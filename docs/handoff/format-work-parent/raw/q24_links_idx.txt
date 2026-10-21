@@ -1,0 +1,10 @@
+-- SQL: SELECT indexrelid::regclass AS idx, indisprimary, pg_get_indexdef(indexrelid) AS def FROM pg_index WHERE indrelid='public.product_format_game_links'::regclass
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+time="2026-10-22T00:16:16+09:00" level=warning msg="Found orphan containers ([astro-webapp-gemini-egress-1 astro-webapp-frontend-1 astro-webapp-discord-gateway-1 astro-webapp-celery-beat-1 astro-webapp-celery-worker-1 astro-webapp-nginx-1 astro-webapp-postgres-1 astro-webapp-gha-exporter-1 astro-webapp-redis-1 astro-webapp-certbot-1 astro-webapp-node-exporter-1 astro-webapp-promtail-1]) for this project. If you removed or renamed this service in your compose file, you can run this command with the --remove-orphans flag to clean it up."
+ Container astro-webapp-ai-reader-run-def2b369ea36 Creating 
+ Container astro-webapp-ai-reader-run-def2b369ea36 Created 
+idx	indisprimary	def
+product_format_game_links_pkey	True	CREATE UNIQUE INDEX product_format_game_links_pkey ON public.product_format_game_links USING btree (format_id, type_master_id)
+idx_pfgl_format_id	False	CREATE INDEX idx_pfgl_format_id ON public.product_format_game_links USING btree (format_id)
+idx_pfgl_type_master_id	False	CREATE INDEX idx_pfgl_type_master_id ON public.product_format_game_links USING btree (type_master_id)
+AUDIT ts=2026-10-21T15:16:17Z sha=66bb71ea8dc7 rows=3 ms=41 result=ok sql=SELECT indexrelid::regclass AS idx, indisprimary, pg_get_indexdef(indexrelid) AS def FROM pg_index WHERE indrelid='public.product_format_game_links'::regclass 

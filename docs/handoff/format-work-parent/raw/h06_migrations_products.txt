@@ -1,0 +1,57 @@
+migrations/20260602_010000_repoint_downstream_fk_to_public_products.sql:64:-- work_id NOT NULL ガード: public.products.work_id が NOT NULL の場合は INSERT をスキップ。
+migrations/20260602_010000_repoint_downstream_fk_to_public_products.sql:68:    -- Skip if work_id is NOT NULL (handled by later migrations)
+migrations/20260602_010000_repoint_downstream_fk_to_public_products.sql:74:        AND a.attname = 'work_id' AND a.attnotnull = true
+migrations/20260602_010000_repoint_downstream_fk_to_public_products.sql:77:        RAISE NOTICE 'public.products.work_id is NOT NULL — skipping tenant_006 INSERT (handled by later migrations
+migrations/20260602_020000_add_products_tcg_type.sql:3:-- （削除済み）products.tcg_type は ADR-1030 で取り除いた。作品の正本は products.work_id。
+migrations/20260902_110100_tcg_products_classification_ids.sql:43:          AND conname = 'fk_tcg_products_work_id'
+migrations/20260902_110100_tcg_products_classification_ids.sql:47:                ADD CONSTRAINT fk_tcg_products_work_id
+migrations/20260902_110100_tcg_products_classification_ids.sql:48:                    FOREIGN KEY (work_id)
+migrations/20260909_000000_public_products_phase2b_columns.sql:26:-- 正しいマーカー: public.products.work_id は migrations/20260919_010000_master_ssot_work_id_recast.sql
+migrations/20260909_000000_public_products_phase2b_columns.sql:27:-- （scripts/run_all_migrations.sh の tcg_uuid DROP より後、work_id を UUID→INTEGER に
+migrations/20260909_000000_public_products_phase2b_columns.sql:29:-- public.products.work_id を再び UUID にはしない）。よって
+migrations/20260909_000000_public_products_phase2b_columns.sql:30:-- 「tcg_uuid が既に存在する」または「work_id が INTEGER でない（未存在 or UUID）」場合のみ
+migrations/20260909_000000_public_products_phase2b_columns.sql:31:-- ADD + index を実行し、「tcg_uuid が無い かつ work_id が INTEGER」なら恒久的にスキップする。
+migrations/20260909_000000_public_products_phase2b_columns.sql:41:          AND column_name = 'work_id' AND data_type = 'integer'
+migrations/20260909_000000_public_products_phase2b_columns.sql:49:        RAISE NOTICE 'tcg_uuid: work_id が INTEGER に再キャスト済み（Phase 3 完了）— tcg_uuid 再 ADD をスキップ';
+migrations/20260909_000000_public_products_phase2b_columns.sql:54:ALTER TABLE public.products ADD COLUMN IF NOT EXISTS work_id           UUID;
+migrations/20260914_140000_unify_tcg_products_to_public.sql:26:--     - work_id が UUID でない（INTEGER 等）→ work_id を NULL キャストして UPSERT
+migrations/20260914_140000_unify_tcg_products_to_public.sql:45:-- コメント参照）。正しいマーカーは public.products.work_id が INTEGER かどうか
+migrations/20260914_140000_unify_tcg_products_to_public.sql:46:-- （migrations/20260919_010000_master_ssot_work_id_recast.sql が永久に UUID→INTEGER 変換する）。
+migrations/20260914_140000_unify_tcg_products_to_public.sql:56:          AND column_name = 'work_id' AND data_type = 'integer'
+migrations/20260914_140000_unify_tcg_products_to_public.sql:74:        RAISE NOTICE 'tcg_uuid: work_id が INTEGER に再キャスト済み（Phase 3 完了）— tcg_uuid 再 ADD をスキップ';
+migrations/20260914_140000_unify_tcg_products_to_public.sql:79:ALTER TABLE public.products ADD COLUMN IF NOT EXISTS work_id           UUID;
+migrations/20260914_140000_unify_tcg_products_to_public.sql:95:    _work_id_is_uuid             BOOLEAN;
+migrations/20260914_140000_unify_tcg_products_to_public.sql:101:    --                  20260919_010000: work_id UUID→INTEGER スワップ,
+migrations/20260914_140000_unify_tcg_products_to_public.sql:125:    -- work_id が UUID 型で存在するか確認
+migrations/20260914_140000_unify_tcg_products_to_public.sql:133:          AND a.attname = 'work_id'
+migrations/20260914_140000_unify_tcg_products_to_public.sql:137:    ) INTO _work_id_is_uuid;
+migrations/20260914_140000_unify_tcg_products_to_public.sql:139:    IF NOT _work_id_is_uuid THEN
+migrations/20260914_140000_unify_tcg_products_to_public.sql:140:        RAISE NOTICE 'Step2: public.products.work_id が UUID 型ではありません（20260919_010000 適用済み）。work_id は NULL でコピーします。';
+migrations/20260914_140000_unify_tcg_products_to_public.sql:177:        IF _work_id_is_uuid AND _product_category_id_is_uuid THEN
+migrations/20260914_140000_unify_tcg_products_to_public.sql:182:                    tcg_uuid, division_id, work_id, manufacturer_id, product_category_id,
+migrations/20260914_140000_unify_tcg_products_to_public.sql:193:                    t.work_id,
+migrations/20260914_140000_unify_tcg_products_to_public.sql:206:                    work_id              = EXCLUDED.work_id,
+migrations/20260914_140000_unify_tcg_products_to_public.sql:212:        ELSIF NOT _work_id_is_uuid AND _product_category_id_is_uuid THEN
+migrations/20260914_140000_unify_tcg_products_to_public.sql:213:            -- work_id が INTEGER に変わっているが product_category_id はまだ UUID
+migrations/20260914_140000_unify_tcg_products_to_public.sql:218:                    tcg_uuid, division_id, work_id, manufacturer_id, product_category_id,
+migrations/20260914_140000_unify_tcg_products_to_public.sql:248:            -- 型ミスマッチケース: work_id と product_category_id の両方が INTEGER に変わっている
+migrations/20260914_140000_unify_tcg_products_to_public.sql:253:                    tcg_uuid, division_id, work_id, manufacturer_id, product_category_id,
+migrations/20260916_130000_work_id_not_null.sql:3:-- Backfill uses verified UUID→INTEGER mapping from existing products with same work_id_old_uuid
+migrations/20260916_130000_work_id_not_null.sql:18:    IF NOT EXISTS (SELECT 1 FROM public.products WHERE work_id IS NULL) THEN
+migrations/20260916_130000_work_id_not_null.sql:19:      ALTER TABLE public.products ALTER COLUMN work_id SET NOT NULL;
+migrations/20260916_130000_work_id_not_null.sql:22:        (SELECT COUNT(*) FROM public.products WHERE work_id IS NULL);
+migrations/20260919_010000_master_ssot_work_id_recast.sql:2:-- Migration 20260919_010000: マスタ SSOT Step 1-1 — products.work_id UUID→INTEGER 列スワップ
+migrations/20260919_010000_master_ssot_work_id_recast.sql:6:--   public スキーマへ移行するにあたり、public.products.work_id を
+migrations/20260919_010000_master_ssot_work_id_recast.sql:10:--   1. public.products.work_id を work_id_old_uuid にリネーム（バックアップ列）
+migrations/20260919_010000_master_ssot_work_id_recast.sql:12:--   2. public.products に新 work_id INTEGER 列を追加
+migrations/20260919_010000_master_ssot_work_id_recast.sql:74:        ALTER TABLE public.products RENAME COLUMN work_id TO work_id_old_uuid;
+migrations/20260919_010000_master_ssot_work_id_recast.sql:78:        ALTER TABLE public.products ALTER COLUMN work_id_old_uuid DROP NOT NULL;
+migrations/20260919_010000_master_ssot_work_id_recast.sql:107:        ALTER TABLE public.products ADD COLUMN work_id INTEGER;
+migrations/20260919_030000_master_ssot_fk_work_id.sql:2:-- Migration 20260919_030000: products.work_id → tcg_type_master FK制約
+migrations/20260919_030000_master_ssot_fk_work_id.sql:5:--   Phase 1 で products.work_id を UUID → INTEGER に変更し、
+migrations/20260919_190000_fix_extraction_work_id_type.sql:32:            EXECUTE format('UPDATE %I.extraction_items SET resolved_work_id = NULL WHERE resolved_work_id IS NOT NULL', schema_n
+migrations/20260920_130000_create_product_classification.sql:102:CREATE INDEX IF NOT EXISTS idx_products_product_format_id ON public.products (product_format_id);
+migrations/20260920_130000_create_product_classification.sql:106:--   ALTER TABLE public.products DROP COLUMN IF EXISTS product_format_id;
+migrations/20260922_010000_product_format_kind_id_and_products_type_master_id.sql:20:--    作品の正本は products.work_id。products は列番号が上限 1600 に達しているため、
+migrations/20261017_210000_drop_products_type_master_id.sql:1:-- ADR-1026: products.type_master_id を取り除く（作品の正本は products.work_id）
+migrations/20261018_110000_drop_products_tcg_type.sql:1:-- ADR-1030: products.tcg_type を取り除く（作品の正本は products.work_id）

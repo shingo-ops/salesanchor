@@ -1,0 +1,84 @@
+.github/workflows/migration-guard.yml:224:          PUBLIC_TABLES="tenants users permissions products suppliers supplier_aliases inventory inventory_movements tcg_series_master pokemon_dex trainer_dex supplier_prompts meta_page_ro
+backend/app/main.py:111:    super_admin_product_formats,  # フォーマットマスタ中央 admin
+backend/app/main.py:586:    super_admin_product_formats.router, prefix="/api/v1", tags=["super-admin"],
+backend/app/routers/super_admin_product_formats.py:2:中央 admin 用 public.product_formats CRUD ルーター。
+backend/app/routers/super_admin_product_formats.py:53:async def list_product_formats(
+backend/app/routers/super_admin_product_formats.py:69:            f"FROM public.product_formats {where} "
+backend/app/routers/super_admin_product_formats.py:92:                "INSERT INTO public.product_formats "
+backend/app/routers/super_admin_product_formats.py:101:        log_hidden_error("super_admin_product_formats.create_product_format", exc)
+backend/app/routers/super_admin_product_formats.py:130:                f"UPDATE public.product_formats SET {set_clauses}, updated_at = NOW() "
+backend/app/routers/super_admin_product_formats.py:137:        log_hidden_error("super_admin_product_formats.update_product_format", exc)
+backend/app/routers/super_admin_product_formats.py:160:        text(f"SELECT {_COLS} FROM public.product_formats WHERE id = :id FOR UPDATE"),
+backend/app/routers/super_admin_product_formats.py:199:        log_hidden_error("super_admin_product_formats.replace_product_format_games", exc)
+backend/app/routers/super_admin_product_formats.py:228:            "UPDATE public.product_formats SET is_active = FALSE, updated_at = NOW() "
+backend/app/routers/super_admin_product_lines.py:137:    """soft delete (is_active=FALSE)。product_formats.line_id または products.product_line_id で参照中なら 409。"""
+backend/app/routers/super_admin_product_lines.py:138:    # 参照チェック: product_formats.line_id
+backend/app/routers/super_admin_product_lines.py:140:        text("SELECT 1 FROM public.product_formats WHERE line_id = :id LIMIT 1"),
+backend/app/routers/super_admin_product_lines.py:146:            detail="この小分類はフォーマット（product_formats）で使用中のため削除できません",
+backend/app/schemas/product_format.py:2:フォーマットマスタ Pydantic スキーマ（public.product_formats テーブル）。
+backend/app/services/tcg_product_import_svc.py:267:        text("SELECT code, id FROM public.product_formats WHERE is_active = TRUE")
+backend/app/services/tcg_product_master_svc.py:121:        text("SELECT 1 FROM public.product_formats WHERE id = :id AND is_active = TRUE"),
+backend/app/services/tcg_product_master_svc.py:136:        "FROM public.product_formats f "
+backend/app/services/tcg_product_roundtrip_svc.py:137:    joins.append("LEFT JOIN public.product_formats fmt ON fmt.id=p.product_format_id")
+backend/app/services/tcg_product_roundtrip_svc.py:240:    format_result = await db.execute(text("SELECT to_jsonb(r) FROM public.product_formats r WHERE r.is_active=TRUE"))
+backend/app/services/tcg_product_roundtrip_svc.py:431:        await db.execute(text("LOCK TABLE public.product_formats, public.product_format_game_links IN SHARE MODE"))
+backend/tests/test_product_format_game_links_pg.py:8:from app.routers import super_admin_product_formats as formats_router
+backend/tests/test_product_format_game_links_pg.py:27:                     "20260923_010000_product_formats_add_type_master_id.sql"):
+backend/tests/test_product_format_game_links_pg.py:31:        cur.execute("INSERT INTO public.product_formats(code,name,display_order) "
+backend/tests/test_product_format_game_links_pg.py:34:        cur.execute("INSERT INTO public.product_formats(code,name,display_order) "
+backend/tests/test_product_format_game_links_pg.py:45:        cur.execute("DELETE FROM public.product_formats WHERE id = ANY(%s)", ([linked, unlinked],))
+backend/tests/test_product_format_game_links_pg.py:83:                cur.execute("UPDATE public.product_formats SET is_active=FALSE WHERE id=%s", (fmt_pg["unlinked"],))
+backend/tests/test_tcg_completion_safety.py:164:                fmt_id = (await session.execute(text("INSERT INTO public.product_formats (code,name) VALUES ('SAFETYFMT','安全試験細分類') RETURNING id"))).scalar_one()
+backend/tests/test_tcg_product_import.py:400:        elif "public.product_formats" in sql:
+backend/tests/test_tcg_product_import_atomicity_pg.py:54:        cur.execute("INSERT INTO public.product_formats (code,name) VALUES ('ATOMICFMT','原子細分類') RETURNING id")
+backend/tests/test_tcg_schema_qualification.py:199:    # 8 -> 9: ADR-1020 便2c で load_lookup_maps に細分類 (public.product_formats) の
+docs/adr/ADR-1026-drop-products-type-master-id.md:16:2. 列を足していた `migrations/20260922_010000_product_format_kind_id_and_products_type_master_id.sql` の「2. products に type_master_id FK 追加」の2文を消す。同じファイルの product_formats.kind_id の部分は残す
+docs/adr/ADR-1026-drop-products-type-master-id.md:17:3. 商品の作品（中分類）は `products.work_id` だけに置く。`product_formats.type_master_id` と `product_format_game_links.type_master_id`（細分類とゲームの対応）は別の情報なので変えない。
+frontend/api-contract/openapi.json:59446:        "operationId": "list_product_formats_api_v1_super_admin_product_formats_get",
+frontend/api-contract/openapi.json:59525:        "operationId": "create_product_format_api_v1_super_admin_product_formats_post",
+frontend/api-contract/openapi.json:59572:        "operationId": "delete_product_format_api_v1_super_admin_product_formats__format_id__delete",
+frontend/api-contract/openapi.json:59610:        "operationId": "update_product_format_api_v1_super_admin_product_formats__format_id__patch",
+frontend/api-contract/openapi.json:59668:        "operationId": "replace_product_format_games_api_v1_super_admin_product_formats__format_id__games_put",
+frontend/api-contract/openapi.json:60071:        "description": "soft delete (is_active=FALSE)。product_formats.line_id または products.product_line_id で参照中なら 409。",
+migrations/20260920_130000_create_product_classification.sql:4:--   - public.product_formats (細分類: 商品形態)
+migrations/20260920_130000_create_product_classification.sql:54:CREATE TABLE IF NOT EXISTS public.product_formats (
+migrations/20260920_130000_create_product_classification.sql:66:CREATE INDEX IF NOT EXISTS idx_product_formats_sort
+migrations/20260920_130000_create_product_classification.sql:67:    ON public.product_formats (display_order, id);
+migrations/20260920_130000_create_product_classification.sql:69:CREATE INDEX IF NOT EXISTS idx_product_formats_line_id
+migrations/20260920_130000_create_product_classification.sql:70:    ON public.product_formats (line_id);
+migrations/20260920_130000_create_product_classification.sql:73:CREATE OR REPLACE FUNCTION public.set_updated_at_product_formats()
+migrations/20260920_130000_create_product_classification.sql:81:DROP TRIGGER IF EXISTS trg_product_formats_updated_at ON public.product_formats;
+migrations/20260920_130000_create_product_classification.sql:82:CREATE TRIGGER trg_product_formats_updated_at
+migrations/20260920_130000_create_product_classification.sql:83:    BEFORE UPDATE ON public.product_formats
+migrations/20260920_130000_create_product_classification.sql:84:    FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_product_formats();
+migrations/20260920_130000_create_product_classification.sql:86:COMMENT ON TABLE public.product_formats IS
+migrations/20260920_130000_create_product_classification.sql:99:    REFERENCES public.product_formats(id) ON DELETE SET NULL;
+migrations/20260920_130000_create_product_classification.sql:108:--   DROP TABLE IF EXISTS public.product_formats;
+migrations/20260920_130000_create_product_classification.sql:110:--   DROP FUNCTION IF EXISTS public.set_updated_at_product_formats();
+migrations/20260922_010000_product_format_kind_id_and_products_type_master_id.sql:7:-- 1. product_formats に kind_id FK 追加（細分類→大分類）
+migrations/20260922_010000_product_format_kind_id_and_products_type_master_id.sql:11:CREATE TABLE IF NOT EXISTS public.product_formats (id SERIAL PRIMARY KEY, code VARCHAR(50) NOT NULL UNIQUE, name VARCHAR(100) NOT NULL, name_en V
+migrations/20260922_010000_product_format_kind_id_and_products_type_master_id.sql:15:ALTER TABLE public.product_formats ADD COLUMN IF NOT EXISTS kind_id INTEGER REFERENCES public.product_kinds(id) ON DELETE SET NULL;
+migrations/20260922_010000_product_format_kind_id_and_products_type_master_id.sql:16:CREATE INDEX IF NOT EXISTS idx_product_formats_kind_id ON public.product_formats (kind_id);
+migrations/20260922_030000_product_format_game_links.sql:10:CREATE TABLE IF NOT EXISTS public.product_formats (id SERIAL PRIMARY KEY, code VARCHAR(50) NOT NULL UNIQUE, name VARCHAR(100) NOT NULL, name_en VARCHAR(100), line_id INTE
+migrations/20260922_030000_product_format_game_links.sql:13:    format_id     INTEGER NOT NULL REFERENCES public.product_formats(id) ON DELETE CASCADE,
+migrations/20260923_010000_product_formats_add_type_master_id.sql:1:-- 細分類(product_formats)に中分類(type_master)への直接リンクを追加
+migrations/20260923_010000_product_formats_add_type_master_id.sql:6:  -- テーブル自体が存在しない場合はスキップ（CI test DB では product_formats が未作成の場合がある）
+migrations/20260923_010000_product_formats_add_type_master_id.sql:9:    WHERE table_schema = 'public' AND table_name = 'product_formats'
+migrations/20260923_010000_product_formats_add_type_master_id.sql:11:    RAISE NOTICE 'product_formats table does not exist, skip type_master_id';
+migrations/20260923_010000_product_formats_add_type_master_id.sql:14:    WHERE table_schema = 'public' AND table_name = 'product_formats' AND column_name = 'type_master_id'
+migrations/20260923_010000_product_formats_add_type_master_id.sql:16:    ALTER TABLE public.product_formats ADD COLUMN type_master_id INTEGER REFERENCES public.type_master(id) ON DELETE SET NULL;
+migrations/20260923_010000_product_formats_add_type_master_id.sql:17:    RAISE NOTICE 'Added type_master_id to product_formats';
+migrations/20260923_010000_product_formats_add_type_master_id.sql:19:    RAISE NOTICE 'type_master_id already exists on product_formats, skip';
+migrations/20260923_010000_product_formats_add_type_master_id.sql:25:  -- テーブル自体が存在しない場合はスキップ（CI test DB では product_formats が未作成の場合がある）
+migrations/20260923_010000_product_formats_add_type_master_id.sql:28:    WHERE table_schema = 'public' AND table_name = 'product_formats'
+migrations/20260923_010000_product_formats_add_type_master_id.sql:30:    RAISE NOTICE 'product_formats table does not exist, skip kind_id';
+migrations/20260923_010000_product_formats_add_type_master_id.sql:33:    WHERE table_schema = 'public' AND table_name = 'product_formats' AND column_name = 'kind_id'
+migrations/20260923_010000_product_formats_add_type_master_id.sql:35:    ALTER TABLE public.product_formats ADD COLUMN kind_id INTEGER REFERENCES public.product_kinds(id) ON DELETE SET NULL;
+migrations/20260923_010000_product_formats_add_type_master_id.sql:36:    RAISE NOTICE 'Added kind_id to product_formats';
+migrations/20260923_010000_product_formats_add_type_master_id.sql:38:    RAISE NOTICE 'kind_id already exists on product_formats, skip';
+scripts/migration-guard/protected-tables.txt:9:#       ADR-1007 決定1（全マスタ表が対象）に合わせ、product_lines / product_formats / product_kinds /
+scripts/migration-guard/protected-tables.txt:36:product_formats
+scripts/run_all_migrations.sh:798:# 商品分類マスタ新設: product_lines（小分類）+ product_formats（細分類）+ products FK カラム追加
+scripts/run_all_migrations.sh:850:# ADR-156 Phase 9: 細分類(product_formats)に type_master_id 直接リンク追加（カードゲーム別フィルタリング）
+scripts/run_all_migrations.sh:851:run_sql migrations/20260923_010000_product_formats_add_type_master_id.sql
+scripts/tests/test_migration_value_writes.py:282:        for table in ("product_lines", "product_formats", "product_kinds", "supplier_aliases"):

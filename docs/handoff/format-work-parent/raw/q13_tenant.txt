@@ -1,0 +1,10 @@
+-- SQL: SELECT 'public.products tenant_id values' k, tenant_id::text v, count(*) FROM ai_ro.public__products GROUP BY 2 UNION ALL SELECT 'tenant_001.products rows','',count(*) FROM ai_ro.tenant_001__products UNION ALL SELECT 'tenant_004.products rows','',count(*) FROM ai_ro.tenant_004__products
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+time="2026-10-21T23:51:31+09:00" level=warning msg="Found orphan containers ([astro-webapp-gemini-egress-1 astro-webapp-frontend-1 astro-webapp-celery-beat-1 astro-webapp-discord-gateway-1 astro-webapp-celery-worker-1 astro-webapp-nginx-1 astro-webapp-postgres-1 astro-webapp-gha-exporter-1 astro-webapp-redis-1 astro-webapp-certbot-1 astro-webapp-node-exporter-1 astro-webapp-promtail-1]) for this project. If you removed or renamed this service in your compose file, you can run this command with the --remove-orphans flag to clean it up."
+ Container astro-webapp-ai-reader-run-fcf5df11d448 Creating 
+ Container astro-webapp-ai-reader-run-fcf5df11d448 Created 
+k	v	count
+public.products tenant_id values		1453
+tenant_001.products rows		0
+tenant_004.products rows		0
+AUDIT ts=2026-10-21T14:51:31Z sha=6f2df9f0a066 rows=3 ms=50 result=ok sql=SELECT 'public.products tenant_id values' k, tenant_id::text v, count(*) FROM ai_ro.public__products GROUP BY 2 UNION ALL SELECT 'tenant_001.products rows','',count(*) FROM ai_ro.tenant_001__products UNION ALL SELECT 'tenant_004.products rows','',count(*) FROM ai_ro.tenant_004__products 

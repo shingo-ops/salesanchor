@@ -1,0 +1,25 @@
+-- SQL: SELECT p.work_id, count(*) FILTER (WHERE p.product_format_id IS NULL) AS no_format, count(*) AS total, count(*) FILTER (WHERE p.product_format_id IS NULL AND p.is_active) AS no_format_active FROM ai_ro.public__products p GROUP BY 1 ORDER BY 1
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+time="2026-10-21T23:51:37+09:00" level=warning msg="Found orphan containers ([astro-webapp-gemini-egress-1 astro-webapp-frontend-1 astro-webapp-celery-beat-1 astro-webapp-discord-gateway-1 astro-webapp-celery-worker-1 astro-webapp-nginx-1 astro-webapp-postgres-1 astro-webapp-gha-exporter-1 astro-webapp-redis-1 astro-webapp-certbot-1 astro-webapp-node-exporter-1 astro-webapp-promtail-1]) for this project. If you removed or renamed this service in your compose file, you can run this command with the --remove-orphans flag to clean it up."
+ Container astro-webapp-ai-reader-run-af533c3bff10 Creating 
+ Container astro-webapp-ai-reader-run-af533c3bff10 Created 
+work_id	no_format	total	no_format_active
+1	27	242	27
+2	57	206	57
+3	37	80	37
+4	3	117	3
+5	4	166	4
+6	22	22	22
+19	1	22	1
+20	5	465	5
+21	1	64	1
+22	0	29	0
+23	0	23	0
+24	3	3	3
+8981	3	4	3
+8982	3	4	3
+9043	1	1	1
+9044	3	3	3
+9045	0	1	0
+9046	0	1	0
+AUDIT ts=2026-10-21T14:51:37Z sha=9ebcdc7f3ded rows=18 ms=48 result=ok sql=SELECT p.work_id, count(*) FILTER (WHERE p.product_format_id IS NULL) AS no_format, count(*) AS total, count(*) FILTER (WHERE p.product_format_id IS NULL AND p.is_active) AS no_format_active FROM ai_ro.public__products p GROUP BY 1 ORDER BY 1 

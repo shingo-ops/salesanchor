@@ -104,6 +104,72 @@ run_sql() {
   done
 }
 
+# >>> read-probe begin
+# ADR-1037 便1.2: 移行の間、在庫表の GET が読む表を2秒おきに読み、鍵待ちで何ms待たされるかを測る（K7）。
+# 計測は読み取りだけ（ACCESS SHARE）。結果は止めるときに時刻・ms・回数だけをログに出す（SQL・表名は出さない）。
+# 関数名は run_ で始めない（TOTAL は ^run_(sql|py) の行を数えるため）。
+READ_PROBE_INTERVAL_SEC="${READ_PROBE_INTERVAL_SEC:-2}"
+READ_PROBE_SLOW_MS="${READ_PROBE_SLOW_MS:-2000}"
+READ_PROBE_STMT_TIMEOUT="${READ_PROBE_STMT_TIMEOUT:-3s}"
+READ_PROBE_TABLES="${READ_PROBE_TABLES:-analysis_results extraction_items extraction_jobs source_messages supplier_channels item_corrections line_conditions products line_units product_search_keywords suppliers type_master tcg_distribution_settings users}"
+READ_PROBE_PID=""
+READ_PROBE_OUT=""
+read_probe_start() {
+  READ_PROBE_OUT="$(mktemp)" || { READ_PROBE_OUT=""; return 0; }
+  READ_PROBE_PARENT=$$
+  (
+    set +e
+    probe_args=()
+    for probe_t in ${READ_PROBE_TABLES}; do
+      probe_args+=(-c "SELECT 1 FROM public.${probe_t} LIMIT 1")
+    done
+    while :; do
+      kill -0 "${READ_PROBE_PARENT}" 2>/dev/null || exit 0
+      probe_t0=${EPOCHREALTIME/[.,]/}
+      docker exec -e PGOPTIONS="-c lock_timeout=${READ_PROBE_STMT_TIMEOUT} -c statement_timeout=${READ_PROBE_STMT_TIMEOUT}" \
+        -e PGAPPNAME=sa_read_probe "${POSTGRES}" \
+        psql -X -q -At -U jarvis -d jarvis_db "${probe_args[@]}" >/dev/null 2>"${READ_PROBE_OUT}.err"
+      probe_rc=$?
+      probe_t1=${EPOCHREALTIME/[.,]/}
+      probe_err="$(grep -c 'ERROR:' "${READ_PROBE_OUT}.err" 2>/dev/null)"
+      [[ ${probe_err} =~ ^[0-9]+$ ]] || probe_err=0
+      if [ "${probe_rc}" -ne 0 ] && [ "${probe_err}" -eq 0 ]; then probe_err=1; fi
+      if [[ ${probe_t0} =~ ^[0-9]+$ ]] && [[ ${probe_t1} =~ ^[0-9]+$ ]]; then
+        echo "$(( probe_t0 / 1000000 )) $(( (probe_t1 - probe_t0) / 1000 )) ${probe_err}" >>"${READ_PROBE_OUT}"
+      else
+        echo "0 - ${probe_err}" >>"${READ_PROBE_OUT}"
+      fi
+      sleep "${READ_PROBE_INTERVAL_SEC}"
+    done
+  ) </dev/null >/dev/null 2>&1 &
+  READ_PROBE_PID=$!
+}
+read_probe_stop() {
+  [ -n "${READ_PROBE_PID:-}" ] || return 0
+  kill "${READ_PROBE_PID}" 2>/dev/null || true
+  wait "${READ_PROBE_PID}" 2>/dev/null || true
+  READ_PROBE_PID=""
+  local probe_sum="" probe_kind="" pa="" pb="" pc="" pd="" pe="" probe_shown=0
+  probe_sum="$(awk -v slow="${READ_PROBE_SLOW_MS}" '
+    { n++; err += $3
+      if ($2 == "-") { inv++ } else { if ($2 + 0 > max) max = $2 + 0; if ($2 + 0 > slow) { ns++; print "SLOW " $1 " " $2 } } }
+    END { print "SUM " n + 0 " " ns + 0 " " err + 0 " " inv + 0 " " max + 0 }
+  ' "${READ_PROBE_OUT}" 2>/dev/null)" || true
+  while read -r probe_kind pa pb pc pd pe; do
+    if [ "${probe_kind}" = "SLOW" ]; then
+      if [ "${probe_shown}" -lt 20 ]; then
+        echo ">>> [final] read probe slow: $(TZ=UTC printf '%(%Y-%m-%dT%H:%M:%SZ)T' "${pa}") ${pb}ms" || true
+        probe_shown=$((probe_shown + 1))
+      fi
+    elif [ "${probe_kind}" = "SUM" ]; then
+      echo ">>> [final] read probe: n=${pa} slow=${pb} error=${pc} invalid=${pd} max=${pe}ms"
+    fi
+  done <<< "${probe_sum:-SUM 0 0 0 0 0}" || true
+  rm -f "${READ_PROBE_OUT}" "${READ_PROBE_OUT}.err" || true
+  return 0
+}
+# <<< read-probe end
+
 preflight_registered_files() {
   echo ">>> [0] Verifying registered migration files exist..."
   bash scripts/check-migration-registration-exists.sh \
@@ -128,6 +194,7 @@ AI_RO_CREATE_TIMEOUT="${AI_RO_CREATE_TIMEOUT:-30s}"
 _ai_ro_create_on_exit() {
   local rc=$?
   trap - EXIT
+  if declare -F read_probe_stop >/dev/null; then read_probe_stop || true; fi
   if [ "${rc}" -ne 0 ]; then
     echo ">>> [final] script failed rc=${rc}; recreating ai_ro views anyway"
   fi
@@ -146,6 +213,8 @@ _ai_ro_create_on_exit() {
   exit "${rc}"
 }
 trap _ai_ro_create_on_exit EXIT
+# ADR-1037 便1.2: trap の後で計測を始める（どこで落ちても上の trap が止める）
+read_probe_start
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # マイグレーション一覧（順序厳守・冪等必須）

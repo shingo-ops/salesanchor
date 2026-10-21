@@ -1,0 +1,8 @@
+-- SQL: SELECT count(*) AS products_with_format, count(*) FILTER (WHERE f.type_master_id IS DISTINCT FROM p.work_id) AS pf_type_master_id_differs_from_work_id FROM ai_ro.public__products p JOIN ai_ro.public__product_formats f ON f.id=p.product_format_id
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+time="2026-10-21T23:52:03+09:00" level=warning msg="Found orphan containers ([astro-webapp-gemini-egress-1 astro-webapp-frontend-1 astro-webapp-celery-beat-1 astro-webapp-discord-gateway-1 astro-webapp-celery-worker-1 astro-webapp-nginx-1 astro-webapp-postgres-1 astro-webapp-gha-exporter-1 astro-webapp-redis-1 astro-webapp-certbot-1 astro-webapp-node-exporter-1 astro-webapp-promtail-1]) for this project. If you removed or renamed this service in your compose file, you can run this command with the --remove-orphans flag to clean it up."
+ Container astro-webapp-ai-reader-run-2a616522f09f Creating 
+ Container astro-webapp-ai-reader-run-2a616522f09f Created 
+products_with_format	pf_type_master_id_differs_from_work_id
+1283	706
+AUDIT ts=2026-10-21T14:52:03Z sha=f89753dcfb44 rows=1 ms=50 result=ok sql=SELECT count(*) AS products_with_format, count(*) FILTER (WHERE f.type_master_id IS DISTINCT FROM p.work_id) AS pf_type_master_id_differs_from_work_id FROM ai_ro.public__products p JOIN ai_ro.public__product_formats f ON f.id=p.product_format_id 

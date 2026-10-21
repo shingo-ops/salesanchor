@@ -1,0 +1,12 @@
+-- SQL: SELECT 'manufacturers' AS t, count(*) FROM ai_ro.public__tcg_manufacturers UNION ALL SELECT 'categories', count(*) FROM ai_ro.public__tcg_product_categories UNION ALL SELECT 'kinds', count(*) FROM ai_ro.public__product_kinds UNION ALL SELECT 'type_master', count(*) FROM ai_ro.public__type_master UNION ALL SELECT 'formats_active', count(*) FROM ai_ro.public__product_formats WHERE is_active
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+time="2026-10-22T00:18:24+09:00" level=warning msg="Found orphan containers ([astro-webapp-gemini-egress-1 astro-webapp-frontend-1 astro-webapp-discord-gateway-1 astro-webapp-celery-beat-1 astro-webapp-celery-worker-1 astro-webapp-nginx-1 astro-webapp-postgres-1 astro-webapp-gha-exporter-1 astro-webapp-redis-1 astro-webapp-certbot-1 astro-webapp-node-exporter-1 astro-webapp-promtail-1]) for this project. If you removed or renamed this service in your compose file, you can run this command with the --remove-orphans flag to clean it up."
+ Container astro-webapp-ai-reader-run-8381d00da9e3 Creating 
+ Container astro-webapp-ai-reader-run-8381d00da9e3 Created 
+t	count
+manufacturers	6
+categories	6
+kinds	3
+type_master	18
+formats_active	28
+AUDIT ts=2026-10-21T15:18:25Z sha=ff727cc07907 rows=5 ms=45 result=ok sql=SELECT 'manufacturers' AS t, count(*) FROM ai_ro.public__tcg_manufacturers UNION ALL SELECT 'categories', count(*) FROM ai_ro.public__tcg_product_categories UNION ALL SELECT 'kinds', count(*) FROM ai_ro.public__product_kinds UNION ALL SELECT 'type_master', count(*) FROM ai_ro.public__type_master UNION ALL SELECT 'formats_active', count(*) FROM ai_ro.public__product_formats WHERE is_active 

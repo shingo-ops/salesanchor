@@ -1,0 +1,9 @@
+-- SQL: SELECT 'formats_with_line_id', count(*) FROM ai_ro.public__product_formats WHERE line_id IS NOT NULL UNION ALL SELECT 'lines', count(*) FROM ai_ro.public__product_lines
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+time="2026-10-21T23:58:54+09:00" level=warning msg="Found orphan containers ([astro-webapp-gemini-egress-1 astro-webapp-frontend-1 astro-webapp-celery-beat-1 astro-webapp-discord-gateway-1 astro-webapp-celery-worker-1 astro-webapp-nginx-1 astro-webapp-postgres-1 astro-webapp-gha-exporter-1 astro-webapp-redis-1 astro-webapp-certbot-1 astro-webapp-node-exporter-1 astro-webapp-promtail-1]) for this project. If you removed or renamed this service in your compose file, you can run this command with the --remove-orphans flag to clean it up."
+ Container astro-webapp-ai-reader-run-4e7aae226632 Creating 
+ Container astro-webapp-ai-reader-run-4e7aae226632 Created 
+?column?	count
+formats_with_line_id	0
+lines	10
+AUDIT ts=2026-10-21T14:58:55Z sha=2743c91798ea rows=2 ms=43 result=ok sql=SELECT 'formats_with_line_id', count(*) FROM ai_ro.public__product_formats WHERE line_id IS NOT NULL UNION ALL SELECT 'lines', count(*) FROM ai_ro.public__product_lines 
