@@ -78,15 +78,15 @@ tcg_condition_review_svc.py:129 を次に変える:
 ### 10-2. KGI・KPI
 | 基準 | 検証方法 |
 |---|---|
-| KGI-3 要確認画面を開いてから一覧の1行目が出るまで 2.0 秒以内（本番・既定表示） | 本番で Playwright の計時（画面遷移〜一覧1行目の描画）を3回。中央値で判定 |
-| KPI-3a 一覧 API（既定: 24時間・25件）のサーバー処理時間（SQL と後続の問い合わせを含む） | 本番 Prometheus の http_request_duration_seconds（handler=一覧 API、backend/app/metrics.py:16-20,:83-108）。nginx のログには処理時間が無い（形式 combined） |
+| KGI-3 要確認画面を開いてから一覧の1行目が出るまで 2.0 秒以内（本番・既定表示）。起点は要確認のパネルが出た時（§10-10） | 便0 の計時の行の `panel_ms`（PO が開いた3回の中央値） |
+| KPI-3a 一覧の取得時間（既定: 24時間・25件。要求の送信から応答の受信完了まで。サーバー処理と転送を含む） | 便0 の計時の行の `list_ms`（ブラウザで測る、§10-10）。Prometheus の http_request_duration_seconds（backend/app/metrics.py:16-20,:83-108）は handler が route.path で要確認以外の呼び出しも混ざり、区切りも既定のままのため参考のみ。nginx のログには処理時間が無い（形式 combined） |
 | KPI-3b 一覧 API の送信量（gzip 後） | 本番 nginx の body_bytes_sent（変更前 20行 約132KB） |
 | KGI-4 24時間の絞りを外したとき、絞りなしの従来と件数・仕入元・行の中身が一致する（順番だけ投稿日の新しい順に変わる） | 本番 reader で旧形と新形を同条件で比べる |
 | KGI-5 CSV・シート出力の中身が変わらない | 変更前後の sha256 比較（§5 と同じ方式） |
 
 ### 10-3. 現在地（2026-10-21 調査・読み取りのみ）
 生出力: /tmp/CC報告ファイル/review-slow-20261021/、/tmp/CC報告ファイル/review-speed-design-20261021/、/tmp/CC報告ファイル/review-window-recon-20261021/（社外秘を含むため repo に入れない）。
-- 本番の画面全体: 反映後 4.03秒（nginx request_time、2026-10-20 15:30:48Z の1件）。応答 132,644 byte（非圧縮）。
+- 本番の一覧 API: 反映後 4.03秒（Prometheus の sum、2026-10-20 15:30:48Z の1件。nginx のログに処理時間は無い）。応答 132,644 byte（非圧縮）。
 - 画面の待ち順: /me/permissions（ページ）→ /me/permissions（パネル）→ 一覧、の直列（AnalysisRulesPage.tsx:100,:116、NeedsReviewTabsPanel.tsx:66-67,:89）。
 - 一覧 API はサーバーで件数・仕入元・一覧の3本を直列に流す（tcg_analysis_review_svc.py:231,:240,:311）。reader 実測 約1.5+1.5+1.0 = 約4.1秒。3本とも review_joins を全 active 投稿について評価する。
 - 1本化（V2）は NEEDS_REVIEW で約2.8秒・結果一致。他タブでは大幅悪化（ALL 1.0→33秒）。
@@ -129,7 +129,7 @@ tcg_condition_review_svc.py:129 を次に変える:
   | 1本化（絞りなし）＋新しい順 25件 | — | 1441 / 1499 |
 - 読み解き（事実）: JIT あり/なしの差は JIT Total とほぼ一致（W25 差 993/1029 に対し JIT 992/1017）。JIT が出たのは計画コスト 165790 以上の件数・仕入元・W で、コスト 44241 の一覧20件には出なかった（観測）。W の計画コストは 25/50/100 件で同一（165790）で、件数を増やしても時間はほぼ増えない。salesanchor_app のまま `SET LOCAL jit = off` が ERROR なく効いた（同ブロック）。1回目の「24時間を直接」で起きた products の全件走査×1037回は W では出ない。
 - 結論（設計判断）: 要確認タブの既定表示は、W 形（件数・仕入元・ページを1本の SQL で返す＋24時間の絞りは F3 形＋投稿日の新しい順）を JIT なしで流す。DB 側は 約4.0秒 → 約1.1秒（実測）。絞りを外したときも 約1.5秒（実測）で今より速い。
-- 未確認（この設計の合格を妨げない理由つき）: W50 r2 の 700ms の外れ（r1 と W25/W100 は約1.1秒で、計画は同一）。バインド変数とリテラルでの計画差（実装後に本番 nginx の request_time で KPI-3a を測る）。絞りを外して100件のとき（W100 から伸びない見込みだが推定は事実扱いしない→実装後に測る）。/me/permissions 2回・転送・描画の時間（§10-7 便0 で測る）。測定時の app.tenant_id・app.is_operator は空文字だった。この API は get_db と require_super_admin だけに依存し（routers/tcg_analysis_review.py:137-138）、要求の中でテナントの SET をしない。使い回しの接続は get_db の後始末（database.py:56-61 → auth/dependencies.py:414-433）で空文字に戻るので測定と同じ値になるが、新しい接続の既定値は未確認（ALTER ROLE ... SET の記述は repo に無い）。
+- 未確認（この設計の合格を妨げない理由つき）: W50 r2 の 700ms の外れ（r1 と W25/W100 は約1.1秒で、計画は同一）。バインド変数とリテラルでの計画差（実装後に便0 の計時の行の `list_ms` で KPI-3a を測る）。絞りを外して100件のとき（W100 から伸びない見込みだが推定は事実扱いしない→実装後に測る）。/me/permissions 2回・転送・描画の時間（§10-7 便0 で測る）。本番の要求時の app.tenant_id・app.is_operator の値（事実: 測定時は空文字。この API は get_db と require_super_admin だけに依存し routers/tcg_analysis_review.py:137-138、要求の中でテナントの SET をしない。後始末の clear_tenant_context は同じトランザクションの中で SET を流し database.py:56-61・auth/dependencies.py:429-433、get_db は commit しない。public.products は FORCE RLS で app.tenant_id により見える行が変わる migrations/20260626_130000_force_rls_public_products.sql:5-13。接続を使い回したときの値と新しい接続の既定値は未確認で、ALTER ROLE ... SET の記述は repo に無い）。このため DB 側の 約1.1秒 は測定条件での値であり、便1 の合否は本番の計時の行（`list_ms`・`panel_ms`）で判定する（§10-7）。
 
 ### 10-5. 見え方の変更（PO 提案どおり。金型・i18n・SSOT を守る）
 - 既定: 投稿から24時間以内（line_posted_at >= 取得時点の now() - 24時間）だけ、投稿日の新しい順。
@@ -155,10 +155,10 @@ tcg_condition_review_svc.py:129 を次に変える:
 ### 10-7. 便の分け方と受入条件
 | 便 | 中身 | 受入条件（○×） | 検証方法 |
 |---|---|---|---|
-| 便0 | 画面に計時を仕込む（§10-10）。入れた後、変更前の値を取る | ①要確認画面を開くたびに1回だけ、計時の1行が本番の記録に残る ②保存後の読み直し・他の人の変更による読み直しでは残らない ③PO が3回開いて3行そろう（これが KGI-3 の変更前の値）④super admin 以外は受け口が 403 | ①②③ 本番 Loki で目印の行を数える ④ pytest |
-| 便1 | S1〜S3 ＋ §10-5 の画面（要確認タブのみ: 24時間ボタン・新しい順・25/50/100・投稿日の表示）＋API の新しい引数（既定は従来） | ①既定表示の一覧 API のサーバー処理時間が 1.5秒以下（3回の中央値。2.0秒から便0 で測る一覧の前後の時間を引いた値で、便0 の後に確定する）②新しい道（24時間・25/50/100件）と、同じ24時間窓・同じ並びを足した旧3本とで、件数・仕入元・行の中身と順番が一致（100件で窓内の全行を比べる）③絞りを外した新しい道（25/50/100件、全ページ）と、絞りなしの旧3本とで件数・仕入元・行の中身が一致（順番だけ新しい順）④CSV・シートの sha256 が変更前と一致 ⑤CSV・シート・配信・他タブ・確認済みタブの SQL が変わらない（テストで固定）⑥新しい道の後続の問い合わせに jit=off が残らない（テストで current_setting を確かめる、PostgreSQL のテスト）⑦生 select・直値色・ハードコード文字列が0（CI の UI ガバナンス・i18n 検査） | ① Prometheus ②③ 本番 reader で旧形と新形を比べる ④ §5 と同じ方式 ⑤⑥⑦ pytest・vitest・CI |
+| 便0 | 画面に計時を仕込む（§10-10）。入れた後、変更前の値を取る | ①要確認のパネルが出るたびに1回だけ、計時の1行が本番の記録に残る ②同じパネル表示の中の、2回目以降の一覧の表示（保存後の読み直し・他の人の変更による読み直し・ページ送り・タブ切替）では残らない ③PO が3回開いて3行そろう（これが KGI-3・KPI-3a の変更前の値）④super admin 以外は受け口が 403 | ①②③ 本番 Loki で目印の行を数える（PO が開いた時刻と突き合わせる）②④ vitest・pytest |
+| 便1 | S1〜S3 ＋ §10-5 の画面（要確認タブのみ: 24時間ボタン・新しい順・25/50/100・投稿日の表示）＋API の新しい引数（既定は従来） | ①既定表示の一覧の取得時間 `list_ms` が 1.5秒以下（PO が開いた3回の中央値。1.5秒は仮置きで、便0 の3行の中央値で「2.0秒 −（panel_ms − list_ms）」を求めて確定し本節に追記する）②新しい道（24時間・25/50/100件）と、同じ24時間窓・同じ並びを足した旧3本とで、件数・仕入元・行の中身と順番が一致（100件で窓内の全行を比べる）③絞りを外した新しい道（25/50/100件、全ページ）と、絞りなしの旧3本とで件数・仕入元・行の中身が一致（順番だけ新しい順）④CSV・シートの sha256 が変更前と一致 ⑤CSV・シート・配信・他タブ・確認済みタブの SQL が変わらない（テストで固定）⑥新しい道の後続の問い合わせに jit=off が残らない（テストで current_setting を確かめる、PostgreSQL のテスト）⑦生 select・直値色・ハードコード文字列が0（CI の UI ガバナンス・i18n 検査） | ① 便0 の計時の行 ②③ 本番 reader で旧形と新形を比べる ④ §5 と同じ方式 ⑤⑥⑦ pytest・vitest・CI |
 | 便2 | S4 圧縮 | 一覧 API の送信バイト（nginx の bytes）が変更前（約132KB/20行）より小さい・SSE の3本が切れない | 本番 nginx ログ・SSE の接続ログ |
-| 判定 | KGI-3 | 開いてから一覧の1行目まで 2.0秒以内（PO が開いた3回の中央値） | 便0 の計時の行（page_mount_ms）。超えたら S5 を設計 |
+| 判定 | KGI-3 | 開いてから一覧の1行目まで 2.0秒以内（PO が開いた3回の中央値） | 便0 の計時の行（panel_ms）。超えたら S5 を設計 |
 - 実装カードには、S1〜S3 の変更箇所の file:line・変更前後のコード・引数の範囲チェック・追加/修正するテスト（SQL 形を固定する test_tcg_analysis_review.py:223-253、test_tcg_condition_review.py:681-692,:946-976、test_tcg_condition_review_fenced.py:27-41、test_tcg_result_order.py:367-370、test_v102_human_decisions_pg.py:279-303,:437-445 は今の道で通り続けること。フロントの NeedsReviewTabsPanel*.test.tsx、特に drawer.test.tsx:115 の呼び出し回数）・触らない範囲を書く。材料: /tmp/CC報告ファイル/review-speed-bin1-recon-20261021/（repo 外）。
 
 ### 10-8. 弊害・戻し方・維持
@@ -171,13 +171,16 @@ tcg_condition_review_svc.py:129 を次に変える:
 - 実装は PO の実装承認後（§10-1 の約束どおり作り始める前に再確認する）。
 
 ### 10-10. 便0: 画面の計時（2026-10-21 PO「1」）
-- PO の決定: 要確認画面を開くたびに「開いてから一覧の1行目が出るまで」をブラウザで測り、サーバーの記録に1行残す。PO は普段どおり開くだけ。
+- PO が「1」で選んだ選択肢（AI 作成）の中身: 要確認画面を開くたびに「開いてから一覧の1行目が出るまで」をブラウザで測り、サーバーの記録に1行残す。PO は普段どおり開くだけ。直す前の値を先に3回分取る。
 - 材料（repo 外）: /tmp/CC報告ファイル/review-speed-bin0-recon-20261021/SUMMARY.md。事実: フロントから計測を送る既存の口は無い（sendBeacon・telemetry ほか 0件）。送信は frontend/src/lib/api.ts の api.post（POST はリトライしない :71-73）。backend の記録は平文の logging（JSON でない）で、promtail（monitoring/promtail/promtail.yml:56-87）が標準出力・標準エラーを Loki（job=containerlogs）へ送る。Prometheus は再起動で 0 に戻る（--workers 1、backend/Dockerfile:37）。
-- 測る区間: 起点＝AnalysisRulesPage の mount 時の performance.now()（認証と /me/permissions の待ちを含む。AnalysisRulesPage.tsx:100,:116-122）。終点＝NeedsReviewTabsPanel の要確認タブ（production）で最初の一覧データが入った描画の後（データが入った後の effect から requestAnimationFrame を2段）。参考に、文書の読み込み起点からの時間（performance.now() そのもの）も送る。
-- 送るのは1回だけ: そのページ表示の中で最初に要確認タブの一覧が出たときだけ（ref で1回に限る）。保存後の読み直し（NeedsReviewTabsPanel.tsx:91 の isReload）・他の人の変更による読み直し（:86）・ページ送り・タブ切替では送らない。0件でも「出た」として送る（rows=0）。送信の失敗は画面に出さず、やり直さない。
-- 受け口: 新しい POST `/api/v1/tcg/analysis-results/client-timing`（routers/tcg_analysis_review.py、Depends(require_super_admin)、auth/dependencies.py:516-544）。本文: `page_mount_ms`・`doc_ms`（0〜120000 の数）、`rows`（0〜500 の整数）、`page_size`（25/50/100 のどれか。便1 までは今の 20 も可）、`start`（"navigation" | "spa"＝文書の最初の画面か、アプリ内の移動か）。範囲外は 422。DB に書かない（新しい表・列を作らない）。
+- 起点の決め方（事実）: このページを開いたときの既定の表示はダッシュボードで（AnalysisRulesPage.tsx:101-102 の既定値 "dashboard"）、要確認のパネル（NeedsReviewTabsPanel）は左のメニューで要確認を選んだときに初めて mount される（:107-114、:164）。2026-10-20 15:30 の記録もダッシュボード系5本 → 2回目の /me/permissions → 一覧の順だった（/tmp/CC報告ファイル/review-slow-20261021/SUMMARY.md:30）。ページの mount を起点にするとダッシュボードを見ていた時間が入るため、起点はパネルの mount にする。
+- 測る区間: 起点＝NeedsReviewTabsPanel の mount 時の performance.now()（パネル側の /me/permissions の待ち NeedsReviewTabsPanel.tsx:66-67,:89 を含む）。終点＝要確認タブ（production）の一覧データが入った描画の後（データが入った後の effect から requestAnimationFrame を2段）。区間の長さを `panel_ms` とする。あわせて、終点の描画に使われたデータを取った一覧の要求1本について、送信の直前から応答の受信完了（JSON の読み取り後）までを `list_ms` とする。参考に、文書の読み込み起点からの時間（終点の performance.now() そのもの）を `doc_ms` とする。
+- 送るのは1回だけ: 1回の mount の中で、要確認タブの一覧が最初に出たときだけ（パネルの中の ref で1回に限る。メニューで離れて戻ると mount し直すので、そのときはまた1回送る＝要確認を開くたびに1回）。最初に出たデータが、読み直し（保存後 NeedsReviewTabsPanel.tsx:91 の isReload、他の人の変更 :86）の道で入った場合も、その回の最初の表示として送る（最初の取得が取り消されて読み直しで入る競合でも1行残す）。最初の表示の後の読み直し・ページ送り・タブ切替では送らない。要確認タブが出る前に確認済みタブへ移った・メニューで離れた場合は送らない。0件でも「出た」として送る（rows=0）。送信の失敗は画面に出さず、やり直さない。
+- `entry` の決め方: その文書（ブラウザの読み込み1回）の中で最初のパネル mount なら "first"、メニューで離れて戻った2回目以降なら "return"（モジュール変数で数える）。
+- 受け口: 新しい POST `/api/v1/tcg/analysis-results/client-timing`（routers/tcg_analysis_review.py、main.py:709 で /api/v1 付き登録、/tcg/analysis-results/ 配下に同じ道は無い。Depends(require_super_admin)、auth/dependencies.py:516-544）。本文: `panel_ms`・`list_ms`・`doc_ms`（0〜120000 の数）、`rows`（0〜500 の整数）、`page_size`（25/50/100 のどれか。便1 までは今の 20 も可）、`entry`（"first" | "return"）。範囲外・余計な項目は 422。DB に書かない（新しい表・列を作らない）。
 - 記録: backend のログに1行（目印 `review_timing` と上の値）。利用者のメール・名前は出さない（利用者の内部 id も出さない。PO 一人の計測で区別が要らないため）。ログの水準は、実装の前に本番 Loki で backend の logger.info の行が出ているか（例 routers/buyback_prices.py:880）を読み取りで確かめ、出ていれば info、出ていなければ warning にする（実装カードに分岐として書く）。
 - 画面の文字は増えない（i18n の対象なし）。色・部品も増えない。
 - 受入条件・検証は §10-7 便0 の行。
 - 弊害: 要確認画面を開くたびに小さな送信が1回増える（super admin だけ）。戻し方: PR の revert。
-- 便1 の①の閾値（一覧 API に割ける時間）は、便0 の3行の page_mount_ms と、同じ時刻の一覧 API のサーバー処理時間（Prometheus）の差から決めて、本節に追記する。
+- 便1 の①の閾値（一覧の取得に割ける時間）は、便0 の3行の中央値で「2.0秒 −（panel_ms − list_ms）」を求めて決め、本節に追記する（同じ行の中の2つの値の差なので、別の記録との突き合わせは要らない）。
+- 便0 の実装カードに必ず書くこと: 起点（パネルの mount）と1回だけの ref の置き場所（パネルの中）、`entry` のモジュール変数、`list_ms` を取る要求の特定（終点の描画に使われたデータの要求）、読み直しの競合の扱い（上記）、ログの水準の分岐（info / warning）、フロントのテストで api を mock している箇所に `api.post` の mock を足すこと（足りないとテストが落ちる）、受け口の pytest（403・422・ログ1行）、触らない範囲（一覧 API と既存の取得の流れは変えない）。

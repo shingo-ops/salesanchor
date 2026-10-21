@@ -81,7 +81,7 @@ PO 2026-10-18「y」×2（同じ商品の中は価値の高い順。解析の結
 
 PO 2026-10-21 の提案「投稿日の新しい順に並べて欲しい」（docs/handoff/review-speed/design.md §10-1）。
 
-- LINE 解析の結果画面のうち、要確認タブ（一覧 API に `status_tab=NEEDS_REVIEW` と `order=posted_desc` を渡す画面）だけ、並びの先頭に投稿日（source_messages.line_posted_at の新しい順）と投稿を置く。同じ投稿の中は今までどおり `result_order_sql`（群 → value_rank → 価格）の順。
+- LINE 解析の結果画面のうち、要確認タブ（一覧 API に `status_tab=NEEDS_REVIEW` と `order=posted_desc` を渡す画面）だけ、並びの先頭に投稿日（source_messages.line_posted_at の新しい順）と投稿を置く。同じ投稿の中は今までどおり `result_order_sql`（発売日 → 商品 → 状態の順位 → 状態名 → 価格、backend/app/services/tcg_result_order.py:36-42）の順。
 - `result_order_sql` 本体と、在庫表・閲覧ページ・取込進捗・GAS 在庫一覧へ送るデータ（sort_ord）の並びは変えない（ADR-1014:121）。CSV・シート・配信は `order` を渡さないので今の並びのまま。
 - 戻し方: 実装 PR を revert。
 - 設計: `docs/handoff/review-speed/design.md` §10-6。
