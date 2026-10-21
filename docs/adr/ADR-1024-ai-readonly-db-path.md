@@ -103,6 +103,18 @@ PostgreSQL の仕様の一部（ビューの持ち主の権限で行の制限が
 - 残る危険（R8）: DB のエラー文に値が載り、postgres のログから Loki に入る道は本件の範囲外。別件とする。
 - PO 承認: 原文「y」（2026-10-17）。
 
+### 改訂（失敗時の作り直し、2026-10-21）
+
+- 経緯: 移行が途中で失敗すると、EXIT trap はビューを作らずに終わっていた（「views stay dropped」）。直近300回の入れ替えで移行の失敗8回すべてで外れたまま、10/21 は約13分 AI が読めなかった。設計: [design.md](../handoff/ai-ro-restore-on-failure/design.md)。
+- Decision の「最後で作り直す」を「スクリプトの成否にかかわらず最後で作り直す」に改める。終了コードは元のまま（作成の成否で入れ替えの成否を変えない）。
+- Why: 秘密列の拒否リストは列名とカタログだけで決まり、途中まで進んだ DB に流しても同じ列が外れる。作成は元の表に ACCESS SHARE しか取らず、在庫表の読み取りを待たせない（使い捨て DB で実測）。そのため外したままにする守りの理由が無い。
+- 作成には、lock_timeout ではなく statement_timeout（既定30秒）を渡す。
+  - lock_timeout の失敗（55P03）は、1本ずつの例外処理に飲まれる。そのビューだけ欠けたまま、成功扱いになる。
+  - statement_timeout の打ち切り（57014）は WHEN others に捕まらず、作成全体が戻って警告になる（PostgreSQL 16 公式文書）。
+  - そのため結果は「全部ある」か「警告」の2つになる。ACCESS EXCLUSIVE の持ち主がいても、待ち続けない。
+- ログの文面: 失敗回の「skip ai_ro views (script failed rc=N; views stay dropped)」は「script failed rc=N; recreating ai_ro views anyway」に変わる。
+- PO 承認: テーマは「1」、成功条件の案に「確立したなら進める」（2026-10-21）。
+
 ## 関連 ADR
 
 - ADR-079: 監視用の読み取り鍵。今回の鍵とは別にする

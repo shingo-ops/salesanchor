@@ -118,29 +118,31 @@ preflight_registered_files
 # DROP / ALTER（列削除・型変更・表の作り直し）が止まるため。作成は下の EXIT trap が最後に行う。
 run_sql migrations/20261017_125900_drop_ai_ro_views.sql
 
-# ADR-1024: ai_ro ビューの作成（秘密列を除く）。スクリプトが正常終了（rc=0）したときだけ、
-# 常に最後に流す。将来の migration が末尾に追記されても、作成は常に最後になる。
-# 途中で失敗した場合はビューを外したままにする（fail-closed）。
-# 作成に失敗したら exit 1。（TOTAL は ^run_ 行を数えるため、ここでは run_sql を使わず直接流す）
+# ADR-1024: ai_ro ビューの作成（秘密列を除く）。スクリプトの成否にかかわらず、常に最後に流す。
+# 将来の migration が末尾に追記されても、作成は常に最後になる。
+# 途中で失敗した場合も作り直す（拒否リストは流した時点の列名で決まり、途中の状態にも同じ判定が当たる。ADR-1024 改訂）。
+# 作成の成否は終了コードを変えない（元の rc を返す）。待ちの上限は AI_RO_CREATE_TIMEOUT（1文ごと）。
+# （TOTAL は ^run_ 行を数えるため、ここでは run_sql を使わず直接流す）
 AI_RO_CREATE_SQL="migrations/20261017_130100_create_ai_ro_views.sql"
+AI_RO_CREATE_TIMEOUT="${AI_RO_CREATE_TIMEOUT:-30s}"
 _ai_ro_create_on_exit() {
   local rc=$?
   trap - EXIT
   if [ "${rc}" -ne 0 ]; then
-    echo ">>> [final] skip ai_ro views (script failed rc=${rc}; views stay dropped)"
-    exit "${rc}"
+    echo ">>> [final] script failed rc=${rc}; recreating ai_ro views anyway"
   fi
   echo ">>> [final] psql < ${AI_RO_CREATE_SQL}"
   if [ ! -f "${REPO_DIR}/${AI_RO_CREATE_SQL}" ]; then
-    echo "⚠️ ${AI_RO_CREATE_SQL} が見つかりません（デプロイは続行。ai_ro は外れたまま＝AI は読めない）"
-    exit 0
+    echo "⚠️ ${AI_RO_CREATE_SQL} が見つかりません（ai_ro は外れたまま＝AI は読めない）"
+    exit "${rc}"
   fi
-  # ビューは AI が読むための補助。作成に失敗しても本体のデプロイは止めず、「読めない」側に倒す
-  if ! docker exec -i "${POSTGRES}" ${PSQL} < "${REPO_DIR}/${AI_RO_CREATE_SQL}"; then
-    echo "⚠️ ai_ro views の作成に失敗（デプロイは続行。ai_ro は外れたまま＝AI は読めない）"
-    exit 0
+  # ビューは AI が読むための補助。作成に失敗しても入れ替えの成否は変えず、「読めない」側に倒す
+  # 1文ごとの上限。打ち切り（57014）は作成 SQL の WHEN others に捕まらず、全体が戻って下の警告に入る
+  if ! docker exec -e PGOPTIONS="-c statement_timeout=${AI_RO_CREATE_TIMEOUT}" -i "${POSTGRES}" ${PSQL} < "${REPO_DIR}/${AI_RO_CREATE_SQL}"; then
+    echo "⚠️ ai_ro views の作成に失敗（ai_ro は外れたまま＝AI は読めない）"
+    exit "${rc}"
   fi
-  exit 0
+  exit "${rc}"
 }
 trap _ai_ro_create_on_exit EXIT
 
