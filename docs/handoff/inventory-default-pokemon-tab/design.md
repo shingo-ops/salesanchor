@@ -42,8 +42,8 @@
   );
   ```
 - MAIN_SERIES が既に import されていることを確認する（`:288-` の Tabs で使用中）。
-- tab を「すべて」に戻す処理は無い（審査で確認: `setTab` は `:223/:292/:305` だけ、`resetAll` は tab を触らない）。InventoryView はデータ到着後に毎回作り直される（`ViewerApp.tsx:65-80, 135-139`）ので、初期 state だけで足りる。
-- `ViewerApp.tsx` の読み込み、`api.ts`、バックエンドは変えない。
+- tab を「すべて」に戻す処理は無い（審査で確認: `setTab` は `:223/:292/:305` だけ、`resetAll` は tab を触らない）。InventoryView はデータ到着後に毎回作り直される（`frontend/src/pages/viewer/ViewerApp.tsx:65-80, 135-139`）ので、初期 state だけで足りる。
+- `frontend/src/pages/viewer/ViewerApp.tsx` の読み込み、`frontend/src/pages/viewer/api.ts`、バックエンドは変えない。
 - テスト `frontend/src/pages/viewer/InventoryView.test.tsx`:
   - 追加 K1: ポケモンとワンピースの行がある data で描画 → PC のタブ「ポケモン」が aria-selected=true、表の行はポケモンだけ。スマホ（既存テストの isMobile の切り替え方に合わせる）で `viewer-tab-select` の value が「ポケモン」。
   - 追加 K2: ポケモンの行が無い data → 「すべて」が選択中・全行表示。
@@ -77,7 +77,7 @@
 - 閲覧ページ: InventoryView の初期 state だけ。URL・API・作り置き・権限に変更なし。
 - シート版: 画面の初期タブと検索用文字列を作る時機だけ。サーバー（Code.js）・シート・配信の列は変えない。
 - アプリ在庫表・バックエンド・DB・migration・deploy.yml: 変更なし。
-- 「その他」の判定・主な3つの定義は既存の1か所ずつ（閲覧 `viewerFilter.ts:227`、GAS `index.html:1003`）を使い、増やさない。
+- 「その他」の判定・主な3つの定義は既存の1か所ずつ（閲覧 `frontend/src/pages/viewer/viewerFilter.ts:227`、GAS `index.html:1003`）を使い、増やさない。
 
 ## 6. リスクと対処
 | リスク | 対処 |
@@ -97,9 +97,9 @@
 1. Sonnet: 4-1 を実装、vitest（InventoryView 全件）・build・lint・check:all を通す。4-2 の stage/prod_stage を作り編集、`node --check` 相当の構文確認（index.html の script 部分を取り出して確認）と、編集前後の diff を保存。clasp は実行しない。
 2. Opus: コード審査（APPROVE を review-code.md に記録）。
 3. PR（閲覧ページ）→ CI → マージ → deploy → K1 の配信 JS 確認。
-4. PO が `!` で台本1 `/Users/tanizawashingo/CC報告ファイル-keep/inventory-default-pokemon/po_run_test.sh` を実行（`clasp login` の案内 → permit-danger → テスト版だけ反映）。
+4. PO が `!` で台本1 （リポジトリ外: CC報告ファイル-keep/inventory-default-pokemon/po_run_test.sh） を実行（`clasp login` の案内 → permit-danger → テスト版だけ反映）。
 5. Opus: テスト版で K3〜K5、K6（旧＝版31は台本1の実行前に Opus が測っておく）。どれかが × なら本番には出さず、テスト版を版31に戻す台本を用意して止める。
-6. 全部 ○ なら PO が `!` で台本2 `po_run_prod.sh`（本番だけ反映）を実行。Opus が本番で K3・K5 を確認。
+6. 全部 ○ なら PO が `!` で台本2 （同じ場所の po_run_prod.sh）（本番だけ反映）を実行。Opus が本番で K3・K5 を確認。
 - K6 の「旧」はテスト版を反映する前に測る（反映すると旧が無くなるため）。
 
 ## 8-2. PO への説明（報告に入れること）
@@ -109,10 +109,11 @@
 - 「1秒」速くなるかはまだ確かめていない。直した後に測って伝える。
 
 ## 9. 維持の仕組み
-- 既定タブは MAIN_SERIES[0] に従うので、主な3つの並びを変えたら既定も一緒に変わる（閲覧 `viewerFilter.ts:227`、GAS `index.html:1003` の既存の相互参照コメントのとおり両方直す）。
+- 守り手: Claude Opus（設計担当）。主な3つの並びを変える設計のときに既定タブも確認する。
+- 既定タブは MAIN_SERIES[0] に従うので、主な3つの並びを変えたら既定も一緒に変わる（閲覧 `frontend/src/pages/viewer/viewerFilter.ts:227`、GAS `index.html:1003` の既存の相互参照コメントのとおり両方直す）。
 - 閲覧ページの既定は vitest K1/K2 が守る。シート版はテストの仕組みが無いため、この設計と GAS の版番号の記録（ADR-1014 の版の記録欄）で追う。
 
-## 10. 外部事例
+## 10. 外部・過去事例の参照と我々への応用
 - 該当事例は使わない。理由: 判断の根拠は本番での実測（recon C の内訳）で足り、外部の数値を当てはめると「通信量が小さい GAS」という条件が合わない。
 
 ## 11. 残件（今回やらない）

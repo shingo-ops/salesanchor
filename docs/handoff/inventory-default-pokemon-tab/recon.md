@@ -23,10 +23,10 @@ GAS ソースの基準: `/Users/tanizawashingo/CC報告ファイル-keep/invento
 ## B. 閲覧ページ /viewer
 - 既定タブ「すべて」: `frontend/src/pages/viewer/InventoryView.tsx:56` `useState(TAB_ALL)`、`TAB_ALL="all"`（`frontend/src/pages/viewer/viewerFilter.ts:10`）。
 - 主な3つの定義: `frontend/src/pages/viewer/viewerFilter.ts:227` `MAIN_SERIES = ["ポケモン","ワンピース","ドラゴンボール"]`（type_master.name_ja と照合。GAS index.html の MAIN_SERIES と相互参照コメントあり）。
-- 読み込み: `GET /api/v1/viewer/inventory` 1回で全行。サーバーは Redis の作り置き JSON を丸ごと返す（`backend/app/routers/viewer.py:234-245`、作り置き `backend/app/tasks/viewer_inventory_cache.py:72-116`）。絞り込み・並べ替えは手元（`InventoryView.tsx:96-98`）、表に渡すのは50件の slice（`:100-102`）。タブ切替で通信は起きない。
-- スマホのセレクト: `InventoryView.tsx:219-228`、value={tab}、選択肢は「すべて」＋件数順の全シリーズ（`seriesTabs` `viewerFilter.ts:213-224`）。
-- PC のタブ: `InventoryView.tsx:288-` Tabs 金型、activeKey は tab が TAB_ALL か MAIN_SERIES のときその値。
-- 既定=すべて を明示的に確かめるテストは無い（grep で該当なし）。`InventoryView.test.tsx` 全体が暗黙に全件表示を前提にしているかは未確認 → 実装時に vitest で確認する。
+- 読み込み: `GET /api/v1/viewer/inventory` 1回で全行。サーバーは Redis の作り置き JSON を丸ごと返す（`backend/app/routers/viewer.py:234-245`、作り置き `backend/app/tasks/viewer_inventory_cache.py:72-116`）。絞り込み・並べ替えは手元（`frontend/src/pages/viewer/InventoryView.tsx:96-98`）、表に渡すのは50件の slice（`:100-102`）。タブ切替で通信は起きない。
+- スマホのセレクト: `frontend/src/pages/viewer/InventoryView.tsx:219-228`、value={tab}、選択肢は「すべて」＋件数順の全シリーズ（`seriesTabs` `frontend/src/pages/viewer/viewerFilter.ts:213-224`）。
+- PC のタブ: `frontend/src/pages/viewer/InventoryView.tsx:288-` Tabs 金型、activeKey は tab が TAB_ALL か MAIN_SERIES のときその値。
+- 既定=すべて を明示的に確かめるテストは無い（grep で該当なし）。`frontend/src/pages/viewer/InventoryView.test.tsx` 全体が暗黙に全件表示を前提にしているかは未確認 → 実装時に vitest で確認する。
 - 表示時間: 【未測定】。閲覧 API はログインが必要（未ログインは 401、0.07〜0.15秒・30B、measure/api.txt）。計測用アカウントは無い（id=23 は 10/20 削除済み）。応答の大きさは件数×項目からの見積もりで約1.4〜2.4MB（非圧縮）【推測】。
 
 ## C. シート版（GAS 在庫一覧）
@@ -56,7 +56,7 @@ GAS ソースの基準: `/Users/tanizawashingo/CC報告ファイル-keep/invento
 - condition_review 結合を別名の列で代用しているため完全一致の保証は無い【未測定】。
 
 ## E. 「その他」判定の正本
-- 3か所で別々に定義: アプリ `InventoryPage.tsx:59` MAIN_TCG_CODES（code）、閲覧 `viewerFilter.ts:227` MAIN_SERIES（name_ja）、GAS `index.html:1003` MAIN_SERIES（name_ja）。共通ファイルは無い（GAS は別の配信系のため共有できない）。今回はこの定義を増やさず、既定タブは各所の MAIN_SERIES[0]（アプリは既存の定数）を使う。
+- 3か所で別々に定義: アプリ `frontend/src/pages/inventory/InventoryPage.tsx:59` MAIN_TCG_CODES（code）、閲覧 `frontend/src/pages/viewer/viewerFilter.ts:227` MAIN_SERIES（name_ja）、GAS `index.html:1003` MAIN_SERIES（name_ja）。共通ファイルは無い（GAS は別の配信系のため共有できない）。今回はこの定義を増やさず、既定タブは各所の MAIN_SERIES[0]（アプリは既存の定数）を使う。
 
 ## F. 分かったこと（設計への入力）
 1. GAS の時間の大半（外枠 2.67秒＋応答待ち 1.85秒）は Google 側。通信量は 33KB で 20ms。サーバー呼び出しを「ポケモン」「その他」に分けても、シートは毎回全行読むので応答待ちは減らず、呼び出しが1回増える。
