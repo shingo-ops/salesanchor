@@ -152,6 +152,16 @@ END
 $do$;"""
 
 
+AUDIT_CHECK = """DO $do$
+DECLARE c int;
+BEGIN
+  SELECT count(*) INTO c FROM public.audit_log WHERE changed_by = '__ACTOR__';
+  IF c <> __NA__ THEN RAISE EXCEPTION 'audit_log rows by actor=% (expected __NA__)', c; END IF;
+  RAISE NOTICE 'OK (after) audit_log rows=%', c;
+END
+$do$;"""
+
+
 def sub(t, **kw):
     t = t.replace("__SPECS__", json.dumps(SPECS, ensure_ascii=False, indent=1)).replace("__TM__", str(TYPE_MASTER_ID))
     for k, v in kw.items():
@@ -174,7 +184,7 @@ def main():
         "precheck.sql": head("precheck.sql (READ-ONLY)", "今の本番の値が想定どおりか照合。違えば止まる。") + "BEGIN READ ONLY;\n" + show() + "\n" + sub(CHECK, SIDE="before") + "\nROLLBACK;\n",
         "apply.sql": head("apply.sql (WRITES, one transaction, ends with COMMIT)", "precheck → 変更 → postcheck を同じトランザクションで。語を末尾に足す。作品 8982 の code_only_match を true に。audit_log に各1行。") + body + "COMMIT;\n",
         "dryrun.sql": head("dryrun.sql (same as apply.sql but ends with ROLLBACK)", "precheck → 変更 → postcheck を流して、最後に ROLLBACK。何も残さない。") + body + "ROLLBACK;\n",
-        "postcheck.sql": head("postcheck.sql (READ-ONLY)", "適用後の値が目標どおりか照合。") + "BEGIN READ ONLY;\n" + show() + "\n" + sub(CHECK, SIDE="after") + "\nROLLBACK;\n",
+        "postcheck.sql": head("postcheck.sql (READ-ONLY)", "適用後の値が目標どおりか照合。") + "BEGIN READ ONLY;\n" + show() + "\n" + sub(CHECK, SIDE="after") + "\n" + sub(AUDIT_CHECK, ACTOR=ACTOR_APPLY, NA=str(len(SPECS) + 1)) + "\nROLLBACK;\n",
     }
     for name, text in files.items():
         (HERE / name).write_text(text, encoding="utf-8")

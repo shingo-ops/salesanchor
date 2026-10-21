@@ -21,7 +21,7 @@
 | 対象外の商品が動かない | touched = 5 の確認が DONE 行に出る |
 | 監査が残る | apply 後に audit_log が 商品 5 行 + type_master 1 行 |
 | 悪化 0 | recon.md §5 のシミュレーション（実行前）＋再解析後の差分確認（別便） |
-| 文書に削除文がない | `grep -ci delete docs/handoff/master-keyword-fix/*` が全 0 |
+| 文書に削除文がない | `grep -ci delete docs/handoff/master-keyword-fix/*.sql`（対象は *.sql）が全 0 |
 
 ## 外部・過去事例
 - 前例: docs/handoff/deckbuild-master-fix/（直接 SQL・dryrun・precheck/postcheck の型）
