@@ -11,7 +11,7 @@ status: Proposed（設計案・設計審査済み・KGI は PO 合意 2026-10-17
 現状把握: [recon.md](./recon.md)（origin/main d6b956826 の file:line と本番の試し）
 決定の記録: [ADR-1027 案](../../adr/ADR-1027-bundle-sale-reading.md)（ADR-1021 の便2「1枚単価にそろえる」を置き換える）
 
-状態: 設計案作成済み・設計審査済み（Architect/Fable。1回目 REVISE → 指摘を反映 → 2回目 APPROVE。/tmp/CC報告ファイル/bundle-sale/review/fable-review.md・fable-review-2.md。2回目の「低」6件も反映）・KGI K1〜K6 は PO 合意（2026-10-17、PO の答え「y」）・便1 の実装カード [card-bin1.md](./card-bin1.md)・便1 #4479 本番反映済・便2 本番投入済（2026-10-17、[bin2-record.md](./bin2-record.md)）・便3 再解析 93 job 済（2026-10-17、[bin3-record.md](./bin3-record.md)、K1 PO 目視 ○（2026-10-18、PO チャット「y」）・K2 の値段は本文と未照合）・現行キーは現状維持（PO 2026-10-18 y、ADR-1027 追記）・バルク系だけの追加の形 P1・P2（§12）は設計審査済み（Opus reviewer 3回目 APPROVE・Fable 成功見込み「高」）・PO 承認済み（2026-10-21、PO の答え「1」）・便1 実装未着手。
+状態: 設計案作成済み・設計審査済み（Architect/Fable。1回目 REVISE → 指摘を反映 → 2回目 APPROVE。/tmp/CC報告ファイル/bundle-sale/review/fable-review.md・fable-review-2.md。2回目の「低」6件も反映）・KGI K1〜K6 は PO 合意（2026-10-17、PO の答え「y」）・便1 の実装カード [card-bin1.md](./card-bin1.md)・便1 #4479 本番反映済・便2 本番投入済（2026-10-17、[bin2-record.md](./bin2-record.md)）・便3 再解析 93 job 済（2026-10-17、[bin3-record.md](./bin3-record.md)、K1 PO 目視 ○（2026-10-18、PO チャット「y」）・K2 の値段は本文と未照合）・現行キーは現状維持（PO 2026-10-18 y、ADR-1027 追記）・バルク系だけの追加の形 P1・P2（§12）は設計審査済み（Opus reviewer 3回目 APPROVE・Fable 成功見込み「高」）・PO 承認済み（2026-10-21、PO の答え「1」）・便1 実装済み（この PR）・便2 未着手。
 
 ---
 
@@ -203,7 +203,7 @@ PO 承認: 2026-10-21、PO の答え「1」（既存の延長として進め、8
 ### 12-4. 便1 で触るファイル（ほかは触らない）
 - backend/app/services/v102_bundle_svc.py: `detect_bundle(..., bulk_shapes: bool = False)`。:128 の後に `if bulk_shapes: found += _find_bulk_candidates(full, word_to_canonical, set_words, quantity)`。`_bulk_patterns`（lru_cache・`_patterns` と同じ語の作り方）と `_find_bulk_candidates` を足す。説明文 :4 に「バルク系だけ P1・P2 も見る」を足す。
 - backend/app/services/line_analysis_v102_svc.py: `_apply_bundle` に `bulk_shapes` を足して渡す。:1140 を `pairs` と zip し、`bulk_shapes=item.get("product_category") == PRODUCT_KUBUN_BULK`。
-- scripts/dev/bundle_replay.py: `_BULK_KUBUN = "バルク系"`（product_first を import しない。一致はテストで固定）。:94 に `bulk_shapes=(r.get("kubun_type") or "") == _BULK_KUBUN`。集計をバルク系／それ以外に分け、False と True で結果が違う行の数を出す。
+- scripts/dev/bundle_replay.py: `_BULK_KUBUN = "バルク系"`（product_first を import しない。一致はテストで固定）。:94 に `bulk_shapes=(r.get("kubun_type") or "") == _BULK_KUBUN`。集計をバルク系／それ以外に分け、False と True で結果が違う行の数を出す。説明文 :1-13 に、バルク系は bulk_shapes=True で読むことを 1 行足す。
 - backend/tests/test_v102_bundle.py: P1・P2（セットあり→決まる／セット無し→None）・bulk_shapes=False→None・既存の形と混ざる→決まらない・誤り #9・#81・#42 の形→None・`_BULK_KUBUN == PRODUCT_KUBUN_BULK`。単位名の直書き検査（:90-95）は今のまま通る。
 - backend/tests/test_v102_bulk_price.py: `_write_results` 段で、バルク系の P1 の作り文→bundle_size=100・Piece・値段と数量は不変・review_reasons None。同じ本文で箱系→bundle_size None。
 - 触らない: v102_bulk_price_svc.py・配信 SQL・マスタ・migrations・frontend。

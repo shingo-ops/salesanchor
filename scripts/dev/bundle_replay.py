@@ -10,6 +10,7 @@
   ALIASES_Q4.tsv 単位の別名マスタ（列 unit_id・alias_text・lang）
   OUT_DIR       rows.tsv と summary.txt を書く
 
+kubun_type がバルク系の行は detect_bundle を bulk_shapes=True で読む（design.md §12）。summary.txt はバルク系とそれ以外に分け、追加の形で変わった行を数える。
 通信・DB 書き込みはしない。データ（本番の本文）はリポジトリに置かない。判定の作りは v102_bundle_svc に 1 か所だけ（ここでは持たない）。
 """
 from __future__ import annotations
@@ -32,6 +33,7 @@ from app.services.v102_bundle_svc import (  # noqa: E402
     split_unit_words,
 )
 
+_BULK_KUBUN = "バルク系"  # = gemini_raw_copy_v102_product_first.PRODUCT_KUBUN_BULK（:49）。台本は純関数だけを import するので写し、一致は test_v102_bundle.py で固定
 _BODY_SEPARATOR = " / "
 _SET_PRICE_BASIS = re.compile(r"V102:bulk:set:(\d+)")
 _VERDICT = {KIND_DECIDED: "decided", KIND_UNVERIFIED: "unverified", None: "none"}
@@ -79,6 +81,10 @@ def count_unknown_words(rows: list[dict[str, str]], unit_words: dict[str, str], 
     return counter
 
 
+def _signature(res: object) -> tuple:
+    return (None, None, None) if res is None else (res.kind, res.n, res.unit)  # type: ignore[attr-defined]
+
+
 def main(argv: list[str]) -> int:
     if len(argv) != 5:
         print(__doc__)
@@ -91,27 +97,37 @@ def main(argv: list[str]) -> int:
     results = []
     for r in rows:
         block = r["body"].replace(_BODY_SEPARATOR, "\n")
-        res = detect_bundle(block, unit_words, set_words, (r["price_normalized"] or "").strip() or None, read_quantity(r) or None)
-        results.append((r, res, hashlib.md5(r["body"].encode("utf-8")).hexdigest()[:8]))
+        price = (r["price_normalized"] or "").strip() or None
+        quantity = read_quantity(r) or None
+        is_bulk = (r.get("kubun_type") or "") == _BULK_KUBUN
+        before = detect_bundle(block, unit_words, set_words, price, quantity, bulk_shapes=False)  # 今の規則
+        res = detect_bundle(block, unit_words, set_words, price, quantity, bulk_shapes=is_bulk)  # 新しい規則
+        changed = _signature(before) != _signature(res)
+        results.append((r, res, hashlib.md5(r["body"].encode("utf-8")).hexdigest()[:8], is_bulk, changed))
     with open(out / "rows.tsv", "w", encoding="utf-8") as f:
-        f.write("item_id\tjob_id\tmd5_8\t判定\tN\t単位canonical\t理由\tbody_md5\n")
-        for r, res, md5 in results:
+        f.write("item_id\tjob_id\tmd5_8\t判定\tN\t単位canonical\t理由\tbody_md5\tkubun_type\tbulk_shapes_changed\n")
+        for r, res, md5, _is_bulk, changed in results:
             kind = _VERDICT[res.kind if res else None]
             n = "" if res is None or res.n is None else str(res.n)
             unit = "" if res is None or res.unit is None else res.unit
-            f.write("\t".join([r["item_id"], r["job_id"], r["md5_8"], kind, n, unit, res.reason if res else "当たりなし", md5]) + "\n")
+            f.write("\t".join([r["item_id"], r["job_id"], r["md5_8"], kind, n, unit, res.reason if res else "当たりなし", md5, r.get("kubun_type") or "", "1" if changed else "0"]) + "\n")
     lines = ["# bundle_replay summary", "", "入力: %d 行" % len(rows),
-             "単位の語（Set を除く）: %d 語。Set の語: %s" % (len(unit_words), sorted(set_words)), "",
-             "## 判定ごとの件数", "|判定|行数|本文md5の種数|job数|", "|---|---|---|---|"]
-    for kind in ("decided", "unverified", "none"):
-        picked = [x for x in results if _VERDICT[x[1].kind if x[1] else None] == kind]
-        lines.append("|%s|%d|%d|%d|" % (kind, len(picked), len({x[2] for x in picked}), len({x[0]["job_id"] for x in picked})))
+             "単位の語（Set を除く）: %d 語。Set の語: %s" % (len(unit_words), sorted(set_words)), ""]
+    for title, want_bulk in (("バルク系", True), ("それ以外", False)):
+        lines += ["## 判定ごとの件数（%s）" % title, "|判定|行数|本文md5の種数|job数|", "|---|---|---|---|"]
+        for kind in ("decided", "unverified", "none"):
+            picked = [x for x in results if x[3] == want_bulk and _VERDICT[x[1].kind if x[1] else None] == kind]
+            lines.append("|%s|%d|%d|%d|" % (kind, len(picked), len({x[2] for x in picked}), len({x[0]["job_id"] for x in picked})))
+        lines.append("")
+    changed_rows = [x for x in results if x[4]]
+    lines.append("## バルク系だけの追加の形で変わった行: %d 行（うちバルク系以外 %d 行）" % (len(changed_rows), sum(1 for x in changed_rows if not x[3])))
+    lines.append("")
     lines += ["", "## 参考: N＋別名に無い語＋まとめの語（判定には使わない・新しい書き方は人が見る）"]
     unknown = count_unknown_words(rows, unit_words, set_words)
     lines.append("合計 %d 行" % sum(unknown.values()))
     lines += ["- %s: %d" % (w, n) for w, n in unknown.most_common()]
     (out / "summary.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
-    print("rows=%d decided=%d unverified=%d none=%d" % (len(results), *(sum(1 for x in results if _VERDICT[x[1].kind if x[1] else None] == k) for k in ("decided", "unverified", "none"))))
+    print("rows=%d decided=%d unverified=%d none=%d bulk_shapes_changed=%d" % (len(results), *(sum(1 for x in results if _VERDICT[x[1].kind if x[1] else None] == k) for k in ("decided", "unverified", "none")), len(changed_rows)))
     return 0
 
 
