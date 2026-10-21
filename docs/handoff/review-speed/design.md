@@ -155,10 +155,10 @@ tcg_condition_review_svc.py:129 を次に変える:
 ### 10-7. 便の分け方と受入条件
 | 便 | 中身 | 受入条件（○×） | 検証方法 |
 |---|---|---|---|
-| 便0 | KGI-3 の基準値を取る（計り方は §10-9 の PO 決定待ち） | 変更前の「開いてから一覧の1行目まで」が3回以上記録される | 決まった計り方で |
+| 便0 | 画面に計時を仕込む（§10-10）。入れた後、変更前の値を取る | ①要確認画面を開くたびに1回だけ、計時の1行が本番の記録に残る ②保存後の読み直し・他の人の変更による読み直しでは残らない ③PO が3回開いて3行そろう（これが KGI-3 の変更前の値）④super admin 以外は受け口が 403 | ①②③ 本番 Loki で目印の行を数える ④ pytest |
 | 便1 | S1〜S3 ＋ §10-5 の画面（要確認タブのみ: 24時間ボタン・新しい順・25/50/100・投稿日の表示）＋API の新しい引数（既定は従来） | ①既定表示の一覧 API のサーバー処理時間が 1.5秒以下（3回の中央値。2.0秒から便0 で測る一覧の前後の時間を引いた値で、便0 の後に確定する）②新しい道（24時間・25/50/100件）と、同じ24時間窓・同じ並びを足した旧3本とで、件数・仕入元・行の中身と順番が一致（100件で窓内の全行を比べる）③絞りを外した新しい道（25/50/100件、全ページ）と、絞りなしの旧3本とで件数・仕入元・行の中身が一致（順番だけ新しい順）④CSV・シートの sha256 が変更前と一致 ⑤CSV・シート・配信・他タブ・確認済みタブの SQL が変わらない（テストで固定）⑥新しい道の後続の問い合わせに jit=off が残らない（テストで current_setting を確かめる、PostgreSQL のテスト）⑦生 select・直値色・ハードコード文字列が0（CI の UI ガバナンス・i18n 検査） | ① Prometheus ②③ 本番 reader で旧形と新形を比べる ④ §5 と同じ方式 ⑤⑥⑦ pytest・vitest・CI |
 | 便2 | S4 圧縮 | 一覧 API の送信バイト（nginx の bytes）が変更前（約132KB/20行）より小さい・SSE の3本が切れない | 本番 nginx ログ・SSE の接続ログ |
-| 判定 | KGI-3 | 開いてから一覧の1行目まで 2.0秒以内（3回の中央値） | 便0 と同じ計り方。超えたら S5 を設計 |
+| 判定 | KGI-3 | 開いてから一覧の1行目まで 2.0秒以内（PO が開いた3回の中央値） | 便0 の計時の行（page_mount_ms）。超えたら S5 を設計 |
 - 実装カードには、S1〜S3 の変更箇所の file:line・変更前後のコード・引数の範囲チェック・追加/修正するテスト（SQL 形を固定する test_tcg_analysis_review.py:223-253、test_tcg_condition_review.py:681-692,:946-976、test_tcg_condition_review_fenced.py:27-41、test_tcg_result_order.py:367-370、test_v102_human_decisions_pg.py:279-303,:437-445 は今の道で通り続けること。フロントの NeedsReviewTabsPanel*.test.tsx、特に drawer.test.tsx:115 の呼び出し回数）・触らない範囲を書く。材料: /tmp/CC報告ファイル/review-speed-bin1-recon-20261021/（repo 外）。
 
 ### 10-8. 弊害・戻し方・維持
@@ -167,5 +167,17 @@ tcg_condition_review_svc.py:129 を次に変える:
 - 維持: F3 形と JIT なしの理由はコードのコメントとテストに残す。KGI-3 は便ごとに本番で測り、本節に追記する。
 
 ### 10-9. 未解決
-- KGI-3 の計り方（PO 決定待ち）。事実: 本番向け Playwright（tests/qa-smoke/、playwright.config.ts:27）の利用者は tenant_006 の admin/staff/viewer で super admin ではなく、smoke 用トークンは super admin だと 401（ADR-1017、auth/dependencies.py:151-170）。storageState の仕組みは repo に無い。画面側の描画時間を記録する仕組み（web-vitals・performance.mark・RUM）も無い。材料 /tmp/CC報告ファイル/review-speed-bin1-recon-20261021/kgi3_method.md。
+- （2026-10-21 PO「1」で決定: 画面に計時を仕込む。§10-10）KGI-3 の計り方の検討材料:事実: 本番向け Playwright（tests/qa-smoke/、playwright.config.ts:27）の利用者は tenant_006 の admin/staff/viewer で super admin ではなく、smoke 用トークンは super admin だと 401（ADR-1017、auth/dependencies.py:151-170）。storageState の仕組みは repo に無い。画面側の描画時間を記録する仕組み（web-vitals・performance.mark・RUM）も無い。材料 /tmp/CC報告ファイル/review-speed-bin1-recon-20261021/kgi3_method.md。
 - 実装は PO の実装承認後（§10-1 の約束どおり作り始める前に再確認する）。
+
+### 10-10. 便0: 画面の計時（2026-10-21 PO「1」）
+- PO の決定: 要確認画面を開くたびに「開いてから一覧の1行目が出るまで」をブラウザで測り、サーバーの記録に1行残す。PO は普段どおり開くだけ。
+- 材料（repo 外）: /tmp/CC報告ファイル/review-speed-bin0-recon-20261021/SUMMARY.md。事実: フロントから計測を送る既存の口は無い（sendBeacon・telemetry ほか 0件）。送信は frontend/src/lib/api.ts の api.post（POST はリトライしない :71-73）。backend の記録は平文の logging（JSON でない）で、promtail（monitoring/promtail/promtail.yml:56-87）が標準出力・標準エラーを Loki（job=containerlogs）へ送る。Prometheus は再起動で 0 に戻る（--workers 1、backend/Dockerfile:37）。
+- 測る区間: 起点＝AnalysisRulesPage の mount 時の performance.now()（認証と /me/permissions の待ちを含む。AnalysisRulesPage.tsx:100,:116-122）。終点＝NeedsReviewTabsPanel の要確認タブ（production）で最初の一覧データが入った描画の後（データが入った後の effect から requestAnimationFrame を2段）。参考に、文書の読み込み起点からの時間（performance.now() そのもの）も送る。
+- 送るのは1回だけ: そのページ表示の中で最初に要確認タブの一覧が出たときだけ（ref で1回に限る）。保存後の読み直し（NeedsReviewTabsPanel.tsx:91 の isReload）・他の人の変更による読み直し（:86）・ページ送り・タブ切替では送らない。0件でも「出た」として送る（rows=0）。送信の失敗は画面に出さず、やり直さない。
+- 受け口: 新しい POST `/api/v1/tcg/analysis-results/client-timing`（routers/tcg_analysis_review.py、Depends(require_super_admin)、auth/dependencies.py:516-544）。本文: `page_mount_ms`・`doc_ms`（0〜120000 の数）、`rows`（0〜500 の整数）、`page_size`（25/50/100 のどれか。便1 までは今の 20 も可）、`start`（"navigation" | "spa"＝文書の最初の画面か、アプリ内の移動か）。範囲外は 422。DB に書かない（新しい表・列を作らない）。
+- 記録: backend のログに1行（目印 `review_timing` と上の値）。利用者のメール・名前は出さない（利用者の内部 id も出さない。PO 一人の計測で区別が要らないため）。ログの水準は、実装の前に本番 Loki で backend の logger.info の行が出ているか（例 routers/buyback_prices.py:880）を読み取りで確かめ、出ていれば info、出ていなければ warning にする（実装カードに分岐として書く）。
+- 画面の文字は増えない（i18n の対象なし）。色・部品も増えない。
+- 受入条件・検証は §10-7 便0 の行。
+- 弊害: 要確認画面を開くたびに小さな送信が1回増える（super admin だけ）。戻し方: PR の revert。
+- 便1 の①の閾値（一覧 API に割ける時間）は、便0 の3行の page_mount_ms と、同じ時刻の一覧 API のサーバー処理時間（Prometheus）の差から決めて、本節に追記する。
