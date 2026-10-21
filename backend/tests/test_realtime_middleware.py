@@ -60,7 +60,10 @@ async def _post(app, path, headers=None):
 
 
 async def _drain():
-    await asyncio.gather(*list(mw._pending))
+    # mw._pending はモジュール共通。同じプロセスで先に走った別の試験（TestClient 等、別のイベントループ）が
+    # 残した task が混ざるので、今のループの task だけを待つ（別ループの task を gather すると ValueError）
+    loop = asyncio.get_running_loop()
+    await asyncio.gather(*[t for t in list(mw._pending) if t.get_loop() is loop])
 
 
 async def test_2xx_sends_and_4xx_does_not(monkeypatch):
@@ -89,6 +92,50 @@ async def test_origin_from_header_only_when_valid(monkeypatch):
     await _post(app, GLOBAL_PATH, {"X-Client-Id": "a" * 65})
     await _drain()
     assert [s[3] for s in sent] == ["abc-123", None, None]
+
+
+INV_PATH = "/inv"
+
+
+def _make_inventory_app(monkeypatch, sent):
+    app = _make_app(monkeypatch, sent)
+    monkeypatch.setattr(mw, "INVENTORY_SIGNAL_ROUTES", frozenset({("POST", INV_PATH), ("POST", GLOBAL_PATH)}))
+
+    @app.post(INV_PATH)
+    async def inv(fail: bool = False):
+        if fail:
+            raise HTTPException(400, "bad")
+        return {"ok": True}
+
+    return app
+
+
+async def test_inventory_route_2xx_sends_shared_and_4xx_does_not(monkeypatch):
+    sent = []
+    app = _make_inventory_app(monkeypatch, sent)
+    assert (await _post(app, INV_PATH)).status_code == 200
+    assert (await _post(app, INV_PATH + "?fail=true")).status_code == 400
+    await _drain()
+    assert sent == [("tcg.inventory", "shared", None, None)]
+
+
+async def test_route_in_both_tables_sends_review_and_inventory(monkeypatch):
+    sent = []
+    app = _make_inventory_app(monkeypatch, sent)
+    await _post(app, GLOBAL_PATH)
+    await _drain()
+    assert sorted(sent) == sorted([("tcg.review", SCOPE_GLOBAL, None, None), ("tcg.inventory", "shared", None, None)])
+
+
+async def test_inventory_signal_has_no_origin_but_review_keeps_it(monkeypatch):
+    sent = []
+    app = _make_inventory_app(monkeypatch, sent)
+    await _post(app, INV_PATH, {"X-Client-Id": "abc-123"})
+    await _post(app, GLOBAL_PATH, {"X-Client-Id": "abc-123"})
+    await _drain()
+    origins = {s[0]: s[3] for s in sent}
+    assert origins == {"tcg.inventory": None, "tcg.review": "abc-123"}
+    assert [s[3] for s in sent if s[0] == "tcg.inventory"] == [None, None]
 
 
 async def test_get_and_unlisted_routes_do_not_send(monkeypatch):
@@ -133,6 +180,15 @@ def test_global_signal_only_to_super_admin():
     hub.dispatch("rt:global", '{"topic":"tcg.review","origin":"o1"}')
     assert normal.queue.qsize() == 0
     assert sa.queue.get_nowait() == {"topic": "tcg.review", "origin": "o1"}
+
+
+def test_shared_signal_to_every_connection():
+    hub = RealtimeHub()
+    t1, t2, sa = _conn(1), _conn(2), _conn(1, sa=True)
+    hub._conns.update({t1, t2, sa})
+    hub.dispatch("rt:shared", '{"topic":"tcg.inventory","origin":null}')
+    for c in (t1, t2, sa):
+        assert c.queue.get_nowait() == {"topic": "tcg.inventory", "origin": None}
 
 
 def test_invalid_payload_is_ignored():

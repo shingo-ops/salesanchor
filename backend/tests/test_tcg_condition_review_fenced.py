@@ -26,7 +26,7 @@ def _c3(sql: str) -> str:
 def test_default_is_unfenced_and_unchanged():
     base = review_joins(schema="tcg")
     assert review_joins(schema="tcg", fenced=False) == base
-    assert base.count("OFFSET 0") == 2  # コメント内1 + cr_data の1（従来どおり）
+    assert base.count("OFFSET 0") == 3  # コメント内1 + cr_data の1 + cr_shime の1
     assert "cr_ei" not in base and "cr_js" not in base
     assert "to_jsonb(ei)->" in base
 
@@ -38,7 +38,7 @@ def test_fenced_matches_experiment_c3():
 
 def test_fenced_structure():
     sql = review_joins(schema="tcg", fenced=True)
-    assert sql.count("OFFSET 0") == 2 + 5 + 2  # 既存2 + 5本 + cr_ei + cr_js
+    assert sql.count("OFFSET 0") == 3 + 5 + 2  # 既存3 + 5本 + cr_ei + cr_js
     assert "to_jsonb(ei)->" not in sql
     assert sql.count("cr_js.j_") >= 5
     assert "cr_ei.j->" in sql

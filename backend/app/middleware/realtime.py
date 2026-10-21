@@ -7,7 +7,12 @@ import re
 from typing import Optional
 
 from app.realtime.publisher import publish_change
-from app.realtime.topics import WRITE_ROUTE_TOPICS
+from app.realtime.topics import (
+    INVENTORY_SIGNAL_ROUTES,
+    TASK_TOPICS,
+    TOPIC_TCG_INVENTORY,
+    WRITE_ROUTE_TOPICS,
+)
 
 _WRITE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 _CLIENT_ID_RE = re.compile(r"^[A-Za-z0-9-]{1,64}$")
@@ -52,18 +57,30 @@ class RealtimeSignalMiddleware:
             return
         route = scope.get("route")
         route_path = getattr(route, "path", None)
-        entry = WRITE_ROUTE_TOPICS.get((scope["method"], route_path))
-        if entry is None:
+        key = (scope["method"], route_path)
+        entry = WRITE_ROUTE_TOPICS.get(key)
+        inventory = key in INVENTORY_SIGNAL_ROUTES
+        if entry is None and not inventory:
             return
-        topic, sig_scope = entry
-        tenant_id = None
-        if sig_scope == "tenant":
-            tenant_id = (scope.get("state") or {}).get("rt_tenant_id")
-            if tenant_id is None:
-                return
         origin = None
         for k, v in scope.get("headers", []):
             if k == b"x-client-id":
                 origin = parse_origin(v.decode("latin-1"))
                 break
-        _spawn(publish_change(topic, sig_scope, tenant_id=tenant_id, origin=origin))
+        if entry is not None:
+            topic, sig_scope = entry
+            tenant_id = None
+            if sig_scope == "tenant":
+                tenant_id = (scope.get("state") or {}).get("rt_tenant_id")
+            if sig_scope != "tenant" or tenant_id is not None:
+                _spawn(publish_change(topic, sig_scope, tenant_id=tenant_id, origin=origin))
+        if inventory:
+            # 全接続に届く合図なので origin は載せない（ADR-1016 改訂 2026-10-19）
+            _spawn(
+                publish_change(
+                    TOPIC_TCG_INVENTORY,
+                    TASK_TOPICS[TOPIC_TCG_INVENTORY],
+                    tenant_id=None,
+                    origin=None,
+                )
+            )

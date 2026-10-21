@@ -1,0 +1,40 @@
+# ADR-1024 便3a: AI 用「本番 DB を読むだけの道」の実行場所。
+# 本体の docker-compose.yml は変えない（別ファイル）。
+# 固定コマンド（便3b で authorized_keys に入れる）:
+#   docker compose -f <絶対パス>/docker-compose.ai-reader.yml run --rm -T --no-deps ai-reader
+# 渡す環境変数は AI_READER_DATABASE_URL の 1 つだけ。
+# AUDIT は /dev/log → auth.log → Loki。結果は残さない（logging none）。マウントはこのソケット 1 本だけ（ADR-1024 Decision 3 改訂）。
+# DATABASE_URL / ADMIN_DATABASE_URL / METADATA_FERNET_KEY は渡さない（env_file も使わない）。
+name: astro-webapp
+
+services:
+  ai-reader:
+    # backend と同じイメージ（astro-webapp-backend）。無いときだけ ./backend から作る。
+    build: ./backend
+    image: astro-webapp-backend
+    command: ["python", "-m", "app.ops.readonly_query"]
+    environment:
+      - AI_READER_DATABASE_URL=${AI_READER_DATABASE_URL:?AI_READER_DATABASE_URL is required}
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 256m
+    restart: "no"
+    logging:
+      driver: "none"
+    volumes:
+      - type: bind
+        source: /dev/log
+        target: /dev/log
+        bind:
+          create_host_path: false
+    stdin_open: true
+    networks:
+      - backnet
+
+networks:
+  backnet:
+    external: true
+    name: astro-webapp_backnet

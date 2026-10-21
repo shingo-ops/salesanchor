@@ -23,3 +23,5 @@ export const Default: Story = {};
 export const Narrow: Story = { args: { gap: '1' } };
 
 export const Wide: Story = { args: { gap: '6' } };
+
+export const Row: Story = { args: { direction: 'row', gap: '2' } };

@@ -1067,10 +1067,19 @@ def _apply_f3(
     return new_roles, fixes
 
 
+_SOLD_OUT_SENTENCE_TAIL = r"(?:しました|しております|です|となりました|になりました|致しました|いたしました)?[\s。、.,!]*"
+
+
+def _is_sold_out_sentence(text: str, ctx: V101Context) -> bool:
+    """完売の語だけの行（語＋丁寧な言い回し＋句読点。例「完売しました。」）。余白行の疑いにしない（design.md §13-3 B）。"""
+    stripped = _nfkc(text).strip().lower()
+    return any(w and re.fullmatch(re.escape(_nfkc(w).lower()) + _SOLD_OUT_SENTENCE_TAIL, stripped) for w in ctx.sold_out_words)
+
+
 def _apply_f5(
-    items: list[dict], roles: list[dict[int, str]],
+    items: list[dict], roles: list[dict[int, str]], lines: list[str], ctx: V101Context,
 ) -> tuple[list[dict[int, str]], dict[int, list[dict]], list[int]]:
-    """F5 最後の price_line より後ろの行で、役割が名前のものは名前に使わない。戻り値の最後は possible_footer_line。"""
+    """F5 最後の price_line より後ろの行で、役割が名前のものは名前に使わない。戻り値の最後は possible_footer_line（完売の語だけの行は除く）。"""
     last_price_line = max(it["price_line"] for it in items)
     new_roles: list[dict[int, str]] = []
     fixes: dict[int, list[dict]] = {}
@@ -1080,7 +1089,8 @@ def _apply_f5(
         for n in item["lines"]:
             if n > last_price_line and role_map[n] == ROLE_NAME:
                 updated[n] = ROLE_IGNORED
-                footer.add(n)
+                if not _is_sold_out_sentence(lines[n - 1], ctx):
+                    footer.add(n)
                 fixes.setdefault(i, []).append(_fix("F5", n, "最後の price_line より後ろの行を名前に使わない"))
         new_roles.append(updated)
     return new_roles, fixes, sorted(footer)
@@ -1214,6 +1224,7 @@ def _apply_soldout_inherit(
             **row,
             "soldout_targets": [{
                 "product_id": d.product_id, "condition_id": d.condition_id, "ref_message_id": d.ref_message_id, "ref_line": d.ref_line,
+                "unit_id": d.unit_id, "unit_canonical": d.unit_canonical,
             }],
             "soldout_target_basis": CONDITION_BASIS_SOLDOUT_INHERIT,
         } if (d := decisions.get(i)) is not None else row
@@ -1232,7 +1243,10 @@ def _soldout_ref_row(built: dict, decision: SoldoutRefDecision) -> dict:
     }
     if decision.targets:
         row["soldout_targets"] = [
-            {"product_id": t.product_id, "condition_id": t.condition_id, "ref_message_id": t.ref_message_id, "ref_line": t.ref_line}
+            {
+                "product_id": t.product_id, "condition_id": t.condition_id, "ref_message_id": t.ref_message_id, "ref_line": t.ref_line,
+                "unit_id": t.unit_id, "unit_canonical": t.unit_canonical,
+            }
             for t in decision.targets
         ]
     return row
@@ -1355,7 +1369,7 @@ def _extract_v102(
     items, f1_fixes = ((items, {}) if gemini_trust else _apply_f1(items, assign_roles(items, lines, ctx), lines, ctx))
     roles = assign_roles(items, lines, ctx)
     roles, f3_fixes = _apply_f3(items, roles, lines, ctx)
-    name_roles, f5_fixes, footer_lines = _apply_f5(items, roles)
+    name_roles, f5_fixes, footer_lines = _apply_f5(items, roles, lines, ctx)
     owners = {it["price_line"]: it for it in items}
     shared = _shared_line_numbers(items)
     f2 = _f2_prefixes(items, name_roles, lines, owners, shared, ctx)

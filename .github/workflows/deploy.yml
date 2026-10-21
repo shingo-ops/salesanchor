@@ -58,6 +58,24 @@ jobs:
               - 'scripts/run_all_migrations.sh'
               - 'scripts/migrate_*.py'
 
+      - name: Check previous deploy completed
+        id: gate
+        env:
+          GH_TOKEN: ${{ secrets.PIPELINE_PAT }}
+          BEFORE: ${{ github.event.before }}
+          C_MIG: ${{ steps.changes.outputs.migrations }}
+          C_NGX: ${{ steps.changes.outputs.nginx }}
+          C_DB: ${{ steps.changes.outputs.db_migrations }}
+        run: |
+          last=$(gh api "repos/${{ github.repository }}/actions/workflows/deploy.yml/runs?branch=main&event=push&status=success&per_page=1" --jq '.workflow_runs[0].head_sha // ""' 2>/dev/null || echo "")
+          if [ -n "$last" ] && [ "$last" = "$BEFORE" ]; then
+            echo "前回デプロイは成功（${last:0:7}）→ 差分どおり"
+            { echo "migrations=$C_MIG"; echo "nginx=$C_NGX"; echo "db_migrations=$C_DB"; } >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::前回の成功デプロイ(${last:0:7})が push 直前(${BEFORE:0:7})と違う／取れない → 全部実行"
+            { echo "migrations=true"; echo "nginx=true"; echo "db_migrations=true"; } >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Setup Node.js
         uses: actions/setup-node@v5
         with:
@@ -170,12 +188,12 @@ jobs:
       # git pull / docker compose の前に取得して万一のロールバック保険とする。
       # scripts/backup.sh が /home/ubuntu/backups/postgres/ に .sql.gz を生成。
       # PO承認（2026-10-03）: DBマイグレーションを含むデプロイのみ実行する
-      # （steps.changes.outputs.db_migrations が 'true' の場合のみ。
+      # （steps.gate.outputs.db_migrations が 'true' の場合のみ。
       #   `migrations` フィルタは backend/** 等も含み広すぎるため、
       #   実際に DB を変更しうるパスだけの `db_migrations` フィルタを使う）。
       # ============================================
       - name: Pre-deploy DB backup
-        if: steps.changes.outputs.db_migrations == 'true'
+        if: steps.gate.outputs.db_migrations == 'true'
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -250,6 +268,7 @@ jobs:
             #   - quoted heredoc (`<<'ENV_EOF'`) でシェル変数展開を抑止し、
             #     Secret 値をそのまま literal text として書き込む。
             #     `${{ secrets.X }}` 自体は GitHub Actions が SSH 送信前に展開する。
+            #   - 値は単一引用符で囲む（compose も source も文字どおり読む。件1 design）
             #   - Phase 1-D Sprint 1: METADATA_FERNET_KEY 紛失は DB token を永久に
             #     復号不能化するリスクが極めて高い。GitHub Secrets と別の安全な
             #     バックアップの二重保管必須。ローテーション手順は
@@ -263,6 +282,7 @@ jobs:
               -e '/^METADATA_FERNET_KEY=/d' \
               -e '/^GEMINI_API_KEY=/d' \
               -e '/^ADMIN_NOTIFICATION_DISCORD_WEBHOOK=/d' \
+              -e '/^ANALYSIS_ERROR_REPORT_DISCORD_WEBHOOK=/d' \
               -e '/^GOOGLE_CALENDAR_CLIENT_ID=/d' \
               -e '/^GOOGLE_CALENDAR_CLIENT_SECRET=/d' \
               -e '/^GOOGLE_CALENDAR_REDIRECT_URI=/d' \
@@ -289,9 +309,9 @@ jobs:
               -e '/^AUTH_VIEWER_JWT_SECRET=/d' \
               -e '/^OPS_API_TOKEN=/d' \
               -e '/^OPS_INGEST_TOKEN=/d' \
+              -e '/^ERROR_REPORT_AGENT_TOKEN=/d' \
               -e '/^COMPOSE_FILE=/d' \
               .env
-            rm -f .env.bak
             # YAML `|` ブロックの共通インデント (12 スペース) はパース時に自動除去される。
             # したがって heredoc 本文の各行は実行時に行頭スペースなしで届く。
             # Sprint 4 (F4): GEMINI_API_KEY / ADMIN_NOTIFICATION_DISCORD_WEBHOOK は
@@ -300,42 +320,55 @@ jobs:
             #   parsed_rule_only に graceful degrade、AC4.5）。
             # ADR-1013 便3: メール送信（mail_config.py が読む）と再設定の送信許可。未登録の Secret は空文字＝送らない
             # ADR-1019 段2: 閲覧者のトークンの鍵（viewer_tokens.py が読む）。アプリの鍵 AUTH_JWT_SECRET とは別の値
-            cat >> .env <<'ENV_EOF'
-            META_VERIFY_TOKEN=${{ secrets.META_VERIFY_TOKEN }}
-            META_APP_SECRET=${{ secrets.META_APP_SECRET }}
-            META_APP_ID=${{ secrets.META_APP_ID }}
-            META_OAUTH_REDIRECT_URI=${{ secrets.META_OAUTH_REDIRECT_URI }}
-            METADATA_FERNET_KEY=${{ secrets.METADATA_FERNET_KEY }}
-            GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
-            ADMIN_NOTIFICATION_DISCORD_WEBHOOK=${{ secrets.ADMIN_NOTIFICATION_DISCORD_WEBHOOK }}
-            GOOGLE_CALENDAR_CLIENT_ID=${{ secrets.GOOGLE_CALENDAR_CLIENT_ID }}
-            GOOGLE_CALENDAR_CLIENT_SECRET=${{ secrets.GOOGLE_CALENDAR_CLIENT_SECRET }}
-            GOOGLE_CALENDAR_REDIRECT_URI=${{ secrets.GOOGLE_CALENDAR_REDIRECT_URI }}
-            DISCORD_BOT_TOKEN=${{ secrets.DISCORD_BOT_TOKEN }}
-            GOOGLE_DRIVE_CLIENT_ID=${{ secrets.GOOGLE_DRIVE_CLIENT_ID }}
-            GOOGLE_DRIVE_CLIENT_SECRET=${{ secrets.GOOGLE_DRIVE_CLIENT_SECRET }}
-            GOOGLE_DRIVE_REDIRECT_URI=${{ secrets.GOOGLE_DRIVE_REDIRECT_URI }}
-            SMOKE_SERVICE_TOKEN=${{ secrets.FEDEX_SMOKE_API_TOKEN }}
-            SMOKE_SERVICE_EMAIL=${{ secrets.FEDEX_SMOKE_USER_EMAIL }}
-            REVIEW_MAIL_IMAP_HOST=${{ secrets.REVIEW_MAIL_IMAP_HOST }}
-            REVIEW_MAIL_IMAP_PORT=${{ secrets.REVIEW_MAIL_IMAP_PORT }}
-            REVIEW_MAIL_IMAP_USER=${{ secrets.REVIEW_MAIL_IMAP_USER }}
-            REVIEW_MAIL_IMAP_PASSWORD=${{ secrets.REVIEW_MAIL_IMAP_PASSWORD }}
-            REVIEW_MAIL_WEBMAIL_URL=${{ secrets.REVIEW_MAIL_WEBMAIL_URL }}
-            REVIEW_MAIL_DISCORD_WEBHOOK=${{ secrets.REVIEW_MAIL_DISCORD_WEBHOOK }}
-            VITE_FUNNEL_DASHBOARD=${{ secrets.VITE_FUNNEL_DASHBOARD }}
-            SMTP_HOST=${{ secrets.SMTP_HOST }}
-            SMTP_PORT=${{ secrets.SMTP_PORT }}
-            SMTP_USER=${{ secrets.SMTP_USER }}
-            SMTP_PASSWORD=${{ secrets.SMTP_PASSWORD }}
-            MAIL_FROM=${{ secrets.MAIL_FROM }}
-            CONTACT_NOTIFY_EMAIL=${{ secrets.CONTACT_NOTIFY_EMAIL }}
-            AUTH_PASSWORD_RESET_ALLOWLIST=${{ secrets.AUTH_PASSWORD_RESET_ALLOWLIST }}
-            AUTH_VIEWER_JWT_SECRET=${{ secrets.AUTH_VIEWER_JWT_SECRET }}
-            OPS_API_TOKEN=${{ secrets.OPS_API_TOKEN }}
-            OPS_INGEST_TOKEN=${{ secrets.OPS_INGEST_TOKEN }}
+            cat > .env.secrets.new <<'ENV_EOF'
+            META_VERIFY_TOKEN='${{ secrets.META_VERIFY_TOKEN }}'
+            META_APP_SECRET='${{ secrets.META_APP_SECRET }}'
+            META_APP_ID='${{ secrets.META_APP_ID }}'
+            META_OAUTH_REDIRECT_URI='${{ secrets.META_OAUTH_REDIRECT_URI }}'
+            METADATA_FERNET_KEY='${{ secrets.METADATA_FERNET_KEY }}'
+            GEMINI_API_KEY='${{ secrets.GEMINI_API_KEY }}'
+            ADMIN_NOTIFICATION_DISCORD_WEBHOOK='${{ secrets.ADMIN_NOTIFICATION_DISCORD_WEBHOOK }}'
+            ANALYSIS_ERROR_REPORT_DISCORD_WEBHOOK='${{ secrets.ANALYSIS_ERROR_REPORT_DISCORD_WEBHOOK }}'
+            GOOGLE_CALENDAR_CLIENT_ID='${{ secrets.GOOGLE_CALENDAR_CLIENT_ID }}'
+            GOOGLE_CALENDAR_CLIENT_SECRET='${{ secrets.GOOGLE_CALENDAR_CLIENT_SECRET }}'
+            GOOGLE_CALENDAR_REDIRECT_URI='${{ secrets.GOOGLE_CALENDAR_REDIRECT_URI }}'
+            DISCORD_BOT_TOKEN='${{ secrets.DISCORD_BOT_TOKEN }}'
+            GOOGLE_DRIVE_CLIENT_ID='${{ secrets.GOOGLE_DRIVE_CLIENT_ID }}'
+            GOOGLE_DRIVE_CLIENT_SECRET='${{ secrets.GOOGLE_DRIVE_CLIENT_SECRET }}'
+            GOOGLE_DRIVE_REDIRECT_URI='${{ secrets.GOOGLE_DRIVE_REDIRECT_URI }}'
+            SMOKE_SERVICE_TOKEN='${{ secrets.FEDEX_SMOKE_API_TOKEN }}'
+            SMOKE_SERVICE_EMAIL='${{ secrets.FEDEX_SMOKE_USER_EMAIL }}'
+            REVIEW_MAIL_IMAP_HOST='${{ secrets.REVIEW_MAIL_IMAP_HOST }}'
+            REVIEW_MAIL_IMAP_PORT='${{ secrets.REVIEW_MAIL_IMAP_PORT }}'
+            REVIEW_MAIL_IMAP_USER='${{ secrets.REVIEW_MAIL_IMAP_USER }}'
+            REVIEW_MAIL_IMAP_PASSWORD='${{ secrets.REVIEW_MAIL_IMAP_PASSWORD }}'
+            REVIEW_MAIL_WEBMAIL_URL='${{ secrets.REVIEW_MAIL_WEBMAIL_URL }}'
+            REVIEW_MAIL_DISCORD_WEBHOOK='${{ secrets.REVIEW_MAIL_DISCORD_WEBHOOK }}'
+            VITE_FUNNEL_DASHBOARD='${{ secrets.VITE_FUNNEL_DASHBOARD }}'
+            SMTP_HOST='${{ secrets.SMTP_HOST }}'
+            SMTP_PORT='${{ secrets.SMTP_PORT }}'
+            SMTP_USER='${{ secrets.SMTP_USER }}'
+            SMTP_PASSWORD='${{ secrets.SMTP_PASSWORD }}'
+            MAIL_FROM='${{ secrets.MAIL_FROM }}'
+            CONTACT_NOTIFY_EMAIL='${{ secrets.CONTACT_NOTIFY_EMAIL }}'
+            AUTH_PASSWORD_RESET_ALLOWLIST='${{ secrets.AUTH_PASSWORD_RESET_ALLOWLIST }}'
+            AUTH_VIEWER_JWT_SECRET='${{ secrets.AUTH_VIEWER_JWT_SECRET }}'
+            OPS_API_TOKEN='${{ secrets.OPS_API_TOKEN }}'
+            OPS_INGEST_TOKEN='${{ secrets.OPS_INGEST_TOKEN }}'
+            ERROR_REPORT_AGENT_TOKEN='${{ secrets.ERROR_REPORT_AGENT_TOKEN }}'
             COMPOSE_FILE=docker-compose.yml:docker-compose.exporters.yml
             ENV_EOF
+            # 件1（docs/handoff/deploy-secrets-dollar-quote/design.md）: 値に ' か改行があると単一引用符が壊れる。
+            # 壊れた行があれば .env を書き換える前の状態に戻して止める。出すのは heredoc 内の行番号だけ（値は出さない）。
+            _bad_lines=$(grep -nvE "^[A-Z0-9_]+='[^']*'$|^COMPOSE_FILE=" .env.secrets.new | cut -d: -f1 | tr '\n' ' ')
+            if [ -n "${_bad_lines}" ]; then
+              echo "❌ secrets の値に単一引用符か改行がある（heredoc の行: ${_bad_lines}）。.env は変更前に戻した"
+              mv .env.bak .env
+              rm -f .env.secrets.new
+              exit 1
+            fi
+            cat .env.secrets.new >> .env
+            rm -f .env.secrets.new .env.bak
 
             echo "Step 2b: DATABASE_URL ホスト修正 + Phase2 フラグ確認..."
             # SA-18: localhost:5432 は必ずコンテナ内到達可能な postgres:5432 に修正する。
@@ -444,7 +477,7 @@ jobs:
       # 通常デプロイ（backend/frontend のみ）ではこのステップは実行されない。
       # ============================================
       - name: Recreate nginx (apply config/volume changes)
-        if: ${{ success() && steps.changes.outputs.nginx == 'true' }}
+        if: ${{ success() && steps.gate.outputs.nginx == 'true' }}
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -513,8 +546,11 @@ jobs:
               fi
             fi
             # [2b] ADMIN_DATABASE_URL を .env に注入（migration の run_py 用）
+            case "${ADMIN_DATABASE_URL}" in
+              *"'"*|*$'\n'*) echo "❌ ADMIN_DATABASE_URL に単一引用符か改行がある（値は出さない）"; exit 1 ;;
+            esac
             sed -i '/^ADMIN_DATABASE_URL=/d' .env
-            echo "ADMIN_DATABASE_URL=${ADMIN_DATABASE_URL}" >> .env
+            echo "ADMIN_DATABASE_URL='${ADMIN_DATABASE_URL}'" >> .env
             # ADR-130: Bootstrap 完了後に nginx reload（belt-and-suspenders）
             # blue-green cutover 内で既に reload 済みだが、将来の Bootstrap 変更でも
             # 確実に nginx DNS キャッシュがリフレッシュされるよう明示的に追加する。
@@ -525,7 +561,7 @@ jobs:
           ADMIN_DATABASE_URL: ${{ secrets.ADMIN_DATABASE_URL }}
 
       - name: Run database migrations
-        if: ${{ success() && steps.changes.outputs.migrations == 'true' }}
+        if: ${{ success() && steps.gate.outputs.migrations == 'true' }}
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -546,7 +582,7 @@ jobs:
 
       # SA-19: Post-deploy smoke tests (SA-18 Phase2)
       - name: Post-deploy smoke tests (SA-19)
-        if: ${{ success() && steps.changes.outputs.migrations == 'true' }}
+        if: ${{ success() && steps.gate.outputs.migrations == 'true' }}
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -626,7 +662,7 @@ jobs:
             set -e
             cd /home/ubuntu/salesanchor
 
-            if [ "${{ steps.changes.outputs.migrations }}" != "true" ]; then
+            if [ "${{ steps.gate.outputs.migrations }}" != "true" ]; then
               echo "ℹ️  ADR-082: backend/migration 変更なし → DB マイグレーションは skip しました（フロントのみのデプロイ）。"
             fi
 
@@ -701,7 +737,7 @@ jobs:
               fi
 
               # Discord 通知（GitHub Secrets 経由の env var → .env フォールバック）
-              _webhook="${ROLLBACK_DISCORD_WEBHOOK:-$(grep '^ADMIN_NOTIFICATION_DISCORD_WEBHOOK=' .env 2>/dev/null | cut -d= -f2-)}"
+              _webhook="${ROLLBACK_DISCORD_WEBHOOK:-$(grep '^ADMIN_NOTIFICATION_DISCORD_WEBHOOK=' .env 2>/dev/null | cut -d= -f2- | tr -d "'")}"
               if [ -n "${_webhook}" ]; then
                 if [ "${_rollback_result}" = "success" ]; then
                   curl -s -X POST "${_webhook}" \

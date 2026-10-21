@@ -1,9 +1,12 @@
 # recon: 受信箱の「新規」バッジ（担当になったが、まだ開いていない）
 
 **日付**: 2026-10-15
-**ベース**: `origin/main` = `861b5182b`
+**ベース**: `origin/main` = `62f341957`（PR-A 作業先 worktree で再確認）
 **原則**: 全主張は一次情報（コード実体）で裏取り。サブエージェント報告は一次情報として扱わない。
-本ファイルの引用はすべてコーディネータ（Opus）が `git show origin/main:<path>` で再確認済み。
+本ファイルの引用はすべて作業先 worktree の実ファイルで再確認済み（審査 D5 対応）。
+`backend/app/routers/leads.py`・`backend/app/routers/meta_inbox.py`・`frontend/` 配下の各ファイルは
+PR-B（`release/inbox-new-assignment-badge`）側で行番号が動くため、識別子名で引用する
+（本ファイルの対象は PR-A＝列だけなので、これらのファイルは触らない）。
 
 > サブエージェントの報告には**行番号のずれ**と**バッジ表示条件の誤り**があったため、
 > 決定的な箇所はすべて自分で読み直した（下記はその結果）。
@@ -58,12 +61,12 @@ next_action_date, per_order_amount, sales_form, target_titles
 `discord_user_id` / `discord_dm_channel_id` / `initiative` / `channel_type` も追加されている。
 
 ### 2-3. 新テナント作成時の定義
-`backend/app/services/tenant.py:346-397` にも `leads` の CREATE TABLE があり、
+`backend/app/services/tenant.py:355-407` にも `leads` の CREATE TABLE があり、
 **マイグレーションとは別に同じ列を持たせる必要がある**（2 箇所の同期が必須）。
 
 ### 2-4. 紛らわしい既存列（取り違え注意）
 `assigned_at` は存在するが **`user_roles` の列**（ユーザーへの役割割当時刻）であり leads とは無関係。
-`migrations/003_add_phase1_tenant_tables.sql:62-69`
+`migrations/003_add_phase1_tenant_tables.sql:63-70`
 ```sql
 CREATE TABLE IF NOT EXISTS {schema}.user_roles (
     ...
@@ -80,7 +83,8 @@ CREATE TABLE IF NOT EXISTS {schema}.user_roles (
 ## 3. 「開いた」合図は既に存在する（新しい API は不要）
 
 ### 3-1. 会話を開いたときにフロントが呼ぶもの
-`frontend/src/pages/inbox/useInboxState.ts:613-621`
+`frontend/src/pages/inbox/useInboxState.ts` の、`selectedLeadId` が変わったときの `useEffect`
+（PR-B で行番号が動くため識別子で引用。本ファイルは PR-A では触らない）
 ```ts
   useEffect(() => {
     if (selectedLeadId === null) {
@@ -92,10 +96,11 @@ CREATE TABLE IF NOT EXISTS {schema}.user_roles (
     markRead(selectedLeadId);          // ← これが「開いた」合図になる
     loadLeadDetail(selectedLeadId);
 ```
-依存配列は `:643` の `[selectedLeadId, loadMessages, markRead, loadLeadDetail]`。
+依存配列は同 `useEffect` の `[selectedLeadId, loadMessages, markRead, loadLeadDetail]`。
 
 ### 3-2. markRead の中身
-`frontend/src/lib/messages.ts:195-198`
+`frontend/src/lib/messages.ts` の `markRead` 関数
+（PR-B で行番号が動くため識別子で引用）
 ```ts
  * POST /api/v1/leads/{lead_id}/messages/mark-read
   return api.post<MarkReadResponse>(`/leads/${leadId}/messages/mark-read`, {});
@@ -103,7 +108,8 @@ CREATE TABLE IF NOT EXISTS {schema}.user_roles (
 → **既に空オブジェクトの body を送っている**ため、任意フィールドの追加は後方互換。
 
 ### 3-3. バックエンド実体
-`backend/app/routers/leads.py:1148-1215`
+`backend/app/routers/leads.py` の `mark_lead_messages_read`
+（PR-B で行番号が動くため識別子で引用）
 ```python
 @router.post(
     "/leads/{lead_id}/messages/mark-read",
@@ -132,18 +138,21 @@ async def mark_lead_messages_read(lead_id, db, tenant_id, current_user):
 ```
 確定事項:
 - **`leads` の存在確認を既に行っている**（同じトランザクションで leads を触れる）
-- **`current_user.id` は `users.id`**（`:1183` のコメントが ADR-1008 を明示）。
-  `leads.assigned_to` も users.id（`backend/app/routers/analytics.py:106-113` の
+- **`current_user.id` は `users.id`**（`mark_lead_messages_read` 内の
+  「既読者はログイン中の users.id（ADR-1008: seen_by_staff_id には users.id を入れる）」
+  というコメントが ADR-1008 を明示。PR-B で行番号が動くため識別子で引用）。
+  `leads.assigned_to` も users.id（`backend/app/routers/analytics.py:104-114` の
   `LEFT JOIN public.users u ON u.id = l.assigned_to` で確認済み）→ **同じ体系で比較可能**
 - 既存の未読（`meta_messages.seen_at`）は「**お客さまのメッセージを読んだか**」であり、
   「担当になった通知を開いたか」とは**別の概念**
 
 ### 3-4. mark-read は一括操作からも呼ばれる（重要）
-`frontend/src/pages/inbox/useInboxState.ts:922`
+`frontend/src/pages/inbox/useInboxState.ts` の `handleMarkAllRead`
+（PR-B で行番号が動くため識別子で引用）
 ```ts
     await Promise.all(unreadConvs.map((c) => markRead(c.lead_id)));   // 「すべて既読」
 ```
-`:986`
+同ファイルの `handleBulkMarkRead`
 ```ts
     await Promise.all([...selectedLeadIds].map((id) => markRead(id)));  // 複数選択の既読化
 ```
@@ -153,7 +162,8 @@ async def mark_lead_messages_read(lead_id, db, tenant_id, current_user):
 
 ## 4. 会話一覧 API は担当者を返していない
 
-`backend/app/routers/meta_inbox.py:865-877`
+`backend/app/routers/meta_inbox.py` の `list_conversations`
+（PR-B で行番号が動くため識別子で引用）
 ```python
 @router.get("/conversations", dependencies=[Depends(require_permission("messaging.view"))])
 async def list_conversations(
@@ -169,7 +179,7 @@ async def list_conversations(
 ```
 → **`current_user` は既に依存に入っている**ため、サーバー側で「自分が担当か」を判定できる。
 
-SELECT 句 `:950-962`
+SELECT 句（`LEFT JOIN leads l` を含む箇所。PR-B で行番号が動くため識別子で引用）
 ```sql
         SELECT
             l.id                    AS lead_id,
@@ -193,7 +203,7 @@ SELECT 句 `:950-962`
 ```
 → **`assigned_to` は SELECT にも WHERE にも無い**。
 
-応答生成 `:1005-1018`
+応答生成（`conversations.append({...})` の箇所。PR-B で行番号が動くため識別子で引用）
 ```python
         conversations.append({
             "lead_id": row["lead_id"],
@@ -211,17 +221,20 @@ SELECT 句 `:950-962`
         })
 ```
 
-フロントの型 `frontend/src/lib/messages.ts:21-37` も同じ 12 項目（`profile_picture_url` は任意）。
+フロントの型 `frontend/src/lib/messages.ts` の `Conversation` interface も同じ 12 項目
+（`profile_picture_url` は任意。PR-B で行番号が動くため識別子で引用）。
 
 ---
 
 ## 5. 担当の変更箇所
 
-`backend/app/routers/leads.py:489-731`（`PATCH /leads/{lead_id}`・権限 `leads.update`）
-- `old_row` を先に取得（`:504-509`）→ **変更前の `assigned_to` が取れる**
-- `_UPDATABLE_COLUMNS` に `assigned_to` を含む（`:84`）
-- 便1 で追加したアサイン通知が `:727` 付近で `asyncio.create_task` 実行（担当が変わったときのみ）
-- 監査記録 `:693-697` で `old_data=dict(old_row)` / `new_data=audit_new_data` を残す
+`backend/app/routers/leads.py` の `update_lead`（`PATCH /leads/{lead_id}`・権限 `leads.update`。
+PR-B で行番号が動くため識別子で引用）
+- `old_row`（`old_result.mappings().first()`）を先に取得 → **変更前の `assigned_to` が取れる**
+- `_UPDATABLE_COLUMNS` に `assigned_to` を含む
+- 便1 で追加したアサイン通知が `asyncio.create_task(notify_lead_assigned(...))` で実行
+  （担当が変わったときのみ）
+- 監査記録 `record_audit_log(..., old_data=dict(old_row), new_data=audit_new_data, ...)` を残す
   → **担当変更の履歴は audit_logs に既にある**ので、時刻列を別に持つ必要はない
 
 ---
@@ -253,7 +266,9 @@ docstring（`:1-14`）に明記:
 → **金型の新設は不要。この金型をそのまま使う。**
 
 ### 6-2. 既存の未読バッジは金型を使っていない（本 PR では置き換えない）
-`frontend/src/pages/inbox/InboxConversationRows.tsx:138-140`
+`frontend/src/pages/inbox/InboxConversationRows.tsx` の
+`conv.unread_count > 0 && (<span className="badge conv-unread-badge">...)` の箇所
+（PR-B で行番号が動くため識別子で引用）
 
 **訂正（実装時に判明）**: 本行は当初 InboxConversationList.tsx の239-241行目として記載していたが、
 別PR（会話一覧の行描画を共通部品に分離するリファクタ）で既に上記ファイルへ移動済みだった。
@@ -301,8 +316,9 @@ END $$;
 （＝構造変更と同じマイグレーション内での UPDATE は本リポジトリの確立した作法）。
 
 ### 7-4. 実行登録
-`scripts/run_all_migrations.sh` の**末尾に追記**する。
-最終行付近（`:939` 近辺）の形:
+`scripts/run_all_migrations.sh` に追記する。recon 時点（2026-10-15）の最終行付近は次の形だった
+（`:968-969`。**訂正**: PR-A 実装時点では `run_all_migrations.sh` の登録はタイムスタンプ順に
+並んでいたため、末尾ではなくタイムスタンプ順の位置に挿入した。design.md §3-1「実行登録」参照）:
 ```bash
 # 試運転（shadow）の表2件の削除（画面・API・書き込み経路は #4218 で削除済み・PO GO 待ち・冪等・不可逆）
 run_sql migrations/20261013_180000_drop_extraction_shadow_tables.sql

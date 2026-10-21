@@ -26,6 +26,7 @@ from app.middleware.session_guard import SessionGuardMiddleware
 # spec.md v1.2 F9 (Sprint 9): スプレッドシート並走 Phase 切替 admin UI
 from app.routers import (
     admin,
+    analysis_error_reports,  # ADR-1025 便1: 解析の誤り報告
     analytics,
     archives,
     auth,
@@ -71,6 +72,7 @@ from app.routers import (
     note_master,  # 備考マスタ テナント用
     notifications,
     ops,  # ADR-1012 段階2 便B: 保守 API
+    ops_error_reports,  # ADR-1025 便2: 自動セッション用の口
     order_commissions,  # ADR-021 Phase 5 / Sprint 5: 報酬計算 MVP
     order_financials,  # ADR-021 Phase 2 / Sprint 2: 売上計算 MVP
     order_purchase_details,  # ADR-021 Phase 4 / Sprint 4: 仕入情報 MVP
@@ -692,6 +694,11 @@ app.include_router(
     item_corrections.router, prefix="/api/v1", tags=["super-admin"],
 )
 
+# ADR-1025 便1: 解析の誤り報告 API（require_super_admin 限定）
+app.include_router(
+    analysis_error_reports.router, prefix="/api/v1", tags=["super-admin"],
+)
+
 # 便C1: v102 の書き写しを直す API（require_super_admin 限定）
 app.include_router(
     tcg_v102_posts.router, prefix="/api/v1", tags=["super-admin"],
@@ -768,6 +775,9 @@ app.include_router(
 
 # ADR-1012 段階2 便B: 保守 API（鍵か super admin のログイン。テナント文脈なし）
 app.include_router(ops.router, prefix="/api/v1")
+
+# ADR-1025 便2: 自動セッション用の口 3 つ（専用の鍵 ERROR_REPORT_AGENT_TOKEN のみ）
+app.include_router(ops_error_reports.router, prefix="/api/v1")
 
 @app.exception_handler(OperationalError)
 async def db_operational_error_handler(request: Request, exc: OperationalError) -> JSONResponse:

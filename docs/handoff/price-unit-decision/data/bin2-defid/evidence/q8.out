@@ -1,0 +1,6 @@
+id	code	name	name_en	value	display_order	is_active	created_at	updated_at
+1	CASE	ケース	Case		10	True	2026-09-22 10:45:07.511226+00:00	2026-09-22 10:45:07.511226+00:00
+2	BOX	ボックス	Box		20	True	2026-09-22 10:45:07.511226+00:00	2026-09-22 10:45:07.511226+00:00
+3	PACK	パック	Pack		30	True	2026-09-22 10:45:07.511226+00:00	2026-09-22 10:45:07.511226+00:00
+5	CARD	カード	Card		40	True	2026-10-17 16:18:06.763387+00:00	2026-10-17 16:18:06.763387+00:00
+AUDIT ts=2026-10-21T01:15:09Z sha=ba9568f200ca rows=4 ms=43 result=ok sql=SELECT * FROM ai_ro.public__quantity_units ORDER BY 1; 

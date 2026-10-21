@@ -23,6 +23,8 @@ type Screen =
   | { name: "signup" };
 
 const RESET_HASH_PREFIX = "#reset=";
+/** 申込画面を直接開く URL（管理画面の「申込フォームのURLをコピー」が作る） */
+const SIGNUP_HASH = "#signup";
 
 /** メールのリンク（#reset=トークン）から来たときのトークン。無ければ null */
 function readResetTokenFromHash(): string | null {
@@ -49,12 +51,13 @@ export default function ViewerApp() {
   const [screen, setScreen] = useState<Screen>(() => {
     const resetToken = readResetTokenFromHash();
     if (resetToken) return { name: "reset", token: resetToken };
+    if (window.location.hash === SIGNUP_HASH) return { name: "signup" };
     return readToken() ? { name: "loading" } : { name: "login" };
   });
 
-  // トークンは URL に残さない（履歴・共有・Referer に出さない）
+  // トークンは URL に残さない（履歴・共有・Referer に出さない）。#signup も読んだら消す
   useEffect(() => {
-    if (window.location.hash.startsWith(RESET_HASH_PREFIX)) {
+    if (window.location.hash.startsWith(RESET_HASH_PREFIX) || window.location.hash === SIGNUP_HASH) {
       window.history.replaceState(null, "", window.location.pathname + window.location.search);
     }
   }, []);
@@ -132,8 +135,6 @@ export default function ViewerApp() {
       {screen.name === "inventory" && (
         <InventoryView
           data={screen.data}
-          onLogout={onLogout}
-          onChangePassword={() => setScreen({ name: "passwordChange", forced: false })}
         />
       )}
     </div>

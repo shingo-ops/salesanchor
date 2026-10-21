@@ -122,7 +122,7 @@ async def search_inventory_endpoint(
             box_weight_kg=c.box_weight_kg,
             case_weight_kg=c.case_weight_kg,
             mark=c.mark,
-            tcg_type=c.tcg_type,
+            work_code=c.work_code,
             matched_via=c.matched_via,
             score=c.score,
             # spec v1.3 F11 AC11.4: 仕入元現在オファー一覧

@@ -1,17 +1,38 @@
 import { describe, expect, it } from "vitest";
+import type { BadgeVariant } from "../../components/Badge";
 import { conditionBadgeVariant } from "./conditionBadge";
 
+// ADR-1023 の12値（public.line_conditions）＋ Bulk。割り当ては design.md の表。
+const CASES: ReadonlyArray<[string, BadgeVariant]> = [
+  ["Sealed box", "info"],
+  ["Case", "success"],
+  ["Unsearched pack", "info"],
+  ["Damaged sealed box", "warning"],
+  ["Damaged case", "warning"],
+  ["No shrink box", "purple"],
+  ["Opened box", "danger"],
+  ["Opened case", "danger"],
+  ["Searched box", "danger"],
+  ["Searched pack", "danger"],
+  ["AR confirmed pack", "danger"],
+  ["Bulk", "neutral"],
+];
+
 describe("conditionBadgeVariant", () => {
-  it("maps exact (trimmed, case-insensitive) values", () => {
-    expect(conditionBadgeVariant("sealed")).toBe("success");
-    expect(conditionBadgeVariant("  Sealed ")).toBe("success");
-    expect(conditionBadgeVariant("DAMAGED")).toBe("danger");
-    expect(conditionBadgeVariant("case")).toBe("info");
+  it.each(CASES)("maps %s -> %s", (value, variant) => {
+    expect(conditionBadgeVariant(value)).toBe(variant);
   });
-  it("falls back to neutral for anything else (no partial match)", () => {
-    expect(conditionBadgeVariant("sealed box")).toBe("neutral");
-    expect(conditionBadgeVariant("New")).toBe("neutral");
-    expect(conditionBadgeVariant("")).toBe("neutral");
-    expect(conditionBadgeVariant(null)).toBe("neutral");
+  it.each(CASES)("is trim and case-insensitive for %s", (value, variant) => {
+    expect(conditionBadgeVariant(`  ${value.toUpperCase()} `)).toBe(variant);
+    expect(conditionBadgeVariant(value.toLowerCase())).toBe(variant);
+  });
+  it.each([["Empty box"], ["FLAG_SINGLE"], ["New"], ["sealed"], ["damaged"], ["sealed box x"]])(
+    "falls back to neutral for %s (no partial match, old values dropped)",
+    (value) => {
+      expect(conditionBadgeVariant(value)).toBe("neutral");
+    },
+  );
+  it.each([[""], ["   "], [null], [undefined]])("falls back to neutral for empty %s", (value) => {
+    expect(conditionBadgeVariant(value)).toBe("neutral");
   });
 });

@@ -27,7 +27,7 @@
 
 - **エージェントは原則として制限付き鍵を使用**（`salesanchor-claude`、ForceCommand 制限）
 - **無制限鍵（`~/.ssh/manual-only/id_ed25519`）**（PO 決定 2026-09-30「CLAUDE.md のこのルール変更を許可する」）
-  - 読み取りだけの調査（SELECT・ログ/設定表示・`ss`/`ps`/`systemctl status`・接続確認）は恒常許可で使用可。変更を伴う作業（ファイル作成・コンテナ起動停止・設定変更・再起動・DB 書き込み）は作業ごとに PO の GO が必要（設計担当が GO 原文を依頼文と PR に転記）
+  - **本番 DB の読み取りは reader 鍵の道（`docs/handoff/ai-readonly-db-path/usage.md`）を使う。manual-only は使わない**。DB 以外の読み取りだけの調査（ログ/設定表示・`ss`/`ps`/`systemctl status`・接続確認）は恒常許可で使用可。変更を伴う作業（ファイル作成・コンテナ起動停止・設定変更・再起動・DB 書き込み）は作業ごとに PO の GO が必要（設計担当が GO 原文を依頼文と PR に転記）
   - 鍵・パスワード・トークンの値は表示しない。人間の無制限鍵（`hitoshi@` 等）は VPS 側で変更しない
 - 詳細・ロールバック手順: `docs/handoff/rehearsal-env/design-b-ssh-isolation.md`
 
@@ -37,7 +37,7 @@
 
 DROP TABLE / 大量DELETE / `rm -rf` / `git reset --hard` / `git push --force`（main/develop） / 本番Docker volume削除 / secrets変更 / Cloudflare・Firebase等の外部GUI操作 / `.github/workflows/workflow-lint.yml` の変更 / `gh api` による Branch Protection・Ruleset・Required Status Check の変更・削除
 
-上記操作を許可する場合: `bash scripts/permit-danger.sh "<op>"`（1回限り有効・30分で自動失効）
+上記操作を許可する場合: `bash scripts/permit-danger.sh "<op>"`（1回限り有効・30分で自動失効）。会話の同意票でも可（ADR-1033、除外あり）
 
 ---
 

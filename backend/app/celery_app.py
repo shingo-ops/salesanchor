@@ -40,6 +40,8 @@ celery_app = Celery(
         "app.tasks.buyback_scraper",     # ADR-157: 買取相場ログ（シンソク + 買取ホムラ）
         "app.tasks.ai_ops_heartbeat",  # ADR-1012 段階1 便5: celery の止まりの見張り
         "app.tasks.viewer_inventory_cache",  # ADR-1019 段2: 閲覧ページの在庫の作り置き
+        "app.tasks.master_required_fields_monitor",  # ADR-1020 便4c: 共用商品の必須項目の週次件数
+        "app.tasks.viewer_share_flag_monitor",  # ADR-1019 段6: 閲覧者の使い回しの疑いを運用 Discord へ
     ],
 )
 
@@ -187,6 +189,16 @@ celery_app.conf.beat_schedule = {
     "refresh-viewer-inventory": {
         "task": "app.tasks.viewer_inventory_cache.refresh_viewer_inventory",
         "schedule": 60.0,
+    },
+    # ADR-1020 便4c: 共用商品の必須9項目の入れ忘れ件数と印の件数を毎週月曜 09:00 に管理者用 Discord へ
+    "report-master-required-fields-weekly": {
+        "task": "app.tasks.master_required_fields_monitor.report_master_required_fields",
+        "schedule": crontab(hour=9, minute=0, day_of_week=1),
+    },
+    # ADR-1019 段6: 閲覧者の使い回しの疑いが新しく出たら運用の Discord へ（1時間ごと・同じ知らせは30日送らない）
+    "notify-viewer-share-flags-hourly": {
+        "task": "app.tasks.viewer_share_flag_monitor.notify_viewer_share_flags",
+        "schedule": crontab(minute=15),  # 毎時15分（interval だと deploy の再起動で計測が初めからになるため）
     },
 }
 

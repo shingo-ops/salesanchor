@@ -21,6 +21,7 @@ import { formatDate } from "../../../features/tcg-analysis-review/formatDateTime
 import { ReviewItemDrawer } from "../../../features/tcg-analysis-review/ReviewItemDrawer";
 import { V102PostsTab } from "../../../features/tcg-analysis-review/V102PostsTab";
 import { ReviewCsvPanel } from "../../../features/tcg-review-csv/ReviewCsvPanel";
+import { useReviewTiming } from "./useReviewTiming";
 
 const PAGE_SIZE = 20;
 
@@ -85,6 +86,13 @@ export default function NeedsReviewTabsPanel() {
   // ADR-1016: 他の人・裏の処理で要確認が変わったら、保存後と同じ読み直しを 1 回走らせる
   useRealtimeRefresh([TOPICS.tcgReview], () => setReloadKey((k) => k + 1));
 
+  // 便0: 要確認タブの一覧が最初に描かれるまでの計時（mount ごとに1回だけ送る）
+  const { recordListMs, abandon: abandonTiming } = useReviewTiming({
+    shown: activeTab === "production" && data !== null,
+    rows: data?.items.length ?? 0,
+    pageSize: PAGE_SIZE,
+  });
+
   useEffect(() => {
     if (authLoading || !isSuperAdmin || activeTab === "posts") return;
     let cancelled = false;
@@ -98,10 +106,14 @@ export default function NeedsReviewTabsPanel() {
       offset: String(offset),
       limit: String(PAGE_SIZE),
     });
+    const startedAt = performance.now();
     api
       .get<NeedsReviewResponse>(`/tcg/analysis-results?${params.toString()}`)
       .then((result) => {
-        if (!cancelled) setData(result);
+        if (!cancelled) {
+          setData(result);
+          recordListMs(performance.now() - startedAt);
+        }
       })
       .catch((error: unknown) => {
         if (!cancelled) {
@@ -119,7 +131,7 @@ export default function NeedsReviewTabsPanel() {
     return () => {
       cancelled = true;
     };
-  }, [authLoading, isSuperAdmin, offset, activeTab, reloadKey]);
+  }, [authLoading, isSuperAdmin, offset, activeTab, reloadKey, recordListMs]);
 
   const productionColumns: DataTableColumn<NeedsReviewItem>[] = [
     {
@@ -187,6 +199,7 @@ export default function NeedsReviewTabsPanel() {
   // タブを替えたら、前のタブの行・ページ・ドロワーを持ち越さない
   const changeTab = (tab: TabKey) => {
     if (tab === activeTab) return;
+    abandonTiming();
     setActiveTab(tab);
     setOffset(0);
     setDrawerItemId(null);

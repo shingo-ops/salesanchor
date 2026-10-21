@@ -24,7 +24,7 @@
  */
 import { useRef } from 'react';
 import type { ReactNode, KeyboardEvent, MouseEvent } from 'react';
-import { TABLE_ICONS } from '../constants/icons';
+import { TABLE_ICONS } from '../constants/icons-base';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { useFitTableZoom } from '../hooks/useFitTableZoom';
 import './DataTable.css';
@@ -124,6 +124,8 @@ export interface DataTableProps<T = Record<string, unknown>> {
   fitToWidth?: boolean;
   /** スマホ（767px 以下）で表をカード表示にする。このとき stickyHeader・stickyLeft・fitToWidth は効かない */
   mobileCards?: boolean;
+  /** 表の上をタブ行にくっつける（上の線と上の角丸を消す）。カード表示のときは効かない */
+  attachedTop?: boolean;
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -168,6 +170,7 @@ export function DataTable<T = Record<string, unknown>>({
   stickyHeader = false,
   fitToWidth = false,
   mobileCards = false,
+  attachedTop = false,
 }: DataTableProps<T>) {
   const isMobile = useIsMobile();
   const cardMode = mobileCards && isMobile;
@@ -215,6 +218,7 @@ export function DataTable<T = Record<string, unknown>>({
     'comp-table',
     `comp-table--${density}`,
     stickyHeader && useFrame ? 'comp-table--sticky' : '',
+    attachedTop && !cardMode ? 'comp-table--attached-top' : '',
     className,
   ].filter(Boolean).join(' ');
 

@@ -4,8 +4,9 @@
  * 隠せる列は hidden_columns の id（colVisible に渡す）で絞る。
  */
 import type { TFunction } from "i18next";
-import { Badge } from "../../components/Badge";
 import type { DataTableColumn } from "../../components/DataTable";
+import { HoverCard } from "../../components/HoverCard";
+import { BlockValue } from "./blockBadges";
 import { conditionBadgeVariant } from "./conditionBadge";
 import { supplierLabel } from "./inventoryFormat";
 import "./inventoryColumns.css";
@@ -24,6 +25,9 @@ export interface InventoryRow {
   note_ja: string | null;
   ship_ja: string | null;
   merged_count: number;
+  /** 同じ商品のまとまり（絞り込み後・ページ前）で最安／在庫最多か。無いときは付けない（ADR-1014 改訂） */
+  badge_cheapest?: boolean;
+  badge_most_stock?: boolean;
   /** 行の元になった extraction_items.id（まとめた行は組の全件）。解析パネル用 */
   extraction_item_ids: string[];
   posted_at: string | null;
@@ -32,7 +36,7 @@ export interface InventoryRow {
   supplier_name: string | null;
   unit_price: number;
   quantity: number | null;
-  tcg_type: string | null;
+  work_code: string | null;
   offered_at: string;
   release_date: string | null;
 }
@@ -48,13 +52,43 @@ interface BuildArgs {
 export function buildInventoryColumns({ t, colVisible, fmtOfferedAt }: BuildArgs): DataTableColumn<InventoryRow>[] {
   const all: { hideId: string | null; col: DataTableColumn<InventoryRow> }[] = [
     {
+      hideId: null,
+      col: {
+        key: "offer_type",
+        header: t("inventory.col.status"),
+        sortable: true,
+        stickyLeft: true,
+        mobileHidden: true,
+        renderCell: (it) => (
+          <>
+            {it.offer_type === null ? (
+              <span className="inventory-cell__nowrap">{it.status ?? "-"}</span>
+            ) : it.offer_type === "pre_order" ? (
+              <span className="inventory-cell__nowrap inventory-cell__offer--preorder">
+                {t("inventory.offerType.pre_order")}
+              </span>
+            ) : (
+              <span className="inventory-cell__nowrap inventory-cell__offer--instock">
+                {t("inventory.offerType.in_stock")}
+              </span>
+            )}
+            {it.offer_type === "pre_order" && it.ship_timing && (
+              <div className="inventory-cell__sub">
+                {t(`inventory.shipTiming.${it.ship_timing}`, { defaultValue: it.ship_timing })}
+              </div>
+            )}
+          </>
+        ),
+      },
+    },
+    {
       hideId: "mark",
       col: {
         key: "mark",
         header: t("inventory.col.mark"),
         sortable: true,
         mobileHidden: true,
-        renderCell: (it) => it.mark ?? "-",
+        renderCell: (it) => <span className="inventory-cell__nowrap">{it.mark ?? "-"}</span>,
       },
     },
     {
@@ -63,13 +97,18 @@ export function buildInventoryColumns({ t, colVisible, fmtOfferedAt }: BuildArgs
         key: "name",
         header: t("inventory.col.title"),
         sortable: true,
-        stickyLeft: true,
         mobileOrder: 1,
         renderCell: (it) => (
-          <>
-            <div className="inventory-cell__title">{it.product_name ?? `#${it.product_id}`}</div>
-            {it.name_en && <div className="inventory-cell__sub">{it.name_en}</div>}
-          </>
+          <HoverCard title={it.product_name ?? `#${it.product_id}`} subtitle={it.name_en}>
+            <div className="inventory-cell__title inventory-cell__clip" data-hover-card-clip>
+              {it.product_name ?? `#${it.product_id}`}
+            </div>
+            {it.name_en && (
+              <div className="inventory-cell__sub inventory-cell__clip" data-hover-card-clip>
+                {it.name_en}
+              </div>
+            )}
+          </HoverCard>
         ),
       },
     },
@@ -80,41 +119,27 @@ export function buildInventoryColumns({ t, colVisible, fmtOfferedAt }: BuildArgs
         header: t("inventory.col.condition"),
         sortable: true,
         mobileOrder: 2,
-        renderCell: (it) => <Badge variant={conditionBadgeVariant(it.condition)}>{it.condition}</Badge>,
-      },
-    },
-    {
-      hideId: "unit",
-      col: {
-        key: "unit",
-        header: t("inventory.col.unit"),
-        sortable: true,
-        mobileHidden: true,
-        renderCell: (it) => it.unit ?? "-",
-      },
-    },
-    {
-      hideId: "offerType",
-      col: {
-        key: "offer_type",
-        header: t("inventory.col.offerType"),
-        sortable: true,
-        mobileHidden: true,
         renderCell: (it) => (
-          <>
-            {it.offer_type === null ? (
-              (it.status ?? "-")
-            ) : it.offer_type === "pre_order" ? (
-              <Badge variant="info" appearance="soft">{t("inventory.offerType.pre_order")}</Badge>
-            ) : (
-              t("inventory.offerType.in_stock")
-            )}
-            {it.offer_type === "pre_order" && it.ship_timing && (
-              <div className="inventory-cell__sub">
-                {t(`inventory.shipTiming.${it.ship_timing}`, { defaultValue: it.ship_timing })}
-              </div>
-            )}
-          </>
+          <span className={`inventory-cell__nowrap inventory-cell__condition--${conditionBadgeVariant(it.condition)}`}>
+            {it.condition}
+          </span>
+        ),
+      },
+    },
+    {
+      hideId: "unitPrice",
+      col: {
+        key: "unit_price",
+        header: t("inventory.col.unitPrice"),
+        sortable: true,
+        align: "right",
+        mobileOrder: 3,
+        renderCell: (it) => (
+          <span className="inventory-cell__nowrap">
+            <BlockValue frame={it.badge_cheapest ? "cheapest" : null} label={t("inventory.badge.cheapest")}>
+              {`¥${it.unit_price.toLocaleString()}`}
+            </BlockValue>
+          </span>
         ),
       },
     },
@@ -128,7 +153,11 @@ export function buildInventoryColumns({ t, colVisible, fmtOfferedAt }: BuildArgs
         mobileOrder: 4,
         renderCell: (it) => (
           <>
-            {it.quantity ?? ""}
+            <span className="inventory-cell__nowrap">
+              <BlockValue frame={it.badge_most_stock ? "mostStock" : null} label={t("inventory.badge.mostStock")}>
+                {it.quantity ?? ""}
+              </BlockValue>
+            </span>
             {it.merged_count >= 2 && (
               <div data-testid={`inventory-row-${it.id}-merged`} className="inventory-cell__sub">
                 {t("inventory.mergedCount", { count: it.merged_count })}
@@ -139,14 +168,21 @@ export function buildInventoryColumns({ t, colVisible, fmtOfferedAt }: BuildArgs
       },
     },
     {
-      hideId: "unitPrice",
+      hideId: "note",
       col: {
-        key: "unit_price",
-        header: t("inventory.col.unitPrice"),
-        sortable: true,
-        align: "right",
-        mobileOrder: 3,
-        renderCell: (it) => `¥${it.unit_price.toLocaleString()}`,
+        key: "note",
+        header: t("inventory.col.note"),
+        mobileOrder: 5,
+        renderCell: (it) => <span className="inventory-cell__wrap">{it.note_ja ?? ""}</span>,
+      },
+    },
+    {
+      hideId: "ship",
+      col: {
+        key: "ship",
+        header: t("inventory.col.ship"),
+        mobileOrder: 6,
+        renderCell: (it) => <span className="inventory-cell__wrap">{it.ship_ja ?? ""}</span>,
       },
     },
     {
@@ -158,28 +194,10 @@ export function buildInventoryColumns({ t, colVisible, fmtOfferedAt }: BuildArgs
         mobileOrder: 7,
         renderCell: (it) => (
           <>
-            <div>{supplierLabel(it)}</div>
+            <div className="inventory-cell__nowrap">{supplierLabel(it)}</div>
             <div className="inventory-cell__sub">{fmtOfferedAt(it.offered_at)}</div>
           </>
         ),
-      },
-    },
-    {
-      hideId: "note",
-      col: {
-        key: "note",
-        header: t("inventory.col.note"),
-        mobileOrder: 5,
-        renderCell: (it) => it.note_ja ?? "",
-      },
-    },
-    {
-      hideId: "ship",
-      col: {
-        key: "ship",
-        header: t("inventory.col.ship"),
-        mobileOrder: 6,
-        renderCell: (it) => it.ship_ja ?? "",
       },
     },
     {
@@ -189,7 +207,7 @@ export function buildInventoryColumns({ t, colVisible, fmtOfferedAt }: BuildArgs
         header: t("inventory.col.releaseDate"),
         sortable: true,
         mobileHidden: true,
-        renderCell: (it) => it.release_date ?? "-",
+        renderCell: (it) => <span className="inventory-cell__nowrap">{it.release_date ?? "-"}</span>,
       },
     },
   ];

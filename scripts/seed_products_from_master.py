@@ -28,6 +28,7 @@ DB マッピング:
   docker compose exec -w /app backend python scripts/seed_products_from_master.py --apply
 
 冪等: ON CONFLICT (product_code) DO UPDATE SET ...
+入数・重さは書かない（ADR-1028）。--apply で4項目に値がある行があれば何も書かず終了コード 3。
 
 関連:
   migrations/082_extend_products_box_attributes.sql
@@ -150,13 +151,26 @@ def _load_rows() -> list[ProductRow]:
 
 async def _seed(rows: Iterable[ProductRow], dry_run: bool) -> None:
     rows_list = list(rows)
+    # ADR-1028: 入数・重さは荷姿の表（便6 の手順）へ入れる。この取り込みは古い4列に書かない
+    with_packaging = sum(
+        1 for r in rows_list
+        if any(v is not None for v in (r.boxes_per_case, r.packs_per_box, r.box_weight_kg, r.case_weight_kg))
+    )
     if dry_run:
+        logger.info("ADR-1028: 入数・重さは書かない。値がある行 %d 件（0 でなければ --apply は終了コード 3 で止まる）", with_packaging)
         logger.info("dry-run: %d 行を投入予定 (DB 変更なし)", len(rows_list))
         for r in rows_list[:5]:
             logger.info("  sample: %s | %s | %s | %s", r.product_code, r.name, r.category, r.release_date)
         if len(rows_list) > 5:
             logger.info("  ... (残り %d 行は省略)", len(rows_list) - 5)
         return
+
+    if with_packaging:
+        print(
+            f"ADR-1028: 入数・重さは書かない。CSV の4項目に値がある行 {with_packaging} 件。何も書かずに終了します",
+            file=sys.stderr,
+        )
+        sys.exit(3)
 
     url = os.getenv("DATABASE_URL")
     if not url:
@@ -177,19 +191,14 @@ async def _seed(rows: Iterable[ProductRow], dry_run: bool) -> None:
                     text(
                         """
                         INSERT INTO public.products
-                            (product_code, name, name_en, category, boxes_per_case,
-                             packs_per_box, box_weight_kg, case_weight_kg, release_date,
+                            (product_code, name, name_en, category, release_date,
                              moq, hs_code, material, stock_quantity)
-                        VALUES (:pc, :nm, :ne, :cat, :bpc, :ppb, :bw, :cw, :rd,
+                        VALUES (:pc, :nm, :ne, :cat, :rd,
                                 :moq, :hs, :mat, 0)
                         ON CONFLICT (product_code) DO UPDATE SET
                             name = EXCLUDED.name,
                             name_en = EXCLUDED.name_en,
                             category = EXCLUDED.category,
-                            boxes_per_case = EXCLUDED.boxes_per_case,
-                            packs_per_box = EXCLUDED.packs_per_box,
-                            box_weight_kg = EXCLUDED.box_weight_kg,
-                            case_weight_kg = EXCLUDED.case_weight_kg,
                             release_date = EXCLUDED.release_date,
                             moq = EXCLUDED.moq,
                             hs_code = EXCLUDED.hs_code,
@@ -200,8 +209,7 @@ async def _seed(rows: Iterable[ProductRow], dry_run: bool) -> None:
                     ),
                     {
                         "pc": r.product_code, "nm": r.name, "ne": r.name_en,
-                        "cat": r.category, "bpc": r.boxes_per_case, "ppb": r.packs_per_box,
-                        "bw": r.box_weight_kg, "cw": r.case_weight_kg, "rd": r.release_date,
+                        "cat": r.category, "rd": r.release_date,
                         "moq": r.moq, "hs": r.hs_code, "mat": r.material,
                     },
                 )

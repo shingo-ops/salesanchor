@@ -38,10 +38,17 @@ from app.schemas.product import (
     InventoryCheckResponse,
     ProductArchiveResponse,
     ProductCreate,
+    ProductPackagingOut,
     ProductResponse,
     ProductUpdate,
 )
 from app.services.audit import record_audit_log
+from app.services.product_packagings import (
+    LEGACY_FIELDS,
+    legacy_field_sql,
+    load_packagings,
+    save_legacy_fields,
+)
 from app.services.tcg_product_master_svc import check_required_fields, find_cleared_fields
 
 router = APIRouter()
@@ -60,32 +67,14 @@ _UPDATABLE_COLUMNS = {
     "is_archived", "supplier_default_id",
     # ADR-093: 商品種類（最上位ジャンル区分）+ セット種別
     "product_kind", "set_type",
-    # ADR-090 PR5a: TCG 種別マスタ統一
-    "tcg_type",
     # ADR-093 Phase 1: 商品マスタ全項目（Box 属性 + 発送ラベル + 検索/分類）
-    "boxes_per_case", "packs_per_box", "box_weight_kg", "case_weight_kg",
+    # 入数・重さ4項目は荷姿の表へ書く（ADR-1028。services/product_packagings.py）
     "volume_weight", "moq", "hs_code", "material", "item",
     "required_output_value", "search_keywords", "exclude_keywords",
     "related_series",
     # 手動並び替え（行ドラッグ）順
     "display_order",
 }
-
-_TCG_TYPE_CANONICAL_CODES = {
-    "pokemon_booster_box",
-    "one_piece",
-    "dragon_ball",
-    "union_arena",
-    "yugioh",
-    "other",
-    "gundam",
-    "weiss_schwarz",
-    "digimon",
-    "hololive",
-    "lorcana",
-    "xross_stars",
-}
-
 
 # ADR-090: products を public 中央テーブルへ一本化。
 # - PostgreSQL 本番: public.products（実列は name / stock_quantity）。Discord取込もここに入るため
@@ -94,49 +83,32 @@ _TCG_TYPE_CANONICAL_CODES = {
 #   dialect で参照テーブル名と列名を分岐する（応答契約 name_ja / quantity は alias で維持）。
 def _products_ctx(db: AsyncSession) -> dict[str, str]:
     if is_postgresql(db):
-        return {"ref": "public.products", "name": "name", "qty": "stock_quantity"}
-    return {"ref": "products", "name": "name_ja", "qty": "quantity"}
-
-
-def _type_master_ref(db: AsyncSession) -> str:
-    return "public.type_master" if is_postgresql(db) else "type_master"
-
-
-async def _validate_tcg_type(db: AsyncSession, tcg_type: str | None) -> None:
-    if tcg_type is None:
-        return
-    if is_postgresql(db):
-        has_master = await db.scalar(text("SELECT to_regclass('public.type_master') IS NOT NULL"))
-        if not has_master:
-            if tcg_type not in _TCG_TYPE_CANONICAL_CODES:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="tcg_type は type_master.code に存在する値か NULL のみ指定できます",
-                )
-            return
-    ref = _type_master_ref(db)
-    exists = await db.execute(
-        text(f"SELECT 1 FROM {ref} WHERE code = :code LIMIT 1"),
-        {"code": tcg_type},
-    )
-    if exists.scalar_one_or_none() is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="tcg_type は type_master.code に存在する値か NULL のみ指定できます",
-        )
+        return {"ref": "public.products", "name": "name", "qty": "stock_quantity", "dialect": "postgresql"}
+    return {"ref": "products", "name": "name_ja", "qty": "quantity", "dialect": "sqlite"}
 
 
 def _select_columns(ctx: dict[str, str]) -> str:
     """応答契約（name_ja / quantity）を維持しつつ実列を alias した SELECT 列リストを返す。"""
+    # 入数・重さ4項目は荷姿の表から組み立てる（ADR-1028）。SQLite には表が無いので NULL。
+    tm_ref = "public.type_master" if ctx["dialect"] == "postgresql" else "type_master"
+    if ctx["dialect"] == "postgresql":
+        legacy4 = ", ".join(
+            f"{legacy_field_sql(f, ctx['ref'] + '.id')} AS {f}"
+            for f in LEGACY_FIELDS
+        )
+    else:
+        legacy4 = ", ".join(f"NULL AS {f}" for f in LEGACY_FIELDS)
     return (
         f"id, product_code, {ctx['name']} AS name_ja, name_en, category, mark, "
         f"status, unit_price, {ctx['qty']} AS quantity, weight, "
         "notes, release_date, created_at, updated_at, "
         "jan_code, card_number, expansion_code, rarity, language, "
         "unit_price_usd, unit_price_eur, image_url, "
-        "is_archived, archived_at, supplier_default_id, tcg_type, "
+        "is_archived, archived_at, supplier_default_id, "
+        # 作品の符号は products.work_id → type_master.code（写しの列は持たない。ADR-1030）
+        f"(SELECT tm.code FROM {tm_ref} tm WHERE tm.id = {ctx['ref']}.work_id) AS work_code, "
         # ADR-093 Phase 1: 商品マスタ全項目
-        "boxes_per_case, packs_per_box, box_weight_kg, case_weight_kg, "
+        f"{legacy4}, "
         "volume_weight, moq, hs_code, material, item, required_output_value, "
         "search_keywords, exclude_keywords, related_series, "
         # ADR-093: 商品種類（最上位ジャンル区分。値='TCG' 等）+ セット種別
@@ -144,6 +116,18 @@ def _select_columns(ctx: dict[str, str]) -> str:
         # 手動並び替え順（行ドラッグ。NULL=未設定）
         "display_order"
     )
+
+
+async def _build_responses(db: AsyncSession, ctx: dict[str, str], rows) -> list[ProductResponse]:
+    """行から応答を組み、PostgreSQL では荷姿（packagings）を1回の SELECT でまとめて詰める。"""
+    rows = [dict(r) for r in rows]
+    packs: dict[int, list[dict]] = {}
+    if ctx["dialect"] == "postgresql":
+        packs = await load_packagings(db, [r["id"] for r in rows])
+    return [
+        ProductResponse(**r, packagings=[ProductPackagingOut(**p) for p in packs.get(r["id"], [])])
+        for r in rows
+    ]
 
 
 @router.get(
@@ -156,7 +140,7 @@ async def list_products(
     per_page: int = Query(default=20, ge=1, le=100),
     search: str | None = Query(default=None, max_length=255),
     category: str | None = Query(default=None, max_length=100),
-    tcg_type: str | None = Query(default=None, max_length=50, description="TCG種別コードで絞り込み（type_master.code）"),
+    work_code: str | None = Query(default=None, max_length=50, description="作品の符号で絞り込み（products.work_id → type_master.code）"),
     status_filter: str | None = Query(default=None, alias="status"),
     sort: str | None = Query(
         default=None,
@@ -216,9 +200,10 @@ async def list_products(
     if category:
         conditions.append("category = :category")
         params["category"] = category
-    if tcg_type:
-        conditions.append("tcg_type = :tcg_type")
-        params["tcg_type"] = tcg_type
+    if work_code:
+        tm_ref = "public.type_master" if ctx["dialect"] == "postgresql" else "type_master"
+        conditions.append(f"work_id = (SELECT tm.id FROM {tm_ref} tm WHERE tm.code = :work_code)")
+        params["work_code"] = work_code
     if status_filter:
         conditions.append("status = :status")
         params["status"] = status_filter
@@ -252,7 +237,7 @@ async def list_products(
         text(f"SELECT {_select_columns(ctx)} FROM {ctx['ref']} {where} ORDER BY {order_by} LIMIT :limit OFFSET :offset"),
         params,
     )
-    return [ProductResponse(**row) for row in result.mappings().all()]
+    return await _build_responses(db, ctx, result.mappings().all())
 
 
 @router.get(
@@ -351,7 +336,7 @@ async def get_product(
     row = result.mappings().first()
     if not row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="商品が見つかりません")
-    return ProductResponse(**row)
+    return (await _build_responses(db, ctx, [row]))[0]
 
 
 @router.post(
@@ -368,7 +353,10 @@ async def create_product(
 ):
     ctx = _products_ctx(db)
     payload = data.model_dump()
-    await _validate_tcg_type(db, payload.get("tcg_type"))
+    # 入数・重さ4項目は products の列ではなく荷姿の表へ書く（ADR-1028）
+    packaging_fields = {k: payload.pop(k) for k in LEGACY_FIELDS if payload.get(k) is not None}
+    for k in LEGACY_FIELDS:
+        payload.pop(k, None)
     if payload.get("status") is not None:
         payload["status"] = payload["status"].value if hasattr(payload["status"], "value") else payload["status"]
     # ADR-090: public.products は中央カタログ（tenant_id=NULL）。SQLite テスト表は
@@ -403,8 +391,7 @@ async def create_product(
                 notes, release_date,
                 jan_code, card_number, expansion_code, rarity, language,
                 unit_price_usd, unit_price_eur, image_url,
-                is_archived, supplier_default_id, tcg_type,
-                boxes_per_case, packs_per_box, box_weight_kg, case_weight_kg,
+                is_archived, supplier_default_id,
                 volume_weight, moq, hs_code, material, item,
                 required_output_value, search_keywords, exclude_keywords,
                 related_series, product_kind, set_type
@@ -414,8 +401,7 @@ async def create_product(
                 :notes, :release_date,
                 :jan_code, :card_number, :expansion_code, :rarity, :language,
                 :unit_price_usd, :unit_price_eur, :image_url,
-                :is_archived, :supplier_default_id, :tcg_type,
-                :boxes_per_case, :packs_per_box, :box_weight_kg, :case_weight_kg,
+                :is_archived, :supplier_default_id,
                 :volume_weight, :moq, :hs_code, :material, :item,
                 :required_output_value, :search_keywords, :exclude_keywords,
                 :related_series, :product_kind, :set_type
@@ -430,11 +416,15 @@ async def create_product(
         {"code": f"PD-{new_id:05d}", "id": new_id},
     )
 
+    if packaging_fields and ctx["dialect"] == "postgresql":
+        await save_legacy_fields(db, new_id, packaging_fields, f"user:{current_user.id}")
+
     fetched = await db.execute(
         text(f"SELECT {_select_columns(ctx)} FROM {ctx['ref']} WHERE id = :id"),
         {"id": new_id},
     )
     row = fetched.mappings().first()
+    response = (await _build_responses(db, ctx, [row]))[0]
 
     await record_audit_log(
         db=db, tenant_id=tenant_id, user_id=current_user.id,
@@ -445,7 +435,7 @@ async def create_product(
     await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
     await invalidate_dashboard_cache(tenant_id)
 
-    return ProductResponse(**row)
+    return response
 
 
 @router.patch(
@@ -470,15 +460,24 @@ async def update_product(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="商品が見つかりません")
 
     update_data = data.model_dump(exclude_unset=True)
+    packaging_fields = {k: v for k, v in update_data.items() if k in LEGACY_FIELDS}
     update_data = {k: v for k, v in update_data.items() if k in _UPDATABLE_COLUMNS}
-    if not update_data:
+    if not update_data and not packaging_fields:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="更新するフィールドを指定してください")
+
+    if packaging_fields and ctx["dialect"] == "postgresql":
+        tenant_of_row = (await db.execute(
+            text("SELECT tenant_id FROM public.products WHERE id = :id"), {"id": product_id}
+        )).scalar_one_or_none()
+        if tenant_of_row is not None:
+            # 荷姿の表の RLS はテナントを持たない共用の行だけが対象（ADR-1028）
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="PACKAGING_SHARED_ONLY",
+            )
 
     if "status" in update_data and update_data["status"] is not None:
         update_data["status"] = update_data["status"].value if hasattr(update_data["status"], "value") else update_data["status"]
-
-    if "tcg_type" in update_data:
-        await _validate_tcg_type(db, update_data.get("tcg_type"))
 
     # ADR-1020: 共用の行で、値か印があった項目を空にする更新は止める（古い空欄は止めない）。
     if is_postgresql(db):
@@ -504,34 +503,48 @@ async def update_product(
     # 応答契約の name_ja / quantity を実列(ctx)へマッピングして SET 句を組む（param キーは据え置き）。
     _col = {"name_ja": ctx["name"], "quantity": ctx["qty"]}
     # is_archived=true への遷移時に archived_at を自動設定
-    set_clauses = ", ".join(f"{_col.get(k, k)} = :{k}" for k in update_data)
+    set_parts = [f"{_col.get(k, k)} = :{k}" for k in update_data]
     if update_data.get("is_archived") is True and not old_row.get("is_archived"):
-        set_clauses += ", archived_at = NOW()"
+        set_parts.append("archived_at = NOW()")
     elif update_data.get("is_archived") is False and old_row.get("is_archived"):
-        set_clauses += ", archived_at = NULL"
+        set_parts.append("archived_at = NULL")
+    set_parts.append("updated_at = NOW()")
+    set_clauses = ", ".join(set_parts)
 
     update_data["id"] = product_id
 
+    # products の UPDATE は常に流す（RLS の判定を今と同じにするため）
     result = await db.execute(
         text(f"""
-            UPDATE {ctx['ref']} SET {set_clauses}, updated_at = NOW()
+            UPDATE {ctx['ref']} SET {set_clauses}
             WHERE id = :id
             RETURNING {_select_columns(ctx)}
         """),
         update_data,
     )
     row = result.mappings().first()
+    if row is None:
+        # RLS で共用の行に書けない（UPDATE 0 行）。rollback は get_db が行う
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="PRODUCT_NOT_WRITABLE")
+
+    if packaging_fields and ctx["dialect"] == "postgresql":
+        await save_legacy_fields(db, product_id, packaging_fields, f"user:{current_user.id}")
+        row = (await db.execute(
+            text(f"SELECT {_select_columns(ctx)} FROM {ctx['ref']} WHERE id = :id"),
+            {"id": product_id},
+        )).mappings().first()
+    response = (await _build_responses(db, ctx, [row]))[0]
 
     await record_audit_log(
         db=db, tenant_id=tenant_id, user_id=current_user.id,
         action="update", table_name="products", record_id=product_id,
-        old_data=dict(old_row), new_data=update_data,
+        old_data=dict(old_row), new_data={**update_data, **packaging_fields},
     )
     await db.commit()
     await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
     await invalidate_dashboard_cache(tenant_id)
 
-    return ProductResponse(**row)
+    return response
 
 
 # 削除時に検査する下流テーブルの allowlist。

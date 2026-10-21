@@ -11,9 +11,9 @@ vi.mock('../../lib/api', () => ({ api: mock }));
 
 const row = {
   id: 'r1', product_id: 2, product_name: 'Card', name_en: null, category: 'cat', mark: null,
-  condition: 'sealed', unit: 'BOX', offer_type: 'in_stock', status: 'in_stock', note_ja: 'memo', ship_ja: 'ship',
+  condition: 'Sealed box', unit: 'BOX', offer_type: 'in_stock', status: 'in_stock', note_ja: 'memo', ship_ja: 'ship',
   merged_count: 1, posted_at: null, ship_timing: null, supplier_id: 3, supplier_name: 'S',
-  unit_price: 10, quantity: 2, tcg_type: 'pokemon_booster_box', offered_at: '', release_date: null,
+  unit_price: 10, quantity: 2, work_code: 'pokemon_booster_box', offered_at: '', release_date: null,
 };
 
 let instance = createInstance();
@@ -40,20 +40,21 @@ describe('InventoryPage table layout (DataTable)', () => {
     renderPage();
     const rowEl = await screen.findByTestId('inventory-row-r1');
     const heads = Array.from(document.querySelectorAll('thead th')).map((th) => th.textContent?.trim());
-    expect(heads.slice(1)).toEqual(
-      ['mark', 'title', 'condition', 'unit', 'offerType', 'quantity', 'unitPrice', 'supplier', 'note', 'ship', 'releaseDate']
+    expect(heads).toEqual(
+      ['status', 'mark', 'title', 'condition', 'unitPrice', 'quantity', 'note', 'ship', 'supplier', 'releaseDate']
         .map((k) => (en as unknown as { inventory: { col: Record<string, string> } }).inventory.col[k]),
     );
     expect(heads).not.toContain(en.inventory.col.category);
-    expect(within(rowEl).getByText('sealed').className).toContain('comp-badge--success');
+    expect(within(rowEl).getByText('Sealed box').className).toContain('inventory-cell__condition--info');
   });
 
-  it('sort menu has 3 options and placeholder by default; picking one sets sort and resetAll returns to release_date desc', async () => {
+  it('sort menu has a heading plus 3 options (no release_date:desc) and shows the heading by default; picking one sets sort and resetAll returns to the heading', async () => {
     renderPage();
     await screen.findByTestId('inventory-row-r1');
     const menu = screen.getByTestId('inventory-sort-menu') as HTMLSelectElement;
     expect(menu.value).toBe('');
     expect(Array.from(menu.options).map((o) => o.value)).toEqual(['', 'unit_price:asc', 'quantity:desc', 'offered_at:desc']);
+    expect(Array.from(menu.options).map((o) => o.value)).not.toContain('release_date:desc');
     expect(menu.options[0].textContent).toBe('Sort');
     fireEvent.change(menu, { target: { value: 'unit_price:asc' } });
     await waitFor(() =>
@@ -66,5 +67,20 @@ describe('InventoryPage table layout (DataTable)', () => {
     const last = String(invCalls[invCalls.length - 1][0]);
     expect(last).toContain('sort=release_date');
     expect(last).toContain('order=desc');
+  });
+
+  it('choosing the heading after another sort returns to release_date desc', async () => {
+    renderPage();
+    await screen.findByTestId('inventory-row-r1');
+    fireEvent.change(screen.getByTestId('inventory-sort-menu'), { target: { value: 'unit_price:asc' } });
+    await waitFor(() => expect((screen.getByTestId('inventory-sort-menu') as HTMLSelectElement).value).toBe('unit_price:asc'));
+    fireEvent.change(screen.getByTestId('inventory-sort-menu'), { target: { value: '' } });
+    await waitFor(() => expect((screen.getByTestId('inventory-sort-menu') as HTMLSelectElement).value).toBe(''));
+    await waitFor(() => {
+      const invCalls = mock.get.mock.calls.filter(([u]) => String(u).startsWith('/inventory?'));
+      const last = String(invCalls[invCalls.length - 1][0]);
+      expect(last).toContain('sort=release_date');
+      expect(last).toContain('order=desc');
+    });
   });
 });

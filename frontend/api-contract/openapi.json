@@ -225,7 +225,7 @@
             "title": "Series",
             "type": "string"
           },
-          "tcg_type": {
+          "work_code": {
             "anyOf": [
               {
                 "type": "string"
@@ -234,8 +234,8 @@
                 "type": "null"
               }
             ],
-            "description": "TCG 種別 (products.tcg_type)。タブ分割キー。",
-            "title": "Tcg Type"
+            "description": "作品の符号（products.work_id → type_master.code）。タブ分割キー。",
+            "title": "Work Code"
           }
         },
         "required": [
@@ -3812,6 +3812,64 @@
           "rows"
         ],
         "title": "ChannelsResponse",
+        "type": "object"
+      },
+      "ClientTimingBody": {
+        "additionalProperties": false,
+        "description": "要確認パネルの表示時間（ブラウザ計測）。利用者を特定する項目は持たない。",
+        "properties": {
+          "doc_ms": {
+            "maximum": 120000.0,
+            "minimum": 0.0,
+            "title": "Doc Ms",
+            "type": "number"
+          },
+          "entry": {
+            "enum": [
+              "first",
+              "return"
+            ],
+            "title": "Entry",
+            "type": "string"
+          },
+          "list_ms": {
+            "maximum": 120000.0,
+            "minimum": 0.0,
+            "title": "List Ms",
+            "type": "number"
+          },
+          "page_size": {
+            "enum": [
+              20,
+              25,
+              50,
+              100
+            ],
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "panel_ms": {
+            "maximum": 120000.0,
+            "minimum": 0.0,
+            "title": "Panel Ms",
+            "type": "number"
+          },
+          "rows": {
+            "maximum": 500.0,
+            "minimum": 0.0,
+            "title": "Rows",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "panel_ms",
+          "list_ms",
+          "doc_ms",
+          "rows",
+          "page_size",
+          "entry"
+        ],
+        "title": "ClientTimingBody",
         "type": "object"
       },
       "CloseReasonCreate": {
@@ -9287,6 +9345,71 @@
         "title": "EngineStats",
         "type": "object"
       },
+      "ErrorReportField": {
+        "properties": {
+          "expected_missing_product": {
+            "default": false,
+            "title": "Expected Missing Product",
+            "type": "boolean"
+          },
+          "expected_value": {
+            "title": "Expected Value"
+          },
+          "field_name": {
+            "enum": [
+              "product_id",
+              "quantity",
+              "price",
+              "unit",
+              "condition",
+              "status",
+              "note"
+            ],
+            "title": "Field Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "field_name"
+        ],
+        "title": "ErrorReportField",
+        "type": "object"
+      },
+      "ErrorReportRequest": {
+        "properties": {
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/ErrorReportField"
+            },
+            "minItems": 1,
+            "title": "Fields",
+            "type": "array"
+          }
+        },
+        "required": [
+          "fields"
+        ],
+        "title": "ErrorReportRequest",
+        "type": "object"
+      },
+      "ErrorReportResponse": {
+        "properties": {
+          "notified": {
+            "title": "Notified",
+            "type": "boolean"
+          },
+          "report_code": {
+            "title": "Report Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "report_code",
+          "notified"
+        ],
+        "title": "ErrorReportResponse",
+        "type": "object"
+      },
       "EtdImageResponse": {
         "properties": {
           "environment": {
@@ -9507,16 +9630,33 @@
       "ExtendRequest": {
         "properties": {
           "days": {
+            "anyOf": [
+              {
+                "maximum": 365.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "description": "延長する日数（1〜365）",
-            "maximum": 365.0,
-            "minimum": 1.0,
-            "title": "Days",
-            "type": "integer"
+            "title": "Days"
+          },
+          "until_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "この日の終わり（日本時間 23:59:59）まで延長する。今日より後・365日以内",
+            "title": "Until Date"
           }
         },
-        "required": [
-          "days"
-        ],
         "title": "ExtendRequest",
         "type": "object"
       },
@@ -11113,7 +11253,7 @@
             "type": "array"
           },
           "tabs": {
-            "description": "存在する tcg_type の一覧 (重複なし、昇順)。",
+            "description": "存在する work_code の一覧 (重複なし、昇順)。",
             "items": {
               "type": "string"
             },
@@ -11310,6 +11450,17 @@
             },
             "title": "Items",
             "type": "array"
+          },
+          "next_expiry_in_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Expiry In Seconds"
           },
           "page": {
             "title": "Page",
@@ -11726,17 +11877,6 @@
             ],
             "title": "Supplier Name"
           },
-          "tcg_type": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Tcg Type"
-          },
           "unit": {
             "anyOf": [
               {
@@ -11764,6 +11904,17 @@
             "format": "date-time",
             "title": "Updated At",
             "type": "string"
+          },
+          "work_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Work Code"
           }
         },
         "required": [
@@ -12034,6 +12185,16 @@
       "InventoryRow": {
         "description": "在庫表ビューの 1 明細行（商品×仕入元×状態）。読み取り専用。\n\nadmin 専用フィールド（notes/source/status）は含めない。最終ユーザー（各クライアントの\n営業担当ロール以上）が閲覧 + 見積/請求/発注作成するための列のみ。\ncondition は migration 089 の 16 値だが、旧データ混入時も 500 にしないため str で受ける\n（inventory_offers 500 の教訓）。",
         "properties": {
+          "badge_cheapest": {
+            "default": false,
+            "title": "Badge Cheapest",
+            "type": "boolean"
+          },
+          "badge_most_stock": {
+            "default": false,
+            "title": "Badge Most Stock",
+            "type": "boolean"
+          },
           "category": {
             "anyOf": [
               {
@@ -12213,17 +12374,6 @@
             ],
             "title": "Supplier Name"
           },
-          "tcg_type": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Tcg Type"
-          },
           "unit": {
             "anyOf": [
               {
@@ -12238,6 +12388,17 @@
           "unit_price": {
             "title": "Unit Price",
             "type": "integer"
+          },
+          "work_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Work Code"
           }
         },
         "required": [
@@ -12415,18 +12576,6 @@
             ],
             "title": "Supplier Name"
           },
-          "tcg_type": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "TCG 種別。",
-            "title": "Tcg Type"
-          },
           "unit_price": {
             "anyOf": [
               {
@@ -12437,6 +12586,18 @@
               }
             ],
             "title": "Unit Price"
+          },
+          "work_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "作品の符号（products.work_id → type_master.code）。",
+            "title": "Work Code"
           }
         },
         "required": [
@@ -15702,6 +15863,21 @@
         "title": "LeadUpdate",
         "type": "object"
       },
+      "LineNameUpdate": {
+        "properties": {
+          "line_name": {
+            "description": "新しい LINE名（前後の空白を除いて 1〜100 文字）",
+            "maxLength": 200,
+            "title": "Line Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "line_name"
+        ],
+        "title": "LineNameUpdate",
+        "type": "object"
+      },
       "LinkProductRequest": {
         "properties": {
           "product_id": {
@@ -16881,6 +17057,47 @@
         "title": "OpsControlChange",
         "type": "object"
       },
+      "OpsEventRequest": {
+        "properties": {
+          "actor": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Actor",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "cause",
+              "action"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "payload": {
+            "title": "Payload",
+            "type": "object"
+          }
+        },
+        "required": [
+          "kind",
+          "actor"
+        ],
+        "title": "OpsEventRequest",
+        "type": "object"
+      },
+      "OpsEventResponse": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "OpsEventResponse",
+        "type": "object"
+      },
       "OpsIncidentAnnotation": {
         "additionalProperties": false,
         "properties": {
@@ -17048,6 +17265,151 @@
           }
         },
         "title": "OpsIncidentFields",
+        "type": "object"
+      },
+      "OpsReanalyzeResponse": {
+        "properties": {
+          "task_id": {
+            "title": "Task Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "task_id"
+        ],
+        "title": "OpsReanalyzeResponse",
+        "type": "object"
+      },
+      "OpsReportDetail": {
+        "properties": {
+          "current_values": {
+            "title": "Current Values",
+            "type": "object"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/OpsReportEvent"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/OpsReportField"
+            },
+            "title": "Fields",
+            "type": "array"
+          },
+          "prompt_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prompt Version"
+          },
+          "report": {
+            "$ref": "#/components/schemas/OpsReportHeader"
+          }
+        },
+        "required": [
+          "report",
+          "fields",
+          "current_values",
+          "prompt_version",
+          "events"
+        ],
+        "title": "OpsReportDetail",
+        "type": "object"
+      },
+      "OpsReportEvent": {
+        "properties": {
+          "actor": {
+            "title": "Actor",
+            "type": "string"
+          },
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "payload": {
+            "title": "Payload",
+            "type": "object"
+          }
+        },
+        "required": [
+          "at",
+          "actor",
+          "kind",
+          "payload"
+        ],
+        "title": "OpsReportEvent",
+        "type": "object"
+      },
+      "OpsReportField": {
+        "properties": {
+          "expected_missing_product": {
+            "default": false,
+            "title": "Expected Missing Product",
+            "type": "boolean"
+          },
+          "expected_value": {
+            "title": "Expected Value"
+          },
+          "field_name": {
+            "title": "Field Name",
+            "type": "string"
+          },
+          "system_value": {
+            "title": "System Value"
+          }
+        },
+        "required": [
+          "field_name"
+        ],
+        "title": "OpsReportField",
+        "type": "object"
+      },
+      "OpsReportHeader": {
+        "properties": {
+          "extraction_item_id": {
+            "title": "Extraction Item Id",
+            "type": "string"
+          },
+          "extraction_job_id": {
+            "title": "Extraction Job Id",
+            "type": "string"
+          },
+          "report_code": {
+            "title": "Report Code",
+            "type": "string"
+          },
+          "reported_at": {
+            "format": "date-time",
+            "title": "Reported At",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "report_code",
+          "extraction_item_id",
+          "extraction_job_id",
+          "status",
+          "reported_at"
+        ],
+        "title": "OpsReportHeader",
         "type": "object"
       },
       "OrderCommissionAssignmentRequest": {
@@ -21765,6 +22127,114 @@
         "title": "POResponse",
         "type": "object"
       },
+      "PackagingIn": {
+        "additionalProperties": false,
+        "description": "ADR-1028 便4: 荷姿 1 単位ぶん。中の単位はサーバーが決める。",
+        "properties": {
+          "contained_count": {
+            "anyOf": [
+              {
+                "maximum": 1000000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contained Count"
+          },
+          "count_source": {
+            "anyOf": [
+              {
+                "enum": [
+                  "official",
+                  "official_store",
+                  "retailer",
+                  "measured",
+                  "legacy"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Count Source"
+          },
+          "count_source_urls": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 10,
+            "title": "Count Source Urls",
+            "type": "array"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "unit_code": {
+            "title": "Unit Code",
+            "type": "string"
+          },
+          "weight_kg": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 99999.999,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weight Kg"
+          },
+          "weight_source": {
+            "anyOf": [
+              {
+                "enum": [
+                  "official",
+                  "official_store",
+                  "retailer",
+                  "measured",
+                  "legacy"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weight Source"
+          },
+          "weight_source_urls": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 10,
+            "title": "Weight Source Urls",
+            "type": "array"
+          }
+        },
+        "required": [
+          "unit_code"
+        ],
+        "title": "PackagingIn",
+        "type": "object"
+      },
       "ParallelReportResponse": {
         "properties": {
           "summary": {
@@ -23476,7 +23946,7 @@
           "box_weight_kg": {
             "anyOf": [
               {
-                "minimum": 0.0,
+                "exclusiveMinimum": 0.0,
                 "type": "number"
               },
               {
@@ -23491,7 +23961,7 @@
           "boxes_per_case": {
             "anyOf": [
               {
-                "minimum": 0.0,
+                "exclusiveMinimum": 0.0,
                 "type": "integer"
               },
               {
@@ -23515,7 +23985,7 @@
           "case_weight_kg": {
             "anyOf": [
               {
-                "minimum": 0.0,
+                "exclusiveMinimum": 0.0,
                 "type": "number"
               },
               {
@@ -23697,7 +24167,7 @@
           "packs_per_box": {
             "anyOf": [
               {
-                "minimum": 0.0,
+                "exclusiveMinimum": 0.0,
                 "type": "integer"
               },
               {
@@ -23811,18 +24281,6 @@
               }
             ],
             "title": "Supplier Default Id"
-          },
-          "tcg_type": {
-            "anyOf": [
-              {
-                "maxLength": 50,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Tcg Type"
           },
           "unit_price": {
             "anyOf": [
@@ -24065,6 +24523,21 @@
             "maxLength": 5000,
             "title": "Mark",
             "type": "string"
+          },
+          "packagings": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/PackagingIn"
+                },
+                "maxItems": 10,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Packagings"
           },
           "product_category_id": {
             "anyOf": [
@@ -24903,6 +25376,108 @@
         "title": "ProductListResponse",
         "type": "object"
       },
+      "ProductPackagingOut": {
+        "description": "ADR-1028: 荷姿の表の1行（単位ごとの入数・重さと出典）。",
+        "properties": {
+          "contained_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contained Count"
+          },
+          "contained_unit_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contained Unit Code"
+          },
+          "count_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Count Source"
+          },
+          "count_source_urls": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Count Source Urls",
+            "type": "array"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "unit_code": {
+            "title": "Unit Code",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "weight_kg": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weight Kg"
+          },
+          "weight_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weight Source"
+          },
+          "weight_source_urls": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Weight Source Urls",
+            "type": "array"
+          }
+        },
+        "required": [
+          "unit_code",
+          "updated_at"
+        ],
+        "title": "ProductPackagingOut",
+        "type": "object"
+      },
       "ProductResponse": {
         "properties": {
           "archived_at": {
@@ -25133,6 +25708,14 @@
             ],
             "title": "Notes"
           },
+          "packagings": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ProductPackagingOut"
+            },
+            "title": "Packagings",
+            "type": "array"
+          },
           "packs_per_box": {
             "anyOf": [
               {
@@ -25255,18 +25838,6 @@
             ],
             "title": "Supplier Default Id"
           },
-          "tcg_type": {
-            "anyOf": [
-              {
-                "maxLength": 50,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Tcg Type"
-          },
           "unit_price": {
             "anyOf": [
               {
@@ -25326,6 +25897,17 @@
               }
             ],
             "title": "Weight"
+          },
+          "work_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Work Code"
           }
         },
         "required": [
@@ -25360,7 +25942,7 @@
           "box_weight_kg": {
             "anyOf": [
               {
-                "minimum": 0.0,
+                "exclusiveMinimum": 0.0,
                 "type": "number"
               },
               {
@@ -25375,7 +25957,7 @@
           "boxes_per_case": {
             "anyOf": [
               {
-                "minimum": 0.0,
+                "exclusiveMinimum": 0.0,
                 "type": "integer"
               },
               {
@@ -25399,7 +25981,7 @@
           "case_weight_kg": {
             "anyOf": [
               {
-                "minimum": 0.0,
+                "exclusiveMinimum": 0.0,
                 "type": "number"
               },
               {
@@ -25606,7 +26188,7 @@
           "packs_per_box": {
             "anyOf": [
               {
-                "minimum": 0.0,
+                "exclusiveMinimum": 0.0,
                 "type": "integer"
               },
               {
@@ -25732,18 +26314,6 @@
               }
             ],
             "title": "Supplier Default Id"
-          },
-          "tcg_type": {
-            "anyOf": [
-              {
-                "maxLength": 50,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Tcg Type"
           },
           "unit_price": {
             "anyOf": [
@@ -29813,6 +30383,20 @@
           }
         },
         "title": "SignalSummary",
+        "type": "object"
+      },
+      "SignupRequestResponse": {
+        "properties": {
+          "text": {
+            "description": "①申込のお願いの文",
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "SignupRequestResponse",
         "type": "object"
       },
       "SoldOutResultItem": {
@@ -35797,6 +36381,53 @@
         "title": "ViewerPasswordResetRequest",
         "type": "object"
       },
+      "ViewerReissueResponse": {
+        "description": "作り直した申込コードと招待リンク（この応答でしか見られない）。",
+        "properties": {
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "申込コードの有効期限",
+            "title": "Expires At"
+          },
+          "invite_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Discord 招待リンク（作れなければ null）",
+            "title": "Invite Url"
+          },
+          "message": {
+            "description": "そのまま送れる案内文（招待には外部ブラウザの目印付き）",
+            "title": "Message",
+            "type": "string"
+          },
+          "signup_code": {
+            "description": "申込コード（XXXX-XXXX-XXXX-XXXX）",
+            "title": "Signup Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "signup_code",
+          "expires_at",
+          "message"
+        ],
+        "title": "ViewerReissueResponse",
+        "type": "object"
+      },
       "ViewerSignupRequest": {
         "properties": {
           "email": {
@@ -35843,6 +36474,289 @@
           "line_name"
         ],
         "title": "ViewerSignupRequest",
+        "type": "object"
+      },
+      "ViewerStatusChangeResponse": {
+        "description": "状態変更（activate／suspend／unsuspend／extend）の応答。部屋へのお知らせの結果つき。",
+        "properties": {
+          "created_at": {
+            "description": "登録した時刻",
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "discord_channel_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Discord のチケット部屋 ID",
+            "title": "Discord Channel Id"
+          },
+          "discord_channel_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Discord のチケット部屋を開く URL",
+            "title": "Discord Channel Url"
+          },
+          "discord_user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Discord の利用者 ID",
+            "title": "Discord User Id"
+          },
+          "email": {
+            "description": "メールアドレス（小文字）",
+            "title": "Email",
+            "type": "string"
+          },
+          "flag_many_ips": {
+            "description": "目印: 24時間以内に3種類以上の IP からログイン",
+            "title": "Flag Many Ips",
+            "type": "boolean"
+          },
+          "flag_shared_ip": {
+            "description": "目印: 別の閲覧者と同じ IP からログイン",
+            "title": "Flag Shared Ip",
+            "type": "boolean"
+          },
+          "id": {
+            "description": "閲覧者 viewer_accounts.id",
+            "title": "Id",
+            "type": "integer"
+          },
+          "inventory_issue": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "在庫関連の課題（任意）",
+            "title": "Inventory Issue"
+          },
+          "line_name": {
+            "description": "LINE の表示名",
+            "title": "Line Name",
+            "type": "string"
+          },
+          "room_notice": {
+            "anyOf": [
+              {
+                "enum": [
+                  "sent",
+                  "failed",
+                  "no_room",
+                  "no_template"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "部屋へのお知らせの結果（unsuspend は null。no_template はテンプレートが使えず送らなかった）",
+            "title": "Room Notice"
+          },
+          "room_notice_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "部屋へ送ろうとした文（送れなかったとき画面でコピーする）",
+            "title": "Room Notice Text"
+          },
+          "status": {
+            "description": "pending／verified／trial／active／suspended",
+            "title": "Status",
+            "type": "string"
+          },
+          "trial_expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "お試しの期限",
+            "title": "Trial Expires At"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "line_name",
+          "status",
+          "created_at",
+          "flag_many_ips",
+          "flag_shared_ip"
+        ],
+        "title": "ViewerStatusChangeResponse",
+        "type": "object"
+      },
+      "ViewerTemplateItem": {
+        "description": "文面テンプレート1件（台帳の1鍵）。",
+        "properties": {
+          "body": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "本文。DB に行が無ければ null",
+            "title": "Body"
+          },
+          "copy_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "コピー用の文。{signup_url} だけ入れ済み。body が null なら null",
+            "title": "Copy Text"
+          },
+          "key": {
+            "description": "文面の鍵（台帳の9件）",
+            "title": "Key",
+            "type": "string"
+          },
+          "placeholders": {
+            "description": "差し込み項目（台帳の順）",
+            "items": {
+              "type": "string"
+            },
+            "title": "Placeholders",
+            "type": "array"
+          },
+          "send_mode": {
+            "description": "手で送る／自動",
+            "enum": [
+              "manual",
+              "auto"
+            ],
+            "title": "Send Mode",
+            "type": "string"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "最後に直した時刻",
+            "title": "Updated At"
+          },
+          "updated_by_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "最後に直した人の名前（full_name、空なら username）",
+            "title": "Updated By Name"
+          }
+        },
+        "required": [
+          "key",
+          "placeholders",
+          "send_mode"
+        ],
+        "title": "ViewerTemplateItem",
+        "type": "object"
+      },
+      "ViewerTemplateListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ViewerTemplateItem"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "ViewerTemplateListResponse",
+        "type": "object"
+      },
+      "ViewerTemplateTextResponse": {
+        "properties": {
+          "text": {
+            "description": "その人の値を差し込んだ、そのまま送れる文",
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "ViewerTemplateTextResponse",
+        "type": "object"
+      },
+      "ViewerTemplateUpdate": {
+        "properties": {
+          "body": {
+            "description": "新しい本文（差し込み項目は台帳どおり・1〜1800文字）",
+            "title": "Body",
+            "type": "string"
+          },
+          "expected_updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "画面で開いた時の updated_at。未登録の行を新しく入れるときは null",
+            "title": "Expected Updated At"
+          }
+        },
+        "required": [
+          "body"
+        ],
+        "title": "ViewerTemplateUpdate",
         "type": "object"
       },
       "VoidRequest": {
@@ -43709,9 +44623,9 @@
             }
           },
           {
-            "description": "TCG種別 (public.products.tcg_type)",
+            "description": "作品の符号（products.work_id → type_master.code）",
             "in": "query",
-            "name": "tcg_type",
+            "name": "work_code",
             "required": false,
             "schema": {
               "anyOf": [
@@ -43723,8 +44637,8 @@
                   "type": "null"
                 }
               ],
-              "description": "TCG種別 (public.products.tcg_type)",
-              "title": "Tcg Type"
+              "description": "作品の符号（products.work_id → type_master.code）",
+              "title": "Work Code"
             }
           },
           {
@@ -44016,7 +44930,7 @@
             "name": "order",
             "required": false,
             "schema": {
-              "default": "asc",
+              "default": "desc",
               "pattern": "^(asc|desc)$",
               "title": "Order",
               "type": "string"
@@ -44081,11 +44995,11 @@
     },
     "/api/v1/inventory/aggregated": {
       "get": {
-        "description": "在庫を商品 (series) x 状態 (condition) でピボットした集計を返す。\n\n- 各セルは集計後の最良 1 件 (価格/数量)。\n- supplier_name / 採用理由 / raw オファーは含まない (テナント境界)。\n- ?category= で products.tcg_type による絞り込みが可能。",
+        "description": "在庫を商品 (series) x 状態 (condition) でピボットした集計を返す。\n\n- 各セルは集計後の最良 1 件 (価格/数量)。\n- supplier_name / 採用理由 / raw オファーは含まない (テナント境界)。\n- ?category= で work_id の作品の符号（type_master.code） による絞り込みが可能。",
         "operationId": "get_inventory_aggregated_api_v1_inventory_aggregated_get",
         "parameters": [
           {
-            "description": "tcg_type フィルタ (例: pokemon)。未指定の場合は全種別。",
+            "description": "work_code フィルタ (例: pokemon)。未指定の場合は全種別。",
             "in": "query",
             "name": "category",
             "required": false,
@@ -44098,7 +45012,7 @@
                   "type": "null"
                 }
               ],
-              "description": "tcg_type フィルタ (例: pokemon)。未指定の場合は全種別。",
+              "description": "work_code フィルタ (例: pokemon)。未指定の場合は全種別。",
               "title": "Category"
             }
           }
@@ -47695,6 +48609,157 @@
         ]
       }
     },
+    "/api/v1/ops/error-reports/{report_code}": {
+      "get": {
+        "operationId": "get_error_report_api_v1_ops_error_reports__report_code__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "report_code",
+            "required": true,
+            "schema": {
+              "title": "Report Code",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpsReportDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "誤り報告の取得（ADR-1025）",
+        "tags": [
+          "ops"
+        ]
+      }
+    },
+    "/api/v1/ops/error-reports/{report_code}/events": {
+      "post": {
+        "operationId": "post_error_report_event_api_v1_ops_error_reports__report_code__events_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "report_code",
+            "required": true,
+            "schema": {
+              "title": "Report Code",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OpsEventRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpsEventResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "誤り報告に原因・対応を記録する（ADR-1025）",
+        "tags": [
+          "ops"
+        ]
+      }
+    },
+    "/api/v1/ops/error-reports/{report_code}/reanalyze": {
+      "post": {
+        "operationId": "post_error_report_reanalyze_api_v1_ops_error_reports__report_code__reanalyze_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "report_code",
+            "required": true,
+            "schema": {
+              "title": "Report Code",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpsReanalyzeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "誤り報告の行を再解析して照合する（v102 のみ・ADR-1025）",
+        "tags": [
+          "ops"
+        ]
+      }
+    },
     "/api/v1/ops/incidents": {
       "get": {
         "operationId": "list_incidents_api_v1_ops_incidents_get",
@@ -50471,9 +51536,9 @@
             }
           },
           {
-            "description": "TCG種別コードで絞り込み（type_master.code）",
+            "description": "作品の符号で絞り込み（products.work_id → type_master.code）",
             "in": "query",
-            "name": "tcg_type",
+            "name": "work_code",
             "required": false,
             "schema": {
               "anyOf": [
@@ -50485,8 +51550,8 @@
                   "type": "null"
                 }
               ],
-              "description": "TCG種別コードで絞り込み（type_master.code）",
-              "title": "Tcg Type"
+              "description": "作品の符号で絞り込み（products.work_id → type_master.code）",
+              "title": "Work Code"
             }
           },
           {
@@ -62367,6 +63432,89 @@
         ]
       }
     },
+    "/api/v1/super-admin/viewer-templates": {
+      "get": {
+        "operationId": "list_viewer_templates_endpoint_api_v1_super_admin_viewer_templates_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViewerTemplateListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Viewer Templates Endpoint",
+        "tags": [
+          "super-admin"
+        ]
+      }
+    },
+    "/api/v1/super-admin/viewer-templates/{key}": {
+      "put": {
+        "operationId": "update_viewer_template_endpoint_api_v1_super_admin_viewer_templates__key__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "title": "Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ViewerTemplateUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViewerTemplateItem"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Viewer Template Endpoint",
+        "tags": [
+          "super-admin"
+        ]
+      }
+    },
     "/api/v1/super-admin/viewers": {
       "get": {
         "operationId": "list_viewers_endpoint_api_v1_super_admin_viewers_get",
@@ -62393,6 +63541,89 @@
         ]
       }
     },
+    "/api/v1/super-admin/viewers/signup-request": {
+      "get": {
+        "operationId": "signup_request_endpoint_api_v1_super_admin_viewers_signup_request_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignupRequestResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Signup Request Endpoint",
+        "tags": [
+          "super-admin"
+        ]
+      }
+    },
+    "/api/v1/super-admin/viewers/{viewer_id}": {
+      "patch": {
+        "operationId": "update_line_name_endpoint_api_v1_super_admin_viewers__viewer_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "viewer_id",
+            "required": true,
+            "schema": {
+              "title": "Viewer Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LineNameUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViewerAdminItem"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Line Name Endpoint",
+        "tags": [
+          "super-admin"
+        ]
+      }
+    },
     "/api/v1/super-admin/viewers/{viewer_id}/activate": {
       "post": {
         "operationId": "activate_endpoint_api_v1_super_admin_viewers__viewer_id__activate_post",
@@ -62412,7 +63643,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ViewerAdminItem"
+                  "$ref": "#/components/schemas/ViewerStatusChangeResponse"
                 }
               }
             },
@@ -62469,7 +63700,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ViewerAdminItem"
+                  "$ref": "#/components/schemas/ViewerStatusChangeResponse"
                 }
               }
             },
@@ -62544,6 +63775,53 @@
         ]
       }
     },
+    "/api/v1/super-admin/viewers/{viewer_id}/reissue-signup-code": {
+      "post": {
+        "operationId": "reissue_signup_code_endpoint_api_v1_super_admin_viewers__viewer_id__reissue_signup_code_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "viewer_id",
+            "required": true,
+            "schema": {
+              "title": "Viewer Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViewerReissueResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Reissue Signup Code Endpoint",
+        "tags": [
+          "super-admin"
+        ]
+      }
+    },
     "/api/v1/super-admin/viewers/{viewer_id}/suspend": {
       "post": {
         "operationId": "suspend_endpoint_api_v1_super_admin_viewers__viewer_id__suspend_post",
@@ -62563,7 +63841,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ViewerAdminItem"
+                  "$ref": "#/components/schemas/ViewerStatusChangeResponse"
                 }
               }
             },
@@ -62591,6 +63869,62 @@
         ]
       }
     },
+    "/api/v1/super-admin/viewers/{viewer_id}/template-text": {
+      "get": {
+        "operationId": "viewer_template_text_endpoint_api_v1_super_admin_viewers__viewer_id__template_text_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "viewer_id",
+            "required": true,
+            "schema": {
+              "title": "Viewer Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "title": "Key",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViewerTemplateTextResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Viewer Template Text Endpoint",
+        "tags": [
+          "super-admin"
+        ]
+      }
+    },
     "/api/v1/super-admin/viewers/{viewer_id}/unsuspend": {
       "post": {
         "operationId": "unsuspend_endpoint_api_v1_super_admin_viewers__viewer_id__unsuspend_post",
@@ -62610,7 +63944,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ViewerAdminItem"
+                  "$ref": "#/components/schemas/ViewerStatusChangeResponse"
                 }
               }
             },
@@ -63867,6 +65201,45 @@
         ]
       }
     },
+    "/api/v1/tcg/analysis-results/client-timing": {
+      "post": {
+        "operationId": "post_client_timing_api_v1_tcg_analysis_results_client_timing_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClientTimingBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Post Client Timing",
+        "tags": [
+          "super-admin"
+        ]
+      }
+    },
     "/api/v1/tcg/conditions/review-options": {
       "get": {
         "operationId": "list_condition_review_options_api_v1_tcg_conditions_review_options_get",
@@ -64720,6 +66093,63 @@
           }
         ],
         "summary": "解析レビュー手動修正保存（PARITY-03 Phase 3 Stage 3）",
+        "tags": [
+          "super-admin"
+        ]
+      }
+    },
+    "/api/v1/tcg/items/{extraction_item_id}/error-reports": {
+      "post": {
+        "operationId": "post_error_report_api_v1_tcg_items__extraction_item_id__error_reports_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "extraction_item_id",
+            "required": true,
+            "schema": {
+              "title": "Extraction Item Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ErrorReportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorReportResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "解析の誤りを報告する（ADR-1025）",
         "tags": [
           "super-admin"
         ]

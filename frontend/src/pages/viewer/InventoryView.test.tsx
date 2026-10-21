@@ -28,8 +28,13 @@ beforeEach(() => { captured.props = null; });
 afterEach(() => cleanup());
 
 describe("InventoryView", () => {
+  it("has no password-change or logout button in the header", () => {
+    render(<InventoryView data={data} />);
+    expect(screen.queryByTestId("viewer-change-password")).toBeNull();
+    expect(screen.queryByTestId("viewer-logout")).toBeNull();
+  });
   it("passes the designed props to DataTable: sticky, fit, cards, 50 per page, default sort release_date desc", () => {
-    render(<InventoryView data={data} onLogout={() => undefined} onChangePassword={() => undefined} />);
+    render(<InventoryView data={data} />);
     const p = captured.props!;
     expect(p.stickyHeader).toBe(true);
     expect(p.fitToWidth).toBe(true);
@@ -43,26 +48,137 @@ describe("InventoryView", () => {
   });
 
   it("shows the last updated time as HH:MM (JST) and has no refresh button", () => {
-    render(<InventoryView data={data} onLogout={() => undefined} onChangePassword={() => undefined} />);
+    render(<InventoryView data={data} />);
     expect(screen.getByTestId("viewer-updated").textContent).toContain("12:05");
     expect(screen.queryByTestId("viewer-refresh")).toBeNull();
   });
 
-  it("sort pull-down has exactly 3 options", () => {
-    render(<InventoryView data={data} onLogout={() => undefined} onChangePassword={() => undefined} />);
+  it("sort pull-down has a heading plus 3 options (no release_date:desc) and shows the heading by default", () => {
+    render(<InventoryView data={data} />);
     const select = screen.getByTestId("viewer-sort-menu") as HTMLSelectElement;
-    const values = Array.from(select.options).map((o) => o.value).filter((v) => v !== "");
-    expect(values).toEqual(["unit_price:asc", "quantity:desc", "offered_at:desc"]);
+    expect(select.value).toBe("");
+    expect(Array.from(select.options).map((o) => o.value)).toEqual(["", "unit_price:asc", "quantity:desc", "offered_at:desc"]);
     fireEvent.change(select, { target: { value: "unit_price:asc" } });
     expect(captured.props!.sortKey).toBe("unit_price");
     expect(captured.props!.sortDir).toBe("asc");
   });
 
+  it("choosing the heading after another sort returns to release_date desc", () => {
+    render(<InventoryView data={data} />);
+    const select = screen.getByTestId("viewer-sort-menu") as HTMLSelectElement;
+    fireEvent.change(select, { target: { value: "unit_price:asc" } });
+    expect(captured.props!.sortKey).toBe("unit_price");
+    fireEvent.change(select, { target: { value: "" } });
+    expect(captured.props!.sortKey).toBe("release_date");
+    expect(captured.props!.sortDir).toBe("desc");
+    expect(select.value).toBe("");
+  });
+
   it("24 hours button is pressed by default and toggles", () => {
-    render(<InventoryView data={data} onLogout={() => undefined} onChangePassword={() => undefined} />);
+    render(<InventoryView data={data} />);
     const btn = screen.getByTestId("viewer-fresh-toggle");
     expect(btn.getAttribute("aria-pressed")).toBe("true");
     fireEvent.click(btn);
     expect(btn.getAttribute("aria-pressed")).toBe("false");
   });
+
+  it("PC: two-row toolbar, no filter button, reset restores search and sort", () => {
+    render(<InventoryView data={data} />);
+    expect(screen.queryByTestId("viewer-filter-toggle")).toBeNull();
+    const rows = document.querySelectorAll(".content-toolbar--two-rows > .content-toolbar__row");
+    expect(rows).toHaveLength(2);
+    for (const id of ["viewer-search", "viewer-price-min", "viewer-qty-max"]) {
+      expect(rows[0].contains(screen.getByTestId(id))).toBe(true);
+    }
+    for (const id of ["viewer-sort-menu", "viewer-condition-filter-button", "viewer-provider-filter-button", "viewer-fresh-toggle", "viewer-reset"]) {
+      expect(rows[1].contains(screen.getByTestId(id))).toBe(true);
+    }
+    fireEvent.change(screen.getByTestId("viewer-search"), { target: { value: "t001" } });
+    fireEvent.change(screen.getByTestId("viewer-sort-menu"), { target: { value: "unit_price:asc" } });
+    expect(captured.props!.sortKey).toBe("unit_price");
+    expect(captured.props!.data).toHaveLength(1);
+    fireEvent.click(screen.getByTestId("viewer-reset"));
+    expect((screen.getByTestId("viewer-search") as HTMLInputElement).value).toBe("");
+    expect(captured.props!.sortKey).toBe("release_date");
+    expect(captured.props!.sortDir).toBe("desc");
+    expect(captured.props!.data).toHaveLength(50);
+  });
+
+  it("mobile: keeps the old single toolbar with the filter button", () => {
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      writable: true,
+      value: (q: string) => ({
+        matches: true, media: q, onchange: null,
+        addEventListener: () => undefined, removeEventListener: () => undefined,
+        addListener: () => undefined, removeListener: () => undefined, dispatchEvent: () => false,
+      }),
+    });
+    try {
+      render(<InventoryView data={data} />);
+      expect(document.querySelector(".content-toolbar--two-rows")).toBeNull();
+      expect(screen.getByTestId("viewer-filter-toggle")).toBeTruthy();
+      expect(screen.queryByTestId("viewer-reset")).toBeNull();
+    } finally {
+      delete (window as unknown as { matchMedia?: unknown }).matchMedia;
+    }
+  });
+
+  /* eslint-disable local/no-japanese-literal -- DB の series 名（画面文言ではない） */
+  const seriesData: ViewerInventoryResponse = {
+    ...data,
+    rows: [
+      { ...mkRow(1), series: "ポケモン" },
+      { ...mkRow(2), series: "ワンピース" },
+      { ...mkRow(3), series: "ホロライブ" },
+      { ...mkRow(4), series: "アクア" },
+    ],
+  };
+
+  it("K3: PC tabs are all + 3 main series, no counts, 'other' pull-down lists the rest in name order, tab row sits right before the table", () => {
+    render(<InventoryView data={seriesData} />);
+    const tabs = screen.getAllByRole("tab");
+    expect(tabs).toHaveLength(4);
+    expect(tabs.slice(1).map((el) => el.textContent)).toEqual(["ポケモン", "ワンピース", "ドラゴンボール"]);
+    expect(document.querySelector(".comp-tabs__tab .comp-badge")).toBeNull();
+    const other = screen.getByTestId("viewer-tab-other") as HTMLSelectElement;
+    expect(Array.from(other.options).map((o) => o.value)).toEqual(["", "アクア", "ホロライブ"]);
+    const bar = screen.getByRole("tablist").closest(".comp-tabs-bar") as HTMLElement;
+    expect(bar.nextElementSibling).toBe(screen.getByTestId("dt"));
+    expect(captured.props!.attachedTop).toBe(true);
+  });
+
+  it("K4: choosing a series in 'other' shows only that series and clears the tab selection", () => {
+    render(<InventoryView data={seriesData} />);
+    fireEvent.change(screen.getByTestId("viewer-tab-other"), { target: { value: "ホロライブ" } });
+    expect(captured.props!.data).toHaveLength(1);
+    expect((captured.props!.data[0] as unknown as { series: string }).series).toBe("ホロライブ");
+    expect((screen.getByTestId("viewer-tab-other") as HTMLSelectElement).className).toContain("comp-select--tab-active");
+    for (const tab of screen.getAllByRole("tab")) expect(tab.getAttribute("aria-selected")).toBe("false");
+    fireEvent.click(screen.getAllByRole("tab")[1]);
+    expect(captured.props!.data).toHaveLength(1);
+    expect((captured.props!.data[0] as unknown as { series: string }).series).toBe("ポケモン");
+  });
+
+  it("K5: mobile keeps the series select with counts and shows no tab row", () => {
+    Object.defineProperty(window, "matchMedia", {
+      configurable: true,
+      writable: true,
+      value: (q: string) => ({
+        matches: true, media: q, onchange: null,
+        addEventListener: () => undefined, removeEventListener: () => undefined,
+        addListener: () => undefined, removeListener: () => undefined, dispatchEvent: () => false,
+      }),
+    });
+    try {
+      render(<InventoryView data={seriesData} />);
+      const sel = screen.getByTestId("viewer-tab-select") as HTMLSelectElement;
+      expect(sel.options[1].textContent).toMatch(/\(\d+\)$/);
+      expect(screen.queryByRole("tablist")).toBeNull();
+      expect(captured.props!.attachedTop).toBe(false);
+    } finally {
+      delete (window as unknown as { matchMedia?: unknown }).matchMedia;
+    }
+  });
+  /* eslint-enable local/no-japanese-literal */
 });

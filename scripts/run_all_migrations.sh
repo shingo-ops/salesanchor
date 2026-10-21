@@ -58,11 +58,32 @@ run_py() {
     "$@" -w /app "${BACKEND}" python "${script}"
 }
 
+# 稼働中のアプリと deadlock したときだけ、同じファイルを流し直す（全 migration は冪等で、
+# CI のドライラン2周目で再実行が通ることを確かめている）。ほかのエラーは今までどおり即停止。
+SQL_DEADLOCK_MAX_ATTEMPTS=3
 run_sql() {
   local file="$1"
   STEP=$((STEP + 1))
   echo ">>> [${STEP}/${TOTAL}] psql < ${file}"
-  docker exec -i "${POSTGRES}" ${PSQL} < "${REPO_DIR}/${file}"
+  local attempt=1 rc errlog
+  errlog="$(mktemp)"
+  while true; do
+    rc=0
+    docker exec -i "${POSTGRES}" ${PSQL} < "${REPO_DIR}/${file}" 2>"${errlog}" || rc=$?
+    cat "${errlog}" >&2
+    if [ "${rc}" -eq 0 ]; then
+      rm -f "${errlog}"
+      return 0
+    fi
+    if grep -q "deadlock detected" "${errlog}" && [ "${attempt}" -lt "${SQL_DEADLOCK_MAX_ATTEMPTS}" ]; then
+      attempt=$((attempt + 1))
+      echo ">>> [${STEP}/${TOTAL}] deadlock detected; retry ${attempt}/${SQL_DEADLOCK_MAX_ATTEMPTS} in 5s: ${file}"
+      sleep 5
+      continue
+    fi
+    rm -f "${errlog}"
+    return "${rc}"
+  done
 }
 
 preflight_registered_files() {
@@ -74,6 +95,36 @@ preflight_registered_files() {
 }
 
 preflight_registered_files
+
+# ADR-1024: ai_ro ビューを一覧の先頭で外す。ビューが依存していると、後続 migration の
+# DROP / ALTER（列削除・型変更・表の作り直し）が止まるため。作成は下の EXIT trap が最後に行う。
+run_sql migrations/20261017_125900_drop_ai_ro_views.sql
+
+# ADR-1024: ai_ro ビューの作成（秘密列を除く）。スクリプトが正常終了（rc=0）したときだけ、
+# 常に最後に流す。将来の migration が末尾に追記されても、作成は常に最後になる。
+# 途中で失敗した場合はビューを外したままにする（fail-closed）。
+# 作成に失敗したら exit 1。（TOTAL は ^run_ 行を数えるため、ここでは run_sql を使わず直接流す）
+AI_RO_CREATE_SQL="migrations/20261017_130100_create_ai_ro_views.sql"
+_ai_ro_create_on_exit() {
+  local rc=$?
+  trap - EXIT
+  if [ "${rc}" -ne 0 ]; then
+    echo ">>> [final] skip ai_ro views (script failed rc=${rc}; views stay dropped)"
+    exit "${rc}"
+  fi
+  echo ">>> [final] psql < ${AI_RO_CREATE_SQL}"
+  if [ ! -f "${REPO_DIR}/${AI_RO_CREATE_SQL}" ]; then
+    echo "⚠️ ${AI_RO_CREATE_SQL} が見つかりません（デプロイは続行。ai_ro は外れたまま＝AI は読めない）"
+    exit 0
+  fi
+  # ビューは AI が読むための補助。作成に失敗しても本体のデプロイは止めず、「読めない」側に倒す
+  if ! docker exec -i "${POSTGRES}" ${PSQL} < "${REPO_DIR}/${AI_RO_CREATE_SQL}"; then
+    echo "⚠️ ai_ro views の作成に失敗（デプロイは続行。ai_ro は外れたまま＝AI は読めない）"
+    exit 0
+  fi
+  exit 0
+}
+trap _ai_ro_create_on_exit EXIT
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # マイグレーション一覧（順序厳守・冪等必須）
@@ -760,7 +811,7 @@ run_sql migrations/20260921_140000_product_classification_masters.sql
 # ADR-157: 買取相場ログ（外部買取店の価格定期取得テーブル）
 run_sql migrations/20260922_000000_create_buyback_tables.sql
 
-# ADR-156 Phase 7: 細分類→大分類FK / 商品→中分類FK追加
+# ADR-156 Phase 7: 細分類→大分類FK /（商品→中分類FK は ADR-1026 で削除）
 run_sql migrations/20260922_010000_product_format_kind_id_and_products_type_master_id.sql
 
 # ADR-156 Phase 8: 細分類→中分類 多対多中間テーブル
@@ -938,6 +989,9 @@ run_sql migrations/20261013_160000_add_self_hosted_auth_tables.sql
 # 試運転（shadow）の表2件の削除（画面・API・書き込み経路は #4218 で削除済み・PO GO 待ち・冪等・不可逆）
 run_sql migrations/20261013_180000_drop_extraction_shadow_tables.sql
 
+# 受信箱「新規」バッジの置き場（leads に 1 列。構造＋既存行の埋め直し・冪等・不可逆操作なし。expand/contract の先行便）
+run_sql migrations/20261015_090000_add_leads_assignment_opened_at.sql
+
 run_sql migrations/20261015_130000_add_permissions_rls.sql
 run_sql migrations/20261016_010000_add_google_config_rls.sql
 run_sql migrations/20261016_020000_add_suppliers_rls.sql
@@ -961,6 +1015,24 @@ run_sql migrations/20261016_190000_create_product_blank_confirmations.sql
 run_sql migrations/20261017_100000_add_viewer_discord_config.sql
 # ADR-1023: 状態マスタの価値順の列（構造のみ。値は docs/handoff/condition-value-rank/data/ の SQL で入れる）
 run_sql migrations/20261017_120000_line_conditions_value_rank.sql
-
-# 受信箱「新規」バッジの置き場（leads に 1 列。構造＋既存行の埋め直し・冪等・不可逆操作なし）
-run_sql migrations/20261015_090000_add_leads_assignment_opened_at.sql
+# ADR-1024: AI 用の読み取り専用ユーザー ai_reader（パスワードなし。ログインは便3bまで不可）
+run_sql migrations/20261017_130000_create_ai_reader_role.sql
+# ADR-1025 便1: 解析の誤り報告の表3つ（空・構造のみ・冪等）
+run_sql migrations/20261017_140000_create_analysis_error_report_tables.sql
+# ADR-1026: 使われていない作品欄 products.type_master_id を取り除く（FK・索引ごと。冪等）
+run_sql migrations/20261017_210000_drop_products_type_master_id.sql
+# ADR-1027 便1: まとめ売りのまとめの数の列（NULL 許可・構造のみ・冪等）
+run_sql migrations/20261017_220000_add_analysis_results_bundle_size.sql
+# ADR-1027 便1: 単位マスタの呼び名の列（NULL 許可・構造のみ・冪等。値は docs/handoff/bundle-sale/data/ の SQL で入れる）
+run_sql migrations/20261017_220100_add_line_units_display_names.sql
+# ADR-1028 便1: 商品の荷姿の表（空・構造のみ・冪等）
+run_sql migrations/20261018_100000_create_product_packagings.sql
+# ADR-1030: 使われていない作品の写し products.tcg_type を取り除く（FK・索引ごと。冪等）
+run_sql migrations/20261018_110000_drop_products_tcg_type.sql
+run_sql migrations/20261019_100000_line_conditions_value_group_add_promo_single.sql
+# ADR-1035: 状態の価値の群に booklet を許す（CHECK の作り直しのみ。冪等）
+run_sql migrations/20261020_100000_line_conditions_value_group_add_booklet.sql
+# ADR-1035 追補: 状態の価値の群に supply を許す（CHECK の作り直しのみ。冪等）
+run_sql migrations/20261020_110000_line_conditions_value_group_add_supply.sql
+# ADR-1019 段11 便1: 閲覧者向け文面のテンプレート表（空・構造のみ・冪等）
+run_sql migrations/20261020_120000_create_viewer_message_templates.sql

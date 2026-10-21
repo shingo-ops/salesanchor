@@ -103,6 +103,7 @@ services:
       - TCG_AUTO_ANALYZE=${TCG_AUTO_ANALYZE:-1}
       - TCG_AUTO_DISTRIBUTE=${TCG_AUTO_DISTRIBUTE:-0}
       - ADMIN_NOTIFICATION_DISCORD_WEBHOOK=${ADMIN_NOTIFICATION_DISCORD_WEBHOOK:-}
+      - ANALYSIS_ERROR_REPORT_DISCORD_WEBHOOK=${ANALYSIS_ERROR_REPORT_DISCORD_WEBHOOK:-}
       # ADR-091 KPI4〜7: Discord REST API 呼び出し（アナウンス・招待・削除・ロール同期）
       # backend コンテナも Bot トークンが必要（discord-gateway だけでは不足）
       # ADR-146 B方式: per-tenant トークン（DISCORD_BOT_TOKEN_4）を共通トークンに統合
@@ -136,6 +137,8 @@ services:
       # ADR-1012 段階2 便B: 保守 API の鍵（空なら口は全部 401）
       - OPS_API_TOKEN=${OPS_API_TOKEN:-}
       - OPS_INGEST_TOKEN=${OPS_INGEST_TOKEN:-}
+      # ADR-1025 便2: 誤り報告の自動セッション用の鍵（空なら口は全部 401）
+      - ERROR_REPORT_AGENT_TOKEN=${ERROR_REPORT_AGENT_TOKEN:-}
     volumes:
       - ./firebase-credentials.json:/app/firebase-credentials.json:ro
       - ${TCG_SHEETS_SA_KEY_FILE:-/dev/null}:${TCG_SHEETS_SA_KEY_FILE:-/dev/null}:ro
@@ -232,6 +235,8 @@ services:
       # ADMIN_NOTIFICATION_DISCORD_WEBHOOK: 翻訳監視アラート送信先
       # check_translation_health_task が異常時に通知する（未設定だと通知が沈黙する）
       - ADMIN_NOTIFICATION_DISCORD_WEBHOOK=${ADMIN_NOTIFICATION_DISCORD_WEBHOOK:-}
+      # ADR-1025 便2: 誤り報告の照合結果の送り先（タスクが送る）
+      - ANALYSIS_ERROR_REPORT_DISCORD_WEBHOOK=${ANALYSIS_ERROR_REPORT_DISCORD_WEBHOOK:-}
       # review@salesanchor.jp メール監視（GitHub Secrets → deploy.yml → VPS .env）
       - REVIEW_MAIL_IMAP_HOST=${REVIEW_MAIL_IMAP_HOST:-}
       - REVIEW_MAIL_IMAP_PORT=${REVIEW_MAIL_IMAP_PORT:-993}

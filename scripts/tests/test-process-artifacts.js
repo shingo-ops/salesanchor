@@ -150,6 +150,26 @@ test('ops/launchd/ は dangerous 区分', () => {
   assert.strictEqual(classifyFile('ops/launchd/jp.salesanchor.disk-janitor.plist'), 'dangerous');
 });
 
+test('ADR-1024 台本 backend/app/ops/ は dangerous 区分', () => {
+  assert.strictEqual(classifyFile('backend/app/ops/readonly_query.py'), 'dangerous');
+});
+
+test('ADR-1024 docker-compose.ai-reader.yml は dangerous 区分', () => {
+  assert.strictEqual(classifyFile('docker-compose.ai-reader.yml'), 'dangerous');
+});
+
+test('backend/app/opsx/ は dangerous にならない（real-code）', () => {
+  assert.strictEqual(classifyFile('backend/app/opsx/a.py'), 'real-code');
+});
+
+test('docker-compose.yml は dangerous にならない（unknown）', () => {
+  assert.strictEqual(classifyFile('docker-compose.yml'), 'unknown');
+});
+
+test('backend/app/routers/ は dangerous にならない（real-code）', () => {
+  assert.strictEqual(classifyFile('backend/app/routers/x.py'), 'real-code');
+});
+
 test('frontend/src/ は real-code 区分', () => {
   assert.strictEqual(classifyFile('frontend/src/App.tsx'), 'real-code');
 });

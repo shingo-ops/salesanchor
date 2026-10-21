@@ -22,7 +22,7 @@ _ROUTE_COLUMNS = (
     "stock_quantity INTEGER NOT NULL DEFAULT 0", "weight NUMERIC(10,3)", "notes TEXT",
     "jan_code VARCHAR(20)", "card_number VARCHAR(50)", "expansion_code VARCHAR(20)", "rarity VARCHAR(20)",
     "language VARCHAR(10)", "unit_price_usd NUMERIC(15,2)", "unit_price_eur NUMERIC(15,2)",
-    "image_url VARCHAR(500)", "archived_at TIMESTAMPTZ", "supplier_default_id INTEGER", "tcg_type VARCHAR(50)",
+    "image_url VARCHAR(500)", "archived_at TIMESTAMPTZ", "supplier_default_id INTEGER",
     "boxes_per_case INTEGER", "packs_per_box INTEGER", "box_weight_kg NUMERIC(8,3)", "case_weight_kg NUMERIC(8,3)",
     "volume_weight NUMERIC(8,3)", "moq INTEGER", "hs_code VARCHAR(20)", "material VARCHAR(50)", "item VARCHAR(255)",
     "search_keywords TEXT", "exclude_keywords TEXT", "related_series VARCHAR(255)",

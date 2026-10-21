@@ -1,7 +1,7 @@
 /**
  * Badge — ステータス・ラベルバッジ（Task 3C）
  *
- * variant  : 見た目の意味（neutral / info / success / warning / danger）
+ * variant  : 見た目の意味（neutral / info / success / warning / danger / purple）
  * appearance: soft（既定・淡い背景＋色文字）/ solid（塗り）
  * size     : sm / md
  * dot      : 先頭ドットインジケーター
@@ -13,7 +13,7 @@
 import type { ReactNode } from 'react';
 import './Badge.css';
 
-export type BadgeVariant    = 'neutral' | 'info' | 'success' | 'warning' | 'danger';
+export type BadgeVariant    = 'neutral' | 'info' | 'success' | 'warning' | 'danger' | 'purple';
 export type BadgeAppearance = 'soft' | 'solid';
 export type BadgeSize       = 'sm' | 'md';
 

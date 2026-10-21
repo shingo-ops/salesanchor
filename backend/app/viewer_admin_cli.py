@@ -8,7 +8,7 @@ import json
 import sys
 
 from app.database import AsyncSessionLocal
-from app.services import viewer_admin
+from app.services import viewer_admin, viewer_room_notice
 
 _ACTIONS = ("activate", "suspend", "unsuspend", "extend")
 
@@ -25,13 +25,18 @@ async def run(payload: dict, session_factory=AsyncSessionLocal) -> dict:
         item = await viewer_admin.change_status_by_email(
             db, email, action, actor=viewer_admin.ACTOR_CLAUDE, days=days
         )
+        # お知らせの文は commit の前（同じトランザクション）に DB から読む。無くても状態は変える
+        prepared = await viewer_room_notice.prepare_notice(db, action, item)
         await db.commit()
+    # commit の後に部屋へ送る（文面なしの unsuspend は None、テンプレートが無ければ "no_template"）
+    room_notice, _ = await viewer_room_notice.notify_prepared(prepared, item)
     return {
         "id": item["id"],
         "status": item["status"],
         "trial_expires_at": item["trial_expires_at"].isoformat()
         if item["trial_expires_at"] is not None
         else None,
+        "room_notice": room_notice,
     }
 
 

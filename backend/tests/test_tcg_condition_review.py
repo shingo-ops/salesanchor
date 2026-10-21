@@ -28,10 +28,12 @@ from app.services import tcg_distribution_svc as distribution
 from app.services.tcg_empty_box_rules import classification_sql, classify_empty_box
 from tests.test_tcg_empty_box_rules import CASES
 from tests.conftest import _PUBLIC_SUPPLIERS_DDL, _supplier_ssot_premigration
+from tests.condition_value_columns import apply_condition_value_columns
 from tests.seed_data import type_master_seed_sql
 from tests.test_tcg_work_matching_integration import (
     _PUBLIC_PRODUCTS_DDL,
     _rewire_keyword_fks,
+    apply_bundle_sale_columns,
     create_soldout_extra_targets,
     provision,
 )
@@ -74,6 +76,7 @@ def pg(monkeypatch):
             cursor.execute(_rewire_keyword_fks(SCHEMA))
             # Master SSOT Phase 3: public schema tables for 9 master tables
             cursor.execute((MIGRATIONS / "20260919_020000_master_ssot_public_tables.sql").read_text())
+            apply_condition_value_columns(cursor)  # 本番の形（value_group / value_rank 列＋11状態の値）に揃える
             # Master SSOT Phase 3: unit_id/condition_id UUID→INTEGER rewire + product_category_id UUID→INTEGER
             cursor.execute((MIGRATIONS / "20260920_010000_phase3_fk_rewire_unit_condition.sql").read_text())
             cursor.execute((MIGRATIONS / "20260910_160000_tcg_work_evidence.sql").read_text())
@@ -96,6 +99,7 @@ def pg(monkeypatch):
             cursor.execute((MIGRATIONS / "20261013_140000_add_analysis_results_ship_ja_ship_en.sql").read_text())
             cursor.execute(f"ALTER TABLE {SCHEMA}.analysis_results ADD COLUMN IF NOT EXISTS ship_ja TEXT")
             cursor.execute(f"ALTER TABLE {SCHEMA}.analysis_results ADD COLUMN IF NOT EXISTS ship_en TEXT")
+            apply_bundle_sale_columns(cursor, SCHEMA)  # ADR-1027 便1: 配信の SELECT が bundle_size と line_units を読む
             # この試験は TCG_SCHEMA を差し替えず public の analysis_results を使うので、public にも作る（migration の本来の置き場）
             create_soldout_extra_targets(cursor, "public")
             # ADR-158 Phase 2: raw_product_code column on extraction_items (Gemini v6).
@@ -743,3 +747,230 @@ def test_needs_review_tab_hides_old_prompt_versions_only(pg):
     assert old["eid"] not in ids(tabs["unreg_review_only"])  # (c)
     assert "OldVersionSupplier" not in tabs["needs"]["providers"] and "OldVersionSupplier" in tabs["all"]["providers"]  # (d)
     assert ids(by_id) == {old["eid"]}  # ID 指定は不変（旧版も出る）
+
+
+# ---- 〆の確認済み扱い（docs/handoff/shime-review-exclude/design.md §12-3・§7 T1） ----
+
+def seed_shime(pg, **overrides):
+    """価格のない〆（Sold out・excluded・価格と数量なし）の行。"""
+    values = dict(name="Test Booster", reasons="", needs_review=False, condition_id=pg["normal"],
+                  condition_canonical="Sealed box", status="Sold out", exclusion="excluded",
+                  price_normalized=None, quantity_normalized=None)
+    values.update(overrides)
+    return seed(pg, **values)
+
+
+def seed_partner(pg, hours, *, channel_id=None, **overrides):
+    """同じ商品・同じ状態の相手の在庫（価格あり）。投稿を hours 時間前にする。"""
+    values = dict(name="Test Booster", reasons="", needs_review=False, condition_id=pg["normal"],
+                  condition_canonical="Sealed box")
+    values.update(overrides)
+    item = seed(pg, channel_id=channel_id, **values)
+    age_message(pg, item, hours)
+    return item
+
+
+def shime_reasons(pg, item):
+    return set(filter(None, context(pg, item)["review_reasons"].split(",")))
+
+
+def test_shime_settled_when_partner_stock_is_gone(pg):  # (a)
+    shime = seed_shime(pg)
+    seed_partner(pg, 100)
+    ctx = context(pg, shime)
+    assert ctx["needs_review"] is False
+    assert not shime_reasons(pg, shime) & {"price_unresolved", "excluded"}
+
+
+def test_shime_settled_without_partner_stock(pg):  # (b)
+    shime = seed_shime(pg)
+    assert not shime_reasons(pg, shime) & {"price_unresolved", "excluded"}
+    assert context(pg, shime)["needs_review"] is False
+
+
+def test_shime_stays_while_partner_stock_is_within_window(pg):  # (c)
+    shime = seed_shime(pg)
+    seed_partner(pg, 10)
+    assert {"price_unresolved", "excluded"} <= shime_reasons(pg, shime)
+
+
+def test_shime_settled_when_partner_stock_is_older_than_window(pg):  # (d)
+    shime = seed_shime(pg)
+    seed_partner(pg, 49)
+    assert not shime_reasons(pg, shime) & {"price_unresolved", "excluded"}
+
+
+def test_shime_stays_when_condition_is_flag(pg):  # (e)
+    shime = seed_shime(pg, condition_basis="FLAG_UNKNOWN")
+    seed_partner(pg, 100)
+    assert {"price_unresolved", "excluded"} <= shime_reasons(pg, shime)
+
+
+def test_shime_stays_when_human_correction_exists(pg):  # (f)
+    shime = seed_shime(pg)
+    seed_partner(pg, 100)
+    with pg["connection"].cursor() as cursor:
+        cursor.execute("""INSERT INTO public.item_corrections(extraction_item_id,source_message_id,field_name,human_value,corrected_by)
+            VALUES (%s,%s,'raw_memo','x','test')""", (shime["eid"], shime["smid"]))
+    assert {"price_unresolved", "excluded"} <= shime_reasons(pg, shime)
+
+
+def test_shime_settled_when_only_other_channel_has_the_partner(pg):  # (g)
+    with pg["connection"].cursor() as cursor:
+        cursor.execute("INSERT INTO public.suppliers(name,supplier_type) VALUES ('ShimeOtherSupplier','corporate') RETURNING id")
+        cursor.execute("INSERT INTO public.supplier_channels(channel,is_active,supplier_id) VALUES ('line',true,%s) RETURNING id",
+                       (cursor.fetchone()[0],))
+        other_channel = str(cursor.fetchone()[0])
+        cursor.execute("SELECT id FROM public.supplier_channels WHERE id<>%s::uuid ORDER BY id LIMIT 1", (other_channel,))
+        own_channel = str(cursor.fetchone()[0])
+    shime = seed_shime(pg, channel_id=own_channel)
+    seed_partner(pg, 10, channel_id=other_channel)
+    assert not shime_reasons(pg, shime) & {"price_unresolved", "excluded"}
+
+
+def test_shime_other_saved_reason_stays_needs_review(pg):  # (h)
+    shime = seed_shime(pg, reasons="condition_unknown", needs_review=True)
+    seed_partner(pg, 100)
+    ctx = context(pg, shime)
+    assert ctx["needs_review"] is True
+    reasons = shime_reasons(pg, shime)
+    assert "condition_unknown" in reasons and not reasons & {"price_unresolved", "excluded"}
+
+
+def test_shime_settled_when_partner_is_superseded_not_current(pg):  # (i)
+    shime = seed_shime(pg)
+    seed_partner(pg, 10, is_current=False)
+    assert not shime_reasons(pg, shime) & {"price_unresolved", "excluded"}
+
+
+def test_shime_settled_when_partner_was_posted_after_it_but_old(pg):  # (j)
+    shime = seed_shime(pg)
+    age_message(pg, shime, 200)
+    seed_partner(pg, 100)
+    assert not shime_reasons(pg, shime) & {"price_unresolved", "excluded"}
+
+
+def test_shime_settled_when_partner_is_sold_out_too(pg):  # (k)
+    shime = seed_shime(pg)
+    seed_partner(pg, 100, status="Sold out")
+    assert not shime_reasons(pg, shime) & {"price_unresolved", "excluded"}
+
+
+def put_in_same_post(pg, partner, shime):
+    """相手の job を〆の投稿に付け替える（同じ投稿の別の行にする）。"""
+    with pg["connection"].cursor() as cursor:
+        cursor.execute("UPDATE public.extraction_jobs SET source_message_id=%s WHERE id=%s", (shime["smid"], partner["job"]))
+
+
+def test_shime_settled_with_price_and_quantity_and_no_partner(pg):  # (p)
+    shime = seed_shime(pg, price_normalized=7500, quantity_normalized=3)
+    assert not shime_reasons(pg, shime) & {"price_unresolved", "excluded"}
+
+
+def test_shime_settled_when_same_post_has_other_condition_stock(pg):  # (q)
+    shime = seed_shime(pg)
+    partner = seed_partner(pg, 0, condition_id=pg["empty"], condition_canonical="Empty box")
+    put_in_same_post(pg, partner, shime)
+    assert not shime_reasons(pg, shime) & {"price_unresolved", "excluded"}
+
+
+def test_shime_stays_when_same_post_has_same_condition_stock(pg):  # (r)
+    shime = seed_shime(pg)
+    partner = seed_partner(pg, 0)
+    put_in_same_post(pg, partner, shime)
+    assert {"price_unresolved", "excluded"} <= shime_reasons(pg, shime)
+
+
+def test_shime_stays_when_other_post_has_other_condition_stock(pg):  # (s)
+    shime = seed_shime(pg)
+    seed_partner(pg, 10, condition_id=pg["empty"], condition_canonical="Empty box")
+    assert {"price_unresolved", "excluded"} <= shime_reasons(pg, shime)
+
+
+def test_shime_stays_when_superseded_post_still_has_current_stock(pg):  # (t)
+    shime = seed_shime(pg)
+    partner = seed_partner(pg, 10)
+    with pg["connection"].cursor() as cursor:
+        cursor.execute("UPDATE public.source_messages SET is_active=false WHERE id=%s", (partner["smid"],))
+    assert {"price_unresolved", "excluded"} <= shime_reasons(pg, shime)
+
+
+# ---- 〆より前の別の状態の相手は最新の在庫の投稿のものだけ数える（design.md §13-10 A-2・T1 (kk)〜(nn)） ----
+
+def test_shime_settled_when_other_state_partner_is_only_in_an_older_post_than_the_latest_stock_post(pg):  # (kk)
+    shime = seed_shime(pg)
+    seed_partner(pg, 20, condition_id=pg["empty"], condition_canonical="Empty box")  # P0：別の状態・現行
+    seed_partner(pg, 10, is_current=False)  # P1：最新の在庫の投稿（行は現行でない＝相手の条件を満たさない）
+    assert not shime_reasons(pg, shime) & {"price_unresolved", "excluded"}
+
+
+def test_shime_stays_when_older_post_partner_has_the_same_condition(pg):  # (ll)
+    shime = seed_shime(pg)
+    seed_partner(pg, 20)  # P0：〆と同じ状態・現行（どの投稿のものでも数える）
+    seed_partner(pg, 10, is_current=False)
+    assert {"price_unresolved", "excluded"} <= shime_reasons(pg, shime)
+
+
+def test_shime_stays_when_the_latest_stock_post_has_other_state_partner(pg):  # (mm)
+    shime = seed_shime(pg)
+    seed_partner(pg, 20, condition_id=pg["empty"], condition_canonical="Empty box")
+    seed_partner(pg, 10, condition_id=pg["empty"], condition_canonical="Empty box")  # P1：最新の在庫の投稿の別の状態
+    assert {"price_unresolved", "excluded"} <= shime_reasons(pg, shime)
+
+
+def test_shime_settled_when_the_latest_stock_post_is_outside_the_partner_window(pg):  # (oo)
+    shime = seed_shime(pg)
+    seed_partner(pg, 60, condition_id=pg["empty"], condition_canonical="Empty box")  # 〆より前の最新の在庫の投稿：60時間前（窓の外）・別の状態の現行行
+    seed_partner(pg, 24, status="Sold out")  # 24時間前の投稿：在庫の行が無い（〆だけ）
+    assert not shime_reasons(pg, shime) & {"price_unresolved", "excluded"}  # 現 HEAD（窓なしの cr_n1）でも同じ。窓の外は相手の条件で落ちる
+
+
+def test_shime_stays_when_the_latest_stock_post_is_inside_the_partner_window(pg):  # (oo2)
+    shime = seed_shime(pg)
+    seed_partner(pg, 40, condition_id=pg["empty"], condition_canonical="Empty box")  # 窓の内なら相手になる（窓を狭めすぎていない）
+    seed_partner(pg, 24, status="Sold out")
+    assert {"price_unresolved", "excluded"} <= shime_reasons(pg, shime)
+
+
+def test_shime_form_row_does_not_break_fenced_distribution_sql(pg):  # (l)
+    set_max_age_hours(pg, 48)
+    seed_shime(pg)
+    seed_partner(pg, 100)
+    seed_partner(pg, 1)
+    rows = output(pg)  # review_joins(fenced=True, shime=False) を通る在庫表（cr_shime は作らない）。例外が出ず、〆の行は出ない（出るのは相手の2行だけ。output は年齢の窓を渡さない）
+    assert len(rows) == 2
+
+
+def test_shime_false_has_no_partner_subqueries():  # (m)
+    for fenced in (False, True):
+        joins = condition.review_joins(schema="tcg", fenced=fenced, shime=False)
+        assert "cr_pa" not in joins and "cr_sa" not in joins
+        assert joins.count("SELECT FALSE AS settled OFFSET 0) cr_shime") == 1
+        assert joins.count("OFFSET 0") == (10 if fenced else 3)
+
+
+@pytest.mark.parametrize("grouped", [False, True])
+def test_distribution_rows_sql_has_no_shime_subquery(grouped):  # (n)
+    sql = distribution.distribution_rows_sql(include_flag_single=False, age_condition="TRUE", merge_same_post=grouped)
+    assert "cr_pa" not in sql and "cr_sa" not in sql
+
+
+def test_callers_pass_shime_false():  # (o)
+    root = Path(distribution.__file__).parent
+    assert (root / "tcg_distribution_svc.py").read_text(encoding="utf-8").count("shime=False") == 3
+    assert (root / "tcg_import_progress.py").read_text(encoding="utf-8").count("shime=False") == 1
+
+
+def test_shime_review_joins_has_the_latest_stock_post_subquery_without_new_offset_0():  # (nn)
+    joins = condition.review_joins(schema="tcg", shime=True)
+    assert "cr_p.id" in joins and joins.count("OFFSET 0") == 3  # コメント1・cr_data 1・cr_shime 1（足していない）
+    assert joins.count("cr_prev") == 2 and joins.count("cr_n1x.id") == 1  # cr_prev の参照も cr_n1x の参照も1か所だけ（コメントの1語を含む）
+    assert "cr_n1" not in condition.review_joins(schema="tcg", shime=False) and "cr_prev" not in condition.review_joins(schema="tcg", shime=False)
+
+
+def test_latest_stock_cte_is_in_source_cte_and_window_matches_the_partner_window():  # (pp)
+    joins = condition.review_joins(schema="tcg", shime=True)
+    window = f"line_posted_at >= NOW() - make_interval(hours => {condition.SHIME_STOCK_WINDOW_HOURS})"
+    assert f"cr_sm.{window}" in joins and f"cr_n1.{window}" in condition.source_cte(schema="tcg")  # 相手の条件と同じ式
+    assert condition.source_cte(schema="tcg").startswith("WITH cr_prev AS MATERIALIZED (")
+    assert "cr_prev" not in condition.source_cte(schema="tcg", latest_stock=False)  # shime=False の呼び出し側は文字列が変わらない

@@ -23,6 +23,7 @@ from app.auth.viewer_signup_code import normalize_signup_code, signup_code_sha25
 from app.cache import get_redis
 from app.discord_gateway import private_channel
 from app.discord_gateway import viewer_bot_texts as T
+from app.services import viewer_message_templates as vmt
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +32,13 @@ _FAIL_LIMIT = 5
 _FAIL_WINDOW_SEC = 3600
 _SWEEP_MAX_DELETE = 10
 _ROOM_NAME_RE = re.compile(r"^trial-(\d+)$")
+_ROOM_TOPIC_RE = re.compile(r"^在庫集計ツールのお試し（番号 (\d+)）$")  # fullmatch で使う。T.ROOM_TOPIC と同じ形
+_ROOM_NAME_MAX = 100
+
+
+def _room_name(viewer_id: int, line_name: str | None) -> str:
+    name = (line_name or "").strip()[:_ROOM_NAME_MAX]
+    return name or f"trial-{viewer_id}"
 
 
 class ViewerDiscordConfig(NamedTuple):
@@ -106,21 +114,35 @@ async def handle_interaction(interaction: Any, db_factory: Any) -> None:
     await handler(interaction, db_factory, config)
 
 
-async def _create_room(guild: Any, member: Any, config: ViewerDiscordConfig, viewer_id: int):
+async def _create_room(
+    guild: Any, member: Any, config: ViewerDiscordConfig, viewer_id: int, line_name: str | None
+):
     category = private_channel.resolve_category(
         guild, int(config.ticket_category_id), "viewer_trial"
     )
     if category is None:
         return None
-    return await private_channel.create_private_text_channel(
-        guild,
-        category,
-        member,
-        config.staff_role_id,
-        name=f"trial-{viewer_id}",
-        reason="SalesAnchor viewer trial",
-        log_context="viewer_trial",
-    )
+    fallback_name = f"trial-{viewer_id}"
+    name = _room_name(viewer_id, line_name)
+    topic = T.ROOM_TOPIC.format(viewer_id=viewer_id)
+
+    async def _make(room_name: str):
+        return await private_channel.create_private_text_channel(
+            guild,
+            category,
+            member,
+            config.staff_role_id,
+            name=room_name,
+            reason="SalesAnchor viewer trial",
+            log_context="viewer_trial",
+            topic=topic,
+            log_name=fallback_name,
+        )
+
+    channel = await _make(name)
+    if channel is None and name != fallback_name:
+        channel = await _make(fallback_name)
+    return channel
 
 
 async def _discard_room(channel: Any) -> None:
@@ -132,6 +154,16 @@ async def _discard_room(channel: Any) -> None:
         logger.warning("[viewer-trial] rollback channel delete failed channel=%s", channel.id)
 
 
+async def _load_template_body(db_factory: Any, key: str) -> str | None:
+    """案内文のテンプレートを DB から読む（後戻りできない処理の前に呼ぶ）。無い・検査に通らない・読めないは None。"""
+    try:
+        async with db_factory() as session:
+            return await vmt.load_body(session, key)
+    except Exception:  # noqa: BLE001
+        logger.warning("[viewer-trial] template read failed key=%s", key)
+        return None
+
+
 async def on_open(interaction: Any, db_factory: Any, config: ViewerDiscordConfig) -> None:
     guild = interaction.guild
     member = interaction.user
@@ -140,7 +172,7 @@ async def on_open(interaction: Any, db_factory: Any, config: ViewerDiscordConfig
             row = (
                 await session.execute(
                     text(
-                        "SELECT id, email, discord_channel_id FROM public.viewer_accounts "
+                        "SELECT id, email, discord_channel_id, line_name FROM public.viewer_accounts "
                         "WHERE discord_user_id = :uid"
                     ),
                     {"uid": str(member.id)},
@@ -162,7 +194,16 @@ async def on_open(interaction: Any, db_factory: Any, config: ViewerDiscordConfig
         await _reply(interaction, T.YOUR_ROOM.format(channel_id=channel.id), True)
         return
 
-    new_channel = await _create_room(guild, member, config, viewer_id)
+    # 部屋を作る前に案内文を読む。無ければ何も作らず TRY_LATER
+    recreated_body = await _load_template_body(db_factory, "room_recreated")
+    recreated_text = (
+        vmt.render("room_recreated", recreated_body, email=email) if recreated_body is not None else None
+    )
+    if recreated_text is None:
+        await _reply(interaction, T.TRY_LATER, True)
+        return
+
+    new_channel = await _create_room(guild, member, config, viewer_id, row[3])
     if new_channel is None:
         await _reply(interaction, T.TRY_LATER, True)
         return
@@ -182,7 +223,7 @@ async def on_open(interaction: Any, db_factory: Any, config: ViewerDiscordConfig
         await _reply(interaction, T.TRY_LATER, True)
         return
     try:
-        await new_channel.send(T.ROOM_RECREATED.format(email=email))
+        await new_channel.send(recreated_text)
     except Exception:  # noqa: BLE001
         logger.warning("[viewer-trial] recreated post failed viewer=%d", viewer_id)
     await _reply(interaction, T.YOUR_ROOM.format(channel_id=new_channel.id), True)
@@ -237,6 +278,12 @@ async def on_code_submit(interaction: Any, db_factory: Any, config: ViewerDiscor
         await _reply(interaction, T.TRY_LATER, True)
         return
 
+    # 申込コードの照合（使用済みにする DELETE）より前に案内文を読む。無ければ何も変えず TRY_LATER
+    welcome_body = await _load_template_body(db_factory, "room_welcome")
+    if welcome_body is None:
+        await _reply(interaction, T.TRY_LATER, True)
+        return
+
     channel = None
     try:
         async with db_factory() as session:
@@ -260,20 +307,24 @@ async def on_code_submit(interaction: Any, db_factory: Any, config: ViewerDiscor
                 v = (
                     await session.execute(
                         text(
-                            "SELECT id, email, status, trial_expires_at "
+                            "SELECT id, email, status, trial_expires_at, discord_user_id, line_name "
                             "FROM public.viewer_accounts WHERE id = :vid FOR UPDATE"
                         ),
                         {"vid": vid},
                     )
                 ).first()
-                if v is None or v[2] != "pending":
+                if (
+                    v is None
+                    or v[2] not in ("pending", "trial", "active")
+                    or v[4] is not None  # もう Discord と結び付いている
+                ):
                     await session.rollback()
                     await _count_failure(redis, key)
                     await _reply(interaction, T.CODE_INVALID, True)
                     return
-                email, old_expires = v[1], v[3]
+                email, old_expires, prior_status = v[1], v[3], v[2]
 
-                channel = await _create_room(guild, member, config, vid)
+                channel = await _create_room(guild, member, config, vid, v[5])
                 if channel is None:
                     await session.rollback()
                     await _reply(interaction, T.TRY_LATER, True)
@@ -285,35 +336,59 @@ async def on_code_submit(interaction: Any, db_factory: Any, config: ViewerDiscor
                     await _discard_room(channel)
                     await _reply(interaction, T.TRY_LATER, True)
                     return
+                welcome_text = vmt.render("room_welcome", welcome_body, email=email, password=password)
+                if welcome_text is None:  # 差し込み後が長すぎるなど。commit の前なので申込コードは使用済みにならない
+                    await session.rollback()
+                    await _discard_room(channel)
+                    await _reply(interaction, T.TRY_LATER, True)
+                    return
                 pw_hash = await asyncio.to_thread(hash_password, password)
 
                 now = datetime.now(timezone.utc)
-                exp = now + timedelta(days=_TRIAL_DAYS)
-                await session.execute(
-                    text(
-                        "UPDATE public.viewer_accounts SET status='trial', "
-                        "trial_expires_at=:exp, discord_user_id=:uid, discord_channel_id=:ch, "
-                        "password_argon2_hash=:h, password_must_change=true, updated_at=:now "
-                        "WHERE id=:vid"
-                    ),
-                    {
-                        "exp": exp,
-                        "uid": str(member.id),
-                        "ch": str(channel.id),
-                        "h": pw_hash,
-                        "now": now,
-                        "vid": vid,
-                    },
-                )
-                await session.execute(
-                    text(
-                        "INSERT INTO public.viewer_status_changes (viewer_id, action, "
-                        "from_status, to_status, from_expires_at, to_expires_at, extend_days, "
-                        "actor, actor_user_id, created_at) VALUES (:vid, 'start_trial', "
-                        "'pending', 'trial', :old, :exp, NULL, 'system', NULL, :now)"
-                    ),
-                    {"vid": vid, "old": old_expires, "exp": exp, "now": now},
-                )
+                if prior_status == "pending":
+                    exp = now + timedelta(days=_TRIAL_DAYS)
+                    await session.execute(
+                        text(
+                            "UPDATE public.viewer_accounts SET status='trial', "
+                            "trial_expires_at=:exp, discord_user_id=:uid, discord_channel_id=:ch, "
+                            "password_argon2_hash=:h, password_must_change=true, updated_at=:now "
+                            "WHERE id=:vid"
+                        ),
+                        {
+                            "exp": exp,
+                            "uid": str(member.id),
+                            "ch": str(channel.id),
+                            "h": pw_hash,
+                            "now": now,
+                            "vid": vid,
+                        },
+                    )
+                    await session.execute(
+                        text(
+                            "INSERT INTO public.viewer_status_changes (viewer_id, action, "
+                            "from_status, to_status, from_expires_at, to_expires_at, extend_days, "
+                            "actor, actor_user_id, created_at) VALUES (:vid, 'start_trial', "
+                            "'pending', 'trial', :old, :exp, NULL, 'system', NULL, :now)"
+                        ),
+                        {"vid": vid, "old": old_expires, "exp": exp, "now": now},
+                    )
+                else:
+                    # お試し中・本契約: 状態と期限は変えず、部屋とパスワードだけ付ける
+                    await session.execute(
+                        text(
+                            "UPDATE public.viewer_accounts SET "
+                            "discord_user_id=:uid, discord_channel_id=:ch, "
+                            "password_argon2_hash=:h, password_must_change=true, updated_at=:now "
+                            "WHERE id=:vid"
+                        ),
+                        {
+                            "uid": str(member.id),
+                            "ch": str(channel.id),
+                            "h": pw_hash,
+                            "now": now,
+                            "vid": vid,
+                        },
+                    )
                 await session.execute(
                     text(
                         "INSERT INTO public.viewer_login_events (viewer_id, event_type, "
@@ -335,14 +410,18 @@ async def on_code_submit(interaction: Any, db_factory: Any, config: ViewerDiscor
         return
 
     try:
-        await channel.send(T.ROOM_WELCOME.format(email=email, password=password))
+        await channel.send(welcome_text)
     except Exception:  # noqa: BLE001
         logger.warning("[viewer-trial] welcome post failed viewer=%d", vid)
     await _reply(interaction, T.YOUR_ROOM.format(channel_id=channel.id), True)
 
 
 async def sweep_orphan_rooms(guild: Any, db_factory: Any, config: ViewerDiscordConfig) -> int:
-    """消された閲覧者の部屋（trial-<id>）を片付ける。1回の上限は10件。"""
+    """消された閲覧者の部屋を片付け、今の trial-<id> の部屋を LINE 名へ1回だけ直す。
+
+    部屋の番号は説明（ROOM_TOPIC）を先に、無ければ名前（trial-<id>）から読む。1回の上限は
+    消す10件・名前直し10件（別々に数える）。
+    """
     category = guild.get_channel(int(config.ticket_category_id))
     if not isinstance(category, discord.CategoryChannel):
         return 0
@@ -350,20 +429,38 @@ async def sweep_orphan_rooms(guild: Any, db_factory: Any, config: ViewerDiscordC
     for ch in category.channels:
         if not isinstance(ch, discord.TextChannel):
             continue
-        m = _ROOM_NAME_RE.match(ch.name)
+        topic = ch.topic if isinstance(ch.topic, str) else None
+        m = _ROOM_TOPIC_RE.fullmatch(topic) if topic is not None else None
+        if m is None:
+            m = _ROOM_NAME_RE.match(ch.name)
         if m:
             rooms.append((ch, int(m.group(1))))
     missing: list[Any] = []
+    to_rename: list[tuple[Any, int, str]] = []
     try:
         async with db_factory() as session:
             for ch, vid in rooms:
                 row = (
                     await session.execute(
-                        text("SELECT 1 FROM public.viewer_accounts WHERE id = :id"), {"id": vid}
+                        text(
+                            "SELECT line_name, discord_channel_id "
+                            "FROM public.viewer_accounts WHERE id = :id"
+                        ),
+                        {"id": vid},
                     )
                 ).first()
                 if row is None:
                     missing.append(ch)
+                    continue
+                topic = ch.topic if isinstance(ch.topic, str) else None
+                wanted = _room_name(vid, row[0])
+                if (
+                    _ROOM_NAME_RE.match(ch.name)
+                    and (topic is None or _ROOM_TOPIC_RE.fullmatch(topic) is None)
+                    and row[1] == str(ch.id)
+                    and wanted != ch.name
+                ):
+                    to_rename.append((ch, vid, wanted))
     except Exception:  # noqa: BLE001
         logger.warning("[viewer-trial] sweep read failed; nothing deleted")
         return 0
@@ -378,5 +475,22 @@ async def sweep_orphan_rooms(guild: Any, db_factory: Any, config: ViewerDiscordC
             deleted += 1
         except Exception:  # noqa: BLE001
             logger.warning("[viewer-trial] sweep delete failed channel=%s", ch.id)
-    logger.info("[viewer-trial] sweep deleted=%d checked=%d", deleted, len(rooms))
+    renamed = 0
+    reason = "SalesAnchor viewer room renamed to LINE name"
+    for ch, vid, wanted in to_rename[:_SWEEP_MAX_DELETE]:
+        topic = T.ROOM_TOPIC.format(viewer_id=vid)
+        try:
+            await ch.edit(name=wanted, topic=topic, reason=reason)
+            renamed += 1
+            continue
+        except Exception:  # noqa: BLE001
+            pass
+        try:
+            # 名前を Discord が拒んでも目印は付け、翌日から対象にしない
+            await ch.edit(topic=topic, reason=reason)
+        except Exception:  # noqa: BLE001
+            logger.warning("[viewer-trial] sweep rename failed channel=%s", ch.id)
+    logger.info(
+        "[viewer-trial] sweep deleted=%d renamed=%d checked=%d", deleted, renamed, len(rooms)
+    )
     return deleted

@@ -11,8 +11,10 @@ from __future__ import annotations
 
 SCOPE_TENANT = "tenant"
 SCOPE_GLOBAL = "global"
+SCOPE_SHARED = "shared"
 
 TOPIC_TCG_REVIEW = "tcg.review"
+TOPIC_TCG_INVENTORY = "tcg.inventory"
 
 # {(method, route_path): (topic, scope)}
 WRITE_ROUTE_TOPICS: dict[tuple[str, str], tuple[str, str]] = {
@@ -20,6 +22,63 @@ WRITE_ROUTE_TOPICS: dict[tuple[str, str], tuple[str, str]] = {
     ("POST", "/api/v1/tcg/items/{extraction_item_id}/review-ack/revoke"): (TOPIC_TCG_REVIEW, SCOPE_GLOBAL),
     ("POST", "/api/v1/tcg/items/{extraction_item_id}/value-override"): (TOPIC_TCG_REVIEW, SCOPE_GLOBAL),
 }
+
+# 裏の処理（Celery）が出す topic → 範囲（ADR-1016 決定5）。
+# tcg.inventory は書き込み API からも INVENTORY_SIGNAL_ROUTES 経由で同じ範囲で出る
+TASK_TOPICS: dict[str, str] = {
+    TOPIC_TCG_INVENTORY: SCOPE_SHARED,
+}
+
+# 在庫表が読む共通の表（public）に書く経路。2xx のとき middleware が tcg.inventory を shared で出す
+# （ADR-1016 改訂 2026-10-19）。WRITE_ROUTE_TOPICS / NO_SIGNAL_ROUTES のどちらに載るかとは別に持つ。
+# 増減は設計の改訂を通す（test_realtime_topics.py が数を固定する）
+INVENTORY_SIGNAL_ROUTES: frozenset[tuple[str, str]] = frozenset({
+    ("POST", "/api/v1/conditions"),
+    ("POST", "/api/v1/conditions/import/commit"),
+    ("DELETE", "/api/v1/conditions/{condition_id}"),
+    ("PATCH", "/api/v1/conditions/{condition_id}"),
+    ("POST", "/api/v1/products"),
+    ("DELETE", "/api/v1/products/{product_id}"),
+    ("PATCH", "/api/v1/products/{product_id}"),
+    ("POST", "/api/v1/units"),
+    ("POST", "/api/v1/units/import/commit"),
+    ("DELETE", "/api/v1/units/{unit_id}"),
+    ("PATCH", "/api/v1/units/{unit_id}"),
+    ("POST", "/api/v1/super-admin/conditions"),
+    ("POST", "/api/v1/super-admin/conditions/import/commit"),
+    ("DELETE", "/api/v1/super-admin/conditions/{condition_id}"),
+    ("PATCH", "/api/v1/super-admin/conditions/{condition_id}"),
+    ("POST", "/api/v1/super-admin/suppliers"),
+    ("POST", "/api/v1/super-admin/suppliers/import/commit"),
+    ("DELETE", "/api/v1/super-admin/suppliers/{supplier_id}"),
+    ("PATCH", "/api/v1/super-admin/suppliers/{supplier_id}"),
+    ("POST", "/api/v1/super-admin/tcg/types"),
+    ("DELETE", "/api/v1/super-admin/tcg/types/{type_id}"),
+    ("PATCH", "/api/v1/super-admin/tcg/types/{type_id}"),
+    ("POST", "/api/v1/super-admin/units"),
+    ("POST", "/api/v1/super-admin/units/import/commit"),
+    ("DELETE", "/api/v1/super-admin/units/{unit_id}"),
+    ("PATCH", "/api/v1/super-admin/units/{unit_id}"),
+    ("PUT", "/api/v1/tcg/distribution/settings/{key}"),
+    ("POST", "/api/v1/tcg/extraction-jobs/{extraction_job_id}/reanalyze"),
+    ("POST", "/api/v1/tcg/items/{extraction_item_id}/corrections"),
+    ("POST", "/api/v1/tcg/items/{extraction_item_id}/review-ack"),
+    ("POST", "/api/v1/tcg/items/{extraction_item_id}/review-ack/revoke"),
+    ("POST", "/api/v1/tcg/items/{extraction_item_id}/value-override"),
+    ("POST", "/api/v1/tcg/line-devices/import"),
+    ("POST", "/api/v1/tcg/line-import"),
+    ("POST", "/api/v1/tcg/line-import/android"),
+    ("POST", "/api/v1/tcg/line-import/{import_job_id}/commit"),
+    ("POST", "/api/v1/tcg/line-import/{import_job_id}/resolve"),
+    ("POST", "/api/v1/tcg/products"),
+    ("POST", "/api/v1/tcg/products/create"),
+    ("DELETE", "/api/v1/tcg/products/detail/{product_id}"),
+    ("PUT", "/api/v1/tcg/products/detail/{product_id}"),
+    ("POST", "/api/v1/tcg/products/import/commit"),
+    ("POST", "/api/v1/tcg/products/{product_id}/search-keywords"),
+    ("POST", "/api/v1/tcg/review/csv/commit"),
+    ("PUT", "/api/v1/tcg/v102/posts/{job_id}/items"),
+})
 
 _PENDING = "段階2で画面に当てるときに決める"
 
@@ -40,6 +99,7 @@ NO_SIGNAL_ROUTES: dict[tuple[str, str], str] = {
     ("POST", "/api/v1/archives/{archive_id}/restore"): _PENDING,
     ("POST", "/api/v1/auth/login"): _PENDING,
     ("POST", "/api/v1/auth/logout"): _PENDING,
+    ("POST", "/api/v1/tcg/analysis-results/client-timing"): "データを変えない。計時ログを1行残すだけ",
     ("POST", "/api/v1/viewer/login"): "閲覧ページ ADR-1019: 閲覧者のログインは画面更新の通知対象外",
     ("POST", "/api/v1/viewer/logout"): "閲覧ページ ADR-1019: 閲覧者のログアウトは画面更新の通知対象外",
     ("POST", "/api/v1/viewer/password"): "閲覧ページ ADR-1019: 閲覧者のパスワード変更は画面更新の通知対象外",
@@ -50,6 +110,9 @@ NO_SIGNAL_ROUTES: dict[tuple[str, str], str] = {
     ("POST", "/api/v1/super-admin/viewers/{viewer_id}/suspend"): "閲覧者管理 ADR-1019: 社外の閲覧者の状態変更で画面更新の通知対象外",
     ("POST", "/api/v1/super-admin/viewers/{viewer_id}/unsuspend"): "閲覧者管理 ADR-1019: 社外の閲覧者の状態変更で画面更新の通知対象外",
     ("POST", "/api/v1/super-admin/viewers/{viewer_id}/extend"): "閲覧者管理 ADR-1019: 社外の閲覧者の状態変更で画面更新の通知対象外",
+    ("POST", "/api/v1/super-admin/viewers/{viewer_id}/reissue-signup-code"): "閲覧者管理 ADR-1019: 一覧に出る値を変えない（申込コードを置き換えるだけ）ので通知対象外",
+    ("PATCH", "/api/v1/super-admin/viewers/{viewer_id}"): "閲覧者管理 ADR-1019: 社外の閲覧者の LINE名の訂正で画面更新の通知対象外（保存した画面は応答で差し替える）",
+    ("PUT", "/api/v1/super-admin/viewer-templates/{key}"): "閲覧者管理 段11: 文面テンプレートの本文を直すだけで画面更新の通知対象外（保存した画面は応答で差し替える）",
     ("POST", "/api/v1/ops/alertmanager"): "保守 API ADR-1012: 運用者向けで画面更新の通知対象外",
     ("POST", "/api/v1/ops/control/halt"): "保守 API ADR-1012: 運用者向けで画面更新の通知対象外",
     ("POST", "/api/v1/ops/control/resume"): "保守 API ADR-1012: 運用者向けで画面更新の通知対象外",
@@ -354,7 +417,10 @@ NO_SIGNAL_ROUTES: dict[tuple[str, str], str] = {
     ("DELETE", "/api/v1/tcg/distribution/targets/{target_id}"): _PENDING,
     ("PUT", "/api/v1/tcg/distribution/targets/{target_id}"): _PENDING,
     ("POST", "/api/v1/tcg/extraction-jobs/{extraction_job_id}/reanalyze"): _PENDING,
+    ("POST", "/api/v1/ops/error-reports/{report_code}/events"): "誤り報告の記録のみ。画面に出る在庫データは変えない（ADR-1025 便2）",
+    ("POST", "/api/v1/ops/error-reports/{report_code}/reanalyze"): _PENDING,
     ("POST", "/api/v1/tcg/items/{extraction_item_id}/corrections"): _PENDING,
+    ("POST", "/api/v1/tcg/items/{extraction_item_id}/error-reports"): "誤り報告の記録のみ。画面に出る在庫データは変えない（ADR-1025 便1）",
     ("POST", "/api/v1/tcg/line-devices/approve"): _PENDING,
     ("POST", "/api/v1/tcg/line-devices/import"): _PENDING,
     ("POST", "/api/v1/tcg/line-devices/start"): _PENDING,

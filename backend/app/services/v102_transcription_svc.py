@@ -379,6 +379,8 @@ async def apply_transcription_edit(db: AsyncSession, job: PostJob, items: list[I
     for index, (_item, item_id) in enumerate(ordered):
         await db.execute(text(_RENUMBER_SQL.format(schema=TCG_SCHEMA)), {"id": item_id, "gemini_index": index})
     if removed_pairs:  # 削除した件が最新だった組は、同じ仕入元の次に新しい投稿の件を最新に戻す（G5）。同じトランザクション内
-        await db.run_sync(lambda sync: analyzer._merge_supplier_products(sync, job.job_id, TCG_SCHEMA, extra_pairs=removed_pairs))
+        await db.run_sync(lambda sync: analyzer._merge_supplier_products(
+            sync, job.job_id, TCG_SCHEMA, extra_pairs=removed_pairs, revival_guard=False,  # ADR-1032: 削除は再解析ではない（D1b）
+        ))
     await db.commit()  # public スキーマのみでテナント文脈を使わないため reset_tenant_context は不要(item_corrections と同じ)
     return EditResult(True, [item_id for _item, item_id in ordered])

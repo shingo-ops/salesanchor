@@ -8,3 +8,77 @@
   color: var(--text-secondary);
   overflow-wrap: anywhere;
 }
+
+/* PC 幅（768px 以上）は、商品名は上限幅で1行のまま「…」で省略（全文は title）、備考・発送は上限幅で折り返す。
+   それでもはみ出す分は DataTable の fitToWidth が表ごと縮めて収める。
+   767px 以下（カード表示）は上の折り返しのまま。 */
+@media (min-width: 768px) { /* = --breakpoint-mobile-max の次 */
+  .inventory-cell__title,
+  .inventory-cell__sub,
+  .inventory-cell__nowrap {
+    white-space: nowrap;
+  }
+
+  .inventory-cell__clip {
+    max-width: var(--comp-inventory-title-max-w);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .inventory-cell__wrap {
+    display: block;
+    max-width: var(--comp-inventory-text-max-w);
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .inventory-cell__wrap:not(:empty) {
+    min-width: var(--comp-inventory-text-min-w);
+  }
+}
+
+/* 在庫・予約の文字色（トークン参照。ライト／ダークは tokens.css 側で定義） */
+.inventory-cell__offer--instock {
+  color: var(--offer-instock-text);
+}
+
+.inventory-cell__offer--preorder {
+  color: var(--offer-preorder-text);
+}
+
+.inventory-cell__condition--info {
+  color: var(--info-text);
+}
+
+.inventory-cell__condition--success {
+  color: var(--success-text);
+}
+
+.inventory-cell__condition--warning {
+  color: var(--warning-text);
+}
+
+.inventory-cell__condition--purple {
+  color: var(--purple-text);
+}
+
+.inventory-cell__condition--danger {
+  color: var(--danger-text);
+}
+
+/* 価格・数量の値の入れ物。印の有無で幅を変えないため、全行で同じ余白を持つ（形と余白は金型 Badge sm と同じトークン。ADR-1014 改訂 2026-10-19（4）） */
+.inventory-cell__value {
+  display: inline-block;
+  padding: var(--space-2px) var(--space-2);
+  border-radius: var(--comp-badge-radius);
+}
+/* 同じ商品・ステータス・状態のまとまりの最安（薄い水色の塗り）と在庫最多（薄い緑の塗り）。色の組は Badge soft info / success と同じ */
+.inventory-cell__value--cheapest {
+  background: var(--info-bg);
+  color: var(--info-text);
+}
+.inventory-cell__value--most-stock {
+  background: var(--success-bg);
+  color: var(--success-text);
+}

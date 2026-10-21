@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import csv
 from datetime import date
+from decimal import Decimal
 from typing import Annotated, Literal
 from uuid import UUID
 
@@ -273,6 +274,24 @@ async def product_detail(
 DetailWord = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=5000)]
 
 
+PackagingSource = Literal["official", "official_store", "retailer", "measured", "legacy"]
+
+
+class PackagingIn(BaseModel):
+    """ADR-1028 便4: 荷姿 1 単位ぶん。中の単位はサーバーが決める。"""
+
+    model_config = ConfigDict(extra="forbid")
+
+    unit_code: str
+    contained_count: int | None = Field(default=None, ge=1, le=1000000)
+    count_source: PackagingSource | None = None
+    count_source_urls: list[str] = Field(default_factory=list, max_length=10)
+    weight_kg: Decimal | None = Field(default=None, gt=0, le=Decimal("99999.999"), decimal_places=3)
+    weight_source: PackagingSource | None = None
+    weight_source_urls: list[str] = Field(default_factory=list, max_length=10)
+    note: str | None = Field(default=None, max_length=1000)
+
+
 class ProductDetailUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -289,6 +308,7 @@ class ProductDetailUpdate(BaseModel):
     exclude_keywords: list[DetailWord] = Field(max_length=1000)
     product_format_id: int | None = None
     blank_confirmations: list[Literal["name_en", "mark", "release_date", "exclude_keywords"]] | None = None
+    packagings: list[PackagingIn] | None = Field(default=None, max_length=10)
 
     @field_validator("release_date")
     @classmethod
@@ -311,12 +331,13 @@ async def save_product_detail(
     user: User = Depends(require_super_admin),
 ) -> dict:
     values = payload.model_dump(mode="json", exclude={"revision"})
-    for optional in ("product_format_id", "blank_confirmations"):
+    for optional in ("product_format_id", "blank_confirmations", "packagings"):
         if optional not in payload.model_fields_set:
             values.pop(optional, None)
     try:
         return await update_product_detail(
             db, product_id, values, payload.revision, str(user.email or user.id or ""),
+            actor_user_id=user.id,
         )
     except ProductDetailError as exc:
         raise HTTPException(status_code=exc.status, detail=str(exc)) from exc

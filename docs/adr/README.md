@@ -3,7 +3,7 @@
 > このファイルは `scripts/generate-adr-index.js` により自動生成されます。
 > **手動編集禁止。** ADR ファイルを追加・変更後に `node scripts/generate-adr-index.js` を実行してください。
 
-最終更新: 2026-10-17 / ADR 総数: 184 件
+最終更新: 2026-10-21 / ADR 総数: 196 件
 
 ## 維持ルール（整合性を保つ・必須）
 
@@ -202,7 +202,19 @@
 | [ADR-1021](./ADR-1021-bulk-condition-state.md) | ADR-1021: バルク系の商品で状態語が無いときは状態「Bulk」（配信可）にする。価格は1枚単価にそろえ、セット情報は備考に出す（価格は便2） | Accepted | — | — |
 | [ADR-1022](./ADR-1022-python-upgrade-deadline.md) | ADR-1022: Python は 3.12 のまま作り続け、2027 年 10 月までに本番ごと 3.14 へ上げる | Proposed | — | — |
 | [ADR-1023](./ADR-1023-condition-value-rank.md) | ADR-1023: 状態の価値順 — 複数の状態語が当たったら価値の低い状態を採る（v102） | Accepted | — | — |
-| [ADR-1024](./ADR-1024-ai-readonly-db-path.md) | ADR-1024: AI 用「本番 DB を読むだけの道」— 何でもできる鍵を許可で縛るのをやめ、読むことしかできない道を作る | Proposed | — | — |
+| [ADR-1024](./ADR-1024-ai-readonly-db-path.md) | ADR-1024: AI 用「本番 DB を読むだけの道」— 何でもできる鍵を許可で縛るのをやめ、読むことしかできない道を作る | Accepted | — | — |
+| [ADR-1025](./ADR-1025-analysis-error-report-autofix.md) | ADR-1025: 解析の誤り報告から自律修正まで — 報告は本番の表 1 か所、起動は agent-console が Discord の 1 チャンネルを読む | Proposed | — | — |
+| [ADR-1026](./ADR-1026-drop-products-type-master-id.md) | ADR-1026: 商品の使われていない作品欄 products.type_master_id を取り除く | Proposed | — | — |
+| [ADR-1027](./ADR-1027-bundle-sale-reading.md) | ADR-1027: まとめ売り（N単位セット）は値段を割らずに保存し、商品名の欄に「N＋単位＋セット」を表示の時に付ける（ADR-1021 便2 の置き換え） | Proposed | — | — |
+| [ADR-1028](./ADR-1028-product-packaging-table.md) | ADR-1028: 商品の入数・重さを「商品の荷姿」の表 1 つで持つ | Proposed | — | — |
+| [ADR-1029](./ADR-1029-review-gate-hook.md) | ADR-1029: AI のマージは、その PR の今の HEAD に Opus 審査役の APPROVE 記録が無ければフックで止める | Proposed | — | — |
+| [ADR-1030](./ADR-1030-drop-products-tcg-type.md) | ADR-1030: 商品の作品の写し products.tcg_type をやめ、中分類 products.work_id だけで絞る | Accepted | — | — |
+| [ADR-1031](./ADR-1031-single-and-promo-pack-conditions.md) | ADR-1031: シングル系の状態5つ（PSA10／PSA9／PSA8／PSA7以下／Single）と、区分「プロモパック系」（既定は未開封） | Accepted | — | — |
+| [ADR-1032](./ADR-1032-current-row-revival-guard.md) | ADR-1032: 再解析で、新しい投稿に隠れていた古い投稿の行を現行に戻さない（復活止め） | Accepted | — | — |
+| [ADR-1033](./ADR-1033-conversation-consent-ticket.md) | ADR-1033: 危険な操作を、会話での同意（同意票と「1」）でも通せるようにする | Proposed | — | — |
+| [ADR-1034](./ADR-1034-opus-permission-delegation-ledger.md) | ADR-1034: Opus が権限を足し引きし、理由を台帳に残して毎週点検する | Proposed | — | — |
+| [ADR-1035](./ADR-1035-condition-unit-and-booklet-category.md) | ADR-1035: 状態ごとの単位（Case/Box/Pack）と、区分「ブックレット系」（既定は With booklet） | Proposed | — | — |
+| [ADR-1036](./ADR-1036-price-decides-unit.md) | ADR-1036: 単位が「個」・無記入の箱系の行は、値段で Box／Case／Pack を決める（v102） | Proposed | — | — |
 
 ## ステータス凡例
 

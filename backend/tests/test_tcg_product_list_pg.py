@@ -20,6 +20,11 @@ URL = os.getenv("RLS_ADMIN_DATABASE_URL")
 pytestmark = [pytest.mark.asyncio, pytest.mark.skipif(not URL, reason="Disposable PostgreSQL required")]
 
 
+from tests.rls_bootstrap import (
+    _PUBLIC_BOOTSTRAP_LOCK_KEY,
+    _PUBLIC_BOOTSTRAP_LOCK_NAMESPACE,
+    ensure_product_packagings,
+)
 from tests.seed_data import type_master_seed_sql
 from tests.test_tcg_work_matching_integration import (
     _PUBLIC_PRODUCTS_DDL,
@@ -95,9 +100,17 @@ async def product_db(monkeypatch):
     monkeypatch.setattr(routes, "TCG_SCHEMA", schema)
     engine = create_async_engine(url.set(drivername="postgresql+asyncpg"))
     try:
+        # 荷姿の表は transaction の外で一度だけ確定させる（巻き戻す DDL にすると表ロックを持ち続けて deadlock する）
+        await ensure_product_packagings(engine)
         async with engine.connect() as conn:
             transaction = await conn.begin()
             try:
+                # 準備（bootstrap）の作り直しと取り合わないよう、public_bootstrap_lock と同じ鍵を共有で取る。
+                # bootstrap は排他で待ち、この試験は rollback で自動的に外れる。
+                await conn.execute(
+                    text("SELECT pg_advisory_xact_lock_shared(:namespace, :lock_key)"),
+                    {"namespace": _PUBLIC_BOOTSTRAP_LOCK_NAMESPACE, "lock_key": _PUBLIC_BOOTSTRAP_LOCK_KEY},
+                )
                 await create_product_schema(conn, schema)
                 async with AsyncSession(bind=conn) as db:
                     yield db, schema

@@ -1,6 +1,7 @@
+/* eslint-disable local/no-japanese-literal -- テスト: 検索の正規化ベクタ・日本語タイトルの並びを検証する（ADR-027・precedent: ProductMasterDrawer.test.tsx） */
 import { describe, expect, it } from "vitest";
 import vectors from "../../features/inventory/searchNormalize.vectors.json";
-import { filterRows, matchesQuery, parsePostedAt, seriesTabs, sortRows, withIndex } from "./viewerFilter";
+import { DEFAULT_SORT_DIR, DEFAULT_SORT_KEY, filterRows, MAIN_SERIES, markBlockBadges, matchesQuery, otherSeries, parsePostedAt, seriesTabs, sortRows, withIndex } from "./viewerFilter";
 import type { ViewerFilters } from "./viewerFilter";
 import type { ViewerRow } from "./types";
 
@@ -57,37 +58,152 @@ describe("filters", () => {
   });
 });
 
-describe("sort (design L365)", () => {
+describe("sort (ADR-1014 改訂 2026-10-18)", () => {
+  // 商品A(2026-01-01) の2行（価格 900/100）、商品B(2026-03-01) 1行、発売日が空の商品C 1行
   const rows = withIndex([
-    mk({ english_title: "item 2", release_date: "2026-01-01" }), // 0
-    mk({ english_title: "item 10", release_date: "2026-03-01" }), // 1
-    mk({ english_title: "", release_date: "2026-02-01", japanese_title: "あ" }), // 2
-    mk({ english_title: "item 2", release_date: "" }), // 3
-    mk({ english_title: "item 2", release_date: "2026-05-01" }), // 4
-    mk({ english_title: "", release_date: "", japanese_title: "い" }), // 5
+    mk({ english_title: "B item", release_date: "2026-03-01", unit_price: "50" }), // 0
+    mk({ english_title: "A item", release_date: "2026-01-01", unit_price: "900" }), // 1
+    mk({ english_title: "C item", release_date: "", unit_price: "10" }), // 2
+    mk({ english_title: "A item", release_date: "2026-01-01", unit_price: "100" }), // 3
   ]);
-  it("default: english_title asc ('' first), then release_date desc (empty last), then original order", () => {
-    // 'item 10' < 'item 2'（numeric なし）。'' が先頭
-    expect(sortRows(rows, "release_date", "desc").map((r) => r.idx)).toEqual([2, 5, 1, 4, 0, 3]);
+  it("default (release_date desc): groups by release date newest first, empty last, original order inside", () => {
+    expect(sortRows(rows, DEFAULT_SORT_KEY, DEFAULT_SORT_DIR).map((r) => r.idx)).toEqual([0, 1, 3, 2]);
   });
-  it("pull-down price asc applies only inside the same english_title", () => {
+  it("release_date asc: groups by release date oldest first, empty last", () => {
+    expect(sortRows(rows, "release_date", "asc").map((r) => r.idx)).toEqual([1, 3, 0, 2]);
+  });
+  it("price asc keeps the default group order (release date newest first) and sorts only inside a group", () => {
+    expect(sortRows(rows, "unit_price", "asc").map((r) => r.idx)).toEqual([0, 3, 1, 2]);
+  });
+  it("price asc: inside a product, condition blocks keep the default order (idx), price sorts only inside a condition block", () => {
+    // idx 順 = サーバーの価値順: sealed(0,1) → damaged(2,3)。価格は sealed が高く damaged が安い
     const rs = withIndex([
-      mk({ english_title: "b", unit_price: "5" }),
-      mk({ english_title: "a", unit_price: "9" }),
-      mk({ english_title: "a", unit_price: "" }),
-      mk({ english_title: "a", unit_price: "2" }),
+      mk({ english_title: "A", release_date: "2026-01-01", condition: "sealed", unit_price: "900" }), // 0
+      mk({ english_title: "A", release_date: "2026-01-01", condition: "sealed", unit_price: "800" }), // 1
+      mk({ english_title: "A", release_date: "2026-01-01", condition: "damaged", unit_price: "100" }), // 2
+      mk({ english_title: "A", release_date: "2026-01-01", condition: "damaged", unit_price: "50" }), // 3
     ]);
-    expect(sortRows(rs, "unit_price", "asc").map((r) => r.idx)).toEqual([3, 1, 2, 0]);
+    expect(sortRows(rs, "unit_price", "asc").map((r) => r.idx)).toEqual([1, 0, 3, 2]);
+    expect(sortRows(rs, "unit_price", "desc").map((r) => r.idx)).toEqual([0, 1, 2, 3]);
+    expect(sortRows(rs, "quantity", "desc").map((r) => r.idx)).toEqual([0, 1, 2, 3]);
+  });
+  it("release_date desc: newest group first, empty still last", () => {
+    expect(sortRows(rows, "release_date", "desc").map((r) => r.idx)).toEqual([0, 1, 3, 2]);
+  });
+  it("same release date: groups are split by english_title", () => {
+    const rs = withIndex([
+      mk({ english_title: "b", release_date: "2026-01-01" }),
+      mk({ english_title: "a", release_date: "2026-01-01" }),
+      mk({ english_title: "b", release_date: "2026-01-01" }),
+    ]);
+    expect(sortRows(rs, "release_date", "asc").map((r) => r.idx)).toEqual([1, 0, 2]);
+  });
+  it("same release date and english_title: empty japanese_title comes first (same as backend)", () => {
+    const rs = withIndex([
+      mk({ english_title: "x", japanese_title: "あ", release_date: "2026-01-01" }),
+      mk({ english_title: "x", japanese_title: "", release_date: "2026-01-01" }),
+    ]);
+    expect(sortRows(rs, "release_date", "asc").map((r) => r.idx)).toEqual([1, 0]);
   });
   it("name header desc: english_title desc and japanese_title desc, '' english last", () => {
-    const out = sortRows(rows, "name", "desc");
+    const nameRows = withIndex([
+      mk({ english_title: "item 2" }),
+      mk({ english_title: "item 10" }),
+      mk({ english_title: "", japanese_title: "あ" }),
+      mk({ english_title: "item 2" }),
+      mk({ english_title: "item 2" }),
+      mk({ english_title: "", japanese_title: "い" }),
+    ]);
+    const out = sortRows(nameRows, "name", "desc");
     // english_title '' の行は末尾（降順）、'item 2' が 'item 10' より前
     expect(out.slice(-2).map((r) => r.english_title)).toEqual(["", ""]);
     expect(out.slice(-2).map((r) => r.japanese_title)).toEqual(["い", "あ"]);
     expect(out.map((r) => r.english_title).slice(0, 4)).toEqual(["item 2", "item 2", "item 2", "item 10"]);
   });
   it("'item 10' sorts before 'item 2' (no numeric collation)", () => {
-    const out = sortRows(withIndex([mk({ english_title: "item 2" }), mk({ english_title: "item 10" })]), "release_date", "desc");
+    const out = sortRows(withIndex([mk({ english_title: "item 2" }), mk({ english_title: "item 10" })]), "release_date", "asc");
     expect(out.map((r) => r.english_title)).toEqual(["item 10", "item 2"]);
   });
 });
+
+describe("markBlockBadges (ADR-1014 rev 2026-10-19 (3))", () => {
+  const blk = { release_date: "2026-01-01", english_title: "A", japanese_title: "あ" };
+  const flags = (rows: ViewerRow[]) => markBlockBadges(rows).map((r) => [r.badge_cheapest, r.badge_most_stock]);
+
+  it("marks every row equal to the min price / max quantity (B1)", () => {
+    const rows = [
+      mk({ ...blk, unit_price: "100", quantity: "10" }),
+      mk({ ...blk, unit_price: "200", quantity: "20" }),
+      mk({ ...blk, unit_price: "100", quantity: "20" }),
+    ];
+    expect(flags(rows)).toEqual([[true, false], [false, true], [true, true]]);
+  });
+  it("marks nothing for a single row or all-same values (B2)", () => {
+    expect(flags([mk({ ...blk, unit_price: "100", quantity: "5" })])).toEqual([[false, false]]);
+    expect(flags([mk({ ...blk, unit_price: "100", quantity: "5" }), mk({ ...blk, unit_price: "100", quantity: "5" })])).toEqual([
+      [false, false], [false, false],
+    ]);
+  });
+  it("leaves out '' and non-numeric values from the comparison (B2)", () => {
+    const rows = [
+      mk({ ...blk, unit_price: "", quantity: "abc" }),
+      mk({ ...blk, unit_price: "100", quantity: "5" }),
+      mk({ ...blk, unit_price: "300", quantity: "9" }),
+    ];
+    expect(flags(rows)).toEqual([[false, false], [true, false], [false, true]]);
+    // 値のある行が1行だけなら付けない
+    expect(flags([mk({ ...blk, unit_price: "", quantity: "" }), mk({ ...blk, unit_price: "100", quantity: "5" })])).toEqual([
+      [false, false], [false, false],
+    ]);
+  });
+  it("compares per block (release_date + english_title + japanese_title) and keeps extra fields (B3)", () => {
+    const rows = markBlockBadges([
+      { ...mk({ ...blk, unit_price: "100" }), idx: 0 },
+      { ...mk({ ...blk, unit_price: "200" }), idx: 1 },
+      { ...mk({ ...blk, english_title: "B", unit_price: "500" }), idx: 2 },
+      { ...mk({ ...blk, english_title: "B", unit_price: "900" }), idx: 3 },
+      { ...mk({ ...blk, release_date: "2026-02-01", unit_price: "50" }), idx: 4 },
+    ]);
+    expect(rows.map((r) => r.idx)).toEqual([0, 1, 2, 3, 4]);
+    expect(rows.map((r) => r.badge_cheapest)).toEqual([true, false, true, false, false]);
+  });
+  it("compares each status separately (F1)", () => {
+    const rows = [
+      mk({ ...blk, status: "In Stock", unit_price: "100", quantity: "5" }),
+      mk({ ...blk, status: "In Stock", unit_price: "200", quantity: "9" }),
+      mk({ ...blk, status: "Pre-order", unit_price: "300", quantity: "1" }),
+      mk({ ...blk, status: "Pre-order", unit_price: "400", quantity: "3" }),
+    ];
+    expect(flags(rows)).toEqual([[true, false], [false, true], [true, false], [false, true]]);
+  });
+  it("compares each condition separately, and a one-row group gets nothing (F2)", () => {
+    const rows = [
+      mk({ ...blk, condition: "Sealed box", unit_price: "100", quantity: "5" }),
+      mk({ ...blk, condition: "Sealed box", unit_price: "200", quantity: "9" }),
+      mk({ ...blk, condition: "Case", unit_price: "500", quantity: "1" }),
+      mk({ ...blk, condition: "Case", unit_price: "600", quantity: "3" }),
+    ];
+    expect(flags(rows)).toEqual([[true, false], [false, true], [true, false], [false, true]]);
+    const single = [
+      mk({ ...blk, condition: "Sealed box", unit_price: "100", quantity: "5" }),
+      mk({ ...blk, condition: "Sealed box", unit_price: "200", quantity: "9" }),
+      mk({ ...blk, condition: "Case", unit_price: "500", quantity: "50" }),
+    ];
+    expect(flags(single)).toEqual([[true, false], [false, true], [false, false]]);
+  });
+  it("compares the rounded values shown on screen", () => {
+    expect(flags([mk({ ...blk, unit_price: "100.4" }), mk({ ...blk, unit_price: "100" })])).toEqual([[false, false], [false, false]]);
+  });
+});
+
+/* eslint-disable local/no-japanese-literal -- DB の series 名（画面文言ではない） */
+describe("otherSeries / MAIN_SERIES", () => {
+  it("MAIN_SERIES is the three main names", () => {
+    expect([...MAIN_SERIES]).toEqual(["ポケモン", "ワンピース", "ドラゴンボール"]);
+  });
+  it("otherSeries lists non-empty series outside MAIN_SERIES, unique, in name order", () => {
+    const rs = [mk({ series: "ホロライブ" }), mk({ series: "ポケモン" }), mk({ series: "B" }), mk({ series: "" }), mk({ series: "B" }), mk({ series: "ワンピース" })];
+    expect(otherSeries(rs)).toEqual(["B", "ホロライブ"]);
+  });
+});
+/* eslint-enable local/no-japanese-literal */

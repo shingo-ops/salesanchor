@@ -1,8 +1,13 @@
 # design: 受信箱の「新規」バッジ（担当になったが、まだ開いていない）
 
 **日付**: 2026-10-15
-**ベース**: `origin/main` = `861b5182b`
+**ベース**: `origin/main` = `62f341957`（PR-A 作業先 worktree で再確認）
 **recon**: `docs/handoff/inbox-new-assignment-badge/recon.md`
+**本便の区分**: 本 PR（PR-A・`release/inbox-badge-column`）は「出し方（2段階・expand/contract）」
+（本書この後の節）のうち**列だけ**を担当する。読み書きのコードと画面は PR-B
+（`release/inbox-new-assignment-badge`）の担当。`backend/app/routers/leads.py`・
+`backend/app/routers/meta_inbox.py`・`frontend/` 配下の各ファイルは PR-B で行番号が動くため、
+本書では識別子名で引用する（審査 D5 対応）。
 **対象 ADR**: ADR-1008（人の列は `public.users(id)` を参照）／ADR-144（UI 金型ガバナンス）／ADR-027（i18n）／ADR-067（デザイントークン）／ADR-072（テナント文脈）／ADR-025（手動 DB 操作の原則禁止）／ADR-135・ADR-136（危険パスの GO 手順）／ADR-1015（PR 区分＝**A 区分**：新機能かつ 「.sql」を含む）／ADR-1016（書き込みルート台帳。**本件は新しい書き込み API を足さないため登録不要**）
 **PO 決定**: 案 B「**担当になったが、まだ開いていない**」。**開くと消える。**
 
@@ -28,7 +33,7 @@
 | P3 | **新しい API を作らない** | `git diff main...HEAD` に `@router.` の追加が 0 件（既存 API の拡張のみ） |
 | P4 | **新しい UI 金型を作らない** | `frontend/src/components/` への新規ファイルが 0 件 |
 | P5 | 新しいデザイントークンを作らない | `git diff main...HEAD -- frontend/src/index.css` が空 |
-| P6 | 既存の未読バッジを触らない | `frontend/src/pages/inbox/InboxConversationRows.tsx:138-140` の 3 行が diff に現れない |
+| P6 | 既存の未読バッジを触らない | `frontend/src/pages/inbox/InboxConversationRows.tsx` の `conv.unread_count > 0 && (...)` の既存3行が diff に現れない（PR-B で行番号が動くため識別子で引用） |
 
 ---
 
@@ -37,17 +42,17 @@
 | 事実 | 根拠 |
 |---|---|
 | `leads` に「担当になった時刻」の列は**無い**（本体21列＋追加33列を全数確認） | `migrations/003_add_phase1_tenant_tables.sql:75-98` ／ recon §2 |
-| 紛らわしい `assigned_at` は **`user_roles` の列**（無関係） | `migrations/003_add_phase1_tenant_tables.sql:62-69` |
-| 新テナント用の定義が**別ファイルにもある** | `backend/app/services/tenant.py:346-397` |
-| **会話を開くと既に `mark-read` が呼ばれる** | `frontend/src/pages/inbox/useInboxState.ts:613-621` |
-| その API は**空 body を既に送っている**（任意項目の追加は後方互換） | `frontend/src/lib/messages.ts:195-198` |
-| その API は**同じ処理内で `leads` の存在確認をしている** | `backend/app/routers/leads.py:1148-1215` |
-| **`current_user.id` は `users.id`**（ADR-1008）。`leads.assigned_to` も users.id | `backend/app/routers/leads.py:1183` ／ `backend/app/routers/analytics.py:106-113` |
-| **一括既読からも `mark-read` が呼ばれる**（＝「開いた」と区別が必要） | `frontend/src/pages/inbox/useInboxState.ts:922,986` |
-| 会話一覧 API に `current_user` は**既に居る** | `backend/app/routers/meta_inbox.py:865-877` |
-| 会話一覧は `assigned_to` を返していない | 同 `:950-962` ／ `:1005-1018` |
+| 紛らわしい `assigned_at` は **`user_roles` の列**（無関係） | `migrations/003_add_phase1_tenant_tables.sql:63-70` |
+| 新テナント用の定義が**別ファイルにもある** | `backend/app/services/tenant.py:355-407` |
+| **会話を開くと既に `mark-read` が呼ばれる** | `frontend/src/pages/inbox/useInboxState.ts` の `selectedLeadId` 変更時の `useEffect`（PR-B で行番号が動くため識別子） |
+| その API は**空 body を既に送っている**（任意項目の追加は後方互換） | `frontend/src/lib/messages.ts` の `markRead` 関数（同上） |
+| その API は**同じ処理内で `leads` の存在確認をしている** | `backend/app/routers/leads.py` の `mark_lead_messages_read`（同上） |
+| **`current_user.id` は `users.id`**（ADR-1008）。`leads.assigned_to` も users.id | `mark_lead_messages_read` 内の ADR-1008 コメント（同上） ／ `backend/app/routers/analytics.py:104-114` |
+| **一括既読からも `mark-read` が呼ばれる**（＝「開いた」と区別が必要） | `frontend/src/pages/inbox/useInboxState.ts` の `handleMarkAllRead` ／ `handleBulkMarkRead`（同上） |
+| 会話一覧 API に `current_user` は**既に居る** | `backend/app/routers/meta_inbox.py` の `list_conversations`（同上） |
+| 会話一覧は `assigned_to` を返していない | 同関数内の SELECT 句 ／ `conversations.append({...})`（同上） |
 | **`Badge` 金型は既にある**（新設不要） | `frontend/src/components/Badge.tsx:16-34` |
-| 既存の未読バッジは金型未使用（本 PR では置き換えない） | `frontend/src/pages/inbox/InboxConversationRows.tsx:138-140` ／ ADR-144:66-69 |
+| 既存の未読バッジは金型未使用（本 PR では置き換えない） | `frontend/src/pages/inbox/InboxConversationRows.tsx` の既存の未読バッジ JSX（同上） ／ ADR-144:66-69 |
 
 ---
 
@@ -65,7 +70,7 @@
 ```
 
 **「担当になった時刻」の列は作らない。** 担当変更の履歴は監査記録に既に残るため
-（`backend/app/routers/leads.py:693-697` が `old_data`/`new_data` に `assigned_to` を含める）、
+（`backend/app/routers/leads.py` の `update_lead` 内 `record_audit_log(..., old_data=dict(old_row), new_data=audit_new_data, ...)` が `assigned_to` を含める。PR-B で行番号が動くため識別子で引用）、
 時刻列を別に持つのは重複になる。
 
 ### 3-1. マイグレーション（列 1 本の追加 ＋ 既存行の埋め直し）
@@ -119,18 +124,23 @@ PO が直接書き直すため、上記サンプルは更新していない）�
 `backend/tests/test_inbox_new_assignment_badge.py` の
 `test_a1_a2_column_guard_backfill_is_idempotent_across_redeploys`。
 
+**追記（CI で実発生・2026-10-17）**: 埋め直し UPDATE は `assigned_to` 列があるスキーマだけで行う。
+`leads` 表があっても `assigned_to` が無いスキーマが CI の試験用 DB に実在する
+（根拠: `.github/workflows/migration-test.yml` の試験用 `tenant_001.leads` 最小定義）。
+検証: `backend/tests/test_leads_assignment_opened_at_pg.py` の T5。
+
 **実行登録**: `scripts/run_all_migrations.sh` の**末尾に追記**
 ```bash
 # 受信箱「新規」バッジの置き場（leads に 1 列。構造＋既存行の埋め直し・冪等）
 run_sql migrations/20261015_090000_add_leads_assignment_opened_at.sql
 ```
 
-**新テナント用の定義も同期**: `backend/app/services/tenant.py:346-397` の
+**新テナント用の定義も同期**: `backend/app/services/tenant.py:355-407` の
 `leads` CREATE TABLE に `assignment_opened_at TIMESTAMPTZ,` を追加（recon §2-3：2 箇所同期が必須）。
 
 ### 3-2. 担当が変わったら未設定に戻す
 
-**追加先** `backend/app/routers/leads.py` の `update_lead`（`:489-731`）。
+**追加先** `backend/app/routers/leads.py` の `update_lead`（PR-B で行番号が動くため識別子で引用）。
 `update_data` に `assigned_to` が含まれ、かつ `old_row["assigned_to"]` と異なるときだけ、
 同じ UPDATE 文で `assignment_opened_at = NULL` も設定する。
 
@@ -142,7 +152,7 @@ run_sql migrations/20261015_090000_add_leads_assignment_opened_at.sql
         and update_data["assigned_to"] != old_row["assigned_to"]
     )
 ```
-UPDATE 文の組み立て（`:585` 付近）で `set_clauses` に
+UPDATE 文の組み立て（`set_clauses` を構築する箇所。PR-B で行番号が動くため識別子で引用）で
 `assignment_opened_at = NULL` を**文字列として足す**（バインド不要の固定値）。
 `_UPDATABLE_COLUMNS` には**加えない**（利用者が直接書き換える列ではない）。
 
@@ -151,7 +161,7 @@ UPDATE 文の組み立て（`:585` 付近）で `set_clauses` に
 `mark-read` は**開いたとき**と**一括既読**の両方から呼ばれる（recon §3-4）。
 区別のため、**既存 API に任意フィールドを 1 つ追加**する。新しい API は作らない。
 
-**変更前** `backend/app/routers/leads.py:1148-1157`
+**変更前** `backend/app/routers/leads.py` の `mark_lead_messages_read`（PR-B で行番号が動くため識別子で引用）
 ```python
 @router.post(
     "/leads/{lead_id}/messages/mark-read",
@@ -210,8 +220,9 @@ export function markRead(leadId: number, opened = false) {
   return api.post<MarkReadResponse>(`/leads/${leadId}/messages/mark-read`, { opened });
 }
 ```
-`frontend/src/pages/inbox/useInboxState.ts:620` の**開いたときの呼び出しだけ** `true` にする。
-`:922` と `:986` の一括既読は**無変更**（既定 `false`）。
+`frontend/src/pages/inbox/useInboxState.ts` の `selectedLeadId` 変更時の `useEffect` 内の
+**開いたときの呼び出しだけ** `true` にする（PR-B で行番号が動くため識別子で引用）。
+`handleMarkAllRead` と `handleBulkMarkRead` の一括既読は**無変更**（既定 `false`）。
 
 **追記（レビュー 2026-10-15 指摘・修正2）**: PC（非モバイル）では「未選択なら先頭会話を
 自動選択する」効果（`frontend/src/pages/inbox/useInboxState.ts` 内の `isMobile` 判定の効果）があり、これが
@@ -232,12 +243,12 @@ export function markRead(leadId: number, opened = false) {
 
 ### 3-4. 会話一覧がバッジの有無を返す
 
-`backend/app/routers/meta_inbox.py` の SELECT（`:950-962`）に 2 列を足す。
+`backend/app/routers/meta_inbox.py` の `list_conversations` 内 SELECT 句（PR-B で行番号が動くため識別子で引用）に 2 列を足す。
 ```sql
             l.assigned_to           AS assigned_to,
             l.assignment_opened_at  AS assignment_opened_at,
 ```
-応答生成（`:1005-1018`）に**計算済みの真偽値 1 つ**を足す。
+応答生成（`conversations.append({...})` の箇所。同上）に**計算済みの真偽値 1 つ**を足す。
 ```python
             # 受信箱「新規」バッジ: 自分が担当で、まだ開いていない（design.md §3-4）
             "is_new_assignment": (
@@ -249,7 +260,7 @@ export function markRead(leadId: number, opened = false) {
 - フロントに「自分の users.id」を持ち回る配線が不要
 - **他人の担当者 ID を画面に出さない**（便3 の可視範囲制限とも整合）
 
-フロントの型 `frontend/src/lib/messages.ts:21-37` に追加
+フロントの型 `frontend/src/lib/messages.ts` の `Conversation` interface に追加（PR-B で行番号が動くため識別子で引用）
 ```ts
   /** 自分が担当になったが、まだ開いていない（受信箱の「新規」バッジ用） */
   is_new_assignment?: boolean;
@@ -257,7 +268,8 @@ export function markRead(leadId: number, opened = false) {
 
 ### 3-5. 画面（既存の金型を使う・新設なし）
 
-`frontend/src/pages/inbox/InboxConversationRows.tsx` の既存の未読バッジ（`:138-140`）の**隣**に追加。
+`frontend/src/pages/inbox/InboxConversationRows.tsx` の既存の未読バッジ JSX
+（`conv.unread_count > 0 && (...)`。PR-B で行番号が動くため識別子で引用）の**隣**に追加。
 既存 3 行は**触らない**（ADR-144:66-69）。
 
 **訂正（レビュー後）**: 当初 InboxConversationList.tsx の239-241行目と記載していたが、これは別PR
@@ -294,7 +306,7 @@ export function markRead(leadId: number, opened = false) {
 | R4 | 他人の担当者 ID が画面に漏れる | 生の `assigned_to` を返さず**真偽値だけ**返す（§3-4） | 応答に `assigned_to` が無いことをテスト |
 | R5 | 既存の `mark-read` 呼び出しが壊れる | **任意フィールド・既定 False**。既存の `{}` body はそのまま通る | 既存テストが緑 |
 | R6 | **新テナントに列が無い**（マイグレーションは既存テナントのみループ） | `backend/app/services/tenant.py` の CREATE TABLE にも追加（§3-1） | 2 箇所に列名があることを grep で確認するテスト |
-| R7 | **マイグレーションの二重実行で壊れる** | `ADD COLUMN IF NOT EXISTS` ＋ `UPDATE ... WHERE assignment_opened_at IS NULL`（どちらも冪等） | 同じ SQL を 2 回流すテスト |
+| R7 | **マイグレーションの二重実行で壊れる** | `information_schema.columns` で列の有無を見て、列が無いときだけ `ADD COLUMN` + `UPDATE`。あれば `CONTINUE` で完全スキップ（審査 D4。現物: `migrations/20261015_090000_add_leads_assignment_opened_at.sql`） | 同じ SQL を 2 回流すテスト（`backend/tests/test_leads_assignment_opened_at_pg.py` の T3） |
 | R8 | 本番適用の失敗・巻き戻し | **戻し方を ⑦ に明記**（列は残しても無害＝前方互換） | ⑦ 参照 |
 | R9 | 未読バッジ（お客さまのメッセージ）と**意味が混ざる** | 別概念として別列・別条件。`unread_count` は一切触らない | コードレビュー＋実機 |
 
@@ -302,27 +314,27 @@ export function markRead(leadId: number, opened = false) {
 
 ## ⑤ Acceptance Criteria
 
-| # | 基準 | 検証方法 |
-|---|---|---|
-| A1 | マイグレーションが列を足し、既存の担当付き行を埋める | 単体テスト（実行前後の値） |
-| A2 | マイグレーションを 2 回流しても同じ結果（冪等） | 単体テスト |
-| A3 | 担当が変わると `assignment_opened_at` が NULL に戻る | 単体テスト（`PATCH /leads/{id}` で担当変更） |
-| A4 | **同じ担当者への再保存では NULL に戻らない** | 単体テスト |
-| A5 | `mark-read` に `opened=true` を送ると、**自分が担当のときだけ**時刻が入る | 単体テスト（担当が自分／他人の 2 ケース） |
-| A6 | `mark-read` に `opened` を送らない（または false）と時刻は入らない | 単体テスト（＝一括既読で消えない） |
-| A7 | 2 回開いても時刻は最初のまま | 単体テスト |
-| A8 | 会話一覧が `is_new_assignment` を返し、**自分が担当＆未開封のときだけ true** | 単体テスト（自分担当・他人担当・担当なしの 3 ケース） |
-| A9 | 会話一覧の応答に **`assigned_to` が含まれない** | 単体テスト（キーの不在を assert） |
-| A10 | 既存の `mark-read` 呼び出し（body なし）が壊れていない | 既存テストが緑 |
-| A11 | `leads` の CREATE TABLE が**2 箇所**（migration と tenant.py）で列を持つ | 単体テスト（grep 相当の静的チェック） |
-| A12 | 新しい表・新しい API・新しい金型・新しいトークンがゼロ | KPI P2〜P5 の diff チェック |
-| A13 | i18n キーが ja/en 両方にある | `npm run check:i18n` が緑 |
-| A14 | フロントの検査が全部緑 | `npm run check:all` ／ `npm run lint` |
-| A15 | **実機**: 担当になるとバッジが出る | PO ＋ 実機（K1） |
-| A16 | **実機**: 開くと消える・再読込しても消えたまま | PO ＋ 実機（K2） |
-| A17 | **実機**: 他人担当には出ない／担当変更で新担当側に出る | PO ＋ 実機（K3・K4） |
-| A18 | **実機**: 「すべて既読」では消えない | PO ＋ 実機（K5） |
-| A19 | **実機**: 本番反映直後に既存会話へバッジが付かない | PO ＋ 実機（K6） |
+| # | 基準 | 検証方法 | 担当PR |
+|---|---|---|---|
+| A1 | マイグレーションが列を足し、既存の担当付き行を埋める | 単体テスト（実行前後の値） | **PR-A** |
+| A2 | マイグレーションを 2 回流しても同じ結果（冪等） | 単体テスト | **PR-A** |
+| A3 | 担当が変わると `assignment_opened_at` が NULL に戻る | 単体テスト（`PATCH /leads/{id}` で担当変更） | PR-B |
+| A4 | **同じ担当者への再保存では NULL に戻らない** | 単体テスト | PR-B |
+| A5 | `mark-read` に `opened=true` を送ると、**自分が担当のときだけ**時刻が入る | 単体テスト（担当が自分／他人の 2 ケース） | PR-B |
+| A6 | `mark-read` に `opened` を送らない（または false）と時刻は入らない | 単体テスト（＝一括既読で消えない） | PR-B |
+| A7 | 2 回開いても時刻は最初のまま | 単体テスト | PR-B |
+| A8 | 会話一覧が `is_new_assignment` を返し、**自分が担当＆未開封のときだけ true** | 単体テスト（自分担当・他人担当・担当なしの 3 ケース） | PR-B |
+| A9 | 会話一覧の応答に **`assigned_to` が含まれない** | 単体テスト（キーの不在を assert） | PR-B |
+| A10 | 既存の `mark-read` 呼び出し（body なし）が壊れていない | 既存テストが緑 | PR-B |
+| A11 | `leads` の CREATE TABLE が**2 箇所**（migration と tenant.py）で列を持つ | 単体テスト（grep 相当の静的チェック） | **PR-A** |
+| A12 | 新しい表・新しい API・新しい金型・新しいトークンがゼロ | KPI P2〜P5 の diff チェック | PR-A・PR-B 各々 |
+| A13 | i18n キーが ja/en 両方にある | `npm run check:i18n-missing-keys` が緑 | PR-B |
+| A14 | フロントの検査が全部緑 | `npm run check:all` ／ `npm run lint`。**`check:all` は型検査（tsc）を含まないため、`npx tsc --noEmit` を別に実行する**（審査 D10） | PR-B |
+| A15 | **実機**: 担当になるとバッジが出る | PO ＋ 実機（K1） | PR-B |
+| A16 | **実機**: 開くと消える・再読込しても消えたまま | PO ＋ 実機（K2） | PR-B |
+| A17 | **実機**: 他人担当には出ない／担当変更で新担当側に出る | PO ＋ 実機（K3・K4） | PR-B |
+| A18 | **実機**: 「すべて既読」では消えない | PO ＋ 実機（K5） | PR-B |
+| A19 | **実機**: 本番反映直後に既存会話へバッジが付かない | PO ＋ 実機（K6） | PR-B |
 
 ---
 
@@ -332,13 +344,50 @@ export function markRead(leadId: number, opened = false) {
 migrations/20261015_090000_add_leads_assignment_opened_at.sql, scripts/run_all_migrations.sh, backend/app/services/tenant.py, backend/app/routers/leads.py, backend/app/routers/meta_inbox.py, backend/tests/test_inbox_new_assignment_badge.py, backend/tests/test_conversations.py, frontend/src/lib/messages.ts, frontend/src/pages/inbox/useInboxState.ts, frontend/src/pages/inbox/InboxConversationRows.tsx, frontend/src/locales/ja.json, frontend/src/locales/en.json, frontend/api-contract/openapi.json, docs/handoff/inbox-new-assignment-badge/recon.md, docs/handoff/inbox-new-assignment-badge/design.md, .claude-pipeline/active-work.d/release-inbox-new-assignment-badge.md
 ```
 
+## 出し方（2段階・expand/contract）
+
+本設計は当初 `release/inbox-new-assignment-badge` 1本（列＋読み書きコード＋画面）で出す
+予定だったが、`.github/workflows/deploy.yml` を精査した結果、以下のデプロイ順序上の危険が
+判明したため、**PR-A（列だけ）→ PR-B（読み書きのコードと画面）** の2段階（expand/contract）
+に分割する。
+
+### デプロイ順序の事実（`.github/workflows/deploy.yml`、行番号は PR-A 作業先 worktree で確認した値）
+- `- name: Deploy to VPS (code + env + docker compose)`（:230）のステップ内で
+  `bash scripts/blue-green-cutover.sh`（:418）が走り、新コードが客を受け始める。
+- `- name: Run database migrations`（:547、`bash scripts/run_all_migrations.sh` を実行、:561）は
+  **その後**に実行される。
+
+### 危険
+列の追加と、その列を読み書きするコード（`/api/v1/conversations` の読み・`mark-read` の書き・
+担当変更の書き）を同じ PR で出すと、切替からマイグレーション完了までの間、これらが
+存在しない列に触って失敗する。
+
+### 決定（expand/contract）
+- **PR-A（本 PR、先行・列だけ）**: `migrations/20261015_090000_add_leads_assignment_opened_at.sql`
+  と `backend/app/services/tenant.py` の列追加のみ。読み書きのアプリコード・画面は一切含まない。
+  列が増えてもアプリはまだ読み書きしないので、コードが古いまま先にデプロイされても安全
+  （expand）。
+- **PR-B（`release/inbox-new-assignment-badge`、PR-A マージ・本番反映後に出す）**:
+  `backend/app/routers/leads.py`・`backend/app/routers/meta_inbox.py`・`frontend/` 配下の
+  読み書きと画面。PR-A が本番反映済みであることが前提。
+- 先例: `docs/handoff/llm-usage-ledger/design.md §9`（:89）と同じ分割方式。
+
+### PR-A が単独で安全な根拠
+- 追加列 `assignment_opened_at` は NULL 許容。
+- `leads` に VIEW も TRIGGER も無い（`git grep -n "CREATE VIEW\|CREATE TRIGGER" migrations/` で
+  `leads` を対象にした VIEW/TRIGGER が無いことを確認済み。`leads` に言及する既存 TRIGGER は
+  いずれも `customers`/`companies`/`contacts`/`lead_playbook`/`lead_attachments` 側に定義されて
+  いるものであり、`leads` 自体には無い）。
+- RLS は `migrations/003_add_phase1_tenant_tables.sql:191` のテナント分離ポリシー1本のみで、
+  新しい列を参照する条件は無い。
+
 ## ⑦ 戻し方（本番適用後に問題が出た場合）
 
 **列は残したまま戻せる（前方互換）。** 列を DROP する必要はない。
 
 | 段階 | 戻し方 |
 |---|---|
-| 画面だけ止める | `frontend/src/pages/inbox/InboxConversationRows.tsx:141-143`（本便で追加した `is_new_assignment` バッジ描画 3 行）を外す（列もデータも無害に残る） |
+| 画面だけ止める | `frontend/src/pages/inbox/InboxConversationRows.tsx` の本便で追加した `conv.is_new_assignment && (...)` バッジ描画（PR-B で行番号が動くため識別子で引用）を外す（列もデータも無害に残る） |
 | API も止める | `is_new_assignment` を常に `false` で返す（1 行） |
 | 全部戻す | この PR を revert。**列は残る**が参照されないため無害。`DROP COLUMN` は**行わない**（不可逆・PO 確認必須のため） |
 
@@ -355,7 +404,7 @@ migrations/20261015_090000_add_leads_assignment_opened_at.sql, scripts/run_all_m
 - **新しい API を作らない**（既存 `mark-read` に任意フィールドを 1 つ足すのみ）→ ADR-1016 の台帳登録は**不要**
 - **新しい UI 金型を作らない**（既存 `frontend/src/components/Badge.tsx` を使う）
 - **`frontend/src/index.css` を触らない**（新しいデザイントークンを作らない）
-- **既存の未読バッジを触らない**（`frontend/src/pages/inbox/InboxConversationRows.tsx:138-140`・ADR-144:66-69 により移行は別 PR）
+- **既存の未読バッジを触らない**（`frontend/src/pages/inbox/InboxConversationRows.tsx` の既存の未読バッジ JSX。PR-B で行番号が動くため識別子で引用・ADR-144:66-69 により移行は別 PR）
 - **`unread_count`（お客さまのメッセージの未読）に一切触らない**
 - **`DROP COLUMN` / `DROP TABLE` を書かない**
 - 便3（担当者別の可視範囲）は別便。本 PR では**誰に何が見えるかを変えない**
@@ -366,27 +415,31 @@ migrations/20261015_090000_add_leads_assignment_opened_at.sql, scripts/run_all_m
 |---|---|---|
 | 自リポジトリの先例 `migrations/20260718_100000_leads_add_deal_columns.sql` | 全テナントをループして `ADD COLUMN IF NOT EXISTS` する冪等な形 | §3-1 の DO $$ ループをこの形に揃えた（自分で発明しない） |
 | 自リポジトリの先例 `migrations/032_add_company_contact_to_downstream.sql:124` | 構造変更と同じマイグレーション内で既存行を `UPDATE` して埋める | §3-1 の既存行の埋め直しをこの作法に揃えた |
-| 自リポジトリの先例 `backend/app/routers/leads.py:1183`（ADR-1008） | 「人」の列は `public.users(id)` を参照し、`current_user.id` をそのまま入れる | §3-3 の `assigned_to = :me` 比較に `current_user.id` をそのまま使える根拠 |
-| 自リポジトリの金型 `frontend/src/components/Badge.tsx:1-14` | 「ラベルは children で渡す」「ステータス値 → variant のマッピングは呼び出し側で定義すること」 | §3-5 でラベルを i18n から渡し、`variant` を呼び出し側で指定する形にした |
+| 自リポジトリの先例 `backend/app/routers/leads.py` の `mark_lead_messages_read` 内 ADR-1008 コメント（PR-B で行番号が動くため識別子で引用） | 「人」の列は `public.users(id)` を参照し、`current_user.id` をそのまま入れる | §3-3 の `assigned_to = :me` 比較に `current_user.id` をそのまま使える根拠 |
+| 自リポジトリの金型 `frontend/src/components/Badge.tsx:1-12` | 「ラベルは children で渡す」「ステータス値 → variant のマッピングは呼び出し側で定義すること」 | §3-5 でラベルを i18n から渡し、`variant` を呼び出し側で指定する形にした |
 
 **注**: 上記以外の外部事例は一次情報で確認できていないため記載しない（推測で事例を書かない）。
 
 ## 維持の仕組み
 
-守り手: `backend/tests/test_inbox_new_assignment_badge.py`
+守り手: PR-A は `backend/tests/test_leads_assignment_opened_at_pg.py`（T1〜T5）、
+PR-B は `backend/tests/test_inbox_new_assignment_badge.py`（A3〜A10 等。PR-A の時点では
+未着手のため PR-A のツリーには存在しない。`git cat-file -e HEAD:backend/tests/test_inbox_new_assignment_badge.py`
+は PR-A では `does not exist in 'HEAD'` になる＝想定どおり）。
 
-| 守るもの | 関所 | 壊れたときの症状 |
-|---|---|---|
-| 担当変更でバッジが復活する | `backend/tests/test_inbox_new_assignment_badge.py`（A3・A4） | リセット処理を外すと赤 |
-| **開いたときだけ消える**（一括既読で消えない） | 同上（A5・A6） | `opened` の判定を外すと赤 |
-| 他人のバッジを消せない | 同上（A5） | `assigned_to = :me` 条件を外すと赤 |
-| **他人の担当者 ID を返さない** | 同上（A9） | 応答に `assigned_to` を足すと赤 |
-| マイグレーションが冪等 | 同上（A2） | `IF NOT EXISTS` や `WHERE ... IS NULL` を外すと赤 |
-| **新テナントにも列がある**（2 箇所同期） | 同上（A11） | `backend/app/services/tenant.py` への追加を忘れると赤 |
-| 既存の `mark-read` 呼び出しが壊れない | 既存の受信箱テスト | 必須フィールドにすると赤 |
-| i18n キーが ja/en 揃う | `frontend/scripts/check-i18n-missing-keys.js` | 片方だけ足すと赤 |
-| API の形と台帳が一致 | CI「API contract is up to date」 | `frontend/api-contract/openapi.json` の更新忘れで赤 |
-| マイグレーションのファイル名形式 | `.github/workflows/migration-guard.yml` | 命名規則を外すと赤 |
+| 守るもの | 関所 | 壊れたときの症状 | 担当PR |
+|---|---|---|---|
+| 担当変更でバッジが復活する | `backend/tests/test_inbox_new_assignment_badge.py`（A3・A4） | リセット処理を外すと赤 | PR-B |
+| **開いたときだけ消える**（一括既読で消えない） | 同上（A5・A6） | `opened` の判定を外すと赤 | PR-B |
+| 他人のバッジを消せない | 同上（A5） | `assigned_to = :me` 条件を外すと赤 | PR-B |
+| **他人の担当者 ID を返さない** | 同上（A9） | 応答に `assigned_to` を足すと赤 | PR-B |
+| マイグレーションが冪等 | `backend/tests/test_leads_assignment_opened_at_pg.py`（T3） | `information_schema.columns` での列有無チェックや `CONTINUE` を外すと赤（審査 D4） | **PR-A** |
+| `leads` 表はあるが `assigned_to` が無いスキーマでも落ちない | 同上（T5） | 埋め直し UPDATE の前に `assigned_to` の有無を確認する分岐を外すと赤（CI で実発生・2026-10-17） | **PR-A** |
+| **新テナントにも列がある**（2 箇所同期） | `backend/tests/test_leads_assignment_opened_at_pg.py`（T4）／CI「テナントスキーマ整合性チェック（実行）」（`.github/workflows/schema-check.yml:48` のジョブ。`scripts/db/sync_tenant_schema.py --dry-run`〔`.github/workflows/schema-check.yml:217`〕が `information_schema.columns`〔`scripts/db/sync_tenant_schema.py:98`〕を読んで列レベルで突き合わせる） | `backend/app/services/tenant.py` の `leads` CREATE TABLE への追加を忘れると赤 | **PR-A** |
+| 既存の `mark-read` 呼び出しが壊れない | 既存の受信箱テスト | 必須フィールドにすると赤 | PR-B |
+| i18n キーが ja/en 揃う | `frontend/scripts/check-i18n-missing-keys.js` | 片方だけ足すと赤 | PR-B |
+| API の形と台帳が一致 | CI「API contract is up to date」 | `frontend/api-contract/openapi.json` の更新忘れで赤 | PR-B |
+| マイグレーションのファイル名形式 | `.github/workflows/migration-guard.yml` | 命名規則を外すと赤 | **PR-A**（本便の `migrations/20261015_090000_...` にも適用） |
 
 **人手に残る部分**: 実機での往復確認（A15〜A19）。特に「導入直後にバッジが大量発生しないこと」は
 本番データの件数に依存するため自動化していない。
@@ -400,3 +453,4 @@ migrations/20261015_090000_add_leads_assignment_opened_at.sql, scripts/run_all_m
 | C1 | 便3（担当者別の可視範囲・4段階） | PO 決定済み（未アサインは見せない／CRM も絞る／注文・見積・請求も対象）。**残り1問**＝たどっても担当者が分からない行の扱い |
 | C2 | 既存の未読バッジの金型移行 | ADR-144:66-69 に従い別 PR |
 | C3 | 本番の `assigned_to IS NOT NULL` の件数確認 | マージ後に読み取りのみで数える（recon §8 U1） |
+| C4 | バッジ消去（`assignment_opened_at` の更新）が監査記録に残らない | `mark_lead_messages_read`（`backend/app/routers/leads.py`）の監査記録は未読が1件以上のとき（`marked > 0`）だけ記録され、`table_name` は `meta_messages` 固定。バッジ消去自体の別記録は無い。本便の対象外と裁定（審査 D11） |

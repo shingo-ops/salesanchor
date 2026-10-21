@@ -214,7 +214,7 @@ class TestDiscordOAuthStart:
 
     @pytest.mark.asyncio
     async def test_invite_url_contains_required_permissions(self, app_client):
-        """発行された invite_url に permissions=805432406 が含まれる。
+        """発行された invite_url に permissions=805432407 が含まれる。
 
         Developer Portal で確認した permissions integer（2026-06-16）と一致することを保証する。
         ADR-091 Bot 権限定義の正本と同期している。
@@ -235,8 +235,8 @@ class TestDiscordOAuthStart:
         parsed = urlparse(invite_url)
         qs = parse_qs(parsed.query)
 
-        assert qs.get("permissions") == ["805432406"], (
-            f"permissions が 805432406 ではありません: {qs.get('permissions')}"
+        assert qs.get("permissions") == ["805432407"], (
+            f"permissions が 805432407 ではありません: {qs.get('permissions')}"
         )
 
     @pytest.mark.asyncio

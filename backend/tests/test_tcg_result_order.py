@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from app.services import tcg_analysis_review_svc as review
 from app.services import tcg_distribution_svc as distribution
 from app.services import tcg_import_progress as progress
+from tests.condition_value_columns import seed_condition_value_rows
 from tests.test_tcg_condition_review import pg as condition_pg
 from tests.test_tcg_condition_review import request, save, seed
 
@@ -65,6 +66,8 @@ def snapshot(pg):
 
 
 def test_release_product_condition_price_and_all_page_boundaries(pg):
+    with pg["connection"].cursor() as cursor:
+        seed_condition_value_rows(cursor)  # 本番と同じ 11 状態の value_group / value_rank
     products = []
     with pg["connection"].cursor() as cursor:
         for n, date in enumerate(("2026-10-16", "2026-10-16", "2026-09-16", None)):
@@ -100,7 +103,8 @@ def test_release_product_condition_price_and_all_page_boundaries(pg):
     assert reviewed["total"] == imported["total"] == len(output) == len(expected) == 96
     assert [r["system"]["note"] for r in reviewed["items"]] == expected
     assert [r["note_ja"] for r in imported["items"]] == expected
-    assert [r[7] for r in output] == expected
+    # 配信（output）は空箱を出さない（要確認扱い）ので Empty box だけ無い。ほかの並びは同じ
+    assert [r[7] for r in output] == [state for state in expected if state != "Empty box"]
     assert all(len(r) == 14 for r in output)
     assert all("sort_ordinal" not in r for r in imported["items"])
     assert Counter(r["extraction_item_id"] for r in reviewed["items"]) == Counter(e["eid"] for e in entries)
@@ -160,6 +164,7 @@ def test_same_price_uuid_tiebreak_and_current_confirmed_condition(pg):
         cursor.execute("INSERT INTO public.conditions(code,canonical,priority,app_kubun,is_active) "
                        "VALUES ('CN0098','Case',1,'箱系',true) RETURNING id")
         case_id = str(cursor.fetchone()[0])
+        seed_condition_value_rows(cursor)
     confirmed = seed(pg, name="Test Booster", reasons="", condition_id=pg["normal"],
                      condition_canonical="Searched pack", note_ja="confirmed-case")
     save(pg, confirmed, request(pg, confirmed, decision="correct", target=case_id))
@@ -188,6 +193,8 @@ def test_larger_result_set_public_pages_and_read_only_delivery(pg):
     from psycopg2.extras import execute_values
     from sqlalchemy import text
 
+    with pg["connection"].cursor() as cursor:
+        seed_condition_value_rows(cursor)
     baseline = seed(pg, name="Test Booster", reasons="", condition_id=pg["normal"],
                     condition_canonical="Case", note_ja="baseline")
     entries = [{"smid": str(uuid4()), "job": str(uuid4()), "eid": str(uuid4())}
@@ -356,8 +363,53 @@ def test_existing_twelve_columns_unchanged(pg):
     assert row[9] == "2026-01-02"
 
 
-def test_bulk_is_ranked_after_pack_states_and_before_unlisted_values():
-    from app.services.tcg_result_order import RESULT_CONDITION_ORDER, result_order_sql
+def test_order_sql_uses_condition_master_and_group_order():
+    from app.services.tcg_result_order import UNRANKED_FIRST, VALUE_GROUP_ORDER, result_order_sql
 
-    assert RESULT_CONDITION_ORDER[-1] == "Bulk" and RESULT_CONDITION_ORDER.index("Searched pack") < RESULT_CONDITION_ORDER.index("Bulk")
-    assert f"WHEN 'Bulk' THEN {len(RESULT_CONDITION_ORDER) - 1}" in result_order_sql()
+    assert VALUE_GROUP_ORDER == ("case", "box", "pack", "promo_pack", "single", "booklet", "supply") and UNRANKED_FIRST == "Bulk"
+    sql = result_order_sql()
+    assert "FROM public.conditions lc" in sql and "lc.value_group" in sql and "lc.value_rank" in sql
+    assert "WHEN 'case' THEN 0 WHEN 'box' THEN 1 WHEN 'pack' THEN 2 WHEN 'promo_pack' THEN 3 WHEN 'single' THEN 4 WHEN 'booklet' THEN 5 WHEN 'supply' THEN 6" in sql
+    assert "CASE WHEN cr.canonical = 'Bulk' THEN 0 ELSE 1 END" in sql
+    assert "jsonb_object_agg(" in sql and "ORDER BY lc.id DESC" in sql and "->> cr.canonical" in sql
+
+
+RANKED_STATES = (
+    "Case", "Damaged case", "Opened case",
+    "Sealed box", "Damaged sealed box", "No shrink box", "Opened box", "Searched box",
+    "Unsearched pack", "Searched pack", "AR confirmed pack",
+)
+
+
+def _seed_all_states(pg):
+    states = (*RANKED_STATES, "Bulk", "Empty box", "Zeta")
+    entries = [seed(pg, name="Test Booster", reasons="", condition_id=pg["normal"], condition_canonical=state,
+                    price_normalized=100, note_ja=state) for state in reversed(states)]
+    return entries, link_import(pg, entries)
+
+
+def test_order_follows_condition_master_value_rank_then_bulk_then_text(pg):
+    with pg["connection"].cursor() as cursor:
+        seed_condition_value_rows(cursor)
+    entries, import_id = _seed_all_states(pg)
+    reviewed, imported, output = fetch(pg, import_id)
+    # 群（case → box → pack）→ 価値の順位。順位なしは Bulk → 文字順
+    expected = [*RANKED_STATES, "Bulk", "Empty box", "Zeta"]
+    assert [r["system"]["note"] for r in reviewed["items"]] == expected
+    assert [r["note_ja"] for r in imported["items"]] == expected
+    # 配信（output）は空箱を出さない（要確認扱い）ので Empty box だけ無い。ほかの並びは同じ
+    assert [r[7] for r in output] == [state for state in expected if state != "Empty box"]
+
+
+def test_order_without_master_values_is_bulk_then_text(pg):
+    with pg["connection"].cursor() as cursor:
+        seed_condition_value_rows(cursor)
+        cursor.execute("UPDATE public.conditions SET value_group = NULL, value_rank = NULL")
+    entries, import_id = _seed_all_states(pg)
+    reviewed, imported, output = fetch(pg, import_id)
+    others = sorted((*RANKED_STATES, "Empty box", "Zeta"), key=lambda state: state.encode())
+    expected = ["Bulk", *others]
+    assert [r["system"]["note"] for r in reviewed["items"]] == expected
+    assert [r["note_ja"] for r in imported["items"]] == expected
+    # 配信（output）は空箱を出さない（要確認扱い）ので Empty box だけ無い。ほかの並びは同じ
+    assert [r[7] for r in output] == [state for state in expected if state != "Empty box"]

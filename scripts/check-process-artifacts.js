@@ -121,6 +121,9 @@ const DANGEROUS_PATTERNS = [
   /^docs\/STANDARD-WORKFLOW\.md$/,                      // 正本（自己保護）
   /^\.github\/workflows\/process-artifacts-gate\.yml$/, // 関所ワークフロー（自己保護）
   /^\.github\/PULL_REQUEST_TEMPLATE\.md$/,              // 宣言テンプレ（自己保護）
+  // ADR-1024 読み取り道の台本・compose（変更に GO 記録を要求）
+  /^backend\/app\/ops\//,
+  /^docker-compose\.ai-reader\.yml$/,
 ];
 
 const REAL_CODE_PATTERNS = [

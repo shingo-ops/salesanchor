@@ -9,6 +9,8 @@
 | 領域 | 設計仕様書（あるべき姿） | 状態 |
 |---|---|---|
 | AI 保守運用 24 時間化（ai-ops-247。報知器の感度・精度、応急処置、Mac に頼らない AI 起動〔routines〕、障害記録と月次成績表。discord-ops-intake は Mac 依存のため本テーマの予備 C） | [ai-ops-247/README.md](ai-ops-247/README.md) | あるべき姿・KGI 6件 PO承認 2026-10-13・recon・design・ADR-1012 草案・実装未着手 |
+| まとめ売り（N単位セット）の読み取り（bundle-sale。「40パックセット/¥24,000 残り15」を全商品で 商品名＋40パックセット／中身の単位／まとめ1つの値段／まとめの数 で保存・表示。ADR-1021 便2 の置き換え） | [bundle-sale/README.md](bundle-sale/README.md) | あるべき姿 2026-10-17・KGI K1〜K6 PO 合意 2026-10-17・recon・design（審査 APPROVE）・ADR-1027 Proposed・便1 カード作成・実装未着手 |
+| 解析の誤り報告から自律修正まで（analysis-error-report。在庫表の行ドロワーで誤りと正解を報告→Discord→agent-console の自動セッション→再解析と機械照合→Discord に記録） | [analysis-error-report/README.md](analysis-error-report/README.md) | あるべき姿・KGI PO承認 2026-10-17・recon・design草案・実装未着手 |
 | Discord 監視通知 → AI 保守運用（discord-ops-intake。監視 webhook を Claude Code が受けて調査・委任範囲で対応） | [discord-ops-intake/README.md](discord-ops-intake/README.md) | あるべき姿・KGI提示（KGI-3 PO修正反映）・recon・design草案 2026-10-13・実装未着手 |
 | ブランチ運用（develop 廃止後の開発環境） | [branch-operations/README.md](branch-operations/README.md) | 公開 |
 | reaper 自動掃除（worktree の自動回収） | [reaper-auto-cleanup/README.md](reaper-auto-cleanup/README.md) | あるべき姿・KGI・recon・design済 2026-07-22 |
@@ -30,6 +32,7 @@
 | 在庫管理 | [inventory-management/README.md](inventory-management/README.md) | 親のあるべき姿・KGI確定 2026-07-12・A/B/C/feed-translation/inventory-analytics すべて あるべき姿・KGI・To-Be完成 |
 | ├ 提供元フィード翻訳（feed-translation） | [inventory-management/feed-translation/README.md](inventory-management/feed-translation/README.md) | あるべき姿・KGI完成 2026-07-05 |
 | ├ LINE完売ルールの認識合わせ・引き継ぎ | [合意と未決事項](../handoff/tcg-import-latest-only/sold-out-rules-handoff.md) | C01〜C43合意・[詳細設計案](../handoff/tcg-import-latest-only/sold-out-rules-design.md)作成・本番DB/接続実測済・自己審査REVISE・Q24未決。実装未着手 |
+| │ └ 同じ投稿の〆を在庫の件に効かせる（規則13。価格のない〆が同じ商品・状態の在庫の件を完売にする） | [設計](../handoff/v102-shime-same-post-stock/design.md) | KGI PO承認 2026-10-19・設計案・審査反映済・本番反映済（#4525、2026-10-19） |
 | ├ 在庫の閲覧専用ページ（inventory-viewer。お客さんが自社サーバーで在庫表だけを見る・GAS 在庫一覧の置き換え） | [inventory-management/inventory-viewer/README.md](inventory-management/inventory-viewer/README.md) | あるべき姿・KGI 作成 2026-10-15・設計 PO 承認済 2026-10-16・実装着手 |
 | └ 在庫解析（inventory-analytics） | [inventory-management/inventory-analytics/README.md](inventory-management/inventory-analytics/README.md) | あるべき姿・KGI・To-Be完成 2026-07-15 |
 | 管理センター（management-center。全データの基盤管理＝データセンターの役割。CRM等の分析機能とは意図的に別役割） | [management-center/README.md](management-center/README.md) | あるべき姿・KGI・To-Be確定 2026-07-15 |

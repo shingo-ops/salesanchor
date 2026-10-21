@@ -1,7 +1,7 @@
 /**
  * ADR-1016: 合図を受けたら reload を呼ぶ。
  * - 自分が起こした変更（origin が自分の clientId）は無視
- * - 1.5 秒の間に来た合図は 1 回にまとめる
+ * - 既定 1.5 秒（呼び出し元で変えられる）の間に来た合図は 1 回にまとめる
  * - 裏のタブ（document.hidden）の間は保留し、表に戻ったとき保留があれば 1 回だけ呼ぶ
  * - 再接続の通知が来たら 1 回呼ぶ
  * - Provider の外では何もしない
@@ -12,7 +12,12 @@ import { RealtimeContext, type RealtimeEvent } from "../lib/realtime/context";
 
 export const REALTIME_DEBOUNCE_MS = 1_500;
 
-export function useRealtimeRefresh(topics: readonly string[], reload: () => void): void {
+export function useRealtimeRefresh(
+  topics: readonly string[],
+  reload: () => void,
+  options?: { debounceMs?: number },
+): void {
+  const debounceMs = options?.debounceMs ?? REALTIME_DEBOUNCE_MS;
   const rt = useContext(RealtimeContext);
   const reloadRef = useRef(reload);
   reloadRef.current = reload;
@@ -34,7 +39,7 @@ export function useRealtimeRefresh(topics: readonly string[], reload: () => void
     };
     const schedule = () => {
       if (timer) return;
-      timer = setTimeout(fire, REALTIME_DEBOUNCE_MS);
+      timer = setTimeout(fire, debounceMs);
     };
     const onVisible = () => {
       if (!document.hidden && pending) {
@@ -57,5 +62,5 @@ export function useRealtimeRefresh(topics: readonly string[], reload: () => void
       document.removeEventListener("visibilitychange", onVisible);
       if (timer) clearTimeout(timer);
     };
-  }, [rt, topicsKey]);
+  }, [rt, topicsKey, debounceMs]);
 }

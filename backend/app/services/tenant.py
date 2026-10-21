@@ -374,8 +374,6 @@ CREATE TABLE IF NOT EXISTS {schema}.leads (
     expected_close_date DATE,
     prospect_rank VARCHAR(10),
     assigned_to INTEGER,
-    -- 受信箱「新規」バッジ: 現在の担当者が開いた時刻（NULL=未開封）
-    -- 設計: docs/handoff/inbox-new-assignment-badge/design.md §3-1
     assignment_opened_at TIMESTAMPTZ,
     converted_deal_id INTEGER,
     notes TEXT,

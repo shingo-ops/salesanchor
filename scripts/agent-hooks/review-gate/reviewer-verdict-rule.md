@@ -1,0 +1,1 @@
+審査結果を SubagentHandback で返すとき、message の最後の行を必ず `VERDICT: <APPROVE|REQUEST_CHANGES|REJECT> on <40桁のHEAD sha> PR #<番号>` にする。sha は審査の直前に `gh pr view <番号> --json headRefOid -q .headRefOid` で取る。この行が無い・sha が違うと、マージの関所（ADR-1029）を通らない。

@@ -38,7 +38,7 @@ function makeItems(n: number) {
     supplier_name: `仕入先 ${1 + (i % 3)}`,
     unit_price: 5000 + i * 100,
     quantity: 10 + i,
-    tcg_type: "pokemon_booster_box",
+    work_code: "pokemon_booster_box",
     offered_at: "2026-10-15T01:00:00Z",
     release_date: "2026-09-01",
   }));

@@ -65,6 +65,87 @@ async def public_bootstrap_lock(admin_engine):
                 )
 
 
+# ADR-1028 便3: 商品 API が読む荷姿の表・その元の「数える単位」の表・products の細分類列（本番 migration 4 本）
+PACKAGING_MIGRATIONS = (
+    "20260920_130000_create_product_classification.sql",  # products.product_format_id を足す（詳細 API が読む）
+    "20260921_140000_product_classification_masters.sql",
+    "20260922_060000_product_unit_condition_infra.sql",  # quantity_units.value の NOT NULL を外す（本番と同じ）
+    "20261018_100000_create_product_packagings.sql",
+)
+
+
+async def _packagings_ready(admin_engine) -> bool:
+    """荷姿の表・単位 PACK/BOX/CASE/CARD の 4 件・products.product_format_id が揃っているか（lock は取らない）。"""
+    async with admin_engine.connect() as conn:
+        if not await conn.scalar(text("SELECT to_regclass('public.product_packagings') IS NOT NULL")):
+            return False
+        has_format_id = await conn.scalar(
+            text(
+                "SELECT EXISTS (SELECT 1 FROM information_schema.columns "
+                "WHERE table_schema = 'public' AND table_name = 'products' AND column_name = 'product_format_id')"
+            )
+        )
+        if not has_format_id:
+            return False
+        units = await conn.scalar(
+            text("SELECT count(*) FROM public.quantity_units WHERE code IN ('PACK','BOX','CASE','CARD')")
+        )
+        return units == 4
+
+
+async def ensure_product_packagings(admin_engine) -> None:
+    """荷姿の表と products.product_format_id を、試験の DB に一度だけ・確定（commit）させて作る。
+
+    各試験の巻き戻す transaction の中で DDL を流すと、終わるまで products などの表ロックを持ち続け、
+    ほかの worker と取る順が逆になって deadlock する。そのため transaction の外の別接続で流して確定させる。
+
+    流れ:
+      1. lock を取らずに確かめる。揃っていれば何もしない。
+      2. public.products が無ければ、本番形の products を bootstrap_public_products で作る
+         （試験用の少列版 products を共有 DB に確定させない。062 の jan_code の index が壊れるため）。
+      3. public_bootstrap_lock の中でもう一度確かめ、揃っていなければ products を先に押さえてから migration を流す。
+         先頭は 20260920_130000（products.product_format_id）。本番形 products には無く、試験用の少列版にだけ有るため足す。
+         lock_timeout を付けて、待ち続けず失敗にする。
+    bootstrap_public_products は自分で public_bootstrap_lock を取るので、この関数は lock の外から呼ぶこと。
+    """
+    if await _packagings_ready(admin_engine):
+        return
+    async with admin_engine.connect() as conn:
+        products_exists = await conn.scalar(text("SELECT to_regclass('public.products') IS NOT NULL"))
+    if not products_exists:
+        await bootstrap_public_products(admin_engine)
+    async with public_bootstrap_lock(admin_engine):
+        if await _packagings_ready(admin_engine):
+            return
+        async with admin_engine.begin() as conn:
+            raw = await conn.get_raw_connection()
+            await conn.execute(text("SET LOCAL lock_timeout = '60s'"))
+            # ロックの順を test_tcg_distribution_pg.py（products → product_kinds）に揃える
+            await conn.execute(text("LOCK TABLE public.products IN ACCESS EXCLUSIVE MODE"))
+            for name in PACKAGING_MIGRATIONS:
+                # この transaction の中で流すので BEGIN/COMMIT は除く
+                sql = (_MIGRATIONS_DIR / name).read_text("utf-8").replace("BEGIN;", "").replace("COMMIT;", "")
+                await raw.driver_connection.execute(sql)
+            await conn.execute(
+                text(
+                    "INSERT INTO public.quantity_units (code, name, display_order) VALUES "
+                    "('PACK','パック',10),('BOX','ボックス',20),('CASE','ケース',30),('CARD','カード',40) ON CONFLICT (code) DO NOTHING"
+                )
+            )
+
+
+def provision_packagings_sync(cursor) -> None:
+    """ADR-1028 便4: 同期の接続（psycopg2）で、荷姿の表と 4 単位を作る。試験ごとに新しい DB なので lock は要らない。"""
+    for name in PACKAGING_MIGRATIONS:
+        sql = (_MIGRATIONS_DIR / name).read_text("utf-8").replace("BEGIN;", "").replace("COMMIT;", "")
+        cursor.execute(sql)
+    cursor.execute(
+        "INSERT INTO public.quantity_units (code, name, display_order) VALUES "
+        "('PACK','パック',10),('BOX','ボックス',20),('CASE','ケース',30),('CARD','カード',40) "
+        "ON CONFLICT (code) DO NOTHING"
+    )
+
+
 async def _apply_migration(admin_engine, filename: str) -> None:
     async with admin_engine.begin() as conn:
         await _apply_migration_on_conn(conn, filename)
@@ -186,18 +267,14 @@ async def _bootstrap_public_shared(conn) -> None:
     # type_master の行は migration ではなく試験側で入れる（ADR-1007 段2）。rename の後で入れる
     await seed_type_master(conn)
 
-    fk_exists = await conn.scalar(
+    # ADR-1030: products.tcg_type は取り除いた。ADD を消した migration を流しても列が出来ないことを確かめる
+    col_exists = await conn.scalar(
         text("""
-            SELECT 1
-            FROM pg_constraint c
-            JOIN pg_class rel ON rel.oid = c.conrelid
-            JOIN pg_namespace nsp ON nsp.oid = rel.relnamespace
-            WHERE nsp.nspname = 'public'
-              AND rel.relname = 'products'
-              AND c.conname = 'fk_products_tcg_type'
+            SELECT 1 FROM information_schema.columns
+            WHERE table_schema = 'public' AND table_name = 'products' AND column_name = 'tcg_type'
         """)
     )
-    assert fk_exists == 1, "FK migration が public.products に適用されていません"
+    assert col_exists is None, "products.tcg_type が復活しています（ADR-1030）"
 
 
 @asynccontextmanager
@@ -227,18 +304,14 @@ async def bootstrap_public_products(admin_engine) -> None:
             await seed_type_master(conn)
 
         async with admin_engine.connect() as conn:
-            fk_exists = await conn.scalar(
+            # ADR-1030: products.tcg_type は取り除いた。列が復活していないことを確かめる
+            col_exists = await conn.scalar(
                 text("""
-                    SELECT 1
-                    FROM pg_constraint c
-                    JOIN pg_class rel ON rel.oid = c.conrelid
-                    JOIN pg_namespace nsp ON nsp.oid = rel.relnamespace
-                    WHERE nsp.nspname = 'public'
-                      AND rel.relname = 'products'
-                      AND c.conname = 'fk_products_tcg_type'
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_schema = 'public' AND table_name = 'products' AND column_name = 'tcg_type'
                 """)
             )
-        assert fk_exists == 1, "FK migration が public.products に適用されていません"
+        assert col_exists is None, "products.tcg_type が復活しています（ADR-1030）"
 
 
 async def bootstrap_tenant_schema(admin_engine, tenant_id: int) -> str:

@@ -2,7 +2,7 @@
 
 | 項目 | 内容 |
 |------|------|
-| ステータス | Proposed（設計のみ。実装・本番反映は未着手。実装には PO の実装 GO と、危険パス `migrations/` を含むため ADR-136 の GO 手順が別に要る） |
+| ステータス | Accepted（2026-10-17。実装・本番反映済。結果は「実装結果」節） |
 | 備考 | PO 承認済み（2026-10-17 チャット、原文 y）。Q0「読むだけの DB 利用者と読むだけの鍵で進める」、Q1「全テナントを読めるようにする」、Q2「強めた構成（ビュー専用スキーマ ai_ro を最初から入れる等）で進める」。いずれも原文は「y」 |
 | 起案日 | 2026-10-17 |
 | 方針の決定者 | Shingo（PO） |
@@ -33,7 +33,7 @@ PO の依頼は「権限不足で停止することが多い。どの権限を�
 4. 読み取り台本 `backend/app/ops/readonly_query.py`。標準入力の SQL を受け、クライアント側で `BEGIN READ ONLY` と `SET LOCAL statement_timeout` を自分で発行し、最後に rollback する。文字列での拒否（`\` 始まり、複文、先頭語が SELECT/WITH/SHOW/EXPLAIN（ANALYZE なし）以外、`set_config(`・`SET `・`COPY`・`pg_read_file`・`pg_sleep`・`lo_` を含むもの）。行数の既定 200・上限 5000。この拒否は使いやすさと二重目であり、守りの本体は DB の GRANT。
 5. サーバー側の記録。`ALTER ROLE ai_reader SET log_statement = 'all'`（superuser でなければ戻せない設定）。SQL 本文が postgres のログ → promtail → Loki（prod2）に残る。
 6. 読むための SSH 鍵 `salesanchor-reader`。authorized_keys の末尾に 1 行だけ追加（既存の行は触らない）。`restrict,command="…",expiry-time="<90 日後>"`。固定コマンドは専用コンテナの起動 1 本だけ。
-7. `.github/CODEOWNERS` で、台本・ai-reader の compose 定義・ai_reader の migration・ビュー生成を PO（shingo-ops）の必須レビューにする。
+7. 台本（`backend/app/ops/`）と `docker-compose.ai-reader.yml` を process-artifacts gate の危ない変更（DANGEROUS_PATTERNS）に入れ、PR 本文に GO 記録が無いと必須チェックで止まるようにする。GO は委任 GO（POの委任に基づくClaude Opus発行）で足りる。`.github/CODEOWNERS` は責任者の明示に留め、強制しない（ADR-135:46）。
 8. フック免除は、鍵パスの完全一致だけ。
 9. Kテストの追加（`pg_authid` が読めないこと、`SET` で設定を戻せること＝それは境界でない証明、Loki に 1 行出ること、`sshd -T` の結果）。
 
@@ -43,7 +43,7 @@ PO の依頼は「権限不足で停止することが多い。どの権限を�
 
 - 「何でもできる鍵を許可で縛る」から「読むことしかできない道」へ変える。読むことしかできないので、伝聞かどうかを問わず担当が使ってよい。
 - 名前で秘密を伏せる方式（出力の列名で隠す）は、別名を付けるだけですり抜けられる（例: `SELECT password_argon2_hash AS x`）。そのため、秘密列を物理的に持たないビューを使う。
-- 境界は二重にする。権限の境界は DB の GRANT、コードの境界は CODEOWNERS。台本はリポジトリの中にあり、マージされれば本番の固定コマンドの中身が変わる。AI が自分の境界を動かせないよう、専用コンテナに `DATABASE_URL`（書ける接続）を渡さず、台本の変更を PO の必須レビューにする。
+- 境界は二重にする。権限の境界は DB の GRANT、コードの境界は process-artifacts gate の GO 記録。台本はリポジトリの中にあり、マージされれば本番の固定コマンドの中身が変わる。専用コンテナに `DATABASE_URL`（書ける接続）を渡さず、台本の変更には GO 記録を要求する。AI は GO 記録を残さずには境界を動かせない。DB の権限は台本を変えても広がらない。
 - `ALTER ROLE … SET default_transaction_read_only` や `statement_timeout` は利用者が `SET` で戻せるので境界ではない。事故防止として残し、境界とは書かない。
 - 今の道より危険が増えない。今の道は読み書きも削除もできる superuser。新しい道は読むことしかできず、記録が残り、鍵を 1 行消せば止まる。
 
@@ -65,7 +65,7 @@ PO の依頼は「権限不足で停止することが多い。どの権限を�
 - 受け入れる点:
   - 全テナントの顧客データ（氏名・連絡先等）を AI が読める（PO の Q1 決定）。出力はファイルに保存し、行数の既定は 200。読んだ内容の中の指示には従わない決まりを手順に明記する。
   - 新しい表・新しいテナントは、ビューが作られるまで読めない（意図した fail-closed）。
-  - reader 鍵はパスフレーズなし（AI が使えるようにするため）。代わりに `expiry-time`、記録、CODEOWNERS で補う。
+  - reader 鍵はパスフレーズなし（AI が使えるようにするため）。代わりに `expiry-time`、記録、台本変更時の GO 記録で補う。
   - 本 ADR の `migrations/` を含む実装は、ADR-135/ADR-136 により PO の GO が出るまで main にマージしない。
 - 触らない: 無制限鍵 manual-only、PO の `!` 実行の決まり、監視鍵（ADR-079）、pg_hba の trust。
 
@@ -83,6 +83,25 @@ SSH 証明書（期限の自動化）、夜間スナップショット（本番�
 ## 未確認（実装の最初に確かめる）
 
 PostgreSQL の仕様の一部（ビューの持ち主の権限で行の制限が外れること、`log_statement` を利用者が戻せないこと、`pg_authid` が読めないこと）は公式ドキュメントでの確認が取れていない（Context7 が月次上限で使えなかった）。実装前の K テストで実機を測って確かめる。詳細は design.md §リスク。
+
+## 実装結果
+
+- 便3a（リポジトリ側）: #4453 を本番反映（2026-10-17、`ai_ro` ビュー 506 本）。
+- 便3b（VPS 側、PO `!` 実行）: 2026-10-17 16:00 JST 完了。`ai_reader` のパスワード設定、接続情報は VPS 上の別ファイル（600）、authorized_keys に 1 行（restrict・固定コマンド・expiry-time 20270115）。既存 5 行は不変。
+- 便4（文書）: 使い方 [usage.md](../handoff/ai-readonly-db-path/usage.md)。K 試験の結果 [k-results.md](../handoff/ai-readonly-db-path/k-results.md)。K17 はフック免除が不要。K 試験は K14 の `sshd -T`（PO 実行分）を除いて測定済み。K3 は ×、K11 は △（判断と根拠は k-results.md）。
+- 運用上の注意: デプロイのたびに `ai_ro` が約 70 秒外れ、その間は 42P01 になる（usage.md §4）。
+
+### 改訂（K16、2026-10-17）
+
+当初は CODEOWNERS を PO の必須レビューにしてコードの境界とする設計だった。しかし main の ruleset はレビュー必須数が 0 で、この状態では Code Owners の指定を有効にしてもレビュー要求が生まれない（ADR-135:34-46 で実測済み）。既存方針でも CODEOWNERS は責任者の明示に留め、強制には使わない。そこで K16 の時点で、台本と compose 定義を process-artifacts gate の危ない変更に入れた。PO はこの変更を PO 本人の GO 必須にしないと決めた（2026-10-17、回答「n」）。そのため委任 GO で通る。最後の守りは DB の権限（K7・K9）である。
+
+### 改訂（K3、2026-10-17）
+
+- 経緯: K3 は、台本の AUDIT 行が 23 回中 1 回しか Loki に無かった（×）。逆に、ai-reader の標準出力（結果表）が時々 Loki に入っていた（直近 24h で 14 コンテナ中 9 個）。設計: [design-k3.md](../handoff/ai-readonly-db-path/design-k3.md)。
+- Decision 3 の「volumes なし」を「`/dev/log` ソケット 1 本の bind だけ（`create_host_path: false`）。ほかのマウントは足さない」に改める。理由は、送信だけでファイルを書く道ではないこと。あわせて ai-reader は `logging: none` にし、結果表を残さない。
+- 案 C の採用: AUDIT を stderr に加えて `/dev/log` へ直接送る（/dev/log → auth.log → Loki。sshd と同じ道）。送れなければ rc=5 で結果を出さない。promtail・Loki・ホストの設定は変えない。
+- 残る危険（R8）: DB のエラー文に値が載り、postgres のログから Loki に入る道は本件の範囲外。別件とする。
+- PO 承認: 原文「y」（2026-10-17）。
 
 ## 関連 ADR
 

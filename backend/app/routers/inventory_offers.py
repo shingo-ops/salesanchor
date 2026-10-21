@@ -70,10 +70,11 @@ _BASE_SELECT = """
            p.name_en AS name_en,
            p.category AS category,
            p.mark AS mark,
-           p.tcg_type AS tcg_type
+           tm.code AS work_code
     FROM public.inventory i
     LEFT JOIN public.suppliers s ON s.id = i.supplier_id
     LEFT JOIN public.products  p ON p.id = i.product_id
+    LEFT JOIN public.type_master tm ON tm.id = p.work_id
 """
 
 _UPDATABLE_COLS = {
@@ -170,7 +171,7 @@ def _project_inventory_rows(raw_rows: list[dict[str, object]]) -> list[Inventory
                 supplier_name=row.get("provider") or None,
                 unit_price=round_half_up(row["price_num"] or 0),
                 quantity=None if quantity is None else round_half_up(quantity),
-                tcg_type=row.get("tcg_type"),
+                work_code=row.get("work_code"),
                 offered_at=row["posted_ts"],
                 posted_at=row["posted_ts"],
                 release_date=row.get("release_date") or None,
@@ -178,6 +179,8 @@ def _project_inventory_rows(raw_rows: list[dict[str, object]]) -> list[Inventory
                 ship_ja=row.get("ship_ja") or None,
                 status=status_value,
                 merged_count=int(row.get("merged_count") or 1),
+                badge_cheapest=bool(row.get("badge_cheapest")),
+                badge_most_stock=bool(row.get("badge_most_stock")),
                 extraction_item_ids=[str(v) for v in (row.get("extraction_item_ids") or [])],
             )
         )
@@ -185,16 +188,16 @@ def _project_inventory_rows(raw_rows: list[dict[str, object]]) -> list[Inventory
 
 
 def _build_view_filters(
-    *, q, tcg_type, category, offer_type, hide_supplier_ids, hide_categories, condition, condition_in,
-    unit_in, offer_type_in, qty_min, qty_max, price_min, price_max, fresh_only=False,
+    *, q, work_code, category, offer_type, hide_supplier_ids, hide_categories, condition, condition_in,
+    unit_in, offer_type_in, qty_min, qty_max, price_min, price_max,
     supplier_ids: str | None = None,
 ) -> tuple[list[str], dict]:
     """問い合わせ値を、配信行の列（d.*）への WHERE 条件と bind に変える。値は必ず bind で渡す。"""
     conditions: list[str] = []
     params: dict = {}
-    if tcg_type:
-        conditions.append("d.tcg_type = :tcg_type")
-        params["tcg_type"] = tcg_type
+    if work_code:
+        conditions.append("d.work_code = :work_code")
+        params["work_code"] = work_code
     if category:
         conditions.append("d.category = :category")
         params["category"] = category
@@ -255,53 +258,89 @@ def _build_view_filters(
         if value is not None:
             conditions.append(f"{column} {op} CAST(:{name} AS integer)")
             params[name] = value
-    if fresh_only:  # 「24時間以内」。件数とページ送りに連動させるため WHERE 側で絞る
-        conditions.append("d.posted_ts >= NOW() - make_interval(hours => :fresh_hours)")
-        params["fresh_hours"] = FRESH_WINDOW_HOURS
     return conditions, params
+
+
+def _build_view_order_by(*, sort_col: str, order_dir: str) -> str:
+    """GET /inventory の ORDER BY（ADR-1014 改訂 2026-10-18）。sort_col / order_dir は信頼できる断片のみ。
+
+    まとまり（商品）の順: 発売日（空欄は末尾）→ 英語名 → 日本語名 → product_id。発売日の向きは release_date を選んだときだけ order_dir。ほかの並び替えでは既定と同じ DESC（ADR-1014 改訂 2026-10-19）。
+    まとまりの中: 状態のまとまり（cond_block = 同じ商品・同じ状態の最小 sort_ord。価値順 ADR-1023）→ 選んだ列（release_date なら sort_ord のみ）。
+    価格・数量などの並び替えは同じ商品・同じ状態の中だけで効く（ADR-1014 改訂 2026-10-19（5））。タイトル列（name）は変更前の式のまま。
+    """
+    if sort_col == _SORT_COLUMNS["name"]:
+        return f"ORDER BY d.english_title {order_dir}, d.japanese_title {order_dir} NULLS LAST, d.sort_ord ASC"
+    group_dir = order_dir if sort_col == _SORT_COLUMNS["release_date"] else "DESC"
+    group = (
+        f"NULLIF(d.release_date, '') {group_dir} NULLS LAST, d.english_title ASC, "
+        "d.japanese_title ASC NULLS LAST, d.product_id ASC"
+    )
+    if sort_col == _SORT_COLUMNS["release_date"]:
+        return f"ORDER BY {group}, d.sort_ord ASC"
+    return f"ORDER BY {group}, d.cond_block ASC, {sort_col} {order_dir} NULLS LAST, d.sort_ord ASC"
 
 
 def _build_inventory_view_sql(
     *, head: str, final_main: str, merge: bool, where: str, sort_col: str, order_dir: str,
+    expiry: bool = False,
 ) -> str:
     """GET /inventory の1文。dist_base（配信行の重い計算）を1回だけ計算し、件数・ページ・絞り込み候補を UNION ALL で返す。
 
     head は distribution_rows_parts の WITH 句（そのまま使う）。where / sort_col / order_dir は
     _build_view_filters と _SORT_COLUMNS が作った信頼できる断片で、利用者入力の値は bind のみ。
-    列並び（3枝共通）: __kind, __total, <配信行+tcg_type+category の全列>, __ord, __f_* の5列。
+    列並び（3枝共通）: __kind, __total, <配信行+work_code+category+cond_block の全列>, __ord, __badge_cheapest, __badge_most_stock, __expiry_s, __f_* の5列。
+    __badge_* は同じ product_id・status・condition のまとまり（絞り込み後・ページ前）で最安／在庫最多か（ADR-1014 改訂 2026-10-19（3））。
+    expiry が真のとき __expiry_s（total 枝のみ）は、まとめ前・絞り込み前の行が次に時間の枠から外れるまでの秒数（:expiry_hours が必要）。
     """
-    # GAS 方式: 英語タイトルでまとめてから並べる。タイトル列そのものを並べるときは英語タイトルの昇降を切り替える。
-    if sort_col == _SORT_COLUMNS["name"]:
-        order_by = f"ORDER BY d.english_title {order_dir}, d.japanese_title {order_dir} NULLS LAST, d.sort_ord ASC"
-    else:
-        order_by = f"ORDER BY d.english_title ASC, {sort_col} {order_dir} NULLS LAST, d.sort_ord ASC"
-    join = "LEFT JOIN public.products pp ON pp.id = x.product_id"
+    order_by = _build_view_order_by(sort_col=sort_col, order_dir=order_dir)
+    join = "LEFT JOIN public.products pp ON pp.id = x.product_id LEFT JOIN public.type_master tm ON tm.id = pp.work_id"
     ctes = [f"rows_main AS ({final_main})"]
     if merge:
         ctes.append(f"rows_plain AS ({distribution_final_select_plain()})")
-    ctes.append(f"rows_x AS (SELECT x.*, pp.tcg_type AS tcg_type, pp.category AS category FROM rows_main x {join})")
+    ctes.append(
+        "rows_x AS (SELECT x.*, tm.code AS work_code, pp.category AS category, "
+        f"MIN(x.sort_ord) OVER (PARTITION BY x.product_id, x.condition) AS cond_block FROM rows_main x {join})"
+    )
     if merge:
-        ctes.append(f"rows_xp AS (SELECT x.*, pp.tcg_type AS tcg_type, pp.category AS category FROM rows_plain x {join})")
+        ctes.append(f"rows_xp AS (SELECT x.*, tm.code AS work_code, pp.category AS category FROM rows_plain x {join})")
     facet_src = "rows_xp" if merge else "rows_x"  # merge=False は rows_main == rows_plain なので共用
     ctes.append(f"rows_f AS (SELECT * FROM rows_x d {where})")
     # 型は実物の列から: LEFT JOIN ON FALSE で rows_x と同じ型の NULL 1行を得る
     ctes.append("rows_nx AS (SELECT o.* FROM (SELECT 1) one LEFT JOIN rows_x o ON FALSE)")
+    badge_cheapest = (
+        "(d.product_id IS NOT NULL AND d.price_num IS NOT NULL "
+        "AND COUNT(d.price_num) OVER (PARTITION BY d.product_id, d.status, d.condition) >= 2 "
+        "AND MIN(ROUND(d.price_num)) OVER (PARTITION BY d.product_id, d.status, d.condition) < MAX(ROUND(d.price_num)) OVER (PARTITION BY d.product_id, d.status, d.condition) "
+        "AND ROUND(d.price_num) = MIN(ROUND(d.price_num)) OVER (PARTITION BY d.product_id, d.status, d.condition)) AS __badge_cheapest"
+    )
+    badge_most_stock = (
+        "(d.product_id IS NOT NULL AND d.qty_num IS NOT NULL "
+        "AND COUNT(d.qty_num) OVER (PARTITION BY d.product_id, d.status, d.condition) >= 2 "
+        "AND MIN(ROUND(d.qty_num)) OVER (PARTITION BY d.product_id, d.status, d.condition) < MAX(ROUND(d.qty_num)) OVER (PARTITION BY d.product_id, d.status, d.condition) "
+        "AND ROUND(d.qty_num) = MAX(ROUND(d.qty_num)) OVER (PARTITION BY d.product_id, d.status, d.condition)) AS __badge_most_stock"
+    )
     ctes.append(
-        f"rows_pg AS (SELECT d.*, ROW_NUMBER() OVER ({order_by}) AS __ord FROM rows_f d "
-        f"{order_by} LIMIT :limit OFFSET :offset)"
+        f"rows_pg AS (SELECT d.*, ROW_NUMBER() OVER ({order_by}) AS __ord, {badge_cheapest}, {badge_most_stock} "
+        f"FROM rows_f d {order_by} LIMIT :limit OFFSET :offset)"
+    )
+    expiry_expr = (
+        "(SELECT CEIL(EXTRACT(EPOCH FROM (MIN(d.posted_ts) + make_interval(hours => :expiry_hours) - NOW())))::bigint "
+        f"FROM {facet_src} d)"
+        if expiry else "NULL::bigint"
     )
     q_total = (
         "SELECT 'total'::text AS __kind, (SELECT COUNT(*) FROM rows_f)::bigint AS __total, nx.*, "
-        "NULL::bigint AS __ord, nx.supplier_id AS __f_supplier_id, nx.provider AS __f_provider, "
+        f"NULL::bigint AS __ord, NULL::boolean AS __badge_cheapest, NULL::boolean AS __badge_most_stock, "
+        f"{expiry_expr} AS __expiry_s, nx.supplier_id AS __f_supplier_id, nx.provider AS __f_provider, "
         "nx.category AS __f_category, nx.condition AS __f_condition, nx.unit_canonical AS __f_unit "
         "FROM rows_nx nx"
     )
     q_page = (
-        "SELECT 'page'::text, NULL::bigint, pg.*, nx.supplier_id, nx.provider, nx.category, nx.condition, "
+        "SELECT 'page'::text, NULL::bigint, pg.*, NULL::bigint, nx.supplier_id, nx.provider, nx.category, nx.condition, "
         "nx.unit_canonical FROM rows_pg pg CROSS JOIN rows_nx nx"
     )
     q_facet = (
-        "SELECT 'facet'::text, NULL::bigint, nx.*, NULL::bigint, fd.supplier_id, fd.provider, fd.category, "
+        "SELECT 'facet'::text, NULL::bigint, nx.*, NULL::bigint, NULL::boolean, NULL::boolean, NULL::bigint, fd.supplier_id, fd.provider, fd.category, "
         "fd.condition, fd.unit_canonical FROM (SELECT DISTINCT d.supplier_id, d.provider, d.category, "
         f"d.condition, d.unit_canonical FROM {facet_src} d) fd CROSS JOIN rows_nx nx"
     )
@@ -315,7 +354,7 @@ def _build_inventory_view_sql(
 )
 async def list_inventory_view(
     q: str | None = Query(default=None, max_length=255, description="日本語名/英語名/型番/検索ワード（NFKC・かな同一視・空白区切りAND）"),
-    tcg_type: str | None = Query(default=None, max_length=50, description="TCG種別 (public.products.tcg_type)"),
+    work_code: str | None = Query(default=None, max_length=50, description="作品の符号（products.work_id → type_master.code）"),
     category: str | None = Query(default=None, max_length=100, description="カテゴリー絞り込み (public.products.category)"),
     offer_type: str | None = Query(default=None, pattern="^(in_stock|pre_order)$", description="区分: in_stock(在庫) / pre_order(予約)"),
     hide_supplier_ids: str | None = Query(default=None, max_length=2000, description="非表示にする仕入元IDのCSV（ユーザー別フィルタ用）"),
@@ -337,7 +376,7 @@ async def list_inventory_view(
         pattern="^(name|category|mark|condition|unit|offer_type|quantity|unit_price|supplier|offered_at|release_date)$",
         description="ソート列。全列対応（ADR-093 在庫表改修）",
     ),
-    order: str = Query(default="asc", pattern="^(asc|desc)$"),
+    order: str = Query(default="desc", pattern="^(asc|desc)$"),
     page: int = Query(default=1, ge=1),
     per_page: int = Query(default=50, ge=1, le=200),
     db: AsyncSession = Depends(get_db),
@@ -357,17 +396,24 @@ async def list_inventory_view(
             fresh_window_hours=FRESH_WINDOW_HOURS,
         )
     include_flag_single = settings.get("include_flag_single", "false").lower() == "true"
-    age_condition, age_params = _age_window(max_age_hours)
+    window_hours = max_age_hours
+    if fresh_only:  # 「24時間以内」は配信行の計算の内側で絞る（便2・ADR-1014 改訂 2026-10-18（3））
+        # max_age_hours は 0 以上の int（None は上で返却済み）。0 は「絞らない」なので 24h にする
+        window_hours = min(max_age_hours, FRESH_WINDOW_HOURS) if max_age_hours else FRESH_WINDOW_HOURS
+    age_condition, age_params = _age_window(window_hours)
 
     conditions, filter_params = _build_view_filters(
-        q=q, tcg_type=tcg_type, category=category, offer_type=offer_type,
+        q=q, work_code=work_code, category=category, offer_type=offer_type,
         hide_supplier_ids=hide_supplier_ids, hide_categories=hide_categories, condition=condition,
         condition_in=condition_in, unit_in=unit_in, offer_type_in=offer_type_in,
-        qty_min=qty_min, qty_max=qty_max, price_min=price_min, price_max=price_max, fresh_only=fresh_only,
+        qty_min=qty_min, qty_max=qty_max, price_min=price_min, price_max=price_max,
         supplier_ids=supplier_ids,
     )
     where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
     params = {**age_params, **filter_params}
+    expiry = bool(window_hours)  # 実効の窓（応答の window_hours とは別）。0 は絞らないので期限なし
+    if expiry:
+        params["expiry_hours"] = window_hours
     order_dir = "ASC" if order == "asc" else "DESC"
     sort_col = _SORT_COLUMNS.get(sort, "d.japanese_title")
     head, final_main = distribution_rows_parts(
@@ -375,11 +421,13 @@ async def list_inventory_view(
     )
     sql = _build_inventory_view_sql(
         head=head, final_main=final_main, merge=merge_same_post, where=where, sort_col=sort_col, order_dir=order_dir,
+        expiry=expiry,
     )
     result = await db.execute(
         text(sql), {**params, "limit": per_page, "offset": (page - 1) * per_page},
     )
     total = 0
+    expiry_s: int | None = None
     page_rows: list[tuple[int, dict]] = []
     facet_rows: list[dict] = []
     for r in result.mappings().all():
@@ -387,8 +435,13 @@ async def list_inventory_view(
         kind = row["__kind"]
         if kind == "total":
             total = int(row["__total"] or 0)
+            expiry_s = int(row["__expiry_s"]) if row["__expiry_s"] is not None else None
         elif kind == "page":
-            page_rows.append((row["__ord"], {k: v for k, v in row.items() if not k.startswith("__")}))
+            page_rows.append((row["__ord"], {
+                **{k: v for k, v in row.items() if not k.startswith("__")},
+                "badge_cheapest": bool(row["__badge_cheapest"]),
+                "badge_most_stock": bool(row["__badge_most_stock"]),
+            }))
         elif kind == "facet":
             facet_rows.append({
                 "supplier_id": row["__f_supplier_id"], "provider": row["__f_provider"],
@@ -418,6 +471,7 @@ async def list_inventory_view(
         units=unit_facet,
         window_hours=max_age_hours,
         fresh_window_hours=FRESH_WINDOW_HOURS,
+        next_expiry_in_seconds=expiry_s,
     )
 
 

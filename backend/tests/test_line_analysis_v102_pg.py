@@ -43,6 +43,8 @@ def v102(pg, monkeypatch):  # noqa: F811
         cur.execute(sql.replace("public.extraction_", f"{SCHEMA}.extraction_"))
         price_basis_sql = (MIGRATIONS / "20261011_150000_add_analysis_results_price_basis.sql").read_text(encoding="utf-8")
         cur.execute(price_basis_sql.replace("public.analysis_results", f"{SCHEMA}.analysis_results"))
+        bundle_sql = (MIGRATIONS / "20261017_220000_add_analysis_results_bundle_size.sql").read_text(encoding="utf-8")
+        cur.execute(bundle_sql.replace("public.analysis_results", f"{SCHEMA}.analysis_results"))
         detail_sql = (MIGRATIONS / "20261012_100000_add_extraction_jobs_system_review_detail.sql").read_text(encoding="utf-8")
         cur.execute(detail_sql.replace("public.extraction_jobs", f"{SCHEMA}.extraction_jobs"))
         cur.execute("INSERT INTO public.units(code,canonical,kubun,is_active) VALUES ('UN9001','BOX','箱系',true) RETURNING id")
