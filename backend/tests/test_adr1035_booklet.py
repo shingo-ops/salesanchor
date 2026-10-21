@@ -148,10 +148,10 @@ def test_condition_id_is_taken_inside_the_group():
     assert svc._condition_columns("Without booklet", masters, B) == ("Without booklet", 924, True)
 
 
-# 6. 並びの群は booklet が最後
+# 6. 並びの群は booklet の次が supply（ADR-1035 追補で supply を末尾に足した）
 def test_value_group_order_ends_with_booklet():
-    assert VALUE_GROUP_ORDER[-1] == "booklet"
-    assert VALUE_GROUP_ORDER == ("case", "box", "pack", "promo_pack", "single", "booklet")
+    assert VALUE_GROUP_ORDER[-2:] == ("booklet", "supply")
+    assert VALUE_GROUP_ORDER == ("case", "box", "pack", "promo_pack", "single", "booklet", "supply")
 
 
 def test_booklet_scoped_group_mapping():

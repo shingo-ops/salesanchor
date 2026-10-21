@@ -23,6 +23,7 @@ from app.auth.viewer_signup_code import normalize_signup_code, signup_code_sha25
 from app.cache import get_redis
 from app.discord_gateway import private_channel
 from app.discord_gateway import viewer_bot_texts as T
+from app.services import viewer_message_templates as vmt
 
 logger = logging.getLogger(__name__)
 
@@ -153,6 +154,16 @@ async def _discard_room(channel: Any) -> None:
         logger.warning("[viewer-trial] rollback channel delete failed channel=%s", channel.id)
 
 
+async def _load_template_body(db_factory: Any, key: str) -> str | None:
+    """案内文のテンプレートを DB から読む（後戻りできない処理の前に呼ぶ）。無い・検査に通らない・読めないは None。"""
+    try:
+        async with db_factory() as session:
+            return await vmt.load_body(session, key)
+    except Exception:  # noqa: BLE001
+        logger.warning("[viewer-trial] template read failed key=%s", key)
+        return None
+
+
 async def on_open(interaction: Any, db_factory: Any, config: ViewerDiscordConfig) -> None:
     guild = interaction.guild
     member = interaction.user
@@ -183,6 +194,15 @@ async def on_open(interaction: Any, db_factory: Any, config: ViewerDiscordConfig
         await _reply(interaction, T.YOUR_ROOM.format(channel_id=channel.id), True)
         return
 
+    # 部屋を作る前に案内文を読む。無ければ何も作らず TRY_LATER
+    recreated_body = await _load_template_body(db_factory, "room_recreated")
+    recreated_text = (
+        vmt.render("room_recreated", recreated_body, email=email) if recreated_body is not None else None
+    )
+    if recreated_text is None:
+        await _reply(interaction, T.TRY_LATER, True)
+        return
+
     new_channel = await _create_room(guild, member, config, viewer_id, row[3])
     if new_channel is None:
         await _reply(interaction, T.TRY_LATER, True)
@@ -203,7 +223,7 @@ async def on_open(interaction: Any, db_factory: Any, config: ViewerDiscordConfig
         await _reply(interaction, T.TRY_LATER, True)
         return
     try:
-        await new_channel.send(T.ROOM_RECREATED.format(email=email))
+        await new_channel.send(recreated_text)
     except Exception:  # noqa: BLE001
         logger.warning("[viewer-trial] recreated post failed viewer=%d", viewer_id)
     await _reply(interaction, T.YOUR_ROOM.format(channel_id=new_channel.id), True)
@@ -258,6 +278,12 @@ async def on_code_submit(interaction: Any, db_factory: Any, config: ViewerDiscor
         await _reply(interaction, T.TRY_LATER, True)
         return
 
+    # 申込コードの照合（使用済みにする DELETE）より前に案内文を読む。無ければ何も変えず TRY_LATER
+    welcome_body = await _load_template_body(db_factory, "room_welcome")
+    if welcome_body is None:
+        await _reply(interaction, T.TRY_LATER, True)
+        return
+
     channel = None
     try:
         async with db_factory() as session:
@@ -306,6 +332,12 @@ async def on_code_submit(interaction: Any, db_factory: Any, config: ViewerDiscor
 
                 password = secrets.token_urlsafe(18)
                 if check_password(password) is not None:
+                    await session.rollback()
+                    await _discard_room(channel)
+                    await _reply(interaction, T.TRY_LATER, True)
+                    return
+                welcome_text = vmt.render("room_welcome", welcome_body, email=email, password=password)
+                if welcome_text is None:  # 差し込み後が長すぎるなど。commit の前なので申込コードは使用済みにならない
                     await session.rollback()
                     await _discard_room(channel)
                     await _reply(interaction, T.TRY_LATER, True)
@@ -378,7 +410,7 @@ async def on_code_submit(interaction: Any, db_factory: Any, config: ViewerDiscor
         return
 
     try:
-        await channel.send(T.ROOM_WELCOME.format(email=email, password=password))
+        await channel.send(welcome_text)
     except Exception:  # noqa: BLE001
         logger.warning("[viewer-trial] welcome post failed viewer=%d", vid)
     await _reply(interaction, T.YOUR_ROOM.format(channel_id=channel.id), True)

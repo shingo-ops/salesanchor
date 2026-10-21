@@ -13,6 +13,7 @@ from typing import Any
 from sqlalchemy import text
 
 from app.discord_gateway import viewer_bot_texts
+from app.services import viewer_message_templates as vmt
 from app.services.viewer_room_notice import send_room_notice
 
 logger = logging.getLogger(__name__)
@@ -66,6 +67,16 @@ async def run_once(db_factory: Any, redis_client: Any, now_utc: datetime) -> int
     if redis_client is None:
         logger.warning("[viewer-interview] Redis unavailable (skip)")
         return 0
+    # テンプレートは最初に1回読む。無い・読めない・検査に通らないときは誰にも送らず（Redis キーも作らず）次の周期で再試行
+    try:
+        async with db_factory() as session:
+            body = await vmt.load_body(session, "interview_request")
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("[viewer-interview] template read failed: %s", type(exc).__name__)
+        return 0
+    if body is None:
+        logger.warning("[viewer-interview] template unavailable (skip)")
+        return 0
     sent = 0
     for viewer_id, channel_id, expires_at in await _load_trials(db_factory):
         if not is_due(now_utc, expires_at):
@@ -77,7 +88,12 @@ async def run_once(db_factory: Any, redis_client: Any, now_utc: datetime) -> int
         except Exception as exc:  # noqa: BLE001
             logger.warning("[viewer-interview] Redis check failed: %s", type(exc).__name__)
             continue
-        ok = await send_room_notice(channel_id, viewer_bot_texts.interview_request_text(expires_at))
+        text = vmt.render(
+            "interview_request", body, expires_date=viewer_bot_texts.format_jst_date(expires_at)
+        )
+        if text is None:
+            continue  # 差し込み後が長すぎるなど。送らず Redis キーも作らない（警告ログは render が出す）
+        ok = await send_room_notice(channel_id, text)
         logger.info("[viewer-interview] id=%s result=%s", viewer_id, "sent" if ok else "failed")
         if not ok:
             continue

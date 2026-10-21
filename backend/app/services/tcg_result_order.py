@@ -7,8 +7,8 @@ holds the group order and the Bulk special case. It changes no persisted data.
 """
 from __future__ import annotations
 
-# 群の順（カートン → ボックス → パック → プロモパック → シングル → ブックレット）。群の中は状態マスタの value_rank（1=価値が高い）。
-VALUE_GROUP_ORDER = ("case", "box", "pack", "promo_pack", "single", "booklet")
+# 群の順（カートン → ボックス → パック → プロモパック → シングル → ブックレット → サプライ）。群の中は状態マスタの value_rank（1=価値が高い）。
+VALUE_GROUP_ORDER = ("case", "box", "pack", "promo_pack", "single", "booklet", "supply")
 # 価値の順位が無い状態のうち、先頭に置くもの（ADR-1021）。残りは canonical の文字順。
 UNRANKED_FIRST = "Bulk"
 _GROUP_STRIDE = 1000

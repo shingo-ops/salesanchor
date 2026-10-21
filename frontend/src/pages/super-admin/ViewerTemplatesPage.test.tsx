@@ -1,14 +1,14 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { api } from "../../lib/api";
+import { api, ApiError } from "../../lib/api";
 import { useSuperAdmin } from "../../hooks/useSuperAdmin";
 import i18n from "../../i18n";
 import ViewerTemplatesPage from "./ViewerTemplatesPage";
 
 vi.mock("../../lib/api", async () => {
   const actual = await vi.importActual<typeof import("../../lib/api")>("../../lib/api");
-  return { ...actual, api: { get: vi.fn() } };
+  return { ...actual, api: { get: vi.fn(), put: vi.fn() } };
 });
 vi.mock("../../hooks/useSuperAdmin", () => ({ useSuperAdmin: vi.fn() }));
 
@@ -99,7 +99,7 @@ it("opens a drawer on row click with name, send mode, when, placeholders and bod
   ]);
   const body = screen.getByTestId("viewer-templates-body") as HTMLTextAreaElement;
   expect(body.value).toBe("body-reissue_notice\nline2");
-  expect(body.readOnly).toBe(true);
+  expect(body.readOnly).toBe(false);
 
   fireEvent.click(screen.getByTestId("viewer-templates-copy"));
   await waitFor(() => expect(writeText).toHaveBeenCalledWith("copy-reissue_notice"));
@@ -111,7 +111,7 @@ it("shows the unregistered label and disables copy when the body is null", async
   fireEvent.click(name.closest("tr") as HTMLElement);
   await screen.findByTestId("viewer-templates-detail");
   expect(screen.getByTestId("viewer-templates-unregistered").textContent).toBe("Not registered");
-  expect(screen.queryByTestId("viewer-templates-body")).toBeNull();
+  expect((screen.getByTestId("viewer-templates-body") as HTMLTextAreaElement).value).toBe("");
   expect((screen.getByTestId("viewer-templates-copy") as HTMLButtonElement).disabled).toBe(true);
   expect(screen.getByText("None")).toBeTruthy();
   fireEvent.click(screen.getByTestId("viewer-templates-copy"));
@@ -129,4 +129,233 @@ it("shows an error message when loading fails", async () => {
   vi.mocked(api.get).mockRejectedValue(new Error("x"));
   renderPage();
   expect((await screen.findByTestId("viewer-templates-error")).textContent).toBe("Could not load the templates");
+});
+
+async function openRow(key: string) {
+  const name = await screen.findByText(i18n.t(`superAdmin.viewerTemplates.names.${key}`));
+  fireEvent.click(name.closest("tr") as HTMLElement);
+  await screen.findByTestId("viewer-templates-detail");
+}
+
+function edit(value: string) {
+  fireEvent.change(screen.getByTestId("viewer-templates-body"), { target: { value } });
+}
+
+it("saves an edit with the opened updated_at, shows saved, and refreshes the list", async () => {
+  const saved = { ...ITEMS[4], body: "new body", copy_text: "new copy", updated_at: "2026-10-21T00:00:00Z" };
+  vi.mocked(api.put).mockResolvedValue(saved);
+  vi.mocked(api.get)
+    .mockResolvedValueOnce({ items: ITEMS })
+    .mockResolvedValueOnce({ items: ITEMS })
+    .mockResolvedValueOnce({ items: ITEMS.map(i => (i.key === "room_recreated" ? saved : i)) });
+  renderPage();
+  await openRow("room_recreated");
+  edit("new body");
+  fireEvent.click(screen.getByTestId("viewer-templates-save"));
+  expect((await screen.findByTestId("viewer-templates-saved")).textContent).toBe("Saved");
+  expect(api.put).toHaveBeenCalledWith("/super-admin/viewer-templates/room_recreated", {
+    body: "new body",
+    expected_updated_at: "2026-10-20T00:00:00Z",
+  });
+  await waitFor(() => expect(api.get).toHaveBeenCalledTimes(3));
+  expect((screen.getByTestId("viewer-templates-body") as HTMLTextAreaElement).value).toBe("new body");
+  fireEvent.click(screen.getByTestId("viewer-templates-copy"));
+  await waitFor(() => expect(writeText).toHaveBeenCalledWith("new copy"));
+});
+
+it("saves an unregistered row with expected_updated_at null", async () => {
+  vi.mocked(api.put).mockResolvedValue({ ...ITEMS[7], body: "hello", copy_text: null, updated_at: "2026-10-21T00:00:00Z" });
+  renderPage();
+  await openRow("notice_suspended");
+  edit("hello");
+  fireEvent.click(screen.getByTestId("viewer-templates-save"));
+  await screen.findByTestId("viewer-templates-saved");
+  expect(api.put).toHaveBeenCalledWith("/super-admin/viewer-templates/notice_suspended", {
+    body: "hello",
+    expected_updated_at: null,
+  });
+});
+
+it("shows the conflict message on 409", async () => {
+  vi.mocked(api.put).mockRejectedValue(new ApiError("template_conflict", 409, "template_conflict"));
+  renderPage();
+  await openRow("room_recreated");
+  edit("x");
+  fireEvent.click(screen.getByTestId("viewer-templates-save"));
+  expect((await screen.findByTestId("viewer-templates-save-error")).textContent).toBe(
+    i18n.t("superAdmin.viewerTemplates.conflict"),
+  );
+  expect(screen.queryByTestId("viewer-templates-saved")).toBeNull();
+});
+
+it.each([
+  ["template_placeholders", "errorPlaceholders"],
+  ["template_bad_syntax", "errorBadSyntax"],
+  ["template_format_spec", "errorFormatSpec"],
+  ["template_empty", "errorEmpty"],
+  ["template_too_long", "errorTooLong"],
+  ["template_line_name_prefix", "errorLineNamePrefix"],
+])("shows the reason for the 422 code %s", async (code, key) => {
+  vi.mocked(api.put).mockRejectedValue(new ApiError(code, 422, code));
+  renderPage();
+  await openRow("room_recreated");
+  edit("x");
+  fireEvent.click(screen.getByTestId("viewer-templates-save"));
+  expect((await screen.findByTestId("viewer-templates-save-error")).textContent).toBe(
+    i18n.t(`superAdmin.viewerTemplates.${key}`),
+  );
+});
+
+it("shows the generic save error for other failures", async () => {
+  vi.mocked(api.put).mockRejectedValue(new ApiError("boom", 500, "boom"));
+  renderPage();
+  await openRow("room_recreated");
+  edit("x");
+  fireEvent.click(screen.getByTestId("viewer-templates-save"));
+  expect((await screen.findByTestId("viewer-templates-save-error")).textContent).toBe("Could not save");
+});
+
+it("shows the character count by code points and keeps save disabled until edited", async () => {
+  renderPage();
+  await openRow("room_recreated");
+  expect((screen.getByTestId("viewer-templates-save") as HTMLButtonElement).disabled).toBe(true);
+  edit("a\u{1F600}b");
+  expect(screen.getByText("3 / 1800")).toBeTruthy();
+  expect((screen.getByTestId("viewer-templates-save") as HTMLButtonElement).disabled).toBe(false);
+});
+
+it("after a 409, closing and reopening the row sends the newest updated_at", async () => {
+  const newer = { ...ITEMS[4], body: "someone else", copy_text: "c", updated_at: "2026-10-21T01:00:00Z" };
+  vi.mocked(api.get)
+    .mockResolvedValueOnce({ items: ITEMS }) // initial
+    .mockResolvedValueOnce({ items: ITEMS }) // first open
+    .mockResolvedValueOnce({ items: ITEMS.map(i => (i.key === "room_recreated" ? newer : i)) }) // after 409
+    .mockResolvedValueOnce({ items: ITEMS.map(i => (i.key === "room_recreated" ? newer : i)) }); // second open
+  vi.mocked(api.put)
+    .mockRejectedValueOnce(new ApiError("template_conflict", 409, "template_conflict"))
+    .mockResolvedValueOnce({ ...newer, body: "mine" });
+  renderPage();
+  await openRow("room_recreated");
+  edit("mine");
+  fireEvent.click(screen.getByTestId("viewer-templates-save"));
+  await screen.findByTestId("viewer-templates-save-error");
+  // typed text is kept after the 409
+  expect((screen.getByTestId("viewer-templates-body") as HTMLTextAreaElement).value).toBe("mine");
+  await waitFor(() => expect(api.get).toHaveBeenCalledTimes(3));
+  // close and reopen
+  const name = screen.getAllByText(i18n.t("superAdmin.viewerTemplates.names.room_recreated"))[0];
+  fireEvent.click(name.closest("tr") as HTMLElement);
+  await waitFor(() => expect(api.get).toHaveBeenCalledTimes(4));
+  await waitFor(() =>
+    expect((screen.getByTestId("viewer-templates-body") as HTMLTextAreaElement).value).toBe("someone else"),
+  );
+  edit("mine");
+  fireEvent.click(screen.getByTestId("viewer-templates-save"));
+  await screen.findByTestId("viewer-templates-saved");
+  expect(vi.mocked(api.put).mock.calls[1][1]).toEqual({ body: "mine", expected_updated_at: "2026-10-21T01:00:00Z" });
+});
+
+function deferred<T>() {
+  let resolve!: (v: T) => void;
+  let reject!: (e: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
+function clickRow(key: string) {
+  const name = screen.getByText(i18n.t(`superAdmin.viewerTemplates.names.${key}`));
+  fireEvent.click(name.closest("tr") as HTMLElement);
+}
+
+it("does not reopen the drawer when the refetch returns after it was closed", async () => {
+  const d = deferred<{ items: typeof ITEMS }>();
+  vi.mocked(api.get).mockResolvedValueOnce({ items: ITEMS }).mockReturnValueOnce(d.promise);
+  renderPage();
+  await screen.findByText(i18n.t("superAdmin.viewerTemplates.names.room_recreated"));
+  clickRow("room_recreated");
+  await screen.findByTestId("viewer-templates-detail");
+  fireEvent.click(screen.getByRole("button", { name: /close/i }));
+  await waitFor(() => expect(screen.queryByTestId("viewer-templates-detail")).toBeNull());
+  d.resolve({ items: ITEMS });
+  await new Promise(r => setTimeout(r, 20));
+  expect(screen.queryByTestId("viewer-templates-detail")).toBeNull();
+});
+
+it("a late refetch for row A does not overwrite the drawer of row B", async () => {
+  const d = deferred<{ items: typeof ITEMS }>();
+  vi.mocked(api.get)
+    .mockResolvedValueOnce({ items: ITEMS })
+    .mockReturnValueOnce(d.promise)
+    .mockResolvedValueOnce({ items: ITEMS });
+  renderPage();
+  await screen.findByText(i18n.t("superAdmin.viewerTemplates.names.room_recreated"));
+  clickRow("room_recreated");
+  await screen.findByTestId("viewer-templates-detail");
+  clickRow("notice_extended");
+  await waitFor(() =>
+    expect((screen.getByTestId("viewer-templates-body") as HTMLTextAreaElement).value).toBe("body-notice_extended\nline2"),
+  );
+  d.resolve({ items: ITEMS.map(i => ({ ...i, body: `late-${i.key}` })) });
+  await new Promise(r => setTimeout(r, 20));
+  expect((screen.getByTestId("viewer-templates-body") as HTMLTextAreaElement).value).not.toContain("late-");
+});
+
+it("keeps text typed while the refetch is in flight", async () => {
+  const d = deferred<{ items: typeof ITEMS }>();
+  vi.mocked(api.get).mockResolvedValueOnce({ items: ITEMS }).mockReturnValueOnce(d.promise);
+  renderPage();
+  await screen.findByText(i18n.t("superAdmin.viewerTemplates.names.room_recreated"));
+  clickRow("room_recreated");
+  await screen.findByTestId("viewer-templates-detail");
+  edit("typed text");
+  d.resolve({ items: ITEMS.map(i => ({ ...i, body: `late-${i.key}`, updated_at: "2026-10-22T00:00:00Z" })) });
+  await new Promise(r => setTimeout(r, 20));
+  expect((screen.getByTestId("viewer-templates-body") as HTMLTextAreaElement).value).toBe("typed text");
+});
+
+it("does not reopen the drawer when the PUT returns after it was closed", async () => {
+  const d = deferred<(typeof ITEMS)[number]>();
+  vi.mocked(api.put).mockReturnValueOnce(d.promise);
+  renderPage();
+  await openRow("room_recreated");
+  edit("x");
+  fireEvent.click(screen.getByTestId("viewer-templates-save"));
+  await waitFor(() => expect(api.put).toHaveBeenCalled());
+  fireEvent.click(screen.getByRole("button", { name: /close/i }));
+  await waitFor(() => expect(screen.queryByTestId("viewer-templates-detail")).toBeNull());
+  d.resolve({ ...ITEMS[4], body: "x" });
+  await new Promise(r => setTimeout(r, 20));
+  expect(screen.queryByTestId("viewer-templates-detail")).toBeNull();
+});
+
+it.each(["success", "failure"])("a late PUT %s for row A does not change row B's drawer", async kind => {
+  const d = deferred<(typeof ITEMS)[number]>();
+  vi.mocked(api.put).mockReturnValueOnce(d.promise);
+  renderPage();
+  await openRow("room_recreated");
+  edit("x");
+  fireEvent.click(screen.getByTestId("viewer-templates-save"));
+  await waitFor(() => expect(api.put).toHaveBeenCalled());
+  clickRow("notice_extended");
+  await waitFor(() =>
+    expect((screen.getByTestId("viewer-templates-body") as HTMLTextAreaElement).value).toBe("body-notice_extended\nline2"),
+  );
+  if (kind === "success") d.resolve({ ...ITEMS[4], body: "from A" });
+  else d.reject(new ApiError("boom", 500, "boom"));
+  await new Promise(r => setTimeout(r, 20));
+  expect((screen.getByTestId("viewer-templates-body") as HTMLTextAreaElement).value).toBe("body-notice_extended\nline2");
+  expect(screen.queryByTestId("viewer-templates-save-error")).toBeNull();
+  expect(screen.queryByTestId("viewer-templates-saved")).toBeNull();
+});
+
+it("shows the load error when the refetch on open fails, and still opens with the row at hand", async () => {
+  vi.mocked(api.get).mockResolvedValueOnce({ items: ITEMS }).mockRejectedValueOnce(new Error("x"));
+  renderPage();
+  await screen.findByText(i18n.t("superAdmin.viewerTemplates.names.room_recreated"));
+  clickRow("room_recreated");
+  expect((await screen.findByTestId("viewer-templates-error")).textContent).toBe("Could not load the templates");
+  expect((screen.getByTestId("viewer-templates-body") as HTMLTextAreaElement).value).toBe("body-room_recreated\nline2");
 });

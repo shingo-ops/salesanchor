@@ -113,13 +113,13 @@ async def test_fresh_only_false_with_unset_window_stays_unfiltered() -> None:
     assert "max_age_hours" not in params and "sm.line_posted_at >= NOW()" not in sql
 
 
-# ADR-1035 で VALUE_GROUP_ORDER に booklet を足した後の値（4通りとも +22 文字: WHEN 'booklet' THEN 5 の追加。価値順位なしの基準値 5000→6000 は桁数が同じ）。
+# ADR-1035 追補で VALUE_GROUP_ORDER に supply を足した後の値（4通りとも +21 文字: WHEN 'supply' THEN 6 の追加。booklet は +22 文字。価値順位なしの基準値 5000→6000 は桁数が同じ）。
 # fresh_only=false の在庫表の1文（max_age_hours=48・既定の並び）の長さとハッシュ。
 # 便4（ADR-1016 改訂 2026-10-19）で __expiry_s 列を足した後、ADR-1014 改訂 2026-10-19（2）でバッジの2列（__badge_cheapest・__badge_most_stock）を足した後、改訂（3）で PARTITION BY に status・condition を足した後、ADR-1031 で状態の並びの群に promo_pack・single を足した後、ADR-1014 改訂 2026-10-19（5）で rows_x に cond_block を足した後、shime-review-exclude 便（§4-5）で在庫表に cr_shime の定数 lateral を足した後の値。列の追加以外は変えていないことは
 # PG 試験の total・page・facet の一致で確かめる。試験の意図は「fresh_only の有無で fresh_only=false の SQL が変わらないこと」。
 _VIEW_SQL_BEFORE = {
-    False: (28188, "990ba9785064635376c40f67bc12dbbf95848ab11cbcc3d44c4605ce0428a139"),
-    True: (30105, "e1ef437a08c501e5173f866db29a14158fc1f58f1c0842a4954f120440b7620f"),
+    False: (28209, "03f2a266554229e73491b456ef16c269f45728cf06b12aa502f8d1cbf2d3538c"),
+    True: (30126, "13422fad35ac2ea72bd2f242d8e867118faf1ca2c51519fb54b944731f8b7dca"),
 }
 
 
@@ -269,10 +269,10 @@ async def test_line_analysis_api_forbidden_for_non_super_admin() -> None:
 # ADR-1031 で VALUE_GROUP_ORDER に promo_pack・single を足して再生成した。差は ORDER BY の状態の部分1か所のみ（WHEN 'promo_pack' THEN 3 WHEN 'single' THEN 4 の追加と、群の数に連動する価値順位なしの基準値 3000→5000。4通りとも同じ差。/tmp/CC報告ファイル/adr1031/sql_diff.txt）。
 # shime-review-exclude 便（§4-5）で、在庫表の側に cr_shime の定数の lateral（SELECT FALSE AS settled）と cr_reasons での参照を足して再生成した。差はこの部分だけ（4通りとも +159 文字、/tmp/CC報告ファイル/shime-review-exclude-20261019/impl3/sql-diff.txt）。
 _GOLDEN = {
-    (False, False): (25514, "dc0fcc4b39790441b9c6cbf6fa5e1844de648f197a2b42fcf4c345fa52ca2edb"),
-    (False, True): (26665, "6b5c137cfefade8fd06df699a708923aa1b825d65cf46bf1b4e7873d363ff5f7"),
-    (True, False): (25548, "debe3db152645cc981cd2350a3ba0a6b6e8e643eec19b0585d84f6ec2eb91539"),
-    (True, True): (26699, "14ac05a9ff1bfcee7a6d7fd42f491109d5b1107ca77f309873a0a49244ed0aa5"),
+    (False, False): (25535, "fe41dd14e69f222a080d7f46fcf7bd7ce4531677836cd8a624b0fbcb3d72f6bd"),
+    (False, True): (26686, "5e3f3739e6fd8839f1d78b7da57b6a781a743d8f733f2fe4eb3c052d7807df19"),
+    (True, False): (25569, "cbb74cae489819bb50b24ca2c0e717084948fbc2601cebdfe8cf801b48ff6c8d"),
+    (True, True): (26720, "61cc84f052f3171b7a38479ad9a13e91e37276086b46e91a126d8dadda5a2cdb"),
 }
 
 
