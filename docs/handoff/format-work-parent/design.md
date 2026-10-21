@@ -43,8 +43,8 @@ KGI（○×で判定できる形）:
   - 予定値は、細分類 17〜22 → ポケモン、23 → 遊戯王、24・25 → ワンピース。今の値（recon §10.1）と一致する。
   - 細分類 1〜16 は「NULL 据置（PO判断待ち）」と書かれているが、今は全部に値が入っている。誰がいつ入れたかの記録は見つかっていない（【未確認】）。
 - その後、ADR-1020 で links（1 つの細分類を複数の中分類で使える表）が選択肢の正になり、旧列は使われなくなった。
-- PO に選んでもらう形は 2 つ。
-  - A（推奨）: 今の links のまま。1 つの細分類を、複数の中分類の下で共有する。親子の記録は 1 か所。
+- 比べた形は 2 つで、PO は A を選んだ（2026-10-22「1,」）。
+  - A（採用）: 今の links のまま。1 つの細分類を、複数の中分類の下で共有する。親子の記録は 1 か所。
   - B: 厳密な木。中分類ごとに別の細分類の行を持つ。ブースターパックだけで最大 16 行に分かれる。
   - B は旧列の考え方に近いが、同じ名前の行が増えて「データを分散させない」に反する。
 - 旧列を落とすと、人が画面で入れた 28 個の値が消える。便3b の前に CSV に退避し、PO に見せる。
@@ -134,7 +134,6 @@ KGI（○×で判定できる形）:
   - `frontend/src/pages/super-admin/components/ProductFormatsMasterPanel.tsx:44,57,68,134,159,222,328-341`（単独欄と一覧の列）とそのテスト :39
   - `frontend/api-contract/openapi.json` の 3 か所（再生成の手順に従う）
   - `ja.json`/`en.json` のキー typeMasterId（両方同時に外す）
-- API は type_master_id を受けたら、ほかの未知の項目と同じ扱い（スキーマの既存の扱い）にする。どの扱いになるかは、カード作成時に schemas の model_config を確かめて書く。
 - 列は残す（便3b まで値はそのまま）。
 - 作成・更新のスキーマ（`backend/app/schemas/product_format.py:12-33`）に model_config は無い。既定では知らない項目は無視される（pydantic v2 の extra="ignore"）。これはまだ実際に送って確かめていない（【未確認】）。便3a の試験で、type_master_id を付けて送っても 200 で保存できることを確かめる。
 - GO: `frontend/api-contract/` を触るため、ADR-1015:17 の危険なパスに当たる。委任 GO（Opus）。DROP は含まない。
@@ -144,7 +143,7 @@ KGI（○×で判定できる形）:
 - `migrations/20260923_010000_product_formats_add_type_master_id.sql` の Step 1（:4-21）を消し、「ここに ADD を戻さないこと（ADR-1038）」と書く。Step 2（kind_id）は残す。前例は ADR-1026 の commit 03d770375。
 - 新しい migration: `DROP COLUMN IF EXISTS type_master_id`。FK 制約 `product_formats_type_master_id_fkey` は列と一緒に消える。値は書かない。`run_all_migrations.sh` の末尾に登録する。
 - チェック 10（column churn）とチェック 6（PR 本文に ADR-1038）を満たす。
-  - 【未確認】`scripts/check-migration-column-churn.js` の allowlist に product_formats.type_master_id を足す必要があるか。便3b のカードで、ADR-1026 の commit 03d770375 と照らして確かめる。
+  - 前例の commit 03d770375 は、churn の許可表も検査スクリプトも変えていない（reviewer r32, r34）。前例どおり許可表には足さず、ADD 文を消して対応する。合否は CI で確かめる。
 - GO: STANDARD-WORKFLOW:140 により **PO 本人の「GO #PR番号」** が要る。
 
 ### 便4 登録ドロワーの 5 欄を金型 Select にする（画面のみ）
@@ -154,10 +153,10 @@ KGI（○×で判定できる形）:
   - props: `size="sm" fullWidth placeholder options value onChange`。
   - options は金型の形 `{value,label}`（Select.tsx:106-108）に変換する。例: `formatOptionsFor(formats, values.work_id).map(o => ({ value: String(o.id), label: o.name }))`。value の型は Select.tsx の実物に合わせる。
   - 細分類には `disabled={!values.work_id}` を付ける。
-  - 中分類の onChange は、今の `formatAfterWorkChange`（:125）をそのまま通す。
+  - onChange は、今の `setValue`（key と値を受け、中分類のときは中で `formatAfterWorkChange` を呼ぶ。:163）に渡す。例: `onChange={(e) => setValue('work_id', e.target.value)}`。SelectControl の onChange は素の select のイベント（Select.tsx:42）。
 - 文言: 今の「名称で検索・選択」（ja.json:4923）は、文字を打って絞れない Select の動きと合わない。新しいキー `tcgAnalysisReview.productMasterDrawer.selectPlaceholder`（ja「選択してください」、en「Select」）を ja/en 同時に足す。使わなくなる `searchSelectPlaceholder` は、ほかで使っていなければ消す。
 - GO: 画面だけの変更。委任 GO（Opus）。
-- 試験: `ProductMasterDrawer.test.tsx` の `input[list]`（:63）と `#lookup-product_format_id option`（:132 付近）を、Select の選択の試験に書き直す。
+- 試験: `ProductMasterDrawer.test.tsx` の `input[list]`（:62）と `#lookup-product_format_id option`（:130）を、Select の選択の試験に書き直す。
 - 動きの違い（PO に伝える）:
   - 文字を打って絞る動きが、一覧から選ぶ形に変わる。候補は最大 18 件。
   - 中分類の子だけが出ることと、中分類を変えると細分類が空に戻ることは変わらない。
@@ -231,10 +230,11 @@ KGI（○×で判定できる形）:
 ## 11. 未解決（実装カードで確かめるもの）
 
 - (c) 細分類の物理削除の動き → 便2 の試験 (4)
-- 便3b の column churn の allowlist → 便3b カード
-- （解決済み・Fable 審査）試験の土台: §便2 のとおり。schemas に model_config は無く、既定の extra=ignore なので、古いクライアントが type_master_id を送っても 422 にならない（20_consumers.txt）。
+- （解決済み）便3b の column churn の許可表: 前例どおり足さない（§便3b）
+- （解決済み・Fable 審査）試験の土台: §便2 のとおり。links の migration を読む 3 つ目の試験 `backend/tests/test_tcg_product_list_pg.py` は FK を足さなくても今と同じに動く見込み。便2 のカードで、足すかどうかを実物で確かめる。
+- schemas が知らない項目を無視するか → 便3a の試験で 200 を確かめる（§便3a）
 - product_formats の列数の余裕 → 便3b カード
-- pmd-field と Select ラベルの重なり → 便4 カード
+- （解決済み・reviewer）pmd-field と Select ラベル: §便4 のとおり SelectControl を pmd-field に入れる
 - （解決済み・reviewer r05/r06/r22）ADR-1038 の番号は空いている
 - ADR-1026 側の「Amended by ADR-1038」の追記 → ADR-1038 を Accepted にする PR で行う
-- recon §10.3 の実験見出し（raw/x01 :27-28 は組があるので成功）の訂正 → 本 PR で recon を直す
+- （解決済み）recon §2-3 の旧列の由来と、§10.3 の実験見出しの訂正 → 本 PR で recon を直した
