@@ -1,0 +1,8 @@
+-- SQL: SELECT count(*) FILTER (WHERE attisdropped) AS dropped, count(*) FILTER (WHERE NOT attisdropped) AS live, max(attnum) AS maxattnum FROM pg_attribute WHERE attrelid='public.products'::regclass AND attnum>0
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+time="2026-10-22T00:16:35+09:00" level=warning msg="Found orphan containers ([astro-webapp-gemini-egress-1 astro-webapp-frontend-1 astro-webapp-discord-gateway-1 astro-webapp-celery-beat-1 astro-webapp-celery-worker-1 astro-webapp-nginx-1 astro-webapp-postgres-1 astro-webapp-gha-exporter-1 astro-webapp-redis-1 astro-webapp-certbot-1 astro-webapp-node-exporter-1 astro-webapp-promtail-1]) for this project. If you removed or renamed this service in your compose file, you can run this command with the --remove-orphans flag to clean it up."
+ Container astro-webapp-ai-reader-run-7280f2b6dead Creating 
+ Container astro-webapp-ai-reader-run-7280f2b6dead Created 
+dropped	live	maxattnum
+1545	55	1600
+AUDIT ts=2026-10-21T15:16:35Z sha=afbdb7d8b9bd rows=1 ms=40 result=ok sql=SELECT count(*) FILTER (WHERE attisdropped) AS dropped, count(*) FILTER (WHERE NOT attisdropped) AS live, max(attnum) AS maxattnum FROM pg_attribute WHERE attrelid='public.products'::regclass AND attnum>0 

@@ -268,3 +268,143 @@ DB 側に「細分類が商品の作品につながっていること」を保�
 - preflight: raw/preflight.txt（PREFLIGHT OK、identity=shingo-cc）
 - worktree: ~/worktrees/salesanchor/release-format-work-parent（branch release/format-work-parent）
 - 読んだ文書: AGENTS.md は読んでいない（行数のみ確認）【未確認】、docs/STANDARD-WORKFLOW.md（§1・§1.5 読了）、docs/ai-agents/executor-checklist.md（行数のみ確認）【未確認】、docs/specs/README.md（読了せず）【未確認】、docs/specs/product-master/registration-rules.md（全文）、ADR-156・1020（What/Why）・1026・1024（全文）、docs/specs/master-ssot-migration/design.md（1-80 行）
+
+
+---
+
+## 10. 追加調査（設計前）
+
+調査日: 2026-10-22。担当: Sonnet。範囲: 読み取りと使い捨て DB の実験のみ。本番は ADR-1024 の reader 鍵（`ssh -i ~/.ssh/salesanchor-reader ubuntu@<prod1>`、SQL は標準入力、SELECT のみ）で読んだ。製品コード・本番 DB は変更していない。生出力は `docs/handoff/format-work-parent/raw/` に保存（本節は raw/ のファイル名で出典を示す）。
+
+方針（Opus）: 既存の `product_format_game_links`（多対多）を唯一の正本にし、`products(product_format_id, work_id)` から links `(format_id, type_master_id)` への複合 FK（NOT VALID → VALIDATE）を足す。重複列 `product_formats.type_master_id` は落とす。ProductMasterDrawer の自作 SearchSelect は金型に置き換える。
+
+### 10.1 旧列 `product_formats.type_master_id` の読み手・書き手（項目1）
+
+【事実】読み書きする場所は 14 か所（raw/h01_type_master_id_all.txt、h02_product_formats_all.txt、h03_product_format_id.txt）。
+- backend/app/routers/super_admin_product_formats.py:30（_COLS）、:31（_UPDATABLE）、:93-94（INSERT）、:130（UPDATE）
+- backend/app/schemas/product_format.py:19, :33
+- frontend/src/pages/super-admin/components/ProductFormatsMasterPanel.tsx:44, 57, 68, 134, 159, 222, 337-338 と、そのテスト ProductFormatsMasterPanel.test.tsx:39
+- frontend/api-contract/openapi.json:24675, 24777, 24878
+- frontend/src/locales/ja.json と en.json の 5204 行（キー typeMasterId）
+- migrations/20260923_010000_product_formats_add_type_master_id.sql:16（列を足す）。scripts/run_all_migrations.sh:850-851 に登録。
+
+【事実】読み手がいない場所: gas/、.github/（保護表の名前一覧を除く）、scripts/（run_all_migrations.sh の登録を除く）、docs/specs、docs/ai-agents、ops/、monitoring/、tools/、tasks/、監視 SQL。ai_ro のビュー SQL は表名を直書きせず pg_attribute から動的に作る（migrations/20261017_130100_create_ai_ro_views.sql）。ai_ro は run_all_migrations.sh の先頭で外され、最後に作り直される（migrations/20261017_125900_drop_ai_ro_views.sql）。列を落としても、ビューは次の作り直しで列なしで作られる。
+
+【事実】名前が同じで別物（数えない）: links.type_master_id（tcg_product_master_svc.py:109,134、super_admin_product_formats.py:40,185,192、migrations/20260922_030000_product_format_game_links.sql）、すでに落とした products.type_master_id（migrations/20261017_210000_drop_products_type_master_id.sql）。
+
+【事実】backend/app/services/tcg_product_roundtrip_svc.py:240 は `SELECT to_jsonb(r) FROM public.product_formats r WHERE r.is_active=TRUE` で行を丸ごと取るが、使うのは `formats[code]["id"]`（:294）だけ。列を落としても壊れない。
+
+【事実】scripts/migration-guard/protected-tables.txt:36 付近に product_formats、scripts/tests/test_migration_value_writes.py:282 にも載っている（名前の一覧であり、列の読み手ではない）。
+
+【事実】本番の列の値 28 件（raw/q28_pf_tmid_values.txt、ai_ro.public__product_formats、全て is_active=True）。退避 CSV の元になる。
+id:値 = 1:20, 2:21, 3:1, 4:1, 5:1, 6:2, 7:21, 8:1, 9:20, 10:5, 11:21, 12:4, 13:2, 14:20, 15:2, 16:23, 17:1, 18:1, 19:1, 20:1, 21:1, 22:1, 23:5, 24:2, 25:2, 28:2, 30:1, 32:1。
+【事実】本番で `product_formats.type_master_id` は attnum=11 の生きた列（raw/q27_tmid_attr.txt）。`products` には type_master を含む生きた列が無い（同ファイル）。products は列番号を 1600 まで使っており、落とした列が 1545、生きた列が 55（raw/q27b_dropped_count.txt）。
+
+### 10.2 複合 FK で壊れる操作（項目2）
+
+【事実】products の work_id / product_format_id を変える場所（raw/h05_work_id.txt、g07_product_writers.txt）。
+- 壊れない（1 文で両方を入れる）: backend/app/services/tcg_product_master_svc.py:566-588（新規登録の INSERT。事前に :528 で `_validate_product_format`、:105-127 の format_matches_game で検証）。backend/app/services/tcg_product_roundtrip_svc.py:462-475（1 つの UPDATE に全項目）。ラウンドトリップは :431 で両表を SHARE MODE でロックするが、FK 検査の ROW SHARE とは衝突しない。
+- 壊れる（1 件目）: backend/app/services/tcg_product_detail_svc.py:260-267 が work_id を先に UPDATE、:275 が別の UPDATE で product_format_id を変え、:278-284 で format_matches_game を確かめる。即時の複合 FK だと、旧細分類が新作品に紐づかない場合、1 回目の UPDATE で失敗する。
+- 壊れる（2 件目、試験）: backend/tests/test_product_format_game_links_pg.py:142-143（test_detail_update_keeps_unchanged_old_pair）。`_set_product`（:48-51）で、links に無い組を直接 UPDATE で作る。複合 FK は拒否する。書き直しが必要。
+- 影響なし: backend/app/routers/products.py:377（product_format_id は None 固定）、tcg_product_import_svc.py:421,474-480（create_product と format_matches_game を通る）、scripts/seed_products_from_master.py:193（細分類列を書かない）。migration に products.product_format_id を書くものは無い。migrations/20260914_140000_unify_tcg_products_to_public.sql の work_id の UPSERT は旧テナント表からのコピーで、毎回の再実行で当たるかは【未確認】。line_analysis_v102_svc.py:777、tcg_analyzer_svc.py:1894 の `work_id = EXCLUDED.work_id` は解析用の表で、products ではない。
+- 行を消す場所: links の削除は super_admin_product_formats.py:184（直前の使用中チェック :172-180 が 409 PRODUCT_FORMAT_GAME_IN_USE、:196-199 の IntegrityError も 409）。type_master の削除は super_admin_tcg.py:270（すでに fk_products_work_id の NO ACTION で止まる。新しい失敗の形は増えない）。細分類は論理削除のみ（super_admin_product_formats.py:227-231、is_active=FALSE）。物理削除は試験だけ（backend/tests/test_product_format_game_links_pg.py:45）。
+- 試験の土台: backend/tests/fixtures/public_products_test.sql:11,17 の products は work_id が NULL 可。
+
+【事実】現在の本番データは新しい FK に違反しない: 細分類があるのに作品と links が合わない行は共用 0 件（raw/q12_mismatch_count.txt: 共用 1453 行、細分類あり 1283、なし 170、不一致 0）。テナント側の products は tenant_001・tenant_004 とも 0 行（raw/q13_tenant.txt）。
+
+【事実】結論の数: 壊れる操作は 2 か所（詳細保存の 2 回 UPDATE、およびその試験）。
+
+### 10.3 PostgreSQL 16 の挙動（項目3）
+
+出典は PG16 公式文書（postgresql.org/docs/16 を取得し /tmp/CC報告ファイル/pgdocs/ に保存: ddl-constraints.html、sql-createtable.html、sql-altertable.html、explicit-locking.html）。Context7 は月の上限を超えていたため使えなかった。使い捨て PG16.15 での実験は raw/x01_fk_experiment_sql.txt（.sql は gitignore のため .txt の写し）と raw/x02_fk_experiment_out.txt。
+
+- (a) ○ MATCH SIMPLE: 「MATCH SIMPLE allows any of the foreign key columns to be null; if any of them are null, the row is not required to have a match in the referenced table.」（sql-createtable）。実験でも、(work 2, format NULL) と (work NULL, format 10) は通り、(work 2, format 10) で links に組が無いと拒否された。
+- (b) ○ ロック: ADD FOREIGN KEY は変更する表に SHARE ROW EXCLUSIVE、「in addition」で参照先にも SHARE ROW EXCLUSIVE（sql-altertable）。NOT VALID は既存行を走査しない。VALIDATE CONSTRAINT は変更する表に SHARE UPDATE EXCLUSIVE のみ、外部キーのときは参照先に ROW SHARE も要る（同）。実験では NOT VALID の後の VALIDATE が成功した。パーティション表の FK は NOT VALID にできない（今回は対象外）。
+- (c) 【未確認】細分類の削除で links が CASCADE で消え、同じ文で products.product_format_id が SET NULL になる流れが、NO ACTION の複合 FK に止められないか。公式文書にこの組み合わせの記述が見つからず、指示で削除文を使う実験は行わなかった。方針: 実装の段階で CI の pytest に試験として入れ、そこで確かめる。細分類は論理削除が通常なので、実害が出る経路は試験の後始末と将来の物理削除に限られる（【推測】）。
+
+実験で分かった動き（raw/x02_fk_experiment_out.txt）:
+- 即時の複合 FK: 詳細保存と同じ 2 回の UPDATE（作品 → 細分類）は 1 回目で失敗し、トランザクションが中断された。行は変わらない。
+- 1 つの UPDATE で作品と細分類を同時に変えると成功した。
+- ALTER CONSTRAINT で DEFERRABLE INITIALLY DEFERRED にすると、同じトランザクション内の 2 回の UPDATE は通った。ずれが残ったまま COMMIT すると失敗し、自動コミットの単独 UPDATE でずれが残ると失敗した。pg_constraint は convalidated=t, condeferrable=t, condeferred=t, confmatchtype='s'。
+- 注意: 「作品だけ変更」の否定試験は、使った id=3 の細分類が両作品に紐づいていて通ってしまった。有効な否定の根拠としては使わない。
+- 【未確認】DEFERRED で 2 回の UPDATE が通るのは同じトランザクションの場合だけ。実際の詳細保存（tcg_product_detail_svc.py:260-284）が 1 トランザクションかは未確認。確実なのは 2 回の UPDATE を 1 文にまとめる案。
+
+### 10.4 migration の決まりと前例（項目4）
+
+【事実】FK の前例: migrations/20260919_030000_master_ssot_fk_work_id.sql。冪等な DO ブロックで、表名を 'pro' || 'ducts'、制約名を 'fk_' || _tbl || '_work_id' と組み立て（migration-guard の文面を避ける）、pg_constraint を conname で確かめてから `ALTER TABLE public.%I ADD CONSTRAINT %I FOREIGN KEY ... REFERENCES` を実行する。参照先の存在は pg_class で確かめる。
+
+【事実】lock_timeout（ADR-1037 docs/adr/ADR-1037-migration-lock-timeout.md、What 1-2）: scripts/run_all_migrations.sh:65 の `SQL_LOCK_TIMEOUT="${SQL_LOCK_TIMEOUT:-1s}"`、:84 で `docker exec -e PGOPTIONS="-c lock_timeout=${SQL_LOCK_TIMEOUT}"` により run_sql の接続ごとに付く。鍵が取れず落ちたファイルは 3 秒あけて流し直し、1 回の実行で合計 40 回まで。`SET LOCAL lock_timeout = '5s'` を持つ 8 ファイルは対象外。【推測】ADD CONSTRAINT は products と links の両方に SHARE ROW EXCLUSIVE を要るので、読み取り中の長い接続があると 1 秒で諦めて流し直しになる。NOT VALID で走査を避ける設計はこれと合う。
+
+【事実】migration-guard チェック 7・8 の判定（scripts/check-migration-value-writes.py 全文を読んだ。raw/i4_value_writes_script.txt）。
+- チェック 7（:56-63, :134）: 保護表への INSERT INTO / UPDATE / DELETE FROM の文面だけを見る。`ALTER TABLE ... ADD CONSTRAINT`、`ADD FOREIGN KEY`、`VALIDATE CONSTRAINT`、`DROP COLUMN` はどれにも当たらない。
+- チェック 8（:66-68, :138）: 追加された行に保護表の名前（語境界つき）があり、かつ許可パターン（:35-42）に当たらない行を失敗にする。許可パターンには `ALTER\s+TABLE`、`ADD\s+COLUMN`、`DROP\s+COLUMN`、`ALTER\s+COLUMN`、`REFERENCES`、`information_schema`、`pg_class`、`RAISE\s+NOTICE` などが入る。`ADD CONSTRAINT` と `VALIDATE CONSTRAINT` は許可パターンに入っていない。
+  - 当たる条件: 「保護表の名前を含む行に、許可パターンの語が同じ行に無い」場合だけ失敗する。保護表は products（protected-tables.txt）と product_formats。product_format_game_links は一覧に無く、`\bproduct_formats\b` は product_format_game_links に当たらない。
+  - よって `ALTER TABLE public.products ADD CONSTRAINT ...` を 1 行に書けば通る。`REFERENCES public.product_format_game_links (...)` の行も通る。表名だけの行（例: 行頭に `public.products` だけ、または `VALIDATE CONSTRAINT` の行に表名）は失敗する。前例の 'pro' || 'ducts' はこれを避けるための組み立て。
+  - 【未確認】実際の PR 差分に対する CI 実行はしていない。上は正規表現を読んだ結果。実装時に `python3 scripts/check-migration-value-writes.py diff <base> <head>` を手元で流して確かめる。
+- チェック 6（.github/workflows/migration-guard.yml:335-390）: 追加行に `DROP COLUMN` / `DROP TABLE` があると、PR 本文に `ADR-NNN` の参照が要る。承認状態は人が確認する。
+- チェック 10（同 :518-、scripts/check-migration-column-churn.js、許可表 scripts/migration-column-churn-allowlist.json）: 登録順で同じ (表, 列) を ADD してから後で DROP する組を失敗にする。
+- docs/STANDARD-WORKFLOW.md:140: DROP TABLE/COLUMN を含む migration は PO 本人の GO が必須（ADR-1003 の委任 GO の例外）。CLAUDE.md の危険 PR（migrations/ を含む）は「GO #PR番号」を受けるまでマージ・適用しない（ADR-135/136）。
+
+【事実・設計に直結】旧列の ADD が毎デプロイ走る: migrations/20260923_010000_product_formats_add_type_master_id.sql:16 は「列が無ければ ADD COLUMN」。scripts/run_all_migrations.sh:850-851 に登録されている。DROP COLUMN の migration だけを足すと、(1) 毎デプロイで列が作り直される、(2) チェック 10 の ADD→DROP に当たる。前例 ADR-1026（commit 03d770375）は、ADD 側の migration（20260922_010000_...）から ADD 文を取り除き、「ここに ADD を戻さないこと」のコメントを残して解決し、DROP の migration（migrations/20261017_210000_drop_products_type_master_id.sql）を scripts/run_all_migrations.sh:1043-1044 に登録した。今回も同じ手順が要る（20260923_010000 の Step 1 を削り、DROP を後ろに登録）。【未確認】20260923_010000 の Step 2 以降（kind_id など）は列の追加を続けるので、Step 1 だけを削る形でよいかは設計で確かめる。
+
+【事実】DROP の前例の中身（migrations/20261017_210000_drop_products_type_master_id.sql、ADR-1026 docs/adr/ADR-1026-drop-products-type-master-id.md）: `DROP CONSTRAINT IF EXISTS`、`DROP INDEX IF EXISTS`、`DROP COLUMN IF EXISTS` のみ。冪等。値は書かない。ai_ro は先に外し、最後に作り直す。ADR-1026 の「What」4: 消す直前に全行の `id, type_master_id, work_id` を CSV に退避する。戻し方: 同じ列は二度と足せない（上限のため。products の場合）、退避した CSV から値を読む。product_formats は列番号に余裕があるので再追加はできる（【推測】。列数は未測定）。
+
+### 10.5 本番の追加の読み取り（項目5）
+
+reader 経路、SELECT のみ（SQL は各 raw ファイルの 1 行目）。
+- links の索引（raw/q24_links_idx.txt）: PK は `product_format_game_links_pkey`（UNIQUE btree (format_id, type_master_id)）。ほかに idx_pfgl_format_id（format_id）、idx_pfgl_type_master_id（type_master_id）。複合 FK が参照する (format_id, type_master_id) の一意制約は、この PK で満たされる。参照側の逆引き索引（products 側の (product_format_id, work_id)）は別途【未確認】（既存の products 索引は未列挙）。
+- products の制約（raw/q25_products_cons.txt）: PK products_pkey (id)。FK 8 本: fk_products_product_category_id、fk_products_work_id（work_id → type_master(id)、NO ACTION）、products_product_format_id_fkey（product_format_id → product_formats(id) ON DELETE SET NULL）、products_product_kind_id_fkey、products_product_line_id_fkey（SET NULL）、products_quantity_unit_id_fkey（SET NULL）、products_supplier_default_id_fkey（SET NULL）、products_weight_class_id_fkey（SET NULL）。CHECK・UNIQUE は無い。
+- トリガー（raw/q26_products_trg.txt）: products に trigger_set_updated_at_public_products（BEFORE UPDATE、set_updated_at_products）、product_formats に trg_product_formats_updated_at（BEFORE UPDATE）。links には無い。どちらも値の検査はしない更新時刻のトリガー。
+- products.type_master_id: 生きた列は無い（raw/q27_tmid_attr.txt）。落とした列は 1545 個（q27b）。
+- product_formats.type_master_id の値 28 件: 10.1 に記載（raw/q28_pf_tmid_values.txt）。
+- 参照用の件数（raw/q29_lookup_counts.txt）: 製造元 6、商品分類 6、大分類（kinds）3、作品（type_master）18、有効な細分類 28。
+
+### 10.6 ProductMasterDrawer の自作 SearchSelect の置き換え（項目6）
+
+【事実】自作部品: frontend/src/features/tcg-analysis-review/ProductMasterDrawer.tsx:54-91（SearchSelect）。TextFieldControl に `list` 属性を付け、同じ階層の `<datalist>` に `<option value=名前>` を並べる。入力文字が一覧の名前に完全一致したときだけ onChange(key, id)、一致しなければ空文字を返す（:80-84）。使用箇所は :215-219 の 5 つ（大分類 product_kind_id、作品 work_id、製造元 manufacturer_id、商品分類 product_category_id、細分類 product_format_id）。細分類だけ `key={format-${work_id}}` と `formatOptionsFor(formats, values.work_id)` で作品に紐づく候補に絞る（:219）。作品を変えると :125 の formatAfterWorkChange が、紐づかない細分類を空に戻す。SupplierDetailView.tsx:6,135 は ProductMasterDrawer を呼ぶ側。
+【事実】datalist を使うのはこの 1 ファイルだけ（frontend/src で grep: datalist を含む tsx は ProductMasterDrawer.tsx のみ）。
+【事実】候補の数（本番 raw/q29）: 3 / 18 / 6 / 6 / 細分類は作品ごとに最大 28 件以下。すべて読み込み済みの一覧からの選択で、検索の API 呼び出しは無い。
+
+【事実】金型の props（raw/j01_mold_components.txt）。
+- Select（frontend/src/components/Select.tsx:117-175）: `options: {value,label,disabled?}[]`、`label?`、`helperText?`、`error?`、`size`（sm/md/lg）、`fullWidth`、`placeholder`（空値の option として出る。required なら disabled）、`value`/`onChange`/`disabled` など select の属性。ネイティブ select なので全候補が見え、placeholder に戻せる（クリアできる）。
+- AsyncCombobox（frontend/src/components/AsyncCombobox.tsx:23-43）: `id`、`ariaLabel`、`value`（閉じているときに出す表示名の文字）、`placeholder?`、`disabled?`、`loadOptions(query)`、`onSelect(option)`、`minChars`（既定 1）、`debounceMs`（既定 300）、`noResultsText`、`loadingText`、`errorText?`。候補は選んだときだけ onSelect で渡る。クリアの手段は無い。1 文字入れるまで一覧は出ない。
+- MultiSelect は複数選択用で、今回は対象外。
+
+【事実】同じ画面群の前例: ReviewRegisterProductForm.tsx:9, 68-76, 354-376, 383-399 は同じ 5 項目を AsyncCombobox で出している。読み込み済みの一覧を `filterLookup`（:68-76、部分一致、最大 50 件、API なし）で絞り、細分類は `disabled={busy || !selected.work_id}` と `formatOptionsFor` で絞る（:319, :383-399）。作品を変えたときは formatAfterWorkChange で細分類を外す（:361-368）。表示名は state に持つ。
+【事実】テスト: ProductMasterDrawer.test.tsx は `input[list]`（:63）と `#lookup-product_format_id option`（:132 付近）を直接見る。置き換えると書き直しが要る。ReviewRegisterProductForm.test.tsx は `getByRole("combobox", { name })` を使う（:61, :224-245）。
+【事実】ガバナンス: docs/CC_UI_GOVERNANCE.md は「`components/` に金型があれば必ず使う」「生 select・生 input を禁止」と定める。scripts/check-ui-governance.js は `<select>`、`<input>`（text/search/省略）、checkbox、radio、自作タブを検出するが、`datalist` は 1 件も検出しない（grep 0 件）。SearchSelect は TextFieldControl（金型）の上に datalist を載せているため、CI は素通りしている。現状の自作は CI 違反ではないが、「金型に置き換える」はガバナンスの趣旨（ADR-144）に沿う。`ui-allow` は例外を許すときに理由＋番号が要る。
+
+置き換え案（【推測】を含む。実機で見ていない）:
+- 案A【おすすめ】5 項目とも `Select`: `size="sm" fullWidth label={t(...)} placeholder={t('...searchSelectPlaceholder')} options={...map(o => ({value:o.id,label:o.name}))} value={values[key]} onChange={e => setValue(key, e.target.value)}`。細分類は `options={formatOptionsFor(formats, values.work_id)}` と `disabled={!values.work_id}`。候補が最大 28 件なので全件が見える。空へ戻せる（placeholder の option）。選んだ値の id がそのまま state に入るので、確認欄 optionName（:188-191）と missingFields はそのまま動く。
+- 案B: ReviewRegisterProductForm と同じ AsyncCombobox + filterLookup。同じ画面群で揃う。ただしクリア手段が無い、1 文字入れるまで候補が出ない、`value` が表示名で state の id と二重管理になる。
+- 表示も動きも同じになるか: どちらの案も「同じにはならない」。【事実】変わる点: datalist はブラウザ固有の候補表示で、名前の完全一致で id が入り、消すと空になる。Select は全候補のプルダウンで、入力して絞る動きが無い（先頭文字の頭出しのみ）。AsyncCombobox は部分一致で絞れるが、クリアできない。【事実】変わらない点: 作品に紐づく細分類だけを出すこと、作品変更で細分類が空に戻ること、送る値（id）、必須判定、確認欄の表示名。【未確認】見た目（pmd-field のレイアウトと Select の comp-field の余白）は実機で確かめていない。`<label className="pmd-field">` で包む構造が、Select 内蔵のラベルと二重にならないよう設計で決める。
+- 試験の書き直し: ProductMasterDrawer.test.tsx の lookupInputs / fillLookups と、`#lookup-product_format_id option` の確認を、選んだ候補の確認に変える。
+- 文言: `tcgAnalysisReview.productMasterDrawer.searchSelectPlaceholder` は ja/en にあり再利用できる（i18n は ja.json と en.json の同一キー必須）。
+
+### 10.7 次の ADR 番号（項目7）
+
+【事実】docs/adr/ の 10xx の最大は ADR-1037（docs/adr/ADR-1037-migration-lock-timeout.md）。origin/main を fetch した後の ls-tree でも ADR-1037 が最大（raw/i4_guard_adrnum.txt）。docs と .claude-pipeline に ADR-1038 以降の言及は無い。次は ADR-1038。他セッションが予約している可能性は【未確認】（作業ツリーの active-work は見ていない）。
+【事実】形式: ADR-1037 は表（項目/内容: ステータス・備考・起案日・方針の決定者・関連・設計）の後に「What（何を決めたか）」「Why（なぜ）」「対象外」「結果」。ADR-113 は Status/Date/Author/PO の後に What/Why/Scope。ADR-1026 も What/Why 形式。docs/adr のテンプレートファイルは無い（ls に template なし）。ADR を足したら `node scripts/generate-adr-index.js` を実行して docs/adr/README.md を再生成してコミットする（CLAUDE.md、CI「ADR index is up to date」）。DROP COLUMN を含む PR は本文に ADR-NNN の参照が要る（チェック 6）。
+
+### 10.8 AGENTS.md・executor-checklist・docs/specs/README.md（項目8）
+
+全文を読んだ。この設計に関わるもの。
+- AGENTS.md: 通常の経路は ChatGPT 設計 → Claude Code 実装 → Codex 補助レビュー → 最終ゲート → GO（ADR-1003 で例外を除き Opus に委任）→ main マージ。Generator は設計の再解釈・独断変更が禁止。エビデンス要件「数値なし = 証拠なし」（Plannerの設計の Why に必ず入れる）。ブランチは origin/main から release/*。DB migration の作成・実行は Codex に禁止、`deploy.yml`・本番 `scripts/` の変更も禁止（Codex 向け）。マージ前は reviewer(opus) の `VERDICT: APPROVE on <sha> PR #<N>` 行つき報告が必須（ADR-1029）。不可逆操作（DROP TABLE 等）は PO 確認。i18n は t("key")、ja.json と en.json は同一キー。引き継ぎ: tasks/todo.md、docs/runbooks の更新と、根拠は一次情報のみ。
+- docs/ai-agents/executor-checklist.md: 1 便 1 目的。PR 本文の「触るファイル」「削除するファイル」は平打ち（行頭の記号・バッククォート・注記を付けない）。「削除するファイル」は git diff の実測。完了報告に指示の全項目の○×自己チェックを添える。recon は読み取り専用で file:line 必須、origin/main の SHA を冒頭に書く。§3: フック・権限に止められたら言い換えず全部止めて報告。§4: 番号の若い open PR にマージを譲る。`gh pr create/edit` の本文は先に Write で作り、別コマンドで `--body-file` を使う（ADR-1033）。
+- docs/specs/README.md: 設計仕様書の索引。関係するのは「商品マスタ」（product-master/README.md、公開）と「DB設計のSSOT化」（db-ssot/README.md、あるべき姿・KGI確定 2026-07-09）、「管理センター」（management-center/README.md）。着手前に該当の設計仕様書を読む（STANDARD-WORKFLOW §1.5）。新しい設計仕様書を作ったらこの表に 1 行足す。
+- CLAUDE.md（リポジトリ直下）: migrations/ を含む実装は PO GO（「GO #PR番号」）が出るまで release ブランチで待機。危険 PR は GO 記録を PR 本文に転記。90 行上限。
+
+### 10.9 外部事例（項目9・任意）
+
+【事実】「多対多の分類を中間表で持ち、複合 FK で組み合わせの整合を守る」ことの、数値つき導入事例（誰が・いつ・何件）は、今回の検索（WebSearch 1 回、2026-10-22）では見つからなかった。結果は一般的な中間表の説明のみ。
+【事実】仕組みそのものの公式根拠は PG16 文書（10.3）: 複合 FK は複数列を束ねて参照でき、MATCH SIMPLE で NULL は検査されず、NO ACTION は検査を後ろにずらせる（ddl-constraints）。
+結論: 外部の数値つき事例は「なし」。理由: 一般的な構成で、事例として公開される種類の話ではない（【推測】）。設計の根拠は 10.3 の実験と公式文書、本番の実測（不一致 0 件）を使う。
+
+### 10.10 設計に渡す要点（事実のみ）
+
+- 旧列を落とす影響は 14 か所。管理画面・API・スキーマ・openapi・locales・試験・ADD の migration。
+- 複合 FK で壊れるのは、詳細保存の 2 回 UPDATE（1 文にまとめる、または DEFERRABLE INITIALLY DEFERRED）と試験 1 件。
+- 旧列の ADD が毎デプロイ走るので、ADD 側を取り除かないと列が戻り、チェック 10 に当たる（ADR-1026 の前例の手順）。
+- DROP COLUMN を含む PR は PO 本人の GO と、本文の ADR 参照（次は ADR-1038）が要る。値の退避 CSV（10.1 の 28 件）を GO の前に取る。
+- 【未確認】(c) CASCADE と SET NULL が同じ文で起きたときの動作は、実装時に CI の pytest で確かめる。
+- 現在の本番データは新しい FK に違反しない（共用 1453 行で不一致 0）。

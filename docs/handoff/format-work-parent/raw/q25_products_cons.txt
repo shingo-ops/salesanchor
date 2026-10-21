@@ -1,0 +1,16 @@
+-- SQL: SELECT conname, contype, pg_get_constraintdef(oid) AS def FROM pg_constraint WHERE conrelid='public.products'::regclass ORDER BY 2,1
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+time="2026-10-22T00:16:18+09:00" level=warning msg="Found orphan containers ([astro-webapp-gemini-egress-1 astro-webapp-frontend-1 astro-webapp-discord-gateway-1 astro-webapp-celery-beat-1 astro-webapp-celery-worker-1 astro-webapp-nginx-1 astro-webapp-postgres-1 astro-webapp-gha-exporter-1 astro-webapp-redis-1 astro-webapp-certbot-1 astro-webapp-node-exporter-1 astro-webapp-promtail-1]) for this project. If you removed or renamed this service in your compose file, you can run this command with the --remove-orphans flag to clean it up."
+ Container astro-webapp-ai-reader-run-c236d6b47704 Creating 
+ Container astro-webapp-ai-reader-run-c236d6b47704 Created 
+conname	contype	def
+fk_products_product_category_id	f	FOREIGN KEY (product_category_id) REFERENCES tcg_product_categories(id)
+fk_products_work_id	f	FOREIGN KEY (work_id) REFERENCES type_master(id)
+products_product_format_id_fkey	f	FOREIGN KEY (product_format_id) REFERENCES product_formats(id) ON DELETE SET NULL
+products_product_kind_id_fkey	f	FOREIGN KEY (product_kind_id) REFERENCES product_kinds(id)
+products_product_line_id_fkey	f	FOREIGN KEY (product_line_id) REFERENCES product_lines(id) ON DELETE SET NULL
+products_quantity_unit_id_fkey	f	FOREIGN KEY (quantity_unit_id) REFERENCES quantity_units(id) ON DELETE SET NULL
+products_supplier_default_id_fkey	f	FOREIGN KEY (supplier_default_id) REFERENCES suppliers(id) ON DELETE SET NULL
+products_weight_class_id_fkey	f	FOREIGN KEY (weight_class_id) REFERENCES weight_classes(id) ON DELETE SET NULL
+products_pkey	p	PRIMARY KEY (id)
+AUDIT ts=2026-10-21T15:16:18Z sha=5ea1e021c2c4 rows=9 ms=43 result=ok sql=SELECT conname, contype, pg_get_constraintdef(oid) AS def FROM pg_constraint WHERE conrelid='public.products'::regclass ORDER BY 2,1 

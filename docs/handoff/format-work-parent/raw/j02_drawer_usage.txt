@@ -1,0 +1,84 @@
+### ReviewRegisterProductForm
+7:import { useEffect, useRef, useState } from "react";
+8:import { useTranslation } from "react-i18next";
+9:import { AsyncCombobox } from "../../components/AsyncCombobox";
+10:import type { AsyncComboboxOption } from "../../components/AsyncCombobox";
+11:import { Button } from "../../components/Button";
+12:import { Callout } from "../../components/Callout";
+13:import { Checkbox } from "../../components/Checkbox";
+14:import { ChoiceCardGroup } from "../../components/ChoiceCardGroup";
+15:import { Stack } from "../../components/Stack";
+16:import { TextField } from "../../components/TextField";
+17:import { Textarea } from "../../components/Textarea";
+18:import { ApiError } from "../../lib/api";
+19:import type { AnalysisReviewItem } from "./ItemComparison";
+20:import {
+30:import {
+31:  formatAfterWorkChange,
+32:  formatOptionsFor,
+36:} from "../tcg-product-import/productDetailModel";
+37:import "./review-fix-wizard.css";
+51:type SelectKey = "product_kind_id" | "work_id" | "manufacturer_id" | "product_category_id";
+52:type RequiredKey = SelectKey | "japanese_title";
+54:const SELECT_FIELDS: Array<{ key: SelectKey; labelKey: string }> = [
+68:function filterLookup(options: LookupOption[], query: string): Promise<AsyncComboboxOption[]> {
+92:  const [selected, setSelected] = useState<Record<SelectKey, AsyncComboboxOption | null>>({
+104:  const [format, setFormat] = useState<AsyncComboboxOption | null>(null);
+319:  const formatChoices = formatOptionsFor(lookups?.product_format_id ?? [], selected.work_id?.value ?? "");
+354:            <AsyncCombobox
+361:              onSelect={(option) => {
+362:                setSelected((current) => ({ ...current, [key]: option }));
+366:                    current && formatAfterWorkChange(lookups?.product_format_id ?? [], option.value, current.value) ? current : null,
+383:        <AsyncCombobox
+390:          onSelect={(option) => {
+### model
+88:export const formatOptionsFor = (options: FormatOption[], workId: string) =>
+89-  workId ? options.filter(option => option.game_ids.includes(String(workId))) : [];
+90-
+91-/** 作品を変えた後の細分類。新しい作品に紐づかなければ空に戻す */
+92:export const formatAfterWorkChange = (options: FormatOption[], workId: string, formatId: string) =>
+93:  formatOptionsFor(options, workId).some(option => option.id === formatId) ? formatId : "";
+94-
+95-/** 下書きの項目名 → 印の項目名（印を付けられない項目は undefined） */
+96-export const blankCodeOf = (field: keyof Draft): BlankCode | undefined =>
+97-  blankConfirmable.find(([, draftField]) => draftField === field)?.[0];
+98-
+99-const requiredDraftFields = [
+100-  "japanese_title", "english_title", "mark", "release_date", "search_keywords", "exclude_keywords",
+101-  "work_id", "product_format_id", "product_category_id",
+102-] as const;
+103-export type RequiredDraftField = typeof requiredDraftFields[number];
+104-
+105-/** ADR-1020 の9項目のうち、未入力で印も無い項目（案内の表示に使う。便2では保存を止めない） */
+106-export function missingFields(draft: Omit<Draft, "packagings">): RequiredDraftField[] {
+107-  return requiredDraftFields.filter(field => {
+### tests
+ConditionReviewPanel.test.tsx
+GapSuspectNote.test.tsx
+ItemComparison.test.tsx
+ProductMasterDrawer.test.tsx
+reviewActions.test.ts
+reviewFixRows.test.ts
+ReviewFixWizard.test.tsx
+ReviewItemDrawer.test.tsx
+ReviewProductFixForm.test.tsx
+ReviewRegisterProductForm.test.tsx
+ReviewValueFixForm.test.tsx
+ShadowSourcePane.test.tsx
+sourceRawNavigation.test.ts
+SourceRawPane.test.tsx
+V102PostsTab.test.tsx
+v102PostValidation.test.ts
+65:  lookupInputs().forEach((input, i) => fireEvent.change(input, { target: { value: names[i] } }));
+109:    fireEvent.change(title, { target: { value: "" } });
+132:    fireEvent.change(lookupInputs()[4], { target: { value: "Box Set" } });
+61:  const input = screen.getByRole("combobox", { name: label });
+76:  await screen.findByRole("combobox", { name: "Product type" });
+102:    expect(screen.queryByRole("combobox")).toBeNull();
+115:    fireEvent.change(screen.getByLabelText(/Japanese name/), { target: { value: "" } });
+147:    fireEvent.change(screen.getByLabelText(/Search keywords/), { target: { value: " a \n\n b " } });
+212:    expect(screen.queryByRole("combobox")).toBeNull();
+224:    const format = screen.getByRole("combobox", { name: "Format" }) as HTMLInputElement;
+229:    const enabled = screen.getByRole("combobox", { name: "Format" }) as HTMLInputElement;
+241:    expect((screen.getByRole("combobox", { name: "Format" }) as HTMLInputElement).value).toBe("Box Set");
+245:    expect((screen.getByRole("combobox", { name: "Format" }) as HTMLInputElement).value).toBe("");
