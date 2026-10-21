@@ -474,3 +474,83 @@ it("navigates to the viewer templates page with the header button", async () => 
   fireEvent.click(screen.getByText(i18n.t("superAdmin.viewers.templates")));
   expect(await screen.findByTestId("templates-page")).toBeTruthy();
 });
+
+const TEMPLATE_PATH = (id: number, key: string) => `/super-admin/viewers/${id}/template-text?key=${key}`;
+
+async function openDetailAfterLoad(name: string) {
+  await screen.findByText(name);
+  fireEvent.click(within(row(name)).getByText(name));
+  await screen.findByTestId("viewers-detail");
+}
+
+it("K6: detail footer has a template select and copy button; copy is disabled until chosen, then copies the API text", async () => {
+  const writeText = vi.fn().mockResolvedValue(undefined);
+  Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+  vi.mocked(api.get).mockImplementation(async (path: string) => {
+    if (path === "/super-admin/viewers") return { items: ITEMS };
+    if (path === TEMPLATE_PATH(1, "room_recreated")) return { text: "ROOM TEXT t1" };
+    return { items: [] };
+  });
+  renderPage();
+  await openDetailAfterLoad("Taro");
+  const copy = screen.getByTestId("viewers-detail-template-copy") as HTMLButtonElement;
+  expect(screen.getByTestId("viewers-detail-template")).toBeTruthy();
+  expect(copy.disabled).toBe(true);
+  fireEvent.change(screen.getByTestId("viewers-detail-template"), { target: { value: "room_recreated" } });
+  expect(copy.disabled).toBe(false);
+  fireEvent.click(copy);
+  await waitFor(() => expect(writeText).toHaveBeenCalledWith("ROOM TEXT t1"));
+  await waitFor(() => expect(copy.textContent).toBe(i18n.t("superAdmin.viewers.copied")));
+});
+
+it("K7: without a trial expiry, the extend and interview options are disabled", async () => {
+  renderPage();
+  await openDetailAfterLoad("Sato");
+  const select = screen.getByTestId("viewers-detail-template") as HTMLSelectElement;
+  const opt = (value: string) => Array.from(select.options).find(o => o.value === value) as HTMLOptionElement;
+  expect(opt("notice_extended").disabled).toBe(true);
+  expect(opt("interview_request").disabled).toBe(true);
+  expect(opt("signup_request").disabled).toBe(false);
+  expect(opt("notice_suspended").disabled).toBe(false);
+});
+
+it("K7: with a trial expiry, the extend and interview options are enabled", async () => {
+  renderPage();
+  await openDetailAfterLoad("Taro");
+  const select = screen.getByTestId("viewers-detail-template") as HTMLSelectElement;
+  const opt = (value: string) => Array.from(select.options).find(o => o.value === value) as HTMLOptionElement;
+  expect(opt("notice_extended").disabled).toBe(false);
+  expect(opt("interview_request").disabled).toBe(false);
+});
+
+it.each([
+  [409, "templateNoExpiry"],
+  [503, "templateNotFound"],
+])("K8: a %s from the template API shows an error under the select", async (status, key) => {
+  vi.mocked(api.get).mockImplementation(async (path: string) => {
+    if (path === "/super-admin/viewers") return { items: ITEMS };
+    if (path.includes("/template-text")) throw new ApiError("x", status, null);
+    return { items: [] };
+  });
+  renderPage();
+  await openDetailAfterLoad("Taro");
+  fireEvent.change(screen.getByTestId("viewers-detail-template"), { target: { value: "notice_extended" } });
+  fireEvent.click(screen.getByTestId("viewers-detail-template-copy"));
+  expect(await screen.findByText(i18n.t(`superAdmin.viewers.${key}`))).toBeTruthy();
+});
+
+it("K9: choosing another row resets the selected template and its error", async () => {
+  vi.mocked(api.get).mockImplementation(async (path: string) => {
+    if (path === "/super-admin/viewers") return { items: ITEMS };
+    if (path.includes("/template-text")) throw new ApiError("x", 503, null);
+    return { items: [] };
+  });
+  renderPage();
+  await openDetailAfterLoad("Taro");
+  fireEvent.change(screen.getByTestId("viewers-detail-template"), { target: { value: "signup_request" } });
+  fireEvent.click(screen.getByTestId("viewers-detail-template-copy"));
+  await screen.findByText(i18n.t("superAdmin.viewers.templateNotFound"));
+  fireEvent.click(within(row("Sato")).getByText("Sato"));
+  await waitFor(() => expect((screen.getByTestId("viewers-detail-template") as HTMLSelectElement).value).toBe(""));
+  expect(screen.queryByText(i18n.t("superAdmin.viewers.templateNotFound"))).toBeNull();
+});
