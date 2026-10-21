@@ -587,15 +587,31 @@ def _unit_after(after: str, aliases: Sequence[str]) -> bool:
     return False
 
 
+_HEAD_Y_RE = re.compile(r"(?<![A-Za-z])Y\s*$")
+_DIGIT_X_BEFORE_RE = re.compile(r"\d[xX]$")
+
+
+def is_tagged_number(text: str, start: int) -> bool:
+    """text の start から始まる数字が、英字か「-」の直後にあって数えない数字か（PSA8 の 8・品番の一部など）。
+
+    Y の直後（Y100,000）と、数字に挟まれた x/X（3x100）は数える。
+    原文から値段を読む処理（_extract_line_numbers）と、Gemini の値段の写しを読む処理
+    （gemini_raw_copy_v101._single_price_number）が同じ規則を使うための1か所。ここを変えると両方が変わる。
+    """
+    before = text[:start]
+    if _HEAD_Y_RE.search(before) or _DIGIT_X_BEFORE_RE.search(before):
+        return False
+    return bool(re.search(r"[A-Za-z]$", before)) or before.endswith("-")
+
+
 def _extract_line_numbers(line: str, line_no: int, aliases: Sequence[str]) -> list[_Num]:
     """1行から値を取り出す。品番の一部（OP-17・PSA10・30th）は取り出さない。"""
     nums: list[_Num] = []
     for m in _NUMBER_RE.finditer(line):
         before, after = line[: m.start()], line[m.end():]
         raw = m.group(0).replace("，", ",")
-        head_y = bool(re.search(r"(?<![A-Za-z])Y\s*$", before))
-        digit_x_before = bool(re.search(r"\d[xX]$", before))  # 数字に挟まれた x/X は区切り
-        if not head_y and not digit_x_before and (re.search(r"[A-Za-z]$", before) or before.endswith("-")):
+        head_y = bool(_HEAD_Y_RE.search(before))
+        if is_tagged_number(line, m.start()):
             continue
         is_unit = _unit_after(after, aliases)
         if (
