@@ -340,3 +340,93 @@ async def test_item_ids_non_super_admin_is_forbidden():
         app.dependency_overrides.pop(get_current_user, None)
     assert resp.status_code == 403, resp.text
     mock.assert_not_awaited()
+
+
+# ---------------------------------------------------------------------------
+# POST /tcg/analysis-results/client-timing（要確認パネルの計時）
+# ---------------------------------------------------------------------------
+
+_TIMING_URL = "/api/v1/tcg/analysis-results/client-timing"
+_TIMING_BODY = {
+    "panel_ms": 1234.5,
+    "list_ms": 800.2,
+    "doc_ms": 2345.6,
+    "rows": 20,
+    "page_size": 20,
+    "entry": "first",
+}
+
+
+async def _post_timing(body):
+    from app.main import app
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        return await client.post(_TIMING_URL, json=body)
+
+
+async def test_client_timing_returns_204_and_logs_one_line(fake_super_admin_override, caplog):
+    import logging
+
+    with caplog.at_level(logging.INFO, logger="app.routers.tcg_analysis_review"):
+        resp = await _post_timing(_TIMING_BODY)
+    assert resp.status_code == 204, resp.text
+    assert resp.content == b""
+    lines = [r for r in caplog.records if "review_timing" in r.getMessage()]
+    assert len(lines) == 1
+    assert lines[0].levelno == logging.INFO
+    assert lines[0].getMessage() == (
+        "review_timing panel_ms=1234 list_ms=800 doc_ms=2346 rows=20 page_size=20 entry=first"
+    )
+
+
+async def test_client_timing_non_super_admin_is_forbidden():
+    from app.auth.dependencies import get_current_user
+    from app.main import app
+    from app.models import User
+
+    async def _fake() -> User:
+        u = User()
+        u.id = 100
+        u.is_super_admin = False
+        u.role = "admin"
+        u.tenant_id = 6
+        return u
+
+    app.dependency_overrides[get_current_user] = _fake
+    try:
+        resp = await _post_timing(_TIMING_BODY)
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+    assert resp.status_code == 403, resp.text
+
+
+@pytest.mark.parametrize(
+    "patch_body",
+    [
+        {"panel_ms": 120001},
+        {"panel_ms": -1},
+        {"rows": 501},
+        {"rows": -1},
+        {"page_size": 30},
+        {"entry": "x"},
+        {"extra_field": "x"},
+    ],
+)
+async def test_client_timing_out_of_range_or_extra_is_422(fake_super_admin_override, patch_body):
+    resp = await _post_timing({**_TIMING_BODY, **patch_body})
+    assert resp.status_code == 422, resp.text
+
+
+async def test_client_timing_route_itself_does_not_take_db():
+    """この受け口自身は get_db を依存に持たない（認証の中の DB 利用は既存どおり）。"""
+    import inspect
+
+    from app.auth.dependencies import require_super_admin
+    from app.database import get_db
+    from app.main import app
+
+    route = next(r for r in app.routes if getattr(r, "path", "") == _TIMING_URL)
+    direct = [d.call for d in route.dependant.dependencies]
+    assert direct == [require_super_admin]
+    assert get_db not in direct
+    assert "db" not in inspect.signature(route.endpoint).parameters
