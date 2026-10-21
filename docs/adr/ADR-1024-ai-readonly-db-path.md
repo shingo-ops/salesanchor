@@ -103,6 +103,24 @@ PostgreSQL の仕様の一部（ビューの持ち主の権限で行の制限が
 - 残る危険（R8）: DB のエラー文に値が載り、postgres のログから Loki に入る道は本件の範囲外。別件とする。
 - PO 承認: 原文「y」（2026-10-17）。
 
+### 改訂（失敗時の作り直し、2026-10-21）
+
+- 経緯: 移行が途中で失敗すると、EXIT trap はビューを作らずに終わっていた（「views stay dropped」）。直近300回の入れ替えで移行の失敗8回すべてで外れたまま、10/21 は約13分 AI が読めなかった。設計: [design.md](../handoff/ai-ro-restore-on-failure/design.md)。
+- Decision の「最後で作り直す」を「スクリプトの成否にかかわらず最後で作り直す」に改める。終了コードは元のまま（作成の成否で入れ替えの成否を変えない）。
+- Why: 秘密列の拒否リストは列名とカタログだけで決まり、途中まで進んだ DB に流しても同じ列が外れる。作成は元の表に ACCESS SHARE しか取らず、在庫表の読み取りを待たせない（使い捨て DB で実測）。そのため外したままにする守りの理由が無い。
+- 作成には、lock_timeout ではなく statement_timeout（既定30秒）を渡す。
+  - lock_timeout の失敗（55P03）は、1本ずつの例外処理に飲まれる。そのビューだけ欠けたまま、成功扱いになる。
+  - statement_timeout の打ち切り（57014）は WHEN others に捕まらず、作成全体が戻って警告になる（PostgreSQL 16 公式文書）。
+  - そのため結果は「全部ある」か「警告」の2つになる。ACCESS EXCLUSIVE の持ち主がいても、待ち続けない。
+- ログの文面: 失敗回の「skip ai_ro views (script failed rc=N; views stay dropped)」は「script failed rc=N; recreating ai_ro views anyway」に変わる。
+- 作成の psql には `-v VERBOSITY=terse` を渡す。打ち切りの回は、エラーの CONTEXT 欄に SQL 文（表名と列名）が出ていた（コード審査 M1）。terse にすると、出るのは重さ・本文・位置だけになる（PostgreSQL 16 公式文書 libpq-control）。成功回の作成結果の行は本文なので、今のまま出る。sandbox run 39600086141（head 4df4308d7）で T1〜T7 は全部合格した。打ち切りの回のログでは CONTEXT と SQL 文が0行で、残ったのは「canceling statement due to statement timeout」だけだった。
+- 使い捨て DB の試験（sandbox run 39598850269、ubuntu の bash 5.2.21）: T1〜T7 は全部合格した。
+  - 移行が失敗した回: 作り直した後、ビュー数は作成数と同じで、秘密列は0。
+  - 作成の時間: 読み取り中の接続があっても作成は161ms、読み取りは56ms。
+  - ACCESS EXCLUSIVE の持ち主がいた回: 3秒で打ち切られ、rc=3 のまま、ビューは0本。
+- 記録だけの T8: 移行の途中で SIGTERM を受けた回の終了コードは143。trap は「失敗」の行を出さずに作成まで流れた。信号で止まった場合の扱いは本件の範囲外とする。
+- PO 承認: テーマは「1」、成功条件の案に「確立したなら進める」（2026-10-21）。
+
 ## 関連 ADR
 
 - ADR-079: 監視用の読み取り鍵。今回の鍵とは別にする
