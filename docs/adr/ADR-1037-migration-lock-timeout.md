@@ -51,7 +51,8 @@
   - "lock conflict; retry" 0回、"retry limit reached" 0回、"lock holders" 0回。K6 は 2/3（失敗0）。
   - 間の run 39595679550・39602336552 は移行ステップが skipped（`Filter db_migrations = false`）なので、回数に入れない。
   - K7 は今回も判定不能。
-    - design が指す系列 handler="/api/v1/inventory" は、Prometheus の handler 一覧に無かった。近い名前は `/api/v1/viewer/inventory` だけで、移行の時間帯は空。系列の数は 13:07 付近で7から1に落ちていた。
-    - Loki に nginx のアクセスログは無い。
-    - 測り方の設計の漏れ。在庫表の GET を移行中に数える方法を決め直すまで、K7 は測れない。
+    - 訂正（#4621 の記載の誤り）: handler="/api/v1/inventory" の系列は Prometheus にある。在庫表が行を取る API も GET /api/v1/inventory（`frontend/src/pages/inventory/InventoryPage.tsx:227` → `backend/app/routers/inventory_offers.py:351`）で、design の名前は正しかった。
+    - 測れなかった理由は、移行の時間帯（13:05〜13:12 UTC、10:25〜10:32 UTC）にこの GET が0件だったため。系列は無く、Loki の docker・nginx のログも0行だった。この系列は 10/21 09:15 UTC 以降は増えていない。
+    - 計測（`backend/app/metrics.py`）は、1件目の要求で系列を作り、再起動で0に戻す。待っているだけでは、移行中に在庫表が開かれた回しか数えられない。
+    - 移行中にこちらから在庫表の GET を流して測る方法を決めるまで、K7 は測れない（PO 判断）。
   - 生の記録: Mac の /tmp/CC報告ファイル/ai-ro-restore/k67/report.md（リポジトリ外）。
