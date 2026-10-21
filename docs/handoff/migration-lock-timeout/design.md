@@ -172,6 +172,7 @@ run_sql() {
 
 ### 13-4. 変更内容（`scripts/run_all_migrations.sh`）
 - `SQL_RETRY_MAX_ATTEMPTS="${SQL_RETRY_MAX_ATTEMPTS:-10}"` → `SQL_RETRY_MAX_ATTEMPTS="${SQL_RETRY_MAX_ATTEMPTS:-40}"`
+- その2行上のコメント `# 再試行はファイルごとに初回含め最大10回・3秒あけ、1回の実行全体で合計40回まで（移行ステップの打ち切り10分に収める）。` → `# 再試行は3秒あけ、1回の実行全体で合計40回まで。1ファイルでもその40回まで使える（移行ステップの打ち切り10分に収める。ADR-1037 便1.1）。`
 - `SQL_RETRY_USED=0` の次の行（`run_sql() {` の前）に次を足す:
 ```bash
 # 鍵が取れなかったときの手がかり: 開始から1秒を超えて開いている接続（ADR-1037 便1.1）
