@@ -21,7 +21,7 @@ from typing import Any, TypeGuard
 
 from app.services import gemini_raw_copy_v8 as v8
 from app.services import gemini_raw_copy_v10 as v10
-from app.services.extraction_judgement_svc import resolve_price_quantity
+from app.services.extraction_judgement_svc import is_tagged_number, resolve_price_quantity
 from app.services.gemini_raw_copy_v102_context_work import (
     MATCH_STATUS_MATCHED,
     MATCH_STATUS_MATCHED_CONTEXT,
@@ -875,6 +875,21 @@ def _single_number(copied: object) -> float | None:
     return float(digits) if digits else None
 
 
+def _single_price_number(copied: object) -> float | None:
+    """値段の写し用の _single_number。英字か「-」の直後の数字（PSA8 の 8 など）は数えない（原文読みと同じ規則 is_tagged_number）。
+    それ以外（万・千・億・k・0個・2個以上・小数は None）は _single_number と同じ。数量には使わない。"""
+    if not isinstance(copied, str):
+        return None
+    norm = _nfkc(copied)
+    if _SCALE_WORDS_RE.search(norm):
+        return None
+    runs = [m.group(0) for m in _NUMBER_RUN_RE.finditer(norm) if not is_tagged_number(norm, m.start())]
+    if len(runs) != 1:
+        return None
+    digits = runs[0].replace(",", "")
+    return float(digits) if digits else None
+
+
 def _fill_from_copy(resolved: float | None, copied: object, own_text: str) -> float | None:
     """v102：原文から取り直した値が無いとき、Gemini の写しの数字で補う。補うのは、数が1つに決まり、その数が原文の件の行に独立した数としてあるときだけ。"""
     if resolved is not None:
@@ -937,7 +952,7 @@ def _extract_one(
     price_normalized, quantity_normalized = pq.price, pq.quantity
     trust_extra: dict = {}
     if v102 and gemini_trust:
-        price_normalized, quantity_normalized = _single_number(item["price"]), _single_number(item["quantity"])
+        price_normalized, quantity_normalized = _single_price_number(item["price"]), _single_number(item["quantity"])
         trust_extra = {
             "price_source_mismatch": _numbers_differ(price_normalized, pq.price),
             "quantity_source_mismatch": _numbers_differ(quantity_normalized, pq.quantity),
