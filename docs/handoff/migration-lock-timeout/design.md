@@ -179,9 +179,14 @@ run_sql() {
 # 公開リポジトリの Actions ログに出るため、SQL の文面・接続元アドレスは出さない（命令の先頭1語と表名だけ）
 log_lock_holders() {
   echo ">>> [${STEP}/${TOTAL}] lock holders (xact > 1s):"
-  docker exec -i "${POSTGRES}" ${PSQL} -At -F ' | ' -c "SELECT a.pid, a.usename, a.application_name, a.state, coalesce(a.wait_event_type, '-'), round(extract(epoch FROM now() - a.xact_start))::int AS xact_sec, upper(split_part(ltrim(a.query), ' ', 1)) AS cmd, coalesce((SELECT string_agg(DISTINCT c.relname || ':' || l.mode, ',') FROM pg_locks l JOIN pg_class c ON c.oid = l.relation WHERE l.pid = a.pid AND l.granted AND c.relkind IN ('r', 'p', 'v')), '-') AS locks FROM pg_stat_activity a WHERE a.pid <> pg_backend_pid() AND a.backend_type = 'client backend' AND a.xact_start < now() - interval '1 second' ORDER BY a.xact_start" 2>&1 | sed "s/^/>>> [${STEP}\/${TOTAL}]   /" || true
+  docker exec -e PGOPTIONS="-c lock_timeout=1s -c statement_timeout=5s" "${POSTGRES}" ${PSQL} -At -F ' | ' -c "SELECT a.pid, a.usename, a.application_name, a.state, coalesce(a.wait_event_type, '-'), round(extract(epoch FROM now() - a.xact_start))::int AS xact_sec, upper(coalesce(substring(a.query from '^[[:space:]]*([A-Za-z]+)'), '-')) AS cmd, coalesce((SELECT string_agg(DISTINCT c.relname || ':' || l.mode, ',') FROM pg_locks l JOIN pg_class c ON c.oid = l.relation WHERE l.pid = a.pid AND l.granted AND l.database = (SELECT oid FROM pg_database WHERE datname = current_database()) AND c.relkind IN ('r', 'p', 'v')), '-') AS locks FROM pg_stat_activity a WHERE a.pid <> pg_backend_pid() AND a.backend_type = 'client backend' AND a.xact_start < now() - interval '1 second' ORDER BY a.xact_start" 2>&1 | sed "s/^/>>> [${STEP}\/${TOTAL}]   /" || true
 }
 ```
+- 審査 review-code-1-1.md の R1・S1〜S3 を受けた形にしてある。
+  - 命令は先頭の英字の並びだけを取る。区切りが改行・タブ・記号でも、値や文面が出ない。
+  - 鍵は今の DB の分だけを出す。
+  - 一覧を取る問い合わせ自体にも待ち1秒・実行5秒の上限を付ける。
+  - `-i` を付けない。スクリプトの標準入力を docker exec に吸わせないため。
 - run_sql の中:
   - `if grep -qE "deadlock detected|canceling statement due to lock timeout" "${errlog}"; then` の次の行に `[ "${attempt}" -eq 1 ] && log_lock_holders` を足す。
   - `echo ">>> [${STEP}/${TOTAL}] lock conflict; retry limit reached …"` の次の行に `log_lock_holders` を足す。
@@ -190,6 +195,7 @@ log_lock_holders() {
 ### 13-5. 試験（`tests/sandbox/migration-run-sql-retry.sh` に足す）
 - 抽出範囲: `sed -n '/^SQL_LOCK_TIMEOUT=/,/^}/p'` は最初の `}`（`log_lock_holders` の終わり）で止まってしまう。そこで、`^SQL_LOCK_TIMEOUT=` から `^run_sql() {` の後の最初の `^}` まで取る。抽出行数を表示する。
 - T3 に足す判定: ログに `lock holders (xact > 1s):` が出ていて、そのあとの行のどれかに `products:AccessShareLock` が含まれる。あわせて、ログに `pg_sleep` の文字が出ていないこと（SQL の文面を出していないことの確認）。
+- T3d（新）: T3 の持ち主の行の7列目（cmd）が英大文字か `-` だけ（`^[A-Z]+$|^-$`）。T3 の持ち主の SQL は `BEGIN; …` なので `BEGIN` になること。
 - T7（新）: 既定値の確認。`SQL_RETRY_MAX_ATTEMPTS` が 40、`SQL_RETRY_BUDGET` が 40。
 - T8（新）: T4 と同じ「1回目だけ deadlock」で、ログに `lock holders` が1回だけ出る（2回目以降の再試行では出さない）。
 - T1〜T6 は今の判定のまま全部 PASS すること。

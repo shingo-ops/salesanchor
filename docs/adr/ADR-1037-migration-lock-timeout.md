@@ -15,10 +15,10 @@
 
 1. `scripts/run_all_migrations.sh` の run_sql で流す SQL は、接続ごとに `lock_timeout=1s` を付けて流す（`docker exec -e PGOPTIONS`）。DB・ロール全体には付けない。
 2. "deadlock detected" と "canceling statement due to lock timeout" で落ちたファイルは、3秒あけて流し直す。1回の実行全体で再試行は合計40回まで。1ファイルでもその40回まで使える（便1.1 で、1ファイル最大10回から変えた）。上限に達したら今までどおり止める。ほかのエラーは即停止。
-3. 値の正本は run_sql の直前の4行（`SQL_LOCK_TIMEOUT` など）だけ。環境変数での上書きは試験のためで、deploy.yml・.env には書かない。
+3. 値の正本は `scripts/run_all_migrations.sh` の `SQL_LOCK_TIMEOUT`・`SQL_RETRY_MAX_ATTEMPTS`・`SQL_RETRY_SLEEP_SEC`・`SQL_RETRY_BUDGET` の4行だけ。環境変数での上書きは試験のためで、deploy.yml・.env には書かない。
 4. 挙動は `tests/sandbox/migration-run-sql-retry.sh`（本物の run_sql を抜き出して使い捨て DB で試す）で確かめる。run_sql を変えたらこの試験を流す。
 5. 鍵が取れなかったとき（ファイルごとの1回目と上限到達時）は、開始から1秒を超えて開いている接続をログに書く（便1.1）。
-   - 出すのは、接続番号・利用者名・アプリ名・状態・待ちの種類・秒数・命令の先頭1語・鍵を持つ表名だけ。
+   - 出すのは、接続番号・利用者名・アプリ名・状態・待ちの種類・秒数・命令の先頭の英字の並び・鍵を持つ表名（今の DB の分）だけ。
    - SQL の文面・接続元アドレス・値は出さない。このリポジトリは公開で、Actions のログは外から読めるため。
 
 ## Why（なぜ）

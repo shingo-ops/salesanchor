@@ -159,6 +159,15 @@ if grep -q 'lock holders (xact > 1s):' "$OUT_DIR/t3.log" && grep -q 'products:Ac
 else
   fail "T3b lock holders missing (header=$(grep -c 'lock holders (xact > 1s):' "$OUT_DIR/t3.log" || true) products_lock=$(grep -c 'products:AccessShareLock' "$OUT_DIR/t3.log" || true))"
 fi
+# T3d: 持ち主の行の7列目（cmd）が英大文字か - だけで、T3 の持ち主は BEGIN
+T3_CMDS="$(grep 'products:AccessShareLock' "$OUT_DIR/t3.log" | sed -E 's/^>>> \[[0-9]+\/[0-9]+\] +//' | awk -F' [|] ' '{print $7}')"
+T3_BAD="$(printf '%s\n' "$T3_CMDS" | grep -vE '^[A-Z]+$|^-$' || true)"
+T3_NOTBEGIN="$(printf '%s\n' "$T3_CMDS" | grep -vx 'BEGIN' || true)"
+if [ -n "$T3_CMDS" ] && [ -z "$T3_BAD" ] && [ -z "$T3_NOTBEGIN" ]; then
+  pass "T3d cmd column is BEGIN (letters only)"
+else
+  fail "T3d cmd column cmds='$(printf '%s' "$T3_CMDS" | tr '\n' ',')'"
+fi
 if ! grep -q 'pg_sleep' "$OUT_DIR/t3.log"; then
   pass "T3c no SQL text (pg_sleep) in log"
 else
