@@ -43,9 +43,32 @@ export function makeInventoryItems(n: number) {
   }));
 }
 
+/**
+ * 原文（raw-texts）の行データを n 件作る。
+ * n===1 のときは既存の固定値（"item-1" / "原文テキスト"）のまま返す
+ * （既存 spec の挙動を変えないため）。n>=2 のときは行ドロワーのタブ
+ * （InventoryRowDrawer.tsx:161-169、原文2件以上で出る itemTabs）を実際に
+ * 出すために、id・文面を1件ずつ違う値にする。
+ */
+function makeRawTextItems(n: number) {
+  if (n <= 1) {
+    return [{ extraction_item_id: "item-1", raw_text: "原文テキスト", line_start: 1, line_end: 1 }];
+  }
+  return Array.from({ length: n }, (_, i) => ({
+    extraction_item_id: `item-${i + 1}`,
+    raw_text: `原文テキスト ${i + 1}`,
+    line_start: 1,
+    line_end: 1,
+  }));
+}
+
 /** 認証とAPI mockだけ入れる（viewport設定・ページ遷移はしない） */
-export async function installInventoryMocks(page: Page, opts?: { items?: number }): Promise<void> {
+export async function installInventoryMocks(
+  page: Page,
+  opts?: { items?: number; rawTexts?: number },
+): Promise<void> {
   const items = opts?.items ?? 5;
+  const rawTexts = opts?.rawTexts ?? 1;
   await installAuthBypass(page);
   await mockApi(page, {
     ...commonMocks(),
@@ -69,7 +92,7 @@ export async function installInventoryMocks(page: Page, opts?: { items?: number 
     },
     "GET /products/tcg-types": [{ code: "pokemon_booster_box", name_ja: "ポケモン" }],
     "GET /inventory/raw-texts": {
-      items: [{ extraction_item_id: "item-1", raw_text: "原文テキスト", line_start: 1, line_end: 1 }],
+      items: makeRawTextItems(rawTexts),
     },
   });
 }
@@ -77,12 +100,12 @@ export async function installInventoryMocks(page: Page, opts?: { items?: number 
 /** 在庫表を開き、viewport設定→mock→遷移→1行目が見えるまで待つ、をまとめて行う */
 export async function gotoInventory(
   page: Page,
-  opts?: { width?: number; height?: number; items?: number },
+  opts?: { width?: number; height?: number; items?: number; rawTexts?: number },
 ): Promise<void> {
   const width = opts?.width ?? 390;
   const height = opts?.height ?? 844;
   await page.setViewportSize({ width, height });
-  await installInventoryMocks(page, { items: opts?.items });
+  await installInventoryMocks(page, { items: opts?.items, rawTexts: opts?.rawTexts });
   await page.goto("/inventory");
   await expect(page.getByTestId("inventory-row-row-1")).toBeVisible();
 }
