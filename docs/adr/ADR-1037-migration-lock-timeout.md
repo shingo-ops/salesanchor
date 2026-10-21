@@ -47,3 +47,11 @@
   - K7 は判定不能。移行の時間帯に Prometheus の在庫表 GET の系列が無かった（再起動で系列が消え、10:20〜10:30 UTC に0件）。次の回で数える。
   - K6（失敗0回）は、この回を1回目として数える（1/3）。
 - 便1.1 以降、移行ステップのある入れ替え3回分の結果を追記する。書くのは、失敗回数、"lock conflict; retry" と "retry limit reached" の回数、移行中に在庫表が2秒を超えた件数。
+- 移行ステップのある入れ替え2回目（Deploy to VPS run 39604739864、PR #4618、2026-10-21 13:07:43〜13:08:59 UTC）は成功した。
+  - "lock conflict; retry" 0回、"retry limit reached" 0回、"lock holders" 0回。K6 は 2/3（失敗0）。
+  - 間の run 39595679550・39602336552 は移行ステップが skipped（`Filter db_migrations = false`）なので、回数に入れない。
+  - K7 は今回も判定不能。
+    - design が指す系列 handler="/api/v1/inventory" は、Prometheus の handler 一覧に無かった。近い名前は `/api/v1/viewer/inventory` だけで、移行の時間帯は空。系列の数は 13:07 付近で7から1に落ちていた。
+    - Loki に nginx のアクセスログは無い。
+    - 測り方の設計の漏れ。在庫表の GET を移行中に数える方法を決め直すまで、K7 は測れない。
+  - 生の記録: Mac の /tmp/CC報告ファイル/ai-ro-restore/k67/report.md（リポジトリ外）。
