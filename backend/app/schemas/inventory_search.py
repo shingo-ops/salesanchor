@@ -62,7 +62,7 @@ class InventorySearchCandidate(BaseModel):
     box_weight_kg: float | None = Field(default=None, description="Box 単体重量 (kg)。")
     case_weight_kg: float | None = Field(default=None, description="Case 重量 (kg)。")
     mark: str | None = Field(default=None, description="型番。")
-    tcg_type: str | None = Field(default=None, description="TCG 種別。")
+    work_code: str | None = Field(default=None, description="作品の符号（products.work_id → type_master.code）。")
     matched_via: str = Field(
         description=(
             "ヒット経路: "

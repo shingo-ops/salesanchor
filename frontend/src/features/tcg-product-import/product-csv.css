@@ -25,3 +25,11 @@
   flex-wrap: wrap;
   gap: var(--space-2);
 }
+
+/* ADR-1028 便4: 商品詳細の荷姿（入数・重さ・出典）。色と余白は既存トークンのみ */
+.product-detail__packagings { display: flex; flex-direction: column; gap: var(--space-3); }
+.product-detail__packaging-heading { margin: 0; font-size: var(--role-section-title-size); font-weight: var(--role-section-title-weight); color: var(--role-section-title-color); }
+.product-detail__packaging-description { margin: 0; font-size: var(--role-caption-size); color: var(--role-caption-color); }
+.product-detail__packaging { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-md); }
+.product-detail__packaging-unit { margin: 0; font-weight: var(--font-weight-semi); }
+.product-detail__packaging-field { display: flex; flex-direction: column; gap: var(--space-2); }

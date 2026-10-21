@@ -51,6 +51,9 @@ TCG_SCHEMA = "public"
 
 _UUID_PATTERN = "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
 _HEX_PATTERN = "^[0-9a-f]{64}$"
+# 〆の確認済み扱いで「在庫表にまだ在庫がある」とみなす投稿の新しさ（時間）。
+# 本番の tcg_distribution_settings.max_age_hours（48）と同じ値。設定を変えたらここも変える（docs/handoff/shime-review-exclude/design.md §12-3）
+SHIME_STOCK_WINDOW_HOURS = 48
 _SOURCE_CTE_NAME = "condition_review_sources"
 
 
@@ -58,7 +61,28 @@ def digest_sql(expression: str) -> str:
     return f"encode(sha256(convert_to(({expression})::text, 'UTF8')), 'hex')"
 
 
-def source_cte(*, schema: str | None = None, item_only: bool = False, source_hash: str | None = None, include_inactive: bool = False) -> str:
+def latest_stock_cte(schema: str) -> str:
+    """cr_prev: 在庫の投稿（最新 job の、商品・状態が決まった「Sold out でない」行を持つ投稿）を、チャネル×商品ごとに引ける形で1回だけ集める。
+
+    review_joins(shime=True) の cr_n1x が行ごとの相関サブクエリだと、本番で 1,476,379（main 508,702）まで膨らむため（docs/handoff/shime-review-exclude/design.md §13-10-2）。
+    窓（line_posted_at >= NOW() - SHIME_STOCK_WINDOW_HOURS）は、cr_n1 を相手にする条件（cr_shime の cr_sm.line_posted_at >= ...）と同じ式。
+    窓の外の投稿は、相手の条件で必ず落ちるので、ここで落としても結果は変わらない（窓の外が最新なら、それより前も全て窓の外）。
+    """
+    return f"""cr_prev AS MATERIALIZED (
+        SELECT cr_n1.supplier_channel_id, cr_n1a.product_id, cr_n1.id, cr_n1.line_posted_at
+        FROM {schema}.source_messages cr_n1
+        JOIN (SELECT DISTINCT ON (source_message_id) id, source_message_id FROM {schema}.extraction_jobs
+              ORDER BY source_message_id, created_at DESC, id DESC) cr_n1j ON cr_n1j.source_message_id = cr_n1.id
+        JOIN {schema}.extraction_items cr_n1i ON cr_n1i.extraction_job_id = cr_n1j.id
+        JOIN {schema}.analysis_results cr_n1a ON cr_n1a.extraction_item_id = cr_n1i.id
+        WHERE cr_n1a.pid_resolved IS TRUE AND cr_n1a.condition_id IS NOT NULL
+          AND cr_n1a.status IS DISTINCT FROM 'Sold out'
+          AND cr_n1.line_posted_at >= NOW() - make_interval(hours => {SHIME_STOCK_WINDOW_HOURS})
+    )"""
+
+
+def source_cte(*, schema: str | None = None, item_only: bool = False, source_hash: str | None = None, include_inactive: bool = False,
+               latest_stock: bool = True) -> str:
     schema = schema or "public"
     if item_only:
         scope = (f"WHERE id=(SELECT ej.source_message_id FROM {schema}.extraction_items ei "
@@ -69,7 +93,9 @@ def source_cte(*, schema: str | None = None, item_only: bool = False, source_has
         scope = "WHERE is_active IS TRUE"
     hash_expression = source_hash or digest_sql("raw_text")
     # Materialization makes the full original-message hash reusable by its items.
-    return f"""WITH {_SOURCE_CTE_NAME} AS MATERIALIZED (
+    # latest_stock=True（既定）は review_joins(shime=True) の cr_prev を先頭に足す。review_joins(shime=False) の呼び出し側は False を渡し、文字列を変えない。
+    prev = f"{latest_stock_cte(schema)},\n    " if latest_stock else ""
+    return f"""WITH {prev}{_SOURCE_CTE_NAME} AS MATERIALIZED (
         SELECT id, {hash_expression} AS source_hash FROM {schema}.source_messages {scope}
     )"""
 
@@ -136,7 +162,7 @@ def _fence_review_joins(sql: str) -> str:
 
 
 def review_joins(*, analysis_expression: str = "to_jsonb(ar)", selected_expression: str | None = None,
-                 schema: str | None = None, fenced: bool = False) -> str:
+                 schema: str | None = None, fenced: bool = False, shime: bool = True) -> str:
     """SQL requires ar/ei/ej/sm aliases plus source_cte; optional candidate for reanalysis.
 
     fenced=True は配信行 SQL 専用（OFFSET 0 の壁を追加）。既定 False は従来と同一の文字列。
@@ -170,6 +196,40 @@ def review_joins(*, analysis_expression: str = "to_jsonb(ar)", selected_expressi
         **{key: f"cr_data.ar->'{key}'" for key in ("review_reasons", "needs_review", "status", "exclusion", "note_ja")},
         "latest_correction_id": "cr_latest.id",
     }))
+    shime_lateral = (
+        "CROSS JOIN LATERAL (SELECT FALSE AS settled OFFSET 0) cr_shime" if not shime else
+        f"""CROSS JOIN LATERAL (SELECT
+        -- 〆の確認済み扱い（docs/handoff/shime-review-exclude/design.md §12-3）。真なら price_unresolved と excluded を付けない
+        CASE WHEN
+            lower(btrim(COALESCE(cr_data.ar->>'status', ''))) IN ('sold out', 'soldout')
+            AND cr_data.ar->>'exclusion' = 'excluded'
+            AND cr_data.ar->>'product_id' IS NOT NULL AND cr_data.ar->>'condition_id' IS NOT NULL
+            AND strpos(COALESCE(cr_data.ar->>'condition_canonical', '') || COALESCE(cr_data.ar->>'condition_basis', ''), 'FLAG') = 0
+            AND cr_latest.id IS NULL
+        THEN NOT EXISTS (SELECT 1 FROM (
+                -- 〆より前の最新の在庫の投稿（cr_n1x）。cr_prev（source_cte の先頭のCTE）から引く。窓は相手の条件と同じ式なので結果は変わらない（design.md §13-10-2）
+                SELECT (SELECT cr_p.id FROM cr_prev cr_p
+                        WHERE cr_p.supplier_channel_id = sm.supplier_channel_id
+                          AND cr_p.product_id = (cr_data.ar->>'product_id')::integer
+                          AND cr_p.line_posted_at < sm.line_posted_at
+                        ORDER BY cr_p.line_posted_at DESC, cr_p.id DESC LIMIT 1) AS id) cr_n1x
+                CROSS JOIN {schema}.analysis_results cr_sa
+                JOIN {schema}.extraction_items cr_si ON cr_si.id = cr_sa.extraction_item_id
+                JOIN {schema}.extraction_jobs cr_sj ON cr_sj.id = cr_si.extraction_job_id
+                JOIN {schema}.source_messages cr_sm ON cr_sm.id = cr_sj.source_message_id
+                WHERE cr_sm.supplier_channel_id = sm.supplier_channel_id
+                  AND cr_sa.product_id = (cr_data.ar->>'product_id')::integer
+                  AND cr_sa.extraction_item_id <> ei.id
+                  AND (cr_sa.condition_id = (cr_data.ar->>'condition_id')::integer
+                       -- 別の状態の相手は、〆以後の投稿か、〆より前の最新の在庫の投稿（cr_n1）のものだけ（design.md §13-10 A-2）
+                       OR (cr_sm.id <> sm.id AND (sm.line_posted_at IS NULL OR cr_sm.line_posted_at >= sm.line_posted_at OR cr_sm.id = cr_n1x.id)))
+                  AND cr_sa.is_current IS TRUE AND cr_sa.pid_resolved IS TRUE AND cr_sa.unit_resolved IS TRUE
+                  AND cr_sa.exclusion IS DISTINCT FROM 'excluded'
+                  AND cr_sa.price_normalized IS NOT NULL
+                  AND cr_sm.line_posted_at >= NOW() - make_interval(hours => {SHIME_STOCK_WINDOW_HOURS})
+                  AND COALESCE(cr_sa.condition_canonical, '') NOT LIKE 'FLAG_%'
+                  AND lower(btrim(COALESCE(cr_sa.status, ''))) NOT IN ('sold out', 'soldout'))
+        ELSE FALSE END AS settled OFFSET 0) cr_shime""")
     sql = f"""
     JOIN {_SOURCE_CTE_NAME} cr_source ON cr_source.id = sm.id
     -- OFFSET 0 は PostgreSQL の展開（pull-up）を止め、to_jsonb(ar) を行ごとに1回だけ作るため。外すと要確認一覧が約3倍遅くなる（docs/handoff/review-speed/design.md）
@@ -225,20 +285,21 @@ def review_joins(*, analysis_expression: str = "to_jsonb(ar)", selected_expressi
         AND cr_event.value->>'binding_hash' = cr_hash.ack_binding_hash
         AND cr_ack_condition.is_active IS TRUE
         AND (NOT cr_input.mentions OR cr_input.master_valid), FALSE) AS valid_ack) cr_valid
+    {shime_lateral}
     CROSS JOIN LATERAL (SELECT
         ARRAY(SELECT DISTINCT reason FROM unnest(
             string_to_array(COALESCE(cr_data.ar->>'review_reasons', ''), ',') || ARRAY[
                 CASE WHEN cr_data.ar->>'pid_resolved' IS DISTINCT FROM 'true' THEN 'pid_unresolved' END,
                 CASE WHEN cr_data.ar->>'unit_resolved' IS DISTINCT FROM 'true' THEN 'unit_unresolved' END,
-                CASE WHEN cr_data.ar->>'price_normalized' IS NULL THEN 'price_unresolved' END,
-                CASE WHEN cr_data.ar->>'exclusion' IS NOT NULL AND NOT cr_review_ack.excluded_acked THEN 'excluded' END
+                CASE WHEN cr_data.ar->>'price_normalized' IS NULL AND NOT cr_shime.settled THEN 'price_unresolved' END,
+                CASE WHEN cr_data.ar->>'exclusion' IS NOT NULL AND NOT cr_review_ack.excluded_acked AND NOT cr_shime.settled THEN 'excluded' END
             ]) reason
               WHERE reason != '' AND reason NOT IN ({empty_reasons})
                 AND NOT (reason = 'note_unmatched' AND {pure_memo})
                 AND NOT (reason = 'pid_unresolved' AND cr_data.ar->>'pid_resolved' = 'true')
                 AND NOT (reason = 'unit_unresolved' AND cr_data.ar->>'unit_resolved' = 'true')
-                AND NOT (reason = 'price_unresolved' AND cr_data.ar->>'price_normalized' IS NOT NULL)
-                AND NOT (reason = 'excluded' AND (cr_data.ar->>'exclusion' IS NULL OR cr_review_ack.excluded_acked)) ORDER BY reason) AS other_reasons,
+                AND NOT (reason = 'price_unresolved' AND (cr_data.ar->>'price_normalized' IS NOT NULL OR cr_shime.settled))
+                AND NOT (reason = 'excluded' AND (cr_data.ar->>'exclusion' IS NULL OR cr_review_ack.excluded_acked OR cr_shime.settled)) ORDER BY reason) AS other_reasons,
         COALESCE((cr_data.ar->>'needs_review')::boolean, FALSE)
             AND COALESCE(cr_data.ar->>'review_reasons', '') = '' AS unknown_review,
         CASE WHEN cr_input.mentions AND NOT cr_input.master_valid THEN 'empty_box_master_unavailable'

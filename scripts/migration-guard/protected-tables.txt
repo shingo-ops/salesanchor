@@ -8,6 +8,7 @@
 #       57dd67c55（2026-09-19）で 21 表 → 48731a698（2026-09-21）で 23 表。
 #       ADR-1007 決定1（全マスタ表が対象）に合わせ、product_lines / product_formats / product_kinds /
 #       supplier_aliases を足した（27 表）。
+#       ae81ba18a（2026-10-16、ADR-1020 便1）で product_blank_confirmations を足した（28 表）。
 products
 tcg_products
 product_search_keywords
@@ -36,3 +37,4 @@ product_formats
 product_kinds
 supplier_aliases
 product_blank_confirmations
+product_packagings

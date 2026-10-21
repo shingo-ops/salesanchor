@@ -213,3 +213,112 @@
 5. 本番に public.tenants id=2 / tenant_002 スキーマ / users が今あるか。
 6. フロントのメニューが権限で閉じるか（外部ユーザー向け）。
 7. LP→API の CORS・CSP（Astro 置き場の場合）、GAS の現閲覧者数。
+
+
+## 段5（2026-10-19）
+
+（調査の生記録: /tmp/CC報告ファイル/viewer_stage5/recon_raw.md。基準は origin/main。パスは frontend/src・backend/app の下をフルパスに展開して写した。）
+
+基準: `git fetch origin main` 後の origin/main。行番号付き全文の写しは /tmp/CC報告ファイル/viewer_stage5/src/ 配下（ファイル名は パスの / を _ に置換）。
+
+### R§1 ViewerAccountsPage.tsx（frontend/src/pages/super-admin/ViewerAccountsPage.tsx、360行）
+【事実】import（:7-19）: react の useCallback/useEffect/useState、react-i18next useTranslation、`api, ApiError`(../../lib/api)、useSuperAdmin(../../hooks)、components の PageLayout / Button / ButtonLink / Badge(+BadgeVariant) / DataTable(+DataTableColumn) / EmptyState / Modal / Drawer / TextField。react-router の import は無い。
+- 型: ViewerItem（:21-34、id,email,line_name,inventory_issue,status,trial_expires_at,created_at,discord_user_id,discord_channel_id,discord_channel_url,flag_many_ips,flag_shared_ip）、LoginItem（:36-41）、Action=activate|suspend|unsuspend|extend（:43）。
+- 状態バッジ: STATUS_VARIANT（:45-51）active=success / trial=info / suspended=danger / pending=neutral / verified=neutral。STATUS_KEY（:53-59）→ ja の statusPending 等。
+- データ取得: `api.get("/super-admin/viewers")` を load()（:90-100）。マウント時 isSuperAdmin なら実行（:102-106）。一覧は全件を1回で取り、ページ分け・絞り込みは画面側に無い。状態変更は `api.post(/super-admin/viewers/${id}/${action}, …)`（:131-136）後に load() 再取得。ログイン記録は `api.get(/super-admin/viewers/${id}/logins)`（:152）を Drawer(:334-357) に表示。
+- 表の列（:174-257）: email / line_name / status(Badge) / trial_expires_at(期限) / discord_user_id(+discord_channel_url があれば ButtonLink「部屋を開く」) / flags(Badge warning ×2) / created_at / actions。
+- 操作ボタン（:229-255）: trial の行に「本契約にする(primary)」「延長(secondary)」、suspended 以外に「停止(danger)」、suspended に「停止を解除(secondary)」、全行に「ログイン記録(ghost)」。pending/verified/active 行で出るのは「停止」と「ログイン記録」のみ。
+- 確認 Modal（:289-332）、延長日数 TextField（:319-329）。PageLayout は navKey="nav.superAdminViewers" subtitleKey="superAdmin.viewers.subtitle"（:272）。noScroll なし。非 super admin は :164-172 でアクセス拒否表示。
+- クリップボード・サイドメニュー・URL パラメータの利用は無い。
+### テスト frontend/src/pages/super-admin/ViewerAccountsPage.test.tsx（153行、it 8本）
+api と useSuperAdmin を vi.mock、i18n は en。確認内容: (1)非 super admin は拒否文のみで api.get 0回（:56）(2)状態バッジ・フラグバッジが該当行だけ（:63）(3)discord_channel_url がある行だけ「Open room」リンク（:73）(4)trial 行に Make active/Extend/Suspend、suspended 行に Unsuspend のみ（:93）(5)suspend のモーダル→POST `/super-admin/viewers/1/suspend` {}→一覧再取得2回（:107）(6)extend は0で送信不可・7で POST {days:7}（:117）(7)409 で競合メッセージ（:130）(8)ログイン記録 Drawer に時刻・IP・端末（:139）。MemoryRouter で包んで描画（:35-41）。
+
+### R§2 状態の値と list_viewers
+【事実】DB: migrations/20261016_150000_add_viewer_accounts.sql:21 `CONSTRAINT ck_viewer_accounts_status CHECK (status IN ('pending','verified','trial','active','suspended'))`。:29 コメント「pending／verified／trial／active／suspended。verified は将来用」。
+- 意味（ja.json:2667-2671）: pending=申込中 / verified=確認済み / trial=お試し / active=本契約 / suspended=停止中。
+- 遷移の実装: 申込 POST /signup で pending を INSERT（backend/app/routers/viewer.py:458-459）。trial への移行は Discord 受付の申込コード照合（design.md:594 Q5「照合が済んだ時点で自動的にトライアル。verified は今回使わない（5値は残す）」）。activate は trial→active のみ（backend/app/services/viewer_admin.py:147-150）、extend は trial のみ（:171-175）、suspend は suspended 以外（:151-154）、unsuspend は直前 suspend の from_status に戻す（:155-170）。
+- status変更履歴 viewer_status_changes（migration:79-93）action CHECK は activate/suspend/unsuspend/extend/start_trial、actor は po/claude/system。
+- list_viewers（backend/app/services/viewer_admin.py:88-90）: `_LIST_SQL`（:39-65）。返す項目: v.id,email,line_name,inventory_issue,status,trial_expires_at,created_at,discord_user_id,discord_channel_id,discord_guild_id(→discord_channel_url に変換 :68-77),flag_many_ips,flag_shared_ip。並び順 `ORDER BY v.created_at DESC, v.id DESC`（:64）。WHERE なし・LIMIT なし・ページ分けなし（全件）。status での絞り込みはサーバー側に無い（クエリパラメータも無し。backend/app/routers/super_admin_viewers.py:85-86 は引数 db のみ）。
+- ログイン記録だけ LIMIT 500（backend/app/services/viewer_admin.py:22,105）。
+- 応答モデル ViewerAdminItem（backend/app/routers/super_admin_viewers.py:37-51）。申込コード/招待に関する項目は一覧に無い。
+- ja.json superAdmin.viewers（frontend/src/locales/ja.json:2657-2705）キー: subtitle, colEmail, colLineName, colStatus, colExpires, colDiscord, openRoom, colFlags, colCreated, colActions, statusPending/Verified/Trial/Active/Suspended, flagManyIps, flagSharedIp, empty, activate, extend, suspend, unsuspend, logins, confirmActivate/Suspend/Unsuspend, extendTitle, extendTarget, extendDays, run, loadError, notFoundError, conflictError, genericError, loginsTitle, loginsEmpty, colLoginAt/Type/Ip/Agent, eventLoginSucceeded…eventCodeMatched。招待・コピー・申込フォーム・絞り込み用のキーは無い。nav.superAdminViewers=閲覧者管理（ja.json:264）。
+
+### R§3 申込の流れ
+【事実】backend/app/routers/viewer.py（487行）
+- :399 SIGNUP_CODE_TTL=7日。:416 `POST /signup`。
+- 流れ: Origin 検査 :426 → email 正規化・line_name 1〜100 字 :427-430 → IP 1時間10回・email 1時間3回の回数制限 :433-440（Redis で数えられないときは招待を作らない `limits_ok` :440,:486）→ generate_signup_code（16文字 Crockford base32）:442 → honeypot `website` が入っていれば行も招待も作らず捨てコード+invite_url null :445-446 → 既存 users に email があれば何もしない :448-451 → viewer_accounts が無ければ status 'pending' で INSERT :455-463 → 既存が pending なら旧 signup_code トークンを DELETE して作り直し :468-473 → viewer_login_tokens に INSERT（purpose 'signup_code'、sha256 のみ、expires_at=7日後）:474-481 → login_events に 'signup' :482 → commit :483 → commit の後に create_viewer_invite :486 → 応答 `{signup_code(XXXX-XXXX-XXXX-XXXX), expires_at, invite_url}` :403-404。
+- 申込コードの保存: public.viewer_login_tokens（migration:39-56）列 id, viewer_account_id(→viewer_accounts.id), token_sha256 BYTEA(32バイト・UNIQUE), purpose('signup_code'|'password_reset'), expires_at, created_at。平文は保存しない（ハッシュ化 backend/app/auth/viewer_signup_code.py:24-25）。申込コードは viewer_account_id で viewer の行に結びつく（1 viewer・pending 再申込のたび差し替え）。
+- 招待 backend/app/services/viewer_invite.py（57行）create_viewer_invite: viewer_discord_config(id=1) の reception_channel_id を読み（:31）、`POST /channels/{reception_channel_id}/invites` に `{"max_age":604800,"max_uses":1,"unique":true}`（:39-46。定数 :19-20 = 7日・1回）。bot token は環境変数 DISCORD_BOT_TOKEN（:36）。戻りは `https://discord.gg/<code>`（:50）、失敗時は None（:34,:38,:49,:54,:58）。docstring :5「招待は DB に保存しない（正本は Discord）」。招待 URL の列・表は無い（`viewer_discord_config` は migrations/20261017_100000:2-12 の guild_id, reception_channel_id, ticket_category_id, staff_role_id のみ）。招待と申込コード/viewer の紐づきはコード上に無い（invite_url は応答にだけ載り、DB に保存されない）。
+- 【事実】招待は「申込1回につき1本」を作る仕様。つまり現行の招待は /signup の応答でしか得られない。管理画面から発行する API（super-admin 側）は現状無い（backend/app/routers/super_admin_viewers.py の docstring :5-12 の6本のみ）。
+- Q16 の記載: docs/handoff/gas-viewer-fresh-fast/design.md:607（Q16 決定 2026-10-17 PO「y」、期限1週間・使用1回）、:260（D5「招待リンク」PO 決定。原文引用）、:261（API 呼び出し）、:263（作れなかったとき）、:264（登録済み email でも作る／honeypot では作らない）、:265（DB に保存しない・期限は申込コードと同じ7日）、:267（権限 805432406→805432407）、:364-368（受け入れ基準）、:494,:504-509（段4実施）。ADR-1019 本文（docs/adr/ADR-1019-inventory-viewer-separate-accounts.md、40行）には「招待」「管理画面」の語は無い（grep 0件。:23 に「申込と本人の結び付けは…受付で申込コードを照合」）。
+
+### R§4 閲覧ページから申込画面への入口
+【事実】frontend/src/pages/viewer/ViewerApp.tsx: 画面状態 Screen に `{name:"signup"}`（:23）。URL で入口を決めるのは `#reset=` のみ（:25-33,:50-51,:57-59）。signup を直接開くハッシュ・クエリは無い（`git grep "location.(hash|search)|URLSearchParams" frontend/src/pages/viewer` の結果は ViewerApp.tsx:29,:57 と Password.test.tsx:117 のみ）。初期画面は トークン有→loading、無→login（:52）。
+- 現在の行き方: LoginView.tsx:99-101 の「申込」ボタン（data-testid="viewer-login-signup"、文言 frontend/src/locales/viewer/ja.json:74）→ onSignup（LoginView.tsx:40,:113 in ViewerApp）→ setScreen({name:"signup"})（ViewerApp.tsx:113）。申込画面は SignupView（:116）。
+- 閲覧ページの URL: app.salesanchor.jp/viewer/（ADR-1019:15、frontend/viewer/index.html）。つまり申込フォームの URL としてコピーできるのは現状 `https://app.salesanchor.jp/viewer/` までで、申込画面を直接開く URL は存在しない（ログイン画面が出る）。
+- SignupView（153行）: 完了画面で signup_code と invite_url と案内を表示（:60-91）、入力は email, lineName, inventoryIssue, 隠し欄 website（:101-141）。
+- 重要: 閲覧ページは別バンドルで 300KB 上限（design.md:509）。ButtonLink を使わない理由が書かれている。
+
+### R§5 既存の部品（金型）
+【事実】frontend/src/components/ の .tsx 一覧（stories/test を除く）に次がある: Badge, Button, ButtonLink, Callout, Card, Checkbox*, ConfirmModal, DataTable, Drawer, EmptyState, ListRow, Modal, MultiSelect, NavDropdown, NavItemList, Popover, Select, Sheet, Stack, SubMenu, Tabs, TextField, Textarea, Toggle, Tooltip, TwoColumn（OverflowTabs は components 直下に .tsx としては見つからず）。
+- サイドメニュー: **SubMenu.tsx**（縦型サイドナビ。variant grouped/flat。props groups[{title?, items[{key,label,icon?,badge?(数字),disabled?,to?}]}], activeKey, onChange?, className。`to` 有り=NavLink の「ドア型」、無し=button の「リモコン型」 :13-38,:64-117）。使用例: frontend/src/pages/crm/CustomerHubPage.tsx:72-77、frontend/src/pages/management-center/ManagementCenterPage.tsx:117-122（`<div className="hub-shell">` + `<SubMenu variant="grouped" className="hub-subnav" …/>` + `<div className="hub-content">`、PageLayout は noScroll）。hub-shell.css:1-40 が .hub-shell/.hub-subnav の寸法を定義。
+- タブ: **Tabs.tsx**（variant underline|pill, size sm|md, items[{key,label,count?,icon?,disabled?}], activeKey, onChange :25-44）。super-admin 内の使用: AnalysisDashboardPanel.tsx:38, ExtractionErrorLogPanel.tsx:25, NeedsReviewTabsPanel.tsx:13, ProductMasterPanel.tsx:17, RuleManagementPanel.tsx:19。
+- 状態バッジ: **Badge.tsx** variant neutral/info/success/warning/danger/purple（:16）。ViewerAccountsPage が既に使用（:14,:45-51,:181）。
+- AnalysisRulesPage（frontend/src/pages/super-admin/AnalysisRulesPage.tsx, 200行）+ components/AnalysisRulesSidebar.tsx（134行）: PageLayout noScroll（:141-146）→ `div.hub-shell`（:151）→ **自前の** AnalysisRulesSidebar（`<nav className="hub-subnav">` の中に生の `<button className="hub-subnav-item active">` :50-56,:75-80。SubMenu は使っていない。共通 SubMenu への移行前の旧作り）→ `div.hub-content`（:159）。選択状態は useState + `useSearchParams` の `?section=`（:99-113、`setSearchParams({section:key},{replace:true})`）。
+- URL で絞る既存例: (a) クエリ `?section=`（AnalysisRulesPage）(b) 子ルート+Outlet（CustomerHubPage の /crm/leads,/crm/companies,/crm/archive、ManagementCenterPage）。`:tab` のような動的セグメントで状態を分ける例は App.tsx の `path=".../:xxx"` 検索（App.tsx:162,180,183,185,198,212,217,220,248,250,252,262）に無い（すべて :id か :carrier）。useSearchParams を使うページ: contacts/ContactsPage, design-preview, inbox/useInboxState, register/*, schedule/SchedulePageImpl, super-admin/AnalysisRulesPage。
+- docs/CC_UI_GOVERNANCE.md: :9-15 必須チェック（components/ に金型があるか先に確認→あれば使う→無ければ実装せず止めて報告）、:23-29 禁止表（:27 自作タブ＝className に `tab` を含む div/nav は禁止、:28 色直値、:29 生px）、:33-46 例外コメント書式 `ui-allow: <理由> (#<番号>)`、:59 ADR-144。ADR-149 は SubMenu への集約（CustomerHubPage.tsx:71 のコメント）。
+- クリップボード: `navigator.clipboard` の既存利用 = frontend/src/features/tcg-distribution/DistributionTargetForm.tsx:125（writeText 後 setCopied(true) → 2秒で戻す）、frontend/src/features/tcg-import-workflow/ExtractionAttemptHistory.tsx:34、frontend/src/pages/inbox/InboxKartePanel.tsx:429（Button secondary sm +「registration.copyLink」）、frontend/src/pages/integrations/FedexLabelValidationTab.tsx:157。共通の hook / CopyButton 部品は無い（`git grep -i "useCopy|CopyButton|copyToClipboard" frontend/src` はコピー文言キーのみ）。各所が個別に writeText を直書き。
+
+### R§6 グローバルメニュー・ルート
+【事実】
+- frontend/src/App.tsx:89 import、:342 `<Route path="/super-admin/viewers" element={<ViewerAccountsPage />} />`（フラットなルート。子ルート・Outlet なし）。
+- frontend/src/components/DesktopShell.tsx:193-198 saasAdminItems の最後 `{ to:"/super-admin/viewers", labelKey:"nav.superAdminViewers" }`、:364-379 で isSuperAdmin のとき NavLink 描画。
+- frontend/src/components/MobileShell.tsx:185-190 resolveItem("viewerAccounts","nav.superAdminViewers",…,"/super-admin/viewers")。
+- nav.superAdminViewers = ja「閲覧者管理」(ja.json:264)。
+- 状態ごとの URL 分けの既存例: クエリ（?section=）か子ルート+Outlet（上記）。ViewerAccountsPage は今どちらも使わない。
+
+### R§7 ADR-1019 と design.md の管理画面・招待・申込フォーム
+【事実】ADR-1019（40行）: 「管理画面」「招待」「申込フォーム」を含む行 0件。関連する行は :23（申込→Discord 受付で申込コード照合）、:27（discord-gateway が viewer_* に書く）。
+design.md（docs/handoff/gas-viewer-fresh-fast/design.md、620行）:
+- 申込フォーム: :158（⑤申込の画面）、:246（D5 見出し）、:259-267（応答・招待リンク・保存しない・権限）、:551 Q2b/:554 Q2f（フォームはメールと LINE 名の2つ）/:555 Q2g（在庫関連の課題・任意）。
+- 招待: :260-265, :267, :364-368, :427-429（案B＝その人専用の招待で見分ける案は MANAGE_GUILD が要り ADR-091 で除外）, :494, :504-509, :607, :620（社内ユーザーの招待トークン発行は別件）。
+- 管理画面: :448（PO 質問「ツールの顧客管理も出来るように」への答え）、:449（PO 決定「saas管理者y」・置き場所 DesktopShell/MobileShell）、:486-491（段4を4PRに。4a-2＝管理 API・viewer_admin.py・専用スクリプト・/super-admin/viewers の画面）、:510-511（4a-2 の細部。一覧の Discord 部屋 URL は 4c で足す）、:568, :580（画面は ViewerAccountsPage 1ページ、部品 DataTable/Badge/Button/TextField）。
+- 対象外・未実装として明記されている関連: :551 本契約用の詳しい情報フォームは対象外（別の便）、:554 Discord ID の自動取得は別設計。**管理画面に「申込フォーム URL のコピー」「招待発行ボタン」「状態別の左メニュー」は design.md に記載なし**（上の grep 全件にその語はない）。:580 周辺の画面部品指定は DataTable/Badge/Button/TextField のみ（左メニューの記載なし）。
+補足: 別の読み取り用ファイルに全文あり → /tmp/CC報告ファイル/viewer_stage5/src/docs_handoff_gas-viewer-fresh-fast_design.md（行番号付き）。
+
+### R§8 FEATURE-INDEX
+`git grep -n -i -E "viewer" origin/main -- docs/adr/FEATURE-INDEX.md` の結果: **0件**（出力なし）。
+
+### 未確認
+- design.md:580 付近と :568-575 の本文全体（管理 API の設計詳細）は行番号のみ拾い、全文の精読はしていない。
+- OverflowTabs の実体（components 直下に .tsx が見つからない。別ディレクトリにあるかは未確認）。
+- 本番で bot に「招待を作成」権限が付いているか、reception_channel_id の実値は未確認（DB・Discord は見ていない）。
+- 招待発行 API を管理画面から呼ぶ際の権限・回数制限（/signup は IP/email の回数制限 viewer.py:433-440。super-admin 経由の扱い）は設計されていない（コード上に無いことのみ確認）。
+
+## 段6（2026-10-19、origin/main d92162bd8 基準。詳細は /tmp/CC報告ファイル/viewer_stage6/recon_raw.md, recon_raw2.md）
+- 延長：backend/app/services/viewer_admin.py:175-179 は trial のみ受け付け、期限は「今+日数」。上限365は backend/app/routers/super_admin_viewers.py:74-75 の ExtendRequest だけ。日付指定の入力は無かった。
+- 画面の延長 Modal：frontend/src/pages/super-admin/ViewerAccountsPage.tsx:459-502。日付入力の金型は専用品が無く、TextField type="date"（frontend/src/features/tcg-product-import/TcgProductDetailDrawer.tsx:276）。
+- 作り直し：backend/app/services/viewer_admin.py:283-297 は pending のみ。画面は frontend/src/pages/super-admin/ViewerAccountsPage.tsx:294-298 で pending のみ表示。
+- 受付：backend/app/discord_gateway/viewer_trial.py:269 は pending 以外を CODE_INVALID、:290-307 は status='trial'・期限14日へ更新（trial/active を通すと本契約がお試しに下がるため、段6で分岐）。
+- 目印の SQL：backend/app/services/viewer_admin.py:43-65（一覧 SQL の中）。通知の対象も同じ条件を使うため、定数に切り出した。
+- 通知の型：backend/app/tasks/master_required_fields_monitor.py と backend/app/celery_app.py の beat_schedule／include。重複防止の型は backend/app/services/review_mail_notifier.py:89-115（Redis キー＋TTL）。送信は backend/app/services/discord_notifier.py:45-64。
+- 期限切れ trial の拒否（変えない）：backend/app/routers/viewer.py:193-200、backend/app/auth/viewer_dependencies.py:88-91。
+
+## 段7（2026-10-20、origin/main 95e623fd3 基準。実物の点検）
+- 画面：frontend/src/pages/super-admin/ViewerAccountsPage.tsx。列定義は `const columns`（約209行目）。段7前の並び：email, line_name, status, trial_expires_at, discord_user_id（openRoom の ButtonLink を含む）, flags, created_at, actions
+- 表：frontend/src/components/DataTable.tsx。`onRowClick?: (row: T) => void`（100行目）。セル内のボタンは isInteractiveTarget（302行目・414行目）で行クリック扱いにならない。stopPropagation は不要
+- スライド：frontend/src/components/Drawer.tsx。props は open / onClose / title / children / footer / size。使用例 frontend/src/pages/contacts/ContactsPage.tsx:365
+- 横並び：frontend/src/components/Stack.tsx は縦積みのみ（Stack.css は flex-direction: column）。横並びの金型は無かった
+- ラベルと値の並べ方：frontend/src/company-forms.css:78-98 の `.form-grid` / `.form-row` / `.form-grid > .form-row > label`（共通 class。使用例 frontend/src/pages/contacts/ContactsPage.tsx:305 の作成モーダル。同ページの Drawer（365行目）は ContactFormFields を使い form-grid は使わない）
+- 既存 ADR 検索：ADR-1019（閲覧者管理）、ADR-144（金型）
+
+## 段8（2026-10-20、origin/main d6f543e64 基準。実物の点検）
+- LINE名の置き場所は public.viewer_accounts.line_name の1か所だけ。写しは無い
+  - 書き込み：申込 backend/app/routers/viewer.py:458、初回登録 backend/app/services/viewer_admin.py:323
+  - 読み出し：一覧 backend/app/services/viewer_admin.py:71
+  - Discord の部屋の名前などには使っていない（backend/app/discord_gateway/viewer_trial.py に line_name は出てこない）
+  - backend/app/routers/super_admin_suppliers.py の line_name は仕入元の別の項目で、関係ない
+- 申込のときの決まり：前後の空白を除いて 1〜100 文字（backend/app/routers/viewer.py:87、428-429）
+- 管理側 API：backend/app/routers/super_admin_viewers.py（保護は require_super_admin、誤りの変換は _ERROR_STATUS と _http_error、応答の型は ViewerAdminItem、1件の読み出しは viewer_admin._get_item）
+- 画面：frontend/src/pages/super-admin/ViewerAccountsPage.tsx の Drawer。LINE名は読むだけの表示だった
+- 編集スライドの前例：frontend/src/features/supplier-master/SupplierDetailDrawer.tsx（TextField 金型・api.patch・422 は入力の誤り・footer に Button）。仕入元の PATCH にも変更の履歴は無い

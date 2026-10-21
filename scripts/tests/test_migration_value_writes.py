@@ -241,17 +241,27 @@ class DryrunReport(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("登録されていない除外", result.stderr + result.stdout)
 
-    def test_run_reports_failures_but_exits_zero(self) -> None:
-        """報告のみ: 落ちたファイルがあっても終了コードは 0。"""
+    def test_run_exits_nonzero_when_a_file_fails(self) -> None:
+        """強制: 落ちたファイルが1本でもあれば終了コードは 1。"""
         self.exclusions(self.names[0])
         fake = self.repo.dir / "fake-psql.sh"
         fake.write_text('#!/bin/bash\ncase "$*" in *"%s"*) echo "ERROR: relation x does not exist" >&2; exit 3;; esac\nexit 0\n' % self.names[1])
         fake.chmod(0o755)
         result = self.report("run", "--db", "x", "--rounds", "1", "--psql", str(fake))
-        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.returncode, 1, result.stderr)
         self.assertIn("対象 2 ファイル", result.stdout)
         self.assertIn("❌ [1周目 1/2]", result.stdout)
         self.assertIn("1周目: 成功 1 / 失敗 1", result.stdout)
+
+    def test_run_exits_zero_when_all_pass(self) -> None:
+        """全部通れば終了コードは 0。"""
+        self.exclusions(self.names[0])
+        fake = self.repo.dir / "fake-psql.sh"
+        fake.write_text("#!/bin/bash\nexit 0\n")
+        fake.chmod(0o755)
+        result = self.report("run", "--db", "x", "--rounds", "1", "--psql", str(fake))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("1周目: 成功 2 / 失敗 0", result.stdout)
 
 
 class RealRepo(unittest.TestCase):
@@ -267,10 +277,11 @@ class RealRepo(unittest.TestCase):
         self.assertTrue(result.stdout.strip())
 
     def test_protected_tables_include_the_four_added_masters(self) -> None:
-        names = {ln.strip() for ln in TABLES.read_text(encoding="utf-8").splitlines() if ln.strip() and not ln.startswith("#")}
+        lines = [ln.strip() for ln in TABLES.read_text(encoding="utf-8").splitlines() if ln.strip() and not ln.startswith("#")]
+        names = set(lines)
         for table in ("product_lines", "product_formats", "product_kinds", "supplier_aliases"):
             self.assertIn(table, names)
-        self.assertEqual(len(names), 27)
+        self.assertEqual(len(lines), len(set(lines)), "重複した表名がある")
 
 
 if __name__ == "__main__":

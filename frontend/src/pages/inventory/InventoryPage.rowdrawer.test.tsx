@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { createInstance } from 'i18next';
 import { I18nextProvider } from 'react-i18next';
 import { MemoryRouter } from 'react-router-dom';
@@ -25,7 +25,7 @@ const row = {
   id: 'r1', product_id: 2, product_name: 'Card', name_en: null, category: 'cat', mark: null,
   condition: 'sealed', unit: 'BOX', offer_type: 'in_stock', status: 'in_stock', note_ja: 'memo', ship_ja: 'ship',
   merged_count: 1, posted_at: null, ship_timing: null, supplier_id: 3, supplier_name: 'S',
-  unit_price: 10, quantity: 2, tcg_type: 'pokemon_booster_box', offered_at: '', release_date: null,
+  unit_price: 10, quantity: 2, work_code: 'pokemon_booster_box', offered_at: '', release_date: null,
   extraction_item_ids: ['item-1'],
 };
 
@@ -93,7 +93,7 @@ describe('InventoryPage row drawer', () => {
     fireEvent.click(rowEl);
     expect(await screen.findByText('staff raw text')).toBeTruthy();
     expect(mock.get).toHaveBeenCalledWith('/inventory/raw-texts?extraction_item_ids=item-1');
-    expect(screen.queryByRole('tab')).toBeNull();
+    expect(within(screen.getByText('staff raw text').closest('[role="dialog"]') as HTMLElement).queryByRole('tab')).toBeNull();
     expect(analysisCalls()).toHaveLength(0);
   });
 
@@ -119,16 +119,13 @@ describe('InventoryPage row drawer', () => {
     }
   });
 
-  it('F3: clicking the row checkbox selects the row but does not open the panel', async () => {
+  it('F3: there is no row-select checkbox column', async () => {
     await setup(true);
     renderPage();
     await screen.findByTestId('inventory-row-r1');
-    await new Promise((r) => setTimeout(r, 30));
-    const checkbox = screen.getAllByRole('checkbox', { name: /select row r1/i })[0];
-    fireEvent.click(checkbox);
-    await new Promise((r) => setTimeout(r, 30));
-    expect(analysisCalls()).toHaveLength(0);
-    expect(screen.queryByText('Analysis details')).toBeNull();
+    expect(screen.queryAllByRole('checkbox', { name: /select row r1/i })).toHaveLength(0);
+    expect(screen.queryAllByRole('checkbox', { name: /select all/i })).toHaveLength(0);
+    expect(document.querySelector('.comp-table__th--check')).toBeNull();
   });
 
   it('E5: a saved fix in the panel reloads /inventory (onChanged)', async () => {

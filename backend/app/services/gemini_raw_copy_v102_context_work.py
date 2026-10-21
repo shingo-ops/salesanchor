@@ -4,6 +4,7 @@ PO 決定（2026-10-08）：
   (a) 前と後ろが同じ作品のとき → 決める（競合の条件は見ない）
   (b) 片側だけ手がかりがあるとき → その作品の候補が1つで、落とす候補の作品がその投稿に無ければ決める
   (c) 前後2件ずつ見て最も多い作品が1つに決まるとき → (b) と同じ条件で決める
+  (d) (c) が同数のとき、同数の作品のうち候補を持つ作品が1つだけなら (b) と同じ条件で決める（PO 決定 2026-10-19）
   それ以外 → 決めない（要確認に回す）
 
 手がかりは1回目に作った件のうち match_status が matched で作品が分かる件だけ。
@@ -23,6 +24,7 @@ from app.services.extraction_judgement_svc import ProductEntry
 RULE_SAME_BOTH_SIDES = "a"
 RULE_ONE_SIDE = "b"
 RULE_MAJORITY = "c"
+RULE_TIE_ONLY_CANDIDATE_WORK = "d"
 
 REASON_NO_CLUE = "no_clue"
 REASON_TIE = "tie"
@@ -125,7 +127,15 @@ def _decide_one(
         return _undecided(REASON_NO_CLUE)
     ranked = Counter(c.work_id for c in near).most_common()
     if len(ranked) > 1 and ranked[0][1] == ranked[1][1]:
-        return _undecided(REASON_TIE)
+        top = ranked[0][1]
+        candidate_works = {work_of.get(c) for c in candidates}
+        tied = [w for w, n in ranked if n == top and w in candidate_works]
+        if len(tied) != 1:
+            return _undecided(REASON_TIE)
+        chosen, _reason = _pick(tied[0], candidates, work_of, post_works, check_competitor=True)
+        if chosen is None:
+            return _undecided(REASON_TIE)
+        return _decided(RULE_TIE_ONLY_CANDIDATE_WORK, chosen, candidates, near)
     chosen, reason = _pick(ranked[0][0], candidates, work_of, post_works, check_competitor=True)
     if chosen is not None:
         return _decided(RULE_MAJORITY, chosen, candidates, near)

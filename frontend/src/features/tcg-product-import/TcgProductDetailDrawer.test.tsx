@@ -48,12 +48,18 @@ describe("TcgProductDetailDrawer code collisions", () => {
 });
 
 const REVISION = "a".repeat(64);
+const packagingUnits = [
+  { code: "CASE", contained_code: "BOX", name: "Case-ja", name_en: "Case", contained_name: "Box-ja", contained_name_en: "Box" },
+  { code: "BOX", contained_code: "PACK", name: "Box-ja", name_en: "Box", contained_name: "Pack-ja", contained_name_en: "Pack" },
+  { code: "PACK", contained_code: "CARD", name: "Pack-ja", name_en: "Pack", contained_name: "Card-ja", contained_name_en: "Card" },
+];
+const packagingSources = ["official", "official_store", "retailer", "measured", "legacy"];
 const detailOf = (id: string, exclude: string[]) => ({
-  revision: REVISION, lookups,
+  revision: REVISION, lookups, packaging_units: packagingUnits, packaging_sources: packagingSources,
   product: { id, code: "PM-" + id, japanese_title: "Other Box", english_title: null, mark: "ST01", release_date: null,
     product_kind_id: null, work_id: "3", manufacturer_id: null, product_category_id: null,
     search_keywords: ["ob"], exclude_keywords: exclude, required_output_value: null, category_class: "x", is_active: true, created_at: "2026-01-01",
-    product_format_id: null, blank_confirmations: [] as string[] },
+    product_format_id: null, blank_confirmations: [] as string[], packagings: [] as Record<string, unknown>[] },
 });
 function routeGet(detail: unknown) {
   vi.mocked(api.get).mockImplementation(async (url: string) => url.startsWith("/tcg/products/detail/") ? detail : { lookups });
@@ -230,5 +236,91 @@ describe("TcgProductDetailDrawer required fields error (ADR-1020)", () => {
     const alert = await screen.findByText(/cannot be left empty/);
     expect(alert.getAttribute("role")).toBe("alert");
     expect(alert.textContent).toContain("Release date");
+  });
+});
+
+describe("ADR-1028 packaging editor", () => {
+  const row = (unit: string, over: Record<string, unknown> = {}) => ({
+    unit_code: unit, contained_unit_code: null, contained_count: 12, count_source: "official", count_source_urls: ["https://a.example/x"],
+    weight_kg: null, weight_source: null, weight_source_urls: [], note: null, updated_at: "2026-10-18T00:00:00Z", ...over,
+  });
+  const renderPackaging = (product: Record<string, unknown> = {}, mode: "edit" | "create" = "edit") => {
+    const base = detailOf("42", []);
+    routeGet({ ...base, product: { ...base.product, ...product } });
+    render(<TcgProductDetailDrawer productId={mode === "edit" ? 42 : null} open mode={mode} onClose={vi.fn()} onSaved={vi.fn()} />);
+  };
+  const countField = (unit: string) => screen.getByRole("spinbutton", { name: new RegExp(`in one ${unit}$`) }) as HTMLInputElement;
+  const submit = () => fireEvent.submit(screen.getByLabelText(/Japanese name/).closest("form") as HTMLFormElement);
+  it("shows one count and weight field per unit for a shared product", async () => {
+    renderPackaging({ tenant_id: null, packagings: [row("CASE")] });
+    await screen.findByLabelText(/Japanese name/);
+    expect(screen.getByRole("heading", { name: "Packaging (count and weight)" })).toBeTruthy();
+    expect(screen.getAllByRole("spinbutton")).toHaveLength(packagingUnits.length * 2);
+    expect(countField("Case").value).toBe("12");
+    expect(countField("Box").value).toBe("");
+  });
+  it("shows no packaging fields for a tenant product or in create mode", async () => {
+    renderPackaging({ tenant_id: "t-1" });
+    await screen.findByLabelText(/Japanese name/);
+    expect(screen.queryByRole("heading", { name: "Packaging (count and weight)" })).toBeNull();
+    cleanup();
+    renderPackaging({}, "create");
+    await screen.findByLabelText(/Japanese name/);
+    expect(screen.queryByRole("heading", { name: "Packaging (count and weight)" })).toBeNull();
+  });
+  it("does not send packagings when only another field changed", async () => {
+    vi.mocked(api.put).mockResolvedValue(detailOf("42", []));
+    renderPackaging({ packagings: [row("CASE")] });
+    fireEvent.change(await screen.findByLabelText(/Japanese name/), { target: { value: "Changed" } });
+    submit();
+    await waitFor(() => expect(api.put).toHaveBeenCalledTimes(1));
+    expect("packagings" in (vi.mocked(api.put).mock.calls[0][1] as object)).toBe(false);
+  });
+  it("sends every unit when a packaging value changed, and resets the source", async () => {
+    vi.mocked(api.put).mockResolvedValue(detailOf("42", []));
+    renderPackaging({ packagings: [row("CASE")] });
+    await screen.findByLabelText(/Japanese name/);
+    fireEvent.change(countField("Case"), { target: { value: "6" } });
+    expect((screen.getAllByRole("combobox", { name: "Source" })[0] as HTMLSelectElement).value).toBe("");
+    submit();
+    await waitFor(() => expect(api.put).toHaveBeenCalledTimes(1));
+    const body = vi.mocked(api.put).mock.calls[0][1] as { packagings: Record<string, unknown>[] };
+    expect(body.packagings.map(r => r.unit_code)).toEqual(["CASE", "BOX", "PACK"]);
+    expect(body.packagings[0]).toMatchObject({ contained_count: 6, count_source: null, weight_kg: null });
+  });
+  it("clears source and URLs when a value is emptied", async () => {
+    renderPackaging({ packagings: [row("CASE")] });
+    await screen.findByLabelText(/Japanese name/);
+    fireEvent.change(countField("Case"), { target: { value: "" } });
+    expect((screen.getAllByRole("textbox", { name: "Source URLs" })[0] as HTMLTextAreaElement).value).toBe("");
+  });
+  it("offers the legacy source (disabled) only while the legacy value is unchanged", async () => {
+    renderPackaging({ packagings: [row("CASE", { count_source: "legacy", count_source_urls: [] })] });
+    await screen.findByLabelText(/Japanese name/);
+    const legacy = () => screen.queryByRole("option", { name: "Old value (no source)" }) as HTMLOptionElement | null;
+    expect(legacy()?.disabled).toBe(true);
+    fireEvent.change(countField("Case"), { target: { value: "5" } });
+    expect(legacy()).toBeNull();
+  });
+  it("shows the packaging error message for a 422 code", async () => {
+    vi.mocked(api.put).mockRejectedValue(new ApiError("PACKAGING_URLS_REQUIRED", 422, null));
+    renderPackaging({ packagings: [row("CASE")] });
+    await screen.findByLabelText(/Japanese name/);
+    fireEvent.change(countField("Case"), { target: { value: "5" } });
+    submit();
+    expect((await screen.findByText(/Source URLs are missing/)).getAttribute("role")).toBe("alert");
+  });
+  it("refuses to open a detail whose packaging data is not an array", async () => {
+    const base = detailOf("42", []);
+    routeGet({ ...base, packaging_sources: null });
+    render(<TcgProductDetailDrawer productId={42} onClose={vi.fn()} onSaved={vi.fn()} />);
+    await screen.findByText(/Could not load the product details/);
+  });
+  it("addExcludeWord never sends packagings", async () => {
+    const base = detailOf("42", []);
+    routeGet({ ...base, product: { ...base.product, packagings: [row("CASE")] } });
+    vi.mocked(api.put).mockResolvedValue(base);
+    await expect(addExcludeWord(42, "fixture")).resolves.toBe("added");
+    expect("packagings" in (vi.mocked(api.put).mock.calls[0][1] as object)).toBe(false);
   });
 });

@@ -208,3 +208,32 @@ def test_chosen_product_id_among_candidates_makes_it_matched():
     row = pf.resolve_product_first(**base, chosen_product_id=31)
     assert row["match_status"] == "matched" and row["product_id"] == 31 and row["product_category"] == "箱系"
     assert pf.REVIEW_PRODUCT_MULTIPLE not in [r["kind"] for r in row["review_extra"]]
+
+
+# --- (d) (c) が同数のとき、候補を持つ作品が1つだけなら決める（PO 決定 2026-10-19） ---------------------
+
+
+def _tie_decide(neighbors, candidates):
+    """neighbors は [(price_line, 作品)]（商品ID は作品ごとの 21/22/23）、候補は ambiguous の件（price_line=100）。"""
+    pid = {1: 21, 2: 22, 3: 23}
+    items = [{"price_line": ln, "product_id": pid[w], "match_status": "matched"} for ln, w in neighbors]
+    items.append({"price_line": 100, "product_id": None, "match_status": "ambiguous", "match_candidates": candidates})
+    items.sort(key=lambda it: it["price_line"])
+    result = cw.decide_by_context(items, (*_PRODUCTS, _p(61, 4, "作品フォー商品")))
+    return result[items.index(next(it for it in items if it["price_line"] == 100))]
+
+
+def test_rule_d_tie_with_one_candidate_work_decides():
+    # 前2件 W、後ろ2件 X。候補は W・Y・作品4（X は候補に無い）。Y・作品4 は投稿に無い
+    d = _tie_decide([(98, 1), (99, 1), (101, 2), (102, 2)], [31, 33, 61])
+    assert d.is_decided and d.product_id == 31 and d.rule == cw.RULE_TIE_ONLY_CANDIDATE_WORK == "d"
+
+
+def test_rule_d_tie_with_two_candidate_works_stays_undecided():
+    d = _tie_decide([(98, 1), (99, 1), (101, 2), (102, 2)], [31, 32])
+    assert not d.is_decided and d.reason == cw.REASON_TIE
+
+
+def test_rule_d_three_way_tie_with_two_candidate_works_stays_undecided():
+    d = _tie_decide([(99, 1), (101, 2), (102, 3)], [31, 33])
+    assert not d.is_decided and d.reason == cw.REASON_TIE

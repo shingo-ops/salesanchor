@@ -490,6 +490,46 @@
   box-shadow: 0 0 0 3px var(--danger-bg-subtle);
 }
 
+/* ── tab: Tabs 金型のタブと同じ見た目の透明プルダウン（design.md §3-3） ── */
+.comp-select__control.comp-select--tab {
+  border-top-color: transparent;
+  border-left-color: transparent;
+  border-right-color: transparent;
+  border-bottom: var(--comp-tab-underline-w) solid transparent;
+  border-radius: 0;
+  background-color: transparent;
+  height: var(--comp-tab-h-md);
+  min-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  padding-left: var(--comp-tab-px-md);
+  padding-right: var(--space-5);
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+}
+
+.comp-select__control.comp-select--tab:hover {
+  color: var(--accent);
+}
+
+.comp-select__control.comp-select--tab:focus {
+  box-shadow: none;
+  border-top-color: transparent;
+  border-left-color: transparent;
+  border-right-color: transparent;
+}
+
+.comp-select__control.comp-select--tab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.comp-select__control.comp-select--tab.comp-select--tab-active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  font-weight: var(--font-weight-semi);
+}
+
 /* ── 8. モバイル タッチターゲット（WCAG 2.5.5）── */
 @media (max-width: 767px) {
   .comp-field__input,

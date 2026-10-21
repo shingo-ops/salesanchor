@@ -1,0 +1,92 @@
+=== RESULT mode=guard
+                tag                 | is_current 
+------------------------------------+------------
+ D1 new A/Box(残る)                 | t
+ D1 old A/Single                    | f
+ D1b new A/Box(残る)                | t
+ D1b old A/Single                   | t
+ D2 old A/Single                    | t
+ R1 new A/Single(再解析後)          | t
+ R1 old A/Error                     | f
+ R2 new B/Single(再解析後)          | t
+ R2 old A/Single                    | t
+ R3a X A/Damaged(再解析後)          | t
+ R3a X A/Single(再解析後)           | f
+ R3a Y A/Box                        | t
+ R3b X A/Damaged(再解析後)          | t
+ R3b X A/Single(再解析後)           | t
+ R3b Y B/Box                        | t
+ R3c X A/Single(再解析後)           | t
+ R3c Z A/Error                      | f
+ R5 new A/Single(再解析後)          | t
+ R5 old A/Damaged                   | t
+ R5 old A/Sealed                    | f
+ R6 new A/Sealed(再解析後・同じ)    | t
+ R6 old A/Damaged                   | t
+ R6 old A/Sealed                    | f
+ S1 new A/Single                    | t
+ S1 old A/Error                     | t
+ S2 new B                           | t
+ S2 old A                           | t
+ S2 old B                           | f
+ S3 old A                           | t
+ S5 new shime B                     | t
+ S5 old A/Box                       | f
+ S5 old A/Case                      | t
+ S6 same-post A/Box #1              | t
+ S6 same-post A/Box #2              | t
+ S6 same-post A/Case                | t
+ S7 tie job a                       | t
+ S7 tie job b                       | t
+ S8 new A/Box                       | t
+ S8 old A/Box                       | f
+ S8 old A/Case                      | t
+ S9 late-first-analysis old A/Error | t
+ S9 new A/Single                    | t
+(42 行)
+
+ run_merge 
+-----------
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+(35 行)
+
+=== IDEMPOTENT rows_changed_by_second_run
+ rows_changed_by_second_run 
+----------------------------
+                          0
+(1 行)
+

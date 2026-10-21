@@ -34,7 +34,7 @@ describe('ProductEditPage inputs use the product-edit variant (design.md §AY-2z
     const inputs = Array.from(form.querySelectorAll('input'));
     expect(inputs).toHaveLength(14);
     inputs.forEach((el) => expect(el.className).toBe('comp-field__input comp-input--product-edit'));
-    expect(form.querySelectorAll('select')).toHaveLength(9);
+    expect(form.querySelectorAll('select')).toHaveLength(8);
     expect(form.querySelectorAll('textarea')).toHaveLength(1);
     form.querySelectorAll('select').forEach((el) => expect(el.className).toBe('comp-select__control comp-select__control--full comp-select--product-edit'));
     form.querySelectorAll('textarea').forEach((el) => expect(el.className).toBe('comp-field__textarea comp-textarea--product-edit'));

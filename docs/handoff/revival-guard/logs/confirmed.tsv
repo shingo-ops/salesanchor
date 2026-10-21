@@ -1,0 +1,3 @@
+cls	ar_id	job_id	channel_id	product_id	condition_id	eng	received_at	computed_at	updated_at	newest_newer_received	n_newer	newer_cond_ids	delivered
+A_confirmed(確認済)	349eaef0-1958-4a82-80eb-74d9c6fe5212	f6393ec9-c28c-4542-a562-92a6ef9945b8	bf8ee742-b21a-49d7-8efa-51f624974da5	440569	17	v102	2026-10-08 00:20:00+00:00	2026-10-18 00:08:01.954577+00:00	2026-10-18 00:08:02.033735+00:00	2026-10-19 05:19:00+00:00	21	14,16	True
+A_confirmed(確認済)	f61f1ea7-40d4-454e-ac52-3e3e6e8fcffe	a1a5dcbe-9ba8-4e8c-8d17-fb23f91da67f	aae01d0c-d699-4455-9ceb-0a2d7a573764	458213	12	v102	2026-10-11 18:09:00+00:00	2026-10-18 00:21:58.361305+00:00	2026-10-18 00:21:58.428487+00:00	2026-10-16 11:42:00+00:00	1	14	True

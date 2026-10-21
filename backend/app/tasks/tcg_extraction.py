@@ -722,11 +722,13 @@ def schedule_distribution() -> bool:
 
 
 def _publish_review_changed() -> None:
-    """ADR-1016: 要確認の一覧が変わったことを合図する。失敗しても仕事は失敗させない。"""
+    """ADR-1016: 要確認の一覧と在庫表が変わったことを合図する。失敗しても仕事は失敗させない。"""
     try:
         from app.realtime.publisher import publish_change_sync
+        from app.realtime.topics import TASK_TOPICS, TOPIC_TCG_INVENTORY
 
         publish_change_sync("tcg.review", "global")
+        publish_change_sync(TOPIC_TCG_INVENTORY, TASK_TOPICS[TOPIC_TCG_INVENTORY])
     except Exception as exc:  # noqa: BLE001
         logger.warning("[tcg_extraction] realtime publish skipped: %s", exc)
 
@@ -854,6 +856,24 @@ try:
             raise self.retry(exc=exc) from exc
 
     @celery_app.task(
+        name="tcg.error_report_reanalyze_and_verify",
+        bind=True,
+        max_retries=0,
+        time_limit=330,
+        soft_time_limit=300,
+    )
+    def error_report_reanalyze_and_verify_task(self, report_id: str) -> dict:
+        """
+        Celery タスク（ADR-1025 便2）: 誤り報告の行を v102 で再解析し、報告の項目ごとに照合して
+        events・status に残し、Discord へ結果を送る。再試行はしない（失敗は unresolved として残る）。
+        """
+        from app.services.analysis_error_report_verify import run_reanalyze_and_verify  # noqa: PLC0415
+
+        return run_reanalyze_and_verify(
+            report_id, reanalyze=reanalyze_v102_job, session_factory=_get_sync_session,
+        )
+
+    @celery_app.task(
         name="tcg.auto_distribute_after_analysis",
         bind=True,
         max_retries=1,
@@ -909,6 +929,7 @@ except Exception as _celery_init_err:  # noqa: BLE001
     auto_distribute_after_analysis_task = None  # type: ignore[assignment]
     v102_reanalyze_after_correction_task = None  # type: ignore[assignment]
     scheduled_distribution_task = None  # type: ignore[assignment]
+    error_report_reanalyze_and_verify_task = None  # type: ignore[assignment]
 
 
 __all__ = [
@@ -917,6 +938,7 @@ __all__ = [
     "auto_distribute_after_analysis_task",
     "v102_reanalyze_after_correction_task",
     "scheduled_distribution_task",
+    "error_report_reanalyze_and_verify_task",
     "enqueue_v102_reanalyze",
     "schedule_distribution",
 ]

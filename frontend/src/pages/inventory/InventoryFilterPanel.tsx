@@ -4,14 +4,14 @@
  * InventoryPage から切り出した表示専用コンポーネント（ページ行数上限対策）。
  * 状態は親（InventoryPage）が保持し、props 経由で受け取る。
  *   - フィルタ有効化トグル
- *   - （スマホのみ）提供者の選択 / カテゴリーの表示・非表示（除外フィルタ）
+ *   - （スマホのみ）提供者・コンディション・価格・数量（PC はツールバー。常に有効）/ カテゴリーの表示・非表示（除外フィルタ）
  *   - 表示する列（列トグル）
- *   - 表示条件: 状態 / 形態 / 在庫・予約 の複数選択 + 数量 / 単価 の範囲（包含フィルタ）
+ *   - 表示条件: 形態 / 在庫・予約 の複数選択（包含フィルタ）
  */
 import type { Dispatch, SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/Button";
-import { TextFieldControl } from "../../components/TextField";
+import { ContentToolbarRange } from "../../components/ContentToolbar";
 import { MultiSelect, type MultiSelectOption } from "../../components/MultiSelect";
 import { Checkbox } from "../../components/Checkbox";
 
@@ -32,7 +32,7 @@ interface Props {
   toggleHiddenColumn: (c: string) => void;
   conditionFacet: string[];
   showConditions: Set<string>;
-  setShowConditions: Dispatch<SetStateAction<Set<string>>>;
+  onConditionChange: (next: string[]) => void;
   unitFacet: string[];
   showUnits: Set<string>;
   setShowUnits: Dispatch<SetStateAction<Set<string>>>;
@@ -66,7 +66,7 @@ export default function InventoryFilterPanel({
   toggleHiddenColumn,
   conditionFacet,
   showConditions,
-  setShowConditions,
+  onConditionChange,
   unitFacet,
   showUnits,
   setShowUnits,
@@ -128,6 +128,44 @@ export default function InventoryFilterPanel({
         />
       )}
 
+      {/* スマホだけ: ツールバーに出ない コンディション・価格・数量 をここに出す（常に有効。有効化スイッチの対象外） */}
+      {showSupplierSelect && (
+        <>
+          <MultiSelect
+            testId="inventory-condition-filter"
+            label={t("inventory.conditionFilter.label")}
+            options={conditionFacet.map((c) => ({ value: c, label: c }))}
+            selected={Array.from(showConditions)}
+            onChange={onConditionChange}
+            clearLabel={t("inventory.conditionFilter.clear")}
+            allLabel={t("inventory.conditionFilter.all")}
+            countLabel={(n) => t("inventory.conditionFilter.count", { count: n })}
+          />
+          <ContentToolbarRange
+            minValue={priceMin}
+            maxValue={priceMax}
+            onMinChange={(v) => { setPriceMin(v); setPage(1); }}
+            onMaxChange={(v) => { setPriceMax(v); setPage(1); }}
+            minPlaceholder={t("inventory.range.priceMin")}
+            maxPlaceholder={t("inventory.range.priceMax")}
+            minAriaLabel={t("inventory.range.priceMin")}
+            maxAriaLabel={t("inventory.range.priceMax")}
+            testIdPrefix="inventory-price"
+          />
+          <ContentToolbarRange
+            minValue={qtyMin}
+            maxValue={qtyMax}
+            onMinChange={(v) => { setQtyMin(v); setPage(1); }}
+            onMaxChange={(v) => { setQtyMax(v); setPage(1); }}
+            minPlaceholder={t("inventory.range.qtyMin")}
+            maxPlaceholder={t("inventory.range.qtyMax")}
+            minAriaLabel={t("inventory.range.qtyMin")}
+            maxAriaLabel={t("inventory.range.qtyMax")}
+            testIdPrefix="inventory-qty"
+          />
+        </>
+      )}
+
       <Checkbox
         label={t("inventory.filterPanel.enable")}
         data-testid="inventory-filter-enabled"
@@ -183,7 +221,7 @@ export default function InventoryFilterPanel({
         </div>
       </div>
 
-      {/* 4) 表示条件（状態/形態/区分の複数選択 + 数量/単価の範囲。選択したものだけ表示） */}
+      {/* 4) 表示条件（形態/区分の複数選択。選択したものだけ表示） */}
       <div
         style={{
           background: "var(--bg-subtle)",
@@ -197,25 +235,6 @@ export default function InventoryFilterPanel({
         </div>
         <div style={{ fontSize: "var(--font-xs)", color: "var(--text-muted)", marginBottom: "var(--space-2)" }}>
           {t("inventory.filterPanel.displayConditionsNote")}
-        </div>
-
-        {/* 状態 */}
-        <div style={{ marginBottom: "var(--space-2)" }}>
-          <div style={{ fontSize: "var(--font-xs)", color: "var(--text-secondary)", marginBottom: "var(--space-1)" }}>{t("inventory.col.condition")}</div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)" }}>
-            {conditionFacet.length === 0 ? (
-              <span style={{ color: "var(--text-muted)" }}>{t("inventory.noResults")}</span>
-            ) : (
-              conditionFacet.map((c) => (
-                <Checkbox key={c}
-                  label={c}
-                  data-testid={`inventory-cond-${c}`}
-                  checked={showConditions.has(c)}
-                  onChange={() => toggleSetMember(setShowConditions, c)}
-                />
-              ))
-            )}
-          </div>
         </div>
 
         {/* 形態 */}
@@ -249,26 +268,6 @@ export default function InventoryFilterPanel({
                 onChange={() => toggleSetMember(setShowOfferTypes, o)}
               />
             ))}
-          </div>
-        </div>
-
-        {/* 数量・単価の範囲 */}
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-4)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
-            <span style={{ fontSize: "var(--font-xs)", color: "var(--text-secondary)" }}>{t("inventory.col.quantity")}</span>
-            <TextFieldControl type="number" min="0" inputMode="numeric" data-testid="inventory-qty-min" value={qtyMin}
-              onChange={(e) => { setQtyMin(e.target.value); setPage(1); }} style={{ width: "6rem" }} placeholder={t("inventory.filterPanel.min")} />
-            <span style={{ color: "var(--text-muted)" }}>〜</span>
-            <TextFieldControl type="number" min="0" inputMode="numeric" data-testid="inventory-qty-max" value={qtyMax}
-              onChange={(e) => { setQtyMax(e.target.value); setPage(1); }} style={{ width: "6rem" }} placeholder={t("inventory.filterPanel.max")} />
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
-            <span style={{ fontSize: "var(--font-xs)", color: "var(--text-secondary)" }}>{t("inventory.col.unitPrice")}</span>
-            <TextFieldControl type="number" min="0" inputMode="numeric" data-testid="inventory-price-min" value={priceMin}
-              onChange={(e) => { setPriceMin(e.target.value); setPage(1); }} style={{ width: "7rem" }} placeholder={t("inventory.filterPanel.min")} />
-            <span style={{ color: "var(--text-muted)" }}>〜</span>
-            <TextFieldControl type="number" min="0" inputMode="numeric" data-testid="inventory-price-max" value={priceMax}
-              onChange={(e) => { setPriceMax(e.target.value); setPage(1); }} style={{ width: "7rem" }} placeholder={t("inventory.filterPanel.max")} />
           </div>
         </div>
       </div>

@@ -27,6 +27,7 @@ from app.services import tcg_extraction_record_svc as extraction_records
 from app.services import tcg_product_master_svc as product_master
 from app.tasks import tcg_extraction as extraction
 from tests.conftest import _PUBLIC_SUPPLIERS_DDL, _supplier_ssot_premigration
+from tests.condition_value_columns import apply_condition_value_columns
 from tests.seed_data import tcg_product_categories_seed_sql, type_master_seed_sql
 
 MIGRATIONS = Path(__file__).resolve().parents[2] / "migrations"
@@ -234,6 +235,39 @@ def create_soldout_extra_targets(cursor, schema):
     cursor.execute((MIGRATIONS / SOLDOUT_EXTRA_TARGETS).read_text(encoding="utf-8").replace("public.analysis_", f"{schema}.analysis_"))
 
 
+def _has_columns(cursor, table_schema, table_name, columns):
+    """information_schema.columns で全部の列が既にあるかを見る（ALTER を流さず AccessExclusiveLock を避けるため）。"""
+    cursor.execute(
+        "SELECT count(DISTINCT column_name) FROM information_schema.columns WHERE table_schema = %s AND table_name = %s AND column_name = ANY(%s)",
+        (table_schema, table_name, list(columns)),
+    )
+    return cursor.fetchone()[0] == len(columns)
+
+
+def apply_bundle_sale_columns(cursor, schema):
+    """ADR-1027 便1 の列を試験 DB に足す。何回呼んでもよい。
+
+    analysis_results.bundle_size（public と schema の両方。本番の migration をそのまま）と、配信が読む line_units.name_ja/name_en。
+    試験 DB では public.units が実表で line_units が無い（本番は line_units が実表・units が VIEW）。
+    無い／VIEW（前回の呼び出しが作った）: units に列を足し、無ければ同名の VIEW を作る。実表: 本番の migration をそのまま当てる。
+    並列試験で毎回 AccessExclusiveLock を取らないよう、列が既にあれば ALTER を流さない（CI のデッドロック対策）。
+    """
+    if not _has_columns(cursor, "public", "analysis_results", ["bundle_size"]):
+        cursor.execute((MIGRATIONS / "20261017_220000_add_analysis_results_bundle_size.sql").read_text())
+    if not _has_columns(cursor, schema, "analysis_results", ["bundle_size"]):
+        cursor.execute(f"ALTER TABLE {schema}.analysis_results ADD COLUMN IF NOT EXISTS bundle_size integer")
+    cursor.execute("SELECT c.relkind FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'public' AND c.relname = 'line_units'")
+    kind = cursor.fetchone()
+    if kind is not None and kind[0] == "r":
+        if not _has_columns(cursor, "public", "line_units", ["name_ja", "name_en"]):
+            cursor.execute((MIGRATIONS / "20261017_220100_add_line_units_display_names.sql").read_text())
+    else:
+        if not _has_columns(cursor, "public", "units", ["name_ja", "name_en"]):
+            cursor.execute("ALTER TABLE public.units ADD COLUMN IF NOT EXISTS name_ja text, ADD COLUMN IF NOT EXISTS name_en text")
+        if kind is None:
+            cursor.execute("CREATE VIEW public.line_units AS SELECT * FROM public.units")
+
+
 def migrate(cursor):
     cursor.execute(_PUBLIC_PRODUCTS_DDL)
     cursor.execute(_PUBLIC_SUPPLIERS_DDL)
@@ -257,6 +291,7 @@ def migrate(cursor):
     cursor.execute(_rewire_keyword_fks(SCHEMA))
     # Master SSOT Phase 3: public schema tables for 9 master tables
     cursor.execute((MIGRATIONS / "20260919_020000_master_ssot_public_tables.sql").read_text())
+    apply_condition_value_columns(cursor)  # 本番の形（value_group / value_rank 列＋11状態の値）に揃える
     # Seed public.tcg_product_categories from tenant schema so seed_products() can resolve PC_BOX
     cursor.execute(f"""
         INSERT INTO public.tcg_product_categories (code, display_name, kubun_type, is_active)
@@ -340,6 +375,7 @@ def migrate(cursor):
     # TCG_SCHEMA を差し替える試験用スキーマにも同じ列を足す。配信の SELECT が ship_ja を読む。
     cursor.execute(f"ALTER TABLE {SCHEMA}.analysis_results ADD COLUMN IF NOT EXISTS ship_ja TEXT")
     cursor.execute(f"ALTER TABLE {SCHEMA}.analysis_results ADD COLUMN IF NOT EXISTS ship_en TEXT")
+    apply_bundle_sale_columns(cursor, SCHEMA)  # ADR-1027 便1
 
 
 @pytest.fixture
@@ -750,6 +786,7 @@ def test_condition_note_18_items_history_twice_and_distribution(pg, monkeypatch)
         # 発送日の専用列（v102）: tenant_004 の analysis_results・extraction_items にも列が要る（_merge_supplier_products が読む）。
         cursor.execute("ALTER TABLE tenant_004.analysis_results ADD COLUMN IF NOT EXISTS ship_ja TEXT")
         cursor.execute("ALTER TABLE tenant_004.analysis_results ADD COLUMN IF NOT EXISTS ship_en TEXT")
+        apply_bundle_sale_columns(cursor, "tenant_004")  # ADR-1027 便1: 配信の SELECT が bundle_size と line_units を読む
         for code, name in [("PM0268", "匿名パック"), ("PM0141", "匿名箱")]:
             cursor.execute("INSERT INTO public.products(product_code,name,category_class,is_active,work_id) SELECT %s,%s,'Box',true,id FROM public.type_master WHERE code='pokemon_booster_box' RETURNING id", (code, name))
             pid = cursor.fetchone()[0]

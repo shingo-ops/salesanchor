@@ -59,3 +59,29 @@ PO の言葉:
 ## 維持の仕組み
 
 状態を足すときは、群と順位を決めて値を入れる。recon / design: `docs/handoff/condition-value-rank/`。
+
+---
+
+## 改訂 2026-10-18（value_rank を並び順の正本にも使う）
+
+PO 2026-10-18「y」×2（同じ商品の中は価値の高い順。解析の結果画面・取込進捗の一覧・GAS 在庫一覧へ送るデータの順も同じく変わってよい）。
+
+- 状態マスタの value_group / value_rank を、v102 の判定に加えて、同じ商品の中の行の並び順の正本としても使う。
+- 並びの規則（`backend/app/services/tcg_result_order.py` の `result_order_sql`）: 群は case → box → pack、群の中は value_rank の小さい順（1＝価値が高い）、価値の順位が無い状態は最後に置き、Bulk を先頭に、残りは canonical の文字順。同じ状態の中は今までどおり価格の安い順。
+- コードに置くのは群の順（`VALUE_GROUP_ORDER`）と Bulk の特例（`UNRANKED_FIRST`）だけ。固定の表 `RESULT_CONDITION_ORDER` は廃止した。状態を足すときは、値（群と順位）を状態マスタに入れれば並びも決まる。値の変更は上記の「値の表」の手順（記録した SQL）で行う。
+- 状態マスタに value_group / value_rank の値が無い環境では、全状態が「順位なし」になり、Bulk → 文字順で並ぶ（壊れない）。
+- 影響する画面・出力: 在庫表・閲覧ページ・LINE 解析の結果画面（ページの切れ目が変わる）・取込進捗の一覧・GAS 在庫一覧へ送るデータ（配信行の sort_ord）。列・GAS 出力の14列は変えない。
+- 前の表との差: 表に無かった Opened case・Searched box・AR confirmed pack が、Bulk より後ろから、それぞれの群の最後へ移る。
+- 戻し方: PR を revert（値はそのまま残る）。
+- 設計・調査: `docs/handoff/result-order-condition-value/`。
+
+---
+
+## 改訂 2026-10-21（要確認タブの既定の並びは投稿日の新しい順を先にする）
+
+PO 2026-10-21 の提案「投稿日の新しい順に並べて欲しい」（docs/handoff/review-speed/design.md §10-1）。
+
+- LINE 解析の結果画面のうち、要確認タブ（一覧 API に `status_tab=NEEDS_REVIEW` と `order=posted_desc` を渡す画面）だけ、並びの先頭に投稿日（source_messages.line_posted_at の新しい順）と投稿を置く。同じ投稿の中は今までどおり `result_order_sql`（発売日 → 商品 → 状態の順位 → 状態名 → 価格、backend/app/services/tcg_result_order.py:36-42）の順。
+- `result_order_sql` 本体と、在庫表・閲覧ページ・取込進捗・GAS 在庫一覧へ送るデータ（sort_ord）の並びは変えない（ADR-1014:121）。CSV・シート・配信は `order` を渡さないので今の並びのまま。
+- 戻し方: 実装 PR を revert。
+- 設計: `docs/handoff/review-speed/design.md` §10-6。

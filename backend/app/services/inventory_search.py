@@ -40,6 +40,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.inventory_axes import resolve_condition_view
+from app.services.product_packagings import legacy_field_sql
 
 # 検索結果の matched_via 優先順位 (低数値が高優先)
 MATCHED_VIA_PRIORITY: dict[str, int] = {
@@ -99,11 +100,11 @@ class SearchCandidate:
     score: float
     # 海外顧客向け見積/請求明細用 (public.products の付帯情報)。
     # box_weight_kg・case_weight_kg=形態別重量
-    # mark=型番 / tcg_type=TCG 種別。見積/請求の明細行に引き込んで使う。
+    # mark=型番 / work_code=作品の符号（work_id → type_master.code）。見積/請求の明細行に引き込んで使う。
     box_weight_kg: float | None = None
     case_weight_kg: float | None = None
     mark: str | None = None
-    tcg_type: str | None = None
+    work_code: str | None = None
     # spec v1.3 F11 AC11.4: 仕入元 × condition の現在オファー (status='in_stock' のみ)
     inventory_offers: tuple[OfferSummary, ...] = ()
 
@@ -340,10 +341,10 @@ SELECT
     s.name AS supplier_name,
     p.image_url,
     -- 海外顧客向け見積/請求明細用の付帯列 (public.products)
-    p.box_weight_kg,
-    p.case_weight_kg,
+    {legacy_field_sql("box_weight_kg", "p.id")} AS box_weight_kg,
+    {legacy_field_sql("case_weight_kg", "p.id")} AS case_weight_kg,
     p.mark,
-    p.tcg_type,
+    tm.code AS work_code,
     r.matched_via,
     -- ranking score:
     --   matched_via 優先度 (10〜30) を base + 在庫切れ penalty (+1000 で末尾) で総合化
@@ -368,6 +369,7 @@ SELECT
 FROM ranked r
 JOIN public.products p ON p.id = r.product_id
 LEFT JOIN public.suppliers s ON s.id = p.supplier_default_id
+LEFT JOIN public.type_master tm ON tm.id = p.work_id
 ORDER BY score ASC, p.id ASC
 LIMIT :limit
 """
@@ -441,7 +443,7 @@ async def search_inventory(
                     float(r["case_weight_kg"]) if r.get("case_weight_kg") is not None else None
                 ),
                 mark=r.get("mark"),
-                tcg_type=r.get("tcg_type"),
+                work_code=r.get("work_code"),
                 matched_via=str(r["matched_via"]),
                 score=float(r["score"]),
                 inventory_offers=tuple(offers_by_product.get(pid, ())),

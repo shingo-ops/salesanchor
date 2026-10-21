@@ -42,6 +42,7 @@
 | v102：価格なし・数ありの件に前の価格を引き継ぐ price_basis=INHERIT:<id> | （この PR） | 価格が書かれていない数だけの行に、同じ仕入元・同じ商品×状態の前の価格（48時間以内）を引き継いだ。id は元の analysis_results.id。相場（_MARKET_SQL）の母数には入れない | `docs/handoff/remaining-n-price-inherit/` |
 | 段1 間の行の検知の記録（system_review_detail） | （この PR） | 投稿ごとの取りこぼしの疑いの行番号・間の行から出る商品の候補を extraction_jobs.system_review_detail に残す。要確認の判定・配信・画面は不変 | [v102-gap-detect-record](../../handoff/v102-gap-detect-record/) |
 | 段2a 取りこぼし疑いを要確認の理由に | （この PR） | 段1の記録の gap_name の件（unmatched・価格数量あり・間の行あり）の review に gemini_gap_suspect（fix_stage=extraction）を足す。商品は当てない（product_id・pid_resolved 不変）ので配信は不変。間の行番号の画面は PR-B | [v102-gap-fill-review](../../handoff/v102-gap-fill-review/) |
+| v102：単位が「個」・無記入の箱系の行を値段で Box／Case／Pack に決める（ADR-1036） | （この PR） | 買取の物差しを投稿日時の時点に（便1）、対象を状態の語がある行と「個」へ広げ Pack と状態の写しを足す（便2）。③自社前日・②他社は別設計 | [price-unit-decision](../../handoff/price-unit-decision/) |
 
 - 2026-10-07 以降の新しい指示書は、リポジトリに本文を置かない。この記録には key と本文の sha256 と成績の数字だけを書く（PO 2026-10-07「基盤となるロジックはあまり公開してほしくはない」）。
 

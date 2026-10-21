@@ -17,6 +17,18 @@ describe('Stack', () => {
     const { container } = render(<Stack gap="2" className="x">a</Stack>);
     expect((container.firstElementChild as HTMLElement).className).toBe('comp-stack comp-stack--gap-2 x');
   });
+
+  it('adds comp-stack--row only when direction is row', () => {
+    const { container } = render(<Stack direction="row" gap="2">a</Stack>);
+    expect((container.firstElementChild as HTMLElement).className).toBe('comp-stack comp-stack--row comp-stack--gap-2');
+  });
+
+  it('does not add comp-stack--row by default or with direction column', () => {
+    const { container, rerender } = render(<Stack>a</Stack>);
+    expect((container.firstElementChild as HTMLElement).className).not.toContain('comp-stack--row');
+    rerender(<Stack direction="column">a</Stack>);
+    expect((container.firstElementChild as HTMLElement).className).not.toContain('comp-stack--row');
+  });
 });
 
 describe('TwoColumn', () => {

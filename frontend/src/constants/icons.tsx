@@ -12,30 +12,21 @@
  */
 
 import "./platform-icon.css";
-import { forwardRef } from "react";
-import type { ComponentType, SVGProps, ForwardRefExoticComponent, RefAttributes } from "react";
+import type { ComponentType, SVGProps } from "react";
+import { hi, ArrowUp, ArrowDown, X, ArrowTopRight, TABLE_ICONS } from "./icons-base";
+import type { Icon, IconProps, LucideIcon } from "./icons-base";
+export type { Icon, IconProps, LucideIcon };
+export { TABLE_ICONS };
 
 // ============================================================
 // アイコン型定義（@phosphor-icons/react 依存を排除した独自定義）
 // ============================================================
 
-/** アイコンコンポーネントが受け取る props */
-export type IconProps = {
-  size?: number | string;
-  weight?: string;  // Heroicons では無視（solid 固定）
-  className?: string;
-} & Pick<SVGProps<SVGSVGElement>, "aria-hidden" | "aria-label" | "aria-labelledby" | "aria-describedby" | "role" | "focusable">;
-
-/** アイコンコンポーネント型 — 全 ICON_* 定数の値型 */
-export type Icon = ForwardRefExoticComponent<IconProps & RefAttributes<SVGSVGElement>>;
-
-// 後方互換エイリアス（RolesPage.tsx 等が LucideIcon 型を参照しているため）
-export type LucideIcon = Icon;
 
 // ── solid: ダッシュボード・ステータス・アクション・カテゴリ等 ──────────────
 import {
   MoonIcon, SunIcon, GlobeAltIcon,
-  CheckIcon, ExclamationTriangleIcon, XMarkIcon,
+  CheckIcon, ExclamationTriangleIcon,
   ChartBarIcon, UserIcon, SignalIcon, BriefcaseIcon, CubeIcon,
   UsersIcon, KeyIcon, Cog6ToothIcon, Cog8ToothIcon, FolderIcon,
   WrenchScrewdriverIcon, ChatBubbleLeftIcon, ChatBubbleOvalLeftIcon, ClipboardDocumentListIcon,
@@ -49,11 +40,9 @@ import {
   ReceiptPercentIcon,
   UserCircleIcon, LockClosedIcon, PhoneIcon,
   ArchiveBoxIcon,
-  ArrowUpIcon, ArrowDownIcon,
   LanguageIcon,
   PaperAirplaneIcon,
   PaperClipIcon,
-  ArrowTopRightOnSquareIcon,
   PlusIcon,
   HeartIcon,
 } from "@heroicons/react/24/solid";
@@ -90,30 +79,6 @@ import {
   CheckCircleIcon as CheckCircleOutlineIcon,
 } from "@heroicons/react/24/outline";
 
-/**
- * Heroicons コンポーネントを Icon API（size/weight/ARIA props）に変換するアダプター。
- * weight は受け取るが無視（solid 固定）。
- */
-function hi(HeroIcon: ComponentType<SVGProps<SVGSVGElement>>): Icon {
-  const Wrapped = forwardRef<SVGSVGElement, IconProps>(
-    ({ size = 24, className, "aria-hidden": ariaHidden = true, "aria-label": ariaLabel,
-      "aria-labelledby": ariaLabelledBy, "aria-describedby": ariaDescribedBy, role, focusable }, ref) => (
-      <HeroIcon
-        ref={ref}
-        width={size}
-        height={size}
-        className={className}
-        aria-hidden={ariaHidden}
-        aria-label={ariaLabel}
-        aria-labelledby={ariaLabelledBy}
-        aria-describedby={ariaDescribedBy}
-        role={role}
-        focusable={focusable}
-      />
-    )
-  );
-  return Wrapped as unknown as Icon;
-}
 
 // ── solid wrapped（ダッシュボード・ステータス・アクション等）────────────
 const Moon      = hi(MoonIcon);
@@ -121,7 +86,6 @@ const Sun       = hi(SunIcon);
 const Globe     = hi(GlobeAltIcon);
 const Check     = hi(CheckIcon);
 const Warning   = hi(ExclamationTriangleIcon);
-const X         = hi(XMarkIcon);
 const ChartBar  = hi(ChartBarIcon);
 const User      = hi(UserIcon);
 const Target    = hi(SignalIcon);
@@ -142,8 +106,6 @@ const Trash         = hi(TrashIcon);
 const Envelope      = hi(EnvelopeOpenIcon);  // markRead = 開封済み封筒
 const EnvelopeClosed = hi(EnvelopeIcon);     // markUnread = 未開封封筒（完全ソリッド）
 const TrendUp       = hi(ArrowTrendingUpIcon);
-const ArrowUp       = hi(ArrowUpIcon);
-const ArrowDown     = hi(ArrowDownIcon);
 const Bell          = hi(BellIcon);
 const CalendarCheck = hi(CalendarDaysIcon);
 const ArrowRight    = hi(ArrowRightIcon);
@@ -156,7 +118,6 @@ const ArchiveBox    = hi(ArchiveBoxIcon);
 const Languages     = hi(LanguageIcon);
 const PaperAirplane = hi(PaperAirplaneIcon);
 const Paperclip     = hi(PaperClipIcon);
-const ArrowTopRight = hi(ArrowTopRightOnSquareIcon);
 
 // ── outline wrapped（サイドバーナビゲーション専用）────────────────────────
 const SquaresFour       = hi(Squares2X2Icon);
@@ -230,11 +191,6 @@ export const PAGE_ICONS = {
   settingsSolid:      GearEight,        // 受信箱ヘッダー設定ボタン（solid）
 } satisfies Record<string, Icon>;
 
-// テーブル用アイコン（DataTable ソートインジケーター）
-export const TABLE_ICONS = {
-  sortAsc:  ArrowUp,
-  sortDesc: ArrowDown,
-} satisfies Record<string, Icon>;
 
 // テーマ切り替え（Layout.tsx）
 // light: ライトモード時 → ダークへ切り替えるボタンに表示

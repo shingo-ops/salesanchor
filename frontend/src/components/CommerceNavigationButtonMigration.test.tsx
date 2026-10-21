@@ -43,9 +43,9 @@ afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 describe('commerce navigation Button migration contracts', () => {
   it('paginates inventory with exact GETs and disabled pending boundaries', async () => {
-    const row = { id: '1', product_id: 2, product_name: 'Card', name_en: null, category: null, mark: null, condition: 'new', unit: null, offer_type: 'in_stock', status: 'in_stock', note_ja: null, ship_ja: null, merged_count: 1, posted_at: null, ship_timing: null, supplier_id: 3, supplier_name: 'Supplier', unit_price: 10, quantity: 1, tcg_type: 'pokemon_booster_box', offered_at: '', release_date: null };
-    const page1Url = '/inventory?page=1&per_page=50&sort=release_date&order=desc&merge_same_post=false&fresh_only=true&tcg_type=pokemon_booster_box';
-    const page2Url = '/inventory?page=2&per_page=50&sort=release_date&order=desc&merge_same_post=false&fresh_only=true&tcg_type=pokemon_booster_box';
+    const row = { id: '1', product_id: 2, product_name: 'Card', name_en: null, category: null, mark: null, condition: 'new', unit: null, offer_type: 'in_stock', status: 'in_stock', note_ja: null, ship_ja: null, merged_count: 1, posted_at: null, ship_timing: null, supplier_id: 3, supplier_name: 'Supplier', unit_price: 10, quantity: 1, work_code: 'pokemon_booster_box', offered_at: '', release_date: null };
+    const page1Url = '/inventory?page=1&per_page=50&sort=release_date&order=desc&merge_same_post=false&fresh_only=true&work_code=pokemon_booster_box';
+    const page2Url = '/inventory?page=2&per_page=50&sort=release_date&order=desc&merge_same_post=false&fresh_only=true&work_code=pokemon_booster_box';
     const page2 = deferred();
     mock.get.mockImplementation(async (url: string) => {
       if (url === '/me/permissions') return { permissions };
@@ -59,7 +59,7 @@ describe('commerce navigation Button migration contracts', () => {
     const prev = screen.getByTestId('inventory-prev') as HTMLButtonElement;
     expect(prev.disabled).toBe(true); await waitFor(() => expect(next.disabled).toBe(false));
     fireEvent.click(next);
-    await waitFor(() => expect(mock.get).toHaveBeenCalledWith('/inventory?page=2&per_page=50&sort=release_date&order=desc&merge_same_post=false&fresh_only=true&tcg_type=pokemon_booster_box'));
+    await waitFor(() => expect(mock.get).toHaveBeenCalledWith('/inventory?page=2&per_page=50&sort=release_date&order=desc&merge_same_post=false&fresh_only=true&work_code=pokemon_booster_box'));
     expect(next.disabled).toBe(true); expect(prev.disabled).toBe(true);
     await act(async () => page2.resolve({ items: [row], total: 51, page: 2, per_page: 50 }));
     await waitFor(() => expect((screen.getByTestId('inventory-prev') as HTMLButtonElement).disabled).toBe(false));

@@ -87,6 +87,7 @@ import ChannelMastersPage from "./pages/admin/ChannelMastersPage";
 import ManagementCenterPage from "./pages/management-center/ManagementCenterPage";
 import FxRatePage from "./pages/super-admin/FxRatePage";
 import ViewerAccountsPage from "./pages/super-admin/ViewerAccountsPage";
+import ViewerTemplatesPage from "./pages/super-admin/ViewerTemplatesPage";
 import TcgProductImportPage from "./pages/super-admin/TcgProductImportPage";
 import TcgDistributionPage from "./pages/super-admin/TcgDistributionPage";  // CC_TASK_DISTUI-01
 import TcgLineImportPage from "./pages/super-admin/TcgLineImportPage";  // MIG-04 Stage 1
@@ -340,6 +341,7 @@ function App() {
                     element={<ProductCategoriesImportPage />}
                   />
                   <Route path="/super-admin/viewers" element={<ViewerAccountsPage />} />
+                  <Route path="/super-admin/viewer-templates" element={<ViewerTemplatesPage />} />
                   {/* SaaS 管理者ハブ（ボトムタブ統合） */}
                   <Route path="/admin" element={<AdminHubPage />}>
                     <Route index element={<Navigate to="tenant-profile" replace />} />

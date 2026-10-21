@@ -99,12 +99,19 @@ def test_unresolved_product_is_returned_unchanged():
     assert svc._apply_bulk_price(values, BULK, SET_BLOCK, UNIT_IDS) == values
 
 
-def test_set_row_is_converted():
-    out = svc._apply_bulk_price(_values(), BULK, SET_BLOCK, UNIT_IDS)
-    assert out["price_normalized"] == 260 and out["quantity_normalized"] == 500
-    assert (out["unit_canonical"], out["unit_id"], out["unit_resolved"]) == ("Piece", 12, True)
-    assert out["note_ja"] == "100枚セット単位（1セット26,000円）" and out["price_basis"] == "V102:bulk:set:100"
-    assert out["needs_review"] is False and out["review_reasons"] is None
+def test_set_row_is_not_converted_but_goes_to_review():
+    """set の換算（÷N・×N・備考・V102:bulk:set:N）は ADR-1027 で置き換え。まとめ売りと決まらなかった set は割らずに要確認。"""
+    values = _values()
+    out = svc._apply_bulk_price(values, BULK, SET_BLOCK, UNIT_IDS)
+    assert out["review_reasons"] == REASON and out["needs_review"] is True
+    assert {k: v for k, v in out.items() if k not in ("review_reasons", "needs_review")} == {
+        k: v for k, v in values.items() if k not in ("review_reasons", "needs_review")
+    }
+
+
+def test_bundled_row_does_not_pass_bulk_price():
+    values = _values(bundle_size=100, unit_canonical="Piece", unit_id=12)
+    assert svc._apply_bulk_price(values, BULK, SET_BLOCK, UNIT_IDS) == values
 
 
 def test_piece_row_keeps_price_and_quantity_and_sets_piece_unit():
@@ -137,11 +144,14 @@ def test_without_piece_unit_id_is_review_not_guessed():
 RAW = "【見出し】\n" + SET_BLOCK  # 1行目は見出し、2〜3行目が件の行
 
 
-def _write(items, decisions=None, raw_text=RAW, lines=(2, 3)):
+ALIASES_MASTERS = {**_MASTERS, "unit_alias_to_info": {"枚": ("Piece", "枚系"), "パック": ("Pack", "パック系"), "セット": ("Set", "セット系"), "set": ("Set", "セット系")}}
+
+
+def _write(items, decisions=None, raw_text=RAW, lines=(2, 3), masters=_MASTERS):
     rows = [SimpleNamespace(id=f"row{i}", gemini_index=i, source_lines=list(lines), line_start=min(lines), line_end=max(lines), raw_price=None) for i in range(len(items))]
     numbered = [{"lines": list(lines), "gemini_index": i, **it} for i, it in enumerate(items)]
     session = _WriteSession([], [])
-    svc._write_results(session, "job1", {"v102_items": numbered, "v102_flags": {}}, rows, _MASTERS, dict(UNIT_IDS, Case=5), decisions, raw_text)
+    svc._write_results(session, "job1", {"v102_items": numbered, "v102_flags": {}}, rows, masters, dict(UNIT_IDS, Case=5, Pack=14), decisions, raw_text)
     return [p for sql, p in session.calls if "INSERT INTO public.analysis_results" in sql]
 
 
@@ -149,10 +159,16 @@ def _item(**extra):
     return {"unit": "Set", "product_id": 1, "match_status": "matched", "condition": "Sealed box", "price_normalized": 26000, "quantity_normalized": 5, **BULK, **extra}
 
 
-def test_write_results_converts_from_the_source_block_of_the_item_lines():
-    row = _write([_item()])[0]
-    assert (row["price_normalized"], row["quantity_normalized"], row["unit_canonical"]) == (260, 500, "Piece")
-    assert row["note_ja"] == "100枚セット単位（1セット26,000円）" and row["review_reasons"] is None
+def test_write_results_bundle_keeps_price_and_quantity_and_sets_bundle_size():
+    row = _write([_item()], masters=ALIASES_MASTERS)[0]
+    assert (row["price_normalized"], row["quantity_normalized"], row["unit_canonical"], row["bundle_size"]) == (26000, 5, "Piece", 100)
+    assert row["note_ja"] is None and row["price_basis"] is None and row["review_reasons"] is None
+
+
+def test_write_results_set_without_bundle_goes_to_review_not_converted():
+    row = _write([_item()])[0]  # 別名マスタが無い = まとめ売りと決まらない。set は割らない
+    assert (row["price_normalized"], row["quantity_normalized"], row["bundle_size"]) == (26000, 5, None)
+    assert row["review_reasons"] == REASON and row["needs_review"] is True and row["price_basis"] is None
 
 
 def test_write_results_without_raw_text_is_review():
@@ -160,9 +176,21 @@ def test_write_results_without_raw_text_is_review():
     assert row["review_reasons"] == REASON and row["needs_review"] is True and row["price_normalized"] == 26000
 
 
-def test_write_results_non_bulk_is_untouched():
+def test_write_results_non_bulk_is_untouched_without_bundle_words():
     row = _write([_item(product_category="箱系")])[0]
     assert (row["price_normalized"], row["quantity_normalized"], row["unit_canonical"], row["note_ja"]) == (26000, 5, "Set", None)
+
+
+def test_write_results_non_bulk_bundle_applies_to_all_categories():
+    """ADR-1027：区分を問わず全ての行に当てる。本文「100枚セット / 5セット@26,000円」は 100枚のまとめ。"""
+    row = _write([_item(product_category="箱系")], masters=ALIASES_MASTERS)[0]
+    assert (row["price_normalized"], row["quantity_normalized"], row["unit_canonical"], row["bundle_size"]) == (26000, 5, "Piece", 100)
+
+
+def test_write_results_bundle_unverified_adds_reason_and_keeps_values():
+    row = _write([_item(product_category="箱系", price_normalized=None)], masters=ALIASES_MASTERS)[0]  # 値段なし = 決まらない
+    assert row["bundle_size"] is None and row["unit_canonical"] == "Set" and row["quantity_normalized"] == 5
+    assert row["review_reasons"] == "bundle_unverified" and row["needs_review"] is True
 
 
 def _decision(**values) -> dict:

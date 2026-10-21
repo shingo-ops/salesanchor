@@ -151,6 +151,7 @@
   --ease-standard: cubic-bezier(0.4, 0, 0.2, 1); /* Material/Meta 標準 */
   --ease-enter:    cubic-bezier(0, 0, 0.2, 1);    /* 要素が画面に入る */
   --ease-exit:     cubic-bezier(0.4, 0, 1, 1);    /* 要素が画面から出る */
+  --ease-pop:      cubic-bezier(0.2, 0.9, 0.3, 1.15); /* 少し行き過ぎて戻る。浮くカードが出るとき */
   --toast-slide-distance: 120%;                  /* Toast の退避距離 */
   --splash-dot-delay-step: 180ms;                /* Splash dots のずらし */
 
@@ -388,6 +389,10 @@
   --cal-release:         #0d9488;  --cal-release-tint:  #e0f1ef;  --cal-release-text:  #0b6e66;
   --cal-holiday:         #64748b;  --cal-holiday-tint:  #eef1f4;  --cal-holiday-text:  #475569;
 
+  /* ---- 在庫表・閲覧ページの「在庫・予約」文字色（在庫=青 / 予約=オレンジ）。地色に 4.5:1 以上 ---- */
+  --offer-instock-text:  var(--info-text);
+  --offer-preorder-text: #b45309;  /* amber-700: 白地 5.02:1 */
+
   /* ---- Chart categorical series palette (ADR-067 新規トークン追加手順) ----
      使いみち別グラフ等、カレンダー以外のドメインでカテゴリカルな塗り分けが
      必要な箇所はこちらを参照する（--cal-* を他ドメインから直接参照しない）。
@@ -429,6 +434,10 @@
   --drawer-panel-w-default: 480px; /* Drawer 既定幅（size="default"） */
   --drawer-panel-w-wide: var(--modal-xwide-w); /* Drawer 広幅（size="wide"・1100px） */
   --comp-table-ellipsis-max-w: var(--col-width-medium); /* DataTable ellipsis 列の最大幅（width 無指定時・200px） */
+  --comp-inventory-title-max-w: var(--col-width-wide);   /* 在庫表 商品名1段の上限幅（360px） */
+  --comp-inventory-text-max-w: var(--col-width-medium);  /* 在庫表 備考・発送の折り返し幅（200px） */
+  --comp-inventory-text-min-w: calc(var(--col-width-medium) / 2);  /* 在庫表 備考・発送の最小幅（100px） */
+  --comp-hover-card-blur: 12px;   /* 浮くカードのすりガラスの強さ（schedule.css の前例と同じ値） */
   --comparison-label-col-w: 72px;  /* 比較表の項目ラベル列幅 */
   --comparison-source-col-w: 112px; /* 比較表の採用元列の内容幅（「Gemini抽出値を採用」が収まる幅） */
   --modal-commission-w:    760px;  /* 手数料パネル */
@@ -579,6 +588,10 @@
   --cal-billing:   #e0a35a; --cal-billing-tint:  #3a2a10; --cal-billing-text:  #f1c48e;
   --cal-release:   #2dd4bf; --cal-release-tint:  #0c322d; --cal-release-text:  #8de6da;
   --cal-holiday:   #94a3b8; --cal-holiday-tint:  #1f2a3a; --cal-holiday-text:  #c2cdda;
+
+  /* 在庫・予約の文字色（ダーク） */
+  --offer-instock-text:  var(--info-text);
+  --offer-preorder-text: #fb923c;  /* orange-400: --bg-surface 6.46:1 */
 
   /* ---- Chart categorical series palette（ダーク・--cal-* のエイリアス） ---- */
   --chart-series-1: var(--cal-personal);

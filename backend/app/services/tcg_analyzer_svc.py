@@ -649,7 +649,13 @@ def resolve_condition(
 # ---------------------------------------------------------------------------
 
 
-def load_condition_entries(session: Session) -> list[dict]:
+# ADR-1031: v102 専用の状態の群（既定の load_condition_entries は返さない）
+SCOPED_VALUE_GROUPS = ("single", "promo_pack", "booklet", "supply")
+
+
+def load_condition_entries(
+    session: Session, include_scoped_groups: bool = False
+) -> list[dict]:
     """
     priority > 0 の conditions 行を condEntries として返す。
     priority ASC → app_kubun 長 DESC → code ASC でソート済み（resolveCondition_ と同順）。
@@ -660,6 +666,10 @@ def load_condition_entries(session: Session) -> list[dict]:
 
     注意: migration 適用前の環境（CI テスト DB 等）で match_type / effect カラムが
     存在しない場合は fallback クエリに切り替えてデフォルト値を補完する。
+
+    include_scoped_groups（ADR-1031）: False（既定）のとき value_group が
+    single / promo_pack の行を返さない。これらは v102 だけが使う行で、
+    v6・v10・v101 など他の呼び出し元には渡さない。v102 は True を渡す。
     value_group / value_rank（状態の価値順・ADR-1023）の列は information_schema で
     有無を先に調べ、無い環境では読まずに None を返す（アプリが migration より先に出ても動く）。
     """
@@ -732,6 +742,9 @@ def load_condition_entries(session: Session) -> list[dict]:
                 )
             ).fetchall()
             has_match_type = False
+
+    if has_match_type and has_value_rank and not include_scoped_groups:
+        rows = [r for r in rows if r[9] not in SCOPED_VALUE_GROUPS]
 
     if has_match_type:
         return [
@@ -1951,6 +1964,8 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
 def _merge_supplier_products(
     session: Session, extraction_job_id: str, schema: str,
     extra_pairs: Iterable[tuple[int, int]] = (),
+    prior_current_pairs: Iterable[tuple[int, int]] | None = None,
+    revival_guard: bool = True,
 ) -> int:
     """ADR-158: 同一仕入元の analysis_results を商品×コンディション単位で整理。
 
@@ -1962,6 +1977,12 @@ def _merge_supplier_products(
 
     extra_pairs: 付け直す組に足す (product_id, condition_id)。やり直しで商品や状態が変わった件の
     「前の組」を渡す（前の組で次に新しい投稿の件を最新に戻すため）。無指定なら今まで通り。
+
+    prior_current_pairs / revival_guard (ADR-1032): 付け直しの前にこの job の行が現行だった
+    (product_id, condition_id) の組。None は控え無し（行の今の is_current を「前から現行」とみなす）。
+    revival_guard=True のとき、組の最新投稿の行でも、同じ仕入元のより新しい投稿に同じ商品の行（仮の行を含む）が
+    あり、かつ前から現行でなかった行は FALSE にする（古い投稿の行を現行に戻さない）。
+    すでに現行の行はこの規則では落とさない。件の削除・取り消しは revival_guard=False を渡す。
 
     Returns:
         is_current の値が変更された analysis_results の件数
@@ -1999,6 +2020,10 @@ def _merge_supplier_products(
     if not new_pairs and not extra:
         return 0
 
+    prior = None if prior_current_pairs is None else sorted(
+        {(int(p), int(c)) for p, c in prior_current_pairs}
+    )
+
     # 3. 同一 supplier_channel_id の全メッセージを対象に、各 (product_id, condition_id) ペアごとに
     #    最新の投稿を1つ決め、その投稿の行をすべて is_current=TRUE、ほかの投稿の行を FALSE にする（全体最新ロジック）。
     #    投稿の順は received_at → 組の行の computed_at の最大 → extraction_job_id（必ず1つに決まる）。
@@ -2024,7 +2049,13 @@ def _merge_supplier_products(
             ),
             candidates AS (
                 -- 本物の行
-                SELECT ar.id AS id, ar.product_id, ar.condition_id, sm.received_at, ar.computed_at, ej.id AS job_id
+                SELECT ar.id AS id, ar.product_id, ar.condition_id, sm.received_at, ar.computed_at, ej.id AS job_id,
+                       CASE WHEN ej.id = :job_id AND CAST(:prior_pids AS integer[]) IS NOT NULL
+                            THEN EXISTS (
+                                SELECT 1 FROM unnest(CAST(:prior_pids AS integer[]), CAST(:prior_cids AS integer[])) AS pr(product_id, condition_id)
+                                WHERE pr.product_id = ar.product_id
+                                  AND pr.condition_id IS NOT DISTINCT FROM ar.condition_id)
+                            ELSE ar.is_current END AS was_current
                 FROM {schema}.analysis_results ar
                 JOIN {schema}.extraction_items ei ON ei.id = ar.extraction_item_id
                 JOIN {schema}.extraction_jobs ej ON ej.id = ei.extraction_job_id
@@ -2039,7 +2070,8 @@ def _merge_supplier_products(
                   )
                 UNION ALL
                 -- 仮の行（〆の2つ目以降の完売の相手。順位の鍵は親の行と同じ。id は NULL で UPDATE の対象にしない）
-                SELECT NULL::uuid AS id, et.product_id, et.condition_id, sm.received_at, ar.computed_at, ej.id AS job_id
+                SELECT NULL::uuid AS id, et.product_id, et.condition_id, sm.received_at, ar.computed_at, ej.id AS job_id,
+                       TRUE AS was_current
                 FROM {schema}.analysis_soldout_extra_targets et
                 JOIN {schema}.analysis_results ar ON ar.id = et.analysis_result_id
                 JOIN {schema}.extraction_items ei ON ei.id = ar.extraction_item_id
@@ -2069,7 +2101,25 @@ def _merge_supplier_products(
             ),
             ranked AS (
                 SELECT c.id,
-                       (c.job_id = t.job_id) AS should_be_current
+                       (c.job_id = t.job_id)
+                       AND (NOT CAST(:revival_guard AS boolean) OR c.was_current
+                            OR NOT EXISTS (
+                                -- ADR-1032: 同じ仕入元のより新しい投稿に同じ商品の行（仮の行を含む）が無いときだけ新しく現行にする
+                                SELECT 1 FROM {schema}.analysis_results ar2
+                                JOIN {schema}.extraction_items ei2 ON ei2.id = ar2.extraction_item_id
+                                JOIN {schema}.extraction_jobs ej2 ON ej2.id = ei2.extraction_job_id
+                                JOIN {schema}.source_messages sm2 ON sm2.id = ej2.source_message_id
+                                WHERE sm2.supplier_channel_id = :channel_id AND ar2.pid_resolved = TRUE
+                                  AND ar2.product_id = c.product_id AND sm2.received_at > c.received_at
+                                UNION ALL
+                                SELECT 1 FROM {schema}.analysis_soldout_extra_targets et2
+                                JOIN {schema}.analysis_results ar3 ON ar3.id = et2.analysis_result_id
+                                JOIN {schema}.extraction_items ei3 ON ei3.id = ar3.extraction_item_id
+                                JOIN {schema}.extraction_jobs ej3 ON ej3.id = ei3.extraction_job_id
+                                JOIN {schema}.source_messages sm3 ON sm3.id = ej3.source_message_id
+                                WHERE sm3.supplier_channel_id = :channel_id AND et2.product_id = c.product_id
+                                  AND sm3.received_at > c.received_at
+                            )) AS should_be_current
                 FROM candidates c
                 JOIN top_job t ON t.product_id = c.product_id AND t.condition_id = c.condition_id
             )
@@ -2085,6 +2135,9 @@ def _merge_supplier_products(
             "job_id": extraction_job_id,
             "extra_pids": [pair[0] for pair in extra],
             "extra_cids": [pair[1] for pair in extra],
+            "prior_pids": None if prior is None else [p for p, _ in prior],
+            "prior_cids": None if prior is None else [c for _, c in prior],
+            "revival_guard": bool(revival_guard),
         },
     )
 

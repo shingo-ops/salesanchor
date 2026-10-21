@@ -17,10 +17,10 @@
 | K11 | 設定迂回は境界でない証明 | set_config を台本で送る。pg_settings と has_parameter_privilege で補助確認（bin5） | △ 台本が set_config を rejected にする（rc=2、DB に届かない）。DB の 42501 は直接観測できず。補助として、ai_reader は rolsuper=False で has_parameter_privilege('ai_reader','log_statement','SET')=False、rolconfig に log_statement=all、default_transaction_read_only=on、statement_timeout=60s | bin5/k11-a〜k11-e |
 | K12 | SET が拒否される | `SET log_statement='none'` を送る | ○ 台本で拒否（`result=rejected`）。DB 側の拒否は未測 | bin4/K12.err |
 | K13 | 環境変数は AI_READER_DATABASE_URL のみ | origin/main の docker-compose.ai-reader.yml の定義を読む（bin5。コンテナ内の実測ではない） | ○ environment は :15-16 の AI_READER_DATABASE_URL のみ。env_file は無い。read_only、cap_drop ALL、no-new-privileges、mem_limit 256m、network backnet のみ | bin5/results.md |
-| K14 | 固定コマンド以外は動かない | 引数付き実行、-L 転送、-tt を reader 鍵で試す（bin5） | ○ 引数 `id` は実行されず台本が rejected（rc=2）。-L は接続のたびに administratively prohibited。-tt は PTY allocation request failed（rc=255）。`sshd -T` は sudo が要るため PO が実行する分は残る | bin5/k14-a, k14-b3.err, k14-c |
+| K14 | 固定コマンド以外は動かない | 引数付き実行、-L 転送、-tt を reader 鍵で試す（bin5） | ○ 引数 `id` は実行されず台本が rejected（rc=2）。-L は接続のたびに administratively prohibited。-tt は PTY allocation request failed（rc=255）。`sshd -T` は sudo のパスワードが要り取れないため、設定ファイル（Include 先は空・Match 節なし）と公式の既定値（sshd_config(5)）で照合した（2026-10-17、PO 承認「y」）。permituserenvironment=no・permituserrc は鍵の restrict で停止・forcecommand=none・acceptenv=LANG LC_* で、いずれも ○ | bin5/k14-a, k14-b3.err, k14-c, bin8/k14-result.md |
 | K15 | 鍵に期限と制限 | authorized_keys の reader 行 | ○ restrict と expiry-time 20270115 が入っている | bin3b/commit-20261017-155439.out, bin3b/check.out |
 | K16 | 台本・compose 定義の変更は GO 記録なしでは止まる（ADR-1024 改訂） | process-artifacts gate の模擬（設計 K16 改訂の G1・G2） | ○ GO 記録なしは rc=1、委任 GO 記録ありは rc=0（変更前は免除宣言だけで rc=0 だった） | この PR の本文に貼った実行結果 |
 | K17 | フック免除が完全一致のみ | 免除は入れていない。現在のフックは reader の呼び方に当たらない（`~/.claude/scripts/agent-danger-hook.sh:99-101,113`。リポジトリ外） | 免除そのものが不要 | bin4/recon-hooks.md, k1.rc |
 | K18 | 負荷の上限 | 行数、60 秒、同時 3 本、大きな結果 | ○ 5000 行で打ち切り。60 秒で 57014（QueryCanceled、60525 ms）。同時 3 本は 1 本が OperationalError、2 本は rc=0。150 万行の結果でも 200 行で打ち切り、落ちない | bin4/K18a.err, K18b.err, K18c1.err, K18c1.rc, K18c2.rc, K18c3.rc, bin3b/ktest/t10.out, t10.err |
 
-未測: K14 の `sshd -T`（sudo が要るため PO 実行分）。bin5 で K3・K8・K9・K11・K13・K14 を測定。K3 は ×（便K3-2 で ○ に更新）、K11 は △。
+K14 の `sshd -T` は設定ファイルと公式既定値の照合で代替した（2026-10-17、PO 承認）。bin5 で K3・K8・K9・K11・K13・K14 を測定。K3 は ×（便K3-2 で ○ に更新）、K11 は △。

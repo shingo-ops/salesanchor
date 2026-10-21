@@ -8,27 +8,30 @@
  * - 編集/削除は持たない（管理者は /super-admin/inventory-offers・商品マスタは /admin/products）。
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { PageLayout } from "../../components/PageLayout";
-import { ContentToolbar } from "../../components/ContentToolbar";
+import { HoverCardHost } from "../../components/HoverCard";
 import InventoryFilterPanel from "./InventoryFilterPanel";
+import InventoryToolbar from "./InventoryToolbar";
 import { Button } from "../../components/Button";
 import { SelectControl } from "../../components/Select";
 import { HeaderButton } from "../../components/HeaderButton";
 import { Drawer } from "../../components/Drawer";
-import { TextFieldControl } from "../../components/TextField";
-import { MultiSelect } from "../../components/MultiSelect";
 import { useIsMobile } from "../../hooks/useIsMobile";
 import { PAGE_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 import { DataTable } from "../../components/DataTable";
+import { Tabs } from "../../components/Tabs";
 import { buildInventoryColumns } from "../../features/inventory/inventoryColumns";
 import { fmtOfferedAt } from "../../features/inventory/inventoryFormat";
 import type { InventoryRow } from "../../features/inventory/inventoryColumns";
 import { InventoryRowDrawer } from "../../features/inventory/InventoryRowDrawer";
 import { useSuperAdmin } from "../../hooks/useSuperAdmin";
+import { useExpiryRefresh } from "../../hooks/useExpiryRefresh";
+import { useRealtimeRefresh } from "../../hooks/useRealtimeRefresh";
+import { TOPICS } from "../../lib/realtime/topics";
 
 interface SupplierFacet {
   id: number;
@@ -46,12 +49,15 @@ interface InventoryListResponse {
   units?: string[];
   window_hours?: number | null;
   fresh_window_hours?: number;
+  next_expiry_in_seconds?: number | null;
 }
 
 const PER_PAGE = 50;
 
-// 並び替えプルダウンの値（`${sort}:${order}`）。
-const SORT_MENU_VALUES = ["unit_price:asc", "quantity:desc", "offered_at:desc"];
+/** タブに常時出す主な3つ（type_master.code）。それ以外は「その他」プルダウンへ。
+ *  閲覧ページ viewerFilter.ts の MAIN_SERIES・GAS index.html の MAIN_SERIES と対応（名前を変えたら両方直す） */
+const MAIN_TCG_CODES: readonly string[] = ["pokemon_booster_box", "one_piece", "dragon_ball"];
+
 
 // 表示条件「在庫・予約」の選択肢（固定 2 値）。
 const OFFER_TYPES = ["in_stock", "pre_order"] as const;
@@ -95,22 +101,25 @@ const buildFilterPayload = (v: FilterPayloadInput) => ({
 
 // title(タイトル) は識別子のため常時表示。下記は列トグル対象。
 const HIDEABLE_COLUMNS = [
-  "mark", "condition", "unit", "offerType", "quantity", "unitPrice", "supplier", "note", "ship",
+  "mark", "condition", "quantity", "unitPrice", "supplier", "note", "ship",
 ];
+
+// ADR-1016 改訂 2026-10-18: 在庫が変わった合図で読み直す。抽出が続く時間帯でも 5 秒に 1 回まで。
+// 同じ合図が全員に同時に届くので、ページごとに 0〜3 秒ずらして読み直しが一度に集まらないようにする
+const INVENTORY_TOPICS = [TOPICS.tcgInventory] as const;
+const INVENTORY_REFRESH_DEBOUNCE_MS = 5_000;
+const INVENTORY_REFRESH_JITTER_MS = 3_000;
 
 export default function InventoryPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const location = useLocation();
 
-  // 見積作成からの往復（在庫表から）: 戻り先・編集中ドラフト・事前選択（在庫行 ID）。
-  const quoteReturn = location.state as {
-    fromQuote?: boolean;
-    returnTo?: string;
-    draft?: unknown;
-    preselectedInventoryIds?: string[];
-  } | null;
-
+  const [refreshDebounceMs] = useState(
+    () => INVENTORY_REFRESH_DEBOUNCE_MS + Math.floor(Math.random() * INVENTORY_REFRESH_JITTER_MS),
+  );
+  const [expiryJitterMs] = useState(() => Math.floor(Math.random() * INVENTORY_REFRESH_JITTER_MS));
+  const [nextExpirySeconds, setNextExpirySeconds] = useState<number | null>(null);
+  const [loadCount, setLoadCount] = useState(0);
   const [items, setItems] = useState<InventoryRow[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -120,10 +129,6 @@ export default function InventoryPage() {
   const [sortField, setSortField] = useState("release_date");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [activeTab, setActiveTab] = useState<string>("pokemon_booster_box");
-  // 見積往復で戻ってきた時は、見積に入っていた在庫行を最初からチェック状態にする。
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(
-    () => new Set(quoteReturn?.fromQuote ? quoteReturn.preselectedInventoryIds ?? [] : []),
-  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -159,7 +164,7 @@ export default function InventoryPage() {
   const [freshWindowHours, setFreshWindowHours] = useState<number | undefined>(undefined);
   const [showSettings, setShowSettings] = useState(false);
   const [windowHours, setWindowHours] = useState<number | null | undefined>(undefined);
-  // 種別マスタ（tcg_type コード → 日本語名）。カテゴリー列を日本語表示するために使う。
+  // 中分類マスタ（type_master.code → 日本語名）。カテゴリー列を日本語表示するために使う。
   const [tcgTypes, setTcgTypes] = useState<{ code: string; name_ja: string }[]>([]);
 
   const totalPages = useMemo(() => (total === 0 ? 1 : Math.ceil(total / PER_PAGE)), [total]);
@@ -199,31 +204,31 @@ export default function InventoryPage() {
       params.set("fresh_only", freshOnly ? "true" : "false");
       if (debouncedQ.trim()) params.set("q", debouncedQ.trim());
       if (category) params.set("category", category);
-      if (activeTab !== "all") params.set("tcg_type", activeTab);
+      if (activeTab !== "all") params.set("work_code", activeTab);
       if (selectedSupplierIds.length > 0) params.set("supplier_ids", selectedSupplierIds.join(","));
       if (filterEnabled && hiddenCategories.size > 0) {
         params.set("hide_categories", Array.from(hiddenCategories).join(","));
       }
-      // ADR-093 表示条件（フィルタ有効時のみ適用）
-      if (filterEnabled && showConditions.size > 0) params.set("condition_in", Array.from(showConditions).join(","));
+      // コンディション・数量・単価はツールバーの入力で、有効化スイッチに関わらず常に適用する。
+      if (showConditions.size > 0) params.set("condition_in", Array.from(showConditions).join(","));
+      // ADR-093 表示条件（形態・在庫/予約はフィルタ有効時のみ適用）
       if (filterEnabled && showUnits.size > 0) params.set("unit_in", Array.from(showUnits).join(","));
       if (filterEnabled && showOfferTypes.size > 0) params.set("offer_type_in", Array.from(showOfferTypes).join(","));
-      if (filterEnabled) {
-        const qmin = toNonNegInt(qtyMin);
-        const qmax = toNonNegInt(qtyMax);
-        const pmin = toNonNegInt(priceMin);
-        const pmax = toNonNegInt(priceMax);
-        if (qmin !== null) params.set("qty_min", String(qmin));
-        if (qmax !== null) params.set("qty_max", String(qmax));
-        if (pmin !== null) params.set("price_min", String(pmin));
-        if (pmax !== null) params.set("price_max", String(pmax));
-      }
+      const qmin = toNonNegInt(qtyMin);
+      const qmax = toNonNegInt(qtyMax);
+      const pmin = toNonNegInt(priceMin);
+      const pmax = toNonNegInt(priceMax);
+      if (qmin !== null) params.set("qty_min", String(qmin));
+      if (qmax !== null) params.set("qty_max", String(qmax));
+      if (pmin !== null) params.set("price_min", String(pmin));
+      if (pmax !== null) params.set("price_max", String(pmax));
       const d = await api.get<InventoryListResponse>(`/inventory?${params.toString()}`);
       if (seq !== loadSeqRef.current) return;
       setItems(d.items);
       setTotal(d.total);
       setWindowHours(d.window_hours);
       setFreshWindowHours(d.fresh_window_hours);
+      setNextExpirySeconds(d.next_expiry_in_seconds ?? null);
       if (d.suppliers) setSupplierFacet(d.suppliers);
       if (d.categories) setCategoryFacet(d.categories);
       if (d.conditions) setConditionFacet(d.conditions);
@@ -232,7 +237,10 @@ export default function InventoryPage() {
       if (seq !== loadSeqRef.current) return;
       setError(e instanceof Error ? e.message : t("common.fetchError"));
     } finally {
-      if (seq === loadSeqRef.current) setLoading(false);
+      if (seq === loadSeqRef.current) {
+        setLoading(false);
+        setLoadCount((c) => c + 1);
+      }
     }
   }, [page, sortField, sortDir, activeTab, debouncedQ, category, filterEnabled, mergeSamePost, freshOnly, selectedSupplierIds, hiddenCategories, showConditions, showUnits, showOfferTypes, qtyMin, qtyMax, priceMin, priceMax, t]);
 
@@ -240,6 +248,14 @@ export default function InventoryPage() {
     if (!filtersLoaded) return;
     void load();
   }, [load, filtersLoaded]);
+
+  useRealtimeRefresh(INVENTORY_TOPICS, () => {
+    if (filtersLoaded) void load();
+  }, { debounceMs: refreshDebounceMs });
+
+  useExpiryRefresh(nextExpirySeconds, () => {
+    if (filtersLoaded) void load();
+  }, expiryJitterMs, loadCount);
 
   // 種別マスタを取得（カテゴリー列の日本語表示用）。
   useEffect(() => {
@@ -335,7 +351,7 @@ export default function InventoryPage() {
     return () => clearTimeout(timer);
   }, [filtersLoaded, filterEnabled, hiddenSupplierIds, hiddenCategories, hiddenColumns, showConditions, showUnits, showOfferTypes, qtyMin, qtyMax, priceMin, priceMax, mergeSamePost]);
 
-  // リセット: 検索語・カテゴリー絞り込み・ソートを既定（発売日の新しい順）に戻す。
+  // リセット: 検索語・カテゴリー絞り込み・ソートを既定（発売日の早い順）に戻す。
   // ユーザー別の「詳細フィルタ」（仕入元/列の取捨）は意図的な設定なので保持する。
   const resetAll = () => {
     setSearchQ("");
@@ -358,6 +374,10 @@ export default function InventoryPage() {
 
   const onSupplierChange = (next: string[]) => {
     setSelectedSupplierIds(next);
+    setPage(1);
+  };
+  const onConditionChange = (next: string[]) => {
+    setShowConditions(new Set(next));
     setPage(1);
   };
   const supplierOptions = supplierFacet.map((s) => ({ value: String(s.id), label: s.name ?? `#${s.id}` }));
@@ -418,82 +438,47 @@ export default function InventoryPage() {
         </div>
       )}
 
-      {/* ツールバー: 検索窓 / 検索 / リセット / カテゴリー / 詳細フィルタ / 発注書 */}
-        <ContentToolbar
-          left={
-            <>
-              <TextFieldControl
-                type="search"
-                className="field-h-md field-w-md"
-                placeholder={t("inventory.view.searchNameCode")}
-                data-testid="inventory-search"
-                value={searchQ}
-                onChange={(e) => {
-                  setSearchQ(e.target.value);
-                  setPage(1);
-                }}
-                onKeyDown={(e) => { if (e.key === "Enter") runSearch(); }}
-              />
-              <Button variant="secondary" size="sm" layoutClassName="field-h-md" type="button" data-testid="inventory-reset-sort" onClick={resetAll}>
-                {t("inventory.resetSort")}
-              </Button>
-              <Button
-                variant={freshOnly ? "primary" : "secondary"}
-                size="sm"
-                layoutClassName="field-h-md"
-                type="button"
-                data-testid="inventory-fresh-toggle"
-                aria-pressed={freshOnly}
-                disabled={freshWindowHours === undefined}
-                onClick={() => { setFreshOnly((v) => !v); setPage(1); }}
-              >
-                {freshWindowHours === undefined ? t("inventory.view.freshOnly", { hours: "" }) : t("inventory.view.freshOnly", { hours: freshWindowHours })}
-              </Button>
-              <SelectControl
-                size="sm"
-                className="field-h-md"
-                data-testid="inventory-sort-menu"
-                aria-label={t("inventory.sortMenu.placeholder")}
-                placeholder={t("inventory.sortMenu.placeholder")}
-                value={SORT_MENU_VALUES.includes(`${sortField}:${sortDir}`) ? `${sortField}:${sortDir}` : ""}
-                onChange={(e) => {
-                  const [field, dir] = e.target.value.split(":");
-                  if (!field) return;
-                  setSortField(field);
-                  setSortDir(dir === "asc" ? "asc" : "desc");
-                  setPage(1);
-                }}
-                options={[
-                  { value: "unit_price:asc", label: t("inventory.sortMenu.priceAsc") },
-                  { value: "quantity:desc", label: t("inventory.sortMenu.stockDesc") },
-                  { value: "offered_at:desc", label: t("inventory.sortMenu.postedDesc") },
-                ]}
-              />
-              {!isMobile && (
-                <MultiSelect
-                  testId="inventory-supplier-filter"
-                  label={t("inventory.supplierFilter.label")}
-                  options={supplierOptions}
-                  selected={selectedSupplierIds}
-                  onChange={onSupplierChange}
-                  clearLabel={t("inventory.supplierFilter.clear")}
-                  allLabel={t("inventory.supplierFilter.all")}
-                  countLabel={(n) => t("inventory.supplierFilter.count", { count: n })}
-                />
-              )}
-              <Button variant={filterEnabled ? "primary" : "secondary"} size="sm" layoutClassName="field-h-md"
-                type="button"
-
-                data-testid="inventory-filter-toggle"
-                aria-expanded={showFilterPanel}
-                aria-pressed={filterEnabled}
-                onClick={() => setShowFilterPanel((v) => !v)}
-              >
-                {t("inventory.filterPanel.button")}
-              </Button>
-            </>
+      {/* ツールバー（PC は2段・スマホは1段。InventoryToolbar） */}
+      <InventoryToolbar
+        isMobile={isMobile}
+        searchQ={searchQ}
+        onSearchChange={(v) => { setSearchQ(v); setPage(1); }}
+        onSearchEnter={runSearch}
+        onReset={resetAll}
+        freshOnly={freshOnly}
+        freshWindowHours={freshWindowHours}
+        onFreshToggle={() => { setFreshOnly((v) => !v); setPage(1); }}
+        sortField={sortField}
+        sortDir={sortDir}
+        onSortMenuChange={(value) => {
+          const [field, dir] = value.split(":");
+          if (!field) {
+            setSortField("release_date");
+            setSortDir("desc");
+          } else {
+            setSortField(field);
+            setSortDir(dir === "asc" ? "asc" : "desc");
           }
-        />
+          setPage(1);
+        }}
+        supplierOptions={supplierOptions}
+        selectedSupplierIds={selectedSupplierIds}
+        onSupplierChange={onSupplierChange}
+        conditionFacet={conditionFacet}
+        showConditions={showConditions}
+        onConditionChange={onConditionChange}
+        qtyMin={qtyMin}
+        setQtyMin={(v) => { setQtyMin(v); setPage(1); }}
+        qtyMax={qtyMax}
+        setQtyMax={(v) => { setQtyMax(v); setPage(1); }}
+        priceMin={priceMin}
+        setPriceMin={(v) => { setPriceMin(v); setPage(1); }}
+        priceMax={priceMax}
+        setPriceMax={(v) => { setPriceMax(v); setPage(1); }}
+        filterEnabled={filterEnabled}
+        showFilterPanel={showFilterPanel}
+        onFilterPanelToggle={() => setShowFilterPanel((v) => !v)}
+      />
 
       {/* フィルタ ポップアップ（ON/OFF・仕入元・カテゴリー・列の取捨。ユーザー別に永続化） */}
       {showFilterPanel && (
@@ -513,13 +498,13 @@ export default function InventoryPage() {
           toggleHiddenColumn={toggleHiddenColumn}
           conditionFacet={conditionFacet}
           showConditions={showConditions}
-          setShowConditions={setShowConditions}
           unitFacet={unitFacet}
           showUnits={showUnits}
           setShowUnits={setShowUnits}
           offerTypes={OFFER_TYPES}
           showOfferTypes={showOfferTypes}
           setShowOfferTypes={setShowOfferTypes}
+          onConditionChange={onConditionChange}
           qtyMin={qtyMin}
           setQtyMin={setQtyMin}
           qtyMax={qtyMax}
@@ -542,60 +527,56 @@ export default function InventoryPage() {
         {t("common.loading")}
       </div>
 
-      {/* TCG種別タブ: すべて/ポケモン/ワンピース/ドラゴンボール（4ボタン）＋その他ドロップダウン ＋ 警告（右端固定） */}
-      {/* ui-allow: TCG type tab bar from main back-merge, ADR-143 D-1 inventory v2 (#2624) */}
-      <div className="tabs" style={{ display: "flex", gap: "var(--space-sm)", margin: "var(--space-sm) 0", alignItems: "flex-start" }}>
-        <div style={{ display: "flex", gap: "var(--space-xs)", flexWrap: "wrap", flex: 1, alignItems: "center" }}>
-          {(["all", "pokemon_booster_box", "one_piece", "dragon_ball"] as const).map((code) => {
-            const label = code === "all" ? t("common.all") : (tcgTypes.find((tt) => tt.code === code)?.name_ja ?? code);
-            return (
-              <button
-                key={code}
-                className={activeTab === code ? "tab active" : "tab"}
-                onClick={() => { setActiveTab(code); setPage(1); }}
-              >{label}</button>
-            );
-          })}
-          {tcgTypes.filter((tt) => !["pokemon_booster_box", "one_piece", "dragon_ball"].includes(tt.code)).length > 0 && (
+      {/* TCG種別タブ: すべて/ポケモン/ワンピース/ドラゴンボール＋その他プルダウン＋注記（右端）。表にくっつける */}
+      <Tabs
+        variant="underline"
+        size="md"
+        items={[
+          { key: "all", label: t("common.all") },
+          ...MAIN_TCG_CODES.map((code) => ({ key: code, label: tcgTypes.find((tt) => tt.code === code)?.name_ja ?? code })),
+        ]}
+        activeKey={activeTab === "all" || MAIN_TCG_CODES.includes(activeTab) ? activeTab : ""}
+        onChange={(key) => { setActiveTab(key); setPage(1); }}
+        extra={
+          tcgTypes.filter((tt) => !MAIN_TCG_CODES.includes(tt.code)).length > 0 ? (
             <SelectControl
-              size="sm"
-              value={["pokemon_booster_box", "one_piece", "dragon_ball", "all"].includes(activeTab) ? "" : activeTab}
+              variant="tab"
+              value={activeTab === "all" || MAIN_TCG_CODES.includes(activeTab) ? "" : activeTab}
               onChange={(e) => { if (e.target.value) { setActiveTab(e.target.value); setPage(1); } }}
               aria-label={t("inventory.filter.otherTypes")}
             >
               <option value="">{t("inventory.filter.otherTypes")}</option>
               {tcgTypes
-                .filter((tt) => !["pokemon_booster_box", "one_piece", "dragon_ball"].includes(tt.code))
+                .filter((tt) => !MAIN_TCG_CODES.includes(tt.code))
                 .map((tt) => (
                   <option key={tt.code} value={tt.code}>{tt.name_ja}</option>
                 ))}
             </SelectControl>
-          )}
-        </div>
-        <p
-          data-testid="inventory-expiry-warning"
-          style={{ margin: 0, marginLeft: "auto", flexShrink: 0, fontSize: "var(--font-xs)", color: "var(--text-secondary)", whiteSpace: "nowrap" }}
-        >
-          {"※"}
-          {windowHours === undefined
-            ? null
-            : windowHours === null
-              ? t("inventory.distributionOff")
-              : noticeHours === 0
-                ? t("inventory.windowUnlimited")
-                : t("inventory.expiryWarning", { hours: noticeHours })}
-        </p>
-      </div>
+          ) : undefined
+        }
+        end={
+          <p
+            data-testid="inventory-expiry-warning"
+            style={{ margin: 0, fontSize: "var(--font-xs)", color: "var(--text-secondary)", whiteSpace: "nowrap" }}
+          >
+            {"※"}
+            {windowHours === undefined
+              ? null
+              : windowHours === null
+                ? t("inventory.distributionOff")
+                : noticeHours === 0
+                  ? t("inventory.windowUnlimited")
+                  : t("inventory.expiryWarning", { hours: noticeHours })}
+          </p>
+        }
+      />
 
       <DataTable
         columns={columns}
         data={items}
         rowKey={(it) => it.id}
         rowTestId={(it) => `inventory-row-${it.id}`}
-        selectable
         onRowClick={!isMobile ? (row) => setDrawerRow(row) : undefined}
-        selectedKeys={selectedIds}
-        onSelectChange={setSelectedIds}
         sortKey={sortField}
         sortDir={sortDir}
         onSort={(key, dir) => { setSortField(key); setSortDir(dir); setPage(1); }}
@@ -610,9 +591,11 @@ export default function InventoryPage() {
         stickyHeader
         fitToWidth
         mobileCards
+        attachedTop={!isMobile}
         emptyState={t("inventory.noResults")}
       />
       {drawerRow && <InventoryRowDrawer row={drawerRow} isSuperAdmin={isSuperAdmin} onClose={() => setDrawerRow(null)} onChanged={() => { void load(); }} />}
+      <HoverCardHost />
     </PageLayout>
   );
 }

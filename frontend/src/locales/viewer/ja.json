@@ -15,7 +15,8 @@
       "ja": "日本語",
       "en": "English"
     },
-    "tabAll": "全て",
+    "tabAll": "すべて",
+    "tabOther": "その他",
     "tabSelect": "シリーズ",
     "prev": "前へ",
     "next": "次へ",
@@ -24,12 +25,19 @@
     "search": {
       "placeholder": "商品名・型番・キーワードで検索"
     },
+    "resetView": "リセット",
+    "range": {
+      "priceMin": "最低価格",
+      "priceMax": "最高価格",
+      "qtyMin": "最小数量",
+      "qtyMax": "最大数量"
+    },
     "freshOnly": "{{hours}}時間以内",
     "sort": {
-      "placeholder": "並べ替え",
+      "placeholder": "並び替え",
       "priceAsc": "価格が安い順",
       "stockDesc": "在庫が多い順",
-      "postedDesc": "投稿が新しい順"
+      "postedDesc": "投稿が新しい"
     },
     "filter": {
       "button": "絞り込み",
@@ -44,11 +52,15 @@
       "min": "下限",
       "max": "上限"
     },
+    "badge": {
+      "cheapest": "最安",
+      "mostStock": "在庫最多"
+    },
     "col": {
       "mark": "型番",
       "title": "商品名",
       "condition": "コンディション",
-      "offerType": "区分",
+      "offerType": "ステータス",
       "quantity": "数量",
       "unitPrice": "単価",
       "supplier": "提供者",
@@ -69,7 +81,6 @@
       "forgot": "パスワードを忘れた",
       "signup": "申込"
     },
-    "changePassword": "パスワードを変更",
     "passwordChange": {
       "title": "パスワードの変更",
       "forced": "初回はパスワードの変更が必要です。",

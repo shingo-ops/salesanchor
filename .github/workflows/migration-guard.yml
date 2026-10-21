@@ -436,6 +436,12 @@ jobs:
         run: |
           python3 scripts/check-migration-value-writes.py repo
 
+      # 検査本体の試験（scripts/tests/test_migration_value_writes.py）。DB 不要。
+      # 同じ job の step なので、必須チェックの名前は変わらない。paths: は付けない。
+      - name: migration 値書き込み検査の試験
+        run: |
+          python3 scripts/tests/test_migration_value_writes.py -v
+
 
       # ──────────────────────────────────────────────────────────────────────
       # チェック 9: supplier_channels.supplier_id 保護（SSOT ガード）

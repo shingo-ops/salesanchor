@@ -11,7 +11,6 @@ import pytest
 
 CASES = [
     ("test_inventory_sprint1_migrations.py", "_apply_public_migrations"),
-    ("test_products_tcg_type_fk.py", "_bootstrap_public_products"),
     ("test_inventory_aggregated.py", "seed_aggregated_dataset"),
 ]
 
@@ -97,7 +96,14 @@ async def test_setup_holds_public_lock_and_propagates_errors(filename, function,
         async with eng.begin() as conn:
             await conn.exec_driver_sql("SELECT 1")
 
+    async def bootstrap_public_products(eng):
+        # 実物 tests.rls_bootstrap.bootstrap_public_products と同じ形:
+        # 共有 lock を取ってから DDL を流す（関数内 import は RemoveLocalImports で消えるため注入）
+        async with lock(eng), eng.begin() as conn:
+            await conn.execute("SELECT 1")
+
     namespace = {
+        "bootstrap_public_products": bootstrap_public_products,
         "public_bootstrap_lock": lock,
         "pathlib": SimpleNamespace(Path=lambda *args: MigrationPath()),
         "Path": lambda *args: MigrationPath(),

@@ -11,9 +11,9 @@ import { api, ApiError } from "../../lib/api";
 import { CodeCollisionNotice, type CodeCollision } from "./CodeCollisionNotice";
 import {
   addExcludeWord, blankCodeOf, buildUpdateBody, classificationFields, draftFrom, formatAfterWorkChange,
-  formatOptionsFor, missingFields, requiredFieldsMessage, words,
+  formatOptionsFor, LEGACY_SOURCE, missingFields, packagingErrorMessage, requiredFieldsMessage, words,
   type AddWordResult, type BlankCode, type Classification, type Detail, type Draft, type FormatOption,
-  type RequiredDraftField,
+  type PackagingDraft, type PackagingUnit, type RequiredDraftField,
 } from "./productDetailModel";
 
 type LookupOption = { id: string; name: string };
@@ -22,13 +22,21 @@ const emptyDraft: Draft = {
   japanese_title: "", english_title: "", mark: "", release_date: "",
   product_kind_id: "", work_id: "", manufacturer_id: "", product_category_id: "",
   search_keywords: "", exclude_keywords: "", product_format_id: "", blank_confirmations: [],
+  packagings: [],
 };
+
+// 荷姿の2つの値（入数・重さ）と、それぞれの出典・URL の項目名
+const PACKAGING_KINDS = [
+  { value: "contained_count", source: "count_source", urls: "count_source_urls", label: "count" },
+  { value: "weight_kg", source: "weight_source", urls: "weight_source_urls", label: "weight" },
+] as const;
+type PackagingKind = typeof PACKAGING_KINDS[number];
 
 export function TcgProductDetailDrawer({ productId, onClose, onSaved, open: openProp, mode = "edit" }: {
   productId: number | null; onClose: () => void; onSaved: () => void;
   open?: boolean; mode?: "edit" | "create";
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const formId = useId();
   const [detail, setDetail] = useState<Detail | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -97,7 +105,7 @@ export function TcgProductDetailDrawer({ productId, onClose, onSaved, open: open
     if (dirty) setConfirmation("close");
     else onClose();
   }
-  function change(field: Exclude<keyof Draft, "blank_confirmations">, value: string) {
+  function change(field: Exclude<keyof Draft, "blank_confirmations" | "packagings">, value: string) {
     setDraft(previous => {
       if (!previous) return previous;
       const next: Draft = { ...previous, [field]: value };
@@ -110,6 +118,19 @@ export function TcgProductDetailDrawer({ productId, onClose, onSaved, open: open
       }
       return next;
     });
+    setSaved(false);
+  }
+  /** 荷姿の1項目を直す。値を変えたら出典は選び直し、値を空にしたら出典とURLも空にする（ADR-1028） */
+  function changePackaging(unitCode: string, field: keyof PackagingDraft, value: string, kind?: PackagingKind) {
+    setDraft(previous => previous ? { ...previous, packagings: previous.packagings.map(row => {
+      if (row.unit_code !== unitCode) return row;
+      const next: PackagingDraft = { ...row, [field]: value };
+      if (kind && field === kind.value && value !== row[kind.value]) {
+        next[kind.source] = "";
+        if (!value.trim()) next[kind.urls] = "";
+      }
+      return next;
+    }) } : previous);
     setSaved(false);
   }
   function toggleBlank(code: BlankCode, checked: boolean) {
@@ -151,7 +172,7 @@ export function TcgProductDetailDrawer({ productId, onClose, onSaved, open: open
       setCollisions(result.code_collisions ?? []);
       onSaved();
     } catch (err) {
-      const required = requiredFieldsMessage(err, t);
+      const required = requiredFieldsMessage(err, t) ?? packagingErrorMessage(err, t);
       if (required) {
         setBlocked(false);
         setError("");
@@ -241,6 +262,40 @@ export function TcgProductDetailDrawer({ productId, onClose, onSaved, open: open
     label={t("productDetail.notFound", { field: label })} checked={draft.blank_confirmations.includes(code)}
     disabled={saving || Boolean(String(draft[field]).trim())} onChange={event => toggleBlank(code, event.target.checked)} />;
 
+  // ADR-1028 便4: 荷姿は編集モードの共用商品だけ。単位の名前は表示言語に合わせる
+  const showPackagings = mode === "edit" && shared && detail !== null && draft !== null && detail.packaging_units.length > 0;
+  const english = i18n.language.startsWith("en");
+  const unitName = (unit: PackagingUnit) => (english ? unit.name_en ?? unit.name : unit.name);
+  const containedName = (unit: PackagingUnit) => (english ? unit.contained_name_en ?? unit.contained_name : unit.contained_name);
+  const sourceOptions = (kind: PackagingKind, row: PackagingDraft, initialRow: PackagingDraft | undefined) =>
+    (detail?.packaging_sources ?? [])
+      // 古い値（出典なし）は、最初からその出典で、値を変えていないときだけ見せる（選び直しは不可）
+      .filter(source => source !== LEGACY_SOURCE || (initialRow?.[kind.source] === LEGACY_SOURCE && initialRow[kind.value] === row[kind.value]))
+      .map(source => ({ value: source, label: t(`productDetail.packaging.sources.${source}`), disabled: source === LEGACY_SOURCE }));
+  const packagingBlock = (unit: PackagingUnit) => {
+    const row = draft?.packagings.find(item => item.unit_code === unit.code);
+    if (!draft || !row) return null;
+    const initialRow = initial?.packagings.find(item => item.unit_code === unit.code);
+    const updatedAt = detail?.product.packagings.find(item => item.unit_code === unit.code)?.updated_at;
+    return <section key={unit.code} className="product-detail__packaging" aria-label={t("productDetail.packaging.unitLabel", { unit: unitName(unit) })}>
+      <h4 className="product-detail__packaging-unit">{t("productDetail.packaging.unitLabel", { unit: unitName(unit) })}</h4>
+      {PACKAGING_KINDS.map(kind => <div key={kind.value} className="product-detail__packaging-field">
+        <TextField label={t(`productDetail.packaging.${kind.label}`, { unit: unitName(unit), contained: containedName(unit) })}
+          type="number" value={row[kind.value]} onChange={e => changePackaging(unit.code, kind.value, e.target.value, kind)}
+          disabled={saving} fullWidth />
+        <Select label={t("productDetail.packaging.source")} value={row[kind.source]} options={sourceOptions(kind, row, initialRow)}
+          placeholder={t("productDetail.unset")} onChange={e => changePackaging(unit.code, kind.source, e.target.value)}
+          disabled={saving || !row[kind.value].trim()} fullWidth />
+        <Textarea label={t("productDetail.packaging.urls")} helperText={t("productDetail.packaging.urlsHint")}
+          value={row[kind.urls]} onChange={e => changePackaging(unit.code, kind.urls, e.target.value)}
+          rows={3} disabled={saving || !row[kind.value].trim()} fullWidth />
+      </div>)}
+      <Textarea label={t("productDetail.packaging.note")} value={row.note} onChange={e => changePackaging(unit.code, "note", e.target.value)}
+        rows={2} maxLength={1000} disabled={saving} fullWidth />
+      <TextField label={t("productDetail.packaging.updatedAt")} value={updatedAt ?? t("productDetail.unset")} readOnly fullWidth />
+    </section>;
+  };
+
   return <><Drawer open={isOpen} onClose={requestClose} title={t("productDetail.title")}
     footer={draft && !confirmation ? <div className="product-detail__actions">
       {mode === "edit" && <Button type="button" variant="danger" onClick={() => setConfirmDelete(true)} disabled={deleting || saving}>{t("productDetail.delete")}</Button>}
@@ -294,6 +349,11 @@ export function TcgProductDetailDrawer({ productId, onClose, onSaved, open: open
         <Textarea label={t("productDetail.exclude_keywords")} helperText={hintWith(t("productDetail.wordsHint"), "exclude_keywords")}
           value={draft.exclude_keywords} onChange={e => change("exclude_keywords", e.target.value)} rows={4} disabled={saving} fullWidth />
         {blankBox("exclude_keywords", "exclude_keywords", t("productDetail.exclude_keywords"))}
+        {showPackagings && detail && <div className="product-detail__packagings">
+          <h3 className="product-detail__packaging-heading">{t("productDetail.packaging.heading")}</h3>
+          <p className="product-detail__packaging-description">{t("productDetail.packaging.description")}</p>
+          {detail.packaging_units.map(packagingBlock)}
+        </div>}
         {mode === "edit" && detail && <>
           <TextField label={t("productDetail.id")} value={detail.product.id} readOnly fullWidth />
           <TextField label={t("productDetail.categoryClass")} value={detail.product.category_class} readOnly fullWidth />

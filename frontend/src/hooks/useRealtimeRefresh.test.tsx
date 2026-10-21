@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RealtimeContext, type RealtimeApi, type RealtimeHandler } from "../lib/realtime/context";
 import { REALTIME_DEBOUNCE_MS, useRealtimeRefresh } from "./useRealtimeRefresh";
 
-function setup() {
+function setup(options?: { debounceMs?: number }) {
   let handler: RealtimeHandler = () => undefined;
   const api: RealtimeApi = {
     clientId: "me",
@@ -18,7 +18,7 @@ function setup() {
     <RealtimeContext.Provider value={api}>{children}</RealtimeContext.Provider>
   );
   const reload = vi.fn();
-  renderHook(() => useRealtimeRefresh(["tcg.review"], reload), { wrapper });
+  renderHook(() => useRealtimeRefresh(["tcg.review"], reload, options), { wrapper });
   return { reload, emit: (ev: Parameters<RealtimeHandler>[0]) => handler(ev) };
 }
 
@@ -47,6 +47,32 @@ describe("useRealtimeRefresh", () => {
     expect(reload).not.toHaveBeenCalled();
     act(() => {
       vi.advanceTimersByTime(200);
+    });
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  it("uses debounceMs when given", () => {
+    const { reload, emit } = setup({ debounceMs: 5_000 });
+    act(() => {
+      emit({ topic: "tcg.review", origin: "other" });
+      vi.advanceTimersByTime(REALTIME_DEBOUNCE_MS + 100);
+    });
+    expect(reload).not.toHaveBeenCalled();
+    act(() => {
+      vi.advanceTimersByTime(5_000 - REALTIME_DEBOUNCE_MS);
+    });
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  it("defaults to 1.5 seconds when debounceMs is not given", () => {
+    const { reload, emit } = setup();
+    act(() => {
+      emit({ topic: "tcg.review", origin: "other" });
+      vi.advanceTimersByTime(REALTIME_DEBOUNCE_MS - 10);
+    });
+    expect(reload).not.toHaveBeenCalled();
+    act(() => {
+      vi.advanceTimersByTime(20);
     });
     expect(reload).toHaveBeenCalledTimes(1);
   });

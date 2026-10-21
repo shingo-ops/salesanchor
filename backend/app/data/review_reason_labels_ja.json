@@ -15,6 +15,7 @@
   "unit_price_mismatch": "単位と価格が相場と合わない",
   "gemini_gap_suspect": "Gemini取りこぼし疑い（間の行に商品名がある可能性）",
   "bulk_price_basis_unknown": "バルクの1枚の値段が決まりません（セット価格か1枚価格か、原文から読めない）",
+  "bundle_unverified": "まとめ売りの数が本文で決まらない",
   "excluded": "除外の対象",
   "item_shape_invalid": "Gemini の出力の形が正しくない",
   "price_not_in_lines": "価格が原文の行に無い",

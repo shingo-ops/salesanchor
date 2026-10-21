@@ -58,11 +58,32 @@ run_py() {
     "$@" -w /app "${BACKEND}" python "${script}"
 }
 
+# 稼働中のアプリと deadlock したときだけ、同じファイルを流し直す（全 migration は冪等で、
+# CI のドライラン2周目で再実行が通ることを確かめている）。ほかのエラーは今までどおり即停止。
+SQL_DEADLOCK_MAX_ATTEMPTS=3
 run_sql() {
   local file="$1"
   STEP=$((STEP + 1))
   echo ">>> [${STEP}/${TOTAL}] psql < ${file}"
-  docker exec -i "${POSTGRES}" ${PSQL} < "${REPO_DIR}/${file}"
+  local attempt=1 rc errlog
+  errlog="$(mktemp)"
+  while true; do
+    rc=0
+    docker exec -i "${POSTGRES}" ${PSQL} < "${REPO_DIR}/${file}" 2>"${errlog}" || rc=$?
+    cat "${errlog}" >&2
+    if [ "${rc}" -eq 0 ]; then
+      rm -f "${errlog}"
+      return 0
+    fi
+    if grep -q "deadlock detected" "${errlog}" && [ "${attempt}" -lt "${SQL_DEADLOCK_MAX_ATTEMPTS}" ]; then
+      attempt=$((attempt + 1))
+      echo ">>> [${STEP}/${TOTAL}] deadlock detected; retry ${attempt}/${SQL_DEADLOCK_MAX_ATTEMPTS} in 5s: ${file}"
+      sleep 5
+      continue
+    fi
+    rm -f "${errlog}"
+    return "${rc}"
+  done
 }
 
 preflight_registered_files() {
@@ -790,7 +811,7 @@ run_sql migrations/20260921_140000_product_classification_masters.sql
 # ADR-157: 買取相場ログ（外部買取店の価格定期取得テーブル）
 run_sql migrations/20260922_000000_create_buyback_tables.sql
 
-# ADR-156 Phase 7: 細分類→大分類FK / 商品→中分類FK追加
+# ADR-156 Phase 7: 細分類→大分類FK /（商品→中分類FK は ADR-1026 で削除）
 run_sql migrations/20260922_010000_product_format_kind_id_and_products_type_master_id.sql
 
 # ADR-156 Phase 8: 細分類→中分類 多対多中間テーブル
@@ -998,3 +1019,20 @@ run_sql migrations/20261017_120000_line_conditions_value_rank.sql
 run_sql migrations/20261017_130000_create_ai_reader_role.sql
 # ADR-1025 便1: 解析の誤り報告の表3つ（空・構造のみ・冪等）
 run_sql migrations/20261017_140000_create_analysis_error_report_tables.sql
+# ADR-1026: 使われていない作品欄 products.type_master_id を取り除く（FK・索引ごと。冪等）
+run_sql migrations/20261017_210000_drop_products_type_master_id.sql
+# ADR-1027 便1: まとめ売りのまとめの数の列（NULL 許可・構造のみ・冪等）
+run_sql migrations/20261017_220000_add_analysis_results_bundle_size.sql
+# ADR-1027 便1: 単位マスタの呼び名の列（NULL 許可・構造のみ・冪等。値は docs/handoff/bundle-sale/data/ の SQL で入れる）
+run_sql migrations/20261017_220100_add_line_units_display_names.sql
+# ADR-1028 便1: 商品の荷姿の表（空・構造のみ・冪等）
+run_sql migrations/20261018_100000_create_product_packagings.sql
+# ADR-1030: 使われていない作品の写し products.tcg_type を取り除く（FK・索引ごと。冪等）
+run_sql migrations/20261018_110000_drop_products_tcg_type.sql
+run_sql migrations/20261019_100000_line_conditions_value_group_add_promo_single.sql
+# ADR-1035: 状態の価値の群に booklet を許す（CHECK の作り直しのみ。冪等）
+run_sql migrations/20261020_100000_line_conditions_value_group_add_booklet.sql
+# ADR-1035 追補: 状態の価値の群に supply を許す（CHECK の作り直しのみ。冪等）
+run_sql migrations/20261020_110000_line_conditions_value_group_add_supply.sql
+# ADR-1019 段11 便1: 閲覧者向け文面のテンプレート表（空・構造のみ・冪等）
+run_sql migrations/20261020_120000_create_viewer_message_templates.sql

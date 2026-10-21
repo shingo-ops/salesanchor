@@ -177,6 +177,7 @@ jobs:
       #      20260928_110000_create_extraction_shadow_tables.sql の INSERT ON CONFLICT のため最小定義を登録
       #   ※ public.tenant_discord_ticket_config は 20260602_120000_add_discord_ticket_config.sql で本番作成済み。
       #      20260930_130000_set_discord_welcome_template_english.sql の ALTER/UPDATE のため最小定義を登録
+      #   ※ public.quantity_units は 20260921_140000 で本番作成済み（最小定義を登録）
       # ──────────────────────────────────────────────────────────────────────
       - name: 既存データ付きの公開スキーマを作成
         run: |
@@ -654,6 +655,20 @@ jobs:
               code          VARCHAR(50)  NOT NULL UNIQUE,
               name          VARCHAR(100) NOT NULL,
               name_en       VARCHAR(100),
+              display_order INTEGER      NOT NULL DEFAULT 100,
+              is_active     BOOLEAN      NOT NULL DEFAULT TRUE,
+              created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+              updated_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+          );
+          -- public.quantity_units: 20260921_140000_product_classification_masters.sql で本番作成済み。
+          --   20261018_100000_create_product_packagings.sql が REFERENCES public.quantity_units(id) を
+          --   使用するため、前提として最小定義を登録する（value は本番と同じく NULL 可）。
+          CREATE TABLE IF NOT EXISTS public.quantity_units (
+              id            SERIAL PRIMARY KEY,
+              code          VARCHAR(50)  NOT NULL UNIQUE,
+              name          VARCHAR(100) NOT NULL,
+              name_en       VARCHAR(100),
+              value         INTEGER,
               display_order INTEGER      NOT NULL DEFAULT 100,
               is_active     BOOLEAN      NOT NULL DEFAULT TRUE,
               created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
@@ -1256,6 +1271,8 @@ jobs:
               tenant_id       INTEGER      NOT NULL,
               full_name       VARCHAR(255),
               customer_name   VARCHAR(255),  -- migration 003 が作成（run_all_migrations.sh 外）・migration 103 が参照
+              company_name    VARCHAR(255),
+              notes           TEXT,
               source          VARCHAR(50),   -- migration 103 適用前の初期状態を模擬（1周目で 013→103 の相互作用をテスト）
               status          VARCHAR(50),   -- v_company_stats SSOT（20260612_120000）が参照
               discord_user_id VARCHAR(64),
@@ -1441,6 +1458,8 @@ jobs:
               tenant_id       INTEGER      NOT NULL,
               full_name       VARCHAR(255),
               customer_name   VARCHAR(255),
+              company_name    VARCHAR(255),
+              notes           TEXT,
               source          VARCHAR(50),
               status          VARCHAR(50),   -- v_company_stats SSOT（20260612_120000）が参照
               discord_user_id VARCHAR(64),
@@ -1806,12 +1825,12 @@ jobs:
           echo ""
           echo "✅ 2周目（冪等性チェック）完了 — 再デプロイ安全性 OK"
 
-      - name: 全件ドライラン（報告のみ・強制しない）：登録された全ファイル − 除外一覧
+      - name: 全件ドライラン（失敗したら止める）：登録された全ファイル − 除外一覧
         # ADR-1007 決定5。上の 1周目・2周目は、従来の日付の範囲（^migrations/0 など）のままで強制する。
         # この step は、登録された全ファイルから scripts/migration-guard/dryrun-exclusions.tsv にあるものを除いて
-        # 報告用 DB（jarvis_report）に流し、落ちたファイルを一覧にする。落ちても job は失敗させない
-        # （強制への切り替えは、この報告を見てから別の PR で行う）。
-        continue-on-error: true
+        # 報告用 DB（jarvis_report）に流し、落ちたファイルを一覧にする。
+        # 1本でも落ちたら job を失敗させ、集約 migration-test 経由でマージを止める（#4466 で失敗0本を確認してから切替）。
+        # 空の DB で通らないことが実測で分かったファイルだけ、dryrun-exclusions.tsv に実測の ERROR を理由に書いて外す。
         # --psql の後ろに -h を置くと argparse が help と読んで何も流れない（P3）。接続先は env で渡す。
         env:
           PGHOST: localhost

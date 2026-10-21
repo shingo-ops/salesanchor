@@ -65,6 +65,18 @@ async def _post_discord_webhook(url: str, content: str) -> bool:
         return False
 
 
+# field_name → 表示名の固定表（誤り報告の通知で共通・ここ 1 か所だけ）
+_FIELD_LABELS = {
+    "product_id": "商品",
+    "quantity": "数量",
+    "price": "価格",
+    "unit": "単位",
+    "condition": "状態",
+    "status": "販売状態",
+    "note": "メモ",
+}
+
+
 def _get_error_report_webhook_url() -> str | None:
     url = os.getenv("ANALYSIS_ERROR_REPORT_DISCORD_WEBHOOK", "").strip()
     return url or None
@@ -75,20 +87,10 @@ async def notify_analysis_error_report(report_code: str, field_names: list[str])
 
     戻り値は (message_id, 失敗の理由)。成功は (id, None)、未設定・失敗は (None, 理由)。例外は握る。
     """
-    # field_name → 表示名の固定表（ここ 1 か所だけ）
-    labels = {
-        "product_id": "商品",
-        "quantity": "数量",
-        "price": "価格",
-        "unit": "単位",
-        "condition": "状態",
-        "status": "販売状態",
-        "note": "メモ",
-    }
     url = _get_error_report_webhook_url()
     if url is None:
         return None, "webhook_not_configured"
-    content = f"誤り報告 {report_code} 項目: " + ", ".join(labels.get(name, name) for name in field_names)
+    content = f"誤り報告 {report_code} 項目: " + ", ".join(_FIELD_LABELS.get(name, name) for name in field_names)
     wait_url = url + ("&" if "?" in url else "?") + "wait=true"
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
@@ -105,6 +107,39 @@ async def notify_analysis_error_report(report_code: str, field_names: list[str])
         return str(message_id), None
     except Exception as exc:  # noqa: BLE001 - 通知失敗で報告を消さない
         logger.warning("[discord_notifier] error-report webhook POST failed: %s", type(exc).__name__)
+        return None, f"exception_{type(exc).__name__}"
+
+
+def notify_analysis_error_report_verified(
+    report_code: str, result: str, fields: list[dict[str, Any]],
+) -> tuple[str | None, str | None]:
+    """ADR-1025 便2: 照合結果を Discord へ送る（同期。Celery タスクから呼ぶ）。
+
+    本文は「報告番号・正答/未解決・項目ごとの○×」だけ（値は入れない）。
+    戻り値は (message_id, 失敗の理由)。成功は (id, None)、未設定・失敗は (None, 理由)。例外は握る。
+    """
+    url = _get_error_report_webhook_url()
+    if url is None:
+        return None, "webhook_not_configured"
+    verdict = {"resolved": "正答", "reanalyze_failed": "再解析できず（未解決）"}.get(result, "未解決")
+    marks = " ".join(f"{_FIELD_LABELS.get(f['field'], f['field'])}{'○' if f['match'] else '×'}" for f in fields)
+    content = f"誤り報告 {report_code} 照合: {verdict}" + (f"\n{marks}" if marks else "")
+    wait_url = url + ("&" if "?" in url else "?") + "wait=true"
+    try:
+        with httpx.Client(timeout=10.0) as client:
+            resp = client.post(
+                wait_url,
+                json={"content": content[:_MAX_MESSAGE_CHARS], "username": "Sales Anchor 解析の誤り報告"},
+            )
+        if resp.status_code >= 400:
+            logger.warning("[discord_notifier] error-report verified webhook returned %s", resp.status_code)
+            return None, f"http_{resp.status_code}"
+        message_id = resp.json().get("id")
+        if not message_id:
+            return None, "no_message_id"
+        return str(message_id), None
+    except Exception as exc:  # noqa: BLE001 - 通知失敗で照合結果を消さない
+        logger.warning("[discord_notifier] error-report verified webhook POST failed: %s", type(exc).__name__)
         return None, f"exception_{type(exc).__name__}"
 
 

@@ -16,6 +16,7 @@
       "en": "English"
     },
     "tabAll": "All",
+    "tabOther": "Other",
     "tabSelect": "Series",
     "prev": "Previous",
     "next": "Next",
@@ -24,11 +25,18 @@
     "search": {
       "placeholder": "Search by name, model number or keyword"
     },
+    "resetView": "Reset",
+    "range": {
+      "priceMin": "Min price",
+      "priceMax": "Max price",
+      "qtyMin": "Min qty",
+      "qtyMax": "Max qty"
+    },
     "freshOnly": "Last {{hours}} h",
     "sort": {
       "placeholder": "Sort",
       "priceAsc": "Price: low to high",
-      "stockDesc": "Stock: high to low",
+      "stockDesc": "Quantity: high to low",
       "postedDesc": "Newest posts"
     },
     "filter": {
@@ -44,11 +52,15 @@
       "min": "Min",
       "max": "Max"
     },
+    "badge": {
+      "cheapest": "Lowest",
+      "mostStock": "Most stock"
+    },
     "col": {
       "mark": "Model No.",
       "title": "Product",
       "condition": "Condition",
-      "offerType": "Type",
+      "offerType": "Status",
       "quantity": "Qty",
       "unitPrice": "Unit price",
       "supplier": "Supplier",
@@ -69,7 +81,6 @@
       "forgot": "Forgot your password?",
       "signup": "Apply"
     },
-    "changePassword": "Change password",
     "passwordChange": {
       "title": "Change password",
       "forced": "You need to change your password the first time.",

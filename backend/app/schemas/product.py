@@ -60,15 +60,14 @@ class ProductCreate(BaseModel):
     image_url: str | None = Field(default=None, max_length=500)
     is_archived: bool = Field(default=False)
     supplier_default_id: int | None = None
-    tcg_type: str | None = Field(default=None, max_length=50)
     product_kind: str | None = Field(default="TCG", max_length=50)
     set_type: str | None = Field(default=None, max_length=50)
 
     # ADR-093 Phase 1: 商品マスタ全項目（Box 属性 + 発送ラベル + 検索/分類）
-    boxes_per_case: int | None = Field(default=None, ge=0)
-    packs_per_box: int | None = Field(default=None, ge=0)
-    box_weight_kg: Decimal | None = Field(default=None, ge=0, max_digits=8, decimal_places=3)
-    case_weight_kg: Decimal | None = Field(default=None, ge=0, max_digits=8, decimal_places=3)
+    boxes_per_case: int | None = Field(default=None, gt=0)
+    packs_per_box: int | None = Field(default=None, gt=0)
+    box_weight_kg: Decimal | None = Field(default=None, gt=0, max_digits=8, decimal_places=3)
+    case_weight_kg: Decimal | None = Field(default=None, gt=0, max_digits=8, decimal_places=3)
     volume_weight: Decimal | None = Field(default=None, ge=0, max_digits=8, decimal_places=3)
     moq: int | None = Field(default=None, ge=0)
     hs_code: str | None = Field(default=None, max_length=20)
@@ -108,15 +107,14 @@ class ProductUpdate(BaseModel):
     image_url: str | None = Field(default=None, max_length=500)
     is_archived: bool | None = None
     supplier_default_id: int | None = None
-    tcg_type: str | None = Field(default=None, max_length=50)
     product_kind: str | None = Field(default="TCG", max_length=50)
     set_type: str | None = Field(default=None, max_length=50)
 
     # ADR-093 Phase 1: 商品マスタ全項目（Box 属性 + 発送ラベル + 検索/分類）
-    boxes_per_case: int | None = Field(default=None, ge=0)
-    packs_per_box: int | None = Field(default=None, ge=0)
-    box_weight_kg: Decimal | None = Field(default=None, ge=0, max_digits=8, decimal_places=3)
-    case_weight_kg: Decimal | None = Field(default=None, ge=0, max_digits=8, decimal_places=3)
+    boxes_per_case: int | None = Field(default=None, gt=0)
+    packs_per_box: int | None = Field(default=None, gt=0)
+    box_weight_kg: Decimal | None = Field(default=None, gt=0, max_digits=8, decimal_places=3)
+    case_weight_kg: Decimal | None = Field(default=None, gt=0, max_digits=8, decimal_places=3)
     volume_weight: Decimal | None = Field(default=None, ge=0, max_digits=8, decimal_places=3)
     moq: int | None = Field(default=None, ge=0)
     hs_code: str | None = Field(default=None, max_length=20)
@@ -133,6 +131,21 @@ class ProductUpdate(BaseModel):
     @classmethod
     def _check_image_url_update(cls, v: str | None) -> str | None:
         return _validate_image_url(v)
+
+
+class ProductPackagingOut(BaseModel):
+    """ADR-1028: 荷姿の表の1行（単位ごとの入数・重さと出典）。"""
+
+    unit_code: str
+    contained_unit_code: str | None = None
+    contained_count: int | None = None
+    count_source: str | None = None
+    count_source_urls: list[str] = []
+    weight_kg: Decimal | None = None
+    weight_source: str | None = None
+    weight_source_urls: list[str] = []
+    note: str | None = None
+    updated_at: datetime
 
 
 class ProductResponse(BaseModel):
@@ -163,7 +176,7 @@ class ProductResponse(BaseModel):
     is_archived: bool = False
     archived_at: datetime | None = None
     supplier_default_id: int | None = None
-    tcg_type: str | None = Field(default=None, max_length=50)
+    work_code: str | None = None  # 作品の符号（products.work_id → type_master.code）
     product_kind: str | None = Field(default="TCG", max_length=50)
     set_type: str | None = Field(default=None, max_length=50)
 
@@ -183,6 +196,8 @@ class ProductResponse(BaseModel):
     related_series: str | None = None
     # 手動並び替え（商品マスタ一覧の行ドラッグ）順。NULL=未設定。
     display_order: int | None = None
+    # ADR-1028: 荷姿の表の行（入数・重さの出典つき）。4項目はここから組み立てた値
+    packagings: list[ProductPackagingOut] = []
 
     model_config = {"from_attributes": True}
 

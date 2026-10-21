@@ -255,6 +255,24 @@ _GAS_COLUMNS = (
 )
 
 
+def bundle_title_sql() -> tuple[str, str]:
+    """配信の商品名の2欄（日本語, 英語）の SQL の式。まとめ売りの表示の作り方はここだけに置く（ADR-1027）。
+
+    bundle_size が NULL なら今までと同じ商品名。あれば「商品名 + 空白 + N + 単位の呼び名 + セット」（英語は「name N unit Set」）。
+    単位の呼び名は public.line_units の name_ja・name_en（NULL のときは canonical）。「セット」「Set」はこの関数の中だけに書く。
+    ar（analysis_results）・p（products）・lu（line_units）の別名を前提にする。
+    """
+    japanese = (
+        "CASE WHEN ar.bundle_size IS NULL THEN COALESCE(p.name, '') "
+        "ELSE COALESCE(p.name, '') || ' ' || ar.bundle_size::text || COALESCE(lu.name_ja, lu.canonical, ar.unit_canonical, '') || 'セット' END"
+    )
+    english = (
+        "CASE WHEN ar.bundle_size IS NULL THEN COALESCE(p.name_en, '') "
+        "ELSE COALESCE(p.name_en, '') || ' ' || ar.bundle_size::text || ' ' || COALESCE(lu.name_en, lu.canonical, ar.unit_canonical, '') || ' Set' END"
+    )
+    return japanese, english
+
+
 # 区分（offer_type）と LINE 解析の status の対応。1つの定数で持ち、絞り込みは逆引きに使う。
 OFFER_TYPE_TO_STATUS: dict[str, str] = {"in_stock": "In Stock", "pre_order": "Pre-order"}
 _STATUS_TO_OFFER_TYPE = {status_value: offer for offer, status_value in OFFER_TYPE_TO_STATUS.items()}
@@ -294,15 +312,16 @@ def distribution_rows_parts(
     """
     cond_filter = _condition_filter(include_flag_single)
     sold_out_filter = _sold_out_filter()
-    base = f"""{source_cte(schema=TCG_SCHEMA, include_inactive=True)},
+    title_ja, title_en = bundle_title_sql()
+    base = f"""{source_cte(schema=TCG_SCHEMA, include_inactive=True, latest_stock=False)},
     dist_base AS (
         SELECT
             COALESCE(TO_CHAR(sm.line_posted_at AT TIME ZONE 'Asia/Tokyo',
                              'YYYY-MM-DD HH24:MI:SS'), '')          AS posted_at,
             sm.line_posted_at                                       AS posted_ts,
             COALESCE(p.mark, '')                                    AS mark,
-            COALESCE(p.name, '')                                    AS japanese_title,
-            COALESCE(p.name_en, '')                                 AS english_title,
+            {title_ja}                                    AS japanese_title,
+            {title_en}                                 AS english_title,
             cr.canonical                                            AS condition,
             ar.price_normalized                                     AS price_num,
             ar.quantity_normalized                                  AS qty_num,
@@ -325,7 +344,7 @@ def distribution_rows_parts(
             cr.basis                                                AS basis,
             concat_ws(chr(31), ej.id::text, ar.product_id::text, COALESCE(cr.condition_id, ''),
                       COALESCE(ar.unit_canonical, ''), COALESCE(ar.note_ja, ''),
-                      COALESCE(ar.ship_ja, ''), COALESCE(ar.status, '')) AS gkey,
+                      COALESCE(ar.ship_ja, ''), COALESCE(ar.status, ''), COALESCE(ar.bundle_size::text, '')) AS gkey,
             ROW_NUMBER() OVER (ORDER BY {result_order_sql()})       AS sort_ord
         FROM {TCG_SCHEMA}.analysis_results ar
         JOIN {TCG_SCHEMA}.extraction_items ei
@@ -340,9 +359,11 @@ def distribution_rows_parts(
             ON ps.id = sc.supplier_id
         LEFT JOIN public.products p
             ON p.id = ar.product_id
+        LEFT JOIN public.line_units lu
+            ON lu.id = ar.unit_id
         LEFT JOIN public.type_master ser
             ON ser.id = p.work_id
-        {review_joins(schema=TCG_SCHEMA, fenced=True)}
+        {review_joins(schema=TCG_SCHEMA, fenced=True, shime=False)}
         WHERE ar.pid_resolved = TRUE
           AND ar.is_current = TRUE
           AND cr.needs_review IS FALSE
@@ -449,14 +470,14 @@ async def fetch_preview_data(db: AsyncSession) -> dict:
     sold_out_filter = _sold_out_filter()
     age_condition, age_bind_params = _age_window(max_age_hours)
 
-    count_result = await db.execute(text(f"""{source_cte(schema=TCG_SCHEMA, include_inactive=True)}
+    count_result = await db.execute(text(f"""{source_cte(schema=TCG_SCHEMA, include_inactive=True, latest_stock=False)}
         SELECT COUNT(*) AS cnt
         FROM {TCG_SCHEMA}.analysis_results ar
         JOIN {TCG_SCHEMA}.extraction_items ei ON ei.id=ar.extraction_item_id
         JOIN {TCG_SCHEMA}.extraction_jobs ej ON ej.id=ei.extraction_job_id
         JOIN {TCG_SCHEMA}.source_messages sm ON sm.id=ej.source_message_id
         JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id=sm.supplier_channel_id
-        {review_joins(schema=TCG_SCHEMA)}
+        {review_joins(schema=TCG_SCHEMA, shime=False)}
         WHERE ar.pid_resolved = TRUE
           AND ar.is_current = TRUE
           AND cr.needs_review IS FALSE
@@ -470,7 +491,7 @@ async def fetch_preview_data(db: AsyncSession) -> dict:
     output_count = count_result.scalar()
 
     # 除外内訳
-    excl_result = await db.execute(text(f"""{source_cte(schema=TCG_SCHEMA, include_inactive=True)}
+    excl_result = await db.execute(text(f"""{source_cte(schema=TCG_SCHEMA, include_inactive=True, latest_stock=False)}
         SELECT
             COUNT(*) FILTER (WHERE cr.canonical LIKE 'FLAG_%' OR cr.effect = 'EXCLUDE')
                 AS exc_flag,
@@ -500,7 +521,7 @@ async def fetch_preview_data(db: AsyncSession) -> dict:
         JOIN {TCG_SCHEMA}.extraction_jobs ej ON ej.id=ei.extraction_job_id
         JOIN {TCG_SCHEMA}.source_messages sm ON sm.id=ej.source_message_id
         JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id=sm.supplier_channel_id
-        {review_joins(schema=TCG_SCHEMA)}
+        {review_joins(schema=TCG_SCHEMA, shime=False)}
         WHERE ar.is_current = TRUE{age_condition}
     """), age_bind_params)
     excl = excl_result.mappings().one()
