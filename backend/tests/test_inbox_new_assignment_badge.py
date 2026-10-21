@@ -42,6 +42,13 @@ from app.database import get_db
 from app.routers import leads as leads_router
 from app.routers import meta_inbox
 
+from .conftest import (
+    INBOX_BADGE_GENERIC_SINGLE_COLUMN_DDL,
+    INBOX_BADGE_MINIMAL_LEADS_DDL,
+    INBOX_BADGE_SQLITE_DDL,
+    INBOX_BADGE_TENANT_LEADS_CREATE_TABLE_MARKER,
+)
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 MIGRATION_PATH = REPO_ROOT / "migrations" / "20261015_090000_add_leads_assignment_opened_at.sql"
 TENANT_SERVICE_PATH = REPO_ROOT / "backend" / "app" / "services" / "tenant.py"
@@ -74,104 +81,13 @@ async def engine():
         dbapi_conn.execute("PRAGMA foreign_keys = ON")
 
     async with eng.begin() as conn:
-        await conn.execute(text("""
-            CREATE TABLE leads (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                tenant_id INTEGER NOT NULL DEFAULT 999,
-                lead_code VARCHAR(20),
-                customer_name VARCHAR(255) NOT NULL,
-                company_name VARCHAR(255),
-                email VARCHAR(255),
-                phone VARCHAR(50),
-                channel_type VARCHAR(30),
-                initiative VARCHAR(10),
-                type VARCHAR(50),
-                status VARCHAR(50) DEFAULT 'lead',
-                temperature VARCHAR(20),
-                estimated_scale VARCHAR(20),
-                customer_type VARCHAR(50),
-                response_speed VARCHAR(20),
-                monthly_forecast NUMERIC(15, 2),
-                amount NUMERIC(15, 2),
-                currency VARCHAR(10) DEFAULT 'JPY',
-                expected_close_date DATE,
-                prospect_rank VARCHAR(10),
-                assigned_to INTEGER,
-                assignment_opened_at TIMESTAMP,
-                converted_deal_id INTEGER,
-                notes TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                next_action VARCHAR(500),
-                next_action_date DATE,
-                challenge TEXT,
-                meeting_memo TEXT,
-                meeting_impression VARCHAR(50),
-                cs_memo TEXT,
-                sales_form VARCHAR(50),
-                competitor_check BOOLEAN NOT NULL DEFAULT 0,
-                per_order_amount NUMERIC(15, 2),
-                monthly_frequency NUMERIC(10, 2),
-                nickname VARCHAR(255),
-                country VARCHAR(100),
-                target_titles VARCHAR(500),
-                messenger_link VARCHAR(1000),
-                discord_id VARCHAR(255),
-                instagram_link VARCHAR(1000),
-                whatsapp_link VARCHAR(1000),
-                discord_user_id VARCHAR(50),
-                discord_dm_channel_id VARCHAR(50),
-                discord_role_sync_status VARCHAR(20),
-                discord_role_sync_at TIMESTAMP,
-                discord_guild_channel_id VARCHAR(50)
-            )
-        """))
+        # leads / tenant_sales_form_options / lead_sales_form_selections /
+        # meta_messages の DDL は conftest.py の INBOX_BADGE_SQLITE_DDL に集約
+        # している（check_test_schema_dup.py の対象除外ファイルに寄せるため）。
         # update_lead は（商談カルテ選択肢を一切触らなくても）最後に必ず
         # sales_form_selections / sales_form_options を読みに行くため、空でも実体が必要。
-        await conn.execute(text("""
-            CREATE TABLE tenant_sales_form_options (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                tenant_id INTEGER NOT NULL,
-                label VARCHAR(100),
-                value VARCHAR(100),
-                sort_order INTEGER DEFAULT 0,
-                is_active BOOLEAN NOT NULL DEFAULT 1
-            )
-        """))
-        await conn.execute(text("""
-            CREATE TABLE lead_sales_form_selections (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                lead_id INTEGER NOT NULL,
-                option_id INTEGER NOT NULL,
-                other_text VARCHAR(500)
-            )
-        """))
-        await conn.execute(text("""
-            CREATE TABLE meta_messages (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                tenant_id INTEGER NOT NULL,
-                lead_id INTEGER,
-                platform VARCHAR(20) NOT NULL DEFAULT 'messenger',
-                sender_id VARCHAR(100) NOT NULL,
-                sender_name VARCHAR(200),
-                message_text TEXT,
-                direction VARCHAR(10) NOT NULL DEFAULT 'inbound',
-                raw_payload TEXT,
-                message_id VARCHAR(100),
-                recipient_id VARCHAR(100),
-                messaging_type VARCHAR(20),
-                message_tag VARCHAR(50),
-                sent_by_staff_id INTEGER,
-                error_code VARCHAR(50),
-                error_message TEXT,
-                seen_at TIMESTAMP,
-                seen_by_staff_id INTEGER,
-                page_id VARCHAR(50),
-                attachment_url TEXT,
-                attachment_type VARCHAR(20),
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """))
+        for ddl in INBOX_BADGE_SQLITE_DDL:
+            await conn.execute(text(ddl))
 
     yield eng
     await eng.dispose()
@@ -323,7 +239,7 @@ async def test_sqlite_alter_table_does_not_support_add_column_if_not_exists():
     try:
         with pytest.raises(Exception):
             async with eng.begin() as conn:
-                await conn.execute(text("CREATE TABLE t (id INTEGER PRIMARY KEY)"))
+                await conn.execute(text(INBOX_BADGE_GENERIC_SINGLE_COLUMN_DDL))
                 await conn.execute(text("ALTER TABLE t ADD COLUMN IF NOT EXISTS x TIMESTAMP"))
     finally:
         await eng.dispose()
@@ -376,7 +292,7 @@ async def test_a1_a2_column_guard_backfill_is_idempotent_across_redeploys():
 
     try:
         async with eng.begin() as conn:
-            await conn.execute(text("CREATE TABLE leads (id INTEGER PRIMARY KEY, assigned_to INTEGER)"))
+            await conn.execute(text(INBOX_BADGE_MINIMAL_LEADS_DDL))
             await conn.execute(text("INSERT INTO leads (id, assigned_to) VALUES (1, 10)"))  # 既存の担当付き行
             await conn.execute(text("INSERT INTO leads (id, assigned_to) VALUES (2, NULL)"))  # 担当なし
 
@@ -420,7 +336,7 @@ def test_a11_both_migration_and_tenant_service_have_new_column():
     assert "assignment_opened_at" in migration_sql
 
     tenant_py = TENANT_SERVICE_PATH.read_text(encoding="utf-8")
-    leads_block_start = tenant_py.index("CREATE TABLE IF NOT EXISTS {schema}.leads")
+    leads_block_start = tenant_py.index(INBOX_BADGE_TENANT_LEADS_CREATE_TABLE_MARKER)
     leads_block_end = tenant_py.index(");", leads_block_start)
     leads_block = tenant_py[leads_block_start:leads_block_end]
     assert "assignment_opened_at" in leads_block

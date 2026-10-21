@@ -71,6 +71,141 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_suppliers_line_name_active_unique
     WHERE line_name IS NOT NULL AND is_active = TRUE AND tenant_id IS NULL;
 """
 
+# backend/tests/test_inbox_new_assignment_badge.py 向け DDL 定数
+# 受信箱「新規」バッジ（担当になったが、まだ開いていない）の Acceptance
+# Criteria テスト用 SQLite スキーマ。check_test_schema_dup.py の
+# EXCLUDE_FILES 対象（=このファイル）に集約することで、テスト側の
+# 本番テーブル定義コピーを減らす（docs/specs/process-hardening/design-pillar3.md §4-2）。
+INBOX_BADGE_LEADS_DDL = """
+    CREATE TABLE leads (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        tenant_id INTEGER NOT NULL DEFAULT 999,
+        lead_code VARCHAR(20),
+        customer_name VARCHAR(255) NOT NULL,
+        company_name VARCHAR(255),
+        email VARCHAR(255),
+        phone VARCHAR(50),
+        channel_type VARCHAR(30),
+        initiative VARCHAR(10),
+        type VARCHAR(50),
+        status VARCHAR(50) DEFAULT 'lead',
+        temperature VARCHAR(20),
+        estimated_scale VARCHAR(20),
+        customer_type VARCHAR(50),
+        response_speed VARCHAR(20),
+        monthly_forecast NUMERIC(15, 2),
+        amount NUMERIC(15, 2),
+        currency VARCHAR(10) DEFAULT 'JPY',
+        expected_close_date DATE,
+        prospect_rank VARCHAR(10),
+        assigned_to INTEGER,
+        assignment_opened_at TIMESTAMP,
+        converted_deal_id INTEGER,
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        next_action VARCHAR(500),
+        next_action_date DATE,
+        challenge TEXT,
+        meeting_memo TEXT,
+        meeting_impression VARCHAR(50),
+        cs_memo TEXT,
+        sales_form VARCHAR(50),
+        competitor_check BOOLEAN NOT NULL DEFAULT 0,
+        per_order_amount NUMERIC(15, 2),
+        monthly_frequency NUMERIC(10, 2),
+        nickname VARCHAR(255),
+        country VARCHAR(100),
+        target_titles VARCHAR(500),
+        messenger_link VARCHAR(1000),
+        discord_id VARCHAR(255),
+        instagram_link VARCHAR(1000),
+        whatsapp_link VARCHAR(1000),
+        discord_user_id VARCHAR(50),
+        discord_dm_channel_id VARCHAR(50),
+        discord_role_sync_status VARCHAR(20),
+        discord_role_sync_at TIMESTAMP,
+        discord_guild_channel_id VARCHAR(50)
+    )
+"""
+
+# update_lead は（商談カルテ選択肢を一切触らなくても）最後に必ず
+# sales_form_selections / sales_form_options を読みに行くため、空でも実体が必要。
+INBOX_BADGE_SALES_FORM_OPTIONS_DDL = """
+    CREATE TABLE tenant_sales_form_options (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        tenant_id INTEGER NOT NULL,
+        label VARCHAR(100),
+        value VARCHAR(100),
+        sort_order INTEGER DEFAULT 0,
+        is_active BOOLEAN NOT NULL DEFAULT 1
+    )
+"""
+
+INBOX_BADGE_SALES_FORM_SELECTIONS_DDL = """
+    CREATE TABLE lead_sales_form_selections (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        lead_id INTEGER NOT NULL,
+        option_id INTEGER NOT NULL,
+        other_text VARCHAR(500)
+    )
+"""
+
+INBOX_BADGE_META_MESSAGES_DDL = """
+    CREATE TABLE meta_messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        tenant_id INTEGER NOT NULL,
+        lead_id INTEGER,
+        platform VARCHAR(20) NOT NULL DEFAULT 'messenger',
+        sender_id VARCHAR(100) NOT NULL,
+        sender_name VARCHAR(200),
+        message_text TEXT,
+        direction VARCHAR(10) NOT NULL DEFAULT 'inbound',
+        raw_payload TEXT,
+        message_id VARCHAR(100),
+        recipient_id VARCHAR(100),
+        messaging_type VARCHAR(20),
+        message_tag VARCHAR(50),
+        sent_by_staff_id INTEGER,
+        error_code VARCHAR(50),
+        error_message TEXT,
+        seen_at TIMESTAMP,
+        seen_by_staff_id INTEGER,
+        page_id VARCHAR(50),
+        attachment_url TEXT,
+        attachment_type VARCHAR(20),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+"""
+
+# engine fixture が順に execute する DDL 一式（leads → sales_form_options →
+# sales_form_selections → meta_messages の順。外部キー的な参照順ではないが
+# 元のテスト内の実行順を保つ）。
+INBOX_BADGE_SQLITE_DDL = (
+    INBOX_BADGE_LEADS_DDL,
+    INBOX_BADGE_SALES_FORM_OPTIONS_DDL,
+    INBOX_BADGE_SALES_FORM_SELECTIONS_DDL,
+    INBOX_BADGE_META_MESSAGES_DDL,
+)
+
+# test_sqlite_alter_table_does_not_support_add_column_if_not_exists 用:
+# 「ALTER TABLE ... ADD COLUMN IF NOT EXISTS は SQLite に無い」という一般的事実を
+# 確認するためだけの、本番スキーマとは無関係な最小テーブル。
+INBOX_BADGE_GENERIC_SINGLE_COLUMN_DDL = "CREATE TABLE t (id INTEGER PRIMARY KEY)"
+
+# test_a1_a2_column_guard_backfill_is_idempotent_across_redeploys 用:
+# マイグレーション本体の「列が無いときだけ ALTER+UPDATE、あれば完全スキップ」
+# という分岐ロジックを Python 側で再現するための最小 leads テーブル。
+INBOX_BADGE_MINIMAL_LEADS_DDL = (
+    "CREATE TABLE leads (id INTEGER PRIMARY KEY, assigned_to INTEGER)"
+)
+
+# test_a11_both_migration_and_tenant_service_have_new_column 用:
+# backend/app/services/tenant.py 側の leads CREATE TABLE 定義を検索するための
+# マーカー文字列。tenant.py 本体の記述と文字列として一致している必要がある
+# （ズレると A11 の同期検査が静かに空振りする）。
+INBOX_BADGE_TENANT_LEADS_CREATE_TABLE_MARKER = "CREATE TABLE IF NOT EXISTS {schema}.leads"
+
 
 def _supplier_ssot_premigration(cursor, schema: str):
     """Pre-migration value operations for supplier SSOT.
