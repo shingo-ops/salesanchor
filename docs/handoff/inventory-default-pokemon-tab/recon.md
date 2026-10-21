@@ -32,7 +32,7 @@ GAS ソースの基準: `/Users/tanizawashingo/CC報告ファイル-keep/invento
 ## C. シート版（GAS 在庫一覧）
 - 既定タブ「すべて」: `verify_prod_after/index.html:1000` `var activeSeries = ''`。宣言は MAIN_SERIES（`:1003`）より前。
 - 選んでいたシリーズの行が無くなったら「すべて」に戻す: `index.html` buildSeriesTabs 内 `if (activeSeries && !counts[activeSeries]) activeSeries = '';`。
-- 読み込み: `loadData`（`:1207`）が `google.script.run.getInventoryData()` を1回。`Code.js:55-97` は在庫集計シートを `getDataRange().getValues()` で全行読み、許可14列を返す（引数なし）。
+- 読み込み: `loadData`（`:1207`）が `google.script.run.getInventoryData()` を1回。GAS の Code.js 55〜97行目 は在庫集計シートを `getDataRange().getValues()` で全行読み、許可14列を返す（引数なし）。
 - 受信後（`onDataLoaded` `:1219-1252`）: Sold out 除外（`:1232-1234`）→ 全行の検索用文字列 SEARCH_TEXTS（`:1237-1239`）→ buildSeriesTabs → buildFilterOptions → applySortValue → render。
 - render（`:1428-`）: 全行 filter（`:1441-1470`。シリーズ絞りは `:1452`、SEARCH_TEXTS は検索語があるときだけ使う `:1448-1450`）→ sort → 絞った後の全行を innerHTML（ページ分割なし）。
 - 更新ボタン（`:918` `loadData(true)`）は activeSeries を保ったまま再取得する。
