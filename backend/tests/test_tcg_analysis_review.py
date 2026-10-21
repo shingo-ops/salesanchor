@@ -430,3 +430,41 @@ async def test_client_timing_route_itself_does_not_take_db():
     assert direct == [require_super_admin]
     assert get_db not in direct
     assert "db" not in inspect.signature(route.endpoint).parameters
+
+
+# ---------------------------------------------------------------------------
+# 便1: order / posted_within_hours（要確認タブの新しい道。ADR-1023 改訂 2026-10-21）
+# ---------------------------------------------------------------------------
+
+
+async def _get_with_mock(query: str):
+    from app.main import app
+
+    mock = AsyncMock(return_value=_DUMMY_FETCH_RESULT)
+    with patch("app.routers.tcg_analysis_review.fetch_analysis_results", new=mock):
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            resp = await client.get(f"/api/v1/tcg/analysis-results?{query}")
+    return resp, mock
+
+
+async def test_order_and_window_are_passed_to_the_service(fake_super_admin_override):
+    resp, mock = await _get_with_mock("status_tab=NEEDS_REVIEW&order=posted_desc&posted_within_hours=24&limit=25")
+    assert resp.status_code == 200, resp.text
+    kwargs = mock.await_args.kwargs
+    assert (kwargs["order"], kwargs["posted_within_hours"], kwargs["limit"]) == ("posted_desc", 24, 25)
+
+
+async def test_order_and_window_default_to_the_previous_behaviour(fake_super_admin_override):
+    resp, mock = await _get_with_mock("status_tab=NEEDS_REVIEW&offset=5&limit=10")
+    assert resp.status_code == 200, resp.text
+    kwargs = mock.await_args.kwargs
+    assert (kwargs["order"], kwargs["posted_within_hours"]) == ("default", None)
+
+
+@pytest.mark.parametrize(
+    "query",
+    ["order=oldest", "posted_within_hours=0", "posted_within_hours=721", "posted_within_hours=x"],
+)
+async def test_order_and_window_out_of_range_is_422(fake_super_admin_override, query):
+    resp, _ = await _get_with_mock(query)
+    assert resp.status_code == 422, resp.text

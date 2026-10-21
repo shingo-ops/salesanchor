@@ -13,6 +13,7 @@ import json
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth.dependencies import is_postgresql
 from app.services.line_analysis_v102_svc import V102_PROMPT_VERSION_PREFIX
 from app.services.review_reason_codes_svc import build_review_reason_details, load_review_reason_codes
 from app.services.tcg_condition_review_svc import review_joins, source_cte
@@ -89,6 +90,65 @@ _NEEDS_REVIEW_COND = (
     "((NOT ar.pid_resolved OR NOT ar.unit_resolved OR cr.needs_review)"
     " AND COALESCE(starts_with(ej.prompt_version, :v102_prefix), FALSE))"
 )
+
+# ---------------------------------------------------------------------------
+# 一覧の SELECT 列と取得ログの LATERAL（今の道と新しい道の両方がここを使う＝1か所）
+# 文字列は一字一句変えない（SQL スナップショット試験が sha256 で守る）。
+# ---------------------------------------------------------------------------
+
+_ITEM_COLUMNS = f"""ei.id::text                          AS extraction_item_id,
+            ej.source_message_id::text           AS source_message_id,
+            ej.system_review_detail,
+            COALESCE(ps.name, '不明')            AS provider,
+            sm.raw_text,
+            sm.line_posted_at                    AS posted_at,
+            ei.raw_product_name,
+            ei.raw_quantity,
+            ei.raw_price,
+            ei.raw_unit,
+            ei.raw_state,
+            ei.raw_memo,
+            ei.line_start,
+            ei.line_end,
+            p.work_id::text                      AS work_id,
+            ws.name_ja                           AS work_name,
+            ws.name_en                           AS work_alt_name,
+            p.id::text                           AS product_code,
+            p.name                               AS product_title,
+            ar.product_id::text                  AS product_uuid,
+            ar.pid_resolved,
+            ar.pid_basis,
+            ar.condition_basis,
+            ar.unit_canonical,
+            ar.unit_resolved,
+            cr.canonical AS condition_canonical,
+            cr.condition_id, cr.review_version, cr.needs_review, cr.review_reasons,
+            cr.valid_ack AS condition_confirmed, cr.classification AS empty_box_classification,
+            ar.note_ja,
+            ar.status,
+            ar.exclusion,
+            ar.quantity_normalized,
+            ar.price_normalized,
+            (ps.id IS NOT NULL)                  AS supplier_registered,
+            COALESCE(starts_with(ej.prompt_version, :v102_prefix), FALSE) AS is_v102,
+            COALESCE(
+                (SELECT ic.system_value = ic.human_value
+                 FROM {TCG_SCHEMA}.item_corrections ic
+                 WHERE ic.extraction_item_id = ei.id
+                   AND ic.field_name = 'product_id'
+                 ORDER BY ic.corrected_at DESC
+                 LIMIT 1),
+                FALSE
+            )                                    AS product_confirmed,
+            eat.thought_summaries"""
+
+_EAT_LATERAL = f"""LEFT JOIN LATERAL (
+            SELECT ea.thought_summaries
+            FROM {TCG_SCHEMA}.extraction_attempts ea
+            WHERE ea.extraction_job_id = ej.id AND ea.phase = 'completed'
+            ORDER BY ea.started_at DESC, ea.id DESC
+            LIMIT 1
+        ) eat ON TRUE"""
 
 
 def _build_where(
@@ -185,47 +245,92 @@ def _compute_issues(
     return issues
 
 
+async def _fetch_needs_review_posted_desc(
+    db: AsyncSession,
+    *,
+    src: str,
+    base_from: str,
+    where: str,
+    params: dict,
+    offset: int,
+    limit: int,
+    posted_within_hours: int | None,
+) -> tuple[list, int, list[str]]:
+    """要確認タブ専用の道: 件数・仕入元・本体を1本の SQL で取る（設計 ADR-1023 改訂 2026-10-21, §10）。
+
+    並びは投稿日の新しい順 → 投稿 id → 既存の result_order_sql()（全順序）。
+    戻り値は (行, 総件数, 仕入元の名前一覧)。
+    """
+    assert where.startswith("WHERE "), where  # NEEDS_REVIEW は必ず WHERE で始まる（窓の条件を AND でつなぐ）
+    window = ""
+    if posted_within_hours is not None:
+        # 24時間の絞り（S3）。+0秒を足すのは、素直な比較だと索引の見積りが1行になり
+        # 本番で55秒かかったため（2026-10-20 実測）。消さないこと。
+        window = (
+            " AND (sm.line_posted_at + interval '0 second') >= now() - make_interval(hours => :posted_within_hours)"
+        )
+    sql = f"""{src}
+        , base AS MATERIALIZED (
+            SELECT
+                row_number() OVER (ORDER BY sm.line_posted_at DESC NULLS LAST, sm.id ASC, {result_order_sql()}) AS rn,
+                {_ITEM_COLUMNS}
+            {base_from}
+            {_EAT_LATERAL}
+            {where}{window}
+        )
+        , meta AS (
+            SELECT count(*) AS total,
+                   COALESCE(json_agg(DISTINCT provider ORDER BY provider) FILTER (WHERE provider IS NOT NULL), '[]'::json) AS providers
+            FROM base
+        )
+        SELECT meta.total AS meta_total, meta.providers AS meta_providers, base.*
+        FROM meta LEFT JOIN base ON base.rn > :offset AND base.rn <= :offset + :limit
+        ORDER BY base.rn
+    """
+    p = dict(params, limit=limit, offset=offset, v102_prefix=V102_PROMPT_VERSION_PREFIX)
+    if posted_within_hours is not None:
+        p["posted_within_hours"] = posted_within_hours
+
+    if is_postgresql(db):
+        # S2: JIT をこの1本だけ切る（本番 EXPLAIN で JIT の準備に時間を取られた。設計 §10-4）。
+        # is_local=true なので、例外時も元の値はトランザクション終了で戻る。
+        prev_jit = (await db.execute(text("SELECT current_setting('jit')"))).scalar_one()
+        await db.execute(text("SELECT set_config('jit', 'off', true)"))
+        result_rows = (await db.execute(text(sql), p)).fetchall()
+        await db.execute(text("SELECT set_config('jit', :v, true)"), {"v": prev_jit})
+    else:
+        result_rows = (await db.execute(text(sql), p)).fetchall()
+
+    if not result_rows:
+        return [], 0, []
+    total = int(result_rows[0].meta_total)
+    providers_raw = result_rows[0].meta_providers
+    # json 列はドライバによって文字列で返る
+    providers = json.loads(providers_raw) if isinstance(providers_raw, str) else list(providers_raw or [])
+    # ページが空のときは base 側が NULL の1行だけ返る
+    rows = [r for r in result_rows if r.extraction_item_id is not None]
+    return rows, total, providers
+
+
 # ---------------------------------------------------------------------------
 # 解析結果一覧（A-1）
 # ---------------------------------------------------------------------------
 
 
-async def fetch_analysis_results(
+async def _fetch_current_path(
     db: AsyncSession,
     *,
-    query: str | None = None,
-    provider: str | None = None,
-    status_tab: str = "ALL",
-    offset: int = 0,
-    limit: int = 10,
-    review_only: bool = False,
-    unregistered_only: bool = False,
-    unresolved_unit_only: bool = False,
-    strip_raw_text: bool = False,
-    work_id: str | None = None,
-    extraction_item_ids: list[str] | None = None,
-) -> dict:
-    """
-    解析結果一覧を返す（GAS: getAnalysisReviewPage 相当）。
+    src: str,
+    base_from: str,
+    where: str,
+    params: dict,
+    offset: int,
+    limit: int,
+) -> tuple[list, int, list[str]]:
+    """今の道: 件数・仕入元・本体を3本の SQL で取る（CSV・シート・配信・他タブ・確認済みタブが使う）。
 
-    ページングはアイテム単位（GAS の groupBySource=false 相当）。
-    groupBySource は FE 側でグルーピングして表示する。
+    SQL 文字列は便1より前から1文字も変えていない（test_tcg_analysis_review_sql_snapshot.py が sha256 で守る）。
     """
-    where, params = _build_where(
-        query=query,
-        provider=provider,
-        status_tab=status_tab,
-        review_only=review_only,
-        unregistered_only=unregistered_only,
-        unresolved_unit_only=unresolved_unit_only,
-        work_id=work_id,
-        extraction_item_ids=extraction_item_ids,
-    )
-    # ID 指定時は在庫表と同じ範囲（非アクティブな投稿も含む）で引く
-    inactive = extraction_item_ids is not None
-    src = source_cte(schema=TCG_SCHEMA, include_inactive=inactive)
-    base_from = _base_from(include_inactive=inactive)
-
     # 総件数
     count_sql = f"{src} SELECT COUNT(*) {base_from} {where}"
     total: int = (await db.execute(text(count_sql), params)).scalar_one()
@@ -250,65 +355,75 @@ async def fetch_analysis_results(
             LIMIT :limit OFFSET :offset
         )
         SELECT
-            ei.id::text                          AS extraction_item_id,
-            ej.source_message_id::text           AS source_message_id,
-            ej.system_review_detail,
-            COALESCE(ps.name, '不明')            AS provider,
-            sm.raw_text,
-            sm.line_posted_at                    AS posted_at,
-            ei.raw_product_name,
-            ei.raw_quantity,
-            ei.raw_price,
-            ei.raw_unit,
-            ei.raw_state,
-            ei.raw_memo,
-            ei.line_start,
-            ei.line_end,
-            p.work_id::text                      AS work_id,
-            ws.name_ja                           AS work_name,
-            ws.name_en                           AS work_alt_name,
-            p.id::text                           AS product_code,
-            p.name                               AS product_title,
-            ar.product_id::text                  AS product_uuid,
-            ar.pid_resolved,
-            ar.pid_basis,
-            ar.condition_basis,
-            ar.unit_canonical,
-            ar.unit_resolved,
-            cr.canonical AS condition_canonical,
-            cr.condition_id, cr.review_version, cr.needs_review, cr.review_reasons,
-            cr.valid_ack AS condition_confirmed, cr.classification AS empty_box_classification,
-            ar.note_ja,
-            ar.status,
-            ar.exclusion,
-            ar.quantity_normalized,
-            ar.price_normalized,
-            (ps.id IS NOT NULL)                  AS supplier_registered,
-            COALESCE(starts_with(ej.prompt_version, :v102_prefix), FALSE) AS is_v102,
-            COALESCE(
-                (SELECT ic.system_value = ic.human_value
-                 FROM {TCG_SCHEMA}.item_corrections ic
-                 WHERE ic.extraction_item_id = ei.id
-                   AND ic.field_name = 'product_id'
-                 ORDER BY ic.corrected_at DESC
-                 LIMIT 1),
-                FALSE
-            )                                    AS product_confirmed,
-            eat.thought_summaries
+            {_ITEM_COLUMNS}
         {base_from}
         JOIN result_order_page ON result_order_page.id = ei.id
-        LEFT JOIN LATERAL (
-            SELECT ea.thought_summaries
-            FROM {TCG_SCHEMA}.extraction_attempts ea
-            WHERE ea.extraction_job_id = ej.id AND ea.phase = 'completed'
-            ORDER BY ea.started_at DESC, ea.id DESC
-            LIMIT 1
-        ) eat ON TRUE
+        {_EAT_LATERAL}
         {where}
         ORDER BY {result_order_sql()}
     """
     item_params = dict(params, limit=limit, offset=offset, v102_prefix=V102_PROMPT_VERSION_PREFIX)
     rows = (await db.execute(text(items_sql), item_params)).fetchall()
+    return rows, total, providers
+
+
+
+async def fetch_analysis_results(
+    db: AsyncSession,
+    *,
+    query: str | None = None,
+    provider: str | None = None,
+    status_tab: str = "ALL",
+    offset: int = 0,
+    limit: int = 10,
+    review_only: bool = False,
+    unregistered_only: bool = False,
+    unresolved_unit_only: bool = False,
+    strip_raw_text: bool = False,
+    work_id: str | None = None,
+    extraction_item_ids: list[str] | None = None,
+    order: str = "default",
+    posted_within_hours: int | None = None,
+) -> dict:
+    """
+    解析結果一覧を返す（GAS: getAnalysisReviewPage 相当）。
+
+    ページングはアイテム単位（GAS の groupBySource=false 相当）。
+    groupBySource は FE 側でグルーピングして表示する。
+
+    order / posted_within_hours は新しい道でだけ効く。他の道では無視する
+    （要確認画面の要確認タブだけが送る）。
+    """
+    where, params = _build_where(
+        query=query,
+        provider=provider,
+        status_tab=status_tab,
+        review_only=review_only,
+        unregistered_only=unregistered_only,
+        unresolved_unit_only=unresolved_unit_only,
+        work_id=work_id,
+        extraction_item_ids=extraction_item_ids,
+    )
+    # ID 指定時は在庫表と同じ範囲（非アクティブな投稿も含む）で引く
+    inactive = extraction_item_ids is not None
+    src = source_cte(schema=TCG_SCHEMA, include_inactive=inactive)
+    base_from = _base_from(include_inactive=inactive)
+
+    if status_tab == "NEEDS_REVIEW" and order == "posted_desc" and extraction_item_ids is None:
+        rows, total, providers = await _fetch_needs_review_posted_desc(
+            db,
+            src=src,
+            base_from=base_from,
+            where=where,
+            params=params,
+            offset=offset,
+            limit=limit,
+            posted_within_hours=posted_within_hours,
+        )
+    else:
+        rows, total, providers = await _fetch_current_path(
+            db, src=src, base_from=base_from, where=where, params=params, offset=offset, limit=limit
+        )
 
     reason_table = await load_review_reason_codes(db)
     page_ids = {row.extraction_item_id for row in rows}
