@@ -96,7 +96,9 @@ _NEEDS_REVIEW_COND = (
 # 文字列は一字一句変えない（SQL スナップショット試験が sha256 で守る）。
 # ---------------------------------------------------------------------------
 
-_ITEM_COLUMNS = f"""ei.id::text                          AS extraction_item_id,
+def _item_columns() -> str:
+    """呼び出しのたびに組み立てる（テストが TCG_SCHEMA を差し替えても効くように）。"""
+    return f"""ei.id::text                          AS extraction_item_id,
             ej.source_message_id::text           AS source_message_id,
             ej.system_review_detail,
             COALESCE(ps.name, '不明')            AS provider,
@@ -142,7 +144,9 @@ _ITEM_COLUMNS = f"""ei.id::text                          AS extraction_item_id,
             )                                    AS product_confirmed,
             eat.thought_summaries"""
 
-_EAT_LATERAL = f"""LEFT JOIN LATERAL (
+def _eat_lateral() -> str:
+    """呼び出しのたびに組み立てる（テストが TCG_SCHEMA を差し替えても効くように）。"""
+    return f"""LEFT JOIN LATERAL (
             SELECT ea.thought_summaries
             FROM {TCG_SCHEMA}.extraction_attempts ea
             WHERE ea.extraction_job_id = ej.id AND ea.phase = 'completed'
@@ -273,9 +277,9 @@ async def _fetch_needs_review_posted_desc(
         , base AS MATERIALIZED (
             SELECT
                 row_number() OVER (ORDER BY sm.line_posted_at DESC NULLS LAST, sm.id ASC, {result_order_sql()}) AS rn,
-                {_ITEM_COLUMNS}
+                {_item_columns()}
             {base_from}
-            {_EAT_LATERAL}
+            {_eat_lateral()}
             {where}{window}
         )
         , meta AS (
@@ -355,10 +359,10 @@ async def _fetch_current_path(
             LIMIT :limit OFFSET :offset
         )
         SELECT
-            {_ITEM_COLUMNS}
+            {_item_columns()}
         {base_from}
         JOIN result_order_page ON result_order_page.id = ei.id
-        {_EAT_LATERAL}
+        {_eat_lateral()}
         {where}
         ORDER BY {result_order_sql()}
     """
