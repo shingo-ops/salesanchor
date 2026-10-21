@@ -5,7 +5,10 @@
  */
 import type { TFunction } from "i18next";
 import type { DataTableColumn } from "../../components/DataTable";
+import { Button } from "../../components/Button";
 import { HoverCard } from "../../components/HoverCard";
+import { PAGE_ICONS } from "../../constants/icons";
+import { ICON } from "../../constants/iconSizes";
 import { BlockValue } from "./blockBadges";
 import { conditionBadgeVariant } from "./conditionBadge";
 import { supplierLabel } from "./inventoryFormat";
@@ -212,4 +215,35 @@ export function buildInventoryColumns({ t, colVisible, fmtOfferedAt }: BuildArgs
     },
   ];
   return all.filter((c) => c.hideId === null || colVisible(c.hideId)).map((c) => c.col);
+}
+
+/**
+ * スマホのカード表示だけに足す「原文」ボタン列（便1）。
+ * PC では使わない（呼び出し側 InventoryPage.tsx が isMobile のときだけこの列を足す）。
+ * カードのラベル行を増やさないため header は空・mobileLabel も付けない。
+ */
+export function buildInventoryRawTextColumn({
+  t,
+  onOpen,
+}: {
+  t: TFunction;
+  onOpen: (row: InventoryRow) => void;
+}): DataTableColumn<InventoryRow> {
+  return {
+    key: "rawText",
+    header: "",
+    mobileOrder: 8,
+    renderCell: (it) => (
+      <Button
+        variant="ghost"
+        size="lg"
+        iconOnly
+        aria-label={t("inventory.rowDrawer.openButton")}
+        data-testid={`inventory-raw-text-${it.id}`}
+        onClick={() => onOpen(it)}
+      >
+        <PAGE_ICONS.rawText size={ICON.md} aria-hidden="true" />
+      </Button>
+    ),
+  };
 }
