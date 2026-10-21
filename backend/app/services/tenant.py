@@ -374,6 +374,7 @@ CREATE TABLE IF NOT EXISTS {schema}.leads (
     expected_close_date DATE,
     prospect_rank VARCHAR(10),
     assigned_to INTEGER,
+    assignment_opened_at TIMESTAMPTZ,
     converted_deal_id INTEGER,
     notes TEXT,
     -- ADR-015 §1/§2: AI 自動収集データ

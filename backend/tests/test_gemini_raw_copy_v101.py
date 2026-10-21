@@ -1373,3 +1373,40 @@ def test_a16_gemini_index_survives_the_extraction_for_accepted_and_rejected_item
 def test_single_number_treats_k_as_a_scale_word_only_right_after_a_digit_without_a_letter_after(copied, expected):
     # 便G：Pack の k を千・k とみなして None にしていた不具合の修正
     assert v101._single_number(copied) == expected
+
+
+# ---------------------------------------------------------------------------
+# 値段の写しは、原文読みと同じ「英字の直後の数字は数えない」規則で読む（数量は変えない）
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("copied,expected", [
+    ("7,500円(PSA8)", 7500.0), ("7,800（PSA8）", 7800.0), ("PSA10 7,500円", 7500.0), ("ＰＳＡ９ 7,500円", 7500.0),
+])
+def test_price_copy_ignores_a_number_right_after_letters(copied, expected):
+    assert v101._single_price_number(copied) == expected
+
+
+@pytest.mark.parametrize("copied,expected", [
+    ("Y100,000/単価", 100000.0), ("¥25,000/BOX", 25000.0), ("10,300円[状態A-]", 10300.0), ("(BOX)@8,500円", 8500.0),
+    ("￥8,500", 8500.0), ("2万", None), ("1.5", None), ("1000円／2000円", None), (None, None),
+])
+def test_price_copy_keeps_the_existing_forms(copied, expected):
+    assert v101._single_price_number(copied) == expected
+
+
+def test_price_copy_that_is_only_a_tagged_number_is_none_and_unresolved():
+    assert v101._single_price_number("PSA10") is None
+    row = _trust_one("商品A\n3BOX@PSA10", "PSA10", "3")
+    assert row["price_normalized"] is None and "price_unresolved" in _kinds_of(row)
+
+
+def test_price_copy_with_a_grade_is_adopted_in_the_trust_path():
+    row = _trust_one("商品A\n1枚@7,500円(PSA8)", "7,500円(PSA8)", "1枚")
+    assert row["price_normalized"] == 7500.0 and "price_unresolved" not in _kinds_of(row)
+
+
+def test_quantity_copy_is_still_read_by_the_old_rule():
+    assert v101._single_number("PSA10") == 10.0
+    row = _trust_one("商品A\n3BOX@1,000円", "1,000円", "PSA10")
+    assert row["quantity_normalized"] == 10.0
