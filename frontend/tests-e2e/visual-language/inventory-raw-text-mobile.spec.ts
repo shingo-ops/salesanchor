@@ -112,7 +112,13 @@ test.describe("在庫表スマホ原文ボタン（便1）", () => {
     await expect(page.getByTestId("inventory-row-row-1")).toBeVisible();
 
     await page.getByTestId("inventory-raw-text-row-1").click();
-    const panel = page.getByTestId("supplier-drawer");
+    // `data-testid="supplier-drawer"` は Drawer 金型（frontend/src/components/Drawer.tsx:135）が
+    // 全インスタンスに付けるため、在庫ページでは「表の設定」ドロワーと行ドロワーの2つが DOM に居る。
+    // CI 実測（PR #4602）で strict mode violation になったので、開いている方（--open）に絞る。
+    const panel = page.locator(
+      '[data-testid="supplier-drawer"].comp-drawer-panel--open',
+    );
+    await expect(panel).toHaveCount(1);
     await expect(panel).toBeVisible();
 
     const viewport = page.viewportSize();
@@ -131,7 +137,9 @@ test.describe("在庫表スマホ原文ボタン（便1）", () => {
     // 返るのがパネル側の要素であることを確かめる（z-index の数値比較だけでは確定しないため実測）。
     const hit = await page.evaluate(() => {
       const tabbar = document.querySelector(".mobile-tabbar");
-      const panelEl = document.querySelector('[data-testid="supplier-drawer"]');
+      const panelEl = document.querySelector(
+        '[data-testid="supplier-drawer"].comp-drawer-panel--open',
+      );
       if (!tabbar || !panelEl) return { tabbarFound: false, panelFound: !!panelEl, hitInPanel: false, hitInTabbar: false, hitTag: null, hitTestId: null };
       const r = tabbar.getBoundingClientRect();
       const cx = r.left + r.width / 2;
