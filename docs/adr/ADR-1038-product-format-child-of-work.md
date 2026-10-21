@@ -5,7 +5,7 @@
 | ステータス | Proposed（2026-10-22） |
 | 備考 | PO 2026-10-21「細分類は中分類と紐づけて中分類を親に親子関係にできる？」への設計。PO 前提（2026-10-22）: 配線と DB の SSOT を守る、データを分散させない、金型にないハードコードをしない。 |
 | 起案日 | 2026-10-22 |
-| 方針の決定者 | （PO の回答後に記入。形 A／B の選択は PO 確認待ち・design §1-2）。設計: Claude Opus |
+| 方針の決定者 | Shingo（PO）。形の選択: 2026-10-22 チャット「1,」（同じ細分類を複数の中分類で一緒に使う。design §1-2 の A）。設計: Claude Opus |
 | 改める | Amends ADR-1026（What 3） |
 | 関連 | ADR-1020 What 5（links が選択肢の正）、ADR-1026 What 3（本 ADR で改める）、ADR-156（分類の木）、ADR-1007（migration で値を書かない）、ADR-1037（lock_timeout）、ADR-135/136、ADR-1003 |
 | 設計 | `docs/handoff/format-work-parent/design.md`、現状 `docs/handoff/format-work-parent/recon.md` |
