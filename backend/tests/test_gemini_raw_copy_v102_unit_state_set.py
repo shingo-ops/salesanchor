@@ -182,11 +182,11 @@ _BB_VALUES = {"pid_resolved": True, "product_id": 1, "price_normalized": Decimal
 
 
 def test_buyback_skips_set_category():
-    assert bb.is_candidate(_bb_item("セット系"), _BB_VALUES) is False
+    assert bb.is_candidate(_bb_item("セット系"), _BB_VALUES, {}) is False
 
 
 def test_buyback_still_targets_box_category():
-    assert bb.is_candidate(_bb_item("箱系"), _BB_VALUES) is True
+    assert bb.is_candidate(_bb_item("箱系"), _BB_VALUES, {}) is True
 
 
 def test_dataclass_default_keeps_old_constructor_working():
