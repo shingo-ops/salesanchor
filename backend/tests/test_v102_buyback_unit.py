@@ -578,3 +578,30 @@ def test_unit_word_in_a_glued_line_wins_over_price(line, alias):
     assert found == alias and basis["alias"] == alias
     candidate = _kitem(alias=found)
     assert bb.is_candidate(candidate, _values(), ALIASES) is False  # 単位の語で決まった行は値段では決めない
+
+
+def test_default_with_tape_cut_code_in_box_band_gives_opened_box():
+    tape = _kitem(review=[{"kind": "condition_multiple_candidates", "codes": ["CN0009"]}])
+    sealed = _values(10000, condition_id=14, condition_canonical="Sealed box", unit_canonical="Box", unit_id=10, unit_resolved=True,
+                     condition_basis=WORDLESS_BASIS, review_reasons="condition_multiple_candidates")
+    out = _kapply(tape, sealed)
+    assert (out["condition_canonical"], out["unit_canonical"], out["review_reasons"]) == ("Opened box", "Box", None)
+
+
+@pytest.mark.parametrize("group", ["box", "case"])
+def test_box_or_case_group_with_two_unit_ids_stops_everything(group, caplog):
+    rows = [(c, i, n, g, (99 if g == group and d == 5 else u), d, uc) for c, i, n, g, u, d, uc in TARGET_ROWS]
+    values = _kvalues("default", "Box", 10000)
+    with caplog.at_level("WARNING"):
+        assert _kapply(_kitem(), values, targets=rows) == values
+        big = _kvalues("default", "Box", 120000)
+        assert _kapply(_kitem(), big, targets=rows) == big
+    assert any(f"群 {group}" in r.message and "unit_id" in r.message for r in caplog.records)
+
+
+def test_group_with_all_units_unresolved_warns(caplog):
+    rows = [(c, i, n, g, u, d, (None if g == "pack" else uc)) for c, i, n, g, u, d, uc in TARGET_ROWS]
+    with caplog.at_level("WARNING"):
+        values = _kvalues("default", "Box", 1000)
+        assert _kapply(_kitem(), values, targets=rows) == values
+    assert any("群 pack" in r.message and "引けません" in r.message for r in caplog.records)

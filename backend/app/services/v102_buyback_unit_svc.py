@@ -257,6 +257,8 @@ def load_targets(session: Session) -> ConditionMap | None:
             logger.warning("[buyback_unit] 状態マスタの群 %s の既定（札 2・7）の行が %d 行です（1 行であるべき）: %s", group, len(default_codes), ",".join(sorted(default_codes)))
         if len(unit_keys) >= 2:  # (c)
             logger.warning("[buyback_unit] 状態マスタの群 %s の unit_id が %d 種類あります（NULL を含む）: %s", group, len(unit_keys), ",".join(sorted(code for _t, code, _l, _u in members)))
+        elif unit_keys == {None}:  # (c) 群の単位がすべて引けない（line_units が無効等）
+            logger.warning("[buyback_unit] 状態マスタの群 %s の単位がすべて引けません（unit_id が無い、または line_units が無効）: %s", group, ",".join(sorted(code for _t, code, _l, _u in members)))
         single_unit = len(unit_keys) == 1 and None not in unit_keys
         usable[group] = single_unit and (len(default_codes) == 1 or group == _UNIT_GROUP[UNIT_PACK])
         if single_unit:
