@@ -2,7 +2,7 @@
 
 - 日付: 2026-10-21（JST）
 - 状態: 設計案作成済み・設計審査 APPROVE（同じ AI による自己審査）・PO 承認「1」（2026-10-21、等級だけを外す案を値段だけに効く形で入れる）
-- 根拠: [recon.md](recon.md)
+- 根拠: [recon.md](recon.md)（docs/handoff/price-grade-strip/recon.md）
 - 関連 ADR: ADR-1035（要確認0件化）・ADR-1031（状態）
 
 ## 1. 目的（PO の言葉）
@@ -17,12 +17,12 @@
   - `:882` の `_fill_from_copy`（本番で通らない経路）。
   - `_single_number` 自体と、それを固定している既存テスト。
   - Gemini の指示書（DB の extraction_prompt_config）。
-  - 原文読み `extraction_judgement_svc.py` の挙動。
+  - 原文読み `backend/app/services/extraction_judgement_svc.py` の挙動。
   - 万・千・億・k を含む値段、値段が2つ並ぶ値段（別の課題）。
 
 ## 3. 選んだ方法と理由
 
-F2: 「英字か - の直後の数字は数えない（Y の直後と、数字x数字は例外）」という、原文から値段を読む処理にすでにある規則（`extraction_judgement_svc.py:603`）を、写しの値段を読むときにも使う。
+F2: 「英字か - の直後の数字は数えない（Y の直後と、数字x数字は例外）」という、原文から値段を読む処理にすでにある規則（`backend/app/services/extraction_judgement_svc.py:603`）を、写しの値段を読むときにも使う。
 
 - 等級の名前（PSA など）をコードに新しく書かない。等級の正本は状態マスタにあるが、等級の行だけを選ぶ列が無い（recon §4）。名前を書く P1/P2 は、等級の一覧を2か所目に作ることになるため採らない。
 - 規則は1か所にする。`:603` の判定を名前の付いた関数に切り出し、原文読みと写し読みの両方がそれを呼ぶ。写しを作らない。
@@ -36,7 +36,7 @@ F2: 「英字か - の直後の数字は数えない（Y の直後と、数字x�
 
 ## 4. 変更前後
 
-### 変更前（`gemini_raw_copy_v101.py:939-940` 付近）
+### 変更前（`backend/app/services/gemini_raw_copy_v101.py:939-940` 付近）
 ```python
 if v102 and gemini_trust:
     price = _single_number(item["price"])
@@ -50,8 +50,8 @@ if v102 and gemini_trust:
     qty = _single_number(item["quantity"])        # 数量は変えない
 ```
 
-- `extraction_judgement_svc.py`: `:603` の判定（`not head_y and not digit_x_before and (直前が英字 or 直前が "-")`）を、`is_tagged_number(text: str, start: int) -> bool` のような関数に切り出す。`_extract_line_numbers` はそれを呼ぶようにする（挙動は変えない）。
-- `gemini_raw_copy_v101.py`: `_single_price_number(text)` を `_single_number` の隣に置く。
+- `backend/app/services/extraction_judgement_svc.py`: `:603` の判定（`not head_y and not digit_x_before and (直前が英字 or 直前が "-")`）を、`is_tagged_number(text: str, start: int) -> bool` のような関数に切り出す。`_extract_line_numbers` はそれを呼ぶようにする（挙動は変えない）。
+- `backend/app/services/gemini_raw_copy_v101.py`: `_single_price_number(text)` を `_single_number` の隣に置く。
   - 中身: `_nfkc` → 万・千・億・k なら None（`_single_number` と同じ）→ `_NUMBER_RUN_RE` の各かたまりのうち `is_tagged_number` が真のものを除く → 残りがちょうど1つなら float、ほかは None。
   - 先頭の NFKC と単位語の扱いは、`_single_number` と同じ部品を使う（写さない）。
 - 依存の向き: gemini_raw_copy_v101 → extraction_judgement_svc の import が循環しないことを確かめる。循環するなら、関数を両方から読める既存の共通の場所へ移す。新しいファイルは作らない。どうしても置けなければ止めて Opus に戻す。
@@ -60,7 +60,7 @@ if v102 and gemini_trust:
 
 - 呼び出し元: `:940` だけ（`_single_number` の他の呼び出し `:882` は変えない）。
 - price_source_mismatch（`:941-944`）: 写し読みと原文読みが同じ規則になるので、等級で食い違うことはなくなる。比べる仕組みはそのまま残る。
-- 在庫表・閲覧ページ・GAS 在庫一覧: 新しく値段が埋まった行だけが、ほかの条件を満たせば出る（`tcg_distribution_svc.py:366-375` の条件は変えない）。
+- 在庫表・閲覧ページ・GAS 在庫一覧: 新しく値段が埋まった行だけが、ほかの条件を満たせば出る（`backend/app/services/tcg_distribution_svc.py:366-375` の条件は変えない）。
 - 過去の行: 自動では変わらない。
 
 ## 6. 受入条件
@@ -71,7 +71,7 @@ if v102 and gemini_trust:
 | K2 `Y100,000/単価`→100000、`¥25,000/BOX`→25000、`10,300円[状態A-]`→10300、`(BOX)@8,500円`→8500 が変わらない | 新しいテスト |
 | K3 値段の欄が `PSA10` だけなら None・price_unresolved | 新しいテスト |
 | K4 数量は変わらない（数量の欄 `PSA10` は今のまま 10） | 新しいテスト |
-| K5 既存テスト（`test_gemini_raw_copy_v101.py`・`test_line_analysis_v102_svc.py`・`extraction_judgement_svc` のテスト）が全部そのまま通る。既存テストは書き換えない | pytest の結果全文 |
+| K5 既存テスト（`backend/tests/test_gemini_raw_copy_v101.py`・`backend/tests/test_line_analysis_v102_svc.py`・`extraction_judgement_svc` のテスト）が全部そのまま通る。既存テストは書き換えない | pytest の結果全文 |
 | K6 本番の英字入りの値段 1,185 行に新しい関数を当て、空→値11・値→別の値0・値→空0 | 実装後の関数を import した試し計算（読み取りのみ） |
 | K7 本番反映後、古い2投稿を照合と判定だけで解析し直し、11行の値段が原文読みと一致・要確認から外れる・ほかの行の変化0 | 再解析台本の pre/survey/dryrun/commit/post（PO が `!` で実行） |
 
@@ -86,8 +86,11 @@ PR を revert する。DB は変えない。K7 の再解析は before_snapshot �
 
 ## 9. 維持の仕組み
 
-- 守り手: K1〜K4 のテストが CI で毎回走る。
-- 外部事例: 不要（社内の文字の読み方の規則で、外部の導入例が判断材料にならない）。
+- 守り手: backend/tests/test_gemini_raw_copy_v101.py の K1〜K4 のテストが CI で毎回走る。
+
+## 9-2. 外部・過去事例の参照と我々への応用
+
+該当なし。社内の文字の読み方の規則（原文読みにすでにある規則の共有）で、外部の導入例が判断材料にならない。
 
 ## 10. 審査（同じ AI による自己審査。独立した第二者レビューではない）
 
@@ -99,7 +102,7 @@ PR を revert する。DB は変えない。K7 の再解析は before_snapshot �
 
 1. worktree `/Users/tanizawashingo/worktrees/salesanchor/release-price-grade-strip` で作業する。
 2. テストを先に書く（K1〜K4。仕入元名と原文は使わず、上の形の文字だけを使う）。
-3. §4 のとおり実装する。触るのは `extraction_judgement_svc.py`・`gemini_raw_copy_v101.py`・テストファイルだけ。
+3. §4 のとおり実装する。触るのは `backend/app/services/extraction_judgement_svc.py`・`backend/app/services/gemini_raw_copy_v101.py`・テストファイルだけ。
 4. K5 として backend の pytest を流し、全文をファイルに保存する。
 5. K6 として、C_sim と同じ 1,185 行を新しい関数に当てる。
 6. 迷ったら止めて Opus に戻す（循環 import・既存テストの失敗・K6 の数の不一致）。
