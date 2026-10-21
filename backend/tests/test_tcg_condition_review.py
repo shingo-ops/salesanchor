@@ -985,15 +985,17 @@ def _seed_posts_for_posted_desc(pg):
     """要確認の行: 24時間以内に3件（うち2件は同じ投稿・仕入元は2つ）、24時間より古い1件。"""
     set_max_age_hours(pg, 48)
     with pg["connection"].cursor() as cursor:
+        cursor.execute("SELECT id FROM public.supplier_channels ORDER BY id LIMIT 1")
+        default_channel = str(cursor.fetchone()[0])
         cursor.execute("INSERT INTO public.suppliers(name) VALUES ('Other Supplier') RETURNING id")
         other_supplier = cursor.fetchone()[0]
         cursor.execute("INSERT INTO public.supplier_channels(channel,is_active,supplier_id) VALUES ('line',true,%s) RETURNING id",
                        (other_supplier,))
         other_channel = str(cursor.fetchone()[0])
-    fresh_a = seed(pg, name="Fresh A", prompt_version="v102:test")
+    fresh_a = seed(pg, name="Fresh A", prompt_version="v102:test", channel_id=default_channel)
     fresh_b = seed(pg, name="Fresh B", prompt_version="v102:test", channel_id=other_channel)
-    fresh_c = seed(pg, name="Fresh C", prompt_version="v102:test")
-    old = seed(pg, name="Old D", prompt_version="v102:test")
+    fresh_c = seed(pg, name="Fresh C", prompt_version="v102:test", channel_id=default_channel)
+    old = seed(pg, name="Old D", prompt_version="v102:test", channel_id=default_channel)
     age_message(pg, fresh_a, 1)
     age_message(pg, fresh_b, 3)
     age_message(pg, old, 30)

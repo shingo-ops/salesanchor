@@ -119,8 +119,10 @@ describe("review timing", () => {
   it("does not send again for a realtime reload, paging or a tab round trip", async () => {
     view();
     await screen.findByText("Card A");
-    await flushFrames();
-    expect(timingPosts()).toHaveLength(1);
+    await waitFor(async () => {
+      await flushFrames();
+      expect(timingPosts()).toHaveLength(1);
+    });
 
     act(() => fireRealtime());
     await waitFor(() => expect(vi.mocked(api.get)).toHaveBeenCalledTimes(2));
