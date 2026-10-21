@@ -1126,3 +1126,5 @@ run_sql migrations/20261020_100000_line_conditions_value_group_add_booklet.sql
 run_sql migrations/20261020_110000_line_conditions_value_group_add_supply.sql
 # ADR-1019 段11 便1: 閲覧者向け文面のテンプレート表（空・構造のみ・冪等）
 run_sql migrations/20261020_120000_create_viewer_message_templates.sql
+# ADR-1038 便2: products(細分類, 中分類) → product_format_game_links の複合 FK（事前点検つき・冪等）
+run_sql migrations/20261022_100000_products_format_in_work_fk.sql

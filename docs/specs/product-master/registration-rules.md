@@ -23,7 +23,7 @@
 | 検索ワード | product_search_keywords | 商品名をもとに作る。型番は検索ワードに入れない（mark 欄だけ。ワンピースなど商品名に型番が入るゲームも同じ） | 認めない（1語以上） | sword-shield-catalog.md §4（PO 2026-09-04）／PO 2026-10-17（U3「入れない」） |
 | 除外ワード | product_exclude_keywords | 他の商品と取り違えやすいときに付ける。例: 単品が「N種セット」を拾わないよう単品側に「種セット」。型番が他商品と重なるときは相手の名前で見分ける | 記録があれば認める | sword-shield-catalog.md §4（PO 2026-09-04）／product-code-collision-warning/design.md（excl-official） |
 | 中分類（作品） | products.work_id | 外部サイトから公式情報を採用する（ポケモン・ワンピースなどの作品を選ぶ。Box・Set を「中分類」と呼ばない） | 認めない | PO 2026-10-17「外部サイトから公式情報を採用する→例:拡張セット MEGAドリームex M2a→日本語タイトル:MEGAドリーム 細分類:ブースターパック 型番:M2a 中分類:ポケモン」／PO 2026-10-12（用語） |
-| 細分類 | products.product_format_id | 選んだゲームで使える細分類から選ぶ（商品詳細の画面・解析レビューの登録・商品 CSV で入れられる。ADR-1020 便2） | 認めない | ADR-1020 What 5 |
+| 細分類 | products.product_format_id | 選んだゲームで使える細分類から選ぶ（商品詳細の画面・解析レビューの登録・商品 CSV で入れられる。ADR-1020 便2）。細分類は中分類の子。親子の正本は product_format_game_links。DB の FK（fk_products_format_in_work）で守る | 認めない | ADR-1020 What 5 |
 | 商品区分 | products.product_category_id | 名前の語では決めず、公式のセット内容（商品の形）で決める。Set は別々の物 A と B が1つの商品になっているときだけ | 認めない | PO 2026-10-12「名前の中にセットがあるからと短絡的に考えずに…セットはAとBがセットになっている場合に付与する」 |
 
 対象外: メーカー（PO の列挙に無い。前例は「既存の同じ作品の商品に合わせる」onepiece-catalog.md §8）。
