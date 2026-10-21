@@ -1,0 +1,40 @@
+/Users/tanizawashingo/tcg-viewer-1tb-head/コード.js:22:  'Series',
+/Users/tanizawashingo/tcg-viewer-1tb-head/コード.js:89:        return Utilities.formatDate(val, 'Asia/Tokyo', 'yyyy-MM-dd HH:mm:ss');
+/Users/tanizawashingo/tcg-viewer-1tb-head/index.html:158:    .series-select {
+/Users/tanizawashingo/tcg-viewer-1tb-head/index.html:173:    .series-select:focus { border-color: var(--accent); }
+/Users/tanizawashingo/tcg-viewer-1tb-head/index.html:176:    .series-select {
+/Users/tanizawashingo/tcg-viewer-1tb-head/index.html:457:    /* numeric formatting */
+/Users/tanizawashingo/tcg-viewer-1tb-head/index.html:507:      .series-select,
+/Users/tanizawashingo/tcg-viewer-1tb-head/index.html:545:      .series-select {
+/Users/tanizawashingo/tcg-viewer-1tb-head/index.html:755:    /* ── Series tabs（Tabs.css variant=underline size=md の写し） ── */
+/Users/tanizawashingo/tcg-viewer-1tb-head/index.html:756:    .series-tabs{display:flex;align-items:center;gap:0;overflow-x:auto;padding:0 var(--space-4);border-bottom:1px solid var(--border);scrollbar
+/Users/tanizawashingo/tcg-viewer-1tb-head/index.html:757:    .series-tabs[hidden]{display:none}
+/Users/tanizawashingo/tcg-viewer-1tb-head/index.html:758:    .series-tabs::-webkit-scrollbar{display:none}
+/Users/tanizawashingo/tcg-viewer-1tb-head/index.html:759:    .series-tab{display:inline-flex;align-items:center;gap:var(--space-1);flex:0 0 auto;height:var(--comp-tab-h-md);padding:0 var(--comp-tab-px
+/Users/tanizawashingo/tcg-viewer-1tb-head/index.html:760:    .series-tab.is-active{color:var(--accent);border-bottom-color:var(--accent);font-weight:var(--font-weight-semi)}
+/Users/tanizawashingo/tcg-viewer-1tb-head/index.html:761:    .series-tab:hover{color:var(--accent)}
+/Users/tanizawashingo/tcg-viewer-1tb-head/index.html:763:      .series-tabs{padding:0 var(--space-3)}
+/Users/tanizawashingo/tcg-viewer-1tb-head/index.html:764:      .series-tabs{display:none}
+/Users/tanizawashingo/tcg-viewer-1tb-head/index.html:765:      .series-select-wrap { display: inline-flex; align-items: center; gap: var(--space-1); flex: 1 1 auto; min-width: 0; }
+/Users/tanizawashingo/tcg-viewer-1tb-head/index.html:766:      .series-select-wrap .series-select { width: 100%; }
+/Users/tanizawashingo/tcg-viewer-1tb-head/index.html:768:      .series-select-wrap[hidden] { display: none; }
+/Users/tanizawashingo/tcg-viewer-1tb-head/index.html:769:      .series-select-wrap::after { content: '▼'; color: var(--text-muted); font-size: var(--font-2xs); pointer-events: none; }
+/Users/tanizawashingo/tcg-viewer-1tb-head/index.html:770:      .series-select-wrap { margin-right: var(--space-2); }
+/Users/tanizawashingo/tcg-viewer-1tb-head/index.html:776:      .series-tabs { flex-wrap: nowrap; }
+/Users/tanizawashingo/tcg-viewer-1tb-head/index.html:777:      .series-select-wrap { display: none; }
+/Users/tanizawashingo/tcg-viewer-1tb-head/index.html:778:      .series-select { display: none; }
+/Users/tanizawashingo/tcg-viewer-1tb-head/index.html:832:          <label class="series-select-wrap" id="seriesSelectWrap"><select id="seriesSelect" class="series-select" aria-label="シリーズ"></select></
+/Users/tanizawashingo/tcg-viewer-1tb-head/index.html:919:  <div id="seriesTabs" class="series-tabs" role="tablist"></div>
+/Users/tanizawashingo/tcg-viewer-1tb-head/index.html:934:var activeSeries = ''; // Seriesタブの選択（'' は「全て」）
+/Users/tanizawashingo/tcg-viewer-1tb-head/index.html:953:function formatPostedAt(str) {
+/Users/tanizawashingo/tcg-viewer-1tb-head/index.html:968:// ヘッダー: 投稿日時, Mark, Japanese Title, English Title, Condition, Unit Price, Quantity, Note_JA, Status, Release Date, 提供者, Series, Search Keyword
+/Users/tanizawashingo/tcg-viewer-1tb-head/index.html:981:  series:        11,
+/Users/tanizawashingo/tcg-viewer-1tb-head/index.html:1174:  // Seriesタブを構築（選択中のSeriesが消えていれば「全て」に戻す）
+/Users/tanizawashingo/tcg-viewer-1tb-head/index.html:1175:  buildSeriesTabs();
+/Users/tanizawashingo/tcg-viewer-1tb-head/index.html:1196:// ── Seriesタブ ────────────────────────────────────────────────────────────
+/Users/tanizawashingo/tcg-viewer-1tb-head/index.html:1197:function buildSeriesTabs() {
+/Users/tanizawashingo/tcg-viewer-1tb-head/index.html:1198:  var box = document.getElementById('seriesTabs');
+/Users/tanizawashingo/tcg-viewer-1tb-head/index.html:1201:    var s = r[COL.series];
+/Users/tanizawashingo/tcg-viewer-1tb-head/index.html:1207:  if (activeSeries && !counts[activeSeries]) activeSeries = '';
+/Users/tanizawashingo/tcg-viewer-1tb-head/index.html:1210:    var on = name === activeSeries;
+/Users/tanizawashingo/tcg-viewer-1tb-head/index.html:1211:    return '<button type="button" class="series-tab' + (on ? ' is-active' : '') +

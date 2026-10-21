@@ -1,0 +1,25 @@
+-- SQL: SELECT id, code, name_ja, name_en, sort_order, is_active, kind_id, match_by_code, code_only_match FROM ai_ro.public__type_master ORDER BY id
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+time="2026-10-21T23:49:23+09:00" level=warning msg="Found orphan containers ([astro-webapp-gemini-egress-1 astro-webapp-frontend-1 astro-webapp-celery-beat-1 astro-webapp-discord-gateway-1 astro-webapp-celery-worker-1 astro-webapp-nginx-1 astro-webapp-postgres-1 astro-webapp-gha-exporter-1 astro-webapp-redis-1 astro-webapp-certbot-1 astro-webapp-node-exporter-1 astro-webapp-promtail-1]) for this project. If you removed or renamed this service in your compose file, you can run this command with the --remove-orphans flag to clean it up."
+ Container astro-webapp-ai-reader-run-ada6c9b1570d Creating 
+ Container astro-webapp-ai-reader-run-ada6c9b1570d Created 
+id	code	name_ja	name_en	sort_order	is_active	kind_id	match_by_code	code_only_match
+1	pokemon_booster_box	ポケモン	Pokémon Card	10	True	1	False	True
+2	one_piece	ワンピース	One Piece TCG	20	True	1	True	True
+3	dragon_ball	ドラゴンボール	Dragon Ball TCG	30	True	1	True	True
+4	union_arena	ユニオンアリーナ	Union Arena	60	True	1	True	True
+5	yugioh	遊戯王	Yu-Gi-Oh!	40	True	1	True	False
+6	other	その他	Others	120	True	1	True	False
+19	gundam	ガンダム	Gundam Card Game	90	True	1	True	True
+20	weiss_schwarz	ヴァイスシュヴァルツ	Weiß Schwarz	50	True	1	True	False
+21	digimon	デジモン	Digimon Card Game	80	True	1	True	False
+22	hololive	ホロライブ	hololive Official Card Game	70	True	1	True	False
+23	lorcana	ディズニー ロルカナ	Disney Lorcana	100	True	1	True	False
+24	xross_stars	クロススタァ	Xross Stars	110	True	1	True	False
+8981	duel_masters	デュエル・マスターズ	Duel Masters	115	True	1	True	False
+8982	detective_conan	名探偵コナン	Detective Conan Card Game	118	True	1	True	True
+9043	wuthering_waves	鳴潮：対決		121	True	1	True	False
+9044	magic_the_gathering	マジック：ザ・ギャザリング	Magic: The Gathering	122	True	1	True	False
+9045	harry_potter	ハリー・ポッター		123	True	1	True	False
+9046	palworld	パルワールド		124	True	1	True	False
+AUDIT ts=2026-10-21T14:49:23Z sha=eef30a7e41ac rows=18 ms=40 result=ok sql=SELECT id, code, name_ja, name_en, sort_order, is_active, kind_id, match_by_code, code_only_match FROM ai_ro.public__type_master ORDER BY id 

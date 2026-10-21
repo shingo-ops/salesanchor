@@ -1,0 +1,8 @@
+-- SQL: SELECT c.relname, a.attnum, a.attname FROM pg_attribute a JOIN pg_class c ON c.oid=a.attrelid WHERE c.relname IN ('products','product_formats') AND c.relnamespace='public'::regnamespace AND a.attname ~ 'type_master' AND NOT a.attisdropped AND a.attnum>0 ORDER BY 1,2
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+time="2026-10-22T00:16:33+09:00" level=warning msg="Found orphan containers ([astro-webapp-gemini-egress-1 astro-webapp-frontend-1 astro-webapp-discord-gateway-1 astro-webapp-celery-beat-1 astro-webapp-celery-worker-1 astro-webapp-nginx-1 astro-webapp-postgres-1 astro-webapp-gha-exporter-1 astro-webapp-redis-1 astro-webapp-certbot-1 astro-webapp-node-exporter-1 astro-webapp-promtail-1]) for this project. If you removed or renamed this service in your compose file, you can run this command with the --remove-orphans flag to clean it up."
+ Container astro-webapp-ai-reader-run-f5528265ff46 Creating 
+ Container astro-webapp-ai-reader-run-f5528265ff46 Created 
+relname	attnum	attname
+product_formats	11	type_master_id
+AUDIT ts=2026-10-21T15:16:34Z sha=91b3d552a262 rows=1 ms=44 result=ok sql=SELECT c.relname, a.attnum, a.attname FROM pg_attribute a JOIN pg_class c ON c.oid=a.attrelid WHERE c.relname IN ('products','product_formats') AND c.relnamespace='public'::regnamespace AND a.attname ~ 'type_master' AND NOT a.attisdropped AND a.attnum>0 ORDER BY 1,2 

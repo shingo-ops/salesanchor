@@ -114,3 +114,14 @@ describe("acked tab keeps the previous behaviour", () => {
     expect(screen.queryByText(formatDate("2026-10-21T00:30:00Z", "en"))).toBeNull();
   });
 });
+
+describe("loading indicator", () => {
+  it("shows the Spinner (not a text paragraph) while the list is loading", async () => {
+    vi.mocked(api.get).mockImplementation(() => new Promise(() => undefined));
+    view();
+    const status = await screen.findByRole("status", { name: "Loading..." });
+    expect(status.className).toContain("sa-spinner");
+    expect(status.tagName).not.toBe("P");
+    expect(screen.queryByText("Loading...")).toBeNull();
+  });
+});

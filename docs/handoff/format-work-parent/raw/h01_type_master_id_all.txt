@@ -1,0 +1,60 @@
+backend/app/routers/super_admin_product_formats.py:30:_COLS = "id, code, name, name_en, display_order, is_active, line_id, type_master_id, created_at, updated_at"
+backend/app/routers/super_admin_product_formats.py:31:_UPDATABLE = {"code", "name", "name_en", "display_order", "is_active", "line_id", "type_master_id"}
+backend/app/routers/super_admin_product_formats.py:40:            "SELECT format_id, array_agg(type_master_id ORDER BY type_master_id) AS game_ids "
+backend/app/routers/super_admin_product_formats.py:93:                "(code, name, name_en, display_order, is_active, line_id, type_master_id) "
+backend/app/routers/super_admin_product_formats.py:94:                "VALUES (:code, :name, :name_en, :display_order, :is_active, :line_id, :type_master_id) "
+backend/app/routers/super_admin_product_formats.py:185:                "WHERE format_id = :id AND NOT (type_master_id = ANY(:ids))"
+backend/app/routers/super_admin_product_formats.py:192:                    "INSERT INTO public.product_format_game_links (format_id, type_master_id) "
+backend/app/routers/super_admin_product_formats.py:193:                    "VALUES (:id, :gid) ON CONFLICT (format_id, type_master_id) DO NOTHING"
+backend/app/schemas/product_format.py:19:    type_master_id: Optional[int] = None
+backend/app/schemas/product_format.py:33:    type_master_id: Optional[int] = None
+backend/app/services/tcg_product_master_svc.py:109:             "WHERE format_id = :fid AND type_master_id = :wid"),
+backend/app/services/tcg_product_master_svc.py:134:        "COALESCE(array_agg(l.type_master_id::text ORDER BY l.type_master_id) "
+backend/app/services/tcg_product_master_svc.py:135:        "FILTER (WHERE l.type_master_id IS NOT NULL), ARRAY[]::text[]) AS game_ids "
+backend/tests/test_product_format_game_links_pg.py:27:                     "20260923_010000_product_formats_add_type_master_id.sql"):
+backend/tests/test_product_format_game_links_pg.py:37:        cur.execute("INSERT INTO public.product_format_game_links(format_id,type_master_id,alias) "
+backend/tests/test_product_format_game_links_pg.py:56:        cur.execute("SELECT type_master_id, alias FROM public.product_format_game_links "
+backend/tests/test_product_format_game_links_pg.py:57:                    "WHERE format_id=%s ORDER BY type_master_id", (format_id,))
+backend/tests/test_tcg_completion_safety.py:165:                await session.execute(text("INSERT INTO public.product_format_game_links (format_id,type_master_id) SELECT :f,id FROM public.type_master WHERE code='one_piece'"),{'f':fmt_id})
+backend/tests/test_tcg_product_import_atomicity_pg.py:57:            "INSERT INTO public.product_format_game_links (format_id,type_master_id) "
+docs/adr/ADR-1026-drop-products-type-master-id.md:1:# ADR-1026: 商品の使われていない作品欄 products.type_master_id を取り除く
+docs/adr/ADR-1026-drop-products-type-master-id.md:5:| ステータス | Proposed（方針は PO 2026-10-17 チャット「type_master_id→削除」。適用は PO 本人の「GO #PR番号」後。docs/STANDARD-WORKFLOW.md の例外「DROP TABLE/COLUMN を含む migration は PO 本人の GO」） |
+docs/adr/ADR-1026-drop-products-type-master-id.md:15:1. 共用・テナントを問わず `public.products` の列 `type_master_id` と、その外部キー `products_type_master_id_fkey`・索引 `idx_products_type_master_id` を取り除く。
+docs/adr/ADR-1026-drop-products-type-master-id.md:16:2. 列を足していた `migrations/20260922_010000_product_format_kind_id_and_products_type_master_id.sql` の「2. products に type_master_id FK 追加」の2文を消す。同じファイルの product_formats.kind_id の部分は残す。
+docs/adr/ADR-1026-drop-products-type-master-id.md:17:3. 商品の作品（中分類）は `products.work_id` だけに置く。`product_formats.type_master_id` と `product_format_game_links.type_master_id`（細分類とゲームの対応）は別の情報なので変えない。
+docs/adr/ADR-1026-drop-products-type-master-id.md:18:4. 消す直前に、共用・テナントの全行の `id, type_master_id, work_id` を CSV に退避して保存する。
+docs/adr/ADR-1026-drop-products-type-master-id.md:22:- 作品の正本は `products.work_id`（docs/specs/master-ssot-migration/design.md:13,22）。画面・API・解析・在庫一覧 GAS はすべて work_id か tcg_type を使い、`products.type_master_id` を読み書きするコードは origin/main に 0 件（recon §2）。
+docs/adr/README.md:207:| [ADR-1026](./ADR-1026-drop-products-type-master-id.md) | ADR-1026: 商品の使われていない作品欄 products.type_master_id を取り除く | Proposed | — | — |
+frontend/api-contract/openapi.json:24675:          "type_master_id": {
+frontend/api-contract/openapi.json:24777:          "type_master_id": {
+frontend/api-contract/openapi.json:24878:          "type_master_id": {
+frontend/src/pages/super-admin/components/ProductFormatsMasterPanel.test.tsx:39:  type_master_id: null,
+frontend/src/pages/super-admin/components/ProductFormatsMasterPanel.tsx:44:  type_master_id: number | null;
+frontend/src/pages/super-admin/components/ProductFormatsMasterPanel.tsx:57:  type_master_id: number | null;
+frontend/src/pages/super-admin/components/ProductFormatsMasterPanel.tsx:68:  type_master_id: null,
+frontend/src/pages/super-admin/components/ProductFormatsMasterPanel.tsx:134:      type_master_id: item.type_master_id,
+frontend/src/pages/super-admin/components/ProductFormatsMasterPanel.tsx:159:      type_master_id: form.type_master_id,
+frontend/src/pages/super-admin/components/ProductFormatsMasterPanel.tsx:222:    { key: "type_master_id", header: t(`${f}.typeMasterId`), renderCell: row => getGameName(row.type_master_id) },
+frontend/src/pages/super-admin/components/ProductFormatsMasterPanel.tsx:337:                value={form.type_master_id != null ? String(form.type_master_id) : ""}
+frontend/src/pages/super-admin/components/ProductFormatsMasterPanel.tsx:338:                onChange={e => setForm({ ...form, type_master_id: e.target.value ? Number(e.target.value) : null })}
+migrations/20260922_010000_product_format_kind_id_and_products_type_master_id.sql:19:-- 2. （削除済み）products.type_master_id は ADR-1026 で取り除いた。
+migrations/20260922_030000_product_format_game_links.sql:14:    type_master_id INTEGER NOT NULL REFERENCES public.type_master(id) ON DELETE CASCADE,
+migrations/20260922_030000_product_format_game_links.sql:16:    PRIMARY KEY (format_id, type_master_id)
+migrations/20260922_030000_product_format_game_links.sql:20:CREATE INDEX IF NOT EXISTS idx_pfgl_type_master_id ON public.product_format_game_links (type_master_id);
+migrations/20260923_010000_product_formats_add_type_master_id.sql:4:-- Step 1: type_master_id カラム追加（CI test DB 用。本番には既存）
+migrations/20260923_010000_product_formats_add_type_master_id.sql:11:    RAISE NOTICE 'product_formats table does not exist, skip type_master_id';
+migrations/20260923_010000_product_formats_add_type_master_id.sql:14:    WHERE table_schema = 'public' AND table_name = 'product_formats' AND column_name = 'type_master_id'
+migrations/20260923_010000_product_formats_add_type_master_id.sql:16:    ALTER TABLE public.product_formats ADD COLUMN type_master_id INTEGER REFERENCES public.type_master(id) ON DELETE SET NULL;
+migrations/20260923_010000_product_formats_add_type_master_id.sql:17:    RAISE NOTICE 'Added type_master_id to product_formats';
+migrations/20260923_010000_product_formats_add_type_master_id.sql:19:    RAISE NOTICE 'type_master_id already exists on product_formats, skip';
+migrations/20260923_010000_product_formats_add_type_master_id.sql:44:-- 列名 type_master_id を含む UPDATE 文も保護テーブルへの参照と判定される。
+migrations/20261009_100000_type_master_match_by_code.sql:6:-- 書き方は migrations/20260922_010000_product_format_kind_id_and_products_type_master_id.sql と同じ）
+migrations/20261017_210000_drop_products_type_master_id.sql:1:-- ADR-1026: products.type_master_id を取り除く（作品の正本は products.work_id）
+migrations/20261017_210000_drop_products_type_master_id.sql:5:ALTER TABLE public.products DROP CONSTRAINT IF EXISTS products_type_master_id_fkey;
+migrations/20261017_210000_drop_products_type_master_id.sql:6:DROP INDEX IF EXISTS public.idx_products_type_master_id;
+migrations/20261017_210000_drop_products_type_master_id.sql:7:ALTER TABLE public.products DROP COLUMN IF EXISTS type_master_id;
+scripts/run_all_migrations.sh:836:run_sql migrations/20260922_010000_product_format_kind_id_and_products_type_master_id.sql
+scripts/run_all_migrations.sh:850:# ADR-156 Phase 9: 細分類(product_formats)に type_master_id 直接リンク追加（カードゲーム別フィルタリング）
+scripts/run_all_migrations.sh:851:run_sql migrations/20260923_010000_product_formats_add_type_master_id.sql
+scripts/run_all_migrations.sh:1043:# ADR-1026: 使われていない作品欄 products.type_master_id を取り除く（FK・索引ごと。冪等）
+scripts/run_all_migrations.sh:1044:run_sql migrations/20261017_210000_drop_products_type_master_id.sql

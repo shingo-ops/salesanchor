@@ -1,0 +1,26 @@
+-- SQL: SELECT conrelid::regclass AS tbl, conname, contype, pg_get_constraintdef(oid) AS def FROM pg_constraint WHERE conrelid IN ('public.type_master'::regclass,'public.product_formats'::regclass,'public.product_format_game_links'::regclass,'public.product_kinds'::regclass) OR conname ~ 'products_(work_id|product_format|product_category)|fk_products' ORDER BY 1,2
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+time="2026-10-21T23:50:35+09:00" level=warning msg="Found orphan containers ([astro-webapp-gemini-egress-1 astro-webapp-frontend-1 astro-webapp-celery-beat-1 astro-webapp-discord-gateway-1 astro-webapp-celery-worker-1 astro-webapp-nginx-1 astro-webapp-postgres-1 astro-webapp-gha-exporter-1 astro-webapp-redis-1 astro-webapp-certbot-1 astro-webapp-node-exporter-1 astro-webapp-promtail-1]) for this project. If you removed or renamed this service in your compose file, you can run this command with the --remove-orphans flag to clean it up."
+ Container astro-webapp-ai-reader-run-7d2073c2f03e Creating 
+ Container astro-webapp-ai-reader-run-7d2073c2f03e Created 
+tbl	conname	contype	def
+tenant_006.products	fk_products_supplier_default	f	FOREIGN KEY (supplier_default_id) REFERENCES suppliers(id)
+products	fk_products_product_category_id	f	FOREIGN KEY (product_category_id) REFERENCES tcg_product_categories(id)
+products	fk_products_work_id	f	FOREIGN KEY (work_id) REFERENCES type_master(id)
+products	products_product_format_id_fkey	f	FOREIGN KEY (product_format_id) REFERENCES product_formats(id) ON DELETE SET NULL
+type_master	tcg_type_master_code_key	u	UNIQUE (code)
+type_master	tcg_type_master_pkey	p	PRIMARY KEY (id)
+type_master	type_master_kind_id_fkey	f	FOREIGN KEY (kind_id) REFERENCES product_kinds(id) ON DELETE SET NULL
+tenant_004.products_logistics	fk_products_logistics_product_id	f	FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+tenant_001.products_logistics	fk_products_logistics_product_id	f	FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+product_formats	product_formats_code_key	u	UNIQUE (code)
+product_formats	product_formats_kind_id_fkey	f	FOREIGN KEY (kind_id) REFERENCES product_kinds(id) ON DELETE SET NULL
+product_formats	product_formats_line_id_fkey	f	FOREIGN KEY (line_id) REFERENCES product_lines(id) ON DELETE SET NULL
+product_formats	product_formats_pkey	p	PRIMARY KEY (id)
+product_formats	product_formats_type_master_id_fkey	f	FOREIGN KEY (type_master_id) REFERENCES type_master(id) ON DELETE SET NULL
+product_kinds	product_kinds_code_key	u	UNIQUE (code)
+product_kinds	product_kinds_pkey	p	PRIMARY KEY (id)
+product_format_game_links	product_format_game_links_format_id_fkey	f	FOREIGN KEY (format_id) REFERENCES product_formats(id) ON DELETE CASCADE
+product_format_game_links	product_format_game_links_pkey	p	PRIMARY KEY (format_id, type_master_id)
+product_format_game_links	product_format_game_links_type_master_id_fkey	f	FOREIGN KEY (type_master_id) REFERENCES type_master(id) ON DELETE CASCADE
+AUDIT ts=2026-10-21T14:50:35Z sha=c8e3a8331b2f rows=19 ms=50 result=ok sql=SELECT conrelid::regclass AS tbl, conname, contype, pg_get_constraintdef(oid) AS def FROM pg_constraint WHERE conrelid IN ('public.type_master'::regclass,'public.product_formats'::regclass,'public.product_format_game_links'::regclass,'public.product_kinds'::regclass) OR conname ~ 'products_(work_id|product_format|product_category)|fk_products' ORDER BY 1,2 

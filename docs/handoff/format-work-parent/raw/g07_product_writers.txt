@@ -1,0 +1,11 @@
+backend/app/routers/purchase_orders.py:265:            text("UPDATE products SET quantity = quantity + :qty, updated_at = NOW() WHERE id = :pid"),
+backend/app/routers/purchase_orders.py:301:            text("UPDATE products SET quantity = GREATEST(quantity - :qty, 0), updated_at = NOW() WHERE id = :pid"),
+backend/app/services/tcg_product_detail_svc.py:260:            "UPDATE public.products SET "
+backend/app/services/tcg_product_detail_svc.py:275:                "UPDATE public.products SET product_format_id=:fid WHERE id=:pid"
+backend/app/services/tcg_product_master_svc.py:566:            INSERT INTO public.products
+backend/app/services/tcg_product_roundtrip_svc.py:474:                        f"UPDATE public.products SET {','.join(assignments)} WHERE id=:product_id"
+scripts/agent-hooks/master-register-rules-guard.py:19:    "INSERT INTO public.products",
+scripts/agent-hooks/master-register-rules-guard.py:20:    "INSERT INTO products",
+scripts/seed_products_from_master.py:193:                        INSERT INTO public.products
+scripts/tests/test_migration_value_writes.py:105:        self.repo.write("migrations/20260101_000000_a.sql", VALUE_WRITING + "UPDATE public.products SET mark = 'M3';\n")
+scripts/tests/test_migration_value_writes.py:153:            + "INSERT INTO public.products_category_classification_backup (id) VALUES (1);\n"

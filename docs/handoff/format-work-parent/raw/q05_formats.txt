@@ -1,0 +1,35 @@
+-- SQL: SELECT id, code, name, name_en, line_id, display_order, is_active, kind_id, type_master_id FROM ai_ro.public__product_formats ORDER BY id
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+time="2026-10-21T23:49:26+09:00" level=warning msg="Found orphan containers ([astro-webapp-gemini-egress-1 astro-webapp-frontend-1 astro-webapp-celery-beat-1 astro-webapp-discord-gateway-1 astro-webapp-celery-worker-1 astro-webapp-nginx-1 astro-webapp-postgres-1 astro-webapp-gha-exporter-1 astro-webapp-redis-1 astro-webapp-certbot-1 astro-webapp-node-exporter-1 astro-webapp-promtail-1]) for this project. If you removed or renamed this service in your compose file, you can run this command with the --remove-orphans flag to clean it up."
+ Container astro-webapp-ai-reader-run-e6c83b355021 Creating 
+ Container astro-webapp-ai-reader-run-e6c83b355021 Created 
+id	code	name	name_en	line_id	display_order	is_active	kind_id	type_master_id
+1	BOOSTER	ブースターパック	Booster Pack		10	True	1	20
+2	EXTRA_BOOSTER	エクストラブースター	Extra Booster		20	True	1	21
+3	STARTER_DECK	スターターデッキ	Starter Deck		30	True	1	1
+4	ENHANCED_BOOSTER	強化拡張パック	Enhanced Expansion		40	True	1	1
+5	HIGH_CLASS	ハイクラスパック	High Class Pack		50	True	1	1
+6	PREMIUM_BOOSTER	プレミアムブースター	Premium Booster		60	True	1	2
+7	THEME_BOOSTER	テーマブースター	Theme Booster		70	True	1	21
+8	CONCEPT_PACK	コンセプトパック	Concept Pack		80	True	1	1
+9	SPECIAL_PACK	スペシャルパック	Special Pack		90	True	1	20
+10	STRUCTURE_DECK	ストラクチャーデッキ	Structure Deck		100	True	1	5
+11	ADVANCE_DECK	アドバンスデッキ	Advance Deck		110	True	1	21
+12	START_DECK_EX	スタートデッキEX	Start Deck EX		120	True	1	4
+13	MEMORIAL_PACK	メモリアルパック	Memorial Pack		130	True	1	2
+14	ANNIVERSARY_SET	アニバーサリーセット	Anniversary Set		140	True	1	20
+15	GIFT_SET	ギフトセット	Gift Set		150	True	1	2
+16	ILLUMINEERS_TROVE	イルミニアーズトローヴ	Illumineers Trove		160	True	1	23
+17	SPECIAL_BOX	スペシャルBOX			100	True	1	1
+18	DECK_BUILD_BOX	デッキビルドBOX			100	True	1	1
+19	PREMIUM_TRAINER_BOX	プレミアムトレーナーボックス			100	True	1	1
+20	COLLECTOR_BOX	コレクターボックス			100	True	1	1
+21	HIGH_CLASS_DECK	ハイクラスデッキ			100	True	1	1
+22	BOOSTER_BOX	ブースターBOX			100	True	1	1
+23	SPECIAL_SET	スペシャルセット			100	True	1	5
+24	ILLUSTRATION_BOX	イラストレーションボックス			100	True	1	2
+25	STORAGE_BOX	ストレージボックス			100	True	1	2
+28	PROMO	プロモ	Promo		100	True	1	2
+30	GRADED	鑑定品			100	True	1	1
+32	BULK	バルク			170	True	1	1
+AUDIT ts=2026-10-21T14:49:26Z sha=7c6dc6fed61b rows=28 ms=41 result=ok sql=SELECT id, code, name, name_en, line_id, display_order, is_active, kind_id, type_master_id FROM ai_ro.public__product_formats ORDER BY id 

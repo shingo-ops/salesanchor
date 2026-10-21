@@ -1,0 +1,13 @@
+== executor preflight (identity=shingo-cc, mode=fix) ==
+[1/3] network -> api.github.com
+  [OK]   GitHub API 到達
+[2/3] gh auth = shingo-cc
+  [OK]   gh は shingo-cc
+[3/3] git config user.name = shingo-cc
+  [OK]   git user.name は shingo-cc
+[4/4] long-lived branch -> origin/main
+  [OK]   origin/main は存在
+==============================================
+[G2.2 WARN] 本店(/Users/tanizawashingo/salesanchor)が origin/main より 4011 コミット遅れています
+[G2.2 WARN] 本店に台帳以外の未保存 30 件あり — ff-pull不能の可能性。本店掃除便を検討してください
+PREFLIGHT OK — 作業続行可

@@ -1,0 +1,34 @@
+-- SQL: SELECT table_name, column_name FROM information_schema.columns WHERE table_schema='ai_ro' AND table_name='tenant_001__products' ORDER BY ordinal_position
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+time="2026-10-21T23:51:33+09:00" level=warning msg="Found orphan containers ([astro-webapp-gemini-egress-1 astro-webapp-frontend-1 astro-webapp-celery-beat-1 astro-webapp-discord-gateway-1 astro-webapp-celery-worker-1 astro-webapp-nginx-1 astro-webapp-postgres-1 astro-webapp-gha-exporter-1 astro-webapp-redis-1 astro-webapp-certbot-1 astro-webapp-node-exporter-1 astro-webapp-promtail-1]) for this project. If you removed or renamed this service in your compose file, you can run this command with the --remove-orphans flag to clean it up."
+ Container astro-webapp-ai-reader-run-1fa577e83843 Creating 
+ Container astro-webapp-ai-reader-run-1fa577e83843 Created 
+table_name	column_name
+tenant_001__products	id
+tenant_001__products	tenant_id
+tenant_001__products	product_code
+tenant_001__products	category
+tenant_001__products	mark
+tenant_001__products	name_en
+tenant_001__products	name_ja
+tenant_001__products	status
+tenant_001__products	condition
+tenant_001__products	unit_price
+tenant_001__products	quantity
+tenant_001__products	weight
+tenant_001__products	notes
+tenant_001__products	release_date
+tenant_001__products	created_at
+tenant_001__products	updated_at
+tenant_001__products	jan_code
+tenant_001__products	card_number
+tenant_001__products	expansion_code
+tenant_001__products	rarity
+tenant_001__products	language
+tenant_001__products	unit_price_usd
+tenant_001__products	unit_price_eur
+tenant_001__products	image_url
+tenant_001__products	is_archived
+tenant_001__products	archived_at
+tenant_001__products	supplier_default_id
+AUDIT ts=2026-10-21T14:51:33Z sha=cfe69ec72353 rows=27 ms=48 result=ok sql=SELECT table_name, column_name FROM information_schema.columns WHERE table_schema='ai_ro' AND table_name='tenant_001__products' ORDER BY ordinal_position 
