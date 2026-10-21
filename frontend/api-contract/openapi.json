@@ -3814,6 +3814,64 @@
         "title": "ChannelsResponse",
         "type": "object"
       },
+      "ClientTimingBody": {
+        "additionalProperties": false,
+        "description": "要確認パネルの表示時間（ブラウザ計測）。利用者を特定する項目は持たない。",
+        "properties": {
+          "doc_ms": {
+            "maximum": 120000.0,
+            "minimum": 0.0,
+            "title": "Doc Ms",
+            "type": "number"
+          },
+          "entry": {
+            "enum": [
+              "first",
+              "return"
+            ],
+            "title": "Entry",
+            "type": "string"
+          },
+          "list_ms": {
+            "maximum": 120000.0,
+            "minimum": 0.0,
+            "title": "List Ms",
+            "type": "number"
+          },
+          "page_size": {
+            "enum": [
+              20,
+              25,
+              50,
+              100
+            ],
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "panel_ms": {
+            "maximum": 120000.0,
+            "minimum": 0.0,
+            "title": "Panel Ms",
+            "type": "number"
+          },
+          "rows": {
+            "maximum": 500.0,
+            "minimum": 0.0,
+            "title": "Rows",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "panel_ms",
+          "list_ms",
+          "doc_ms",
+          "rows",
+          "page_size",
+          "entry"
+        ],
+        "title": "ClientTimingBody",
+        "type": "object"
+      },
       "CloseReasonCreate": {
         "properties": {
           "label": {
@@ -65114,6 +65172,45 @@
           }
         ],
         "summary": "解析結果一覧（SupplierDetailPage から provider フィルタで使用）",
+        "tags": [
+          "super-admin"
+        ]
+      }
+    },
+    "/api/v1/tcg/analysis-results/client-timing": {
+      "post": {
+        "operationId": "post_client_timing_api_v1_tcg_analysis_results_client_timing_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClientTimingBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Post Client Timing",
         "tags": [
           "super-admin"
         ]

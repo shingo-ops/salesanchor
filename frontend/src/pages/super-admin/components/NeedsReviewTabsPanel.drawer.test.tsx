@@ -31,6 +31,9 @@ const response = (items: ReturnType<typeof makeItem>[]) => ({
 
 const view = () => render(<MemoryRouter><NeedsReviewTabsPanel /></MemoryRouter>);
 
+// 便0の計時 POST（client-timing）は数えに入れない
+const nonTimingPosts = () => vi.mocked(api.post).mock.calls.filter(([p]) => !String(p).includes("/client-timing"));
+
 beforeEach(async () => {
   vi.resetAllMocks();
   await i18n.changeLanguage("en");
@@ -104,7 +107,7 @@ describe("production tab row drawer", () => {
     await screen.findByRole("dialog");
     fireEvent.click(screen.getByRole("button", { name: "Keep as is" }));
     fireEvent.click(within(screen.getByRole("dialog", { name: "Keep as it is?" })).getByRole("button", { name: "Keep" }));
-    await waitFor(() => expect(api.post).toHaveBeenCalledOnce());
+    await waitFor(() => expect(nonTimingPosts()).toHaveLength(1));
     expect(api.post).toHaveBeenCalledWith("/tcg/items/v102-item/review-ack", {
       source_message_id: "source-v102-item",
       codes: ["product_not_in_master"],
@@ -139,7 +142,7 @@ describe("production tab row drawer", () => {
     await screen.findByRole("dialog");
     expect(screen.queryByRole("radio", { name: /Keep as is/ })).toBeNull();
     expect(screen.queryByRole("button", { name: "Keep as is" })).toBeNull();
-    expect(api.post).not.toHaveBeenCalled();
+    expect(nonTimingPosts()).toHaveLength(0);
   });
 });
 
