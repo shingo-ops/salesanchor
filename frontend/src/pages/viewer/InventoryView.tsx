@@ -53,7 +53,10 @@ export function InventoryView({ data }: InventoryViewProps) {
   const isMobile = useIsMobile();
 
   const [now] = useState(() => Date.now());
-  const [tab, setTab] = useState(TAB_ALL);
+  // 既定はポケモン（MAIN_SERIES の先頭）。その行が無いときは「すべて」（docs/handoff/inventory-default-pokemon-tab/design.md）
+  const [tab, setTab] = useState(() =>
+    data.rows.some((r) => r.series === MAIN_SERIES[0]) ? MAIN_SERIES[0] : TAB_ALL,
+  );
   const [query, setQuery] = useState("");
   const [freshOnly, setFreshOnly] = useState(true);
   const [providers, setProviders] = useState<string[]>([]);
