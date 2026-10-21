@@ -204,12 +204,12 @@ def test_apply_decisions_does_not_apply_values_but_runs_for_value_only_decisions
 def test_buyback_units_exclude_items_with_a_human_unit_or_price(monkeypatch):
     captured = {}
 
-    def fake_apply(_session, _items, base_values, _unit_ids, _posted_at, human_condition):
+    def fake_apply(_session, _items, base_values, _unit_ids, _alias, _posted_at, human_condition):
         captured["human"] = human_condition
         return base_values
 
     monkeypatch.setattr(svc, "apply_buyback_units", fake_apply)
-    monkeypatch.setattr(svc, "is_buyback_candidate", lambda _item, _values: True)
+    monkeypatch.setattr(svc, "is_buyback_candidate", lambda _item, _values, _alias: True)
     session = MagicMock()
     rows = [SimpleNamespace(id=f"r{i}") for i in range(5)]
     pairs = [({}, row) for row in rows]
@@ -217,7 +217,7 @@ def test_buyback_units_exclude_items_with_a_human_unit_or_price(monkeypatch):
         "r0": Decisions(condition_id=1), "r1": Decisions(values=ValueOverrides(unit="Case")),
         "r2": Decisions(values=ValueOverrides(price=Decimal("5"))), "r3": Decisions(values=ValueOverrides(note="x")),
     }
-    svc._buyback_units(session, pairs, [values_row() for _ in rows], {}, "job", decisions)
+    svc._buyback_units(session, pairs, [values_row() for _ in rows], {}, "job", decisions, {})
     assert captured["human"] == frozenset({0, 1, 2})
 
 
