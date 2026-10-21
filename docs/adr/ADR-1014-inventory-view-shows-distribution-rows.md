@@ -174,3 +174,13 @@ PO 決定（2026-10-20「1」。この形で、アプリ・閲覧ページ・在
 - 反映: アプリ: 本 PR。GAS: 反映後に版番号を追記する。
 - 戻し方: アプリは PR を revert。GAS はテストを版29、本番を版19へ redeploy する。
 - 記録: `docs/handoff/inventory-toolbar-two-rows/`（recon・design・審査）。
+
+## 改訂 2026-10-21（在庫一覧を最初からポケモンで開く）
+
+前の節の本文は書き換えない。
+
+- 内容: 在庫一覧（GAS 在庫一覧・閲覧ページ）を開くと、最初からタブ「ポケモン」（`MAIN_SERIES[0]`）で開く。ポケモンの行が無いときは「すべて」で開く。GAS 在庫一覧の検索用の文字列は表示の後に作る（検索語が入っていれば先に作る）。Code.js は変更なし。
+- 正本: GAS `index.html` の `activeSeries`・`ensureSearchTexts`、閲覧ページ `frontend/src/pages/viewer/InventoryView.tsx`。
+- 反映: 閲覧ページ: PR #4597。GAS: テスト版32・本番版22（2026-10-21）。
+- 戻し方: 閲覧ページは PR #4597 を revert。GAS はテストを版31、本番を版21へ redeploy する。
+- 記録: `docs/handoff/inventory-default-pokemon-tab/`（詳細は design.md §12）。
