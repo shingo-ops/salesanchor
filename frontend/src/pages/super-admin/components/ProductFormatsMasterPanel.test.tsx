@@ -36,7 +36,6 @@ const formatRow = {
   name: "Booster Box",
   name_en: null,
   line_id: null,
-  type_master_id: null,
   display_order: 100,
   is_active: true,
   created_at: "2026-10-01T00:00:00Z",
@@ -107,6 +106,8 @@ it("creates a format and then replaces its games", async () => {
     expect(api.put).toHaveBeenCalledWith("/super-admin/product-formats/50/games", { game_ids: [1] })
   );
   expect(api.post).toHaveBeenCalledTimes(1);
+  // ADR-1038 便3a: 旧列 type_master_id の単独欄は無く、送信にも含めない
+  expect(vi.mocked(api.post).mock.calls[0][1]).not.toHaveProperty("type_master_id");
 });
 
 it("skips the games call when games are unchanged", async () => {
