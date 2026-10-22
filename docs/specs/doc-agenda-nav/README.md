@@ -25,3 +25,4 @@
 - 以後の整備は別セッションが引き継ぐ（PO 2026-10-22）。引き継ぎ書: [handover.md](../../handoff/doc-agenda-nav/handover.md)
 - 2026-10-22（引き継ぎ後）: KGI K1〜K7 **PO 承認済み**。KGI の測り方修正（K1・K5・K7）と K8〜K10 の追加も PO 承認済み（原文「1」）。design §10-3 PO 回答済み（Codex 使用中）。本文の正本を AGENTS.md に置き CLAUDE.md が取り込む構造も PO 承認済み（原文「1」）。PO 判断の残りは design §10 を正とする。
 - 2026-10-22: design 審査7回目 APPROVE（HEAD 084764bf3）。§10-2 入口の上限は PO 原文「1」で 90行（AGENTS.md 80・CLAUDE.md 10）。
+- 2026-10-22: 残りの判断（design §10-4〜§10-7・§11 の安全寄りの3文）は PO 原文「fableにまかせてくれ」で Fable が決め、design に反映。PO 向けの全体図は design §20。上の行の「PO 判断5件待ち」は解消。

@@ -1,6 +1,6 @@
 # 目次から届かない文書の一覧と扱い（design §10-4）
 
-status: 草案（Opus の推奨付き・PO 判断待ち）。作成 2026-10-22。
+status: 決定済み（PO 原文「fableにまかせてくれ」2026-10-22 → Fable の判断で全件確定。design §20）。作成 2026-10-22。
 
 ## 1. 数え方（基準値の訂正）
 
@@ -26,7 +26,7 @@ status: 草案（Opus の推奨付き・PO 判断待ち）。作成 2026-10-22�
 | 4 | docs/specs/schedule/to-be.md | 2026-07-07 | 0 | 表紙に名前なし。テーマは docs/specs/README.md:56 | 登録 |
 | 5 | docs/specs/schedule/track-record.md | 2026-07-07 | 0 | 同上（実績台帳） | 登録 |
 | 6 | docs/specs/inbox/track-record.md | 2026-07-05 | 0 | 表紙 docs/specs/inbox/README.md:21-23 は ideal-state・kgi・design のみ | 登録 |
-| 7 | docs/specs/inventory-management/spec-v1.0.md | 2026-05-25 | 0 | 509行。表紙に名前なし。置き換えを示す語は同フォルダに無い。後の文書に中身が引き継がれたかは未確認 | 登録（「2026-05 の初版」と添える） |
+| 7 | docs/specs/inventory-management/spec-v1.0.md | 2026-05-25 | 0 | 509行。表紙に名前なし。後継は同フォルダの spec.md（1行目の題名が同一。spec.md §Version に v1.0 初版起案〜v1.3 の履歴。spec.md:3 は「.claude-pipeline/spec-v1.0.md に保管」と書くが、そのパスは origin/main に無い） | 登録（docs/specs/inventory-management/README.md:24「既存資料との関係」節に「spec.md の v1.0 起案版（spec.md §Version で v1.1〜v1.3 に置き換え済み）」と1行。spec.md:3 の保管先の記載を同じ PR で直すのは任意） |
 | 8 | docs/specs/ledger-guard/design-g2.md | 2026-07-20 | scripts/dev/executor-preflight.sh:79 が設計の場所として指す | 表紙に名前なし | 登録（移すと scripts の注記が切れる） |
 | 9 | docs/specs/process-hardening/design-pillar1.md | 2026-07-24 | 0 | 表紙に名前なし。同フォルダに pillar2・pillar3 あり | 登録 |
 | 10 | docs/specs/product-master/product-classification-decisions.md | 2026-06-30 | 0 | 表紙に名前なし。決定記録 | 登録 |
@@ -35,8 +35,8 @@ status: 草案（Opus の推奨付き・PO 判断待ち）。作成 2026-10-22�
 | 13 | docs/specs/process-hardening/proof-of-behavior/README.md | 2026-07-21 | handoff 1 | 子テーマの表紙。親 process-hardening の表紙から案内が無い | 登録（親の表紙に1行。14・15 もこれで届く） |
 | 14 | docs/specs/process-hardening/proof-of-behavior/ideal-state.md | 2026-07-21 | 0 | 13 の表紙に名前あり | 登録（13 で解決） |
 | 15 | docs/specs/process-hardening/proof-of-behavior/kgi.md | 2026-07-21 | 0 | 13 の表紙に名前あり | 登録（13 で解決） |
-| 16 | docs/specs/master-ssot-migration/design-fix-unify-type-mismatch.md | 2026-09-22 | docs/handoff/fix-unify-type-mismatch/design.md:43 | フォルダに表紙なし・docs/specs/README.md に行なし。1回の不具合修正の設計メモ。同じ修正の記録置き場が docs/handoff/fix-unify-type-mismatch/ にある | 移動（docs/handoff/fix-unify-type-mismatch/ へ。参照元 :43 も直す） |
-| 17 | docs/specs/master-ssot-migration/recon-fix-unify-type-mismatch.md | 2026-09-22 | docs/handoff/fix-unify-type-mismatch/design.md:42 | 同上（調査メモ） | 移動（同上。:42 も直す） |
+| 16 | docs/specs/master-ssot-migration/design-fix-unify-type-mismatch.md | 2026-09-22 | docs/handoff/fix-unify-type-mismatch/design.md:43 | フォルダに表紙なし・docs/specs/README.md に行なし。1回の不具合修正の設計メモ。同じ修正の記録置き場が docs/handoff/fix-unify-type-mismatch/ にある | 移動（docs/handoff/fix-unify-type-mismatch/ へ。参照元 :43 はパスを書き換えず、行末に「（2026-10 に同フォルダへ移動）」を添える＝記録の原本は書き換えない） |
+| 17 | docs/specs/master-ssot-migration/recon-fix-unify-type-mismatch.md | 2026-09-22 | docs/handoff/fix-unify-type-mismatch/design.md:42 | 同上（調査メモ） | 移動（同上。:42 にも同じ添え書き。2本を一緒に移すので design 側 :4 の相対参照は切れない） |
 
 ## 4. docs/ai-agents 19本（教訓のメモ）
 
@@ -46,4 +46,5 @@ status: 草案（Opus の推奨付き・PO 判断待ち）。作成 2026-10-22�
 
 ## 5. PO の判断
 
-- （未回答）
+- 2026-10-22 PO 原文「fableにまかせてくれ」→ Fable の判断（全文 ~/CC報告ファイル-keep/agenda-nav-20261022/fable/decisions.md）: §3 と §4 の推奨どおりに確定（#7 と #16・#17 は上の書き方に確定）。段2の PR に含める。
+- 参考（判断は不要）: lessons.d の直下は 22枚で scripts/lessons-view.sh:37 の警告の目安 20 を超える（清書は本テーマの範囲外）。docs/specs/master-ssot-migration/ に表紙が無い（K4 には影響しない。段2で docs/specs/README.md に1行足すのは任意）。
