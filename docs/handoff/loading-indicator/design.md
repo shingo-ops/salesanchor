@@ -84,7 +84,7 @@ PO 原文の要旨: 「全ての読み込みを差し替えて」「金型を変
 ## 2-5 弊害とリスク
 - 共用 class（`.fu-loading`＋`.fu-empty` 等、recon S3）は便2以降で読み込みだけを外す。CSS 定義は空・エラー側のために残す。
 - role=status が増えて試験が落ちる所（recon S6）は、その便で name 指定に直す。e2e は便2で実行して確かめる。
-- 検査の判定は文字の形を見るだけなので、prop 以外の三項（`title={x ? t("…loading") : …}`）を数えることがある。その場合は ui-allow で除外する。
+- 検査の判定は文字の形を見るだけなので、prop 以外の三項（`title={x ? t("…loading") : …}`）、テンプレート文字列の `${t(…)}`、JSX の外の `t(…)`、`loadingError` のような読み込み中でないキーを数えることがある（審査 probe-edge-cases.txt）。増分方式なので既存は赤にならず、新しく当たった場合は ui-allow で除外する。
 
 ## 2-6 維持の仕組み
 - 正本は LoadingBlock（components/loading/）1つ。見た目は LoadingBlock.css と loading-animations.css、寸法はトークン。

@@ -101,3 +101,9 @@ export type { LoadingBlockProps } from './LoadingBlock';
 
 ## 戻し方
 この PR の revert。
+
+## 追補1（2026-10-22 Opus。審査の差し戻しへの対応）
+- 事実: 閲覧ページは Button.tsx → `./loading` の一括 export を通じて LoadingBlock に届く。閲覧ページの辞書 frontend/src/locales/viewer/ja.json・en.json に `common.loading` が無く、`node scripts/check-i18n-missing-keys.js` が exit 1（/tmp/CC報告ファイル/loading-stage2-bin1/reviewer/i18n-missing-keys.txt）。設計で入れ忘れた。
+- 決定: viewer の ja.json・en.json の `common` に `"loading"` を足す。値は本体の辞書と同じ（ja `読み込み中...`／en `Loading...`）。閲覧ページも将来 LoadingBlock を使うため、Button の import を変える案（金型の一括 export を迂回する）は採らない。
+- 変更: frontend/src/locales/viewer/ja.json・en.json の `common` に1行ずつ（`close` の直後）。
+- 検証: `node scripts/check-i18n-missing-keys.js` exit 0 ／ 既存の i18n 検査（check:all にあるもの）緑。

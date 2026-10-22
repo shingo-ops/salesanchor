@@ -1,6 +1,7 @@
 {
   "common": {
-    "close": "Close"
+    "close": "Close",
+    "loading": "Loading..."
   },
   "suppliers": {
     "openFullPage": "Open full page"
