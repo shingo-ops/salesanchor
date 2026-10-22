@@ -62,3 +62,28 @@
 - gh の作成元の取り方の漏れ（クラウドの gh は無効なので影響は小さい）: `gh api ... -fhead=<枝>`（詰め書き）は取れず手元の HEAD で判定される。`gh pr create --head A --head B` は最初の A で判定されるが gh は最後の B を使う（`guard_pre_tool.py:186-187`）。
 - `owner:枝` の owner を見ていない（`:191-192`）。別 owner（fork）の同名枝でも手元の origin で判定する。
 - `>(` は `<(` と違い読み取り扱いの除外条件に無い（`:57`）。今回の probe（`tee >(…)`）は止まったが、`tee` が一覧外だったため。
+
+## 再々審査（2026-10-23・HEAD f71baa18c）
+
+- 審査者: Reviewer エージェント（Opus・新規起動）
+- 対象: PR #4666 / 審査時 HEAD f71baa18c148214614052dad11bd0bd2728fa3ba（前回 beceecd3c からのコード差分は guard_pre_tool.py・test.sh の2件）
+- 判定: **APPROVE**（直すべき点 0 件。指摘のみ 2 件）
+
+### テスト結果（生出力）
+- `bash scripts/agent-hooks/cloud/test.sh`: /tmp/CC報告ファイル/cloud-parity-bin1/review3-test.txt（終了コード 0、「全件OK」、K6 54件中逸脱0件、K7 1秒以上 0件・負荷 24.3）
+- 審査役の追加試験: /tmp/CC報告ファイル/cloud-parity-bin1/review3-probe.txt
+
+### 確認できたこと
+1. 前回の直すべき点（古い追跡参照で判定する K3 の漏れ）は直っている。`guard_pre_tool.py:166-174` で head があれば判定の前に毎回 `git fetch -q origin +refs/heads/main:refs/remotes/origin/main +refs/heads/<枝>:refs/remotes/origin/<枝>` を行い、取り込み先を明示している。fetch が失敗したら RuntimeError → `check_pr_create`（`:222-225`）で止める（fail-closed）。
+   - 再現（probe 1）: 使い捨ての bare リポジトリで docs だけの枝を取り込んだ後、別 clone からその枝に src/late.py を push → MCP head=その枝・本文に節あり → exit 2（src/late.py を理由に止まる）。取り込み後の `origin/docsonly` はリモートの sha と一致。
+   - fetch 設定が main だけの single-branch clone でも同じく止まり、`origin/<枝>` が作られる（probe 2）。docs だけの未取り込み枝は通る（probe 3）。origin 不通は止まる（probe 4）。`a..b`・`x.lock` は refspec 不正で止まる（probe 6, 7）。
+2. 取り込みは作業ツリー・現在の枝・未保存ファイルを変えない（probe 1: 前後とも `## main...origin/main` / ` M README.md` / `?? WIP.txt`、HEAD 同一）。手元（`CLAUDE_CODE_REMOTE` 未設定）は `dispatch.sh:2` で先に exit 0 し、取り込みも走らない（probe 17: `origin/docs3` が作られていない）。test.sh K6 54件も逸脱 0。
+3. gh の head の取り方（`:188-194`）: 複数指定は最後を使う（probe 13, 14 と test.sh「--head 2回」）、`-fhead=` の詰め書きも取れる（test.sh）。`>(` は読み取り扱いから外れた（`:57`、test.sh「>( の中に危険語」で止まる。危険語なしの `cat >(head -1)` は通る＝probe 15）。
+4. 秘密・社外秘: 今回の差分にトークン形式・Webhook URL・鍵・URL は 0 件。仕入元名なし。test.sh の宛先は `t@example.invalid`。
+
+### 直すべき点（REQUEST_CHANGES の理由）
+- なし
+
+### 指摘のみ（今回は止めない）
+- 「最後の指定を使う」変更で gh の道に新しい止め漏れが出た（前回までは止まっていた）。`:188-190` の正規表現は命令文全体を見るため、実際の `--head` より後ろにある本文中の `-H <枝>`／`--head <枝>`、または gh api の末尾のヘッダ `-H 'X-A:<枝>'` が「最後の指定」になる。再現（probe 8, 9, 10）: 実際の head はコード枝、本文や末尾ヘッダに docs だけの枝名 → exit 0（2 が期待）。クラウドの gh は無効（recon.md:24）で、PR 作成は MCP の道（今回直った）を通るため影響は小さい。直すなら本文・ヘッダの値を引数として読み飛ばす（shlex で分けて、`--body`/`-b`/`-H`(gh api) の次の語を除く）。
+- 止めすぎ: gh api で `-H 'Accept: …'` を `-f head=` より後ろに書くと、枝名が空と読まれて止まる（probe 12）。前に書けば通る（probe 11）。
