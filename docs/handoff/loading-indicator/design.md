@@ -128,3 +128,17 @@ PO 原文の要旨: 「全ての読み込みを差し替えて」「金型を変
 - 弊害: InventoryPage 系の試験は負荷が高いと時々落ちる（未変更のファイル。原因は未確認、再実行で pass）。
 - 守り手: 2-6 と同じ（UI governance gate と Opus の件数記録）。
 - 戻し方: 本便の PR を revert。
+
+## 2-11 便3 第2組（仕入元・単位・チーム・スタッフなど 18 画面 28 件）
+- 直し方: card-5.md の規則 A・B。全件 common.loading なので label・size は渡さない。RolesPage は外側の `<div className="page">` を残す（規則 E、recon C7）。
+- 触らない: excluded の件、第3組、CSS・辞書。
+- 受入条件
+| 基準 | 検証方法 |
+|---|---|
+| 対象 28 ファイルの件数が 41→13（28 減） | countLoadingText の前後（/tmp/CC報告ファイル/loading-stage2-bin3-g2/count-*.txt） |
+| 試験 | 対象ページを読み込む試験 10 本が pass（対象ディレクトリの試験は 0 本） |
+| 規約 | tsc 0・eslint 警告 0・i18n 欠け 0・UI governance gate 緑 |
+| 本番 | 反映後、本番の画面の JS で仕入元一覧の読み込み枝が LoadingBlock 呼び出しになっている |
+- 弊害: ButtonMigration 系の試験は負荷が高いと 5 秒の時間切れで落ちる（未変更の試験。単独・時間延長の再実行で pass）。
+- 守り手: 2-6 と同じ（UI governance gate と Opus の件数記録）。
+- 戻し方: 本便の PR を revert。
