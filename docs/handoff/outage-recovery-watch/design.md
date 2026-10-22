@@ -47,7 +47,7 @@
 
 #### 3-1-1. 便3 での確定（2026-10-23 Opus。KGI G1 は不変。詳細は card-bin3.md）
 
-- 部品の分け方: review@ の部品（backend/app/services/review_mail_notifier.py）は 1 行も変えない。運用の受け箱用に新しい部品 `ops_mail_notifier.py` を作り、review@ の部品からヘッダーの読み解き（`_decode_mime_header`）と Redis の取得（`_get_redis`）を読み込んで使う。→ 3-1 の「受け箱を複数持てる形に広げる」を変更
+- 部品の分け方: review@ の部品（backend/app/services/review_mail_notifier.py）は 1 行も変えない。運用の受け箱用に新しい部品 backend/app/services/ops_mail_notifier.py（新規）を作り、review@ の部品からヘッダーの読み解き（`_decode_mime_header`）と Redis の取得（`_get_redis`）を読み込んで使う。→ 3-1 の「受け箱を複数持てる形に広げる」を変更
   - 理由1: 受け入れ基準「既存の review@ 通知が変わらない」を、既存の 39 件の試験がそのまま通ることで確かめられる。
   - 理由2: 運用の受け箱は、絞り込み・本文の一部の読み取り・重複防止の鍵の形・検索の範囲が review@ と違う。1 つの関数に分岐を足すより、別の関数のほうが試験しやすい。
   - 理由3: 重複防止の鍵を受け箱ごとに分けられる（今の鍵 `review_mail:notified:<uid>` には受け箱の名前が無く、同じ UID がぶつかる。recon 2026-10-23）。
