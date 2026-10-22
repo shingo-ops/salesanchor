@@ -1,7 +1,7 @@
 ---
 mode: handoff
 adr: 未起案（段0で新規 ADR として起案し ADR-076 を一部改める。§8 段0）
-status: 草案（審査 REVISE 2回目反映済み・PO 判断待ち: §10-3 の構造承認・§10-2・§10-4〜§10-7・§14-2 の KGI 測り方修正と K8〜K10。KGI 合格ラインは PO 承認済み 2026-10-22）
+status: 草案（審査 REVISE 2回目反映済み・PO 判断待ち: §10-2・§10-4〜§10-7・§14-2 の KGI 測り方修正と K8〜K10。KGI 合格ラインは PO 承認済み 2026-10-22）
 ---
 
 # design — AI向け指示文書の「入口→目次→章→末端ページ」化（設計草案）
@@ -85,7 +85,7 @@ KPI は各段（§8）の完了ごとに上表の該当行を再測定する。
 | 文書 | 今 | 後 | 根拠 |
 |---|---|---|---|
 | CLAUDE.md（120行） | 前提・ブランチ運用・不可逆・VPS・標準フロー要約・i18n・UI統治・ルール追加判定木 | **入口に残す**（段3で AGENTS.md へ移し、CLAUDE.md は取り込む）: 前提（:7-18）・VPS 直作業禁止（:26-35）・不可逆操作（:36-42）・直接コミット禁止の1行（:49）・目次リンク。**移す**: ブランチ運用の手順詳細（:44-69 のうち :49 を除く）→ specs/branch-operations/README.md（既に正典と明記）、標準フロー要約（:70-82）→ STANDARD-WORKFLOW（正本 :156 の方針）、i18n 本文（:90-95）→ frontend/CLAUDE.md（既に ESLint 強制の記述あり :25-27）、ルール追加判定木（:105-117）→ docs/INDEX.md の末尾章（行番号は origin/main 2026-10-22 の `git show origin/main:CLAUDE.md` 実測） | 公式「under 200 lines」、ADR-076 の分割方針、STANDARD-WORKFLOW:156 |
-| AGENTS.md（281行） | CLAUDE.md と6節同文＋Codex 固有（役割分担・AEON・Codex UI 補助・引き継ぎ・カード定型文）。「VPS 直作業禁止」節は無い（見出し実測: `git show origin/main:AGENTS.md \| grep -n '^#'`、2026-10-22） | **全 AI 共通の入口（正本）にする**（§10-3 PO 回答からの Opus 解釈・構造は PO 承認待ち §15）。本文 = 前提・安全の決まり（不可逆操作・VPS 鍵制限・直 push 禁止。CLAUDE.md から移して1か所に）・「作業の型は目次から辿る」1行・目次リンク。Codex 固有節（役割分担・AEON・Codex UI 補助・引き継ぎ）は docs/ai-agents/codex-operations.md（新設・移動のみ）へ移し、目次の章A から辿る。カード定型文（:259-281）は design-partner.md §6 が原本と書いてあるので **PO 確認後に**そちらへ一本化 | PO 2026-10-22「どのAIを使っても指示が届くように指示をＳＳＯＴしている」。Codex は AGENTS.md を根から作業場所まで連結して読み、合計 32 KiB で打ち切る（project_doc_max_bytes 既定。公式 https://learn.chatgpt.com/docs/agent-configuration/agents-md 取得 2026-10-22）。取り込み記法（@path）は同公式に記載なし＝**Codex は @ を展開しない前提で、本文は AGENTS.md 側に置く** |
+| AGENTS.md（281行） | CLAUDE.md と6節同文＋Codex 固有（役割分担・AEON・Codex UI 補助・引き継ぎ・カード定型文）。「VPS 直作業禁止」節は無い（見出し実測: `git show origin/main:AGENTS.md \| grep -n '^#'`、2026-10-22） | **全 AI 共通の入口（正本）にする**（§10-3 解決・構造は PO 承認済み 2026-10-22）。本文 = 前提・安全の決まり（不可逆操作・VPS 鍵制限・直 push 禁止。CLAUDE.md から移して1か所に）・「作業の型は目次から辿る」1行・目次リンク。Codex 固有節（役割分担・AEON・Codex UI 補助・引き継ぎ）は docs/ai-agents/codex-operations.md（新設・移動のみ）へ移し、目次の章A から辿る。カード定型文（:259-281）は design-partner.md §6 が原本と書いてあるので **PO 確認後に**そちらへ一本化 | PO 2026-10-22「どのAIを使っても指示が届くように指示をＳＳＯＴしている」。Codex は AGENTS.md を根から作業場所まで連結して読み、合計 32 KiB で打ち切る（project_doc_max_bytes 既定。公式 https://learn.chatgpt.com/docs/agent-configuration/agents-md 取得 2026-10-22）。取り込み記法（@path）は同公式に記載なし＝**Codex は @ を展開しない前提で、本文は AGENTS.md 側に置く** |
 | CLAUDE.md（入口化後） | — | 「@AGENTS.md」 の1行＋Claude Code だけに要る決まり（CLAUDE.md 行数検査・.claude/agents 変更前の pull 等）のみ | Claude Code 公式「put an 「@AGENTS.md」 import in a `CLAUDE.md` … Add any Claude-specific instructions below the import」（https://code.claude.com/docs/en/memory 取得 2026-10-22。取り込みも起動時に読み込まれ文脈量は減らない＝KGI-1 は CLAUDE.md＋AGENTS.md の合計で数える） |
 | frontend/AGENTS.md・backend/AGENTS.md | CLAUDE.md と同文 | 本文の正本を AGENTS.md 側に一本化し、同ディレクトリの CLAUDE.md は 「@AGENTS.md」＋Claude 固有のみ（ルートと同じ向き） | 同上 |
 | docs/STANDARD-WORKFLOW.md（175行） | 正本 | **そのまま**（章A の末端）。§7:157「CLAUDE.md に要約＋リンク」の「要約」を「リンクのみ」に改める1行修正（SSOT） | :156 |
@@ -154,11 +154,11 @@ KPI は各段（§8）の完了ごとに上表の該当行を再測定する。
 2. 入口（CLAUDE.md）の上限を 90 行にしてよいか（今120）。
    - 1. 90行【おすすめ】→ 安全の決まり＋目次リンクで収まる試算（残す節は :8-16, :20-40, :44-45, :100 前後 ≈ 55行）
    - 2. 120行のまま → 行数は減らず、重複削減だけになる
-3. **PO 回答済み・構造の承認は確認待ち（PO 2026-10-22・原文「2,どのAIを使っても指示が届くように指示をＳＳＯＴしている」）**: Codex は今も AGENTS.md を読んで動いているか。
+3. **解決済み（PO 2026-10-22・原文「2,どのAIを使っても指示が届くように指示をＳＳＯＴしている」、構造は同日 PO 原文「1」で承認）**: Codex は今も AGENTS.md を読んで動いているか。
    - 1. 動いていない → 段4で AGENTS.md を薄い入口にする
    - 2. 動いている → Codex 固有節を残す形に変える（本文は移動、リンクで辿る）← **PO 回答**
-   - 反映（Opus の解釈・**PO 未承認**）: 本文の正本を AGENTS.md（全 AI 共通の入口）に置き、CLAUDE.md は 「@AGENTS.md」 で取り込む向きに変更（§4・§5・§6・§7・§8 段3/4）。旧案「AGENTS.md を 「@CLAUDE.md」 だけにする」は、Codex の公式説明に取り込み記法の記載が無く Codex に本文が届かないため不採用。
-   - 審査（2026-10-22 2回目）の指摘: 選択肢2の文面は「Codex 固有節を AGENTS.md に残し本文は移動」で、採用した構造（本文を AGENTS.md に置き Codex 固有節を移す）と向きが逆。PO の補足（SSOT）からの解釈であり、構造そのものの承認記録は無い → **構造を PO に確認する（§15）**。それまで段3・段4のカードは書かない。
+   - 反映（構造は PO 承認済み 2026-10-22）: 本文の正本を AGENTS.md（全 AI 共通の入口）に置き、CLAUDE.md は 「@AGENTS.md」 で取り込む向きに変更（§4・§5・§6・§7・§8 段3/4）。旧案「AGENTS.md を 「@CLAUDE.md」 だけにする」は、Codex の公式説明に取り込み記法の記載が無く Codex に本文が届かないため不採用。
+   - 審査（2026-10-22 2回目）の指摘: 選択肢2の文面は「Codex 固有節を AGENTS.md に残し本文は移動」で、採用した構造（本文を AGENTS.md に置き Codex 固有節を移す）と向きが逆。PO の補足（SSOT）からの解釈であり、構造そのものの承認記録は無い → 構造を PO に確認した。Opus が「本文は『どのAIも最初に読む共通の入口』1か所に置き、Claude の入口はそれを読み込む1行と Claude 専用の決まりだけにする」を選択肢1として示したのに対し、**PO 原文「1」（2026-10-22）で承認**。
 4. docs/ai-agents の辿れない19件と specs の35件を「目次に登録」か「handoff へ移動（記録扱い）」か、1件ずつ表を出して確認してよいか（段2の前に一覧を提示）。
    - 1. 一覧を出してから決める【おすすめ】
    - 2. 全部登録する
@@ -260,5 +260,5 @@ KPI は各段（§8）の完了ごとに上表の該当行を再測定する。
 - 審査役（model opus・新規起動）: **REVISE**（止めるべき0・直すべき9・任意3）。全文 /tmp/CC報告ファイル/agenda-nav-review-20261022.md（リポジトリ外）。
 - 定着の検証（governance）: **MONITOR**（BLOCK 条件なし）。全文 /tmp/CC報告ファイル/agenda-nav-governance-20261022.md（リポジトリ外）。
 - 反映したもの: K1 の数え方（段3以後は AGENTS.md を足す）／K7 の3文字列を受け入れ基準・§6 で統一し、:49 を入口に残す行として明記／§5 の行番号を origin/main の実測に修正／§6 の LIMITS に AGENTS.md を登録・:58 の案内文を書き換える計画／テストの有無の食い違い（在る・CI 未配線）／§13・§14-3 の古い記述／段0（済み分と ADR の衝突点）／段1（変更前・写し方・例文・取りこぼし前提）／段3 を 3a〜3c に分割／基準値 Python の未保存を §11 に／守り手の担当と「連続5回」の数え方／claude-md-staleness-check.yml の切り分け／見出し重複検査の流用候補／「5回」に外部出典が無いこと。
-- **PO 確認が要るので未反映**: ①§10-3 の構造（本文を AGENTS.md に置く向き）の承認 ②K5 の「末端」の数え方と K7 の判定対象（kgi.md:18 は「CLAUDE.md」）の修正、K8〜K10 の追加（KGI 表の修正＝再承認）。
-- 段1は上の反映でカード化できる状態。段0は ADR の向き（新規＋ADR-076 一部改訂）を決めたのでカード化できる。段3・段4は ① の承認まで書かない。
+- PO 確認: ①§10-3 の構造は **PO 原文「1」（2026-10-22）で承認済み**（§10-3）。②（未反映・確認待ち）K5 の「末端」の数え方と K7 の判定対象（kgi.md:18 は「CLAUDE.md」）の修正、K8〜K10 の追加（KGI 表の修正＝再承認）。
+- 段1は上の反映でカード化できる状態。段0は ADR の向き（新規＋ADR-076 一部改訂）を決めたのでカード化できる。段3・段4は ① の承認により、§10-2 の回答後にカード化できる。
