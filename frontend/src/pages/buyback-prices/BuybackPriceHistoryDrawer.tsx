@@ -23,6 +23,7 @@ import {
   formatChartDate,
 } from "./buybackTypes";
 import styles from "./BuybackPricesPage.module.css";
+import { LoadingBlock } from "../../components/loading";
 
 interface BuybackPriceHistoryDrawerProps {
   open: boolean;
@@ -96,7 +97,7 @@ export function BuybackPriceHistoryDrawer({
     >
       <div className={styles.drawerBody}>
         {historyLoading && (
-          <p role="status">{t("common.loading")}</p>
+          <LoadingBlock />
         )}
 
         {!historyLoading && history && (

@@ -23,6 +23,7 @@ import { useIsMobile } from "../../hooks/useIsMobile";
 import { DISCORD_CONFIG_PERMISSION, getDiscordSendErrorGuide } from "./discordSendError";
 import { toast } from "../../components/loading/Toast";
 import { InboxThreadHeaderMobile } from "./InboxThreadHeaderMobile";
+import { LoadingBlock } from "../../components/loading";
 
 interface Props {
   selectedLeadId: number | null;
@@ -520,9 +521,7 @@ export function InboxMessageThread({
       {/* メッセージリスト */}
       <div ref={messageListRef} className="inbox-messages">
         {msgLoading && !messagesData && (
-          <div style={{ textAlign: "center", color: "var(--text-secondary)", padding: "var(--space-4)" }}>
-            {t("common.loading")}
-          </div>
+          <LoadingBlock />
         )}
         {msgError && (
           <div className="error-banner">{msgError}</div>

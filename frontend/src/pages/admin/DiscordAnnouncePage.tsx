@@ -14,6 +14,7 @@ import { PageLayout } from "../../components/PageLayout";
 import { Button } from "../../components/Button";
 import { TextareaControl } from "../../components/Textarea";
 import { TextFieldControl } from "../../components/TextField";
+import { LoadingBlock } from "../../components/loading";
 
 export default function DiscordAnnouncePage() {
   const { t } = useTranslation();
@@ -62,7 +63,7 @@ export default function DiscordAnnouncePage() {
   if (permsLoading) {
     return (
       <PageLayout navKey="nav.discordAnnounce">
-        <p className="text-token-text-secondary text-sm">{t("common.loading")}</p>
+        <LoadingBlock />
       </PageLayout>
     );
   }

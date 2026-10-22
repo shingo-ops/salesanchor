@@ -9,6 +9,7 @@ import { useTranslation } from "react-i18next";
 import { PageLayout } from "../../components/PageLayout";
 import { getReasons, type ReasonsResponse } from "../../api/funnel";
 import "./FunnelReasonsPage.css";
+import { LoadingBlock } from "../../components/loading";
 
 type ReasonType = "won" | "lost";
 
@@ -55,7 +56,7 @@ export default function FunnelReasonsPage() {
       </div>
 
       {loading ? (
-        <div className="frr-loading">{t("common.loading")}</div>
+        <LoadingBlock />
       ) : !data ? (
         <div className="frr-error">{t("common.errorLoad")}</div>
       ) : (

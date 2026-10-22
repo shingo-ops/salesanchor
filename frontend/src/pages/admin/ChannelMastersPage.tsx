@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { PageLayout } from "../../components/PageLayout";
 import { TextFieldControl } from "../../components/TextField";
+import { LoadingBlock } from "../../components/loading";
 
 interface ChannelMaster {
   id: number;
@@ -75,7 +76,7 @@ export default function ChannelMastersPage() {
   return (
     <PageLayout navKey="nav.channelMasters">
       {loading ? (
-        <p>{t("channelMasters.loading")}</p>
+        <LoadingBlock />
       ) : (
         <>
           <table className="channel-masters-table">
