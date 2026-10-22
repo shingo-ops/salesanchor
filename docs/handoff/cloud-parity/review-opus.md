@@ -33,3 +33,32 @@
 - `dispatch.sh:8-12` は入力 JSON が壊れていると EVENT が空になり exit 0（通す）。`guard_pre_tool.py:200` の fail-closed は dispatch 経由では届かない。
 - 一覧の語の直書き: `guard_pre_tool.py:93` の正規表現に一覧の語が1つ、design.md の K1 行に5つ含まれる（card-1 §1-2(a) の「直接書かない」と食い違い。害は無い）。
 - K7: 負荷 24.0 の機械で 17 件が 1 秒以上。参考値。クラウドでの実測で確かめる。
+
+## 再審査（2026-10-23・HEAD beceecd3c）
+
+- 審査者: Reviewer エージェント（Opus・新規起動）
+- 対象: PR #4666 / 審査時 HEAD beceecd3c833dc9f8f8e6decea9b5f2693c4b6ac（前回 23c146ec6 からの差分は dispatch.sh・guard_pre_tool.py・test.sh の3件）
+- 判定: **REQUEST_CHANGES**（直すべき点 1 件）
+
+### テスト結果（生出力）
+- `bash scripts/agent-hooks/cloud/test.sh`: /tmp/CC報告ファイル/cloud-parity-bin1/review2-test.txt（終了コード 0、「全件OK」、K6 50件中逸脱0件、K7 1秒以上 0件・負荷 26.1）
+- 審査役の追加試験: /tmp/CC報告ファイル/cloud-parity-bin1/review2-probe.txt
+
+### 確認できたこと
+1. K3 の作成元の取り方: MCP は `tool_input.head`（無い・空・文字列でない → 止める）、gh は `--head`／`-H`、gh api は `-f/-F/--field/--raw-field head=`。`owner:` は外して枝名だけにし、`_BRANCH_OK`（`guard_pre_tool.py:175`、先頭に `-` 不可・空白や `;` 不可）で不正なら止める。`-x`・`--upload-pack=x`・`o:-x`・`a;b`・数値・`a..b`・存在しない枝はすべて止まった（probe）。fetch の引数は検査済みの枝名だけで、`-` 始まりは通らない。
+2. fetch は `git fetch -q origin <枝>` のみ。作業ツリー・現在の枝・未保存ファイルは変わらない（probe: fetch 後も `## main...origin/main`・`?? WIP.txt` のまま）。
+3. 単独 `&`（`guard_pre_tool.py:70,73`）、`<(`（`:57`）、`ssh-keygen` の誤検知（`:117`）、`dispatch.sh:12,15-18` の壊れた JSON で止める、はいずれも test.sh と probe で期待どおり。`ls 2>&1 | head`・`sleep 0 & wait`・`git status` は通る。配列 JSON・空入力も dispatch で止まる。
+4. 手元（`CLAUDE_CODE_REMOTE` 未設定）: `dispatch.sh:2` で先に exit 0。test.sh K6 50件・probe（壊れた JSON、K3 の不正 head）とも exit 0・出力なし。
+5. 秘密・社外秘: 今回の差分にトークン形式・Webhook URL・鍵の並びは 0 件。追加は scripts の3件のみで文書の追加なし。test.sh の宛先は `t@example.invalid`。
+
+### 直すべき点（REQUEST_CHANGES の理由）
+- **K3 の止め漏れ: 手元に古い `origin/<枝>` があると fetch せずにそれを見る**
+  `scripts/agent-hooks/cloud/guard_pre_tool.py:166-172`。fetch は「最初の diff が失敗したとき」だけで、手元に追跡参照があれば古いままの中身で判定する。
+  再現（review2-probe.txt 1行目）: docs だけの枝を手元に取り込んだ後、リモートだけでその枝にコード（src/late.py）を足す → MCP head=その枝・本文に節あり → exit 0（2 が期待）。
+  前回指摘の理由そのもの（MCP の push_files 等は手元の追跡参照を更新しない）と同じ道で起きる。最初に docs を git push してから MCP でコードを足す流れで通る。
+  直し方の例: 判定の前に必ず fetch し、fetch が失敗したら止める（fail-closed）。fetch は `+refs/heads/<枝>:refs/remotes/origin/<枝>` のように取り込み先を明示するか、`FETCH_HEAD` と比べる（clone の fetch 設定に依存しない）。test.sh に「手元の追跡参照が古い」ケースを足す。
+
+### 指摘のみ（今回は止めない）
+- gh の作成元の取り方の漏れ（クラウドの gh は無効なので影響は小さい）: `gh api ... -fhead=<枝>`（詰め書き）は取れず手元の HEAD で判定される。`gh pr create --head A --head B` は最初の A で判定されるが gh は最後の B を使う（`guard_pre_tool.py:186-187`）。
+- `owner:枝` の owner を見ていない（`:191-192`）。別 owner（fork）の同名枝でも手元の origin で判定する。
+- `>(` は `<(` と違い読み取り扱いの除外条件に無い（`:57`）。今回の probe（`tee >(…)`）は止まったが、`tee` が一覧外だったため。
