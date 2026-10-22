@@ -9,6 +9,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { SelectControl } from "../../components/Select";
+import { LoadingBlock } from "../../components/loading";
 
 interface ConvLogEntry {
   id: number;
@@ -89,7 +90,7 @@ export function CompanyConvLogsTab({ companyId, contacts }: Props) {
         </SelectControl>
       </div>
 
-      {loading && <p className="conv-logs-loading">{t("common.loading")}</p>}
+      {loading && <LoadingBlock />}
       {error && <p className="conv-logs-error" role="alert">{error}</p>}
       {!loading && !error && logs.length === 0 && (
         <p className="conv-logs-empty">{t("companies.convHistory.empty")}</p>

@@ -22,6 +22,7 @@ import { TextFieldControl } from "../../components/TextField";
 import { SelectControl } from "../../components/Select";
 import { TextareaControl } from "../../components/Textarea";
 import { requiredFieldsMessage } from "../../features/tcg-product-import/productDetailModel";
+import { LoadingBlock } from "../../components/loading";
 
 export default function ProductEditPage() {
   const { t } = useTranslation();
@@ -196,7 +197,7 @@ export default function ProductEditPage() {
       subtitleKey={isNew ? "products.newProduct" : "products.editProduct"}
     >
       <ContentToolbar right={pageActions} />
-      {loading && <div className="loading">{t("common.loading")}</div>}
+      {loading && <LoadingBlock />}
       {error && <div className="error-message">{error}</div>}
 
       {!loading && (

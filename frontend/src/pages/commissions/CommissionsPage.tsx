@@ -21,6 +21,7 @@ import type { DataTableColumn } from "../../components/DataTable";
 import { Card } from "../../components/Card";
 import { Button } from "../../components/Button";
 import { TextFieldControl } from "../../components/TextField";
+import { LoadingBlock } from "../../components/loading";
 
 type RoleKey = "sales" | "order" | "ship" | "purchase" | "trouble";
 
@@ -164,9 +165,7 @@ export default function CommissionsPage() {
         </div>
 
         {loading ? (
-          <div className="loading" style={{ marginTop: "var(--space-4)" }}>
-            {t("common.loading")}
-          </div>
+          <LoadingBlock />
         ) : monthly ? (
           <div style={{ marginTop: "var(--space-4)" }}>
             <p data-testid="commissions-total">

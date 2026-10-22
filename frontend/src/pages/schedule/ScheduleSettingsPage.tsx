@@ -13,6 +13,7 @@ import {
   type ApiCalendarOwnersResponse,
   type CalendarOwner,
 } from "./schedule-owner";
+import { LoadingBlock } from "../../components/loading";
 
 function OwnerBadge({ owner }: { owner: CalendarOwner }) {
   return (
@@ -106,7 +107,7 @@ export default function ScheduleSettingsPage() {
   };
 
   if (permsLoading) {
-    return <div className="page">{t("common.loading")}</div>;
+    return <div className="page"><LoadingBlock /></div>;
   }
 
   if (!hasPermission("staff.view")) {
@@ -124,7 +125,7 @@ export default function ScheduleSettingsPage() {
       <div className="schedule-settings">
         {error && <div className="error-message">{error}</div>}
         {loading ? (
-          <div>{t("common.loading")}</div>
+          <LoadingBlock />
         ) : (
           <div className="schedule-settings__shell">
             <nav className="schedule-settings__nav" aria-label={t("schedule.settingsNavigation")}>
