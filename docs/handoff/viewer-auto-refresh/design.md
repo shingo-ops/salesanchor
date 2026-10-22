@@ -234,3 +234,4 @@ const STOP_DETAILS = new Set(["viewer_suspended", "viewer_trial_expired", "passw
 ## 審査
 - r1: REVISE（Blocking 3件 B1〜B3）。記録: docs/handoff/viewer-auto-refresh/review-design.md。B1〜B3 と N-1〜N-10 を反映して r2 へ。
 - r2: REVISE（B3-r2 recon の引用・B2-r2 K6 の測り方）。反映して r3 へ。
+- r3: APPROVE on 8da64e905（Blocking 0）。実装は PO の一任（2026-10-22「PRマージ、デプロイまで完走させてくれ。」）と成功条件の承認「1」に基づく。

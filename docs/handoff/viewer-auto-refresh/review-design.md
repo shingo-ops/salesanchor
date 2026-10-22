@@ -139,3 +139,54 @@
 ### 再審査で見ること（r3）
 - B3-r2: recon.md を `scripts/check-process-artifacts.js` の引用検査に当てて、エラーが0件になること。
 - B2-r2: K6 の検証方法に、起点の取り方・終点の取り方・測る人が1つずつ書かれていること。
+
+---
+
+## r3
+
+- 対象: 同じ2文書（HEAD 8da64e905）
+- 審査: Architect（Opus）、2026-10-22
+- 判定: **APPROVE**（Blocking 0件。PO 承認へ進めてよい。Generator は PO 承認の後）
+
+### r2 の Blocking の確かめ
+
+- B3-r2 解消（実測）。`scripts/check-process-artifacts.js:412-470` の関数をそのまま読み込む台本（r2 と同じもの）で3文書を検査した。
+  - recon.md: エラー0件。recon.md:51 はワイルドカードのバッククォートが外れ、実在する `frontend/src/pages/viewer/InventoryView.test.tsx` だけが引用になっている。
+  - design.md: エラー3件。中身は、この PR で新しく作る useViewerAutoRefresh.ts・useViewerAutoRefresh.test.ts・ViewerApp.test.tsx（frontend/src/pages/viewer/ 配下）だけ。除外の条件どおり、合格とした。
+  - review-design.md（r2 まで）: エラー0件。
+- B2-r2 解消。`docs/handoff/viewer-auto-refresh/design.md:207` に、次の4つが1つずつ書かれている。
+  - 測る人: Evaluator（本番反映後）
+  - 起点: reader 鍵で未完了の analysis_runs・extraction_jobs を10秒ごとに数え、1件以上から初めて0件になった読み取りの時刻（10秒の幅の誤差も記録）
+  - 終点: 開いたままの閲覧ページの通信記録で、updated_at が起点より後の inventory 応答を受けた時刻
+  - 止まる条件: 表が reader 鍵で読めない、または試験アカウントで開けない → 停止して Opus へ（PO の目視へ）
+  - 合格の線（終点−起点 ≦ 120秒、1件以上）と、わずかに超えたときの扱い（記録して PO に報告）も1つに決まっている。
+- reader 鍵で件数が読める形か（ファイルで確かめた）:
+  - 2つの表は public にある（`migrations/20260921_110000_pipeline_tables_public.sql:80`・`:167`）。TCG_SCHEMA の既定も public（`backend/app/tcg_config.py:20`）。
+  - ai_ro のビューは public と tenant_* の全部の表（relkind r・p）から作られる（`migrations/20261017_130100_create_ai_ro_views.sql:25-33`）。名前は「スキーマ__表」（同 :52）なので、ai_ro.public__analysis_runs と ai_ro.public__extraction_jobs になる。
+  - 数えるのに要る列（analysis_runs.completed_at、extraction_jobs.status）は拒否リスト（同 :23）に当たらないので、ビューに残る。
+  - 台本は SELECT を受け付け、1文60秒で打ち切る（`backend/app/ops/readonly_query.py:28-31`・`:51`）。count(*) の読み取りはこの範囲に入る。
+  - 【推測】本番 DB で2つのビューが今あるかは照会していない（ADR-1024 便3a で 506 本作成、`docs/adr/ADR-1024-ai-readonly-db-path.md:89`）。ただ、無かったときは K6 の止まる条件が効くので、Blocking にしない。
+
+### r2 の Non-blocking の確かめ
+
+- 反映済み。refresh 冒頭コメント（`docs/handoff/viewer-auto-refresh/design.md:93`）に「401 はログイン画面、STOP_DETAILS は load() と同じ案内画面へ」と書かれ、コード（同 :104-107）と合っている。
+
+### 実装カード §4 の最終確認
+
+- §4-2 の「変更前」を、実物と照らし合わせた。どれも一致した。
+  - `frontend/src/pages/viewer/ViewerApp.tsx:65-80`（load）
+  - `frontend/src/pages/viewer/InventoryView.tsx:55`（now）・`:1`（注記）・`:100`（eslint-disable の前例）
+- refresh が使う名前は、既にある import と関数だけで足りる。
+  - useCallback・useRef（`frontend/src/pages/viewer/ViewerApp.tsx:5`）
+  - ViewerApiError・clearToken・fetchInventory・readToken（同 :13）
+  - screenForError（同 :38）
+- 想定分岐（§4 の末尾）と K6 の止まる条件で、迷ったときの行き先が決まっている。Sonnet が判断に迷う箇所は見当たらない。
+
+### Non-blocking（r3。直さずに進めてよい）
+
+1. §3-2 の「冒頭の注記（:1-4）」とあるが、ViewerApp.tsx の冒頭コメントは :1-3（:4 は import）。足す位置は、コメントの中の最後の行の後と読めば迷わない。
+2. K6 の起点の SQL 条件は §7 の引用（`backend/app/services/tcg_distribution_svc.py:894-935`）から分かるが、測るときは配信の安全装置と同じ条件を使う。
+   - analysis_runs: completed_at IS NULL
+   - extraction_jobs: status IN ('pending','running','extracted')
+   - ビュー名は ai_ro.public__analysis_runs・ai_ro.public__extraction_jobs。Evaluator のカードにこの条件を書き写すとよい。
+3. デプロイのたびに ai_ro が約70秒外れる（`docs/adr/ADR-1024-ai-readonly-db-path.md:92`）。本番反映の直後に K6 を測るときは、ビューが戻ってから始める。42P01 が出たら待ってから読み直す（止まる条件の「読めない」とは分けて扱う）。
