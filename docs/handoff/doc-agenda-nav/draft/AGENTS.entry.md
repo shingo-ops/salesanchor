@@ -23,16 +23,16 @@ DROP TABLE / 大量DELETE / `rm -rf` / `git reset --hard` / `git push --force`�
 ## VPS 直作業禁止（技術的にも制限付き鍵のみ）
 
 - **エージェントは原則として制限付き鍵を使用**（`salesanchor-claude`、ForceCommand 制限）
-- **無制限鍵（`~/.ssh/manual-only/id_ed25519`）**: 本番 DB の読み取りは reader 鍵の道（`docs/handoff/ai-readonly-db-path/usage.md`）を使い、manual-only は使わない。DB 以外の読み取りだけの調査は恒常許可。変更を伴う作業は作業ごとに PO の GO が必要
+- **無制限鍵（`~/.ssh/manual-only/id_ed25519`）**: 本番 DB の読み取りは reader 鍵の道（`docs/handoff/ai-readonly-db-path/usage.md`）を使い、manual-only は使わない。DB 以外の読み取りだけの調査（ログ/設定表示・`ss`/`ps`/`systemctl status`・接続確認）は恒常許可。変更を伴う作業（ファイル作成・コンテナ起動停止・設定変更・再起動・DB 書き込み）は作業ごとに PO の GO が必要（設計担当が GO 原文を依頼文と PR に転記）
 - 鍵・パスワード・トークンの値は表示しない。人間の無制限鍵（`hitoshi@` 等）は VPS 側で変更しない
 - 詳細・ロールバック手順: `docs/handoff/rehearsal-env/design-b-ssh-isolation.md`
 
 ## ブランチと作業場所
 
 - `develop` / `main` への直接コミット禁止。`release/*` → `main` は PR 経由（直push禁止・Branch Protection で強制）
-- 作業前に必ず `bash scripts/new-worktree.sh release/<topic>` で `origin/main` 起点の作業場所を作る
+- 作業前に必ず（例外なし） `bash scripts/new-worktree.sh release/<topic>` で `origin/main` 起点の作業場所を `~/worktrees` 配下に作る
 - `main` / `develop` は消さない（`git push --delete`・UI の branch delete・`gh api` の ref delete は実行しない）
-- `migrations/`・`deploy.yml`・本番 `scripts/` を含む PR は PO の「GO #PR番号」まで main にマージしない（ADR-135・ADR-136。GO は ADR-1003 で Claude Opus 設計担当へ委譲）
+- `migrations/`・`deploy.yml`・本番 `scripts/` を含む PR は PO の「GO #PR番号」まで main にマージしない（ADR-135・ADR-136。GO は ADR-1003 により例外（PO 本人の GO が必須の7種）を除き Claude Opus 設計担当へ常時委譲。PO「委譲停止」で解除）
 - 手順の詳細（PR の作り方・Draft・break-glass・リリース PR）: `docs/specs/branch-operations/README.md`
 
 ## 作業の型
