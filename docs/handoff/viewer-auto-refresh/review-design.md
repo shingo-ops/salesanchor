@@ -84,3 +84,58 @@
 - B1: §3-3 の変更後コードが lint 警告0になること（同じ stdin 検査を再実行する）。
 - B2: K6 の起点・合格の線・測り方が1つに決まっていること。ADR 文案と §7 に条件が入っていること。
 - B3: 引用パスが実在すること。
+
+---
+
+## r2
+
+- 対象: 同じ2文書（HEAD cc06febde）
+- 審査: Architect（Opus）、2026-10-22
+- 判定: **REVISE**（Blocking 2件。どちらも文書だけの直し。コードの形と方式は合格）
+
+### r1 の Blocking の確かめ
+
+- B1 解消（実測）。§3-1〜§3-3 のコードを写しに当て、本店 checkout の eslint で stdin 検査した。
+  - 写し: `frontend/src/pages/viewer/ViewerApp.tsx`（import・STOP_DETAILS・refresh・フック呼び出しを足したもの）、`frontend/src/pages/viewer/InventoryView.tsx`（:55 を §3-3 の変更後に置き換えたもの）、新規の useViewerAutoRefresh.ts。
+  - 結果: 3つとも `--max-warnings=0` で警告0・エラー0（exit 0）。
+  - 対照として、disable の1行だけを抜いた InventoryView の写しでは `57:41 warning React Hook useMemo has an unnecessary dependency: 'data'` が出た。検査が効いていることも確かめた。
+  - 型: 写しを入れた frontend の複製で `tsc --noEmit -p .` を実行した。`src/pages/viewer` のエラーは0件。出たエラー5件は、viewer の外にある生成物の未作成（api/generated/schema）と本店 node_modules に無い @xyflow/react によるもの。複製の環境が原因で、今回の変更とは関係ない。`screenForError` の戻り値は Screen（`frontend/src/pages/viewer/ViewerApp.tsx:38`）で、`setScreen((prev) => (prev.name === "inventory" ? next : prev))` は Screen を返すので型が合う。
+- B2 一部解消。起点（解析待ち0件の時刻）と合格の線（終点−起点 ≦ 120秒、1件以上）は1つに決まった（`docs/handoff/viewer-auto-refresh/design.md:207`）。§7（`docs/handoff/viewer-auto-refresh/design.md:217-218`）と ADR 文案 7-2（`docs/handoff/viewer-auto-refresh/design.md:149`）にも、ほかの解析が続く間は作り置きが書かれない、という条件が入った。ただし測り方が書かれていない（下の B2-r2）。
+- B3 一部解消。r1 で挙げた services 側のパスは3か所とも tasks 側に直っていた。ただし recon に、ゲートで落ちる引用が1つ残っている（下の B3-r2。r1 の審査で見落とした）。
+
+### Blocking
+
+#### B3-r2. recon.md のワイルドカード入りパスがゲートで落ちる
+- 根拠（実測）: `scripts/check-process-artifacts.js:412-470` の関数をそのまま読み込んで recon.md に当てた。結果は `❌ frontend/src/pages/viewer/*.test.tsx — ファイルが存在しません`。recon.md:51 のバッククォート内のワイルドカード（*.test.tsx）を、実在するファイル名として調べるため。recon の引用検査は `scripts/check-process-artifacts.js:682` で必ず走る。
+- 直し方: recon.md:51 のバッククォートを外す（例: frontend/src/pages/viewer/ の *.test.tsx）。または実在するファイル（`frontend/src/pages/viewer/InventoryView.test.tsx` など）を並べる。
+- design.md で同じ検査に引っかかるのは、新しく作る3ファイル（useViewerAutoRefresh.ts・useViewerAutoRefresh.test.ts・ViewerApp.test.tsx）だけ。どれもこの PR で作るので、PR の段では実在する。design.md の冒頭注記（:1-3）の決まりにも合っている。review-design.md の引用は全部実在した（`git ls-files` と照合）。
+
+#### B2-r2. K6 の測り方（起点と終点の時刻をどう取るか、誰が測るか）が書かれていない
+- 根拠: `docs/handoff/viewer-auto-refresh/design.md:207` は起点と終点の定義だけで、時刻の取り方が無い。r1 B2 の直し方で求めた「DB の読み取りで起点時刻を取る（前例 `docs/handoff/gas-viewer-fresh-fast/design.md:328`）」が入っていない。
+  - 起点は、未完了の analysis_runs（completed_at IS NULL）と extraction_jobs（pending・running・extracted）が0件になった瞬間（`backend/app/services/tcg_distribution_svc.py:897-935`）。後から1回 DB を読んでも、0件になった瞬間は分からない。決めずに測ると、測る人によって起点がずれる。
+  - 終点の「最終更新の時刻がその起点より後になった時刻」も、画面を見て時刻を書くのか、通信記録の応答時刻を使うのかが決まっていない。
+- 直し方: K6 の検証方法に次の3つを足す（Planner が決める。例を書く）。
+  - 起点の取り方。例: Evaluator が閲覧用の読み取りで、上の2つの未完了件数を10秒ごとに読み、初めて両方0件になった読み取りの時刻を起点にする（生の出力を残す）。
+  - 終点の取り方。例: 開いたままの閲覧ページの通信記録で、updated_at が起点より後の `GET /api/v1/viewer/inventory` 応答を受けた時刻を終点にする。
+  - 測る人。K5 と同じく Evaluator。試験アカウントが使えなければ PO の目視に回す。
+
+### Non-blocking の確かめ
+
+- N-1 反映済み（`docs/handoff/viewer-auto-refresh/design.md:25`・`:212`）。引用先の `backend/app/auth/viewer_dependencies.py:47-56` は public.viewer_accounts を id で1行読む処理で、実物と一致した。
+- N-2 反映済み。STOP_DETAILS の3つ（viewer_suspended・viewer_trial_expired・password_change_required）は `frontend/src/pages/viewer/ViewerApp.tsx:42-44` の detail 名と1字違わず一致した。行き先を load() と同じ screenForError で決めるので、停止・期限切れの案内とパスワード変更画面に行く。
+- N-3 反映済み（`docs/handoff/viewer-auto-refresh/design.md:33`）。
+- N-4 反映済み（`docs/handoff/viewer-auto-refresh/design.md:167-172`）。`viewer-pagination-label` は `frontend/src/pages/viewer/InventoryView.tsx:337` にある。`import "./i18n"` は `frontend/src/pages/viewer/InventoryView.test.tsx:13` にある。
+- N-5 反映済み（`docs/handoff/viewer-auto-refresh/design.md:186`）。
+- N-6・N-8 反映済み（`docs/handoff/viewer-auto-refresh/design.md:219-220`）。
+- N-7 反映済み（`docs/handoff/viewer-auto-refresh/design.md:149`）。
+- N-9 反映済み（`docs/handoff/viewer-auto-refresh/design.md:25`・`:216`）。`backend/app/middleware/rate_limit.py:97-102` は IP 単位の数え方で、実物と一致した。
+- N-10 反映済み（`docs/handoff/viewer-auto-refresh/design.md:125`）。「12時間」は `backend/app/auth/viewer_tokens.py:16`（12 * 3600）と一致した。
+- T9（`docs/handoff/viewer-auto-refresh/design.md:181`）: 「NoticeView の suspended」は、kind の型（`frontend/src/pages/viewer/types.ts:56`）と NoticeView の分岐（`frontend/src/pages/viewer/NoticeView.tsx:18`）にある名前と一致した。画面の目印は `viewer-notice-suspended`（`frontend/src/pages/viewer/NoticeView.tsx:30`）で確かめられる。403 では clearToken を通らない（§3-2 の条件は 401 と "invalid viewer token" の両方）ので、T9 の「clearToken は呼ばれない」も設計どおり。
+
+### Non-blocking（r2 で新しく見つけたもの）
+
+1. §3-2 の refresh 冒頭コメント（`docs/handoff/viewer-auto-refresh/design.md:93`）は「トークンが無効（401）ならログイン画面へ戻す」だけで、STOP_DETAILS で案内画面に切り替える場合が書かれていない。コードと食い違うので、「401 と、待っても直らない失敗（STOP_DETAILS）は画面を切り替える」に直すとよい。
+
+### 再審査で見ること（r3）
+- B3-r2: recon.md を `scripts/check-process-artifacts.js` の引用検査に当てて、エラーが0件になること。
+- B2-r2: K6 の検証方法に、起点の取り方・終点の取り方・測る人が1つずつ書かれていること。

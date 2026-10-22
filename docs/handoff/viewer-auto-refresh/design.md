@@ -90,7 +90,7 @@ export function useViewerAutoRefresh(enabled: boolean, refresh: () => void): voi
 ```ts
   // 1分ごとの読み直し（docs/handoff/viewer-auto-refresh/design.md）。読み込み中の画面にはしない。
   // 成功したら在庫表の data だけ差し替える（InventoryView は残るので検索・タブ・ページは保たれる）。
-  // 失敗しても今の表を出したまま次の回を待つ。ただしトークンが無効（401）ならログイン画面へ戻す。
+  // 一時的な失敗は今の表を出したまま次の回を待つ。401 はログイン画面、STOP_DETAILS（停止・期限切れ・パスワード変更）は load() と同じ案内画面へ切り替える。
   const refreshing = useRef(false);
   const refresh = useCallback(async () => {
     if (refreshing.current) return;
@@ -204,7 +204,7 @@ const STOP_DETAILS = new Set(["viewer_suspended", "viewer_trial_expired", "passw
 | K3 一時的な失敗で表が消えない。無効なトークンはログインへ、止められた閲覧者は案内へ切り替わる | vitest T6・T7・T9 合格 |
 | K4 24時間以内の判定が新しい時刻で行われる | vitest T8 合格 |
 | K5 本番で、開いたまま（再読み込みなし）1分ごとに在庫の取得が起き、最終更新の時刻が進む | 本番反映後、閲覧ページを開いて3分置く。ブラウザの通信記録で `GET /api/v1/viewer/inventory` が約60秒おきに出ることと、最終更新の時刻が2回以上進むことを確かめる（Evaluator。閲覧者の試験アカウントが使えなければ PO の目視に回す） |
-| K6（KGI） 解析待ちが0件になってから2分以内に、再読み込みなしで新しい在庫が表に出る | 起点 = 解析待ち（未完了の analysis_runs・extraction_jobs）が0件になった時刻。終点 = 閲覧ページの最終更新の時刻がその起点より後になった時刻（開いたまま、再読み込みなし）。本番で1件以上測る。終点 − 起点 ≦ 120秒なら合格。作り直しの時間で120秒をわずかに超えたときは、値を記録して PO に報告する |
+| K6（KGI） 解析待ちが0件になってから2分以内に、再読み込みなしで新しい在庫が表に出る | 測る人: Evaluator（本番反映後）。起点: reader 鍵（ADR-1024）の読み取りで、未完了の analysis_runs・extraction_jobs の件数を10秒ごとに数え、1件以上から初めて0件になった読み取りの時刻（10秒の幅の誤差を記録する）。終点: 同じ時間帯に閲覧ページを開いたまま（再読み込みなし）にしたブラウザの通信記録で、updated_at が起点より後の `GET /api/v1/viewer/inventory` の応答を受けた時刻。1件以上測り、終点 − 起点 ≦ 120秒なら合格。作り直しの時間で120秒をわずかに超えたときは、値を記録して PO に報告する。止まる条件: 該当の表が reader 鍵で読めない、または閲覧者の試験アカウントで閲覧ページを開けない → 停止して Opus へ（PO の目視に回す） |
 | K7 型・lint・build・既存テストがすべて合格 | §4-5 のコマンド、CI |
 
 ## 6. 外部・過去事例の参照と我々への応用
@@ -233,3 +233,4 @@ const STOP_DETAILS = new Set(["viewer_suspended", "viewer_trial_expired", "passw
 
 ## 審査
 - r1: REVISE（Blocking 3件 B1〜B3）。記録: docs/handoff/viewer-auto-refresh/review-design.md。B1〜B3 と N-1〜N-10 を反映して r2 へ。
+- r2: REVISE（B3-r2 recon の引用・B2-r2 K6 の測り方）。反映して r3 へ。

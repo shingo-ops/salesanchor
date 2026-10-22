@@ -48,7 +48,7 @@
 - nginx は api zone が 30r/s、/api/ の burst は50（`nginx/nginx.conf:8`、`:217-219`）。
 
 ## テスト
-- vitest: `frontend/src/pages/viewer/*.test.tsx`。ViewerApp のテストは無い。実行は `cd frontend && npm run test:unit`。
+- vitest: frontend/src/pages/viewer/ の *.test.tsx（例: `frontend/src/pages/viewer/InventoryView.test.tsx`）。ViewerApp のテストは無い。実行は `cd frontend && npm run test:unit`。
 - 閲覧ページの e2e は無い。
 
 ## i18n
