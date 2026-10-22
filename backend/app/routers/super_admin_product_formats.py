@@ -27,8 +27,8 @@ from app.schemas.product_format import (
 
 router = APIRouter()
 
-_COLS = "id, code, name, name_en, display_order, is_active, line_id, type_master_id, created_at, updated_at"
-_UPDATABLE = {"code", "name", "name_en", "display_order", "is_active", "line_id", "type_master_id"}
+_COLS = "id, code, name, name_en, display_order, is_active, line_id, created_at, updated_at"
+_UPDATABLE = {"code", "name", "name_en", "display_order", "is_active", "line_id"}
 
 
 async def _game_ids_for(db: AsyncSession, format_ids: list[int]) -> dict[int, list[int]]:
@@ -90,8 +90,8 @@ async def create_product_format(
         result = await db.execute(
             text(
                 "INSERT INTO public.product_formats "
-                "(code, name, name_en, display_order, is_active, line_id, type_master_id) "
-                "VALUES (:code, :name, :name_en, :display_order, :is_active, :line_id, :type_master_id) "
+                "(code, name, name_en, display_order, is_active, line_id) "
+                "VALUES (:code, :name, :name_en, :display_order, :is_active, :line_id) "
                 f"RETURNING {_COLS}"
             ),
             data.model_dump(),

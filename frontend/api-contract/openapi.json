@@ -24671,17 +24671,6 @@
               }
             ],
             "title": "Name En"
-          },
-          "type_master_id": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Type Master Id"
           }
         },
         "required": [
@@ -24774,17 +24763,6 @@
             ],
             "title": "Name En"
           },
-          "type_master_id": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Type Master Id"
-          },
           "updated_at": {
             "format": "date-time",
             "title": "Updated At",
@@ -24874,17 +24852,6 @@
               }
             ],
             "title": "Name En"
-          },
-          "type_master_id": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Type Master Id"
           }
         },
         "title": "ProductFormatUpdate",

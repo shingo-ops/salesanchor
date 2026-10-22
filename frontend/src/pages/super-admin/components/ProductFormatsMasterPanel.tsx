@@ -41,7 +41,6 @@ interface ProductFormat {
   name: string;
   name_en: string | null;
   line_id: number | null;
-  type_master_id: number | null;
   display_order: number;
   is_active: boolean;
   created_at: string;
@@ -54,7 +53,6 @@ type FormatFormState = {
   name: string;
   name_en: string;
   line_id: number | null;
-  type_master_id: number | null;
   display_order: number;
   is_active: boolean;
   game_ids: string[];
@@ -65,7 +63,6 @@ const emptyForm: FormatFormState = {
   name: "",
   name_en: "",
   line_id: null,
-  type_master_id: null,
   display_order: 100,
   is_active: true,
   game_ids: [],
@@ -131,7 +128,6 @@ export function ProductFormatsMasterPanel() {
       name: item.name,
       name_en: item.name_en || "",
       line_id: item.line_id,
-      type_master_id: item.type_master_id,
       display_order: item.display_order,
       is_active: item.is_active,
       game_ids: item.game_ids.map(String),
@@ -156,7 +152,6 @@ export function ProductFormatsMasterPanel() {
       name: form.name,
       name_en: form.name_en || null,
       line_id: form.line_id,
-      type_master_id: form.type_master_id,
       display_order: form.display_order,
       is_active: form.is_active,
     };
@@ -219,7 +214,6 @@ export function ProductFormatsMasterPanel() {
 
   const columns: DataTableColumn<ProductFormat>[] = [
     { key: "name", header: t(`${f}.name`) },
-    { key: "type_master_id", header: t(`${f}.typeMasterId`), renderCell: row => getGameName(row.type_master_id) },
     { key: "game_ids", header: t(`${f}.gameIds`), renderCell: row => getGameNames(row.game_ids) },
     { key: "line_id", header: t(`${f}.lineId`), renderCell: row => getLineName(row.line_id) },
     { key: "display_order", header: t(`${f}.displayOrder`) },
@@ -322,20 +316,6 @@ export function ProductFormatsMasterPanel() {
                 ]}
                 value={form.line_id != null ? String(form.line_id) : ""}
                 onChange={e => setForm({ ...form, line_id: e.target.value ? Number(e.target.value) : null })}
-                fullWidth
-              />
-            </div>
-            <div className="form-group">
-              <label style={{ display: "block", fontSize: "var(--font-sm)", marginBottom: "var(--space-1)" }}>
-                {t(`${f}.typeMasterId`)}
-              </label>
-              <SelectControl
-                options={[
-                  { value: "", label: "—" },
-                  ...tcgTypes.map(g => ({ value: String(g.id), label: g.name_ja })),
-                ]}
-                value={form.type_master_id != null ? String(form.type_master_id) : ""}
-                onChange={e => setForm({ ...form, type_master_id: e.target.value ? Number(e.target.value) : null })}
                 fullWidth
               />
             </div>
