@@ -75,4 +75,4 @@ ADR-027（i18n）・ADR-067（デザイントークン）・ADR-144（UIガバ�
 - B3 文言: analysisRules.dashboard.loading・tcgLineImport.loading は日英とも common.loading と同じ文言。label は要らない。
 - B4 CSS: 使っている class は analysis-dashboard-empty（空表示と共用）と page（共用）だけで、置換後に使われなくなる規則は 0（css.txt）。
 - B5 試験: frontend/src/pages/super-admin/components/ProductMasterPanel.test.tsx:126 は置換後に落ちる（tests.txt §3）。試験 :112-128 の意図は「古い失敗で alert と件数表示を出さない」。件数表示は :100 と同じ文面 "Products: N"。
-- B6 e2e: frontend/e2e/tcg-product-import.spec.ts:63・:86 は排他の三項の別の枝を見るため重ならない（コード読み、実機は CI で確認）。
+- B6 e2e: frontend/tests-e2e/tcg-product-import.spec.ts:63・:86 は排他の三項の別の枝を見るため重ならない（コード読み、実機は CI で確認）。
