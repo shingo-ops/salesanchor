@@ -68,3 +68,11 @@ ADR-027（i18n）・ADR-067（デザイントークン）・ADR-144（UIガバ�
 - frontend/src/pages/super-admin/components/ProductMasterPanel.test.tsx:126 は `queryByRole("status")` が null を期待。ProductMasterPanel.tsx:116 を Spinner にすると落ちる可能性が高い（未実行）。
 - e2e tcg-product-import.spec.ts:63,86 は画面全体の `getByRole("status")`。影響は未確認。
 - 試験は i18n を各自で import して初期化する（frontend/src/test-setup.ts に i18n 初期化は無い。H6.txt）。en.json の common.loading は "Loading..."。
+
+## 段階2 便2 の調査（origin/main 16000c2d5、生出力 /tmp/CC報告ファイル/loading-bin2-recon/）
+- B1 対象: pages/super-admin の文字だけ表示 31 件（targets.tsv）。検査の数え方で super-admin は 48 件、残り 17 件はボタン内の三項 13・"uploading" 1・"errorLoading" 2・TcgDistributionPage.tsx:25 1（gov-counts.txt）。
+- B2 置き方: 親が td・li・p の中にあるもの 0、同じ要素に他の文字が混ざるもの 0（context.txt）。要素ごと LoadingBlock に替えられる。
+- B3 文言: analysisRules.dashboard.loading・tcgLineImport.loading は日英とも common.loading と同じ文言。label は要らない。
+- B4 CSS: 使っている class は analysis-dashboard-empty（空表示と共用）と page（共用）だけで、置換後に使われなくなる規則は 0（css.txt）。
+- B5 試験: frontend/src/pages/super-admin/components/ProductMasterPanel.test.tsx:126 は置換後に落ちる（tests.txt §3）。試験 :112-128 の意図は「古い失敗で alert と件数表示を出さない」。件数表示は :100 と同じ文面 "Products: N"。
+- B6 e2e: frontend/e2e/tcg-product-import.spec.ts:63・:86 は排他の三項の別の枝を見るため重ならない（コード読み、実機は CI で確認）。
