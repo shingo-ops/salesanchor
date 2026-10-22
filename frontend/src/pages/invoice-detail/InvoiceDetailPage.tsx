@@ -17,6 +17,7 @@ import { ContentToolbar } from "../../components/ContentToolbar";
 import { Button } from "../../components/Button";
 import { ButtonLink } from "../../components/ButtonLink";
 import { TextFieldControl } from "../../components/TextField";
+import { LoadingBlock } from "../../components/loading";
 
 interface InvoiceItem {
   id: number;
@@ -188,7 +189,7 @@ export default function InvoiceDetailPage() {
     );
   };
 
-  if (loading) return <div className="page"><div className="loading">{t("common.loading")}</div></div>;
+  if (loading) return <div className="page"><LoadingBlock /></div>;
   if (!invoice) return <div className="page"><div className="error-message">{error || t("common.fetchError")}</div></div>;
 
   // 総重量 = Σ(数量 × 行重量)。

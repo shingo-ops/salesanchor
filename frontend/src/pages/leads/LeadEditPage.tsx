@@ -19,6 +19,7 @@ import { getCloseReasons, type CloseReasonResponse } from "../../api/closeReason
 import { LostReasonFields, buildLostReasonUpdatePayload } from "./LeadFormFields";
 import { TextareaControl } from "../../components/Textarea";
 import { TextFieldControl } from "../../components/TextField";
+import { LoadingBlock } from "../../components/loading";
 
 interface Lead {
   id: number;
@@ -166,7 +167,7 @@ export default function LeadEditPage() {
     <PageLayout navKey="nav.leadsSection" subtitleKey="leads.subtitle">
       {error && <div className="error-message">{error}</div>}
       {loading ? (
-        <div className="loading">{t("common.loading")}</div>
+        <LoadingBlock />
       ) : (
         <form onSubmit={handleSubmit} style={{ maxWidth: "var(--modal-max-w-md)" }}>
           <div className="form-group"><label>{t("leads.customerName")} *</label>

@@ -26,6 +26,7 @@ import { CompanyConvLogsTab } from "./CompanyConvLogsTab";
 import { CompanyAddressModal } from "./CompanyAddressModal";
 import { typeLabel } from "./company-detail.types";
 import { PageLayout } from "../../components/PageLayout";
+import { LoadingBlock } from "../../components/loading";
 
 export default function CompanyDetailPage() {
   const { t } = useTranslation();
@@ -61,7 +62,7 @@ export default function CompanyDetailPage() {
     load,
   } = state;
 
-  if (loading) return <div className="page-container"><p>{t("common.loading")}</p></div>;
+  if (loading) return <div className="page-container"><LoadingBlock /></div>;
   if (!company) {
     return (
       <div className="page-container">

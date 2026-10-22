@@ -25,6 +25,7 @@ import {
   weightForUnit,
 } from "../quote-create/quoteDraft";
 import { TextFieldControl } from "../../components/TextField";
+import { LoadingBlock } from "../../components/loading";
 
 interface QuoteSummary {
   id: number;
@@ -253,7 +254,7 @@ export default function InvoiceCreatePage() {
         <div data-testid="invoice-from-quote">
           <p style={{ color: "var(--text-secondary)" }}>{t("invoices.fromQuoteHelp")}</p>
           {quotesLoading ? (
-            <div className="loading">{t("common.loading")}</div>
+            <LoadingBlock />
           ) : quotes.length === 0 ? (
             <div className="empty">{t("invoices.noApprovedQuotes")}</div>
           ) : (

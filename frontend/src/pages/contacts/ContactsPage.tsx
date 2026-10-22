@@ -32,6 +32,7 @@ import { ContactFormFields, type ContactFormState, type ContactCompany } from ".
 import { TextareaControl } from "../../components/Textarea";
 import { TextFieldControl } from "../../components/TextField";
 import { Checkbox } from "../../components/Checkbox";
+import { LoadingBlock } from "../../components/loading";
 
 interface Contact {
   id: number;
@@ -383,7 +384,7 @@ export default function ContactsPage() {
       </Drawer>
 
       {loading ? (
-        <p>{t("common.loading")}</p>
+        <LoadingBlock />
       ) : (() => {
         const columns: DataTableColumn<Contact>[] = [
           { key: "name", header: t("common.name"), renderCell: (c) => contactDisplayName(c) },
