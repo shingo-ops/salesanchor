@@ -18,6 +18,7 @@
  *   2026-04-30: Phase 1-D Sprint 3 初版
  */
 
+import { LoadingBlock } from "../../components/loading";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -418,7 +419,7 @@ export default function ChannelsPage() {
       </h3>
 
       {loading ? (
-        <div className="loading">{t("common.loading")}</div>
+        <LoadingBlock />
       ) : channels.length === 0 ? (
         // ----- 空 state（onboarding CTA） -----
         <div

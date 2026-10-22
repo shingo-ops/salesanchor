@@ -1,3 +1,4 @@
+import { LoadingBlock } from "../../components/loading";
 import { useEffect, useState, FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
@@ -83,7 +84,7 @@ export default function ShiftsPage() {
           </div>
         </form>
       </Modal>
-      {loading ? <div className="loading">{t("common.loading")}</div> : (() => {
+      {loading ? <LoadingBlock /> : (() => {
         const columns: DataTableColumn<Shift>[] = [
           {
             key: "shift_date",
