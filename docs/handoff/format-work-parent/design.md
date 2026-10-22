@@ -149,11 +149,11 @@ KGI（○×で判定できる形）:
 ### 便4 登録ドロワーの 5 欄を金型 Select にする（画面のみ）
 - 対象: `frontend/src/features/tcg-analysis-review/ProductMasterDrawer.tsx:54-91`（SearchSelect を消す）と `:215-219`。
 - 変更: 5 欄（大分類・中分類・製造元・商品分類・細分類）を金型 `SelectControl`（`frontend/src/components/Select.tsx:64`）にする。
-  - 周りの欄と同じく `<label className="pmd-field">{label}<SelectControl .../></label>` の形にする（:220-235 の TextFieldControl と同じ形）。ラベル付きの `Select` は使わない。こうするとラベルが二重にならない。前例は `frontend/src/pages/super-admin/components/ProductFormatsMasterPanel.tsx:332`。
+  - 周りの欄と同じく `<label className="pmd-field">{label}<SelectControl .../></label>` の形にする（:220-235 の TextFieldControl と同じ形）。ラベル付きの `Select` は使わない。こうするとラベルが二重にならない。前例は `frontend/src/pages/super-admin/components/ProductFormatsMasterPanel.tsx:312`。
   - props: `size="sm" fullWidth placeholder options value onChange`。
   - options は金型の形 `{value,label}`（Select.tsx:106-108）に変換する。例: `formatOptionsFor(formats, values.work_id).map(o => ({ value: String(o.id), label: o.name }))`。value の型は Select.tsx の実物に合わせる。
   - 細分類には `disabled={!values.work_id}` を付ける。
-  - onChange は、今の `setValue`（key と値を受け、中分類のときは中で `formatAfterWorkChange` を呼ぶ。:163）に渡す。例: `onChange={(e) => setValue('work_id', e.target.value)}`。SelectControl の onChange は素の select のイベント（Select.tsx:42）。
+  - onChange は、今の `setValue`（key と値を受け、中分類のときは中で `formatAfterWorkChange` を呼ぶ。`frontend/src/features/tcg-analysis-review/ProductMasterDrawer.tsx:119-130`、呼ぶ行は :125）に渡す。例: `onChange={(e) => setValue('work_id', e.target.value)}`。SelectControl の onChange は素の select のイベント（`frontend/src/components/Select.tsx:34-37` の native props）。
 - 文言: 今の「名称で検索・選択」（ja.json:4923）は、文字を打って絞れない Select の動きと合わない。新しいキー `tcgAnalysisReview.productMasterDrawer.selectPlaceholder`（ja「選択してください」、en「Select」）を ja/en 同時に足す。使わなくなる `searchSelectPlaceholder` は、ほかで使っていなければ消す。
 - GO: 画面だけの変更。委任 GO（Opus）。
 - 試験: `frontend/src/features/tcg-analysis-review/ProductMasterDrawer.test.tsx` の `input[list]`（:62）と `#lookup-product_format_id option`（:130）を、Select の選択の試験に書き直す。

@@ -4920,7 +4920,7 @@
       "memo": "Memo"
     },
     "productMasterDrawer": {
-      "searchSelectPlaceholder": "Search or select by name",
+      "selectPlaceholder": "Select",
       "unselected": "Not selected",
       "emptyValue": "Not entered",
       "registeredTitle": "Registered in the product master (applied from the next analysis)",
