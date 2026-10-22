@@ -15,7 +15,7 @@
 |links に無い組を products に直接書くと DB が拒否する|test_db_rejects_pair_not_in_links|
 |片方が NULL なら通る|test_db_allows_pair_with_null_side|
 |使われている links の行を直接消すと DB が拒否する。API は今と同じ 409|test_db_rejects_removing_link_in_use と、既存の test_replace_games_blocks_removal_in_use|
-|使われている細分類の物理削除の結果が一貫している。通るか落ちるかを CI のログに残す|test_physical_delete_of_format_in_use_outcome（警告 BIN2_T4_PHYSICAL_DELETE_OUTCOME）|
+|使われている細分類の物理削除は FK が拒否し、products・formats・links は元のまま|test_physical_delete_of_format_in_use_is_rejected|
 |migration が値を書かない|python3 scripts/check-migration-value-writes.py diff origin/main HEAD が 0 件|
 |本番で不一致が 0 件|recon-bin2.md の本番の基準値が 0|
 
@@ -28,3 +28,9 @@
 
 ## CI の実測（試験(4)）
 CI の実測で、使用中の細分類の物理削除は FK により拒否された。物理削除の前に、使用中の商品の細分類を外す必要がある。ON DELETE は変えない（design.md §便2 の分岐どおり）。
+
+## 解析の正答率への影響（2026-10-22 調べ）
+影響する経路は無い。調査役と独立の検証役（Fable）が、別々に origin/main 0a22b62a8 を読んだ。
+- v102 の解析は、products から id・product_code・mark・work_id・検索語・除外語・name・name_en だけを読む。products へ INSERT/UPDATE しない。根拠: backend/app/services/gemini_raw_copy_v102_product_first.py:338-347、backend/app/services/tcg_work_reference.py:86-92、backend/app/services/line_analysis_v102_svc.py:787。product_format_id・product_formats・links は読まない。
+- 正答率の採点（scripts/accuracy/score_v102.py）は TSV の突き合わせだけで、DB に接続しない。
+- products の work_id・product_format_id を書くのは次の 3 か所だけで、どれも書く前に links と照合する。backend/app/services/tcg_product_detail_svc.py:270-283、backend/app/services/tcg_product_master_svc.py:528、backend/app/services/tcg_product_roundtrip_svc.py:330-337。backend/app/routers/products.py の INSERT・PATCH は 2 列を書かない（:61-78 の _UPDATABLE_COLUMNS に無い）。
