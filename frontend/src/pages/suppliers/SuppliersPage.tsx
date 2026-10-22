@@ -1,3 +1,4 @@
+import { LoadingBlock } from "../../components/loading";
 import { useEffect, useRef, useState, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -228,7 +229,7 @@ export default function SuppliersPage() {
         </form>
       </Drawer>
 
-      {loading ? <div className="loading">{t("common.loading")}</div> : (() => {
+      {loading ? <LoadingBlock /> : (() => {
         const columns: DataTableColumn<Supplier>[] = [
           { key: "supplier_code", header: t("common.code"), renderCell: (s) => <span className="mono">{s.supplier_code || "-"}</span> },
           { key: "name", header: t("suppliers.supplierName") },

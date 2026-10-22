@@ -12,6 +12,7 @@
  *   2026-04-16: 初版（GAS UI互換に刷新、モーダル式→split-view式）
  */
 
+import { LoadingBlock } from "../../components/loading";
 import { useEffect, useMemo, useState, FormEvent } from "react";
 import type { LucideIcon } from "../../constants/icons";
 import { useTranslation } from "react-i18next";
@@ -300,7 +301,7 @@ export default function RolesPage() {
     }
   };
 
-  if (loading) return <div className="page"><div className="loading">{t("common.loading")}</div></div>;
+  if (loading) return <div className="page"><LoadingBlock /></div>;
 
   return (
     <div className="page roles-page">
