@@ -1,6 +1,7 @@
 """ADR-1020 便2a: 細分類とゲームの照合・選択肢・印の返却・使えるゲームの置き換え（実 PostgreSQL・CI のみ）。"""
 from pathlib import Path
 
+import psycopg2.errors
 import pytest
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
@@ -24,7 +25,8 @@ def fmt_pg(edit_pg):  # noqa: F811
     connection, url = edit_pg
     with connection.cursor() as cur:
         for name in ("20260922_030000_product_format_game_links.sql",
-                     "20260923_010000_product_formats_add_type_master_id.sql"):
+                     "20260923_010000_product_formats_add_type_master_id.sql",
+                     "20261022_100000_products_format_in_work_fk.sql"):  # ADR-1038 便2: 複合 FK
             cur.execute((_MIGRATIONS / name).read_text())
         cur.execute("SELECT id FROM public.type_master WHERE is_active ORDER BY id LIMIT 2")
         work_a, work_b = [r[0] for r in cur.fetchall()]
@@ -139,22 +141,55 @@ async def test_detail_update_rejects_unlinked_format_change(fmt_pg):
         await engine.dispose()
 
 
-async def test_detail_update_keeps_unchanged_old_pair(fmt_pg):
-    _set_product(fmt_pg, "DETAIL", fmt_pg["work_a"], fmt_pg["unlinked"])
-    engine = create_async_engine(fmt_pg["url"])
-    try:
-        async with AsyncSession(engine) as db:
-            pid = await _pid(db, "DETAIL")
-            snapshot = await details.get_product_detail(db, pid)
-            values = edit_values(snapshot)
-            values["japanese_title"] = "Renamed only"
-            result = await details.update_product_detail(db, pid, values, snapshot["revision"], "test")
-            assert result["product"]["japanese_title"] == "Renamed only"
-        with fmt_pg["connection"].cursor() as cur:
-            cur.execute("SELECT product_format_id, name FROM public.products WHERE product_code='DETAIL'")
-            assert cur.fetchone() == (fmt_pg["unlinked"], "Renamed only")
-    finally:
-        await engine.dispose()
+def test_db_rejects_pair_not_in_links(fmt_pg):
+    """ADR-1038 便2: links に無い組を products に直接書くと DB が拒否する（旧 keeps_unchanged_old_pair の置き換え）。"""
+    _set_product(fmt_pg, "DETAIL", fmt_pg["work_a"], fmt_pg["linked"])
+    with pytest.raises(psycopg2.errors.ForeignKeyViolation):
+        _set_product(fmt_pg, "DETAIL", fmt_pg["work_a"], fmt_pg["unlinked"])
+    with pytest.raises(psycopg2.errors.ForeignKeyViolation):
+        _set_product(fmt_pg, "DETAIL", fmt_pg["work_b"], fmt_pg["linked"])
+    assert _row(fmt_pg)[:2] == (fmt_pg["work_a"], fmt_pg["linked"])
+
+
+def test_db_allows_pair_with_null_side(fmt_pg):
+    """MATCH SIMPLE: 片方が NULL なら照合しない。"""
+    _set_product(fmt_pg, "DETAIL", None, fmt_pg["unlinked"])
+    assert _row(fmt_pg)[:2] == (None, fmt_pg["unlinked"])
+    _set_product(fmt_pg, "DETAIL", fmt_pg["work_b"], None)
+    assert _row(fmt_pg)[:2] == (fmt_pg["work_b"], None)
+    _set_product(fmt_pg, "DETAIL", None, None)
+    assert _row(fmt_pg)[:2] == (None, None)
+
+
+def test_db_rejects_removing_link_in_use(fmt_pg):
+    """使われている組の links 行を直接消すと DB が拒否する。使われていなければ消せる。"""
+    _set_product(fmt_pg, "DETAIL", fmt_pg["work_a"], fmt_pg["linked"])
+    sql = "DELETE FROM public.product_format_game_links WHERE format_id=%s AND type_master_id=%s"
+    with fmt_pg["connection"].cursor() as cur:
+        with pytest.raises(psycopg2.errors.ForeignKeyViolation):
+            cur.execute(sql, (fmt_pg["linked"], fmt_pg["work_a"]))
+    assert _links(fmt_pg, fmt_pg["linked"]) == [(fmt_pg["work_a"], "keep-me")]
+    _set_product(fmt_pg, "DETAIL", None, None)
+    with fmt_pg["connection"].cursor() as cur:
+        cur.execute(sql, (fmt_pg["linked"], fmt_pg["work_a"]))
+    assert _links(fmt_pg, fmt_pg["linked"]) == []
+
+
+def test_physical_delete_of_format_in_use_is_rejected(fmt_pg):
+    """ADR-1038 便2 試験(4): 使われている細分類の物理削除は FK が拒否する。
+
+    links の CASCADE 削除が fk_products_format_in_work に止められる（CI の実測）。
+    拒否後も products・formats・links は元のまま。ON DELETE は変えない。
+    """
+    _set_product(fmt_pg, "DETAIL", fmt_pg["work_a"], fmt_pg["linked"])
+    with fmt_pg["connection"].cursor() as cur:
+        with pytest.raises(psycopg2.errors.ForeignKeyViolation):
+            cur.execute("DELETE FROM public.product_formats WHERE id=%s", (fmt_pg["linked"],))
+        cur.execute("SELECT work_id, product_format_id FROM public.products WHERE product_code='DETAIL'")
+        assert cur.fetchone() == (fmt_pg["work_a"], fmt_pg["linked"])
+        cur.execute("SELECT count(*) FROM public.product_formats WHERE id=%s", (fmt_pg["linked"],))
+        assert cur.fetchone()[0] == 1
+    assert _links(fmt_pg, fmt_pg["linked"]) == [(fmt_pg["work_a"], "keep-me")]
 
 
 async def test_replace_games_adds_and_removes_links(fmt_pg):
