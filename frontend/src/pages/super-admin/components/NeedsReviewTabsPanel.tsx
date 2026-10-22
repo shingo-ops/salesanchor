@@ -16,7 +16,7 @@ import { Button } from "../../../components/Button";
 import { SelectControl } from "../../../components/Select";
 import { ContentToolbar } from "../../../components/ContentToolbar";
 import { Stack } from "../../../components/Stack";
-import { Spinner } from "../../../components/loading";
+import { LoadingBlock } from "../../../components/loading";
 import { useSuperAdmin } from "../../../hooks/useSuperAdmin";
 import { useRealtimeRefresh } from "../../../hooks/useRealtimeRefresh";
 import { TOPICS } from "../../../lib/realtime/topics";
@@ -282,7 +282,7 @@ export default function NeedsReviewTabsPanel() {
               }
             />
           )}
-          {loading && <Spinner size="md" label={t("common.loading")} />}
+          {loading && <LoadingBlock />}
           {errorKey && <p role="alert" style={{ color: "var(--color-error)" }}>{t(errorKey)}</p>}
           {data && (
             <DataTable

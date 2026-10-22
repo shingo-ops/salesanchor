@@ -5,12 +5,13 @@
  * PRで追加・変更された frontend/src/pages/ 配下の .tsx ファイルに
  * 新規の「生UI部品」が増えていないかを検査する。
  *
- * 検出対象（5種）:
+ * 検出対象（6種）:
  *   - 生 <select>
  *   - 生 <input type="text"|"search"|type省略>  ← 複数行対応
  *   - 生 <input type="checkbox">（AY-4d）
  *   - 生 <input type="radio">（AY-5b）
  *   - 自作タブ（classNameにtabを含むがtableを含まないトークン）
+ *   - 読み込み中の文字だけの表示 t("...loading...")（<LoadingBlock> を使う）
  *
  * 判定方式:
  *   各変更ファイルについて BASE/HEAD 両 SHA の全文を取得し、
@@ -335,6 +336,31 @@ function countRadio(content) {
 }
 
 // ---------------------------------------------------------------------------
+// 検出ロジック: 読み込み中の文字だけの表示
+// ---------------------------------------------------------------------------
+
+/**
+ * コンテンツ内の t("...loading...") の件数を返す（ui-allow 除外済み）。
+ * prop の値（`name={t("...")}`）は数えない。
+ */
+function countLoadingText(content) {
+  const lines = content.split('\n');
+  const re = /\bt\(\s*["'`]([A-Za-z0-9_.]*[Ll]oading[A-Za-z0-9_.]*)["'`]\s*\)/g;
+  let count = 0;
+  let m;
+  while ((m = re.exec(content)) !== null) {
+    const brace = content.lastIndexOf('{', m.index);
+    if (brace !== -1) {
+      const before = content.slice(0, brace).replace(/\s+$/, '');
+      if (before.endsWith('=')) continue;
+    }
+    const lineIdx = getLineIndex(content, m.index);
+    if (!hasUiAllowBefore(lines, lineIdx)) count++;
+  }
+  return count;
+}
+
+// ---------------------------------------------------------------------------
 // 集計
 // ---------------------------------------------------------------------------
 
@@ -345,6 +371,7 @@ function countAll(content) {
     tab: countTab(content),
     checkbox: countCheckbox(content),
     radio: countRadio(content),
+    loadingText: countLoadingText(content),
   };
 }
 
@@ -387,9 +414,10 @@ function main() {
       tab:    '自作タブ',
       checkbox: '生<input type="checkbox">',
       radio: '生<input type="radio">',
+      loadingText: '読み込み中の文字だけの表示 → <LoadingBlock> を使うこと',
     };
 
-    for (const type of ['select', 'input', 'tab', 'checkbox', 'radio']) {
+    for (const type of ['select', 'input', 'tab', 'checkbox', 'radio', 'loadingText']) {
       if (headCounts[type] > baseCounts[type]) {
         violations.push({
           file: headPath,
@@ -455,6 +483,8 @@ if (require.main === module) {
     countCheckbox,
     isCheckboxInput,
     countRadio,
+    countLoadingText,
+    countAll,
     isRadioInput,
     extractInputTags,
     isTabToken,

@@ -17,6 +17,8 @@ const {
   countTab,
   countCheckbox,
   countRadio,
+  countLoadingText,
+  countAll,
   isValidUiAllow,
 } = require('../check-ui-governance');
 
@@ -330,6 +332,23 @@ assert(
   countRadio('<input type={kind} />'),
   0
 );
+
+// T38-T44: 読み込み中の文字だけの表示
+assert('T38: <p>{t("common.loading")}</p> は1件', countLoadingText('<p>{t("common.loading")}</p>'), 1);
+assert(
+  'T39: 三項の中の t("schedule.loading") は1件',
+  countLoadingText('{loading ? <div className="loading">{t("schedule.loading")}</div> : null}'),
+  1
+);
+assert('T40: prop の値 label={t(...)} は0件', countLoadingText('<LoadingBlock label={t("schedule.loading")} />'), 0);
+assert('T41: loadingText={t(...)} は0件', countLoadingText('<Button loadingText={t("common.loading")}>'), 0);
+assert(
+  'T42: 直前行に有効な ui-allow があれば0件',
+  countLoadingText('// ui-allow: 理由 (#4624)\n<p>{t("common.loading")}</p>'),
+  0
+);
+assert('T43: t("common.save") は0件', countLoadingText('{t("common.save")}'), 0);
+assert('T44: countAll の戻りに loadingText がある', countAll('<p>{t("common.loading")}</p>').loadingText, 1);
 
 // ---------------------------------------------------------------------------
 // 結果サマリ
