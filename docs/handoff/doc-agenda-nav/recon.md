@@ -33,12 +33,12 @@
 
 ### 2-1. 会話のたびに自動で読み込まれるもの（起動時）
 
-公式仕様（raw/official-memory-page.md）: ユーザー CLAUDE.md と @import、作業ディレクトリ以上の CLAUDE.md、`paths` の無い `.claude/rules/*.md`、MEMORY.md 先頭200行/25KB、が起動時に読み込まれる。サブディレクトリの CLAUDE.md と `paths` 付き rules は、該当ファイルを触ったときだけ読み込まれる（同 :64, :88, :585）。
+公式仕様（raw/official-memory-page.md）: ユーザー CLAUDE.md と @import、作業ディレクトリ以上の CLAUDE.md、`paths` の無い .claude/rules/*.md、MEMORY.md 先頭200行/25KB、が起動時に読み込まれる。サブディレクトリの CLAUDE.md と `paths` 付き rules は、該当ファイルを触ったときだけ読み込まれる（同 :64, :88, :585）。
 
 | # | ファイル | 行 | 文字 | 根拠（読み込まれる理由） |
 |---|---|---|---|---|
 | 1 | ~/.claude/CLAUDE.md | 84 | 3,025 | ユーザー指示（公式 :61 表） |
-| 2 | ~/kb/AGENTS.md | 32 | 1,316 | ~/.claude/CLAUDE.md:84 `@~/kb/AGENTS.md` の import（import は文脈を減らさない: 公式 :104 周辺） |
+| 2 | ~/kb/AGENTS.md | 32 | 1,316 | ~/.claude/CLAUDE.md:84 @~/kb/AGENTS.md の import（import は文脈を減らさない: 公式 :104 周辺） |
 | 3 | ~/.claude/rules/common/agents.md | 53 | 1,712 | `paths` 無し＝常時読込（raw/rules-frontmatter.txt） |
 | 4 | ~/.claude/rules/common/git-workflow.md | 24 | 622 | 同上 |
 | 5 | MEMORY.md（auto memory） | 149 | 16,298 | 公式 :547「先頭200行または25KB」。149行/16,298字は上限内＝全文読込 |
@@ -46,7 +46,7 @@
 | **計** | | **462** | **29,290** | raw/autoload-sizes.txt |
 
 読み込まれない（よくある誤解）:
-- `AGENTS.md`（281行/8,651字）: CLAUDE.md が在るため読まれない（公式 :357「An AGENTS.md and a CLAUDE.md … → Your CLAUDE.md files only」。`pluginConfigs` 未設定＝既定 `claude-md-or-agents-md`: raw/settings-flags.txt）。CLAUDE.md に `@AGENTS.md` も無い。
+- `AGENTS.md`（281行/8,651字）: CLAUDE.md が在るため読まれない（公式 :357「An AGENTS.md and a CLAUDE.md … → Your CLAUDE.md files only」。`pluginConfigs` 未設定＝既定 `claude-md-or-agents-md`: raw/settings-flags.txt）。CLAUDE.md に @AGENTS.md も無い。
 - `docs/` 配下の全文書・ADR: 自動ロードされない（FEATURE-INDEX.md:3 も同旨）。
 
 条件付き（該当ファイルを触ったとき）:
