@@ -142,3 +142,17 @@ PO 原文の要旨: 「全ての読み込みを差し替えて」「金型を変
 - 弊害: ButtonMigration 系の試験は負荷が高いと 5 秒の時間切れで落ちる（未変更の試験。単独・時間延長の再実行で pass）。
 - 守り手: 2-6 と同じ（UI governance gate と Opus の件数記録）。
 - 戻し方: 本便の PR を revert。
+
+## 2-12 便3 第3組（顧客・見込み客・商品・見積・請求・受注・登録など 17 画面 24 件）
+- 直し方: card-6.md の規則 A・B・E・F。枠の div は残し中だけ替える（E）、枠の div 自身が文字を持つ 1 件は枠を残して文字だけ替える（F、recon C8）。label・size は渡さない。CommissionsPage の読み込み中の上の余白（marginTop）は金型の見た目にそろって消える（便2のインライン style と同じ扱い）。
+- 触らない: excluded の件、features/・components/、CSS・辞書。
+- 受入条件
+| 基準 | 検証方法 |
+|---|---|
+| 対象 23 ファイルの件数が 25→1（24 減） | countLoadingText の前後（/tmp/CC報告ファイル/loading-stage2-bin3-g3/count-*.txt） |
+| 試験 | 対象ページを読み込む試験 14 本が pass |
+| 規約 | tsc 0・eslint 警告 0・i18n 欠け 0・UI governance gate 緑 |
+| 本番 | 反映後、本番の画面の JS で見積詳細と登録画面の読み込み枝が LoadingBlock 呼び出しになっている |
+- 弊害: ButtonMigration 系の試験は負荷が高いと 5 秒の時間切れで落ちる（未変更の試験。単独・時間延長の再実行で pass）。
+- 守り手: 2-6 と同じ（UI governance gate と Opus の件数記録）。
+- 戻し方: 本便の PR を revert。
