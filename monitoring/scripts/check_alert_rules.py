@@ -4,6 +4,7 @@
 作業場所の直下から `python3 monitoring/scripts/check_alert_rules.py` で実行する。
 依存は PyYAML だけ。出力はルール名と理由だけ（秘密は含まない）。
 """
+import re
 import sys
 from pathlib import Path
 
@@ -12,6 +13,7 @@ import yaml
 ROOT = Path(__file__).resolve().parent.parent.parent
 PROM = ROOT / "monitoring/prometheus/alert_rules.yml"
 LOKI = ROOT / "monitoring/loki/rules/jarvis/alerts.yml"
+ALERTMANAGER = ROOT / "monitoring/alertmanager/alertmanager.yml"
 RUNBOOK = ROOT / "docs/runbooks/alerts.md"
 URL_BASE = "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#"
 TIERS = {"page", "auto", "ticket"}
@@ -26,6 +28,35 @@ def load(path):
             if "alert" in r:
                 rules.append((path.name, r))
     return rules, group_names, errors
+
+
+def check_inhibit_rules(rule_names):
+    """alertmanager.yml の inhibit_rules が指す alertname が実在するかを検査する。
+
+    読める形は alertname="名前" と alertname=~"名前|名前|…"（名前は英数字だけ）。
+    読めない形は止まる側に倒す。alertname 以外の matcher は見ない。
+    """
+    errors = []
+    data = yaml.safe_load(ALERTMANAGER.read_text(encoding="utf-8")) or {}
+    for i, rule in enumerate(data.get("inhibit_rules") or []):
+        for key in ("source_matchers", "target_matchers"):
+            for m in rule.get(key) or []:
+                m = str(m).strip()
+                if not re.match(r"^alertname\s*(=~|=)", m):
+                    continue
+                exact = re.fullmatch(r'alertname="([A-Za-z0-9]+)"', m)
+                regex = re.fullmatch(r'alertname=~"([A-Za-z0-9]+(?:\|[A-Za-z0-9]+)*)"', m)
+                if exact:
+                    found = [exact.group(1)]
+                elif regex:
+                    found = regex.group(1).split("|")
+                else:
+                    errors.append(f"inhibit_rules[{i}] の alertname を読めません: {m}")
+                    continue
+                for n in found:
+                    if n not in rule_names:
+                        errors.append(f"inhibit_rules[{i}] の alertname が見つかりません: {n}")
+    return errors
 
 
 def main():
@@ -70,6 +101,8 @@ def main():
     for h in headings:
         if h not in set(names):
             errors.append(f"手順書の見出し '## {h}' がどのルールにも当たらない")
+
+    errors += check_inhibit_rules(set(names))
 
     if errors:
         for e in errors:

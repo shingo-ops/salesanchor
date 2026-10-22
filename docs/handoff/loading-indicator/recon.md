@@ -68,3 +68,19 @@ ADR-027（i18n）・ADR-067（デザイントークン）・ADR-144（UIガバ�
 - frontend/src/pages/super-admin/components/ProductMasterPanel.test.tsx:126 は `queryByRole("status")` が null を期待。ProductMasterPanel.tsx:116 を Spinner にすると落ちる可能性が高い（未実行）。
 - e2e tcg-product-import.spec.ts:63,86 は画面全体の `getByRole("status")`。影響は未確認。
 - 試験は i18n を各自で import して初期化する（frontend/src/test-setup.ts に i18n 初期化は無い。H6.txt）。en.json の common.loading は "Loading..."。
+
+## 段階2 便2 の調査（origin/main 16000c2d5、生出力 /tmp/CC報告ファイル/loading-bin2-recon/）
+- B1 対象: pages/super-admin の文字だけ表示 31 件（targets.tsv）。検査の数え方で super-admin は 48 件、残り 17 件はボタン内の三項 13・"uploading" 1・"errorLoading" 2・TcgDistributionPage.tsx:25 1（gov-counts.txt）。
+- B2 置き方: 親が td・li・p の中にあるもの 0、同じ要素に他の文字が混ざるもの 0（context.txt）。要素ごと LoadingBlock に替えられる。
+- B3 文言: analysisRules.dashboard.loading・tcgLineImport.loading は日英とも common.loading と同じ文言。label は要らない。
+- B4 CSS: 使っている class は analysis-dashboard-empty（空表示と共用）と page（共用）だけで、置換後に使われなくなる規則は 0（css.txt）。
+- B5 試験: frontend/src/pages/super-admin/components/ProductMasterPanel.test.tsx:126 は置換後に落ちる（tests.txt §3）。試験 :112-128 の意図は「古い失敗で alert と件数表示を出さない」。件数表示は :100 と同じ文面 "Products: N"。
+- B6 e2e: frontend/tests-e2e/tcg-product-import.spec.ts:63・:86 は排他の三項の別の枝を見るため重ならない（コード読み、実機は CI で確認）。
+
+## 段階2 便3 の調査（origin/main 44c34a488、生出力 /tmp/CC報告ファイル/loading-bin3-recon/）
+- C1 対象: frontend/src/pages/ のうち super-admin 以外で countLoadingText が当たるのは 106 件。替えられるもの 84 件（targets.tsv）、替えないもの 22 件（excluded.tsv: ボタン内の三項 18・prop 1・aria-live などを持つ要素 3）。
+- C2 組分け（groups.txt）: 第1組 32 件・25 ファイル（buyback-prices・dashboard・admin・inbox・integrations・inventory）、第2組 28 件、第3組 24 件。ファイルは組をまたがない。
+- C3 文言: common.loading と文言が違うのは inventoryVisibility.loadingMatrix と dashboard.weeklyLoading（keys.txt）。他は同じ文言。
+- C4 CSS: 置換で使われなくなる規則は .db-loading など 8 つ（css.txt 末尾の精密再計測）。共用の .loading・.page は残る。
+- C5 試験: 対象の画面の試験に、読み込み中の文字・role=status への依存は見つからない（tests.txt、コード読み）。
+- C6 lint: 対象のうち 3 ファイルにもともと eslint 警告 4 件（exhaustive-deps 1・日本語の直書き 3）があり、触ると commit 前の lint-staged（--max-warnings=0）で止まる（/tmp/CC報告ファイル/loading-stage2-bin3/）。

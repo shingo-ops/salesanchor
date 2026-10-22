@@ -22,6 +22,7 @@ import { TextField } from "../../components/TextField";
 import { Textarea } from "../../components/Textarea";
 import { NAV_ICONS } from "../../constants/icons";
 import "./discord-config.css";
+import { LoadingBlock } from "../../components/loading";
 
 interface DiscordConfig {
   guild_id: string | null;
@@ -337,7 +338,7 @@ export default function DiscordConfigPage() {
   if (permsLoading || loading) {
     return (
       <PageLayout navKey="nav.discordConfig">
-        <p className="dc-desc">{t("common.loading")}</p>
+        <LoadingBlock />
       </PageLayout>
     );
   }

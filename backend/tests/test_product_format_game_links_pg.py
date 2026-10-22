@@ -7,7 +7,7 @@ from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
 from app.routers import super_admin_product_formats as formats_router
-from app.schemas.product_format import ProductFormatGamesUpdate
+from app.schemas.product_format import ProductFormatCreate, ProductFormatGamesUpdate, ProductFormatUpdate
 from app.services import tcg_product_detail_svc as details
 from app.services import tcg_product_master_svc as master
 from tests import test_tcg_product_list_pg as fixtures
@@ -26,7 +26,8 @@ def fmt_pg(edit_pg):  # noqa: F811
     with connection.cursor() as cur:
         for name in ("20260922_030000_product_format_game_links.sql",
                      "20260923_010000_product_formats_add_type_master_id.sql",
-                     "20261022_100000_products_format_in_work_fk.sql"):  # ADR-1038 便2: 複合 FK
+                     "20261022_100000_products_format_in_work_fk.sql",  # ADR-1038 便2: 複合 FK
+                     "20261022_110000_product_formats_drop_type_master_id.sql"):  # ADR-1038 便3b: 旧列を落とす
             cur.execute((_MIGRATIONS / name).read_text())
         cur.execute("SELECT id FROM public.type_master WHERE is_active ORDER BY id LIMIT 2")
         work_a, work_b = [r[0] for r in cur.fetchall()]
@@ -285,5 +286,38 @@ async def test_detail_update_rejects_mismatch_before_write(fmt_pg):
             assert caught.value.status == 422
             assert str(caught.value) == "PRODUCT_DETAIL_FORMAT_GAME_MISMATCH"
         assert _row(fmt_pg) == (fmt_pg["work_a"], fmt_pg["linked"], "Original")
+    finally:
+        await engine.dispose()
+
+
+# ADR-1038 便3a/3b: API は旧列 type_master_id を受け取っても無視し、返さない（列は便3b で落とした。送っても保存できる）
+async def test_create_ignores_legacy_type_master_id_and_does_not_return_it(fmt_pg):
+    body = ProductFormatCreate.model_validate(
+        {"code": "T3A_CREATE", "name": "T3A create", "type_master_id": fmt_pg["work_b"]})
+    engine = create_async_engine(fmt_pg["url"])
+    created = None
+    try:
+        async with AsyncSession(engine) as db:
+            res = await formats_router.create_product_format(body, db)
+            created = res.id
+        assert "type_master_id" not in res.model_dump()
+    finally:
+        await engine.dispose()
+        if created is not None:
+            with fmt_pg["connection"].cursor() as cur:
+                cur.execute("DELETE FROM public.product_formats WHERE id=%s", (created,))
+
+
+async def test_update_ignores_legacy_type_master_id_and_list_does_not_return_it(fmt_pg):
+    body = ProductFormatUpdate.model_validate(
+        {"name": "T3A renamed", "type_master_id": fmt_pg["work_b"]})
+    engine = create_async_engine(fmt_pg["url"])
+    try:
+        async with AsyncSession(engine) as db:
+            res = await formats_router.update_product_format(fmt_pg["linked"], body, db)
+            assert res.name == "T3A renamed"
+            assert "type_master_id" not in res.model_dump()
+            listed = await formats_router.list_product_formats(is_active=None, page=1, per_page=500, db=db)
+            assert all("type_master_id" not in r.model_dump() for r in listed)
     finally:
         await engine.dispose()

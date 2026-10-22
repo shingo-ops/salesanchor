@@ -9,6 +9,7 @@ import { DashboardIcons } from "../../constants/icons";
 import { getWeeklyAdvisorDefensive, type WeeklyAdvisorAction } from "../../api/funnel";
 import type { LeadDetail } from "../inbox/inbox.types";
 import "./WeeklyAdvisorSection.css";
+import { LoadingBlock } from "../../components/loading";
 
 const WeeklyIcon = DashboardIcons.reminder;
 
@@ -286,7 +287,7 @@ export function WeeklyAdvisorSection() {
       <p className="db-weekly-subtitle">{t("dashboard.weeklySubtitle")}</p>
 
       {loading ? (
-        <div className="db-weekly-loading">{t("dashboard.weeklyLoading")}</div>
+        <LoadingBlock label={t("dashboard.weeklyLoading")} />
       ) : error ? (
         <div className="db-weekly-error">{error}</div>
       ) : actions.length === 0 ? (
@@ -363,7 +364,7 @@ export function WeeklyAdvisorSection() {
                 {showComposer && canAdd && (
                   <div className="db-weekly-composer" data-testid="weekly-followup-composer">
                     {composer.loadingLead ? (
-                      <div className="db-weekly-composer-loading">{t("common.loading")}</div>
+                      <LoadingBlock />
                     ) : null}
 
                     {snapshot?.next_action ? (

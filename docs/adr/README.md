@@ -3,7 +3,7 @@
 > このファイルは `scripts/generate-adr-index.js` により自動生成されます。
 > **手動編集禁止。** ADR ファイルを追加・変更後に `node scripts/generate-adr-index.js` を実行してください。
 
-最終更新: 2026-10-22 / ADR 総数: 198 件
+最終更新: 2026-10-22 / ADR 総数: 199 件
 
 ## 維持ルール（整合性を保つ・必須）
 
@@ -204,7 +204,7 @@
 | [ADR-1023](./ADR-1023-condition-value-rank.md) | ADR-1023: 状態の価値順 — 複数の状態語が当たったら価値の低い状態を採る（v102） | Accepted | — | — |
 | [ADR-1024](./ADR-1024-ai-readonly-db-path.md) | ADR-1024: AI 用「本番 DB を読むだけの道」— 何でもできる鍵を許可で縛るのをやめ、読むことしかできない道を作る | Accepted | — | — |
 | [ADR-1025](./ADR-1025-analysis-error-report-autofix.md) | ADR-1025: 解析の誤り報告から自律修正まで — 報告は本番の表 1 か所、起動は agent-console が Discord の 1 チャンネルを読む | Proposed | — | — |
-| [ADR-1026](./ADR-1026-drop-products-type-master-id.md) | ADR-1026: 商品の使われていない作品欄 products.type_master_id を取り除く | Proposed | — | — |
+| [ADR-1026](./ADR-1026-drop-products-type-master-id.md) | ADR-1026: 商品の使われていない作品欄 products.type_master_id を取り除く | Proposed | Amended by ADR-1038 | — |
 | [ADR-1027](./ADR-1027-bundle-sale-reading.md) | ADR-1027: まとめ売り（N単位セット）は値段を割らずに保存し、商品名の欄に「N＋単位＋セット」を表示の時に付ける（ADR-1021 便2 の置き換え） | Proposed | — | — |
 | [ADR-1028](./ADR-1028-product-packaging-table.md) | ADR-1028: 商品の入数・重さを「商品の荷姿」の表 1 つで持つ | Proposed | — | — |
 | [ADR-1029](./ADR-1029-review-gate-hook.md) | ADR-1029: AI のマージは、その PR の今の HEAD に Opus 審査役の APPROVE 記録が無ければフックで止める | Proposed | — | — |
@@ -216,7 +216,8 @@
 | [ADR-1035](./ADR-1035-condition-unit-and-booklet-category.md) | ADR-1035: 状態ごとの単位（Case/Box/Pack）と、区分「ブックレット系」（既定は With booklet） | Proposed | — | — |
 | [ADR-1036](./ADR-1036-price-decides-unit.md) | ADR-1036: 単位が「個」・無記入の箱系の行は、値段で Box／Case／Pack を決める（v102） | Proposed | — | — |
 | [ADR-1037](./ADR-1037-migration-lock-timeout.md) | ADR-1037: 入れ替え時の migration はロック待ちを1秒で諦め、間を空けて流し直す | Accepted | — | — |
-| [ADR-1038](./ADR-1038-product-format-child-of-work.md) | ADR-1038: 細分類は中分類（作品）の子。親子は product_format_game_links の 1 か所だけに持ち、DB で守る | Proposed | Amends ADR-1026 | — |
+| [ADR-1038](./ADR-1038-product-format-child-of-work.md) | ADR-1038: 細分類は中分類（作品）の子。親子は product_format_game_links の 1 か所だけに持ち、DB で守る | Accepted | Amends ADR-1026 | — |
+| [ADR-1039](./ADR-1039-discord-pdca-agent-console.md) | ADR-1039: Discord の不具合報告を agent-console で受け、件ごとに Opus が対応と効果測定を回す | Proposed | Supersedes ADR-1009 | — |
 
 ## ステータス凡例
 

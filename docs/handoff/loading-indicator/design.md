@@ -98,3 +98,33 @@ PO 原文の要旨: 「全ての読み込みを差し替えて」「金型を変
 
 ## 2-8 戻し方
 便ごとの PR を revert。便1を戻すと要確認画面は段階1の Spinner 直接呼び出しに戻る。
+
+## 2-9 便2（pages/super-admin 31 件）
+- 直し方: 実装カード card-3.md の §1 規則 A〜C と §2 の表。要素ごと `<LoadingBlock />` に替え、label は渡さない（recon B3）。インライン style の 5 ファイルは style ごと消えて金型の見た目にそろう。
+- 試験: ProductMasterPanel.test.tsx:126 を `queryByText(/^Products: \d+/)` が null の確認に替える（recon B5。試験の意図を保つ）。
+- 触らない: ボタン内の三項・CSS・辞書（参照 0 になるキー 2 つは辞書整理の別便で消す）。
+- 受入条件
+| 基準 | 検証方法 |
+|---|---|
+| super-admin の文字だけ表示が 48→17 件 | countLoadingText で前後を数える（/tmp/CC報告ファイル/loading-stage2-bin2/count-*.txt） |
+| 既存の試験が通る | vitest src/pages/super-admin 全件 pass |
+| 規約 | tsc 0・eslint 0・i18n 欠け 0・UI governance gate 緑 |
+| e2e | CI の e2e 緑 |
+| 本番 | 反映後、本番の画面の JS に変わった画面の LoadingBlock 呼び出しが入っている |
+- 守り手: 2-6 と同じ（UI governance gate と Opus の件数記録）。
+- 戻し方: 本便の PR を revert。
+
+## 2-10 便3 第1組（買取相場・ダッシュボード・管理・受信箱など 32 件）
+- 直し方: card-4.md の規則 A〜D。便2の規則に、文言が違うキーは label で渡す（C）と、入力欄の注記だった 2 件は size="sm"（D）を足した。
+- 追補1: もともとあった lint 警告 4 件（recon C6）を、表示を変えずに直す（依存配列に t、defaultValue を外す、「万」を t("common.unitMan") から渡す）。
+- 触らない: excluded の 22 件、第2組・第3組、CSS・辞書。
+- 受入条件
+| 基準 | 検証方法 |
+|---|---|
+| 対象 25 ファイルの件数が 34→2（32 減） | countLoadingText の前後（/tmp/CC報告ファイル/loading-stage2-bin3/count-*.txt） |
+| 試験 | vitest の対象 6 ディレクトリが全件 pass |
+| 規約 | tsc 0・eslint 警告 0・i18n 欠け 0・UI governance gate 緑 |
+| 本番 | 反映後、買取相場の画面を再読み込みすると読み込み中に丸が出る（PO 目視） |
+- 弊害: InventoryPage 系の試験は負荷が高いと時々落ちる（未変更のファイル。原因は未確認、再実行で pass）。
+- 守り手: 2-6 と同じ（UI governance gate と Opus の件数記録）。
+- 戻し方: 本便の PR を revert。

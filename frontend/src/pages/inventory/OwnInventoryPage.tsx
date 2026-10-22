@@ -14,6 +14,7 @@ import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
 import { Button } from "../../components/Button";
 import { TextFieldControl } from "../../components/TextField";
+import { LoadingBlock } from "../../components/loading";
 
 type OwnInventoryRow = components["schemas"]["OwnInventoryResponse"];
 
@@ -103,7 +104,7 @@ export default function OwnInventoryPage() {
       )}
 
       {loading ? (
-        <p className="loading-text">{t("common.loading")}</p>
+        <LoadingBlock />
       ) : (
         <>
           <div className="table-container">

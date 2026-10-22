@@ -196,3 +196,10 @@ def test_replay_script_bulk_constant_matches_product_first():
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)  # `if __name__ == "__main__"` のため main は走らない
     assert module._BULK_KUBUN == PRODUCT_KUBUN_BULK
+
+
+def test_bundle_title_sql_english_returns_name_en_as_is_when_name_en_is_blank():
+    """ADR-1027 便4: 英語名が空のときは、まとめ売りでもまとめ売りでない行と同じ式の枝に入る（実行の確認は test_bundle_title_empty_name_en_pg.py）。"""
+    _, en = dist.bundle_title_sql()
+    assert en.startswith("CASE WHEN ar.bundle_size IS NULL OR COALESCE(BTRIM(p.name_en), '') = '' THEN COALESCE(p.name_en, '') ")
+    assert en.count("CASE") == 1  # 式を複製しない（1か所）

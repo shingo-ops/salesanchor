@@ -267,7 +267,8 @@ def bundle_title_sql() -> tuple[str, str]:
         "ELSE COALESCE(p.name, '') || ' ' || ar.bundle_size::text || COALESCE(lu.name_ja, lu.canonical, ar.unit_canonical, '') || 'セット' END"
     )
     english = (
-        "CASE WHEN ar.bundle_size IS NULL THEN COALESCE(p.name_en, '') "
+        # 英語名が NULL・空・空白だけなら、まとめ売りでも空のまま返す（先頭が空白の題を作らない。ADR-1027 便4）。
+        "CASE WHEN ar.bundle_size IS NULL OR COALESCE(BTRIM(p.name_en), '') = '' THEN COALESCE(p.name_en, '') "
         "ELSE COALESCE(p.name_en, '') || ' ' || ar.bundle_size::text || ' ' || COALESCE(lu.name_en, lu.canonical, ar.unit_canonical, '') || ' Set' END"
     )
     return japanese, english

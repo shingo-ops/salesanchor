@@ -16,6 +16,7 @@ import { PageLayout } from "../../components/PageLayout";
 import { ContentToolbar } from "../../components/ContentToolbar";
 import { SCHEDULE_SETTINGS_ICONS } from "../../constants/icons";
 import { Button } from "../../components/Button";
+import { LoadingBlock } from "../../components/loading";
 
 interface FxRate {
   currency: string;
@@ -69,7 +70,7 @@ export default function FxRatePage() {
   };
 
   if (authLoading) {
-    return <div className="page">{t("common.loading")}</div>;
+    return <LoadingBlock />;
   }
 
   if (!isSuperAdmin) {
@@ -115,7 +116,7 @@ export default function FxRatePage() {
       )}
 
       {fetching ? (
-        <div>{t("common.loading")}</div>
+        <LoadingBlock />
       ) : rate === null ? (
         <div className="empty-state-message" data-testid="fx-rate-no-data">
           {t("superAdmin.fxRate.noData")}

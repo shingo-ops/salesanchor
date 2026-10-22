@@ -51,6 +51,7 @@ import { DistributionSettingsDrawer } from "./components/DistributionSettingsDra
 import { DbViewerPanel } from "./components/DbViewerPanel";
 import { PipelineMapPanel } from "./components/PipelineMapPanel";
 import { LineWorkflowGuidePanel } from "./components/LineWorkflowGuidePanel";
+import { LoadingBlock } from "../../components/loading";
 
 // ---------------------------------------------------------------------------
 // 解析精度管理パネル（旧スタンドアロンページ（AY-2g で削除）の内容を移植）
@@ -116,7 +117,7 @@ export default function AnalysisRulesPage() {
   if (superAdminLoading) {
     return (
       <PageLayout navKey="nav.superAdminAnalysisRules">
-        <p style={{ padding: "var(--space-4)" }}>{t("common.loading")}</p>
+        <LoadingBlock />
       </PageLayout>
     );
   }

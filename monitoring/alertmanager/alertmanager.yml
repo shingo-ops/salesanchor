@@ -23,3 +23,12 @@ receivers:
           authorization:
             type: Bearer
             credentials_file: /etc/alertmanager/secrets/ops-ingest-token
+
+inhibit_rules:
+  # ClockSkew が鳴っている間は、時刻を比べる 7 本を止める（outage-recovery-watch 便1・design.md §3-3）
+  # equal は付けない: どちらの機体の時計がずれても「prod1 が書いた時刻」と「prod2 の time()」の比較が狂うため
+  # target の名前は monitoring/scripts/check_alert_rules.py が alert_rules.yml に実在するかを確かめる
+  - source_matchers:
+      - alertname="ClockSkew"
+    target_matchers:
+      - alertname=~"F2CleanupStale|CeleryHeartbeatStale|ViewerInventoryStale|ViewerInventoryStaleOnHold|BackupLocalStale|BackupS3Stale|ContainerStateStale"

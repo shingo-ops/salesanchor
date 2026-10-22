@@ -16,6 +16,7 @@ import { Badge } from "../../components/Badge";
 import { Button } from "../../components/Button";
 import { api } from "../../lib/api";
 import type { PendingReviewItem, PendingReviewResponse, MatchCandidate } from "./buybackTypes";
+import { LoadingBlock } from "../../components/loading";
 
 interface BuybackPendingReviewModalProps {
   open: boolean;
@@ -103,9 +104,7 @@ export function BuybackPendingReviewModal({ open, onClose }: BuybackPendingRevie
         </p>
 
         {loading && (
-          <p role="status" style={{ color: "var(--text-muted)", fontSize: "var(--font-sm)" }}>
-            {t("buybackPrices.loading")}
-          </p>
+          <LoadingBlock />
         )}
 
         {!loading && error && (
