@@ -23,6 +23,7 @@
 5. 閲覧者が呼べる入口は、VIEWER_ROUTE_ALLOWLIST の7本だけにする（signup・login・logout・inventory・password・password-reset/request・password-reset/confirm）。ログインは専用 URL と1人1つのパスワード（PO 決定 2026-10-16。保存は既存の hash_password（Argon2）、規則は既存の check_password）。パスワードを忘れたときだけメールで再発行する。申込と本人の結び付けは、運用の Discord サーバーの受付で申込コードを照合して行う（design.md D5・D6）。
 6. 7本以外のすべての入口が閲覧者のトークンを拒否することを、全ルートを列挙するテストで固定する。
 7. 在庫のデータは、1分に1回だけ、run_distribution（GAS への配信）と共通の build_distribution_rows（安全装置 #8・#8b、設定の読み込み、fetch_output_rows＝ADR-1014 の1か所の定義、の順）を通して作り、Redis に置いて全員に配る。GAS に配信される行と同じものを作る。DB の表やシートには写しを作らない。
+7-2.（改訂 2026-10-22、PO「1」）閲覧ページは、在庫表を出している間、1分ごとに同じ入口（inventory）を裏で読み直して表の中身だけ差し替える。入口は7本のまま。解析待ちが0件になってから表に出るまでは、およそ2分以内（作り置き最大60秒＋読み直し60秒。ほかの解析が続く間は、7 のとおり作り置きが書かれない）。本体アプリの即時通知（ADR-1016）は閲覧者のトークンでは使えない（4）ので、閲覧ページはその対象外。設計: docs/handoff/viewer-auto-refresh/design.md
 8. 閲覧ページの画面は、アプリの在庫表（/inventory）と同じ金型（DataTable・MultiSelect・Select・Tabs・Badge・Drawer・Button・TextField）と、共有部品（frontend/src/features/inventory/ の normalizeForSearch・conditionBadgeVariant・inventoryColumns.css）で作る。列の定義は行の形が違うので viewer の中に置き、アプリの列の定義との一致を検査で固定する（design.md D4）。
 9. Discord の受付（運用サーバー1つ）で申込コードを照合する処理は discord-gateway の中で動き、public.viewer_* の表（viewer_accounts・viewer_login_tokens・viewer_status_changes・viewer_login_events）に書く。設定は public.viewer_discord_config に置き、テナントの Discord 設定には入れない（設計書 D6）。
 
@@ -32,6 +33,7 @@
 - 閲覧者をアプリのユーザーにすると、在庫を見るだけの権限にしても 614 本中 74 本の入口に届き、仕入元の情報や会話本文まで見えてしまう。閲覧者を別のアカウントにすれば、届く入口は7本（ログインの後に使うのは3本）になる。API を後から足しても、閲覧者に漏れる経路が仕組みとして生まれない。
 - 全員に同じ作り置きを配れば、閲覧者が増えても DB の負荷は増えない。
 - 画面をアプリの在庫表と同じ部品で作れば、片方だけ直って見え方がずれることを防げる（PO 決定 Q14「アプリの在庫表も同じ作りにする」）。
+- 再読み込みしないと新しい在庫が出ないと、開いたままの閲覧者は古い値段を見続ける。入口を増やさずに2分以内を満たすため、すぐ知らせる仕組みではなく、1分ごとの読み直しにした（2026-10-22）。
 
 ## 根拠
 
