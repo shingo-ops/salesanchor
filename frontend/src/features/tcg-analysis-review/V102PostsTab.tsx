@@ -12,6 +12,7 @@ import { formatDate } from "./formatDateTime";
 import { reviewReasonLabel } from "./reviewReasonLabel";
 import { V102PostEditModal } from "./V102PostEditModal";
 import type { V102PostListResponse, V102PostSummary } from "./v102PostTypes";
+import { LoadingBlock } from "../../components/loading";
 
 const PAGE_SIZE = 20;
 
@@ -67,7 +68,7 @@ export function V102PostsTab() {
 
   return (
     <>
-      {loading && <p role="status">{t("common.loading")}</p>}
+      {loading && <LoadingBlock />}
       {hasError && <Callout variant="warning" title={t("common.fetchError")} />}
       {data && data.items.length === 0 && <EmptyState size="compact" title={t("v102Posts.empty")} />}
       {data && data.items.length > 0 && (

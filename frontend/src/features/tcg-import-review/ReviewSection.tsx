@@ -14,6 +14,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/Button";
 import { api } from "../../lib/api";
+import { LoadingBlock } from "../../components/loading";
 
 // ---------------------------------------------------------------------------
 // 型定義
@@ -179,7 +180,7 @@ export function ReviewSection({ importJobId, unresolvedNames, onCommitSuccess }:
   if (loadingSuppliers) {
     return (
       <section style={sectionStyle}>
-        <p style={{ color: "var(--text-secondary)" }}>{t("tcgLineImport.loading")}</p>
+        <LoadingBlock label={t("tcgLineImport.loading")} />
       </section>
     );
   }

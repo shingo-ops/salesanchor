@@ -43,6 +43,7 @@ import {
   type BlankCode,
 } from '../tcg-product-import/productDetailModel';
 import type { AnalysisReviewItem } from './ItemComparison';
+import { LoadingBlock } from "../../components/loading";
 
 // ── 型定義 ──────────────────────────────────────────────────────────────────
 
@@ -172,7 +173,7 @@ function RegistrationSection({ item }: { item: AnalysisReviewItem }) {
     <>
       <h3>{t('tcgAnalysisReview.productMasterDrawer.registerHeading')}</h3>
       {status === 'loading' ? (
-        <p>{t('tcgAnalysisReview.productMasterDrawer.formLoading')}</p>
+        <LoadingBlock label={t('tcgAnalysisReview.productMasterDrawer.formLoading')} />
       ) : (
         <>
           <div className="pmd-fields">

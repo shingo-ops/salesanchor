@@ -27,6 +27,7 @@ import { SelectControl } from "./Select";
 import { Button } from "./Button";
 import { TextareaControl } from "./Textarea";
 import { TextFieldControl } from "./TextField";
+import { LoadingBlock } from "./loading";
 
 export interface PurchaseDetailDto {
   id: number;
@@ -308,7 +309,7 @@ export default function PurchaseDetailPanel({
       footer={footer}
     >
       {loading ? (
-        <div className="loading">{t("common.loading")}</div>
+        <LoadingBlock />
       ) : (
         <form id="purchase-detail-form" onSubmit={handleSubmit}>
           {error && <div className="error-message">{error}</div>}

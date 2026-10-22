@@ -23,6 +23,7 @@ import { RadioControl } from "./RadioControl";
 import { TextField } from "./TextField";
 import { Textarea } from "./Textarea";
 import { getStatusPresentation } from "../utils/statusPresentation";
+import { LoadingBlock } from "./loading";
 
 interface ContactOption {
   id: number;
@@ -187,7 +188,7 @@ export default function MergeContactModal({ open, companyId, source, onMerged, o
               }}
             >
               {loading ? (
-                <p style={{ padding: "var(--space-4)", textAlign: "center" }}>{t("common.loading")}</p>
+                <LoadingBlock />
               ) : candidates.length === 0 ? (
                 <p style={{ padding: "var(--space-4)", textAlign: "center", color: "var(--text-muted)" }}>
                   {t("mergeContact.noResults")}

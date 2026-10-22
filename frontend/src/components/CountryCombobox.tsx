@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../lib/api";
 import { TextFieldControl } from "./TextField";
+import { LoadingBlock } from "./loading";
 
 export interface CountryOption {
   code: string;
@@ -161,7 +162,7 @@ export function CountryCombobox({
         >
           {loading ? (
             <div style={{ padding: "var(--space-3)", color: "var(--text-secondary)" }}>
-              {t("common.loading")}
+              <LoadingBlock size="sm" inline />
             </div>
           ) : filtered.length === 0 ? (
             <div style={{ padding: "var(--space-3)", color: "var(--text-secondary)" }}>
