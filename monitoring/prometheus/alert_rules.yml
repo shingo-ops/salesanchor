@@ -345,3 +345,32 @@ groups:
           summary: "コンテナ {{ $labels.service }} に健康診断がありません"
           description: "prod1 の {{ $labels.service }} は動いていますが、健康診断（healthcheck）がありません。固まっても ContainerUnhealthy が鳴りません。"
           runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#containerhealthcheckmissing"
+
+  - name: clock_alerts
+    rules:
+      # 各機体の時計と、Prometheus（prod2）が値を読み取った時刻の差が 60 秒超（tokens.yml: clock_skew_sec=60）
+      # 2026-10-22 のさくらメンテの後、prod1 が約 40 分遅れて時刻を比べる警報が誤って鳴った（outage-recovery-watch 便1）
+      # この警報が鳴っている間、時刻を比べる 7 本は alertmanager.yml の inhibit_rules で止める
+      - alert: ClockSkew
+        expr: abs(node_time_seconds{job="node-exporter"} - timestamp(node_time_seconds{job="node-exporter"})) > 60
+        for: 2m
+        keep_firing_for: 5m
+        labels:
+          severity: critical
+          tier: page
+        annotations:
+          summary: "サーバー {{ $labels.instance }} の時計が 60 秒以上ずれています"
+          description: "{{ $labels.instance }} の時計と監視サーバーの時計の差が {{ $value | humanizeDuration }} です。この間、時刻を比べる警報（裏方の処理が止まった等）は止めています。"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#clockskew"
+
+      # 時刻合わせ（NTP）が止まった。ずれる前の兆候
+      - alert: ClockSyncStopped
+        expr: node_timex_sync_status{job="node-exporter"} == 0
+        for: 10m
+        labels:
+          severity: warning
+          tier: ticket
+        annotations:
+          summary: "サーバー {{ $labels.instance }} の時刻合わせが止まっています"
+          description: "{{ $labels.instance }} で時刻合わせ（NTP）が 10 分以上同期していません。このままだと時計がずれ、時刻を比べる警報が誤って鳴ります。"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#clocksyncstopped"

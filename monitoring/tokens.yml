@@ -94,6 +94,9 @@ thresholds:
   config_drift_files:          0  # MonitoringConfigDrift: monitoring_config_drift_files > 0
   config_check_stale_sec: 180000  # MonitoringConfigCheckStale: time() - 送った時刻 > 180000（50h）
 
+  # 時計ずれ（alert_rules.yml: clock_alerts）
+  clock_skew_sec: 60  # ClockSkew: abs(node_time_seconds - timestamp(node_time_seconds)) > 60
+
   # ログ異常検知（loki/rules/jarvis/alerts.yml）
   brute_force_per_5m:     20    # BruteForceAttempt: > 20
   auth_failure_per_1h:    50    # SustainedAuthFailure: > 50
@@ -123,3 +126,5 @@ for_durations:
   backup_absent:     "30h"  # BackupTimestampAbsent
   config_drift:       "5m"  # MonitoringConfigDrift
   config_check_stale: "1h"  # MonitoringConfigCheckStale
+  clock_skew:         "2m"   # ClockSkew
+  clock_sync_stopped: "10m"  # ClockSyncStopped
