@@ -5,7 +5,7 @@
 
 親: [docs/specs/ai-ops-247/README.md](../../specs/ai-ops-247/README.md)（区分: 既存テーマ ai-ops-247 の延長。STANDARD-WORKFLOW §1.8 により仕様書の履歴に追記）
 
-**対象ADR**: 新規 ADR 起案予定（ADR-1012 AI保守運用24時間化の延長として扱う。通知経路の正本=Alertmanager、障害記録の正本=ops_incidents を踏襲）  
+**対象ADR**: 新規 ADR は作らない（ADR-1012 決定1・ADR-080 の範囲。§3-2-1）（ADR-1012 AI保守運用24時間化の延長として扱う。通知経路の正本=Alertmanager、障害記録の正本=ops_incidents を踏襲）  
 **recon**: docs/handoff/outage-recovery-watch/recon.md  
 **日付**: 2026-10-22  
 **担当**: Planner（Claude Opus）
@@ -49,9 +49,21 @@
 
 prod1 が止まっても動く必要があるため prod2 に置く（ADR-080 の分離方針に一致）。
 
-- 新しい小さな点検係（prod2 の Docker 常駐・60秒ごと。prod2 に crontab は無い（docs/adr/ADR-153-data-durability.md:22）ため、同じ /opt/salesanchor-monitoring 配下で常駐する monitoring/github-collector の型に揃える）: API ヘルス（https://api.salesanchor.jp/api/health）を見て、前回「NG」→今回「OK」に変わった時だけ点検を1回実行。前回状態は prod2 のファイル1つに保存。型は mac-jobs-watch（docs/handoff/mac-jobs-watch/design.md）の「起動後点検・復旧通知」に揃える。
-- 点検項目（読み取りのみ）: ①App/API/LP の HTTP 200 ②health 本文の database/redis/celery が connected ③prod1 の時計ずれ（HTTP Date ヘッダーと prod2 時計の差 < 60秒）④Celery heartbeat が新しい（Prometheus の celery_heartbeat_last_success_timestamp_seconds）⑤container_state が新しい。
-- 結果は Discord 運用チャンネルへ ✅/❌ ＋ NG 項目名。復帰後 15 分の間に NG があれば 5 分おきに最大3回まで再点検して結果を追記（一時的な NG で騒がない）。
+- 新しい小さな点検係（prod2 の Docker 常駐・60秒ごと。prod2 に crontab は無い（docs/adr/ADR-153-data-durability.md:22）ため、同じ /opt/salesanchor-monitoring 配下で常駐する monitoring/github-collector の型に揃える）: API ヘルス（https://api.salesanchor.jp/api/health）を見て、前回「NG」→今回「OK」に変わった時だけ点検を1回実行。前回状態は prod2 のファイル1つに保存。型は mac-jobs-watch（docs/handoff/mac-jobs-watch/design.md）の「起動後点検・復旧通知」に揃える。→ 判定の仕方（応答したかで見る）は §3-2-1 で変更
+- 点検項目（読み取りのみ）: ①App/API/LP の HTTP 200 ②health 本文の database/redis/celery が connected ③prod1 の時計ずれ（HTTP Date ヘッダーと prod2 時計の差 < 60秒）④Celery heartbeat が新しい（Prometheus の celery_heartbeat_last_success_timestamp_seconds）⑤container_state が新しい。→ 時計の見方（Prometheus の値）と項目の並びは §3-2-1 で変更
+- 結果は Discord 運用チャンネルへ ✅/❌ ＋ NG 項目名。復帰後 15 分の間に NG があれば 5 分おきに最大3回まで再点検して結果を追記（一時的な NG で騒がない）。→ 点検の間隔（0・2・4・6 分、❌ の後は 5 分おき）は §3-2-1 で変更
+
+#### 3-2-1. 便2 での確定（2026-10-22 Opus。KGI G2 は不変。詳細は card-bin2.md）
+
+- 通知の道: 点検係は Discord へ直接送らず、Prometheus の指標 → ルール → Alertmanager → Discord の既存の道に載せる（U2 の残りを解消）。
+  - 理由1: ADR-1012 決定1（docs/adr/ADR-1012-ai-ops-247.md:25「経路の正本は Alertmanager 1 本」）。
+  - 理由2: ルールにすると札・手順書リンク・見出しの検査（monitoring/scripts/check_alert_rules.py）と promtool の単体試験（.github/workflows/monitoring-check.yml:70-75）に乗る。API で直接入れた警報はこの検査に乗らない（check_alert_rules.py は手順書の見出しにルールが無いと NG を出す）。
+  - ✅ は新しい子ルート（matcher `alertname="RecoveryCheckPassed"`、continue なし）で Discord だけに送り、解決の通知は出さない（`send_resolved: false`。障害記録の保守 API には載せない）。❌ は既存の道のまま Discord と保守 API の両方に届き、全項目が直ると Discord に「解決」が届く。
+- ③時計: HTTP の Date ヘッダーではなく Prometheus の `node_time_seconds{instance="app-vps"}` と読み取り時刻の差で見る（便1 の ClockSkew と同じ式）。理由: 公開 URL の応答は Cloudflare を通るため、Date ヘッダーは prod1 の時計ではない見込みが高い（未確認。確かめるより便1 で実測済みの式を使うほうが確実）。時計が NG の間は④⑤を判定しない（時刻の比較が狂うため。便1 と同じ考え方）。
+- 再点検の間隔: 「15 分の間に 5 分おき最大3回」を「復帰を見つけた時から 0・2・4・6 分」に改める。全部 OK になった時点で ✅、6 分でまだ NG なら ❌。理由: 5 分おき3回では ❌ が確定するのが最大 15 分後になり、G2（復帰から 10 分以内に 1 件）を満たせない。❌ の後も 5 分おきに点検を続け、直れば「解決」が届く（打ち切ると ❌ が鳴りっぱなしになるため）。
+- 「止まった」「戻った」の判定: 本文の値ではなく「本番の本体が応答したか」で見る（API が本文つきで応答した、またはアプリ画面が HTTP 200 を返した）。理由: 本文の値で見ると、裏方の処理だけが戻らない場合に「戻った」と判定されず ❌ が届かない（G2 違反）。逆に、止まっていないのに裏方の処理の応答確認が外れただけで ✅ が出てしまう（2026-10-22 設計審査の指摘1）。
+- 点検係そのものの見張り: 点検係が止まると ServiceDown（alert_rules.yml の `up == 0`）が鳴る。点検の繰り返しが止まったら新しいルール RecoveryCheckStale が鳴る。
+- 新しい ADR は作らない（ADR-1012 決定1 と ADR-080 の分離方針の範囲内）。
 
 ### 3-3. 時計ずれ警報と誤警報の抑止（Prometheus/Alertmanager）
 
@@ -81,7 +93,8 @@ prod1 が止まっても動く必要があるため prod2 に置く（ADR-080 �
 ## 弊害・トレードオフ
 
 - 転送設定を誤るとさくら以外のメールが流れる → 差出人絞り込みをコード側でも二重に持つ
-- 点検係の誤 ❌ で騒がしくなる → 復帰後15分は再点検で確定させ、最大3回で打ち切り
+- 点検係の誤 ❌ で騒がしくなる → 復帰を見つけてから 0・2・4・6 分の 4 回の点検で確定させる（§3-2-1）。❌ の後は 5 分おきに点検を続け、直れば「解決」が届く。本番配置の前に、状態を変えない 1 回だけの点検で NG が 0 件であることを確かめる（card-bin2.md §8）
+- ✅ の後に約 15 分以内でもう一度止まって戻ると、2 度目の ✅ が届かない見込みがある（未確認。Alertmanager が送った記録を片付ける時間。❌ は届く）→ 起きたら記録して見直す（card-bin2.md §7）
 - inhibit で本物の停止を見逃す → 抑止は ClockSkew 発火中だけ。ServiceDown・KumaMonitorDown は抑止しない
 - prod1 停止中は対策1が動かない → 予告メールは停止前に届くので許容。停止そのものは Kuma が既に知らせる
 
@@ -111,7 +124,7 @@ prod1 が止まっても動く必要があるため prod2 に置く（ADR-080 �
 ## 未解決事項（実装カード発行前に解消する）
 
 - U1（解消 2026-10-22）: node_time_seconds・node_timex_offset_seconds・node_timex_sync_status が app-vps / mgmt-vps とも値を返す。collector の無効化なし（docker-compose.exporters.yml:12-17）。promtool のルール試験は .github/workflows/monitoring-check.yml:70-75 で CI 実行済みの仕組みがある（monitoring/prometheus/tests/alert_rules_test.yml）。生出力 ~/CC報告ファイル-keep/v102-shipdate-range/routine/20261022_1200/outage/prevention/u1u2/
-- U2（一部解消 2026-10-22）: prod2 の設定は /opt/salesanchor-monitoring に repo と同じ相対パスで手作業コピー＋reload で反映する（前例 docs/handoff/ai-ops-247/card-stage1-bin7.md の §8。自動配置の workflow は無い）。ずれは monitoring-config-drift.yml が毎日検知する。Alertmanager の Discord 送り先はファイル参照（monitoring/alertmanager/alertmanager.yml:14、docker-compose.monitoring.yml:180）。残り: 便2 で点検係の通知を Alertmanager 経由にするか（ADR-1012 決定1）を便2カードで確定。prod2 への反映は無制限鍵を使うため、各便で PO の同意票が要る
+- U2（一部解消 2026-10-22）: prod2 の設定は /opt/salesanchor-monitoring に repo と同じ相対パスで手作業コピー＋reload で反映する（前例 docs/handoff/ai-ops-247/card-stage1-bin7.md の §8。自動配置の workflow は無い）。ずれは monitoring-config-drift.yml が毎日検知する。Alertmanager の Discord 送り先はファイル参照（monitoring/alertmanager/alertmanager.yml:14、docker-compose.monitoring.yml:180）。残り: 便2 で点検係の通知を Alertmanager 経由にするか（ADR-1012 決定1）を便2カードで確定 → 確定（2026-10-22。§3-2-1。Alertmanager 経由）。prod2 への反映は無制限鍵を使うため、各便で PO の同意票が要る
 - U3（解消）: PO が案M を選択（2026-10-22）。便3 では PO の転送設定・受け箱作成の手順書をカードに含める
 
 ## Architect 自己審査（同一AIによる自己審査）
