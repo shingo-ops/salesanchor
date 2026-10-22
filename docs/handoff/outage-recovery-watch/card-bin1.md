@@ -175,7 +175,7 @@ inhibit_rules:
 4. ClockSkew 鳴らない（ずれ無し）: `'0+60x30'` で `eval_time` 5m に 0 件。
 5. ClockSyncStopped 鳴る: `node_timex_sync_status{job="node-exporter", instance="mgmt-vps"}` を `'0x30'` で `eval_time` 15m に 1 件（`exp_labels` は job・instance・severity・tier）。同じ入力で `eval_time` 5m は 0 件。
 6. ClockSyncStopped 鳴らない: `'1x30'` で `eval_time` 15m に 0 件。
-- `exp_annotations` は 3 つとも書く。description の `{{ $value | humanizeDuration }}` の展開は、試験 1 が `40m 36s`（値 2436）、試験 2 が `1m 1s`（値 61）の見込み（Prometheus の humanizeDuration: 60 秒以上 1 時間未満は `%dm %ds`）。担当は https://raw.githubusercontent.com/prometheus/prometheus/v3.11.3/template/template.go の humanizeDuration を WebFetch で読んでこの見込みを確かめ、読んだ行を報告に貼る。違っていればソースのとおりに書く。それでも CI か試験場で落ちたら、Opus が出力の got 側を渡すので、それに合わせて直す（便3 カード §6 と同じ扱い）。
+- `exp_annotations` は 3 つとも書く。description の `{{ $value | humanizeDuration }}` の展開は、試験 1 が `40m 36s`（値 2436）、試験 2 が `1m 1s`（値 61）の見込み（Prometheus の humanizeDuration: 60 秒以上 1 時間未満は `%dm %ds`）。実装は Prometheus 本体ではなく prometheus/common v0.67.5（Prometheus v3.11.3 の go.mod が指す版）の helpers/templates/time.go :61-106 にある。担当は `gh api 'repos/prometheus/common/contents/helpers/templates/time.go?ref=v0.67.5' --jq .content | base64 -d > /tmp/CC報告ファイル/outage-bin1/common-time.go` で取り（raw.githubusercontent は 404 を返した）、:61-106 を読んでこの見込みを確かめ、該当の行番号を報告に書く。違っていればソースのとおりに書く。それでも CI か試験場で落ちたら、Opus が出力の got 側を渡すので、それに合わせて直す（便3 カード §6 と同じ扱い）。
 
 4-5. `docs/runbooks/alerts.md`（:3 の「Prometheus 27 本」を「29 本」に直す）。最後に `## ClockSkew`・`## ClockSyncStopped` の 2 節を足す。形は F9 のとおり。書くこと:
 - ClockSkew:
@@ -211,12 +211,12 @@ inhibit_rules:
 ```
 
 4-7. 本番配置の台本（リポジトリの外。commit しない）`/tmp/CC報告ファイル/outage-bin1/deploy/deploy-bin1.sh` を Write で作る。担当は実行しない（実行は Opus が PO の同意票を受けて行う）。
-- 接続方法: 機体は prod2（管理室VPS）、利用者は `ubuntu`、鍵は `~/.ssh/manual-only/id_ed25519`（メモリ reference_vps_monitor_access.md の冒頭の注記。本文の `~/.ssh/id_ed25519` は古い）。IP は同じメモリの「管理室VPS」から写す。推測で利用者名を書かない（fail2ban に当たる）。sudo は使わない（前例 docs/handoff/ai-ops-247/card-stage1-bin7.md §8 は ubuntu のまま `/opt/salesanchor-monitoring` に `install` した）。台本の手順 1 の前に、prod2 で 2 本の本番ファイルと控えの場所に `test -w` を行い、書けなければ止まる。
+- 接続方法: 機体は prod2（管理室VPS）、利用者は `ubuntu`、鍵は `~/.ssh/manual-only/id_ed25519`（メモリ reference_vps_monitor_access.md の冒頭の注記。本文の `~/.ssh/id_ed25519` は古い）。IP は同じメモリの「管理室VPS」から写す。推測で利用者名を書かない（fail2ban に当たる）。sudo は使わない（前例 docs/handoff/ai-ops-247/card-stage1-bin7.md §8 は ubuntu のまま `/opt/salesanchor-monitoring` に `install` した）。台本の手順 1 の前に、prod2 で `/opt/salesanchor-monitoring/backups`・`/opt/salesanchor-monitoring/monitoring/prometheus`・`/opt/salesanchor-monitoring/monitoring/alertmanager` の 3 つのディレクトリに `test -w` を行い（`install` で置き換えるにはファイルではなくディレクトリへの書き込みが要る）、1 つでも書けなければ止まる。
 - 台本は本店 `/Users/tanizawashingo/salesanchor` で動かす前提にする（作業場所はマージの後に片付けられるため）。台本の最初に `git -C /Users/tanizawashingo/salesanchor fetch origin` を行い、マージ commit の版は `git -C /Users/tanizawashingo/salesanchor show "${MC}:パス"`、1 つ前は `"${MC}^1:パス"` で取る（本店の作業ツリーのファイルは使わない）。
 - 引数は 1 つ: 実装 PR のマージ commit の sha。`set -euo pipefail`。生出力は `/tmp/CC報告ファイル/outage-bin1/deploy/` に `tee` で残す。秘密（webhook・token の値）は出さない。
 - 手順（この順。外れたらその場で止まり、以降を行わない）:
   1. prod2 の本番の `monitoring/prometheus/alert_rules.yml` と `monitoring/alertmanager/alertmanager.yml` の sha256 が、マージ commit の 1 つ前（`git show "${MC}^1":パス`）と一致することを出す。違えば止まる。
-  2. 控え: `/opt/salesanchor-monitoring/backups/outage-bin1/` に 2 本を `cp -p` で `.bak-` に日付を付けた名前で写し、sha256 を出す。
+  2. 控え: `mkdir -p /opt/salesanchor-monitoring/backups/outage-bin1` の後、そこに 2 本を `cp -p` で `.bak-` に日付を付けた名前で写し、sha256 を出す。
   3. Alertmanager の今の silence の数（コンテナの中の `amtool --alertmanager.url=http://localhost:9093 silence query -q` の行数）と、鳴っている警報の数（`/api/v2/alerts` の件数と alertname の一覧）を出す。あわせて Alertmanager のコンテナの `docker inspect -f '{{json .Mounts}}'` を出す。silence が 1 以上なら止まる（イメージに VOLUME `/alertmanager` があり、作り直しでも silence は名前の無い volume に残る見込みだが、まだ確かめていないため）。鳴っている警報は件数と名前を記録して進む（ずっと鳴っている警報があると配置できなくなるため。作り直しの後にもう一度届くことがある）。
   4. 一時ディレクトリ `/opt/salesanchor-monitoring/tmp-outage-bin1/` に、マージ commit の版の 2 本を scp で送る。
   5. 同じ版のイメージで検査する: `docker run --rm --entrypoint promtool -v 一時ディレクトリ:/w:ro prom/prometheus:v3.11.3 check rules /w/alert_rules.yml`（期待 "SUCCESS: 29 rules found"）と、`--entrypoint amtool ... prom/alertmanager:v0.28.1 check-config /w/alertmanager.yml`。amtool の検査は CI（monitoring-check.yml:81）で secrets のファイル無しに通っている。どちらか落ちたら止まる。
@@ -249,7 +249,7 @@ inhibit_rules:
   - 版は `AM=prom/alertmanager:v0.28.1`・`PROM=prom/prometheus:v3.11.3`（F6）。
   - 試験用の偽の secrets を `$OUT/secrets/` に作る: `discord-webhook`（中身 `http://127.0.0.1:9/dummy`）と `ops-ingest-token`（中身 `dummy`）。参照先は alertmanager.yml:14・:25 の `/etc/alertmanager/secrets/` の 2 本。本物の値は使わない。
   - 段 0（検査）: `python3 monitoring/scripts/check_alert_rules.py`、`$PROM` の `promtool check rules /p/alert_rules.yml` と `promtool test rules /p/tests/alert_rules_test.yml`（container-state.sh:25-26 と同じ書き方）、`$AM` の `amtool check-config /etc/alertmanager/alertmanager.yml`（alertmanager.yml と `$OUT/secrets` を読み取り専用でマウント）。どれか落ちたらスクリプトが exit 1。
-  - 段 1（壊すと落ちる）: `cp -r monitoring/prometheus "$OUT/prom-broken"` で写しを作り、写しの alert_rules.yml の ClockSkew の式の `> 60` を `> 6000` に `sed` で替える（替わった行数が 1 であることを確かめ、1 でなければ exit 1）。写しに `promtool test rules` を実行して、終了コードが 0 でないことを確かめる（0 なら `echo "NG: broken rule passed"` で exit 1）。リポジトリのファイルは書き換えない。
+  - 段 1（壊すと落ちる）: `cp -r monitoring/prometheus "$OUT/prom-broken"` で写しを作り、写しの alert_rules.yml の ClockSkew の式だけを `sed -i 's/timestamp(node_time_seconds{job="node-exporter"})) > 60$/timestamp(node_time_seconds{job="node-exporter"})) > 6000/'` で替える（素の `s/> 60/> 6000/` は使わない。既存の `> 600` の 3 行 :184・:222・:233 にも当たるため）。替えた後に `grep -c 'node-exporter"})) > 6000$'` が 1 であることを確かめ、1 でなければ exit 1。写しに `promtool test rules` を実行して、終了コードが 0 でないことを確かめる（0 なら `echo "NG: broken rule passed"` で exit 1）。リポジトリのファイルは書き換えない。
   - 段 2（起動）: `docker run -d --name bin1-am --network none -v "$PWD/monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro" -v "$OUT/secrets:/etc/alertmanager/secrets:ro" "$AM" --config.file=/etc/alertmanager/alertmanager.yml --cluster.listen-address=`。`--network none` は必ず付ける（ops-api の送り先は本番 API のため）。`--cluster.listen-address=`（値は空）も必ず付ける（v0.28.1 は既定で仲間探しを 0.0.0.0:9094 で開こうとし、`--network none` では起動に失敗するため）。`docker exec bin1-am wget -q -O- http://127.0.0.1:9093/-/ready` が通るまで最大 12 回・5 秒おきに待つ（通らなければ exit 1）。
   - 読み取りは `docker exec bin1-am wget -q -O- http://127.0.0.1:9093/api/v2/alerts` の出力を runner の `python3` に渡し、alertname・`status.state`・`status.inhibitedBy` の件数の 3 列にして出す（イメージの中に python3 は無い）。
   - 段 3（ClockSkew なし）: コンテナの中の amtool（`--alertmanager.url=http://127.0.0.1:9093`）で `alert add` を 3 本送る: `alertname=CeleryHeartbeatStale job=backend severity=critical`、`alertname=ContainerStateStale instance=app-vps job=node-exporter severity=critical`、比べ役の `alertname=ServiceDown job=backend severity=critical`。期待: 3 本とも active・inhibitedBy は 0 件。
@@ -336,7 +336,7 @@ inhibit_rules:
 
 ## 12. 委任の定型
 
-- sleep しない（待ちは Opus が行う。§4-7 の台本の中の `/-/ready` の確認だけは例外で、台本は担当が実行しない）
+- sleep しない（待ちは Opus が行う。例外は 2 つ: §4-7 の台本の中の `/-/ready` の確認（台本は担当が実行しない）と、§5-7 の試験場スクリプトの中の 12 回・5 秒おきの待ち（GitHub の試験場の中で動き、前例 tests/sandbox/container-state.sh:36 と同じ）。Mac の上では sleep しない）
 - ファイルの作成と編集は Write/Edit ツールで行う（ヒアドキュメントで書かない）
 - PR を作る前に `scripts/dev/validate-pr-body.sh` で exit 0 を確かめる
 - フックや自動判定に止められたら、言い換えて再試行せず、止まった手順・最後のコマンド・理由の原文を報告して終える
