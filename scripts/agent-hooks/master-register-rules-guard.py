@@ -22,7 +22,7 @@ TARGETS = (
 )
 EXEMPT_PATHS = ("/backend/", "/frontend/", "/docs/", "/migrations/", "/tests/")
 READ_ONLY_CMDS = {"git", "grep", "rg", "cat", "sed", "head", "tail", "less"}
-PROMPT_RE = re.compile(r"(マスタ|商品).*登録|登録.*(マスタ|商品)", re.S)
+PROMPT_RE = re.compile(r"マスタ[^。\n]{0,40}登録|登録[^。\n]{0,20}マスタ")
 PROMPT_LIMIT = 9000
 
 
