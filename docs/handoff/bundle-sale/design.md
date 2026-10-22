@@ -8,7 +8,7 @@ status: Proposed（設計案・設計審査済み・KGI は PO 合意 2026-10-17
 
 この文書は何か: 「40パックセット/¥24,000 残り15」のようなまとめ売りの行を、全商品で同じ形で保存し、在庫表・在庫一覧(GAS)・閲覧ページの商品名の欄に「商品名 40パックセット」と出すための作り方。
 親（あるべき姿＋KGI）: [../../specs/bundle-sale/README.md](../../specs/bundle-sale/README.md)／[ideal-state.md](../../specs/bundle-sale/ideal-state.md)／[kgi.md](../../specs/bundle-sale/kgi.md)
-現状把握: [recon.md](./recon.md)（origin/main d6b956826 の file:line と本番の試し）
+現状把握: [recon.md](./recon.md)（docs/handoff/bundle-sale/recon.md）（origin/main d6b956826 の file:line と本番の試し）
 決定の記録: [ADR-1027 案](../../adr/ADR-1027-bundle-sale-reading.md)（ADR-1021 の便2「1枚単価にそろえる」を置き換える）
 
 状態: 設計案作成済み・設計審査済み（Architect/Fable。1回目 REVISE → 指摘を反映 → 2回目 APPROVE。/tmp/CC報告ファイル/bundle-sale/review/fable-review.md・fable-review-2.md。2回目の「低」6件も反映）・KGI K1〜K6 は PO 合意（2026-10-17、PO の答え「y」）・便1 の実装カード [card-bin1.md](./card-bin1.md)・便1 #4479 本番反映済・便2 本番投入済（2026-10-17、[bin2-record.md](./bin2-record.md)）・便3 再解析 93 job 済（2026-10-17、[bin3-record.md](./bin3-record.md)、K1 PO 目視 ○（2026-10-18、PO チャット「y」）・K2 の値段は本文と未照合）・現行キーは現状維持（PO 2026-10-18 y、ADR-1027 追記）・バルク系だけの追加の形 P1・P2（§12）は設計審査済み（Opus reviewer 3回目 APPROVE・Fable 成功見込み「高」）・PO 承認済み（2026-10-21、PO の答え「1」）・便1 実装済み（この PR）・便2 未着手。
