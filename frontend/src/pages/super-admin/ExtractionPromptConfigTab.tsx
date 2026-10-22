@@ -13,6 +13,7 @@ import { api } from "../../lib/api";
 import { Button } from "../../components/Button";
 import { Checkbox } from "../../components/Checkbox";
 import { TextareaControl } from "../../components/Textarea";
+import { LoadingBlock } from "../../components/loading";
 
 const PROMPT_KEYS = ["base_extraction", "work_id_extraction"] as const;
 type PromptKey = (typeof PROMPT_KEYS)[number];
@@ -110,9 +111,7 @@ export default function ExtractionPromptConfigTab() {
 
   if (loading) {
     return (
-      <div style={{ padding: "var(--space-6)", color: "var(--text-muted)" }}>
-        {t("common.loading")}
-      </div>
+      <LoadingBlock />
     );
   }
 

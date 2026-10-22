@@ -25,6 +25,7 @@ import {
   AnalysisRulesSidebar,
   type AnalysisRulesSidebarKey,
 } from "./components/AnalysisRulesSidebar";
+import { LoadingBlock } from "../../components/loading";
 
 // ---------------------------------------------------------------------------
 // 型定義
@@ -248,7 +249,7 @@ export default function TcgLineImportPage() {
   if (superAdminLoading) {
     return (
       <PageLayout navKey="nav.superAdminAnalysisRules">
-        <p style={{ color: "var(--text-secondary)" }}>{t("tcgLineImport.loading")}</p>
+        <LoadingBlock />
       </PageLayout>
     );
   }
@@ -507,7 +508,7 @@ export default function TcgLineImportPage() {
         </h3>
 
         {pendingLoading && (
-          <p style={{ color: "var(--text-secondary)" }}>{t("tcgLineImport.loading")}</p>
+          <LoadingBlock />
         )}
 
         {!pendingLoading && pendingJobs.length === 0 && (
@@ -594,7 +595,7 @@ export default function TcgLineImportPage() {
         </h3>
 
         {historyLoading && (
-          <p style={{ color: "var(--text-secondary)" }}>{t("tcgLineImport.loading")}</p>
+          <LoadingBlock />
         )}
         {historyError && (
           <p style={{ color: "var(--color-error)" }}>{historyError}</p>
