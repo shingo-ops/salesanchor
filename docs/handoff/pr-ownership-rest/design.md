@@ -4,6 +4,7 @@
 
 ## How
 scripts/validate-pr-ownership.sh のチェック4を `gh api repos/<origin>/pulls?head=<owner>:<branch>&state=closed` に置換し、merged_at 非nullの件数で判定。失敗時は理由1行を stderr に出し exit 1。
+owner/repo は origin URL の末尾 .git と / を除いた最後の2区切りから取る（クラウドの git プロキシ形式 .../git/owner/repo にも対応）。
 
 ## 受け入れ基準
 |基準|検証方法|
