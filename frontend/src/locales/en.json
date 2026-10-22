@@ -5204,9 +5204,6 @@
     "displayOrder": "Display Order",
     "isActive": "Active",
     "gameIds": "Usable games",
-    "gamesNone": "None",
-    "gamesClear": "Clear selection",
-    "gamesCount": "{{n}} games",
     "gamesInUse": "Products with this sub-category use that game, so it cannot be removed. Change those products first.",
     "gamesUnknown": "A selected game was not found or is inactive. Reload and choose again.",
     "saveFailed": "Could not save"

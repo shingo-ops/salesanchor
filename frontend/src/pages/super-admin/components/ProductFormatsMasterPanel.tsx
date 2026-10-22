@@ -15,7 +15,6 @@ import { EmptyState } from "../../../components/EmptyState";
 import { TextField } from "../../../components/TextField";
 import { Drawer } from "../../../components/Drawer";
 import ConfirmModal from "../../../components/ConfirmModal";
-import { MultiSelect } from "../../../components/MultiSelect";
 import { Callout } from "../../../components/Callout";
 import { SelectControl } from "../../../components/Select";
 import { STATUS_ICONS } from "../../../constants/icons";
@@ -319,17 +318,27 @@ export function ProductFormatsMasterPanel() {
                 fullWidth
               />
             </div>
-            <div className="form-group">
-              <MultiSelect
-                label={t(`${f}.gameIds`)}
-                options={gameOptions}
-                selected={form.game_ids}
-                onChange={next => setForm({ ...form, game_ids: next })}
-                clearLabel={t(`${f}.gamesClear`)}
-                allLabel={t(`${f}.gamesNone`)}
-                countLabel={n => t(`${f}.gamesCount`, { n })}
-                testId="product-format-games"
-              />
+            <div className="form-group" style={{ gridColumn: "1 / -1" }}>
+              <div style={{ fontSize: "var(--font-sm)", marginBottom: "var(--space-1)" }}>
+                {t(`${f}.gameIds`)}
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)" }}>
+                {gameOptions.map(o => (
+                  <Checkbox
+                    key={o.value}
+                    size="sm"
+                    label={o.label}
+                    data-testid={`product-format-games-option-${o.value}`}
+                    checked={form.game_ids.includes(o.value)}
+                    onChange={() => setForm({
+                      ...form,
+                      game_ids: form.game_ids.includes(o.value)
+                        ? form.game_ids.filter(v => v !== o.value)
+                        : [...form.game_ids, o.value],
+                    })}
+                  />
+                ))}
+              </div>
             </div>
             <div className="form-group">
               <TextField
