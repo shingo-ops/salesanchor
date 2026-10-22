@@ -21,5 +21,6 @@
 
 ## 状態
 
-- 2026-10-22: あるべき姿（PO の言葉）記録・KGI 草案（**PO 未承認**）・recon・design（自己審査 REVISE。PO 判断7件待ち）・ADR 未起案・実装未着手。
+- 2026-10-22: あるべき姿（PO の言葉）記録・KGI 草案（PO 未承認）・recon・design（自己審査 REVISE。PO 判断6件待ち。§10-1 は解決済み）・ADR 未起案・実装未着手。
 - 以後の整備は別セッションが引き継ぐ（PO 2026-10-22）。引き継ぎ書: [handover.md](../../handoff/doc-agenda-nav/handover.md)
+- 2026-10-22（引き継ぎ後）: KGI K1〜K7 **PO 承認済み**。design §10-3 解決（Codex 使用中 → 本文の正本を AGENTS.md に置き CLAUDE.md が取り込む向きへ変更）。PO 判断の残りは design §10 を正とする。
