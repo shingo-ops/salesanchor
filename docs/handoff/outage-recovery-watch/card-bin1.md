@@ -70,7 +70,7 @@
 | # | 事実 | 出典 |
 |---|---|---|
 | F1 | Prometheus のルールは今 27 本（8 グループ）。最後のグループは `container_state_alerts` | bin1-facts/alert_rules.yml・alert_rules_test.yml:4「全 27 本」 |
-| F2 | 時刻を比べる 7 本（式の行）: :121 F2CleanupStale・:184 CeleryHeartbeatStale・:222 ViewerInventoryStale・:233 ViewerInventoryStaleOnHold・:248 BackupLocalStale・:261 BackupS3Stale・:327 ContainerStateStale。7 本に共通の札は無い（CeleryHeartbeatStale は `job="backend"`、他は `instance="app-vps"` 等） | bin1-facts/alert_rules.yml |
+| F2 | 時刻を比べる 7 本（式の行）: :121 F2CleanupStale・:184 CeleryHeartbeatStale・:222 ViewerInventoryStale・:233 ViewerInventoryStaleOnHold・:248 BackupLocalStale・:261 BackupS3Stale・:327 ContainerStateStale。7 本に共通の札は無い（CeleryHeartbeatStale・ViewerInventoryStale・ViewerInventoryStaleOnHold は `job="backend"`、他は `instance="app-vps"` 等） | bin1-facts/alert_rules.yml |
 | F3 | `node_time_seconds`・`node_timex_offset_seconds`・`node_timex_sync_status` は app-vps・mgmt-vps とも値がある。2026-10-22 の測定で sync_status は両機とも 1、offset は両機とも 1 ミリ秒未満 | u1u2/q_node_timex_sync_status.json・q_node_timex_offset_seconds.json |
 | F4 | 2026-10-22 の障害の後、`node_time_seconds - timestamp(node_time_seconds)` は app-vps で -2436.7 秒だった | prom_skew.txt |
 | F5 | alertmanager.yml は 25 行。`inhibit_rules` は無い。group_wait 30s・group_interval 5m・repeat_interval 4h。受け手は discord-server-alerts（:12）と ops-api（:16、送り先は本番 API） | facts2 Q1 |
@@ -103,7 +103,7 @@
 - 変更: `monitoring/tokens.yml`
 - 変更: `docs/runbooks/alerts.md`
 - 変更: `docs/handoff/outage-recovery-watch/card-bin1.md`（このカード。§13 報告欄の追記のみ）
-- リポジトリの外（commit しない）: `/tmp/CC報告ファイル/outage-bin1/deploy/deploy-bin1.sh`
+- リポジトリの外（commit しない）: `/tmp/CC報告ファイル/outage-bin1/deploy/deploy-bin1.sh`・`/tmp/CC報告ファイル/outage-bin1/deploy/rollback-bin1.sh`
 
 ## 4. 作り方
 
@@ -236,13 +236,19 @@ inhibit_rules:
   - ClockSkew の `> 60` を `> 6000` にすると、§4-4 の試験 1 が落ちる。`promtool test rules` の出力と終了コード 1 を貼る。
 5-6. 手順書の見出しを数える: `grep -c '^## ' docs/runbooks/alerts.md`（期待 35）と、`grep -n '^## Clock' docs/runbooks/alerts.md`（期待 ClockSkew・ClockSyncStopped の 2 行）。
 5-7. 抑止の確かめ（手元・外部通信なし）:
-  - `/tmp/CC報告ファイル/outage-bin1/am-test/` に、作業場所の alertmanager.yml を写す。`secrets/discord-webhook` に `http://127.0.0.1:9/dummy`、`secrets/ops-ingest-token` に `dummy` の 1 行を Write で作る（本物の値は使わない）。
-  - `docker run -d --rm --name outage-bin1-am --network none -v （am-test の絶対パス）/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro -v （am-test の絶対パス）/secrets:/etc/alertmanager/secrets:ro prom/alertmanager:v0.28.1 --config.file=/etc/alertmanager/alertmanager.yml --cluster.listen-address=`。`--network none` は必ず付ける（ops-api の送り先は本番 API のため）。`--cluster.listen-address=`（値は空）も必ず付ける（v0.28.1 は既定で仲間探しの機能を 0.0.0.0:9094 で開こうとし、`--network none` では自分の IP が見つからず起動に失敗するため。空にするとこの機能が切れる）。
-  - 起動の直後に `docker ps --filter name=outage-bin1-am --format '{{.Names}} {{.Status}}'` を出し、1 行あることを確かめる（無ければ `--rm` で消えている。`docker run` を `--rm` 無しでもう一度起動して `docker logs outage-bin1-am` を貼り、BLOCKED:。その場合の後始末は `docker stop` だけでよい）。
+  - `/tmp/CC報告ファイル/outage-bin1/am-test/secrets/` に `discord-webhook`（中身 `http://127.0.0.1:9/dummy` の 1 行）と `ops-ingest-token`（中身 `dummy` の 1 行）を Write で作る（本物の値は使わない。参照先は alertmanager.yml:14・:25 の `/etc/alertmanager/secrets/` の 2 本）。
+  - ファイルはマウントせず、`docker cp` で中に入れる（Docker は colima で動いており、colima が見せるのは $HOME だけで /tmp は見えないため）。次の順に実行する:
+    - `docker create --rm --name outage-bin1-am --network none prom/alertmanager:v0.28.1 --config.file=/etc/alertmanager/alertmanager.yml --cluster.listen-address=`
+    - `docker cp monitoring/alertmanager/alertmanager.yml outage-bin1-am:/etc/alertmanager/alertmanager.yml`（作業場所から）
+    - `docker cp /tmp/CC報告ファイル/outage-bin1/am-test/secrets outage-bin1-am:/etc/alertmanager/secrets`
+    - `docker start outage-bin1-am`
+  - `--network none` は必ず付ける（ops-api の送り先は本番 API のため）。`--cluster.listen-address=`（値は空）も必ず付ける（v0.28.1 は既定で仲間探しの機能を 0.0.0.0:9094 で開こうとし、`--network none` では自分の IP が見つからず起動に失敗するため。空にするとこの機能が切れる）。
+  - 起動の直後に `docker ps --filter name=outage-bin1-am --format '{{.Names}} {{.Status}}'` を出し、1 行あることを確かめる（無ければ `--rm` で消えている。上の 4 つを `--rm` 無しでやり直して `docker logs outage-bin1-am` を貼り、BLOCKED:。その場合の後始末は `docker stop` だけでよい）。
+  - `api/v2/alerts` の読み取りは `docker exec outage-bin1-am wget -q -O- http://127.0.0.1:9093/api/v2/alerts` の出力を、手元（Mac）の `python3` にパイプで渡して 3 列にする（イメージの中に python3 は無い）。
   - 段 1（ClockSkew なし）: コンテナの中の amtool（`--alertmanager.url=http://127.0.0.1:9093`）で `alert add` を送る。送るのは 3 本: `alertname=CeleryHeartbeatStale job=backend severity=critical`、`alertname=ContainerStateStale instance=app-vps job=node-exporter severity=critical`、比べ役の `alertname=ServiceDown job=backend severity=critical`。コンテナの中から `wget -q -O- http://127.0.0.1:9093/api/v2/alerts` を読み、`python3` で alertname・`status.state`・`status.inhibitedBy` の 3 列にして出す（期待: 3 本とも active・inhibitedBy は空）。
   - 段 2（ClockSkew あり）: `alertname=ClockSkew instance=app-vps job=node-exporter severity=critical` を足して、同じ 3 列を出す（期待: CeleryHeartbeatStale と ContainerStateStale は suppressed で inhibitedBy が 1 件、ServiceDown と ClockSkew は active）。
   - 最後に `docker stop outage-bin1-am`（`--rm` なので消える）と、`docker ps -a --filter name=outage-bin1-am --format '{{.Names}}'` が空であることを出す。
-5-8. `python3 monitoring/scripts/validate_tokens.py` の終了コードと「閾値ズレ」の行（期待: exit 0・閾値ズレ 0 行）。値の一致は、§5-1 の出力と tokens.yml の 3 行を並べて報告に貼って示す。
+5-8. `python3 monitoring/scripts/validate_tokens.py` の終了コードと「閾値ズレ」の行（期待: exit 0・閾値ズレ 0 行）。値の一致は、`grep -n -A1 "alert: Clock" monitoring/prometheus/alert_rules.yml` の式の行（閾値 60）と §5-1 の for の値を、tokens.yml の 3 行と並べて報告に貼って示す。
 5-9. `bash -n /tmp/CC報告ファイル/outage-bin1/deploy/deploy-bin1.sh` と `bash -n /tmp/CC報告ファイル/outage-bin1/deploy/rollback-bin1.sh` の終了コード（期待 0）。台本 2 本の全文を報告に貼る（鍵のパスと利用者名は伏せずに貼ってよい。秘密の値は台本に書かない）。
 5-10. `grep -nE "[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+" docs/runbooks/alerts.md monitoring/alertmanager/alertmanager.yml` の該当（期待: 0 行。版の番号の形に当たった行は、その行を貼って IP でないことを書く）。
 5-11. `git diff origin/main --stat` が §3 のリポジトリ内のファイルであること（§13 の追記前なら 6 ファイル、追記後なら 7 ファイル）。
@@ -253,7 +259,7 @@ inhibit_rules:
 - 5-4 で promtool の test が落ちる → 試験の期待値（展開後の文字列・札）を直してやり直す。§4-1 の式・for・閾値を変えて合わせることはしない。3 回直しても通らなければ、出力を貼って BLOCKED:。
 - 5-4 で amtool の check-config が落ちる → 出力を貼って BLOCKED:（§4-2 の書き方を自分で変えない）。
 - 5-7 で段 2 の 2 本が suppressed にならない → 出力を貼って BLOCKED:（§4-2 を自分で変えない）。
-- 作業の最初に `docker version` が接続できない → `colima start` を 1 回だけ実行してから `docker version` をもう一度出す（Docker は colima で動かす。2026-10-22 の審査の時点では止まっていた）。それでも動かなければ、5-4・5-7 を飛ばさずに BLOCKED:。
+- 作業の最初に `docker version` が接続できない → `colima start` を 1 回だけ実行してから（`>` などの書き先を付けずにそのまま実行する。書き先を付けると見張り mac-vm-guard が別の起動と読んで止める） `docker version` をもう一度出す（Docker は colima で動かす。2026-10-22 の審査の時点では止まっていた）。それでも動かなければ、5-4・5-7 を飛ばさずに BLOCKED:。
 - reference_vps_monitor_access.md に接続方法が無い → 台本を作らずに NEEDS_DECISION:。
 - PR の CI で Docker Hub の取得回数の制限に当たって落ちる → 便3（ai-ops-247）カード §6 と同じく `quay.io` の同じ版に替えてよい。
 
@@ -276,6 +282,7 @@ inhibit_rules:
 - 8-2. Opus が PO に同意票 `操作1: bash /tmp/CC報告ファイル/outage-bin1/deploy/deploy-bin1.sh マージcommitのsha` を出す。
 - 8-3. PO の「1」を受けて Opus が実行し、生出力を `/tmp/CC報告ファイル/outage-bin1/deploy/` に残す。
 - 8-4. 手順 9 の結果を PR にコメントで追記する。
+- マージから配置までの間に、毎日の設定ずれの見回り（monitoring-config-drift.yml:8、日本時間 09:23）を過ぎると、設定ずれの警報 MonitoringConfigDrift（warning）が 1 件鳴る（check_config_drift.sh:19・:22 が 2 本を見ているため）。Opus はマージをこの時刻の前に配置まで終えられる時間に行う。鳴った場合は配置の後の次の見回りで消えることを確かめる。
 - 本番の Alertmanager に疑似の警報は入れない（§2 決めたこと）。抑止の動きの確かめは §5-7 で代える。本物で確かめられるのは次に時計がずれたとき。そのときは Opus が、時刻を比べる警報が Discord に届かなかったことを記録する（設計「継続」）。
 
 §8 の分岐:
