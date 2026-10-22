@@ -1,6 +1,10 @@
 <!-- 状態: PO 承認済み（2026-10-22。PO 返信「1」= KGI G1〜G3 を修正なしで承認・対策1は案M）。Architect 自己審査 APPROVE（条件付き：U1〜U3 は各便カード前に解消） -->
 # Phase 3 設計 — outage-recovery-watch（さくらメンテ予告の見張り＋復旧後点検）
 
+この文書は何か(専門用語なしの1行): さくらの点検予告に気づけるようにし、本番が止まって戻ったときに元どおりか自動で確かめて知らせる仕組みの設計。
+
+親: [docs/specs/ai-ops-247/README.md](../../specs/ai-ops-247/README.md)（区分: 既存テーマ ai-ops-247 の延長。STANDARD-WORKFLOW §1.8 により仕様書の履歴に追記）
+
 **対象ADR**: 新規 ADR 起案予定（ADR-1012 AI保守運用24時間化の延長として扱う。通知経路の正本=Alertmanager、障害記録の正本=ops_incidents を踏襲）  
 **recon**: docs/handoff/outage-recovery-watch/recon.md  
 **日付**: 2026-10-22  
@@ -12,11 +16,11 @@
 
 - 2026-10-21 15:54 JST、さくらから緊急メンテ予告メール（作業 10/21 15:00〜10/22 18:00、大阪含む、1VPS約1時間停止）が PO の業務用メールに届いたが未読。
 - 2026-10-22 12:02〜12:54 JST、prod1 が一時停止。App/API/LP 全停止。利用者への事前告知なし。
-- 復帰後、prod1 の時計が 約40分36.7秒遅れ（Prometheus node_time 差 -2436.7s）。13:05頃に一度に補正。
-- その間、CeleryHeartbeatStale / ViewerInventoryStale / ContainerStateStale が誤って鳴った（実際は毎分動いていた）。DB に約40分古い時刻の行が最低2行。
+- 復帰後、prod1 の時計が 約40分36.7秒遅れ（Prometheus の node_time_seconds - timestamp(node_time_seconds)、instance=app-vps が -2436.7s。生出力 ~/CC報告ファイル-keep/v102-shipdate-range/routine/20261022_1200/outage/timesync/impact/prom_skew.txt・prom_skew.json）。13:05頃に一度に補正。
+- その間、CeleryHeartbeatStale / ViewerInventoryStale / ContainerStateStale が誤って鳴った（実際は毎分動いていた）。DB に約40分古い時刻の行が最低2行（障害記録1行・解析ジョブ1行）。生出力 ~/CC報告ファイル-keep/v102-shipdate-range/routine/20261022_1200/outage/cause.md:7、~/CC報告ファイル-keep/v102-shipdate-range/routine/20261022_1200/outage/alerts.md、~/CC報告ファイル-keep/v102-shipdate-range/routine/20261022_1200/outage/timesync/impact/ops_incidents_row.txt・db_more.txt・beat_nonminute.txt
 - 復帰時に「アプリが元どおりか」を確かめる仕組みは無い（recon §4: deploy.yml は push 起動のみ、ServiceDown は「解決」通知だけ）。時計ずれの警報も無い。
 
-## 1. KGI（PO 承認待ち）
+## 1. KGI（PO 承認済み 2026-10-22）
 
 | # | KGI（POが○×で判定できる形） |
 |---|---|
@@ -45,14 +49,14 @@
 
 prod1 が止まっても動く必要があるため prod2 に置く（ADR-080 の分離方針に一致）。
 
-- 新しい小さな点検係（prod2 の cron・1分ごと）: API ヘルス（https://api.salesanchor.jp/api/health）を見て、前回「NG」→今回「OK」に変わった時だけ点検を1回実行。前回状態は prod2 のファイル1つに保存。型は mac-jobs-watch（docs/handoff/mac-jobs-watch/design.md）の「起動後点検・復旧通知」に揃える。
+- 新しい小さな点検係（prod2 の Docker 常駐・60秒ごと。prod2 に crontab は無い（docs/adr/ADR-153-data-durability.md:22）ため、同じ /opt/salesanchor-monitoring 配下で常駐する monitoring/github-collector の型に揃える）: API ヘルス（https://api.salesanchor.jp/api/health）を見て、前回「NG」→今回「OK」に変わった時だけ点検を1回実行。前回状態は prod2 のファイル1つに保存。型は mac-jobs-watch（docs/handoff/mac-jobs-watch/design.md）の「起動後点検・復旧通知」に揃える。
 - 点検項目（読み取りのみ）: ①App/API/LP の HTTP 200 ②health 本文の database/redis/celery が connected ③prod1 の時計ずれ（HTTP Date ヘッダーと prod2 時計の差 < 60秒）④Celery heartbeat が新しい（Prometheus の celery_heartbeat_last_success_timestamp_seconds）⑤container_state が新しい。
 - 結果は Discord 運用チャンネルへ ✅/❌ ＋ NG 項目名。復帰後 15 分の間に NG があれば 5 分おきに最大3回まで再点検して結果を追記（一時的な NG で騒がない）。
 
 ### 3-3. 時計ずれ警報と誤警報の抑止（Prometheus/Alertmanager）
 
-- 新ルール ClockSkew: prod1 の node-exporter の時刻と Prometheus の時刻の差の絶対値 > 60秒 が 2分続いたら critical。式は実機の /metrics で node_time_seconds / node_timex_offset_seconds の有無を確かめてから確定（recon 未確認点）。
-- Alertmanager の inhibit: ClockSkew が鳴っている間、時刻比較型ルール（monitoring/prometheus/alert_rules.yml の :121 F2CleanupStale、:183 CeleryHeartbeatStale、:222 ViewerInventoryStale、:249 と :262 のバックアップ系2本、:327 ContainerStateStale。ルール名は便1のカードで実物から写す）を抑止。
+- 新ルール ClockSkew: `abs(node_time_seconds{job="node-exporter"} - timestamp(node_time_seconds{job="node-exporter"})) > 60` が 2分続いたら critical（10/22 の実測に使った式と同じ。prod1=instance app-vps・prod2=mgmt-vps の両方を見る）。補助に `node_timex_sync_status == 0` が 10分続いたら warning（時刻合わせが止まった兆候）。U1 で3指標とも値が出ていることを確認済み。
+- Alertmanager の inhibit: ClockSkew が鳴っている間、時刻比較型ルール（monitoring/prometheus/alert_rules.yml の式の行で :121 F2CleanupStale、:183 CeleryHeartbeatStale、:222 ViewerInventoryStale、:233 ViewerInventoryStaleOnHold、:248 BackupLocalStale、:261 BackupS3Stale、:327 ContainerStateStale の7本）を抑止。:300 MonitoringConfigCheckStale は GitHub Actions が書く時刻なので対象外。
 
 ## 外部・過去事例の参照と我々への応用
 
@@ -72,7 +76,7 @@ prod1 が止まっても動く必要があるため prod2 に置く（ADR-080 �
 ## 技術 How・KPI
 
 - KPI: G1 到着時間（分）、G2 到着時間（分）・誤 ❌ 件数、G3 誤警報件数（時計ずれ中の時刻比較型警報＝0件）
-- 技術選択: 対策1は既存 IMAP 部品の拡張（理由: SSOT）。対策2は prod2 の cron スクリプト（理由: prod1 停止中も動く・ADR-080）。時計は Prometheus ルール（理由: 通知経路の正本=Alertmanager、ADR-1012）
+- 技術選択: 対策1は既存 IMAP 部品の拡張（理由: SSOT）。対策2は prod2 の Docker 常駐（理由: prod1 停止中も動く・ADR-080）。時計は Prometheus ルール（理由: 通知経路の正本=Alertmanager、ADR-1012）
 
 ## 弊害・トレードオフ
 
@@ -85,9 +89,9 @@ prod1 が止まっても動く必要があるため prod2 に置く（ADR-080 �
 
 | ステップ | 内容 | 担当 |
 |---------|------|------|
-| 0 | PO: KGI 承認・受け口ルート選択 | PO |
+| 0 | PO: KGI 承認・受け口ルート選択（済 2026-10-22・案M） | PO |
 | 1 | 便1: 時計ずれ警報＋inhibit（Prometheus/Alertmanager、promtool テスト） | Sonnet（実装カード後） |
-| 2 | 便2: 復旧後点検係（prod2 cron・状態ファイル・Discord） | Sonnet（実装カード後） |
+| 2 | 便2: 復旧後点検係（prod2 Docker 常駐・状態ファイル・Discord） | Sonnet（実装カード後） |
 | 3 | 便3: メール見張り（review_mail_notifier の複数受け箱化＋差出人絞り込み）＋ PO の転送設定 | Sonnet＋PO（GUI） |
 
 便ごとに 変更→反映→測定。
@@ -106,12 +110,13 @@ prod1 が止まっても動く必要があるため prod2 に置く（ADR-080 �
 
 ## 未解決事項（実装カード発行前に解消する）
 
-- U1（便1前）: prod1 node-exporter が node_time_seconds / node_timex_offset_seconds を出しているか実機で確認し、ClockSkew の式を確定
-- U2（便2前）: prod2 へのスクリプト配置経路（リポジトリ管理か・反映手順）と prod2 で使える Discord 送り先を確認。ADR-1012「通知経路の正本=Alertmanager」と合わせるため、❌ は prod2 の Alertmanager へ警報として送り、✅ のみ直接送る案を第一候補として便2カードで確定
+- U1（解消 2026-10-22）: node_time_seconds・node_timex_offset_seconds・node_timex_sync_status が app-vps / mgmt-vps とも値を返す。collector の無効化なし（docker-compose.exporters.yml:12-17）。promtool のルール試験は .github/workflows/monitoring-check.yml:70-75 で CI 実行済みの仕組みがある（monitoring/prometheus/tests/alert_rules_test.yml）。生出力 ~/CC報告ファイル-keep/v102-shipdate-range/routine/20261022_1200/outage/prevention/u1u2/
+- U2（一部解消 2026-10-22）: prod2 の設定は /opt/salesanchor-monitoring に repo と同じ相対パスで手作業コピー＋reload で反映する（前例 docs/handoff/ai-ops-247/card-stage1-bin7.md の §8。自動配置の workflow は無い）。ずれは monitoring-config-drift.yml が毎日検知する。Alertmanager の Discord 送り先はファイル参照（monitoring/alertmanager/alertmanager.yml:14、docker-compose.monitoring.yml:180）。残り: 便2 で点検係の通知を Alertmanager 経由にするか（ADR-1012 決定1）を便2カードで確定。prod2 への反映は無制限鍵を使うため、各便で PO の同意票が要る
 - U3（解消）: PO が案M を選択（2026-10-22）。便3 では PO の転送設定・受け箱作成の手順書をカードに含める
 
 ## Architect 自己審査（同一AIによる自己審査）
 
 - 判定: **APPROVE（条件付き）** — KGI・対象範囲・受入条件は○×で検証可能。U1〜U3 は各便のカード発行前の確認事項として切り出し済みで、設計の骨格を変えない
 - 修正済み: ①recon に無いルール名を書いていた箇所を行番号参照に直した ②維持の仕組みで「半年に1回」と「週次」が矛盾していたのを30日無着信の見張りに一本化
+- 2回目（reviewer REVISE 2026-10-22 への対応）: ③抑止対象に ViewerInventoryStaleOnHold を足し行番号を式の行に統一 ④実測値に生出力の出典を付け U1 と測り方の矛盾を解消 ⑤状態表示を承認済みに統一 ⑥区分=ai-ops-247 の延長と決め仕様書へリンク ⑦U1/U2 の確認結果で点検係の置き方を cron から Docker 常駐に変更（KGI は不変）
 - 残る注意: 外部事例は「該当なし」（理由記載）。設計合格は PO 承認・実装開始の承認を兼ねない

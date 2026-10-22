@@ -1,12 +1,16 @@
 # Phase 2 recon — outage-recovery-watch（さくらメンテ予告の見張り＋復旧後点検）
 
-基準: git fetch 後の origin/main 14b1b6d39（2026-10-22）。読み取りのみ。発端: 2026-10-22 12:02〜12:54 JST さくらVPS緊急メンテで prod1 一時停止、予告メール未読、復帰後に prod1 時計 約40分36.7秒遅れ（13:05頃自動補正）・誤警報3件。
+この文書は何か(専門用語なしの1行): 本番が止まった件の再発防止を作る前に、今ある仕組みを調べた記録。
+
+親: [docs/specs/ai-ops-247/README.md](../../specs/ai-ops-247/README.md)
+
+基準: git fetch 後の origin/main 14b1b6d39（2026-10-22）。読み取りのみ。発端: 2026-10-22 12:02〜12:54 JST さくらVPS緊急メンテで prod1 一時停止、予告メール未読、復帰後に prod1 時計 約40分36.7秒遅れ（13:05頃自動補正）・誤警報3件（生出力 ~/CC報告ファイル-keep/v102-shipdate-range/routine/20261022_1200/outage/cause.md・~/CC報告ファイル-keep/v102-shipdate-range/routine/20261022_1200/outage/timesync/impact/prom_skew.txt）。
 
 # recon_raw: 止まったサーバーの再発防止（対策1 さくらメール通知 / 対策2 復旧後の自動確認）
 基準: git fetch origin 後の worktree（origin/main = 14b1b6d39）。読み取りのみ。パスは worktree 相対。
-worktree: /Users/tanizawashingo/worktrees/salesanchor/release-outage-recovery-watch（ブランチ release/outage-recovery-watch）
-preflight: PREFLIGHT OK（identity=shingo-cc）。警告2件: 本店が origin/main より4086コミット遅れ／本店に未保存31件。全文 .../prevention/preflight.txt
-worktree作成: 成功。最後に「claude 起動」で "Input must be provided either through stdin or as a prompt argument when using --print" のエラー（worktree自体は作成済み）。全文 .../prevention/worktree.txt
+worktree: ~/worktrees/salesanchor/release-outage-recovery-watch（ブランチ release/outage-recovery-watch）
+preflight: PREFLIGHT OK（identity=shingo-cc）。警告2件: 本店が origin/main より4086コミット遅れ／本店に未保存31件。全文 ~/CC報告ファイル-keep/v102-shipdate-range/routine/20261022_1200/outage/prevention/preflight.txt
+worktree作成: 成功。最後に「claude 起動」で "Input must be provided either through stdin or as a prompt argument when using --print" のエラー（worktree自体は作成済み）。全文 ~/CC報告ファイル-keep/v102-shipdate-range/routine/20261022_1200/outage/prevention/worktree.txt
 
 ## 1. 既存ADR
 - ADR-069 (docs/adr/ADR-069-uptime-kuma-activation.md:13-21,47-57): Kuma有効化。App/API/LP/PG/Redis/Meta/Firebaseを監視。:44 「Discord Webhook 通知設定」は手動(UI)作業。
@@ -58,7 +62,7 @@ worktree作成: 成功。最後に「claude 起動」で "Input must be provided
   - monitoring/ 全体・docs で node_timex_offset_seconds / node_time_seconds / ntp / chrony の参照は【なし】(grep済み)。時刻ずれ警報は【なし】。
   - node-exporter は prom/node-exporter:v1.11.1(docker-compose.exporters.yml:5, monitoring.yml:83)。起動引数に --no-collector.* の無効化指定は無い(exporters.yml:13-17)。よって既定で有効な time / timex コレクタのメトリクスは出ている【推測】(公式既定。実機の /metrics で node_timex_offset_seconds を確認していない=【未確認】)。
   - 今回の誤警報の仕組み(コードからの事実): CeleryHeartbeatStale は `time() - celery_heartbeat_last_success_timestamp_seconds > 600`(alert_rules.yml:183-185)。heartbeat値は prod1 の backend が time.time() で書く(backend/app/celery_health.py:51)。time() は Prometheus(prod2)の時計。prod1が約40分遅れなら差は40分超になり得る【推測:結論は実測要。10/22の時計の遅れ値と合わせて検証していない】。
-  - 他の時刻比較型ルール(同じ誤警報の可能性): F2CleanupStale(:121), ViewerInventoryStale(:222), BackupLocalStale/S3Stale(:249,262), ContainerStateStale(:327)。prod1側で書いた時刻を使う点は同じ(確認は式のみ)。
+  - 他の時刻比較型ルール(同じ誤警報の可能性): F2CleanupStale(:121), ViewerInventoryStale(:222), ViewerInventoryStaleOnHold(:233), BackupLocalStale(:248), BackupS3Stale(:261), ContainerStateStale(:327)（式の行）。prod1側で書いた時刻を使う点は同じ(確認は式のみ)。
 
 ## 5. Mac常駐・定期実行の同種見張り
 - mac-jobs-watch: docs/handoff/mac-jobs-watch/design.md:1-12,20(scripts/mac-jobs-watch.sh と ops/launchd/jp.salesanchor.mac-jobs-watch.plist, 30分ごと+ログイン時)。Macの自動お手入れの停止/失敗をDiscord通知。通知先=watchdog-webhookファイル(:24)。起動直後の判定・復旧通知(「✅ 復旧」:3-1 ⑧)・起動後の点検(:6)の作りがあり、対策2の「復帰後の点検通知」の型の前例になる。ただし対象はMac、prod1ではない。
@@ -70,7 +74,7 @@ worktree作成: 成功。最後に「claude 起動」で "Input must be provided
 - docs/specs/README.md:3-5,102-105 「索引に載る領域に触れる開発は設計仕様書を先に読む(無ければ作る)。新しい設計仕様書を作ったら表に1行足す」。近い既存領域: 「AI 保守運用 24 時間化(ai-ops-247)」(:10) と「mac-jobs-watch」。
 - docs/STANDARD-WORKFLOW.md:
   - :30-39 §1.5 設計仕様書は3ファイル標準: README.md / ideal-state.md(POの言葉のみ) / kgi.md。保存先 docs/specs/<テーマ>/。
-  - :65-75 §1.8 区分判定: 新規テーマ=フルセット / 既存の延長=既存テーマの履歴に追記 / 軽微。本件は ai-ops-247 の延長にも新規にも読めるため区分は【PO/設計で判定】。
+  - :65-75 §1.8 区分判定: 新規テーマ=フルセット / 既存の延長=既存テーマの履歴に追記 / 軽微。本件は ai-ops-247 の延長にも新規にも読めるため区分は【PO/設計で判定】→ design.md で ai-ops-247 の延長と決定。
   - :77-82 §2 recon: docs/handoff/<仕事名>/recon.md、フルパス:行番号、既存ADR検索結果の明記。design: 各受入基準に検証方法リンク、recon/ADR 相互参照、「外部・過去事例の参照と我々への応用」欄(空欄不可)。
   - :55-63 §1.7 design.md 末尾「## 維持の仕組み」(守り手パス・対象・関所なしの場合)必須。
   - :43-51 §1.6 親子リンクと素人向け説明(1行説明)。例: docs/handoff/mac-jobs-watch/design.md:3。
