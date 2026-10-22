@@ -3,7 +3,7 @@
 状態: 調査済み（2026-10-22〜23、Opus＋Sonnet）
 
 ## 1. 既存ADR・仕様の検索
-- ADR-1029（マージ前 Opus 審査のフック強制）: review-gate gate.py は手元 `~/.claude/scripts/review-gate/` にあり、リポジトリには無い。
+- ADR-1029（マージ前 Opus 審査のフック強制）: review-gate の gate.py は手元のホーム側にあり、リポジトリには無い。
 - ADR-136（危険PRのGO手順）、ADR-1003（GO委任）、ADR-1033（会話同意）: いずれも手元の hooks／許可券（permit-danger.sh）を前提にしている。
 - クラウド実行（Claude Code on the web / routine）を扱う ADR は無い。
 
