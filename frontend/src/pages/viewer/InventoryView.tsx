@@ -1,4 +1,4 @@
-/** ③ 在庫表（検索・絞り込み・並べ替えはすべて手元の行に対して行う。更新ボタンは無い） */
+/** ③ 在庫表（検索・絞り込み・並べ替えはすべて手元の行に対して行う。更新ボタンは無い。中身は ViewerApp が1分ごとに差し替える） */
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/Button";
@@ -52,7 +52,10 @@ export function InventoryView({ data }: InventoryViewProps) {
   const { t, i18n } = useTranslation();
   const isMobile = useIsMobile();
 
-  const [now] = useState(() => Date.now());
+  // data が差し替わるたびに「今」を取り直す（24時間以内の判定を新しい時刻で行う。docs/handoff/viewer-auto-refresh/design.md）。
+  // data は中で使わないが、取り直しのきっかけとして依存に入れる
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const now = useMemo(() => Date.now(), [data]);
   // 既定はポケモン（MAIN_SERIES の先頭）。その行が無いときは「すべて」（docs/handoff/inventory-default-pokemon-tab/design.md）
   const [tab, setTab] = useState(() =>
     data.rows.some((r) => r.series === MAIN_SERIES[0]) ? MAIN_SERIES[0] : TAB_ALL,
