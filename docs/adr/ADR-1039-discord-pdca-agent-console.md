@@ -33,6 +33,7 @@
 10. Discord 発の不具合の行は、段階6 より前から ADR-1012 の障害記録の表に入れ、`labels.source='discord'` で分ける（§14-9）。
 11. ADR-1009 は全部置き換える（§14-4）。前の受付はやめる。
 12. 件の作業に渡す指示書と、ADR-1012 Decision 5 の共用の担当定義は `docs/ai-agents/ops-incident-agent.md` の1ファイルにする（正本は1か所。まだ無い。本件の便2 で先に作る）。
+13. 件の worktree の作成と作業前の確かめは、件の作業を開く前に囲いの外で行う。囲いの外で件の worktree に向けて動かす git には `-c core.fsmonitor=false -c core.hooksPath=/dev/null` を付け、`status`・`diff` には `--ignore-submodules=all` も付ける。フックが動く命令（commit・checkout・merge・push・rebase など）は囲いの外から件の worktree に向けて動かさない。件の作業から `.git/hooks`・`.git/config`・件の worktree の `.git` ファイル・`.git/worktrees/<名>/commondir`・`gitdir` は書けない設定にする（第0段 0-19 で `.git/hooks`・`.git/config` の拒否と commit の両立を確かめた。本物のリポジトリでは便2 で確かめる）。
 
 ## Why（なぜこの形か）
 
