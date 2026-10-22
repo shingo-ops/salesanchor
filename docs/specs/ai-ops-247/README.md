@@ -30,6 +30,7 @@ discord-ops-intake は本テーマの「予備（C）」として残し、構築
 | 日付 | 状態 |
 |---|---|
 | 2026-10-13 | あるべき姿・KGI 6 件 PO 承認（「Cも予備で構築して動作確認まで完結させる、その条件付きでy」）。recon・design・ADR-1012 草案作成。実装未着手 |
+| 2026-10-22 | 延長: さくらメンテ停止（12:02〜12:54 JST）の再発防止 outage-recovery-watch。KGI 3件 PO 承認（PO 返信「1」）。設計済み・実装未着手 |
 
 ## 文書
 
@@ -37,4 +38,5 @@ discord-ops-intake は本テーマの「予備（C）」として残し、構築
 - [kgi.md](kgi.md) — KGI（PO 承認済み）
 - 子: [recon.md](../../handoff/ai-ops-247/recon.md) — 現状調査
 - 子: [design.md](../../handoff/ai-ops-247/design.md) — 設計
+- 子（延長）: [outage-recovery-watch/design.md](../../handoff/outage-recovery-watch/design.md) — さくら予告メール見張り・復旧後点検・時計ずれ警報
 - ADR: [ADR-1012](../../adr/ADR-1012-ai-ops-247.md)
