@@ -17,6 +17,7 @@ import { ICON } from "../../constants/iconSizes";
 import { PageLayout } from "../../components/PageLayout";
 import { Button } from "../../components/Button";
 import { CheckboxControl } from "../../components/CheckboxControl";
+import { LoadingBlock } from "../../components/loading";
 
 interface MatrixRow {
   role_id: number;
@@ -110,7 +111,7 @@ export default function InventoryVisibilityPage() {
   };
 
   if (permsLoading) {
-    return <div className="page">{t("common.loading")}</div>;
+    return <LoadingBlock />;
   }
 
   if (!hasPermission("tenant.inventory_visibility.edit")) {
@@ -127,7 +128,7 @@ export default function InventoryVisibilityPage() {
     <PageLayout navKey="nav.inventoryVisibility" subtitleKey="inventoryVisibility.subtitle">
       {error && <div className="error-message">{error}</div>}
       {loading ? (
-        <div>{t("inventoryVisibility.loadingMatrix")}</div>
+        <LoadingBlock label={t("inventoryVisibility.loadingMatrix")} />
       ) : matrix.length === 0 ? (
         <div>{t("inventoryVisibility.noRoles")}</div>
       ) : (

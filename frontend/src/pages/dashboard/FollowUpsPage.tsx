@@ -14,6 +14,7 @@ import { Drawer } from "../../components/Drawer";
 import { useRecordDrawer } from "../../hooks/useRecordDrawer";
 import { getFollowUps, type FollowUpItem } from "../../api/funnel";
 import "./FollowUpsPage.css";
+import { LoadingBlock } from "../../components/loading";
 
 type SegmentFilter = "all" | "order_stopped" | "no_repeat_after_first" | "won_no_order";
 
@@ -109,7 +110,7 @@ export default function FollowUpsPage() {
     {
       key: "days",
       header: t("funnel.colDays"),
-      renderCell: (row) => `${row.days}${t("common.unitDay", { defaultValue: "日" })}`,
+      renderCell: (row) => `${row.days}${t("common.unitDay")}`,
     },
     {
       key: "last_order_at",
@@ -161,7 +162,7 @@ export default function FollowUpsPage() {
 
       {/* DataTable */}
       {loading ? (
-        <div className="fu-loading">{t("common.loading")}</div>
+        <LoadingBlock />
       ) : (
         <DataTable<FollowUpRow>
           columns={columns}
@@ -198,7 +199,7 @@ export default function FollowUpsPage() {
             </div>
             <div className="fu-drawer-row">
               <span className="fu-drawer-label">{t("funnel.colDays")}</span>
-              <span>{editForm.days}{t("common.unitDay", { defaultValue: "日" })}</span>
+              <span>{editForm.days}{t("common.unitDay")}</span>
             </div>
             <div className="fu-drawer-row">
               <span className="fu-drawer-label">{t("funnel.colLastOrder")}</span>

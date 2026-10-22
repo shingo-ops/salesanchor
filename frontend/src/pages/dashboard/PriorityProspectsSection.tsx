@@ -13,6 +13,7 @@ import {
 import type { LeadDetail } from "../inbox/inbox.types";
 import "./WeeklyAdvisorSection.css";
 import "./PriorityProspectsSection.css";
+import { LoadingBlock } from "../../components/loading";
 
 const PriorityIcon = DashboardIcons.trendUp;
 
@@ -326,7 +327,7 @@ export function PriorityProspectsSection() {
       <p className="db-priority-subtitle">{t("dashboard.prioritySubtitle")}</p>
 
       {loading ? (
-        <div className="db-priority-loading">{t("dashboard.weeklyLoading")}</div>
+        <LoadingBlock label={t("dashboard.weeklyLoading")} />
       ) : error ? (
         <div className="db-priority-error">{error}</div>
       ) : items.length === 0 ? (
@@ -392,7 +393,7 @@ export function PriorityProspectsSection() {
                 {showComposer && (
                   <div className="db-weekly-composer" data-testid="priority-followup-composer">
                     {composer.loadingLead ? (
-                      <div className="db-weekly-composer-loading">{t("common.loading")}</div>
+                      <LoadingBlock />
                     ) : null}
 
                     {detail?.next_action ? (
