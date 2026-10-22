@@ -31,3 +31,6 @@
 - 前例 03d770375（ADR-1026）: ADD 文を消した migration は「（削除済み）…ここに ADD を戻さないこと」、DROP の migration は DROP CONSTRAINT / DROP INDEX / DROP COLUMN の各 IF EXISTS。churn の許可表は足していない。
 - チェック 10: scripts/check-migration-column-churn.js が scripts/run_all_migrations.sh の登録順で ADD→DROP を検出（.github/workflows/migration-guard.yml:518-550）。チェック 8: scripts/check-migration-value-writes.py --check 8（同 :411-425）。DDL は対象外。
 - ADR: ADR-1038（docs/adr/ADR-1038-product-format-child-of-work.md）、ADR-1026（docs/adr/ADR-1026-drop-products-type-master-id.md）、ADR-1024（docs/adr/ADR-1024-ai-readonly-db-path.md）。
+
+## 6. CI での失敗（事実）
+- run 39727376560 の「マイグレーションSQL 実行テスト（実DB）」は、product_formats が無い空の DB に新 migration だけを流し、`relation "public.product_formats" does not exist` で落ちた（/tmp/CC報告ファイル/format-work-parent/bin3b/mig_fail.txt:26）。ALTER TABLE を IF EXISTS 付きに直した。

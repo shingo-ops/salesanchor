@@ -36,3 +36,7 @@
 - 便3a の結果: v102 の解析、backend/app/tasks、scripts/accuracy、gas/ に type_master_id・typeMasterId を含む行は 0 件。
 - 便3b の git grep -n "type_master_id" -- backend/app は、links 由来の行だけ（旧列の読み手は app に 0 件。recon-bin3b.md §1）。
 - 解析側で product_formats を読む行は code と id だけを使う（recon-bin3b.md §4）。正答率の採点は TSV の突き合わせだけで DB に接続しない（design-bin2.md）。
+
+## CI での失敗と直し
+- PR #4642 の CI「マイグレーションSQL 実行テスト（実DB）」（run 39727376560）が、空の DB で変更した SQL だけを流して `relation "public.product_formats" does not exist` で落ちた。全体の流し（migration-full-dryrun）は success だった。
+- 直し: 2 つの ALTER を `ALTER TABLE IF EXISTS public.product_formats` にした。表が無い DB では何もしない。
