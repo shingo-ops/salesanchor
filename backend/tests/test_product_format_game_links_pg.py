@@ -26,7 +26,8 @@ def fmt_pg(edit_pg):  # noqa: F811
     with connection.cursor() as cur:
         for name in ("20260922_030000_product_format_game_links.sql",
                      "20260923_010000_product_formats_add_type_master_id.sql",
-                     "20261022_100000_products_format_in_work_fk.sql"):  # ADR-1038 便2: 複合 FK
+                     "20261022_100000_products_format_in_work_fk.sql",  # ADR-1038 便2: 複合 FK
+                     "20261022_110000_product_formats_drop_type_master_id.sql"):  # ADR-1038 便3b: 旧列を落とす
             cur.execute((_MIGRATIONS / name).read_text())
         cur.execute("SELECT id FROM public.type_master WHERE is_active ORDER BY id LIMIT 2")
         work_a, work_b = [r[0] for r in cur.fetchall()]
@@ -289,13 +290,7 @@ async def test_detail_update_rejects_mismatch_before_write(fmt_pg):
         await engine.dispose()
 
 
-# ADR-1038 便3a: API は旧列 type_master_id を受け取っても無視し、返さない（列と値は便3b まで残る）
-def _legacy_value(ctx, format_id):
-    with ctx["connection"].cursor() as cur:
-        cur.execute("SELECT type_master_id FROM public.product_formats WHERE id=%s", (format_id,))
-        return cur.fetchone()[0]
-
-
+# ADR-1038 便3a/3b: API は旧列 type_master_id を受け取っても無視し、返さない（列は便3b で落とした。送っても保存できる）
 async def test_create_ignores_legacy_type_master_id_and_does_not_return_it(fmt_pg):
     body = ProductFormatCreate.model_validate(
         {"code": "T3A_CREATE", "name": "T3A create", "type_master_id": fmt_pg["work_b"]})
@@ -306,7 +301,6 @@ async def test_create_ignores_legacy_type_master_id_and_does_not_return_it(fmt_p
             res = await formats_router.create_product_format(body, db)
             created = res.id
         assert "type_master_id" not in res.model_dump()
-        assert _legacy_value(fmt_pg, created) is None
     finally:
         await engine.dispose()
         if created is not None:
@@ -315,9 +309,6 @@ async def test_create_ignores_legacy_type_master_id_and_does_not_return_it(fmt_p
 
 
 async def test_update_ignores_legacy_type_master_id_and_list_does_not_return_it(fmt_pg):
-    with fmt_pg["connection"].cursor() as cur:
-        cur.execute("UPDATE public.product_formats SET type_master_id=%s WHERE id=%s",
-                    (fmt_pg["work_a"], fmt_pg["linked"]))
     body = ProductFormatUpdate.model_validate(
         {"name": "T3A renamed", "type_master_id": fmt_pg["work_b"]})
     engine = create_async_engine(fmt_pg["url"])
@@ -328,6 +319,5 @@ async def test_update_ignores_legacy_type_master_id_and_list_does_not_return_it(
             assert "type_master_id" not in res.model_dump()
             listed = await formats_router.list_product_formats(is_active=None, page=1, per_page=500, db=db)
             assert all("type_master_id" not in r.model_dump() for r in listed)
-        assert _legacy_value(fmt_pg, fmt_pg["linked"]) == fmt_pg["work_a"]
     finally:
         await engine.dispose()

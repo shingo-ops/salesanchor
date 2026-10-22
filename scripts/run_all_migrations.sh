@@ -1128,3 +1128,5 @@ run_sql migrations/20261020_110000_line_conditions_value_group_add_supply.sql
 run_sql migrations/20261020_120000_create_viewer_message_templates.sql
 # ADR-1038 便2: products(細分類, 中分類) → product_format_game_links の複合 FK（事前点検つき・冪等）
 run_sql migrations/20261022_100000_products_format_in_work_fk.sql
+# ADR-1038 便3b: 旧列 product_formats.type_master_id を取り除く（FK・索引ごと。冪等。親子の正本は links）
+run_sql migrations/20261022_110000_product_formats_drop_type_master_id.sql
