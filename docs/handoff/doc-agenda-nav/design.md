@@ -1,7 +1,7 @@
 ---
 mode: handoff
 adr: 未起案（段0で新規 ADR として起案し ADR-076 を一部改める。§8 段0）
-status: 草案（審査7回目 APPROVE on 084764bf3・§10-2 PO 回答済み（90行）・§10-4〜§10-7 と §11 の安全寄りの3文は PO「fableにまかせてくれ」で Fable が判断し反映済み（§20）・PO 判断待ちなし。KGI 合格ライン・測り方修正・K8〜K10 は PO 承認済み 2026-10-22）
+status: 草案（審査9回目 REVISE を反映済み（§22）。最新の判定は末尾の審査記録を正とする。審査7回目 APPROVE on 084764bf3・§10-2 PO 回答済み（90行）・§10-4〜§10-7 と §11 の安全寄りの3文は PO「fableにまかせてくれ」で Fable が判断し反映済み（§20）・PO 判断待ちなし。KGI 合格ライン・測り方修正・K8〜K10 は PO 承認済み 2026-10-22）
 ---
 
 # design — AI向け指示文書の「入口→目次→章→末端ページ」化（設計草案）
@@ -30,7 +30,7 @@ PO の言葉（2026-10-22）: 「マニュアルのようにアジェンダが�
 | KGI-1 | 会話開始時に自動で入る行数（ユーザー側＋プロジェクト側の指示＋rules。MEMORY.md を除く） | 313行/12,992字 | **200行以下** | raw/autoload-sizes.txt と同じコマンド（wc -l -m）を実行し合計。段3以後は CLAUDE.md が取り込む AGENTS.md の行数も足す（取り込みは文脈を減らさない・§5） |
 | KGI-2 | 関係ない入力（raw/prompt-regex-test.txt の無関係例文5本）で商品マスタ登録ルールが注入される回数 | 5/5 | **0/5**（関係あり例文2本は 2/2 のまま） | python3 -I で正規表現に例文を通す（同ファイルの手順） |
 | KGI-3 | 同じ決まりが2ファイル以上に本文として書かれている件数（recon §2-4 の9語） | 9語すべて複数ファイル | **プロジェクト側（CLAUDE.md/AGENTS.md/frontend/backend）で 0 語**（ユーザー側 ~/.claude は本便の範囲外） | raw/duplicates.txt と同じ grep |
-| KGI-4 | 入口から目次を辿って届かない docs/specs・docs/ai-agents の文書数 | specs 35・ai-agents 19（unreachable-list.md §1 で specs 17・ai-agents 19 に訂正。元の 35 は再現できない） | **0** | raw/reachability.txt と同じ幅優先探索（CI 化後は CI の出力） |
+| KGI-4 | 入口から目次を辿って届かない docs/specs・docs/ai-agents の文書数 | specs 35・ai-agents 19（unreachable-list.md §1 で specs 17・ai-agents 19 に訂正。元の 35 は再現できない） | **0** | reach.py（unreachable-list.md §1 の定義。今はリポジトリ外 ~/CC報告ファイル-keep/agenda-nav-20261022/unreach/reach.py、段2で docs/handoff/doc-agenda-nav/ に入れる）の幅優先探索（CI 化後は CI の出力）。旧 raw/reachability.txt を出した Python は保存されておらず使わない（§11・審査9回目 直1） |
 | KGI-5 | 入口から末端ページまでの段数 | 最深14段（同 §1 で最深15段に訂正） | **入口→目次→章→末端 = 3段以内**（docs/handoff は対象外） | 同上の depth 出力。**注**: 今の構造図（§4）では各テーマの表紙（specs の各 README）が3段目、その子（例 kgi.md）が4段目になる。**PO 承認（2026-10-22 原文「1」）で「末端＝各テーマの表紙」と数える**（docs/specs/doc-agenda-nav/kgi.md K5） |
 | KGI-6 | 目次の各項目に「いつ読むか」1行が付いている割合 | 索引 docs/specs/README.md は状態列はあるが「いつ読むか」列なし | **100%** | 目次ファイルの表に「いつ読むか」列が空欄なし（CI で空欄を数える） |
 | KGI-7 | 安全の決まり（不可逆操作の PO 確認・VPS 鍵制限・main 直 push 禁止）が入口に残っているか | CLAUDE.md:26-40 に在る | **入口に残る（移さない）** | 入口（段3以後は AGENTS.md。CLAUDE.md は 「@AGENTS.md」 で取り込む）で「不可逆操作は必ず PO 確認」「VPS 直作業禁止」「直接コミット禁止」を grep し各1件以上 |
@@ -40,8 +40,8 @@ KPI は各段（§8）の完了ごとに上表の該当行を再測定する。
 
 ## 3. 範囲／範囲外
 
-- 範囲: リポジトリ salesanchor の AI 向け指示文書（CLAUDE.md・AGENTS.md・frontend/backend の同2種・docs/STANDARD-WORKFLOW.md・docs/ai-agents/・docs/specs/README.md・docs/adr/FEATURE-INDEX.md）、~/.claude/scripts/master-register-rules-guard.py の正規表現1行（と origin/main の同名スクリプト）、新設する CI 1本。
-- 範囲外: docs/handoff（便の記録・1,809件。索引化しない。理由: 作業記録であって手順書ではない）、docs/adr（README.md 自動生成で既に全件辿れる）、MEMORY.md（auto memory。別便。ただし KGI-1 の分母から外して測る理由は recon §2-1 #5: 16,298字で自動読込の 56%）、~/.claude/CLAUDE.md と ~/kb（ユーザー個人設定。別便）、フロントエンド（画面は触らない。触る場合はデザイントークンと components/ の金型に従う。本設計では該当なし）。
+- 範囲: リポジトリ salesanchor の AI 向け指示文書（CLAUDE.md・AGENTS.md・frontend/backend の同2種・docs/STANDARD-WORKFLOW.md・docs/ai-agents/・docs/specs/README.md・docs/adr/FEATURE-INDEX.md）、~/.claude/scripts/master-register-rules-guard.py の正規表現1行（段1）と免除の置き場1行 :23（段1b）（いずれも origin/main の同名スクリプトと一緒に）、新設する CI 1本（段2）と既存 CI .github/workflows/check-claude-size.yml の変更判定パス（段2a）、ユーザー側 ~/.claude/CLAUDE.md の重複2行 :12-13 の削除（段6）と ~/.claude・~/kb の短縮（段7。§10-8 で本テーマに追加。PO の実装承認待ち）（審査9回目 直2）。
+- 範囲外: docs/handoff（便の記録・1,809件。索引化しない。理由: 作業記録であって手順書ではない）、docs/adr（README.md 自動生成で既に全件辿れる）、MEMORY.md（auto memory。別便。ただし KGI-1 の分母から外して測る理由は recon §2-1 #5: 16,298字で自動読込の 56%）、~/.claude と ~/kb のうち段6・段7 に挙げた以外（ユーザー個人設定）、フロントエンド（画面は触らない。触る場合はデザイントークンと components/ の金型に従う。本設計では該当なし）。
 
 ## 4. 構造図（前→後）
 
@@ -51,7 +51,7 @@ KPI は各段（§8）の完了ごとに上表の該当行を再測定する。
  ├ ~/.claude/CLAUDE.md 84 ─@→ ~/kb/AGENTS.md 32
  ├ ~/.claude/rules/common/{agents,git-workflow}.md 77
  ├ MEMORY.md 149
- └ CLAUDE.md 120 ──「必ず read」→ STANDARD-WORKFLOW 175 ─→ specs/README 100 ─→ 各仕様書 … 最深14段
+ └ CLAUDE.md 120 ──「必ず read」→ STANDARD-WORKFLOW 175 ─→ specs/README 100 ─→ 各仕様書 … 最深14段（recon 時点。数え直しで最深15段＝unreachable-list.md §1）
                  ──「必読」→ executor-checklist 52
    AGENTS.md 281（Claude には読まれない・CLAUDE.md と6節が同文）
 入力のたび: PROMPT_RE 一致で registration-rules.md 76行 を注入（無関係入力でも）
@@ -154,7 +154,7 @@ KPI は各段（§8）の完了ごとに上表の該当行を再測定する。
 | 守るもの | 仕組み | 既存との重なり |
 |---|---|---|
 | 入口の行数（KGI-1） | 既存 CI「CLAUDE.md line count check」の LIMITS（frontend/scripts/check-claude-size.js:22-28）を直す: §10-2 の回答値（入口の合計）を **AGENTS.md と CLAUDE.md の個別上限の和として登録**する（check-claude-size.js:46-61 はファイルごとに判定するため、和を合計値にすれば合計も機械で守られる。90 の場合 AGENTS.md 80・CLAUDE.md 10、60 の場合 AGENTS.md 50・CLAUDE.md 10。案文の実測は 45・9＝§5-2）、docs/INDEX.md を limit 60 で登録。**あわせて .github/workflows/check-claude-size.yml:23 の変更判定パス 「'**/CLAUDE.md'」 に `CLAUDE.md`（root）・`AGENTS.md`・「**/AGENTS.md」・docs/INDEX.md を足す**（今のパスは root の CLAUDE.md にも AGENTS.md にも一致せず、検査が飛ばされる＝審査4回目 直2。`git diff --name-only 283a53328^ 283a53328 -- '**/CLAUDE.md'` が空の実測あり。root CLAUDE.md が今も検査されていない既存の穴なので、段0 の ADR に記載し段1の次に単独の段2a で直す）。同スクリプトの案内文 :58「ファイル名は必ず CLAUDE.md にすること」は本設計（本文を AGENTS.md に置く）と食い違うため段3で書き換える（ADR-076 の一部改訂・段0の ADR に記載） | 既存必須チェックを流用。新規 required check 追加なし＝Branch Protection 変更なし |
-| 目次から辿れる（KGI-4/5/6） | 新設 .github/workflows/doc-index-reachability.yml（名称仮）: docs/INDEX.md を起点に docs/specs・docs/ai-agents の .md を幅優先で辿り、①届かない文書 ②4段以上 ③「いつ読むか」空欄 を列挙（K5 の末端＝docs/specs/<テーマ>/README.md と docs/ai-agents/*.md。docs/specs/<テーマ>/ の README.md 以外は子文書として段数を数えない。K6 の目次＝docs/INDEX.md と docs/specs/README.md の表）。**初期は警告のみ。昇格条件は期間ではなく「警告段階の出力が連続5回の PR で 0 件」**（§14 の C21: GitLab は違反0の確認後に error 化。C22/C23: 止めない設定のまま固定化した失敗例。旧案「2週間」は根拠なしのため改めた）。リポジトリ内リンクの行き先が実在するかも同じ走査で検査（外部 URL は対象外。C20） | reachability の実装は raw/reachability.txt を作った Python をそのまま流用（Python 3.12・標準ライブラリのみ） |
+| 目次から辿れる（KGI-4/5/6） | 新設 .github/workflows/doc-index-reachability.yml（名称仮）: docs/INDEX.md を起点に docs/specs・docs/ai-agents の .md を幅優先で辿り、①届かない文書 ②4段以上 ③「いつ読むか」空欄 を列挙（K5 の末端＝docs/specs/<テーマ>/README.md と docs/ai-agents/*.md。docs/specs/<テーマ>/ の README.md 以外は子文書として段数を数えない。K6 の目次＝docs/INDEX.md と docs/specs/README.md の表）。**初期は警告のみ。昇格条件は期間ではなく「警告段階の出力が連続5回の PR で 0 件」**（§14 の C21: GitLab は違反0の確認後に error 化。C22/C23: 止めない設定のまま固定化した失敗例。旧案「2週間」は根拠なしのため改めた）。リポジトリ内リンクの行き先が実在するかも同じ走査で検査（外部 URL は対象外。C20） | reachability の実装は reach.py（unreachable-list.md §1 の定義。今はリポジトリ外 ~/CC報告ファイル-keep/agenda-nav-20261022/unreach/reach.py、段2で docs/handoff/doc-agenda-nav/ に入れる）を流用（Python 3.12・標準ライブラリのみ。旧 raw/reachability.txt を出した Python は保存されておらず使わない＝§11・審査9回目 直1）。目次にフォルダとして登録された場所の直下の文書は届くとみなす（unreachable-list.md §4） |
 | 同じ決まりを2か所に書かない（KGI-3） | 同 CI に「CLAUDE.md と AGENTS.md の本文が同一見出しを持たない」検査（見出し行の集合の交差 = 0）と「各 CLAUDE.md に 「@AGENTS.md」 行がある」検査を追加（root・frontend・backend） | 既存の scripts/check-doc-heading-duplicates.sh（.github/workflows/process-artifacts-gate.yml:47 で実行中）を流用できるかを段2のカード作成時に実物で確認し、流用を優先する |
 | 関係ない注入ゼロ（KGI-2） | master-register-rules-guard.py:25 を re.compile(r"マスタ[^。\n]{0,40}登録|登録[^。\n]{0,20}マスタ") に変更（raw/prompt-regex-test.txt 案2: 無関係 5/5→0/5、関係あり 2/2 維持、別マスタ「顧客マスタに登録」は一致＝許容）。origin/main の scripts/agent-hooks/ と ~/.claude/scripts/ の両方（diff 同一を recon で確認済み）。PreToolUse 側（:53-84）は本便では変更なし。ただし本便で「監視語を引用した調査記録の Write」が止まった実測（raw/hook-block-event-20261022.txt）があるため、EXEMPT_PATHS に調査記録の置き場2つ（文字列 /CC報告ファイル-keep/ と /tmp/CC報告ファイル/）を足すのは段1b（§10-7 解決済み） | 既存テスト scripts/agent-hooks/test_master_register_rules_guard.sh（T1〜T8）が在る。CI からは呼ばれていない（.github/workflows/agent-hooks-test.yml:24 は review-gate のみ）→ 段1では手元実行を必須にする |
 | 安全の決まりが入口から消えない（KGI-7） | 同 CI に「入口（段3までは CLAUDE.md、段3以後は AGENTS.md）に『不可逆操作は必ず PO 確認』『VPS 直作業禁止』『直接コミット禁止』の3文字列が各1件以上ある」検査（3文字列は受け入れ基準 K7 と同一。実物は origin/main CLAUDE.md:36・:26・:49）。CI の守りとしては『直push禁止』（CLAUDE.md:52）と『暗号化済シークレット』（ADR-025 常時厳禁・:98）も同じ検査に足す（K7 の合格ラインは変えない） | — |
@@ -178,7 +178,7 @@ KPI は各段（§8）の完了ごとに上表の該当行を再測定する。
 
 | 段 | 変更 | 測定（KGI） | 戻し方 |
 |---|---|---|---|
-| 0 | 親仕様書と specs/README.md への1行登録は **済み**（f6d8a0be6・#4638）。残り: 新規 ADR を Proposed で起案し `node scripts/generate-adr-index.js` で docs/adr/README.md を再生成。ADR には ADR-076 との衝突点を列挙する: ①ADR-076:55「上限が小さすぎると具体例が削除され判断精度が低下」を理由に上限を据え置いた点（本設計は上限を §10-2 で決め直す）②check-claude-size.js:58「ファイル名は必ず CLAUDE.md」（本設計は本文を AGENTS.md に置く）③check-claude-size.yml:23 の変更判定パスが root の CLAUDE.md に一致せず、root CLAUDE.md が今も行数検査されていない既存の穴（段2a で直す）。ADR-076 本体（docs/adr/ADR-076-claude-md-hierarchy.md。ADR-076 は2本あるのでファイル名で指定）には「一部改訂: 新 ADR」の1行だけ足す。上限の数値は §10-2 待ちのため ADR では「§10-2 で決める」と書く | — | PR revert |
+| 0 | 親仕様書と specs/README.md への1行登録は **済み**（f6d8a0be6・#4638）。残り: 新規 ADR を Proposed で起案し `node scripts/generate-adr-index.js` で docs/adr/README.md を再生成。ADR には ADR-076 との衝突点を列挙する: ①ADR-076:55「上限が小さすぎると具体例が削除され判断精度が低下」を理由に上限を据え置いた点（本設計は上限を §10-2 で決め直す）②check-claude-size.js:58「ファイル名は必ず CLAUDE.md」（本設計は本文を AGENTS.md に置く）③check-claude-size.yml:23 の変更判定パスが root の CLAUDE.md に一致せず、root CLAUDE.md が今も行数検査されていない既存の穴（段2a で直す）。ADR-076 本体（docs/adr/ADR-076-claude-md-hierarchy.md。ADR-076 は2本あるのでファイル名で指定）には「一部改訂: 新 ADR」の1行だけ足す。上限の数値は §10-2 の PO 回答どおり 90行（AGENTS.md 80・CLAUDE.md 10）と ADR に書く（審査9回目 参考1） | — | PR revert |
 | 0b | **K8・K9 の変更前の値を測る（段1より前。審査3回目 直すべき8・審査4回目 直5）**。K8 の**集団**: head が release/ で始まり main へマージされた PR を、マージ時刻の新しい順に10件（変更後は段3c マージ後の最初の10件。同じ条件）。変更前の基準時点（測った時刻と最後の PR 番号）を baseline.md に書き、本テーマ自身の PR（head が release/doc-agenda-nav で始まるもの）は前後とも集団から除く（審査5回目 参考8）。K8 の**項目の選び方**: ①案文 AGENTS.entry.md の決まりを1行ずつ並べる ②各決まりが機械で強制されているかを、次の4か所すべてで確かめ表にする: CI（.github/workflows/）／GitHub の Ruleset・Branch Protection（`gh api repos/shingo-ops/salesanchor/rules/branches/main` を読むだけ（rulesets の一覧はルールの中身を返さない。main に Branch Protection は無く 404＝審査6回目 参考1）。PR 経由必須・merge commit のみ・ブランチ削除禁止が強制済み＝recon2/c10-rules.txt）／フック（~/.claude/settings.json と リポジトリの .claude/settings.json の hooks）／git フック（frontend/.husky/）。したがって「直接コミット禁止」「直push禁止」「main/develop を消さない」は強制済みで効果の項目にしない（審査5回目 直1） ③強制されていない・かつ gh や git で数えられるものだけを効果の項目にする（例の「PR 本文の標準ワークフロー確認欄」は process-artifacts gate が強制しているので効果の項目にしない。強制済みの項目は別枠で記録だけする）④効果の項目が0件なら「K8 は入口の効果測定に使えない」と baseline.md に書き PO へ戻す。各項目の判定コマンドと結果を記録。K9: 新しい会話の直後に /context の表示値を記録。記録先 docs/handoff/doc-agenda-nav/baseline.md（手順も保存）。項目は kgi.md K8 の「等」の範囲内で選ぶ（合格ラインは基準値の後に PO と決める＝承認済みの手順どおり） | K8/K9 基準値 | 記録の削除 |
 | 1 | master-register-rules-guard.py:25 の正規表現（scripts/ の変更なので check-process-artifacts.js の危険パスに当たり、PR 本文に `### GO記録` が要る。ADR-1003 の委譲範囲で Opus が出せる。カードに書く）。**変更前**（実物）: `(マスタ|商品).*登録|登録.*(マスタ|商品)`（re.S）／**変更後**: §6 の KGI-2 行。repo 側 scripts/agent-hooks/ を PR で審査 → ~/.claude/scripts/ へは前例 docs/handoff/master-register-rules-hook/design.md:37 の型（PO が `!` で写す→写す前に .bak を作る→repo 版と diff 一致を確認）。例文は raw/prompt-regex-test.txt の7本（無関係4本＋境界1本＋関係あり2本）をカードに全文で写す。新しい式は「マスタ」を含まない「商品を登録して」を拾わなくなる → この例文を試験に足し「拾わない」を期待値とし、PreToolUse 側（登録操作の直前に止める）が残ることを前提として明記する。既存テスト T1〜T8 を手元で実行 | KGI-2 | 1行を戻す（.bak から戻す） |
 | 1b | master-register-rules-guard.py:23 の EXEMPT_PATHS に `/CC報告ファイル-keep/` と `/tmp/CC報告ファイル/` の2つの文字列を足す（:66 の判定は file_path（絶対パス）への部分一致で `~` は展開されないため、`~/` 付きで書くと効かない＝審査8回目 直6）（§10-7。段1とは別 PR。触る行も測るものも別）。写し方は段1と同じ型（repo の scripts/agent-hooks/ を PR で審査→PO が `!` で ~/.claude/scripts/ へ写す。.bak を作る）。scripts/ の変更なので PR 本文に `### GO記録` が要る。PO の実装承認が別に要る | 試験2本を scripts/agent-hooks/test_master_register_rules_guard.sh に足し手元実行: ①免除パスへ監視語入りの Write が通る（試験の file_path は絶対パスで書く。例 /Users/tanizawashingo/CC報告ファイル-keep/x.md と /tmp/CC報告ファイル/x.md）②Bash の登録コマンドは止まる（Bash は fpath が空で免除判定 :66 を通らない＝:60-61）。段1の T1〜T8 も通ること。段1と同じ試験ファイルに足すので、後に出す方は先の PR のマージ後に作る（審査8回目 参考2） | :23 の1行を .bak から戻す（写しはファイルごとなので、戻した後に repo 版との diff で確かめる＝審査8回目 参考3） |
@@ -224,7 +224,7 @@ KPI は各段（§8）の完了ごとに上表の該当行を再測定する。
 6. **解決済み（PO 2026-10-22 原文「fableにまかせてくれ」→ Fable の判断。全文 ~/CC報告ファイル-keep/agenda-nav-20261022/fable/decisions.md（リポジトリ外）。Opus が根拠の file:line を実物で照合済み） → 選択肢1（別便で検討）。着手条件: ①段1が本番反映され K2 が測れた後 ②PreToolUse 側は残し、置き換えるのは UserPromptSubmit 側だけ ③.claude/skills は新しい仕組みなので architect の判断を通す**: 章E（商品マスタ登録）を将来スキル化する検討を別便で起こすか（本便では正規表現修正のみ）。
    - 1. 別便で検討【おすすめ】
    - 2. 検討しない
-7. **解決済み（PO 2026-10-22 原文「fableにまかせてくれ」→ Fable の判断。全文 ~/CC報告ファイル-keep/agenda-nav-20261022/fable/decisions.md（リポジトリ外）。Opus が根拠の file:line を実物で照合済み） → 選択肢1。足すのは ~/CC報告ファイル-keep/ と /tmp/CC報告ファイル/ の2つ（Fable の判断文書の書き込み自体が同じフックに止められた＝2件目の実例）。段1とは分けて段1b（§8）**: 登録ルールのフック（PreToolUse 側）が、監視語を「説明として引用」した文書の書き込みでも止まる件（本便で実測）。
+7. **解決済み（PO 2026-10-22 原文「fableにまかせてくれ」→ Fable の判断。全文 ~/CC報告ファイル-keep/agenda-nav-20261022/fable/decisions.md（リポジトリ外）。Opus が根拠の file:line を実物で照合済み） → 選択肢1。足すのは ~/CC報告ファイル-keep/ と /tmp/CC報告ファイル/ の2つ（置き場所の名前としての書き方。足す文字列の正は §8 段1b＝`~` は判定で展開されないため /CC報告ファイル-keep/ と書く＝審査9回目 参考3。Fable の判断文書の書き込み自体が同じフックに止められた＝2件目の実例）。段1とは分けて段1b（§8）**: 登録ルールのフック（PreToolUse 側）が、監視語を「説明として引用」した文書の書き込みでも止まる件（本便で実測）。
    - 1. 免除パスに ~/CC報告ファイル-keep/ を足す【おすすめ】→ 調査記録は止まらなくなる。登録操作そのものは引き続き止まる
    - 2. 今のまま → 規則を説明する文書を書くたびに ack 行が要る
 8. **解決済み（PO 2026-10-22・原文「1,fableに相談、外部での導入事例と成功事例と成功要因、失敗事例と失敗要因を徹底的に調査してエビデンスを取得してくれ…」）→ 選択肢1（ユーザー側を短くする段を本テーマに足す。200行は保つ）。外部事例の調査と Fable への相談・レビュアー審査・定着の仕組みの検証を追加で指示された（§14・§15・維持の仕組みに反映済み）。** （引き継ぎ後に Opus が発見・2026-10-22）K1 の 200行は、本便の範囲（プロジェクト側）だけでは届かない。** 実測（2026-10-22 `wc -l`）: ユーザー側 ~/.claude/CLAUDE.md 84・~/kb/AGENTS.md 32・常時読込の rules（agents.md 53＋git-workflow.md 24）77 ＝ **193行**、プロジェクト側 CLAUDE.md 120行、計313行。ユーザー側が今のままだと、プロジェクト側の入口を7行以下にしないと200行に入らない。前セッションの設計で、K1 の分子にユーザー側を含めながら範囲外にしていた（入れ忘れ）。
@@ -389,4 +389,10 @@ PO 原文（2026-10-22）「仕様書と設計図はどうなったの？逐一�
 - 審査役（model opus・新規起動）: **REVISE**（止めるべき0・直すべき6・参考6）。全文 /tmp/CC報告ファイル/agenda-nav-review8-20261022.md（リポジトリ外）。Fable の根拠は実物と一致、案文の安全の決まりは緩んでいない（45・9＝54行）、CI は失敗0。
 - 反映（直すべき）: ①K4・K5 の「今」の値に訂正の注記（design §2・kgi.md）②案文の行数を 45・9＝54 に ③docs/specs/README.md の状態列を更新 ④docs/ai-agents 19件の行を決定（lessons.d をフォルダ1行）に合わせた ⑤§11 の「旧基準値を再現してから」を「新しい基準値を再現してから」に ⑥段1b で足す文字列を `/CC報告ファイル-keep/` に（`~` は判定で展開されない）・試験は絶対パスで書く。
 - 反映（参考）: 段7の「承認待ち」を実装承認と明記／段1と段1b の試験ファイルの順番／.bak から戻した後の diff 確認／ADR-076 をファイル名で指定。参考5・6 は変更不要。
+
+## 22. 審査9回目（2026-10-22・PR #4649 HEAD 857de7b45）と反映
+
+- 審査役（model opus・新規起動）: **REVISE**（止めるべき0・直すべき2・参考5）。全文 /tmp/CC報告ファイル/agenda-nav-review9-20261022.md（リポジトリ外）。審査8回目の直すべき6件・参考1〜4 は反映済みと確認。段1b の免除文字列は判定式の再現で効くことを確認。案文の安全の決まりは緩んでいない（45・9＝54行）。CI は失敗0。段0・段1・段1b のカードは書ける。
+- 反映（直すべき）: ①KGI-4 の測り方と §6 の到達検査の実装を reach.py（unreachable-list.md §1 の定義）に合わせた（保存されていない旧スクリプトを指していた）②§3 の範囲と docs/specs/doc-agenda-nav/README.md の境界を今の段（1b・2a・6・7）に合わせた。
+- 反映（参考）: 段0 の ADR に上限の決定値 90行を書く／status に最新の審査を明記／§10-7 の書き方は置き場所の名前で、文字列の正は §8 段1b と明記／§4 の「最深14段」に訂正の注記。参考5（§20 の日常語の要約）は審査役の判断どおり変更なし。
 
