@@ -1,3 +1,4 @@
+import { LoadingBlock } from "../../components/loading";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
@@ -32,7 +33,7 @@ export default function ArchivesPage() {
   return (
     <PageLayout navKey="nav.archive" subtitleKey="archives.subtitle">
       {error && <div className="error-message">{error}</div>}
-      {loading ? <div className="loading">{t("common.loading")}</div> : (() => {
+      {loading ? <LoadingBlock /> : (() => {
         const columns: DataTableColumn<Archive>[] = [
           {
             key: "source_table",

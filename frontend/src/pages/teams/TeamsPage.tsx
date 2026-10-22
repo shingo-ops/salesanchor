@@ -7,6 +7,7 @@
  *   2026-06-10: 編集を Drawer 化（useRecordDrawer, ADR-122 バッチA）
  */
 
+import { LoadingBlock } from "../../components/loading";
 import { useEffect, useState, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -270,7 +271,7 @@ export default function TeamsPage() {
       </Modal>
 
       {loading ? (
-        <div className="loading">{t("common.loading")}</div>
+        <LoadingBlock />
       ) : (() => {
         const teamColumns: DataTableColumn<Team>[] = [
           { key: "name", header: t("teams.teamName") },

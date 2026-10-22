@@ -6,6 +6,7 @@
  * 保存後は /suppliers 一覧へ戻る。
  */
 
+import { LoadingBlock } from "../../components/loading";
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -72,7 +73,7 @@ export default function SupplierEditPage() {
     <PageLayout navKey="nav.suppliers" subtitleKey="suppliers.subtitle">
       {error && <div className="error-message">{error}</div>}
       {loading ? (
-        <div className="loading">{t("common.loading")}</div>
+        <LoadingBlock />
       ) : (
         <form onSubmit={handleSubmit} style={{ maxWidth: "var(--modal-max-w-md)" }}>
           <SupplierFormFields form={form} onChange={handleChange} />

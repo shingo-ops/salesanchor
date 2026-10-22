@@ -1,3 +1,4 @@
+import { LoadingBlock } from "../../components/loading";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
@@ -63,7 +64,7 @@ export default function ERPPage() {
         />
       ) : undefined}
       <h3 style={{ marginBottom: "var(--space-3)" }}>{t("erp.syncLogs")}</h3>
-      {loading ? <div className="loading">{t("common.loading")}</div> : (() => {
+      {loading ? <LoadingBlock /> : (() => {
         const columns: DataTableColumn<SyncLog>[] = [
           {
             key: "sync_type",
