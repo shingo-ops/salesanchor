@@ -18,6 +18,7 @@ import { OrdersFormModal } from "./OrdersFormModal";
 import { OrdersTable } from "./OrdersTable";
 import { emptyForm, STATUSES } from "./orders.types";
 import { Button } from "../../components/Button";
+import { LoadingBlock } from "../../components/loading";
 
 export default function OrdersPage() {
   const { t } = useTranslation();
@@ -108,7 +109,7 @@ export default function OrdersPage() {
           {error && <div className="error-message">{error}</div>}
 
           {loading ? (
-            <div className="loading">{t("common.loading")}</div>
+            <LoadingBlock />
           ) : (
             <OrdersTable
               orders={orders}

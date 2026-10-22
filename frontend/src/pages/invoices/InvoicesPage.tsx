@@ -16,6 +16,7 @@ import { ContentToolbar } from "../../components/ContentToolbar";
 import { SelectControl } from "../../components/Select";
 import { getStatusPresentation } from "../../utils/statusPresentation";
 import { Button } from "../../components/Button";
+import { LoadingBlock } from "../../components/loading";
 
 interface Invoice {
   id: number;
@@ -147,7 +148,7 @@ export default function InvoicesPage() {
       {error && <div className="error-message">{error}</div>}
 
       {loading ? (
-        <div className="loading">{t("common.loading")}</div>
+        <LoadingBlock />
       ) : (
         <DataTable<Invoice>
           columns={columns}

@@ -19,6 +19,7 @@ import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
 import { Card } from "../../components/Card";
 import { Button } from "../../components/Button";
+import { LoadingBlock } from "../../components/loading";
 
 interface SalesOrderItem {
   order_id: number;
@@ -84,7 +85,7 @@ export default function SalesPage() {
       {error && <div className="error-message">{error}</div>}
 
       {loading ? (
-        <div className="loading">{t("common.loading")}</div>
+        <LoadingBlock />
       ) : (
         <>
           {/* 集計サマリー */}

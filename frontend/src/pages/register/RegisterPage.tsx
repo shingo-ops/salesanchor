@@ -17,6 +17,7 @@ import { CountryCombobox } from "./CountryCombobox";
 import { Button } from "../../components/Button";
 import { TextFieldControl } from "../../components/TextField";
 import { Radio } from "../../components/Radio";
+import { LoadingBlock } from "../../components/loading";
 
 interface TokenInfo {
   valid: boolean;
@@ -246,7 +247,7 @@ export default function RegisterPage() {
   if (loading) {
     return (
       <div className="page-container" style={{ maxWidth: "600px", margin: "0 auto", padding: "var(--spacing-6)" }}>
-        <p>{t("common.loading")}</p>
+        <LoadingBlock />
       </div>
     );
   }

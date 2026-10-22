@@ -36,6 +36,7 @@ import { LeadFormFields, buildLostReasonUpdatePayload, type LeadFormState } from
 import { getCloseReasons, type CloseReasonResponse } from "../../api/closeReasons";
 import { TextareaControl } from "../../components/Textarea";
 import { TextFieldControl } from "../../components/TextField";
+import { LoadingBlock } from "../../components/loading";
 
 /* ------------------------------------------------------------------ */
 /* Lead types                                                           */
@@ -476,7 +477,7 @@ export default function LeadsPage() {
       </Modal>
 
       {loading ? (
-        <div className="loading">{t("common.loading")}</div>
+        <LoadingBlock />
       ) : (() => {
         const baseColumns: DataTableColumn<Lead>[] = [
           { key: "customer_name", header: t("leads.customerName") },

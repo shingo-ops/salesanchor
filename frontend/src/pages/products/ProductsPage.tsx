@@ -22,6 +22,7 @@ import { TextFieldControl } from "../../components/TextField";
 import type { Product } from "./products.types";
 import { Button } from "../../components/Button";
 import { CheckboxControl } from "../../components/CheckboxControl";
+import { LoadingBlock } from "../../components/loading";
 
 // embedded: マスタ管理タブ内に埋め込む場合 true（PageLayout を被せず中身のみ描画）。
 export default function ProductsPage({ embedded = false }: { embedded?: boolean } = {}) {
@@ -284,7 +285,7 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
       {error && <div className="error-message">{error}</div>}
 
       {loading ? (
-        <div className="loading">{t("common.loading")}</div>
+        <LoadingBlock />
       ) : (
         <div className="products-master-table-wrap">
         <table className="data-table" style={{ width: "100%" }}>

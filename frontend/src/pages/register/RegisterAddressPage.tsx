@@ -13,6 +13,7 @@ import i18n from "../../i18n";
 import { COUNTRIES, type CountryEntry } from "../../constants/countries";
 import { Button } from "../../components/Button";
 import { TextFieldControl } from "../../components/TextField";
+import { LoadingBlock } from "../../components/loading";
 
 interface TokenInfo {
   valid: boolean;
@@ -261,7 +262,7 @@ export default function RegisterAddressPage() {
   if (loading) {
     return (
       <div className="page-container" style={{ maxWidth: "600px", margin: "0 auto", padding: "var(--spacing-6)" }}>
-        <p>{t("common.loading")}</p>
+        <LoadingBlock />
       </div>
     );
   }
