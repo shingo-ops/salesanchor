@@ -44,3 +44,8 @@
 - 障害記録の表の追加は migration（危険 PR）になり、ADR-136 の GO が要る。
 - 段階4 で PO が Web で routine を作り、トークンを本番の secrets に登録する作業が要る。
 - AI の修理 PR のマージ権限は広げない。広げるかは月次成績表の実績を見て PO が判断する。
+
+## 追記（2026-10-22・ADR-1039 から。決定は変えない）
+
+- Decision 5 の「repo の共用担当定義 1 ファイル」は `docs/ai-agents/ops-incident-agent.md` とする。ADR-1039（Discord の不具合報告を agent-console で受ける件）の便2 で先に作る。段階4 の B の節は段階4 の設計で足す。
+- Decision 5 の予備 C（ADR-1009 の受付）は、ADR-1039 で全部置き換える（PO 2026-10-21「1」）。ADR-1039 が Accepted になったときに効く。
