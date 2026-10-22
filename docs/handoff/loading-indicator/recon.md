@@ -57,7 +57,7 @@ ADR-027（i18n）・ADR-067（デザイントークン）・ADR-144（UIガバ�
 - トークン: frontend/src/tokens.css:69-78 `--space-1`〜`--space-12`、--text-muted は frontend/src/index.css:25・:231。
 
 ## S4 金型の登録手順
-- docs/adr/ADR-144-ui-component-governance.md:59-64「金型がない場合は PO 許可を得て `Xxx.tsx` + `Xxx.css`（var() のみ）+ `Xxx.stories.tsx` で新設」。
+- docs/adr/ADR-144-ui-component-governance.md:59-64「金型がない場合は PO 許可を得て Xxx.tsx + Xxx.css（var() のみ）+ Xxx.stories.tsx で新設」。
 - Storybook は frontend/.storybook/main.ts:11 が `src/**/*.stories.*` を自動で拾う。一覧への登録作業は無い。
 - 直近の前例（Radio、2db5c98ab）は docs/CC_UI_GOVERNANCE.md の禁止事項の表に1行足している。
 

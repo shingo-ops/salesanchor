@@ -90,6 +90,7 @@ PO 原文の要旨: 「全ての読み込みを差し替えて」「金型を変
 - 正本は LoadingBlock（components/loading/）1つ。見た目は LoadingBlock.css と loading-animations.css、寸法はトークン。
 - UI ガバナンス検査（必須チェック）が新しい文字だけ表示を止める。docs/CC_UI_GOVERNANCE.md の禁止事項の表に書く。
 - 残り件数は便ごとに recon の方法（grep）で数え、memory/project_loading_indicator.md に記録する。
+- 守り手: UI governance gate（.github/workflows/ui-governance-gate.yml、必須チェック）と Opus（便ごとの件数の記録）。
 
 ## 2-7 外部・過去事例の参照と我々への応用
 - 外部事例は使わない。理由: 社内に同じ形の前例（Radio・RadioControl の新設 2db5c98ab と禁止事項の表への1行、ConfirmModal の既定文字 t()）があり、それに従えば足りる。
