@@ -1,7 +1,7 @@
 # Prometheus ルールの単体試験（promtool test rules）
 # 書式: https://prometheus.io/docs/prometheus/latest/configuration/unit_testing_rules/
 # 実行: promtool test rules monitoring/prometheus/tests/alert_rules_test.yml
-# 全 27 本が擬似の系列で鳴ること、tier と runbook_url が付くことを確かめる。
+# 全 29 本が擬似の系列で鳴ること、tier と runbook_url が付くことを確かめる。
 
 rule_files:
   - ../alert_rules.yml
@@ -793,4 +793,99 @@ tests:
     alert_rule_test:
       - eval_time: 15m
         alertname: ContainerHealthcheckMissing
+        exp_alerts: []
+
+  # --- outage-recovery-watch 便1: 時計ずれ ---
+  # timestamp() は試験の中の値の時刻（0 から 1m おき）。値と読み取り時刻の差が一定になる系列で確かめる
+  - name: ClockSkewFiringBehind
+    interval: 1m
+    input_series:
+      - series: 'node_time_seconds{job="node-exporter", instance="app-vps"}'
+        values: '-2436+60x30'
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: ClockSkew
+        exp_alerts: []
+      - eval_time: 5m
+        alertname: ClockSkew
+        exp_alerts:
+          - exp_labels:
+              job: node-exporter
+              instance: app-vps
+              severity: critical
+              tier: page
+            exp_annotations:
+              summary: "サーバー app-vps の時計が 60 秒以上ずれています"
+              description: "app-vps の時計と監視サーバーの時計の差が 40m 36s です。この間、時刻を比べる警報（裏方の処理が止まった等）は止めています。"
+              runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#clockskew"
+
+  - name: ClockSkewFiringAhead
+    interval: 1m
+    input_series:
+      - series: 'node_time_seconds{job="node-exporter", instance="app-vps"}'
+        values: '61+60x30'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: ClockSkew
+        exp_alerts:
+          - exp_labels:
+              job: node-exporter
+              instance: app-vps
+              severity: critical
+              tier: page
+            exp_annotations:
+              summary: "サーバー app-vps の時計が 60 秒以上ずれています"
+              description: "app-vps の時計と監視サーバーの時計の差が 1m 1s です。この間、時刻を比べる警報（裏方の処理が止まった等）は止めています。"
+              runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#clockskew"
+
+  - name: ClockSkewQuietBelowBoundary
+    interval: 1m
+    input_series:
+      - series: 'node_time_seconds{job="node-exporter", instance="app-vps"}'
+        values: '59+60x30'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: ClockSkew
+        exp_alerts: []
+
+  - name: ClockSkewQuietNoSkew
+    interval: 1m
+    input_series:
+      - series: 'node_time_seconds{job="node-exporter", instance="app-vps"}'
+        values: '0+60x30'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: ClockSkew
+        exp_alerts: []
+
+  - name: ClockSyncStoppedFiring
+    interval: 1m
+    input_series:
+      - series: 'node_timex_sync_status{job="node-exporter", instance="mgmt-vps"}'
+        values: '0x30'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: ClockSyncStopped
+        exp_alerts: []
+      - eval_time: 15m
+        alertname: ClockSyncStopped
+        exp_alerts:
+          - exp_labels:
+              job: node-exporter
+              instance: mgmt-vps
+              severity: warning
+              tier: ticket
+            exp_annotations:
+              summary: "サーバー mgmt-vps の時刻合わせが止まっています"
+              description: "mgmt-vps で時刻合わせ（NTP）が 10 分以上同期していません。このままだと時計がずれ、時刻を比べる警報が誤って鳴ります。"
+              runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#clocksyncstopped"
+
+  - name: ClockSyncStoppedQuiet
+    interval: 1m
+    input_series:
+      - series: 'node_timex_sync_status{job="node-exporter", instance="mgmt-vps"}'
+        values: '1x30'
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: ClockSyncStopped
         exp_alerts: []

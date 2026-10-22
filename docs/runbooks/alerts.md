@@ -1,6 +1,6 @@
 # 見張りのルール別 手順書
 
-この文書は何か：見張り（アラート）のルールごとの手順書です。ルールの正本は `monitoring/prometheus/alert_rules.yml`（Prometheus 27 本）と `monitoring/loki/rules/jarvis/alerts.yml`（Loki 6 本）です。各ルールの `runbook_url` はこの文書の同名の見出しを指します。見出しはルール名と同じにしてあります。札とリンクの欠けは `monitoring/scripts/check_alert_rules.py` が CI で検査します。
+この文書は何か：見張り（アラート）のルールごとの手順書です。ルールの正本は `monitoring/prometheus/alert_rules.yml`（Prometheus 29 本）と `monitoring/loki/rules/jarvis/alerts.yml`（Loki 6 本）です。各ルールの `runbook_url` はこの文書の同名の見出しを指します。見出しはルール名と同じにしてあります。札とリンクの欠けは `monitoring/scripts/check_alert_rules.py` が CI で検査します。
 
 ### 札（tier）の意味
 
@@ -288,3 +288,22 @@
 - 最初に見るもの：main の docker-compose.yml の該当サービスの healthcheck（CI の `monitoring/scripts/check_app_healthchecks.py` が通っているか）→ prod1 で `docker inspect -f '{{json .Config.Healthcheck}}'`（該当のコンテナ）。
 - 直し方：main に定義があれば、次の deploy で作り直されて戻る。main から消えていれば、消した変更を戻す PR を出して Opus に報告する。
 - 止め方：`amtool silence add alertname=ContainerHealthcheckMissing --duration=PERIOD --comment=REASON`
+
+## ClockSkew
+
+- 札：page
+- 何が起きているか：その機体の時計と監視サーバーの時計の差が 60 秒を超えた。さくらのメンテや機体の再起動の後に起きうる（2026-10-22 に prod1 が約 40 分遅れた）。
+- 影響：時刻を比べる警報 7 本（F2CleanupStale・CeleryHeartbeatStale・ViewerInventoryStale・ViewerInventoryStaleOnHold・BackupLocalStale・BackupS3Stale・ContainerStateStale）は、この警報の間 Alertmanager で止めている。止めている間、それらの本物の停止にも気づけない。DB に書く時刻もずれる。
+- 最初に見るもの：Grafana か Prometheus で `node_time_seconds - timestamp(node_time_seconds)` を機体ごとに見る。`node_timex_sync_status` が 1 か。
+- 直し方：時刻合わせが動いていれば数分で自然に直る（2026-10-22 は約 11 分）。直らなければ Opus に報告する（時計を手で直す操作は本番の変更なので PO の判断）。
+- prod2 自身の時計のずれはこの警報では見えない（差はいつもほぼ 0）。prod2 は ClockSyncStopped で見る。
+- 止め方：`amtool silence add alertname=ClockSkew --duration=PERIOD --comment=REASON`
+
+## ClockSyncStopped
+
+- 札：ticket
+- 何が起きているか：その機体で時刻合わせが 10 分以上同期していない。
+- 影響：今は無いが、続くと時計がずれ、ClockSkew と誤警報が起きる。
+- 最初に見るもの：`node_timex_sync_status` と `node_timex_offset_seconds` を機体ごとに見る。
+- 直し方：Opus に報告する（時刻合わせの設定の変更は本番の変更なので PO の判断）。
+- 止め方：`amtool silence add alertname=ClockSyncStopped --duration=PERIOD --comment=REASON`
