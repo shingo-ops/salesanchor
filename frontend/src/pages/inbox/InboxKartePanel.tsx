@@ -12,6 +12,7 @@ import { SelectControl } from "../../components/Select";
 import { TextareaControl } from "../../components/Textarea";
 import { TextFieldControl } from "../../components/TextField";
 import ConfirmModal from "../../components/ConfirmModal";
+import { LoadingBlock } from "../../components/loading";
 
 interface CardForm {
   nickname?: string | null;
@@ -288,7 +289,7 @@ export function InboxKartePanel({
                   disabled={convertAssigneeLoading || convertSaving}
                 />
                 {convertAssigneeLoading && (
-                  <p className="comp-field__hint">{t("common.loading")}</p>
+                  <LoadingBlock size="sm" />
                 )}
                 {!convertAssigneeLoading && convertAssigneeOptions.length === 0 && (
                   <p className="comp-field__hint comp-field__hint--error" role="alert">
@@ -316,7 +317,7 @@ export function InboxKartePanel({
         </div>
       ) : (
         <div className="right-panel-empty">
-          <p>{t("inbox.loadingProfile")}</p>
+          <LoadingBlock />
         </div>
       )}
     </aside>

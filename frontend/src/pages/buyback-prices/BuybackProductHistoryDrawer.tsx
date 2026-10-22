@@ -27,6 +27,7 @@ import {
   formatChartDate,
   formatPrice,
 } from "./buybackTypes";
+import { LoadingBlock } from "../../components/loading";
 
 interface MergedDataPoint {
   date: string;
@@ -171,7 +172,7 @@ export function BuybackProductHistoryDrawer({
         setError(msg ?? t("buybackPrices.loadError"));
       })
       .finally(() => setLoading(false));
-  }, [item, open]);
+  }, [item, open, t]);
 
   // 期間切り替え
   useEffect(() => {
@@ -212,7 +213,7 @@ export function BuybackProductHistoryDrawer({
     >
       <div style={{ padding: "var(--space-3)" }}>
         {loading && (
-          <p role="status">{t("common.loading")}</p>
+          <LoadingBlock />
         )}
 
         {!loading && error && (

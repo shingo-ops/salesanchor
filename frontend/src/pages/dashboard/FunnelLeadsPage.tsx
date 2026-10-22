@@ -10,6 +10,7 @@ import { PageLayout } from "../../components/PageLayout";
 import { DataTable, type DataTableColumn } from "../../components/DataTable";
 import { api } from "../../lib/api";
 import { getChannels, type ChannelRow } from "../../api/funnel";
+import { LoadingBlock } from "../../components/loading";
 
 interface ChannelRowWithId extends ChannelRow {
   id: number;
@@ -21,8 +22,8 @@ interface LeadSummaryResponse {
   };
 }
 
-function fmtMoney(n: number): string {
-  if (n >= 10_000) return `¥${Math.round(n / 10_000)}万`;
+function fmtMoney(n: number, man: string): string {
+  if (n >= 10_000) return `¥${Math.round(n / 10_000)}${man}`;
   return `¥${n.toLocaleString("ja-JP")}`;
 }
 
@@ -89,12 +90,12 @@ export default function FunnelLeadsPage() {
     {
       key: "avg_order_value",
       header: t("funnel.colAvgOrderValue"),
-      renderCell: (row) => fmtMoney(row.avg_order_value),
+      renderCell: (row) => fmtMoney(row.avg_order_value, t("common.unitMan")),
     },
     {
       key: "gross_margin",
       header: t("funnel.grossMargin"),
-      renderCell: (row) => fmtMoney(row.gross_margin),
+      renderCell: (row) => fmtMoney(row.gross_margin, t("common.unitMan")),
     },
   ];
 
@@ -104,9 +105,7 @@ export default function FunnelLeadsPage() {
       subtitleKey="funnel.leadsPageTitle"
     >
       {loading ? (
-        <div style={{ padding: "var(--space-6) 0", color: "var(--text-secondary)", fontSize: "var(--font-sm)" }}>
-          {t("common.loading")}
-        </div>
+        <LoadingBlock />
       ) : (
         <>
           <div
