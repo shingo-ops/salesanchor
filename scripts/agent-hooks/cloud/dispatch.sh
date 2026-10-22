@@ -9,9 +9,13 @@ EVENT="$(printf '%s' "$INPUT" | python3 -c 'import sys,json
 try:
     print(json.load(sys.stdin).get("hook_event_name",""))
 except Exception:
-    print("")' 2>/dev/null)"
+    print("__INVALID__")' 2>/dev/null)"
 
 case "$EVENT" in
+  __INVALID__)
+    echo "BLOCKED(cloud): 見張りの入力(JSON)を読めなかったため止めます。" >&2
+    exit 2
+    ;;
   PreToolUse)
     printf '%s' "$INPUT" | python3 "$DIR/guard_pre_tool.py"
     RC=$?

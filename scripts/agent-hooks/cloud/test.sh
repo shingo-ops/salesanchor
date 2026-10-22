@@ -32,6 +32,29 @@ def mkrepo(path, fname):
 tmp = tempfile.mkdtemp(prefix="cloudparity-")
 DOCS = mkrepo(os.path.join(tmp, "docsrepo"), "docs/a.md")
 CODE = mkrepo(os.path.join(tmp, "coderepo"), "src/x.py")
+def mkremote(path):
+    """bare の origin を持つ clone。origin に main / codebr / docsbr がある。
+    codebr・docsbr は別 clone から push するので、手元 clone には参照が無い（fetch の確認も兼ねる）。
+    手元 clone は main に居て変更なし（HEAD は origin/main と同じ）。"""
+    g = ["git", "-c", "user.name=t", "-c", "user.email=t@example.invalid"]
+    bare = path + "-origin.git"
+    sh("git", "init", "-q", "--bare", "-b", "main", bare)
+    work = path + "-seed"
+    sh("git", "clone", "-q", bare, work)
+    open(os.path.join(work, "README.txt"), "w").write("x\n")
+    sh(*g, "add", ".", cwd=work); sh(*g, "commit", "-qm", "base", cwd=work)
+    sh(*g, "branch", "-M", "main", cwd=work); sh(*g, "push", "-q", "origin", "main", cwd=work)
+    for br, fname in (("codebr", "src/x.py"), ("docsbr", "docs/a.md")):
+        sh(*g, "checkout", "-q", "-b", br, "main", cwd=work)
+        fp = os.path.join(work, fname); os.makedirs(os.path.dirname(fp), exist_ok=True)
+        open(fp, "w").write("y\n")
+        sh(*g, "add", ".", cwd=work); sh(*g, "commit", "-qm", br, cwd=work)
+        sh(*g, "push", "-q", "origin", br, cwd=work)
+    sh("git", "clone", "-q", "--single-branch", "-b", "main", bare, path)
+    sh("git", "config", "remote.origin.fetch", "+refs/heads/*:refs/remotes/origin/*", cwd=path)
+    return path
+
+REMOTE = mkremote(os.path.join(tmp, "remoterepo"))
 NOGIT = os.path.join(tmp, "nogit"); os.makedirs(NOGIT)
 
 def pre(tool, cwd=D, **ti):
@@ -69,16 +92,33 @@ add("K2", "gh api PUT /merge", bash("gh api -X PUT repos/o/r/pulls/12/merge"), 2
 add("K2", "gh pr view", bash("gh pr view 12"), 0)
 add("K2", "MCP get_me", pre("mcp__github__get_me"), 0)
 # K3
-add("K3", "MCP作成 コード枝", pre("mcp__github__create_pull_request", CODE, title="t", body=GOOD), 2)
+add("K3", "MCP作成 コード枝", pre("mcp__github__create_pull_request", REMOTE, title="t", head="codebr", body=GOOD), 2)
 add("K3", "gh pr create コード枝", bash(f'gh pr create --title t --body "{GOOD}"', CODE), 2)
 add("K3", "gh api POST pulls コード枝", bash(f'gh api -X POST repos/o/r/pulls -f title=t -f body="{GOOD}"', CODE), 2)
-add("K3", "MCP作成 docsのみ", pre("mcp__github__create_pull_request", DOCS, title="t", body=GOOD), 0)
+add("K3", "MCP作成 docsのみ", pre("mcp__github__create_pull_request", REMOTE, title="t", head="docsbr", body=GOOD), 0)
 add("K3", "gh pr create docsのみ", bash(f'gh pr create --title t --body "{GOOD}"', DOCS), 0)
-add("K3", "git失敗なら止める", pre("mcp__github__create_pull_request", NOGIT, title="t", body=GOOD), 2)
+add("K3", "git失敗なら止める", pre("mcp__github__create_pull_request", NOGIT, title="t", head="docsbr", body=GOOD), 2)
+add("K3", "MCP head=コード枝", pre("mcp__github__create_pull_request", REMOTE, title="t", head="codebr", body=GOOD), 2)
+add("K3", "MCP head=docs枝(owner:形式)", pre("mcp__github__create_pull_request", REMOTE, title="t", head="o:docsbr", body=GOOD), 0)
+add("K3", "MCP head=docs枝 節なし", pre("mcp__github__create_pull_request", REMOTE, title="t", head="docsbr", body="概要だけ"), 2)
+add("K3", "MCP head無し", pre("mcp__github__create_pull_request", REMOTE, title="t", body=GOOD), 2)
+add("K3", "MCP head空", pre("mcp__github__create_pull_request", REMOTE, title="t", head="", body=GOOD), 2)
+add("K3", "MCP head不正文字", pre("mcp__github__create_pull_request", REMOTE, title="t", head="a;b", body=GOOD), 2)
+add("K3", "gh pr create --head コード枝", bash(f'gh pr create --head codebr --title t --body "{GOOD}"', REMOTE), 2)
+add("K3", "gh pr create --head= docs枝", bash(f'gh pr create --head=docsbr --title t --body "{GOOD}"', REMOTE), 0)
+add("K3", "gh pr create -H コード枝", bash(f'gh pr create -H codebr --title t --body "{GOOD}"', REMOTE), 2)
+add("K3", "gh api head=コード枝", bash(f'gh api -X POST repos/o/r/pulls -f head=codebr -f title=t -f body="{GOOD}"', REMOTE), 2)
+add("K3", "gh api --raw-field head=docs枝", bash(f'gh api -X POST repos/o/r/pulls --raw-field head=docsbr -f title=t -f body="{GOOD}"', REMOTE), 0)
+add("K3", "head枝が存在しない", pre("mcp__github__create_pull_request", REMOTE, title="t", head="nosuchbr", body=GOOD), 2)
+# 審査指摘の止め漏れ
+add("K1", "単独&の後ろに危険語", bash(f"cat a & {ops[0]} foo"), 2)
+add("K1", "2>&1 の後ろに危険語", bash(f"cat a 2>&1 | {ops[0]} foo"), 2)
+add("K1", "<( の中に危険語", bash(f"cat <({ops[0]} foo)"), 2)
+add("K1", "ssh-keygen は通す", bash("ssh-keygen -f prod_key.pub"), 0)
 # K4
-add("K4", "本文に節なし(MCP)", pre("mcp__github__create_pull_request", DOCS, title="t", body="概要だけ"), 2)
+add("K4", "本文に節なし(MCP)", pre("mcp__github__create_pull_request", REMOTE, title="t", head="docsbr", body="概要だけ"), 2)
 add("K4", "本文に節なし(gh)", bash('gh pr create --title t --body "概要だけ"', DOCS), 2)
-add("K4", "本文に節あり(MCP)", pre("mcp__github__create_pull_request", DOCS, title="t", body=GOOD), 0)
+add("K4", "本文に節あり(MCP)", pre("mcp__github__create_pull_request", REMOTE, title="t", head="docsbr", body=GOOD), 0)
 # K5
 add("K5", "Stop 英語のみ", {"hook_event_name": "Stop", "last_assistant_message": "Done. All tests passed successfully."}, 2)
 add("K5", "Stop 日本語あり", {"hook_event_name": "Stop", "last_assistant_message": "完了しました。"}, 0)
@@ -119,6 +159,18 @@ ok = p.returncode == 2 and "内部エラー" in p.stderr
 fail += (not ok)
 print(f"{'FC':3} {'guard異常終了→止める':26} {2:<4} {p.returncode:<4} {'-':>6} {'OK' if ok else 'NG'}")
 print("      止めた文言: " + p.stderr.strip())
+
+# dispatch: 壊れた JSON は止める（変数なしでは通す）
+env = dict(os.environ); env["CLAUDE_CODE_REMOTE"] = "true"
+p = subprocess.run(["bash", DISPATCH], input="not json", capture_output=True, text=True, env=env)
+ok = p.returncode == 2 and "読めなかった" in p.stderr
+fail += (not ok)
+print(f"{'FC':3} {'JSON不正→止める(dispatch)':26} {2:<4} {p.returncode:<4} {'-':>6} {'OK' if ok else 'NG'}")
+env.pop("CLAUDE_CODE_REMOTE")
+p = subprocess.run(["bash", DISPATCH], input="not json", capture_output=True, text=True, env=env)
+ok = p.returncode == 0 and not p.stdout and not p.stderr
+fail += (not ok)
+print(f"{'FC':3} {'JSON不正 変数なし→通す':26} {0:<4} {p.returncode:<4} {'-':>6} {'OK' if ok else 'NG'}")
 
 # K5 SessionStart
 rc, out, err, sec = run({"hook_event_name": "SessionStart", "source": "startup"}, True)

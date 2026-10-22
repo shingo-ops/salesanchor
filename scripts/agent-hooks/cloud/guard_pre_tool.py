@@ -54,7 +54,7 @@ def strip_message_quotes(seg: str) -> str:
 
 def is_readonly_segment(seg: str) -> bool:
     s = seg.strip()
-    if not s or "\n" in s or "$(" in s or "`" in s:
+    if not s or "\n" in s or "$(" in s or "`" in s or "<(" in s:
         return False
     m = re.match(r"([\w./-]+)", s)
     if not m:
@@ -67,10 +67,10 @@ def is_readonly_segment(seg: str) -> bool:
 
 def scan_text(cmd: str) -> str:
     cmd = strip_heredoc_bodies(cmd)
-    parts = re.split(r"(&&|\|\||;|\|)", cmd)
+    parts = re.split(r"(&&|\|\||;|\||&)", cmd)
     out = []
     for p in parts:
-        if p in ("&&", "||", ";", "|"):
+        if p in ("&&", "||", ";", "|", "&"):
             out.append(p)
         elif is_readonly_segment(p):
             out.append("")
@@ -114,7 +114,7 @@ def check_danger(cmd: str):
     m = re.search(r"\bpsql\b[^|&;\n]*?(?:-c|--command)[ =]+(\"([^\"]*)\"|'([^']*)')", raw, re.I)
     if m and _SQL_WRITE.search(m.group(2) or m.group(3) or ""):
         return "psql の書込系 SQL は止めます（本番 DB への書込はクラウドでは行えません）。"
-    if re.search(r"\bssh\b[^|;&\n]*\bprod", scanned, re.I):
+    if re.search(r"(?<![\w-])ssh(?![\w-])[^|;&\n]*\bprod", scanned, re.I):
         return "本番サーバーへの ssh はクラウドでは行えません。"
     return None
 
@@ -149,14 +149,50 @@ def is_pr_create(tool: str, cmd: str) -> bool:
     return False
 
 
-def changed_files(cwd: str):
+def _diff_names(cwd: str, rng: str):
     r = subprocess.run(
-        ["git", "-C", cwd, "diff", "--name-only", "origin/main...HEAD"],
+        ["git", "-C", cwd, "diff", "--name-only", rng],
         capture_output=True, text=True, timeout=10,
     )
     if r.returncode != 0:
         raise RuntimeError((r.stderr or "").strip()[:200])
     return [x for x in r.stdout.splitlines() if x.strip()]
+
+
+def changed_files(cwd: str, branch=None):
+    """branch があれば origin/main...origin/<branch>（無ければ1回 fetch）、無ければ origin/main...HEAD。"""
+    if branch is None:
+        return _diff_names(cwd, "origin/main...HEAD")
+    rng = f"origin/main...origin/{branch}"
+    try:
+        return _diff_names(cwd, rng)
+    except Exception:
+        subprocess.run(["git", "-C", cwd, "fetch", "-q", "origin", branch],
+                       capture_output=True, text=True, timeout=10)
+        return _diff_names(cwd, rng)
+
+
+_BRANCH_OK = re.compile(r"^[A-Za-z0-9._/][A-Za-z0-9._/-]*$")
+
+
+def head_branch(tool: str, ti: dict, cmd: str):
+    """作成元の枝名を返す。取れなければ None。MCP で無い／空、枝名が不正なら ValueError。"""
+    if tool != "Bash":
+        h = ti.get("head")
+        if not isinstance(h, str) or not h.strip():
+            raise ValueError("PR の作成元(head)が指定されていません")
+        raw = h.strip()
+    else:
+        m = (re.search(r"(?:^|\s)(?:--head[ =]+|-H[ =]*)[\"']?([^\s\"']+)", cmd)
+             or re.search(r"(?:-f|-F|--field|--raw-field)[ =]+[\"']?head=([^\s\"']+)", cmd))
+        if not m:
+            return None
+        raw = m.group(1)
+    if ":" in raw:
+        raw = raw.split(":", 1)[1]
+    if not _BRANCH_OK.match(raw):
+        raise ValueError("作成元の枝名に使えない文字があります: " + raw[:60])
+    return raw
 
 
 def is_doc_path(p: str) -> bool:
@@ -180,7 +216,7 @@ def body_text(tool: str, ti: dict, cmd: str) -> str:
 
 def check_pr_create(tool: str, ti: dict, cmd: str, cwd: str):
     try:
-        files = changed_files(cwd)
+        files = changed_files(cwd, head_branch(tool, ti, cmd))
     except Exception as e:
         return "枝の変更ファイルを git で取れなかったため止めます: " + str(e)
     code = [f for f in files if not is_doc_path(f)]
