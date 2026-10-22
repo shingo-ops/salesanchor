@@ -156,3 +156,19 @@ PO 原文の要旨: 「全ての読み込みを差し替えて」「金型を変
 - 弊害: ButtonMigration 系の試験は負荷が高いと 5 秒の時間切れで落ちる（未変更の試験。単独・時間延長の再実行で pass）。
 - 守り手: 2-6 と同じ（UI governance gate と Opus の件数記録）。
 - 戻し方: 本便の PR を revert。
+
+## 2-13 便4（features/・components/ の 24 件・23 ファイル）
+- 直し方: card-6.md の規則 A・E・F に、card-7.md の判断 1〜3 を加える。
+  - 判断1（文言を変えない）: キーが common.loading でない 3 件（ExtractionAttemptHistory・ProductMasterDrawer・ReviewSection）は `label` で今の文言を保つ。理由: 画面に出る文言を便の中で変えないため。
+  - 判断2（認証待ちの全画面配置を保つ）: ProtectedRoute は `div.loading-screen` を残し中だけ `<LoadingBlock />` にする。理由: 全画面の中央寄せを保つため。
+  - 判断3（一覧の行の高さと data-testid を保つ）: ChannelTypeCombobox・CountryCombobox・InventorySearchBar は枠（div・li・style・data-testid）を残し中を `<LoadingBlock size="sm" inline />` にする。理由: 選択肢の一覧の行の高さと試験用 data-testid を保つため。
+- 触らない: excluded の 10 件、CSS・辞書・金型・scripts/。
+- 受入条件
+| 基準 | 検証方法 |
+|---|---|
+| 対象 24 件が消える（対象 23 ファイル 25→1、本体 31→7） | countLoadingText の前後（/tmp/CC報告ファイル/loading-stage2-bin4/impl/count-*.txt） |
+| 試験 | 対象ディレクトリの vitest 全件 pass |
+| 規約 | tsc 0・eslint 警告 0・i18n 欠け 0・UI governance gate 緑 |
+- 弊害: 小さい丸（sm）は読み込み中の文字より小さく見える。
+- 守り手: 2-6 と同じ。
+- 戻し方: 本便の PR を revert。
