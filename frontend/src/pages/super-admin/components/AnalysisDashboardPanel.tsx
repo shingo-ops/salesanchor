@@ -46,6 +46,7 @@ import type { SupplierQualitySummary } from "../../../features/tcg-analysis-revi
 import { reviewReasonLabel } from "../../../features/tcg-analysis-review/reviewReasonLabel";
 import { LlmUsageSection } from "./LlmUsageSection";
 import "./AnalysisDashboardPanel.css";
+import { LoadingBlock } from "../../../components/loading";
 
 // ──────────────────────────────────────────────────────────────────────────────
 // 型定義
@@ -536,7 +537,7 @@ export function AnalysisDashboardPanel({ onNavigate }: AnalysisDashboardPanelPro
       {/* ── Extraction Tab ───────────────────────────────────────────────── */}
       {activeTab === "extraction" && (
         pipelineLoading ? (
-          <p className="analysis-dashboard-empty">{t("analysisRules.dashboard.loading")}</p>
+          <LoadingBlock />
         ) : pipelineError || !data ? (
           <p className="analysis-dashboard-error">
             {error ?? t("analysisRules.dashboard.fetchError")}
@@ -554,7 +555,7 @@ export function AnalysisDashboardPanel({ onNavigate }: AnalysisDashboardPanelPro
       {/* ── Analysis Tab ─────────────────────────────────────────────────── */}
       {activeTab === "analysis" && (
         pipelineLoading ? (
-          <p className="analysis-dashboard-empty">{t("analysisRules.dashboard.loading")}</p>
+          <LoadingBlock />
         ) : pipelineError || !data ? (
           <p className="analysis-dashboard-error">
             {error ?? t("analysisRules.dashboard.fetchError")}
@@ -670,7 +671,7 @@ function ImportTabContent({ data, trend, loading, error, trendDays, t, onNavigat
   };
 
   if (loading) {
-    return <p className="analysis-dashboard-empty">{t("analysisRules.dashboard.loading")}</p>;
+    return <LoadingBlock />;
   }
   if (error || !data) {
     return (
@@ -1709,7 +1710,7 @@ interface DistributionTabContentProps {
 
 function DistributionTabContent({ data, loading, error, t }: DistributionTabContentProps) {
   if (loading) {
-    return <p className="analysis-dashboard-empty">{t("analysisRules.dashboard.loading")}</p>;
+    return <LoadingBlock />;
   }
   if (error || !data) {
     return (

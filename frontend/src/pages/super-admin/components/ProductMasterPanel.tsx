@@ -18,6 +18,7 @@ import { Tabs } from "../../../components/Tabs";
 
 import { TcgProductDetailDrawer } from "../../../features/tcg-product-import/TcgProductDetailDrawer";
 import "../../../features/tcg-product-import/product-csv.css";
+import { LoadingBlock } from "../../../components/loading";
 
 interface ProductRow {
   id: number; japanese_title: string; english_title: string; mark: string;
@@ -113,7 +114,7 @@ export function ProductMasterPanel() {
         size="md"
       />
       <ContentToolbar left={<TextField type="search" label={t("productCsv.search")} value={filter.query} onChange={e => setFilter(value => ({ ...value, query: e.target.value, page: 1 }))} />} />
-      {loading ? <p>{t("common.loading")}</p> : error ? <div role="alert"><p>{t("productCsv.loadError")}</p><HeaderButton variant="secondary" onClick={() => setRetry(value => value + 1)}>{t("productCsv.retry")}</HeaderButton></div> : data && <>
+      {loading ? <LoadingBlock /> : error ? <div role="alert"><p>{t("productCsv.loadError")}</p><HeaderButton variant="secondary" onClick={() => setRetry(value => value + 1)}>{t("productCsv.retry")}</HeaderButton></div> : data && <>
         <p role="status">{t("productCsv.total", { count: data.total })}</p>
         <DataTable
           columns={columns}

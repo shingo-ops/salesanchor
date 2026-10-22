@@ -98,3 +98,18 @@ PO 原文の要旨: 「全ての読み込みを差し替えて」「金型を変
 
 ## 2-8 戻し方
 便ごとの PR を revert。便1を戻すと要確認画面は段階1の Spinner 直接呼び出しに戻る。
+
+## 2-9 便2（pages/super-admin 31 件）
+- 直し方: 実装カード card-3.md の §1 規則 A〜C と §2 の表。要素ごと `<LoadingBlock />` に替え、label は渡さない（recon B3）。インライン style の 5 ファイルは style ごと消えて金型の見た目にそろう。
+- 試験: ProductMasterPanel.test.tsx:126 を `queryByText(/^Products: \d+/)` が null の確認に替える（recon B5。試験の意図を保つ）。
+- 触らない: ボタン内の三項・CSS・辞書（参照 0 になるキー 2 つは辞書整理の別便で消す）。
+- 受入条件
+| 基準 | 検証方法 |
+|---|---|
+| super-admin の文字だけ表示が 48→17 件 | countLoadingText で前後を数える（/tmp/CC報告ファイル/loading-stage2-bin2/count-*.txt） |
+| 既存の試験が通る | vitest src/pages/super-admin 全件 pass |
+| 規約 | tsc 0・eslint 0・i18n 欠け 0・UI governance gate 緑 |
+| e2e | CI の e2e 緑 |
+| 本番 | 反映後、本番の画面の JS に変わった画面の LoadingBlock 呼び出しが入っている |
+- 守り手: 2-6 と同じ（UI governance gate と Opus の件数記録）。
+- 戻し方: 本便の PR を revert。

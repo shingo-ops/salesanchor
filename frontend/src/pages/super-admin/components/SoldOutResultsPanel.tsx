@@ -14,6 +14,7 @@ import { Drawer } from "../../../components/Drawer";
 import { useSuperAdmin } from "../../../hooks/useSuperAdmin";
 import { ApiError } from "../../../lib/api";
 import { fetchSoldOut, type SoldOutItem, type SoldOutResponse, type SourceScope } from "../../../features/tcg-sold-out/soldOutApi";
+import { LoadingBlock } from "../../../components/loading";
 
 function SourceDetail({ item }: { item: SoldOutItem }) {
   const { t } = useTranslation();
@@ -76,7 +77,7 @@ export function SoldOutResultsPanel() {
     { key: "source_is_active", header: t("soldOut.sourceState"), renderCell: item => t(item.source_is_active === true
       ? "soldOut.active" : item.source_is_active === false ? "soldOut.history" : "soldOut.unknown") },
   ];
-  if (authLoading) return <p role="status">{t("common.loading")}</p>;
+  if (authLoading) return <LoadingBlock />;
   if (!isSuperAdmin) return <p role="alert">{t("soldOut.denied")}</p>;
   return <>
     <p>{t("soldOut.subtitle")}</p>
@@ -88,7 +89,7 @@ export function SoldOutResultsPanel() {
         { value: "all", label: t("soldOut.all") }, { value: "active", label: t("soldOut.active") }, { value: "history", label: t("soldOut.history") },
       ]} onChange={event => { setScope(event.target.value as SourceScope); setOffset(0); }} />
     </>} right={<><Button onClick={() => { setQ(draft.trim()); setOffset(0); }}>{t("soldOut.searchAction")}</Button><Button variant="secondary" disabled={loading} onClick={() => setReload(value => value + 1)}>{t("soldOut.reload")}</Button></>} />
-    {loading && <p role="status">{t("common.loading")}</p>}
+    {loading && <LoadingBlock />}
     {errorKey && <p role="alert">{t(errorKey)}</p>}
     {data && <>
       <p><span>{t("soldOut.total", { count: data.total })}</span> · <span>{t("soldOut.asOf", { date: date(data.as_of) })}</span></p>
