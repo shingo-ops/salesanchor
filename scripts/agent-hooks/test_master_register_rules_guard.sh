@@ -54,4 +54,25 @@ echo "$O" | grep -q '"permissionDecision": "deny"'; check "T7 cat heredoc書き�
 # T8 (許容する副作用: リダイレクト付きgrepもdeny)
 O="$(mk PreToolUse Bash command 'grep -rn "create_product(" backend > /tmp/out.txt' | python3 "$G")"
 echo "$O" | grep -q '"permissionDecision": "deny"'; check "T8 grep+リダイレクトもdeny(許容する副作用)" $?
+# T9〜T18: 差し込み条件（doc-agenda-nav 段1。docs/handoff/doc-agenda-nav/card-stage1.md §4-2）
+# 出ないこと（無関係4本・境界1本・マスタを含まない1本・無関係1本）
+for P in \
+  '在庫表の商品名の列幅を直して。あとログイン登録画面のバグも見て' \
+  'ユーザー登録フォームで商品一覧が出ない' \
+  'マスタ画面の表示が遅い。GitHub に登録してあるワークフローも確認' \
+  'Discord の webhook を登録して商品の通知を流す' \
+  'マスタを整備して正答率を上げたい。登録はまだしない' \
+  '商品を登録して' \
+  'PR を作って'; do
+  O="$(mk UserPromptSubmit x x "$P" | python3 "$G")"
+  [ -z "$O" ]; check "T9-15 出ない: $P" $?
+done
+# 出ること（関係あり2本・別マスタ1本）
+for P in \
+  '商品マスタに新しいカードを登録して' \
+  '共用マスタへ登録する候補一覧を出して' \
+  '販売先を顧客マスタに登録して'; do
+  O="$(mk UserPromptSubmit x x "$P" | python3 "$G")"
+  echo "$O" | grep -q '"additionalContext"' && echo "$O" | grep -q "$RULES_HEAD"; check "T16-18 出る: $P" $?
+done
 exit $FAIL

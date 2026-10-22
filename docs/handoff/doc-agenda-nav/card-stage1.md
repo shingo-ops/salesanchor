@@ -6,7 +6,7 @@
 - recon: docs/handoff/doc-agenda-nav/recon.md（:68 に今の条件の原因）
 - 対象ADR: ADR-1040（Proposed。Decision 6）。関連: ADR-076・ADR-113
 - 事実確認の生出力: /tmp/CC報告ファイル/an-stage1-regex-check.txt（新旧の式に例文11本を通した結果。2026-10-22 Opus）・/tmp/CC報告ファイル/an-card1/facts.txt（試験ファイル全文・見張りの :15-30・CI の定義）
-- 状態: 設計は審査済み（PR #4649 でマージ済み）。KGI は PO 承認済み（2026-10-22「1」）。**このカードの実装は、PO の実装承認がまだ無い。承認が出るまで担当に渡さない**
+- 状態: 設計は審査済み（PR #4649 でマージ済み）。KGI は PO 承認済み（2026-10-22「1」）。段0 は PR #4660 でマージ済み（2026-10-22）。**PO の実装承認あり**（Opus が例文つきで内容を説明した後の PO 原文「1」、2026-10-23）
 - 前提: 段0 の PR（ADR-1040 とこのカード。head は release/doc-agenda-nav-stage0）が main にマージされていること（§10 で確かめる）
 - 危険便（ADR-136 の危険パス）: はい。`scripts/` を触るため scripts/check-process-artifacts.js:115-127 の DANGEROUS_PATTERNS に当たり、PR 本文に `### GO記録` が要る。GO は ADR-1003 の委譲名義で Opus が出す（PO の実装承認の後に限る）
 - 作業の最初に、作業場所で `./scripts/dev/executor-preflight.sh` を実行し、exit 0 を確かめる（0 でなければ BLOCKED:）
@@ -154,20 +154,20 @@ done
 - 前例: docs/handoff/master-register-rules-hook/design.md:37 の型（PR で審査 → PO が写す → 写す前に .bak → 写した後に diff で一致を確かめる）。
 - 8-1. マージの後、Opus が本店で `git fetch origin` を行い、PO に次の1行を渡す（PO が `!` で実行する）:
   `cp -p ~/.claude/scripts/master-register-rules-guard.py ~/.claude/scripts/master-register-rules-guard.py.bak-20261022 && git -C /Users/tanizawashingo/salesanchor show origin/main:scripts/agent-hooks/master-register-rules-guard.py > ~/.claude/scripts/master-register-rules-guard.py.new && test -s ~/.claude/scripts/master-register-rules-guard.py.new && cp ~/.claude/scripts/master-register-rules-guard.py.new ~/.claude/scripts/master-register-rules-guard.py && git -C /Users/tanizawashingo/salesanchor show origin/main:scripts/agent-hooks/master-register-rules-guard.py | diff - ~/.claude/scripts/master-register-rules-guard.py && echo SAME`
-  （日付の部分は写す日に合わせて Opus が書き換える。いったん `.new` に書き、空でないことを `test -s` で確かめてから本体に写す。`git show` が失敗しても本体は空にならない。`cp` は既存の本体の権限を保つ。`.new` は消さずに残す）
+  （日付の部分は写す日に合わせて Opus が書き換える。いったん `.new` に書き、空でないことを `test -s` で確かめてから本体に写す。`git show` が失敗しても本体は空にならない。`cp` は既存の本体の権限を保つ。`.new` は消さずに残す。**この1行は再実行しない**：再実行すると、写した後の本体で `.bak` が上書きされ、元の版に戻せなくなる。失敗したときは §9 で戻してから Opus が新しい日付の1行を渡し直す）
 - 8-2. 期待: 最後の行が `SAME`。出なければ §9 で戻す。
 - 8-3. 反映の確かめ（Opus）: 新しい会話で無関係の例文「ユーザー登録フォームで商品一覧が出ない」を入れても、商品マスタ登録ルールが差し込まれないこと。新しい会話で関係ある例文「商品マスタに新しいカードを登録して」を入れると差し込まれること。結果を PR にコメントで残す（会話の記録ファイルは読まない）。
 - ホームの `.claude/settings.json` は変えないので、写すだけで次の入力から効く。
 
 ## 9. 戻し方
 
-- 見張りの本体: PO が `!` で `cp -p ~/.claude/scripts/master-register-rules-guard.py.bak-20261022 ~/.claude/scripts/master-register-rules-guard.py` を実行し、`git -C /Users/tanizawashingo/salesanchor show origin/main:scripts/agent-hooks/master-register-rules-guard.py | diff - ~/.claude/scripts/master-register-rules-guard.py` で差が :25 の1行だけになったことを確かめる（repo を revert した後なら差は0行）。
+- 見張りの本体: PO が `!` で `cp -p ~/.claude/scripts/master-register-rules-guard.py.bak-20261022 ~/.claude/scripts/master-register-rules-guard.py` を実行し（`.bak-` の後の日付は §8-1 で Opus が書き換えた日付に合わせる）、`git -C /Users/tanizawashingo/salesanchor show origin/main:scripts/agent-hooks/master-register-rules-guard.py | diff - ~/.claude/scripts/master-register-rules-guard.py` で差が :25 の1行だけになったことを確かめる（repo を revert した後なら差は0行）。
 - repo: この PR の revert を main にマージする。
 - 戻すと、関係ない入力でもルール約100行が入る状態に戻る（2026-10-22 以前と同じ）。
 
 ## 10. PR
 
-- 作業場所: 段0 の PR が main にマージされたことを `gh pr list --state merged --head release/doc-agenda-nav-stage0 --limit 1 --json number,state` で確かめる（合格は1件で state が MERGED。`[]` なら作業を始めずに BLOCKED:）。その後 `cd /Users/tanizawashingo/salesanchor && git fetch origin && bash scripts/new-worktree.sh release/doc-agenda-nav-stage1 --claude`（origin/main 起点）を実行する。
+- 作業場所: 段0 の PR が main にマージされたことを `gh pr list --state merged --head release/doc-agenda-nav-stage0 --limit 1 --json number,state` で確かめる（合格は1件で state が MERGED。`[]` なら作業を始めずに BLOCKED:）。作業場所は Opus が `bash scripts/new-worktree.sh release/doc-agenda-nav-stage1 --claude`（origin/main 起点・2026-10-22）で作成済みで、このカードの書き足しのコミットも載っている。担当は作り直さない（もう一度実行しない）。
   - 出力はパイプに通さない。
   - 最後に「Input must be provided」と出て exit 1 になることがあるが、作業場所の作成とは無関係（2026-10-22 実測）。
   - 作成後に `ls -1d /Users/tanizawashingo/worktrees/salesanchor/release-doc-agenda-nav-stage1` と `git worktree list` の両方で実在を確かめる。
