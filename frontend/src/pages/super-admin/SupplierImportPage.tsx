@@ -7,6 +7,7 @@ import { PageLayout } from "../../components/PageLayout";
 import { ContentToolbar } from "../../components/ContentToolbar";
 import { HeaderButton } from "../../components/HeaderButton";
 import { TextField } from "../../components/TextField";
+import { LoadingBlock } from "../../components/loading";
 
 interface PreviewResponse {
   digest: string;
@@ -128,7 +129,7 @@ export default function SupplierImportPage() {
   const { isSuperAdmin, loading } = useSuperAdmin();
   return (
     <PageLayout titleText={t("supplierCsv.importTitle")}>
-      {loading ? <p>{t("common.loading")}</p> : !isSuperAdmin ? <p role="alert">{t("productCsv.denied")}</p> : <SupplierImportPanel onDone={() => navigate("/super-admin/analysis-rules?section=supplier-master")} />}
+      {loading ? <LoadingBlock /> : !isSuperAdmin ? <p role="alert">{t("productCsv.denied")}</p> : <SupplierImportPanel onDone={() => navigate("/super-admin/analysis-rules?section=supplier-master")} />}
       {!loading && !isSuperAdmin && <HeaderButton variant="secondary" onClick={() => navigate("/super-admin/analysis-rules?section=supplier-master")}>{t("supplierCsv.backToList")}</HeaderButton>}
     </PageLayout>
   );

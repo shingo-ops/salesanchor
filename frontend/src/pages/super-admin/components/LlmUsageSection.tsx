@@ -27,6 +27,7 @@ import { Card } from "../../../components/Card";
 import { DataTable } from "../../../components/DataTable";
 import type { DataTableColumn } from "../../../components/DataTable";
 import "./LlmUsageSection.css";
+import { LoadingBlock } from "../../../components/loading";
 
 // ──────────────────────────────────────────────────────────────────────────────
 // 型定義
@@ -405,7 +406,7 @@ export function LlmUsageSection({ days, t }: LlmUsageSectionProps) {
   }, [days, t]);
 
   if (loading) {
-    return <p className="analysis-dashboard-empty">{t("analysisRules.dashboard.loading")}</p>;
+    return <LoadingBlock />;
   }
   if (error || !data) {
     return (

@@ -25,6 +25,7 @@ import { TextField } from "../../components/TextField";
 import { Radio } from "../../components/Radio";
 import { Select } from "../../components/Select";
 import { SubMenu, type SubMenuGroup } from "../../components/SubMenu";
+import { LoadingBlock } from "../../components/loading";
 
 interface ViewerItem {
   id: number;
@@ -314,7 +315,7 @@ export default function ViewerAccountsPage() {
   };
 
   if (authLoading) {
-    return <div className="page">{t("common.loading")}</div>;
+    return <LoadingBlock />;
   }
 
   if (!isSuperAdmin) {
@@ -457,7 +458,7 @@ export default function ViewerAccountsPage() {
         </div>
       )}
       {fetching && items.length === 0 ? (
-        <div>{t("common.loading")}</div>
+        <LoadingBlock />
       ) : (
         <DataTable
           columns={columns}
