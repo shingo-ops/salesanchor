@@ -70,3 +70,4 @@
   - 計測のまとめは `read probe: n=35 slow=0 error=0 invalid=0 max=797ms`。K10 は合格（prod1 で `$EPOCHREALTIME` が取れた）。
   - K7 は 1/3（slow=0・error=0）。この回は ai_ro のビューを外す run_sql（計測を始める前）で鍵待ちがあったが、計測は trap の後から始まるため、その分は数えていない（design §14-3）。
   - 生の記録: Mac の /tmp/CC報告ファイル/k7-probe/deploy-39634747232.txt（リポジトリ外）。
+- 2026-10-22 便2 は保留（PO「1」）。調べた時点で、5秒の8ファイルに由来する待ちは入れ替え3回で0件、read probe も slow=0。K7 の残り2回で該当ファイルの待ちが出たら再相談する。根拠: docs/handoff/migration-lock-timeout/design.md の便2の行と :366。
