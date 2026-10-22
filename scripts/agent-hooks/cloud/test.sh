@@ -55,6 +55,29 @@ def mkremote(path):
     return path
 
 REMOTE = mkremote(os.path.join(tmp, "remoterepo"))
+def mkstale(path):
+    """staledocs 枝（docs のみ）を一度 fetch した後、別 clone からその枝にコードを足して push する。
+    手元の追跡参照は古いまま残る。"""
+    g = ["git", "-c", "user.name=t", "-c", "user.email=t@example.invalid"]
+    bare = REMOTE + "-origin.git"
+    seed = REMOTE + "-seed"
+    sh(*g, "checkout", "-q", "-b", "staledocs", "main", cwd=seed)
+    os.makedirs(os.path.join(seed, "docs"), exist_ok=True)
+    open(os.path.join(seed, "docs/s.md"), "w").write("s\n")
+    sh(*g, "add", ".", cwd=seed); sh(*g, "commit", "-qm", "staledocs", cwd=seed)
+    sh(*g, "push", "-q", "origin", "staledocs", cwd=seed)
+    sh("git", "clone", "-q", "--single-branch", "-b", "main", bare, path)
+    sh("git", "config", "remote.origin.fetch", "+refs/heads/*:refs/remotes/origin/*", cwd=path)
+    sh("git", "fetch", "-q", "origin", "staledocs", cwd=path)
+    other = path + "-other"
+    sh("git", "clone", "-q", bare, other)
+    sh(*g, "checkout", "-q", "staledocs", cwd=other)
+    fp = os.path.join(other, "src/late.py"); os.makedirs(os.path.dirname(fp), exist_ok=True)
+    open(fp, "w").write("z\n")
+    sh(*g, "add", ".", cwd=other); sh(*g, "commit", "-qm", "late code", cwd=other)
+    sh(*g, "push", "-q", "origin", "staledocs", cwd=other)
+    return path
+STALE = mkstale(os.path.join(tmp, "stalerepo"))
 NOGIT = os.path.join(tmp, "nogit"); os.makedirs(NOGIT)
 
 def pre(tool, cwd=D, **ti):
@@ -110,6 +133,11 @@ add("K3", "gh pr create -H コード枝", bash(f'gh pr create -H codebr --title 
 add("K3", "gh api head=コード枝", bash(f'gh api -X POST repos/o/r/pulls -f head=codebr -f title=t -f body="{GOOD}"', REMOTE), 2)
 add("K3", "gh api --raw-field head=docs枝", bash(f'gh api -X POST repos/o/r/pulls --raw-field head=docsbr -f title=t -f body="{GOOD}"', REMOTE), 0)
 add("K3", "head枝が存在しない", pre("mcp__github__create_pull_request", REMOTE, title="t", head="nosuchbr", body=GOOD), 2)
+# 再審査指摘
+add("K3", "追跡参照が古い(後からコード追加)", pre("mcp__github__create_pull_request", STALE, title="t", head="staledocs", body=GOOD), 2)
+add("K3", "--head 2回(後がコード枝)", bash(f'gh pr create --head docsbr --head codebr --title t --body "{GOOD}"', REMOTE), 2)
+add("K3", "gh api -fhead=コード枝(詰め書き)", bash(f'gh api -X POST repos/o/r/pulls -fhead=codebr -f title=t -f body="{GOOD}"', REMOTE), 2)
+add("K1", ">( の中に危険語", bash(f"cat >({ops[0]} foo)"), 2)
 # 審査指摘の止め漏れ
 add("K1", "単独&の後ろに危険語", bash(f"cat a & {ops[0]} foo"), 2)
 add("K1", "2>&1 の後ろに危険語", bash(f"cat a 2>&1 | {ops[0]} foo"), 2)

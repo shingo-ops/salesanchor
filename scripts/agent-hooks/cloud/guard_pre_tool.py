@@ -54,7 +54,7 @@ def strip_message_quotes(seg: str) -> str:
 
 def is_readonly_segment(seg: str) -> bool:
     s = seg.strip()
-    if not s or "\n" in s or "$(" in s or "`" in s or "<(" in s:
+    if not s or "\n" in s or "$(" in s or "`" in s or "<(" in s or ">(" in s:
         return False
     m = re.match(r"([\w./-]+)", s)
     if not m:
@@ -160,16 +160,18 @@ def _diff_names(cwd: str, rng: str):
 
 
 def changed_files(cwd: str, branch=None):
-    """branch があれば origin/main...origin/<branch>（無ければ1回 fetch）、無ければ origin/main...HEAD。"""
+    """branch があれば毎回 fetch（main と作成元の枝）してから origin/main...origin/<branch>、無ければ origin/main...HEAD。"""
     if branch is None:
         return _diff_names(cwd, "origin/main...HEAD")
-    rng = f"origin/main...origin/{branch}"
-    try:
-        return _diff_names(cwd, rng)
-    except Exception:
-        subprocess.run(["git", "-C", cwd, "fetch", "-q", "origin", branch],
-                       capture_output=True, text=True, timeout=10)
-        return _diff_names(cwd, rng)
+    r = subprocess.run(
+        ["git", "-C", cwd, "fetch", "-q", "origin",
+         "+refs/heads/main:refs/remotes/origin/main",
+         f"+refs/heads/{branch}:refs/remotes/origin/{branch}"],
+        capture_output=True, text=True, timeout=10,
+    )
+    if r.returncode != 0:
+        raise RuntimeError("fetch に失敗: " + (r.stderr or "").strip()[:200])
+    return _diff_names(cwd, f"origin/main...origin/{branch}")
 
 
 _BRANCH_OK = re.compile(r"^[A-Za-z0-9._/][A-Za-z0-9._/-]*$")
@@ -183,10 +185,12 @@ def head_branch(tool: str, ti: dict, cmd: str):
             raise ValueError("PR の作成元(head)が指定されていません")
         raw = h.strip()
     else:
-        m = (re.search(r"(?:^|\s)(?:--head[ =]+|-H[ =]*)[\"']?([^\s\"']+)", cmd)
-             or re.search(r"(?:-f|-F|--field|--raw-field)[ =]+[\"']?head=([^\s\"']+)", cmd))
-        if not m:
+        ms = list(re.finditer(
+            r"(?:(?:^|\s)(?:--head[ =]+|-H[ =]*)|(?:^|\s)(?:--field|--raw-field|-f|-F)[ =]*[\"']?head=)"
+            r"[\"']?([^\s\"']+)", cmd))
+        if not ms:
             return None
+        m = ms[-1]  # gh と同じく最後の指定を使う
         raw = m.group(1)
     if ":" in raw:
         raw = raw.split(":", 1)[1]
