@@ -56,7 +56,7 @@ prod1 が止まっても動く必要があるため prod2 に置く（ADR-080 �
 ### 3-3. 時計ずれ警報と誤警報の抑止（Prometheus/Alertmanager）
 
 - 新ルール ClockSkew: `abs(node_time_seconds{job="node-exporter"} - timestamp(node_time_seconds{job="node-exporter"})) > 60` が 2分続いたら critical（10/22 の実測に使った式と同じ。prod1=instance app-vps・prod2=mgmt-vps の両方を見る）。補助に `node_timex_sync_status == 0` が 10分続いたら warning（時刻合わせが止まった兆候）。U1 で3指標とも値が出ていることを確認済み。
-- Alertmanager の inhibit: ClockSkew が鳴っている間、時刻比較型ルール（monitoring/prometheus/alert_rules.yml の式の行で :121 F2CleanupStale、:183 CeleryHeartbeatStale、:222 ViewerInventoryStale、:233 ViewerInventoryStaleOnHold、:248 BackupLocalStale、:261 BackupS3Stale、:327 ContainerStateStale の7本）を抑止。:300 MonitoringConfigCheckStale は GitHub Actions が書く時刻なので対象外。
+- Alertmanager の inhibit: ClockSkew が鳴っている間、時刻比較型ルール（monitoring/prometheus/alert_rules.yml の式の行で :121 F2CleanupStale、:184 CeleryHeartbeatStale、:222 ViewerInventoryStale、:233 ViewerInventoryStaleOnHold、:248 BackupLocalStale、:261 BackupS3Stale、:327 ContainerStateStale の7本）を抑止。:300 MonitoringConfigCheckStale は GitHub Actions が書く時刻なので対象外。
 
 ## 外部・過去事例の参照と我々への応用
 
@@ -70,7 +70,7 @@ prod1 が止まっても動く必要があるため prod2 に置く（ADR-080 �
 |------|---------|
 | G1: さくら差出人のテストメールが10分以内に Discord 運用チャンネルに1件届く。差出人が他のメールは届かない | 本番で PO がさくら差出人を模したテスト転送を1通（または過去の予告メールを再転送）→ Discord の到着時刻を記録。差出人絞り込みは pytest（review_mail_notifier の新テスト） |
 | G2: prod1 の API を止めずに「NG→OK」を模擬して ✅ 通知が1件届く。NG 項目があれば ❌＋項目名 | prod2 の点検係を状態ファイル「NG」で1回動かす実機確認＋点検係の単体テスト（NG 判定の各項目） |
-| G3: 時計ずれ 60秒超で ClockSkew が鳴り、その間時刻比較型の警報が抑止される | promtool test rules（ClockSkew と inhibit の単体テスト）を CI で実行 |
+| G3: 時計ずれ 60秒超で ClockSkew が鳴り、その間時刻比較型の警報が抑止される | ClockSkew は promtool test rules を CI で実行。inhibit は promtool で試せないため、本番と同じ版の Alertmanager を手元で外部通信なしに起動して疑似警報で確かめ（便1 カード §5）、抑止対象の警報名が実在することを check_alert_rules.py で CI が毎回確かめる |
 | 既存の review@ 通知が変わらない | 既存 pytest がそのまま通る |
 
 ## 技術 How・KPI
