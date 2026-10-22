@@ -5201,7 +5201,6 @@
     "name": "名称",
     "nameEn": "英語名",
     "lineId": "小分類",
-    "typeMasterId": "カードゲーム",
     "displayOrder": "表示順",
     "isActive": "有効",
     "gameIds": "使えるゲーム",

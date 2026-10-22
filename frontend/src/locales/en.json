@@ -5201,7 +5201,6 @@
     "name": "Name",
     "nameEn": "English Name",
     "lineId": "Product Line",
-    "typeMasterId": "Card Game",
     "displayOrder": "Display Order",
     "isActive": "Active",
     "gameIds": "Usable games",
