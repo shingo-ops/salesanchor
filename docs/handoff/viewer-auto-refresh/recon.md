@@ -35,8 +35,8 @@
   - 応答は `{updated_at, fresh_window_hours, rows}`。
   - キャッシュが無ければ 503 "viewer_inventory_not_ready"。
   - ETag や軽い確認用の入口は無く、毎回全文を返す。
-- `backend/app/services/viewer_inventory_cache.py:87`: updated_at は作り直しが成功するたびに今の時刻になる（中身が同じでも毎分変わる）。
-- `backend/app/services/viewer_inventory_cache.py:79-84`: 解析待ちがある間は書かない（前の値と時刻のまま）。
+- `backend/app/tasks/viewer_inventory_cache.py:87`: updated_at は作り直しが成功するたびに今の時刻になる（中身が同じでも毎分変わる）。
+- `backend/app/tasks/viewer_inventory_cache.py:79-84`: 解析待ちがある間は書かない（前の値と時刻のまま）。
 - `backend/app/celery_app.py:188-192`: 作り直しは60秒ごと。
 - 行数の上限は `backend/app/services/tcg_distribution_svc.py:45` の DIST_ROW_LIMIT=5000。1行は15キー。応答のバイト数は実測していない【未確認】。
 
