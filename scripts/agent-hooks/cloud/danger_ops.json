@@ -1,0 +1,19 @@
+[
+  "DROP TABLE",
+  "DROP DATABASE",
+  "rm -rf",
+  "git push --force",
+  "git push -f",
+  "git reset --hard",
+  "DELETE FROM",
+  "TRUNCATE",
+  "git push origin main",
+  "git push origin develop",
+  "rm -r",
+  "git push -u origin main",
+  "git push -u origin develop",
+  "git push origin HEAD:main",
+  "git push origin HEAD:develop",
+  "git rebase",
+  "clasp push"
+]
