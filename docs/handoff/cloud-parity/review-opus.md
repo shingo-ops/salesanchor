@@ -87,3 +87,14 @@
 ### 指摘のみ（今回は止めない）
 - 「最後の指定を使う」変更で gh の道に新しい止め漏れが出た（前回までは止まっていた）。`:188-190` の正規表現は命令文全体を見るため、実際の `--head` より後ろにある本文中の `-H <枝>`／`--head <枝>`、または gh api の末尾のヘッダ `-H 'X-A:<枝>'` が「最後の指定」になる。再現（probe 8, 9, 10）: 実際の head はコード枝、本文や末尾ヘッダに docs だけの枝名 → exit 0（2 が期待）。クラウドの gh は無効（recon.md:24）で、PR 作成は MCP の道（今回直った）を通るため影響は小さい。直すなら本文・ヘッダの値を引数として読み飛ばす（shlex で分けて、`--body`/`-b`/`-H`(gh api) の次の語を除く）。
 - 止めすぎ: gh api で `-H 'Accept: …'` を `-f head=` より後ろに書くと、枝名が空と読まれて止まる（probe 12）。前に書けば通る（probe 11）。
+
+## 本線取り込み後の確認（2026-10-23・HEAD 6a44570e0）
+
+- 審査者: Opus（審査役・新規起動）
+- 対象: merge commit 6a44570e09bbf8090ea53ebf9b2d5388c172f1ed（本線 33294fe9a の取り込み。親は bc0a2e241 と 33294fe9a）
+- 判定: APPROVE（取り込みで PR の中身は変わっていない）
+- 確認したこと:
+  - `git diff origin/main...HEAD --name-only` は承認時と同じ13件（.claude/settings.json、scripts/agent-hooks/cloud/ 8件、docs/handoff/cloud-parity/ 4件）
+  - `git diff bc0a2e241 HEAD -- <13件>` は空（.claude/settings.json を含め差分なし）
+  - 取り込みで入った本線側の変更は4件（ADR-1032 追記、doc-agenda-nav カード、master-register-rules-guard.py の正規表現、その試験）。scripts/agent-hooks/cloud/ と .claude/settings.json はこれらを参照していない（grep 0件）。cloud/dispatch.sh が呼ぶのは同じ階層の guard_pre_tool.py・guard_stop.py・session_start.py のみ
+- テスト結果: `/tmp/CC報告ファイル/cloud-parity-bin1/review4-test.txt`（全件OK・終了コード0）。差分の生出力: `/tmp/CC報告ファイル/cloud-parity-bin1/review4-diff.txt`
