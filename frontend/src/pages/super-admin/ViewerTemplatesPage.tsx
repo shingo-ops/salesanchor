@@ -18,6 +18,7 @@ import { EmptyState } from "../../components/EmptyState";
 import { Drawer } from "../../components/Drawer";
 import { Textarea } from "../../components/Textarea";
 import { Stack } from "../../components/Stack";
+import { LoadingBlock } from "../../components/loading";
 
 interface TemplateItem {
   key: string;
@@ -160,7 +161,7 @@ export default function ViewerTemplatesPage() {
   };
 
   if (authLoading) {
-    return <div className="page">{t("common.loading")}</div>;
+    return <LoadingBlock />;
   }
 
   if (!isSuperAdmin) {
@@ -211,7 +212,7 @@ export default function ViewerTemplatesPage() {
         </div>
       )}
       {fetching && items.length === 0 ? (
-        <div>{t("common.loading")}</div>
+        <LoadingBlock />
       ) : (
         <DataTable
           columns={columns}
