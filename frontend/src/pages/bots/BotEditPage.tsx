@@ -6,6 +6,7 @@
  * 保存後は /bots 一覧へ戻る。
  */
 
+import { LoadingBlock } from "../../components/loading";
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -81,7 +82,7 @@ export default function BotEditPage() {
     <PageLayout navKey="nav.bots" subtitleKey="bots.subtitle">
       {error && <div className="error-message">{error}</div>}
       {loading ? (
-        <div className="loading">{t("common.loading")}</div>
+        <LoadingBlock />
       ) : (
         <form onSubmit={handleSubmit} style={{ maxWidth: "var(--modal-max-w-md)" }}>
           <BotFormFields form={form} onChange={(f, v) => setForm((p) => ({ ...p, [f]: v }))} staff={staff} />

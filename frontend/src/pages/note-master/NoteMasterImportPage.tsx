@@ -1,3 +1,4 @@
+import { LoadingBlock } from "../../components/loading";
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -129,7 +130,7 @@ export default function NoteMasterImportTenantPage() {
   const canImport = hasPermission("suppliers.view");
   return (
     <PageLayout titleText={t("noteMasterCsv.importTitle")} subtitleKey="noteMasterCsv.importSubtitle">
-      {loading ? <p>{t("common.loading")}</p>
+      {loading ? <LoadingBlock />
        : !canImport ? <p role="alert">{t("productCsv.denied")}</p>
        : <NoteMasterImportPanel onDone={() => navigate("/management-center/note-master")} />}
       {!loading && !canImport && (

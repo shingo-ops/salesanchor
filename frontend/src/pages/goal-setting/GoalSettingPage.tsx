@@ -11,6 +11,7 @@
  *   2026-05-25: 初版作成（ダッシュボード強化）
  */
 
+import { LoadingBlock } from "../../components/loading";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
@@ -644,7 +645,7 @@ export default function GoalSettingPage() {
   if (loading) {
     return (
       <PageLayout navKey="nav.goalSettings" subtitleKey="goals.subtitle">
-        <div className="loading">{t("common.loading")}</div>
+        <LoadingBlock />
       </PageLayout>
     );
   }

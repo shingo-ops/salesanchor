@@ -4,6 +4,7 @@
  * ADR-027: 全UI文字列は t("key") 経由。
  * ADR-144: 金型クラスのみ使用。
  */
+import { LoadingBlock } from "../../components/loading";
 import { useEffect, useRef, useState, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -344,7 +345,7 @@ export default function ProductCategoriesPage() {
       </Modal>
 
       {loading ? (
-        <div className="loading">{t("common.loading")}</div>
+        <LoadingBlock />
       ) : (
         <DataTable<ProductCategoryEntry>
           columns={columns}

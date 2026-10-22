@@ -4,6 +4,7 @@
  * ADR-027: 全UI文字列は t("key") 経由。
  * ADR-144: 金型クラスのみ使用。
  */
+import { LoadingBlock } from "../../components/loading";
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -135,7 +136,7 @@ export default function ProductCategoriesImportTenantPage() {
   const canImport = hasPermission("product_categories.edit");
   return (
     <PageLayout titleText={t("productCategoriesCsv.importTitle")} subtitleKey="productCategoriesCsv.importSubtitle">
-      {loading ? <p>{t("common.loading")}</p>
+      {loading ? <LoadingBlock />
        : !canImport ? <p role="alert">{t("productCsv.denied")}</p>
        : <ProductCategoriesImportPanel onDone={() => navigate("/management-center/product-categories")} />}
       {!loading && !canImport && (

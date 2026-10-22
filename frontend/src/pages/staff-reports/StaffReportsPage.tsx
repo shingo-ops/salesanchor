@@ -1,3 +1,4 @@
+import { LoadingBlock } from "../../components/loading";
 import { useEffect, useState, FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
@@ -98,7 +99,7 @@ export default function StaffReportsPage() {
           </div>
         </form>
       </Modal>
-      {loading ? <div className="loading">{t("common.loading")}</div> : (
+      {loading ? <LoadingBlock /> : (
         <table className="data-table">
           <thead><tr><th>{t("common.code")}</th><th>{t("common.type")}</th><th>{t("common.date")}</th><th>{t("common.createdAt")}</th><th>{t("common.status")}</th></tr></thead>
           <tbody>
