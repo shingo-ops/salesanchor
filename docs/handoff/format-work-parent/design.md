@@ -210,7 +210,7 @@ KGI（○×で判定できる形）:
 | K8 便4 後、ProductMasterDrawer.tsx に datalist が 0 件 | `git grep -n datalist frontend/src` が何も出さず、exit 1 で終わる。CI の check-ui-governance は datalist を見ないため、Reviewer が確かめる |
 | K9 全便で CI（migration-guard・UI ガバナンス・i18n・ADR 索引）が緑 | PR の CI |
 
-## 維持の仕組み
+## 9. 維持の仕組み
 
 - 守り手: backend/tests/test_product_format_game_links_pg.py（便2 で FK の試験を足す）
 - 守り手: scripts/check-migration-column-churn.js（旧列の ADD を戻さない）
