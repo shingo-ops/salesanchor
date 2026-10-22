@@ -13,8 +13,11 @@ scripts/validate-pr-ownership.sh のチェック4を `gh api repos/<origin>/pull
 |問い合わせ失敗で理由つき rc=1|GH_HOST=invalid.example|
 |文法|bash -n|
 
-## 外部事例
-GitHub REST API「List pull requests」(head=user:ref-name, state=closed) の公式仕様。GraphQL不可環境の標準的な代替。
+## 外部・過去事例の参照と我々への応用
+GitHub REST API「List pull requests」(head=user:ref-name, state=closed) の公式仕様。GraphQL不可環境の標準的な代替。応用: 同じ問い合わせを REST で行い、判定（マージ済みなら止める）は不変。
+
+## 維持の仕組み
+問い合わせ失敗時は理由を stderr に出す（無言停止の再発防止）。クラウド試行で毎回 push が通ることを確認する。
 
 ## 戻し方
 このPRをrevert。
