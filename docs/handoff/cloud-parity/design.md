@@ -21,7 +21,7 @@ PO 2026-10-23「今まで通りopusには権限委譲するので決まったこ
 | K2 | クラウドで、PR のマージ（`mcp__github__merge_pull_request`、`gh api …/merge`、`gh pr merge`）が止まる | 同上 |
 | K3 | クラウドで、コード変更を含む枝の PR 作成（`mcp__github__create_pull_request`、`gh api … /pulls` の POST、`gh pr create`）が止まる。docs だけなら通る | テスト台本で、変更ファイル一覧が docs のみ／コードを含む の2通りを試す |
 | K4 | クラウドで作る PR 本文に「### 標準ワークフロー確認」が無いと止まる | テスト台本 |
-| K5 | クラウドで、英語だけの最終返事が止まる。会話の始まりに、手元の `~/.claude/CLAUDE.md` に相当する決まり（報告の型・秘密を出さない等）が入る | クラウド試行の記録（get_run_log）で確認 |
+| K5 | クラウドで、英語だけの最終返事が止まる。会話の始まりに、手元の個人用 CLAUDE.md（ホーム側） に相当する決まり（報告の型・秘密を出さない等）が入る | クラウド試行の記録（get_run_log）で確認 |
 | K6 | 手元（Mac）では新しい見張りが一切動かない | 手元で `CLAUDE_CODE_REMOTE` 未設定のまま dispatch.sh に各入力を流し、すべて exit 0・出力なしになること |
 | K7 | Python 以外の新しい依存を足さない。各見張りは 1 回 1 秒以内に終わる | テスト台本で時間を測る |
 
@@ -43,7 +43,7 @@ PO 2026-10-23「今まで通りopusには権限委譲するので決まったこ
 無効: gh-scope-guard（#23）。
 
 ## 5. 作り方
-- `scripts/agent-hooks/cloud/` を新設する。入口は `dispatch.sh` 1本で、先頭に `[ "$CLAUDE_CODE_REMOTE" = "true" ] || exit 0` を置く（K6）。
+- `scripts/agent-hooks/cloud/` を新設する。入口は `scripts/agent-hooks/cloud/dispatch.sh` 1本で、先頭に `[ "$CLAUDE_CODE_REMOTE" = "true" ] || exit 0` を置く（K6）。
 - 個々の見張りは同じフォルダに置く。各ファイルの先頭に「元: ~/.claude/hooks/<名>」を書く。Mac の絶対パスは使わない。
 - `.claude/settings.json` の hooks に、dispatch.sh を PreToolUse（Bash と `mcp__github__.*`）、Stop、SessionStart で配線する。既存の hooks は消さない。
 - 決まりの本文は `scripts/agent-hooks/cloud/rules.md` に置き、SessionStart で会話に渡す。秘密・社外秘（仕入元名など）は入れない（リポジトリは公開）。
@@ -64,10 +64,11 @@ PO 2026-10-23「今まで通りopusには権限委譲するので決まったこ
 ## 8. 戻し方
 `.claude/settings.json` から、足した hooks を消す（1 commit の Revert）。手元は CLAUDE_CODE_REMOTE で最初から素通しなので、影響はない。
 
-## 9. 外部事例
+## 9. 外部・過去事例の参照と我々への応用
 Anthropic 公式文書の推奨形（CLAUDE_CODE_REMOTE で切り分ける）に従う。数値つきの導入事例は見つけていないので、成功の証明には使わない。効果は K1〜K7 の実地試行で測る。
 
 ## 10. 維持の仕組み
+- 守り手: Opus（設計統括）。手元の見張りを直したときに、クラウド側の写しの更新要否を判断する。
 - 写しの出どころを各ファイルの先頭に書く。
 - test.sh を CI に載せるかは、段階1の結果を見て別カードで決める（今回は CI 設定を変えない）。
 
