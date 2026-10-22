@@ -1,5 +1,5 @@
--- 細分類(product_formats)に中分類(type_master)への直接リンクを追加
--- カードゲームごとの細分類フィルタリングを実現する
+-- 細分類(product_formats)に大分類(product_kinds)への kind_id を追加する（Step 2 のみ）
+-- 中分類への直接リンク type_master_id の ADD は ADR-1038 で削除済み（親子の正本は product_format_game_links）
 
 -- Step 1: （削除済み）product_formats.type_master_id は ADR-1038 で取り除いた。
 --   親子（細分類→中分類）の正本は product_format_game_links。値の控えは
