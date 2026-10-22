@@ -43,6 +43,7 @@
 | 標準ワークフロー / SOP / process-artifacts gate | **ADR-121** ／ ADR-112 ／ [`docs/STANDARD-WORKFLOW.md`](../STANDARD-WORKFLOW.md) | KGI→recon→設計の関所 |
 | 設計仕様書 / あるべき姿 / 仕様書索引 | **ADR-121** ／ [`docs/specs/README.md`](../specs/README.md) | 領域→設計仕様書の地図。索引に載る領域に触れる開発は仕様書を先に読む |
 | Claude Code 運用ガードレール / SessionStart hook | **ADR-042** | 運用ガードレール・hook 整備 |
+| CLAUDE.md / AGENTS.md / 入口の行数 / 目次 / 指示文書の構成 | **ADR-1040**（Proposed） ／ ADR-076 | 入口→目次→章→末端。本文の正本は AGENTS.md・入口の上限90行（ADR-076 のルート上限と命名を一部改訂） |
 | 担当者アイコン / 英語名必須 / Discord webhook 送信 / avatar | **ADR-159** ／ ADR-091 | Discord 返信を担当者の名（given_name_en）とアイコンで送る・Bot 名義では送らない（便A=アイコン+英語名必須 / 便B=webhook 送信） |
 | 24時間保守運用 / 障害記録 / 応急処置 / routines / アラート札 page・auto・ticket | **ADR-1012**（Proposed） ／ ADR-1009 ／ ADR-115 | 経路の正本は Alertmanager・障害記録の正本はアプリ DB・AI は PR で修理（ADR-136 の GO）・C は予備 |
 | Meta / Facebook / Instagram / Webhook | ADR-024 ／ ADR-025 ／ ADR-041 ／ ADR-026 | 連携整備・フォールバック・mid TEXT 化 |
