@@ -27,5 +27,5 @@
 - 書き直し対象: `input[list]`（:62）、placeholder の検証（:82、:156）、`.pmd-field input` の個数 9（:89）、`input:not([list])`（:108）、`#lookup-product_format_id option`（:130）。
 
 ## 6. 候補件数の上限
-- 中分類は public.type_master 18 行（docs/handoff/format-work-parent/design.md §2、raw/q07）。
+- 中分類は public.type_master 18 行（docs/handoff/format-work-parent/design.md §2、docs/handoff/format-work-parent/raw/q07_constraints.txt）。
 - 他の 4 欄（大分類・製造元・商品分類・細分類）は、取得元のコード（backend/app/services/tcg_product_master_svc.py:238-275）に LIMIT が無く、件数の上限をコードから確かめられなかった。design.md の「最大 18 件」は中分類にだけ言える。細分類は 28 行（docs/handoff/format-work-parent/recon-bin3b.md §2）で、作品で絞ると更に少ない。他の 3 欄の件数は未確認。

@@ -2,7 +2,7 @@
 
 | 項目 | 内容 |
 |------|------|
-| ステータス | Proposed（方針は PO 2026-10-17 チャット「type_master_id→削除」。適用は PO 本人の「GO #PR番号」後。docs/STANDARD-WORKFLOW.md の例外「DROP TABLE/COLUMN を含む migration は PO 本人の GO」） |
+| ステータス | Proposed（方針は PO 2026-10-17 チャット「type_master_id→削除」。適用は PO 本人の「GO #PR番号」後。docs/STANDARD-WORKFLOW.md の例外「DROP TABLE/COLUMN を含む migration は PO 本人の GO」。What 3 は ADR-1038 で改められた: Amended by ADR-1038） |
 | 起案日 | 2026-10-17 |
 | 方針の決定者 | Shingo（PO） |
 | 関連 | ADR-156（分類の木。Phase 7 で列を追加）、docs/specs/master-ssot-migration/design.md（作品の正本は products.work_id）、ADR-1020（中分類＝work_id を必須）、ADR-1024（ai_ro ビュー）、ADR-1007（migration で値を入れない） |
