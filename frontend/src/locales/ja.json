@@ -4920,7 +4920,7 @@
       "memo": "メモ"
     },
     "productMasterDrawer": {
-      "searchSelectPlaceholder": "名称で検索・選択",
+      "selectPlaceholder": "選択してください",
       "unselected": "未選択",
       "emptyValue": "未入力",
       "registeredTitle": "商品マスタへの登録が完了しました（次回解析で反映）",
