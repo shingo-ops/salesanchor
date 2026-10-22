@@ -8,7 +8,7 @@
 - クラウド実行（Claude Code on the web / routine）を扱う ADR は無い。
 
 ## 2. 公式文書（code.claude.com/docs/en/cloud-environments、2026-10-22 取得）
-- ユーザーの `~/.claude/settings.json` の hooks と `~/.claude/CLAUDE.md` はクラウドに入らない。リポジトリの `.claude/settings.json` は入る。
+- ユーザーの ~/.claude/settings.json（手元） の hooks と ~/.claude/CLAUDE.md（手元） はクラウドに入らない。リポジトリの `.claude/settings.json` は入る。
 - クラウドでは `CLAUDE_CODE_REMOTE=true`。公式は、手元で動かしたくない hook ではこの変数を見て早く抜ける形を示している。
 - GitHub への中継では GraphQL（`gh pr` 等）が 403、REST の `gh api` は通ると書かれている。
 
@@ -23,7 +23,7 @@
 - リポジトリの husky（`.husky/`）はクラウドでも作動した。worktree 外の commit/push は「🚫 commit を中断しました: worktree 外での作業は禁止されています。」で止まり、`scripts/new-worktree.sh` で作り直すと通った。validate-pr-ownership は「✅ オーナーシップチェック通過」。
 - `gh` は「The token in GH_TOKEN is invalid.」で使えなかった（公式の説明と違う。【未確認】原因）。
 - クラウドには既定で GitHub MCP（`mcp__github__create_pull_request`、`mcp__github__get_me` など）があり、それで Draft PR #4664 を作れた。名義は `shingo-ops`。
-- クラウド既定の `~/.claude/stop-hook-git-check.sh` が、new-worktree.sh の作る未追跡の台帳ファイル（`.claude-pipeline/active-work.d/*.md`）を理由に、停止のたびに「commit して push せよ」と促した（3回）。
+- クラウド既定の ~/.claude/stop-hook-git-check.sh（クラウド既定） が、new-worktree.sh の作る未追跡の台帳ファイル（.claude-pipeline/active-work.d/ 配下の登録ファイル）を理由に、停止のたびに「commit して push せよ」と促した（3回）。
 
 ## 4. 手元の見張り48件の仕分け
 生出力: /tmp/CC報告ファイル/cloud-parity-hooks-20261022/hooks-analysis.csv
