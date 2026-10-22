@@ -14,7 +14,7 @@
   - /tmp/CC報告ファイル/outage-bin3/recon2/a.txt・b.txt・c.txt（Opus）
   - /tmp/CC報告ファイル/outage-bin3/recon3/a.txt・b.txt・c.txt（Opus）
 - 対象ADR:
-  - ADR-1012（AI保守運用24時間化。決定1「経路の正本は Alertmanager 1 本。全アラートルールに札と手順書リンク」:31）
+  - ADR-1012（AI保守運用24時間化。決定1「経路の正本は Alertmanager 1 本。全アラートルールに札と手順書リンク」:25）
   - ADR-136（危険 PR の GO 手順）
 - 状態: 設計は PO 承認済み（2026-10-22 PO 返信「1」。KGI G1〜G3 と案M）。2026-10-23 PO が「2. 先にさくらのメールの転送（便3）の作り方も決めてから、まとめて作り始める」を選択。このカードはその「作り方」。実装の開始は、このカードを添えた PO への報告の後、PO の返事を受けてから
 - 前提:
@@ -77,7 +77,7 @@
 9. `monitoring/prometheus/alert_rules.yml` に新しいグループ `ops_mail_alerts`（2 本）と、その試験 4 件
 10. `docs/runbooks/alerts.md` に 2 節
 11. `monitoring/tokens.yml` に閾値 2 行と for 2 行
-12. 本番配置の台本 3 本（リポジトリの外 `/tmp/CC報告ファイル/outage-bin3/deploy/`。commit しない。§4-12）
+12. 本番配置の台本 3 本（リポジトリの外 `/tmp/CC報告ファイル/outage-bin3/deploy/`。commit しない。§4-13）
 
 入れない:
 - `backend/app/services/review_mail_notifier.py` と `backend/app/tasks/review_mail_monitor.py`（1 行も変えない。review@ の通知は今のまま。design.md §3-1-1）
