@@ -137,7 +137,8 @@ esac
 # 注: gh pr list は GraphQL を使う。Claude クラウドでは GraphQL が 403 になるため REST で問い合わせる。
 if command -v gh >/dev/null 2>&1; then
   # {owner}/{repo} 置換は別名リモートに引っ張られるため、origin の URL から明示的に求める
-  REPO_SLUG="$(git remote get-url origin 2>/dev/null | sed -E 's#^(https?://[^/]+/|git@[^:]+:|ssh://[^/]+/)##; s#\.git$##')"
+  # 末尾の .git と / を除き、パスの最後の2区切りを owner/repo とする（クラウドの git プロキシ形式 .../git/owner/repo や git@host:owner/repo も可）
+  REPO_SLUG="$(git remote get-url origin 2>/dev/null | sed -E 's#(\.git)?/*$##' | awk -F'[/:]' 'NF>=2 && $(NF-1)!="" && $NF!="" {print $(NF-1) "/" $NF}')"
   REPO_SLUG="${REPO_SLUG:-shingo-ops/salesanchor}"
   GH_ERR_FILE="$(mktemp)"
   if ! MERGED_COUNT="$(gh api --method GET "repos/${REPO_SLUG}/pulls" \
