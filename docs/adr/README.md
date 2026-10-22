@@ -3,7 +3,7 @@
 > このファイルは `scripts/generate-adr-index.js` により自動生成されます。
 > **手動編集禁止。** ADR ファイルを追加・変更後に `node scripts/generate-adr-index.js` を実行してください。
 
-最終更新: 2026-10-22 / ADR 総数: 198 件
+最終更新: 2026-10-22 / ADR 総数: 199 件
 
 ## 維持ルール（整合性を保つ・必須）
 
@@ -217,6 +217,7 @@
 | [ADR-1036](./ADR-1036-price-decides-unit.md) | ADR-1036: 単位が「個」・無記入の箱系の行は、値段で Box／Case／Pack を決める（v102） | Proposed | — | — |
 | [ADR-1037](./ADR-1037-migration-lock-timeout.md) | ADR-1037: 入れ替え時の migration はロック待ちを1秒で諦め、間を空けて流し直す | Accepted | — | — |
 | [ADR-1038](./ADR-1038-product-format-child-of-work.md) | ADR-1038: 細分類は中分類（作品）の子。親子は product_format_game_links の 1 か所だけに持ち、DB で守る | Proposed | Amends ADR-1026 | — |
+| [ADR-1039](./ADR-1039-discord-pdca-agent-console.md) | ADR-1039: Discord の不具合報告を agent-console で受け、件ごとに Opus が対応と効果測定を回す | Proposed | Supersedes ADR-1009 | — |
 
 ## ステータス凡例
 

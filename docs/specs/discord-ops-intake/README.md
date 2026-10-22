@@ -18,7 +18,9 @@ Sales Anchor の監視（Alertmanager・Grafana）は、異常を Discord の監
 |---|---|
 | 2026-10-12 | 手順書 C-1（channels の利用可否）合格 |
 | 2026-10-13 | C-3（DM 往復）合格。公式プラグインは webhook 投稿を捨てることを実測で確定 |
-| 2026-10-13 | あるべき姿・KGI 提示（KGI-3 は PO 修正反映）・recon・design 草案作成。実装未着手 |
+| 2026-10-13 | あるべき姿・KGI 提示（KGI-3 は PO 修正反映）・recon・design 草案作成 |
+| 2026-10-13 | ADR-1009 の設計 PR #4185・実装 PR #4188 を main にマージ |
+| 2026-10-22 | ADR-1039（Proposed）で全部置き換える予定。ADR-1039 が Accepted になったら受付をやめる |
 
 ## 文書
 
