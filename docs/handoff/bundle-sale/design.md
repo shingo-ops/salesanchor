@@ -8,7 +8,7 @@ status: Proposed（設計案・設計審査済み・KGI は PO 合意 2026-10-17
 
 この文書は何か: 「40パックセット/¥24,000 残り15」のようなまとめ売りの行を、全商品で同じ形で保存し、在庫表・在庫一覧(GAS)・閲覧ページの商品名の欄に「商品名 40パックセット」と出すための作り方。
 親（あるべき姿＋KGI）: [../../specs/bundle-sale/README.md](../../specs/bundle-sale/README.md)／[ideal-state.md](../../specs/bundle-sale/ideal-state.md)／[kgi.md](../../specs/bundle-sale/kgi.md)
-現状把握: [recon.md](./recon.md)（origin/main d6b956826 の file:line と本番の試し）
+現状把握: [recon.md](./recon.md)（docs/handoff/bundle-sale/recon.md）（origin/main d6b956826 の file:line と本番の試し）
 決定の記録: [ADR-1027 案](../../adr/ADR-1027-bundle-sale-reading.md)（ADR-1021 の便2「1枚単価にそろえる」を置き換える）
 
 状態: 設計案作成済み・設計審査済み（Architect/Fable。1回目 REVISE → 指摘を反映 → 2回目 APPROVE。/tmp/CC報告ファイル/bundle-sale/review/fable-review.md・fable-review-2.md。2回目の「低」6件も反映）・KGI K1〜K6 は PO 合意（2026-10-17、PO の答え「y」）・便1 の実装カード [card-bin1.md](./card-bin1.md)・便1 #4479 本番反映済・便2 本番投入済（2026-10-17、[bin2-record.md](./bin2-record.md)）・便3 再解析 93 job 済（2026-10-17、[bin3-record.md](./bin3-record.md)、K1 PO 目視 ○（2026-10-18、PO チャット「y」）・K2 の値段は本文と未照合）・現行キーは現状維持（PO 2026-10-18 y、ADR-1027 追記）・バルク系だけの追加の形 P1・P2（§12）は設計審査済み（Opus reviewer 3回目 APPROVE・Fable 成功見込み「高」）・PO 承認済み（2026-10-21、PO の答え「1」）・便1 実装済み（この PR）・便2 未着手。
@@ -189,6 +189,7 @@ PO 承認: 2026-10-21、PO の答え「1」（既存の延長として進め、8
 - まとめ売りと決まった行は `_apply_bulk_price` を通らない（line_analysis_v102_svc.py:1049）ので、理由 bulk_price_basis_unknown は付かない（backend/tests/test_v102_bulk_price.py:162-165 が固定）。
 - scripts/dev/bundle_replay.py:94 は区分を見ずに detect_bundle を呼ぶ。入力の TSV は既に列 kubun_type を持つ（:6-7）が読んでいない。
 - 基準値（2026-10-21、ADR-1024 の読み取りの道）: 現行のバルク系 55 行のうち bulk_price_basis_unknown 21 行・bundle_unverified 0 行。
+- 2026-10-22 便2 後の基準値（便3 の SQL で測定。2026-10-22 09:58 JST）: 現行のバルク系（全エンジン）288 行（うち v102-f_ct 57 行）・bulk_price_basis_unknown 14 行・bundle_unverified 0 行・全区分の bundle_unverified 5 行（product_id 未解決の行はバルク系か判定できないため参考値）。21 行の元の SQL は残っておらず、21→14 の差の内訳は確かめていない。
 
 ### 12-3. 足す形
 | 形 | 書き方 | 当てる本文 | 候補にする条件 |
@@ -212,7 +213,7 @@ PO 承認: 2026-10-21、PO の答え「1」（既存の延長として進め、8
 - 便0（この節・文書のみ）: ADR-1027 追記・この節・FEATURE-INDEX・手順書 docs/runbooks/bundle-sale-new-wording.md。
 - 便1（コード）: 12-4。PR の前に bundle_replay.py を全行に当て直し、バルク系／それ以外の数と増えた行数を PR 本文に書く。固定一覧（下の 12-6）と 1 行でも違う、またはバルク系以外で 1 行でも変わるなら止める。
 - 便2（本番データ）: 現行 8 行を含む 4 投稿だけを再解析する（過去 7 行の投稿は配信に出ないので通さない）。前の値を全列保存・必ず戻す試し・書き戻しの SQL を先に用意。実行の前に同意票で PO に確認（ADR-1033）。再解析の最後に配信の予約が走るので、8 行が次の配信で出ることを同意票に書く。
-- 便3（見張り）: agent-console の週次定期実行で、バルク系の bulk_price_basis_unknown・bundle_unverified の件数を Discord に出す。基準値は 12-2。
+- 便3（見張り）: 本番の celery beat（毎週月曜 09:05）で、現行のバルク系の bulk_price_basis_unknown・bundle_unverified の件数と、参考に全区分の bundle_unverified の件数を管理者用 Discord に出す（backend/app/tasks/bundle_bulk_monitor.py）。PO 2026-10-22「1」で agent-console 週次から変更（Mac が止まっても届く・既存 ADR-1020 便4c と同じ型）。engine_version では絞らない（理由コードは v102 系だけが付けるため）。基準値は 12-2。
 - 便4（表示・別テーマ）: 英語名が空のときの商品名の欄（tcg_distribution_svc.py:271 で先頭が空白になる）。
 
 ### 12-6. 受入基準
