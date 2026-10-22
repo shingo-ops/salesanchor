@@ -48,7 +48,7 @@
 
 入れる:
 1. `scripts/agent-hooks/master-register-rules-guard.py` の :25 の1行（`PROMPT_RE`）だけを変える
-2. `scripts/agent-hooks/test_master_register_rules_guard.sh` に試験 T9〜T18 を足す（§4-2）。先頭コメント :2 の「T1〜T6」は「T1〜T18」に直す
+2. `scripts/agent-hooks/test_master_register_rules_guard.sh` に試験 T9〜T18 を足す（§4-2）。先頭コメント :2（別テーマ master-register-rules-hook の設計書の T1〜T6 を指す）は変えない。T9〜T18 の出典は §4-2 の見出しコメントに書く
 
 入れない:
 - :23 の `EXEMPT_PATHS`（免除パスの追加は段1b。別 PR）
@@ -77,12 +77,18 @@
 ## 3. 触るファイル（これ以外は触らない）
 
 - 変更: `scripts/agent-hooks/master-register-rules-guard.py`（:25 の1行だけ）
-- 変更: `scripts/agent-hooks/test_master_register_rules_guard.sh`（:2 のコメントと、:56 の T8 の後・:57 `exit $FAIL` の前に試験を足す）
+- 変更: `scripts/agent-hooks/test_master_register_rules_guard.sh`（:56 の T8 の後・:57 `exit $FAIL` の前に試験を足すだけ）
 - 変更: `docs/handoff/doc-agenda-nav/card-stage1.md`（このカード。担当は §13 報告欄の追記だけ）
 
 ## 4. 作り方
 
-4-1. `scripts/agent-hooks/master-register-rules-guard.py` の :25 を次の1行にする（他の行は変えない）:
+4-1. `scripts/agent-hooks/master-register-rules-guard.py` の :25 の次の1行（変更前。この文字列と一致する行を探して置き換える）:
+
+```python
+PROMPT_RE = re.compile(r"(マスタ|商品).*登録|登録.*(マスタ|商品)", re.S)
+```
+
+を、次の1行にする（他の行は変えない）:
 
 ```python
 PROMPT_RE = re.compile(r"マスタ[^。\n]{0,40}登録|登録[^。\n]{0,20}マスタ")
@@ -115,7 +121,7 @@ done
 ```
 
 - T4（「この商品をマスタに登録して」）は残す（関係ありの例文として新しい式でも出る＝F6）。
-- `:2` の「T1〜T6」を「T1〜T18」にする。
+- `:2` のコメントは変えない（§1）。
 
 ## 5. 確かめ方（担当が実行し、出力を報告に貼る）
 
@@ -147,8 +153,8 @@ done
 
 - 前例: docs/handoff/master-register-rules-hook/design.md:37 の型（PR で審査 → PO が写す → 写す前に .bak → 写した後に diff で一致を確かめる）。
 - 8-1. マージの後、Opus が本店で `git fetch origin` を行い、PO に次の1行を渡す（PO が `!` で実行する）:
-  `cp -p ~/.claude/scripts/master-register-rules-guard.py ~/.claude/scripts/master-register-rules-guard.py.bak-20261022 && git -C /Users/tanizawashingo/salesanchor show origin/main:scripts/agent-hooks/master-register-rules-guard.py > ~/.claude/scripts/master-register-rules-guard.py && git -C /Users/tanizawashingo/salesanchor show origin/main:scripts/agent-hooks/master-register-rules-guard.py | diff - ~/.claude/scripts/master-register-rules-guard.py && echo SAME`
-  （日付の部分は写す日に合わせて Opus が書き換える）
+  `cp -p ~/.claude/scripts/master-register-rules-guard.py ~/.claude/scripts/master-register-rules-guard.py.bak-20261022 && git -C /Users/tanizawashingo/salesanchor show origin/main:scripts/agent-hooks/master-register-rules-guard.py > ~/.claude/scripts/master-register-rules-guard.py.new && test -s ~/.claude/scripts/master-register-rules-guard.py.new && cp ~/.claude/scripts/master-register-rules-guard.py.new ~/.claude/scripts/master-register-rules-guard.py && git -C /Users/tanizawashingo/salesanchor show origin/main:scripts/agent-hooks/master-register-rules-guard.py | diff - ~/.claude/scripts/master-register-rules-guard.py && echo SAME`
+  （日付の部分は写す日に合わせて Opus が書き換える。いったん `.new` に書き、空でないことを `test -s` で確かめてから本体に写す。`git show` が失敗しても本体は空にならない。`cp` は既存の本体の権限を保つ。`.new` は消さずに残す）
 - 8-2. 期待: 最後の行が `SAME`。出なければ §9 で戻す。
 - 8-3. 反映の確かめ（Opus）: 新しい会話で無関係の例文「ユーザー登録フォームで商品一覧が出ない」を入れても、商品マスタ登録ルールが差し込まれないこと。新しい会話で関係ある例文「商品マスタに新しいカードを登録して」を入れると差し込まれること。結果を PR にコメントで残す（会話の記録ファイルは読まない）。
 - ホームの `.claude/settings.json` は変えないので、写すだけで次の入力から効く。

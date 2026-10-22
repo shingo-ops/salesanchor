@@ -21,7 +21,7 @@
 
 ## ADR-076 との衝突点
 
-1. ADR-076:55 は「上限が小さすぎると具体例が削除され AI の判断精度が低下する」を理由にルートの上限を 120行のまま据え置いた。本 ADR は入口の上限を 90行（AGENTS.md 80・CLAUDE.md 10）に下げる。具体例は削らず、目次の先の末端ページへ移す（写しは作らない）。
+1. ADR-076:55（本 ADR で「一部改訂」の1行を足す前の行番号。足した後は :56）は「上限が小さすぎると具体例が削除され AI の判断精度が低下する」を理由にルートの上限を 120行のまま据え置いた。本 ADR は入口の上限を 90行（AGENTS.md 80・CLAUDE.md 10）に下げる。具体例は削らず、目次の先の末端ページへ移す（写しは作らない）。
 2. ADR-076 §2 と frontend/scripts/check-claude-size.js:58 は「ファイル名は必ず CLAUDE.md」とする。本 ADR は本文の正本を AGENTS.md に置き、CLAUDE.md は `@AGENTS.md` の1行と Claude 固有の数行だけにする。CLAUDE.md が自動で読まれる点は変わらない。
 3. .github/workflows/check-claude-size.yml:23 の変更判定パス `'**/CLAUDE.md'` はルートの CLAUDE.md に一致せず、ルートの CLAUDE.md は今も行数検査されていない（既存の穴。design §8 段2a で直す）。
 
