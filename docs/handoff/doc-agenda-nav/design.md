@@ -1,7 +1,7 @@
 ---
 mode: handoff
 adr: 未起案（段0で新規 ADR として起案し ADR-076 を一部改める。§8 段0）
-status: 草案（審査 REVISE 2回目反映済み・PO 判断待ち: §10-2・§10-4〜§10-7。KGI 合格ライン・測り方修正・K8〜K10 は PO 承認済み 2026-10-22）
+status: 草案（審査 REVISE 3回目反映済み・PO 判断待ち: §10-2・§10-4〜§10-7。KGI 合格ライン・測り方修正・K8〜K10 は PO 承認済み 2026-10-22）
 ---
 
 # design — AI向け指示文書の「入口→目次→章→末端ページ」化（設計草案）
@@ -87,7 +87,7 @@ KPI は各段（§8）の完了ごとに上表の該当行を再測定する。
 |---|---|---|---|
 | CLAUDE.md（120行） | 前提・ブランチ運用・不可逆・VPS・標準フロー要約・i18n・UI統治・ルール追加判定木 | **入口に残す**（段3で AGENTS.md へ移し、CLAUDE.md は取り込む）: 前提（:7-18）・VPS 直作業禁止（:26-35）・不可逆操作（:36-42）・直接コミット禁止の1行（:49）・目次リンク。**移す**: ブランチ運用の手順詳細（:44-69 のうち :49 を除く）→ specs/branch-operations/README.md（既に正典と明記）、標準フロー要約（:70-82）→ STANDARD-WORKFLOW（正本 :156 の方針）、i18n 本文（:90-95）→ frontend/CLAUDE.md（既に ESLint 強制の記述あり :25-27）、ルール追加判定木（:105-117）→ docs/INDEX.md の末尾章（行番号は origin/main 2026-10-22 の `git show origin/main:CLAUDE.md` 実測） | 公式「under 200 lines」、ADR-076 の分割方針、STANDARD-WORKFLOW:156 |
 | AGENTS.md（281行） | CLAUDE.md と6節同文＋Codex 固有（役割分担・AEON・Codex UI 補助・引き継ぎ・カード定型文）。「VPS 直作業禁止」節は無い（見出し実測: `git show origin/main:AGENTS.md \| grep -n '^#'`、2026-10-22） | **全 AI 共通の入口（正本）にする**（§10-3 解決・構造は PO 承認済み 2026-10-22）。本文 = 前提・安全の決まり（不可逆操作・VPS 鍵制限・直 push 禁止。CLAUDE.md から移して1か所に）・「作業の型は目次から辿る」1行・目次リンク。Codex 固有節（役割分担・AEON・Codex UI 補助・引き継ぎ）は docs/ai-agents/codex-operations.md（新設・移動のみ）へ移し、目次の章A から辿る。カード定型文（:259-281）は design-partner.md §6 が原本と書いてあるので **PO 確認後に**そちらへ一本化 | PO 2026-10-22「どのAIを使っても指示が届くように指示をＳＳＯＴしている」。Codex は AGENTS.md を根から作業場所まで連結して読み、合計 32 KiB で打ち切る（project_doc_max_bytes 既定。公式 https://learn.chatgpt.com/docs/agent-configuration/agents-md 取得 2026-10-22）。取り込み記法（@path）は同公式に記載なし＝**Codex は @ を展開しない前提で、本文は AGENTS.md 側に置く** |
-| CLAUDE.md（入口化後） | — | 「@AGENTS.md」 の1行＋Claude Code だけに要る決まり（CLAUDE.md 行数検査・.claude/agents 変更前の pull 等）のみ | Claude Code 公式「put an 「@AGENTS.md」 import in a `CLAUDE.md` … Add any Claude-specific instructions below the import」（https://code.claude.com/docs/en/memory 取得 2026-10-22。取り込みも起動時に読み込まれ文脈量は減らない＝KGI-1 は CLAUDE.md＋AGENTS.md の合計で数える） |
+| CLAUDE.md（入口化後） | — | 「@AGENTS.md」 の1行＋Claude Code だけに要る決まり（.claude/agents 変更前の pull と個人設定への案内）のみ。行数上限の文（:117）は docs/INDEX.md 末尾章へ移す（§5-2。二重扱いを解消） | Claude Code 公式「put an 「@AGENTS.md」 import in a `CLAUDE.md` … Add any Claude-specific instructions below the import」（https://code.claude.com/docs/en/memory 取得 2026-10-22。取り込みも起動時に読み込まれ文脈量は減らない＝KGI-1 は CLAUDE.md＋AGENTS.md の合計で数える） |
 | frontend/AGENTS.md・backend/AGENTS.md | CLAUDE.md と同文 | 本文の正本を AGENTS.md 側に一本化し、同ディレクトリの CLAUDE.md は 「@AGENTS.md」＋Claude 固有のみ（ルートと同じ向き） | 同上 |
 | docs/STANDARD-WORKFLOW.md（175行） | 正本 | **そのまま**（章A の末端）。§7:157「CLAUDE.md に要約＋リンク」の「要約」を「リンクのみ」に改める1行修正（SSOT） | :156 |
 | docs/ai-agents/executor-checklist.md | 必読 | そのまま（章A の末端）。「いつ読むか: 便の作業前・commit前・PR前」 | :5 |
@@ -98,15 +98,65 @@ KPI は各段（§8）の完了ごとに上表の該当行を再測定する。
 | specs/product-master/registration-rules.md | フックで毎回注入 | 章E の末端。フックは正規表現を狭め、PreToolUse（登録操作の直前）は現状維持 | recon §2-2 |
 | ~/.claude/CLAUDE.md:13「AGENTS.md も同時更新」 | 二重化を要求 | **範囲外だが矛盾**: 本文の正本が AGENTS.md 1か所になれば「同時更新」は不要になる（AGENTS.md だけ直せば Claude にも届く）。書き換えか削除かは PO 判断（§10-5） | recon §2-4 |
 
+### 5-2. 入口2本の全行の行き先（審査3回目 直すべき2・3 の反映。基準 `git show origin/main:CLAUDE.md`／`git show origin/main:AGENTS.md`、2026-10-22）
+
+入口の案文を実際に書いて数えた: docs/handoff/doc-agenda-nav/draft/AGENTS.entry.md **44行**・docs/handoff/doc-agenda-nav/draft/CLAUDE.entry.md **8行**＝**52行**（`wc -l`、2026-10-22）。K7 の3文字列と「直push禁止」「暗号化済シークレット」は案文 AGENTS.entry.md に各1件、CLAUDE.entry.md に「@AGENTS.md」1行（grep 実測）。段3c はこの案文を写すだけにする（Generator は文面を考えない）。
+
+**CLAUDE.md（120行）**
+
+| 行 | 中身 | 行き先 |
+|---|---|---|
+| :1-5 | 表題・個人設定への案内 | 案文 CLAUDE.entry.md（表題と案内1行） |
+| :7-16 | 前提 | 案文 AGENTS.entry.md「プロジェクト前提」（:10 Dev 行は AGENTS.md :10 と食い違うため codex-operations.md の役割分担へ。:15 仕様書は docs/INDEX.md 章A へ。:16 の generate-adr-index.js の手順は docs/adr/README.md の生成元の説明として INDEX 章A へ） |
+| :20-24 | VPS コンテナの落とし穴 | docs/ops/runner-commands.md に節を足して移す（AGENTS.md :165-169 と同文＝1か所に） |
+| :26-32 | VPS 直作業禁止 | 案文 AGENTS.entry.md（:29 の PO 決定日付と :30 の GO 転記手順は docs/handoff/rehearsal-env/design-b-ssh-isolation.md へ） |
+| :36-40 | 不可逆操作 | 案文 AGENTS.entry.md（そのまま） |
+| :46-47 | release ブランチ・new-worktree.sh | 案文 AGENTS.entry.md に1行。詳細は docs/specs/branch-operations/README.md |
+| :48 | .claude/agents 変更前の pull | 案文 CLAUDE.entry.md のみ（Claude 固有。§5 旧記載の「移す」からは外す） |
+| :49・:52 | 直接コミット禁止・直push禁止 | 案文 AGENTS.entry.md に1行 |
+| :50-51・:53-55・:58 | PR の作り方・名義・Draft・確認済みコメント・break-glass・リリース PR | docs/specs/branch-operations/README.md（現物に該当記述なし＝移動で重複は生じない、`git show origin/main:docs/specs/branch-operations/README.md \| grep` 実測） |
+| :56-57 | ADR-135・ADR-136 危険 PR の GO | 要点1行を案文 AGENTS.entry.md、手順本文は docs/specs/branch-operations/README.md |
+| :60-66 | 長命ブランチ消失防止 | 要点1行を案文 AGENTS.entry.md、残りは docs/specs/branch-operations/README.md |
+| :70-80 | 標準フロー要約 | 1行を案文 AGENTS.entry.md、本文は docs/STANDARD-WORKFLOW.md（正本） |
+| :84-86 | 実行役 preflight | 案文 AGENTS.entry.md（AGENTS.md :97-99 と同文＝1か所に） |
+| :90-92 | i18n | frontend/CLAUDE.md（既に :25 に ESLint 強制の節あり） |
+| :96-98 | ADR-025 | 「常時厳禁」の文を案文 AGENTS.entry.md の不可逆操作の節へ。前半（開発フェーズ中の扱い）は docs/adr/ADR-025_meta_integration_operational_hardening.md を正とし入口から消す |
+| :102-103 | ADR 優先原則 | 案文 AGENTS.entry.md「プロジェクト前提」 |
+| :105-117 | ルール追加の判定木・行数上限の文 | docs/INDEX.md の末尾章（:117 の上限の文はここ1か所。§5 旧記載の「Claude 固有として残す」は撤回） |
+| :118-119 | UI ガバナンス（ADR-144） | frontend/CLAUDE.md（現物に ADR-144 の記述なし＝移動で重複は生じない） |
+| :120 | executor-checklist | 案文 AGENTS.entry.md「作業の型」 |
+
+**AGENTS.md（281行）**
+
+| 行 | 中身 | 行き先 |
+|---|---|---|
+| :1-3 | 表題 | 案文 AGENTS.entry.md |
+| :7-10・:44-50 | 前提（CLAUDE.md と重複） | 案文 AGENTS.entry.md に1つにまとめる。:46 venv の決まりは docs/ai-agents/dev-commands.md、:50 KPI 正本は INDEX 章A |
+| :14-38 | 役割分担・エビデンス要件 | docs/ai-agents/codex-operations.md（新設・移動のみ） |
+| :40-42 | 廃止の注記（ADR-082） | 削除（ADR-082 に履歴あり） |
+| :54-93 | AI Agent Pipeline・AEON | docs/ai-agents/codex-operations.md |
+| :97-99 | 実行役 preflight | 案文 AGENTS.entry.md（CLAUDE.md :86 と1つに） |
+| :103-126 | セットアップ & 実行コマンド | docs/ai-agents/dev-commands.md（新設・移動のみ） |
+| :130-146 | ブランチ運用 | 要点は案文 AGENTS.entry.md、:133 Codex のブランチ名は codex-operations.md、:137-138 は docs/specs/branch-operations/README.md |
+| :150-154 | 不可逆操作（CLAUDE.md より古い文面） | 案文 AGENTS.entry.md の新しい文面に置き換え |
+| :158-161 | i18n | frontend/AGENTS.md（同じ決まりは frontend 側で1か所。frontend の CLAUDE.md/AGENTS.md の重複は段4） |
+| :165-169 | VPS コンテナの落とし穴 | docs/ops/runner-commands.md（CLAUDE.md :20-24 と1つに） |
+| :173-194 | Codex app UI/UX 補助 | docs/ai-agents/codex-operations.md |
+| :198-203 | サブディレクトリ別ルール | 案文 AGENTS.entry.md「作業の型」1行 |
+| :207-209 | ADR 一覧 | 案文 AGENTS.entry.md「設計判断」 |
+| :213-218 | 自動更新ルール | 正本1か所化で不要になるため削除（~/.claude/CLAUDE.md:13 側は §10-5 の PO 回答後） |
+| :222-257 | 引き継ぎルール | docs/ai-agents/codex-operations.md |
+| :259-281 | 実装役の常設ルール・定型文 | docs/ai-agents/design-partner.md §6 へ一本化（逐語で移す。§6:167 の逐語一致の教訓により文面は変えない） |
+
 ## 6. 守りの仕組み（機械強制）
 
 | 守るもの | 仕組み | 既存との重なり |
 |---|---|---|
-| 入口の行数（KGI-1） | 既存 CI「CLAUDE.md line count check」の LIMITS（frontend/scripts/check-claude-size.js:22-28）を直す: root CLAUDE.md の上限は §10-2 の回答値に、**AGENTS.md（段3以後の本文の正本）を新たに登録**、docs/INDEX.md を limit 60 で登録。同スクリプトの案内文 :58「ファイル名は必ず CLAUDE.md にすること」は本設計（本文を AGENTS.md に置く）と食い違うため段3で書き換える（ADR-076 の一部改訂・段0の ADR に記載） | 既存必須チェックを流用。新規 required check 追加なし＝Branch Protection 変更なし |
-| 目次から辿れる（KGI-4/5/6） | 新設 .github/workflows/doc-index-reachability.yml（名称仮）: docs/INDEX.md を起点に docs/specs・docs/ai-agents の .md を幅優先で辿り、①届かない文書 ②4段以上 ③「いつ読むか」空欄 を列挙。**初期は警告のみ。昇格条件は期間ではなく「警告段階の出力が連続5回の PR で 0 件」**（§14 の C21: GitLab は違反0の確認後に error 化。C22/C23: 止めない設定のまま固定化した失敗例。旧案「2週間」は根拠なしのため改めた）。リポジトリ内リンクの行き先が実在するかも同じ走査で検査（外部 URL は対象外。C20） | reachability の実装は raw/reachability.txt を作った Python をそのまま流用（Python 3.12・標準ライブラリのみ） |
+| 入口の行数（KGI-1） | 既存 CI「CLAUDE.md line count check」の LIMITS（frontend/scripts/check-claude-size.js:22-28）を直す: §10-2 の回答値（入口の合計）を **AGENTS.md と CLAUDE.md の個別上限の和として登録**する（check-claude-size.js:46-61 はファイルごとに判定するため、和を合計値にすれば合計も機械で守られる。90 の場合 AGENTS.md 80・CLAUDE.md 10、60 の場合 AGENTS.md 50・CLAUDE.md 10。案文の実測は 44・8＝§5-2）、docs/INDEX.md を limit 60 で登録。同スクリプトの案内文 :58「ファイル名は必ず CLAUDE.md にすること」は本設計（本文を AGENTS.md に置く）と食い違うため段3で書き換える（ADR-076 の一部改訂・段0の ADR に記載） | 既存必須チェックを流用。新規 required check 追加なし＝Branch Protection 変更なし |
+| 目次から辿れる（KGI-4/5/6） | 新設 .github/workflows/doc-index-reachability.yml（名称仮）: docs/INDEX.md を起点に docs/specs・docs/ai-agents の .md を幅優先で辿り、①届かない文書 ②4段以上 ③「いつ読むか」空欄 を列挙（K5 の末端＝docs/specs/<テーマ>/README.md と docs/ai-agents/*.md。docs/specs/<テーマ>/ の README.md 以外は子文書として段数を数えない。K6 の目次＝docs/INDEX.md と docs/specs/README.md の表）。**初期は警告のみ。昇格条件は期間ではなく「警告段階の出力が連続5回の PR で 0 件」**（§14 の C21: GitLab は違反0の確認後に error 化。C22/C23: 止めない設定のまま固定化した失敗例。旧案「2週間」は根拠なしのため改めた）。リポジトリ内リンクの行き先が実在するかも同じ走査で検査（外部 URL は対象外。C20） | reachability の実装は raw/reachability.txt を作った Python をそのまま流用（Python 3.12・標準ライブラリのみ） |
 | 同じ決まりを2か所に書かない（KGI-3） | 同 CI に「CLAUDE.md と AGENTS.md の本文が同一見出しを持たない」検査（見出し行の集合の交差 = 0）と「各 CLAUDE.md に 「@AGENTS.md」 行がある」検査を追加（root・frontend・backend） | 既存の scripts/check-doc-heading-duplicates.sh（.github/workflows/process-artifacts-gate.yml:47 で実行中）を流用できるかを段2のカード作成時に実物で確認し、流用を優先する |
 | 関係ない注入ゼロ（KGI-2） | master-register-rules-guard.py:25 を re.compile(r"マスタ[^。\n]{0,40}登録|登録[^。\n]{0,20}マスタ") に変更（raw/prompt-regex-test.txt 案2: 無関係 5/5→0/5、関係あり 2/2 維持、別マスタ「顧客マスタに登録」は一致＝許容）。origin/main の scripts/agent-hooks/ と ~/.claude/scripts/ の両方（diff 同一を recon で確認済み）。PreToolUse 側（:53-84）は本便では変更なし。ただし本便で「監視語を引用した調査記録の Write」が止まった実測（raw/hook-block-event-20261022.txt）があるため、EXEMPT_PATHS に報告フォルダ（~/CC報告ファイル-keep/）を足すかは §10-7 で PO に聞く | 既存テスト scripts/agent-hooks/test_master_register_rules_guard.sh（T1〜T8）が在る。CI からは呼ばれていない（.github/workflows/agent-hooks-test.yml:24 は review-gate のみ）→ 段1では手元実行を必須にする |
-| 安全の決まりが入口から消えない（KGI-7） | 同 CI に「入口（段3までは CLAUDE.md、段3以後は AGENTS.md）に『不可逆操作は必ず PO 確認』『VPS 直作業禁止』『直接コミット禁止』の3文字列が各1件以上ある」検査（3文字列は受け入れ基準 K7 と同一。実物は origin/main CLAUDE.md:36・:26・:49） | — |
+| 安全の決まりが入口から消えない（KGI-7） | 同 CI に「入口（段3までは CLAUDE.md、段3以後は AGENTS.md）に『不可逆操作は必ず PO 確認』『VPS 直作業禁止』『直接コミット禁止』の3文字列が各1件以上ある」検査（3文字列は受け入れ基準 K7 と同一。実物は origin/main CLAUDE.md:36・:26・:49）。CI の守りとしては『直push禁止』（CLAUDE.md:52）と『暗号化済シークレット』（ADR-025 常時厳禁・:98）も同じ検査に足す（K7 の合格ラインは変えない） | — |
 | 変更そのもの | CLAUDE.md/AGENTS.md/STANDARD-WORKFLOW は executor-checklist §2:29-30 により「危険ファイル変更 PR」＝PO GO 必須。ADR 起案（§9） | ADR-1029 マージ前審査フック |
 
 ## 7. 弊害・リスクと対策
@@ -126,11 +176,12 @@ KPI は各段（§8）の完了ごとに上表の該当行を再測定する。
 | 段 | 変更 | 測定（KGI） | 戻し方 |
 |---|---|---|---|
 | 0 | 親仕様書と specs/README.md への1行登録は **済み**（f6d8a0be6・#4638）。残り: 新規 ADR を Proposed で起案し `node scripts/generate-adr-index.js` で docs/adr/README.md を再生成。ADR には ADR-076 との衝突点を列挙する: ①ADR-076:55「上限が小さすぎると具体例が削除され判断精度が低下」を理由に上限を据え置いた点（本設計は上限を §10-2 で決め直す）②check-claude-size.js:58「ファイル名は必ず CLAUDE.md」（本設計は本文を AGENTS.md に置く）。ADR-076 本体には「一部改訂: 新 ADR」の1行だけ足す。上限の数値は §10-2 待ちのため ADR では「§10-2 で決める」と書く | — | PR revert |
+| 0b | **K8・K9 の変更前の値を測る（段1より前。審査3回目 直すべき8）**。K8: 直近の同じ種類の便10回について、new-worktree.sh で作った作業場所か（ブランチの作業場所の記録）・PR 本文に必須欄（標準ワークフロー確認・対象ADR）があるかを gh pr view で数える。K9: 新しい会話の直後に /context の表示値を記録。記録先 docs/handoff/doc-agenda-nav/baseline.md（数えた手順も保存） | K8/K9 基準値 | 記録の削除 |
 | 1 | master-register-rules-guard.py:25 の正規表現。**変更前**（実物）: `(マスタ|商品).*登録|登録.*(マスタ|商品)`（re.S）／**変更後**: §6 の KGI-2 行。repo 側 scripts/agent-hooks/ を PR で審査 → ~/.claude/scripts/ へは前例 docs/handoff/master-register-rules-hook/design.md:37 の型（PO が `!` で写す→写す前に .bak を作る→repo 版と diff 一致を確認）。例文は raw/prompt-regex-test.txt の7本（無関係4本＋境界1本＋関係あり2本）をカードに全文で写す。新しい式は「マスタ」を含まない「商品を登録して」を拾わなくなる → この例文を試験に足し「拾わない」を期待値とし、PreToolUse 側（登録操作の直前に止める）が残ることを前提として明記する。既存テスト T1〜T8 を手元で実行 | KGI-2 | 1行を戻す（.bak から戻す） |
 | 2 | docs/INDEX.md 新設（章A〜F・「いつ読むか」列）＋ specs/README.md に「いつ読むか」列＋辿れない specs 35件を登録 | KGI-4/5/6（警告段階の CI で観測） | ファイル削除 |
 | 3a | Codex 固有節を docs/ai-agents/codex-operations.md へ移すだけ（AGENTS.md には目次への1行を残す）。§10-3 の構造承認後 | KGI-3 途中値 | PR revert |
 | 3b | CLAUDE.md の「移す」節（§5）を既存の移動先へ移す（1PR1移動先。branch-operations・STANDARD-WORKFLOW・frontend/CLAUDE.md・INDEX の4本に分けてよい） | KGI-1 途中値 | PR revert |
-| 3c | 入口の入れ替え: 安全の決まり・前提を CLAUDE.md から AGENTS.md へ移し、CLAUDE.md を 「@AGENTS.md」＋Claude 固有のみにする ＋ LIMITS（§6）＋ STANDARD-WORKFLOW §7:157-159（入口を「ターミナル＝CLAUDE.md」と定めている箇所）を「AGENTS.md が正本・CLAUDE.md が取り込む」に書き換え | KGI-1/3/7（ルート分）。/memory 表示で AGENTS.md の本文が会話に入ったことを確認 | PR revert（2ファイル＋STANDARD-WORKFLOW） |
+| 3c | 入口の入れ替え（**文面は §5-2 の案文 draft/AGENTS.entry.md・draft/CLAUDE.entry.md をそのまま写す**）: 安全の決まり・前提を CLAUDE.md から AGENTS.md へ移し、CLAUDE.md を 「@AGENTS.md」＋Claude 固有のみにする ＋ LIMITS（§6）＋ STANDARD-WORKFLOW §7:157-159（入口を「ターミナル＝CLAUDE.md」と定めている箇所）を「AGENTS.md が正本・CLAUDE.md が取り込む」に書き換え | KGI-1/3/7（ルート分）。/memory 表示で AGENTS.md の本文が会話に入ったことを確認 | PR revert（2ファイル＋STANDARD-WORKFLOW） |
 | 4 | frontend/backend の同2種を同じ向き（AGENTS.md が正本、CLAUDE.md は 「@AGENTS.md」＋固有のみ）に揃える | KGI-3（全体） | PR revert |
 | 5 | doc-index-reachability CI を警告→失敗へ昇格（条件: 連続5回の PR で 0 件）。必須チェック（ruleset）への登録は Branch Protection／Ruleset の変更＝CLAUDE.md の不可逆操作リスト該当のため PO 確認を別にとる | KGI-4/5/6 が0であること | 警告に戻す |
 | 6 | ~/.claude/CLAUDE.md:13 の扱い（書き換えか削除かは §10-5）（ユーザー側） | KGI-3 再測 | 1行を戻す |
@@ -143,7 +194,7 @@ KPI は各段（§8）の完了ごとに上表の該当行を再測定する。
 | Claude Code 公式 memory（https://code.claude.com/docs/en/memory 取得 2026-10-22） | 「target under 200 lines per CLAUDE.md file. Longer files consume more context and reduce adherence」／サブディレクトリ CLAUDE.md と paths rules は on demand／import は文脈を減らさない | 入口を短く、領域別は on demand に任せる（章D）。import で目次を取り込まない | 「遵守率低下」の数値は公式には無い |
 | Claude Code 公式 skills（同 /skills） | 「a skill's body loads only when it's used」「Keep SKILL.md under 500 lines」 | 章E（商品マスタ登録）は将来スキル化の候補（description だけ常駐、本文は呼び出し時）。本設計では採らない（§10-6） | リポジトリに .claude/skills 無し（新機構導入は architect 判断が要る） |
 | Anthropic「Effective context engineering for AI agents」（https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents 2025-09-29） | 「find the smallest set of high-signal tokens」「progressive disclosure」「just in time context」 | 本設計の原理そのもの（入口最小・必要時に辿る） | 定量の効果値は記事に無い |
-| 自リポジトリ ADR-076（2026-05-28） | 外部エビデンス表「471行→61行（87%削減）で一貫性改善」「OpenAI AGENTS.md は150行以下目標」 | 上限引き下げ（120→90）の前例 | **未確認**: 表の出典 URL・日付が ADR に無い |
+| 自リポジトリ ADR-076（2026-05-28） | 外部エビデンス表「471行→61行（87%削減）で一貫性改善」「OpenAI AGENTS.md は150行以下目標」 | 上限引き下げの前例**ではない**（ADR-076:24 はルート上限 120→120 据え置き。審査3回目 参考5） | **未確認**: 表の出典 URL・日付が ADR に無い |
 | 自リポジトリ PR #3358（2026-09-08） | design-partner.md の guards を節ごとに分割し目次化 | 同じ発想の先行例。効果測定の記録は PR に無い（**未確認**） | — |
 | 自リポジトリ 本便 recon（2026-10-22） | 自動読込 462行/29,290字、無関係注入 5/5、辿れない文書 1,880 | KGI の「今」の値 | — |
 
@@ -153,8 +204,9 @@ KPI は各段（§8）の完了ごとに上表の該当行を再測定する。
    - 1. 段0で作る【おすすめ】→ STANDARD-WORKFLOW §1.5/§1.8 どおり。PR が1本増える
    - 2. 段1から始める → 早いが、索引に親が無いまま進む（§1.8 違反）
 2. 入口（段3以後は AGENTS.md と CLAUDE.md の合計）の上限を 90 行にしてよいか（今 CLAUDE.md 120）。
-   - 1. 90行【おすすめ】→ 安全の決まり＋目次リンクで収まる試算（残す範囲は §5 の :7-18・:26-35・:36-42・:49 ＝30行。見出し・目次リンク・Claude 固有の決まりを足して 60行前後）。K1 ≤ 200 にはユーザー側 193行を段7で 110行以下にする必要がある（§10-8）。外部根拠は §14-4（90行を直接示す一次資料は無く、K1 の予算配分として決める）
+   - 1. 90行【おすすめ】→ 入口の案文を実際に書いて数えると 52行（AGENTS.md 44・CLAUDE.md 8、§5-2）。個別上限は AGENTS.md 80・CLAUDE.md 10。残す範囲の元の行は §5-2 の表のとおり。K1 ≤ 200 にはユーザー側 193行を段7で 110行以下にする必要がある（§10-8）。外部根拠は §14-4（90行を直接示す一次資料は無く、K1 の予算配分として決める）
    - 2. 120行のまま → 行数は減らず、重複削減だけになる
+   - 3. 60行 → 案文 52行は収まる（AGENTS.md 50・CLAUDE.md 10）が、AGENTS.md の余地は6行
 3. **解決済み（PO 2026-10-22・原文「2,どのAIを使っても指示が届くように指示をＳＳＯＴしている」、構造は同日 PO 原文「1」で承認）**: Codex は今も AGENTS.md を読んで動いているか。
    - 1. 動いていない → 段4で AGENTS.md を薄い入口にする
    - 2. 動いている → Codex 固有節を残す形に変える（本文は移動、リンクで辿る）← **PO 回答**
@@ -177,6 +229,7 @@ KPI は各段（§8）の完了ごとに上表の該当行を再測定する。
 
 ## 11. 未確認・開いている論点
 
+- @AGENTS.md で取り込んだ本文が圧縮（compaction）後も再注入されるか（§7 の「公式 :627」は root CLAUDE.md の記述。§7 の :435・:627 は https://code.claude.com/docs/en/memory を取得したときの行番号）。段3c の測定で圧縮後の /memory 表示を確認する（審査3回目 参考4）
 - 過去会話記録に同じ構想の議論があるか（recon §1。Grep ツールのあるセッションで再実行）
 - K4/K5 の基準値（raw/reachability.txt）を出した Python が design/・recon2/ に保存されていない（審査 2026-10-22）。段2のカードで作り直し、docs/handoff/doc-agenda-nav/ に保存して基準値（specs 35・ai-agents 19・最深14段）を再現できることを確かめてから CI に使う
 - agent-console のセッション記録から「目次を辿ったか」を数えられるか（§7）
@@ -232,7 +285,7 @@ KPI は各段（§8）の完了ごとに上表の該当行を再測定する。
 
 ### 14-2. 結論（事実ベース）
 
-- 【事実】行数を減らす効果として外部に数値があるのは「費用・時間・読込量」（C3・C4）。「守られる率・精度」が上がる数値は無く、むしろ差が出ないという研究（C2・C5）がある。
+- 【事実】（審査3回目で訂正）短くして確実に減るのは「会話の始まりに自動で読む行数・トークン」（作り方から確実。K1・K9 で測る）。「費用が減る」は外部の根拠が弱い: S3（Gloaguen）は長さと費用に明確な関係なし、S4（Lulla）は有無の比較で行数ではない、S1 は1人の自己申告。「守られる率・精度」が上がる数値は無く、むしろ差が出ないという研究（C2・C5）がある。
 - したがって本設計の効果は **「軽く・速く・安く・同じ決まりが1か所」** として約束し、**「精度が上がる」は自分たちで測るまで約束しない**。PO のあるべき姿（「精度も向上する」）を確かめるには、KGI に次を足した（**PO 承認済み 2026-10-22 原文「1」**。合格ラインは基準値を測った後に PO と決める。正本は docs/specs/doc-agenda-nav/kgi.md）:
   - K8 守られた回数: 入口に書いた決まりのうち機械で数えられるもの（例: 作業場所を new-worktree.sh で作った／PR 本文に必須欄がある）を、同じ種類の便10回ずつ前後で数える
   - K9 会話開始直後の読込量（トークン）: /context の表示値を前後で記録
@@ -246,16 +299,16 @@ KPI は各段（§8）の完了ごとに上表の該当行を再測定する。
 - ADR-113 の手順（recon→設計確定→Architect 整合検査1回→実装→CI）に従う。カード検査は scripts/card-lint.sh（カード作成時に実行）。
 - 行数の記載: origin/main では CLAUDE.md:117「120 行を超えたら」と check-claude-size.js:23 の上限 120 が一致（382d3bff5 で解消済み。§13 と同じ）。手元の古い checkout だけが「90 行」のまま。段3で上限を変えるときは本文と LIMITS を同じ PR で直す。
 
-### 14-4. 入口の上限（§10-2）の外部根拠（2026-10-22 PO 指示「外部での導入事例…5w2h化」・Sonnet 調査、Opus が全文読了）
+### 14-4. 入口の上限（§10-2）の外部根拠（2026-10-22 PO 指示「外部での導入事例…5w2h化」・Sonnet 調査、Opus が全文読了。審査3回目の指摘で訂正済み）
 
 保存先: ~/CC報告ファイル-keep/agenda-nav-20261022/research/linelimit/agenda-nav-linelimit-20261022.md（数値あり8件・数値なし4件・未確認4件・公式4件・公開19リポジトリ実測）。
 
 - 【事実】行数を変えて守られる率を比べた管理実験は1件（McMillan arXiv 2605.10039、1,650 セッション）。25行 60.0%／100行 65.2%／250行 67.7%／500行 64.0% で**差は検出されず**。ファイル無しは 0/524。同じ会話で作業が1つ進むごとに守られるオッズが約5.6%下がる（行数と無関係）。
-- 【事実】長さと課題解決率・費用に明確な関係は見られない（Gloaguen arXiv 2602.11988）。常時読込と必要時読込で正答率は同じ、読込量は 11/11 課題で減る（Khatri arXiv 2607.27250）。
-- 【事実】守られる率が下がるのは「指示の本数」が増えたとき（IFScale arXiv 2507.11538: claude-sonnet-4 で100本 94.4%→250本 77.2%→500本 42.9%。ManyIFEval: 10本を同時に全部守る率 0.21〜0.48）。行と本数の換算は論文に無い。
-- 【事実】公式の数値: Anthropic「1ファイル200行未満を目標」（数値の根拠となる測定は非公開）、Codex 合計32KiB、Cursor 1ルール500行未満、Copilot「2ページ以内」。**60／90／120行を直接示す一次資料は見つからなかった**。
+- 【事実】長さと課題解決率・費用に明確な関係は見られない（Gloaguen arXiv 2602.11988）。常時読込と必要時読込で正答率は同じ。必要時読込では cache-creation トークンが 11/11 課題で減る（Khatri arXiv 2607.27250。比べたのは読み方で、行数ではない）。
+- 【事実】守られる率が下がるのは「指示の本数」が増えたとき（IFScale arXiv 2507.11538: claude-sonnet-4 で100本 94.4%→250本 77.2%→500本 42.9%。ManyIFEval: 10本を同時に全部守る率 0.19〜0.48、旧世代モデル）。行と本数の換算は論文に無い。
+- 【事実】公式の数値: Anthropic「1ファイル200行未満を目標」（低下量の数値の記載なし）、Codex 合計32KiB、Cursor 1ルール500行未満。Copilot の「2ページ以内」は公式文書内のサンプルプロンプトの文で、推奨値ではない。**60／90／120行を直接示す一次資料は見つからなかった**。
 - 【事実】公開19リポジトリ（非無作為）の最長ファイルの中央値162行。60行以下6、61〜90行1、91〜120行0、121〜200行6、201行超6。
-- **結論**: 上限の数字そのものが守られる率を決めるという根拠は無い。根拠があるのは ①読込量・費用は短いほど減る（S1・S5）②指示の本数が増えると守られにくい（S7・S8）③Anthropic の目安は1ファイル200行未満。したがって §10-2 の上限は「守られる率を上げる数字」ではなく、**K1（会話の始まりの合計200行以下・PO 承認済み）を満たすための予算**として決める。90行の根拠は「残す決まりの実測 約60行＋増える余地30行」と「K1 の予算配分（ユーザー側110行＋入口90行＝200行）」の2つだけで、外部の数値ではない。守られる率は K8 で前後を測って確かめる。
+- **結論**: 上限の数字そのものが守られる率を決めるという根拠は無い。確実に言えるのは ①会話の始まりに自動で読む行数・トークンは短いほど減る（作り方から確実。K1・K9 で測る）②指示の本数が増えると守られにくい（S7・S8）③Anthropic の目安は1ファイル200行未満。「費用が減る」は外部の根拠が弱い（S3 は長さと費用の関係なし）。したがって §10-2 の上限は「守られる率を上げる数字」ではなく、**K1（会話の始まりの合計200行以下・PO 承認済み）を満たすための予算**として決める。90行の根拠は「入口案文の実測 52行（§5-2）＋増える余地」と「K1 の予算配分（ユーザー側110行＋入口90行＝200行）」の2つだけで、外部の数値ではない。守られる率は K8 で前後を測って確かめる。
 
 ## 維持の仕組み
 
@@ -274,3 +327,9 @@ KPI は各段（§8）の完了ごとに上表の該当行を再測定する。
 - 反映したもの: K1 の数え方（段3以後は AGENTS.md を足す）／K7 の3文字列を受け入れ基準・§6 で統一し、:49 を入口に残す行として明記／§5 の行番号を origin/main の実測に修正／§6 の LIMITS に AGENTS.md を登録・:58 の案内文を書き換える計画／テストの有無の食い違い（在る・CI 未配線）／§13・§14-3 の古い記述／段0（済み分と ADR の衝突点）／段1（変更前・写し方・例文・取りこぼし前提）／段3 を 3a〜3c に分割／基準値 Python の未保存を §11 に／守り手の担当と「連続5回」の数え方／claude-md-staleness-check.yml の切り分け／見出し重複検査の流用候補／「5回」に外部出典が無いこと。
 - PO 確認: ①§10-3 の構造は **PO 原文「1」（2026-10-22）で承認済み**（§10-3）。②（**PO 原文「1」2026-10-22 で承認・kgi.md に反映済み**）K5 の「末端」の数え方と K7 の判定対象（kgi.md:18 は「CLAUDE.md」）の修正、K8〜K10 の追加（KGI 表の修正＝再承認）。
 - 段1は上の反映でカード化できる状態。段0は ADR の向き（新規＋ADR-076 一部改訂）を決めたのでカード化できる。段3・段4は ① の承認により、§10-2 の回答後にカード化できる。
+
+## 16. 審査3回目（2026-10-22・PR #4649 HEAD 3f981c51d）と反映
+
+- 審査役（model opus・新規起動）: **REVISE**（止めるべき0・直すべき8・参考6）。全文 /tmp/CC報告ファイル/agenda-nav-review3-20261022.md（リポジトリ外）。段0・段1はこのままでもカード化できるとの判定。
+- 反映（直すべき）: ①§14-4 の「約60行」を案文の実測52行へ（§5-2）②CLAUDE.md・AGENTS.md の全行の行き先を §5-2 に表で記載・入口の案文2本を draft/ に作成 ③:48 は CLAUDE.entry のみ、:117 は docs/INDEX.md のみに一本化 ④入口の合計を個別上限の和で機械的に守る（§6）⑤「費用が減る」を「会話の始まりに読む行数・トークンは確実に減る／費用は根拠が弱い」に分離（§14-2・§14-4）⑥PR 本文の触るファイルに docs/specs/README.md と draft 2本を追加 ⑦docs/specs/doc-agenda-nav/README.md:24 の「PO 未承認」を訂正 ⑧段0b（K8・K9 の基準値測定、記録先 baseline.md）を §8 に追加。
+- 反映（参考）: ManyIFEval の値域・Copilot「2ページ」はサンプル文・Anthropic は「数値の記載なし」（§14-4）／K7 の守りに「直push禁止」「暗号化済シークレット」を追加（§6）／K5・K6 の CI 定義（§6）／@ で取り込んだ本文の圧縮後の再注入を §11 に未確認として追加／§9 の ADR-076 は前例ではないと訂正。UI governance gate の失敗はブランチの遅れによるもので本 PR と無関係（審査役の判定）。
