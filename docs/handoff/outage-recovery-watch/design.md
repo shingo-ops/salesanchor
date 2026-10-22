@@ -5,7 +5,7 @@
 
 親: [docs/specs/ai-ops-247/README.md](../../specs/ai-ops-247/README.md)（区分: 既存テーマ ai-ops-247 の延長。STANDARD-WORKFLOW §1.8 により仕様書の履歴に追記）
 
-**対象ADR**: 新規 ADR 起案予定（ADR-1012 AI保守運用24時間化の延長として扱う。通知経路の正本=Alertmanager、障害記録の正本=ops_incidents を踏襲）  
+**対象ADR**: 新規 ADR は作らない（ADR-1012 決定1・ADR-080 の範囲。§3-2-1）（ADR-1012 AI保守運用24時間化の延長として扱う。通知経路の正本=Alertmanager、障害記録の正本=ops_incidents を踏襲）  
 **recon**: docs/handoff/outage-recovery-watch/recon.md  
 **日付**: 2026-10-22  
 **担当**: Planner（Claude Opus）
@@ -49,9 +49,9 @@
 
 prod1 が止まっても動く必要があるため prod2 に置く（ADR-080 の分離方針に一致）。
 
-- 新しい小さな点検係（prod2 の Docker 常駐・60秒ごと。prod2 に crontab は無い（docs/adr/ADR-153-data-durability.md:22）ため、同じ /opt/salesanchor-monitoring 配下で常駐する monitoring/github-collector の型に揃える）: API ヘルス（https://api.salesanchor.jp/api/health）を見て、前回「NG」→今回「OK」に変わった時だけ点検を1回実行。前回状態は prod2 のファイル1つに保存。型は mac-jobs-watch（docs/handoff/mac-jobs-watch/design.md）の「起動後点検・復旧通知」に揃える。
-- 点検項目（読み取りのみ）: ①App/API/LP の HTTP 200 ②health 本文の database/redis/celery が connected ③prod1 の時計ずれ（HTTP Date ヘッダーと prod2 時計の差 < 60秒）④Celery heartbeat が新しい（Prometheus の celery_heartbeat_last_success_timestamp_seconds）⑤container_state が新しい。
-- 結果は Discord 運用チャンネルへ ✅/❌ ＋ NG 項目名。復帰後 15 分の間に NG があれば 5 分おきに最大3回まで再点検して結果を追記（一時的な NG で騒がない）。
+- 新しい小さな点検係（prod2 の Docker 常駐・60秒ごと。prod2 に crontab は無い（docs/adr/ADR-153-data-durability.md:22）ため、同じ /opt/salesanchor-monitoring 配下で常駐する monitoring/github-collector の型に揃える）: API ヘルス（https://api.salesanchor.jp/api/health）を見て、前回「NG」→今回「OK」に変わった時だけ点検を1回実行。前回状態は prod2 のファイル1つに保存。型は mac-jobs-watch（docs/handoff/mac-jobs-watch/design.md）の「起動後点検・復旧通知」に揃える。→ 判定の仕方（応答したかで見る）は §3-2-1 で変更
+- 点検項目（読み取りのみ）: ①App/API/LP の HTTP 200 ②health 本文の database/redis/celery が connected ③prod1 の時計ずれ（HTTP Date ヘッダーと prod2 時計の差 < 60秒）④Celery heartbeat が新しい（Prometheus の celery_heartbeat_last_success_timestamp_seconds）⑤container_state が新しい。→ 時計の見方（Prometheus の値）と項目の並びは §3-2-1 で変更
+- 結果は Discord 運用チャンネルへ ✅/❌ ＋ NG 項目名。復帰後 15 分の間に NG があれば 5 分おきに最大3回まで再点検して結果を追記（一時的な NG で騒がない）。→ 点検の間隔（0・2・4・6 分、❌ の後は 5 分おき）は §3-2-1 で変更
 
 #### 3-2-1. 便2 での確定（2026-10-22 Opus。KGI G2 は不変。詳細は card-bin2.md）
 
