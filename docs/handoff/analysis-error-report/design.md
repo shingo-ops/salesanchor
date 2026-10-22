@@ -66,10 +66,10 @@ super admin が見つけた解析の誤りを、ボタンで「何が間違っ�
 ### 4-4 agent-console（別リポジトリ・版上げとタグ）
 - 誤り報告チャンネルを 30 秒ごとに Discord の REST（GET /channels/{id}/messages?after=<最後の ID>&limit=100）で読む。bot に要る権限は VIEW_CHANNEL と READ_MESSAGE_HISTORY だけ。鍵は bot トークン（Mac の鍵ファイルだけに置く）。429 と X-RateLimit-* ヘッダに従って待つ（公式 https://docs.discord.com/developers/topics/rate-limits：全体の上限 50 回/秒。30 秒に 1 回はその内）。
 - 拾う判定はメッセージの webhook_id が決めた webhook と一致すること（公式 https://docs.discord.com/developers/resources/message）。
-- 作る場所: 稼働中の v0.42.3（~/Library/Application Support/agent-console/current → versions/v0.42.3、HEAD 525358a54）を土台にする。
+- 作る場所: 今の稼働の版（v0.43.0 以降）を土台にする。受け口の部品は ADR-1039 の設計（agent-console `docs/handoff/discord-pdca/design.md` §4-1）と共通（2026-10-22 直し。決定 ADR-1025 Decision 4 は変えない）。
 - 拾うのは、決めた webhook の投稿で、本文が `ER-` ＋ 6 桁に合うものだけ。他の文は読まない。
 - 最後に処理した投稿の ID を保存する。起動時と眠りから戻った後はそれより後を読む（G2b）。
-- 同じ report_code のセッションがあれば開かない。同時に開くのは 1 つ、1 時間に 6 つまで。止めるスイッチ（画面と設定ファイル）を入れている間は開かない。
+- 同じ report_code のセッションがあれば開かない。同時に開くのは 1 つ、1 時間に 6 つまで。全停止は `halt_all`（不具合報告と誤り報告の両方の種類が見る。PO 2026-10-21「1」）が入っている間は開かない。設定ファイルの `enabled` は受け口の有効・無効。
 - セッションに送る指示は決まった文だけ: 「誤り報告 ER-xxxxxx を docs/specs/analysis-error-report/playbook.md に従って処理する」。報告の文面は指示に入れない（AI が文面を指示と取り違えないため）。
 
 ### 4-5 自動セッションの手順書（playbook.md）
