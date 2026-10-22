@@ -69,7 +69,7 @@
 
 | # | 事実 | 出典 |
 |---|---|---|
-| F1 | Prometheus のルールは今 27 本（9 グループ）。最後のグループは `container_state_alerts` | bin1-facts/alert_rules.yml・alert_rules_test.yml:4「全 27 本」 |
+| F1 | Prometheus のルールは今 27 本（8 グループ）。最後のグループは `container_state_alerts` | bin1-facts/alert_rules.yml・alert_rules_test.yml:4「全 27 本」 |
 | F2 | 時刻を比べる 7 本（式の行）: :121 F2CleanupStale・:184 CeleryHeartbeatStale・:222 ViewerInventoryStale・:233 ViewerInventoryStaleOnHold・:248 BackupLocalStale・:261 BackupS3Stale・:327 ContainerStateStale。7 本に共通の札は無い（CeleryHeartbeatStale は `job="backend"`、他は `instance="app-vps"` 等） | bin1-facts/alert_rules.yml |
 | F3 | `node_time_seconds`・`node_timex_offset_seconds`・`node_timex_sync_status` は app-vps・mgmt-vps とも値がある。2026-10-22 の測定で sync_status は両機とも 1、offset は両機とも 1 ミリ秒未満 | u1u2/q_node_timex_sync_status.json・q_node_timex_offset_seconds.json |
 | F4 | 2026-10-22 の障害の後、`node_time_seconds - timestamp(node_time_seconds)` は app-vps で -2436.7 秒だった | prom_skew.txt |
@@ -156,8 +156,8 @@ inhibit_rules:
 4-3. `monitoring/scripts/check_alert_rules.py` に検査を 1 つ足す（形は既存の検査に合わせる。既存の検査と出力文言は変えない）:
 - `monitoring/alertmanager/alertmanager.yml` を読む（パスは既存のファイルの決め方に合わせる）。
 - `inhibit_rules` の各ルールについて、`source_matchers`・`target_matchers` の各要素を調べる。`alertname="名前"` か `alertname=~"名前|名前|…"`（名前は英数字だけ）の形なら、名前を取り出す。
-- 取り出した名前が Prometheus と Loki のルール名のどれにも無ければ、`NG: inhibit_rules[i] の alertname が見つかりません: 名前` を既存のエラーの一覧に足す。
-- `alertname` の matcher で、上の 2 つの形に当たらないもの（正規表現に記号がある等）も `NG: inhibit_rules[i] の alertname を読めません: 元の文字列` にする（読めないものは止まる側に倒す）。
+- 取り出した名前が Prometheus と Loki のルール名のどれにも無ければ、`inhibit_rules[i] の alertname が見つかりません: 名前` を既存のエラーの一覧に足す（一覧には接頭辞を付けない。出すときに既存の処理（:76）が `NG: ` を付ける）。
+- `alertname` の matcher で、上の 2 つの形に当たらないもの（正規表現に記号がある等）も `inhibit_rules[i] の alertname を読めません: 元の文字列` を一覧に足す（読めないものは止まる側に倒す）。
 - `alertname` 以外の matcher は見ない。`inhibit_rules` が無いときは何もしない。
 - 成功時の出力 1 行（F8）は変えない。
 - 既存の試験の置き場所に `check_alert_rules.py` の試験があれば、そこへ 1 件足す（名前が実在しない場合に exit 1）。無ければ足さず、§5-5 のわざと壊す確認で代える（報告に「試験の置き場所は無い」と書く）。
@@ -190,7 +190,7 @@ inhibit_rules:
 - IP・URL の秘密・鍵のパス・webhook を書かない（公開リポジトリ）。
 
 4-6. `monitoring/tokens.yml`:
-- `thresholds:` の最後のキー（:101 `db_error_per_5m`）の前の段の区切りに合わせて、空行と次の段を足す（置き場所は既存の段の並びに合わせ、ログ異常検知の段より前に置く）:
+- `thresholds:` の中で、:95 の行の後・:97 のログ異常検知の段の前に、空行と次の段を足す（作業の前に `sed -n '90,101p' monitoring/tokens.yml` で場所を確かめ、行番号がずれていれば段の並びで合わせる）:
 
 ```yaml
   # 時計ずれ（alert_rules.yml: clock_alerts）
@@ -210,7 +210,7 @@ inhibit_rules:
 - 手順（この順。外れたらその場で止まり、以降を行わない）:
   1. prod2 の本番の `monitoring/prometheus/alert_rules.yml` と `monitoring/alertmanager/alertmanager.yml` の sha256 が、マージ commit の 1 つ前（`git show "${MC}^1":パス`）と一致することを出す。違えば止まる。
   2. 控え: `/opt/salesanchor-monitoring/backups/outage-bin1/` に 2 本を `cp -p` で `.bak-` に日付を付けた名前で写し、sha256 を出す。
-  3. Alertmanager の今の silence の数を出す（コンテナの中の `amtool silence query -q` の行数）。1 以上なら止まる（F7: データの保存場所が無いので、作り直すと silence が消える）。
+  3. Alertmanager の今の silence の数（コンテナの中の `amtool --alertmanager.url=http://localhost:9093 silence query -q` の行数）と、鳴っている警報の数（`/api/v2/alerts` の件数と alertname の一覧）を出す。どちらかが 1 以上なら止まる（F7: データの保存場所が無いので、作り直すと silence と送信の記録が消える。鳴っている警報があると Discord と ops-api にもう一度届く）。
   4. 一時ディレクトリ `/opt/salesanchor-monitoring/tmp-outage-bin1/` に、マージ commit の版の 2 本を scp で送る。
   5. 同じ版のイメージで検査する: `docker run --rm --entrypoint promtool -v 一時ディレクトリ:/w:ro prom/prometheus:v3.11.3 check rules /w/alert_rules.yml`（期待 "SUCCESS: 29 rules found"）と、`--entrypoint amtool ... prom/alertmanager:v0.28.1 check-config /w/alertmanager.yml`。amtool の検査は、受け手のファイル参照（webhook・token）が一時ディレクトリに無いことで落ちるかもしれない。その場合は、実在する secrets のディレクトリを読み取り専用で同じパスにマウントして通す（値は出さない）。どちらか落ちたら止まる。
   6. 2 本を `install -m 644` で本番の場所に置き、本番のファイルとマージ commit の版の sha256 が一致することを出す。
@@ -237,11 +237,12 @@ inhibit_rules:
 5-6. 手順書の見出しを数える: `grep -c '^## ' docs/runbooks/alerts.md`（期待 35）と、`grep -n '^## Clock' docs/runbooks/alerts.md`（期待 ClockSkew・ClockSyncStopped の 2 行）。
 5-7. 抑止の確かめ（手元・外部通信なし）:
   - `/tmp/CC報告ファイル/outage-bin1/am-test/` に、作業場所の alertmanager.yml を写す。`secrets/discord-webhook` に `http://127.0.0.1:9/dummy`、`secrets/ops-ingest-token` に `dummy` の 1 行を Write で作る（本物の値は使わない）。
-  - `docker run -d --rm --name outage-bin1-am --network none -v （am-test の絶対パス）/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro -v （am-test の絶対パス）/secrets:/etc/alertmanager/secrets:ro prom/alertmanager:v0.28.1 --config.file=/etc/alertmanager/alertmanager.yml`。`--network none` は必ず付ける（ops-api の送り先は本番 API のため）。
+  - `docker run -d --rm --name outage-bin1-am --network none -v （am-test の絶対パス）/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro -v （am-test の絶対パス）/secrets:/etc/alertmanager/secrets:ro prom/alertmanager:v0.28.1 --config.file=/etc/alertmanager/alertmanager.yml --cluster.listen-address=`。`--network none` は必ず付ける（ops-api の送り先は本番 API のため）。`--cluster.listen-address=`（値は空）も必ず付ける（v0.28.1 は既定で仲間探しの機能を 0.0.0.0:9094 で開こうとし、`--network none` では自分の IP が見つからず起動に失敗するため。空にするとこの機能が切れる）。
+  - 起動の直後に `docker ps --filter name=outage-bin1-am --format '{{.Names}} {{.Status}}'` を出し、1 行あることを確かめる（無ければ `--rm` で消えている。`docker run` を `--rm` 無しでもう一度起動して `docker logs outage-bin1-am` を貼り、BLOCKED:。その場合の後始末は `docker stop` だけでよい）。
   - 段 1（ClockSkew なし）: コンテナの中の amtool（`--alertmanager.url=http://127.0.0.1:9093`）で `alert add` を送る。送るのは 3 本: `alertname=CeleryHeartbeatStale job=backend severity=critical`、`alertname=ContainerStateStale instance=app-vps job=node-exporter severity=critical`、比べ役の `alertname=ServiceDown job=backend severity=critical`。コンテナの中から `wget -q -O- http://127.0.0.1:9093/api/v2/alerts` を読み、`python3` で alertname・`status.state`・`status.inhibitedBy` の 3 列にして出す（期待: 3 本とも active・inhibitedBy は空）。
   - 段 2（ClockSkew あり）: `alertname=ClockSkew instance=app-vps job=node-exporter severity=critical` を足して、同じ 3 列を出す（期待: CeleryHeartbeatStale と ContainerStateStale は suppressed で inhibitedBy が 1 件、ServiceDown と ClockSkew は active）。
   - 最後に `docker stop outage-bin1-am`（`--rm` なので消える）と、`docker ps -a --filter name=outage-bin1-am --format '{{.Names}}'` が空であることを出す。
-5-8. `python3 monitoring/scripts/validate_tokens.py` の終了コードと「不一致」の行（期待: 不一致 0）。値の一致は、§5-1 の出力と tokens.yml の 3 行を並べて報告に貼って示す。
+5-8. `python3 monitoring/scripts/validate_tokens.py` の終了コードと「閾値ズレ」の行（期待: exit 0・閾値ズレ 0 行）。値の一致は、§5-1 の出力と tokens.yml の 3 行を並べて報告に貼って示す。
 5-9. `bash -n /tmp/CC報告ファイル/outage-bin1/deploy/deploy-bin1.sh` と `bash -n /tmp/CC報告ファイル/outage-bin1/deploy/rollback-bin1.sh` の終了コード（期待 0）。台本 2 本の全文を報告に貼る（鍵のパスと利用者名は伏せずに貼ってよい。秘密の値は台本に書かない）。
 5-10. `grep -nE "[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+" docs/runbooks/alerts.md monitoring/alertmanager/alertmanager.yml` の該当（期待: 0 行。版の番号の形に当たった行は、その行を貼って IP でないことを書く）。
 5-11. `git diff origin/main --stat` が §3 のリポジトリ内のファイルであること（§13 の追記前なら 6 ファイル、追記後なら 7 ファイル）。
@@ -252,7 +253,7 @@ inhibit_rules:
 - 5-4 で promtool の test が落ちる → 試験の期待値（展開後の文字列・札）を直してやり直す。§4-1 の式・for・閾値を変えて合わせることはしない。3 回直しても通らなければ、出力を貼って BLOCKED:。
 - 5-4 で amtool の check-config が落ちる → 出力を貼って BLOCKED:（§4-2 の書き方を自分で変えない）。
 - 5-7 で段 2 の 2 本が suppressed にならない → 出力を貼って BLOCKED:（§4-2 を自分で変えない）。
-- 5-7 で Docker が手元で動かない → 5-7 を飛ばさずに BLOCKED:。
+- 作業の最初に `docker version` が接続できない → `colima start` を 1 回だけ実行してから `docker version` をもう一度出す（Docker は colima で動かす。2026-10-22 の審査の時点では止まっていた）。それでも動かなければ、5-4・5-7 を飛ばさずに BLOCKED:。
 - reference_vps_monitor_access.md に接続方法が無い → 台本を作らずに NEEDS_DECISION:。
 - PR の CI で Docker Hub の取得回数の制限に当たって落ちる → 便3（ai-ops-247）カード §6 と同じく `quay.io` の同じ版に替えてよい。
 
@@ -279,7 +280,7 @@ inhibit_rules:
 
 §8 の分岐:
 - 手順 1 で sha256 が一致しない → 置かずに止まる（Opus が PO に報告）。
-- 手順 3 で silence が 1 以上 → 置かずに止まる（作り直すと消えるため。Opus が PO に報告）。
+- 手順 3 で silence か鳴っている警報が 1 以上 → 置かずに止まる（作り直すと silence が消え、警報がもう一度届くため。Opus が時間を置いてやり直すか PO に報告）。
 - 手順 5 の検査が落ちる → 置かずに止まる。
 - 手順 9 で `health` が ok でないルールがある、または `/-/ready` が 200 にならない → `rollback-bin1.sh` を同意票で出し直して戻す。
 
