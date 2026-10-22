@@ -214,7 +214,7 @@ PO 承認: 2026-10-21、PO の答え「1」（既存の延長として進め、8
 - 便1（コード）: 12-4。PR の前に bundle_replay.py を全行に当て直し、バルク系／それ以外の数と増えた行数を PR 本文に書く。固定一覧（下の 12-6）と 1 行でも違う、またはバルク系以外で 1 行でも変わるなら止める。
 - 便2（本番データ）: 現行 8 行を含む 4 投稿だけを再解析する（過去 7 行の投稿は配信に出ないので通さない）。前の値を全列保存・必ず戻す試し・書き戻しの SQL を先に用意。実行の前に同意票で PO に確認（ADR-1033）。再解析の最後に配信の予約が走るので、8 行が次の配信で出ることを同意票に書く。
 - 便3（見張り）: 本番の celery beat（毎週月曜 09:05）で、現行のバルク系の bulk_price_basis_unknown・bundle_unverified の件数と、参考に全区分の bundle_unverified の件数を管理者用 Discord に出す（backend/app/tasks/bundle_bulk_monitor.py）。PO 2026-10-22「1」で agent-console 週次から変更（Mac が止まっても届く・既存 ADR-1020 便4c と同じ型）。engine_version では絞らない（理由コードは v102 系だけが付けるため）。基準値は 12-2。
-- 便4（表示・別テーマ）: 英語名が空のときの商品名の欄（tcg_distribution_svc.py:271 で先頭が空白になる）。
+- 便4（表示）: 英語名（products.name_en）が NULL・空・空白だけのときは、まとめ売りでも英語タイトルを空にする（まとめ売りでない行と同じ）。PO『1』（2026-10-22）。変更は tcg_distribution_svc.py の bundle_title_sql の英語 CASE だけ。受け入れ: |基準|検証方法| ①英語名が空の行は英語タイトルが空になる → 単体テスト (b)(c)（backend/tests/test_bundle_title_empty_name_en_pg.py） ②英語名がある行は今と同じ → 単体テスト (a)(d)、本番の読み取りで、新旧の式の差がその条件の行の外では0件 ③配信対象で変わるのは3行 → 本番の読み取りの件数
 
 ### 12-6. 受入基準
 固定一覧: 判定の写し（origin/main 7560d8007 と同じ判定に 12-3 を足したもの）を全 v102 35,846 行に当てて変わる 15 行（現行 8・過去 7。全て「当たりなし→100・Piece」）。一覧はリポジトリの外（社外秘）。
@@ -246,7 +246,7 @@ PO 承認: 2026-10-21、PO の答え「1」（既存の延長として進め、8
 - 守り手: backend/tests/test_v102_bundle.py と backend/tests/test_v102_bulk_price.py（便1 で追加。CI 必須の pytest で毎回）。
 - 守り手: scripts/dev/bundle_replay.py（便1 で区分付きに。規則を変える便は PR の前に全行へ当て直す。CI では走らない）。
 - 守り手: docs/runbooks/bundle-sale-new-wording.md（便0）と docs/adr/FEATURE-INDEX.md の「まとめ売り」の行（便0）。
-- 未確立（正直な明記）: 件数の自動の見張り（便3 まで無い）・英語名が空の表示のテスト（便4 まで無い）・まとめの語の置き場の 1 本化（別の ADR）。
+- 未確立（正直な明記）: 件数の自動の見張り（便3 まで無い）・英語名が空の表示のテスト（便4 で backend/tests/test_bundle_title_empty_name_en_pg.py に追加。CI の PostgreSQL 専用）・まとめの語の置き場の 1 本化（別の ADR）。
 
 ### 12-10. 未確認（便2 の前に確かめる）
 - 本番で動いている版が origin/main と同じか。

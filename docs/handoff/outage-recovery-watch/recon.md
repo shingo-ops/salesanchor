@@ -71,7 +71,7 @@ worktree作成: 成功。最後に「claude 起動」で "Input must be provided
 - GitHub Actions の cron 一覧(.github/workflows の `cron:` を含む17本): brand-asset-monitor, monitoring-config-drift(毎日 pushgatewayへ) ほか。サーバー復帰検知用は【なし】。
 
 ## 6. 正式な様式
-- docs/specs/README.md:3-5,102-105 「索引に載る領域に触れる開発は設計仕様書を先に読む(無ければ作る)。新しい設計仕様書を作ったら表に1行足す」。近い既存領域: 「AI 保守運用 24 時間化(ai-ops-247)」(:10) と「mac-jobs-watch」。
+- docs/specs/README.md:3-5,98-99 「索引に載る領域に触れる開発は設計仕様書を先に読む(無ければ作る)。新しい設計仕様書を作ったら表に1行足す」。近い既存領域: 「AI 保守運用 24 時間化(ai-ops-247)」(:11) と「mac-jobs-watch」。
 - docs/STANDARD-WORKFLOW.md:
   - :30-39 §1.5 設計仕様書は3ファイル標準: README.md / ideal-state.md(POの言葉のみ) / kgi.md。保存先 docs/specs/<テーマ>/。
   - :65-75 §1.8 区分判定: 新規テーマ=フルセット / 既存の延長=既存テーマの履歴に追記 / 軽微。本件は ai-ops-247 の延長にも新規にも読めるため区分は【PO/設計で判定】→ design.md で ai-ops-247 の延長と決定。
