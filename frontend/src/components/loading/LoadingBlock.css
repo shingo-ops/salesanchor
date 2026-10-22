@@ -1,0 +1,12 @@
+.sa-loading-block {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-8);
+  color: var(--text-muted);
+}
+.sa-loading-block--inline {
+  display: inline-flex;
+  padding: 0;
+  vertical-align: middle;
+}

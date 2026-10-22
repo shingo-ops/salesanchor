@@ -1,6 +1,7 @@
 /**
  * 閲覧ページの親。状態は ① ログイン / ② パスワード変更 / ③ 在庫表 / ④ 案内 / ⑤ 再発行 / ⑥ 申込。
  * トークンは localStorage。401（invalid viewer token）ならトークンを消して ① に戻る。
+ * 在庫表を出している間は1分ごとに裏で読み直し、表の中身だけ差し替える（useViewerAutoRefresh）。
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -10,6 +11,7 @@ import { NoticeView } from "./NoticeView";
 import { PasswordChangeView } from "./PasswordChangeView";
 import { PasswordResetView } from "./PasswordResetView";
 import { SignupView } from "./SignupView";
+import { useViewerAutoRefresh } from "./useViewerAutoRefresh";
 import { ViewerApiError, clearToken, fetchInventory, logout, readToken, writeToken } from "./api";
 import type { ViewerInventoryResponse, ViewerLoginResponse, ViewerNoticeKind } from "./types";
 
@@ -33,6 +35,9 @@ function readResetTokenFromHash(): string | null {
   const token = decodeURIComponent(hash.slice(RESET_HASH_PREFIX.length));
   return token || null;
 }
+
+/** 読み直しで出たら、表を閉じて案内へ切り替える失敗（待っても直らないもの） */
+const STOP_DETAILS = new Set(["viewer_suspended", "viewer_trial_expired", "password_change_required"]);
 
 /** 在庫取得の失敗 → 次の画面 */
 function screenForError(err: unknown): Screen {
@@ -78,6 +83,30 @@ export default function ViewerApp() {
       setScreen(screenForError(err));
     }
   }, []);
+
+  // 1分ごとの読み直し（docs/handoff/viewer-auto-refresh/design.md）。読み込み中の画面にはしない。
+  // 成功したら在庫表の data だけ差し替える（InventoryView は残るので検索・タブ・ページは保たれる）。
+  // 一時的な失敗は今の表を出したまま次の回を待つ。401 はログイン画面、STOP_DETAILS（停止・期限切れ・パスワード変更）は load() と同じ案内画面へ切り替える。
+  const refreshing = useRef(false);
+  const refresh = useCallback(async () => {
+    if (refreshing.current) return;
+    const token = readToken();
+    if (!token) return;
+    refreshing.current = true;
+    try {
+      const data = await fetchInventory(token);
+      setScreen((prev) => (prev.name === "inventory" ? { name: "inventory", data } : prev));
+    } catch (err) {
+      if (err instanceof ViewerApiError && (err.status === 401 || STOP_DETAILS.has(err.detail))) {
+        if (err.status === 401 && err.detail === "invalid viewer token") clearToken();
+        const next = screenForError(err);
+        setScreen((prev) => (prev.name === "inventory" ? next : prev));
+      }
+    } finally {
+      refreshing.current = false;
+    }
+  }, []);
+  useViewerAutoRefresh(screen.name === "inventory", () => void refresh());
 
   // 起動時に「読み込み中」で始まったときだけ在庫を取りに行く（再発行リンクから来たときは行かない）
   const startedLoading = useRef(screen.name === "loading");

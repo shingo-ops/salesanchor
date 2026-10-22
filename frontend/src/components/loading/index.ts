@@ -1,6 +1,8 @@
 // Barrel export for the Sales Anchor loading & feedback parts.
 export { Spinner } from './Spinner';
 export type { SpinnerProps, SpinnerSize } from './Spinner';
+export { LoadingBlock } from './LoadingBlock';
+export type { LoadingBlockProps } from './LoadingBlock';
 
 export { Skeleton } from './Skeleton';
 export type { SkeletonProps, SkeletonVariant } from './Skeleton';

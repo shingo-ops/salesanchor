@@ -82,6 +82,23 @@ describe("InventoryView", () => {
     expect(btn.getAttribute("aria-pressed")).toBe("false");
   });
 
+  it("T8: re-evaluates the 24h window against a fresh clock when data is replaced", () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date("2026-10-22T03:00:00Z"));
+      const jst = (ms: number) => new Date(ms + 9 * 3600 * 1000).toISOString().slice(0, 19).replace("T", " ");
+      const old = { ...mkRow(1), posted_at: jst(Date.now() - 23.5 * 3600 * 1000) };
+      const d1: ViewerInventoryResponse = { ...data, rows: [old] };
+      const { rerender } = render(<InventoryView data={d1} />);
+      expect(captured.props!.data).toHaveLength(1);
+      vi.setSystemTime(new Date("2026-10-22T04:00:00Z"));
+      rerender(<InventoryView data={{ ...d1, updated_at: "2026-10-22T04:00:00Z" }} />);
+      expect(captured.props!.data).toHaveLength(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("PC: two-row toolbar, no filter button, reset restores search and sort", () => {
     render(<InventoryView data={data} />);
     expect(screen.queryByTestId("viewer-filter-toggle")).toBeNull();
