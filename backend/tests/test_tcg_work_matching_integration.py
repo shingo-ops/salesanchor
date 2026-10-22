@@ -372,6 +372,8 @@ def migrate(cursor):
     cursor.execute((MIGRATIONS / "20261016_190000_create_product_blank_confirmations.sql").read_text())
     # ADR-1020 便2a: 細分類の選択肢・ゲームとの紐づけを読む表（IF NOT EXISTS の本番 migration）。
     cursor.execute((MIGRATIONS / "20260922_030000_product_format_game_links.sql").read_text())
+    # ADR-1038 便2: products(細分類, 中分類) → links の複合 FK（本番 migration。冪等）。
+    cursor.execute((MIGRATIONS / "20261022_100000_products_format_in_work_fk.sql").read_text())
     # TCG_SCHEMA を差し替える試験用スキーマにも同じ列を足す。配信の SELECT が ship_ja を読む。
     cursor.execute(f"ALTER TABLE {SCHEMA}.analysis_results ADD COLUMN IF NOT EXISTS ship_ja TEXT")
     cursor.execute(f"ALTER TABLE {SCHEMA}.analysis_results ADD COLUMN IF NOT EXISTS ship_en TEXT")
