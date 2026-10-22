@@ -14,7 +14,12 @@ except Exception:
 case "$EVENT" in
   PreToolUse)
     printf '%s' "$INPUT" | python3 "$DIR/guard_pre_tool.py"
-    exit $?
+    RC=$?
+    if [ "$RC" -ne 0 ] && [ "$RC" -ne 2 ]; then
+      echo "BLOCKED(cloud): 見張りの内部エラーのため止めます（終了コード ${RC}）。" >&2
+      exit 2
+    fi
+    exit $RC
     ;;
   Stop)
     printf '%s' "$INPUT" | python3 "$DIR/guard_stop.py"

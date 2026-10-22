@@ -57,6 +57,11 @@ add("K1", "git status", bash("git status"), 0)
 add("K1", "grep内の語は読取り扱い", bash(f'grep -i "{ops[0]}" x.log'), 0)
 add("K1", "commit文中の語は対象外", bash(f'git commit -m "docs: {ops[0]} を説明"'), 0)
 add("K1", "psql 読取(select)", bash('psql -c "select 1"'), 0)
+# K1 heredoc（実行される本文は検査／ファイルへ書くだけの本文は対象外）
+add("K1", "bash heredoc本文に危険語", bash(f"bash <<EOF\necho hi\n{ops[0]} foo\nEOF"), 2)
+add("K1", "python3 heredoc本文に危険語", bash(f"python3 - <<'PYX'\nprint(1)\n# {ops[0]}\nPYX"), 2)
+add("K1", "cat>file heredoc本文は通す", bash(f"cat > note.txt <<EOF\n{ops[0]} の説明\nEOF"), 0)
+add("K1", "cat>run.sh heredoc本文は通す", bash(f"cat > run.sh <<'EOF'\n{ops[0]}\nEOF"), 0)
 # K2
 add("K2", "MCP merge", pre("mcp__github__merge_pull_request", owner="o", repo="r", pullNumber=1), 2)
 add("K2", "gh pr merge", bash("gh pr merge 12 --merge"), 2)
@@ -98,6 +103,22 @@ for k, name, inp, exp in cases:
     slow += (sec >= 1.0)
     print(f"{k:3} {name:26} {exp:<4} {rc:<4} {sec:6.3f} {'OK' if ok else 'NG'}{' 遅' if sec >= 1.0 else ''}")
     if rc == 2: print("      止めた文言: " + err.strip().replace("\n", " ")[:160])
+
+# fail-closed: JSON が読めない PreToolUse は止める（guard 直接）／guard が想定外の終了コードなら dispatch が止める
+p = subprocess.run(["python3", os.path.join(D, "guard_pre_tool.py")], input="not json", capture_output=True, text=True)
+ok = p.returncode == 2
+fail += (not ok)
+print(f"{'FC':3} {'JSON不正→止める(guard)':26} {2:<4} {p.returncode:<4} {'-':>6} {'OK' if ok else 'NG'}")
+import shutil
+stub = os.path.join(tmp, "stubdir"); os.makedirs(stub)
+shutil.copy(DISPATCH, os.path.join(stub, "dispatch.sh"))
+open(os.path.join(stub, "guard_pre_tool.py"), "w").write("import sys\nsys.exit(1)\n")
+env = dict(os.environ); env["CLAUDE_CODE_REMOTE"] = "true"
+p = subprocess.run(["bash", os.path.join(stub, "dispatch.sh")], input=json.dumps(bash("ls")), capture_output=True, text=True, env=env)
+ok = p.returncode == 2 and "内部エラー" in p.stderr
+fail += (not ok)
+print(f"{'FC':3} {'guard異常終了→止める':26} {2:<4} {p.returncode:<4} {'-':>6} {'OK' if ok else 'NG'}")
+print("      止めた文言: " + p.stderr.strip())
 
 # K5 SessionStart
 rc, out, err, sec = run({"hook_event_name": "SessionStart", "source": "startup"}, True)

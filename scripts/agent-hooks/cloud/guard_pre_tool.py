@@ -21,9 +21,27 @@ def block(msg: str) -> int:
 
 
 # ---------- 前処理 ----------
+EXEC_CMDS = {"bash", "sh", "zsh", "python", "python3", "psql", "ssh", "docker", "eval", "xargs"}
+
+
+def _heredoc_is_executed(line: str) -> bool:
+    """heredoc の開始行に、本文を実行しうる命令があるか。cat / tee などへの書き込みは対象外。"""
+    for tok in re.split(r"[\s;|&()`]+", line):
+        if tok.split("/")[-1] in EXEC_CMDS:
+            return True
+    return False
+
+
 def strip_heredoc_bodies(cmd: str) -> str:
-    """heredoc の本文だけを取り除く（開始行は残す）。psql への流し込み検査は元の文字列で行う。"""
-    return re.sub(r"(<<-?\s*['\"]?(\w+)['\"]?[^\n]*\n).*?\n\s*\2\b", r"\1", cmd, flags=re.S)
+    """ファイルへ書くだけの heredoc の本文を取り除く（開始行は残す）。
+    実行されうる命令（EXEC_CMDS）に流す heredoc の本文は残して検査する。
+    psql への流し込み検査は、取り除く前の文字列で別に行う。"""
+    def repl(m):
+        line_start = cmd.rfind("\n", 0, m.start(1)) + 1
+        line = cmd[line_start:m.start(1)] + m.group(1)
+        return m.group(0) if _heredoc_is_executed(line) else m.group(1)
+
+    return re.sub(r"(<<-?\s*['\"]?(\w+)['\"]?[^\n]*\n).*?\n\s*\2\b", repl, cmd, flags=re.S)
 
 
 def strip_message_quotes(seg: str) -> str:
@@ -177,8 +195,10 @@ def check_pr_create(tool: str, ti: dict, cmd: str, cwd: str):
 def main() -> int:
     try:
         data = json.load(sys.stdin)
-    except Exception:
-        return 0
+        if not isinstance(data, dict):
+            raise ValueError("not an object")
+    except Exception:  # クラウドの PreToolUse は止める側に倒す（fail-closed）
+        return block("見張りの入力(JSON)を読めなかったため止めます。")
     tool = data.get("tool_name", "")
     if not (tool == "Bash" or tool.startswith("mcp__github__")):
         return 0
