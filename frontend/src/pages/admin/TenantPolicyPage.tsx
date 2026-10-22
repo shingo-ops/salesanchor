@@ -20,6 +20,7 @@ import { PageLayout } from "../../components/PageLayout";
 import { Button } from "../../components/Button";
 import { SelectControl } from "../../components/Select";
 import { TextFieldControl } from "../../components/TextField";
+import { LoadingBlock } from "../../components/loading";
 
 interface TenantPolicy {
   inventory_agg_filter: "none" | "cheapest" | "balanced";
@@ -148,7 +149,7 @@ export default function TenantPolicyPage() {
       subtitleKey="tenantPolicy.subtitle"
     >
       {loading ? (
-        <div className="loading">{t("common.loading")}</div>
+        <LoadingBlock />
       ) : (
         <form
           className="form"

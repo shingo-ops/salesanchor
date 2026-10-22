@@ -7,6 +7,7 @@ import { Badge } from "../../components/Badge";
 import { Check } from "../../constants/icons";
 import CarrierCredentialForm from "./CarrierCredentialForm";
 import "./FedexLabelValidationTab.css";
+import { LoadingBlock } from "../../components/loading";
 
 type Env = "sandbox" | "production";
 type StepKey = "portal" | "apis" | "credentials" | "etd" | "done";
@@ -356,7 +357,7 @@ export function FedexEtdSetupGuide({
         ariaLabel={t("carrierIntegration.fedexEtdGuideProgressLabel")}
       />
 
-      {statusLoading && <p className="form-hint">{t("common.loading")}</p>}
+      {statusLoading && <LoadingBlock size="sm" />}
       {statusError && <p className="error-message">{statusError}</p>}
 
       <StepCard

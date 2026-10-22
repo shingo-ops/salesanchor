@@ -33,6 +33,7 @@ import { BuybackAlertModal } from "./BuybackAlertModal";
 import { BuybackPendingReviewModal } from "./BuybackPendingReviewModal";
 import { BuybackByProductPage } from "./BuybackByProductPage";
 import styles from "./BuybackPricesPage.module.css";
+import { LoadingBlock } from "../../components/loading";
 
 type ViewMode = "shop" | "product";
 
@@ -393,9 +394,7 @@ export default function BuybackPricesPage() {
       ) : (
         <>
           {loading && (
-            <p role="status" className={styles.statusMsg}>
-              {t("common.loading")}
-            </p>
+            <LoadingBlock />
           )}
           {!loading && error && (
             <p role="alert" className={styles.errorMsg}>

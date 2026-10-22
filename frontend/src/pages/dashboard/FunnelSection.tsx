@@ -16,6 +16,7 @@ import {
   type FollowUpsResponse,
 } from "../../api/funnel";
 import "./FunnelSection.css";
+import { LoadingBlock } from "../../components/loading";
 
 // ─── 型 ─────────────────────────────────────────────────────────────────
 
@@ -495,7 +496,7 @@ export function FunnelSection({ month, viewMode }: FunnelSectionProps) {
   if (loading) {
     return (
       <section className="fn-section" aria-label={t("funnel.sectionTitle")}>
-        <div className="fn-loading">{t("common.loading")}</div>
+        <LoadingBlock />
       </section>
     );
   }

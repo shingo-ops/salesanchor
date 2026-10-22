@@ -39,6 +39,7 @@ import { PriorityProspectsSection } from "./PriorityProspectsSection";
 import { WeeklyAdvisorSection } from "./WeeklyAdvisorSection";
 import { FUNNEL_MODE } from "../../api/funnel";
 import "./DashboardPage.css";
+import { LoadingBlock } from "../../components/loading";
 
 const TrendUpIcon = DashboardIcons.forecast;
 const BellIcon = DashboardIcons.reminder;
@@ -482,7 +483,7 @@ export default function DashboardPage() {
             </h3>
           </div>
           {loadingFixed ? (
-            <div className="db-loading">{t("common.loading")}</div>
+            <LoadingBlock />
           ) : (
             <div className="db-followup-body">
               {followups && followups.overdue.map((item) => (
@@ -551,7 +552,7 @@ export default function DashboardPage() {
           </div>
 
           {loadingFixed ? (
-            <div className="db-loading">{t("common.loading")}</div>
+            <LoadingBlock />
           ) : (
             <div className="db-goals-body">
               <div className="db-goals-period-block">
@@ -587,7 +588,7 @@ export default function DashboardPage() {
 
       <div className="db-period-area">
         {loadingPeriod ? (
-          <div className="db-loading">{t("common.loading")}</div>
+          <LoadingBlock />
         ) : summary ? (
           <>
             {/* リード（リードビューとチームビューのみ表示）*/}
@@ -662,7 +663,7 @@ export default function DashboardPage() {
 
           {/* グラフ */}
           {loadingChart ? (
-            <div className="db-loading">{t("common.loading")}</div>
+            <LoadingBlock />
           ) : revenueChart && revenueChart.entries.length > 0 ? (
             <ResponsiveContainer width="100%" height={220}>
               <ComposedChart
