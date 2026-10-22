@@ -20,7 +20,7 @@
 
 ## 3. ai_ro ビューの扱い
 - scripts/run_all_migrations.sh:183-185 が一覧の先頭で migrations/20261017_125900_drop_ai_ro_views.sql（DROP SCHEMA IF EXISTS ai_ro CASCADE）を流す。
-- :187-215 が、スクリプトの成否にかかわらず終了時に migrations/20261017_130100_create_ai_ro_views.sql を流す（trap :215）。
+- scripts/run_all_migrations.sh:187-215 が、スクリプトの成否にかかわらず終了時に migrations/20261017_130100_create_ai_ro_views.sql を流す（trap :215）。
 - 作成 SQL は列を名指ししない。pg_attribute の今の列から組み立てる（migrations/20261017_130100_create_ai_ro_views.sql:26-44、EXECUTE format :63-66）。列を落とした後は旧列なしで作られる。
 
 ## 4. 解析・監視の読み手
