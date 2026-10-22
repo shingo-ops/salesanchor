@@ -13,6 +13,7 @@ import { PageLayout } from "../../components/PageLayout";
 import { ContentToolbar } from "../../components/ContentToolbar";
 import { HeaderButton } from "../../components/HeaderButton";
 import { TextField } from "../../components/TextField";
+import { LoadingBlock } from "../../components/loading";
 
 interface PreviewResponse {
   digest: string;
@@ -134,7 +135,7 @@ export default function ProductCategoriesImportPage() {
   const { isSuperAdmin, loading } = useSuperAdmin();
   return (
     <PageLayout titleText={t("productCategoriesCsv.importTitle")}>
-      {loading ? <p>{t("common.loading")}</p> : !isSuperAdmin ? <p role="alert">{t("productCsv.denied")}</p> : <ProductCategoriesImportPanel onDone={() => navigate("/super-admin/analysis-rules")} />}
+      {loading ? <LoadingBlock /> : !isSuperAdmin ? <p role="alert">{t("productCsv.denied")}</p> : <ProductCategoriesImportPanel onDone={() => navigate("/super-admin/analysis-rules")} />}
       {!loading && !isSuperAdmin && <HeaderButton variant="secondary" onClick={() => navigate("/super-admin/analysis-rules")}>{t("productCategoriesCsv.backToList")}</HeaderButton>}
     </PageLayout>
   );

@@ -24,6 +24,7 @@ import { Modal } from "../../../components/Modal";
 import { ContentToolbar } from "../../../components/ContentToolbar";
 import { Tabs } from "../../../components/Tabs";
 import type { TabItem } from "../../../components/Tabs";
+import { LoadingBlock } from "../../../components/loading";
 
 // ---------------------------------------------------------------------------
 // 型定義
@@ -372,15 +373,7 @@ export function ExtractionErrorLogPanel() {
       )}
 
       {loading && items.length > 0 && (
-        <p
-          style={{
-            textAlign: "center",
-            color: "var(--text-muted)",
-            fontSize: "var(--font-sm)",
-          }}
-        >
-          {t("common.loading")}
-        </p>
+        <LoadingBlock />
       )}
 
       <Modal
