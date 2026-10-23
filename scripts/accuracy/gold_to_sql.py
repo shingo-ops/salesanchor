@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""正解表(TSV)から、本番DBへの投入SQL 4本を作る道具(ADR-1043)。標準ライブラリのみ。
+"""正解表(TSV)から、本番DBへの投入SQL 3本を作る道具(ADR-1043)。標準ライブラリのみ。
 
 使い方:
   python3 scripts/accuracy/gold_to_sql.py --gold G --version V --note N --out-dir D
