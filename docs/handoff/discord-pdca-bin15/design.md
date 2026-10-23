@@ -49,7 +49,7 @@
   - 表の形（列・制約・RLS）。migration を作らない。
   - 既存の受け口 `ingest_alertmanager`（`backend/app/routers/ops.py:213-267`）と `_UPSERT_INCIDENT_SQL`（:161-180）。1文字も変えない。
   - 読む口（:275-326）・全停止の口（:406-489）・鍵の関数（:85-133）。
-  - `round` を省いた出来事の口の振る舞い（`detail` の形・答えの形・状態コード）。既存の試験は1つも書き換えない。
+  - `round` を省いた出来事の口の振る舞い（`detail` の形・答えの形・状態コード）。既存の試験は1つも書き換えない。ただし1つだけ例外: `detail` が 8000 バイトを超えるとき（`note` に非 ASCII の字を2000字近く入れたときなど）は、`round` の有無にかかわらず 422 `OPS_DETAIL_TOO_LARGE` になる（今は 200、無い行なら 404）。大きさの検査は行を探す前に行うので、無い行でも 422 が先に返る。既存の12本は大きな注記を送らないので影響しない。
   - agent-console のリポジトリ（便2 で使う側を作る）。
   - `frontend/src/` の画面（この口は画面から呼ばない）。
 
@@ -63,6 +63,7 @@
 - 設計の細部（Opus の技術判断。設計 §4-9 の目的・範囲を変えない）:
   - 鍵: 3つの口とも `require_ops_reader`（保守の鍵か super admin のログイン）。既存の出来事の口（ops.py:361）と同じ。取り込み用の鍵（Alertmanager）は 401。
   - 人の報告の入力は `message_id`（数字1〜20桁）・`posted_at`（時差付きの時刻。時差の無い時刻は 422）・`message_url`（`https://discord.com/channels/<数字>/<数字>/<数字>` の形で、最後の数字が `message_id` と同じ）・`test`（真偽。省略は false）。ほかの名前は 422。
+  - `posted_at` は Discord の投稿の時刻（受け取った時刻ではない）を送る取り決め（便2 の呼ぶ側が守る）。同じ件かどうかは `(fingerprint, starts_at)`（mig :31）で決まるので、同じ投稿 id でも違う時刻で送ると別の行になる。
   - `labels` は `{"source": "discord", "message_url": ...}`。`test` が true のときだけ `"test": "true"`（文字列。Alertmanager の labels と同じく値は文字列）。
   - 出来事の `detail.round.at`: 人の報告の口と閉じる口では、サーバーが受け付けた時刻（UTC の ISO 8601）を入れる。出来事の口の `round.at` は呼ぶ側が送る（必須）。
   - 閉じる口の入力は `n`（1〜99）と `session_id`（1〜64字）。答えは `{"incident_id", "closed"}`。既に閉じた行なら何も書かず `closed=false`（呼び直しで出来事が2つにならない）。Discord 発でない行は 409 `OPS_INCIDENT_NOT_DISCORD`。無い行は 404 `OPS_INCIDENT_NOT_FOUND`。
@@ -212,7 +213,9 @@ class OpsIncidentAnnotation(BaseModel):
     columns = [c for c in _ANNOTATABLE_COLUMNS if c in values]
     detail: dict[str, Any] = {"fields": sorted(columns), "note": body.note, "user_id": who["user_id"]}
     if body.round is not None:
-        detail["round"] = body.round.model_dump(mode="json", exclude_none=True)
+        round_detail = body.round.model_dump(mode="json", exclude_none=True)
+        round_detail["at"] = body.round.at.isoformat()  # model_dump は UTC を "Z" で出す。ほかの口（_now_iso）と同じ "+00:00" の形にそろえる
+        detail["round"] = round_detail
     detail_json = _dumps(detail)
     if len(detail_json.encode("utf-8")) > _DETAIL_LIMIT_BYTES:
         raise HTTPException(status_code=422, detail="OPS_DETAIL_TOO_LARGE")
@@ -470,11 +473,11 @@ def _round(**kw):
 | T6 | `test_close_twice_adds_no_second_event` | 閉じたあとにもう一度閉じる。200・`closed` が false。出来事の数は増えない・`resolved_at` は1回目の値のまま |
 | T7 | `test_close_rejects_alertmanager_incident` | Alertmanager の口で作った行を閉じると 409・`detail == "OPS_INCIDENT_NOT_DISCORD"`。行は `firing` のまま・出来事は増えない |
 | T8 | `test_close_unknown_incident_returns_404` | 乱数の UUID で 404 |
-| T9 | `test_annotate_round_written_into_detail` | Discord の行に `{"kind": "ai", "note": "start", "round": _round(session_id="s-1", reservation_id="r-1")}`。200。足された出来事の `detail` が `fields`・`note`・`user_id`・`round` の4つの鍵で、`round` は送った値（`at` は ISO の文字列）。`step="result", result="fail", reason="failed"` も 200 |
+| T9 | `test_annotate_round_written_into_detail` | Discord の行に `{"kind": "ai", "note": "start", "round": _round(session_id="s-1", reservation_id="r-1")}`。200。足された出来事の `detail` が `fields`・`note`・`user_id`・`round` の4つの鍵で、`round` は送った値と文字列まで同じ（`at` も `"2026-10-23T01:05:00+00:00"` のまま。§4-2 で `isoformat()` に直すため `Z` にならない）。`step="result", result="fail", reason="failed"` も 200 |
 | T10 | `test_annotate_round_rejects_bad_values` | 422 になる9つ: `step` が `accept`／`n=0`／`n=100`／`round` に知らない鍵／`step="result"` で `result="pass"`／`step="result"` で `result` なし／`step="start"` に `result="fail"`／`kind="annotated"` に `round`／`round` ありで `note` が 501 字。`session_id` が 65 字も 422。どの場合も出来事が増えない |
 | T11 | `test_annotate_without_round_keeps_detail_shape` | Alertmanager の行に `round` なしで書く。200。出来事の `detail` の鍵がちょうど `fields`・`note`・`user_id` の3つ |
 | T12 | `test_annotate_detail_size_limit` | `note` に `"😀" * 1950`（`round` なし）は 200。`"😀" * 2000` に `fields={"root_cause": "x"}` を付けると 422・`detail == "OPS_DETAIL_TOO_LARGE"`、`root_cause` は書かれず出来事も増えない |
-| T13 | `test_annotate_discord_row_rejects_locked_fields` | Discord の行に、5つの欄（`ai_started_at`・`detection_path`・`first_aid_started_at`・`first_aid_done_at`・`first_aid_result`）を1つずつ送るとどれも 422・`detail == "OPS_FIELD_LOCKED_FOR_DISCORD"`。`{"ai_started_at": None}` も 422。行の `ai_started_at` は None・`detection_path` は `human` のまま・出来事は増えない。続けて `{"review_note": "r", "human_noticed_at": <時刻>}` は 200 で両方書ける |
+| T13 | `test_annotate_discord_row_rejects_locked_fields` | Discord の行に、5つの欄（`ai_started_at`・`detection_path`・`first_aid_started_at`・`first_aid_done_at`・`first_aid_result`）を1つずつ送るとどれも 422・`detail == "OPS_FIELD_LOCKED_FOR_DISCORD"`。送る値は型に合うものにする（型の誤りの 422 と区別するため）: `ai_started_at`・`first_aid_started_at`・`first_aid_done_at` は `"2026-10-23T01:10:00+00:00"`、`detection_path` は `"ai"`、`first_aid_result` は `"recovered"`。`{"ai_started_at": None}` も 422。行の `ai_started_at` は None・`detection_path` は `human` のまま・出来事は増えない。続けて `{"review_note": "r", "human_noticed_at": <時刻>}` は 200 で両方書ける |
 | T14 | `test_annotate_alert_row_still_accepts_locked_fields` | Alertmanager の行には `ai_started_at` と `detection_path="ai"` を書ける（200・値が入る） |
 | T15 | `test_discord_endpoints_record_while_halted` | `ops_control_lock` の中で halt を ON にし（`test_ingest_continues_while_halted` と同じ形、:396-412）、人の報告・`round` 付きの出来事・閉じるが3つとも 200。`finally` で `_clear_control` |
 

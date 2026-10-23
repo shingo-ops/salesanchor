@@ -39,7 +39,7 @@
 | `backend/app/realtime/topics.py:86` | `NO_SIGNAL_ROUTES` の始まり |
 | `backend/app/realtime/topics.py:116` | 保守 API の4つの登録（:116-119）。理由の文は「保守 API ADR-1012: 運用者向けで画面更新の通知対象外」 |
 | `backend/tests/test_realtime_topics.py:34` | 書く口はすべて表のどちらか1つに載る（:34-39）。足し忘れはここで落ちる |
-| `backend/tests/test_realtime_topics.py:110` | 表に実在しない口があると落ちる（:110-113） |
+| `backend/tests/test_realtime_topics.py:108` | 表に実在しない口があると落ちる（:108-111） |
 | `backend/tests/test_ops_router.py:22` | 実 PostgreSQL が無いと全体が skip（:22-31） |
 | `backend/tests/test_ops_router.py:84` | `env` の fixture（:84-141）。後片付けは `holder.fingerprints` に入れた指紋の行だけ消す（:121-139） |
 | `backend/tests/test_ops_router.py:151` | `_incidents`・`_events` の助け（:151-162） |
