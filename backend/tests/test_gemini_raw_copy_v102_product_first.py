@@ -525,3 +525,157 @@ def test_resolve_condition_picks_lowest_value_state_when_several_words_hit():
     ]
     cond, basis, reviews = pf._resolve_condition("シュリンク無し美品", "箱系", "箱系", entries, {})
     assert cond == "No shrink box" and basis == "R3:シュリンク無し"
+
+
+# --- 区分ごとに取れる単位の表（ADR-1041 便1。合成のデータ） --------------------------------------
+
+_KUBUN_TABLE = {
+    "箱系": frozenset({"Box", "Case", "Pack", "MasterCarton"}),
+    "プロモパック系": frozenset({"Booklet", "Pack"}),
+    "ブックレット系": frozenset({"Booklet"}),
+}
+_KUBUN_UNITS = {
+    **_UNITS, "セット": ("Set", "複合"), "Set": ("Set", "複合"), "Pack": ("Pack", "パック系"), "Booklet": ("Booklet", "冊子系"),
+    "MasterCarton": ("MasterCarton", "箱系大"),
+}
+_STATE_UNITS = {**_CONDITION_UNIT, "未開封": "Pack", "With booklet": "Booklet"}
+
+
+def _kmasters(table=_KUBUN_TABLE, condition_unit=None):
+    base = _pf()
+    return ProductFirstMasters(**{**base.__dict__, "kubun_allowed_units": table, "condition_unit": condition_unit or _STATE_UNITS})
+
+
+def _fix(kubun, unit, condition, *, table=_KUBUN_TABLE, unit_kubun="複合"):
+    return pf._fix_unit_by_kubun(
+        unit=unit, unit_kubun=unit_kubun, unit_basis={"line": 1}, product_kubun=kubun, product_id=1, condition=condition,
+        masters=_kmasters(table), unit_alias_to_info=_KUBUN_UNITS,
+    )
+
+
+def test_kubun_table_box_with_set_is_replaced_by_state_unit_box_a():
+    unit, unit_kubun, basis, reviews = _fix("箱系", "Set", "Sealed box")
+    assert (unit, unit_kubun, reviews) == ("Box", "箱系", [])
+    assert basis == {"line": 1, "kubun_unit_fix": "a", "kubun_unit_from": "Set"}
+
+
+def test_kubun_table_box_with_set_end_to_end_becomes_box():
+    masters = ProductFirstMasters(**{**_pf().__dict__, "kubun_allowed_units": _KUBUN_TABLE})
+    row = _one("サンプル拡張\n3セット@1,500円", _it([1, 2], "1,500円", "3"), product_first=masters, units=_KUBUN_UNITS)
+    assert (row["condition"], row["unit"], row["unit_kubun"]) == ("Sealed box", "Box", "箱系")
+    assert row["unit_basis"]["kubun_unit_fix"] == "a" and row["unit_basis"]["kubun_unit_from"] == "Set"
+    plain = _one("サンプル拡張\n3セット@1,500円", _it([1, 2], "1,500円", "3"), units=_KUBUN_UNITS)
+    assert plain["unit"] == "Set" and "kubun_unit_fix" not in plain["unit_basis"]
+
+
+def test_kubun_table_box_with_mastercarton_is_unchanged():
+    unit, unit_kubun, basis, reviews = _fix("箱系", "MasterCarton", "Sealed box", unit_kubun="箱系大")
+    assert (unit, unit_kubun, basis, reviews) == ("MasterCarton", "箱系大", {"line": 1}, [])
+
+
+def test_kubun_table_promo_pack_with_case_and_state_pack_is_replaced_a():
+    unit, unit_kubun, basis, reviews = _fix("プロモパック系", "Case", "未開封", unit_kubun="箱系大")
+    assert (unit, unit_kubun, reviews) == ("Pack", "パック系", [])
+    assert basis["kubun_unit_fix"] == "a" and basis["kubun_unit_from"] == "Case"
+
+
+def test_kubun_table_box_with_booklet_and_state_unit_not_allowed_adds_unit_unknown_b():
+    unit, unit_kubun, basis, reviews = _fix("箱系", "Booklet", "With booklet", unit_kubun="冊子系")
+    assert (unit, unit_kubun) == ("Booklet", "冊子系")
+    assert basis == {"line": 1, "kubun_unit_fix": "b"} and reviews == [{"kind": "unit_unknown"}]
+
+
+def test_kubun_table_box_with_booklet_and_no_state_unit_is_b():
+    unit, _k, basis, reviews = _fix("箱系", "Booklet", "none-such", unit_kubun="冊子系")
+    assert unit == "Booklet" and basis["kubun_unit_fix"] == "b" and reviews == [{"kind": "unit_unknown"}]
+
+
+@pytest.mark.parametrize(
+    "kubun,unit", [("セット系", "Set"), ("箱系", None), ("箱系", ""), ("シングル系", "個"), ("不明", "Set")]
+)
+def test_kubun_table_unlisted_kubun_or_empty_unit_is_unchanged(kubun, unit):
+    assert _fix(kubun, unit, "Sealed box") == (unit, "複合", {"line": 1}, [])
+
+
+@pytest.mark.parametrize(
+    "kubun,unit,cond",
+    [("箱系", "Set", "Sealed box"), ("箱系", "MasterCarton", "Sealed box"), ("プロモパック系", "Case", "未開封"),
+     ("箱系", "Booklet", "With booklet"), ("セット系", "Set", "Sealed box"), ("箱系", None, "Sealed box")],
+)
+def test_kubun_table_empty_table_changes_nothing(kubun, unit, cond):
+    assert _fix(kubun, unit, cond, table={}) == (unit, "複合", {"line": 1}, [])
+
+
+def test_kubun_table_empty_table_end_to_end_equals_plain():
+    plain = _one("サンプル拡張\n3セット@1,500円", _it([1, 2], "1,500円", "3"), units=_KUBUN_UNITS)
+    given = _one("サンプル拡張\n3セット@1,500円", _it([1, 2], "1,500円", "3"), units=_KUBUN_UNITS,
+                 product_first=ProductFirstMasters(**{**_pf().__dict__, "kubun_allowed_units": {}}))
+    assert plain == given
+
+
+def test_kubun_table_unregistered_unit_word_is_replaced_like_any_other_a():
+    unit, unit_kubun, basis, reviews = _fix("箱系", "謎の単位", "Sealed box", unit_kubun="不明")
+    assert (unit, unit_kubun, reviews) == ("Box", "箱系", [])
+    assert basis["kubun_unit_fix"] == "a" and basis["kubun_unit_from"] == "謎の単位"
+    unit, unit_kubun, basis, reviews = _fix("箱系", "謎の単位", "With booklet", unit_kubun="不明")
+    assert (unit, unit_kubun, reviews) == ("謎の単位", "不明", [{"kind": "unit_unknown"}]) and basis["kubun_unit_fix"] == "b"
+
+
+def test_kubun_table_logs_one_info_line_each_without_source_text(caplog):
+    with caplog.at_level("INFO", logger=pf.logger.name):
+        _fix("箱系", "Set", "Sealed box")
+        _fix("箱系", "Booklet", "With booklet", unit_kubun="冊子系")
+        _fix("箱系", "Box", "Sealed box")  # 表にある単位：ログなし
+    lines = [r.getMessage() for r in caplog.records if "kubun_unit_fix" in r.getMessage()]
+    assert len(lines) == 2
+    assert "fix=a" in lines[0] and "kubun=箱系" in lines[0] and "from=Set" in lines[0] and "to=Box" in lines[0] and "product_id=1" in lines[0]
+    assert "fix=b" in lines[1] and "from=Booklet" in lines[1] and "to=Booklet" in lines[1]
+
+
+_OK_JSON = json.dumps({"箱系": ["Box", "Case"], "ブックレット系": ["Booklet"]}, ensure_ascii=False)
+_VALID_KUBUNS = {"箱系", "プロモパック系", "ブックレット系", "セット系"}
+_VALID_UNITS = {"Box", "Case", "Pack", "Booklet", "MasterCarton", "Set"}
+
+
+def test_validate_kubun_allowed_units_accepts_a_good_value():
+    table = pf.validate_kubun_allowed_units(_OK_JSON, _VALID_KUBUNS, _VALID_UNITS)
+    assert table == {"箱系": frozenset({"Box", "Case"}), "ブックレット系": frozenset({"Booklet"})}
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [None, "{not json", "[]", json.dumps({"箱系": "Box"}), json.dumps({"箱系": []}), json.dumps({"箱系": [1]}),
+     json.dumps({"知らない区分": ["Box"]}, ensure_ascii=False), json.dumps({"箱系": ["知らない単位"]}, ensure_ascii=False)],
+)
+def test_validate_kubun_allowed_units_bad_value_gives_empty_table_and_warning(raw, caplog):
+    with caplog.at_level("WARNING", logger=pf.logger.name):
+        assert pf.validate_kubun_allowed_units(raw, _VALID_KUBUNS, _VALID_UNITS) == {}
+    warnings = [r for r in caplog.records if r.levelname == "WARNING" and "kubun_unit_fix" in r.getMessage()]
+    assert len(warnings) == 1 and "知らない" not in warnings[0].getMessage()
+
+
+def test_loader_reads_kubun_allowed_units_through_validation(monkeypatch):
+    monkeypatch.setattr(pf, "load_product_entries", lambda s: list(_PRODUCTS))
+    monkeypatch.setattr(pf, "load_product_kubun_type_map", lambda s: dict(_PRODUCT_KUBUN))
+
+    def execute(stmt, params=None):
+        sql = str(stmt)
+        rows = (
+            [] if "type_master" in sql or "release_date" in sql else [(_OK_JSON,)] if "tcg_distribution_settings" in sql
+            else [(k,) for k in sorted(_VALID_KUBUNS)] if "tcg_product_categories" in sql
+            else [("Sealed box", "Box")] if "line_conditions" in sql
+            else [(u,) for u in sorted(_VALID_UNITS)] if "line_units" in sql and "code = " not in sql
+            else [("Set",)] if "line_units" in sql else [("ONE PIECE",)]
+        )
+        return SimpleNamespace(fetchall=lambda: rows)
+
+    session = MagicMock()
+    session.execute.side_effect = execute
+    masters = pf.load_product_first_masters(session)
+    assert masters.kubun_allowed_units["箱系"] == frozenset({"Box", "Case"})
+
+
+def test_validate_kubun_allowed_units_empty_object_is_rollback_value_without_warning(caplog):
+    with caplog.at_level("WARNING", logger=pf.logger.name):
+        assert pf.validate_kubun_allowed_units("{}", _VALID_KUBUNS, _VALID_UNITS) == {}
+    assert [r for r in caplog.records if r.levelname == "WARNING"] == []
