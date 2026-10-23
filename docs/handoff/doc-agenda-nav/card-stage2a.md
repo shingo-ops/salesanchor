@@ -91,6 +91,6 @@
 
 ## 11. 報告欄（担当が追記）
 
-（未記入）
+- 2026-10-23 担当(Sonnet): :23 の1行を §4 のとおり変更。§5-1〜5-6 は期待どおり（5-5 は PASSED・rc=0。tools/claude-channels/intake/CLAUDE.md の LIMITS 未登録警告は既存で今回の範囲外）。生出力 /tmp/CC報告ファイル/an-stage2a/
 
 END OF CARD
