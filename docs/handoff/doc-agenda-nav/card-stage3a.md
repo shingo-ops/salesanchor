@@ -51,6 +51,8 @@
 - 変更: `AGENTS.md`
 - 変更: `CLAUDE.md`
 - 変更: `docs/INDEX.md`
+- 変更: `docs/PARALLEL_TERMINAL_GUIDE.md`（改訂1で追加。§4-7 の1行だけ）
+- 変更: `tasks/todo.md`（改訂1で追加。§4-7 の1行だけ）
 - 変更: `docs/handoff/doc-agenda-nav/card-stage3a.md`（このカード。担当は §11 報告欄の追記だけ）
 
 ## 4. 作り方
@@ -142,6 +144,26 @@
 | A 開発の進め方 | [開発コマンド（venv・セットアップ・実行）](ai-agents/dev-commands.md) | 手元で venv を作るとき、frontend・backend の検査や試験を動かすとき |
 ```
 
+### 4-7. 改訂1: 消した節を古い場所で指す2行を直す（Edit。各1行だけ）
+
+経緯: PR #4700 の審査（HEAD a3bd9e98a・REQUEST_CHANGES R1）で、§5-6 の検索語（見出しの全文）に掛からない省略形の参照が2件見つかった。Opus が消した見出し16個（`git diff "$B" a3bd9e98a -- AGENTS.md CLAUDE.md | grep '^-#'`）の語で入口名つきの参照を探し直し、行き先として生きているのはこの2件だけと確かめた（docs/adr/ADR-012・ADR-039、questions/Q02、docs/handoff/format-work-parent/recon.md の当たりは過去の記録なので直さない）。生出力: /tmp/CC報告ファイル/an-stage3a/refsearch.txt
+
+`docs/PARALLEL_TERMINAL_GUIDE.md:81`（変更前 → 変更後）
+
+```
+`tasks/todo.md` は作業完了・ブロック発生時に**手動で更新する**（ルール: `AGENTS.md §引き継ぎルール`）。
+`tasks/todo.md` は作業完了・ブロック発生時に**手動で更新する**（ルール: `docs/ai-agents/codex-operations.md §引き継ぎルール（忘れ防止）`）。
+```
+
+`tasks/todo.md:3`（変更前 → 変更後）
+
+```
+タスク台帳の正本。セッション開始時に必ず読むこと（`AGENTS.md §引き継ぎルール` 参照）。
+タスク台帳の正本。セッション開始時に必ず読むこと（`docs/ai-agents/codex-operations.md §引き継ぎルール（忘れ防止）` 参照）。
+```
+
+（変えるのは各行の `AGENTS.md §引き継ぎルール` を `docs/ai-agents/codex-operations.md §引き継ぎルール（忘れ防止）` に置き換える部分だけ。各ブロックの1行目が変更前、2行目が変更後。Edit の old_string には `AGENTS.md §引き継ぎルール` を含む行をファイルから読んだまま使う。行番号がずれていたら、その語を含む行が各ファイルに1行だけであることを確かめてから直す。2行以上・0行なら NEEDS_DECISION:。）
+
 ## 5. 確かめ方（担当が実行し、出力を報告に貼る。生出力は /tmp/CC報告ファイル/an-stage3a/impl/ に保存）
 
 すべて `cd /Users/tanizawashingo/worktrees/salesanchor/release-doc-agenda-nav-stage3a && B=$(git merge-base origin/main HEAD) && ...` の形で行う。
@@ -186,6 +208,8 @@ diff <(git show "$B:CLAUDE.md" | sed 10d) <(sed 10d CLAUDE.md)
 
 5-6. 外から見出しの名前で入口の節を指している文書が無いか: `git grep -n -F -e '役割分担（ChatGPT' -e 'AI Agent Pipeline' -e 'AEON 呼び出し' -e 'セットアップ & 実行コマンド' -e 'Codex app UI/UX補助運用' -e '引き継ぎルール（忘れ防止）' -- . ':!docs/handoff/' ':!docs/ai-agents/codex-operations.md' ':!docs/ai-agents/dev-commands.md'` の全文を保存する。当たった行のうち「AGENTS.md の〜節を見よ」のように入口の節を行き先として指すものがあれば NEEDS_DECISION:（一覧を貼る）。無ければその旨を書く。
 
+5-6b.（改訂1）省略形の参照も含めて探し直す: `git grep -n -E 'AGENTS\.md ?(§|「|の)' -- docs tasks scripts .github ':!docs/handoff/' ':!docs/adr/'` の全文を保存し、当たった行のうち §4-3 で消した節（引き継ぎ・役割分担・AI Agent Pipeline・AEON・セットアップ・Codex app UI/UX）を指すものが 0 件であること。あわせて `git grep -n -F 'AGENTS.md §引き継ぎルール'` が 0 件、`git diff "$B" -- docs/PARALLEL_TERMINAL_GUIDE.md tasks/todo.md` が §4-7 の2行の置き換えだけであること。
+
 5-7. `git status --short` と `git diff "$B" --stat`（期待: §3 のファイルだけ）。
 
 5-8. PR を作った後、`gh pr checks` に作った PR の番号と `--repo shingo-ops/salesanchor` を付けたもの を1回だけ実行して貼る（待たない）。「Check CLAUDE.md sizes」が skipping でなく実行されているか（pending・pass のどちらでもよい）を書く。
@@ -195,7 +219,8 @@ diff <(git show "$B:CLAUDE.md" | sed 10d) <(sed 10d CLAUDE.md)
 - 5-1・5-3・5-4 で差が出る → 写しか消す範囲の誤り。直して 5-1 からやり直す（2回直しても合わなければ BLOCKED:）。
 - 5-2 で MISSING が出る → 5-1 が合っていれば起こらない。出たら一覧を貼って BLOCKED:。
 - 5-5 で警告が増える・新設2本が出る → 一覧を貼って NEEDS_DECISION:。
-- 5-6 で入口の節を指す文書がある → NEEDS_DECISION:（直すかどうかは Opus が決める。担当は直さない）。
+- 5-6 で入口の節を指す文書がある → NEEDS_DECISION:（直すかどうかは Opus が決める。担当は直さない）。§4-7 の2件は改訂1で直すと決めたので対象外。
+- 5-6b で §4-7 以外に消した節を指す行が出る → 一覧を貼って NEEDS_DECISION:（担当は直さない）。
 - `### 標準ワークフロー確認` などの本文の検査（validate-pr-body.sh）に止められた → 止まった欄と理由の原文を報告に書き、本文を直して再実行（3回で通らなければ BLOCKED:）。
 - 見張りや自動判定に止められた → 言い換えず、止まった手順・最後のコマンド・理由の原文を報告して終える。
 
@@ -209,6 +234,7 @@ diff <(git show "$B:CLAUDE.md" | sed 10d) <(sed 10d CLAUDE.md)
 | 目次の章A に新設2本が「いつ読むか」付きで載る | §5-4 |
 | 目次から届かない文書・行き先の無いリンクが増えない | §5-5 |
 | CLAUDE.md が120行以下（行数の検査が通る） | §5-3 の wc と PR の「Check CLAUDE.md sizes」 |
+| 消した節を古い場所で指す参照が残らない（改訂1） | §5-6b |
 | 触ったのは §3 のファイルだけ | §5-7 |
 
 ## 8. 戻し方
