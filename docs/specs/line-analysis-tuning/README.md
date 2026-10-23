@@ -43,6 +43,7 @@
 | 段1 間の行の検知の記録（system_review_detail） | （この PR） | 投稿ごとの取りこぼしの疑いの行番号・間の行から出る商品の候補を extraction_jobs.system_review_detail に残す。要確認の判定・配信・画面は不変 | [v102-gap-detect-record](../../handoff/v102-gap-detect-record/) |
 | 段2a 取りこぼし疑いを要確認の理由に | （この PR） | 段1の記録の gap_name の件（unmatched・価格数量あり・間の行あり）の review に gemini_gap_suspect（fix_stage=extraction）を足す。商品は当てない（product_id・pid_resolved 不変）ので配信は不変。間の行番号の画面は PR-B | [v102-gap-fill-review](../../handoff/v102-gap-fill-review/) |
 | v102：単位が「個」・無記入の箱系の行を値段で Box／Case／Pack に決める（ADR-1036） | （この PR） | 買取の物差しを投稿日時の時点に（便1）、対象を状態の語がある行と「個」へ広げ Pack と状態の写しを足す（便2）。③自社前日・②他社は別設計 | [price-unit-decision](../../handoff/price-unit-decision/) |
+| v102：区分ごとに取れる単位の表で単位を直す・状態の見出しを下の品目に使う（ADR-1041） | （この PR） | 表は設定 v102_kubun_allowed_units（箱系・プロモパック系・ブックレット系）。合わない単位は状態の単位へ置き換えるか単位不明に。スペシャルセット 3 商品を箱系に。見出し（D2）は規則を試算とそろえて再審査してから | [v102-heading-and-unit](../../handoff/v102-heading-and-unit/) |
 
 - 2026-10-07 以降の新しい指示書は、リポジトリに本文を置かない。この記録には key と本文の sha256 と成績の数字だけを書く（PO 2026-10-07「基盤となるロジックはあまり公開してほしくはない」）。
 
