@@ -266,4 +266,13 @@ diff <(git show "$B:CLAUDE.md" | sed 10d) <(sed 10d CLAUDE.md)
 - 5-6: 1件（aeon-routing.md:46 の一般文。入口の節を指す文ではない）（impl/5-6.txt）
 - 5-7: impl/5-7.txt
 
+### 改訂1の結果（impl2/ に保存）
+
+- 4-7: docs/PARALLEL_TERMINAL_GUIDE.md:81 と tasks/todo.md:3 の各1行を置き換え（変更前は各ファイルに1行だけだった）
+- 5-1: 9本 ok / 5-2: OK 117・MISSING 0 / 5-3: diff 出力なし・121・120・140・32行 / 5-4: 13a14,15 と2行だけ
+- 5-5: 起点・HEAD とも SUMMARY unreached=0 deep=2 blank_when=0 no_when_column=0 broken_link=8 warnings=10
+- 5-6: 2件が新規に表示（置換後の2行が「引き継ぎルール（忘れ防止）」を含むため。行き先は新設文書で正）＋aeon-routing.md:46 の一般文
+- 5-6b: 1件（docs/specs/doc-agenda-nav/kgi.md:20 の「AGENTS.md の行数も足す」。消した節を指さない）。`AGENTS.md §引き継ぎルール` はカード自身（docs/handoff）の引用4行だけ。PARALLEL_TERMINAL_GUIDE.md・todo.md の差分は各1行の置き換えのみ
+- 5-7: 変更は §3 と §4-7 のファイルだけ
+
 END OF CARD
