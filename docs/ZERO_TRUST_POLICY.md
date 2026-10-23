@@ -44,8 +44,8 @@
 | 非rootユーザー | 全コンテナでappuser実行 | ✅ |
 | 権限昇格防止 | no-new-privileges:true | ✅ |
 | リソース制限 | メモリ・CPU上限設定 | ✅ |
-| 読み取り専用FS | frontend/Redisでread_only | ✅ |
-| ヘルスチェック | 全サービスにhealthcheck定義 | ✅ |
+| 読み取り専用FS | read_only は redis だけ（docker-compose.yml:473） | ✅ |
+| ヘルスチェック | 11 サービスのうち 9 に healthcheck 定義（無いのは certbot・gha-exporter） | ✅ |
 
 ## 3. 今後の強化計画
 

@@ -10,60 +10,13 @@ cd backend
 python -m app.discord_gateway.main
 ```
 
-環境変数 `DISCORD_BOT_TOKEN_<TENANT_ID>` を 1 つ以上設定する。
+環境変数 `DISCORD_BOT_TOKEN`（共通の Bot Token 1本。docker-compose.yml:362）を設定する。ADR-146 の本文はリポジトリに無い（docker-compose.yml のコメントに名前が出るだけ）。
 
-```bash
-# tenant_006 用 Bot Token (撮影 / QA テナント)
-export DISCORD_BOT_TOKEN_TENANT_006=Mxxxxxxxxxxxxxxxxxxxxxxxx
-# 任意: テナントコード上書き
-export DISCORD_TENANT_CODE_6=tenant-review
-```
+Bot Token は全テナント共通の1本。テナントごとの Bot Token 環境変数は使わない（値は書かない）。
 
-複数テナント同時起動も可能 (`DISCORD_BOT_TOKEN_4`, `DISCORD_BOT_TOKEN_6`, ...)。
+## VPS での運用（docker compose）
 
-## VPS systemd unit (Sprint 5 以降、しんごさん引き受け)
-
-`/etc/systemd/system/sales-anchor-discord-gateway.service`:
-
-```ini
-[Unit]
-Description=Sales Anchor Discord Bot Gateway (ADR-009 M3)
-After=network.target postgresql.service
-Wants=postgresql.service
-
-[Service]
-Type=simple
-User=ubuntu
-WorkingDirectory=/opt/sales-anchor/backend
-EnvironmentFile=/etc/sales-anchor/discord-gateway.env
-ExecStart=/opt/sales-anchor/venv/bin/python -m app.discord_gateway.main
-Restart=on-failure
-RestartSec=10
-StandardOutput=journal
-StandardError=journal
-
-[Install]
-WantedBy=multi-user.target
-```
-
-`/etc/sales-anchor/discord-gateway.env` (権限 0600):
-
-```
-DISCORD_BOT_TOKEN_TENANT_006=...
-DATABASE_URL=postgresql+asyncpg://...
-DISCORD_GATEWAY_LOG_LEVEL=INFO
-ADMIN_NOTIFICATION_DISCORD_WEBHOOK=https://discord.com/api/webhooks/...
-GEMINI_API_KEY=...
-```
-
-起動:
-
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable sales-anchor-discord-gateway
-sudo systemctl start sales-anchor-discord-gateway
-sudo journalctl -u sales-anchor-discord-gateway -f
-```
+docker compose のサービス `discord-gateway`（docker-compose.yml:350。`restart: unless-stopped`）。デプロイ時に deploy.yml:453 が起動する。環境変数は `.env` から入る。
 
 ## 動作確認 (実 Discord guild が利用可能になったら)
 
@@ -83,14 +36,14 @@ sudo journalctl -u sales-anchor-discord-gateway -f
 
 ### 連続再起動 (最大 10 回で停止)
 - `_MAX_RECONNECT_ATTEMPTS = 10` 超過で停止し、`RuntimeError` を投げる
-- journalctl を確認、Token 確認後に `systemctl restart` で復旧
+- `docker compose logs discord-gateway` を確認、Token 確認後に `docker compose restart discord-gateway` で復旧
 
 ### ignored_routing が多発
 - supplier_discord_routing の登録漏れ → /super-admin/masters → 仕入元 → Discord 紐付けで追加
 - 既存 ignored_routing 行はそのまま (audit ログとして残す)
 
 ### parse_status='unparsed' (LLM 失敗)
-- `inventory_parser_llm.py` の Gemini API キー (`GEMINI_API_KEY`) を確認
+- `GEMINI_API_KEY` を読むのは backend と celery-worker（docker-compose.yml:95,230）。discord-gateway には渡していない
 - `public.tenant_llm_budgets` の `current_month_usd` が `monthly_budget_usd` に到達していないか確認
   (到達時は `budget_exhausted` 状態に遷移する)
 
@@ -154,19 +107,16 @@ SQL
 
 ### 送信が 502 になる場合
 
-1. `DISCORD_BOT_TOKEN_{TENANT_ID}` が VPS 環境変数に設定されているか確認
+1. 共通の `DISCORD_BOT_TOKEN` が `.env` に設定されているか確認
 2. Discord Developer Portal で Bot Token が失効していないか確認
-3. Gateway コンテナが起動していない → `sudo systemctl restart sales-anchor-discord-gateway`
+3. Gateway コンテナが起動していない → `docker compose restart discord-gateway`
 
-```bash
-# VPS でトークン確認（値は表示しない）
-sudo grep -c "DISCORD_BOT_TOKEN" /etc/sales-anchor/discord-gateway.env
-```
+トークンは `.env` から入る（deploy.yml）。値は表示しない。
 
 ### dm_writer が失敗する場合（Gateway ログ確認）
 
 ```bash
-sudo journalctl -u sales-anchor-discord-gateway --since "1 hour ago" | grep "\[dm_writer\]"
+docker compose logs --since 1h discord-gateway | grep "\[dm_writer\]"
 ```
 
 エラーパターン:

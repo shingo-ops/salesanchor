@@ -17,7 +17,7 @@
 1. アラート受信（Grafana/Uptime Kuma/ユーザー報告）
 2. インシデントレベルを判定
 3. 対応チームを招集
-4. インシデントチャンネルを開設（Slack等）
+4. インシデントチャンネルを開設（Discord。まだ確かめていない: 開設するチャンネル名）
 5. タイムラインの記録を開始
 ```
 
@@ -144,11 +144,11 @@ docker compose down
 | Firebase/GCPサポート | 認証障害 | https://console.cloud.google.com/support |
 | 個人情報保護委員会 | 個人情報漏洩報告（72時間以内） | https://www.ppc.go.jp/ |
 
-### Slackチャンネル（要設定）
+### Discord チャンネル（まだ確かめていない: チャンネル名）
 
 | チャンネル | 用途 |
 |-----------|------|
-| #jarvis-alerts | 自動アラート通知 |
+| Discord（alertmanager の送り先 discord-server-alerts ほか。monitoring/alertmanager/alertmanager.yml） | 自動アラート通知 |
 | #jarvis-incidents | インシデント対応専用 |
 | #jarvis-dev | 開発全般 |
 
