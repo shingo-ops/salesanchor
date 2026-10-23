@@ -1,7 +1,7 @@
 # Prometheus ルールの単体試験（promtool test rules）
 # 書式: https://prometheus.io/docs/prometheus/latest/configuration/unit_testing_rules/
 # 実行: promtool test rules monitoring/prometheus/tests/alert_rules_test.yml
-# 全 29 本が擬似の系列で鳴ること、tier と runbook_url が付くことを確かめる。
+# 全 32 本が擬似の系列で鳴ること、tier と runbook_url が付くことを確かめる。
 
 rule_files:
   - ../alert_rules.yml
@@ -888,4 +888,93 @@ tests:
     alert_rule_test:
       - eval_time: 15m
         alertname: ClockSyncStopped
+        exp_alerts: []
+
+  - name: RecoveryCheckFailedFiring
+    interval: 1m
+    input_series:
+      - series: 'salesanchor_recovery_check_failed{job="recovery-check", instance="recovery-check:8000", item="clock", item_ja="本番サーバーの時計"}'
+        values: '1x10'
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: RecoveryCheckFailed
+        exp_alerts:
+          - exp_labels:
+              job: recovery-check
+              instance: "recovery-check:8000"
+              item: clock
+              item_ja: "本番サーバーの時計"
+              severity: critical
+              tier: page
+            exp_annotations:
+              summary: "❌ サーバー復旧後の点検で異常: 本番サーバーの時計"
+              description: "本番の API が止まって戻った後の点検で、本番サーバーの時計（clock）が 6 分たっても正常に戻りません。5 分おきに点検を続け、直ればこの警報は解決します。"
+              runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#recoverycheckfailed"
+
+  - name: RecoveryCheckFailedQuiet
+    interval: 1m
+    input_series:
+      - series: 'salesanchor_recovery_check_failed{job="recovery-check", instance="recovery-check:8000", item="clock", item_ja="本番サーバーの時計"}'
+        values: '0x10'
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: RecoveryCheckFailed
+        exp_alerts: []
+
+  - name: RecoveryCheckPassedFiring
+    interval: 1m
+    input_series:
+      - series: 'salesanchor_recovery_check_passed_until_timestamp_seconds{job="recovery-check", instance="recovery-check:8000"}'
+        values: '600x20'
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: RecoveryCheckPassed
+        exp_alerts:
+          - exp_labels:
+              job: recovery-check
+              instance: "recovery-check:8000"
+              severity: info
+              tier: ticket
+            exp_annotations:
+              summary: "✅ サーバー復旧後の点検: すべて正常です"
+              description: "本番の API が止まって戻った後の点検で、アプリ画面・API・データベース・Redis・裏方の処理の受け手・紹介ページ・監視の読み取り・本番サーバーの時計・裏方の処理・コンテナの状態記録がすべて正常でした。対応は不要です。"
+              runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#recoverycheckpassed"
+
+  - name: RecoveryCheckPassedExpired
+    interval: 1m
+    input_series:
+      - series: 'salesanchor_recovery_check_passed_until_timestamp_seconds{job="recovery-check", instance="recovery-check:8000"}'
+        values: '600x20'
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: RecoveryCheckPassed
+        exp_alerts: []
+
+  - name: RecoveryCheckStaleFiring
+    interval: 1m
+    input_series:
+      - series: 'salesanchor_recovery_check_last_poll_timestamp_seconds{job="recovery-check", instance="recovery-check:8000"}'
+        values: '0x30'
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: RecoveryCheckStale
+        exp_alerts:
+          - exp_labels:
+              job: recovery-check
+              instance: "recovery-check:8000"
+              severity: warning
+              tier: ticket
+            exp_annotations:
+              summary: "復旧後の点検係が止まっています"
+              description: "点検係（recovery-check）が 15m 0s の間、点検を回していません。この間、サーバーが戻っても ✅/❌ は届きません。"
+              runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#recoverycheckstale"
+
+  - name: RecoveryCheckStaleQuiet
+    interval: 1m
+    input_series:
+      - series: 'salesanchor_recovery_check_last_poll_timestamp_seconds{job="recovery-check", instance="recovery-check:8000"}'
+        values: '0+60x30'
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: RecoveryCheckStale
         exp_alerts: []

@@ -28,6 +28,7 @@ import { Button } from "./Button";
 import { SelectControl } from "./Select";
 import { TextareaControl } from "./Textarea";
 import { TextFieldControl } from "./TextField";
+import { LoadingBlock } from "./loading";
 
 export interface ShippingDetailDto {
   id: number;
@@ -381,7 +382,7 @@ export default function ShippingDetailPanel({
       footer={footer}
     >
       {loading ? (
-        <div className="loading">{t("common.loading")}</div>
+        <LoadingBlock />
       ) : (
         <form id="shipping-detail-form" onSubmit={handleSubmit}>
           {error && <div className="error-message">{error}</div>}

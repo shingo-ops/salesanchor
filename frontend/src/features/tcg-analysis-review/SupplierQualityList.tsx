@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { api } from '../../lib/api';
 import { DataList } from './components/DataList';
 import { supplierQualityColumns, type SupplierQualitySummary } from './supplierQuality';
+import { LoadingBlock } from "../../components/loading";
 
 interface ApiSummary {
   supplier_id: string;
@@ -47,7 +48,7 @@ export function SupplierQualityList({ onSelectSupplier }: { onSelectSupplier: (s
       .finally(() => { setLoading(false); });
   }, []);
 
-  if (loading) return <p>{t("common.loading")}</p>;
+  if (loading) return <LoadingBlock />;
   if (error) return <p style={{ color: 'var(--color-error)' }}>{error}</p>;
 
   return (

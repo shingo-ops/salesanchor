@@ -66,6 +66,7 @@ jobs:
           python3 monitoring/scripts/check_app_healthchecks.py
           python3 monitoring/scripts/tests/test_check_app_healthchecks.py -v
           python3 scripts/tests/test_container_state.py -v
+          python3 monitoring/recovery-check/tests/test_recovery_check.py -v
 
       - name: Prometheus ルール構文と単体試験（promtool）
         if: steps.changes.outputs.relevant == 'true'
@@ -84,8 +85,11 @@ jobs:
         if: steps.changes.outputs.relevant == 'true'
         run: |
           # どの通知も Discord と保守 API の両方に届くこと（ADR-1012 段階2 便C）
+          # ただし RecoveryCheckPassed（復旧後の点検の ✅）だけは Discord にだけ届くこと（outage-recovery-watch 便2）
           docker run --rm -v "$PWD/monitoring/alertmanager:/a:ro" --entrypoint amtool prom/alertmanager:v0.28.1 config routes test --config.file=/a/alertmanager.yml --verify.receivers=discord-server-alerts,ops-api alertname=CiRoutesTest
           docker run --rm -v "$PWD/monitoring/alertmanager:/a:ro" --entrypoint amtool prom/alertmanager:v0.28.1 config routes test --config.file=/a/alertmanager.yml --verify.receivers=discord-server-alerts,ops-api alertname=CiRoutesTest severity=critical job=node
+          docker run --rm -v "$PWD/monitoring/alertmanager:/a:ro" --entrypoint amtool prom/alertmanager:v0.28.1 config routes test --config.file=/a/alertmanager.yml --verify.receivers=discord-recovery-info alertname=RecoveryCheckPassed
+          docker run --rm -v "$PWD/monitoring/alertmanager:/a:ro" --entrypoint amtool prom/alertmanager:v0.28.1 config routes test --config.file=/a/alertmanager.yml --verify.receivers=discord-server-alerts,ops-api alertname=RecoveryCheckFailed severity=critical
 
       - name: Loki ルール構文検査（lokitool）
         if: steps.changes.outputs.relevant == 'true'

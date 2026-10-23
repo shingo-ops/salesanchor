@@ -5,6 +5,7 @@
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useTranslation } from "react-i18next";
+import { LoadingBlock } from "./loading";
 
 export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -12,7 +13,7 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
   const location = useLocation();
 
   if (loading) {
-    return <div className="loading-screen">{t("common.loading")}</div>;
+    return <div className="loading-screen"><LoadingBlock /></div>;
   }
 
   if (!user) {

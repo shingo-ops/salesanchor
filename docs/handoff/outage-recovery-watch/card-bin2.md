@@ -577,6 +577,11 @@
 
 ## 13. 報告欄（担当が追記）
 
-（未記入）
+本報告はカード outage-recovery-watch 便2 の実行結果である（2026-10-23 実装）。
+- 単体試験 18 件 OK（14 件の要件に対し、補助の試験を追加）。`attempt >= 1` に壊すと試験 4・5・13 が落ちることを確認し、戻した。
+- check_alert_rules.py: `OK: Prometheus 32 rules, Loki 6 rules, runbook 38 sections`。validate_tokens.py は exit 0。
+- 台本 3 本は `/tmp/CC報告ファイル/outage-bin2/deploy/` に作成（`bash -n` 3 本とも exit 0。commit しない）。
+- 判断を要した点: compose の healthcheck 行は 127.0.0.1 を含む（既存の github-collector と同じ形。カード指定どおり）。台本の接続先は便1 の台本から実行時に読む形にし、台本自体には書いていない。
+- promtool・amtool・docker compose config は Mac で実行していない（CI の monitoring-check で動く）。
 
 END OF CARD

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/Button";
 import { attemptCopy, getExtractionAttempts, type ExtractionAttempt } from "./extractionAttemptsApi";
+import { LoadingBlock } from "../../components/loading";
 
 export function ExtractionAttemptHistory({ jobId }: { jobId: string }) {
   const { t, i18n } = useTranslation();
@@ -40,7 +41,7 @@ export function ExtractionAttemptHistory({ jobId }: { jobId: string }) {
     {open && <section aria-label={t("pmgAttempt.title")} aria-busy={loading}>
       <p>{t("pmgAttempt.historyNote")}</p>
       <Button variant="secondary" onClick={() => { setReload(value => value + 1); setCopyStatus(null); }}>{t("pmgAttempt.refresh")}</Button>
-      {loading && <p role="status">{t("pmgAttempt.loading")}</p>}
+      {loading && <LoadingBlock label={t("pmgAttempt.loading")} />}
       {!loading && state.error && <p role="alert">{t("pmgAttempt.unavailable")}</p>}
       {rows?.length === 0 && <p>{t("pmgAttempt.empty")}</p>}
       {rows?.map(row => <article className="pmg-attempt__row" key={row.id}>

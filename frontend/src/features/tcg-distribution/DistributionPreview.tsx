@@ -10,6 +10,7 @@ import { api } from "../../lib/api";
 import { INBOX_ACTION_ICONS, NAV_ICONS, Check, Warning } from "../../constants/icons";
 import type { PreviewData, RunResult } from "./distributionApi";
 import { runDistributionAll } from "./distributionApi";
+import { LoadingBlock } from "../../components/loading";
 
 interface Props {
   /** 一覧のリフレッシュを親に通知する */
@@ -64,9 +65,7 @@ export function DistributionPreview({ onRefreshTargets }: Props) {
   if (!preview) {
     return (
       <div className="dist-preview-card">
-        <p style={{ fontSize: "var(--font-sm)", color: "var(--text-secondary)" }}>
-          {t("common.loading")}
-        </p>
+        <LoadingBlock />
       </div>
     );
   }

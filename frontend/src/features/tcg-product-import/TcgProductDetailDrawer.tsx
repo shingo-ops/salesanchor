@@ -15,6 +15,7 @@ import {
   type AddWordResult, type BlankCode, type Classification, type Detail, type Draft, type FormatOption,
   type PackagingDraft, type PackagingUnit, type RequiredDraftField,
 } from "./productDetailModel";
+import { LoadingBlock } from "../../components/loading";
 
 type LookupOption = { id: string; name: string };
 type LookupsMap = Record<Classification, LookupOption[]> & { product_format_id: FormatOption[] };
@@ -311,7 +312,7 @@ export function TcgProductDetailDrawer({ productId, onClose, onSaved, open: open
         <Button type="button" variant="danger" onClick={confirmDiscard}>{t("productDetail.discard")}</Button>
       </div>
     </div> : <>
-      {loading && <p role="status">{t("common.loading")}</p>}
+      {loading && <LoadingBlock />}
       {error && <p role="alert">{t(error)}</p>}
       {requiredError && <p role="alert">{requiredError}</p>}
       {mode === "edit" && !loading && (blocked || (!detail && error)) && <Button type="button" variant="secondary" onClick={() => {
