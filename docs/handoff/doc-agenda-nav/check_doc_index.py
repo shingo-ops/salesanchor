@@ -95,7 +95,10 @@ def main():
                 c = c.split('#')[0].split('?')[0]
                 if not c:
                     continue
-                p = posixpath.normpath(posixpath.join(base, c))
+                if c.startswith('/'):
+                    p = posixpath.normpath(c.lstrip('/'))
+                else:
+                    p = posixpath.normpath(posixpath.join(base, c))
                 if (c.endswith('/') or isdir(p)) and p not in fset and isdir(p):
                     folders.append(p)
         for fo in folders:
@@ -152,6 +155,7 @@ def main():
             continue
         col = None
         in_table = False
+        found_when = False
         for i, line in enumerate(read(t).split("\n"), 1):
             s = line.strip()
             if not s.startswith("|"):
@@ -161,6 +165,7 @@ def main():
             cells = [c.strip() for c in s.strip("|").split("|")]
             if WHEN_NAME in cells and not in_table:
                 col = cells.index(WHEN_NAME)
+                found_when = True
                 in_table = True
                 continue
             if col is None:
@@ -171,7 +176,7 @@ def main():
                 blank += 1
                 lines.append((t, "BLANK_WHEN %s:%d" % (t, i)))
         if t == INDEX or t == "docs/specs/README.md":
-            if WHEN_NAME not in read(t):
+            if not found_when:
                 no_when += 1
                 lines.append((t, "NO_WHEN_COLUMN " + t))
 

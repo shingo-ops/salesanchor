@@ -142,5 +142,7 @@
 - 5-5 actionlint exit 0
 - 判断: workflow に timeout-minutes: 5 を足した（PR テンプレートの workflows 欄の決まり）
 - 生出力: /tmp/CC報告ファイル/an-stage2b/impl/
+- 審査差し戻し対応: R1（NO_WHEN_COLUMN を表の見出し行で判定）・N1（フォルダ登録で先頭 `/` をリポジトリ根から解決）を直した。基準値は同じ（unreached=0 deep=2 blank_when=0 no_when_column=0 broken_link=8 warnings=10）
+- 写しの試験: E（見出しを「いつ読む?」に）→ NO_WHEN_COLUMN docs/specs/README.md・no_when_column=1／F（lessons.d を `/docs/ai-agents/lessons.d/` に）→ UNREACHED 0 のまま。§5-4 の4つも再実行して同じく出た。生出力: /tmp/CC報告ファイル/an-stage2b/fix1/
 
 END OF CARD
