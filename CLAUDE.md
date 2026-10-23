@@ -7,7 +7,7 @@
 ## プロジェクト前提
 
 - **PO**: しんごさん（`shingo-ops`）— 本番アクセス・ADR起案・不可逆操作の最終判断
-- **Dev**: Hikky-dev（Claude Code）— 設計・実装・PR起票
+- **役割分担**: [docs/ai-agents/codex-operations.md](docs/ai-agents/codex-operations.md)（目次 [docs/INDEX.md](docs/INDEX.md) の章A から辿る）
 - **事業**: Sales Anchor (salesanchor) — B2B SaaS CRM（HIGH LIFE JPN / Treasure Island JP）
 - **スタック**: Python 3.12 / FastAPI / PostgreSQL 16 | React 18 + TypeScript + Vite | Astro | Docker + さくらVPS
 - **本番 URL**: App `https://app.salesanchor.jp/` / API `https://api.salesanchor.jp/` / LP `https://salesanchor.jp/`

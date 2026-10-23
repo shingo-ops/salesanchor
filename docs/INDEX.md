@@ -11,6 +11,8 @@
 | A 開発の進め方 | [設計パートナーの手順](ai-agents/design-partner.md) | 設計の担当（Planner・Architect）を始めるとき |
 | A 開発の進め方 | [実装役への指示の定型文](ai-agents/executor-preamble.md) | 実装役に作業を渡す指示を書くとき |
 | A 開発の進め方 | [教訓メモのフォルダ](ai-agents/lessons.d/)（まとめて読む: `bash scripts/lessons-view.sh`） | 設計・審査で、過去の失敗を確かめるとき |
+| A 開発の進め方 | [Codex の運用（役割分担・AEON・UI/UX補助・引き継ぎ）](ai-agents/codex-operations.md) | 役割分担を確かめるとき、Codex で作業する・Codex に作業を渡すとき、会話をまたいで作業を引き継ぐとき |
+| A 開発の進め方 | [開発コマンド（venv・セットアップ・実行）](ai-agents/dev-commands.md) | 手元で venv を作るとき、frontend・backend の検査や試験を動かすとき |
 | B 設計仕様書 | [設計仕様書の索引](specs/README.md) | 新しいテーマを始める前、索引に載る領域に触れる前 |
 | C 設計判断（ADR） | [機能から ADR を引く索引](adr/FEATURE-INDEX.md) | 現状把握（recon）で既存の設計判断を探すとき |
 | C 設計判断（ADR） | [ADR の一覧](adr/README.md) | ADR を足す・変えるとき（一覧は `node scripts/generate-adr-index.js` で作り直す） |
