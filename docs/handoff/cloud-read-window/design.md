@@ -26,9 +26,9 @@ PO 2026-10-22「クラウドでもいまと変わらない環境を構築した�
 クラウド → `https://api.salesanchor.jp/api/v1/ops/read-window/query`（POST、本文に SQL）→ nginx → **新しい専用コンテナ `ai-reader-http`** → `ai_reader` で DB を読む。
 
 ### 3-1. 専用コンテナ `ai-reader-http`
-- 新規ファイル `docker-compose.ai-reader-http.yml`。`ai-reader` と同じ守り: 環境変数は `AI_READER_DATABASE_URL` と窓口の鍵 `READ_WINDOW_TOKEN` だけ。volumes なし（/dev/log のみ）、`read_only`、`cap_drop: [ALL]`、`no-new-privileges`。
+- docker-compose.ai-reader-http.yml（新規）。`ai-reader` と同じ守り: 環境変数は `AI_READER_DATABASE_URL` と窓口の鍵 `READ_WINDOW_TOKEN` だけ。volumes なし（/dev/log のみ）、`read_only`、`cap_drop: [ALL]`、`no-new-privileges`。
 - ネットワークは frontnet（nginx から届くため）と backnet（DB へ届くため）。ports は開けない（外から直接は届かない）。
-- 中身は `backend/app/ops/read_window_http.py`（新規）。検査・実行は readonly_query.py の関数をそのまま呼ぶ（拒否の規則・上限・伏せ字を二重に書かない＝正本は readonly_query.py の1か所）。
+- 中身は backend/app/ops/read_window_http.py（新規）。検査・実行は readonly_query.py の関数をそのまま呼ぶ（拒否の規則・上限・伏せ字を二重に書かない＝正本は readonly_query.py の1か所）。
 - 同時実行は2本まで（3本目は 429 で即答。待たせない）。60秒で打ち切り。
 - 鍵の比較は `hmac.compare_digest`。`READ_WINDOW_TOKEN` が空・未設定なら全員 401（ADR-1025 と同じ）。
 - 監査: 1回ごとに AUDIT 行を /dev/log へ（ADR-1024 と同じ形に `via=https` を足す）。送れなければ 503 で結果を返さない。
@@ -45,7 +45,7 @@ PO 2026-10-22「クラウドでもいまと変わらない環境を構築した�
 - docs/B-11_credential_management_policy.md の90日表に `READ_WINDOW_TOKEN` を足す。
 
 ### 3-4. GO の境界
-- `backend/app/ops/` と `docker-compose.ai-reader*.yml` は既に process-artifacts gate の危ない変更に入っている（ADR-1024 §7）。新しい compose ファイル名もこの形に入るので、窓口のコードを変えるには GO 記録が要る。nginx/nginx.conf の変更も既存の危険パス。
+- `backend/app/ops/` と docker-compose.ai-reader で始まる compose ファイル は既に process-artifacts gate の危ない変更に入っている（ADR-1024 §7）。新しいファイル名がこの対象に入るかは、便1カードで定義の実物と照合し、入らなければ対象に足す。窓口のコードを変えるには GO 記録が要る形にする。nginx/nginx.conf の変更も既存の危険パス。
 
 ## 4. 代替案
 | 案 | 内容 | 判断 |
@@ -70,7 +70,7 @@ PO 2026-10-22「クラウドでもいまと変わらない環境を構築した�
 - 便1: 窓口コンテナ・nginx・deploy・B-11 追記（本番変更。GO 記録が要る）。手元で K2〜K6 を試す。
 - 便2: 鍵を作り GitHub secret へ（PO が `!` で実行）→ PO がクラウドにネットワークシークレットを登録 → クラウド試行で K1・K7・K9、本番で K8。
 
-## 8. 外部事例
+## 8. 外部・過去事例の参照と我々への応用
 - Anthropic 公式文書が、クラウドから社内 API を呼ぶ方法としてネットワークシークレットを示している（recon §7）。数値つきの導入事例は見つけていないため、成功の証明には使わない。効果は K1〜K9 の実測で測る。
 
 ## 9. 維持の仕組み
