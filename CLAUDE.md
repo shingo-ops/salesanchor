@@ -83,19 +83,6 @@ DROP TABLE / 大量DELETE / `rm -rf` / `git reset --hard` / `git push --force`�
 ## ADRと実装の優先順位（最上位原則）
 ADRと既存実装が食い違う箇所は必ずADRを優先し、追加安全マイグレーションでコードをADRへ寄せる（逆はしない）。
 
-## このファイルにルールを追加する前に
-
-以下に順番に答える:
-
-1. CI / ESLint / Husky が既に強制しているか？ → YES: **書かない**（CSS変数・アイコン・デザイントークン規約はこれ）
-2. `frontend/` だけに関係するか？ → YES: **`frontend/CLAUDE.md`** に追加
-3. `backend/` だけに関係するか？ → YES: **`backend/CLAUDE.md`** に追加
-4. frontend と backend 両方に等しく関係するか？ → YES: **このファイル** に追加（i18n 等）
-5. Generator / Evaluator / Reviewer の動作手順か？ → YES: **`~/.claude/agents/`** の該当ファイルに追加
-6. `~/.claude/rules/` に同等の内容が既にあるか？ → YES: **書かない**（Git workflow・coding-style 等）
-7. 全セッションで Claude が知る必要があるか？ → NO: **書かない**（ADRリンクか docs/ 参照で十分）
-8. 上記をすべて通過した場合のみ追加。既存セクションへの統合を最優先（新セクション追加は最後の手段）。
-**ファイル全体が 120 行を超えたら `frontend/scripts/check-claude-size.js` がコミットをブロックする。**
 ## UIガバナンス遵守（ADR-144）
 UI部品新設時は必ず `components/` の金型を先確認。生select/生input/生checkbox/生radio/自作タブ/色直値禁止。例外は `ui-allow: <理由> (#<番号>)` コメント付与（理由＋番号の両方必須）。詳細: `docs/CC_UI_GOVERNANCE.md`
 実装・調査の作業前/commit前/PR前チェックは docs/ai-agents/executor-checklist.md（正本・必読）に従う。
