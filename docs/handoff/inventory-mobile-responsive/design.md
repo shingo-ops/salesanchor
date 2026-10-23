@@ -135,3 +135,64 @@ recon §5 で確定したとおり、**在庫のはみ出しを見張る検査�
 | C4 | 合否を出す spec（受信箱の `inbox-single-column.spec.ts` 相当）を追加し、はみ出し0を恒久検査にする | 便1〜3 の後。閾値は実測値から決める |
 | C5 | `tests-e2e/` 直下の spec 群が CI で走っていない問題（`e2e.yml:247` の `if: false`） | 別便（#4602 の design ⑫ C4 と同じ宿題） |
 | C6 | 実機（SC-51G）での実測。ADB のペア設定が切れているため PO からペア設定コードが必要 | PO 依頼中 |
+
+## ⑬ 便0 の実測結果（2026-10-23・CI run 39876238895）
+
+> CI のログは保存期限で消えるため、便1以降の設計根拠として**数値をここに固定**する。
+> 取得元は `frontend/tests-e2e/visual-language/inventory-mobile-baseline.spec.ts` が
+> 出力する3種のマーカー（`INVENTORY_BASELINE` / `INVENTORY_DRAWER_BASELINE` /
+> `INVENTORY_DRAWER_TABS_BASELINE`）。受け入れ基準 A1〜A9 はすべて満たした。
+
+### 13-1. 横スクロールは出ていない（＝既存の検査では捕まらない）
+
+| 測った対象 | 360px | 390px |
+|---|---|---|
+| `document` の `scrollWidth - innerWidth` | **0** | **0** |
+| `.mobile-content` の `scrollWidth - clientWidth` | **0** | **0** |
+
+`frontend/tests-e2e/horizontal-overflow.spec.ts` の測り方（`document` のはみ出し）では
+在庫画面の問題は**原理的に検出できない**ことが数値で確定した。C4（合否 spec）は
+`document` ではなく**要素単位の超過**を見る必要がある。
+
+### 13-2. 本体の問題は上部操作台（`.content-toolbar__left`）
+
+子5件が**全て同一行**（`sameRowAsFirst: true`・`y=78`・`h=44`）に並び、右端は **657px**。
+親枠は 360px 時 **312px**、390px 時 **342px**。
+
+| 子要素（`data-testid`） | x | w | 右端 |
+|---|---|---|---|
+| `inventory-search` | 24 | 212 | 236 |
+| `inventory-reset-sort` | 248 | 74 | 322 |
+| `inventory-fresh-toggle` | 334 | 87 | **421** |
+| `inventory-sort-menu` | 433 | 114 | **547** |
+| `inventory-filter-toggle` | 559 | 98 | **657** |
+
+→ **新着・並び替え・絞り込みの3つはスマホ幅で画面外**（360/390 のどちらでも到達不能）。
+枠のはみ出しが 0 と出るのは、超過が内側のスクロール枠に吸われているため。
+C1（上部操作台の便）の設計はこの5件の配置を対象にする。
+
+### 13-3. カードと文字
+
+| 項目 | 値（360px） |
+|---|---|
+| カード枚数 | 5 |
+| 1枚目の高さ | 308px |
+| 1画面に入る枚数 | 2 |
+| ラベルの文字サイズ | 12px |
+| 値の文字サイズ | 13.6px |
+
+### 13-4. 詳細パネル（便1 の成果物）は 360px で破綻していない
+
+- パネルの `overflow` は **0**、パネル内のはみ出し要素は **0件**（原文1件・原文3件の両方）。
+- 原文本文は `white-space: pre-wrap` / `overflow-wrap: anywhere` で折り返せている。
+- ただし**タブ列（原文2件以上で出る）のタブは 68×36px** ＝ タップ目標 44px に**高さが8px足りない**。
+  C3（詳細パネルの便）で扱う論点として確定。
+
+### 13-5. 便2以降の作り手が踏む落とし穴（実測で判明）
+
+- **閉じているドロワーは必ず「はみ出し要素」一覧に載る**（`supplier-drawer` が x=360/390 に駐車）。
+  C4 で合否 spec を作るときは `.comp-drawer-panel--open` で絞らないと常に赤になる。
+- 作業端末（arm64 / ubuntu 26.04）では Playwright のブラウザが入らない
+  （`Playwright does not support chromium on ubuntu26.04-arm64`）。
+  手元で取れるのは `--list`・`npx tsc --noEmit`・`npm run check:all` まで。
+  **e2e の結果は CI ログだけが一次情報。**
