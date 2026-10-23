@@ -1,5 +1,7 @@
 # Sales Anchor セキュリティ強化対策レポート（統合版）
 
+> 過去時点の計画書。対象の jarvis-claude.uk は今は app.salesanchor.jp へ転送するだけの旧住所。
+
 **作成日**: 2026-04-13
 **対象**: Sales Anchor (https://jarvis-claude.uk)
 **ステータス**: 静的解析CIのみ実装済み、その他は**待機状態**（いつでも実装可能）
@@ -37,7 +39,7 @@
 
 | カテゴリ | ステータス | 備考 |
 |---------|-----------|------|
-| 静的解析CI（毎PR + 週次） | ✅ **実装済み** | Gitleaks/Trivy/Semgrep を GitHub Actions に組込済 |
+| 静的解析CI（毎PR + 週次） | ✅ **実装済み** | Gitleaks/Trivy/Semgrep を GitHub Actions に組込済（今の実物: secret-scan.yml:15,24 に gitleaks。trivy・semgrep の語は secret-scan.yml に無い。3種すべての組込はまだ確かめていない） |
 | 監査役Claude Code 常駐化 | ⏸ **待機中** | 本レポート §3 で詳述 |
 | 動的ペネトレーションテスト | ⏸ **待機中** | 本レポート §4 で詳述 |
 | ロジック攻撃テスト | ⏸ **待機中** | Claude Code が最も得意な領域 |

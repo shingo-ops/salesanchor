@@ -1,20 +1,14 @@
 # GitHub Actions Workflows
 
+> この文書は Discord 通知2本（discord-pr-notify.yml・discord-ci-notify.yml）と deploy.yml の3本だけを説明する。全ワークフローは `.github/workflows/` の実物を見る。
+
 ## discord-pr-notify.yml
 
 PR ライフサイクルイベントを Discord に通知する。
 
 ### 通知対象イベント
 
-| イベント | 通知タイトル | 色 |
-|---------|------------|----|
-| PR作成 (opened) | 🔵 新しいPRが作成されました | 青 |
-| PR再オープン (reopened) | 🔄 PRが再オープンされました | 黄 |
-| レビュー承認 (approved) | ✅ レビューが投稿されました (承認) | 緑 |
-| レビュー修正要求 (changes_requested) | ⚠️ レビューが投稿されました (修正要求) | 赤 |
-| レビューコメント (commented) | 💬 レビューが投稿されました (コメント) | 黄 |
-| マージ (merged) | 🎉 PRがマージされました | 緑 |
-| クローズ (closed, 未マージ) | ❌ PRがクローズされました（未マージ） | 赤 |
+通知の文言（タイトル・色）は文書に写さない。文言の正本: discord-pr-notify.yml（作成 :33／再オープン :68／レビュー :131／マージ :170／未マージで閉じた :205）。
 
 ### 必要な Secrets
 
@@ -47,7 +41,7 @@ PR ごとに 1〜2 通知に集約される (個別 workflow ごとに飛ばさ�
 | 結果 | 通知タイトル | 色 |
 |---|---|---|
 | 全 check pass (success) | 🟢 PR #N — All checks passed | 緑 |
-| 1 件以上 fail (failure / timed_out) | 🔴 PR #N — Some checks failed (失敗 check 一覧付き) | 赤 |
+| 1 件以上 fail (failure / timed_out / action_required。正本 discord-ci-notify.yml:53) | 🔴 PR #N — Some checks failed (失敗 check 一覧付き) | 赤 |
 | キャンセル / skip | 通知しない (rerun 中のノイズ防止) | — |
 
 ### 通知内容
@@ -58,7 +52,7 @@ PR ごとに 1〜2 通知に集約される (個別 workflow ごとに飛ばさ�
 
 ### 必要な Secrets
 
-`DISCORD_WEBHOOK_PR` を再利用 (PR 通知と同じ channel)。
+`DISCORD_WEBHOOK_CI`（discord-ci-notify.yml:100）。
 
 ---
 
@@ -72,19 +66,8 @@ PR ごとに 1〜2 通知に集約される (個別 workflow ごとに飛ばさ�
 
 ### デプロイ手順（自動）
 
-1. VPS に SSH 接続
-2. `git pull origin main`
-3. Meta Webhook 環境変数を `.env` に追記
-4. `docker compose up -d --build`
-5. ヘルスチェック（`/api/health`）
-6. 外部からの疎通確認
+手順は文書に写さない。段階の正本: deploy.yml の「Deploy to VPS」ステップ（:230〜）。取り込み・`.env` 追記・blue-green 切替・compose 起動をこの順で行う。
 
 ### 必要な Secrets
 
-| Secret 名 | 説明 |
-|-----------|------|
-| `VPS_HOST` | VPS のホスト名または IP |
-| `VPS_USER` | SSH ユーザー名 |
-| `SSH_PRIVATE_KEY` | SSH 秘密鍵 |
-| `META_VERIFY_TOKEN` | Meta Webhook 検証トークン |
-| `META_APP_SECRET` | Meta App シークレット |
+deploy.yml は 40 種以上の secrets を参照する（`secrets.` 参照の重複なし数は 45）。名前の正本は deploy.yml の `secrets.` 参照。

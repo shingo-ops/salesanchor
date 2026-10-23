@@ -3,7 +3,7 @@
 > このファイルは `scripts/generate-adr-index.js` により自動生成されます。
 > **手動編集禁止。** ADR ファイルを追加・変更後に `node scripts/generate-adr-index.js` を実行してください。
 
-最終更新: 2026-10-23 / ADR 総数: 201 件
+最終更新: 2026-10-23 / ADR 総数: 202 件
 
 ## 維持ルール（整合性を保つ・必須）
 
@@ -220,6 +220,7 @@
 | [ADR-1039](./ADR-1039-discord-pdca-agent-console.md) | ADR-1039: Discord の不具合報告を agent-console で受け、件ごとに Opus が対応と効果測定を回す | Proposed | Supersedes ADR-1009 | — |
 | [ADR-1040](./ADR-1040-doc-agenda-nav-entry-index.md) | ADR-1040: AI 向け指示文書を「入口→目次→章→末端」に組み替え、本文の正本を AGENTS.md に置く | Proposed | — | — |
 | [ADR-1041](./ADR-1041-kubun-allowed-units-and-condition-heading.md) | ADR-1041: 区分ごとに取れる単位の表で単位を直し、状態の見出しを下の品目に使う（v102） | Proposed | — | — |
+| [ADR-1042](./ADR-1042-cloud-read-window.md) | ADR-1042: クラウドから本番を読むだけの HTTPS 窓口を、読む人の接続だけを持つ専用コンテナで作る | Proposed | — | — |
 
 ## ステータス凡例
 

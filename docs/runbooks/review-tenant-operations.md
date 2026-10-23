@@ -1,5 +1,7 @@
 # review-tenant-operations Runbook (ADR-028)
 
+> ADR-028 は Superseded（scripts/setup_review_tenant.py と docs/META_APP_REVIEW_PRE_RECORDING_CHECKLIST.md に置き換え）。
+
 `tenant-review` (`review@salesanchor.jp`) の運用手順。  
 Meta App Review 撮影・QA Smoke 用テナントの日常管理、パスワード管理、セットアップ再実行。
 
@@ -118,7 +120,7 @@ password : （直前のパスワードリセット結果ファイルを参照、
 ### セットアップスクリプトがクラッシュした場合
 
 - `customers` テーブルへの参照: ADR-089 対応済み（v2 以降は発生しない）
-- `password_hash` 列への参照: ADR-138 対応済み（v2 以降は発生しない）
+- `password_hash` 列への参照: 列は廃止済み（migrations/20260612_150000_drop_password_hash.sql）。ADR-138 は ADR-1013 に置き換えられた（v2 以降は発生しない）
 - Firebase 認証エラー: `/app/firebase-credentials.json` の存在を確認
 
 ---
