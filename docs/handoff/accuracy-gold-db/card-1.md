@@ -76,3 +76,7 @@ CI（HEAD 2bd54e601）で次の 3 つが落ちた。生ログ: /tmp/CC報告フ�
 - `migration-guard`（チェック4）: `REFERENCES public.accuracy_gold_versions` の参照先が `.github/workflows/migration-guard.yml` の `PUBLIC_TABLES` に無い。→ 同ファイルの `PUBLIC_TABLES` の末尾に ` accuracy_gold_versions accuracy_gold_rows` を足す（前例 5249aad99「public 表リストに誤り報告の表3つを追加」）。触るファイルにこの 1 ファイルを加える。この行以外は変えない。
 - `guard-authoring/evaluation` が error: `scripts/run-guard-evaluation.js:24-25` の `merge-base --is-ancestor base head` が外れる（ブランチが古い main 起点）。→ `git merge origin/main`（merge commit。rebase・force push はしない）。衝突したら止まって NEEDS_DECISION。
 - `process-artifacts gate`: PR 本文の `### GO記録` が無い。→ GO 発行時に Opus が書く。担当は触らない。
+
+審査役（2026-10-23、REQUEST_CHANGES。止める指摘は上の migration-guard の 1 件だけ）の N3 も直す:
+- `scripts/accuracy/gold_to_sql.py` の 01_precheck の突き合わせ 2 か所で、索引が効くように比べる側の型を変える。`s.id::text = v.id` → `s.id = v.id::uuid`、`p.id::text = v.id` → `p.id = v.id::bigint`（投稿id は uuid、商品 id は数字だけに点検済み）。直す前に `public.products.id` の型を migrations で確かめ、integer なら `::integer` にする。試験で 01 の文の形を見ている所があれば合わせる。
+- N4（design.md §7 の古い書き方）は Opus が直した。

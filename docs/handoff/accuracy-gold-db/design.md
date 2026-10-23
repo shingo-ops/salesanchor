@@ -76,7 +76,7 @@
 
 ## 7. 戻し方
 - データだけ: Opus が psql で、versions からその版の 1 行を消す（rows は ON DELETE CASCADE で一緒に消える）。消す前に 03_verify で件数を控え、消した後に rows・versions とも その版 0 行を確かめる。
-- 表ごと: migration 先頭のコメント `DROP TABLE IF EXISTS public.accuracy_gold_rows; DROP TABLE IF EXISTS public.accuracy_gold_versions;`（不可逆。PO 確認のうえ）。ai_ro は次のデプロイで自動的に消える。
+- 表ごと: 次の文を流す（正本はこの節。migration の 2 行目はここを指すだけ）`DROP TABLE IF EXISTS public.accuracy_gold_rows; DROP TABLE IF EXISTS public.accuracy_gold_versions;`（不可逆。PO 確認のうえ）。ai_ro は次のデプロイで自動的に消える。
 
 ## 8. 受入条件（確かめ方）
 | 基準 | 検証方法 |
