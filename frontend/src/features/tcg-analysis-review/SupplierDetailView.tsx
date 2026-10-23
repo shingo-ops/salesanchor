@@ -7,6 +7,7 @@ import { ProductMasterDrawer } from './ProductMasterDrawer';
 import { SourceRawPane, type SourceLineJump } from './SourceRawPane';
 import './supplier-detail-view.css';
 import { ConditionReviewPanel } from './ConditionReviewPanel';
+import { LoadingBlock } from "../../components/loading";
 
 const PAGE_SIZE = 20;
 
@@ -92,7 +93,7 @@ export function SupplierDetailView({ supplierId, supplierName, onBack }: { suppl
           <button type="button" className="supplier-detail-back" onClick={onBack}>{t("superAdmin.supplierQuality.backToList")}</button>
           <h2>{supplierName} <span className="supplier-detail-id">{supplierId}</span></h2>
         </div>
-        {loading && <p>{t("common.loading")}</p>}
+        {loading && <LoadingBlock />}
         {error   && <p style={{ color: 'var(--color-error)' }}>{error}</p>}
         {!loading && works.length > 0 && (
           <Tabs

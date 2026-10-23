@@ -24,6 +24,7 @@ import { Button } from "./Button";
 import { RadioControl } from "./RadioControl";
 import { TextareaControl } from "./Textarea";
 import { TextFieldControl } from "./TextField";
+import { LoadingBlock } from "./loading";
 
 interface LeadOption {
   id: number;
@@ -179,7 +180,7 @@ export default function MergeLeadModal({ open, source, onMerged, onCancel }: Pro
               }}
             >
               {loading ? (
-                <p style={{ padding: "var(--space-4)", textAlign: "center" }}>{t("common.loading")}</p>
+                <LoadingBlock />
               ) : candidates.length === 0 ? (
                 <p style={{ padding: "var(--space-4)", textAlign: "center", color: "var(--text-muted)" }}>
                   {t("mergeLead.noResults")}
