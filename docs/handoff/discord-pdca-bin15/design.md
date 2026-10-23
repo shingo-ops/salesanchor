@@ -214,7 +214,7 @@ class OpsIncidentAnnotation(BaseModel):
     detail: dict[str, Any] = {"fields": sorted(columns), "note": body.note, "user_id": who["user_id"]}
     if body.round is not None:
         round_detail = body.round.model_dump(mode="json", exclude_none=True)
-        round_detail["at"] = body.round.at.isoformat()  # model_dump は UTC を "Z" で出す。ほかの口（_now_iso）と同じ "+00:00" の形にそろえる
+        round_detail["at"] = body.round.at.astimezone(timezone.utc).isoformat()  # 送られた時差によらず UTC の "+00:00" の形にする（model_dump は "Z"、ほかの口の _now_iso は "+00:00"）
         detail["round"] = round_detail
     detail_json = _dumps(detail)
     if len(detail_json.encode("utf-8")) > _DETAIL_LIMIT_BYTES:
@@ -473,7 +473,7 @@ def _round(**kw):
 | T6 | `test_close_twice_adds_no_second_event` | 閉じたあとにもう一度閉じる。200・`closed` が false。出来事の数は増えない・`resolved_at` は1回目の値のまま |
 | T7 | `test_close_rejects_alertmanager_incident` | Alertmanager の口で作った行を閉じると 409・`detail == "OPS_INCIDENT_NOT_DISCORD"`。行は `firing` のまま・出来事は増えない |
 | T8 | `test_close_unknown_incident_returns_404` | 乱数の UUID で 404 |
-| T9 | `test_annotate_round_written_into_detail` | Discord の行に `{"kind": "ai", "note": "start", "round": _round(session_id="s-1", reservation_id="r-1")}`。200。足された出来事の `detail` が `fields`・`note`・`user_id`・`round` の4つの鍵で、`round` は送った値と文字列まで同じ（`at` も `"2026-10-23T01:05:00+00:00"` のまま。§4-2 で `isoformat()` に直すため `Z` にならない）。`step="result", result="fail", reason="failed"` も 200 |
+| T9 | `test_annotate_round_written_into_detail` | Discord の行に `{"kind": "ai", "note": "start", "round": _round(session_id="s-1", reservation_id="r-1")}`。200。足された出来事の `detail` が `fields`・`note`・`user_id`・`round` の4つの鍵で、`round` は送った値と文字列まで同じ（`at` も `"2026-10-23T01:05:00+00:00"` のまま。§4-2 で UTC の `isoformat()` に直すため `Z` にならない）。`step="result", result="fail", reason="failed"` も 200。さらに `at` を `"2026-10-23T10:05:00+09:00"` で送ると、`detail["round"]["at"]` は `"2026-10-23T01:05:00+00:00"` になる |
 | T10 | `test_annotate_round_rejects_bad_values` | 422 になる9つ: `step` が `accept`／`n=0`／`n=100`／`round` に知らない鍵／`step="result"` で `result="pass"`／`step="result"` で `result` なし／`step="start"` に `result="fail"`／`kind="annotated"` に `round`／`round` ありで `note` が 501 字。`session_id` が 65 字も 422。どの場合も出来事が増えない |
 | T11 | `test_annotate_without_round_keeps_detail_shape` | Alertmanager の行に `round` なしで書く。200。出来事の `detail` の鍵がちょうど `fields`・`note`・`user_id` の3つ |
 | T12 | `test_annotate_detail_size_limit` | `note` に `"😀" * 1950`（`round` なし）は 200。`"😀" * 2000` に `fields={"root_cause": "x"}` を付けると 422・`detail == "OPS_DETAIL_TOO_LARGE"`、`root_cause` は書かれず出来事も増えない |
