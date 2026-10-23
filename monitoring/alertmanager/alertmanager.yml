@@ -5,6 +5,11 @@ route:
   group_interval: 5m
   repeat_interval: 4h
   routes:
+    # 復旧後の点検の ✅ は Discord にだけ送る。障害記録（ops-api）に載せず、解決の通知も出さない（outage-recovery-watch 便2）
+    # continue を付けないので、一致したらここで止まる
+    - receiver: discord-recovery-info
+      matchers:
+        - alertname="RecoveryCheckPassed"
     - receiver: discord-server-alerts
       continue: true
     - receiver: ops-api
@@ -23,6 +28,10 @@ receivers:
           authorization:
             type: Bearer
             credentials_file: /etc/alertmanager/secrets/ops-ingest-token
+  - name: discord-recovery-info
+    discord_configs:
+      - webhook_url_file: /etc/alertmanager/secrets/discord-webhook
+        send_resolved: false
 
 inhibit_rules:
   # ClockSkew が鳴っている間は、時刻を比べる 7 本を止める（outage-recovery-watch 便1・design.md §3-3）

@@ -1,6 +1,6 @@
 # 見張りのルール別 手順書
 
-この文書は何か：見張り（アラート）のルールごとの手順書です。ルールの正本は `monitoring/prometheus/alert_rules.yml`（Prometheus 29 本）と `monitoring/loki/rules/jarvis/alerts.yml`（Loki 6 本）です。各ルールの `runbook_url` はこの文書の同名の見出しを指します。見出しはルール名と同じにしてあります。札とリンクの欠けは `monitoring/scripts/check_alert_rules.py` が CI で検査します。
+この文書は何か：見張り（アラート）のルールごとの手順書です。ルールの正本は `monitoring/prometheus/alert_rules.yml`（Prometheus 32 本）と `monitoring/loki/rules/jarvis/alerts.yml`（Loki 6 本）です。各ルールの `runbook_url` はこの文書の同名の見出しを指します。見出しはルール名と同じにしてあります。札とリンクの欠けは `monitoring/scripts/check_alert_rules.py` が CI で検査します。
 
 ### 札（tier）の意味
 
@@ -307,3 +307,30 @@
 - 最初に見るもの：`node_timex_sync_status` と `node_timex_offset_seconds` を機体ごとに見る。
 - 直し方：Opus に報告する（時刻合わせの設定の変更は本番の変更なので PO の判断）。
 - 止め方：`amtool silence add alertname=ClockSyncStopped --duration=PERIOD --comment=REASON`
+
+## RecoveryCheckFailed
+
+- 札：page
+- 何が起きているか：本番の API が止まって戻った後の点検で、札 `item_ja` の項目が 6 分たっても正常に戻らない。項目は 10 個（アプリ画面・API・データベース・Redis・裏方の処理の受け手・紹介ページ・監視の読み取り・本番サーバーの時計・裏方の処理・コンテナの状態記録）。監視の読み取りが NG のときは時計・裏方の処理・コンテナの状態記録を、時計が NG のときは裏方の処理・コンテナの状態記録を判定しない（その間は一覧に出ない）。
+- 影響：その項目が使えないまま。直るまで 5 分おきに点検を続ける。
+- 最初に見るもの：Prometheus で `salesanchor_recovery_check_failed == 1` の `item`。`docker compose -f docker-compose.monitoring.yml logs --tail 50 recovery-check`（prod2）。同じ時間に鳴っている警報（ServiceDown・ClockSkew・CeleryHeartbeatStale 等）。
+- 直し方：項目ごとの警報の節に従う。直れば自動で解決する。サービスの再起動などの本番の変更は Opus に報告する（PO の判断）。
+- 止め方：`amtool silence add alertname=RecoveryCheckFailed --duration=PERIOD --comment=REASON`
+
+## RecoveryCheckPassed
+
+- 札：ticket（知らせだけ。対応は要らない）
+- 何が起きているか：本番の API が止まって戻った後の点検で、10 項目すべてが正常だった。10 分だけ鳴り、Discord にだけ届く（障害記録には書かない。解決の通知も出ない）。
+- 影響：無し。
+- 最初に見るもの：無し。止まっていた間の原因は、同じ時間の ServiceDown・KumaMonitorDown の記録で見る。
+- 直し方：無し。
+- 止め方：`amtool silence add alertname=RecoveryCheckPassed --duration=PERIOD --comment=REASON`
+
+## RecoveryCheckStale
+
+- 札：ticket
+- 何が起きているか：点検係（prod2 の `recovery-check`）が 5 分以上点検を回していない。
+- 影響：サーバーが戻っても ✅/❌ が届かない。
+- 最初に見るもの：prod2 の `docker compose -f docker-compose.monitoring.yml ps recovery-check` と `logs --tail 50 recovery-check`。ServiceDown（job recovery-check）が同時に鳴っているか。
+- 直し方：Opus に報告する（コンテナの再起動は本番の変更なので PO の判断）。
+- 止め方：`amtool silence add alertname=RecoveryCheckStale --duration=PERIOD --comment=REASON`

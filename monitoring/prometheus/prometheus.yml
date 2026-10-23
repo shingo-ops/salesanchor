@@ -58,6 +58,11 @@ scrape_configs:
       - targets: ["github-collector:8000"]
     scrape_interval: 300s
 
+  # 復旧後の点検係（outage-recovery-watch 便2。alert_rules.yml: recovery_check_alerts）
+  - job_name: "recovery-check"
+    static_configs:
+      - targets: ["recovery-check:8000"]
+
   # Prometheus Pushgateway（sop-health-reporter など週次バッチ指標を受け取る）
   # ADR-124: GitHub Actions が週次で SOP 遵守指標 5 件を push する
   - job_name: "pushgateway"
