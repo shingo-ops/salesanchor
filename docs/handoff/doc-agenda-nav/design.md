@@ -400,3 +400,19 @@ PO 原文（2026-10-22）「仕様書と設計図はどうなったの？逐一�
 - 反映（直すべき）: ①KGI-4 の測り方と §6 の到達検査の実装を reach.py（unreachable-list.md §1 の定義）に合わせた（保存されていない旧スクリプトを指していた）②§3 の範囲と docs/specs/doc-agenda-nav/README.md の境界を今の段（1b・2a・6・7）に合わせた。
 - 反映（参考）: 段0 の ADR に上限の決定値 90行を書く／status に最新の審査を明記／§10-7 の書き方は置き場所の名前で、文字列の正は §8 段1b と明記／§4 の「最深14段」に訂正の注記。参考5（§20 の日常語の要約）は審査役の判断どおり変更なし。
 
+
+## 23. 段3c の分け方と、移り先の隙間の判断（2026-10-24・Opus 設計判断。PO 承認「1」2026-10-23＝段3c に進む）
+
+- 照合（起点 50d7f52da）: 入口2本の空行以外 128 行のうち、案文に一字一句ある 21・ほかの場所に一字一句ある 51・一致なし 56（/tmp/CC報告ファイル/an-stage3c/recon/11-line-map.tsv・12-missing.txt、リポジトリ外）。一致なし 56 の多くは案文に同じ意味の行がある（見出し・言い回しの違い）。
+- 移り先が本当に無いもの（隙間）と判断:
+  - G1 i18n（CLAUDE.md:71・:73、AGENTS.md:57-60）と G2 UI ガバナンス（CLAUDE.md:86・:87）: §5-2 の行き先は frontend/AGENTS.md だが、段4の前は Claude が frontend/AGENTS.md を読み込まない（frontend/CLAUDE.md が @AGENTS.md になるのは段4）。そこで**段4までは案文 AGENTS.entry.md に CLAUDE.md:71・:73・:86・:87 を一字一句写して残し、段4で frontend/AGENTS.md へ移す**。段3b-4 カード §1「frontend/AGENTS.md へ移すのは段4の後」と同じ向き。
+  - G3 仕様書 docx（CLAUDE.md:15）: 目次 docs/INDEX.md の章B に1行足す。
+  - G4 KPI の正本（AGENTS.md:23）: 目次の章A に1行足す（docs/ai-agents/kpi.md は存在する）。
+- 入れ替えると指す先が消える参照（`git grep` 実測、/tmp/CC報告ファイル/an-stage3c/recon/16-refs.txt・21-code-refs.txt）:
+  - scripts/check-process-artifacts.js:356「→ 詳細: CLAUDE.md §ブランチ運用ルール」→ docs/specs/branch-operations/README.md §8（GO 手順はそこにある）。^scripts/ に当たるので GO 記録が要る。
+  - docs/runbooks/adr-019-english-ui-temporary-deploy.md:186 の CLAUDE.md へのリンク → 同 README へ。
+  - docs/onboarding/claude-code.md:145・docs/STANDARD-WORKFLOW.md:160・.claude/hooks/check-freshness.sh:25（見張る文書の一覧に AGENTS.md・docs/INDEX.md が無い）は、入れ替えと同じ PR で直す。
+  - 直さないもの: 「不可逆操作は必ず PO 確認」の見出しは AGENTS.md に残り CLAUDE.md が取り込むので、workflow-lint.yml（変更禁止）・scripts/agent-hooks/cloud/rules.md の参照は有効のまま。ADR・research・audit の行番号参照は経緯の記録なので直さない。scripts/setup_tenant.py:31・:474 の「新規テナント作成後の必須チェックリスト」は今の CLAUDE.md にも無い（入れ替え前から切れている。本テーマの範囲外）。
+- 便の分け方:
+  - 段3c-1（準備）: 案文への i18n・UI ガバナンスの写し、目次への2行、上の参照2件、この節。カード docs/handoff/doc-agenda-nav/card-stage3c-prep.md。
+  - 段3c-2（入れ替え）: AGENTS.md・CLAUDE.md を案文どおりにする。check-claude-size.js の LIMITS（AGENTS.md 80・CLAUDE.md 10・docs/INDEX.md 60）とエラー文、docs/INDEX.md:28・:40、STANDARD-WORKFLOW:160、onboarding:145、check-freshness.sh:25、ADR-1040 の Accepted 化と README の作り直し。入れ替えの前に全 128 行を「案文の行／移り先の行／意味の対応表」で 100% 結ぶ（K11）。
