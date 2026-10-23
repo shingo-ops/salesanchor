@@ -11,7 +11,7 @@ import re
 import subprocess
 import sys
 
-REPO = "/Users/tanizawashingo/salesanchor"
+REPO = os.environ.get("CLAUDE_PROJECT_DIR") or "/Users/tanizawashingo/salesanchor"
 RULES_PATH = "docs/specs/product-master/registration-rules.md"
 TITLE = "共用商品の新規登録ルール（必読）"
 TARGETS = (

@@ -78,7 +78,15 @@
       { "matcher": "Bash", "hooks": [
           { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/scripts/agent-hooks/cloud/dispatch.sh\"", "timeout": 10 }
       ] },
+      { "matcher": "Write|Edit", "hooks": [
+          { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/scripts/agent-hooks/cloud/dispatch.sh\"", "timeout": 10 }
+      ] },
       { "matcher": "mcp__github__.*", "hooks": [
+          { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/scripts/agent-hooks/cloud/dispatch.sh\"", "timeout": 10 }
+      ] }
+    ],
+    "UserPromptSubmit": [
+      { "hooks": [
           { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/scripts/agent-hooks/cloud/dispatch.sh\"", "timeout": 10 }
       ] }
     ],
