@@ -8,10 +8,11 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import re
 import unicodedata
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Collection, Mapping, Sequence
 from dataclasses import dataclass, field
 from dataclasses import replace as dataclass_replace
 from datetime import date
@@ -144,6 +145,8 @@ class ProductFirstMasters:
     posted_date: date | None = None
     # ADR-1031：value_group が single / promo_pack の状態の行（群名 → 行）。通常の cond_entries には入れない。空なら働かない
     scoped_cond_entries: Mapping[str, tuple[dict, ...]] = field(default_factory=dict)
+    # ADR-1041：商品の分類（kubun_type）→ その分類で取れる単位の名前（line_units.canonical）。設定 v102_kubun_allowed_units から読む。空なら働かない
+    kubun_allowed_units: Mapping[str, frozenset[str]] = field(default_factory=dict)
 
 
 _RELEASE_DATE_SQL = """
@@ -156,6 +159,10 @@ _CONDITION_UNIT_SQL = """
     WHERE c.is_active = TRUE AND u.is_active = TRUE
 """
 _SET_UNIT_SQL = "SELECT canonical FROM public.line_units WHERE code = :code AND is_active = TRUE"
+_KUBUN_ALLOWED_UNITS_KEY = "v102_kubun_allowed_units"  # public.tcg_distribution_settings の key（値は JSON：区分名 → 単位名の配列）
+_KUBUN_ALLOWED_UNITS_SQL = "SELECT value FROM public.tcg_distribution_settings WHERE key = :key"
+_ACTIVE_UNIT_NAMES_SQL = "SELECT canonical FROM public.line_units WHERE is_active = TRUE"
+_ACTIVE_KUBUN_TYPES_SQL = "SELECT kubun_type FROM public.tcg_product_categories WHERE is_active = TRUE"
 _IGNORE_PHRASES_SQL = """
     SELECT phrase FROM public.line_unit_ignore_phrases WHERE is_active = TRUE ORDER BY id
 """
@@ -378,10 +385,55 @@ def load_product_first_masters(session: Session) -> ProductFirstMasters:
     set_unit = str(set_rows[0][0]) if set_rows and set_rows[0][0] else None
     release = {str(r[0]): r[1] for r in session.execute(text(_RELEASE_DATE_SQL)).fetchall()}
     masters = ProductFirstMasters(
-        entries, kubun_map, cond_unit, phrases, g2_index, plural_words, work_names, set_unit, product_release=release
+        entries, kubun_map, cond_unit, phrases, g2_index, plural_words, work_names, set_unit, product_release=release,
+        kubun_allowed_units=_load_kubun_allowed_units(session),
     )
     check_product_first_masters(masters)
     return masters
+
+
+def validate_kubun_allowed_units(
+    raw: str | None, valid_kubuns: Collection[str], valid_units: Collection[str]
+) -> dict[str, frozenset[str]]:
+    """設定 v102_kubun_allowed_units の値（JSON 文字列）を検査して表にする（純粋関数）。
+
+    値が {}（取り消しの値）なら warning なしで空の表を返す。次のどれかなら logger.warning を出して空の表を返す（空なら _fix_unit_by_kubun は何もしない）:
+    値が無い／JSON として読めない／「区分名 → 文字列の配列」の形でない／区分名が有効な tcg_product_categories.kubun_type に無い／
+    単位の名前が有効な line_units.canonical に無い。区分名・単位名はコードに書かない（引数で受け取る）。
+    """
+    if raw is None:
+        logger.warning("[kubun_unit_fix] 設定 %s がありません。区分ごとの単位の表は使いません", _KUBUN_ALLOWED_UNITS_KEY)
+        return {}
+    try:
+        data = json.loads(raw)
+    except (TypeError, ValueError):
+        logger.warning("[kubun_unit_fix] 設定 %s が JSON として読めません。区分ごとの単位の表は使いません", _KUBUN_ALLOWED_UNITS_KEY)
+        return {}
+    if data == {}:  # 取り消しの値（区分が 1 つも無い表）。warning なしで空の表にする
+        return {}
+    if not isinstance(data, dict) or not all(
+        isinstance(k, str) and isinstance(v, list) and v and all(isinstance(u, str) for u in v) for k, v in data.items()
+    ):
+        logger.warning("[kubun_unit_fix] 設定 %s の形が「区分名 → 単位名の配列」ではありません。区分ごとの単位の表は使いません", _KUBUN_ALLOWED_UNITS_KEY)
+        return {}
+    unknown_kubuns = sorted(set(data) - set(valid_kubuns))
+    if unknown_kubuns:
+        logger.warning("[kubun_unit_fix] 設定 %s に有効でない区分名があります（%d 件）。区分ごとの単位の表は使いません", _KUBUN_ALLOWED_UNITS_KEY, len(unknown_kubuns))
+        return {}
+    unknown_units = sorted({u for v in data.values() for u in v} - set(valid_units))
+    if unknown_units:
+        logger.warning("[kubun_unit_fix] 設定 %s に有効でない単位名があります（%d 件）。区分ごとの単位の表は使いません", _KUBUN_ALLOWED_UNITS_KEY, len(unknown_units))
+        return {}
+    return {k: frozenset(v) for k, v in data.items()}
+
+
+def _load_kubun_allowed_units(session: Session) -> dict[str, frozenset[str]]:
+    """設定・有効な単位・有効な区分を読み、検査を通った表だけを返す（読み取りのみ）。"""
+    rows = session.execute(text(_KUBUN_ALLOWED_UNITS_SQL), {"key": _KUBUN_ALLOWED_UNITS_KEY}).fetchall()
+    raw = str(rows[0][0]) if rows and rows[0][0] is not None else None
+    units = {str(r[0]) for r in session.execute(text(_ACTIVE_UNIT_NAMES_SQL)).fetchall() if r[0]}
+    kubuns = {str(r[0]) for r in session.execute(text(_ACTIVE_KUBUN_TYPES_SQL)).fetchall() if r[0]}
+    return validate_kubun_allowed_units(raw, kubuns, units)
 
 
 def check_product_first_masters(masters: ProductFirstMasters) -> None:
@@ -715,6 +767,32 @@ def _resolve_unit_from_state(
     return unit, unit_kubun, unit_basis
 
 
+REVIEW_UNIT_UNKNOWN = "unit_unknown"  # gemini_raw_copy_v101._REVIEW_UNIT_UNKNOWN と同じ値（既存の理由）
+UNIT_BASIS_KUBUN_FIX = "kubun_unit_fix"  # unit_basis のキー。値は "a"（状態の単位に置き換え）か "b"（要確認）
+UNIT_BASIS_KUBUN_FROM = "kubun_unit_from"  # (a) で置き換える前の単位の名前
+
+
+def _fix_unit_by_kubun(
+    *, unit: str | None, unit_kubun: str, unit_basis: dict, product_kubun: str, product_id: object, condition: str | None,
+    masters: ProductFirstMasters, unit_alias_to_info: dict,
+) -> tuple[str | None, str, dict, list[dict]]:
+    """(単位, 単位の区分, unit_basis, 足す要確認の理由)。区分ごとの単位の表（ADR-1041）に無い単位を直す。
+
+    表が空・商品の区分が表に無い・単位が無い・単位が表にある → 何もしない。
+    表に無い単位で、状態の単位が表にある → (a) 状態の単位に置き換える。そうでなければ (b) 単位はそのまま、理由 unit_unknown を足す。
+    """
+    allowed = masters.kubun_allowed_units.get(product_kubun)
+    if not allowed or not unit or unit in allowed:
+        return unit, unit_kubun, unit_basis, []
+    state_unit = masters.condition_unit.get(condition or "")
+    if state_unit and state_unit in allowed:
+        new_unit, new_kubun, _resolved = resolve_unit_v2(state_unit, unit_alias_to_info)
+        logger.info("[kubun_unit_fix] fix=a kubun=%s from=%s to=%s product_id=%s", product_kubun, unit, new_unit, product_id)
+        return new_unit, new_kubun, {**unit_basis, UNIT_BASIS_KUBUN_FIX: "a", UNIT_BASIS_KUBUN_FROM: unit}, []
+    logger.info("[kubun_unit_fix] fix=b kubun=%s from=%s to=%s product_id=%s", product_kubun, unit, unit, product_id)
+    return unit, unit_kubun, {**unit_basis, UNIT_BASIS_KUBUN_FIX: "b"}, [{"kind": REVIEW_UNIT_UNKNOWN}]
+
+
 def resolve_product_first(
     *, item: Mapping[str, Any], roles: Mapping[int, str], lines: Sequence[str], block: str, name: str,
     aliases: Sequence[str], unit_alias_to_info: dict, cond_entries: list[dict], cond_canonical_to_uuid: dict,
@@ -751,12 +829,16 @@ def resolve_product_first(
         unit=unit, unit_kubun=unit_kubun, unit_basis=unit_basis, product_kubun=product_kubun, condition=condition,
         basis=basis, masters=masters, unit_alias_to_info=unit_alias_to_info,
     )
+    unit, unit_kubun, unit_basis, unit_reviews = _fix_unit_by_kubun(
+        unit=unit, unit_kubun=unit_kubun, unit_basis=unit_basis, product_kubun=product_kubun, product_id=product_id,
+        condition=condition, masters=masters, unit_alias_to_info=unit_alias_to_info,
+    )
     return {
         "product_id": product_id, "product_category": product_kubun, "match_status": match.status,
         "match_candidates": list(match.candidates),
         "match_boundary_dropped": list(match.boundary_dropped),
         "unit": unit or NONE_VALUE, "unit_kubun": unit_kubun, "unit_basis": unit_basis,
         "condition": condition or NONE_VALUE, "condition_basis": basis,
-        "review_extra": [*_product_reviews(match, score), *reviews],
+        "review_extra": [*_product_reviews(match, score), *reviews, *unit_reviews],
         "score_decision": score,
     }
