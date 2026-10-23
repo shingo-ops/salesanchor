@@ -135,4 +135,12 @@
 
 ## 11. 報告欄（担当が追記）
 
+- 受領: 本報告はカード doc-agenda-nav 段2-2 の実行結果である
+- 5-1 py_compile exit 0 / 5-2 HEAD で exit 0
+- 5-3 基準値: `SUMMARY unreached=0 deep=2 blank_when=0 no_when_column=0 broken_link=8 warnings=10` / `MAX_DEPTH_TERMINAL 4`（DEEP は docs/ai-agents/adr-template.md と docs/specs/ledger-guard/README.md、いずれも 4）
+- 5-4 壊した写し: BLANK_WHEN +1（specs/README.md:15）／BROKEN_LINK +1（INDEX.md に nothing-here.md）／UNREACHED 0→3（reaper-auto-cleanup の行を削除）／--strict で exit 1
+- 5-5 actionlint exit 0
+- 判断: workflow に timeout-minutes: 5 を足した（PR テンプレートの workflows 欄の決まり）
+- 生出力: /tmp/CC報告ファイル/an-stage2b/impl/
+
 END OF CARD
