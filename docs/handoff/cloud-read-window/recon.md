@@ -11,14 +11,14 @@
   - docs/adr/ADR-1024*.md:32「専用コンテナ ai-reader。環境変数は AI_READER_DATABASE_URL だけ。volumes なし、read_only、cap_drop: [ALL]、no-new-privileges、backnet のみ。backend コンテナでは動かさない。」
   - 同:46「境界は二重にする。権限の境界は DB の GRANT、コードの境界は process-artifacts gate の GO 記録。」
   - 同:59 不採用「backend コンテナでの実行: 台本の隣に DATABASE_URL・ADMIN_DATABASE_URL・METADATA_FERNET_KEY などがあり、暗号文と復号鍵が同じ場所に揃う。blue-green の切替でコンテナ名が一時的に消える可用性の問題もある」
-- ADR-1025（Discord 不具合報告の受け口）: 専用の鍵でだけ通す口の前例。backend/app/routers/ops_error_reports.py:1-10, :66-92。鍵 `ERROR_REPORT_AGENT_TOKEN` が未設定なら全員 401、比較は `hmac.compare_digest`。
+- ADR-1025（Discord 不具合報告の受け口）: 専用の鍵でだけ通す口の前例。backend/app/routers/ops_error_reports.py:1-10, :66-92。鍵 `ERROR_REPORT_AGENT_TOKEN` が未設定なら全員 401、比較は `secrets.compare_digest`。
 - ADR-1017（smoke の最小権限）: 未設定時は拒否に倒す（fail-closed）の前例。
 - ADR-1012:45: トークンを本番 secrets に登録する作業が要ると明記。
 
 ## 2. 公開経路（$O/02-*）
 - api.salesanchor.jp は 49.212.137.46。Cloudflare を通っていない（$O/02-dig-cf.txt）。
 - TLS は nginx コンテナで終端（docker-compose.yml:7-9、nginx/nginx.conf:337-338）。
-- api の server ブロックは nginx/nginx.conf:318-515。`location /api/`（:498）から backend:8000。
+- api の server ブロックは nginx/nginx.conf:331-517（443 側ブロック。:317-329 は 80 番のリダイレクト用）。`location /api/`（:498）から backend:8000。
 - 速度制限 `limit_req_zone ... zone=api:10m rate=30r/s`（nginx/nginx.conf:8）、burst=50（:499-500）。
 - IP 許可の前例: `/api/v1/ops/alertmanager` は `allow 49.212.160.98` のみ（nginx/nginx.conf:480-482）。
 - nginx は frontnet（docker-compose.yml:39）。backend は frontnet と backnet の両方（docker-compose.yml:174-176）。
@@ -39,8 +39,8 @@
 - docs/B-11_credential_management_policy.md:62-71 の90日更新表に OPS 系の鍵は無い。
 
 ## 5. 速度制限・監査（$O/05-*）
-- backend/app/core/rate_limit.py は Redis 方式。JWT でない固定トークンは IP 単位 60回/分。Redis が落ちると通す（fail-open）。
-- backend/app/core/audit.py は通常の GET を記録しない。
+- backend/app/middleware/rate_limit.py は Redis 方式。JWT でない固定トークンは IP 単位 60回/分。Redis が落ちると通す（fail-open）。
+- backend/app/middleware/audit.py は通常の GET を記録しない。
 - → HTTPS 窓口の「誰が何を読んだか」の記録は新しく作る必要がある。
 
 ## 6. 手元での使われ方（$O/06-*、AUDIT 行 3450 本）

@@ -16,8 +16,8 @@
 1. クラウドの AI は `https://api.salesanchor.jp/api/v1/ops/read-window/query` に SQL を POST して本番を読む。
 2. 受けるのは新しい専用コンテナ `ai-reader-http`。持つ環境変数は `AI_READER_DATABASE_URL` と `READ_WINDOW_TOKEN` だけ。read_only・cap_drop ALL・no-new-privileges・ports なし。frontnet と backnet に置く。
 3. SQL の検査・上限・秘密列の伏せ字は `backend/app/ops/readonly_query.py` の関数を呼ぶ。規則の正本はこの1か所。
-4. 鍵は `READ_WINDOW_TOKEN`（32バイト乱数・90日更新・B-11 に記載）。正本は GitHub secret。クラウドではネットワークシークレットに登録し、環境変数には置かない。未設定なら全員 401。
-5. 同時2本・nginx で2回/秒。1回ごとに AUDIT 行を /dev/log へ送り、送れなければ結果を返さない。
+4. 鍵は `READ_WINDOW_TOKEN`（ヘッダ `X-Read-Window-Token`・32バイト乱数・90日更新・B-11 に記載）。正本は GitHub secret。クラウドではネットワークシークレットに登録し、環境変数には置かない。未設定なら全員 401。
+5. 窓口の同時実行は1本（手元の SSH の道と合わせて全体で2本。ai_reader の接続上限は2）・nginx で2回/秒。1回ごとに AUDIT 行を /dev/log へ送り、送れなければ結果を返さない。
 6. 書き込みの窓口は作らない。
 
 ## Why（なぜ）
@@ -38,7 +38,7 @@
 
 ## 戻し方
 
-1. 即停止: サーバーの `READ_WINDOW_TOKEN` を空にしてコンテナを作り直す（全員 401）。
+1. 即停止: `docker stop ai-reader-http`。止め続けるには GitHub secret `READ_WINDOW_TOKEN` も消す（空なら全員 401。サーバーの鍵だけ空にしても次の deploy で書き戻される）。
 2. 撤去: compose・台本・nginx の変更を git revert、GitHub secret とクラウドのネットワークシークレットを削除。DB は変えていない。
 
 ## 検証

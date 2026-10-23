@@ -310,6 +310,7 @@ jobs:
               -e '/^OPS_API_TOKEN=/d' \
               -e '/^OPS_INGEST_TOKEN=/d' \
               -e '/^ERROR_REPORT_AGENT_TOKEN=/d' \
+              -e '/^READ_WINDOW_TOKEN=/d' \
               -e '/^COMPOSE_FILE=/d' \
               .env
             # YAML `|` ブロックの共通インデント (12 スペース) はパース時に自動除去される。
@@ -356,6 +357,7 @@ jobs:
             OPS_API_TOKEN='${{ secrets.OPS_API_TOKEN }}'
             OPS_INGEST_TOKEN='${{ secrets.OPS_INGEST_TOKEN }}'
             ERROR_REPORT_AGENT_TOKEN='${{ secrets.ERROR_REPORT_AGENT_TOKEN }}'
+            READ_WINDOW_TOKEN='${{ secrets.READ_WINDOW_TOKEN }}'
             COMPOSE_FILE=docker-compose.yml:docker-compose.exporters.yml
             ENV_EOF
             # 件1（docs/handoff/deploy-secrets-dollar-quote/design.md）: 値に ' か改行があると単一引用符が壊れる。
@@ -492,6 +494,24 @@ jobs:
             sleep 3
             docker inspect --format='{{.State.Status}}' astro-webapp-nginx-1
             echo "nginx force-recreate done."
+
+      # ADR-1042: AI 読み取り窓口（ai-reader-http）を起こす。付け足しの機能なので、
+      # 失敗してもアプリの反映は止めない（警告だけ出す）。image は backend と同じ astro-webapp-backend。
+      - name: Start ai-reader-http (read window)
+        if: ${{ success() }}
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /home/ubuntu/salesanchor
+            if [ ! -r /home/ubuntu/.config/salesanchor/ai-reader.env ]; then
+              echo "::warning::ai-reader.env が読めないため ai-reader-http を起こしません"
+              exit 0
+            fi
+            docker compose -f docker-compose.ai-reader-http.yml up -d --build=false --force-recreate \
+              || echo "::warning::ai-reader-http を起こせませんでした（アプリの反映には影響しません）"
 
       # SA-18 Phase2: salesanchor_app ロールの bootstrap（冪等）
       # migrations より前に実行する。ADMIN_DATABASE_URL を .env に注入。

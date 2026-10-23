@@ -1,0 +1,57 @@
+# ADR-1042 便1: クラウドから本番 DB を「読むだけ」の HTTP 窓口 ai-reader-http。
+# 本体の docker-compose.yml・docker-compose.ai-reader.yml は変えない（別ファイル・別プロジェクト）。
+# 起動（deploy.yml が行う）: docker compose -f docker-compose.ai-reader-http.yml up -d --build=false --force-recreate
+# 止める: docker stop ai-reader-http（止め続けるには GitHub secret READ_WINDOW_TOKEN も消す。空なら全員 401）
+# 接続情報の正本は VPS の /home/ubuntu/.config/salesanchor/ai-reader.env の1か所（値はここに写さない）。
+# 窓口の鍵 READ_WINDOW_TOKEN は deploy が .env に書く。空なら全員 401。
+# AUDIT は /dev/log → auth.log → Loki。結果は残さない（logging none）。ports は公開しない（nginx からだけ）。
+# name は astro-webapp-readwindow：deploy の --remove-orphans に消されないよう本体と別プロジェクトにする。
+name: astro-webapp-readwindow
+
+services:
+  ai-reader-http:
+    # backend と同じイメージ（astro-webapp-backend）。deploy の docker compose build で作られる。
+    image: astro-webapp-backend
+    container_name: ai-reader-http
+    command:
+      - uvicorn
+      - app.ops.read_window_http:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8080"
+      - --workers
+      - "1"
+      - --no-access-log
+    env_file:
+      - /home/ubuntu/.config/salesanchor/ai-reader.env
+    environment:
+      READ_WINDOW_TOKEN: ${READ_WINDOW_TOKEN:-}
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 128m
+    restart: unless-stopped
+    logging:
+      driver: "none"
+    volumes:
+      - type: bind
+        source: /dev/log
+        target: /dev/log
+        bind:
+          create_host_path: false
+    networks:
+      - frontnet
+      - backnet
+
+networks:
+  frontnet:
+    external: true
+    name: astro-webapp_frontnet
+  backnet:
+    external: true
+    name: astro-webapp_backnet
