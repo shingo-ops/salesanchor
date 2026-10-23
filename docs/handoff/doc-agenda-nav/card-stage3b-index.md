@@ -204,4 +204,15 @@ grep -c '^OK' /tmp/CC報告ファイル/an-stage3b/impl4/k11.txt; grep -c '^MISS
 
 ## 11. 報告欄（担当が追記）
 
+- 受領: 本報告はカード doc-agenda-nav 段3b-4 の実行結果である
+- 5-0 起点 71a5687ae: CLAUDE.md 101行・INDEX.md 24行で F1・F2 と一致
+- 5-1 diff 3本とも出力なし、28行目は注記の全文と一致
+- 5-2 K11: OK 11・MISSING 0
+- 5-3 差分なし、CLAUDE.md 88行・INDEX.md 40行
+- 5-4 24a25,40 の16行のみ
+- 5-5 SUMMARY unreached=0 deep=2 blank_when=0 no_when_column=0 broken_link=8 warnings=10（起点と同じ）
+- 5-6 docs/INDEX.md:26 の1件のみ
+- 5-7 変更は CLAUDE.md・docs/INDEX.md・本カードのみ
+- 生出力: /tmp/CC報告ファイル/an-stage3b/impl4/
+
 END OF CARD

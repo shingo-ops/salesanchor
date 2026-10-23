@@ -22,3 +22,19 @@
 | F 運用・本番 | [サーバーで使うコマンド](ops/runner-commands.md) | VPS・本番のコンテナで作業するとき |
 | F 運用・本番 | [自前の実行機の資格情報の落とし穴](ops/self-hosted-runner-credential-trap.md) | GitHub の自前の実行機（self-hosted runner）を触るとき |
 | F 運用・本番 | [手順書のフォルダ](runbooks/) | 監視・デプロイ・障害対応の手順を探すとき |
+
+## このファイルにルールを追加する前に
+
+> この節は入口 CLAUDE.md から写した決まり（doc-agenda-nav 段3b）。節の中の「このファイル」は入口の CLAUDE.md を指す。
+
+以下に順番に答える:
+
+1. CI / ESLint / Husky が既に強制しているか？ → YES: **書かない**（CSS変数・アイコン・デザイントークン規約はこれ）
+2. `frontend/` だけに関係するか？ → YES: **`frontend/CLAUDE.md`** に追加
+3. `backend/` だけに関係するか？ → YES: **`backend/CLAUDE.md`** に追加
+4. frontend と backend 両方に等しく関係するか？ → YES: **このファイル** に追加（i18n 等）
+5. Generator / Evaluator / Reviewer の動作手順か？ → YES: **`~/.claude/agents/`** の該当ファイルに追加
+6. `~/.claude/rules/` に同等の内容が既にあるか？ → YES: **書かない**（Git workflow・coding-style 等）
+7. 全セッションで Claude が知る必要があるか？ → NO: **書かない**（ADRリンクか docs/ 参照で十分）
+8. 上記をすべて通過した場合のみ追加。既存セクションへの統合を最優先（新セクション追加は最後の手段）。
+**ファイル全体が 120 行を超えたら `frontend/scripts/check-claude-size.js` がコミットをブロックする。**
