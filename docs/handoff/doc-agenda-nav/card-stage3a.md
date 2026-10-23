@@ -232,4 +232,12 @@ diff <(git show "$B:CLAUDE.md" | sed 10d) <(sed 10d CLAUDE.md)
 
 ## 11. 報告欄（担当が追記）
 
+- 5-1: 9本の diff すべて出力なし（impl/5-1.txt）
+- 5-2: OK 117・MISSING 0（impl/k11.txt）
+- 5-3: 2本の diff 出力なし・AGENTS.md 121行・CLAUDE.md 120行・codex-operations.md 140行・dev-commands.md 32行（impl/5-3.txt）
+- 5-4: 13a14,15 と2行だけ（impl/5-4.txt）
+- 5-5: 起点 SUMMARY unreached=0 deep=2 blank_when=0 no_when_column=0 broken_link=8 / HEAD（新設ファイルを git add した後）は同じ数字。add 前は新設ファイルが git ls-files に無く broken_link=13 だった（impl/5-5-*.txt）
+- 5-6: 1件（aeon-routing.md:46 の一般文。入口の節を指す文ではない）（impl/5-6.txt）
+- 5-7: impl/5-7.txt
+
 END OF CARD
