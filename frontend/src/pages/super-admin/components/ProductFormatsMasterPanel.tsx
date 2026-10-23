@@ -68,6 +68,9 @@ const emptyForm: FormatFormState = {
 };
 
 const PER_PAGE = 200;
+// 一覧の「使えるゲーム」列で名前を出す件数と区切り
+const GAME_PREVIEW_COUNT = 3;
+const GAME_SEPARATOR = ", ";
 
 export function ProductFormatsMasterPanel() {
   const { t } = useTranslation();
@@ -77,6 +80,7 @@ export function ProductFormatsMasterPanel() {
   const [lines, setLines] = useState<ProductLine[]>([]);
   const [tcgTypes, setTcgTypes] = useState<TcgType[]>([]);
   const [error, setError] = useState("");
+  const [gameFilter, setGameFilter] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<FormatFormState>(emptyForm);
   const [editId, setEditId] = useState<number | null>(null);
@@ -206,14 +210,42 @@ export function ProductFormatsMasterPanel() {
     return found ? found.name_ja : String(id);
   };
 
-  const getGameNames = (ids: number[]) => ids.length === 0 ? "-" : ids.map(id => getGameName(id)).join(", ");
+  // tcgTypes（API は sort_order 順）の並びに揃える。tcgTypes に無い id は末尾
+  const sortGameIds = (ids: number[]) => {
+    const rank = (id: number) => {
+      const i = tcgTypes.findIndex(g => g.id === id);
+      return i === -1 ? tcgTypes.length : i;
+    };
+    return [...ids].sort((a, b) => rank(a) - rank(b));
+  };
+
+  const renderGames = (ids: number[]) => {
+    if (ids.length === 0) return "-";
+    const sorted = sortGameIds(ids);
+    const preview = sorted.slice(0, GAME_PREVIEW_COUNT).map(id => getGameName(id)).join(GAME_SEPARATOR);
+    const rest = sorted.length - GAME_PREVIEW_COUNT;
+    const all = sorted.map(id => getGameName(id)).join(GAME_SEPARATOR);
+    return (
+      <span title={all}>
+        {rest > 0 ? `${preview}${GAME_SEPARATOR}${t(`${f}.gamesMore`, { count: rest })}` : preview}
+      </span>
+    );
+  };
+
+  const filterOptions = [
+    { value: "", label: t(`${f}.filterAllGames`) },
+    ...tcgTypes.filter(g => g.is_active).map(g => ({ value: String(g.id), label: g.name_ja })),
+  ];
+  const visibleItems = gameFilter === ""
+    ? items
+    : items.filter(row => row.game_ids.includes(Number(gameFilter)));
   const gameOptions = tcgTypes
     .filter(g => g.is_active || form.game_ids.includes(String(g.id)))
     .map(g => ({ value: String(g.id), label: g.name_ja }));
 
   const columns: DataTableColumn<ProductFormat>[] = [
     { key: "name", header: t(`${f}.name`) },
-    { key: "game_ids", header: t(`${f}.gameIds`), renderCell: row => getGameNames(row.game_ids) },
+    { key: "game_ids", header: t(`${f}.gameIds`), renderCell: row => renderGames(row.game_ids) },
     { key: "line_id", header: t(`${f}.lineId`), renderCell: row => getLineName(row.line_id) },
     { key: "display_order", header: t(`${f}.displayOrder`) },
     {
@@ -228,6 +260,17 @@ export function ProductFormatsMasterPanel() {
   return (
     <>
       <ContentToolbar
+        left={
+          <SelectControl
+            size="sm"
+            className="field-h-md"
+            data-testid="product-formats-game-filter"
+            aria-label={t(`${f}.filterByGame`)}
+            value={gameFilter}
+            onChange={e => setGameFilter(e.target.value)}
+            options={filterOptions}
+          />
+        }
         right={
           <HeaderButton
             variant="primary"
@@ -241,7 +284,7 @@ export function ProductFormatsMasterPanel() {
       {error && !showForm && <p role="alert">{error}</p>}
       <DataTable
         columns={columns}
-        data={items}
+        data={visibleItems}
         rowKey={row => String(row.id)}
         onRowClick={row => openEdit(row)}
         emptyState={<EmptyState title={t(`${f}.noData`)} size="compact" />}

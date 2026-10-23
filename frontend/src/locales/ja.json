@@ -5204,6 +5204,9 @@
     "displayOrder": "表示順",
     "isActive": "有効",
     "gameIds": "使えるゲーム",
+    "gamesMore": "他 {{count}} 件",
+    "filterAllGames": "すべての作品",
+    "filterByGame": "作品で絞り込む",
     "gamesInUse": "この細分類を使っている商品があるため、そのゲームは外せません。先に商品の細分類か作品を直してください。",
     "gamesUnknown": "選んだゲームが見つからないか、使われていません。読み込み直してから選んでください。",
     "saveFailed": "保存できませんでした"
