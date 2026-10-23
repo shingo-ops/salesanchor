@@ -585,6 +585,7 @@ cd /Users/tanizawashingo/worktrees/salesanchor/release-discord-pdca-bin15/fronte
 - §5-1 ruff 0 件。§5-2 試験 27 本（既存12＋T1〜T15）。§5-3 test_realtime_topics は 10 passed、test_ops_router は 27 skipped（手元に RLS_* なし）。§5-4 消えた行は §4-1・§4-2 の変更前の行だけ（23行）で、ingest_alertmanager と _UPSERT_INCIDENT_SQL の行は消えていない。§5-5 openapi.json は追加のみ（597行追加・0行削除）。frontend の npm run generate:api-types は openapi-typescript が未導入で失敗（rc=127。追跡外の生成物のみ）。§5-6 CI は取得時点で実行中。
 - 生出力: /tmp/CC報告ファイル/discord-pdca-bin15/impl/
 - §4-6 の jsonb の型: 手元に実 PostgreSQL が無く未確認。試験は文字列でも dict でも比べられるよう json.loads の助けを通して書いた。
+- openapi を CI と同じ版（Python 3.12・pydantic 2.10.6・fastapi 0.136.3・starlette 1.3.1）の仮想環境で作り直した。差分は追加 270 行・削除 0 行で、新しい口2つ・型3つ・OpsIncidentAnnotation の round だけ。
 - 判断を要した点: PR 本文の「削除するファイル」はゲートの規則で backend/app/routers/ops.py を記載しないと不合格のため、カードの「なし」ではなく同ファイルを書いた（ファイルの削除はない）。
 
 END OF CARD
