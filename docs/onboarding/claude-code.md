@@ -114,7 +114,7 @@ AEON ルートを使う場合は、まず [AEON Operation Guide](../ai-agents/ae
 
 ## 4. 開発フロー（要点）
 
-詳細は `<repo>/CLAUDE.md` の「ブランチ運用ルール」を読むこと。要点:
+詳細は `<repo>/docs/specs/branch-operations/README.md` の「8. 日々の運用ルール」を読むこと。要点:
 
 1. 最新 `origin/main` から `release/<topic>` を切る（`bash scripts/new-worktree.sh release/<topic>`。`<topic>` は作業内容を英語で簡潔に）
    - ADR pipeline 経由の自動実装は別途 `feature/shingo/adr-NNN-impl` が自動生成される

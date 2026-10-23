@@ -138,7 +138,7 @@ gh pr create --base develop --head feature/morimoto/redo-business-address --titl
 | ③ | マージ後 24 時間以内に事後 Approve（Shingo `shingo-ops` が当該 PR を GitHub 上で Approve）を取得 |
 | ④ | 下記「4-B. 緊急マージ（0-Approve）ログ」に1行追記 |
 
-**このルールは CLAUDE.md ブランチ運用ルール§緊急 break-glass に同期記載。**
+**このルールは docs/specs/branch-operations/README.md §8（日々の運用ルール）の緊急 break-glass に同期記載。**
 
 ### 4-B. 緊急マージ（0-Approve）ログ
 
