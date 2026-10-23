@@ -69,7 +69,7 @@ bash scripts/backup_tenant_before_drop.sh <tenant_id>
 
 ## 6. PO GO の書式
 
-物理削除を承認する際、PO は以下の形式で GitHub PR コメントまたは Slack に記録する。
+物理削除を承認する際、PO は以下の形式で GitHub PR（PR 本文の GO 記録とコメント。ADR-136）に記録する。
 
 ```
 GO: tenant_id=<ID> の物理削除を承認します。

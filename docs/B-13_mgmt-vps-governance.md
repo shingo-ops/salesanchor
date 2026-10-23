@@ -3,7 +3,7 @@
 ## 目的
 
 管理室VPS（監視スタック + CIランナー）の健全性を継続的に維持するためのチェックリスト。
-ADR-080 による分離後、運用が属人化しないよう定期チェックを制度化する。
+ADR-080 による分離後、運用が属人化しないよう定期チェックを制度化する（ADR-080 のステータスは Proposed のまま。docs/adr/README.md:90）。
 
 ## 最終更新: 2026-05-28
 
@@ -223,20 +223,20 @@ ADR-080 による分離後、運用が属人化しないよう定期チェック
 
 - [ ] Discord 通知の Contact Point がアクティブである
   - Grafana → Alerting → Contact points → discord-ops → Test → Discord にテスト通知が届く
+  - （まだ確かめていない: Grafana 画面の中の設定。リポジトリの monitoring 配下には discord-ops は無く、alertmanager の送り先は discord-server-alerts / discord-recovery-info / ops-api）
 
 - [ ] Uptime Kuma の通知設定がアクティブである
   - Uptime Kuma → Settings → Notifications → テスト通知を送信
 
 ### 期待されるアラートルール一覧
 
+期待するアラート名の正本: monitoring/prometheus/alert_rules.yml（例 ServiceDown・BackendHighErrorRate）。PostgresDown / HighErrorRate / High502Rate は今の規則に無い。
+
 | ルール名 | ソース | 種別 |
 |---------|--------|------|
 | HighCpuUsage | Prometheus | リソース |
 | HighMemoryUsage | Prometheus | リソース |
 | HighDiskUsage | Prometheus | リソース |
-| PostgresDown | Prometheus | サービス |
-| HighErrorRate | Prometheus | アプリ |
-| High502Rate | Prometheus | アプリ |
 | ServiceDown | Prometheus | サービス |
 | BruteForceAttempt | Loki | セキュリティ |
 | BackendErrorSpike | Loki | アプリ |

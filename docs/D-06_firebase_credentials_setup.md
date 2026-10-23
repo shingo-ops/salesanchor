@@ -149,10 +149,10 @@ echo $TOKEN
 
 ```bash
 # トークンを使ってAPIアクセス
-curl -H "Authorization: Bearer $TOKEN" https://jarvis-claude.uk/api/v1/customers
+curl -H "Authorization: Bearer $TOKEN" https://api.salesanchor.jp/api/v1/dashboard
 
 # 期待される結果（テナント作成前）: 403 テナントが無効です
-# 期待される結果（テナント作成後）: 200 [] (空配列)
+# 期待される結果（テナント作成後）: 200 が返る
 ```
 
 ## D-14: テナント作成・データ操作テスト
@@ -163,22 +163,23 @@ D-13完了後、管理者テナント・ユーザーを作成して以下を確�
 # 1. 管理者でテナント作成
 curl -X POST -H "Authorization: Bearer $ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
-  https://jarvis-claude.uk/api/v1/admin/tenants \
+  https://api.salesanchor.jp/api/v1/admin/tenants \
   -d '{"tenant_name":"テスト株式会社","tenant_code":"test-corp"}'
 
 # 2. 顧客作成
 curl -X POST -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  https://jarvis-claude.uk/api/v1/customers \
+  https://api.salesanchor.jp/api/v1/customers \
   -d '{"name":"山田太郎","email":"yamada@example.com","company":"山田商事"}'
+# （この道は廃止済み。ADR-089 で customers は companies に統合）
 
 # 3. 顧客一覧取得
 curl -H "Authorization: Bearer $TOKEN" \
-  https://jarvis-claude.uk/api/v1/customers
+  https://api.salesanchor.jp/api/v1/dashboard
 
 # 4. ダッシュボード確認
 curl -H "Authorization: Bearer $TOKEN" \
-  https://jarvis-claude.uk/api/v1/dashboard
+  https://api.salesanchor.jp/api/v1/dashboard
 ```
 
 ## トラブルシューティング
@@ -207,7 +208,7 @@ docker compose logs backend --tail=30
 
 | 項目 | 対策 |
 |------|------|
-| firebase-credentials.json の漏洩 | .gitignoreで除外、chmod 600、GitHub Secretsで管理 |
+| firebase-credentials.json の漏洩 | .gitignoreで除外、chmod 600。GitHub Secrets には無い（deploy.yml に該当 0 件）。compose は compose と同じフォルダの firebase-credentials.json を読み取り専用で読む（docker-compose.yml:143,267）。git には入っていない。（まだ確かめていない: サーバーへの置き方） |
 | 鍵の有効期限 | デフォルトで永続。漏洩疑い時は即座にローテーション |
 | ローテーション頻度 | 6ヶ月ごと（B-11_credential_management_policy.md準拠） |
 | 鍵の漏洩時対応 | 1) GCPで該当鍵を即座に削除 2) 新しい鍵を発行 3) インシデント対応Playbook起動 |

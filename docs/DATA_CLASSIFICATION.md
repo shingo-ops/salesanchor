@@ -13,7 +13,7 @@
 ### テナントデータ（社外秘）
 | データ | テーブル | 保護手段 |
 |--------|---------|---------|
-| 顧客名・連絡先 | customers | スキーマ分離 + RLS |
+| 顧客名・連絡先 | companies（ADR-089） | スキーマ分離 + RLS |
 | 商談情報・金額 | deals | スキーマ分離 + RLS |
 | 注文情報 | orders | スキーマ分離 + RLS |
 | 操作履歴 | audit_logs | スキーマ分離 + RLS |
@@ -21,7 +21,7 @@
 ### 認証データ（機密）
 | データ | テーブル/場所 | 保護手段 |
 |--------|-------------|---------|
-| パスワードハッシュ | users.password_hash | bcrypt（12ラウンド） |
+| パスワード | 今の既定（Firebase）では DB に持たない。自社ログイン（AUTH_PROVIDER=self）のときだけ users.password_argon2_hash | Argon2id。bcrypt（12ラウンド）は bot の API キー（backend/app/routers/bots.py:58）だけ |
 | Firebase IDトークン | メモリ/Redis | TTL付きキャッシュ、ブラックリスト |
 | Firebase認証情報 | firebase-credentials.json | ファイル権限600、.gitignore |
 
@@ -46,7 +46,7 @@
 ## 4. データ処理の原則
 
 1. **最小権限**: データへのアクセスは業務上必要な範囲に限定
-2. **暗号化**: 通信はTLS 1.2+、パスワードはbcryptハッシュ
+2. **暗号化**: 通信はTLS 1.2+、パスワードは今の既定（Firebase）では DB に持たず、自社ログイン（AUTH_PROVIDER=self）のときだけ Argon2id で保存（bcrypt は bot の API キーだけ）
 3. **監査可能性**: 全データ変更に監査ログを記録
 4. **テナント分離**: テナント間のデータは物理的にスキーマ分離
 5. **安全な削除**: バックアップも含め保持期間後に確実に削除

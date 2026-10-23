@@ -1,5 +1,7 @@
 # Self-hosted Runner Credential Trap（過去事故と対策）
 
+> 過去時点の記録: ここに出てくる claude-pipeline.yml は今の .github/workflows に無い。
+
 ## TL;DR
 
 **self-hosted runner で `actions/checkout@v4` を使うとき、必ず `with: token: ${{ secrets.PIPELINE_PAT }}` を指定すること**。デフォルトの GITHUB_TOKEN だけだと、runner ホストの `~/.gitconfig` の credential helper にフォールバックして失敗するパターンを観測している。
