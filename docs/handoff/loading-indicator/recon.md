@@ -86,3 +86,10 @@ ADR-027（i18n）・ADR-067（デザイントークン）・ADR-144（UIガバ�
 - C6 lint: 対象のうち 3 ファイルにもともと eslint 警告 4 件（exhaustive-deps 1・日本語の直書き 3）があり、触ると commit 前の lint-staged（--max-warnings=0）で止まる（/tmp/CC報告ファイル/loading-stage2-bin3/）。
 - C7 第2組（groups.txt「第2組」・targets.tsv）: 18 ディレクトリ 28 ファイル 28 件。文言は全件 common.loading で label は要らない。要素は `<div className="loading">` 21・`<p>` 7。roles/RolesPage.tsx:303 だけ外側に `<div className="page">` があり残す（css.txt）。対象 18 ディレクトリに試験ファイルは 0 本で、対象ページを読み込む試験は src/components/*ButtonMigration.test.tsx の 10 本（/tmp/CC報告ファイル/loading-stage2-bin3-g2/related-tests.txt）。
 - C8 第3組（groups.txt「第3組」・targets.tsv・context.txt）: 17 ディレクトリ 23 ファイル 24 件。文言は全件 common.loading。外側の枠（`page`・`page-container`）の中にあるものが 6 件（CompanyDetailPage:64・InvoiceDetailPage:191・QuoteDetailPage:119・Register 系 3 件）、枠の div 自身が文字を持つものが 1 件（ScheduleSettingsPage:109）。CommissionsPage:167 は style（marginTop）付き。置換後に対象 23 ファイルで残る 1 件は QuoteDetailPage:147 のボタン内三項（excluded.tsv）。対象ページを読み込む試験は 14 本（/tmp/CC報告ファイル/loading-stage2-bin3-g3/importing-tests.txt）。
+
+## 段階2 便4 の調査（origin/main 13576c09c、生出力 /tmp/CC報告ファイル/loading-stage2-bin4/）
+- C9 features/・components/（カード card-7.md）: countLoadingText が当たるのは 36 行。うち金型自身（components/loading/LoadingBlock.tsx）1 行を除く本体が 34 行、loadingText 属性 3 行を除くと 31 件（features 17・components 14）。内訳は targets 24 件（targets.tsv）・excluded 10 件（excluded.tsv: loadingText 属性 3・ボタン内の三項 5・downloading 1・placeholder 関数 1）。対象は features 12 ファイル・components 11 ファイルの計 23 ファイル（カード本文の「19 ファイル」は 23 の誤記）。
+- 文言: common.loading でないのは pmgAttempt.loading・tcgAnalysisReview.productMasterDrawer.formLoading・tcgLineImport.loading の 3 件（keys.txt）。
+- 形: 枠自身が文字を持つのは ProtectedRoute:15・InventorySearchBar:380 と、選択肢の一覧の中の ChannelTypeCombobox:165・CountryCombobox:164（context.txt）。
+- 試験: NeedsReviewTabsPanel.view.test.tsx:119-125 は Spinner を期待済み（tests.txt）。
+- 実装後の件数（countLoadingText、/tmp/CC報告ファイル/loading-stage2-bin4/impl/count-*.txt）: 対象 23 ファイル 25→1、features+components 本体 31→7。

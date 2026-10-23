@@ -18,6 +18,7 @@ import { ShadowSourcePane } from "../tcg-analysis-review/ShadowSourcePane";
 import type { InventoryRow } from "./inventoryColumns";
 import { fmtOfferedAt, supplierLabel } from "./inventoryFormat";
 import "./inventory-row-drawer.css";
+import { LoadingBlock } from "../../components/loading";
 
 interface Props {
   row: InventoryRow;
@@ -120,7 +121,7 @@ function AnalysisPane({ row, onClose, onChanged, modeTabs }: PaneProps) {
   return (
     <Drawer open size="wide" title={t("inventory.rowDrawer.title")} onClose={onClose}>
       {modeTabs}
-      {state === "loading" && <p role="status">{t("common.loading")}</p>}
+      {state === "loading" && <LoadingBlock />}
       {state === "forbidden" && <Callout variant="warning" title={t("superAdmin.supplierQuality.superAdminOnly")} />}
       {state === "error" && <Callout variant="warning" title={t("inventory.rowDrawer.loadError")} />}
       {state === "ready" && <Callout variant="info" title={t("inventory.rowDrawer.notFound")} />}
@@ -178,7 +179,7 @@ function RawTextPane({ row, onClose, modeTabs }: PaneProps) {
       <Stack gap="4" className="inventory-rawtext-pane">
         {modeTabs}
         {itemTabs}
-        {state === "loading" && <p role="status">{t("common.loading")}</p>}
+        {state === "loading" && <LoadingBlock />}
         {state === "notFound" && <Callout variant="info" title={t("inventory.rowDrawer.notFound")} />}
         {state === "error" && <Callout variant="warning" title={t("inventory.rowDrawer.loadError")} />}
         {state === "ready" && current && (
