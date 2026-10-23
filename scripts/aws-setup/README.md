@@ -181,9 +181,9 @@ crontab -e
 実行スケジュール:
 - **3:00 AM**: ローカルバックアップ作成
 - **3:30 AM**: S3に転送（30分の余裕でローカル完了を確実に待つ）
-- 毎月1日は monthly-archives/ へ Glacier で永久保存（backup_to_s3.sh:140-158、s3-lifecycle.json:14-18）
-- 成功時刻を backup_s3.prom に書き、BackupS3Stale が見張る（backup_to_s3.sh:161-177）
-- 失敗時は DISCORD_WEBHOOK_OPS へ通知（backup_to_s3.sh:56-73）
+- 毎月1日は monthly-archives/ へ Glacier で永久保存（backup_to_s3.sh:138-157、s3-lifecycle.json:14-18）
+- 成功時刻を backup_s3.prom に書き、BackupS3Stale が見張る（backup_to_s3.sh:159-176）
+- 失敗時は DISCORD_WEBHOOK_OPS へ通知（backup_to_s3.sh:56-72）
 
 #### Step 2-7: 動作確認
 

@@ -140,7 +140,8 @@
 - F3: deploy.yml の secrets は 45 種（3-17 の 47 は `secrets.X` のコメントと `.env.secrets.new` を数えた誤り）。
 - F4: INCIDENT_RESPONSE:125 は人ごとの連絡先を書く表の列名で、仕組みの主張ではない。書き換えると推測になるため 3-18 の対象から外す。
 - N1: D-06 の「3. 顧客一覧取得」は中身を /api/v1/dashboard にしたため、見出しを「3. ダッシュボード取得」にする。
-- N3: aws-setup README の backup_to_s3.sh の行範囲を :140-158 / :161-177 に直す。
+- N3: aws-setup README の backup_to_s3.sh の行範囲を :138-157（月次 Glacier）/ :159-176（成功時刻の書き込み）/ :56-72（失敗通知）に直す（backup_to_s3.sh を開いて実測）。
+- N5: 1回目の審査の行範囲も1行ずれていたため実測で直した。
 
 ### 3-18 合格の確かめ方の追加
 担当の照合表は人の判断で書いたため、機械の確認を足す: 修正後の15本に、次の古い語が「まだ確かめていない」の注記や過去記録の注記の外で残っていないことを grep で確かめる — `systemctl`・`journalctl`（discord-gateway）、`DISCORD_BOT_TOKEN_<`、`myapp_user`・`myapp_db`（B-04）、`/api/v1/customers`（D-06）、`jarvis-claude.uk`（D-06・TEST_ADMIN・B-04 の対象行）、`PostgresDown`・`High502Rate`（B-13）、`Slack`（INCIDENT_RESPONSE・tenant-deletion）、`bcrypt`（DATA_CLASSIFICATION・SECURITY の bot キー以外）。最終確認は model "opus" の審査役が独立に行う。
