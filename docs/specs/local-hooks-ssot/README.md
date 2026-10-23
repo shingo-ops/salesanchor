@@ -6,6 +6,7 @@
 ## 構成
 - [ideal-state.md](ideal-state.md) — あるべき姿(PO自筆の正本。書き換え禁止)
 - [kgi.md](kgi.md) — KGI(○×判定・全10項目)
+- [guard-disabled-record.md](guard-disabled-record.md) — gh-scope-guard 無効化の記録（2026-08-31）
 
 ## 対象(5本・2026-07-20実測)
 ~/.claude/settings.json の PreToolUse に登録された以下のスクリプト。

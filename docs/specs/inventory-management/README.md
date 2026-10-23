@@ -24,6 +24,7 @@
 ## 既存資料との関係
 
 - `spec.md`（2026-05-21〜05-26作成・Discord受信〜在庫反映の実装仕様）は本テーマ群とは別件の古い形式の文書。各テーマとの重複・衝突判定は各テーマのrecon便で行う（[restructure-plan.md §5](./dropship-procurement/restructure-plan.md) に既知の衝突メモあり）。
+- [spec-v1.0.md](./spec-v1.0.md)（509行）は spec.md の v1.0 起案版。spec.md §Version で v1.1〜v1.3 に置き換え済み。
 
 ## 未決事項
 

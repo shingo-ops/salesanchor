@@ -39,8 +39,8 @@ pg_attribute で実行時に列型を確認する:
 - `migrations/20260914_140000_unify_tcg_products_to_public.sql` — Step2/Step3/Step4 に pg_attribute ガード追加
 - `docs/handoff/fix-unify-type-mismatch/recon.md` — 新規作成
 - `docs/handoff/fix-unify-type-mismatch/design.md` — 新規作成
-- `docs/specs/master-ssot-migration/recon-fix-unify-type-mismatch.md` — 調査メモ（新規）
-- `docs/specs/master-ssot-migration/design-fix-unify-type-mismatch.md` — 設計メモ（新規）
+- `docs/specs/master-ssot-migration/recon-fix-unify-type-mismatch.md` — 調査メモ（新規）（2026-10 に同フォルダへ移動）
+- `docs/specs/master-ssot-migration/design-fix-unify-type-mismatch.md` — 設計メモ（新規）（2026-10 に同フォルダへ移動）
 
 ## 削除するファイル
 
