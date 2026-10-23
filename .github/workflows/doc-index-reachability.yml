@@ -1,0 +1,27 @@
+name: Doc Index Reachability (warning)
+
+# paths を使わず常時実行する（check-claude-size.yml と同じ理由）。
+# 警告だけで失敗にはしない。失敗への昇格は段5（連続5回の PR で警告0件になってから）。
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    name: doc index reachability (warning only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Check doc index reachability
+        shell: bash
+        run: |
+          set -o pipefail
+          python3 -I docs/handoff/doc-agenda-nav/check_doc_index.py --root . | tee /tmp/doc-index.txt
+          echo "doc-index: $(grep '^SUMMARY' /tmp/doc-index.txt)" >> "$GITHUB_STEP_SUMMARY"
