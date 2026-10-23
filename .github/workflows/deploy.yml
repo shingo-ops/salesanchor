@@ -298,6 +298,9 @@ jobs:
               -e '/^REVIEW_MAIL_IMAP_PASSWORD=/d' \
               -e '/^REVIEW_MAIL_WEBMAIL_URL=/d' \
               -e '/^REVIEW_MAIL_DISCORD_WEBHOOK=/d' \
+              -e '/^OPS_MAIL_IMAP_USER=/d' \
+              -e '/^OPS_MAIL_IMAP_PASSWORD=/d' \
+              -e '/^OPS_MAIL_DISCORD_WEBHOOK=/d' \
               -e '/^VITE_FUNNEL_DASHBOARD=/d' \
               -e '/^SMTP_HOST=/d' \
               -e '/^SMTP_PORT=/d' \
@@ -344,6 +347,9 @@ jobs:
             REVIEW_MAIL_IMAP_PASSWORD='${{ secrets.REVIEW_MAIL_IMAP_PASSWORD }}'
             REVIEW_MAIL_WEBMAIL_URL='${{ secrets.REVIEW_MAIL_WEBMAIL_URL }}'
             REVIEW_MAIL_DISCORD_WEBHOOK='${{ secrets.REVIEW_MAIL_DISCORD_WEBHOOK }}'
+            OPS_MAIL_IMAP_USER='${{ secrets.OPS_MAIL_IMAP_USER }}'
+            OPS_MAIL_IMAP_PASSWORD='${{ secrets.OPS_MAIL_IMAP_PASSWORD }}'
+            OPS_MAIL_DISCORD_WEBHOOK='${{ secrets.OPS_MAIL_DISCORD_WEBHOOK }}'
             VITE_FUNNEL_DASHBOARD='${{ secrets.VITE_FUNNEL_DASHBOARD }}'
             SMTP_HOST='${{ secrets.SMTP_HOST }}'
             SMTP_PORT='${{ secrets.SMTP_PORT }}'
