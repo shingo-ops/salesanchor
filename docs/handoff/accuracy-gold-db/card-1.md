@@ -80,3 +80,7 @@ CI（HEAD 2bd54e601）で次の 3 つが落ちた。生ログ: /tmp/CC報告フ�
 審査役（2026-10-23、REQUEST_CHANGES。止める指摘は上の migration-guard の 1 件だけ）の N3 も直す:
 - `scripts/accuracy/gold_to_sql.py` の 01_precheck の突き合わせ 2 か所で、索引が効くように比べる側の型を変える。`s.id::text = v.id` → `s.id = v.id::uuid`、`p.id::text = v.id` → `p.id = v.id::bigint`（投稿id は uuid、商品 id は数字だけに点検済み）。直す前に `public.products.id` の型を migrations で確かめ、integer なら `::integer` にする。試験で 01 の文の形を見ている所があれば合わせる。
 - N4（design.md §7 の古い書き方）は Opus が直した。
+
+## §6 追補（2026-10-23 本番投入時の不具合）
+- 事実: 出力 SQL の検査 `CASE WHEN … ELSE 1 / 0 END` は PostgreSQL が定数 `1 / 0` を計画時に評価するため、条件が真でも division by zero で止まった（01_precheck の最初の検査。書き込みなし）。
+- 修正: 検査を `1 / (CASE WHEN … THEN 1 ELSE 0 END)` に変更（前例 docs/handoff/condition-unit-booklet/data/bin2/02_apply.sql:31 と同じく畳み込まれない形）。試験で古い形が無いことを確かめる。

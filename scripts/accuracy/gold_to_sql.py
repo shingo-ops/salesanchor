@@ -112,21 +112,21 @@ def build_precheck(version, rows):
            "BEGIN;\n",
            "SET LOCAL app.is_operator = 'true';\n\n",
            "-- 表 2 つがあること\n",
-           "SELECT CASE WHEN to_regclass('public.accuracy_gold_versions') IS NOT NULL "
-           "AND to_regclass('public.accuracy_gold_rows') IS NOT NULL THEN 1 ELSE 1 / 0 END;\n\n",
+           "SELECT 1 / (CASE WHEN to_regclass('public.accuracy_gold_versions') IS NOT NULL "
+           "AND to_regclass('public.accuracy_gold_rows') IS NOT NULL THEN 1 ELSE 0 END);\n\n",
            "-- その版がまだ無いこと\n",
-           "SELECT CASE WHEN count(*) = 0 THEN 1 ELSE 1 / 0 END FROM public.accuracy_gold_versions "
+           "SELECT 1 / (CASE WHEN count(*) = 0 THEN 1 ELSE 0 END) FROM public.accuracy_gold_versions "
            "WHERE gold_version = %s;\n\n" % lit(version),
            "-- 投稿idが source_messages に全部あること\n",
            "WITH m AS (SELECT count(*) AS n FROM (VALUES %s) AS v(id) "
            "WHERE NOT EXISTS (SELECT 1 FROM public.source_messages s WHERE s.id = v.id::uuid))\n"
-           "SELECT 'MISSING_POSTS ' || n, CASE WHEN n = 0 THEN 1 ELSE 1 / 0 END FROM m;\n\n"
+           "SELECT 'MISSING_POSTS ' || n, 1 / (CASE WHEN n = 0 THEN 1 ELSE 0 END) FROM m;\n\n"
            % ", ".join("(%s)" % lit(p) for p in post_ids)]
     out.append("-- a1_product_id の数字が products に全部あること\n")
     if prod_ids:
         out.append("WITH m AS (SELECT count(*) AS n FROM (VALUES %s) AS v(id) "
                    "WHERE NOT EXISTS (SELECT 1 FROM public.products p WHERE p.id = v.id::integer))\n"
-                   "SELECT 'MISSING_PRODUCTS ' || n, CASE WHEN n = 0 THEN 1 ELSE 1 / 0 END FROM m;\n\n"
+                   "SELECT 'MISSING_PRODUCTS ' || n, 1 / (CASE WHEN n = 0 THEN 1 ELSE 0 END) FROM m;\n\n"
                    % ", ".join("(%s)" % lit(p) for p in prod_ids))
     else:
         out.append("SELECT 'MISSING_PRODUCTS 0';\n\n")
@@ -157,7 +157,7 @@ def build_apply(version, note, sha, rows, posts):
         for k, r in enumerate(rows[start:start + CHUNK], start=start + 1):
             vals.append("(" + ", ".join([lit(version), str(k), lit(r[0]) + "::uuid"] + [lit(v) for v in r[1:]]) + ")")
         out.append("INSERT INTO public.accuracy_gold_rows (%s) VALUES\n%s;\n\n" % (cols, ",\n".join(vals)))
-    out.append("SELECT CASE WHEN count(*) = %d THEN 1 ELSE 1 / 0 END FROM public.accuracy_gold_rows "
+    out.append("SELECT 1 / (CASE WHEN count(*) = %d THEN 1 ELSE 0 END) FROM public.accuracy_gold_rows "
                "WHERE gold_version = %s;\n\n" % (n, lit(version)))
     out.append(":end;\nSELECT 'APPLY_END';\n")
     return "".join(out)
@@ -172,12 +172,12 @@ def build_verify(version, rows, posts):
             "SELECT 'VERSION ' || gold_version || ' rows=' || row_count || ' posts=' || post_count "
             "FROM public.accuracy_gold_versions WHERE gold_version = %(v)s;\n"
             "-- 行数・投稿数が版の記録と同じこと\n"
-            "SELECT CASE WHEN count(*) = %(n)d AND count(DISTINCT post_id) = %(p)d THEN 1 ELSE 1 / 0 END\n"
+            "SELECT 1 / (CASE WHEN count(*) = %(n)d AND count(DISTINCT post_id) = %(p)d THEN 1 ELSE 0 END)\n"
             "  FROM public.accuracy_gold_rows WHERE gold_version = %(v)s;\n"
-            "SELECT CASE WHEN row_count = %(n)d AND post_count = %(p)d THEN 1 ELSE 1 / 0 END\n"
+            "SELECT 1 / (CASE WHEN row_count = %(n)d AND post_count = %(p)d THEN 1 ELSE 0 END)\n"
             "  FROM public.accuracy_gold_versions WHERE gold_version = %(v)s;\n"
             "-- row_no が 1〜N の連番であること\n"
-            "SELECT CASE WHEN min(row_no) = 1 AND max(row_no) = %(n)d AND count(*) = %(n)d THEN 1 ELSE 1 / 0 END\n"
+            "SELECT 1 / (CASE WHEN min(row_no) = 1 AND max(row_no) = %(n)d AND count(*) = %(n)d THEN 1 ELSE 0 END)\n"
             "  FROM public.accuracy_gold_rows WHERE gold_version = %(v)s;\n"
             "ROLLBACK;\n"
             "SELECT 'VERIFY_END';\n" % {"v": v, "n": len(rows), "p": posts})
