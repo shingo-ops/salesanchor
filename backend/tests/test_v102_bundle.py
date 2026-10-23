@@ -1,11 +1,13 @@
 """まとめ売り（N単位セット）の読み取りの検査（ADR-1027）。例文は検査用に自作した短いもの。"""
 from __future__ import annotations
 
+import importlib.util
 from pathlib import Path
 
 from app.services import v102_bundle_svc as svc
 from app.services import line_analysis_v102_svc as line_svc
 from app.services import tcg_distribution_svc as dist
+from app.services.gemini_raw_copy_v102_product_first import PRODUCT_KUBUN_BULK
 
 ALIASES = {"パック": "Pack", "pack": "Pack", "枚": "Piece", "個": "Item", "カートン": "Case", "セット": "Set", "set": "Set"}
 WORDS, SET_WORDS = svc.split_unit_words(ALIASES)
@@ -143,3 +145,61 @@ def test_line_units_migration_adds_both_display_name_columns():
     assert "ALTER TABLE public.line_units" in sql
     assert "ADD COLUMN IF NOT EXISTS name_ja text" in sql
     assert "ADD COLUMN IF NOT EXISTS name_en text" in sql
+
+
+# --- バルク系だけの追加の形 P1・P2（設計 bundle-sale §12。例文は自作） -----------------------------------
+
+def _b(block, price=10000, quantity=12, bulk_shapes=True):
+    return svc.detect_bundle(block, WORDS, SET_WORDS, price, quantity, bulk_shapes=bulk_shapes)
+
+
+def test_bulk_p1_parenthesized_bundle_is_decided_only_with_bulk_shapes():
+    block = "✅RR バルク(100枚)\n@10000 在庫数 12セット"
+    r = _b(block)
+    assert (r.kind, r.n, r.unit) == (svc.KIND_DECIDED, 100, "Piece")
+    assert _b(block, bulk_shapes=False) is None
+    assert _d(block, price=10000, quantity=12) is None  # 既定（引数なし）は今まで通り
+
+
+def test_bulk_p1_space_just_inside_parens_is_not_read():
+    assert _b("✅RR バルク( 100枚 )\n@10000 在庫数 12セット") is None
+
+
+def test_bulk_p2_needs_set_right_after_quantity():
+    block = "まとめ 100枚\n@24000 在庫数18セット"
+    r = _b(block, price=24000, quantity=18)
+    assert (r.kind, r.n, r.unit) == (svc.KIND_DECIDED, 100, "Piece")
+    assert _b("まとめ 100枚\n@24000 在庫 20", price=24000, quantity=20) is None
+    assert _b(block, price=24000, quantity=None) is None
+    assert _b(block, price=24000, quantity=18, bulk_shapes=False) is None
+
+
+def test_bulk_shapes_do_not_read_contents_description():
+    assert _b("バルク(100枚入)\n@10000 在庫数 12セット") is None
+    assert _b("まとめ 100枚入\n@3000 在庫 5セット", price=3000, quantity=5) is None
+
+
+def test_bulk_shapes_mixed_sizes_are_unverified():
+    r = _b("50枚セット\nバルク(100枚)\n@5000 在庫 3セット", price=5000, quantity=3)
+    assert r.kind == svc.KIND_UNVERIFIED
+
+
+def test_bulk_shapes_past_mistake_shapes_stay_none():
+    for flag in (True, False):
+        assert _b("シングル 10000円(合計34枚セット)", price=10000, quantity=1, bulk_shapes=flag) is None
+        assert _b("BULK 200枚 ¥4300", price=4300, quantity=None, bulk_shapes=flag) is None
+
+
+def test_replay_script_bulk_constant_matches_product_first():
+    path = Path(svc.__file__).resolve().parents[3] / "scripts" / "dev" / "bundle_replay.py"
+    spec = importlib.util.spec_from_file_location("bundle_replay_under_test", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)  # `if __name__ == "__main__"` のため main は走らない
+    assert module._BULK_KUBUN == PRODUCT_KUBUN_BULK
+
+
+def test_bundle_title_sql_english_returns_name_en_as_is_when_name_en_is_blank():
+    """ADR-1027 便4: 英語名が空のときは、まとめ売りでもまとめ売りでない行と同じ式の枝に入る（実行の確認は test_bundle_title_empty_name_en_pg.py）。"""
+    _, en = dist.bundle_title_sql()
+    assert en.startswith("CASE WHEN ar.bundle_size IS NULL OR COALESCE(BTRIM(p.name_en), '') = '' THEN COALESCE(p.name_en, '') ")
+    assert en.count("CASE") == 1  # 式を複製しない（1か所）

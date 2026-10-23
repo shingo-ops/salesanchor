@@ -1025,13 +1025,15 @@ def _bulk_review(values: dict) -> dict:
     return {**values, "review_reasons": reasons, "needs_review": True}
 
 
-def _apply_bundle(values: dict, block: str, unit_words: dict[str, str], set_words: frozenset[str], unit_ids: dict) -> dict:
+def _apply_bundle(
+    values: dict, block: str, unit_words: dict[str, str], set_words: frozenset[str], unit_ids: dict, bulk_shapes: bool = False,
+) -> dict:
     """まとめ売り（N単位セット）を読む（ADR-1027。規則は v102_bundle_svc）。全ての行に当てる。
 
     決まった: bundle_size=N、単位を中身の単位にそろえる。値段・数量は Gemini の読みのまま（割らない・掛けない）。
     決まらない: 値は変えず、理由 bundle_unverified で要確認にする。当たりなしは values をそのまま返す。
     """
-    result = detect_bundle(block, unit_words, set_words, values["price_normalized"], values["quantity_normalized"])
+    result = detect_bundle(block, unit_words, set_words, values["price_normalized"], values["quantity_normalized"], bulk_shapes=bulk_shapes)
     if result is None:
         return values
     unit_id = unit_ids.get(result.unit) if result.kind == KIND_DECIDED and result.unit else None
@@ -1137,7 +1139,10 @@ def _write_results(
     base_values = [_analysis_values(item, masters, unit_ids, work_ids) for item, _row in pairs]
     unit_words, set_words = split_unit_words({a: info[0] for a, info in (masters.get("unit_alias_to_info") or {}).items()})
     blocks = [_source_block(raw_text, row) for _item, row in pairs]  # 原文ブロックは投稿の raw_text から。追加の問い合わせなし
-    base_values = [_apply_bundle(values, block, unit_words, set_words, unit_ids) for values, block in zip(base_values, blocks)]  # ADR-1027：全ての行
+    base_values = [
+        _apply_bundle(values, block, unit_words, set_words, unit_ids, bulk_shapes=item.get("product_category") == PRODUCT_KUBUN_BULK)
+        for values, (item, _row), block in zip(base_values, pairs, blocks)
+    ]  # ADR-1027：全ての行。バルク系だけ P1・P2 も見る
     base_values = [  # 便2：バルク系の価格を1枚の値段に（まとめ売りと決まった行は通らない）
         _apply_bulk_price(values, item, block if item.get("product_category") == PRODUCT_KUBUN_BULK else "", unit_ids)
         for values, (item, _row), block in zip(base_values, pairs, blocks)

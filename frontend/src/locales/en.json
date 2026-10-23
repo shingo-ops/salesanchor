@@ -4920,7 +4920,7 @@
       "memo": "Memo"
     },
     "productMasterDrawer": {
-      "searchSelectPlaceholder": "Search or select by name",
+      "selectPlaceholder": "Select",
       "unselected": "Not selected",
       "emptyValue": "Not entered",
       "registeredTitle": "Registered in the product master (applied from the next analysis)",
@@ -5201,13 +5201,9 @@
     "name": "Name",
     "nameEn": "English Name",
     "lineId": "Product Line",
-    "typeMasterId": "Card Game",
     "displayOrder": "Display Order",
     "isActive": "Active",
     "gameIds": "Usable games",
-    "gamesNone": "None",
-    "gamesClear": "Clear selection",
-    "gamesCount": "{{n}} games",
     "gamesInUse": "Products with this sub-category use that game, so it cannot be removed. Change those products first.",
     "gamesUnknown": "A selected game was not found or is inactive. Reload and choose again.",
     "saveFailed": "Could not save"

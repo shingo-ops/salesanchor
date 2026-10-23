@@ -1,0 +1,83 @@
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+CREATE TABLE
+INSERT 0 2
+INSERT 0 2
+INSERT 0 3
+INSERT 0 4
+=== ADD FK NOT VALID (immediate) ===
+ALTER TABLE
+=== (a) format NULL: expect OK ===
+INSERT 0 1
+=== (a2) work_id NULL / format NULL / both set but no link (separate table, same FK shape) ===
+CREATE TABLE
+INSERT 0 1
+INSERT 0 1
+psql:/Users/tanizawashingo/worktrees/salesanchor/release-format-work-parent/docs/handoff/format-work-parent/raw/x01_fk_experiment.sql:18: ERROR:  insert or update on table "p2" violates foreign key constraint "p2_product_format_id_work_id_fkey"
+DETAIL:  Key (product_format_id, work_id)=(10, 2) is not present in table "links".
+=== mismatch INSERT: expect ERROR ===
+psql:/Users/tanizawashingo/worktrees/salesanchor/release-format-work-parent/docs/handoff/format-work-parent/raw/x01_fk_experiment.sql:20: ERROR:  insert or update on table "products" violates foreign key constraint "pfk"
+DETAIL:  Key (product_format_id, work_id)=(10, 2) is not present in table "links".
+=== IMMEDIATE: two UPDATEs (work first, then format) in one tx: expect ERROR at 1st ===
+BEGIN
+psql:/Users/tanizawashingo/worktrees/salesanchor/release-format-work-parent/docs/handoff/format-work-parent/raw/x01_fk_experiment.sql:22: ERROR:  insert or update on table "products" violates foreign key constraint "pfk"
+DETAIL:  Key (product_format_id, work_id)=(10, 2) is not present in table "links".
+psql:/Users/tanizawashingo/worktrees/salesanchor/release-format-work-parent/docs/handoff/format-work-parent/raw/x01_fk_experiment.sql:22: ERROR:  current transaction is aborted, commands ignored until end of transaction block
+ROLLBACK
+ id | work_id | product_format_id 
+----+---------+-------------------
+  1 |       1 |                10
+(1 行)
+
+=== IMMEDIATE: one UPDATE both: expect OK ===
+BEGIN
+UPDATE 1
+COMMIT
+ id | work_id | product_format_id 
+----+---------+-------------------
+  1 |       2 |                11
+(1 行)
+
+=== IMMEDIATE: work only change to a work the format lacks: ERROR ===
+UPDATE 1
+=== VALIDATE ===
+ALTER TABLE
+=== DEFERRABLE INITIALLY DEFERRED ===
+ALTER TABLE
+=== DEFERRED: two UPDATEs (work first, then format) one tx: expect OK ===
+BEGIN
+UPDATE 1
+UPDATE 1
+COMMIT
+ id | work_id | product_format_id 
+----+---------+-------------------
+  1 |       1 |                10
+(1 行)
+
+=== DEFERRED: 1st UPDATE only, never fixed: expect ERROR at COMMIT ===
+BEGIN
+UPDATE 1
+psql:/Users/tanizawashingo/worktrees/salesanchor/release-format-work-parent/docs/handoff/format-work-parent/raw/x01_fk_experiment.sql:37: ERROR:  insert or update on table "products" violates foreign key constraint "pfk"
+DETAIL:  Key (product_format_id, work_id)=(10, 2) is not present in table "links".
+ id | work_id | product_format_id 
+----+---------+-------------------
+  1 |       1 |                10
+(1 行)
+
+=== DEFERRED: autocommit single UPDATE leaving mismatch: expect ERROR ===
+psql:/Users/tanizawashingo/worktrees/salesanchor/release-format-work-parent/docs/handoff/format-work-parent/raw/x01_fk_experiment.sql:40: ERROR:  insert or update on table "products" violates foreign key constraint "pfk"
+DETAIL:  Key (product_format_id, work_id)=(10, 2) is not present in table "links".
+=== DEFERRED: one UPDATE both: expect OK ===
+UPDATE 1
+ id | work_id | product_format_id 
+----+---------+-------------------
+  1 |       2 |                11
+(1 行)
+
+=== constraint flags ===
+ conname | convalidated | condeferrable | condeferred | confmatchtype 
+---------+--------------+---------------+-------------+---------------
+ pfk     | t            | t             | t           | s
+(1 行)
+

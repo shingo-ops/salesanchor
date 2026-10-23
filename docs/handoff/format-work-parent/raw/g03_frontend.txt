@@ -1,0 +1,80 @@
+frontend/src/features/tcg-analysis-review/ProductMasterDrawer.tsx:109:    product_format_id: '',
+frontend/src/features/tcg-analysis-review/ProductMasterDrawer.tsx:118:  const formats = form?.lookups.product_format_id ?? [];
+frontend/src/features/tcg-analysis-review/ProductMasterDrawer.tsx:125:      if (key === 'work_id') next.product_format_id = formatAfterWorkChange(formats, value, c.product_format_id);
+frontend/src/features/tcg-analysis-review/ProductMasterDrawer.tsx:188:  const optionName = (key: 'product_kind_id' | 'work_id' | 'manufacturer_id' | 'product_category_id' | 'product_format_id') => {
+frontend/src/features/tcg-analysis-review/ProductMasterDrawer.tsx:219:            <SearchSelect key={`format-${values.work_id}`} label={t('tcgAnalysisReview.productMasterDrawer.fieldFormat')} lookupKey="product_format_id" options={formatOptionsFor(formats, val
+frontend/src/features/tcg-analysis-review/ProductMasterDrawer.tsx:261:            <p>{t('tcgAnalysisReview.productMasterDrawer.fieldFormat')}: {optionName('product_format_id')}</p>
+frontend/src/features/tcg-analysis-review/ReviewRegisterProductForm.tsx:169:    product_format_id: format?.value ?? "",
+frontend/src/features/tcg-analysis-review/ReviewRegisterProductForm.tsx:319:  const formatChoices = formatOptionsFor(lookups?.product_format_id ?? [], selected.work_id?.value ?? "");
+frontend/src/features/tcg-analysis-review/ReviewRegisterProductForm.tsx:366:                    current && formatAfterWorkChange(lookups?.product_format_id ?? [], option.value, current.value) ? current : null,
+frontend/src/features/tcg-analysis-review/ReviewRegisterProductForm.tsx:380:        <label htmlFor={`review-register-${item.extraction_item_id}-product_format_id`} className="comp-field__label">
+frontend/src/features/tcg-analysis-review/ReviewRegisterProductForm.tsx:384:          id={`review-register-${item.extraction_item_id}-product_format_id`}
+frontend/src/features/tcg-analysis-review/reviewActions.ts:81:  /** ADR-1020: 細分類は紐づくゲーム（game_ids）付き */
+frontend/src/features/tcg-analysis-review/reviewActions.ts:82:  lookups: Record<RegistrationLookupKey, LookupOption[]> & { product_format_id: FormatOption[] };
+frontend/src/features/tcg-analysis-review/reviewActions.ts:97:  product_format_id: string;
+frontend/src/features/tcg-analysis-review/reviewActions.ts:123:    product_format_id: values.product_format_id ? Number(values.product_format_id) : null,
+frontend/src/features/tcg-product-import/TcgProductDetailDrawer.tsx:20:type LookupsMap = Record<Classification, LookupOption[]> & { product_format_id: FormatOption[] };
+frontend/src/features/tcg-product-import/TcgProductDetailDrawer.tsx:24:  search_keywords: "", exclude_keywords: "", product_format_id: "", blank_confirmations: [],
+frontend/src/features/tcg-product-import/TcgProductDetailDrawer.tsx:117:        next.product_format_id = formatAfterWorkChange(activeLookups.product_format_id, value, previous.product_format_id);
+frontend/src/features/tcg-product-import/TcgProductDetailDrawer.tsx:204:        product_format_id: draft.product_format_id ? Number(draft.product_format_id) : null,
+frontend/src/features/tcg-product-import/TcgProductDetailDrawer.tsx:256:    ? formatOptionsFor(activeLookups.product_format_id, draft.work_id).map(option => ({ value: option.id, label: option.name, disabled: false }))
+frontend/src/features/tcg-product-import/TcgProductDetailDrawer.tsx:258:  if (draft?.product_format_id && !formatOptions.some(option => option.value === draft.product_format_id)) {
+frontend/src/features/tcg-product-import/TcgProductDetailDrawer.tsx:259:    formatOptions.push({ value: draft.product_format_id, label: t("productDetail.missingClassification", { id: draft.product_format_id }), disabled: true });
+frontend/src/features/tcg-product-import/TcgProductDetailDrawer.tsx:343:        {activeLookups && <Select label={t("productDetail.product_format_id")} value={draft.product_format_id} options={formatOptions}
+frontend/src/features/tcg-product-import/TcgProductDetailDrawer.tsx:345:          helperText={missingHint("product_format_id")}
+frontend/src/features/tcg-product-import/TcgProductDetailDrawer.tsx:346:          onChange={e => change("product_format_id", e.target.value)} disabled={saving || !draft.work_id} fullWidth />}
+frontend/src/features/tcg-product-import/importMessages.ts:16:    PRODUCT_FORMAT_GAME_MISMATCH: "formatGameMismatch",
+frontend/src/features/tcg-product-import/importMessages.ts:33:  for (const field of ["DIVISION_CODE", "WORK_CODE", "MANUFACTURER_CODE", "PRODUCT_CATEGORY_CODE", "PRODUCT_FORMAT_CODE"]) {
+frontend/src/features/tcg-product-import/productDetailModel.ts:12:export type FormatOption = { id: string; name: string; is_active: boolean; game_ids: string[] };
+frontend/src/features/tcg-product-import/productDetailModel.ts:36:    product_format_id: number | string | null; blank_confirmations: string[]; tenant_id?: string | null;
+frontend/src/features/tcg-product-import/productDetailModel.ts:41:  lookups: Record<Classification, { id: string; name: string; is_active: boolean }[]> & { product_format_id: FormatOption[] };
+frontend/src/features/tcg-product-import/productDetailModel.ts:47:  product_format_id: string; blank_confirmations: BlankCode[];
+frontend/src/features/tcg-product-import/productDetailModel.ts:63:      !Array.isArray(p.blank_confirmations) || !Array.isArray(result.lookups?.product_format_id) ||
+frontend/src/features/tcg-product-import/productDetailModel.ts:80:    product_format_id: p.product_format_id == null ? "" : String(p.product_format_id),
+frontend/src/features/tcg-product-import/productDetailModel.ts:87:/** 選んだ作品（ゲーム）に紐づく細分類だけを返す。正は product_format_game_links（API の game_ids） */
+frontend/src/features/tcg-product-import/productDetailModel.ts:89:  workId ? options.filter(option => option.game_ids.includes(String(workId))) : [];
+frontend/src/features/tcg-product-import/productDetailModel.ts:101:  "work_id", "product_format_id", "product_category_id",
+frontend/src/features/tcg-product-import/productDetailModel.ts:142:    product_format_id: draft.product_format_id ? Number(draft.product_format_id) : null, blank_confirmations: draft.blank_confirmations,
+frontend/src/locales/en.json:6:    "templateOptional": "Enter the release date as YYYY-MM-DD, or leave it blank if unknown. Separate multiple search or exclusion keywords with commas within one cell. For the format, enter its code in product_format_code. If yo
+frontend/src/locales/en.json:53:      "PRODUCT_FORMAT_CODE": "Format"
+frontend/src/locales/en.json:4141:    "product_format_id": "Format",
+frontend/src/locales/en.json:4283:      "productFormatsMaster": "Sub-categories",
+frontend/src/locales/en.json:5193:  "productFormatsMaster": {
+frontend/src/locales/en.json:5207:    "gameIds": "Usable games",
+frontend/src/locales/ja.json:6:    "templateOptional": "発売日はYYYY-MM-DD形式で入力し、不明なら空欄にします。検索・除外キーワードを複数指定する場合は、1つのセル内でカンマで区切ってください。細分類は product_format_code に細分類のコードを入れます。英語名・型番・発売日・除外キーワードを調べて存在しなかった場合は、blank_confirmed にその列名（english_title、mark、release_date、exclu
+frontend/src/locales/ja.json:53:      "PRODUCT_FORMAT_CODE": "細分類"
+frontend/src/locales/ja.json:4141:    "product_format_id": "細分類",
+frontend/src/locales/ja.json:4283:      "productFormatsMaster": "細分類マスタ",
+frontend/src/locales/ja.json:5193:  "productFormatsMaster": {
+frontend/src/locales/ja.json:5207:    "gameIds": "使えるゲーム",
+frontend/src/pages/super-admin/AnalysisRulesPage.tsx:34:import { ProductFormatsMasterPanel } from "./components/ProductFormatsMasterPanel";
+frontend/src/pages/super-admin/AnalysisRulesPage.tsx:181:              {activeSection === "product-formats-master" && <ProductFormatsMasterPanel />}
+frontend/src/pages/super-admin/components/AnalysisRulesSidebar.tsx:115:        {navItem("product-formats-master", t("analysisRules.sidebar.productFormatsMaster"))}
+frontend/src/pages/super-admin/components/ProductFormatsMasterPanel.tsx:2: * ProductFormatsMasterPanel — 商品形態マスタパネル（AnalysisRulesPage の hub-content 内で使用）
+frontend/src/pages/super-admin/components/ProductFormatsMasterPanel.tsx:38:interface ProductFormat {
+frontend/src/pages/super-admin/components/ProductFormatsMasterPanel.tsx:49:  game_ids: number[];
+frontend/src/pages/super-admin/components/ProductFormatsMasterPanel.tsx:60:  game_ids: string[];
+frontend/src/pages/super-admin/components/ProductFormatsMasterPanel.tsx:71:  game_ids: [],
+frontend/src/pages/super-admin/components/ProductFormatsMasterPanel.tsx:76:export function ProductFormatsMasterPanel() {
+frontend/src/pages/super-admin/components/ProductFormatsMasterPanel.tsx:78:  const f = "productFormatsMaster";
+frontend/src/pages/super-admin/components/ProductFormatsMasterPanel.tsx:80:  const [items, setItems] = useState<ProductFormat[]>([]);
+frontend/src/pages/super-admin/components/ProductFormatsMasterPanel.tsx:89:  const [savedGameIds, setSavedGameIds] = useState<string[]>([]);
+frontend/src/pages/super-admin/components/ProductFormatsMasterPanel.tsx:95:      const data = await api.get<ProductFormat[]>("/super-admin/product-formats");
+frontend/src/pages/super-admin/components/ProductFormatsMasterPanel.tsx:126:  const openCreate = () => { setEditId(null); setForm(emptyForm); setSavedGameIds([]); setError(""); setShowForm(true); };
+frontend/src/pages/super-admin/components/ProductFormatsMasterPanel.tsx:127:  const openEdit = (item: ProductFormat) => {
+frontend/src/pages/super-admin/components/ProductFormatsMasterPanel.tsx:137:      game_ids: item.game_ids.map(String),
+frontend/src/pages/super-admin/components/ProductFormatsMasterPanel.tsx:139:    setSavedGameIds(item.game_ids.map(String).sort());
+frontend/src/pages/super-admin/components/ProductFormatsMasterPanel.tsx:146:    if (err instanceof ApiError && err.status === 409 && err.message === "PRODUCT_FORMAT_GAME_IN_USE") return t(`${f}.gamesInUse`);
+frontend/src/pages/super-admin/components/ProductFormatsMasterPanel.tsx:147:    if (err instanceof ApiError && err.status === 422 && err.message === "PRODUCT_FORMAT_GAME_UNKNOWN") return t(`${f}.gamesUnknown`);
+frontend/src/pages/super-admin/components/ProductFormatsMasterPanel.tsx:163:    const wanted = [...form.game_ids].sort();
+frontend/src/pages/super-admin/components/ProductFormatsMasterPanel.tsx:169:        const created = await api.post<ProductFormat>("/super-admin/product-formats", payload);
+frontend/src/pages/super-admin/components/ProductFormatsMasterPanel.tsx:172:        setSavedGameIds([]);
+frontend/src/pages/super-admin/components/ProductFormatsMasterPanel.tsx:174:      const before = editId ? savedGameIds : [];
+frontend/src/pages/super-admin/components/ProductFormatsMasterPanel.tsx:177:          game_ids: wanted.map(Number).sort((a, b) => a - b),
+frontend/src/pages/super-admin/components/ProductFormatsMasterPanel.tsx:183:      setSavedGameIds([]);
+frontend/src/pages/super-admin/components/ProductFormatsMasterPanel.tsx:217:    .filter(g => g.is_active || form.game_ids.includes(String(g.id)))
+frontend/src/pages/super-admin/components/ProductFormatsMasterPanel.tsx:220:  const columns: DataTableColumn<ProductFormat>[] = [
+frontend/src/pages/super-admin/components/ProductFormatsMasterPanel.tsx:223:    { key: "game_ids", header: t(`${f}.gameIds`), renderCell: row => getGameNames(row.game_ids) },
+frontend/src/pages/super-admin/components/ProductFormatsMasterPanel.tsx:344:                label={t(`${f}.gameIds`)}
+frontend/src/pages/super-admin/components/ProductFormatsMasterPanel.tsx:346:                selected={form.game_ids}
+frontend/src/pages/super-admin/components/ProductFormatsMasterPanel.tsx:347:                onChange={next => setForm({ ...form, game_ids: next })}

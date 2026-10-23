@@ -1,0 +1,112 @@
+[
+  {
+    "table": "tenant.deals",
+    "column": "lost_reason_code",
+    "reason": "ADD (migrations/20260604_060000_add_lost_reason_code.sql) runs inside a per-tenant loop guarded by 'deals テーブルが存在しないスキーマはスキップ' (IF NOT EXISTS ... information_schema.tables ... table_name = 'deals' THEN ... CONTINUE). deals table itself was permanently dropped for all tenants by migrations/20260729_043520_drop_deals.sql, and no later migration recreates a deals table. On every full migration re-run after the first rollout, run_all_migrations.sh reaches this ADD step before it reaches the later DROP table step, but the deals-existence guard already short-circuits it (deals no longer exists from the previous run). The ADD->DROP churn happened once at the 2026-07-29 production rollout and cannot recur.",
+    "reference": "commit a0b849fb3 (#1605, deals-existence guard) / migrations/20260729_043520_drop_deals.sql"
+  },
+  {
+    "table": "public.products",
+    "column": "tcg_uuid",
+    "reason": "ADD (migrations/20260909_000000_public_products_phase2b_columns.sql and migrations/20260914_140000_unify_tcg_products_to_public.sql) is wrapped in DO $guard_tcg_uuid$ ... IF EXISTS(tcg_uuid) OR NOT EXISTS(work_id AS integer) THEN ADD ... ELSE RAISE NOTICE (skip) END IF. migrations/20260919_010000_master_ssot_work_id_recast.sql permanently converts work_id to INTEGER, so once that has run, the guard's ELSE branch always skips the ADD on every subsequent full migration re-run, even though migrations/20260916_120000_phase_c_drop_tcg_uuid.sql (DROP COLUMN) runs later in registration order every time.",
+    "reference": "commit 17582fbd5 (ADR-1002 Phase C) / docs/handoff/products-column-churn-2/design.md"
+  }
+]
+#####
+#!/usr/bin/env node
+/**
+ * check-migration-column-churn.js
+ *
+ * scripts/run_all_migrations.sh の登録順に沿って migrations/*.sql
+ * （run_py が読む .sql ファイルも含む）を走査し、同一 (table, column) に対して
+ * ADD → 後で DROP（カラム番号を消費し続ける「チャーン」）が起きている箇所を検出する。
+ * 逆方向（DROP → 後で ADD）は別クラス（警告のみ、exit は変えない）として報告する。
+ *
+ * 背景: ADR-1005（docs/adr/ADR-1005-migration-run-once-ledger.md）Stage 0 ①。
+ *       2026-10-03 インシデント（condition/unit/category_classification の
+ *       ADD が #3958 で削除された例、tcg_uuid の ADD→guard→DROP の例）を踏まえ、
+ *       同種の column churn を機械的に検出できるようにする。
+ *
+ * 実行方法:
+ *   node scripts/check-migration-column-churn.js
+ *
+ * 終了コード:
+ *   0 = 未許可の churn なし（かつ allowlist が stale でない）
+ *   1 = 未許可の churn あり、または allowlist が stale
+ *
+ * テスト用オーバーライド（回帰テスト専用）:
+ *   MIGRATIONS_SCRIPT_OVERRIDE=<path>   run_all_migrations.sh の代わりに読むファイル
+ *   ALLOWLIST_OVERRIDE=<path>           allowlist の代わりに読むファイル
+ *   REPO_ROOT_OVERRIDE=<path>           repo root の代わりに使うディレクトリ
+ */
+'use strict';
+
+const { execSync } = require('child_process');
+const { existsSync, readFileSync } = require('fs');
+const path = require('path');
+
+const REPO_ROOT =
+  process.env.REPO_ROOT_OVERRIDE ||
+  execSync('git rev-parse --show-toplevel', { encoding: 'utf8' }).trim();
+
+const MIGRATIONS_SCRIPT_PATH =
+  process.env.MIGRATIONS_SCRIPT_OVERRIDE ||
+  path.join(REPO_ROOT, 'scripts/run_all_migrations.sh');
+
+const ALLOWLIST_PATH =
+  process.env.ALLOWLIST_OVERRIDE ||
+  path.join(REPO_ROOT, 'scripts/migration-column-churn-allowlist.json');
+
+// ---------------------------------------------------------------------------
+// 1. run_all_migrations.sh から登録順リストを抽出
+// ---------------------------------------------------------------------------
+
+/**
+ * @returns {{kind: 'sql'|'py', filePath: string, order: number}[]}
+ */
+function parseRegistrations(migrationsScriptPath) {
+  const text = readFileSync(migrationsScriptPath, 'utf8');
+  const lines = text.split('\n');
+  const registrations = [];
+  let order = 0;
+  for (const line of lines) {
+    const sqlMatch = line.match(/^run_sql[ \t]+(\S+)/);
+    const pyMatch = line.match(/^run_py[ \t]+(\S+)/);
+    if (sqlMatch) {
+#####
+836:run_sql migrations/20260922_010000_product_format_kind_id_and_products_type_master_id.sql
+850:# ADR-156 Phase 9: 細分類(product_formats)に type_master_id 直接リンク追加（カードゲーム別フィルタリング）
+851:run_sql migrations/20260923_010000_product_formats_add_type_master_id.sql
+1043:# ADR-1026: 使われていない作品欄 products.type_master_id を取り除く（FK・索引ごと。冪等）
+1044:run_sql migrations/20261017_210000_drop_products_type_master_id.sql
+#####
+-- 細分類(product_formats)に中分類(type_master)への直接リンクを追加
+-- カードゲームごとの細分類フィルタリングを実現する
+
+-- Step 1: type_master_id カラム追加（CI test DB 用。本番には既存）
+DO $$ BEGIN
+  -- テーブル自体が存在しない場合はスキップ（CI test DB では product_formats が未作成の場合がある）
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'product_formats'
+  ) THEN
+    RAISE NOTICE 'product_formats table does not exist, skip type_master_id';
+  ELSIF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'product_formats' AND column_name = 'type_master_id'
+  ) THEN
+    ALTER TABLE public.product_formats ADD COLUMN type_master_id INTEGER REFERENCES public.type_master(id) ON DELETE SET NULL;
+    RAISE NOTICE 'Added type_master_id to product_formats';
+  ELSE
+    RAISE NOTICE 'type_master_id already exists on product_formats, skip';
+  END IF;
+END $$;
+
+-- Step 2: kind_id カラム追加（CI test DB 用。本番には既存）
+DO $$ BEGIN
+  -- テーブル自体が存在しない場合はスキップ（CI test DB では product_formats が未作成の場合がある）
+#####
+a26d679f1 fix(migration): resolve CI failures in product_formats type_master_id migration
+2083a19b2 feat: link product_formats to type_master for game-specific filtering
+03d770375 feat: products.type_master_id を取り除く（ADR-1026）
+94eee68ac feat(product-master): add product_formats.kind_id and products.type_master_id for hybrid classification

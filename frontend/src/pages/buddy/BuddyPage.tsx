@@ -1,3 +1,4 @@
+import { LoadingBlock } from "../../components/loading";
 import { useEffect, useState, FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
@@ -72,7 +73,7 @@ export default function BuddyPage() {
           </div>
         </form>
       </Modal>
-      {loading ? <div className="loading">{t("common.loading")}</div> : (
+      {loading ? <LoadingBlock /> : (
         <>
           <h3 style={{ marginBottom: "var(--space-3)" }}>{t("buddy.pairsTitle")}</h3>
           <table className="data-table" style={{ marginBottom: "var(--space-6)" }}>

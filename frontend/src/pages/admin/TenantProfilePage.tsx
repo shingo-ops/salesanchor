@@ -22,6 +22,7 @@ import { Button } from "../../components/Button";
 import { SelectControl } from "../../components/Select";
 import { TextareaControl } from "../../components/Textarea";
 import { TextFieldControl } from "../../components/TextField";
+import { LoadingBlock } from "../../components/loading";
 
 interface TenantProfile {
   id: number;
@@ -135,7 +136,7 @@ export default function TenantProfilePage() {
   return (
     <PageLayout navKey="nav.tenantProfile" subtitleKey="tenantProfile.subtitle">
       {loading ? (
-        <div className="loading">{t("common.loading")}</div>
+        <LoadingBlock />
       ) : (
         <form className="form" onSubmit={handleSave} data-testid="tenant-profile-form">
           {error && <div className="error-message">{error}</div>}

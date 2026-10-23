@@ -53,6 +53,12 @@
           { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/hooks/check-freshness.sh\"", "timeout": 12 },
           { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/hooks/stop-log-digest.sh\"", "timeout": 20 }
         ]
+      },
+      {
+        "matcher": "startup|resume|clear",
+        "hooks": [
+          { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/scripts/agent-hooks/cloud/dispatch.sh\"", "timeout": 10 }
+        ]
       }
     ],
     "SubagentStop": [
@@ -68,6 +74,17 @@
     "PreToolUse": [
       { "matcher": "SubagentHandback", "hooks": [
           { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/hooks/require-status-label.sh\"", "timeout": 10 }
+      ] },
+      { "matcher": "Bash", "hooks": [
+          { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/scripts/agent-hooks/cloud/dispatch.sh\"", "timeout": 10 }
+      ] },
+      { "matcher": "mcp__github__.*", "hooks": [
+          { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/scripts/agent-hooks/cloud/dispatch.sh\"", "timeout": 10 }
+      ] }
+    ],
+    "Stop": [
+      { "hooks": [
+          { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/scripts/agent-hooks/cloud/dispatch.sh\"", "timeout": 10 }
       ] }
     ]
   }

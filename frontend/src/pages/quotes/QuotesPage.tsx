@@ -18,6 +18,7 @@ import { getStatusPresentation } from "../../utils/statusPresentation";
 import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn, SortDir } from "../../components/DataTable";
 import { Button } from "../../components/Button";
+import { LoadingBlock } from "../../components/loading";
 
 interface Quote {
   id: number;
@@ -142,7 +143,7 @@ export default function QuotesPage() {
       {error && <div className="error-message">{error}</div>}
 
       {loading ? (
-        <div className="loading">{t("common.loading")}</div>
+        <LoadingBlock />
       ) : (() => {
         const columns: DataTableColumn<Quote>[] = [
           { key: "quote_code", header: t("quotes.quoteCode"), sortable: true, renderCell: (q) => <span className="mono">{q.quote_code || "-"}</span> },

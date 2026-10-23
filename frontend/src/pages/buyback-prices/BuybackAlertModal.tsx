@@ -15,6 +15,7 @@ import {
   type AlertFormState,
   INITIAL_ALERT_FORM,
 } from "./buybackTypes";
+import { LoadingBlock } from "../../components/loading";
 
 /* ─── AlertRuleForm サブコンポーネント ─────────────────────────────────── */
 
@@ -271,7 +272,7 @@ export function BuybackAlertModal({ open, onClose }: BuybackAlertModalProps) {
         )}
 
         {alertLoading ? (
-          <p style={{ color: "var(--text-secondary)" }}>{t("buybackPrices.loading")}</p>
+          <LoadingBlock />
         ) : alertRules.length === 0 ? (
           <p style={{ color: "var(--text-muted)" }}>{t("buybackPrices.alertNoRules")}</p>
         ) : (

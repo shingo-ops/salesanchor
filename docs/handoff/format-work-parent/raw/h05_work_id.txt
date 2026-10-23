@@ -1,0 +1,268 @@
+backend/app/routers/buyback_prices.py:413:            SELECT p.work_id, tm.name_ja, count(DISTINCT p.id)
+backend/app/routers/buyback_prices.py:416:            JOIN public.type_master tm ON tm.id = p.work_id
+backend/app/routers/buyback_prices.py:420:            GROUP BY p.work_id, tm.name_ja
+backend/app/routers/buyback_prices.py:425:            SELECT p.work_id, tm.name_ja, count(DISTINCT p.id)
+backend/app/routers/buyback_prices.py:428:            JOIN public.type_master tm ON tm.id = p.work_id
+backend/app/routers/buyback_prices.py:430:            GROUP BY p.work_id, tm.name_ja
+backend/app/routers/buyback_prices.py:443:        extra_conditions.append("p.work_id = :category")
+backend/app/routers/buyback_prices.py:483:            p.work_id,
+backend/app/routers/buyback_prices.py:593:            "work_id": r[3],
+backend/app/routers/inventory_aggregated.py:5:タブ分割: ?category= (work_id の作品の符号（type_master.code）) で絞り込み。
+backend/app/routers/inventory_aggregated.py:61:    - ?category= で work_id の作品の符号（type_master.code） による絞り込みが可能。
+backend/app/routers/inventory_offers.py:77:    LEFT JOIN public.type_master tm ON tm.id = p.work_id
+backend/app/routers/inventory_offers.py:296:    join = "LEFT JOIN public.products pp ON pp.id = x.product_id LEFT JOIN public.type_master tm ON tm.id = pp.work_id"
+backend/app/routers/inventory_offers.py:357:    work_code: str | None = Query(default=None, max_length=50, description="作品の符号（products.work_id → type_master.code）"),
+backend/app/routers/products.py:108:        # 作品の符号は products.work_id → type_master.code（写しの列は持たない。ADR-1030）
+backend/app/routers/products.py:109:        f"(SELECT tm.code FROM {tm_ref} tm WHERE tm.id = {ctx['ref']}.work_id) AS work_code, "
+backend/app/routers/products.py:143:    work_code: str | None = Query(default=None, max_length=50, description="作品の符号で絞り込み（products.work_id → type_master.code）"),
+backend/app/routers/products.py:205:        conditions.append(f"work_id = (SELECT tm.id FROM {tm_ref} tm WHERE tm.code = :work_code)")
+backend/app/routers/products.py:376:            "work_id": None,
+backend/app/routers/super_admin_product_formats.py:175:            "AND work_id IS NOT NULL AND NOT (work_id = ANY(:ids)) LIMIT 1"
+backend/app/routers/tcg_analysis_review.py:55:    work_id: str = ""
+backend/app/routers/tcg_analysis_review.py:138:    work_id: str | None = Query(default=None, description="作品IDで絞り込み"),
+backend/app/routers/tcg_analysis_review.py:173:        work_id=work_id,
+backend/app/routers/tcg_product_import.py:103:    work_id: int | None = Query(default=None),
+backend/app/routers/tcg_product_import.py:110:    if work_id is not None:
+backend/app/routers/tcg_product_import.py:111:        condition += " AND p.work_id = :work_id"
+backend/app/routers/tcg_product_import.py:112:        params["work_id"] = work_id
+backend/app/routers/tcg_product_import.py:149:        "WHERE p.work_id = s.id) ORDER BY s.code ASC"
+backend/app/routers/tcg_product_import.py:165:    work_id: int | None = Query(default=None),
+backend/app/routers/tcg_product_import.py:170:        raw = await roundtrip.export_csv(db, query, str(work_id) if work_id else None)
+backend/app/routers/tcg_product_import.py:304:    work_id: int | None = None
+backend/app/routers/tcg_product_import.py:358:    # work_id → public.type_master (SSOT)
+backend/app/routers/tcg_product_import.py:364:    lookups["work_id"] = [{"id": r.id, "name": r.name} for r in work_rows.fetchall()]
+backend/app/routers/tcg_product_import.py:404:    work_id: str
+backend/app/routers/tcg_product_import.py:431:            work_id=body.work_id,
+backend/app/routers/tcg_product_master.py:58:    work_id: list[LookupOption]
+backend/app/routers/tcg_product_master.py:97:    work_id: str
+backend/app/routers/tcg_product_master.py:115:    work_id: str
+backend/app/routers/tcg_product_master.py:217:        work_id=body.work_id,
+backend/app/routers/tcg_product_master.py:250:            work_id=body.work_id,
+backend/app/schemas/inventory_aggregated.py:6:  - work_id の作品の符号（type_master.code） を基準。?category= で絞り込み可。
+backend/app/schemas/inventory_aggregated.py:22:    work_code: str | None = Field(default=None, description="作品の符号（products.work_id → type_master.code）。タブ分割キー。")
+backend/app/schemas/inventory_offers.py:152:    work_code: str | None = None       # 作品の符号（products.work_id → type_master.code）
+backend/app/schemas/inventory_search.py:65:    work_code: str | None = Field(default=None, description="作品の符号（products.work_id → type_master.code）。")
+backend/app/schemas/product.py:179:    work_code: str | None = None  # 作品の符号（products.work_id → type_master.code）
+backend/app/services/extraction_judgement_svc.py:132:    work_id: int | None
+backend/app/services/extraction_judgement_svc.py:141:    work_id: int | None
+backend/app/services/extraction_judgement_svc.py:421:            work_id=None,
+backend/app/services/extraction_judgement_svc.py:436:            work_id=None,
+backend/app/services/extraction_judgement_svc.py:457:        work_id=product.work_id,
+backend/app/services/gemini_extraction_svc.py:32:    validate_work_id,
+backend/app/services/gemini_extraction_svc.py:126:    work_id_text = prompts.get("work_id_extraction")
+backend/app/services/gemini_extraction_svc.py:133:    if not work_id_text:
+backend/app/services/gemini_extraction_svc.py:135:            "抽出プロンプト設定エラー: work_id_extraction プロンプトがDBに登録されていないか無効です。"
+backend/app/services/gemini_extraction_svc.py:138:    return base_text, work_id_text
+backend/app/services/gemini_extraction_svc.py:391:    db_base_prompt, db_work_id_prompt = _load_db_prompts()
+backend/app/services/gemini_extraction_svc.py:414:        full_prompt = (f"{db_work_id_prompt}{supplier_section}\n商品・作品マスタ（参照値）:"
+backend/app/services/gemini_extraction_svc.py:671:                    "resolved_work_id": (cols[9].strip() or None) if version in (4, 5, 6) else None,
+backend/app/services/gemini_extraction_svc.py:855:                item["resolved_work_id"] = validate_work_id(item["resolved_work_id"], work_reference)
+backend/app/services/gemini_raw_copy_v101.py:1175:                "clues": [{"line": c.line, "product_id": c.product_id, "work_id": c.work_id} for c in decision.clues],
+backend/app/services/gemini_raw_copy_v101.py:1223:        product_works={e.id: e.work_id for e in masters.product_entries if e.work_id is not None},
+backend/app/services/gemini_raw_copy_v102_context_work.py:47:    work_id: int
+backend/app/services/gemini_raw_copy_v102_context_work.py:85:        clues.append(ContextClue(line=item["price_line"], product_id=item["product_id"], work_id=work))
+backend/app/services/gemini_raw_copy_v102_context_work.py:117:    if both_sides and before[0].work_id == after[0].work_id:
+backend/app/services/gemini_raw_copy_v102_context_work.py:118:        chosen, _reason = _pick(before[0].work_id, candidates, work_of, post_works, check_competitor=False)
+backend/app/services/gemini_raw_copy_v102_context_work.py:122:        chosen, _reason = _pick((before or after)[0].work_id, candidates, work_of, post_works, check_competi
+backend/app/services/gemini_raw_copy_v102_context_work.py:128:    ranked = Counter(c.work_id for c in near).most_common()
+backend/app/services/gemini_raw_copy_v102_context_work.py:142:    if both_sides and before[0].work_id != after[0].work_id:
+backend/app/services/gemini_raw_copy_v102_context_work.py:149:    work_of = {p.id: p.work_id for p in product_entries}
+backend/app/services/gemini_raw_copy_v102_product_first.py:121:    work_id: int
+backend/app/services/gemini_raw_copy_v102_product_first.py:175:def apply_name_only_works(entries: Sequence[ProductEntry], name_only_work_ids: frozenset[int]) -> tuple[Pro
+backend/app/services/gemini_raw_copy_v102_product_first.py:181:    if not name_only_work_ids:
+backend/app/services/gemini_raw_copy_v102_product_first.py:191:        ) if e.work_id in name_only_work_ids else e
+backend/app/services/gemini_raw_copy_v102_product_first.py:203:    entries：型番を外す前の商品。name_only_work_ids：名前だけ（match_by_code = FALSE）の中分類。
+backend/app/services/gemini_raw_copy_v102_product_first.py:204:    code_only_off_work_ids：型番は絞り込みだけ（match_by_code = TRUE かつ code_only_match = FALSE）の中分類。
+backend/app/services/gemini_raw_copy_v102_product_first.py:210:    name_only_work_ids: frozenset[int]
+backend/app/services/gemini_raw_copy_v102_product_first.py:211:    code_only_off_work_ids: frozenset[int]
+backend/app/services/gemini_raw_copy_v102_product_first.py:228:    entries: Sequence[ProductEntry], name_only_work_ids: frozenset[int], code_only_off_work_ids: frozenset[
+backend/app/services/gemini_raw_copy_v102_product_first.py:231:    all_work_ids = frozenset(e.work_id for e in entries if e.work_id is not None)
+backend/app/services/gemini_raw_copy_v102_product_first.py:236:        name_only_work_ids=name_only_work_ids,
+backend/app/services/gemini_raw_copy_v102_product_first.py:237:        code_only_off_work_ids=code_only_off_work_ids,
+backend/app/services/gemini_raw_copy_v102_product_first.py:238:        name_entries=apply_name_only_works(entries, all_work_ids),
+backend/app/services/gemini_raw_copy_v102_product_first.py:239:        base_entries=apply_name_only_works(entries, name_only_work_ids),
+backend/app/services/gemini_raw_copy_v102_product_first.py:266:            code_hit=False if entry.work_id in index.name_only_work_ids else (basis or code_keyword),
+backend/app/services/gemini_raw_copy_v102_product_first.py:275:    work_of = {e.id: e.work_id for e in index.entries}
+backend/app/services/gemini_raw_copy_v102_product_first.py:280:    no_code_only = index.name_only_work_ids | index.code_only_off_work_ids
+backend/app/services/gemini_raw_copy_v102_product_first.py:297:            base, status="unmatched", product_id=None, work_id=None, candidates=(), basis="",
+backend/app/services/gemini_raw_copy_v102_product_first.py:302:            base, status="ambiguous", product_id=None, work_id=None, candidates=candidates, basis="",
+backend/app/services/gemini_raw_copy_v102_product_first.py:308:    work_id = next(e.work_id for e in index.entries if e.id == product_id)
+backend/app/services/gemini_raw_copy_v102_product_first.py:310:        base, status="matched", product_id=product_id, work_id=work_id, candidates=candidates, basis=basis,
+backend/app/services/gemini_raw_copy_v102_product_first.py:323:    for work_id, name_ja, name_en in session.execute(text(_WORK_NAMES_SQL)).fetchall():
+backend/app/services/gemini_raw_copy_v102_product_first.py:326:            found.append(WorkName(int(work_id), names))
+backend/app/services/gemini_raw_copy_v102_product_first.py:338:            SELECT p.id, p.product_code, p.mark, p.work_id,
+backend/app/services/gemini_raw_copy_v102_product_first.py:353:            work_id=int(r[3]) if r[3] is not None else None,
+backend/app/services/gemini_raw_copy_v102_product_first.py:673:    work_of = {p.id: p.work_id for p in masters.product_entries}
+backend/app/services/gemini_raw_copy_v102_product_first.py:678:        match, status="matched", product_id=fixed_product_id, work_id=work_of[fixed_product_id],
+backend/app/services/gemini_raw_copy_v102_product_first.py:739:        work_of = {p.id: p.work_id for p in masters.product_entries}
+backend/app/services/gemini_raw_copy_v102_product_first.py:740:        match = dataclass_replace(match, status="matched", product_id=chosen_product_id, work_id=work_of.ge
+backend/app/services/gemini_raw_copy_v102_soldout_ref.py:217:            found[work.work_id] = (*found.get(work.work_id, ()), *hits)
+backend/app/services/gemini_raw_copy_v102_soldout_ref.py:230:def _hit_rows(rows: Sequence[RefRow], codes: Sequence[str], names: Sequence[str], work_id: int | None, rules:
+backend/app/services/gemini_raw_copy_v102_soldout_ref.py:232:    candidates = [r for r in rows if (work_id is None or rules.product_works.get(r.product_id) == work_id) an
+backend/app/services/gemini_raw_copy_v102_soldout_ref.py:304:    work_id, work_names = next(iter(found.items()), (None, ()))
+backend/app/services/gemini_raw_copy_v102_soldout_ref.py:306:    if work_id is None and not codes and not names:
+backend/app/services/gemini_raw_copy_v102_soldout_ref.py:308:    hits = _hit_rows(rows, codes, names, work_id, rules)
+backend/app/services/gemini_raw_copy_v102_soldout_ref.py:314:    if is_plural and work_id is None and _has_unresolved_clue_line(
+backend/app/services/inventory_aggregated_service.py:31:    """in_stock 在庫を持つ商品を一括取得。category 指定時は work_id の作品の符号（type_master.code）で絞る。N+1 回避。"""
+backend/app/services/inventory_aggregated_service.py:36:        LEFT JOIN public.type_master tm ON tm.id = p.work_id
+backend/app/services/inventory_search.py:103:    # mark=型番 / work_code=作品の符号（work_id → type_master.code）。見積/請求の明細行に引き込んで使う。
+backend/app/services/inventory_search.py:372:LEFT JOIN public.type_master tm ON tm.id = p.work_id
+backend/app/services/line_analysis_v102_svc.py:717:def _analysis_values(item: dict, masters: dict, unit_ids: dict, work_ids: dict) -> dict:
+backend/app/services/line_analysis_v102_svc.py:751:        "work_id": work_ids.get(product_id) if matched else None,
+backend/app/services/line_analysis_v102_svc.py:761:        status, exclusion, needs_review, review_reasons, engine_version, computed_at, updated_at, work_id,
+backend/app/services/line_analysis_v102_svc.py:766:        :status, :exclusion, :needs_review, :review_reasons, :engine_version, :computed_at, :updated_at, :work_id,
+backend/app/services/line_analysis_v102_svc.py:777:        work_id = EXCLUDED.work_id, price_basis = EXCLUDED.price_basis,
+backend/app/services/line_analysis_v102_svc.py:783:def _load_product_work_ids(session: Session, product_ids: list[int]) -> dict[int, int | None]:
+backend/app/services/line_analysis_v102_svc.py:787:        text("SELECT id, work_id FROM public.products WHERE id = ANY(:ids)"), {"ids": product_ids}
+backend/app/services/line_analysis_v102_svc.py:1129:    work_ids = _load_product_work_ids(session, sorted(set(matched_ids)))
+backend/app/services/line_analysis_v102_svc.py:1137:    base_values = [_analysis_values(item, masters, unit_ids, work_ids) for item, _row in pairs]
+backend/app/services/tcg_analysis_review_svc.py:76:    LEFT JOIN public.type_master ws ON ws.id = p.work_id
+backend/app/services/tcg_analysis_review_svc.py:115:            p.work_id::text                      AS work_id,
+backend/app/services/tcg_analysis_review_svc.py:166:    work_id: str | None = None,
+backend/app/services/tcg_analysis_review_svc.py:215:    if work_id:
+backend/app/services/tcg_analysis_review_svc.py:216:        conditions.append("p.work_id = :work_id")
+backend/app/services/tcg_analysis_review_svc.py:217:        params["work_id"] = work_id
+backend/app/services/tcg_analysis_review_svc.py:387:    work_id: str | None = None,
+backend/app/services/tcg_analysis_review_svc.py:408:        work_id=work_id,
+backend/app/services/tcg_analysis_review_svc.py:463:                    "work_id": row.work_id or "",
+backend/app/services/tcg_analysis_review_svc.py:509:        "WHERE p.work_id = s.id) ORDER BY s.code ASC"
+backend/app/services/tcg_analyzer_svc.py:50:    validate_work_id,
+backend/app/services/tcg_analyzer_svc.py:462:    work_id = next(iter(ids))
+backend/app/services/tcg_analyzer_svc.py:475:        return work_id if (direct == ids and line_start <= start <= end <= line_end
+backend/app/services/tcg_analyzer_svc.py:489:        return work_id
+backend/app/services/tcg_analyzer_svc.py:558:    *, work_id: str | None, product_work_ids: dict[str, str | None],
+backend/app/services/tcg_analyzer_svc.py:570:        if work_id is not None and product_work_ids.get(code) != work_id:
+backend/app/services/tcg_analyzer_svc.py:577:                   and (work_id is not None or not is_model_keyword(kw))]
+backend/app/services/tcg_analyzer_svc.py:581:                       and (work_id is not None or not is_model_keyword(kw))]
+backend/app/services/tcg_analyzer_svc.py:587:    constraint = f"WORK:{work_id}" if work_id else "WORK:UNKNOWN"
+backend/app/services/tcg_analyzer_svc.py:1461:        "SELECT id, work_id, category_class FROM public.products WHERE is_active = TRUE"
+backend/app/services/tcg_analyzer_svc.py:1463:    product_work_ids = {str(r[0]): str(r[1]) if r[1] is not None else None for r in work_rows}
+backend/app/services/tcg_analyzer_svc.py:1494:            # v5+: fetch both resolved_work_id and resolved_product_code in one query
+backend/app/services/tcg_analyzer_svc.py:1496:                SELECT ei.id, to_jsonb(ei)->>'resolved_work_id', to_jsonb(ei)->>'resolved_product_code'
+backend/app/services/tcg_analyzer_svc.py:1499:            _raw = {str(i): validate_work_id(wid, reference) for i, wid, _ in decisions}
+backend/app/services/tcg_analyzer_svc.py:1500:            # match_pid_with_work expects str work_id (same type as product_work_ids values)
+backend/app/services/tcg_analyzer_svc.py:1519:            # v4: resolved_product_code column not populated; work_id only
+backend/app/services/tcg_analyzer_svc.py:1521:                SELECT ei.id, to_jsonb(ei)->>'resolved_work_id'
+backend/app/services/tcg_analyzer_svc.py:1524:            _raw = {str(i): validate_work_id(value, reference) for i, value in decisions_v4}
+backend/app/services/tcg_analyzer_svc.py:1629:        work_id = (work_decisions[str(item_id)] if work_decisions is not None else resolve_work_evidence(
+backend/app/services/tcg_analyzer_svc.py:1711:                    work_id=work_id, product_work_ids=product_work_ids,
+backend/app/services/tcg_analyzer_svc.py:1724:                work_id=work_id, product_work_ids=product_work_ids,
+backend/app/services/tcg_analyzer_svc.py:1736:                # v4 ジョブ (work_id のみ) は従来の GEMINI プレフィックスを維持
+backend/app/services/tcg_analyzer_svc.py:1738:            if work_decisions is None and work_id and not raw_work_name and not raw_work_span and pid_basis != "NONE":
+backend/app/services/tcg_analyzer_svc.py:1740:                if heading and heading[0] == work_id:
+backend/app/services/tcg_analyzer_svc.py:1847:                    work_id
+backend/app/services/tcg_analyzer_svc.py:1871:                    :work_id
+backend/app/services/tcg_analyzer_svc.py:1894:                    work_id             = EXCLUDED.work_id
+backend/app/services/tcg_analyzer_svc.py:1919:                "work_id": int(work_id) if work_id else None,
+backend/app/services/tcg_condition_review_svc.py:123:    pairs.update({"product_title": "cr_product.name", "product_work": "cr_product.work_id",
+backend/app/services/tcg_distribution_svc.py:365:            ON ser.id = p.work_id
+backend/app/services/tcg_product_code_collision_svc.py:32:    "LEFT JOIN public.type_master tm ON tm.id = p.work_id "
+backend/app/services/tcg_product_detail_svc.py:112:    # work_id → public.type_master (INTEGER, SSOT)
+backend/app/services/tcg_product_detail_svc.py:118:    ), {"selected": product["work_id"]})
+backend/app/services/tcg_product_detail_svc.py:119:    lookups["work_id"] = [dict(row) for row in work_rows.mappings()]
+backend/app/services/tcg_product_detail_svc.py:171:        # work_id → public.type_master (INTEGER, SSOT); validated separately from LOOKUPS
+backend/app/services/tcg_product_detail_svc.py:172:        new_work_id = values.get("work_id")
+backend/app/services/tcg_product_detail_svc.py:173:        if new_work_id is not None and str(new_work_id) != str(product.get("work_id") or ""):
+backend/app/services/tcg_product_detail_svc.py:175:                new_work_id_int = int(new_work_id)
+backend/app/services/tcg_product_detail_svc.py:181:            ), {"id": new_work_id_int})).one_or_none()
+backend/app/services/tcg_product_detail_svc.py:185:            params["work_id"] = new_work_id_int
+backend/app/services/tcg_product_detail_svc.py:187:            params["work_id"] = product.get("work_id")
+backend/app/services/tcg_product_detail_svc.py:226:                    "work_id": product.get("work_id"),
+backend/app/services/tcg_product_detail_svc.py:236:                    "work_id": params["work_id"],
+backend/app/services/tcg_product_detail_svc.py:264:            "work_id=:work_id,manufacturer_id=CAST(:manufacturer_id AS uuid),"
+backend/app/services/tcg_product_detail_svc.py:280:        work_changed = params["work_id"] != product.get("work_id")
+backend/app/services/tcg_product_detail_svc.py:281:        if (final_format_id is not None and params["work_id"] is not None
+backend/app/services/tcg_product_detail_svc.py:283:                and not await format_matches_game(db, final_format_id, params["work_id"])):
+backend/app/services/tcg_product_import_svc.py:79:    "work_id": "work_code",
+backend/app/services/tcg_product_import_svc.py:120:    "work_code": "work_id",
+backend/app/services/tcg_product_import_svc.py:421:        work_id=payload["work_id"],
+backend/app/services/tcg_product_import_svc.py:475:            work_id = payload.get("work_id")
+backend/app/services/tcg_product_import_svc.py:476:            if format_id is not None and work_id:
+backend/app/services/tcg_product_import_svc.py:479:                if not await format_matches_game(db, int(format_id), int(work_id)):
+backend/app/services/tcg_product_master_svc.py:37:    "exclude_keywords", "work_id", "product_format_id", "product_category_id",
+backend/app/services/tcg_product_master_svc.py:87:        "work_id": args.get("work_id"),
+backend/app/services/tcg_product_master_svc.py:105:async def format_matches_game(db: AsyncSession, product_format_id: int, work_id: int) -> bool:
+backend/app/services/tcg_product_master_svc.py:110:        {"fid": int(product_format_id), "wid": int(work_id)},
+backend/app/services/tcg_product_master_svc.py:116:    db: AsyncSession, product_format_id: int | None, work_id: int | None = None,
+backend/app/services/tcg_product_master_svc.py:126:    if work_id is not None and not await format_matches_game(db, product_format_id, work_id):
+backend/app/services/tcg_product_master_svc.py:239:    # work_id → public.type_master (SSOT)
+backend/app/services/tcg_product_master_svc.py:245:    lookups["work_id"] = [{"id": r.id, "name": r.name} for r in work_rows.fetchall()]
+backend/app/services/tcg_product_master_svc.py:340:    work_id: str,
+backend/app/services/tcg_product_master_svc.py:359:            r.work_id == work_id
+backend/app/services/tcg_product_master_svc.py:378:    work_id: str,
+backend/app/services/tcg_product_master_svc.py:396:                p.work_id::text           AS work_id,
+backend/app/services/tcg_product_master_svc.py:411:                    p.work_id::text = :work_id
+backend/app/services/tcg_product_master_svc.py:418:                p.work_id, p.manufacturer_id, p.product_category_id, p.mark
+backend/app/services/tcg_product_master_svc.py:425:            "work_id": work_id,
+backend/app/services/tcg_product_master_svc.py:433:        work_id=work_id,
+backend/app/services/tcg_product_master_svc.py:487:    work_id: str | int,
+backend/app/services/tcg_product_master_svc.py:518:        "exclude_keywords": exclude_keywords, "work_id": work_id,
+backend/app/services/tcg_product_master_svc.py:525:        _work_id_int: int | None = int(work_id) if str(work_id).strip() else None
+backend/app/services/tcg_product_master_svc.py:527:        _work_id_int = None
+backend/app/services/tcg_product_master_svc.py:528:    await _validate_product_format(db, product_format_id, work_id=_work_id_int)
+backend/app/services/tcg_product_master_svc.py:533:        work_id=work_id,
+backend/app/services/tcg_product_master_svc.py:548:    work_id_int = int(work_id)
+backend/app/services/tcg_product_master_svc.py:549:    # category_class: work_id（type_master.name_ja）から導出
+backend/app/services/tcg_product_master_svc.py:552:        {"id": work_id_int},
+backend/app/services/tcg_product_master_svc.py:568:                 product_kind_id, work_id, manufacturer_id, product_category_id,
+backend/app/services/tcg_product_master_svc.py:572:                 :product_kind_id, :work_id, :manufacturer_id, :product_category_id,
+backend/app/services/tcg_product_master_svc.py:583:            "work_id": work_id_int,
+backend/app/services/tcg_product_master_svc.py:601:        "exclude_keywords": exclude_keywords, "work_id": work_id,
+backend/app/services/tcg_product_roundtrip_svc.py:129:async def snapshots(db: AsyncSession, query: str = "", work_id: str | None = None) -> list[dict]:
+backend/app/services/tcg_product_roundtrip_svc.py:134:    joins.append("LEFT JOIN public.type_master work ON work.id=p.work_id")
+backend/app/services/tcg_product_roundtrip_svc.py:156:    work_id_int = int(work_id) if work_id else None
+backend/app/services/tcg_product_roundtrip_svc.py:162:            "AND (CAST(:work_id AS INTEGER) IS NULL OR p.work_id = CAST(:work_id AS INTEGER)) "
+backend/app/services/tcg_product_roundtrip_svc.py:165:        {"like": "%" + query.strip() + "%", "work_id": work_id_int},
+backend/app/services/tcg_product_roundtrip_svc.py:196:async def export_csv(db: AsyncSession, query: str = "", work_id: str | None = None) -> bytes:
+backend/app/services/tcg_product_roundtrip_svc.py:200:    for snapshot in await snapshots(db, query, work_id):
+backend/app/services/tcg_product_roundtrip_svc.py:330:            if not errors and ("product_format_id" in plan["sets"] or "work_id" in plan["sets"]):
+backend/app/services/tcg_product_roundtrip_svc.py:332:                final_work = plan["sets"].get("work_id", snapshot["product"].get("work_id"))
+backend/app/services/tcg_product_roundtrip_svc.py:347:                        "work_id": product.get("work_id"),
+backend/app/services/tcg_product_roundtrip_svc.py:361:                        "work_id": plan["sets"].get("work_id", product.get("work_id")),
+backend/app/services/tcg_product_roundtrip_svc.py:463:                        if field in ("work_id", "product_category_id", "product_kind_id", "product_format_id")
+backend/app/services/tcg_work_comparison_svc.py:18:    validate_work_id,
+backend/app/services/tcg_work_comparison_svc.py:70:        item_id, work_id = cols
+backend/app/services/tcg_work_comparison_svc.py:75:            raw_wid = work_id or None
+backend/app/services/tcg_work_comparison_svc.py:76:            _wid = validate_work_id(raw_wid, reference)
+backend/app/services/tcg_work_comparison_svc.py:77:            # validate_work_id returns None for both empty (intentional null) and
+backend/app/services/tcg_work_comparison_svc.py:79:            # validation means the model produced an invalid work_id — reject it.
+backend/app/services/tcg_work_comparison_svc.py:82:            # match_pid_with_work and product_work_ids expect str; convert for consistency
+backend/app/services/tcg_work_comparison_svc.py:150:            "'id', p.id::text, 'is_active', p.is_active, 'work_id', p.work_id, 'category_class', p.category_class"
+backend/app/services/tcg_work_comparison_svc.py:161:            "work_ids": {p["id"]: str(p["work_id"]) if p["work_id"] else None for p in masters["products"] if p["is_ac
+backend/app/services/tcg_work_comparison_svc.py:206:            _wid = validate_work_id(item.get("resolved_work_id"), reference)
+backend/app/services/tcg_work_comparison_svc.py:207:            # match_pid_with_work expects str; convert for consistency with product_work_ids
+backend/app/services/tcg_work_comparison_svc.py:216:def match_item(item: dict, work_id: str | None, context: dict) -> dict:
+backend/app/services/tcg_work_comparison_svc.py:223:        work_id=work_id, product_work_ids=context["work_ids"], raw_state=norm("raw_state", "CONDITION"),
+backend/app/services/tcg_work_comparison_svc.py:227:            "pid_resolved": resolved, "basis": basis, "candidates": sorted(candidates), "work_id": work_id}
+backend/app/services/tcg_work_reference.py:34:def work_ids(reference: dict) -> set[int]:
+backend/app/services/tcg_work_reference.py:38:def validate_work_id(value: str | int | None, reference: dict) -> int | None:
+backend/app/services/tcg_work_reference.py:44:        logger.warning("validate_work_id: non-integer value %r, returning None", value)
+backend/app/services/tcg_work_reference.py:46:    if canonical not in work_ids(reference):
+backend/app/services/tcg_work_reference.py:47:        logger.warning("validate_work_id: %d not in reference, returning None", canonical)
+backend/app/services/tcg_work_reference.py:88:            'english_title', p.name_en, 'mark', p.mark, 'work_id', p.work_id,
+backend/app/services/tcg_work_reference.py:96:    ids = work_ids(row)
+backend/app/services/tcg_work_reference.py:99:    if any(p["work_id"] not in ids for p in row["products"]):
+backend/app/tasks/master_required_fields_monitor.py:24:           "exclude_keywords", "work_id", "product_format_id", "product_category_id")
+backend/app/tasks/master_required_fields_monitor.py:40:  count(*) FILTER (WHERE work_id IS NULL) AS work_id,
+backend/app/tasks/tcg_extraction.py:141:            (attrelid = '{TCG_SCHEMA}.extraction_items'::regclass AND attname IN ('resolved_work_id', 'resolved_product_code'))
+backend/app/tasks/tcg_extraction.py:515:                    if explicit and item.get("resolved_work_id") not in (None, int(explicit)):
+backend/app/tasks/tcg_extraction.py:518:                            extraction_job_id, item.get("resolved_work_id"), explicit,
+backend/app/tasks/tcg_extraction.py:520:                        item["resolved_work_id"] = None
+backend/app/tasks/tcg_extraction.py:557:                        raw_work_name, raw_work_source_line_span, resolved_work_id,
+backend/app/tasks/tcg_extraction.py:566:                        :raw_work_name, :raw_work_source_line_span, :resolved_work_id,
+backend/app/tasks/tcg_extraction.py:583:                    "resolved_work_id": item.get("resolved_work_id"),
+scripts/migrate-pipeline-data-to-public.sh:108:INSERT INTO public.extraction_items (id, extraction_job_id, line_start, line_end, raw_product_name, raw_quantity, raw_price
+scripts/migrate-pipeline-data-to-public.sh:109:SELECT id, extraction_job_id, line_start, line_end, raw_product_name, raw_quantity, raw_price, raw_unit, raw_state, raw_mem
+scripts/migration-column-churn-allowlist.json:11:    "reason": "ADD (migrations/20260909_000000_public_products_phase2b_columns.sql and migrations/20260914_140000_unify_t
+scripts/run_all_migrations.sh:695:# PHASE-2B: public.products Phase 2b columns prerequisite (work_id, unit, condition, etc.)
+scripts/run_all_migrations.sh:710:run_sql migrations/20260912_020000_tcg_resolved_work_id.sql
+scripts/run_all_migrations.sh:744:# work_id NOT NULL 制約追加
+scripts/run_all_migrations.sh:745:run_sql migrations/20260916_130000_work_id_not_null.sql
+scripts/run_all_migrations.sh:759:# Master SSOT Phase 1a: public.products.work_id を UUID→INTEGER へ再キャスト（冪等）
+scripts/run_all_migrations.sh:760:run_sql migrations/20260919_010000_master_ssot_work_id_recast.sql
+scripts/run_all_migrations.sh:768:# Master SSOT Phase 2: FK work_id → tcg_type_master（冪等）
+scripts/run_all_migrations.sh:769:run_sql migrations/20260919_030000_master_ssot_fk_work_id.sql
+scripts/run_all_migrations.sh:771:# Fix extraction_items.resolved_work_id UUID→INTEGER 型修正（冪等）
+scripts/run_all_migrations.sh:772:run_sql migrations/20260919_190000_fix_extraction_work_id_type.sql
+scripts/run_all_migrations.sh:862:# public.analysis_results に work_id カラムを追加（Gemini 精度計測用）
+scripts/run_all_migrations.sh:863:run_sql migrations/20260923_120000_add_work_id_to_analysis_results.sql

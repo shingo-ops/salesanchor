@@ -36,7 +36,6 @@ const formatRow = {
   name: "Booster Box",
   name_en: null,
   line_id: null,
-  type_master_id: null,
   display_order: 100,
   is_active: true,
   created_at: "2026-10-01T00:00:00Z",
@@ -69,11 +68,10 @@ afterEach(() => cleanup());
 const openEdit = async () => {
   render(<ProductFormatsMasterPanel />);
   fireEvent.click(await screen.findByText("Booster Box"));
-  await screen.findByTestId("product-format-games-button");
+  await screen.findByTestId("product-format-games-option-1");
 };
 
 const toggleGame = (id: number) => {
-  fireEvent.click(screen.getByTestId("product-format-games-button"));
   fireEvent.click(screen.getByTestId(`product-format-games-option-${id}`));
 };
 
@@ -86,9 +84,22 @@ it("does not offer inactive games", async () => {
   render(<ProductFormatsMasterPanel />);
   await screen.findByText("Booster Box");
   fireEvent.click(screen.getByTestId("product-formats-new"));
-  fireEvent.click(await screen.findByTestId("product-format-games-button"));
-  expect(screen.getByTestId("product-format-games-option-1")).toBeTruthy();
+  expect(await screen.findByTestId("product-format-games-option-1")).toBeTruthy();
   expect(screen.queryByTestId("product-format-games-option-3")).toBeNull();
+});
+
+it("shows every active game as a checkbox right after the drawer opens, without a button", async () => {
+  await openEdit();
+  expect(screen.getByTestId("product-format-games-option-1")).toBeTruthy();
+  expect(screen.getByTestId("product-format-games-option-2")).toBeTruthy();
+  expect(screen.queryByTestId("product-format-games-option-3")).toBeNull();
+  expect(screen.queryByTestId("product-format-games-button")).toBeNull();
+});
+
+it("checks the games already saved for the format", async () => {
+  await openEdit();
+  expect((screen.getByTestId("product-format-games-option-1") as HTMLInputElement).checked).toBe(true);
+  expect((screen.getByTestId("product-format-games-option-2") as HTMLInputElement).checked).toBe(true);
 });
 
 it("creates a format and then replaces its games", async () => {
@@ -107,6 +118,8 @@ it("creates a format and then replaces its games", async () => {
     expect(api.put).toHaveBeenCalledWith("/super-admin/product-formats/50/games", { game_ids: [1] })
   );
   expect(api.post).toHaveBeenCalledTimes(1);
+  // ADR-1038 便3a: 旧列 type_master_id の単独欄は無く、送信にも含めない
+  expect(vi.mocked(api.post).mock.calls[0][1]).not.toHaveProperty("type_master_id");
 });
 
 it("skips the games call when games are unchanged", async () => {

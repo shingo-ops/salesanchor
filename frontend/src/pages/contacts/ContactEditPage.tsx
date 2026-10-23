@@ -16,6 +16,7 @@ import { api } from "../../lib/api";
 import { TextareaControl } from "../../components/Textarea";
 import { TextFieldControl } from "../../components/TextField";
 import { Checkbox } from "../../components/Checkbox";
+import { LoadingBlock } from "../../components/loading";
 
 interface CompanyMini {
   id: number;
@@ -138,7 +139,7 @@ export default function ContactEditPage() {
     <PageLayout navKey="nav.contacts" subtitleKey="contacts.subtitle">
       {error && <div className="error-message">{error}</div>}
       {loading ? (
-        <div className="loading">{t("common.loading")}</div>
+        <LoadingBlock />
       ) : (
         <form onSubmit={handleSubmit} style={{ maxWidth: "var(--modal-max-w-md)" }}>
           <Select

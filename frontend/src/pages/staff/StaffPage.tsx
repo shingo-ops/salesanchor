@@ -8,6 +8,7 @@
  *   2026-06-11: 編集を Drawer 化（useRecordDrawer, ADR-122 バッチB）
  */
 
+import { LoadingBlock } from "../../components/loading";
 import { useEffect, useState, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -324,7 +325,7 @@ export default function StaffPage() {
       </Drawer>
 
       {loading ? (
-        <div className="loading">{t("common.loading")}</div>
+        <LoadingBlock />
       ) : (() => {
         const columns: DataTableColumn<Staff>[] = [
           {

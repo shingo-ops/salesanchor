@@ -41,6 +41,7 @@ celery_app = Celery(
         "app.tasks.ai_ops_heartbeat",  # ADR-1012 段階1 便5: celery の止まりの見張り
         "app.tasks.viewer_inventory_cache",  # ADR-1019 段2: 閲覧ページの在庫の作り置き
         "app.tasks.master_required_fields_monitor",  # ADR-1020 便4c: 共用商品の必須項目の週次件数
+        "app.tasks.bundle_bulk_monitor",  # ADR-1027 便3: バルク系のまとめ売りの週次件数
         "app.tasks.viewer_share_flag_monitor",  # ADR-1019 段6: 閲覧者の使い回しの疑いを運用 Discord へ
     ],
 )
@@ -194,6 +195,11 @@ celery_app.conf.beat_schedule = {
     "report-master-required-fields-weekly": {
         "task": "app.tasks.master_required_fields_monitor.report_master_required_fields",
         "schedule": crontab(hour=9, minute=0, day_of_week=1),
+    },
+    # ADR-1027 便3: バルク系の値段基準不明・まとめ数未確認の件数を毎週月曜 09:05 に管理者用 Discord へ
+    "report-bundle-bulk-weekly": {
+        "task": "app.tasks.bundle_bulk_monitor.report_bundle_bulk",
+        "schedule": crontab(hour=9, minute=5, day_of_week=1),
     },
     # ADR-1019 段6: 閲覧者の使い回しの疑いが新しく出たら運用の Discord へ（1時間ごと・同じ知らせは30日送らない）
     "notify-viewer-share-flags-hourly": {

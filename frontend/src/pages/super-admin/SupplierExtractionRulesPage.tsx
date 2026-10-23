@@ -21,6 +21,7 @@ import { Button } from "../../components/Button";
 import { DashboardIcons, SCHEDULE_SETTINGS_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 import "./SupplierExtractionRulesPage.css";
+import { LoadingBlock } from "../../components/loading";
 
 // ---------------------------------------------------------------------------
 // 型定義
@@ -537,7 +538,7 @@ export default function SupplierExtractionRulesPage({ embedded = false }: Suppli
       </div>
 
       {detailError && <p>{detailError}</p>}
-      {loadingDetail && <p>{t("common.loading")}</p>}
+      {loadingDetail && <LoadingBlock />}
 
       {!loadingDetail && detail && (
         <div className="supplier-rules-split">
@@ -931,7 +932,7 @@ export default function SupplierExtractionRulesPage({ embedded = false }: Suppli
     <div>
       {listError && <p>{listError}</p>}
       {loadingList ? (
-        <p>{t("common.loading")}</p>
+        <LoadingBlock />
       ) : (
         <DataTable
           columns={columns}

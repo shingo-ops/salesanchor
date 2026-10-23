@@ -59,10 +59,11 @@ afterEach(async () => {
   await i18n.changeLanguage("ja");
 });
 
-const lookupInputs = () => Array.from(document.querySelectorAll<HTMLInputElement>("input[list]"));
+const lookupSelects = () => Array.from(document.querySelectorAll<HTMLSelectElement>(".pmd-field select"));
+const optionValues = (select: HTMLSelectElement) => Array.from(select.options).map((o) => o.value).filter(Boolean);
 async function fillLookups() {
-  const names = ["Card", "Pokemon", "Nintendo", "Booster"];
-  lookupInputs().forEach((input, i) => fireEvent.change(input, { target: { value: names[i] } }));
+  const ids = ["k1", "w1", "m1", "c1"];
+  ids.forEach((id, i) => fireEvent.change(lookupSelects()[i], { target: { value: id } }));
 }
 
 describe("ProductMasterDrawer registration (ja)", () => {
@@ -79,15 +80,17 @@ describe("ProductMasterDrawer registration (ja)", () => {
     expect(screen.getByRole("button", { name: "商品マスタに登録" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "閉じる" })).toBeTruthy();
     expect(document.querySelector("aside")?.getAttribute("aria-label")).toBe("商品マスタメンテナンス");
-    expect(lookupInputs()[0].placeholder).toBe("名称で検索・選択");
+    expect(lookupSelects()[0].options[0].textContent).toBe("選択してください");
   });
 
   it("uses the shared control classes for inputs, textareas and buttons", async () => {
     renderDrawer(["PRODUCT_MASTER_UNREGISTERED"]);
     await screen.findByText("登録内容確認");
     const inputs = Array.from(document.querySelectorAll<HTMLInputElement>(".pmd-field input:not([type=checkbox])"));
-    expect(inputs.length).toBe(9);
+    expect(inputs.length).toBe(4);
     for (const input of inputs) expect(input.className).toContain("comp-field__input");
+    expect(lookupSelects().length).toBe(5);
+    for (const select of lookupSelects()) expect(select.className).toContain("comp-select__control");
     const textareas = Array.from(document.querySelectorAll<HTMLTextAreaElement>(".pmd-field textarea"));
     expect(textareas.length).toBe(2);
     for (const textarea of textareas) expect(textarea.className).toContain("comp-field__textarea");
@@ -105,7 +108,7 @@ describe("ProductMasterDrawer registration (ja)", () => {
     await fillLookups();
     expect(check.disabled).toBe(false);
     expect(register.disabled).toBe(false);
-    const title = document.querySelectorAll<HTMLInputElement>(".pmd-field input:not([list])")[1];
+    const title = document.querySelectorAll<HTMLInputElement>(".pmd-field input")[1];
     fireEvent.change(title, { target: { value: "" } });
     expect(check.disabled).toBe(true);
     expect(register.disabled).toBe(true);
@@ -127,9 +130,8 @@ describe("ProductMasterDrawer registration (ja)", () => {
     renderDrawer(["PRODUCT_MASTER_UNREGISTERED"]);
     await screen.findByText("登録内容確認");
     await fillLookups();
-    const options = Array.from(document.querySelectorAll<HTMLOptionElement>("#lookup-product_format_id option")).map((o) => o.value);
-    expect(options).toEqual(["Box Set"]);
-    fireEvent.change(lookupInputs()[4], { target: { value: "Box Set" } });
+    expect(optionValues(lookupSelects()[4])).toEqual(["7"]);
+    fireEvent.change(lookupSelects()[4], { target: { value: "7" } });
     fireEvent.click(screen.getByRole("checkbox", { name: "英語タイトル：調べたが存在しない" }));
     fireEvent.click(screen.getByRole("button", { name: "商品マスタに登録" }));
     await waitFor(() =>
@@ -138,6 +140,38 @@ describe("ProductMasterDrawer registration (ja)", () => {
         expect.objectContaining({ product_format_id: 7, blank_confirmations: ["name_en"], force: false }),
       ),
     );
+  });
+
+  it("uses select controls, not typed search inputs, for the five lookup fields", async () => {
+    renderDrawer(["PRODUCT_MASTER_UNREGISTERED"]);
+    await screen.findByText("登録内容確認");
+    expect(lookupSelects().length).toBe(5);
+    expect(document.querySelectorAll("[list], [id^=lookup-]").length).toBe(0);
+  });
+
+  it("disables the format select until a work is chosen", async () => {
+    renderDrawer(["PRODUCT_MASTER_UNREGISTERED"]);
+    await screen.findByText("登録内容確認");
+    expect(lookupSelects()[4].disabled).toBe(true);
+    fireEvent.change(lookupSelects()[1], { target: { value: "w1" } });
+    expect(lookupSelects()[4].disabled).toBe(false);
+  });
+
+  it("offers only the children of the chosen work, and resets the format when the work changes", async () => {
+    const wideForm = {
+      ...form,
+      lookups: { ...form.lookups, work_id: [{ id: "w1", name: "Pokemon" }, { id: "w9", name: "Other" }] },
+    };
+    vi.mocked(api.get).mockImplementation((async (path: string) => (path.startsWith("/tcg/products/search") ? { candidates } : wideForm)) as typeof api.get);
+    renderDrawer(["PRODUCT_MASTER_UNREGISTERED"]);
+    await screen.findByText("登録内容確認");
+    fireEvent.change(lookupSelects()[1], { target: { value: "w1" } });
+    expect(optionValues(lookupSelects()[4])).toEqual(["7"]);
+    fireEvent.change(lookupSelects()[4], { target: { value: "7" } });
+    expect(lookupSelects()[4].value).toBe("7");
+    fireEvent.change(lookupSelects()[1], { target: { value: "w9" } });
+    expect(optionValues(lookupSelects()[4])).toEqual(["8"]);
+    expect(lookupSelects()[4].value).toBe("");
   });
 });
 
@@ -153,7 +187,7 @@ describe("ProductMasterDrawer registration (en)", () => {
     expect(screen.getByRole("button", { name: "Check for duplicates" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Register in product master" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Close" })).toBeTruthy();
-    expect(lookupInputs()[0].placeholder).toBe("Search or select by name");
+    expect(lookupSelects()[0].options[0].textContent).toBe("Select");
     expect(visibleStrings(container)).not.toMatch(JAPANESE);
   });
 

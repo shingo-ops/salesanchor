@@ -1,0 +1,35 @@
+-- SQL: SELECT id, code, type_master_id, is_active FROM ai_ro.public__product_formats ORDER BY id
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+time="2026-10-22T00:16:36+09:00" level=warning msg="Found orphan containers ([astro-webapp-gemini-egress-1 astro-webapp-frontend-1 astro-webapp-discord-gateway-1 astro-webapp-celery-beat-1 astro-webapp-celery-worker-1 astro-webapp-nginx-1 astro-webapp-postgres-1 astro-webapp-gha-exporter-1 astro-webapp-redis-1 astro-webapp-certbot-1 astro-webapp-node-exporter-1 astro-webapp-promtail-1]) for this project. If you removed or renamed this service in your compose file, you can run this command with the --remove-orphans flag to clean it up."
+ Container astro-webapp-ai-reader-run-d60ffcdc7289 Creating 
+ Container astro-webapp-ai-reader-run-d60ffcdc7289 Created 
+AUDIT ts=2026-10-21T15:16:37Z sha=039835c78183 rows=28 ms=40 result=ok sql=SELECT id, code, type_master_id, is_active FROM ai_ro.public__product_formats ORDER BY id 
+id	code	type_master_id	is_active
+1	BOOSTER	20	True
+2	EXTRA_BOOSTER	21	True
+3	STARTER_DECK	1	True
+4	ENHANCED_BOOSTER	1	True
+5	HIGH_CLASS	1	True
+6	PREMIUM_BOOSTER	2	True
+7	THEME_BOOSTER	21	True
+8	CONCEPT_PACK	1	True
+9	SPECIAL_PACK	20	True
+10	STRUCTURE_DECK	5	True
+11	ADVANCE_DECK	21	True
+12	START_DECK_EX	4	True
+13	MEMORIAL_PACK	2	True
+14	ANNIVERSARY_SET	20	True
+15	GIFT_SET	2	True
+16	ILLUMINEERS_TROVE	23	True
+17	SPECIAL_BOX	1	True
+18	DECK_BUILD_BOX	1	True
+19	PREMIUM_TRAINER_BOX	1	True
+20	COLLECTOR_BOX	1	True
+21	HIGH_CLASS_DECK	1	True
+22	BOOSTER_BOX	1	True
+23	SPECIAL_SET	5	True
+24	ILLUSTRATION_BOX	2	True
+25	STORAGE_BOX	2	True
+28	PROMO	2	True
+30	GRADED	1	True
+32	BULK	1	True

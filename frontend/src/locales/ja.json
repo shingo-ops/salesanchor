@@ -4920,7 +4920,7 @@
       "memo": "メモ"
     },
     "productMasterDrawer": {
-      "searchSelectPlaceholder": "名称で検索・選択",
+      "selectPlaceholder": "選択してください",
       "unselected": "未選択",
       "emptyValue": "未入力",
       "registeredTitle": "商品マスタへの登録が完了しました（次回解析で反映）",
@@ -5201,13 +5201,9 @@
     "name": "名称",
     "nameEn": "英語名",
     "lineId": "小分類",
-    "typeMasterId": "カードゲーム",
     "displayOrder": "表示順",
     "isActive": "有効",
     "gameIds": "使えるゲーム",
-    "gamesNone": "未設定",
-    "gamesClear": "選択をクリア",
-    "gamesCount": "{{n}}件のゲーム",
     "gamesInUse": "この細分類を使っている商品があるため、そのゲームは外せません。先に商品の細分類か作品を直してください。",
     "gamesUnknown": "選んだゲームが見つからないか、使われていません。読み込み直してから選んでください。",
     "saveFailed": "保存できませんでした"

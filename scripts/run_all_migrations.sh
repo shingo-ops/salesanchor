@@ -58,9 +58,21 @@ run_py() {
     "$@" -w /app "${BACKEND}" python "${script}"
 }
 
-# 稼働中のアプリと deadlock したときだけ、同じファイルを流し直す（全 migration は冪等で、
+# 稼働中のアプリとロックを取り合ったら、同じファイルを流し直す（全 migration は冪等で、
 # CI のドライラン2周目で再実行が通ることを確かめている）。ほかのエラーは今までどおり即停止。
-SQL_DEADLOCK_MAX_ATTEMPTS=3
+# ロック待ちは1秒で諦める。待っている間は後から来た在庫表などの読み取りも止まるため（ADR-1037）。
+# 再試行は3秒あけ、1回の実行全体で合計40回まで。1ファイルでもその40回まで使える（移行ステップの打ち切り10分に収める。ADR-1037 便1.1）。
+SQL_LOCK_TIMEOUT="${SQL_LOCK_TIMEOUT:-1s}"
+SQL_RETRY_MAX_ATTEMPTS="${SQL_RETRY_MAX_ATTEMPTS:-40}"
+SQL_RETRY_SLEEP_SEC="${SQL_RETRY_SLEEP_SEC:-3}"
+SQL_RETRY_BUDGET="${SQL_RETRY_BUDGET:-40}"
+SQL_RETRY_USED=0
+# 鍵が取れなかったときの手がかり: 開始から1秒を超えて開いている接続（ADR-1037 便1.1）
+# 公開リポジトリの Actions ログに出るため、SQL の文面・接続元アドレスは出さない（命令の先頭1語と表名だけ）
+log_lock_holders() {
+  echo ">>> [${STEP}/${TOTAL}] lock holders (xact > 1s):"
+  docker exec -e PGOPTIONS="-c lock_timeout=1s -c statement_timeout=5s" "${POSTGRES}" ${PSQL} -At -F ' | ' -c "SELECT a.pid, a.usename, a.application_name, a.state, coalesce(a.wait_event_type, '-'), round(extract(epoch FROM now() - a.xact_start))::int AS xact_sec, upper(coalesce(substring(a.query from '^[[:space:]]*([A-Za-z]+)'), '-')) AS cmd, coalesce((SELECT string_agg(DISTINCT c.relname || ':' || l.mode, ',') FROM pg_locks l JOIN pg_class c ON c.oid = l.relation WHERE l.pid = a.pid AND l.granted AND l.database = (SELECT oid FROM pg_database WHERE datname = current_database()) AND c.relkind IN ('r', 'p', 'v')), '-') AS locks FROM pg_stat_activity a WHERE a.pid <> pg_backend_pid() AND a.backend_type = 'client backend' AND a.xact_start < now() - interval '1 second' ORDER BY a.xact_start" 2>&1 | sed "s/^/>>> [${STEP}\/${TOTAL}]   /" || true
+}
 run_sql() {
   local file="$1"
   STEP=$((STEP + 1))
@@ -69,22 +81,94 @@ run_sql() {
   errlog="$(mktemp)"
   while true; do
     rc=0
-    docker exec -i "${POSTGRES}" ${PSQL} < "${REPO_DIR}/${file}" 2>"${errlog}" || rc=$?
+    docker exec -e PGOPTIONS="-c lock_timeout=${SQL_LOCK_TIMEOUT}" -i "${POSTGRES}" ${PSQL} < "${REPO_DIR}/${file}" 2>"${errlog}" || rc=$?
     cat "${errlog}" >&2
     if [ "${rc}" -eq 0 ]; then
       rm -f "${errlog}"
       return 0
     fi
-    if grep -q "deadlock detected" "${errlog}" && [ "${attempt}" -lt "${SQL_DEADLOCK_MAX_ATTEMPTS}" ]; then
-      attempt=$((attempt + 1))
-      echo ">>> [${STEP}/${TOTAL}] deadlock detected; retry ${attempt}/${SQL_DEADLOCK_MAX_ATTEMPTS} in 5s: ${file}"
-      sleep 5
-      continue
+    if grep -qE "deadlock detected|canceling statement due to lock timeout" "${errlog}"; then
+      [ "${attempt}" -eq 1 ] && log_lock_holders
+      if [ "${attempt}" -lt "${SQL_RETRY_MAX_ATTEMPTS}" ] && [ "${SQL_RETRY_USED}" -lt "${SQL_RETRY_BUDGET}" ]; then
+        attempt=$((attempt + 1))
+        SQL_RETRY_USED=$((SQL_RETRY_USED + 1))
+        echo ">>> [${STEP}/${TOTAL}] lock conflict; retry ${attempt}/${SQL_RETRY_MAX_ATTEMPTS} in ${SQL_RETRY_SLEEP_SEC}s (total ${SQL_RETRY_USED}/${SQL_RETRY_BUDGET}): ${file}"
+        sleep "${SQL_RETRY_SLEEP_SEC}"
+        continue
+      fi
+      echo ">>> [${STEP}/${TOTAL}] lock conflict; retry limit reached (file ${attempt}/${SQL_RETRY_MAX_ATTEMPTS}, total ${SQL_RETRY_USED}/${SQL_RETRY_BUDGET}): ${file}"
+      log_lock_holders
     fi
     rm -f "${errlog}"
     return "${rc}"
   done
 }
+
+# >>> read-probe begin
+# ADR-1037 便1.2: 移行の間、在庫表の GET が読む表を2秒おきに読み、鍵待ちで何ms待たされるかを測る（K7）。
+# 計測は読み取りだけ（ACCESS SHARE）。結果は止めるときに時刻・ms・回数だけをログに出す（SQL・表名は出さない）。
+# 関数名は run_ で始めない（TOTAL は ^run_(sql|py) の行を数えるため）。
+READ_PROBE_INTERVAL_SEC="${READ_PROBE_INTERVAL_SEC:-2}"
+READ_PROBE_SLOW_MS="${READ_PROBE_SLOW_MS:-2000}"
+READ_PROBE_STMT_TIMEOUT="${READ_PROBE_STMT_TIMEOUT:-3s}"
+READ_PROBE_TABLES="${READ_PROBE_TABLES:-analysis_results extraction_items extraction_jobs source_messages supplier_channels item_corrections line_conditions products line_units product_search_keywords suppliers type_master tcg_distribution_settings users}"
+READ_PROBE_PID=""
+READ_PROBE_OUT=""
+read_probe_start() {
+  READ_PROBE_OUT="$(mktemp)" || { READ_PROBE_OUT=""; return 0; }
+  READ_PROBE_PARENT=$$
+  (
+    set +e
+    probe_args=()
+    for probe_t in ${READ_PROBE_TABLES}; do
+      probe_args+=(-c "SELECT 1 FROM public.${probe_t} LIMIT 1")
+    done
+    while :; do
+      kill -0 "${READ_PROBE_PARENT}" 2>/dev/null || exit 0
+      probe_t0=${EPOCHREALTIME/[.,]/}
+      docker exec -e PGOPTIONS="-c lock_timeout=${READ_PROBE_STMT_TIMEOUT} -c statement_timeout=${READ_PROBE_STMT_TIMEOUT}" \
+        -e PGAPPNAME=sa_read_probe "${POSTGRES}" \
+        psql -X -q -At -U jarvis -d jarvis_db "${probe_args[@]}" >/dev/null 2>"${READ_PROBE_OUT}.err"
+      probe_rc=$?
+      probe_t1=${EPOCHREALTIME/[.,]/}
+      probe_err="$(grep -c 'ERROR:' "${READ_PROBE_OUT}.err" 2>/dev/null)"
+      [[ ${probe_err} =~ ^[0-9]+$ ]] || probe_err=0
+      if [ "${probe_rc}" -ne 0 ] && [ "${probe_err}" -eq 0 ]; then probe_err=1; fi
+      if [[ ${probe_t0} =~ ^[0-9]+$ ]] && [[ ${probe_t1} =~ ^[0-9]+$ ]]; then
+        echo "$(( probe_t0 / 1000000 )) $(( (probe_t1 - probe_t0) / 1000 )) ${probe_err}" >>"${READ_PROBE_OUT}"
+      else
+        echo "0 - ${probe_err}" >>"${READ_PROBE_OUT}"
+      fi
+      sleep "${READ_PROBE_INTERVAL_SEC}"
+    done
+  ) </dev/null >/dev/null 2>&1 &
+  READ_PROBE_PID=$!
+}
+read_probe_stop() {
+  [ -n "${READ_PROBE_PID:-}" ] || return 0
+  kill "${READ_PROBE_PID}" 2>/dev/null || true
+  wait "${READ_PROBE_PID}" 2>/dev/null || true
+  READ_PROBE_PID=""
+  local probe_sum="" probe_kind="" pa="" pb="" pc="" pd="" pe="" probe_shown=0
+  probe_sum="$(awk -v slow="${READ_PROBE_SLOW_MS}" '
+    { n++; err += $3
+      if ($2 == "-") { inv++ } else { if ($2 + 0 > max) max = $2 + 0; if ($2 + 0 > slow) { ns++; print "SLOW " $1 " " $2 } } }
+    END { print "SUM " n + 0 " " ns + 0 " " err + 0 " " inv + 0 " " max + 0 }
+  ' "${READ_PROBE_OUT}" 2>/dev/null)" || true
+  while read -r probe_kind pa pb pc pd pe; do
+    if [ "${probe_kind}" = "SLOW" ]; then
+      if [ "${probe_shown}" -lt 20 ]; then
+        echo ">>> [final] read probe slow: $(TZ=UTC printf '%(%Y-%m-%dT%H:%M:%SZ)T' "${pa}") ${pb}ms" || true
+        probe_shown=$((probe_shown + 1))
+      fi
+    elif [ "${probe_kind}" = "SUM" ]; then
+      echo ">>> [final] read probe: n=${pa} slow=${pb} error=${pc} invalid=${pd} max=${pe}ms"
+    fi
+  done <<< "${probe_sum:-SUM 0 0 0 0 0}" || true
+  rm -f "${READ_PROBE_OUT}" "${READ_PROBE_OUT}.err" || true
+  return 0
+}
+# <<< read-probe end
 
 preflight_registered_files() {
   echo ">>> [0] Verifying registered migration files exist..."
@@ -100,31 +184,37 @@ preflight_registered_files
 # DROP / ALTER（列削除・型変更・表の作り直し）が止まるため。作成は下の EXIT trap が最後に行う。
 run_sql migrations/20261017_125900_drop_ai_ro_views.sql
 
-# ADR-1024: ai_ro ビューの作成（秘密列を除く）。スクリプトが正常終了（rc=0）したときだけ、
-# 常に最後に流す。将来の migration が末尾に追記されても、作成は常に最後になる。
-# 途中で失敗した場合はビューを外したままにする（fail-closed）。
-# 作成に失敗したら exit 1。（TOTAL は ^run_ 行を数えるため、ここでは run_sql を使わず直接流す）
+# ADR-1024: ai_ro ビューの作成（秘密列を除く）。スクリプトの成否にかかわらず、常に最後に流す。
+# 将来の migration が末尾に追記されても、作成は常に最後になる。
+# 途中で失敗した場合も作り直す（拒否リストは流した時点の列名で決まり、途中の状態にも同じ判定が当たる。ADR-1024 改訂）。
+# 作成の成否は終了コードを変えない（元の rc を返す）。待ちの上限は AI_RO_CREATE_TIMEOUT（1文ごと）。
+# （TOTAL は ^run_ 行を数えるため、ここでは run_sql を使わず直接流す）
 AI_RO_CREATE_SQL="migrations/20261017_130100_create_ai_ro_views.sql"
+AI_RO_CREATE_TIMEOUT="${AI_RO_CREATE_TIMEOUT:-30s}"
 _ai_ro_create_on_exit() {
   local rc=$?
   trap - EXIT
+  if declare -F read_probe_stop >/dev/null; then read_probe_stop || true; fi
   if [ "${rc}" -ne 0 ]; then
-    echo ">>> [final] skip ai_ro views (script failed rc=${rc}; views stay dropped)"
-    exit "${rc}"
+    echo ">>> [final] script failed rc=${rc}; recreating ai_ro views anyway"
   fi
   echo ">>> [final] psql < ${AI_RO_CREATE_SQL}"
   if [ ! -f "${REPO_DIR}/${AI_RO_CREATE_SQL}" ]; then
-    echo "⚠️ ${AI_RO_CREATE_SQL} が見つかりません（デプロイは続行。ai_ro は外れたまま＝AI は読めない）"
-    exit 0
+    echo "⚠️ ${AI_RO_CREATE_SQL} が見つかりません（ai_ro は外れたまま＝AI は読めない）"
+    exit "${rc}"
   fi
-  # ビューは AI が読むための補助。作成に失敗しても本体のデプロイは止めず、「読めない」側に倒す
-  if ! docker exec -i "${POSTGRES}" ${PSQL} < "${REPO_DIR}/${AI_RO_CREATE_SQL}"; then
-    echo "⚠️ ai_ro views の作成に失敗（デプロイは続行。ai_ro は外れたまま＝AI は読めない）"
-    exit 0
+  # ビューは AI が読むための補助。作成に失敗しても入れ替えの成否は変えず、「読めない」側に倒す
+  # 1文ごとの上限。打ち切り（57014）は作成 SQL の WHEN others に捕まらず、全体が戻って下の警告に入る
+  # VERBOSITY=terse: エラーは重さ・本文・位置だけにし、CONTEXT（SQL 文）を公開ログに出さない
+  if ! docker exec -e PGOPTIONS="-c statement_timeout=${AI_RO_CREATE_TIMEOUT}" -i "${POSTGRES}" ${PSQL} -v VERBOSITY=terse < "${REPO_DIR}/${AI_RO_CREATE_SQL}"; then
+    echo "⚠️ ai_ro views の作成に失敗（ai_ro は外れたまま＝AI は読めない）"
+    exit "${rc}"
   fi
-  exit 0
+  exit "${rc}"
 }
 trap _ai_ro_create_on_exit EXIT
+# ADR-1037 便1.2: trap の後で計測を始める（どこで落ちても上の trap が止める）
+read_probe_start
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # マイグレーション一覧（順序厳守・冪等必須）
@@ -1036,3 +1126,7 @@ run_sql migrations/20261020_100000_line_conditions_value_group_add_booklet.sql
 run_sql migrations/20261020_110000_line_conditions_value_group_add_supply.sql
 # ADR-1019 段11 便1: 閲覧者向け文面のテンプレート表（空・構造のみ・冪等）
 run_sql migrations/20261020_120000_create_viewer_message_templates.sql
+# ADR-1038 便2: products(細分類, 中分類) → product_format_game_links の複合 FK（事前点検つき・冪等）
+run_sql migrations/20261022_100000_products_format_in_work_fk.sql
+# ADR-1038 便3b: 旧列 product_formats.type_master_id を取り除く（FK・索引ごと。冪等。親子の正本は links）
+run_sql migrations/20261022_110000_product_formats_drop_type_master_id.sql

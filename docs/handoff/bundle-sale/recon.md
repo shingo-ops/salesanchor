@@ -251,3 +251,4 @@
 - 【事実】再解析は ON CONFLICT (extraction_item_id) の UPSERT（backend/app/services/line_analysis_v102_svc.py:709-732）。is_current は最後に _merge_supplier_products（:1380）が付け直す。人の直しは後から重なって勝つ。
 - 【事実】理由コードの整合テストが既にある: backend/tests/test_review_reason_codes_consistency.py、backend/tests/test_review_reason_labels_ja_sync.py（.github/workflows/test.yml:242 の pytest 全体で毎回）。
 - 【未確認】本番の換算済み 13 行に人の直しがあるか（便3 の始めに読み取りの道で数える）。GAS 側の価格の使い方（配信の列を読むだけという recon の表示経路の範囲まで確認）。
+- 【事実】便3の見張り: backend/app/tasks/bundle_bulk_monitor.py（_COUNT_SQL・build_message）、登録は backend/app/celery_app.py の include と beat "report-bundle-bulk-weekly"（月曜 09:05）。先例は backend/app/tasks/master_required_fields_monitor.py。定数は gemini_raw_copy_v102_product_first.py:49・line_analysis_v102_svc.py:118-119。基準値の実測は design.md 12-2 の追記。

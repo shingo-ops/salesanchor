@@ -1,0 +1,35 @@
+-- SQL: SELECT f.id, f.code, f.name, f.type_master_id AS pf_type_master_id, (SELECT count(*) FROM ai_ro.public__product_format_game_links l WHERE l.format_id=f.id) AS linked_games, (SELECT bool_or(l.type_master_id=f.type_master_id) FROM ai_ro.public__product_format_game_links l WHERE l.format_id=f.id) AS own_tm_in_links, (SELECT count(*) FROM ai_ro.public__products p WHERE p.product_format_id=f.id AND p.tenant_id IS NULL) AS shared_products, (SELECT count(*) FROM ai_ro.public__products p WHERE p.product_format_id=f.id AND p.tenant_id IS NOT NULL) AS tenant_products FROM ai_ro.public__product_formats f ORDER BY f.id
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+time="2026-10-21T23:51:07+09:00" level=warning msg="Found orphan containers ([astro-webapp-gemini-egress-1 astro-webapp-frontend-1 astro-webapp-celery-beat-1 astro-webapp-discord-gateway-1 astro-webapp-celery-worker-1 astro-webapp-nginx-1 astro-webapp-postgres-1 astro-webapp-gha-exporter-1 astro-webapp-redis-1 astro-webapp-certbot-1 astro-webapp-node-exporter-1 astro-webapp-promtail-1]) for this project. If you removed or renamed this service in your compose file, you can run this command with the --remove-orphans flag to clean it up."
+ Container astro-webapp-ai-reader-run-5b1081ca4885 Creating 
+ Container astro-webapp-ai-reader-run-5b1081ca4885 Created 
+id	code	name	pf_type_master_id	linked_games	own_tm_in_links	shared_products	tenant_products
+1	BOOSTER	ブースターパック	20	16	True	989	0
+2	EXTRA_BOOSTER	エクストラブースター	21	4	True	11	0
+3	STARTER_DECK	スターターデッキ	1	10	True	5	0
+4	ENHANCED_BOOSTER	強化拡張パック	1	1	True	0	0
+5	HIGH_CLASS	ハイクラスパック	1	1	True	0	0
+6	PREMIUM_BOOSTER	プレミアムブースター	2	2	True	2	0
+7	THEME_BOOSTER	テーマブースター	21	1	True	6	0
+8	CONCEPT_PACK	コンセプトパック	1	1	False	0	0
+9	SPECIAL_PACK	スペシャルパック	20	2	True	1	0
+10	STRUCTURE_DECK	ストラクチャーデッキ	5	1	True	23	0
+11	ADVANCE_DECK	アドバンスデッキ	21	1	True	3	0
+12	START_DECK_EX	スタートデッキEX	4	7	True	141	0
+13	MEMORIAL_PACK	メモリアルパック	2	2	True	1	0
+14	ANNIVERSARY_SET	アニバーサリーセット	20	6	True	27	0
+15	GIFT_SET	ギフトセット	2	2	True	1	0
+16	ILLUMINEERS_TROVE	イルミニアーズトローヴ	23	1	True	0	0
+17	SPECIAL_BOX	スペシャルBOX	1	1	True	6	0
+18	DECK_BUILD_BOX	デッキビルドBOX	1	2	True	18	0
+19	PREMIUM_TRAINER_BOX	プレミアムトレーナーボックス	1	1	True	2	0
+20	COLLECTOR_BOX	コレクターボックス	1	2	True	2	0
+21	HIGH_CLASS_DECK	ハイクラスデッキ	1	1	True	3	0
+22	BOOSTER_BOX	ブースターBOX	1	1	True	0	0
+23	SPECIAL_SET	スペシャルセット	5	4	True	17	0
+24	ILLUSTRATION_BOX	イラストレーションボックス	2	2	True	11	0
+25	STORAGE_BOX	ストレージボックス	2	1	True	1	0
+28	PROMO	プロモ	2	2	True	4	0
+30	GRADED	鑑定品	1	1	True	5	0
+32	BULK	バルク	1	2	True	4	0
+AUDIT ts=2026-10-21T14:51:08Z sha=876c1d851496 rows=28 ms=48 result=ok sql=SELECT f.id, f.code, f.name, f.type_master_id AS pf_type_master_id, (SELECT count(*) FROM ai_ro.public__product_format_game_links l WHERE l.format_id=f.id) AS linked_games, (SELECT bool_or(l.type_master_id=f.type_master_id) FROM ai_ro.public__product_format_game_links l WHERE l.format_id=f.id) AS own_tm_in_links, (SELECT count(*) FROM ai_ro.public__products p WHERE p.product_format_id=f.id AND p.tenant_id IS NULL) AS shared_products, (SELECT count(*) FROM ai_ro.public__products p WHERE p.product

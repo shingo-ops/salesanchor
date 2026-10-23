@@ -28,6 +28,7 @@ import { CompanyFormFields, type CompanyFormState } from "./CompanyFormFields";
 import { ButtonLink } from "../../components/ButtonLink";
 import { TextareaControl } from "../../components/Textarea";
 import { TextFieldControl } from "../../components/TextField";
+import { LoadingBlock } from "../../components/loading";
 
 const PHONE_RE = /^(\+?\d{10,15}|0\d{9,10})$/;
 const validatePhoneClient = (raw: string): string | null => {
@@ -396,7 +397,7 @@ export default function CompaniesPage() {
       />
 
       {loading ? (
-        <p>{t("common.loading")}</p>
+        <LoadingBlock />
       ) : (() => {
         const columns: DataTableColumn<Company>[] = [
           { key: "name", header: t("common.name"), renderCell: (c) => (

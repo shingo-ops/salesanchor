@@ -123,7 +123,7 @@ it("AC7 ignores stale failure and completion while the new request is pending", 
   fireEvent.click(screen.getByRole("tab", { name: "One Piece" }));
   await act(async () => rejectA(new Error("old")));
   expect(screen.queryByRole("alert")).toBeNull();
-  expect(screen.queryByRole("status")).toBeNull();
+  expect(screen.queryByText(/^Products: \d+/)).toBeNull();
   await act(async () => resolveB(empty));
   await screen.findByText("Products: 0");
 });

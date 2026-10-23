@@ -4,6 +4,7 @@
 - **Date**: 2026-05-28
 - **Author**: Claude Code (Hikky-dev)
 - **PO**: しんごさん
+- **一部改訂**: ADR-1040（Proposed。ルートの上限と命名の決まりを改訂。ADR-1040 が Accepted になったときに効く）
 
 ---
 

@@ -1,0 +1,10 @@
+-- SQL: SELECT * FROM ai_ro.public__product_kinds ORDER BY id
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+time="2026-10-21T23:49:24+09:00" level=warning msg="Found orphan containers ([astro-webapp-gemini-egress-1 astro-webapp-frontend-1 astro-webapp-celery-beat-1 astro-webapp-discord-gateway-1 astro-webapp-celery-worker-1 astro-webapp-nginx-1 astro-webapp-postgres-1 astro-webapp-gha-exporter-1 astro-webapp-redis-1 astro-webapp-certbot-1 astro-webapp-node-exporter-1 astro-webapp-promtail-1]) for this project. If you removed or renamed this service in your compose file, you can run this command with the --remove-orphans flag to clean it up."
+ Container astro-webapp-ai-reader-run-30614bac154b Creating 
+ Container astro-webapp-ai-reader-run-30614bac154b Created 
+id	code	name	name_en	display_order	is_active	created_at	updated_at
+1	TCG	トレーディングカードゲーム	Trading Card Game	1	True	2026-09-21 06:18:47.241527+00:00	2026-09-21 06:18:47.241527+00:00
+2	FIGURE	フィギュア	Figure	2	True	2026-09-21 06:18:47.241527+00:00	2026-09-21 06:18:47.241527+00:00
+3	GOODS	グッズ	Goods	3	True	2026-09-21 06:18:47.241527+00:00	2026-09-21 06:18:47.241527+00:00
+AUDIT ts=2026-10-21T14:49:25Z sha=d501208e2ea9 rows=3 ms=38 result=ok sql=SELECT * FROM ai_ro.public__product_kinds ORDER BY id 

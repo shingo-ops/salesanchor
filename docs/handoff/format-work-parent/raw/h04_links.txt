@@ -1,0 +1,12 @@
+.github/workflows/migration-guard.yml:224:          PUBLIC_TABLES="tenants users permissions products suppliers supplier_aliases inventory inventory_movements tcg_series_master pokemon_dex trainer_dex
+backend/app/routers/super_admin_product_formats.py:35:    """ADR-1020 便2a: 細分類ごとの使えるゲーム（product_format_game_links）。"""
+backend/app/routers/super_admin_product_formats.py:41:            "FROM public.product_format_game_links WHERE format_id = ANY(:ids) GROUP BY format_id"
+backend/app/routers/super_admin_product_formats.py:184:                "DELETE FROM public.product_format_game_links "
+backend/app/routers/super_admin_product_formats.py:192:                    "INSERT INTO public.product_format_game_links (format_id, type_master_id) "
+backend/app/services/tcg_product_master_svc.py:108:        text("SELECT 1 FROM public.product_format_game_links "
+backend/app/services/tcg_product_master_svc.py:137:        "LEFT JOIN public.product_format_game_links l ON l.format_id = f.id "
+backend/app/services/tcg_product_roundtrip_svc.py:431:        await db.execute(text("LOCK TABLE public.product_formats, public.product_format_game_links IN SHARE MODE"))
+migrations/20260922_030000_product_format_game_links.sql:12:CREATE TABLE IF NOT EXISTS public.product_format_game_links (
+migrations/20260922_030000_product_format_game_links.sql:19:CREATE INDEX IF NOT EXISTS idx_pfgl_format_id ON public.product_format_game_links (format_id);
+migrations/20260922_030000_product_format_game_links.sql:20:CREATE INDEX IF NOT EXISTS idx_pfgl_type_master_id ON public.product_format_game_links (type_master_id);
+scripts/run_all_migrations.sh:839:run_sql migrations/20260922_030000_product_format_game_links.sql

@@ -18,6 +18,7 @@
 | 在庫 / inventory / 商品マスタ / 仕入元 / オファー | **ADR-099** ／ ADR-093 ／ ADR-014 | 在庫モデル・商品/在庫マスタ分離・Discord 収集 |
 | 共用商品の登録 / 必須項目 / 調べたが無い / product_blank_confirmations / 細分類 | **ADR-1020** ／ ADR-155 ／ ADR-156 | 9項目必須・4項目は印で空を認める・全入口で check_required_fields。値の決め方は docs/specs/product-master/registration-rules.md |
 | 取り込み / 解析 / パイプライン / Discord 収集 | **ADR-100** ／ ADR-014 | 提供元メッセージ→生オファー |
+| まとめ売り / N枚セット / bundle_size / バルク / bulk_price_basis_unknown / bundle_unverified | **ADR-1027** ／ ADR-1021 ／ [`docs/specs/bundle-sale/README.md`](../specs/bundle-sale/README.md) | 値段を割らずまとめの数を保存・商品名の欄に「N単位セット」。バルク系だけ形 P1・P2 を足す（2026-10-21 追記）。新しい書き方の手順は [`docs/runbooks/bundle-sale-new-wording.md`](../runbooks/bundle-sale-new-wording.md) |
 
 ## 顧客・リード・テナント
 
@@ -42,6 +43,7 @@
 | 標準ワークフロー / SOP / process-artifacts gate | **ADR-121** ／ ADR-112 ／ [`docs/STANDARD-WORKFLOW.md`](../STANDARD-WORKFLOW.md) | KGI→recon→設計の関所 |
 | 設計仕様書 / あるべき姿 / 仕様書索引 | **ADR-121** ／ [`docs/specs/README.md`](../specs/README.md) | 領域→設計仕様書の地図。索引に載る領域に触れる開発は仕様書を先に読む |
 | Claude Code 運用ガードレール / SessionStart hook | **ADR-042** | 運用ガードレール・hook 整備 |
+| CLAUDE.md / AGENTS.md / 入口の行数 / 目次 / 指示文書の構成 | **ADR-1040**（Proposed） ／ ADR-076 | 入口→目次→章→末端。本文の正本は AGENTS.md・入口の上限90行（ADR-076 のルート上限と命名を一部改訂） |
 | 担当者アイコン / 英語名必須 / Discord webhook 送信 / avatar | **ADR-159** ／ ADR-091 | Discord 返信を担当者の名（given_name_en）とアイコンで送る・Bot 名義では送らない（便A=アイコン+英語名必須 / 便B=webhook 送信） |
 | 24時間保守運用 / 障害記録 / 応急処置 / routines / アラート札 page・auto・ticket | **ADR-1012**（Proposed） ／ ADR-1009 ／ ADR-115 | 経路の正本は Alertmanager・障害記録の正本はアプリ DB・AI は PR で修理（ADR-136 の GO）・C は予備 |
 | Meta / Facebook / Instagram / Webhook | ADR-024 ／ ADR-025 ／ ADR-041 ／ ADR-026 | 連携整備・フォールバック・mid TEXT 化 |

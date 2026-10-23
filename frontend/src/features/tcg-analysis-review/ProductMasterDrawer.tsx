@@ -18,6 +18,7 @@ import { Trans, useTranslation } from 'react-i18next';
 import { Button } from '../../components/Button';
 import { Callout } from '../../components/Callout';
 import { Checkbox } from '../../components/Checkbox';
+import { SelectControl } from '../../components/Select';
 import { TextFieldControl } from '../../components/TextField';
 import { TextareaControl } from '../../components/Textarea';
 import { X } from '../../constants/icons';
@@ -51,44 +52,7 @@ type TextKey = Exclude<keyof RegistrationValues, 'blank_confirmations'>;
 
 // ── 共通 UI 部品 ─────────────────────────────────────────────────────────────
 
-function SearchSelect({
-  label,
-  lookupKey,
-  options,
-  value,
-  onChange,
-}: {
-  label: string;
-  lookupKey: TextKey;
-  options: LookupOption[];
-  value: string;
-  onChange: (key: TextKey, value: string) => void;
-}) {
-  const { t } = useTranslation();
-  const selected = options.find((o) => o.id === value);
-  const listId = `lookup-${lookupKey}`;
-  const [query, setQuery] = useState(selected?.name || '');
-  useEffect(() => { if (selected) setQuery(selected.name); }, [selected]);
-  return (
-    <label className="pmd-field">
-      {label}
-      <TextFieldControl
-        size="sm"
-        list={listId}
-        value={query}
-        placeholder={t('tcgAnalysisReview.productMasterDrawer.searchSelectPlaceholder')}
-        onChange={(e) => {
-          setQuery(e.target.value);
-          const match = options.find((o) => o.name === e.target.value);
-          onChange(lookupKey, match?.id || '');
-        }}
-      />
-      <datalist id={listId}>
-        {options.map((o) => <option value={o.name} key={o.id} />)}
-      </datalist>
-    </label>
-  );
-}
+const toSelectOptions = (options: LookupOption[]) => options.map((o) => ({ value: String(o.id), label: o.name }));
 
 // ── 商品マスタ新規登録フォーム（PRODUCT_MASTER_UNREGISTERED） ─────────────────
 
@@ -212,11 +176,62 @@ function RegistrationSection({ item }: { item: AnalysisReviewItem }) {
       ) : (
         <>
           <div className="pmd-fields">
-            <SearchSelect label={t('tcgAnalysisReview.productMasterDrawer.fieldKind')} lookupKey="product_kind_id" options={form?.lookups.product_kind_id || []} value={values.product_kind_id} onChange={setValue} />
-            <SearchSelect label={t('tcgAnalysisReview.productMasterDrawer.fieldWork')} lookupKey="work_id" options={form?.lookups.work_id || []} value={values.work_id} onChange={setValue} />
-            <SearchSelect label={t('tcgAnalysisReview.productMasterDrawer.fieldManufacturer')} lookupKey="manufacturer_id" options={form?.lookups.manufacturer_id || []} value={values.manufacturer_id} onChange={setValue} />
-            <SearchSelect label={t('tcgAnalysisReview.productMasterDrawer.fieldCategory')} lookupKey="product_category_id" options={form?.lookups.product_category_id || []} value={values.product_category_id} onChange={setValue} />
-            <SearchSelect key={`format-${values.work_id}`} label={t('tcgAnalysisReview.productMasterDrawer.fieldFormat')} lookupKey="product_format_id" options={formatOptionsFor(formats, values.work_id)} value={values.product_format_id} onChange={setValue} />
+            <label className="pmd-field">
+              {t('tcgAnalysisReview.productMasterDrawer.fieldKind')}
+              <SelectControl
+                size="sm"
+                fullWidth
+                placeholder={t('tcgAnalysisReview.productMasterDrawer.selectPlaceholder')}
+                options={toSelectOptions(form?.lookups.product_kind_id || [])}
+                value={values.product_kind_id}
+                onChange={(e) => setValue('product_kind_id', e.target.value)}
+              />
+            </label>
+            <label className="pmd-field">
+              {t('tcgAnalysisReview.productMasterDrawer.fieldWork')}
+              <SelectControl
+                size="sm"
+                fullWidth
+                placeholder={t('tcgAnalysisReview.productMasterDrawer.selectPlaceholder')}
+                options={toSelectOptions(form?.lookups.work_id || [])}
+                value={values.work_id}
+                onChange={(e) => setValue('work_id', e.target.value)}
+              />
+            </label>
+            <label className="pmd-field">
+              {t('tcgAnalysisReview.productMasterDrawer.fieldManufacturer')}
+              <SelectControl
+                size="sm"
+                fullWidth
+                placeholder={t('tcgAnalysisReview.productMasterDrawer.selectPlaceholder')}
+                options={toSelectOptions(form?.lookups.manufacturer_id || [])}
+                value={values.manufacturer_id}
+                onChange={(e) => setValue('manufacturer_id', e.target.value)}
+              />
+            </label>
+            <label className="pmd-field">
+              {t('tcgAnalysisReview.productMasterDrawer.fieldCategory')}
+              <SelectControl
+                size="sm"
+                fullWidth
+                placeholder={t('tcgAnalysisReview.productMasterDrawer.selectPlaceholder')}
+                options={toSelectOptions(form?.lookups.product_category_id || [])}
+                value={values.product_category_id}
+                onChange={(e) => setValue('product_category_id', e.target.value)}
+              />
+            </label>
+            <label className="pmd-field">
+              {t('tcgAnalysisReview.productMasterDrawer.fieldFormat')}
+              <SelectControl
+                size="sm"
+                fullWidth
+                placeholder={t('tcgAnalysisReview.productMasterDrawer.selectPlaceholder')}
+                options={toSelectOptions(formatOptionsFor(formats, values.work_id))}
+                value={values.product_format_id}
+                onChange={(e) => setValue('product_format_id', e.target.value)}
+                disabled={!values.work_id}
+              />
+            </label>
             <label className="pmd-field">
               {t('tcgAnalysisReview.productMasterDrawer.fieldMark')}
               <TextFieldControl size="sm" value={values.mark} onChange={(e) => setValue('mark', e.target.value)} />

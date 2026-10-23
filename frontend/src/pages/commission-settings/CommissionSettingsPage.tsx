@@ -16,6 +16,7 @@ import { PageLayout } from "../../components/PageLayout";
 import { Button } from "../../components/Button";
 import { SelectControl } from "../../components/Select";
 import { TextFieldControl } from "../../components/TextField";
+import { LoadingBlock } from "../../components/loading";
 
 type RoleKey = "sales" | "order" | "ship" | "purchase" | "trouble";
 type RateType = "rate" | "fixed";
@@ -176,7 +177,7 @@ export default function CommissionSettingsPage() {
   return (
     <PageLayout navKey="nav.commissionSettings" subtitleKey="commissions.subtitle">
       {loading ? (
-        <div className="loading">{t("common.loading")}</div>
+        <LoadingBlock />
       ) : (
         <>
           {error && <div className="error-message">{error}</div>}

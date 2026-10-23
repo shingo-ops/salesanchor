@@ -15,6 +15,7 @@ import { DataTable, type DataTableColumn } from "../../../components/DataTable";
 import { TextField } from "../../../components/TextField";
 import { Badge } from "../../../components/Badge";
 import "./DbViewerPanel.css";
+import { LoadingBlock } from "../../../components/loading";
 
 // ──────────────────────────────────────────────────────────────────────────────
 // 型定義
@@ -451,9 +452,7 @@ export function DbViewerPanel() {
         </div>
 
         {loadingTables && (
-          <p style={{ padding: "var(--space-3)", fontSize: "var(--font-sm)", color: "var(--text-muted)" }}>
-            {t("common.loading")}
-          </p>
+          <LoadingBlock />
         )}
 
         {tablesError && (
@@ -552,9 +551,7 @@ export function DbViewerPanel() {
             )}
 
             {loadingDetail && (
-              <p style={{ color: "var(--text-muted)", fontSize: "var(--font-sm)" }}>
-                {t("common.loading")}
-              </p>
+              <LoadingBlock />
             )}
 
             {detail && (

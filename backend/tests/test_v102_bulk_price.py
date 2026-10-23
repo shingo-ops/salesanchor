@@ -193,6 +193,21 @@ def test_write_results_bundle_unverified_adds_reason_and_keeps_values():
     assert row["review_reasons"] == "bundle_unverified" and row["needs_review"] is True
 
 
+RAW_PAREN = "【見出し】\n✅RR バルク(100枚)\n@3000 在庫数 26セット"
+
+
+def test_write_results_bulk_parenthesized_bundle_is_decided():
+    """設計 bundle-sale §12: バルク系だけ「まとめの語＋(N＋単位の語)」を読む。"""
+    row = _write([_item(price_normalized=3000, quantity_normalized=26)], raw_text=RAW_PAREN, lines=(2, 3), masters=ALIASES_MASTERS)[0]
+    assert (row["bundle_size"], row["unit_canonical"], row["price_normalized"], row["quantity_normalized"]) == (100, "Piece", 3000, 26)
+    assert row["review_reasons"] is None and row["needs_review"] is False
+
+
+def test_write_results_non_bulk_parenthesized_bundle_is_not_read():
+    row = _write([_item(price_normalized=3000, quantity_normalized=26, product_category="箱系")], raw_text=RAW_PAREN, lines=(2, 3), masters=ALIASES_MASTERS)[0]
+    assert row["bundle_size"] is None
+
+
 def _decision(**values) -> dict:
     return {"row0": Decisions(values=ValueOverrides(**values))}
 

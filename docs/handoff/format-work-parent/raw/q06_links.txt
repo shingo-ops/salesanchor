@@ -1,0 +1,85 @@
+-- SQL: SELECT l.format_id, l.type_master_id, l.alias FROM ai_ro.public__product_format_game_links l ORDER BY 1,2
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+time="2026-10-21T23:49:28+09:00" level=warning msg="Found orphan containers ([astro-webapp-gemini-egress-1 astro-webapp-frontend-1 astro-webapp-celery-beat-1 astro-webapp-discord-gateway-1 astro-webapp-celery-worker-1 astro-webapp-nginx-1 astro-webapp-postgres-1 astro-webapp-gha-exporter-1 astro-webapp-redis-1 astro-webapp-certbot-1 astro-webapp-node-exporter-1 astro-webapp-promtail-1]) for this project. If you removed or renamed this service in your compose file, you can run this command with the --remove-orphans flag to clean it up."
+ Container astro-webapp-ai-reader-run-1da330a7e71f Creating 
+ Container astro-webapp-ai-reader-run-1da330a7e71f Created 
+format_id	type_master_id	alias
+1	1	拡張パック
+1	2	
+1	3	
+1	4	
+1	5	基本パック
+1	6	
+1	19	
+1	20	
+1	21	
+1	22	
+1	23	
+1	24	
+1	8981	拡張パック
+1	8982	拡張パック
+1	9045	
+1	9046	
+2	2	
+2	20	
+2	21	
+2	22	
+3	1	構築デッキ
+3	2	スタートデッキ
+3	3	スタートデッキ
+3	4	
+3	5	
+3	19	
+3	20	トライアルデッキ
+3	21	スタートデッキ
+3	23	
+3	24	
+4	1	
+5	1	
+6	2	
+6	20	
+7	21	
+8	5	
+9	5	
+9	20	
+10	5	
+11	21	
+12	1	
+12	2	
+12	3	
+12	4	
+12	21	
+12	22	
+12	23	
+13	2	
+13	19	
+14	1	
+14	2	
+14	3	
+14	5	
+14	19	
+14	20	
+15	2	
+15	23	
+16	23	
+17	1	
+18	1	
+18	5	
+19	1	
+20	1	
+20	5	
+21	1	
+22	1	
+23	1	
+23	2	
+23	5	
+23	20	
+24	2	
+24	3	
+25	2	
+28	1	
+28	2	
+30	1	
+32	1	
+32	2	
+AUDIT ts=2026-10-21T14:49:28Z sha=d680ed935d79 rows=78 ms=42 result=ok sql=SELECT l.format_id, l.type_master_id, l.alias FROM ai_ro.public__product_format_game_links l ORDER BY 1,2 

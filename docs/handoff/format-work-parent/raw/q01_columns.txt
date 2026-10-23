@@ -1,0 +1,40 @@
+-- SQL: SELECT table_name, ordinal_position, column_name, data_type, is_nullable FROM information_schema.columns WHERE table_schema='ai_ro' AND table_name IN ('public__type_master','public__product_formats','public__product_format_game_links','public__product_kinds') ORDER BY 1,2
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+time="2026-10-21T23:49:11+09:00" level=warning msg="Found orphan containers ([astro-webapp-gemini-egress-1 astro-webapp-frontend-1 astro-webapp-celery-beat-1 astro-webapp-discord-gateway-1 astro-webapp-celery-worker-1 astro-webapp-nginx-1 astro-webapp-postgres-1 astro-webapp-gha-exporter-1 astro-webapp-redis-1 astro-webapp-certbot-1 astro-webapp-node-exporter-1 astro-webapp-promtail-1]) for this project. If you removed or renamed this service in your compose file, you can run this command with the --remove-orphans flag to clean it up."
+ Container astro-webapp-ai-reader-run-818e33f5192a Creating 
+ Container astro-webapp-ai-reader-run-818e33f5192a Created 
+table_name	ordinal_position	column_name	data_type	is_nullable
+public__product_format_game_links	1	format_id	integer	YES
+public__product_format_game_links	2	type_master_id	integer	YES
+public__product_format_game_links	3	alias	character varying	YES
+public__product_formats	1	id	integer	YES
+public__product_formats	2	code	character varying	YES
+public__product_formats	3	name	character varying	YES
+public__product_formats	4	name_en	character varying	YES
+public__product_formats	5	line_id	integer	YES
+public__product_formats	6	display_order	integer	YES
+public__product_formats	7	is_active	boolean	YES
+public__product_formats	8	created_at	timestamp with time zone	YES
+public__product_formats	9	updated_at	timestamp with time zone	YES
+public__product_formats	10	kind_id	integer	YES
+public__product_formats	11	type_master_id	integer	YES
+public__product_kinds	1	id	integer	YES
+public__product_kinds	2	code	character varying	YES
+public__product_kinds	3	name	character varying	YES
+public__product_kinds	4	name_en	character varying	YES
+public__product_kinds	5	display_order	integer	YES
+public__product_kinds	6	is_active	boolean	YES
+public__product_kinds	7	created_at	timestamp with time zone	YES
+public__product_kinds	8	updated_at	timestamp with time zone	YES
+public__type_master	1	id	integer	YES
+public__type_master	2	code	character varying	YES
+public__type_master	3	name_ja	character varying	YES
+public__type_master	4	name_en	character varying	YES
+public__type_master	5	sort_order	integer	YES
+public__type_master	6	is_active	boolean	YES
+public__type_master	7	created_at	timestamp with time zone	YES
+public__type_master	8	updated_at	timestamp with time zone	YES
+public__type_master	9	kind_id	integer	YES
+public__type_master	10	match_by_code	boolean	YES
+public__type_master	11	code_only_match	boolean	YES
+AUDIT ts=2026-10-21T14:49:12Z sha=1ae429aa6882 rows=33 ms=47 result=ok sql=SELECT table_name, ordinal_position, column_name, data_type, is_nullable FROM information_schema.columns WHERE table_schema='ai_ro' AND table_name IN ('public__type_master','public__product_formats','public__product_format_game_links','public__product_kinds') ORDER BY 1,2 

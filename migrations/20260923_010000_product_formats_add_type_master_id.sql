@@ -1,24 +1,11 @@
--- 細分類(product_formats)に中分類(type_master)への直接リンクを追加
--- カードゲームごとの細分類フィルタリングを実現する
+-- 細分類(product_formats)に大分類(product_kinds)への kind_id を追加する（Step 2 のみ）
+-- 中分類への直接リンク type_master_id の ADD は ADR-1038 で削除済み（親子の正本は product_format_game_links）
 
--- Step 1: type_master_id カラム追加（CI test DB 用。本番には既存）
-DO $$ BEGIN
-  -- テーブル自体が存在しない場合はスキップ（CI test DB では product_formats が未作成の場合がある）
-  IF NOT EXISTS (
-    SELECT 1 FROM information_schema.tables
-    WHERE table_schema = 'public' AND table_name = 'product_formats'
-  ) THEN
-    RAISE NOTICE 'product_formats table does not exist, skip type_master_id';
-  ELSIF NOT EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_schema = 'public' AND table_name = 'product_formats' AND column_name = 'type_master_id'
-  ) THEN
-    ALTER TABLE public.product_formats ADD COLUMN type_master_id INTEGER REFERENCES public.type_master(id) ON DELETE SET NULL;
-    RAISE NOTICE 'Added type_master_id to product_formats';
-  ELSE
-    RAISE NOTICE 'type_master_id already exists on product_formats, skip';
-  END IF;
-END $$;
+-- Step 1: （削除済み）product_formats.type_master_id は ADR-1038 で取り除いた。
+--   親子（細分類→中分類）の正本は product_format_game_links。値の控えは
+--   docs/handoff/format-work-parent/data/product_formats_type_master_id_20261022.csv。
+--   列を足し直すと、後続の DROP migration と毎デプロイで ADD→DROP が繰り返される。
+--   ここに ADD を戻さないこと（ADR-1038）。
 
 -- Step 2: kind_id カラム追加（CI test DB 用。本番には既存）
 DO $$ BEGIN

@@ -13,6 +13,7 @@ import { Checkbox } from "../../components/Checkbox";
 import { SCHEDULE_POPOVER_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 import { NOTIFICATION_EVENT_LABEL_KEYS } from "../../constants/notificationEventTypes";
+import { LoadingBlock } from "../../components/loading";
 
 interface Channel { id: number; channel_name: string; webhook_url: string; event_types: string; is_active: boolean; created_at: string; }
 interface EventTypeOption { code: string; }
@@ -170,7 +171,7 @@ export default function NotificationsPage() {
           </div>
         </form>
       </Modal>
-      {loading ? <div className="loading">{t("common.loading")}</div> : (() => {
+      {loading ? <LoadingBlock /> : (() => {
         const columns: DataTableColumn<Channel>[] = [
           {
             key: "channel_name",

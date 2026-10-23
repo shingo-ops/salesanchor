@@ -1,3 +1,4 @@
+import { LoadingBlock } from "../../components/loading";
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -129,7 +130,7 @@ export default function StatusMasterImportTenantPage() {
   const canImport = hasPermission("suppliers.view");
   return (
     <PageLayout titleText={t("statusMasterCsv.importTitle")} subtitleKey="statusMasterCsv.importSubtitle">
-      {loading ? <p>{t("common.loading")}</p>
+      {loading ? <LoadingBlock />
        : !canImport ? <p role="alert">{t("productCsv.denied")}</p>
        : <StatusMasterImportPanel onDone={() => navigate("/management-center/status-master")} />}
       {!loading && !canImport && (

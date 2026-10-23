@@ -1,0 +1,14 @@
+-- SQL: SELECT table_name FROM information_schema.tables WHERE table_schema='ai_ro' AND (table_name ~ 'public__(type_master|product_format|product_kinds|products|product_lines|tcg_type)' ) ORDER BY 1
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+time="2026-10-21T23:49:05+09:00" level=warning msg="Found orphan containers ([astro-webapp-gemini-egress-1 astro-webapp-frontend-1 astro-webapp-celery-beat-1 astro-webapp-discord-gateway-1 astro-webapp-celery-worker-1 astro-webapp-nginx-1 astro-webapp-postgres-1 astro-webapp-gha-exporter-1 astro-webapp-redis-1 astro-webapp-certbot-1 astro-webapp-node-exporter-1 astro-webapp-promtail-1]) for this project. If you removed or renamed this service in your compose file, you can run this command with the --remove-orphans flag to clean it up."
+ Container astro-webapp-ai-reader-run-24f4fb39b8b7 Creating 
+ Container astro-webapp-ai-reader-run-24f4fb39b8b7 Created 
+table_name
+public__product_format_game_links
+public__product_formats
+public__product_kinds
+public__product_lines
+public__products
+public__products_category_classification_backup
+public__type_master
+AUDIT ts=2026-10-21T14:49:05Z sha=ba01c8ffe3de rows=7 ms=55 result=ok sql=SELECT table_name FROM information_schema.tables WHERE table_schema='ai_ro' AND (table_name ~ 'public__(type_master|product_format|product_kinds|products|product_lines|tcg_type)' ) ORDER BY 1 

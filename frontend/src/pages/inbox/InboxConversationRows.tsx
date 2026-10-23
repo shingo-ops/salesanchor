@@ -13,6 +13,7 @@ import { Badge } from "../../components/Badge";
 import type { Conversation } from "../../lib/messages";
 import type { LongPressHandlers } from "../../hooks/useLongPress";
 import { getInitials, relativeTime } from "./inbox.types";
+import { LoadingBlock } from "../../components/loading";
 
 export interface InboxConversationRowsProps {
   convLoading: boolean;
@@ -57,9 +58,7 @@ export function InboxConversationRows({
         </div>
       )}
       {convLoading ? (
-        <div style={{ padding: "var(--space-6)", textAlign: "center", color: "var(--text-secondary)", fontSize: "var(--font-base)" }}>
-          {t("common.loading")}
-        </div>
+        <LoadingBlock />
       ) : filteredConversations.length === 0 ? (
         <div style={{ padding: "var(--space-6)", textAlign: "center", color: "var(--text-secondary)", fontSize: "var(--font-base)" }}>
           {unreadOnly ? t("inbox.noUnread") : t("inbox.noMessages")}

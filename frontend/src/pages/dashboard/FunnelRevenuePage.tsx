@@ -9,6 +9,7 @@ import { useTranslation } from "react-i18next";
 import { PageLayout } from "../../components/PageLayout";
 import { getRevenueSummary, type RevenueSummaryResponse } from "../../api/funnel";
 import "./FunnelRevenuePage.css";
+import { LoadingBlock } from "../../components/loading";
 
 function fmtMoney(n: number): string {
   return `¥${n.toLocaleString("ja-JP")}`;
@@ -40,7 +41,7 @@ export default function FunnelRevenuePage() {
   if (loading) {
     return (
       <PageLayout navKey="nav.dashboard" subtitleKey="funnel.revenuePageTitle">
-        <div className="frp-loading">{t("common.loading")}</div>
+        <LoadingBlock />
       </PageLayout>
     );
   }
