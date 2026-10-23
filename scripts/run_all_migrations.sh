@@ -1130,3 +1130,5 @@ run_sql migrations/20261020_120000_create_viewer_message_templates.sql
 run_sql migrations/20261022_100000_products_format_in_work_fk.sql
 # ADR-1038 便3b: 旧列 product_formats.type_master_id を取り除く（FK・索引ごと。冪等。親子の正本は links）
 run_sql migrations/20261022_110000_product_formats_drop_type_master_id.sql
+# ADR-1043 便1: 精度測定の正解表の表 2 つ（空の表を作るだけ。値は書かない・冪等）
+run_sql migrations/20261023_180000_create_accuracy_gold.sql
