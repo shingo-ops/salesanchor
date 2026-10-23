@@ -70,3 +70,9 @@ design §3-4 のとおり。`python3 scripts/accuracy/fetch_gold.py --version V 
 - P2 で CI に scripts/accuracy の試験が無い → 手元で `python3 -m unittest` 等で走らせ、その方法を報告。CI の変更はしない。
 - 試験で偽の窓口が立てられない（ポート使用不可等）→ 送る関数を差し替える形の試験にし、そう報告。
 - 迷ったら止まって NEEDS_DECISION で Opus に戻す。
+
+## 5. 追補（2026-10-23 Opus、CI の結果を受けて）
+CI（HEAD 2bd54e601）で次の 3 つが落ちた。生ログ: /tmp/CC報告ファイル/accuracy-gold-db-impl/fail-*.txt
+- `migration-guard`（チェック4）: `REFERENCES public.accuracy_gold_versions` の参照先が `.github/workflows/migration-guard.yml` の `PUBLIC_TABLES` に無い。→ 同ファイルの `PUBLIC_TABLES` の末尾に ` accuracy_gold_versions accuracy_gold_rows` を足す（前例 5249aad99「public 表リストに誤り報告の表3つを追加」）。触るファイルにこの 1 ファイルを加える。この行以外は変えない。
+- `guard-authoring/evaluation` が error: `scripts/run-guard-evaluation.js:24-25` の `merge-base --is-ancestor base head` が外れる（ブランチが古い main 起点）。→ `git merge origin/main`（merge commit。rebase・force push はしない）。衝突したら止まって NEEDS_DECISION。
+- `process-artifacts gate`: PR 本文の `### GO記録` が無い。→ GO 発行時に Opus が書く。担当は触らない。
