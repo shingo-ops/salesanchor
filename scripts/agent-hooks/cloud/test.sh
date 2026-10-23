@@ -1,5 +1,5 @@
 #!/bin/bash
-# 新規。K1〜K4・K6・K7 の確認台本。各ケースの入力 JSON を dispatch.sh に流し、exit コードと時間を表にする。
+# 新規。K1〜K4・K6・K7 の確認台本（便2: B1〜B8 を追加・card-2.md §4-7）。各ケースの入力 JSON を dispatch.sh に流し、exit コードと時間を表にする。
 # 危険操作のケースは danger_ops.json から組み立てる（台本に危険語を直接書かない）。
 # 前提: sync_danger_ops.py で danger_ops.json を作ってあること。
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -209,6 +209,78 @@ except Exception:
     ok = False
 fail += (not ok)
 print(f"{'K5':3} {'SessionStart 決まり注入':26} {0:<4} {rc:<4} {sec:6.3f} {'OK' if ok else 'NG'}")
+
+# ---- 便2: B1〜B8（card-2.md §4-7）。商品作成の命令名は master-register-rules-guard.py の TARGETS から組み立てる ----
+import hashlib, importlib.util
+_spec = importlib.util.spec_from_file_location("mrr_guard", os.path.join(D, "..", "master-register-rules-guard.py"))
+_mrr = importlib.util.module_from_spec(_spec); _spec.loader.exec_module(_mrr)
+T0 = _mrr.TARGETS[0]
+WORKTREE = os.path.abspath(os.path.join(D, "..", "..", ".."))
+RULES_TMP = os.path.join(tmp, "rules.md")
+open(RULES_TMP, "w", encoding="utf-8").write("# 試験用ルール\nテスト本文\n")
+ACK = hashlib.sha256(open(RULES_TMP, "rb").read()).hexdigest()[:8]
+PYLOG = os.path.join(tmp, "agent-events.jsonl")
+
+def run2(inp, remote, extra=None, drop=()):
+    env = dict(os.environ)
+    env.pop("CLAUDE_CODE_REMOTE", None)
+    for k in ("MRR_RULES_FILE", "CLAUDE_PROJECT_DIR", *drop): env.pop(k, None)
+    env["PY312_GUARD_LOG"] = PYLOG
+    env["SUBAGENT_BASH_WAIT_GUARD_LOG"] = PYLOG
+    if remote: env["CLAUDE_CODE_REMOTE"] = "true"
+    env.update(extra or {})
+    t = time.time()
+    p = subprocess.run(["bash", DISPATCH], input=json.dumps(inp), capture_output=True, text=True, env=env)
+    return p.returncode, p.stdout, p.stderr, time.time() - t
+
+def sub(cmd, **kw):
+    d = bash(cmd); d.update(kw); return d
+def prompt(text):
+    return {"hook_event_name": "UserPromptSubmit", "prompt": text, "cwd": D}
+MRR = {"MRR_RULES_FILE": RULES_TMP}
+def hasdeny(o): return '"permissionDecision": "deny"' in o
+
+bcases = [  # (No, 名前, 入力, 追加env, 判定関数(rc,out,err), 期待の説明)
+ ("B1", "登録ルール deny(Bash)", bash(f'python3 -c "{T0}1)"'), MRR, lambda r, o, e: r == 0 and hasdeny(o), "exit0+deny"),
+ ("B1b", "rules-ack あり→通す", bash(f'python3 -c "{T0}1)" # rules-ack: {ACK}'), MRR, lambda r, o, e: r == 0 and not o.strip(), "exit0+出力なし"),
+ ("B1c", "origin/mainからルールを読む", bash(f'python3 -c "{T0}1)"'), {"CLAUDE_PROJECT_DIR": WORKTREE}, lambda r, o, e: r == 0 and hasdeny(o) and "共用商品マスタ 新規登録ルール" in o, "exit0+deny+本文"),
+ ("B2", "Write /tmp/x.py deny", pre("Write", file_path="/tmp/x.py", content=f"x = {T0}1)"), MRR, lambda r, o, e: r == 0 and hasdeny(o), "deny"),
+ ("B2b", "Write docs 配下は通す", pre("Write", file_path="/repo/docs/a.md", content=f"x = {T0}1)"), MRR, lambda r, o, e: r == 0 and not o.strip(), "出力なし"),
+ ("B3", "UserPromptSubmit 登録ルール注入", prompt("マスタに商品を登録して"), MRR, lambda r, o, e: r == 0 and "additionalContext" in o, "additionalContext"),
+ ("B4", "python3.11 -m venv", bash("python3.11 -m venv .venv"), None, lambda r, o, e: r == 2 and "py312-guard" in e, "exit2+py312-guard"),
+ ("B4", "pip install", bash("pip install requests"), None, lambda r, o, e: r == 2 and "py312-guard" in e, "exit2+py312-guard"),
+ ("B4", "virtualenv", bash("virtualenv x"), None, lambda r, o, e: r == 2 and "py312-guard" in e, "exit2+py312-guard"),
+ ("B4b", "python3.12 -m venv", bash("python3.12 -m venv .venv"), None, lambda r, o, e: r == 0, "exit0"),
+ ("B4b", "uv venv --python 3.12", bash("uv venv --python 3.12 .venv"), None, lambda r, o, e: r == 0, "exit0"),
+ ("B4b", "git status", bash("git status"), None, lambda r, o, e: r == 0, "exit0"),
+ ("B5", "担当 timeout 300000", sub("ls", agent_id="a1", tool_input={"command": "ls", "timeout": 300000}), None, lambda r, o, e: r == 2 and "subagent-bash-wait-guard" in e, "exit2+guard名"),
+ ("B5b", "親 timeout 300000", sub("ls", tool_input={"command": "ls", "timeout": 300000}), None, lambda r, o, e: r == 0, "exit0"),
+ ("B5b", "担当 timeout 240000", sub("ls", agent_id="a1", tool_input={"command": "ls", "timeout": 240000}), None, lambda r, o, e: r == 0, "exit0"),
+ ("B6", "カード 受領確認なし", prompt("手順1\n  ls\nEND OF CARD"), None, lambda r, o, e: r == 2 and "card-lint" in e, "exit2+card-lint"),
+ ("B6b", "ふつうの依頼文", prompt("こんにちは"), None, lambda r, o, e: r == 0 and not o.strip() and not e.strip(), "exit0+出力なし"),
+]
+print("== 便2 B1〜B6b（CLAUDE_CODE_REMOTE=true）==")
+print(f"{'No':4} {'ケース':28} {'期待':18} {'実際':4} {'秒':6} 判定")
+b_slow = 0
+b_times = []
+for no, name, inp, extra, chk, exp in bcases:
+    rc, out, err, sec = run2(inp, True, extra)
+    ok = chk(rc, out, err)
+    fail += (not ok)
+    b_times.append((no, name, sec))
+    print(f"{no:4} {name:28} {exp:18} {rc:<4} {sec:6.3f} {'OK' if ok else 'NG'}")
+    if not ok: print("      stdout: " + out[:200].replace("\n", " ") + " / stderr: " + err[:200].replace("\n", " "))
+# B7: CLAUDE_CODE_REMOTE 未設定では全て exit 0・出力なし
+b7bad = 0
+for no, name, inp, extra, chk, exp in bcases:
+    rc, out, err, sec = run2(inp, False, extra)
+    if rc != 0 or out or err: b7bad += 1
+fail += (b7bad > 0)
+print(f"B7  {len(bcases)}件中 逸脱 {b7bad}件 {'OK' if b7bad == 0 else 'NG'}")
+# B8: 各 1 秒以内
+b8slow = [t for t in b_times if t[2] >= 1.0]
+fail += (len(b8slow) > 0)
+print(f"B8  1秒以上かかった件: {len(b8slow)}（最大 {max(t[2] for t in b_times):.3f} 秒） {'OK' if not b8slow else 'NG'}")
 
 print("== CLAUDE_CODE_REMOTE 未設定（K6: 全件 exit 0・出力なし）==")
 allinp = [c[2] for c in cases] + [{"hook_event_name": "SessionStart", "source": "startup"}]
