@@ -107,6 +107,7 @@ mode: handoff
   - `ProductFirstMasters`（:126-148）: 末尾に `kubun_allowed_units: Mapping[str, frozenset[str]] = field(default_factory=dict)` を足す。空なら T は働かない。
   - `load_product_first_masters`（:361-384）: 設定と `line_units`・`tcg_product_categories` を読み、上の検査を通った表だけを入れる。検査の関数は別に作り、テストから直接呼べるようにする。
   - `resolve_product_first`（:718-762）: :750-753 の `_resolve_unit_from_state` の後に、新しい関数 `_fix_unit_by_kubun(...)` を呼ぶ。戻り値で `unit`・`unit_kubun`・`unit_basis` と、足す理由の配列（要素は `{"kind": "unit_unknown"}` の dict。`backend/app/services/gemini_raw_copy_v101.py:935` と `backend/app/services/line_analysis_v102_svc.py:567-568` が受ける形）を受け取る。:760 の `review_extra` の末尾にその配列を足す。
+  - `_fix_unit_by_kubun` は (a)・(b) のたびに、モジュールの logger で INFO を 1 行出す（印 `kubun_unit_fix`・区分・元の単位・後の単位・商品 id。原文は出さない。T 3）。
   - `_fix_unit_by_kubun` は (a) で `resolve_unit_v2(状態の単位, unit_alias_to_info)`（`backend/app/services/tcg_analyzer_svc.py:817-842`）を使って `unit_kubun` も揃える。試算の差分（社外秘フォルダ `kubun-unit-sim/patch_T.diff`）と同じ形。
 - 触らない: `_resolve_unit_from_state`（:683-715）、`resolve_condition_v2`、`backend/app/services/v102_buyback_unit_svc.py`、要確認の理由の一覧と画面の文字（`unit_unknown` は既にある）。
 - テスト: `backend/tests/test_gemini_raw_copy_v102_product_first.py` に足す。
@@ -116,6 +117,7 @@ mode: handoff
   - 箱系 × 冊（Booklet）、状態の単位も表に無い → 単位そのまま、`unit_unknown` が足される（b）。
   - 表に無い区分（セット系 × Set）→ 変わらない。
   - 表が空 → 今と同じ結果（全組）。
+  - (a)・(b) でログが 1 行ずつ出て、原文を含まない（caplog）。
   - 検査: key 無し・JSON 不正・知らない区分名・知らない単位名で、表が空になり警告が出る。
 - 設定の記録 SQL（ADR-1007）: key を 1 行 INSERT。verify で値が上の JSON と一致すること、rollback で行を消す。コードの反映の後に入れる（key が無いあいだは何もしないので、順番が逆でも害はない）。
 
