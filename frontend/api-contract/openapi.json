@@ -697,6 +697,7 @@
           "works": {
             "default": [],
             "items": {
+              "additionalProperties": true,
               "type": "object"
             },
             "title": "Works",
@@ -4095,6 +4096,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,15}0*$)\\d{0,10}\\.\\d{0,4}0*$)",
                 "type": "string"
               }
             ],
@@ -4120,6 +4122,7 @@
             "type": "string"
           },
           "value": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,15}0*$)\\d{0,10}\\.\\d{0,4}0*$)",
             "title": "Value",
             "type": "string"
           }
@@ -4632,6 +4635,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -4721,6 +4725,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -5064,6 +5069,7 @@
           "monthly_forecast": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -5168,6 +5174,7 @@
           "per_order_amount": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -5371,6 +5378,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -5467,6 +5475,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -7753,6 +7762,7 @@
             "type": "integer"
           },
           "pickup_address": {
+            "additionalProperties": true,
             "title": "Pickup Address",
             "type": "object"
           },
@@ -7767,6 +7777,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               }
             ],
@@ -8004,6 +8015,7 @@
           "customs_clearance": {
             "anyOf": [
               {
+                "additionalProperties": true,
                 "type": "object"
               },
               {
@@ -8018,6 +8030,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -8037,6 +8050,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -8067,6 +8081,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               }
             ],
@@ -8078,6 +8093,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -8105,6 +8121,7 @@
             "type": "string"
           },
           "confirmed_shipping_fee": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Confirmed Shipping Fee",
             "type": "string"
           },
@@ -8382,6 +8399,7 @@
           },
           "recent_companies": {
             "items": {
+              "additionalProperties": true,
               "type": "object"
             },
             "title": "Recent Companies",
@@ -8390,6 +8408,7 @@
           "recent_leads": {
             "default": [],
             "items": {
+              "additionalProperties": true,
               "type": "object"
             },
             "title": "Recent Leads",
@@ -8398,6 +8417,7 @@
           "recent_quotes": {
             "default": [],
             "items": {
+              "additionalProperties": true,
               "type": "object"
             },
             "title": "Recent Quotes",
@@ -8646,6 +8666,7 @@
           },
           "rows": {
             "items": {
+              "additionalProperties": true,
               "type": "object"
             },
             "title": "Rows",
@@ -9245,10 +9266,12 @@
             "type": "number"
           },
           "record_a": {
+            "additionalProperties": true,
             "title": "Record A",
             "type": "object"
           },
           "record_b": {
+            "additionalProperties": true,
             "title": "Record B",
             "type": "object"
           }
@@ -9463,6 +9486,7 @@
             "title": "Description"
           },
           "end": {
+            "additionalProperties": true,
             "title": "End",
             "type": "object"
           },
@@ -9478,6 +9502,7 @@
             "title": "Location"
           },
           "start": {
+            "additionalProperties": true,
             "title": "Start",
             "type": "object"
           },
@@ -9510,6 +9535,7 @@
           "end": {
             "anyOf": [
               {
+                "additionalProperties": true,
                 "type": "object"
               },
               {
@@ -9532,6 +9558,7 @@
           "start": {
             "anyOf": [
               {
+                "additionalProperties": true,
                 "type": "object"
               },
               {
@@ -9603,6 +9630,7 @@
           "result": {
             "anyOf": [
               {
+                "additionalProperties": true,
                 "type": "object"
               },
               {
@@ -12712,6 +12740,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,8}|(?=[\\d.]{1,13}0*$)\\d{0,8}\\.\\d{0,4}0*$)",
                 "type": "string"
               },
               {
@@ -12727,6 +12756,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,8}|(?=[\\d.]{1,13}0*$)\\d{0,8}\\.\\d{0,4}0*$)",
                 "type": "string"
               },
               {
@@ -12774,6 +12804,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,13}|(?=[\\d.]{1,16}0*$)\\d{0,13}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -12789,6 +12820,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,13}|(?=[\\d.]{1,16}0*$)\\d{0,13}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -12811,6 +12843,7 @@
           "amount_jpy": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -12822,6 +12855,7 @@
           "amount_usd": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -12833,6 +12867,7 @@
           "bill_to_snapshot": {
             "anyOf": [
               {
+                "additionalProperties": true,
                 "type": "object"
               },
               {
@@ -12902,6 +12937,7 @@
           "duty_amount": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -12913,6 +12949,7 @@
           "duty_policy_snapshot": {
             "anyOf": [
               {
+                "additionalProperties": true,
                 "type": "object"
               },
               {
@@ -12935,6 +12972,7 @@
           "exchange_rate_jpy": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -12946,6 +12984,7 @@
           "exchange_rate_usd": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -12957,6 +12996,7 @@
           "fx_rate_snapshot": {
             "anyOf": [
               {
+                "additionalProperties": true,
                 "type": "object"
               },
               {
@@ -13037,6 +13077,7 @@
           "payment_fee": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -13126,6 +13167,7 @@
           "ship_to_snapshot": {
             "anyOf": [
               {
+                "additionalProperties": true,
                 "type": "object"
               },
               {
@@ -13137,6 +13179,7 @@
           "shipping_fee": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -13152,6 +13195,7 @@
           "subtotal": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -13163,6 +13207,7 @@
           "tax_amount": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -13174,6 +13219,7 @@
           "total_amount": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -13312,6 +13358,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,13}|(?=[\\d.]{1,16}0*$)\\d{0,13}\\.\\d{0,2}0*$)",
                 "type": "string"
               }
             ],
@@ -13324,6 +13371,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,7}|(?=[\\d.]{1,11}0*$)\\d{0,7}\\.\\d{0,3}0*$)",
                 "type": "string"
               },
               {
@@ -13404,6 +13452,7 @@
             "type": "integer"
           },
           "subtotal": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Subtotal",
             "type": "string"
           },
@@ -13419,12 +13468,14 @@
             "title": "Unit"
           },
           "unit_price": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Unit Price",
             "type": "string"
           },
           "weight": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -13453,6 +13504,7 @@
           "amount_jpy": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -13464,6 +13516,7 @@
           "amount_usd": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -13475,6 +13528,7 @@
           "bill_to_snapshot": {
             "anyOf": [
               {
+                "additionalProperties": true,
                 "type": "object"
               },
               {
@@ -13544,6 +13598,7 @@
           "duty_amount": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -13555,6 +13610,7 @@
           "duty_policy_snapshot": {
             "anyOf": [
               {
+                "additionalProperties": true,
                 "type": "object"
               },
               {
@@ -13577,6 +13633,7 @@
           "exchange_rate_jpy": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -13588,6 +13645,7 @@
           "exchange_rate_usd": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -13599,6 +13657,7 @@
           "fx_rate_snapshot": {
             "anyOf": [
               {
+                "additionalProperties": true,
                 "type": "object"
               },
               {
@@ -13671,6 +13730,7 @@
           "payment_fee": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -13760,6 +13820,7 @@
           "ship_to_snapshot": {
             "anyOf": [
               {
+                "additionalProperties": true,
                 "type": "object"
               },
               {
@@ -13771,6 +13832,7 @@
           "shipping_fee": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -13786,6 +13848,7 @@
           "subtotal": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -13797,6 +13860,7 @@
           "tax_amount": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -13808,6 +13872,7 @@
           "total_amount": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -13899,6 +13964,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,8}|(?=[\\d.]{1,13}0*$)\\d{0,8}\\.\\d{0,4}0*$)",
                 "type": "string"
               },
               {
@@ -13914,6 +13980,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,8}|(?=[\\d.]{1,13}0*$)\\d{0,8}\\.\\d{0,4}0*$)",
                 "type": "string"
               },
               {
@@ -14318,6 +14385,7 @@
             "title": "Created At"
           },
           "current_month_usd": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Current Month Usd",
             "type": "string"
           },
@@ -14330,6 +14398,7 @@
             "type": "string"
           },
           "monthly_budget_usd": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Monthly Budget Usd",
             "type": "string"
           },
@@ -14401,6 +14470,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,8}|(?=[\\d.]{1,11}0*$)\\d{0,8}\\.\\d{0,2}0*$)",
                 "type": "string"
               }
             ],
@@ -14491,6 +14561,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,13}|(?=[\\d.]{1,16}0*$)\\d{0,13}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -14680,6 +14751,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,13}|(?=[\\d.]{1,16}0*$)\\d{0,13}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -14793,6 +14865,7 @@
           "amount": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -15083,6 +15156,7 @@
           "monthly_forecast": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -15094,6 +15168,7 @@
           "monthly_frequency": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -15150,6 +15225,7 @@
           "per_order_amount": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -15172,6 +15248,7 @@
           "priority_score": {
             "anyOf": [
               {
+                "additionalProperties": true,
                 "type": "object"
               },
               {
@@ -15361,6 +15438,7 @@
             "type": "integer"
           },
           "total_deal_amount": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Total Deal Amount",
             "type": "string"
           }
@@ -15671,6 +15749,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,13}|(?=[\\d.]{1,16}0*$)\\d{0,13}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -15686,6 +15765,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,8}|(?=[\\d.]{1,11}0*$)\\d{0,8}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -15749,6 +15829,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,13}|(?=[\\d.]{1,16}0*$)\\d{0,13}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -15951,6 +16032,7 @@
             "title": "Notes"
           },
           "required_ids": {
+            "additionalProperties": true,
             "title": "Required Ids",
             "type": "object"
           },
@@ -15994,6 +16076,7 @@
             "title": "Notes"
           },
           "required_ids": {
+            "additionalProperties": true,
             "description": "{\"field_name\": true} 形式",
             "title": "Required Ids",
             "type": "object"
@@ -16855,6 +16938,7 @@
             "type": "string"
           },
           "total": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Total",
             "type": "string"
           }
@@ -16892,6 +16976,7 @@
             "title": "Staff Name"
           },
           "total": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Total",
             "type": "string"
           }
@@ -16925,6 +17010,7 @@
             "type": "integer"
           },
           "total": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Total",
             "type": "string"
           },
@@ -16955,6 +17041,7 @@
         "description": "月次集計レスポンス（テナント単位）。\n\nADR-021 第 4 節 AC-004 の月次レポート最小実装。staff_id 別の集計は\nPhase 5 で実装する（本 Sprint では受け取って無視 = 全件集計）。",
         "properties": {
           "cost_total": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Cost Total",
             "type": "string"
           },
@@ -16965,6 +17052,7 @@
           "gross_profit_rate": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -16974,6 +17062,7 @@
             "title": "Gross Profit Rate"
           },
           "gross_profit_total": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Gross Profit Total",
             "type": "string"
           },
@@ -16982,6 +17071,7 @@
             "type": "integer"
           },
           "revenue_total": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Revenue Total",
             "type": "string"
           },
@@ -17074,6 +17164,7 @@
             "type": "string"
           },
           "payload": {
+            "additionalProperties": true,
             "title": "Payload",
             "type": "object"
           }
@@ -17096,6 +17187,39 @@
           "id"
         ],
         "title": "OpsEventResponse",
+        "type": "object"
+      },
+      "OpsHumanReport": {
+        "additionalProperties": false,
+        "properties": {
+          "message_id": {
+            "pattern": "^[0-9]{1,20}$",
+            "title": "Message Id",
+            "type": "string"
+          },
+          "message_url": {
+            "maxLength": 200,
+            "pattern": "^https://discord\\.com/channels/[0-9]{1,20}/[0-9]{1,20}/[0-9]{1,20}$",
+            "title": "Message Url",
+            "type": "string"
+          },
+          "posted_at": {
+            "format": "date-time",
+            "title": "Posted At",
+            "type": "string"
+          },
+          "test": {
+            "default": false,
+            "title": "Test",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "message_id",
+          "posted_at",
+          "message_url"
+        ],
+        "title": "OpsHumanReport",
         "type": "object"
       },
       "OpsIncidentAnnotation": {
@@ -17125,12 +17249,45 @@
               }
             ],
             "title": "Note"
+          },
+          "round": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OpsRound"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
           "kind"
         ],
         "title": "OpsIncidentAnnotation",
+        "type": "object"
+      },
+      "OpsIncidentClose": {
+        "additionalProperties": false,
+        "properties": {
+          "n": {
+            "maximum": 99.0,
+            "minimum": 1.0,
+            "title": "N",
+            "type": "integer"
+          },
+          "session_id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Session Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "n",
+          "session_id"
+        ],
+        "title": "OpsIncidentClose",
         "type": "object"
       },
       "OpsIncidentFields": {
@@ -17283,6 +17440,7 @@
       "OpsReportDetail": {
         "properties": {
           "current_values": {
+            "additionalProperties": true,
             "title": "Current Values",
             "type": "object"
           },
@@ -17341,6 +17499,7 @@
             "type": "string"
           },
           "payload": {
+            "additionalProperties": true,
             "title": "Payload",
             "type": "object"
           }
@@ -17412,6 +17571,110 @@
         "title": "OpsReportHeader",
         "type": "object"
       },
+      "OpsRound": {
+        "additionalProperties": false,
+        "description": "Discord 発の件の回の記録（設計 §4-9）。accept と result の pass は別の口が書く。",
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "n": {
+            "maximum": 99.0,
+            "minimum": 1.0,
+            "title": "N",
+            "type": "integer"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "failed-3",
+                  "unknown",
+                  "halt",
+                  "interrupted",
+                  "lost",
+                  "full",
+                  "not_ready",
+                  "failed",
+                  "cwd_invalid",
+                  "needs_decision",
+                  "blocked",
+                  "waiting_60m",
+                  "no-reply",
+                  "leftover"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "reservation_id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reservation Id"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "const": "fail",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
+          },
+          "step": {
+            "enum": [
+              "start",
+              "launch_failed",
+              "kept",
+              "closed",
+              "measure",
+              "result",
+              "stop",
+              "notify_failed",
+              "suspicious"
+            ],
+            "title": "Step",
+            "type": "string"
+          }
+        },
+        "required": [
+          "step",
+          "n",
+          "at"
+        ],
+        "title": "OpsRound",
+        "type": "object"
+      },
       "OrderCommissionAssignmentRequest": {
         "description": "`POST /orders/{id}/commissions/assign` リクエスト。\n\nrole と staff_id を 1 ペア指定して UPSERT する。\nstaff_id=None で「担当解除（行は残し staff_id を NULL に戻す）」も可能。",
         "properties": {
@@ -17449,6 +17712,7 @@
         "description": "1 ロール分の報酬レコードレスポンス。",
         "properties": {
           "calculated_amount": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Calculated Amount",
             "type": "string"
           },
@@ -17656,6 +17920,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,13}|(?=[\\d.]{1,16}0*$)\\d{0,13}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -17675,6 +17940,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,13}|(?=[\\d.]{1,16}0*$)\\d{0,13}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -17701,6 +17967,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
                 "type": "string"
               }
             ],
@@ -17714,6 +17981,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
                 "type": "string"
               }
             ],
@@ -17727,6 +17995,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
                 "type": "string"
               }
             ],
@@ -17752,6 +18021,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
                 "type": "string"
               }
             ],
@@ -17765,6 +18035,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
                 "type": "string"
               }
             ],
@@ -17778,6 +18049,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
                 "type": "string"
               }
             ],
@@ -17791,6 +18063,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
                 "type": "string"
               }
             ],
@@ -17804,6 +18077,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
                 "type": "string"
               }
             ],
@@ -17817,6 +18091,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
                 "type": "string"
               }
             ],
@@ -17830,6 +18105,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
                 "type": "string"
               }
             ],
@@ -17843,6 +18119,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
                 "type": "string"
               }
             ],
@@ -17856,6 +18133,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
                 "type": "string"
               }
             ],
@@ -17869,6 +18147,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
                 "type": "string"
               }
             ],
@@ -17884,15 +18163,18 @@
         "properties": {
           "ad_cost": {
             "default": "0",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
             "title": "Ad Cost",
             "type": "string"
           },
           "commission_base_amount": {
             "default": "0",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
             "title": "Commission Base Amount",
             "type": "string"
           },
           "cost_total": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Cost Total",
             "type": "string"
           },
@@ -17903,16 +18185,19 @@
           },
           "exchange_fee": {
             "default": "0",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
             "title": "Exchange Fee",
             "type": "string"
           },
           "gross_profit": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Gross Profit",
             "type": "string"
           },
           "gross_profit_rate": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -17938,6 +18223,7 @@
             "title": "Notes"
           },
           "operating_profit_with_tax_refund": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Operating Profit With Tax Refund",
             "type": "string"
           },
@@ -17947,46 +18233,55 @@
           },
           "outsource_fee": {
             "default": "0",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
             "title": "Outsource Fee",
             "type": "string"
           },
           "packing_fee": {
             "default": "0",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
             "title": "Packing Fee",
             "type": "string"
           },
           "paypal_fee": {
             "default": "0",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
             "title": "Paypal Fee",
             "type": "string"
           },
           "purchase_cost": {
             "default": "0",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
             "title": "Purchase Cost",
             "type": "string"
           },
           "purchase_shipping": {
             "default": "0",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
             "title": "Purchase Shipping",
             "type": "string"
           },
           "refund_amount": {
             "default": "0",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
             "title": "Refund Amount",
             "type": "string"
           },
           "return_fee": {
             "default": "0",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
             "title": "Return Fee",
             "type": "string"
           },
           "revenue_amount": {
             "default": "0",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
             "title": "Revenue Amount",
             "type": "string"
           },
           "tax_refund": {
             "default": "0",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
             "title": "Tax Refund",
             "type": "string"
           },
@@ -18001,6 +18296,7 @@
           },
           "wise_fee": {
             "default": "0",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
             "title": "Wise Fee",
             "type": "string"
           }
@@ -18029,6 +18325,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -18044,6 +18341,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -18059,6 +18357,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -18086,6 +18385,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -18101,6 +18401,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -18116,6 +18417,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -18131,6 +18433,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -18146,6 +18449,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -18161,6 +18465,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -18176,6 +18481,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -18191,6 +18497,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -18206,6 +18513,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -18221,6 +18529,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -18276,6 +18585,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,8}|(?=[\\d.]{1,13}0*$)\\d{0,8}\\.\\d{0,4}0*$)",
                 "type": "string"
               },
               {
@@ -18355,6 +18665,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,13}|(?=[\\d.]{1,16}0*$)\\d{0,13}\\.\\d{0,2}0*$)",
                 "type": "string"
               }
             ],
@@ -18379,6 +18690,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,13}|(?=[\\d.]{1,16}0*$)\\d{0,13}\\.\\d{0,2}0*$)",
                 "type": "string"
               }
             ],
@@ -18391,6 +18703,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,13}|(?=[\\d.]{1,16}0*$)\\d{0,13}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -18406,6 +18719,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,7}|(?=[\\d.]{1,11}0*$)\\d{0,7}\\.\\d{0,3}0*$)",
                 "type": "string"
               },
               {
@@ -18440,6 +18754,7 @@
           "exchange_rate_usd": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -18513,6 +18828,7 @@
             "type": "integer"
           },
           "subtotal": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Subtotal",
             "type": "string"
           },
@@ -18528,12 +18844,14 @@
             "title": "Unit"
           },
           "unit_price": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Unit Price",
             "type": "string"
           },
           "usd_unit_value": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -18545,6 +18863,7 @@
           "weight": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -18737,6 +19056,7 @@
           "shipping_fee": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -18752,6 +19072,7 @@
           "total_amount": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -18834,6 +19155,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -18885,6 +19207,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -18927,6 +19250,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -19018,6 +19342,7 @@
           "purchase_amount": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -19065,6 +19390,7 @@
           "purchase_shipping": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -19103,6 +19429,7 @@
           "purchase_total": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -19140,6 +19467,7 @@
             "type": "integer"
           },
           "total_with_shipping": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Total With Shipping",
             "type": "string"
           },
@@ -19228,6 +19556,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -19279,6 +19608,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -19321,6 +19651,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -19506,6 +19837,7 @@
           "shipping_fee": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -19521,6 +19853,7 @@
           "total_amount": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -19680,6 +20013,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,13}0*$)\\d{0,10}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -19695,6 +20029,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,6}|(?=[\\d.]{1,13}0*$)\\d{0,6}\\.\\d{0,6}0*$)",
                 "type": "string"
               },
               {
@@ -19722,6 +20057,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,6}|(?=[\\d.]{1,9}0*$)\\d{0,6}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -19773,6 +20109,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,13}0*$)\\d{0,10}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -19800,6 +20137,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,6}|(?=[\\d.]{1,9}0*$)\\d{0,6}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -19983,6 +20321,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,8}|(?=[\\d.]{1,11}0*$)\\d{0,8}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -19998,6 +20337,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,5}|(?=[\\d.]{1,9}0*$)\\d{0,5}\\.\\d{0,3}0*$)",
                 "type": "string"
               },
               {
@@ -20013,6 +20353,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,6}|(?=[\\d.]{1,9}0*$)\\d{0,6}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -20150,6 +20491,7 @@
           "est_shipping_fee": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,13}0*$)\\d{0,10}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -20161,6 +20503,7 @@
           "exchange_rate": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,6}|(?=[\\d.]{1,13}0*$)\\d{0,6}\\.\\d{0,6}0*$)",
                 "type": "string"
               },
               {
@@ -20184,6 +20527,7 @@
           "height_cm": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,6}|(?=[\\d.]{1,9}0*$)\\d{0,6}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -20235,6 +20579,7 @@
           "item_price_usd": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,13}0*$)\\d{0,10}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -20258,6 +20603,7 @@
           "length_cm": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,6}|(?=[\\d.]{1,9}0*$)\\d{0,6}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -20450,6 +20796,7 @@
           "volume_g": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,8}|(?=[\\d.]{1,11}0*$)\\d{0,8}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -20461,6 +20808,7 @@
           "weight_kg": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,5}|(?=[\\d.]{1,9}0*$)\\d{0,5}\\.\\d{0,3}0*$)",
                 "type": "string"
               },
               {
@@ -20472,6 +20820,7 @@
           "width_cm": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,6}|(?=[\\d.]{1,9}0*$)\\d{0,6}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -20615,6 +20964,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,13}0*$)\\d{0,10}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -20630,6 +20980,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,6}|(?=[\\d.]{1,13}0*$)\\d{0,6}\\.\\d{0,6}0*$)",
                 "type": "string"
               },
               {
@@ -20657,6 +21008,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,6}|(?=[\\d.]{1,9}0*$)\\d{0,6}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -20708,6 +21060,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,13}0*$)\\d{0,10}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -20735,6 +21088,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,6}|(?=[\\d.]{1,9}0*$)\\d{0,6}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -20918,6 +21272,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,8}|(?=[\\d.]{1,11}0*$)\\d{0,8}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -20933,6 +21288,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,5}|(?=[\\d.]{1,9}0*$)\\d{0,5}\\.\\d{0,3}0*$)",
                 "type": "string"
               },
               {
@@ -20948,6 +21304,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,6}|(?=[\\d.]{1,9}0*$)\\d{0,6}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -21111,6 +21468,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,13}|(?=[\\d.]{1,16}0*$)\\d{0,13}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -21136,6 +21494,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,13}|(?=[\\d.]{1,16}0*$)\\d{0,13}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -21407,6 +21766,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -21511,6 +21871,7 @@
           "unit_price": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -21616,6 +21977,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -21894,6 +22256,7 @@
           "total_amount": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -21955,6 +22318,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,13}|(?=[\\d.]{1,16}0*$)\\d{0,13}\\.\\d{0,2}0*$)",
                 "type": "string"
               }
             ],
@@ -21999,10 +22363,12 @@
             "type": "integer"
           },
           "subtotal": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Subtotal",
             "type": "string"
           },
           "unit_cost": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Unit Cost",
             "type": "string"
           }
@@ -22097,6 +22463,7 @@
           "total_amount": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -22194,6 +22561,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,3}0*$",
                 "type": "string"
               },
               {
@@ -22380,6 +22748,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
                 "type": "string"
               }
             ],
@@ -22406,6 +22775,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,4}|(?=[\\d.]{1,9}0*$)\\d{0,4}\\.\\d{0,4}0*$)",
                 "type": "string"
               }
             ],
@@ -22439,6 +22809,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -22515,6 +22886,7 @@
           "fixed_amount": {
             "default": "0",
             "description": "固定手数料額（通貨単位）。rate_pctと併用",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
             "title": "Fixed Amount",
             "type": "string"
           },
@@ -22538,6 +22910,7 @@
           "rate_pct": {
             "default": "0",
             "description": "料率（%）。手数料 = 対象金額 × rate_pct / 100 + fixed_amount",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,4}|(?=[\\d.]{1,9}0*$)\\d{0,4}\\.\\d{0,4}0*$)",
             "title": "Rate Pct",
             "type": "string"
           },
@@ -22575,6 +22948,7 @@
           "threshold": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -22678,6 +23052,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -22706,6 +23081,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,4}|(?=[\\d.]{1,9}0*$)\\d{0,4}\\.\\d{0,4}0*$)",
                 "type": "string"
               },
               {
@@ -22748,6 +23124,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -22956,6 +23333,7 @@
           },
           "match_candidates": {
             "items": {
+              "additionalProperties": true,
               "type": "object"
             },
             "title": "Match Candidates",
@@ -23950,6 +24328,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,5}|(?=[\\d.]{1,9}0*$)\\d{0,5}\\.\\d{0,3}0*$)",
                 "type": "string"
               },
               {
@@ -23989,6 +24368,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,5}|(?=[\\d.]{1,9}0*$)\\d{0,5}\\.\\d{0,3}0*$)",
                 "type": "string"
               },
               {
@@ -24289,6 +24669,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,13}|(?=[\\d.]{1,16}0*$)\\d{0,13}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -24304,6 +24685,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,13}|(?=[\\d.]{1,16}0*$)\\d{0,13}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -24319,6 +24701,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,13}|(?=[\\d.]{1,16}0*$)\\d{0,13}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -24334,6 +24717,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,5}|(?=[\\d.]{1,9}0*$)\\d{0,5}\\.\\d{0,3}0*$)",
                 "type": "string"
               },
               {
@@ -24349,6 +24733,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,7}|(?=[\\d.]{1,11}0*$)\\d{0,7}\\.\\d{0,3}0*$)",
                 "type": "string"
               },
               {
@@ -24371,6 +24756,7 @@
             "anyOf": [
               {
                 "items": {
+                  "additionalProperties": true,
                   "type": "object"
                 },
                 "type": "array"
@@ -24439,11 +24825,13 @@
             "type": "array"
           },
           "lookups": {
+            "additionalProperties": true,
             "description": "分類の選択肢",
             "title": "Lookups",
             "type": "object"
           },
           "product": {
+            "additionalProperties": true,
             "description": "保存後の商品の内容",
             "title": "Product",
             "type": "object"
@@ -25410,6 +25798,7 @@
           "weight_kg": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -25462,6 +25851,7 @@
           "box_weight_kg": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -25495,6 +25885,7 @@
           "case_weight_kg": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -25808,6 +26199,7 @@
           "unit_price": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -25819,6 +26211,7 @@
           "unit_price_eur": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -25830,6 +26223,7 @@
           "unit_price_usd": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -25846,6 +26240,7 @@
           "volume_weight": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -25857,6 +26252,7 @@
           "weight": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -25913,6 +26309,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,5}|(?=[\\d.]{1,9}0*$)\\d{0,5}\\.\\d{0,3}0*$)",
                 "type": "string"
               },
               {
@@ -25952,6 +26349,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,5}|(?=[\\d.]{1,9}0*$)\\d{0,5}\\.\\d{0,3}0*$)",
                 "type": "string"
               },
               {
@@ -26289,6 +26687,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,13}|(?=[\\d.]{1,16}0*$)\\d{0,13}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -26304,6 +26703,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,13}|(?=[\\d.]{1,16}0*$)\\d{0,13}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -26319,6 +26719,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,13}|(?=[\\d.]{1,16}0*$)\\d{0,13}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -26334,6 +26735,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,5}|(?=[\\d.]{1,9}0*$)\\d{0,5}\\.\\d{0,3}0*$)",
                 "type": "string"
               },
               {
@@ -26349,6 +26751,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,7}|(?=[\\d.]{1,11}0*$)\\d{0,7}\\.\\d{0,3}0*$)",
                 "type": "string"
               },
               {
@@ -26419,6 +26822,7 @@
           "purchase_amount": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -26453,6 +26857,7 @@
           "purchase_shipping": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -26475,6 +26880,7 @@
           "purchase_total": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -26924,6 +27330,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,13}|(?=[\\d.]{1,16}0*$)\\d{0,13}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -26939,6 +27346,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,13}|(?=[\\d.]{1,16}0*$)\\d{0,13}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -27125,6 +27533,7 @@
           "shipping_fee": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -27140,6 +27549,7 @@
           "subtotal": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -27151,6 +27561,7 @@
           "tax_amount": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -27162,6 +27573,7 @@
           "total_amount": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -27281,6 +27693,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,13}|(?=[\\d.]{1,16}0*$)\\d{0,13}\\.\\d{0,2}0*$)",
                 "type": "string"
               }
             ],
@@ -27293,6 +27706,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,7}|(?=[\\d.]{1,11}0*$)\\d{0,7}\\.\\d{0,3}0*$)",
                 "type": "string"
               },
               {
@@ -27362,6 +27776,7 @@
             "type": "integer"
           },
           "subtotal": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Subtotal",
             "type": "string"
           },
@@ -27377,12 +27792,14 @@
             "title": "Unit"
           },
           "unit_price": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Unit Price",
             "type": "string"
           },
           "weight": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -27560,6 +27977,7 @@
           "shipping_fee": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -27575,6 +27993,7 @@
           "subtotal": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -27586,6 +28005,7 @@
           "tax_amount": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -27597,6 +28017,7 @@
           "total_amount": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -27717,6 +28138,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,13}|(?=[\\d.]{1,16}0*$)\\d{0,13}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -27732,6 +28154,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,13}|(?=[\\d.]{1,16}0*$)\\d{0,13}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -27805,6 +28228,7 @@
       "ReanalyzeResponse": {
         "properties": {
           "after": {
+            "additionalProperties": true,
             "title": "After",
             "type": "object"
           },
@@ -29204,6 +29628,7 @@
         "description": "`GET /financials/orders` のレスポンス（区切り4）。\n\n受注ごとの売上行 + 全体集計（売上合計 / 原価合計 / 粗利合計 / 件数 / 粗利率）。\n通貨混在時の合算は単純合計（表示は JPY 換算前提・将来通貨別集計検討）。",
         "properties": {
           "cost_total": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Cost Total",
             "type": "string"
           },
@@ -29214,6 +29639,7 @@
           "gross_profit_rate": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -29223,6 +29649,7 @@
             "title": "Gross Profit Rate"
           },
           "gross_profit_total": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Gross Profit Total",
             "type": "string"
           },
@@ -29234,6 +29661,7 @@
             "type": "array"
           },
           "revenue_total": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Revenue Total",
             "type": "string"
           }
@@ -29277,6 +29705,7 @@
           "cost_total": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -29304,6 +29733,7 @@
           "gross_profit": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -29315,6 +29745,7 @@
           "gross_profit_rate": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -29334,6 +29765,7 @@
           "revenue_amount": {
             "anyOf": [
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
                 "type": "string"
               },
               {
@@ -29870,6 +30302,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,6}|(?=[\\d.]{1,9}0*$)\\d{0,6}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -29885,6 +30318,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,6}|(?=[\\d.]{1,9}0*$)\\d{0,6}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -29939,6 +30373,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,7}|(?=[\\d.]{1,11}0*$)\\d{0,7}\\.\\d{0,3}0*$)",
                 "type": "string"
               }
             ],
@@ -29951,6 +30386,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,6}|(?=[\\d.]{1,9}0*$)\\d{0,6}\\.\\d{0,2}0*$)",
                 "type": "string"
               },
               {
@@ -30042,6 +30478,7 @@
             "title": "Delivery Timestamp"
           },
           "fee": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Fee",
             "type": "string"
           },
@@ -30129,6 +30566,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,13}|(?=[\\d.]{1,16}0*$)\\d{0,13}\\.\\d{0,2}0*$)",
                 "type": "string"
               }
             ],
@@ -30141,6 +30579,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,7}|(?=[\\d.]{1,11}0*$)\\d{0,7}\\.\\d{0,3}0*$)",
                 "type": "string"
               }
             ],
@@ -30153,6 +30592,7 @@
                 "type": "number"
               },
               {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,7}|(?=[\\d.]{1,11}0*$)\\d{0,7}\\.\\d{0,3}0*$)",
                 "type": "string"
               }
             ],
@@ -30195,6 +30635,7 @@
             "type": "integer"
           },
           "price": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Price",
             "type": "string"
           },
@@ -30204,10 +30645,12 @@
             "type": "string"
           },
           "weight_max": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Weight Max",
             "type": "string"
           },
           "weight_min": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Weight Min",
             "type": "string"
           },
@@ -32952,6 +33395,7 @@
         "description": "追加料金の内訳（ADR-128）。",
         "properties": {
           "amount": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Amount",
             "type": "string"
           },
@@ -37383,6 +37827,7 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "additionalProperties": true,
                   "title": "Response Create Channel Master Api V1 Admin Channel Masters Post",
                   "type": "object"
                 }
@@ -40686,6 +41131,7 @@
               "application/json": {
                 "schema": {
                   "items": {
+                    "additionalProperties": true,
                     "type": "object"
                   },
                   "title": "Response List Channel Masters Api V1 Channel Masters Get",
@@ -41646,6 +42092,7 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "additionalProperties": true,
                   "title": "Response Import Conditions Commit Api V1 Conditions Import Commit Post",
                   "type": "object"
                 }
@@ -41693,6 +42140,7 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "additionalProperties": true,
                   "title": "Response Import Conditions Preview Api V1 Conditions Import Preview Post",
                   "type": "object"
                 }
@@ -42383,6 +42831,7 @@
           "content": {
             "application/json": {
               "schema": {
+                "additionalProperties": true,
                 "title": "Body",
                 "type": "object"
               }
@@ -42873,6 +43322,7 @@
               "application/json": {
                 "schema": {
                   "items": {
+                    "additionalProperties": true,
                     "type": "object"
                   },
                   "title": "Response List Guild Emojis Api V1 Discord Guilds  Guild Id  Emojis Get",
@@ -43025,6 +43475,7 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "additionalProperties": true,
                   "title": "Response Discord Oauth Start Api V1 Discord Oauth Start Post",
                   "type": "object"
                 }
@@ -46312,6 +46763,7 @@
               "application/json": {
                 "schema": {
                   "items": {
+                    "additionalProperties": true,
                     "type": "object"
                   },
                   "title": "Response List Conv Logs Api V1 Leads  Lead Id  Conv Logs Get",
@@ -46371,6 +46823,7 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "additionalProperties": true,
                   "title": "Response Create Conv Log Api V1 Leads  Lead Id  Conv Logs Post",
                   "type": "object"
                 }
@@ -46487,6 +46940,7 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "additionalProperties": true,
                   "title": "Response Update Conv Log Api V1 Leads  Lead Id  Conv Logs  Log Id  Patch",
                   "type": "object"
                 }
@@ -48068,6 +48522,7 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "additionalProperties": true,
                   "title": "Response Import Note Master Commit Api V1 Note Master Import Commit Post",
                   "type": "object"
                 }
@@ -48115,6 +48570,7 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "additionalProperties": true,
                   "title": "Response Import Note Master Preview Api V1 Note Master Import Preview Post",
                   "type": "object"
                 }
@@ -48812,6 +49268,50 @@
         ]
       }
     },
+    "/api/v1/ops/incidents/human": {
+      "post": {
+        "operationId": "report_human_incident_api_v1_ops_incidents_human_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OpsHumanReport"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Report Human Incident",
+        "tags": [
+          "ops"
+        ]
+      }
+    },
     "/api/v1/ops/incidents/{incident_id}": {
       "get": {
         "operationId": "get_incident_api_v1_ops_incidents__incident_id__get",
@@ -48853,6 +49353,62 @@
           }
         ],
         "summary": "Get Incident",
+        "tags": [
+          "ops"
+        ]
+      }
+    },
+    "/api/v1/ops/incidents/{incident_id}/close": {
+      "post": {
+        "operationId": "close_incident_api_v1_ops_incidents__incident_id__close_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "incident_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Incident Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OpsIncidentClose"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Close Incident",
         "tags": [
           "ops"
         ]
@@ -51270,6 +51826,7 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "additionalProperties": true,
                   "title": "Response Import Product Categories Commit Api V1 Product Categories Import Commit Post",
                   "type": "object"
                 }
@@ -51317,6 +51874,7 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "additionalProperties": true,
                   "title": "Response Import Product Categories Preview Api V1 Product Categories Import Preview Post",
                   "type": "object"
                 }
@@ -54032,6 +54590,7 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "additionalProperties": true,
                   "title": "Response Etd Upload Image Api V1 Shipping Etd Images Post",
                   "type": "object"
                 }
@@ -54140,6 +54699,7 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "additionalProperties": true,
                   "title": "Response Lv Get Email Template Api V1 Shipping Label Validation Email Template Get",
                   "type": "object"
                 }
@@ -55043,6 +55603,7 @@
           "content": {
             "application/json": {
               "schema": {
+                "additionalProperties": true,
                 "title": "Payload",
                 "type": "object"
               }
@@ -55136,6 +55697,7 @@
           "content": {
             "application/json": {
               "schema": {
+                "additionalProperties": true,
                 "title": "Payload",
                 "type": "object"
               }
@@ -55482,6 +56044,7 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "additionalProperties": true,
                   "title": "Response Import Status Master Commit Api V1 Status Master Import Commit Post",
                   "type": "object"
                 }
@@ -55529,6 +56092,7 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "additionalProperties": true,
                   "title": "Response Import Status Master Preview Api V1 Status Master Import Preview Post",
                   "type": "object"
                 }
@@ -56480,6 +57044,7 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "additionalProperties": true,
                   "title": "Response Import Conditions Commit Api V1 Super Admin Conditions Import Commit Post",
                   "type": "object"
                 }
@@ -56527,6 +57092,7 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "additionalProperties": true,
                   "title": "Response Import Conditions Preview Api V1 Super Admin Conditions Import Preview Post",
                   "type": "object"
                 }
@@ -57066,6 +57632,7 @@
           "content": {
             "application/json": {
               "schema": {
+                "additionalProperties": true,
                 "title": "Data",
                 "type": "object"
               }
@@ -57178,6 +57745,7 @@
           "content": {
             "application/json": {
               "schema": {
+                "additionalProperties": true,
                 "title": "Data",
                 "type": "object"
               }
@@ -58556,6 +59124,7 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "additionalProperties": true,
                   "title": "Response Import Note Master Commit Api V1 Super Admin Note Master Import Commit Post",
                   "type": "object"
                 }
@@ -58603,6 +59172,7 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "additionalProperties": true,
                   "title": "Response Import Note Master Preview Api V1 Super Admin Note Master Import Preview Post",
                   "type": "object"
                 }
@@ -59236,6 +59806,7 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "additionalProperties": true,
                   "title": "Response Import Product Categories Commit Api V1 Super Admin Product Categories Import Commit Post",
                   "type": "object"
                 }
@@ -59283,6 +59854,7 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "additionalProperties": true,
                   "title": "Response Import Product Categories Preview Api V1 Super Admin Product Categories Import Preview Post",
                   "type": "object"
                 }
@@ -61120,6 +61692,7 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "additionalProperties": true,
                   "title": "Response Import Status Master Commit Api V1 Super Admin Status Master Import Commit Post",
                   "type": "object"
                 }
@@ -61167,6 +61740,7 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "additionalProperties": true,
                   "title": "Response Import Status Master Preview Api V1 Super Admin Status Master Import Preview Post",
                   "type": "object"
                 }
@@ -61611,6 +62185,7 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "additionalProperties": true,
                   "title": "Response Import Suppliers Commit Api V1 Super Admin Suppliers Import Commit Post",
                   "type": "object"
                 }
@@ -61659,6 +62234,7 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "additionalProperties": true,
                   "title": "Response Import Suppliers Preview Api V1 Super Admin Suppliers Import Preview Post",
                   "type": "object"
                 }
@@ -62639,6 +63215,7 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "additionalProperties": true,
                   "title": "Response Delete Tenant Logical Api V1 Super Admin Tenants  Tenant Id  Delete",
                   "type": "object"
                 }
@@ -62698,6 +63275,7 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "additionalProperties": true,
                   "title": "Response Delete Tenant Physical Api V1 Super Admin Tenants  Tenant Id  Physical Delete",
                   "type": "object"
                 }
@@ -63121,6 +63699,7 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "additionalProperties": true,
                   "title": "Response Import Units Commit Api V1 Super Admin Units Import Commit Post",
                   "type": "object"
                 }
@@ -63168,6 +63747,7 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "additionalProperties": true,
                   "title": "Response Import Units Preview Api V1 Super Admin Units Import Preview Post",
                   "type": "object"
                 }
@@ -64400,6 +64980,7 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "additionalProperties": true,
                   "title": "Response Import Tenant Suppliers Commit Api V1 Suppliers Import Commit Post",
                   "type": "object"
                 }
@@ -64448,6 +65029,7 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "additionalProperties": true,
                   "title": "Response Import Tenant Suppliers Preview Api V1 Suppliers Import Preview Post",
                   "type": "object"
                 }
@@ -65252,6 +65834,7 @@
               "application/json": {
                 "schema": {
                   "items": {
+                    "additionalProperties": true,
                     "type": "object"
                   },
                   "title": "Response List Condition Review Options Api V1 Tcg Conditions Review Options Get",
@@ -67368,6 +67951,7 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "additionalProperties": true,
                   "title": "Response Delete Product Detail Api V1 Tcg Products Detail  Product Id  Delete",
                   "type": "object"
                 }
@@ -67414,6 +67998,7 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "additionalProperties": true,
                   "title": "Response Product Detail Api V1 Tcg Products Detail  Product Id  Get",
                   "type": "object"
                 }
@@ -67579,6 +68164,7 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "additionalProperties": true,
                   "title": "Response Commit Import Endpoint Api V1 Tcg Products Import Commit Post",
                   "type": "object"
                 }
@@ -67627,6 +68213,7 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "additionalProperties": true,
                   "title": "Response Preview Import Api V1 Tcg Products Import Preview Post",
                   "type": "object"
                 }
@@ -67752,6 +68339,7 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "additionalProperties": true,
                   "title": "Response Get Product Lookups Api V1 Tcg Products Lookups Get",
                   "type": "object"
                 }
@@ -67904,6 +68492,7 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "additionalProperties": true,
                   "title": "Response Add Product Exclude Keyword Api V1 Tcg Products  Product Id  Exclude Keywords Post",
                   "type": "object"
                 }
@@ -67962,6 +68551,7 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "additionalProperties": true,
                   "title": "Response Add Product Search Keyword Api V1 Tcg Products  Product Id  Search Keywords Post",
                   "type": "object"
                 }
@@ -68009,6 +68599,7 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "additionalProperties": true,
                   "title": "Response Commit Review Csv Api V1 Tcg Review Csv Commit Post",
                   "type": "object"
                 }
@@ -68080,6 +68671,7 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "additionalProperties": true,
                   "title": "Response Preview Review Csv Api V1 Tcg Review Csv Preview Post",
                   "type": "object"
                 }
@@ -69051,6 +69643,7 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "additionalProperties": true,
                   "title": "Response Seed Products To Glossary Api V1 Translation Glossary Seed Products Post",
                   "type": "object"
                 }
@@ -69200,6 +69793,7 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "additionalProperties": true,
                   "title": "Response Outbound Confirm Api V1 Translation Outbound Confirm  Draft Id  Post",
                   "type": "object"
                 }
@@ -69462,6 +70056,7 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "additionalProperties": true,
                   "title": "Response Import Units Commit Api V1 Units Import Commit Post",
                   "type": "object"
                 }
@@ -69509,6 +70104,7 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "additionalProperties": true,
                   "title": "Response Import Units Preview Api V1 Units Import Preview Post",
                   "type": "object"
                 }
@@ -70116,6 +70712,7 @@
               "application/json": {
                 "schema": {
                   "items": {
+                    "additionalProperties": true,
                     "type": "object"
                   },
                   "title": "Response List Company Conv Logs Api V1  Company Id  Conv Logs Get",
