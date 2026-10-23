@@ -222,4 +222,12 @@ diff <(git show "${B}:AGENTS.md" | sed -e 37d -e 39,40d) AGENTS.md
 
 ## 11. 報告欄（担当が追記）
 
+- 本報告はカード doc-agenda-nav 段3b-2 の実行結果である（2026-10-23・Sonnet）。
+- 起点 f57a8193b。5-0 は F1・F2・F5 と一致。
+- 5-1 の6本の diff・5-3 の2本の diff は出力なし。5-2 は OK 22・MISSING 0。同義2行の差は §4-2 の表の通り。
+- wc -l: CLAUDE.md 109・AGENTS.md 110・README.md 107。5-4 は 82-104 の23行追加のみ。5-5 は2行の置き換えのみ。
+- 5-6 SUMMARY: `unreached=0 deep=2 blank_when=0 no_when_column=0 broken_link=8 warnings=10`（起点と同じ）。
+- 5-7: 想定外の行は docs/BRANCH_PROTECTION_SETUP.md:342（astro-webapp/CLAUDE.md を指す別ファイルの参照）と docs/adr/ADR-050-release-pr-workflow-standardization.md:193（break-glass の説明文）。どちらも入口の節を行き先として指していない。
+- 生出力: /tmp/CC報告ファイル/an-stage3b/impl2/
+
 END OF CARD

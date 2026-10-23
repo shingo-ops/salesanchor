@@ -41,15 +41,10 @@ DROP TABLE / 大量DELETE / `rm -rf` / `git reset --hard` / `git push --force`�
 - **作業開始前に必ず（例外なし）** `bash scripts/new-worktree.sh release/<topic> --claude` で独立ディレクトリを作成（main土台・~/worktrees配下。正典: `docs/specs/branch-operations/README.md §3-3`／詳細: `docs/PARALLEL_TERMINAL_GUIDE.md`）
 - **`.claude/agents/` 変更前は必ず `git pull` で最新取得**（複数セッション同時書き込みによる上書き防止）
 - `develop` / `main` への直接コミット禁止
-- 完了後 `gh pr create --base main` でPR作成 → レビュー後 `main` へマージ（merge commit・squash禁止）
 - **PR作成前に `gh auth status` で `shingo-cc` 名義を確認。`shingo-ops` 名義でのコード変更PR作成は禁止（docs-only PR は除く）。**
 - **release/* → main は PR 経由**（直push禁止・Branch Protection で強制）
-  - リリース相当の大きな変更は `--draft` で起票（**必ず Draft**）→ PO が diff・相乗り PR を確認し GO を出すまで誰も un-draft/マージしない（ADR-1015 の B 区分は Draft にしない）
-  - マージ前に「確認済み：〇〇」コメントを残すこと（チェックリスト形骸化防止）
-  - **緊急 break-glass**（本番障害復旧のみ）: ①PRタイトルに `EMERGENCY:` 明記＋理由 ②Shingo即時報告 ③24h以内に事後Approve＋ログ記録（詳細: `docs/BRANCH_PROTECTION_SETUP.md §4`）
 - **main にマージ＝本番投入可の宣言**（ADR-135）：`migrations/`・`deploy.yml`・本番 `scripts/` を含む実装は PO GO が出るまで release ブランチで待機し main にマージしない。main は待合室ではない。
 - **危険PR（上記パス含む）のGO手順**（ADR-136）：①マージ前にチャットで「対象・変更3行サマリ・直前バックアップ確認」をPOに提示 ②POの「GO #PR番号」（番号必須・番号なし曖昧肯定は無効）を受領するまでマージ・適用しない ③受領後は PR本文に `### GO記録`（GO発行者・日時・GO原文・バックアップ確認）セクションを転記 ④GO権限はPO（Shingo）。ADR-1003により例外を除き Claude Opus 設計担当へ常時委譲（PO「委譲停止」で解除）
-- **リリース PR 作成時**は `git diff main...HEAD --name-only` で全 PR・全 migration を列挙し PR 本文に記載。**1リリース1テーマ**：`migrations/` に無関係トラックの混入がないか明示確認。GO記録に相乗り全 PR を明記（#2446/#2503 教訓）。危険パスが含まれたら停止して PO 確認。
 
 ### 長命ブランチ消失防止（develop は第3便まで残置・ロールバック用・新規作業での使用禁止）
 
