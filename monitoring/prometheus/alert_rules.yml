@@ -411,3 +411,30 @@ groups:
           summary: "復旧後の点検係が止まっています"
           description: "点検係（recovery-check）が {{ $value | humanizeDuration }} の間、点検を回していません。この間、サーバーが戻っても ✅/❌ は届きません。"
           runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#recoverycheckstale"
+
+  - name: ops_mail_alerts
+    rules:
+      # 運用の受け箱に、さくらの差出人のメールが 40 日届いていない（Gmail の転送切れの兆し。tokens.yml: ops_mail_silent_sec=3456000）
+      # backend/app/metrics.py が Redis から読んで出す。0（未設定）のときは鳴らない
+      - alert: OpsMailSilent
+        expr: (time() - salesanchor_ops_mail_last_sakura_mail_timestamp_seconds{job="backend"}) > 3456000 and salesanchor_ops_mail_last_sakura_mail_timestamp_seconds{job="backend"} > 0
+        for: 1h
+        labels:
+          severity: warning
+          tier: ticket
+        annotations:
+          summary: "さくらからのメールが 40 日届いていません"
+          description: "運用の受け箱に、さくらの差出人のメールが {{ $value | humanizeDuration }} 届いていません（閾値: 40 日。決済の案内は毎月届きます）。業務用メールの自動転送が切れている見込みがあります。"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#opsmailsilent"
+
+      # 運用の受け箱を 3 時間読めていない（パスワードの誤り・受け箱の削除・celery の停止。tokens.yml: ops_mail_poll_stale_sec=10800）
+      - alert: OpsMailPollStale
+        expr: (time() - salesanchor_ops_mail_last_poll_success_timestamp_seconds{job="backend"}) > 10800 and salesanchor_ops_mail_last_poll_success_timestamp_seconds{job="backend"} > 0
+        for: 10m
+        labels:
+          severity: warning
+          tier: ticket
+        annotations:
+          summary: "運用の受け箱を 3 時間読めていません"
+          description: "さくらの点検・障害のメールを読む処理が {{ $value | humanizeDuration }} の間、受け箱を読めていません（閾値: 3 時間）。この間、さくらのお知らせは Discord に届きません。"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#opsmailpollstale"

@@ -554,6 +554,10 @@ OPS_MAIL_DISCORD_WEBHOOK=
 
 ## 13. 報告欄（担当が追記）
 
-（未記入）
+担当の実装報告（2026-10-23）:
+
+- 検査の生出力は /tmp/CC報告ファイル/outage-bin3/impl/ に保存した。
+- カードの記述から変えた点（1 つ）: `_SCHEDULE_RE`・`_SCOPE_RE` のコロンの後ろの空白を `\s*` から `[^\S\r\n]*` にした。値が空の行で、改行をまたいで次の行（会員 ID など）を取り出さないため。試験 5・6 の期待はそのまま通る。
+- 配置の台本のうち verify-bin3.sh の prod1 の接続先は、環境変数 `PROD1_HOST` か、prod1 に ubuntu で入る既存の台本の HOST 行から読む。Opus が実行前に確かめる。
 
 END OF CARD
