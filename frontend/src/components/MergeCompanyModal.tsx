@@ -23,6 +23,7 @@ import { Button } from "./Button";
 import { RadioControl } from "./RadioControl";
 import { TextField } from "./TextField";
 import { Textarea } from "./Textarea";
+import { LoadingBlock } from "./loading";
 
 interface CompanyOption {
   id: number;
@@ -189,7 +190,7 @@ export default function MergeCompanyModal({ open, source, onMerged, onCancel }: 
               }}
             >
               {loading ? (
-                <p style={{ padding: "var(--space-4)", textAlign: "center" }}>{t("common.loading")}</p>
+                <LoadingBlock />
               ) : filteredCandidates.length === 0 ? (
                 <p style={{ padding: "var(--space-4)", textAlign: "center", color: "var(--text-muted)" }}>
                   {t("mergeCompany.noResults")}

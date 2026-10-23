@@ -7,6 +7,7 @@ import { Button } from "../../components/Button";
 import ConfirmModal from "../../components/ConfirmModal";
 import { HeaderButton } from "../../components/HeaderButton";
 import { api, ApiError } from "../../lib/api";
+import { LoadingBlock } from "../../components/loading";
 
 interface CentralSupplier {
   id: number;
@@ -323,7 +324,7 @@ export function SupplierDetailDrawer({
           </div>
         ) : (
           <>
-            {loading && <p role="status">{t("common.loading")}</p>}
+            {loading && <LoadingBlock />}
             {error && <p role="alert">{t(error)}</p>}
             {mode === "edit" && !loading && (blocked || (!supplier && error)) && (
               <Button

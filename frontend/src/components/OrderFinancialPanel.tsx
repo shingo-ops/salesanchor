@@ -15,6 +15,7 @@ import { Modal } from "./Modal";
 import { Button } from "./Button";
 import { TextareaControl } from "./Textarea";
 import { TextFieldControl } from "./TextField";
+import { LoadingBlock } from "./loading";
 
 export interface OrderFinancialDto {
   id: number;
@@ -207,7 +208,7 @@ export default function OrderFinancialPanel({
   return (
     <Modal open={true} onClose={onClose} title={`${t("orders.financial")} — ${orderNumber}`} size="lg">
         {loading ? (
-          <div className="loading">{t("common.loading")}</div>
+          <LoadingBlock />
         ) : (
           <form onSubmit={handleSubmit}>
             {error && <div className="error-message">{error}</div>}

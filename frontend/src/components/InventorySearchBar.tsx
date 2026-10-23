@@ -25,6 +25,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../lib/api";
 import { Button } from "./Button";
 import { TextFieldControl } from "./TextField";
+import { LoadingBlock } from "./loading";
 
 // spec v1.3 F11 AC11.4: 検索結果に同梱する仕入元現在オファー
 export interface InventoryOfferSummary {
@@ -377,7 +378,7 @@ export default function InventorySearchBar({
               data-testid={`${testIdPrefix}-loading`}
               style={{ padding: "var(--space-2) var(--space-10px)", color: "var(--text-secondary)" }}
             >
-              {t("common.loading")}
+              <LoadingBlock size="sm" inline />
             </li>
           )}
           {!loading && results.length === 0 && (

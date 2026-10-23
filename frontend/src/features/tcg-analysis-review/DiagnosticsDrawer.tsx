@@ -16,6 +16,7 @@ import { Button } from "../../components/Button";
 import { Drawer } from "../../components/Drawer";
 import { toast } from "../../components/loading/Toast";
 import { api } from "../../lib/api";
+import { LoadingBlock } from "../../components/loading";
 
 type Row = Record<string, unknown>;
 
@@ -98,7 +99,7 @@ function DiagnosticsSection({ diagKey, titleKey, open, highlight, onRetry }: Sec
         )}
       </div>
 
-      {loading && <p style={{ color: "var(--color-text-sub)" }}>{t("common.loading")}</p>}
+      {loading && <LoadingBlock />}
 
       {!loading && error && (
         <p style={{ color: "var(--color-error)" }}>{error}</p>

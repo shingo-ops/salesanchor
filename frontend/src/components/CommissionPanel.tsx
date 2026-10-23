@@ -19,6 +19,7 @@ import { api } from "../lib/api";
 import { Modal } from "./Modal";
 import { Button } from "./Button";
 import { SelectControl } from "./Select";
+import { LoadingBlock } from "./loading";
 
 const ROLES: { key: RoleKey; labelKey: string }[] = [
   { key: "sales", labelKey: "commissions.role_sales" },
@@ -185,7 +186,7 @@ export default function CommissionPanel({
   return (
     <Modal open={true} onClose={onClose} title={`${t("commission.assignedStaff")} — ${orderNumber}`} size="lg">
         {loading ? (
-          <div className="loading">{t("common.loading")}</div>
+          <LoadingBlock />
         ) : (
           <>
             {error && <div className="error-message">{error}</div>}

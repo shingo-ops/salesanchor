@@ -35,6 +35,7 @@ import {
   type BlankCode,
 } from "../tcg-product-import/productDetailModel";
 import "./review-fix-wizard.css";
+import { LoadingBlock } from "../../components/loading";
 
 export type RegisterNotice = { variant: "info" | "warning"; title: string };
 
@@ -288,7 +289,7 @@ export function ReviewRegisterProductForm({ item, onRefresh, onSaved, searchDebo
       await finish({ variant: "info", title: t("reviewItem.reassigned") });
     });
 
-  if (loadState === "loading") return <p>{t("common.loading")}</p>;
+  if (loadState === "loading") return <LoadingBlock />;
   if (loadState === "resolved") return <Callout variant="info" title={t("reviewItem.wizard.register.alreadyResolved")} />;
   if (loadState === "error") {
     return <Callout variant="warning" title={t("reviewItem.wizard.register.failed", { reason: loadReason })} />;
