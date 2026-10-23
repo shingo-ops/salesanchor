@@ -204,7 +204,9 @@ class RunCheckTests(unittest.TestCase):
 class RespondingTests(unittest.TestCase):
     def test_10_responding(self):
         r = rc.server_responding
-        self.assertTrue(r(make_get(api=(503, b'{"status":"error","database":"disconnected"}'))))
+        self.assertTrue(
+            r(make_get(api=(503, b'{"status":"error","database":"disconnected"}'), app=(502, b"x")))
+        )
         self.assertFalse(r(make_get(api=(502, b"<html>bad</html>"), app=(502, b"x"))))
         self.assertTrue(r(make_get(api=(None, b""), app=(200, b""))))
 
