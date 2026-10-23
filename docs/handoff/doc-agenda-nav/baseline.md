@@ -25,7 +25,7 @@ file:line はすべて a20ebc5bc の時点（scripts/check-process-artifacts.js 
 
 | 行 | 決まり | 判定 | 根拠 |
 |---|---|---|---|
-| 17 | 不可逆操作は PO 確認（一覧） | 一部強制（workflow-lint.yml の変更と cloud 実行時のみ）。手元のフックは未確認。gh/git で数えられない | scripts/check-process-artifacts.js:42-45,85,366／scripts/agent-hooks/cloud/guard_pre_tool.py:98-119 |
+| 17 | 不可逆操作は PO 確認（一覧） | 一部強制（workflow-lint.yml の変更と cloud 実行時のみ）。手元のフックは未確認。gh/git で数えられない | scripts/check-process-artifacts.js:42-51,85,366／scripts/agent-hooks/cloud/guard_pre_tool.py:98-119 |
 | 17 | Branch Protection・Ruleset・必須チェックの変更 | 未確認。gh/git で数えられない | － |
 | 19 | permit-danger.sh／会話の同意票で許可 | cloud は全面禁止。手元は未確認。gh/git で数えられない | scripts/agent-hooks/cloud/guard_pre_tool.py:4 |
 | 21 | ADR-025 暗号化済シークレットの手動投入禁止 | 一部強制（cloud の本番 DB 書込止めのみ）。手元は未確認。gh/git で数えられない | scripts/agent-hooks/cloud/guard_pre_tool.py:108-119 |
@@ -39,7 +39,7 @@ file:line はすべて a20ebc5bc の時点（scripts/check-process-artifacts.js 
 | 42 | PR 本文の標準ワークフロー確認欄 | 強制済み | scripts/check-process-artifacts.js:255-263／scripts/dev/validate-pr-body.sh:33-35 |
 | 34 | origin/main 起点で作る | 強制なし・数えられる（候補） | 読んだ範囲に検査なし |
 | 43 | executor-checklist.md に従う | 強制なし・数えられる（候補） | 読んだ範囲に検査なし |
-| 41 | 作業前に executor-preflight.sh | 強制なし・痕跡が PR/git に残らない | `git grep executor-preflight` は scripts/dev/executor-preflight.sh 自身のみ |
+| 41 | 作業前に executor-preflight.sh | 強制なし・痕跡が PR/git に残らない | `git grep -l executor-preflight a20ebc5bc -- .github scripts` は scripts/dev/executor-preflight.sh 自身のみ（範囲を付けないと文書を含め多数ヒットする） |
 | 44 | docs/INDEX.md から辿る | 強制なし・gh/git で数えられない | docs/INDEX.md は未新設 |
 | 11・12・13・45 | Legacy 削除禁止・ADR 確認・ADR 優先・領域別 AGENTS.md | 強制なし・「守った」を一義に決められない | － |
 
