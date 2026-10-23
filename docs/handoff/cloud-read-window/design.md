@@ -29,8 +29,8 @@ PO 2026-10-22「クラウドでもいまと変わらない環境を構築した�
 - docker-compose.ai-reader-http.yml（新規）。`ai-reader` と同じ守り: 環境変数は `AI_READER_DATABASE_URL` と窓口の鍵 `READ_WINDOW_TOKEN` だけ。volumes なし（/dev/log のみ）、`read_only`、`cap_drop: [ALL]`、`no-new-privileges`。
 - ネットワークは frontnet（nginx から届くため）と backnet（DB へ届くため）。ports は開けない（外から直接は届かない）。
 - 中身は backend/app/ops/read_window_http.py（新規）。検査・実行は readonly_query.py の関数をそのまま呼ぶ（拒否の規則・上限・伏せ字を二重に書かない＝正本は readonly_query.py の1か所）。
-- 同時実行は2本まで（3本目は 429 で即答。待たせない）。60秒で打ち切り。
-- 鍵の比較は `hmac.compare_digest`。`READ_WINDOW_TOKEN` が空・未設定なら全員 401（ADR-1025 と同じ）。
+- 同時実行は1本まで（2本目は 429 で即答。待たせない。D1）。60秒で打ち切り。
+- 鍵の比較は `secrets.compare_digest`（ops_error_reports.py:82 と同じ）。`READ_WINDOW_TOKEN` が空・未設定なら全員 401（ADR-1025 と同じ）。
 - 監査: 1回ごとに AUDIT 行を /dev/log へ（ADR-1024 と同じ形に `via=https` を足す）。送れなければ 503 で結果を返さない。
 
 ### 3-2. nginx
@@ -40,12 +40,12 @@ PO 2026-10-22「クラウドでもいまと変わらない環境を構築した�
 
 ### 3-3. 鍵の置き場所（データを分散させない）
 - 正本は GitHub secret `READ_WINDOW_TOKEN` の1か所。deploy.yml がサーバーの env ファイルへ書き、コンテナへ渡す（`OPS_API_TOKEN` と同じ道。recon §4）。
-- クラウド側は「ネットワークシークレット」に同じ値を1回だけ登録する（ホスト `api.salesanchor.jp`、ヘッダ `Authorization: Bearer`）。鍵は VM に出ない（recon §7）。環境変数には置かない。
+- クラウド側は「ネットワークシークレット」に同じ値を1回だけ登録する（ホスト `api.salesanchor.jp`、ヘッダ `X-Read-Window-Token`、前置きなし。D6）。鍵は VM に出ない（recon §7）。環境変数には置かない。
 - 登録は PO が claude.ai の画面で行う（外部の画面操作のため）。値の受け渡しは手元のファイル経由とし、チャットに出さない。
 - docs/B-11_credential_management_policy.md の90日表に `READ_WINDOW_TOKEN` を足す。
 
 ### 3-4. GO の境界
-- `backend/app/ops/` と docker-compose.ai-reader で始まる compose ファイル は既に process-artifacts gate の危ない変更に入っている（ADR-1024 §7）。新しいファイル名がこの対象に入るかは、便1カードで定義の実物と照合し、入らなければ対象に足す。窓口のコードを変えるには GO 記録が要る形にする。nginx/nginx.conf の変更も既存の危険パス。
+- `backend/app/ops/` と docker-compose.ai-reader.yml は既に process-artifacts gate の危ない変更に入っている（ADR-1024 §7）。新しいファイル名がこの対象に入るかは、便1カードで定義の実物と照合し、入らなければ対象に足す。窓口のコードを変えるには GO 記録が要る形にする。docker-compose.ai-reader-http.yml を DANGEROUS_PATTERNS に足す（D4）。nginx/nginx.conf は足さない（窓口の守りは鍵と DB の権限にあり、nginx の変更では広がらない）。
 
 ## 4. 代替案
 | 案 | 内容 | 判断 |
@@ -57,13 +57,13 @@ PO 2026-10-22「クラウドでもいまと変わらない環境を構築した�
 | E | IP 許可で守る | 不可。クラウドの出口 IP が固定と書かれていない |
 
 ## 5. リスクと対処
-- 鍵が漏れると、外から本番を読まれる → 読めるのは ai_ro（秘密列なし）だけ。同時2本・2回/秒。90日更新。K7 で即停止。
+- 鍵が漏れると、外から本番を読まれる → 読めるのは ai_ro（秘密列なし）だけ。同時1本（手元の SSH の道と合わせて全体で2本まで）・2回/秒。90日更新。K7 で即停止。
 - 常駐コンテナでメモリが増える → K8 で150MB以下を確認。prod1 の空きを実装の最初に測り、足りなければ止めて相談。
 - デプロイ中の約70秒は ai_ro が外れる（recon §3）→ 窓口はエラーを返すだけ。クラウドへの依頼文に「42P01 なら1分待って再試行」と書く。
 - 中身（本番の値）は Anthropic のクラウドを通る → PO 2026-10-22「データをクラウドに預けることを許容する」で許容済み。ただし PR・リポジトリには載せない決まりは残る。
 
 ## 6. 戻し方
-- 即停止（K7）: サーバーの env ファイルで `READ_WINDOW_TOKEN` を空にしてコンテナを作り直す（全員 401）。または `docker stop ai-reader-http`（nginx は 502）。
+- 即停止（K7）: `docker stop ai-reader-http`（nginx は 503）。止め続けるには加えて GitHub secret `READ_WINDOW_TOKEN` を消す（空なら全員 401。サーバーの鍵を空にするだけでは次の deploy で secret から書き戻される。D7）。
 - 完全撤去: compose ファイル・台本・nginx の1か所を git revert、GitHub secret を削除、PO がクラウドのネットワークシークレットを削除。DB は何も変えないので戻す作業は無い。
 
 ## 7. 実装の分け方（カードは PO 承認後に発行）
@@ -81,3 +81,14 @@ PO 2026-10-22「クラウドでもいまと変わらない環境を構築した�
 判定: APPROVE（設計として）。実装は PO 承認後。
 - 根拠: 守りの本体（DB の GRANT・ai_ro・GO 境界）は ADR-1024 のまま変えない。新しく足すのは「入口」だけで、鍵・速度・監査・停止のそれぞれに検証方法がある。
 - 未解決（実装で測るもの。設計の成立は妨げない）: prod1 の空きメモリ（K8）、routine でネットワークシークレットが効くか、会話記録に鍵が出ないか（K9）。いずれも外れたら止めて相談する。
+
+## 11. 実装前の具体化（2026-10-23）
+便1 実装カード（card-1.md §0）での Opus 決定。実物（本番実測・コード）に合わせて §3・§5・§6 を直した。
+- D1 同時数: ai_reader の接続上限は 2（本番実測 rolconnlimit=2、max_connections=100）。窓口は同時1本、もう1本は手元の SSH の道に残す。全体で2本まで。DB の上限は変えない。
+- D2 別プロジェクト: deploy.yml の `--remove-orphans` に消されないよう、compose の `name:` は `astro-webapp-readwindow`。ネットワークは既存の `astro-webapp_frontnet` と `astro-webapp_backnet` を external で使う。`container_name: ai-reader-http`。.env の COMPOSE_PROJECT_NAME が top-level の name: より優先されるため、起動は必ず -p astro-webapp-readwindow を付ける。
+- D3 nginx は resolver 127.0.0.11 と変数で送る（コンテナが居なくても nginx は起動する）。落ちているときは 503（`error_page 502 504 =503`）。
+- D4 GO の境界: `docker-compose.ai-reader-http.yml` を DANGEROUS_PATTERNS に足す。nginx/nginx.conf は足さない。
+- D5 接続情報の正本は VPS の /home/ubuntu/.config/salesanchor/ai-reader.env の1か所。compose は `env_file` で読む（値を写さない）。窓口の鍵は deploy が .env に書く `READ_WINDOW_TOKEN`（空なら全員 401）。
+- D6 鍵のヘッダは専用の `X-Read-Window-Token`（前置きなし）。`Authorization` は使わない（保守用 OPS_API_TOKEN と取り合わない）。クラウドのネットワークシークレットはヘッダ名を変えられる。
+- D7 止め続ける手順: 即停止は `docker stop ai-reader-http`。止め続けるには加えて GitHub secret `READ_WINDOW_TOKEN` を消す。
+- D8 既知の重なり: 窓口の読み（最長60秒）と deploy の ai_ro 作り直し（ロック待ち1秒・最大40回、ADR-1037）が重なると作り直しが失敗しうる。失敗時の作り直しは #4618 の仕組み。usage-cloud.md に「重い読みは短く分ける」を書き、K8 の測定期間に deploy があれば結果を記録する。
