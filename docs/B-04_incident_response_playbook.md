@@ -1,6 +1,6 @@
 # インシデント対応 Playbook
 
-## 対象: Sales Anchor（jarvis-claude.uk）
+## 対象: Sales Anchor（app.salesanchor.jp / api.salesanchor.jp。jarvis-claude.uk は全パスを app.salesanchor.jp へ転送するだけの旧住所）
 ## 最終更新: 2026-04-06
 
 ---
@@ -27,7 +27,7 @@ docker compose ps
 docker compose logs --tail=100 backend
 
 # 認証ログの確認（直近1時間の認証失敗）
-docker compose exec postgres psql -U myapp_user -d myapp_db -c \
+docker compose exec postgres psql -U jarvis -d jarvis_db -c \
   "SELECT event_type, client_ip, COUNT(*) FROM public.auth_events
    WHERE created_at > NOW() - INTERVAL '1 hour'
    GROUP BY event_type, client_ip ORDER BY count DESC;"
@@ -36,12 +36,12 @@ docker compose exec postgres psql -U myapp_user -d myapp_db -c \
 ### Step 2: 影���範囲の特定
 ```bash
 # 不正アクセスのあったテナントを特定
-docker compose exec postgres psql -U myapp_user -d myapp_db -c \
+docker compose exec postgres psql -U jarvis -d jarvis_db -c \
   "SELECT DISTINCT schema_name FROM information_schema.schemata
    WHERE schema_name LIKE 'tenant_%';"
 
 # 各テナントのaudit_logsで異常な操作を確認
-docker compose exec postgres psql -U myapp_user -d myapp_db -c \
+docker compose exec postgres psql -U jarvis -d jarvis_db -c \
   "SELECT * FROM tenant_001.audit_logs
    WHERE created_at > NOW() - INTERVAL '24 hours'
    ORDER BY created_at DESC LIMIT 50;"
@@ -53,7 +53,7 @@ docker compose exec postgres psql -U myapp_user -d myapp_db -c \
 sudo ufw deny from <攻撃元IP>
 
 # 侵害されたアカウントを無効化
-docker compose exec postgres psql -U myapp_user -d myapp_db -c \
+docker compose exec postgres psql -U jarvis -d jarvis_db -c \
   "UPDATE public.users SET is_active = false WHERE email = '<対象メール>';"
 
 # ��要に応じてサービスを一時停止
@@ -70,7 +70,7 @@ docker compose stop backend
 docker compose logs > /home/ubuntu/incident_logs_$(date +%Y%m%d%H%M).txt
 
 # DBのバックアップ（証拠保全）
-docker compose exec postgres pg_dump -U myapp_user myapp_db | gzip > \
+docker compose exec postgres pg_dump -U jarvis jarvis_db | gzip > \
   /home/ubuntu/backups/incident_backup_$(date +%Y%m%d%H%M).sql.gz
 ```
 
@@ -92,7 +92,7 @@ docker compose exec postgres pg_dump -U myapp_user myapp_db | gzip > \
 docker compose up -d
 
 # ヘルスチェック確認
-curl -s https://jarvis-claude.uk/api/health | jq
+curl -s https://api.salesanchor.jp/api/health | jq
 ```
 
 ### Step 7: 当局への報告（個人情報漏洩の場合）

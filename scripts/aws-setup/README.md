@@ -169,6 +169,8 @@ crontab -e
 30 3 * * * /home/ubuntu/salesanchor/scripts/backup_to_s3.sh >> /home/ubuntu/backups/s3_backup.log 2>&1
 ```
 
+（まだ確かめていない: 実際の cron の出力先。スクリプト側のコメントは /var/log/s3_backup.log。backup_to_s3.sh:14、setup-s3-backup.sh:129）
+
 > **注意**: 旧crontabエントリ（下記）が残っている場合は削除すること:
 > ```
 > 0 3 * * * /home/ubuntu/astro-webapp/scripts/backup.sh >> /home/ubuntu/backups/cron.log 2>&1
@@ -179,6 +181,9 @@ crontab -e
 実行スケジュール:
 - **3:00 AM**: ローカルバックアップ作成
 - **3:30 AM**: S3に転送（30分の余裕でローカル完了を確実に待つ）
+- 毎月1日は monthly-archives/ へ Glacier で永久保存（backup_to_s3.sh:138-157、s3-lifecycle.json:14-18）
+- 成功時刻を backup_s3.prom に書き、BackupS3Stale が見張る（backup_to_s3.sh:159-176）
+- 失敗時は DISCORD_WEBHOOK_OPS へ通知（backup_to_s3.sh:56-72）
 
 #### Step 2-7: 動作確認
 

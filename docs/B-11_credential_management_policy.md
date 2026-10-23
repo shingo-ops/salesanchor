@@ -69,6 +69,7 @@
 | Grafana管理者パスワード | 90日ごと |
 | **Claude Code 専用 SSH 鍵**（`salesanchor-claude`） | **90日ごと**（ADR-079） |
 | **Grafana Service Account Token**（`claude-code-reader`） | **90日ごと**（ADR-079） |
+| **AI 読み取り窓口の鍵**（`READ_WINDOW_TOKEN`） | **90日ごと**（ADR-1042） |
 
 ---
 

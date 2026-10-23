@@ -124,6 +124,7 @@ const DANGEROUS_PATTERNS = [
   // ADR-1024 読み取り道の台本・compose（変更に GO 記録を要求）
   /^backend\/app\/ops\//,
   /^docker-compose\.ai-reader\.yml$/,
+  /^docker-compose\.ai-reader-http\.yml$/,  // ADR-1042 クラウド読み取り窓口
 ];
 
 const REAL_CODE_PATTERNS = [
