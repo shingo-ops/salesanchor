@@ -227,7 +227,11 @@ export function ProductFormatsMasterPanel() {
     const all = sorted.map(id => getGameName(id)).join(GAME_SEPARATOR);
     return (
       <span title={all}>
-        {rest > 0 ? `${preview}${GAME_SEPARATOR}${t(`${f}.gamesMore`, { count: rest })}` : preview}
+        {rest > 0 ? (
+          <>
+            {preview}{GAME_SEPARATOR}<span style={{ color: "var(--accent)" }}>{t(`${f}.gamesMore`, { count: rest })}</span>
+          </>
+        ) : preview}
       </span>
     );
   };
