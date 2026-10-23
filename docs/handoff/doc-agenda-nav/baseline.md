@@ -21,13 +21,21 @@ design.md §8 の段0b の記録先。測定者: Opus（設計担当）＋Sonnet
 
 ### 強制の有無（draft/AGENTS.entry.md の行ごと。CI・Ruleset・フック・husky を確認）
 
+file:line はすべて a20ebc5bc の時点（scripts/check-process-artifacts.js は 8b5438142 以降、127行目以降が1行ずれる）。行3-10・37 は事実の記述やリンクで、行動の決まりではないため対象外。
+
 | 行 | 決まり | 判定 | 根拠 |
 |---|---|---|---|
+| 17 | 不可逆操作は PO 確認（一覧） | 一部強制（workflow-lint.yml の変更と cloud 実行時のみ）。手元のフックは未確認。gh/git で数えられない | scripts/check-process-artifacts.js:42-45,85,366／scripts/agent-hooks/cloud/guard_pre_tool.py:98-119 |
+| 17 | Branch Protection・Ruleset・必須チェックの変更 | 未確認。gh/git で数えられない | － |
+| 19 | permit-danger.sh／会話の同意票で許可 | cloud は全面禁止。手元は未確認。gh/git で数えられない | scripts/agent-hooks/cloud/guard_pre_tool.py:4 |
+| 21 | ADR-025 暗号化済シークレットの手動投入禁止 | 一部強制（cloud の本番 DB 書込止めのみ）。手元は未確認。gh/git で数えられない | scripts/agent-hooks/cloud/guard_pre_tool.py:108-119 |
+| 25-28 | VPS は制限付き鍵・無制限鍵の使い方 | cloud は本番への ssh を止める。手元は未確認。gh/git で数えられない | scripts/agent-hooks/cloud/guard_pre_tool.py:117-118 |
+| 32 | release/* → main は PR 経由（head は release/*・hotfix/*） | CI で強制（必須チェックには入っていない） | .github/workflows/pr-base-check.yml:26-27／Ruleset の必須チェック一覧に無し |
 | 32 | main/develop へ直接コミット・直 push 禁止 | 強制済み | Ruleset の pull_request 必須（`gh api repos/shingo-ops/salesanchor/rules/branches/main`）／~/.claude/scripts/worktree-only-guard.sh:149-152 |
 | 33 | shingo-cc 名義で PR | 強制済み（docs-only 例外の扱いは未確認） | scripts/check-process-artifacts.js:38,808-811（必須チェック process-artifacts gate） |
 | 34 | 作業場所は ~/worktrees 配下 | 強制済み（手元の commit のみ） | frontend/.husky/pre-commit:3-26 |
 | 35 | main を消さない | 強制済み（develop は未確認） | Ruleset の deletion |
-| 36 | 危険パスは GO 記録まで main にマージしない | 強制済み | scripts/check-process-artifacts.js:116-124,311-381 |
+| 36 | 危険パスは GO 記録まで main にマージしない | 強制済み | scripts/check-process-artifacts.js:116-126,311-381 |
 | 42 | PR 本文の標準ワークフロー確認欄 | 強制済み | scripts/check-process-artifacts.js:255-263／scripts/dev/validate-pr-body.sh:33-35 |
 | 34 | origin/main 起点で作る | 強制なし・数えられる（候補） | 読んだ範囲に検査なし |
 | 43 | executor-checklist.md に従う | 強制なし・数えられる（候補） | 読んだ範囲に検査なし |
@@ -60,6 +68,7 @@ design.md §8 の段0b の記録先。測定者: Opus（設計担当）＋Sonnet
 - 行43（executor-checklist）: 0/10。PR テンプレート（.github/PULL_REQUEST_TEMPLATE.md、72行）に語が無く、決まりも本文への記載を求めていない。語の有無は「従ったか」を表さない → 不採用。
 - **結論: K8 は入口の効果測定に使えない**（design.md §8 段0b ④）。PO へ戻した。
 - PO 決定（2026-10-23、原文「1」）: 守られた回数での比較はやめ、K9（会話の始まりに読む量）と K10（目次を開いた割合）で比べる。
+- design.md:37 と docs/specs/doc-agenda-nav/kgi.md の K8 の扱いへの反映は、後続の PR で行う（本 PR は測定記録のみ）。
 
 ## K9 会話の始まりに読む量
 
