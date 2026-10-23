@@ -496,7 +496,7 @@ cd /Users/tanizawashingo/worktrees/salesanchor/release-discord-pdca-bin15/fronte
 
 - 5-1 `cd backend && ruff check app/routers/ops.py app/realtime/topics.py tests/test_ops_router.py` → 0 件。
 - 5-2 `grep -n "^async def test_" backend/tests/test_ops_router.py` → 既存の12本（:165〜:415）のあとに T1〜T15 の名前が §4-6 の順で15本。合わせて27本。名前の一覧を保存する。
-- 5-3 `cd backend && pytest tests/test_ops_router.py tests/test_realtime_topics.py -q` → 手元では `test_ops_router.py` が skip になる（RLS_* が無い。recon §2 :22-31）。`test_realtime_topics.py` は全部 passed。skip は失敗ではない。実 PostgreSQL での合否は CI の「pytest (SQLite + PostgreSQL RLS)」（`.github/workflows/test.yml`:252）で見る。
+- 5-3 `cd backend && pytest tests/test_ops_router.py tests/test_realtime_topics.py -q` → 手元では `backend/tests/test_ops_router.py` が skip になる（RLS_* が無い。recon §2 :22-31）。`backend/tests/test_realtime_topics.py` は全部 passed。skip は失敗ではない。実 PostgreSQL での合否は CI の「pytest (SQLite + PostgreSQL RLS)」（`.github/workflows/test.yml`:252）で見る。
 - 5-4 `git diff --stat origin/main...HEAD` → §3 の5ファイルだけ。`git diff origin/main...HEAD -- backend/app/routers/ops.py | grep "^-" | grep -v "^---"` で消えた行を保存し、§4-1〜§4-2 の変更前の行（:20 の import・`OpsIncidentAnnotation` の終わりの行はそのまま残る・`annotate_incident` の :364-403）以外が無いことを確かめる。`ingest_alertmanager`・`_UPSERT_INCIDENT_SQL` の行が1行も消えていない。
 - 5-5 §4-7 の2つの命令のあとに `git status --short frontend/` → `frontend/api-contract/openapi.json` だけ。
 - 5-6 PR を作ったあと、CI の「pytest (SQLite + PostgreSQL RLS)」「API contract is up to date」の結果を `gh pr checks <番号>` で1回だけ取って保存する（待たない。終わっていなければ「実行中」と書く）。
@@ -506,7 +506,7 @@ cd /Users/tanizawashingo/worktrees/salesanchor/release-discord-pdca-bin15/fronte
 - §4 の目印の行が recon の行番号とずれている（ほかの PR が先に変えた）→ `git show origin/main:backend/app/routers/ops.py | grep -n "class OpsIncidentAnnotation"` のように origin/main で探し直し、同じ意味の位置で行う。意味が変わっていたら（関数の中身が recon と違う）NEEDS_DECISION: で、grep の出力を貼る。
 - `AwareDatetime` か `model_validator` が import できない → `pip show pydantic` の出力を貼って BLOCKED:（`backend/requirements.txt`:8 は `pydantic[email]==2.10.6`。2系にはどちらもある）。
 - openapi の差分に今回と関係ない変化が出る → 作り直しを1回やり直し、同じなら差分の要約（変わった口の名前）を貼って NEEDS_DECISION:。手で openapi.json を直さない。
-- `test_realtime_topics.py` が落ちる → 落ちた口の名前を確かめ、§4-5 の2行の綴りを直す。それでも落ちたら BLOCKED:。
+- `backend/tests/test_realtime_topics.py` が落ちる → 落ちた口の名前を確かめ、§4-5 の2行の綴りを直す。それでも落ちたら BLOCKED:。
 - CI の pytest で T12 の 1950 字が 422 か、DB の制約違反（500）になる → 8000 と DB の測り方の差が想定と違う。数字を変えずに失敗の原文を貼って BLOCKED:（Opus が測り方を見直す）。
 - CI の pytest で RLS に拒まれる（`42501`）→ 原文を貼って BLOCKED:（権限の設計を Opus が見る。推測で直さない）。
 - 既存の12本のどれかが落ちる → 自分の変更で落ちたかを `git stash` せずに、落ちた試験の原文と §4-2 の差分を貼って BLOCKED:。既存の試験を書き換えない。

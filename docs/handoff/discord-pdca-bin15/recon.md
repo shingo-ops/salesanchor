@@ -52,7 +52,7 @@
 | `migrations/20261016_100000_create_ops_incident_tables.sql:55` | 出来事の `kind` は notified/resolved/annotated/first_aid/ai/halt |
 | `migrations/20261016_100000_create_ops_incident_tables.sql:57` | 出来事の `actor` は alertmanager/ops_token/super_admin だけ |
 | `migrations/20261016_100000_create_ops_incident_tables.sql:58` | `octet_length(detail::text) <= 8192` |
-| `.github/workflows/test.yml:207` | 「Run pytest (full suite + PostgreSQL RLS)」。:223・:225 で `RLS_TEST_DATABASE_URL`・`RLS_ADMIN_DATABASE_URL` を渡すので、CI では `test_ops_router.py` が skip されずに走る |
+| `.github/workflows/test.yml:207` | 「Run pytest (full suite + PostgreSQL RLS)」。:223・:225 で `RLS_TEST_DATABASE_URL`・`RLS_ADMIN_DATABASE_URL` を渡すので、CI では `backend/tests/test_ops_router.py` が skip されずに走る |
 | `.github/workflows/test.yml:252` | 必須 Check 名「pytest (SQLite + PostgreSQL RLS)」 |
 | `.github/workflows/api-contract-check.yml:31` | openapi の書き出し（:31-35、`ENVIRONMENT=test`）と :50-55 の `git diff --exit-code -- frontend/api-contract/` |
 | `frontend/package.json:10` | `generate:api-types`。出力の `frontend/src/api/generated/` は `.gitignore`:128 で追跡外 |
@@ -62,7 +62,7 @@
 
 - 出来事の入口を呼ぶコードは、両リポジトリに無い（文書だけ。生出力 /tmp/CC報告ファイル/discord-pdca-bin15/80-ops-callers.txt）。`round` を足しても壊れる呼び出し元は無い。
 - 表を変える後の migration は無い（同 21-grep-mig.txt）。
-- `deploy.yml` は main への push で動く（paths の絞りなし）。本便を main に入れると backend が本番に入る。
+- `.github/workflows/deploy.yml` は main への push で動く（paths の絞りなし）。本便を main に入れると backend が本番に入る。
 
 ## 4. 不明点リスト
 
