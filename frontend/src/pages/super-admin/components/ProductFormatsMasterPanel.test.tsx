@@ -157,3 +157,65 @@ it("keeps the drawer open and explains a game in use", async () => {
   await waitFor(() => expect(formatsCalls()).toBeGreaterThan(before));
   expect(formatsCalls()).toBeGreaterThanOrEqual(2);
 });
+
+const manyGames = [
+  { id: 1, code: "pokemon", name_ja: "Pokemon", name_en: null, is_active: true },
+  { id: 2, code: "onepiece", name_ja: "One Piece", name_en: null, is_active: true },
+  { id: 3, code: "dragonball", name_ja: "Dragon Ball", name_en: null, is_active: true },
+  { id: 4, code: "yugioh", name_ja: "Yu-Gi-Oh", name_en: null, is_active: true },
+  { id: 5, code: "mtg", name_ja: "Magic", name_en: null, is_active: true },
+  { id: 6, code: "old", name_ja: "Old Game", name_en: null, is_active: false },
+];
+
+const mockApi = (formats: unknown[], types: unknown[]) => {
+  vi.mocked(api.get).mockImplementation((path: string) => {
+    if (path === "/super-admin/product-formats") return Promise.resolve(formats);
+    if (path === "/super-admin/product-lines") return Promise.resolve([]);
+    if (path === "/super-admin/tcg/types") return Promise.resolve(types);
+    return Promise.resolve([]);
+  });
+};
+
+it("shows the first 3 games and a 'more' count, with all names in the title", async () => {
+  mockApi([{ ...formatRow, game_ids: [1, 2, 3, 4, 5] }], manyGames);
+  render(<ProductFormatsMasterPanel />);
+  const cell = await screen.findByText("Pokemon, One Piece, Dragon Ball, +2 more");
+  expect(cell.getAttribute("title")).toBe("Pokemon, One Piece, Dragon Ball, Yu-Gi-Oh, Magic");
+});
+
+it("orders games by the tcgTypes order even when game_ids are in id order", async () => {
+  const types = [
+    { id: 2, code: "onepiece", name_ja: "One Piece", name_en: null, is_active: true },
+    { id: 1, code: "pokemon", name_ja: "Pokemon", name_en: null, is_active: true },
+  ];
+  mockApi([{ ...formatRow, game_ids: [1, 2] }], types);
+  render(<ProductFormatsMasterPanel />);
+  expect(await screen.findByText("One Piece, Pokemon")).toBeTruthy();
+});
+
+it("filters rows by the selected game and restores all rows on 'All games'", async () => {
+  mockApi(
+    [
+      { ...formatRow, id: 7, name: "Box A", game_ids: [1] },
+      { ...formatRow, id: 8, name: "Pack B", game_ids: [2] },
+    ],
+    games,
+  );
+  render(<ProductFormatsMasterPanel />);
+  await screen.findByText("Box A");
+  const select = screen.getByTestId("product-formats-game-filter");
+  fireEvent.change(select, { target: { value: "2" } });
+  expect(screen.queryByText("Box A")).toBeNull();
+  expect(screen.getByText("Pack B")).toBeTruthy();
+  fireEvent.change(select, { target: { value: "" } });
+  expect(screen.getByText("Box A")).toBeTruthy();
+  expect(screen.getByText("Pack B")).toBeTruthy();
+});
+
+it("does not offer inactive games in the filter", async () => {
+  render(<ProductFormatsMasterPanel />);
+  await screen.findByText("Booster Box");
+  const select = screen.getByTestId("product-formats-game-filter");
+  const labels = Array.from(select.querySelectorAll("option")).map(o => o.textContent);
+  expect(labels).toEqual(["All games", "Pokemon", "One Piece"]);
+});
