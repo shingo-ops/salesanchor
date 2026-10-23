@@ -156,4 +156,6 @@ grep -c '^OK' /tmp/CC報告ファイル/an-stage3b/impl3/k11.txt; grep -c '^MISS
 
 ## 11. 報告欄（担当が追記）
 
+- 5-0 起点一致（CLAUDE.md 109行・STANDARD-WORKFLOW.md 175行）。5-1 diff 出力なし。5-2 OK 3・MISSING 0。5-3 差なし・101行/178行。5-4 81a82,84 のみ。5-5 SUMMARY unreached=0 deep=2 blank_when=0 no_when_column=0 broken_link=8 warnings=10（起点と同じ）。5-6 STANDARD-WORKFLOW.md:77 の1件のみ。
+
 END OF CARD
