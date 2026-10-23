@@ -2,6 +2,7 @@
 import hashlib
 import importlib.util
 import os
+import re
 import subprocess
 import sys
 import uuid
@@ -56,7 +57,11 @@ def test_ok_outputs_three_files_only(tmp_path):
     assert "\\set ON_ERROR_STOP on" in apply_sql and "\\if :{?end}" in apply_sql and "\n:end;" in apply_sql
     assert "SET LOCAL app.is_operator = 'true'" in apply_sql
     assert "'it''s ok'" in apply_sql
-    assert "THEN 1 ELSE 1 / 0 END FROM public.accuracy_gold_rows WHERE gold_version = 'gold_t1'" in apply_sql
+    assert "THEN 1 ELSE 0 END) FROM public.accuracy_gold_rows WHERE gold_version = 'gold_t1'" in apply_sql
+    for name in OUTS:
+        text = (out / name).read_text(encoding="utf-8")
+        assert not re.search(r"ELSE\s+1\s*/\s*0", text), name
+    assert "1 / (CASE WHEN" in apply_sql and "1 / (CASE WHEN" in (out / "03_verify.sql").read_text(encoding="utf-8")
     pre = (out / "01_precheck.sql").read_text(encoding="utf-8")
     assert "MISSING_POSTS" in pre and "MISSING_PRODUCTS" in pre
     assert "s.id = v.id::uuid" in pre and "p.id = v.id::integer" in pre
