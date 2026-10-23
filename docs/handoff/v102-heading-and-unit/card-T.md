@@ -27,7 +27,7 @@
 1-4. 未登録の単位語（区分「不明」になる語）が (a) で置き換わる場合も、上の規則どおりに動くことをテストで示す（審査 4 回目の任意）。
 1-5. 設定の記録 SQL（ADR-1007。既存の data/ の設定 SQL と同じ型・同じ置き場）: key v102_kubun_allowed_units を 1 行 INSERT。値は次の JSON と一字一句同じ:
   {"箱系": ["Box", "Case", "Pack", "MasterCarton"], "プロモパック系": ["Booklet", "Pack"], "ブックレット系": ["Booklet"]}
-  precheck（key が無い）／dryrun／commit／verify（値が上と一致）／rollback（行を消す）を用意する。本番には流さない。
+  precheck（key が無い）／dryrun／commit／verify（値が上と一致）／rollback（値を {} に上書きする。2026-10-23 設計担当の判断で、行を消す形から変更）を用意する。本番には流さない。
 触らない: _resolve_unit_from_state、resolve_condition_v2、v102_buyback_unit_svc.py、_UPSERT_SQL、要確認の理由の一覧・画面の文字（unit_unknown は既にある）、指示書、migrations、deploy.yml。
 
 ## 2. テスト（backend/tests/test_gemini_raw_copy_v102_product_first.py に足す。合成のデータで）
@@ -67,5 +67,10 @@
 - 0 で前提が違う／v102 以外の経路を変えないとできない／3-2 の 2 つの処理を手元で通せない／テストが通らない → NEEDS_DECISION（理由と生出力のパス）。
 - フックに止められたら言い換えず止まる。本番への書き込みはしない（reader 鍵の読み取りだけ）。
 - 報告: 生出力はファイルに保存し、チャットにはパスと数だけ。最終行は DONE、または BLOCKED: と NEEDS_DECISION: のどちらかに理由を続けた 1 行。
+
+## 判断の記録（設計担当 Opus・2026-10-23）
+- 戻し方: 行を消す形をやめ、値を {} にする UPDATE にした。理由は2つ。行を消すと読み込むたびに「設定が無い」warning が出続け、K8（warning 0 件）と食い違うため。もう1つは不可逆な削除を避けるため。key は PRIMARY KEY（migrations/20260921_110000_pipeline_tables_public.sql:355）なので、commit は INSERT ... ON CONFLICT (key) DO UPDATE とする。design.md の「行を消す」の記述（:122・:196）は、便1b の文書更新でこの形に直す。
+- K1 の実測: 単位の正答率は表なしで 93.4%、表ありで 95.0%（+1.6 ポイント）。10/22 の試算は 93.7% → 95.3%（+1.6 ポイント）。上がり幅は試算どおりで、表なしの値が 0.3 ポイント下がった。下がった理由は、10/22 の写しから 10/23 の本番マスタへの更新（状態の対応が17件増えた）で、表とは無関係。表による悪化（正解→外れ）は 0 行。届かなかった4行は、ブックレット系のプレミアムカードコレクション系の商品で、表を入れる前も後も外れている（区分は PO の判断待ち）。合否の判断の扱いは PR 本文に記録する。
+- 審査で出た軽微な点: コミットの Co-Authored-By が Sonnet 5.5 になっている（カードの指定は Opus 5.5）。履歴の書き換えはしない。
 
 END OF CARD
