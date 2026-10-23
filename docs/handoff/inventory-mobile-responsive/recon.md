@@ -50,9 +50,9 @@
 
 | 事実 | 引用 |
 |---|---|
-| `horizontal-overflow.spec.ts` は **`document.documentElement.scrollWidth <= window.innerWidth`** で測る＝`.mobile-content` の内側のはみ出しを**構造的に見逃す** | `frontend/tests-e2e/horizontal-overflow.spec.ts:24-27` |
-| `inventory-table-layout.spec.ts` は `.mobile-content` の `scrollWidth`/`clientWidth` を直接見ており測り方は正しい | `frontend/tests-e2e/inventory-table-layout.spec.ts:82-88` |
-| しかし**この2本は CI で1本も走っていない**。`playwright` ジョブが停止中で、動いているのは3幅検査だけ、その対象は `visual-language/*.spec.ts` に限定 | `.github/workflows/e2e.yml:247`（`if: false # 一時停止 2026-06-01`）／`frontend/playwright.config.ts:60,64,69,74` |
+| `frontend/tests-e2e/horizontal-overflow.spec.ts` は **`document.documentElement.scrollWidth <= window.innerWidth`** で測る＝`.mobile-content` の内側のはみ出しを**構造的に見逃す** | `frontend/tests-e2e/horizontal-overflow.spec.ts:24-27` |
+| `frontend/tests-e2e/inventory-table-layout.spec.ts` は `.mobile-content` の `scrollWidth`/`clientWidth` を直接見ており測り方は正しい | `frontend/tests-e2e/inventory-table-layout.spec.ts:82-88` |
+| しかし**この2本は CI で1本も走っていない**。`playwright` ジョブが停止中で、動いているのは3幅検査だけ、その対象は `frontend/tests-e2e/visual-language/` 配下の spec に限定 | `.github/workflows/e2e.yml:247`（`if: false # 一時停止 2026-06-01`）／`frontend/playwright.config.ts:60,64,69,74` |
 
 ## 6. お手本（受信箱）
 

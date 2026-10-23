@@ -66,7 +66,7 @@ recon §5 で確定したとおり、**在庫のはみ出しを見張る検査�
 
 - `frontend/src` 配下（**1行も変えない**）。
 - `playwright.config.ts`・`.github/workflows/`（project や CI の配線は変えない。幅は spec 側で与えるため不要）。
-- 既存 `horizontal-overflow.spec.ts`・`inventory-table-layout.spec.ts`（CI で走らない件は別便の宿題＝C4 のまま）。
+- 既存 `frontend/tests-e2e/horizontal-overflow.spec.ts`・`frontend/tests-e2e/inventory-table-layout.spec.ts`（CI で走らない件は別便の宿題＝C4 のまま）。
 - DB・バックエンド・配線（この便は触らない）。
 
 ## ⑤ Acceptance Criteria
