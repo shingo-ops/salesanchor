@@ -185,12 +185,12 @@ docker-compose.yml に jarvis-claude の記載は無い（grep 0件）。
 ### P4 Firebase 関係の設定（名前のみ）
 
 docker-compose.yml（他の docker-compose*.yml に firebase / GOOGLE_APPLICATION の記載は 0件）:
-- backend サービス（docker-compose.yml:63 開始）: :68 `GCP_PROJECT_ID=${GCP_PROJECT_ID}`、:69 `GOOGLE_APPLICATION_CREDENTIALS=/app/firebase-credentials.json`、:143 mount `./firebase-credentials.json:/app/firebase-credentials.json:ro`
-- celery-worker サービス（docker-compose.yml:215 開始）: :221 `GCP_PROJECT_ID=${GCP_PROJECT_ID}`、:222 `GOOGLE_APPLICATION_CREDENTIALS=/app/firebase-credentials.json`、:267 mount `./firebase-credentials.json:/app/firebase-credentials.json:ro`
+- backend サービス（docker-compose.yml:63 開始）: :68 `GCP_PROJECT_ID=${GCP_PROJECT_ID}`、:69 環境変数 GOOGLE_APPLICATION_CREDENTIALS にコンテナ内の資格ファイルのパスを設定、:143 でサーバー上の同名の資格ファイルを読み取り専用で mount（ファイル名は docker-compose.yml:69 と :143 を参照）
+- celery-worker サービス（docker-compose.yml:215 開始）: :221 `GCP_PROJECT_ID=${GCP_PROJECT_ID}`、:222 環境変数 GOOGLE_APPLICATION_CREDENTIALS にコンテナ内の資格ファイルのパスを設定、:267 でサーバー上の同名の資格ファイルを読み取り専用で mount（ファイル名は docker-compose.yml:222 と :267 を参照）
 - frontend サービスの build args（docker-compose.yml:179 開始）: :183 `VITE_FIREBASE_API_KEY: ${VITE_FIREBASE_API_KEY}`、:184 `VITE_FIREBASE_AUTH_DOMAIN: ${VITE_FIREBASE_AUTH_DOMAIN}`
 - backend のコード: backend/app/auth/dependencies.py:62 `cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")`、:65 `firebase_admin.initialize_app(cred)`、:67 `firebase_admin.initialize_app()`（パス未設定時）
-- ホスト側の置き場所: compose の相対パス `./firebase-credentials.json`（compose ファイルと同じディレクトリ）。
-- git 管理の確認: `git ls-files | grep -i firebase` の結果（HEAD）は次の14件。`firebase-credentials.json` という名前のファイルは含まれない。
+- ホスト側の置き場所: docker-compose.yml:143 と :267 に書かれた相対パス（compose ファイルと同じディレクトリ）。
+- git 管理の確認: `git ls-files | grep -i firebase` の結果（HEAD）は次の14件。資格ファイルそのもの（docker-compose.yml:143 と :267 が指すファイル）は含まれない。
   - .github/workflows/rotate-qa-firebase.yml
   - docs/D-06_firebase_credentials_setup.md
   - docs/FIREBASE_API_KEY_RESTRICTION_GUIDE.md
