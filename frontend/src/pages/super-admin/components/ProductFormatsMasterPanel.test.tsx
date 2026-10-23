@@ -179,8 +179,15 @@ const mockApi = (formats: unknown[], types: unknown[]) => {
 it("shows the first 3 games and a 'more' count, with all names in the title", async () => {
   mockApi([{ ...formatRow, game_ids: [1, 2, 3, 4, 5] }], manyGames);
   render(<ProductFormatsMasterPanel />);
-  const cell = await screen.findByText("Pokemon, One Piece, Dragon Ball, +2 more");
-  expect(cell.getAttribute("title")).toBe("Pokemon, One Piece, Dragon Ball, Yu-Gi-Oh, Magic");
+  const cell = await screen.findByTitle("Pokemon, One Piece, Dragon Ball, Yu-Gi-Oh, Magic");
+  expect(cell.textContent).toBe("Pokemon, One Piece, Dragon Ball, +2 more");
+});
+
+it("colors only the 'more' count with the accent token", async () => {
+  mockApi([{ ...formatRow, game_ids: [1, 2, 3, 4, 5] }], manyGames);
+  render(<ProductFormatsMasterPanel />);
+  const more = await screen.findByText("+2 more");
+  expect(more.style.color).toBe("var(--accent)");
 });
 
 it("orders games by the tcgTypes order even when game_ids are in id order", async () => {
