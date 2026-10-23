@@ -23,7 +23,28 @@ case "$EVENT" in
       echo "BLOCKED(cloud): 見張りの内部エラーのため止めます（終了コード ${RC}）。" >&2
       exit 2
     fi
-    exit $RC
+    [ "$RC" -eq 2 ] && exit 2
+    for G in python_version_guard.py subagent_bash_wait_guard.py; do
+      printf '%s' "$INPUT" | python3 "$DIR/$G"
+      RC=$?
+      [ "$RC" -eq 0 ] && continue
+      [ "$RC" -eq 2 ] || echo "BLOCKED(cloud): 見張り ${G} の内部エラーのため止めます（終了コード ${RC}）。" >&2
+      exit 2
+    done
+    # 商品登録ルールの見張りは止めるとき JSON（permissionDecision: deny）を標準出力に出す。そのまま流す。
+    printf '%s' "$INPUT" | python3 "$DIR/../master-register-rules-guard.py"
+    RC=$?
+    if [ "$RC" -ne 0 ]; then
+      echo "BLOCKED(cloud): 見張り master-register-rules-guard の内部エラーのため止めます（終了コード ${RC}）。" >&2
+      exit 2
+    fi
+    exit 0
+    ;;
+  UserPromptSubmit)
+    printf '%s' "$INPUT" | bash "$DIR/card_lint_hook.sh"
+    [ $? -eq 2 ] && exit 2
+    printf '%s' "$INPUT" | python3 "$DIR/../master-register-rules-guard.py"
+    exit 0
     ;;
   Stop)
     printf '%s' "$INPUT" | python3 "$DIR/guard_stop.py"
