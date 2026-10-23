@@ -510,7 +510,7 @@ jobs:
               echo "::warning::ai-reader.env が読めないため ai-reader-http を起こしません"
               exit 0
             fi
-            docker compose -f docker-compose.ai-reader-http.yml up -d --build=false --force-recreate \
+            docker compose -p astro-webapp-readwindow -f docker-compose.ai-reader-http.yml up -d --build=false --force-recreate \
               || echo "::warning::ai-reader-http を起こせませんでした（アプリの反映には影響しません）"
 
       # SA-18 Phase2: salesanchor_app ロールの bootstrap（冪等）

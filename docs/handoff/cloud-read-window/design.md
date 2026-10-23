@@ -85,7 +85,7 @@ PO 2026-10-22「クラウドでもいまと変わらない環境を構築した�
 ## 11. 実装前の具体化（2026-10-23）
 便1 実装カード（card-1.md §0）での Opus 決定。実物（本番実測・コード）に合わせて §3・§5・§6 を直した。
 - D1 同時数: ai_reader の接続上限は 2（本番実測 rolconnlimit=2、max_connections=100）。窓口は同時1本、もう1本は手元の SSH の道に残す。全体で2本まで。DB の上限は変えない。
-- D2 別プロジェクト: deploy.yml の `--remove-orphans` に消されないよう、compose の `name:` は `astro-webapp-readwindow`。ネットワークは既存の `astro-webapp_frontnet` と `astro-webapp_backnet` を external で使う。`container_name: ai-reader-http`。
+- D2 別プロジェクト: deploy.yml の `--remove-orphans` に消されないよう、compose の `name:` は `astro-webapp-readwindow`。ネットワークは既存の `astro-webapp_frontnet` と `astro-webapp_backnet` を external で使う。`container_name: ai-reader-http`。.env の COMPOSE_PROJECT_NAME が top-level の name: より優先されるため、起動は必ず -p astro-webapp-readwindow を付ける。
 - D3 nginx は resolver 127.0.0.11 と変数で送る（コンテナが居なくても nginx は起動する）。落ちているときは 503（`error_page 502 504 =503`）。
 - D4 GO の境界: `docker-compose.ai-reader-http.yml` を DANGEROUS_PATTERNS に足す。nginx/nginx.conf は足さない。
 - D5 接続情報の正本は VPS の /home/ubuntu/.config/salesanchor/ai-reader.env の1か所。compose は `env_file` で読む（値を写さない）。窓口の鍵は deploy が .env に書く `READ_WINDOW_TOKEN`（空なら全員 401）。

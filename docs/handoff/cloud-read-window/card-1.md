@@ -5,7 +5,7 @@
 
 ## 0. 設計からの具体化（Opus 決定・design.md §11 に追記する）
 - D1 同時数: ai_reader の接続上限は 2（本番実測 rolconnlimit=2、max_connections=100。$R/opus-role.txt）。窓口は **同時1本** にし、もう1本は手元の SSH の道に残す。全体で2本まで（PO 承認の K6「同時に読むのは2本まで。手元の道はそのまま」を満たす形）。DB の上限は変えない。
-- D2 別プロジェクト: deploy.yml の `--remove-orphans`（:453, :722）に消されないよう、compose の `name:` は `astro-webapp-readwindow`。ネットワークは既存の `astro-webapp_frontnet` と `astro-webapp_backnet` を external で使う。`container_name: ai-reader-http`。
+- D2 別プロジェクト: deploy.yml の `--remove-orphans`（:453, :722）に消されないよう、compose の `name:` は `astro-webapp-readwindow`。ネットワークは既存の `astro-webapp_frontnet` と `astro-webapp_backnet` を external で使う。`container_name: ai-reader-http`。.env の COMPOSE_PROJECT_NAME が top-level の name: より優先されるため、起動は必ず -p astro-webapp-readwindow を付ける。
 - D3 nginx は resolver 127.0.0.11 と変数で送る（nginx/nginx.conf:355-356 の前例）。コンテナが居なくても nginx は起動する。コンテナが落ちているときは 503 を返す（`error_page 502 504 =503`）。
 - D4 GO の境界: `docker-compose.ai-reader-http.yml` を scripts/check-process-artifacts.js の DANGEROUS_PATTERNS（:126 の隣）に足す。nginx/nginx.conf は足さない（窓口の守りは鍵と DB の権限にあり、nginx の変更では広がらない。ほかの作業への影響を避ける）。
 - D6 鍵のヘッダ: `Authorization` は使わず専用ヘッダ `X-Read-Window-Token`（前置きなし）にする。クラウドのネットワークシークレットはヘッダ名を変えられる（公式 cloud-environments:126。$O/07）。api.salesanchor.jp への全通信に付くが、保守用 OPS_API_TOKEN の `Authorization` と取り合わない。backend はこのヘッダを読まない。
@@ -60,7 +60,7 @@ docker-compose.ai-reader.yml（$R の 2. の全文）を手本にする。
 
 ### 2-5. deploy.yml
 - :310 の削除列に `-e '/^READ_WINDOW_TOKEN=/d'`、:356 の並びに `READ_WINDOW_TOKEN='${{ secrets.READ_WINDOW_TOKEN }}'`（ERROR_REPORT_AGENT_TOKEN :358 と同じ形）。:363 の引用符・改行チェックに同じく含める。secret が未登録でも空で書かれて止まらないこと（ERROR_REPORT_AGENT_TOKEN と同じ扱いか確かめる）。
-- nginx を作り直す手順（:479-494）の後に1手順:「ai-reader-http を起こす」。`docker compose -f docker-compose.ai-reader-http.yml up -d --build=false --force-recreate` 相当（image は backend と同じものを使い、作り直しの build はしない。ai-reader の image が deploy でどう作られているかを $R の deploy.txt で確かめ、同じ image タグを使う）。
+- nginx を作り直す手順（:479-494）の後に1手順:「ai-reader-http を起こす」。`docker compose -p astro-webapp-readwindow -f docker-compose.ai-reader-http.yml up -d --build=false --force-recreate` 相当（image は backend と同じものを使い、作り直しの build はしない。ai-reader の image が deploy でどう作られているかを $R の deploy.txt で確かめ、同じ image タグを使う）。
 - この手順は失敗しても deploy 全体を止めない（`|| echo "::warning::..."`）。窓口は付け足しの機能で、アプリの反映を巻き込まないため。env_file が無い・読めない場合も警告で抜ける。
 - blue-green の手順・migration の手順は触らない。
 
@@ -75,7 +75,7 @@ docker-compose.ai-reader.yml（$R の 2. の全文）を手本にする。
 - T1 `cd backend && pytest tests/ops/test_readonly_query.py -q` 全件合格（既存は無改変）。
 - T2 test_read_window_http.py（Starlette の TestClient。DB はスタブ）: 鍵なし/違う鍵/サーバー鍵空/`Authorization: Bearer <正しい鍵>`（専用ヘッダ以外では通さない） → 401（K3）、書込10種（UPDATE・DELETE・INSERT・DROP VIEW（表を消す形の文字列は安全フックが止めるため、DROP の種類として VIEW を使う。2026-10-23 Opus 修正）・複文・SET・COPY・`\` 始まり・pg_sleep・EXPLAIN ANALYZE）→ 400 で DB に届かない（K2）、同時2本目 → 429（K6）、audit 不可 → 503 で本文なし（K5）、秘密列 → `<redacted>`（K4）、65KB → 413、GET → 405。
 - T3 `node scripts/tests/test-process-artifacts.js` 合格。
-- T4 `docker compose -f docker-compose.ai-reader-http.yml config --quiet`（env_file が手元に無いなら、そのことを記録して代わりに yaml の構文確認）。
+- T4 `docker compose -p astro-webapp-readwindow -f docker-compose.ai-reader-http.yml config --quiet`（env_file が手元に無いなら、そのことを記録して代わりに yaml の構文確認）。
 - T5 nginx の構文: `docker run --rm -v $PWD/nginx/nginx.conf:/etc/nginx/nginx.conf:ro nginx:<compose と同じ版> nginx -t` が手元で動くなら実行。証明書パスで失敗する場合は、その失敗だけであることを記録。
 - T6 `bash scripts/agent-hooks/cloud/test.sh` が今まで通り全件OK（触っていないことの確認）。
 
