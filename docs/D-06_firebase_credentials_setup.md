@@ -173,7 +173,7 @@ curl -X POST -H "Authorization: Bearer $TOKEN" \
   -d '{"name":"山田太郎","email":"yamada@example.com","company":"山田商事"}'
 # （この道は廃止済み。ADR-089 で customers は companies に統合）
 
-# 3. 顧客一覧取得
+# 3. ダッシュボード取得
 curl -H "Authorization: Bearer $TOKEN" \
   https://api.salesanchor.jp/api/v1/dashboard
 

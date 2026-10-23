@@ -57,7 +57,7 @@ Sales Anchorのセキュリティ脆弱性を発見された場合は、以下�
 
 ### データ保護
 - テナントスキーマ分離 + Row Level Security
-- パスワード: 今の既定（Firebase）では DB に持たない。自社ログイン（AUTH_PROVIDER=self）のときだけ users.password_argon2_hash に Argon2id で保存。bcrypt（12ラウンド）は bot の API キー（bots.py:58）だけ
+- パスワード: DB に置くものは Argon2id（backend/app/auth/passwords.py）。列は users.password_argon2_hash（自社ログインとパスワード再設定。再設定は AUTH_PROVIDER に関係なく動く: backend/app/routers/auth.py:350,468）と viewer_accounts.password_argon2_hash（閲覧ページ: migrations/20261016_150000_add_viewer_accounts.sql:12）。ログイン判定の既定は Firebase（self_tokens.py:20）。bcrypt（12ラウンド）は bot の API キー（bots.py:58）だけ。本番に行があるかはまだ確かめていない
 - TLS 1.2/1.3 通信暗号化
 - HSTS有効（1年間）
 

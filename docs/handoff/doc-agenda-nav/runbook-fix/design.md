@@ -134,6 +134,14 @@
 - recon §1 SECURITY_ENHANCEMENT_ROADMAP #3 の「trivy・semgrep の文字列は secret-scan.yml にある」は誤り。実測: gitleaks のみ secret-scan.yml:15,24。trivy・semgrep は .github/workflows 全体で 0 件。
 - 3-1 の「約40種」は実測 47 種（重複なし）。
 
+### 3-17b 審査（model opus・1回目 REQUEST_CHANGES）を受けた訂正
+- F1: パスワードの記述（DATA_CLASSIFICATION:24・:49、SECURITY:60）は次に揃える。DB に置くパスワードは Argon2id（backend/app/auth/passwords.py）。列は users.password_argon2_hash（自社ログインとパスワード再設定。再設定は AUTH_PROVIDER に関係なく動く: backend/app/routers/auth.py:350,468）と viewer_accounts.password_argon2_hash（閲覧ページ: migrations/20261016_150000_add_viewer_accounts.sql:12）。ログイン判定の既定は Firebase（self_tokens.py:20）。bcrypt（12ラウンド）は bot の API キー（bots.py:58）だけ。本番に行があるかはまだ確かめていない。
+- F2: jarvis-claude.uk の 301 転送の根拠は nginx/nginx.conf:44-46（3-2・3-13 の :37-38 は誤り）。
+- F3: deploy.yml の secrets は 45 種（3-17 の 47 は `secrets.X` のコメントと `.env.secrets.new` を数えた誤り）。
+- F4: INCIDENT_RESPONSE:125 は人ごとの連絡先を書く表の列名で、仕組みの主張ではない。書き換えると推測になるため 3-18 の対象から外す。
+- N1: D-06 の「3. 顧客一覧取得」は中身を /api/v1/dashboard にしたため、見出しを「3. ダッシュボード取得」にする。
+- N3: aws-setup README の backup_to_s3.sh の行範囲を :140-158 / :161-177 に直す。
+
 ### 3-18 合格の確かめ方の追加
 担当の照合表は人の判断で書いたため、機械の確認を足す: 修正後の15本に、次の古い語が「まだ確かめていない」の注記や過去記録の注記の外で残っていないことを grep で確かめる — `systemctl`・`journalctl`（discord-gateway）、`DISCORD_BOT_TOKEN_<`、`myapp_user`・`myapp_db`（B-04）、`/api/v1/customers`（D-06）、`jarvis-claude.uk`（D-06・TEST_ADMIN・B-04 の対象行）、`PostgresDown`・`High502Rate`（B-13）、`Slack`（INCIDENT_RESPONSE・tenant-deletion）、`bcrypt`（DATA_CLASSIFICATION・SECURITY の bot キー以外）。最終確認は model "opus" の審査役が独立に行う。
 

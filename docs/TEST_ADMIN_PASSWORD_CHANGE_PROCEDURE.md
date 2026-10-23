@@ -94,7 +94,7 @@ Password updated successfully for UID: NJiwFSFTlOQgt9AOKxNIRLPmNe42
 
 ## 4. 動作確認
 
-ブラウザで https://app.salesanchor.jp を開いてログイン（jarvis-claude.uk は全パスを転送するだけ。nginx/nginx.conf:37-38）:
+ブラウザで https://app.salesanchor.jp を開いてログイン（jarvis-claude.uk は全パスを転送するだけ。nginx/nginx.conf:44-46）:
 
 - メアド: `test-admin@jarvis-test.local`
 - パスワード: 新しく設定したもの

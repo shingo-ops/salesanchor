@@ -70,4 +70,4 @@ PR ごとに 1〜2 通知に集約される (個別 workflow ごとに飛ばさ�
 
 ### 必要な Secrets
 
-deploy.yml は 40 種以上の secrets を参照する（`secrets.` 参照の重複なし数は 47）。名前の正本は deploy.yml の `secrets.` 参照。
+deploy.yml は 40 種以上の secrets を参照する（`secrets.` 参照の重複なし数は 45）。名前の正本は deploy.yml の `secrets.` 参照。
