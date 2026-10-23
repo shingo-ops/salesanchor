@@ -34,7 +34,8 @@ jobs:
   karte-gate-run:
     needs: detect-changes
     if: needs.detect-changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
+    # ubuntu-26.04 では Playwright 1.59.1 が依存（日本語フォント）を入れられず基準画像と食い違うため固定（2026-10-23 run 39929732953）
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     defaults:
       run:
