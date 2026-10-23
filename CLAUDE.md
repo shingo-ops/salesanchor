@@ -17,12 +17,6 @@
 
 ---
 
-## VPS コンテナの落とし穴
-
-- `/app` は書込不可 → 出力先は `/tmp`
-- `docker compose cp backend:/tmp/...` は使えない（tmpfs）→ `docker compose exec -T backend cat /tmp/xxx > host_file`
-- コンテナ再起動で `/tmp` は消える
-
 ## VPS 直作業禁止（技術的にも制限付き鍵のみ）
 
 - **エージェントは原則として制限付き鍵を使用**（`salesanchor-claude`、ForceCommand 制限）

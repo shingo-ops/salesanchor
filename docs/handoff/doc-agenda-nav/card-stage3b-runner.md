@@ -165,4 +165,7 @@ diff <(git show "${B}:AGENTS.md" | sed 65,72d) AGENTS.md
 
 ## 11. 報告欄（担当が追記）
 
+- 実行結果（担当 Sonnet・2026-10-23）: §5-1 の4本 diff は出力なし／§5-2 は OK 8・MISSING 0／§5-3 は diff 出力なし・行数 114・113・383／§5-5 SUMMARY は unreached=0 deep=2 blank_when=0 no_when_column=0 broken_link=8 warnings=10（起点と同じ）／§5-6 は2件のみ。
+- 判断を要した点: §5-4 の diff は `368a369,378` と出た（カードの `366a367,376` と表記が違う）。挿入した10行の中身は同じで、diff が先頭の `---` を既存の :367 と対応づけた結果。ファイル上の :367 `---`・:369 見出し・:373-375 本文は §4-1 の表どおり。
+
 END OF CARD

@@ -64,14 +64,6 @@ DROP TABLE / 大量 DELETE / `rm -rf` / `git reset --hard` / `git push --force`�
 
 ---
 
-## VPS コンテナの落とし穴
-
-- `/app` は書込不可 → 出力先は `/tmp`
-- `docker compose cp backend:/tmp/...` は使えない（tmpfs）→ `docker compose exec -T backend cat /tmp/xxx > host_file`
-- コンテナ再起動で `/tmp` は消える
-
----
-
 ## サブディレクトリ別ルール
 
 | ディレクトリ | ルールファイル |
