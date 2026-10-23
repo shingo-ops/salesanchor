@@ -92,9 +92,48 @@ file:line はすべて a20ebc5bc の時点（scripts/check-process-artifacts.js 
 ## K10 目次を開いた割合
 
 - 変更前の値: 0（docs/INDEX.md は 8b5438142 に存在しない＝`git cat-file -e` の終了コード128）。
-- 変更後の数え方: design.md:327 のとおり、会話の記録で事後に確かめる。記録で数えられるかは【未確認】。段3c の前に確かめる。
+- 実測（2026-10-23、K12 と同じ20回）: **0/20**。docs/INDEX.md を含む道具の呼び出しは0件（[k12/result.tsv](./k12/result.tsv) の INDEX 列）。
+- 数え方の変更（Opus 判断、2026-10-23）: 当初の「会話の記録で事後に確かめる」（design.md の維持の仕組み）は、下の K12 の事実1・2により使えない。K12 と同じ実行で数える。
+
+## K12 必要な手順書まで開いた割合
+
+### 過去の会話記録からは測れない（事実）
+
+1. 会話記録（~/.claude/projects/ 配下）への Bash は見張り consent-guard が例外なく止める（~/.claude/scripts/agent-danger-hook.sh:242-260、docs/handoff/conversation-consent/design.md:133「読み取り専用の例外は作らない」）。正規の読み方は Read/Grep（同 design.md:122-135）だが、本セッションの担当には Grep ツールが無かった。scripts/dev/consent-audit.py は同意台帳との突き合わせ専用で、開いたファイルを数える機能は無い（:293、引数 :1028-1031）。
+2. K8 の10件の PR 本文で「設計仕様書（あるべき姿）」にページ名があるのは #4677 の1件だけ（5件は「対象外」、4件は行なし）。過去の作業から「開くべき手順書」を一義に決められない。
+
+→ PO 決定（2026-10-23、原文「1」）: 練習問題を AI に解かせて測る。
+
+### 練習問題と条件（測定前に固定）
+
+- 題・正解の集合・実行条件・数え方: [k12-tasks.md](./k12-tasks.md)（sha256 `820449563a838968f8c0d319fbfdc38c65ac18d848bcd2d93444ec053646dd5e`。測定前に取った値と同じ）。
+- 正解の手順書の確認: 候補12組を origin/main の本文で照合し、正解が1つに決まらない2組（現在地調査・作業カード）を除いた（照合の生出力はリポジトリ外 /tmp/CC報告ファイル/an-stage1/k12/pairs.md）。T2・T10 は手順の所在が2か所に分かれているため、2本どちらでも正解とした。
+- 実行の場所: origin/main 137b117eb42b7ae6d40cde5d68042e6bb51ffeb2 の detached 写し。docs/INDEX.md は無い（`test -e` で確認）。各回の後に写しの `git status --porcelain` が空であることを確認（20回とも空）。
+- 実行: [k12/runall.sh](./k12/runall.sh)（題は [k12/prompts.tsv](./k12/prompts.tsv)）。`claude -p … --model sonnet --permission-mode plan --output-format stream-json --verbose --max-budget-usd 1 --no-session-persistence --permission-prompts none`。この Mac に `timeout` が無いため、600秒の上限は `perl -e 'alarm 600; exec @ARGV'` で付けた。claude の版は 2.1.309。
+- 数え方: [k12/count.py](./k12/count.py)。assistant 行の tool_use の input に正解のパスが含まれれば「開いた」。
+
+### 結果（[k12/result.tsv](./k12/result.tsv)）
+
+| 題 | 1回目 | 2回目 |
+|---|---|---|
+| T1 画面に選ぶ欄を足す | 0 | 0 |
+| T2 作業場所とブランチ | 0 | 0 |
+| T3 commit・PR 前の確認 | 0 | 0 |
+| T4 新しい依頼の進め方 | 0 | 0 |
+| T5 秘密の値の入れ替え | 0 | 0 |
+| T6 監視の通知 | 0 | 0 |
+| T7 週次通知が届かない | 0 | 0 |
+| T8 まとめ売りの新しい書き方 | 1 | 0 |
+| T9 PO の相談を設計に | 0 | 0 |
+| T10 画面の文字を足す | 0 | 0 |
+
+- **K12 = 1/20**（T8 の1回目が `cat docs/runbooks/bundle-sale-new-wording.md` で開いた）。**K10 = 0/20**。
+- 20回中15回は道具の呼び出しが0回（呼び出しがあったのは T1 の2回・T7 の2回・T8 の1回目）で、会話の始まりに自動で入る指示だけで答えた（tool_use 数の列）。
+- 費用: 20回の total_cost_usd の合計 2.8363 ドル。全20回の終了コード0。
+- T10: frontend/CLAUDE.md の文字列は最終回答と result 行にだけ出た。自動読込が起きたかは stream-json からは判別できない【未確認】。数えたのは道具の呼び出しだけ。
 
 ## 手順（変更後に同じ条件で測る）
 
 1. K9: origin/main から作った新しい作業場所で `claude` を起動し、何も話しかけずに `/context` を実行して表示を記録する。
-2. K10: 段3c マージ後、手順を要する便の会話記録で docs/INDEX.md を開いたかを数える（数え方は段3c の前に確定）。
+2. K10・K12: 段3c マージ後の origin/main の detached 写しで、k12-tasks.md を変えずに k12/runall.sh と同じ条件で20回実行し、k12/count.py で数える。k12-tasks.md の sha256 が上の値と同じことを先に確かめる。
+3. K11: 段3a・3b・3c・4 の各段のマージ前に、design §5-2 の表で入口以外へ行く行ごとに移動先を grep し、在る行の数 / 移す行の数を PR 本文に書く。
