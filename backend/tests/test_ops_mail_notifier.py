@@ -17,6 +17,7 @@ from unittest.mock import MagicMock, patch
 
 import app.services.ops_mail_notifier as n
 
+FIXED_NOW = float(calendar.timegm((2026, 10, 23, 0, 0, 0)))
 WEBHOOK = "https://discord.example.com/webhook"
 SUBJECT_OPS = "［緊急］さくらのVPS東京・大阪・石狩リージョンのソフトウェアメンテナンスについて"
 SCHEDULE = "2026年10月21日15時00分 - 2026年10月22日18時00分"
@@ -123,12 +124,19 @@ def test_extract_lines_fullwidth_missing_and_truncate() -> None:
     assert s is not None and len(s) == 200
 
 
+# 6b
+def test_extract_lines_strips_and_empty_is_none() -> None:
+    assert n._extract_lines("■作業日時 :    \n■影響範囲 :   \n") == (None, None)
+    assert n._extract_lines("■作業日時 :\r\n■影響範囲 :\r\n会員ID : XX000000\r\n") == (None, None)
+    assert n._extract_lines("■作業日時 :  A日時  \r\n") == ("A日時", None)
+
+
 # 6
 def test_extract_lines_does_not_pick_member_lines() -> None:
     text = "会員ID : XX000000\nご契約者名 : 試験 太郎\n対象会員ID : XX000000\n"
     assert n._extract_lines(text) == (None, None)
     # 値が空の行で次の行（会員 ID など）を拾わない
-    assert n._extract_lines("■影響範囲 :\n会員ID : XX000000\n")[1] != "会員ID : XX000000"
+    assert n._extract_lines("■影響範囲 :\n会員ID : XX000000\n")[1] is None
 
 
 # 7
@@ -148,7 +156,10 @@ def test_body_text_variants() -> None:
     full = _full_bytes("support@sakura.ad.jp", "s", "あ" * 40000)
     assert isinstance(n._body_text(full[:65536]), str)
 
-    assert n._body_text(b"\xff\xfe broken") == "" or isinstance(n._body_text(b"\xff\xfe broken"), str)
+    broken = n._body_text(b"\xff\xfe broken")
+    assert "broken" in broken and "\ufffd" in broken
+    with patch("email.message_from_bytes", side_effect=ValueError("boom")):
+        assert n._body_text(b"x") == ""
     bad_charset = b"Content-Type: text/plain; charset=nosuch-cs\r\n\r\nxyz\r\n"
     assert "xyz" in n._body_text(bad_charset)
 
@@ -268,13 +279,14 @@ def test_post_failure_does_not_mark() -> None:
 def test_notified_uid_not_fetched_and_search_uses_since() -> None:
     conn = _make_imap({b"9": (b"", b"")})
     redis_client = MagicMock(exists=MagicMock(return_value=1))
-    result, _, post = _run(conn, redis_client=redis_client)
+    with patch("app.services.ops_mail_notifier.time.time", return_value=FIXED_NOW):
+        result, _, post = _run(conn, redis_client=redis_client)
     assert result == 0
     assert _fetch_whats(conn) == []
     post.assert_not_called()
     search = [c for c in conn.calls if c[0] == "search"][0]
     assert search[2] == "SINCE" and search[1] is None
-    assert search[3] != "ALL" and len(search[3]) == 11
+    assert search[3] == n._since_date(FIXED_NOW) == "16-Oct-2026"
 
 
 # 16
@@ -294,3 +306,37 @@ def test_logs_do_not_leak(caplog) -> None:
     assert "[ops_mail] done notified=1" in text
     for secret in (SUBJECT_OPS, "別の件名", "support@sakura.ad.jp", "someone@example.com", "XX000000", "試験 太郎", "pw-secret", WEBHOOK):
         assert secret not in text
+
+
+# 17
+def test_imap_connection_has_timeout() -> None:
+    conn = _make_imap({b"3": (b"", b"")})
+    redis_client = MagicMock(exists=MagicMock(return_value=1))
+    with (
+        patch.object(n, "_IMAP_HOST", "imap.example.com"),
+        patch.object(n, "_IMAP_USER", "ops@example.com"),
+        patch.object(n, "_IMAP_PASSWORD", "pw"),
+        patch.object(n, "_DISCORD_WEBHOOK", WEBHOOK),
+        patch("imaplib.IMAP4_SSL", return_value=conn) as imap,
+        patch.object(n, "_get_redis", return_value=redis_client),
+    ):
+        n.check_and_notify()
+    assert imap.call_args.kwargs.get("timeout") == 30
+
+
+# 18
+def test_header_fetch_unexpected_response_logs_uid_only(caplog) -> None:
+    conn = _make_imap({b"4": (b"", b"")})
+    orig = conn.uid.side_effect
+
+    def uid(cmd, *args):
+        if cmd == "fetch":
+            return "OK", [b")"]
+        return orig(cmd, *args)
+
+    conn.uid.side_effect = uid
+    with caplog.at_level(logging.DEBUG):
+        result, _, post = _run(conn)
+    assert result == 0
+    post.assert_not_called()
+    assert "[ops_mail] header fetch unexpected response uid=4" in caplog.text

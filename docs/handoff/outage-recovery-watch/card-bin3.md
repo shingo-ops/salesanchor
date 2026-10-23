@@ -558,6 +558,18 @@ OPS_MAIL_DISCORD_WEBHOOK=
 
 - 検査の生出力は /tmp/CC報告ファイル/outage-bin3/impl/ に保存した。
 - カードの記述から変えた点（1 つ）: `_SCHEDULE_RE`・`_SCOPE_RE` のコロンの後ろの空白を `\s*` から `[^\S\r\n]*` にした。値が空の行で、改行をまたいで次の行（会員 ID など）を取り出さないため。試験 5・6 の期待はそのまま通る。
-- 配置の台本のうち verify-bin3.sh の prod1 の接続先は、環境変数 `PROD1_HOST` か、prod1 に ubuntu で入る既存の台本の HOST 行から読む。Opus が実行前に確かめる。
+- 配置の台本のうち verify-bin3.sh の prod1 の接続先は、環境変数 `PROD1_HOST` を必須にした（未設定なら STOP。Opus が実行時に渡す。ほかの台本からは読まない）。
+
+審査 REVISE（2026-10-23、Opus 指示）への修正:
+
+- 関数の数: カードの 9 関数に加え、`_mark`（重複通知防止の印を付ける小さな補助）を 10 個目として足した。
+- M1: origin/main を取り込んだ（取り込みの commit。衝突なし）。
+- S1: `imaplib.IMAP4_SSL(...)` に `timeout=30` を足した（応答しないメールサーバーで celery の枠が詰まるのを防ぐ）。試験 17 を追加。review@ の部品は触っていない。
+- S2: 試験 6 の確認を `is None` に直した。
+- N1: `_extract_lines` の値を `.strip()` し、空なら None にした。空白だけ・CRLF で値が空の試験を追加（試験 6b）。
+- N3: ヘッダーの fetch が tuple でないとき、uid だけを warning でログに出す（試験 18）。
+- N4: 試験 15 は検索の日付が `_since_date` の値と一致することを確かめる。試験 7 の常に通る確認は、壊れた入力が文字化け文字を含む文字列になること、解析が例外のときは空文字になることの確認に直した。
+- S3: docker compose の呼び方（`cd /home/ubuntu/salesanchor && docker compose exec -T`）の出典は docs/handoff/bundle-sale/bin2-record.md:43 と docs/handoff/design-system-recon/evidence-20260910/ar-verify-production.py:14。サービス名 celery-worker は docker-compose.yml の celery-worker の段。ssh 失敗時は手順ごとの STOP 文を出す。
+- N6: rollback-bin3.sh の手順 4 はルール数が 32 でなければ exit 1。deploy-bin3.sh の一時ディレクトリは trap で、中のファイルだけ消す。
 
 END OF CARD

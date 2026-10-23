@@ -104,9 +104,9 @@ def _extract_lines(text: str) -> tuple[str | None, str | None]:
     """作業日時の行と影響範囲の行の中身だけを取り出す。ほかの行は見ない。"""
     sm = _SCHEDULE_RE.search(text)
     cm = _SCOPE_RE.search(text)
-    schedule = sm.group(1)[:_MAX_LINE_CHARS] if sm else None
-    scope = cm.group(1)[:_MAX_LINE_CHARS] if cm else None
-    return schedule, scope
+    schedule = sm.group(1).strip()[:_MAX_LINE_CHARS] if sm else None
+    scope = cm.group(1).strip()[:_MAX_LINE_CHARS] if cm else None
+    return schedule or None, scope or None
 
 
 def _build_content(subject: str, schedule: str | None, scope: str | None, date_str: str) -> str:
@@ -169,7 +169,7 @@ def check_and_notify() -> int:
 
     conn = None
     try:
-        conn = imaplib.IMAP4_SSL(_IMAP_HOST, _IMAP_PORT)
+        conn = imaplib.IMAP4_SSL(_IMAP_HOST, _IMAP_PORT, timeout=30)
         conn.login(_IMAP_USER, _IMAP_PASSWORD)
         conn.select("INBOX")
         uidvalidity_raw = conn.response("UIDVALIDITY")[1][0]
@@ -203,6 +203,7 @@ def check_and_notify() -> int:
                     "fetch", uid_bytes, "(BODY.PEEK[HEADER.FIELDS (FROM SUBJECT DATE)])"
                 )
                 if not msg_data or not msg_data[0] or not isinstance(msg_data[0], tuple):
+                    logger.warning("[ops_mail] header fetch unexpected response uid=%s", uid)
                     continue
                 msg = email.message_from_bytes(msg_data[0][1])
 
