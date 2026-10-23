@@ -119,13 +119,13 @@ def build_precheck(version, rows):
            "WHERE gold_version = %s;\n\n" % lit(version),
            "-- 投稿idが source_messages に全部あること\n",
            "WITH m AS (SELECT count(*) AS n FROM (VALUES %s) AS v(id) "
-           "WHERE NOT EXISTS (SELECT 1 FROM public.source_messages s WHERE s.id::text = v.id))\n"
+           "WHERE NOT EXISTS (SELECT 1 FROM public.source_messages s WHERE s.id = v.id::uuid))\n"
            "SELECT 'MISSING_POSTS ' || n, CASE WHEN n = 0 THEN 1 ELSE 1 / 0 END FROM m;\n\n"
            % ", ".join("(%s)" % lit(p) for p in post_ids)]
     out.append("-- a1_product_id の数字が products に全部あること\n")
     if prod_ids:
         out.append("WITH m AS (SELECT count(*) AS n FROM (VALUES %s) AS v(id) "
-                   "WHERE NOT EXISTS (SELECT 1 FROM public.products p WHERE p.id::text = v.id))\n"
+                   "WHERE NOT EXISTS (SELECT 1 FROM public.products p WHERE p.id = v.id::integer))\n"
                    "SELECT 'MISSING_PRODUCTS ' || n, CASE WHEN n = 0 THEN 1 ELSE 1 / 0 END FROM m;\n\n"
                    % ", ".join("(%s)" % lit(p) for p in prod_ids))
     else:

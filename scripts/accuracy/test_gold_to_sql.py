@@ -59,6 +59,8 @@ def test_ok_outputs_three_files_only(tmp_path):
     assert "THEN 1 ELSE 1 / 0 END FROM public.accuracy_gold_rows WHERE gold_version = 'gold_t1'" in apply_sql
     pre = (out / "01_precheck.sql").read_text(encoding="utf-8")
     assert "MISSING_POSTS" in pre and "MISSING_PRODUCTS" in pre
+    assert "s.id = v.id::uuid" in pre and "p.id = v.id::integer" in pre
+    assert "::text = v.id" not in pre
     assert "gold_t1" in (out / "03_verify.sql").read_text(encoding="utf-8")
 
 
