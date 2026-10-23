@@ -14,7 +14,7 @@
 - 対象外: score_v102.py の変更（変えない）、システム結果の写し（スナップショット）をクラウドで作る話、正解表の作り方（判定・裁定）の変更、窓口（ADR-1042）の変更。
 
 ## 3. 方式
-### 3-1. 表（migration `20261023_180000_create_accuracy_gold.sql`）
+### 3-1. 表（migration `migrations/20261023_180000_create_accuracy_gold.sql`）
 - `public.accuracy_gold_versions`: 1 行 = 正解表の 1 版。
   - `id SERIAL PRIMARY KEY`、`gold_version TEXT NOT NULL UNIQUE`（`^[a-z0-9_]+$`）、`file_sha256 TEXT NOT NULL`（`^[0-9a-f]{64}$`）、`row_count INTEGER NOT NULL`、`post_count INTEGER NOT NULL`、`note TEXT NOT NULL DEFAULT ''`、`created_at TIMESTAMPTZ NOT NULL DEFAULT now()`。
   - 列名に hash を使わない（ai_ro の拒否語。recon §3）。
@@ -32,9 +32,9 @@
 - 入力 `--gold <tsv> --version gold_v1 --note <文> --out-dir <リポジトリ外のフォルダ>`。標準ライブラリのみ。
 - 点検（どれか外れたら何も書かずに止まる）: 見出しが 16 列で順番どおり／全行 16 列／値に タブ・LF・CR・`\`・`"` が無い／投稿id が小文字 uuid（`str(uuid.UUID(v)) == v`）／`--version` が `^[a-z0-9_]+$`／`--out-dir` がリポジトリの中でない。
 - 出力 3 本（前例 bin2 の型）。戻し用のファイルは道具では作らない（2026-10-23 Opus 変更: 消す文を道具のソースに持たせると、不可逆操作の見張りがそのソースを扱う全コマンドを止めるため。戻し方の正本は §7 の 1 か所）:
-  - `01_precheck.sql`: 表 2 つがあること、その版がまだ無いこと、投稿id 100 種が source_messages に全部あること（無い数を表示。0 でなければ止める）、a1_product_id の数字が products に全部あること（同）。
-  - `02_apply.sql`: `\set ON_ERROR_STOP on`、`-v end` の指定がなければ止める、`BEGIN`、`SET LOCAL app.is_operator = 'true'`、versions に 1 行、rows に 1494 行（文字列は `'` を `''` にするだけ。base64 などの符号化はしない）、件数が row_count と違えば `SELECT 1 / 0`、`:end`。
-  - `03_verify.sql`: 版の行数・投稿数・row_no が 1〜N の連番であること。
+  - 01_precheck.sql: 表 2 つがあること、その版がまだ無いこと、投稿id 100 種が source_messages に全部あること（無い数を表示。0 でなければ止める）、a1_product_id の数字が products に全部あること（同）。
+  - 02_apply.sql: `\set ON_ERROR_STOP on`、`-v end` の指定がなければ止める、`BEGIN`、`SET LOCAL app.is_operator = 'true'`、versions に 1 行、rows に 1494 行（文字列は `'` を `''` にするだけ。base64 などの符号化はしない）、件数が row_count と違えば `SELECT 1 / 0`、`:end`。
+  - 03_verify.sql: 版の行数・投稿数・row_no が 1〜N の連番であること。
 - 置き場: `~/CC報告ファイル-keep/accuracy-gold-20261020/db-load/gold_v1/`（社外秘の正本の隣。リポジトリに入れない）。
 
 ### 3-3. 本番への投入（Opus）
@@ -94,13 +94,13 @@
 - 便1（この設計の全部）: migration・2 道具・試験・手順書。migrations を含むので危険 PR。GO は Opus（ADR-1003 の委任）。カード `docs/handoff/accuracy-gold-db/card-1.md`。
 - 投入と K1〜K7 は Opus（マージ後）。
 
-## 10. 外部事例
+## 10. 外部・過去事例の参照と我々への応用
 - 該当事例を使わない。理由: 判断の中身は「既存の正本（本番 DB）と既存の読み道（ai_ro・窓口）に、1 つの小さな表を足す」で、このリポジトリの前例（product_packagings の RLS、bin2 の投入型、ADR-1042 の窓口）で根拠が足りる。外部の数値で成否が変わる論点が無い。
 
 ## 11. 維持の仕組み
 - 新しい版（gold_v2 等）を作ったら、同じ gold_to_sql で投入する（版を列に持つので同居できる）。手順は scripts/accuracy/README.md。
 - 表の形は ai_ro が毎デプロイで写す。列を足すときは拒否語を避ける（3-1）。
-- 担当: 正解表の版を決めるのは PO、投入は Opus。
+- 守り手: Opus（設計統括）。正解表の版を決めるのは PO、投入は Opus。
 
 ## 12. 審査（Opus 自己審査。同一 AI のため独立した第二者レビューではない）
 - 判定: APPROVE（設計合格）。
