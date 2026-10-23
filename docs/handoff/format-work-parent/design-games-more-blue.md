@@ -8,9 +8,9 @@
 
 ## 現在地（recon）
 - frontend/src/pages/super-admin/components/ProductFormatsMasterPanel.tsx:222-232 の renderGames は、`<span title={all}>` の中で preview と gamesMore を1本の文字列にしていた。
-- frontend/src/index.css:33 に `--accent`（ダークは :237 で切り替わる）。
+- frontend/src/index.css:33 に `--accent`（ダークは frontend/src/index.css:237 で切り替わる）。
 - frontend/src/locales/ja.json:5207 と frontend/src/locales/en.json:5207 に gamesMore（キー追加なし）。
-- 文中の文字にトークンで色を付ける既存の形: frontend/src/pages/badges/BadgesPage.tsx:102、frontend/src/pages/inbox/InboxConversationRows.tsx:68。eslint.config.js:39 は var() の参照を勧めている。
+- 文中の文字にトークンで色を付ける既存の形: frontend/src/pages/badges/BadgesPage.tsx:102、frontend/src/pages/inbox/InboxConversationRows.tsx:68。frontend/eslint.config.js:39 は var() の参照を勧めている。
 
 ## 設計判断
 - 色は `var(--accent)`（frontend/src/index.css:33）。
