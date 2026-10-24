@@ -276,4 +276,9 @@ comm -23 $P/missing-keys.txt $P/map-keys.txt
 
 ## 11. 報告欄（担当が追記）
 
+- 本報告はカード doc-agenda-nav 段3c-2 の実行結果である。
+- 5-0 起点一致／5-1 diff 2本 出力なし／5-2 OK-ENTRY 27・OK-DOCS 51・MISSING 50（合計128）・comm 出力なし／5-4 PASSED と逆の確かめ exit 1（83行）・AGENTS.md 復元済み／5-5 SUMMARY unreached=0 deep=2 blank_when=0 no_when_column=0 broken_link=8 warnings=10（起点と同じ）／5-6 132 PASS 0 FAIL。
+- 判断点: generate-adr-index.js は docs/adr/README.md の「最終更新」日付行も 2026-10-23 から 2026-10-24 に変えた（生成物の自動変更）。
+- 生出力: /tmp/CC報告ファイル/an-stage3c/impl2/
+
 END OF CARD

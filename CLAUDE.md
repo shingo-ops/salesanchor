@@ -1,88 +1,9 @@
 # CLAUDE.md
 
-チーム共通の真実のみ。個人設定は `~/.claude/CLAUDE.md`、初期セットアップは `docs/onboarding/claude-code.md`。
+@AGENTS.md
 
----
+## Claude Code だけの決まり
 
-## プロジェクト前提
-
-- **PO**: しんごさん（`shingo-ops`）— 本番アクセス・ADR起案・不可逆操作の最終判断
-- **役割分担**: [docs/ai-agents/codex-operations.md](docs/ai-agents/codex-operations.md)（目次 [docs/INDEX.md](docs/INDEX.md) の章A から辿る）
-- **事業**: Sales Anchor (salesanchor) — B2B SaaS CRM（HIGH LIFE JPN / Treasure Island JP）
-- **スタック**: Python 3.12 / FastAPI / PostgreSQL 16 | React 18 + TypeScript + Vite | Astro | Docker + さくらVPS
-- **本番 URL**: App `https://app.salesanchor.jp/` / API `https://api.salesanchor.jp/` / LP `https://salesanchor.jp/`
-- **Legacy**: `https://jarvis-claude.uk/`（並行稼働中・**独断削除禁止、PO確認必須**）
-- **仕様書**: `salesanchor_system_overview.docx` 他 3 冊（リポジトリ外・PO から入手）
-- **設計判断**: `docs/adr/ADR-NNN-*.md` で起案。メモリ・チャット履歴を根拠にしない。ADR 追加・変更後は `node scripts/generate-adr-index.js` を実行し `docs/adr/README.md` を再生成してコミットすること。CI「ADR index is up to date」が必須チェック。
-
----
-
-## VPS 直作業禁止（技術的にも制限付き鍵のみ）
-
-- **エージェントは原則として制限付き鍵を使用**（`salesanchor-claude`、ForceCommand 制限）
-- **無制限鍵（`~/.ssh/manual-only/id_ed25519`）**（PO 決定 2026-09-30「CLAUDE.md のこのルール変更を許可する」）
-  - **本番 DB の読み取りは reader 鍵の道（`docs/handoff/ai-readonly-db-path/usage.md`）を使う。manual-only は使わない**。DB 以外の読み取りだけの調査（ログ/設定表示・`ss`/`ps`/`systemctl status`・接続確認）は恒常許可で使用可。変更を伴う作業（ファイル作成・コンテナ起動停止・設定変更・再起動・DB 書き込み）は作業ごとに PO の GO が必要（設計担当が GO 原文を依頼文と PR に転記）
-  - 鍵・パスワード・トークンの値は表示しない。人間の無制限鍵（`hitoshi@` 等）は VPS 側で変更しない
-- 詳細・ロールバック手順: `docs/handoff/rehearsal-env/design-b-ssh-isolation.md`
-
----
-
-## 不可逆操作は必ず PO 確認
-
-DROP TABLE / 大量DELETE / `rm -rf` / `git reset --hard` / `git push --force`（main/develop） / 本番Docker volume削除 / secrets変更 / Cloudflare・Firebase等の外部GUI操作 / `.github/workflows/workflow-lint.yml` の変更 / `gh api` による Branch Protection・Ruleset・Required Status Check の変更・削除
-
-上記操作を許可する場合: `bash scripts/permit-danger.sh "<op>"`（1回限り有効・30分で自動失効）。会話の同意票でも可（ADR-1033、除外あり）
-
----
-
-## ブランチ運用ルール
-
-- 作業前に `origin/main` から `release/<英語で簡潔>` ブランチを作成（develop起点は廃止。新規作業は release/* のみ。develop はロールバック用に残置。正: `docs/specs/branch-operations/README.md §3-3`）
-- **作業開始前に必ず（例外なし）** `bash scripts/new-worktree.sh release/<topic> --claude` で独立ディレクトリを作成（main土台・~/worktrees配下。正典: `docs/specs/branch-operations/README.md §3-3`／詳細: `docs/PARALLEL_TERMINAL_GUIDE.md`）
-- **`.claude/agents/` 変更前は必ず `git pull` で最新取得**（複数セッション同時書き込みによる上書き防止）
-- `develop` / `main` への直接コミット禁止
-- **PR作成前に `gh auth status` で `shingo-cc` 名義を確認。`shingo-ops` 名義でのコード変更PR作成は禁止（docs-only PR は除く）。**
-- **release/* → main は PR 経由**（直push禁止・Branch Protection で強制）
-- **main にマージ＝本番投入可の宣言**（ADR-135）：`migrations/`・`deploy.yml`・本番 `scripts/` を含む実装は PO GO が出るまで release ブランチで待機し main にマージしない。main は待合室ではない。
-- **危険PR（上記パス含む）のGO手順**（ADR-136）：①マージ前にチャットで「対象・変更3行サマリ・直前バックアップ確認」をPOに提示 ②POの「GO #PR番号」（番号必須・番号なし曖昧肯定は無効）を受領するまでマージ・適用しない ③受領後は PR本文に `### GO記録`（GO発行者・日時・GO原文・バックアップ確認）セクションを転記 ④GO権限はPO（Shingo）。ADR-1003により例外を除き Claude Opus 設計担当へ常時委譲（PO「委譲停止」で解除）
-
-### 長命ブランチ消失防止（develop は第3便まで残置・ロールバック用・新規作業での使用禁止）
-
-- GitHub の削除保護を使えない前提では、`main` / `develop` は「物理的に消さない」運用で固定する
-- `main` / `develop` に対する `git push --delete`、GitHub UI の branch delete、`gh api` の ref delete は実行しない
-- `--delete-branch` は feature head のみ許可し、長命ブランチには使わない
-- `./scripts/dev/executor-preflight.sh` は `origin/main` の存在を毎回確認する（#2715 で main-only 化済み）
-- もし `main` / `develop` が欠落していたら、作業は止めて PO に報告する
-
----
-
-## 標準開発フロー（正本: docs/STANDARD-WORKFLOW.md）
-
-**作業開始前に `docs/STANDARD-WORKFLOW.md` を必ず read すること。** 全タスクは例外なく3フェーズ: ①KGI設定（定量・PO承認。ADR-1015 の B 区分は不要）→②現在地把握（recon・file:line・推測禁止）→③実現方法の設計（How/KPI/弊害/計画/継続＋外部事例検討）。成果物は中身が揃って初めて成果物（在るだけ不可）。
-
----
-
-## 実行役 preflight
-
-- 実行役(CC/Codex)は作業開始前に必ず `./scripts/dev/executor-preflight.sh || exit 1` を実行する
-
----
-
-## i18n 強制（ADR-027）
-
-全 UI 文字列は `t("key")` 経由（JSX / aria-label / placeholder / title すべて）。`ja.json` と `en.json` は同一キー必須。ハードコード日本語は絶対禁止。詳細: `docs/adr/ADR-027-ui-internationalization.md`、grep セルフチェック: `frontend/CLAUDE.md`
-
----
-
-## データ手動 DB INSERT の原則禁止（ADR-025）
-
-**本番運用フェーズ移行後に effective**（現在は開発フェーズのため直接INSERT/UPDATE は継続）。ただし常時厳禁: 暗号化済シークレット（`*_token_encrypted`）の手動投入 / destructive操作（DROP TABLE等）のPO確認なし実行。詳細: `docs/adr/ADR-025_meta_integration_operational_hardening.md`
-
----
-
-## ADRと実装の優先順位（最上位原則）
-ADRと既存実装が食い違う箇所は必ずADRを優先し、追加安全マイグレーションでコードをADRへ寄せる（逆はしない）。
-
-## UIガバナンス遵守（ADR-144）
-UI部品新設時は必ず `components/` の金型を先確認。生select/生input/生checkbox/生radio/自作タブ/色直値禁止。例外は `ui-allow: <理由> (#<番号>)` コメント付与（理由＋番号の両方必須）。詳細: `docs/CC_UI_GOVERNANCE.md`
-実装・調査の作業前/commit前/PR前チェックは docs/ai-agents/executor-checklist.md（正本・必読）に従う。
+- 作業場所は `bash scripts/new-worktree.sh release/<topic> --claude` で作る（`--claude` は作った場所で Claude Code を起動する）
+- `.claude/agents/` 変更前は必ず `git pull` で最新取得（複数セッション同時書き込みによる上書き防止）
+- 個人設定は `~/.claude/CLAUDE.md`、初期セットアップは `docs/onboarding/claude-code.md`

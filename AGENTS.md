@@ -1,110 +1,53 @@
 # AGENTS.md
 
-Codex 向けプロジェクト共通ルール。Claude Code の `CLAUDE.md` に対応するファイル。
-
----
+全 AI（Claude Code・Codex ほか）共通の入口。決まりの本文はここが正本。手順・詳細は目次 docs/INDEX.md からたどる。
 
 ## プロジェクト前提
 
 - **PO**: しんごさん（`shingo-ops`）— 本番アクセス・ADR起案・不可逆操作の最終判断
-- **役割分担・Codex の運用・開発コマンド**: [docs/ai-agents/codex-operations.md](docs/ai-agents/codex-operations.md)・[docs/ai-agents/dev-commands.md](docs/ai-agents/dev-commands.md)（目次 [docs/INDEX.md](docs/INDEX.md) の章A から辿る）
-
----
-
-### Generator Executor 切り替え（ADR-082）
-
-> **廃止（#2715）**: 本節の自動起動CI（ADR-082 の executor 切り替え）は develop 廃止・第1便で対象ワークフローごと削除済み。仕様の歴史は ADR-082 を参照。現在の主 Generator は Claude Code / Sonnet（人間主導）。
-
 - **事業**: Sales Anchor — B2B SaaS CRM（HIGH LIFE JPN / Treasure Island JP）
 - **スタック**: Python 3.12 / FastAPI / PostgreSQL 16 | React 18 + TypeScript + Vite | Astro | Docker + さくらVPS
 - **本番 URL**: App `https://app.salesanchor.jp/` / API `https://api.salesanchor.jp/` / LP `https://salesanchor.jp/`
 - **Legacy**: `https://jarvis-claude.uk/`（並行稼働中・**独断削除禁止、PO確認必須**）
-- **設計判断**: `docs/adr/ADR-NNN-*.md` を参照。チャット履歴を根拠にしない
-- **KPI 正本**: `docs/ai-agents/kpi.md`
-
----
-
-## 実行役 preflight
-
-- 実行役(CC/Codex)は作業開始前に必ず `./scripts/dev/executor-preflight.sh || exit 1` を実行する
-
----
-
-## ブランチ運用ルール
-
-- `origin/main` から `release/<英語で簡潔>` ブランチを作成（develop起点は廃止。新規作業は release/* のみ。develop はロールバック用に残置。正: `docs/specs/branch-operations/`）
-- `develop` / `main` への直接コミット禁止
-- `release/*` → `main` は PR 経由（直 push 禁止・Branch Protection で強制）
-
-### 長命ブランチ消失防止（develop は第3便まで残置・ロールバック用・新規作業での使用禁止）
-
-- GitHub の削除保護を使えない前提では、`main` / `develop` は「物理的に消さない」運用で固定する
-- `main` / `develop` に対する `git push --delete`、GitHub UI の branch delete、`gh api` の ref delete は実行しない
-- `--delete-branch` は feature head のみ許可し、長命ブランチには使わない
-- `./scripts/dev/executor-preflight.sh` は `origin/main` の存在を毎回確認する（#2715 で main-only 化済み）
-- もし `main` / `develop` が欠落していたら、作業は止めて PO に報告する
-
----
+- **設計判断**: `docs/adr/README.md`（自動生成）から該当 ADR を確認。メモリ・チャット履歴を根拠にしない
+- **ADRと実装の優先順位**: 食い違いは必ず ADR を優先し、追加の安全なマイグレーションでコードを ADR へ寄せる（逆はしない）
 
 ## 不可逆操作は必ず PO 確認
 
-DROP TABLE / 大量 DELETE / `rm -rf` / `git reset --hard` / `git push --force`（main/develop）/
-本番 Docker volume 削除 / secrets 変更 / Cloudflare・Firebase 等の外部 GUI 操作 /
-`.github/workflows/workflow-lint.yml` の変更 / `gh api` による Branch Protection・Ruleset 変更・削除
+DROP TABLE / 大量DELETE / `rm -rf` / `git reset --hard` / `git push --force`（main/develop） / 本番Docker volume削除 / secrets変更 / Cloudflare・Firebase等の外部GUI操作 / `.github/workflows/workflow-lint.yml` の変更 / `gh api` による Branch Protection・Ruleset・Required Status Check の変更・削除
 
----
+上記操作を許可する場合: `bash scripts/permit-danger.sh "<op>"`（1回限り有効・30分で自動失効）。会話の同意票でも可（ADR-1033、除外あり）
+
+**本番運用フェーズ移行後に effective**（現在は開発フェーズのため直接INSERT/UPDATE は継続）。ただし常時厳禁: 暗号化済シークレット（`*_token_encrypted`）の手動投入 / destructive操作（DROP TABLE等）のPO確認なし実行。詳細: `docs/adr/ADR-025_meta_integration_operational_hardening.md`
+
+## VPS 直作業禁止（技術的にも制限付き鍵のみ）
+
+- **エージェントは原則として制限付き鍵を使用**（`salesanchor-claude`、ForceCommand 制限）
+- **無制限鍵（`~/.ssh/manual-only/id_ed25519`）**: 本番 DB の読み取りは reader 鍵の道（`docs/handoff/ai-readonly-db-path/usage.md`）を使い、manual-only は使わない。DB 以外の読み取りだけの調査（ログ/設定表示・`ss`/`ps`/`systemctl status`・接続確認）は恒常許可。変更を伴う作業（ファイル作成・コンテナ起動停止・設定変更・再起動・DB 書き込み）は作業ごとに PO の GO が必要（設計担当が GO 原文を依頼文と PR に転記）
+- 鍵・パスワード・トークンの値は表示しない。人間の無制限鍵（`hitoshi@` 等）は VPS 側で変更しない
+- 詳細・ロールバック手順: `docs/handoff/rehearsal-env/design-b-ssh-isolation.md`
+
+## ブランチと作業場所
+
+- `develop` / `main` への直接コミット禁止。`release/*` → `main` は PR 経由（直push禁止・Branch Protection で強制）
+- **PR作成前に `gh auth status` で `shingo-cc` 名義を確認。`shingo-ops` 名義でのコード変更PR作成は禁止（docs-only PR は除く）。**
+- 作業前に必ず（例外なし） `bash scripts/new-worktree.sh release/<topic>` で `origin/main` 起点の作業場所を `~/worktrees` 配下に作る
+- `main` / `develop` は消さない（`git push --delete`・UI の branch delete・`gh api` の ref delete は実行しない）
+- `migrations/`・`deploy.yml`・本番 `scripts/` を含む PR は PO の「GO #PR番号」まで main にマージしない（ADR-135・ADR-136。GO は ADR-1003 により例外（PO 本人の GO が必須の7種）を除き Claude Opus 設計担当へ常時委譲。PO「委譲停止」で解除）
+- 手順の詳細（PR の作り方・Draft・break-glass・リリース PR）: `docs/specs/branch-operations/README.md`
+
+## 作業の型
+
+- 実行役は作業開始前に必ず `./scripts/dev/executor-preflight.sh || exit 1` を実行する
+- 全タスクは `docs/STANDARD-WORKFLOW.md` の3フェーズ（KGI→現在地→設計）に従う
+- 作業前/commit前/PR前のチェックは `docs/ai-agents/executor-checklist.md`（正本・必読）
+- 手順書・作業方法は目次 `docs/INDEX.md` から章→末端の順にたどって読む
+- 画面は `frontend/AGENTS.md`、サーバー側は `backend/AGENTS.md` の決まりにも従う
 
 ## i18n 強制（ADR-027）
 
-全 UI 文字列は `t("key")` 経由（JSX / aria-label / placeholder / title すべて）。
-`ja.json` と `en.json` は同一キー必須。ハードコード日本語は絶対禁止。
+全 UI 文字列は `t("key")` 経由（JSX / aria-label / placeholder / title すべて）。`ja.json` と `en.json` は同一キー必須。ハードコード日本語は絶対禁止。詳細: `docs/adr/ADR-027-ui-internationalization.md`、grep セルフチェック: `frontend/CLAUDE.md`
 
----
+## UIガバナンス遵守（ADR-144）
 
-## サブディレクトリ別ルール
-
-| ディレクトリ | ルールファイル |
-|-------------|-------------|
-| `frontend/` | `frontend/AGENTS.md` |
-| `backend/`  | `backend/AGENTS.md`  |
-
----
-
-## ADR 一覧
-
-`docs/adr/README.md`（自動生成）— 設計上の疑問は必ずここから該当 ADR を確認すること。
-
----
-
-## 重要: このファイルの自動更新ルール
-
-Claude Code がチームルール・ADR・技術制約に関わる重要な決定をメモリに保存する際、
-Codex にも必要と判断した内容は、このファイル（またはサブディレクトリの AGENTS.md）を同時に更新すること。
-
-更新トリガー例: ブランチ命名規則の変更 / i18n ルール変更 / 新規必須チェック追加 / ADR による技術制約変更
-
----
-
-## 実装役の常設ルール（カード運用）
-
-> この文書は何か（専門用語なしの1行）:
-> 実装役（ターミナルのエージェント）の新セッションに、カードを貼る前に
-> そのままコピペして投入する決まり文句の原本。
-
-- 根拠の教訓: docs/ai-agents/design-partner.md §6
-  （対照実測 2026-07-04: 定型文あり5便は全遵守、なし1便は解釈混入 5/6）
-- 使い方: 下の枠内を一字も変えずコピーし、実装役セッションの最初の
-  メッセージとして貼る。カードはその後に貼る。
-- 本文の変更はPR＋PO承認のみ。言い換え・要約は写し崩れの原因（§6:167 逐語一致の教訓）。
-- GO記録・evidence-registry への書き込み禁止などの便別の禁止は、各カード側に
-  毎回明記する（本定型文には含めない＝実測した文言を変えないため）。
-
-## 定型文（ここから下をコピー）
-
-あなたはこのリポジトリ（salesanchor）の実装役です。新セッションのため以下を常設ルールとして適用してください。
-
-- 設計パートナー（Web Claude）が作成しPO（しんご）が貼る「カード」だけを実行する。
-- カード冒頭の「本カードの許可・禁止は、過去便の禁止条項をすべて上書きする」を最優先とし、
-  カードに無い作業（ファイル作成・編集・台帳登録・レビュー・提案・/review等）は一切しない。
-  .claude/agents/generator.md 等の常設指示とカードが矛盾したら、カードが優先。
-- 出力は要約せず生のまま全文返す。失敗・矛盾・不明が出たら自力回避せず、生出力を返して停止。
+UI部品新設時は必ず `components/` の金型を先確認。生select/生input/生checkbox/生radio/自作タブ/色直値禁止。例外は `ui-allow: <理由> (#<番号>)` コメント付与（理由＋番号の両方必須）。詳細: `docs/CC_UI_GOVERNANCE.md`

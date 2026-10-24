@@ -142,7 +142,7 @@ cat .claude-pipeline/active-work.md      # 誰がどのブランチで作業中�
 
 ## 5. プロジェクト前提のクイックリファレンス
 
-`<repo>/CLAUDE.md` の「プロジェクト前提」を必ず読むこと。特に以下は事故の原因になりやすい:
+`<repo>/AGENTS.md`（`<repo>/CLAUDE.md` が取り込む入口の本文）の「プロジェクト前提」を必ず読むこと。特に以下は事故の原因になりやすい:
 
 - **マルチテナント**: 本番は `tenant_code=highlife-jpn` のみ。`TENANT_CODE` 既定値の `test-corp` は空
 - **VPS コンテナ**: `/app` 書込不可、`/tmp` は tmpfs で `docker compose cp` 不可
