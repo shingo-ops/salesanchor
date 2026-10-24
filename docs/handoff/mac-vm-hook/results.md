@@ -28,3 +28,22 @@ Context7 は月間上限超過（"Monthly quota exceeded"）で使えなかっ�
 既知の限界（Opus コード審査）: `$( … )`・バッククォート内、`nohup`/`exec`/`command` 前置、別行の `export COLIMA_PROFILE=x` は判定しない。AI の通常の書き方では起きにくく、H6 の観測と K5（10/31 `colima list`）で取りこぼしを検出する。
 
 補足の根拠として実機も観測した: PreToolUse フックの exit 2 と標準エラー出力でコマンドが実行されず、メッセージが AI に返った（h1_log.txt）。
+
+## H6 7日観測（2026-10-17〜2026-10-24 09:10 JST）— ×
+
+- 観測源: `~/.claude/logs/agent-events.jsonl` の `hook: "mac-vm-guard"` 行（ローテーション無し）。生データ: `/tmp/CC報告ファイル/mac-vm-hook/h6/events-raw.jsonl`、一覧: `denials.txt`
+- 件数: 拒否 `hook_blocked` 5件 / 券消費 `hook_permit_consumed` 0件 / 内部エラー 計測不能（後述）
+- 判定基準: §3 の「止める形」に当たらない拒否が0件なら○
+
+| # | 日時(JST) | 止まった部分 | §3 判定 |
+|---|---|---|---|
+| 1 | 10/17 20:04 | `colima start 2>&1` | 当たらない（profile 無指定＝default）→ 誤検知 |
+| 2 | 10/20 21:54 | `(colima start --cpu 2 --memory 4 --disk 20 > …` | 記録が120文字で切れ全文不明。見えている範囲に profile 指定なし。再現試験で同形が `>` により止まる → 誤検知の疑い |
+| 3 | 10/22 15:22 | `colima start > /tmp/…/colima_start.txt 2>&1` | 当たらない → 誤検知 |
+| 4 | 10/22 15:22 | 3と同じ（再実行） | 当たらない → 誤検知 |
+| 5 | 10/22 15:45 | `colima start 2>&1` | 当たらない → 誤検知 |
+
+- 結論: 誤検知 4件確定（＋1件疑い）。H6 は ×。
+- 原因（コード読み取り＋再現）: `~/.claude/scripts/mac-vm-guard.py:81-103` の `colima_profile()` が `-` で始まらない最初の語を位置引数の profile とみなすため、`2>&1`・`>`・リダイレクト先が profile 名扱いになり default 以外と判定される。再現: `/tmp/CC報告ファイル/mac-vm-hook/h6/fp-repro.txt`（`colima start 2>&1 | tail -5` rc=2、`colima start` 単独 rc=0、`colima start -p foo` rc=2）
+- 設計との食い違い2点: (a) 上記リダイレクトの扱い（§3 は無指定＝default） (b) §6「内部エラーも1行記録」に対し実装 `mac-vm-guard.py:180-181` は記録せず return 0 のため、内部エラー件数を観測できない。`cmd_head` が120文字切り詰め（`:142`）で全文検証もできない。
+- 対応: 見張りは直していない。修正方針は PO 判断待ち。

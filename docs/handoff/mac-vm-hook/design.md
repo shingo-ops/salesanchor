@@ -64,3 +64,59 @@ Claude Code 公式の hooks 仕様（PreToolUse・exit 2 で拒否し標準エ�
 - 見張りは ~/.claude/scripts/（他の見張りと同じ場所。リポジトリ外）。試験は `python3 ~/.claude/scripts/tests/test_mac_vm_guard.py` で再実行できる。
 - 戻し方: settings.json の1件を消す（または mac-vm-guard.py を退避）。
 - K5（2026-10-31 `colima list`）で段階1・2をまとめて効果測定する。
+
+## 11. 修正便 R1（H6 × への対応）
+状態: 設計案作成済み・Opus 自己審査済み（§11-8）。PO は 2026-10-24 に「1（見張りを直す設計をつくる）」を選択。実装は PO の実装承認後に Sonnet へ委任。
+
+### 11-1. 何が起きたか（観測事実。詳細は results.md「H6 7日観測」）
+- 10/17〜10/24 の拒否 5件のうち 4件は `colima start 2>&1`／`colima start > file 2>&1` の形（profile 無指定＝§3 では default）で止まった。残り1件は記録が途中で切れているが、同じ形。
+- 原因: `~/.claude/scripts/mac-vm-guard.py:81-103` の `colima_profile()` が、`-` で始まらない最初の語を位置引数の profile と読む。`2>&1`・`>`・リダイレクト先の語が profile 名になり、default 以外と判定される。再現: `/tmp/CC報告ファイル/mac-vm-hook/h6/fp-repro.txt`
+- 設計との食い違い: §6 は「内部エラーも1行記録」と定めているが、`mac-vm-guard.py:180-181` と `:190-191` は記録せずに exit 0 で終わる。また `cmd_head` は先頭120文字で切られる（`:142`）ため、止めた命令を全文で検証できない。
+- 同じ読み方は段階1の CI 検査 `scripts/ci/no-mac-vm-guard.sh:27-45` にもある（`2>&1` は `&` で切られて `2>` が残り、`>` もそのまま残る）。ただし 7日間に CI 側の誤検知は観測していない（未計測）。
+
+### 11-2. KGI（○×で判定）
+| # | 合格条件 | 測り方 | 合格ライン |
+|---|---|---|---|
+| R1-1 | default の起動はリダイレクト・背景実行・括弧付きでも止まらない | 試験に次の8件を足す: `colima start 2>&1 \| tail -5`／`colima start > /tmp/x.txt 2>&1; echo exit=$?`／`(colima start --cpu 2 --memory 4 --disk 20 > /tmp/x 2>&1)`／`colima start 2>/dev/null`／`colima start >> /tmp/x`／`colima start &> /tmp/x`／`colima start &`／`colima start < /dev/null` | 8件とも exit 0 |
+| R1-2 | default 以外は、リダイレクトが前後にあっても止まる | 試験に次の5件を足す: `colima start -p foo 2>&1`／`colima start foo > /tmp/x`／`colima start > /tmp/x -p foo`／`colima start 2>&1 --profile=foo`／`COLIMA_PROFILE=foo colima start 2>&1`（vm-guard-allow: 見張りの試験の説明文。実行する命令ではない） | 5件とも exit 2 |
+| R1-3 | 今までの試験が全部通る | `python3 ~/.claude/scripts/tests/test_mac_vm_guard.py` | 既存8件＋追加分すべて OK |
+| R1-4 | 内部エラーが記録される | 試験: 一時 HOME で、壊れた JSON を標準入力に渡す | exit 0、かつ記録ファイルに `type: hook_internal_error` が1行 |
+| R1-5 | 止めた記録で「どの部分が理由か」が分かる | 試験: `echo a; colima start -p foo 2>&1` を止める | 記録の `matched_part` が `colima start -p foo 2>&1`（300文字まで）（vm-guard-allow: 見張りの試験の説明文） |
+| R1-6 | 入れ替えた後の7日間で誤って止めない（H6 の測り直し） | 入れ替え日から7日後に、§1 H6 と同じ手順で `hook_blocked` を全件判定 | §3 に当たらない拒否 0件、`hook_internal_error` 0件 |
+
+### 11-3. 変更（対象は ~/.claude/scripts/ の2ファイルだけ。リポジトリ外・git 管理外）
+1. 入れ替え前に退避: `cp ~/.claude/scripts/mac-vm-guard.py ~/.claude/scripts/mac-vm-guard.py.bak-r1`、`cp ~/.claude/scripts/tests/test_mac_vm_guard.py ~/.claude/scripts/tests/test_mac_vm_guard.py.bak-r1`
+2. `mac-vm-guard.py` に関数 `drop_redirections(args)` を足す。`colima_profile()` の前で、次のものを語の並びから取り除く:
+   - `^(\d+|&)?(>>?|>\||<<<|<>|<|>&|<&)(.*)$` に当たる語（例 `2>&1`・`>/tmp/x`・`&>`・`2>`）。後ろ（3番目の部分）が空のときは、次の1語（リダイレクト先）も取り除く。
+   - 単独の `&`（背景実行）。
+   - 部分の最後に付く閉じ括弧 `)`・`}`。語の末尾に付いている場合も外す。
+3. `bad_part()`（`:111-117`）の colima の分かれ道で、`colima_profile(drop_redirections(args[1:]))` と呼ぶ。`args[0]` の判定（start/create/restart）も、末尾の `)` を外した語で行う。
+4. 記録: `log_event()`（`:135-147`）に省略可の引数 `part` を足し、`matched_part` に止めた理由の部分を300文字まで入れる。`cmd_head` は今の120文字のまま（命令にほかの文字列が混ざっても記録が長くならないようにするため）。止めた部分を返すため、`bad_command()` は「止めた部分の文字列か None」を返す形に変える（呼び出し元は `main()` の1か所だけ）。
+5. 内部エラー: `main()` の `except`（`:180-181`）と最外の `except`（`:190-191`）で `log_event('hook_internal_error', command か '', 例外の型名)` を呼んでから exit 0。`log_event` 自体の失敗は今までどおり黙る（fail-open は変えない）。
+6. 試験 `test_mac_vm_guard.py` に R1-1・R1-2・R1-4・R1-5 の試験を足す。既存の試験は変えない。
+- 触らない: 案内文（§4）、許可券（§5）、settings.json、`limactl` と `bash -c` の判定、ヒアドキュメントの処理、リポジトリ内のファイル。
+
+### 11-4. 段階1 CI 側（`scripts/ci/no-mac-vm-guard.sh`）の扱い
+同じ読み違いがあるが、R1 には入れない（一度に1つ変える）。R1-6 の合格後に、別の便 R2 として同じ規則（リダイレクトの語を取り除く）を CI 側に入れるか、PO に確認する。R2 はリポジトリ内の CI 検査の変更なので、別の PR になる。
+
+### 11-5. 代替案
+- A 採用: リダイレクトの語を取り除いてから profile を読む。§3 の表は変えずに、実装を §3 に寄せる。
+- B 不採用: リダイレクトの語が出たら、そこで読むのをやめる。`colima start > x -p foo` のように後ろに profile がある形を見逃す（bash ではリダイレクトはどこに置いてもよい）。
+- C 不採用: 位置引数の profile を読まない（`-p`/`--profile` だけ見る）。`colima start foo` を見逃し、§3 から外れる。
+
+### 11-6. リスクと対処
+- 取り除きすぎて、止めるべき命令を見逃す → R1-2 の5件で確かめる。
+- 見張りの書き換えに失敗して全 Bash が止まる → fail-open は変えない。入れ替え直後に `echo ok` と R1-3 を実行して確かめる。
+- 記録が増える → 1回の拒否につき1行のままで、`matched_part` は300文字まで。
+
+### 11-7. 戻し方・測り方
+- 戻し方: `.bak-r1` の2ファイルを元の名前に戻す（settings.json の変更は無い）。
+- 測り方: R1-1〜R1-5 は入れ替え当日に試験で測る。R1-6 は入れ替え日から7日後に予約して測る。基準値は今回の H6（5件中4件が誤検知、1件は疑い。内部エラーは計測不能）。
+
+### 11-8. Opus 自己審査（同一 AI による審査）
+- 整合: §3 の表（profile 無指定は default）に実装を合わせる変更で、§3 自体は変えない。§6 の記録義務の入れ忘れを埋める。
+- 根拠: 原因は `mac-vm-guard.py:81-103` と再現試験 `fp-repro.txt` で確かめた。shlex は `2>&1` を1語のまま返す。これは再現試験の結果（rc=2）と合う。
+- 検証可能性: R1-1〜R1-5 は試験で○×、R1-6 は記録で○×。
+- 範囲: リポジトリ外の2ファイルだけ。外から入るものはなく（標準ライブラリのみ）、フックの出入り（exit 0/2・標準エラー）も変えないので、Claude Code の hooks 仕様の新しい確認は要らない。
+- 未解決: R2（CI 側）をやるかどうかは PO の判断。R1 の実装可否には影響しない。
+- 判定: APPROVE（PO の実装承認後に実装可）。
