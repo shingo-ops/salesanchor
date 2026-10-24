@@ -204,7 +204,7 @@ export function FedExRateModal({
           onClick={handleGetQuote}
           disabled={loading || !originCountryCode || !destCC}
         >
-          {loading ? t("fedexRateModal.loading") : t("fedexRateModal.getQuote")}
+          {t("fedexRateModal.getQuote")}
         </Button>
       </div>
 

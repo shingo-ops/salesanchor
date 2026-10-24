@@ -102,7 +102,7 @@ export function PasswordChangeView({ forced, onDone, onBack, onLogout }: Passwor
         </p>
       )}
       <Button type="submit" fullWidth loading={busy} disabled={busy}>
-        {busy ? t("viewer.passwordChange.submitting") : t("viewer.passwordChange.submit")}
+        {t("viewer.passwordChange.submit")}
       </Button>
       {!forced && (
         <Button type="button" variant="secondary" fullWidth onClick={onBack} data-testid="viewer-password-back">

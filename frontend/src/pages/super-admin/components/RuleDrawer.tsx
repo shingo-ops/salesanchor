@@ -289,7 +289,6 @@ export function RuleDrawer({ open, onClose, onSaved, editRule }: RuleDrawerProps
             onClick={() => { void handleDisable(); }}
             disabled={isSubmitBusy}
             loading={disabling}
-            loadingText={t(`${fe}.disabling`)}
             fullWidth
             data-testid="rule-drawer-disable-btn"
           >
@@ -305,7 +304,6 @@ export function RuleDrawer({ open, onClose, onSaved, editRule }: RuleDrawerProps
         onClick={() => { void handleSubmit(); }}
         disabled={(needsPatternTest && !testPassed) || isSubmitBusy}
         loading={submitting}
-        loadingText={isEditMode ? t(`${fe}.updating`) : t(`${fc}.creating`)}
         data-testid="rule-drawer-submit-btn"
       >
         {isEditMode ? t(`${fe}.update`) : t(`${f}.createRule`)}

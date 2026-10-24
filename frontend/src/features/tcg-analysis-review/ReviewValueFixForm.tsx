@@ -114,7 +114,7 @@ export function ReviewValueFixForm({ item, rowKey, onRefresh }: Props) {
       )}
       <div>
         <Button variant="primary" loading={isSaving} disabled={!canSave || isSaving} onClick={() => void save()}>
-          {isSaving ? t("reviewItem.valueFix.saving") : t("reviewItem.valueFix.save")}
+          {t("reviewItem.valueFix.save")}
         </Button>
       </div>
       {notice && <Callout variant={notice.variant} title={notice.title} />}
