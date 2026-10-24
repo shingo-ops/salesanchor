@@ -147,6 +147,9 @@ echo ALLDONE >> "$D/exits.txt"
 
 ## 8. 報告欄（担当が追記）
 
-（担当が追記）
+本報告はカード doc-agenda-nav 原因調べの実行結果である。
+- 5-1 rc=0/0、5-2 最後の行 `K12 1 K10 0 cost 2.8805707`・diff 空、5-3 sha256 一致・INDEX あり・差は44行目1行のみ、claude 2.1.310
+- B: K12 1 K10 1 cost 1.8352219 / C: K12 0 K10 1 cost 1.7058189 / D: K12 3 K10 5 cost 2.1422289（全条件 ALLDONE・DIRTY なし）
+- 結果は k12/diag-B.tsv・diag-C.tsv・diag-D.tsv、生出力は /tmp/CC報告ファイル/an-diag/
 
 END OF CARD

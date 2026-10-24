@@ -1,5 +1,6 @@
 import json,os,sys
 D=sys.argv[1]
+R=int(sys.argv[2]) if len(sys.argv)>2 else 2
 gold={'T1':['docs/CC_UI_GOVERNANCE.md'],'T2':['docs/specs/branch-operations/README.md','docs/PARALLEL_TERMINAL_GUIDE.md'],
 'T3':['docs/ai-agents/executor-checklist.md'],'T4':['docs/STANDARD-WORKFLOW.md'],'T5':['docs/runbooks/secret-rotation.md'],
 'T6':['docs/runbooks/alerts.md'],'T7':['docs/runbooks/weekly-stale-tasks.md'],'T8':['docs/runbooks/bundle-sale-new-wording.md'],
@@ -10,7 +11,7 @@ for l in open(D+'/exits.txt'):
     if len(p)==2 and p[1].startswith('exit='): exits[p[0]]=p[1][5:]
 rows=[]
 for t in gold:
-  for k in (1,2):
+  for k in range(1,R+1):
     f=f'{D}/{t}-{k}.jsonl'
     op=ix=n=0; cost=''; last=''; autoload=0
     for line in open(f,errors='replace'):
