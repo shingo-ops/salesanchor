@@ -281,4 +281,49 @@ comm -23 $P/missing-keys.txt $P/map-keys.txt
 - 判断点: generate-adr-index.js は docs/adr/README.md の「最終更新」日付行も 2026-10-23 から 2026-10-24 に変えた（生成物の自動変更）。
 - 生出力: /tmp/CC報告ファイル/an-stage3c/impl2/
 
+## 12. 追補（Opus 2026-10-24。担当の報告の「pre-commit が CLAUDE.md: 78行と表示した」件。design.md §24 G7）
+
+原因は Opus が再現して確かめた: フックの中では GIT_DIR が設定され、check-claude-size.js:16 の `git rev-parse --show-toplevel` が frontend/ を返すため、frontend/CLAUDE.md を入口の CLAUDE.md として数えている。この PR で次の1か所を直す。
+
+### 12-1. 触るファイル
+
+- 変更: `frontend/scripts/check-claude-size.js`（§3 に既にある。追加のファイルは無い）
+- 変更: このカード（§12 の報告欄に追記するだけ）
+
+### 12-2. 作り方（Edit）
+
+- :13 `import { join } from 'path';` を次の2行に置き換える:
+
+```
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+```
+
+- :16 `const repoRoot = execSync('git rev-parse --show-toplevel', { encoding: 'utf8' }).trim();` を次の2行に置き換える:
+
+```
+// フックの中では GIT_DIR が設定され git rev-parse --show-toplevel が今いる場所を返すので、スクリプト自身の場所から根を求める（frontend/scripts/ の2つ上）
+const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
+```
+
+ほかの行は変えない（:14 の execSync は :33 の find で使うので残す）。
+
+### 12-3. 確かめ方（生出力は /tmp/CC報告ファイル/an-stage3c/impl2/ に `12-` で始まる名前で保存）
+
+- 12-a: `node --check frontend/scripts/check-claude-size.js` が exit 0。
+- 12-b: 根から `node frontend/scripts/check-claude-size.js` が exit 0 で PASSED。
+- 12-c: フックと同じ条件 `cd frontend && GIT_DIR=$(git rev-parse --git-dir) node scripts/check-claude-size.js` が exit 0 で PASSED（直す前は「❌ CLAUDE.md: 78行（上限10行）」・exit 1）。
+- 12-d: 逆の確かめ: §5-4 と同じ手順（AGENTS.md を写して30行足す）を、12-c と同じフックの条件で実行し、exit 1 と `❌ AGENTS.md: 83行（上限80行）` を確かめ、AGENTS.md を戻して `diff AGENTS.md docs/handoff/doc-agenda-nav/draft/AGENTS.entry.md` が出力なし。
+- 12-e: `git diff fde539e6987f868483c10a88ce02e4f42f3a8488 -- frontend/scripts/check-claude-size.js` が `-` 2行・`+` 4行で、`+` の行が §12-2 の全文と同じ。
+- 12-f: commit のときの pre-commit の出力を保存し、`✅ CLAUDE.md サイズチェック PASSED` が出ていることを確かめる。
+- 12-g: push の後、`gh pr checks 4710 --repo shingo-ops/salesanchor` を1回だけ実行して貼る（待たない）。
+- PR 本文は変えなくてよい（触るファイル・削除するファイルは §9 のまま。check-claude-size.js は既に両方の欄にある）。
+
+### 12-4. 分岐
+
+- 12-c・12-d が期待どおりでない → 出力を貼って BLOCKED:（ほかを直さない）。
+- commit・push で見張りに止められた → 言い換えず、止まった手順と理由の原文を報告して止まる。
+
+### 12-5. 報告欄（担当が追記）
+
 END OF CARD
