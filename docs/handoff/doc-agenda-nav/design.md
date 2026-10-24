@@ -416,3 +416,13 @@ PO 原文（2026-10-22）「仕様書と設計図はどうなったの？逐一�
 - 便の分け方:
   - 段3c-1（準備）: 案文への i18n・UI ガバナンスの写し、目次への2行、上の参照2件、この節。カード docs/handoff/doc-agenda-nav/card-stage3c-prep.md。
   - 段3c-2（入れ替え）: AGENTS.md・CLAUDE.md を案文どおりにする。check-claude-size.js の LIMITS（AGENTS.md 80・CLAUDE.md 10・docs/INDEX.md 60）とエラー文、docs/INDEX.md:28・:40、STANDARD-WORKFLOW:160、onboarding:145、check-freshness.sh:25、ADR-1040 の Accepted 化と README の作り直し。入れ替えの前に全 128 行を「案文の行／移り先の行／意味の対応表」で 100% 結ぶ（K11）。
+
+## 24. 段3c-2 の前に見つけた隙間 G5・G6 と、K11 の確かめ方（2026-10-24・Opus 設計判断。起点 d298ab129＝段3c-1 #4708 のマージ後）
+
+- §23 の LIMITS の数値（AGENTS.md 80・CLAUDE.md 10・docs/INDEX.md 60）は、段3c-2 で check-claude-size.js に**設定する値**であり、起点ではまだ CLAUDE.md 120 だけが登録されている（frontend/scripts/check-claude-size.js:22-28。段3c-1 の審査の参考指摘）。
+- G5（ADR-025 の前半）: CLAUDE.md:79 の前半「**本番運用フェーズ移行後に effective**（現在は開発フェーズのため直接INSERT/UPDATE は継続）」は ADR-025 の本文に無い（`grep -n 'effective\|開発フェーズ\|本番運用フェーズ\|フェーズ' docs/adr/ADR-025_meta_integration_operational_hardening.md` が0件）。§5-2 の「前半は ADR-025 を正とする」という前提が成り立たないため、**案文 draft/AGENTS.entry.md:21 を CLAUDE.md:79 の全文に置き換える**（一字一句・行数は変わらない）。この便の最初のコミットで Opus が直す。
+- G6（並行作業の手引きへの道）: CLAUDE.md:41 の「詳細: `docs/PARALLEL_TERMINAL_GUIDE.md`」は案文に無く、目次 docs/INDEX.md・docs/specs/branch-operations/README.md からも指されていない（`git grep -n PARALLEL_TERMINAL_GUIDE -- docs ':!docs/handoff' ':!docs/adr'` は evidence-registry の3件だけ）。目次の到達検査（check_doc_index.py:130）の対象は docs/specs/・docs/ai-agents/ だけなので、この欠けは検査に出ない。そこで**目次の章A（ブランチ運用の行の直後）に1行足す**。
+- 入れ替え後の到達検査: 起点の写し（detached worktree）で AGENTS.md・CLAUDE.md を入れ替え後の文面に置いて check_doc_index.py を回し、SUMMARY は入れ替え前と同じ（unreached=0 deep=2 blank_when=0 no_when_column=0 broken_link=8 warnings=10。/tmp/CC報告ファイル/an-stage3c/swap-recon/cdi-before.txt・cdi-after.txt、リポジトリ外）。
+- K11 の確かめ方（この便のマージ前）: 起点の CLAUDE.md・AGENTS.md の空行以外 128 行それぞれを、①入れ替え後の AGENTS.md・CLAUDE.md ②`git ls-files docs ':!docs/handoff'` の全文、の順に完全一致で探す。**grep には -a を付ける**（全文をつないだファイルは macOS の grep で binary と判定され、一致しても見つからない扱いになる。実測: CLAUDE.md:73 が -a なしで不一致・-a ありで一致）。一致しない行は、すべて意味の対応表 docs/handoff/doc-agenda-nav/k11-map.md に載っていること。Opus の試算（G5 反映後の案文で実施）は 入口に一致 27・docs に一致 51・一致なし 50 で、一致なし 50 行はすべて対応表に載せた。
+- 対応表で「移り先なし（削除）」としたもの: AGENTS.md:14・:16（ADR-082 の廃止済みの節。経緯は ADR-082 と git の履歴）、AGENTS.md:79-84（AGENTS.md を正本1か所にしたので「CLAUDE.md の決定を AGENTS.md にも写す」決まりは不要になる。ユーザー側 ~/.claude/CLAUDE.md の同じ決まりは段6で扱う）、AGENTS.md:3・CLAUDE.md:3 の旧冒頭文（入口の役割は案文 :3・CLAUDE.entry:9 が言い直す）。
+- この便で変えないもの（確かめただけ）: .github/PULL_REQUEST_TEMPLATE.md:65-67「CLAUDE.md 変更時」の欄（危険パス。CLAUDE.md は残るので有効）、claude-md-staleness-check.yml（CLAUDE.md だけを見る。AGENTS.md の鮮度は見ていない＝保守の穴として記録し、段5で扱う）、frontend/AGENTS.md・backend/AGENTS.md の LIMITS 登録（段4）。
