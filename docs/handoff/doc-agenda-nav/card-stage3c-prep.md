@@ -206,7 +206,7 @@ grep -c '^OK' /tmp/CC報告ファイル/an-stage3c/impl1/k11.txt; grep -c '^MISS
   - `対象ADR: ADR-1040（関連: ADR-076・ADR-027・ADR-144）`
   - `設計仕様書（あるべき姿）: docs/specs/doc-agenda-nav/README.md`
   - `触るファイル: docs/handoff/doc-agenda-nav/draft/AGENTS.entry.md, docs/INDEX.md, scripts/check-process-artifacts.js, docs/runbooks/adr-019-english-ui-temporary-deploy.md, docs/handoff/doc-agenda-nav/design.md, docs/handoff/doc-agenda-nav/card-stage3c-prep.md`
-  - `削除するファイル: なし`
+  - `削除するファイル: scripts/check-process-artifacts.js, docs/runbooks/adr-019-english-ui-temporary-deploy.md`（置き換えで消える1行も削除と数える。初版の「なし」は Opus の書き誤りで、pr-body-guard.sh に止められた）
   - `区分: A（ADR-1015。本番 scripts/ を触るため B 区分に当たらない。KGI と実装は PO 承認済み。GO は ADR-1003 の委任で Opus が出す）`
   - `PO承認: 「1」（2026-10-23）`
   - `Opus 審査記録: コード審査はこれから`
