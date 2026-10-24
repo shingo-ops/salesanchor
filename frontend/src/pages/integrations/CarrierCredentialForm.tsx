@@ -140,12 +140,12 @@ export default function CarrierCredentialForm({
         >
           {t("common.cancel")}
         </Button>
-        <Button variant="primary" size="md"
+        <Button loading={busy} variant="primary" size="md"
 
           disabled={busy || !clientId || !clientSecret}
           onClick={handleSaveAndTest}
         >
-          {busy ? t("carrierIntegration.saving") : t("carrierIntegration.saveAndTest")}
+          {t("carrierIntegration.saveAndTest")}
         </Button>
       </div>
     </section>

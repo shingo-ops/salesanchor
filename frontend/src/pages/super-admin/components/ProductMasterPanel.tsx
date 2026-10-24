@@ -92,8 +92,8 @@ export function ProductMasterPanel() {
       <ContentToolbar
         right={
           <>
-            <HeaderButton variant="secondary" disabled={exporting} onClick={() => void downloadExport()}>
-              {t(exporting ? "common.loading" : "productCsv.export")}
+            <HeaderButton loading={exporting} variant="secondary" disabled={exporting} onClick={() => void downloadExport()}>
+              {t("productCsv.export")}
             </HeaderButton>
             <HeaderButton variant="primary" onClick={() => setCreating(true)}>
               {t("productCsv.addProduct")}

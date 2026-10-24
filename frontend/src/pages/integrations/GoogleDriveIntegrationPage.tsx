@@ -129,10 +129,8 @@ export default function GoogleDriveIntegrationPage() {
           <h3>{t("googleDriveIntegration.connectTitle")}</h3>
           <p>{t("googleDriveIntegration.connectDescription")}</p>
           <div className="form-actions">
-            <Button variant="primary" size="md" disabled={busy} onClick={handleConnect}>
-              {busy
-                ? t("googleDriveIntegration.connecting")
-                : t("googleDriveIntegration.connectButton")}
+            <Button loading={busy} variant="primary" size="md" disabled={busy} onClick={handleConnect}>
+              {t("googleDriveIntegration.connectButton")}
             </Button>
           </div>
         </section>
@@ -172,10 +170,8 @@ export default function GoogleDriveIntegrationPage() {
               </small>
             </div>
             <div className="form-actions">
-              <Button variant="primary" size="md" disabled={busy} onClick={handleTest}>
-                {busy
-                  ? t("googleDriveIntegration.testing")
-                  : t("googleDriveIntegration.testButton")}
+              <Button loading={busy} variant="primary" size="md" disabled={busy} onClick={handleTest}>
+                {t("googleDriveIntegration.testButton")}
               </Button>
             </div>
 

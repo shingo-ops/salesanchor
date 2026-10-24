@@ -93,7 +93,7 @@ function UnitImportPanel({ onDone }: { onDone: () => void }) {
         )}
         <ContentToolbar
           left={<HeaderButton variant="secondary" onClick={() => { if (!lock.current) { setPreview(null); setFile(null); setError(""); } }} disabled={busy}>{t("unitCsv.cancel")}</HeaderButton>}
-          right={<HeaderButton variant="primary" onClick={() => void doCommit()} disabled={busy || hasErrors}>{busy ? t("common.loading") : t("unitCsv.commit")}</HeaderButton>}
+          right={<HeaderButton loading={busy} variant="primary" onClick={() => void doCommit()} disabled={busy || hasErrors}>{t("unitCsv.commit")}</HeaderButton>}
         />
       </section>
     );
@@ -117,7 +117,7 @@ function UnitImportPanel({ onDone }: { onDone: () => void }) {
       </section>
       <ContentToolbar
         left={<HeaderButton variant="secondary" onClick={onDone} disabled={busy}>{t("unitCsv.backToList")}</HeaderButton>}
-        right={<HeaderButton variant="primary" onClick={() => void doPreview()} disabled={!file || busy}>{busy ? t("common.loading") : t("unitCsv.preview")}</HeaderButton>}
+        right={<HeaderButton loading={busy} variant="primary" onClick={() => void doPreview()} disabled={!file || busy}>{t("unitCsv.preview")}</HeaderButton>}
       />
     </>
   );

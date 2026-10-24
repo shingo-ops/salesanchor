@@ -245,8 +245,8 @@ export function SupplierMasterPanel() {
       <ContentToolbar
         right={
           <>
-            <HeaderButton variant="secondary" disabled={exporting} data-testid="suppliers-export" onClick={() => void downloadExport()}>
-              {t(exporting ? "common.loading" : "supplierCsv.exportButton")}
+            <HeaderButton loading={exporting} variant="secondary" disabled={exporting} data-testid="suppliers-export" onClick={() => void downloadExport()}>
+              {t("supplierCsv.exportButton")}
             </HeaderButton>
             <HeaderButton variant="primary" data-testid="suppliers-new" onClick={openCreate}>
               {t("superAdmin.suppliersAdmin.newSupplier")}

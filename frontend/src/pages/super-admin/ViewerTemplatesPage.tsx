@@ -230,13 +230,13 @@ export default function ViewerTemplatesPage() {
         footer={
           detail && (
             <Stack direction="row" gap="2">
-              <Button
+              <Button loading={saving}
                 variant="primary"
                 onClick={() => { void save(); }}
                 disabled={saving || draft === (detail.body ?? "")}
                 data-testid="viewer-templates-save"
               >
-                {saving ? t(`${f}.saving`) : t(`${f}.save`)}
+                {t(`${f}.save`)}
               </Button>
               <Button
                 variant="secondary"

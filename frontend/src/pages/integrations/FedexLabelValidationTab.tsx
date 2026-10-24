@@ -253,12 +253,12 @@ export function FedexLabelValidationTab({
         <StepHeader num={2} title={t("carrierIntegration.lvStep2Title")} done={!!labels} />
         <p className="form-hint">{t("carrierIntegration.lvStep2Desc")}</p>
         <div className="form-actions">
-          <Button variant="primary" size="md"
+          <Button loading={labelBusy} variant="primary" size="md"
 
             disabled={labelBusy}
             onClick={handleIssueLabels}
           >
-            {labelBusy ? t("carrierIntegration.lvStep2Issuing") : t("carrierIntegration.lvStep2Button")}
+            {t("carrierIntegration.lvStep2Button")}
           </Button>
         </div>
         {labelError && <p className="error-message">{labelError}</p>}
@@ -358,12 +358,12 @@ export function FedexLabelValidationTab({
         </div>
 
         <div className="form-actions">
-          <Button variant="secondary" size="md"
+          <Button loading={coverBusy} variant="secondary" size="md"
 
             disabled={coverBusy || !contactName || !printerModel || !printerCount}
             onClick={handleDownloadCoverSheet}
           >
-            {coverBusy ? t("carrierIntegration.lvStep6Downloading") : t("carrierIntegration.lvStep6Button")}
+            {t("carrierIntegration.lvStep6Button")}
           </Button>
         </div>
         {coverError && <p className="error-message">{coverError}</p>}
@@ -374,12 +374,12 @@ export function FedexLabelValidationTab({
         <StepHeader num={7} title={t("carrierIntegration.lvStep7Title")} done={!!emailTemplate} />
         <p className="form-hint">{t("carrierIntegration.lvStep7Desc")}</p>
         <div className="form-actions">
-          <Button variant="secondary" size="md"
+          <Button loading={emailBusy} variant="secondary" size="md"
 
             disabled={emailBusy}
             onClick={handleGetEmailTemplate}
           >
-            {emailBusy ? t("carrierIntegration.lvStep7Loading") : t("carrierIntegration.lvStep7Button")}
+            {t("carrierIntegration.lvStep7Button")}
           </Button>
         </div>
         {emailError && <p className="error-message">{emailError}</p>}

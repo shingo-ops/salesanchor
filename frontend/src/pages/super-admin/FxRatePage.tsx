@@ -92,7 +92,7 @@ export default function FxRatePage() {
     >
       <ContentToolbar
         right={
-          <Button variant="primary" size="sm" layoutClassName="field-h-md"
+          <Button loading={refreshing} variant="primary" size="sm" layoutClassName="field-h-md"
             type="button"
 
             onClick={handleRefresh}
@@ -100,7 +100,7 @@ export default function FxRatePage() {
             data-testid="fx-rate-refresh-btn"
           >
             <RefreshIcon size={16} aria-hidden="true" />
-            {refreshing ? t("common.loading") : t("superAdmin.fxRate.refreshBtn")}
+            {t("superAdmin.fxRate.refreshBtn")}
           </Button>
         }
       />
