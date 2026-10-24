@@ -18,3 +18,12 @@
 - 出力先 `<DIR>` はリポジトリの外に置く（クラウドは scratchpad）。写しは社外秘。共有しない・GitHub に載せない。
 - 最後の 1 行: `posts=… with_rows=… rows=… fetched_at=… engine=…`（投稿id・値は出さない）。
 - 止まる条件（`STOP:` を出して終了コード 1、ファイルは 1 つも書かない）: HTTP が 200 でない／rc が 0 でない／見出しが想定の 15 列と違う／返った行数が limit 以上／値に `\` を含む／値が 10240 文字以上／投稿数が版の記録と違う／`<DIR>` に既に .tsv がある／投稿id が UUID の形でない。
+
+## 結果の持ち帰り（クラウド → 非公開ページ）
+- 正解表 fetch_gold.py → 写し fetch_snapshot.py → 採点 score_v102.py の順に回す（出力先はリポジトリの外。クラウドではシステム指示の scratchpad の下）。
+- 結果は Artifact で本人だけが見られるページに出す。ページは共有しない。削除は PO の確認が要る。
+- files で添えるファイルは、元ファイルを scratchpad の下に置き、公開名を .txt（例 data/result.txt・data/errors.txt・data/inputs.txt）、contentType は text/plain にする。text/tab-separated-values は配信されず公開が拒否される。
+- 手元で取り出すときは Artifact の read で path を指定し、sha256 をクラウドの値と照合する。
+- errors.tsv と inputs.sha256 は投稿 id を含むので社外秘。リポジトリ・PR・コメントに載せない。
+- 手元 Mac の Python 3.14 では環境変数 SSL_CERT_FILE=/etc/ssl/cert.pem を付ける。
+- 窓口は同時 1 本。短い間に続けて呼ぶと 429 で止まることがある（道具は何も書かずに止まる）。クラウドと手元を同時に走らせない。
