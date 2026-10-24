@@ -108,4 +108,9 @@ echo ALLDONE >> "$D/exits.txt"
 
 ## 8. 報告欄（担当が追記）
 
+本報告はカード doc-agenda-nav 測り直しの実行結果である。
+- 5-1 rc=0/0、5-2 差は T1-1 の終了コード列のみ（K12 1 K10 0 cost 2.8362855）、5-3 OK（sha256一致・INDEXあり・汚れなし）、5-4 20回とも exit=0・ALLDONE・DIRTYなし、5-5 完了。
+- claude 2.1.310。count.py 最終行: K12 1 K10 0 cost 2.8805707
+- 生出力: /tmp/CC報告ファイル/an-measure-after/
+
 END OF CARD

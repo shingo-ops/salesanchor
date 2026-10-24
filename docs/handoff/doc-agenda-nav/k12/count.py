@@ -1,5 +1,5 @@
-import json,os
-D='/tmp/CC報告ファイル/an-stage1/k12/run'
+import json,os,sys
+D=sys.argv[1]
 gold={'T1':['docs/CC_UI_GOVERNANCE.md'],'T2':['docs/specs/branch-operations/README.md','docs/PARALLEL_TERMINAL_GUIDE.md'],
 'T3':['docs/ai-agents/executor-checklist.md'],'T4':['docs/STANDARD-WORKFLOW.md'],'T5':['docs/runbooks/secret-rotation.md'],
 'T6':['docs/runbooks/alerts.md'],'T7':['docs/runbooks/weekly-stale-tasks.md'],'T8':['docs/runbooks/bundle-sale-new-wording.md'],
@@ -8,7 +8,6 @@ exits={}
 for l in open(D+'/exits.txt'):
     p=l.split()
     if len(p)==2 and p[1].startswith('exit='): exits[p[0]]=p[1][5:]
-exits['T1-1']='0'
 rows=[]
 for t in gold:
   for k in (1,2):
