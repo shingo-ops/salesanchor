@@ -167,3 +167,73 @@ def test_bad_version_rejected():
     for v in ("x'; select 1 --", "Gold", ""):
         with pytest.raises(ValueError):
             fg.rows_sql(v)
+
+
+# --- 429(入口の速度制限)のときだけ待ってやり直す ---
+class Seq:
+    """返事を順番に返す偽の窓口。最後の返事は繰り返す。"""
+
+    def __init__(self, replies):
+        self.replies, self.n = list(replies), 0
+        outer = self
+
+        class H(BaseHTTPRequestHandler):
+            def do_POST(self):
+                self.rfile.read(int(self.headers.get("Content-Length", 0)))
+                st, body = outer.replies[min(outer.n, len(outer.replies) - 1)]
+                outer.n += 1
+                self.send_response(st)
+                self.send_header("X-Read-Window-Rc", "0")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+
+            def log_message(self, *a):
+                pass
+
+        self.srv = HTTPServer(("127.0.0.1", 0), H)
+        self.url = "http://127.0.0.1:%d/q" % self.srv.server_address[1]
+        threading.Thread(target=self.srv.serve_forever, daemon=True).start()
+
+    def close(self):
+        self.srv.shutdown()
+        self.srv.server_close()
+
+
+@pytest.fixture
+def seq(monkeypatch):
+    waits, made = [], []
+    monkeypatch.setattr(fg, "_sleep", waits.append)
+
+    def mk(replies):
+        s = Seq(replies)
+        made.append(s)
+        return s
+    mk.waits = waits
+    yield mk
+    for s in made:
+        s.close()
+
+
+def test_t1_429_twice_then_200(seq, capsys):
+    s = seq([(429, b"x" * 162), (429, b"x" * 162), (200, b"ok")])
+    assert fg.post(s.url, "select 1") == (200, "0", b"ok")
+    assert seq.waits == [1, 2] and s.n == 3
+    err = capsys.readouterr().err
+    assert "429: wait 2s (retry 2/4)" in err
+
+
+def test_t2_429_five_times_stops(seq, tmp_path, capsys):
+    s = seq([(429, b"busy-429")])
+    out = tmp_path / "o.tsv"
+    rc = fg.main(["--version", "gold_t1", "--out", str(out), "--url", s.url])
+    assert rc == 1 and not out.exists()
+    assert seq.waits == [1, 2, 4, 8] and s.n == 5
+    assert "STOP: http=429" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("code", [400, 401, 503])
+def test_t3_other_errors_not_retried(seq, code):
+    s = seq([(code, b"err")])
+    assert fg.post(s.url, "select 1")[0] == code
+    assert seq.waits == [] and s.n == 1

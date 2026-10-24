@@ -15,6 +15,7 @@ import importlib.util
 import os
 import re
 import sys
+import time
 import urllib.error
 import urllib.request
 
@@ -23,6 +24,8 @@ DEFAULT_URL = "https://api.salesanchor.jp/api/v1/ops/read-window/query"
 TIMEOUT = 90
 VERSION_RE = re.compile(r"^[a-z0-9_]+$")
 ROW_LIMIT = 5000
+RETRY_WAITS = (1, 2, 4, 8)  # 429(入口の速度制限)のときだけ待ってやり直す秒数。最大4回、合計15秒
+_sleep = time.sleep  # 試験で差し替えて時間を待たないため
 
 
 def _load_gold_to_sql():
@@ -55,8 +58,8 @@ def rows_sql(version):
             "where gold_version = '%s' order by row_no" % (ROW_LIMIT, ", ".join(cols), version))
 
 
-def post(url, sql, token=None):
-    """窓口に SQL を送り (HTTP番号, rc文字列, 本文bytes) を返す。通信エラーは (0, '', b'')。"""
+def _post_once(url, sql, token=None):
+    """窓口に SQL を1回送り (HTTP番号, rc文字列, 本文bytes) を返す。通信エラーは (0, '', b'')。"""
     headers = {"Content-Type": "text/plain; charset=utf-8"}
     if token:
         headers["X-Read-Window-Token"] = token
@@ -68,6 +71,18 @@ def post(url, sql, token=None):
         return e.code, e.headers.get("X-Read-Window-Rc", ""), e.read()
     except (urllib.error.URLError, OSError) as e:
         return 0, "", type(e).__name__.encode("ascii", "replace")
+
+
+def post(url, sql, token=None):
+    """窓口に SQL を送り (HTTP番号, rc文字列, 本文bytes) を返す。HTTP 429 のときだけ 1・2・4・8 秒待ってやり直す。"""
+    result = _post_once(url, sql, token)
+    for i, wait in enumerate(RETRY_WAITS, 1):
+        if result[0] != 429:
+            return result
+        sys.stderr.write("429: wait %ds (retry %d/%d)\n" % (wait, i, len(RETRY_WAITS)))
+        _sleep(wait)
+        result = _post_once(url, sql, token)
+    return result
 
 
 def first_line(body):
