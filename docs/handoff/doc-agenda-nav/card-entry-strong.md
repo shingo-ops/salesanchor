@@ -37,7 +37,7 @@
 - 作業場所: /Users/tanizawashingo/worktrees/salesanchor/release-doc-agenda-nav-entry-strong（ブランチ release/doc-agenda-nav-entry-strong、起点 origin/main 6ec23c2df738c6e1dd6f892a247c6ad401f780bb）。
 - AGENTS.md:44 の今の文: ``- 手順書・作業方法は目次 `docs/INDEX.md` から章→末端の順にたどって読む``
 - 置き換える文は k12/agents-line44-strong.txt の1行（原因調べの C・D で使ったものと同じ）: ``- 手順や作業方法を答える・計画する前に、必ず目次 `docs/INDEX.md` を開き、章→末端の順にたどって該当する手順書を読む（記憶や推測だけで答えない）``
-- AGENTS.md は54行。行数の上限は80（frontend/scripts/check-claude-size.js:25）。1行の置き換えなので行数は変わらない。
+- AGENTS.md は53行（`wc -l`。当初54と書いたのは誤り。担当の BLOCKED: で訂正 2026-10-25）。行数の上限は80（frontend/scripts/check-claude-size.js:25）。1行の置き換えなので行数は変わらない。
 - k12/prompts.tsv の sha256 は `4259f55d81855d006763b35aca614277d0d27eb98e23cbeceb499d03fadf729d`、k12-tasks.md の sha256 は `820449563a838968f8c0d319fbfdc38c65ac18d848bcd2d93444ec053646dd5e`（§4-4 で k12-tasks.md を変えるので、変えた後は値が変わる）。
 - 変更前の版: 8b54381427c542ff470959753a4b0eb6c3062823（baseline.md で「変更前」とした版。docs/INDEX.md は無い）。
 - k12/runall.sh は題の後ろの文を :8 の `SUF="計画だけを日本語で答えてください。ファイルの変更・commit・push はしないでください。"` で固定している。各題2回。
@@ -106,7 +106,7 @@
 - 変更後の K12 が10以上 → K12 合格。9以下 → K12 未達。
 - 変更前と変更後の差は数字をそのまま記録する。合否は上の2つだけで決める。
 
-- 5-1: `bash -n docs/handoff/doc-agenda-nav/k12/runall.sh` と `python3 -m py_compile docs/handoff/doc-agenda-nav/k12/count.py` が rc=0。`wc -l < AGENTS.md` が 54。`git diff -U0 origin/main -- AGENTS.md` を保存し、差が44行目の1行だけであること。`node frontend/scripts/check-claude-size.js` の rc を保存する（0 であること）。
+- 5-1: `bash -n docs/handoff/doc-agenda-nav/k12/runall.sh` と `python3 -m py_compile docs/handoff/doc-agenda-nav/k12/count.py` が rc=0。`wc -l < AGENTS.md` が 53。`git diff -U0 origin/main -- AGENTS.md` を保存し、差が44行目の1行だけであること。`node frontend/scripts/check-claude-size.js` の rc を保存する（0 であること）。
 - 5-2（数える道具の確かめ。元の生出力には書き込まない）:
   - `mkdir -p /tmp/CC報告ファイル/an-v2` → `cp -R /tmp/CC報告ファイル/an-measure-after/run /tmp/CC報告ファイル/an-v2/chk-a`
     - `python3 docs/handoff/doc-agenda-nav/k12/count.py /tmp/CC報告ファイル/an-v2/chk-a` の最後の行が `K12 1 K10 0 cost 2.8805707` であること。
@@ -145,5 +145,9 @@
 最後の報告は DONE / BLOCKED: / NEEDS_DECISION: のいずれかで始め、次を書く: 5-3 の sha40、新しい HEAD の sha40、5-1〜5-8 の rc と結果、before・after それぞれの count.py の最後の行（read と any の両方）、result-v2-before.tsv・result-v2-after.tsv の全文、claude の版、各実行の開始・終了時刻、保存したファイルのパス一覧。解釈・推測は書かない。
 
 ## 8. 報告欄（担当が追記）
+
+- 実行結果（Sonnet、2026-10-25）: 変更後の版 06fb277192cdc471c84b230a12e5627cea979d7d。変更前 02:43:29〜03:02:14 JST、変更後 03:02:36〜03:21:09 JST。claude 2.1.310。
+- count.py の最後の行（read）: 変更前 K12 4 K10 0 / 変更後 K12 13 K10 7。any も同じ値。
+- 生出力: /tmp/CC報告ファイル/an-v2/（before・after・count-*.txt）。結果表: k12/result-v2-before.tsv・result-v2-after.tsv。
 
 END OF CARD
