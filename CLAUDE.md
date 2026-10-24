@@ -7,7 +7,7 @@
 ## プロジェクト前提
 
 - **PO**: しんごさん（`shingo-ops`）— 本番アクセス・ADR起案・不可逆操作の最終判断
-- **Dev**: Hikky-dev（Claude Code）— 設計・実装・PR起票
+- **役割分担**: [docs/ai-agents/codex-operations.md](docs/ai-agents/codex-operations.md)（目次 [docs/INDEX.md](docs/INDEX.md) の章A から辿る）
 - **事業**: Sales Anchor (salesanchor) — B2B SaaS CRM（HIGH LIFE JPN / Treasure Island JP）
 - **スタック**: Python 3.12 / FastAPI / PostgreSQL 16 | React 18 + TypeScript + Vite | Astro | Docker + さくらVPS
 - **本番 URL**: App `https://app.salesanchor.jp/` / API `https://api.salesanchor.jp/` / LP `https://salesanchor.jp/`
@@ -16,12 +16,6 @@
 - **設計判断**: `docs/adr/ADR-NNN-*.md` で起案。メモリ・チャット履歴を根拠にしない。ADR 追加・変更後は `node scripts/generate-adr-index.js` を実行し `docs/adr/README.md` を再生成してコミットすること。CI「ADR index is up to date」が必須チェック。
 
 ---
-
-## VPS コンテナの落とし穴
-
-- `/app` は書込不可 → 出力先は `/tmp`
-- `docker compose cp backend:/tmp/...` は使えない（tmpfs）→ `docker compose exec -T backend cat /tmp/xxx > host_file`
-- コンテナ再起動で `/tmp` は消える
 
 ## VPS 直作業禁止（技術的にも制限付き鍵のみ）
 
@@ -47,15 +41,10 @@ DROP TABLE / 大量DELETE / `rm -rf` / `git reset --hard` / `git push --force`�
 - **作業開始前に必ず（例外なし）** `bash scripts/new-worktree.sh release/<topic> --claude` で独立ディレクトリを作成（main土台・~/worktrees配下。正典: `docs/specs/branch-operations/README.md §3-3`／詳細: `docs/PARALLEL_TERMINAL_GUIDE.md`）
 - **`.claude/agents/` 変更前は必ず `git pull` で最新取得**（複数セッション同時書き込みによる上書き防止）
 - `develop` / `main` への直接コミット禁止
-- 完了後 `gh pr create --base main` でPR作成 → レビュー後 `main` へマージ（merge commit・squash禁止）
 - **PR作成前に `gh auth status` で `shingo-cc` 名義を確認。`shingo-ops` 名義でのコード変更PR作成は禁止（docs-only PR は除く）。**
 - **release/* → main は PR 経由**（直push禁止・Branch Protection で強制）
-  - リリース相当の大きな変更は `--draft` で起票（**必ず Draft**）→ PO が diff・相乗り PR を確認し GO を出すまで誰も un-draft/マージしない（ADR-1015 の B 区分は Draft にしない）
-  - マージ前に「確認済み：〇〇」コメントを残すこと（チェックリスト形骸化防止）
-  - **緊急 break-glass**（本番障害復旧のみ）: ①PRタイトルに `EMERGENCY:` 明記＋理由 ②Shingo即時報告 ③24h以内に事後Approve＋ログ記録（詳細: `docs/BRANCH_PROTECTION_SETUP.md §4`）
 - **main にマージ＝本番投入可の宣言**（ADR-135）：`migrations/`・`deploy.yml`・本番 `scripts/` を含む実装は PO GO が出るまで release ブランチで待機し main にマージしない。main は待合室ではない。
 - **危険PR（上記パス含む）のGO手順**（ADR-136）：①マージ前にチャットで「対象・変更3行サマリ・直前バックアップ確認」をPOに提示 ②POの「GO #PR番号」（番号必須・番号なし曖昧肯定は無効）を受領するまでマージ・適用しない ③受領後は PR本文に `### GO記録`（GO発行者・日時・GO原文・バックアップ確認）セクションを転記 ④GO権限はPO（Shingo）。ADR-1003により例外を除き Claude Opus 設計担当へ常時委譲（PO「委譲停止」で解除）
-- **リリース PR 作成時**は `git diff main...HEAD --name-only` で全 PR・全 migration を列挙し PR 本文に記載。**1リリース1テーマ**：`migrations/` に無関係トラックの混入がないか明示確認。GO記録に相乗り全 PR を明記（#2446/#2503 教訓）。危険パスが含まれたら停止して PO 確認。
 
 ### 長命ブランチ消失防止（develop は第3便まで残置・ロールバック用・新規作業での使用禁止）
 
@@ -70,14 +59,6 @@ DROP TABLE / 大量DELETE / `rm -rf` / `git reset --hard` / `git push --force`�
 ## 標準開発フロー（正本: docs/STANDARD-WORKFLOW.md）
 
 **作業開始前に `docs/STANDARD-WORKFLOW.md` を必ず read すること。** 全タスクは例外なく3フェーズ: ①KGI設定（定量・PO承認。ADR-1015 の B 区分は不要）→②現在地把握（recon・file:line・推測禁止）→③実現方法の設計（How/KPI/弊害/計画/継続＋外部事例検討）。成果物は中身が揃って初めて成果物（在るだけ不可）。
-### 成果物の完了定義（必須）
-- **着手前に既存 ADR を検索**（機能キーワードで `git grep -i docs/adr/` ＋ `docs/adr/FEATURE-INDEX.md`）。ADR は自動ロードされない＝指さないと見落とす。結果を recon.md に明記。
-- recon.md: フルパス:行番号 で引用（例: `.github/workflows/x.yml:15`）。短縮禁止。
-- design.md: recon/ADR 相互参照 ＋ `|基準|検証方法|` テーブル ＋ 外部事例欄 記入済み。
-- PR本文: `### 標準ワークフロー確認` セクション必須。
-- recon.md と design.md は必ず git add してからコミットすること。
-- **KGI/KPIの粒度**: POが画面・出力で○×を一義に判定できる粒度で書く（抽象語=統一/改善/正常 禁止→観測可能な事象に分解）。
-- **役割**: Generatorは単純作業のみ。Plannerが file:line＋変更前後コード＋触らない範囲まで設計。実装不備/PO不満=設計粒度の責任。
 
 ---
 
@@ -102,19 +83,6 @@ DROP TABLE / 大量DELETE / `rm -rf` / `git reset --hard` / `git push --force`�
 ## ADRと実装の優先順位（最上位原則）
 ADRと既存実装が食い違う箇所は必ずADRを優先し、追加安全マイグレーションでコードをADRへ寄せる（逆はしない）。
 
-## このファイルにルールを追加する前に
-
-以下に順番に答える:
-
-1. CI / ESLint / Husky が既に強制しているか？ → YES: **書かない**（CSS変数・アイコン・デザイントークン規約はこれ）
-2. `frontend/` だけに関係するか？ → YES: **`frontend/CLAUDE.md`** に追加
-3. `backend/` だけに関係するか？ → YES: **`backend/CLAUDE.md`** に追加
-4. frontend と backend 両方に等しく関係するか？ → YES: **このファイル** に追加（i18n 等）
-5. Generator / Evaluator / Reviewer の動作手順か？ → YES: **`~/.claude/agents/`** の該当ファイルに追加
-6. `~/.claude/rules/` に同等の内容が既にあるか？ → YES: **書かない**（Git workflow・coding-style 等）
-7. 全セッションで Claude が知る必要があるか？ → NO: **書かない**（ADRリンクか docs/ 参照で十分）
-8. 上記をすべて通過した場合のみ追加。既存セクションへの統合を最優先（新セクション追加は最後の手段）。
-**ファイル全体が 120 行を超えたら `frontend/scripts/check-claude-size.js` がコミットをブロックする。**
 ## UIガバナンス遵守（ADR-144）
 UI部品新設時は必ず `components/` の金型を先確認。生select/生input/生checkbox/生radio/自作タブ/色直値禁止。例外は `ui-allow: <理由> (#<番号>)` コメント付与（理由＋番号の両方必須）。詳細: `docs/CC_UI_GOVERNANCE.md`
 実装・調査の作業前/commit前/PR前チェックは docs/ai-agents/executor-checklist.md（正本・必読）に従う。

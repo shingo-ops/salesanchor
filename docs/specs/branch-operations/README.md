@@ -79,6 +79,29 @@ develop ブランチが存在しない。撤去は全工程の最後。撤去前
 - 子1 recon.md: 親のKGIを満たすための現在地把握（file:line実物）
 - 子2 design.md: 親のKGIとreconに基づく実現設計（各便の受入基準・KPI）
 
+## 8. 日々の運用ルール（入口から写した決まり）
+
+入口（CLAUDE.md・AGENTS.md）の「ブランチ運用ルール」節から、文を変えずに写しました（2026-10-23・ADR-1040 段3b）。
+
+- 完了後 `gh pr create --base main` でPR作成 → レビュー後 `main` へマージ（merge commit・squash禁止）
+- **release/* → main は PR 経由**（直push禁止・Branch Protection で強制）
+  - リリース相当の大きな変更は `--draft` で起票（**必ず Draft**）→ PO が diff・相乗り PR を確認し GO を出すまで誰も un-draft/マージしない（ADR-1015 の B 区分は Draft にしない）
+  - マージ前に「確認済み：〇〇」コメントを残すこと（チェックリスト形骸化防止）
+  - **緊急 break-glass**（本番障害復旧のみ）: ①PRタイトルに `EMERGENCY:` 明記＋理由 ②Shingo即時報告 ③24h以内に事後Approve＋ログ記録（詳細: `docs/BRANCH_PROTECTION_SETUP.md §4`）
+  - マージ方法は必ず "Create a merge commit"（squash 禁止 — back-merge が永続発生するため）
+- マージ前は reviewer(opus) の `VERDICT: APPROVE on <sha> PR #<N>` 行つき報告が必須（ADR-1029 のフックで強制）
+- **main にマージ＝本番投入可の宣言**（ADR-135）：`migrations/`・`deploy.yml`・本番 `scripts/` を含む実装は PO GO が出るまで release ブランチで待機し main にマージしない。main は待合室ではない。
+- **危険PR（上記パス含む）のGO手順**（ADR-136）：①マージ前にチャットで「対象・変更3行サマリ・直前バックアップ確認」をPOに提示 ②POの「GO #PR番号」（番号必須・番号なし曖昧肯定は無効）を受領するまでマージ・適用しない ③受領後は PR本文に `### GO記録`（GO発行者・日時・GO原文・バックアップ確認）セクションを転記 ④GO権限はPO（Shingo）。ADR-1003により例外を除き Claude Opus 設計担当へ常時委譲（PO「委譲停止」で解除）
+- **リリース PR 作成時**は `git diff main...HEAD --name-only` で全 PR・全 migration を列挙し PR 本文に記載。**1リリース1テーマ**：`migrations/` に無関係トラックの混入がないか明示確認。GO記録に相乗り全 PR を明記（#2446/#2503 教訓）。危険パスが含まれたら停止して PO 確認。
+
+### 長命ブランチ消失防止（develop は第3便まで残置・ロールバック用・新規作業での使用禁止）
+
+- GitHub の削除保護を使えない前提では、`main` / `develop` は「物理的に消さない」運用で固定する
+- `main` / `develop` に対する `git push --delete`、GitHub UI の branch delete、`gh api` の ref delete は実行しない
+- `--delete-branch` は feature head のみ許可し、長命ブランチには使わない
+- `./scripts/dev/executor-preflight.sh` は `origin/main` の存在を毎回確認する（#2715 で main-only 化済み）
+- もし `main` / `develop` が欠落していたら、作業は止めて PO に報告する
+
 ---
 
 *本仕様書は develop 廃止作業の正本。recon.md / design.md は本書に紐づけて docs/handoff/ 配下に追加する。*

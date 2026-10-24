@@ -20,7 +20,7 @@ jobs:
         id: changed
         run: |
           BASE_SHA="${{ github.event.pull_request.base.sha }}"
-          CHANGED=$(git diff --name-only "${BASE_SHA}...HEAD" -- '**/CLAUDE.md' 2>/dev/null || echo "")
+          CHANGED=$(git diff --name-only "${BASE_SHA}...HEAD" -- 'CLAUDE.md' 'AGENTS.md' '**/CLAUDE.md' '**/AGENTS.md' 'docs/INDEX.md' 2>/dev/null || echo "")
           if [ -n "$CHANGED" ]; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
             echo "✅ CLAUDE.md に変更あり — サイズチェックを実行します"

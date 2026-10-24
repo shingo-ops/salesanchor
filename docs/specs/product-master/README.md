@@ -132,6 +132,8 @@
 
 - [インポート・解析・配信の統合設計（第1段階）](../../handoff/pmg-import-delivery-ssot/design.md)
 - [同テーマの実物確認](../../handoff/pmg-import-delivery-ssot/recon.md)
+- [商品分類の決定記録](./product-classification-decisions.md)
+- [開発計画書: 商品マスタ 英語名・発売日の欠損補完（tcg_products）](./dev-plans/2026-09-tcg-product-master-fill-title-date.md)
 
 
 ## 8. 商品一覧の発売日順・作品タブ（2026-09-11）
