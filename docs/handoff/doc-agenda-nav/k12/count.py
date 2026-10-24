@@ -1,6 +1,7 @@
 import json,os,sys
 D=sys.argv[1]
 R=int(sys.argv[2]) if len(sys.argv)>2 else 2
+M=sys.argv[3] if len(sys.argv)>3 else 'any'
 gold={'T1':['docs/CC_UI_GOVERNANCE.md'],'T2':['docs/specs/branch-operations/README.md','docs/PARALLEL_TERMINAL_GUIDE.md'],
 'T3':['docs/ai-agents/executor-checklist.md'],'T4':['docs/STANDARD-WORKFLOW.md'],'T5':['docs/runbooks/secret-rotation.md'],
 'T6':['docs/runbooks/alerts.md'],'T7':['docs/runbooks/weekly-stale-tasks.md'],'T8':['docs/runbooks/bundle-sale-new-wording.md'],
@@ -25,6 +26,7 @@ for t in gold:
             for c in d.get('message',{}).get('content',[]):
                 if c.get('type')=='tool_use':
                     n+=1; s=json.dumps(c.get('input'),ensure_ascii=False)
+                    if M=='read' and c.get('name') not in ('Read','Bash','Grep','Glob'): continue
                     if any(g in s for g in gold[t]): op=1
                     if 'docs/INDEX.md' in s: ix=1
         elif t=='T10' and d.get('type')!='result' and 'frontend/CLAUDE.md' in line and d.get('type') in ('system','attachment','user'):

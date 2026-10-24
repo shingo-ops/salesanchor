@@ -41,7 +41,7 @@ DROP TABLE / 大量DELETE / `rm -rf` / `git reset --hard` / `git push --force`�
 - 実行役は作業開始前に必ず `./scripts/dev/executor-preflight.sh || exit 1` を実行する
 - 全タスクは `docs/STANDARD-WORKFLOW.md` の3フェーズ（KGI→現在地→設計）に従う
 - 作業前/commit前/PR前のチェックは `docs/ai-agents/executor-checklist.md`（正本・必読）
-- 手順書・作業方法は目次 `docs/INDEX.md` から章→末端の順にたどって読む
+- 手順や作業方法を答える・計画する前に、必ず目次 `docs/INDEX.md` を開き、章→末端の順にたどって該当する手順書を読む（記憶や推測だけで答えない）
 - 画面は `frontend/AGENTS.md`、サーバー側は `backend/AGENTS.md` の決まりにも従う
 
 ## i18n 強制（ADR-027）

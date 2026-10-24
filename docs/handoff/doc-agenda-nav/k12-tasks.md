@@ -27,3 +27,10 @@ K10 は同じ実行で docs/INDEX.md を含む tool_use の有無を数える（
 
 ## 注意（未確認）
 - frontend/CLAUDE.md は frontend 配下のファイルを読むと自動で読み込まれる場合があり、tool_use に出ない可能性がある（T10）。stream-json にその読み込みが出るかは未確認。出なければ T10 は「tool_use で開いた」だけを数え、その旨を記録する。
+
+## 2026-10-25 の改定（PO「1」2026-10-25）
+
+この日以降の測定（k12/result-v2-*.tsv）は次の条件に変える。前の測定（result.tsv・result-after.tsv）は上の条件のまま残す。
+- 共通の末尾文: 「日本語で答えてください。ファイルの変更・commit・push はしないでください。」（k12/suffix-open.txt。実際の依頼に近づけるため「計画だけ」を外した）
+- 「開いた」の定義: 読む道具（Read・Bash・Grep・Glob）の tool_use の input に、正解の集合のどれかのパスが含まれていれば 1。Write・Edit などの書く道具は数えない（`count.py <dir> 2 read`）。K10 も同じ数え方。
+- 実行: `runall.sh <OUT_DIR> <COPY_DIR> docs/handoff/doc-agenda-nav/k12/suffix-open.txt`。claude の引数・各題2回は上と同じ。
