@@ -10,10 +10,12 @@
  */
 
 import { readFileSync, existsSync } from 'fs';
-import { join } from 'path';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import { execSync } from 'child_process';
 
-const repoRoot = execSync('git rev-parse --show-toplevel', { encoding: 'utf8' }).trim();
+// フックの中では GIT_DIR が設定され git rev-parse --show-toplevel が今いる場所を返すので、スクリプト自身の場所から根を求める（frontend/scripts/ の2つ上）
+const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
 
 // 各 CLAUDE.md の上限行数（超過すると CI / pre-commit がブロック）
