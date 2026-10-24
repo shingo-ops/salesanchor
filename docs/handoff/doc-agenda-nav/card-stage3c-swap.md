@@ -326,4 +326,10 @@ const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
 ### 12-5. 報告欄（担当が追記）
 
+- 修正 commit: 246cef568（check-claude-size.js のみ、+4 -2）。生出力: /tmp/CC報告ファイル/an-stage3c/impl2/12-*.txt
+- 12-a rc=0／12-b rc=0 PASSED／12-c rc=0 PASSED／12-d rc=1 で `❌ AGENTS.md: 83行（上限80行）`、AGENTS.md 復元後 diff rc=0 出力なし
+- 12-e rc=0 差分は -2 行・+4 行で §12-2 と同文
+- 12-f commit 時の pre-commit に `✅ CLAUDE.md サイズチェック PASSED`（12-f.txt 5行目）
+- 12-g `gh pr checks 4710 --repo shingo-ops/salesanchor` は rc=1「no checks reported on the 'release/doc-agenda-nav-stage3c-swap' branch」（12-g.txt）
+
 END OF CARD
