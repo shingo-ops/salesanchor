@@ -8,6 +8,7 @@
 | A 開発の進め方 | [標準開発フロー](STANDARD-WORKFLOW.md) | 便（1回の作業）を始める前 |
 | A 開発の進め方 | [実行役のチェックリスト](ai-agents/executor-checklist.md) | 実装・調査の作業前、commit の前、PR を作る前 |
 | A 開発の進め方 | [ブランチ運用](specs/branch-operations/README.md) | ブランチと作業場所を作る前、PR を作る・マージする前 |
+| A 開発の進め方 | [並行ターミナルの使い方](PARALLEL_TERMINAL_GUIDE.md) | 作業場所（worktree）を複数並べて作業するとき |
 | A 開発の進め方 | [設計パートナーの手順](ai-agents/design-partner.md) | 設計の担当（Planner・Architect）を始めるとき |
 | A 開発の進め方 | [実装役への指示の定型文](ai-agents/executor-preamble.md) | 実装役に作業を渡す指示を書くとき |
 | A 開発の進め方 | [教訓メモのフォルダ](ai-agents/lessons.d/)（まとめて読む: `bash scripts/lessons-view.sh`） | 設計・審査で、過去の失敗を確かめるとき |
@@ -27,7 +28,7 @@
 
 ## このファイルにルールを追加する前に
 
-> この節は入口 CLAUDE.md から写した決まり（doc-agenda-nav 段3b）。節の中の「このファイル」は入口の CLAUDE.md を指す。
+> この節は入口から写した決まり（doc-agenda-nav 段3b）。節の中の「このファイル」は入口の AGENTS.md を指す（段3c で本文の正本を CLAUDE.md から AGENTS.md へ移した）。
 
 以下に順番に答える:
 
@@ -39,4 +40,4 @@
 6. `~/.claude/rules/` に同等の内容が既にあるか？ → YES: **書かない**（Git workflow・coding-style 等）
 7. 全セッションで Claude が知る必要があるか？ → NO: **書かない**（ADRリンクか docs/ 参照で十分）
 8. 上記をすべて通過した場合のみ追加。既存セクションへの統合を最優先（新セクション追加は最後の手段）。
-**ファイル全体が 120 行を超えたら `frontend/scripts/check-claude-size.js` がコミットをブロックする。**
+**入口の AGENTS.md が 80 行、CLAUDE.md が 10 行、この目次が 60 行を超えたら `frontend/scripts/check-claude-size.js` がコミットをブロックする。**
