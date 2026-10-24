@@ -143,7 +143,7 @@ export function SignupView({ onToLogin }: SignupViewProps) {
         </p>
       )}
       <Button type="submit" fullWidth loading={busy} disabled={busy}>
-        {busy ? t("viewer.signup.submitting") : t("viewer.signup.submit")}
+        {t("viewer.signup.submit")}
       </Button>
       <Button type="button" variant="secondary" fullWidth onClick={onToLogin} data-testid="viewer-signup-back">
         {t("viewer.signup.backToLogin")}

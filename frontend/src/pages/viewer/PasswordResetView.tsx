@@ -163,7 +163,7 @@ export function PasswordResetView({ token, onToLogin }: PasswordResetViewProps) 
           </p>
         )}
         <Button type="submit" fullWidth loading={busy} disabled={busy}>
-          {busy ? t("viewer.reset.submitting") : t("viewer.reset.submit")}
+          {t("viewer.reset.submit")}
         </Button>
       </form>
     );
@@ -188,7 +188,7 @@ export function PasswordResetView({ token, onToLogin }: PasswordResetViewProps) 
         </p>
       )}
       <Button type="submit" fullWidth loading={busy} disabled={busy}>
-        {busy ? t("viewer.reset.sending") : t("viewer.reset.send")}
+        {t("viewer.reset.send")}
       </Button>
       <Button type="button" variant="secondary" fullWidth onClick={onToLogin} data-testid="viewer-reset-back">
         {t("viewer.reset.backToLogin")}
