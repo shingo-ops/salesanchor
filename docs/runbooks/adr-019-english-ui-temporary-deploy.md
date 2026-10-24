@@ -183,7 +183,7 @@ ADR-019 §パートナーへの委任事項 §2 への回答。
 
 ### 4-2. ロールバック PR 作成（Hikky-dev）
 
-通常の develop → main リリース PR と同じ手順（[CLAUDE.md ブランチ運用ルール](../../CLAUDE.md) §「develop → main も PR 経由」）。
+通常の develop → main リリース PR と同じ手順（[ブランチ運用](../specs/branch-operations/README.md) §8）。
 
 ```
 gh pr create \

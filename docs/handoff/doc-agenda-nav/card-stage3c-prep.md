@@ -234,4 +234,15 @@ grep -c '^OK' /tmp/CC報告ファイル/an-stage3c/impl1/k11.txt; grep -c '^MISS
 
 ## 11. 報告欄（担当が追記）
 
+本報告はカード doc-agenda-nav 段3c-1 の実行結果である。
+
+- 5-0: 起点 50d7f52da。45/88/40 行、引用行は F2・F3・F5・F7 と一致（/tmp/CC報告ファイル/an-stage3c/impl1/s50.txt）。
+- 5-1: diff 4本とも出力なし。INDEX.md の16・18行目は §4-2 の全文と同じ。
+- 5-2: OK 4・MISSING 0。
+- 5-3: 各 -1/+1 行、node --check exit 0。
+- 5-4: 132 PASS / 0 FAIL、exit 0。
+- 5-5: SUMMARY unreached=0 deep=2 blank_when=0 no_when_column=0 broken_link=8 warnings=10（起点と同じ）。
+- 5-6: 53 行・9 行（合計 62）。
+- 5-7: 変更は §3 のファイルのみ。
+
 END OF CARD

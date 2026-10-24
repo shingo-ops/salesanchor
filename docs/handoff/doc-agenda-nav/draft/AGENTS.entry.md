@@ -43,3 +43,11 @@ DROP TABLE / 大量DELETE / `rm -rf` / `git reset --hard` / `git push --force`�
 - 作業前/commit前/PR前のチェックは `docs/ai-agents/executor-checklist.md`（正本・必読）
 - 手順書・作業方法は目次 `docs/INDEX.md` から章→末端の順にたどって読む
 - 画面は `frontend/AGENTS.md`、サーバー側は `backend/AGENTS.md` の決まりにも従う
+
+## i18n 強制（ADR-027）
+
+全 UI 文字列は `t("key")` 経由（JSX / aria-label / placeholder / title すべて）。`ja.json` と `en.json` は同一キー必須。ハードコード日本語は絶対禁止。詳細: `docs/adr/ADR-027-ui-internationalization.md`、grep セルフチェック: `frontend/CLAUDE.md`
+
+## UIガバナンス遵守（ADR-144）
+
+UI部品新設時は必ず `components/` の金型を先確認。生select/生input/生checkbox/生radio/自作タブ/色直値禁止。例外は `ui-allow: <理由> (#<番号>)` コメント付与（理由＋番号の両方必須）。詳細: `docs/CC_UI_GOVERNANCE.md`
