@@ -207,8 +207,8 @@ export function NoteMasterPanel() {
       <ContentToolbar
         right={
           <>
-            <HeaderButton variant="secondary" disabled={exporting} data-testid="note-master-export" onClick={() => void downloadExport()}>
-              {t(exporting ? "common.loading" : "noteMasterCsv.exportButton")}
+            <HeaderButton loading={exporting} variant="secondary" disabled={exporting} data-testid="note-master-export" onClick={() => void downloadExport()}>
+              {t("noteMasterCsv.exportButton")}
             </HeaderButton>
             <HeaderButton variant="primary" data-testid="note-master-import" onClick={() => navigate("/super-admin/masters/note-master/import")}>
               {t("noteMasterCsv.importButton")}

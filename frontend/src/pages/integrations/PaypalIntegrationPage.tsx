@@ -179,12 +179,12 @@ export default function PaypalIntegrationPage() {
               {t("paypalIntegration.disconnect")}
             </Button>
           )}
-          <Button variant="primary" size="md"
+          <Button loading={busy} variant="primary" size="md"
 
             disabled={busy || !clientId || !clientSecret}
             onClick={handleSave}
           >
-            {busy ? t("paypalIntegration.saving") : t("paypalIntegration.save")}
+            {t("paypalIntegration.save")}
           </Button>
         </div>
         {saved && <p className="success-message">{t("paypalIntegration.saved")}</p>}
@@ -194,12 +194,12 @@ export default function PaypalIntegrationPage() {
       <section className="card">
         <h3>{t("paypalIntegration.testTitle")}</h3>
         <div className="form-actions">
-          <Button variant="primary" size="md"
+          <Button loading={busy} variant="primary" size="md"
 
             disabled={busy || !status?.configured}
             onClick={handleTest}
           >
-            {busy ? t("paypalIntegration.testing") : t("paypalIntegration.testButton")}
+            {t("paypalIntegration.testButton")}
           </Button>
         </div>
         {!status?.configured && (
@@ -222,8 +222,8 @@ export default function PaypalIntegrationPage() {
           <h3>{t("paypalIntegration.payTestTitle")}</h3>
           <p className="form-hint">{t("paypalIntegration.payTestHint")}</p>
           <div className="form-actions">
-            <Button variant="primary" size="md" disabled={busy} onClick={handlePaymentTest}>
-              {busy ? t("paypalIntegration.payTestRunning") : t("paypalIntegration.payTestButton")}
+            <Button loading={busy} variant="primary" size="md" disabled={busy} onClick={handlePaymentTest}>
+              {t("paypalIntegration.payTestButton")}
             </Button>
           </div>
           {payTest && (

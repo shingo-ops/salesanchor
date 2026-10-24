@@ -183,13 +183,13 @@ export function RuleManagementPanel() {
                 >
                   {t("common.search")}
                 </HeaderButton>
-                <HeaderButton
+                <HeaderButton loading={exporting}
                   variant="secondary"
                   disabled={exporting}
                   data-testid="rule-management-export-btn"
                   onClick={() => void downloadExport()}
                 >
-                  {t(exporting ? `${f}.exporting` : `${f}.export`)}
+                  {t(`${f}.export`)}
                 </HeaderButton>
                 <HeaderButton
                   variant="primary"
