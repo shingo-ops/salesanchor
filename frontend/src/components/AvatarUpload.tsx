@@ -96,7 +96,6 @@ export function AvatarUpload({
               size="sm"
               onClick={openPicker}
               loading={uploading}
-              loadingText={labels.uploading}
               disabled={uploading}
             >
               {hasImage ? labels.change : labels.choose}

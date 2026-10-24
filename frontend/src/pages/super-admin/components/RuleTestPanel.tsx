@@ -362,7 +362,7 @@ export function RuleTestPanel() {
             {t(`${f}.casesTitle`)}
           </h3>
           <div style={{ display: "flex", gap: "var(--space-2)" }}>
-            <Button variant="secondary" size="sm" onClick={() => { void handleSeedCases(); }} loading={seeding} loadingText={t(`${f}.seeding`)}>
+            <Button variant="secondary" size="sm" onClick={() => { void handleSeedCases(); }} loading={seeding}>
               {t(`${f}.seedCases`)}
             </Button>
             <Button variant="secondary" size="sm" onClick={() => setAddOpen(true)}>
@@ -386,7 +386,6 @@ export function RuleTestPanel() {
           onClick={() => { void handleRunTests(); }}
           disabled={cases.length === 0 || isRunningState}
           loading={isRunningState}
-          loadingText={t(`${f}.running`)}
         >
           {t(`${f}.runAll`)}
         </Button>

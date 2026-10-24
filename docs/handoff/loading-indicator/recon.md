@@ -93,3 +93,9 @@ ADR-027（i18n）・ADR-067（デザイントークン）・ADR-144（UIガバ�
 - 形: 枠自身が文字を持つのは ProtectedRoute:15・InventorySearchBar:380 と、選択肢の一覧の中の ChannelTypeCombobox:165・CountryCombobox:164（context.txt）。
 - 試験: NeedsReviewTabsPanel.view.test.tsx:119-125 は Spinner を期待済み（tests.txt）。
 - 実装後の件数（countLoadingText、/tmp/CC報告ファイル/loading-stage2-bin4/impl/count-*.txt）: 対象 23 ファイル 25→1、features+components 本体 31→7。
+## 段階3 の調査（origin/main 50d7f52da、生出力 /tmp/CC報告ファイル/loading-button-recon/）
+- C10 金型: Button.tsx:28-29 に loading・loadingText、68-69 で loading 中は Spinner＋`loadingText ?? children`、62 で disabled||loading、63 で aria-busy。HeaderButton.tsx:16-36 に loading なし（テキスト用は Button に children と disabled だけ渡す。icon 用は生 button）。ButtonLink・IconToggleButton に loading なし（buttons.txt）。
+- targets 134 件・94 ファイル（targets.tsv）: 金型 Button 87・HeaderButton 38・生 button 9。キーは common.loading 40・common.saving 30・common.processing 3 ほか（counts.txt）。loading prop を既に併用し文言も替えているもの 7 件（FedExRateModal:207・ReviewValueFixForm:117・viewer 5 画面）。
+- excluded 35 件（excluded.tsv）: Button の loadingText 属性 8・AsyncCombobox の loadingText 3・ボタン外 15・誤検出 2・他部品の属性 2・関数 1・sr-only 1・AvatarUpload 経由 1・金型本体 1。
+- 試験: 押下中の文字を検査する A群 7 ファイル 12 点、金型自身 Button.test.tsx:87,98-106・ButtonLink.test.tsx:89（tests.txt）。
+- 検査: check-ui-governance.js の countLoadingText は `t("…loading…")` だけを数え、common.saving 等や `t(cond ? a : b)` は数えない（buttons.txt 末尾）。

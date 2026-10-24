@@ -34,6 +34,18 @@ describe("HeaderButton contract", () => {
     },
   );
 
+  it("passes loading to Button: spinner, same label, aria-busy and disabled", () => {
+    const click = vi.fn();
+    render(<HeaderButton variant="ghost" loading onClick={click} data-testid="header-loading">Action</HeaderButton>);
+    const button = screen.getByTestId("header-loading") as HTMLButtonElement;
+    expect(button.getAttribute("aria-busy")).toBe("true");
+    expect(button.disabled).toBe(true);
+    expect(button.textContent).toBe("Action");
+    expect(button.querySelector(".sa-spinner")).not.toBeNull();
+    fireEvent.click(button);
+    expect(click).not.toHaveBeenCalled();
+  });
+
   it("keeps the icon variant on its native icon-btn implementation", () => {
     const click = vi.fn();
     const { rerender } = render(

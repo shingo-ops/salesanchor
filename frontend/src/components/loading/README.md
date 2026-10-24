@@ -104,10 +104,10 @@ const [status, setStatus] = useState<SaveStatus>('idle');
 これらは新コンポーネントを足さず、**既存の仕組みにCSS/propを少し足すだけ**が最適です。
 
 ### ① Button の `loading`
-既存 `Button` に `loading?: boolean` と `loadingText?: string` を追加し、`true` のとき
-`disabled` + 先頭に `<Spinner size="sm" onAccent={variant==='primary'} />` を差し込むだけ。
+既存 `Button` の `loading?: boolean` が `true` のとき、`disabled` + 先頭に Spinner を差し込み、
+文字は元の `children` のまま丸と並べる。`loadingText` は廃止した（段階3 便1）。
 ```tsx
-<Button variant="primary" loading={isPending} loadingText="保存中">保存</Button>
+<Button variant="primary" loading={isPending}>保存</Button>
 ```
 
 ### ② StatusBadge＝既存 `Badge`

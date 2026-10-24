@@ -24,6 +24,7 @@ type BaseProps = {
 // テキストボタン: aria-label は任意
 type TextButtonProps = BaseProps & {
   variant: "ghost" | "primary" | "secondary";
+  loading?: boolean;
   "aria-label"?: string;
 };
 
@@ -37,6 +38,7 @@ export type HeaderButtonProps = TextButtonProps | IconButtonProps;
 
 export function HeaderButton(props: HeaderButtonProps) {
   const { variant, onClick, disabled, children } = props;
+  const loading = "loading" in props ? props.loading : undefined;
   const ariaLabel = "aria-label" in props ? props["aria-label"] : undefined;
   const tooltip = "data-tooltip" in props ? props["data-tooltip"] : undefined;
   const testId = "data-testid" in props ? props["data-testid"] : undefined;
@@ -49,6 +51,7 @@ export function HeaderButton(props: HeaderButtonProps) {
         size="md"
         onClick={onClick}
         disabled={disabled}
+        loading={loading}
         aria-label={ariaLabel}
         data-tooltip={tooltip}
         data-testid={testId}

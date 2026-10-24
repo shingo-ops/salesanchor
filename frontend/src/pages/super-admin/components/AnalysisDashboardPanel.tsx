@@ -818,7 +818,6 @@ function ImportTabContent({ data, trend, loading, error, trendDays, t, onNavigat
           onClick={handleUpload}
           disabled={uploading || !selectedFile}
           loading={uploading}
-          loadingText={t("analysisRules.dashboard.importUploading")}
         >
           {t("analysisRules.dashboard.importUploadButton")}
         </Button>
