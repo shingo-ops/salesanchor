@@ -5,7 +5,7 @@
 ## 目的（PO の言葉）
 「誰が検索しても出てこないように出来る？集客用のLPではないので出したくない」
 
-## 現状（recon.md を参照）
+## 現状（docs/handoff/app-noindex/recon.md を参照）
 - frontend/index.html に robots の meta はない（recon 1）
 - 本番の `/` と `/login` に robots の meta も X-Robots-Tag もない（recon 6）
 - head の meta を動的に書き換えるコードはない（recon 2）
@@ -52,3 +52,5 @@ Google 公式ヘルプ（developers.google.com/search/docs/crawling-indexing/blo
 
 ## 維持の仕組み
 ADR-1044 に、アプリも対象であることを書く。
+
+守り手: 人手で守る（理由: meta 1 行の変更で自動テストの対象にしない。確認は本番 HTML の grep で行い、記録は ADR-1044 の追記に残す）
