@@ -98,3 +98,9 @@
   - `git diff bc0a2e241 HEAD -- <13件>` は空（.claude/settings.json を含め差分なし）
   - 取り込みで入った本線側の変更は4件（ADR-1032 追記、doc-agenda-nav カード、master-register-rules-guard.py の正規表現、その試験）。scripts/agent-hooks/cloud/ と .claude/settings.json はこれらを参照していない（grep 0件）。cloud/dispatch.sh が呼ぶのは同じ階層の guard_pre_tool.py・guard_stop.py・session_start.py のみ
 - テスト結果: `/tmp/CC報告ファイル/cloud-parity-bin1/review4-test.txt`（全件OK・終了コード0）。差分の生出力: `/tmp/CC報告ファイル/cloud-parity-bin1/review4-diff.txt`
+
+## 別カード 指摘1・2 の対処（PR #<番号>）
+
+- 直したこと: `guard_pre_tool.py` の `head_branch` の Bash の道を、命令文全体への正規表現から、`shlex` で語に分けて `gh pr create` / `gh api` の引数として読む方式に変えた。本文・ヘッダなど「値を取る選択肢」の値は作成元として読まない（止め漏れ＝指摘1 を解消）。
+- 直したこと: gh api の `-H`/`--header` は値ごと読み飛ばすので、`-H 'Accept: …'` が `-f head=` より後ろにあっても枝名と誤読されない（止めすぎ＝指摘2 を解消）。引用符が閉じていない命令は止める側に倒す。
+- 試験: `scripts/agent-hooks/cloud/test.sh` に H1〜H5 を追加（H1 本文中の -H／H2 本文中の --head／H3 末尾ヘッダ／H4 Accept ヘッダが後ろ／H5 引用符未閉）。H6 は既存ケースが同じ結果であること。

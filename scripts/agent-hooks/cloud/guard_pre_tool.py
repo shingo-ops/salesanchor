@@ -7,6 +7,7 @@ pr-body-guard.sh（K4）。PR 作成の範囲の止め（K3）は新規。PreToo
 import json
 import os
 import re
+import shlex
 import subprocess
 import sys
 
@@ -177,6 +178,97 @@ def changed_files(cwd: str, branch=None):
 _BRANCH_OK = re.compile(r"^[A-Za-z0-9._/][A-Za-z0-9._/-]*$")
 
 
+# gh pr create が「値を取る」選択肢（次の語を値として読み飛ばす）。
+# 出典: `gh pr create --help` の FLAGS（-a -B -b -F -H -l -m -p -r -T -t と --recover）。
+_PR_VAL_SHORT = set("aBbFHlmprTt")
+_PR_VAL_LONG = {"assignee", "base", "body", "body-file", "head", "label", "milestone",
+                "project", "recover", "reviewer", "template", "title"}
+# gh api が値を取る選択肢（出典: `gh api --help`）。-f/-F/--field/--raw-field の値だけが head の候補。
+_API_VAL_SHORT = set("fFHXqtp")
+_API_VAL_LONG = {"field", "raw-field", "header", "method", "jq", "template", "input",
+                 "hostname", "cache", "preview"}
+_API_FIELD_SHORT = set("fF")
+_API_FIELD_LONG = {"field", "raw-field"}
+
+
+def _split_commands(cmd: str):
+    """命令文を shlex で語に分け、&& || ; | & で区切った命令ごとの語の列を返す。閉じていない引用符は ValueError。"""
+    lex = shlex.shlex(strip_heredoc_bodies(cmd), posix=True, punctuation_chars=True)
+    lex.whitespace_split = True
+    segs, cur = [], []
+    for t in lex:
+        if t and set(t) <= set("();<>|&") and t in ("&&", "||", ";", "|", "&", "|&"):
+            segs.append(cur)
+            cur = []
+        else:
+            cur.append(t)
+    segs.append(cur)
+    return segs
+
+
+def _find_seq(words, seq):
+    n = len(seq)
+    for i in range(len(words) - n + 1):
+        if words[i:i + n] == seq:
+            return i + n
+    return None
+
+
+def _flag_value(words, i, short_vals, long_vals):
+    """words[i] が値を取る選択肢なら (名前, 値, 次の位置)、そうでなければ None。名前は '-x' か '--xxx'。"""
+    w = words[i]
+    if w.startswith("--") and len(w) > 2:
+        name, eq, val = w[2:].partition("=")
+        if name not in long_vals:
+            return None
+        if eq:
+            return "--" + name, val, i + 1
+        return "--" + name, (words[i + 1] if i + 1 < len(words) else ""), i + 2
+    if w.startswith("-") and len(w) >= 2 and w[1] in short_vals:
+        if len(w) > 2:
+            v = w[2:]
+            return "-" + w[1], (v[1:] if v.startswith("=") else v), i + 1
+        return "-" + w[1], (words[i + 1] if i + 1 < len(words) else ""), i + 2
+    return None
+
+
+def _bash_head(cmd: str):
+    """Bash の gh pr create / gh api の作成元を、語に分けた引数から読む。無ければ None。
+    読めない（引用符が閉じていない・gh の位置が語から取れない）ときは ValueError（止める側）。"""
+    try:
+        segs = _split_commands(cmd)
+    except ValueError as e:
+        raise ValueError("命令文を語に分けられません: " + str(e))
+    found, last = False, None
+    for words in segs:
+        i = _find_seq(words, ["gh", "pr", "create"])
+        if i is not None:
+            found = True
+            while i < len(words):
+                r = _flag_value(words, i, _PR_VAL_SHORT, _PR_VAL_LONG)
+                if r is None:
+                    i += 1
+                    continue
+                name, val, i = r
+                if name in ("-H", "--head"):
+                    last = val
+            continue
+        i = _find_seq(words, ["gh", "api"])
+        if i is not None:
+            found = True
+            while i < len(words):
+                r = _flag_value(words, i, _API_VAL_SHORT, _API_VAL_LONG)
+                if r is None:
+                    i += 1
+                    continue
+                name, val, i = r
+                if (name[1:] in _API_FIELD_SHORT or name[2:] in _API_FIELD_LONG) and val.startswith("head="):
+                    last = val[len("head="):]  # gh と同じく最後の指定を使う
+    if not found:
+        raise ValueError("gh pr create / gh api の位置を命令文から読めません")
+    return last
+
+
 def head_branch(tool: str, ti: dict, cmd: str):
     """作成元の枝名を返す。取れなければ None。MCP で無い／空、枝名が不正なら ValueError。"""
     if tool != "Bash":
@@ -185,13 +277,9 @@ def head_branch(tool: str, ti: dict, cmd: str):
             raise ValueError("PR の作成元(head)が指定されていません")
         raw = h.strip()
     else:
-        ms = list(re.finditer(
-            r"(?:(?:^|\s)(?:--head[ =]+|-H[ =]*)|(?:^|\s)(?:--field|--raw-field|-f|-F)[ =]*[\"']?head=)"
-            r"[\"']?([^\s\"']+)", cmd))
-        if not ms:
+        raw = _bash_head(cmd)
+        if raw is None:
             return None
-        m = ms[-1]  # gh と同じく最後の指定を使う
-        raw = m.group(1)
     if ":" in raw:
         raw = raw.split(":", 1)[1]
     if not _BRANCH_OK.match(raw):

@@ -137,6 +137,12 @@ add("K3", "head枝が存在しない", pre("mcp__github__create_pull_request", R
 add("K3", "追跡参照が古い(後からコード追加)", pre("mcp__github__create_pull_request", STALE, title="t", head="staledocs", body=GOOD), 2)
 add("K3", "--head 2回(後がコード枝)", bash(f'gh pr create --head docsbr --head codebr --title t --body "{GOOD}"', REMOTE), 2)
 add("K3", "gh api -fhead=コード枝(詰め書き)", bash(f'gh api -X POST repos/o/r/pulls -fhead=codebr -f title=t -f body="{GOOD}"', REMOTE), 2)
+# 別カード 指摘1・2: 本文・ヘッダの中の枝名を作成元と読まない（H1〜H5）
+add("H1", "本文中の -H docs枝", bash(f'gh pr create --head codebr --title t --body "{GOOD} -H docsbr"', REMOTE), 2)
+add("H2", "本文中の --head docs枝", bash(f'gh pr create --head codebr --title t --body "{GOOD} --head docsbr"', REMOTE), 2)
+add("H3", "gh api 末尾ヘッダ X-A:docs枝", bash(f"gh api repos/o/r/pulls -f head=codebr -f title=t -f body=\"{GOOD}\" -H 'X-A:docsbr'", REMOTE), 2)
+add("H4", "gh api Accept ヘッダが後ろ", bash(f"gh api repos/o/r/pulls -f head=docsbr -f base=main -f body=\"{GOOD}\" -H 'Accept: application/vnd.github+json'", REMOTE), 0)
+add("H5", "引用符が閉じていない", bash(f'gh pr create --head docsbr --title "t --body "{GOOD}"', REMOTE), 2)
 add("K1", ">( の中に危険語", bash(f"cat >({ops[0]} foo)"), 2)
 # 審査指摘の止め漏れ
 add("K1", "単独&の後ろに危険語", bash(f"cat a & {ops[0]} foo"), 2)
