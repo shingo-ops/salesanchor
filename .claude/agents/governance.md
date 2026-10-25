@@ -69,7 +69,7 @@ Governance は **「この仕組みが将来も壊れず機能し続けるため
 | チェック | 確認コマンド | 期待する証拠 |
 |---------|------------|------------|
 | **ADR 存在** | `ls docs/adr/ \| grep -i <topic>` | ADRファイルパスと Status: Accepted |
-| **CLAUDE.md 反映** | `grep -n <pattern> CLAUDE.md frontend/CLAUDE.md backend/CLAUDE.md` | 該当ルールの記載行 |
+| **CLAUDE.md 反映** | `grep -n <pattern> AGENTS.md CLAUDE.md frontend/AGENTS.md backend/AGENTS.md` | 該当ルールの記載行 |
 | **ADR 受け入れ基準** | ADR本文を Read して確認 | "Acceptance Criteria" / "受け入れ基準" セクションの存在 |
 
 **判定基準**: 設計判断が「ADR・CLAUDE.md・コメントのどれにも記録なし」なら Critical。

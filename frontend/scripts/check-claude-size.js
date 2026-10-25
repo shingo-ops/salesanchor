@@ -25,8 +25,10 @@ const LIMITS = [
   { path: 'AGENTS.md', limit: 80 },
   { path: 'CLAUDE.md', limit: 10 },
   { path: 'docs/INDEX.md', limit: 60 },
-  { path: 'frontend/CLAUDE.md', limit: 90 },
-  { path: 'backend/CLAUDE.md', limit: 70 },
+  { path: 'frontend/AGENTS.md', limit: 90 },
+  { path: 'frontend/CLAUDE.md', limit: 10 },
+  { path: 'backend/AGENTS.md', limit: 70 },
+  { path: 'backend/CLAUDE.md', limit: 10 },
   { path: 'backend/scripts/CLAUDE.md', limit: 70 },
   { path: 'backend/tenant/CLAUDE.md', limit: 70 },
 ];
