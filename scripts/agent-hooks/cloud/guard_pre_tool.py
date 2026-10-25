@@ -96,6 +96,24 @@ _SQL_WRITE = re.compile(
 )
 
 
+def has_recursive_rm(scanned: str) -> bool:
+    """区切り（&& || ; | & 改行）で分けた各区間に、再帰の選択肢つきの rm があるか。
+    最後の / より後ろが rm の語を探し、その後ろ（-- より前）に -r/-R を含む短い選択肢か --recursive があれば True。"""
+    for seg in re.split(r"&&|\|\||;|\||&|\n", scanned):
+        words = seg.split()
+        for i, w in enumerate(words):
+            if w.split("/")[-1] != "rm":
+                continue
+            for a in words[i + 1:]:
+                if a == "--":
+                    break
+                if a.startswith("--recursive"):
+                    return True
+                if a.startswith("-") and not a.startswith("--") and re.search(r"[rR]", a):
+                    return True
+    return False
+
+
 def check_danger(cmd: str):
     scanned = scan_text(cmd)
     low = scanned.lower()
@@ -106,6 +124,8 @@ def check_danger(cmd: str):
     for op in ops:
         if op.lower() in low:
             return f"'{op}' は不可逆操作です。クラウドでは行えません。手元で PO の承認を得て実行してください。"
+    if has_recursive_rm(scanned):
+        return "rm の再帰削除（-r／-R／--recursive）はクラウドでは行えません。手元で PO の承認を得て実行してください。"
     # 本番 DB への書込
     raw = cmd  # 流し込みの検査は取り除く前の文字列で行う
     if re.search(r"\bpsql\b[^\n]*<", raw) or re.search(r"\|\s*(?:ssh\b[^|]*|docker\b[^|]*)?\bpsql\b", raw):
@@ -130,6 +150,16 @@ def check_merge(tool: str, cmd: str):
             return "gh pr merge はクラウドでは行いません（マージは手元で行います）。"
         if re.search(r"\bgh\s+api\b", s) and re.search(r"(-X|--method)[ =]*PUT\b", s, re.I) and re.search(r"/merge(\s|$|[\"'?])", s):
             return "gh api によるマージ(PUT …/merge)はクラウドでは行いません。"
+        # 別の書き方（curl・wget・httpie・GraphQL・枝の直接まとめ）。送る道具が無い命令（grep 等）は対象外。
+        if re.search(r"\b(gh\s+api|curl|wget)\b|(?<![\w/:])https?(?![\w:])", s):
+            if re.search(r"/pulls/[^/\s\"']+/merge(\s|$|[\"'?])", s) and re.search(
+                r"-X\s*PUT\b|--(request|method)[ =]PUT\b|\bPUT\b", s, re.I
+            ):
+                return "PUT …/merge によるマージはクラウドでは行いません（マージは手元で行います）。"
+            if re.search(r"\b(mergePullRequest|enablePullRequestAutoMerge)\b", s):
+                return "GraphQL によるマージ・自動マージの予約はクラウドでは行いません（マージは手元で行います）。"
+            if re.search(r"repos/[^\s\"']+/merges(\s|$|[\"'?/])", s):
+                return "枝を直接まとめる API(…/merges)はクラウドでは行いません（マージは手元で行います）。"
     return None
 
 

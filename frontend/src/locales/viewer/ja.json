@@ -51,7 +51,11 @@
       "priceRange": "価格の範囲",
       "quantityRange": "数量の範囲",
       "min": "下限",
-      "max": "上限"
+      "max": "上限",
+      "back": "戻る",
+      "apply": "決定する",
+      "searchOptions": "絞り込む",
+      "noOptions": "見つかりません"
     },
     "badge": {
       "cheapest": "最安",

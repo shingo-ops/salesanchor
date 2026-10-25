@@ -5,7 +5,7 @@
 
 import { forwardRef } from "react";
 import type { ComponentType, SVGProps, ForwardRefExoticComponent, RefAttributes } from "react";
-import { ArrowUpIcon, ArrowDownIcon, XMarkIcon, ArrowTopRightOnSquareIcon } from "@heroicons/react/24/solid";
+import { ArrowUpIcon, ArrowDownIcon, XMarkIcon, ArrowTopRightOnSquareIcon, ArrowLeftIcon, ChevronRightIcon } from "@heroicons/react/24/solid";
 
 /** アイコンコンポーネントが受け取る props */
 export type IconProps = {
@@ -49,6 +49,10 @@ export const ArrowUp = hi(ArrowUpIcon);
 export const ArrowDown = hi(ArrowDownIcon);
 export const X = hi(XMarkIcon);
 export const ArrowTopRight = hi(ArrowTopRightOnSquareIcon);
+/** Drawer の「← 戻る」用（design.md 4-1・4-3） */
+export const ArrowLeft = hi(ArrowLeftIcon);
+/** MultiSelect layout="row" の右端「>」用（design.md 4-2・4-3） */
+export const ChevronRight = hi(ChevronRightIcon);
 export const TABLE_ICONS = {
   sortAsc:  ArrowUp,
   sortDesc: ArrowDown,

@@ -40,3 +40,41 @@ function Demo({ initial }: { initial: string[] }) {
 export const Empty: Story = { render: () => <Demo initial={[]} /> };
 export const One: Story = { render: () => <Demo initial={["b"]} /> };
 export const Many: Story = { render: () => <Demo initial={["a", "c"]} /> };
+
+function RowDemo({ initial }: { initial: string[] }) {
+  const [selected, setSelected] = useState<string[]>(initial);
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{ width: "320px" }}>
+      <MultiSelect
+        layout="row"
+        label="仕入元"
+        options={OPTIONS}
+        selected={selected}
+        onChange={setSelected}
+        clearLabel="選択をクリア"
+        allLabel="すべて"
+        countLabel={(n) => `${n}件選択中`}
+        testId="story-multiselect-row"
+        onOpen={() => setOpen((v) => !v)}
+      />
+      {open && (
+        <MultiSelect
+          layout="inline"
+          label="仕入元"
+          options={OPTIONS}
+          selected={selected}
+          onChange={setSelected}
+          clearLabel="選択をクリア"
+          allLabel="すべて"
+          countLabel={(n) => `${n}件選択中`}
+          emptyLabel="見つかりません"
+          testId="story-multiselect-row-options"
+        />
+      )}
+    </div>
+  );
+}
+
+export const Row: Story = { render: () => <RowDemo initial={[]} /> };
+export const RowWithSelection: Story = { render: () => <RowDemo initial={["a", "c"]} /> };

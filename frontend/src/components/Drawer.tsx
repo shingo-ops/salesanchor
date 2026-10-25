@@ -2,11 +2,13 @@
  * Drawer — 右スライドパネル（Notion「サイドピーク」相当）
  *
  * - 右から出るスライドアニメーション（user-drawer パターン踏襲）
- * - Esc で閉じる
+ * - Esc で閉じる（onEscape が渡されていればそちら。背景クリック・✕ は常に onClose。design.md 4-4・審査指摘9）
  * - 背景クリックで閉じる
+ * - ✕ ボタンで閉じる
  * - フォーカストラップ（Tab / Shift+Tab がパネル内を循環）
  * - 閉じたら元の要素へフォーカス復帰
  * - onOpenFullPage が渡された場合は「フルページで開く↗」ボタンをヘッダに表示
+ * - onBack が渡された場合は題の左に「← 戻る」ボタンをヘッダに表示（省略時は今までどおり何も出ない。design.md 4-1）
  * - a11y: role="dialog" / aria-modal / aria-labelledby
  * - ReactDOM.createPortal で document.body にマウント
  * - z-index: --z-drawer (301) — Modal の overlay は --z-modal (400) で前面
@@ -16,20 +18,31 @@ import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import ReactDOM from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Button } from "./Button";
-import { X, ArrowTopRight } from "../constants/icons-base";
+import { X, ArrowTopRight, ArrowLeft } from "../constants/icons-base";
 import "./Drawer.css";
 
-interface DrawerProps {
+interface DrawerBaseProps {
   open: boolean;
   onClose: () => void;
   title: string;
   children: ReactNode;
   /** フルページで開くコールバック。省略時はボタン非表示 */
   onOpenFullPage?: () => void;
+  /** Esc を押したときの処理。渡したときだけ onClose の代わりに呼ばれる（省略時は今までどおり onClose）。
+   *  背景クリックと ✕ ボタンは常に onClose のまま（design.md 4-4） */
+  onEscape?: () => void;
   footer?: ReactNode;
   /** パネル幅。'default'（480px）/ 'wide'（1100px・スマホは全幅） */
   size?: "default" | "wide";
 }
+
+/** onBack を渡すときは backLabel（読み上げ名）も必須にする。片方だけでは
+ *  aria-label の無いアイコンボタンが作れてしまうため（審査指摘） */
+type DrawerBackProps =
+  | { onBack: () => void; backLabel: string }
+  | { onBack?: undefined; backLabel?: undefined };
+
+type DrawerProps = DrawerBaseProps & DrawerBackProps;
 
 export function Drawer({
   open,
@@ -37,6 +50,9 @@ export function Drawer({
   title,
   children,
   onOpenFullPage,
+  onEscape,
+  onBack,
+  backLabel,
   footer,
   size = "default",
 }: DrawerProps) {
@@ -69,18 +85,18 @@ export function Drawer({
     if (first) first.focus();
   }, [open]);
 
-  /* Esc で閉じる */
+  /* Esc で閉じる（onEscape が渡されていればそちらを呼ぶ。省略時は今までどおり onClose。design.md 4-4） */
   useEffect(() => {
     if (!open) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.stopPropagation();
-        onClose();
+        (onEscape ?? onClose)();
       }
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [open, onClose]);
+  }, [open, onClose, onEscape]);
 
   /* フォーカストラップ */
   useEffect(() => {
@@ -136,6 +152,19 @@ export function Drawer({
       >
         {/* ヘッダ */}
         <div className="comp-drawer-header">
+          {onBack && (
+            <Button
+              variant="ghost"
+              size="md"
+              iconOnly
+              aria-label={backLabel}
+              onClick={onBack}
+              data-testid="drawer-back"
+              layoutClassName="comp-drawer-header-back"
+            >
+              <ArrowLeft size={20} aria-hidden="true" />
+            </Button>
+          )}
           <h2 id={titleId} className="comp-drawer-title">{title}</h2>
           <div className="comp-drawer-header-actions">
             {onOpenFullPage && (

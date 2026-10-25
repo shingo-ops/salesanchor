@@ -260,13 +260,145 @@ describe("InventoryView", () => {
     }
   });
 
-  it("A15: mobile — opening the drawer and selecting one provider narrows the table", () => {
+  describe("filter subscreen navigation (docs/handoff/viewer-filter-subscreen/design.md 4-4)", () => {
+    function openDrawer() {
+      Object.defineProperty(window, "matchMedia", mobileMatchMedia);
+      render(<InventoryView data={providerData} />);
+      fireEvent.click(screen.getByTestId("viewer-filter-toggle"));
+    }
+    afterEach(() => {
+      delete (window as unknown as { matchMedia?: unknown }).matchMedia;
+    });
+
+    it("A1/A2: root shows the provider and condition rows and is not a subscreen (no drawer-back)", () => {
+      openDrawer();
+      expect(screen.getByTestId("viewer-provider-row")).toBeTruthy();
+      expect(screen.getByTestId("viewer-condition-row")).toBeTruthy();
+      expect(screen.queryByTestId("drawer-back")).toBeNull();
+    });
+
+    it("A2/A14: clicking the provider row opens the subscreen, drawer-back appears and takes focus", () => {
+      openDrawer();
+      fireEvent.click(screen.getByTestId("viewer-provider-row"));
+      expect(screen.getByTestId("viewer-provider-options-option-Acme")).toBeTruthy();
+      const back = screen.getByTestId("drawer-back");
+      expect(back).toBeTruthy();
+      expect(document.activeElement).toBe(back);
+    });
+
+    it("A3/A14: back returns to root, drawer-back disappears and focus returns to the row", () => {
+      openDrawer();
+      fireEvent.click(screen.getByTestId("viewer-provider-row"));
+      fireEvent.click(screen.getByTestId("drawer-back"));
+      expect(screen.queryByTestId("drawer-back")).toBeNull();
+      expect(screen.getByTestId("viewer-provider-row")).toBeTruthy();
+      expect(document.activeElement).toBe(screen.getByTestId("viewer-provider-row"));
+    });
+
+    it("A11: apply returns to root and keeps the selection", () => {
+      openDrawer();
+      fireEvent.click(screen.getByTestId("viewer-provider-row"));
+      fireEvent.click(screen.getByTestId("viewer-provider-options-option-Acme"));
+      fireEvent.click(screen.getByTestId("viewer-filter-apply"));
+      expect(screen.queryByTestId("drawer-back")).toBeNull();
+      expect(captured.props!.data).toHaveLength(5);
+      // 親の行に選んだ名前が出る（A7）
+      expect(screen.getByTestId("viewer-provider-row").textContent).toContain("Acme");
+    });
+
+    it("A12: Escape in a subscreen returns to root (the drawer stays open)", () => {
+      openDrawer();
+      fireEvent.click(screen.getByTestId("viewer-provider-row"));
+      fireEvent.keyDown(document, { key: "Escape" });
+      expect(screen.queryByTestId("drawer-back")).toBeNull();
+      expect(screen.getByTestId("viewer-provider-row")).toBeTruthy();
+      expect(document.querySelector(".comp-drawer-panel--open")).toBeTruthy();
+    });
+
+    it("fix 1: the close (X) button closes the drawer even from a subscreen (name and action now match)", () => {
+      openDrawer();
+      fireEvent.click(screen.getByTestId("viewer-provider-row"));
+      expect(screen.getByTestId("drawer-back")).toBeTruthy();
+      fireEvent.click(screen.getByTestId("drawer-close"));
+      // 以前はここで一段戻るだけだった（Drawer の onClose が Esc と同じ関数だったため）。
+      // onEscape を足したことで ✕ は本当に閉じるようになった
+      expect(document.querySelector(".comp-drawer-panel--open")).toBeNull();
+    });
+
+    it("A17: closing from a subscreen and reopening immediately lands on root with an empty search box", () => {
+      openDrawer();
+      fireEvent.click(screen.getByTestId("viewer-provider-row"));
+      fireEvent.change(screen.getByTestId("viewer-filter-option-search"), { target: { value: "Acme" } });
+      // 選択画面のまま ✕ で閉じる
+      fireEvent.click(screen.getByTestId("drawer-close"));
+      expect(document.querySelector(".comp-drawer-panel--open")).toBeNull();
+      // すぐ開き直す（時間で戻す作りだとここで選択画面のまま開いた＝CI で実測した退行）
+      fireEvent.click(screen.getByTestId("viewer-filter-toggle"));
+      // 開き直せていることを先に確定させる（これが無いと drawer-back の不在が空振りで真になる）
+      expect(document.querySelector(".comp-drawer-panel--open")).not.toBeNull();
+      expect(screen.queryByTestId("drawer-back")).toBeNull();
+      expect(screen.getByTestId("viewer-provider-row")).toBeTruthy();
+      fireEvent.click(screen.getByTestId("viewer-provider-row"));
+      expect((screen.getByTestId("viewer-filter-option-search") as HTMLInputElement).value).toBe("");
+    });
+
+    it("A8/A9: narrowing the options by search keeps the selected names resolved", () => {
+      openDrawer();
+      fireEvent.click(screen.getByTestId("viewer-provider-row"));
+      fireEvent.click(screen.getByTestId("viewer-provider-options-option-Acme"));
+      fireEvent.click(screen.getByTestId("viewer-provider-options-option-Globex"));
+      // "Acme" を検索語で画面から追い出す
+      fireEvent.change(screen.getByTestId("viewer-filter-option-search"), { target: { value: "Globex" } });
+      expect(screen.queryByTestId("viewer-provider-options-option-Acme")).toBeNull();
+      expect(screen.getByTestId("viewer-provider-options-option-Globex")).toBeTruthy();
+      // 要約（inline の summary）は絞り込み前の2件とも正しい名前のまま
+      expect(document.querySelector(".comp-multiselect__inline-summary")!.textContent).toBe("Acme, Globex");
+    });
+
+    it("A10: a query with no matches shows the noOptions text", () => {
+      openDrawer();
+      fireEvent.click(screen.getByTestId("viewer-provider-row"));
+      fireEvent.change(screen.getByTestId("viewer-filter-option-search"), { target: { value: "no-such-provider" } });
+      // eslint-disable-next-line local/no-japanese-literal -- テスト: 画面に出る日本語文言そのものを検証する（ADR-027・precedent: src/features/tcg-analysis-review/SourceRawPane.test.tsx:1）
+      expect(screen.getByText("見つかりません")).toBeTruthy();
+    });
+
+    it("A17: the option search box is cleared when leaving the subscreen with back", () => {
+      openDrawer();
+      fireEvent.click(screen.getByTestId("viewer-provider-row"));
+      fireEvent.change(screen.getByTestId("viewer-filter-option-search"), { target: { value: "Acme" } });
+      fireEvent.click(screen.getByTestId("drawer-back"));
+      fireEvent.click(screen.getByTestId("viewer-provider-row"));
+      expect((screen.getByTestId("viewer-filter-option-search") as HTMLInputElement).value).toBe("");
+    });
+
+    it("A17: the option search box is cleared when leaving with apply", () => {
+      openDrawer();
+      fireEvent.click(screen.getByTestId("viewer-provider-row"));
+      fireEvent.change(screen.getByTestId("viewer-filter-option-search"), { target: { value: "Acme" } });
+      fireEvent.click(screen.getByTestId("viewer-filter-apply"));
+      fireEvent.click(screen.getByTestId("viewer-provider-row"));
+      expect((screen.getByTestId("viewer-filter-option-search") as HTMLInputElement).value).toBe("");
+    });
+
+    it("the condition row navigates the same way", () => {
+      openDrawer();
+      fireEvent.click(screen.getByTestId("viewer-condition-row"));
+      expect(screen.getByTestId("drawer-back")).toBeTruthy();
+      expect(screen.getByTestId("viewer-condition-options-option-sealed")).toBeTruthy();
+      fireEvent.click(screen.getByTestId("drawer-back"));
+      expect(document.activeElement).toBe(screen.getByTestId("viewer-condition-row"));
+    });
+  });
+
+  it("A15: mobile — opening the drawer, entering the provider screen, and selecting one provider narrows the table", () => {
     Object.defineProperty(window, "matchMedia", mobileMatchMedia);
     try {
       render(<InventoryView data={providerData} />);
       expect(captured.props!.data).toHaveLength(10);
       fireEvent.click(screen.getByTestId("viewer-filter-toggle"));
-      fireEvent.click(screen.getByTestId("viewer-provider-filter-option-Acme"));
+      fireEvent.click(screen.getByTestId("viewer-provider-row"));
+      fireEvent.click(screen.getByTestId("viewer-provider-options-option-Acme"));
       expect(captured.props!.data).toHaveLength(5);
     } finally {
       delete (window as unknown as { matchMedia?: unknown }).matchMedia;

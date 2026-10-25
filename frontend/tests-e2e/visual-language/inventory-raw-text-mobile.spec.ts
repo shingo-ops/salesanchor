@@ -47,7 +47,7 @@ test.describe("在庫表スマホ原文ボタン（便1）", () => {
     await gotoInventory(page, { width: 375, height: 800 });
 
     await page.getByTestId("inventory-raw-text-row-1").click();
-    // `data-testid="supplier-drawer"` は Drawer 金型（frontend/src/components/Drawer.tsx:135）が
+    // `data-testid="supplier-drawer"` は Drawer 金型（frontend/src/components/Drawer.tsx:151）が
     // 全インスタンスに付けるため、在庫ページでは「表の設定」ドロワーと行ドロワーの2つが DOM に居る。
     // CI 実測（PR #4602）で strict mode violation になったので、開いている方（--open）に絞る。
     const panel = page.locator(
