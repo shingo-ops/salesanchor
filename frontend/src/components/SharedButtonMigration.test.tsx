@@ -83,7 +83,7 @@ describe('shared button migration: real panel operations', () => {
     const save = screen.getByRole('button', { name: 'common.save' }) as HTMLButtonElement;
     expect(save.type).toBe('submit');fireEvent.click(save);
     expect(mock.post).toHaveBeenCalledExactlyOnceWith('/leads/9/priority-score/override', { override_score: 0.75, override_note: 'manual note' });
-    expect(save.disabled).toBe(true);expect(save.textContent).toBe('common.saving');fireEvent.click(save);expect(mock.post).toHaveBeenCalledTimes(1);
+    expect(save.disabled).toBe(true);expect(save.textContent).toBe('common.save');expect(save.getAttribute('aria-busy')).toBe('true');fireEvent.click(save);expect(mock.post).toHaveBeenCalledTimes(1);
     await act(async () => { pending.resolve(currentScore); });expect(updated).toHaveBeenCalledExactlyOnceWith(currentScore);expect(screen.queryByRole('dialog')).toBeNull();
   });
 
@@ -125,7 +125,7 @@ describe('shared button migration: real panel operations', () => {
     const saved = vi.fn(), close = vi.fn(), pending = deferred<typeof bundle>();mock.post.mockReturnValue(pending.promise);
     render(<CommissionPanel orderId={7} orderNumber="ORD-7" onClose={close} onSaved={saved} />);
     const recalc = await screen.findByTestId('commission-recalc') as HTMLButtonElement;fireEvent.click(recalc);
-    expect(recalc.disabled).toBe(true);expect(recalc.textContent).toBe('commission.recalculating');fireEvent.click(recalc);
+    expect(recalc.disabled).toBe(true);expect(recalc.textContent).toBe('commission.recalc');expect(recalc.getAttribute('aria-busy')).toBe('true');fireEvent.click(recalc);
     expect(mock.post).toHaveBeenCalledExactlyOnceWith('/orders/7/commissions/recalc', {});
     await act(async () => { pending.resolve(bundle); });expect(saved).toHaveBeenCalledExactlyOnceWith(bundle);
     const closeButtons=screen.getAllByRole('button', { name: 'common.close' });fireEvent.click(closeButtons[closeButtons.length-1]);expect(close).toHaveBeenCalledTimes(1);
@@ -161,7 +161,7 @@ describe('shared button migration: real panel operations', () => {
   it('confirms existing purchase once while confirming and updates displayed status', async () => {
     const saved=vi.fn(), close=vi.fn(), pending=deferred<typeof purchase>();mock.patch.mockReturnValue(pending.promise);
     render(<PurchaseDetailPanel orderId={7} orderNumber="ORD-7" onClose={close} onSaved={saved} />);await screen.findByTestId('pur-input-purchase_amount');
-    const confirm=button('pur-confirm');fireEvent.click(confirm);expect(confirm.disabled).toBe(true);expect(confirm.textContent).toBe('purchase.confirming');fireEvent.click(confirm);expect(mock.patch).toHaveBeenCalledExactlyOnceWith('/orders/7/purchase/status', {});
+    const confirm=button('pur-confirm');fireEvent.click(confirm);expect(confirm.disabled).toBe(true);expect(confirm.textContent).toBe('purchase.confirm');expect(confirm.getAttribute('aria-busy')).toBe('true');fireEvent.click(confirm);expect(mock.patch).toHaveBeenCalledExactlyOnceWith('/orders/7/purchase/status', {});
     const result={...purchase,purchase_status:'confirmed'};await act(async () => {pending.resolve(result);});expect(saved).toHaveBeenCalledExactlyOnceWith(result);expect((screen.getByTestId('pur-input-purchase_status') as HTMLSelectElement).value).toBe('confirmed');expect(close).not.toHaveBeenCalled();
   });
 
@@ -176,7 +176,7 @@ describe('shared button migration: real panel operations', () => {
     const create=vi.fn().mockReturnValue('blob:fixture'), revoke=vi.fn();class MockURL extends originalURL { static createObjectURL = create; static revokeObjectURL = revoke; } vi.stubGlobal('URL',MockURL);
     const downloads: {href:string;download:string}[]=[];vi.spyOn(HTMLAnchorElement.prototype,'click').mockImplementation(function(this:HTMLAnchorElement){downloads.push({href:this.href,download:this.download});});
     render(<ShippingDetailPanel orderId={7} orderNumber="ORD-7" onClose={vi.fn()} />);await screen.findByTestId('ship-input-weight_kg');const csv=button('ship-download-csv');fireEvent.click(csv);
-    await waitFor(()=>expect(fetchMock).toHaveBeenCalledExactlyOnceWith('/api/v1/orders/7/shipping/elogi-csv',{headers:{Authorization:'Bearer fixture-token'}}));expect(csv.disabled).toBe(true);expect(csv.textContent).toBe('shipping.downloading');fireEvent.click(csv);expect(fetchMock).toHaveBeenCalledTimes(1);
+    await waitFor(()=>expect(fetchMock).toHaveBeenCalledExactlyOnceWith('/api/v1/orders/7/shipping/elogi-csv',{headers:{Authorization:'Bearer fixture-token'}}));expect(csv.disabled).toBe(true);expect(csv.textContent).toBe('shipping.downloadCsv');expect(csv.getAttribute('aria-busy')).toBe('true');fireEvent.click(csv);expect(fetchMock).toHaveBeenCalledTimes(1);
     await act(async()=>{pending.resolve({ok:true,blob:async()=>blob} as Response);});expect(create).toHaveBeenCalledExactlyOnceWith(blob);expect(downloads).toEqual([{href:'blob:fixture',download:'elogi-ORD-7.csv'}]);expect(revoke).toHaveBeenCalledExactlyOnceWith('blob:fixture');expect(csv.disabled).toBe(false);expect(mock.token).toHaveBeenCalledTimes(1);
   });
 });
