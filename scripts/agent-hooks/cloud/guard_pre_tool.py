@@ -191,9 +191,59 @@ _API_FIELD_SHORT = set("fF")
 _API_FIELD_LONG = {"field", "raw-field"}
 
 
+_SEPARATORS = ("&&", "||", ";", "|", "&", "|&")
+
+
+def _check_symbols(cmd: str):
+    """引用符・逃がし・コメントの外に、区切り(&& || ; | & |&)以外の記号の並び（;( ( ) << <<< < > >& など）があれば ValueError。
+    記号 ();<>|& の連続を1つの並びとして取り出し、区切りと完全一致しなければ止める。"""
+    i, n = 0, len(cmd)
+    q = None
+    at_start = True
+    run = ""
+    while i < n:
+        c = cmd[i]
+        if q == "'":
+            if c == "'":
+                q = None
+        elif q == '"':
+            if c == "\\":
+                i += 1
+            elif c == '"':
+                q = None
+        else:
+            if c in "();<>|&":
+                run += c
+                at_start = True
+                i += 1
+                continue
+            if run:
+                if run not in _SEPARATORS:
+                    raise ValueError("区切り以外の記号があり、正しく読めません")
+                run = ""
+            if c == "\\":
+                i += 1
+                at_start = False
+            elif c in "'\"":
+                q = c
+                at_start = False
+            elif c == "#" and at_start:
+                j = cmd.find("\n", i)
+                if j < 0:
+                    break
+                i = j
+                continue
+            else:
+                at_start = c in " \t\n"
+        i += 1
+    if run and run not in _SEPARATORS:
+        raise ValueError("区切り以外の記号があり、正しく読めません")
+
+
 def _split_commands(cmd: str):
     """命令文を shlex で語に分け、&& || ; | & で区切った命令ごとの語の列を返す。閉じていない引用符は ValueError。"""
-    lex = shlex.shlex(strip_heredoc_bodies(cmd), posix=True, punctuation_chars=True)
+    _check_symbols(cmd)
+    lex = shlex.shlex(cmd, posix=True, punctuation_chars=True)
     lex.whitespace_split = True
     segs, cur = [], []
     for t in lex:
@@ -277,17 +327,18 @@ def _bash_head(cmd: str):
     読めない（引用符が閉じていない・語の途中に #・gh の位置が語から取れない）ときは ValueError（止める側）。"""
     if "\r" in cmd:
         raise ValueError("命令文に復帰文字(\\r)があり、正しく読めません")
-    if _midword_hash(strip_heredoc_bodies(cmd)):
+    if _midword_hash(cmd):
         raise ValueError("語の途中に # があり、正しく読めません")
     try:
         segs = _split_commands(cmd)
     except ValueError as e:
         raise ValueError("命令文を語に分けられません: " + str(e))
-    found, last = False, None
+    found, last, n_found = False, None, 0
     for words in segs:
         i = _find_seq(words, ["gh", "pr", "create"])
         if i is not None:
             found = True
+            n_found += 1
             while i < len(words):
                 r = _flag_value(words, i, _PR_VAL_SHORT, _PR_VAL_LONG)
                 if r is None:
@@ -300,6 +351,7 @@ def _bash_head(cmd: str):
         i = _find_seq(words, ["gh", "api"])
         if i is not None:
             found = True
+            n_found += 1
             while i < len(words):
                 r = _flag_value(words, i, _API_VAL_SHORT, _API_VAL_LONG)
                 if r is None:
@@ -310,6 +362,9 @@ def _bash_head(cmd: str):
                     last = val[len("head="):]  # gh と同じく最後の指定を使う
     if not found:
         raise ValueError("gh pr create / gh api の位置を命令文から読めません")
+    n_text = len(re.findall(r"\bgh\s+pr\s+create\b", cmd)) + len(re.findall(r"\bgh\s+api\b", cmd))
+    if n_text != 1 or n_found != 1:
+        raise ValueError("PR 作成の命令が1つに定まらず、正しく読めません")
     return last
 
 

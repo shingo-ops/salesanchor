@@ -159,6 +159,14 @@ add("H16", "Fix\\ #12 (逃がした空白の直後の #)", bash(f"gh pr create -
 add("H17", "x\\;#12 (逃がした ; の直後の #)", bash(f"gh pr create --title x\\;#12 --head codebr --body \"{GOOD}\"", REMOTE), 2)
 add("H18", "命令文に \\r を含む", bash(f"gh pr create --title a\r#12 --head codebr --body \"{GOOD}\"", REMOTE), 2)
 add("H19", "区切り直後の # はコメント", bash(f"gh pr create --head docsbr --body \"{GOOD}\"; # --head codebr", REMOTE), 0)
+# 追補 R4: 読める形だけ読み、区切り以外の記号・作成の命令が複数に見える形は止める（H20〜H26）
+add("H20", ";( の後ろに docs枝", bash(f"gh pr create --head codebr --body \"{GOOD}\";(echo --head docsbr)", REMOTE), 2)
+add("H21", "&&( の後ろに docs枝", bash(f"gh pr create --head codebr --body \"{GOOD}\"&&(echo --head docsbr)", REMOTE), 2)
+add("H22", "引用符の中の <<EOF から行頭 EOF までに本物の --head", bash(f"gh pr create --body \"{GOOD}\" --title '<<EOF' \\\n  --head codebr --title \\\nEOF", REMOTE), 2)
+add("H23", "echo gh pr create の後ろの bash -c に本物の作成", bash(f"echo gh pr create; bash -c 'gh pr create --head codebr --body \"{GOOD}\"'", REMOTE), 2)
+add("H24", "docs枝の作成の後ろの bash -c に本物の作成", bash(f"gh pr create --head docsbr --body \"{GOOD}\" && bash -c 'gh pr create --head codebr --body x'", REMOTE), 2)
+add("H25", "何も足さない普通の形", bash(f"gh pr create --head docsbr --body \"{GOOD}\"", REMOTE), 0)
+add("H26", "引用符の中の記号 (a <<b)", bash(f"gh pr create --head docsbr --title 'a <<b' --body \"{GOOD}\"", REMOTE), 0)
 add("K1", ">( の中に危険語", bash(f"cat >({ops[0]} foo)"), 2)
 # 審査指摘の止め漏れ
 add("K1", "単独&の後ろに危険語", bash(f"cat a & {ops[0]} foo"), 2)
