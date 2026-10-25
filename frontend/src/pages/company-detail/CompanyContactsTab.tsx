@@ -213,8 +213,8 @@ export function CompanyContactsTab({
             <Button type="button" size="sm" variant="secondary" onClick={onCloseModal}>
               {t("common.cancel")}
             </Button>
-            <Button type="submit" size="sm" variant="primary" disabled={contactSubmitting}>
-              {contactSubmitting ? t("common.saving") : t("common.save")}
+            <Button loading={contactSubmitting} type="submit" size="sm" variant="primary" disabled={contactSubmitting}>
+              {t("common.save")}
             </Button>
           </div>
         </form>

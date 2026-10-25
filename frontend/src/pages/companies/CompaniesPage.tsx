@@ -554,8 +554,8 @@ export default function CompaniesPage() {
 
               <div className="form-actions">
                 <Button variant="secondary" size="md" type="button" onClick={() => setShowCreate(false)} disabled={submitting}>{t("common.cancel")}</Button>
-                <Button variant="primary" size="md" type="submit" disabled={submitting}>
-                  {submitting ? t("common.saving") : t("common.register")}
+                <Button loading={submitting} variant="primary" size="md" type="submit" disabled={submitting}>
+                  {t("common.register")}
                 </Button>
               </div>
             </form>

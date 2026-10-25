@@ -252,13 +252,13 @@ export default function TenantProfilePage() {
 
           {canEdit && (
             <div className="form-actions">
-              <Button variant="primary" size="md"
+              <Button loading={saving} variant="primary" size="md"
                 type="submit"
 
                 disabled={saving}
                 data-testid="tenant-profile-save"
               >
-                {saving ? t("common.saving") : t("common.save")}
+                {t("common.save")}
               </Button>
             </div>
           )}

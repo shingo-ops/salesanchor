@@ -36,8 +36,8 @@ export function CompanyChannelsTab({
       </div>
       {canEdit && (
         <div className="form-actions">
-          <Button type="submit" variant="primary" size="md" disabled={!channelsDirty || channelsSubmitting}>
-            {channelsSubmitting ? t("common.saving") : t("companies.saveChannels")}
+          <Button loading={channelsSubmitting} type="submit" variant="primary" size="md" disabled={!channelsDirty || channelsSubmitting}>
+            {t("companies.saveChannels")}
           </Button>
         </div>
       )}
