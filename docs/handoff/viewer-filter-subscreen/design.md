@@ -156,7 +156,7 @@ const [optionQuery, setOptionQuery] = useState("");   // 候補を絞る欄（�
 | 候補が0件のとき | **`MultiSelect` が描く**（§4-2）。呼び出し側は `emptyLabel` を渡すだけ |
 | 画面が変わったときのフォーカス | `filterView` が `root` 以外になったら**「←」へ**、`root` に戻ったら**元の行へ**移す（`useEffect` ＋ `ref`）。`frontend/src/components/Drawer.tsx:80-86` の初期フォーカスは `open` が変わらないと再実行されないため、**押した行が消えてフォーカスが `<body>` に落ち、Tab がダイアログの外へ逃げる**（`frontend/src/components/Drawer.tsx:101-130` のトラップは `activeElement` が端のときしか効かない） |
 | Esc | `root` 以外では**`root` に戻る**（ドロワーごと閉じない）。**✕ は常に閉じる**（§4-1b・修正1）。当初案は `Drawer` の `onClose` に分岐を入れるものだったが、`onClose` は Esc・背景クリック・✕ の3経路すべてで呼ばれるため ✕ まで「戻る」になってしまう不具合を2回目の審査で指摘された。そこで `Drawer` に `onEscape?: () => void` を足し、**Esc だけ**その処理を呼ぶ形に変更（§4-1b）。`onClose` には本当に閉じる関数を渡す |
-| ドロワーを閉じたとき | `root` へ戻すのは**閉じ終わってから**（`--transition-slow` ぶん遅らせる）。`frontend/src/components/Drawer.tsx:144-147` のとおり DOM は常にあるので、即座に戻すとスライドアウト中に題と中身が切り替わって見える |
+| ドロワーを閉じたとき | **閉じるときは戻さない**（`frontend/src/components/Drawer.tsx:144-147` のとおり DOM は常にあるので、即座に戻すとスライドアウト中に題と中身が切り替わって見える）。代わりに**開くときに `root` へ戻す**（`openFilterDrawer`）。**当初案は閉じた 280ms 後に戻すタイマーだったが、閉じて 280ms 以内に開き直すとタイマーが片付けられて戻らず、選択画面のまま開いた**（CI 実測で A17 が3幅×2＝6件赤。`docs/handoff/viewer-filter-subscreen/design.md` ⑤ A17 がこの退行の守り手）。開く瞬間に戻せば時間に依存しない |
 | 自動読み直し（60秒） | `frontend/src/pages/viewer/useViewerAutoRefresh.ts` が `data` を差し替えても `filterView` は別の状態なので画面は維持される。選択肢が消えた場合は下の「選んだ名前」の規則で守る |
 
 ### 4-4b. testId を層ごとに分ける（strict mode violation の予防）
@@ -300,6 +300,11 @@ const [optionQuery, setOptionQuery] = useState("");   // 候補を絞る欄（�
 | **閲覧ページの JS が 300KB を超えない** | `frontend/scripts/check-viewer-bundle.js`（CI 必須） | 赤 |
 
 ## ⑫ 継続（この便の後）
+
+> 経緯のメモ（2026-10-25）: 画面の状態を「時間（280ms）で戻す」作りは、**閉じて 280ms 以内に開き直す**操作で
+> 破れた（CI が実測で捕らえた）。**状態は「開くとき」に初期化する**方が時間に依存せず堅い。
+> 同じ形の作り（閉じたあとに遅延して片付ける）を他画面で書くときも同じ罠がある。
+
 
 | # | 項目 | 状態 |
 |---|---|---|

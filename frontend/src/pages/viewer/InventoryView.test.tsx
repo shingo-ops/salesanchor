@@ -325,6 +325,23 @@ describe("InventoryView", () => {
       expect(document.querySelector(".comp-drawer-panel--open")).toBeNull();
     });
 
+    it("A17: closing from a subscreen and reopening immediately lands on root with an empty search box", () => {
+      openDrawer();
+      fireEvent.click(screen.getByTestId("viewer-provider-row"));
+      fireEvent.change(screen.getByTestId("viewer-filter-option-search"), { target: { value: "Acme" } });
+      // 選択画面のまま ✕ で閉じる
+      fireEvent.click(screen.getByTestId("drawer-close"));
+      expect(document.querySelector(".comp-drawer-panel--open")).toBeNull();
+      // すぐ開き直す（時間で戻す作りだとここで選択画面のまま開いた＝CI で実測した退行）
+      fireEvent.click(screen.getByTestId("viewer-filter-toggle"));
+      // 開き直せていることを先に確定させる（これが無いと drawer-back の不在が空振りで真になる）
+      expect(document.querySelector(".comp-drawer-panel--open")).not.toBeNull();
+      expect(screen.queryByTestId("drawer-back")).toBeNull();
+      expect(screen.getByTestId("viewer-provider-row")).toBeTruthy();
+      fireEvent.click(screen.getByTestId("viewer-provider-row"));
+      expect((screen.getByTestId("viewer-filter-option-search") as HTMLInputElement).value).toBe("");
+    });
+
     it("A8/A9: narrowing the options by search keeps the selected names resolved", () => {
       openDrawer();
       fireEvent.click(screen.getByTestId("viewer-provider-row"));

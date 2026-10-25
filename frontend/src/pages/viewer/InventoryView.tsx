@@ -36,10 +36,6 @@ interface InventoryViewProps {
   data: ViewerInventoryResponse;
 }
 
-/** tokens.css の --transition-slow（280ms）と同じ。ドロワーのスライドアウトが終わってから
- *  filterView を root に戻す（design.md 4-4。即座に戻すとスライド中に題と中身が切り替わって見える） */
-const DRAWER_CLOSE_RESET_DELAY_MS = 280;
-
 /** 絞り込みドロワーの画面（design.md 4-4）。root=一覧／provider・condition=選択画面 */
 type FilterView = "root" | "provider" | "condition";
 
@@ -140,6 +136,15 @@ export function InventoryView({ data }: InventoryViewProps) {
     setOptionQuery("");
     setFilterView("root");
   };
+  // 絞り込みを「開く」ときに最初の画面へ戻す（design.md 4-4・審査指摘13）。
+  // 閉じるときに戻さないのは、スライドアウト中に題と中身が切り替わって見えるのを避けるため。
+  // 当初は閉じた 280ms 後に戻すタイマーにしていたが、**閉じて 280ms 以内に開き直すと
+  // タイマーが片付けられて戻らない**（CI 実測: A17 が3幅×2＝6件赤）。開く瞬間に戻せば時間に依存しない。
+  const openFilterDrawer = () => {
+    setOptionQuery("");
+    setFilterView("root");
+    setDrawerOpen(true);
+  };
   // Drawer の onEscape（design.md 4-4・審査指摘9＝A12）。Esc だけ「戻る」に使う：
   // filterView が root 以外なら root へ戻る、root ならドロワーを閉じる。
   // 背景クリックと ✕ ボタンは常に Drawer.tsx 側の onClose（＝本当に閉じる）を呼ぶため、
@@ -158,10 +163,14 @@ export function InventoryView({ data }: InventoryViewProps) {
   // フォーカス復帰」effect で別物）は open が変わらないと再実行されないため、
   // root⇄選択画面の遷移では自前でフォーカス先を決める。
   const prevFilterViewRef = useRef<FilterView>(filterView);
+  const prevDrawerOpenRef = useRef<boolean>(drawerOpen);
   useEffect(() => {
     const prev = prevFilterViewRef.current;
+    const wasOpen = prevDrawerOpenRef.current;
     prevFilterViewRef.current = filterView;
-    if (!drawerOpen || prev === filterView) return;
+    prevDrawerOpenRef.current = drawerOpen;
+    // 開いた直後（openFilterDrawer で root に戻した回）は Drawer 側の初期フォーカスに任せる
+    if (!drawerOpen || !wasOpen || prev === filterView) return;
     if (filterView === "root") {
       const rowTestId = prev === "provider" ? "viewer-provider-row" : prev === "condition" ? "viewer-condition-row" : null;
       if (rowTestId) {
@@ -171,19 +180,6 @@ export function InventoryView({ data }: InventoryViewProps) {
       document.querySelector<HTMLElement>('[data-testid="drawer-back"]')?.focus();
     }
   }, [filterView, drawerOpen]);
-
-  // ドロワーを閉じたら、スライドアウトが終わってから root へ戻す（design.md 4-4・審査指摘13）。
-  // root で閉じたときは戻す必要が無いので何もしない（修正1: ✕ が選択画面のまま閉じられるようになった
-  // ことで、このタイマーが初めて意味を持つ。以前は setDrawerOpen(false) が root のときしか
-  // 呼ばれず、このガード自体が到達不能だった）
-  useEffect(() => {
-    if (drawerOpen || filterView === "root") return;
-    const timer = setTimeout(() => {
-      setFilterView("root");
-      setOptionQuery("");
-    }, DRAWER_CLOSE_RESET_DELAY_MS);
-    return () => clearTimeout(timer);
-  }, [drawerOpen, filterView]);
 
   const providerSelect = (
     <MultiSelect
@@ -426,7 +422,7 @@ export function InventoryView({ data }: InventoryViewProps) {
             {searchField}
             {freshButton}
             {sortMenu}
-            <Button variant="secondary" size="sm" type="button" data-testid="viewer-filter-toggle" onClick={() => setDrawerOpen(true)}>
+            <Button variant="secondary" size="sm" type="button" data-testid="viewer-filter-toggle" onClick={openFilterDrawer}>
               {t("viewer.filter.button")}
             </Button>
           </div>
