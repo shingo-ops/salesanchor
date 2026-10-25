@@ -29,7 +29,7 @@ export function ReviewCsvPreviewTable({ preview, busy, onCommit, onCancel }: Pro
     <p>{t("reviewCsv.confirmHint")}</p>
     <ContentToolbar
       left={<HeaderButton variant="secondary" onClick={onCancel} disabled={busy}>{t("reviewCsv.chooseAgain")}</HeaderButton>}
-      right={<HeaderButton variant="primary" onClick={onCommit} disabled={busy || preview.applies.length === 0}>{busy ? t("common.loading") : t("reviewCsv.commit")}</HeaderButton>}
+      right={<HeaderButton loading={busy} variant="primary" onClick={onCommit} disabled={busy || preview.applies.length === 0}>{t("reviewCsv.commit")}</HeaderButton>}
     />
   </section>;
 }

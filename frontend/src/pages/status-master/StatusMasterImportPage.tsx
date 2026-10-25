@@ -93,7 +93,7 @@ function StatusMasterImportPanel({ onDone }: { onDone: () => void }) {
         )}
         <ContentToolbar
           left={<HeaderButton variant="secondary" onClick={() => { if (!lock.current) { setPreview(null); setFile(null); setError(""); } }} disabled={busy}>{t("statusMasterCsv.cancel")}</HeaderButton>}
-          right={<HeaderButton variant="primary" onClick={() => void doCommit()} disabled={busy || hasErrors}>{busy ? t("common.loading") : t("statusMasterCsv.commit")}</HeaderButton>}
+          right={<HeaderButton loading={busy} variant="primary" onClick={() => void doCommit()} disabled={busy || hasErrors}>{t("statusMasterCsv.commit")}</HeaderButton>}
         />
       </section>
     );
@@ -117,7 +117,7 @@ function StatusMasterImportPanel({ onDone }: { onDone: () => void }) {
       </section>
       <ContentToolbar
         left={<HeaderButton variant="secondary" onClick={onDone} disabled={busy}>{t("statusMasterCsv.backToList")}</HeaderButton>}
-        right={<HeaderButton variant="primary" onClick={() => void doPreview()} disabled={!file || busy}>{busy ? t("common.loading") : t("statusMasterCsv.preview")}</HeaderButton>}
+        right={<HeaderButton loading={busy} variant="primary" onClick={() => void doPreview()} disabled={!file || busy}>{t("statusMasterCsv.preview")}</HeaderButton>}
       />
     </>
   );
