@@ -301,8 +301,8 @@ export function TcgProductDetailDrawer({ productId, onClose, onSaved, open: open
     footer={draft && !confirmation ? <div className="product-detail__actions">
       {mode === "edit" && <Button type="button" variant="danger" onClick={() => setConfirmDelete(true)} disabled={deleting || saving}>{t("productDetail.delete")}</Button>}
       <Button type="button" variant="secondary" onClick={requestClose} disabled={saving}>{t("common.close")}</Button>
-      <Button type="submit" form={formId} disabled={saving || blocked || !dirty}>
-        {t(saving ? "productDetail.saving" : mode === "create" ? "productDetail.create" : "productDetail.save")}
+      <Button type="submit" form={formId} disabled={saving || blocked || !dirty} loading={saving}>
+        {t(mode === "create" ? "productDetail.create" : "productDetail.save")}
       </Button>
     </div> : undefined}>
     {confirmation ? <div className="product-detail__confirmation" role="alert">
