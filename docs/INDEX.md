@@ -19,8 +19,8 @@
 | B 設計仕様書 | 業務の仕様書 `salesanchor_system_overview.docx` 他 3 冊（リポジトリ外・PO から入手） | 業務の仕様（画面・データの意味）を確かめるとき |
 | C 設計判断（ADR） | [機能から ADR を引く索引](adr/FEATURE-INDEX.md) | 現状把握（recon）で既存の設計判断を探すとき |
 | C 設計判断（ADR） | [ADR の一覧](adr/README.md) | ADR を足す・変えるとき（一覧は `node scripts/generate-adr-index.js` で作り直す） |
-| D 領域別ルール | [frontend の決まり](../frontend/CLAUDE.md)・[frontend の AGENTS](../frontend/AGENTS.md) | frontend/ のファイルを触るとき |
-| D 領域別ルール | [backend の決まり](../backend/CLAUDE.md)・[backend の AGENTS](../backend/AGENTS.md) | backend/ のファイルを触るとき |
+| D 領域別ルール | [frontend の決まり](../frontend/AGENTS.md) | frontend/ のファイルを触るとき |
+| D 領域別ルール | [backend の決まり](../backend/AGENTS.md) | backend/ のファイルを触るとき |
 | E 商品マスタ登録 | [商品マスタ登録の決まり](specs/product-master/registration-rules.md) | 商品マスタに商品を登録する・登録内容を直すとき |
 | F 運用・本番 | [サーバーで使うコマンド](ops/runner-commands.md) | VPS・本番のコンテナで作業するとき |
 | F 運用・本番 | [自前の実行機の資格情報の落とし穴](ops/self-hosted-runner-credential-trap.md) | GitHub の自前の実行機（self-hosted runner）を触るとき |
@@ -33,9 +33,9 @@
 以下に順番に答える:
 
 1. CI / ESLint / Husky が既に強制しているか？ → YES: **書かない**（CSS変数・アイコン・デザイントークン規約はこれ）
-2. `frontend/` だけに関係するか？ → YES: **`frontend/CLAUDE.md`** に追加
-3. `backend/` だけに関係するか？ → YES: **`backend/CLAUDE.md`** に追加
-4. frontend と backend 両方に等しく関係するか？ → YES: **このファイル** に追加（i18n 等）
+2. `frontend/` だけに関係するか？ → YES: **`frontend/AGENTS.md`** に追加
+3. `backend/` だけに関係するか？ → YES: **`backend/AGENTS.md`** に追加
+4. frontend と backend 両方に等しく関係するか？ → YES: **このファイル** に追加（不可逆操作・ブランチ運用 等）
 5. Generator / Evaluator / Reviewer の動作手順か？ → YES: **`~/.claude/agents/`** の該当ファイルに追加
 6. `~/.claude/rules/` に同等の内容が既にあるか？ → YES: **書かない**（Git workflow・coding-style 等）
 7. 全セッションで Claude が知る必要があるか？ → NO: **書かない**（ADRリンクか docs/ 参照で十分）

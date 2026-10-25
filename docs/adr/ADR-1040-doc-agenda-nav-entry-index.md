@@ -43,7 +43,7 @@
 
 ## Consequences（結果）
 
-- ADR-076 の §1 ルート行（120行）と §2 の命名の決まりは、本 ADR が Accepted になった時点で本 ADR の Decision 1・2 に置き換わる。frontend・backend の CLAUDE.md の上限と階層の決まりは ADR-076 のまま。
+- ADR-076 の §1 ルート行（120行）と §2 の命名の決まりは、本 ADR が Accepted になった時点で本 ADR の Decision 1・2 に置き換わる。frontend・backend の階層の決まりは ADR-076 のまま。行数の上限（frontend 90・backend 70）は段4（2026-10-25）から本文の在る同じ場所の AGENTS.md に付け、CLAUDE.md は「@AGENTS.md」だけなのでルートと同じ 10 行にする。
 - check-claude-size.js のエラー文（「ファイル名は必ず CLAUDE.md」）と LIMITS は段3c で本 ADR に合わせて直す。
 - 手順を読むのに1〜3回ファイルを開く手間が増える。開いた割合は design KGI-10 で記録する。
 - 戻し方: 各段の PR を revert する（design §8 の戻し方の列）。
