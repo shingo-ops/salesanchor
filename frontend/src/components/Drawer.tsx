@@ -7,6 +7,7 @@
  * - フォーカストラップ（Tab / Shift+Tab がパネル内を循環）
  * - 閉じたら元の要素へフォーカス復帰
  * - onOpenFullPage が渡された場合は「フルページで開く↗」ボタンをヘッダに表示
+ * - onBack が渡された場合は題の左に「← 戻る」ボタンをヘッダに表示（省略時は今までどおり何も出ない。design.md 4-1）
  * - a11y: role="dialog" / aria-modal / aria-labelledby
  * - ReactDOM.createPortal で document.body にマウント
  * - z-index: --z-drawer (301) — Modal の overlay は --z-modal (400) で前面
@@ -16,7 +17,7 @@ import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import ReactDOM from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Button } from "./Button";
-import { X, ArrowTopRight } from "../constants/icons-base";
+import { X, ArrowTopRight, ArrowLeft } from "../constants/icons-base";
 import "./Drawer.css";
 
 interface DrawerProps {
@@ -26,6 +27,10 @@ interface DrawerProps {
   children: ReactNode;
   /** フルページで開くコールバック。省略時はボタン非表示 */
   onOpenFullPage?: () => void;
+  /** 「← 戻る」を押したときの処理。渡したときだけヘッダの左に「←」が出る（省略時は今までどおり出ない） */
+  onBack?: () => void;
+  /** 「←」の読み上げ名（ADR-027: 文言は呼び出し側が t() で渡す） */
+  backLabel?: string;
   footer?: ReactNode;
   /** パネル幅。'default'（480px）/ 'wide'（1100px・スマホは全幅） */
   size?: "default" | "wide";
@@ -37,6 +42,8 @@ export function Drawer({
   title,
   children,
   onOpenFullPage,
+  onBack,
+  backLabel,
   footer,
   size = "default",
 }: DrawerProps) {
@@ -136,6 +143,19 @@ export function Drawer({
       >
         {/* ヘッダ */}
         <div className="comp-drawer-header">
+          {onBack && (
+            <Button
+              variant="ghost"
+              size="md"
+              iconOnly
+              aria-label={backLabel}
+              onClick={onBack}
+              data-testid="drawer-back"
+              layoutClassName="comp-drawer-header-back"
+            >
+              <ArrowLeft size={20} aria-hidden="true" />
+            </Button>
+          )}
           <h2 id={titleId} className="comp-drawer-title">{title}</h2>
           <div className="comp-drawer-header-actions">
             {onOpenFullPage && (

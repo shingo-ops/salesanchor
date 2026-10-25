@@ -1,5 +1,5 @@
 /** ③ 在庫表（検索・絞り込み・並べ替えはすべて手元の行に対して行う。更新ボタンは無い。中身は ViewerApp が1分ごとに差し替える） */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/Button";
 import { ContentToolbar, ContentToolbarRange } from "../../components/ContentToolbar";
@@ -35,6 +35,13 @@ import type { ViewerInventoryResponse } from "./types";
 interface InventoryViewProps {
   data: ViewerInventoryResponse;
 }
+
+/** tokens.css の --transition-slow（280ms）と同じ。ドロワーのスライドアウトが終わってから
+ *  filterView を root に戻す（design.md 4-4。即座に戻すとスライド中に題と中身が切り替わって見える） */
+const DRAWER_CLOSE_RESET_DELAY_MS = 280;
+
+/** 絞り込みドロワーの画面（design.md 4-4）。root=一覧／provider・condition=選択画面 */
+type FilterView = "root" | "provider" | "condition";
 
 /** ISO8601（UTC）→ 日本時間の HH:MM */
 function formatUpdatedAt(iso: string): string {
@@ -72,6 +79,8 @@ export function InventoryView({ data }: InventoryViewProps) {
   const [sortDir, setSortDir] = useState<SortDir>(DEFAULT_SORT_DIR);
   const [page, setPage] = useState(1);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [filterView, setFilterView] = useState<FilterView>("root");
+  const [optionQuery, setOptionQuery] = useState("");
 
   const allRows = useMemo(() => withIndex(data.rows), [data.rows]);
   const tabs = useMemo(() => seriesTabs(data.rows), [data.rows]);
@@ -83,6 +92,15 @@ export function InventoryView({ data }: InventoryViewProps) {
   const conditionOptions = useMemo(
     () => distinctValues(data.rows, (r) => r.condition).map((v) => ({ value: v, label: v })),
     [data.rows],
+  );
+  // 選択画面の「候補を絞る」欄（design.md 4-4）。名前の解決には使わず、一覧の絞り込みだけに使う
+  const filteredProviderOptions = useMemo(
+    () => providerOptions.filter((o) => o.label.toLowerCase().includes(optionQuery.toLowerCase())),
+    [providerOptions, optionQuery],
+  );
+  const filteredConditionOptions = useMemo(
+    () => conditionOptions.filter((o) => o.label.toLowerCase().includes(optionQuery.toLowerCase())),
+    [conditionOptions, optionQuery],
   );
   const columns = useMemo(() => buildViewerColumns({ t }), [t]);
 
@@ -112,6 +130,54 @@ export function InventoryView({ data }: InventoryViewProps) {
     setPage(1);
   };
 
+  // 画面の行き来（design.md 4-4）。候補を絞る欄は画面を離れるたびに空へ戻す
+  // （← ・決定する・閉じる・項目を開く の全経路。審査指摘10）。
+  const openFilterSubview = (view: "provider" | "condition") => {
+    setOptionQuery("");
+    setFilterView(view);
+  };
+  const backToFilterRoot = () => {
+    setOptionQuery("");
+    setFilterView("root");
+  };
+  // Drawer の onClose は Esc・背景クリック・✕ ボタンの全てで同じ関数が呼ばれる（Drawer.tsx は変えない）。
+  // filterView が root 以外なら「戻る」、root なら本当に閉じる（design.md 4-4・審査指摘9＝A12）。
+  const handleDrawerClose = () => {
+    if (filterView !== "root") {
+      backToFilterRoot();
+      return;
+    }
+    setDrawerOpen(false);
+  };
+
+  // 画面が変わった直後のフォーカス移動（design.md 4-4・審査指摘8＝A13・A14）。
+  // Drawer の初期フォーカス（Drawer.tsx:64-70）は open が変わらないと再実行されないため、
+  // root⇄選択画面の遷移では自前でフォーカス先を決める。
+  const prevFilterViewRef = useRef<FilterView>(filterView);
+  useEffect(() => {
+    const prev = prevFilterViewRef.current;
+    prevFilterViewRef.current = filterView;
+    if (!drawerOpen || prev === filterView) return;
+    if (filterView === "root") {
+      const rowTestId = prev === "provider" ? "viewer-provider-row" : prev === "condition" ? "viewer-condition-row" : null;
+      if (rowTestId) {
+        document.querySelector<HTMLElement>(`[data-testid="${rowTestId}"]`)?.focus();
+      }
+    } else {
+      document.querySelector<HTMLElement>('[data-testid="drawer-back"]')?.focus();
+    }
+  }, [filterView, drawerOpen]);
+
+  // ドロワーを閉じたら、スライドアウトが終わってから root へ戻す（design.md 4-4・審査指摘13）
+  useEffect(() => {
+    if (drawerOpen) return;
+    const timer = setTimeout(() => {
+      setFilterView("root");
+      setOptionQuery("");
+    }, DRAWER_CLOSE_RESET_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [drawerOpen]);
+
   const providerSelect = (
     <MultiSelect
       testId="viewer-provider-filter"
@@ -138,12 +204,13 @@ export function InventoryView({ data }: InventoryViewProps) {
     />
   );
 
-  // ドロワーの中では浮かせられないため layout="inline"（design.md 4-1・4-3）。
-  // PC 側（上の popover 版）とは別インスタンス。
-  const providerSelectInline = (
+  // ドロワーの最初の画面（root）: 押せる1行。押すと選択画面（provider/condition）に入れ替わる
+  // （design.md 4-2・4-4）。PC 側（上の popover 版 providerSelect/conditionSelect）とは別インスタンス。
+  // testId は3層に分ける（design.md 4-4b）: PC=viewer-provider-filter／行=viewer-provider-row／選択画面=viewer-provider-options
+  const providerRow = (
     <MultiSelect
-      layout="inline"
-      testId="viewer-provider-filter"
+      layout="row"
+      testId="viewer-provider"
       label={t("viewer.filter.provider")}
       options={providerOptions}
       selected={providers}
@@ -151,13 +218,14 @@ export function InventoryView({ data }: InventoryViewProps) {
       clearLabel={t("viewer.filter.clear")}
       allLabel={t("viewer.filter.all")}
       countLabel={(n) => t("viewer.filter.count", { count: n })}
+      onOpen={() => openFilterSubview("provider")}
     />
   );
 
-  const conditionSelectInline = (
+  const conditionRow = (
     <MultiSelect
-      layout="inline"
-      testId="viewer-condition-filter"
+      layout="row"
+      testId="viewer-condition"
       label={t("viewer.filter.condition")}
       options={conditionOptions}
       selected={conditions}
@@ -165,7 +233,83 @@ export function InventoryView({ data }: InventoryViewProps) {
       clearLabel={t("viewer.filter.clear")}
       allLabel={t("viewer.filter.all")}
       countLabel={(n) => t("viewer.filter.count", { count: n })}
+      onOpen={() => openFilterSubview("condition")}
     />
+  );
+
+  // 選択画面（provider/condition）: 候補を絞る検索欄 ＋ layout="inline" の一覧（design.md 4-4）。
+  // options は検索で絞るが、選択済みの名前の解決は allOptions（全件）から行う（design.md 4-2・審査指摘6）。
+  const providerOptionsView = (
+    <div className="viewer-filter-options">
+      <TextFieldControl
+        type="search"
+        className="field-h-md field-w-lg"
+        placeholder={t("viewer.filter.searchOptions")}
+        aria-label={t("viewer.filter.searchOptions")}
+        data-testid="viewer-filter-option-search"
+        value={optionQuery}
+        onChange={(e) => setOptionQuery(e.target.value)}
+      />
+      <MultiSelect
+        layout="inline"
+        testId="viewer-provider-options"
+        label={t("viewer.filter.provider")}
+        options={filteredProviderOptions}
+        allOptions={providerOptions}
+        selected={providers}
+        onChange={reset(setProviders)}
+        clearLabel={t("viewer.filter.clear")}
+        allLabel={t("viewer.filter.all")}
+        countLabel={(n) => t("viewer.filter.count", { count: n })}
+        emptyLabel={t("viewer.filter.noOptions")}
+      />
+    </div>
+  );
+
+  const conditionOptionsView = (
+    <div className="viewer-filter-options">
+      <TextFieldControl
+        type="search"
+        className="field-h-md field-w-lg"
+        placeholder={t("viewer.filter.searchOptions")}
+        aria-label={t("viewer.filter.searchOptions")}
+        data-testid="viewer-filter-option-search"
+        value={optionQuery}
+        onChange={(e) => setOptionQuery(e.target.value)}
+      />
+      <MultiSelect
+        layout="inline"
+        testId="viewer-condition-options"
+        label={t("viewer.filter.condition")}
+        options={filteredConditionOptions}
+        allOptions={conditionOptions}
+        selected={conditions}
+        onChange={reset(setConditions)}
+        clearLabel={t("viewer.filter.clear")}
+        allLabel={t("viewer.filter.all")}
+        countLabel={(n) => t("viewer.filter.count", { count: n })}
+        emptyLabel={t("viewer.filter.noOptions")}
+      />
+    </div>
+  );
+
+  const filterDrawerTitle = filterView === "provider"
+    ? t("viewer.filter.provider")
+    : filterView === "condition"
+      ? t("viewer.filter.condition")
+      : t("viewer.filter.title");
+
+  const filterDrawerFooter = filterView === "root" ? undefined : (
+    <Button
+      variant="primary"
+      size="md"
+      type="button"
+      fullWidth
+      onClick={backToFilterRoot}
+      data-testid="viewer-filter-apply"
+    >
+      {t("viewer.filter.apply")}
+    </Button>
   );
   const sortMenuValue = `${sortKey}:${sortDir}`;
   const searchField = (
@@ -377,57 +521,70 @@ export function InventoryView({ data }: InventoryViewProps) {
       </main>
 
       {isMobile && (
-      <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)} title={t("viewer.filter.title")}>
-        <div className="viewer-filter-body">
-          {providerSelectInline}
-          {conditionSelectInline}
-          <div>
-            <div>{t("viewer.filter.priceRange")}</div>
-            <div className="viewer-filter-range">
-              <TextFieldControl
-                type="number"
-                min={0}
-                aria-label={`${t("viewer.filter.priceRange")} ${t("viewer.filter.min")}`}
-                placeholder={t("viewer.filter.min")}
-                data-testid="viewer-price-min"
-                value={priceMin}
-                onChange={(e) => reset(setPriceMin)(e.target.value)}
-              />
-              <TextFieldControl
-                type="number"
-                min={0}
-                aria-label={`${t("viewer.filter.priceRange")} ${t("viewer.filter.max")}`}
-                placeholder={t("viewer.filter.max")}
-                data-testid="viewer-price-max"
-                value={priceMax}
-                onChange={(e) => reset(setPriceMax)(e.target.value)}
-              />
+      <Drawer
+        open={drawerOpen}
+        onClose={handleDrawerClose}
+        title={filterDrawerTitle}
+        onBack={filterView === "root" ? undefined : backToFilterRoot}
+        backLabel={t("viewer.filter.back")}
+        footer={filterDrawerFooter}
+      >
+        {filterView === "provider" ? (
+          providerOptionsView
+        ) : filterView === "condition" ? (
+          conditionOptionsView
+        ) : (
+          <div className="viewer-filter-body">
+            {providerRow}
+            {conditionRow}
+            <div>
+              <div>{t("viewer.filter.priceRange")}</div>
+              <div className="viewer-filter-range">
+                <TextFieldControl
+                  type="number"
+                  min={0}
+                  aria-label={`${t("viewer.filter.priceRange")} ${t("viewer.filter.min")}`}
+                  placeholder={t("viewer.filter.min")}
+                  data-testid="viewer-price-min"
+                  value={priceMin}
+                  onChange={(e) => reset(setPriceMin)(e.target.value)}
+                />
+                <TextFieldControl
+                  type="number"
+                  min={0}
+                  aria-label={`${t("viewer.filter.priceRange")} ${t("viewer.filter.max")}`}
+                  placeholder={t("viewer.filter.max")}
+                  data-testid="viewer-price-max"
+                  value={priceMax}
+                  onChange={(e) => reset(setPriceMax)(e.target.value)}
+                />
+              </div>
+            </div>
+            <div>
+              <div>{t("viewer.filter.quantityRange")}</div>
+              <div className="viewer-filter-range">
+                <TextFieldControl
+                  type="number"
+                  min={0}
+                  aria-label={`${t("viewer.filter.quantityRange")} ${t("viewer.filter.min")}`}
+                  placeholder={t("viewer.filter.min")}
+                  data-testid="viewer-qty-min"
+                  value={qtyMin}
+                  onChange={(e) => reset(setQtyMin)(e.target.value)}
+                />
+                <TextFieldControl
+                  type="number"
+                  min={0}
+                  aria-label={`${t("viewer.filter.quantityRange")} ${t("viewer.filter.max")}`}
+                  placeholder={t("viewer.filter.max")}
+                  data-testid="viewer-qty-max"
+                  value={qtyMax}
+                  onChange={(e) => reset(setQtyMax)(e.target.value)}
+                />
+              </div>
             </div>
           </div>
-          <div>
-            <div>{t("viewer.filter.quantityRange")}</div>
-            <div className="viewer-filter-range">
-              <TextFieldControl
-                type="number"
-                min={0}
-                aria-label={`${t("viewer.filter.quantityRange")} ${t("viewer.filter.min")}`}
-                placeholder={t("viewer.filter.min")}
-                data-testid="viewer-qty-min"
-                value={qtyMin}
-                onChange={(e) => reset(setQtyMin)(e.target.value)}
-              />
-              <TextFieldControl
-                type="number"
-                min={0}
-                aria-label={`${t("viewer.filter.quantityRange")} ${t("viewer.filter.max")}`}
-                placeholder={t("viewer.filter.max")}
-                data-testid="viewer-qty-max"
-                value={qtyMax}
-                onChange={(e) => reset(setQtyMax)(e.target.value)}
-              />
-            </div>
-          </div>
-        </div>
+        )}
       </Drawer>
       )}
       <HoverCardHost />

@@ -79,6 +79,30 @@ export const Wide: Story = {
   },
 }
 
+export const WithBack: Story = {
+  name: 'with back — ← 戻るボタン付き（design.md 4-1）',
+  render: () => {
+    const [open, setOpen] = useState(false)
+    const [sub, setSub] = useState(false)
+    return (
+      <div style={{ height: '100vh', background: 'var(--bg-canvas)', padding: '2rem' }}>
+        <button onClick={() => { setSub(false); setOpen(true) }}>Drawer を開く</button>
+        <Drawer
+          open={open}
+          onClose={() => setOpen(false)}
+          title={sub ? '提供者' : '絞り込み'}
+          onBack={sub ? () => setSub(false) : undefined}
+          backLabel="戻る"
+        >
+          {sub
+            ? <p>提供者だけの選択画面（← で一覧に戻る）</p>
+            : <button onClick={() => setSub(true)}>提供者 ›</button>}
+        </Drawer>
+      </div>
+    )
+  },
+}
+
 export const Closed: Story = {
   name: 'closed — 閉じた状態',
   args: {
