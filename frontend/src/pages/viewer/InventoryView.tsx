@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/Button";
+import { CheckboxControl } from "../../components/CheckboxControl";
 import { ContentToolbar, ContentToolbarRange } from "../../components/ContentToolbar";
 import { DataTable } from "../../components/DataTable";
 import { Drawer } from "../../components/Drawer";
@@ -117,6 +118,13 @@ export function InventoryView({ data }: InventoryViewProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [allRows, tab, query, freshOnly, data.fresh_window_hours, providers, conditions, priceMin, priceMax, qtyMin, qtyMax, sortKey, sortDir, now],
   );
+  // 絞り込みボタンに出す有効な数（design.md 4-3・PO 指示に無い追加）
+  const filterActiveCount =
+    (freshOnly ? 1 : 0) +
+    (providers.length > 0 ? 1 : 0) +
+    (conditions.length > 0 ? 1 : 0) +
+    (priceMin || priceMax ? 1 : 0) +
+    (qtyMin || qtyMax ? 1 : 0);
   const totalPages = Math.max(1, Math.ceil(sorted.length / PER_PAGE));
   const current = Math.min(page, totalPages);
   const pageRows = sorted.slice((current - 1) * PER_PAGE, current * PER_PAGE);
@@ -324,7 +332,7 @@ export function InventoryView({ data }: InventoryViewProps) {
   const searchField = (
     <TextFieldControl
       type="search"
-      className="field-h-md field-w-md"
+      className="field-h-md field-w-md viewer-toolbar__search"
       placeholder={t("viewer.search.placeholder")}
       aria-label={t("viewer.search.placeholder")}
       data-testid="viewer-search"
@@ -344,9 +352,21 @@ export function InventoryView({ data }: InventoryViewProps) {
       {t("viewer.freshOnly", { hours: data.fresh_window_hours })}
     </Button>
   );
+  // 絞り込みドロワーの先頭の1行（design.md 4-1）。上部の viewer-fresh-toggle とは別の testId（便2の教訓）
+  const freshCheck = (
+    <label className="comp-multiselect__option comp-multiselect__option--inline">
+      <CheckboxControl
+        data-testid="viewer-fresh-check"
+        checked={freshOnly}
+        onChange={(e) => reset(setFreshOnly)(e.target.checked)}
+      />
+      {t("viewer.freshOnly", { hours: data.fresh_window_hours })}
+    </label>
+  );
   const sortMenu = (
     <SelectControl
       size="sm"
+      className="viewer-toolbar__fixed"
       aria-label={t("viewer.sort.placeholder")}
       placeholder={t("viewer.sort.placeholder")}
       data-testid="viewer-sort-menu"
@@ -404,26 +424,32 @@ export function InventoryView({ data }: InventoryViewProps) {
       </header>
 
       <main className="viewer-main">
-        {isMobile && (
-          <SelectControl
-            aria-label={t("viewer.tabSelect")}
-            data-testid="viewer-tab-select"
-            value={tab}
-            onChange={(e) => reset(setTab)(e.target.value)}
-            options={[
-              { value: TAB_ALL, label: `${t("viewer.tabAll")} (${data.rows.length})` },
-              ...tabs.map((s) => ({ value: s.key, label: `${s.key} (${s.count})` })),
-            ]}
-          />
-        )}
-
         {isMobile ? (
           <div className="viewer-toolbar">
             {searchField}
-            {freshButton}
+            <SelectControl
+              className="viewer-toolbar__series"
+              aria-label={t("viewer.tabSelect")}
+              data-testid="viewer-tab-select"
+              value={tab}
+              onChange={(e) => reset(setTab)(e.target.value)}
+              options={[
+                { value: TAB_ALL, label: `${t("viewer.tabAll")} (${data.rows.length})` },
+                ...tabs.map((s) => ({ value: s.key, label: `${s.key} (${s.count})` })),
+              ]}
+            />
             {sortMenu}
-            <Button variant="secondary" size="sm" type="button" data-testid="viewer-filter-toggle" onClick={openFilterDrawer}>
-              {t("viewer.filter.button")}
+            <Button
+              variant="secondary"
+              size="sm"
+              type="button"
+              layoutClassName="viewer-toolbar__fixed"
+              data-testid="viewer-filter-toggle"
+              onClick={openFilterDrawer}
+            >
+              {filterActiveCount > 0
+                ? t("viewer.filter.buttonWithCount", { count: filterActiveCount })
+                : t("viewer.filter.button")}
             </Button>
           </div>
         ) : (
@@ -544,6 +570,7 @@ export function InventoryView({ data }: InventoryViewProps) {
           conditionOptionsView
         ) : (
           <div className="viewer-filter-body">
+            {freshCheck}
             {providerRow}
             {conditionRow}
             <div>

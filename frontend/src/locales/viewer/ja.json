@@ -42,6 +42,7 @@
     },
     "filter": {
       "button": "絞り込み",
+      "buttonWithCount": "絞り込み ({{count}})",
       "title": "絞り込み",
       "provider": "提供者",
       "condition": "コンディション",
