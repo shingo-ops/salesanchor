@@ -11,6 +11,7 @@ import { INBOX_ACTION_ICONS, NAV_ICONS, Check, Warning } from "../../constants/i
 import type { PreviewData, RunResult } from "./distributionApi";
 import { runDistributionAll } from "./distributionApi";
 import { LoadingBlock } from "../../components/loading";
+import { Button } from "../../components/Button";
 
 interface Props {
   /** 一覧のリフレッシュを親に通知する */
@@ -117,16 +118,18 @@ export function DistributionPreview({ onRefreshTargets }: Props) {
               </div>
             )}
           </div>
-          <button
+          <Button
             type="button"
-            className="dist-btn dist-btn--primary"
+            variant="primary"
+            size="sm"
+            loading={running}
             onClick={() => setShowConfirm(true)}
             disabled={running || preview.output_count === 0}
             aria-label={t("distributionTarget.preview.runAllLabel")}
           >
             <INBOX_ACTION_ICONS.send size={16} aria-hidden="true" />
-            {running ? t("distributionTarget.preview.running") : t("distributionTarget.preview.runAll")}
-          </button>
+            {t("distributionTarget.preview.runAll")}
+          </Button>
         </div>
 
         {runResult && (
