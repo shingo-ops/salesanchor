@@ -96,6 +96,123 @@ _SQL_WRITE = re.compile(
 )
 
 
+# ---------- 埋め込まれた命令の取り出し（別カード 指摘5） ----------
+def _paren_body(t: str, i: int):
+    """t[i] は '(' の次の位置。対応する ')' までの中身と、その次の位置を返す。閉じが無ければ末尾まで。"""
+    n = len(t)
+    depth = 1
+    j = i
+    while j < n:
+        c = t[j]
+        if c == "\\":
+            j += 2
+            continue
+        if c == "'":
+            k = t.find("'", j + 1)
+            j = n if k < 0 else k + 1
+            continue
+        if c == '"':
+            j += 1
+            while j < n and t[j] != '"':
+                j += 2 if t[j] == "\\" else 1
+            j += 1
+            continue
+        if c == "(":
+            depth += 1
+        elif c == ")":
+            depth -= 1
+            if depth == 0:
+                return t[i:j], j + 1
+        j += 1
+    return t[i:], n
+
+
+def _subst_bodies(t: str):
+    """$( … ) と逆引用符の中身を取り出す。単引用符の中と、\\ の付いたものは飛ばす。$(( )) は対象外。"""
+    out = []
+    n = len(t)
+    i = 0
+    dq = False
+    while i < n:
+        c = t[i]
+        if c == "\\":
+            i += 2
+            continue
+        if not dq and c == "'":
+            k = t.find("'", i + 1)
+            i = n if k < 0 else k + 1
+            continue
+        if c == '"':
+            dq = not dq
+            i += 1
+            continue
+        if c == "`":
+            j = i + 1
+            while j < n and t[j] != "`":
+                j += 2 if t[j] == "\\" else 1
+            out.append(t[i + 1:min(j, n)].replace("\\`", "`"))
+            i = j + 1
+            continue
+        if c == "$" and t.startswith("$(", i):
+            if t.startswith("$((", i):
+                i += 3
+                continue
+            body, i = _paren_body(t, i + 2)
+            out.append(body)
+            continue
+        i += 1
+    return out
+
+
+def _quoted_arg(s: str, i: int) -> str:
+    """s[i:] の先頭の引数を返す。'…' は中身、"…" はエスケープを戻した中身、引用符なしは区切りまでの残り。"""
+    n = len(s)
+    while i < n and s[i] in " \t":
+        i += 1
+    if i >= n:
+        return ""
+    if s[i] == "'":
+        k = s.find("'", i + 1)
+        return s[i + 1:] if k < 0 else s[i + 1:k]
+    if s[i] == '"':
+        j = i + 1
+        while j < n and s[j] != '"':
+            j += 2 if s[j] == "\\" else 1
+        return re.sub(r'\\(["$`\\])', r"\1", s[i + 1:min(j, n)])
+    return re.match(r"[^;&|\n]*", s[i:]).group(0)
+
+
+_SHELL_C = re.compile(
+    r"(?<![\w./-])(?:[\w.-]*/)*(?:bash|sh|zsh|dash)(?![\w.-])((?:\s+(?:-o\s+\w+|--?[A-Za-z][\w-]*))*)"
+)
+_EVAL = re.compile(r"(?<![\w./-])eval(?![\w.-])")
+
+
+def embedded_commands(cmd: str, depth: int = 0):
+    """命令文に埋め込まれた命令（$( )・逆引用符・( ) の殻・bash/sh/zsh/dash -c・eval の中身）を平らに返す。
+    入れ子は depth 3 まで。閉じ忘れは末尾までを中身とする（止める側）。"""
+    if depth > 3:
+        return []
+    t = strip_heredoc_bodies(cmd)
+    found = _subst_bodies(t)
+    for seg in re.split(r"&&|\|\||;|\||&|\n", t):
+        s = seg.lstrip()
+        if s.startswith("(") and not s.startswith("(("):
+            found.append(_paren_body(s, 1)[0])
+    s = scan_text(t)
+    for m in _SHELL_C.finditer(s):
+        opts = [o for o in re.findall(r"(?<!\S)-[A-Za-z]\w*", m.group(1)) if "c" in o]
+        if opts:
+            found.append(_quoted_arg(s, m.end()))
+    for m in _EVAL.finditer(s):
+        found.append(_quoted_arg(s, m.end()))
+    result = []
+    for f in found:
+        result.append(f)
+        result.extend(embedded_commands(f, depth + 1))
+    return result
+
+
 def has_recursive_rm(scanned: str) -> bool:
     """区切り（&& || ; | & 改行）で分けた各区間に、再帰の選択肢つきの rm があるか。
     最後の / より後ろが rm の語を探し、その後ろ（-- より前）に -r/-R を含む短い選択肢か --recursive があれば True。"""
@@ -382,12 +499,17 @@ def main() -> int:
     cwd = data.get("cwd") or os.getcwd()
 
     if tool == "Bash":
-        r = check_danger(cmd)
+        for text in [cmd] + embedded_commands(cmd):
+            r = check_danger(text)
+            if r:
+                return block(r)
+            r = check_merge(tool, text)
+            if r:
+                return block(r)
+    else:
+        r = check_merge(tool, cmd)
         if r:
             return block(r)
-    r = check_merge(tool, cmd)
-    if r:
-        return block(r)
     if is_pr_create(tool, cmd):
         r = check_pr_create(tool, ti, cmd, cwd)
         if r:
