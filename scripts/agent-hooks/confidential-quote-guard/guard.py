@@ -30,13 +30,13 @@ import unicodedata
 HOOK = "confidential-quote-guard"
 MIN_LEN = 4
 
-GH_RE = re.compile(
-    r"(?<![\w./-])gh\b[^;&|\n]*?\b(?:pr\s+(?:create|edit|comment|review)|issue\s+(?:create|comment))\b")
-PUSH_RE = re.compile(r"(?<![\w./-])git\b[^;&|\n]*?\bpush\b")
+GH_SUB_RE = re.compile(
+    r"(?:^|[\s;&|(`\x22\x27])(?:\S*/)?gh\b[^;&|\n]*?\b(?:pr\s+(?:create|edit|comment|review)|issue\s+(?:create|comment))\b")
+GH_ACTIONS = {"pr": {"create", "edit", "comment", "review"}, "issue": {"create", "comment"}}
+PUSH_RE = re.compile(r"(?:^|[\s;&|(`\x22\x27])(?:\S*/)?git\b[^;&|\n]*?\bpush\b")
 HEREDOC_RE = re.compile(r"(?<!<)<<(?!<)(-?)\s*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\2")
-BODY_FLAG_RE = re.compile(r"(?:^|\s)(?:--body|--body-file|-b|-F)(?:[=\s]|$)")
 PHRASE_RES = (re.compile(r"「([^「」\n]*)」"), re.compile(r"『([^『』\n]*)』"))
-SEPS = {";", "&&", "&", "|", "||", "(", ")"}
+SEP_CHARS = set(";&|()\n")
 PUSH_VALUE_FLAGS = {"-o", "--push-option", "--receive-pack", "--exec", "--repo"}
 EXPLAIN = ("仕入元の原文の書き写しは、公開の置き場へ送れません。"
            "該当の語句を消し、「形の説明」(例: 値段の行・在庫数の行・見出しの行) に書き換えてから、もう一度送ってください。"
@@ -177,9 +177,11 @@ def strip_heredocs(cmd):
     return "\n".join(out)
 
 
-def tokenize(cmd):
-    lex = shlex.shlex(cmd, posix=True, punctuation_chars=";&|()<>")
+def tokenize_all(cmd):
+    """字句に分ける。改行も区切りの字句にする (改行で区切った 2 つ目の操作も読むため)。"""
+    lex = shlex.shlex(cmd, posix=True, punctuation_chars=";&|()<>\n")
     lex.whitespace_split = True
+    lex.whitespace = " \t\r"
     lex.commenters = ""
     return list(lex)
 
@@ -211,14 +213,27 @@ def repo_slug(cwd):
 
 def added_lines(cwd, ref):
     """origin/main...ref の追加行 -> [(file, lineno, text)]。取れなければ Block。"""
-    r = git(cwd, "diff", "--no-color", "--no-ext-diff", "-U0", "origin/main...%s" % ref)
+    r = git(cwd, "-c", "core.quotePath=false", "diff", "--no-color", "--no-ext-diff", "-U0", "origin/main...%s" % ref)
     if r.returncode != 0:
         raise Block("差分が取れません (origin/main...%s)" % ref)
-    out, fname, ln = [], None, 0
+    out, fname, ln, in_head = [], None, 0, False
     for line in r.stdout.split("\n"):
-        if line.startswith("+++ "):
-            fname = line[6:] if line.startswith("+++ b/") else None
+        if line.startswith("diff --git "):
+            fname, in_head = None, True  # ファイルの見出し。この中の "+++ " だけが名前
             continue
+        if in_head:
+            if line.startswith("+++ "):
+                nm = line[4:].split("\t")[0]
+                if nm.startswith('"b/') and nm.endswith('"'):
+                    fname = nm[3:-1]
+                elif nm.startswith("b/"):
+                    fname = nm[2:]
+                else:
+                    fname = None
+                continue
+            if not line.startswith("@@"):
+                continue
+            in_head = False
         m = re.match(r"@@ -\S+ \+(\d+)(?:,\d+)? @@", line)
         if m:
             ln = int(m.group(1))
@@ -305,77 +320,157 @@ def read_body_file(p):
         raise Block("本文のファイルが読めません: %s (%s)" % (os.path.basename(p), e.strerror))
 
 
-def check_gh(cmd, m, payload_cwd):
-    """gh の本文。(a) コマンド全体 (b) 本文ファイル (c) 外から来る本文 (d) 決まらなければ Block"""
-    cwd = resolve_cwd(cmd, payload_cwd, m.start())
-    entries = [("コマンド本文", i + 1, t) for i, t in enumerate(cmd.split("\n"))]  # (a)
-    has_flag = bool(BODY_FLAG_RE.search(cmd))
-    files = []
-    toks = []
-    stdin_needed = False
-    if has_flag:
-        try:
-            toks = tokenize(strip_heredocs(cmd))
-        except ValueError:
-            raise Block("コマンドの本文の付け方を読めません")
-        start = None
-        for i, t in enumerate(toks):
-            if t == "gh":
-                start = i
-                break
-        if start is None:
-            raise Block("gh の位置が決まりません")
-        seg = []
-        for t in toks[start:]:
-            if t in SEPS:
-                break
-            seg.append(t)
-        i = 0
-        while i < len(seg):
-            t = seg[i]
-            val, kind = None, None
-            if t in ("--body", "-b"):
-                kind, val = "body", (seg[i + 1] if i + 1 < len(seg) else None)
-                i += 1
-            elif t.startswith("--body="):
-                kind, val = "body", t[7:]
-            elif t in ("--body-file", "-F"):
-                kind, val = "file", (seg[i + 1] if i + 1 < len(seg) else None)
-                i += 1
-            elif t.startswith("--body-file="):
-                kind, val = "file", t[12:]
-            i += 1
-            if kind is None:
-                continue
-            if val is None:
-                raise Block("本文の指定の値がありません")
-            if kind == "file":
-                if val == "-":
-                    stdin_needed = True
-                else:
-                    files.append(_plain_path(val, cwd))
+def heredoc_infos(cmd):
+    """heredoc ごとの (印が引用符つきか, 本文) -> [(bool, str)]"""
+    infos = []
+    tag, dash, quoted, buf = None, False, False, []
+    for ln in cmd.split("\n"):
+        if tag is not None:
+            chk = ln.strip() if dash else ln
+            if chk == tag:
+                infos.append((quoted, "\n".join(buf)))
+                tag, buf = None, []
             else:
-                if "<<" in val:
-                    continue  # heredoc の本文は (a) に含まれる
-                cm = re.search(r"\$\(\s*cat\s+([^\s)]+)\s*\)", val)
-                if cm:
-                    files.append(_plain_path(cm.group(1), cwd))
-                elif re.search(r"\$[A-Za-z_{(]|`", val):
-                    raise Block("本文の出どころが決まりません (変数・コマンド置換)")
-    if has_flag:
-        for i, t in enumerate(toks):
-            if t == "<" and i + 1 < len(toks):
-                files.append(_plain_path(toks[i + 1], cwd))
-            elif t == "cat" and i + 2 < len(toks) and toks[i + 2] == "|":
-                files.append(_plain_path(toks[i + 1], cwd))
-        for cm in re.finditer(r"\$\(\s*cat\s+([^\s)]+)\s*\)", strip_heredocs(cmd)):
-            files.append(_plain_path(cm.group(1), cwd))
-    if stdin_needed:
-        has_src = ("<<" in toks or "<<<" in toks or "<" in toks or HEREDOC_RE.search(cmd) is not None
-                   or any(t == "cat" and i + 2 < len(toks) and toks[i + 2] == "|" for i, t in enumerate(toks))
-                   or any(t in ("echo", "printf") for t in toks))
-        if not has_src:
-            raise Block("標準入力で渡す本文の出どころが決まりません")
+                buf.append(ln)
+            continue
+        m = HEREDOC_RE.search(ln)
+        if m:
+            dash, quoted, tag = m.group(1) == "-", bool(m.group(2)), m.group(3)
+    if tag is not None:
+        infos.append((quoted, "\n".join(buf)))
+    return infos
+
+
+def _is_sep(t):
+    return bool(t) and all(c in SEP_CHARS for c in t)
+
+
+def _split_segments(toks):
+    """字句を区切りで切る -> [(区切り記号, 字句のリスト)]"""
+    segs, cur, sep = [], [], None
+    for t in toks:
+        if _is_sep(t):
+            segs.append((sep, cur))
+            cur, sep = [], t
+        else:
+            cur.append(t)
+    segs.append((sep, cur))
+    return segs
+
+
+def _gh_target(seg):
+    """この段が gh の本文つき操作なら gh より後ろの字句を返す。違えば None。"""
+    for i, t in enumerate(seg):
+        if os.path.basename(t) == "gh":
+            rest = seg[i + 1:]
+            for j in range(len(rest) - 1):
+                if rest[j] in GH_ACTIONS and rest[j + 1] in GH_ACTIONS[rest[j]]:
+                    return rest
+            return None
+    return None
+
+
+def _stdin_source(seg, prev_sep, prev_seg, cwd, files, heredocs):
+    """gh -F - の標準入力の出どころ。照らせる形ならファイルを files に足す。決まらなければ Block。"""
+    redirected = False
+    for i, t in enumerate(seg):
+        if t == "<" and i + 1 < len(seg):
+            files.append(_plain_path(seg[i + 1], cwd))
+            redirected = True
+        elif t == "<<<":
+            redirected = True
+            arg = seg[i + 1] if i + 1 < len(seg) else ""
+            if re.search(r"[$`]", arg):
+                raise Block("標準入力 (<<<) の本文の出どころが決まりません (変数・コマンド置換)")
+        elif t.startswith("<<") and t != "<<<":
+            redirected = True
+            if any((not q) and re.search(r"[$`]", b) for q, b in heredocs):
+                raise Block("引用符なしの heredoc の本文に変数・コマンド置換があります")
+    if redirected:
+        return
+    if prev_sep == "|" and prev_seg:
+        head = os.path.basename(prev_seg[0])
+        args = prev_seg[1:]
+        if head == "cat":
+            got, i = [], 0
+            while i < len(args):
+                if args[i] == "<" and i + 1 < len(args):
+                    got.append(args[i + 1]); i += 1
+                elif not args[i].startswith("-") and not _is_sep(args[i]):
+                    got.append(args[i])
+                i += 1
+            if got:
+                for g in got:
+                    files.append(_plain_path(g, cwd))
+                return
+        elif head in ("echo", "printf"):
+            if not any(re.search(r"[$`]", a) for a in args):
+                return
+            raise Block("echo/printf の本文に変数・コマンド置換があります")
+    raise Block("標準入力で渡す本文の出どころが決まりません")
+
+
+def check_gh(cmd, payload_cwd):
+    """gh の本文。(a) コマンド全体 (b) 本文ファイル (c) 外から来る本文 (d) 決まらなければ Block
+    コマンド中の gh の操作は全部読む (区切りごとに字句に分けて、本文の付け方を見る)。"""
+    base = strip_heredocs(cmd)
+    try:
+        toks = tokenize_all(base)
+    except ValueError:
+        raise Block("コマンドの本文の付け方を読めません")
+    heredocs = heredoc_infos(cmd)
+    entries = [("コマンド本文", i + 1, t) for i, t in enumerate(cmd.split("\n"))]  # (a)
+    files = []
+    cwd = payload_cwd or os.getcwd()
+    prev_seg, prev_sep = None, None
+    for k, t in enumerate(toks):
+        if k and toks[k - 1] in ("-c", "eval") and GH_SUB_RE.search(t):
+            raise Block("文字列の中の gh の操作は読めません")
+    for sep, seg in _split_segments(toks):
+        if seg and seg[0] == "cd" and len(seg) > 1:
+            p = os.path.expanduser(seg[1])
+            if p.startswith("/"):
+                cwd = p
+        rest = _gh_target(seg)
+        if rest is not None:
+            i = 0
+            while i < len(rest):
+                t = rest[i]
+                val, kind = None, None
+                if t in ("--body", "-b"):
+                    kind, val = "body", (rest[i + 1] if i + 1 < len(rest) else None)
+                    i += 1
+                elif t.startswith("--body="):
+                    kind, val = "body", t[7:]
+                elif t in ("--body-file", "-F"):
+                    kind, val = "file", (rest[i + 1] if i + 1 < len(rest) else None)
+                    i += 1
+                elif t.startswith("--body-file="):
+                    kind, val = "file", t[12:]
+                i += 1
+                if kind is None:
+                    continue
+                if val is None:
+                    raise Block("本文の指定の値がありません")
+                if kind == "file":
+                    if val == "-":
+                        _stdin_source(seg, sep, prev_seg, cwd, files, heredocs)
+                    else:
+                        files.append(_plain_path(val, cwd))
+                else:
+                    if "<<" in val:
+                        continue  # heredoc の本文は (a) に含まれる
+                    cm = re.search(r"\$\(\s*cat\s+([^\s)]+)\s*\)", val)
+                    if cm:
+                        files.append(_plain_path(cm.group(1), cwd))
+                    elif re.search(r"\$[A-Za-z_{(]|`", val):
+                        raise Block("本文の出どころが決まりません (変数・コマンド置換)")
+            for j, t in enumerate(seg):  # --body "$(cat f)" 以外の < file も読む
+                if t == "<" and j + 1 < len(seg):
+                    files.append(_plain_path(seg[j + 1], cwd))
+        prev_sep, prev_seg = sep, seg
+    for cm in re.finditer(r"\$\(\s*cat\s+([^\s)]+)\s*\)", base):
+        files.append(_plain_path(cm.group(1), cwd))
     seen = set()
     for f in files:
         if f in seen:
@@ -392,17 +487,17 @@ def run(payload):
         return 0
     ti = payload.get("tool_input") or {}
     cmd = ti.get("command") or ""
-    pm = PUSH_RE.search(cmd)
-    gm = GH_RE.search(cmd)
-    if not pm and not gm:
+    pms = list(PUSH_RE.finditer(cmd))
+    gh_on = GH_SUB_RE.search(cmd) is not None
+    if not pms and not gh_on:
         return 0
     try:
         repos, corpus, excl, _n = load_tables()
         entries = []
-        if pm:
+        for pm in pms:
             entries.extend(check_push(cmd, pm, payload.get("cwd"), repos))
-        if gm:
-            entries.extend(check_gh(cmd, gm, payload.get("cwd")))
+        if gh_on:
+            entries.extend(check_gh(cmd, payload.get("cwd")))
         hits = find_hits(entries, corpus, excl)
     except Block as e:
         log_block("停止: %s" % e)

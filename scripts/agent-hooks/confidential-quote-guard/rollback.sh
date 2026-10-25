@@ -13,24 +13,34 @@ STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 if [ -f "$SETTINGS" ]; then
   cp "$SETTINGS" "$SETTINGS.bak-confidential-quote-guard-rollback-$STAMP"
   SETTINGS="$SETTINGS" DEST="$DEST" python3 - <<'PY'
-import json, os
+import glob, json, os
 p = os.environ["SETTINGS"]
 target = "python3 %s/guard.py" % os.environ["DEST"]
+# 導入前の姿 = いちばん古い install 時の .bak。無ければ空の項目は消さない
+baks = sorted(glob.glob(p + ".bak-confidential-quote-guard-[0-9]*"))
+orig = None
+if baks:
+    with open(baks[0], encoding="utf-8") as f:
+        orig = json.load(f)
 with open(p, encoding="utf-8") as f:
     d = json.load(f)
-arr = d.get("hooks", {}).get("PreToolUse", [])
-new = []
-for e in arr:
-    hs = e.get("hooks", [])
-    kept = [h for h in hs if h.get("command") != target]
-    if kept:
-        e = dict(e)
-        e["hooks"] = kept
-        new.append(e)
-    elif not hs:
-        new.append(e)
-if "hooks" in d and "PreToolUse" in d["hooks"]:
-    d["hooks"]["PreToolUse"] = new
+hooks = d.get("hooks", {})
+for event in list(hooks):
+    new = []
+    for e in hooks[event]:
+        kept = [h for h in e.get("hooks", []) if h.get("command") != target]
+        if kept:
+            e = dict(e)
+            e["hooks"] = kept
+            new.append(e)
+        elif not e.get("hooks"):
+            new.append(e)
+    if new or orig is None or event in (orig.get("hooks") or {}):
+        hooks[event] = new
+    else:
+        del hooks[event]
+if not hooks and orig is not None and "hooks" not in orig:
+    d.pop("hooks", None)
 tmp = p + ".tmp-confidential-quote-guard"
 with open(tmp, "w", encoding="utf-8") as f:
     json.dump(d, f, ensure_ascii=False, indent=2)

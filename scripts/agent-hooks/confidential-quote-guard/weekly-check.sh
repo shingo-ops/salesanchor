@@ -14,10 +14,11 @@ INST="$CLAUDE_DIR/scripts/confidential-quote-guard/guard.py"
 REL="scripts/agent-hooks/confidential-quote-guard/guard.py"
 bad=0
 
+[ -f "$INST" ] || { echo "0 写しが無い: $INST"; bad=1; }
 d1="$(git -C "$REPO" show "origin/main:$REL" 2>/dev/null | diff - "$INST" 2>/dev/null | wc -l | tr -d ' ')"
 echo "1 原本と写しの差分行数: $d1"; [ "$d1" != "0" ] && bad=1
 
-n="$(grep -vc '^\s*#\|^\s*$' "$D/confidential-allow.txt" 2>/dev/null || echo 0)"
+n="$(grep -vc '^\s*#\|^\s*$' "$D/confidential-allow.txt" 2>/dev/null || true)"; n="${n:-0}"
 w="$(find "$D/confidential-allow.txt" -mtime -7 2>/dev/null | wc -l | tr -d ' ')"
 echo "2 一般語の表の行数: $n (今週更新: $([ "$w" = "1" ] && echo あり || echo なし))"
 
