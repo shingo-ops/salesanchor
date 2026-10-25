@@ -186,6 +186,17 @@ PR を revert する（1ファイル）。
 
 ## 11. 報告欄（担当が追記）
 
-（未記入）
+本報告はカード doc-agenda-nav 段5b の実行結果である。
+
+- preflight: rc=0。F1・F5 は実物と一致。
+- 5-0 (t1-before): rc=0、backend/tenant/CLAUDE.md（144日）・backend/scripts/CLAUDE.md（146日）の2本、stale=true。
+- 5-1 (t1-after): rc=0、同じ2本、stale=true。
+- 5-2 (t2): rc=0、9本（AGENTS.md 3本・CLAUDE.md 6本）。
+- 5-3 (t3): s5probe は t3.txt・t3-find.txt とも0件。試しのファイルは削除済み。
+- 5-4 (t4): actionlint rc=0、指摘0件。
+- 5-5: 製品側の変更は .github/workflows/claude-md-staleness-check.yml の1ファイルのみ。git status に stale_files.txt・frontend/node_modules なし。
+- 生出力: /tmp/CC報告ファイル/an-s5b/impl/
+- 本番での確認: まだ確かめていない（次の定期実行 2027-01-01 09:00 日本時間）。
+
 
 END OF CARD

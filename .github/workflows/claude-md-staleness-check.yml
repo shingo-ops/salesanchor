@@ -1,10 +1,10 @@
-name: CLAUDE.md 定期見直しチェック（90日）
+name: CLAUDE.md・AGENTS.md 定期見直しチェック（90日）
 
-# 四半期ごとに CLAUDE.md ファイルの最終更新日を確認し、
+# 四半期ごとに CLAUDE.md・AGENTS.md ファイルの最終更新日を確認し、
 # 90日以上更新されていないファイルがあれば GitHub Issue を自動作成する。
 #
 # 目的: ドキュメントが古くなったまま放置されるのを防ぐ。
-# 参照: docs/adr/ADR-076-claude-md-hierarchy.md
+# 参照: docs/adr/ADR-076-claude-md-hierarchy.md・ADR-1040（本文は AGENTS.md へ移った）
 
 on:
   schedule:
@@ -15,7 +15,7 @@ on:
 
 jobs:
   staleness-check:
-    name: CLAUDE.md 陳腐化チェック
+    name: CLAUDE.md・AGENTS.md 陳腐化チェック
     runs-on: ubuntu-latest
     permissions:
       issues: write
@@ -26,7 +26,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Check CLAUDE.md staleness (90 days)
+      - name: Check CLAUDE.md and AGENTS.md staleness (90 days)
         id: check
         run: |
           THRESHOLD_DAYS=90
@@ -42,10 +42,9 @@ jobs:
             if [ "$DAYS_OLD" -gt "$THRESHOLD_DAYS" ]; then
               STALE_FILES="${STALE_FILES}\n- ${file}（最終更新: ${LAST_DATE}、${DAYS_OLD}日前）"
             fi
-          done < <(find . -name "CLAUDE.md" \
+          done < <(find . \( -name "CLAUDE.md" -o -name "AGENTS.md" \) \
             -not -path "./.git/*" \
-            -not -path "./node_modules/*" \
-            -not -path "./frontend/node_modules/*")
+            -not -path "*/node_modules/*")
 
           if [ -n "$STALE_FILES" ]; then
             echo "stale=true" >> "$GITHUB_OUTPUT"
@@ -54,7 +53,7 @@ jobs:
             cat stale_files.txt
           else
             echo "stale=false" >> "$GITHUB_OUTPUT"
-            echo "全 CLAUDE.md ファイルは ${THRESHOLD_DAYS}日以内に更新されています"
+            echo "全 CLAUDE.md・AGENTS.md ファイルは ${THRESHOLD_DAYS}日以内に更新されています"
           fi
 
       - name: Create GitHub Issue
@@ -68,7 +67,7 @@ jobs:
           STALE_LIST=$(cat stale_files.txt)
 
           {
-            echo "以下の CLAUDE.md ファイルが90日以上更新されていません。内容が実態と合っているか確認してください。"
+            echo "以下の CLAUDE.md・AGENTS.md ファイルが90日以上更新されていません。内容が実態と合っているか確認してください。"
             echo ""
             echo "${STALE_LIST}"
             echo ""
@@ -82,5 +81,5 @@ jobs:
           } > issue_body.txt
 
           gh issue create \
-            --title "CLAUDE.md 定期見直し ${YEAR_Q}（90日以上未更新あり）" \
+            --title "CLAUDE.md・AGENTS.md 定期見直し ${YEAR_Q}（90日以上未更新あり）" \
             --body-file issue_body.txt
