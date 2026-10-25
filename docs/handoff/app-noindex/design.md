@@ -42,7 +42,7 @@
 | 本番の `/` と `/login` の HTML に noindex, nofollow が1件ある | 反映後に curl と grep で数える |
 | 本番のログイン画面が 200 で開ける | 反映後に curl でステータスを見る |
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 Google 公式ヘルプ（developers.google.com/search/docs/crawling-indexing/block-indexing、2026-10-25 取得）には次の3点が書かれている。
 - noindex の目印に気づいたら、Google はそのページを検索結果から外す
 - そのためには robots.txt でページをブロックしてはいけない
@@ -50,5 +50,5 @@ Google 公式ヘルプ（developers.google.com/search/docs/crawling-indexing/blo
 
 個別の会社の事例は、この変更が成功したかどうかの判定に使わないため、取り上げない。
 
-## 維持する仕組み
+## 維持の仕組み
 ADR-1044 に、アプリも対象であることを書く。
