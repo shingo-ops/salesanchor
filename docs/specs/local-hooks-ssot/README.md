@@ -7,6 +7,7 @@
 - [ideal-state.md](ideal-state.md) — あるべき姿(PO自筆の正本。書き換え禁止)
 - [kgi.md](kgi.md) — KGI(○×判定・全10項目)
 - [guard-disabled-record.md](guard-disabled-record.md) — gh-scope-guard 無効化の記録（2026-08-31）
+- 子: [confidential-quote-guard 設計](../../handoff/confidential-quote-guard/design.md) — 社外秘の原文の書き写しを送る前に止める見張り（6本目。設計 2026-10-25）
 
 ## 対象(5本・2026-07-20実測)
 ~/.claude/settings.json の PreToolUse に登録された以下のスクリプト。

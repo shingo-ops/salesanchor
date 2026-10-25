@@ -93,7 +93,7 @@ function SupplierImportPanel({ onDone }: { onDone: () => void }) {
         )}
         <ContentToolbar
           left={<HeaderButton variant="secondary" onClick={() => { if (!lock.current) { setPreview(null); setFile(null); setError(""); } }} disabled={busy}>{t("supplierCsv.cancel")}</HeaderButton>}
-          right={<HeaderButton variant="primary" onClick={() => void doCommit()} disabled={busy || hasErrors}>{busy ? t("common.loading") : t("supplierCsv.commit")}</HeaderButton>}
+          right={<HeaderButton loading={busy} variant="primary" onClick={() => void doCommit()} disabled={busy || hasErrors}>{t("supplierCsv.commit")}</HeaderButton>}
         />
       </section>
     );
@@ -117,7 +117,7 @@ function SupplierImportPanel({ onDone }: { onDone: () => void }) {
       </section>
       <ContentToolbar
         left={<HeaderButton variant="secondary" onClick={onDone} disabled={busy}>{t("supplierCsv.backToList")}</HeaderButton>}
-        right={<HeaderButton variant="primary" onClick={() => void doPreview()} disabled={!file || busy}>{busy ? t("common.loading") : t("supplierCsv.preview")}</HeaderButton>}
+        right={<HeaderButton loading={busy} variant="primary" onClick={() => void doPreview()} disabled={!file || busy}>{t("supplierCsv.preview")}</HeaderButton>}
       />
     </>
   );
