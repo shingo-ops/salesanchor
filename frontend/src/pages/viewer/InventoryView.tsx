@@ -137,6 +137,36 @@ export function InventoryView({ data }: InventoryViewProps) {
       countLabel={(n) => t("viewer.filter.count", { count: n })}
     />
   );
+
+  // ドロワーの中では浮かせられないため layout="inline"（design.md 4-1・4-3）。
+  // PC 側（上の popover 版）とは別インスタンス。
+  const providerSelectInline = (
+    <MultiSelect
+      layout="inline"
+      testId="viewer-provider-filter"
+      label={t("viewer.filter.provider")}
+      options={providerOptions}
+      selected={providers}
+      onChange={reset(setProviders)}
+      clearLabel={t("viewer.filter.clear")}
+      allLabel={t("viewer.filter.all")}
+      countLabel={(n) => t("viewer.filter.count", { count: n })}
+    />
+  );
+
+  const conditionSelectInline = (
+    <MultiSelect
+      layout="inline"
+      testId="viewer-condition-filter"
+      label={t("viewer.filter.condition")}
+      options={conditionOptions}
+      selected={conditions}
+      onChange={reset(setConditions)}
+      clearLabel={t("viewer.filter.clear")}
+      allLabel={t("viewer.filter.all")}
+      countLabel={(n) => t("viewer.filter.count", { count: n })}
+    />
+  );
   const sortMenuValue = `${sortKey}:${sortDir}`;
   const searchField = (
     <TextFieldControl
@@ -349,8 +379,8 @@ export function InventoryView({ data }: InventoryViewProps) {
       {isMobile && (
       <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)} title={t("viewer.filter.title")}>
         <div className="viewer-filter-body">
-          {isMobile && providerSelect}
-          {conditionSelect}
+          {providerSelectInline}
+          {conditionSelectInline}
           <div>
             <div>{t("viewer.filter.priceRange")}</div>
             <div className="viewer-filter-range">
