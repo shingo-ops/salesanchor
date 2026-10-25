@@ -191,7 +191,7 @@ KPI は各段（§8）の完了ごとに上表の該当行を再測定する。
 | 3b | CLAUDE.md・AGENTS.md の「移す」行（**§5-2 の表が正**）を既存の移動先へ移す（1PR1移動先。移動先は §5-2 の表のうち段3a の2本以外: docs/specs/branch-operations/README.md・docs/STANDARD-WORKFLOW.md・frontend/AGENTS.md・docs/ops/runner-commands.md、および段2で新設済みの docs/INDEX.md） | KGI-1 途中値 | PR revert |
 | 3c | 入口の入れ替え（**文面は §5-2 の案文 draft/AGENTS.entry.md・draft/CLAUDE.entry.md をそのまま写す**。写す前に、§5-2 の表で入口以外へ行く行が移動先に在ることを行ごとに grep で確かめ、1行でも無ければ止める＝審査6回目 参考3）: 安全の決まり・前提を CLAUDE.md から AGENTS.md へ移し、CLAUDE.md を 「@AGENTS.md」＋Claude 固有のみにする ＋ LIMITS（§6）＋ STANDARD-WORKFLOW §7:157-159（入口を「ターミナル＝CLAUDE.md」と定めている箇所）を「AGENTS.md が正本・CLAUDE.md が取り込む」に書き換え | KGI-1/3/7（ルート分）。/memory 表示で AGENTS.md の本文が会話に入ったことを確認 | PR revert（2ファイル＋STANDARD-WORKFLOW） |
 | 4 | frontend/backend の同2種を同じ向き（AGENTS.md が正本、CLAUDE.md は 「@AGENTS.md」＋固有のみ）に揃える | KGI-3（全体） | PR revert |
-| 5 | doc-index-reachability CI を警告→失敗へ昇格（条件: 連続5回の PR で 0 件）。必須チェック（ruleset）への登録は Branch Protection／Ruleset の変更＝CLAUDE.md の不可逆操作リスト該当のため PO 確認を別にとる | KGI-4/5/6 が0であること | 警告に戻す |
+| 5 | **§26 で3つに分けた（2026-10-25）**。5a: 手元の記録（commit）でも行数の上限超えで止める＋AGENTS.md の未登録も見つける。5b: 古さの見張り（claude-md-staleness-check.yml）に AGENTS.md を足す。5c: doc-index-reachability CI を警告→失敗へ昇格（条件: 連続5回の PR で 0 件。起点では broken_link=8・warnings=10・deep=2 で条件を満たさないので保留）。必須チェック（ruleset）への登録は Branch Protection／Ruleset の変更＝CLAUDE.md の不可逆操作リスト該当のため PO 確認を別にとる | 5a・5b は §26 の表。5c は KGI-4/5/6 が0であること | 5a・5b は PR revert。5c は警告に戻す |
 | 6 | ~/.claude/CLAUDE.md:12-13（「AGENTS.md も同時に更新」の節）を削除（§10-5 確定。段4の本番反映後。変更前の写しを ~/CC報告ファイル-keep/ に保存してから消す）（ユーザー側。PO の実装承認が要る） | KGI-3 再測 | 写しから2行を貼り戻す |
 | 7 | **ユーザー側の常時読込を短くする（§10-8 解決で追加）**。対象と実測（recon2/autoload-user.txt、2026-10-22）: ~/.claude/CLAUDE.md 84・~/kb/AGENTS.md 32・~/.claude/rules/common/agents.md 53・git-workflow.md 24 ＝ 193行（paths 付きの rules 10本は条件付き読込で対象外）。方法: 節ごとの行き先案（残す／paths 付き rules へ移す／リポジトリ側の正本へのリンクに置換）を一覧で PO に提示し、承認された分だけ変える。~/kb 側の記録（commit）は ~/kb/AGENTS.md:29 により PO が `!` で実行。上限の数値はプロジェクト側入口の行数（§10-2）と合わせて K1 ≤ 200 に収まるよう段7の開始時に一覧で示す | KGI-1（全体）・K8/K9（§14、PO 承認済み） | 各ファイルを変更前の写し（リポジトリ外 ~/CC報告ファイル-keep/ に保存）から戻す |
 
@@ -447,3 +447,58 @@ PO 原文（2026-10-22）「仕様書と設計図はどうなったの？逐一�
   - 日本語: frontend/AGENTS.md:23・:24・:31（画面の文字を日本語で直書きしない＝i18n）と backend/AGENTS.md:66（DB の列の説明は日本語で書く）。語は同じだが決まりは別（recon §2-4 の行の名前は「日本語で応答」で、どちらもそれではない）。重なりではないと判断し、文は変えない。報告では grep の数（2本）と判断を並べて書く。
   - 段4の後の見込み: grep で 2本以上に出る語は「日本語」1語だけ。同じ決まりの重なりは 0語。
 - 戻し方: この PR の revert。
+
+## 26. 段5 見張りを強める（2026-10-25・Opus 設計判断。PO 承認「1」2026-10-25＝見張りを強める段へ進む：文書の行数が上限を超えたら手元で記録するときにも止まる。決まりの文書が古いまま放っておかれていないかも見張る。起点 origin/main 6a5047685＝段4 #4726 のマージ）
+
+### 26-1. 現状（実物。生出力 /tmp/CC報告ファイル/an-s5/recon1〜5.txt、リポジトリ外）
+
+- 手元の記録で止まらない理由: 作業場所のフックの置き場は `frontend/.husky`（scripts/new-worktree.sh:113-115 が husky の `frontend/.husky/_` を上書きして直接指す。この作業場所の `git config --get core.hooksPath` も `frontend/.husky`）。husky の起動役を通らないので、frontend/.husky/pre-commit は `#!/bin/sh`（:1）のまま `set -e` なしに動く。:52 の `node "$REPO_ROOT/frontend/scripts/check-claude-size.js"` が exit 1 でも次の行へ進み、最後の if（:74-77）の結果で終わる。§24 G7 の残り（担当の commit が exit 0）と同じ。
+- 同じ理由で :43 `npx lint-staged`・:48 `check-dark-parity.js` の失敗も手元では止まらない（frontend/AGENTS.md:25「コミット前に自動ブロック」と食い違う）。**段5では直さない**（PO 承認の範囲は行数の見張り。この作業場所には frontend/node_modules が無い。lint-staged を止める側にすると、入れていない作業場所の commit が止まるおそれがあり、別に設計が要る）。§26-5 に残す。
+- 未登録の見つけ方: check-claude-size.js:39-46 は `-name "CLAUDE.md"` だけを探す。:40 の `-not -name "./CLAUDE.md"` は名前に `/` を含むので何にも当たらない（根の CLAUDE.md は :44 の `p !== 'CLAUDE.md'` で外れている）。除外は `./node_modules/*` だけで、本店の写しには frontend/node_modules/recharts/AGENTS.md がある（`find frontend/node_modules \( -name AGENTS.md -o -name CLAUDE.md \)` が1件）。AGENTS.md を探す形にすると、除外を足さなければ本店で誤った警告が出る。
+- 起点のリポジトリにある同名ファイル（`git ls-files`）: AGENTS.md 3本（根・frontend・backend。3本とも LIMITS に登録済み）、CLAUDE.md 6本（根・frontend・backend・backend/scripts・backend/tenant・tools/claude-channels/intake）。tools/claude-channels/intake/CLAUDE.md は未登録で、今も警告が出る（この作業場所で `node frontend/scripts/check-claude-size.js` が警告1件・PASSED・rc=0）。
+- 古さの見張り: .github/workflows/claude-md-staleness-check.yml:45-48 は `find . -name "CLAUDE.md"` だけ。段4で本文は AGENTS.md へ移り、CLAUDE.md は3行の取り込みだけになったので、本文の古さは見ていない。起点での日数（origin/main の最終 commit から）: backend/scripts/CLAUDE.md 146日・backend/tenant/CLAUDE.md 144日、ほかの7本は12日以内。直近の実行は 2026-10-01 の定期実行（success）で、Issue #3904（OPEN）を作った。このワークフローは同じ Issue があっても新しく作る（:84-86 に重複の確かめが無い）。
+- 危険パスの判定（scripts/check-process-artifacts.js:76-115）: frontend/.husky/pre-commit・frontend/scripts/check-claude-size.js は区分なし（本検査へ）、.github/workflows/claude-md-staleness-check.yml は実コード。どれも DANGEROUS_PATTERNS・PO 本人の GO の例外（:10-12 workflow-lint.yml だけ）に当たらない。workflow-lint.yml は触らない。必須チェック・Ruleset は変えない。
+
+### 26-2. 分け方（1便1つ。変更→反映→測定→次）
+
+| 便 | 変えるもの | 触るファイル |
+|---|---|---|
+| 5a | 手元の記録でも行数の上限超えで止める。あわせて AGENTS.md の未登録も見つける（止まる対象が LIMITS の表で決まるので、表から漏れたファイルを見つける側も同じ便で直す） | frontend/.husky/pre-commit:52、frontend/scripts/check-claude-size.js:21-46 |
+| 5b | 古さの見張りの対象に AGENTS.md を足す | .github/workflows/claude-md-staleness-check.yml |
+| 5c | 到達検査を警告から失敗へ上げる | 保留（§8 段5。条件を満たしていない） |
+
+### 26-3. 5a の作り方と受け入れ基準
+
+- pre-commit:52 を `node "$REPO_ROOT/frontend/scripts/check-claude-size.js" || exit 1` にする（1行。ファイル全体に `set -e` は入れない＝:43 などの扱いを変えないため）。
+- check-claude-size.js の未登録探し: find を `\( -name "CLAUDE.md" -o -name "AGENTS.md" \)` にし、`-not -path "*/node_modules/*"` を足し、何にも当たらない `-not -name "./CLAUDE.md"` を外す。:44 の根の除外は `p !== 'CLAUDE.md' && p !== 'AGENTS.md'`。警告の文は「CLAUDE.md・AGENTS.md」にする。警告のまま（失敗にしない。ADR-076 からの扱いを変えない）。:21-23・:36 の説明コメントも AGENTS.md を含む形に直す。
+- 止まるのは「作業場所のファイル」の行数（:52-68 は index ではなく作業場所を読む）。記録しない別の変更が上限を超えていても止まる。CI（check-claude-size.yml:37-40）も同じファイルを数えるので、手元で通って CI で落ちる差は縮まる。`git commit --no-verify` で抜けられるのは今と同じ。
+
+| 基準 | 検証方法 |
+|---|---|
+| T1 上限超えで手元が止まる | 作業場所で backend/AGENTS.md の写しを取り、1行足して `sh frontend/.husky/pre-commit; echo rc=$?` を変更前・変更後で実行。変更前 rc=0、変更後 rc=1 で「❌ backend/AGENTS.md: 71行（上限70行）」が出る。写しから戻し `git diff --exit-code backend/AGENTS.md` が rc=0 |
+| T2 上限内なら止まらない | 変更後に何も足さず同じ実行で rc=0。この便の commit 自体がフックを通って成功する |
+| T3 AGENTS.md の未登録を見つける | tools/s5probe/AGENTS.md（1行）を置いて `node frontend/scripts/check-claude-size.js`。変更前は出ない、変更後は「tools/s5probe/AGENTS.md: LIMITS 未登録」が出て rc=0。消した後は intake の警告1件だけ |
+| T4 node_modules の中は数えない | frontend/node_modules/s5probe/AGENTS.md を置いて同じ実行。変更後は警告に出ない。置いたものを消す |
+| T5 文法 | `sh -n frontend/.husky/pre-commit` rc=0、`node --check frontend/scripts/check-claude-size.js` rc=0 |
+| T6 CI | check-claude-size.yml は AGENTS.md・CLAUDE.md・docs/INDEX.md の変更時だけ動く。この便はどれも触らないので skip になる（想定どおり）。ほかの CI が緑 |
+
+- 戻し方: PR revert（2ファイル）。
+
+### 26-4. 5b の作り方と受け入れ基準（5a のマージ後に作る）
+
+- :45-48 の find を `\( -name "CLAUDE.md" -o -name "AGENTS.md" \)` と `-not -path "*/node_modules/*"` にする。名前・見出し・Issue の文（:1・:18・:29・:57・:71・:85）を「CLAUDE.md・AGENTS.md」にする。日数（90）・実行の時期・Issue の作り方は変えない。
+- 確かめ方: run の中身を手元の bash で origin/main の写しに対して回す。THRESHOLD_DAYS=90 で2本（backend/scripts・backend/tenant の CLAUDE.md）、THRESHOLD_DAYS=-1 で9本（AGENTS.md 3本を含む）が出ること。`actionlint` が0件。
+- 手動実行（workflow_dispatch）はしない: Issue #3904 が開いたままで、実行すると同じ内容の Issue がもう1本できる（:84-86）。本番での確認は次の定期実行 2027-01-01 09:00（日本時間）で、それまでは「まだ確かめていない」と記録する。
+- 戻し方: PR revert。
+
+### 26-5. 残すもの（この段で直さない）
+
+- pre-commit:43 lint-staged・:48 dark-parity の失敗が手元で止まらない（§26-1）。frontend/AGENTS.md:25 の「コミット前に自動ブロック」と食い違う。直すなら作業場所の frontend/node_modules の有無を先に決める設計が要る。PO に報告して扱いを決めてもらう。
+- tools/claude-channels/intake/CLAUDE.md の LIMITS 未登録（起点から警告あり）。別の道具の文書なので、この段では登録しない。
+- 5c の昇格（broken_link=8・warnings=10・deep=2 が残る）。
+
+### 26-6. 審査（Architect、同じ AI による自己審査）
+
+- 判定: **APPROVE**（5a の実装カードへ進める）。
+- 根拠: 変えるのは2ファイルで、§26-1 の行番号を実物で確かめた。止まる対象は CI と同じ LIMITS の表なので、新しい決まりは作らない。危険パス・Ruleset・必須チェックに当たらない。T1〜T5 は変更前と変更後の差で判定でき、推測を含まない。
+- 未解決: なし（§26-5 は範囲外として残す。5b は 5a のマージ後に同じ形で進める）。
