@@ -294,9 +294,10 @@ export default function PurchaseDetailPanel({
         type="submit"
         variant="primary"
         disabled={saving}
+        loading={saving}
         data-testid="pur-save"
       >
-        {saving ? t("common.saving") : existing ? t("common.update") : t("common.register")}
+        {existing ? t("common.update") : t("common.register")}
       </Button>
     </>
   );

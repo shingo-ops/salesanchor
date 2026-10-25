@@ -367,9 +367,10 @@ export default function ShippingDetailPanel({
         type="submit"
         variant="primary"
         disabled={saving}
+        loading={saving}
         data-testid="ship-save"
       >
-        {saving ? t("common.saving") : existing ? t("common.update") : t("common.register")}
+        {existing ? t("common.update") : t("common.register")}
       </Button>
     </>
   );
