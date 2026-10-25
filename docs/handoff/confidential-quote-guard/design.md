@@ -37,11 +37,11 @@
 
 - 新しい見張りの原本を repo の scripts/agent-hooks/confidential-quote-guard/（便1 で作る）に置く（guard.py・install.sh・rollback.sh・テスト）。review-gate（ADR-1029）と同じ形。原本には原文も語句も入れない（置き場の場所は Mac の表から読む）。
 - install.sh が原本を ~/.claude/scripts に写し、~/.claude/settings.json の PreToolUse:Bash に pr-body-guard.sh の前で登録する。写したものと原本が一字一句同じかを diff で確かめる（local-hooks-ssot の H3 の考え方）。
-- 動く条件: コマンドに `git push` が含まれるとき、または §2 の gh の操作に `--body`／`--body-file` が付くとき。作業場所は、コマンドの `cd <絶対パス>` か cwd から決める（pr-body-guard.sh と同じ決め方）。
+- 動く条件: コマンドに `git push` が含まれるとき、または §2 の gh の操作のとき（本文の付け方は `--body`／`-b`／`--body=…`／`--body-file`／`-F`／`-F -`〔標準入力〕のどれでもよい。付け方で抜けないよう、gh の操作であれば下の 2 の照らし方で必ず照らす）。作業場所は、コマンドの `cd <絶対パス>` か cwd から決める（pr-body-guard.sh と同じ決め方）。
 - 照らす repo: 本文はどの repo でも照らす（repo に関係なく照らせるため）。足した行は、置き場の表に並べた repo（最初は shingo-ops/salesanchor だけ）の push のときだけ照らす。表に無い repo の push は照らさずに通す。表に並んだ repo で `origin/main` が無い、または差分が取れないときは止める（全部拒否に倒す）。
 - 照らすもの:
   1. `git diff origin/main...HEAD` の追加行（全ファイル）。
-  2. PR 本文（pr-body-guard.sh と同じ取り出し方）。
+  2. gh の操作の本文。pr-body-guard.sh の取り出し方（~/.claude/scripts/extract-pr-body.py）は create／edit の `--body` だけを拾い、comment や短い形を拾わないので使わない。代わりに、(a) コマンドの文字列全体（`--body` の値、heredoc で書いた本文、`-F -` に流し込む本文を含む）と、(b) `--body-file`／`-F` が指すファイルの中身、の両方を照らす。(b) のファイルが読めないときは止める（全部拒否に倒す）。
 - 止める決まり: 次の 3 つを全部満たす語句が 1 つでもあれば exit 2。
   1. 「」または『』の中にあり、4 文字以上。
   2. 除外表に無い。除外表は「状態の言葉の写し」「商品名の写し」「一般語の表」の 3 つ。数字と区切りだけの語句も止めない。
@@ -64,7 +64,7 @@
 | K4 2 秒以内 | 上の 3 回の time の値 |
 | 置き場が無いと止まる | 表を空にした試しで exit 2 |
 | 表に無い repo は通る・表にある repo で差分が取れないと止まる | origin/main の無い作り物の repo で 2 通りを試し、exit 0 と exit 2 |
-| コメントの本文も照らす | `gh pr comment --body-file` に作り物の原文の語句を入れて exit 2 |
+| コメントの本文も照らす | 作り物の原文の語句を入れて、`gh pr comment --body`・`gh pr comment -b`・`gh pr review -F <file>`・`gh issue comment -F -`（heredoc）・`gh pr create --body=…` の 5 通りがどれも exit 2 |
 | 止めた記録が残る | 止めた試しのあと agent-events.jsonl の最後の行に、見張りの名前・日時・件数があり、語句が無い |
 | 見張りのテスト | scripts/agent-hooks/confidential-quote-guard/ に作り物の原文で試すテストを置く（本物の原文はテストに入れない）。止まる・通る・置き場なし・除外表・「」の外は止めない、の 5 つ |
 
