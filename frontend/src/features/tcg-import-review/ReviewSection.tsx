@@ -350,11 +350,12 @@ export function ReviewSection({ importJobId, unresolvedNames, onCommitSuccess }:
 
       {/* 抽出開始ボタン */}
       <Button
+        loading={committing}
         variant="primary"
         onClick={() => void handleCommit()}
         disabled={!allResolved || committing || commitSuccess}
       >
-        {committing ? t("tcgLineImport.committing") : t("tcgLineImport.startExtraction")}
+        {t("tcgLineImport.startExtraction")}
       </Button>
 
       {commitError && (

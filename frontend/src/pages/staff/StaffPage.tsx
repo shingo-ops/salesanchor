@@ -297,8 +297,8 @@ export default function StaffPage() {
           })()}
           <div className="form-actions">
             <Button type="button" variant="secondary" size="md" onClick={() => setShowCreate(false)} disabled={submitting}>{t("common.cancel")}</Button>
-            <Button type="submit" variant="primary" size="md" disabled={submitting}>
-              {submitting ? t("common.submitting") : t("common.register")}
+            <Button loading={submitting} type="submit" variant="primary" size="md" disabled={submitting}>
+              {t("common.register")}
             </Button>
           </div>
         </form>
