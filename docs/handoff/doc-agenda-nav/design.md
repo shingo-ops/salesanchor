@@ -496,9 +496,16 @@ PO 原文（2026-10-22）「仕様書と設計図はどうなったの？逐一�
 - pre-commit:43 lint-staged・:48 dark-parity の失敗が手元で止まらない（§26-1）。frontend/AGENTS.md:25 の「コミット前に自動ブロック」と食い違う。直すなら作業場所の frontend/node_modules の有無を先に決める設計が要る。PO に報告して扱いを決めてもらう。
 - tools/claude-channels/intake/CLAUDE.md の LIMITS 未登録（起点から警告あり）。別の道具の文書なので、この段では登録しない。
 - 5c の昇格（broken_link=8・warnings=10・deep=2 が残る）。
+- フックの置き場が共有の設定で、`frontend/.husky/_` に書き換わる間は作業場所によって pre-commit が動かない（§26-7）。直すなら作業場所ごとの設定（worktreeConfig）か husky の prepare の扱いを決める設計が要る。PO に報告して扱いを決めてもらう。
 
 ### 26-6. 審査（Architect、同じ AI による自己審査）
 
 - 判定: **APPROVE**（5a の実装カードへ進める）。
 - 根拠: 変えるのは2ファイルで、§26-1 の行番号を実物で確かめた。止まる対象は CI と同じ LIMITS の表なので、新しい決まりは作らない。危険パス・Ruleset・必須チェックに当たらない。T1〜T5 は変更前と変更後の差で判定でき、推測を含まない。
 - 未解決: なし（§26-5 は範囲外として残す。5b は 5a のマージ後に同じ形で進める）。
+
+### 26-7. 5a の結果と 5b へ（2026-10-25）
+
+- 5a: PR #4733 マージ（mergeCommit 01e53da6b、2026-10-25 13:22 JST）。T1〜T5 は担当の生出力（/tmp/CC報告ファイル/an-s5/impl/）で全て期待どおり、審査は 777c2f94d・main 取り込み後 680b0fcc7 とも APPROVE。CI の guard-authoring/evaluation は PR が main から遅れていた間 error になり（scripts/run-guard-evaluation.js:25 の `merge-base --is-ancestor base head` が失敗する）、main 取り込み後に pass。
+- 審査で見つかった範囲外の事実（§26-5 に足す）: フックの置き場 `core.hooksPath` は本店の .git/config に1つしかなく（worktreeConfig は無効）、scripts/new-worktree.sh:115 の `git config core.hooksPath frontend/.husky` も共有の設定に書く。審査の途中で一度 `frontend/.husky/_` になっていた（書き換えうる仕組みとして husky の prepare＝frontend/package.json:47 `cd .. && husky frontend/.husky` が在る。いつ何が書いたかは未確認）。`_` の間は、その中身（husky の起動役）が無い作業場所では pre-commit 自体が動かない。2026-10-25 13:2x の確認では `frontend/.husky` に戻っている。
+- 5b: §26-4 のとおり。起点 origin/main 01e53da6b で、新しい find が出すのは9本（AGENTS.md 3本・CLAUDE.md 6本）、90日を超えるのは backend/scripts/CLAUDE.md（146日）・backend/tenant/CLAUDE.md（144日）の2本。カードは card-stage5b.md（card-lint rc=0）。
