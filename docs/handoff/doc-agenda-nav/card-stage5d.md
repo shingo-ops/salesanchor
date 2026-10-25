@@ -230,7 +230,16 @@ PR を revert する（2ファイル）。
 
 ## 11. 報告欄（担当が追記）
 
-（未記入）
+本報告はカード doc-agenda-nav 段5d の実行結果である。
+
+- 実装承認: PO「1」2026-10-25
+- 前提 F1〜F5: 実物と一致（preflight rc=0）
+- 5-2 変更前（A-i・A-iii・B-i・B-ii・B-iii）: 5つとも rc=0。A-i の出力に「Task failed to spawn」1件
+- 5-3 変更後: T1 A-i rc=0（警告行あり・Task failed to spawn 0件）／T2 A-iii rc=1（FAILED あり）／T3 B-ii rc=1（local/no-japanese-literal あり）／T4 B-i rc=0／T5 B-iii rc=1／T6 3つの .cached に足したファイル1行ずつ／T7 5つとも 0件（t7.txt）
+- T8: sh -n rc=0・check-claude-size rc=0・frontend/AGENTS.md 77行
+- 後片付け: s5d-trial の worktree 0件（cleanup.txt）。差分は製品側 frontend/.husky/pre-commit・frontend/AGENTS.md の2ファイルのみ（diff-stat.txt）
+- 生出力: /tmp/CC報告ファイル/an-s5d/impl/
+- 判断が必要だった点: 台本の引数は zsh で "A i" が1語になるため、1語ずつ分けて実行した（台本の中身は変更なし）
 
 
 END OF CARD
