@@ -595,3 +595,93 @@ fi
 - 根拠: 変えるのは2ファイルで、行番号と動きを §27-1 の実測で確かめた。部品の有無で分けるので、今通っている 46 件の作業場所の commit を新しく止めない（T1）。止まるのは文書が約束している場合だけ（T2・T3・T5）。CI の関所・Ruleset・危険パスに当たらない。T1〜T8 は変更前と変更後の rc の差で判定でき、推測を含まない。
 - 未確認（カードの T で確かめる）: フック全体を通したときの rc（試しは `npx lint-staged` 単体）、stylelint 単体の結果、オフラインでの動き（変更後は npx を使わないので関係しない）。
 - 未解決: なし。
+
+## 28. 段7（段6を含む）全員共通のルール集を短くする（2026-10-25・Opus 設計判断。PO 承認「1」2026-10-25＝全員共通のルール集を、目次から詳しい文書へたどる形に組み替える案を作る。予定の段6もここに含める。起点 origin/main c233ec8f6）
+
+### 28-1. 現状（実物。生出力 /tmp/CC報告ファイル/an-k9/・an-gl/。リポジトリ外）
+
+- K9 の測り直し（c233ec8f6 の detached の写しで `claude -p "/context" --no-session-persistence` を1回。claude 2.1.310。2026-10-25 20:46）: Memory files 17.7k − MEMORY.md 10.6k ＝ **7.1k**（前回 4bd48fa42 は 7.2k）。合格ライン 6.5k 以下に 0.6k 足りない。内訳: ~/.claude/CLAUDE.md 2.7k・~/kb/AGENTS.md 1k・rules/common/git-workflow.md 247・agents.md 907・リポジトリの CLAUDE.md 198・AGENTS.md 2k（an-k9/context-c233ec8f6.txt:215-221）。ユーザー側の4本（約4.85k）は本テーマでまだ変えていない。
+- K1（`wc -l`）: ユーザー側 193（~/.claude/CLAUDE.md 84・~/kb/AGENTS.md 32・agents.md 53・git-workflow.md 24）＋入口 54（origin/main AGENTS.md 45・CLAUDE.md 9）＝ **247行**。合格ライン 200行以下。
+- ~/.claude/CLAUDE.md は通常のファイル（symlink でも git 管理でもない。生成する台本も無い）。節ごとの量（wc -m。推定トークン＝割合×2.7k で、実測ではない。an-gl/sections_table.txt）:
+
+| 行 | 節 | 文字 | 推定トークン | 行き先 |
+|---|---|---|---|---|
+| 1-2 | 表題 | 16 | 約14 | 残す |
+| 3-8 | 認証情報 | 185 | 約165 | 残す（全リポジトリで毎回守る） |
+| 9-11 | Context7 | 76 | 約68 | 残す（ほかに同じ決まりが無い） |
+| 12-14 | AGENTS.md 自動更新ルール | 205 | 約183 | **消す（段6。§10-5 で確定済み）** |
+| 15-36 | 報告の型（PO への型・「詳しく」の型） | 1201 | 約1072 | 残す。PO の最優先の決まり（2026-10-19）で毎回の返事に使う。見張り ~/.claude/scripts/japanese-reply-guard.py:2,:16 と ~/kb/00-rules/chat-format.md:9 がこの節を名指しする |
+| 37-56 | 記憶で答えない／出力を省略しない／実行と反映は別／一度に1つ／提案の型／迷ったら止まる | 452 | 約404 | 残す（全リポジトリで毎回守る） |
+| 57-74 | GAS / clasp | 582 | 約519 | **~/.claude/rules/gas-clasp.md へ文言そのまま移し、paths で GAS の作業のときだけ読まれるようにする。元の場所には案内1行** |
+| 75-83 | 生出力はファイルへ | 309 | 約276 | 残す（全リポジトリで毎回守る） |
+| 84 | @~/kb/AGENTS.md | — | （1k は ~/kb/AGENTS.md 側） | 残す（今回は変えない） |
+
+- GAS / clasp の節は Sales Anchor の文書・仕様に1件も出てこない（clasprc・clasp login・tcg-sales-management・列番号の直書き。an-gl/overlap_grep.txt）。GAS を持つリポジトリは ~/crm-app-current・~/ebay-gas-automation・~/tcg-client-viewer・~/tcg-inventory-parser（an-gl/repos_index.txt・gas_repos.txt）。~/tcg-inventory-parser/CLAUDE.md:62,67-70,72 に同じ決まりの一部があるが、:58-64（clasprc の共有・GCP の統一・OAuth の本番）はどのリポジトリにも無い。だから「消す」ではなく「移す」。
+- 公式の決まり（https://code.claude.com/docs/en/memory 取得 2026-10-25。Context7 は月の上限で使えなかったので、本起動指示の許可で公式資料を直接読んだ）: 「Rules without a `paths` field are loaded unconditionally」「A path-scoped rule loads when Claude uses the Read, Write, or Edit tool on a matching file」「User-level rules: [patterns are relative to] the session's primary working directory」「Personal rules in `~/.claude/rules/` apply to every project on your machine」。~/.claude/rules/common/coding-style.md:1-5 が同じ形（paths 付き）で既に使われている。
+
+### 28-2. 代替案と選んだ理由
+
+| 案 | 中身 | 判断 |
+|---|---|---|
+| A | 報告の型（約1.07k、いちばん大きい）を ~/kb/00-rules/ へ移して案内1行にする | 退ける。毎回の返事で使う PO の最優先の決まり。K10 の実測（目次を開くのは 20 回中 7 回）から、案内だけにすると読まれない回が出る。見張り2つも名指ししている |
+| B | GAS / clasp を消す | 退ける。clasprc の共有・GCP の統一・OAuth の本番の3つは、ほかに書いてある場所が無い |
+| **C（採用）** | 段6の3行を消す＋GAS / clasp を paths 付きの rules へ移す（文言はそのまま）＋案内1行 | 毎回読む量から約0.64k（推定）を外せる。決まりそのものは1つも消えない（GAS の決まりは GAS の作業で読まれる） |
+| D | C に加えて「出力を省略しない」と「生出力はファイルへ」を1つにまとめる | 今回は採らない。PO の言葉を書き換えることになる。C を測って足りなければ次の一手として PO に見せる |
+
+- 見込み: 7.1k − 約0.64k（183＋519−案内の約60）＝ **約6.46k**（推定。表示は 0.1k 単位なので 6.4k〜6.5k）。合格ライン 6.5k に対して余裕は小さい。判定は実測だけで行う。
+- K1 は 247 → 約227行（84→65）で、**200行以下にはまだ届かない**。残り約27行は ~/.claude/rules/common/agents.md（53行）・git-workflow.md（24行）・~/kb/AGENTS.md（32行）の見直しが要り、次の判断として PO に見せる（今回は触らない）。
+
+### 28-3. 作り方（リポジトリの外。変更は一度に1つ、それぞれ測る）
+
+- 7-0（準備）: 変更前の写しを ~/CC報告ファイル-keep/agenda-nav-stage7-20261025/ に保存（~/.claude/CLAUDE.md・~/.claude/rules/common/ の一覧）。`cmp` で同じことを確かめる。
+- 7a（段6）: ~/.claude/CLAUDE.md:12-14（見出し「## AGENTS.md 自動更新ルール」・本文1行・空行1行）を消す。ほかの行は変えない。→ K9 を測る（1回）。
+- 7b: ~/.claude/rules/gas-clasp.md を新しく作る。中身は次の frontmatter の後に、元の :57-73（見出し「## GAS / clasp」から「新種は既存と重複しない接頭辞＋4桁連番）」まで）を1字も変えずに写す。
+
+```markdown
+---
+paths:
+  - "**/*.gs"
+  - "**/appsscript.json"
+  - "**/.clasp.json"
+---
+```
+
+  そのあと ~/.claude/CLAUDE.md の元の :58-73（見出しの下の本文）を、次の1行に置き換える（見出し「## GAS / clasp」と後ろの空行は残す）。
+  `- GAS・clasp の作業の決まりは ~/.claude/rules/gas-clasp.md にある（.gs・appsscript.json・.clasp.json を開くと自動で読まれる）。clasp を実行する前に必ず読む`
+  → K9 を測る（1回）。
+- 測り方は §28-1 と同じ（origin/main の detached の写し・`claude -p "/context" --no-session-persistence`・Memory files − MEMORY.md）。リポジトリ側は変えないので、差はユーザー側の変更だけになる。
+- 担当（Sonnet）がカード card-stage7.md どおりに行う。~/kb は触らない（~/kb の記録は PO が `!` で行う決まりのため、今回は ~/kb を変えない案にした）。
+
+### 28-4. 受け入れ基準
+
+| 基準 | 検証方法 |
+|---|---|
+| T1 写しがある | 7-0 の写しと今のファイルを `cmp`。rc=0 |
+| T2 7a は3行だけ消えた | 写しと 7a 後の `diff` が :12-14 の削除だけ。`grep -c "AGENTS.md 自動更新ルール" ~/.claude/CLAUDE.md` が 0 |
+| T3 7b で GAS の決まりが1字も欠けていない | 写しの :57-73 と gas-clasp.md の frontmatter の後ろを `diff`。差 0 |
+| T4 7b でほかの節は変わっていない | 写しと 7b 後の `diff` が :12-14 の削除と :58-73→案内1行だけ |
+| T5 K9 | 7a 後・7b 後それぞれの K9（Memory files − MEMORY.md）。7b 後が **6.5k 以下**なら合格。Memory files の一覧に gas-clasp.md が出ていない（会話の始まりには読まれない） |
+| T6 GAS の作業では読まれる | GAS のリポジトリ（appsscript.json を持つもの1つ）で `claude -p` に「appsscript.json を Read で開いてから、指示の中に clasprc の決まりがあれば原文を1行そのまま引用して」と頼み（`--allowedTools Read`・`--no-session-persistence`）、答えに「ホームに1つしかない共有ファイル」が出る。比べるために、同じ問いを appsscript.json を開かせずに聞き、出ないこと |
+| T7 K1 | `wc -l` の合計を記録する（合否には使わない。約227行の見込み） |
+
+- 戻し方: 写しから ~/.claude/CLAUDE.md を戻し、~/.claude/rules/gas-clasp.md を消す。
+- 測り方（反映後）: T5 の値を kgi.md の K9 と baseline.md に記録する（この便の記録の PR で）。
+
+### 28-5. 外部事例
+
+- 公式資料（§28-1 の引用）だけを使う。paths 付きの rules は公式の決まりで、このMacでも coding-style.md 等が既に使っている。ほかの会社の事例は使わない。GAS の4リポジトリはどれも appsscript.json を持つ（crm-app-current/src・ebay-gas-automation/gas/…・tcg-client-viewer/src・tcg-inventory-parser 直下。`find` 2026-10-25）ので、paths の `**/appsscript.json` で当たる（理由: 何を毎回読ませるかは、この PO の決まりの中身で決まり、他社の数字は当てはまらない）。
+
+### 28-6. 残すもの
+
+- K1 の残り約27行（agents.md・git-workflow.md・~/kb/AGENTS.md の見直し）。agents.md:7-17 の一覧と :23-30 の起動条件が名指しする tdd-guide・code-reviewer・security-reviewer 等は、このリポジトリのセッションで使える担当の一覧に無い（見つけたこと。直していない）。
+- 案 D（出力の決まり2つのまとめ）。7b 後に 6.5k を超えたときの次の一手。
+- 見張り: design 維持の仕組みにある「~/kb/scripts/patrol.sh にユーザー側の合計行数を足す」は ~/kb の変更なので PO の `!` が要る。今回は入れない。
+
+### 28-7. 審査（Architect、同じ AI による自己審査）
+
+- PO の実装承認: 案（§28-3。PO への説明は「古い決まりを1つ消す」「GAS の決まりを GAS の作業のときだけ読む場所へ文言そのまま移す」）を見せた後、PO 原文「1」（2026-10-25）。PO の質問「gasとは？何を変更するのか教えてくれ」に答えてから受けた。実装カード card-stage7.md。
+
+- 判定: **APPROVE**（PO の実装承認の後、card-stage7.md へ進める）。
+- 根拠: 消すのは §10-5 で決まった3行だけ。移す GAS の決まりは文言を変えず、公式の paths の決まりで GAS の作業のときに読まれる（T6 で実物を確かめる）。PO の最優先の報告の型は動かさない。1つずつ変えて測る。戻し方は写しを戻すだけ。リポジトリ・本番・CI・Ruleset に触らない。
+- 未確認（T で確かめる）: `**/.clasp.json` のように点で始まる名前に paths が当たるか（appsscript.json でも当たるので T6 はそちらで見る）。推定トークンと実測の差。
+- 未解決: なし。K9 が 6.5k に届かない場合は案 D を PO に見せる（推測で進めない）。
