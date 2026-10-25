@@ -270,6 +270,7 @@ export default function PurchaseDetailPanel({
         type="button"
         variant="secondary"
         onClick={handleConfirm}
+        loading={confirming}
         disabled={!existing || confirming}
         data-testid="pur-confirm"
         title={
@@ -278,7 +279,7 @@ export default function PurchaseDetailPanel({
             : t("purchase.confirmTitleDisabled")
         }
       >
-        {confirming ? t("purchase.confirming") : t("purchase.confirm")}
+        {t("purchase.confirm")}
       </Button>
       <Button
         type="button"

@@ -326,11 +326,10 @@ export default function MergeCompanyModal({ open, source, onMerged, onCancel }: 
               <Button
                 type="submit"
                 variant="danger"
+                loading={submitting}
                 disabled={submitting}
               >
-                {submitting
-                  ? t("mergeCompany.merging")
-                  : t("mergeCompany.executeLabel", { masterName: selected.name })}
+                {t("mergeCompany.executeLabel", { masterName: selected.name })}
               </Button>
             </div>
           </form>

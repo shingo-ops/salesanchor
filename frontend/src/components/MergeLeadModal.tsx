@@ -313,11 +313,10 @@ export default function MergeLeadModal({ open, source, onMerged, onCancel }: Pro
               <Button variant="danger" size="md"
                 type="submit"
 
+                loading={submitting}
                 disabled={submitting}
               >
-                {submitting
-                  ? t("mergeLead.merging")
-                  : t("mergeLead.executeLabel", { masterName: selected.customer_name })}
+                {t("mergeLead.executeLabel", { masterName: selected.customer_name })}
               </Button>
             </div>
           </form>

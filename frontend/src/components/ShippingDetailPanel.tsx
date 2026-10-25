@@ -343,6 +343,7 @@ export default function ShippingDetailPanel({
         type="button"
         variant="secondary"
         onClick={handleDownloadCsv}
+        loading={downloading}
         disabled={!existing || downloading}
         data-testid="ship-download-csv"
         title={
@@ -351,7 +352,7 @@ export default function ShippingDetailPanel({
             : t("shipping.downloadCsvTitleDisabled")
         }
       >
-        {downloading ? t("shipping.downloading") : t("shipping.downloadCsv")}
+        {t("shipping.downloadCsv")}
       </Button>
       <Button
         type="button"
