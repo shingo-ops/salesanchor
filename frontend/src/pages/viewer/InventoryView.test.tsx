@@ -240,4 +240,36 @@ describe("InventoryView", () => {
     expect(captured.props!.data).toHaveLength(2);
   });
   /* eslint-enable local/no-japanese-literal */
+
+  const providerData: ViewerInventoryResponse = {
+    ...data,
+    rows: [
+      ...Array.from({ length: 5 }, (_, i) => ({ ...mkRow(i), provider: "Acme" })),
+      ...Array.from({ length: 5 }, (_, i) => ({ ...mkRow(i + 5), provider: "Globex" })),
+    ],
+  };
+
+  it("A14: opening the drawer moves focus to its first focusable element", () => {
+    Object.defineProperty(window, "matchMedia", mobileMatchMedia);
+    try {
+      render(<InventoryView data={providerData} />);
+      fireEvent.click(screen.getByTestId("viewer-filter-toggle"));
+      expect(document.activeElement).toBe(screen.getByTestId("drawer-close"));
+    } finally {
+      delete (window as unknown as { matchMedia?: unknown }).matchMedia;
+    }
+  });
+
+  it("A15: mobile — opening the drawer and selecting one provider narrows the table", () => {
+    Object.defineProperty(window, "matchMedia", mobileMatchMedia);
+    try {
+      render(<InventoryView data={providerData} />);
+      expect(captured.props!.data).toHaveLength(10);
+      fireEvent.click(screen.getByTestId("viewer-filter-toggle"));
+      fireEvent.click(screen.getByTestId("viewer-provider-filter-option-Acme"));
+      expect(captured.props!.data).toHaveLength(5);
+    } finally {
+      delete (window as unknown as { matchMedia?: unknown }).matchMedia;
+    }
+  });
 });
