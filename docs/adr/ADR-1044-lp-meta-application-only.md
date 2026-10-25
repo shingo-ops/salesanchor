@@ -49,3 +49,11 @@
 ## 検証
 
 `docs/handoff/lp-application-only/design.md` の受け入れ基準の表のとおり。
+
+## 追記（2026-10-25）: アプリも対象に加える
+
+- PO の決定（2026-10-25）: 「誰が検索しても出てこないように」という意図で、アプリ（app.salesanchor.jp）も検索結果に出さない。
+- 変更: `frontend/index.html` の head に `<meta name="robots" content="noindex, nofollow" />` を1行加える。アプリのページはすべてこの index.html から表示されるため、全ページが対象になる。
+- 触らないもの: `frontend/viewer/index.html`（noindex を設定済み）。robots.txt は作らない（Disallow にすると noindex が読まれなくなるため）。nginx の X-Robots-Tag は使わない（本文と同じ理由）。
+- 戻し方: その1行を消す revert を main にマージする。
+- 設計: docs/handoff/app-noindex/design.md
