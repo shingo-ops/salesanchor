@@ -247,11 +247,21 @@ def _midword_hash(text: str) -> bool:
             elif c == '"':
                 q = None
         elif c == "\\":
+            # 行の継ぎ目（\ の次が改行）の直後の # は、bash では前の語とつながる＝語の途中
+            if text[i + 1:i + 2] == "\n" and text[i + 2:i + 3] == "#":
+                return True
             i += 1
+        elif c == "$" and text[i + 1:i + 2] == "'":
+            return True  # ANSI-C の引用符は shlex と読み方が違うため、読まずに止める
         elif c in "'\"":
             q = c
-        elif c == "#" and i > 0 and text[i - 1] not in " \t\r\n;&|()<>":
-            return True
+        elif c == "#":
+            if i > 0 and text[i - 1] not in " \t\r\n;&|()<>":
+                return True
+            j = text.find("\n", i)  # 語の頭の # はコメント。行末まで読み飛ばす
+            if j < 0:
+                return False
+            i = j - 1
         i += 1
     return False
 

@@ -148,6 +148,12 @@ add("H7", "語の途中の # (--title fix#12)", bash('gh pr create --title fix#1
 add("H8", "gh api 語の途中の # (title=a#b)", bash('gh api repos/o/r/pulls -f title=a#b -f head=codebr', REMOTE), 2)
 add("H9", "語の頭の # はコメント(後ろのコード枝は読まない)", bash(f'gh pr create --head docsbr --body "{GOOD}" # --head codebr', REMOTE), 0)
 add("H10", "引用符の中の # は対象外", bash(f"gh pr create --head docsbr --body '{GOOD} see #12' ", REMOTE), 0)
+# 追補 R2: コメント内の引用符・行の継ぎ目・ANSI-C 引用符（H11〜H15）。本文は GOOD で、本文欠落では止まらない形にしてある
+add("H11", "コメント内の ' の後ろの行に fix#12", bash(f"# don't forget\ngh pr create --title fix#12 --head codebr --body \"{GOOD}\"", REMOTE), 2)
+add("H12", "git status # it's fine の後ろの行に fix#12", bash(f"git status # it's fine\ngh pr create --title fix#12 --head codebr --body \"{GOOD}\"", REMOTE), 2)
+add("H13", "行の継ぎ目の直後の #", bash(f"gh pr create --head docsbr --body \"{GOOD}\"\\\n# --head codebr", REMOTE), 2)
+add("H14", "$' (ANSI-C 引用符)", bash(f"gh pr create --title $'a' --head docsbr --body \"{GOOD}\"", REMOTE), 2)
+add("H15", "コメント内の ' は無視して正しく読む", bash(f"# it's a note\ngh pr create --head docsbr --body \"{GOOD}\"", REMOTE), 0)
 add("K1", ">( の中に危険語", bash(f"cat >({ops[0]} foo)"), 2)
 # 審査指摘の止め漏れ
 add("K1", "単独&の後ろに危険語", bash(f"cat a & {ops[0]} foo"), 2)
