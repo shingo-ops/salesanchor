@@ -122,3 +122,10 @@
 - 直したこと: 読み取り専用の区間は scan_text で消えるので対象外（grep 内の文字列は通る）。`rm -f` や `rm -- -r`、rmdir は止めない。
 - 試験: `scripts/agent-hooks/cloud/test.sh` に R1〜R12・R14 を追加（R1 -fr／R2 -Rf／R3 -f -r／R4 --recursive／R5 /bin/rm -dfr／R6 env と command の前置き／R7 && の後ろ／R8 -f のみ／R9 `--` の後ろの -r／R10 grep／R11 commit 文／R12 rmdir／R14 nice の前置き）。R13 は既存ケースの結果が変わらないこと（B8 の時間試験は負荷で変更前から NG）。
 - 変更前の見張りに新しい試験を当てた結果: R1・R3〜R7・R14 は通る（NG）、R8〜R12 は期待どおり。R2（-Rf）だけは変更前から止まっていた（一覧照合が小文字にそろえるため）。
+
+## 別カード 指摘5 の対処
+
+- 直したこと: `guard_pre_tool.py` に `embedded_commands` を足し、`main` の Bash の道で「外側の命令＋埋め込まれた命令」を1つずつ `check_danger`・`check_merge` に通す。埋め込みは `$( … )`（単引用符の中と `\` 付きは飛ばす・`$(( ))` は対象外）、逆引用符、行頭の `( )` の殻、`bash`/`sh`/`zsh`/`dash` の `-c`、`eval` の中身。入れ子は depth 3 まで、閉じ忘れは末尾までを中身にして止める側に倒す。
+- 触っていない範囲: `danger_ops.json`、`scan_text`、`strip_message_quotes`、`strip_heredoc_bodies`、`is_readonly_segment`、`has_recursive_rm`、`check_danger`、`check_merge`、`is_pr_create`、`check_pr_create`、`dispatch.sh`。止めた理由の文は既存のものをそのまま使う。
+- 試験: `scripts/agent-hooks/cloud/test.sh` に E1〜E18 を追加（E1〜E11 止まる、E12〜E18 通る）。E19 は既存ケースの結果が変わらないこと。
+- 変更前の見張りに E 系を当てた結果: E5 のみ変更前から止まっていた（一覧の部分一致）。E1〜E4・E6〜E11 は通っていた（止め漏れの再現）。
