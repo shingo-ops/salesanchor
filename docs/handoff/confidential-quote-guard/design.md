@@ -1,5 +1,10 @@
 # Phase 3 設計 — 社外秘の原文の書き写しを送る前に止める（confidential-quote-guard）
 
+> この文書は何か(専門用語なしの1行):
+> 仕入元の投稿の文面を書類に書き写したまま送ろうとしたら、送る前に機械で止める見張りの設計。
+
+親へのリンク: [個人側検問の正本化(local-hooks-ssot)](../../specs/local-hooks-ssot/README.md)（既存テーマの延長として扱う。STANDARD-WORKFLOW §1.8 の「既存仕様書の延長」。個人側の見張りを 1 本足すため）
+
 - recon: [recon.md](recon.md)
 - 関係する仕様: `docs/specs/local-hooks-ssot/README.md`（個人側の見張りは原本を repo に置き、PR で変える）。前例の置き場 `scripts/agent-hooks/review-gate/`（ADR-1029）
 - 関係する ADR: ADR-1043（社外秘の正解表は公開リポジトリに置かない、`docs/adr/ADR-1043-accuracy-gold-in-db.md:21`）、ADR-075（秘密情報の扱い、`docs/adr/ADR-075-github-secrets-only-policy.md`）
@@ -11,14 +16,16 @@
 - 目的: 仕入元の投稿の文面を、AI が repo の書類やプログラムに書き写して公開の置き場へ送ることを、送る前に機械で止める。
 - 利用者に見える変化: PO から見た変化は無い。AI が文面を書き写した書類を送ろうとすると、その場で止まり、どの行のどの語句かが AI に示される。
 - KGI（○× で判定）:
-  - K1: 10/25 に文面が漏れた 2 回分の記録（#4727・#4729 のコミット）を送ろうとすると、どちらも止まる。
+  - K1: 10/25 に文面が漏れた 2 回分の記録（#4727・#4729 のコミット）を送ろうとすると、どちらも止まる（exit 2 で 1 語以上を示す）。
   - K2: 審査に合格した記録（#4730 のコミット）は止まらない。
   - K3: いま main にある docs と backend/tests を全部当てたとき止まる語句（recon §4-1 で 324 種類）を Opus が 1 つずつ見て、全部が「原文の書き写し」か「除外表に足したもの」のどちらかに分かれる（どちらでもないものが 0）。便1 で判定し、表は社外秘フォルダに置く。
   - K4: 1 回の照合は 2 秒以内。
 
 ## 2. 対象と対象外
 
-- 対象: Mac で AI が行う `git push` と `gh pr create`／`gh pr edit`（本文つき）。見るのは、送る差分で足した行と PR 本文の、「」と『』の中の語句。
+- 対象: Mac で AI が行う次の操作。見るのは、送る差分で足した行と本文の、「」と『』の中の語句。
+  - `git push`（足した行）
+  - `gh pr create`／`gh pr edit`／`gh pr comment`／`gh pr review`、`gh issue create`／`gh issue comment` の本文（`--body`／`--body-file`）。審査の結果を PR のコメントに書くことが多く、公開の置き場へ出る道になるため、PR 本文と同じに扱う。
 - 対象外:
   - すでに GitHub に残っている閉じた PR の中身（PO 判断「2」）。
   - 「」の外にそのまま書き写した文面（§7 弊害で扱う。今回は数えるだけ）。
@@ -28,9 +35,10 @@
 
 ## 3. 変える内容
 
-- 新しい見張りの原本を repo の `scripts/agent-hooks/confidential-quote-guard/` に置く（guard.py・install.sh・rollback.sh・テスト）。review-gate（ADR-1029）と同じ形。原本には原文も語句も入れない（置き場の場所は Mac の表から読む）。
+- 新しい見張りの原本を repo の scripts/agent-hooks/confidential-quote-guard/（便1 で作る）に置く（guard.py・install.sh・rollback.sh・テスト）。review-gate（ADR-1029）と同じ形。原本には原文も語句も入れない（置き場の場所は Mac の表から読む）。
 - install.sh が原本を ~/.claude/scripts に写し、~/.claude/settings.json の PreToolUse:Bash に pr-body-guard.sh の前で登録する。写したものと原本が一字一句同じかを diff で確かめる（local-hooks-ssot の H3 の考え方）。
-- 動く条件: コマンドに `git push` または `gh pr create`／`gh pr edit` と `--body`／`--body-file` が含まれるとき。作業場所は、コマンドの `cd <絶対パス>` か cwd から決める（pr-body-guard.sh と同じ決め方）。
+- 動く条件: コマンドに `git push` が含まれるとき、または §2 の gh の操作に `--body`／`--body-file` が付くとき。作業場所は、コマンドの `cd <絶対パス>` か cwd から決める（pr-body-guard.sh と同じ決め方）。
+- 照らす repo: 本文はどの repo でも照らす（repo に関係なく照らせるため）。足した行は、置き場の表に並べた repo（最初は shingo-ops/salesanchor だけ）の push のときだけ照らす。表に無い repo の push は照らさずに通す。表に並んだ repo で `origin/main` が無い、または差分が取れないときは止める（全部拒否に倒す）。
 - 照らすもの:
   1. `git diff origin/main...HEAD` の追加行（全ファイル）。
   2. PR 本文（pr-body-guard.sh と同じ取り出し方）。
@@ -39,6 +47,7 @@
   2. 除外表に無い。除外表は「状態の言葉の写し」「商品名の写し」「一般語の表」の 3 つ。数字と区切りだけの語句も止めない。
   3. 原文の置き場のどれかのファイルに、そのまま現れる。
 - 止めたときの表示: ファイル名と行番号と語句。表示先は AI の画面だけで、送らないので外には出ない。「形の説明に書き換える」よう案内を付ける。
+- 止めた記録: 既存の見張りと同じ `_hook_blocked_log`（agent-events.jsonl に 1 行足す。pr-body-guard.sh:12・:158 と同じ）で、日時・見張りの名前・ファイル名と行番号・止めた語句の数だけを残す。語句そのものは記録に書かない（記録も社外秘にしないため）。local-hooks-ssot の H7（いつ・何を・なぜ）に当たる。
 - 原文の置き場の表（confidential-corpus.conf）: 原文ファイルの場所の並び。最初は recon §3 の 120 ファイルとする。実装の便で、17 フォルダを担当に確かめさせ、投稿の原文の入ったものを足す。分析の出力（自分たちの言葉が混じる）は入れない。
 - 商品名の写し: 共用の商品マスタ（公開して困らない名前）の商品名・シリーズ名・検索ワードを、読み取り専用の道（ADR-1024）で取り出して Mac の社外秘フォルダに置く。recon §4-1 の 170 種類はここと一般語の表で消す想定。写しが古くなると新商品名で誤って止まるので、週の点検で取り直す。
 - 一般語の表（confidential-allow.txt）: 1 行 1 語で、語ごとに足した理由を書く。最初は、ダメージの有無の言い方のように、状態の写しに無い状態の一般語を入れる。足すのは Opus の判断でよい。足したら記録に残し、週の点検で見直す。
@@ -49,22 +58,25 @@
 
 | 基準 | 検証方法 |
 |---|---|
-| K1 #4727・#4729 の記録が止まる | 2 つのコミットを土台に置いた試しの作業場所で `git push --dry-run` 相当のコマンドを見張りに渡し、exit 2 と止めた語句の数（10・1）を確かめる |
+| K1 #4727・#4729 の記録が止まる | 2 つのコミットを土台に置いた試しの作業場所で `git push --dry-run` 相当のコマンドを見張りに渡し、どちらも exit 2 で 1 語以上を示すことを確かめる。語句の数は参考に残す（recon §4 の 10・1 は除外表が状態の写しだけのときの値で、便1 では減ってよい） |
 | K2 #4730 の記録が通る | 同じ方法で 18060e58f を渡し、exit 0 を確かめる |
 | K3 既存の書類で説明できない停止 0 | main の docs と backend/tests を全部当てた一覧を Opus が 1 語ずつ判定し、表に残す（社外秘フォルダに置く） |
 | K4 2 秒以内 | 上の 3 回の time の値 |
 | 置き場が無いと止まる | 表を空にした試しで exit 2 |
-| 見張りのテスト | `scripts/agent-hooks/confidential-quote-guard/` に作り物の原文で試すテストを置く（本物の原文はテストに入れない）。止まる・通る・置き場なし・除外表・「」の外は止めない、の 5 つ |
+| 表に無い repo は通る・表にある repo で差分が取れないと止まる | origin/main の無い作り物の repo で 2 通りを試し、exit 0 と exit 2 |
+| コメントの本文も照らす | `gh pr comment --body-file` に作り物の原文の語句を入れて exit 2 |
+| 止めた記録が残る | 止めた試しのあと agent-events.jsonl の最後の行に、見張りの名前・日時・件数があり、語句が無い |
+| 見張りのテスト | scripts/agent-hooks/confidential-quote-guard/ に作り物の原文で試すテストを置く（本物の原文はテストに入れない）。止まる・通る・置き場なし・除外表・「」の外は止めない、の 5 つ |
 
 ## 5. 外部・過去事例の参照と我々への応用
 
-- 社内の前例: worktree-only-guard.sh、review-gate（原本は `scripts/agent-hooks/review-gate/gate.py`、配り方は同じフォルダの install.sh・rollback.sh）（マージ前の審査記録を照らして止める）、pr-body-guard.sh。どれも「送る・マージする前に、決まりを機械で照らして止める」形で、この設計も同じ形にする。止めるときの終わり方（exit 2）と、コマンドから作業場所を決めるやり方を、pr-body-guard.sh にそろえる。
+- 社内の前例: worktree-only-guard.sh、review-gate（マージ前の審査記録を照らして止める。原本は `scripts/agent-hooks/review-gate/gate.py`、配り方は同じフォルダの install.sh・rollback.sh）、pr-body-guard.sh。どれも「送る・マージする前に、決まりを機械で照らして止める」形で、この設計も同じ形にする。止めるときの終わり方（exit 2）と、コマンドから作業場所を決めるやり方を、pr-body-guard.sh にそろえる。
 - 社内の前例 2: 秘密情報の検査（`.gitleaks.toml`）は、形で見つけて除外表で誤検知を消す作り。この設計の一般語の表も同じ考え方にする。
 - 外部の数値事例: 使わない。照らす相手が「自社だけが持つ原文」で、外の事例の数値はこの誤検知率の根拠にならないため。代わりに K1〜K3 の実測で決める。
 
 ## 6. 影響範囲
 
-- 呼び出し元: Mac で AI が打つ `git push`・`gh pr create`・`gh pr edit` の全部（どの repo でも）。salesanchor 以外の repo では、原文が混じらないので止まらない想定。ただし照合の時間はかかる（K4 で測る）。
+- 呼び出し元: Mac で AI が打つ `git push` と §2 の gh の操作の全部（どの repo でも）。足した行を照らすのは表に並べた repo だけなので、ほかの repo の push は照らさずに通る。本文はどの repo でも照らす（照合の時間は K4 で測る）。
 - 変えないもの: 製品のコード、DB、本番、GitHub の CI。repo で足すのは、見張りの原本（scripts/agent-hooks の下）と ADR と AGENTS.md・FEATURE-INDEX の追記（§8）。
 
 ## 7. 弊害とその対処
@@ -78,29 +90,31 @@
 
 - 便1（この設計の実装・1 回）:
   - 見張りの原本・install.sh・rollback.sh・テストを repo に作る（担当: Sonnet）。表 2 つと商品名の写しは Mac の社外秘フォルダに作る（repo に入れない）。
-  - PR がマージされたあと install.sh で写して登録する。
+  - PR がマージされたあと、PO が `!` で install.sh を流して写し、登録する（ADR-1011:39「フックの変更は AI がパッチを作り、PO が `!` で反映する」、前例 `scripts/agent-hooks/review-gate/install.sh:2`）。AI は settings.json を自分で書き換えない。
   - repo 側では ADR を起案し、AGENTS.md に新しい必須の照合を 1 行足す（新しい必須チェックの追加にあたるため）。FEATURE-INDEX に 1 行足す。
   - K1〜K4 を測る。
 - 便2（必要なら）: 「」の外への広げ方。K3 の数を見てから決める。
 
 ## 9. 戻し方
 
-- `bash scripts/agent-hooks/confidential-quote-guard/rollback.sh` で settings.json の登録 1 つを外す（review-gate と同じ形）。変える前の settings.json は日付付きの写しで残す。
+- PO が `!` で rollback.sh（便1 で scripts/agent-hooks/confidential-quote-guard/ に作る）を流し、settings.json の登録 1 つを外す（review-gate と同じ形）。変える前の settings.json は日付付きの写しで残す。
 - 表 2 つとスクリプトは消さずに残してよい（登録が無ければ動かない）。
 
-## 10. 継続と維持の仕組み
+## 10. 審査（同一 AI の自己審査）
 
-- 対象: confidential-quote-guard.py、confidential-corpus.conf、confidential-allow.txt、商品名の写し。
-- 守り手: Opus（設計担当）。週の点検（agent-console の定期実行）で、次の 2 つを数える。
-  - 一般語の表の行数と、その週に足した語
-  - 商品名の写しの取り直し（日付が 7 日より古ければ取り直す）
-  - 社外秘フォルダの新しいフォルダのうち、置き場の表に無いもの
-- 決まりの正本: 便1 の ADR。
-
-## 11. 審査（同一 AI の自己審査）
-
-- 結論: APPROVE（設計として）。最初の案では見張りを Mac のホームにだけ置く形だったが、local-hooks-ssot（原本を repo に置く）と食い違うため、review-gate と同じ置き方に直した。
+- 結論: APPROVE（設計として）。#4736 の reviewer（opus）の REVISE（A〜K）を受けて、実行する人（PO の `!`）・止めた記録・写しのずれの点検・コメントの本文・照らす repo の決め方を足した。最初の案では見張りを Mac のホームにだけ置く形だったが、local-hooks-ssot（原本を repo に置く）と食い違うため、review-gate と同じ置き方に直した。
 - 根拠: 止める決まりは recon §4 の試しで K1 の 2 件を止め、K2 で止まる 1 語は一般語の表で消える。既存の書類に当てた試し（recon §4-1）で、商品名で誤って止まることが分かったため、除外表に商品名の写しを足した。止める場所（PreToolUse:Bash、exit 2）は既存の見張りと同じ形（recon §2）。
 - 未解決:
   - 原文の置き場の 17 フォルダの中身（便1 の最初に確かめる。確かめるまでは 120 ファイルで動かす）。
   - main にすでにある書き写しに見える約 140 種類の扱い（PO 判断。この設計の実装とは独立）。
+
+## 維持の仕組み
+
+- 守り手: 人手で守る。理由: 関所の本体（scripts/agent-hooks/confidential-quote-guard/guard.py）は便1 で作るため、この設計の段階ではまだ無い。それまでは Opus が書いたあと原文と照らす（この PR でも実施）。便1 のあとの守り手は guard.py と、下の週の点検。
+- 対象: guard.py の原本と ~/.claude/scripts に写したもの、confidential-corpus.conf、confidential-allow.txt、商品名の写し。
+- 週の点検（agent-console の定期実行。Opus が結果を見る）で、次の 4 つを数える。
+  - 原本（origin/main の guard.py）と写したもの（~/.claude/scripts）の diff。1 行でも違えば知らせる（local-hooks-ssot の H4・H5）。
+  - 一般語の表の行数と、その週に足した語。
+  - 商品名の写しの日付（7 日より古ければ取り直す）。
+  - 社外秘フォルダの新しいフォルダのうち、置き場の表に無いもの。
+- 決まりの正本: 便1 の ADR。

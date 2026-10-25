@@ -83,7 +83,7 @@
 | Mac の自動お手入れの見張り（mac-jobs-watch。Docker 自動停止と毎日の自動片付けが止まったり失敗したりしたら Discord で知らせる） | [mac-jobs-watch/README.md](mac-jobs-watch/README.md) | あるべき姿=PO発言転記・設置済み K1〜K5 合格（2026-10-15 #4315）・K6 観測待ち | Mac の定期作業の見張りを変える前 |
 | 仮想マシンが要る試験を GitHub で行う（vm-test-on-gha。PO の Mac で試験用の仮想マシンを作らず、GitHub のコンピュータで試す） | [vm-test-on-gha/README.md](vm-test-on-gha/README.md) | あるべき姿=PO発言転記・KGI PO承認済み 2026-10-16・設計審査済み・実装中 | 仮想マシンが要る試験を行う前 |
 | 個人側検問の正本化(local-hooks-ssot) | [local-hooks-ssot/README.md](local-hooks-ssot/README.md) | あるべき姿・KGI承認済 2026-07-20 | ~/.claude の見張り（フック）を変える前 |
-| 社外秘の原文の書き写しを送る前に止める見張り（confidential-quote-guard。仕入元の投稿の文面を書類に書き写したまま git push・PR 本文で送ろうとすると止める） | [設計](../handoff/confidential-quote-guard/design.md) | 方針 PO「2」2026-10-25・自己審査 APPROVE・実装未着手 | 社外秘の書類の扱い・送る前の見張りを変える前 |
+| └ 社外秘の原文の書き写しを送る前に止める見張り（confidential-quote-guard。仕入元の投稿の文面を書類に書き写したまま git push・PR 本文で送ろうとすると止める） | [設計](../handoff/confidential-quote-guard/design.md) | 方針 PO「2」2026-10-25・自己審査 APPROVE・実装未着手 | 社外秘の書類の扱い・送る前の見張りを変える前 |
 | データ保全（data-durability。バックアップ・多重化・復旧演習。壊れないことと戻せることの両方） | [data-durability/README.md](data-durability/README.md) | あるべき姿・KGI承認済 2026-09-01 | バックアップ・復旧の仕組みを変える前 |
 | 添付ファイルの保管（attachment-storage。Discord等で受けた画像を自社保存し、期限切れ・投稿削除でも受信箱に残す） | [attachment-storage/README.md](attachment-storage/README.md) | あるべき姿・KGI確定 2026-09-01 | 受信した画像の保存を変える前 |
 | Discordリアクション（discord-reaction。受信箱でDiscordと同じように絵文字を付ける・見る） | discord-reaction/README.md | あるべき姿・KGI確定 2026-09-04 | 受信箱の絵文字リアクションを変える前 |

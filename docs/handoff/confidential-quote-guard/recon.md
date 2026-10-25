@@ -1,5 +1,10 @@
 # recon — 社外秘の原文の書き写しを送る前に止める（confidential-quote-guard）
 
+> この文書は何か(専門用語なしの1行):
+> 送る前の見張りを足すために、今の見張りの形と、原文の置き場と、試しの結果を調べた記録。
+
+親へのリンク: [個人側検問の正本化(local-hooks-ssot)](../../specs/local-hooks-ssot/README.md)
+
 - 基準: origin/main ebab342eb（2026-10-25）
 - 設計: [design.md](design.md)
 - 審査: 同一 AI（Opus）の自己審査。独立した第二者レビューではない。
@@ -25,8 +30,8 @@
 
 ## 2. 送る前の見張りの今の形
 
-- 見張りは Mac のホームの設定（~/.claude/settings.json）の PreToolUse:Bash に並ぶ。順は worktree-only-guard.sh → agent-danger-hook.sh → worktree-access-guard.sh → gh-scope-guard.sh → pr-body-guard.sh → ほか（担当の調べ。生出力 /tmp/CC報告ファイル/confid-guard-recon/hooks.txt）。
-- pr-body-guard.sh は `gh pr create`／`gh pr edit` に `--body`／`--body-file` が付くときだけ動き、止めるときは exit 2。git push では動かない。
+- 見張りは Mac のホームの設定（~/.claude/settings.json）の PreToolUse:Bash に並ぶ。順は worktree-only-guard.sh → agent-danger-hook.sh → worktree-access-guard.sh → gh-scope-guard.sh → pr-body-guard.sh → ほか（担当の調べ。生出力 ~/CC報告ファイル-keep/confid-guard-recon-20261025/hooks.txt）。
+- pr-body-guard.sh は `gh pr create`／`gh pr edit` に `--body`／`--body-file` が付くときだけ動き（~/.claude/scripts/pr-body-guard.sh:55-56。comment には反応しないと明記）、止めるときは記録を残して exit 2（同 :12 の `_hook_blocked_log`、:158）。git push では動かない。repo の外のファイルなので、行番号は 2026-10-25 に Mac で読んだ値。
 - 見張りのスクリプト置き場（~/.claude/scripts）は git 管理ではない。変更の跡は .bak とバックアップのフォルダで残す運用。テストは ~/.claude/scripts/tests/ に 4 本あり、標準入力に JSON を渡して動かす形。
 - 状態の言葉の一覧は repo に無い（状態マスタは本番 DB）。過去に取った写しが社外秘フォルダにある。
 
