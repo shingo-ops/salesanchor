@@ -259,14 +259,14 @@ export default function CommissionPanel({
                 gap: "var(--space-2)",
               }}
             >
-              <Button variant="primary" size="md"
+              <Button loading={recalcing} variant="primary" size="md"
                 type="button"
 
                 onClick={handleRecalc}
                 disabled={recalcing}
                 data-testid="commission-recalc"
               >
-                {recalcing ? t("commission.recalculating") : t("commission.recalc")}
+                {t("commission.recalc")}
               </Button>
               <Button
                 type="button"

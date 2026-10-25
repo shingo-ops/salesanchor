@@ -296,12 +296,12 @@ export default function ContactChannelForm({
             <Button type="button" variant="secondary" onClick={onCancel}>
               {t("contactChannel.cancel")}
             </Button>
-            <Button
+            <Button loading={submitting}
               type="submit"
               variant="primary"
               disabled={submitting || !channel}
             >
-              {submitting ? t("common.saving") : t("contactChannel.save")}
+              {t("contactChannel.save")}
             </Button>
           </div>
         )}
