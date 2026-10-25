@@ -16,6 +16,7 @@ import { SCHEDULE_POPOVER_ICONS, INBOX_ACTION_ICONS, Check, Warning } from "../.
 import type { DistributionTarget, RunResult } from "./distributionApi";
 import { deleteTarget, runDistributionTarget } from "./distributionApi";
 import { DistributionTargetForm } from "./DistributionTargetForm";
+import { Button } from "../../components/Button";
 
 interface Props {
   targets: DistributionTarget[];
@@ -167,19 +168,19 @@ export function DistributionTargetList({ targets, onRefresh }: Props) {
 
                       {target.is_active && (
                         <>
-                          <button
+                          <Button
                             type="button"
-                            className="dist-btn dist-btn--primary"
+                            variant="primary"
+                            size="sm"
+                            loading={running === target.id}
                             onClick={() => setConfirm({ type: "run", target })}
                             disabled={running === target.id}
                             title={t("distributionTarget.list.runBtn")}
                             aria-label={`${t("distributionTarget.list.runBtn")}: ${target.name}`}
                           >
                             <INBOX_ACTION_ICONS.send size={14} aria-hidden="true" />
-                            {running === target.id
-                              ? t("distributionTarget.preview.running")
-                              : t("distributionTarget.list.runBtn")}
-                          </button>
+                            {t("distributionTarget.list.runBtn")}
+                          </Button>
 
                           <button
                             type="button"
