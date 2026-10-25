@@ -187,7 +187,7 @@
 | [ADR-1006](./ADR-1006-product-code-pm5-and-mark-only-matching.md) | ADR-1006: 商品コードを PM-00001 形式の連番にそろえ、品番の照合は型番（mark）だけで行う | Accepted | Amends ADR-1002 | 2026-10-05 |
 | [ADR-1007](./ADR-1007-migration-structure-only-run-once.md) | ADR-1007: migration は構造の変更だけ・1回だけ流す。テナントの作成と権限は migration の再実行に頼らない | Superseded | — | 2026-10-05 |
 | [ADR-1008](./ADR-1008-person-ssot-users-id.md) | ADR-1008: 「人」の正本は public.users.id 一本にする（名簿 staff は会社内の詳細） | Accepted | — | — |
-| [ADR-1009](./ADR-1009-discord-ops-intake.md) | ADR-1009: Discord の監視通知を Claude Code の常駐受付で受け、不具合ごとの担当が承認チャンネルで対応する | Accepted | — | — |
+| [ADR-1009](./ADR-1009-discord-ops-intake.md) | ADR-1009: Discord の監視通知を Claude Code の常駐受付で受け、不具合ごとの担当が承認チャンネルで対応する | Superseded | Superseded by ADR-1039 | — |
 | [ADR-1010](./ADR-1010-api-contract-and-wiring-ledger.md) | ADR-1010: API型契約（OpenAPI→TypeScript）と配線台帳の自動生成 | Accepted | — | — |
 | [ADR-1011](./ADR-1011-permission-self-maintenance.md) | ADR-1011: AI による許可の自律保守（週1回・SM- の文だけ・台帳必須） | Accepted | — | — |
 | [ADR-1012](./ADR-1012-ai-ops-247.md) | ADR-1012: 監視の通知から応急処置と AI（Claude Code routines）を起動し、障害記録で振り返る 24 時間保守運用 | Proposed | — | — |
@@ -217,7 +217,7 @@
 | [ADR-1036](./ADR-1036-price-decides-unit.md) | ADR-1036: 単位が「個」・無記入の箱系の行は、値段で Box／Case／Pack を決める（v102） | Proposed | — | — |
 | [ADR-1037](./ADR-1037-migration-lock-timeout.md) | ADR-1037: 入れ替え時の migration はロック待ちを1秒で諦め、間を空けて流し直す | Accepted | — | — |
 | [ADR-1038](./ADR-1038-product-format-child-of-work.md) | ADR-1038: 細分類は中分類（作品）の子。親子は product_format_game_links の 1 か所だけに持ち、DB で守る | Accepted | Amends ADR-1026 | — |
-| [ADR-1039](./ADR-1039-discord-pdca-agent-console.md) | ADR-1039: Discord の不具合報告を agent-console で受け、件ごとに Opus が対応と効果測定を回す | Proposed | Supersedes ADR-1009 | — |
+| [ADR-1039](./ADR-1039-discord-pdca-agent-console.md) | ADR-1039: Discord の不具合報告を agent-console で受け、件ごとに Opus が対応と効果測定を回す | Accepted | Supersedes ADR-1009 | — |
 | [ADR-1040](./ADR-1040-doc-agenda-nav-entry-index.md) | ADR-1040: AI 向け指示文書を「入口→目次→章→末端」に組み替え、本文の正本を AGENTS.md に置く | Accepted | — | — |
 | [ADR-1041](./ADR-1041-kubun-allowed-units-and-condition-heading.md) | ADR-1041: 区分ごとに取れる単位の表で単位を直し、状態の見出しを下の品目に使う（v102） | Proposed | — | — |
 | [ADR-1042](./ADR-1042-cloud-read-window.md) | ADR-1042: クラウドから本番を読むだけの HTTPS 窓口を、読む人の接続だけを持つ専用コンテナで作る | Accepted | — | — |
