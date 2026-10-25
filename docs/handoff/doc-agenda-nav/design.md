@@ -685,3 +685,24 @@ paths:
 - 根拠: 消すのは §10-5 で決まった3行だけ。移す GAS の決まりは文言を変えず、公式の paths の決まりで GAS の作業のときに読まれる（T6 で実物を確かめる）。PO の最優先の報告の型は動かさない。1つずつ変えて測る。戻し方は写しを戻すだけ。リポジトリ・本番・CI・Ruleset に触らない。
 - 未確認（T で確かめる）: `**/.clasp.json` のように点で始まる名前に paths が当たるか（appsscript.json でも当たるので T6 はそちらで見る）。推定トークンと実測の差。
 - 未解決: なし。K9 が 6.5k に届かない場合は案 D を PO に見せる（推測で進めない）。
+
+### 28-8. 実装の結果（2026-10-25・Sonnet 実装、Opus が生出力で照合）
+
+生出力: /tmp/CC報告ファイル/an-s7/（リポジトリ外）。写し: ~/CC報告ファイル-keep/agenda-nav-stage7-20261025/。
+
+- 【事実】T1 cmp rc=0。T2 diff-7a.txt は `12,14d11` だけ、「AGENTS.md 自動更新ルール」は 0 件。
+- 【事実】T3 `tail -n +7 ~/.claude/rules/gas-clasp.md` と写しの :57-73 の diff は rc=0（Opus が写しから直接比べ直した）。gas-clasp.md は 23 行（frontmatter 6 行＋見出し 1 行＋本文 16 行）。
+- 【事実】T4 diff-7b.txt は `12,14d11` と `58,73c55`（本文16行→案内1行）だけ。~/.claude/CLAUDE.md は 84 行から 66 行になった。
+- 【事実】T5 K9（origin/main c233ec8f6、claude 2.1.310）:
+
+| 測った時点 | Memory files | MEMORY.md | K9 | ~/.claude/CLAUDE.md |
+|---|---|---|---|---|
+| 変更前（28-1） | 17.7k | 10.6k | 7.1k | 2.7k |
+| 7a 後（22:57 JST） | 17.5k | 10.6k | 6.9k | 2.5k |
+| 7b 後（22:59 JST） | 17.1k | 10.6k | **6.5k** | 2.1k |
+
+  ほかの行（~/kb/AGENTS.md 1k・git-workflow.md 247・agents.md 907・CLAUDE.md 198・AGENTS.md 2k）は3回とも同じ。7b の一覧に gas-clasp.md は無い。
+- 【事実】T6 ~/tcg-inventory-parser で appsscript.json を開いた回は、gas-clasp.md が自動で読まれ「- `~/.clasprc.json` はホームに1つしかない共有ファイル。」を引用した。開かない回は「無い」。両方 rc=0。
+- 判定: **K9 合格**（6.5k ≤ 6.5k。合格ラインちょうど、余裕は 0.0k）。
+- 【事実】K1 はユーザー側 175 行（~/.claude/CLAUDE.md 66・~/kb/AGENTS.md 32・git-workflow.md 24・agents.md 53）＋入口 54 行（AGENTS.md 45・CLAUDE.md 9）＝ 229 行で、200 行以下にまだ 29 行届かない（28-6 の残り。PO に別に相談する）。
+- 【未確認】/context の表示は 0.1k 単位の丸めで、6.5k が丸める前にラインの上か下かは分からない。判定は kgi.md の決まり（表示値で判定）に従う。
