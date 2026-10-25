@@ -25,7 +25,7 @@
 
 - 対象: Mac で AI が行う次の操作。見るのは、送る差分で足した行と本文の、「」と『』の中の語句。
   - `git push`（足した行）
-  - `gh pr create`／`gh pr edit`／`gh pr comment`／`gh pr review`、`gh issue create`／`gh issue comment` の本文（`--body`／`--body-file`）。審査の結果を PR のコメントに書くことが多く、公開の置き場へ出る道になるため、PR 本文と同じに扱う。
+  - `gh pr create`／`gh pr edit`／`gh pr comment`／`gh pr review`、`gh issue create`／`gh issue comment` の本文（付け方は §3 の「動く条件」のとおり、短い形や標準入力も含む）。審査の結果を PR のコメントに書くことが多く、公開の置き場へ出る道になるため、PR 本文と同じに扱う。
 - 対象外:
   - すでに GitHub に残っている閉じた PR の中身（PO 判断「2」）。
   - 「」の外にそのまま書き写した文面（§7 弊害で扱う。今回は数えるだけ）。
@@ -41,7 +41,8 @@
 - 照らす repo: 本文はどの repo でも照らす（repo に関係なく照らせるため）。足した行は、置き場の表に並べた repo（最初は shingo-ops/salesanchor だけ）の push のときだけ照らす。表に無い repo の push は照らさずに通す。表に並んだ repo で `origin/main` が無い、または差分が取れないときは止める（全部拒否に倒す）。
 - 照らすもの:
   1. `git diff origin/main...HEAD` の追加行（全ファイル）。
-  2. gh の操作の本文。pr-body-guard.sh の取り出し方（~/.claude/scripts/extract-pr-body.py）は create／edit の `--body` だけを拾い、comment や短い形を拾わないので使わない。代わりに、(a) コマンドの文字列全体（`--body` の値、heredoc で書いた本文、`-F -` に流し込む本文を含む）と、(b) `--body-file`／`-F` が指すファイルの中身、の両方を照らす。(b) のファイルが読めないときは止める（全部拒否に倒す）。
+  2. gh の操作の本文。pr-body-guard.sh の取り出し方（~/.claude/scripts/extract-pr-body.py）は create／edit の `--body` だけを拾い、comment や短い形を拾わないので使わない。代わりに、(a) コマンドの文字列全体（`--body` の値、heredoc で書いた本文、`-F -` に流し込む本文を含む）と、(b) `--body-file`／`-F` が指すファイルの中身、の両方を照らす。(b) のファイルが読めないときは止める（全部拒否に倒す）。(c) 本文がコマンドの外から来る形、つまり `< <path>`、`cat <path> |`、`$(cat <path>)` のときは、その path のファイルを読んで照らす。(d) それ以外で、本文の出どころが文字列にもファイルにも決まらないとき（`--body "$VAR"`、`-F -` に別のコマンドの出力を流す、など）は止める（exit 2）。
+- 送るブランチ: `git push` で送るブランチが今いるブランチと違うとき（`git push origin <別ブランチ>`）は、`origin/main...<別ブランチ>` の追加行を照らす。送るブランチがコマンドから決まらないときは止める。
 - 止める決まり: 次の 3 つを全部満たす語句が 1 つでもあれば exit 2。
   1. 「」または『』の中にあり、4 文字以上。
   2. 除外表に無い。除外表は「状態の言葉の写し」「商品名の写し」「一般語の表」の 3 つ。数字と区切りだけの語句も止めない。
@@ -64,7 +65,9 @@
 | K4 2 秒以内 | 上の 3 回の time の値 |
 | 置き場が無いと止まる | 表を空にした試しで exit 2 |
 | 表に無い repo は通る・表にある repo で差分が取れないと止まる | origin/main の無い作り物の repo で 2 通りを試し、exit 0 と exit 2 |
-| コメントの本文も照らす | 作り物の原文の語句を入れて、`gh pr comment --body`・`gh pr comment -b`・`gh pr review -F <file>`・`gh issue comment -F -`（heredoc）・`gh pr create --body=…` の 5 通りがどれも exit 2 |
+| コメントの本文も照らす | 作り物の原文の語句を入れて、`gh pr comment --body`・`gh pr comment -b`・`gh pr review -F <file>`・`gh issue comment -F -`（heredoc）・`gh pr create --body=…`・`gh pr comment -F - < <file>`・`gh pr comment --body "$(cat <file>)"` の 7 通りがどれも exit 2。`gh pr comment --body "$VAR"` も exit 2 |
+| 本文のファイルが読めないと止まる | 存在しないファイルを `--body-file` と `-F` に渡して、どちらも exit 2 |
+| 別のブランチを送るときも照らす | 作り物の語句を足したブランチを、別のブランチにいるまま `git push origin <そのブランチ>` で送ろうとして exit 2 |
 | 止めた記録が残る | 止めた試しのあと agent-events.jsonl の最後の行に、見張りの名前・日時・件数があり、語句が無い |
 | 見張りのテスト | scripts/agent-hooks/confidential-quote-guard/ に作り物の原文で試すテストを置く（本物の原文はテストに入れない）。止まる・通る・置き場なし・除外表・「」の外は止めない、の 5 つ |
 
