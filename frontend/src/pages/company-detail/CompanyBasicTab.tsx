@@ -98,8 +98,8 @@ export function CompanyBasicTab({
       </div>
       {canEdit && (
         <div className="form-actions">
-          <Button type="submit" variant="primary" size="md" disabled={!basicDirty || basicSubmitting}>
-            {basicSubmitting ? t("common.saving") : t("companies.saveBasicInfo")}
+          <Button loading={basicSubmitting} type="submit" variant="primary" size="md" disabled={!basicDirty || basicSubmitting}>
+            {t("companies.saveBasicInfo")}
           </Button>
         </div>
       )}

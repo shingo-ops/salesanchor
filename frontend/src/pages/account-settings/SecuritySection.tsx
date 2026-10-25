@@ -103,8 +103,8 @@ export default function SecuritySection() {
         {success && <div className="account-settings-success">{t("accountSettings.passwordChanged")}</div>}
 
         <div className="account-settings-actions">
-          <Button variant="primary" size="md" type="submit" disabled={changing}>
-            {changing ? t("accountSettings.changing") : t("accountSettings.changePassword")}
+          <Button loading={changing} variant="primary" size="md" type="submit" disabled={changing}>
+            {t("accountSettings.changePassword")}
           </Button>
         </div>
       </form>

@@ -368,8 +368,8 @@ export default function ConditionsPage() {
       headerAction={
         hasPermission("conditions.view") ? (
           <>
-            <HeaderButton variant="secondary" disabled={exporting} data-testid="conditions-export" onClick={() => void downloadExport()}>
-              {t(exporting ? "common.loading" : "conditionCsv.exportButton")}
+            <HeaderButton loading={exporting} variant="secondary" disabled={exporting} data-testid="conditions-export" onClick={() => void downloadExport()}>
+              {t("conditionCsv.exportButton")}
             </HeaderButton>
             <HeaderButton variant="primary" data-testid="conditions-import" onClick={() => navigate("/management-center/conditions/import")}>
               {t("conditionCsv.importButton")}

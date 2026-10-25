@@ -385,12 +385,12 @@ export default function ChannelsPage() {
             {t("channels.reauthRequired")}
           </span>
           {canManage && (
-            <Button variant="secondary" size="sm"
+            <Button loading={connecting} variant="secondary" size="sm"
 
               onClick={handleConnect}
               disabled={connecting}
             >
-              {connecting ? t("channels.connecting") : t("channels.reauthAction")}
+              {t("channels.reauthAction")}
             </Button>
           )}
         </div>
@@ -434,13 +434,13 @@ export default function ChannelsPage() {
             {t("channels.noChannelsDesc")}
           </p>
           {canManage ? (
-            <Button variant="primary" size="lg"
+            <Button loading={connecting} variant="primary" size="lg"
 
               onClick={handleConnect}
               disabled={connecting}
 
             >
-              {connecting ? t("channels.connecting") : t("channels.connect")}
+              {t("channels.connect")}
             </Button>
           ) : (
             <p style={{ color: "var(--text-muted)" }}>
@@ -556,13 +556,13 @@ export default function ChannelsPage() {
                 {t("channels.discordNoServerDesc")}
               </p>
               {canManage && (
-                <Button variant="primary" size="lg"
+                <Button loading={discordConnecting} variant="primary" size="lg"
 
                   onClick={handleDiscordConnect}
                   disabled={discordConnecting}
 
                 >
-                  {discordConnecting ? t("channels.discordConnecting") : t("channels.discordAddBot")}
+                  {t("channels.discordAddBot")}
                 </Button>
               )}
             </div>
