@@ -303,8 +303,8 @@ export function SupplierDetailDrawer({
               <Button type="button" variant="secondary" onClick={requestClose} disabled={saving}>
                 {t("common.close")}
               </Button>
-              <Button type="submit" form={formId} disabled={saving || blocked || !dirty}>
-                {t(saving ? `${s}.saving` : mode === "create" ? "common.create" : "common.save")}
+              <Button type="submit" form={formId} disabled={saving || blocked || !dirty} loading={saving}>
+                {t(mode === "create" ? "common.create" : "common.save")}
               </Button>
             </div>
           ) : undefined

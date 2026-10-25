@@ -184,9 +184,10 @@ export default function ProductEditPage() {
         type="submit"
         variant="primary" size="md"
         disabled={saving || loading}
+        loading={saving}
         data-testid="product-edit-save"
       >
-        {saving ? t("common.saving") : isNew ? t("common.register") : t("common.update")}
+        {isNew ? t("common.register") : t("common.update")}
       </Button>
     </>
   );

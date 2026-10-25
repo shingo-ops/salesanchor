@@ -42,6 +42,7 @@
     },
     "filter": {
       "button": "Filters",
+      "buttonWithCount": "Filter ({{count}})",
       "title": "Filters",
       "provider": "Supplier",
       "condition": "Condition",

@@ -30,6 +30,23 @@
   gap: var(--space-3);
   margin: var(--space-3) 0;
 }
+/* 1行に収まることを運任せにしない（design.md 4-2）。ADR-067: flex の数値と min-width は
+   色・寸法のトークン対象外なので直書き可。.viewer-toolbar の直下にしか無いクラスなので、
+   PC（ContentToolbar）側の同名要素（searchField・sortMenu は mobile/PC で同じ変数を再利用）
+   には効かない */
+.viewer-toolbar > .viewer-toolbar__search {
+  flex: 1 1 100%;
+}
+.viewer-toolbar > .viewer-toolbar__series {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.viewer-toolbar > .viewer-toolbar__fixed {
+  flex: 0 0 auto;
+}
 .viewer-filter-body {
   display: flex;
   flex-direction: column;

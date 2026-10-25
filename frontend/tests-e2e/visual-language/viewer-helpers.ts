@@ -40,14 +40,26 @@ function jstNow(): string {
   return new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 19).replace("T", " ");
 }
 
+/** fresh_window_hours（既定24時間）より確実に古い posted_at（48時間前。viewer-top-compact A7 用） */
+function jstStale(): string {
+  return new Date(Date.now() - 48 * 3600 * 1000 + 9 * 3600 * 1000).toISOString().slice(0, 19).replace("T", " ");
+}
+
 /**
  * 在庫の行データを n 件作る。仕入元とコンディションを順番に割り当てて全件に行き渡らせる
  * （design.md 4-5: 仕入元20件以上・コンディション2種類以上・行50件以上が空振りしないための形）。
  * posted_at は常に「今」にする（InventoryView の freshOnly 既定 true で落ちないように）。
+ * staleRowCount（既定0・後方互換）: 先頭からその件数だけ posted_at を24時間より前にする
+ * （docs/handoff/viewer-top-compact/design.md ⑤A7。既定0 なら今までと1行も変わらない）。
  */
-export function makeViewerRows(n: number, providers: string[], conditions: string[]): ViewerRow[] {
+export function makeViewerRows(
+  n: number,
+  providers: string[],
+  conditions: string[],
+  staleRowCount = 0,
+): ViewerRow[] {
   return Array.from({ length: n }, (_, i) => ({
-    posted_at: jstNow(),
+    posted_at: i < staleRowCount ? jstStale() : jstNow(),
     mark: `M${i + 1}`,
     japanese_title: `商品 ${i + 1}`,
     english_title: `item-${String(i + 1).padStart(3, "0")}`,
@@ -69,6 +81,8 @@ export interface ViewerFixtureOptions {
   providerCount?: number;
   conditionCount?: number;
   rowCount?: number;
+  /** 24時間より古い行の件数（既定0・後方互換。design.md ⑤A7） */
+  staleRowCount?: number;
 }
 
 export interface ViewerFixture {
@@ -81,7 +95,7 @@ export interface ViewerFixture {
 export function makeViewerFixture(opts?: ViewerFixtureOptions): ViewerFixture {
   const providers = makeProviderNames(opts?.providerCount ?? 25);
   const conditions = makeConditionValues(opts?.conditionCount ?? 2);
-  const rows = makeViewerRows(opts?.rowCount ?? 60, providers, conditions);
+  const rows = makeViewerRows(opts?.rowCount ?? 60, providers, conditions, opts?.staleRowCount ?? 0);
   return {
     providers,
     conditions,
