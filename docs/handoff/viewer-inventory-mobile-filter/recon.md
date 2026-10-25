@@ -136,7 +136,7 @@
 | 事実 | 引用 |
 |---|---|
 | CI で実際に走る Playwright は3幅検査だけで、対象は `frontend/tests-e2e/visual-language/` 配下に限定 | `frontend/playwright.config.ts:64`・`:69`・`:74`／`.github/workflows/e2e.yml:247`（`playwright` ジョブは `if: false`） |
-| その `frontend/tests-e2e/visual-language/` に**閲覧ページの spec は1本も無い** | ディレクトリの中身は `frontend/tests-e2e/visual-language/inbox-baseline.spec.ts`・`inbox-helpers.ts`・`inbox-single-column.spec.ts`・`inventory-helpers.ts`・`inventory-mobile-baseline.spec.ts`・`inventory-raw-text-mobile.spec.ts` の6本のみ |
+| その `frontend/tests-e2e/visual-language/` に**閲覧ページの spec は1本も無い** | ディレクトリの中身は受信箱3本（`frontend/tests-e2e/visual-language/inbox-baseline.spec.ts`・`frontend/tests-e2e/visual-language/inbox-helpers.ts`・`frontend/tests-e2e/visual-language/inbox-single-column.spec.ts`）と在庫3本（`frontend/tests-e2e/visual-language/inventory-helpers.ts`・`frontend/tests-e2e/visual-language/inventory-mobile-baseline.spec.ts`・`frontend/tests-e2e/visual-language/inventory-raw-text-mobile.spec.ts`）の6本のみ |
 | 単体テストはスマホ版も試すが、確かめているのは絞り込みボタンが在るかだけ。パネルを開いて選択肢を操作するテストが無い | `frontend/src/pages/viewer/InventoryView.test.tsx:124-142` |
 | 単体テストの土台（jsdom）には重なり順も描画も無いため、3-1〜3-4 は**原理的に検出できない** | 同上 |
 | ページ全体の横はみ出し検査でも捕まらない | 実測 `document.scrollWidth` = 360（はみ出し 0） |

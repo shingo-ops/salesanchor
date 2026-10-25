@@ -197,7 +197,7 @@ popover 限定の値は**子孫セレクタを使わない**（詳細度が上�
 | `frontend/src/components/MultiSelect.test.tsx` | inline の描画と、popover が既定のままであることを固定 |
 | `frontend/tests-e2e/visual-language/viewer-helpers.ts` | 新規（モックの唯一の置き場） |
 | `frontend/tests-e2e/visual-language/viewer-inventory-mobile-filter.spec.ts` | 新規（合否） |
-| `docs/handoff/viewer-inventory-mobile-filter/recon.md`・`design.md`・`review-opus.md` | 新規 |
+| `docs/handoff/viewer-inventory-mobile-filter/recon.md`・design.md・review-opus.md | 新規 |
 | `docs/specs/design-system/visual-language/benchmark/mercari-search-filter.md` | 新規（お手本の実測） |
 | `docs/specs/design-system/visual-language/benchmark/README.md` | 子文書の表に1行追加 |
 | `.claude-pipeline/active-work.d/release-viewer-inventory-mobile-filter.md` | 台帳 |
@@ -251,5 +251,5 @@ popover 限定の値は**子孫セレクタを使わない**（詳細度が上�
 | C2 | アプリ側 `/inventory` のスマホ絞り込み（原因②③④が同じく当てはまる） | 別便 |
 | C3 | アプリ側 `/inventory` の上部操作台が画面外に出ている件（`docs/handoff/inventory-mobile-responsive/design.md` §13-2） | 別便 |
 | C4 | **`Popover` 金型の2つの欠陥**: ⑴ `position: fixed` に `window.scrollY` を二重加算（`frontend/src/components/Popover.tsx:50`・`:55`・`:60`・`:66` × `frontend/src/components/Popover.css:16`。実測: 400px 下げると 400px ずれる） ⑵ 画面端で折り返さない（同 `:63-68`）。**金型を使う全画面に波及するため、影響の全数調査から始める別便** | 未着手・実測の証拠あり |
-| C5 | `frontend/src/components/Popover.css:7-12` の `.comp-popover-overlay` は `Popover.tsx` が一度も描画しない死んだ CSS | 別便（掃除） |
+| C5 | `frontend/src/components/Popover.css:7-12` の `.comp-popover-overlay` は `frontend/src/components/Popover.tsx` が一度も描画しない死んだ CSS | 別便（掃除） |
 | C6 | 撮影手順書 §0-3（文字入力の禁止）を買い物アプリにも当てはめるか | PO 判断待ち（`docs/specs/design-system/visual-language/benchmark/mercari-search-filter.md` §6） |

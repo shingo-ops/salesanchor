@@ -34,7 +34,7 @@
 | 6 | 区分 B-1 が規程の文言に厳密には合わない（`docs/` と `.claude-pipeline/` を含む）。①と⑥が自己矛盾 | 中 | **PO に2択で確認し「1」を受領（2026-10-25）**＝1本の PR で進め、PR 本文に「B-1相当・PO 確認済み」と明記。あわせて「今は無い状態を作る＝A」への反論を design §1-2 に明記 |
 | 7 | 44px の根拠トークンが二重（`--field-h-lg` と `--size-icon-btn-lg`） | 中 | **`--size-icon-btn-lg`（`frontend/src/tokens.css:163`・WCAG 2.5.5 の注記あり）に一本化** |
 | 8 | お手本との対応づけが誤り（「前者を採る」の前者は横並びボタンで、チェックボックス一覧は後者の中身） | 中 | design §⑨ を訂正。**本便が作るのは第3の形**（後者の中身を画面を増やさず置く）と明記 |
-| 9 | `InventoryView.tsx:352` の二重ガード／`:353` と非対称 | 軽 | §4-3 の PC／ドロワー分割で解消すると明記 |
+| 9 | `frontend/src/pages/viewer/InventoryView.tsx:352` の二重ガード／`:353` と非対称 | 軽 | §4-3 の PC／ドロワー分割で解消すると明記 |
 | 10 | 引用の行ずれ2件 | — | `frontend/src/components/Drawer.css:30`→**`:31`**、`:105-112`→**`:109-112`** に訂正。`ADR-140 §63`→**`:63`（受け入れ基準 G4 行）**と表記を訂正 |
 | 11 | e2e のモックキーが未記載 | 軽 | **`"GET /viewer/inventory"`** を design §4-5 に明記（`frontend/src/pages/viewer/api.ts:8` ＋ `frontend/tests-e2e/utils/api-mock.ts:33`・`:66`） |
 | 12 | 検査漏れ9件（スクロール経路／`scrollWidth`／PC の一覧幅／選択肢が多い fixture／condition 2種以上／初期フォーカス／暗いテーマ 等） | — | **A7・A10・A11・A12・A13・A14・A16 を新設**。fixture の形（仕入元20件以上・コンディション2種以上・行50件以上）を §4-5 に固定 |
@@ -44,8 +44,8 @@
 - **`MultiSelect` の呼び出し元は製品コード6・テスト2・Storybook 1 の全9か所**。既定 `"popover"` なら全数不変（design §4-6 に転記）。`frontend/src/pages/inbox/SalesFormMultiSelect.tsx` は金型を使わない別部品で無関係。
 - **閲覧ページの e2e は書ける**。`frontend/viewer/index.html` が存在し、`frontend/src/pages/viewer/ViewerApp.tsx:60` は `readToken()` の有無だけで分岐するため `addInitScript` で足りる。アプリ本体の Firebase バイパスは不要。
 - `detect-changes` のフィルタは `frontend/**`（`.github/workflows/e2e.yml:52-53`）なので、1本目が `frontend/tests-e2e/` だけでも画面検査は走る。
-- `frontend/src/components/Popover.css:7-12` の `.comp-popover-overlay` は `Popover.tsx` が一度も描画しない**死んだ CSS**（C5 に記録）。
-- 審査記録の置き場は ADR-1015:30 に従い `review-opus.md`（`docs/handoff/devflow-autonomy-b/design.md:68` の `review-fable.md` とは食い違うが、ADR-1015:15 により ADR を優先）。
+- `frontend/src/components/Popover.css:7-12` の `.comp-popover-overlay` は `frontend/src/components/Popover.tsx` が一度も描画しない**死んだ CSS**（C5 に記録）。
+- 審査記録の置き場は ADR-1015:30 に従い review-opus.md（`docs/handoff/devflow-autonomy-b/design.md:68` の review-fable.md とは食い違うが、ADR-1015:15 により ADR を優先）。
 
 ## 4. 判定
 
