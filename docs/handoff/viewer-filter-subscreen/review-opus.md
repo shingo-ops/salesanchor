@@ -46,7 +46,7 @@ Storybook 2本を追加し、**便1 の spec（旧 A4〜A13）と本便の AC �
 - ~~`frontend/scripts/check-page-size.js:19` の上限800行に対し `frontend/src/pages/viewer/InventoryView.tsx` は 436 行で余裕。~~
   **前提が誤り（事後の独立審査で指摘）**: `frontend/scripts/check-page-size.js:33` は `entry.endsWith('Page.tsx')` の
   ファイルだけを集めるため、`frontend/src/pages/viewer/InventoryView.tsx`（ファイル名が Page.tsx で終わるもの という名前ではない）はこの関所の**対象外**。
-  現在 **606行**（修正1〜5 の実装後）。800行の関所は掛かっていない。将来の分割は別途判断（design.md ⑫C7）。
+  現在 **602行**（`wc -l` の実測。修正1〜5 の実装後。2回目の審査の指摘 N3 で 606 という記載が実測と合わないことを指摘され訂正）。800行の関所は掛かっていない。将来の分割は別途判断（design.md ⑫C7）。
 - `frontend/scripts/check-icon-sync.js` は大きさの一致だけを見るため、**アイコン追加で `frontend/src/constants/iconSizes.ts` の再生成は不要**。
 - 提案した4つの文言キーは既存と衝突しない。
 - `npm run check:all` に型検査が無いという前便の学びが A23/A24 に正しく反映されている。

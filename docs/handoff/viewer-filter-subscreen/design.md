@@ -152,9 +152,9 @@ const [optionQuery, setOptionQuery] = useState("");   // 候補を絞る欄（�
 | 論点 | 決定 |
 |---|---|
 | 選択の反映 | **即時反映**（便1 と同じ）。「決定する」と「←」はどちらも `root` に戻るだけ。押し忘れで選択が消えることは無い |
-| 候補を絞る欄の寿命 | **画面を離れるたびに空に戻す**（`←`・「決定する」・ドロワーを閉じる・項目を開く の全経路で `setOptionQuery("")`）。残して「候補が少ない」と誤解させない |
+| 候補を絞る欄の寿命 | **画面を離れるたび／開くたびに空に戻す**（実装の `setOptionQuery("")` は3箇所: `frontend/src/pages/viewer/InventoryView.tsx:132`＝項目を開く・`:136`＝「←」と「決定する」・`:144`＝**ドロワーを開く**）。**閉じるときには消さない**（閉じるときに状態を触らない方針＝上の「ドロワーを閉じたとき」の行と対）。残して「候補が少ない」と誤解させない |
 | 候補が0件のとき | **`MultiSelect` が描く**（§4-2）。呼び出し側は `emptyLabel` を渡すだけ |
-| 画面が変わったときのフォーカス | `filterView` が `root` 以外になったら**「←」へ**、`root` に戻ったら**元の行へ**移す（`useEffect` ＋ `ref`）。`frontend/src/components/Drawer.tsx:80-86` の初期フォーカスは `open` が変わらないと再実行されないため、**押した行が消えてフォーカスが `<body>` に落ち、Tab がダイアログの外へ逃げる**（`frontend/src/components/Drawer.tsx:101-130` のトラップは `activeElement` が端のときしか効かない） |
+| 画面が変わったときのフォーカス | `filterView` が `root` 以外になったら**「←」へ**、`root` に戻ったら**元の行へ**移す（`useEffect` ＋ `ref`）。`frontend/src/components/Drawer.tsx:80-86` の初期フォーカスは `open` が変わらないと再実行されないため、**押した行が消えてフォーカスが `<body>` に落ち、Tab がダイアログの外へ逃げる**（`frontend/src/components/Drawer.tsx:101-129` のトラップは `activeElement` が端のときしか効かない） |
 | Esc | `root` 以外では**`root` に戻る**（ドロワーごと閉じない）。**✕ は常に閉じる**（§4-1b・修正1）。当初案は `Drawer` の `onClose` に分岐を入れるものだったが、`onClose` は Esc・背景クリック・✕ の3経路すべてで呼ばれるため ✕ まで「戻る」になってしまう不具合を2回目の審査で指摘された。そこで `Drawer` に `onEscape?: () => void` を足し、**Esc だけ**その処理を呼ぶ形に変更（§4-1b）。`onClose` には本当に閉じる関数を渡す |
 | ドロワーを閉じたとき | **閉じるときは戻さない**（`frontend/src/components/Drawer.tsx:144-147` のとおり DOM は常にあるので、即座に戻すとスライドアウト中に題と中身が切り替わって見える）。代わりに**開くときに `root` へ戻す**（`openFilterDrawer`）。**当初案は閉じた 280ms 後に戻すタイマーだったが、閉じて 280ms 以内に開き直すとタイマーが片付けられて戻らず、選択画面のまま開いた**（CI 実測で A17 が3幅×2＝6件赤。`docs/handoff/viewer-filter-subscreen/design.md` ⑤ A17 がこの退行の守り手）。開く瞬間に戻せば時間に依存しない |
 | 自動読み直し（60秒） | `frontend/src/pages/viewer/useViewerAutoRefresh.ts` が `data` を差し替えても `filterView` は別の状態なので画面は維持される。選択肢が消えた場合は下の「選んだ名前」の規則で守る |
@@ -314,4 +314,5 @@ const [optionQuery, setOptionQuery] = useState("");   // 候補を絞る欄（�
 | C4 | 「決定するまで反映しない」にするか | PO の使用感次第（⑩ 参照） |
 | C5 | 下のボタンの文言 | **決着済み**（PO 2026-10-25「決定する」） |
 | C6 | **A6（選択画面で8件以上見える）の余裕が約1行しかない**。360×700 でヘッダ・フッタ・検索欄・見出しを引くと 44px 行で約9行、下限は8。ヘッダやフッタが数十px 太ると赤になるため、**太らせる変更をするときは同時に下限（`MIN_VISIBLE_OPTIONS`）を見直すこと** | 審査（抜き取り検証）で判明。対応は見送り・次に太らせる便で見直す |
-| C7 | `frontend/src/pages/viewer/InventoryView.tsx` が **606行**。`frontend/scripts/check-page-size.js` の800行の関所は ファイル名が Page.tsx で終わるもの という名前のファイルしか見ないため**この画面には掛かっていない**（review-opus.md §3 の訂正）。分割するかは別便で判断 | 対応は見送り（本便の範囲外） |
+| C7 | `frontend/src/pages/viewer/InventoryView.tsx` が **602行**（`wc -l` の実測。`frontend/scripts/check-page-size.js` の数え方では603）。`frontend/scripts/check-page-size.js` の800行の関所は ファイル名が Page.tsx で終わるもの という名前のファイルしか見ないため**この画面には掛かっていない**（review-opus.md §3 の訂正）。分割するかは別便で判断 | 対応は見送り（本便の範囲外） |
+| C8 | **自動読み直し（60秒）でフォーカス中の候補がデータから消えると、フォーカスが `<body>` に落ちて `Drawer` のトラップ（`frontend/src/components/Drawer.tsx:101-129`。`document.activeElement` が端のときだけ働く）を抜ける**。`frontend/src/pages/viewer/InventoryView.tsx:167-182` のフォーカス移動は `[filterView, drawerOpen]` 依存なので `data` 差し替えでは動かない。便1 の inline 一覧にも同じ性質があり**本便で持ち込まれたものではない**。直すなら金型側（パネル内の `focusout` で `<body>` に落ちたら先頭へ戻す）が筋で、`Drawer` を使う35ファイル全部が得をする | 2回目の審査の指摘 N1（非ブロック）。次便以降 |
