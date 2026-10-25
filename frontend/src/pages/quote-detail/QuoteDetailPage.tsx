@@ -144,8 +144,8 @@ export default function QuoteDetailPage() {
               <Button variant="primary" size="sm" layoutClassName="field-h-md" onClick={convertToInvoice}>{t("quotes.convertToInvoice")}</Button>
             )}
             {quote.currency !== "JPY" && (
-              <Button variant="secondary" size="sm" layoutClassName="field-h-md" onClick={handleFetchFxRate} disabled={fxLoading}>
-                {fxLoading ? t("common.loading") : t("quotes.fx.fetchRate")}
+              <Button loading={fxLoading} variant="secondary" size="sm" layoutClassName="field-h-md" onClick={handleFetchFxRate} disabled={fxLoading}>
+                {t("quotes.fx.fetchRate")}
               </Button>
             )}
             <Button variant="secondary" size="sm" layoutClassName="field-h-md" onClick={handleDownloadPdf}>{t("invoices.snapshot.downloadPdf")}</Button>

@@ -524,13 +524,13 @@ export default function RegisterPage() {
           </div>
         </fieldset>
 
-        <Button variant="primary" size="md" fullWidth
+        <Button loading={submitting} variant="primary" size="md" fullWidth
           type="submit"
 
           disabled={submitting}
 
         >
-          {submitting ? t("common.saving") : t("registration.submit")}
+          {t("registration.submit")}
         </Button>
       </form>
     </div>
