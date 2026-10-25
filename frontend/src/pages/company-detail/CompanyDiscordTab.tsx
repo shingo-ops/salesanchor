@@ -87,12 +87,12 @@ export function CompanyDiscordTab({
 
         {canEdit && (
           <div className="form-actions" style={{ marginTop: "var(--space-3)" }}>
-            <Button variant="primary" size="sm"
+            <Button loading={discordSubmitting} variant="primary" size="sm"
               type="submit"
 
               disabled={!discordDirty || discordSubmitting}
             >
-              {discordSubmitting ? t("common.saving") : t("common.save")}
+              {t("common.save")}
             </Button>
             <Button variant="danger" size="sm" layoutClassName="comp-btn-layout--ml-2"
               type="button"

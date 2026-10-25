@@ -839,12 +839,12 @@ function ChannelInviteButton({ leadId }: { leadId: number }) {
     <div className="right-panel-row">
       <span className="right-panel-label">{t("leads.channelInvite")}</span>
       <div className="flex flex-col gap-1">
-        <Button variant="secondary" size="md"
+        <Button loading={sending} variant="secondary" size="md"
           onClick={handleSend}
           disabled={sending}
 
         >
-          {sending ? t("leads.channelInviteSending") : t("leads.channelInviteSend")}
+          {t("leads.channelInviteSend")}
         </Button>
         {sent && <span className="text-xs text-green-600">{t("leads.channelInviteSent")}</span>}
         {error && <span className="text-xs text-red-500">{error}</span>}
@@ -897,12 +897,12 @@ function RoleSyncStatusRow({
             </span>
           )}
         </span>
-        <Button variant="secondary" size="md"
+        <Button loading={syncing} variant="secondary" size="md"
           onClick={handleResync}
           disabled={syncing}
 
         >
-          {syncing ? t("leads.discordRoleSyncing") : t("leads.discordRoleResync")}
+          {t("leads.discordRoleResync")}
         </Button>
         {triggered && <span className="text-xs text-green-600">{t("leads.discordRoleSyncTriggered")}</span>}
         {error && <span className="text-xs text-red-500">{error}</span>}
@@ -940,27 +940,27 @@ function DiscordRemoveButtons({ leadId, hasChannel }: { leadId: number; hasChann
       <div className="flex flex-col gap-1">
         <div className="flex gap-1 flex-wrap">
           {hasChannel && (
-            <Button variant="secondary" size="md"
+            <Button loading={loading === "remove-from-channel"} variant="secondary" size="md"
               onClick={() => handleAction("remove-from-channel")}
               disabled={loading !== null}
 
             >
-              {loading === "remove-from-channel" ? t("common.processing") : t("leads.discordRemoveFromChannel")}
+              {t("leads.discordRemoveFromChannel")}
             </Button>
           )}
-          <Button variant="secondary" size="md"
+          <Button loading={loading === "kick"} variant="secondary" size="md"
             onClick={() => handleAction("kick")}
             disabled={loading !== null}
 
           >
-            {loading === "kick" ? t("common.processing") : t("leads.discordKick")}
+            {t("leads.discordKick")}
           </Button>
-          <Button variant="danger" size="md"
+          <Button loading={loading === "ban"} variant="danger" size="md"
             onClick={() => handleAction("ban")}
             disabled={loading !== null}
 
           >
-            {loading === "ban" ? t("common.processing") : t("leads.discordBan")}
+            {t("leads.discordBan")}
           </Button>
         </div>
         {done && <span className="text-xs text-green-600">{done}</span>}
