@@ -349,6 +349,13 @@ check "ガード(ファイル): dangling は指し先がある物を拒否" bash
 check "ガード(ファイル): dangling は宙に浮いたリンクを通す" bash -c 'source "$1"; DJ_TMP_STALE_DAYS=7; dj_guard_file dangling "$2" "." "$3"' _ "${JANITOR}" "${DJ_ROOT_CLAUDE_TMP}/slug/uuid1/tasks/a-dangling.output" "${DJ_ROOT_CLAUDE_TMP}"
 check "ガード(ファイル): 途中がシンボリックリンクなら拒否" bash -c 'source "$1"; DJ_TMP_STALE_DAYS=7; ln -s "$3" "$2/linkdir"; ! dj_guard_file f "$2/linkdir/target" "." "$2"' _ "${JANITOR}" "${DJ_ROOT_TMP_CC}" "${T}/outside6"
 
+# J1(ADR-1039): git の守りを読めないとき、何も実行せず終了コード 1。読めるときは配列が定義される
+J1_COPY="${T}/j1-copy"; mkdir -p "${J1_COPY}"
+cp "${JANITOR}" "${J1_COPY}/disk-janitor.sh"
+J1_RC=0; bash "${J1_COPY}/disk-janitor.sh" >/dev/null 2>&1 || J1_RC=$?
+check "J1: git-safe.sh が無い写しは終了コード 1 で終わる" test "${J1_RC}" -eq 1
+check "J1: git-safe.sh があれば GIT_SAFE_ARGS が定義される" bash -c 'source "$1"; [ "${#GIT_SAFE_ARGS[@]}" -gt 0 ]' _ "${JANITOR}"
+
 echo ""
 echo "=== 合計 ==="
 echo "ok: ${OK}"

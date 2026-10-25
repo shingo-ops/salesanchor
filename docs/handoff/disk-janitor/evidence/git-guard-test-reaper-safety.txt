@@ -1,0 +1,284 @@
+
+=== reaper dry-run 出力（round 1） ===
+🔍 worktree を走査（ディレクトリ指定）: /tmp/reaper-test.PCDDcj/worktrees
+
+   対象 worktree 数: 4 件
+
+=== reaper 結果 ===
+
+🔒 IN_PROGRESS/REVIEW 未マージ（削除しない）: 2 件
+   - feature/test/in-progress
+   - feature/test/review-open
+
+🔄 未マージ（削除しない）: 1 件
+   - feature/test/unknown-no-pr
+
+=== ゴースト検出 ===
+   走査: /Users/tanizawashingo/worktrees/salesanchor
+
+   👻 GHOST: /Users/tanizawashingo/worktrees/salesanchor/_ay2y_node_modules_link (0.0 MB)
+   👻 GHOST: /Users/tanizawashingo/worktrees/salesanchor/release-permission-delegation-ledger (9.2 MB)
+   👻 GHOST: /Users/tanizawashingo/worktrees/salesanchor/release-time-handling-lint (0.0 MB)
+
+⚠️  GHOST 合計: 3 件 / 9.2 MB（手動確認してください）
+
+🗑️  削除対象（安全条件クリア）: 1 件
+   - feature/test/done-clean
+
+ℹ️  dry-run モード（上記は削除候補の一覧です）
+   実削除するには: bash scripts/reaper-worktree.sh --execute
+
+=== テスト結果 ===
+✅ PASS [IN_PROGRESS保護]: feature/test/in-progress は削除対象に含まれていません
+✅ PASS [REVIEW保護]: feature/test/review-open は削除対象に含まれていません
+✅ PASS [DONE削除候補]: feature/test/done-clean が削除対象に含まれています
+✅ PASS [NOT_FOUND+gh0保護]: feature/test/unknown-no-pr は削除対象に含まれていません
+✅ PASS [DONE+未保存あり保護]: feature/test/done-unsaved は削除対象に含まれていません
+✅ PASS [DONE+upstream未設定+originなし+ローカルのみ→保護(R8)]: feature/test/done-no-upstream は削除対象に含まれていません
+✅ PASS [DONE+upstream未設定+origin有+未push→保護]: feature/test/done-unpushed は削除対象に含まれていません
+✅ PASS [DONE+共用upstream+専用棚一致+きれい→削除候補(本バグ)]: feature/test/done-shared-upstream が削除対象に含まれています
+✅ PASS [R8-a DONE+upstream=main+origin専用棚なし+ローカルのみ→保護]: feature/test/r8a-local-only は削除対象に含まれていません
+✅ PASS [R8-b DONE+upstream未設定+全コミットがoriginにある→削除候補]: feature/test/r8b-all-on-origin が削除対象に含まれています
+✅ PASS [R8-c DONE+コミット無し→削除候補]: feature/test/r8c-no-commits が削除対象に含まれています
+✅ PASS [R8-d fetch失敗時はDONEきれい(R8-c)も削除しない]: feature/test/r8c-no-commits は削除対象に含まれていません
+✅ PASS [R8-d fetch失敗時はDONEきれい(R8-b)も削除しない]: feature/test/r8b-all-on-origin は削除対象に含まれていません
+✅ PASS [R8-d fetch失敗の警告]: 警告2種が出力されています
+✅ PASS [新規行テーブル内挿入]: 新規行が --- より上に挿入されました
+
+=== テスト 9-12 dry-run 出力 ===
+🔍 worktree を走査（ディレクトリ指定）: /tmp/reaper-test.PCDDcj/worktrees
+
+   対象 worktree 数: 15 件
+
+=== reaper 結果 ===
+
+🔒 IN_PROGRESS/REVIEW 未マージ（削除しない）: 4 件
+   - feature/test/in-progress-no-merge
+   - feature/test/in-progress
+   - feature/test/review-no-merge
+   - feature/test/review-open
+
+⚠️  未保存あり（削除しない）: 4 件 ← 人の判断が必要
+   - feature/test/done-no-upstream
+   - feature/test/done-unpushed
+   - feature/test/done-unsaved
+   - feature/test/r8a-local-only
+
+🔄 未マージ（削除しない）: 1 件
+   - feature/test/unknown-no-pr
+
+=== ゴースト検出 ===
+   走査: /Users/tanizawashingo/worktrees/salesanchor
+
+   👻 GHOST: /Users/tanizawashingo/worktrees/salesanchor/_ay2y_node_modules_link (0.0 MB)
+   👻 GHOST: /Users/tanizawashingo/worktrees/salesanchor/release-permission-delegation-ledger (9.2 MB)
+   👻 GHOST: /Users/tanizawashingo/worktrees/salesanchor/release-time-handling-lint (0.0 MB)
+
+⚠️  GHOST 合計: 3 件 / 9.2 MB（手動確認してください）
+
+🗑️  削除対象（安全条件クリア）: 6 件
+   - feature/test/done-shared-upstream
+   - feature/test/done-clean
+   - feature/test/in-progress-merged
+   - feature/test/r8b-all-on-origin
+   - feature/test/r8c-no-commits
+   - feature/test/review-merged
+
+ℹ️  dry-run モード（上記は削除候補の一覧です）
+   実削除するには: bash scripts/reaper-worktree.sh --execute
+
+=== テスト 9-12 結果 ===
+✅ PASS [IN_PROGRESS+merged削除候補]: feature/test/in-progress-merged が削除対象に含まれています
+✅ PASS [REVIEW+merged削除候補]: feature/test/review-merged が削除対象に含まれています
+✅ PASS [REVIEW+未マージ保護]: feature/test/review-no-merge は削除対象に含まれていません
+✅ PASS [IN_PROGRESS+未マージ保護]: feature/test/in-progress-no-merge は削除対象に含まれていません
+
+=== テスト 13-14 dry-run 出力 ===
+🔍 worktree を走査（ディレクトリ指定）: /tmp/reaper-test.PCDDcj/worktrees
+
+   対象 worktree 数: 17 件
+
+=== reaper 結果 ===
+
+🔒 IN_PROGRESS/REVIEW 未マージ（削除しない）: 6 件
+   - feature/test/in-progress-merged
+   - feature/test/in-progress-no-merge
+   - feature/test/in-progress
+   - feature/test/review-merged
+   - feature/test/review-no-merge
+   - feature/test/review-open
+
+⚠️  未保存あり（削除しない）: 4 件 ← 人の判断が必要
+   - feature/test/done-no-upstream
+   - feature/test/done-unpushed
+   - feature/test/done-unsaved
+   - feature/test/r8a-local-only
+
+🔄 未マージ（削除しない）: 2 件
+   - feature/test/legacy-no-merge-no-id
+   - feature/test/unknown-no-pr
+
+=== ゴースト検出 ===
+   走査: /Users/tanizawashingo/worktrees/salesanchor
+
+   👻 GHOST: /Users/tanizawashingo/worktrees/salesanchor/_ay2y_node_modules_link (0.0 MB)
+   👻 GHOST: /Users/tanizawashingo/worktrees/salesanchor/release-permission-delegation-ledger (9.2 MB)
+   👻 GHOST: /Users/tanizawashingo/worktrees/salesanchor/release-time-handling-lint (0.0 MB)
+
+⚠️  GHOST 合計: 3 件 / 9.2 MB（手動確認してください）
+
+🗑️  削除対象（安全条件クリア）: 5 件
+   - feature/test/done-shared-upstream
+   - feature/test/done-clean
+   - feature/test/legacy-merged-no-id
+   - feature/test/r8b-all-on-origin
+   - feature/test/r8c-no-commits
+
+ℹ️  dry-run モード（上記は削除候補の一覧です）
+   実削除するには: bash scripts/reaper-worktree.sh --execute
+
+=== テスト 13-14 結果 ===
+✅ PASS [.worktree-idなし+merged削除候補]: feature/test/legacy-merged-no-id が削除対象に含まれています
+✅ PASS [.worktree-idなし+未マージ保護]: feature/test/legacy-no-merge-no-id は削除対象に含まれていません
+
+=== テスト R9 dry-run 出力 ===
+🔍 worktree を走査（ディレクトリ指定）: /tmp/reaper-test.PCDDcj/worktrees
+
+   対象 worktree 数: 23 件
+
+/Users/tanizawashingo/worktrees/salesanchor/release-discord-pdca-git-guard/scripts/tests/../reaper-worktree.sh: line 315: [: ## 概要
+
+- 変更点その1
+- 変更点その2
+
+### 標準ワークフロー確認: integer expression expected
+=== reaper 結果 ===
+
+🔒 IN_PROGRESS/REVIEW 未マージ（削除しない）: 6 件
+   - feature/test/in-progress-merged
+   - feature/test/in-progress-no-merge
+   - feature/test/in-progress
+   - feature/test/review-merged
+   - feature/test/review-no-merge
+   - feature/test/review-open
+
+⚠️  未保存あり（削除しない）: 7 件 ← 人の判断が必要
+   - feature/test/done-no-upstream
+   - feature/test/done-unpushed
+   - feature/test/done-unsaved
+   - feature/test/r8a-local-only
+   - feature/test/r9b-draft-extra-line
+   - feature/test/r9c-notes-md
+   - feature/test/r9d-draft-no-merged-pr
+
+🔄 未マージ（削除しない）: 4 件
+   - feature/test/legacy-merged-no-id
+   - feature/test/legacy-no-merge-no-id
+   - feature/test/r9e-body-fetch-fail
+   - feature/test/unknown-no-pr
+
+=== ゴースト検出 ===
+   走査: /Users/tanizawashingo/worktrees/salesanchor
+
+   👻 GHOST: /Users/tanizawashingo/worktrees/salesanchor/_ay2y_node_modules_link (0.0 MB)
+   👻 GHOST: /Users/tanizawashingo/worktrees/salesanchor/release-permission-delegation-ledger (9.2 MB)
+   👻 GHOST: /Users/tanizawashingo/worktrees/salesanchor/release-time-handling-lint (0.0 MB)
+
+⚠️  GHOST 合計: 3 件 / 9.2 MB（手動確認してください）
+
+🗑️  削除対象（安全条件クリア）: 6 件
+   - feature/test/done-shared-upstream
+   - feature/test/done-clean
+   - feature/test/r8b-all-on-origin
+   - feature/test/r8c-no-commits
+   - feature/test/r9a-draft-ok（PR本文の下書き 1 件は GitHub の本文と一致）
+   - feature/test/r9f-subfolder-draft（PR本文の下書き 1 件は GitHub の本文と一致）
+
+ℹ️  dry-run モード（上記は削除候補の一覧です）
+   実削除するには: bash scripts/reaper-worktree.sh --execute
+
+=== テスト R9 結果 ===
+✅ PASS [R9-a マージ済み+pr-body.md全行が本文にある→削除候補]: feature/test/r9a-draft-ok が削除対象に含まれています
+✅ PASS [R9-b 下書きに本文に無い行→保護]: feature/test/r9b-draft-extra-line は削除対象に含まれていません
+✅ PASS [R9-c notes.md(下書きでない)→保護]: feature/test/r9c-notes-md は削除対象に含まれていません
+✅ PASS [R9-d 下書きあり+マージ済みPRなし→保護]: feature/test/r9d-draft-no-merged-pr は削除対象に含まれていません
+✅ PASS [R9-f .scratch/pr-body.md(サブフォルダ・CRLF)→削除候補]: feature/test/r9f-subfolder-draft が削除対象に含まれています
+✅ PASS [R9-e 本文取得失敗→保護]: feature/test/r9e-body-fetch-fail は削除対象に含まれていません
+✅ PASS [R9-e 本文取得失敗→R9-aも保護]: feature/test/r9a-draft-ok は削除対象に含まれていません
+
+=== テスト R9-g --execute 出力 ===
+🔍 worktree を走査（ディレクトリ指定）: /tmp/reaper-test.PCDDcj/r9g-rooms
+
+   対象 worktree 数: 1 件
+
+=== reaper 結果 ===
+
+=== ゴースト検出 ===
+   走査: /Users/tanizawashingo/worktrees/r9g-main
+
+👻 GHOST: 0件
+
+🗑️  削除対象（安全条件クリア）: 1 件
+   - release/r9g-exec（PR本文の下書き 2 件は GitHub の本文と一致）
+
+🗑️  削除を実行します...
+
+  ▶ release/r9g-exec
+    📝 下書きを控えました: /private/tmp/reaper-test.PCDDcj/r9g-main/.git/reaper-drafts/release-r9g-exec/.scratch/pr-body-2.md
+    📝 下書きを控えました: /private/tmp/reaper-test.PCDDcj/r9g-main/.git/reaper-drafts/release-r9g-exec/pr-body.md
+    ✅ フォルダ削除: /tmp/reaper-test.PCDDcj/r9g-rooms/room/
+Deleted branch release/r9g-exec (was cecedd0).
+    ✅ ブランチ削除: release/r9g-exec
+    ℹ️  active-work.md DONE 更新不要（既に DONE または行なし）: release/r9g-exec
+
+✅ reaper 完了: 削除 1 件
+✅ PASS [R9-g --execute]: 控え2件ができ、部屋が消えました
+
+=== テスト B（REAPER_BASE_BRANCH=staging）出力 ===
+🔍 worktree を走査（ディレクトリ指定）: /tmp/reaper-test.PCDDcj/base-rooms
+
+   対象 worktree 数: 5 件
+
+=== reaper 結果 ===
+
+🛡️  本体ブランチ（削除しない）: 3 件
+   - develop
+   - main
+   - staging
+
+🔄 未マージ（削除しない）: 1 件
+   - feature/test/base-nogh
+
+=== ゴースト検出 ===
+   走査: /Users/tanizawashingo/worktrees/salesanchor
+
+   👻 GHOST: /Users/tanizawashingo/worktrees/salesanchor/_ay2y_node_modules_link (0.0 MB)
+   👻 GHOST: /Users/tanizawashingo/worktrees/salesanchor/release-permission-delegation-ledger (9.2 MB)
+   👻 GHOST: /Users/tanizawashingo/worktrees/salesanchor/release-time-handling-lint (0.0 MB)
+
+⚠️  GHOST 合計: 3 件 / 9.2 MB（手動確認してください）
+
+🗑️  削除対象（安全条件クリア）: 1 件
+   - feature/test/base-normal
+
+ℹ️  dry-run モード（上記は削除候補の一覧です）
+   実削除するには: bash scripts/reaper-worktree.sh --execute
+✅ PASS [B-c]: main・develop・REAPER_BASE_BRANCH の3部屋が本体ブランチとして保護されました
+✅ PASS [B-d]: 通常ブランチの DONE は削除対象、main/develop/staging は削除対象にない
+✅ PASS [B-a]: REAPER_BASE_BRANCH=staging で gh の行き先判定が staging になりました
+✅ PASS [B-b]: 未指定の既定は main のままです
+✅ PASS [G1-対照]: 上書きなしの git status では印の台本が動く（仕込みが効く作りだと確認）
+✅ PASS [G1]: reaper の dry-run で印の台本が動きませんでした
+✅ PASS [G1+上書きしても判定は変わらない（DONE+未保存なしは削除候補）]: feature/test/g1-fsmonitor が削除対象に含まれています
+✅ PASS [G2-前提]: 作り物の部屋に mode 160000 がある
+✅ PASS [G2-対照: 入れ子なしの同じ作りの部屋は削除候補]: feature/test/g2-plain が削除対象に含まれています
+✅ PASS [G2: 入れ子のリポジトリがある部屋は残す]: feature/test/g2-nested は削除対象に含まれていません
+✅ PASS [G2-理由]: 理由「入れ子のリポジトリがある（残す）」が出ています
+✅ PASS [G3]: git-safe.sh を読めないとき、終了コード 1・削除対象なしで終わりました
+
+=== 合計 ===
+PASS: 41
+FAIL: 0
+
+✅ 全テスト PASS
+bash scripts/tests/test-reaper-safety.sh  39.40s user 39.60s system 18% cpu 7:13.54 total

@@ -1,0 +1,256 @@
+ok: K9 全ての根・last-ok が一時ディレクトリの下（--execute より前に確認）
+=== dry-run 出力 ===
+===== disk-janitor 開始 2026-10-25 23:16:53 mode=dry-run =====
+--- df（開始）---
+Filesystem      Size    Used   Avail Capacity iused ifree %iused  Mounted on
+/dev/disk3s1   228Gi   175Gi    21Gi    90%    5.4M  218M    2%   /System/Volumes/Data
+根: /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/worktrees /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/acwt /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/sa /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/ac /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/versions
+lsof: 25569 行を取得
+
+== R1 散らばった .npm-cache ==
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/ac/.npm-cache （使用中（プロセスが開いている））
+  [R1] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/acwt/x/.npm-cache (0KB)
+  [R1] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/sa/.npm-cache (0KB)
+  [R1] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/sa/frontend/.npm-cache (0KB)
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/sa/keepcache/.npm-cache （npm の設定先（保護））
+  [R1] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/worktrees/repoA/wt1/.npm-cache (4KB)
+[R1] 削除候補: 4 件 / 4KB（4KB）、飛ばした: 2 件
+
+== R2 使っていない作業用コピーの node_modules ==
+  [R2] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/worktrees/repoA/wt-del/node_modules (4KB)
+  [R2] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/worktrees/repoA/wt-del/frontend/node_modules (4KB)
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/worktrees/repoA/wt-inuse/node_modules （使用中（プロセスが開いている））
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/worktrees/repoA/wt-inuse/frontend/node_modules （使用中（プロセスが開いている））
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/worktrees/repoA/wt-nogit/node_modules （最終コミット時刻を取得できない（残す））
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/worktrees/repoA/wt-nogit/frontend/node_modules （最終コミット時刻を取得できない（残す））
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/worktrees/repoA/wt-nolock/node_modules （package-lock.json が無い（作り直せない））
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/worktrees/repoA/wt-recentcommit/node_modules （最終コミットが14日以内）
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/worktrees/repoA/wt-recentcommit/frontend/node_modules （最終コミットが14日以内）
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/worktrees/repoA/wt-recentfile/node_modules （14日以内に更新されたファイルあり）
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/worktrees/repoA/wt-recentfile/frontend/node_modules （14日以内に更新されたファイルあり）
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/worktrees/repoA/wt-sym/node_modules （ガード: シンボリックリンク）
+  [R2] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/acwt/wt-acdel/node_modules (4KB)
+  [R2] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/acwt/wt-acdel/frontend/node_modules (4KB)
+[R2] 削除候補: 4 件 / 16KB（16KB）、飛ばした: 10 件
+
+== R3 agent-console の旧版 ==
+  current=v0.9.1、1つ前=v0.7.0（これらと current より新しい版は残す）
+  [R3] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/versions/v0.2.0 (4KB)
+  [R3] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/versions/v0.3.0 (4KB)
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/versions/v0.4.0 （使用中（プロセスが開いている））
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/versions/v0.5.0 （ガード: シンボリックリンク）
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/versions/v1.0.0 （current より新しい版）
+[R3] 削除候補: 2 件 / 8KB（8KB）、飛ばした: 3 件
+
+== R4 他リポジトリの作業用コピー（reaper-worktree.sh） ==
+  -- /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/repoX (owner/x, 行き先 develop) reaper rc=0, 1 行 --
+     fake reaper ran
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/repoY （origin が想定と違う（想定 owner/y、実測 owner/wrong））
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/missing （リポジトリが無い）
+[R4] 削除候補: 0 件 / 0KB（0KB）、飛ばした: 2 件
+
+== R5 /tmp/CC報告ファイルの .md 以外 ==
+  [規則ごと飛ばす] R5/R6 見送り（HDD 写しが2日以上成功していない）
+[R5] 削除候補: 0 件 / 0KB（0KB）、飛ばした: 0 件
+
+== R6 セッションの作業メモ ==
+  [規則ごと飛ばす] R5/R6 見送り（HDD 写しが2日以上成功していない）
+[R6] 削除候補: 0 件 / 0KB（0KB）、飛ばした: 0 件
+
+--- df（終了）---
+Filesystem      Size    Used   Avail Capacity iused ifree %iused  Mounted on
+/dev/disk3s1   228Gi   175Gi    21Gi    90%    5.4M  218M    2%   /System/Volumes/Data
+===== disk-janitor 終了 2026-10-25 23:17:15 mode=dry-run 合計 10 件 / 28KB（R4 の容量は含まない） =====
+=== ここまで ===
+ok: dry-run: exit 0
+ok: dry-run: 何も消えない（前後の一覧が同一）
+ok: dry-run: R1 の候補が出る
+ok: dry-run: R2 の候補が出る
+ok: dry-run: R3 の候補が出る
+ok: dry-run: 見出しが dry-run
+ok: dry-run: R4 の reaper は --execute なしで呼ばれる
+=== execute 出力 ===
+===== disk-janitor 開始 2026-10-25 23:17:16 mode=execute =====
+--- df（開始）---
+Filesystem      Size    Used   Avail Capacity iused ifree %iused  Mounted on
+/dev/disk3s1   228Gi   175Gi    21Gi    90%    5.4M  218M    2%   /System/Volumes/Data
+根: /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/worktrees /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/acwt /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/sa /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/ac /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/versions
+lsof: 24776 行を取得
+
+== R1 散らばった .npm-cache ==
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/ac/.npm-cache （使用中（プロセスが開いている））
+  [R1] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/acwt/x/.npm-cache (0KB)
+  [R1] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/sa/.npm-cache (0KB)
+  [R1] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/sa/frontend/.npm-cache (0KB)
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/sa/keepcache/.npm-cache （npm の設定先（保護））
+  [R1] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/worktrees/repoA/wt1/.npm-cache (4KB)
+[R1] 削除: 4 件 / 4KB（4KB）、飛ばした: 2 件
+
+== R2 使っていない作業用コピーの node_modules ==
+  [R2] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/worktrees/repoA/wt-del/node_modules (4KB)
+  [R2] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/worktrees/repoA/wt-del/frontend/node_modules (4KB)
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/worktrees/repoA/wt-inuse/node_modules （使用中（プロセスが開いている））
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/worktrees/repoA/wt-inuse/frontend/node_modules （使用中（プロセスが開いている））
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/worktrees/repoA/wt-nogit/node_modules （最終コミット時刻を取得できない（残す））
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/worktrees/repoA/wt-nogit/frontend/node_modules （最終コミット時刻を取得できない（残す））
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/worktrees/repoA/wt-nolock/node_modules （package-lock.json が無い（作り直せない））
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/worktrees/repoA/wt-recentcommit/node_modules （最終コミットが14日以内）
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/worktrees/repoA/wt-recentcommit/frontend/node_modules （最終コミットが14日以内）
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/worktrees/repoA/wt-recentfile/node_modules （14日以内に更新されたファイルあり）
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/worktrees/repoA/wt-recentfile/frontend/node_modules （14日以内に更新されたファイルあり）
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/worktrees/repoA/wt-sym/node_modules （ガード: シンボリックリンク）
+  [R2] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/acwt/wt-acdel/node_modules (4KB)
+  [R2] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/acwt/wt-acdel/frontend/node_modules (4KB)
+[R2] 削除: 4 件 / 16KB（16KB）、飛ばした: 10 件
+
+== R3 agent-console の旧版 ==
+  current=v0.9.1、1つ前=v0.7.0（これらと current より新しい版は残す）
+  [R3] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/versions/v0.2.0 (4KB)
+  [R3] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/versions/v0.3.0 (4KB)
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/versions/v0.4.0 （使用中（プロセスが開いている））
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/versions/v0.5.0 （ガード: シンボリックリンク）
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/versions/v1.0.0 （current より新しい版）
+[R3] 削除: 2 件 / 8KB（8KB）、飛ばした: 3 件
+
+== R4 他リポジトリの作業用コピー（reaper-worktree.sh） ==
+  -- /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/repoX (owner/x, 行き先 develop) reaper rc=0, 1 行 --
+     fake reaper ran
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/repoY （origin が想定と違う（想定 owner/y、実測 owner/wrong））
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/missing （リポジトリが無い）
+[R4] 削除: 0 件 / 0KB（0KB）、飛ばした: 2 件
+
+== R5 /tmp/CC報告ファイルの .md 以外 ==
+  [規則ごと飛ばす] R5/R6 見送り（HDD 写しが2日以上成功していない）
+[R5] 削除: 0 件 / 0KB（0KB）、飛ばした: 0 件
+
+== R6 セッションの作業メモ ==
+  [規則ごと飛ばす] R5/R6 見送り（HDD 写しが2日以上成功していない）
+[R6] 削除: 0 件 / 0KB（0KB）、飛ばした: 0 件
+
+--- df（終了）---
+Filesystem      Size    Used   Avail Capacity iused ifree %iused  Mounted on
+/dev/disk3s1   228Gi   175Gi    21Gi    90%    5.4M  218M    2%   /System/Volumes/Data
+===== disk-janitor 終了 2026-10-25 23:17:41 mode=execute 合計 10 件 / 28KB（R4 の容量は含まない） =====
+=== ここまで ===
+ok: execute: exit 0
+ok: R1 消す: worktree 内の .npm-cache
+ok: R1 消す: 本体直下の .npm-cache
+ok: R1 消す: 本体 frontend の .npm-cache
+ok: R1 消す: agent-console-wt 内の .npm-cache
+ok: R1 保護: npm の設定先（保護する cache）
+ok: R1 保護: 使用中（プロセスが cwd にしている）
+ok: R1 保護: シンボリックリンク（リンク自身）
+ok: R1 保護: シンボリックリンクの指し先（根の外）
+ok: R1 保護: 使用中は理由つきで飛ばしたと出る
+ok: R2 消す: 直下の node_modules
+ok: R2 消す: frontend の node_modules
+ok: R2 消す: agent-console-wt 側
+ok: R2 消す: 作業用コピー自体と package-lock は残る
+ok: R2 保護: package-lock.json なし
+ok: R2 保護: 14日以内に更新されたファイルあり
+ok: R2 保護: 最終コミットが14日以内
+ok: R2 保護: 使用中（cwd にしているプロセスあり）
+ok: R2 保護: git log が失敗する（L1: 使っていない判定にしない）
+ok: R2 保護: node_modules がシンボリックリンク（リンクも指し先も残る）
+ok: R2 保護: 本体 salesanchor の node_modules
+ok: R2 保護: 本体 agent-console の node_modules
+ok: R3 消す: v0.2.0
+ok: R3 消す: v0.3.0
+ok: R3 保護: current (v0.9.1)
+ok: R3 保護: 1つ前 (v0.7.0)
+ok: R3 保護: current より新しい版 (v1.0.0)
+ok: R3 保護: 使用中の旧版 (v0.4.0)
+ok: R3 保護: シンボリックリンクの版（リンクも指し先も残る）
+ok: R3 保護: 版名でないディレクトリ
+ok: R4: reaper が --execute 付きで呼ばれる
+ok: R4: 作業場所・名前・行き先・台帳の無効化が渡る
+ok: R4: origin が想定と違うリポジトリは呼ばれない
+ok: R4: origin が想定と違うリポジトリは理由つきで飛ばす
+ok: R4: 無いリポジトリは飛ばす
+ok: R4: reaper は2回目の呼び出しを含めて repoX の1回だけ
+ok: 2回目の dry-run: R1 の削除候補 0 件
+ok: 2回目の dry-run: R2 の削除候補 0 件
+ok: 2回目の dry-run: R3 の削除候補 0 件
+ok: lsof 失敗: R1 全体を飛ばし何も消えない
+ok: lsof 失敗: R1〜R3 を飛ばすと出る
+ok: npm の cache が根の下: R1 全体を飛ばし何も消えない
+ok: npm の cache が根の下: 警告が出る
+ok: 相対パス設定（場所で値が変わる）: R1 全体を飛ばし何も消えない
+ok: 相対パス設定（場所で値が変わる）: 警告が出る
+ok: current が読めない: R3 全体を飛ばす
+ok: current が読めない: 旧版は消えない
+ok: ロック中: 実行せず skip と出る
+ok: ログ: 上限超えは .1 に退避され1世代だけ
+ok: ログ: 新しいログに実行の記録が出る
+ok: ログ: 新しいログに規則ごとの件数・容量と df が出る
+ok: ガード: 条件を満たすパスは通る
+ok: ガード: 空のパスは拒否
+ok: ガード: / は拒否
+ok: ガード: HOME そのものは拒否
+ok: ガード: 根そのものは拒否
+ok: ガード: 相対パスは拒否
+ok: ガード: .. を含むパスは拒否
+ok: ガード: 根の外は拒否
+ok: ガード: シンボリックリンクは拒否
+ok: ガード: 名前が規則と一致しないものは拒否
+ok: ガード: 存在しないパスは拒否
+=== K6 dry-run 出力 ===
+== R5 /tmp/CC報告ファイルの .md 以外 ==
+  [R5] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/tmpcc/sub/raw.txt (1KB)
+  [R5] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/tmpcc/sub/old.sql (1KB)
+[R5] 削除候補: 2 件 / 2KB（2KB）、飛ばした: 0 件
+
+== R6 セッションの作業メモ ==
+  [R6] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/claudetmp/slug/uuid1/scratchpad/images/pw.png (1KB)
+  [R6] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/claudetmp/slug/uuid1/scratchpad/deep/a.log (1KB)
+  [R6] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/claudetmp/slug/uuid1/scratchpad/memo.txt (1KB)
+  [R6] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/claudetmp/slug/uuid1/tasks/b1.output (1KB)
+  [R6] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.aOmjIj/claudetmp/slug/uuid1/tasks/a-dangling.output (0KB)
+[R6] 削除候補: 5 件 / 4KB（4KB）、飛ばした: 0 件
+
+--- df（終了）---
+=== ここまで ===
+ok: K6 dry-run: 何も消えない（前後の一覧が同一）
+ok: K6 dry-run: R5 の候補に raw.txt が出る
+ok: K6 dry-run: R5 の候補に old.sql が出る
+ok: K6 dry-run: R6 の候補に scratchpad の中が出る
+ok: K6 dry-run: R6 の候補に宙に浮いた a*.output が出る
+ok: K6 dry-run: 見出し R5・R6 の削除候補
+ok: K6 R5 消す: 7日より古い .md 以外
+ok: K6 R5 保護: .md
+ok: K6 R5 保護: 7日以内
+ok: K6 R5 保護: シンボリックリンク（リンクも指し先も残る）
+ok: K6 R6 消す: scratchpad の中（images/ と深い階層も）
+ok: K6 R6 消す: tasks/b*.output
+ok: K6 R6 消す: 宙に浮いた a*.output（リンクだけ）
+ok: K6 R6 保護: <slug>/<uuid>/images/（PO の画像）
+ok: K6 R6 保護: 7日以内（scratchpad・b*.output・宙に浮いた a*.output）
+ok: K6 R6 保護: 指し先がある a*.output（リンクも指し先も残る）
+ok: K6 R6 保護: tasks の b*.output 以外
+ok: K6 根の外は触らない
+ok: K6 last-ok が3日前: 何も消えない
+ok: K6 last-ok が3日前: 見送りがログに出る
+ok: K6 last-ok が無い: 何も消えない
+ok: K6 last-ok が無い: 見送りがログに出る
+ok: K6 last-ok が数字でない: 何も消えない
+ok: K6 根が無い: 規則ごと飛ばす
+ok: ガード(ファイル): 条件を満たすファイルは通る
+ok: ガード(ファイル): 7日以内は拒否
+ok: ガード(ファイル): 根の外は拒否
+ok: ガード(ファイル): シンボリックリンクは f で拒否
+ok: ガード(ファイル): ディレクトリは拒否
+ok: ガード(ファイル): 根そのものは拒否
+ok: ガード(ファイル): .. を含むパスは拒否
+ok: ガード(ファイル): 相対パスは拒否
+ok: ガード(ファイル): 名前が規則と一致しないものは拒否
+ok: ガード(ファイル): dangling は指し先がある物を拒否
+ok: ガード(ファイル): dangling は宙に浮いたリンクを通す
+ok: ガード(ファイル): 途中がシンボリックリンクなら拒否
+ok: J1: git-safe.sh が無い写しは終了コード 1 で終わる
+ok: J1: git-safe.sh があれば GIT_SAFE_ARGS が定義される
+
+=== 合計 ===
+ok: 108
+ng: 0
+全試験 ok
+bash scripts/tests/test-disk-janitor.sh  19.49s user 14.06s system 15% cpu 3:42.31 total

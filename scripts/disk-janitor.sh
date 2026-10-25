@@ -19,6 +19,14 @@
 
 set -u
 
+# ── 作業場所に向ける git の守り（ADR-1039）。読めなければ何も消さずに終わる ──────
+# shellcheck source=scripts/git-safe.sh
+if ! source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/git-safe.sh" 2>/dev/null || [ "${#GIT_SAFE_ARGS[@]}" -eq 0 ]; then
+  echo "[disk-janitor] git の守りを読めない（scripts/git-safe.sh）。何も消さずに終了します。" >&2
+  # shellcheck disable=SC2317  # source されたときは return、直接実行なら exit
+  return 1 2>/dev/null || exit 1
+fi
+
 # ── 設定（1か所）─────────────────────────────────────────────────────────────
 dj_config() {
   local home_dir="${HOME:-/Users/tanizawashingo}"
@@ -287,7 +295,7 @@ dj_wt_unused() { # dj_wt_unused <wt>: 使っていないなら 0。理由は DJ_
       -o -name coverage -o -name storybook-static -o -name test-results -o -name playwright-report -o -name .git \) -prune \
       -o -type f -mtime "-${DJ_STALE_DAYS}" -print -quit 2>/dev/null)"
   if [ -n "${recent}" ]; then DJ_WT_REASON="${DJ_STALE_DAYS}日以内に更新されたファイルあり"; return 1; fi
-  last_ct="$(git -C "${wt}" log -1 --format=%ct 2>/dev/null)"
+  last_ct="$(git "${GIT_SAFE_ARGS[@]}" -C "${wt}" log -1 --format=%ct 2>/dev/null)"
   case "${last_ct}" in ''|*[!0-9]*) DJ_WT_REASON="最終コミット時刻を取得できない（残す）"; return 1 ;; esac
   now="$(date +%s)"
   cutoff=$(( now - DJ_STALE_DAYS * 86400 ))
@@ -386,7 +394,7 @@ dj_rule_r4() {
   while IFS='|' read -r path want base; do
     [ -n "${path}" ] || continue
     if [ ! -d "${path}" ]; then dj_skip "${path}" "リポジトリが無い"; continue; fi
-    url="$(git -C "${path}" remote get-url origin 2>/dev/null)"
+    url="$(git "${GIT_SAFE_ARGS[@]}" -C "${path}" remote get-url origin 2>/dev/null)"
     got="$(printf '%s\n' "${url}" | sed -E 's#\.git$##; s#^.*[:/]([^/:]+/[^/:]+)$#\1#')"
     if [ -z "${url}" ] || [ "${got}" != "${want}" ]; then
       dj_skip "${path}" "origin が想定と違う（想定 ${want}、実測 ${got:-取得できない}）"; continue

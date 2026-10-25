@@ -24,6 +24,9 @@
 #   [B-b] REAPER_BASE_BRANCH 未指定 → gh の PR 行き先判定は main（既定）
 #   [B-c] ブランチ名が main・develop・REAPER_BASE_BRANCH と同じ部屋は DONE でも削除対象に出ない（本体ブランチ保護）
 #   [B-d] 上の保護の対照: 通常ブランチの DONE の部屋は削除対象に出る
+#   [G1] 部屋の core.fsmonitor に仕込んだ印の台本が reaper の dry-run で動かない（対照: 上書きなしの git status では動く）
+#   [G2] 入れ子のリポジトリ（mode 160000）がある部屋は残し理由を出す（対照: 入れ子なしは削除候補）
+#   [G3] git-safe.sh を読めないとき終了コード 1・何も消さない
 #
 # 実行方法: bash scripts/tests/test-reaper-safety.sh
 # 終了コード: 0=全PASS / 1=FAIL あり
@@ -716,6 +719,115 @@ if grep -q 'baseRefName == "main"' "${BASE_LOG_DEF}" && ! grep -q 'baseRefName =
 else
   echo "❌ FAIL [B-b]: 既定の行き先が main になっていません"
   sed 's/^/    /' "${BASE_LOG_DEF}"
+  FAIL=$(( FAIL + 1 ))
+fi
+
+# ── G: git の守り（ADR-1039・scripts/git-safe.sh）──────────────────────────
+# G1: 部屋の config に仕込まれた core.fsmonitor の台本が、reaper の git で動かない
+# G2: 入れ子のリポジトリ（mode 160000）がある部屋は、ほかが消す条件でも残る（理由つき）
+# G3: git-safe.sh を読めないとき、終了コード 1 で何も消さない
+G_MARK="${TMPDIR_TEST}/g1-mark"
+G_SCRIPT="${TMPDIR_TEST}/g1-fsmonitor.sh"
+cat > "${G_SCRIPT}" << GEOF
+#!/bin/bash
+touch "${G_MARK}"
+exit 0
+GEOF
+chmod +x "${G_SCRIPT}"
+
+# G1
+BRANCH_G1="feature/test/g1-fsmonitor"
+G1_DIR=$(make_worktree_dir "wt-g1" "${BRANCH_G1}")
+echo "| ${BRANCH_G1} | テスト | 2026-06-06 | DONE | #990 | | |" >> "${FAKE_ACTIVE_WORK}"
+git init "${G1_DIR}" -q 2>/dev/null
+echo ".worktree-id" > "${G1_DIR}/.git/info/exclude"
+git -C "${G1_DIR}" config core.fsmonitor "${G_SCRIPT}"
+rm -f "${G_MARK}"
+git -C "${G1_DIR}" status >/dev/null 2>&1 || true
+if [ -e "${G_MARK}" ]; then
+  echo "✅ PASS [G1-対照]: 上書きなしの git status では印の台本が動く（仕込みが効く作りだと確認）"
+  PASS=$(( PASS + 1 ))
+else
+  echo "❌ FAIL [G1-対照]: 上書きなしでも印ができません（この作りでは fsmonitor が呼ばれない）"
+  FAIL=$(( FAIL + 1 ))
+fi
+rm -f "${G_MARK}"
+OUTPUT_G1=$(run_reaper_dry)
+if [ ! -e "${G_MARK}" ]; then
+  echo "✅ PASS [G1]: reaper の dry-run で印の台本が動きませんでした"
+  PASS=$(( PASS + 1 ))
+else
+  echo "❌ FAIL [G1]: reaper の dry-run で印の台本が動きました"
+  FAIL=$(( FAIL + 1 ))
+fi
+assert_in_delete "G1+上書きしても判定は変わらない（DONE+未保存なしは削除候補）" "${BRANCH_G1}" "${OUTPUT_G1}"
+
+# G2: 入れ子のリポジトリ。対照（入れ子なし）と並べる
+G_REMOTE="${TMPDIR_TEST}/g2-remote.git"
+git init --bare "${G_REMOTE}" -q 2>/dev/null
+make_g2_room() {
+  local name="$1" branch="$2" nested="$3" dir
+  dir=$(make_worktree_dir "${name}" "${branch}")
+  echo "| ${branch} | テスト | 2026-06-06 | DONE | #991 | | |" >> "${FAKE_ACTIVE_WORK}"
+  git init "${dir}" -q 2>/dev/null
+  echo ".worktree-id" > "${dir}/.git/info/exclude"
+  git -C "${dir}" config user.email "test@test.com"
+  git -C "${dir}" config user.name "test"
+  git -C "${dir}" remote add origin "${G_REMOTE}"
+  touch "${dir}/base.txt"
+  git -C "${dir}" add base.txt
+  if [ "${nested}" = "1" ]; then
+    mkdir -p "${dir}/inner"
+    git init "${dir}/inner" -q 2>/dev/null
+    git -C "${dir}/inner" config user.email "test@test.com"
+    git -C "${dir}/inner" config user.name "test"
+    touch "${dir}/inner/x.txt"
+    git -C "${dir}/inner" add x.txt
+    git -C "${dir}/inner" commit -m "inner" -q 2>/dev/null
+    git -C "${dir}" add inner 2>/dev/null
+  fi
+  git -C "${dir}" commit -m "base" -q 2>/dev/null
+  git -C "${dir}" push origin HEAD:"refs/heads/${branch}" -q 2>/dev/null
+  git -C "${dir}" fetch origin -q 2>/dev/null
+  echo "${dir}"
+}
+BRANCH_G2_CTRL="feature/test/g2-plain"
+BRANCH_G2="feature/test/g2-nested"
+make_g2_room "wt-g2-plain" "${BRANCH_G2_CTRL}" 0 >/dev/null
+G2_DIR=$(make_g2_room "wt-g2-nested" "${BRANCH_G2}" 1)
+if git -C "${G2_DIR}" ls-files --stage | grep -q '^160000 '; then
+  echo "✅ PASS [G2-前提]: 作り物の部屋に mode 160000 がある"
+  PASS=$(( PASS + 1 ))
+else
+  echo "❌ FAIL [G2-前提]: mode 160000 の行がありません"
+  FAIL=$(( FAIL + 1 ))
+fi
+OUTPUT_G2=$(run_reaper_dry)
+assert_in_delete     "G2-対照: 入れ子なしの同じ作りの部屋は削除候補" "${BRANCH_G2_CTRL}" "${OUTPUT_G2}"
+assert_not_in_delete "G2: 入れ子のリポジトリがある部屋は残す"       "${BRANCH_G2}"      "${OUTPUT_G2}"
+if echo "${OUTPUT_G2}" | grep -A 20 "未保存あり" | grep -q "${BRANCH_G2}（入れ子のリポジトリがある（残す））"; then
+  echo "✅ PASS [G2-理由]: 理由「入れ子のリポジトリがある（残す）」が出ています"
+  PASS=$(( PASS + 1 ))
+else
+  echo "❌ FAIL [G2-理由]: 理由が出ていません"
+  FAIL=$(( FAIL + 1 ))
+fi
+
+# G3: git-safe.sh が無い写しで動かす → 終了コード 1・何も消さない
+G3_COPY="${TMPDIR_TEST}/g3-copy"
+mkdir -p "${G3_COPY}"
+cp "${REAPER}" "${G3_COPY}/reaper-worktree.sh"
+G3_RC=0
+G3_OUT=$(REAPER_WORKTREES_DIR="${FAKE_WORKTREES}" \
+  REAPER_ACTIVE_WORK_FILE="${FAKE_ACTIVE_WORK}" \
+  REAPER_REPO_NAME="test/test" REAPER_SKIP_FETCH=1 \
+  bash "${G3_COPY}/reaper-worktree.sh" 2>&1) || G3_RC=$?
+if [ "${G3_RC}" -eq 1 ] && echo "${G3_OUT}" | grep -q "git の守りを読めない" && ! echo "${G3_OUT}" | grep -q "削除対象"; then
+  echo "✅ PASS [G3]: git-safe.sh を読めないとき、終了コード 1・削除対象なしで終わりました"
+  PASS=$(( PASS + 1 ))
+else
+  echo "❌ FAIL [G3]: 終了コード=${G3_RC}"
+  echo "${G3_OUT}" | sed 's/^/    /'
   FAIL=$(( FAIL + 1 ))
 fi
 
