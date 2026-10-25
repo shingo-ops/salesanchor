@@ -209,8 +209,8 @@ export default function UnitsPage() {
       headerAction={
         hasPermission("suppliers.view") ? (
           <>
-            <HeaderButton variant="secondary" disabled={exporting} data-testid="units-export" onClick={() => void downloadExport()}>
-              {t(exporting ? "common.loading" : "unitCsv.exportButton")}
+            <HeaderButton loading={exporting} variant="secondary" disabled={exporting} data-testid="units-export" onClick={() => void downloadExport()}>
+              {t("unitCsv.exportButton")}
             </HeaderButton>
             <HeaderButton variant="primary" data-testid="units-import" onClick={() => navigate("/management-center/units/import")}>
               {t("unitCsv.importButton")}

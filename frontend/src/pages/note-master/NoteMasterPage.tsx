@@ -363,8 +363,8 @@ export default function NoteMasterPage() {
       headerAction={
         hasPermission("suppliers.view") ? (
           <>
-            <HeaderButton variant="secondary" disabled={exporting} data-testid="note-master-export" onClick={() => void downloadExport()}>
-              {t(exporting ? "common.loading" : "noteMasterCsv.exportButton")}
+            <HeaderButton loading={exporting} variant="secondary" disabled={exporting} data-testid="note-master-export" onClick={() => void downloadExport()}>
+              {t("noteMasterCsv.exportButton")}
             </HeaderButton>
             <HeaderButton variant="primary" data-testid="note-master-import" onClick={() => navigate("/management-center/note-master/import")}>
               {t("noteMasterCsv.importButton")}

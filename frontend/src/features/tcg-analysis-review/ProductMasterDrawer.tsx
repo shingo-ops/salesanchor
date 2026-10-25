@@ -303,22 +303,24 @@ function RegistrationSection({ item }: { item: AnalysisReviewItem }) {
           {error && <p className="pmd-error">{t('tcgAnalysisReview.productMasterDrawer.registerError')}: {error}</p>}
           <div className="pmd-actions">
             <Button
+              loading={status === 'checking'}
               type="button"
               variant="secondary"
               size="md"
               disabled={!required || status === 'checking' || status === 'saving'}
               onClick={checkDuplicates}
             >
-              {status === 'checking' ? t('tcgAnalysisReview.productMasterDrawer.checking') : t('tcgAnalysisReview.productMasterDrawer.checkDuplicates')}
+              {t('tcgAnalysisReview.productMasterDrawer.checkDuplicates')}
             </Button>
             <Button
+              loading={status === 'saving'}
               type="button"
               variant="primary"
               size="md"
               disabled={!required || (candidates.length > 0 && !confirmed) || status === 'saving'}
               onClick={save}
             >
-              {status === 'saving' ? t('tcgAnalysisReview.productMasterDrawer.saving') : t('tcgAnalysisReview.productMasterDrawer.register')}
+              {t('tcgAnalysisReview.productMasterDrawer.register')}
             </Button>
           </div>
         </>
@@ -408,8 +410,8 @@ function SearchKeywordSection({ item }: { item: AnalysisReviewItem }) {
         </label>
       </div>
       <div className="pmd-actions">
-        <Button type="button" variant="secondary" size="md" disabled={!query.trim() || searching} onClick={search}>
-          {searching ? t('superAdmin.supplierQuality.productAssign.searching') : t('tcgAnalysisReview.productMasterDrawer.searchMaster')}
+        <Button loading={searching} type="button" variant="secondary" size="md" disabled={!query.trim() || searching} onClick={search}>
+          {t('tcgAnalysisReview.productMasterDrawer.searchMaster')}
         </Button>
       </div>
       {candidates.length === 0 && !searching && (
@@ -434,8 +436,8 @@ function SearchKeywordSection({ item }: { item: AnalysisReviewItem }) {
           </div>
           {addError && <p className="pmd-error">{addError}</p>}
           <div className="pmd-actions">
-            <Button type="button" variant="primary" size="md" disabled={addStatus === 'saving'} onClick={addKeyword}>
-              {addStatus === 'saving' ? t('tcgAnalysisReview.productMasterDrawer.adding') : t('tcgAnalysisReview.productMasterDrawer.addKeyword')}
+            <Button loading={addStatus === 'saving'} type="button" variant="primary" size="md" disabled={addStatus === 'saving'} onClick={addKeyword}>
+              {t('tcgAnalysisReview.productMasterDrawer.addKeyword')}
             </Button>
           </div>
         </>
@@ -535,8 +537,8 @@ function ProductAssignSection({ item, onSaved }: { item: AnalysisReviewItem; onS
         </label>
       </div>
       <div className="pmd-actions">
-        <Button type="button" variant="secondary" size="md" disabled={!query.trim() || searching} onClick={search}>
-          {searching ? t('superAdmin.supplierQuality.productAssign.searching') : t('superAdmin.supplierQuality.productAssign.searchBtn')}
+        <Button loading={searching} type="button" variant="secondary" size="md" disabled={!query.trim() || searching} onClick={search}>
+          {t('superAdmin.supplierQuality.productAssign.searchBtn')}
         </Button>
       </div>
       {candidates.length === 0 && !searching && query && (
@@ -555,11 +557,11 @@ function ProductAssignSection({ item, onSaved }: { item: AnalysisReviewItem; onS
       ))}
       {error && <p className="pmd-error">{error}</p>}
       <div className="pmd-actions">
-        <Button type="button" variant="primary" size="md" disabled={!selected || busy} onClick={changeProduct}>
-          {status === 'changing' ? t('superAdmin.supplierQuality.productAssign.changing') : t('superAdmin.supplierQuality.productAssign.changeBtn')}
+        <Button loading={status === 'changing'} type="button" variant="primary" size="md" disabled={!selected || busy} onClick={changeProduct}>
+          {t('superAdmin.supplierQuality.productAssign.changeBtn')}
         </Button>
-        <Button type="button" variant="secondary" size="md" disabled={!item.system.product_uuid || busy} onClick={markConfirmed}>
-          {status === 'confirming' ? t('superAdmin.supplierQuality.productAssign.confirming') : t('superAdmin.supplierQuality.productAssign.confirmBtn')}
+        <Button loading={status === 'confirming'} type="button" variant="secondary" size="md" disabled={!item.system.product_uuid || busy} onClick={markConfirmed}>
+          {t('superAdmin.supplierQuality.productAssign.confirmBtn')}
         </Button>
       </div>
     </>

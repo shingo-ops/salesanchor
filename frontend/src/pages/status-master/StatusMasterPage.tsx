@@ -316,8 +316,8 @@ export default function StatusMasterPage() {
       headerAction={
         hasPermission("suppliers.view") ? (
           <>
-            <HeaderButton variant="secondary" disabled={exporting} data-testid="status-master-export" onClick={() => void downloadExport()}>
-              {t(exporting ? "common.loading" : "statusMasterCsv.exportButton")}
+            <HeaderButton loading={exporting} variant="secondary" disabled={exporting} data-testid="status-master-export" onClick={() => void downloadExport()}>
+              {t("statusMasterCsv.exportButton")}
             </HeaderButton>
             <HeaderButton variant="primary" data-testid="status-master-import" onClick={() => navigate("/management-center/status-master/import")}>
               {t("statusMasterCsv.importButton")}
