@@ -51,7 +51,7 @@
 - 止めたときの表示: ファイル名と行番号と語句。表示先は AI の画面だけで、送らないので外には出ない。「形の説明に書き換える」よう案内を付ける。
 - 止めた記録: 既存の見張りと同じ `_hook_blocked_log`（agent-events.jsonl に 1 行足す。pr-body-guard.sh:12・:158 と同じ）で、日時・見張りの名前・ファイル名と行番号・止めた語句の数だけを残す。語句そのものは記録に書かない（記録も社外秘にしないため）。local-hooks-ssot の H7（いつ・何を・なぜ）に当たる。
 - 原文の置き場（PO 決定「1」2026-10-25）: 本番の投稿原文（`ai_ro.public__source_messages` の `raw_text`）だけを、見比べる相手にする。2026-10-25 に ADR-1024 の道で数えた結果は 3,812 行・約 279 万字（うち is_active が真は 228 行・約 8 万字）。is_active に関係なく全行を使う（取り下げた投稿も社外秘だから）。以前の 2 経路（R2-raw の msgs_*.tsv と check3 の msgs/*.txt、計 120 ファイル）は外す。正本は本番の記録 1 か所のまま。
-- 原文の写し: `fetch_corpus.py` が毎日 1 回、本番から鍵付きフォルダ（`~/CC報告ファイル-keep/confid-guard/`、700）に 1 ファイル（`source-messages.txt`、600）だけ取り直す。読み取りは ADR-1024 の道だけ（読み取り専用の鍵、ai_ro の同名ビュー、SQL は標準入力から 1 文ずつ）。manual-only の鍵は使わない。読み取り台本は 1 つの値を 10,240 字で切るので、8,000 字ずつに分けて取って繋ぎ、本番の件数・文字数の合計と一致を確かめる。一時ファイルに書き、一致してから置き換える。途中で失敗したら前の写しを残して 0 以外で終わる。前回の半分未満に減ったときも置き換えず止める。件数・文字数・日時は別ファイル（`source-messages.meta`、本文なし）に残す。
+- 原文の写し: `scripts/agent-hooks/confidential-quote-guard/fetch_corpus.py` が毎日 1 回、本番から鍵付きフォルダ（`~/CC報告ファイル-keep/confid-guard/`、700）に 1 ファイル（`source-messages.txt`、600）だけ取り直す。読み取りは ADR-1024 の道だけ（読み取り専用の鍵、ai_ro の同名ビュー、SQL は標準入力から 1 文ずつ）。manual-only の鍵は使わない。読み取り台本は 1 つの値を 10,240 字で切るので、8,000 字ずつに分けて取って繋ぎ、本番の件数・文字数の合計と一致を確かめる。一時ファイルに書き、一致してから置き換える。途中で失敗したら前の写しを残して 0 以外で終わる。前回の半分未満に減ったときも置き換えず止める。件数・文字数・日時は別ファイル（`source-messages.meta`、本文なし）に残す。
 - 写しが古いとき: guard は、原文の写しが 2 日より古ければ止める（exit 2、「原文の写しが古い」）。古い写しで通すと新しい投稿を照らせないため。
 - 毎日の取り直し: LaunchAgent（`jp.salesanchor.confidential-quote-guard-fetch.plist`、毎日 06:30、RunAtLoad=true・KeepAlive=false）。原本は repo、install.sh が写して登録、rollback.sh が外す（PO が `!` で流す）。多重起動は mkdir ロック＋trap で防ぐ。
 - 原文の置き場の表（confidential-corpus.conf）: `corpus:` の行は上の写し 1 つだけ。`repo:` の行は変えない。
