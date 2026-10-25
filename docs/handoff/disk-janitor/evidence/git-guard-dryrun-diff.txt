@@ -1,0 +1,16 @@
+8c8
+<    - release/app-noindex
+---
+>    - release/loading-button-bin6a
+10c10
+< 🔒 IN_PROGRESS/REVIEW 未マージ（削除しない）: 10 件
+---
+> 🔒 IN_PROGRESS/REVIEW 未マージ（削除しない）: 11 件
+11a12
+>    - release/app-noindex
+22c23
+< ⚠️  未保存あり（削除しない）: 39 件 ← 人の判断が必要
+---
+> ⚠️  未保存あり（削除しない）: 38 件 ← 人の判断が必要
+45d45
+<    - release/loading-button-bin6a
