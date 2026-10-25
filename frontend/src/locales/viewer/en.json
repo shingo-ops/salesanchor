@@ -51,7 +51,11 @@
       "priceRange": "Price range",
       "quantityRange": "Quantity range",
       "min": "Min",
-      "max": "Max"
+      "max": "Max",
+      "back": "Back",
+      "apply": "Done",
+      "searchOptions": "Filter options",
+      "noOptions": "No matches"
     },
     "badge": {
       "cheapest": "Lowest",
