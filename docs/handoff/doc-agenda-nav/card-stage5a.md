@@ -237,4 +237,6 @@ PR を revert する（2ファイル）。
 
 ## 11. 報告欄（担当が追記）
 
+- 2026-10-25 Sonnet: §5-0〜5-6 全て期待どおり（t1-before rc=0・t1-after rc=1、どちらも「71行（上限70行）」／t2 rc=0／t3-after に tools/s5probe/AGENTS.md の警告・t3-clean は警告1件／t4 s5probe 0件／t5 両方 rc=0）。生出力は /tmp/CC報告ファイル/an-s5/impl/。試し書き足しは残っていない。
+
 END OF CARD
