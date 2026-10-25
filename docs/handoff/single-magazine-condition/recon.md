@@ -13,7 +13,7 @@
 
 ## 置き場所とtier
 
-- 【事実】`docs/STANDARD-WORKFLOW.md` §1.8: 新テーマは一式、既存テーマの拡張は既存テーマの履歴に追記、軽微は台帳+PR。§2（80-84行付近）: recon は `docs/handoff/<仕事名>/recon.md`、design は外部事例節と受け入れ基準表（検証方法つき）、PR 本文に `### 標準ワークフロー確認`。§1.7: design の末尾は「## 維持の仕組み」。
+- 【事実】`docs/STANDARD-WORKFLOW.md` §1.8: 新テーマは一式、既存テーマの拡張は既存テーマの履歴に追記、軽微は台帳+PR。§2（80-84行付近）: recon は docs/handoff/<仕事名>/recon.md、design は外部事例節と受け入れ基準表（検証方法つき）、PR 本文に `### 標準ワークフロー確認`。§1.7: design の末尾は「## 維持の仕組み」。
 - 【事実】`docs/specs/README.md` は仕様書の索引で、仕事別の recon/design は docs/handoff にある。よって置き場所は `docs/handoff/single-magazine-condition/`（本ファイル）。仕様書を新設する場合のみ specs/README.md に追記。
 - 【推測】tier は「既存テーマ（雑誌付き）の拡張」で、前例どおり ADR なしの B 類（ADR-1015: Opus 審査 APPROVE で足りる。記録は review-opus.md）。ただし「別の群へ適用を広げる」は前例（同じ群に1行）より一段広く、ADR 要否は親の判断が要る。【未確認】
 
@@ -47,13 +47,13 @@
   - 【事実】注意点2: 並び順の順位表も canonical キーで、同名は小さい id(68)の promo_pack 位置が勝つ。シングル群内の並びは別途確認が要る。
   - 【事実】注意点3: コード CN0025 は使用済み。次は CN0026 以降（本番に無い。テストの仮データ名と同じ字面で衝突はしないが、【未確認】Supply との整合）。
 - 案B（68 の適用を広げる）
-  - 【事実】68 は promo_pack の行。別の群のカードに効かせるにはコード（`gemini_raw_copy_v102_product_first.py:641` と `tcg_analyzer_svc.py:653`, `:882` 付近）の変更が要り、言い回しを広げると promo_pack 側の判定も動く。試算では promo 側の「本付き」当たりは0行なので現データでは変化なしだが、K3 を保証する仕組みにならない。
+  - 【事実】68 は promo_pack の行。別の群のカードに効かせるにはコード（`backend/app/services/gemini_raw_copy_v102_product_first.py:641` と `backend/app/services/tcg_analyzer_svc.py:653`, `:882` 付近）の変更が要り、言い回しを広げると promo_pack 側の判定も動く。試算では promo 側の「本付き」当たりは0行なので現データでは変化なしだが、K3 を保証する仕組みにならない。
 - 結合キー: 【事実】condition_id（名前ではない）。案Aは別idなので分かれる。
 
 ## 4. 届け先・画面
 
 - 【事実】出力名は canonical そのもの（tcg_distribution_svc.py:326）。「雑誌付き」は既に出力される名前なので、新しい名前は増えない。
-- 【事実】`conditionBadge.ts` は完全一致で未知は灰色。「雑誌付き」が12値に入っているかは本調査では未読。【未確認】（同ファイル・design.md・conditionBadge.test.ts は3点同時更新の決まり）
+- 【事実】`frontend/src/features/inventory/conditionBadge.ts` は完全一致で未知は灰色。「雑誌付き」は12値に入っていない（2026-10-25 Opus が grep で確認、design.md 対象外の表）。（同ファイル・design.md・conditionBadge.test.ts は3点同時更新の決まり）
 - 【事実】在庫一覧 GAS は別リポジトリ（shingo-ops/tcg-client-viewer）。conditionClass が conditionBadge.ts の写しで未知は灰色。【未確認】リポジトリ内には無く、本調査では中身を読んでいない。
 - 【事実】状態名の翻訳キーはフロント ja.json/en.json に見つからなかった（未開封は別キー ja.json:1539, 2882, 2894）。line_conditions に英語名列は無い。
 
