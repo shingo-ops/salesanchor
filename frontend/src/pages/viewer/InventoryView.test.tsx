@@ -475,7 +475,7 @@ describe("InventoryView", () => {
   });
 
   // docs/handoff/viewer-choice-sheet/design.md（便5）: スマホの並び替えは専用の sortTrigger + パネル。
-  // PC の sortMenu（<select>）は変えない（上の "sort pull-down..." 系テストで検証済み）
+  // PC の sortMenu（OS 標準のプルダウン）は変えない（上の "sort pull-down..." 系テストで検証済み）
   describe("mobile sort panel (docs/handoff/viewer-choice-sheet/design.md)", () => {
     afterEach(() => {
       delete (window as unknown as { matchMedia?: unknown }).matchMedia;

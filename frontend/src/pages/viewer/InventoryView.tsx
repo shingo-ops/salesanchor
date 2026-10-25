@@ -407,7 +407,7 @@ export function InventoryView({ data }: InventoryViewProps) {
   const currentSortLabel = isCustomSort
     ? (sortOptions.find((o) => o.value === sortMenuValue)?.label ?? t("viewer.sort.placeholder"))
     : t("viewer.sort.placeholder");
-  // スマホの「シリーズ」ボタン（design.md 4-1）。PC の sortMenu（<select>）とは別物
+  // スマホの「シリーズ」ボタン（design.md 4-1）。PC の sortMenu（OS 標準のプルダウン）とは別物
   const seriesTrigger = (
     <Button
       variant="ghost"
@@ -422,7 +422,7 @@ export function InventoryView({ data }: InventoryViewProps) {
       <ChevronRight className="viewer-toolbar__caret" aria-hidden />
     </Button>
   );
-  // スマホの「並び替え」ボタン（design.md 4-1）。sortMenu（<select>）は PC 専用のまま残す
+  // スマホの「並び替え」ボタン（design.md 4-1）。sortMenu（OS 標準のプルダウン）は PC 専用のまま残す
   const sortTrigger = (
     <Button
       variant="ghost"
