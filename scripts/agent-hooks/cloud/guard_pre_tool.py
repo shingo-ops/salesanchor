@@ -130,6 +130,16 @@ def check_merge(tool: str, cmd: str):
             return "gh pr merge はクラウドでは行いません（マージは手元で行います）。"
         if re.search(r"\bgh\s+api\b", s) and re.search(r"(-X|--method)[ =]*PUT\b", s, re.I) and re.search(r"/merge(\s|$|[\"'?])", s):
             return "gh api によるマージ(PUT …/merge)はクラウドでは行いません。"
+        # 別の書き方（curl・wget・httpie・GraphQL・枝の直接まとめ）。送る道具が無い命令（grep 等）は対象外。
+        if re.search(r"\b(gh\s+api|curl|wget)\b|(?<![\w/:])https?(?![\w:])", s):
+            if re.search(r"/pulls/[^/\s\"']+/merge(\s|$|[\"'?])", s) and re.search(
+                r"-X\s*PUT\b|--(request|method)[ =]PUT\b|\bPUT\b", s, re.I
+            ):
+                return "PUT …/merge によるマージはクラウドでは行いません（マージは手元で行います）。"
+            if re.search(r"\b(mergePullRequest|enablePullRequestAutoMerge)\b", s):
+                return "GraphQL によるマージ・自動マージの予約はクラウドでは行いません（マージは手元で行います）。"
+            if re.search(r"repos/[^\s\"']+/merges(\s|$|[\"'?/])", s):
+                return "枝を直接まとめる API(…/merges)はクラウドでは行いません（マージは手元で行います）。"
     return None
 
 
