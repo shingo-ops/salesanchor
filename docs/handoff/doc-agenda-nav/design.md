@@ -493,7 +493,7 @@ PO 原文（2026-10-22）「仕様書と設計図はどうなったの？逐一�
 
 ### 26-5. 残すもの（この段で直さない）
 
-- pre-commit:43 lint-staged・:48 dark-parity の失敗が手元で止まらない（§26-1）。frontend/AGENTS.md:25 の「コミット前に自動ブロック」と食い違う。直すなら作業場所の frontend/node_modules の有無を先に決める設計が要る。PO に報告して扱いを決めてもらう。
+- pre-commit:43 lint-staged・:48 dark-parity の失敗が手元で止まらない（§26-1）。frontend/AGENTS.md:25 の「コミット前に自動ブロック」と食い違う。直すなら作業場所の frontend/node_modules の有無を先に決める設計が要る。PO に報告して扱いを決めてもらう。→ PO「1」（2026-10-25）で段5d として設計した（§27）。
 - tools/claude-channels/intake/CLAUDE.md の LIMITS 未登録（起点から警告あり）。別の道具の文書なので、この段では登録しない。
 - 5c の昇格（broken_link=8・warnings=10・deep=2 が残る）。
 - フックの置き場が共有の設定で、`frontend/.husky/_` に書き換わる間は作業場所によって pre-commit が動かない（§26-7）。直すなら作業場所ごとの設定（worktreeConfig）か husky の prepare の扱いを決める設計が要る。PO に報告して扱いを決めてもらう。
@@ -509,3 +509,89 @@ PO 原文（2026-10-22）「仕様書と設計図はどうなったの？逐一�
 - 5a: PR #4733 マージ（mergeCommit 01e53da6b、2026-10-25 13:22 JST）。T1〜T5 は担当の生出力（/tmp/CC報告ファイル/an-s5/impl/）で全て期待どおり、審査は 777c2f94d・main 取り込み後 680b0fcc7 とも APPROVE。CI の guard-authoring/evaluation は PR が main から遅れていた間 error になり（scripts/run-guard-evaluation.js:25 の `merge-base --is-ancestor base head` が失敗する）、main 取り込み後に pass。
 - 審査で見つかった範囲外の事実（§26-5 に足す）: フックの置き場 `core.hooksPath` は本店の .git/config に1つしかなく（worktreeConfig は無効）、scripts/new-worktree.sh:115 の `git config core.hooksPath frontend/.husky` も共有の設定に書く。審査の途中で一度 `frontend/.husky/_` になっていた（書き換えうる仕組みとして husky の prepare＝frontend/package.json:47 `cd .. && husky frontend/.husky` が在る。いつ何が書いたかは未確認）。`_` の間は、その中身（husky の起動役）が無い作業場所では pre-commit 自体が動かない。2026-10-25 13:2x の確認では `frontend/.husky` に戻っている。
 - 5b: §26-4 のとおり。起点 origin/main 01e53da6b で、新しい find が出すのは9本（AGENTS.md 3本・CLAUDE.md 6本）、90日を超えるのは backend/scripts/CLAUDE.md（146日）・backend/tenant/CLAUDE.md（144日）の2本。カードは card-stage5b.md（card-lint rc=0）。
+
+## 27. 段5d 手元で止まらない検査2つ（2026-10-25・Opus 設計判断。PO 承認「1」2026-10-25＝直し方を別の段で設計する。起点 origin/main 00a8e3c38＝#4741 のマージ）
+
+### 27-1. 現状（実物。生出力 /tmp/CC報告ファイル/an-s5d/、試しは t2/。リポジトリ外）
+
+- frontend/.husky/pre-commit:43 `npx lint-staged` と :48 `node scripts/check-dark-parity.js` は、終わりの値（rc）を見ていない。フックは `set -e` なし（§26-1）で、最後の if（:74-77）の値で終わる。frontend/AGENTS.md:25「`lint-staged` により **コミット前に自動ブロック**（`--max-warnings=0`）。」と食い違う。
+- 試し（41ed133be の使い捨ての作業場所で `npx lint-staged` を直接実行。t2/trial.sh）:
+  - B＝本店の frontend/node_modules を symlink した作業場所: (i) 違反なし rc=0、(ii) tsx に日本語の文字列 → `local/no-japanese-literal`・「ESLint found too many warnings (maximum: 0).」rc=1、(iii) index.css の :root だけに変数を足す → dark-parity FAILED rc=1。
+  - A＝frontend/node_modules が無い作業場所: (i)・(ii) とも「✖ Task failed to spawn: eslint --max-warnings=0 / ENOENT」rc=1（違反を見つけたのではなく、eslint を起動できない）。(iii) rc=1。
+  - dark-parity を直接: 変更なし rc=0、(iii) rc=1。使うのは node の標準部品だけ（check-dark-parity.js:13-15）なので、node_modules が無くても正しく動く。
+  - `npx lint-staged` は node_modules が無くてもネットから取って動く（17.6.0）。`npx eslint` は v10.13.0、stylelint は 17.16.0 を取ってくる（package.json は eslint ^9.39.4・stylelint ^16.26.1・lint-staged ^17.0.5。本店の node_modules は 9.39.4・16.26.1・17.0.5）。
+- 作業場所 49 件のうち frontend/node_modules を持つのは 3 件（実体 2・symlink 1）、46 件は持たない（5-count.txt）。scripts/new-worktree.sh は node_modules を扱わない（:113-115 はフックの置き場の設定だけ）。
+- つまり今は、46 件の作業場所で frontend の commit のたびに lint-staged が rc=1 になっているが、rc を見ないので誰も気づかない。本当の関所は CI の必須チェック「Lint & Dark Mode Check (ADR-067)」（.github/workflows/e2e.yml:121-122。:57 の lint-run が `npm ci` → `npm run check:all`。check:all は package.json:46 で eslint・dark-parity・css 系・stylelint を含む）。
+- 範囲の外で見つけたこと（記録だけ。直さない）: pre-commit:56 のコメント「ruff 未インストールの場合は警告のみ」に対し、:61-67 は ruff が無いと exit 1、:62 は `--exit-zero` で違反があっても止まらない。:76 lint_tenant_schema.py の rc はフック全体の rc になる（最後の if のため）。
+
+### 27-2. 代替案と選んだ理由
+
+| 案 | 中身 | 判断 |
+|---|---|---|
+| A | :43・:48 に `\|\| exit 1` を足すだけ | 退ける。46 件の作業場所で frontend の commit が「eslint を起動できない」で全部止まる（違反が無くても） |
+| B | new-worktree.sh で本店の node_modules を symlink する | 退ける。本店の部品の版と作業場所の package.json がずれうる・共有の部品を作業場所が書き換えうる。部品の手当ては別の課題 |
+| C | npx に任せる | 退ける。ネットから版の違う道具（eslint 10・stylelint 17）を取ってきて、CI と違う結果になる |
+| **D（採用）** | dark-parity は `\|\| exit 1`。lint-staged は部品（`node_modules/.bin/` の lint-staged・eslint・stylelint）が揃っているときだけ直接呼んで `\|\| exit 1`。揃っていなければ「飛ばした・CI で検査される」と警告を出して先へ進む | 部品がある作業場所では文書どおり止まる。無い作業場所では今と同じく通るが、飛ばしたことが目に見える。ネットから道具を取らない。CI の関所は変えない |
+
+### 27-3. 作り方（2ファイル）
+
+- frontend/.husky/pre-commit:42-49 を次にする（:37-41・:50 以降は変えない。`set -e` は入れない）。
+
+```sh
+# lint-staged で変更ファイルのみチェック（ADR-1040 段5d）
+# 部品（frontend/node_modules）が揃っていれば違反で止める。揃っていなければ飛ばして知らせる
+# （npx でネットから版の違う道具を取らない。CI の必須チェック「Lint & Dark Mode Check (ADR-067)」で検査される）
+if [ -x node_modules/.bin/lint-staged ] && [ -x node_modules/.bin/eslint ] && [ -x node_modules/.bin/stylelint ]; then
+  node_modules/.bin/lint-staged || exit 1
+else
+  echo "⚠️  frontend/node_modules が無いため、書き方の検査（lint-staged）を飛ばしました。CI の Lint & Dark Mode Check で検査されます"
+fi
+
+# index.css が変更された場合はパリティチェック
+if git diff --cached --name-only | grep -q "frontend/src/index.css"; then
+  echo "📋 index.css 変更検出 → ダークモード変数パリティチェック実行"
+  node scripts/check-dark-parity.js || exit 1
+fi
+```
+
+- cwd は :38 で frontend なので、`node_modules/.bin/` は frontend/node_modules/.bin を指す。symlink の node_modules でも `-x` は先をたどる。
+- 部品があるとき、index.css の変更では dark-parity が lint-staged（package.json:66-68）と :48 の2回動く（今と同じ）。
+- frontend/AGENTS.md:25 を次の1行にする（行数は 77 のまま。上限 90）:
+  `` `lint-staged` により **コミット前に自動ブロック**（`--max-warnings=0`）。frontend/node_modules が無い作業場所では手元の検査を飛ばして警告だけ出し、CI の必須チェック「Lint & Dark Mode Check (ADR-067)」で検査される。``
+- 危険パスの判定: frontend/.husky/pre-commit・frontend/AGENTS.md は DANGEROUS_PATTERNS に当たらない（§26-1 と同じ）。workflow-lint.yml・Ruleset・必須チェックは触らない。
+
+### 27-4. 受け入れ基準
+
+試しは使い捨ての作業場所（`~/worktrees/salesanchor/` の下に detached で作る。フックの :14-25 が作業場所の外を止めるため）で、フック全体 `sh frontend/.husky/pre-commit; echo rc=$?` を変更前（origin/main のフック）と変更後（この便のフックを写したもの）で比べる。
+
+| 基準 | 検証方法 |
+|---|---|
+| T1 部品なし・違反なしは通る | A で tsx に `// probe` を足して add。変更前 rc=0・変更後 rc=0、変更後は「⚠️ … 飛ばしました」が出て「Task failed to spawn」が出ない |
+| T2 部品なしでも暗い画面の色は止まる | A で index.css の :root だけに変数を足して add。変更前 rc=0・変更後 rc=1（dark-parity FAILED） |
+| T3 部品ありで書き方の違反は止まる | B で tsx に日本語の文字列を足して add。変更前 rc=0・変更後 rc=1（`local/no-japanese-literal`） |
+| T4 部品ありで違反なしは通る | B で T1 と同じ。変更前・変更後とも rc=0 |
+| T5 部品ありで暗い画面の色も止まる | B で T2 と同じ。変更後 rc=1 |
+| T6 止まったあとも記録しようとした変更は消えない | T3・T5 の後に `git diff --cached --name-only` で足したファイルが残っている |
+| T7 ネットから道具を取らない | 変更後の T1〜T5 の出力に npx の取得（`npm warn exec`・`Need to install`）が出ない |
+| T8 文法と行数 | `sh -n frontend/.husky/pre-commit` rc=0。`node frontend/scripts/check-claude-size.js` rc=0（frontend/AGENTS.md 77行） |
+| T9 CI | この便の PR の CI が緑（Lint & Dark Mode Check は frontend の変更で動く） |
+
+- 戻し方: PR revert（2ファイル）。
+- 測り方（反映後）: 部品のある作業場所で frontend の違反を入れた commit が手元で止まること＝T3 が本番の作業場所でも同じになる。46 件の作業場所では警告の行が出るだけで、通り方は今と同じ。
+
+### 27-5. 外部事例
+
+- 使わない。理由: 判断の根拠はこのリポジトリのフック・CI・作業場所の実測（§27-1）で足り、他社の事例は部品の置き方が違うため当てはまらない。lint-staged が失敗で 1 を返し変更を元に戻す動きは、実測（B-ii の「Reverting to original state because of errors」rc=1）で確かめた。
+
+### 27-6. 残すもの
+
+- 作業場所に frontend の部品を入れるかどうか（入れれば 46 件でも手元で止まる）。版・容量・共有の扱いが要る別の課題。
+- §27-1 の ruff・:76 の食い違い。
+- §26-5 のフックの置き場が共有の設定である件（変わらず PO に扱いを聞く）。
+
+### 27-7. 審査（Architect、同じ AI による自己審査）
+
+- 判定: **APPROVE**（実装カード card-stage5d.md へ進める）。
+- 根拠: 変えるのは2ファイルで、行番号と動きを §27-1 の実測で確かめた。部品の有無で分けるので、今通っている 46 件の作業場所の commit を新しく止めない（T1）。止まるのは文書が約束している場合だけ（T2・T3・T5）。CI の関所・Ruleset・危険パスに当たらない。T1〜T8 は変更前と変更後の rc の差で判定でき、推測を含まない。
+- 未確認（カードの T で確かめる）: フック全体を通したときの rc（試しは `npx lint-staged` 単体）、stylelint 単体の結果、オフラインでの動き（変更後は npx を使わないので関係しない）。
+- 未解決: なし。
