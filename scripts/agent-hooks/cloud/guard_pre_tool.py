@@ -191,69 +191,36 @@ _API_FIELD_SHORT = set("fF")
 _API_FIELD_LONG = {"field", "raw-field"}
 
 
-_SEPARATORS = ("&&", "||", ";", "|", "&", "|&")
+_PLAIN_CHARS = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 \t_-./:=,@+%^")
 
 
-def _check_symbols(cmd: str):
-    """引用符・逃がし・コメントの外に、区切り(&& || ; | & |&)以外の記号の並び（;( ( ) << <<< < > >& など）があれば ValueError。
-    記号 ();<>|& の連続を1つの並びとして取り出し、区切りと完全一致しなければ止める。"""
-    i, n = 0, len(cmd)
+def _check_simple(cmd: str):
+    """gh だけの1行の命令かを字句で確かめる。引用符の外は 英数字・空白(スペース/タブ)・_-./:=,@+%^ と引用符の開閉だけ。
+    単引用符の中は何でもよい。二重引用符の中は $・バッククォート・\\ があれば止める。それ以外は ValueError（止める側）。"""
     q = None
-    at_start = True
-    run = ""
-    while i < n:
-        c = cmd[i]
+    for c in cmd:
         if q == "'":
             if c == "'":
                 q = None
         elif q == '"':
-            if c == "\\":
-                i += 1
-            elif c == '"':
+            if c == '"':
                 q = None
-        else:
-            if c in "();<>|&":
-                run += c
-                at_start = True
-                i += 1
-                continue
-            if run:
-                if run not in _SEPARATORS:
-                    raise ValueError("区切り以外の記号があり、正しく読めません")
-                run = ""
-            if c == "\\":
-                i += 1
-                at_start = False
-            elif c in "'\"":
-                q = c
-                at_start = False
-            elif c == "#" and at_start:
-                j = cmd.find("\n", i)
-                if j < 0:
-                    break
-                i = j
-                continue
-            else:
-                at_start = c in " \t\n"
-        i += 1
-    if run and run not in _SEPARATORS:
-        raise ValueError("区切り以外の記号があり、正しく読めません")
+            elif c in "$`\\":
+                raise ValueError("二重引用符の中に $ ` \\ があり、正しく読めません")
+        elif c in "'\"":
+            q = c
+        elif not (c.isascii() and c in _PLAIN_CHARS):
+            raise ValueError("つなぎ・変数・置き換えなどの記号があり、正しく読めません")
+    if q is not None:
+        raise ValueError("引用符が閉じていません")
 
 
 def _split_commands(cmd: str):
-    """命令文を shlex で語に分け、&& || ; | & で区切った命令ごとの語の列を返す。閉じていない引用符は ValueError。"""
-    _check_symbols(cmd)
-    lex = shlex.shlex(cmd, posix=True, punctuation_chars=True)
+    """gh だけの1行の命令を shlex で語に分けて返す。それ以外は ValueError。"""
+    _check_simple(cmd)
+    lex = shlex.shlex(cmd, posix=True)
     lex.whitespace_split = True
-    segs, cur = [], []
-    for t in lex:
-        if t and set(t) <= set("();<>|&") and t in ("&&", "||", ";", "|", "&", "|&"):
-            segs.append(cur)
-            cur = []
-        else:
-            cur.append(t)
-    segs.append(cur)
-    return segs
+    return list(lex)
 
 
 def _find_seq(words, seq):
@@ -282,89 +249,38 @@ def _flag_value(words, i, short_vals, long_vals):
     return None
 
 
-def _midword_hash(text: str) -> bool:
-    """引用符の外で、語の途中にある # があれば True。shlex は語の途中の # 以降を捨てる（bash は語の頭だけ）ため、その命令は読まずに止める。
-    語の頭かどうかは直前の文字ではなく「区切り直後か」の旗で決める（\\ で逃がした文字や閉じ引用符の直後は語の途中）。"""
-    i, n = 0, len(text)
-    q = None  # 今いる引用符（' か "）
-    at_word_start = True
-    while i < n:
-        c = text[i]
-        if q == "'":
-            if c == "'":
-                q = None
-                at_word_start = False
-        elif q == '"':
-            if c == "\\":
-                i += 1
-            elif c == '"':
-                q = None
-                at_word_start = False
-        elif c == "\\":
-            # 逃がした文字は語の一部。行の継ぎ目（\\ の次が改行）の直後の # も語の途中として止める
-            i += 1
-            at_word_start = False
-        elif c == "$" and text[i + 1:i + 2] == "'":
-            return True  # ANSI-C の引用符は shlex と読み方が違うため、読まずに止める
-        elif c in "'\"":
-            q = c
-            at_word_start = False
-        elif c == "#":
-            if not at_word_start:
-                return True
-            j = text.find("\n", i)  # 語の頭の # はコメント。行末まで読み飛ばす
-            if j < 0:
-                return False
-            i = j - 1
-        else:
-            at_word_start = c in " \t\n;&|()<>"
-        i += 1
-    return False
-
-
 def _bash_head(cmd: str):
     """Bash の gh pr create / gh api の作成元を、語に分けた引数から読む。無ければ None。
-    読めない（引用符が閉じていない・語の途中に #・gh の位置が語から取れない）ときは ValueError（止める側）。"""
+    gh だけの1行の命令（つなぎ・変数・置き換え・コメント無し）以外は読まずに ValueError（止める側）。"""
     if "\r" in cmd:
         raise ValueError("命令文に復帰文字(\\r)があり、正しく読めません")
-    if _midword_hash(cmd):
-        raise ValueError("語の途中に # があり、正しく読めません")
     try:
-        segs = _split_commands(cmd)
+        words = _split_commands(cmd)
     except ValueError as e:
-        raise ValueError("命令文を語に分けられません: " + str(e))
-    found, last, n_found = False, None, 0
-    for words in segs:
-        i = _find_seq(words, ["gh", "pr", "create"])
-        if i is not None:
-            found = True
-            n_found += 1
-            while i < len(words):
-                r = _flag_value(words, i, _PR_VAL_SHORT, _PR_VAL_LONG)
-                if r is None:
-                    i += 1
-                    continue
-                name, val, i = r
-                if name in ("-H", "--head"):
-                    last = val
-            continue
-        i = _find_seq(words, ["gh", "api"])
-        if i is not None:
-            found = True
-            n_found += 1
-            while i < len(words):
-                r = _flag_value(words, i, _API_VAL_SHORT, _API_VAL_LONG)
-                if r is None:
-                    i += 1
-                    continue
-                name, val, i = r
-                if (name[1:] in _API_FIELD_SHORT or name[2:] in _API_FIELD_LONG) and val.startswith("head="):
-                    last = val[len("head="):]  # gh と同じく最後の指定を使う
-    if not found:
-        raise ValueError("gh pr create / gh api の位置を命令文から読めません")
-    n_text = len(re.findall(r"\bgh\s+pr\s+create\b", cmd)) + len(re.findall(r"\bgh\s+api\b", cmd))
-    if n_text != 1 or n_found != 1:
-        raise ValueError("PR 作成の命令が1つに定まらず、正しく読めません")
+        raise ValueError("PR を作る命令は、gh だけの1行で書いてください（つなぎ・変数・置き換えがあると作成元を正しく読めないため止めます）: " + str(e))
+    last = None
+    if words[:3] == ["gh", "pr", "create"]:
+        i = 3
+        while i < len(words):
+            r = _flag_value(words, i, _PR_VAL_SHORT, _PR_VAL_LONG)
+            if r is None:
+                i += 1
+                continue
+            name, val, i = r
+            if name in ("-H", "--head"):
+                last = val
+    elif words[:2] == ["gh", "api"]:
+        i = 2
+        while i < len(words):
+            r = _flag_value(words, i, _API_VAL_SHORT, _API_VAL_LONG)
+            if r is None:
+                i += 1
+                continue
+            name, val, i = r
+            if (name[1:] in _API_FIELD_SHORT or name[2:] in _API_FIELD_LONG) and val.startswith("head="):
+                last = val[len("head="):]  # gh と同じく最後の指定を使う
+    else:
+        raise ValueError("PR を作る命令は、gh だけの1行で書いてください（先頭が gh pr create / gh api ではないため止めます）")
     return last
 
 

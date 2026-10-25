@@ -146,19 +146,19 @@ add("H5", "引用符が閉じていない(shlex の道)", bash("gh pr create --h
 # 追補 R1: 語の途中の # は shlex が以降を捨てるため止める（H7〜H10）
 add("H7", "語の途中の # (--title fix#12)", bash('gh pr create --title fix#12 --head codebr --body x', REMOTE), 2)
 add("H8", "gh api 語の途中の # (title=a#b)", bash('gh api repos/o/r/pulls -f title=a#b -f head=codebr', REMOTE), 2)
-add("H9", "語の頭の # はコメント(後ろのコード枝は読まない)", bash(f'gh pr create --head docsbr --body "{GOOD}" # --head codebr', REMOTE), 0)
+add("H9", "引用符の外のコメントは読めないので止める(R5)", bash(f'gh pr create --head docsbr --body "{GOOD}" # --head codebr', REMOTE), 2)
 add("H10", "引用符の中の # は対象外", bash(f"gh pr create --head docsbr --body '{GOOD} see #12' ", REMOTE), 0)
 # 追補 R2: コメント内の引用符・行の継ぎ目・ANSI-C 引用符（H11〜H15）。本文は GOOD で、本文欠落では止まらない形にしてある
 add("H11", "コメント内の ' の後ろの行に fix#12", bash(f"# don't forget\ngh pr create --title fix#12 --head codebr --body \"{GOOD}\"", REMOTE), 2)
 add("H12", "git status # it's fine の後ろの行に fix#12", bash(f"git status # it's fine\ngh pr create --title fix#12 --head codebr --body \"{GOOD}\"", REMOTE), 2)
 add("H13", "行の継ぎ目の直後の #", bash(f"gh pr create --head docsbr --body \"{GOOD}\"\\\n# --head codebr", REMOTE), 2)
 add("H14", "$' (ANSI-C 引用符)", bash(f"gh pr create --title $'a' --head docsbr --body \"{GOOD}\"", REMOTE), 2)
-add("H15", "コメント内の ' は無視して正しく読む", bash(f"# it's a note\ngh pr create --head docsbr --body \"{GOOD}\"", REMOTE), 0)
+add("H15", "先頭のコメント行は読めないので止める(R5)", bash(f"# it's a note\ngh pr create --head docsbr --body \"{GOOD}\"", REMOTE), 2)
 # 追補 R3: 逃がした文字の直後の # は語の途中・\r は区切りにしない（H16〜H19）
 add("H16", "Fix\\ #12 (逃がした空白の直後の #)", bash(f"gh pr create --title Fix\\ #12 --head codebr --body \"{GOOD}\"", REMOTE), 2)
 add("H17", "x\\;#12 (逃がした ; の直後の #)", bash(f"gh pr create --title x\\;#12 --head codebr --body \"{GOOD}\"", REMOTE), 2)
 add("H18", "命令文に \\r を含む", bash(f"gh pr create --title a\r#12 --head codebr --body \"{GOOD}\"", REMOTE), 2)
-add("H19", "区切り直後の # はコメント", bash(f"gh pr create --head docsbr --body \"{GOOD}\"; # --head codebr", REMOTE), 0)
+add("H19", "区切り直後のコメントは読めないので止める(R5)", bash(f"gh pr create --head docsbr --body \"{GOOD}\"; # --head codebr", REMOTE), 2)
 # 追補 R4: 読める形だけ読み、区切り以外の記号・作成の命令が複数に見える形は止める（H20〜H26）
 add("H20", ";( の後ろに docs枝", bash(f"gh pr create --head codebr --body \"{GOOD}\";(echo --head docsbr)", REMOTE), 2)
 add("H21", "&&( の後ろに docs枝", bash(f"gh pr create --head codebr --body \"{GOOD}\"&&(echo --head docsbr)", REMOTE), 2)
@@ -167,6 +167,13 @@ add("H23", "echo gh pr create の後ろの bash -c に本物の作成", bash(f"e
 add("H24", "docs枝の作成の後ろの bash -c に本物の作成", bash(f"gh pr create --head docsbr --body \"{GOOD}\" && bash -c 'gh pr create --head codebr --body x'", REMOTE), 2)
 add("H25", "何も足さない普通の形", bash(f"gh pr create --head docsbr --body \"{GOOD}\"", REMOTE), 0)
 add("H26", "引用符の中の記号 (a <<b)", bash(f"gh pr create --head docsbr --title 'a <<b' --body \"{GOOD}\"", REMOTE), 0)
+# 追補 R5: PR 作成は gh だけの1行しか読まない（H27〜H32）
+add("H27", "変数 $G で本物を隠す", bash(f'G=gh; gh pr create --head docsbr --body GOOD; $G pr create --head codebr --body x', REMOTE), 2)
+add("H28", "逃がした \\; で語を作る", bash(f'gh pr create --head docsbr --body GOOD --title \\; --head codebr', REMOTE), 2)
+add("H29", "二重引用符の中の $(…)", bash(f'gh pr create --head docsbr --body GOOD --title "$(echo x)"', REMOTE), 2)
+add("H30", "cd && gh pr create (つなぎ)", bash(f'cd /tmp && gh pr create --head docsbr --body GOOD', REMOTE), 2)
+add("H31", "単引用符の中は何でもよい", bash(f"gh pr create --head docsbr --base main --title 'a; b $c' --body \"{GOOD}\"", REMOTE), 0)
+add("H32", "二重引用符の本文(普通の文字+節の見出し)", bash('gh pr create --head docsbr --body "plain text ### 標準ワークフロー確認"', REMOTE), 0)
 add("K1", ">( の中に危険語", bash(f"cat >({ops[0]} foo)"), 2)
 # 審査指摘の止め漏れ
 add("K1", "単独&の後ろに危険語", bash(f"cat a & {ops[0]} foo"), 2)
