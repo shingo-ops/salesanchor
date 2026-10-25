@@ -15,6 +15,7 @@ import { InventoryView } from "./InventoryView";
 import type { ViewerInventoryResponse, ViewerRow } from "./types";
 
 const jstNow = () => new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 19).replace("T", " ");
+const jstAt = (ms: number) => new Date(ms + 9 * 3600 * 1000).toISOString().slice(0, 19).replace("T", " ");
 const mkRow = (i: number): ViewerRow => ({
   posted_at: jstNow(), mark: `M${i}`, japanese_title: `n${i}`, english_title: `t${String(i).padStart(3, "0")}`, condition: "sealed",
   unit_price: String(100 + i), quantity: "1", note_ja: "", status: "In Stock", release_date: "", series: "S", provider: "P",
@@ -403,5 +404,56 @@ describe("InventoryView", () => {
     } finally {
       delete (window as unknown as { matchMedia?: unknown }).matchMedia;
     }
+  });
+
+  // docs/handoff/viewer-top-compact/design.md 4-1・4-3・⑤A8・A9
+  describe("viewer-top-compact (24h moved into the filter drawer, filter button count)", () => {
+    const freshStaleData: ViewerInventoryResponse = {
+      ...data,
+      rows: [
+        mkRow(1),
+        { ...mkRow(2), posted_at: jstAt(Date.now() - 25 * 3600 * 1000) },
+      ],
+    };
+
+    it("mobile: no viewer-fresh-toggle at the top, and the drawer's fresh check is checked by default", () => {
+      Object.defineProperty(window, "matchMedia", mobileMatchMedia);
+      try {
+        render(<InventoryView data={freshStaleData} />);
+        expect(screen.queryByTestId("viewer-fresh-toggle")).toBeNull();
+        fireEvent.click(screen.getByTestId("viewer-filter-toggle"));
+        const check = screen.getByTestId("viewer-fresh-check") as HTMLInputElement;
+        expect(check).toBeTruthy();
+        expect(check.checked).toBe(true);
+      } finally {
+        delete (window as unknown as { matchMedia?: unknown }).matchMedia;
+      }
+    });
+
+    it("unchecking viewer-fresh-check in the drawer increases the rows passed to the table", () => {
+      Object.defineProperty(window, "matchMedia", mobileMatchMedia);
+      try {
+        render(<InventoryView data={freshStaleData} />);
+        fireEvent.click(screen.getByTestId("viewer-filter-toggle"));
+        expect(captured.props!.data).toHaveLength(1);
+        fireEvent.click(screen.getByTestId("viewer-fresh-check"));
+        expect(captured.props!.data).toHaveLength(2);
+      } finally {
+        delete (window as unknown as { matchMedia?: unknown }).matchMedia;
+      }
+    });
+
+    it("the mobile filter button shows (1) by default and drops the count once everything is cleared", () => {
+      Object.defineProperty(window, "matchMedia", mobileMatchMedia);
+      try {
+        render(<InventoryView data={data} />);
+        expect(screen.getByTestId("viewer-filter-toggle").textContent).toContain("(1)");
+        fireEvent.click(screen.getByTestId("viewer-filter-toggle"));
+        fireEvent.click(screen.getByTestId("viewer-fresh-check"));
+        expect(screen.getByTestId("viewer-filter-toggle").textContent).not.toContain("(1)");
+      } finally {
+        delete (window as unknown as { matchMedia?: unknown }).matchMedia;
+      }
+    });
   });
 });
