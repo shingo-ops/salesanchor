@@ -120,8 +120,8 @@ export default function LoginPage() {
                   {t("login.forgotPassword")}
                 </button>
               </div>
-              <Button variant="primary" size="lg" fullWidth type="submit" disabled={loading}>
-                {loading ? t("login.signingIn") : t("login.signIn")}
+              <Button loading={loading} variant="primary" size="lg" fullWidth type="submit" disabled={loading}>
+                {t("login.signIn")}
               </Button>
             </form>
           </>
@@ -146,8 +146,8 @@ export default function LoginPage() {
                     autoComplete="email"
                   />
                 </div>
-                <Button variant="primary" size="lg" fullWidth type="submit" disabled={loading}>
-                  {loading ? t("login.sendingEmail") : t("login.sendResetEmail")}
+                <Button loading={loading} variant="primary" size="lg" fullWidth type="submit" disabled={loading}>
+                  {t("login.sendResetEmail")}
                 </Button>
               </form>
             )}

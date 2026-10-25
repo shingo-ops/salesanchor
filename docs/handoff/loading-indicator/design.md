@@ -193,6 +193,7 @@ PO の選択: 押すと丸と元の言葉が並ぶ（例: 丸＋「保存」）�
 - 便1（card-8.md）: 金型2つの変更（loadingText 削除・HeaderButton に loading）、loadingText を使う 8 件、loading と三項を併用している 7 件、金型の試験・stories。
 - 便2（card-9）= pages/super-admin 22・pages/integrations 12。
 - 便3（card-10）= pages/admin ほか 34 か所。
+- 便4（card-11）= pages の残りと features ほか 34 か所。
 - 便2〜5: 金型経由の残り（Button・HeaderButton）を 40 件以下ずつ。ディレクトリ順（pages/super-admin → pages/integrations・admin → pages の残り → features・components）。
 - 便6: 生 `<button>` 9 件を金型 Button へ。
 - 便7: 再発防止の検査（金型ボタンの children に読み込み中系キーの三項を書くと UI ガバナンス検査が赤）と、使われなくなった辞書キーの整理。
