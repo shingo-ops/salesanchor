@@ -18,8 +18,8 @@ import { execSync } from 'child_process';
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
 
-// 各 CLAUDE.md の上限行数（超過すると CI / pre-commit がブロック）
-// 新規サブディレクトリ CLAUDE.md を追加した場合はここに登録すること（ADR-076）
+// 各 AGENTS.md・CLAUDE.md の上限行数（超過すると CI / pre-commit がブロック）
+// 新規サブディレクトリ AGENTS.md・CLAUDE.md を追加した場合はここに登録すること（ADR-076・ADR-1040）
 // 例: { path: 'backend/db/CLAUDE.md', limit: 70 },
 const LIMITS = [
   { path: 'AGENTS.md', limit: 80 },
@@ -33,16 +33,17 @@ const LIMITS = [
   { path: 'backend/tenant/CLAUDE.md', limit: 70 },
 ];
 
-// LIMITS に未登録のサブディレクトリ CLAUDE.md を自動検出して警告（ADR-076）
+// LIMITS に未登録のサブディレクトリ AGENTS.md・CLAUDE.md を自動検出して警告（ADR-076・ADR-1040）
+// node_modules の中（例: パッケージ同梱の AGENTS.md）は数えない
 const registeredPaths = new Set(LIMITS.map(l => l.path));
 try {
   const found = execSync(
-    'find . -name "CLAUDE.md" -not -path "./node_modules/*" -not -path "./.git/*" -not -name "./CLAUDE.md"',
+    'find . \\( -name "CLAUDE.md" -o -name "AGENTS.md" \\) -not -path "*/node_modules/*" -not -path "./.git/*"',
     { encoding: 'utf8', cwd: repoRoot }
   ).trim().split('\n').filter(Boolean).map(p => p.replace(/^\.\//, ''));
   for (const p of found) {
-    if (p !== 'CLAUDE.md' && !registeredPaths.has(p)) {
-      console.warn(`⚠️  ${p}: LIMITS 未登録 — check-claude-size.js の LIMITS 配列に追加してください（ADR-076）`);
+    if (p !== 'CLAUDE.md' && p !== 'AGENTS.md' && !registeredPaths.has(p)) {
+      console.warn(`⚠️  ${p}: LIMITS 未登録 — check-claude-size.js の LIMITS 配列に追加してください（ADR-076・ADR-1040）`);
     }
   }
 } catch { /* find が空結果の場合は無視 */ }
