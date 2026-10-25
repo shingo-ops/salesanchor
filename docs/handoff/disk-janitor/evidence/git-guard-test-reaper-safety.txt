@@ -1,6 +1,6 @@
 
 === reaper dry-run 出力（round 1） ===
-🔍 worktree を走査（ディレクトリ指定）: /tmp/reaper-test.PCDDcj/worktrees
+🔍 worktree を走査（ディレクトリ指定）: /tmp/reaper-test.UZcBoX/worktrees
 
    対象 worktree 数: 4 件
 
@@ -46,7 +46,7 @@
 ✅ PASS [新規行テーブル内挿入]: 新規行が --- より上に挿入されました
 
 === テスト 9-12 dry-run 出力 ===
-🔍 worktree を走査（ディレクトリ指定）: /tmp/reaper-test.PCDDcj/worktrees
+🔍 worktree を走査（ディレクトリ指定）: /tmp/reaper-test.UZcBoX/worktrees
 
    対象 worktree 数: 15 件
 
@@ -94,7 +94,7 @@
 ✅ PASS [IN_PROGRESS+未マージ保護]: feature/test/in-progress-no-merge は削除対象に含まれていません
 
 === テスト 13-14 dry-run 出力 ===
-🔍 worktree を走査（ディレクトリ指定）: /tmp/reaper-test.PCDDcj/worktrees
+🔍 worktree を走査（ディレクトリ指定）: /tmp/reaper-test.UZcBoX/worktrees
 
    対象 worktree 数: 17 件
 
@@ -142,7 +142,7 @@
 ✅ PASS [.worktree-idなし+未マージ保護]: feature/test/legacy-no-merge-no-id は削除対象に含まれていません
 
 === テスト R9 dry-run 出力 ===
-🔍 worktree を走査（ディレクトリ指定）: /tmp/reaper-test.PCDDcj/worktrees
+🔍 worktree を走査（ディレクトリ指定）: /tmp/reaper-test.UZcBoX/worktrees
 
    対象 worktree 数: 23 件
 
@@ -207,7 +207,7 @@
 ✅ PASS [R9-e 本文取得失敗→R9-aも保護]: feature/test/r9a-draft-ok は削除対象に含まれていません
 
 === テスト R9-g --execute 出力 ===
-🔍 worktree を走査（ディレクトリ指定）: /tmp/reaper-test.PCDDcj/r9g-rooms
+🔍 worktree を走査（ディレクトリ指定）: /tmp/reaper-test.UZcBoX/r9g-rooms
 
    対象 worktree 数: 1 件
 
@@ -224,10 +224,10 @@
 🗑️  削除を実行します...
 
   ▶ release/r9g-exec
-    📝 下書きを控えました: /private/tmp/reaper-test.PCDDcj/r9g-main/.git/reaper-drafts/release-r9g-exec/.scratch/pr-body-2.md
-    📝 下書きを控えました: /private/tmp/reaper-test.PCDDcj/r9g-main/.git/reaper-drafts/release-r9g-exec/pr-body.md
-    ✅ フォルダ削除: /tmp/reaper-test.PCDDcj/r9g-rooms/room/
-Deleted branch release/r9g-exec (was cecedd0).
+    📝 下書きを控えました: /private/tmp/reaper-test.UZcBoX/r9g-main/.git/reaper-drafts/release-r9g-exec/.scratch/pr-body-2.md
+    📝 下書きを控えました: /private/tmp/reaper-test.UZcBoX/r9g-main/.git/reaper-drafts/release-r9g-exec/pr-body.md
+    ✅ フォルダ削除: /tmp/reaper-test.UZcBoX/r9g-rooms/room/
+Deleted branch release/r9g-exec (was 326f9d6).
     ✅ ブランチ削除: release/r9g-exec
     ℹ️  active-work.md DONE 更新不要（既に DONE または行なし）: release/r9g-exec
 
@@ -235,7 +235,7 @@ Deleted branch release/r9g-exec (was cecedd0).
 ✅ PASS [R9-g --execute]: 控え2件ができ、部屋が消えました
 
 === テスト B（REAPER_BASE_BRANCH=staging）出力 ===
-🔍 worktree を走査（ディレクトリ指定）: /tmp/reaper-test.PCDDcj/base-rooms
+🔍 worktree を走査（ディレクトリ指定）: /tmp/reaper-test.UZcBoX/base-rooms
 
    対象 worktree 数: 5 件
 
@@ -275,10 +275,10 @@ Deleted branch release/r9g-exec (was cecedd0).
 ✅ PASS [G2: 入れ子のリポジトリがある部屋は残す]: feature/test/g2-nested は削除対象に含まれていません
 ✅ PASS [G2-理由]: 理由「入れ子のリポジトリがある（残す）」が出ています
 ✅ PASS [G3]: git-safe.sh を読めないとき、終了コード 1・削除対象なしで終わりました
+✅ PASS [G3b]: git-safe.sh が空のとき、終了コード 1・削除対象なしで終わりました
 
 === 合計 ===
-PASS: 41
+PASS: 42
 FAIL: 0
 
 ✅ 全テスト PASS
-bash scripts/tests/test-reaper-safety.sh  39.40s user 39.60s system 18% cpu 7:13.54 total

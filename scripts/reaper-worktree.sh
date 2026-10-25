@@ -32,7 +32,7 @@
 
 # ── 作業場所に向ける git の守り（ADR-1039）。読めなければ何も消さずに終わる ──────
 # shellcheck source=scripts/git-safe.sh
-if ! source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/git-safe.sh" 2>/dev/null || [ "${#GIT_SAFE_ARGS[@]}" -eq 0 ]; then
+if ! source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/git-safe.sh" 2>/dev/null || [ -z "${GIT_SAFE_ARGS+x}" ]; then
   echo "[reaper] git の守りを読めない（scripts/git-safe.sh）。何も消さずに終了します。" >&2
   exit 1
 fi

@@ -27,6 +27,7 @@
 #   [G1] 部屋の core.fsmonitor に仕込んだ印の台本が reaper の dry-run で動かない（対照: 上書きなしの git status では動く）
 #   [G2] 入れ子のリポジトリ（mode 160000）がある部屋は残し理由を出す（対照: 入れ子なしは削除候補）
 #   [G3] git-safe.sh を読めないとき終了コード 1・何も消さない
+#   [G3b] git-safe.sh が空のときも終了コード 1・何も消さない
 #
 # 実行方法: bash scripts/tests/test-reaper-safety.sh
 # 終了コード: 0=全PASS / 1=FAIL あり
@@ -828,6 +829,25 @@ if [ "${G3_RC}" -eq 1 ] && echo "${G3_OUT}" | grep -q "git の守りを読めな
 else
   echo "❌ FAIL [G3]: 終了コード=${G3_RC}"
   echo "${G3_OUT}" | sed 's/^/    /'
+  FAIL=$(( FAIL + 1 ))
+fi
+
+# G3b: git-safe.sh が空（配列を作らない）の写しで動かす → 終了コード 1・何も消さない
+G3B_COPY="${TMPDIR_TEST}/g3b-copy"
+mkdir -p "${G3B_COPY}"
+cp "${REAPER}" "${G3B_COPY}/reaper-worktree.sh"
+: > "${G3B_COPY}/git-safe.sh"
+G3B_RC=0
+G3B_OUT=$(REAPER_WORKTREES_DIR="${FAKE_WORKTREES}" \
+  REAPER_ACTIVE_WORK_FILE="${FAKE_ACTIVE_WORK}" \
+  REAPER_REPO_NAME="test/test" REAPER_SKIP_FETCH=1 \
+  bash "${G3B_COPY}/reaper-worktree.sh" 2>&1) || G3B_RC=$?
+if [ "${G3B_RC}" -eq 1 ] && echo "${G3B_OUT}" | grep -q "git の守りを読めない" && ! echo "${G3B_OUT}" | grep -q "削除対象"; then
+  echo "✅ PASS [G3b]: git-safe.sh が空のとき、終了コード 1・削除対象なしで終わりました"
+  PASS=$(( PASS + 1 ))
+else
+  echo "❌ FAIL [G3b]: 終了コード=${G3B_RC}"
+  echo "${G3B_OUT}" | sed 's/^/    /'
   FAIL=$(( FAIL + 1 ))
 fi
 

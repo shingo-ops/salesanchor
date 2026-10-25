@@ -355,6 +355,14 @@ cp "${JANITOR}" "${J1_COPY}/disk-janitor.sh"
 J1_RC=0; bash "${J1_COPY}/disk-janitor.sh" >/dev/null 2>&1 || J1_RC=$?
 check "J1: git-safe.sh が無い写しは終了コード 1 で終わる" test "${J1_RC}" -eq 1
 check "J1: git-safe.sh があれば GIT_SAFE_ARGS が定義される" bash -c 'source "$1"; [ "${#GIT_SAFE_ARGS[@]}" -gt 0 ]' _ "${JANITOR}"
+# J2: git-safe.sh が空のとき、--execute でも終了コード 1・何も消さない（bash 3.2 + set -u で配列判定が止まらない問題の対策）
+J2_COPY="${T}/j2-copy"; mkdir -p "${J2_COPY}"
+cp "${JANITOR}" "${J2_COPY}/disk-janitor.sh"; : > "${J2_COPY}/git-safe.sh"
+mkdir -p "${DJ_ROOT_SALESANCHOR}/j2probe/.npm-cache"
+J2_RC=0; J2_OUT="$(bash "${J2_COPY}/disk-janitor.sh" --execute 2>&1)" || J2_RC=$?
+check "J2: git-safe.sh が空なら終了コード 1" test "${J2_RC}" -eq 1
+check "J2: 空のとき何も消さない（置いた .npm-cache が残る）" test -d "${DJ_ROOT_SALESANCHOR}/j2probe/.npm-cache"
+check "J2: 空のとき削除の出力が無い" bash -c '! printf "%s" "$1" | grep -q "削除"' _ "${J2_OUT}"
 
 echo ""
 echo "=== 合計 ==="

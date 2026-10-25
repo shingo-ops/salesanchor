@@ -21,7 +21,7 @@ set -u
 
 # ── 作業場所に向ける git の守り（ADR-1039）。読めなければ何も消さずに終わる ──────
 # shellcheck source=scripts/git-safe.sh
-if ! source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/git-safe.sh" 2>/dev/null || [ "${#GIT_SAFE_ARGS[@]}" -eq 0 ]; then
+if ! source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/git-safe.sh" 2>/dev/null || [ -z "${GIT_SAFE_ARGS+x}" ]; then
   echo "[disk-janitor] git の守りを読めない（scripts/git-safe.sh）。何も消さずに終了します。" >&2
   # shellcheck disable=SC2317  # source されたときは return、直接実行なら exit
   return 1 2>/dev/null || exit 1
