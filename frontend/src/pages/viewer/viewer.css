@@ -47,6 +47,36 @@
 .viewer-toolbar > .viewer-toolbar__fixed {
   flex: 0 0 auto;
 }
+/* 枠なしボタン（シリーズ・並び替え）の中の文字（便5 design.md 4-4）。長いシリーズ名を … で切る */
+.viewer-toolbar__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* 下向きの山形（ChevronRight を回転。アイコンを足さない。便5 design.md 4-4） */
+.viewer-toolbar__caret {
+  transform: rotate(90deg);
+  flex-shrink: 0;
+}
+/* シリーズ・並び替えのパネルの行一覧（便5 design.md 4-4） */
+.viewer-choice-list {
+  display: flex;
+  flex-direction: column;
+}
+.viewer-choice-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: var(--size-icon-btn-lg);
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--font-sm);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+.viewer-choice-row:hover {
+  background: var(--bg-hover);
+}
 .viewer-filter-body {
   display: flex;
   flex-direction: column;

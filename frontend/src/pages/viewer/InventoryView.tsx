@@ -8,9 +8,11 @@ import { DataTable } from "../../components/DataTable";
 import { Drawer } from "../../components/Drawer";
 import { HoverCardHost } from "../../components/HoverCard";
 import { MultiSelect } from "../../components/MultiSelect";
+import { RadioControl } from "../../components/RadioControl";
 import { SelectControl } from "../../components/Select";
 import { Tabs } from "../../components/Tabs";
 import { TextFieldControl } from "../../components/TextField";
+import { ChevronRight } from "../../constants/icons-base";
 import { useIsMobile } from "../../hooks/useIsMobile";
 import { saveLocaleCookie } from "./i18n";
 import type { ViewerLang } from "./i18n";
@@ -39,6 +41,9 @@ interface InventoryViewProps {
 
 /** 絞り込みドロワーの画面（design.md 4-4）。root=一覧／provider・condition=選択画面 */
 type FilterView = "root" | "provider" | "condition";
+
+/** シリーズ・並び替えのパネル（便5 design.md 4-2）。none=どちらも開いていない */
+type ChoicePanel = "none" | "series" | "sort";
 
 /** ISO8601（UTC）→ 日本時間の HH:MM */
 function formatUpdatedAt(iso: string): string {
@@ -78,6 +83,10 @@ export function InventoryView({ data }: InventoryViewProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [filterView, setFilterView] = useState<FilterView>("root");
   const [optionQuery, setOptionQuery] = useState("");
+  // シリーズ・並び替えのパネル（便5 design.md 4-2）。絞り込みドロワーの状態機械（drawerOpen・filterView）とは別物
+  const [choicePanel, setChoicePanel] = useState<ChoicePanel>("none");
+  const openChoicePanel = (p: "series" | "sort") => setChoicePanel(p);
+  const closeChoicePanel = () => setChoicePanel("none");
 
   const allRows = useMemo(() => withIndex(data.rows), [data.rows]);
   const tabs = useMemo(() => seriesTabs(data.rows), [data.rows]);
@@ -329,6 +338,24 @@ export function InventoryView({ data }: InventoryViewProps) {
     </Button>
   );
   const sortMenuValue = `${sortKey}:${sortDir}`;
+  // 並び替えの3択（並び替えプルダウンとパネルの両方で使う。design.md 4-1・4-2）
+  const sortOptions = [
+    { value: "unit_price:asc", label: t("viewer.sort.priceAsc") },
+    { value: "quantity:desc", label: t("viewer.sort.stockDesc") },
+    { value: "offered_at:desc", label: t("viewer.sort.postedDesc") },
+  ];
+  const isCustomSort = (SORT_MENU_VALUES as readonly string[]).includes(sortMenuValue);
+  const applySortValue = (value: string) => {
+    const [k, d] = value.split(":");
+    if (!k) {
+      setSortKey(DEFAULT_SORT_KEY);
+      setSortDir(DEFAULT_SORT_DIR);
+    } else {
+      setSortKey(k);
+      setSortDir(d === "asc" ? "asc" : "desc");
+    }
+    setPage(1);
+  };
   const searchField = (
     <TextFieldControl
       type="search"
@@ -370,25 +397,114 @@ export function InventoryView({ data }: InventoryViewProps) {
       aria-label={t("viewer.sort.placeholder")}
       placeholder={t("viewer.sort.placeholder")}
       data-testid="viewer-sort-menu"
-      value={(SORT_MENU_VALUES as readonly string[]).includes(sortMenuValue) ? sortMenuValue : ""}
-      onChange={(e) => {
-        const [k, d] = e.target.value.split(":");
-        if (!k) {
-          setSortKey(DEFAULT_SORT_KEY);
-          setSortDir(DEFAULT_SORT_DIR);
-        } else {
-          setSortKey(k);
-          setSortDir(d === "asc" ? "asc" : "desc");
-        }
-        setPage(1);
-      }}
-      options={[
-        { value: "unit_price:asc", label: t("viewer.sort.priceAsc") },
-        { value: "quantity:desc", label: t("viewer.sort.stockDesc") },
-        { value: "offered_at:desc", label: t("viewer.sort.postedDesc") },
-      ]}
+      value={isCustomSort ? sortMenuValue : ""}
+      onChange={(e) => applySortValue(e.target.value)}
+      options={sortOptions}
     />
   );
+  // いま選ばれているシリーズ・並び替えの名前（ボタンの文字。design.md 4-1）。件数は付けない
+  const currentSeriesLabel = tab === TAB_ALL ? t("viewer.tabAll") : tab;
+  const currentSortLabel = isCustomSort
+    ? (sortOptions.find((o) => o.value === sortMenuValue)?.label ?? t("viewer.sort.placeholder"))
+    : t("viewer.sort.placeholder");
+  // スマホの「シリーズ」ボタン（design.md 4-1）。PC の sortMenu（<select>）とは別物
+  const seriesTrigger = (
+    <Button
+      variant="ghost"
+      size="sm"
+      type="button"
+      layoutClassName="viewer-toolbar__series"
+      data-testid="viewer-tab-select"
+      aria-label={`${t("viewer.tabSelect")}: ${currentSeriesLabel}`}
+      onClick={() => openChoicePanel("series")}
+    >
+      <span className="viewer-toolbar__label">{currentSeriesLabel}</span>
+      <ChevronRight className="viewer-toolbar__caret" aria-hidden />
+    </Button>
+  );
+  // スマホの「並び替え」ボタン（design.md 4-1）。sortMenu（<select>）は PC 専用のまま残す
+  const sortTrigger = (
+    <Button
+      variant="ghost"
+      size="sm"
+      type="button"
+      layoutClassName="viewer-toolbar__fixed"
+      data-testid="viewer-sort-menu"
+      aria-label={`${t("viewer.sort.placeholder")}: ${currentSortLabel}`}
+      onClick={() => openChoicePanel("sort")}
+    >
+      <span className="viewer-toolbar__label">{currentSortLabel}</span>
+      <ChevronRight className="viewer-toolbar__caret" aria-hidden />
+    </Button>
+  );
+  // パネルの行の共通の描き方（design.md 4-2）。選ぶと即反映して閉じる
+  const choiceRow = (opts: { name: string; value: string; checked: boolean; testId: string; label: string; pick: () => void }) => (
+    <label className="viewer-choice-row" key={opts.value}>
+      <RadioControl
+        name={opts.name}
+        value={opts.value}
+        checked={opts.checked}
+        data-testid={opts.testId}
+        // ネイティブ radio の change は「値が変わったとき」だけ起きる。すでに選ばれている行を
+        // 押しても閉じるよう、onClick でも同じ処理を呼ぶ（審査 R1。pick は同じ値の setState なので二重でも無害）
+        onChange={() => {
+          opts.pick();
+          closeChoicePanel();
+        }}
+        onClick={() => {
+          opts.pick();
+          closeChoicePanel();
+        }}
+      />
+      <span className="viewer-choice-row__label">{opts.label}</span>
+    </label>
+  );
+  // シリーズのパネルの行（design.md 4-2）: 先頭「すべて (総件数)」＋ seriesTabs() の各件
+  const seriesChoiceRows = [
+    choiceRow({
+      name: "viewer-series-choice",
+      value: TAB_ALL,
+      checked: tab === TAB_ALL,
+      testId: `viewer-series-option-${TAB_ALL}`,
+      label: `${t("viewer.tabAll")} (${data.rows.length})`,
+      pick: () => reset(setTab)(TAB_ALL),
+    }),
+    ...tabs.map((s) =>
+      choiceRow({
+        name: "viewer-series-choice",
+        value: s.key,
+        checked: tab === s.key,
+        testId: `viewer-series-option-${s.key}`,
+        label: `${s.key} (${s.count})`,
+        pick: () => reset(setTab)(s.key),
+      }),
+    ),
+  ];
+  // 並び替えのパネルの行（design.md 4-2）: 先頭「既定」＋ SORT_MENU_VALUES の3択（必須4行）
+  const sortChoiceRows = [
+    choiceRow({
+      name: "viewer-sort-choice",
+      value: "default",
+      checked: !isCustomSort,
+      testId: "viewer-sort-option-default",
+      label: t("viewer.sort.default"),
+      pick: () => {
+        setSortKey(DEFAULT_SORT_KEY);
+        setSortDir(DEFAULT_SORT_DIR);
+        setPage(1);
+      },
+    }),
+    ...sortOptions.map((o) =>
+      choiceRow({
+        name: "viewer-sort-choice",
+        value: o.value,
+        checked: sortMenuValue === o.value,
+        testId: `viewer-sort-option-${o.value}`,
+        label: o.label,
+        pick: () => applySortValue(o.value),
+      }),
+    ),
+  ];
   // リセット: 検索語・並び（既定）・ページを戻す（アプリのリセットと同じ範囲）
   const resetAll = () => {
     setQuery("");
@@ -427,20 +543,10 @@ export function InventoryView({ data }: InventoryViewProps) {
         {isMobile ? (
           <div className="viewer-toolbar">
             {searchField}
-            <SelectControl
-              className="viewer-toolbar__series"
-              aria-label={t("viewer.tabSelect")}
-              data-testid="viewer-tab-select"
-              value={tab}
-              onChange={(e) => reset(setTab)(e.target.value)}
-              options={[
-                { value: TAB_ALL, label: `${t("viewer.tabAll")} (${data.rows.length})` },
-                ...tabs.map((s) => ({ value: s.key, label: `${s.key} (${s.count})` })),
-              ]}
-            />
-            {sortMenu}
+            {seriesTrigger}
+            {sortTrigger}
             <Button
-              variant="secondary"
+              variant="ghost"
               size="sm"
               type="button"
               layoutClassName="viewer-toolbar__fixed"
@@ -621,6 +727,17 @@ export function InventoryView({ data }: InventoryViewProps) {
             </div>
           </div>
         )}
+      </Drawer>
+      )}
+      {isMobile && (
+      <Drawer
+        open={choicePanel !== "none"}
+        onClose={closeChoicePanel}
+        title={choicePanel === "sort" ? t("viewer.sort.placeholder") : t("viewer.tabSelect")}
+      >
+        <div className="viewer-choice-list">
+          {choicePanel === "sort" ? sortChoiceRows : seriesChoiceRows}
+        </div>
       </Drawer>
       )}
       <HoverCardHost />
