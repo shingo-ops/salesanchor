@@ -115,3 +115,10 @@
 - 直したこと: `guard_pre_tool.py` の `check_merge`（Bash の道）に、既存3条件の後ろへ「送る道具（gh api・curl・wget・httpie）がある命令で、`/pulls/<n>/merge` への PUT、`mergePullRequest` / `enablePullRequestAutoMerge`（GraphQL）、`repos/…/merges`（枝の直接まとめ）のどれかがあれば止める」条件を足した。
 - 直したこと: 送る道具の無い命令（grep など）と、PUT 指定の無い `…/merge` の読み取り、GraphQL の読取り（query）は止めない。
 - 試験: `scripts/agent-hooks/cloud/test.sh` に M1〜M8 を追加（M1 curl PUT／M2 curl --request=PUT／M3 GraphQL マージ／M4 GraphQL 自動マージ予約／M5 …/merges／M6 curl GET／M7 grep／M8 GraphQL 読取）。M9 は既存ケースの結果が変わらないこと（B8 の時間試験は負荷で変更前から NG）。
+
+## 別カード 指摘4 の対処（PR #<番号>）
+
+- 直したこと: `guard_pre_tool.py` に `has_recursive_rm` を足し、`check_danger` の一覧照合の後ろで呼ぶ。区切り（`&&` `||` `;` `|` `&` 改行）で分けた区間の語から、最後の `/` より後ろが rm の語を探し、その後ろ（`--` より前）に `-` 1つ始まりで r／R を含む語、または `--recursive` があれば止める。`danger_ops.json` と一覧照合は変えていない。
+- 直したこと: 読み取り専用の区間は scan_text で消えるので対象外（grep 内の文字列は通る）。`rm -f` や `rm -- -r`、rmdir は止めない。
+- 試験: `scripts/agent-hooks/cloud/test.sh` に R1〜R12・R14 を追加（R1 -fr／R2 -Rf／R3 -f -r／R4 --recursive／R5 /bin/rm -dfr／R6 env と command の前置き／R7 && の後ろ／R8 -f のみ／R9 `--` の後ろの -r／R10 grep／R11 commit 文／R12 rmdir／R14 nice の前置き）。R13 は既存ケースの結果が変わらないこと（B8 の時間試験は負荷で変更前から NG）。
+- 変更前の見張りに新しい試験を当てた結果: R1・R3〜R7・R14 は通る（NG）、R8〜R12 は期待どおり。R2（-Rf）だけは変更前から止まっていた（一覧照合が小文字にそろえるため）。
