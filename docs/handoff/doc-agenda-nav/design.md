@@ -702,7 +702,8 @@ paths:
 | 7b 後（22:59 JST） | 17.1k | 10.6k | **6.5k** | 2.1k |
 
   ほかの行（~/kb/AGENTS.md 1k・git-workflow.md 247・agents.md 907・CLAUDE.md 198・AGENTS.md 2k）は3回とも同じ。7b の一覧に gas-clasp.md は無い。
-- 【事実】T6 ~/tcg-inventory-parser で appsscript.json を開いた回は、gas-clasp.md が自動で読まれ「- ~/.clasprc.json はホームに1つしかない共有ファイル。」を引用した。開かない回は「無い」。両方 rc=0。
+- 【事実】T6 ~/tcg-inventory-parser で appsscript.json を開いた回（t6-open.txt）は、claude が「appsscript.json を開いたときに自動で読み込まれた gas-clasp.md」と答え、「- ~/.clasprc.json はホームに1つしかない共有ファイル。」を引用した。開かない回（t6-noopen.txt）は「無い」。
+- 【未確認】読み込まれたことの根拠は claude 自身の答えと、開かない回との対比だけで、読み込みの記録（ログ）では確かめていない。T6 の2回の終了コード rc=0 は担当の報告だけで、生出力には残っていない。
 - 判定: **K9 合格**（6.5k ≤ 6.5k。合格ラインちょうど、余裕は 0.0k）。
 - 【事実】K1 はユーザー側 175 行（~/.claude/CLAUDE.md 66・~/kb/AGENTS.md 32・git-workflow.md 24・agents.md 53）＋入口 54 行（AGENTS.md 45・CLAUDE.md 9）＝ 229 行で、200 行以下にまだ 29 行届かない（28-6 の残り。PO に別に相談する）。
 - 【未確認】/context の表示は 0.1k 単位の丸めで、6.5k が丸める前にラインの上か下かは分からない。判定は kgi.md の決まり（表示値で判定）に従う。
