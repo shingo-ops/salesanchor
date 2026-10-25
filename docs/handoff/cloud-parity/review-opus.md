@@ -129,3 +129,11 @@
 - 触っていない範囲: `danger_ops.json`、`scan_text`、`strip_message_quotes`、`strip_heredoc_bodies`、`is_readonly_segment`、`has_recursive_rm`、`check_danger`、`check_merge`、`is_pr_create`、`check_pr_create`、`dispatch.sh`。止めた理由の文は既存のものをそのまま使う。
 - 試験: `scripts/agent-hooks/cloud/test.sh` に E1〜E18 を追加（E1〜E11 止まる、E12〜E18 通る）。E19 は既存ケースの結果が変わらないこと。
 - 変更前の見張りに E 系を当てた結果: E5 のみ変更前から止まっていた（一覧の部分一致）。E1〜E4・E6〜E11 は通っていた（止め漏れの再現）。
+
+## 指摘5 の残り7件の対処
+
+- 直したこと: `guard_pre_tool.py` の「埋め込まれた命令の取り出し」節だけを直した（main は Bash の道の1か所）。直接の取り出しを `_found_bodies` に切り出し、`embedded_commands` は入れ子が depth 3 を超えてまだ埋め込みがあれば `TOO_DEEP` を返す。main は `TOO_DEEP` があれば「入れ子が深すぎて中身を確かめられない」として止める（B29・B30。通す側から止める側へ）。
+- 直したこと: 区間の先頭の then・do・else・elif・if・while・until・time・!・{ を外してから ( ) の殻を探す（B31〜B34）。`bash -c` の後ろの `--` を1つ飛ばす（B13）。`<( )`・`>( )` を二重引用符の外で取り出す（B35）。`$(( ))` も `$( )` と同じく中身を常に調べる（B36）。ドル付き単引用符の `bash -c` はエスケープ（`\n` `\t` `\\` `\'` `\"` `\xHH` `\NNN`）を戻して調べ、ドル付き二重引用符は通常の二重引用符と同じ扱い（B37）。引用符なしの `\X` は `X` に戻す（B38）。
+- 触っていない範囲: `_paren_body`、`strip_heredoc_bodies`、`scan_text`、`strip_message_quotes`、`is_readonly_segment`、`has_recursive_rm`、`check_danger`、`check_merge`、`is_pr_create`、`check_pr_create`、`danger_ops.json`、`dispatch.sh`。
+- 試験: `scripts/agent-hooks/cloud/test.sh` に E20〜E39 を追加（E20〜E32 止まる、E33〜E39 通る）。E40 は既存ケース全件が変更前と同じ結果であること。
+- 注意: E21 は中身が無害でも深さ5で止める（止める側に倒した結果）。B8 の時間試験は負荷で変更前から NG になることがある。

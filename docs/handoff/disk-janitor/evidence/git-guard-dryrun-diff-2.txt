@@ -1,0 +1,14 @@
+7,9c7
+< 🧑‍💻 使用中（削除しない）: 3 件
+<    - release/cloud-hook-embed2
+<    - release/doc-agenda-nav-stage7
+---
+> 🧑‍💻 使用中（削除しない）: 1 件
+12c10
+< 🔒 IN_PROGRESS/REVIEW 未マージ（削除しない）: 8 件
+---
+> 🔒 IN_PROGRESS/REVIEW 未マージ（削除しない）: 10 件
+13a12
+>    - release/cloud-hook-embed2
+15a15
+>    - release/doc-agenda-nav-stage7

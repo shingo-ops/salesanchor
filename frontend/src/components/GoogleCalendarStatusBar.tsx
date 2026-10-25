@@ -13,6 +13,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Check, X } from "../constants/icons";
 import { api } from "../lib/api";
+import { Button } from "./Button";
 import "./GoogleCalendarStatusBar.css";
 
 /**
@@ -126,23 +127,16 @@ export function GoogleCalendarStatusBar({
       Icon: X,
       message: t("schedule.statusDisconnected"),
       action: canManage ? (
-        <button
-          onClick={handleReconnect}
+        <Button
+          variant="secondary"
+          size="sm"
+          loading={reconnecting}
           disabled={reconnecting}
-          style={{
-            marginLeft: "var(--space-3)",
-            padding: "var(--space-1) var(--space-3)",
-            background: "var(--calendar-status-error-text)",
-            color: "var(--on-accent)",
-            border: "none",
-            borderRadius: "var(--radius-sm)",
-            cursor: "pointer",
-            fontSize: "var(--font-sm)",
-            fontWeight: "var(--font-weight-medium)",
-          }}
+          onClick={handleReconnect}
+          layoutClassName="google-calendar-status-action-layout"
         >
-          {reconnecting ? t("common.saving") : t("schedule.statusReconnect")}
-        </button>
+          {t("schedule.statusReconnect")}
+        </Button>
       ) : null,
     },
   } as const;

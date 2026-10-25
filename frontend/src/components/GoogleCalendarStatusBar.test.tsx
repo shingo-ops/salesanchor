@@ -100,7 +100,8 @@ describe('Google Calendar status notification dependencies', () => {
     fireEvent.click(button);
     expect(reconnect).toHaveBeenCalledTimes(1);
     expect(button.disabled).toBe(true);
-    expect(button.textContent).toBe('common.saving');
+    expect(button.textContent).toBe('schedule.statusReconnect');
+    expect(button.getAttribute('aria-busy')).toBe('true');
     expect(get).toHaveBeenCalledTimes(1);
     await act(async () => { finish(); await Promise.resolve(); });
     expect(get).toHaveBeenCalledTimes(2);

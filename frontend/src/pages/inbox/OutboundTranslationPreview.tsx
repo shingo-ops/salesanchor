@@ -14,6 +14,7 @@ import { useTranslation } from "react-i18next";
 import type { OutboundPreviewResponse } from "../../lib/messages";
 import { confirmOutboundDraft, requestOutboundPreview } from "../../lib/messages";
 import { TextareaControl } from "../../components/Textarea";
+import { Button } from "../../components/Button";
 
 interface Props {
   leadId: number | null;
@@ -169,16 +170,16 @@ export function OutboundTranslationPreview({
               >
                 {t("translation.outbound.back")}
               </button>
-              <button
+              <Button
                 type="button"
-                className="outbound-translation-send-btn"
+                variant="primary"
+                size="md"
+                loading={confirming}
                 onClick={handleConfirmSend}
                 disabled={confirming || !editedText.trim()}
               >
-                {confirming
-                  ? t("translation.outbound.confirming")
-                  : t("translation.outbound.confirmSend")}
-              </button>
+                {t("translation.outbound.confirmSend")}
+              </Button>
             </div>
           </>
         )}
