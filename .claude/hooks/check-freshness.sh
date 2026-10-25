@@ -22,7 +22,7 @@ git rev-parse --verify --quiet origin/main >/dev/null || exit 0
 # origin/main 側でルールが更新された」＝こちらが遅れている。
 # blob 直比較なので①history simplification の影響を受けず②このブランチ自身がルールを
 # 編集していても誤警告しない（merge-base 起点で main 側の前進だけを見る）。
-RULES="AGENTS.md CLAUDE.md docs/INDEX.md docs/STANDARD-WORKFLOW.md backend/CLAUDE.md frontend/CLAUDE.md"
+RULES="AGENTS.md CLAUDE.md docs/INDEX.md docs/STANDARD-WORKFLOW.md backend/AGENTS.md backend/CLAUDE.md frontend/AGENTS.md frontend/CLAUDE.md"
 BASE="$(git merge-base HEAD origin/main 2>/dev/null)" || exit 0
 [ -n "$BASE" ] || exit 0
 

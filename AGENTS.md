@@ -42,12 +42,4 @@ DROP TABLE / 大量DELETE / `rm -rf` / `git reset --hard` / `git push --force`�
 - 全タスクは `docs/STANDARD-WORKFLOW.md` の3フェーズ（KGI→現在地→設計）に従う
 - 作業前/commit前/PR前のチェックは `docs/ai-agents/executor-checklist.md`（正本・必読）
 - 手順や作業方法を答える・計画する前に、必ず目次 `docs/INDEX.md` を開き、章→末端の順にたどって該当する手順書を読む（記憶や推測だけで答えない）
-- 画面は `frontend/AGENTS.md`、サーバー側は `backend/AGENTS.md` の決まりにも従う
-
-## i18n 強制（ADR-027）
-
-全 UI 文字列は `t("key")` 経由（JSX / aria-label / placeholder / title すべて）。`ja.json` と `en.json` は同一キー必須。ハードコード日本語は絶対禁止。詳細: `docs/adr/ADR-027-ui-internationalization.md`、grep セルフチェック: `frontend/CLAUDE.md`
-
-## UIガバナンス遵守（ADR-144）
-
-UI部品新設時は必ず `components/` の金型を先確認。生select/生input/生checkbox/生radio/自作タブ/色直値禁止。例外は `ui-allow: <理由> (#<番号>)` コメント付与（理由＋番号の両方必須）。詳細: `docs/CC_UI_GOVERNANCE.md`
+- 画面（`frontend/`）は `frontend/AGENTS.md`、サーバー側（`backend/`）は `backend/AGENTS.md` の決まりにも従う。触る前に開いて読む（Codex は作業場所より下の AGENTS.md を自動では読まない）

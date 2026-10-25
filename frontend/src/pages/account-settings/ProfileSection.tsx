@@ -203,8 +203,8 @@ export default function ProfileSection() {
         {success && <div className="account-settings-success">{t("accountSettings.profileSaved")}</div>}
 
         <div className="account-settings-actions">
-          <Button type="submit" variant="primary" size="md" disabled={saving}>
-            {saving ? t("accountSettings.saving") : t("common.save")}
+          <Button loading={saving} type="submit" variant="primary" size="md" disabled={saving}>
+            {t("common.save")}
           </Button>
         </div>
       </form>

@@ -158,7 +158,8 @@ describe('page form Button migration: real pages and real forms', () => {
     fireEvent.click(save);
     expect(save.disabled).toBe(true);
     expect(cancel.disabled).toBe(true);
-    expect(save.textContent).toBe('common.saving');
+    expect(save.getAttribute('aria-busy')).toBe('true');
+    expect(save.textContent).toBe('common.register');
     fireEvent.click(save);
     fireEvent.click(cancel);
     const form = save.form;
