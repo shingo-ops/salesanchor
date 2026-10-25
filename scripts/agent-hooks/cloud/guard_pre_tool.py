@@ -233,35 +233,41 @@ def _flag_value(words, i, short_vals, long_vals):
 
 
 def _midword_hash(text: str) -> bool:
-    """引用符の外で、語の途中にある # があれば True。shlex は語の途中の # 以降を捨てる（bash は語の頭だけ）ため、その命令は読まずに止める。"""
+    """引用符の外で、語の途中にある # があれば True。shlex は語の途中の # 以降を捨てる（bash は語の頭だけ）ため、その命令は読まずに止める。
+    語の頭かどうかは直前の文字ではなく「区切り直後か」の旗で決める（\\ で逃がした文字や閉じ引用符の直後は語の途中）。"""
     i, n = 0, len(text)
     q = None  # 今いる引用符（' か "）
+    at_word_start = True
     while i < n:
         c = text[i]
         if q == "'":
             if c == "'":
                 q = None
+                at_word_start = False
         elif q == '"':
             if c == "\\":
                 i += 1
             elif c == '"':
                 q = None
+                at_word_start = False
         elif c == "\\":
-            # 行の継ぎ目（\ の次が改行）の直後の # は、bash では前の語とつながる＝語の途中
-            if text[i + 1:i + 2] == "\n" and text[i + 2:i + 3] == "#":
-                return True
+            # 逃がした文字は語の一部。行の継ぎ目（\\ の次が改行）の直後の # も語の途中として止める
             i += 1
+            at_word_start = False
         elif c == "$" and text[i + 1:i + 2] == "'":
             return True  # ANSI-C の引用符は shlex と読み方が違うため、読まずに止める
         elif c in "'\"":
             q = c
+            at_word_start = False
         elif c == "#":
-            if i > 0 and text[i - 1] not in " \t\r\n;&|()<>":
+            if not at_word_start:
                 return True
             j = text.find("\n", i)  # 語の頭の # はコメント。行末まで読み飛ばす
             if j < 0:
                 return False
             i = j - 1
+        else:
+            at_word_start = c in " \t\n;&|()<>"
         i += 1
     return False
 
@@ -269,6 +275,8 @@ def _midword_hash(text: str) -> bool:
 def _bash_head(cmd: str):
     """Bash の gh pr create / gh api の作成元を、語に分けた引数から読む。無ければ None。
     読めない（引用符が閉じていない・語の途中に #・gh の位置が語から取れない）ときは ValueError（止める側）。"""
+    if "\r" in cmd:
+        raise ValueError("命令文に復帰文字(\\r)があり、正しく読めません")
     if _midword_hash(strip_heredoc_bodies(cmd)):
         raise ValueError("語の途中に # があり、正しく読めません")
     try:

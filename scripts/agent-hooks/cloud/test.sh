@@ -142,7 +142,7 @@ add("H1", "本文中の -H docs枝", bash(f'gh pr create --head codebr --title t
 add("H2", "本文中の --head docs枝", bash(f'gh pr create --head codebr --title t --body "{GOOD} --head docsbr"', REMOTE), 2)
 add("H3", "gh api 末尾ヘッダ X-A:docs枝", bash(f"gh api repos/o/r/pulls -f head=codebr -f title=t -f body=\"{GOOD}\" -H 'X-A:docsbr'", REMOTE), 2)
 add("H4", "gh api Accept ヘッダが後ろ", bash(f"gh api repos/o/r/pulls -f head=docsbr -f base=main -f body=\"{GOOD}\" -H 'Accept: application/vnd.github+json'", REMOTE), 0)
-add("H5", "引用符が閉じていない", bash(f'gh pr create --head docsbr --title "t --body "{GOOD}"', REMOTE), 2)
+add("H5", "引用符が閉じていない(shlex の道)", bash("gh pr create --head docsbr --body 'abc", REMOTE), 2)
 # 追補 R1: 語の途中の # は shlex が以降を捨てるため止める（H7〜H10）
 add("H7", "語の途中の # (--title fix#12)", bash('gh pr create --title fix#12 --head codebr --body x', REMOTE), 2)
 add("H8", "gh api 語の途中の # (title=a#b)", bash('gh api repos/o/r/pulls -f title=a#b -f head=codebr', REMOTE), 2)
@@ -154,6 +154,11 @@ add("H12", "git status # it's fine の後ろの行に fix#12", bash(f"git status
 add("H13", "行の継ぎ目の直後の #", bash(f"gh pr create --head docsbr --body \"{GOOD}\"\\\n# --head codebr", REMOTE), 2)
 add("H14", "$' (ANSI-C 引用符)", bash(f"gh pr create --title $'a' --head docsbr --body \"{GOOD}\"", REMOTE), 2)
 add("H15", "コメント内の ' は無視して正しく読む", bash(f"# it's a note\ngh pr create --head docsbr --body \"{GOOD}\"", REMOTE), 0)
+# 追補 R3: 逃がした文字の直後の # は語の途中・\r は区切りにしない（H16〜H19）
+add("H16", "Fix\\ #12 (逃がした空白の直後の #)", bash(f"gh pr create --title Fix\\ #12 --head codebr --body \"{GOOD}\"", REMOTE), 2)
+add("H17", "x\\;#12 (逃がした ; の直後の #)", bash(f"gh pr create --title x\\;#12 --head codebr --body \"{GOOD}\"", REMOTE), 2)
+add("H18", "命令文に \\r を含む", bash(f"gh pr create --title a\r#12 --head codebr --body \"{GOOD}\"", REMOTE), 2)
+add("H19", "区切り直後の # はコメント", bash(f"gh pr create --head docsbr --body \"{GOOD}\"; # --head codebr", REMOTE), 0)
 add("K1", ">( の中に危険語", bash(f"cat >({ops[0]} foo)"), 2)
 # 審査指摘の止め漏れ
 add("K1", "単独&の後ろに危険語", bash(f"cat a & {ops[0]} foo"), 2)
