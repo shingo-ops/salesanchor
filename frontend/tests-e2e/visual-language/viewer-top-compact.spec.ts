@@ -198,7 +198,12 @@ for (const width of MOBILE_WIDTHS) {
       const pageInfo = page.getByTestId("viewer-pagination-label");
       const before = extractRowCount(await pageInfo.textContent());
 
-      await page.getByTestId("viewer-tab-select").selectOption(OTHER_SERIES);
+      // 便5（docs/handoff/viewer-choice-sheet/design.md）: シリーズはネイティブ select ではなく
+      // 枠なしボタン→パネルで選ぶ形になった。ボタンを押してパネルの行を押す
+      await page.getByTestId("viewer-tab-select").click();
+      const panel = page.locator('[data-testid="supplier-drawer"].comp-drawer-panel--open');
+      await expect(panel).toHaveCount(1);
+      await panel.getByTestId(`viewer-series-option-${OTHER_SERIES}`).click();
 
       const after = extractRowCount(await pageInfo.textContent());
       expect(after).toBeLessThan(before);
