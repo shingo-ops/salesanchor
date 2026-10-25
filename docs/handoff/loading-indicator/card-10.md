@@ -55,7 +55,7 @@
   - pages/buyback-prices/BuybackPricesPage.tsx:302: `t(L)` を使わない文字列「...」の三項で規則1・2の形に当てはまらない
   - pages/inbox/ManualRecordSection.tsx:197: 生 button（金型 Button ではない。便6の対象）
   - pages/inbox/OutboundTranslationPreview.tsx:178: 生 button（金型 Button ではない。便6の対象）
-- disabled に X が文字どおりには入っていない 6 行（disabled は別の式で、読み込み中を含む）: DiscordConfigPage:441・532（disabled は ticketSavingSource !== null）、InboxKartePanel:948・956・963（disabled は loading !== null）。ほか 28 行は X が disabled に入っている
+- disabled に X が文字どおりには入っていない 5 行（disabled は別の式で、読み込み中を含む）: DiscordConfigPage:441・532（disabled は ticketSavingSource !== null）、InboxKartePanel:948・956・963（disabled は loading !== null）。ほか 29 行は X が disabled に入っている
 
 ## 2. 置き換えの規則（card-9 と同じ）
 - 規則1: `{X ? t(L) : t(O)}` → 要素に `loading={X}`、中身は `{t(O)}`
@@ -90,3 +90,15 @@
 - 行がずれた → 文面が一致すれば進め、新旧の行を報告
 - schema.d.ts が無い → `npm run generate:api-types` を先に
 - 対象が 40 を超える1ディレクトリだけになる → そのディレクトリだけで止めず NEEDS_DECISION:
+
+## 9. 直した試験（審査差し戻し後。§4 の範囲）
+CI の Frontend unit tests で落ちた 4 件を、期待を「元の言葉のまま・そのボタンに aria-busy="true"」に直した。disabled の確認は残した。
+- frontend/src/components/BotFormButtonMigration.test.tsx:108〜109（BotsPage:265 の送信中）
+  - 前: aria-busy が無いこと／言葉が common.submitting（create）
+  - 後: create は aria-busy が "true"（update は付かない）／言葉が bots.registerIssueKey（create）
+- frontend/src/components/PageFormButtonMigration.test.tsx:161（CompaniesPage:558・ContactsPage:359、company と contact の 2 件）
+  - 前: textContent が common.saving
+  - 後: aria-busy が "true"、textContent が common.register
+- frontend/src/components/AccountCompanySaveButtonMigration.test.tsx:77（CompanyChannelsTab:40）
+  - 前: 名前が common.saving のボタンを取る
+  - 後: 名前が companies.saveChannels のボタンを取り、aria-busy が "true"
