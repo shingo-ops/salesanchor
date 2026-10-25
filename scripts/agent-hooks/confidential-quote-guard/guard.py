@@ -25,6 +25,7 @@ import re
 import shlex
 import subprocess
 import sys
+import time
 import unicodedata
 
 HOOK = "confidential-quote-guard"
@@ -115,6 +116,19 @@ def load_tables():
         if not m:
             raise Block("原文の置き場の表の行に当たるファイルがありません: 表の %d 行目以降を確かめてください" % (patterns.index(pat) + 1))
         files.extend(m)
+    # 写しが古いと、新しい投稿を照らせないまま通してしまう。古ければ止める (取り直しは fetch_corpus.py)
+    try:
+        max_age = float(os.environ.get("CONFID_CORPUS_MAX_AGE_DAYS", "2"))
+    except ValueError:
+        raise Block("原文の写しの古さの上限が読めません")
+    now = time.time()
+    for f in files:
+        try:
+            age = (now - os.path.getmtime(f)) / 86400.0
+        except OSError as e:
+            raise Block("原文のファイルが読めません: %s" % e.strerror)
+        if age > max_age:
+            raise Block("原文の写しが古い (%.1f 日前。上限 %g 日)。fetch_corpus.py で取り直してください" % (age, max_age))
     parts = []
     for f in files:
         try:

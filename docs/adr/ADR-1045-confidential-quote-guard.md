@@ -18,7 +18,8 @@
 3. 原本は `scripts/agent-hooks/confidential-quote-guard/`（guard.py・install.sh・rollback.sh・tests/）。原文・表の中身・語句は repo に入れない。表は Mac の社外秘フォルダ（`~/CC報告ファイル-keep/confid-guard/`）に置く。
 4. 表が読めない・空、差分が取れない、本文の出どころが決まらないときは止める（全部拒否に倒す）。環境変数で飛ばす抜け道は作らない。誤って止まったときの直し方は、一般語の表に理由つきで足すことだけ（Opus 判断）。
 5. 止めた記録は日時・見張りの名前・ファイル:行・件数だけ。語句は記録しない。
-6. 原文を取る道具の出力先は、作る時点で原文の置き場の表（`confidential-corpus.conf`）に入れる。入れ忘れは週の点検（`weekly-check.sh`）で数える。
+6. 見比べる相手（原文の置き場）は、本番の投稿原文（`ai_ro.public__source_messages` の `raw_text`、is_active に関係なく全行。2026-10-25 時点で 3,812 行・約 279 万字）だけにする（PO 決定「1」2026-10-25）。`fetch_corpus.py` が毎日 1 回、ADR-1024 の読み取り専用の道で、鍵付きフォルダに 1 ファイル（600）へ取り直す。正本は本番の記録 1 か所のまま。以前の 2 経路（R2-raw、check3）は外す。
+7. 写しが 2 日より古ければ guard は止める（exit 2）。取り直しは LaunchAgent（毎日 06:30、install.sh が登録・rollback.sh が外す）。失敗時は前の写しを残して 0 以外で終わり、前回の半分未満に減ったときは置き換えず止める。週の点検（`weekly-check.sh`）で写しの日付と件数の増減を数える。
 
 ## Why（なぜ）
 
@@ -35,8 +36,8 @@
 
 ## 戻し方
 
-PO が `!` で `rollback.sh` を流す。settings.json の登録 1 つだけを外す。表とスクリプトは残してよい（登録が無ければ動かない）。
+PO が `!` で `rollback.sh` を流す。settings.json の登録 1 つと、毎日の取り直し（LaunchAgent）を外す。表・原文の写し・スクリプトは残してよい（登録が無ければ動かない）。
 
 ## 検証
 
-design.md §4 の受入表。`tests/test_guard.py` が 1 行 1 試験。
+design.md §4 の受入表。`tests/test_guard.py` が 1 行 1 試験、`tests/test_fetch.py` が取り直しの試験（本番には繋がない偽の読み取り口を使う）。

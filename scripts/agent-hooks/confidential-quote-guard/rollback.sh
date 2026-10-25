@@ -1,7 +1,8 @@
 #!/bin/bash
 # rollback.sh — install.sh で足した confidential-quote-guard (ADR-1045) の登録を外す。PO が `!` で実行する。
 # settings.json の登録 1 つだけを外す（他の変更を巻き戻さないため .bak の丸ごと戻しはしない）。
-# 表 2 つ・商品名の写し・写したスクリプトは消さずに残す（登録が無ければ動かない）。
+# 毎日1回の取り直し (LaunchAgent) も外す。
+# 表・原文の写し・商品名の写し・写したスクリプトは消さずに残す（登録が無ければ動かない）。
 # 設計: docs/handoff/confidential-quote-guard/design.md §9
 set -eu
 
@@ -9,6 +10,14 @@ CLAUDE_DIR="${CLAUDE_DIR:-$HOME/.claude}"
 DEST="$CLAUDE_DIR/scripts/confidential-quote-guard"
 SETTINGS="$CLAUDE_DIR/settings.json"
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+LABEL="jp.salesanchor.confidential-quote-guard-fetch"
+LAUNCH_DIR="${LAUNCH_DIR:-$HOME/Library/LaunchAgents}"
+
+# 毎日の取り直しを止めて外す (無ければ何もしない)
+if [ "${CONFID_SKIP_LAUNCHCTL:-0}" != "1" ]; then
+  launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null || true
+fi
+rm -f "$LAUNCH_DIR/$LABEL.plist"
 
 if [ -f "$SETTINGS" ]; then
   cp "$SETTINGS" "$SETTINGS.bak-confidential-quote-guard-rollback-$STAMP"

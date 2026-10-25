@@ -14,6 +14,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 GUARD = os.path.abspath(sys.argv[1]) if len(sys.argv) > 1 else os.path.join(os.path.dirname(HERE), "guard.py")
@@ -169,6 +170,18 @@ def main():
     make_tables()
     os.remove(os.path.join(D, "product-names.txt"))
     check("T16 商品名の写しが無い -> 止まる", "git push origin HEAD", 2)
+    make_tables()
+    branch_with("fresh", "- 「%s」\n" % FAKE_NOT_IN_CORPUS)
+    cf = os.path.join(D, "raw", "msgs_1.tsv")
+    old_t = time.time() - 3 * 86400
+    os.utime(cf, (old_t, old_t))
+    check("T16b 原文の写しが3日前 (上限2日) -> 止まる", "git push origin HEAD", 2)
+    rc, err = run("git push origin HEAD")
+    results.append("古い" in err)
+    print("%s %-62s" % ("PASS" if results[-1] else "FAIL", "T16c 止めた理由に「古い」がある"))
+    new_t = time.time() - 1 * 86400
+    os.utime(cf, (new_t, new_t))
+    check("T16d 原文の写しが1日前 -> 通る", "git push origin HEAD", 0)
     make_tables()
 
     print("== 5 表に無い repo / 差分が取れない")

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- confidential-quote-guard (ADR-1045): 見張りが見比べる原文の写しを、毎日1回、本番から取り直す。
+     原本。install.sh が __HOME__ を置き換えて ~/Library/LaunchAgents に写し、rollback.sh が外す。PO が ! で流す。
+     RunAtLoad=true: ログイン時と登録直後に1回走る / KeepAlive=false: 終わったら再起動しない(常駐しない)
+     StartCalendarInterval: 毎日 06:30 (寝ていた場合は復帰後に走る)。WorkingDirectory は git に依らないので $HOME。
+     ログは件数と日時だけ(本文は出さない)。 -->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>jp.salesanchor.confidential-quote-guard-fetch</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/python3</string>
+    <string>__HOME__/.claude/scripts/confidential-quote-guard/fetch_corpus.py</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>__HOME__</string>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <false/>
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>6</integer>
+    <key>Minute</key>
+    <integer>30</integer>
+  </dict>
+  <key>StandardOutPath</key>
+  <string>__HOME__/CC報告ファイル-keep/confid-guard/fetch.log</string>
+  <key>StandardErrorPath</key>
+  <string>__HOME__/CC報告ファイル-keep/confid-guard/fetch.log</string>
+</dict>
+</plist>
