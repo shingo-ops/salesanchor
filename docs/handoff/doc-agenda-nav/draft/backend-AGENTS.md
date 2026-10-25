@@ -1,0 +1,70 @@
+# backend/AGENTS.md
+
+`backend/` 配下の作業時のみ適用。プロジェクト全体ルールは `/AGENTS.md` を参照。
+
+## マルチテナント運用
+
+- 本番テナント: `tenant_code=highlife-jpn`（schema: `tenant_004`）
+- 撮影 / Meta App Review 用: `tenant_review`（schema: `tenant_006`、Demo データのみ）。`scripts/setup_review_tenant.py` 実行後はパスワードを必ずホスト側に保存すること（コンテナ `/tmp` は再起動で消える）。手順詳細: `backend/scripts/CLAUDE.md`
+- 既定値 `test-corp` は空テナント。移行 / バッチ実行時は必ず明示: `gh workflow run run-*-migration.yml -f tenant_code=highlife-jpn`・`docker exec -e TENANT_CODE=highlife-jpn ...`
+- **ADR-072 write endpoint**: `db.commit()` 直後に `reset_tenant_context()` 必須 → 詳細: `backend/tenant/CLAUDE.md`
+
+## 新規テナント作成時の不変条件チェック（ADR-034 マージまで暫定）
+
+詳細: `docs/adr/ADR-034-tenant-migration-automation.md`。**ADR-034 マージ前は新規テナントを作る作業すべてで以下 4 ステップを必須**:
+
+1. 実機 Messenger + Instagram DM 送受信（モック / SQLite 不可）
+2. `SELECT * FROM public.meta_page_routing WHERE tenant_id = :new_tenant_id` で行存在確認
+3. `SELECT column_name FROM information_schema.columns WHERE table_schema='tenant_NNN' AND table_name='meta_messages'` で全カラム + `message_id=text` 確認
+4. 不足あれば手動 ALTER/INSERT で補完
+
+未実施 = FAIL。Coverage notes に書いて逃げない。
+<!-- [SELF-DESTRUCT-ADR-034] ADR-034マージ時にこのセクションを削除すること -->
+
+## Migration は additive-only（追加専用）
+
+**カラム削除・テーブル削除・型変更を含む migration は原則禁止。** 理由: `downgrade` 関数が未整備のため、本番適用後に問題が起きても自動ロールバック不能（ADR-045:90 参照）。
+- ✅ 許可: カラム追加、インデックス追加、テーブル追加、制約追加
+- ❌ 要PO確認: カラム削除・リネーム、テーブル削除、型変更、データ移行を伴う変更。destructive な変更が必要な場合は必ずしんごさん（PO）に確認してから ADR を起案すること
+
+## Migration 適用経路
+
+新規 migration を追加した場合:
+- **ファイル命名規則（101番以降）**: `migrations/YYYYMMDD_HHMMSS_description.sql`（例: `20260601_082000_add_foo.sql`）。連番（`NNN_`）は廃止（001〜100は既存ファイル）。タイムスタンプにより並行エージェント間の番号衝突を防ぐ。CI が形式を強制するため、連番形式は CI でブロックされる
+- **`deploy.yml` 登録必須**: migration ファイルを作成したら、必ず `.github/workflows/deploy.yml` の「新しいマイグレーションはここに追加」コメント直前に psql 実行ステップを追記すること。**登録しないと本番 DB に適用されず、API が 500 エラーになる**（ADR-045, PR #1277 の前例あり）
+- **CI が自動検知**: `migration-guard.yml` が新規 migration ファイルを検出し、deploy.yml に対応行がない場合 or ファイル名形式が不正な場合は PR をブロックする
+- 既存全テナント + 新規作成テナント両方への適用経路を PR body に明記する
+- PostgreSQL実機で `information_schema.columns` により全テナントschema整合を確認（SQLite不可）
+- **migration-test 段階的拡充**: migration が操作するテーブルが `migration-test.yml` セットアップになければ最小定義を追加すること（migration 変更なし PR ではジョブ未起動のため速度影響ゼロ）
+- **`{schema}` プレースホルダは絶対使用禁止**（`deploy.yml` で直接実行不可。psql に渡すと構文エラーになり本番デプロイが停止する。前例: PR #1345 で約1.5h停止）。全テナントへのカラム追加・テーブル追加は必ず `DO $$ ... pg_namespace` 走査形式で書く（参考ファイル: `migrations/090_add_lead_contact_links.sql`）:
+
+```sql
+DO $$
+DECLARE
+    schema_record RECORD;
+BEGIN
+    FOR schema_record IN
+        SELECT nspname AS schema_name
+        FROM pg_namespace
+        WHERE nspname LIKE 'tenant_%'
+        ORDER BY nspname
+    LOOP
+        RAISE NOTICE 'Processing schema: %', schema_record.schema_name;
+
+        EXECUTE format(
+            'ALTER TABLE %I.your_table
+             ADD COLUMN IF NOT EXISTS new_col TEXT',
+            schema_record.schema_name
+        );
+    END LOOP;
+END
+$$;
+```
+
+## 書き方の決まり
+
+- **カラムコメント**: 新テーブル作成時は全カラムに `COMMENT ON COLUMN` を付与すること。後から見直しても意味が分かる日本語説明を書く
+- **Pydantic schema**: 全 `Field()` に `description` パラメータを設定すること（Swagger /docs に自動反映）。計算ロジック（率＋固定額など）がある場合は docstring に計算式を明記
+- **取引先 SSOT: companies（ADR-089 完了）**: `customers` テーブルは廃止済み（2026-06-01 Sprint 7 DROP）。取引先は `companies` / `company_addresses` / `company_discord` を使うこと。本番DROP手順: `scripts/migrate_089_drop_customers_tables.py`（PO確認必須）。詳細: `docs/adr/ADR-089-deprecate-customers-unify-to-companies.md`
+- **受信翻訳の標準入口**は `app.services.inbound_translation.enqueue_inbound_translation()`。受信保存後の翻訳 enqueue は必ずこれを使う
+- **品質チェック**: `make lint`（ruff / bandit / mypy）/ `make check`（lint + pytest）。初回: `pip install -r requirements-dev.txt`
