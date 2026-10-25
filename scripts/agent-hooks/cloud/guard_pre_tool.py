@@ -128,7 +128,8 @@ def _paren_body(t: str, i: int):
 
 
 def _subst_bodies(t: str):
-    """$( … ) と逆引用符の中身を取り出す。単引用符の中と、\\ の付いたものは飛ばす。$(( )) は対象外。"""
+    """$( … )・$(( … ))・<( … )・>( … ) と逆引用符の中身を取り出す。単引用符の中と、\\ の付いたものは飛ばす。
+    $(( )) も中に $( ) を書けば実行されるため、中身は常に調べる。<( )・>( ) は二重引用符の外だけ。"""
     out = []
     n = len(t)
     i = 0
@@ -154,14 +155,33 @@ def _subst_bodies(t: str):
             i = j + 1
             continue
         if c == "$" and t.startswith("$(", i):
-            if t.startswith("$((", i):
-                i += 3
-                continue
+            body, i = _paren_body(t, i + 2)
+            out.append(body)
+            continue
+        if not dq and c in "<>" and t.startswith("(", i + 1):
             body, i = _paren_body(t, i + 2)
             out.append(body)
             continue
         i += 1
     return out
+
+
+_ANSI_ESC = re.compile(r"\\(x[0-9A-Fa-f]{1,2}|[0-7]{1,3}|.)", re.S)
+
+
+def _ansi_c(body: str) -> str:
+    """$'…' の中身のエスケープ（\\n \\t \\\\ \\' \\" \\xHH \\NNN）を戻す。"""
+    simple = {"n": "\n", "t": "\t", "r": "\r", "a": "\a", "b": "\b", "f": "\f", "v": "\v", "e": "\x1b"}
+
+    def one(m):
+        g = m.group(1)
+        if g[0] == "x":
+            return chr(int(g[1:], 16))
+        if g[0] in "01234567":
+            return chr(int(g, 8) & 0xFF)
+        return simple.get(g, g)
+
+    return _ANSI_ESC.sub(one, body)
 
 
 def _quoted_arg(s: str, i: int) -> str:
@@ -171,6 +191,13 @@ def _quoted_arg(s: str, i: int) -> str:
         i += 1
     if i >= n:
         return ""
+    if s.startswith("$'", i):
+        j = i + 2
+        while j < n and s[j] != "'":
+            j += 2 if s[j] == "\\" else 1
+        return _ansi_c(s[i + 2:min(j, n)])
+    if s.startswith('$"', i):
+        i += 1
     if s[i] == "'":
         k = s.find("'", i + 1)
         return s[i + 1:] if k < 0 else s[i + 1:k]
@@ -179,7 +206,7 @@ def _quoted_arg(s: str, i: int) -> str:
         while j < n and s[j] != '"':
             j += 2 if s[j] == "\\" else 1
         return re.sub(r'\\(["$`\\])', r"\1", s[i + 1:min(j, n)])
-    return re.match(r"[^;&|\n]*", s[i:]).group(0)
+    return re.sub(r"\\(.)", r"\1", re.match(r"(?:\\.|[^;&|\n\\])*", s[i:]).group(0))
 
 
 _SHELL_C = re.compile(
@@ -188,24 +215,37 @@ _SHELL_C = re.compile(
 _EVAL = re.compile(r"(?<![\w./-])eval(?![\w.-])")
 
 
-def embedded_commands(cmd: str, depth: int = 0):
-    """命令文に埋め込まれた命令（$( )・逆引用符・( ) の殻・bash/sh/zsh/dash -c・eval の中身）を平らに返す。
-    入れ子は depth 3 まで。閉じ忘れは末尾までを中身とする（止める側）。"""
-    if depth > 3:
-        return []
+TOO_DEEP = "\x00too-deep"
+_LEAD_KW = re.compile(r"^(?:(?:then|do|else|elif|if|while|until|time|!|\{)\s+)+")
+
+
+def _found_bodies(cmd: str):
+    """命令文に直接埋め込まれた命令（$( )・逆引用符・( ) の殻・bash/sh/zsh/dash -c・eval の中身）を返す。"""
     t = strip_heredoc_bodies(cmd)
     found = _subst_bodies(t)
     for seg in re.split(r"&&|\|\||;|\||&|\n", t):
-        s = seg.lstrip()
+        s = _LEAD_KW.sub("", seg.lstrip())
         if s.startswith("(") and not s.startswith("(("):
             found.append(_paren_body(s, 1)[0])
     s = scan_text(t)
     for m in _SHELL_C.finditer(s):
         opts = [o for o in re.findall(r"(?<!\S)-[A-Za-z]\w*", m.group(1)) if "c" in o]
         if opts:
-            found.append(_quoted_arg(s, m.end()))
+            k = m.end()
+            mm = re.match(r"\s+--(?=\s)", s[k:])
+            k += mm.end() if mm else 0
+            found.append(_quoted_arg(s, k))
     for m in _EVAL.finditer(s):
         found.append(_quoted_arg(s, m.end()))
+    return found
+
+
+def embedded_commands(cmd: str, depth: int = 0):
+    """命令文に埋め込まれた命令を平らに返す。入れ子は depth 3 まで。
+    それより深くまだ埋め込みがあれば TOO_DEEP を返す（止める側）。閉じ忘れは末尾までを中身とする（止める側）。"""
+    found = _found_bodies(cmd)
+    if depth > 3:
+        return [TOO_DEEP] if found else []
     result = []
     for f in found:
         result.append(f)
@@ -499,7 +539,10 @@ def main() -> int:
     cwd = data.get("cwd") or os.getcwd()
 
     if tool == "Bash":
-        for text in [cmd] + embedded_commands(cmd):
+        texts = [cmd] + embedded_commands(cmd)
+        if TOO_DEEP in texts:
+            return block("埋め込んだ命令の入れ子が深すぎて中身を確かめられないため止めます。入れ子を浅くするか、手元で PO の承認を得て実行してください。")
+        for text in texts:
             r = check_danger(text)
             if r:
                 return block(r)
