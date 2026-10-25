@@ -143,6 +143,11 @@ add("H2", "本文中の --head docs枝", bash(f'gh pr create --head codebr --tit
 add("H3", "gh api 末尾ヘッダ X-A:docs枝", bash(f"gh api repos/o/r/pulls -f head=codebr -f title=t -f body=\"{GOOD}\" -H 'X-A:docsbr'", REMOTE), 2)
 add("H4", "gh api Accept ヘッダが後ろ", bash(f"gh api repos/o/r/pulls -f head=docsbr -f base=main -f body=\"{GOOD}\" -H 'Accept: application/vnd.github+json'", REMOTE), 0)
 add("H5", "引用符が閉じていない", bash(f'gh pr create --head docsbr --title "t --body "{GOOD}"', REMOTE), 2)
+# 追補 R1: 語の途中の # は shlex が以降を捨てるため止める（H7〜H10）
+add("H7", "語の途中の # (--title fix#12)", bash('gh pr create --title fix#12 --head codebr --body x', REMOTE), 2)
+add("H8", "gh api 語の途中の # (title=a#b)", bash('gh api repos/o/r/pulls -f title=a#b -f head=codebr', REMOTE), 2)
+add("H9", "語の頭の # はコメント(後ろのコード枝は読まない)", bash(f'gh pr create --head docsbr --body "{GOOD}" # --head codebr', REMOTE), 0)
+add("H10", "引用符の中の # は対象外", bash(f"gh pr create --head docsbr --body '{GOOD} see #12' ", REMOTE), 0)
 add("K1", ">( の中に危険語", bash(f"cat >({ops[0]} foo)"), 2)
 # 審査指摘の止め漏れ
 add("K1", "単独&の後ろに危険語", bash(f"cat a & {ops[0]} foo"), 2)

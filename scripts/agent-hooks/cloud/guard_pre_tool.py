@@ -232,9 +232,35 @@ def _flag_value(words, i, short_vals, long_vals):
     return None
 
 
+def _midword_hash(text: str) -> bool:
+    """引用符の外で、語の途中にある # があれば True。shlex は語の途中の # 以降を捨てる（bash は語の頭だけ）ため、その命令は読まずに止める。"""
+    i, n = 0, len(text)
+    q = None  # 今いる引用符（' か "）
+    while i < n:
+        c = text[i]
+        if q == "'":
+            if c == "'":
+                q = None
+        elif q == '"':
+            if c == "\\":
+                i += 1
+            elif c == '"':
+                q = None
+        elif c == "\\":
+            i += 1
+        elif c in "'\"":
+            q = c
+        elif c == "#" and i > 0 and text[i - 1] not in " \t\r\n;&|()<>":
+            return True
+        i += 1
+    return False
+
+
 def _bash_head(cmd: str):
     """Bash の gh pr create / gh api の作成元を、語に分けた引数から読む。無ければ None。
-    読めない（引用符が閉じていない・gh の位置が語から取れない）ときは ValueError（止める側）。"""
+    読めない（引用符が閉じていない・語の途中に #・gh の位置が語から取れない）ときは ValueError（止める側）。"""
+    if _midword_hash(strip_heredoc_bodies(cmd)):
+        raise ValueError("語の途中に # があり、正しく読めません")
     try:
         segs = _split_commands(cmd)
     except ValueError as e:
