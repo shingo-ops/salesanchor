@@ -3,6 +3,9 @@
 > この文書は何か（1行）: 設計を別の Opus に「反証を探す立場」で審査させた結果と、指摘への対応の記録。
 
 **日付**: 2026-10-25
+**この記録の行番号について**: 本文の `file:line` は**審査を行った時点（実装前＝`origin/main`）の行**を指す。
+実装で行がずれたものは `docs/handoff/viewer-filter-subscreen/design.md` 側が現在値を持つ（2回目の審査の指摘⑧で明示を求められた）。
+
 **審査の指示**: 承認ありきにしない／`file:line` を全数で抜き取り検証／`Drawer` と `MultiSelect` の呼び出し元を全数 grep／CI 設定を一次ファイルで読む／推測で書かない
 **初回の結論**: **CHANGES-REQUESTED**（引用の誤り5件＋設計の穴9件＋検査の抜け多数）
 **改訂後の状態**: 全14項目に対応済み。**審査を書いた時点では区分 A の KGI の PO 承認が未取得**だったが、
@@ -40,7 +43,10 @@ Storybook 2本を追加し、**便1 の spec（旧 A4〜A13）と本便の AC �
 
 ## 3. 審査が確認した「問題なし」
 
-- `frontend/scripts/check-page-size.js:19` の上限800行に対し `frontend/src/pages/viewer/InventoryView.tsx` は 436 行で余裕。
+- ~~`frontend/scripts/check-page-size.js:19` の上限800行に対し `frontend/src/pages/viewer/InventoryView.tsx` は 436 行で余裕。~~
+  **前提が誤り（事後の独立審査で指摘）**: `frontend/scripts/check-page-size.js:33` は `entry.endsWith('Page.tsx')` の
+  ファイルだけを集めるため、`frontend/src/pages/viewer/InventoryView.tsx`（ファイル名が Page.tsx で終わるもの という名前ではない）はこの関所の**対象外**。
+  現在 **606行**（修正1〜5 の実装後）。800行の関所は掛かっていない。将来の分割は別途判断（design.md ⑫C7）。
 - `frontend/scripts/check-icon-sync.js` は大きさの一致だけを見るため、**アイコン追加で `frontend/src/constants/iconSizes.ts` の再生成は不要**。
 - 提案した4つの文言キーは既存と衝突しない。
 - `npm run check:all` に型検査が無いという前便の学びが A23/A24 に正しく反映されている。

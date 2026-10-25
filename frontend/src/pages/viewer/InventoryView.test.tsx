@@ -312,6 +312,17 @@ describe("InventoryView", () => {
       fireEvent.keyDown(document, { key: "Escape" });
       expect(screen.queryByTestId("drawer-back")).toBeNull();
       expect(screen.getByTestId("viewer-provider-row")).toBeTruthy();
+      expect(document.querySelector(".comp-drawer-panel--open")).toBeTruthy();
+    });
+
+    it("fix 1: the close (X) button closes the drawer even from a subscreen (name and action now match)", () => {
+      openDrawer();
+      fireEvent.click(screen.getByTestId("viewer-provider-row"));
+      expect(screen.getByTestId("drawer-back")).toBeTruthy();
+      fireEvent.click(screen.getByTestId("drawer-close"));
+      // 以前はここで一段戻るだけだった（Drawer の onClose が Esc と同じ関数だったため）。
+      // onEscape を足したことで ✕ は本当に閉じるようになった
+      expect(document.querySelector(".comp-drawer-panel--open")).toBeNull();
     });
 
     it("A8/A9: narrowing the options by search keeps the selected names resolved", () => {

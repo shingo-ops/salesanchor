@@ -64,6 +64,30 @@ backLabel?: string;
 - 「←」のアイコンは **`frontend/src/constants/icons-base.tsx` に新設**する（§4-3）。題の**左**に置く（お手本 §3 と同じ）。
 - `data-testid="drawer-back"`（既存の `drawer-close` と同じ並び）。
 
+### 4-1b. 独立審査の修正1・3（実装後の2回目の審査で判明。`frontend/src/components/Drawer.tsx` の追加分）
+
+当初案（上の §4-1 執筆時点）は「`onClose` に『`root` 以外なら戻る／`root` なら閉じる』を入れる」だった（下の §4-4 Esc の行も当時の記述）。
+これは Esc・背景クリック・✕ の**3経路すべてが同じ `onClose` を呼ぶ**ため、✕ を押しても一段戻るだけになり、
+✕ の読み上げ名「閉じる」と動作が食い違う不具合を生んだ（2回目の独立審査で指摘）。そこで次の2点を追加する。
+
+```ts
+/** Esc を押したときの処理。渡したときだけ onClose の代わりに呼ばれる（省略時は今までどおり onClose）。
+ *  「一段戻る」を Esc に割り当てたい画面のため */
+onEscape?: () => void;
+```
+
+- Esc のハンドラだけを `(onEscape ?? onClose)()` にする。**背景クリックと ✕ ボタンは常に `onClose`**（＝本当に閉じる）のまま変えない。
+- 閲覧ページ側は `onClose` に本当に閉じる関数（`() => setDrawerOpen(false)`）を渡し、`onEscape` に「選択画面なら root へ戻る／root なら閉じる」（旧 `handleDrawerClose` を改名した `handleFilterEscape`）を渡す。
+- あわせて、`onBack` と `backLabel` を union にして**片方だけでは渡せない**ようにする（`onBack` だけ渡すと `aria-label={undefined}` の名前の無いボタンが型検査を通ってしまっていた）:
+
+```ts
+type DrawerBackProps =
+  | { onBack: () => void; backLabel: string }
+  | { onBack?: undefined; backLabel?: undefined };
+```
+
+既存の呼び出し元（35ファイル）はどちらも渡していないため影響は無い（`npx tsc --noEmit` で確認）。
+
 ### 4-2. `MultiSelect` 金型に「行」の形を足す
 
 `frontend/src/components/MultiSelect.tsx` の `layout` に `"row"` を足す（今は `"popover" | "inline"`）。
@@ -101,7 +125,7 @@ backLabel?: string;
 - **`frontend/src/constants/icons.tsx` には足さない。** 閲覧ページは JS 合計 **300KB** が上限で（`frontend/scripts/check-viewer-bundle.js:21`）、
   超えると CI が落ちる。`frontend/src/constants/icons-base.tsx:2-3` に「閲覧ページが使う最小のアイコン。**定義はここだけ**。
   icons.tsx が再 export する」と明記されている。`Drawer` 金型自身も `icons-base` から読んでいる
-  （`frontend/src/components/Drawer.tsx:19`）。
+  （`frontend/src/components/Drawer.tsx:21`。本便で `ArrowLeft` を足したため1行増えた位置）。
 - 包み方は既存と同じ `hi(HeroIcon)`（`frontend/src/constants/icons-base.tsx:8`・`:27`）。
   `frontend/src/constants/icons.tsx` 側は**再 export だけ**を足す（`X`・`ArrowTopRight` と同じ扱い）。
 - `ICON` は**アイコンの大きさ**の定数（`frontend/src/constants/iconSizes.ts:5`・生成物）なので、ここには足さない。
@@ -130,9 +154,9 @@ const [optionQuery, setOptionQuery] = useState("");   // 候補を絞る欄（�
 | 選択の反映 | **即時反映**（便1 と同じ）。「決定する」と「←」はどちらも `root` に戻るだけ。押し忘れで選択が消えることは無い |
 | 候補を絞る欄の寿命 | **画面を離れるたびに空に戻す**（`←`・「決定する」・ドロワーを閉じる・項目を開く の全経路で `setOptionQuery("")`）。残して「候補が少ない」と誤解させない |
 | 候補が0件のとき | **`MultiSelect` が描く**（§4-2）。呼び出し側は `emptyLabel` を渡すだけ |
-| 画面が変わったときのフォーカス | `filterView` が `root` 以外になったら**「←」へ**、`root` に戻ったら**元の行へ**移す（`useEffect` ＋ `ref`）。`frontend/src/components/Drawer.tsx:64-70` の初期フォーカスは `open` が変わらないと再実行されないため、**押した行が消えてフォーカスが `<body>` に落ち、Tab がダイアログの外へ逃げる**（`frontend/src/components/Drawer.tsx:91-108` のトラップは `activeElement` が端のときしか効かない） |
-| Esc | `root` 以外では**`root` に戻る**（ドロワーごと閉じない）。`Drawer` の Esc は `onClose` 固定（`frontend/src/components/Drawer.tsx:73-83`）なので、**`onClose` に「`root` 以外なら戻る／`root` なら閉じる」を入れて実現する**（金型は変えない） |
-| ドロワーを閉じたとき | `root` へ戻すのは**閉じ終わってから**（`--transition-slow` ぶん遅らせる）。`frontend/src/components/Drawer.tsx:129-131` のとおり DOM は常にあるので、即座に戻すとスライドアウト中に題と中身が切り替わって見える |
+| 画面が変わったときのフォーカス | `filterView` が `root` 以外になったら**「←」へ**、`root` に戻ったら**元の行へ**移す（`useEffect` ＋ `ref`）。`frontend/src/components/Drawer.tsx:80-86` の初期フォーカスは `open` が変わらないと再実行されないため、**押した行が消えてフォーカスが `<body>` に落ち、Tab がダイアログの外へ逃げる**（`frontend/src/components/Drawer.tsx:101-130` のトラップは `activeElement` が端のときしか効かない） |
+| Esc | `root` 以外では**`root` に戻る**（ドロワーごと閉じない）。**✕ は常に閉じる**（§4-1b・修正1）。当初案は `Drawer` の `onClose` に分岐を入れるものだったが、`onClose` は Esc・背景クリック・✕ の3経路すべてで呼ばれるため ✕ まで「戻る」になってしまう不具合を2回目の審査で指摘された。そこで `Drawer` に `onEscape?: () => void` を足し、**Esc だけ**その処理を呼ぶ形に変更（§4-1b）。`onClose` には本当に閉じる関数を渡す |
+| ドロワーを閉じたとき | `root` へ戻すのは**閉じ終わってから**（`--transition-slow` ぶん遅らせる）。`frontend/src/components/Drawer.tsx:144-147` のとおり DOM は常にあるので、即座に戻すとスライドアウト中に題と中身が切り替わって見える |
 | 自動読み直し（60秒） | `frontend/src/pages/viewer/useViewerAutoRefresh.ts` が `data` を差し替えても `filterView` は別の状態なので画面は維持される。選択肢が消えた場合は下の「選んだ名前」の規則で守る |
 
 ### 4-4b. testId を層ごとに分ける（strict mode violation の予防）
@@ -177,7 +201,7 @@ const [optionQuery, setOptionQuery] = useState("");   // 候補を絞る欄（�
 | A6 | 選択画面で**スクロールせずに見える行が 8 件以上、かつ 20 件以下**（上限も見ないと「全部出しただけ」と区別できない） | spec |
 | A7 | 2件選ぶと一覧が絞られ、**親の行に選んだ名前がカンマつなぎで出る** | spec |
 | A8 | 検索欄に文字を入れると候補が絞られ、消すと件数が元に戻る | spec |
-| A9 | **検索で候補を絞っている間も、親の行の名前が生の値に化けない**（§4-2 の1） | spec |
+| A9 | **検索で候補を絞っている間も、親の行の名前が生の値に化けない**（§4-2 の1） | `frontend/src/components/MultiSelect.test.tsx`（spec ではなく単体テスト。理由: 閲覧ページは `frontend/src/pages/viewer/InventoryView.tsx:88-95` が `{value: v, label: v}` を作るため value と label が同じ文字列で、e2e では名前が生の値に化ける退行を**原理的に観測できない**。実際の守り手は単体テスト。審査で指摘） |
 | A10 | **候補が0件になる語を入れると `noOptions` の文字が出る**（§4-2 の2） | spec |
 | A11 | **「決定する」を押すと最初の画面に戻り、選択は残っている** | spec |
 | A12 | 選択画面で **Esc を押すと最初の画面に戻る**（ドロワーは閉じない） | spec |
@@ -216,7 +240,7 @@ const [optionQuery, setOptionQuery] = useState("");   // 候補を絞る欄（�
 |---|---|
 | `frontend/src/constants/icons-base.tsx` | `ArrowLeft`・`ChevronRight` を新設 |
 | `frontend/src/constants/icons.tsx` | 上の2つを再 export |
-| `frontend/src/components/Drawer.tsx` | `onBack` / `backLabel` を追加（既定は今のまま） |
+| `frontend/src/components/Drawer.tsx` | `onBack` / `backLabel` を追加（既定は今のまま）。2回目の審査対応（§4-1b）で `onEscape` を追加し、Esc だけ分岐・背景クリックと✕は常に `onClose`。`onBack`/`backLabel` を union 化して片方だけ渡せないようにする |
 | `frontend/src/components/Drawer.css` | 「←」の置き場 |
 | `frontend/src/components/Drawer.test.tsx` | A19 |
 | `frontend/src/components/Drawer.stories.tsx` | 「←」付きの見本 |
@@ -268,10 +292,11 @@ const [optionQuery, setOptionQuery] = useState("");   // 候補を絞る欄（�
 | 画面の行き来ができる | 上記 spec（A2・A3・A11・A17） | 赤 |
 | 選択画面で8〜20件見える・44px 以上 | 上記 spec（A5・A6） | 赤 |
 | 浮かぶパネルを作らない | 上記 spec（A15・A5 と対） | 赤 |
-
+| 検索で候補を絞っても親の行の名前が生の値に化けない（A9） | `frontend/src/components/MultiSelect.test.tsx`（spec ではない。理由は⑤ A9 の行と同じ: 閲覧ページは value と label が同じ文字列のため e2e では退行を観測できない） | 赤 |
 | PC が popover のまま | 上記 spec（A18）＋ `frontend/src/components/MultiSelect.test.tsx` | 赤 |
 | キーボードだけで操作できる（Esc・Tab・フォーカス） | 上記 spec（A12〜A14） | 赤 |
 | 既定の Drawer に「←」が出ない | `frontend/src/components/Drawer.test.tsx`（A19） | 赤 |
+| ✕ は選択画面からでも必ず閉じる（Esc は戻るだけ） | `frontend/src/components/Drawer.test.tsx`・`frontend/src/pages/viewer/InventoryView.test.tsx`（修正1） | 赤 |
 | **閲覧ページの JS が 300KB を超えない** | `frontend/scripts/check-viewer-bundle.js`（CI 必須） | 赤 |
 
 ## ⑫ 継続（この便の後）
@@ -283,3 +308,5 @@ const [optionQuery, setOptionQuery] = useState("");   // 候補を絞る欄（�
 | C3 | アプリ側 `/inventory` の絞り込みも同じ形にするか | 別便。閲覧ページでの PO の使用感を見てから |
 | C4 | 「決定するまで反映しない」にするか | PO の使用感次第（⑩ 参照） |
 | C5 | 下のボタンの文言 | **決着済み**（PO 2026-10-25「決定する」） |
+| C6 | **A6（選択画面で8件以上見える）の余裕が約1行しかない**。360×700 でヘッダ・フッタ・検索欄・見出しを引くと 44px 行で約9行、下限は8。ヘッダやフッタが数十px 太ると赤になるため、**太らせる変更をするときは同時に下限（`MIN_VISIBLE_OPTIONS`）を見直すこと** | 審査（抜き取り検証）で判明。対応は見送り・次に太らせる便で見直す |
+| C7 | `frontend/src/pages/viewer/InventoryView.tsx` が **606行**。`frontend/scripts/check-page-size.js` の800行の関所は ファイル名が Page.tsx で終わるもの という名前のファイルしか見ないため**この画面には掛かっていない**（review-opus.md §3 の訂正）。分割するかは別便で判断 | 対応は見送り（本便の範囲外） |

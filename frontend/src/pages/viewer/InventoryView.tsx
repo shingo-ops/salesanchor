@@ -140,9 +140,11 @@ export function InventoryView({ data }: InventoryViewProps) {
     setOptionQuery("");
     setFilterView("root");
   };
-  // Drawer の onClose は Esc・背景クリック・✕ ボタンの全てで同じ関数が呼ばれる（Drawer.tsx は変えない）。
-  // filterView が root 以外なら「戻る」、root なら本当に閉じる（design.md 4-4・審査指摘9＝A12）。
-  const handleDrawerClose = () => {
+  // Drawer の onEscape（design.md 4-4・審査指摘9＝A12）。Esc だけ「戻る」に使う：
+  // filterView が root 以外なら root へ戻る、root ならドロワーを閉じる。
+  // 背景クリックと ✕ ボタンは常に Drawer.tsx 側の onClose（＝本当に閉じる）を呼ぶため、
+  // ここでは Esc の挙動だけを決める（Drawer.tsx:88-99・修正1）。
+  const handleFilterEscape = () => {
     if (filterView !== "root") {
       backToFilterRoot();
       return;
@@ -151,7 +153,9 @@ export function InventoryView({ data }: InventoryViewProps) {
   };
 
   // 画面が変わった直後のフォーカス移動（design.md 4-4・審査指摘8＝A13・A14）。
-  // Drawer の初期フォーカス（Drawer.tsx:64-70）は open が変わらないと再実行されないため、
+  // Drawer の初期フォーカス（frontend/src/components/Drawer.tsx:80-86。本PRで onEscape・onBack の
+  // union を足して行がずれたため書類の訂正3の1として直した値。:69-77 は「閉じたら元の要素へ
+  // フォーカス復帰」effect で別物）は open が変わらないと再実行されないため、
   // root⇄選択画面の遷移では自前でフォーカス先を決める。
   const prevFilterViewRef = useRef<FilterView>(filterView);
   useEffect(() => {
@@ -168,15 +172,18 @@ export function InventoryView({ data }: InventoryViewProps) {
     }
   }, [filterView, drawerOpen]);
 
-  // ドロワーを閉じたら、スライドアウトが終わってから root へ戻す（design.md 4-4・審査指摘13）
+  // ドロワーを閉じたら、スライドアウトが終わってから root へ戻す（design.md 4-4・審査指摘13）。
+  // root で閉じたときは戻す必要が無いので何もしない（修正1: ✕ が選択画面のまま閉じられるようになった
+  // ことで、このタイマーが初めて意味を持つ。以前は setDrawerOpen(false) が root のときしか
+  // 呼ばれず、このガード自体が到達不能だった）
   useEffect(() => {
-    if (drawerOpen) return;
+    if (drawerOpen || filterView === "root") return;
     const timer = setTimeout(() => {
       setFilterView("root");
       setOptionQuery("");
     }, DRAWER_CLOSE_RESET_DELAY_MS);
     return () => clearTimeout(timer);
-  }, [drawerOpen]);
+  }, [drawerOpen, filterView]);
 
   const providerSelect = (
     <MultiSelect
@@ -298,6 +305,12 @@ export function InventoryView({ data }: InventoryViewProps) {
     : filterView === "condition"
       ? t("viewer.filter.condition")
       : t("viewer.filter.title");
+
+  // onBack と backLabel は Drawer 側で一体の union になった（修正3: 片方だけでは渡せない）。
+  // root では両方とも渡さない（spread で型を合わせる）
+  const filterDrawerBackProps = filterView === "root"
+    ? {}
+    : { onBack: backToFilterRoot, backLabel: t("viewer.filter.back") };
 
   const filterDrawerFooter = filterView === "root" ? undefined : (
     <Button
@@ -523,10 +536,10 @@ export function InventoryView({ data }: InventoryViewProps) {
       {isMobile && (
       <Drawer
         open={drawerOpen}
-        onClose={handleDrawerClose}
+        onClose={() => setDrawerOpen(false)}
+        onEscape={handleFilterEscape}
         title={filterDrawerTitle}
-        onBack={filterView === "root" ? undefined : backToFilterRoot}
-        backLabel={t("viewer.filter.back")}
+        {...filterDrawerBackProps}
         footer={filterDrawerFooter}
       >
         {filterView === "provider" ? (

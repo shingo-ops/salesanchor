@@ -64,3 +64,38 @@ describe("Drawer onBack (A19・design.md 4-1)", () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 });
+
+describe("Drawer onEscape (design.md 4-4)", () => {
+  it("calls onEscape, not onClose, on Escape when onEscape is given", () => {
+    const onClose = vi.fn();
+    const onEscape = vi.fn();
+    render(
+      <Drawer open onClose={onClose} title="T" onEscape={onEscape}>
+        x
+      </Drawer>,
+    );
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(onEscape).toHaveBeenCalledTimes(1);
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("falls back to onClose on Escape when onEscape is omitted (default unchanged)", () => {
+    const onClose = vi.fn();
+    render(<Drawer open onClose={onClose} title="T">x</Drawer>);
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("the close (X) button still calls onClose even when onEscape is given", () => {
+    const onClose = vi.fn();
+    const onEscape = vi.fn();
+    render(
+      <Drawer open onClose={onClose} title="T" onEscape={onEscape}>
+        x
+      </Drawer>,
+    );
+    fireEvent.click(screen.getByTestId("drawer-close"));
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(onEscape).not.toHaveBeenCalled();
+  });
+});

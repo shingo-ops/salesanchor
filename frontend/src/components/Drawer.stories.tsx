@@ -84,6 +84,8 @@ export const WithBack: Story = {
   render: () => {
     const [open, setOpen] = useState(false)
     const [sub, setSub] = useState(false)
+    // onBack / backLabel は一体の union（design.md 4-1b）。片方だけでは渡せないので spread で揃える
+    const backProps = sub ? { onBack: () => setSub(false), backLabel: '戻る' } : {}
     return (
       <div style={{ height: '100vh', background: 'var(--bg-canvas)', padding: '2rem' }}>
         <button onClick={() => { setSub(false); setOpen(true) }}>Drawer を開く</button>
@@ -91,8 +93,7 @@ export const WithBack: Story = {
           open={open}
           onClose={() => setOpen(false)}
           title={sub ? '提供者' : '絞り込み'}
-          onBack={sub ? () => setSub(false) : undefined}
-          backLabel="戻る"
+          {...backProps}
         >
           {sub
             ? <p>提供者だけの選択画面（← で一覧に戻る）</p>

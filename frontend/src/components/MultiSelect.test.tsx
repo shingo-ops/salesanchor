@@ -205,6 +205,25 @@ describe("MultiSelect", () => {
       expect(screen.getByText("No matches")).toBeTruthy();
       expect(document.querySelectorAll(".comp-multiselect__option--inline")).toHaveLength(0);
     });
+
+    it("renders nothing in place of the list when emptyLabel is omitted and options is empty (review-opus.md fix 2)", () => {
+      // emptyLabel を渡さないアプリ側の既存呼び出し元（InventoryToolbar/InventoryFilterPanel）で
+      // 候補0件のとき .comp-multiselect__empty の帯（8px x2）が増えないことの固定
+      render(
+        <MultiSelect
+          layout="inline"
+          label="Supplier"
+          options={[]}
+          selected={[]}
+          onChange={vi.fn()}
+          clearLabel="Clear"
+          allLabel="All"
+          countLabel={(n) => `${n} selected`}
+          testId="ms"
+        />,
+      );
+      expect(document.querySelector(".comp-multiselect__empty")).toBeNull();
+    });
   });
 
   describe("layout=\"row\"", () => {

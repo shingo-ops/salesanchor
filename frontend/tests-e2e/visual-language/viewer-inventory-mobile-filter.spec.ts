@@ -192,7 +192,10 @@ for (const width of MOBILE_WIDTHS) {
       await panel.getByTestId(`viewer-provider-options-option-${p0}`).click();
       await panel.getByTestId(`viewer-provider-options-option-${p1}`).click();
 
-      // A9: 検索で候補を絞っている間も選択済みの名前は生の値に化けない（ここでは要約表示で確認）
+      // A9: 検索で候補を絞っている間も選択済みの名前は生の値に化けない（ここでは要約表示で確認）。
+      // 実際は value と label が同じ文字列（viewer-helpers.ts の makeProviderNames）のため、
+      // この spec 単独では退行を観測できない。実際の守り手は frontend/src/components/MultiSelect.test.tsx
+      // （design.md ⑤ A9・⑪）
       await panel.getByTestId("viewer-filter-option-search").fill(p1);
       await expect(panel.getByTestId(`viewer-provider-options-option-${p0}`)).toHaveCount(0);
       const summary = panel.locator(".comp-multiselect__inline-summary");
@@ -255,19 +258,24 @@ for (const width of MOBILE_WIDTHS) {
       expect(after).toBeLessThan(before);
     });
 
-    test("A12・A13: Esc で root に戻る（ドロワーは閉じない）。Tab はドロワーの外へ出ない", async ({ page }) => {
+    test("A12・A13: Esc で root に戻る（ドロワーは閉じない）。Tab / Shift+Tab は端で回り込む", async ({ page }) => {
       await gotoViewer(page, { width, height });
       const panel = await openFilterDrawer(page);
 
       await panel.getByTestId("viewer-provider-row").click();
-      await expect(panel.getByTestId("drawer-back")).toBeVisible();
+      const back = panel.getByTestId("drawer-back");
+      await expect(back).toBeVisible();
 
-      // A13: Tab を10回押してもフォーカスがドロワーの外に出ない
-      for (let i = 0; i < 10; i++) {
-        await page.keyboard.press("Tab");
-        const inside = await panel.evaluate((el) => el.contains(document.activeElement));
-        expect(inside).toBe(true);
-      }
+      // A13: 選択画面に入った直後は先頭（←）にフォーカスがある。Tab を10回押すだけでは
+      // 端に届かず空振りする（候補25件＋←／✕／検索欄／選択をクリア／決定する＝約30個）ため、
+      // 端の回り込みを直接測る（design.md ⑤・審査指摘「A13が空振り」の修正4）。
+      await expect(back).toBeFocused();
+      // 先頭で Shift+Tab を押すと末尾（決定する）に回り込む
+      await page.keyboard.press("Shift+Tab");
+      await expect(panel.getByTestId("viewer-filter-apply")).toBeFocused();
+      // 逆向き: 末尾で Tab を押すと先頭（←）に回り込む
+      await page.keyboard.press("Tab");
+      await expect(back).toBeFocused();
 
       // A12: Esc で root に戻る。ドロワー自体は閉じない
       await page.keyboard.press("Escape");
@@ -275,17 +283,15 @@ for (const width of MOBILE_WIDTHS) {
       await expect(page.locator('[data-testid="supplier-drawer"].comp-drawer-panel--open')).toHaveCount(1);
     });
 
-    test("A17: ドロワーを閉じて開き直すと最初の画面に戻り、検索欄が空になっている", async ({ page }) => {
+    test("A17: 選択画面のまま ✕ を押すとドロワーが閉じる。開き直すと最初の画面に戻り、検索欄が空になっている", async ({ page }) => {
       await gotoViewer(page, { width, height });
       const panel = await openFilterDrawer(page);
 
       await panel.getByTestId("viewer-provider-row").click();
       await panel.getByTestId("viewer-filter-option-search").fill("abc");
 
-      // ✕ は Drawer の onClose 固定（Esc と同じ関数）のため、root 以外では一段戻るだけ
-      await panel.getByTestId("drawer-close").click();
-      await expect(panel.getByTestId("drawer-back")).toHaveCount(0);
-      // root からの ✕ で実際に閉じる
+      // ✕ は onClose 固定（Esc・onEscape とは別経路）のため、選択画面のままでも1回で閉じる
+      // （修正1: 以前は Esc と同じ関数で一段戻るだけだった＝名前「閉じる」と動作が食い違っていた）
       await panel.getByTestId("drawer-close").click();
       await expect(page.locator('[data-testid="supplier-drawer"].comp-drawer-panel--open')).toHaveCount(0);
 
@@ -317,7 +323,9 @@ for (const width of MOBILE_WIDTHS) {
       await expect(panel.getByTestId("viewer-condition-row")).toHaveText(new RegExp(fixture.conditions[0]));
 
       const after = extractRowCount(await pageInfo.textContent());
-      expect(after).toBeLessThanOrEqual(before);
+      // fixture は60行をコンディション2種類に均等配分（viewer-helpers.ts）なので、1種類を
+      // 選べば必ず30件に減る。toBeLessThanOrEqual では絞り込みが全く効かなくても緑になる（修正5）
+      expect(after).toBeLessThan(before);
 
       await expectNoPageOverflow(page);
     });

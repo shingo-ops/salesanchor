@@ -13,6 +13,9 @@
  * （countLabel は使わない）。名前の解決は常に `allOptions ?? options` から行う（検索で options を
  * 絞っても選択済みの名前が生の値に化けないため。design.md 4-2・審査指摘6）。
  * options が空のときは一覧の代わりに emptyLabel を描く（design.md 4-2・審査指摘7）。
+ * emptyLabel を渡さないときは何も描かない（origin/main の既定どおり。アプリ側の既存呼び出し元
+ * ＝InventoryToolbar/InventoryFilterPanel が emptyLabel を渡していないため、ここで波及が止まる。
+ * docs/handoff/viewer-filter-subscreen/review-opus.md 修正2）。
  * 文言は金型に書かず、呼び出し側が t() で渡す。
  *
  * testid: ボタン `${testId}-button`（inline/row では出さない）、行 `${testId}-row`（layout="row" のみ）、
@@ -46,7 +49,8 @@ export interface MultiSelectProps {
   allLabel: string;
   /** 2件以上のときの文言を返す（layout="inline"・"row" では使わない） */
   countLabel: (n: number) => string;
-  /** options が空のときに一覧の代わりに出す文言（design.md 4-2・審査指摘7） */
+  /** options が空のときに一覧の代わりに出す文言（design.md 4-2・審査指摘7）。
+   *  省略時は何も描かない（review-opus.md 修正2） */
   emptyLabel?: string;
   testId?: string;
   /** 選択肢の出し方。既定 "popover"（ボタンを押すと浮かぶ＝今までどおり）。
@@ -84,8 +88,10 @@ export function MultiSelect({
   const menuCls = `comp-multiselect__menu${layout === "popover" ? " comp-multiselect__menu--popover" : ""}`;
   const listCls = `comp-multiselect__list${layout === "popover" ? " comp-multiselect__list--popover" : ""}`;
 
+  // emptyLabel 未指定なら何も描かない（design.md 4-2・審査指摘7の修正。既存のアプリ側呼び出し元は
+  // emptyLabel を渡していないため、ここで origin/main と同じ「空なら何も出ない」に保つ）
   const optionRows = options.length === 0 ? (
-    <div className="comp-multiselect__empty">{emptyLabel}</div>
+    emptyLabel != null ? <div className="comp-multiselect__empty">{emptyLabel}</div> : null
   ) : options.map((o) => (
     <label
       key={o.value}
