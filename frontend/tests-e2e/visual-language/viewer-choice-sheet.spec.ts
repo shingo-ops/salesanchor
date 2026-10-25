@@ -302,7 +302,7 @@ for (const width of MOBILE_WIDTHS) {
       await expect(trigger).toHaveText("並び替え");
     });
 
-    test("B10: パネルは Esc・✕・背景クリックのどれでも閉じる", async ({ page }) => {
+    test("B10: パネルは Esc と ✕ で閉じる（スマホは全幅のため背景を押す余地が無い）", async ({ page }) => {
       await gotoViewer(page, { width, height });
       const trigger = page.getByTestId("viewer-tab-select");
 
@@ -315,13 +315,18 @@ for (const width of MOBILE_WIDTHS) {
       await trigger.click();
       panel = openPanel(page);
       await waitPanelSlidIn(panel);
-      await panel.getByTestId("drawer-close").click();
-      await expect(openPanel(page)).toHaveCount(0);
 
-      await trigger.click();
-      panel = openPanel(page);
-      await waitPanelSlidIn(panel);
-      await page.locator(".comp-drawer-overlay").click();
+      // スマホ幅では Drawer 金型が全幅になる（frontend/src/components/Drawer.css:114-118）。
+      // そのため「背景（オーバーレイ）を押して閉じる」は**物理的に押せる場所が無い**。
+      // CI 実測（PR #4759 の1回目）: オーバーレイをクリックしようとすると
+      // comp-drawer-panel--open の subtree が pointer events を遮り 15 秒でタイムアウトした。
+      // 便2 の記録（スマホは全幅で背景タップができない）と一致する。
+      // ここでは「閉じる手段が Esc と ✕ の2つであること」と「全幅であること」を固定する。
+      const panelBox = await panel.boundingBox();
+      expect(panelBox).not.toBeNull();
+      expect(Math.round(panelBox!.width)).toBe(width);
+
+      await panel.getByTestId("drawer-close").click();
       await expect(openPanel(page)).toHaveCount(0);
     });
 
