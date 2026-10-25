@@ -138,7 +138,7 @@ describe('shared button migration: real panel operations', () => {
     await screen.findByTestId('fin-input-revenue_amount');fireEvent.change(button('fin-input-revenue_amount'), { target: { value: '1250' } });
     fireEvent.click(button('fin-save'));
     expect(send).toHaveBeenCalledExactlyOnceWith('/orders/7/financial', { ...Object.fromEntries(financialKeys.map(k => [k, k === 'revenue_amount' ? 1250 : 0])), notes: null });
-    expect(button('fin-save').disabled).toBe(true);expect(button('fin-save').textContent).toBe('common.saving');
+    expect(button('fin-save').disabled).toBe(true);expect(button('fin-save').textContent).toBe(existing?'common.update':'common.register');expect(button('fin-save').getAttribute('aria-busy')).toBe('true');
     const cancel = screen.getByRole('button', { name: 'common.cancel' }) as HTMLButtonElement;expect(cancel.disabled).toBe(true);fireEvent.click(cancel);fireEvent.click(button('fin-save'));expect(close).not.toHaveBeenCalled();expect(send).toHaveBeenCalledTimes(1);
     await act(async () => { pending.resolve(financial); });expect(saved).toHaveBeenCalledExactlyOnceWith(financial);expect(close).toHaveBeenCalledTimes(1);
   });
@@ -153,7 +153,7 @@ describe('shared button migration: real panel operations', () => {
     fireEvent.change(screen.getByTestId(`${prefix}-input-${kind === 'purchase' ? 'purchase_amount' : 'weight_kg'}`), { target: { value: kind === 'purchase' ? '125.50' : '2.5' } });
     const save = button(`${prefix}-save`);expect(save.form?.id).toBe(`${kind}-detail-form`);expect(save.closest('form')).toBeNull();expect(save.type).toBe('submit');
     fireEvent.click(save);const expected = Object.fromEntries((kind === 'purchase' ? [...purchaseText, ...purchaseNumbers] : [...shippingText, ...shippingNumbers]).map(k => [k, k === 'purchase_amount' ? 125.5 : k === 'weight_kg' ? 2.5 : null]));
-    expect(send).toHaveBeenCalledExactlyOnceWith(`/orders/7/${kind}`, expected);expect(save.disabled).toBe(true);expect(save.textContent).toBe('common.saving');fireEvent.click(save);
+    expect(send).toHaveBeenCalledExactlyOnceWith(`/orders/7/${kind}`, expected);expect(save.disabled).toBe(true);expect(save.textContent).toBe(existing?'common.update':'common.register');expect(save.getAttribute('aria-busy')).toBe('true');fireEvent.click(save);
     const cancel=screen.getByRole('button', { name: 'common.cancel' }) as HTMLButtonElement;expect(cancel.disabled).toBe(true);fireEvent.click(cancel);expect(close).not.toHaveBeenCalled();expect(send).toHaveBeenCalledTimes(1);
     await act(async () => { pending.resolve(data); });expect(saved).toHaveBeenCalledExactlyOnceWith(data);expect(close).toHaveBeenCalledTimes(1);
   });
