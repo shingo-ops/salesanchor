@@ -81,7 +81,7 @@ export function ReviewCsvPanel({ onDone }: { onDone: () => void }) {
       <p>{t("reviewCsv.inputHint")}</p>
       <TextField type="file" accept=".csv,text/csv" label={t("reviewCsv.file")} disabled={busy} onChange={e => select(e.target.files?.[0] ?? null)} />
       {file && <p>{file.name}</p>}
-      <ContentToolbar right={<HeaderButton variant="primary" onClick={() => void review()} disabled={!file || busy}>{busy ? t("common.loading") : t("reviewCsv.review")}</HeaderButton>} />
+      <ContentToolbar right={<HeaderButton loading={busy} variant="primary" onClick={() => void review()} disabled={!file || busy}>{t("reviewCsv.review")}</HeaderButton>} />
     </>}
   </>;
 }

@@ -37,6 +37,6 @@ export function TcgProductImportPreview({ preview, busy, onCommit, onCancel }: P
     {preview.file_errors.length > 0 && <div role="alert">{preview.file_errors.map((code, index) => <p key={index}>{importMessage(code, t)}</p>)}</div>}
     <DataTable columns={columns} data={preview.rows} rowKey={row => row.row_no} emptyState={t("productCsv.emptyRows")} />
     <p>{t(update ? "productCsv.updateConfirm" : "productCsv.confirmHint")}</p>
-    <ContentToolbar left={<HeaderButton variant="secondary" onClick={onCancel} disabled={busy}>{t("productCsv.chooseAgain")}</HeaderButton>} right={<HeaderButton variant="primary" onClick={onCommit} disabled={busy || preview.ok === 0 || preview.file_errors.length > 0 || (update && preview.blocked > 0)}>{busy ? t("common.loading") : t(update ? "productCsv.commitUpdate" : "productCsv.commit")}</HeaderButton>} />
+    <ContentToolbar left={<HeaderButton variant="secondary" onClick={onCancel} disabled={busy}>{t("productCsv.chooseAgain")}</HeaderButton>} right={<HeaderButton loading={busy} variant="primary" onClick={onCommit} disabled={busy || preview.ok === 0 || preview.file_errors.length > 0 || (update && preview.blocked > 0)}>{t(update ? "productCsv.commitUpdate" : "productCsv.commit")}</HeaderButton>} />
   </section>;
 }

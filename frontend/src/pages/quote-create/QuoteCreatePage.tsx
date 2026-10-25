@@ -283,7 +283,7 @@ export default function QuoteCreatePage() {
 
         <div className="form-actions">
           <Button type="button" variant="secondary" size="md" onClick={() => navigate("/quotes")}>{t("common.cancel")}</Button>
-          <Button type="submit" variant="primary" size="md" disabled={saving}>{saving ? t("common.saving") : t("quotes.saveDraft")}</Button>
+          <Button loading={saving} type="submit" variant="primary" size="md" disabled={saving}>{t("quotes.saveDraft")}</Button>
         </div>
       </form>
       <FedExRateModal
