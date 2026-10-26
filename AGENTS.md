@@ -43,4 +43,3 @@ DROP TABLE / 大量DELETE / `rm -rf` / `git reset --hard` / `git push --force`�
 - 作業前/commit前/PR前のチェックは `docs/ai-agents/executor-checklist.md`（正本・必読）
 - 手順や作業方法を答える・計画する前に、必ず目次 `docs/INDEX.md` を開き、章→末端の順にたどって該当する手順書を読む（記憶や推測だけで答えない）
 - 画面（`frontend/`）は `frontend/AGENTS.md`、サーバー側（`backend/`）は `backend/AGENTS.md` の決まりにも従う。触る前に開いて読む（Codex は作業場所より下の AGENTS.md を自動では読まない）
-- i18n の決まりは frontend/AGENTS.md
