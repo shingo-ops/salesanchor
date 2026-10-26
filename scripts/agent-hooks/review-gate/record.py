@@ -4,6 +4,7 @@
 審査役 (reviewer, model opus) の報告の最後の VERDICT 行を読み、APPROVE で、
 かつ sha が PR の今の HEAD と一致するときだけ記録を残す。
 設計: docs/handoff/review-gate-hook/design.md §5-2 / ADR-1029
+第8版: 末尾 repo <owner>/<repo> を受ける
 常に exit 0 (審査役の報告を妨げない)。標準ライブラリのみ。
 """
 import datetime
@@ -15,7 +16,8 @@ import subprocess
 import sys
 
 VERDICT_RE = re.compile(
-    r"^VERDICT: (APPROVE|REQUEST_CHANGES|REJECT) on ([0-9a-f]{40}) PR #(\d+)\s*$",
+    r"^VERDICT: (APPROVE|REQUEST_CHANGES|REJECT) on ([0-9a-f]{40}) PR #(\d+)"
+    r"(?: repo ([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+))?\s*$",
     re.M,
 )
 
@@ -120,13 +122,17 @@ def main():
     if not found:
         log({"result": "skip", "reason": "no VERDICT line", "agent_id": agent_id})
         return 0
-    verdict, sha, pr = found[-1]
+    verdict, sha, pr, vowner, vrepo = found[-1]
     if verdict != "APPROVE":
         log({"result": "skip", "reason": "verdict " + verdict, "pr": int(pr), "agent_id": agent_id})
         return 0
+    cmd = [gh_path(), "pr", "view", pr, "--json", "headRefOid,url"]
+    if vowner:
+        cmd = [gh_path(), "pr", "view", pr, "--repo", "%s/%s" % (vowner, vrepo),
+               "--json", "headRefOid,url"]
     try:
         out = subprocess.run(
-            [gh_path(), "pr", "view", pr, "--json", "headRefOid,url"],
+            cmd,
             cwd=cwd if os.path.isdir(cwd) else None,
             capture_output=True, text=True, timeout=60,
         )
@@ -137,6 +143,9 @@ def main():
     ownrepo = repo_from_url(info.get("url"))
     if not ownrepo or info.get("headRefOid") != sha:
         log({"result": "skip", "reason": "sha mismatch or bad url", "pr": int(pr)})
+        return 0
+    if vowner and (ownrepo[0].lower(), ownrepo[1].lower()) != (vowner.lower(), vrepo.lower()):
+        log({"result": "skip", "reason": "repo mismatch", "pr": int(pr)})
         return 0
     owner, repo = ownrepo
     rec_dir = os.path.join(gate_dir(), "records")

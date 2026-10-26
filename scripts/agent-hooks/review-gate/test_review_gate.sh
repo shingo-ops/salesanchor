@@ -40,6 +40,7 @@ cat > "$REVIEW_GATE_GH" <<'EOF'
 if [ "$1" = "pr" ] && [ "$2" = "view" ]; then
   repo="o/r"; prev=""
   for a in "$@"; do [ "$prev" = "--repo" ] && repo="$a"; prev="$a"; done
+  [ -n "${FAKE_URL_REPO:-}" ] && repo="$FAKE_URL_REPO"
   printf '{"headRefOid":"%s","url":"https://github.com/%s/pull/%s"}\n' "$(cat "$FAKE_HEAD_FILE")" "$repo" "$3"
   exit 0
 fi
@@ -167,6 +168,25 @@ expect_rec "R4 VERDICT が複数あるときは最後の 1 件 (APPROVE が最�
 clear_records
 run_record "$(rec_json "$M_OK" reviewer xxx "$MAIN_T")"
 expect "R4 record.py の記録で gate が通る" 0 'gh pr merge 1 --merge'
+
+# ---- 第8版: VERDICT 行の末尾 repo <owner>/<repo>
+M_XY=$'審査しました。\nVERDICT: APPROVE on '"$SHA1"$' PR #1 repo x/y'
+expect_rec "R2(8) repo x/y つき -> 記録 1 件" 1 "$M_XY" reviewer xxx "$MAIN_T"
+[ -f "$GD/records/x__y-1-$SHA1.json" ] && ok "R2(8) 記録ファイル名 x__y-1-<sha>.json" || ng "R2(8) 記録ファイル名" "無い"
+expect "R2(8) 記録後 gh pr merge 1 --merge --repo x/y が通る" 0 'gh pr merge 1 --merge --repo x/y'
+expect "R2(8) repo 指定なしの merge (o/r) は x/y の記録では通らない" 2 'gh pr merge 1 --merge'
+expect_rec "R2(8) 大文字小文字違い repo X/Y でも記録 1 件" 1 $'x\nVERDICT: APPROVE on '"$SHA1"$' PR #1 repo X/Y' reviewer xxx "$MAIN_T"
+FAKE_URL_REPO=x/z expect_rec "R4(8) repo x/y つきで url が x/z -> 記録 0 件" 0 "$M_XY" reviewer xxx "$MAIN_T"
+grep -q '"reason": "repo mismatch"' "$GD/log.jsonl" && ok "R4(8) log reason repo mismatch" || ng "R4(8) log reason" "repo mismatch が無い"
+expect_rec "R4(8) repo なしの今までの行 -> 記録 1 件" 1 "$M_OK" reviewer xxx "$MAIN_T"
+[ -f "$GD/records/o__r-1-$SHA1.json" ] && ok "R4(8) repo なしは o__r-1-<sha>.json" || ng "R4(8) repo なしの記録名" "無い"
+expect_rec "R4(8) repo x (/ なし) -> 記録 0 件" 0 $'x\nVERDICT: APPROVE on '"$SHA1"$' PR #1 repo x' reviewer xxx "$MAIN_T"
+expect_rec "R4(8) repo x/y z (余分) -> 記録 0 件" 0 $'x\nVERDICT: APPROVE on '"$SHA1"$' PR #1 repo x/y z' reviewer xxx "$MAIN_T"
+# 止めの文に owner/repo と repo つきの案内が入る
+clear_records
+expect "R1(8) 止めの文に「 repo o/r」の案内" 2 'gh pr merge 1 --merge' "$WORK" ' repo o/r」を足させてください'
+clear_records
+run_record "$(rec_json "$M_OK" reviewer xxx "$MAIN_T")"
 
 # ---------------------------------------------------------------- R5 model
 expect_tool "R5 Agent reviewer model=sonnet" 2 Agent '{"subagent_type":"reviewer","model":"sonnet","prompt":"x"}'
