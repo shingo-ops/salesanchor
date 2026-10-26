@@ -39,7 +39,7 @@ main の鍵（消せない・巻き戻し禁止・レビュー必須・process-a
 
 ### 3-3. 作法
 
-worktree の唯一の正規入口は `scripts/new-worktree.sh` であり、`origin/main` 起点で作る。台帳への登録は `scripts/new-worktree.sh` が自動で行い、手作業やミラーは不要。危険操作の承認手順（確認→退避→試し→自筆GO→実行→検算）、台帳更新が、main 一本の動線でこれまでどおり機能する。develop 前提の自動化のうち、リスクを止める「守り」は main へ移し、単なる develop 運用の付随機能（AI自動ライン等）は廃止する。
+worktree の唯一の正規入口は `scripts/new-worktree.sh` であり、`origin/main` 起点で作る。台帳への登録は `scripts/new-worktree.sh` が自動で行い、手作業やミラーは不要。（例外: Discord の件のセッションの作業場所は、agent-console が `~/worktrees/discord-cases/` に作る本店から切り離した写しで、台帳もその写しの中に agent-console が同じ書式で登録する。`--no-verify` は使わない。ADR-1039 Exceptions）危険操作の承認手順（確認→退避→試し→自筆GO→実行→検算）、台帳更新が、main 一本の動線でこれまでどおり機能する。develop 前提の自動化のうち、リスクを止める「守り」は main へ移し、単なる develop 運用の付随機能（AI自動ライン等）は廃止する。
 
 ### 3-4. 撤去そのもの
 
