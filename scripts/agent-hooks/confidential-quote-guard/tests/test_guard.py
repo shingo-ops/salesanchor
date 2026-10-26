@@ -582,6 +582,25 @@ def main():
     sh("git", "config", "--unset", "extensions.worktreeConfig", cwd=WORK)
     check("L1 設定を戻すと push -> 通る", P("hcl"), 0, cwd=T)
 
+    # worktree が複数あっても (拡張なし) 通常の push は通る / 拡張ありで worktree の設定に別名があれば止まる
+    WT2 = os.path.join(T, "wt2")
+    sh("git", "worktree", "add", "-q", "-B", "wt2br", WT2, "origin/main", cwd=WORK)
+    write(os.path.join(WT2, "wt2.md"), "- 「%s」\n" % FAKE_NOT_IN_CORPUS)
+    sh("git", "add", "-A", cwd=WT2)
+    sh("git", "-c", "user.email=t@example.com", "-c", "user.name=t", "commit", "-q", "-m", "wt2", cwd=WT2)
+    check("L1 worktree が複数 (拡張なし) の clean push -> 通る", P("wt2br", path=WT2), 0, cwd=T)
+    write(os.path.join(WT2, "wt2b.md"), "- 「%s」\n" % q)
+    sh("git", "add", "-A", cwd=WT2)
+    sh("git", "-c", "user.email=t@example.com", "-c", "user.name=t", "commit", "-q", "-m", "wt2b", cwd=WT2)
+    check("L1 worktree が複数 (拡張なし) で書き写しあり -> 止まる", P("wt2br", path=WT2), 2, cwd=T)
+    sh("git", "reset", "-q", "--hard", "HEAD~1", cwd=WT2)
+    sh("git", "config", "extensions.worktreeConfig", "true", cwd=WORK)
+    sh("git", "config", "--worktree", "alias.sy", "push", cwd=WT2)
+    check("L1 worktree が複数 (拡張あり) で worktree の設定に alias -> 止まる", P("wt2br", path=WT2), 2, cwd=T)
+    sh("git", "config", "--worktree", "--unset", "alias.sy", cwd=WT2)
+    check("L1 worktree が複数 (拡張あり) で設定なし -> 通る", P("wt2br", path=WT2), 0, cwd=T)
+    sh("git", "config", "--unset", "extensions.worktreeConfig", cwd=WORK)
+
     # L2: 追跡ブランチを手で進める
     for nm, c in (("update-ref refs/remotes", "git update-ref refs/remotes/origin/hcl hcl"),
                   ("-C W update-ref refs/remotes", "git -C %s update-ref refs/remotes/origin/hcl hcl" % WORK),

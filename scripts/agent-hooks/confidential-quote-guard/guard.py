@@ -442,7 +442,13 @@ def check_push(words, repos, matched):
     c = git(top, "config", "--get-regexp", PUSH_CFG_RE)
     if c.returncode != 1:  # 1 = 該当なし。0 (別名や push 先の差し替えがある) とそれ以外の失敗は止める
         raise Block("この repo には別名 (alias) か push 先の差し替え (pushurl など) の設定があります")
-    for scope in ("--local", "--worktree"):  # この repo だけの設定。include 先の中身も別名を持ち込めるので include も止める
+    ext = git(top, "config", "--bool", "--get", "extensions.worktreeConfig")
+    if ext.returncode not in (0, 1):
+        raise Block("extensions.worktreeConfig が読めません")
+    scopes = ["--local"]
+    if ext.returncode == 0 and ext.stdout.strip() == "true":
+        scopes.append("--worktree")  # 拡張が無いと、worktree が複数あるとき --worktree は失敗する (config.worktree も読まれない)
+    for scope in scopes:  # この repo だけの設定。include 先の中身も別名を持ち込めるので include も止める
         c = git(top, "config", scope, "--get-regexp", SCOPED_CFG_RE)
         if c.returncode != 1:
             raise Block("この repo の設定 (%s) に別名・push 先の差し替え・include があります" % scope)
