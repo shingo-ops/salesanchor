@@ -13,9 +13,9 @@
 
 ## What（何を決めるか）
 
-1. 手元の Mac の ~/.claude/settings.json の PreToolUse に、matcher `Write|Edit|MultiEdit|NotebookEdit|Bash` の見張りを 1 つ足す。
-2. 入力に `agent_id` がある（担当の中の呼び出し）とき、Write・Edit・MultiEdit・NotebookEdit を止める。Bash では git の保存・送り出し（commit・push・merge・rebase・cherry-pick・revert・am・tag）と GitHub への書き込み（gh pr create/merge/comment など・gh api の書き込み）を止める。
-3. `agent_id` が無い（Opus 本体）ときは何もしない。読むだけの命令は担当でも止めない。
+1. 手元の Mac の ~/.claude/settings.json の PreToolUse に、matcher `Write|Edit|MultiEdit|NotebookEdit|Bash|Monitor` の見張りを 1 つ足す。
+2. 入力に `agent_id` がある（担当・fork・teammate の中の呼び出し）とき、Write・Edit・MultiEdit・NotebookEdit を止める。Bash・Monitor の命令では、git と gh は「読むだけの一覧」（design.md §5-3 表A・表B）に無い使い方を全部止め、GitHub へ書く台本（表C）と別の AI（claude・codex）の起動も止める。
+3. `agent_id` が無い（Opus 本体）ときは何もしない。読むだけの命令は担当でも止めない。手元の generator も止まるので、generator はクラウド専用になる。
 4. 台本と試験はリポジトリ（scripts/agent-hooks/local-subagent-guard/）に置き、CI（agent-hooks-test）で試験を流す。命令文の読み方はクラウドの見張り（scripts/agent-hooks/cloud/guard_pre_tool.py の scan_text）を使い回す。
 
 ## Why（なぜ）
@@ -26,8 +26,10 @@
 
 ## 受け入れるリスク
 
-- Bash の命令文での書き換え（`>`・`sed -i` など）は止めない。保存と送り出しが止まるので外には出ない。
-- 変数で組み立てた命令・隠した命令は見抜けない。
+- Bash の命令文での書き換え（`>`・`sed -i` など）は止めない。保存と送り出しが止まるので外には出ないが、本体と同じ作業場所の未保存の変更を上書きすることはありうる。
+- 変数で組み立てた命令・隠した命令・表C に無い台本の中の書き込みは見抜けない（表C は CI の照合で保つ）。
+- MCP の書き込み道具は対象外。
+- 写した命令文の読み方（guard_pre_tool.py）は導入した時点の版で固まる。変わったら install し直す。
 - 入力の JSON が読めないときは通す（本体を止めないため）。
 - 文字の中の語（`echo "git push"`）でも担当は止まる。
 

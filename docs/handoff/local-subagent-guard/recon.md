@@ -7,7 +7,7 @@
 
 ## 1. フックの仕様（出典: https://code.claude.com/docs/en/hooks 。Context7 は月の上限で使えず、起動指示の許す代わりの手段として公式文書を WebFetch で直接読んだ）
 
-- 【事実】設定ファイルのフックはサブエージェントの中の道具呼び出しにもかかり、PreToolUse の入力に `agent_id`（担当ごとの id）と `agent_type`（担当の種類の名前）が入る。本流（Opus 本体）の呼び出しには入らない。
+- 【事実】設定ファイルのフックはサブエージェントの中の道具呼び出しにもかかり、PreToolUse の入力に `agent_id`（担当ごとの id）と `agent_type`（担当の種類の名前）が入る。本流（Opus 本体）の呼び出しには入らない。公式文書の説明は「the subagent or in-process teammate」で、fork（本体の写しの担当）も担当として扱われる。→ fork・teammate も同じく止まる。
 - 【事実】model はフック入力に入らない（SessionStart のみ）。→ 担当の model（opus/sonnet）では分けられない。agent_id の有無で分ける。
 - 【事実】止め方は exit 2（stderr が Claude に見える）か、`hookSpecificOutput.permissionDecision: "deny"`＋理由の JSON。exit 1 は止める扱いではない。
 
