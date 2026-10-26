@@ -117,7 +117,7 @@ React は同種の effect を**書いた順**に流すため、通常の `useEff
 **B1・B2 の作り方（確定事項）**:
 - 置き場は `frontend/tests-e2e/visual-language/`（ここ以外は CI で1本も走らない）。
 - **「3幅」ではなく「3 project で同じ 390px を3回」**（独立審査 N5 の訂正）: 対象のパネルは
-  `isMobile`（767px 以下）のときだけ存在するため、`viewer-helpers.ts` の `gotoViewer` が
+  `isMobile`（767px 以下）のときだけ存在するため、`frontend/tests-e2e/visual-language/viewer-helpers.ts` の `gotoViewer` が
   既定で 390×844 を強制する。tablet・desktop の project でも 390px で走るのが正しい。
 - **前提を必ず assert する**（便6・便7 の教訓）: 「閉じたパネルが2枚ある」「その中にフォーカスできる要素が
   **10個以上ある**」を先に確かめる。ここを測らないと、中身が空のときに**何も確かめずに緑**になる。
@@ -132,7 +132,7 @@ React は同種の effect を**書いた順**に流すため、通常の `useEff
   回数が 200 を超えたら前提が崩れていると見なして赤にする（黙って打ち切らない）。
 - **B2 は「入った回数が0」だけでなく、Tab が実際に進んでいること**（現在地が複数の場所に動いたこと）も assert する。
   フォーカスがどこにも行かない状態でも「0回」は成立してしまうため。
-- 疑似応答は `viewer-helpers.ts` の `gotoViewer`（固定の応答）で足りる。**「取得回数」で切り替える形は使わない**
+- 疑似応答は `frontend/tests-e2e/visual-language/viewer-helpers.ts` の `gotoViewer`（固定の応答）で足りる。**「取得回数」で切り替える形は使わない**
   （便7 で踏んだ罠。`React.StrictMode` で初期取得が2回走る）。
 
 ## ⑥ 触るファイル
@@ -195,10 +195,10 @@ React は同種の effect を**書いた順**に流すため、通常の `useEff
 | F2 | **D2＝メルカリの表示サイズ感**（操作部分の文字 12px→16px・行 44px→48px）。PO 決定（2026-10-27）で「**まず操作部分→本番で見て一覧も直すか判断**」「**他の宿題のあと**」 |
 | F3 | 便6 からの **C-up**（下が狭いとき上へ反転）・**C-out**・**C-sb**・**C-perf**・**C-tap**（popover 層の選択肢が44px未満） |
 | F4 | `Modal`・`Sheet` に単体テストが1件も無い（便7 の E4）。本便で `Sheet` には C4 が入るので、残りは `Modal` |
-| F6 | **`FOCUSABLE_SELECTOR` の写しが `tests-e2e/` 側に2つある**（`viewer-focus-trap.spec.ts`・本便の `drawer-inert-closed.spec.ts`）。便7 の C11（定義は1か所）は `src/` 配下しか見ない（`useFocusTrap.test.tsx` の `SRC_ROOT`）ため、検査側の写しは**歯止めの外で静かにずれる**（独立審査 N3） |
-| F7 | **`tests-e2e/` は既定の型検査・lint の対象外**（`tsconfig.json` の `include` が `["src"]`・`npm run lint` は `eslint src`）。本便の新 spec は**手で型検査して0件**を確認したが、仕組みとしては野放し。CI か手順に組み込む（独立審査 N4） |
+| F6 | **`FOCUSABLE_SELECTOR` の写しが `tests-e2e/` 側に2つある**（`frontend/tests-e2e/visual-language/viewer-focus-trap.spec.ts`・本便の `frontend/tests-e2e/visual-language/drawer-inert-closed.spec.ts`）。便7 の C11（定義は1か所）は `src/` 配下しか見ない（`frontend/src/hooks/useFocusTrap.test.tsx` の `SRC_ROOT`）ため、検査側の写しは**歯止めの外で静かにずれる**（独立審査 N3） |
+| F7 | **`tests-e2e/` は既定の型検査・lint の対象外**（`frontend/tsconfig.json` の `include` が `["src"]`・`npm run lint` は `eslint src`）。本便の新 spec は**手で型検査して0件**を確認したが、仕組みとしては野放し。CI か手順に組み込む（独立審査 N4） |
 | F8 | `useInertWhenClosed` の `ready` は依存配列専用で effect 本文では使っていない。`if (!ready) return;` の形にすると自己説明的になる（独立審査 N7） |
-| F5 | **`frontend/src/components/loading/Drawer.tsx`・`Modal.tsx`（使われていないもう一つの実装）を正本へ接続する**。PO 決定（2026-10-27）で**本便は対象外**。事実: 入口 `loading/index.ts` から export され README にも記載があるが、**名前で取り込んでいるファイルは0件**。閉じたときは `aria-hidden={!open}`（`loading/Drawer.tsx:29`）で読み上げからは外れるが **Tab の通り道からは外れない**（同じ穴が半分ある）。正本 `docs/specs/design-system/design.md:269` が「同名だからと直ちに削除しない／公開入口を既存正本へ接続する」と定めているため、削除・export 外しは正本側の変更を伴う別便 |
+| F5 | **`frontend/src/components/loading/Drawer.tsx`・`frontend/src/components/Modal.tsx`（使われていないもう一つの実装）を正本へ接続する**。PO 決定（2026-10-27）で**本便は対象外**。事実: 入口 `frontend/src/components/loading/index.ts` から export され README にも記載があるが、**名前で取り込んでいるファイルは0件**。閉じたときは `aria-hidden={!open}`（`frontend/src/components/loading/Drawer.tsx:29`）で読み上げからは外れるが **Tab の通り道からは外れない**（同じ穴が半分ある）。正本 `docs/specs/design-system/design.md:269` が「同名だからと直ちに削除しない／公開入口を既存正本へ接続する」と定めているため、削除・export 外しは正本側の変更を伴う別便 |
 
 ## 対象 ADR
 

@@ -48,7 +48,7 @@
 | N1 | jsdom は `inert` 未実装（`'inert' in el` が false・属性にも反映されない）＝C1〜C4 が保証するのは「値を代入したこと」だけ。design ⑨ の「印が付いているかは測れる」は不正確 | **書類を訂正**（⑨）。検査ファイルの冒頭にも明記。挙動の一次情報は画面検査だけ、ただし順序だけは C8 で単体固定 |
 | N2 | 「直す前は赤」の対象は C1・C4 だけでなく **C2・C3 も赤**（未設定は `false` ではなく `undefined`） | **書類を訂正**（⑤ の表） |
 | N3 | `FOCUSABLE_SELECTOR` の写しが検査側に2つ。便7 の C11（定義1か所）は `src/` しか見ないので歯止めの外 | ⑫ **F6** |
-| N4 | **`tests-e2e/` は既定の型検査・lint の対象外**（`tsconfig.json` の include が `["src"]`／`npm run lint` は `eslint src`）。新 spec は手で型検査して0件だが仕組みとしては野放し | ⑫ **F7** |
+| N4 | **`tests-e2e/` は既定の型検査・lint の対象外**（`frontend/tsconfig.json` の include が `["src"]`／`npm run lint` は `eslint src`）。新 spec は手で型検査して0件だが仕組みとしては野放し | ⑫ **F7** |
 | N5 | 「画面検査3幅」は不正確。対象パネルは `isMobile` のときだけ存在し `gotoViewer` が 390×844 を強制するため、**3 project で同じ 390px を3回** | **書類を訂正**（③・⑤） |
 | N6 | B1 の前提「10個以上」に対し実測11＝余裕1 | **書類に明記**（⑤。将来ここが赤くなる理由を残した） |
 | N7 | `ready` は依存配列専用で effect 本文では使っていない | ⑫ **F8** |
@@ -83,7 +83,7 @@
 - **B2 の「DOM 順で後ろ」前提は成立**: ポータル先は `document.body`（`Drawer.tsx:67`）で閉じた2枚は `#root` の後ろ。
   スマホのカード表示にフォーカス対象は無い（`onRowClick`・`selectable` 未使用）ため、外側は約6個＝押下回数は約9回。
 - **B1 の前提の数**（閉じたパネル2枚・focusable 合計11＝絞り込み9＋シリーズ2）は現物と一致。
-- `Modal` が対象外という判断（`Modal.tsx:86` で閉じると null）は正しい。
+- `Modal` が対象外という判断（`frontend/src/components/Modal.tsx:86` で閉じると null）は正しい。
 
 ## 設計担当が自分で測った一次情報（コマンドと出力の件数行）
 

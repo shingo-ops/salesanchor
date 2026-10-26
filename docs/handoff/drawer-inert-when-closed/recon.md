@@ -35,7 +35,7 @@
 
 ## 3. `Sheet` は同じ作り・`Modal` は無関係
 
-| 金型 | 閉じているときの DOM | 閉じている状態の指定 | 使用ファイル数（`src/**/*.tsx`・test/stories 除く） |
+| 金型 | 閉じているときの DOM | 閉じている状態の指定 | 使用ファイル数（src/**/*.tsx・test/stories 除く） |
 |---|---|---|---|
 | `Drawer` | **残る**（`frontend/src/components/Drawer.tsx:105`＝本便の実装後は `:107` は `portalTarget` が無いときだけ null） | `transform: translateX(100%)` のみ（`frontend/src/components/Drawer.css:39`） | **35** |
 | `Sheet` | **残る**（`frontend/src/components/Sheet.tsx:86`＝実装後は `:88` も同じ） | `transform: translateY(100%)` のみ（`frontend/src/components/Sheet.css:45`） | **2** |
