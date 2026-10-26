@@ -66,7 +66,7 @@ Python 3 標準ライブラリだけ。guard_pre_tool.py は写したディレ�
   （`git -C dir commit`・`git -c k=v push`・`cd x && git push`・`bash -c 'git commit …'`・`$(git push)` も当たる。scan_text は区切りごとに読むだけの区間（grep 等）を消し、git commit / gh の区間では引用符の中身を消す）
 - GitHub への書き込み: `\bgh\s+(pr\s+(create|merge|edit|comment|review|close|reopen|ready)|issue\s+(create|edit|comment|close|reopen)|release\s+(create|edit|delete|upload)|repo\s+(create|edit|delete|fork)|workflow\s+run|run\s+(rerun|cancel))\b`
 - gh api の書き込み: `\bgh\s+api\b` があり、かつ `(-X|--method)[ =]*(POST|PUT|PATCH|DELETE)` か `(\s-f\s|\s-F\s|--field|--raw-field|--input)` がある
-- 決まった台本: `gh-pr-merge-safe\.sh|check-pr-merge-ready\.py|new-worktree\.sh`
+- 決まった台本: 名前に gh-pr-merge-safe.sh・check-pr-merge-ready.py・new-worktree.sh を含む命令（正規表現は三つの名前の点を `\.` にして `|` でつなぐ）
 
 読むだけの git（log・status・diff・show・fetch・ls-remote・rev-parse・branch の一覧）と gh（pr view・pr list・pr checks・api の GET）は当たらない。`echo "git push"` のような文字の中の語にも当たる（止める側に倒す。担当だけなので本体には影響しない。§7）。
 
@@ -114,8 +114,11 @@ Python 3 標準ライブラリだけ。guard_pre_tool.py は写したディレ�
 ## 9. 作業の分け方
 
 - 便1（この設計の PR と実装を同じ PR にする）: クラウドの Sonnet が §5-1 のファイルを作り、test_guard.sh を流して push。本体が PR を作り、審査役の審査 → マージ。PO が `!` で install.sh。本体が K7・K8 を確かめる
-- 維持: scripts/agent-hooks/** が変わる PR で CI が試験を流す。止めた件数は guard.log。週次の権限点検（ADR-1034）の対象に guard.log の件数を足すかは、導入後 1 週の件数を見て決める
 
-## 10. 外部事例
+## 維持の仕組み
 
-該当なし。Claude Code のフックで担当だけを止める公開の事例は探していない。根拠は公式文書の仕様（recon.md §1）と、この Mac の実際の記録（recon.md §2）で足りるため。
+- scripts/agent-hooks/** が変わる PR で CI（agent-hooks-test）が試験を流す。止めた件数は guard.log。週次の権限点検（ADR-1034）の対象に guard.log の件数を足すかは、導入後 1 週の件数を見て決める
+
+## 10. 外部・過去事例の参照と我々への応用
+
+外部事例は該当なし。Claude Code のフックで担当だけを止める公開の事例は探していない。根拠は公式文書の仕様（recon.md §1）と、この Mac の実際の記録（recon.md §2）で足りるため。過去事例として社内の ADR-1029（review-gate）を参照し、install・rollback・CI の型と、agent_id で担当を見分けるやり方（~/.claude/scripts/subagent-bash-wait-guard.py:37）をそのまま使う。
