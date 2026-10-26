@@ -3,6 +3,7 @@
 #
 # 流れ: バックアップ → 試作の試験 → 本物へ反映（settings.json に登録を1件足す）→ 本物の試験 → 不合格なら自動で戻す（ROLLED BACK）
 # このスクリプトを実行するまで、本物のフックは変わらない。取り消しは po-rollback-consent.sh。
+# `--update`: 反映済みの Mac で、試作と本物の中身が違うファイルだけを入れ替える（settings.json は触らない。試験不合格ならその入れ替えだけ戻す）。
 set -u
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -21,9 +22,20 @@ BK="$DST/.backup/$TS"
 ORIG_FILES=(agent-danger-hook.sh worktree-only-guard.sh pr-body-guard.sh danger_sanitize.py)
 DEPLOY_FILES=(agent-danger-hook.sh worktree-only-guard.sh pr-body-guard.sh danger_sanitize.py consent_check.py)
 
-if [ -f "$DST/consent_check.py" ]; then
+UPDATE=""
+if [ "$#" -gt 1 ] || { [ "$#" -eq 1 ] && [ "$1" != "--update" ]; }; then
+  echo "使い方: po-apply-consent.sh [--update]"
+  exit 2
+fi
+[ "${1:-}" = "--update" ] && UPDATE=1
+
+if [ -z "$UPDATE" ] && [ -f "$DST/consent_check.py" ]; then
   echo "反映済み（$DST/consent_check.py が既にある）。何も変更しません。"
   exit 0
+fi
+if [ -n "$UPDATE" ] && [ ! -f "$DST/consent_check.py" ]; then
+  echo "中止: $DST/consent_check.py が無い。初回は --update なしで実行してください。"
+  exit 1
 fi
 
 echo "== ADR-1033 反映 $TS =="
@@ -49,6 +61,9 @@ for f in "${ORIG_FILES[@]}"; do
 done
 cp -p "$SETTINGS" "$BK/settings.json" && cmp "$SETTINGS" "$BK/settings.json" || { echo "中止: settings.json のバックアップ失敗"; exit 1; }
 cp -p "$BRIDGE" "$BK/permit_bridge.py" && cmp "$BRIDGE" "$BK/permit_bridge.py" || { echo "中止: permit_bridge.py のバックアップ失敗"; exit 1; }
+if [ -n "$UPDATE" ]; then
+  cp -p "$DST/consent_check.py" "$BK/consent_check.py" && cmp "$DST/consent_check.py" "$BK/consent_check.py" || { echo "中止: consent_check.py のバックアップ失敗"; exit 1; }
+fi
 date -u +%Y-%m-%dT%H:%M:%SZ > "$BK/CONSENT_BACKUP"
 echo "[1] バックアップ完了: ${BK}（フック4・settings.json・permit_bridge.py 一致）"
 
@@ -56,6 +71,79 @@ echo "[1] バックアップ完了: ${BK}（フック4・settings.json・permit_
 echo "[2] 試作に対する試験"
 if ! bash "$TEST" "$SRC"; then
   echo "中止: 試作の試験が不合格。本物は変えていない。"
+  exit 1
+fi
+
+# 更新（--update）: 中身が違うファイルだけ入れ替える。settings.json は触らない。初回の流れ（[3] 以降）には入らない。
+if [ -n "$UPDATE" ]; then
+  echo "[3u] 更新: 試作と本物で中身が違うファイルを探す"
+  CHANGED=()
+  for f in "${DEPLOY_FILES[@]}"; do
+    if [ ! -e "$DST/$f" ] || ! cmp -s "$SRC/$f" "$DST/$f"; then CHANGED+=("$f"); fi
+  done
+  if [ "${#CHANGED[@]}" -eq 0 ]; then
+    echo "差なし（試作と本物は同じ）。何も入れ替えません。"
+    exit 0
+  fi
+  UBAD=""
+  for f in "${CHANGED[@]}"; do
+    if [ -e "$DST/$f" ]; then
+      mode="$(stat -f %Lp "$DST/$f")"
+      chmod u+w "$DST/$f"
+    else
+      mode="555"
+    fi
+    cp "$SRC/$f" "$DST/$f" || { echo "入れ替え失敗 $f"; UBAD=1; }
+    chmod "$mode" "$DST/$f"
+    cmp "$SRC/$f" "$DST/$f" && echo "  入れ替え ${f}（権限 ${mode}）" || UBAD=1
+  done
+
+  if [ -n "$UBAD" ]; then
+    echo "入れ替えに失敗した。本物の試験は流さず、入れ替えを戻す。"
+  elif ls "$HOME/.claude/permits"/danger-permit-*.json >/dev/null 2>&1; then
+    UBAD=1
+    echo "danger-permit-*.json が現れた。本物の試験を中止して、入れ替えを戻す。"
+  else
+    echo "[4u] 本物に対する試験"
+    T_START="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    echo "  試験開始: $T_START"
+    bash "$TEST" "$DST" --real-home
+    TEST_RC=$?
+    T_END="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    echo "  試験終了: $T_END"
+    mkdir -p "$HOME/.claude/logs"
+    echo "$T_START $T_END po-apply-consent real-home-test rc=$TEST_RC" >> "$HOME/.claude/logs/test-runs.log"
+    [ "$TEST_RC" -eq 0 ] || UBAD=1
+  fi
+
+  if [ -z "$UBAD" ]; then
+    echo
+    echo "== 結果: 更新成功（入れ替え ${#CHANGED[@]} 件: ${CHANGED[*]}） =="
+    echo "バックアップ: $BK"
+    exit 0
+  fi
+
+  echo
+  echo "== 更新が不合格。入れ替えたファイルだけバックアップから戻す =="
+  RBF=""
+  for f in "${CHANGED[@]}"; do
+    if [ -f "$BK/$f" ]; then
+      bmode="$(stat -f %Lp "$BK/$f")"
+      chmod u+w "$DST/$f" 2>/dev/null
+      if cp -p "$BK/$f" "$DST/$f" && cmp "$BK/$f" "$DST/$f"; then
+        chmod "$bmode" "$DST/$f"
+        echo "  復元 $f"
+      else
+        echo "ROLLBACK FAILED: $f"; RBF=1
+      fi
+    else
+      chmod u+w "$DST/$f" 2>/dev/null
+      rm -f "$DST/$f"
+      if [ -e "$DST/$f" ]; then echo "ROLLBACK FAILED: $f"; RBF=1; else echo "  削除 $f（更新前は無かった）"; fi
+    fi
+  done
+  if [ -n "$RBF" ]; then echo "バックアップ: $BK から手で戻してください。"; exit 3; fi
+  echo "ROLLED BACK（更新の入れ替えだけ）"
   exit 1
 fi
 
