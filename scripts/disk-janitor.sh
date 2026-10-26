@@ -303,6 +303,19 @@ dj_wt_unused() { # dj_wt_unused <wt>: 使っていないなら 0。理由は DJ_
   return 0
 }
 
+# 照らす元のリポジトリ（DJ_ROOT_SALESANCHOR と DJ_REPOS の各行のパス）のどれか1つと git の繋がりが合えば 0
+dj_link_known() { # <作業場所>
+  local wt="$1" main rpath _w _b
+  DJ_LINK_REASON="照らす元のリポジトリが無い"
+  while IFS= read -r main; do
+    [ -n "${main}" ] || continue
+    [ -d "${main}" ] || continue
+    if git_safe_link_ok "${wt}" "${main}"; then return 0; fi
+    DJ_LINK_REASON="${GIT_SAFE_LINK_REASON}"
+  done < <({ printf '%s\n' "${DJ_ROOT_SALESANCHOR}"; while IFS='|' read -r rpath _w _b; do printf '%s\n' "${rpath}"; done <<<"${DJ_REPOS}"; })
+  return 1
+}
+
 dj_rule_r2() {
   dj_rule_begin "R2 使っていない作業用コピーの node_modules"
   if [ "${DJ_LSOF_OK}" -ne 1 ]; then
@@ -325,6 +338,11 @@ dj_rule_r2() {
         cands+=("${nm}")
       done
       [ "${#cands[@]}" -gt 0 ] || continue
+      # ADR-1039 便2b-2: git の繋がりが、照らす元のリポジトリのどれとも合わない作業場所は残す
+      if ! dj_link_known "${wt}"; then
+        for c in "${cands[@]}"; do dj_skip "${c}" "git の繋がりが知っている元のリポジトリと合わない（残す）: ${DJ_LINK_REASON}"; done
+        continue
+      fi
       if ! dj_wt_unused "${wt}"; then
         for c in "${cands[@]}"; do dj_skip "${c}" "${DJ_WT_REASON}"; done
         continue
@@ -394,6 +412,9 @@ dj_rule_r4() {
   while IFS='|' read -r path want base; do
     [ -n "${path}" ] || continue
     if [ ! -d "${path}" ]; then dj_skip "${path}" "リポジトリが無い"; continue; fi
+    if ! git_safe_link_ok "${path}" "${path}"; then
+      dj_skip "${path}" "git の繋がりを確かめられない（残す）: ${GIT_SAFE_LINK_REASON}"; continue
+    fi
     url="$(git "${GIT_SAFE_ARGS[@]}" -C "${path}" remote get-url origin 2>/dev/null)"
     got="$(printf '%s\n' "${url}" | sed -E 's#\.git$##; s#^.*[:/]([^/:]+/[^/:]+)$#\1#')"
     if [ -z "${url}" ] || [ "${got}" != "${want}" ]; then

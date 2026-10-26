@@ -1,23 +1,35 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!--
-  jp.salesanchor.reaper-onlogin.plist — 起動時 worktree 自動回収（ADR-114 PR-C）
+  jp.salesanchor.reaper-onlogin.plist — ログイン時と毎日 03:00 の worktree 自動回収（ADR-114 PR-C・R12）
   対象: Shingo-Mac-Temp (user: tanizawashingo)
 
+  古い本店の写しの台本で動かさない理由（ADR-1039 便2b-2）:
+    本店 ~/salesanchor は origin/main より大きく古く、scripts/git-safe.sh が無い。
+    自動回収の台本は道具の写し ~/.salesanchor-tools（origin/main に取り直したもの）から動かし、cwd だけ本店にする。
+
   Hikky-dev-Mac に適用する場合:
+    - ProgramArguments の T= → /Users/hitoshi/.salesanchor-tools
+    - ProgramArguments の cd → /Users/hitoshi/salesanchor
     - WorkingDirectory → /Users/hitoshi/salesanchor
     - StandardOutPath/StandardErrorPath → /Users/hitoshi/Library/Logs/reaper-onlogin.*
 
   配置コマンド:
     cp ops/launchd/jp.salesanchor.reaper-onlogin.plist ~/Library/LaunchAgents/
-    launchctl load ~/Library/LaunchAgents/jp.salesanchor.reaper-onlogin.plist
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/jp.salesanchor.reaper-onlogin.plist
+
+  注意（RunAtLoad=true）: bootstrap した瞬間に --execute が1回走る（以前の launchctl load も同じ）。
+    入れ替える前に、3つ目の引数の --execute を --dry-run にした形を手で1回動かして通ることを確かめる。
+    （reaper は --execute 以外の引数を dry-run として扱う）
+  注意（ネットワーク）: ログイン直後にネットワークが繋がらないと道具の写しの取り直しが失敗して、その回は動かない
+    （消す側には倒れない）。受け入れる（毎日 03:00 と GitHub Actions の reaper-schedule.yml で動く）。
 
   動作確認:
     launchctl list | grep reaper
     tail ~/Library/Logs/reaper-onlogin.log
 
   無効化:
-    launchctl unload ~/Library/LaunchAgents/jp.salesanchor.reaper-onlogin.plist
+    launchctl bootout gui/$(id -u)/jp.salesanchor.reaper-onlogin
 -->
 <plist version="1.0">
 <dict>
@@ -28,14 +40,23 @@
   <array>
     <string>/bin/bash</string>
     <string>-lc</string>
-    <string>bash scripts/reaper-worktree.sh --execute</string>
+    <string>T=/Users/tanizawashingo/.salesanchor-tools; { git -C "$T" fetch -q origin main &amp;&amp; test -z "$(git -C "$T" status --porcelain --untracked-files=all)" &amp;&amp; git -C "$T" checkout -q --detach origin/main &amp;&amp; test "$(git -C "$T" rev-parse HEAD)" = "$(git -C "$T" rev-parse origin/main)"; } || { echo "reaper: 道具のコピーの更新・確認に失敗したため実行しない" &gt;&amp;2; exit 1; }; cd /Users/tanizawashingo/salesanchor || exit 1; bash "$T/scripts/reaper-worktree.sh" --execute; rc=$?; [ "$rc" -eq 0 ] || echo "reaper: 自動回収が終了コード $rc で終わった" &gt;&amp;2; exit "$rc"</string>
   </array>
 
-  <!-- WorkingDirectory が git rev-parse の前提を満たす（scripts/reaper-worktree.sh:28-34） -->
+  <!-- cwd は本店の最上位（reaper の本店の確かめが求める。scripts/reaper-worktree.sh の git の繋がりの確かめ） -->
   <key>WorkingDirectory</key>
   <string>/Users/tanizawashingo/salesanchor</string>
 
-  <!-- ログイン時に 1 回だけ実行（KeepAlive=false = デーモン化しない） -->
+  <!-- 毎日 03:00 にも 1 回（手元の実物に合わせる。GitHub Actions の定期と同じ時刻） -->
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>3</integer>
+    <key>Minute</key>
+    <integer>0</integer>
+  </dict>
+
+  <!-- ログイン時に 1 回実行（KeepAlive=false = デーモン化しない） -->
   <key>RunAtLoad</key>
   <true/>
 
