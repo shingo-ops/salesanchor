@@ -384,6 +384,32 @@ if [ -f "$HOOKDIR/pr-body-guard.sh" ] && { [ -z "${ONLY:-}" ] || [ "$ONLY" = "T9
   fi
 fi
 
+# K1〜K3: --head のブランチの worktree を検証の場所にする（標準エラーの行だけで判定）
+if [ -f "$HOOKDIR/pr-body-guard.sh" ] && { [ -z "${ONLY:-}" ] || [ "$ONLY" = "K1" ] || [ "$ONLY" = "K2" ] || [ "$ONLY" = "K3" ]; }; then
+  KMAIN="$T/k-main"; KWT="$T/k-wt"; KBODY="$T/k-body.md"
+  mkdir -p "$KMAIN"
+  git -C "$KMAIN" init -q -b main
+  git -C "$KMAIN" remote add origin https://github.com/shingo-ops/salesanchor.git
+  git -C "$KMAIN" -c user.name=t -c user.email=t@example.com commit -q --allow-empty -m init
+  git -C "$KMAIN" worktree add -q -b release/t-headwt "$KWT"
+  mkdir -p "$KWT/docs/handoff/t"
+  : > "$KWT/docs/handoff/t/recon.md"
+  : > "$KWT/docs/handoff/t/design.md"
+  printf 't\n' > "$KBODY"
+  k_check() {
+    local id="$1" want="$2" cmd="$3" out got inf="$T/in-$1.json"
+    if [ -n "${ONLY:-}" ] && [ "$ONLY" != "$id" ]; then return; fi
+    python3 -c 'import json,sys; print(json.dumps({"tool_name":"Bash","tool_input":{"command":sys.argv[1]},"cwd":sys.argv[2]}))' "$cmd" "$KMAIN" > "$inf"
+    out="$(run_hook_err pr-body-guard.sh "$KMAIN" "$inf")"
+    if echo "$out" | grep -q '作業場所を release/t-headwt の worktree'; then got=yes; else got=no; fi
+    if [ "$got" = "$want" ]; then PASS=$((PASS + 1)); RESULTS+=("$id       pr-body-guard の作業場所の行=$got PASS")
+    else FAIL=$((FAIL + 1)); RESULTS+=("$id       pr-body-guard の作業場所の行=$got 期待=$want FAIL"); fi
+  }
+  k_check K1 yes "gh pr create --head release/t-headwt --title t --body-file $KBODY"
+  k_check K2 no  "gh pr create --head no-such-branch --title t --body-file $KBODY"
+  k_check K3 no  "cd $KMAIN && gh pr create --head release/t-headwt --title t --body-file $KBODY"
+fi
+
 # T0〜T6: 判定部品 consent_check.py と consent-audit.py の単体試験（偽の会話記録・偽のホームで行う。本物の ~/.claude には書かない）
 if [ -f "$HOOKDIR/consent_check.py" ] && { [ -z "${ONLY:-}" ] || [ "$ONLY" = "T1-6" ]; }; then
   while IFS= read -r line; do
