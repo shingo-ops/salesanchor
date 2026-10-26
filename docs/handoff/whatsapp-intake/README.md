@@ -58,10 +58,10 @@ Opus が出した選択肢：
 4. 承認・実装カードがそろったら Sonnet に実装を任せる
 
 ## 6. 次のセッションの始め方
-`docs/handoff/whatsapp-intake/README.md` を読み、§3 の PO の回答から再開する。
+docs/handoff/whatsapp-intake/README.md を読み、§3 の PO の回答から再開する。
 
 ## 外部・過去事例の参照と我々への応用
-他社事例の調査は `evidence/wa-case-studies.md` にある。応用の判断はまだしていない（PO の回答待ち。上の §5 の③で design.md に進む）。
+他社事例の調査は docs/handoff/whatsapp-intake/evidence/wa-case-studies.md にある。応用の判断はまだしていない（PO の回答待ち。上の §5 の③で design.md に進む）。
 
 ## 維持の仕組み
 この文書は引き継ぎ用で、設計ではない。守り手: PO の回答後に設計を起こす担当（§5 の③で決める）。
