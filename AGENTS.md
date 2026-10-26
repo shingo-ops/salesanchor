@@ -20,7 +20,7 @@ DROP TABLE / 大量DELETE / `rm -rf` / `git reset --hard` / `git push --force`�
 
 **本番運用フェーズ移行後に effective**（現在は開発フェーズのため直接INSERT/UPDATE は継続）。ただし常時厳禁: 暗号化済シークレット（`*_token_encrypted`）の手動投入 / destructive操作（DROP TABLE等）のPO確認なし実行。詳細: `docs/adr/ADR-025_meta_integration_operational_hardening.md`
 
-## VPS 直作業禁止（技術的にも制限付き鍵のみ）
+## （技術的にも制限付き鍵のみ）
 
 - **エージェントは原則として制限付き鍵を使用**（`salesanchor-claude`、ForceCommand 制限）
 - **無制限鍵（`~/.ssh/manual-only/id_ed25519`）**: 本番 DB の読み取りは reader 鍵の道（`docs/handoff/ai-readonly-db-path/usage.md`）を使い、manual-only は使わない。DB 以外の読み取りだけの調査（ログ/設定表示・`ss`/`ps`/`systemctl status`・接続確認）は恒常許可。変更を伴う作業（ファイル作成・コンテナ起動停止・設定変更・再起動・DB 書き込み）は作業ごとに PO の GO が必要（設計担当が GO 原文を依頼文と PR に転記）
