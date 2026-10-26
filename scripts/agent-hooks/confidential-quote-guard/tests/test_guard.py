@@ -938,6 +938,25 @@ def main():
                   ("echo |& bash", "echo '" + P("leak14") + "' |& bash")):
         stop("R11 止まる: " + nm, c)
 
+    print("== 15 審査 12 回目の指摘 (群の前の -R・bash <( ))")
+    for nm, c in (("gh -R o/r pr view", G2 + " -R o/r pr view 1"),
+                  ("gh --repo o/r issue list", G2 + " --repo o/r issue list"),
+                  ("gh --repo=o/r pr list", G2 + " --repo=o/r pr list"),
+                  ("gh -Ro/r pr view", G2 + " -Ro/r pr view 1"),
+                  ("diff <( )", "diff <(ls) <(ls)"),
+                  ("bash <(echo push) (git なし)", "bash <(echo push)")):
+        stop("R12 通る: " + nm, c, 0)
+    for nm, c in (("gh -R o/r pr comment", G2 + " -R o/r pr comment 1 --body " + hq),
+                  ("gh -Ro/r pr comment", G2 + " -Ro/r pr comment 1 --body " + hq),
+                  ("gh --repo=o/r pr comment", G2 + " --repo=o/r pr comment 1 --body " + hq),
+                  ("gh -R o/r pr -R x/y comment", G2 + " -R o/r pr -R x/y comment 1 --body " + hq),
+                  ("gh -R o/r pr $OP", G2 + " -R o/r pr $OP 1 --body " + hq),
+                  ("gh -R o/r --foo pr view", G2 + " -R o/r --foo pr view 1"),
+                  ("gh --help pr comment", G2 + " --help pr comment 1 --body " + hq),
+                  ("bash <( ) の push", "bash <(echo '" + P("leak15") + "')"),
+                  ("source <( ) の push", "source <(echo '" + P("leak15") + "')")):
+        stop("R12 止まる: " + nm, c)
+
     print("== 8 止めた記録")
     open(EV, "w").close()
     check("T50 記録を取るため 1 回止める", "gh pr comment 1 -b '「%s」'" % q, 2)

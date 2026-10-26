@@ -594,8 +594,8 @@ def check_words(words, aliases):
                 raise Block(EXPAND_MSG)
         if g and g[0].val in GH_ACTIONS:  # 群のあとの -R／--repo (値つき) を飛ばした先の操作の語も、展開があれば止める
             m = j + 1
-            while m < len(rest) and (rest[m].val in ("-R", "--repo") or rest[m].val.startswith("--repo=")):
-                if rest[m].val.startswith("--repo="):
+            while m < len(rest) and (rest[m].val in ("-R", "--repo") or rest[m].val.startswith("--repo=") or (rest[m].val.startswith("-R") and not rest[m].val.startswith("--"))):
+                if rest[m].val.startswith("--repo=") or (rest[m].val.startswith("-R") and rest[m].val != "-R"):
                     if not _plain(rest[m]):
                         raise Block(EXPAND_MSG)
                     m += 1
@@ -711,6 +711,22 @@ def danger_text(cmd):
     return None
 
 
+def skip_repo(v, j, flags=False):
+    """字(文字列)の並び v の j 番目から、-R／--repo (値つき)・--repo=…・-Ro/r を値ごと飛ばした次の位置。
+    flags=True のときは --version／-h／--help も飛ばす (群の前で使う)。群の前も後ろもこの 1 つで飛ばす。"""
+    while j < len(v):
+        t = v[j]
+        if t in ("-R", "--repo"):
+            j += 2
+        elif t.startswith("--repo=") or (t.startswith("-R") and len(t) > 2 and not t.startswith("--")):
+            j += 1
+        elif flags and t in ("--version", "-h", "--help"):
+            j += 1
+        else:
+            break
+    return j
+
+
 def detect(cmd):
     """字句として git ... push / gh pr|issue ... が現れるか -> (push, gh)。
     見分けは、生の文字と、shlex で分けた字句 (引用符と \\ を外したもの) の両方で行う。
@@ -748,7 +764,8 @@ def detect(cmd):
         return False
     sh_stdin = bool(sh_cmds) and not any(re.fullmatch(r"-\w*c\w*", t) for t in toks) and \
         ("<<" in cmd or piped_shell() or "-s" in toks)  # shell に文字列を渡す形 (-c なし)
-    if (any(b in SHELLS for b in base) and any(re.fullmatch(r"-\w*c\w*", t) for t in toks)) or "eval" in base or sh_stdin:
+    proc_sub = re.search(r"(?:^|[\s;&|(])(?:\S*/)?(?:sh|bash|zsh|dash|ksh|source|\.)(?:\s+-\w+)*\s+<\(", cmd) is not None  # bash <( ) ・source <( ) も文字列を渡す形
+    if (any(b in SHELLS for b in base) and any(re.fullmatch(r"-\w*c\w*", t) for t in toks)) or "eval" in base or sh_stdin or proc_sub:
         loose = cmd + "\n" + re.sub(r"[\\'\"]", "", cmd)  # sh -c の中身は読まない。引用符と \\ を外した形でも目印を探す
         return (re.search(r"\bgit\b[\s\S]*\bpush\b", loose) is not None,
                 re.search(r"\bgh\b[\s\S]*\b(?:pr|issue|release|repo|gist)\b", loose) is not None)
@@ -763,20 +780,14 @@ def detect(cmd):
             continue
         if "gist" in toks[i + 1:]:
             gh = True
-        if i + 1 < len(toks) and toks[i + 1].startswith("-") and toks[i + 1] not in ("-h", "--help", "--version"):
-            gh = True  # 群の前に印がある (gh -R o/r pr ...): 群の位置が読めないので決まりの外として止める
+        j0 = skip_repo(toks, i + 1, True)  # 群の前の -R／--repo (値つき) と --version／-h／--help を飛ばす
+        if j0 < len(toks) and toks[j0].startswith("-"):
+            gh = True  # ほかの印が群の前にある: 群の位置が読めないので決まりの外として止める
             continue
-        if i + 1 >= len(toks) or toks[i + 1] not in GH_ACTIONS:
-            continue  # 群の位置 (gh のすぐ次) が pr／issue／release／repo のときだけ見る。値や別の位置の同じ語は見ない
-        g = toks[i + 1]
-        j = i + 2
-        while j < len(toks):  # 群のあとの -R／--repo (値つき) を飛ばす
-            if toks[j] in ("-R", "--repo"):
-                j += 2
-            elif toks[j].startswith("--repo="):
-                j += 1
-            else:
-                break
+        if j0 >= len(toks) or toks[j0] not in GH_ACTIONS:
+            continue  # 群の位置が pr／issue／release／repo のときだけ見る。値や別の位置の同じ語は見ない
+        g = toks[j0]
+        j = skip_repo(toks, j0 + 1)  # 群のあとの -R／--repo を飛ばす
         if j >= len(toks) or OP_TOK_RE.match(toks[j]):
             gh = True  # 操作が無い: 決まりの外
         elif toks[j].startswith("-"):
@@ -1021,16 +1032,14 @@ def read_body_file(p):
 def check_gh(words):
     """本文・題名・説明の印は、gh の操作ごとの表 (GH_OPS) で、位置や前の印に関係なく字句のどこにあっても照らす。"""
     v, raws = [w[0] for w in words], [w[1] for w in words]
-    if len(v) >= 2 and v[0] == "gh":  # 群と操作のあいだの -R／--repo を飛ばす。ほかの印は決まりの外
-        j = 2
-        while j < len(v) and v[j].startswith("-"):
-            if v[j] in ("-R", "--repo") and j + 1 < len(v):
-                j += 2
-            elif v[j].startswith("--repo="):
-                j += 1
-            else:
-                raise Block(GH_MSG)
-        v, raws = v[:2] + v[j:], raws[:2] + raws[j:]
+    if len(v) >= 2 and v[0] == "gh":  # 群の前と、群と操作のあいだの -R／--repo を飛ばす。ほかの印は決まりの外
+        j0 = skip_repo(v, 1, True)
+        if j0 >= len(v):
+            raise Block(GH_MSG)
+        j = skip_repo(v, j0 + 1)
+        if j < len(v) and v[j].startswith("-"):
+            raise Block(GH_MSG)
+        v, raws = ["gh", v[j0]] + v[j:], ["gh", raws[j0]] + raws[j:]
     if len(v) < 3 or v[0] != "gh" or (v[1], v[2]) not in GH_OPS:  # release upload も表に無いので止まる
         raise Block(GH_MSG)  # gh gist など、表に無い操作は止める
     B_STR, B_FILE, B_TITLE = GH_OPS[(v[1], v[2])]
