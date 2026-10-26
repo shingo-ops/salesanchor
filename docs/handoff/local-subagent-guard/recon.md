@@ -20,6 +20,8 @@
 
 - 【事実】~/.claude/agents の model: opus = architect・planner・researcher・reviewer、sonnet = evaluator・generator・governance（`grep -n 'model:' ~/.claude/agents/*.md`）。
 - 【事実】審査役は結果を SubagentHandback の文で返す。最後の行の決まり ~/.claude/agents/reviewer.md:111-112（`VERDICT: ...`）。記録は PostToolUse のフック（ADR-1029 record.py）が書く。審査役自身の Write・commit は要らない。
+- 【事実】reviewer.md:66・:80-81、evaluator.md:62-63、governance.md:165 は `gh pr review` での投稿を手順にしている。しかし最近の PR #4787・#4785 は、どちらも reviews が空だった（`gh api repos/shingo-ops/salesanchor/pulls/<番号>/reviews`、/tmp/CC報告ファイル/local-subagent-guard/v3-recon.txt）。マージの関所は VERDICT の行の記録で回っており、gh pr review の投稿には頼っていない。
+- 【事実】着手前点検の台本 scripts/dev/executor-preflight.sh は読むだけではない。:39 で `gh auth switch`、:58 で `git config user.name` を設定する（/tmp/CC報告ファイル/local-subagent-guard/preflight-writes.txt）。
 - 【事実】planner.md:91 は「コードを書く（Edit/Write）」を planner の禁止事項に挙げている。
 - 【未確認】担当の種類ごとの過去の書き換えの件数。担当に数えさせたが ac-routine-guard が担当の活動記録の読み取りを止めた。担当は「本体で数えて」と返したが、権限のすり替えに当たるので本体では数えていない。§3 の 2 行から、審査役の流れは書き換え無しで回ることが分かるので、設計にこの件数は要らない。
 
