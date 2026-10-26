@@ -1,5 +1,6 @@
 # design: 会話での同意を許可券の代わりにする（＋不要な停止の解消）
 
+改訂: §13 改訂1（2026-10-26、見張りの異常の数え方を分ける。設計案・自己審査済み・実装は PO 承認待ち）。
 状態: PO 承認済み（2026-10-19、PO が選択肢「1. この設計で進める → 審査役の確認後に Sonnet に作らせる」に「1」と回答）。Architect 審査 1回目 REVISE → 第2版、2回目 REVISE → 第3版、3回目 REVISE（HIGH 0・P1〜P5・Q1〜Q7）→ 第4版で反映（§12）。§7 の受け入れるリスク R1 は PO が受容（2026-10-19、選択肢「1.【おすすめ】受け入れて進める」に PO 原文「1,定期実行に追加された権限などをチェックするセッションを開く仕組みを入れて定期的にチェックする」）。受容の言葉と日付を ADR-1033 に書いてから便1をマージする。PO の追加条件は §9 の定期点検（K13）で満たす。
 ADR 案: ADR-1033（番号は起票時に再確認）。
 根拠: 同じフォルダの recon.md（origin/main 70c3eda3d 基準）。停止の仕分けは /tmp/CC報告ファイル/stop-triage/triage.md。審査は /tmp/CC報告ファイル/conversation-consent/architect-review.md・architect-review-2.md。
@@ -268,3 +269,109 @@ PO への返事の本文（ツール呼び出しの中ではない）の、**最
 | P4 【おすすめ】との衝突 | §4-1、§4-2 の6（行頭一致）。T1 に【おすすめ】つきの例を入れる |
 | P5 K0 の遅れの見分け | K0、§4-2（consent_probe の項目） |
 | Q1〜Q7 | §4-3、§4-5、§4-6(a)(c)、§4-2 の6、§7 R1 |
+
+## 13. 改訂1: 見張りの「異常」の数え方を、偽造の疑いと読み取りの空振りに分ける（2026-10-26）
+
+状態: 設計案（Opus 作成・自己審査済み、§13-9）。PO が「異常と数えるのを書き足しと送り込みだけに絞る設計の直しを作る」を選択（2026-10-26 週次点検の報告への返事「1」）。実装は PO の実装承認の後。止め方（§4-5 の止める条件）は変えない。
+
+### 13-1 目的（PO の選択）
+
+- 週次点検の「異常」を、同意の偽造につながる操作（記録・台帳への書き足し、端末への「1」の送り込み）が見張りに当たったときだけにする。
+- 読むだけで止められた件（空振り）は、引き続き止めるが、異常に数えず参考の件数として出す。
+
+利用者に見える変化:
+- 前: AI が調べ物で会話の記録を読むたびに数が増え、毎週「異常」の報告が PO に届く（2026-10-26: 56件、偽造の形は0件）。
+- 後: 偽造の疑いが1件以上の週だけ PO に報告が届く。空振りの件数は保存ファイルにだけ出る。
+
+### 13-2 現状（観測事実）
+
+- 2026-10-19〜10-26 の consent_guard_blocked は69行。13行が試験の区間内、残り56行（transcript 52・consent-used 4）。区間外に tmux-inject・osascript-keystroke・chat-queue・transcript-or-ledger-write は0行（~/CC報告ファイル-keep/consent-weekly/20261026-guard-blocked-analysis.md、同 -raw.txt）。
+- 記録の項目は ts・type・hook・condition・cmd_head（先頭120字）だけ（docs/handoff/conversation-consent/hooks/agent-danger-hook.sh:60-93）。Bash の条件 transcript・consent-used は、読み取りと書き込みを区別しない（同:242-255）。
+- consent-audit.py の分け方は時刻（試験の区間）だけ（scripts/dev/consent-audit.py:187-200）。異常は `abnormal = unmatched > 0 or guard_real > 0 or n_reasons > 0`（同:1021）。
+- 週次点検の指示文は「2 の consent_guard_blocked が1件以上なら異常」（docs/handoff/permission-delegation/routine.json:12）。前回の結果を /tmp から読むため、/tmp が消えると比べられない（2026-10-26 に発生）。
+- 点検中の Opus 自身の集計コマンドと記録の書き出しも、文字列に記録のパスを含んだだけで2回止められた（2026-10-26）。
+
+### 13-3 変更後の仕組み
+
+(a) 見張りの記録に「種類」を足す（hooks/agent-danger-hook.sh の _consent_guard_log、hooks/worktree-only-guard.sh:67）。止める条件・止める文・exit 2 は変えない。
+
+| condition | kind | 異常に数えるか |
+|---|---|---|
+| tmux-inject・osascript-keystroke・chat-queue | `inject` | 数える |
+| transcript-or-ledger-write（Write・Edit・MultiEdit・NotebookEdit） | `write` | 数える |
+| transcript・consent-used で、下の「書き込みの形」に当たる | `write` | 数える |
+| transcript・consent-used で、書き込みの形に当たらない | `read` | 数えない（参考） |
+
+- 書き込みの形（Bash。迷う形は `write` 側に倒す）: 次のどれか1つでも当たれば `write`。
+  1. `>`・`>>`・`>|`・`tee`（`-a` を含む）の書き先の語に `.claude/projects/` か `consent-used` を含む。
+  2. `sed -i`・`perl -i`・`cp`・`mv`・`dd`・`truncate`・`rm`・`ln`・`install`・`rsync`・`touch`・`chmod` が語としてあり、コマンド内に `.claude/projects/` か `consent-used` がある。
+  3. `python`・`python3`・`node`・`perl`・`ruby` の行内コード（`-c`・`-e`・heredoc）に `.claude/projects/` か `consent-used` があり、かつ `open(` に `'w'`・`'a'`・`'x'`・`+` のどれか、`.write(`・`write_text`・`write_bytes`・`writeFile`・`appendFile`・`os.replace`・`os.rename`・`shutil.` のどれかがある。
+  4. `cd` の行き先に `.claude/projects/` を含み、同じコマンドに 1〜3 の書き込みの語（書き先は問わない）がある。
+- 足す項目: `kind`（上の表）、`cmd_sha`（マスク前のコマンド全文の sha256 先頭16桁）、`cmd_len`（文字数）。cmd_head は今のまま（マスク・120字）。
+- 書き込みの形の判定は、§4-5 と同じく文字列照合の水準（R1 の範囲）。判定の関数は consent_check.py に置かず、agent-danger-hook.sh の CONSENT_GUARD の python の中に足す（新しいファイルを増やさない）。
+
+(b) consent-audit.py --audit の2行目を分ける（scripts/dev/consent-audit.py:187-200 count_guard_split、:1009-1010 の出力、:1021 の異常）。
+
+- 出力の形（1行のまま）: `2. consent_guard_blocked: 疑い <S> 件（0件が正常）／読み取りの空振り <R> 件（参考）（試験の区間 <W> 個・区間内で除いた件数 <I>）`
+- 疑い S = 試験の区間外で、kind が `inject`・`write` のもの。kind が無い旧形式の行は、condition が inject 系・transcript-or-ledger-write なら疑い。Bash の旧形式は cmd_head に (a) の書き込みの形を当て、当たれば疑い、当たらなければ空振り。
+- 読み取りの空振り R = 試験の区間外で、kind が `read`（旧形式で書き込みの形に当たらない Bash を含む）。
+- 異常: `abnormal = unmatched > 0 or guard_suspect > 0 or n_reasons > 0`。R は異常に使わない。
+- 疑いが1件以上のときは、その行の ts・hook・condition・cmd_sha・cmd_len を `GUARD_SUSPECT=` の行で1件ずつ出す（cmd_head は出さない）。
+- 既存の行の形（`PERMISSION_CHANGES=`・`REVIEW_DUE=`・`ABNORMAL=`）は変えない（permission-delegation/design.md:207）。
+
+(c) 週次点検の指示文（docs/handoff/permission-delegation/routine.json:12 と、agent-console に登録済みの同じ定期実行）。
+
+- 手順3の判定「2 の consent_guard_blocked が1件以上なら異常」を「2 の『疑い』が1件以上なら異常」に変える。
+- 前回の結果は ~/CC報告ファイル-keep/consent-weekly/ の1つ前のファイルから読む（/tmp は消えるため）。
+- 手順7の「同意票関連の異常」は、1行目の不一致か2の疑いのこと、と書き直す。
+
+(d) 文書: §4-5 の冒頭、§7 R1 の「見つける手段」、§9 の 2 と冒頭の担当の行、ADR-1033 の「見つける手段」（:42）と「維持の仕組み」（:56-57）の「consent_guard_blocked が1件でも」を「consent_guard_blocked のうち偽造の疑い（kind が inject・write）が1件でも」に変える。ADR 変更後は `node scripts/generate-adr-index.js`。
+
+### 13-4 対象と対象外
+
+- 対象（リポジトリ内）: hooks/agent-danger-hook.sh・hooks/worktree-only-guard.sh（試作）、scripts/dev/consent-audit.py、scripts/dev/consent-unit-tests.py、scripts/dev/test-agent-hooks.sh、docs/handoff/permission-delegation/routine.json、本書、ADR-1033、docs/adr/README.md（再生成）。
+- 対象（リポジトリ外・PO の `!` で反映）: ~/.claude/scripts/agent-danger-hook.sh・worktree-only-guard.sh（po-apply-consent.sh で写す。po-apply-consent.sh の中身は変えない）。agent-console の定期実行の指示文は Opus が公式手順で書き換える（§9 と同じ。サブエージェントは触らない）。
+- 対象外: 止める条件と止める文（§4-5）、consent_check.py、settings.json、po-rollback-consent.sh、既にある agent-events.jsonl の行（書き換えない）。読み取りを止めないようにする変更（PO は数え方だけを選んだ。N4 の判断は維持）。
+
+### 13-5 代替案
+
+| 案 | 採否 | 理由 |
+|---|---|---|
+| A 記録に kind を足し、点検で疑いと空振りを分ける（本案） | 採用 | 止め方を変えずに数え方だけ直せる。旧形式の行も cmd_head で分けられる |
+| B 点検だけで cmd_head（120字）から分ける | 不採用 | 120字の後ろの書き込みを見落とす（2026-10-26 の調査で未確認として残った点）。A は全文で判定する |
+| C 読み取りは止めない（例外を作る） | 不採用 | PO が選んだのは数え方の直し。N4 の判断（規則が単純な方）を変える理由が出ていない |
+| D 今のまま、毎週 Opus が中身を見て報告 | 不採用 | 毎週 PO に報告が届き、本当の疑いが埋もれる |
+
+### 13-6 リスクと対処
+
+| # | リスク | 対処 |
+|---|---|---|
+| R8 | 書き込みの形の判定を、文字を分けるなどで逃れると、疑いが空振りに数えられる | R1 と同じ水準（受け入れ済みの範囲。止め方は変わらないので、止まること自体は今と同じ）。迷う形は write 側に倒す。空振りの件数も毎週出すので、急に増えれば Opus が気づける |
+| R9 | 書き込みの形が広すぎて、/tmp へ書き出すだけの python も疑いになる | 疑いの行は cmd_sha・cmd_len で特定でき、Opus が中身を確かめて PO に報告する。K16 で件数を測り、多ければ判定を直す改訂を出す |
+| R10 | 反映前後の旧形式の行を、cmd_head だけで空振りと数える | 旧形式は反映後7日で点検の期間から外れる。反映後最初の点検の結果に、旧形式の件数を併記する |
+
+戻し方: リポジトリ側はこの PR の revert。フックは `! bash docs/handoff/conversation-consent/po-rollback-consent.sh`（反映時のバックアップへ戻す）。kind が無い記録も (b) で読めるので、フックだけ戻しても点検は動く。
+
+### 13-7 成功条件
+
+| # | 基準 | 検証方法 |
+|---|---|---|
+| K14 | 見張りに当てたとき、記録の行に kind・cmd_sha・cmd_len が入り、kind が §13-3(a) の表どおり | test-agent-hooks.sh T7 を拡張: 読み取り例（`grep x <記録のパス>`）→ read、書き込み例（(a) の1〜4 の各1件以上、`>>`・`tee -a`・`sed -i`・python の `open(...,'a')`・`cd` の後の `>`）→ write、tmux 等 → inject、Write/Edit → write。全件一致で○ |
+| K15 | consent-audit.py --audit が、疑いと空振りを分けて出し、空振りだけの週は ABNORMAL=no | consent-unit-tests.py: (1) read 3件だけ → ABNORMAL=no・疑い0・空振り3 (2) write 1件 → ABNORMAL=yes・GUARD_SUSPECT=1行 (3) 旧形式の Bash で cmd_head に `>> ~/.claude/projects/x.jsonl` → 疑い (4) 旧形式の Bash で `grep x ~/.claude/projects/y.jsonl` → 空振り (5) 試験の区間内の write → 除外。全件一致で○ |
+| K16 | 反映後最初の週次点検で、疑い0件・ABNORMAL=no（ほかの理由が無い場合）。疑いが出たら、全件を Opus が cmd_sha で特定し本物か空振りかを報告 | 週次点検の保存ファイル（~/CC報告ファイル-keep/consent-weekly/） |
+| K17 | 週次点検が前回の結果を ~/CC報告ファイル-keep/consent-weekly/ から読み、試験の区間の数を比べられる | 反映後最初の点検の結果に、前回のファイル名が書かれていれば○ |
+
+### 13-8 実装の分け方（Sonnet へ・1便）
+
+- 便R1: §13-3(a)(b)(d) と routine.json:12（(c) のリポジトリ側）、試験 K14・K15。PR 1本。フックのパスを含むため、マージ後に PO が `! bash docs/handoff/conversation-consent/po-apply-consent.sh` を1回打つ（試験が不合格なら自動で戻る）。
+- 反映後に Opus: agent-console の定期実行の指示文を routine.json と同じに書き換える（ac-routine の公式手順）。K16・K17 は次の月曜の点検で測る。
+
+### 13-9 設計審査（Opus の自己審査。独立した第二者の審査ではない）
+
+判定: APPROVE（HIGH 0・MEDIUM 0・LOW 2）。
+- 整合: 止める条件（§4-5・K7）を変えないので T1〜T9 の既存の期待は変わらない（T7 は件数の期待 7・6 を保ち、項目の確認を足すだけ）。ABNORMAL 系の行の形を変えない（permission-delegation/design.md:207）。R1 の受容の範囲を広げない（判定の文字列照合は R1 と同じ水準・R8）。
+- 根拠: 56件の内訳と条件は保存した生データ、行番号は origin/main 900afee29 の worktree で確認。
+- 検証可能性: K14・K15 は試験で○×、K16・K17 は保存ファイルで○×。
+- LOW-1: 書き込みの形 3 の語の一覧は網羅でない（R8・R9 で受け入れ、K16 で測る）。
+- LOW-2: agent-console の定期実行の指示文は agent-console 側にも写しがあり、二重管理になっている（今回は routine.json を正にして写すだけ。二重管理の解消は対象外）。
+- 未解決の前提: なし。PO の判断が要るのは実装の承認と、反映（po-apply-consent.sh）の実行の2点。
