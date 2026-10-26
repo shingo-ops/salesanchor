@@ -60,7 +60,7 @@
 - 件の作業場所（PO 2026-10-26 チャット「1」。件ごとに本店から切り離した写しにする案への回答。設計第18〜20版 §4-5「件ごとの写し」）: Discord の件のセッションの作業場所は、`scripts/new-worktree.sh` の linked worktree ではなく、agent-console の常駐サーバーが囲いの外で作る、本店から切り離した丸ごとの写し（`git clone --no-hardlinks --local`。置き場 `~/worktrees/discord-cases/<セッション id>`・枝 `release/discord-case-<id の先頭8字>`・origin/main 起点）とする。linked worktree では、囲いの中の命令が本店の共有の `.git` に書けてしまうため。
   - 台帳への登録は `scripts/new-worktree.sh` と同じ書式で、agent-console が写しの中の `.claude-pipeline/active-work.d/` に書く（push の前の検査 `scripts/validate-pr-ownership.sh` が写しの中の台帳を読むため）。この台帳のファイルは件の PR に入ってよい。
   - 件のセッションは `--no-verify` を使わない（commit・push の前の検査を飛ばさない）。
-  - 上限・自動回収（ADR-1015 系の worktree の決まり）は件の写しに当たらない。終わった件の写しの片付けは agent-console の便2b-4 で決める。
+  - 上限・自動回収（ADR-114 の worktree の上限・自動回収）は件の写しに当たらない。終わった件の写しの片付けは agent-console の便2b-4 で決める。
 
 ## Follow-up
 
