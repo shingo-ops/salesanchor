@@ -229,3 +229,15 @@ PO「1」（2026-10-25。全員共通のルール集 ~/.claude/CLAUDE.md から�
 | 7b（GAS の決まりを移した後） | 17.1k | 10.6k | **6.5k** |
 
 - 判定: K9 合格（合格ライン 6.5k 以下。表示値で判定）。詳しくは [design.md](./design.md) §28-8。
+
+## 段8 の後の測り直し（2026-10-26）
+
+PO「1」（2026-10-26。設計 [design.md](./design.md) §29 の案 A：~/.claude/rules/common/agents.md から定義の無い担当の表・必須起動の表・Multi-Perspective を外して在る担当だけの5行にし、git-workflow.md の偽の一文を消し、~/.claude/CLAUDE.md:7 を /security-review に書き換える）。生出力: /tmp/CC報告ファイル/an-k1/s8/（リポジトリ外）。測り方は段7 と同じ（origin/main の使い捨て worktree で `claude -p "/context"`）。
+
+| 時点 | K1（行） | Memory files | MEMORY.md | K9（MEMORY.md を除く） |
+|---|---|---|---|---|
+| 段8 の前 | 229 | 17.1k（段7 の後） | 10.6k | 6.5k |
+| 段8 の後 | **197** | 16.8k | 10.7k | **6.1k** |
+
+- 判定: K1 合格（200 行以下）。K9 合格のまま（6.5k 以下）。
+- 【事実】段8 の後の内訳（表示値）: ~/.claude/CLAUDE.md 2.1k・~/kb/AGENTS.md 1k・git-workflow.md 221・agents.md 528・CLAUDE.md 198・AGENTS.md 2k。
