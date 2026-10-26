@@ -331,7 +331,7 @@ PO への返事の本文（ツール呼び出しの中ではない）の、**最
 ### 13-4 対象と対象外
 
 - 対象（リポジトリ内）: hooks/agent-danger-hook.sh・hooks/worktree-only-guard.sh（試作）、scripts/dev/consent-audit.py、scripts/dev/consent-unit-tests.py、scripts/dev/test-agent-hooks.sh、docs/handoff/permission-delegation/routine.json、本書、ADR-1033、docs/adr/README.md（再生成）。
-- 対象（リポジトリ外・PO の `!` で反映）: ~/.claude/scripts/agent-danger-hook.sh・worktree-only-guard.sh（po-apply-consent.sh で写す。po-apply-consent.sh の中身は変えない）。agent-console の定期実行の指示文は Opus が公式手順で書き換える（§9 と同じ。サブエージェントは触らない）。
+- 対象（リポジトリ外・PO の `!` で反映）: ~/.claude/scripts/agent-danger-hook.sh・worktree-only-guard.sh（po-apply-consent.sh で写す。§13-10 で `--update` を足す。初回の流れは変えない）。agent-console の定期実行の指示文は Opus が公式手順で書き換える（§9 と同じ。サブエージェントは触らない）。
 - 対象外: 止める条件と止める文（§4-5）、consent_check.py、settings.json、po-rollback-consent.sh、既にある agent-events.jsonl の行（書き換えない）。読み取りを止めないようにする変更（PO は数え方だけを選んだ。N4 の判断は維持）。
 
 ### 13-5 代替案
@@ -364,7 +364,7 @@ PO への返事の本文（ツール呼び出しの中ではない）の、**最
 
 ### 13-8 実装の分け方（Sonnet へ・1便）
 
-- 便R1: §13-3(a)(b)(d) と routine.json:12（(c) のリポジトリ側）、試験 K14・K15。PR 1本。フックのパスを含むため、マージ後に PO が `! bash docs/handoff/conversation-consent/po-apply-consent.sh` を1回打つ（試験が不合格なら自動で戻る）。
+- 便R1: §13-3(a)(b)(d) と routine.json:12（(c) のリポジトリ側）、試験 K14・K15。PR 1本。フックのパスを含むため、マージ後に PO が `! bash docs/handoff/conversation-consent/po-apply-consent.sh --update` を1回打つ（試験が不合格なら自動で戻る。§13-10）。
 - 反映後に Opus: agent-console の定期実行の指示文を routine.json と同じに書き換える（ac-routine の公式手順）。K16・K17 は次の月曜の点検で測る。
 
 ### 13-9 設計審査（Opus の自己審査。独立した第二者の審査ではない）
@@ -376,3 +376,12 @@ PO への返事の本文（ツール呼び出しの中ではない）の、**最
 - LOW-1: 書き込みの形 3 の語の一覧は網羅でない（R8・R9 で受け入れ、K16 で測る）。
 - LOW-2: agent-console の定期実行の指示文は agent-console 側にも写しがあり、二重管理になっている（今回は routine.json を正にして写すだけ。二重管理の解消は対象外）。
 - 未解決の前提: なし。PO の判断が要るのは実装の承認と、反映（po-apply-consent.sh）の実行の2点。
+
+### 13-10 反映の道の追加: po-apply-consent.sh `--update`（2026-10-26・設計の入れ忘れの補い）
+
+- 観測事実: 便R1（#4779）のマージ後、PO が引数なしで po-apply-consent.sh を打ったところ、「反映済み（consent_check.py が既にある）。何も変更しません。」で終わった（同スクリプト :24-27 は初回専用）。手元の agent-danger-hook.sh・worktree-only-guard.sh は #4779 の前の版のまま（afbd1dc61^1 と一致）、残る3ファイルは試作と一致。§13-4 の「中身は変えない」は、2回目以降の入れ替えの道が無いことを見落とした設計の入れ忘れ。
+- 判断（Opus・ADR-1003 の範囲）: PO が承認した成果は「便R1 の見張りが手元に入ること」。`--update` はその成果を届ける手段で、見張りの止める条件・settings.json・同意の台帳を変えない。設計の外へ出る変更ではないため、PO への再承認は求めず記録する。
+- `--update` の流れ: 前提の確認（初回と同じ＋consent_check.py が無ければ「初回は --update なしで」と exit 1）→ バックアップ（5ファイル・settings.json・permit_bridge.py）→ 試作の試験 → 試作と本物で中身が違うファイルだけ入れ替え（0件なら「差なし」で exit 0）→ settings.json は触らない → 本物の試験 → 不合格なら入れ替えたファイルだけバックアップから戻す（戻せなければ exit 3）。po-rollback-consent.sh は consent_check.py を消すため使わない。
+- 対象外: 引数なしの初回の流れ、po-rollback-consent.sh、settings.json。
+- 成功条件: K18 偽の HOME で (a) 差あり→入れ替えて合格 (b) 差なし→何も変えない (c) consent_check.py 無し→exit 1 (d) 本物の試験が不合格→入れ替えた分だけ戻る (e) 引数なし→従来どおり、が全件 PASS。K19 PO の実行後、~/.claude/scripts の2ファイルが試作と cmp で一致し、本物の試験が合格。
+- 戻し方: スクリプトはこの PR の revert。反映後のフックは、実行時に出るバックアップのフォルダから2ファイルを戻す。
