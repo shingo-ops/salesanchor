@@ -199,6 +199,39 @@ tj() {
 EVENTS_FILE="$FAKE_HOME/.claude/logs/agent-events.jsonl"
 [ "$REAL_HOME_MODE" = "--real-home" ] && EVENTS_FILE="$HOME/.claude/logs/agent-events.jsonl"
 count_guard() { grep -c '"consent_guard_blocked"' "$EVENTS_FILE" 2>/dev/null || true; }
+# consent_guard_blocked の各行の kind を順に空白区切りで出す。cmd_sha（16桁）と cmd_len（整数）が無い行があれば "BAD" を出す（フックの行 = hook が agent-danger-hook のものだけ cmd_sha を要求）
+guard_kinds() {
+  python3 -c '
+import sys, json
+out = []
+try:
+    for line in open(sys.argv[1], encoding="utf-8"):
+        try:
+            r = json.loads(line)
+        except Exception:
+            continue
+        if r.get("type") != "consent_guard_blocked":
+            continue
+        k = r.get("kind", "NONE")
+        if r.get("hook") == "agent-danger-hook":
+            sha = r.get("cmd_sha")
+            if not (isinstance(sha, str) and len(sha) == 16 and isinstance(r.get("cmd_len"), int)):
+                k = "BAD"
+        out.append(k)
+except Exception:
+    pass
+print(" ".join(out))
+' "$EVENTS_FILE"
+}
+# check_new_kinds <ID> <増える前の guard_kinds> <期待する kind の並び>
+check_new_kinds() {
+  local id="$1" before="$2" expect="$3" after new
+  [ -z "${ONLY:-}" ] || return 0
+  after="$(guard_kinds)"
+  new="${after#"$before"}"; new="${new# }"
+  if [ "$new" = "$expect" ]; then PASS=$((PASS + 1)); RESULTS+=("$id kind の並び=[$new] PASS")
+  else FAIL=$((FAIL + 1)); RESULTS+=("$id kind の並び=[$new] 期待=[$expect] FAIL"); fi
+}
 
 if [ -f "$HOOKDIR/agent-danger-hook.sh" ]; then
   # T1(配線): 判定部品が allow を返したときだけ、psql の経路と danger_ops の経路が通る。部品が無い・不可なら今までどおり止める
@@ -221,6 +254,7 @@ if [ -f "$HOOKDIR/agent-danger-hook.sh" ]; then
 
   # T7: 会話記録・同意の台帳・端末への入力注入（Bash）。止めると consent_guard_blocked が1行ずつ増える
   G0="$(count_guard)"
+  K0S="$(guard_kinds)"
   t T7-b1  agent-danger-hook.sh W 2 'cat /Users/x/.claude/projects/-p/s.jsonl'
   t T7-b2  agent-danger-hook.sh W 2 'tail -n 3 ~/.claude/logs/consent-used.jsonl'
   t T7-b3  agent-danger-hook.sh W 2 'tmux send-keys -t ac-1 1 Enter'
@@ -232,6 +266,52 @@ if [ -f "$HOOKDIR/agent-danger-hook.sh" ]; then
   if [ -z "${ONLY:-}" ]; then
     if [ "$((G1 - G0))" = "7" ]; then PASS=$((PASS + 1)); RESULTS+=("T7-log   consent_guard_blocked が7件増えた PASS")
     else FAIL=$((FAIL + 1)); RESULTS+=("T7-log   consent_guard_blocked の増加=$((G1 - G0)) 期待=7 FAIL"); fi
+  fi
+  # K14: 各行の kind（読み取り2・注入5）と cmd_sha・cmd_len
+  check_new_kinds T7-kind "$K0S" "read read inject inject inject inject inject"
+  # K14: 書き込みの形 1〜4 の各例は write、読み取りの例は read
+  K1S="$(guard_kinds)"
+  t T7-k1  agent-danger-hook.sh W 2 'echo x >> /Users/x/.claude/projects/-p/s.jsonl'
+  t T7-k2  agent-danger-hook.sh W 2 'echo x | tee -a /Users/x/.claude/logs/consent-used.jsonl'
+  t T7-k3  agent-danger-hook.sh W 2 'sed -i s/a/b/ /Users/x/.claude/projects/-p/s.jsonl'
+  t T7-k4  agent-danger-hook.sh W 2 "python3 -c \"open('/Users/x/.claude/projects/-p/s.jsonl','a').write('x')\""
+  t T7-k5  agent-danger-hook.sh W 2 'cd /Users/x/.claude/projects/-p && echo x > s.jsonl'
+  t T7-k6  agent-danger-hook.sh W 2 'cp /Users/x/.claude/projects/-p/s.jsonl /tmp/z'
+  t T7-k7  agent-danger-hook.sh W 2 'grep x /Users/x/.claude/projects/-p/s.jsonl'
+  t T7-k8  agent-danger-hook.sh W 2 'cd /Users/x/.claude/projects/-p && cat s.jsonl 2>&1'
+  t T7-k9  agent-danger-hook.sh W 2 'cat /Users/x/.claude/projects/-p/s.jsonl > /tmp/out.txt'
+  check_new_kinds T7-kind2 "$K1S" "write write write write write write read read read"
+  # 審査 LOW-2: Path(...).open('a') は write
+  K2S="$(guard_kinds)"
+  t T7-k10 agent-danger-hook.sh W 2 "python3 -c \"from pathlib import Path; Path('/Users/x/.claude/projects/-p/s.jsonl').open('a').write('x')\""
+  check_new_kinds T7-kind3 "$K2S" "write"
+  # 審査 HIGH-1: 64KB 程度の長いコマンド（記録のパスと open(a, のくり返し）が5秒以内に exit 2 で止まり、kind は write
+  K3S="$(guard_kinds)"
+  LONGCMD="$(python3 -c 'print("python3 -c \"" + "open(a, " * 5000 + " /Users/x/.claude/projects/-p/s.jsonl" * 1000 + "\"")')"
+  LT0=$SECONDS
+  t T7-long agent-danger-hook.sh W 2 "$LONGCMD"
+  LT1=$SECONDS
+  if [ -z "${ONLY:-}" ]; then
+    if [ "$((LT1 - LT0))" -le 5 ]; then PASS=$((PASS + 1)); RESULTS+=("T7-long-time 長いコマンド(${#LONGCMD}字)の所要 $((LT1 - LT0)) 秒 <= 5 PASS")
+    else FAIL=$((FAIL + 1)); RESULTS+=("T7-long-time 長いコマンドの所要 $((LT1 - LT0)) 秒 > 5 FAIL"); fi
+  fi
+  check_new_kinds T7-kind4 "$K3S" "write"
+  # 再審査 MEDIUM: 4000字ちょうどの最悪の形（open( のくり返し + 閉じない引用符）が2秒以内に exit 2 で止まり、kind が write か read で記録される
+  K4S="$(guard_kinds)"
+  WORST1="$(python3 -c 'p = "python3 -c /Users/x/.claude/projects/-p/s.jsonl " + "open(" * 267 + ", \x27"; print(p + "w" * (4000 - len(p)), end="")')"
+  WORST2="$(python3 -c 'p = "python3 -c /Users/x/.claude/projects/-p/s.jsonl " + ".open(" * 267 + "\x27"; print(p + "w" * (4000 - len(p)), end="")')"
+  LT0=$SECONDS
+  t T7-worst1 agent-danger-hook.sh W 2 "$WORST1"
+  t T7-worst2 agent-danger-hook.sh W 2 "$WORST2"
+  LT1=$SECONDS
+  if [ -z "${ONLY:-}" ]; then
+    if [ "$((LT1 - LT0))" -le 2 ]; then PASS=$((PASS + 1)); RESULTS+=("T7-worst-time 最悪の形2件(${#WORST1}・${#WORST2}字)の所要 $((LT1 - LT0)) 秒 <= 2 PASS")
+    else FAIL=$((FAIL + 1)); RESULTS+=("T7-worst-time 最悪の形の所要 $((LT1 - LT0)) 秒 > 2 FAIL"); fi
+    W_AFTER="$(guard_kinds)"; W_NEW="${W_AFTER#"$K4S"}"; W_NEW="${W_NEW# }"
+    case "$W_NEW" in
+      "write write"|"write read"|"read write"|"read read") PASS=$((PASS + 1)); RESULTS+=("T7-worst-kind kind=[$W_NEW] PASS") ;;
+      *) FAIL=$((FAIL + 1)); RESULTS+=("T7-worst-kind kind=[$W_NEW] FAIL") ;;
+    esac
   fi
   t T7-b8  agent-danger-hook.sh W 0 'tmux ls'
   t T7-b9  agent-danger-hook.sh W 0 'ls'
@@ -273,6 +353,7 @@ fi
 if [ -f "$HOOKDIR/worktree-only-guard.sh" ]; then
   # T7: Write・Edit・MultiEdit・NotebookEdit で会話記録・同意の台帳を触る（file_path と notebook_path の両方、小文字の realpath）
   G0="$(count_guard)"
+  KWS="$(guard_kinds)"
   JSONL_P="$REAL_HOME_DIR/.claude/projects/-Users-x/s.jsonl"
   tj T7-w1 worktree-only-guard.sh W 2 Write     "{\"file_path\":\"$JSONL_P\"}"
   tj T7-w2 worktree-only-guard.sh W 2 Edit      "{\"file_path\":\"$JSONL_P\"}"
@@ -285,7 +366,8 @@ if [ -f "$HOOKDIR/worktree-only-guard.sh" ]; then
     if [ "$((G1 - G0))" = "6" ]; then PASS=$((PASS + 1)); RESULTS+=("T7-wlog  consent_guard_blocked が6件増えた PASS")
     else FAIL=$((FAIL + 1)); RESULTS+=("T7-wlog  consent_guard_blocked の増加=$((G1 - G0)) 期待=6 FAIL"); fi
   fi
-  tj T7-w7 worktree-only-guard.sh W 0 Write     "{\"file_path\":\"$WT_ROOT/docs/handoff/conversation-consent/x.md\"}"
+  check_new_kinds T7-wkind "$KWS" "write write write write write write"
+  tj T7-w7 worktree-only-guard.sh W 0 Write    "{\"file_path\":\"$WT_ROOT/docs/handoff/conversation-consent/x.md\"}"
   tj T7-w8 worktree-only-guard.sh W 0 NotebookEdit "{\"notebook_path\":\"$WT_ROOT/x.ipynb\"}"
   tj T7-w9 worktree-only-guard.sh W 0 Edit      "{\"file_path\":\"$REAL_HOME_DIR/.claude/projects/-Users-x/notes.md\"}"
 fi
