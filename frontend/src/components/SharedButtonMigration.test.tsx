@@ -62,6 +62,26 @@ describe('shared button migration: real panel operations', () => {
     fireEvent.click(screen.getByRole('button', { name: 'confirmModal.defaultCancel' })); expect(cancel).toHaveBeenCalledTimes(1);
   });
 
+  it('ConfirmModal confirmLoading: default is idle and clickable', () => {
+    const confirm = vi.fn();
+    render(<ConfirmModal open title="Confirm" message="Message" confirmLabel="Go" onConfirm={confirm} onCancel={vi.fn()} />);
+    const target = screen.getByRole('button', { name: 'Go' });
+    expect(target.getAttribute('aria-busy')).toBeNull();
+    expect((target as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(target); expect(confirm).toHaveBeenCalledTimes(1);
+  });
+
+  it('ConfirmModal confirmLoading: true shows spinner, busy, not clickable, label kept', () => {
+    const confirm = vi.fn();
+    render(<ConfirmModal open title="Confirm" message="Message" confirmLabel="Go" confirmLoading onConfirm={confirm} onCancel={vi.fn()} />);
+    const target = screen.getByRole('button', { name: 'Go' }) as HTMLButtonElement;
+    expect(target.getAttribute('aria-busy')).toBe('true');
+    expect(target.disabled).toBe(true);
+    expect(target.textContent).toContain('Go');
+    expect(target.querySelector('.sa-spinner')).not.toBeNull();
+    fireEvent.click(target); expect(confirm).not.toHaveBeenCalled();
+  });
+
   it('hides Priority without permission and retains omitted trigger type/cancel', () => {
     const updated = vi.fn(); mock.permission.mockReturnValue(false);
     const { rerender } = render(<PriorityScoreOverride leadId={9} currentScore={currentScore} onUpdated={updated} />);
