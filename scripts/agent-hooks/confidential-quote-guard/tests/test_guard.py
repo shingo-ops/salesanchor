@@ -397,6 +397,122 @@ def main():
     results.append("--body-file <絶対パス>" in err and "Write" in err)
     print("%s %-62s" % ("PASS" if results[-1] else "FAIL", "G21 止めた理由に Write と --body-file の案内がある"))
 
+    print("== 9 審査 6 回目の指摘 (gh review の印・題名・途中の commit・差分の取り方・別名)")
+    for nm, fl in (("-r", "-r"), ("-a", "-a"), ("-c", "-c"), ("--request-changes", "--request-changes"), ("--approve", "--approve")):
+        check("R01 gh pr review %s -b 書き写しあり -> 止まる" % nm, "gh pr review 1 %s -b '「%s」'" % (fl, q), 2)
+        check("R02 gh pr review %s -F 書き写しあり -> 止まる" % nm, "gh pr review 1 %s -F %s" % (fl, hitbody), 2)
+        check("R03 gh pr review %s -b 中身なし -> 通る" % nm, "gh pr review 1 %s -b 'ok'" % fl, 0)
+    check("R04 gh pr create -a x -r y -b 書き写しあり -> 止まる", "gh pr create -a x -r y -b '「%s」'" % q, 2)
+    check("R05 gh pr create --title t -r --body-file 書き写しあり -> 止まる", "gh pr create --title t -r --body-file " + hitbody, 2)
+    check("R06 gh pr create -f -> 止まる", "gh pr create -f", 2)
+    check("R06b gh issue create -f -> 止まる", "gh issue create -f", 2)
+    qt = "「%s」" % q
+    check("R10 pr create --title 書き写しあり -> 止まる", "gh pr create --title '%s' --body 'x'" % qt, 2)
+    check("R11 issue create -t 書き写しあり -> 止まる", "gh issue create -t '%s' -b 'x'" % qt, 2)
+    check("R12 pr edit --title 書き写しあり (本文なし) -> 止まる", "gh pr edit 1 --title '%s'" % qt, 2)
+    check("R13 pr edit --title=… 書き写しあり -> 止まる", "gh pr edit 1 --title='%s'" % qt, 2)
+    check("R14 題名が中身なし -> 通る", "gh pr edit 1 --title '「%s」' -b 'x'" % FAKE_NOT_IN_CORPUS, 0)
+    check("R15 pr edit --title 二重引用符 書き写しあり -> 止まる", 'gh pr edit 1 --title "%s"' % qt, 2)
+    for nm, c in (("git の \\ 逃げ", "g\\it -C %s push -u origin hit" % W),
+                  ("push の \"\" 割り", "git -C %s pus\"\"h -u origin hit" % W),
+                  ("git の '' 割り", "'gi't -C %s push -u origin hit" % W),
+                  ("gh の \\ 逃げ", "g\\h pr comment 1 -F " + hitbody),
+                  ("pr の '' 割り", "gh p''r comment 1 -F " + hitbody),
+                  ("字句に分けられない + git", "git -C %s push -u origin 'HEAD" % W),
+                  ("字句に分けられない + gh", "gh pr comment 1 -b 'x")):
+        rc, err = run(c, T)
+        results.append(rc == 2)
+        print("%s %-62s exit=%d (期待 2)" % ("PASS" if rc == 2 else "FAIL", "R20 " + nm, rc))
+    check("R21 字句に分けられず git も gh も無い -> 通る", "echo 'x", 0)
+
+    def commit_all(msg):
+        sh("git", "add", "-A", cwd=WORK)
+        sh("git", "commit", "-q", "-m", msg, cwd=WORK)
+
+    # 途中の commit
+    sh("git", "checkout", "-q", "-B", "hist", "origin/main", cwd=WORK)
+    write(os.path.join(WORK, "hist.md"), "- 「%s」\n" % q)
+    commit_all("add")
+    write(os.path.join(WORK, "hist.md"), "消した\n")
+    commit_all("remove")
+    rc, err = check("R30 足して消す 2 つの commit -> 止まる", P("hist"), 2, cwd=T)
+    results.append("書き直し" in err and "履歴に残って" in err)
+    print("%s %-62s" % ("PASS" if results[-1] else "FAIL", "R30b 止めた理由に履歴と書き直しの案内がある"))
+    # origin/main へ書き写し入りの commit を進め、それを取り込んだだけのブランチ
+    sh("git", "checkout", "-q", "-B", "mrg", "origin/main", cwd=WORK)
+    write(os.path.join(WORK, "mrg.md"), "- 「%s」\n" % FAKE_NOT_IN_CORPUS)
+    commit_all("mrg")
+    sh("git", "checkout", "-q", "-B", "adv", "origin/main", cwd=WORK)
+    write(os.path.join(WORK, "shared.md"), "base line\n")
+    write(os.path.join(WORK, "main-side.md"), "- 「%s」\n" % q)
+    commit_all("adv1")
+    sh("git", "push", "-q", "origin", "adv:main", cwd=WORK)
+    sh("git", "fetch", "-q", "origin", cwd=WORK)
+    sh("git", "checkout", "-q", "mrg", cwd=WORK)
+    sh("git", "merge", "-q", "--no-edit", "origin/main", cwd=WORK)
+    check("R31 origin/main を merge commit で取り込んだだけ (main 側に書き写し) -> 通る", P("mrg"), 0, cwd=T)
+    # 衝突を直した行
+    sh("git", "checkout", "-q", "-B", "cx", "origin/main", cwd=WORK)
+    write(os.path.join(WORK, "shared.md"), "cx line\n")
+    commit_all("cx")
+    sh("git", "checkout", "-q", "-B", "adv", "origin/main", cwd=WORK)
+    write(os.path.join(WORK, "shared.md"), "main line\n")
+    commit_all("adv2")
+    sh("git", "push", "-q", "origin", "adv:main", cwd=WORK)
+    sh("git", "fetch", "-q", "origin", cwd=WORK)
+    sh("git", "checkout", "-q", "cx", cwd=WORK)
+    subprocess.run(["git", "merge", "--no-edit", "origin/main"], cwd=WORK, capture_output=True, text=True)
+    write(os.path.join(WORK, "shared.md"), "- 「%s」\n" % q)
+    commit_all("resolve")
+    check("R32 merge の衝突を直した行に書き写し -> 止まる", P("cx"), 2, cwd=T)
+
+    # 差分の取り方
+    def one(name, files):
+        sh("git", "checkout", "-q", "-B", name, "origin/main", cwd=WORK)
+        for fn, txt in files.items():
+            write(os.path.join(WORK, fn), txt)
+        commit_all(name)
+    line = "引用「%s」\n" % q
+    one("bin", {".gitattributes": "*.txt binary\n", "note.txt": line})
+    check("R40 .gitattributes binary -> 止まる", P("bin"), 2, cwd=T)
+    one("nodiff", {".gitattributes": "*.md -diff\n", "x.md": line})
+    check("R41 .gitattributes -diff -> 止まる", P("nodiff"), 2, cwd=T)
+    one("nul", {"n.dat": "a\0b\n" + line})
+    check("R42 NUL を含むファイル -> 止まる", P("nul"), 2, cwd=T)
+    one("pref", {"pref.md": line})
+    for k in ("diff.noprefix", "diff.mnemonicPrefix"):
+        sh("git", "config", k, "true", cwd=WORK)
+        check("R43 %s=true でも -> 止まる" % k, P("pref"), 2, cwd=T)
+        sh("git", "config", "--unset", k, cwd=WORK)
+    one("fname", {"「%s」.md" % q: "x\n"})
+    check("R44 ファイル名に書き写し -> 止まる", P("fname"), 2, cwd=T)
+    sh("git", "checkout", "-q", "-B", "ren", "origin/main", cwd=WORK)
+    sh("git", "mv", "shared.md", "「%s」.md" % q, cwd=WORK)
+    commit_all("ren")
+    check("R45 改名だけ (中身は同じ) でも名前に書き写し -> 止まる", P("ren"), 2, cwd=T)
+    one("fclean", {"clean-name.md": "- 「%s」\n" % FAKE_NOT_IN_CORPUS})
+    check("R46 clean な名前と中身 -> 通る", P("fclean"), 0, cwd=T)
+
+    # 別名・push 先の差し替え
+    cfgs = (("alias.sy", "push"), ("remote.origin.pushurl", "/nonexistent/x.git"), ("url./nonexistent/.pushInsteadOf", "https://example.invalid/"))
+    for k, v in cfgs:
+        sh("git", "config", k, v, cwd=WORK)
+        check("R50 repo の設定に %s があると -> 止まる" % k, P("fclean"), 2, cwd=T)
+        sh("git", "config", "--unset", k, cwd=WORK)
+    check("R51 設定を戻すと -> 通る", P("fclean"), 0, cwd=T)
+    for nm, c in (("git config alias.sy push", "git config alias.sy push"),
+                  ("git -C W config alias.sy push", "git -C %s config alias.sy push" % W),
+                  ("git config alias.sy pu\\sh", "git config alias.sy pu\\sh"),
+                  ("git config remote.origin.pushurl x", "git config remote.origin.pushurl /x"),
+                  ("git config url.x.pushInsteadOf y", "git config url./x/.pushInsteadOf y"),
+                  ("git remote set-url --push origin x", "git remote set-url --push origin /x"),
+                  ("git -c alias.sy=push", "git -c alias.sy=push -C %s sy origin HEAD" % W)):
+        rc, err = run(c, T)
+        results.append(rc == 2)
+        print("%s %-62s exit=%d (期待 2)" % ("PASS" if rc == 2 else "FAIL", "R52 " + nm, rc))
+    check("R53 git config user.name x は通る", "git config user.name x", 0)
+    check("R54 git remote -v は通る", "git remote -v", 0)
+
     print("== 8 止めた記録")
     open(EV, "w").close()
     check("T50 記録を取るため 1 回止める", "gh pr comment 1 -b '「%s」'" % q, 2)

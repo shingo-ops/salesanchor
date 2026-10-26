@@ -191,9 +191,11 @@ SAFE_CHARS = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789
 SHELLS = {"sh", "bash", "zsh", "dash", "ksh", "eval", "source", "."}
 REF_RE = re.compile(r"HEAD|[A-Za-z0-9][A-Za-z0-9/._-]*")
 REDIR_TAIL_RE = re.compile(r"\s+(?:2>&1|>>?\s*/[A-Za-z0-9_@%+=:,./-]+)\s*$")
-GH_VALUE_OPTS = {"-t", "--title", "-B", "--base", "-H", "--head", "-R", "--repo", "-a", "--assignee",
-                 "-l", "--label", "-m", "--milestone", "-p", "--project", "-r", "--reviewer"}
-GH_BAD_OPTS = {"--fill", "--fill-first", "--fill-verbose", "--editor", "-e", "--web", "-w", "--template", "-T", "--recover"}
+GH_BAD_OPTS = {"-f", "--fill", "--fill-first", "--fill-verbose", "--editor", "-e", "--web", "-w", "--template", "-T", "--recover"}
+GH_TITLE = {"--title", "-t"}
+HIST_MSG = ("送る途中の commit に書き写しがあります。新しい commit で消しても履歴に残って送られます。"
+            "該当の commit を書き直すか、origin/main から作り直したブランチで送ってください。書き直しは Opus の指示を待ってください。")
+PUSH_CFG_RE = r"^(alias\.|remote\..*\.pushurl|url\..*\.pushinsteadof)"
 GH_BODY_STR = {"--body", "-b"}
 GH_BODY_FILE = {"--body-file", "-F"}
 
@@ -206,19 +208,25 @@ def _lex(cmd):
 
 
 def detect(cmd):
-    """字句として git ... push / gh pr|issue ... が現れるか -> (push, gh)。読めないときは粗い目印で判断する。"""
-    pre_push = re.search(r"\bgit\b[\s\S]*\bpush\b", cmd) is not None
-    pre_gh = re.search(r"\bgh\b[\s\S]*\b(?:pr|issue)\b", cmd) is not None
-    if not pre_push and not pre_gh:
-        return False, False
+    """字句として git ... push / gh pr|issue ... が現れるか -> (push, gh)。
+    見分けは、生の文字と、shlex で分けた字句 (引用符と \\ を外したもの) の両方で行う。
+    字句に分けられないときは、生の文字に git か gh が含まれれば止める (push と gh の両方を立てる)。"""
     try:
         toks = _lex(cmd)
     except ValueError:
-        return pre_push, pre_gh
+        if re.search(r"git|gh", cmd):
+            return True, True
+        return False, False
     base = [t.rsplit("/", 1)[-1] for t in toks]
-    if any(b in SHELLS for b in base) and any(re.fullmatch(r"-\w*c\w*", t) for t in toks) or "eval" in base:
-        return pre_push, pre_gh  # sh -c "..." など。決まった形ではないので、後で止まる
+    if (any(b in SHELLS for b in base) and any(re.fullmatch(r"-\w*c\w*", t) for t in toks)) or "eval" in base:
+        loose = cmd + "\n" + re.sub(r"[\\'\"]", "", cmd)  # sh -c の中身は読まない。引用符と \\ を外した形でも目印を探す
+        return (re.search(r"\bgit\b[\s\S]*\bpush\b", loose) is not None,
+                re.search(r"\bgh\b[\s\S]*\b(?:pr|issue)\b", loose) is not None)
     push = any(b == "git" and "push" in toks[i + 1:] for i, b in enumerate(base))
+    if not push and "git" in base:
+        low = [t.lower() for t in toks]
+        if any("alias." in t or "pushurl" in t or "pushinsteadof" in t for t in low) or ("set-url" in low and "--push" in low):
+            push = True  # push の行き先や別名を書き換える操作: 決まった形ではないので、後で止まる
     gh = False
     for i, b in enumerate(base):
         if b != "gh":
@@ -284,7 +292,7 @@ def strict_words(cmd):
 
 def git(cwd, *args):
     env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
-    return subprocess.run(["git", "-C", cwd] + list(args), capture_output=True, text=True, env=env)
+    return subprocess.run(["git", "-C", cwd] + list(args), capture_output=True, text=True, encoding="utf-8", errors="replace", env=env)
 
 
 def repo_slug(cwd):
@@ -298,18 +306,26 @@ def repo_slug(cwd):
     return "/".join(parts[-2:]) if len(parts) >= 2 else None
 
 
-def added_lines(cwd, base, sha):
-    """base から sha までの追加行 -> [(file, lineno, text)]。取れなければ Block。"""
-    r = git(cwd, "-c", "core.quotePath=false", "diff", "--no-color", "--no-ext-diff", "-U0", base, sha)
+def added_lines(cwd, sha, excludes):
+    """送る commit のそれぞれが足した行 + 追加・改名したファイルの名前 -> [(場所, 行, 文)]。取れなければ Block。
+    excludes (origin/main など) から届く commit は数えない。merge commit は --cc で、衝突を直した行だけ見る。"""
+    r = git(cwd, "-c", "core.quotePath=false", "-c", "log.showSignature=false", "log", "-p", "--cc", "--format=%H",
+            "--no-color", "--no-ext-diff", "--text", "--no-textconv", "--src-prefix=a/", "--dst-prefix=b/",
+            "-U0", sha, "--not", *excludes)
     if r.returncode != 0:
         raise Block("差分が取れません")
-    out, fname, ln, in_head = [], None, 0, False
+    out, fname, ln, in_head, ncol = [], None, 0, False, 1
     for line in r.stdout.split("\n"):
-        if line.startswith("diff --git "):
+        if re.fullmatch(r"[0-9a-f]{40}", line):
+            fname, in_head = None, False
+            continue
+        if line.startswith(("diff --git ", "diff --cc ", "diff --combined ")):
             fname, in_head = None, True  # ファイルの見出し。この中の "+++ " だけが名前
             continue
         if in_head:
-            if line.startswith("+++ "):
+            if line.startswith(("rename to ", "copy to ")):
+                out.append(("ファイル名", 0, line.split(" to ", 1)[1]))
+            elif line.startswith("+++ "):
                 nm = line[4:].split("\t")[0]
                 if nm.startswith('"b/') and nm.endswith('"'):
                     fname = nm[3:-1]
@@ -317,16 +333,18 @@ def added_lines(cwd, base, sha):
                     fname = nm[2:]
                 else:
                     fname = None
+                if fname:
+                    out.append(("ファイル名", 0, fname))
                 continue
             if not line.startswith("@@"):
                 continue
             in_head = False
-        m = re.match(r"@@ -\S+ \+(\d+)(?:,\d+)? @@", line)
+        m = re.match(r"(@@+) (?:-\S+ )+\+(\d+)(?:,\d+)? @@+", line)
         if m:
-            ln = int(m.group(1))
+            ncol, ln = len(m.group(1)) - 1, int(m.group(2))
             continue
-        if line.startswith("+") and fname:
-            out.append((fname, ln, line[1:]))
+        if fname and line[:ncol].find("+") >= 0 and not line.startswith("\\"):
+            out.append((fname, ln, line[ncol:]))
             ln += 1
     return out
 
@@ -343,6 +361,9 @@ def check_push(words, repos, matched):
         raise Block("push の場所が存在しません")
     if git(path, "rev-parse", "--show-toplevel").returncode != 0:
         raise Block("push の場所が git の repo ではありません")
+    c = git(path, "config", "--get-regexp", PUSH_CFG_RE)
+    if c.returncode != 1:  # 1 = 該当なし。0 (別名や push 先の差し替えがある) とそれ以外の失敗は止める
+        raise Block("この repo には別名 (alias) か push 先の差し替え (pushurl など) の設定があります")
     slug = repo_slug(path)
     if slug is None or slug not in repos:
         return []  # 表に無い repo の push は照らさずに通す
@@ -357,13 +378,10 @@ def check_push(words, repos, matched):
     if ref == "HEAD":
         s = git(path, "symbolic-ref", "--quiet", "--short", "HEAD")
         name = s.stdout.strip() if s.returncode == 0 else None
-    base = "origin/main"
+    excludes = ["refs/remotes/origin/main"]
     if name and git(path, "rev-parse", "--verify", "--quiet", "refs/remotes/origin/%s^{commit}" % name).returncode == 0:
-        base = "refs/remotes/origin/%s" % name
-    mb = git(path, "merge-base", base, sha)
-    if mb.returncode != 0 or not mb.stdout.strip():
-        raise Block("送る範囲の起点が決まりません")
-    return added_lines(path, mb.stdout.strip(), sha)
+        excludes.append("refs/remotes/origin/%s" % name)
+    return added_lines(path, sha, excludes)
 
 
 def read_body_file(p):
@@ -377,37 +395,42 @@ def read_body_file(p):
 
 
 def check_gh(words):
+    """本文 (--body/-b/--body-file/-F) と題名 (--title/-t) は、位置や前の印に関係なく字句のどこにあっても照らす。"""
     v, raws = [w[0] for w in words], [w[1] for w in words]
     if len(v) < 3 or v[0] != "gh" or v[1] not in GH_ACTIONS or v[2] not in GH_ACTIONS[v[1]]:
         raise Block(GH_MSG)
-    body, i = None, 3
+    body, titles, i = None, [], 3
     while i < len(v):
         t = v[i]
         key, eq, val = t.partition("=") if t.startswith("--") else (t, "", "")
         if t in GH_BAD_OPTS or key in GH_BAD_OPTS:
             raise Block(GH_MSG)
-        if key in GH_BODY_STR or key in GH_BODY_FILE:
-            if body is not None:
-                raise Block(GH_MSG)
+        if key in GH_BODY_STR or key in GH_BODY_FILE or key in GH_TITLE:
             if eq:
                 value, raw, i = val, raws[i].split("=", 1)[1], i + 1
             elif i + 1 < len(v):
                 value, raw, i = v[i + 1], raws[i + 1], i + 2
             else:
                 raise Block(GH_MSG)
+            if key in GH_TITLE:
+                titles.append(value)
+                continue
+            if body is not None:
+                raise Block(GH_MSG)
             body = ("str" if key in GH_BODY_STR else "file", value, raw)
             continue
         if re.fullmatch(r"-[^-].+", t):
             raise Block(GH_MSG)  # 短い指定の束ね書きは読み分けない
-        i += 2 if t in GH_VALUE_OPTS else 1
+        i += 1
+    out = [("題名", n + 1, x) for n, x in enumerate(titles)]
     if body is None:
-        return []
+        return out
     kind, value, raw = body
     if kind == "str":
         if re.fullmatch(r"'[^']*'", raw) is None:
             raise Block(GH_MSG)
-        return [("本文", n + 1, t) for n, t in enumerate(value.split("\n"))]
-    return read_body_file(value)
+        return out + [("本文", n + 1, t) for n, t in enumerate(value.split("\n"))]
+    return out + read_body_file(value)
 
 
 def run(payload):
@@ -452,6 +475,8 @@ def run(payload):
     for l, n, p in hits[:30]:
         sys.stderr.write("  %s:%d 「%s」\n" % (l, n, p))
     sys.stderr.write(EXPLAIN + "\n")
+    if push:
+        sys.stderr.write(HIST_MSG + "\n")
     return 2
 
 
