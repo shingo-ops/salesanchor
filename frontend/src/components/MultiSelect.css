@@ -10,7 +10,9 @@
 }
 
 .comp-multiselect__menu--popover {
-  min-width: var(--dropdown-min-width);
+  /* min-width は max-width より強いため、min() で包まないと画面幅より広いまま残る
+     （Popover.css の .comp-popover の max-width との組み合わせ。design.md 4-3） */
+  min-width: min(var(--dropdown-min-width), calc(100vw - var(--space-6)));
 }
 
 .comp-multiselect__list {
