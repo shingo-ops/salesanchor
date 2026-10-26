@@ -11,6 +11,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { PageLayout } from "../../components/PageLayout";
+import { Button } from "../../components/Button";
 import { TextFieldControl } from "../../components/TextField";
 import { LoadingBlock } from "../../components/loading";
 
@@ -132,14 +133,17 @@ export default function ChannelMastersPage() {
               disabled={saving}
               style={{ width: "auto" }}
             />
-            <button
+            <Button
               type="button"
+              variant="primary"
+              size="md"
+              loading={saving}
               onClick={handleAdd}
               disabled={saving || !newPlatform.trim() || !newDisplayName.trim()}
               aria-label={t("channelMasters.add")}
             >
-              {saving ? t("channelMasters.saving") : t("channelMasters.add")}
-            </button>
+              {t("channelMasters.add")}
+            </Button>
           </div>
         </>
       )}

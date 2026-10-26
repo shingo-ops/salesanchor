@@ -353,7 +353,7 @@ function validateGORecord(goRecord, prNumber, { requiresPoOnly = false } = {}) {
       '❌ PR本文に「### GO記録」セクションがありません',
       '   → 危険変更はマージ前にチャットで「3行サマリ＋バックアップ確認」をPOに提示し、',
       '     「GO #<PR番号>」を受領してからPR本文の「### GO記録」セクションに転記してください',
-      '   → 詳細: CLAUDE.md §ブランチ運用ルール',
+      '   → 詳細: docs/specs/branch-operations/README.md §8',
     ];
   }
 

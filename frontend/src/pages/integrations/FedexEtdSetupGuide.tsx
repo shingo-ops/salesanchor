@@ -514,15 +514,13 @@ export function FedexEtdSetupGuide({
                   ref={letterheadInputRef}
                 />
                 <div className="form-actions">
-                  <Button variant="secondary" size="md"
+                  <Button loading={uploadBusy.letterhead} variant="secondary" size="md"
                     type="button"
 
                     disabled={uploadBusy.letterhead}
                     onClick={() => void handleUpload("LETTERHEAD")}
                   >
-                    {uploadBusy.letterhead
-                      ? t("carrierIntegration.fedexEtdGuideUploading")
-                      : t("carrierIntegration.fedexEtdGuideUploadButton")}
+                    {t("carrierIntegration.fedexEtdGuideUploadButton")}
                   </Button>
                 </div>
                 {uploadError.letterhead && <p className="error-message">{uploadError.letterhead}</p>}
@@ -543,15 +541,13 @@ export function FedexEtdSetupGuide({
                   ref={signatureInputRef}
                 />
                 <div className="form-actions">
-                  <Button variant="secondary" size="md"
+                  <Button loading={uploadBusy.signature} variant="secondary" size="md"
                     type="button"
 
                     disabled={uploadBusy.signature}
                     onClick={() => void handleUpload("SIGNATURE")}
                   >
-                    {uploadBusy.signature
-                      ? t("carrierIntegration.fedexEtdGuideUploading")
-                      : t("carrierIntegration.fedexEtdGuideUploadButton")}
+                    {t("carrierIntegration.fedexEtdGuideUploadButton")}
                   </Button>
                 </div>
                 {uploadError.signature && <p className="error-message">{uploadError.signature}</p>}

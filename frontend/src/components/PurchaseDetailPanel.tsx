@@ -270,6 +270,7 @@ export default function PurchaseDetailPanel({
         type="button"
         variant="secondary"
         onClick={handleConfirm}
+        loading={confirming}
         disabled={!existing || confirming}
         data-testid="pur-confirm"
         title={
@@ -278,7 +279,7 @@ export default function PurchaseDetailPanel({
             : t("purchase.confirmTitleDisabled")
         }
       >
-        {confirming ? t("purchase.confirming") : t("purchase.confirm")}
+        {t("purchase.confirm")}
       </Button>
       <Button
         type="button"
@@ -293,9 +294,10 @@ export default function PurchaseDetailPanel({
         type="submit"
         variant="primary"
         disabled={saving}
+        loading={saving}
         data-testid="pur-save"
       >
-        {saving ? t("common.saving") : existing ? t("common.update") : t("common.register")}
+        {existing ? t("common.update") : t("common.register")}
       </Button>
     </>
   );

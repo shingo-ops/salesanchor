@@ -6,6 +6,8 @@
 - あるべき姿（POの言葉のみ・正本）: [ideal-state.md](./ideal-state.md)
 - KGI: [kgi.md](kgi.md)（2026-07-20 PO承認・エビデンス層別つき）
 - 親: 索引 [docs/specs/README.md](../README.md)
+- 柱1 design — 検査結果の取り違え・マージ経路: [design-pillar1.md](./design-pillar1.md)
+- 子テーマ 動作実測ゲート（proof-of-behavior）: [proof-of-behavior/README.md](./proof-of-behavior/README.md)
 - ステータス: あるべき姿確定（PO自筆・2026-07-19）。KGI・recon以降は次便。
 
 ## 子テーマ候補（recon前・確定ではない）

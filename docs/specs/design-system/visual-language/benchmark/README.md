@@ -1,6 +1,6 @@
 # ベンチマークの観察メモ — 表紙
 
-> この文書は何か（専門用語なしの1行）: お手本にするアプリ（WhatsApp / Meta Business Suite）の画面を測った数字を置く場所の入口。
+> この文書は何か（専門用語なしの1行）: お手本にするアプリ（WhatsApp / Meta Business Suite / メルカリ）の画面を測った数字を置く場所の入口。
 
 親: [../README.md](../README.md) / 設計: [../design.md](../design.md) §5 / 合格条件: [../kgi.md](../kgi.md) / 手順書: [../../../../handoff/app-visual-language/phone-capture-runbook.md](../../../../handoff/app-visual-language/phone-capture-runbook.md)
 
@@ -24,6 +24,7 @@
 | [whatsapp-reproduction-spec.md](whatsapp-reproduction-spec.md) | **再現用の構造仕様**（入れ子と余白） | — | — | — |
 | [whatsapp-ux-behavior.md](whatsapp-ux-behavior.md) | **操作感**（動き・速さ・画面のつながり） | — | — | — |
 | [whatsapp-color-structure.md](whatsapp-color-structure.md) | **配色の構造**（役割と面積比・明度差・SAへの写し方） | — | — | — |
+| [mercari-search-filter.md](mercari-search-filter.md) | **メルカリ 検索結果の上部・絞り込み・複数選びのチェックボックス**（記録日 2026-10-25） | — | — | — |
 
 ## PO 決定（2026-10-11）
 

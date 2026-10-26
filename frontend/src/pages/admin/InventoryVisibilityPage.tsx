@@ -160,14 +160,12 @@ export default function InventoryVisibilityPage() {
                   </td>
                 ))}
                 <td>
-                  <Button variant="primary" size="md"
+                  <Button loading={savingFor === row.role_id} variant="primary" size="md"
                     onClick={() => saveRole(row)}
 
                     disabled={savingFor === row.role_id}
                   >
-                    {savingFor === row.role_id
-                      ? t("common.saving")
-                      : t("inventoryVisibility.save")}
+                    {t("inventoryVisibility.save")}
                   </Button>
                   {savedFor === row.role_id && (
                     <span style={{ marginLeft: "var(--space-2)", color: "var(--success)" }}>

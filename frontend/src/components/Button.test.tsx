@@ -94,9 +94,9 @@ describe('Button native contract', () => {
     },
   );
 
-  it('preserves loadingText, iconOnly name and native aria override order', () => {
-    const { rerender } = render(<Button loading loadingText="Saving">Save</Button>);
-    expect(screen.getByRole('button', { name: 'Saving' }).textContent).toBe('Saving');
+  it('keeps children while loading, iconOnly name and native aria override order', () => {
+    const { rerender } = render(<Button loading>Save</Button>);
+    expect(screen.getByRole('button', { name: 'Save' }).textContent).toBe('Save');
     rerender(<Button loading iconOnly aria-label="Send"><span aria-hidden="true">X</span></Button>);
     const button = screen.getByRole('button', { name: 'Send' });
     expect(button.classList.contains('comp-btn--icon-only')).toBe(true);

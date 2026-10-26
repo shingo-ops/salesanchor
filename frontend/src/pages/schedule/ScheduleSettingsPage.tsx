@@ -184,7 +184,6 @@ export default function ScheduleSettingsPage() {
                           onClick={() => saveOwner(selfOwner)}
                           disabled={selfOwner.userId == null}
                           loading={savingStaffId === selfOwner.staffId}
-                          loadingText={t("common.saving")}
                         >
                           {t("schedule.settingsSave")}
                         </Button>
@@ -238,7 +237,6 @@ export default function ScheduleSettingsPage() {
                             onClick={() => saveOwner(owner)}
                             disabled={owner.userId == null}
                             loading={savingStaffId === owner.staffId}
-                            loadingText={t("common.saving")}
                           >
                             {t("schedule.settingsSave")}
                           </Button>

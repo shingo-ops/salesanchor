@@ -366,6 +366,16 @@ AI（Claude Code）は見張り mac-vm-guard（~/.claude/scripts/mac-vm-guard.py
 
 ---
 
+## VPS コンテナの落とし穴
+
+入口（CLAUDE.md・AGENTS.md）の同じ名前の節から、文を変えずに移しました（2026-10-23・ADR-1040 段3b）。
+
+- `/app` は書込不可 → 出力先は `/tmp`
+- `docker compose cp backend:/tmp/...` は使えない（tmpfs）→ `docker compose exec -T backend cat /tmp/xxx > host_file`
+- コンテナ再起動で `/tmp` は消える
+
+---
+
 ## 関連 doc
 
 - [`self-hosted-runner-credential-trap.md`](./self-hosted-runner-credential-trap.md) — 2026-05-07 の事故と PIPELINE_PAT 導入の経緯

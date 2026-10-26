@@ -153,8 +153,8 @@ export function CompanyAddressModal({
           </div>
           <div className="form-actions">
             <Button type="button" variant="secondary" onClick={onClose} disabled={addrSubmitting}>{t("common.cancel")}</Button>
-            <Button type="submit" disabled={!canEdit || addrSubmitting}>
-              {addrSubmitting ? t("common.saving") : t("common.save")}
+            <Button loading={addrSubmitting} type="submit" disabled={!canEdit || addrSubmitting}>
+              {t("common.save")}
             </Button>
           </div>
         </form>

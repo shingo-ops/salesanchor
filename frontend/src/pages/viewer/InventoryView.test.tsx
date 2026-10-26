@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { DataTableProps } from "../../components/DataTable";
 
@@ -15,6 +15,7 @@ import { InventoryView } from "./InventoryView";
 import type { ViewerInventoryResponse, ViewerRow } from "./types";
 
 const jstNow = () => new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 19).replace("T", " ");
+const jstAt = (ms: number) => new Date(ms + 9 * 3600 * 1000).toISOString().slice(0, 19).replace("T", " ");
 const mkRow = (i: number): ViewerRow => ({
   posted_at: jstNow(), mark: `M${i}`, japanese_title: `n${i}`, english_title: `t${String(i).padStart(3, "0")}`, condition: "sealed",
   unit_price: String(100 + i), quantity: "1", note_ja: "", status: "In Stock", release_date: "", series: "S", provider: "P",
@@ -26,6 +27,14 @@ const data: ViewerInventoryResponse = {
 
 beforeEach(() => { captured.props = null; });
 afterEach(() => cleanup());
+
+// 便5（docs/handoff/viewer-choice-sheet/design.md）: 絞り込みドロワーとシリーズ/並び替えパネルは
+// 別の Drawer インスタンスで、どちらも DOM には常にマウントされる（Drawer.tsx の作り）。
+// "drawer-close" が2つ存在しうるため、いま開いている方（.comp-drawer-panel--open）に絞って取る。
+function openPanelCloseButton(): HTMLElement {
+  const panel = document.querySelector(".comp-drawer-panel--open") as HTMLElement;
+  return within(panel).getByTestId("drawer-close");
+}
 
 describe("InventoryView", () => {
   it("has no password-change or logout button in the header", () => {
@@ -177,7 +186,7 @@ describe("InventoryView", () => {
     expect((captured.props!.data[0] as unknown as { series: string }).series).toBe("ポケモン");
   });
 
-  it("K5: mobile keeps the series select with counts and shows no tab row", () => {
+  it("K5/B8/B4: mobile series button has no count, opening it shows a panel titled 'シリーズ' with counts, and no tab row appears", () => {
     Object.defineProperty(window, "matchMedia", {
       configurable: true,
       writable: true,
@@ -189,8 +198,17 @@ describe("InventoryView", () => {
     });
     try {
       render(<InventoryView data={seriesData} />);
-      const sel = screen.getByTestId("viewer-tab-select") as HTMLSelectElement;
-      expect(sel.options[1].textContent).toMatch(/\(\d+\)$/);
+      const trigger = screen.getByTestId("viewer-tab-select");
+      // B8: ボタンの文字に件数が入っていない
+      expect(trigger.textContent).not.toMatch(/\(/);
+      // 開く前はパネルが開いていない（空振り検査を避ける。design.md ⑤冒頭の決まりの単体テスト版）
+      expect(document.querySelector(".comp-drawer-panel--open")).toBeNull();
+      fireEvent.click(trigger);
+      const panel = document.querySelector(".comp-drawer-panel--open") as HTMLElement;
+      expect(panel).not.toBeNull();
+      expect(within(panel).getByText("シリーズ")).toBeTruthy();
+      const row = within(panel).getByTestId("viewer-series-option-ポケモン").closest("label");
+      expect(row?.textContent).toMatch(/\(\d+\)$/);
       expect(screen.queryByRole("tablist")).toBeNull();
       expect(captured.props!.attachedTop).toBe(false);
     } finally {
@@ -218,11 +236,11 @@ describe("InventoryView", () => {
     expect((captured.props!.data[0] as unknown as { series: string }).series).toBe("ポケモン");
   });
 
-  it("K1: mobile select opens on the first main series", () => {
+  it("K1/K4: mobile series button opens on the first main series", () => {
     Object.defineProperty(window, "matchMedia", mobileMatchMedia);
     try {
       render(<InventoryView data={seriesData} />);
-      expect((screen.getByTestId("viewer-tab-select") as HTMLSelectElement).value).toBe("ポケモン");
+      expect(screen.getByTestId("viewer-tab-select").textContent).toContain("ポケモン");
       expect(captured.props!.data).toHaveLength(1);
     } finally {
       delete (window as unknown as { matchMedia?: unknown }).matchMedia;
@@ -240,4 +258,299 @@ describe("InventoryView", () => {
     expect(captured.props!.data).toHaveLength(2);
   });
   /* eslint-enable local/no-japanese-literal */
+
+  const providerData: ViewerInventoryResponse = {
+    ...data,
+    rows: [
+      ...Array.from({ length: 5 }, (_, i) => ({ ...mkRow(i), provider: "Acme" })),
+      ...Array.from({ length: 5 }, (_, i) => ({ ...mkRow(i + 5), provider: "Globex" })),
+    ],
+  };
+
+  it("A14: opening the drawer moves focus to its first focusable element", () => {
+    Object.defineProperty(window, "matchMedia", mobileMatchMedia);
+    try {
+      render(<InventoryView data={providerData} />);
+      fireEvent.click(screen.getByTestId("viewer-filter-toggle"));
+      expect(document.activeElement).toBe(openPanelCloseButton());
+    } finally {
+      delete (window as unknown as { matchMedia?: unknown }).matchMedia;
+    }
+  });
+
+  describe("filter subscreen navigation (docs/handoff/viewer-filter-subscreen/design.md 4-4)", () => {
+    function openDrawer() {
+      Object.defineProperty(window, "matchMedia", mobileMatchMedia);
+      render(<InventoryView data={providerData} />);
+      fireEvent.click(screen.getByTestId("viewer-filter-toggle"));
+    }
+    afterEach(() => {
+      delete (window as unknown as { matchMedia?: unknown }).matchMedia;
+    });
+
+    it("A1/A2: root shows the provider and condition rows and is not a subscreen (no drawer-back)", () => {
+      openDrawer();
+      expect(screen.getByTestId("viewer-provider-row")).toBeTruthy();
+      expect(screen.getByTestId("viewer-condition-row")).toBeTruthy();
+      expect(screen.queryByTestId("drawer-back")).toBeNull();
+    });
+
+    it("A2/A14: clicking the provider row opens the subscreen, drawer-back appears and takes focus", () => {
+      openDrawer();
+      fireEvent.click(screen.getByTestId("viewer-provider-row"));
+      expect(screen.getByTestId("viewer-provider-options-option-Acme")).toBeTruthy();
+      const back = screen.getByTestId("drawer-back");
+      expect(back).toBeTruthy();
+      expect(document.activeElement).toBe(back);
+    });
+
+    it("A3/A14: back returns to root, drawer-back disappears and focus returns to the row", () => {
+      openDrawer();
+      fireEvent.click(screen.getByTestId("viewer-provider-row"));
+      fireEvent.click(screen.getByTestId("drawer-back"));
+      expect(screen.queryByTestId("drawer-back")).toBeNull();
+      expect(screen.getByTestId("viewer-provider-row")).toBeTruthy();
+      expect(document.activeElement).toBe(screen.getByTestId("viewer-provider-row"));
+    });
+
+    it("A11: apply returns to root and keeps the selection", () => {
+      openDrawer();
+      fireEvent.click(screen.getByTestId("viewer-provider-row"));
+      fireEvent.click(screen.getByTestId("viewer-provider-options-option-Acme"));
+      fireEvent.click(screen.getByTestId("viewer-filter-apply"));
+      expect(screen.queryByTestId("drawer-back")).toBeNull();
+      expect(captured.props!.data).toHaveLength(5);
+      // 親の行に選んだ名前が出る（A7）
+      expect(screen.getByTestId("viewer-provider-row").textContent).toContain("Acme");
+    });
+
+    it("A12: Escape in a subscreen returns to root (the drawer stays open)", () => {
+      openDrawer();
+      fireEvent.click(screen.getByTestId("viewer-provider-row"));
+      fireEvent.keyDown(document, { key: "Escape" });
+      expect(screen.queryByTestId("drawer-back")).toBeNull();
+      expect(screen.getByTestId("viewer-provider-row")).toBeTruthy();
+      expect(document.querySelector(".comp-drawer-panel--open")).toBeTruthy();
+    });
+
+    it("fix 1: the close (X) button closes the drawer even from a subscreen (name and action now match)", () => {
+      openDrawer();
+      fireEvent.click(screen.getByTestId("viewer-provider-row"));
+      expect(screen.getByTestId("drawer-back")).toBeTruthy();
+      fireEvent.click(openPanelCloseButton());
+      // 以前はここで一段戻るだけだった（Drawer の onClose が Esc と同じ関数だったため）。
+      // onEscape を足したことで ✕ は本当に閉じるようになった
+      expect(document.querySelector(".comp-drawer-panel--open")).toBeNull();
+    });
+
+    it("A17: closing from a subscreen and reopening immediately lands on root with an empty search box", () => {
+      openDrawer();
+      fireEvent.click(screen.getByTestId("viewer-provider-row"));
+      fireEvent.change(screen.getByTestId("viewer-filter-option-search"), { target: { value: "Acme" } });
+      // 選択画面のまま ✕ で閉じる
+      fireEvent.click(openPanelCloseButton());
+      expect(document.querySelector(".comp-drawer-panel--open")).toBeNull();
+      // すぐ開き直す（時間で戻す作りだとここで選択画面のまま開いた＝CI で実測した退行）
+      fireEvent.click(screen.getByTestId("viewer-filter-toggle"));
+      // 開き直せていることを先に確定させる（これが無いと drawer-back の不在が空振りで真になる）
+      expect(document.querySelector(".comp-drawer-panel--open")).not.toBeNull();
+      expect(screen.queryByTestId("drawer-back")).toBeNull();
+      expect(screen.getByTestId("viewer-provider-row")).toBeTruthy();
+      fireEvent.click(screen.getByTestId("viewer-provider-row"));
+      expect((screen.getByTestId("viewer-filter-option-search") as HTMLInputElement).value).toBe("");
+    });
+
+    it("A8/A9: narrowing the options by search keeps the selected names resolved", () => {
+      openDrawer();
+      fireEvent.click(screen.getByTestId("viewer-provider-row"));
+      fireEvent.click(screen.getByTestId("viewer-provider-options-option-Acme"));
+      fireEvent.click(screen.getByTestId("viewer-provider-options-option-Globex"));
+      // "Acme" を検索語で画面から追い出す
+      fireEvent.change(screen.getByTestId("viewer-filter-option-search"), { target: { value: "Globex" } });
+      expect(screen.queryByTestId("viewer-provider-options-option-Acme")).toBeNull();
+      expect(screen.getByTestId("viewer-provider-options-option-Globex")).toBeTruthy();
+      // 要約（inline の summary）は絞り込み前の2件とも正しい名前のまま
+      expect(document.querySelector(".comp-multiselect__inline-summary")!.textContent).toBe("Acme, Globex");
+    });
+
+    it("A10: a query with no matches shows the noOptions text", () => {
+      openDrawer();
+      fireEvent.click(screen.getByTestId("viewer-provider-row"));
+      fireEvent.change(screen.getByTestId("viewer-filter-option-search"), { target: { value: "no-such-provider" } });
+      // eslint-disable-next-line local/no-japanese-literal -- テスト: 画面に出る日本語文言そのものを検証する（ADR-027・precedent: src/features/tcg-analysis-review/SourceRawPane.test.tsx:1）
+      expect(screen.getByText("見つかりません")).toBeTruthy();
+    });
+
+    it("A17: the option search box is cleared when leaving the subscreen with back", () => {
+      openDrawer();
+      fireEvent.click(screen.getByTestId("viewer-provider-row"));
+      fireEvent.change(screen.getByTestId("viewer-filter-option-search"), { target: { value: "Acme" } });
+      fireEvent.click(screen.getByTestId("drawer-back"));
+      fireEvent.click(screen.getByTestId("viewer-provider-row"));
+      expect((screen.getByTestId("viewer-filter-option-search") as HTMLInputElement).value).toBe("");
+    });
+
+    it("A17: the option search box is cleared when leaving with apply", () => {
+      openDrawer();
+      fireEvent.click(screen.getByTestId("viewer-provider-row"));
+      fireEvent.change(screen.getByTestId("viewer-filter-option-search"), { target: { value: "Acme" } });
+      fireEvent.click(screen.getByTestId("viewer-filter-apply"));
+      fireEvent.click(screen.getByTestId("viewer-provider-row"));
+      expect((screen.getByTestId("viewer-filter-option-search") as HTMLInputElement).value).toBe("");
+    });
+
+    it("the condition row navigates the same way", () => {
+      openDrawer();
+      fireEvent.click(screen.getByTestId("viewer-condition-row"));
+      expect(screen.getByTestId("drawer-back")).toBeTruthy();
+      expect(screen.getByTestId("viewer-condition-options-option-sealed")).toBeTruthy();
+      fireEvent.click(screen.getByTestId("drawer-back"));
+      expect(document.activeElement).toBe(screen.getByTestId("viewer-condition-row"));
+    });
+  });
+
+  it("A15: mobile — opening the drawer, entering the provider screen, and selecting one provider narrows the table", () => {
+    Object.defineProperty(window, "matchMedia", mobileMatchMedia);
+    try {
+      render(<InventoryView data={providerData} />);
+      expect(captured.props!.data).toHaveLength(10);
+      fireEvent.click(screen.getByTestId("viewer-filter-toggle"));
+      fireEvent.click(screen.getByTestId("viewer-provider-row"));
+      fireEvent.click(screen.getByTestId("viewer-provider-options-option-Acme"));
+      expect(captured.props!.data).toHaveLength(5);
+    } finally {
+      delete (window as unknown as { matchMedia?: unknown }).matchMedia;
+    }
+  });
+
+  // docs/handoff/viewer-top-compact/design.md 4-1・4-3・⑤A8・A9
+  describe("viewer-top-compact (24h moved into the filter drawer, filter button count)", () => {
+    const freshStaleData: ViewerInventoryResponse = {
+      ...data,
+      rows: [
+        mkRow(1),
+        { ...mkRow(2), posted_at: jstAt(Date.now() - 25 * 3600 * 1000) },
+      ],
+    };
+
+    it("mobile: no viewer-fresh-toggle at the top, and the drawer's fresh check is checked by default", () => {
+      Object.defineProperty(window, "matchMedia", mobileMatchMedia);
+      try {
+        render(<InventoryView data={freshStaleData} />);
+        expect(screen.queryByTestId("viewer-fresh-toggle")).toBeNull();
+        fireEvent.click(screen.getByTestId("viewer-filter-toggle"));
+        const check = screen.getByTestId("viewer-fresh-check") as HTMLInputElement;
+        expect(check).toBeTruthy();
+        expect(check.checked).toBe(true);
+      } finally {
+        delete (window as unknown as { matchMedia?: unknown }).matchMedia;
+      }
+    });
+
+    it("unchecking viewer-fresh-check in the drawer increases the rows passed to the table", () => {
+      Object.defineProperty(window, "matchMedia", mobileMatchMedia);
+      try {
+        render(<InventoryView data={freshStaleData} />);
+        fireEvent.click(screen.getByTestId("viewer-filter-toggle"));
+        expect(captured.props!.data).toHaveLength(1);
+        fireEvent.click(screen.getByTestId("viewer-fresh-check"));
+        expect(captured.props!.data).toHaveLength(2);
+      } finally {
+        delete (window as unknown as { matchMedia?: unknown }).matchMedia;
+      }
+    });
+
+    it("the mobile filter button shows (1) by default and drops the count once everything is cleared", () => {
+      Object.defineProperty(window, "matchMedia", mobileMatchMedia);
+      try {
+        render(<InventoryView data={data} />);
+        expect(screen.getByTestId("viewer-filter-toggle").textContent).toContain("(1)");
+        fireEvent.click(screen.getByTestId("viewer-filter-toggle"));
+        fireEvent.click(screen.getByTestId("viewer-fresh-check"));
+        expect(screen.getByTestId("viewer-filter-toggle").textContent).not.toContain("(1)");
+      } finally {
+        delete (window as unknown as { matchMedia?: unknown }).matchMedia;
+      }
+    });
+  });
+
+  // docs/handoff/viewer-choice-sheet/design.md（便5）: スマホの並び替えは専用の sortTrigger + パネル。
+  // PC の sortMenu（OS 標準のプルダウン）は変えない（上の "sort pull-down..." 系テストで検証済み）
+  describe("mobile sort panel (docs/handoff/viewer-choice-sheet/design.md)", () => {
+    afterEach(() => {
+      delete (window as unknown as { matchMedia?: unknown }).matchMedia;
+    });
+
+    it("defaults to the placeholder, opens a 4-row panel, and applying an option updates the trigger text and sort", () => {
+      Object.defineProperty(window, "matchMedia", mobileMatchMedia);
+      render(<InventoryView data={data} />);
+      const trigger = screen.getByTestId("viewer-sort-menu");
+      // eslint-disable-next-line local/no-japanese-literal -- テスト: 画面に出る日本語文言そのものを検証する（ADR-027・precedent: src/features/tcg-analysis-review/SourceRawPane.test.tsx:1）
+      expect(trigger.textContent).toContain("並び替え");
+      // 開く前はパネルが開いていない
+      expect(document.querySelector(".comp-drawer-panel--open")).toBeNull();
+
+      fireEvent.click(trigger);
+      const panel = document.querySelector(".comp-drawer-panel--open") as HTMLElement;
+      expect(panel).not.toBeNull();
+      // eslint-disable-next-line local/no-japanese-literal -- テスト: 画面に出る日本語文言そのものを検証する（ADR-027・precedent: src/features/tcg-analysis-review/SourceRawPane.test.tsx:1）
+      expect(within(panel).getByText("並び替え")).toBeTruthy();
+      // B9: 既定＋3択の4行。既定が選ばれている
+      expect(within(panel).getAllByRole("radio")).toHaveLength(4);
+      expect((within(panel).getByTestId("viewer-sort-option-default") as HTMLInputElement).checked).toBe(true);
+
+      fireEvent.click(within(panel).getByTestId("viewer-sort-option-unit_price:asc"));
+      // 選ぶと即閉じる
+      expect(document.querySelector(".comp-drawer-panel--open")).toBeNull();
+      expect(captured.props!.sortKey).toBe("unit_price");
+      expect(captured.props!.sortDir).toBe("asc");
+      // eslint-disable-next-line local/no-japanese-literal -- テスト: 画面に出る日本語文言そのものを検証する（ADR-027・precedent: src/features/tcg-analysis-review/SourceRawPane.test.tsx:1）
+      expect(screen.getByTestId("viewer-sort-menu").textContent).toContain("価格が安い順");
+    });
+
+    it("B6: selecting the default row after another sort returns to release_date desc", () => {
+      Object.defineProperty(window, "matchMedia", mobileMatchMedia);
+      render(<InventoryView data={data} />);
+
+      fireEvent.click(screen.getByTestId("viewer-sort-menu"));
+      let panel = document.querySelector(".comp-drawer-panel--open") as HTMLElement;
+      fireEvent.click(within(panel).getByTestId("viewer-sort-option-quantity:desc"));
+      expect(captured.props!.sortKey).toBe("quantity");
+
+      fireEvent.click(screen.getByTestId("viewer-sort-menu"));
+      panel = document.querySelector(".comp-drawer-panel--open") as HTMLElement;
+      expect((within(panel).getByTestId("viewer-sort-option-default") as HTMLInputElement).checked).toBe(false);
+
+      fireEvent.click(within(panel).getByTestId("viewer-sort-option-default"));
+      expect(captured.props!.sortKey).toBe("release_date");
+      expect(captured.props!.sortDir).toBe("desc");
+      // eslint-disable-next-line local/no-japanese-literal -- テスト: 画面に出る日本語文言そのものを検証する（ADR-027・precedent: src/features/tcg-analysis-review/SourceRawPane.test.tsx:1）
+      expect(screen.getByTestId("viewer-sort-menu").textContent).toContain("並び替え");
+    });
+  });
+
+  // docs/handoff/viewer-header-remove/design.md（便4）: スマホは帯（.viewer-header）が無く、
+  // 最終更新・言語は絞り込みドロワーの最初の画面（root）の一番下にある
+  describe("viewer-header-remove (C12: no header on mobile, updated/lang in the drawer)", () => {
+    afterEach(() => {
+      delete (window as unknown as { matchMedia?: unknown }).matchMedia;
+    });
+
+    it("C12: mobile has no .viewer-header; opening the filter drawer shows last-updated and language at the bottom", () => {
+      Object.defineProperty(window, "matchMedia", mobileMatchMedia);
+      render(<InventoryView data={data} />);
+
+      expect(document.querySelector(".viewer-header")).toBeNull();
+      // Drawer の中身は閉じていても DOM に居る（design.md ⑥守ること）ので、
+      // 開く前は「開いているパネルが無い」ことだけを確かめる
+      expect(document.querySelector(".comp-drawer-panel--open")).toBeNull();
+
+      fireEvent.click(screen.getByTestId("viewer-filter-toggle"));
+      const panel = document.querySelector(".comp-drawer-panel--open") as HTMLElement;
+      expect(panel).not.toBeNull();
+      const updated = within(panel).getByTestId("viewer-updated");
+      expect(updated.textContent).toContain("12:05");
+      expect(within(panel).getByTestId("viewer-lang")).toBeTruthy();
+    });
+  });
 });

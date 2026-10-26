@@ -253,13 +253,13 @@ export default function CommissionSettingsPage() {
                 gap: "var(--space-2)",
               }}
             >
-              <Button variant="primary" size="md"
+              <Button loading={saving} variant="primary" size="md"
                 type="submit"
 
                 disabled={saving}
                 data-testid="settings-save"
               >
-                {saving ? t("common.saving") : t("common.save")}
+                {t("common.save")}
               </Button>
             </div>
             {settings && (

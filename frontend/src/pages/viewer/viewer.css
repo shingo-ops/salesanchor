@@ -30,6 +30,53 @@
   gap: var(--space-3);
   margin: var(--space-3) 0;
 }
+/* 1行に収まることを運任せにしない（design.md 4-2）。ADR-067: flex の数値と min-width は
+   色・寸法のトークン対象外なので直書き可。.viewer-toolbar の直下にしか無いクラスなので、
+   PC（ContentToolbar）側の同名要素（searchField・sortMenu は mobile/PC で同じ変数を再利用）
+   には効かない */
+.viewer-toolbar > .viewer-toolbar__search {
+  flex: 1 1 100%;
+}
+.viewer-toolbar > .viewer-toolbar__series {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.viewer-toolbar > .viewer-toolbar__fixed {
+  flex: 0 0 auto;
+}
+/* 枠なしボタン（シリーズ・並び替え）の中の文字（便5 design.md 4-4）。長いシリーズ名を … で切る */
+.viewer-toolbar__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* 下向きの山形（ChevronRight を回転。アイコンを足さない。便5 design.md 4-4） */
+.viewer-toolbar__caret {
+  transform: rotate(90deg);
+  flex-shrink: 0;
+}
+/* シリーズ・並び替えのパネルの行一覧（便5 design.md 4-4） */
+.viewer-choice-list {
+  display: flex;
+  flex-direction: column;
+}
+.viewer-choice-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: var(--size-icon-btn-lg);
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--font-sm);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+.viewer-choice-row:hover {
+  background: var(--bg-hover);
+}
 .viewer-filter-body {
   display: flex;
   flex-direction: column;
@@ -39,6 +86,24 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
+}
+/* 絞り込みの選択画面（provider/condition・design.md 4-4）: 候補を絞る検索欄 ＋ 一覧 */
+.viewer-filter-options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+/* 絞り込み画面（root）の一番下。最終更新・言語（便4 design.md 4-3）。区切り線で絞り込みの項目と見分ける */
+.viewer-filter-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+  margin-top: var(--space-2);
+  border-top: 1px solid var(--border);
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
 }
 .viewer-login {
   display: flex;

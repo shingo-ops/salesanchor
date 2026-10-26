@@ -105,8 +105,8 @@ describe('Bot form migration using real pages and permissions', () => {
   it.each(modes)('%s preserves pending state and failed input', async mode => {
     const pending = deferred(), send = mode === 'create' ? mock.post : mock.patch; send.mockReturnValue(pending.promise);
     const scope = await mountForm(mode), target = save(scope, mode); fireEvent.click(target);
-    expect(target.disabled).toBe(mode === 'create'); expect(cancel(scope).disabled).toBe(mode === 'create'); expect(target.hasAttribute('aria-busy')).toBe(false);
-    expect(target.textContent).toBe(tr(mode === 'create' ? 'common.submitting' : 'common.update'));
+    expect(target.disabled).toBe(mode === 'create'); expect(cancel(scope).disabled).toBe(mode === 'create'); expect(target.getAttribute('aria-busy')).toBe(mode === 'create' ? 'true' : null);
+    expect(target.textContent).toBe(tr(mode === 'create' ? 'bots.registerIssueKey' : 'common.update'));
     await act(async () => { pending.reject(new Error('Fixture failure')); });
     expect(screen.getByText('Fixture failure')).toBeTruthy(); expect(field(scope, 'bots.displayName').value).toBe('Edited Bot');
     expect(field(scope, 'bots.ownerStaff').value).toBe('10'); expect(target.disabled).toBe(false); expect(cancel(scope).disabled).toBe(false);

@@ -2,3 +2,7 @@
   margin-right: var(--space-2);
   flex-shrink: 0;
 }
+
+.google-calendar-status-action-layout {
+  margin-left: var(--space-3);
+}

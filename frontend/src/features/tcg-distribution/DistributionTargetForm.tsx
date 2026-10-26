@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 import { NAV_ICONS } from "../../constants/icons";
 import { TextFieldControl } from "../../components/TextField";
 import { Checkbox } from "../../components/Checkbox";
+import { Button } from "../../components/Button";
 import type { DistributionTarget, DistributionTargetCreate, DistributionTargetUpdate } from "./distributionApi";
 import { createTarget, updateTarget, verifySpreadsheetAccess } from "./distributionApi";
 
@@ -247,14 +248,16 @@ export function DistributionTargetForm({ target, onClose, onSaved }: Props) {
           <button type="button" className="dist-btn dist-btn--ghost" onClick={onClose}>
             {t("common.cancel")}
           </button>
-          <button
+          <Button
             type="button"
-            className="dist-btn dist-btn--primary"
+            variant="primary"
+            size="sm"
+            loading={saving}
             onClick={handleSave}
             disabled={saving}
           >
-            {saving ? t("common.saving") : t("common.save")}
-          </button>
+            {t("common.save")}
+          </Button>
         </div>
       </aside>
     </>

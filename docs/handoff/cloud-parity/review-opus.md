@@ -98,3 +98,51 @@
   - `git diff bc0a2e241 HEAD -- <13件>` は空（.claude/settings.json を含め差分なし）
   - 取り込みで入った本線側の変更は4件（ADR-1032 追記、doc-agenda-nav カード、master-register-rules-guard.py の正規表現、その試験）。scripts/agent-hooks/cloud/ と .claude/settings.json はこれらを参照していない（grep 0件）。cloud/dispatch.sh が呼ぶのは同じ階層の guard_pre_tool.py・guard_stop.py・session_start.py のみ
 - テスト結果: `/tmp/CC報告ファイル/cloud-parity-bin1/review4-test.txt`（全件OK・終了コード0）。差分の生出力: `/tmp/CC報告ファイル/cloud-parity-bin1/review4-diff.txt`
+
+## 別カード 指摘1・2 の対処（PR #4728）
+
+- 直したこと: `guard_pre_tool.py` の `head_branch` の Bash の道を、命令文全体への正規表現から、`shlex` で語に分けて `gh pr create` / `gh api` の引数として読む方式に変えた。本文・ヘッダなど「値を取る選択肢」の値は作成元として読まない（止め漏れ＝指摘1 を解消）。
+- 直したこと: gh api の `-H`/`--header` は値ごと読み飛ばすので、`-H 'Accept: …'` が `-f head=` より後ろにあっても枝名と誤読されない（止めすぎ＝指摘2 を解消）。引用符が閉じていない命令は止める側に倒す。
+- 試験: `scripts/agent-hooks/cloud/test.sh` に H1〜H5 を追加（H1 本文中の -H／H2 本文中の --head／H3 末尾ヘッダ／H4 Accept ヘッダが後ろ／H5 引用符未閉）。H6 は既存ケースが同じ結果であること。
+- 追補 R1 の対処（2026-10-25）: shlex は語の途中の # 以降を捨てるため、`_midword_hash` を足し、引用符の外で語の途中に # がある命令は ValueError（止める側）にした。試験 H7〜H10 を追加。
+- 追補 R2 の対処（2026-10-25）: `_midword_hash` が語の頭の # を行末まで読み飛ばす（コメント内の引用符で誤読しない）。行の継ぎ目（\ の次が改行）の直後の # と、引用符の外の `$'` は True（止める側）。試験 H11〜H15 を追加。
+- 追補 R3 の対処（2026-10-25）: `_midword_hash` の語の頭の判定を、直前の文字ではなく「区切り直後か」の旗（`\` で逃がした文字・閉じ引用符の直後は語の途中）に変更。`\r` は区切りにせず、命令文に `\r` があれば `_bash_head` が止める。H5 を shlex の道の試験に戻し、H16〜H19 を追加。
+- 追補 R4 の対処（2026-10-25）: 「読める形だけ読み、それ以外は止める」に寄せた。`_bash_head` は heredoc 本文を取り除かず命令文そのものを読み、引用符・逃がし・コメントの外に区切り（`&&` `||` `;` `|` `&` `|&`）以外の記号の並び（`;(` `(` `)` `<<` `<<<` `<` `>` など）があれば止める（`_check_symbols`）。命令文の中の `gh pr create` と `gh api` の出現数が1つでない、または shlex で見つけた作成の命令の数と合わなければ止める。試験 H20〜H26 を追加。
+- 追補 R5 の対処（2026-10-25）: 書き方を1つずつ追う方式（R4 の記号の並び・出現数の検査）をやめ、PR 作成と判定された Bash の命令は「gh だけの1行」しか読まない方針に切り替えた（`_check_simple`）。引用符の外は英数字・空白・`_-./:=,@+%^` だけ、単引用符の中は自由、二重引用符の中は `$` バッククォート `\` があれば止め、先頭が `gh pr create` / `gh api` でなければ止める。理由: 変数・置き換え・`bash -c`・逃がした記号などで本物を隠し、見える囮の docs 枝を置く形を書き方ごとに追いきれないため（クラウドの gh は無効で PR 作成は MCP が主、止めすぎの害は小さい）。`_check_symbols` と出現数の検査は削除。期待を通る→止まるに変えた既存ケース: H9・H15・H19。試験 H27〜H32 を追加。
+
+## 別カード 指摘3 の対処（PR #4742）
+
+- 直したこと: `guard_pre_tool.py` の `check_merge`（Bash の道）に、既存3条件の後ろへ「送る道具（gh api・curl・wget・httpie）がある命令で、`/pulls/<n>/merge` への PUT、`mergePullRequest` / `enablePullRequestAutoMerge`（GraphQL）、`repos/…/merges`（枝の直接まとめ）のどれかがあれば止める」条件を足した。
+- 直したこと: 送る道具の無い命令（grep など）と、PUT 指定の無い `…/merge` の読み取り、GraphQL の読取り（query）は止めない。
+- 試験: `scripts/agent-hooks/cloud/test.sh` に M1〜M8 を追加（M1 curl PUT／M2 curl --request=PUT／M3 GraphQL マージ／M4 GraphQL 自動マージ予約／M5 …/merges／M6 curl GET／M7 grep／M8 GraphQL 読取）。M9 は既存ケースの結果が変わらないこと（B8 の時間試験は負荷で変更前から NG）。
+
+## 別カード 指摘4 の対処（PR #4745）
+
+- 直したこと: `guard_pre_tool.py` に `has_recursive_rm` を足し、`check_danger` の一覧照合の後ろで呼ぶ。区切り（`&&` `||` `;` `|` `&` 改行）で分けた区間の語から、最後の `/` より後ろが rm の語を探し、その後ろ（`--` より前）に `-` 1つ始まりで r／R を含む語、または `--recursive` があれば止める。`danger_ops.json` と一覧照合は変えていない。
+- 直したこと: 読み取り専用の区間は scan_text で消えるので対象外（grep 内の文字列は通る）。`rm -f` や `rm -- -r`、rmdir は止めない。
+- 試験: `scripts/agent-hooks/cloud/test.sh` に R1〜R12・R14 を追加（R1 -fr／R2 -Rf／R3 -f -r／R4 --recursive／R5 /bin/rm -dfr／R6 env と command の前置き／R7 && の後ろ／R8 -f のみ／R9 `--` の後ろの -r／R10 grep／R11 commit 文／R12 rmdir／R14 nice の前置き）。R13 は既存ケースの結果が変わらないこと（B8 の時間試験は負荷で変更前から NG）。
+- 変更前の見張りに新しい試験を当てた結果: R1・R3〜R7・R14 は通る（NG）、R8〜R12 は期待どおり。R2（-Rf）だけは変更前から止まっていた（一覧照合が小文字にそろえるため）。
+
+## 別カード 指摘5 の対処
+
+- 直したこと: `guard_pre_tool.py` に `embedded_commands` を足し、`main` の Bash の道で「外側の命令＋埋め込まれた命令」を1つずつ `check_danger`・`check_merge` に通す。埋め込みは `$( … )`（単引用符の中と `\` 付きは飛ばす・`$(( ))` は対象外）、逆引用符、行頭の `( )` の殻、`bash`/`sh`/`zsh`/`dash` の `-c`、`eval` の中身。入れ子は depth 3 まで、閉じ忘れは末尾までを中身にして止める側に倒す。
+- 触っていない範囲: `danger_ops.json`、`scan_text`、`strip_message_quotes`、`strip_heredoc_bodies`、`is_readonly_segment`、`has_recursive_rm`、`check_danger`、`check_merge`、`is_pr_create`、`check_pr_create`、`dispatch.sh`。止めた理由の文は既存のものをそのまま使う。
+- 試験: `scripts/agent-hooks/cloud/test.sh` に E1〜E18 を追加（E1〜E11 止まる、E12〜E18 通る）。E19 は既存ケースの結果が変わらないこと。
+- 変更前の見張りに E 系を当てた結果: E5 のみ変更前から止まっていた（一覧の部分一致）。E1〜E4・E6〜E11 は通っていた（止め漏れの再現）。
+
+## 指摘5 の残り7件の対処
+
+- 直したこと: `guard_pre_tool.py` の「埋め込まれた命令の取り出し」節だけを直した（main は Bash の道の1か所）。直接の取り出しを `_found_bodies` に切り出し、`embedded_commands` は入れ子が depth 3 を超えてまだ埋め込みがあれば `TOO_DEEP` を返す。main は `TOO_DEEP` があれば「入れ子が深すぎて中身を確かめられない」として止める（B29・B30。通す側から止める側へ）。
+- 直したこと: 区間の先頭の then・do・else・elif・if・while・until・time・!・{ を外してから ( ) の殻を探す（B31〜B34）。`bash -c` の後ろの `--` を1つ飛ばす（B13）。`<( )`・`>( )` を二重引用符の外で取り出す（B35）。`$(( ))` も `$( )` と同じく中身を常に調べる（B36）。ドル付き単引用符の `bash -c` はエスケープ（`\n` `\t` `\\` `\'` `\"` `\xHH` `\NNN`）を戻して調べ、ドル付き二重引用符は通常の二重引用符と同じ扱い（B37）。引用符なしの `\X` は `X` に戻す（B38）。
+- 触っていない範囲: `_paren_body`、`strip_heredoc_bodies`、`scan_text`、`strip_message_quotes`、`is_readonly_segment`、`has_recursive_rm`、`check_danger`、`check_merge`、`is_pr_create`、`check_pr_create`、`danger_ops.json`、`dispatch.sh`。
+- 試験: `scripts/agent-hooks/cloud/test.sh` に E20〜E39 を追加（E20〜E32 止まる、E33〜E39 通る）。E40 は既存ケース全件が変更前と同じ結果であること。
+- 注意: E21 は中身が無害でも深さ5で止める（止める側に倒した結果）。B8 の時間試験は負荷で変更前から NG になることがある。
+
+## 時間切れの扱い（指摘5 の続き 便1）
+
+- 確定事実: Claude Code 2.1.310 で PreToolUse の command フックが timeout を超えると、ツール呼び出しは通る（公式: 「a timed-out command … hook doesn't block the tool call … To block the call when a command or http hook times out, set onFailure: "block"」。写し /tmp/CC報告ファイル/hook-timeout/doc-quotes.txt・recon2-A-section.txt。実測 /tmp/CC報告ファイル/hook-timeout/result.txt の A/D、recon2-B-results.txt の E1〜E4）。onFailure は各フック項目の中に置き、値は "continue"（既定）か "block"（v2.1.295 以上）。block のとき timeout・0/2 以外の終了・起動失敗が exit 2 と同じ扱い。
+- 直したこと（1）: `.claude/settings.json` の PreToolUse で dispatch.sh を呼ぶ3項目（Bash・Write|Edit・mcp__github__.*）に `"onFailure": "block"` を付け、command の先頭に `[ "$CLAUDE_CODE_REMOTE" = "true" ] || exit 0;` を足した（手元で dispatch.sh が見つからない・CLAUDE_PROJECT_DIR が空でも、block で手元の全ツールが止まらないようにするため）。timeout 10 は変えていない。
+- 直したこと（2）: `guard_pre_tool.py` の `main` を、`SIGALRM` による時間の上限（既定6秒・環境変数 CLOUD_GUARD_DEADLINE_SEC で変更）で囲んだ。上限を超えたら「命令文が長すぎて時間内に中身を確かめられない」として止める（exit 2）。onFailure が効かない版のクラウドでも止まるようにする二重の備え。時間切れの例外は既存の広い `except Exception` に飲まれないよう `BaseException` にしてある。判定関数の中身は変えていない。
+- 試験: `scripts/agent-hooks/cloud/test.sh` に T1〜T5（T5b を含む）を追加。既存ケース144件の期待・実際・判定は変更前と差 0（B8 の時間試験は負荷で変更前から NG）。
+- 実物の Claude Code での確認: 変更後の settings の PreToolUse(Bash) 項目そのものを使い、dispatch.sh の代わりに `sleep 15` するだけの一時スクリプトを指して CLAUDE_CODE_REMOTE=true で実行 → touch は実行されない。`sleep 0` なら通る。CLAUDE_CODE_REMOTE 未設定で dispatch.sh が無い場所を指しても通る。
+- 残り: 残り17件（便2）は別カード。UserPromptSubmit・SessionStart・Stop の時間切れは通る側のまま（対象外）。クラウドの Claude Code の版は未確認。

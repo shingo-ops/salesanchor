@@ -172,3 +172,60 @@ PO 原文の要旨: 「全ての読み込みを差し替えて」「金型を変
 - 弊害: 小さい丸（sm）は読み込み中の文字より小さく見える。
 - 守り手: 2-6 と同じ。
 - 戻し方: 本便の PR を revert。
+
+# 段階3: ボタンの中の読み込み中を金型 Button の丸＋元の言葉へ（2026-10-24 Opus）
+
+参照: recon.md「段階3 の調査」C10 ／ 実装カード card-8.md（便1）／ ADR-027・ADR-067・ADR-144
+
+## 3-1 KGI（PO 2026-10-23「1」）
+PO の選択: 押すと丸と元の言葉が並ぶ（例: 丸＋「保存」）。ボタンの部品を1か所直すと全部のボタンが同じ見た目になる。
+- K1: ボタンの中で押すと文字が読み込み中系の文言に変わる箇所（recon C10 の targets 134 件）が 0 件になる。測り方は便ごとの抽出スクリプト（/tmp/CC報告ファイル/loading-button-recon/targets.cjs）の再実行件数。
+- K2: 押している間、ボタンには丸（金型 Spinner）と元の言葉が並ぶ。言葉は変わらない。置き換えたボタンの試験で「押下中も元の言葉・aria-busy=true・disabled」を確かめる。
+- K3: 金型 Button の丸の見た目を1か所（Button.tsx の loading 表示）で変えると全部のボタンが変わる。文言差し替えの口（loadingText）は無くす。
+
+## 3-2 直し方
+- 金型 Button（Button.tsx:28-29,46,68-69）: `loading` は今のまま（丸＋children、disabled||loading、aria-busy）。`loadingText` を props から削除し、69 行を `{children}` にする。理由: 丸＋元の言葉に揃え、文言差し替えを型で書けなくする（K3）。
+- 金型 HeaderButton（HeaderButton.tsx:25-28,39,46-57）: テキスト用の TextButtonProps に `loading?: boolean` を足し、Button へ素通しする。icon 用（生 `icon-btn`）には足さない（対象 38 件はすべてテキスト用。recon C10）。
+- 各ボタン: `{busy ? t(読み込み中キー) : t(元のキー)}` や `{t(busy ? 読み込み中キー : 元のキー)}` を `loading={busy}` ＋ `{t(元のキー)}` に替える。disabled の条件はそのまま残す（Button が disabled||loading で重ねる）。
+- 生 `<button>` 9 件は金型 Button へ移す便を分ける（見た目が変わるため単独で確かめる）。
+- 規則3（便6a で追加）: 外側の条件が読み込み中で内側が言葉の選び分けの三項は、`loading={外側の条件}`＋内側の式をそのまま残す。
+
+## 3-3 便（1便ずつ、合流・反映・確認のあとで次へ）
+- 便1（card-8.md）: 金型2つの変更（loadingText 削除・HeaderButton に loading）、loadingText を使う 8 件、loading と三項を併用している 7 件、金型の試験・stories。
+- 便2（card-9）= pages/super-admin 22・pages/integrations 12。
+- 便3（card-10）= pages/admin ほか 34 か所。
+- 便4（card-11）= pages の残りと features ほか 34 か所。
+- 便5（card-12）= components と残り 8 か所。
+- 便6a（card-13）= 金型 Button の入れ子の三項 7・文字の三項 1 の 8 か所。便6b（card-14）= 生 button 9 か所。
+- 便2〜5: 金型経由の残り（Button・HeaderButton）を 40 件以下ずつ。ディレクトリ順（pages/super-admin → pages/integrations・admin → pages の残り → features・components）。
+- 便6: 生 `<button>` 9 件を金型 Button へ。
+- 便7: 再発防止の検査（金型ボタンの children に読み込み中系キーの三項を書くと UI ガバナンス検査が赤）と、使われなくなった辞書キーの整理。
+- 便7a（card-15）= 検査。便7b = 使われなくなった辞書キーと CSS の片付け。
+
+## 3-4 代替案
+- loadingText を残し、各所で loadingText を外す: 文言差し替えを後から書けてしまい K3 を満たさない。不採用。
+- HeaderButton をやめ Button に置き換える: ADR-069 のヘッダーボタン SSoT を崩す。不採用。
+- 丸だけにして言葉を消す: PO が選ばなかった（2026-10-23 選択肢2）。
+
+## 3-5 受入条件（便1）
+| 基準 | 検証方法 |
+|---|---|
+| Button から loadingText が無くなり、使う箇所 0 | `git grep -n "loadingText" -- frontend/src` で Button 系 0（AsyncCombobox の loadingText は別部品で対象外） |
+| 便1 対象 15 件が丸＋元の言葉 | 対象の試験で押下中の textContent が元の言葉・aria-busy=true |
+| HeaderButton の loading | HeaderButton.test.tsx に loading=true で Spinner・aria-busy・disabled を確かめる試験 |
+| 規約 | tsc 0・eslint 警告 0・i18n 欠け 0・UI governance gate 緑・Storybook build 緑 |
+
+## 3-6 弊害とリスク
+- 押下中の言葉が「保存中…」から「保存」に変わる。読み上げは aria-busy で「処理中」が伝わる。
+- 今まで押下中も押せたボタンがあれば押せなくなる（Button が disabled||loading）。便ごとに disabled の条件に busy が入っているかを確かめ、入っていない箇所は差分として報告する。二重押しを防ぐ向きの変化。
+- 試験の期待（押下中の文字）を直す必要がある: recon C10 の A群 7 ファイル 12 点。
+
+## 3-7 維持の仕組み
+- 型: Button に loadingText が無いので文言差し替えはコンパイルで止まる。
+- 検査: UI ガバナンス検査の loadingTernary（便7a）が、pages/・features/・components/ で増えたら赤にする
+
+## 3-8 外部・過去事例の参照と我々への応用
+- 段階2（LoadingBlock 108 件）と同じ「金型を1つにして 40 件以下ずつ置換・便ごとに本番の配信 JS で確かめる」型を使う。外部事例は使わない（社内の金型移行で、段階2の実測で足りるため）。
+
+## 3-9 戻し方
+- 便ごとの PR を revert。便1 を戻すと loadingText が復活するため、便2 以降を先に戻す。

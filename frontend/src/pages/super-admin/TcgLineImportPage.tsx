@@ -412,7 +412,7 @@ export default function TcgLineImportPage() {
         </div>
 
         {/* アップロードボタン */}
-        <Button variant="primary" onClick={handleUpload} disabled={uploading || !selectedFile}>{uploading ? t("tcgLineImport.uploading") : t("tcgLineImport.uploadButton")}</Button>
+        <Button loading={uploading} variant="primary" onClick={handleUpload} disabled={uploading || !selectedFile}>{t("tcgLineImport.uploadButton")}</Button>
 
         {/* エラー */}
         {uploadError && (

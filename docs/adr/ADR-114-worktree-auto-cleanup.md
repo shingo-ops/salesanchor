@@ -82,6 +82,7 @@ develop マージ時に、対象ブランチの行を自動で DONE に書き換
 - 実削除の前に dry-run（消す予定一覧の表示）を経由。
 - **PR の行き先ブランチ（2026-10-13 R10）**：`REAPER_BASE_BRANCH`（既定 `main`）で、PR のマージ済み・閉じ判定の行き先ブランチを変えられる（`scripts/reaper-worktree.sh` の gh 判定3か所）。既定のままなら salesanchor の動きは変わらない。develop 運用の他リポジトリは `scripts/disk-janitor.sh` が、リポジトリごとに `REAPER_REPO_NAME`・`REAPER_BASE_BRANCH`・`REAPER_ACTIVE_WORK_FILE=/dev/null`・`ACTIVE_WORK_DIR=/nonexistent-disk-janitor` を付けて別のシェルで呼ぶ（対象は同スクリプト冒頭の設定。安全条件は本節のまま）。
 - **本体ブランチの保護（2026-10-13 R10）**：worktree のブランチ名が `main`・`develop`・`REAPER_BASE_BRANCH` のいずれかと同じ部屋は、DONE やマージ済みに見えても候補にしない（行き先ブランチそのものの部屋を、他リポジトリで誤って消さないため）。
+- **作業場所に向けた git の守り（2026-10-25 R11）**：作業場所に向けた git は `scripts/git-safe.sh` の上書き（`core.fsmonitor=false`・`core.hooksPath=/dev/null`）を付け、`status` は入れ子のリポジトリに入らない（`--ignore-submodules=all`）。入れ子のリポジトリ（`git ls-files --stage` に mode 160000）がある部屋は未保存扱いで消さない（ADR-1039）。`scripts/git-safe.sh` を読めないときは何も消さずに終了コード 1 で終わる。
 
 ### 6. 上限はセーフティネット化・エスケープ廃止
 - 4 で自動的に減り続けるので、上限は「異常検知の網」に降格。
@@ -159,3 +160,4 @@ develop マージ時に、対象ブランチの行を自動で DONE に書き換
 | 2026-10-10 | R8：取り戻せる部屋だけ消す（未push＝origin のどの ref からも到達できないコミット。走査前 fetch --prune、失敗時は削除しない）。§3 の台帳 DONE 化の注を実物に合わせて改訂 | docs/handoff/reaper-on-merge/design.md（R8 節）／本 PR |
 | 2026-10-11 | R9：PR 本文の下書き（未追跡の *pr-body*.md）だけが残るマージ済みの部屋は、下書きの全行がマージ済み PR の本文にあるとき回収する。実削除前に .git/reaper-drafts/ へ控える | docs/handoff/reaper-on-merge/design.md（R9 節）／本 PR |
 | 2026-10-13 | R10：`REAPER_BASE_BRANCH`（既定 main）で PR の行き先を変えられる。ブランチ名が main・develop・REAPER_BASE_BRANCH の部屋は候補にしない。`scripts/disk-janitor.sh` が他リポジトリの回収に reaper を使う | docs/handoff/disk-janitor/design.md／本 PR |
+| 2026-10-25 | R11：作業場所に向けた git は `scripts/git-safe.sh` の上書きを付け、`status` は入れ子のリポジトリに入らない。入れ子のリポジトリがある部屋は消さない（ADR-1039） | docs/handoff/discord-pdca/bin2b0-sa-git-guard-card.md／本 PR |

@@ -2,7 +2,7 @@
 
 | 項目 | 内容 |
 |------|------|
-| ステータス | Proposed（2026-10-22） |
+| ステータス | Accepted（2026-10-24。採用の根拠: PO 承認「1」2026-10-23＝段3c に進み決まりも正式にする。入口の入れ替えはこの PR） |
 | 備考 | 設計は審査10回目 APPROVE・PR #4649 で保存済み。KGI と構造は PO 承認済み（2026-10-22 原文「1」）。入口の上限は PO 回答「1」＝90行。各段の実装は段ごとに PO の実装承認を受ける（本 ADR の起案は実装開始の承認を兼ねない）。段3c（入口の入れ替え）の前に PO の承認で Accepted に上げる |
 | 起案日 | 2026-10-22 |
 | 方針の決定者 | Shingo（PO）。設計: Claude Opus |
@@ -43,7 +43,7 @@
 
 ## Consequences（結果）
 
-- ADR-076 の §1 ルート行（120行）と §2 の命名の決まりは、本 ADR が Accepted になった時点で本 ADR の Decision 1・2 に置き換わる。frontend・backend の CLAUDE.md の上限と階層の決まりは ADR-076 のまま。
+- ADR-076 の §1 ルート行（120行）と §2 の命名の決まりは、本 ADR が Accepted になった時点で本 ADR の Decision 1・2 に置き換わる。frontend・backend の階層の決まりは ADR-076 のまま。行数の上限（frontend 90・backend 70）は段4（2026-10-25）から本文の在る同じ場所の AGENTS.md に付け、CLAUDE.md は「@AGENTS.md」だけなのでルートと同じ 10 行にする。
 - check-claude-size.js のエラー文（「ファイル名は必ず CLAUDE.md」）と LIMITS は段3c で本 ADR に合わせて直す。
 - 手順を読むのに1〜3回ファイルを開く手間が増える。開いた割合は design KGI-10 で記録する。
 - 戻し方: 各段の PR を revert する（design §8 の戻し方の列）。

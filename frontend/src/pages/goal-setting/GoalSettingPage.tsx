@@ -207,8 +207,8 @@ function GoalBlock({
           />
         ))}
       </div>
-      <Button variant="primary" size="md" layoutClassName="gs-save-btn" onClick={onSave} disabled={saving}>
-        {saving ? t("common.saving") : t("goals.save")}
+      <Button loading={saving} variant="primary" size="md" layoutClassName="gs-save-btn" onClick={onSave} disabled={saving}>
+        {t("goals.save")}
       </Button>
     </div>
   );
@@ -367,14 +367,14 @@ function GoalAdvisorPanel({ defaultMonthlyKgi, t }: GoalAdvisorPanelProps) {
                   {t("goals.advisorTypeWins")}
                 </button>
               </div>
-              <Button variant="primary" size="md" layoutClassName="gs-advisor__run-btn"
+              <Button loading={loadingAdvice} variant="primary" size="md" layoutClassName="gs-advisor__run-btn"
                 type="button"
 
                 data-testid="goal-advisor-generate"
                 onClick={fetchAdvice}
                 disabled={loadingAdvice}
               >
-                {loadingAdvice ? t("common.loading") : t("goals.advisorGenerate")}
+                {t("goals.advisorGenerate")}
               </Button>
             </div>
             <p className="gs-advisor__scope-note">{t("goals.advisorScopeMine")}</p>

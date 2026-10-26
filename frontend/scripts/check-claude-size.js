@@ -10,33 +10,40 @@
  */
 
 import { readFileSync, existsSync } from 'fs';
-import { join } from 'path';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import { execSync } from 'child_process';
 
-const repoRoot = execSync('git rev-parse --show-toplevel', { encoding: 'utf8' }).trim();
+// フックの中では GIT_DIR が設定され git rev-parse --show-toplevel が今いる場所を返すので、スクリプト自身の場所から根を求める（frontend/scripts/ の2つ上）
+const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
 
-// 各 CLAUDE.md の上限行数（超過すると CI / pre-commit がブロック）
-// 新規サブディレクトリ CLAUDE.md を追加した場合はここに登録すること（ADR-076）
+// 各 AGENTS.md・CLAUDE.md の上限行数（超過すると CI / pre-commit がブロック）
+// 新規サブディレクトリ AGENTS.md・CLAUDE.md を追加した場合はここに登録すること（ADR-076・ADR-1040）
 // 例: { path: 'backend/db/CLAUDE.md', limit: 70 },
 const LIMITS = [
-  { path: 'CLAUDE.md', limit: 120 },
-  { path: 'frontend/CLAUDE.md', limit: 90 },
-  { path: 'backend/CLAUDE.md', limit: 70 },
+  { path: 'AGENTS.md', limit: 80 },
+  { path: 'CLAUDE.md', limit: 10 },
+  { path: 'docs/INDEX.md', limit: 60 },
+  { path: 'frontend/AGENTS.md', limit: 90 },
+  { path: 'frontend/CLAUDE.md', limit: 10 },
+  { path: 'backend/AGENTS.md', limit: 70 },
+  { path: 'backend/CLAUDE.md', limit: 10 },
   { path: 'backend/scripts/CLAUDE.md', limit: 70 },
   { path: 'backend/tenant/CLAUDE.md', limit: 70 },
 ];
 
-// LIMITS に未登録のサブディレクトリ CLAUDE.md を自動検出して警告（ADR-076）
+// LIMITS に未登録のサブディレクトリ AGENTS.md・CLAUDE.md を自動検出して警告（ADR-076・ADR-1040）
+// node_modules の中（例: パッケージ同梱の AGENTS.md）は数えない
 const registeredPaths = new Set(LIMITS.map(l => l.path));
 try {
   const found = execSync(
-    'find . -name "CLAUDE.md" -not -path "./node_modules/*" -not -path "./.git/*" -not -name "./CLAUDE.md"',
+    'find . \\( -name "CLAUDE.md" -o -name "AGENTS.md" \\) -not -path "*/node_modules/*" -not -path "./.git/*"',
     { encoding: 'utf8', cwd: repoRoot }
   ).trim().split('\n').filter(Boolean).map(p => p.replace(/^\.\//, ''));
   for (const p of found) {
-    if (p !== 'CLAUDE.md' && !registeredPaths.has(p)) {
-      console.warn(`⚠️  ${p}: LIMITS 未登録 — check-claude-size.js の LIMITS 配列に追加してください（ADR-076）`);
+    if (p !== 'CLAUDE.md' && p !== 'AGENTS.md' && !registeredPaths.has(p)) {
+      console.warn(`⚠️  ${p}: LIMITS 未登録 — check-claude-size.js の LIMITS 配列に追加してください（ADR-076・ADR-1040）`);
     }
   }
 } catch { /* find が空結果の場合は無視 */ }
@@ -53,9 +60,9 @@ for (const { path: relPath, limit } of LIMITS) {
   const lines = split[split.length - 1] === '' ? split.length - 1 : split.length;
   if (lines > limit) {
     console.error(`❌ ${relPath}: ${lines}行（上限${limit}行）`);
-    console.error(`   → 詳細ルールをサブディレクトリ CLAUDE.md に分割してください（ADR-076）`);
-    console.error(`   　 例: backend/db/CLAUDE.md、backend/tenant/CLAUDE.md`);
-    console.error(`   　 ファイル名は必ず CLAUDE.md にすること（それ以外は AI が自動ロードしない）`);
+    console.error(`   → 入口（AGENTS.md・CLAUDE.md）には安全の決まりだけを置き、手順・詳細は目次 docs/INDEX.md からたどる文書へ移してください（ADR-1040）`);
+    console.error(`   　 領域別の決まりは frontend/・backend/ などのサブディレクトリの AGENTS.md・CLAUDE.md へ分けてください（ADR-076）`);
+    console.error(`   　 CLAUDE.md は「@AGENTS.md」と Claude Code だけの決まりに限ること（ADR-1040）`);
     console.error(`   　 追加後は LIMITS 配列に登録して CI 監視対象に加えること`);
     hasError = true;
   }

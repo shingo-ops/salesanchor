@@ -26,7 +26,6 @@ interface ButtonOwnProps {
   size?: ButtonSize;
   fullWidth?: boolean;
   loading?: boolean;
-  loadingText?: string;
   /** tab variant でのみ選択状態を表す */
   active?: boolean;
   /** true にする場合は aria-label 必須 */
@@ -43,7 +42,6 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   size = "md",
   fullWidth = false,
   loading = false,
-  loadingText,
   active = false,
   iconOnly = false,
   children,
@@ -66,7 +64,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       {...rest}
     >
       {loading && <Spinner size="sm" tone="inherit" decorative />}
-      {loading ? (loadingText ?? children) : children}
+      {children}
     </button>
   );
 });

@@ -57,8 +57,8 @@ export default function ERPPage() {
       {hasPermission("erp.sync") ? (
         <ContentToolbar
           right={
-            <Button variant="primary" size="sm" layoutClassName="field-h-md" onClick={exportInvoices} disabled={exporting}>
-              {exporting ? t("erp.exporting") : t("erp.exportInvoices")}
+            <Button loading={exporting} variant="primary" size="sm" layoutClassName="field-h-md" onClick={exportInvoices} disabled={exporting}>
+              {t("erp.exportInvoices")}
             </Button>
           }
         />

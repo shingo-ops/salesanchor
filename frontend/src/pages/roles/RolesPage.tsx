@@ -375,8 +375,8 @@ export default function RolesPage() {
                   <Button variant="secondary" size="md" disabled={!dirty || savingPerms} onClick={cancelEdits}>
                     {t("roles.cancelChanges")}
                   </Button>
-                  <Button variant="primary" size="md" disabled={!dirty || savingPerms || !canEditPerms} onClick={savePermissions}>
-                    {savingPerms ? t("common.saving") : t("roles.saveChanges")}
+                  <Button loading={savingPerms} variant="primary" size="md" disabled={!dirty || savingPerms || !canEditPerms} onClick={savePermissions}>
+                    {t("roles.saveChanges")}
                   </Button>
                 </div>
               </div>

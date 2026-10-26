@@ -9,6 +9,8 @@
 | `README.md`（本書） | 表紙：概要・境界・ステータス・案内 | Planner |
 | `ideal-state.md` | あるべき姿：**POの言葉のみの正本** | **PO専用**（Planner/CCは書き換えない） |
 | `kgi.md` | KGIの数値・○×条件・運用方針・設計送り事項 | Planner（PO承認必須） |
+| [to-be.md](./to-be.md) | ダッシュボード（dashboard）— 理想形設計図（To-Be） | — |
+| [track-record.md](./track-record.md) | ダッシュボード（dashboard）— track-record（実績台帳） | — |
 
 ## ステータス
 

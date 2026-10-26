@@ -7,6 +7,8 @@ pr-body-guard.sh（K4）。PR 作成の範囲の止め（K3）は新規。PreToo
 import json
 import os
 import re
+import shlex
+import signal
 import subprocess
 import sys
 
@@ -95,6 +97,181 @@ _SQL_WRITE = re.compile(
 )
 
 
+# ---------- 埋め込まれた命令の取り出し（別カード 指摘5） ----------
+def _paren_body(t: str, i: int):
+    """t[i] は '(' の次の位置。対応する ')' までの中身と、その次の位置を返す。閉じが無ければ末尾まで。"""
+    n = len(t)
+    depth = 1
+    j = i
+    while j < n:
+        c = t[j]
+        if c == "\\":
+            j += 2
+            continue
+        if c == "'":
+            k = t.find("'", j + 1)
+            j = n if k < 0 else k + 1
+            continue
+        if c == '"':
+            j += 1
+            while j < n and t[j] != '"':
+                j += 2 if t[j] == "\\" else 1
+            j += 1
+            continue
+        if c == "(":
+            depth += 1
+        elif c == ")":
+            depth -= 1
+            if depth == 0:
+                return t[i:j], j + 1
+        j += 1
+    return t[i:], n
+
+
+def _subst_bodies(t: str):
+    """$( … )・$(( … ))・<( … )・>( … ) と逆引用符の中身を取り出す。単引用符の中と、\\ の付いたものは飛ばす。
+    $(( )) も中に $( ) を書けば実行されるため、中身は常に調べる。<( )・>( ) は二重引用符の外だけ。"""
+    out = []
+    n = len(t)
+    i = 0
+    dq = False
+    while i < n:
+        c = t[i]
+        if c == "\\":
+            i += 2
+            continue
+        if not dq and c == "'":
+            k = t.find("'", i + 1)
+            i = n if k < 0 else k + 1
+            continue
+        if c == '"':
+            dq = not dq
+            i += 1
+            continue
+        if c == "`":
+            j = i + 1
+            while j < n and t[j] != "`":
+                j += 2 if t[j] == "\\" else 1
+            out.append(t[i + 1:min(j, n)].replace("\\`", "`"))
+            i = j + 1
+            continue
+        if c == "$" and t.startswith("$(", i):
+            body, i = _paren_body(t, i + 2)
+            out.append(body)
+            continue
+        if not dq and c in "<>" and t.startswith("(", i + 1):
+            body, i = _paren_body(t, i + 2)
+            out.append(body)
+            continue
+        i += 1
+    return out
+
+
+_ANSI_ESC = re.compile(r"\\(x[0-9A-Fa-f]{1,2}|[0-7]{1,3}|.)", re.S)
+
+
+def _ansi_c(body: str) -> str:
+    """$'…' の中身のエスケープ（\\n \\t \\\\ \\' \\" \\xHH \\NNN）を戻す。"""
+    simple = {"n": "\n", "t": "\t", "r": "\r", "a": "\a", "b": "\b", "f": "\f", "v": "\v", "e": "\x1b"}
+
+    def one(m):
+        g = m.group(1)
+        if g[0] == "x":
+            return chr(int(g[1:], 16))
+        if g[0] in "01234567":
+            return chr(int(g, 8) & 0xFF)
+        return simple.get(g, g)
+
+    return _ANSI_ESC.sub(one, body)
+
+
+def _quoted_arg(s: str, i: int) -> str:
+    """s[i:] の先頭の引数を返す。'…' は中身、"…" はエスケープを戻した中身、引用符なしは区切りまでの残り。"""
+    n = len(s)
+    while i < n and s[i] in " \t":
+        i += 1
+    if i >= n:
+        return ""
+    if s.startswith("$'", i):
+        j = i + 2
+        while j < n and s[j] != "'":
+            j += 2 if s[j] == "\\" else 1
+        return _ansi_c(s[i + 2:min(j, n)])
+    if s.startswith('$"', i):
+        i += 1
+    if s[i] == "'":
+        k = s.find("'", i + 1)
+        return s[i + 1:] if k < 0 else s[i + 1:k]
+    if s[i] == '"':
+        j = i + 1
+        while j < n and s[j] != '"':
+            j += 2 if s[j] == "\\" else 1
+        return re.sub(r'\\(["$`\\])', r"\1", s[i + 1:min(j, n)])
+    return re.sub(r"\\(.)", r"\1", re.match(r"(?:\\.|[^;&|\n\\])*", s[i:]).group(0))
+
+
+_SHELL_C = re.compile(
+    r"(?<![\w./-])(?:[\w.-]*/)*(?:bash|sh|zsh|dash)(?![\w.-])((?:\s+(?:-o\s+\w+|--?[A-Za-z][\w-]*))*)"
+)
+_EVAL = re.compile(r"(?<![\w./-])eval(?![\w.-])")
+
+
+TOO_DEEP = "\x00too-deep"
+_LEAD_KW = re.compile(r"^(?:(?:then|do|else|elif|if|while|until|time|!|\{)\s+)+")
+
+
+def _found_bodies(cmd: str):
+    """命令文に直接埋め込まれた命令（$( )・逆引用符・( ) の殻・bash/sh/zsh/dash -c・eval の中身）を返す。"""
+    t = strip_heredoc_bodies(cmd)
+    found = _subst_bodies(t)
+    for seg in re.split(r"&&|\|\||;|\||&|\n", t):
+        s = _LEAD_KW.sub("", seg.lstrip())
+        if s.startswith("(") and not s.startswith("(("):
+            found.append(_paren_body(s, 1)[0])
+    s = scan_text(t)
+    for m in _SHELL_C.finditer(s):
+        opts = [o for o in re.findall(r"(?<!\S)-[A-Za-z]\w*", m.group(1)) if "c" in o]
+        if opts:
+            k = m.end()
+            mm = re.match(r"\s+--(?=\s)", s[k:])
+            k += mm.end() if mm else 0
+            found.append(_quoted_arg(s, k))
+    for m in _EVAL.finditer(s):
+        found.append(_quoted_arg(s, m.end()))
+    return found
+
+
+def embedded_commands(cmd: str, depth: int = 0):
+    """命令文に埋め込まれた命令を平らに返す。入れ子は depth 3 まで。
+    それより深くまだ埋め込みがあれば TOO_DEEP を返す（止める側）。閉じ忘れは末尾までを中身とする（止める側）。"""
+    found = _found_bodies(cmd)
+    if depth > 3:
+        return [TOO_DEEP] if found else []
+    result = []
+    for f in found:
+        result.append(f)
+        result.extend(embedded_commands(f, depth + 1))
+    return result
+
+
+def has_recursive_rm(scanned: str) -> bool:
+    """区切り（&& || ; | & 改行）で分けた各区間に、再帰の選択肢つきの rm があるか。
+    最後の / より後ろが rm の語を探し、その後ろ（-- より前）に -r/-R を含む短い選択肢か --recursive があれば True。"""
+    for seg in re.split(r"&&|\|\||;|\||&|\n", scanned):
+        words = seg.split()
+        for i, w in enumerate(words):
+            if w.split("/")[-1] != "rm":
+                continue
+            for a in words[i + 1:]:
+                if a == "--":
+                    break
+                if a.startswith("--recursive"):
+                    return True
+                if a.startswith("-") and not a.startswith("--") and re.search(r"[rR]", a):
+                    return True
+    return False
+
+
 def check_danger(cmd: str):
     scanned = scan_text(cmd)
     low = scanned.lower()
@@ -105,6 +282,8 @@ def check_danger(cmd: str):
     for op in ops:
         if op.lower() in low:
             return f"'{op}' は不可逆操作です。クラウドでは行えません。手元で PO の承認を得て実行してください。"
+    if has_recursive_rm(scanned):
+        return "rm の再帰削除（-r／-R／--recursive）はクラウドでは行えません。手元で PO の承認を得て実行してください。"
     # 本番 DB への書込
     raw = cmd  # 流し込みの検査は取り除く前の文字列で行う
     if re.search(r"\bpsql\b[^\n]*<", raw) or re.search(r"\|\s*(?:ssh\b[^|]*|docker\b[^|]*)?\bpsql\b", raw):
@@ -129,6 +308,16 @@ def check_merge(tool: str, cmd: str):
             return "gh pr merge はクラウドでは行いません（マージは手元で行います）。"
         if re.search(r"\bgh\s+api\b", s) and re.search(r"(-X|--method)[ =]*PUT\b", s, re.I) and re.search(r"/merge(\s|$|[\"'?])", s):
             return "gh api によるマージ(PUT …/merge)はクラウドでは行いません。"
+        # 別の書き方（curl・wget・httpie・GraphQL・枝の直接まとめ）。送る道具が無い命令（grep 等）は対象外。
+        if re.search(r"\b(gh\s+api|curl|wget)\b|(?<![\w/:])https?(?![\w:])", s):
+            if re.search(r"/pulls/[^/\s\"']+/merge(\s|$|[\"'?])", s) and re.search(
+                r"-X\s*PUT\b|--(request|method)[ =]PUT\b|\bPUT\b", s, re.I
+            ):
+                return "PUT …/merge によるマージはクラウドでは行いません（マージは手元で行います）。"
+            if re.search(r"\b(mergePullRequest|enablePullRequestAutoMerge)\b", s):
+                return "GraphQL によるマージ・自動マージの予約はクラウドでは行いません（マージは手元で行います）。"
+            if re.search(r"repos/[^\s\"']+/merges(\s|$|[\"'?/])", s):
+                return "枝を直接まとめる API(…/merges)はクラウドでは行いません（マージは手元で行います）。"
     return None
 
 
@@ -177,6 +366,112 @@ def changed_files(cwd: str, branch=None):
 _BRANCH_OK = re.compile(r"^[A-Za-z0-9._/][A-Za-z0-9._/-]*$")
 
 
+# gh pr create が「値を取る」選択肢（次の語を値として読み飛ばす）。
+# 出典: `gh pr create --help` の FLAGS（-a -B -b -F -H -l -m -p -r -T -t と --recover）。
+_PR_VAL_SHORT = set("aBbFHlmprTt")
+_PR_VAL_LONG = {"assignee", "base", "body", "body-file", "head", "label", "milestone",
+                "project", "recover", "reviewer", "template", "title"}
+# gh api が値を取る選択肢（出典: `gh api --help`）。-f/-F/--field/--raw-field の値だけが head の候補。
+_API_VAL_SHORT = set("fFHXqtp")
+_API_VAL_LONG = {"field", "raw-field", "header", "method", "jq", "template", "input",
+                 "hostname", "cache", "preview"}
+_API_FIELD_SHORT = set("fF")
+_API_FIELD_LONG = {"field", "raw-field"}
+
+
+_PLAIN_CHARS = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 \t_-./:=,@+%^")
+
+
+def _check_simple(cmd: str):
+    """gh だけの1行の命令かを字句で確かめる。引用符の外は 英数字・空白(スペース/タブ)・_-./:=,@+%^ と引用符の開閉だけ。
+    単引用符の中は何でもよい。二重引用符の中は $・バッククォート・\\ があれば止める。それ以外は ValueError（止める側）。"""
+    q = None
+    for c in cmd:
+        if q == "'":
+            if c == "'":
+                q = None
+        elif q == '"':
+            if c == '"':
+                q = None
+            elif c in "$`\\":
+                raise ValueError("二重引用符の中に $ ` \\ があり、正しく読めません")
+        elif c in "'\"":
+            q = c
+        elif not (c.isascii() and c in _PLAIN_CHARS):
+            raise ValueError("つなぎ・変数・置き換えなどの記号があり、正しく読めません")
+    if q is not None:
+        raise ValueError("引用符が閉じていません")
+
+
+def _split_commands(cmd: str):
+    """gh だけの1行の命令を shlex で語に分けて返す。それ以外は ValueError。"""
+    _check_simple(cmd)
+    lex = shlex.shlex(cmd, posix=True)
+    lex.whitespace_split = True
+    return list(lex)
+
+
+def _find_seq(words, seq):
+    n = len(seq)
+    for i in range(len(words) - n + 1):
+        if words[i:i + n] == seq:
+            return i + n
+    return None
+
+
+def _flag_value(words, i, short_vals, long_vals):
+    """words[i] が値を取る選択肢なら (名前, 値, 次の位置)、そうでなければ None。名前は '-x' か '--xxx'。"""
+    w = words[i]
+    if w.startswith("--") and len(w) > 2:
+        name, eq, val = w[2:].partition("=")
+        if name not in long_vals:
+            return None
+        if eq:
+            return "--" + name, val, i + 1
+        return "--" + name, (words[i + 1] if i + 1 < len(words) else ""), i + 2
+    if w.startswith("-") and len(w) >= 2 and w[1] in short_vals:
+        if len(w) > 2:
+            v = w[2:]
+            return "-" + w[1], (v[1:] if v.startswith("=") else v), i + 1
+        return "-" + w[1], (words[i + 1] if i + 1 < len(words) else ""), i + 2
+    return None
+
+
+def _bash_head(cmd: str):
+    """Bash の gh pr create / gh api の作成元を、語に分けた引数から読む。無ければ None。
+    gh だけの1行の命令（つなぎ・変数・置き換え・コメント無し）以外は読まずに ValueError（止める側）。"""
+    if "\r" in cmd:
+        raise ValueError("命令文に復帰文字(\\r)があり、正しく読めません")
+    try:
+        words = _split_commands(cmd)
+    except ValueError as e:
+        raise ValueError("PR を作る命令は、gh だけの1行で書いてください（つなぎ・変数・置き換えがあると作成元を正しく読めないため止めます）: " + str(e))
+    last = None
+    if words[:3] == ["gh", "pr", "create"]:
+        i = 3
+        while i < len(words):
+            r = _flag_value(words, i, _PR_VAL_SHORT, _PR_VAL_LONG)
+            if r is None:
+                i += 1
+                continue
+            name, val, i = r
+            if name in ("-H", "--head"):
+                last = val
+    elif words[:2] == ["gh", "api"]:
+        i = 2
+        while i < len(words):
+            r = _flag_value(words, i, _API_VAL_SHORT, _API_VAL_LONG)
+            if r is None:
+                i += 1
+                continue
+            name, val, i = r
+            if (name[1:] in _API_FIELD_SHORT or name[2:] in _API_FIELD_LONG) and val.startswith("head="):
+                last = val[len("head="):]  # gh と同じく最後の指定を使う
+    else:
+        raise ValueError("PR を作る命令は、gh だけの1行で書いてください（先頭が gh pr create / gh api ではないため止めます）")
+    return last
+
+
 def head_branch(tool: str, ti: dict, cmd: str):
     """作成元の枝名を返す。取れなければ None。MCP で無い／空、枝名が不正なら ValueError。"""
     if tool != "Bash":
@@ -185,13 +480,9 @@ def head_branch(tool: str, ti: dict, cmd: str):
             raise ValueError("PR の作成元(head)が指定されていません")
         raw = h.strip()
     else:
-        ms = list(re.finditer(
-            r"(?:(?:^|\s)(?:--head[ =]+|-H[ =]*)|(?:^|\s)(?:--field|--raw-field|-f|-F)[ =]*[\"']?head=)"
-            r"[\"']?([^\s\"']+)", cmd))
-        if not ms:
+        raw = _bash_head(cmd)
+        if raw is None:
             return None
-        m = ms[-1]  # gh と同じく最後の指定を使う
-        raw = m.group(1)
     if ":" in raw:
         raw = raw.split(":", 1)[1]
     if not _BRANCH_OK.match(raw):
@@ -232,7 +523,30 @@ def check_pr_create(tool: str, ti: dict, cmd: str, cwd: str):
     return None
 
 
+# ---------- 時間の上限（クラウドの見張りの時間切れは通す側に倒れるため、見張り自身が先に止める側へ倒す） ----------
+DEADLINE_SEC = float(os.environ.get("CLOUD_GUARD_DEADLINE_SEC", "6"))
+
+
+class _Deadline(BaseException):
+    """時間切れ。既存の広い `except Exception` に飲まれないよう BaseException にしてある。"""
+
+
+def _on_deadline(signum, frame):
+    raise _Deadline()
+
+
 def main() -> int:
+    signal.signal(signal.SIGALRM, _on_deadline)
+    signal.setitimer(signal.ITIMER_REAL, DEADLINE_SEC)
+    try:
+        return _main_body()
+    except _Deadline:
+        return block("命令文が長すぎて時間内に中身を確かめられないため止めます。命令を短く分けるか、手元で PO の承認を得て実行してください。")
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0)
+
+
+def _main_body() -> int:
     try:
         data = json.load(sys.stdin)
         if not isinstance(data, dict):
@@ -249,12 +563,20 @@ def main() -> int:
     cwd = data.get("cwd") or os.getcwd()
 
     if tool == "Bash":
-        r = check_danger(cmd)
+        texts = [cmd] + embedded_commands(cmd)
+        if TOO_DEEP in texts:
+            return block("埋め込んだ命令の入れ子が深すぎて中身を確かめられないため止めます。入れ子を浅くするか、手元で PO の承認を得て実行してください。")
+        for text in texts:
+            r = check_danger(text)
+            if r:
+                return block(r)
+            r = check_merge(tool, text)
+            if r:
+                return block(r)
+    else:
+        r = check_merge(tool, cmd)
         if r:
             return block(r)
-    r = check_merge(tool, cmd)
-    if r:
-        return block(r)
     if is_pr_create(tool, cmd):
         r = check_pr_create(tool, ti, cmd, cwd)
         if r:

@@ -17098,6 +17098,39 @@
         "title": "OpsEventResponse",
         "type": "object"
       },
+      "OpsHumanReport": {
+        "additionalProperties": false,
+        "properties": {
+          "message_id": {
+            "pattern": "^[0-9]{1,20}$",
+            "title": "Message Id",
+            "type": "string"
+          },
+          "message_url": {
+            "maxLength": 200,
+            "pattern": "^https://discord\\.com/channels/[0-9]{1,20}/[0-9]{1,20}/[0-9]{1,20}$",
+            "title": "Message Url",
+            "type": "string"
+          },
+          "posted_at": {
+            "format": "date-time",
+            "title": "Posted At",
+            "type": "string"
+          },
+          "test": {
+            "default": false,
+            "title": "Test",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "message_id",
+          "posted_at",
+          "message_url"
+        ],
+        "title": "OpsHumanReport",
+        "type": "object"
+      },
       "OpsIncidentAnnotation": {
         "additionalProperties": false,
         "properties": {
@@ -17125,12 +17158,45 @@
               }
             ],
             "title": "Note"
+          },
+          "round": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OpsRound"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
           "kind"
         ],
         "title": "OpsIncidentAnnotation",
+        "type": "object"
+      },
+      "OpsIncidentClose": {
+        "additionalProperties": false,
+        "properties": {
+          "n": {
+            "maximum": 99.0,
+            "minimum": 1.0,
+            "title": "N",
+            "type": "integer"
+          },
+          "session_id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Session Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "n",
+          "session_id"
+        ],
+        "title": "OpsIncidentClose",
         "type": "object"
       },
       "OpsIncidentFields": {
@@ -17410,6 +17476,110 @@
           "reported_at"
         ],
         "title": "OpsReportHeader",
+        "type": "object"
+      },
+      "OpsRound": {
+        "additionalProperties": false,
+        "description": "Discord 発の件の回の記録（設計 §4-9）。accept と result の pass は別の口が書く。",
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "n": {
+            "maximum": 99.0,
+            "minimum": 1.0,
+            "title": "N",
+            "type": "integer"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "failed-3",
+                  "unknown",
+                  "halt",
+                  "interrupted",
+                  "lost",
+                  "full",
+                  "not_ready",
+                  "failed",
+                  "cwd_invalid",
+                  "needs_decision",
+                  "blocked",
+                  "waiting_60m",
+                  "no-reply",
+                  "leftover"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "reservation_id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reservation Id"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "const": "fail",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
+          },
+          "step": {
+            "enum": [
+              "start",
+              "launch_failed",
+              "kept",
+              "closed",
+              "measure",
+              "result",
+              "stop",
+              "notify_failed",
+              "suspicious"
+            ],
+            "title": "Step",
+            "type": "string"
+          }
+        },
+        "required": [
+          "step",
+          "n",
+          "at"
+        ],
+        "title": "OpsRound",
         "type": "object"
       },
       "OrderCommissionAssignmentRequest": {
@@ -48812,6 +48982,50 @@
         ]
       }
     },
+    "/api/v1/ops/incidents/human": {
+      "post": {
+        "operationId": "report_human_incident_api_v1_ops_incidents_human_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OpsHumanReport"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Report Human Incident",
+        "tags": [
+          "ops"
+        ]
+      }
+    },
     "/api/v1/ops/incidents/{incident_id}": {
       "get": {
         "operationId": "get_incident_api_v1_ops_incidents__incident_id__get",
@@ -48853,6 +49067,62 @@
           }
         ],
         "summary": "Get Incident",
+        "tags": [
+          "ops"
+        ]
+      }
+    },
+    "/api/v1/ops/incidents/{incident_id}/close": {
+      "post": {
+        "operationId": "close_incident_api_v1_ops_incidents__incident_id__close_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "incident_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Incident Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OpsIncidentClose"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Close Incident",
         "tags": [
           "ops"
         ]
