@@ -133,8 +133,12 @@ RED-first（直す前のコードで実行して赤になること）を単体�
   （`frontend/package-lock.json` が固定している版は **1.59.1**、入っている型定義に `clock: Clock` と
   `fastForward(ticks: number|string)`・`install(options?)` が実在することを 2026-10-26 に実物で確認）。
   `await page.clock.install({ time: <現在時刻> })` → `await page.clock.fastForward(60_000)`。
-- 2回目の応答だけ候補を減らすため、`frontend/tests-e2e/utils/api-mock.ts` の `MockEntry` が
-  **関数（`(route) => ...`）を受け付ける**ことを使い、呼ばれた回数で返す中身を変える。
+- 途中から候補を減らすため、`frontend/tests-e2e/utils/api-mock.ts` の `MockEntry` が
+  **関数（`(route) => ...`）を受け付ける**ことを使う。**切り替えは「取得回数」ではなく検査側の旗で行う**
+  （CI 1往復目で実測した訂正）: `frontend/src/pages/viewer/main.tsx:13` の `React.StrictMode` が
+  開発サーバで effect を2回流すため**画面を開くだけで在庫取得が2回走る**。回数で切り替えると
+  2回目の応答が初期表示に使われ、**前提（候補が最初は居る）が崩れた状態から始まって9件すべて赤になった**
+  （CI の失敗画面に Provider01 が最初から居ないことで確認）。
 - spec の置き場は `frontend/tests-e2e/visual-language/` 配下（ここ以外は CI で1本も走らない。
   [[salesanchor-ci-blind-spots]] §tests-e2e 直下の落とし穴）。
 - 窓スクロールは使わないので `makePageScrollable` 相当は不要。

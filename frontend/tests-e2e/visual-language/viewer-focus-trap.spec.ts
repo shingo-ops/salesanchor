@@ -20,8 +20,10 @@
  *
  * 60秒は既定のテスト制限時間（30秒）を超えるため実時間では待たない。page.clock で仮想時計を進める
  * （package-lock.json 固定の 1.59.1 に clock.install / fastForward が実在することを設計時に確認済み）。
- * 2回目の応答だけ対象の提供者を欠落させるため、tests-e2e/utils/api-mock.ts の MockEntry が
+ * 対象の提供者を途中から欠落させるため、tests-e2e/utils/api-mock.ts の MockEntry が
  * 関数（(route) => ...）を受け付けることを使う（design.md ⑤「作り方」）。
+ * **切り替えは「取得回数」ではなく検査側の旗で行う**（画面を開くだけで在庫取得が2回走るため。
+ * openProviderScreenWithFocusedCandidate の説明を参照＝CI 1往復目で実測した事実）。
  *
  * 提供者の選択画面（絞り込みドロワー）は frontend/src/pages/viewer/InventoryView.tsx の
  * `{isMobile && (<Drawer ...>)}` の中にしかない（isMobile は frontend/src/hooks/useIsMobile.ts が
@@ -56,12 +58,19 @@ function openPanel(page: Page) {
 
 /**
  * 閲覧ページを開き、絞り込み→提供者の選択画面まで進め、候補の1つ（targetOptionTestId）へ
- * フォーカスを当てた状態で返す。2回目以降の在庫取得だけ、その候補の提供者を欠落させる
- * （design.md ⑤「2回目の応答だけ候補を減らす」）。
+ * フォーカスを当てた状態で返す。返り値の `dropTarget()` を呼ぶと、**それ以降の**在庫取得だけ
+ * その候補の提供者を欠落させる（design.md ⑤「2回目の応答だけ候補を減らす」）。
+ *
+ * **「2回目の応答」を取得回数で数えてはいけない（CI 1往復目で実測）**: 画面を開くだけで
+ * 在庫取得が**2回**走る（frontend/src/pages/viewer/main.tsx:13 の `React.StrictMode` が
+ * 開発サーバで effect を2回流すため。画面検査は開発サーバ相手に走る）。CI の失敗時の画面には
+ * 最初から Provider01 が居らず、**2回目の応答が初期表示に使われていた**＝回数で切り替えると
+ * 前提が崩れた状態から始まる。検査が「いつ消えてほしいか」を自分で決める形（この旗）にすれば、
+ * 初期取得が何回でも成り立つ。
  */
 async function openProviderScreenWithFocusedCandidate(
   page: Page,
-): Promise<{ targetOptionTestId: string }> {
+): Promise<{ targetOptionTestId: string; dropTarget: () => void }> {
   const providers = makeProviderNames(6);
   const conditions = makeConditionValues(2);
   // providers はゼロ埋め済みで辞書順＝distinctValues の並びと一致するため、先頭 = providers[0]
@@ -75,14 +84,13 @@ async function openProviderScreenWithFocusedCandidate(
   // 値の重複を作らないため viewer-helpers の共通処理をそのまま使う（審査 N-4）
   await installViewerToken(page);
 
-  let fetchCount = 0;
+  let dropped = false;
   await mockApi(page, {
     "GET /viewer/inventory": async (route: Route) => {
-      fetchCount += 1;
       const body: ViewerInventoryResponse = {
         updated_at: new Date().toISOString(),
         fresh_window_hours: 24,
-        rows: fetchCount === 1 ? initialRows : rowsWithoutTarget,
+        rows: dropped ? rowsWithoutTarget : initialRows,
       };
       await route.fulfill({
         status: 200,
@@ -115,7 +123,12 @@ async function openProviderScreenWithFocusedCandidate(
   const isFocused = await option.evaluate((el) => el === document.activeElement);
   expect(isFocused).toBe(true);
 
-  return { targetOptionTestId };
+  return {
+    targetOptionTestId,
+    dropTarget: () => {
+      dropped = true;
+    },
+  };
 }
 
 /** document.activeElement が「どこでもない」（<body>・<html>・null）になっていること */
@@ -175,8 +188,9 @@ async function readPanelFocusState(page: Page): Promise<{
 
 test.describe("visual-language: 閲覧ページ フォーカストラップ（宿題 C8）", () => {
   test("B1: 候補にフォーカス→自動読み直しで消える→activeElement が <body> になる（前提の固定）", async ({ page }) => {
-    const { targetOptionTestId } = await openProviderScreenWithFocusedCandidate(page);
+    const { targetOptionTestId, dropTarget } = await openProviderScreenWithFocusedCandidate(page);
 
+    dropTarget();
     await page.clock.fastForward(60_000);
 
     // 前提1: 候補が実際に DOM から消えた（空振り防止・守ること4）
@@ -186,8 +200,9 @@ test.describe("visual-language: 閲覧ページ フォーカストラップ（�
   });
 
   test("B2: B1 の直後に Tab を押すと、パネル内の先頭（戻るボタン）へ連れ戻される（本題）", async ({ page }) => {
-    const { targetOptionTestId } = await openProviderScreenWithFocusedCandidate(page);
+    const { targetOptionTestId, dropTarget } = await openProviderScreenWithFocusedCandidate(page);
 
+    dropTarget();
     await page.clock.fastForward(60_000);
 
     // B1 と同じ前提をこのテスト単体でも確かめる（このテストだけ実行しても空振りで緑にならないように）
@@ -205,8 +220,9 @@ test.describe("visual-language: 閲覧ページ フォーカストラップ（�
   });
 
   test("B2': B1 の直後に Shift+Tab を押すと、パネル内の末尾（決定するボタン）へ連れ戻される", async ({ page }) => {
-    const { targetOptionTestId } = await openProviderScreenWithFocusedCandidate(page);
+    const { targetOptionTestId, dropTarget } = await openProviderScreenWithFocusedCandidate(page);
 
+    dropTarget();
     await page.clock.fastForward(60_000);
 
     await expect(page.getByTestId(targetOptionTestId)).toHaveCount(0);

@@ -43,7 +43,8 @@ export function getFirstFocusable(container: HTMLElement): HTMLElement | null {
  * （design.md 4-2・T1）。
  *
  * `open` が true の間だけ購読する。後片付けは `removeEventListener` のみ（時間に頼る
- * 後始末は作らない。design.md ⑨「便2・PR #4740 の失敗」）。
+ * 後始末は作らない。design.md ⑨「便2・PR (#4740) の失敗」）。
+ * ※ PR 番号は (#...) の形で書く。括弧の無い番号は関所 guard-hex-increase が色コードと誤認する
  */
 export function useFocusTrap(open: boolean, containerRef: RefObject<HTMLElement | null>): void {
   useEffect(() => {
