@@ -1,0 +1,1176 @@
+#!/usr/bin/env python3
+"""confidential-quote-guard guard.py — PreToolUse (matcher: Bash)
+
+仕入元の投稿の原文を、「」『』の中に書き写したまま公開の置き場へ送るのを、送る前に止める。
+  - git push        : 決まった形 `git -C <絶対パス> push [-u] origin <ref>` だけ通し、送る差分の追加行を照らす
+  - gh pr create/edit/comment/review/merge, gh issue create/edit/comment, gh release create/edit, gh repo edit : 本文・題名・説明 (--body-file <絶対パス> か 一重引用符の --body だけ通す)。gh gist は止める
+  - 決まりの外の形は、照らせないので止める (命令文から作業場所や出どころを推し量らない)
+
+止める決まり (全部満たす語句が 1 つでもあれば exit 2):
+  1. 「」または『』の中にあり、4 文字以上
+  2. 除外表 (状態の写し・商品名の写し・一般語の表) に無い。数字と区切りだけの語句も止めない
+  3. 原文の置き場のどれかのファイルに、そのまま現れる
+
+表は Mac の社外秘フォルダにあり、repo には中身を一切入れない。
+表が読めない/空/本文の出どころが決まらない/差分が取れないときは止める (全部拒否に倒す)。
+止めた記録は日時・ファイル:行・件数だけ。語句は記録に書かない。
+
+設計: docs/handoff/confidential-quote-guard/design.md §3 / ADR-1045
+標準ライブラリのみ。
+"""
+import datetime
+import glob
+import json
+import os
+import re
+import shlex
+import subprocess
+import sys
+import math
+import time
+import unicodedata
+
+HOOK = "confidential-quote-guard"
+MIN_LEN = 4
+
+_BT = ({"--body", "-b"}, {"--body-file", "-F"}, {"--title", "-t", "--subject"})
+_REL = ({"--notes", "-n"}, {"--notes-file", "-F"}, {"--title", "-t"})
+_CLOSE = ({"--comment", "-c"}, set(), set())  # close / reopen のコメント
+# (gh の群, 操作) -> (本文の印, 本文ファイルの印, 題名の印)。印は gh の操作ごとに違う (-d は repo edit では説明、release では draft)
+GH_OPS = {
+    ("pr", "create"): _BT, ("pr", "new"): _BT, ("pr", "edit"): _BT, ("pr", "comment"): _BT, ("pr", "review"): _BT, ("pr", "merge"): _BT,
+    ("issue", "create"): _BT, ("issue", "new"): _BT, ("issue", "edit"): _BT, ("issue", "comment"): _BT,
+    ("pr", "close"): _CLOSE, ("pr", "reopen"): _CLOSE, ("issue", "close"): _CLOSE, ("issue", "reopen"): _CLOSE,
+    ("release", "create"): _REL, ("release", "new"): _REL, ("release", "edit"): _REL,
+    ("repo", "edit"): ({"--description", "-d"}, set(), set()),
+    ("repo", "create"): ({"--description", "-d"}, set(), set()),
+}
+# 本文の印は持たないが、repo の外へ何かを送る操作 (添付ファイルなど)。見つけたら必ず止める
+GH_STOP = {("release", "upload")}
+GH_ACTIONS = {}
+for _g, _a in list(GH_OPS) + list(GH_STOP):
+    GH_ACTIONS.setdefault(_g, set()).add(_a)
+# release create/edit の値を取る印。これ以外の印は値を取らないものとして数え、残りの位置引数 (タグ名以外 = 添付ファイル) は止める
+REL_VALUE_OPTS = {"--notes", "-n", "--notes-file", "-F", "--title", "-t", "--target", "--discussion-category", "--notes-start-tag"}
+PHRASE_RES = (re.compile(r"「([^「」\n]*)」"), re.compile(r"『([^『』\n]*)』"))
+EXPLAIN = ("仕入元の原文の書き写しは、公開の置き場へ送れません。"
+           "該当の語句を消し、「形の説明」(例: 値段の行・在庫数の行・見出しの行) に書き換えてから、もう一度送ってください。"
+           "誤って止まった一般語は、Opus が一般語の表 (confidential-allow.txt) に理由つきで足します。")
+
+
+class Block(Exception):
+    pass
+
+
+def table_dir():
+    return os.path.expanduser(os.environ.get("CONFID_GUARD_DIR") or "~/CC報告ファイル-keep/confid-guard")
+
+
+def events_path():
+    return os.path.expanduser(os.environ.get("CONFID_GUARD_EVENTS") or "~/.claude/logs/agent-events.jsonl")
+
+
+def log_block(reason):
+    """止めた記録 (日時・見張りの名前・件数と場所だけ。語句は書かない)。"""
+    try:
+        p = events_path()
+        os.makedirs(os.path.dirname(p), exist_ok=True)
+        rec = {
+            "ts": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "type": "hook_blocked",
+            "hook": HOOK,
+            "reason": reason,
+            "cmd_head": "",
+        }
+        with open(p, "a", encoding="utf-8") as f:
+            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    except Exception:
+        pass
+
+
+# ---------------------------------------------------------------- tables
+
+def _read_lines(path):
+    try:
+        with open(path, encoding="utf-8") as f:
+            return f.read().splitlines()
+    except OSError as e:
+        raise Block("表が読めません: %s (%s)" % (os.path.basename(path), e.strerror))
+
+
+def load_wordlist(path, allow_tab_reason=False):
+    words = set()
+    for ln in _read_lines(path):
+        if not ln.strip() or ln.lstrip().startswith("#"):
+            continue
+        w = ln.split("\t", 1)[0] if allow_tab_reason else ln
+        w = w.strip()
+        if w:
+            words.add(w)
+    return words
+
+
+def load_repos():
+    """照らす repo の表だけ読む (原文の写しは読まない)。"""
+    repos = set()
+    for ln in _read_lines(os.path.join(table_dir(), "confidential-corpus.conf")):
+        s = ln.strip()
+        if s.startswith("repo:"):
+            repos.add(s[5:].strip().lower())
+    return repos
+
+
+def load_tables():
+    d = table_dir()
+    conf = os.path.join(d, "confidential-corpus.conf")
+    repos, patterns = set(), []
+    for ln in _read_lines(conf):
+        s = ln.strip()
+        if not s or s.startswith("#"):
+            continue
+        if s.startswith("repo:"):
+            repos.add(s[5:].strip())
+        elif s.startswith("corpus:"):
+            patterns.append(s[7:].strip())
+    if not patterns:
+        raise Block("原文の置き場の表 (confidential-corpus.conf) に corpus: の行がありません")
+    files = []
+    for pat in patterns:
+        m = sorted(glob.glob(os.path.expanduser(pat)))
+        if not m:
+            raise Block("原文の置き場の表の行に当たるファイルがありません: 表の %d 行目以降を確かめてください" % (patterns.index(pat) + 1))
+        files.extend(m)
+    # 写しが古いと、新しい投稿を照らせないまま通してしまう。古ければ止める (取り直しは fetch_corpus.py)
+    max_age = 2.0
+    try:  # 環境変数は短くする方向だけ効く (試験用)。nan・inf・負・数でない値は無視して 2 日
+        v = float(os.environ.get("CONFID_CORPUS_MAX_AGE_DAYS", "2"))
+        if math.isfinite(v) and v > 0:
+            max_age = min(v, 2.0)
+    except ValueError:
+        pass
+    now = time.time()
+    for f in files:
+        try:
+            age = (now - os.path.getmtime(f)) / 86400.0
+        except OSError as e:
+            raise Block("原文のファイルが読めません: %s" % e.strerror)
+        if age > max_age:
+            raise Block("原文の写しが古い (%.1f 日前。上限 %g 日)。fetch_corpus.py で取り直してください" % (age, max_age))
+    parts = []
+    for f in files:
+        try:
+            with open(f, encoding="utf-8", errors="replace") as fh:
+                parts.append(fh.read())
+        except OSError as e:
+            raise Block("原文のファイルが読めません: %s" % e.strerror)
+    corpus = "\n".join(parts)
+    if not corpus.strip():
+        raise Block("原文の置き場が空です")
+    excl = set()
+    excl |= load_wordlist(os.path.join(d, "status-words.txt"))
+    excl |= load_wordlist(os.path.join(d, "product-names.txt"))
+    excl |= load_wordlist(os.path.join(d, "confidential-allow.txt"), allow_tab_reason=True)
+    return repos, corpus, excl, len(files)
+
+
+# ---------------------------------------------------------------- phrase check
+
+def only_digits_punct(p):
+    for ch in p:
+        if unicodedata.category(ch)[0] not in ("N", "P", "S", "Z", "C"):
+            return False
+    return True
+
+
+def find_hits(entries, corpus, excl):
+    """entries: [(label, lineno, text)] -> [(label, lineno, phrase)] (重複語句は場所ごとに 1 件)"""
+    cache = {}
+    hits = []
+    for label, no, text in entries:
+        for rx in PHRASE_RES:
+            for m in rx.finditer(text):
+                p = m.group(1).strip()
+                if len(p) < MIN_LEN or only_digits_punct(p) or p in excl:
+                    continue
+                if p not in cache:
+                    cache[p] = p in corpus
+                if cache[p]:
+                    hits.append((label, no, p))
+    return hits
+
+
+# ---------------------------------------------------------------- command parsing
+# 方針: 命令文から作業場所や本文の出どころを推し量らない。
+# git push と gh の本文の操作は「決まった形」だけを通し、それ以外はすべて止める。
+
+PUSH_MSG = "git push は `git -C <worktree の絶対パス> push -u origin <ブランチ>` の形で、ほかの命令とつなげずに単独で流してください"
+GH_MSG = "本文は Write で作ったファイルを `--body-file <絶対パス>` で渡してください (または一重引用符の `--body '...'`)。ほかの命令とつなげずに単独で流してください"
+SAFE_CHARS = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_@%+=:,./-")
+SHELLS = {"sh", "bash", "zsh", "dash", "ksh", "eval", "source", "."}
+REF_RE = re.compile(r"HEAD|[A-Za-z0-9][A-Za-z0-9/._-]*")
+REDIR_TAIL_RE = re.compile(r"\s+(?:2>&1|>>?\s*/[A-Za-z0-9_@%+=:,./-]+)\s*$")
+GH_BAD_OPTS = {"--notes-from-tag", "-f", "--fill", "--fill-first", "--fill-verbose", "--editor", "-e", "--web", "-w", "--template", "-T", "--recover"}
+HIST_MSG = ("送る途中の commit に書き写しがあります。新しい commit で消しても履歴に残って送られます。"
+            "該当の commit を書き直すか、origin/main から作り直したブランチで送ってください。書き直しは Opus の指示を待ってください。")
+PUSH_CFG_RE = r"^(alias\.|remote\..*\.pushurl|url\..*\.pushinsteadof)"
+SCOPED_CFG_RE = (r"^(alias\.|include\.|includeif\.|remote\..*\.pushurl|url\..*\.pushinsteadof"
+                 r"|push\.followtags|push\.pushoption|remote\..*\.(push|mirror|tagopt))")  # --local / --worktree だけに使う
+DANGER_MSG = ("repo の設定 (別名・push 先・include・タグの送り方など) や追跡ブランチ (refs/remotes)・git replace・hooks を書き換える操作、"
+              "git の送信系の命令 (send-pack・http-push) は、見張りの決まりの外なので止めます。必要なら Opus に相談してください")
+NAME_MSG = "命令の名前に変数・展開・glob・[ は使えません。命令名を字で書くか、test を使ってください"
+EXPAND_MSG = "git／gh の命令に変数や展開は使えません。値を書き出して単独で流してください"
+WRITE_MARK_RE = re.compile(r"(?:>|\b(?:tee|cp|mv|sed|perl|python3?|ruby|awk|dd|install|ln|node|truncate|rsync|ed)\b)")
+GIT_PATH_RE = re.compile(r"\.git(?:/[^\s'\"/;|&]+)*/(?:config(?:\.worktree)?|packed-refs)(?![\w.-])|\.git/refs/(?:remotes|replace)|\.git/hooks(?![\w.-])|config\.worktree(?![\w.-])")
+SEND_RE = re.compile(r"\bgit\b[^;&|\n]*?\b(?:send-pack|http-push)\b|git-(?:send-pack|http-push)\b")
+REMOTES_RE = re.compile(r"\bgit\b[^;&|\n]*?\b(?:update-ref|fetch|symbolic-ref)\b[^;&|\n]*?refs/(?:remotes|replace)")
+# 書き込むと push の中身や行き先が変わる鍵。include は読む形でも止める。それ以外は --get 系・--list の読むだけを通す
+CFG_INCLUDE_RE = re.compile(r"\binclude(?:if)?\.", re.I)
+CFG_KEY_RE = re.compile(r"\bremote\.[^\s=]*\.(?:url|pushurl|push|mirror|tagopt)\b|\bpush\.(?:followtags|pushoption)\b"
+                        r"|\burl\.[^\s=]*\.(?:insteadof|pushinsteadof)\b|\bcore\.hookspath\b", re.I)
+CFG_READ_RE = re.compile(r"\s(?:--get\S*|--list|-l)(?:\s|$)")
+GITGH_RE = re.compile(r"(?<![A-Za-z0-9_-])(?:git|gh)(?![A-Za-z0-9_-])")
+OP_TOK_RE = re.compile(r"^[;&|()<>]+$")
+WRAPPERS = {"env", "command", "exec", "time", "nohup", "sudo", "xargs", "builtin", "nice", "timeout", "stdbuf", "then", "do", "else", "elif", "if", "while", "until", "!", "{"}
+GIT_OPT_ARG = {"-C", "-c", "--git-dir", "--work-tree", "--namespace", "--exec-path", "--super-prefix", "--config-env"}
+
+
+def _lex(cmd):
+    lex = shlex.shlex(cmd, posix=True, punctuation_chars=True)
+    lex.whitespace_split = True
+    lex.commenters = ""
+    return list(lex)
+
+
+def _try_lex(cmd):
+    try:
+        return _lex(cmd)
+    except ValueError:
+        return None
+
+
+ASSIGN_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
+DUR_RE = re.compile(r"\d+(?:\.\d+)?[smhd]?")
+BRACE_RE = re.compile(r"\{[^{}\s]*(?:,|\.\.)[^{}\s]*\}")
+REDIR_RE = re.compile(r"&>>|&>|<<<|<<-|<<|>>|>&|<&|<>|>\||<|>")
+NAME_CH = re.compile(r"[A-Za-z0-9_]")
+# 送らない git の下位命令。後ろの引数に $ があっても通す (それ以外は引数の $ で止める)
+SAFE_SUBS = {"commit", "status", "log", "diff", "add", "show", "fetch", "merge", "worktree", "branch", "rev-parse", "ls-files",
+             "rm", "mv", "restore", "switch", "checkout", "stash", "blame", "grep", "describe", "cat-file", "ls-tree", "rev-list",
+             "diff-tree", "diff-index", "show-ref", "for-each-ref", "merge-base", "reset", "rebase", "cherry-pick", "revert", "pull",
+             "apply", "am", "clean", "shortlog", "name-rev", "check-ignore", "ls-remote", "format-patch", "count-objects", "version", "help"}
+ALIAS_MSG = "gh の別名 (alias) は使えません。元の命令 (gh pr comment など) を書いて単独で流してください"
+
+
+class PErr(Exception):
+    pass
+
+
+class W:
+    """命令の 1 語。val は引用符を外した値。exp = $・バッククォート・$( ) を含む (引用符の中も)。glob = 引用符の外の ? * [ {a,b}。
+    bs = バックスラッシュを使った。q = 引用符を使った。"""
+    __slots__ = ("val", "uq", "exp", "glob", "bs", "q")
+
+    def __init__(self):
+        self.val, self.uq = [], []
+        self.exp = self.glob = self.bs = self.q = False
+
+
+class Parser:
+    """シェルの命令文を、単純な命令 (語の並び) と、$( )・バッククォートの中の命令に分ける。
+    heredoc の本文は命令として読まない (引用符なしの区切りの本文は、中の $( ) だけ読む)。読めない形は PErr。"""
+
+    def __init__(self, s):
+        self.s, self.units, self.bodies = s, [], []
+
+    def top(self):
+        cmds, skel, _ = self.lst(0, False)
+        return [(skel, cmds)] + self.units
+
+    def lst(self, i, stop_paren):
+        s, n = self.s, len(self.s)
+        cmds, cur, sk, pend = [], [], [], []
+        w, mode, strip, closed = None, None, False, False
+
+        def endword():
+            nonlocal w, mode
+            if w is None:
+                return
+            ww, w = w, None
+            ww.val = "".join(ww.val)
+            uq = "".join(ww.uq)
+            if any(c in uq for c in "?*[") or BRACE_RE.search(uq):
+                ww.glob = True
+            if ww.val == "" and not ww.q:
+                return
+            if mode == "h":
+                pend.append((ww.val, strip, ww.q or ww.bs))
+                mode = None
+            elif mode == "r":
+                mode = None
+            else:
+                cur.append(ww)
+
+        def endcmd():
+            nonlocal cur, mode
+            if cur:
+                cmds.append(cur)
+                cur = []
+            mode = None
+
+        while i < n:
+            c = s[i]
+            if c in " \t":
+                endword()
+                sk.append(c)
+                i += 1
+            elif c == "\n":
+                endword()
+                endcmd()
+                sk.append("\n")
+                i += 1
+                for delim, st, quoted in pend:
+                    i = self.heredoc(i, delim, st, quoted)
+                pend = []
+            elif w is None and c == "#" and (i == 0 or s[i - 1] in " \t\n;&|()"):
+                j = s.find("\n", i)
+                j = n if j < 0 else j
+                sk.append(s[i:j])  # 命令としては読まないが、骨組みには残す (決まった形の push に # は付けられない)
+                i = j
+            elif c == ")" and stop_paren:
+                i += 1
+                closed = True
+                break
+            elif c in "<>" or (c == "&" and s[i + 1:i + 2] == ">"):
+                if w is not None and not w.q and not w.bs and "".join(w.val).isdigit():
+                    w = None  # 2>&1 の 2
+                else:
+                    endword()
+                op = REDIR_RE.match(s, i).group(0)
+                sk.append(op)
+                i += len(op)
+                mode = "h" if op in ("<<", "<<-") else "r"
+                strip = op == "<<-"
+            elif c in ";&|()":
+                endword()
+                endcmd()
+                sk.append(c)
+                i += 1
+            else:
+                if w is None:
+                    w = W()
+                if c == "'":
+                    j = s.find("'", i + 1)
+                    if j < 0:
+                        raise PErr("引用が閉じていません")
+                    w.val.append(s[i + 1:j])
+                    w.q = True
+                    sk.append(s[i:j + 1])
+                    i = j + 1
+                elif c == '"':
+                    w.q = True
+                    sk.append('"')
+                    i = self.dq(i + 1, w, sk, '"')
+                elif c == "\\":
+                    if i + 1 >= n:
+                        raise PErr("行末の \\")
+                    w.bs = True
+                    if s[i + 1] != "\n":
+                        w.val.append(s[i + 1])
+                        sk.append(s[i:i + 2])
+                    i += 2
+                elif c == "$":
+                    i = self.dollar(i, w, sk, False)
+                elif c == "`":
+                    i = self.backtick(i, w, sk)
+                else:
+                    w.val.append(c)
+                    w.uq.append(c)
+                    sk.append(c)
+                    i += 1
+        if stop_paren and not closed:
+            raise PErr("$( が閉じていません")
+        endword()
+        endcmd()
+        return cmds, "".join(sk), i
+
+    def dq(self, i, w, sk, end):
+        """二重引用符の中 (end=None は heredoc の本文)。展開だけ読む。"""
+        s, n = self.s, len(self.s)
+        while True:
+            if i >= n:
+                if end is None:
+                    return i
+                raise PErr("引用が閉じていません")
+            c = s[i]
+            if end is not None and c == end:
+                sk.append(end)
+                return i + 1
+            if c == "\\":
+                if i + 1 >= n:
+                    if end is None:
+                        return n
+                    raise PErr("行末の \\")
+                nx = s[i + 1]
+                if nx != "\n":
+                    w.val.append(nx if nx in '$`"\\' else c + nx)
+                    sk.append(c + nx)
+                i += 2
+            elif c == "$":
+                i = self.dollar(i, w, sk, True)
+            elif c == "`":
+                i = self.backtick(i, w, sk)
+            else:
+                w.val.append(c)
+                sk.append(c)
+                i += 1
+
+    def dollar(self, i, w, sk, in_dq):
+        s, n = self.s, len(self.s)
+        nx = s[i + 1:i + 2]
+        if s.startswith("$((", i):
+            j = s.find("))", i + 3)
+            if j < 0 or "$(" in s[i + 3:j] or "`" in s[i + 3:j]:
+                raise PErr("算術展開")
+            w.exp = True
+            w.val.append("$")
+            sk.append("$((_))")
+            return j + 2
+        if nx == "(":
+            cmds, skel, j = self.lst(i + 2, True)
+            self.units.append((skel, cmds))
+            w.exp = True
+            w.val.append("$(_)")
+            sk.append("$(_)")
+            return j
+        if nx == "{":
+            j = s.find("}", i + 2)
+            if j < 0 or "$(" in s[i + 2:j] or "`" in s[i + 2:j]:
+                raise PErr("${ }")
+            w.exp = True
+            w.val.append("${_}")
+            sk.append("${_}")
+            return j + 1
+        if nx == "'" and not in_dq:
+            k = i + 2
+            while k < n and s[k] != "'":
+                k += 2 if s[k] == "\\" else 1
+            if k >= n:
+                raise PErr("$' が閉じていません")
+            w.exp = True
+            w.q = True
+            w.val.append("$'_'")
+            sk.append("$'_'")
+            return k + 1
+        if nx == '"' and not in_dq:
+            w.exp = True
+            w.val.append("$")
+            sk.append("$")
+            return i + 1
+        if nx and (nx.isalpha() or nx == "_"):
+            k = i + 1
+            while k < n and NAME_CH.match(s[k]):
+                k += 1
+            w.exp = True
+            w.val.append(s[i:k])
+            sk.append(s[i:k])
+            return k
+        if nx and nx in "@*#?!$-0123456789":
+            w.exp = True
+            w.val.append(s[i:i + 2])
+            sk.append(s[i:i + 2])
+            return i + 2
+        w.val.append("$")
+        sk.append("$")
+        return i + 1
+
+    def backtick(self, i, w, sk):
+        s, n = self.s, len(self.s)
+        j = i + 1
+        while j < n and s[j] != "`":
+            j += 2 if s[j] == "\\" else 1
+        if j >= n:
+            raise PErr("バッククォートが閉じていません")
+        self.units.extend(Parser(s[i + 1:j]).top())
+        w.exp = True
+        w.val.append("`_`")
+        sk.append("`_`")
+        return j + 1
+
+    def heredoc(self, i, delim, strip, quoted):
+        s, n = self.s, len(self.s)
+        body = []
+        while i < n:
+            k = s.find("\n", i)
+            end = n if k < 0 else k
+            line = s[i:end]
+            i = n if k < 0 else k + 1
+            if (line.lstrip("\t") if strip else line) == delim:
+                break
+            body.append(line)
+        text = "\n".join(body)
+        self.bodies.append(text)
+        if not quoted and ("$" in text or "`" in text):
+            sub = Parser(text)
+            sub.dq(0, W(), [], None)
+            self.units.extend(sub.units)
+        return i
+
+
+def command_word(words):
+    """単純な命令の語の並びから、命令の語の位置 (代入・env などの前置きを飛ばす)。"""
+    i, wrap = 0, False
+    while i < len(words):
+        v = words[i].val
+        dur = wrap and DUR_RE.fullmatch(v) is not None
+        if v in WRAPPERS or dur or v.startswith("-") or ASSIGN_RE.match(v):
+            wrap = v in WRAPPERS or dur
+            i += 1
+            continue
+        break
+    return i
+
+
+def git_safe(sub, args):
+    if sub in SAFE_SUBS:
+        return True
+    if sub == "tag":
+        return any(a.val in ("-l", "--list") or a.val.startswith("--list=") for a in args)
+    if sub == "config":
+        return any(a.val.startswith("--get") or a.val in ("--list", "-l") for a in args)
+    return False
+
+
+def _plain(w, quoted_ok=True):
+    return not (w.exp or w.glob or w.bs or (w.q and not quoted_ok))
+
+
+def check_words(words, aliases):
+    """単純な命令 1 つの展開の決まり (H1)。止める形は Block(理由)。
+    1. 命令の語に $・バッククォート・glob・行末の \\ がある
+    2. git: 前置きの印 (-C -c --git-dir など) の値までと下位命令の語に、展開・glob・引用符の崩しがある
+       gh: 1 つ目と 2 つ目の語に、展開・glob・引用符の崩しがある (gh api の 2 つ目は宛先なので除く)
+    3. 下位命令が字のまま読めたら、送らない下位命令 (SAFE_SUBS など) の引数の $ は通す。それ以外の引数の $ は止める"""
+    i = command_word(words)
+    if i >= len(words):
+        return
+    cw = words[i]
+    base = cw.val.rsplit("/", 1)[-1]
+    if not _plain(cw):
+        raise Block(EXPAND_MSG if base in ("git", "gh") or (cw.exp and GITGH_RE.search(cw.val)) else NAME_MSG)
+    rest = words[i + 1:]
+    if base == "git":
+        j = 0
+        while j < len(rest) and rest[j].val.startswith("-"):
+            o = rest[j]
+            if not _plain(o):
+                raise Block(EXPAND_MSG)
+            j += 1
+            if o.val in GIT_OPT_ARG and j < len(rest):
+                if not _plain(rest[j]):
+                    raise Block(EXPAND_MSG)
+                j += 1
+        if j >= len(rest):
+            return
+        if not _plain(rest[j], False):
+            raise Block(EXPAND_MSG)
+        sub, args = rest[j].val, rest[j + 1:]
+        if any(a.exp for a in args) and not git_safe(sub, args):
+            raise Block(EXPAND_MSG)
+    elif base == "gh":
+        j = 0
+        while j < len(rest) and rest[j].val.startswith("-"):
+            if not _plain(rest[j]):
+                raise Block(EXPAND_MSG)
+            j += 1
+            if rest[j - 1].val in ("-R", "--repo", "--hostname") and j < len(rest):
+                if not _plain(rest[j]):
+                    raise Block(EXPAND_MSG)
+                j += 1
+        g = rest[j:j + 2]
+        for k, x in enumerate(g):
+            if k == 1 and g[0].val == "api":
+                break
+            if not _plain(x, False):
+                raise Block(EXPAND_MSG)
+        if g and g[0].val in GH_ACTIONS:  # 群のあとの -R／--repo (値つき) を飛ばした先の操作の語も、展開があれば止める
+            m = j + 1
+            while m < len(rest) and (rest[m].val in ("-R", "--repo") or rest[m].val.startswith("--repo=") or (rest[m].val.startswith("-R") and not rest[m].val.startswith("--"))):
+                if rest[m].val.startswith("--repo=") or (rest[m].val.startswith("-R") and rest[m].val != "-R"):
+                    if not _plain(rest[m]):
+                        raise Block(EXPAND_MSG)
+                    m += 1
+                    continue
+                if m + 1 < len(rest) and not _plain(rest[m + 1]):
+                    raise Block(EXPAND_MSG)
+                m += 2
+            if m < len(rest) and not _plain(rest[m], False):
+                raise Block(EXPAND_MSG)
+        if len(g) == 2 and g[0].val == "alias" and g[1].val in ("set", "import"):
+            raise Block(DANGER_MSG)
+        if g and g[0].val in aliases():
+            raise Block(ALIAS_MSG)
+
+
+def make_aliases():
+    """gh の別名の名前の集合 (gh を使う命令のときだけ、1 回だけ読む)。"""
+    cache = []
+
+    def aliases():
+        if not cache:
+            try:
+                r = subprocess.run(["gh", "alias", "list"], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=10)
+            except FileNotFoundError:
+                cache.append(set())
+                return cache[0]
+            except Exception:
+                raise Block("gh の別名 (alias) の一覧が読めません")
+            if r.returncode != 0:
+                raise Block("gh の別名 (alias) の一覧が読めません")
+            cache.append({ln.split(":", 1)[0].strip() for ln in r.stdout.splitlines() if ":" in ln})
+        return cache[0]
+    return aliases
+
+
+def analyze(cmd):
+    """命令文 -> [(骨組みの文字列, 単純な命令の一覧)] (先頭が最上位。あとは $( )・バッククォートの中)。読めなければ None。
+    骨組み = heredoc の本文と $( ) の中身を取り除いた文字列。sh など別の shell を呼ぶ命令があるときだけ、本文を足して残す。"""
+    try:
+        p = Parser(cmd)
+        units = p.top()
+    except (PErr, RecursionError):
+        return None
+    for _, cmds in units:
+        for words in cmds:
+            k = command_word(words)
+            if k < len(words) and words[k].val.rsplit("/", 1)[-1] in SHELLS:
+                return [(units[0][0] + "\n" + "\n".join(p.bodies), units[0][1])] + units[1:]
+    return units
+
+
+def git_subs(toks):
+    """字句から git の下位命令を取り出す -> [(下位命令, 後ろの字句)]。-C などの値を取る印は飛ばす。"""
+    out = []
+    for i, t in enumerate(toks):
+        if t.rsplit("/", 1)[-1] != "git":
+            continue
+        j = i + 1
+        while j < len(toks) and toks[j].startswith("-"):
+            j += 2 if toks[j] in GIT_OPT_ARG else 1
+        if j < len(toks):
+            rest = []
+            for x in toks[j + 1:]:
+                if OP_TOK_RE.match(x):
+                    break
+                rest.append(x)
+            out.append((toks[j], rest))
+    return out
+
+
+def config_write(loose):
+    """git config／git -c で、include か push の中身・行き先を変える鍵を書く形。"""
+    for seg in re.split(r"[;&|\n]", loose):
+        if not re.search(r"\bgit\b", seg) or not re.search(r"(?:\sconfig\b|\s-c\s)", seg + " "):
+            continue
+        if CFG_INCLUDE_RE.search(seg):
+            return True
+        if CFG_KEY_RE.search(seg) and not CFG_READ_RE.search(seg + " "):
+            return True
+    return False
+
+
+def danger(units, cmd):
+    """repo の設定・追跡ブランチ・送信系の命令を、見張りを通らずに書き換える/使う形 -> 理由 (無ければ None)。
+    units = 骨組みの一覧 (読めなければ None。そのときは生の文字全体で探す)。"""
+    for text in ([cmd] if units is None else [u[0] for u in units]):
+        r = danger_text(text)
+        if r:
+            return r
+    return None
+
+
+def danger_text(cmd):
+    """生の文字と、引用符と \\ を外した文字の両方で探す。"""
+    toks = _try_lex(cmd)
+    loose = cmd + "\n" + re.sub(r"[\\'\"]", "", cmd)
+    if SEND_RE.search(loose) or REMOTES_RE.search(loose) or config_write(loose):
+        return DANGER_MSG
+    if GIT_PATH_RE.search(loose) and WRITE_MARK_RE.search(loose):
+        return DANGER_MSG
+    if toks is None or any(t.rsplit("/", 1)[-1] in SHELLS for t in toks):
+        # 字句に分けられない・sh -c の中身は読まないので、生の文字で探す
+        if re.search(r"\bgit\b[^;&|\n]*?\breplace\b|\bgit\b[^;&|\n]*?\bremote\b[^;&|\n]*?\b(?:set-url|add|rename|remove|rm)\b", loose):
+            return DANGER_MSG
+    else:
+        for sub, rest in git_subs(toks):
+            if sub == "replace":
+                return DANGER_MSG
+            if sub == "remote":
+                first = next((x for x in rest if not x.startswith("-")), "")
+                if first in ("set-url", "add", "rename", "remove", "rm"):
+                    return DANGER_MSG
+    return None
+
+
+def skip_repo(v, j, flags=False):
+    """字(文字列)の並び v の j 番目から、-R／--repo (値つき)・--repo=…・-Ro/r を値ごと飛ばした次の位置。
+    flags=True のときは --version／-h／--help も飛ばす (群の前で使う)。群の前も後ろもこの 1 つで飛ばす。"""
+    while j < len(v):
+        t = v[j]
+        if t in ("-R", "--repo"):
+            j += 2
+        elif t.startswith("--repo=") or (t.startswith("-R") and len(t) > 2 and not t.startswith("--")):
+            j += 1
+        elif flags and t in ("--version", "-h", "--help"):
+            j += 1
+        else:
+            break
+    return j
+
+
+def detect(cmd):
+    """字句として git ... push / gh pr|issue ... が現れるか -> (push, gh)。
+    見分けは、生の文字と、shlex で分けた字句 (引用符と \\ を外したもの) の両方で行う。
+    字句に分けられないときは、生の文字に git か gh が含まれれば止める (push と gh の両方を立てる)。"""
+    try:
+        toks = _lex(cmd)
+    except ValueError:
+        if re.search(r"git|gh", cmd):
+            return True, True
+        return False, False
+    base = [t.rsplit("/", 1)[-1] for t in toks]
+    sh_cmds = []  # 解析器が見つけた「命令の語が shell」の単純な命令 (改行・env／command・代入・|& の後ろも含む。書類と同じ定義)
+    units = analyze(cmd)
+    if units is None:
+        sh_cmds = None
+    else:
+        for _s, cmds in units:
+            for ws in cmds:
+                k = command_word(ws)
+                if k < len(ws) and ws[k].val.rsplit("/", 1)[-1] in SHELLS and ws[k].val.rsplit("/", 1)[-1] not in ("source", ".", "eval"):
+                    sh_cmds.append(ws[k].val)
+    if sh_cmds is None:  # 解析できない形: 字句の並びで代用する
+        ops = {";", "&&", "||", "|", "&", "(", "|&"}
+        sh_cmds = [t for i, t in enumerate(toks) if base[i] in SHELLS and base[i] not in ("source", ".", "eval") and (i == 0 or toks[i - 1] in ops)]
+
+    def piped_shell():  # shell の前 (env／command／代入を飛ばした先) が | か |& か
+        for i, b in enumerate(base):
+            if b not in SHELLS or b in ("source", ".", "eval"):
+                continue
+            j = i - 1
+            while j >= 0 and (toks[j] in WRAPPERS or ASSIGN_RE.match(toks[j]) or toks[j].startswith("-")):
+                j -= 1
+            if j >= 0 and toks[j] in ("|", "|&"):
+                return True
+        return False
+    sh_stdin = bool(sh_cmds) and not any(re.fullmatch(r"-\w*c\w*", t) for t in toks) and \
+        ("<<" in cmd or piped_shell() or "-s" in toks)  # shell に文字列を渡す形 (-c なし)
+    proc_sub = re.search(r"(?:^|[\s;&|(])(?:\S*/)?(?:sh|bash|zsh|dash|ksh|source|\.)(?:\s+-\w+)*\s+<\(", cmd) is not None  # bash <( ) ・source <( ) も文字列を渡す形
+    if (any(b in SHELLS for b in base) and any(re.fullmatch(r"-\w*c\w*", t) for t in toks)) or "eval" in base or sh_stdin or proc_sub:
+        loose = cmd + "\n" + re.sub(r"[\\'\"]", "", cmd)  # sh -c の中身は読まない。引用符と \\ を外した形でも目印を探す
+        return (re.search(r"\bgit\b[\s\S]*\bpush\b", loose) is not None,
+                re.search(r"\bgh\b[\s\S]*\b(?:pr|issue|release|repo|gist)\b", loose) is not None)
+    push = any(b == "git" and "push" in toks[i + 1:] for i, b in enumerate(base))
+    if not push and "git" in base:
+        low = [t.lower() for t in toks]
+        if any("alias." in t or "pushurl" in t or "pushinsteadof" in t for t in low) or ("set-url" in low and "--push" in low):
+            push = True  # push の行き先や別名を書き換える操作: 決まった形ではないので、後で止まる
+    gh = False
+    for i, b in enumerate(base):
+        if b != "gh":
+            continue
+        if "gist" in toks[i + 1:]:
+            gh = True
+        j0 = skip_repo(toks, i + 1, True)  # 群の前の -R／--repo (値つき) と --version／-h／--help を飛ばす
+        if j0 < len(toks) and toks[j0].startswith("-"):
+            gh = True  # ほかの印が群の前にある: 群の位置が読めないので決まりの外として止める
+            continue
+        if j0 >= len(toks) or toks[j0] not in GH_ACTIONS:
+            continue  # 群の位置が pr／issue／release／repo のときだけ見る。値や別の位置の同じ語は見ない
+        g = toks[j0]
+        j = skip_repo(toks, j0 + 1)  # 群のあとの -R／--repo を飛ばす
+        if j >= len(toks) or OP_TOK_RE.match(toks[j]):
+            gh = True  # 操作が無い: 決まりの外
+        elif toks[j].startswith("-"):
+            if toks[j] not in ("-h", "--help"):
+                gh = True
+        elif toks[j] in GH_ACTIONS[g]:
+            gh = True
+    return push, gh
+
+
+def scan_words(cmd):
+    """決まった形の字句分け -> [(値, 元の字面)]。引用の外は安全な文字だけ。それ以外・閉じない引用は Block。"""
+    words, i, n = [], 0, len(cmd)
+    while i < n:
+        if cmd[i] in " \t":
+            i += 1
+            continue
+        start, val = i, []
+        while i < n and cmd[i] not in " \t":
+            c = cmd[i]
+            if c == "'":
+                j = cmd.find("'", i + 1)
+                if j < 0:
+                    raise Block("引用が閉じていません")
+                val.append(cmd[i + 1:j])
+                i = j + 1
+            elif c == '"':
+                j, buf = i + 1, []
+                while j < n and cmd[j] != '"':
+                    if cmd[j] in "$`\\!":
+                        raise Block("二重引用符の中に展開文字があります")
+                    buf.append(cmd[j])
+                    j += 1
+                if j >= n:
+                    raise Block("引用が閉じていません")
+                val.append("".join(buf))
+                i = j + 1
+            elif c in SAFE_CHARS:
+                val.append(c)
+                i += 1
+            else:
+                raise Block("引用の外に決まりの外の文字があります")
+        words.append(("".join(val), cmd[start:i]))
+    return words
+
+
+def strict_words(cmd):
+    s = cmd.strip()
+    while True:
+        s2 = REDIR_TAIL_RE.sub("", s)
+        if s2 == s:
+            break
+        s = s2
+    words = scan_words(s)
+    try:
+        toks = _lex(s)
+    except ValueError:
+        raise Block("字句に分けられません")
+    if toks != [w[0] for w in words]:
+        raise Block("字句の分け方が食い違います")
+    return words
+
+
+def git(cwd, *args):
+    env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+    return subprocess.run(["git", "--no-replace-objects", "-C", cwd] + list(args), capture_output=True, text=True, encoding="utf-8", errors="replace", env=env)
+
+
+def norm_slug(url):
+    """URL の書き方 (ssh:// git@ https://・大文字・末尾の / と .git) によらず、同じ owner/name にそろえる。"""
+    url = url.strip().lower()
+    while url.endswith("/"):
+        url = url[:-1]
+    if url.endswith(".git"):
+        url = url[:-4]
+    while url.endswith("/"):
+        url = url[:-1]
+    parts = [x for x in re.split(r"[/:]", url) if x]
+    return "/".join(parts[-2:]) if len(parts) >= 2 else None
+
+
+def repo_slugs(cwd):
+    """origin の push 先の URL をすべて owner/name にそろえた一覧 (url を複数持つ repo は全部に送られる)。"""
+    r = git(cwd, "remote", "get-url", "--push", "--all", "origin")
+    if r.returncode != 0:
+        return []
+    return [x for x in (norm_slug(ln) for ln in r.stdout.splitlines()) if x]
+
+
+def commit_list(top, sha, excludes):
+    """送る commit の一覧 (excludes から届くものは除く)。作業場所の設定に左右されない下回りの命令で取る。"""
+    r = git(top, "rev-list", sha, "--not", *excludes)
+    if r.returncode != 0:
+        raise Block("送る commit の一覧が取れません")
+    return [x for x in r.stdout.split("\n") if re.fullmatch(r"[0-9a-f]{40}", x)]
+
+
+def added_lines(top, commits):
+    """送る commit のそれぞれが足した行 + 追加・改名したファイルの名前 -> [(場所, 行, 文)]。取れなければ Block。
+    merge commit は --cc で、衝突を直した行だけ見る。diff.relative など作業場所の設定に左右されないよう、
+    下回りの diff-tree に --no-relative・--text・--no-textconv・--no-ext-diff・明示の prefix を付けて取る。"""
+    if not commits:
+        return []
+    r = subprocess.run(
+        ["git", "--no-replace-objects", "-C", top, "-c", "core.quotePath=false", "diff-tree", "--stdin", "-p", "--cc", "--root", "-r", "-M",
+         "--text", "--no-textconv", "--no-ext-diff", "--ignore-submodules=none", "-U0",
+         "--src-prefix=a/", "--dst-prefix=b/", "--no-relative", "--no-color"],
+        input="\n".join(commits) + "\n", capture_output=True, text=True, encoding="utf-8", errors="replace",
+        env={k: v for k, v in os.environ.items() if not k.startswith("GIT_")})
+    if r.returncode != 0:
+        raise Block("差分が取れません")
+    out, fname, ln, in_head, ncol = [], None, 0, False, 1
+    for line in r.stdout.split("\n"):
+        if re.fullmatch(r"[0-9a-f]{40}", line):
+            fname, in_head = None, False
+            continue
+        if line.startswith(("diff --git ", "diff --cc ", "diff --combined ")):
+            fname, in_head = None, True  # ファイルの見出し。この中の "+++ " だけが名前
+            continue
+        if in_head:
+            if line.startswith(("rename to ", "copy to ")):
+                out.append(("ファイル名", 0, line.split(" to ", 1)[1]))
+            elif line.startswith("+++ "):
+                nm = line[4:].split("\t")[0]
+                if nm.startswith('"b/') and nm.endswith('"'):
+                    fname = nm[3:-1]
+                elif nm.startswith("b/"):
+                    fname = nm[2:]
+                else:
+                    fname = None
+                if fname:
+                    out.append(("ファイル名", 0, fname))
+                continue
+            if not line.startswith("@@"):
+                continue
+            in_head = False
+        m = re.match(r"(@@+) (?:-\S+ )+\+(\d+)(?:,\d+)? @@+", line)
+        if m:
+            ncol, ln = len(m.group(1)) - 1, int(m.group(2))
+            continue
+        if fname and line[:ncol].find("+") >= 0 and not line.startswith("\\"):
+            out.append((fname, ln, line[ncol:]))
+            ln += 1
+    return out
+
+
+def tag_lines(top, ref, commits):
+    """注釈つきタグの文面。送る ref がタグのとき (入れ子も) と、送る範囲の commit を指すタグの中身を読む。"""
+    out = []
+
+    def body(obj, label):
+        r = git(top, "cat-file", "-p", obj)
+        if r.returncode != 0:
+            raise Block("タグの文面が取れません")
+        out.extend((label, n + 1, t) for n, t in enumerate(r.stdout.split("\n")))
+        return r.stdout
+
+    obj = git(top, "rev-parse", "--verify", "--quiet", ref).stdout.strip()
+    for _ in range(10):
+        if not obj:
+            break
+        t = git(top, "cat-file", "-t", obj).stdout.strip()
+        if t != "tag":
+            break
+        txt = body(obj, "タグ")
+        m = re.match(r"object ([0-9a-f]{40})", txt)
+        obj = m.group(1) if m else ""
+    if commits:
+        cs = set(commits)
+        r = git(top, "for-each-ref", "--format=%(objecttype) %(objectname) %(*objectname)", "refs/tags")
+        if r.returncode != 0:
+            raise Block("タグの一覧が取れません")
+        for ln in r.stdout.split("\n"):
+            f = ln.split(" ")
+            if len(f) >= 3 and f[0] == "tag" and f[2] in cs:
+                body(f[1], "タグ")
+    return out
+
+
+def check_push(words, repos, matched):
+    v = [w[0] for w in words]
+    ok = (len(v) in (6, 7) and v[0] == "git" and v[1] == "-C" and v[2].startswith("/") and v[3] == "push"
+          and (len(v) == 6 or v[4] in ("-u", "--set-upstream")) and v[-2] == "origin"
+          and REF_RE.fullmatch(v[-1]) is not None and ".." not in v[-1])
+    if not ok:
+        raise Block(PUSH_MSG)
+    path, ref = v[2], v[-1]
+    if not os.path.isdir(path):
+        raise Block("push の場所が存在しません")
+    tl = git(path, "rev-parse", "--show-toplevel")
+    top = tl.stdout.strip()
+    if tl.returncode != 0 or not top.startswith("/"):
+        raise Block("push の場所が git の repo ではありません")
+    c = git(top, "config", "--get-regexp", PUSH_CFG_RE)
+    if c.returncode != 1:  # 1 = 該当なし。0 (別名や push 先の差し替えがある) とそれ以外の失敗は止める
+        raise Block("この repo には別名 (alias) か push 先の差し替え (pushurl など) の設定があります")
+    ext = git(top, "config", "--bool", "--get", "extensions.worktreeConfig")
+    if ext.returncode not in (0, 1):
+        raise Block("extensions.worktreeConfig が読めません")
+    scopes = ["--local"]
+    if ext.returncode == 0 and ext.stdout.strip() == "true":
+        scopes.append("--worktree")  # 拡張が無いと、worktree が複数あるとき --worktree は失敗する (config.worktree も読まれない)
+    for scope in scopes:  # この repo だけの設定。include 先の中身も別名を持ち込めるので include も止める
+        c = git(top, "config", scope, "--get-regexp", SCOPED_CFG_RE)
+        if c.returncode != 1:
+            raise Block("この repo の設定 (%s) に別名・push 先の差し替え・include があります" % scope)
+    rp = git(top, "for-each-ref", "--count=1", "--format=%(refname)", "refs/replace")
+    if rp.returncode != 0 or rp.stdout.strip():
+        raise Block("この repo には git replace の置き換え (refs/replace) があります")
+    listed = [x for x in repo_slugs(top) if x in repos]
+    if not listed:
+        return []  # 表に無い repo の push は照らさずに通す
+    slug = listed[0]
+    matched.append(slug)
+    if git(top, "rev-parse", "--verify", "--quiet", "origin/main^{commit}").returncode != 0:
+        raise Block("表に並んだ repo (%s) に origin/main がありません" % slug)
+    r = git(top, "rev-parse", "--verify", "--quiet", ref + "^{commit}")
+    if r.returncode != 0:
+        raise Block("送るブランチ %s が見つかりません" % ref)
+    sha = r.stdout.strip()
+    name = ref
+    if ref == "HEAD":
+        s = git(top, "symbolic-ref", "--quiet", "--short", "HEAD")
+        name = s.stdout.strip() if s.returncode == 0 else None
+    excludes = ["refs/remotes/origin/main"]
+    if name and git(top, "rev-parse", "--verify", "--quiet", "refs/remotes/origin/%s^{commit}" % name).returncode == 0:
+        excludes.append("refs/remotes/origin/%s" % name)
+    commits = commit_list(top, sha, excludes)
+    return added_lines(top, commits) + tag_lines(top, ref, commits)
+
+
+def read_body_file(p):
+    if not p.startswith("/") or p.startswith(("/dev/", "/proc/")) or not os.path.isfile(p):
+        raise Block(GH_MSG)
+    try:
+        with open(p, encoding="utf-8", errors="replace") as f:
+            return [(p, i + 1, t) for i, t in enumerate(f.read().split("\n"))]
+    except OSError as e:
+        raise Block("本文のファイルが読めません: %s (%s)" % (os.path.basename(p), e.strerror))
+
+
+def check_gh(words):
+    """本文・題名・説明の印は、gh の操作ごとの表 (GH_OPS) で、位置や前の印に関係なく字句のどこにあっても照らす。"""
+    v, raws = [w[0] for w in words], [w[1] for w in words]
+    if len(v) >= 2 and v[0] == "gh":  # 群の前と、群と操作のあいだの -R／--repo を飛ばす。ほかの印は決まりの外
+        j0 = skip_repo(v, 1, True)
+        if j0 >= len(v):
+            raise Block(GH_MSG)
+        j = skip_repo(v, j0 + 1)
+        if j < len(v) and v[j].startswith("-"):
+            raise Block(GH_MSG)
+        v, raws = ["gh", v[j0]] + v[j:], ["gh", raws[j0]] + raws[j:]
+    if len(v) < 3 or v[0] != "gh" or (v[1], v[2]) not in GH_OPS:  # release upload も表に無いので止まる
+        raise Block(GH_MSG)  # gh gist など、表に無い操作は止める
+    B_STR, B_FILE, B_TITLE = GH_OPS[(v[1], v[2])]
+    body, titles, i = None, [], 3
+    positional = 0
+    while i < len(v):
+        t = v[i]
+        key, eq, val = t.partition("=") if t.startswith("--") else (t, "", "")
+        if t in GH_BAD_OPTS or key in GH_BAD_OPTS:
+            raise Block(GH_MSG)
+        if key in B_STR or key in B_FILE or key in B_TITLE:
+            if eq:
+                value, raw, i = val, raws[i].split("=", 1)[1], i + 1
+            elif i + 1 < len(v):
+                value, raw, i = v[i + 1], raws[i + 1], i + 2
+            else:
+                raise Block(GH_MSG)
+            if key in B_TITLE:
+                titles.append(value)
+                continue
+            if body is not None:
+                raise Block(GH_MSG)
+            body = ("str" if key in B_STR else "file", value, raw)
+            continue
+        if re.fullmatch(r"-[^-].+", t):
+            raise Block(GH_MSG)  # 短い指定の束ね書きは読み分けない
+        if v[1] == "release":
+            if t.startswith("-"):
+                i += 2 if (t in REL_VALUE_OPTS and i + 1 < len(v)) else 1
+                continue
+            positional += 1
+            if positional > 1:
+                raise Block(GH_MSG)  # タグ名のほかの位置引数 = 添付ファイル
+        i += 1
+    out = [("題名", n + 1, x) for n, x in enumerate(titles)]
+    if body is None:
+        return out
+    kind, value, raw = body
+    if kind == "str":
+        if re.fullmatch(r"'[^']*'", raw) is None:
+            raise Block(GH_MSG)
+        return out + [("本文", n + 1, t) for n, t in enumerate(value.split("\n"))]
+    return out + read_body_file(value)
+
+
+def run(payload):
+    if not isinstance(payload, dict) or payload.get("tool_name") != "Bash":
+        return 0
+    ti = payload.get("tool_input") or {}
+    cmd = ti.get("command") or ""
+    units = analyze(cmd)
+    try:
+        if units is None:  # 読めない形: 昔の決まり (git／gh の字と展開が両方ある)
+            loose = cmd + "\n" + re.sub(r"[\\'\"]", "", cmd)
+            if ("$" in cmd or "`" in cmd or "\\\n" in cmd) and GITGH_RE.search(loose):
+                raise Block(EXPAND_MSG)
+        else:
+            aliases = make_aliases()
+            for skel, cmds in units:
+                for words in cmds:
+                    check_words(words, aliases)
+            for skel, _c in units[1:]:  # $( )・バッククォートの中に push や gh の本文の操作は置けない
+                if any(detect(skel)):
+                    raise Block(EXPAND_MSG)
+    except Block as e:
+        log_block("停止: 決まりの外 (展開・設定・追跡ブランチ・送信系)")
+        sys.stderr.write("%s: 止めました。理由: %s\n" % (HOOK, e))
+        return 2
+    top = cmd if units is None else units[0][0]
+    push, gh = detect(top)
+    dg = danger(units, cmd)
+    if dg:
+        log_block("停止: 決まりの外 (設定・追跡ブランチ・送信系)")
+        sys.stderr.write("%s: 止めました。理由: %s\n" % (HOOK, dg))
+        return 2
+    if not push and not gh:
+        return 0
+    try:
+        repos = load_repos()
+        entries, matched = [], []
+        try:
+            words = strict_words(top)
+        except Block as e:
+            raise Block(PUSH_MSG if push else GH_MSG) from e
+        if push and gh:
+            raise Block(PUSH_MSG)
+        if push:
+            entries.extend(check_push(words, repos, matched))
+            if not matched:
+                return 0  # 照らす repo の push ではない: 写しが古くても止めない
+        else:
+            entries.extend(check_gh(words))
+        _r, corpus, excl, _n = load_tables()
+        hits = find_hits(entries, corpus, excl)
+    except Block as e:
+        log_block("停止: %s" % e)
+        sys.stderr.write("%s: 止めました (照合できないため全部拒否に倒します)。理由: %s\n" % (HOOK, e))
+        return 2
+    except Exception as e:  # 想定外は拒否に倒す
+        log_block("停止: 想定外の失敗 %s" % type(e).__name__)
+        sys.stderr.write("%s: 止めました。想定外の失敗 (%s)\n" % (HOOK, type(e).__name__))
+        return 2
+    if not hits:
+        return 0
+    kinds = sorted({p for _, _, p in hits})
+    where = sorted({"%s:%d" % (l, n) for l, n, _ in hits})
+    log_block("原文と同じ語句 %d 件 (%d か所): %s" % (len(kinds), len(where), ", ".join(where[:20])))
+    sys.stderr.write("%s: 仕入元の原文と同じ語句を %d 件見つけたため止めました。\n" % (HOOK, len(kinds)))
+    for l, n, p in hits[:30]:
+        sys.stderr.write("  %s:%d 「%s」\n" % (l, n, p))
+    sys.stderr.write(EXPLAIN + "\n")
+    if push:
+        sys.stderr.write(HIST_MSG + "\n")
+    return 2
+
+
+def main():
+    if len(sys.argv) > 1 and sys.argv[1] == "--check":
+        try:
+            repos, corpus, excl, n = load_tables()
+        except Block as e:
+            sys.stderr.write("%s --check: NG %s\n" % (HOOK, e))
+            return 2
+        print("OK repos=%d corpus_files=%d corpus_bytes=%d exclusions=%d" % (len(repos), n, len(corpus.encode()), len(excl)))
+        return 0
+    try:
+        payload = json.loads(sys.stdin.read())
+    except Exception:
+        return 0
+    return run(payload)
+
+
+if __name__ == "__main__":
+    sys.exit(main())
