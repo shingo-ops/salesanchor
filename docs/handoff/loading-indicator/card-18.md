@@ -1,5 +1,7 @@
 # 実装カード 段階3 便8b — 使われていない読み込み系の辞書キーを消す（2回目）
 
+- 状態: Opus 作成・自己審査済み（同一AIの審査）。PO 承認: 方針 2026-10-23「1」、設計 2026-10-24「1」、便7のあとの残件着手 2026-10-26「1」
+- 根拠: 事前調査 keys45-check.tsv（本カード §1 に判定を写した）。便7b card-16 と同じ確かめ方
 - 起点: 最新 origin/main（便8a #4782 の合流 2d25c719d を含むこと。git grep -n confirmLoading origin/main -- frontend/src/pages/channels/ChannelsPage.tsx が2件でなければ BLOCKED:）。ブランチ release/loading-button-bin8b
 - 対象ADR: ADR-027（辞書は ja/en 同一キー）・ADR-144
 - 実行場所: クラウド。push までを行う。PR は手元で作る。
@@ -12,7 +14,7 @@
 - 便8a で参照0になった2キー: channels.disconnecting, channels.discordDisconnecting
 (2) 残す（消さない・触らない）15キー
 - 使われている10キー: ruleManagement.test.gateRunning, ruleManagement.test.expectedCanonicalPlaceholder, superAdmin.viewers.statusPending, superAdmin.viewers.statusSuspended, pmgWorkflow.extractionStatus.pending, pmgWorkflow.extractionStatus.running, analysisRules.errorLog.tab.inProgress, analysisRules.errorLog.status.inProgress, analysisRules.dashboard.extractionJobStatus_pending, analysisRules.dashboard.extractionJobStatus_running
-- 実際の値が入るか確かめきれていない5キー（確かめきれないものは消さない）: leads.discordRoleSyncStatus_pending, discordConfig.syncStatus.pending, superAdmin.viewerTemplates.saving, nav.searchPlaceholder, buybackPrices.loading
+- 実際の値が入るか確かめきれていない5キー（Opus 判断: 確かめきれないものは消さない）: leads.discordRoleSyncStatus_pending, discordConfig.syncStatus.pending, superAdmin.viewerTemplates.saving（試験だけが参照）, nav.searchPlaceholder（型 `nav.${string}` が受ける）, buybackPrices.loading（card_game の値の範囲外だが取り込み元すべては未確認）
 
 ## 2. 消す前の確認（キーごと。結果を /tmp/CC報告ファイル/loading-button-bin8b/impl/keys-check.tsv に1キー1行）
 a. 値: 今の本体 ja・en の値を書き出す（記録のため）
