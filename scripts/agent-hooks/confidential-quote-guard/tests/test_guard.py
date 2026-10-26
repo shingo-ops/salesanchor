@@ -679,7 +679,6 @@ def main():
                   ("; の後ろの命令の位置が $X", "echo a; $X push origin leak11"),
                   ("env $X (git の字なし)", "env $X push origin leak11"),
                   ("波括弧展開 {git,push}", "{git,-C,%s,push,origin,leak11}" % WORK),
-                  ("git status $(pwd) (止めすぎは受け入れ)", "git status $(pwd)"),
                   ("glob g?t", "g?t -C %s push origin leak11" % WORK),
                   ("glob /usr/bin/g[i]t", "/usr/bin/g[i]t -C %s push origin leak11" % WORK),
                   ("glob g*", "g* -C %s push origin leak11" % WORK),
@@ -771,6 +770,106 @@ def main():
     stop("L2 ls hooks は通る", "ls %s/.git/hooks" % WORK, 0)
     # L1: sed -n は読むだけでも止まる (止めすぎは受け入れ)
     stop("L1 sed -n .git/config は止まる (止めすぎ受け入れ)", "sed -n 1p %s/.git/config" % WORK)
+
+    print("== 12 審査 9 回目の指摘 (展開の決まりを絞る・gh の別の出口・複数の URL・remote の書き換え)")
+    G2 = "g" + "h"
+    cm = "git -C %s commit -m " % WORK
+    # H1: 通る (ふだんの commit の heredoc・読むだけの $)
+    body_plain = "fix: x\n\nbody\n"
+    body_push = "fix: x\n\n本文に git push origin x と書く。\"二重\" と 'it' s も。\n"
+    for nm, c in (("commit heredoc", cm + "\"$(cat <<'EOF'\n" + body_plain + "EOF\n)\""),
+                  ("commit heredoc 本文に git push・引用符", cm + "\"$(cat <<'EOF'\n" + body_push + "EOF\n)\""),
+                  ("commit heredoc 本文に 「語句」", cm + "\"$(cat <<'EOF'\n本文「%s」\nEOF\n)\"" % q),
+                  ("commit heredoc 区切りに - (<<-)", cm + "\"$(cat <<-'EOF'\n\tfix\n\tEOF\n)\""),
+                  ("commit -F 絶対パス", cm.replace("-m ", "-F ") + hitbody),
+                  ("commit -m $VAR", cm + "\"$MSG\""),
+                  ("git add $F", "git -C %s add $F" % WORK),
+                  ("git status | awk $2", "git -C %s status --short | awk '{print $2}'" % WORK),
+                  ("git log | grep 'x$'", "git -C %s log --oneline | grep 'x$'" % WORK),
+                  ("echo $PATH | grep git", "echo $PATH | tr : '\\n' | grep git"),
+                  ("git status $(pwd)", "git -C %s status $(pwd)" % WORK),
+                  ("git config --get $K", "git -C %s config --get $K" % WORK),
+                  ("for + git add $f", "for f in $(git -C %s ls-files); do git -C %s add $f; done" % (WORK, WORK)),
+                  ("コメントの $y (git なし)", "echo ok # note $y don't"),
+                  ("gh pr view $N", G2 + " pr view $N"),
+                  ("gh api $X", G2 + " api repos/$X/pulls")):
+        stop("R9H1 通る: " + nm, c, 0)
+    # H1: 止まる
+    for nm, c in (("commit の中に push", cm + "\"$(git push origin x)\""),
+                  ("commit の中に -C つきの push", cm + "\"$(git -C %s push -u origin leak11)\"" % WORK),
+                  ("commit の中の命令の位置が $X", cm + "\"$($X push)\""),
+                  ("バッククォートの中に push", "echo `git push origin x`"),
+                  ("引用符なし heredoc の中の $(git push)", "cat <<EOF\n$(git push origin x)\nEOF"),
+                  ("sh の heredoc の本文に git push", "bash <<'EOF'\ngit push origin x\nEOF"),
+                  ("-C の値が $W", "git -C $W push origin leak11"),
+                  ("-C の値が \"$W\"", "git -C \"$W\" status"),
+                  ("-c の値が $X", "git -c user.name=$X -C %s status" % WORK),
+                  ("下位命令が $x", "git -C %s $x origin leak11" % WORK),
+                  ("下位命令が glob", "git -C %s p?sh origin leak11" % WORK),
+                  ("下位命令の引用符の崩し", "git -C %s pu\"s\"h origin leak11" % WORK),
+                  ("push の引数が $B", "git -C %s push -u origin $B" % WORK),
+                  ("config の値が $X", "git -C %s config user.name $X" % WORK),
+                  ("tag の引数が $X", "git -C %s tag v1 $X" % WORK),
+                  ("remote の引数が $X", "git -C %s remote show $X" % WORK),
+                  ("gh の 2 つ目が $a", G2 + " pr $a 1"),
+                  ("gh の本文が $B", G2 + " pr comment 1 --body \"$B\""),
+                  ("gh の本文が $(cat)", G2 + " pr comment 1 --body \"$(cat %s)\"" % hitbody),
+                  ("gh の中の gh", cm + "\"$(" + G2 + " pr comment 1 -F " + hitbody + ")\""),
+                  ("glob の命令", "g?t -C %s push origin leak11" % WORK),
+                  ("決まった形の push に # のコメント", P("clean12") + " # x"),
+                  ("コメントに git push と $y", "echo ok # git push origin x $y")):
+        stop("R9H1 止まる: " + nm, c)
+    # L1: close / reopen のコメント
+    for op in ("pr close 1", "issue close 1", "pr reopen 1", "issue reopen 1"):
+        for fl in ("--comment", "-c"):
+            stop("R9L1 %s %s 書き写し -> 止まる" % (op, fl), "%s %s %s '「%s」'" % (G2, op, fl, q))
+        stop("R9L1 %s 中身なし -> 通る" % op, "%s %s --comment 'superseded'" % (G2, op), 0)
+    # L2: new は create と同じ
+    stop("R9L2 pr new --body", G2 + " pr new --title x --body '「%s」'" % q)
+    stop("R9L2 pr new --title", G2 + " pr new --title '「%s」' --body x" % q)
+    stop("R9L2 issue new --body", G2 + " issue new --title x --body '「%s」'" % q)
+    stop("R9L2 release new --notes", G2 + " release new v1 --notes '「%s」'" % q)
+    stop("R9L2 repo create --description", G2 + " repo create o/n --public --description '「%s」'" % q)
+    stop("R9L2 pr new 中身なし -> 通る", G2 + " pr new --title x --body 'ok'", 0)
+    # L4: origin に url が複数ある repo
+    one("leak12", {"doc12.md": "引用「%s」\n" % q})
+    one("clean12", {"ok12.md": "- 「%s」\n" % FAKE_NOT_IN_CORPUS})
+    other = os.path.join(ORIGIN_ROOT, "other", "repo.git")
+    sh("git", "init", "-q", "--bare", "-b", "main", other)
+    bare = os.path.join(ORIGIN_ROOT, "test", "fake.git")
+    sh("git", "config", "remote.origin.url", other, cwd=WORK)
+    sh("git", "config", "--add", "remote.origin.url", bare, cwd=WORK)
+    check("R9L4 url 2 本 (1 本目が表に無い・2 本目が表にある) の書き写し push -> 止まる", P("leak12"), 2, cwd=T)
+    check("R9L4 url 2 本の clean push -> 通る", P("clean12"), 0, cwd=T)
+    sh("git", "config", "--unset-all", "remote.origin.url", cwd=WORK)
+    sh("git", "config", "remote.origin.url", bare, cwd=WORK)
+    check("R9L4 url を 1 本に戻すと書き写し push -> 止まる", P("leak12"), 2, cwd=T)
+    # L5: remote の名前の変更・削除
+    for sub in ("rename origin up", "remove origin", "rm origin"):
+        stop("R9L5 git remote " + sub, "git -C %s remote %s" % (WORK, sub))
+    stop("R9L5 git remote -v は通る", "git -C %s remote -v" % WORK, 0)
+    # L6: gh の別名
+    stop("R9L6 gh alias set", G2 + " alias set cc 'pr comment'")
+    stop("R9L6 gh alias import", G2 + " alias import /tmp/x.yml")
+    if shutil.which("gh"):
+        gdir = os.path.join(T, "ghcfg")
+        write(os.path.join(gdir, "config.yml"), "aliases:\n    cc: pr comment\n")
+        def gh_env(c):
+            rc = env_run(c, GH_CONFIG_DIR=gdir).returncode
+            results.append(rc == 2)
+            print("%s %-62s exit=%d (期待 2)" % ("PASS" if rc == 2 else "FAIL", "R9L6 別名 cc で本文を送る -> 止まる", rc))
+        gh_env(G2 + " cc 1 --body '「%s」'" % q)
+        rc = env_run(G2 + " pr view 1", GH_CONFIG_DIR=gdir).returncode
+        results.append(rc == 0)
+        print("%s %-62s exit=%d (期待 0)" % ("PASS" if rc == 0 else "FAIL", "R9L6 別名があっても pr view -> 通る", rc))
+        rc = env_run(G2 + " pr comment 1 --body 'ok'", GH_CONFIG_DIR=gdir).returncode
+        results.append(rc == 0)
+        print("%s %-62s exit=%d (期待 0)" % ("PASS" if rc == 0 else "FAIL", "R9L6 別名があっても pr comment (中身なし) -> 通る", rc))
+    # L7: git config の鍵を --get なしで読む形も止まる (止めすぎは受け入れ)
+    stop("R9L7 git config remote.origin.url (--get なし) は止まる (止めすぎ受け入れ)", "git -C %s config remote.origin.url" % WORK)
+    # 読めない形
+    stop("R9 引用が閉じない git の命令 -> 止まる", "git -C %s commit -m 'abc" % WORK)
+    stop("R9 引用が閉じない git なしの命令 -> 通る", "echo 'abc", 0)
 
     print("== 8 止めた記録")
     open(EV, "w").close()
