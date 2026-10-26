@@ -16,16 +16,17 @@
 - 目的: 仕入元の投稿の文面を、AI が repo の書類やプログラムに書き写して公開の置き場へ送ることを、送る前に機械で止める。
 - 利用者に見える変化: PO から見た変化は無い。AI が文面を書き写した書類を送ろうとすると、その場で止まり、どの行のどの語句かが AI に示される。
 - KGI（○× で判定）:
-  - K1: 10/25 に文面が漏れた 2 回分の記録（#4727・#4729 のコミット）を送ろうとすると、どちらも止まる（exit 2 で 1 語以上を示す）。
+  - K1（PO 決定「1」2026-10-26 で改訂）: 10/25 に文面が漏れた記録のうち、#4727 のコミット（79ec6fa76）を送ろうとすると止まる（exit 2 で 1 語以上を示す）。#4729 のコミット（f13e335fb）は K1 から外す。残る当たりが、状態の一般語として一般語の表に入れた 1 語だけ（審査合格の 18060e58f にも同じ語が出る）で、書き写しの証拠が残らないため。
   - K2: 審査に合格した記録（#4730 のコミット）は止まらない。
   - K3: いま main にある docs と backend/tests を全部当てたとき止まる語句（recon §4-1 で 324 種類）を Opus が 1 つずつ見て、全部が「原文の書き写し」か「除外表に足したもの」のどちらかに分かれる（どちらでもないものが 0）。便1 で判定し、表は社外秘フォルダに置く。
   - K4: 1 回の照合は 2 秒以内。
 
 ## 2. 対象と対象外
 
-- 対象: Mac で AI が行う次の操作。見るのは、送る差分で足した行と本文の、「」と『』の中の語句。
+- 対象: Mac で AI が行う次の操作。見るのは、送る commit のそれぞれが足した行・追加や改名したファイルの名前・本文・題名の、「」と『』の中の語句。
   - `git push`（足した行）
-  - `gh pr create`／`gh pr edit`／`gh pr comment`／`gh pr review`、`gh issue create`／`gh issue comment` の本文（付け方は §3 の「動く条件」のとおり、短い形や標準入力も含む）。審査の結果を PR のコメントに書くことが多く、公開の置き場へ出る道になるため、PR 本文と同じに扱う。
+  - `gh pr create`／`gh pr edit`／`gh pr comment`／`gh pr review`／`gh pr merge`、`gh issue create`／`gh issue edit`／`gh issue comment`、`gh release create`／`gh release edit` の本文・題名・notes、`gh repo edit` の説明（`--description`／`-d`）。`gh gist` は repo の外へ出す道なので、すべて止める（付け方は §3 の「通す形」のとおり、決まった形だけを照らし、標準入力や短い束ね書きは止める）。審査の結果を PR のコメントに書くことが多く、公開の置き場へ出る道になるため、PR 本文と同じに扱う。
+- 狙う相手: AI がうっかり書き写したまま送ること。見張りを通らない手段（Edit／Write ツール、台本ファイル、PO の手作業）を使って意図して回り込む形は見分けない。
 - 対象外:
   - すでに GitHub に残っている閉じた PR の中身（PO 判断「2」）。
   - 「」の外にそのまま書き写した文面（§7 弊害で扱う。今回は数えるだけ）。
@@ -38,19 +39,55 @@
 
 - 新しい見張りの原本を repo の scripts/agent-hooks/confidential-quote-guard/（便1 で作る）に置く（guard.py・install.sh・rollback.sh・テスト）。review-gate（ADR-1029）と同じ形。原本には原文も語句も入れない（置き場の場所は Mac の表から読む）。
 - install.sh が原本を ~/.claude/scripts に写し、~/.claude/settings.json の PreToolUse:Bash に pr-body-guard.sh の前で登録する。写したものと原本が一字一句同じかを diff で確かめる（local-hooks-ssot の H3 の考え方）。
-- 動く条件: コマンドに `git push` が含まれるとき、または §2 の gh の操作のとき（本文の付け方は `--body`／`-b`／`--body=…`／`--body-file`／`-F`／`-F -`・`--body-file -`〔標準入力〕のどれでもよい。付け方で抜けないよう、gh の操作であれば下の 2 の照らし方で必ず照らす）。作業場所は、コマンドの `cd <絶対パス>` か cwd から決める（pr-body-guard.sh と同じ決め方）。
-- 照らす repo: 本文はどの repo でも照らす（repo に関係なく照らせるため）。足した行は、置き場の表に並べた repo（最初は shingo-ops/salesanchor だけ）の push のときだけ照らす。表に無い repo の push は照らさずに通す。表に並んだ repo で `origin/main` が無い、または差分が取れないときは止める（全部拒否に倒す）。
+- 動く条件: コマンドの中に、字句として `git` と `push` がこの順で現れるとき、または `gh` のすぐ次（群の位置）に §2 の gh の群と操作（上の一覧）が現れるとき（`gist` は位置を問わず）。字句は `shlex.shlex(posix=True, punctuation_chars=True, whitespace_split=True)` で分け、引用符と `\` を外した結果で見分ける（`g\it`・`pus""h`・`'gi't` も git／push と読む）。字句に分けられないときは、生の文字に `git` か `gh` が含まれれば止める。`bash -c`・`sh -c`・`eval` を使う形は、生の文字と、引用符と `\` を外した文字の両方で目印を探し、当たれば止める。`git` と一緒に `alias.`・`pushurl`・`pushInsteadOf`・`set-url --push` を含む字句がある操作（`git config`・`git remote`・`git -c` など）も、push の行き先や別名を書き換えるので、決まった形ではないものとして止める。
+- 決まりの外として、push や gh と関係なく止める操作（生の文字と、引用符と `\` を外した文字の両方で探す）:
+  1. git の送信系の命令（`send-pack`・`http-push`、`git-send-pack`・`git-http-push`）。push の別名と同じく、送る差分を照らせないため。
+  2. include を書き込む git config（`include.`／`includeIf.`。`git config`・`git -c`）。include 先に別名を持ち込めるため。
+  3. git 以外の命令で、`.git/` 配下の `config`・`config.worktree`・`packed-refs`・`.git/refs/remotes` を書き込む形（行き先に含む `>`・`>>`・`tee`・`cp`・`mv`・`sed`・`perl`・`python`・`ruby`・`awk`・`dd`・`install`・`ln`・`node`・`truncate`・`rsync`・`ed`）。読むだけ（`cat`・`grep`）は通す。`sed -n` のように読むだけの形でも書き込み印の `sed` に当たって止まる（止めすぎは受け入れる。読むときは `cat` か `grep` を使う）。
+  4. `refs/remotes/` を書き換える `git update-ref`・`git fetch <refspec>`・`git symbolic-ref`。追跡ブランチ（`origin/<ブランチ>`）を手で進めると、送る範囲から差し引かれて照らされなくなるため。ふつうの `git fetch origin` は通す。
+  5. 変数・展開で字を隠せる形（審査 9 回目で範囲を絞った）。(a) 命令の位置の字句（代入と `env`・`command` などを外した最初の字句。`;`・`&&`・`||`・`|`・`&`・改行・`(` の後ろも）に `$`・バッククォート・glob（`?`・`*`・`[`）・行末の `\` があれば止める。(b) 命令が git のとき、前置きの選択肢（`-C <値>`・`-c <値>`・`--git-dir` など）を飛ばし、副命令の字句に展開・引用の崩れ・glob があれば止める。前置きの値に展開があっても止める。gh は 1 つ目・2 つ目の字句に展開があれば止める。(c) 副命令が文字どおり読めるとき、送らない副命令（一覧の正は guard.py の `SAFE_SUBS`。主な例は commit・status・log・diff・add・show・fetch・merge・checkout・switch・stash・rebase・reset・pull・grep・rev-list・ls-remote など。`tag` は `-l`／`--list` つき、`config` は `--get*`／`--list` つきのときだけ）の後ろの引数の `$` は通す。push・gh の本文・config／remote の書き込みの値の `$`・バッククォートは止める。(d) `$( … )`・バッククォートの中は、命令の位置が git・gh・`$…` なら (a)〜(c) を中でも適用する。`cat <<'EOF'` のような git／gh 以外は通す。heredoc の本文は命令として読まず、本文の「git push」では止まらない。(e) bash 風の読み取り器で字句に分ける。分けられないとき（引用の閉じ忘れなど）は、`git`／`gh` と `$`・バッククォート・行末 `\` が同時にあれば止める。理由の文は「git／gh の命令に変数や展開は使えません。値を書き出して単独で流してください」のまま。通す例: `git -C <W> commit -m "$(cat <<'EOF' … EOF)"`・`git -C <W> status --short | awk '{print $2}'`・`git -C <W> log --oneline | grep 'x$'`・`echo $PATH | tr : '\n' | grep git`。止める例: `git -C <W> commit -m "$(git push origin x)"`・`git -C $W push origin x`・`git -C <W> $x origin x`。`[ -f x ]` は止まる。`git config <key>`（`--get` なしの読み取り）も止まる（止めすぎは受け入れる）。
+  5e. gh の群は pr／issue／release／repo の 4 つで、群の位置（gh のすぐ次の字句）にあるときだけ見る（値やパイプ先など別の位置の同じ語は見ない）。群の前と後ろの `-R`／`--repo`（`--repo=…`・`-Ro/r` も）は値ごと飛ばして読む（群の前では `--version`／`-h`／`--help` も飛ばす。`gh -R o/r pr view 1` は通し、`gh -R o/r pr comment …` は本文を照らす。飛ばしたあとにほかの `-` 字句があれば止める）（飛ばした先の操作の語に変数・展開があれば止める。`gh pr --help`／`-h` は通す。群だけで操作が無い形と、`-h`／`--help` 以外の `-` で始まる字句は止める）。`gist` は現れる位置を問わず止める。`gh alias set`／`import` は展開の検査で止める。`-R` の値が無い形は gh 自身が失敗する（実機で `gh pr -R comment 1` が `unknown command "1" for "gh pr"` で失敗することを確認）ので、受け入れる。（`gh pr -R o/r comment …` は gh の本文として照らし、`gh pr -R o/r view 1` は通す）。それ以外の `-` で始まる字句が群と操作のあいだにあれば、決まりの外として止める。sh／bash／zsh など shell の名前が命令の位置（解析器の単純な命令ごとの命令の語。改行・`env`／`command`・代入・`|&` の後ろも含む）にあり、`-c` が無いまま、`<<<`・`<<`・`|` のあと・`-s` のどれかで文字列を渡す形は、`-c` のときと同じく、命令全体から loose の目印（git と push、gh と本文の印）を探し、当たれば止める。理由の文は 2 つに分ける: 命令の位置の字句が git／gh 以外の展開・glob・`[` のときは「命令の名前に変数・展開・glob・[ は使えません。命令名を字で書くか、test を使ってください」、git／gh のときは従来の「git／gh の命令に変数や展開は使えません。値を書き出して単独で流してください」。
+  5f. 止めすぎ（受け入れる）: `git grep push`・`git log --grep push`・`echo … push` のように、字句として git と push が並ぶ読むだけの命令も止まる。探すときは Grep ツールを使う。
+  5f-2. 止めすぎ（受け入れる・審査 11 回目）: shell を呼ぶ命令と、本文に push の字、または閉じない引用符（英語の `don't` など）を含む heredoc のコミットが同じ命令にあると、本文も照らす対象になるため止まる。push を書いていないのに止まったときは、shell の命令と commit を別の Bash 呼び出しに分ける（例: `bash x.sh && git commit -F - <<'EOF' … push …`）。別々の命令で流す。（shell の命令の位置を解析器にそろえた後も残る。解消はしていない。）
+  5g. 受け入れるリスク: `(( … ))` の中の `<<`、入れ子のバッククォート（`` `echo \`…\`` ``）、`git rebase -x` のように送らない下位命令に命令文を渡す形は、読み取り器が命令として読まないので照らさない（受け入れるリスク）。`git rebase -x` や `git bisect run` のように送らない下位命令へ命令文や台本を渡す形も、台本を走らせる形として照らさない。
+  5b. 追加の止め方: `git remote set-url`／`add`／`rename`／`remove`／`rm`、`gh alias set`／`import`、gh の別名名で始まる gh（`gh alias list` を読む。最初から入っている別名 `co` があるので「別名が 1 つでもあれば止める」はせず、呼ばれた別名名だけ止める。push には gh の別名は効かないので push では見ない）。
+  5c. 照らす範囲の追加: `gh pr/issue close`・`reopen` の `--comment`／`-c`、`pr/issue/release new`（`create` と同じ）、`gh repo create` の説明。origin の URL は `git remote get-url --push --all origin` のすべてを見て、表の repo が 1 つでもあれば照らす。
+  5d. 受け入れるリスク: 「」が複数行にまたがる形と半角 `｢｣` は照らさない（便2 で範囲を広げるときに扱う）。
+  6. 送り先・送り方・中身をすり替える操作: `git remote set-url`／`git remote add`、`git config` や `git -c` で `remote.*.url`・`remote.*.pushurl`・`remote.*.push`・`remote.*.mirror`・`remote.*.tagOpt`・`push.followTags`・`push.pushOption`・`url.*.insteadOf`・`core.hooksPath` を書く形（`--get`・`--get-all`・`--get-regexp`・`--list` の読むだけは通す）、`git replace`（`git update-ref refs/replace/…` も）、`.git/hooks/` への書き込み（3 と同じ印）。
+- 通す形（allow-list）: 命令文から作業場所や本文の出どころを推し量らない。決まった形に完全に一致するときだけ照らし、それ以外はすべて止める（照らせないものは通さない）。
+  1. push は `git -C <絶対パス> push [-u|--set-upstream] origin <ref>` だけ。`<ref>` は `HEAD` か、英数字と `/._-` だけのブランチ名（先頭 `-`・`..` は不可）。後ろに付けてよいのは `2>&1` と `> <絶対パス>`／`>> <絶対パス>` だけ。`;`・`&&`・`||`・`|`・`&`・改行・`$`・バッククォート・heredoc・`cd`・`( )`・`<` は、引用符の外に 1 つでもあれば止める。`--force`・`-f`・`--force-with-lease`・`--no-verify`・`--mirror`・`--all`・`--tags`・`--delete`・`:ref` なども決まりの外なので止める。止めた理由の文は「git push は `git -C <worktree の絶対パス> push -u origin <ブランチ>` の形で、ほかの命令とつなげずに単独で流してください」。
+  2. gh の本文は、(a) `--body-file`／`-F` の後ろが絶対パス、(b) 一重引用符で囲んだ `--body`／`-b` の値、の 2 つだけ。(a) はそのファイルを読んで照らし、(b) はその文字列を照らす。題名（`--title`／`-t`／`--title=…`）も本文と同じく照らす。印は gh の操作ごとの表で持つ（同じ字でも操作で意味が違うため）:
+     - `pr create`・`pr edit`・`pr comment`・`pr review`・`issue create`・`issue edit`・`issue comment`: 本文 `--body`／`-b`、本文ファイル `--body-file`／`-F`、題名 `--title`／`-t`。
+     - `pr merge`: 本文は同じ、題名は `--subject`／`-t`。
+     - `release create`・`release edit`: notes は `--notes`／`-n`、notes ファイルは `--notes-file`／`-F`、題名は `--title`／`-t`（`-d` は draft の印で、本文ではない）。`--generate-notes` は自動で付く文面で、照らさずに通す。
+     - `repo edit`: 説明は `--description`／`-d`。
+     - `release create`・`release edit` の位置引数はタグ名の 1 つだけ（2 つ目以降 = 添付ファイルは止める）。値を取る印は `--notes`・`-n`・`--notes-file`・`-F`・`--title`・`-t`・`--target`・`--discussion-category`・`--notes-start-tag` で、それ以外の印は値を取らないものとして数える。`--notes-from-tag` は止める。`gh release upload` も止める。
+     - `gist` はすべて止める。
+     本文・題名・説明の印は、字句の中のどこにあっても（位置や前の印に関係なく）照らす。`gh pr review` の `-a`／`-r`／`-c` などの印の後ろにあっても同じ（値を取る印の表は持たない）。相対パス・`-`・`/dev/*`・heredoc・`$`・バッククォート・二重引用符・引用なしの本文・`-f`／`--fill`／`--fill-first`／`--fill-verbose`／`--editor`／`-e`／`--web`／`-w`／`--template`／`--recover`・本文指定が 2 つ・`-dF` のような短い指定の束ね書きは止める。gh も単独のコマンドで流す（区切り・`cd` があれば止める）。止めた理由の文は「本文は Write で作ったファイルを `--body-file <絶対パス>` で渡してください」。本文の無い gh（`pr edit --add-label` など）と、`gh api`・`gh pr view` などは対象外。
+  3. 引用符の外に書けるのは英数字と `_@%+=:,./-` だけ。二重引用符の中の `$`・バッククォート・`\`・`!` は止める。自前の字句分けと shlex の結果が食い違ったら止める。
+- 照らす repo: 本文はどの repo でも照らす。足した行は、置き場の表に並べた repo（最初は shingo-ops/salesanchor だけ）の push のときだけ照らす。repo は `git -C <絶対パス>` の `<絶対パス>` の origin の URL で決める。表に無い repo の push は照らさずに通す（形が決まりの外なら、repo に関係なく止める）。パスが存在しない・git の repo でない・表に並んだ repo で `origin/main` が無い・sha が取れない・差分が取れない・表が無い／古い／壊れているときは止める（全部拒否に倒す）。
 - 照らすもの:
-  1. `git diff origin/main...HEAD` の追加行（全ファイル）。
-  2. gh の操作の本文。pr-body-guard.sh の取り出し方（~/.claude/scripts/extract-pr-body.py）は create／edit の `--body` だけを拾い、comment や短い形を拾わないので使わない。代わりに、(a) コマンドの文字列全体（`--body` の値、heredoc で書いた本文、`-F -` に流し込む本文を含む）と、(b) `--body-file`／`-F` が指すファイルの中身（`-` は標準入力なので (a)・(c)・(d) で扱う）、の両方を照らす。(b) のファイルが読めないときは止める（全部拒否に倒す）。(c) 本文がコマンドの外から来る形、つまり `< <path>`、`cat <path> |`、`$(cat <path>)` のときは、その path のファイルを読んで照らす。(d) それ以外で、本文の出どころが文字列にもファイルにも決まらないとき（`--body "$VAR"`、`-F -` に別のコマンドの出力を流す、など）は止める（exit 2）。
-- 送るブランチ: `git push` で送るブランチが今いるブランチと違うとき（`git push origin <別ブランチ>`）は、`origin/main...<別ブランチ>` の追加行を照らす。引数なしの `git push` は、今いるブランチ（`HEAD`）を照らす。送るブランチがコマンドから決まらないときは止める。
+  1. push の追加行。`<toplevel>` は `git -C <絶対パス> rev-parse --show-toplevel` で決める（決まらなければ止める）。送る ref の sha を取り、**送る commit のそれぞれが足した行**を、作業場所の設定に左右されない下回りの命令で見る。
+     - 一覧: `git -C <toplevel> rev-list <sha> --not origin/main [origin/<ブランチ名>]`（`origin/<ブランチ名>` があるときだけ足す）。
+     - 足した行: 一覧の commit それぞれについて `git -C <toplevel> diff-tree -p --cc --root -r -M --text --no-textconv --no-ext-diff --ignore-submodules=none -U0 --src-prefix=a/ --dst-prefix=b/ --no-relative <commit>`（実装は一覧を `--stdin` で渡して 1 回で流す。1 commit ずつ流すのと同じ出力）。`diff.relative`・`diff.noprefix`・`diff.mnemonicPrefix`・`diff.external`・`diff.orderFile`・`diff.ignoreSubmodules` や `.gitattributes` の binary／`-diff`・NUL に左右されない（それぞれ設定して試す）。作業場所が repo の下の階層でも、repo 全体の差分を見る。
+     - 足して消した 2 つの commit も、足した側の commit で止まる。merge commit は `--cc` で、衝突を直した行だけを見る（`origin/main` から取り込んだ中身は数えない）。追加や改名したファイルの名前（`+++ b/…`・`rename to …`）も照らす。`HEAD` のブランチ名は `git symbolic-ref` で決める。止めたときは「新しい commit で消しても履歴に残って送られます。該当の commit を書き直すか、origin/main から作り直したブランチで送ってください。書き直しは Opus の指示を待ってください」と案内する。
+     - 注釈つきタグ: 送る ref がタグのとき（タグを指すタグも）と、送る範囲の commit を指す注釈つきタグの文面を `git cat-file -p` で読んで照らす。`push.followTags` が有効だと、送る範囲に無い commit を指すタグまで一緒に送られうるので、`push.followTags` を含むタグ・refspec の送り方を変える設定は、下の「別名・push 先の差し替え」で設定ごと止める（タグの文面を全タグ分は読まない）。
+     - 下回りの git は、すべて `git --no-replace-objects` で流す（`git replace` で commit の中身をすり替えられないため）。
+  - 別名・push 先の差し替え・include: push のとき、`git -C <toplevel> config --get-regexp '^(alias\.|remote\..*\.pushurl|url\..*\.pushinsteadof)'`（すべての設定）と、`--local`・`--worktree`（`extensions.worktreeConfig` が true のときだけ）それぞれの `--get-regexp '^(alias\.|include\.|includeif\.|remote\..*\.pushurl|url\..*\.pushinsteadof|push\.followtags|push\.pushoption|remote\..*\.(push|mirror|tagopt))'` に 1 つでも当たれば止める。さらに `git for-each-ref refs/replace` に 1 件でもあれば止める（表に無い repo も同じ。設定が読めないときも止める）。`--worktree` は `extensions.worktreeConfig` が true のときだけ見る（拡張が無いと、worktree が複数あるときに `--worktree` は失敗し、`config.worktree` も読まれないため）。global の `include` は多くの人が使うので止めない。
+  2. gh の本文と題名。上の (a) のファイルの中身、(b) の文字列、題名の文字列。
+- 作業場所を推し量る処理（`cd`・`-C` 以外の場所決め・`pushd`・heredoc の中身の読み取り・命令文から ref を読む処理）は持たない。理由: 5 回の審査で、命令文を正規表現や shlex で読んで作業場所や本文の出どころを推し量る作りは、直すたびに新しい穴が開いた（F1〜F4、重い 1/2、重い 1、重い 1、重い A/B、6・7 回目の重い指摘）。決まった形だけ通す作りなら、読み間違いが「止まる」側にしか倒れない。
+- 送信前フック（git の pre-push）に移さなかった理由（事実）: 今の環境では多くの worktree で pre-push が走らない。(1) `core.hooksPath` は共有設定（`/Users/tanizawashingo/salesanchor/.git/config`）の 1 つだけで、値は `frontend/.husky/_`。`extensions.worktreeConfig` が無効のため `git config --worktree` は使えない。(2) `scripts/new-worktree.sh:115` の `git -C <worktree> config core.hooksPath frontend/.husky` も共有設定を書き換える（一時リポジトリで再現）が、`frontend/package.json` の `prepare`（husky）が `frontend/.husky/_` に書き戻す。(3) `frontend/.husky/_`（husky の置き場、.gitignore 対象）がある worktree は、`~/worktrees/salesanchor` 配下 51 個のうち 4 個だけ。この worktree にも無く、`git rev-parse --git-path hooks/pre-push` が指す `frontend/.husky/_/pre-push` が存在しない。worktree の土台（new-worktree.sh と既存 51 個）に手を入れるのはこのテーマの範囲を超えるため、送信前フックはやめた。
 - 止める決まり: 次の 3 つを全部満たす語句が 1 つでもあれば exit 2。
   1. 「」または『』の中にあり、4 文字以上。
   2. 除外表に無い。除外表は「状態の言葉の写し」「商品名の写し」「一般語の表」の 3 つ。数字と区切りだけの語句も止めない。
   3. 原文の置き場のどれかのファイルに、そのまま現れる。
 - 止めたときの表示: ファイル名と行番号と語句。表示先は AI の画面だけで、送らないので外には出ない。「形の説明に書き換える」よう案内を付ける。
 - 止めた記録: 既存の見張りと同じ `_hook_blocked_log`（agent-events.jsonl に 1 行足す。pr-body-guard.sh:12・:158 と同じ）で、日時・見張りの名前・ファイル名と行番号・止めた語句の数だけを残す。語句そのものは記録に書かない（記録も社外秘にしないため）。local-hooks-ssot の H7（いつ・何を・なぜ）に当たる。
-- 原文の置き場の表（confidential-corpus.conf）: 原文ファイルの場所の並び。最初は recon §3 の 120 ファイルとする。実装の便で、17 フォルダを担当に確かめさせ、投稿の原文の入ったものを足す。分析の出力（自分たちの言葉が混じる）は入れない。
+- 原文の置き場（PO 決定「1」2026-10-25）: 本番の投稿原文（`ai_ro.public__source_messages` の `raw_text`）だけを、見比べる相手にする。2026-10-25 に ADR-1024 の道で数えた結果は 3,812 行・約 279 万字（うち is_active が真は 228 行・約 8 万字）。is_active に関係なく全行を使う（取り下げた投稿も社外秘だから）。以前の 2 経路（R2-raw の msgs_*.tsv と check3 の msgs/*.txt、計 120 ファイル）は外す。正本は本番の記録 1 か所のまま。
+- 原文の写し: `scripts/agent-hooks/confidential-quote-guard/fetch_corpus.py` が毎日 1 回、本番から鍵付きフォルダ（`~/CC報告ファイル-keep/confid-guard/`、700）に 1 ファイル（`source-messages.txt`、600）だけ取り直す。読み取りは ADR-1024 の道だけ（読み取り専用の鍵、ai_ro の同名ビュー、SQL は標準入力から 1 文ずつ）。manual-only の鍵は使わない。読み取り台本は 1 つの値を 10,240 字で切るので、8,000 字ずつに分けて取って繋ぎ、本番の件数・文字数の合計と一致を確かめる。一時ファイルに書き、一致してから置き換える。途中で失敗したら前の写しを残して 0 以外で終わる。前回の半分未満に減ったときも置き換えず止める。件数・文字数・日時は別ファイル（`source-messages.meta`、本文なし）に残す。
+- 写しが古いとき: guard は、原文の写しが 2 日より古ければ止める（exit 2、「原文の写しが古い」）。古い写しで通すと新しい投稿を照らせないため。
+- 毎日の取り直し: LaunchAgent（`jp.salesanchor.confidential-quote-guard-fetch.plist`、毎日 06:30、RunAtLoad=true・KeepAlive=false）。原本は repo、install.sh が写して登録、rollback.sh が外す（PO が `!` で流す）。多重起動は mkdir ロック＋trap で防ぐ。
+- 原文の置き場の表（confidential-corpus.conf）: `corpus:` の行は上の写し 1 つだけ。`repo:` の行は変えない。
 - 商品名の写し: 共用の商品マスタ（公開して困らない名前）の商品名・シリーズ名・検索ワードを、読み取り専用の道（ADR-1024）で取り出して Mac の社外秘フォルダに置く。recon §4-1 の 170 種類はここと一般語の表で消す想定。写しが古くなると新商品名で誤って止まるので、週の点検で取り直す。
 - 一般語の表（confidential-allow.txt）: 1 行 1 語で、語ごとに足した理由を書く。最初は、ダメージの有無の言い方のように、状態の写しに無い状態の一般語を入れる。足すのは Opus の判断でよい。足したら記録に残し、週の点検で見直す。
 - 置き場の表が無い、空、または読めないときは止める（全部拒否に倒す）。表示で理由を示す。
@@ -60,15 +97,36 @@
 
 | 基準 | 検証方法 |
 |---|---|
-| K1 #4727・#4729 の記録が止まる | 2 つのコミットを土台に置いた試しの作業場所で `git push --dry-run` 相当のコマンドを見張りに渡し、どちらも exit 2 で 1 語以上を示すことを確かめる。語句の数は参考に残す（recon §4 の 10・1 は除外表が状態の写しだけのときの値で、便1 では減ってよい） |
+| K1 #4727 の記録（79ec6fa76）が止まる | そのコミットを子に置いた作り物の repo で、決まった形の push（`git -C <絶対パス> push -u origin HEAD`）を見張りに渡し、exit 2 で 1 語以上を示すことを確かめる。種類数は参考に残す。#4729 の記録（f13e335fb）は K1 の対象外（一般語の表に入れた 1 語だけが残る）で、rc は参考に記録する |
 | K2 #4730 の記録が通る | 同じ方法で 18060e58f を渡し、exit 0 を確かめる |
 | K3 既存の書類で説明できない停止 0 | main の docs と backend/tests を全部当てた一覧を Opus が 1 語ずつ判定し、表に残す（社外秘フォルダに置く） |
 | K4 2 秒以内 | 上の 3 回の time の値 |
 | 置き場が無いと止まる | 表を空にした試しで exit 2 |
 | 表に無い repo は通る・表にある repo で差分が取れないと止まる | origin/main の無い作り物の repo で 2 通りを試し、exit 0 と exit 2 |
-| コメントの本文も照らす | 作り物の原文の語句を入れて、`gh pr comment --body`・`gh pr comment -b`・`gh pr review -F <file>`・`gh issue comment -F -`（heredoc）・`gh pr create --body=…`・`gh pr comment -F - < <file>`・`gh pr comment --body "$(cat <file>)"` の 7 通りがどれも exit 2。`gh pr comment --body "$VAR"` も exit 2 |
+| コメントの本文も照らす | 作り物の原文の語句を入れて、(a) `--body-file <絶対>`・`-F <絶対>`・`--body-file=<絶対>`、(b) `--body '…'`・`-b '…'`・`--body='…'` がどれも exit 2。語句を入れない同じ形は exit 0 |
+| 決まりの外の gh の形は止まる | 相対パス・`-`・`/dev/stdin`・`/dev/fd/*`・heredoc・`$(cat …)`・二重引用符・`--fill*`・`--editor`・`--web`・`--template`・`--recover`・本文 2 つ・束ね書き・パイプ・`&&`・`cd` つきが、中身が clean でもすべて exit 2 |
 | 本文のファイルが読めないと止まる | 存在しないファイルを `--body-file` と `-F` に渡して、どちらも exit 2 |
-| 別のブランチを送るときも照らす | 作り物の語句を足したブランチを、別のブランチにいるまま `git push origin <そのブランチ>` で送ろうとして exit 2 |
+| 決まりの外の push は止まる | `cd <絶対> && git push`・`git push origin HEAD 2>&1 \| tail`・`git -C <相対> push`・`--force-with-lease`・`--no-verify`・`GIT_DIR=… git push`・審査の J1・G1〜G3・B1〜B5・A1・A3・C2・C3・E7・E8 が、中身が clean でもすべて exit 2 |
+| 別のブランチを送るときも照らす | 作り物の語句を足したブランチを、別のブランチにいるまま `git -C <絶対> push -u origin <そのブランチ>` で送ろうとして exit 2 |
+| gh review の印の後ろの本文 | `gh pr review` の `-r`／`-a`／`-c` に `-b`・`-F` を付けた形で書き写しありが exit 2 |
+| 題名も照らす | `--title`／`-t`／`--title=…` に作り物の原文を入れて exit 2 |
+| 途中の commit も照らす | 足して消す 2 つの commit は exit 2。origin/main を merge commit で取り込んだだけのブランチは、main 側の中身では止まらない。衝突を直した行は exit 2 |
+| 差分の取り方に左右されない | `.gitattributes` の binary／`-diff`・NUL・`diff.noprefix`・`diff.mnemonicPrefix`・ファイル名・改名だけ、がどれも exit 2 |
+| 別名・push 先の差し替え | `alias.*`・`remote.*.pushurl`・`url.*.pushInsteadOf` が repo の設定にあると exit 2。それらを書き換える操作も exit 2 |
+| 字句の見分け | `g\it`・`pus""h`・`'gi't`・`g\h`・`p''r`・字句に分けられない（git／gh を含む）が exit 2 |
+| 作業場所の設定に左右されない | `diff.relative`・`diff.noprefix`・`diff.mnemonicPrefix`・`diff.external`・`diff.orderFile`・`diff.ignoreSubmodules` をそれぞれ設定し、repo の上の階層と下の階層（`-C <repo>/sub`）の両方から送って exit 2。設定ありで中身が clean のときは exit 0 |
+| 送信系の命令は止まる | `send-pack`・`http-push`・`git-send-pack`・`g\it send-pack`・`sh -c` の中・`&&` でつないだ形が exit 2。`git log` と `echo send-pack` は exit 0 |
+| include と設定ファイルの書き込み | `git config include.path`・`includeIf`・`git -c include.path=`・`>>`／`tee`／`cp`／`mv`／`sed -i`／`python` で `.git/config`・`config.worktree` に書く形が exit 2。`cat .git/config` と `git config user.name` は exit 0。`--local`／`--worktree` に include／alias があると push が exit 2。worktree が複数ある repo（拡張なし）の clean な push は exit 0 |
+| 追跡ブランチを手で進める | `git update-ref refs/remotes/…`・`git fetch . x:refs/remotes/…`・`git symbolic-ref refs/remotes/…`・`.git/refs/remotes`／`packed-refs` への書き込みが exit 2。`git fetch origin` と読むだけは exit 0 |
+| gh の範囲 | `issue edit`・`release create/edit`（`--notes`／`-n`／`--notes-file`／`-F`／`--title`／`-t`）・`repo edit`（`--description`／`-d`）・`pr merge --body` に作り物の原文で exit 2、`gist` は全部 exit 2。中身なしの同じ形、`release create -d`（draft）、`--generate-notes` は exit 0 |
+| 展開で隠す形 | `x=push; git $x`・`pu$'s'h`・`$(printf …)`・`G=git; $G`・バッククォート・行末の `\`・`$X push`・`env $X`・`{git,push}`・glob の `g?t`・`/usr/bin/g[i]t`・`g*`・`gh pr $a`・`X=gh; $X pr comment`・`git -C $W push origin x`・`git -C <W> $x origin x`・`git -C <W> commit -m "$(git push origin x)"` が exit 2。`echo $HOME`・`ls *.md`・`cat a?b`・`git status -- '*.py'`・heredoc 付きの `git -C <W> commit -m "$(cat <<'EOF' … EOF)"`（本文に git push があっても）・`git status \| awk '{print $2}'`・`git log \| grep 'x$'`・`echo $PATH \| tr : '\n' \| grep git` は exit 0。`gh pr -R o/r comment`・`gh pr --repo o/r comment`・`gh issue -R o/r create`・`gh release -R o/r create`・`bash <<< '…push…'`・`echo '…push…' \| bash` は書き写しありで exit 2。`gh pr -R o/r view 1`・`gh pr -R o/r list` は exit 0 |
+| URL の書き方 | origin が大文字・末尾 `/`・`.git`・`git@`・`ssh://…:22/`・`HTTPS://` のどの書き方でも同じ owner/name と読み、書き写しありの push が exit 2。`git remote set-url`／`add`・`git config remote.*.url` の書き込みが exit 2、`remote -v`・`remote get-url`・`config --get remote.origin.url` は exit 0 |
+| 送り方を変える設定 | `push.followTags`・`push.pushOption`・`remote.*.push`・`mirror`・`tagOpt` の書き込みと、`--local`／`--worktree` にある状態の push が exit 2。戻すと exit 0 |
+| git replace | `git replace`・`update-ref refs/replace` が exit 2。`refs/replace` がある repo の push は clean でも exit 2、消すと clean は exit 0・書き写しは exit 2 |
+| gh release の別の出口 | 添付ファイルの位置引数・`--notes-from-tag`・`release upload` が exit 2。タグ名だけ + `--notes`・`--draft`・`--target`・`--generate-notes`・`release list`／`view` は exit 0 |
+| hooks | `.git/hooks/` への `>`・`cp`・`tee` と `core.hooksPath` の書き込みが exit 2。`cat`・`ls` は exit 0 |
+| 注釈つきタグ | 送る ref がタグ（入れ子も）、または送る範囲の commit を指すタグの文面に作り物の原文で exit 2。文面が clean なタグは exit 0 |
+| 場所の条件 | 表に無い repo は exit 0、パスが存在しない・git の repo でない・origin/main が無い表の repo は exit 2 |
 | 止めた記録が残る | 止めた試しのあと agent-events.jsonl の最後の行に、見張りの名前・日時・件数があり、語句が無い |
 | 見張りのテスト | scripts/agent-hooks/confidential-quote-guard/ に作り物の原文で試すテストを置く（本物の原文はテストに入れない）。止まる・通る・置き場なし・除外表・「」の外は止めない、の 5 つ |
 
@@ -102,23 +160,24 @@
 ## 9. 戻し方
 
 - PO が `!` で rollback.sh（便1 で scripts/agent-hooks/confidential-quote-guard/ に作る）を流し、settings.json の登録 1 つを外す（review-gate と同じ形）。変える前の settings.json は日付付きの写しで残す。
-- 表 2 つとスクリプトは消さずに残してよい（登録が無ければ動かない）。
+- rollback.sh は毎日の取り直し（LaunchAgent）も外す。表 2 つ・原文の写し・スクリプトは消さずに残してよい（登録が無ければ動かない）。
 
 ## 10. 審査（同一 AI の自己審査）
 
 - 結論: APPROVE（設計として）。#4736 の reviewer（opus）の REVISE（A〜K）を受けて、実行する人（PO の `!`）・止めた記録・写しのずれの点検・コメントの本文・照らす repo の決め方を足した。最初の案では見張りを Mac のホームにだけ置く形だったが、local-hooks-ssot（原本を repo に置く）と食い違うため、review-gate と同じ置き方に直した。
-- 根拠: 止める決まりは recon §4 の試しで K1 の 2 件を止め、K2 で止まる 1 語は一般語の表で消える。既存の書類に当てた試し（recon §4-1）で、商品名で誤って止まることが分かったため、除外表に商品名の写しを足した。止める場所（PreToolUse:Bash、exit 2）は既存の見張りと同じ形（recon §2）。
+- 根拠: 止める決まりは K1 の 79ec6fa76 を止め、K2 で止まる 1 語は一般語の表で消える（f13e335fb は PO 決定「1」2026-10-26 で K1 から外した）。既存の書類に当てた試し（recon §4-1）で、商品名で誤って止まることが分かったため、除外表に商品名の写しを足した。止める場所（PreToolUse:Bash、exit 2）は既存の見張りと同じ形（recon §2）。
 - 未解決:
-  - 原文の置き場の 17 フォルダの中身（便1 の最初に確かめる。確かめるまでは 120 ファイルで動かす）。
+  - 原文の置き場は、本番の投稿原文に決まった（PO 決定「1」2026-10-25。17 フォルダの調べは不要になった）。
   - main にすでにある書き写しに見える約 140 種類の扱い（PO 判断。この設計の実装とは独立）。
 
 ## 維持の仕組み
 
 - 守り手: 人手で守る。理由: 関所の本体（scripts/agent-hooks/confidential-quote-guard/guard.py）は便1 で作るため、この設計の段階ではまだ無い。それまでは Opus が書いたあと原文と照らす（この PR でも実施）。便1 のあとの守り手は guard.py と、下の週の点検。
-- 対象: guard.py の原本と ~/.claude/scripts に写したもの、confidential-corpus.conf、confidential-allow.txt、商品名の写し。
-- 週の点検（agent-console の定期実行。Opus が結果を見る）で、次の 4 つを数える。
+- 対象: guard.py と fetch_corpus.py の原本と ~/.claude/scripts に写したもの、confidential-corpus.conf、confidential-allow.txt、商品名の写し。
+- 週の点検（agent-console の定期実行。Opus が結果を見る）で、次の 5 つを数える。
   - 原本（origin/main の guard.py）と写したもの（~/.claude/scripts）の diff。1 行でも違えば知らせる（local-hooks-ssot の H4・H5）。
   - 一般語の表の行数と、その週に足した語。
   - 商品名の写しの日付（7 日より古ければ取り直す）。
-  - 社外秘フォルダの新しいフォルダのうち、置き場の表に無いもの。
+  - 原文の写しの日付（2 日より古ければ知らせる。毎日の取り直しが止まっている印）。
+  - 原文の写しの件数が前回より減っていないか（減っていれば知らせる。取り直しの時点で半分未満なら置き換えずに止まる）。
 - 決まりの正本: 便1 の ADR。
