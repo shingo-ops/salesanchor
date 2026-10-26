@@ -382,6 +382,48 @@ b8slow = [t for t in b_times if t[2] >= 1.0]
 fail += (len(b8slow) > 0)
 print(f"B8  1秒以上かかった件: {len(b8slow)}（最大 {max(t[2] for t in b_times):.3f} 秒） {'OK' if not b8slow else 'NG'}")
 
+# ---- 時間切れの扱い T1〜T5（指摘5 の続き 便1）----
+GUARD = os.path.join(D, "guard_pre_tool.py")
+def run_guard(inp, extra=None):
+    env = dict(os.environ); env.update(extra or {})
+    t = time.time()
+    p = subprocess.run(["python3", GUARD], input=json.dumps(inp), capture_output=True, text=True, env=env)
+    return p.returncode, p.stdout, p.stderr, time.time() - t
+print("== 時間切れ T1〜T5 ==")
+rc, out, err, sec = run_guard(bash("echo " + "$(true)" * 10000), {"CLOUD_GUARD_DEADLINE_SEC": "1"})
+ok = rc == 2 and "時間内に中身を確かめられない" in err
+fail += (not ok)
+print(f"T1  上限1秒で $(true) 1万個→止める+理由文  期待 2 実際 {rc} {sec:.2f}秒 {'OK' if ok else 'NG'}")
+print("      止めた文言: " + err.strip().replace("\n", " ")[:160])
+rc, out, err, sec = run_guard(bash("echo hi"))
+ok = rc == 0 and not err.strip()
+fail += (not ok)
+print(f"T2  既定の上限で echo hi→通す  期待 0 実際 {rc} {sec:.2f}秒 {'OK' if ok else 'NG'}")
+_st = json.load(open(os.path.join(WORKTREE, ".claude", "settings.json"), encoding="utf-8"))
+_pre = _st["hooks"]["PreToolUse"]
+_disp = [h for e in _pre for h in e["hooks"] if "cloud/dispatch.sh" in h.get("command", "")]
+HEAD = '[ "$CLAUDE_CODE_REMOTE" = "true" ] || exit 0;'
+ok = len(_disp) == 3 and all(h.get("onFailure") == "block" and h["command"].startswith(HEAD) for h in _disp)
+fail += (not ok)
+print(f"T3  PreToolUse の dispatch {len(_disp)}項目すべて onFailure block＋先頭判定  期待 3項目 {'OK' if ok else 'NG'}")
+_cmd = _disp[0]["command"] if _disp else "exit 1"
+env = dict(os.environ); env.pop("CLAUDE_CODE_REMOTE", None); env["CLAUDE_PROJECT_DIR"] = "/nonexistent"
+t = time.time()
+p = subprocess.run(["sh", "-c", _cmd], input="{}", capture_output=True, text=True, env=env)
+ok = p.returncode == 0 and not p.stdout and not p.stderr
+fail += (not ok)
+print(f"T4  手元(REMOTE 未設定・PROJECT_DIR 無効)で即 exit 0  期待 0 実際 {p.returncode} {time.time()-t:.2f}秒 {'OK' if ok else 'NG'}")
+env = dict(os.environ); env["CLAUDE_CODE_REMOTE"] = "true"; env["CLAUDE_PROJECT_DIR"] = WORKTREE
+p = subprocess.run(["sh", "-c", _cmd], input=json.dumps(bash("echo hi")), capture_output=True, text=True, env=env)
+ok = p.returncode == 0
+fail += (not ok)
+print(f"T5  クラウド(REMOTE=true)で無害な Bash→dispatch が呼ばれて exit 0  期待 0 実際 {p.returncode} {'OK' if ok else 'NG'}")
+env["CLAUDE_PROJECT_DIR"] = tmp  # dispatch.sh が無い場所→onFailure block 側で止まる形（exec 失敗は 0 以外）
+p = subprocess.run(["sh", "-c", _cmd], input=json.dumps(bash("echo hi")), capture_output=True, text=True, env=env)
+ok = p.returncode not in (0,)
+fail += (not ok)
+print(f"T5b クラウドで dispatch.sh が見つからない→0 以外（onFailure block が効く形）  実際 {p.returncode} {'OK' if ok else 'NG'}")
+
 print("== CLAUDE_CODE_REMOTE 未設定（K6: 全件 exit 0・出力なし）==")
 allinp = [c[2] for c in cases] + [{"hook_event_name": "SessionStart", "source": "startup"}]
 bad = 0
