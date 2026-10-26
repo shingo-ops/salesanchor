@@ -71,9 +71,9 @@
 ## 6. 直し方の材料（事実のみ）
 
 - **`inert`（＝その枝をまるごと無効にする印）は DOM の性質として型定義にある**:
-  `frontend/node_modules/typescript/lib/lib.dom.d.ts:13730` に `inert: boolean`。
+  TypeScript 同梱の DOM 型定義（lib.dom.d.ts の 13730 行目） に `inert: boolean`。
   → `ref` 経由で `el.inert = true` と書けば**型の細工は不要**。
-  一方 **JSX の属性としては実験的扱い**（`frontend/node_modules/@types/react/experimental.d.ts:130` にのみ存在）なので、
+  一方 **JSX の属性としては実験的扱い**（React の実験的型定義（@types/react の experimental.d.ts の 130 行目） にのみ存在）なので、
   `<div inert>` と直接書く形は採らない。React は `frontend/package.json:84` で `^18.3.1`。
   下請け調査は「React 18 では使えない」と報告したが、**正確には「JSX 属性としては使えない／DOM の性質としては使える」**。
 - `inert` は**リポジトリ内で未使用**（先例なし）。
