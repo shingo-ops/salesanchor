@@ -71,6 +71,19 @@ recon §4 と design ① は「閲覧ページは Popover を使っていない�
 読み込みに8〜10秒かかる端末の遅さ。`InventoryPage.toolbar.test.tsx` は在庫表の操作台＝`MultiSelect` を使う所なので
 **本便の影響でないことを確かめる価値があった**（確かめた結果、無関係）。
 
+### R10. 新 spec の B1 が CI の3幅で赤・B2 は空振りで緑だった（前提の不成立）
+
+PR #4780 の CI「画面検査（内部）」run 40301919199 / job 121501741073 で、新設 `popover-mold.spec.ts` の
+B1（C1・スクロールしてから開くと押したボタンのすぐ下に出る）が3幅すべて赤。原文は
+`expect(scrollY).toBeGreaterThanOrEqual(100)` で `Received: 0`。原因は閲覧ページが `DataTable` の
+`stickyHeader` を使っていて（`InventoryView.tsx:660` → `DataTable.css:208-209` の `max-height` + `overflow: auto`、
+トークンは `tokens.css:530`）**表の中だけがスクロールし document の高さが画面を超えない**ため、
+`window.scrollY` が常に 0 になること。同じ理由で B2（C5）は窓が動かず「ボタンもパネルも動かない＝gap が
+変わらないまま通る」**空振りで緑**になっていた（何も確かめていなかった）。
+直し方は製品コード・CSS を1行も変えず、検査側に `body { min-height: 300vh; }` を注入して窓が動く状況だけを
+作るヘルパー `makePageScrollable` を追加し、B1 はそのまま使い、B2 には「ボタンが実際に画面内で上へ動いたこと」の
+assert を足して空振りを防いだ。
+
 ## 4. 実装そのものの点検（設計との一致）
 
 | 設計 | 実装 | 一致 |
@@ -89,3 +102,5 @@ recon §4 と design ① は「閲覧ページは Popover を使っていない�
 **条件付き合格**。残るのは `frontend/tests-e2e/visual-language/popover-mold.spec.ts`（新設）だけで、
 これが入り CI の画面検査3幅が緑になれば main へ出して良い。
 R1 の訂正は本審査で書類に反映済み。R2・R4 は ⑫ に起票して次便へ送る。
+R10（2026-10-26 追記）: B1 の赤・B2 の空振りは検査側の前提不足が原因で、検査を直したうえで
+CI の3幅が緑になることを条件付き合格の確認対象に含める。

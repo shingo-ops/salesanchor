@@ -29,7 +29,7 @@
 | K2 | スマホで絞り込みを開く | 一覧の**左右が画面の中に収まる**（文字が切れない・横スクロールが出ない） |
 | K3 | 開いたまま画面を上下に動かす | 一覧が**ボタンに付いてくる**（置き去りにならない） |
 | K4 | PC で今までどおり | スクロールしていない状態で開いたときの見た目・位置は**今と同じ** |
-| K5 | **閲覧ページを PC** で下へ送ってから絞り込み（状態・提供者）を開く | 一覧が**押したボタンのすぐ下**に出る（K1 と同じ直しがここにも届く・訂正で判明） |
+| K5 | **閲覧ページを PC** で下へ送ってから絞り込み（状態・提供者）を開く | ~~一覧が押したボタンのすぐ下に出る~~ **2026-10-26 再訂正**: 閲覧ページ・在庫表の PC 幅は `DataTable` の `stickyHeader`（`frontend/src/components/DataTable.css:208-209` の `max-height: var(--comp-table-sticky-max-h); overflow: auto;`。トークンは `frontend/src/tokens.css:530` の `calc(100vh - 18rem)`）で**表の中だけがスクロールし、document の高さが画面を超えない**（CI run 40301919199 で実測：`window.scrollY` が常に 0）。よって「PC で下へ送ってから開く」状況自体がこの画面では起きず、**K5 は実機で確かめられない**（観測不能）。直しそのものは `Popover` 金型の中身に入っているので、窓（document）側が動く使い方（例: `MultiSelect` を使う `frontend/src/pages/inventory/InventoryFilterPanel.tsx` など、表の外に出る使い方）や将来そうした画面で使われたときに効く |
 
 ## ③ KPI（機械で測る値）
 
@@ -95,6 +95,21 @@
 ## ⑤ Acceptance Criteria
 
 **測り方の共通の決まり**: `scrollIntoView` は使わない。開いているパネルは `.comp-popover` で取る。スマホ幅は 390（CI の vl-mobile-390）と、単体テストで 360 を作る。
+
+**C1・C5 の測り方の前提（2026-10-26 追記・CI run 40301919199 / job 121501741073 で判明）**:
+新 spec（`popover-mold.spec.ts`）の C1（B1）は PR #4780 の CI で3幅とも赤になった。原文は
+`window.scrollBy(0, 400)` の直後の `expect(scrollY).toBeGreaterThanOrEqual(100)` が
+`Received: 0`。原因は閲覧ページが `DataTable` に `stickyHeader` を渡している
+（`frontend/src/pages/viewer/InventoryView.tsx:660`）こと。`stickyHeader` の箱は
+`frontend/src/components/DataTable.css:208-209` で `max-height: var(--comp-table-sticky-max-h); overflow: auto;`、
+トークンは `frontend/src/tokens.css:530` の `calc(100vh - 18rem)`。つまり**表の中だけがスクロールし、
+document の高さが画面を超えない**ため `window.scrollY` は常に 0 になる（在庫表 `InventoryPage.tsx:593` も同じ構造）。
+同じ理由で C5（B2）は「窓が動かない＝ボタンもパネルも動かず gap が変わらない」まま**空振りで緑**になっていた
+（＝実際には何も確かめていなかった）。
+直し方: 製品コード・CSS は変えず、**spec 側**で `body { min-height: 300vh; }` を注入して
+「窓（document）が動く」状況だけを作るヘルパー `makePageScrollable` を使う。C1 は既存の
+`expect(scrollY).toBeGreaterThanOrEqual(100)` をそのまま歯止めとして残し（前提が崩れたら赤くする）、
+C5 は追加で「ボタンが実際に画面内で上へ動いたこと」を assert して空振りを防ぐ。
 
 | # | 基準 | 検証方法 |
 |---|---|---|

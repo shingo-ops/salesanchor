@@ -58,11 +58,32 @@ async function expectWithinViewport(page: Page, popover: Locator): Promise<void>
   await expectNoPageOverflow(page);
 }
 
+/**
+ * 窓（ページ全体）を縦に動かせる状態にする。
+ * 閲覧ページは DataTable の stickyHeader（DataTable.css:208-209 の max-height + overflow: auto・
+ * トークンは tokens.css:530 の calc(100vh - 18rem)）で表の中だけがスクロールするため、
+ * 既定では document の高さが画面を超えず window.scrollY が常に 0 になる
+ * （2026-10-26 の CI run 40301919199 で B1 がこの前提で3幅とも赤になって判明）。
+ * 検査用に body を高くして「窓が動く」状況だけを作る（製品の CSS は変えない）。
+ */
+async function makePageScrollable(page: Page): Promise<void> {
+  await page.addStyleTag({ content: "body { min-height: 300vh; }" });
+  await expect(async () => {
+    const { scrollHeight, innerHeight } = await page.evaluate(() => ({
+      scrollHeight: document.documentElement.scrollHeight,
+      innerHeight: window.innerHeight,
+    }));
+    expect(scrollHeight).toBeGreaterThan(innerHeight + 400);
+  }).toPass();
+}
+
 test.describe("visual-language: Popover 金型（スクロール追従・画面内収め）", () => {
   test("B1（C1）スクロールしてから開くと押したボタンのすぐ下に出る", async ({ page }) => {
     // fixture（60行）は通常の高さ(900)では縦スクロールの余地が無いことがあるため、
     // viewport の高さを 500 に縮めて縦スクロールを作る（design.md の指示どおり）
     await gotoViewer(page, { width: 1280, height: 500 });
+    // 閲覧ページは表の中だけがスクロールするため、窓自体も動く状況を別途作る（上の注記）
+    await makePageScrollable(page);
 
     await page.evaluate(() => window.scrollBy(0, 400));
     const scrollY = await page.evaluate(() => window.scrollY);
@@ -83,22 +104,31 @@ test.describe("visual-language: Popover 金型（スクロール追従・画面�
 
   test("B2（C5）開いたまま動かすと付いてくる", async ({ page }) => {
     await gotoViewer(page, { width: 1280, height: 900 });
+    // 窓が動かないと、ボタンもパネルも動かず gap が変わらないまま空振りで緑になる（上の注記）
+    await makePageScrollable(page);
 
     const button = page.getByTestId("viewer-provider-filter-button");
+    const beforeBox = await button.boundingBox();
+    expect(beforeBox).not.toBeNull();
+
     const popover = await openProviderPopover(page);
 
     await page.evaluate(() => window.scrollBy(0, 200));
+    const scrollY = await page.evaluate(() => window.scrollY);
+    expect(scrollY).toBeGreaterThanOrEqual(100);
 
     // scroll イベントの測り直し（Popover.tsx の measure()）が反映されるまで待つ
     // （固定時間の waitForTimeout は使わない。design.md の指示どおり toPass を使う）
     await expect(async () => {
-      const buttonBox = await button.boundingBox();
+      const afterBox = await button.boundingBox();
       const popoverBox = await popover.boundingBox();
-      expect(buttonBox).not.toBeNull();
+      expect(afterBox).not.toBeNull();
       expect(popoverBox).not.toBeNull();
-      const gap = popoverBox!.y - (buttonBox!.y + buttonBox!.height);
+      const gap = popoverBox!.y - (afterBox!.y + afterBox!.height);
       expect(gap).toBeGreaterThanOrEqual(GAP_PX - GAP_TOLERANCE);
       expect(gap).toBeLessThanOrEqual(GAP_PX + GAP_TOLERANCE);
+      // 空振りで緑にならないこと：窓が動いた分だけボタンも実際に画面内で上へ動いていること
+      expect(beforeBox!.y - afterBox!.y).toBeGreaterThanOrEqual(100);
     }).toPass();
   });
 
