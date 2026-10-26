@@ -19,6 +19,7 @@ import ReactDOM from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Button } from "./Button";
 import { X, ArrowTopRight, ArrowLeft } from "../constants/icons-base";
+import { useFocusTrap, getFirstFocusable } from "../hooks/useFocusTrap";
 import "./Drawer.css";
 
 interface DrawerBaseProps {
@@ -98,35 +99,8 @@ export function Drawer({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [open, onClose, onEscape]);
 
-  /* フォーカストラップ */
-  useEffect(() => {
-    if (!open) return;
-    const panel = panelRef.current;
-    if (!panel) return;
-
-    const handleTab = (e: KeyboardEvent) => {
-      if (e.key !== "Tab") return;
-      const focusable = getFocusableElements(panel);
-      if (focusable.length === 0) { e.preventDefault(); return; }
-      const first = focusable[0];
-      const last  = focusable[focusable.length - 1];
-
-      if (e.shiftKey) {
-        if (document.activeElement === first) {
-          e.preventDefault();
-          last.focus();
-        }
-      } else {
-        if (document.activeElement === last) {
-          e.preventDefault();
-          first.focus();
-        }
-      }
-    };
-
-    document.addEventListener("keydown", handleTab);
-    return () => document.removeEventListener("keydown", handleTab);
-  }, [open]);
+  /* フォーカストラップ（共通化: frontend/src/hooks/useFocusTrap.ts。design.md 4-3） */
+  useFocusTrap(open, panelRef);
 
   if (!portalTarget) return null;
 
@@ -205,25 +179,3 @@ export function Drawer({
   );
 }
 
-/* ----------------------------------------------------------------
-   ユーティリティ
-   ---------------------------------------------------------------- */
-
-const FOCUSABLE_SELECTOR = [
-  "a[href]",
-  "button:not([disabled])",
-  "input:not([disabled])",
-  "select:not([disabled])",
-  "textarea:not([disabled])",
-  "[tabindex]:not([tabindex='-1'])",
-].join(",");
-
-function getFocusableElements(container: HTMLElement): HTMLElement[] {
-  return Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
-    (el) => !el.closest("[aria-hidden='true']"),
-  );
-}
-
-function getFirstFocusable(container: HTMLElement): HTMLElement | null {
-  return getFocusableElements(container)[0] ?? null;
-}
