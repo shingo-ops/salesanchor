@@ -1772,15 +1772,6 @@ input[type="date"].karte-field-empty:not(:focus)::-webkit-datetime-edit { color:
 .outbound-translation-regenerate-btn:disabled { opacity: var(--opacity-disabled); cursor: not-allowed; }
 .outbound-translation-preview-btn:hover:not(:disabled),
 .outbound-translation-regenerate-btn:hover:not(:disabled) { opacity: var(--opacity-hover); }
-.outbound-translation-send-btn {
-  padding: var(--space-2) var(--space-4);
-  border: none; border-radius: var(--radius-sm);
-  background: var(--accent); color: var(--on-accent, white);
-  font-size: var(--font-sm); font-weight: 600; cursor: pointer;
-  transition: opacity var(--transition-micro);
-}
-.outbound-translation-send-btn:disabled { opacity: var(--opacity-disabled); cursor: not-allowed; }
-.outbound-translation-send-btn:hover:not(:disabled) { opacity: var(--opacity-dim); }
 .outbound-translation-error {
   color: var(--danger); font-size: var(--font-xs);
   background: var(--danger-bg); border-radius: var(--radius-sm);
