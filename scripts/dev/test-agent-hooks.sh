@@ -281,6 +281,21 @@ if [ -f "$HOOKDIR/agent-danger-hook.sh" ]; then
   t T7-k8  agent-danger-hook.sh W 2 'cd /Users/x/.claude/projects/-p && cat s.jsonl 2>&1'
   t T7-k9  agent-danger-hook.sh W 2 'cat /Users/x/.claude/projects/-p/s.jsonl > /tmp/out.txt'
   check_new_kinds T7-kind2 "$K1S" "write write write write write write read read read"
+  # 審査 LOW-2: Path(...).open('a') は write
+  K2S="$(guard_kinds)"
+  t T7-k10 agent-danger-hook.sh W 2 "python3 -c \"from pathlib import Path; Path('/Users/x/.claude/projects/-p/s.jsonl').open('a').write('x')\""
+  check_new_kinds T7-kind3 "$K2S" "write"
+  # 審査 HIGH-1: 64KB 程度の長いコマンド（記録のパスと open(a, のくり返し）が5秒以内に exit 2 で止まり、kind は write
+  K3S="$(guard_kinds)"
+  LONGCMD="$(python3 -c 'print("python3 -c \"" + "open(a, " * 5000 + " /Users/x/.claude/projects/-p/s.jsonl" * 1000 + "\"")')"
+  LT0=$SECONDS
+  t T7-long agent-danger-hook.sh W 2 "$LONGCMD"
+  LT1=$SECONDS
+  if [ -z "${ONLY:-}" ]; then
+    if [ "$((LT1 - LT0))" -le 5 ]; then PASS=$((PASS + 1)); RESULTS+=("T7-long-time 長いコマンド(${#LONGCMD}字)の所要 $((LT1 - LT0)) 秒 <= 5 PASS")
+    else FAIL=$((FAIL + 1)); RESULTS+=("T7-long-time 長いコマンドの所要 $((LT1 - LT0)) 秒 > 5 FAIL"); fi
+  fi
+  check_new_kinds T7-kind4 "$K3S" "write"
   t T7-b8  agent-danger-hook.sh W 0 'tmux ls'
   t T7-b9  agent-danger-hook.sh W 0 'ls'
 

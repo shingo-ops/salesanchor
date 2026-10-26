@@ -290,8 +290,8 @@ def wl(rows):
 def iso(d):
     return d.isoformat()
 since = T0 - td(86400)
-ev = [{"type": "consent_guard_blocked", "ts": iso(T0 + td(60)), "kind": "write", "condition": "tmux-inject"},     # 区間内
-      {"type": "consent_guard_blocked", "ts": iso(T0 + td(5000)), "kind": "write", "condition": "tmux-inject"}]   # 区間外（write は疑い）
+ev = [{"type": "consent_guard_blocked", "ts": iso(T0 + td(60)), "kind": "inject", "condition": "tmux-inject"},     # 区間内
+      {"type": "consent_guard_blocked", "ts": iso(T0 + td(5000)), "kind": "inject", "condition": "tmux-inject"}]   # 区間外（write は疑い）
 wl([{"start": iso(T0)}, {"end": iso(T0 + td(600))}])
 wins, nw = audit.load_windows(hw)
 sus, rd, inside = audit.count_guard_split(ev, since, wins)
@@ -353,9 +353,10 @@ rep("K15-6", "旧形式の inject 系・ファイル書き込みは疑い（2行
 wf = audit.bash_write_form
 rep("K15-7", "書き込みの形: tee -a・sed -i・python の open 'a'・cd の後の > は write",
     wf("echo a | tee -a " + P) and wf("sed -i s/a/b/ " + P) and wf("python3 -c \"open('" + P + "','a').write('x')\"")
-    and wf("cd ~/.claude/projects/-p && echo x > s.jsonl") and wf("cp " + P + " /tmp/z"))
+    and wf("cd ~/.claude/projects/-p && echo x > s.jsonl") and wf("cp " + P + " /tmp/z")
+    and wf("python3 -c \"Path('" + P + "').open('a').write('x')\"") and wf("x" * 4001))
 rep("K15-8", "書き込みの形: 読むだけ（grep・cat | head・python の open 読み・/dev/null への出力）は read",
     (not wf("grep x " + P)) and (not wf("cat " + P + " | head")) and (not wf("python3 -c \"print(open('" + P + "').read())\""))
-    and (not wf("cat " + P + " 2>/dev/null")) and (not wf("cd ~/.claude/projects/-p && cat s.jsonl 2>&1")))
+    and (not wf("cat " + P + " 2>/dev/null")) and (not wf("python3 -c \"print(Path('" + P + "').open('r').read())\"")) and (not wf("cd ~/.claude/projects/-p && cat s.jsonl 2>&1")))
 
 print("DONE", flush=True)

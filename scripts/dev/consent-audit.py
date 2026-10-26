@@ -219,6 +219,8 @@ def _write_words(cmd, need):
             return True
         if re.search(r"""open\([^)]*?,\s*(?:mode\s*=\s*)?['"][rwxabt+]*[wax+][rwxabt+]*['"]""", cmd):
             return True
+        if re.search(r"""\.open\(\s*(?:mode\s*=\s*)?['"][rwxabt+]*[wax+][rwxabt+]*['"]""", cmd):
+            return True
     return False
 
 
@@ -226,6 +228,8 @@ def bash_write_form(cmd):
     """Bash の書き込みの形（design §13-3(a) の 1〜4）。迷う形は True（write 側）。
     agent-danger-hook.sh の CONSENT_GUARD と同じ規則。変えるときは両方。"""
     try:
+        if len(cmd) > 4000:
+            return True  # 長いコマンドは調べずに write（判定の時間切れを防ぐ）
         if _write_words(cmd, True):
             return True
         if re.search(r"(?<![\w.-])(?:cd|pushd)(?![\w-])[^|;&\n]*\.claude/projects/", cmd):

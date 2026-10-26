@@ -294,10 +294,14 @@ def write_words(c, need):
             return True
         if re.search(r'open\([^)]*?,\s*(?:mode\s*=\s*)?[\'"][rwxabt+]*[wax+][rwxabt+]*[\'"]', c):
             return True
+        if re.search(r'\.open\(\s*(?:mode\s*=\s*)?[\'"][rwxabt+]*[wax+][rwxabt+]*[\'"]', c):
+            return True
     return False
 
 def bash_write_form(c):
     try:
+        if len(c) > 4000:
+            return True  # 長いコマンドは調べずに write（判定の時間切れを防ぐ。design §13-3(a)）
         if write_words(c, True):
             return True
         if re.search(r'(?<![\w.-])(?:cd|pushd)(?![\w-])[^|;&\n]*\.claude/projects/', c):
@@ -316,7 +320,11 @@ if cond:
         kind = 'inject'
     print(cond + ' ' + kind)
 PYEOF
-CONSENT_GUARD=$(python3 -c "$CONSENT_GUARD_PY" "$COMMAND" 2>/dev/null)
+if [ -n "$CONSENT_GUARD_PY" ]; then
+  CONSENT_GUARD=$(python3 -c "$CONSENT_GUARD_PY" "$COMMAND" 2>/dev/null)
+else
+  CONSENT_GUARD="transcript write"  # 判定の python が読めていないときは止める側に倒す
+fi
 
 if [ -n "$CONSENT_GUARD" ]; then
   _consent_guard_log "${CONSENT_GUARD%% *}" "${CONSENT_GUARD#* }"
