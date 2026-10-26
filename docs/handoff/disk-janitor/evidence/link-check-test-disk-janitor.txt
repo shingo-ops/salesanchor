@@ -1,53 +1,53 @@
 ok: K9 全ての根・last-ok が一時ディレクトリの下（--execute より前に確認）
 === dry-run 出力 ===
-===== disk-janitor 開始 2026-10-26 12:07:33 mode=dry-run =====
+===== disk-janitor 開始 2026-10-26 12:54:01 mode=dry-run =====
 --- df（開始）---
 Filesystem      Size    Used   Avail Capacity iused ifree %iused  Mounted on
-/dev/disk3s1   228Gi   171Gi    26Gi    87%    5.0M  275M    2%   /System/Volumes/Data
-根: /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/worktrees /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/acwt /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/sa /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/ac /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/versions
-lsof: 25650 行を取得
+/dev/disk3s1   228Gi   173Gi    22Gi    89%    5.1M  236M    2%   /System/Volumes/Data
+根: /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/worktrees /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/acwt /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/sa /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/ac /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/versions
+lsof: 24685 行を取得
 
 == R1 散らばった .npm-cache ==
-  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/ac/.npm-cache （使用中（プロセスが開いている））
-  [R1] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/acwt/x/.npm-cache (0KB)
-  [R1] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/sa/.npm-cache (0KB)
-  [R1] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/sa/frontend/.npm-cache (0KB)
-  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/sa/keepcache/.npm-cache （npm の設定先（保護））
-  [R1] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/worktrees/repoA/wt1/.npm-cache (4KB)
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/ac/.npm-cache （使用中（プロセスが開いている））
+  [R1] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/acwt/x/.npm-cache (0KB)
+  [R1] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/sa/.npm-cache (0KB)
+  [R1] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/sa/frontend/.npm-cache (0KB)
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/sa/keepcache/.npm-cache （npm の設定先（保護））
+  [R1] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/worktrees/repoA/wt1/.npm-cache (4KB)
 [R1] 削除候補: 4 件 / 4KB（4KB）、飛ばした: 2 件
 
 == R2 使っていない作業用コピーの node_modules ==
-  [R2] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/worktrees/repoA/wt-del/node_modules (4KB)
-  [R2] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/worktrees/repoA/wt-del/frontend/node_modules (4KB)
-  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/worktrees/repoA/wt-inuse/node_modules （使用中（プロセスが開いている））
-  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/worktrees/repoA/wt-inuse/frontend/node_modules （使用中（プロセスが開いている））
-  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/worktrees/repoA/wt-nogit/node_modules （git の繋がりが知っている元のリポジトリと合わない（残す）: gitdir の実パスを取れない）
-  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/worktrees/repoA/wt-nogit/frontend/node_modules （git の繋がりが知っている元のリポジトリと合わない（残す）: gitdir の実パスを取れない）
-  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/worktrees/repoA/wt-nolock/node_modules （package-lock.json が無い（作り直せない））
-  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/worktrees/repoA/wt-recentcommit/node_modules （最終コミットが14日以内）
-  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/worktrees/repoA/wt-recentcommit/frontend/node_modules （最終コミットが14日以内）
-  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/worktrees/repoA/wt-recentfile/node_modules （14日以内に更新されたファイルあり）
-  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/worktrees/repoA/wt-recentfile/frontend/node_modules （14日以内に更新されたファイルあり）
-  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/worktrees/repoA/wt-sym/node_modules （ガード: シンボリックリンク）
-  [R2] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/acwt/wt-acdel/node_modules (4KB)
-  [R2] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/acwt/wt-acdel/frontend/node_modules (4KB)
+  [R2] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/worktrees/repoA/wt-del/node_modules (4KB)
+  [R2] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/worktrees/repoA/wt-del/frontend/node_modules (4KB)
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/worktrees/repoA/wt-inuse/node_modules （使用中（プロセスが開いている））
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/worktrees/repoA/wt-inuse/frontend/node_modules （使用中（プロセスが開いている））
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/worktrees/repoA/wt-nogit/node_modules （git の繋がりが知っている元のリポジトリと合わない（残す）: gitdir の実パスを取れない）
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/worktrees/repoA/wt-nogit/frontend/node_modules （git の繋がりが知っている元のリポジトリと合わない（残す）: gitdir の実パスを取れない）
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/worktrees/repoA/wt-nolock/node_modules （package-lock.json が無い（作り直せない））
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/worktrees/repoA/wt-recentcommit/node_modules （最終コミットが14日以内）
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/worktrees/repoA/wt-recentcommit/frontend/node_modules （最終コミットが14日以内）
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/worktrees/repoA/wt-recentfile/node_modules （14日以内に更新されたファイルあり）
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/worktrees/repoA/wt-recentfile/frontend/node_modules （14日以内に更新されたファイルあり）
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/worktrees/repoA/wt-sym/node_modules （ガード: シンボリックリンク）
+  [R2] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/acwt/wt-acdel/node_modules (4KB)
+  [R2] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/acwt/wt-acdel/frontend/node_modules (4KB)
 [R2] 削除候補: 4 件 / 16KB（16KB）、飛ばした: 10 件
 
 == R3 agent-console の旧版 ==
   current=v0.9.1、1つ前=v0.7.0（これらと current より新しい版は残す）
-  [R3] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/versions/v0.2.0 (4KB)
-  [R3] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/versions/v0.3.0 (4KB)
-  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/versions/v0.4.0 （使用中（プロセスが開いている））
-  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/versions/v0.5.0 （ガード: シンボリックリンク）
-  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/versions/v1.0.0 （current より新しい版）
+  [R3] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/versions/v0.2.0 (4KB)
+  [R3] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/versions/v0.3.0 (4KB)
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/versions/v0.4.0 （使用中（プロセスが開いている））
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/versions/v0.5.0 （ガード: シンボリックリンク）
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/versions/v1.0.0 （current より新しい版）
 [R3] 削除候補: 2 件 / 8KB（8KB）、飛ばした: 3 件
 
 == R4 他リポジトリの作業用コピー（reaper-worktree.sh） ==
-  -- /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/repoX (owner/x, 行き先 develop) reaper rc=0, 1 行 --
+  -- /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/repoX (owner/x, 行き先 develop) reaper rc=0, 1 行 --
      fake reaper ran
-  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/repoY （origin が想定と違う（想定 owner/y、実測 owner/wrong））
-  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/missing （リポジトリが無い）
-  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/gitmain （origin が想定と違う（想定 owner/gm、実測 取得できない））
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/repoY （origin が想定と違う（想定 owner/y、実測 owner/wrong））
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/missing （リポジトリが無い）
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/gitmain （origin が想定と違う（想定 owner/gm、実測 取得できない））
 [R4] 削除候補: 0 件 / 0KB（0KB）、飛ばした: 3 件
 
 == R5 /tmp/CC報告ファイルの .md 以外 ==
@@ -60,8 +60,8 @@ lsof: 25650 行を取得
 
 --- df（終了）---
 Filesystem      Size    Used   Avail Capacity iused ifree %iused  Mounted on
-/dev/disk3s1   228Gi   171Gi    25Gi    88%    5.0M  264M    2%   /System/Volumes/Data
-===== disk-janitor 終了 2026-10-26 12:07:48 mode=dry-run 合計 10 件 / 28KB（R4 の容量は含まない） =====
+/dev/disk3s1   228Gi   173Gi    22Gi    89%    5.1M  236M    2%   /System/Volumes/Data
+===== disk-janitor 終了 2026-10-26 12:54:09 mode=dry-run 合計 10 件 / 28KB（R4 の容量は含まない） =====
 === ここまで ===
 ok: dry-run: exit 0
 ok: dry-run: 何も消えない（前後の一覧が同一）
@@ -71,54 +71,54 @@ ok: dry-run: R3 の候補が出る
 ok: dry-run: 見出しが dry-run
 ok: dry-run: R4 の reaper は --execute なしで呼ばれる
 === execute 出力 ===
-===== disk-janitor 開始 2026-10-26 12:07:49 mode=execute =====
+===== disk-janitor 開始 2026-10-26 12:54:09 mode=execute =====
 --- df（開始）---
 Filesystem      Size    Used   Avail Capacity iused ifree %iused  Mounted on
-/dev/disk3s1   228Gi   171Gi    25Gi    88%    5.0M  264M    2%   /System/Volumes/Data
-根: /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/worktrees /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/acwt /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/sa /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/ac /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/versions
-lsof: 26527 行を取得
+/dev/disk3s1   228Gi   173Gi    22Gi    89%    5.1M  236M    2%   /System/Volumes/Data
+根: /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/worktrees /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/acwt /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/sa /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/ac /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/versions
+lsof: 24500 行を取得
 
 == R1 散らばった .npm-cache ==
-  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/ac/.npm-cache （使用中（プロセスが開いている））
-  [R1] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/acwt/x/.npm-cache (0KB)
-  [R1] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/sa/.npm-cache (0KB)
-  [R1] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/sa/frontend/.npm-cache (0KB)
-  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/sa/keepcache/.npm-cache （npm の設定先（保護））
-  [R1] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/worktrees/repoA/wt1/.npm-cache (4KB)
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/ac/.npm-cache （使用中（プロセスが開いている））
+  [R1] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/acwt/x/.npm-cache (0KB)
+  [R1] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/sa/.npm-cache (0KB)
+  [R1] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/sa/frontend/.npm-cache (0KB)
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/sa/keepcache/.npm-cache （npm の設定先（保護））
+  [R1] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/worktrees/repoA/wt1/.npm-cache (4KB)
 [R1] 削除: 4 件 / 4KB（4KB）、飛ばした: 2 件
 
 == R2 使っていない作業用コピーの node_modules ==
-  [R2] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/worktrees/repoA/wt-del/node_modules (4KB)
-  [R2] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/worktrees/repoA/wt-del/frontend/node_modules (4KB)
-  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/worktrees/repoA/wt-inuse/node_modules （使用中（プロセスが開いている））
-  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/worktrees/repoA/wt-inuse/frontend/node_modules （使用中（プロセスが開いている））
-  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/worktrees/repoA/wt-nogit/node_modules （git の繋がりが知っている元のリポジトリと合わない（残す）: gitdir の実パスを取れない）
-  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/worktrees/repoA/wt-nogit/frontend/node_modules （git の繋がりが知っている元のリポジトリと合わない（残す）: gitdir の実パスを取れない）
-  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/worktrees/repoA/wt-nolock/node_modules （package-lock.json が無い（作り直せない））
-  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/worktrees/repoA/wt-recentcommit/node_modules （最終コミットが14日以内）
-  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/worktrees/repoA/wt-recentcommit/frontend/node_modules （最終コミットが14日以内）
-  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/worktrees/repoA/wt-recentfile/node_modules （14日以内に更新されたファイルあり）
-  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/worktrees/repoA/wt-recentfile/frontend/node_modules （14日以内に更新されたファイルあり）
-  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/worktrees/repoA/wt-sym/node_modules （ガード: シンボリックリンク）
-  [R2] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/acwt/wt-acdel/node_modules (4KB)
-  [R2] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/acwt/wt-acdel/frontend/node_modules (4KB)
+  [R2] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/worktrees/repoA/wt-del/node_modules (4KB)
+  [R2] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/worktrees/repoA/wt-del/frontend/node_modules (4KB)
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/worktrees/repoA/wt-inuse/node_modules （使用中（プロセスが開いている））
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/worktrees/repoA/wt-inuse/frontend/node_modules （使用中（プロセスが開いている））
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/worktrees/repoA/wt-nogit/node_modules （git の繋がりが知っている元のリポジトリと合わない（残す）: gitdir の実パスを取れない）
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/worktrees/repoA/wt-nogit/frontend/node_modules （git の繋がりが知っている元のリポジトリと合わない（残す）: gitdir の実パスを取れない）
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/worktrees/repoA/wt-nolock/node_modules （package-lock.json が無い（作り直せない））
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/worktrees/repoA/wt-recentcommit/node_modules （最終コミットが14日以内）
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/worktrees/repoA/wt-recentcommit/frontend/node_modules （最終コミットが14日以内）
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/worktrees/repoA/wt-recentfile/node_modules （14日以内に更新されたファイルあり）
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/worktrees/repoA/wt-recentfile/frontend/node_modules （14日以内に更新されたファイルあり）
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/worktrees/repoA/wt-sym/node_modules （ガード: シンボリックリンク）
+  [R2] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/acwt/wt-acdel/node_modules (4KB)
+  [R2] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/acwt/wt-acdel/frontend/node_modules (4KB)
 [R2] 削除: 4 件 / 16KB（16KB）、飛ばした: 10 件
 
 == R3 agent-console の旧版 ==
   current=v0.9.1、1つ前=v0.7.0（これらと current より新しい版は残す）
-  [R3] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/versions/v0.2.0 (4KB)
-  [R3] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/versions/v0.3.0 (4KB)
-  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/versions/v0.4.0 （使用中（プロセスが開いている））
-  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/versions/v0.5.0 （ガード: シンボリックリンク）
-  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/versions/v1.0.0 （current より新しい版）
+  [R3] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/versions/v0.2.0 (4KB)
+  [R3] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/versions/v0.3.0 (4KB)
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/versions/v0.4.0 （使用中（プロセスが開いている））
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/versions/v0.5.0 （ガード: シンボリックリンク）
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/versions/v1.0.0 （current より新しい版）
 [R3] 削除: 2 件 / 8KB（8KB）、飛ばした: 3 件
 
 == R4 他リポジトリの作業用コピー（reaper-worktree.sh） ==
-  -- /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/repoX (owner/x, 行き先 develop) reaper rc=0, 1 行 --
+  -- /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/repoX (owner/x, 行き先 develop) reaper rc=0, 1 行 --
      fake reaper ran
-  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/repoY （origin が想定と違う（想定 owner/y、実測 owner/wrong））
-  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/missing （リポジトリが無い）
-  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/gitmain （origin が想定と違う（想定 owner/gm、実測 取得できない））
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/repoY （origin が想定と違う（想定 owner/y、実測 owner/wrong））
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/missing （リポジトリが無い）
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/gitmain （origin が想定と違う（想定 owner/gm、実測 取得できない））
 [R4] 削除: 0 件 / 0KB（0KB）、飛ばした: 3 件
 
 == R5 /tmp/CC報告ファイルの .md 以外 ==
@@ -131,8 +131,8 @@ lsof: 26527 行を取得
 
 --- df（終了）---
 Filesystem      Size    Used   Avail Capacity iused ifree %iused  Mounted on
-/dev/disk3s1   228Gi   171Gi    25Gi    88%    5.0M  263M    2%   /System/Volumes/Data
-===== disk-janitor 終了 2026-10-26 12:08:08 mode=execute 合計 10 件 / 28KB（R4 の容量は含まない） =====
+/dev/disk3s1   228Gi   173Gi    22Gi    89%    5.1M  236M    2%   /System/Volumes/Data
+===== disk-janitor 終了 2026-10-26 12:54:16 mode=execute 合計 10 件 / 28KB（R4 の容量は含まない） =====
 === ここまで ===
 ok: execute: exit 0
 ok: R1 消す: worktree 内の .npm-cache
@@ -198,16 +198,16 @@ ok: ガード: 名前が規則と一致しないものは拒否
 ok: ガード: 存在しないパスは拒否
 === K6 dry-run 出力 ===
 == R5 /tmp/CC報告ファイルの .md 以外 ==
-  [R5] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/tmpcc/sub/raw.txt (1KB)
-  [R5] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/tmpcc/sub/old.sql (1KB)
+  [R5] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/tmpcc/sub/raw.txt (1KB)
+  [R5] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/tmpcc/sub/old.sql (1KB)
 [R5] 削除候補: 2 件 / 2KB（2KB）、飛ばした: 0 件
 
 == R6 セッションの作業メモ ==
-  [R6] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/claudetmp/slug/uuid1/scratchpad/images/pw.png (1KB)
-  [R6] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/claudetmp/slug/uuid1/scratchpad/deep/a.log (1KB)
-  [R6] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/claudetmp/slug/uuid1/scratchpad/memo.txt (1KB)
-  [R6] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/claudetmp/slug/uuid1/tasks/b1.output (1KB)
-  [R6] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/claudetmp/slug/uuid1/tasks/a-dangling.output (0KB)
+  [R6] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/claudetmp/slug/uuid1/scratchpad/images/pw.png (1KB)
+  [R6] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/claudetmp/slug/uuid1/scratchpad/deep/a.log (1KB)
+  [R6] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/claudetmp/slug/uuid1/scratchpad/memo.txt (1KB)
+  [R6] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/claudetmp/slug/uuid1/tasks/b1.output (1KB)
+  [R6] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/claudetmp/slug/uuid1/tasks/a-dangling.output (0KB)
 [R6] 削除候補: 5 件 / 4KB（4KB）、飛ばした: 0 件
 
 --- df（終了）---
@@ -256,20 +256,20 @@ ok: J2: 空のとき削除の出力が無い
 ok: J3-対照: 偽の置き場を読む worktree では、上書き付きの git diff でも印ができる
 === J3・J4 dry-run 出力 ===
 == R2 使っていない作業用コピーの node_modules ==
-  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/worktrees/repoA/wt-inuse/node_modules （使用中（プロセスが開いている））
-  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/worktrees/repoA/wt-inuse/frontend/node_modules （使用中（プロセスが開いている））
-  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/worktrees/repoA/wt-j3/node_modules （git の繋がりが知っている元のリポジトリと合わない（残す）: commondir が本店の .git を指していない）
-  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/worktrees/repoA/wt-j3/frontend/node_modules （git の繋がりが知っている元のリポジトリと合わない（残す）: commondir が本店の .git を指していない）
-  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/worktrees/repoA/wt-j4/node_modules （git の繋がりが知っている元のリポジトリと合わない（残す）: gitdir が本店の .git/worktrees の下ではない）
-  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/worktrees/repoA/wt-j4/frontend/node_modules （git の繋がりが知っている元のリポジトリと合わない（残す）: gitdir が本店の .git/worktrees の下ではない）
-  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/worktrees/repoA/wt-nogit/node_modules （git の繋がりが知っている元のリポジトリと合わない（残す）: gitdir の実パスを取れない）
-  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/worktrees/repoA/wt-nogit/frontend/node_modules （git の繋がりが知っている元のリポジトリと合わない（残す）: gitdir の実パスを取れない）
-  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/worktrees/repoA/wt-nolock/node_modules （package-lock.json が無い（作り直せない））
-  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/worktrees/repoA/wt-recentcommit/node_modules （最終コミットが14日以内）
-  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/worktrees/repoA/wt-recentcommit/frontend/node_modules （最終コミットが14日以内）
-  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/worktrees/repoA/wt-recentfile/node_modules （14日以内に更新されたファイルあり）
-  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/worktrees/repoA/wt-recentfile/frontend/node_modules （14日以内に更新されたファイルあり）
-  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.mJ43wr/worktrees/repoA/wt-sym/node_modules （ガード: シンボリックリンク）
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/worktrees/repoA/wt-inuse/node_modules （使用中（プロセスが開いている））
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/worktrees/repoA/wt-inuse/frontend/node_modules （使用中（プロセスが開いている））
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/worktrees/repoA/wt-j3/node_modules （git の繋がりが知っている元のリポジトリと合わない（残す）: commondir が本店の .git を指していない）
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/worktrees/repoA/wt-j3/frontend/node_modules （git の繋がりが知っている元のリポジトリと合わない（残す）: commondir が本店の .git を指していない）
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/worktrees/repoA/wt-j4/node_modules （git の繋がりが知っている元のリポジトリと合わない（残す）: gitdir が本店の .git/worktrees の下ではない）
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/worktrees/repoA/wt-j4/frontend/node_modules （git の繋がりが知っている元のリポジトリと合わない（残す）: gitdir が本店の .git/worktrees の下ではない）
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/worktrees/repoA/wt-nogit/node_modules （git の繋がりが知っている元のリポジトリと合わない（残す）: gitdir の実パスを取れない）
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/worktrees/repoA/wt-nogit/frontend/node_modules （git の繋がりが知っている元のリポジトリと合わない（残す）: gitdir の実パスを取れない）
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/worktrees/repoA/wt-nolock/node_modules （package-lock.json が無い（作り直せない））
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/worktrees/repoA/wt-recentcommit/node_modules （最終コミットが14日以内）
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/worktrees/repoA/wt-recentcommit/frontend/node_modules （最終コミットが14日以内）
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/worktrees/repoA/wt-recentfile/node_modules （14日以内に更新されたファイルあり）
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/worktrees/repoA/wt-recentfile/frontend/node_modules （14日以内に更新されたファイルあり）
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.vvGMJQ/worktrees/repoA/wt-sym/node_modules （ガード: シンボリックリンク）
 [R2] 削除候補: 0 件 / 0KB（0KB）、飛ばした: 14 件
 === ここまで ===
 ok: J3: reaper でない janitor の dry-run で印の台本が動かない

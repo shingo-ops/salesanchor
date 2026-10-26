@@ -7,14 +7,16 @@
 
 ## 外部・過去事例の参照と我々への応用
 
-- 該当なし：前の便（ADR-1039 便2b-0）の git 守りの延長で、設計は指示書に固定済みのため外部事例の参照は不要と判断
+- git 公式の説明（gitattributes の filter の節、gitrepository-layout の commondir、git-worktree の gitdir）への参照は正本の指示書 docs/handoff/discord-pdca/bin2b2-sa-link-card.md の :126-127 に書いてある。応用：worktree の繋がりが元のリポジトリと一致することと、元のリポジトリに commondir が無いことを確かめ、偽の設定を読む道を塞ぐ。実測（git 2.39.3）も同 :127 のとおり
 
 ## 受け入れ基準
 
+正本は指示書 docs/handoff/discord-pdca/bin2b2-sa-link-card.md の「完了の確認」（:98 以降）と試験の節（:86-92）。下の表はその要約。
+
 | 基準 | 検証方法 |
 |---|---|
-| 偽の commondir・gitdir の部屋を reaper が消さず印ファイルが出ない | scripts/tests/test-reaper-safety.sh の G4〜G9 |
-| 偽の繋がりの部屋・一覧外のリポジトリの部屋を janitor が残す | scripts/tests/test-disk-janitor.sh の J3〜J5 |
+| 偽の commondir・gitdir の部屋を reaper が消さず印ファイルが出ない | scripts/tests/test-reaper-safety.sh の G4〜G9（指示書 :81-88） |
+| 偽の繋がりの部屋・一覧外のリポジトリの部屋を janitor が残す | scripts/tests/test-disk-janitor.sh の J3〜J5（指示書 :90-92） |
 | 確かめを外すと試験が落ちる | docs/handoff/disk-janitor/evidence/link-check-mutation.txt |
 | 前後で消す・残すの顔ぶれが同じ | docs/handoff/disk-janitor/evidence/link-check-dryrun-diff.txt |
 
@@ -25,7 +27,7 @@
 
 ## 弊害・トレードオフ
 
-- 本店の checkout で new-worktree.sh を動かすと本店の古い reaper の写しが動く → 対策: マージ後に設計者が道具の写しを取り直す
+- 受け入れる弱さ（取り直しでは解消しない）：人や AI が本店で bash scripts/new-worktree.sh を動かすと、今後も本店の写しの自動回収が動く。指示書 docs/handoff/discord-pdca/bin2b2-sa-link-card.md の :44 のとおり。本店の写しを最新に保つのは別の話でこの便では扱わない
 
 ## 計画票
 

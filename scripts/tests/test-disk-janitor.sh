@@ -370,14 +370,15 @@ check "J2: 空のとき削除の出力が無い" bash -c '! printf "%s" "$1" | g
 # 作り物はすべて $T の下（終了時の既存の後片付けに任せる）。
 J_MARK="${T}/j-mark"
 J_EVIL="${T}/j-evil-gitdir"
+
+# J3: R2 の対象の worktree。追跡している README.md を同じ長さで変え、commondir を偽の置き場へ
+WT_J3="${R_WT}/repoA/wt-j3"; mkwt "${WT_J3}" br-j3; mk_nm "${WT_J3}"
+# 偽の置き場は br-j3 を作った後に写す（枝が見える形にして、判定が「繋がり」の理由で決まるようにする）
 mkdir -p "${J_EVIL}"
 rsync -a --exclude=/worktrees "${GM}/.git/" "${J_EVIL}/"
 printf '[filter "evil"]\n\tclean = touch %s; cat\n' "${J_MARK}" >> "${J_EVIL}/config"
 mkdir -p "${J_EVIL}/info"
 printf 'README.md filter=evil\n' >> "${J_EVIL}/info/attributes"
-
-# J3: R2 の対象の worktree。追跡している README.md を同じ長さで変え、commondir を偽の置き場へ
-WT_J3="${R_WT}/repoA/wt-j3"; mkwt "${WT_J3}" br-j3; mk_nm "${WT_J3}"
 printf 'bas2\n' > "${WT_J3}/README.md"       # 元は「base\n」（同じ5バイト）
 J3_GD="$(git -C "${GM}" rev-parse --absolute-git-dir)/worktrees/wt-j3"
 printf '%s\n' "${J_EVIL}" > "${J3_GD}/commondir"

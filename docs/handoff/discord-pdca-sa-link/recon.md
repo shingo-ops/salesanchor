@@ -11,7 +11,7 @@
 |---|---|
 | `scripts/git-safe.sh:56` | 追加した git_safe_link_ok の定義 |
 | `scripts/disk-janitor.sh:307` | 追加した dj_link_known の定義（R2 が使う） |
-| `scripts/reaper-worktree.sh:115` | 追加した SKIP_LINK の入れ物（部屋ごとの確かめ） |
+| `scripts/reaper-worktree.sh:202-209` | 部屋ごとの確かめ本体（git_safe_link_ok で合わなければ SKIP_LINK に入れて continue）。入れ物 SKIP_LINK の定義は :115 |
 | `scripts/new-worktree.sh:65` | REAPER_SCRIPT を自分と同じ置き場から決める |
 
 ## 不明点リスト
