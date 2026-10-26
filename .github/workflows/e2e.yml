@@ -51,6 +51,9 @@ jobs:
           filters: |
             frontend:
               - 'frontend/**'
+              # この検査自身の定義を変えた PR でも画面検査を走らせる。
+              # 入れないと「実行環境の直し」が自分の PR では skipped になり確かめられない（2026-10-26 PR #4781）
+              - '.github/workflows/e2e.yml'
 
   # ─── ADR-067: ダークモード色規約チェック ───────────────────────────────────
   lint-run:
@@ -149,7 +152,9 @@ jobs:
     name: 画面検査（内部）
     needs: detect-changes
     if: needs.detect-changes.outputs.frontend == 'true'
-    runs-on: ubuntu-latest
+    # ubuntu-26.04 では Playwright 1.59.1 が依存を入れられず「1件も走らない」赤になるため固定
+    # （karte-gate.yml:38 と同じ理由・同じ直し方。2026-10-26 run 40274501029）
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
 
     defaults:
@@ -245,7 +250,9 @@ jobs:
   playwright:
     name: Playwright E2E (chromium)
     if: false # 一時停止 2026-06-01 — CI ボトルネック解消まで停止（再開時はこの行を削除）
-    runs-on: ubuntu-latest
+    # ubuntu-26.04 では Playwright 1.59.1 が依存を入れられず「1件も走らない」赤になるため固定
+    # （karte-gate.yml:38 と同じ理由・同じ直し方。2026-10-26 run 40274501029）
+    runs-on: ubuntu-24.04
     timeout-minutes: 12
     # NOTE: needs: lint を削除し lint と並列実行（2026-05-28）。
     # lint と playwright は完全独立（DB共有なし・API mock済み）のため並列化可能。

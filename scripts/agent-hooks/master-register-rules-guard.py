@@ -20,7 +20,10 @@ TARGETS = (
     "INSERT INTO products",
     "/tcg/products/create",
 )
-EXEMPT_PATHS = ("/backend/", "/frontend/", "/docs/", "/migrations/", "/tests/", "/CC報告ファイル-keep/", "/tmp/CC報告ファイル/")
+WORKTREES = os.path.expanduser("~/worktrees/salesanchor")
+REPO_DIRS = ("backend", "frontend", "docs", "migrations", "tests")
+RECORD_DIRS = (os.path.expanduser("~/CC報告ファイル-keep"), "/tmp/CC報告ファイル", "/private/tmp/CC報告ファイル")
+RECORD_EXTS = (".md", ".txt")
 READ_ONLY_CMDS = {"git", "grep", "rg", "cat", "sed", "head", "tail", "less"}
 PROMPT_RE = re.compile(r"マスタ[^。\n]{0,40}登録|登録[^。\n]{0,20}マスタ")
 PROMPT_LIMIT = 9000
@@ -50,6 +53,22 @@ def deny(reason):
     }})
 
 
+def exempt(fpath):
+    """Write/Edit の保存先が免除の場所か。部分一致ではなく、決まった場所で始まるかで見る。"""
+    if not isinstance(fpath, str) or not fpath.startswith("/"):
+        return False
+    p = os.path.normpath(fpath)
+    if p.endswith(RECORD_EXTS) and any(p.startswith(d + "/") for d in RECORD_DIRS):
+        return True
+    for root, skip in ((os.path.normpath(REPO), 0), (WORKTREES, 1)):
+        if not p.startswith(root + "/"):
+            continue
+        parts = p[len(root) + 1:].split("/")[skip:]
+        if len(parts) > 1 and parts[0] in REPO_DIRS:
+            return True
+    return False
+
+
 def pre_tool_use(data):
     tool = data.get("tool_name", "")
     ti = data.get("tool_input") or {}
@@ -63,7 +82,7 @@ def pre_tool_use(data):
         return
     if not isinstance(text, str) or not any(t in text for t in TARGETS):
         return
-    if tool in ("Write", "Edit") and any(p in fpath for p in EXEMPT_PATHS):
+    if tool in ("Write", "Edit") and exempt(fpath):
         return
     if tool == "Bash":
         words = text.split()
