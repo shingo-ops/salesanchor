@@ -1,9 +1,10 @@
 # design — 手元の担当（サブエージェント）の書き換え・保存・送り出しをフックで止める
 
-- 状態: 設計案（第4版 2026-10-26）。
+- 状態: 設計案（第5版 2026-10-26）。
   - 第1版は審査役（reviewer・opus）が REQUEST_CHANGES（指摘 1〜12）。第2版で反映した。
   - 第2版（026ab0a25）も REQUEST_CHANGES（指摘 A〜I、/tmp/CC報告ファイル/local-subagent-guard/review-2.md）。第3版で反映した。
   - 第3版（4abf275ae）も REQUEST_CHANGES（A〜I は直ったが、台本を流し込む形の素通りと、grep などの誤った止めが残った。/tmp/CC報告ファイル/local-subagent-guard/review-3.md）。第4版で反映した。
+  - 第4版（101b154bf）も REQUEST_CHANGES（3-1〜4 は直ったが、注釈 `#` のあとの行が判定されないなど、普段の書き方の抜けが残った。/tmp/CC報告ファイル/local-subagent-guard/review-4.md）。第5版で反映した。
   - 第1版の審査の文は会話の中にだけあり、ファイルには残していない。要点は §11 にまとめた。
 - 関連: [recon.md](recon.md)・[cases.md](cases.md)（判定の例の正本）・[ADR-1045](../../adr/ADR-1045-local-subagent-write-guard.md)・ADR-1029（前例）・ADR-1011:39（フックは AI がパッチを書き、PO が `!` で反映する）
 - PO の決定（2026-10-26）:
@@ -121,43 +122,50 @@ guard_pre_tool の読み込み:
    - 要素に `guard_pre_tool.TOO_DEEP` があれば、止める（規則 `too-deep`）。
 2. 一覧の文を 1 つずつ見る。
    1. heredoc（`<<EOF` 〜 `EOF`）の本文を扱う。
-      - その行に、シェル（bash・sh・zsh・dash・ksh・fish）か eval・source・`.` の語があるときは、本文を残す（本文は命令として判定する）。
+      - `<<` のある行（`<<` の前と後ろの両方。例: `cat <<EOF > /tmp/x.sh; bash /tmp/x.sh`）に、シェル（bash・sh・zsh・dash・ksh・fish）か eval・source・`.` の語があるときは、本文を残す（本文は命令として判定する）。
       - それ以外（`python3 <<EOF`・`cat > f <<EOF`・`git commit -F - <<EOF` など）は本文を消す。Python などの本文はシェルの命令ではないため。
       - 本文の見つけ方は guard_pre_tool.py:46 と同じ正規表現 `(<<-?\s*['"]?(\w+)['"]?[^\n]*\n).*?\n\s*\2\b` を使う。
       - 第3版の scan_text は使わない。scan_text は引用符を気にせずに `|`・`;` で割るため（guard_pre_tool.py:70）、grep の正規表現の `\|` などで誤って止めていた（第3版の審査 3-2）。
    2. 文を語と区切りに分ける。
-      - `shlex.shlex(文, posix=True, punctuation_chars=";&|<>()\n")` に、`whitespace = " \t\r"`（改行は区切りとして残す）と `whitespace_split = True` を設定して使う。
+      - 先に次の 3 つを直す。
+        - 行の続き（`\` と改行）を空白 1 つにする（`git \` の次の行の `push` のため）。
+        - `$'` を `'` に、`$"` を `"` にする（`$'git' push` のため）。
+        - 注釈を捨てる。引用符の外で、語の頭（文の頭か、空白・改行・`;&|()<>` の直後）にある `#` から、改行の手前までを捨てる。改行は残す。語の途中の `#`（`a#b`・`--format=%h#%s`）と引用符の中の `#` は文字のまま。bash と同じ扱い。
+      - `shlex.shlex(文, posix=True, punctuation_chars=";&|<>()\n")` に、`whitespace = " \t\r"`（改行は区切りとして残す）・`whitespace_split = True`・`commenters = ""` を設定して使う。`commenters` を空にしないと、shlex は `#` から改行までを改行ごと読み捨て、次の行が前の区間に混ざる（第4版の審査 R1）。
       - 引用符の中は 1 語のままで、区切りとして扱わない。`"$WT"`・`${WT}` も 1 語になる。
       - shlex が例外を出したら（引用符の閉じ忘れなど）、`"` と `'` を消してから同じ方法で分け直す。
    3. 区切りの語を見て、区間に分ける。
+      - `(` を含み、`<` か `>` も含む語（`<(`・`>(`。中で命令を動かす形）は区切り。`>(` のとき、次の区間は「パイプの後ろ」とする（`tee >(bash)` のため）。
       - `;`・`&`・`|`・`\n`・`(`・`)` だけでできた語は区切り。区切りに `|`（`||` を除く）を含むとき、次の区間は「パイプの後ろ」とする。
       - `<<<` の次の語は「文字の入力」として覚え、その語を命令として判定する（`bash <<< "git push"` のため）。
       - `<<`・`<<-` の次の語（heredoc の印）は捨て、区間に「heredoc あり」と覚える。
       - `<` の次の語は「`<` の入力」として覚え、語からは外す。
-      - `>` を含む語（`>`・`>>`・`>&`・`&>`）の次の語は捨てる。
+      - `>` を含む語（`>`・`>>`・`>&`・`&>`）の次の語は捨てる。ただし次の語が `>(` などの `(` を含む語なら捨てない（`cat x > >(bash)` のため）。
    - 語の「名前」は、最後の `/` より後ろの部分（例: `/usr/bin/git` → `git`）。
 
 **頭の語**: 区間の先頭から、次の語を読み飛ばした後の最初の語。
 
 - 変数の代入（`A=1`）
-- 前置きの語: env・nohup・time・exec・nice・timeout・xargs・stdbuf・caffeinate・command・then・do・else・if・while・until・`!`
-- 前置きの語の後ろにある、`-` で始まる語・代入・数字（`10`・`5s`）。ただし `-I`・`-L`・`-n`・`-P`・`-s`・`-d`・`-E`・`-a`・`-u`・`-S`・`-k` のちょうどその語は、次の 1 語も飛ばす（`xargs -I {} ./x.sh`・`nice -n 10 ./x.sh`・`timeout -s KILL 10 ./x.sh` のため）
+- 前置きの語: env・nohup・time・exec・nice・timeout・xargs・stdbuf・caffeinate・command・builtin・`{`・then・do・else・if・while・until・`!`（`{` は `{ ./x.sh; } > o.txt` の囲みのため）
+- 前置きの語の後ろにある、`-` で始まる語・代入・数字（`10`・`5s`）。ただし次のちょうどその語は、次の 1 語も飛ばす: `-I`・`-L`・`-n`・`-P`・`-s`・`-d`・`-E`・`-a`・`-u`・`-k`・`-C`・`--signal`・`--kill-after`・`--max-args`・`--replace`・`--max-procs`・`--delimiter`・`--arg-file`・`--unset`・`--chdir`（`xargs -I {} ./x.sh`・`timeout --signal KILL 5 ./x.sh` のため）
 
 **区間の判定**（上から順に見る）
 
 1. 先頭の代入を除いた語が無い → 先頭の代入に `GIT_` で始まる名前があれば止める（規則 `git-env`）。無ければ通す。
-2. 調べるだけの区間 → 通す。ただし rg に `--pre`（`--pre=` を含む）があれば止める（規則 `script`。rg は --pre で別の命令を動かすため）。
-   - 先頭の語（代入を除く）の名前が次のどれか: ls・file・stat・which・du・pgrep・ps・realpath・readlink・basename・dirname・wc・echo・printf・type・grep・egrep・fgrep・rg・ag・jq・cat・head・tail・cd・pushd・popd
-   - または `command` で、その次の語が `-v`・`-V`
-3. 区間のどこかに `GIT_` で始まる代入（`GIT_PAGER=…`・`env GIT_SSH_COMMAND=…`・`export GIT_EXTERNAL_DIFF=…`）がある → 止める（規則 `git-env`）。git は GIT_ の環境変数で別の命令を動かせるため。
-4. 頭の語の名前が sudo・su・doas → 止める（規則 `sudo`）。
-5. 表C（台本の実行）に当たる → 止める（規則 `script`）。
-6. 語のどれかの名前が claude か codex → 止める（規則 `agent`、表D）。ただし、その後ろの語が 1 つ以上あり、全部が `--version`・`-v`・`--help`・`-h` なら通す。
-7. 語のどれかの名前が `git` → その後ろの語を表A で判定する。読むだけでなければ止める（規則 `git-<動詞>` など）。
-8. 語のどれかの名前が `gh` → その後ろの語を表B で判定する。読むだけでなければ止める（規則 `gh-<語>`）。
+2. 頭の語より前に env があり、その後ろ（頭の語まで）に `-S`・`--split-string`（`-S…`・`--split-string=…` の形も含む）がある → その値と後ろの語をつないだ文を、この §5-3 の判定に最初からかける。止まれば止める（`env -S 'git push'` のため）。
+3. 先頭の代入と、頭の語より前の語（`env GIT_SSH_COMMAND=…` など）に `GIT_` で始まる代入がある → 止める（規則 `git-env`）。git は GIT_ の環境変数で別の命令を動かせるため。区間の先頭の語が export・declare・typeset・local・readonly で、語のどれかが `GIT_` で始まる代入のときも止める。頭の語より後ろの引数（`git log -S 'GIT_DIR='`）は見ない。
+4. 区間の先頭の語が `command` で、次の語が `-v`・`-V` → 通す。
+5. 調べるだけの区間 → 通す。ただし rg に `--pre`（`--pre=` を含む）があれば止める（規則 `script`。rg は --pre で別の命令を動かすため）。
+   - 頭の語の名前が次のどれか: ls・file・stat・which・du・pgrep・ps・realpath・readlink・basename・dirname・wc・echo・printf・type・grep・egrep・fgrep・rg・ag・jq・cat・head・tail・cd・pushd・popd（頭の語で見るので、`xargs grep -l bash` も通る）
+6. 頭の語の名前が sudo・su・doas → 止める（規則 `sudo`）。security（Mac の鍵の保管庫）→ 止める（規則 `keychain`）。
+7. 表C（台本の実行）に当たる → 止める（規則 `script`）。
+8. 語を前から順に 1 つずつ見て、最初に当たったもので決める（規則の名前は、先に出た語のものになる）。
+   - 名前が claude か codex → 止める（規則 `agent`、表D）。ただし、その後ろの語が 1 つ以上あり、全部が `--version`・`-v`・`--help`・`-h` なら次の語へ進む。
+   - 名前が `git` → その後ろの語を表A で判定する。読むだけでなければ止める（規則 `git-<動詞>` など）。
+   - 名前が `gh` → その後ろの語を表B で判定する。読むだけでなければ止める（規則 `gh-<語>`）。
 9. どれにも当たらなければ通す。
 
-手順 6〜8 では、find の `-exec`・`-execdir`・`-ok`・`-okdir` から終わりの `;`・`+` までの語は外す（その部分は表C で判定済みのため）。
+手順 8 では、find の `-exec`・`-execdir`・`-ok`・`-okdir` から終わりの `;`・`+` までの語は外す（その部分は表C で判定済みのため）。
 
 **表A git**
 
@@ -169,6 +177,7 @@ guard_pre_tool の読み込み:
   - `-c` の値が `core.quotepath=…` か `color.…=…` でない（規則 `git-c`）。`core.pager`・`core.fsmonitor`・`diff.external`・`alias.*` などは、読むだけの動詞でも別の命令を動かせるため。
   - `--config-env`（`=` 付きも含む）がある（規則 `git-config-env`）。
   - 動詞の後ろに、`--upload-pack`・`--receive-pack`・`--exec` で始まる語がある（規則 `git-exec`）。
+  - 動詞が grep で、後ろに `--open-files-in-pager` で始まる語か、`-` 1 つで始まり `O` を含む語（`-O`・`-nO`・`-O'vim'`）がある（規則 `git-grep-pager`。指定した命令でファイルを開くため）。
   - 飛ばした後に語が無い（規則 `git-noverb`）。
 
 | 動詞 | 判定 |
@@ -181,8 +190,8 @@ guard_pre_tool の読み込み:
 | commit-graph | 次の語が verify なら通す |
 | submodule | 次の語が status なら通す |
 | reflog | 次の語が無いか、show・exists か、`-` で始まる語なら通す |
-| remote | 次の語が無いか、-v・--verbose・show・get-url なら通す |
-| config | 後ろに --get・--get-all・--get-regexp・--list・-l・--get-urlmatch・get・list のどれかがあれば通す |
+| remote | `-` で始まらない最初の語が無いか、show・get-url なら通す（`git remote -v add …` は止まる） |
+| config | 後ろに --get・--get-all・--get-regexp・--list・-l・--get-urlmatch のどれかがあるか、`-` で始まらない最初の語が get・list なら通す（`git config core.pager get` は止まる） |
 | symbolic-ref | -d・--delete があれば止める。それ以外は、`-` で始まらない語が 1 つ以下なら通す |
 | branch | ① 後ろの語（`=` の前）に、書き込みの選択肢 -d・-D・-m・-M・-c・-C・-f・--delete・--move・--copy・--force・-u・--set-upstream-to・--unset-upstream・--edit-description・--track・-t・--create-reflog があれば止める。② `-` で始まらない語があり、一覧の選択肢 -l・--list・--contains・--no-contains・--merged・--no-merged・--points-at・--all・--remotes・--verbose・--show-current・-n・-v・--verify がどれも無ければ止める（枝を作る形）。③ それ以外は通す |
 | tag | branch の書き込みの選択肢に -a・--annotate・-s・--sign・-F・--file を足して、同じ判定をする（-v は一覧の選択肢の側） |
@@ -194,6 +203,8 @@ guard_pre_tool の読み込み:
   - `gh` の後ろと、第 1 語の後ろで、`-` で始まる語を飛ばす。
   - `-R`・`--repo` のときは、次の 1 語も飛ばす。
   - `--version` は飛ばさずに第 1 語として扱う。
+- 後ろの語が 1 つ以上あり、全部が `--version`・`-v`・`--help`・`-h`・`version` なら通す（`gh --help`）。
+- 後ろの語のどれかが `-t`・`--show-token`（`=` 付きも含む）なら止める（規則 `gh-token`。`gh auth status --show-token` は鍵を表示するため）。
 - 飛ばした後に語が無ければ止める（規則 `gh-noverb`）。
 
 | 第 1 語 | 通す第 2 語 |
@@ -203,7 +214,7 @@ guard_pre_tool の読み込み:
 | run | view・list・watch |
 | repo | view |
 | release・workflow | view・list |
-| auth | status（`gh auth token` も止まるので、鍵を取り出して curl で書く形も止まる） |
+| auth | status（`gh auth token` と `--show-token` も止まるので、gh から鍵を取り出して curl で書く形も止まる） |
 | label・secret・cache・extension・alias | list |
 | variable・config | list・get |
 | gist | view・list |
@@ -224,7 +235,7 @@ gh api は、後ろの語を見て次の順に判定する。
 
 区間ごとに見るので、`gh api … | jq -f x` の jq の `-f` には当たらない。
 
-**表C 台本の実行**（区間ごとに判定する。「一時の場所」は `/tmp/` か `/private/tmp/` で始まる道）
+**表C 台本の実行**（区間ごとに判定する。「一時の場所」は `/tmp/` か `/private/tmp/` で始まり、`..` の段を含まない道）
 
 - 頭の語の名前が source か `.` で、後ろに語がある → 止める。
 - 頭の語が `{}`（find・xargs で見つけたファイルそのものを動かす形）→ 止める。
@@ -232,20 +243,24 @@ gh api は、後ろの語を見て次の順に判定する。
   - `/bin/`・`/usr/bin/`・`/usr/sbin/`・`/sbin/`・`/opt/homebrew/bin/`・`/usr/local/bin/` で始まる語。
   - 名前が git・gh・claude・codex の語（表A・表B・表D で判定する）。
   - 一時の場所の台本（審査役などが調べるための使い捨ての台本。§7）。
-- 頭の語の名前が npx・bunx・make・just・task・rake・invoke・uv・uvx・pipx・poetry → 止める。
+- 頭の語の名前が eval で、後ろの語に `$(` か逆引用符がある → 止める（`eval "$(cat x.sh)"`。ファイルの中身は見えないため）。
+- 頭の語の名前が npx・bunx・make・just・task・rake・invoke・uv・uvx・pipx・poetry、または試験や入れ物を動かすもの（pytest・playwright・vitest・jest・tox・nox・pre-commit・docker・alembic・cargo・go）→ 止める。ただし、後ろの語が 1 つ以上あり、全部が `--version`・`-V`・`-v`・`--help`・`-h`・`version` なら通す。
 - 頭の語の名前が npm・pnpm・yarn → 止める。ただし次のときは通す。
   - `-` で始まらない最初の語が ls・list・view・info・outdated・why のとき。
   - `-v`・`--version` があるとき。
-- find の `-exec`・`-execdir`・`-ok`・`-okdir` の後ろ（終わりの `;`・`+` まで）を 1 つの区間として、この節の判定（区間の判定 2〜8）をする。`find … -exec ./x.sh {} \;` は止まり、`find … -exec wc -l {} +` は通る。
-- 区間の語のどれかの名前が、次の解釈系に当たる → その後ろの、`-` で始まる語を飛ばして最初の語を見る（`-c`・`-e`・`--eval`・`-m`・`-` は飛ばさない）。
+- find の `-exec`・`-execdir`・`-ok`・`-okdir` の後ろ（終わりの `;`・`+` まで）を 1 つの区間として、この節の判定（区間の判定 1〜9）をする。`find … -exec ./x.sh {} \;` は止まり、`find … -exec wc -l {} +` は通る。
+- 区間の語のどれかの名前が、次の解釈系に当たる → その後ろの、`-` で始まる語を飛ばして最初の語を見る（`-c`・`-e`・`--eval`・`-` は飛ばさない）。
   - 解釈系: bash・sh・zsh・dash・ksh・fish・python・python2/3（`python3.12` も含む）・pypy・node・deno・bun・tsx・ts-node・ruby・perl・php・osascript
+  - 飛ばすときの決まり:
+    - `-X`・`-W`（Python の値つきの選択肢）は、次の 1 語も飛ばす。
+    - `-r`・`--require`・`--import`・`--loader`・`--experimental-loader`（node などが先にファイルを読む選択肢）は、値（`=` の後ろか次の語）が一時の場所でなければ止める。一時の場所なら値も飛ばす。
+    - シェルで、`-` 1 つで始まり `c` で終わる語（`-c`・`-lc`・`-ec`）は `-c` と同じに扱う。
+    - Python で `-m` で始まる語は、`-m` の値（`-mfoo` の形はくっついた部分、`-m foo` は次の語）が json.tool なら通し、それ以外は止める。
 
   | 最初の語 | 判定 |
   |---|---|
-  | `-c`・`-e`・`--eval` | 通す（中身は前処理 1 の埋め込みとして判定される） |
-  | `-m json.tool` | 通す |
-  | その他の `-m` | 止める |
-  | 無い、または `-` | 区間に heredoc があれば通す（本文は前処理 2-1 で扱う）。`<` の入力があれば、その道が一時の場所なら通し、それ以外は止める。パイプの後ろなら止める（`cat x.sh \| bash`）。どれでもなく、語が無ければ通し、`-` なら止める |
+  | `-c`・`-e`・`--eval` | 次の語に `$(` か逆引用符があれば止める（`bash -c "$(cat x.sh)"`。ファイルの中身は見えないため）。無ければ通す（中身は前処理 1 の埋め込みとして判定される） |
+  | 無い、または `-` | 区間に `<<<` の入力があれば、その値に `$(` か逆引用符があれば止め、無ければ通す（`bash <<< "$(cat x.sh)"` は止まる。値そのものは前処理 2-3 で命令として判定済み）。区間に heredoc があれば通す（本文は前処理 2-1 で扱う）。`<` の入力があれば、その道が一時の場所なら通し、それ以外は止める。パイプの後ろなら止める（`cat x.sh \| bash`）。どれでもなく、語が無ければ通し、`-` なら止める |
   | それ以外（台本のファイル） | 一時の場所なら通す。それ以外は止める |
 
 - 台本の名前の一覧は持たない。どの台本が GitHub へ書くかに関係なく、担当は台本を動かさない。そのため、新しい台本を足しても見張りを直す必要が無い。
@@ -254,10 +269,10 @@ gh api は、後ろの語を見て次の順に判定する。
 
 **設計者の当て試験**
 
-- 上の判定を Python で書いた試作に、[cases.md](cases.md) の止める例 139・通す例 120 を当てた。誤りは 0。
-- cases.md には、第3版の審査役が当てた 46 の例（rv4795v3/probe.py）と、設計者が足した 39 の例を入れた。
-- 試作: /tmp/CC報告ファイル/local-subagent-guard/proto-v4-judge.py
-- 結果: /tmp/CC報告ファイル/local-subagent-guard/proto-v4-out.txt
+- 上の判定を Python で書いた試作に、[cases.md](cases.md) の止める例 212・通す例 179 を当てた。誤りは 0。
+- cases.md には、第3版の審査役が当てた 46 の例（rv4795v3/probe.py）、第4版の審査役が当てた例（rv4795v4/probe.py・comment_probe.py。awk と ssh を除く。§7）、設計者が足した例を入れた。
+- 試作: /tmp/CC報告ファイル/local-subagent-guard/proto-v5-judge.py
+- 結果: /tmp/CC報告ファイル/local-subagent-guard/proto-v5-out.txt
 - 試作は判定を確かめるためのもので、実装はこの節の表から作る。
 
 ### 5-4. 今のフックと、担当の定義との関係
@@ -273,7 +288,7 @@ gh api は、後ろの語を見て次の順に判定する。
 - 評価役（evaluator）・統治役（governance）
   - 評価役（evaluator.md:62-63）と統治役（governance.md:165）の `gh pr review` も止まる。
   - この 2 つの役の結果も、返事の文として本体が受け取る。
-  - 評価役の本来の仕事である試験の実行（`npx playwright`・`npm run test` など）も、表C で止まる。評価役の試験はクラウドで動かす（PO の決定「1」：実装と試験はクラウド）。手元の評価役は、クラウドの試験の結果（PR の checks・記録）を読んで判定する。
+  - 評価役の本来の仕事である試験の実行（`npx playwright`・`playwright test`・`pytest`・`vitest run`・`npm run test`・`docker compose up` など）も、表C で止まる。評価役の試験はクラウドで動かす（PO の決定「1」：実装と試験はクラウド）。手元の評価役は、クラウドの試験の結果（PR の checks・記録）を読んで判定する。
 - 審査役が調べるための使い捨ての台本
   - 一時の場所（/tmp・/private/tmp）にある台本は動かせる（表C）。審査役が設計の試作を写して当てる、といった調べものを止めないため。
   - リポジトリの台本は動かせない。
@@ -337,7 +352,7 @@ gh api は、後ろの語を見て次の順に判定する。
   - git の命令での書き換えや消去（checkout・restore・reset・clean・stash など）は表A で止まるので、残るのはシェルでの直接の書き換えだけ。
   - シェルで .git/config や .gitattributes を書き換えれば、読むだけの git の命令（status・diff）に別の命令を動かさせることもできる。わざと見張りを外す形で、次の 3 つと同じ種類として受け入れる。
 - 解釈系の中で書いた命令
-  - `python3 -c`・`node -e`・`python3 - <<EOF` の本文の中で、ライブラリや subprocess の配列（`["git","push"]`）を使って書き込む形は見抜けない。
+  - `python3 -c`・`node -e`・`python3 - <<EOF` の本文の中で、ライブラリや subprocess の配列（`["git","push"]`）を使って書き込む形は見抜けない。awk の `system("…")` も同じ（Mac の awk にもある）。
   - 担当の数え作業（Python で数える）を止めないため、受け入れる。
 - 一時の場所の台本
   - /tmp・/private/tmp の台本は動かせる（表C）。担当がリポジトリの台本をそこへ写せば動かせる。上と同じく、わざと見張りを外す形として受け入れる。
@@ -346,15 +361,20 @@ gh api は、後ろの語を見て次の順に判定する。
   - 引用符の中の `1e git push` は 1 語になり、名前が git の語にならない。
   - Mac の標準の sed は BSD 版で、`e` 命令が無い。GNU sed を入れたときだけ起きうる。
 - curl などで、GitHub 以外の外の受け口へ書くことは止めない。
-  - GitHub への書き込みに要る鍵は `gh auth token` で取り出せない（表B で止まる）。
+  - GitHub への書き込みに要る鍵は、gh からは取り出せない（`gh auth token`・`gh auth status --show-token` は表B で止まる）。Mac の鍵の保管庫を読む security も止める（区間の判定 6）。
+  - gh は鍵をファイルに置いていない。2026-10-26 に本体が確かめた: ~/.config/gh/hosts.yml に `oauth_token` の行は 0 件（`grep -c` の件数だけを見て、値は出していない）。gh の設定が変わってファイルに置くようになると、cat で読める。
   - 【未確認】agent-console に、手元から会話を起こせる受け口があるか。あれば curl で表D の外に出られる。導入後の点検で確かめる。
+- ssh は止めない。
+  - 手元の担当がサーバーを見る道として残す。担当が使える鍵は制限付き鍵（ForceCommand で決まった命令しか動かない）で、無制限鍵は PO の都度の許可が要る（CLAUDE.md「VPS 直作業禁止」）。
 - 担当が Agent の道具で別の担当を起こすこと
   - 起こされた担当にも agent_id が入るので、同じ見張りで止まる。
   - 起こし先をクラウドにする（isolation remote）と、クラウドで書き込める。クラウドは書き込む場所なので（PO の決定「1」）、止めない。
 - 入力の JSON が読めないときは通す（本体を止めないため）。
 - 担当だけに起きる誤った止め
-  - 調べるだけの命令（§5-3 区間の判定 2）以外の命令の引数に、名前が git・gh・claude・codex の語があるとき（例: `find . -name gh`・`sed -n 1p ~/x/git`）。
+  - 調べるだけの命令（§5-3 区間の判定 5）以外の命令の引数に、名前が git・gh・claude・codex の語があるとき（例: `find . -name gh`・`sed -n 1p ~/x/git`）。
   - 引数の無い `claude`・`codex`。
+  - `docker ps` など、試験や入れ物を動かす道具の読むだけの使い方（表C は名前で止める。`--version` などだけは通す）。
+  - 一時の場所でも、`env -C /tmp ./x.sh` のように道の形が `./` のものは止まる。
 - 写した guard_pre_tool.py は、導入したときの版のまま固まる。クラウド側が直っても、手元は古いまま（「維持の仕組み」で install を流し直す）。
 - MCP の書き込み道具は止めない（§2 の対象外）。
 
@@ -462,3 +482,21 @@ gh api は、後ろの語を見て次の順に判定する。
   - 3-6: §7 に書いた
   - K-b と log の置き場所を直した（§3・§5-2・§5-5）
   - 誤った説明は §5-3 前処理 1 で直した
+- 第4版（101b154bf）の指摘（3-1〜4 は直っていると確認された）
+  - R1 行の終わりの注釈 `#` のあとの行と、語の途中の `#` のあとが判定されない（shlex の注釈の扱い）
+  - R2 `{ …; }` の囲みの中の台本が通る
+  - R3 `bash -c "$(cat x.sh)"`・`eval "$(…)"`・`<<< "$(…)"`・`tee >(bash)`・`> >(bash)` が通る
+  - R4 §5-4 の「評価役の試験は表C で止まる」が一部事実と違う（pytest・playwright など）
+  - R5 `gh auth status --show-token` で鍵を取り出せる。security は未確認
+  - R6 `env -S '…'`・`git grep -O` が通る
+  - §5-3 の文と試作の食い違い（heredoc の行の見方・`<(`・`>(`・手順 6〜8 の順）
+  - 軽微: `xargs grep`・`bash -lc`・`python3 -X utf8 -c`・`gh --help`・`uv --version`・`git log -S 'GIT_DIR='` の誤った止め。`/tmp/../`・`timeout --signal`・`builtin source`・`python3 -mfoo`・`node --import=`・`git remote -v add`・`git config core.pager get`・`$'git'`・行の続き の素通り
+- 第5版での直し
+  - R1: 前処理 2-2 に、注釈を引用符の外の語の頭の `#` だけ捨てることと、`commenters = ""` を書いた
+  - R2: 前置きの語に `{`・builtin を足した
+  - R3: 表C の解釈系に `-c` の値・`<<<` の値・eval の `$(` を足した。前処理 2-3 に `<(`・`>(` を足した
+  - R4: 表C に pytest など試験や入れ物を動かす道具を足し、§5-4 の例を直した
+  - R5: 表B に `-t`・`--show-token` を、区間の判定 6 に security を足し、gh の鍵がファイルに無いことを確かめて §7 に書いた
+  - R6: 区間の判定 2 に env -S を、表A に git grep の `-O` を足した
+  - 食い違い: heredoc は `<<` の行の全体を見る形に揃えた。区間の判定 8 を「語の順に 1 回で見る」に書き直した
+  - 軽微: 素通りは全部直した（`$'`・行の続き・`..` の道・前置きの長い選択肢・remote と config の決まり・解釈系の選択肢）。誤った止めは全部直した。awk と ssh は §7 に書いた

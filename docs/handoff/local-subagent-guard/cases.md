@@ -2,7 +2,7 @@
 
 - 1 行 1 例。`\n` は改行 1 文字を表す（それ以外の `\` はそのまま）。
 - 「止める例」は担当（agent_id あり）の Bash・Monitor の command で、止める（exit 2）。「通す例」は exit 0。
-- 設計者の試作（/tmp/CC報告ファイル/local-subagent-guard/proto-v4-judge.py）に当てた結果: 止める例 139・通す例 120、誤り 0（proto-v4-out.txt）。
+- 設計者の試作（/tmp/CC報告ファイル/local-subagent-guard/proto-v5-judge.py）に当てた結果: 止める例 212・通す例 179、誤り 0（proto-v5-out.txt）。
 - test_guard.sh はこの全例を入れる。例を足すときはこの文書と試験の両方に足す。
 
 ## 止める例
@@ -147,6 +147,79 @@ python3 < scripts/x.py
 (cd /a && git push)
 git log && git push
 gh api graphql -F q=@x -f query='{a}'
+{ ./scripts/dev/executor-preflight.sh; } > /tmp/o.txt 2>&1
+{ source scripts/x.sh; }
+{ npx foo; }
+{ make; }
+f() { ./scripts/x.sh; }; f
+env -S 'git push origin HEAD'
+env -S './scripts/x.sh'
+ls a#b; git push
+ls foo#x && ./scripts/x.sh
+cat <(git push)
+diff <(gh pr merge 1) x
+cat scripts/x.sh | tee >(bash) >/dev/null
+cat scripts/x.sh > >(bash)
+bash -c "$(cat scripts/x.sh)"
+eval "$(cat scripts/x.sh)"
+bash <<< "$(cat scripts/x.sh)"
+python3 <<< "$(cat scripts/x.py)"
+python3 -mpytest backend
+python3 -mscripts.foo
+node --import=./x.mjs -e 1
+pytest backend/tests
+playwright test
+vitest run
+pre-commit run --all-files
+docker compose up -d
+$'git' push origin HEAD
+timeout --signal KILL 5 ./scripts/x.sh
+builtin source scripts/x.sh
+bash /tmp/../Users/tanizawashingo/salesanchor/scripts/x.sh
+/tmp/../Users/tanizawashingo/salesanchor/scripts/x.sh
+git grep -O'sh -c "git push"' foo
+git grep --open-files-in-pager=vim foo
+git remote -v add evil https://x
+git remote --verbose set-url origin https://x
+git config core.pager get
+gh auth status --show-token
+gh auth status -t
+security find-generic-password -s gh:github.com -w
+git \\npush
+cd /a && \\n./scripts/x.sh
+gh api -X GET -X POST repos/a/b/issues
+cd ~/worktrees/x  # go\n./scripts/dev/executor-preflight.sh
+cd ~/worktrees/x  # go\ngit commit -m x
+ls  # list\ngit push origin HEAD
+cat a.txt # show\ngh pr merge 1
+# step1\ngit push
+grep -n x f # find\nbash scripts/x.sh
+git status # check\ngit add .
+echo "a # b"; git push
+echo '#'; git push
+echo \#; git push
+x=1 #c\ngit push
+bash -lc 'git push'
+bash -l -c 'git push'
+bash -lc "$(cat scripts/x.sh)"
+zsh -i scripts/x.sh
+python3 -I scripts/x.py
+node -r ./x.js -e 1
+python3 -m pytest
+env -C /tmp ./x.sh
+env -S'git push'
+env --split-string='./scripts/x.sh'
+timeout -k 5 10 ./scripts/x.sh
+xargs --replace={} ./scripts/x.sh {}
+docker ps
+make
+gh pr view 1 -t
+git remote add x y
+git grep -On foo
+export GIT_DIR=/x
+GIT_PAGER=cat git log
+eval "$(ssh-agent)"
+bash <<< 'git push'
 ```
 
 ## 通す例
@@ -272,4 +345,63 @@ python3 < /tmp/x.py
 git diff --stat 2>/dev/null
 sqlite3 a.db 'select 1' | head
 grep -c 'agent_id' f.jsonl
+grep -rn 'git push' scripts/
+rg -n 'gh pr create' .
+rg 'a\|b' x
+grep 'a\|b' x
+jq '.[] | select(.a=="git")' x.json
+cat x.json | jq -r '.items[] | .name'
+git log --oneline -20
+git log --format='%h#%s' -5
+git -C ~/worktrees/x diff origin/main...HEAD --stat
+git show 101b154bf:docs/x.md
+git diff --name-only main...HEAD | xargs grep -l python3
+find . -name '*.sh' | xargs grep -l bash
+ls scripts | xargs -I{} grep -l node scripts/{}
+gh pr view 4795 --json body -q .body
+gh pr checks 4795
+gh pr view 4795 --json files | jq -r '.files[].path'
+gh api repos/shingo-ops/salesanchor/pulls/4795/reviews
+python3 -c 'import json,sys; print(len(json.load(sys.stdin)))' < /tmp/x.json
+python3 - <<'EOF'\nimport json\nprint(1)\nEOF
+python3 <<'EOF'\nimport subprocess\nEOF
+cat x.jsonl | python3 -c 'import sys; print(sum(1 for _ in sys.stdin))'
+wc -l /tmp/x.txt
+bash -lc 'git log -1'
+python3 -X utf8 -c 'print(1)'
+python3 -W ignore -c 'print(1)'
+gh --help
+for f in docs/*.md; do wc -l "$f"; done
+git log -S 'GIT_DIR=' --oneline
+sed -n '1,20p' x | grep '#'
+echo hi # comment
+git status --short; git log -1 --format=%H
+git -c core.quotepath=false status
+gh pr list --state open --json number,title
+gh run view 123 --log | tail -50
+cat ~/.claude/settings.json | jq '.hooks.PreToolUse'
+ps aux | grep -c node
+lsof -c node | head
+brew info node | head
+uv --version
+sh -ec 'ls'
+python3 -I -c 'print(1)'
+node -r /tmp/x.js -e 1
+diff <(git show a:x) <(git show b:x)
+cat x | tee /tmp/o.txt
+ls >/tmp/o.txt 2>&1
+go version
+pytest --version
+gh version
+git remote
+git config --get core.pager
+git grep -n foo
+git log -S 'GIT_DIR=' -1
+{ git log -1; git status; } > /tmp/o 2>&1
+time git status
+builtin cd /tmp
+eval 'ls'
+python3 <<< 'print(1)'
+cat <<'EOF' | grep x\nfoo # bar\nEOF
+python3 - <<'EOF'\nprint('#')\nEOF
 ```
