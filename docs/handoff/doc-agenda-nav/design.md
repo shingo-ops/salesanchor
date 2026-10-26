@@ -796,3 +796,12 @@ K11（移した先に在るか）: 今回は移す行が無く、消す行と書
 - 【事実】事前点検（29-8 の未解決点）: ~/.claude/scripts・~/.claude/hooks・agent-console（*.mjs *.js *.json）で、外した文言を読む行は0件（s8/pre_grep.txt）。担当の Bash からは agent-console の見張りに止められたため、Opus 本体で実行した。
 - 【事実】担当は K9 を「前回 6.5k から +10.3k」と報告したが、これは MEMORY.md を含めた合計との比較で、K9 の定義（MEMORY.md を除く）では 6.1k。Opus が表示値で計算し直した。
 - 残件（範囲外）: paths 付きの code-review.md・development-workflow.md・testing.md に定義の無い担当名が残る（29-4）。
+
+## 30. 全条件の測り直しと K5 の直し（2026-10-26）
+
+- 30-1 PO 原文「1」（2026-10-26。テーマの合格条件を全部測り直して完了を判定する）を受け、origin/main 9351f2158 で全項目を測った。K1 197行・K2 0/5（関係ある例文 2/2）・K3 0語（grep では「日本語」が2本に出るが §25 の判断どおり別の決まり）・K4 0・K6 100%・K7 残っている・K9 6.1k・K11: 一字一句の照合で 160/186。残り26行を意味で1行ずつ照合し、在る 18・見出しや表の枠 7・欠けている 1 だった（CC報告ファイル-keep/agenda-nav-final-20261026/an-k11sem/table.md）。欠けている1行（CLAUDE.md:92 の「grep セルフチェック」の参照）は、段4より前の frontend/CLAUDE.md で ESLint の自動検出に置き換わっていて、その本文は frontend/AGENTS.md:23-29 に在るので「在る」と判定し直した。さらに2点が移した先に無く、別の文書にだけ在った（ADR 一覧を作り直した後のコミットと CI 必須、ブランチ名を英語で簡潔に）。この2点は §30-6 で移した先に戻した（GAS 16/16）・K12 12/20・K10 9/20（参考）で合格、K5 だけ最深4段で未達。
+- 30-2 K5 の原因（親をたどって確認）: docs/ai-agents/adr-template.md は AGENTS.md → docs/adr/README.md → ADR-150 → docs/handoff/agent-complete-design/recon.md 経由でしか届かない（4段）。docs/specs/ledger-guard/README.md は docs/INDEX.md → docs/specs/README.md → docs/specs/dev-continuity/README.md 経由（4段）。どちらも目次・索引に行が無かった。
+- 30-3 直し（PO 原文「1」2026-10-26）: docs/INDEX.md に adr-template.md の行、docs/specs/README.md に ledger-guard の行を「いつ読むか」付きで1行ずつ足した。
+- 30-4 結果: 検査の最深段数 4 → 3、deep 2 → 0。生出力 /tmp/CC報告ファイル/an-k5/。
+- 30-5 戻し方: このPRを revert する。
+- 30-6 審査の差し戻し（K11 の数に裏づけが無い）を受け、移した先に無かった2点を戻した: docs/INDEX.md の ADR 一覧の行に「作り直してコミットする。CI「ADR index is up to date」が必須」、AGENTS.md の作業場所の行に「<topic> は作業内容を英語で簡潔に」。これで26行はすべて移した先かその入口に在る（K11 186/186）。生出力は CC報告ファイル-keep/agenda-nav-final-20261026/。
