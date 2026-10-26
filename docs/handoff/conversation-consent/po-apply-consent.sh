@@ -23,6 +23,10 @@ ORIG_FILES=(agent-danger-hook.sh worktree-only-guard.sh pr-body-guard.sh danger_
 DEPLOY_FILES=(agent-danger-hook.sh worktree-only-guard.sh pr-body-guard.sh danger_sanitize.py consent_check.py)
 
 UPDATE=""
+if [ "$#" -gt 1 ] || { [ "$#" -eq 1 ] && [ "$1" != "--update" ]; }; then
+  echo "使い方: po-apply-consent.sh [--update]"
+  exit 2
+fi
 [ "${1:-}" = "--update" ] && UPDATE=1
 
 if [ -z "$UPDATE" ] && [ -f "$DST/consent_check.py" ]; then
@@ -94,7 +98,9 @@ if [ -n "$UPDATE" ]; then
     cmp "$SRC/$f" "$DST/$f" && echo "  入れ替え ${f}（権限 ${mode}）" || UBAD=1
   done
 
-  if ls "$HOME/.claude/permits"/danger-permit-*.json >/dev/null 2>&1; then
+  if [ -n "$UBAD" ]; then
+    echo "入れ替えに失敗した。本物の試験は流さず、入れ替えを戻す。"
+  elif ls "$HOME/.claude/permits"/danger-permit-*.json >/dev/null 2>&1; then
     UBAD=1
     echo "danger-permit-*.json が現れた。本物の試験を中止して、入れ替えを戻す。"
   else
