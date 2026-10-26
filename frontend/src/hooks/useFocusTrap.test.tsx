@@ -14,7 +14,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { ReactElement } from "react";
 import "../i18n";
 import { Drawer } from "../components/Drawer";
@@ -173,6 +173,109 @@ describe("getFocusableElements (C8)", () => {
     expect(focusable).not.toContain(screen.getByTestId("hidden"));
   });
 });
+
+/**
+ * 宿題 D5「閉じているパネルを『無い物』として扱う」の単体テスト
+ * （docs/handoff/drawer-inert-when-closed/design.md ⑤ C1〜C4）。
+ *
+ * ここでの C1〜C4 は上の describe.each（宿題 C8。既存20件）とは別の設計書の番号づけ。
+ * `Modal` は閉じると DOM から消えるため対象外（design.md 4-4・recon.md §3）。
+ * `Drawer`・`Sheet` の両方に describe.each をかけるため、mold="Sheet" での実行がそのまま C4
+ * （Sheet でも C1〜C3 が同じ結果になる）を満たす。
+ *
+ * RED-first: `useInertWhenClosed` を呼ぶ前は `panel().inert` が `undefined`（jsdom は inert を
+ * 実装していないため未設定のまま）になるので、**D5-C1・D5-C2・D5-C3 とも**赤になる
+ * （独立審査 N2 の訂正。design.md ⑤）。
+ *
+ * **この3件が保証しているのは「印を入れたこと」だけ**である。jsdom は `inert` を実装していないため
+ * （`'inert' in el` が false・属性にも反映されない）、`el.inert = true` は素の JS の値の代入にすぎない。
+ * **「本当に Tab が拒まれるか」は画面検査（本物のブラウザ）が唯一の一次情報**（design.md ⑨）。
+ * ただし**順序の罠**（D5-C5）だけは本物のブラウザの決まりを模して単体で固定できる（下の describe を参照）。
+ */
+describe.each(molds.filter((m) => m.name !== "Modal"))(
+  "$name inert-when-closed (D5-C1 to D5-C4)",
+  (mold) => {
+    const { panel } = mold;
+
+    it("D5-C1: inert is true while closed", () => {
+      render(mold.element(false, ["a", "b"]));
+      expect(panel().inert).toBe(true);
+    });
+
+    it("D5-C2: inert is false while open", () => {
+      openMold(mold, ["a", "b"]);
+      expect(panel().inert).toBe(false);
+    });
+
+    it("D5-C3: inert follows close -> open -> close (no stale state left behind)", () => {
+      const { rerender } = render(mold.element(false, ["a", "b"]));
+      expect(panel().inert).toBe(true);
+
+      rerender(mold.element(true, ["a", "b"]));
+      expect(panel().inert).toBe(false);
+
+      rerender(mold.element(false, ["a", "b"]));
+      expect(panel().inert).toBe(true);
+    });
+  },
+);
+
+/**
+ * D5-C5 — 開いた直後にフォーカスがパネルの中へ入ること（順序の固定・独立審査 B-1 の再発防止）
+ *
+ * なぜ必要か: 無効化の解除より先に「開いたら先頭へフォーカス」が走ると、**まだ無効な枝へ
+ * focus しようとして不発に終わり**、カーソルが開いたパネルの外に取り残される。
+ * 本物のブラウザでは inert な枝はフォーカス可能領域ではなく `focus()` が何もしないという決まりがあるが、
+ * **jsdom はこれを実装していない**ため、素のままでは永久に検出できない。
+ * そこでこの describe の中だけ、ブラウザの決まり2つを模す:
+ *   ① `inert` を「属性に反映される性質」にする
+ *   ② 自分または先祖が inert のときは `focus()` を何もしないようにする
+ * この2つを入れると、`useInertWhenClosed` が `useLayoutEffect` でないときに**赤**になる。
+ */
+describe.each(molds.filter((m) => m.name !== "Modal"))(
+  "$name opens with focus inside the panel (D5-C5)",
+  (mold) => {
+    const { panel } = mold;
+    const descriptor = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "inert");
+    const originalFocus = HTMLElement.prototype.focus;
+
+    beforeEach(() => {
+      // ① inert を属性へ反映する性質として定義（jsdom には無い）
+      Object.defineProperty(HTMLElement.prototype, "inert", {
+        configurable: true,
+        get(this: HTMLElement) {
+          return this.hasAttribute("inert");
+        },
+        set(this: HTMLElement, value: boolean) {
+          if (value) this.setAttribute("inert", "");
+          else this.removeAttribute("inert");
+        },
+      });
+      // ② inert な枝の中では focus() は何もしない（HTML 標準の決まり）
+      HTMLElement.prototype.focus = function patchedFocus(this: HTMLElement, options?: FocusOptions) {
+        if (this.closest("[inert]")) return;
+        originalFocus.call(this, options);
+      };
+    });
+
+    afterEach(() => {
+      HTMLElement.prototype.focus = originalFocus;
+      if (descriptor) Object.defineProperty(HTMLElement.prototype, "inert", descriptor);
+      else delete (HTMLElement.prototype as unknown as Record<string, unknown>).inert;
+    });
+
+    it("D5-C5: focus lands inside the panel right after opening (inert must be lifted first)", () => {
+      openMold(mold, ["a", "b"]);
+
+      // 前提: 開いた側は無効化されていない（ここが崩れたら以降は何も測っていない）
+      expect(panel().hasAttribute("inert")).toBe(false);
+      // 本題: 現在地がパネルの中にある
+      const active = document.activeElement;
+      expect(active).not.toBe(document.body);
+      expect(panel().contains(active)).toBe(true);
+    });
+  },
+);
 
 describe("FOCUSABLE_SELECTOR is defined in exactly one place in frontend/src (C11)", () => {
   const SRC_ROOT = join(__dirname, "..");
