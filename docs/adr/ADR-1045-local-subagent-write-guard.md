@@ -18,7 +18,7 @@
    - git と gh の、「読むだけの一覧」（表A・表B）に無い使い方
    - 台本の実行（表C）。台本の名前の一覧は持たず、名前によらず止める。`source`・`.`・`{ …; }` の囲み・パイプや `<`・`<<<`・`>(…)` で解釈系へ流し込む形・`-c` や eval に `$(…)` でファイルの中身を渡す形・find -exec・xargs の中・pytest や docker などの試験や入れ物の道具も止める。一時の場所（/tmp・/private/tmp）の台本だけは通す（審査役の調べもののため）
    - git の `-c`（決まった値を除く）・`--config-env`・`GIT_` の環境変数（別の命令を動かせるため）
-   - 別の AI（claude・codex とそのパッケージ）の起動（表D）
+   - 別の AI（claude・codex・gemini とそのパッケージ。別の AI を起動できる ollama は一覧を見る使い方だけ通す）の起動（表D）
    - sudo・su・doas と、Mac の鍵の保管庫を読む security。gh から鍵を表示する `--show-token`
 3. `agent_id` が無い（Opus 本体）ときは何もしない。読むだけの命令は担当でも止めない（判定の例の正本は cases.md）。手元の generator も止まるので、generator はクラウド専用になる。担当の gh pr review も止まるが、マージの関所は VERDICT の行の記録で回る。
 4. 台本と試験はリポジトリ（scripts/agent-hooks/local-subagent-guard/）に置き、CI（agent-hooks-test）で試験を流す。命令文は、bash と同じく引用符の外の語の頭の `#` だけを注釈として捨ててから、shlex の区切りで語と区間に分け、埋め込まれた命令はクラウドの見張り（scripts/agent-hooks/cloud/guard_pre_tool.py の embedded_commands）を使い回して取り出す。止めた記録は ~/.claude/logs/local-subagent-guard.log に残し、戻すときも消さない。

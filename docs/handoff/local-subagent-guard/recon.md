@@ -37,3 +37,14 @@
 - 【事実】CI: .github/workflows/agent-hooks-test.yml:8-11（paths `scripts/agent-hooks/**` ほか）、:24 で test_review_gate.sh を流す。必須チェックには登録していない（:5）。
 - 【事実】命令文の読み方: scripts/agent-hooks/cloud/guard_pre_tool.py の `strip_heredoc_bodies`(:37)・`strip_message_quotes`(:49)・`is_readonly_segment`(:57)・`scan_text`(:70)。`check_merge`(:413) と `is_pr_create`(:436) は scan_text の結果に正規表現を当てる形。モジュールの読み込み時に外部ファイルは読まない（danger_ops.json は `load_ops()`(:85) を呼んだときだけ）。
 - 【事実】クラウドの見張りは手元では動かない: scripts/agent-hooks/cloud/dispatch.sh:2 `[ "$CLAUDE_CODE_REMOTE" = "true" ] || exit 0`。手元の見張りは ~/.claude/settings.json に入れるので、クラウドには届かない（クラウドの Sonnet は本流の会話なので agent_id も無い）。
+
+## 6. 手元にある別の AI の道具（2026-10-26、第5版の審査の N1 を受けて洗い出した）
+
+- 【事実】~/.npm-global/bin・/opt/homebrew/bin・~/.local/bin・/usr/local/bin の名前を、claude・codex・gemini・ollama・cline・droid・opencode・openclaw・clawdbot・moltbot・pi・aider・cursor-agent・goose・amp・qwen・crush と照らした。あったのは次の 5 つ。
+  - ~/.local/bin/claude
+  - ~/.npm-global/bin/codex（@openai/codex）
+  - ~/.npm-global/bin/gemini（@google/gemini-cli。第5版の審査役の確かめで 0.44.0、`-p` と `--yolo` を持つ）・/usr/local/bin/gemini
+  - /opt/homebrew/bin/ollama（0.17.7）
+- 【事実】`ollama launch --help` の「Supported integrations」に claude（Claude Code）・cline・codex・droid・opencode・openclaw・pi があり、`ollama launch claude` で Claude Code を起動できる。`ollama list`・`ps`・`show` は一覧と中身を見るだけ。
+- 【事実】cline・droid・opencode・openclaw・pi・aider などは上の 4 か所に無い。
+- 設計への反映: 表D に gemini と ollama を足した（design.md §5-3）。

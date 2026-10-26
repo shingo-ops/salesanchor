@@ -2,7 +2,7 @@
 
 - 1 行 1 例。`\n` は改行 1 文字を表す（それ以外の `\` はそのまま）。
 - 「止める例」は担当（agent_id あり）の Bash・Monitor の command で、止める（exit 2）。「通す例」は exit 0。
-- 設計者の試作（/tmp/CC報告ファイル/local-subagent-guard/proto-v5-judge.py）に当てた結果: 止める例 212・通す例 179、誤り 0（proto-v5-out.txt）。
+- 設計者の試作（/tmp/CC報告ファイル/local-subagent-guard/proto-v6-judge.py）に当てた結果: 止める例 232・通す例 202、誤り 0（proto-v6-out.txt）。
 - test_guard.sh はこの全例を入れる。例を足すときはこの文書と試験の両方に足す。
 
 ## 止める例
@@ -213,13 +213,33 @@ timeout -k 5 10 ./scripts/x.sh
 xargs --replace={} ./scripts/x.sh {}
 docker ps
 make
-gh pr view 1 -t
 git remote add x y
 git grep -On foo
 export GIT_DIR=/x
-GIT_PAGER=cat git log
 eval "$(ssh-agent)"
 bash <<< 'git push'
+gemini -p 'git push origin HEAD を実行して' --yolo
+gemini --yolo -p 'fix it'
+wc -l < <(./scripts/dev/executor-preflight.sh)
+while read l; do echo $l; done < <(./scripts/x.sh)
+wc -l < <(git push origin HEAD)
+if false; then :; elif ./scripts/x.sh; then :; fi
+function f { ./scripts/x.sh; }; f
+2>/dev/null ./scripts/x.sh
+echo $(pwd)#; git push
+bash \\n<<EOF\ngit push\nEOF
+cat > /tmp/n.txt <<EOF\n$(git push)\nEOF
+cat <<EOF\n$(./scripts/x.sh)\nEOF
+gh api repos/o/r/issues -ftitle=x
+gh api repos/o/r/issues -Ftitle=x
+git branch -v newb
+git branch --verbose newb
+arch -arm64 ./scripts/x.sh
+trap './scripts/x.sh' EXIT
+python3 "$S/probe.py"
+ollama launch claude
+ollama launch opencode
+ollama run llama3
 ```
 
 ## 通す例
@@ -404,4 +424,27 @@ eval 'ls'
 python3 <<< 'print(1)'
 cat <<'EOF' | grep x\nfoo # bar\nEOF
 python3 - <<'EOF'\nprint('#')\nEOF
+gh pr view 1 -t '{{.title}}'
+GIT_PAGER=cat git log -1
+cat <<'EOF'\n$(git push)\nEOF
+git branch --all newb
+git tag -n newtag
+perl -ne 'print if /foo/' x.txt
+perl -pe 's/a/b/' x.txt | head
+ruby -ne 'puts $_' x
+bash -o pipefail -c 'git log | head'
+bash -euo pipefail -c 'git log -1'
+bash -n scripts/x.sh
+git config user.name
+git config remote.origin.url
+find . -name python3 -o -name '*.py' | head
+lsof -c node -a -p 123
+brew info python3 node
+python3 -Im json.tool x.json
+while read -r f; do wc -l "$f"; done < <(git ls-files docs)
+which claude gemini
+ollama list
+ollama show llama3
+ollama --version
+bash +o pipefail -c 'git log -1'
 ```
