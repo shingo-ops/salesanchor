@@ -137,3 +137,12 @@
 - 触っていない範囲: `_paren_body`、`strip_heredoc_bodies`、`scan_text`、`strip_message_quotes`、`is_readonly_segment`、`has_recursive_rm`、`check_danger`、`check_merge`、`is_pr_create`、`check_pr_create`、`danger_ops.json`、`dispatch.sh`。
 - 試験: `scripts/agent-hooks/cloud/test.sh` に E20〜E39 を追加（E20〜E32 止まる、E33〜E39 通る）。E40 は既存ケース全件が変更前と同じ結果であること。
 - 注意: E21 は中身が無害でも深さ5で止める（止める側に倒した結果）。B8 の時間試験は負荷で変更前から NG になることがある。
+
+## 時間切れの扱い（指摘5 の続き 便1）
+
+- 確定事実: Claude Code 2.1.310 で PreToolUse の command フックが timeout を超えると、ツール呼び出しは通る（公式: 「a timed-out command … hook doesn't block the tool call … To block the call when a command or http hook times out, set onFailure: "block"」。写し /tmp/CC報告ファイル/hook-timeout/doc-quotes.txt・recon2-A-section.txt。実測 /tmp/CC報告ファイル/hook-timeout/result.txt の A/D、recon2-B-results.txt の E1〜E4）。onFailure は各フック項目の中に置き、値は "continue"（既定）か "block"（v2.1.295 以上）。block のとき timeout・0/2 以外の終了・起動失敗が exit 2 と同じ扱い。
+- 直したこと（1）: `.claude/settings.json` の PreToolUse で dispatch.sh を呼ぶ3項目（Bash・Write|Edit・mcp__github__.*）に `"onFailure": "block"` を付け、command の先頭に `[ "$CLAUDE_CODE_REMOTE" = "true" ] || exit 0;` を足した（手元で dispatch.sh が見つからない・CLAUDE_PROJECT_DIR が空でも、block で手元の全ツールが止まらないようにするため）。timeout 10 は変えていない。
+- 直したこと（2）: `guard_pre_tool.py` の `main` を、`SIGALRM` による時間の上限（既定6秒・環境変数 CLOUD_GUARD_DEADLINE_SEC で変更）で囲んだ。上限を超えたら「命令文が長すぎて時間内に中身を確かめられない」として止める（exit 2）。onFailure が効かない版のクラウドでも止まるようにする二重の備え。時間切れの例外は既存の広い `except Exception` に飲まれないよう `BaseException` にしてある。判定関数の中身は変えていない。
+- 試験: `scripts/agent-hooks/cloud/test.sh` に T1〜T5（T5b を含む）を追加。既存ケース144件の期待・実際・判定は変更前と差 0（B8 の時間試験は負荷で変更前から NG）。
+- 実物の Claude Code での確認: 変更後の settings の PreToolUse(Bash) 項目そのものを使い、dispatch.sh の代わりに `sleep 15` するだけの一時スクリプトを指して CLAUDE_CODE_REMOTE=true で実行 → touch は実行されない。`sleep 0` なら通る。CLAUDE_CODE_REMOTE 未設定で dispatch.sh が無い場所を指しても通る。
+- 残り: 残り17件（便2）は別カード。UserPromptSubmit・SessionStart・Stop の時間切れは通る側のまま（対象外）。クラウドの Claude Code の版は未確認。
