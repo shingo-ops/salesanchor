@@ -25,6 +25,7 @@ import re
 import shlex
 import subprocess
 import sys
+import math
 import time
 import unicodedata
 
@@ -38,6 +39,7 @@ PUSH_RE = re.compile(r"(?:^|[\s;&|(`\x22\x27])(?:\S*/)?git\b[^;&|\n]*?\bpush\b")
 HEREDOC_RE = re.compile(r"(?<!<)<<(?!<)(-?)\s*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\2")
 PHRASE_RES = (re.compile(r"「([^「」\n]*)」"), re.compile(r"『([^『』\n]*)』"))
 SEP_CHARS = set(";&|()\n")
+SHORT_VALUE_OPTS = set("tBRalmpHTrqiLSA")  # gh の短い値つきオプション (b・F は本文)
 PUSH_VALUE_FLAGS = {"-o", "--push-option", "--receive-pack", "--exec", "--repo"}
 EXPLAIN = ("仕入元の原文の書き写しは、公開の置き場へ送れません。"
            "該当の語句を消し、「形の説明」(例: 値段の行・在庫数の行・見出しの行) に書き換えてから、もう一度送ってください。"
@@ -127,10 +129,13 @@ def load_tables():
             raise Block("原文の置き場の表の行に当たるファイルがありません: 表の %d 行目以降を確かめてください" % (patterns.index(pat) + 1))
         files.extend(m)
     # 写しが古いと、新しい投稿を照らせないまま通してしまう。古ければ止める (取り直しは fetch_corpus.py)
-    try:
-        max_age = min(float(os.environ.get("CONFID_CORPUS_MAX_AGE_DAYS", "2")), 2.0)  # 環境変数は短くする方向だけ (試験用)
+    max_age = 2.0
+    try:  # 環境変数は短くする方向だけ効く (試験用)。nan・inf・負・数でない値は無視して 2 日
+        v = float(os.environ.get("CONFID_CORPUS_MAX_AGE_DAYS", "2"))
+        if math.isfinite(v) and v > 0:
+            max_age = min(v, 2.0)
     except ValueError:
-        raise Block("原文の写しの古さの上限が読めません")
+        pass
     now = time.time()
     for f in files:
         try:
@@ -270,24 +275,23 @@ def added_lines(cwd, ref):
 
 def push_refs(cmd, m):
     """git push の送るブランチを決める。決まらなければ Block。-> [ref] (空なら削除だけ=見るものなし)"""
-    seg = re.split(r"[\n)]", cmd[m.end():], maxsplit=1)[0]
-    seg = re.sub(r"(?<=\s)\d+(?=[<>])", "", seg)  # 2>&1 の 2 は引数ではない
+    rest = re.sub(r"(?<=\s)\d+(?=[<>])", "", cmd[m.end():])  # 2>&1 の 2 は引数ではない
+    lx = shlex.shlex(rest, posix=True, punctuation_chars=";()<>|&\n")
+    lx.whitespace_split = True
+    lx.whitespace = " \t\r"  # 改行は区切りの字句にする
+    toks = []
     try:
-        lx = shlex.shlex(seg, posix=True, punctuation_chars=True)
-        lx.whitespace_split = True
-        raw = list(lx)
+        for t in lx:  # 区切りに着いたらそこで止める (後ろの引用符・heredoc の中身は読まない)
+            if t and all(c in ";()<>|&\n" for c in t):
+                if "<" in t or ">" in t:
+                    nxt = next(lx, None)  # 書き出し先の字句は飛ばす
+                    if nxt is not None and nxt and all(c in ";()<>|&\n" for c in nxt):
+                        break
+                    continue
+                break
+            toks.append(t)
     except ValueError:
         raise Block("git push の引数を読めません")
-    toks, k = [], 0
-    while k < len(raw):  # 書き出し先の字句は飛ばし、| ; && || & は命令の区切りとして止める
-        t = raw[k]
-        if t and all(c in "();<>|&" for c in t):
-            if "<" in t or ">" in t:
-                k += 2
-                continue
-            break
-        toks.append(t)
-        k += 1
     pos, delete = [], False
     i = 0
     while i < len(toks):
@@ -476,13 +480,24 @@ def check_gh(cmd, payload_cwd):
             while i < len(rest):
                 t = rest[i]
                 val, kind = None, None
-                if t in ("--body", "-b"):
+                if re.match(r"-[A-Za-z]", t):  # 短いオプション (まとめ書き -dF file, くっつけ書き -Ffile, -b本文 も)
+                    for ci in range(1, len(t)):
+                        ch = t[ci]
+                        if ch in "bF" or ch in SHORT_VALUE_OPTS:
+                            tail = t[ci + 1:]
+                            if tail.startswith("="):
+                                tail = tail[1:]
+                            elif not tail:
+                                tail = rest[i + 1] if i + 1 < len(rest) else None
+                                i += 1
+                            if ch == "b":
+                                kind, val = "body", tail
+                            elif ch == "F":
+                                kind, val = "file", tail
+                            break
+                elif t == "--body":
                     kind, val = "body", (rest[i + 1] if i + 1 < len(rest) else None)
                     i += 1
-                elif t.startswith("-b") and not t.startswith("--"):
-                    kind, val = "body", (t[2:][1:] if t[2:].startswith("=") else t[2:])
-                elif t.startswith("-F") and not t.startswith("--") and t != "-F":
-                    kind, val = "file", (t[2:][1:] if t[2:].startswith("=") else t[2:])
                 elif t.startswith("--body="):
                     kind, val = "body", t[7:]
                 elif t in ("--body-file", "-F"):

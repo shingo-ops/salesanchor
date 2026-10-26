@@ -209,6 +209,40 @@ def main():
     results.append(r.returncode == 2)
     print("%s %-62s exit=%d (期待 2)" % ("PASS" if results[-1] else "FAIL", "T16s 環境変数で上限を延ばしても2日のまま -> 止まる", r.returncode))
     make_tables()
+    cf = os.path.join(D, "raw", "msgs_1.tsv")
+
+    print("== 4c 区切りのあとの引用符・まとめ書き・上限の値 (REVISE 3)")
+    hitbody = os.path.join(T, "hitbody.md")
+    cleanbody = os.path.join(T, "cleanbody.md")
+    write(hitbody, "「%s」\n" % FAKE_QUOTE)
+    write(cleanbody, "「%s」\n" % FAKE_NOT_IN_CORPUS)
+    branch_with("clean4", "- 「%s」\n" % FAKE_NOT_IN_CORPUS)
+    check("T16t push && gh create --body \"$(cat file)\" (中身なし) -> 通る",
+          'git push -u origin HEAD && gh pr create --base main --title t --body "$(cat %s)"' % cleanbody, 0)
+    check("T16u 同 (本文ファイルに書き写しあり) -> 止まる",
+          'git push -u origin HEAD && gh pr create --base main --title t --body "$(cat %s)"' % hitbody, 2)
+    check("T16v push && gh create --body heredoc (中身なし) -> 通る",
+          "git push -u origin HEAD && gh pr create --base main --title t --body \"$(cat <<'EOF'\n「%s」\nEOF\n)\"" % FAKE_NOT_IN_CORPUS, 0)
+    check("T16w 同 (書き写しあり) -> 止まる",
+          "git push -u origin HEAD && gh pr create --base main --title t --body \"$(cat <<'EOF'\n「%s」\nEOF\n)\"" % FAKE_QUOTE, 2)
+    check("T16x push && echo \"a) b\" (中身なし) -> 通る", 'git push origin HEAD && echo "a) b"', 0)
+    check("T16y 改行のあとの引用符 (中身なし) -> 通る", "git push origin HEAD\necho \"it's (x\"", 0)
+    branch_with("hit4", "- 「%s」\n" % FAKE_QUOTE)
+    check("T16z push && echo \"a) b\" (書き写しあり) -> 止まる", 'git push origin HEAD && echo "a) b"', 2)
+    check("T16A gh -dF <ファイル> (書き写しあり) -> 止まる", "gh pr create --base main -dF %s" % hitbody, 2)
+    check("T16B gh -dF<ファイル> (書き写しあり) -> 止まる", "gh pr create --base main -dF%s" % hitbody, 2)
+    check("T16C gh -db <本文> (書き写しあり) -> 止まる", "gh pr create --base main -db '「%s」'" % FAKE_QUOTE, 2)
+    check("T16D gh -db <本文> (中身なし) -> 通る", "gh pr create --base main -db '「%s」'" % FAKE_NOT_IN_CORPUS, 0)
+    check("T16E gh -dF <ファイル> (中身なし) -> 通る", "gh pr create --base main -dF %s" % cleanbody, 0)
+    old_t = time.time() - 3 * 86400
+    os.utime(cf, (old_t, old_t))
+    for bad in ("nan", "inf", "-5", "abc", "0"):
+        env = dict(os.environ, CONFID_GUARD_DIR=D, CONFID_GUARD_EVENTS=EV, PYTHONDONTWRITEBYTECODE="1", CONFID_CORPUS_MAX_AGE_DAYS=bad)
+        r = subprocess.run([sys.executable, GUARD], input=json.dumps({"tool_name": "Bash", "tool_input": {"command": "git push origin HEAD"}, "cwd": WORK}),
+                           capture_output=True, text=True, env=env)
+        results.append(r.returncode == 2)
+        print("%s %-62s exit=%d (期待 2)" % ("PASS" if results[-1] else "FAIL", "T16F 上限が %s でも2日のまま (3日前の写し) -> 止まる" % bad, r.returncode))
+    make_tables()
 
     print("== 5 表に無い repo / 差分が取れない")
     write(os.path.join(OTHER, "a.md"), "- 「%s」\n" % FAKE_QUOTE)
