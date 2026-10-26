@@ -817,3 +817,99 @@ K11（移した先に在るか）: 今回は移す行が無く、消す行と書
 - 31-7 戻し方: PR を revert し、本体は .bak から戻す。
 - 31-8 外部事例: 該当なし（この Mac の見張り1本の判定の締め直しで、外の事例の数値が判断を変えないため）。
 - 31-9 自己審査（Architect 役・同一 AI）: APPROVE。理由: 触る場所は1ファイルの3か所と試験だけ。今までの試験21本の意味は変えない。締めた後の判定は試験7本で両側（素通り・止まる）を確かめ、元に戻すと落ちる試験も置いた。未解決事項なし。
+
+## 32. 合格した状態を続ける仕組み（定着化）（2026-10-26・Opus 設計判断。設計審査済み（審査6回目 APPROVE on d2f244d70）。PO 実装承認 2026-10-26（PO 原文「1」＝M1〜M3 を作り始める。M4 は PO 本人の操作）。起点 origin/main 840eea949）
+
+- 32-1 PO 原文（2026-10-26）:「この仕組みを標準化して管理定着させて継続させるための仕組みも出来ているか事実ベースでエビデンスを確立してくれ」。目的: K1〜K12 の合格（§30）が、この先の変更で崩れたら自動で止まるか、遅くとも1週間以内に担当へ知らせが届く状態にする。例外は2つ: K12 は90日ごと（D4）、K11 は続けて測らない（D5）。
+
+### 32-2 現在地（governance 検証 2026-10-26・origin/main 840eea949。生出力 /tmp/CC報告ファイル/an-gov/。リポジトリ外）
+
+| 項目 | 今ある仕組み | 必須チェックか | 判定 |
+|---|---|---|---|
+| K1（リポジトリ内） | .github/workflows/check-claude-size.yml:12 → frontend/scripts/check-claude-size.js:24-34（AGENTS.md 80・CLAUDE.md 10） | 必須（ruleset id 15777895） | 1本ずつの上限は守られるが、合計200行は守れない（上限いっぱいの 80＋10＋外 143＝233行まで CI は通る） |
+| K1（リポジトリ外: ~/.claude/CLAUDE.md 66・~/kb/AGENTS.md 32・~/.claude/rules/common/agents.md 23・git-workflow.md 22） | 無い（~/kb/scripts/patrol.sh:12-47 は行数を数えない） | — | 穴。合計 197 行で上限 200 まで残り3行 |
+| K2 | scripts/agent-hooks/test_master_register_rules_guard.sh はあるが CI から呼ばれない（.github/workflows/agent-hooks-test.yml:24 は review-gate だけ）。ホームの写しのずれ検知も無い | — | 穴 |
+| K3 | 無い | — | 穴 |
+| K4・K5・K6 | .github/workflows/doc-index-reachability.yml:26（`--strict` なし＝失敗しない。docs/handoff/doc-agenda-nav/check_doc_index.py:209-210）。pull_request だけ（:6-8） | 必須でない | 警告だけ。直近の実行6回（PR 3本）は警告 0。今の main で `--strict` を付けても exit 0（審査役の実行） |
+| K7 | 無い（§維持の仕組みに予定として書いたが check_doc_index.py に実装なし） | — | 穴 |
+| K9・K12 | 人が測る。合格後の測り直しの時期・担当の記載が無い（design.md:41・:331 は段ごとだけ） | — | 穴 |
+| K11 | 人が照合（186/186） | — | 下の 32-3 D5 |
+| 文書 | ADR-1040 に維持の節が無い。「強制の仕組み」表の到達検査が「段2で新設」のまま。本文 §維持の仕組みの「まだ存在しない」が実物と食い違う | — | 古い |
+
+### 32-3 決めたこと（5つ）
+
+- D1 目次の検査を「落とす」検査にする（K4・K5・K6・K7・K3）
+  - check_doc_index.py を scripts/ci/check_doc_index.py へ移す（docs/handoff は引き継ぎの置き場。CI の部品を置かない）。元の場所には何も残さない（実行する呼び出し元は doc-index-reachability.yml:26 の1か所だけ）。スクリプト自身の使い方の行（:4）も新しいパスに直す。過去の card の中の旧パスは記録なので直さない。
+  - 同じスクリプトに2つの検査を足す。(a) K7: AGENTS.md に「不可逆操作は必ず PO 確認」「VPS 直作業禁止」「直接コミット禁止」が各1件以上、CLAUDE.md・frontend/CLAUDE.md・backend/CLAUDE.md に 「@AGENTS.md」 の行が各1件。(b) K3: design.md:444（本節の上の「K3 の測り方」）の9語（i18n・ハードコード・不可逆・推測・executor-preflight・squash・worktree・日本語・file:line）を、CLAUDE.md・AGENTS.md・frontend/AGENTS.md・backend/AGENTS.md・frontend/CLAUDE.md・backend/CLAUDE.md で数え（grep -F 相当）、2ファイル以上に出る語を数える。今の main で2本以上に出るのは「日本語」だけ（frontend/AGENTS.md:23,24,31・backend/AGENTS.md:66。審査役の実測）。除外は語ごとではなく「ファイル:決まった文言」の組で、§25 の判断（別の決まり）を理由に書く（同じ語がほかの文言で別のファイルに増えたら検出される）。落とす決まり: ある語が2ファイル以上に出て、かつその出現のうち除外の組に当たらないものが1つでもあれば、その語を重複として数える（除外した行を先に取り除いてから数えるのではない）。結果は SUMMARY に `dup_words=<数>`、K7 は `safety_missing=<数>`・`agents_import_missing=<数>` として出し、`--strict` で 0 でなければ exit 1。語と除外の表はスクリプトの先頭に置く（正本は1か所）。旧案（本文 §維持の仕組み）の「CLAUDE.md↔AGENTS.md の見出し重複」は、CLAUDE.md が10行上限で 「@AGENTS.md」 だけになったので K7 の 「@AGENTS.md」 行の検査と行数検査で代える。
+  - workflow を `--strict` で動かし、job 名から「(warning only)」を外す。動く時機に `push: branches: [main]` と毎週月曜の `schedule` を足す（PR を通らない変更も拾う）。
+  - 必須チェックへの登録は D1 の PR が main で緑になった後に別の操作で行う。Ruleset の変更は CLAUDE.md の不可逆操作の一覧に入り、同意票（ADR-1033）では通せない（ADR-1033:20・conversation-consent/design.md:115 が除外、AGENTS.md:17-19）。PO が `!` で `bash scripts/permit-danger.sh "<op>"` を打った後に Opus が読み取りで確かめながら登録するか、PO が GitHub の画面で登録する。登録しない間も、マージの手順（CI 失敗 0 を確かめてからマージ）で止まる。
+- D2 商品登録の見張りの試験を CI で動かす（K2）
+  - agent-hooks-test.yml に job「master-register guard test」を足し、test_master_register_rules_guard.sh を動かす。paths には docs/specs/product-master/registration-rules.md だけを足す（見張り本体は既存の `scripts/agent-hooks/**`（:10）に入っている）。
+  - 前提（事実）: test_master_register_rules_guard.sh は macOS の写しで 28件すべて PASS・rc=0（審査役の実行 2026-10-26）。段1c で NG だった T1 は別の試験（scripts/agent-hooks/cloud/test.sh の時間切れ試験。card-stage1c.md:652）で、この job には入れない。Linux（CI）では未実行なので、M2 の PR の CI の結果で確かめる。CI で落ちたら担当は原因を調べ、試験側の環境差（パス・python の版）なら同じ PR で直す。見張り本体の判定が変わる直しは止めて Opus に返す。
+- D3 リポジトリの外を毎週点検する（K1 外・K2 の写し・K9・D1 の CI の最新結果・点検どうしの見張り）
+  - 新しいスクリプト scripts/dev/doc-entry-weekly-check.sh（読むだけ）。定期実行は、`git -C ~/salesanchor fetch -q origin` の直後に origin/main の使い捨て写し（`git worktree add --detach`。作業場所の札を残さない）を作り、その写しのスクリプトを動かして、終わったら写しを消す（本店の写しは古く、スクリプトが無いため）。
+  - 出す行（1項目1行・`名前=値`）:
+    - `K1=<合計>`: 数える範囲は kgi.md の K1 の行の定義（:22）のとおり。~/.claude/CLAUDE.md、そこから `@` で取り込むファイル（今は ~/kb/AGENTS.md）、~/.claude/rules/ の .md のうち先頭の `---` で囲まれた部分に `paths:` が無いもの（今は agents.md・git-workflow.md）、写しの CLAUDE.md・AGENTS.md。各ファイルを `wc -l` で数えて足す。範囲に入れたファイル名も `K1_FILES=` に並べる。
+    - `K2_COPY=SAME|DIFF`: ~/.claude/scripts/master-register-rules-guard.py と写しの scripts/agent-hooks/master-register-rules-guard.py を cmp。
+    - `K9=<値>k|unreadable|skipped`: 写しで `claude -p "/context" --no-session-persistence`（baseline.md:147・design.md:603 と同じ条件）を実行し、MEMORY.md を除く Memory files の表示値。
+    - `DOC_INDEX_CI=success|failure|pending|none`: `gh run list --workflow doc-index-reachability.yml --branch main -L 1 --json status,conclusion` の最新。実行中は pending（NG にしない。次の週に見る）。
+    - `K12_LAST=<YYYY-MM-DD>` と `K12_DUE=yes|no`: baseline.md の見出しのうち `## 全条件の測り直し（YYYY-MM-DD）` の型だけを拾った日付の最大値（今は :245 の1本。「段8 の後の測り直し」などは拾わない）。今日から90日を過ぎたら yes。
+    - `K12_OPEN_PR=<URL>|none`: `$DOC_ENTRY_GH pr list --state open -L 200 --json headRefName,url -q '.[]|select(.headRefName|startswith("release/doc-entry-k12-"))|.url'` の1件目（`--head` は枝名の完全一致しか拾わないため使わない。審査5回目の実測）。RESULT の判定には使わない。
+    - `PEER_LAST=<YYYY-MM-DD>`: 「同意と権限の週次点検」の保存先 ~/CC報告ファイル-keep/consent-weekly/ のうちファイル名が `^[0-9]{8}\.txt$`（YYYYMMDD.txt。今は 20261026.txt）に合うものの一番新しい日付（ファイル名から読む。更新時刻は使わない。「-guard-blocked-analysis.md」 などの付属ファイルは拾わない）。
+    - 最後の行 `RESULT=OK` か `RESULT=NG <理由>`。NG にするのは K1>200・K2_COPY=DIFF・K9 が 6.5k 超か unreadable・DOC_INDEX_CI=failure・PEER_LAST が今日から7日以上前（日付の差。正常なら同じ日の 14:00 の分で0日）、のどれか。K12_DUE=yes だけでは NG にしない（D4 で扱う）。合格の線（200・6.5k・90日・7日）はスクリプトの先頭に置く（kgi.md の値の写しであることを注記）。
+  - 差し替えの口（試験用。既定は本物）: `DOC_ENTRY_HOME`（既定 $HOME）、`DOC_ENTRY_REPO`（既定 スクリプトの2つ上＝写しの根）、`DOC_ENTRY_GH`（既定 gh）、`DOC_ENTRY_TODAY`（既定 今日 YYYY-MM-DD）、`DOC_ENTRY_SKIP_K9=1`（K9 を `skipped` にし RESULT の判定から外す）。試験 scripts/dev/test_doc_entry_weekly_check.sh で 32-6 の各場合を一時ディレクトリと偽の gh で確かめる（本物の ~/.claude には触れない）。
+  - agent-console の定期実行を1本足す（`ac-routine.mjs add`。役割 opus-designer の Opus 本体が打つ。README v0.47.1「ac-routine の使い方」。名前「入口の文書 週次点検」・月曜 16:00・closeWhenIdle true。月曜の有効な定期実行は 09:00・12:00・14:00（Opus が routines.json を 2026-10-26 に読み取り）で、60分未満は関門で拒まれるため 16:00）。定期実行の手順: スクリプトを動かし出力を ~/CC報告ファイル-keep/doc-entry-weekly/<YYYYMMDD>.txt に保存し、全文を読む。RESULT=OK かつ K12_DUE=no なら「入口の文書 週次点検 異常なし（<パス>）」の1行だけを返して終える（closeWhenIdle で閉じる）。RESULT=NG なら PO へ3行の型で報告し、最後の行に `NEEDS_DECISION: 入口の文書 週次点検 NG` を書く（README v0.47.1: 最後の返答に NEEDS_DECISION: があれば閉じずに残す）。K12_DUE=yes なら D4 の手順に進む。
+  - 点検どうしの見張り: 「同意と権限の週次点検」（月曜 14:00、既存）の手順に1項目足す（`ac-routine.mjs update`。Opus 本体）: ~/CC報告ファイル-keep/doc-entry-weekly/ のうちファイル名が `^[0-9]{8}\.txt$` に合うものの一番新しい日付が今日から8日以上前なら異常として報告する（正常なら前の週の月曜 16:00 の分で7日。14:00 の点検は 16:00 より先に動くため、こちらは8日を線にする）。逆向きは上の PEER_LAST。知らせが出るまで: 同意の週次点検が止まったら、同じ日の 16:00（約2時間後）。入口の週次点検が止まったら、次の月曜 14:00（約7日後）。どちらも32-1 の「遅くとも1週間以内」に入る。
+- D4 人が測る項目の時期を決める（K12）
+  - K12_DUE=yes のとき、定期実行の会話（Opus、この Mac）が次の順で進める。
+    1. 同じ週に RESULT=NG なら測らない。最後の行は D3 の `NEEDS_DECISION: 入口の文書 週次点検 NG` だけにする（直してから次の週に測る。NG を先に扱う）。
+    2. 二重に測らない: スクリプトの `K12_OPEN_PR` が none でなければ測らず、最後の行を `NEEDS_DECISION: K12 測り直し PR マージ待ち <その URL>` にする。
+    3. k12-tasks.md の手順（runall.sh。これまでと同じユーザー設定の条件）で測り直す。生出力は ~/CC報告ファイル-keep/doc-entry-weekly/k12-<YYYYMMDD>/ に保存（ファイル名の型 `^[0-9]{8}\.txt$` に合わないので見張りの日付には混ざらない）。
+    4. `bash scripts/new-worktree.sh release/doc-entry-k12-<YYYYMMDD>`（origin/main 起点。AGENTS.md:34）で作業場所を作り、結果を `## 全条件の測り直し（YYYY-MM-DD）` の見出しで baseline.md に追記する docs だけの PR を起票する（docs/handoff は危険パスではない）。
+    5. 同じ会話で、通常の手順（reviewer を model opus で新規起動して APPROVE・CI 失敗0・「確認済み：」コメント）を済ませてマージする。マージできたら K12_LAST が進むので、次の週は K12_DUE=no に戻る。
+    6. 最後の行: 10/20 以上でマージ済みなら `K12 測り直し 合格 <点>/20 <PR の URL>` の1行で終える（closeWhenIdle で閉じる）。10/20 未満なら PO へ3行の型で報告し、最後の行を `NEEDS_DECISION: K12 未達 <PR の URL>` にする（PR は記録として手順5どおりマージする。K12_LAST は進むが、未達の扱いは PO の判断に委ねるので次の知らせは90日後でよい）。審査が REVISE か CI が赤でマージできなければ、最後の行を `NEEDS_DECISION: K12 測り直し PR マージ待ち <URL>` にして会話を残す。
+  - クラウドで測る案は、ユーザー設定が無く条件が変わり前の値と比べられないので採らない。
+- D5 K11 は続けて測らない
+  - 理由: K11 は「入口から外した行が移した先に在るか」を移す段ごとに確かめる条件で、移す段（段3a〜段8）は終わった。この先は新しく移さない。入口に必ず残す決まりは D1(a) の K7 で、目次から届くことは D1 の K4 で毎回確かめる。今後また入口から決まりを移すときは、その段の設計に K11 の照合を書く（ADR-1040 の維持の節に書く）。
+
+### 32-4 文書の直し（その時点の実物だけを書く。便ごとに足す。ADR-1040 を直す便は毎回 `node scripts/generate-adr-index.js` を回し、差が出たら同じ PR に入れる）
+
+- M1: ADR-1040 に「維持の仕組み」の節を足し、「強制の仕組み」表の到達検査の行を実物に合わせる（scripts/ci/check_doc_index.py・`--strict` で失敗する・必須チェックではない）。本文 §維持の仕組みの「追加予定の守り手（…まだ存在しない）」を実物の名前と §32 への参照に書き換える。docs/STANDARD-WORKFLOW.md に1行: 「新しい手順書・仕様書は docs/INDEX.md か docs/specs/README.md に『いつ読むか』付きで1行足す（CI『doc index reachability』で止まる）」。kgi.md の運用方針に「合格後の点検: design.md §32」を1行。`node scripts/generate-adr-index.js` を回す。
+- M2: ADR-1040 の「強制の仕組み」表に「登録の見張りの試験 CI（agent-hooks-test.yml の job）」の行を足す。
+- M3: 同じ表に「週次点検（scripts/dev/doc-entry-weekly-check.sh・定期実行『入口の文書 週次点検』）」の行を足し、本文 §維持の仕組みの「リポジトリ外の守り手（段7で新設案）」を書き換える。kgi.md の運用方針に「K12 を測り直したら baseline.md に `## 全条件の測り直し（YYYY-MM-DD）` の見出しで書く」を1行。
+- M4: PO の登録操作の後、Opus が起票する別の docs だけの PR で、到達検査の行の「必須チェックではない」を「必須チェック（ruleset 15777895）」に直す。
+
+### 32-5 便の分け方（1便＝1PR。変えたら測ってから次へ）
+
+| 便 | 中身 | 危険な場所に触るか |
+|---|---|---|
+| M1 | D1（スクリプト移動・K3/K7 の検査・--strict・時機の追加）＋ 32-4 の M1 | 危険パス `scripts/`（scripts/check-process-artifacts.js:117）・docs/STANDARD-WORKFLOW.md（同 :121）→ PR 本文に `### GO記録`（ADR-136。GO は委任に基づく Opus 発行・ADR-1003）。CI の workflow（workflow-lint.yml ではない） |
+| M2 | D2（試験 job を足す）＋ 32-4 の M2 | CI の workflow。試験を直すなら危険パス `scripts/` → GO記録 |
+| M3 | D3・D4（週次点検スクリプトと試験）＋ 32-4 の M3。マージ後に Opus が定期実行を1本足し、同意の週次点検の手順を直す | 危険パス `scripts/` → GO記録。agent-console の定期実行（Opus の許可範囲。README v0.47.1「ac-routine の使い方」） |
+| M4 | 必須チェックへの登録（Ruleset の変更。PR ではなく PO の操作）。その後 32-4 の M4 を docs だけの PR 1本で | **不可逆操作の一覧に入り、同意票では通せない（ADR-1033:20）。GO 委任の例外（ADR-1003:31-38）。PO 本人が `!` で permit-danger.sh を打つか画面で操作する** |
+
+### 32-6 受け入れ基準
+
+| 基準 | 検証方法 |
+|---|---|
+| K4・K5・K6 が崩れたら PR が赤になる | M1 の PR で、目次から1行消した使い捨ての確認用コミットで job が失敗し、戻すと成功する（2回の実行の URL を記録） |
+| K7 が崩れたら赤になる | 同じく AGENTS.md の「VPS 直作業禁止」を消したコミットで失敗、戻すと成功 |
+| K3 が崩れたら赤になる | 同じく AGENTS.md（ルート。45行・上限80）に「i18n」の本文を1行足したコミットで job「doc index reachability」が失敗（`dup_words=1`）、戻すと成功（今 i18n は frontend/AGENTS.md の1本だけ。backend/AGENTS.md は70行で上限70なので行数検査まで赤になり判定が混ざる） |
+| 除外が語ごとでない | 同じく AGENTS.md（ルート）に「日本語」を含む別の文言を1行足したコミットで job「doc index reachability」が失敗 |
+| 今の main で全部合格 | M1 の最終 HEAD で job 成功・`SUMMARY` の全項目 0 |
+| 登録の見張りの試験が CI で動く | M2 の PR で job「master-register guard test」成功。試験を1本わざと壊したコミットで失敗 |
+| 週次点検が今の値を正しく出す | (a) M3 の PR で test_doc_entry_weekly_check.sh が全件 PASS: 一時ディレクトリで K1 の範囲（paths ありの rules は数えない）・DIFF で NG・`## 全条件の測り直し（<DOC_ENTRY_TODAY の91日前>）` で K12_DUE=yes かつ RESULT は OK のまま・同じ日の後に「段8 の後の測り直し（新しい日付）」を足しても K12_DUE=yes・偽の gh が failure で NG・pending で OK・consent-weekly に `<7日前>.txt` だけなら NG・偽の gh が headRefName `release/doc-entry-k12-20270101` の PR を返すと `K12_OPEN_PR=<その URL>`・`release/other` だけなら none・`<6日前>.txt` なら OK・`<7日前>.txt` と 「<今日>-guard-blocked-analysis.md」 なら NG（付属ファイルを拾わない）（K9 は DOC_ENTRY_SKIP_K9=1）。(b) M3 マージ後に Opus 本体が本物で1回動かし、K1 がその時に別に `wc -l` で数えた同じ範囲の合計と一致・K2_COPY=SAME・K9 がその時に同じ条件で手で取った `/context` の値と一致・RESULT=OK |
+| 定期実行が登録された | Opus 本体が `ac-routine.mjs list` を打ち（担当からは見張りで止まる）、「入口の文書 週次点検」enabled true・月曜 16:00 を確かめる。月曜の有効な定期実行は 09:00・12:00・14:00（Opus が routines.json を 2026-10-26 に読み取り） |
+| 点検どうしの見張り | Opus 本体が `ac-routine.mjs list` で「同意と権限の週次点検」の指示文に doc-entry-weekly の「8日以上前なら異常」の項目が入ったことを確かめる |
+| 必須になった | M4 の後、ruleset id 15777895 の required checks に「doc index reachability」がある（読み取りの gh api） |
+| 文書が実物と合う | 各便のマージ後、ADR-1040 の「強制の仕組み」表の各行のファイルが origin/main に在る（git ls-tree）。その便でまだ作っていない仕組みの行が無い |
+
+- 32-7 リスクと対処: (1) `--strict` で他のセッションの PR が赤になる → 直近の PR 6回で警告 0、規則も各表の「追加のしかた」に書いてある。赤になった PR は目次に1行足せば通る。(2) K3 の語の数え方が誤検出する → M1 で今の main が 0 になることを受け入れ基準にする。誤検出の語は除外の表に理由つきで足す。(3) 週次点検の `claude -p "/context"` は Claude の版で表示が変わりうる → 読み取れなければ RESULT=NG（値が取れない）として知らせる（黙って合格にしない）。(4) M2 の試験が Linux で落ち、原因が見張り本体だった場合 → M2 を止めて Opus が別に設計する。(5) K1 は CI では1本ずつの上限しか見ないので、合計が200行を超えても最長1週間は知らせが来ない → 週次点検で拾う（目的の1週間以内に入る）。1本ずつの上限を合計から逆算して絞る案（AGENTS.md 47行＝200−外143−CLAUDE.md 上限10）は、PO が決めた入口の上限（ADR-1040 Decision・90行）を変えるので採らない。 (6) agent-console 全体か Mac が止まると、両方の定期実行が止まり、点検どうしの見張りも働かない。これは本節の範囲外（agent-console 停止の見張りは別テーマ）として残る。
+- 32-8 代替案と採らなかった理由: (a) ~/kb/scripts/patrol.sh に行数を足す（§維持の仕組みの旧案）→ ~/kb の記録は PO が `!` で打つ決まり（~/kb/AGENTS.md「検査」）で、PO の手が毎回要る。agent-console の定期実行は Opus が足せる。(b) K12 も毎週測る → 1回 20 実行の費用がかかり、入口の文書は毎週は変わらない。90日ごとにする。(c) 必須チェック登録を先にする → `--strict` 化の前に登録しても警告だけなので意味が無い。
+- 32-9 戻し方: 各便の PR を revert。定期実行は `ac-routine.mjs disable <id>`。必須の登録は、PO が `!` で permit-danger.sh を打った後に外すか、PO が画面で外す。
+- 32-10 外部事例: 該当なし（この会社の CI と手元の定期実行の組み合わせで、外の事例の数値が判断を変えないため）。
+- 32-15 審査5回目（審査役 model opus・新規起動・4f4030598）: REVISE（直すべき N1-b・任意 P-a〜P-d。N1 の残り以外と O-a〜O-e は解消、見張りの日付計算も誤報なし・1週間以内と確認）。生出力 /tmp/CC報告ファイル/an-gov/review5/。反映: N1-b→開いている測り直し PR の確認をスクリプトの `K12_OPEN_PR`（枝名の頭で判定。`--head` は完全一致のみ）に移し、32-6 の試験で確かめる、P-a→`<7日前>.txt`＋付属ファイルで NG の組、P-b→10/20 未満でも記録としてマージし PO へ NEEDS_DECISION、P-c→手順4に new-worktree.sh、P-d→M4 の文言の重複を削った。
+- 32-14 審査4回目（審査役 model opus・新規起動・040c241b6）: REVISE（直すべき N1・任意 O-a〜O-e。R1〜R4・O1〜O5 は解消と確認、実物との照合はすべて一致）。生出力 /tmp/CC報告ファイル/an-gov/review4/。反映: N1→D4 を6手順にし、NG を先に扱う・開いている測り直し PR があれば測らない・同じ会話で審査と CI を済ませてマージ・マージできなければ NEEDS_DECISION で残す、O-a→日付はファイル名 `^[0-9]{8}\.txt$` から読み付属ファイルを拾わない・保存名を YYYYMMDD に揃えた、O-b→入口側は7日以上・同意側は8日以上で、どちらの停止も1週間以内に知らせる、O-c→32-5 の各便に 32-4 の該当分を明記・M4 は PO 操作＋docs PR 1本、O-d→ADR を直す便は毎回目次を作り直す、O-e→32-7 の番号順。
+- 32-13 審査3回目（審査役 model opus・新規起動・d81980f46）: REVISE（直すべき R1〜R4・任意 O1〜O5）。生出力 /tmp/CC報告ファイル/an-gov/review3/。反映: R1→D3 の出す行と RESULT の決まり（K12_DUE は NG にしない）・定期実行の返し方・D4 は定期実行の会話が測って PR まで、R2→32-4 を便ごとに分けた、R3→差し替えの口5つと試験スクリプト、R4→点検どうしの見張り（相互）と残るリスク (6)、O1→範囲は kgi.md:22・先頭の --- の中、O2→47行、O3→:4 の行、O4→pending、O5→K3 の確かめをルートの AGENTS.md に。README v0.47.1 の closeWhenIdle と NEEDS_DECISION の扱いは Opus 本体が読み取りで確かめた（担当は見張りで読めない）。
+- 32-12 審査2回目（審査役 model opus・新規起動・e25bc27f8）: REVISE（直すべき A〜D・任意 E〜G・S1 の残り）。生出力 /tmp/CC報告ファイル/an-gov/review2/。反映: S1 残り→32-5 M4 行、A→時刻を 16:00 にそろえた、B→落とす決まりと9語の正本（design.md:444）を D1(b) に、C→K12 の見出しの型を固定し定期実行は知らせるまでに絞った（測るのは Opus がこの Mac で）、D→受け入れ基準を「その時に別に測った値と一致」に、`--no-session-persistence` を足した、E→SUMMARY の項目名、F→M1 に STANDARD-WORKFLOW.md、G→確かめるのは Opus 本体。
+- 32-11 審査1回目（審査役 model opus・新規起動・50a359da8）: REVISE（止めるべき2・直すべき5・任意6）。生出力 /tmp/CC報告ファイル/an-gov/review/（リポジトリ外）。反映: S1→D1・32-9 を permit-danger.sh か画面操作に、S2→D2 の前提を事実どおりに、R1→K3 の試験を backend/AGENTS.md に、R2→除外を「ファイル:文言」の組に、R3→32-5 に危険パスと GO記録、R4→32-2 の K1 の判定と 32-7(5)、R5→D3 の写し・④⑤・受け入れ基準・32-1 の例外。任意: paths・6回の内訳・行番号・見出し重複を反映。tools/claude-channels/intake/CLAUDE.md の LIMITS 未登録は K1 の対象外（入口ではない）で、本節では扱わない。ADR-1040 を直す M1 では `node scripts/generate-adr-index.js` を回す。
