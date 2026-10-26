@@ -227,3 +227,138 @@ echo "$O" | grep -q '"permissionDecision": "deny"'; check "T28 段の名前そ�
 
 本報告はカード doc-agenda-nav 段1c の実行結果である。
 
+
+枝: release/doc-agenda-nav-stage1c（開始時 HEAD 33d6c29c7ef8bb4beaaf2faf1cf4856e6355996f。commit 後の sha は完了報告に記す）
+
+### preflight（[1/3]・[2/3] のみ FAIL。§12 により続行）
+```
+== executor preflight (identity=shingo-cc, mode=fix) ==
+[1/3] network -> api.github.com
+  [FAIL] GitHub API に到達不可。Mac回線ではなく実行役サンドボックスの通信OFFが濃厚。
+       => Codexをネット有効で起動 (信頼repo内: codex --sandbox danger-full-access / または config の network_access=true)
+[2/3] gh auth = shingo-cc
+  [warn] gh の active account が shingo-cc でない。gh auth switch で切り替え試行...
+  [FAIL] gh auth switch --hostname github.com --user shingo-cc に失敗。gh auth status --active で現状を確認。
+[3/3] git config user.name = shingo-cc
+  [OK]   git user.name は shingo-cc
+[4/4] long-lived branch -> origin/main
+  [OK]   origin/main は存在
+==============================================
+PREFLIGHT FAIL — 上の対策を実施し再実行(深追いしない)
+rc=1
+```
+
+### 5-1 差分全文
+```diff
+diff --git a/scripts/agent-hooks/master-register-rules-guard.py b/scripts/agent-hooks/master-register-rules-guard.py
+index fec62a4cd..e549788af 100755
+--- a/scripts/agent-hooks/master-register-rules-guard.py
++++ b/scripts/agent-hooks/master-register-rules-guard.py
+@@ -20,7 +20,10 @@ TARGETS = (
+     "INSERT INTO products",
+     "/tcg/products/create",
+ )
+-EXEMPT_PATHS = ("/backend/", "/frontend/", "/docs/", "/migrations/", "/tests/", "/CC報告ファイル-keep/", "/tmp/CC報告ファイル/")
++WORKTREES = os.path.expanduser("~/worktrees/salesanchor")
++REPO_DIRS = ("backend", "frontend", "docs", "migrations", "tests")
++RECORD_DIRS = (os.path.expanduser("~/CC報告ファイル-keep"), "/tmp/CC報告ファイル", "/private/tmp/CC報告ファイル")
++RECORD_EXTS = (".md", ".txt")
+ READ_ONLY_CMDS = {"git", "grep", "rg", "cat", "sed", "head", "tail", "less"}
+ PROMPT_RE = re.compile(r"マスタ[^。\n]{0,40}登録|登録[^。\n]{0,20}マスタ")
+ PROMPT_LIMIT = 9000
+@@ -50,6 +53,22 @@ def deny(reason):
+     }})
+ 
+ 
++def exempt(fpath):
++    """Write/Edit の保存先が免除の場所か。部分一致ではなく、決まった場所で始まるかで見る。"""
++    if not isinstance(fpath, str) or not fpath.startswith("/"):
++        return False
++    p = os.path.normpath(fpath)
++    if p.endswith(RECORD_EXTS) and any(p.startswith(d + "/") for d in RECORD_DIRS):
++        return True
++    for root, skip in ((os.path.normpath(REPO), 0), (WORKTREES, 1)):
++        if not p.startswith(root + "/"):
++            continue
++        parts = p[len(root) + 1:].split("/")[skip:]
++        if len(parts) > 1 and parts[0] in REPO_DIRS:
++            return True
++    return False
++
++
+ def pre_tool_use(data):
+     tool = data.get("tool_name", "")
+     ti = data.get("tool_input") or {}
+@@ -63,7 +82,7 @@ def pre_tool_use(data):
+         return
+     if not isinstance(text, str) or not any(t in text for t in TARGETS):
+         return
+-    if tool in ("Write", "Edit") and any(p in fpath for p in EXEMPT_PATHS):
++    if tool in ("Write", "Edit") and exempt(fpath):
+         return
+     if tool == "Bash":
+         words = text.split()
+```
+
+### 5-2 試験出力（T1〜T28 = PASS 28行、FAIL 0行）
+```
+PASS T1 deny+全文
+PASS T2 正しい印はallow(出力なし)
+PASS T3 /backend/ は素通り
+PASS T4 additionalContextに全文
+PASS T5 古い印はdeny
+PASS T6 grepは素通り
+PASS T7 cat heredoc書き込みはdeny
+PASS T8 grep+リダイレクトもdeny(許容する副作用)
+PASS T9-15 出ない: 在庫表の商品名の列幅を直して。あとログイン登録画面のバグも見て
+PASS T9-15 出ない: ユーザー登録フォームで商品一覧が出ない
+PASS T9-15 出ない: マスタ画面の表示が遅い。GitHub に登録してあるワークフローも確認
+PASS T9-15 出ない: Discord の webhook を登録して商品の通知を流す
+PASS T9-15 出ない: マスタを整備して正答率を上げたい。登録はまだしない
+PASS T9-15 出ない: 商品を登録して
+PASS T9-15 出ない: PR を作って
+PASS T16-18 出る: 商品マスタに新しいカードを登録して
+PASS T16-18 出る: 共用マスタへ登録する候補一覧を出して
+PASS T16-18 出る: 販売先を顧客マスタに登録して
+PASS T19 記録置き場(keep)への Write は素通り
+PASS T20 記録置き場(tmp)への Write は素通り
+PASS T21 Bash の登録コマンドは止まる
+PASS T22 リポジトリの外の docs は止まる
+PASS T23 記録置き場の .py は止まる
+PASS T24 作業場所の docs は素通り
+PASS T25 .. で外へ出るパスは止まる
+PASS T26 記録置き場(/private/tmp)への .md は素通り
+PASS T27 絶対パスでないものは止まる
+PASS T28 段の名前そのもの(下に何も無い)は止まる
+rc=0
+```
+
+### 5-3 わざと戻した確かめ（FAIL 3行・PASS 25行）
+```
+FAIL T22 リポジトリの外の docs は止まる
+FAIL T23 記録置き場の .py は止まる
+FAIL T25 .. で外へ出るパスは止まる
+rc=1
+```
+確かめの後、一時の EXEMPT_PATHS 1行を消し、§4-3 を変更後の1行へ Edit で戻した（git checkout 不使用）。
+
+### 5-4
+```
+rc=0
+rc=0
+```
+
+### 5-5
+```
+（0行・grep rc=1）
+```
+### 5-6（分岐点 2d25c719d90839b4a7b2932967659b1cf9daac42 と作業ツリーの比較。commit 後の origin/main...HEAD と同じ範囲）
+```
+ docs/handoff/doc-agenda-nav/card-stage1c.md        | 356 +++++++++++++++++++++
+ docs/handoff/doc-agenda-nav/design.md              |  12 +
+ scripts/agent-hooks/master-register-rules-guard.py |  23 +-
+ .../test_master_register_rules_guard.sh            |  18 +-
+ 4 files changed, 406 insertions(+), 3 deletions(-)
+```
+
+判断を要した点: なし。試験ファイルの編集は §12 のとおり Bash の python 台本＋先頭行の印で行った（見張りが示した印は d5738ef7）。
