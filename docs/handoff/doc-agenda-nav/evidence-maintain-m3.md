@@ -181,3 +181,79 @@ PASS T15 RESULT=NG
 PASS 38 / FAIL 0
 rc=0
 ```
+
+## 手元 macOS での確認（Opus・2026-10-27）
+
+`/bin/bash --version` 1行目: GNU bash, version 3.2.57(1)-release (arm64-apple-darwin25)
+
+### 308c883c2 の試験（直し1の前）の該当行
+```
+FAIL T14 K1_MISSING
+PASS 37 / FAIL 1
+rc=1
+```
+（`"${1/#$HOME_DIR/\~}"` が bash 3.2 では `\~/kb/AGENTS.md` を返した）
+
+### 0a107413e の試験（直し1の後）
+```
+PASS T1 K1=24
+PASS T1 b.md を数えない
+PASS T1 K2_COPY=SAME
+PASS T1 K9=skipped
+PASS T1 DOC_INDEX_CI=success
+PASS T1 K12_LAST
+PASS T1 K12_DUE=no
+PASS T1 K12_OPEN_PR=none
+PASS T1 PEER_LAST
+PASS T1 RESULT=OK
+PASS T1 rc=0
+PASS T2 K1=214
+PASS T2 RESULT=NG K1>200
+PASS T2 rc=1
+PASS T3 K2_COPY=DIFF
+PASS T3 RESULT=NG
+PASS T4 K12_DUE=yes
+PASS T4 RESULT=OK
+PASS T5 K12_LAST=2026-11-01
+PASS T5 K12_DUE=yes
+PASS T6 K12_DUE=no
+PASS T7 DOC_INDEX_CI=failure
+PASS T7 RESULT=NG
+PASS T8 DOC_INDEX_CI=pending
+PASS T8 RESULT=OK
+PASS T9 PEER_LAST=2027-01-24
+PASS T9 RESULT=NG
+PASS T10 RESULT=OK
+PASS T11 PEER_LAST=2027-01-24
+PASS T11 RESULT=NG
+PASS T12 K12_OPEN_PR=URL
+PASS T12 RESULT=OK
+PASS T13 K12_OPEN_PR=none
+PASS T14 K1_MISSING
+PASS T14 RESULT=NG
+PASS T15 DOC_INDEX_CI=unreadable
+PASS T15 K12_OPEN_PR=unreadable
+PASS T15 RESULT=NG
+PASS 38 / FAIL 0
+rc=0
+```
+
+### 本物の環境で1回（HEAD 0a107413e の detached の写し）
+```
+K1=198
+K1_FILES=~/.claude/CLAUDE.md,~/kb/AGENTS.md,~/.claude/rules/common/agents.md,~/.claude/rules/common/git-workflow.md,/tmp/CC報告ファイル/an-gov/m3/detached/CLAUDE.md,/tmp/CC報告ファイル/an-gov/m3/detached/AGENTS.md
+K1_MISSING=none
+K2_COPY=SAME
+K9=6.4k
+DOC_INDEX_CI=success
+K12_LAST=2026-10-26
+K12_DUE=no
+K12_OPEN_PR=none
+PEER_LAST=2026-10-26
+RESULT=OK
+rc=0
+```
+
+- 同じ時に別に数えた入口の6ファイルの `wc -l` の合計: 198（K1 と一致）
+- 同じ時に別に取った `claude -p "/context"` の生出力の該当行: `| Memory files | 17.3k | 8.6% |`・`| AutoMem | …/memory/MEMORY.md | 10.9k |` → 17.3k − 10.9k = 6.4k（K9 と一致）
+- 審査（PR #4804）の注意2: gh は `-R` なしで呼ぶので、写しの中で動かす。定期実行の手順（カード §4）で写しを作業場所にする
