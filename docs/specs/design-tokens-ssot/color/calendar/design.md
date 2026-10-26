@@ -1,6 +1,6 @@
 # design — カレンダー色CSS変数化
 
-親: [../README.md](../README.md)
+親: [../../README.md](../../README.md)（design-tokens-ssot の表紙。color/ 直下に表紙は無い）
 
 > 1行要約: `calendars.config.ts` の 7 カレンダー直書き hex を `index.css` の CSS 変数参照に変え、既存土台色を流用できるものは流用し、識別に必要なものだけを新規値として定義する。
 
