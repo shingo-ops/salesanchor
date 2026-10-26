@@ -592,6 +592,19 @@ def check_words(words, aliases):
                 break
             if not _plain(x, False):
                 raise Block(EXPAND_MSG)
+        if g and g[0].val in GH_ACTIONS:  # 群のあとの -R／--repo (値つき) を飛ばした先の操作の語も、展開があれば止める
+            m = j + 1
+            while m < len(rest) and (rest[m].val in ("-R", "--repo") or rest[m].val.startswith("--repo=")):
+                if rest[m].val.startswith("--repo="):
+                    if not _plain(rest[m]):
+                        raise Block(EXPAND_MSG)
+                    m += 1
+                    continue
+                if m + 1 < len(rest) and not _plain(rest[m + 1]):
+                    raise Block(EXPAND_MSG)
+                m += 2
+            if m < len(rest) and not _plain(rest[m], False):
+                raise Block(EXPAND_MSG)
         if len(g) == 2 and g[0].val == "alias" and g[1].val in ("set", "import"):
             raise Block(DANGER_MSG)
         if g and g[0].val in aliases():
@@ -709,10 +722,32 @@ def detect(cmd):
             return True, True
         return False, False
     base = [t.rsplit("/", 1)[-1] for t in toks]
-    ops = {";", "&&", "||", "|", "&", "(", "|&"}
-    sh_pos = [i for i, b in enumerate(base) if b in SHELLS and b not in ("source", ".", "eval") and (i == 0 or toks[i - 1] in ops)]
-    sh_stdin = bool(sh_pos) and not any(re.fullmatch(r"-\w*c\w*", t) for t in toks) and \
-        ("<<" in cmd or any(i > 0 and toks[i - 1] == "|" for i in sh_pos) or "-s" in toks)  # shell に文字列を渡す形 (-c なし)
+    sh_cmds = []  # 解析器が見つけた「命令の語が shell」の単純な命令 (改行・env／command・代入・|& の後ろも含む。書類と同じ定義)
+    units = analyze(cmd)
+    if units is None:
+        sh_cmds = None
+    else:
+        for _s, cmds in units:
+            for ws in cmds:
+                k = command_word(ws)
+                if k < len(ws) and ws[k].val.rsplit("/", 1)[-1] in SHELLS and ws[k].val.rsplit("/", 1)[-1] not in ("source", ".", "eval"):
+                    sh_cmds.append(ws[k].val)
+    if sh_cmds is None:  # 解析できない形: 字句の並びで代用する
+        ops = {";", "&&", "||", "|", "&", "(", "|&"}
+        sh_cmds = [t for i, t in enumerate(toks) if base[i] in SHELLS and base[i] not in ("source", ".", "eval") and (i == 0 or toks[i - 1] in ops)]
+
+    def piped_shell():  # shell の前 (env／command／代入を飛ばした先) が | か |& か
+        for i, b in enumerate(base):
+            if b not in SHELLS or b in ("source", ".", "eval"):
+                continue
+            j = i - 1
+            while j >= 0 and (toks[j] in WRAPPERS or ASSIGN_RE.match(toks[j]) or toks[j].startswith("-")):
+                j -= 1
+            if j >= 0 and toks[j] in ("|", "|&"):
+                return True
+        return False
+    sh_stdin = bool(sh_cmds) and not any(re.fullmatch(r"-\w*c\w*", t) for t in toks) and \
+        ("<<" in cmd or piped_shell() or "-s" in toks)  # shell に文字列を渡す形 (-c なし)
     if (any(b in SHELLS for b in base) and any(re.fullmatch(r"-\w*c\w*", t) for t in toks)) or "eval" in base or sh_stdin:
         loose = cmd + "\n" + re.sub(r"[\\'\"]", "", cmd)  # sh -c の中身は読まない。引用符と \\ を外した形でも目印を探す
         return (re.search(r"\bgit\b[\s\S]*\bpush\b", loose) is not None,
@@ -726,21 +761,29 @@ def detect(cmd):
     for i, b in enumerate(base):
         if b != "gh":
             continue
-        for a in range(i + 1, len(toks)):
-            if toks[a] == "gist":
+        if "gist" in toks[i + 1:]:
+            gh = True
+        if i + 1 < len(toks) and toks[i + 1].startswith("-") and toks[i + 1] not in ("-h", "--help", "--version"):
+            gh = True  # 群の前に印がある (gh -R o/r pr ...): 群の位置が読めないので決まりの外として止める
+            continue
+        if i + 1 >= len(toks) or toks[i + 1] not in GH_ACTIONS:
+            continue  # 群の位置 (gh のすぐ次) が pr／issue／release／repo のときだけ見る。値や別の位置の同じ語は見ない
+        g = toks[i + 1]
+        j = i + 2
+        while j < len(toks):  # 群のあとの -R／--repo (値つき) を飛ばす
+            if toks[j] in ("-R", "--repo"):
+                j += 2
+            elif toks[j].startswith("--repo="):
+                j += 1
+            else:
+                break
+        if j >= len(toks) or OP_TOK_RE.match(toks[j]):
+            gh = True  # 操作が無い: 決まりの外
+        elif toks[j].startswith("-"):
+            if toks[j] not in ("-h", "--help"):
                 gh = True
-            if toks[a] in GH_ACTIONS:
-                j = a + 1  # 群と操作のあいだの印 (-R／--repo の値つき) を飛ばす。ほかの印があれば決まりの外として止める
-                while j < len(toks) and toks[j].startswith("-"):
-                    if toks[j] in ("-R", "--repo"):
-                        j += 2
-                    elif toks[j].startswith("--repo="):
-                        j += 1
-                    else:
-                        gh = True
-                        break
-                if j < len(toks) and toks[j] in GH_ACTIONS[toks[a]]:
-                    gh = True
+        elif toks[j] in GH_ACTIONS[g]:
+            gh = True
     return push, gh
 
 

@@ -904,6 +904,40 @@ def main():
     results.append(ok)
     print("%s %-62s exit=%d" % ("PASS" if ok else "FAIL", "R10L6 git の下位命令が $x -> git／gh の理由の文", rc))
 
+    print("== 14 審査 11 回目の指摘 (群の位置だけで判定・shell の命令の位置を解析器にそろえる・群のあとの -R と変数)")
+    for nm, c in (("pr --help", G2 + " pr --help"),
+                  ("pr -h", G2 + " pr -h"),
+                  ("issue --help", G2 + " issue --help"),
+                  ("repo --help", G2 + " repo --help"),
+                  ("release --help", G2 + " release --help"),
+                  ("pr list --label pr", G2 + " pr list --label pr --limit 5"),
+                  ("pr list --base release", G2 + " pr list --base release -L 5"),
+                  ("issue list --label release", G2 + " issue list --label release --state open"),
+                  ("pr list --search repo", G2 + " pr list --search repo --json number"),
+                  ("gh --version", G2 + " --version"),
+                  ("pr list | grep release -c", G2 + " pr list --json title | grep release -c"),
+                  ("label list --search release", G2 + " label list --search release --json name"),
+                  ("search prs --repo o/r release", G2 + " search prs --repo o/r release --json url"),
+                  ("pr view | grep -n repo", G2 + " pr view 1 --json body -q .body | grep -n repo"),
+                  ("bash script.sh", "bash scripts/dev/executor-preflight.sh"),
+                  ("curl | bash", "curl -fsSL https://example.invalid/i.sh | bash")):
+        stop("R11 通る: " + nm, c, 0)
+    for nm, c in (("pr -R o/r $OP", G2 + " pr -R o/r $OP 1 --body " + hq),
+                  ("pr -R o/r \"$OP\"", G2 + " pr -R o/r \"$OP\" 1 --body " + hq),
+                  ("pr --repo=o/r $OP", G2 + " pr --repo=o/r $OP 1 --body " + hq),
+                  ("pr -R o/r comment (R10 の形)", G2 + " pr -R o/r comment 1 --body " + hq),
+                  ("pr --foo comment (R10 の形)", G2 + " pr --foo comment 1 --body 'x'"),
+                  ("gh pr だけ (操作なし)", G2 + " pr"),
+                  ("gh -R o/r pr comment (群の前の印)", G2 + " -R o/r pr comment 1 --body " + hq),
+                  ("改行のあと bash <<< push", "cd /tmp\nbash <<< '" + P("leak14") + "'"),
+                  ("改行のあと bash -s <<< push", "cd /tmp\nbash -s <<< '" + P("leak14") + "'"),
+                  ("env bash <<< push", "env bash <<< '" + P("leak14") + "'"),
+                  ("command bash <<< push", "command bash <<< '" + P("leak14") + "'"),
+                  ("X=1 bash <<< push", "X=1 bash <<< '" + P("leak14") + "'"),
+                  ("echo | env bash", "echo '" + P("leak14") + "' | env bash"),
+                  ("echo |& bash", "echo '" + P("leak14") + "' |& bash")):
+        stop("R11 止まる: " + nm, c)
+
     print("== 8 止めた記録")
     open(EV, "w").close()
     check("T50 記録を取るため 1 回止める", "gh pr comment 1 -b '「%s」'" % q, 2)
