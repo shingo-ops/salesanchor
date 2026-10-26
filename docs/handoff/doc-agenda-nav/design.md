@@ -808,7 +808,7 @@ K11（移した先に在るか）: 今回は移す行が無く、消す行と書
 
 ## 31. 段1c 見張りの免除を部分一致から「決まった場所で始まる」に締める（2026-10-26・Opus 設計判断。PO 原文「1」に続けて「,2」2026-10-26＝テーマの外の残り4件をまとめて計画して進める。その3件目 C。起点 origin/main 2d25c719d）
 
-- 31-1 目的: 商品マスタ登録の見張り（scripts/agent-hooks/master-register-rules-guard.py）は、Write/Edit の保存先にリポジトリの段の名前（/docs/ など）や記録の置き場の名前がパスのどこかに含まれれば素通りさせる（:23 `EXEMPT_PATHS` と :66 の部分一致）。段1b で置き場2か所を足したときの審査で、リポジトリの外の `~/x/docs/a.py` や置き場に置いた台本 `/tmp/CC報告ファイル/x.py` も素通りになることが分かった。登録の命令を書いた台本が見張りを通らずに作れるので、免除を本来の場所だけに締める。
+- 31-1 目的: 商品マスタ登録の見張り（scripts/agent-hooks/master-register-rules-guard.py）は、Write/Edit の保存先にリポジトリの段の名前（/docs/ など）や記録の置き場の名前がパスのどこかに含まれれば素通りさせる（:23 `EXEMPT_PATHS` と :66 の部分一致）。段1b で置き場2か所を足したときの審査で、リポジトリの外の ~/x/docs/a.py や置き場に置いた台本 /tmp/CC報告ファイル/x.py（どちらも試験 T22・T23 の例のパス。実在しない）も素通りになることが分かった。登録の命令を書いた台本が見張りを通らずに作れるので、免除を本来の場所だけに締める。
 - 31-2 現在地（origin/main 2d25c719d）: :14 `REPO`、:23 `EXEMPT_PATHS`、:66 の判定。`EXEMPT_PATHS` を使う見張りはこの1本だけ（ほかはホームの本体と、その .bak・.new の写し）。試験 T1〜T21 は CI で動かない（.github/workflows/agent-hooks-test.yml:24 は review-gate の試験だけ）。ホームの本体と origin/main の版は同じ（diff 0）。作業場所の置き場は scripts/new-worktree.sh:13 の `~/worktrees/salesanchor/<ブランチ名>/`。
 - 31-3 決めたこと: パスを `os.path.normpath` で整えた後に、①`REPO` の直下か `~/worktrees/salesanchor/<名前>/` の直下で、最初の段が backend・frontend・docs・migrations・tests のどれか、②`~/CC報告ファイル-keep/`・`/tmp/CC報告ファイル/`・`/private/tmp/CC報告ファイル/` で始まり .md か .txt で終わる、のどちらかのときだけ素通りさせる。絶対パスでないものは免除しない。
 - 31-4 代替案と採らなかった理由: (a) 置き場の免除をやめる → 段1b の誤作動（調査メモの保存が止まる）が戻る。(b) 拡張子を見ず場所だけで締める → 置き場の台本が素通りのまま残る。(c) `os.path.realpath` でつなぎ先までたどる → まだ無いファイルや Mac の /tmp のつなぎで結果が場所ごとに変わる。/tmp と /private/tmp を両方書く方が試験で確かめやすい。
