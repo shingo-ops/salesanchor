@@ -1,5 +1,7 @@
 # prompt_ab: Gemini の一時的な失敗（503/429 等）を待ってやり直す — 設計・実装カード
 
+対象ADR: ADR-1004（費用の台帳。変更しない）
+
 状態: 設計案（Opus 作成 2026-10-27）。PO 承認: 2026-10-27 PO「1」（=「先に、混雑の返事が来たら少し待ってやり直す仕組みを試験の道具に足してから、最初から流し直す」）。
 
 ## 1. 目的（KGI）
@@ -69,6 +71,7 @@ PR を revert。既定 0 なので、オプションを付けなければ戻さ�
 不要。理由: 既に使っている SDK 自身が 408/429/5xx を指数的な待ちでやり直す仕組みを持っている（google-genai 2.33.0 `types.HttpRetryOptions` の既定 attempts=5・initial_delay=1.0・exp_base=2.0、Sonnet 調査 retry_recon/sdk_HttpRetryOptions.txt）。本件はその考え方を、本番経路に触れずに試験道具の側だけで取るもの。
 
 ## 維持の仕組み
+- 守り手: `backend/tests/test_prompt_ab.py`
 - 既定 0 のため、オプションを付けない呼び出しは今と同じ動き。やり直しの判定と回数・待ちは backend/tests/test_prompt_ab.py の K1〜K5 試験で CI が毎回確かめる。
 - 試験の起動台本でどの値を使ったかは、各試験の記録（Opus）に残す。
 

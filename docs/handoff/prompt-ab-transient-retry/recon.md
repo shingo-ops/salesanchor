@@ -26,3 +26,12 @@ Python: 3.12.3（uv venv --python 3.12。本番は 3.12 のため）
 - 同じコマンド: 194 passed, 1 error（同じ DB 必須の 1 件。追加 18 件すべて合格）
 - prompt_ab を import する他の試験: test_gemini_raw_copy_v102_product_first・test_line_analysis_v102_svc・test_v102_review_source は 220 passed。test_line_analysis_v102_pg は DB 必須で変更前も後も 11 errors（動かず）。
 - `ruff check app/`（CI の .github/workflows/test.yml:86 と同じ）: All checks passed。
+
+## 引用（リポジトリからの場所。上の照合と同じ箇所）
+- `backend/app/tools/prompt_ab.py:514-547`（変更前の Gemini 呼び出しの try/except）
+- `backend/app/tools/prompt_ab.py:584`（変更前の parse_args）
+- `backend/app/services/gemini_raw_copy_v8.py:221-229`（1 回呼び、`RuntimeError from exc` に包む）
+- `backend/app/tasks/tcg_extraction.py:819-820`（本番の解析経路のやり直し設定。触らない）
+- `backend/requirements.txt:29`（google-genai の版の指定）
+- `.github/workflows/test.yml:86`（ruff check）
+- 既存 ADR: ADR-1004（費用の台帳。成功した 1 回分だけ書く動きは変えない）
