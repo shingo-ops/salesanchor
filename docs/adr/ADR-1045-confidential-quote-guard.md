@@ -13,7 +13,7 @@
 
 ## What（何を決めたか）
 
-1. Mac で AI が打つ `git push`（足した行）と、`gh pr create/edit/comment/review`・`gh issue create/comment`（本文）を、PreToolUse:Bash の見張り `guard.py` で照らす。
+1. Mac で AI が打つ `git push`（足した行）と、`gh pr create/edit/comment/review`・`gh issue create/comment`（本文）を、PreToolUse:Bash の見張り `guard.py` で照らす。照らすのは決まった形だけ（push は `git -C <絶対パス> push [-u] origin <ref>`、gh の本文は `--body-file <絶対パス>`／`-F <絶対パス>` か一重引用符の `--body '…'`／`-b '…'`）。決まりの外の形は、命令文から作業場所や出どころを推し量らず、すべて止める。
 2. 「」『』の中の語句が、(1) 4 文字以上、(2) 除外表（状態の言葉の写し・商品名の写し・一般語の表）に無い、(3) 原文の置き場のどれかのファイルにそのまま現れる、の全部を満たすと exit 2 で止める。
 3. 原本は `scripts/agent-hooks/confidential-quote-guard/`（guard.py・install.sh・rollback.sh・tests/）。原文・表の中身・語句は repo に入れない。表は Mac の社外秘フォルダ（`~/CC報告ファイル-keep/confid-guard/`）に置く。
 4. 表が読めない・空、差分が取れない、本文の出どころが決まらないときは止める（全部拒否に倒す）。環境変数で飛ばす抜け道は作らない。誤って止まったときの直し方は、一般語の表に理由つきで足すことだけ（Opus 判断）。
@@ -35,8 +35,12 @@
 - 誤って止まる（商品名・一般語）。商品名の写しが古いと新商品名で止まる。週の点検で取り直す。
 - コミットの文面と `gh pr create --fill`（コミットから自動で付く本文）は照らさない（便2で検討）。
 - 「push」の字を含むだけのコマンドも git push と読み、止まる側に倒れる（直近 300 件の PR 本文で該当は 2 件）。
-- 作業場所（どの repo の push か）は、フックの cwd から `cd`・`git -C` をたどって決める。相対パスは繋いで決める。`$` を含む行き先・`pushd`・`git --git-dir=`／`--work-tree=` は作業場所が決まらないので止める（cwd が照らす repo の外でも止める）。
-- 引用符なしの heredoc（`<<EOF`）の本文に `$`・バッククォートがあれば、本文の出どころが決まらないので止める。引用符つき（`<<'EOF'`）は文字どおりの文字列として照らす。
+- 決まった形以外の push と gh の本文は止まるので、作業の手間が増える（push は単独のコマンドで流す。本文は Write で作ったファイルを `--body-file <絶対パス>` で渡す）。
+- 台本ファイル（`bash script.sh`）の中から push する場合は照らさない。
+- PO が手で（Claude を通さず）push する場合は照らさない。git の送信前フックには移せなかった（多くの worktree で `frontend/.husky/_` が無く、フックが走らない。recon §4-2）。
+- `gh api` で本文を付ける道は照らさない。
+- コミットの文面は照らさない。
+- `sh -c "…"`・`eval` の中の push や gh は、目印に当たれば止めるが、当たらなければ読めない。
 - フックに渡された JSON が壊れているときは通す（全部の Bash を止めないため）。
 - 環境変数 `CONFID_CORPUS_MAX_AGE_DAYS` は試験用で、写しの古さの上限を 2 日より短くする方向だけ効く（`min(環境変数, 2)`）。延ばす抜け道にはならない。
 - 取り直し（`fetch_corpus.py`）は読み取りに失敗したら 2 分おいて最大 3 回まで試す（デプロイ中の約 70 秒の停止を越えるため）。ログは件数と日時だけ。

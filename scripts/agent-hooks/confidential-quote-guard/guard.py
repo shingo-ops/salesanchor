@@ -2,8 +2,9 @@
 """confidential-quote-guard guard.py — PreToolUse (matcher: Bash)
 
 仕入元の投稿の原文を、「」『』の中に書き写したまま公開の置き場へ送るのを、送る前に止める。
-  - git push        : 送る差分 (origin/main...<送るブランチ>) の追加行
-  - gh pr create/edit/comment/review, gh issue create/comment : 本文
+  - git push        : 決まった形 `git -C <絶対パス> push [-u] origin <ref>` だけ通し、送る差分の追加行を照らす
+  - gh pr create/edit/comment/review, gh issue create/comment : 本文 (--body-file <絶対パス> か 一重引用符の --body だけ通す)
+  - 決まりの外の形は、照らせないので止める (命令文から作業場所や出どころを推し量らない)
 
 止める決まり (全部満たす語句が 1 つでもあれば exit 2):
   1. 「」または『』の中にあり、4 文字以上
@@ -32,15 +33,8 @@ import unicodedata
 HOOK = "confidential-quote-guard"
 MIN_LEN = 4
 
-GH_SUB_RE = re.compile(
-    r"(?:^|[\s;&|(`\x22\x27])(?:\S*/)?gh\b[^;&|\n]*?\b(?:pr\s+(?:create|edit|comment|review)|issue\s+(?:create|comment))\b")
 GH_ACTIONS = {"pr": {"create", "edit", "comment", "review"}, "issue": {"create", "comment"}}
-PUSH_RE = re.compile(r"(?:^|[\s;&|(`\x22\x27])(?:\S*/)?git\b[^;&|\n]*?\bpush\b")
-HEREDOC_RE = re.compile(r"(?<!<)<<(?!<)(-?)\s*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\2")
 PHRASE_RES = (re.compile(r"「([^「」\n]*)」"), re.compile(r"『([^『』\n]*)』"))
-SEP_CHARS = set(";&|()\n")
-SHORT_VALUE_OPTS = set("tBRalmpHTrqiLSA")  # gh の短い値つきオプション (b・F は本文)
-PUSH_VALUE_FLAGS = {"-o", "--push-option", "--receive-pack", "--exec", "--repo"}
 EXPLAIN = ("仕入元の原文の書き写しは、公開の置き場へ送れません。"
            "該当の語句を消し、「形の説明」(例: 値段の行・在庫数の行・見出しの行) に書き換えてから、もう一度送ってください。"
            "誤って止まった一般語は、Opus が一般語の表 (confidential-allow.txt) に理由つきで足します。")
@@ -188,53 +182,109 @@ def find_hits(entries, corpus, excl):
 
 
 # ---------------------------------------------------------------- command parsing
+# 方針: 命令文から作業場所や本文の出どころを推し量らない。
+# git push と gh の本文の操作は「決まった形」だけを通し、それ以外はすべて止める。
 
-def strip_heredocs(cmd):
-    lines = cmd.split("\n")
-    out, tag, dash = [], None, False
-    for ln in lines:
-        if tag is not None:
-            chk = ln.strip() if dash else ln
-            if chk == tag:
-                tag = None
-                out.append(ln)
-            continue
-        out.append(ln)
-        m = HEREDOC_RE.search(ln)
-        if m:
-            dash, tag = m.group(1) == "-", m.group(3)
-    return "\n".join(out)
+PUSH_MSG = "git push は `git -C <worktree の絶対パス> push -u origin <ブランチ>` の形で、ほかの命令とつながずに単独で流してください"
+GH_MSG = "本文は Write で作ったファイルを `--body-file <絶対パス>` で渡してください (または一重引用符の `--body '...'`)。ほかの命令とつながず単独で流してください"
+SAFE_CHARS = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_@%+=:,./-")
+SHELLS = {"sh", "bash", "zsh", "dash", "ksh", "eval", "source", "."}
+REF_RE = re.compile(r"HEAD|[A-Za-z0-9][A-Za-z0-9/._-]*")
+REDIR_TAIL_RE = re.compile(r"\s+(?:2>&1|>>?\s*/[A-Za-z0-9_@%+=:,./-]+)\s*$")
+GH_VALUE_OPTS = {"-t", "--title", "-B", "--base", "-H", "--head", "-R", "--repo", "-a", "--assignee",
+                 "-l", "--label", "-m", "--milestone", "-p", "--project", "-r", "--reviewer"}
+GH_BAD_OPTS = {"--fill", "--fill-first", "--fill-verbose", "--editor", "-e", "--web", "-w", "--template", "-T", "--recover"}
+GH_BODY_STR = {"--body", "-b"}
+GH_BODY_FILE = {"--body-file", "-F"}
 
 
-def tokenize_all(cmd):
-    """字句に分ける。改行も区切りの字句にする (改行で区切った 2 つ目の操作も読むため)。"""
-    lex = shlex.shlex(cmd, posix=True, punctuation_chars=";&|()<>\n")
+def _lex(cmd):
+    lex = shlex.shlex(cmd, posix=True, punctuation_chars=True)
     lex.whitespace_split = True
-    lex.whitespace = " \t\r"
     lex.commenters = ""
     return list(lex)
 
 
-def _join_dir(cwd, p):
-    """cd / git -C の行き先を、今の場所に繋いで決める。決まらない形は Block。"""
-    if re.search(r"[$`*?]", p) or p == "-" or re.match(r"~[^/]", p):
-        raise Block("作業場所が決まりません (cd / git -C の行き先に展開・~ユーザー・- があります)")
-    p = os.path.expanduser(p)
-    return os.path.normpath(p if os.path.isabs(p) else os.path.join(cwd, p))
+def detect(cmd):
+    """字句として git ... push / gh pr|issue ... が現れるか -> (push, gh)。読めないときは粗い目印で判断する。"""
+    pre_push = re.search(r"\bgit\b[\s\S]*\bpush\b", cmd) is not None
+    pre_gh = re.search(r"\bgh\b[\s\S]*\b(?:pr|issue)\b", cmd) is not None
+    if not pre_push and not pre_gh:
+        return False, False
+    try:
+        toks = _lex(cmd)
+    except ValueError:
+        return pre_push, pre_gh
+    base = [t.rsplit("/", 1)[-1] for t in toks]
+    if any(b in SHELLS for b in base) and any(re.fullmatch(r"-\w*c\w*", t) for t in toks) or "eval" in base:
+        return pre_push, pre_gh  # sh -c "..." など。決まった形ではないので、後で止まる
+    push = any(b == "git" and "push" in toks[i + 1:] for i, b in enumerate(base))
+    gh = False
+    for i, b in enumerate(base):
+        if b != "gh":
+            continue
+        for a in range(i + 1, len(toks) - 1):
+            if toks[a] in GH_ACTIONS and toks[a + 1] in GH_ACTIONS[toks[a]]:
+                gh = True
+    return push, gh
 
 
-def resolve_cwd(cmd, payload_cwd, upto=None):
-    s = cmd if upto is None else cmd[:upto]
-    cwd = payload_cwd or os.getcwd()
-    if re.search(r"(?:^|[;&|\n(`]\s*)pushd\b", s):
-        raise Block("作業場所が決まりません (pushd)")
-    for m in re.finditer(r"(?:^|[;&|\n(]\s*)cd\s+(?:\"([^\"]+)\"|'([^']+)'|([^\s;&|)]+))", s):
-        cwd = _join_dir(cwd, m.group(1) or m.group(2) or m.group(3))
-    return cwd
+def scan_words(cmd):
+    """決まった形の字句分け -> [(値, 元の字面)]。引用の外は安全な文字だけ。それ以外・閉じない引用は Block。"""
+    words, i, n = [], 0, len(cmd)
+    while i < n:
+        if cmd[i] in " \t":
+            i += 1
+            continue
+        start, val = i, []
+        while i < n and cmd[i] not in " \t":
+            c = cmd[i]
+            if c == "'":
+                j = cmd.find("'", i + 1)
+                if j < 0:
+                    raise Block("引用が閉じていません")
+                val.append(cmd[i + 1:j])
+                i = j + 1
+            elif c == '"':
+                j, buf = i + 1, []
+                while j < n and cmd[j] != '"':
+                    if cmd[j] in "$`\\!":
+                        raise Block("二重引用符の中に展開文字があります")
+                    buf.append(cmd[j])
+                    j += 1
+                if j >= n:
+                    raise Block("引用が閉じていません")
+                val.append("".join(buf))
+                i = j + 1
+            elif c in SAFE_CHARS:
+                val.append(c)
+                i += 1
+            else:
+                raise Block("引用の外に決まりの外の文字があります")
+        words.append(("".join(val), cmd[start:i]))
+    return words
+
+
+def strict_words(cmd):
+    s = cmd.strip()
+    while True:
+        s2 = REDIR_TAIL_RE.sub("", s)
+        if s2 == s:
+            break
+        s = s2
+    words = scan_words(s)
+    try:
+        toks = _lex(s)
+    except ValueError:
+        raise Block("字句に分けられません")
+    if toks != [w[0] for w in words]:
+        raise Block("字句の分け方が食い違います")
+    return words
 
 
 def git(cwd, *args):
-    return subprocess.run(["git", "-C", cwd] + list(args), capture_output=True, text=True)
+    env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+    return subprocess.run(["git", "-C", cwd] + list(args), capture_output=True, text=True, env=env)
 
 
 def repo_slug(cwd):
@@ -248,11 +298,11 @@ def repo_slug(cwd):
     return "/".join(parts[-2:]) if len(parts) >= 2 else None
 
 
-def added_lines(cwd, ref):
-    """origin/main...ref の追加行 -> [(file, lineno, text)]。取れなければ Block。"""
-    r = git(cwd, "-c", "core.quotePath=false", "diff", "--no-color", "--no-ext-diff", "-U0", "origin/main...%s" % ref)
+def added_lines(cwd, base, sha):
+    """base から sha までの追加行 -> [(file, lineno, text)]。取れなければ Block。"""
+    r = git(cwd, "-c", "core.quotePath=false", "diff", "--no-color", "--no-ext-diff", "-U0", base, sha)
     if r.returncode != 0:
-        raise Block("差分が取れません (origin/main...%s)" % ref)
+        raise Block("差分が取れません")
     out, fname, ln, in_head = [], None, 0, False
     for line in r.stdout.split("\n"):
         if line.startswith("diff --git "):
@@ -281,91 +331,44 @@ def added_lines(cwd, ref):
     return out
 
 
-def push_refs(cmd, m):
-    """git push の送るブランチを決める。決まらなければ Block。-> [ref] (空なら削除だけ=見るものなし)"""
-    rest = re.sub(r"(?<=\s)\d+(?=[<>])", "", cmd[m.end():])  # 2>&1 の 2 は引数ではない
-    lx = shlex.shlex(rest, posix=True, punctuation_chars=";()<>|&\n")
-    lx.whitespace_split = True
-    lx.whitespace = " \t\r"  # 改行は区切りの字句にする
-    toks = []
-    try:
-        for t in lx:  # 区切りに着いたらそこで止める (後ろの引用符・heredoc の中身は読まない)
-            if t and all(c in ";()<>|&\n" for c in t):
-                if "<" in t or ">" in t:
-                    nxt = next(lx, None)  # 書き出し先の字句は飛ばす
-                    if nxt is not None and nxt and all(c in ";()<>|&\n" for c in nxt):
-                        break
-                    continue
-                break
-            toks.append(t)
-    except ValueError:
-        raise Block("git push の引数を読めません")
-    pos, delete = [], False
-    i = 0
-    while i < len(toks):
-        t = toks[i]
-        if t in ("--delete", "-d"):
-            delete = True
-        elif t in ("--all", "--mirror"):
-            raise Block("%s で送るブランチが決まりません" % t)
-        elif t in PUSH_VALUE_FLAGS:
-            i += 1
-        elif t.startswith("-"):
-            pass
-        else:
-            pos.append(t)
-        i += 1
-    if delete:
-        return []
-    specs = pos[1:]
-    if not specs:
-        return ["HEAD"]
-    refs = []
-    for s in specs:
-        s = s.lstrip("+")
-        src = s.split(":", 1)[0]
-        if s.startswith(":") or src == "":
-            continue
-        if re.search(r"[$*`?]", src):
-            raise Block("送るブランチが決まりません")
-        refs.append(src)
-    return refs
-
-
-def check_push(cmd, m, payload_cwd, repos, matched=None):
-    cwd = resolve_cwd(cmd, payload_cwd, m.start())
-    head = cmd[m.start():m.end()]
-    if re.search(r"--(?:git-dir|work-tree)\b", head):
-        raise Block("作業場所が決まりません (git --git-dir / --work-tree)")
-    for c in re.finditer(r"\s-C\s*(?:\"([^\"]+)\"|'([^']+)'|([^\s]+))", head):
-        cwd = _join_dir(cwd, c.group(1) or c.group(2) or c.group(3))
-    slug = repo_slug(cwd)
+def check_push(words, repos, matched):
+    v = [w[0] for w in words]
+    ok = (len(v) in (6, 7) and v[0] == "git" and v[1] == "-C" and v[2].startswith("/") and v[3] == "push"
+          and (len(v) == 6 or v[4] in ("-u", "--set-upstream")) and v[-2] == "origin"
+          and REF_RE.fullmatch(v[-1]) is not None and ".." not in v[-1])
+    if not ok:
+        raise Block(PUSH_MSG)
+    path, ref = v[2], v[-1]
+    if not os.path.isdir(path):
+        raise Block("push の場所が存在しません")
+    if git(path, "rev-parse", "--show-toplevel").returncode != 0:
+        raise Block("push の場所が git の repo ではありません")
+    slug = repo_slug(path)
     if slug is None or slug not in repos:
         return []  # 表に無い repo の push は照らさずに通す
-    if matched is not None:
-        matched.append(slug)
-    if git(cwd, "rev-parse", "--verify", "--quiet", "origin/main").returncode != 0:
+    matched.append(slug)
+    if git(path, "rev-parse", "--verify", "--quiet", "origin/main^{commit}").returncode != 0:
         raise Block("表に並んだ repo (%s) に origin/main がありません" % slug)
-    entries = []
-    for ref in push_refs(cmd, m):
-        ok = git(cwd, "rev-parse", "--verify", "--quiet", ref + "^{commit}").returncode == 0
-        if not ok:
-            raise Block("送るブランチ %s が見つかりません" % ref)
-        entries.extend(added_lines(cwd, ref))
-    return entries
-
-
-def _plain_path(p, cwd):
-    p = p.strip().strip("'\"")
-    if re.search(r"[$`*?]", p):
-        raise Block("本文のファイルの場所が決まりません")
-    p = os.path.expanduser(p)
-    return p if os.path.isabs(p) else os.path.join(cwd, p)
+    r = git(path, "rev-parse", "--verify", "--quiet", ref + "^{commit}")
+    if r.returncode != 0:
+        raise Block("送るブランチ %s が見つかりません" % ref)
+    sha = r.stdout.strip()
+    name = ref
+    if ref == "HEAD":
+        s = git(path, "symbolic-ref", "--quiet", "--short", "HEAD")
+        name = s.stdout.strip() if s.returncode == 0 else None
+    base = "origin/main"
+    if name and git(path, "rev-parse", "--verify", "--quiet", "refs/remotes/origin/%s^{commit}" % name).returncode == 0:
+        base = "refs/remotes/origin/%s" % name
+    mb = git(path, "merge-base", base, sha)
+    if mb.returncode != 0 or not mb.stdout.strip():
+        raise Block("送る範囲の起点が決まりません")
+    return added_lines(path, mb.stdout.strip(), sha)
 
 
 def read_body_file(p):
-    if p == "/dev/null":
-        return []
+    if not p.startswith("/") or p.startswith(("/dev/", "/proc/")) or not os.path.isfile(p):
+        raise Block(GH_MSG)
     try:
         with open(p, encoding="utf-8", errors="replace") as f:
             return [(p, i + 1, t) for i, t in enumerate(f.read().split("\n"))]
@@ -373,205 +376,64 @@ def read_body_file(p):
         raise Block("本文のファイルが読めません: %s (%s)" % (os.path.basename(p), e.strerror))
 
 
-def heredoc_infos(cmd):
-    """heredoc ごとの (印が引用符つきか, 本文) -> [(bool, str)]"""
-    infos = []
-    tag, dash, quoted, buf = None, False, False, []
-    for ln in cmd.split("\n"):
-        if tag is not None:
-            chk = ln.strip() if dash else ln
-            if chk == tag:
-                infos.append((quoted, "\n".join(buf)))
-                tag, buf = None, []
+def check_gh(words):
+    v, raws = [w[0] for w in words], [w[1] for w in words]
+    if len(v) < 3 or v[0] != "gh" or v[1] not in GH_ACTIONS or v[2] not in GH_ACTIONS[v[1]]:
+        raise Block(GH_MSG)
+    body, i = None, 3
+    while i < len(v):
+        t = v[i]
+        key, eq, val = t.partition("=") if t.startswith("--") else (t, "", "")
+        if t in GH_BAD_OPTS or key in GH_BAD_OPTS:
+            raise Block(GH_MSG)
+        if key in GH_BODY_STR or key in GH_BODY_FILE:
+            if body is not None:
+                raise Block(GH_MSG)
+            if eq:
+                value, raw, i = val, raws[i].split("=", 1)[1], i + 1
+            elif i + 1 < len(v):
+                value, raw, i = v[i + 1], raws[i + 1], i + 2
             else:
-                buf.append(ln)
+                raise Block(GH_MSG)
+            body = ("str" if key in GH_BODY_STR else "file", value, raw)
             continue
-        m = HEREDOC_RE.search(ln)
-        if m:
-            dash, quoted, tag = m.group(1) == "-", bool(m.group(2)), m.group(3)
-    if tag is not None:
-        infos.append((quoted, "\n".join(buf)))
-    return infos
+        if re.fullmatch(r"-[^-].+", t):
+            raise Block(GH_MSG)  # 短い指定の束ね書きは読み分けない
+        i += 2 if t in GH_VALUE_OPTS else 1
+    if body is None:
+        return []
+    kind, value, raw = body
+    if kind == "str":
+        if re.fullmatch(r"'[^']*'", raw) is None:
+            raise Block(GH_MSG)
+        return [("本文", n + 1, t) for n, t in enumerate(value.split("\n"))]
+    return read_body_file(value)
 
-
-def _is_sep(t):
-    return bool(t) and all(c in SEP_CHARS for c in t)
-
-
-def _split_segments(toks):
-    """字句を区切りで切る -> [(区切り記号, 字句のリスト)]"""
-    segs, cur, sep = [], [], None
-    for t in toks:
-        if _is_sep(t):
-            segs.append((sep, cur))
-            cur, sep = [], t
-        else:
-            cur.append(t)
-    segs.append((sep, cur))
-    return segs
-
-
-def _gh_target(seg):
-    """この段が gh の本文つき操作なら gh より後ろの字句を返す。違えば None。"""
-    for i, t in enumerate(seg):
-        if os.path.basename(t) == "gh":
-            rest = seg[i + 1:]
-            for j in range(len(rest) - 1):
-                if rest[j] in GH_ACTIONS and rest[j + 1] in GH_ACTIONS[rest[j]]:
-                    return rest
-            return None
-    return None
-
-
-def _stdin_source(seg, prev_sep, prev_seg, cwd, files, heredocs):
-    """gh -F - の標準入力の出どころ。照らせる形ならファイルを files に足す。決まらなければ Block。"""
-    redirected = False
-    for i, t in enumerate(seg):
-        if t == "<" and i + 1 < len(seg):
-            files.append(_plain_path(seg[i + 1], cwd))
-            redirected = True
-        elif t == "<<<":
-            redirected = True
-            arg = seg[i + 1] if i + 1 < len(seg) else ""
-            if re.search(r"[$`]", arg):
-                raise Block("標準入力 (<<<) の本文の出どころが決まりません (変数・コマンド置換)")
-        elif t.startswith("<<") and t != "<<<":
-            redirected = True
-            if any((not q) and re.search(r"[$`]", b) for q, b in heredocs):
-                raise Block("引用符なしの heredoc の本文に変数・コマンド置換があります")
-    if redirected:
-        return
-    if prev_sep == "|" and prev_seg:
-        head = os.path.basename(prev_seg[0])
-        args = prev_seg[1:]
-        if head == "cat":
-            got, i = [], 0
-            while i < len(args):
-                if args[i] == "<" and i + 1 < len(args):
-                    got.append(args[i + 1]); i += 1
-                elif not args[i].startswith("-") and not _is_sep(args[i]):
-                    got.append(args[i])
-                i += 1
-            if got:
-                for g in got:
-                    files.append(_plain_path(g, cwd))
-                return
-        elif head in ("echo", "printf"):
-            if not any(re.search(r"[$`]", a) for a in args):
-                return
-            raise Block("echo/printf の本文に変数・コマンド置換があります")
-    raise Block("標準入力で渡す本文の出どころが決まりません")
-
-
-def check_gh(cmd, payload_cwd):
-    """gh の本文。(a) コマンド全体 (b) 本文ファイル (c) 外から来る本文 (d) 決まらなければ Block
-    コマンド中の gh の操作は全部読む (区切りごとに字句に分けて、本文の付け方を見る)。"""
-    base = strip_heredocs(cmd)
-    try:
-        toks = tokenize_all(base)
-    except ValueError:
-        raise Block("コマンドの本文の付け方を読めません")
-    heredocs = heredoc_infos(cmd)
-    for q, b in heredocs:  # 引用符なしの heredoc は本文が展開される。出どころが決まらなければ止める
-        if (not q) and re.search(r"[$`]", b):
-            raise Block("引用符なしの heredoc の本文に変数・コマンド置換があります (本文の出どころが決まりません)")
-    entries = [("コマンド本文", i + 1, t) for i, t in enumerate(cmd.split("\n"))]  # (a)
-    files = []
-    cwd = payload_cwd or os.getcwd()
-    prev_seg, prev_sep = None, None
-    for k, t in enumerate(toks):
-        if k and toks[k - 1] in ("-c", "eval") and GH_SUB_RE.search(t):
-            raise Block("文字列の中の gh の操作は読めません")
-    for sep, seg in _split_segments(toks):
-        if seg and seg[0] == "cd" and len(seg) > 1:
-            p = os.path.expanduser(seg[1])
-            if p.startswith("/"):
-                cwd = p
-        rest = _gh_target(seg)
-        if rest is not None:
-            i = 0
-            while i < len(rest):
-                t = rest[i]
-                val, kind = None, None
-                if re.match(r"-[A-Za-z]", t):  # 短いオプション (まとめ書き -dF file, くっつけ書き -Ffile, -b本文 も)
-                    for ci in range(1, len(t)):
-                        ch = t[ci]
-                        if ch in "bF" or ch in SHORT_VALUE_OPTS:
-                            tail = t[ci + 1:]
-                            if tail.startswith("="):
-                                tail = tail[1:]
-                            elif not tail:
-                                tail = rest[i + 1] if i + 1 < len(rest) else None
-                                i += 1
-                            if ch == "b":
-                                kind, val = "body", tail
-                            elif ch == "F":
-                                kind, val = "file", tail
-                            break
-                elif t == "--body":
-                    kind, val = "body", (rest[i + 1] if i + 1 < len(rest) else None)
-                    i += 1
-                elif t.startswith("--body="):
-                    kind, val = "body", t[7:]
-                elif t in ("--body-file", "-F"):
-                    kind, val = "file", (rest[i + 1] if i + 1 < len(rest) else None)
-                    i += 1
-                elif t.startswith("--body-file="):
-                    kind, val = "file", t[12:]
-                i += 1
-                if kind is None:
-                    continue
-                if val is None:
-                    raise Block("本文の指定の値がありません")
-                if kind == "file":
-                    if val == "-":
-                        _stdin_source(seg, sep, prev_seg, cwd, files, heredocs)
-                    else:
-                        files.append(_plain_path(val, cwd))
-                else:
-                    if "<<" in val:
-                        continue  # heredoc の本文は (a) に含まれる
-                    cm = re.search(r"\$\(\s*cat\s+([^\s)]+)\s*\)", val)
-                    if cm:
-                        files.append(_plain_path(cm.group(1), cwd))
-                    elif re.search(r"\$[A-Za-z_{(]|`", val):
-                        raise Block("本文の出どころが決まりません (変数・コマンド置換)")
-            for j, t in enumerate(seg):  # --body "$(cat f)" 以外の < file も読む
-                if t == "<" and j + 1 < len(seg):
-                    files.append(_plain_path(seg[j + 1], cwd))
-        prev_sep, prev_seg = sep, seg
-    for cm in re.finditer(r"\$\(\s*cat\s+([^\s)]+)\s*\)", base):
-        files.append(_plain_path(cm.group(1), cwd))
-    seen = set()
-    for f in files:
-        if f in seen:
-            continue
-        seen.add(f)
-        entries.extend(read_body_file(f))  # (b)(c) 読めなければ Block
-    return entries
-
-
-# ---------------------------------------------------------------- main
 
 def run(payload):
     if not isinstance(payload, dict) or payload.get("tool_name") != "Bash":
         return 0
     ti = payload.get("tool_input") or {}
     cmd = ti.get("command") or ""
-    pms = list(PUSH_RE.finditer(cmd))
-    gh_on = GH_SUB_RE.search(cmd) is not None
-    if not pms and not gh_on:
+    push, gh = detect(cmd)
+    if not push and not gh:
         return 0
     try:
         repos = load_repos()
         entries, matched = [], []
-        for pm in pms:
-            entries.extend(check_push(cmd, pm, payload.get("cwd"), repos, matched))
-        if not gh_on and not matched:
-            return 0  # 照らす repo の push でも gh でもない: 写しが古くても止めない
+        try:
+            words = strict_words(cmd)
+        except Block as e:
+            raise Block(PUSH_MSG if push else GH_MSG) from e
+        if push and gh:
+            raise Block(PUSH_MSG)
+        if push:
+            entries.extend(check_push(words, repos, matched))
+            if not matched:
+                return 0  # 照らす repo の push ではない: 写しが古くても止めない
+        else:
+            entries.extend(check_gh(words))
         _r, corpus, excl, _n = load_tables()
-        if gh_on:
-            entries.extend(check_gh(cmd, payload.get("cwd")))
         hits = find_hits(entries, corpus, excl)
     except Block as e:
         log_block("停止: %s" % e)

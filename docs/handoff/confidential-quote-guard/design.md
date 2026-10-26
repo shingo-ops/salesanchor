@@ -38,12 +38,17 @@
 
 - 新しい見張りの原本を repo の scripts/agent-hooks/confidential-quote-guard/（便1 で作る）に置く（guard.py・install.sh・rollback.sh・テスト）。review-gate（ADR-1029）と同じ形。原本には原文も語句も入れない（置き場の場所は Mac の表から読む）。
 - install.sh が原本を ~/.claude/scripts に写し、~/.claude/settings.json の PreToolUse:Bash に pr-body-guard.sh の前で登録する。写したものと原本が一字一句同じかを diff で確かめる（local-hooks-ssot の H3 の考え方）。
-- 動く条件: コマンドに `git push` が含まれるとき、または §2 の gh の操作のとき（本文の付け方は `--body`／`-b`／`--body=…`／`--body-file`／`-F`／`-F -`・`--body-file -`〔標準入力〕のどれでもよい。付け方で抜けないよう、gh の操作であれば下の 2 の照らし方で必ず照らす）。作業場所は、フックの cwd から始め、コマンド中の `cd <パス>` と `git -C <パス>` を順にたどって決める（相対パスは、その時点の場所に繋いで実際の場所にする。`~` だけ展開する）。`$` や `*` を含む行き先・`cd -`・`~ユーザー`・`pushd`・`git --git-dir=`／`--work-tree=` は作業場所が決まらないので止める（照らす repo の中か外か決められないため。cwd が照らす repo の外でも止める）。
-- 照らす repo: 本文はどの repo でも照らす（repo に関係なく照らせるため）。足した行は、置き場の表に並べた repo（最初は shingo-ops/salesanchor だけ）の push のときだけ照らす。表に無い repo の push は照らさずに通す。表に並んだ repo で `origin/main` が無い、または差分が取れないときは止める（全部拒否に倒す）。
+- 動く条件: コマンドの中に、字句として `git` と `push` がこの順で現れるとき、または字句として `gh` のあとに §2 の gh の操作（`pr create/edit/comment/review`・`issue create/comment`）が現れるとき。字句は `shlex.shlex(posix=True, punctuation_chars=True, whitespace_split=True)` で分ける。読めないときは、粗い目印（`git`…`push`、`gh`…`pr|issue`）で見て、当たれば止める。`bash -c`・`sh -c`・`eval` を使う形は、目印に当たれば止める。
+- 通す形（allow-list）: 命令文から作業場所や本文の出どころを推し量らない。決まった形に完全に一致するときだけ照らし、それ以外はすべて止める（照らせないものは通さない）。
+  1. push は `git -C <絶対パス> push [-u|--set-upstream] origin <ref>` だけ。`<ref>` は `HEAD` か、英数字と `/._-` だけのブランチ名（先頭 `-`・`..` は不可）。後ろに付けてよいのは `2>&1` と `> <絶対パス>`／`>> <絶対パス>` だけ。`;`・`&&`・`||`・`|`・`&`・改行・`$`・バッククォート・heredoc・`cd`・`( )`・`<` は、引用符の外に 1 つでもあれば止める。`--force`・`-f`・`--force-with-lease`・`--no-verify`・`--mirror`・`--all`・`--tags`・`--delete`・`:ref` なども決まりの外なので止める。止めた理由の文は「git push は `git -C <worktree の絶対パス> push -u origin <ブランチ>` の形で、ほかの命令とつなげずに単独で流してください」。
+  2. gh の本文は、(a) `--body-file`／`-F` の後ろが絶対パス、(b) 一重引用符で囲んだ `--body`／`-b` の値、の 2 つだけ。(a) はそのファイルを読んで照らし、(b) はその文字列を照らす。相対パス・`-`・`/dev/*`・heredoc・`$`・バッククォート・二重引用符・引用なしの本文・`--fill`／`--fill-first`／`--fill-verbose`／`--editor`／`-e`／`--web`／`-w`／`--template`／`--recover`・本文指定が 2 つ・`-dF` のような短い指定の束ね書きは止める。gh も単独のコマンドで流す（区切り・`cd` があれば止める）。止めた理由の文は「本文は Write で作ったファイルを `--body-file <絶対パス>` で渡してください」。本文の無い gh（`pr edit --add-label` など）と、`gh api`・`gh pr view` などは対象外。
+  3. 引用符の外に書けるのは英数字と `_@%+=:,./-` だけ。二重引用符の中の `$`・バッククォート・`\`・`!` は止める。自前の字句分けと shlex の結果が食い違ったら止める。
+- 照らす repo: 本文はどの repo でも照らす。足した行は、置き場の表に並べた repo（最初は shingo-ops/salesanchor だけ）の push のときだけ照らす。repo は `git -C <絶対パス>` の `<絶対パス>` の origin の URL で決める。表に無い repo の push は照らさずに通す（形が決まりの外なら、repo に関係なく止める）。パスが存在しない・git の repo でない・表に並んだ repo で `origin/main` が無い・sha が取れない・差分が取れない・表が無い／古い／壊れているときは止める（全部拒否に倒す）。
 - 照らすもの:
-  1. `git diff origin/main...HEAD` の追加行（全ファイル）。
-  2. gh の操作の本文。pr-body-guard.sh の取り出し方（~/.claude/scripts/extract-pr-body.py）は create／edit の `--body` だけを拾い、comment や短い形を拾わないので使わない。代わりに、(a) コマンドの文字列全体（`--body` の値、heredoc で書いた本文、`-F -` に流し込む本文を含む）と、(b) `--body-file`／`-F` が指すファイルの中身（`-` は標準入力なので (a)・(c)・(d) で扱う）、の両方を照らす。(b) のファイルが読めないときは止める（全部拒否に倒す）。(c) 本文がコマンドの外から来る形、つまり `< <path>`、`cat <path> |`、`$(cat <path>)` のときは、その path のファイルを読んで照らす。(d) それ以外で、本文の出どころが文字列にもファイルにも決まらないとき（`--body "$VAR"`、`-F -` に別のコマンドの出力を流す、など）は止める（exit 2）。
-- 送るブランチ: `git push` で送るブランチが今いるブランチと違うとき（`git push origin <別ブランチ>`）は、`origin/main...<別ブランチ>` の追加行を照らす。引数なしの `git push` は、今いるブランチ（`HEAD`）を照らす。送るブランチがコマンドから決まらないときは止める。
+  1. push の追加行。送る ref の sha を `git -C <絶対パス> rev-parse <ref>` で取り、`origin/<ブランチ名>` があればその merge-base から、なければ `origin/main` との merge-base から、sha までの差分の追加行（全ファイル）。`HEAD` のブランチ名は `git symbolic-ref` で決める。
+  2. gh の本文。上の (a) のファイルの中身、または (b) の文字列。
+- 作業場所を推し量る処理（`cd`・`-C` 以外の場所決め・`pushd`・heredoc の中身の読み取り・命令文から ref を読む処理）は持たない。理由: 5 回の審査で、命令文を正規表現や shlex で読んで作業場所や本文の出どころを推し量る作りは、直すたびに新しい穴が開いた（F1〜F4、重い 1/2、重い 1、重い 1、重い A/B）。決まった形だけ通す作りなら、読み間違いが「止まる」側にしか倒れない。
+- 送信前フック（git の pre-push）に移さなかった理由（事実）: 今の環境では多くの worktree で pre-push が走らない。(1) `core.hooksPath` は共有設定（`/Users/tanizawashingo/salesanchor/.git/config`）の 1 つだけで、値は `frontend/.husky/_`。`extensions.worktreeConfig` が無効のため `git config --worktree` は使えない。(2) `scripts/new-worktree.sh:115` の `git -C <worktree> config core.hooksPath frontend/.husky` も共有設定を書き換える（一時リポジトリで再現）が、`frontend/package.json` の `prepare`（husky）が `frontend/.husky/_` に書き戻す。(3) `frontend/.husky/_`（husky の置き場、.gitignore 対象）がある worktree は、`~/worktrees/salesanchor` 配下 51 個のうち 4 個だけ。この worktree にも無く、`git rev-parse --git-path hooks/pre-push` が指す `frontend/.husky/_/pre-push` が存在しない。worktree の土台（new-worktree.sh と既存 51 個）に手を入れるのはこのテーマの範囲を超えるため、送信前フックはやめた。
 - 止める決まり: 次の 3 つを全部満たす語句が 1 つでもあれば exit 2。
   1. 「」または『』の中にあり、4 文字以上。
   2. 除外表に無い。除外表は「状態の言葉の写し」「商品名の写し」「一般語の表」の 3 つ。数字と区切りだけの語句も止めない。
@@ -64,15 +69,18 @@
 
 | 基準 | 検証方法 |
 |---|---|
-| K1 #4727 の記録（79ec6fa76）が止まる | そのコミットを土台に置いた試しの作業場所で `git push --dry-run` 相当のコマンドを見張りに渡し、exit 2 で 1 語以上を示すことを確かめる。種類数は参考に残す。#4729 の記録（f13e335fb）は K1 の対象外（一般語の表に入れた 1 語だけが残る）で、rc は参考に記録する |
+| K1 #4727 の記録（79ec6fa76）が止まる | そのコミットを子に置いた作り物の repo で、決まった形の push（`git -C <絶対パス> push -u origin HEAD`）を見張りに渡し、exit 2 で 1 語以上を示すことを確かめる。種類数は参考に残す。#4729 の記録（f13e335fb）は K1 の対象外（一般語の表に入れた 1 語だけが残る）で、rc は参考に記録する |
 | K2 #4730 の記録が通る | 同じ方法で 18060e58f を渡し、exit 0 を確かめる |
 | K3 既存の書類で説明できない停止 0 | main の docs と backend/tests を全部当てた一覧を Opus が 1 語ずつ判定し、表に残す（社外秘フォルダに置く） |
 | K4 2 秒以内 | 上の 3 回の time の値 |
 | 置き場が無いと止まる | 表を空にした試しで exit 2 |
 | 表に無い repo は通る・表にある repo で差分が取れないと止まる | origin/main の無い作り物の repo で 2 通りを試し、exit 0 と exit 2 |
-| コメントの本文も照らす | 作り物の原文の語句を入れて、`gh pr comment --body`・`gh pr comment -b`・`gh pr review -F <file>`・`gh issue comment -F -`（heredoc）・`gh pr create --body=…`・`gh pr comment -F - < <file>`・`gh pr comment --body "$(cat <file>)"` の 7 通りがどれも exit 2。`gh pr comment --body "$VAR"` も exit 2 |
+| コメントの本文も照らす | 作り物の原文の語句を入れて、(a) `--body-file <絶対>`・`-F <絶対>`・`--body-file=<絶対>`、(b) `--body '…'`・`-b '…'`・`--body='…'` がどれも exit 2。語句を入れない同じ形は exit 0 |
+| 決まりの外の gh の形は止まる | 相対パス・`-`・`/dev/stdin`・`/dev/fd/*`・heredoc・`$(cat …)`・二重引用符・`--fill*`・`--editor`・`--web`・`--template`・`--recover`・本文 2 つ・束ね書き・パイプ・`&&`・`cd` つきが、中身が clean でもすべて exit 2 |
 | 本文のファイルが読めないと止まる | 存在しないファイルを `--body-file` と `-F` に渡して、どちらも exit 2 |
-| 別のブランチを送るときも照らす | 作り物の語句を足したブランチを、別のブランチにいるまま `git push origin <そのブランチ>` で送ろうとして exit 2 |
+| 決まりの外の push は止まる | `cd <絶対> && git push`・`git push origin HEAD 2>&1 \| tail`・`git -C <相対> push`・`--force-with-lease`・`--no-verify`・`GIT_DIR=… git push`・審査の J1・G1〜G3・B1〜B5・A1・A3・C2・C3・E7・E8 が、中身が clean でもすべて exit 2 |
+| 別のブランチを送るときも照らす | 作り物の語句を足したブランチを、別のブランチにいるまま `git -C <絶対> push -u origin <そのブランチ>` で送ろうとして exit 2 |
+| 場所の条件 | 表に無い repo は exit 0、パスが存在しない・git の repo でない・origin/main が無い表の repo は exit 2 |
 | 止めた記録が残る | 止めた試しのあと agent-events.jsonl の最後の行に、見張りの名前・日時・件数があり、語句が無い |
 | 見張りのテスト | scripts/agent-hooks/confidential-quote-guard/ に作り物の原文で試すテストを置く（本物の原文はテストに入れない）。止まる・通る・置き場なし・除外表・「」の外は止めない、の 5 つ |
 

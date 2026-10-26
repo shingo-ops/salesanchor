@@ -75,6 +75,22 @@
   3. 見張りは「送る差分で足した行」だけを見るので、既にある行は、その行を書き換えない限り止まらない。
 - 生出力は社外秘フォルダ（Mac 内）にだけ置く。
 
+### 4-2. git の送信前フック（pre-push）が使えない事実（2026-10-26 の調べ）
+
+【事実】
+- `frontend/.husky/pre-push`（35 行）: `:8-19` が rebase 中の検知、`:21-26` が `scripts/validate-pr-ownership.sh`、`:28-35` が `.claude-pipeline/active-work.md` の書式検査。標準入力は読まない。
+- `core.hooksPath` は共有設定 `/Users/tanizawashingo/salesanchor/.git/config` に 1 つだけあり、値は `frontend/.husky/_`（`git config --show-origin --get-all core.hooksPath` の出力）。
+- `extensions.worktreeConfig` は無効。`git config --worktree` は "cannot be used with multiple working trees" で失敗した。
+- `scripts/new-worktree.sh:113-115` は `git -C <worktree> config core.hooksPath frontend/.husky` を流すが、worktree 専用の設定にはならず共有設定を書き換える。一時リポジトリで、worktree 側で設定すると本店側の値も同じに変わることを再現した。
+- `frontend/package.json` の `prepare`（`cd .. && husky frontend/.husky`）が `frontend/.husky/_` に書き戻す。
+- `frontend/.husky/_`（husky の置き場）が存在する worktree は、`~/worktrees/salesanchor` 配下 51 個のうち 4 個。本件の worktree には無く、`git rev-parse --git-path hooks/pre-push` が返す `frontend/.husky/_/pre-push` が存在しない。
+- 本店（`/Users/tanizawashingo/salesanchor`）には `frontend/.husky/_/pre-push` があり、中身は `. "$(dirname "$0")/h"`。`h` は `frontend/.husky/pre-push` を `sh -e` で呼ぶ。
+
+【未確認】
+- 既存の pre-push（rebase の検知と所有権の検査）が、`frontend/.husky/_` の無い worktree からの実際の `git push` で走っていないかどうか。hooksPath の指す先に無いので走らないと読めるが、実際の push では確かめていない。直さない（このテーマの範囲外）。
+
+【判断】送信前フックに照合を足す案はやめ、PreToolUse 側で push も gh の本文も「決まった形だけ通す」作りにした（design §3）。
+
 ## 5. 不明点
 
 | # | 内容 | 扱い |
