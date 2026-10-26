@@ -156,6 +156,13 @@ echo "$O" | grep -q '"permissionDecision": "deny"'; check "T21 Bash の登録コ
 
 ## 13. 報告欄（担当が追記）
 
-（未記入）
+本報告はカード doc-agenda-nav 段1b の実行結果である。
+
+- 5-1: 変更は :23 の1行のみ（-1行・+1行）。生出力 /tmp/CC報告ファイル/an-stage1b/5-1.txt
+- 5-2: PASS 21行・FAIL 0行・rc=0（5-2.txt）
+- 5-3: 元の1行へ戻すと `FAIL T19`・`FAIL T20`・`PASS T21`・rc=1（5-3.txt）。Edit で変更後へ戻し、再実行で PASS 21行・FAIL 0行・rc=0（5-3b-test.txt）
+- 5-4: 見張りの構文確認 rc=0・試験の構文確認 rc=0（5-4.txt）
+- 5-5: 差分の統計は §3 の3ファイルのみ（5-5.txt）
+- 判断を要した点: なし
 
 END OF CARD
