@@ -1,6 +1,6 @@
 # design — 手元の担当（サブエージェント）の書き換え・保存・送り出しをフックで止める
 
-- 状態: 設計案（第7版 2026-10-26）。
+- 状態: 設計案（第7.1版 2026-10-26）。
   - 第1版は審査役（reviewer・opus）が REQUEST_CHANGES（指摘 1〜12）。第2版で反映した。
   - 第2版（026ab0a25）も REQUEST_CHANGES（指摘 A〜I、/tmp/CC報告ファイル/local-subagent-guard/review-2.md）。第3版で反映した。
   - 第3版（4abf275ae）も REQUEST_CHANGES（A〜I は直ったが、台本を流し込む形の素通りと、grep などの誤った止めが残った。/tmp/CC報告ファイル/local-subagent-guard/review-3.md）。第4版で反映した。
@@ -157,7 +157,7 @@ guard_pre_tool の読み込み:
 **区間の判定**（上から順に見る）
 
 1. 先頭の代入を除いた語が無い → 先頭の代入に `GIT_` で始まる名前があれば止める（規則 `git-env`）。無ければ通す。
-   - この手順と手順 3 の `GIT_` の代入では、`GIT_PAGER=cat` と `GIT_PAGER=`（空）だけは除く（ページャーを止める普段の書き方で、別の命令を動かさないため）。
+   - この手順と手順 3 の `GIT_` の代入では、`GIT_PAGER` の値が、次の PAGER と同じく空か cat・less・more（後ろに `-` で始まる語が続いてもよい）のものだけは除く（ページャーを決める普段の書き方で、別の命令を動かさないため。`GIT_PAGER=less git log` は通り、`GIT_PAGER=./x.sh git log` は止まる。第7版の審査 B）。
    - この手順と手順 3 の同じ場所（先頭の代入・頭の語より前の代入・export などの後ろの代入）で、PAGER・GH_PAGER・MANPAGER・EDITOR・VISUAL・GH_EDITOR・BROWSER・GH_BROWSER・LESSOPEN・LESSCLOSE の代入は、値が空か、cat・less・more（後ろに `-R` のような `-` で始まる語が続いてもよい）でなければ止める（規則 `run-env`。git・gh はこれらの値の命令を動かすため。`PAGER=./x.sh git log`・`EDITOR=./x.sh git log` は止まり、`PAGER=cat git log` は通る）。
 2. 頭の語より前に env があり、その後ろ（頭の語まで）に `-S`・`--split-string`（`-S…`・`--split-string=…` の形も含む）がある → その値と後ろの語をつないだ文を、この §5-3 の判定に最初からかける。止まれば止める（`env -S 'git push'` のため）。
 3. 先頭の代入と、頭の語より前の語（`env GIT_SSH_COMMAND=…` など）に `GIT_` で始まる代入がある → 止める（規則 `git-env`）。git は GIT_ の環境変数で別の命令を動かせるため。区間の先頭の語が export・declare・typeset・local・readonly で、語のどれかが `GIT_` で始まる代入のときも止める。頭の語より後ろの引数（`git log -S 'GIT_DIR='`）は見ない。
@@ -204,7 +204,7 @@ guard_pre_tool の読み込み:
 | config | 後ろに --get・--get-all・--get-regexp・--list・-l・--get-urlmatch のどれかがあるか、`-` で始まらない最初の語が get・list なら通す（`git config core.pager get` は止まる）。`-` で始まらない語がちょうど 1 つ（`git config user.name`。名前だけは値を読む形）で、書き込みの選択肢 --unset・--unset-all・--add・--replace-all・--rename-section・--remove-section・-e・--edit が無ければ通す |
 | symbolic-ref | -d・--delete があれば止める。それ以外は、`-` で始まらない語が 1 つ以下なら通す |
 | branch | ① 後ろの語（`=` の前）に、書き込みの選択肢 -d・-D・-m・-M・-c・-C・-f・--delete・--move・--copy・--force・-u・--set-upstream-to・--unset-upstream・--edit-description・--track・-t・--create-reflog があれば止める。② `-` で始まらない語があり、一覧の選択肢 -l・--list・--contains・--no-contains・--merged・--no-merged・--points-at・--all・--remotes・--show-current がどれも無ければ止める（枝を作る形）。-v・--verbose は枝を作る形でも働くので一覧の選択肢に入れない（`git branch -v newb` は枝を作る。2026-10-26 の審査役の実測）。`-a`・`-r` に名前を付けた形は git が断るので通してよい。①では、`-` 1 つで始まる語（`-uorigin/main` のように値がくっついた形や、`-dv` のようにまとめた形）は、中の文字のどれか 1 つに `-` を付けたものが書き込みの選択肢なら止める（`-vv`・`-avv` は通る。第6版の審査 M3）。③ それ以外は通す |
-| tag | branch の書き込みの選択肢に -a・--annotate・-s・--sign・-F・--file を足して、同じ判定をする。一覧の選択肢には branch のものに -n・-v・--verify を足す（`git tag -n newtag` は一覧を出すだけで、札を作らない。同じ実測） |
+| tag | branch の書き込みの選択肢に -a・--annotate・-s・--sign・-F・--file を足して、同じ判定をする。一覧の選択肢には branch のものに -n・-v・--verify を足す（`git tag -n newtag` は一覧を出すだけで、札を作らない。同じ実測）。-v は tag では札を確かめるだけなので、書き込みの選択肢からは外す（branch の書き込みの選択肢にはもともと -v が無い。第7版の審査 C） |
 | 上に無い動詞（commit・push・merge・rebase・cherry-pick・revert・am・pull・checkout・switch・restore・reset・clean・add・rm・mv・apply・init・clone・update-ref・gc・prune・別名（alias）など全部） | 止める |
 
 **表B gh**
@@ -283,7 +283,7 @@ gh api は、後ろの語を見て次の順に判定する。
 
 **設計者の当て試験**
 
-- 上の判定を Python で書いた試作に、[cases.md](cases.md) の止める例 261・通す例 216 を当てた。誤りは 0。
+- 上の判定を Python で書いた試作に、[cases.md](cases.md) の止める例 262・通す例 218 を当てた。誤りは 0。
 - 第3版〜第6版の審査役が当てた例（重なりを除いて 475）を第6版と第7版の試作の両方に当て、判定が変わったのは第6版の審査の指摘の例だけだった（/tmp/CC報告ファイル/local-subagent-guard/proto-v7-diff67.txt）。
 - cases.md には、第3版の審査役が当てた 46 の例（rv4795v3/probe.py）、第4版の審査役が当てた例（rv4795v4/probe.py・comment_probe.py。awk と ssh を除く。§7）、第5版の審査役が当てた例（rv4795v5/probe5.py。§7 に書いたものと、実測で git が断る・一覧を出すだけと分かったものを除く）、設計者が足した例を入れた。
 - 試作: /tmp/CC報告ファイル/local-subagent-guard/proto-v7-judge.py
@@ -370,6 +370,7 @@ gh api は、後ろの語を見て次の順に判定する。
   - `python3 -c`・`node -e`・`python3 - <<EOF` の本文の中で、ライブラリや subprocess の配列（`["git","push"]`）を使って書き込む形は見抜けない。awk の `system("…")` も同じ（Mac の awk にもある）。
   - perl・ruby の `-e`・`-ne` の中の `system("…")` も同じ（`perl -ne 'print if /foo/'` のような読む使い方を止めないため）。
   - osascript の `-e` の中の `do shell script "…"` も同じ（AppleScript の文で、引用符の中の命令は 1 語になるため。第6版の審査 M2）。
+  - expect・tclsh・wish の heredoc の本文（`expect <<'E'` の本文の `spawn git push`）と、sqlite3 などの対話する道具の中の命令（`.shell`・`.system`）も見ない。heredoc の本文はシェルのときだけ判定する（前処理 2-1）ため。`-c` の値は表C で見るが、heredoc はシェル以外の言語の文として扱う（第7版の審査 A）。
   - 担当の数え作業（Python で数える）を止めないため、受け入れる。
 - 別の命令を後で動かさせる設定
   - `BROWSER=./x.sh gh pr view 1 --web` のように、読むだけの命令に、開くための命令を環境変数で渡す形。`open x.command` のように、Mac の「開く」で台本を動かす形。
@@ -546,3 +547,4 @@ gh api は、後ろの語を見て次の順に判定する。
   - D1: 試作の除外名に gemini・ollama を足した
   - M1: script など 7 つを、後ろの命令を動かす道具として表C で名前で止める。M2: expect・tclsh・swift を解釈系に足し、osascript は §7 に書いた。M3: branch・tag の短い選択肢のまとめ・くっついた値を見る。M4: watch は後ろの語をつないで判定し、parallel は表C で止める。M5: 例の数を直した。M6: fsck の `--lost-found` を止める
   - 審査役の例の外れから足したもの: PAGER・EDITOR・BROWSER などの代入（区間の判定 1・3）と、git の `--exec-path=`（表A）
+- 第7版（43b2dca87）は APPROVE。軽微の指摘 A（expect・tclsh の heredoc と sqlite3 などを §7 に書く）・B（GIT_PAGER の例外を PAGER と揃える）・C（tag の -v を書き込みの選択肢から外す理由）を第7.1版で直した。新しいすり抜けの実測は第7版の審査役がやりきれなかったので、第7.1版で実測だけをもう一度頼んだ

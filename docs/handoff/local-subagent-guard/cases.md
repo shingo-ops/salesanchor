@@ -2,7 +2,7 @@
 
 - 1 行 1 例。`\n` は改行 1 文字を表す（それ以外の `\` はそのまま）。
 - 「止める例」は担当（agent_id あり）の Bash・Monitor の command で、止める（exit 2）。「通す例」は exit 0。
-- 設計者の試作（/tmp/CC報告ファイル/local-subagent-guard/proto-v7-judge.py）に当てた結果: 止める例 261・通す例 216、誤り 0（proto-v7-out.txt）。
+- 設計者の試作（/tmp/CC報告ファイル/local-subagent-guard/proto-v7-judge.py）に当てた結果: 止める例 262・通す例 218、誤り 0（proto-v7-out.txt）。
 - test_guard.sh はこの全例を入れる。例を足すときはこの文書と試験の両方に足す。
 
 ## 止める例
@@ -269,6 +269,7 @@ GH_PAGER=./scripts/x.sh gh pr view 1
 EDITOR=./scripts/x.sh git log
 BROWSER=./scripts/x.sh gh pr view 1 --web
 export PAGER=./scripts/x.sh
+GIT_PAGER=vim git log
 ```
 
 ## 通す例
@@ -490,4 +491,6 @@ git tag -n5
 swift --version
 gh pr view 1 --web
 git fsck
+GIT_PAGER=less git log -1
+GIT_PAGER='less -R' git log -1
 ```
