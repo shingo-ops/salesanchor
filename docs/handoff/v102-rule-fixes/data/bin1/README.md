@@ -115,6 +115,8 @@ print(f"DONE ok={ok} ng={ng}", flush=True)
 sys.exit(1 if ng else 0)
 PY
 ssh -i "$K" -o BatchMode=yes "$H" "mkdir -p $REMOTE && chmod 777 $REMOTE"
+# 置き場を作った直後に後片付けを登録する（scp などが失敗して途中で終わっても本番に残さない。(d) と同じ命令で、二重に流れても害はない）
+trap 'ssh -i "$K" -o BatchMode=yes "$H" "rm -f $REMOTE/*.py $REMOTE/*.txt; rmdir $REMOTE" >/dev/null 2>&1 || true' EXIT
 scp -q -i "$K" "$JOBS" "$OUT/apply.py" "$H:$REMOTE/"
 echo "start $(date -u +%H:%M:%SZ)"
 set +e
