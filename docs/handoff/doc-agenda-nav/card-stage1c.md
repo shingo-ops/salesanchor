@@ -362,3 +362,45 @@ rc=0
 ```
 
 判断を要した点: なし。試験ファイルの編集は §12 のとおり Bash の python 台本＋先頭行の印で行った（見張りが示した印は d5738ef7）。
+
+## 14. 追補（2026-10-26 Opus。審査役の REVISE への対処）
+
+### 14-1 事実
+- 審査役が HEAD fe549d8a7 で `bash scripts/agent-hooks/cloud/test.sh` を流し、B2b（`scripts/agent-hooks/cloud/test.sh:377`）が NG になった。B2b は保存先 `/repo/docs/a.md` を使い、`run2()`（同 :353-356）で CLAUDE_PROJECT_DIR を消している。新しい exempt() は REPO（CLAUDE_PROJECT_DIR、無ければ本店のパス）の下の docs だけを免除するため、架空の `/repo` は免除されない。
+- 公式資料（code.claude.com/docs/en/hooks、2026-10-26 確認）: 「`CLAUDE_PROJECT_DIR`: the project root where the session started」、見張りを起こすときこの値を環境変数として渡す（"export ... on the spawned process"）。`scripts/agent-hooks/cloud/dispatch.sh:35` と :46 は環境を引き継いで見張りを呼ぶ。よって本物のクラウドでは、作業場所の docs への Write は免除される。
+- B2b は古い部分一致（どこでも `/docs/` を含めば免除）を前提にした試験で、見張りの退行ではない。直すのは試験の方とする（§31 の「決まった場所だけ免除」に合わせる）。
+- B8・T1（速さの基準）の NG は審査時の機械の負荷によるもので、origin/main の版でも同じ種類の NG が出た（B1c・B6・T1）。今回の変更の対象外。
+
+### 14-2 触るファイル（これ以外は触らない）
+- 変更: `scripts/agent-hooks/cloud/test.sh`（:377 の B2b 1行の変更と、その直後に B2c 1行の追加だけ）
+- 変更: このカード（担当は §14-5 の報告欄の追記だけ）
+
+### 14-3 作り方
+`scripts/agent-hooks/cloud/test.sh` の B2b の行を、次の2行に置き換える（第4要素だけ変える＋B2c を足す）。
+
+変更前（:377）:
+```
+ ("B2b", "Write docs 配下は通す", pre("Write", file_path="/repo/docs/a.md", content=f"x = {T0}1)"), MRR, lambda r, o, e: r == 0 and not o.strip(), "出力なし"),
+```
+変更後:
+```
+ ("B2b", "Write docs 配下は通す", pre("Write", file_path="/repo/docs/a.md", content=f"x = {T0}1)"), {**MRR, "CLAUDE_PROJECT_DIR": "/repo"}, lambda r, o, e: r == 0 and not o.strip(), "出力なし"),
+ ("B2c", "リポジトリ外の docs は止める", pre("Write", file_path="/other/docs/a.md", content=f"x = {T0}1)"), {**MRR, "CLAUDE_PROJECT_DIR": "/repo"}, lambda r, o, e: r == 0 and hasdeny(o), "deny"),
+```
+- このファイルに監視語の文字列そのものは無い（`grep -c` で 0）。命令名は TARGETS から組み立てる。編集は Edit ツールで行う。止められたら §12 に従う。
+
+### 14-4 確かめ方（担当が実行し、出力の全文を報告に貼る）
+1. `git diff -- scripts/agent-hooks/cloud/test.sh` の全文
+2. 変更後の版: `bash scripts/agent-hooks/cloud/test.sh > /tmp/after.txt 2>&1; echo rc=$?` の後、`cat /tmp/after.txt`
+3. 比べる版: 同じ環境で、origin/main の `scripts/agent-hooks/` 一式を一時の場所へ取り出して流す（`d=$(mktemp -d); git archive origin/main scripts/agent-hooks | tar -x -C "$d"; bash "$d/scripts/agent-hooks/cloud/test.sh" > /tmp/before.txt 2>&1; echo rc=$?; cat /tmp/before.txt`）
+4. `bash scripts/agent-hooks/test_master_register_rules_guard.sh; echo rc=$?`（T1〜T28 が全部 PASS のまま）
+
+### 14-5 受け入れ基準
+| 基準 | 確かめ方 |
+|---|---|
+| B2b と B2c が OK | 14-4 の 2 の出力の B2b・B2c の行 |
+| 変更後の版の NG の項目が、比べる版の NG の項目に含まれる（新しい NG が無い） | 14-4 の 2 と 3 の NG の行の比較 |
+| 見張りの手元試験は 28 件 PASS・rc=0 | 14-4 の 4 |
+| 触ったファイルは 14-2 の2つだけ | `git status --short` |
+
+### 14-6 報告欄（担当が追記）
