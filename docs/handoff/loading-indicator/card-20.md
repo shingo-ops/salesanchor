@@ -46,12 +46,19 @@
 - 直書き 0: `git grep -nE "\"(Loading|Saving|Saved|Close|Done)\"|'(Loading|Saving|Saved|Close|Done)'" -- frontend/src/components/loading` が試験・stories 以外で 0
 - 画面の「...」0: DesktopShell.tsx と InboxKartePanel.tsx の読み込み中の枝に `...` の文字が無い
 - 見本ページ: `git grep -nE "loading>(保存中\.\.\.|読み込み中)</Button>" -- frontend/src/pages/design-preview` が 0
-- 辞書: ja.json・en.json は変えない（git diff に出ない）
+- 辞書: ja.json・en.json は変えない（git diff に出ない）。viewer 辞書は判断8の3キーだけ足す
+
+## 3-2. 閲覧ページの辞書（2回目の NEEDS_DECISION を受けて足した。判断8）
+- frontend/src/locales/viewer/ja.json と viewer/en.json の "common" に、次の3キーを足す（値は本体辞書と同じ文字にする）
+  - ja: `"saving": "保存中..."`・`"saved": "保存しました"`・`"done": "済"`
+  - en: `"saving": "Saving..."`・`"saved": "Saved"`・`"done": "Done"`
+  - 足す前に本体の frontend/src/locales/ja.json・en.json の common.saving・common.saved・common.done の値を読み、上と違えば本体の値を使い、違いを報告する
+- 判断8（Opus）: check-i18n-missing-keys.js:22-26 は「閲覧ページの入口から import をたどって届く金型の t() は、本体辞書と viewer 辞書の両方に要る」と決めている（ADR-1019 の閲覧ページ専用辞書）。viewer 辞書には既に金型用の common.close・common.loading が同じ形で入っている。今回 SaveIndicator・ProgressBar が t() を使うようになり、同じ仕組みで3キーが要るようになった。既存の仕組みに従うだけで、新しい置き場は作らない。本体辞書（ja.json・en.json）は変えない
 
 ## 4. 触らない範囲
 - loading/Drawer と components/Drawer の重複（別件。loading/Drawer は使用 0件のまま残す）
 - 検査スクリプト（判断6）、CSS（.sidebar-loading-dot の規則も消さない）、金型の props・見た目
-- 上の表に無いファイル。辞書（ja.json・en.json）
+- 上の表に無いファイル。本体辞書（ja.json・en.json）。viewer 辞書は §3-2 の3キー以外
 
 ## 5. 文書
 - docs/handoff/loading-indicator/design.md の 3-7 残件に、手元で足した「便9（card-20）」の行がある。中身を変えない
@@ -61,12 +68,12 @@
 | 基準 | 検証方法 |
 |---|---|
 | 直書きの言葉 0 | §3 の3つの grep が 0 |
-| 型 | `cd frontend && npx tsc --noEmit` 0 件 |
+| 型 | `cd frontend && npm run generate:api-types && npx tsc --noEmit` 0 件（schema.d.ts は .gitignore:128 で除外された生成物。CI の frontend-check.yml:30 も tsc の前に生成する。2回目の4件はこれを生成していなかったため） |
 | lint | `npx eslint` を変えたファイルにかけ、警告 0 |
 | 辞書 | `node scripts/check-i18n-missing-keys.js` exit 0、ja/en キー数一致 |
 | 試験 | `npx vitest run --project unit src/components src/pages/inbox src/pages/design-preview` pass（§2 の修正込み） |
 | UI ガバナンス | `BASE_SHA=8cf4c84d6 HEAD_SHA=HEAD node scripts/check-ui-governance.js` exit 0 |
-| 範囲 | `git diff origin/main...HEAD --name-only` が §1 のファイル・§2 で直した試験・design.md・card-20.md・台帳だけ |
+| 範囲 | `git diff origin/main...HEAD --name-only` が §1 のファイル・§2 で直した試験・§3-2 の viewer 辞書2つ・design.md・card-20.md・台帳だけ |
 | 本番（手元で確かめる） | 合流と本番反映のあと、配信 JS で左のメニューとお客さまの情報の欄の読み込み中の枝が sa-loading-block の呼び出しになっている |
 
 ## 7. 想定分岐
