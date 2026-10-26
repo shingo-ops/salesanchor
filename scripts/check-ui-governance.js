@@ -422,19 +422,117 @@ function isLoadingKey(key) {
   return false;
 }
 
+/** テンプレート文字列の ${ ... } の中身を読み飛ばし、閉じの } の次の位置を返す（閉じなければ -1） */
+function skipTemplateExpr(content, from) {
+  let depth = 1;
+  let i = from;
+  while (i < content.length) {
+    const ch = content[i];
+    if (ch === '"' || ch === "'") {
+      let j = i + 1;
+      while (j < content.length && content[j] !== ch && content[j] !== '\n') j += content[j] === '\\' ? 2 : 1;
+      if (content[j] !== ch) return -1;
+      i = j + 1;
+    } else if (ch === '`') {
+      const end = findTemplateEnd(content, i);
+      if (end === -1) return -1;
+      i = end;
+    } else if (ch === '/' && content[i + 1] === '*') {
+      const end = content.indexOf('*/', i + 2);
+      if (end === -1) return -1;
+      i = end + 2;
+    } else if (ch === '/' && content[i + 1] === '/') {
+      const end = content.indexOf('\n', i);
+      if (end === -1) return -1;
+      i = end;
+    } else if (ch === '{') {
+      depth++;
+      i++;
+    } else if (ch === '}') {
+      depth--;
+      i++;
+      if (depth === 0) return i;
+    } else {
+      i++;
+    }
+  }
+  return -1;
+}
+
+/** start のバッククォートで始まるテンプレート文字列の終わり（閉じの次の位置）を返す。閉じなければ -1 */
+function findTemplateEnd(content, start) {
+  let i = start + 1;
+  while (i < content.length) {
+    const ch = content[i];
+    if (ch === '\\') {
+      i += 2;
+    } else if (ch === '`') {
+      return i + 1;
+    } else if (ch === '$' && content[i + 1] === '{') {
+      const end = skipTemplateExpr(content, i + 2);
+      if (end === -1) return -1;
+      i = end;
+    } else {
+      i++;
+    }
+  }
+  return -1;
+}
+
+/** 文字列が来うる直前の記号 */
+const STRING_PRECEDING_CHARS = '(,=:?[{}+-*/%!&|^~;<>';
+/** 文字列が来うる直前の語 */
+const STRING_PRECEDING_WORDS = new Set([
+  'return', 'typeof', 'case', 'in', 'of', 'void', 'yield', 'await', 'delete', 'else', 'throw',
+]);
+
+/**
+ * pos の ' または " が文字列の始まりになりうるか（JSX の地の文の ' " は false）。
+ * pos より前の、空白（改行を含む）でない直前の文字で判定する。
+ */
+function canStartString(masked, pos) {
+  const p = prevNonWs(masked, pos);
+  if (p < 0) return true;
+  const ch = masked[p];
+  if (STRING_PRECEDING_CHARS.includes(ch)) return true;
+  if (/[A-Za-z0-9_$]/.test(ch)) {
+    let w = p;
+    while (w > 0 && /[A-Za-z0-9_$]/.test(masked[w - 1])) w--;
+    return STRING_PRECEDING_WORDS.has(masked.slice(w, p + 1));
+  }
+  return false;
+}
+
 /**
  * コメントと文字列を取り除いた写しを作る（長さは同じ。文字列は区切りだけ残す）。
  * 戻り値: { masked, strings: [{ start, end, value, quote }] }
  */
 function maskSource(content) {
-  const re = /\/\*[\s\S]*?\*\/|\/\/[^\n]*|"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|`(?:[^`\\]|\\.)*`/g;
+  const re = /\/\*[\s\S]*?\*\/|\/\/[^\n]*|"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|`/g;
   const strings = [];
   let masked = '';
   let last = 0;
   let m;
   while ((m = re.exec(content)) !== null) {
-    const text = m[0];
+    let text = m[0];
     masked += content.slice(last, m.index);
+    last = m.index;
+    if (text === '`') {
+      const end = findTemplateEnd(content, m.index);
+      if (end === -1) {
+        // 閉じないテンプレートは文字列とみなさない
+        masked += '`';
+        last = m.index + 1;
+        continue;
+      }
+      text = content.slice(m.index, end);
+      re.lastIndex = end;
+    } else if ((text[0] === '"' || text[0] === "'") && !canStartString(masked, m.index)) {
+      masked += text[0];
+      last = m.index + 1;
+      re.lastIndex = m.index + 1;
+      continue;
+    }
     const isComment = text.startsWith('/*') || text.startsWith('//');
     if (isComment) {
       masked += text.replace(/[^\n]/g, ' ');
@@ -501,7 +599,7 @@ function isInsideTCall(masked, qIdx) {
     else if (ch === '(' || ch === '[' || ch === '{') {
       if (depth === 0) {
         if (ch !== '(') return false;
-        return /(?:^|[^A-Za-z0-9_$.])t\s*$/.test(masked.slice(Math.max(0, i - 8), i));
+        return /(?:^|[^A-Za-z0-9_$.])(?:(?:i18n|i18next)\.)?t\s*$/.test(masked.slice(Math.max(0, i - 20), i));
       }
       depth--;
     } else if (depth === 0 && (ch === ',' || ch === ';')) {
@@ -553,11 +651,24 @@ function countLoadingTernary(content) {
     let unitEnd = s.end;
     let kind;
     const before = masked.slice(Math.max(0, s.start - 40), s.start);
-    const wrap = /(?:^|[^A-Za-z0-9_$.])t\(\s*$/.exec(before);
+    const wrap = /(?:^|[^A-Za-z0-9_$.])((?:(?:i18n|i18next)\.)?t\(\s*)$/.exec(before);
     const after = nextNonWs(masked, s.end);
-    if (isKey && wrap && after !== -1 && masked[after] === ')') {
-      unitStart = s.start - before.length + wrap.index + wrap[0].indexOf('t');
-      unitEnd = after + 1;
+    let wrapEnd = -1;
+    if (isKey && wrap && after !== -1) {
+      if (masked[after] === ')') {
+        wrapEnd = after + 1;
+      } else if (masked[after] === ',') {
+        // t("key", { n }) のように第2引数があるとき、t( に対応する ) までを1つの単位にする
+        let depth = 1;
+        for (let i = after + 1; i < masked.length; i++) {
+          if (masked[i] === '(') depth++;
+          else if (masked[i] === ')' && --depth === 0) { wrapEnd = i + 1; break; }
+        }
+      }
+    }
+    if (wrapEnd !== -1) {
+      unitStart = s.start - wrap[1].length;
+      unitEnd = wrapEnd;
       kind = 'A';
     } else if (isKey) {
       kind = 'B';

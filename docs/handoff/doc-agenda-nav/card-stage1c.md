@@ -1,0 +1,909 @@
+# 実装カード 段1c — 商品マスタ登録の見張りの免除を「パスのどこかに含む」から「決まった場所で始まる」に締める
+
+> この文書は何か：doc-agenda-nav 段1c の作業指示書です。商品マスタ登録の見張り（`scripts/agent-hooks/master-register-rules-guard.py`）は、Write/Edit の保存先のパスに `/docs/` や `/tmp/CC報告ファイル/` などが**どこかに含まれていれば**素通りさせます（部分一致）。このため、リポジトリの外の `~/x/docs/a.py` や、記録の置き場に置いた台本 `/tmp/CC報告ファイル/x.py` へ登録の命令を書いても止まりません。これを「リポジトリ（作業場所）の根の直下の決まった段」と「記録の置き場で始まり、拡張子が .md か .txt」のときだけ素通りさせる形に締めます。この Mac の見張りの本体（ホームの `.claude/scripts/` の同名ファイル）への写しは、マージの後に PO が `!` で行います（§8）。
+
+- 設計: docs/handoff/doc-agenda-nav/design.md §31
+- recon: docs/handoff/doc-agenda-nav/recon.md（この段の現在地は §2 の表。2026-10-26 Opus が origin/main 2d25c719d で確認）
+- 対象ADR: ADR-1040（Accepted）。関連: ADR-076・ADR-113
+- 前の段: 段1b（card-stage1b.md、マージ済み）。同じ1行（`EXEMPT_PATHS`）と同じ試験ファイルを触る
+- 状態: PO の指示原文「1」に続けて「,2」（2026-10-26。残り4件をまとめて計画して進める。この段はその3件目 C）
+- 危険便（ADR-136 の危険パス）: はい。`scripts/` を触るため PR 本文に `### GO記録` が要る。GO は ADR-1003 の委譲名義で Opus が出す
+- 担当: 実装と試験はクラウドの担当（PO 2026-10-26「1」＝直しと試験はクラウドで動かす）。push まで。PR は手元で Opus が shingo-cc 名義で作る。審査は Opus（reviewer を model "opus" で新しく起こす）、GO・マージは Opus、見張りの本体への写しは PO
+
+## 0. カード発行前チェック（design-partner.md §5.5）
+
+| # | 項目 | 結果 |
+|---|---|---|
+| 1 | 記号はバッククォートで囲んだ | ○ |
+| 2 | PR は ready で作る（Draft にしない）と明記 | ○（§10。PR は手元で Opus が作る） |
+| 3 | 報告の宛先と生出力の扱いを明記 | ○（§11） |
+| 4 | 1便1目的 | ○（免除の判定だけ） |
+| 5 | 既存ブランチへの追記ではない（新規ブランチ） | ○（release/doc-agenda-nav-stage1c） |
+| 6 | 書式は実例で示した | ○（§4 は完成形） |
+| 7 | 合格基準を出力まで縛った | ○（§5） |
+| 8 | 件数の判定に名前を出す手順を対で置いた | ○（試験名と PASS/FAIL を1行ずつ出す） |
+| 9 | 出力量に上限のないコマンドを使わない | ○ |
+| 10 | 停止時の報告3点・受領確認・終端合図 | ○ |
+| 11 | 期待値は実物から | ○（§2） |
+| 12 | 停止は本番影響のあるものに限る | ○（§6） |
+| 13 | 委任文の定型4点 | ○（§12） |
+
+## 受領確認
+
+作業を始める前に、報告の冒頭へ「本報告はカード doc-agenda-nav 段1c の実行結果である」と書くこと。
+
+## 1. 範囲
+
+入れる:
+1. `scripts/agent-hooks/master-register-rules-guard.py` の :23 の1行（`EXEMPT_PATHS`）を、§4-1 の定数4行に置き換える
+2. 同じファイルの `deny()` の後（:52 の空行2行の後、`def pre_tool_use` の前）に関数 `exempt()` を足す（§4-2）
+3. 同じファイルの :66 の免除の判定を `exempt(fpath)` に変える（§4-3）
+4. `scripts/agent-hooks/test_master_register_rules_guard.sh` の T3 の前提・T19 のパスを直し、T22〜T28 を足す（§4-4）
+
+入れない:
+- :14 の `REPO`・:25 の `PROMPT_RE`・Bash の判定（:67-71）・印の判定（:72-84）
+- ホームの `.claude/settings.json`
+- `.github/workflows/agent-hooks-test.yml`
+- ホームの `.claude/scripts/` への写し（§8。PO が行う）
+
+## 2. 前提の事実（2026-10-26 Opus が origin/main 2d25c719d で確認）
+
+| # | 事実 | 出典 |
+|---|---|---|
+| F1 | :23 は `EXEMPT_PATHS = ("/backend/", "/frontend/", "/docs/", "/migrations/", "/tests/", "/CC報告ファイル-keep/", "/tmp/CC報告ファイル/")` | 見張りの実物 |
+| F2 | :66 は `if tool in ("Write", "Edit") and any(p in fpath for p in EXEMPT_PATHS):` の次行 `return`。パスのどこかに含めば素通り（部分一致） | 見張りの実物 |
+| F3 | :14 は `REPO = os.environ.get("CLAUDE_PROJECT_DIR") or "/Users/tanizawashingo/salesanchor"` | 見張りの実物 |
+| F4 | 作業場所は `~/worktrees/salesanchor/<ブランチ名>/` に作られる | `scripts/new-worktree.sh:13` |
+| F5 | 試験は T1〜T21（85行、最後の行が `exit $FAIL`）。T3 は `/repo/backend/app/a.py` への Write が素通り、T19 は `/Users/tanizawashingo/CC報告ファイル-keep/x.md`、T20 は `/tmp/CC報告ファイル/x.md` への Write が素通り、T21 は Bash が止まる | 試験の実物 |
+| F6 | 試験は CI で動かない（`.github/workflows/agent-hooks-test.yml:24` は review-gate の試験だけ）。担当の実行結果が証拠 | ワークフローの実物 |
+| F7 | ホームの見張りの本体と origin/main の版は同じ（`diff` 終了コード 0） | Opus 実測（2026-10-26） |
+| F8 | `EXEMPT_PATHS` を使う見張りはこの1本だけ | Opus 実測（2026-10-26。design §31-2） |
+
+決めたこと（design §31-3）:
+- リポジトリの中の免除: パスを `os.path.normpath` で整えた後、`REPO` の直下、または `~/worktrees/salesanchor/<名前>/` の直下で、最初の段が `backend`・`frontend`・`docs`・`migrations`・`tests` のどれかのときだけ。`..` を使ってリポジトリの外へ出るパスは整えた後の形で判定するので素通りしない。
+- 記録の置き場の免除: 整えた後のパスが `~/CC報告ファイル-keep/`・`/tmp/CC報告ファイル/`・`/private/tmp/CC報告ファイル/` で始まり、かつ `.md` か `.txt` で終わるときだけ。
+- 絶対パスでないもの（`/` で始まらない）は免除しない。
+- 試験の T3 は、試験の頭で `CLAUDE_PROJECT_DIR=/repo` を置いて、今までどおり `/repo/backend/app/a.py` が素通りすることを見る（試験はこの Mac 以外でも同じ結果になる）。T19 は `$HOME` で書く（`~` の展開と一致させる）。
+
+## 3. 触るファイル（これ以外は触らない）
+
+- 変更: `scripts/agent-hooks/master-register-rules-guard.py`（§4-1〜4-3 だけ）
+- 変更: `scripts/agent-hooks/test_master_register_rules_guard.sh`（§4-4 だけ）
+- 変更: `docs/handoff/doc-agenda-nav/card-stage1c.md`（このカード。担当は §13 報告欄の追記だけ）
+
+## 4. 作り方
+
+4-1. :23 の次の1行（変更前）:
+
+```python
+EXEMPT_PATHS = ("/backend/", "/frontend/", "/docs/", "/migrations/", "/tests/", "/CC報告ファイル-keep/", "/tmp/CC報告ファイル/")
+```
+
+を、次の4行にする（他の行は変えない）:
+
+```python
+WORKTREES = os.path.expanduser("~/worktrees/salesanchor")
+REPO_DIRS = ("backend", "frontend", "docs", "migrations", "tests")
+RECORD_DIRS = (os.path.expanduser("~/CC報告ファイル-keep"), "/tmp/CC報告ファイル", "/private/tmp/CC報告ファイル")
+RECORD_EXTS = (".md", ".txt")
+```
+
+4-2. `def deny(reason):` の関数の後（その関数の最後の行 `    }})` の後の空行2行の後）、`def pre_tool_use(data):` の前に、次を足す（完成形。後ろに空行2行を置く）:
+
+```python
+def exempt(fpath):
+    """Write/Edit の保存先が免除の場所か。部分一致ではなく、決まった場所で始まるかで見る。"""
+    if not isinstance(fpath, str) or not fpath.startswith("/"):
+        return False
+    p = os.path.normpath(fpath)
+    if p.endswith(RECORD_EXTS) and any(p.startswith(d + "/") for d in RECORD_DIRS):
+        return True
+    for root, skip in ((os.path.normpath(REPO), 0), (WORKTREES, 1)):
+        if not p.startswith(root + "/"):
+            continue
+        parts = p[len(root) + 1:].split("/")[skip:]
+        if len(parts) > 1 and parts[0] in REPO_DIRS:
+            return True
+    return False
+```
+
+4-3. :66 の次の1行（変更前）:
+
+```python
+    if tool in ("Write", "Edit") and any(p in fpath for p in EXEMPT_PATHS):
+```
+
+を、次の1行にする（次の行の `        return` は変えない）:
+
+```python
+    if tool in ("Write", "Edit") and exempt(fpath):
+```
+
+4-4. 試験ファイルを次のとおり直す（完成形。1字も変えない）。
+
+(a) 7行目 `export MRR_RULES_FILE=...` の次に1行足す:
+
+```bash
+export CLAUDE_PROJECT_DIR=/repo
+```
+
+(b) T19 の行（変更前）:
+
+```bash
+O="$(mk PreToolUse Write content 'create_product(x) の説明を引用したメモ' /Users/tanizawashingo/CC報告ファイル-keep/x.md | python3 "$G")"
+```
+
+を、次の1行にする:
+
+```bash
+O="$(mk PreToolUse Write content 'create_product(x) の説明を引用したメモ' "$HOME/CC報告ファイル-keep/x.md" | python3 "$G")"
+```
+
+(c) 最後の `exit $FAIL` の前に、次を足す:
+
+```bash
+# T22〜T28: 免除は決まった場所で始まるときだけ（doc-agenda-nav 段1c。docs/handoff/doc-agenda-nav/card-stage1c.md §4-4）
+O="$(mk PreToolUse Write content 'create_product(x)' "$HOME/x/docs/a.py" | python3 "$G")"
+echo "$O" | grep -q '"permissionDecision": "deny"'; check "T22 リポジトリの外の docs は止まる" $?
+O="$(mk PreToolUse Write content 'create_product(x)' /tmp/CC報告ファイル/x.py | python3 "$G")"
+echo "$O" | grep -q '"permissionDecision": "deny"'; check "T23 記録置き場の .py は止まる" $?
+O="$(mk PreToolUse Write content 'create_product(x)' "$HOME/worktrees/salesanchor/release-a/docs/a.md" | python3 "$G")"
+[ -z "$O" ]; check "T24 作業場所の docs は素通り" $?
+O="$(mk PreToolUse Write content 'create_product(x)' /repo/backend/../../tmp/a.py | python3 "$G")"
+echo "$O" | grep -q '"permissionDecision": "deny"'; check "T25 .. で外へ出るパスは止まる" $?
+O="$(mk PreToolUse Write content 'create_product(x) の説明を引用したメモ' /private/tmp/CC報告ファイル/x.md | python3 "$G")"
+[ -z "$O" ]; check "T26 記録置き場(/private/tmp)への .md は素通り" $?
+O="$(mk PreToolUse Write content 'create_product(x)' backend/a.py | python3 "$G")"
+echo "$O" | grep -q '"permissionDecision": "deny"'; check "T27 絶対パスでないものは止まる" $?
+O="$(mk PreToolUse Write content 'create_product(x)' /repo/backend | python3 "$G")"
+echo "$O" | grep -q '"permissionDecision": "deny"'; check "T28 段の名前そのもの(下に何も無い)は止まる" $?
+```
+
+## 5. 確かめ方（担当が実行し、出力を報告に貼る）
+
+5-1. `git diff origin/main -- scripts/agent-hooks/master-register-rules-guard.py` の全文（期待: §4-1 の `-` 1行・`+` 4行、§4-2 の `+` 16行（関数14行と空行2行）、§4-3 の `-` 1行・`+` 1行）。
+5-2. `bash scripts/agent-hooks/test_master_register_rules_guard.sh; echo "rc=$?"` の全文（期待: PASS が T1〜T8 の8行・T9〜T18 の10行・T19〜T21 の3行・T22〜T28 の7行の計28行。FAIL 0行。最後の行が `rc=0`）。
+5-3. わざと元に戻して落ちることを確かめる: §4-3 の1行だけを Edit で変更前の1行に戻し、§4-1 の4行の後に変更前の `EXEMPT_PATHS = ...` の1行を一時的に足して、5-2 を実行する（期待: T22・T23・T25 の3行が FAIL、ほかは PASS、`rc=1`）。確かめたら Edit で一時の1行を消し、§4-3 を変更後の1行に戻し（`git checkout` は使わない）、5-1 と 5-2 をもう一度実行して貼る。
+5-4. `python3 -I -c "import ast,sys; ast.parse(open(sys.argv[1]).read())" scripts/agent-hooks/master-register-rules-guard.py; echo "rc=$?"` と `bash -n scripts/agent-hooks/test_master_register_rules_guard.sh; echo "rc=$?"`（どちらも `rc=0`）。
+5-5. `git grep -n 'EXEMPT_PATHS' -- scripts/` が0行（古い名前が残っていない）。
+5-6. `git diff origin/main --stat` が §3 の3ファイルだけ。
+
+## 6. 分岐ごとの対処
+
+- 5-2 で T1〜T21 のどれかが FAIL → §4 以外を触っていないか 5-1 で確かめ、触っていなければ BLOCKED:（式や試験を変えない）。
+- T24 が FAIL → クラウドの `$HOME` と `os.path.expanduser("~")` が違う可能性がある。両方の値を `echo "$HOME"` と `python3 -c 'import os;print(os.path.expanduser("~"))'` で出して BLOCKED:。
+- 5-3 の FAIL が T22・T23・T25 の3行でない → 実際の行を貼って NEEDS_DECISION:。
+- 見張りに止められた（この試験の文字列自体が監視語に当たる場合を含む） → 言い換えず、止まった手順・最後のコマンド・理由の原文を報告して終える。
+
+## 7. 受け入れ基準
+
+| 基準 | 検証方法 |
+|---|---|
+| リポジトリの外の `docs` への登録の命令が止まる | §5-2 の T22 が PASS |
+| 記録の置き場の台本（.py）が止まる | §5-2 の T23 が PASS |
+| `..` で外へ出るパス・絶対パスでないもの・段の名前そのものが止まる | §5-2 の T25・T27・T28 が PASS |
+| リポジトリ・作業場所の決まった段と記録の置き場の .md は今までどおり素通り | §5-2 の T3・T19・T20・T24・T26 が PASS |
+| 既存の T1〜T21 が通る | §5-2 |
+| 試験が元の部分一致では落ちる | §5-3 |
+| 変えたのは §4 の場所だけ | §5-1・§5-5・§5-6 |
+| ホームの見張りの本体がリポジトリの版と同じになる | §8 の diff の出力が空（`SAME`） |
+
+## 8. 見張りの本体への写し（マージの後。PO が `!` で行う。担当はしない）
+
+- 型は card-stage1b.md §8 と同じ（写す前に .bak → `.new` に書いて空でないことを確かめる → 本体へ → diff で一致）。`.bak-` の後は写す日の日付と `-stage1c` にして、段1・段1b の .bak を上書きしない。
+- マージの後、Opus が本店で `git fetch origin` を行い、その1行を台本ファイルにして PO に渡す。
+- 期待: 最後の行が `SAME`。
+- 反映の確かめ（Opus）: 写した後、`/tmp/CC報告ファイル/` へ監視語を引用した .md を Write して止まらないこと、同じ場所へ監視語入りの .py を Write しようとして止まること。
+
+## 9. 戻し方
+
+- 見張りの本体: PO が `!` で .bak から戻し、repo 版との diff で確かめる。
+- repo: この PR の revert を main にマージする。
+- 戻すと、部分一致の免除に戻る（段1b と同じ）。
+
+## 10. PR
+
+- 作業の枝は `release/doc-agenda-nav-stage1c`（origin/main 2d25c719d 起点・2026-10-26。このカードと design §31 のコミットが載っている）。担当はこの枝を取ってきて、その上で作業する。新しい枝は作らない。
+- push は `git push origin release/doc-agenda-nav-stage1c`。commit の後に `git log -1 --oneline`、push の後に `git log origin/release/doc-agenda-nav-stage1c -1 --oneline` で確かめる。
+- PR は担当は作らない（コード変更を含むため。scripts/agent-hooks/cloud/rules.md）。Opus が手元で shingo-cc 名義・ready・base main で作る。本文に `### 標準ワークフロー確認`（recon・設計・このカード・`対象ADR: ADR-1040（関連: ADR-076・ADR-113）`）と `### GO記録` を置く。
+- `.claude-pipeline/active-work.d/` は commit しない。
+
+## 11. 報告
+
+- 完了報告に: 冒頭の受領文／§5-1〜5-6 の出力／push した commit の番号／判断を要した点（事実のみ）
+- 停止したとき: 停止した手順番号／最後に実行したコマンド／停止した理由の原文
+- 1行目は DONE／BLOCKED: 理由／NEEDS_DECISION: 内容 のどれか
+
+## 12. 委任の定型
+
+- sleep しない
+- 見張りのファイル（§4-1〜4-3。監視語を含まない）の編集は Edit ツールで行う
+- 試験ファイル（§4-4）の編集は、監視語（`create_product(`）を含むため、Edit/Write ツールでも Bash でもこの見張りに止められる（1回目の実行で確認。2026-10-26 06:39Z）。試験ファイルの編集と §5-3 の一時の書き換えは、Bash で python の台本を流して行い、その Bash のコマンドの先頭行に、見張りが止めたときに示す印 `# rules-ack: <8桁>` を書く（見張りが自分で示す正式な通り道。ファイルには書き込まない）。8桁は見張りの表示から写す（1回目の表示は `d5738ef7`）。印を付けても止まったら、言い換えずに止まる
+- `./scripts/dev/executor-preflight.sh` は、クラウドでは [1/3]（api.github.com に届かない）と [2/3]（gh の切り替え）が FAIL になる。この2つだけの FAIL なら続けてよい（担当は PR を作らないため）。ほかの項目が FAIL なら BLOCKED:。出力の全文を報告に貼る
+- 担当は PR を作らない（§10）
+- フックや自動判定に止められたら、言い換えて再試行せず、止まった手順・最後のコマンド・理由の原文を報告して終える
+
+## 13. 報告欄（担当が追記）
+
+本報告はカード doc-agenda-nav 段1c の実行結果である。
+
+
+枝: release/doc-agenda-nav-stage1c（開始時 HEAD 33d6c29c7ef8bb4beaaf2faf1cf4856e6355996f。commit 後の sha は完了報告に記す）
+
+### preflight（[1/3]・[2/3] のみ FAIL。§12 により続行）
+```
+== executor preflight (identity=shingo-cc, mode=fix) ==
+[1/3] network -> api.github.com
+  [FAIL] GitHub API に到達不可。Mac回線ではなく実行役サンドボックスの通信OFFが濃厚。
+       => Codexをネット有効で起動 (信頼repo内: codex --sandbox danger-full-access / または config の network_access=true)
+[2/3] gh auth = shingo-cc
+  [warn] gh の active account が shingo-cc でない。gh auth switch で切り替え試行...
+  [FAIL] gh auth switch --hostname github.com --user shingo-cc に失敗。gh auth status --active で現状を確認。
+[3/3] git config user.name = shingo-cc
+  [OK]   git user.name は shingo-cc
+[4/4] long-lived branch -> origin/main
+  [OK]   origin/main は存在
+==============================================
+PREFLIGHT FAIL — 上の対策を実施し再実行(深追いしない)
+rc=1
+```
+
+### 5-1 差分全文
+```diff
+diff --git a/scripts/agent-hooks/master-register-rules-guard.py b/scripts/agent-hooks/master-register-rules-guard.py
+index fec62a4cd..e549788af 100755
+--- a/scripts/agent-hooks/master-register-rules-guard.py
++++ b/scripts/agent-hooks/master-register-rules-guard.py
+@@ -20,7 +20,10 @@ TARGETS = (
+     "INSERT INTO products",
+     "/tcg/products/create",
+ )
+-EXEMPT_PATHS = ("/backend/", "/frontend/", "/docs/", "/migrations/", "/tests/", "/CC報告ファイル-keep/", "/tmp/CC報告ファイル/")
++WORKTREES = os.path.expanduser("~/worktrees/salesanchor")
++REPO_DIRS = ("backend", "frontend", "docs", "migrations", "tests")
++RECORD_DIRS = (os.path.expanduser("~/CC報告ファイル-keep"), "/tmp/CC報告ファイル", "/private/tmp/CC報告ファイル")
++RECORD_EXTS = (".md", ".txt")
+ READ_ONLY_CMDS = {"git", "grep", "rg", "cat", "sed", "head", "tail", "less"}
+ PROMPT_RE = re.compile(r"マスタ[^。\n]{0,40}登録|登録[^。\n]{0,20}マスタ")
+ PROMPT_LIMIT = 9000
+@@ -50,6 +53,22 @@ def deny(reason):
+     }})
+ 
+ 
++def exempt(fpath):
++    """Write/Edit の保存先が免除の場所か。部分一致ではなく、決まった場所で始まるかで見る。"""
++    if not isinstance(fpath, str) or not fpath.startswith("/"):
++        return False
++    p = os.path.normpath(fpath)
++    if p.endswith(RECORD_EXTS) and any(p.startswith(d + "/") for d in RECORD_DIRS):
++        return True
++    for root, skip in ((os.path.normpath(REPO), 0), (WORKTREES, 1)):
++        if not p.startswith(root + "/"):
++            continue
++        parts = p[len(root) + 1:].split("/")[skip:]
++        if len(parts) > 1 and parts[0] in REPO_DIRS:
++            return True
++    return False
++
++
+ def pre_tool_use(data):
+     tool = data.get("tool_name", "")
+     ti = data.get("tool_input") or {}
+@@ -63,7 +82,7 @@ def pre_tool_use(data):
+         return
+     if not isinstance(text, str) or not any(t in text for t in TARGETS):
+         return
+-    if tool in ("Write", "Edit") and any(p in fpath for p in EXEMPT_PATHS):
++    if tool in ("Write", "Edit") and exempt(fpath):
+         return
+     if tool == "Bash":
+         words = text.split()
+```
+
+### 5-2 試験出力（T1〜T28 = PASS 28行、FAIL 0行）
+```
+PASS T1 deny+全文
+PASS T2 正しい印はallow(出力なし)
+PASS T3 /backend/ は素通り
+PASS T4 additionalContextに全文
+PASS T5 古い印はdeny
+PASS T6 grepは素通り
+PASS T7 cat heredoc書き込みはdeny
+PASS T8 grep+リダイレクトもdeny(許容する副作用)
+PASS T9-15 出ない: 在庫表の商品名の列幅を直して。あとログイン登録画面のバグも見て
+PASS T9-15 出ない: ユーザー登録フォームで商品一覧が出ない
+PASS T9-15 出ない: マスタ画面の表示が遅い。GitHub に登録してあるワークフローも確認
+PASS T9-15 出ない: Discord の webhook を登録して商品の通知を流す
+PASS T9-15 出ない: マスタを整備して正答率を上げたい。登録はまだしない
+PASS T9-15 出ない: 商品を登録して
+PASS T9-15 出ない: PR を作って
+PASS T16-18 出る: 商品マスタに新しいカードを登録して
+PASS T16-18 出る: 共用マスタへ登録する候補一覧を出して
+PASS T16-18 出る: 販売先を顧客マスタに登録して
+PASS T19 記録置き場(keep)への Write は素通り
+PASS T20 記録置き場(tmp)への Write は素通り
+PASS T21 Bash の登録コマンドは止まる
+PASS T22 リポジトリの外の docs は止まる
+PASS T23 記録置き場の .py は止まる
+PASS T24 作業場所の docs は素通り
+PASS T25 .. で外へ出るパスは止まる
+PASS T26 記録置き場(/private/tmp)への .md は素通り
+PASS T27 絶対パスでないものは止まる
+PASS T28 段の名前そのもの(下に何も無い)は止まる
+rc=0
+```
+
+### 5-3 わざと戻した確かめ（FAIL 3行・PASS 25行）
+```
+FAIL T22 リポジトリの外の docs は止まる
+FAIL T23 記録置き場の .py は止まる
+FAIL T25 .. で外へ出るパスは止まる
+rc=1
+```
+確かめの後、一時の EXEMPT_PATHS 1行を消し、§4-3 を変更後の1行へ Edit で戻した（git checkout 不使用）。
+
+### 5-4
+```
+rc=0
+rc=0
+```
+
+### 5-5
+```
+（0行・grep rc=1）
+```
+### 5-6（分岐点 2d25c719d90839b4a7b2932967659b1cf9daac42 と作業ツリーの比較。commit 後の origin/main...HEAD と同じ範囲）
+```
+ docs/handoff/doc-agenda-nav/card-stage1c.md        | 356 +++++++++++++++++++++
+ docs/handoff/doc-agenda-nav/design.md              |  12 +
+ scripts/agent-hooks/master-register-rules-guard.py |  23 +-
+ .../test_master_register_rules_guard.sh            |  18 +-
+ 4 files changed, 406 insertions(+), 3 deletions(-)
+```
+
+判断を要した点: なし。試験ファイルの編集は §12 のとおり Bash の python 台本＋先頭行の印で行った（見張りが示した印は d5738ef7）。
+
+## 14. 追補（2026-10-26 Opus。審査役の REVISE への対処）
+
+### 14-1 事実
+- 審査役が HEAD fe549d8a7 で `bash scripts/agent-hooks/cloud/test.sh` を流し、B2b（`scripts/agent-hooks/cloud/test.sh:377`）が NG になった。B2b は保存先 `/repo/docs/a.md` を使い、`run2()`（同 :353-356）で CLAUDE_PROJECT_DIR を消している。新しい exempt() は REPO（CLAUDE_PROJECT_DIR、無ければ本店のパス）の下の docs だけを免除するため、架空の `/repo` は免除されない。
+- 公式資料（code.claude.com/docs/en/hooks、2026-10-26 確認）: 「`CLAUDE_PROJECT_DIR`: the project root where the session started」、見張りを起こすときこの値を環境変数として渡す（"export ... on the spawned process"）。`scripts/agent-hooks/cloud/dispatch.sh:35` と :46 は環境を引き継いで見張りを呼ぶ。よって本物のクラウドでは、作業場所の docs への Write は免除される。
+- B2b は古い部分一致（どこでも `/docs/` を含めば免除）を前提にした試験で、見張りの退行ではない。直すのは試験の方とする（§31 の「決まった場所だけ免除」に合わせる）。
+- B8・T1（速さの基準）の NG は審査時の機械の負荷によるもので、origin/main の版でも同じ種類の NG が出た（B1c・B6・T1）。今回の変更の対象外。
+
+### 14-2 触るファイル（これ以外は触らない）
+- 変更: `scripts/agent-hooks/cloud/test.sh`（:377 の B2b 1行の変更と、その直後に B2c 1行の追加だけ）
+- 変更: このカード（担当は §14-5 の報告欄の追記だけ）
+
+### 14-3 作り方
+`scripts/agent-hooks/cloud/test.sh` の B2b の行を、次の2行に置き換える（第4要素だけ変える＋B2c を足す）。
+
+変更前（:377）:
+```
+ ("B2b", "Write docs 配下は通す", pre("Write", file_path="/repo/docs/a.md", content=f"x = {T0}1)"), MRR, lambda r, o, e: r == 0 and not o.strip(), "出力なし"),
+```
+変更後:
+```
+ ("B2b", "Write docs 配下は通す", pre("Write", file_path="/repo/docs/a.md", content=f"x = {T0}1)"), {**MRR, "CLAUDE_PROJECT_DIR": "/repo"}, lambda r, o, e: r == 0 and not o.strip(), "出力なし"),
+ ("B2c", "リポジトリ外の docs は止める", pre("Write", file_path="/other/docs/a.md", content=f"x = {T0}1)"), {**MRR, "CLAUDE_PROJECT_DIR": "/repo"}, lambda r, o, e: r == 0 and hasdeny(o), "deny"),
+```
+- このファイルに監視語の文字列そのものは無い（`grep -c` で 0）。命令名は TARGETS から組み立てる。編集は Edit ツールで行う。止められたら §12 に従う。
+
+### 14-4 確かめ方（担当が実行し、出力の全文を報告に貼る）
+1. `git diff -- scripts/agent-hooks/cloud/test.sh` の全文
+2. 変更後の版: `bash scripts/agent-hooks/cloud/test.sh > /tmp/after.txt 2>&1; echo rc=$?` の後、`cat /tmp/after.txt`
+3. 比べる版: 同じ環境で、origin/main の `scripts/agent-hooks/` 一式を一時の場所へ取り出して流す（`d=$(mktemp -d); git archive origin/main scripts/agent-hooks | tar -x -C "$d"; bash "$d/scripts/agent-hooks/cloud/test.sh" > /tmp/before.txt 2>&1; echo rc=$?; cat /tmp/before.txt`）
+4. `bash scripts/agent-hooks/test_master_register_rules_guard.sh; echo rc=$?`（T1〜T28 が全部 PASS のまま）
+
+### 14-5 受け入れ基準
+| 基準 | 確かめ方 |
+|---|---|
+| B2b と B2c が OK | 14-4 の 2 の出力の B2b・B2c の行 |
+| 変更後の版の NG の項目が、比べる版の NG の項目に含まれる（新しい NG が無い） | 14-4 の 2 と 3 の NG の行の比較 |
+| 見張りの手元試験は 28 件 PASS・rc=0 | 14-4 の 4 |
+| 触ったファイルは 14-2 の2つだけ | `git status --short` |
+
+### 14-5b 止められたときの扱い（2026-10-26 Opus 追記。1回目の担当が、確かめの grep で止められて NEEDS_DECISION で止まったため）
+- 監視語を文字列として含む「読むだけ」の確かめ（grep・sed・cat）で見張りに止められたら、そのコマンドの先頭行に見張りが示す印 `# rules-ack: <8桁>` を書いて1回だけ再実行してよい（§12 の印の扱いを、読むだけの確かめにも広げる。言い換えはしない）。印を付けても止まったら止まる。
+- preflight は監視語を含むコマンドとまとめず、単独の Bash で流す。
+
+### 14-6 報告欄（担当が追記）
+
+本報告はカード doc-agenda-nav 段1c 追補の実行結果である。
+
+枝: release/doc-agenda-nav-stage1c（開始時 HEAD 444c251fcfab2e761b20dc30a08eba196f1d4521。commit 後の sha は完了報告に記す）
+
+### preflight（[1/3]・[2/3] のみ FAIL。§12 により続行）
+```
+== executor preflight (identity=shingo-cc, mode=fix) ==
+[1/3] network -> api.github.com
+  [FAIL] GitHub API に到達不可。Mac回線ではなく実行役サンドボックスの通信OFFが濃厚。
+       => Codexをネット有効で起動 (信頼repo内: codex --sandbox danger-full-access / または config の network_access=true)
+[2/3] gh auth = shingo-cc
+  [warn] gh の active account が shingo-cc でない。gh auth switch で切り替え試行...
+  [FAIL] gh auth switch --hostname github.com --user shingo-cc に失敗。gh auth status --active で現状を確認。
+[3/3] git config user.name = shingo-cc
+  [OK]   git user.name を shingo-cc に設定
+[4/4] long-lived branch -> origin/main
+  [OK]   origin/main は存在
+==============================================
+PREFLIGHT FAIL — 上の対策を実施し再実行(深追いしない)
+rc=1
+```
+
+### 14-4-1 差分全文
+```diff
+diff --git a/scripts/agent-hooks/cloud/test.sh b/scripts/agent-hooks/cloud/test.sh
+index fb5f0cf..fe2c212 100755
+--- a/scripts/agent-hooks/cloud/test.sh
++++ b/scripts/agent-hooks/cloud/test.sh
+@@ -374,7 +374,8 @@ bcases = [  # (No, 名前, 入力, 追加env, 判定関数(rc,out,err), 期待
+  ("B1b", "rules-ack あり→通す", bash(f'python3 -c "{T0}1)" # rules-ack: {ACK}'), MRR, lambda r, o, e: r == 0 and not o.strip(), "exit0+出力なし"),
+  ("B1c", "origin/mainからルールを読む", bash(f'python3 -c "{T0}1)"'), {"CLAUDE_PROJECT_DIR": WORKTREE}, lambda r, o, e: r == 0 and hasdeny(o) and "共用商品マスタ 新規登録ルール" in o, "exit0+deny+本文"),
+  ("B2", "Write /tmp/x.py deny", pre("Write", file_path="/tmp/x.py", content=f"x = {T0}1)"), MRR, lambda r, o, e: r == 0 and hasdeny(o), "deny"),
+- ("B2b", "Write docs 配下は通す", pre("Write", file_path="/repo/docs/a.md", content=f"x = {T0}1)"), MRR, lambda r, o, e: r == 0 and not o.strip(), "出力なし"),
++ ("B2b", "Write docs 配下は通す", pre("Write", file_path="/repo/docs/a.md", content=f"x = {T0}1)"), {**MRR, "CLAUDE_PROJECT_DIR": "/repo"}, lambda r, o, e: r == 0 and not o.strip(), "出力なし"),
++ ("B2c", "リポジトリ外の docs は止める", pre("Write", file_path="/other/docs/a.md", content=f"x = {T0}1)"), {**MRR, "CLAUDE_PROJECT_DIR": "/repo"}, lambda r, o, e: r == 0 and hasdeny(o), "deny"),
+  ("B3", "UserPromptSubmit 登録ルール注入", prompt("マスタに商品を登録して"), MRR, lambda r, o, e: r == 0 and "additionalContext" in o, "additionalContext"),
+  ("B4", "python3.11 -m venv", bash("python3.11 -m venv .venv"), None, lambda r, o, e: r == 2 and "py312-guard" in e, "exit2+py312-guard"),
+  ("B4", "pip install", bash("pip install requests"), None, lambda r, o, e: r == 2 and "py312-guard" in e, "exit2+py312-guard"),
+```
+
+### 14-4-2 変更後の版（rc=1。「止めた文言」の補足行は省略、OK/NG の全行）
+```
+== CLAUDE_CODE_REMOTE=true ==
+No  ケース                        期待   実際   秒      判定
+K1  危険語1つ目                     2    2     0.064 OK
+K1  危険語3つ目                     2    2     0.075 OK
+K1  rebase系(一覧内)               2    2     0.082 OK
+K1  psql 書込(insert)            2    2     0.084 OK
+K1  psql 書込(update)            2    2     0.071 OK
+K1  psql ファイル流し込み              2    2     0.069 OK
+K1  ssh で prod へ               2    2     0.067 OK
+K1  ls                         0    0     0.158 OK
+K1  git status                 0    0     0.179 OK
+K1  grep内の語は読取り扱い              0    0     0.164 OK
+K1  commit文中の語は対象外             0    0     0.145 OK
+K1  psql 読取(select)            0    0     0.169 OK
+K1  bash heredoc本文に危険語         2    2     0.083 OK
+K1  python3 heredoc本文に危険語      2    2     0.077 OK
+K1  cat>file heredoc本文は通す      0    0     0.150 OK
+K1  cat>run.sh heredoc本文は通す    0    0     0.172 OK
+K2  MCP merge                  2    2     0.076 OK
+K2  gh pr merge                2    2     0.080 OK
+K2  gh api PUT /merge          2    2     0.069 OK
+K2  gh pr view                 0    0     0.162 OK
+K2  MCP get_me                 0    0     0.163 OK
+M1  curl PUT /merge            2    2     0.070 OK
+M2  curl --request=PUT /merge  2    2     0.062 OK
+M3  gh api graphql mergePullRequest 2    2     0.066 OK
+M4  gh api graphql 自動マージ予約     2    2     0.078 OK
+M5  gh api repos/…/merges      2    2     0.065 OK
+M6  curl GET /merge(調べるだけ)     0    0     0.164 OK
+M7  grep mergePullRequest      0    0     0.186 OK
+M8  gh api graphql 読取          0    0     0.153 OK
+K3  MCP作成 コード枝                 2    2     0.096 OK
+K3  gh pr create コード枝          2    2     0.082 OK
+K3  gh api POST pulls コード枝     2    2     0.070 OK
+K3  MCP作成 docsのみ               0    0     0.179 OK
+K3  gh pr create docsのみ        0    0     0.182 OK
+K3  git失敗なら止める                 2    2     0.069 OK
+K3  MCP head=コード枝              2    2     0.077 OK
+K3  MCP head=docs枝(owner:形式)   0    0     0.173 OK
+K3  MCP head=docs枝 節なし         2    2     0.107 OK
+K3  MCP head無し                 2    2     0.092 OK
+K3  MCP head空                  2    2     0.075 OK
+K3  MCP head不正文字               2    2     0.070 OK
+K3  gh pr create --head コード枝   2    2     0.100 OK
+K3  gh pr create --head= docs枝 0    0     0.182 OK
+K3  gh pr create -H コード枝       2    2     0.087 OK
+K3  gh api head=コード枝           2    2     0.087 OK
+K3  gh api --raw-field head=docs枝 0    0     0.176 OK
+K3  head枝が存在しない                2    2     0.070 OK
+K3  追跡参照が古い(後からコード追加)          2    2     0.090 OK
+K3  --head 2回(後がコード枝)          2    2     0.105 OK
+K3  gh api -fhead=コード枝(詰め書き)   2    2     0.091 OK
+H1  本文中の -H docs枝              2    2     0.127 OK
+H2  本文中の --head docs枝          2    2     0.091 OK
+H3  gh api 末尾ヘッダ X-A:docs枝     2    2     0.088 OK
+H4  gh api Accept ヘッダが後ろ       0    0     0.172 OK
+H5  引用符が閉じていない(shlex の道)       2    2     0.078 OK
+H7  語の途中の # (--title fix#12)   2    2     0.080 OK
+H8  gh api 語の途中の # (title=a#b) 2    2     0.068 OK
+H9  引用符の外のコメントは読めないので止める(R5)   2    2     0.086 OK
+H10 引用符の中の # は対象外              0    0     0.205 OK
+H11 コメント内の ' の後ろの行に fix#12     2    2     0.074 OK
+H12 git status # it's fine の後ろの行に fix#12 2    2     0.106 OK
+H13 行の継ぎ目の直後の #                2    2     0.062 OK
+H14 $' (ANSI-C 引用符)            2    2     0.070 OK
+H15 先頭のコメント行は読めないので止める(R5)     2    2     0.070 OK
+H16 Fix\ #12 (逃がした空白の直後の #)    2    2     0.087 OK
+H17 x\;#12 (逃がした ; の直後の #)     2    2     0.069 OK
+H18 命令文に \r を含む                2    2     0.076 OK
+H19 区切り直後のコメントは読めないので止める(R5)   2    2     0.070 OK
+H20 ;( の後ろに docs枝              2    2     0.082 OK
+H21 &&( の後ろに docs枝             2    2     0.070 OK
+H22 引用符の中の <<EOF から行頭 EOF までに本物の --head 2    2     0.085 OK
+H23 echo gh pr create の後ろの bash -c に本物の作成 2    2     0.065 OK
+H24 docs枝の作成の後ろの bash -c に本物の作成 2    2     0.071 OK
+H25 何も足さない普通の形                 0    0     0.181 OK
+H26 引用符の中の記号 (a <<b)           0    0     0.168 OK
+H27 変数 $G で本物を隠す               2    2     0.070 OK
+H28 逃がした \; で語を作る              2    2     0.069 OK
+H29 二重引用符の中の $(…)              2    2     0.075 OK
+H30 cd && gh pr create (つなぎ)   2    2     0.064 OK
+H31 単引用符の中は何でもよい               0    0     0.157 OK
+H32 二重引用符の本文(普通の文字+節の見出し)      0    0     0.174 OK
+K1  >( の中に危険語                  2    2     0.078 OK
+K1  単独&の後ろに危険語                 2    2     0.072 OK
+K1  2>&1 の後ろに危険語               2    2     0.068 OK
+K1  <( の中に危険語                  2    2     0.065 OK
+K1  ssh-keygen は通す             0    0     0.154 OK
+R1  rm -fr                     2    2     0.066 OK
+R2  rm -Rf                     2    2     0.063 OK
+R3  rm -f -r                   2    2     0.073 OK
+R4  rm --recursive             2    2     0.065 OK
+R5  /bin/rm -dfr               2    2     0.062 OK
+R6  env X=1 command rm -fr     2    2     0.064 OK
+R7  ls && rm -fr               2    2     0.063 OK
+R8  rm -f (再帰なし)               0    0     0.148 OK
+R9  rm -- -r (-r という名のファイル)    0    0     0.173 OK
+R10 grep内の rm -fr は読取り扱い       0    0     0.158 OK
+R11 commit文中の rm -fr は対象外      0    0     0.165 OK
+R12 rmdir                      0    0     0.177 OK
+R14 nice -n 5 rm -fr           2    2     0.081 OK
+E1  $( ) の中の rm -fr            2    2     0.070 OK
+E2  逆引用符の中の rm -fr             2    2     0.063 OK
+E3  ( ) 殻の中の rm -fr            2    2     0.062 OK
+E4  bash -c の中の rm -fr         2    2     0.065 OK
+E5  /bin/sh -c の中の rm -Rf      2    2     0.079 OK
+E6  eval の中の rm -fr            2    2     0.077 OK
+E7  commit 文の $( ) の中の gh pr merge 2    2     0.076 OK
+E8  $( ) の中の gh api PUT merge  2    2     0.068 OK
+E9  入れ子の $( )                  2    2     0.066 OK
+E10 bash -c の中の $( )           2    2     0.064 OK
+E11 閉じ忘れの $(                   2    2     0.064 OK
+E12 commit 本文中の rm -fr は対象外    0    0     0.168 OK
+E13 echo "$(date)"             0    0     0.163 OK
+E14 単引用符の中の $( ) は実行されない       0    0     0.144 OK
+E15 commit の heredoc 書き方       0    0     0.170 OK
+E16 算術 $(( ))                  0    0     0.175 OK
+E17 \ 付きの $(                   0    0     0.181 OK
+E18 x=$(git rev-parse HEAD)    0    0     0.175 OK
+E20 5段の入れ子の中に rm -fr           2    2     0.072 OK
+E21 5段の入れ子（中身は無害・深すぎで止める）      2    2     0.071 OK
+E22 then の直後の ( )              2    2     0.079 OK
+E23 do の直後の ( )                2    2     0.078 OK
+E24 ! の直後の ( )                 2    2     0.069 OK
+E25 time の直後の ( )              2    2     0.074 OK
+E26 bash -c -- '…'             2    2     0.064 OK
+E27 プロセス置換 <( )                2    2     0.066 OK
+E28 $((rm …) ) の形              2    2     0.065 OK
+E29 bash -c ドル付き単引用符           2    2     0.062 OK
+E30 ドル付き単引用符の \x20             2    2     0.067 OK
+E31 引用符なし \ 区切り                2    2     0.064 OK
+E32 then の直後の ( ) で gh pr merge 2    2     0.065 OK
+E33 4段の入れ子で無害                  0    0     0.143 OK
+E34 if の then ( ) 無害           0    0     0.165 OK
+E35 for の do ( ) 無害            0    0     0.172 OK
+E36 diff <( ) <( ) 無害          0    0     0.168 OK
+E37 算術の中の $( ) 無害              0    0     0.169 OK
+E38 bash -c -- 無害              0    0     0.160 OK
+E39 ドル付き単引用符 無害                0    0     0.162 OK
+E40 \u 小文字の16進で rm             2    2     0.079 OK
+E41 \U 大文字8桁で rm               2    2     0.065 OK
+E42 then( 空白なし                 2    2     0.064 OK
+E43 do( 空白なし                   2    2     0.066 OK
+E44 {( 空白なし                    2    2     0.078 OK
+E45 !( 空白なし                    2    2     0.070 OK
+E46 case a) の後の ( )            2    2     0.069 OK
+E47 case (a) の後の ( )           2    2     0.067 OK
+E48 関数 { ( ) }                 2    2     0.065 OK
+E49 関数 f() ( )                 2    2     0.069 OK
+E50 time -p ( )                2    2     0.064 OK
+E51 bash -c 'rm -f''r'         2    2     0.070 OK
+E52 bash -c r'm -fr'           2    2     0.079 OK
+E53 bash -c "rm -"'fr'         2    2     0.062 OK
+E54 bash -c $'rm -f'r\         2    2     0.083 OK
+E55 配列 a=( ) 無害                0    0     0.164 OK
+E56 二重引用符の中の ( ) 無害            0    0     0.152 OK
+E57 grep -E 'a(b)' 無害          0    0     0.159 OK
+E58 関数定義 f() { } 無害            0    0     0.160 OK
+E59 case 無害                    0    0     0.149 OK
+E60 then( 無害                   0    0     0.166 OK
+E61 bash -c 'echo a''b' 無害     0    0     0.157 OK
+E62 bash -c $'echo A' 無害       0    0     0.149 OK
+E63 bash -c $'…\u0041…' 無害     0    0     0.180 OK
+E64 不正な \u \U（サロゲート・範囲外・桁なし）は例外なく通す 0    0     0.150 OK
+K4  本文に節なし(MCP)                2    2     0.080 OK
+K4  本文に節なし(gh)                 2    2     0.068 OK
+K4  本文に節あり(MCP)                0    0     0.160 OK
+K5  Stop 英語のみ                  2    2     0.055 OK
+K5  Stop 日本語あり                 0    0     0.062 OK
+K5  Stop 続行中は通す                0    0     0.054 OK
+FC  JSON不正→止める(guard)          2    2         - OK
+FC  guard異常終了→止める              2    2         - OK
+FC  JSON不正→止める(dispatch)       2    2         - OK
+FC  JSON不正 変数なし→通す             0    0         - OK
+K5  SessionStart 決まり注入         0    0     0.057 OK
+== 便2 B1〜B6b（CLAUDE_CODE_REMOTE=true）==
+No   ケース                          期待                 実際   秒      判定
+B1   登録ルール deny(Bash)             exit0+deny         0     0.148 OK
+B1b  rules-ack あり→通す              exit0+出力なし         0     0.159 OK
+B1c  origin/mainからルールを読む          exit0+deny+本文      0     0.149 OK
+B2   Write /tmp/x.py deny         deny               0     0.151 OK
+B2b  Write docs 配下は通す             出力なし               0     0.155 OK
+B2c  リポジトリ外の docs は止める            deny               0     0.171 OK
+B3   UserPromptSubmit 登録ルール注入     additionalContext  0     0.087 OK
+B4   python3.11 -m venv           exit2+py312-guard  2     0.105 OK
+B4   pip install                  exit2+py312-guard  2     0.098 OK
+B4   virtualenv                   exit2+py312-guard  2     0.102 OK
+B4b  python3.12 -m venv           exit0              0     0.157 OK
+B4b  uv venv --python 3.12        exit0              0     0.168 OK
+B4b  git status                   exit0              0     0.168 OK
+B5   担当 timeout 300000            exit2+guard名       2     0.141 OK
+B5b  親 timeout 300000             exit0              0     0.170 OK
+B5b  担当 timeout 240000            exit0              0     0.174 OK
+B6   カード 受領確認なし                   exit2+card-lint    2     0.149 OK
+B6b  ふつうの依頼文                      exit0+出力なし         0     0.084 OK
+B7  18件中 逸脱 0件 OK
+B8  1秒以上かかった件: 0（最大 0.174 秒） OK
+== 時間切れ T1〜T5 ==
+T1  上限1秒で $(true) 1万個→止める+理由文  期待 2 実際 0 0.39秒 NG
+T2  既定の上限で echo hi→通す  期待 0 実際 0 0.04秒 OK
+T3  PreToolUse の dispatch 3項目すべて onFailure block＋先頭判定  期待 3項目 OK
+T4  手元(REMOTE 未設定・PROJECT_DIR 無効)で即 exit 0  期待 0 実際 0 0.00秒 OK
+T5  クラウド(REMOTE=true)で無害な Bash→dispatch が呼ばれて exit 0  期待 0 実際 0 OK
+T5b クラウドで dispatch.sh が見つからない→0 以外（onFailure block が効く形）  実際 127 OK
+== CLAUDE_CODE_REMOTE 未設定（K6: 全件 exit 0・出力なし）==
+K6  169件中 逸脱 0件 OK
+K7  1秒以上かかった件: 0（負荷 0.4。負荷が高い機械では参考値）
+== 結果: 1件NG ==
+```
+
+### 14-4-3 比べる版（origin/main。rc=1。T2 の後で Python が FileNotFoundError（取り出し先に .claude/settings.json が無い）で中断。T3 以降は未実行＝未確認）
+```
+== CLAUDE_CODE_REMOTE=true ==
+No  ケース                        期待   実際   秒      判定
+K1  危険語1つ目                     2    2     0.067 OK
+K1  危険語3つ目                     2    2     0.077 OK
+K1  rebase系(一覧内)               2    2     0.084 OK
+K1  psql 書込(insert)            2    2     0.076 OK
+K1  psql 書込(update)            2    2     0.094 OK
+K1  psql ファイル流し込み              2    2     0.066 OK
+K1  ssh で prod へ               2    2     0.064 OK
+K1  ls                         0    0     0.159 OK
+K1  git status                 0    0     0.159 OK
+K1  grep内の語は読取り扱い              0    0     0.157 OK
+K1  commit文中の語は対象外             0    0     0.161 OK
+K1  psql 読取(select)            0    0     0.164 OK
+K1  bash heredoc本文に危険語         2    2     0.076 OK
+K1  python3 heredoc本文に危険語      2    2     0.079 OK
+K1  cat>file heredoc本文は通す      0    0     0.195 OK
+K1  cat>run.sh heredoc本文は通す    0    0     0.181 OK
+K2  MCP merge                  2    2     0.064 OK
+K2  gh pr merge                2    2     0.083 OK
+K2  gh api PUT /merge          2    2     0.072 OK
+K2  gh pr view                 0    0     0.155 OK
+K2  MCP get_me                 0    0     0.167 OK
+M1  curl PUT /merge            2    2     0.081 OK
+M2  curl --request=PUT /merge  2    2     0.078 OK
+M3  gh api graphql mergePullRequest 2    2     0.085 OK
+M4  gh api graphql 自動マージ予約     2    2     0.078 OK
+M5  gh api repos/…/merges      2    2     0.072 OK
+M6  curl GET /merge(調べるだけ)     0    0     0.146 OK
+M7  grep mergePullRequest      0    0     0.173 OK
+M8  gh api graphql 読取          0    0     0.172 OK
+K3  MCP作成 コード枝                 2    2     0.084 OK
+K3  gh pr create コード枝          2    2     0.076 OK
+K3  gh api POST pulls コード枝     2    2     0.072 OK
+K3  MCP作成 docsのみ               0    0     0.203 OK
+K3  gh pr create docsのみ        0    0     0.183 OK
+K3  git失敗なら止める                 2    2     0.074 OK
+K3  MCP head=コード枝              2    2     0.112 OK
+K3  MCP head=docs枝(owner:形式)   0    0     0.183 OK
+K3  MCP head=docs枝 節なし         2    2     0.090 OK
+K3  MCP head無し                 2    2     0.069 OK
+K3  MCP head空                  2    2     0.066 OK
+K3  MCP head不正文字               2    2     0.073 OK
+K3  gh pr create --head コード枝   2    2     0.094 OK
+K3  gh pr create --head= docs枝 0    0     0.204 OK
+K3  gh pr create -H コード枝       2    2     0.082 OK
+K3  gh api head=コード枝           2    2     0.088 OK
+K3  gh api --raw-field head=docs枝 0    0     0.186 OK
+K3  head枝が存在しない                2    2     0.105 OK
+K3  追跡参照が古い(後からコード追加)          2    2     0.095 OK
+K3  --head 2回(後がコード枝)          2    2     0.117 OK
+K3  gh api -fhead=コード枝(詰め書き)   2    2     0.096 OK
+H1  本文中の -H docs枝              2    2     0.084 OK
+H2  本文中の --head docs枝          2    2     0.091 OK
+H3  gh api 末尾ヘッダ X-A:docs枝     2    2     0.083 OK
+H4  gh api Accept ヘッダが後ろ       0    0     0.215 OK
+H5  引用符が閉じていない(shlex の道)       2    2     0.082 OK
+H7  語の途中の # (--title fix#12)   2    2     0.083 OK
+H8  gh api 語の途中の # (title=a#b) 2    2     0.087 OK
+H9  引用符の外のコメントは読めないので止める(R5)   2    2     0.075 OK
+H10 引用符の中の # は対象外              0    0     0.160 OK
+H11 コメント内の ' の後ろの行に fix#12     2    2     0.073 OK
+H12 git status # it's fine の後ろの行に fix#12 2    2     0.071 OK
+H13 行の継ぎ目の直後の #                2    2     0.085 OK
+H14 $' (ANSI-C 引用符)            2    2     0.068 OK
+H15 先頭のコメント行は読めないので止める(R5)     2    2     0.084 OK
+H16 Fix\ #12 (逃がした空白の直後の #)    2    2     0.070 OK
+H17 x\;#12 (逃がした ; の直後の #)     2    2     0.069 OK
+H18 命令文に \r を含む                2    2     0.073 OK
+H19 区切り直後のコメントは読めないので止める(R5)   2    2     0.071 OK
+H20 ;( の後ろに docs枝              2    2     0.066 OK
+H21 &&( の後ろに docs枝             2    2     0.065 OK
+H22 引用符の中の <<EOF から行頭 EOF までに本物の --head 2    2     0.072 OK
+H23 echo gh pr create の後ろの bash -c に本物の作成 2    2     0.083 OK
+H24 docs枝の作成の後ろの bash -c に本物の作成 2    2     0.080 OK
+H25 何も足さない普通の形                 0    0     0.222 OK
+H26 引用符の中の記号 (a <<b)           0    0     0.174 OK
+H27 変数 $G で本物を隠す               2    2     0.081 OK
+H28 逃がした \; で語を作る              2    2     0.086 OK
+H29 二重引用符の中の $(…)              2    2     0.082 OK
+H30 cd && gh pr create (つなぎ)   2    2     0.079 OK
+H31 単引用符の中は何でもよい               0    0     0.189 OK
+H32 二重引用符の本文(普通の文字+節の見出し)      0    0     0.202 OK
+K1  >( の中に危険語                  2    2     0.068 OK
+K1  単独&の後ろに危険語                 2    2     0.075 OK
+K1  2>&1 の後ろに危険語               2    2     0.065 OK
+K1  <( の中に危険語                  2    2     0.082 OK
+K1  ssh-keygen は通す             0    0     0.176 OK
+R1  rm -fr                     2    2     0.079 OK
+R2  rm -Rf                     2    2     0.082 OK
+R3  rm -f -r                   2    2     0.077 OK
+R4  rm --recursive             2    2     0.069 OK
+R5  /bin/rm -dfr               2    2     0.076 OK
+R6  env X=1 command rm -fr     2    2     0.077 OK
+R7  ls && rm -fr               2    2     0.082 OK
+R8  rm -f (再帰なし)               0    0     0.178 OK
+R9  rm -- -r (-r という名のファイル)    0    0     0.164 OK
+R10 grep内の rm -fr は読取り扱い       0    0     0.189 OK
+R11 commit文中の rm -fr は対象外      0    0     0.266 OK
+R12 rmdir                      0    0     0.171 OK
+R14 nice -n 5 rm -fr           2    2     0.075 OK
+E1  $( ) の中の rm -fr            2    2     0.071 OK
+E2  逆引用符の中の rm -fr             2    2     0.072 OK
+E3  ( ) 殻の中の rm -fr            2    2     0.071 OK
+E4  bash -c の中の rm -fr         2    2     0.066 OK
+E5  /bin/sh -c の中の rm -Rf      2    2     0.080 OK
+E6  eval の中の rm -fr            2    2     0.075 OK
+E7  commit 文の $( ) の中の gh pr merge 2    2     0.076 OK
+E8  $( ) の中の gh api PUT merge  2    2     0.067 OK
+E9  入れ子の $( )                  2    2     0.071 OK
+E10 bash -c の中の $( )           2    2     0.065 OK
+E11 閉じ忘れの $(                   2    2     0.064 OK
+E12 commit 本文中の rm -fr は対象外    0    0     0.168 OK
+E13 echo "$(date)"             0    0     0.158 OK
+E14 単引用符の中の $( ) は実行されない       0    0     0.165 OK
+E15 commit の heredoc 書き方       0    0     0.157 OK
+E16 算術 $(( ))                  0    0     0.178 OK
+E17 \ 付きの $(                   0    0     0.169 OK
+E18 x=$(git rev-parse HEAD)    0    0     0.167 OK
+E20 5段の入れ子の中に rm -fr           2    2     0.080 OK
+E21 5段の入れ子（中身は無害・深すぎで止める）      2    2     0.072 OK
+E22 then の直後の ( )              2    2     0.070 OK
+E23 do の直後の ( )                2    2     0.077 OK
+E24 ! の直後の ( )                 2    2     0.063 OK
+E25 time の直後の ( )              2    2     0.063 OK
+E26 bash -c -- '…'             2    2     0.065 OK
+E27 プロセス置換 <( )                2    2     0.069 OK
+E28 $((rm …) ) の形              2    2     0.064 OK
+E29 bash -c ドル付き単引用符           2    2     0.064 OK
+E30 ドル付き単引用符の \x20             2    2     0.066 OK
+E31 引用符なし \ 区切り                2    2     0.081 OK
+E32 then の直後の ( ) で gh pr merge 2    2     0.080 OK
+E33 4段の入れ子で無害                  0    0     0.187 OK
+E34 if の then ( ) 無害           0    0     0.179 OK
+E35 for の do ( ) 無害            0    0     0.173 OK
+E36 diff <( ) <( ) 無害          0    0     0.167 OK
+E37 算術の中の $( ) 無害              0    0     0.169 OK
+E38 bash -c -- 無害              0    0     0.188 OK
+E39 ドル付き単引用符 無害                0    0     0.158 OK
+E40 \u 小文字の16進で rm             2    2     0.085 OK
+E41 \U 大文字8桁で rm               2    2     0.072 OK
+E42 then( 空白なし                 2    2     0.071 OK
+E43 do( 空白なし                   2    2     0.065 OK
+E44 {( 空白なし                    2    2     0.084 OK
+E45 !( 空白なし                    2    2     0.089 OK
+E46 case a) の後の ( )            2    2     0.074 OK
+E47 case (a) の後の ( )           2    2     0.083 OK
+E48 関数 { ( ) }                 2    2     0.084 OK
+E49 関数 f() ( )                 2    2     0.081 OK
+E50 time -p ( )                2    2     0.071 OK
+E51 bash -c 'rm -f''r'         2    2     0.073 OK
+E52 bash -c r'm -fr'           2    2     0.072 OK
+E53 bash -c "rm -"'fr'         2    2     0.082 OK
+E54 bash -c $'rm -f'r\         2    2     0.075 OK
+E55 配列 a=( ) 無害                0    0     0.163 OK
+E56 二重引用符の中の ( ) 無害            0    0     0.176 OK
+E57 grep -E 'a(b)' 無害          0    0     0.150 OK
+E58 関数定義 f() { } 無害            0    0     0.165 OK
+E59 case 無害                    0    0     0.173 OK
+E60 then( 無害                   0    0     0.156 OK
+E61 bash -c 'echo a''b' 無害     0    0     0.182 OK
+E62 bash -c $'echo A' 無害       0    0     0.161 OK
+E63 bash -c $'…\u0041…' 無害     0    0     0.146 OK
+E64 不正な \u \U（サロゲート・範囲外・桁なし）は例外なく通す 0    0     0.179 OK
+K4  本文に節なし(MCP)                2    2     0.080 OK
+K4  本文に節なし(gh)                 2    2     0.079 OK
+K4  本文に節あり(MCP)                0    0     0.196 OK
+K5  Stop 英語のみ                  2    2     0.069 OK
+K5  Stop 日本語あり                 0    0     0.068 OK
+K5  Stop 続行中は通す                0    0     0.065 OK
+FC  JSON不正→止める(guard)          2    2         - OK
+FC  guard異常終了→止める              2    2         - OK
+FC  JSON不正→止める(dispatch)       2    2         - OK
+FC  JSON不正 変数なし→通す             0    0         - OK
+K5  SessionStart 決まり注入         0    0     0.066 OK
+== 便2 B1〜B6b（CLAUDE_CODE_REMOTE=true）==
+No   ケース                          期待                 実際   秒      判定
+B1   登録ルール deny(Bash)             exit0+deny         0     0.172 OK
+B1b  rules-ack あり→通す              exit0+出力なし         0     0.161 OK
+B1c  origin/mainからルールを読む          exit0+deny+本文      0     0.163 NG
+      stdout: {"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny", "permissionDecisionReason": "ルール文書が読めないため止めました（origin/main の docs/specs/product-master/registration-rules.md を確認してく / stderr: 
+B2   Write /tmp/x.py deny         deny               0     0.165 OK
+B2b  Write docs 配下は通す             出力なし               0     0.171 OK
+B3   UserPromptSubmit 登録ルール注入     additionalContext  0     0.088 OK
+B4   python3.11 -m venv           exit2+py312-guard  2     0.107 OK
+B4   pip install                  exit2+py312-guard  2     0.100 OK
+B4   virtualenv                   exit2+py312-guard  2     0.096 OK
+B4b  python3.12 -m venv           exit0              0     0.167 OK
+B4b  uv venv --python 3.12        exit0              0     0.193 OK
+B4b  git status                   exit0              0     0.173 OK
+B5   担当 timeout 300000            exit2+guard名       2     0.141 OK
+B5b  親 timeout 300000             exit0              0     0.145 OK
+B5b  担当 timeout 240000            exit0              0     0.163 OK
+B6   カード 受領確認なし                   exit2+card-lint    0     0.102 NG
+      stdout:  / stderr: 
+B6b  ふつうの依頼文                      exit0+出力なし         0     0.089 OK
+B7  17件中 逸脱 0件 OK
+B8  1秒以上かかった件: 0（最大 0.193 秒） OK
+== 時間切れ T1〜T5 ==
+T1  上限1秒で $(true) 1万個→止める+理由文  期待 2 実際 0 0.48秒 NG
+T2  既定の上限で echo hi→通す  期待 0 実際 0 0.05秒 OK
+Traceback (most recent call last):
+  File "<stdin>", line 424, in <module>
+FileNotFoundError: [Errno 2] No such file or directory: '/tmp/tmp.4QzSwuwdF8/.claude/settings.json'
+```
+
+### 14-4-4 見張りの手元試験（rc=0、PASS 28行・FAIL 0行）
+```
+PASS T1 deny+全文
+PASS T2 正しい印はallow(出力なし)
+PASS T3 /backend/ は素通り
+PASS T4 additionalContextに全文
+PASS T5 古い印はdeny
+PASS T6 grepは素通り
+PASS T7 cat heredoc書き込みはdeny
+PASS T8 grep+リダイレクトもdeny(許容する副作用)
+PASS T9-15 出ない: 在庫表の商品名の列幅を直して。あとログイン登録画面のバグも見て
+PASS T9-15 出ない: ユーザー登録フォームで商品一覧が出ない
+PASS T9-15 出ない: マスタ画面の表示が遅い。GitHub に登録してあるワークフローも確認
+PASS T9-15 出ない: Discord の webhook を登録して商品の通知を流す
+PASS T9-15 出ない: マスタを整備して正答率を上げたい。登録はまだしない
+PASS T9-15 出ない: 商品を登録して
+PASS T9-15 出ない: PR を作って
+PASS T16-18 出る: 商品マスタに新しいカードを登録して
+PASS T16-18 出る: 共用マスタへ登録する候補一覧を出して
+PASS T16-18 出る: 販売先を顧客マスタに登録して
+PASS T19 記録置き場(keep)への Write は素通り
+PASS T20 記録置き場(tmp)への Write は素通り
+PASS T21 Bash の登録コマンドは止まる
+PASS T22 リポジトリの外の docs は止まる
+PASS T23 記録置き場の .py は止まる
+PASS T24 作業場所の docs は素通り
+PASS T25 .. で外へ出るパスは止まる
+PASS T26 記録置き場(/private/tmp)への .md は素通り
+PASS T27 絶対パスでないものは止まる
+PASS T28 段の名前そのもの(下に何も無い)は止まる
+rc=0
+```
+
+### 14-5 合否
+- B2b・B2c が OK: 合格（変更後の版 B2b OK / B2c OK）
+- 新しい NG が無い: 変更後の NG は T1 のみ。比べる版の NG（B1c・B6・T1）に T1 が含まれる。ただし比べる版は T3 以降が未実行で、完全な比較ではない（未確認）
+- 手元試験 28件 PASS・rc=0: 合格
+- 触ったファイルは scripts/agent-hooks/cloud/test.sh とこのカードの2つ: 合格

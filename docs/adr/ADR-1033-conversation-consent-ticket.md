@@ -39,7 +39,7 @@ PO の受容の言葉（原文、選択肢「1.【おすすめ】受け入れて
 
 PO の追加条件は、下の「維持の仕組み」の週次点検（K13）で満たす。
 
-見つける手段: `consent_guard_blocked` が1件でも記録されたら、この仕組みを止めて（`po-rollback-consent.sh`）PO に報告する。なお記録と点検スクリプトは AI が書き換えられるので、見つける手段自体も消せる。これも受け入れる範囲とする。
+見つける手段: `consent_guard_blocked` のうち偽造の疑い（kind が inject・write）が1件でも記録されたら、この仕組みを止めて（`po-rollback-consent.sh`）PO に報告する。なお記録と点検スクリプトは AI が書き換えられるので、見つける手段自体も消せる。これも受け入れる範囲とする。
 
 その他の受け入れるリスク: R2（「1」の直後に取り消しを打っても記録への書込みが遅れると通る。取り消すときは Esc で止める）、R6（操作が `bash <file>` のとき、「1」の後にファイルの中身を書き換えられる。今の許可券と同じ水準）。
 
@@ -53,6 +53,6 @@ PO の追加条件は、下の「維持の仕組み」の週次点検（K13）�
 
 ## 維持の仕組み
 
-- 担当は Opus。週次の保守に `python3 scripts/dev/consent-audit.py --audit` を足す（台帳と記録の突き合わせ、`consent_guard_blocked` の件数）。
-- **権限の定期点検（PO の追加条件）**: agent-console の定期実行に「同意と権限の週次点検」を登録し、毎週月曜 09:30 に点検用のセッションを開く。`python3 scripts/dev/consent-audit.py --audit --permissions` で、(1) 同意で通った操作と、記録に同意票と typed の「1」が見つからないもの（0件が正常）、(2) `consent_guard_blocked`（0件が正常）、(3) 許可券の発行・消費の件数、(4) settings の `permissions.allow`・`hooks` と許可券の増減（前回の写しとの比較。値は出さず項目名と件数だけ）を前週と比べる。異常があれば PO に報告し、(1)(2) なら仕組みを止める案も選択肢に出す。登録は反映後に Opus が行う。
+- 担当は Opus。週次の保守に `python3 scripts/dev/consent-audit.py --audit` を足す（台帳と記録の突き合わせ、`consent_guard_blocked` のうち偽造の疑い（kind が inject・write）と読み取りの空振りの件数）。
+- **権限の定期点検（PO の追加条件）**: agent-console の定期実行に「同意と権限の週次点検」を登録し、毎週月曜 09:30 に点検用のセッションを開く。`python3 scripts/dev/consent-audit.py --audit --permissions` で、(1) 同意で通った操作と、記録に同意票と typed の「1」が見つからないもの（0件が正常）、(2) `consent_guard_blocked` のうち偽造の疑い（kind が inject・write。0件が正常。読み取りの空振りは参考の件数で異常にしない）、(3) 許可券の発行・消費の件数、(4) settings の `permissions.allow`・`hooks` と許可券の増減（前回の写しとの比較。値は出さず項目名と件数だけ）を前週と比べる。異常があれば PO に報告し、(1)(2) なら仕組みを止める案も選択肢に出す。登録は反映後に Opus が行う。
 - 試験は `scripts/dev/test-agent-hooks.sh` に入り、`po-apply` のたびに走る。
