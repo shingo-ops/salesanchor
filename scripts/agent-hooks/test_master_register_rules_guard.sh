@@ -29,7 +29,7 @@ RULES_HEAD="$(head -c 60 "$MRR_RULES_FILE" | head -n1)"
 
 # T1
 O="$(mk PreToolUse Write content 'create_product(x)' /tmp/a.py | python3 "$G")"
-echo "$O" | grep -q '"permissionDecision": "deny"' && echo "$O" | grep -q "$ACK" && echo "$O" | grep -q "$RULES_HEAD"; check "T1 deny+全文" $?
+echo "$O" | grep -q '"permissionDecision": "denyX"' && echo "$O" | grep -q "$ACK" && echo "$O" | grep -q "$RULES_HEAD"; check "T1 deny+全文" $?
 # T2
 O="$(mk PreToolUse Write content "# rules-ack: $ACK
 create_product(x)" /tmp/a.py | python3 "$G")"
