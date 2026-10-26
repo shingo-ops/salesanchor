@@ -39,13 +39,19 @@ cd "$REPO_ROOT/frontend" || exit 1
 
 echo "🔍 ADR-067: ダークモード色規約チェック中..."
 
-# lint-staged で変更ファイルのみチェック
-npx lint-staged
+# lint-staged で変更ファイルのみチェック（ADR-1040 段5d）
+# 部品（frontend/node_modules）が揃っていれば違反で止める。揃っていなければ飛ばして知らせる
+# （npx でネットから版の違う道具を取らない。CI の必須チェック「Lint & Dark Mode Check (ADR-067)」で検査される）
+if [ -x node_modules/.bin/lint-staged ] && [ -x node_modules/.bin/eslint ] && [ -x node_modules/.bin/stylelint ]; then
+  node_modules/.bin/lint-staged || exit 1
+else
+  echo "⚠️  frontend/node_modules が無いため、書き方の検査（lint-staged）を飛ばしました。CI の Lint & Dark Mode Check で検査されます"
+fi
 
 # index.css が変更された場合はパリティチェック
 if git diff --cached --name-only | grep -q "frontend/src/index.css"; then
   echo "📋 index.css 変更検出 → ダークモード変数パリティチェック実行"
-  node scripts/check-dark-parity.js
+  node scripts/check-dark-parity.js || exit 1
 fi
 
 echo "✅ ADR-067チェック完了"

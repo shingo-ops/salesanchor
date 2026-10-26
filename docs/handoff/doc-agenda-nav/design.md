@@ -493,7 +493,7 @@ PO 原文（2026-10-22）「仕様書と設計図はどうなったの？逐一�
 
 ### 26-5. 残すもの（この段で直さない）
 
-- pre-commit:43 lint-staged・:48 dark-parity の失敗が手元で止まらない（§26-1）。frontend/AGENTS.md:25 の「コミット前に自動ブロック」と食い違う。直すなら作業場所の frontend/node_modules の有無を先に決める設計が要る。PO に報告して扱いを決めてもらう。
+- pre-commit:43 lint-staged・:48 dark-parity の失敗が手元で止まらない（§26-1）。frontend/AGENTS.md:25 の「コミット前に自動ブロック」と食い違う。直すなら作業場所の frontend/node_modules の有無を先に決める設計が要る。PO に報告して扱いを決めてもらう。→ PO「1」（2026-10-25）で段5d として設計した（§27）。
 - tools/claude-channels/intake/CLAUDE.md の LIMITS 未登録（起点から警告あり）。別の道具の文書なので、この段では登録しない。
 - 5c の昇格（broken_link=8・warnings=10・deep=2 が残る）。
 - フックの置き場が共有の設定で、`frontend/.husky/_` に書き換わる間は作業場所によって pre-commit が動かない（§26-7）。直すなら作業場所ごとの設定（worktreeConfig）か husky の prepare の扱いを決める設計が要る。PO に報告して扱いを決めてもらう。
@@ -509,3 +509,201 @@ PO 原文（2026-10-22）「仕様書と設計図はどうなったの？逐一�
 - 5a: PR #4733 マージ（mergeCommit 01e53da6b、2026-10-25 13:22 JST）。T1〜T5 は担当の生出力（/tmp/CC報告ファイル/an-s5/impl/）で全て期待どおり、審査は 777c2f94d・main 取り込み後 680b0fcc7 とも APPROVE。CI の guard-authoring/evaluation は PR が main から遅れていた間 error になり（scripts/run-guard-evaluation.js:25 の `merge-base --is-ancestor base head` が失敗する）、main 取り込み後に pass。
 - 審査で見つかった範囲外の事実（§26-5 に足す）: フックの置き場 `core.hooksPath` は本店の .git/config に1つしかなく（worktreeConfig は無効）、scripts/new-worktree.sh:115 の `git config core.hooksPath frontend/.husky` も共有の設定に書く。審査の途中で一度 `frontend/.husky/_` になっていた（書き換えうる仕組みとして husky の prepare＝frontend/package.json:47 `cd .. && husky frontend/.husky` が在る。いつ何が書いたかは未確認）。`_` の間は、その中身（husky の起動役）が無い作業場所では pre-commit 自体が動かない。2026-10-25 13:2x の確認では `frontend/.husky` に戻っている。
 - 5b: §26-4 のとおり。起点 origin/main 01e53da6b で、新しい find が出すのは9本（AGENTS.md 3本・CLAUDE.md 6本）、90日を超えるのは backend/scripts/CLAUDE.md（146日）・backend/tenant/CLAUDE.md（144日）の2本。カードは card-stage5b.md（card-lint rc=0）。
+
+## 27. 段5d 手元で止まらない検査2つ（2026-10-25・Opus 設計判断。PO 承認「1」2026-10-25＝直し方を別の段で設計する。起点 origin/main 00a8e3c38＝#4741 のマージ）
+
+### 27-1. 現状（実物。生出力 /tmp/CC報告ファイル/an-s5d/、試しは t2/。リポジトリ外）
+
+- frontend/.husky/pre-commit:43 `npx lint-staged` と :48 `node scripts/check-dark-parity.js` は、終わりの値（rc）を見ていない。フックは `set -e` なし（§26-1）で、最後の if（:74-77）の値で終わる。frontend/AGENTS.md:25「`lint-staged` により **コミット前に自動ブロック**（`--max-warnings=0`）。」と食い違う。
+- 試し（41ed133be の使い捨ての作業場所で `npx lint-staged` を直接実行。t2/trial.sh）:
+  - B＝本店の frontend/node_modules を symlink した作業場所: (i) 違反なし rc=0、(ii) tsx に日本語の文字列 → `local/no-japanese-literal`・「ESLint found too many warnings (maximum: 0).」rc=1、(iii) index.css の :root だけに変数を足す → dark-parity FAILED rc=1。
+  - A＝frontend/node_modules が無い作業場所: (i)・(ii) とも「✖ Task failed to spawn: eslint --max-warnings=0 / ENOENT」rc=1（違反を見つけたのではなく、eslint を起動できない）。(iii) rc=1。
+  - dark-parity を直接: 変更なし rc=0、(iii) rc=1。使うのは node の標準部品だけ（check-dark-parity.js:13-15）なので、node_modules が無くても正しく動く。
+  - `npx lint-staged` は node_modules が無くてもネットから取って動く（17.6.0）。`npx eslint` は v10.13.0、stylelint は 17.16.0 を取ってくる（package.json は eslint ^9.39.4・stylelint ^16.26.1・lint-staged ^17.0.5。本店の node_modules は 9.39.4・16.26.1・17.0.5）。
+- 作業場所 49 件のうち frontend/node_modules を持つのは 3 件（実体 2・symlink 1）、46 件は持たない（5-count.txt）。scripts/new-worktree.sh は node_modules を扱わない（:113-115 はフックの置き場の設定だけ）。
+- つまり今は、46 件の作業場所で frontend の commit のたびに lint-staged が rc=1 になっているが、rc を見ないので誰も気づかない。本当の関所は CI の必須チェック「Lint & Dark Mode Check (ADR-067)」（.github/workflows/e2e.yml:121-122。:57 の lint-run が `npm ci` → `npm run check:all`。check:all は package.json:46 で eslint・dark-parity・css 系・stylelint を含む）。
+- 範囲の外で見つけたこと（記録だけ。直さない）: pre-commit:56 のコメント「ruff 未インストールの場合は警告のみ」に対し、:61-67 は ruff が無いと exit 1、:62 は `--exit-zero` で違反があっても止まらない。:76 lint_tenant_schema.py の rc はフック全体の rc になる（最後の if のため）。
+
+### 27-2. 代替案と選んだ理由
+
+| 案 | 中身 | 判断 |
+|---|---|---|
+| A | :43・:48 に `\|\| exit 1` を足すだけ | 退ける。46 件の作業場所で frontend の commit が「eslint を起動できない」で全部止まる（違反が無くても） |
+| B | new-worktree.sh で本店の node_modules を symlink する | 退ける。本店の部品の版と作業場所の package.json がずれうる・共有の部品を作業場所が書き換えうる。部品の手当ては別の課題 |
+| C | npx に任せる | 退ける。ネットから版の違う道具（eslint 10・stylelint 17）を取ってきて、CI と違う結果になる |
+| **D（採用）** | dark-parity は `\|\| exit 1`。lint-staged は部品（`node_modules/.bin/` の lint-staged・eslint・stylelint）が揃っているときだけ直接呼んで `\|\| exit 1`。揃っていなければ「飛ばした・CI で検査される」と警告を出して先へ進む | 部品がある作業場所では文書どおり止まる。無い作業場所では今と同じく通るが、飛ばしたことが目に見える。ネットから道具を取らない。CI の関所は変えない |
+
+### 27-3. 作り方（2ファイル）
+
+- frontend/.husky/pre-commit:42-49 を次にする（:37-41・:50 以降は変えない。`set -e` は入れない）。
+
+```sh
+# lint-staged で変更ファイルのみチェック（ADR-1040 段5d）
+# 部品（frontend/node_modules）が揃っていれば違反で止める。揃っていなければ飛ばして知らせる
+# （npx でネットから版の違う道具を取らない。CI の必須チェック「Lint & Dark Mode Check (ADR-067)」で検査される）
+if [ -x node_modules/.bin/lint-staged ] && [ -x node_modules/.bin/eslint ] && [ -x node_modules/.bin/stylelint ]; then
+  node_modules/.bin/lint-staged || exit 1
+else
+  echo "⚠️  frontend/node_modules が無いため、書き方の検査（lint-staged）を飛ばしました。CI の Lint & Dark Mode Check で検査されます"
+fi
+
+# index.css が変更された場合はパリティチェック
+if git diff --cached --name-only | grep -q "frontend/src/index.css"; then
+  echo "📋 index.css 変更検出 → ダークモード変数パリティチェック実行"
+  node scripts/check-dark-parity.js || exit 1
+fi
+```
+
+- cwd は :38 で frontend なので、`node_modules/.bin/` は frontend/node_modules/.bin を指す。symlink の node_modules でも `-x` は先をたどる。
+- 部品があるとき、index.css の変更では dark-parity が lint-staged（package.json:66-68）と :48 の2回動く（今と同じ）。
+- frontend/AGENTS.md:25 を次の1行にする（行数は 77 のまま。上限 90）:
+  `` `lint-staged` により **コミット前に自動ブロック**（`--max-warnings=0`）。frontend/node_modules が無い作業場所では手元の検査を飛ばして警告だけ出し、CI の必須チェック「Lint & Dark Mode Check (ADR-067)」で検査される。``
+- 危険パスの判定: frontend/.husky/pre-commit・frontend/AGENTS.md は DANGEROUS_PATTERNS に当たらない（§26-1 と同じ）。workflow-lint.yml・Ruleset・必須チェックは触らない。
+
+### 27-4. 受け入れ基準
+
+試しは使い捨ての作業場所（`~/worktrees/salesanchor/` の下に detached で作る。フックの :14-25 が作業場所の外を止めるため）で、フック全体 `sh frontend/.husky/pre-commit; echo rc=$?` を変更前（origin/main のフック）と変更後（この便のフックを写したもの）で比べる。
+
+| 基準 | 検証方法 |
+|---|---|
+| T1 部品なし・違反なしは通る | A で tsx に `// probe` を足して add。変更前 rc=0・変更後 rc=0、変更後は「⚠️ … 飛ばしました」が出て「Task failed to spawn」が出ない |
+| T2 部品なしでも暗い画面の色は止まる | A で index.css の :root だけに変数を足して add。変更前 rc=0・変更後 rc=1（dark-parity FAILED） |
+| T3 部品ありで書き方の違反は止まる | B で tsx に日本語の文字列を足して add。変更前 rc=0・変更後 rc=1（`local/no-japanese-literal`） |
+| T4 部品ありで違反なしは通る | B で T1 と同じ。変更前・変更後とも rc=0 |
+| T5 部品ありで暗い画面の色も止まる | B で T2 と同じ。変更後 rc=1 |
+| T6 止まったあとも記録しようとした変更は消えない | T3・T5 の後に `git diff --cached --name-only` で足したファイルが残っている |
+| T7 ネットから道具を取らない | 変更後の T1〜T5 の出力に npx の取得（`npm warn exec`・`Need to install`）が出ない |
+| T8 文法と行数 | `sh -n frontend/.husky/pre-commit` rc=0。`node frontend/scripts/check-claude-size.js` rc=0（frontend/AGENTS.md 77行） |
+| T9 CI | この便の PR の CI が緑（Lint & Dark Mode Check は frontend の変更で動く） |
+
+- 戻し方: PR revert（2ファイル）。
+- 測り方（反映後）: 部品のある作業場所で frontend の違反を入れた commit が手元で止まること＝T3 が本番の作業場所でも同じになる。46 件の作業場所では警告の行が出るだけで、通り方は今と同じ。
+
+### 27-5. 外部事例
+
+- 使わない。理由: 判断の根拠はこのリポジトリのフック・CI・作業場所の実測（§27-1）で足り、他社の事例は部品の置き方が違うため当てはまらない。lint-staged が失敗で 1 を返し変更を元に戻す動きは、実測（B-ii の「Reverting to original state because of errors」rc=1）で確かめた。
+
+### 27-6. 残すもの
+
+- 作業場所に frontend の部品を入れるかどうか（入れれば 46 件でも手元で止まる）。版・容量・共有の扱いが要る別の課題。
+- §27-1 の ruff・:76 の食い違い。
+- §26-5 のフックの置き場が共有の設定である件（変わらず PO に扱いを聞く）。
+
+### 27-7. 審査（Architect、同じ AI による自己審査）
+
+- 判定: **APPROVE**（実装カード card-stage5d.md へ進める）。
+- 根拠: 変えるのは2ファイルで、行番号と動きを §27-1 の実測で確かめた。部品の有無で分けるので、今通っている 46 件の作業場所の commit を新しく止めない（T1）。止まるのは文書が約束している場合だけ（T2・T3・T5）。CI の関所・Ruleset・危険パスに当たらない。T1〜T8 は変更前と変更後の rc の差で判定でき、推測を含まない。
+- 未確認（カードの T で確かめる）: フック全体を通したときの rc（試しは `npx lint-staged` 単体）、stylelint 単体の結果、オフラインでの動き（変更後は npx を使わないので関係しない）。
+- 未解決: なし。
+
+## 28. 段7（段6を含む）全員共通のルール集を短くする（2026-10-25・Opus 設計判断。PO 承認「1」2026-10-25＝全員共通のルール集を、目次から詳しい文書へたどる形に組み替える案を作る。予定の段6もここに含める。起点 origin/main c233ec8f6）
+
+### 28-1. 現状（実物。生出力 /tmp/CC報告ファイル/an-k9/・an-gl/。リポジトリ外）
+
+- K9 の測り直し（c233ec8f6 の detached の写しで `claude -p "/context" --no-session-persistence` を1回。claude 2.1.310。2026-10-25 20:46）: Memory files 17.7k − MEMORY.md 10.6k ＝ **7.1k**（前回 4bd48fa42 は 7.2k）。合格ライン 6.5k 以下に 0.6k 足りない。内訳: ~/.claude/CLAUDE.md 2.7k・~/kb/AGENTS.md 1k・rules/common/git-workflow.md 247・agents.md 907・リポジトリの CLAUDE.md 198・AGENTS.md 2k（an-k9/context-c233ec8f6.txt:215-221）。ユーザー側の4本（約4.85k）は本テーマでまだ変えていない。
+- K1（`wc -l`）: ユーザー側 193（~/.claude/CLAUDE.md 84・~/kb/AGENTS.md 32・agents.md 53・git-workflow.md 24）＋入口 54（origin/main AGENTS.md 45・CLAUDE.md 9）＝ **247行**。合格ライン 200行以下。
+- ~/.claude/CLAUDE.md は通常のファイル（symlink でも git 管理でもない。生成する台本も無い）。節ごとの量（wc -m。推定トークン＝割合×2.7k で、実測ではない。an-gl/sections_table.txt）:
+
+| 行 | 節 | 文字 | 推定トークン | 行き先 |
+|---|---|---|---|---|
+| 1-2 | 表題 | 16 | 約14 | 残す |
+| 3-8 | 認証情報 | 185 | 約165 | 残す（全リポジトリで毎回守る） |
+| 9-11 | Context7 | 76 | 約68 | 残す（ほかに同じ決まりが無い） |
+| 12-14 | AGENTS.md 自動更新ルール | 205 | 約183 | **消す（段6。§10-5 で確定済み）** |
+| 15-36 | 報告の型（PO への型・「詳しく」の型） | 1201 | 約1072 | 残す。PO の最優先の決まり（2026-10-19）で毎回の返事に使う。見張り ~/.claude/scripts/japanese-reply-guard.py:2,:16 と ~/kb/00-rules/chat-format.md:9 がこの節を名指しする |
+| 37-56 | 記憶で答えない／出力を省略しない／実行と反映は別／一度に1つ／提案の型／迷ったら止まる | 452 | 約404 | 残す（全リポジトリで毎回守る） |
+| 57-74 | GAS / clasp | 582 | 約519 | **~/.claude/rules/gas-clasp.md へ文言そのまま移し、paths で GAS の作業のときだけ読まれるようにする。元の場所には案内1行** |
+| 75-83 | 生出力はファイルへ | 309 | 約276 | 残す（全リポジトリで毎回守る） |
+| 84 | @~/kb/AGENTS.md | — | （1k は ~/kb/AGENTS.md 側） | 残す（今回は変えない） |
+
+- GAS / clasp の節は Sales Anchor の文書・仕様に1件も出てこない（clasprc・clasp login・tcg-sales-management・列番号の直書き。an-gl/overlap_grep.txt）。GAS を持つリポジトリは ~/crm-app-current・~/ebay-gas-automation・~/tcg-client-viewer・~/tcg-inventory-parser（an-gl/repos_index.txt・gas_repos.txt）。~/tcg-inventory-parser/CLAUDE.md:62,67-70,72 に同じ決まりの一部があるが、:58-64（clasprc の共有・GCP の統一・OAuth の本番）はどのリポジトリにも無い。だから「消す」ではなく「移す」。
+- 公式の決まり（https://code.claude.com/docs/en/memory 取得 2026-10-25。Context7 は月の上限で使えなかったので、本起動指示の許可で公式資料を直接読んだ）: 「Rules without a `paths` field are loaded unconditionally」「A path-scoped rule loads when Claude uses the Read, Write, or Edit tool on a matching file」「User-level rules: [patterns are relative to] the session's primary working directory」「Personal rules in `~/.claude/rules/` apply to every project on your machine」。~/.claude/rules/common/coding-style.md:1-5 が同じ形（paths 付き）で既に使われている。
+
+### 28-2. 代替案と選んだ理由
+
+| 案 | 中身 | 判断 |
+|---|---|---|
+| A | 報告の型（約1.07k、いちばん大きい）を ~/kb/00-rules/ へ移して案内1行にする | 退ける。毎回の返事で使う PO の最優先の決まり。K10 の実測（目次を開くのは 20 回中 7 回）から、案内だけにすると読まれない回が出る。見張り2つも名指ししている |
+| B | GAS / clasp を消す | 退ける。clasprc の共有・GCP の統一・OAuth の本番の3つは、ほかに書いてある場所が無い |
+| **C（採用）** | 段6の3行を消す＋GAS / clasp を paths 付きの rules へ移す（文言はそのまま）＋案内1行 | 毎回読む量から約0.64k（推定）を外せる。決まりそのものは1つも消えない（GAS の決まりは GAS の作業で読まれる） |
+| D | C に加えて「出力を省略しない」と「生出力はファイルへ」を1つにまとめる | 今回は採らない。PO の言葉を書き換えることになる。C を測って足りなければ次の一手として PO に見せる |
+
+- 見込み: 7.1k − 約0.64k（183＋519−案内の約60）＝ **約6.46k**（推定。表示は 0.1k 単位なので 6.4k〜6.5k）。合格ライン 6.5k に対して余裕は小さい。判定は実測だけで行う。
+- K1 は 247 → 約227行（84→65）で、**200行以下にはまだ届かない**。残り約27行は ~/.claude/rules/common/agents.md（53行）・git-workflow.md（24行）・~/kb/AGENTS.md（32行）の見直しが要り、次の判断として PO に見せる（今回は触らない）。
+
+### 28-3. 作り方（リポジトリの外。変更は一度に1つ、それぞれ測る）
+
+- 7-0（準備）: 変更前の写しを ~/CC報告ファイル-keep/agenda-nav-stage7-20261025/ に保存（~/.claude/CLAUDE.md・~/.claude/rules/common/ の一覧）。`cmp` で同じことを確かめる。
+- 7a（段6）: ~/.claude/CLAUDE.md:12-14（見出し「## AGENTS.md 自動更新ルール」・本文1行・空行1行）を消す。ほかの行は変えない。→ K9 を測る（1回）。
+- 7b: ~/.claude/rules/gas-clasp.md を新しく作る。中身は次の frontmatter の後に、元の :57-73（見出し「## GAS / clasp」から「新種は既存と重複しない接頭辞＋4桁連番）」まで）を1字も変えずに写す。
+
+```markdown
+---
+paths:
+  - "**/*.gs"
+  - "**/appsscript.json"
+  - "**/.clasp.json"
+---
+```
+
+  そのあと ~/.claude/CLAUDE.md の元の :58-73（見出しの下の本文）を、次の1行に置き換える（見出し「## GAS / clasp」と後ろの空行は残す）。
+  `- GAS・clasp の作業の決まりは ~/.claude/rules/gas-clasp.md にある（.gs・appsscript.json・.clasp.json を開くと自動で読まれる）。clasp を実行する前に必ず読む`
+  → K9 を測る（1回）。
+- 測り方は §28-1 と同じ（origin/main の detached の写し・`claude -p "/context" --no-session-persistence`・Memory files − MEMORY.md）。リポジトリ側は変えないので、差はユーザー側の変更だけになる。
+- 担当（Sonnet）がカード card-stage7.md どおりに行う。~/kb は触らない（~/kb の記録は PO が `!` で行う決まりのため、今回は ~/kb を変えない案にした）。
+
+### 28-4. 受け入れ基準
+
+| 基準 | 検証方法 |
+|---|---|
+| T1 写しがある | 7-0 の写しと今のファイルを `cmp`。rc=0 |
+| T2 7a は3行だけ消えた | 写しと 7a 後の `diff` が :12-14 の削除だけ。`grep -c "AGENTS.md 自動更新ルール" ~/.claude/CLAUDE.md` が 0 |
+| T3 7b で GAS の決まりが1字も欠けていない | 写しの :57-73 と gas-clasp.md の frontmatter の後ろを `diff`。差 0 |
+| T4 7b でほかの節は変わっていない | 写しと 7b 後の `diff` が :12-14 の削除と :58-73→案内1行だけ |
+| T5 K9 | 7a 後・7b 後それぞれの K9（Memory files − MEMORY.md）。7b 後が **6.5k 以下**なら合格。Memory files の一覧に gas-clasp.md が出ていない（会話の始まりには読まれない） |
+| T6 GAS の作業では読まれる | GAS のリポジトリ（appsscript.json を持つもの1つ）で `claude -p` に「appsscript.json を Read で開いてから、指示の中に clasprc の決まりがあれば原文を1行そのまま引用して」と頼み（`--allowedTools Read`・`--no-session-persistence`）、答えに「ホームに1つしかない共有ファイル」が出る。比べるために、同じ問いを appsscript.json を開かせずに聞き、出ないこと |
+| T7 K1 | `wc -l` の合計を記録する（合否には使わない。約227行の見込み） |
+
+- 戻し方: 写しから ~/.claude/CLAUDE.md を戻し、~/.claude/rules/gas-clasp.md を消す。
+- 測り方（反映後）: T5 の値を kgi.md の K9 と baseline.md に記録する（この便の記録の PR で）。
+
+### 28-5. 外部事例
+
+- 公式資料（§28-1 の引用）だけを使う。paths 付きの rules は公式の決まりで、このMacでも coding-style.md 等が既に使っている。ほかの会社の事例は使わない。GAS の4リポジトリはどれも appsscript.json を持つ（crm-app-current/src・ebay-gas-automation/gas/…・tcg-client-viewer/src・tcg-inventory-parser 直下。`find` 2026-10-25）ので、paths の「**/appsscript.json」で当たる（理由: 何を毎回読ませるかは、この PO の決まりの中身で決まり、他社の数字は当てはまらない）。
+
+### 28-6. 残すもの
+
+- K1 の残り約27行（agents.md・git-workflow.md・~/kb/AGENTS.md の見直し）。agents.md:7-17 の一覧と :23-30 の起動条件が名指しする tdd-guide・code-reviewer・security-reviewer 等は、このリポジトリのセッションで使える担当の一覧に無い（見つけたこと。直していない）。
+- 案 D（出力の決まり2つのまとめ）。7b 後に 6.5k を超えたときの次の一手。
+- 見張り: design 維持の仕組みにある「~/kb/scripts/patrol.sh にユーザー側の合計行数を足す」は ~/kb の変更なので PO の `!` が要る。今回は入れない。
+
+### 28-7. 審査（Architect、同じ AI による自己審査）
+
+- PO の実装承認: 案（§28-3。PO への説明は「古い決まりを1つ消す」「GAS の決まりを GAS の作業のときだけ読む場所へ文言そのまま移す」）を見せた後、PO 原文「1」（2026-10-25）。PO の質問「gasとは？何を変更するのか教えてくれ」に答えてから受けた。実装カード card-stage7.md。
+
+- 判定: **APPROVE**（PO の実装承認の後、card-stage7.md へ進める）。
+- 根拠: 消すのは §10-5 で決まった3行だけ。移す GAS の決まりは文言を変えず、公式の paths の決まりで GAS の作業のときに読まれる（T6 で実物を確かめる）。PO の最優先の報告の型は動かさない。1つずつ変えて測る。戻し方は写しを戻すだけ。リポジトリ・本番・CI・Ruleset に触らない。
+- 未確認（T で確かめる）: 「**/.clasp.json」のように点で始まる名前に paths が当たるか（appsscript.json でも当たるので T6 はそちらで見る）。推定トークンと実測の差。
+- 未解決: なし。K9 が 6.5k に届かない場合は案 D を PO に見せる（推測で進めない）。
+
+### 28-8. 実装の結果（2026-10-25・Sonnet 実装、Opus が生出力で照合）
+
+生出力: /tmp/CC報告ファイル/an-s7/（リポジトリ外）。写し: ~/CC報告ファイル-keep/agenda-nav-stage7-20261025/。
+
+- 【事実】T1 cmp rc=0。T2 diff-7a.txt は `12,14d11` だけ、「AGENTS.md 自動更新ルール」は 0 件。
+- 【事実】T3 `tail -n +7 ~/.claude/rules/gas-clasp.md` と写しの :57-73 の diff は rc=0（Opus が写しから直接比べ直した）。gas-clasp.md は 23 行（frontmatter 6 行＋見出し 1 行＋本文 16 行）。
+- 【事実】T4 diff-7b.txt は `12,14d11` と `58,73c55`（本文16行→案内1行）だけ。~/.claude/CLAUDE.md は 84 行から 66 行になった。
+- 【事実】T5 K9（origin/main c233ec8f6、claude 2.1.310）:
+
+| 測った時点 | Memory files | MEMORY.md | K9 | ~/.claude/CLAUDE.md |
+|---|---|---|---|---|
+| 変更前（28-1） | 17.7k | 10.6k | 7.1k | 2.7k |
+| 7a 後（22:57 JST） | 17.5k | 10.6k | 6.9k | 2.5k |
+| 7b 後（22:59 JST） | 17.1k | 10.6k | **6.5k** | 2.1k |
+
+  ほかの行（~/kb/AGENTS.md 1k・git-workflow.md 247・agents.md 907・CLAUDE.md 198・AGENTS.md 2k）は3回とも同じ。7b の一覧に gas-clasp.md は無い。
+- 【事実】T6 ~/tcg-inventory-parser で appsscript.json を開いた回（t6-open.txt）は、claude が「appsscript.json を開いたときに自動で読み込まれた gas-clasp.md」と答え、「- ~/.clasprc.json はホームに1つしかない共有ファイル。」を引用した。開かない回（t6-noopen.txt）は「無い」。
+- 【未確認】読み込まれたことの根拠は claude 自身の答えと、開かない回との対比だけで、読み込みの記録（ログ）では確かめていない。T6 の2回の終了コード rc=0 は担当の報告だけで、生出力には残っていない。
+- 判定: **K9 合格**（6.5k ≤ 6.5k。合格ラインちょうど、余裕は 0.0k）。
+- 【事実】K1 はユーザー側 175 行（~/.claude/CLAUDE.md 66・~/kb/AGENTS.md 32・git-workflow.md 24・agents.md 53）＋入口 54 行（AGENTS.md 45・CLAUDE.md 9）＝ 229 行で、200 行以下にまだ 29 行届かない（28-6 の残り。PO に別に相談する）。
+- 【未確認】/context の表示は 0.1k 単位の丸めで、6.5k が丸める前にラインの上か下かは分からない。判定は kgi.md の決まり（表示値で判定）に従う。

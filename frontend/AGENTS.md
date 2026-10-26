@@ -22,7 +22,7 @@
 
 全 UI 文字列は `t("key")` 経由（JSX / aria-label / placeholder / title すべて）。`ja.json` と `en.json` は同一キー必須。ハードコード日本語は絶対禁止。詳細: `docs/adr/ADR-027-ui-internationalization.md`
 JSX / TS(X) 内の日本語ハードコードは ESLint ルール `local/no-japanese-literal`（ADR-027）が自動検出。
-`lint-staged` により **コミット前に自動ブロック**（`--max-warnings=0`）。
+`lint-staged` により **コミット前に自動ブロック**（`--max-warnings=0`）。frontend/node_modules が無い作業場所では手元の検査を飛ばして警告だけ出し、CI の必須チェック「Lint & Dark Mode Check (ADR-067)」で検査される。
 
 ```bash
 cd frontend && npm run lint   # 新規違反が 0 件であること

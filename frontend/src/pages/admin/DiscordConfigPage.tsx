@@ -370,8 +370,8 @@ export default function DiscordConfigPage() {
               />
               {canEdit && (
                 <div className="dc-actions">
-                  <Button variant="primary" onClick={handleGuildSave} disabled={guildSaving}>
-                    {guildSaving ? t("common.saving") : isConnected ? t("common.save") : t("discordConfig.connect")}
+                  <Button variant="primary" onClick={handleGuildSave} disabled={guildSaving} loading={guildSaving}>
+                    {isConnected ? t("common.save") : t("discordConfig.connect")}
                   </Button>
                   {isConnected && (
                     <Button variant="ghost" onClick={handleGuildCancel} disabled={guildSaving}>

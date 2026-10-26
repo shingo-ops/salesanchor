@@ -298,8 +298,8 @@ export default function BuybackPricesPage() {
             <Button variant="ghost" size="sm" onClick={() => setAlertsOpen(true)}>
               {t("buybackPrices.alertSettings")}
             </Button>
-            <Button variant="secondary" size="sm" onClick={handleManualFetch} disabled={fetching}>
-              {fetching ? "..." : t("buybackPrices.fetchNow")}
+            <Button variant="secondary" size="sm" onClick={handleManualFetch} disabled={fetching} loading={fetching}>
+              {t("buybackPrices.fetchNow")}
             </Button>
           </div>
         ) : undefined

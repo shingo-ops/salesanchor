@@ -223,18 +223,7 @@
   height: auto;
 }
 
-/* スクリーンリーダーのみに見せる（SEO/A11y で h1 を残しつつ視覚的にはロゴ画像で訴求） */
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border-width: 0;
-}
+/* .sr-only の定義は frontend/src/components/sr-only.css に移した（docs/handoff/viewer-header-remove/design.md 4-2） */
 
 .login-subtitle {
   text-align: center;

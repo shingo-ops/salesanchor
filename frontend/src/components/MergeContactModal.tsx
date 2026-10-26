@@ -322,11 +322,10 @@ export default function MergeContactModal({ open, companyId, source, onMerged, o
               <Button
                 type="submit"
                 variant="danger"
+                loading={submitting}
                 disabled={submitting}
               >
-                {submitting
-                  ? t("mergeContact.merging")
-                  : t("mergeContact.executeLabel", { masterName: contactDisplayName(selected) })}
+                {t("mergeContact.executeLabel", { masterName: contactDisplayName(selected) })}
               </Button>
             </div>
           </form>

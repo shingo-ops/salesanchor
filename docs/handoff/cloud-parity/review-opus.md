@@ -115,3 +115,25 @@
 - 直したこと: `guard_pre_tool.py` の `check_merge`（Bash の道）に、既存3条件の後ろへ「送る道具（gh api・curl・wget・httpie）がある命令で、`/pulls/<n>/merge` への PUT、`mergePullRequest` / `enablePullRequestAutoMerge`（GraphQL）、`repos/…/merges`（枝の直接まとめ）のどれかがあれば止める」条件を足した。
 - 直したこと: 送る道具の無い命令（grep など）と、PUT 指定の無い `…/merge` の読み取り、GraphQL の読取り（query）は止めない。
 - 試験: `scripts/agent-hooks/cloud/test.sh` に M1〜M8 を追加（M1 curl PUT／M2 curl --request=PUT／M3 GraphQL マージ／M4 GraphQL 自動マージ予約／M5 …/merges／M6 curl GET／M7 grep／M8 GraphQL 読取）。M9 は既存ケースの結果が変わらないこと（B8 の時間試験は負荷で変更前から NG）。
+
+## 別カード 指摘4 の対処（PR #4745）
+
+- 直したこと: `guard_pre_tool.py` に `has_recursive_rm` を足し、`check_danger` の一覧照合の後ろで呼ぶ。区切り（`&&` `||` `;` `|` `&` 改行）で分けた区間の語から、最後の `/` より後ろが rm の語を探し、その後ろ（`--` より前）に `-` 1つ始まりで r／R を含む語、または `--recursive` があれば止める。`danger_ops.json` と一覧照合は変えていない。
+- 直したこと: 読み取り専用の区間は scan_text で消えるので対象外（grep 内の文字列は通る）。`rm -f` や `rm -- -r`、rmdir は止めない。
+- 試験: `scripts/agent-hooks/cloud/test.sh` に R1〜R12・R14 を追加（R1 -fr／R2 -Rf／R3 -f -r／R4 --recursive／R5 /bin/rm -dfr／R6 env と command の前置き／R7 && の後ろ／R8 -f のみ／R9 `--` の後ろの -r／R10 grep／R11 commit 文／R12 rmdir／R14 nice の前置き）。R13 は既存ケースの結果が変わらないこと（B8 の時間試験は負荷で変更前から NG）。
+- 変更前の見張りに新しい試験を当てた結果: R1・R3〜R7・R14 は通る（NG）、R8〜R12 は期待どおり。R2（-Rf）だけは変更前から止まっていた（一覧照合が小文字にそろえるため）。
+
+## 別カード 指摘5 の対処
+
+- 直したこと: `guard_pre_tool.py` に `embedded_commands` を足し、`main` の Bash の道で「外側の命令＋埋め込まれた命令」を1つずつ `check_danger`・`check_merge` に通す。埋め込みは `$( … )`（単引用符の中と `\` 付きは飛ばす・`$(( ))` は対象外）、逆引用符、行頭の `( )` の殻、`bash`/`sh`/`zsh`/`dash` の `-c`、`eval` の中身。入れ子は depth 3 まで、閉じ忘れは末尾までを中身にして止める側に倒す。
+- 触っていない範囲: `danger_ops.json`、`scan_text`、`strip_message_quotes`、`strip_heredoc_bodies`、`is_readonly_segment`、`has_recursive_rm`、`check_danger`、`check_merge`、`is_pr_create`、`check_pr_create`、`dispatch.sh`。止めた理由の文は既存のものをそのまま使う。
+- 試験: `scripts/agent-hooks/cloud/test.sh` に E1〜E18 を追加（E1〜E11 止まる、E12〜E18 通る）。E19 は既存ケースの結果が変わらないこと。
+- 変更前の見張りに E 系を当てた結果: E5 のみ変更前から止まっていた（一覧の部分一致）。E1〜E4・E6〜E11 は通っていた（止め漏れの再現）。
+
+## 指摘5 の残り7件の対処
+
+- 直したこと: `guard_pre_tool.py` の「埋め込まれた命令の取り出し」節だけを直した（main は Bash の道の1か所）。直接の取り出しを `_found_bodies` に切り出し、`embedded_commands` は入れ子が depth 3 を超えてまだ埋め込みがあれば `TOO_DEEP` を返す。main は `TOO_DEEP` があれば「入れ子が深すぎて中身を確かめられない」として止める（B29・B30。通す側から止める側へ）。
+- 直したこと: 区間の先頭の then・do・else・elif・if・while・until・time・!・{ を外してから ( ) の殻を探す（B31〜B34）。`bash -c` の後ろの `--` を1つ飛ばす（B13）。`<( )`・`>( )` を二重引用符の外で取り出す（B35）。`$(( ))` も `$( )` と同じく中身を常に調べる（B36）。ドル付き単引用符の `bash -c` はエスケープ（`\n` `\t` `\\` `\'` `\"` `\xHH` `\NNN`）を戻して調べ、ドル付き二重引用符は通常の二重引用符と同じ扱い（B37）。引用符なしの `\X` は `X` に戻す（B38）。
+- 触っていない範囲: `_paren_body`、`strip_heredoc_bodies`、`scan_text`、`strip_message_quotes`、`is_readonly_segment`、`has_recursive_rm`、`check_danger`、`check_merge`、`is_pr_create`、`check_pr_create`、`danger_ops.json`、`dispatch.sh`。
+- 試験: `scripts/agent-hooks/cloud/test.sh` に E20〜E39 を追加（E20〜E32 止まる、E33〜E39 通る）。E40 は既存ケース全件が変更前と同じ結果であること。
+- 注意: E21 は中身が無害でも深さ5で止める（止める側に倒した結果）。B8 の時間試験は負荷で変更前から NG になることがある。

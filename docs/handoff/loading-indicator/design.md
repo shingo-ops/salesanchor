@@ -188,12 +188,15 @@ PO の選択: 押すと丸と元の言葉が並ぶ（例: 丸＋「保存」）�
 - 金型 HeaderButton（HeaderButton.tsx:25-28,39,46-57）: テキスト用の TextButtonProps に `loading?: boolean` を足し、Button へ素通しする。icon 用（生 `icon-btn`）には足さない（対象 38 件はすべてテキスト用。recon C10）。
 - 各ボタン: `{busy ? t(読み込み中キー) : t(元のキー)}` や `{t(busy ? 読み込み中キー : 元のキー)}` を `loading={busy}` ＋ `{t(元のキー)}` に替える。disabled の条件はそのまま残す（Button が disabled||loading で重ねる）。
 - 生 `<button>` 9 件は金型 Button へ移す便を分ける（見た目が変わるため単独で確かめる）。
+- 規則3（便6a で追加）: 外側の条件が読み込み中で内側が言葉の選び分けの三項は、`loading={外側の条件}`＋内側の式をそのまま残す。
 
 ## 3-3 便（1便ずつ、合流・反映・確認のあとで次へ）
 - 便1（card-8.md）: 金型2つの変更（loadingText 削除・HeaderButton に loading）、loadingText を使う 8 件、loading と三項を併用している 7 件、金型の試験・stories。
 - 便2（card-9）= pages/super-admin 22・pages/integrations 12。
 - 便3（card-10）= pages/admin ほか 34 か所。
 - 便4（card-11）= pages の残りと features ほか 34 か所。
+- 便5（card-12）= components と残り 8 か所。
+- 便6a（card-13）= 金型 Button の入れ子の三項 7・文字の三項 1 の 8 か所。便6b（card-14）= 生 button 9 か所。
 - 便2〜5: 金型経由の残り（Button・HeaderButton）を 40 件以下ずつ。ディレクトリ順（pages/super-admin → pages/integrations・admin → pages の残り → features・components）。
 - 便6: 生 `<button>` 9 件を金型 Button へ。
 - 便7: 再発防止の検査（金型ボタンの children に読み込み中系キーの三項を書くと UI ガバナンス検査が赤）と、使われなくなった辞書キーの整理。

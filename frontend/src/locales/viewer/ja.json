@@ -36,12 +36,14 @@
     "freshOnly": "{{hours}}時間以内",
     "sort": {
       "placeholder": "並び替え",
+      "default": "発売日が新しい順（既定）",
       "priceAsc": "価格が安い順",
       "stockDesc": "在庫が多い順",
       "postedDesc": "投稿が新しい"
     },
     "filter": {
       "button": "絞り込み",
+      "buttonWithCount": "絞り込み ({{count}})",
       "title": "絞り込み",
       "provider": "提供者",
       "condition": "コンディション",
@@ -51,7 +53,11 @@
       "priceRange": "価格の範囲",
       "quantityRange": "数量の範囲",
       "min": "下限",
-      "max": "上限"
+      "max": "上限",
+      "back": "戻る",
+      "apply": "決定する",
+      "searchOptions": "絞り込む",
+      "noOptions": "見つかりません"
     },
     "badge": {
       "cheapest": "最安",

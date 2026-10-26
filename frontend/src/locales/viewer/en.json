@@ -36,12 +36,14 @@
     "freshOnly": "Last {{hours}} h",
     "sort": {
       "placeholder": "Sort",
+      "default": "Newest release date (default)",
       "priceAsc": "Price: low to high",
       "stockDesc": "Quantity: high to low",
       "postedDesc": "Newest posts"
     },
     "filter": {
       "button": "Filters",
+      "buttonWithCount": "Filter ({{count}})",
       "title": "Filters",
       "provider": "Supplier",
       "condition": "Condition",
@@ -51,7 +53,11 @@
       "priceRange": "Price range",
       "quantityRange": "Quantity range",
       "min": "Min",
-      "max": "Max"
+      "max": "Max",
+      "back": "Back",
+      "apply": "Done",
+      "searchOptions": "Filter options",
+      "noOptions": "No matches"
     },
     "badge": {
       "cheapest": "Lowest",
