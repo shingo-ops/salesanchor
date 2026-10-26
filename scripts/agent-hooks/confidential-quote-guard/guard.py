@@ -247,7 +247,7 @@ def _try_lex(cmd):
 def expansion(cmd, toks):
     """git／gh が出るのに、変数・展開・行末の \\ で字を隠せる形 -> True。見分けず止める (止める側に倒す)。
     生の文字と字句の両方に git／gh (G=git のような代入の右辺も含む) が出て、$・バッククォート・行末の \\ のどれかを含むとき。
-    ほかに、命令の位置の字句 (代入を外した最初の字句) が $ やバッククォートで始まるとき。"""
+    ほかに、命令の位置の字句 (代入を外した最初の字句) が $ やバッククォートで始まる、または ? * [ を含む (glob) とき。"""
     loose = cmd + "\n" + re.sub(r"[\\'\"]", "", cmd) + "\n" + " ".join(toks or [])
     has_exp = "$" in cmd or "`" in cmd or "\\\n" in cmd or "\\\r\n" in cmd or re.search(r"\{[^{}\s]*,[^{}\s]*\}", cmd) is not None
     if has_exp and GITGH_RE.search(loose):
@@ -262,8 +262,8 @@ def expansion(cmd, toks):
                 continue
             if re.match(r"^[A-Za-z_][A-Za-z0-9_]*=", t) or t in WRAPPERS or t.startswith("-"):
                 continue
-            if t.startswith(("$", "`")):
-                return True
+            if t.startswith(("$", "`")) or any(c in t for c in "?*["):
+                return True  # 命令の位置の $・バッククォート・glob (g?t など) は、何の命令か読めない
             at_cmd = False
     return False
 

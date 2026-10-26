@@ -679,10 +679,18 @@ def main():
                   ("; の後ろの命令の位置が $X", "echo a; $X push origin leak11"),
                   ("env $X (git の字なし)", "env $X push origin leak11"),
                   ("波括弧展開 {git,push}", "{git,-C,%s,push,origin,leak11}" % WORK),
-                  ("git status $(pwd) (止めすぎは受け入れ)", "git status $(pwd)")):
+                  ("git status $(pwd) (止めすぎは受け入れ)", "git status $(pwd)"),
+                  ("glob g?t", "g?t -C %s push origin leak11" % WORK),
+                  ("glob /usr/bin/g[i]t", "/usr/bin/g[i]t -C %s push origin leak11" % WORK),
+                  ("glob g*", "g* -C %s push origin leak11" % WORK),
+                  ("glob ; の後ろ", "echo a; g?t -C %s push origin leak11" % WORK),
+                  ("glob 代入・env の後ろ", "X=1 env g?t push origin leak11"),
+                  ("glob gh", "g? pr comment 1 -F " + hitbody)):
         stop("H1 " + nm, c)
     for nm, c in (("echo $HOME", "echo $HOME"), ("echo `date`", "echo `date`"), ("ls $HOME/x", "ls $HOME/x"),
-                  ("X=1; echo $X", "X=1; echo $X"), ("echo $(date) && ls", "echo $(date) && ls")):
+                  ("X=1; echo $X", "X=1; echo $X"),
+                  ("ls *.md", "ls *.md"), ("cat a?b", "cat a?b"), ("git status -- '*.py'", "git -C %s status -- '*.py'" % WORK),
+                  ("git log -- *.md", "git -C %s log -1 -- *.md" % WORK), ("echo $(date) && ls", "echo $(date) && ls")):
         stop("H1 git／gh なしの展開は通る: " + nm, c, 0)
 
     # H2: URL の書き方
