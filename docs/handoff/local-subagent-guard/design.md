@@ -209,7 +209,7 @@ gh api は、後ろの語を見て次の順に判定する。
 
 **表C 台本の実行**（区間ごとに判定する）
 
-- 頭の語に `/` が含まれる（`./x.sh`・`scripts/x.sh`・`~/kb/scripts/save.sh`）→ 止める。
+- 頭の語に `/` が含まれる（例: `./scripts/dev/executor-preflight.sh`・`scripts/dev/executor-preflight.sh`・個人の記録帳の save 台本の絶対パス）→ 止める。
   - ただし、次の場所で始まる語は除く: `/bin/`・`/usr/bin/`・`/usr/sbin/`・`/sbin/`・`/opt/homebrew/bin/`・`/usr/local/bin/`。
   - 名前が git・gh・claude・codex のときも除く。これらは表A・表B・表D で判定する。
 - 頭の語の名前が npx・bunx・make・just・task・rake・invoke → 止める。
@@ -321,7 +321,7 @@ gh api は、後ろの語を見て次の順に判定する。
 | 基準 | 検証方法 |
 |---|---|
 | K1 担当の Write・Edit・MultiEdit・NotebookEdit・EnterWorktree・ExitWorktree が止まる（exit 2、stderr に ADR-1045 と規則 tool） | test_guard.sh: agent_id 付きの入力 6 種 |
-| K2 本体（agent_id が無い・空文字）は止まらない（exit 0）。対象は Write と、Bash の `git commit -m x`・`git push`・`claude -p x`・`bash scripts/x.sh` | test_guard.sh |
+| K2 本体（agent_id が無い・空文字）は止まらない（exit 0）。対象は Write と、Bash の `git commit -m x`・`git push`・`claude -p x`・`bash scripts/dev/executor-preflight.sh` | test_guard.sh |
 | K3 担当の、[cases.md](cases.md) の止める例が全部止まる（Bash・Monitor の両方）。command が文字列でない入力も止まる | test_guard.sh（cases.md の例を全部、試験に入れる） |
 | K4 担当の、cases.md の通す例が全部 exit 0（Bash・Monitor の両方）。Monitor で command が無い入力も exit 0 | test_guard.sh |
 | K5 JSON でない入力は exit 0 | test_guard.sh |
