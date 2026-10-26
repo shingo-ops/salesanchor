@@ -388,6 +388,21 @@ assert('T69: pages/ と components/ は loadingTernary の対象2件', sp2.loadi
 assert('T70: .test.tsx は loadingTernary の対象外', splitTargets([fileOf('frontend/src/components/C.test.tsx')]).loadingFiles.length, 0);
 assert('T71: pages/ 外のほかの場所は対象外', splitTargets([fileOf('frontend/src/hooks/H.tsx')]).loadingFiles.length, 0);
 
+// T72-: 取りこぼす4つの書き方（便8c）
+assert('T72: (1) JSX の地の文の \' のあとの三項は1件', lt('<p>Don\'t {saving ? t("common.saving") : t("common.save")} it\'s</p>'), 1);
+assert('T73: (1) \' が2つ以上ある段落の中の三項は1件', lt('<p>It\'s Bob\'s and we don\'t {saving ? t("common.saving") : t("common.save")} you\'re</p>'), 1);
+assert('T74: (2) テンプレートの入れ子は1件', lt('{t(saving ? `${a ? `x` : `y`}.saving` : "common.save")}'), 1);
+assert('T75: (3) t の第2引数 {saving ? t(..., { n }) : t(..)} は1件', lt('{saving ? t("common.saving", { n }) : t("common.save")}'), 1);
+assert('T76: (3) 逆順 {saving ? t(save) : t(saving, { n })} は1件', lt('{saving ? t("common.save") : t("common.saving", { n })}'), 1);
+assert('T77: (4) i18n.t の (A) 形は1件', lt('{saving ? i18n.t("common.saving") : i18n.t("common.save")}'), 1);
+assert('T78: (4) i18n.t の (B) 形は1件', lt('{i18n.t(saving ? "common.saving" : "common.save")}'), 1);
+assert('T79: 三項のない地の文 Don\'t stop. It\'s fine. は0件', lt('<p>Don\'t stop. It\'s fine.</p>'), 0);
+assert('T80: 属性値 placeholder="Don\'t" は0件', lt('<input placeholder="Don\'t" />'), 0);
+assert('T81: t の第2引数があっても読込キーでなければ0件', lt('{x ? t("common.save", { n }) : t("common.cancel")}'), 0);
+assert('T82: prop の値の i18n.t（confirmLabel=）は0件', lt('<Dialog confirmLabel={x ? i18n.t("a.disconnecting") : i18n.t("a.disconnect")} />'), 0);
+assert('T83: obj.t("common.saving") を使った三項は0件', lt('{x ? obj.t("common.saving") : obj.t("common.save")}'), 0);
+assert('T84: ui-allow 付きの (3) は0件', lt('{/* ui-allow: 理由 (#4762) */}\n{saving ? t("common.saving", { n }) : t("common.save")}'), 0);
+
 // ---------------------------------------------------------------------------
 // 結果サマリ
 // ---------------------------------------------------------------------------
