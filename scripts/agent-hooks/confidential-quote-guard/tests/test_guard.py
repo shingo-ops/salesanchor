@@ -660,6 +660,110 @@ def main():
     sh("git", "tag", "-d", "tagr1", cwd=WORK)
     check("L4 そのタグを消すと -> 通る", P("tagr"), 0, cwd=T)
 
+    print("== 11 審査 8 回目の指摘 (展開・URL の書き方・followTags・git replace・gh release・hooks)")
+    bare = os.path.join(ORIGIN_ROOT, "test", "fake.git")
+    one("leak11", {"doc11.md": "引用「%s」\n" % q})
+    G2 = "g" + "h"
+    # H1: 展開で字を隠す
+    for nm, c in (("x=push; git $x", "x=pu" + "sh; git -C %s $x origin leak11" % WORK),
+                  ("pu$'s'h", "git -C %s pu$'s'h origin leak11" % WORK),
+                  ("$(printf pu%%sh s)", "git -C %s $(printf pu%%sh s) origin leak11" % WORK),
+                  ("G=git; $G push", "G=gi" + "t; $G -C %s push origin leak11" % WORK),
+                  ("バッククォート", "git -C %s `echo push` origin leak11" % WORK),
+                  ("行末の \\", "git -C %s pu\\\nsh origin leak11" % WORK),
+                  ("gh 変数の操作", "a=comm" + "ent; " + G2 + " pr $a 1 --body '「%s」'" % q),
+                  ("gh ansi-c", G2 + " pr com$'m'ent 1 --body '「%s」'" % q),
+                  ("X=gh; $X pr comment", "X=g" + "h; $X pr comment 1 --body '「%s」'" % q),
+                  ("命令の位置が $(…)", "$(printf '%%s' gi)t -C %s push origin leak11" % WORK),
+                  ("命令の位置が $X (git の字なし)", "$X push origin leak11"),
+                  ("; の後ろの命令の位置が $X", "echo a; $X push origin leak11"),
+                  ("env $X (git の字なし)", "env $X push origin leak11"),
+                  ("波括弧展開 {git,push}", "{git,-C,%s,push,origin,leak11}" % WORK),
+                  ("git status $(pwd) (止めすぎは受け入れ)", "git status $(pwd)")):
+        stop("H1 " + nm, c)
+    for nm, c in (("echo $HOME", "echo $HOME"), ("echo `date`", "echo `date`"), ("ls $HOME/x", "ls $HOME/x"),
+                  ("X=1; echo $X", "X=1; echo $X"), ("echo $(date) && ls", "echo $(date) && ls")):
+        stop("H1 git／gh なしの展開は通る: " + nm, c, 0)
+
+    # H2: URL の書き方
+    for url in ("https://github.com/TEST/FAKE.git", "https://github.com/test/fake.git/", "git@github.com:Test/Fake.git",
+                "ssh://git@github.com/test/fake", "ssh://git@github.com:22/test/fake.git/", "HTTPS://GitHub.com/Test/Fake/"):
+        sh("git", "remote", "set-url", "origin", url, cwd=WORK)
+        check("H2 origin=%s の push (書き写しあり) -> 止まる" % url, P("leak11"), 2, cwd=T)
+    sh("git", "remote", "set-url", "origin", bare, cwd=WORK)
+    for nm, c in (("remote set-url", "git -C %s remote set-url origin https://example.invalid/a/b.git" % WORK),
+                  ("remote set-url --push", "git -C %s remote set-url --push origin https://example.invalid/a/b.git" % WORK),
+                  ("remote add", "git -C %s remote add up https://example.invalid/a/b.git" % WORK),
+                  ("config remote.origin.url", "git -C %s config remote.origin.url https://example.invalid/a/b.git" % WORK),
+                  ("config remote.up.url", "git config remote.up.url x")):
+        stop("H2 " + nm, c)
+    for nm, c in (("remote -v", "git -C %s remote -v" % WORK), ("remote get-url", "git -C %s remote get-url origin" % WORK),
+                  ("config --get remote.origin.url", "git -C %s config --get remote.origin.url" % WORK),
+                  ("remote show origin", "git -C %s remote show origin" % WORK)):
+        stop("H2 読むだけは通る: " + nm, c, 0)
+
+    # H3: push の送り方を変える設定
+    one("clean11", {"ok11.md": "- 「%s」\n" % FAKE_NOT_IN_CORPUS})
+    for k in ("push.followTags", "push.pushOption", "remote.origin.push", "remote.origin.mirror", "remote.origin.tagOpt"):
+        stop("H3 git config %s の書き込み -> 止まる" % k, "git -C %s config %s true" % (WORK, k))
+        sh("git", "config", "--local", k, "refs/heads/x:refs/heads/x" if k.endswith(".push") else "true", cwd=WORK)
+        check("H3 --local に %s があると push -> 止まる" % k, P("clean11"), 2, cwd=T)
+        sh("git", "config", "--local", "--unset", k, cwd=WORK)
+    stop("H3 git -c push.followTags=true", "git -c push.followTags=true -C %s status" % WORK)
+    stop("H3 git config --get push.followTags は通る", "git -C %s config --get push.followTags" % WORK, 0)
+    sh("git", "config", "extensions.worktreeConfig", "true", cwd=WORK)
+    sh("git", "config", "--worktree", "push.followTags", "true", cwd=WORK)
+    check("H3 --worktree に push.followTags があると push -> 止まる", P("clean11"), 2, cwd=T)
+    sh("git", "config", "--worktree", "--unset", "push.followTags", cwd=WORK)
+    sh("git", "config", "--unset", "extensions.worktreeConfig", cwd=WORK)
+    check("H3 設定を戻すと push -> 通る", P("clean11"), 0, cwd=T)
+
+    # H4: git replace
+    leak_sha = sh("git", "rev-parse", "leak11", cwd=WORK).strip()
+    sh("git", "checkout", "-q", "-B", "repclean", "origin/main", cwd=WORK)
+    write(os.path.join(WORK, "doc11.md"), "clean\n")
+    sh("git", "add", "-A", cwd=WORK)
+    sh("git", "commit", "-q", "-m", "repclean", cwd=WORK)
+    clean_sha = sh("git", "rev-parse", "HEAD", cwd=WORK).strip()
+    stop("H4 git replace", "git -C %s replace %s %s" % (WORK, leak_sha, clean_sha))
+    stop("H4 git replace -d", "git replace -d %s" % leak_sha)
+    stop("H4 git update-ref refs/replace", "git -C %s update-ref refs/replace/%s %s" % (WORK, leak_sha, clean_sha))
+    stop("H4 git 'replace' (引用符)", "git -C %s 'replace' %s %s" % (WORK, leak_sha, clean_sha))
+    stop("H4 git log --grep replace は通る", "git -C %s log --grep replace -1" % WORK, 0)
+    sh("git", "replace", leak_sha, clean_sha, cwd=WORK)
+    check("H4 置き換えがある repo の push (書き写しあり) -> 止まる", P("leak11"), 2, cwd=T)
+    check("H4 置き換えがある repo の push (clean) -> 止まる", P("clean11"), 2, cwd=T)
+    sh("git", "replace", "-d", leak_sha, cwd=WORK)
+    check("H4 置き換えを消すと clean の push -> 通る", P("clean11"), 0, cwd=T)
+    check("H4 置き換えを消すと書き写しの push -> 止まる", P("leak11"), 2, cwd=T)
+
+    # H5: gh release の別の出口
+    att = os.path.join(T, "asset.bin")
+    write(att, "x\n")
+    for nm, c in (("create の添付ファイル", G2 + " release create v1 %s --notes 'x'" % att),
+                  ("create の添付 (印の後ろ)", G2 + " release create v1 --notes 'x' %s" % att),
+                  ("create --notes-from-tag", G2 + " release create v1 --notes-from-tag"),
+                  ("create --notes-from-tag=…", G2 + " release create v1 --notes-from-tag=true"),
+                  ("edit の位置引数 2 つ", G2 + " release edit v1 extra --notes 'x'"),
+                  ("upload", G2 + " release upload v1 %s" % att),
+                  ("upload --clobber", G2 + " release upload v1 %s --clobber" % att)):
+        stop("H5 " + nm, c)
+    for nm, c in (("create タグだけ + notes", G2 + " release create v1 --notes 'ok'"),
+                  ("create 印いろいろ", G2 + " release create v1 -t 'x' --notes 'ok' --draft --target main --latest=false"),
+                  ("create --generate-notes", G2 + " release create v1 --generate-notes"),
+                  ("release list", G2 + " release list"), ("release view", G2 + " release view v1")):
+        stop("H5 " + nm + " -> 通る", c, 0)
+
+    # L2: hooks
+    hk = os.path.join(WORK, ".git", "hooks", "pre-push")
+    for nm, c in (("printf > hooks", "printf '#!/bin/sh\\n' > %s" % hk), ("cp hooks", "cp /tmp/x %s" % hk),
+                  ("tee hooks", "tee %s" % hk), ("config core.hooksPath", "git -C %s config core.hooksPath /tmp/h" % WORK)):
+        stop("L2 " + nm, c)
+    stop("L2 cat hooks は通る", "cat %s" % hk, 0)
+    stop("L2 ls hooks は通る", "ls %s/.git/hooks" % WORK, 0)
+    # L1: sed -n は読むだけでも止まる (止めすぎは受け入れ)
+    stop("L1 sed -n .git/config は止まる (止めすぎ受け入れ)", "sed -n 1p %s/.git/config" % WORK)
+
     print("== 8 止めた記録")
     open(EV, "w").close()
     check("T50 記録を取るため 1 回止める", "gh pr comment 1 -b '「%s」'" % q, 2)

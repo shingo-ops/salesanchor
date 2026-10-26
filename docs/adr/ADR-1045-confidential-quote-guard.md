@@ -13,7 +13,7 @@
 
 ## What（何を決めたか）
 
-1. Mac で AI が打つ `git push`（足した行）と、`gh pr create/edit/comment/review/merge`・`gh issue create/edit/comment`・`gh release create/edit`・`gh repo edit`（本文・題名・notes・説明）を、PreToolUse:Bash の見張り `guard.py` で照らす。照らすのは決まった形だけ（push は `git -C <絶対パス> push [-u] origin <ref>`、gh の本文は `--body-file <絶対パス>`／`-F <絶対パス>` か一重引用符の `--body '…'`／`-b '…'`）。決まりの外の形は、命令文から作業場所や出どころを推し量らず、すべて止める。`gh gist` と、git の送信系の命令（`send-pack`・`http-push`）、include や `.git/config` の書き込み、`refs/remotes` を書き換える操作も止める。push で見る差分は、作業場所の設定（`diff.relative` など）に左右されない下回りの `rev-list` と `diff-tree` で、送る commit のそれぞれが足した行にする。注釈つきタグの文面も照らす。
+1. Mac で AI が打つ `git push`（足した行）と、`gh pr create/edit/comment/review/merge`・`gh issue create/edit/comment`・`gh release create/edit`・`gh repo edit`（本文・題名・notes・説明）を、PreToolUse:Bash の見張り `guard.py` で照らす。照らすのは決まった形だけ（push は `git -C <絶対パス> push [-u] origin <ref>`、gh の本文は `--body-file <絶対パス>`／`-F <絶対パス>` か一重引用符の `--body '…'`／`-b '…'`）。決まりの外の形は、命令文から作業場所や出どころを推し量らず、すべて止める。変数・展開で git／gh の字を隠せる形、`git remote set-url`／`add`、push の送り方を変える設定（`push.followTags`・`remote.*.push` など）、`git replace`（と `refs/replace` がある repo の push）、`.git/hooks/` への書き込み、`gh release` の添付ファイル・`--notes-from-tag`・`upload` も止める。`gh gist` と、git の送信系の命令（`send-pack`・`http-push`）、include や `.git/config` の書き込み、`refs/remotes` を書き換える操作も止める。push で見る差分は、作業場所の設定（`diff.relative` など）に左右されない下回りの `rev-list` と `diff-tree` で、送る commit のそれぞれが足した行にする。注釈つきタグの文面も照らす。
 2. 「」『』の中の語句が、(1) 4 文字以上、(2) 除外表（状態の言葉の写し・商品名の写し・一般語の表）に無い、(3) 原文の置き場のどれかのファイルにそのまま現れる、の全部を満たすと exit 2 で止める。
 3. 原本は `scripts/agent-hooks/confidential-quote-guard/`（guard.py・install.sh・rollback.sh・tests/）。原文・表の中身・語句は repo に入れない。表は Mac の社外秘フォルダ（`~/CC報告ファイル-keep/confid-guard/`）に置く。
 4. 表が読めない・空、差分が取れない、本文の出どころが決まらないときは止める（全部拒否に倒す）。環境変数で飛ばす抜け道は作らない。誤って止まったときの直し方は、一般語の表に理由つきで足すことだけ（Opus 判断）。
@@ -28,13 +28,15 @@
 
 ## 受け入れるリスク
 
+- 狙いは、AI がうっかり書き写したまま送ること。見張りを通らない手段（Edit／Write ツール、台本ファイル、PO の手作業）を使って意図して回り込む形は見分けない。
+
 - 「」の外にそのまま書き写した文面は止められない（便2 で範囲を広げるか、K3 の数を見て決める）。
 - main にすでにある書き写しに見える語句は書き換えない（足した行だけを見るので作業は止まらない）。
 - GitHub に残った閉じた PR の中身は対象外（PO 判断「2」）。
 - `gh api` で本文を付ける道と、取り込み操作に本文を付ける道は対象外（使うようになったら足す）。
 - 誤って止まる（商品名・一般語）。商品名の写しが古いと新商品名で止まる。週の点検で取り直す。
 - コミットの文面は照らさない（便2で検討）。コミットから本文が自動で付く `--fill` 系（`-f`・`--fill`・`--fill-first`・`--fill-verbose`）は照らせないので止める。
-- 「push」の字を含むだけのコマンドも git push と読み、止まる側に倒れる（直近 300 件の PR 本文で該当は 2 件）。
+- 字句として `git` のあとに `push` がある形と、`git`／`gh` を含むのに変数・展開（`$`・バッククォート・行末の `\`・波括弧展開）で字を隠せる形、命令の位置が `$` で始まる形は、push や gh かどうかを見分けずに止める。`git status $(pwd)` のようなふつうの使い方も止まる（止めすぎは受け入れる）。`git`／`gh` を含まない `$` の命令は通す。`sed -n` のように読むだけでも書き込み印に当たれば止まる（読むときは `cat` か `grep`）。
 - 決まった形以外の push と gh の本文は止まるので、作業の手間が増える（push は単独のコマンドで流す。本文は Write で作ったファイルを `--body-file <絶対パス>` で渡す）。
 - 台本ファイル（`bash script.sh`）の中から push する場合は照らさない。
 - 見張りを通らない手段（PO の手作業、見張りが読まない Edit／Write ツール、台本ファイルの中、別のプログラム）で書いた設定は見分けられない。具体的には、`alias`・`pushurl`・`pushInsteadOf`・`include`、追跡ブランチ（`refs/remotes`）を見張りの外で書き換えると、別名経由の push や、手で進めた追跡ブランチ分の差し引きを見分けられない。見張りを通る Bash で書き換える形と、`--local`／`--worktree` の設定に別名・pushurl・pushInsteadOf・include がある状態の決まった形の push は止める。global の `include` は止めない。

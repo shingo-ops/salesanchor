@@ -42,9 +42,13 @@ GH_OPS = {
     ("release", "create"): _REL, ("release", "edit"): _REL,
     ("repo", "edit"): ({"--description", "-d"}, set(), set()),
 }
+# 本文の印は持たないが、repo の外へ何かを送る操作 (添付ファイルなど)。見つけたら必ず止める
+GH_STOP = {("release", "upload")}
 GH_ACTIONS = {}
-for _g, _a in GH_OPS:
+for _g, _a in list(GH_OPS) + list(GH_STOP):
     GH_ACTIONS.setdefault(_g, set()).add(_a)
+# release create/edit の値を取る印。これ以外の印は値を取らないものとして数え、残りの位置引数 (タグ名以外 = 添付ファイル) は止める
+REL_VALUE_OPTS = {"--notes", "-n", "--notes-file", "-F", "--title", "-t", "--target", "--discussion-category", "--notes-start-tag"}
 PHRASE_RES = (re.compile(r"「([^「」\n]*)」"), re.compile(r"『([^『』\n]*)』"))
 EXPLAIN = ("仕入元の原文の書き写しは、公開の置き場へ送れません。"
            "該当の語句を消し、「形の説明」(例: 値段の行・在庫数の行・見出しの行) に書き換えてから、もう一度送ってください。"
@@ -109,7 +113,7 @@ def load_repos():
     for ln in _read_lines(os.path.join(table_dir(), "confidential-corpus.conf")):
         s = ln.strip()
         if s.startswith("repo:"):
-            repos.add(s[5:].strip())
+            repos.add(s[5:].strip().lower())
     return repos
 
 
@@ -202,18 +206,28 @@ SAFE_CHARS = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789
 SHELLS = {"sh", "bash", "zsh", "dash", "ksh", "eval", "source", "."}
 REF_RE = re.compile(r"HEAD|[A-Za-z0-9][A-Za-z0-9/._-]*")
 REDIR_TAIL_RE = re.compile(r"\s+(?:2>&1|>>?\s*/[A-Za-z0-9_@%+=:,./-]+)\s*$")
-GH_BAD_OPTS = {"-f", "--fill", "--fill-first", "--fill-verbose", "--editor", "-e", "--web", "-w", "--template", "-T", "--recover"}
+GH_BAD_OPTS = {"--notes-from-tag", "-f", "--fill", "--fill-first", "--fill-verbose", "--editor", "-e", "--web", "-w", "--template", "-T", "--recover"}
 HIST_MSG = ("送る途中の commit に書き写しがあります。新しい commit で消しても履歴に残って送られます。"
             "該当の commit を書き直すか、origin/main から作り直したブランチで送ってください。書き直しは Opus の指示を待ってください。")
 PUSH_CFG_RE = r"^(alias\.|remote\..*\.pushurl|url\..*\.pushinsteadof)"
-SCOPED_CFG_RE = r"^(alias\.|include\.|includeif\.|remote\..*\.pushurl|url\..*\.pushinsteadof)"  # --local / --worktree だけに使う
-DANGER_MSG = ("repo の設定 (別名・push 先・include) や追跡ブランチ (refs/remotes) を書き換える操作、"
+SCOPED_CFG_RE = (r"^(alias\.|include\.|includeif\.|remote\..*\.pushurl|url\..*\.pushinsteadof"
+                 r"|push\.followtags|push\.pushoption|remote\..*\.(push|mirror|tagopt))")  # --local / --worktree だけに使う
+DANGER_MSG = ("repo の設定 (別名・push 先・include・タグの送り方など) や追跡ブランチ (refs/remotes)・git replace・hooks を書き換える操作、"
               "git の送信系の命令 (send-pack・http-push) は、見張りの決まりの外なので止めます。必要なら Opus に相談してください")
+EXPAND_MSG = "git／gh の命令に変数や展開は使えません。値を書き出して単独で流してください"
 WRITE_MARK_RE = re.compile(r"(?:>|\b(?:tee|cp|mv|sed|perl|python3?|ruby|awk|dd|install|ln|node|truncate|rsync|ed)\b)")
-GIT_PATH_RE = re.compile(r"\.git(?:/[^\s'\"/;|&]+)*/(?:config(?:\.worktree)?|packed-refs)(?![\w.-])|\.git/refs/remotes|config\.worktree(?![\w.-])")
+GIT_PATH_RE = re.compile(r"\.git(?:/[^\s'\"/;|&]+)*/(?:config(?:\.worktree)?|packed-refs)(?![\w.-])|\.git/refs/(?:remotes|replace)|\.git/hooks(?![\w.-])|config\.worktree(?![\w.-])")
 SEND_RE = re.compile(r"\bgit\b[^;&|\n]*?\b(?:send-pack|http-push)\b|git-(?:send-pack|http-push)\b")
-INCLUDE_RE = re.compile(r"\bgit\b[^;&|\n]*?(?:\sconfig\s|\s-c\s)[^;&|\n]*?\binclude(?:if)?\.", re.I)
-REMOTES_RE = re.compile(r"\bgit\b[^;&|\n]*?\b(?:update-ref|fetch|symbolic-ref)\b[^;&|\n]*?refs/remotes")
+REMOTES_RE = re.compile(r"\bgit\b[^;&|\n]*?\b(?:update-ref|fetch|symbolic-ref)\b[^;&|\n]*?refs/(?:remotes|replace)")
+# 書き込むと push の中身や行き先が変わる鍵。include は読む形でも止める。それ以外は --get 系・--list の読むだけを通す
+CFG_INCLUDE_RE = re.compile(r"\binclude(?:if)?\.", re.I)
+CFG_KEY_RE = re.compile(r"\bremote\.[^\s=]*\.(?:url|pushurl|push|mirror|tagopt)\b|\bpush\.(?:followtags|pushoption)\b"
+                        r"|\burl\.[^\s=]*\.(?:insteadof|pushinsteadof)\b|\bcore\.hookspath\b", re.I)
+CFG_READ_RE = re.compile(r"\s(?:--get\S*|--list|-l)(?:\s|$)")
+GITGH_RE = re.compile(r"(?<![A-Za-z0-9_-])(?:git|gh)(?![A-Za-z0-9_-])")
+OP_TOK_RE = re.compile(r"^[;&|()<>]+$")
+WRAPPERS = {"env", "command", "exec", "time", "nohup", "sudo", "xargs", "builtin", "nice", "timeout", "stdbuf", "then", "do", "else", "if", "!"}
+GIT_OPT_ARG = {"-C", "-c", "--git-dir", "--work-tree", "--namespace", "--exec-path", "--super-prefix", "--config-env"}
 
 
 def _lex(cmd):
@@ -223,14 +237,91 @@ def _lex(cmd):
     return list(lex)
 
 
+def _try_lex(cmd):
+    try:
+        return _lex(cmd)
+    except ValueError:
+        return None
+
+
+def expansion(cmd, toks):
+    """git／gh が出るのに、変数・展開・行末の \\ で字を隠せる形 -> True。見分けず止める (止める側に倒す)。
+    生の文字と字句の両方に git／gh (G=git のような代入の右辺も含む) が出て、$・バッククォート・行末の \\ のどれかを含むとき。
+    ほかに、命令の位置の字句 (代入を外した最初の字句) が $ やバッククォートで始まるとき。"""
+    loose = cmd + "\n" + re.sub(r"[\\'\"]", "", cmd) + "\n" + " ".join(toks or [])
+    has_exp = "$" in cmd or "`" in cmd or "\\\n" in cmd or "\\\r\n" in cmd or re.search(r"\{[^{}\s]*,[^{}\s]*\}", cmd) is not None
+    if has_exp and GITGH_RE.search(loose):
+        return True
+    if toks:
+        at_cmd = True
+        for t in toks:
+            if OP_TOK_RE.match(t):
+                at_cmd = True
+                continue
+            if not at_cmd:
+                continue
+            if re.match(r"^[A-Za-z_][A-Za-z0-9_]*=", t) or t in WRAPPERS or t.startswith("-"):
+                continue
+            if t.startswith(("$", "`")):
+                return True
+            at_cmd = False
+    return False
+
+
+def git_subs(toks):
+    """字句から git の下位命令を取り出す -> [(下位命令, 後ろの字句)]。-C などの値を取る印は飛ばす。"""
+    out = []
+    for i, t in enumerate(toks):
+        if t.rsplit("/", 1)[-1] != "git":
+            continue
+        j = i + 1
+        while j < len(toks) and toks[j].startswith("-"):
+            j += 2 if toks[j] in GIT_OPT_ARG else 1
+        if j < len(toks):
+            rest = []
+            for x in toks[j + 1:]:
+                if OP_TOK_RE.match(x):
+                    break
+                rest.append(x)
+            out.append((toks[j], rest))
+    return out
+
+
+def config_write(loose):
+    """git config／git -c で、include か push の中身・行き先を変える鍵を書く形。"""
+    for seg in re.split(r"[;&|\n]", loose):
+        if not re.search(r"\bgit\b", seg) or not re.search(r"(?:\sconfig\b|\s-c\s)", seg + " "):
+            continue
+        if CFG_INCLUDE_RE.search(seg):
+            return True
+        if CFG_KEY_RE.search(seg) and not CFG_READ_RE.search(seg + " "):
+            return True
+    return False
+
+
 def danger(cmd):
-    """repo の設定・追跡ブランチ・送信系の命令を、見張りを通らずに書き換える/使う形 -> 理由 (無ければ None)。
+    """repo の設定・追跡ブランチ・送信系の命令・展開で隠す形を、見張りを通らずに書き換える/使う形 -> 理由 (無ければ None)。
     生の文字と、引用符と \\ を外した文字の両方で探す。"""
+    toks = _try_lex(cmd)
+    if expansion(cmd, toks):
+        return EXPAND_MSG
     loose = cmd + "\n" + re.sub(r"[\\'\"]", "", cmd)
-    if SEND_RE.search(loose) or INCLUDE_RE.search(loose) or REMOTES_RE.search(loose):
+    if SEND_RE.search(loose) or REMOTES_RE.search(loose) or config_write(loose):
         return DANGER_MSG
     if GIT_PATH_RE.search(loose) and WRITE_MARK_RE.search(loose):
         return DANGER_MSG
+    if toks is None or any(t.rsplit("/", 1)[-1] in SHELLS for t in toks):
+        # 字句に分けられない・sh -c の中身は読まないので、生の文字で探す
+        if re.search(r"\bgit\b[^;&|\n]*?\breplace\b|\bgit\b[^;&|\n]*?\bremote\b[^;&|\n]*?\b(?:set-url|add)\b", loose):
+            return DANGER_MSG
+    else:
+        for sub, rest in git_subs(toks):
+            if sub == "replace":
+                return DANGER_MSG
+            if sub == "remote":
+                first = next((x for x in rest if not x.startswith("-")), "")
+                if first in ("set-url", "add"):
+                    return DANGER_MSG
     return None
 
 
@@ -321,18 +412,27 @@ def strict_words(cmd):
 
 def git(cwd, *args):
     env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
-    return subprocess.run(["git", "-C", cwd] + list(args), capture_output=True, text=True, encoding="utf-8", errors="replace", env=env)
+    return subprocess.run(["git", "--no-replace-objects", "-C", cwd] + list(args), capture_output=True, text=True, encoding="utf-8", errors="replace", env=env)
+
+
+def norm_slug(url):
+    """URL の書き方 (ssh:// git@ https://・大文字・末尾の / と .git) によらず、同じ owner/name にそろえる。"""
+    url = url.strip().lower()
+    while url.endswith("/"):
+        url = url[:-1]
+    if url.endswith(".git"):
+        url = url[:-4]
+    while url.endswith("/"):
+        url = url[:-1]
+    parts = [x for x in re.split(r"[/:]", url) if x]
+    return "/".join(parts[-2:]) if len(parts) >= 2 else None
 
 
 def repo_slug(cwd):
     r = git(cwd, "remote", "get-url", "origin")
     if r.returncode != 0:
         return None
-    url = r.stdout.strip()
-    if url.endswith(".git"):
-        url = url[:-4]
-    parts = [x for x in re.split(r"[/:]", url) if x]
-    return "/".join(parts[-2:]) if len(parts) >= 2 else None
+    return norm_slug(r.stdout)
 
 
 def commit_list(top, sha, excludes):
@@ -350,7 +450,7 @@ def added_lines(top, commits):
     if not commits:
         return []
     r = subprocess.run(
-        ["git", "-C", top, "-c", "core.quotePath=false", "diff-tree", "--stdin", "-p", "--cc", "--root", "-r", "-M",
+        ["git", "--no-replace-objects", "-C", top, "-c", "core.quotePath=false", "diff-tree", "--stdin", "-p", "--cc", "--root", "-r", "-M",
          "--text", "--no-textconv", "--no-ext-diff", "--ignore-submodules=none", "-U0",
          "--src-prefix=a/", "--dst-prefix=b/", "--no-relative", "--no-color"],
         input="\n".join(commits) + "\n", capture_output=True, text=True, encoding="utf-8", errors="replace",
@@ -452,6 +552,9 @@ def check_push(words, repos, matched):
         c = git(top, "config", scope, "--get-regexp", SCOPED_CFG_RE)
         if c.returncode != 1:
             raise Block("この repo の設定 (%s) に別名・push 先の差し替え・include があります" % scope)
+    rp = git(top, "for-each-ref", "--count=1", "--format=%(refname)", "refs/replace")
+    if rp.returncode != 0 or rp.stdout.strip():
+        raise Block("この repo には git replace の置き換え (refs/replace) があります")
     slug = repo_slug(top)
     if slug is None or slug not in repos:
         return []  # 表に無い repo の push は照らさずに通す
@@ -486,10 +589,11 @@ def read_body_file(p):
 def check_gh(words):
     """本文・題名・説明の印は、gh の操作ごとの表 (GH_OPS) で、位置や前の印に関係なく字句のどこにあっても照らす。"""
     v, raws = [w[0] for w in words], [w[1] for w in words]
-    if len(v) < 3 or v[0] != "gh" or (v[1], v[2]) not in GH_OPS:
+    if len(v) < 3 or v[0] != "gh" or (v[1], v[2]) not in GH_OPS:  # release upload も表に無いので止まる
         raise Block(GH_MSG)  # gh gist など、表に無い操作は止める
     B_STR, B_FILE, B_TITLE = GH_OPS[(v[1], v[2])]
     body, titles, i = None, [], 3
+    positional = 0
     while i < len(v):
         t = v[i]
         key, eq, val = t.partition("=") if t.startswith("--") else (t, "", "")
@@ -511,6 +615,13 @@ def check_gh(words):
             continue
         if re.fullmatch(r"-[^-].+", t):
             raise Block(GH_MSG)  # 短い指定の束ね書きは読み分けない
+        if v[1] == "release":
+            if t.startswith("-"):
+                i += 2 if (t in REL_VALUE_OPTS and i + 1 < len(v)) else 1
+                continue
+            positional += 1
+            if positional > 1:
+                raise Block(GH_MSG)  # タグ名のほかの位置引数 = 添付ファイル
         i += 1
     out = [("題名", n + 1, x) for n, x in enumerate(titles)]
     if body is None:
