@@ -56,10 +56,10 @@ _consent_allows() {
   [ "$(printf '%s' "$INPUT" | python3 "$CONSENT_CHECK" 2>/dev/null)" = "allow" ]
 }
 
-# 偽造を防ぐ見張りが止めたときの記録: consent_guard_blocked（どの条件か・cmd_head）を1行追記
+# 偽造を防ぐ見張りが止めたときの記録: consent_guard_blocked（どの条件か・kind・cmd_head・cmd_sha・cmd_len）を1行追記
 _consent_guard_log() {
-  printf '%s' "${INPUT:-}" | CG_COND="$1" python3 -c '
-import sys, os, re, json, datetime
+  printf '%s' "${INPUT:-}" | CG_COND="$1" CG_KIND="${2:-write}" python3 -c '
+import sys, os, re, json, datetime, hashlib
 try:
     pats = [
         re.compile(r"(?i)(token|secret|password|passwd|api_key|apikey)[A-Za-z_]*\s*[=:]\s*\S+"),
@@ -82,7 +82,10 @@ try:
         "type": "consent_guard_blocked",
         "hook": "agent-danger-hook",
         "condition": os.environ.get("CG_COND", ""),
+        "kind": os.environ.get("CG_KIND", "write"),
         "cmd_head": mask(str(cmd))[:120],
+        "cmd_sha": hashlib.sha256(str(cmd).encode("utf-8", "replace")).hexdigest()[:16],
+        "cmd_len": len(str(cmd)),
     }
     with open(os.path.expanduser("~/.claude/logs/agent-events.jsonl"), "a", encoding="utf-8") as f:
         f.write(json.dumps(rec, ensure_ascii=False) + "\n")
@@ -239,23 +242,111 @@ fi
 
 # ── 会話記録・同意の台帳・端末への入力注入の見張り（ADR-1033 §4-5） ─────────────────
 # AI が自分で同意を作れないように、次のどれかがコマンド（サニタイズ前）にあれば止める。
-CONSENT_GUARD=$(python3 -c "
-import sys
+# 出力は "<condition> <kind>" の2語（kind: inject / write / read。ADR-1033 改訂1・design §13-3）。
+# 止めるかどうかは CONSENT_GUARD が空かどうかだけで決める（kind は記録用）。
+# （macOS の bash 3.2 は $( ) の中の heredoc を正しく読めないので、先に変数へ入れる）
+IFS= read -r -d '' CONSENT_GUARD_PY <<'PYEOF'
+import sys, re
 cmd = sys.argv[1]
+cond = None
 if '.claude/projects/' in cmd and '.jsonl' in cmd:
-    print('transcript')
+    cond = 'transcript'
 elif 'consent-used' in cmd:
-    print('consent-used')
+    cond = 'consent-used'
 elif 'tmux' in cmd and any(w in cmd for w in ('send-keys', 'paste-buffer', 'load-buffer', 'set-buffer')):
-    print('tmux-inject')
+    cond = 'tmux-inject'
 elif 'osascript' in cmd and 'keystroke' in cmd:
-    print('osascript-keystroke')
+    cond = 'osascript-keystroke'
 elif ('127.0.0.1' in cmd or 'localhost' in cmd) and '/chat/queue' in cmd:
-    print('chat-queue')
-" "$COMMAND" 2>/dev/null)
+    cond = 'chat-queue'
+
+# 書き込みの形（design §13-3(a) の 1〜4）。迷う形は True（write 側）に倒す。
+# consent-audit.py の bash_write_form と同じ規則。変えるときは両方。
+NEEDLES = ('.claude/projects/', 'consent-used')
+VERBS = r'(?<![\w.-])(?:cp|mv|dd|truncate|rm|ln|install|rsync|touch|chmod)(?![\w-])'
+INTERP = r'(?<![\w.-])(?:python3?|node|perl|ruby)(?![\w-])'
+WCALLS = ('write(', 'write_text', 'write_bytes', 'writeFile', 'appendFile', 'os.replace', 'os.rename', 'shutil.')
+
+def redirect_targets(c):
+    out = []
+    for m in re.finditer(r'>\|?>?\s*([^\s|;&<>]*)', c):
+        out.append(m.group(1))
+    for m in re.finditer(r'(?<![\w.-])tee(?![\w-])([^|;&\n]*)', c):
+        out.extend(m.group(1).split())
+    return out
+
+MODE_RE = re.compile(r'[\'"]([rwxabt+]{1,8})[\'"]')
+
+def open_write_mode(c):
+    # open( と .open( の直後 200字の中に、w・a・x・+ を含むモード文字列があれば True（戻りながら探す正規表現は使わない）
+    pos = c.find('open(')
+    while pos != -1:
+        win = c[pos + 5: pos + 205]
+        for m in MODE_RE.finditer(win):
+            s = m.group(1)
+            if 'w' in s or 'a' in s or 'x' in s or '+' in s:
+                return True
+        pos = c.find('open(', pos + 5)
+    return False
+
+def write_words(c, need):
+    has = any(n in c for n in NEEDLES)
+    for t in redirect_targets(c):
+        if need:
+            if any(n in t for n in NEEDLES):
+                return True
+        elif t and not t.startswith('&') and t != '/dev/null':
+            return True
+    if need and not has:
+        return False
+    if re.search(VERBS, c):
+        return True
+    if re.search(r'(?<![\w.-])(?:sed|perl)(?![\w-])[^|;&\n]*\s(?:-[A-Za-z]*i|--in-place)', c):
+        return True
+    if re.search(INTERP, c):
+        if any(w in c for w in WCALLS):
+            return True
+        if open_write_mode(c):
+            return True
+    return False
+
+def bash_write_form(c):
+    try:
+        if len(c) > 4000:
+            return True  # 長いコマンドは調べずに write（判定の時間切れを防ぐ。design §13-3(a)）
+        if write_words(c, True):
+            return True
+        if re.search(r'(?<![\w.-])(?:cd|pushd)(?![\w-])[^|;&\n]*\.claude/projects/', c):
+            return write_words(c, False)
+        return False
+    except Exception:
+        return True
+
+if cond:
+    if cond in ('transcript', 'consent-used'):
+        # 判定には1秒の時間の上限を付け、超えたら write（cond はこの前に決まっている）
+        try:
+            import signal
+            def _timeout(signum, frame):
+                raise TimeoutError()
+            signal.signal(signal.SIGALRM, _timeout)
+            signal.alarm(1)
+            kind = 'write' if bash_write_form(cmd) else 'read'
+            signal.alarm(0)
+        except BaseException:
+            kind = 'write'
+    else:
+        kind = 'inject'
+    print(cond + ' ' + kind)
+PYEOF
+if [ -n "$CONSENT_GUARD_PY" ]; then
+  CONSENT_GUARD=$(python3 -c "$CONSENT_GUARD_PY" "$COMMAND" 2>/dev/null)
+else
+  CONSENT_GUARD="transcript write"  # 判定の python が読めていないときは止める側に倒す
+fi
 
 if [ -n "$CONSENT_GUARD" ]; then
-  _consent_guard_log "$CONSENT_GUARD"
+  _consent_guard_log "${CONSENT_GUARD%% *}" "${CONSENT_GUARD#* }"
   echo "🚫 BLOCKED [consent-guard]: 会話記録・同意の台帳を Bash で触ることはできません。読むだけなら Read/Grep ツールを使ってください。突き合わせと K0 の目安は \`python3 scripts/dev/consent-audit.py\` を使ってください" >&2
   exit 2
 fi
