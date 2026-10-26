@@ -1,5 +1,6 @@
 @import "./tokens.css";
 @import "./components/field-size.css";
+@import "./components/sr-only.css";
 
 /* ============================================================
    カラースキーム変数（ライト/ダークモード自動切替）

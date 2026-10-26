@@ -26,8 +26,8 @@ const MOBILE_WIDTHS = [360, 390] as const;
 const MIN_TAP_PX = 44;
 /** B5: パネルで一度に見える行数の下限（design.md ③） */
 const MIN_VISIBLE_ROWS = 8;
-/** 一覧の先頭カードの y の上限（design.md ③・便3 の値を維持） */
-const MAX_TOP_Y = 192;
+/** 一覧の先頭カードの y の上限（design.md ③・便4で128に更新。docs/handoff/viewer-header-remove/design.md 4-4） */
+const MAX_TOP_Y = 128;
 
 // eslint-disable-next-line local/no-japanese-literal -- tests-e2e は ESLint 対象外。DB の series 名（画面文言ではない）に見せかけた fixture 専用の名前
 const SERIES_NAMES = Array.from({ length: 15 }, (_, i) => `しりーず${String(i + 1).padStart(2, "0")}`);
@@ -330,7 +330,7 @@ for (const width of MOBILE_WIDTHS) {
       await expect(openPanel(page)).toHaveCount(0);
     });
 
-    test("B11: 一覧の先頭カードの y が192px以内（便3の基準を保つ）", async ({ page }) => {
+    test("B11: 一覧の先頭カードの y が上限以内（MAX_TOP_Y。便4で128へ更新）", async ({ page }) => {
       await gotoViewer(page, { width, height });
       const y = await firstCardY(page);
       expect(y).toBeLessThanOrEqual(MAX_TOP_Y);

@@ -1,0 +1,19 @@
+/**
+ * .sr-only — スクリーンリーダーのみに見せる（視覚的には隠す）。
+ * 元の置き場: frontend/src/pages-layout.css（アプリ本体のレイアウト用CSS）。
+ * 閲覧ページ（frontend/src/pages/viewer/）は本体CSSを読まないため、両方から使える
+ * 共通の置き場（frontend/src/components/）へ移した（docs/handoff/viewer-header-remove/design.md 4-2）。
+ * 定義の中身は一字一句変えていない。SSOT（定義は src 全体でここ1か所だけ）を
+ * frontend/src/components/srOnlySsot.test.ts で固定している。
+ */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}

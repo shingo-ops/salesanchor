@@ -36,6 +36,7 @@ const EXCLUDE_DIRS = new Set([
   'super-admin', // 管理者専用サブナビ体系、main sidebar 対象外
   'admin',       // テナント管理ページ群、main sidebar 対象外
   'register',    // 公開登録フォーム（認証不要・ナビ外ページ）
+  'viewer',      // 閲覧ページ（/viewer/。別アプリ・サイドバー無し・辞書に nav 名前空間が無く本規則が成立しない。ADR-1019）
 ]);
 
 // h1/h2 内で nav.* 以外の xxx.title キーを使っているパターン
