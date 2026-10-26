@@ -16,8 +16,8 @@
 1. 手元の Mac の ~/.claude/settings.json の PreToolUse に、matcher `Write|Edit|MultiEdit|NotebookEdit|EnterWorktree|ExitWorktree|Bash|Monitor` の見張りを 1 つ足す。
 2. 入力に `agent_id` がある（担当・fork・teammate の中の呼び出し）とき、Write・Edit・MultiEdit・NotebookEdit・EnterWorktree・ExitWorktree を止める。Bash・Monitor の命令では次を止める（design.md §5-3）。
    - git と gh の、「読むだけの一覧」（表A・表B）に無い使い方
-   - 台本の実行（表C）。台本の名前の一覧は持たず、名前によらず止める。`source`・`.`・`{ …; }` の囲み・パイプや `<`・`<<<`・`>(…)` で解釈系へ流し込む形・`-c` や eval に `$(…)` でファイルの中身を渡す形・find -exec・xargs の中・pytest や docker などの試験や入れ物の道具も止める。一時の場所（/tmp・/private/tmp）の台本だけは通す（審査役の調べもののため）
-   - git の `-c`（決まった値を除く）・`--config-env`・`GIT_` の環境変数（別の命令を動かせるため）
+   - 台本の実行（表C）。台本の名前の一覧は持たず、名前によらず止める。`source`・`.`・`{ …; }` の囲み・Mac にある別のシェル（ksh・csh・tcsh など）の `-c` の中身・script や watch のように後ろの命令を動かす道具・パイプや `<`・`<<<`・`>(…)` で解釈系へ流し込む形・`-c` や eval に `$(…)` でファイルの中身を渡す形・find -exec・xargs の中・pytest や docker などの試験や入れ物の道具も止める。一時の場所（/tmp・/private/tmp）の台本だけは通す（審査役の調べもののため）
+   - git の `-c`（決まった値を除く）・`--config-env`・`GIT_` の環境変数と、PAGER・EDITOR・BROWSER などの代入（cat・less・more を除く。別の命令を動かせるため）
    - 別の AI（claude・codex・gemini とそのパッケージ。別の AI を起動できる ollama は一覧を見る使い方だけ通す）の起動（表D）
    - sudo・su・doas と、Mac の鍵の保管庫を読む security。gh から鍵を表示する `--show-token`
 3. `agent_id` が無い（Opus 本体）ときは何もしない。読むだけの命令は担当でも止めない（判定の例の正本は cases.md）。手元の generator も止まるので、generator はクラウド専用になる。担当の gh pr review も止まるが、マージの関所は VERDICT の行の記録で回る。

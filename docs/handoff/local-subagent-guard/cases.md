@@ -2,7 +2,7 @@
 
 - 1 行 1 例。`\n` は改行 1 文字を表す（それ以外の `\` はそのまま）。
 - 「止める例」は担当（agent_id あり）の Bash・Monitor の command で、止める（exit 2）。「通す例」は exit 0。
-- 設計者の試作（/tmp/CC報告ファイル/local-subagent-guard/proto-v6-judge.py）に当てた結果: 止める例 232・通す例 202、誤り 0（proto-v6-out.txt）。
+- 設計者の試作（/tmp/CC報告ファイル/local-subagent-guard/proto-v7-judge.py）に当てた結果: 止める例 261・通す例 216、誤り 0（proto-v7-out.txt）。
 - test_guard.sh はこの全例を入れる。例を足すときはこの文書と試験の両方に足す。
 
 ## 止める例
@@ -240,6 +240,35 @@ python3 "$S/probe.py"
 ollama launch claude
 ollama launch opencode
 ollama run llama3
+ksh -c 'git push'
+/bin/ksh -c 'git push origin HEAD'
+fish -c 'git push'
+csh -c 'git push'
+tcsh -c './scripts/x.sh'
+csh scripts/x.csh
+tcsh <<EOF\ngit push\nEOF
+csh <<EOF\ngit push\nEOF
+echo git push | csh
+echo 'exec git push' | tclsh
+expect -c 'spawn git push; expect eof'
+swift scripts/x.swift
+script -q /dev/null ./scripts/x.sh
+lockf /tmp/l python3 scripts/x.py
+taskpolicy -b python3 scripts/x.py
+sandbox-exec -n no-network python3 scripts/x.py
+xcrun python3 scripts/x.py
+coproc ./scripts/x.sh
+parallel ::: 'git push'
+watch 'git push'
+watch -n 1 'git push'
+git branch -uorigin/main
+git --exec-path=/tmp/x log
+git fsck --lost-found
+PAGER='./scripts/x.sh' git log
+GH_PAGER=./scripts/x.sh gh pr view 1
+EDITOR=./scripts/x.sh git log
+BROWSER=./scripts/x.sh gh pr view 1 --web
+export PAGER=./scripts/x.sh
 ```
 
 ## 通す例
@@ -447,4 +476,18 @@ ollama list
 ollama show llama3
 ollama --version
 bash +o pipefail -c 'git log -1'
+~/.npm-global/bin/gemini --version
+/opt/homebrew/bin/ollama list
+csh -c 'ls'
+fish -c 'git log | head'
+zsh -lc 'git status'
+watch -n 1 git status
+PAGER=cat git log -1
+PAGER='less -R' git log -1
+git branch -vv
+git branch -avv
+git tag -n5
+swift --version
+gh pr view 1 --web
+git fsck
 ```
