@@ -29,7 +29,7 @@ print((f(sys.argv[1])-f(sys.argv[2])).days)' "$1" "$2"
 K1_TOTAL=0
 K1_LIST=()
 K1_MISS=()
-disp() { printf '%s' "${1/#$HOME_DIR/\~}"; }
+disp() { local t='~'; printf '%s' "${1/#$HOME_DIR/$t}"; }
 count_file() {
   local f="$1"
   K1_TOTAL=$((K1_TOTAL + $(wc -l < "$f")))

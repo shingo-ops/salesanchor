@@ -132,3 +132,52 @@ rc=0
 ## 補足
 - 実装の途中で、`~` の置き換えがシェルに展開され K1_FILES が `/root/...` になる不具合を見つけ、1-1 の `disp` と 1-2 の T14 の期待（引用符付き）を直してから上の出力を取り直した。期待の値（カードの値）は変えていない。
 - 本物の ~/.claude を使う実行（32-6 (b)）はクラウドでは行っていない（マージ後に Opus）。
+
+## 直し1
+
+`bash --version` 1行目: `GNU bash, version 5.2.21(1)-release (x86_64-pc-linux-gnu)`
+
+`bash scripts/dev/test_doc_entry_weekly_check.sh` の全出力（rc 含む）:
+
+```
+PASS T1 K1=24
+PASS T1 b.md を数えない
+PASS T1 K2_COPY=SAME
+PASS T1 K9=skipped
+PASS T1 DOC_INDEX_CI=success
+PASS T1 K12_LAST
+PASS T1 K12_DUE=no
+PASS T1 K12_OPEN_PR=none
+PASS T1 PEER_LAST
+PASS T1 RESULT=OK
+PASS T1 rc=0
+PASS T2 K1=214
+PASS T2 RESULT=NG K1>200
+PASS T2 rc=1
+PASS T3 K2_COPY=DIFF
+PASS T3 RESULT=NG
+PASS T4 K12_DUE=yes
+PASS T4 RESULT=OK
+PASS T5 K12_LAST=2026-11-01
+PASS T5 K12_DUE=yes
+PASS T6 K12_DUE=no
+PASS T7 DOC_INDEX_CI=failure
+PASS T7 RESULT=NG
+PASS T8 DOC_INDEX_CI=pending
+PASS T8 RESULT=OK
+PASS T9 PEER_LAST=2027-01-24
+PASS T9 RESULT=NG
+PASS T10 RESULT=OK
+PASS T11 PEER_LAST=2027-01-24
+PASS T11 RESULT=NG
+PASS T12 K12_OPEN_PR=URL
+PASS T12 RESULT=OK
+PASS T13 K12_OPEN_PR=none
+PASS T14 K1_MISSING
+PASS T14 RESULT=NG
+PASS T15 DOC_INDEX_CI=unreadable
+PASS T15 K12_OPEN_PR=unreadable
+PASS T15 RESULT=NG
+PASS 38 / FAIL 0
+rc=0
+```
