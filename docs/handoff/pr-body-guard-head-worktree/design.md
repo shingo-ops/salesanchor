@@ -17,6 +17,7 @@
   2. `git -C "$CWD" worktree list --porcelain` から `branch refs/heads/<b>` の行を持つ worktree を探す。**ちょうど 1 つ**見つかり、ディレクトリがあるときだけ、そこを検証の場所にする。標準エラーに `pr-body-guard: 作業場所を <ブランチ> の worktree <パス> にしました` を 1 行出す。
   3. 見つからない・2 つ以上・引けない・時間切れのときは、何もしない（変更前と同じ動き = 本店で検証して、足りなければ止まる）。
 - 止める・通すの判定（validate-pr-body.sh の中身）は変えない。場所が正しくなるだけ。
+- 本文の読み出し（extract-pr-body.py の `--body-file` 相対パス解決）は、worktree に切り替える**前**の場所（`BODY_CWD`）で行う。gh は命令を流した場所でファイルを読むため、検証も同じファイルを読む。（2026-10-27 審査 REVISE on 9c7b05adc の指摘: 相対パスだと worktree 側の別ファイルを検証して素通りする）
 
 ## 4. 代替案と選択理由
 - A（採用）: pr-body-guard が `--head`／PR 番号から worktree を探す。理由: 検証は「そのブランチの中身」で行うのが本来の意味で、cd で示すのと同じ場所になる。守りは弱まらない（見つからなければ今までどおり止まる側）。
@@ -37,6 +38,7 @@
 | K3 cd があればそちらが勝つ | `cd <パス> && gh pr create --head <b>` で「作業場所を」の行が出ない |
 | K4 既存の試験が全部通る | `bash scripts/dev/test-agent-hooks.sh` が FAIL 0 |
 | K5 本物で両方の見張りを通る | 入れ替え後、本店の会話から便9の `gh pr create --head release/loading-english-literal --body-file <絶対パス>` を単独で流し、PR ができる |
+| K7 本文は元の場所で読む | 同じ試験で、worktree にだけ `rel.md` を置き cwd を本体にして `--body-file rel.md` を流すと「--body-file を読み込めない」で止まる |
 | K6 confidential-quote-guard は不変 | 入れ替え前後で `shasum ~/.claude/scripts/confidential-quote-guard/guard.py` が同じ |
 
 ## 7. 進め方

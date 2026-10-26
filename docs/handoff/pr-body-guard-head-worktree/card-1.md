@@ -13,6 +13,7 @@
 - ブランチ名: `python3 -c` で COMMAND を `shlex.split` し（失敗したら空）、`gh` `pr` `create` の並びのあとの `--head <b>`／`--head=<b>`／`-H <b>` を取る。`gh` `pr` `edit` の並びなら、`edit` の次の `-` で始まらない語を PR の指定とし、`gh pr view <指定> --json headRefName -q .headRefName`（命令文に `-R`/`--repo` の値があれば `-R <値>` を足す）を python の `subprocess.run(..., timeout=10)` で引く。失敗・時間切れ・空は「ブランチなし」。`gh` と `pr` のあいだの `-R <値>`／`--repo <値>` は飛ばして並びを見る。
 - worktree: ブランチがあれば `git -C "$CWD" worktree list --porcelain` を読み、`worktree <パス>` の組のうち `branch refs/heads/<b>` と完全一致する組を集める。ちょうど 1 つでディレクトリが在るときだけ `CWD="<パス>"` にし、標準エラーへ `pr-body-guard: 作業場所を <b> の worktree <パス> にしました` を出す。それ以外は何もしない。
 - `set -euo pipefail` の下で、このブロックの失敗がフック全体を落とさないこと（`|| true` 等）。落ちたときは何もしない側。
+- 【改訂 2026-10-27 審査 REVISE on 9c7b05adc】本文の読み出しは元の場所のまま: 追加ブロックの**直前**に `BODY_CWD="$CWD"` を置き、`extract-pr-body.py` に渡す引数を `"$CWD"` から `"$BODY_CWD"` に変える（いまの `:219` の 1 行だけ）。理由: gh は命令を流した場所（本店）で `--body-file` の相対パスを読むので、検証も同じファイルを読まないと、worktree 側の別の本文を検証して素通りする。cd があるときは `BODY_CWD` と `CWD` が同じなので今までと変わらない。validate-pr-body.sh と `cd "$CWD"`（いまの `:189-190`・`:238-240`）は worktree 側のまま。
 
 ### 2-2. test-agent-hooks.sh
 - 既存の試験の作法（`t` 行・`run_hook_err` など）に合わせて、K1〜K3 の 3 件を足す（design.md §6）。
@@ -21,6 +22,7 @@
   - K2: `--head no-such-branch` では含まれない。
   - K3: `cd <本体の絶対パス> && gh pr create --head release/t-headwt ...` では含まれない。
   - 判定は標準エラーの行だけで行い、終了コードは問わない（本文の検証の合否は今回の対象外）。
+  - K7（改訂で追加）: worktree にだけ `rel.md` を置き、本体には置かない。cwd を本体にして `gh pr create --head release/t-headwt --title t --body-file rel.md` を渡すと、標準エラーに「--body-file を読み込めない」が含まれる（本文を元の場所で読んでいる証拠）。
   - `gh pr edit` の経路はネットワークが要るので試験にしない（本物の K5 で確かめる）。
 
 ## 3. 確かめること（報告に生の結果を書く）
