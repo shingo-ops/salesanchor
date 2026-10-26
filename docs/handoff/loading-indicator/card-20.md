@@ -28,10 +28,12 @@
 (2) 画面
 - frontend/src/components/DesktopShell.tsx:222-223 `<div className="sidebar-loading-dot">...</div>` → `<div className="sidebar-loading-dot"><LoadingBlock size="sm" inline /></div>`（判断4。LoadingBlock は "./loading" の barrel から import）
 - frontend/src/pages/inbox/InboxKartePanel.tsx:770-772 `<span className="right-panel-value">...</span>` → `<LoadingBlock size="sm" inline />`（判断3。外側の div.karte-performance-section と div.right-panel-row は残す。LoadingBlock は既に L15 で import 済み）
-(3) 見本ページ frontend/src/pages/design-preview/
-- ButtonSection.tsx:53・71・73「保存中...」→ `t("common.saving")`、:74「読み込み中」→ `t("common.loading")`
-- BadgeSection.tsx:37「処理中」→ 辞書の値がちょうど「処理中」のキーを ja.json で探す。common.* にあればそれを使う。無ければ common.processing（ja「処理中」／en「Processing」）を ja.json・en.json の両方に同じ位置で足す。common.* 以外にしか無いときも common.processing を足す（画面固有のキーを見本で使い回さない）。使ったキーを報告する
-- 各ファイルに useTranslation が無ければ、そのファイルの既存の import の書き方に合わせて足す
+(3) 見本ページ frontend/src/pages/design-preview/sections/ButtonSection.tsx（1回目の BLOCKED を受けて直した。判断7）
+- :73 `<Button variant="primary" loading>保存中...</Button>` → children を `{t("common.saving")}`
+- :74 `<Button variant="secondary" loading>読み込み中</Button>` → children を `{t("common.loading")}`
+- このファイルには useTranslation が無い。`import { useTranslation } from "react-i18next";` を既存の import の並びに足し、コンポーネントの先頭で `const { t } = useTranslation();` を足す
+- 同じファイルの :53 の説明文・:71 の行ラベルの「読み込み中」、BadgeSection.tsx の「処理中」、ほかの日本語は変えない（判断7）
+- 判断7（Opus、1回目の BLOCKED のあと）: 見本ページは eslint.config.js:246-252 で「日本語表記を許可」と決めた例外のページで、日本語は 407 行ある。事前調査の5か所は読み込みに関わる言葉だけを数えたもので、ページ全体の数ではなかった。直すのは、読み込み中の見本として金型 Button の loading に渡している言葉2か所だけにする。BadgeSection の「処理中」は状態バッジの見本（対応済み・保留中・要対応・未分類と並ぶ）で読み込みの表示ではないため、外す。辞書のキーは足さない
 
 ## 2. 試験
 - frontend/src で、上の部品・画面の試験と stories のうち、'Loading'・'Saving'・'Saved'・'Close'・'Done'・'...'・「処理中」の文字を期待しているものを git grep で探し、すべて列挙する
@@ -43,13 +45,13 @@
 ## 3. 実測（生出力は /tmp/CC報告ファイル/loading-english-literal/impl/。無ければ作る。主要な結果は報告に書く）
 - 直書き 0: `git grep -nE "\"(Loading|Saving|Saved|Close|Done)\"|'(Loading|Saving|Saved|Close|Done)'" -- frontend/src/components/loading` が試験・stories 以外で 0
 - 画面の「...」0: DesktopShell.tsx と InboxKartePanel.tsx の読み込み中の枝に `...` の文字が無い
-- 見本ページの日本語 0: `git grep -nP "[\x{3040}-\x{30ff}\x{4e00}-\x{9fff}]" -- frontend/src/pages/design-preview` でコメント以外 0
-- 辞書: ja.json・en.json のキー数が同じ（足したら両方 +1）
+- 見本ページ: `git grep -nE "loading>(保存中\.\.\.|読み込み中)</Button>" -- frontend/src/pages/design-preview` が 0
+- 辞書: ja.json・en.json は変えない（git diff に出ない）
 
 ## 4. 触らない範囲
 - loading/Drawer と components/Drawer の重複（別件。loading/Drawer は使用 0件のまま残す）
 - 検査スクリプト（判断6）、CSS（.sidebar-loading-dot の規則も消さない）、金型の props・見た目
-- 上の表に無いファイル。辞書は common.processing を足す場合だけ
+- 上の表に無いファイル。辞書（ja.json・en.json）
 
 ## 5. 文書
 - docs/handoff/loading-indicator/design.md の 3-7 残件に、手元で足した「便9（card-20）」の行がある。中身を変えない
@@ -64,7 +66,7 @@
 | 辞書 | `node scripts/check-i18n-missing-keys.js` exit 0、ja/en キー数一致 |
 | 試験 | `npx vitest run --project unit src/components src/pages/inbox src/pages/design-preview` pass（§2 の修正込み） |
 | UI ガバナンス | `BASE_SHA=8cf4c84d6 HEAD_SHA=HEAD node scripts/check-ui-governance.js` exit 0 |
-| 範囲 | `git diff origin/main...HEAD --name-only` が §1 の表のファイル・§2 で直した試験・（足した場合）ja.json/en.json・design.md・card-20.md・台帳だけ |
+| 範囲 | `git diff origin/main...HEAD --name-only` が §1 のファイル・§2 で直した試験・design.md・card-20.md・台帳だけ |
 | 本番（手元で確かめる） | 合流と本番反映のあと、配信 JS で左のメニューとお客さまの情報の欄の読み込み中の枝が sa-loading-block の呼び出しになっている |
 
 ## 7. 想定分岐
@@ -72,4 +74,4 @@
 - LoadingBlock を DesktopShell の barrel から import すると循環 import の警告が出る → `./loading/LoadingBlock` から直接 import する。それでも出るなら BLOCKED:
 - §2 で英語を期待する試験が 15 ファイルを超える → 直さずに一覧を NEEDS_DECISION:
 - UI ガバナンス検査が赤 → どの種別が増えたかを報告して BLOCKED:（ui-allow で逃げない）
-- 「処理中」の値のキーが common に2つ以上ある → 一覧を NEEDS_DECISION:
+- §1 の行番号・中身が実物とずれている → 中身で探して一致すればその行を直し、ずれを報告する。中身が見つからなければ BLOCKED:
