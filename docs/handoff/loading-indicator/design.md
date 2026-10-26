@@ -228,6 +228,7 @@ PO の選択: 押すと丸と元の言葉が並ぶ（例: 丸＋「保存」）�
 - ChannelsPage.tsx:627・:643 の ConfirmModal の confirmLabel にある prop の三項は、検査の対象外のまま残っている。
   - 便8a（card-17）で ConfirmModal に confirmLoading を足し、ChannelsPage の2か所を直した
 - 参照0の読み込み系 45 キー（keys-loadingish-zero-ref-all.tsv）は、便7b の対象外のまま辞書に残っている。
+  - 便8b（card-18）で 32 キーを消した。残す15キーと理由は card-18 §1(2)。docs/ の中の過去の記録の当たりは参照に数えない
 - 検査が取りこぼすまれな形が4つある: ①同じ行の JSX テキストに `'` が2つある形、②テンプレートの入れ子、③t の第2引数に書く形、④i18n.t の呼び出し。
 
 ## 3-8 外部・過去事例の参照と我々への応用

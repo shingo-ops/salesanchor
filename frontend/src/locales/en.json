@@ -410,9 +410,6 @@
     "sectionSuperAdmin": "Super Admin",
     "subtitle": "Manage organization, data, and business settings in one place."
   },
-  "apiIntegration": {
-    "inProgress": "Under construction"
-  },
   "googleDriveIntegration": {
     "subtitle": "Test whether app-generated PDFs can be saved to Google Drive.",
     "notConfiguredServer": "Server-side integration (OAuth) is not configured yet. Please contact your administrator.",
@@ -707,7 +704,6 @@
     "recentQuotes": "Recent quotes",
     "noData": "No data",
     "firstContact": "First contact",
-    "discovery": "Discovery",
     "proposalSent": "Proposal sent",
     "onHold": "On hold",
     "tabTeam": "Team",
@@ -746,13 +742,11 @@
     "leadExcluded": "Excluded",
     "sectionDeals": "Deals",
     "dealTotal": "Total",
-    "dealActive": "Active",
     "dealWon": "Won",
     "winRate": "Win rate",
     "sectionOrders": "Orders & Revenue",
     "orderRevenue": "Revenue",
     "orderCount": "Orders",
-    "orderActive": "Active",
     "subtitle": "View your sales KPIs and progress.",
     "tabSales": "Sales",
     "tabLead": "Leads",
@@ -891,7 +885,6 @@
     "convert": "Convert",
     "merge": "Merge",
     "status_new": "New",
-    "status_negotiating": "In Progress",
     "status_lost": "Lost",
     "temp_hot": "Hot",
     "temp_warm": "Warm",
@@ -964,7 +957,6 @@
     "competitorNotDone": "Not Done",
     "competitorUnconfirmed": "Unconfirmed",
     "competitorFound": "Competitor found",
-    "status_ai_collecting": "AI Collecting",
     "status_existing_customer": "Existing Customer",
     "status_follow_up_short": "Follow-up (Short)",
     "status_follow_up_long": "Follow-up (Long)",
@@ -1000,7 +992,6 @@
     "status_inactive": "Inactive",
     "status_archived": "Archived",
     "phoneError": "Invalid phone number format (e.g. 03-1234-5678, 090-1234-5678)",
-    "searchPlaceholder": "Search by company name, customer code, or billing name...",
     "tab_basic": "Basic Info",
     "tab_billing": "Billing",
     "tab_delivery": "Delivery",
@@ -1215,7 +1206,6 @@
     "platformDiscord": "Discord",
     "viewLead": "View Lead",
     "viewProfile": "View Profile",
-    "loadingProfile": "Loading...",
     "sectionContact": "Contact",
     "sectionDeal": "Deal Info",
     "sectionNextAction": "Next Steps",
@@ -1339,7 +1329,6 @@
     "title": "Channels (Meta integration)",
     "connect": "Connect a Facebook Page",
     "disconnect": "Disconnect",
-    "disconnecting": "Disconnecting...",
     "disconnectTitle": "Disconnect Page",
     "disconnectConfirm": "will be disconnected.",
     "connectedAt": "Connected at",
@@ -1394,7 +1383,6 @@
     "discordNoServerDesc": "Add a Bot to your Discord server to start message integration.",
     "discordOpenSettings": "Open Discord settings",
     "discordDisconnect": "Disconnect",
-    "discordDisconnecting": "Disconnecting...",
     "discordDisconnectTitle": "Disconnect Discord Integration",
     "discordDisconnectConfirm": "This will remove the Discord Bot integration. After disconnecting, messages cannot be sent to Discord. Are you sure?",
     "discordDisconnectedSuccess": "Discord integration has been disconnected."
@@ -1429,7 +1417,6 @@
     "status_lost": "Lost",
     "status_on_hold": "On hold",
     "stage_open": "First contact",
-    "stage_negotiating": "Discovery",
     "stage_proposal": "Proposal sent",
     "stage_won": "Won",
     "stage_lost": "Lost",
@@ -2203,7 +2190,6 @@
   "oauth": {
     "processing": "Processing...",
     "processingDesc": "Verifying connection information from Facebook. Please wait.",
-    "success": "Connection successful. Redirecting...",
     "error": "An error occurred during connection."
   },
   "financial": {
@@ -2504,7 +2490,6 @@
       "correctPhase3": "Edit",
       "superAdminOnly": "This page is restricted to super_admin.",
       "loadMore": "Load more ({{remaining}} left)",
-      "showingCount": "Showing {{shown}} / {{total}}",
       "workName": "Series",
       "allWorks": "All series",
       "productAssign": {
@@ -2593,7 +2578,6 @@
       "loadError": "Could not load supplier details. Please try again.",
       "saveError": "The save result could not be confirmed. Keep a copy of your edits before retrying.",
       "saved": "Saved.",
-      "saving": "Saving…",
       "discardMessage": "You have unsaved changes. Discard them?",
       "discard": "Discard changes",
       "keepEditing": "Keep editing",
@@ -2786,8 +2770,7 @@
       "filters": {
         "status": "Parse status",
         "statusAny": "All",
-        "search": "Search body",
-        "searchPlaceholder": "Substring of message body..."
+        "search": "Search body"
       },
       "columns": {
         "receivedAt": "Received at",
@@ -2801,7 +2784,6 @@
       },
       "parseStatus": {
         "pending": "Pending",
-        "parsing": "Parsing",
         "parsed": "Parsed",
         "parsed_rule_only": "Parsed (rule)",
         "parsed_llm": "Parsed (LLM)",
@@ -2821,8 +2803,6 @@
         "missingProduct": "Master candidate not selected",
         "selectFromMaster": "Select from product master",
         "linkedToMaster": "Master candidate selected",
-        "selectedProduct": "Selected",
-        "masterPickerPlaceholder": "Search product master…",
         "operatorComment": "Reviewer comment",
         "approveBtn": "Approve and apply to stock",
         "rejectBtn": "Reject",
@@ -2886,8 +2866,6 @@
       "phaseBDesc": "Normal operation: CRM updates stock counts directly",
       "phaseABanner": "Currently in \"emergency rollback\" mode. Approvals will not update stock counts. Please return to normal operation (Phase B) as soon as possible.",
       "outOfScope": "Switching to Phase {{phase}} is not yet available (planned for a future release)",
-      "outOfScopeBadge": "separate ADR pending",
-      "outOfScopeTooltip": "Phase C requires full spreadsheet closure + bulk data migration, decided in a separate ADR.",
       "currentTooltip": "This is the current Phase",
       "switchTo": "Switch to Phase {{phase}}",
       "switchSuccess": "Switched to Phase {{phase}}",
@@ -3532,7 +3510,6 @@
     "subtitle": "Visual review of component standards (dev only)"
   },
   "channelMasters": {
-    "loading": "Loading...",
     "loadError": "Failed to load channel list",
     "platform": "Platform ID",
     "displayName": "Display Name",
@@ -4549,8 +4526,7 @@
       }
     },
     "accuracyManagement": {
-      "title": "Accuracy Management",
-      "comingSoon": "Coming soon"
+      "title": "Accuracy Management"
     },
     "needsReview": {
       "title": "Needs Review",
@@ -4562,7 +4538,6 @@
       "pidResolutionRate": "PID Resolution Rate",
       "unitResolutionRate": "Unit Resolution Rate",
       "needsReviewRate": "Needs Review Rate",
-      "staleRunning": "Frozen",
       "analysisMissing": "Analysis Missing",
       "pending": "Pending",
       "recentErrors": "Recent Errors",
@@ -4579,7 +4554,6 @@
       "noErrors": "No errors",
       "jobs": "jobs",
       "items": "items",
-      "loading": "Loading...",
       "fetchError": "Failed to fetch data",
       "bottleneckLabel": "Bottleneck Detected",
       "bottleneckDesc": "This metric is below the target. Take action to improve the pipeline.",
@@ -4620,7 +4594,6 @@
       "distributionResultSuccess": "Success",
       "distributionResultFailed": "Failed",
       "distributionNeverRun": "Never Distributed",
-      "distributionStale": "Distribution Stalled",
       "distributionProblemsCount": " targets with issues",
       "distributionSettings": "Distribution Settings",
       "distributionSettingKey": "Setting Key",
@@ -5279,7 +5252,6 @@
       "note": "Note",
       "deleteConfirm": "Delete this test case?",
       "runAll": "Run All Tests",
-      "running": "Running...",
       "resultsTitle": "Test Results",
       "resultsPassed": "{{passed}}/{{total}} passed",
       "actualCanonical": "Actual Result",
@@ -5292,7 +5264,6 @@
       "enableGateError": "Tests must pass before enabling rules",
       "gateDescription": "Rules can be enabled/disabled only after all tests pass",
       "seedCases": "Add recommended test cases",
-      "seeding": "Adding...",
       "inputTextLabel": "Product page text",
       "expectedCanonicalLabel": "Expected status",
       "expectedCanonicalPlaceholder": "Select status..."
@@ -5310,7 +5281,6 @@
       "testButton": "Test",
       "matched": "Matched",
       "notMatched": "Not Matched",
-      "creating": "Creating...",
       "created": "Rule created (disabled)",
       "effectOutput": "Detect and show",
       "effectExclude": "Detect and exclude",
@@ -5326,18 +5296,14 @@
     "edit": {
       "title": "Edit Rule",
       "update": "Update",
-      "updating": "Updating...",
       "updated": "Rule updated",
       "disable": "Disable this rule",
-      "disabled": "Rule disabled",
-      "disabling": "Disabling..."
+      "disabled": "Rule disabled"
     },
     "export": "Export",
-    "exporting": "Exporting...",
     "import": "Import",
     "bulkDelete": "Bulk Delete",
     "bulkDeleteConfirm": "Delete {{count}} selected rules?",
-    "bulkDeleting": "Deleting...",
     "bulkDeleted": "{{count}} rules deleted"
   },
   "reviewIssues": {

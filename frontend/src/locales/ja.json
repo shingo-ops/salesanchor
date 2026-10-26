@@ -410,9 +410,6 @@
     "sectionSuperAdmin": "スーパー管理者",
     "subtitle": "組織・データ・業務設定を一か所で管理します。"
   },
-  "apiIntegration": {
-    "inProgress": "現在作成中"
-  },
   "googleDriveIntegration": {
     "subtitle": "アプリで作成したPDFをGoogleドライブに保存できるかをテストします。",
     "notConfiguredServer": "サーバー側の連携設定（OAuth）がまだ完了していません。管理者にご連絡ください。",
@@ -707,7 +704,6 @@
     "recentQuotes": "直近の見積",
     "noData": "データなし",
     "firstContact": "初回接触",
-    "discovery": "ヒアリング中",
     "proposalSent": "提案済",
     "onHold": "保留",
     "tabTeam": "チーム",
@@ -746,13 +742,11 @@
     "leadExcluded": "対象外",
     "sectionDeals": "商談",
     "dealTotal": "合計",
-    "dealActive": "進行中",
     "dealWon": "成約",
     "winRate": "成約率",
     "sectionOrders": "受注・売上",
     "orderRevenue": "売上金額",
     "orderCount": "受注数",
-    "orderActive": "進行中",
     "subtitle": "営業KPIと進捗を確認できます。",
     "tabSales": "営業担当",
     "tabLead": "リード担当",
@@ -891,7 +885,6 @@
     "convert": "案件化する",
     "merge": "統合",
     "status_new": "新規",
-    "status_negotiating": "商談中",
     "status_lost": "失注",
     "temp_hot": "Hot",
     "temp_warm": "Warm",
@@ -964,7 +957,6 @@
     "competitorNotDone": "未",
     "competitorUnconfirmed": "未確認",
     "competitorFound": "競合あり",
-    "status_ai_collecting": "AI対応中",
     "status_existing_customer": "既存顧客",
     "status_follow_up_short": "追客（短期）",
     "status_follow_up_long": "追客（長期）",
@@ -1000,7 +992,6 @@
     "status_inactive": "無効",
     "status_archived": "アーカイブ",
     "phoneError": "電話番号の形式が正しくありません（例: 03-1234-5678, 090-1234-5678）",
-    "searchPlaceholder": "会社名・顧客コード・請求名義で検索...",
     "tab_basic": "基本情報",
     "tab_billing": "請求先",
     "tab_delivery": "配送先",
@@ -1215,7 +1206,6 @@
     "platformDiscord": "Discord",
     "viewLead": "リード詳細を見る",
     "viewProfile": "プロフィールを見る",
-    "loadingProfile": "読み込み中...",
     "sectionContact": "連絡先",
     "sectionDeal": "商談情報",
     "sectionNextAction": "次のアクション",
@@ -1339,7 +1329,6 @@
     "title": "チャンネル (Meta連携)",
     "connect": "Facebookページを接続",
     "disconnect": "切断",
-    "disconnecting": "切断中...",
     "disconnectTitle": "ページの切断",
     "disconnectConfirm": "を切断します。",
     "connectedAt": "接続日時",
@@ -1394,7 +1383,6 @@
     "discordNoServerDesc": "BotをDiscordサーバーに追加してメッセージ連携を開始しましょう。",
     "discordOpenSettings": "Discord設定を開く",
     "discordDisconnect": "切断",
-    "discordDisconnecting": "切断中...",
     "discordDisconnectTitle": "Discord連携を切断",
     "discordDisconnectConfirm": "Discord Botの連携を解除します。切断後はDiscordへのメッセージ送信ができなくなります。よろしいですか？",
     "discordDisconnectedSuccess": "Discord連携を切断しました。"
@@ -1429,7 +1417,6 @@
     "status_lost": "失注",
     "status_on_hold": "保留",
     "stage_open": "初回接触",
-    "stage_negotiating": "ヒアリング中",
     "stage_proposal": "提案済",
     "stage_won": "成約",
     "stage_lost": "失注",
@@ -2203,7 +2190,6 @@
   "oauth": {
     "processing": "処理中...",
     "processingDesc": "Facebook からの接続情報を確認しています。しばらくお待ちください。",
-    "success": "接続が完了しました。リダイレクト中...",
     "error": "接続中にエラーが発生しました。"
   },
   "financial": {
@@ -2504,7 +2490,6 @@
       "correctPhase3": "修正する",
       "superAdminOnly": "このページは super_admin 専用です。",
       "loadMore": "さらに読み込む（{{remaining}}件）",
-      "showingCount": "{{shown}} / {{total}} 件表示中",
       "workName": "作品",
       "allWorks": "すべての作品",
       "productAssign": {
@@ -2593,7 +2578,6 @@
       "loadError": "仕入元の詳細を取得できませんでした。もう一度読み込んでください。",
       "saveError": "保存結果を確認できませんでした。入力内容を控えてから再度お試しください。",
       "saved": "保存しました。",
-      "saving": "保存中…",
       "discardMessage": "未保存の変更があります。変更を破棄しますか？",
       "discard": "変更を破棄",
       "keepEditing": "編集に戻る",
@@ -2786,8 +2770,7 @@
       "filters": {
         "status": "解析ステータス",
         "statusAny": "全て",
-        "search": "本文検索",
-        "searchPlaceholder": "本文に含まれる文字..."
+        "search": "本文検索"
       },
       "columns": {
         "receivedAt": "受信時刻",
@@ -2801,7 +2784,6 @@
       },
       "parseStatus": {
         "pending": "未解析",
-        "parsing": "解析中",
         "parsed": "解析済",
         "parsed_rule_only": "解析済（ルール）",
         "parsed_llm": "解析済（LLM）",
@@ -2821,8 +2803,6 @@
         "missingProduct": "商品マスタ候補 未選択",
         "selectFromMaster": "商品マスタから選択",
         "linkedToMaster": "商品マスタ候補 選択済み",
-        "selectedProduct": "選択中",
-        "masterPickerPlaceholder": "商品マスタを検索…",
         "operatorComment": "レビュー担当者メモ",
         "approveBtn": "承認して在庫反映",
         "rejectBtn": "差し戻し",
@@ -2886,8 +2866,6 @@
       "phaseBDesc": "通常運用: CRM 側で在庫数を実更新",
       "phaseABanner": "現在「緊急戻し」モード中です。承認しても商品の在庫数は更新されません。早めに通常運用 (Phase B) に戻してください。",
       "outOfScope": "Phase {{phase}} への切替は現在対応していません (将来検討予定)",
-      "outOfScopeBadge": "別 ADR で検討中",
-      "outOfScopeTooltip": "Phase C はスプレッドシート完全閉鎖 + 本格データ移行が必要で、別の設計判断 (ADR) で時期検討中",
       "currentTooltip": "現在の Phase です",
       "switchTo": "Phase {{phase}} に切替",
       "switchSuccess": "Phase {{phase}} に切り替えました",
@@ -3532,7 +3510,6 @@
     "subtitle": "標準部品の見本（開発者専用・見た目確認用）"
   },
   "channelMasters": {
-    "loading": "読み込み中...",
     "loadError": "チャネル一覧の取得に失敗しました",
     "platform": "プラットフォームID",
     "displayName": "表示名",
@@ -4549,8 +4526,7 @@
       }
     },
     "accuracyManagement": {
-      "title": "解析精度管理",
-      "comingSoon": "準備中"
+      "title": "解析精度管理"
     },
     "needsReview": {
       "title": "要確認",
@@ -4562,7 +4538,6 @@
       "pidResolutionRate": "PID解決率",
       "unitResolutionRate": "Unit解決率",
       "needsReviewRate": "要確認率",
-      "staleRunning": "フリーズ中",
       "analysisMissing": "解析未実行",
       "pending": "処理待ち",
       "recentErrors": "直近のエラー",
@@ -4579,7 +4554,6 @@
       "noErrors": "エラーはありません",
       "jobs": "件",
       "items": "件",
-      "loading": "読み込み中...",
       "fetchError": "データの取得に失敗しました",
       "bottleneckLabel": "ボトルネック検出",
       "bottleneckDesc": "この指標が目標を下回っています。パイプラインの改善のためにアクションを取ってください。",
@@ -4620,7 +4594,6 @@
       "distributionResultSuccess": "成功",
       "distributionResultFailed": "失敗",
       "distributionNeverRun": "未配信",
-      "distributionStale": "配信停止中",
       "distributionProblemsCount": "件の配信先に問題あり",
       "distributionSettings": "配信設定",
       "distributionSettingKey": "設定キー",
@@ -5279,7 +5252,6 @@
       "note": "備考",
       "deleteConfirm": "このテストケースを削除しますか？",
       "runAll": "テスト一括実行",
-      "running": "実行中...",
       "resultsTitle": "テスト結果",
       "resultsPassed": "{{passed}}/{{total}} 合格",
       "actualCanonical": "実際の判定結果",
@@ -5292,7 +5264,6 @@
       "enableGateError": "ルールを有効化するにはテストに合格する必要があります",
       "gateDescription": "全テストに合格するとルールのON/OFFが可能になります",
       "seedCases": "おすすめテストケースを追加",
-      "seeding": "追加中...",
       "inputTextLabel": "商品ページの文言",
       "expectedCanonicalLabel": "判定されるべきステータス",
       "expectedCanonicalPlaceholder": "ステータスを選択..."
@@ -5310,7 +5281,6 @@
       "testButton": "判定",
       "matched": "マッチ",
       "notMatched": "不一致",
-      "creating": "作成中...",
       "created": "ルールを作成しました（無効状態）",
       "effectOutput": "検索して表示",
       "effectExclude": "検索して除外",
@@ -5326,18 +5296,14 @@
     "edit": {
       "title": "ルール編集",
       "update": "更新",
-      "updating": "更新中...",
       "updated": "ルールを更新しました",
       "disable": "このルールを無効にする",
-      "disabled": "ルールを無効にしました",
-      "disabling": "無効化中..."
+      "disabled": "ルールを無効にしました"
     },
     "export": "エクスポート",
-    "exporting": "エクスポート中...",
     "import": "インポート",
     "bulkDelete": "一括削除",
     "bulkDeleteConfirm": "選択した{{count}}件のルールを削除しますか？",
-    "bulkDeleting": "削除中...",
     "bulkDeleted": "{{count}}件のルールを削除しました"
   },
   "reviewIssues": {
