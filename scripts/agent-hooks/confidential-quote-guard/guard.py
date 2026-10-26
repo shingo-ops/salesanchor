@@ -96,6 +96,16 @@ def load_wordlist(path, allow_tab_reason=False):
     return words
 
 
+def load_repos():
+    """照らす repo の表だけ読む (原文の写しは読まない)。"""
+    repos = set()
+    for ln in _read_lines(os.path.join(table_dir(), "confidential-corpus.conf")):
+        s = ln.strip()
+        if s.startswith("repo:"):
+            repos.add(s[5:].strip())
+    return repos
+
+
 def load_tables():
     d = table_dir()
     conf = os.path.join(d, "confidential-corpus.conf")
@@ -118,7 +128,7 @@ def load_tables():
         files.extend(m)
     # 写しが古いと、新しい投稿を照らせないまま通してしまう。古ければ止める (取り直しは fetch_corpus.py)
     try:
-        max_age = float(os.environ.get("CONFID_CORPUS_MAX_AGE_DAYS", "2"))
+        max_age = min(float(os.environ.get("CONFID_CORPUS_MAX_AGE_DAYS", "2")), 2.0)  # 環境変数は短くする方向だけ (試験用)
     except ValueError:
         raise Block("原文の写しの古さの上限が読めません")
     now = time.time()
@@ -260,11 +270,24 @@ def added_lines(cwd, ref):
 
 def push_refs(cmd, m):
     """git push の送るブランチを決める。決まらなければ Block。-> [ref] (空なら削除だけ=見るものなし)"""
-    seg = re.split(r"[;&|\n)]", cmd[m.end():], maxsplit=1)[0]
+    seg = re.split(r"[\n)]", cmd[m.end():], maxsplit=1)[0]
+    seg = re.sub(r"(?<=\s)\d+(?=[<>])", "", seg)  # 2>&1 の 2 は引数ではない
     try:
-        toks = shlex.split(seg)
+        lx = shlex.shlex(seg, posix=True, punctuation_chars=True)
+        lx.whitespace_split = True
+        raw = list(lx)
     except ValueError:
         raise Block("git push の引数を読めません")
+    toks, k = [], 0
+    while k < len(raw):  # 書き出し先の字句は飛ばし、| ; && || & は命令の区切りとして止める
+        t = raw[k]
+        if t and all(c in "();<>|&" for c in t):
+            if "<" in t or ">" in t:
+                k += 2
+                continue
+            break
+        toks.append(t)
+        k += 1
     pos, delete = [], False
     i = 0
     while i < len(toks):
@@ -297,7 +320,7 @@ def push_refs(cmd, m):
     return refs
 
 
-def check_push(cmd, m, payload_cwd, repos):
+def check_push(cmd, m, payload_cwd, repos, matched=None):
     cwd = resolve_cwd(cmd, payload_cwd, m.start())
     c = re.search(r"\bgit\s+-C\s+(?:\"([^\"]+)\"|'([^']+)'|(\S+))", cmd[m.start():m.end()])
     if c:
@@ -305,6 +328,8 @@ def check_push(cmd, m, payload_cwd, repos):
     slug = repo_slug(cwd)
     if slug is None or slug not in repos:
         return []  # 表に無い repo の push は照らさずに通す
+    if matched is not None:
+        matched.append(slug)
     if git(cwd, "rev-parse", "--verify", "--quiet", "origin/main").returncode != 0:
         raise Block("表に並んだ repo (%s) に origin/main がありません" % slug)
     entries = []
@@ -454,6 +479,10 @@ def check_gh(cmd, payload_cwd):
                 if t in ("--body", "-b"):
                     kind, val = "body", (rest[i + 1] if i + 1 < len(rest) else None)
                     i += 1
+                elif t.startswith("-b") and not t.startswith("--"):
+                    kind, val = "body", (t[2:][1:] if t[2:].startswith("=") else t[2:])
+                elif t.startswith("-F") and not t.startswith("--") and t != "-F":
+                    kind, val = "file", (t[2:][1:] if t[2:].startswith("=") else t[2:])
                 elif t.startswith("--body="):
                     kind, val = "body", t[7:]
                 elif t in ("--body-file", "-F"):
@@ -506,10 +535,13 @@ def run(payload):
     if not pms and not gh_on:
         return 0
     try:
-        repos, corpus, excl, _n = load_tables()
-        entries = []
+        repos = load_repos()
+        entries, matched = [], []
         for pm in pms:
-            entries.extend(check_push(cmd, pm, payload.get("cwd"), repos))
+            entries.extend(check_push(cmd, pm, payload.get("cwd"), repos, matched))
+        if not gh_on and not matched:
+            return 0  # 照らす repo の push でも gh でもない: 写しが古くても止めない
+        _r, corpus, excl, _n = load_tables()
         if gh_on:
             entries.extend(check_gh(cmd, payload.get("cwd")))
         hits = find_hits(entries, corpus, excl)

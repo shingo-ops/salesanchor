@@ -119,7 +119,7 @@
 ## 維持の仕組み
 
 - 守り手: 人手で守る。理由: 関所の本体（scripts/agent-hooks/confidential-quote-guard/guard.py）は便1 で作るため、この設計の段階ではまだ無い。それまでは Opus が書いたあと原文と照らす（この PR でも実施）。便1 のあとの守り手は guard.py と、下の週の点検。
-- 対象: guard.py の原本と ~/.claude/scripts に写したもの、confidential-corpus.conf、confidential-allow.txt、商品名の写し。
+- 対象: guard.py と fetch_corpus.py の原本と ~/.claude/scripts に写したもの、confidential-corpus.conf、confidential-allow.txt、商品名の写し。
 - 週の点検（agent-console の定期実行。Opus が結果を見る）で、次の 5 つを数える。
   - 原本（origin/main の guard.py）と写したもの（~/.claude/scripts）の diff。1 行でも違えば知らせる（local-hooks-ssot の H4・H5）。
   - 一般語の表の行数と、その週に足した語。

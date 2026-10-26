@@ -3,8 +3,8 @@
 # 何度流しても同じ結果（冪等）。戻すときは rollback.sh。
 # 設計: docs/handoff/confidential-quote-guard/design.md §3・§8・§9
 # 手順: ①原本を写す ②写したものと原本が一字一句同じか diff ③原文の写しが無ければ本番から1回取る → 表が読めるか確認（読めなければ登録しない）
-#       ④写した先の guard.py で試験 ⑤settings.json の PreToolUse:Bash に pr-body-guard.sh の前で登録
-#       ⑥毎日1回の取り直し (LaunchAgent) を ~/Library/LaunchAgents に写して登録
+#       ④写した先の guard.py で試験 ⑤毎日1回の取り直し (LaunchAgent) を ~/Library/LaunchAgents に写して登録
+#       ⑥settings.json の PreToolUse:Bash に pr-body-guard.sh の前で登録 (⑤が失敗したら触らない)
 set -eu
 
 SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -46,7 +46,16 @@ if ! python3 "$SRC/tests/test_guard.py" "$DEST/guard.py" >/dev/null || ! python3
   exit 1
 fi
 
-# 5. settings.json の PreToolUse:Bash に登録 (pr-body-guard.sh の前。既にあれば足さない)
+# 5. 毎日1回の取り直し (LaunchAgent)。settings.json より先に登録する (失敗したら settings.json に触らず終わる)。原本の plist の __HOME__ を置き換えて写し、登録し直す (何度流しても同じ)
+mkdir -p "$LAUNCH_DIR" "$GUARD_DIR"
+sed "s#__HOME__#$HOME#g" "$SRC/$LABEL.plist" > "$LAUNCH_DIR/$LABEL.plist"
+plutil -lint "$LAUNCH_DIR/$LABEL.plist" >/dev/null || { echo "INSTALL_FAILED: plist が読めません" >&2; exit 1; }
+if [ "${CONFID_SKIP_LAUNCHCTL:-0}" != "1" ]; then
+  launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null || true
+  launchctl bootstrap "gui/$(id -u)" "$LAUNCH_DIR/$LABEL.plist" || { echo "INSTALL_FAILED: LaunchAgent を登録できません。settings.json には触っていません" >&2; exit 1; }
+fi
+
+# 6. settings.json の PreToolUse:Bash に登録 (pr-body-guard.sh の前。既にあれば足さない)
 [ -f "$SETTINGS" ] || { echo "settings.json がありません: $SETTINGS" >&2; exit 1; }
 cp "$SETTINGS" "$SETTINGS.bak-confidential-quote-guard-$STAMP"
 SETTINGS="$SETTINGS" DEST="$DEST" python3 - <<'PY'
@@ -80,14 +89,5 @@ with open(tmp, encoding="utf-8") as f:
     json.load(f)  # JSON として読めるか確認
 os.replace(tmp, p)
 PY
-
-# 6. 毎日1回の取り直し (LaunchAgent)。原本の plist の __HOME__ を置き換えて写し、登録し直す (何度流しても同じ)
-mkdir -p "$LAUNCH_DIR" "$GUARD_DIR"
-sed "s#__HOME__#$HOME#g" "$SRC/$LABEL.plist" > "$LAUNCH_DIR/$LABEL.plist"
-plutil -lint "$LAUNCH_DIR/$LABEL.plist" >/dev/null || { echo "INSTALL_FAILED: plist が読めません" >&2; exit 1; }
-if [ "${CONFID_SKIP_LAUNCHCTL:-0}" != "1" ]; then
-  launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null || true
-  launchctl bootstrap "gui/$(id -u)" "$LAUNCH_DIR/$LABEL.plist"
-fi
 
 echo "INSTALL_OK"

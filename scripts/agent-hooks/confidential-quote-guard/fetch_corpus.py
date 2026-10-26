@@ -10,7 +10,7 @@
 このスクリプトにも repo にも、本文・語句は入れない。標準出力は件数と日時だけ。
 
 終了コード: 0 成功 / 1 失敗(前の写しは残る) / 2 件数が大きく減った(前の写しは残る) / 3 別の実行中
-環境変数(試験用): CONFID_GUARD_DIR  CONFID_FETCH_CMD(ssh の代わりの実行ファイル。標準入力のSQLを受けTSVを返す)
+環境変数(試験用): CONFID_FETCH_RETRY_WAIT(試し直しの待ち秒)  CONFID_GUARD_DIR  CONFID_FETCH_CMD(ssh の代わりの実行ファイル。標準入力のSQLを受けTSVを返す)
 """
 import datetime
 import os
@@ -26,12 +26,18 @@ KEY = os.path.expanduser("~/.ssh/salesanchor-reader")
 VIEW = "ai_ro.public__source_messages"
 PART = 8000          # 読み取り台本は 1 値 10,240 字で切るので、8,000 字ずつに分けて取る
 BATCH = int(os.environ.get("CONFID_FETCH_BATCH", "5000"))  # 読み取り台本の行数の上限(試験では小さくする)
+READ_TRIES = 3       # 読み取りに失敗したら 2 分おいて最大 3 回まで (デプロイ中の約 70 秒の停止を越える)
+RETRY_WAIT = float(os.environ.get("CONFID_FETCH_RETRY_WAIT", "120"))  # 秒 (試験では短くする)
 SHRINK_RATIO = 0.5   # 前回の半分未満なら置き換えない
 TIMEOUT = 150
 
 D = os.path.expanduser(os.environ.get("CONFID_GUARD_DIR", "~/CC報告ファイル-keep/confid-guard"))
 OUT = os.path.join(D, "source-messages.txt")
 META = os.path.join(D, "source-messages.meta")
+
+
+class ReadFail(Exception):
+    """読み取りの道に繋げない・失敗した (デプロイ中の停止など)。少し待って試し直す。"""
 
 
 def die(msg, rc=1):
@@ -50,9 +56,9 @@ def run_sql(sql):
         p = subprocess.run(argv, input=sql.encode("utf-8"), stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
                            timeout=TIMEOUT)
     except (OSError, subprocess.TimeoutExpired) as e:
-        die("読み取りの道に繋げません (%s)" % type(e).__name__)
+        raise ReadFail("読み取りの道に繋げません (%s)" % type(e).__name__)
     if p.returncode != 0:
-        die("読み取りの道が rc=%d" % p.returncode)
+        raise ReadFail("読み取りの道が rc=%d" % p.returncode)
     lines = p.stdout.decode("utf-8").split("\n")
     if lines and lines[-1] == "":
         lines.pop()
@@ -142,14 +148,22 @@ def main():
             print("別の取り直しが動いています。今回は何もしません。")
             sys.exit(3)
     try:
-        for attempt in (1, 2):   # 取り直しの間に本番へ投稿が増えたときの1回だけの再試行
-            msgs = fetch_all()
-            n, c = totals()
-            got_n, got_c = len(msgs), sum(len(m) for m in msgs)
-            if (got_n, got_c) == (n, c):
+        for tr in range(1, READ_TRIES + 1):
+            try:
+                for attempt in (1, 2):   # 取り直しの間に本番へ投稿が増えたときの1回だけの再試行
+                    msgs = fetch_all()
+                    n, c = totals()
+                    got_n, got_c = len(msgs), sum(len(m) for m in msgs)
+                    if (got_n, got_c) == (n, c):
+                        break
+                else:
+                    die("本番の数と合いません(件数 %d/%d、文字数 %d/%d)" % (got_n, n, got_c, c))
                 break
-        else:
-            die("本番の数と合いません(件数 %d/%d、文字数 %d/%d)" % (got_n, n, got_c, c))
+            except ReadFail as e:
+                print("読み取り失敗 %d/%d 回目 %s" % (tr, READ_TRIES, datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")))
+                if tr == READ_TRIES:
+                    die(str(e))
+                time.sleep(RETRY_WAIT)
         if got_n == 0:
             die("0 件です")
         prev = read_meta()

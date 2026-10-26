@@ -1,7 +1,7 @@
 #!/bin/bash
 # weekly-check.sh — confidential-quote-guard の週の点検 (design.md 維持の仕組み)。
 # agent-console の定期実行から流す。出力は件数と日付だけ（語句は出さない）。0 でないものは知らせる。
-#   1. 原本 (origin/main の guard.py) と写したもの (~/.claude/scripts) の diff 行数
+#   1. 原本 (origin/main の guard.py と fetch_corpus.py) と写したもの (~/.claude/scripts) の diff 行数
 #   2. 一般語の表の行数と、その週に足した行数
 #   3. 商品名の写しの日付 (7 日より古ければ取り直す)
 #   4. 原文の写し (本番から毎日取り直す) の日付 (2 日より古ければ知らせる)
@@ -17,7 +17,11 @@ bad=0
 
 [ -f "$INST" ] || { echo "0 写しが無い: $INST"; bad=1; }
 d1="$(git -C "$REPO" show "origin/main:$REL" 2>/dev/null | diff - "$INST" 2>/dev/null | wc -l | tr -d ' ')"
-echo "1 原本と写しの差分行数: $d1"; [ "$d1" != "0" ] && bad=1
+INSTF="$CLAUDE_DIR/scripts/confidential-quote-guard/fetch_corpus.py"
+RELF="scripts/agent-hooks/confidential-quote-guard/fetch_corpus.py"
+[ -f "$INSTF" ] || { echo "0 写しが無い: $INSTF"; bad=1; }
+d1f="$(git -C "$REPO" show "origin/main:$RELF" 2>/dev/null | diff - "$INSTF" 2>/dev/null | wc -l | tr -d ' ')"
+echo "1 原本と写しの差分行数: guard.py $d1 / fetch_corpus.py $d1f"; { [ "$d1" != "0" ] || [ "$d1f" != "0" ]; } && bad=1
 
 n="$(grep -vc '^\s*#\|^\s*$' "$D/confidential-allow.txt" 2>/dev/null || true)"; n="${n:-0}"
 w="$(find "$D/confidential-allow.txt" -mtime -7 2>/dev/null | wc -l | tr -d ' ')"

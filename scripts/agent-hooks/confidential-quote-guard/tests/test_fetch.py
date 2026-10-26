@@ -21,6 +21,12 @@ import os, re, sys
 sql = sys.stdin.read()
 if os.environ.get("FAKE_FAIL"):
     sys.exit(4)
+cf = os.environ.get("FAKE_FAIL_FILE")
+if cf and os.path.exists(cf):
+    n = int(open(cf).read() or "0")
+    if n > 0:
+        open(cf, "w").write(str(n - 1))
+        sys.exit(4)
 rows = []
 for ln in open(os.environ["FAKE_DATA"], encoding="utf-8").read().split("\n"):
     if ln:
@@ -52,7 +58,7 @@ def put(rows):
 
 
 def fetch(**env):
-    e = dict(os.environ, CONFID_GUARD_DIR=D, CONFID_FETCH_CMD=FAKE, FAKE_DATA=DATA, CONFID_FETCH_BATCH="3",
+    e = dict(os.environ, CONFID_GUARD_DIR=D, CONFID_FETCH_CMD=FAKE, FAKE_DATA=DATA, CONFID_FETCH_BATCH="3", CONFID_FETCH_RETRY_WAIT="0",
              PYTHONDONTWRITEBYTECODE="1")
     e.update(env)
     return subprocess.run([sys.executable, FETCH], capture_output=True, text=True, env=e)
@@ -100,6 +106,16 @@ def main():
     put(rows + [("d00", "追加")])
     r = fetch()
     check("F10 件数が増えれば置き換わる", r.returncode == 0 and "rows=10" in r.stdout)
+    cnt = os.path.join(T, "failcount")
+    open(cnt, "w").write("2")
+    put(rows + [("e00", "さらに追加")])
+    r = fetch(FAKE_FAIL_FILE=cnt)
+    check("F11 読み取りが2回失敗しても3回目で成功する (デプロイ中の停止を越える)",
+          r.returncode == 0 and "rows=10" in r.stdout and r.stdout.count("読み取り失敗") == 2)
+    open(cnt, "w").write("5")
+    r = fetch(FAKE_FAIL_FILE=cnt)
+    check("F12 3回とも失敗 -> rc!=0 で前の写しを残し、出力に本文が無い",
+          r.returncode != 0 and r.stdout.count("読み取り失敗") == 3 and "さらに" not in r.stdout + r.stderr)
     n_ok = sum(results)
     print("PASS %d / FAIL %d" % (n_ok, len(results) - n_ok))
     return 0 if n_ok == len(results) else 1
