@@ -62,7 +62,7 @@ BRANCH_SAFE="${BRANCH//\//-}"
 WORKTREE_DIR="${HOME}/worktrees/${REPO_NAME}/${BRANCH_SAFE}"
 
 # ── マージ済みworktreeを先に回収してから上限チェック（ADR-114）────────────────
-REAPER_SCRIPT="${REPO_ROOT}/scripts/reaper-worktree.sh"
+REAPER_SCRIPT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/reaper-worktree.sh"
 if [ -f "${REAPER_SCRIPT}" ]; then
   bash "${REAPER_SCRIPT}" --execute 2>/dev/null || true
 fi

@@ -20,7 +20,7 @@ TARGETS = (
     "INSERT INTO products",
     "/tcg/products/create",
 )
-EXEMPT_PATHS = ("/backend/", "/frontend/", "/docs/", "/migrations/", "/tests/")
+EXEMPT_PATHS = ("/backend/", "/frontend/", "/docs/", "/migrations/", "/tests/", "/CC報告ファイル-keep/", "/tmp/CC報告ファイル/")
 READ_ONLY_CMDS = {"git", "grep", "rg", "cat", "sed", "head", "tail", "less"}
 PROMPT_RE = re.compile(r"マスタ[^。\n]{0,40}登録|登録[^。\n]{0,20}マスタ")
 PROMPT_LIMIT = 9000

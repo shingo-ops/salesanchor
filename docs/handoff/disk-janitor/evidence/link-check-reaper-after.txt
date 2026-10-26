@@ -1,0 +1,71 @@
+🔍 worktree を走査（全件）: git worktree list
+
+   対象 worktree 数: 48 件
+
+=== reaper 結果 ===
+
+🧑‍💻 使用中（削除しない）: 2 件
+   - release/confidential-quote-guard-bin1
+   - release/doc-agenda-nav-k5
+
+🔒 IN_PROGRESS/REVIEW 未マージ（削除しない）: 7 件
+   - hotfix/analytics-rls-fix4
+   - release/consent-apply-run
+   - release/mac-vm-hook-h6-result
+   - release/migration-ledger
+   - release/ops-mail-notifier
+   - release/tenant-template-parity
+   - release/v102-heading-split-recon
+
+⚠️  未保存あり（削除しない）: 39 件 ← 人の判断が必要
+   - codex/ssot-message-translations-tenant-id
+   - release/fix-analysis-rules-menu-link
+   - release/import-trend-graph-fix-gate
+   - feature/morimoto/discord-config-card-tidy
+   - hotfix/fedex-etd-docs-main
+   - release/adr-1032-accepted
+   - release/chopper-master-promo
+   - release/cloud-read-window-bin1
+   - release/codex-development-parity
+   - release/condition-kw-kenpin-kaifu
+   - release/discord-pdca-bin2b2-sa-link-card
+   - release/doc-agenda-nav-stage1b
+   - release/extraction-prompt-supplier-rule-precedence
+   - release/governance-enforcement-adr
+   - release/line-3411-delivery-evidence
+   - release/line-empty-box-design-handoff
+   - release/line-extraction-prompt-retention
+   - release/line-footer-cut
+   - release/line-per-message-soldout-design
+   - release/line-stock-storage
+   - release/line-system-notice-cleanup
+   - release/migration-runner-design
+   - release/loading-button-bin7b
+   - release/mac-jobs-watch-labels
+   - release/manual-extraction-evidence-20260915
+   - release/master-register-en-name-composed
+   - release/migration-lock-timeout
+   - release/migration-lock-timeout-1-1
+   - release/mobile-analysis-menu
+   - release/new-product-patrol-design
+   - release/permission-self-maintenance-design
+   - release/permission-self-maintenance-s1
+   - release/person-ssot-p4c1-prep
+   - release/product-code-renumber
+   - release/product-master-migration-design
+   - release/unify-product-reference-id
+   - release/v102-gap-fill
+   - release/v102-rule-fixes-design
+   - release/supplier-knowledge-links
+
+=== ゴースト検出 ===
+   走査: /Users/tanizawashingo/worktrees/salesanchor
+
+   👻 GHOST: /Users/tanizawashingo/worktrees/salesanchor/_ay2y_node_modules_link (0.0 MB)
+   👻 GHOST: /Users/tanizawashingo/worktrees/salesanchor/release-permission-delegation-ledger (9.2 MB)
+   👻 GHOST: /Users/tanizawashingo/worktrees/salesanchor/release-time-handling-lint (0.0 MB)
+
+⚠️  GHOST 合計: 3 件 / 9.2 MB（手動確認してください）
+
+✅ 削除対象なし
+rc=0

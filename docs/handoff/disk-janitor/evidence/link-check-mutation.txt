@@ -1,0 +1,39 @@
+<     if ! git_safe_link_ok "${WORKTREE_PATH}" "${MAIN_REPO_ROOT}"; then
+>     if false; then
+<       if ! dj_link_known "${wt}"; then
+>       if false; then
+<     if ! git_safe_link_ok "${path}" "${path}"; then
+>     if false; then
+< if [ "${_LINK_OK}" -ne 1 ]; then
+> if false; then
+=== t5-m1-reaper-roomcheck-off.txt
+❌ FAIL [G4]: reaper の dry-run で印の台本が動きました
+❌ FAIL [G4-合わない欄]: 入っていません
+❌ FAIL [G5-合わない欄]: 入っていません
+❌ テスト失敗あり
+rc=1
+=== t5-m4-reaper-maincheck-off.txt
+❌ FAIL [G9]: 終了コード=0
+❌ FAIL [G7]: 終了コード=0
+❌ FAIL [G8]: 終了コード=0
+❌ テスト失敗あり
+rc=1
+=== t5-m3-janitor-r4-off.txt
+ng: J5: 理由「git の繋がりを確かめられない（残す）」が出る
+ng: 1
+rc=1
+=== t5-m2-janitor-r2-off-r2.txt
+ng: J3: 偽の commondir の worktree の node_modules が「残す」に入り、新しい理由の文が出る
+ng: J3: 削除候補に入らない
+ng: J4: 照らす一覧に無い元のリポジトリの worktree の node_modules が「残す」に入り、同じ文が出る
+ng: J4: 削除候補に入らない
+ng: 4
+rc=1
+=== J3 R2外し: wt-j3 は削除候補に入る(最終コミット時刻の見送りではない)
+  [R2] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.BxCdvy/worktrees/repoA/wt-j3/node_modules (4KB)
+  [R2] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.BxCdvy/worktrees/repoA/wt-j3/frontend/node_modules (4KB)
+  [R2] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.BxCdvy/worktrees/repoA/wt-j4/node_modules (4KB)
+  [R2] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.BxCdvy/worktrees/repoA/wt-j4/frontend/node_modules (4KB)
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.BxCdvy/worktrees/repoA/wt-nogit/node_modules （最終コミット時刻を取得できない（残す））
+  [飛ばす] /private/var/folders/wv/1plfwzs513782w2f4_zqh5m80000gn/T/disk-janitor-test.BxCdvy/worktrees/repoA/wt-nogit/frontend/node_modules （最終コミット時刻を取得できない（残す））
+[R2] 削除候補: 4 件 / 16KB（16KB）、飛ばした: 10 件
