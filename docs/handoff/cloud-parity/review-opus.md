@@ -146,3 +146,13 @@
 - 試験: `scripts/agent-hooks/cloud/test.sh` に T1〜T5（T5b を含む）を追加。既存ケース144件の期待・実際・判定は変更前と差 0（B8 の時間試験は負荷で変更前から NG）。
 - 実物の Claude Code での確認: 変更後の settings の PreToolUse(Bash) 項目そのものを使い、dispatch.sh の代わりに `sleep 15` するだけの一時スクリプトを指して CLAUDE_CODE_REMOTE=true で実行 → touch は実行されない。`sleep 0` なら通る。CLAUDE_CODE_REMOTE 未設定で dispatch.sh が無い場所を指しても通る。
 - 残り: 残り17件（便2）は別カード。UserPromptSubmit・SessionStart・Stop の時間切れは通る側のまま（対象外）。クラウドの Claude Code の版は未確認。
+
+## 指摘5 の続き 便2（埋め込みの残り15件・E21）
+
+- 直したこと（A）: `guard_pre_tool.py` に `_paren_shells`・`_paren_lead_ok` を足し、引用符の外にある `(` を、区間の頭以外でも `_paren_body` に渡す。拾うのは、直前（空白は飛ばす）が「区間の先頭」「`)` `{` `!`」「予約語 then do else elif if while until time in（空白なしでもよい）」「time -p」のもの。`$ < > = @ + * ?` の直後（配列 `a=( )`・`$(`・`<(`・拡張パターン）、予約語でない語の直後（関数名 `f(`）、`((`（算術）は拾わない。拾った中身は既存と同じく再帰して `check_danger`・`check_merge` に渡す（新しい判定は作っていない）。既存の「区間の頭の `(`」の取り出しはそのまま残し、重ねて足した（既存の判定は変わらない）。
+- 直したこと（B）: `_quoted_arg`（`bash -c` 用）を、シェルの1語の読み方に合わせた。引用符の外の空白か区切り（`; & | < > ( )` 改行）まで、`$'…'`・`'…'`・`"…"`・引用符なしの文字（`\X` は X）を順につなげる。呼び出し元は2か所（`bash -c` と `eval`）。`eval` は複数の語をつなげて評価するため振る舞いを変えず、従来の読み方を `_eval_arg` として分けて残した（`eval` に同じ隙間が残っていないかは別カードで要判断）。
+- 直したこと（C）: `_ansi_c` が `\uHHHH`（1〜4桁）と `\UHHHHHHHH`（1〜8桁）を戻す。サロゲート・範囲外・桁なしは元の文字列のまま残し、例外を出さない（当て込みで桁なしの `\u` が例外になるのを見つけて直した）。
+- 触っていない範囲: `dispatch.sh`・`danger_ops.json`・`.claude/settings.json`・ほかの見張り3本、`guard_pre_tool.py` の `check_danger`・`check_merge`・`is_pr_create`・`check_pr_create`・`scan_text`・`strip_heredoc_bodies`・`strip_message_quotes`・`is_readonly_segment`・`has_recursive_rm`・`main`・`TOO_DEEP`。
+- 試験: `test.sh` に E40〜E54（止める15件）と E55〜E64（通す側 10件。E64 は不正な `\u` `\U` が例外なく通ること）を追加。E21 は終了コードに加え、理由文に「入れ子が深すぎて」を含むことまで照合する（期待値は変えていない）。
+- 結果: 変更前 OK 173・NG 1、変更後 OK 198・NG 1（追加25件はすべて OK）。既存ケースの判定の差は 0。NG の1件は T1（`$(true)` 1万個が上限1秒に届かず通る）で、変更前から NG。変更前の見張りに15件を渡すと15件とも exit 0（止め漏れの再現）、変更後は15件とも exit 2。
+- 当て込み: `$(true)` 1万個・`$(` 500段・`(` 500段・閉じ忘れの `(` 1万個・`then(` 1万個・`; (` 1万個・引用符のつなぎ1万個などで Traceback は 0 件。入れ子が深いものは既存の理由文（入れ子が深すぎて）で止まる。
