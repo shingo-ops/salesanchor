@@ -75,4 +75,11 @@ for P in \
   O="$(mk UserPromptSubmit x x "$P" | python3 "$G")"
   echo "$O" | grep -q '"additionalContext"' && echo "$O" | grep -q "$RULES_HEAD"; check "T16-18 出る: $P" $?
 done
+# T19〜T21: 調査記録の置き場の免除（doc-agenda-nav 段1b。docs/handoff/doc-agenda-nav/card-stage1b.md §4-2）
+O="$(mk PreToolUse Write content 'create_product(x) の説明を引用したメモ' /Users/tanizawashingo/CC報告ファイル-keep/x.md | python3 "$G")"
+[ -z "$O" ]; check "T19 記録置き場(keep)への Write は素通り" $?
+O="$(mk PreToolUse Write content 'create_product(x) の説明を引用したメモ' /tmp/CC報告ファイル/x.md | python3 "$G")"
+[ -z "$O" ]; check "T20 記録置き場(tmp)への Write は素通り" $?
+O="$(mk PreToolUse Bash command 'python3 /tmp/CC報告ファイル/x.py create_product(x)' | python3 "$G")"
+echo "$O" | grep -q '"permissionDecision": "deny"'; check "T21 Bash の登録コマンドは止まる" $?
 exit $FAIL
