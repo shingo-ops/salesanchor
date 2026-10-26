@@ -2,7 +2,7 @@
 
 - 1 行 1 例。`\n` は改行 1 文字を表す（それ以外の `\` はそのまま）。
 - 「止める例」は担当（agent_id あり）の Bash・Monitor の command で、止める（exit 2）。「通す例」は exit 0。
-- 設計者の試作（/tmp/CC報告ファイル/local-subagent-guard/proto-v3-judge.py）に当てた結果: 止める例 101・通す例 74、誤り 0（proto-v3-out.txt）。
+- 設計者の試作（/tmp/CC報告ファイル/local-subagent-guard/proto-v4-judge.py）に当てた結果: 止める例 139・通す例 120、誤り 0（proto-v4-out.txt）。
 - test_guard.sh はこの全例を入れる。例を足すときはこの文書と試験の両方に足す。
 
 ## 止める例
@@ -109,6 +109,44 @@ sudo -u a ./x.sh
 xargs sh -c "git push"
 bash -lc "git commit -m x"
 zsh -c "gh pr merge 1"
+source scripts/dev/executor-preflight.sh
+. ./scripts/dev/executor-preflight.sh
+cat scripts/x.sh | bash
+git show HEAD:scripts/x.sh | sh
+echo 'git push' | bash
+python3 - < scripts/dev/perm-change.py
+bash - < scripts/x.sh
+bash < scripts/x.sh
+find . -name x.sh -exec ./x.sh {} \;
+find . -name x.sh -exec {} \;
+xargs -I {} ./x.sh {}
+uv run scripts/x.py
+bash<x.sh
+git -c core.pager='git push' log
+GIT_PAGER='sh x.sh' git log
+git -c alias.x='!git push' x
+gh api graphql -f query="$(cat m.graphql)"
+bash <<'EOF'\ngit push\nEOF
+bash <<< "git push"
+cat <<EOF | bash\ngit push\nEOF
+git -c core.fsmonitor=x status
+GIT_EXTERNAL_DIFF=x git diff
+export GIT_PAGER=x
+env GIT_SSH_COMMAND=x git fetch
+rg --pre ./x.sh foo
+git ls-remote --upload-pack=x origin
+nice -n 10 ./x.sh
+timeout -s KILL 10 ./x.sh
+find . -execdir {} \;
+claude
+echo x | python3
+git --config-env=core.pager=X log
+bash scripts/x.sh 2>&1 | tail
+python3 scripts/x.py > /tmp/o.txt 2>&1
+python3 < scripts/x.py
+(cd /a && git push)
+git log && git push
+gh api graphql -F q=@x -f query='{a}'
 ```
 
 ## 通す例
@@ -188,4 +226,50 @@ sqlite3 a.db "select 1"
 wc -l scripts/x.sh
 diff a.py b.py
 find scripts -name "*.sh" | wc -l
+grep -rn "gh pr create\|gh pr merge" scripts/
+grep -E "git|gh" f
+rg "claude|codex" docs
+git grep -n "git push\|gh pr" -- scripts
+grep "a; git push" f
+python3 <<'EOF'\nprint(1)\nEOF
+python3 <<EOF\nimport json\nprint(1)\nEOF
+claude --version
+npm ls -g @anthropic-ai/claude-code
+jq . ~/.config/claude
+echo '$(git push)'
+git log --oneline | grep -E 'fix|gh'
+jq -r '.[] | select(.agent_id) | .tool_name' f.jsonl
+python3 -c "import json; d=json.load(open('a.json')); print(len(d))"
+git branch -vv
+git branch -r --list 'origin/release/*'
+git tag --sort=-v:refname
+git stash show -p stash@{0}
+git worktree list --porcelain
+git remote get-url origin
+git ls-files | xargs wc -l
+timeout 30 gh pr checks 1
+gh api repos/a/b/pulls/1/reviews
+gh pr diff 1 | head
+awk -F'|' '{print $2}' f
+sed -n '1,5p' f
+git log --since="2 days ago" --format='%h %s'
+cd ~/worktrees/salesanchor/x && git status --short | head
+python3 /tmp/x.py
+python3 /private/tmp/claude-501/s/x.py a
+cd ~/x/claude
+git log | cat
+git -c core.quotepath=false log
+python3 - <<'EOF'\nimport subprocess\nEOF
+python3 <<'EOF'\nx = "gh"\nprint(x)\nEOF
+find . -name '*.py' -exec wc -l {} +
+find . -exec grep -l gh {} \;
+ls | xargs -I {} cat {}
+codex --help
+git -C "$WT" log --format='%h' | head -3
+gh pr view 1 --json body --jq .body > /tmp/b.txt
+node -e 'x' < /dev/null
+python3 < /tmp/x.py
+git diff --stat 2>/dev/null
+sqlite3 a.db 'select 1' | head
+grep -c 'agent_id' f.jsonl
 ```
