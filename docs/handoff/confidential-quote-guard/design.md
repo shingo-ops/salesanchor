@@ -38,7 +38,7 @@
 
 - 新しい見張りの原本を repo の scripts/agent-hooks/confidential-quote-guard/（便1 で作る）に置く（guard.py・install.sh・rollback.sh・テスト）。review-gate（ADR-1029）と同じ形。原本には原文も語句も入れない（置き場の場所は Mac の表から読む）。
 - install.sh が原本を ~/.claude/scripts に写し、~/.claude/settings.json の PreToolUse:Bash に pr-body-guard.sh の前で登録する。写したものと原本が一字一句同じかを diff で確かめる（local-hooks-ssot の H3 の考え方）。
-- 動く条件: コマンドに `git push` が含まれるとき、または §2 の gh の操作のとき（本文の付け方は `--body`／`-b`／`--body=…`／`--body-file`／`-F`／`-F -`・`--body-file -`〔標準入力〕のどれでもよい。付け方で抜けないよう、gh の操作であれば下の 2 の照らし方で必ず照らす）。作業場所は、コマンドの `cd <絶対パス>` か cwd から決める（pr-body-guard.sh と同じ決め方）。
+- 動く条件: コマンドに `git push` が含まれるとき、または §2 の gh の操作のとき（本文の付け方は `--body`／`-b`／`--body=…`／`--body-file`／`-F`／`-F -`・`--body-file -`〔標準入力〕のどれでもよい。付け方で抜けないよう、gh の操作であれば下の 2 の照らし方で必ず照らす）。作業場所は、フックの cwd から始め、コマンド中の `cd <パス>` と `git -C <パス>` を順にたどって決める（相対パスは、その時点の場所に繋いで実際の場所にする。`~` だけ展開する）。`$` や `*` を含む行き先・`cd -`・`~ユーザー`・`pushd`・`git --git-dir=`／`--work-tree=` は作業場所が決まらないので止める（照らす repo の中か外か決められないため。cwd が照らす repo の外でも止める）。
 - 照らす repo: 本文はどの repo でも照らす（repo に関係なく照らせるため）。足した行は、置き場の表に並べた repo（最初は shingo-ops/salesanchor だけ）の push のときだけ照らす。表に無い repo の push は照らさずに通す。表に並んだ repo で `origin/main` が無い、または差分が取れないときは止める（全部拒否に倒す）。
 - 照らすもの:
   1. `git diff origin/main...HEAD` の追加行（全ファイル）。

@@ -215,13 +215,21 @@ def tokenize_all(cmd):
     return list(lex)
 
 
+def _join_dir(cwd, p):
+    """cd / git -C の行き先を、今の場所に繋いで決める。決まらない形は Block。"""
+    if re.search(r"[$`*?]", p) or p == "-" or re.match(r"~[^/]", p):
+        raise Block("作業場所が決まりません (cd / git -C の行き先に展開・~ユーザー・- があります)")
+    p = os.path.expanduser(p)
+    return os.path.normpath(p if os.path.isabs(p) else os.path.join(cwd, p))
+
+
 def resolve_cwd(cmd, payload_cwd, upto=None):
     s = cmd if upto is None else cmd[:upto]
     cwd = payload_cwd or os.getcwd()
+    if re.search(r"(?:^|[;&|\n(`]\s*)pushd\b", s):
+        raise Block("作業場所が決まりません (pushd)")
     for m in re.finditer(r"(?:^|[;&|\n(]\s*)cd\s+(?:\"([^\"]+)\"|'([^']+)'|([^\s;&|)]+))", s):
-        p = os.path.expanduser(m.group(1) or m.group(2) or m.group(3))
-        if p.startswith("/"):
-            cwd = p
+        cwd = _join_dir(cwd, m.group(1) or m.group(2) or m.group(3))
     return cwd
 
 
@@ -326,9 +334,11 @@ def push_refs(cmd, m):
 
 def check_push(cmd, m, payload_cwd, repos, matched=None):
     cwd = resolve_cwd(cmd, payload_cwd, m.start())
-    c = re.search(r"\bgit\s+-C\s+(?:\"([^\"]+)\"|'([^']+)'|(\S+))", cmd[m.start():m.end()])
-    if c:
-        cwd = os.path.expanduser(c.group(1) or c.group(2) or c.group(3))
+    head = cmd[m.start():m.end()]
+    if re.search(r"--(?:git-dir|work-tree)\b", head):
+        raise Block("作業場所が決まりません (git --git-dir / --work-tree)")
+    for c in re.finditer(r"\s-C\s*(?:\"([^\"]+)\"|'([^']+)'|([^\s]+))", head):
+        cwd = _join_dir(cwd, c.group(1) or c.group(2) or c.group(3))
     slug = repo_slug(cwd)
     if slug is None or slug not in repos:
         return []  # 表に無い repo の push は照らさずに通す
@@ -462,6 +472,9 @@ def check_gh(cmd, payload_cwd):
     except ValueError:
         raise Block("コマンドの本文の付け方を読めません")
     heredocs = heredoc_infos(cmd)
+    for q, b in heredocs:  # 引用符なしの heredoc は本文が展開される。出どころが決まらなければ止める
+        if (not q) and re.search(r"[$`]", b):
+            raise Block("引用符なしの heredoc の本文に変数・コマンド置換があります (本文の出どころが決まりません)")
     entries = [("コマンド本文", i + 1, t) for i, t in enumerate(cmd.split("\n"))]  # (a)
     files = []
     cwd = payload_cwd or os.getcwd()

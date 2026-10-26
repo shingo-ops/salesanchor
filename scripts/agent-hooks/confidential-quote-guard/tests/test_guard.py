@@ -244,6 +244,47 @@ def main():
         print("%s %-62s exit=%d (期待 2)" % ("PASS" if results[-1] else "FAIL", "T16F 上限が %s でも2日のまま (3日前の写し) -> 止まる" % bad, r.returncode))
     make_tables()
 
+    print("== 4d 引用符なし heredoc と作業場所 (REVISE 4)")
+    hb = os.path.join(T, "hitbody2.md")
+    write(hb, "「%s」\n" % FAKE_QUOTE)
+    check("T16G --body heredoc(引用符なし)内の $(cat file) (書き写しあり) -> 止まる",
+          "gh pr comment 1 --body \"$(cat <<EOF\n$(cat %s)\nEOF\n)\"" % hb, 2)
+    check("T16H 同 $(head -5 file) -> 止まる", "gh pr comment 1 --body \"$(cat <<EOF\n$(head -5 %s)\nEOF\n)\"" % hb, 2)
+    check("T16I 引用符なし heredoc 内の $変数 -> 止まる", "B=x; gh pr create --base main --title t --body \"$(cat <<EOF\n$B\nEOF\n)\"", 2)
+    check("T16J 引用符なし heredoc 内の バッククォート -> 止まる", "gh pr comment 1 --body \"$(cat <<EOF\n`date`\nEOF\n)\"", 2)
+    check("T16K 引用符なし heredoc、展開なし・中身なし -> 通る", "gh pr comment 1 --body \"$(cat <<EOF\n「%s」\nEOF\n)\"" % FAKE_NOT_IN_CORPUS, 0)
+    check("T16L 引用符なし heredoc、展開なし・書き写しあり -> 止まる", "gh pr comment 1 --body \"$(cat <<EOF\n「%s」\nEOF\n)\"" % FAKE_QUOTE, 2)
+    check("T16M 引用符つき heredoc <<'EOF' の $(cat file) は文字どおり (中身なし) -> 通る",
+          "gh pr comment 1 --body \"$(cat <<'EOF'\n$(cat %s)\nEOF\n)\"" % os.path.join(T, "nothing.md"), 0)
+    check("T16N 引用符つき heredoc <<\"EOF\" (書き写しあり) -> 止まる",
+          "gh pr comment 1 --body \"$(cat <<\"EOF\"\n「%s」\nEOF\n)\"" % FAKE_QUOTE, 2)
+    branch_with("hit5", "- 「%s」\n" % FAKE_QUOTE)
+    wk2 = os.path.join(T, "w2")
+    sh("git", "clone", "-q", os.path.join(ORIGIN_ROOT, "test", "fake.git"), wk2)
+    for k, v in (("user.email", "t@example.com"), ("user.name", "t")):
+        sh("git", "config", k, v, cwd=wk2)
+    sh("git", "checkout", "-q", "-B", "hit5w", "origin/main", cwd=wk2)
+    write(os.path.join(wk2, "d.md"), "- 「%s」\n" % FAKE_QUOTE)
+    sh("git", "add", "-A", cwd=wk2)
+    sh("git", "commit", "-q", "-m", "w2", cwd=wk2)
+    sub = os.path.join(T, "sub")
+    os.makedirs(sub, exist_ok=True)
+    check("T16O 相対 cd ../w2 && git push (書き写しあり) -> 止まる", "cd ../w2 && git push", 2, cwd=sub)
+    check("T16P 相対 git -C ../w2 push (書き写しあり) -> 止まる", "git -C ../w2 push", 2, cwd=sub)
+    sh("git", "checkout", "-q", "-B", "clean5w", "origin/main", cwd=wk2)
+    write(os.path.join(wk2, "e.md"), "- 「%s」\n" % FAKE_NOT_IN_CORPUS)
+    sh("git", "add", "-A", cwd=wk2)
+    sh("git", "commit", "-q", "-m", "w2c", cwd=wk2)
+    check("T16Q 相対 cd ../w2 && git push (中身なし) -> 通る", "cd ../w2 && git push", 0, cwd=sub)
+    for nm, c in (("cd \"$W\" && git push", 'cd "$W" && git push'), ("pushd", "pushd ../w2 && git push"),
+                  ("--git-dir", "git --git-dir=../w2/.git push"), ("--work-tree", "git --work-tree=../w2 push"),
+                  ("git -C $W", 'git -C "$W" push'), ("cd ~user", "cd ~someone && git push")):
+        rc, err = run(c, sub)
+        results.append(rc == 2 and "作業場所" in err)
+        print("%s %-62s exit=%d (期待 2・理由に作業場所)" % ("PASS" if results[-1] else "FAIL", "T16R %s" % nm, rc))
+    check("T16S cwd が照らす repo の外でも cd \"$W\" は止まる", 'cd "$W" && git push', 2, cwd=OTHER)
+    make_tables()
+
     print("== 5 表に無い repo / 差分が取れない")
     write(os.path.join(OTHER, "a.md"), "- 「%s」\n" % FAKE_QUOTE)
     sh("git", "add", "-A", cwd=OTHER)
