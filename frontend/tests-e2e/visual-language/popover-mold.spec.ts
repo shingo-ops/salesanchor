@@ -85,19 +85,27 @@ test.describe("visual-language: Popover 金型（スクロール追従・画面�
     // 閲覧ページは表の中だけがスクロールするため、窓自体も動く状況を別途作る（上の注記）
     await makePageScrollable(page);
 
-    await page.evaluate(() => window.scrollBy(0, 400));
-    const scrollY = await page.evaluate(() => window.scrollY);
-    expect(scrollY).toBeGreaterThanOrEqual(100);
-
     const button = page.getByTestId("viewer-provider-filter-button");
-    const buttonBox = await button.boundingBox();
-    expect(buttonBox).not.toBeNull();
+    const startBox = await button.boundingBox();
+    expect(startBox).not.toBeNull();
+    // ボタンが画面の中に残る範囲で最大まで送る。画面の上へ外すと click 前に Playwright が
+    // 自動で画面内へ戻すため、測った基準だけが古くなる（CI job 121523200091 で gap=406 になった）
+    const delta = Math.floor(startBox!.y) - EDGE_MARGIN * 2;
+    expect(delta).toBeGreaterThanOrEqual(60); // これ未満だと「送ってから開く」を試せていない
+    await page.evaluate((d) => window.scrollBy(0, d), delta);
+    expect(await page.evaluate(() => window.scrollY)).toBeGreaterThanOrEqual(delta - 2);
 
     const popover = await openProviderPopover(page);
+    // 基準はパネルを開いたあとに測り直す（クリックで画面が動いても食い違わないように）
+    const buttonBox = await button.boundingBox();
+    expect(buttonBox).not.toBeNull();
     const popoverBox = await popover.boundingBox();
     expect(popoverBox).not.toBeNull();
+    // click が画面内へ自動で戻していないこと（戻っていると↑の buttonBox が古い基準のままになる）
+    expect(await page.evaluate(() => window.scrollY)).toBeGreaterThanOrEqual(delta - 2);
 
     const gap = popoverBox!.y - (buttonBox!.y + buttonBox!.height);
+    // 直す前の実装なら gap は 6 + delta になるので、この検査は直す前なら赤（RED-first は保たれる）
     expect(gap).toBeGreaterThanOrEqual(GAP_PX - GAP_TOLERANCE);
     expect(gap).toBeLessThanOrEqual(GAP_PX + GAP_TOLERANCE);
   });
@@ -108,14 +116,17 @@ test.describe("visual-language: Popover 金型（スクロール追従・画面�
     await makePageScrollable(page);
 
     const button = page.getByTestId("viewer-provider-filter-button");
-    const beforeBox = await button.boundingBox();
-    expect(beforeBox).not.toBeNull();
-
     const popover = await openProviderPopover(page);
 
-    await page.evaluate(() => window.scrollBy(0, 200));
-    const scrollY = await page.evaluate(() => window.scrollY);
-    expect(scrollY).toBeGreaterThanOrEqual(100);
+    const beforeBox = await button.boundingBox();
+    expect(beforeBox).not.toBeNull();
+    // ボタンが画面の中に残る範囲で最大まで送る。画面の外まで送ると、画面内へ収める処理
+    // （Popover.tsx の top = Math.max(margin, top)）が働いて gap が 6 でなくなる
+    // （C-out・既知。CI job 121523200091 で gap=76.8 になった）。だからボタンが画面に
+    // 残る範囲で送る。
+    const delta = Math.floor(beforeBox!.y) - EDGE_MARGIN * 2;
+    expect(delta).toBeGreaterThanOrEqual(60); // これ未満だと「動かす」を試せていない
+    await page.evaluate((d) => window.scrollBy(0, d), delta);
 
     // scroll イベントの測り直し（Popover.tsx の measure()）が反映されるまで待つ
     // （固定時間の waitForTimeout は使わない。design.md の指示どおり toPass を使う）
@@ -128,7 +139,7 @@ test.describe("visual-language: Popover 金型（スクロール追従・画面�
       expect(gap).toBeGreaterThanOrEqual(GAP_PX - GAP_TOLERANCE);
       expect(gap).toBeLessThanOrEqual(GAP_PX + GAP_TOLERANCE);
       // 空振りで緑にならないこと：窓が動いた分だけボタンも実際に画面内で上へ動いていること
-      expect(beforeBox!.y - afterBox!.y).toBeGreaterThanOrEqual(100);
+      expect(beforeBox!.y - afterBox!.y).toBeGreaterThanOrEqual(delta - 2);
     }).toPass();
   });
 
