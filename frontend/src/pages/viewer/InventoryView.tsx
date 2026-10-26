@@ -521,6 +521,7 @@ export function InventoryView({ data }: InventoryViewProps) {
 
   return (
     <>
+      {!isMobile && (
       <header className="viewer-header">
         <h1 className="viewer-header__title">{t("viewer.title")}</h1>
         <span className="viewer-header__updated" data-testid="viewer-updated">
@@ -538,6 +539,9 @@ export function InventoryView({ data }: InventoryViewProps) {
           ]}
         />
       </header>
+      )}
+
+      {isMobile && <h1 className="sr-only">{t("viewer.title")}</h1>}
 
       <main className="viewer-main">
         {isMobile ? (
@@ -724,6 +728,22 @@ export function InventoryView({ data }: InventoryViewProps) {
                   onChange={(e) => reset(setQtyMax)(e.target.value)}
                 />
               </div>
+            </div>
+            <div className="viewer-filter-meta">
+              <span data-testid="viewer-updated">
+                {t("viewer.lastUpdated", { time: formatUpdatedAt(data.updated_at) })}
+              </span>
+              <SelectControl
+                size="sm"
+                aria-label={t("viewer.language.label")}
+                data-testid="viewer-lang"
+                value={lang}
+                onChange={(e) => changeLang(e.target.value === "en" ? "en" : "ja")}
+                options={[
+                  { value: "ja", label: t("viewer.language.ja") },
+                  { value: "en", label: t("viewer.language.en") },
+                ]}
+              />
             </div>
           </div>
         )}

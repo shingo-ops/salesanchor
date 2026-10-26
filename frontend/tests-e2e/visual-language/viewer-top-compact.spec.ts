@@ -23,8 +23,8 @@ import type { ViewerFixture } from "./viewer-helpers";
 const MOBILE_WIDTHS = [360, 390] as const;
 /** タップ領域の下限（ADR-140。design.md ③） */
 const MIN_TAP_PX = 44;
-/** 一覧の先頭カードの y の上限（design.md ③・K1。現状236px→192px以内） */
-const MAX_TOP_Y = 192;
+/** 一覧の先頭カードの y の上限（design.md ③・K1。便4で128に更新。docs/handoff/viewer-header-remove/design.md 4-4） */
+const MAX_TOP_Y = 128;
 /** シリーズのタブに常時出る3つ（本便のテストでは意図的に外側のシリーズ名を使う。viewerFilter.ts の MAIN_SERIES） */
 // eslint-disable-next-line local/no-japanese-literal -- tests-e2e は ESLint 対象外。DB の series 名（画面文言ではない）
 const OTHER_SERIES = "アクア";
@@ -92,7 +92,7 @@ async function gotoViewerWithSeries(page: Page, width: number, height: number): 
 for (const width of MOBILE_WIDTHS) {
   const height = 844;
   test.describe(`visual-language: 閲覧ページ 上部コンパクト化 ${width}px`, () => {
-    test("A1: 一覧の先頭カードの y が192px以内", async ({ page }) => {
+    test("A1: 一覧の先頭カードの y が上限以内（MAX_TOP_Y。便4で128へ更新）", async ({ page }) => {
       await gotoViewer(page, { width, height });
       const y = await firstCardY(page);
       expect(y).toBeLessThanOrEqual(MAX_TOP_Y);

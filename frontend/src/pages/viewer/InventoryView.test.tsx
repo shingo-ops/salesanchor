@@ -528,4 +528,29 @@ describe("InventoryView", () => {
       expect(screen.getByTestId("viewer-sort-menu").textContent).toContain("並び替え");
     });
   });
+
+  // docs/handoff/viewer-header-remove/design.md（便4）: スマホは帯（.viewer-header）が無く、
+  // 最終更新・言語は絞り込みドロワーの最初の画面（root）の一番下にある
+  describe("viewer-header-remove (C12: no header on mobile, updated/lang in the drawer)", () => {
+    afterEach(() => {
+      delete (window as unknown as { matchMedia?: unknown }).matchMedia;
+    });
+
+    it("C12: mobile has no .viewer-header; opening the filter drawer shows last-updated and language at the bottom", () => {
+      Object.defineProperty(window, "matchMedia", mobileMatchMedia);
+      render(<InventoryView data={data} />);
+
+      expect(document.querySelector(".viewer-header")).toBeNull();
+      // Drawer の中身は閉じていても DOM に居る（design.md ⑥守ること）ので、
+      // 開く前は「開いているパネルが無い」ことだけを確かめる
+      expect(document.querySelector(".comp-drawer-panel--open")).toBeNull();
+
+      fireEvent.click(screen.getByTestId("viewer-filter-toggle"));
+      const panel = document.querySelector(".comp-drawer-panel--open") as HTMLElement;
+      expect(panel).not.toBeNull();
+      const updated = within(panel).getByTestId("viewer-updated");
+      expect(updated.textContent).toContain("12:05");
+      expect(within(panel).getByTestId("viewer-lang")).toBeTruthy();
+    });
+  });
 });
