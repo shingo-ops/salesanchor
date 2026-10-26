@@ -201,21 +201,26 @@ launchctl list | grep actions.runner
 
 ### 起動時 worktree 自動回収（起動時 reaper）
 
-`ops/launchd/jp.salesanchor.reaper-onlogin.plist` を配置・load することで  
-ログイン時に `reaper-worktree.sh --execute` が自動実行される（ADR-114 PR-C）。
+`ops/launchd/jp.salesanchor.reaper-onlogin.plist` を配置・bootstrap することで
+ログイン時と毎日 03:00 に `reaper-worktree.sh --execute` が自動実行される（ADR-114 PR-C・R12）。
+台本は古い本店の写しではなく、道具の写し `/Users/tanizawashingo/.salesanchor-tools`（`origin/main` に取り直したもの）から動かし、cwd だけ本店にする（ADR-1039 便2b-2）。
 
 ```bash
 # 配置（初回のみ）
 cp ops/launchd/jp.salesanchor.reaper-onlogin.plist ~/Library/LaunchAgents/
-launchctl load ~/Library/LaunchAgents/jp.salesanchor.reaper-onlogin.plist
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/jp.salesanchor.reaper-onlogin.plist
 
 # 動作確認
 launchctl list | grep reaper
 tail ~/Library/Logs/reaper-onlogin.log
 
 # 無効化
-launchctl unload ~/Library/LaunchAgents/jp.salesanchor.reaper-onlogin.plist
+launchctl bootout gui/$(id -u)/jp.salesanchor.reaper-onlogin
 ```
+
+- RunAtLoad=true なので、bootstrap した瞬間に `--execute` が1回走る（以前の `launchctl load` も同じ）。入れ替える前に、3つ目の引数の `--execute` を `--dry-run` にした形を手で1回動かして通ることを確かめる。
+- ログイン直後にネットワークが繋がらないと取り直しが失敗して、その回は動かない（消す側には倒れない）。受け入れる（毎日 03:00 と Actions で動く）。
+- Hikky-dev-Mac に適用する場合は、`T=` を `/Users/hitoshi/.salesanchor-tools`、`cd` を `/Users/hitoshi/salesanchor` にする。
 
 ### 毎日の開発データ自動片付け（disk-janitor）
 
