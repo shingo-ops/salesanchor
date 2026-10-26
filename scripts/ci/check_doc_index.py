@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""目次 docs/INDEX.md から手順書が届くかを数える検査（警告だけ。--strict で失敗にできる）。
+"""目次 docs/INDEX.md から手順書が届くか、入口の安全の決まりと重複を数える検査（--strict で 1件でもあれば失敗。CI は --strict で動かす）。
 
-使い方: python3 -I docs/handoff/doc-agenda-nav/check_doc_index.py --root . [--strict]
+使い方: python3 -I scripts/ci/check_doc_index.py --root . [--strict]
 辺の取り方は ~/CC報告ファイル-keep/agenda-nav-20261022/unreach/reach.py の variant any と同じ。
 標準ライブラリだけで動く。
 """
@@ -23,6 +23,18 @@ LINK = re.compile(r'\[[^\]]*\]\(([^)\s]+)(?:\s+"[^"]*")?\)')
 ANY = re.compile(r'[A-Za-z0-9_./~-]+\.md')
 WHEN_NAME = "いつ読むか"
 LIMIT_DEPTH = 3
+DUP_FILES = ["CLAUDE.md", "AGENTS.md", "frontend/AGENTS.md", "backend/AGENTS.md",
+             "frontend/CLAUDE.md", "backend/CLAUDE.md"]
+DUP_WORDS = ["i18n", "ハードコード", "不可逆", "推測", "executor-preflight", "squash",
+             "worktree", "日本語", "file:line"]
+DUP_EXCLUDE = [
+    ("frontend/AGENTS.md", "ハードコード日本語は絶対禁止", "design §25: 別の決まり（画面の文字の決まり）"),
+    ("frontend/AGENTS.md", "日本語ハードコード", "design §25: 別の決まり（画面の文字の決まり）"),
+    ("frontend/AGENTS.md", "コメント内の日本語は OK", "design §25: 別の決まり（画面の文字の決まり）"),
+    ("backend/AGENTS.md", "日本語説明を書く", "design §25: 別の決まり（説明を日本語で書く決まり）"),
+]
+SAFETY_PHRASES = ["不可逆操作は必ず PO 確認", "VPS 直作業禁止", "直接コミット禁止"]
+IMPORT_FILES = ["CLAUDE.md", "frontend/CLAUDE.md", "backend/CLAUDE.md"]
 
 
 def die(msg):
@@ -199,12 +211,42 @@ def main():
                 broken += 1
                 lines.append((f, "BROKEN_LINK %s:%d %s" % (f, i, c0)))
 
+    dup_words = 0
+    for w in DUP_WORDS:
+        hits = []
+        for f in DUP_FILES:
+            if f not in fset:
+                continue
+            for i, line in enumerate(read(f).split("\n"), 1):
+                if w in line:
+                    excluded = any(ef == f and ph in line for ef, ph, _ in DUP_EXCLUDE)
+                    hits.append((f, i, excluded))
+        if len(set(h[0] for h in hits)) >= 2 and any(not h[2] for h in hits):
+            dup_words += 1
+            lines.append(("~", "DUP_WORD %s %s" % (
+                w, ",".join("%s:%d" % (h[0], h[1]) for h in hits if not h[2]))))
+
+    safety_missing = 0
+    agents_text = read("AGENTS.md") if "AGENTS.md" in fset else ""
+    for ph in SAFETY_PHRASES:
+        if ph not in agents_text:
+            safety_missing += 1
+            lines.append(("~", "SAFETY_MISSING " + ph))
+    agents_import_missing = 0
+    for f in IMPORT_FILES:
+        if f not in fset or "@AGENTS.md" not in [l.strip() for l in read(f).split("\n")]:
+            agents_import_missing += 1
+            lines.append(("~", "AGENTS_IMPORT_MISSING " + f))
+
     lines.sort(key=lambda x: (x[1].split(" ")[0] != "UNREACHED", x[0], x[1]))
     for _, l in lines:
         print(l)
-    warnings = len(unreached) + deep + blank + no_when + broken
-    print("SUMMARY unreached=%d deep=%d blank_when=%d no_when_column=%d broken_link=%d warnings=%d"
-          % (len(unreached), deep, blank, no_when, broken, warnings))
+    warnings = (len(unreached) + deep + blank + no_when + broken
+                + dup_words + safety_missing + agents_import_missing)
+    print("SUMMARY unreached=%d deep=%d blank_when=%d no_when_column=%d broken_link=%d "
+          "dup_words=%d safety_missing=%d agents_import_missing=%d warnings=%d"
+          % (len(unreached), deep, blank, no_when, broken,
+             dup_words, safety_missing, agents_import_missing, warnings))
     print("MAX_DEPTH_TERMINAL %d" % max_depth)
     if a.strict and warnings >= 1:
         sys.exit(1)
