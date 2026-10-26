@@ -15,7 +15,7 @@
 - `backend/app/services/gemini_raw_copy_v8.py:219-229` `client.models.generate_content` を 1 回呼び、例外は `RuntimeError(...) from exc` に包む（元の例外は `__cause__`）。
 - 試験ログ（2026-10-27 01:40 JST）: 元の例外は `google.genai.errors.ServerError: 503 UNAVAILABLE`。
 - 本番の解析経路（`backend/app/tasks/tcg_extraction.py:817-838` Celery max_retries=2, delay 30s）は今回触らない。
-- `gemini_extraction_svc.py:248-276` のクライアント生成も触らない（本番の解析経路に影響するため）。
+- `backend/app/services/gemini_extraction_svc.py:248-276` のクライアント生成も触らない（本番の解析経路に影響するため）。
 
 ## 3. 変更（prompt_ab.py と test_prompt_ab.py のみ）
 1. 引数を 2 つ足す（`parse_args`、prompt_ab.py:584-604 付近）:
@@ -36,7 +36,7 @@
 4. 台帳（prompt_ab.py:557-569）は変えない。成功した 1 回分だけ書かれる。
 
 ## 4. 触らない範囲
-- `gemini_raw_copy_v8.py` / `gemini_extraction_svc.py` / `tcg_extraction.py` / 本番の解析経路すべて
+- `backend/app/services/gemini_raw_copy_v8.py` / `backend/app/services/gemini_extraction_svc.py` / `backend/app/tasks/tcg_extraction.py` / 本番の解析経路すべて
 - migrations / deploy.yml / scripts / frontend
 - prompt_ab の他の動き（費用上限・ledger_missing・dry-run）
 
@@ -55,7 +55,7 @@ ServerError/ClientError の作り方は、本番で入る google-genai の版で
 ## 6. 反映と使い方
 - PR は `release/prompt-ab-transient-retry`（origin/main 起点・worktree）。危険パスは含まない（ADR-135/136 の対象外）。
 - 試験道具はコンテナのイメージの中で動くため、main へのマージ後の通常の反映でイメージに入るのを確認してから試験を流す（反映の確認方法: コンテナ内で `python -m app.tools.prompt_ab --help` に `--retry-transient` が出ること）。
-- 試験の起動台本（PR 外・手元の試験フォルダ）`fhd_runner.sh` に `--retry-transient 3 --retry-wait-sec 30` を足すのは Opus の別作業。
+- 試験の起動台本（PR 外・手元の試験フォルダ。リポジトリ外）に `--retry-transient 3 --retry-wait-sec 30` を足すのは Opus の別作業。
 
 ## 7. リスクと対処
 - 待ちが長くなる: 最大 30+60+120=210 秒/組。20 分の見張りより短い。
@@ -65,11 +65,15 @@ ServerError/ClientError の作り方は、本番で入る google-genai の版で
 ## 8. 戻し方
 PR を revert。既定 0 なので、オプションを付けなければ戻さなくても今と同じ動き。
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 不要。理由: 既に使っている SDK 自身が 408/429/5xx を指数的な待ちでやり直す仕組みを持っている（google-genai 2.33.0 `types.HttpRetryOptions` の既定 attempts=5・initial_delay=1.0・exp_base=2.0、Sonnet 調査 retry_recon/sdk_HttpRetryOptions.txt）。本件はその考え方を、本番経路に触れずに試験道具の側だけで取るもの。
 
+## 維持の仕組み
+- 既定 0 のため、オプションを付けない呼び出しは今と同じ動き。やり直しの判定と回数・待ちは backend/tests/test_prompt_ab.py の K1〜K5 試験で CI が毎回確かめる。
+- 試験の起動台本でどの値を使ったかは、各試験の記録（Opus）に残す。
+
 ## 9. 審査（REVISE 1回目）の反映 — 以下が §3・§5・§6・§7 より優先する
-- 置き場所: `docs/handoff/prompt-ab-transient-retry/design.md`（本カード全文）と `recon.md`（実装役が file:line で作る）。
+- 置き場所: `docs/handoff/prompt-ab-transient-retry/design.md`（本カード全文）と `docs/handoff/prompt-ab-transient-retry/recon.md`（実装役が file:line で作る）。
 - R1: やり直しの対象は prompt_ab.py:524-539 の `if config == "v7": ... else: call_gemini_raw_copy_v8(...)` の **if/else 全体**（v7 も `RuntimeError from exc` で包むので同じ判定が効く）。
 - R2: `transient_retries` = 実際にやり直した回数 k（k≥1 のときだけ欄を書く）。K2 では error 行に `transient_retries == 3`。
 - R3: parse_args の検査は既存の `if args.repeat < 1: p.error(...)` と同じ形で、`args.retry_transient < 0 or args.retry_transient > 5` → `p.error("--retry-transient は 0〜5")`、`args.retry_wait_sec <= 0` → `p.error("--retry-wait-sec は 0 より大きく")`。試験: 既定値 0 / 30.0、`-1`・`6`・`0`（wait）で SystemExit。
