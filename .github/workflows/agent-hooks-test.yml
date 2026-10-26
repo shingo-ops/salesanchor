@@ -1,6 +1,6 @@
 name: Agent Hooks Test
 
-# scripts/agent-hooks/review-gate/ (ADR-1029) の受入試験。docs/handoff/review-gate-hook/design.md §5-1・§8。
+# scripts/agent-hooks/ の受入試験（review-gate: ADR-1029・商品登録の見張り: doc-agenda-nav design §32 D2）。
 # scripts/agent-hooks/local-subagent-guard/ (ADR-1045) の受入試験。docs/handoff/local-subagent-guard/design.md §8。
 # 偽の gh・一時ディレクトリだけを使う。本物の ~/.claude には触れない。
 # ※ 必須チェック（Branch Protection）には登録しない。
@@ -11,6 +11,7 @@ on:
       - 'scripts/agent-hooks/**'
       - '.github/workflows/agent-hooks-test.yml'
       - '.claude/agents/reviewer.md'
+      - 'docs/specs/product-master/registration-rules.md'
 
 jobs:
   review-gate:
@@ -23,6 +24,18 @@ jobs:
       - uses: actions/checkout@v5
       - name: Run review-gate tests
         run: bash scripts/agent-hooks/review-gate/test_review_gate.sh
+
+  master-register-guard:
+    name: master-register guard test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - name: Run master-register guard tests
+        run: bash scripts/agent-hooks/test_master_register_rules_guard.sh
+
   local-subagent-guard:
     name: local-subagent-guard hook test
     runs-on: ubuntu-latest

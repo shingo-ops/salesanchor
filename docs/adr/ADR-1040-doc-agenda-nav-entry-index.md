@@ -53,5 +53,12 @@
 | 仕組み | 担当 | 効果 |
 |---|---|---|
 | 行数検査 CI | .github/workflows/check-claude-size.yml・frontend/scripts/check-claude-size.js | 入口が上限を超えたら失敗（段2a・段3c で対象と上限を直す） |
-| 到達検査 CI | 段2で新設 | 目次から届かない文書を数える |
+| 到達検査 CI | .github/workflows/doc-index-reachability.yml（job「doc index reachability」）・scripts/ci/check_doc_index.py | 目次から届かない文書・深さ・「いつ読むか」空欄・壊れたリンク・入口の安全の決まりの欠け（K7）・同じ決まりの重複（K3）を数え、1件でもあれば失敗（`--strict`）。必須チェックではない（登録は PO の操作。design §32 M4） |
+| 登録の見張りの試験 CI | .github/workflows/agent-hooks-test.yml（job「master-register guard test」）・scripts/agent-hooks/test_master_register_rules_guard.sh | 商品登録の見張り（K2）の試験を、見張り・試験・登録の決まり（docs/specs/product-master/registration-rules.md）が変わる PR で動かし、1件でも FAIL なら失敗。必須チェックではない |
 | 設計持ち込みの検査 | .github/workflows/process-artifacts-gate.yml | PR に recon・design・対象 ADR の記載を求める |
+
+## 維持の仕組み
+
+- 守り手は上の表の4つ（行数検査 CI・到達検査 CI・登録の見張りの試験 CI・設計持ち込みの検査）。到達検査は pull_request・main への push・毎週月曜に動く。
+- K11 は続けて測らない（design §32 D5 の理由: 入口から決まりを移すたびの照合で足りるため）。今後また入口から決まりを移すときは、その段の設計に K11 の照合を書く。
+- リポジトリ外の点検と K12 の時期は design §32 D3・D4 で作る予定（M3。まだ無い）。

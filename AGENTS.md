@@ -40,6 +40,7 @@ DROP TABLE / 大量DELETE / `rm -rf` / `git reset --hard` / `git push --force`�
 
 - 実行役は作業開始前に必ず `./scripts/dev/executor-preflight.sh || exit 1` を実行する
 - 全タスクは `docs/STANDARD-WORKFLOW.md` の3フェーズ（KGI→現在地→設計）に従う
+- push・PR/issue の本文・コメントに仕入元の投稿の原文を「」『』で書き写さない。送る前の見張り（`scripts/agent-hooks/confidential-quote-guard/`、ADR-1045）が原文と照らして止める。止められたら語句を消し、形の説明に書き換える。push は `git -C <worktree の絶対パス> push -u origin <ブランチ>` を単独で、本文は Write で作ったファイルを `--body-file <絶対パス>` で渡す（これ以外の形は止まる。commit は heredoc か `-F <絶対パス>` で書ける。見張りの登録は PO が `!` で実行）
 - 作業前/commit前/PR前のチェックは `docs/ai-agents/executor-checklist.md`（正本・必読）
 - 手順や作業方法を答える・計画する前に、必ず目次 `docs/INDEX.md` を開き、章→末端の順にたどって該当する手順書を読む（記憶や推測だけで答えない）
 - 画面（`frontend/`）は `frontend/AGENTS.md`、サーバー側（`backend/`）は `backend/AGENTS.md` の決まりにも従う。触る前に開いて読む（Codex は作業場所より下の AGENTS.md を自動では読まない）
