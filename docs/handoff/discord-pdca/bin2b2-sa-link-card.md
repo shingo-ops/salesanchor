@@ -32,18 +32,23 @@
     4. `G/gitdir` の中身（相対なら G の実パスを起点）の実パスが `P/.git` の実パス
     5. `G/config` と `G/config.worktree` が無い
 - reaper:
-  - :71 の後（本店に向けた :83 の fetch より前）で `git_safe_link_ok "${PWD}" "${MAIN_REPO_ROOT}"` を確かめる。合わなければ「元のリポジトリの git の繋がりを確かめられない（<理由>）。何も消さない」と出して終了コード 1。これで、cwd が本店なら本店の確かめ（`commondir`・`config.worktree` が無い）、cwd が worktree なら worktree の繋がりと本店の確かめになる。本店の `commondir` が偽の置き場を指すと `MAIN_REPO_ROOT` が偽の置き場の親になり、cwd と食い違うのでここで落ちる
+  - :71 の後（本店に向けた :83 の fetch より前）で確かめる。合わなければ「元のリポジトリの git の繋がりを確かめられない（<理由>）。何も消さない」と出して終了コード 1:
+    - 本番の走査のとき（`REAPER_WORKTREES_DIR` が空）: cwd が本店の最上位であることを求める。`git_safe_link_ok "${PWD}" "${PWD}"`（中で `git_safe_main_ok` も通る）に加え、`realpath "${MAIN_REPO_ROOT}"` と `realpath "${PWD}"` が同じであること。cwd が worktree や下のフォルダなら落ちる（再審査 M1: worktree の `.git` ファイルが辻褄の合う偽の本店を指すと、worktree の申告どおりの本店を確かめても防げないため。自動の呼び元＝起動設定・Actions・片付けの R4・agent-console はどれも cwd=本店の最上位）
+    - テスト用の走査のとき: 今の試験は作業場所の最上位などから動くので、`git_safe_link_ok "${PWD}" "${MAIN_REPO_ROOT}"` にとどめる
+    - 本店の `commondir` が偽の置き場を指すと `MAIN_REPO_ROOT` が偽の置き場の親になり、cwd と食い違うのでここで落ちる
+    - 人や AI が worktree の中から `bash scripts/new-worktree.sh` を動かすと、new-worktree.sh :67 の `2>/dev/null || true` で自動回収は黙って飛ばされる（消す側には倒れない）。PR 本文に書く
   - :66・:70 の `rev-parse` は確かめより前に動く。命令が動かないことを試験 G8 で確かめる
   - 本番の走査のとき（`REAPER_WORKTREES_DIR` が空のとき）だけ、:178 の部屋ごとの判定の最初（チェック 0 の前）で `git_safe_link_ok "${WORKTREE_PATH}" "${MAIN_REPO_ROOT}"` を確かめる。合わなければ新しい入れ物 `SKIP_LINK` に「ブランチ名（理由）」を入れて `continue`（その部屋には git を1回も動かさず、消さない）。出力は :358-360 の書き方に合わせて「🔗 git の繋がりが本店と合わない（削除しない）: N 件」
   - テスト用の走査（:106-135）には部屋ごとの確かめを足さない（作り物の部屋は worktree ではないため。本番の起動設定・片付けの R4・Actions がこの変数を使っていないことは審査で確かめ済み。完了の確認8 でもう一度確かめる）
-- `scripts/new-worktree.sh`: :65 を `REAPER_SCRIPT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/reaper-worktree.sh"` にする（自分と同じ置き場の自動回収を動かす。reaper :35 と同じ書き方）。cwd は今のまま。ほかの行は変えない
+- `scripts/new-worktree.sh`: :65 を `REAPER_SCRIPT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/reaper-worktree.sh"` にする（自分と同じ置き場の自動回収を動かす。reaper :35 と同じ書き方。:67 の `--execute` と :76 の上限のときの dry-run の両方がこの変数を使う）。cwd は今のまま。ほかの行は変えない
+- 残る弱さ（受け入れる）: 目的3 の new-worktree.sh の分は、agent-console v0.46.3 が new-worktree.sh 自身を道具の写しから動かす道でだけ成り立つ。人や AI が本店で `bash scripts/new-worktree.sh` を動かすと、今後も本店の写しの自動回収が動く（本店の写しを最新に保つのは別の話。この便では扱わない）。PR 本文に1行書く
 - janitor:
   - 新しい一覧は作らない。R2 で照らす元のリポジトリは、`DJ_ROOT_SALESANCHOR` と、`DJ_REPOS` の各行の「パス」（`|` の前）。読み出しは R4 :394 と同じ書き方にする
   - R2: :327 と :328 の間（候補を集めた後・`dj_wt_unused` の前）で、照らす元のリポジトリのどれか1つと `git_safe_link_ok "${wt}" <元>` が合うかを見る（無い元のリポジトリは飛ばす）。どれとも合わなければ各候補を `dj_skip "<候補>" "git の繋がりが知っている元のリポジトリと合わない（残す）: <理由>"` にして次へ。理由は最後に照らした元のリポジトリのもの
   - R4: :397 の `remote get-url` の前で `git_safe_link_ok "${path}" "${path}"`。合わなければ `dj_skip "${path}" "git の繋がりを確かめられない（残す）: <理由>"` で次へ
   - 照らす一覧に無い元のリポジトリ（salesanchor-docs-staging・salesanchor-public・recovery の写しなど）の worktree は、残す側に倒す。今もこれらの node_modules は残されているので、消す・残すは変わらず、理由の文だけが変わる
 - 起動設定（`ops/launchd/jp.salesanchor.reaper-onlogin.plist`）:
-  - ProgramArguments の3つ目を次の形にする（XML の中では `&&` を `&amp;&amp;` と書く。片付けの plist :34 と同じ）。道具の写しの取り直しと確かめは片付けの plist :34 と同じ4つ（fetch・未保存なし・`checkout --detach origin/main`・HEAD が origin/main）:
+  - ProgramArguments の3つ目を次の形にする（XML の中では `&&` を `&amp;&amp;`、`>&2` を `&gt;&amp;2` と書く。片付けの plist :34 と同じ。`--dry-run` は reaper の知らない引数で、`--execute` 以外は dry-run になる＝reaper :41-44）。道具の写しの取り直しと確かめは片付けの plist :34 と同じ4つ（fetch・未保存なし・`checkout --detach origin/main`・HEAD が origin/main）:
     `T=/Users/tanizawashingo/.salesanchor-tools; { <取り直しと確かめの4つを && で繋ぐ>; } || { echo "reaper: 道具のコピーの更新・確認に失敗したため実行しない" >&2; exit 1; }; cd /Users/tanizawashingo/salesanchor || exit 1; bash "$T/scripts/reaper-worktree.sh" --execute; rc=$?; [ "$rc" -eq 0 ] || echo "reaper: 自動回収が終了コード $rc で終わった" >&2; exit "$rc"`
     （審査 L6: 取り直しの失敗と、自動回収そのものの失敗を別の文にする）
   - cwd を本店にするので、`MAIN_REPO_ROOT`・台帳・ledger-lookup.sh の動きは今と同じ（Actions :47-56 と同じ形で、毎日動いている）
@@ -71,17 +76,20 @@
 3. `scripts/new-worktree.sh`: :65
 4. `scripts/disk-janitor.sh`: R2・R4
 5. `scripts/tests/test-reaper-safety.sh` に足す（作り物の元のリポジトリ: `git init`・`f.txt`（`1\n`）を1回 commit・`git init --bare` の偽の remote に push。偽の置き場＝元の `.git` を写して `worktrees` を除き、`config` に `[filter "evil"]`・`clean = touch <印>; cat`、`info/attributes` に `*.txt filter=evil`。reaper は**本番の走査**で dry-run: cwd=作り物の元のリポジトリ、`REAPER_WORKTREES_DIR` を空、`REAPER_SKIP_FETCH=1`、既存の偽の gh と台帳の作りを使う）:
+   - 作り物の作り: G4・G5・G6 はそれぞれ別の `git worktree add` の worktree にする。偽の remote に push した後、元のリポジトリで `fetch origin` する（G6 の HEAD が `refs/remotes/origin/*` から届くように。既存の R9-g :604 と同じ）
    - G4 偽の置き場（commondir）: `git worktree add` の worktree の `f.txt` を `2\n` にし、その `commondir` を偽の置き場に向ける
      - 対照: その worktree で `git -c core.fsmonitor=false -c core.hooksPath=/dev/null status --porcelain --ignore-submodules=all` を動かして**印ができる**こと（できなければ FAIL）。印を消す
      - reaper の dry-run で印ができず、出力の「git の繋がりが本店と合わない」にその部屋が入り、削除候補に入らないこと
    - G5 偽の gitdir: 同じく worktree の `.git` ファイルを偽の gitdir（`.git/worktrees/<名>` の中身を写し、`commondir` を偽の置き場に向けたもの）に向ける。印ができず、「合わない」に入ること（対照は取らない）
    - G6 正しい worktree: 同じ作り物の正しい worktree が「合わない」に入らず、今の判定どおり（DONE＋未保存なしなら削除候補）になること
    - G7 元のリポジトリの `.git` をシンボリックリンクにした作り物で、終了コード 1・何も消さないこと
+   - G9 cwd が worktree: 正しい worktree（G6）を cwd にして本番の走査の dry-run を動かし、終了コード 1・「何も消さない」の文が出ること（再審査 M1 の確かめ）
    - G8 本店の `commondir`: 元のリポジトリの `f.txt` を `2\n` にし、`.git/commondir` を偽の置き場の絶対パスにする。対照: 元のリポジトリで上書き付きの `git diff --no-ext-diff --no-textconv --ignore-submodules=all --numstat` を動かして**印ができる**こと。印を消してから reaper の dry-run を動かし、終了コード 1・「何も消さない」の文が出る・印ができないこと（:66・:70 の `rev-parse` で印ができたら FAIL）。終わったら `commondir` を消す
-6. `scripts/tests/test-disk-janitor.sh` に足す（既存の `gitmain` を使う。照らす一覧に入れるため、試験の `DJ_REPOS` か `DJ_ROOT_SALESANCHOR` を `gitmain` に向ける。どちらに向けるかは既存の試験の作りに合わせ、PR 本文に書く）:
-   - J3: R2 の対象になる worktree（`mk_nm`・古い更新日時）の追跡しているファイルを同じ長さで変え、`commondir` を G4 と同じ偽の置き場に向ける。対照として、その worktree で上書き付きの `git diff --no-ext-diff --no-textconv --ignore-submodules=all --numstat` で印ができること（審査 H2。`git log` は作業場所のファイルを読まないので対照にならない）。印を消し、dry-run で印ができず、その node_modules が「残す」に入り理由が出ること
-   - J4: 照らす一覧に無い元のリポジトリの worktree の node_modules が「残す」に入ること
-   - 既存の R2 の試験（`WT_DEL` など）の期待が今のままで通ること
+6. `scripts/tests/test-disk-janitor.sh` に足す（既存の `gitmain` を使う。照らす一覧に入れるため、試験の `DJ_REPOS` に `${GM}|owner/gm|main` の1行を足す。`DJ_ROOT_SALESANCHOR` は R_SA の試験（:39-46・:84・:105・:183・:360）が使うので向け直さない。副作用として R4 が gitmain について「origin が想定と違う」の行を1行多く出す。既存の :196・:198 の期待は今のまま通る（:124-130 の作り。再審査 M4））:
+   - J3: R2 の対象になる worktree（`mk_nm`）の追跡しているファイルを同じ長さで変え、`commondir` を G4 と同じ偽の置き場に向ける。対照として、その worktree で上書き付きの `git diff --no-ext-diff --no-textconv --ignore-submodules=all --numstat` で印ができること（`git log` は作業場所のファイルを読まないので対照にならない）。印を消す。書き換えたファイルと worktree の更新日時を既存の試験と同じやり方（既存の古い日時にする関数）で古い日時に戻す（確かめが無ければ削除候補に入る作りにするため）。dry-run で印ができず、その node_modules が「残す」に入り、理由に新しい文「git の繋がりが知っている元のリポジトリと合わない」が含まれること（判定はこの文で行う。再審査 M3）
+   - J4: 照らす一覧に無い元のリポジトリの worktree の node_modules が「残す」に入り、同じ新しい文が出ること
+   - J5（R4）: `DJ_REPOS` の1行に `.git/commondir` を置いた作り物のリポジトリを入れ、dry-run で、そのリポジトリについて偽の reaper が呼ばれない（既存の REAPER_LOG に出ない）ことと、理由「git の繋がりを確かめられない（残す）」が出ること
+   - 既存の R2 の試験（`WT_DEL`・`WT_ACDEL` など）の期待が今のままで通ること
 7. `ops/launchd/jp.salesanchor.reaper-onlogin.plist`・`docs/ops/runner-commands.md`: 上の「決めたこと」
 8. ADR-114 と `docs/adr/README.md`
 9. この指示書は設計者がこのブランチに先に記録済み。作る係は書き換えない
@@ -89,15 +97,17 @@
 ## 完了の確認（生出力を /tmp/CC報告ファイル/discord-pdca-bin2/57-impl2b2-sa/ に保存）
 1. `bash -n scripts/git-safe.sh scripts/reaper-worktree.sh scripts/disk-janitor.sh scripts/new-worktree.sh`
 2. `shellcheck`（手元にあれば。無ければ「無い」と記録）
-3. `bash scripts/tests/test-reaper-safety.sh`（全件の生出力）
-4. `bash scripts/tests/test-disk-janitor.sh`（全件の生出力）
+3. `bash scripts/tests/test-reaper-safety.sh`（全件の生出力。この作業場所の最上位を cwd にして回す）
+4. `bash scripts/tests/test-disk-janitor.sh`（全件の生出力。同じく最上位で回す）
 5. 見分ける力: 次をそれぞれ一時的に外して 3・4 を回し、落ちることを確かめてから戻す（生出力を残す。戻した後の `git diff` に外した跡が無いこと）
-   - 部屋ごとの `git_safe_link_ok` と R2・R4 の呼び出し → G4・G5・J3 が落ちる
-   - reaper :71 の後の確かめ → G7・G8 が落ちる
-6. 変更前（origin/main の写し）と変更後の reaper を、どちらも cwd=~/salesanchor の dry-run で動かし、「消す」と「残す」に入る部屋の**顔ぶれ**の差が0件であること（新しい「合わない」に入る部屋が1つでもあれば止まって報告）。片付けも変更前後の dry-run（`DJ_LOG_FILE` は空）で、R2・R4 の「消す」と「残す」に入る場所の顔ぶれの差が0件であること。理由の文だけが変わった場所は、場所と前後の理由を一覧にして残す（審査 H1）。時刻の差で変わる行があれば書き出す
-7. `plutil -lint ops/launchd/jp.salesanchor.reaper-onlogin.plist`。その3つ目の引数を、`--execute` を `--dry-run`（reaper の dry-run の引数を実物で確かめる）に置き換えて1回だけ手で動かし、道具の写しの取り直しと dry-run が通ること（`~/.salesanchor-tools` が汚れていない・HEAD が origin/main になったこと）。その写しには、まだこの PR の台本は入っていない（マージ前のため）ことを記録に書く
+   - reaper の部屋ごとの `git_safe_link_ok` → G4・G5 が落ちる
+   - janitor R2 の呼び出し → J3・J4 が落ちる
+   - janitor R4 の呼び出し → J5 が落ちる
+   - reaper :71 の後の確かめ → G7・G8・G9 が落ちる
+6. 変更前（origin/main の写し。`scripts/` ごと用意する。git-safe.sh・ledger-lookup.sh が同じ置き場に要るため。reaper :35・:195）と変更後の reaper を、どちらも cwd=~/salesanchor の dry-run で動かす。両方の回で「=== reaper 結果 ===」が出ている（ロックで飛ばされていない）ことを確かめる。「消す」と「残す」に入る部屋の**顔ぶれ**の差が0件であること（新しい「合わない」に入る部屋が1つでもあれば止まって報告）。片付けも変更前後の dry-run（`DJ_LOG_FILE` は空）で、R2・R4 の「消す」と「残す」に入る場所の顔ぶれの差が0件であること。理由の文だけが変わった場所は、場所と前後の理由を一覧にして残す。時刻の差で変わる行があれば書き出す
+7. `plutil -lint ops/launchd/jp.salesanchor.reaper-onlogin.plist`。作る係は3つ目の引数を動かさない（道具の写しを触らない）。3つ目の引数の `--execute` を `--dry-run` にした形を手で1回動かす確かめは、マージ後・入れ替えの前に設計者が行う（再審査 M2）
 8. `git grep -n REAPER_WORKTREES_DIR -- ops scripts docs/ops .github ':!scripts/tests'` で、本番の起動設定・片付け・Actions がこの変数を使っていないこと（reaper の説明とテスト用の分岐以外0件）
-9. `git grep -n 'scripts/reaper-worktree.sh' -- scripts ops .github` で、自動回収を呼ぶ所を全部書き出し、PR 本文の影響範囲に入れる（new-worktree.sh :65-68・janitor R4・起動設定・Actions :47-56）
+9. `git grep -n 'scripts/reaper-worktree.sh' -- scripts ops .github` で、自動回収を呼ぶ所を全部書き出し、PR 本文の影響範囲に入れる（new-worktree.sh :65-68・:76・janitor R4・起動設定・Actions :47-56 と :62-65 の dry-run）
 10. 3・4・5・6・7 の生出力を `docs/handoff/disk-janitor/evidence/` に、前の便のファイルを上書きしない名前 `link-check-<内容>.txt`（例 `link-check-test-reaper-safety.txt`・`link-check-dryrun-diff.txt`）で残す（審査 L8）
 11. `node scripts/check-process-artifacts.js` を PR 前に回す（使い方は scripts/ の実物で確かめる）
 12. 作業前の決まり: この作業場所（`release/discord-pdca-bin2b2-sa-link-card`）で `./scripts/dev/executor-preflight.sh` を通す。指示書の記録の上に1コミット（共著者行 `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`）。`gh auth status` で shingo-cc を確かめて `gh pr create --base main`。PR 本文はテンプレートから作り、`### 標準ワークフロー確認` の節・触ったファイルの一覧・影響範囲（9 の一覧）・「危険パス（scripts/・ops/launchd/）を含むため GO が要る」・「マージすると Actions（reaper-schedule.yml）が新しい確かめ付きの reaper で `--execute` する（完了の確認6 がその関所）」・「Evaluator は画面のファイル変更 0 のため省く」・「手元の起動設定の入れ替えと道具の写しの取り直しはマージ後に設計者が行う」・「agent-console v0.46.3 はこの PR の後に入れる」を書く
@@ -116,7 +126,7 @@
 - 下調べと審査の実測（git 2.39.3）: worktree の `commondir`、または本店の `.git/commondir` を偽の置き場に向けると、上書き付きでも filter の命令が動いた（/tmp/CC報告ファイル/discord-pdca-bin2/53-exp-link/out.txt・/tmp/CC報告ファイル/discord-pdca-bin2/56-review79/review-out.txt）。ほかの事例の数は使わない
 
 ## 維持の仕組み
-- 守り手: 自動回収・片付け・`scripts/git-safe.sh`・`scripts/new-worktree.sh`・起動設定を変える PR の設計者（Opus）。その PR で G4〜G8・J3・J4 を手で回し、記録があるかを審査で確かめる
+- 守り手: 自動回収・片付け・`scripts/git-safe.sh`・`scripts/new-worktree.sh`・起動設定を変える PR の設計者（Opus）。その PR で G4〜G9・J3〜J5 を手で回し、記録があるかを審査で確かめる
 - 確かめの正本は `scripts/git-safe.sh` の `git_safe_main_ok`・`git_safe_link_ok` の1か所。作業場所・本店に向けた git を足すときはここを通す決まりを ADR-114 R12 に書く
 - 試験は CI では走らないため、上の PR で手で回し、記録を `docs/handoff/disk-janitor/evidence/` に残す（既存の決まりのまま。CI に載せることは別の便の候補）
 - 起動設定の手元とリポジトリのずれは、入れ替えの後に `diff` で0行を確かめる（設計者がマージ後に行う）
