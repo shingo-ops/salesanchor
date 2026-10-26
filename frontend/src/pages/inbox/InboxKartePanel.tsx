@@ -769,7 +769,7 @@ function PerformanceSummary({ leadId }: { leadId: number }) {
     return (
       <div className="karte-performance-section" data-testid="karte-performance-section">
         <div className="right-panel-row">
-          <span className="right-panel-value">...</span>
+          <LoadingBlock size="sm" inline />
         </div>
       </div>
     );
