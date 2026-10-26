@@ -3,7 +3,7 @@
 
 仕入元の投稿の原文を、「」『』の中に書き写したまま公開の置き場へ送るのを、送る前に止める。
   - git push        : 決まった形 `git -C <絶対パス> push [-u] origin <ref>` だけ通し、送る差分の追加行を照らす
-  - gh pr create/edit/comment/review, gh issue create/comment : 本文 (--body-file <絶対パス> か 一重引用符の --body だけ通す)
+  - gh pr create/edit/comment/review/merge, gh issue create/edit/comment, gh release create/edit, gh repo edit : 本文・題名・説明 (--body-file <絶対パス> か 一重引用符の --body だけ通す)。gh gist は止める
   - 決まりの外の形は、照らせないので止める (命令文から作業場所や出どころを推し量らない)
 
 止める決まり (全部満たす語句が 1 つでもあれば exit 2):
@@ -33,7 +33,18 @@ import unicodedata
 HOOK = "confidential-quote-guard"
 MIN_LEN = 4
 
-GH_ACTIONS = {"pr": {"create", "edit", "comment", "review"}, "issue": {"create", "comment"}}
+_BT = ({"--body", "-b"}, {"--body-file", "-F"}, {"--title", "-t", "--subject"})
+_REL = ({"--notes", "-n"}, {"--notes-file", "-F"}, {"--title", "-t"})
+# (gh の群, 操作) -> (本文の印, 本文ファイルの印, 題名の印)。印は gh の操作ごとに違う (-d は repo edit では説明、release では draft)
+GH_OPS = {
+    ("pr", "create"): _BT, ("pr", "edit"): _BT, ("pr", "comment"): _BT, ("pr", "review"): _BT, ("pr", "merge"): _BT,
+    ("issue", "create"): _BT, ("issue", "edit"): _BT, ("issue", "comment"): _BT,
+    ("release", "create"): _REL, ("release", "edit"): _REL,
+    ("repo", "edit"): ({"--description", "-d"}, set(), set()),
+}
+GH_ACTIONS = {}
+for _g, _a in GH_OPS:
+    GH_ACTIONS.setdefault(_g, set()).add(_a)
 PHRASE_RES = (re.compile(r"「([^「」\n]*)」"), re.compile(r"『([^『』\n]*)』"))
 EXPLAIN = ("仕入元の原文の書き写しは、公開の置き場へ送れません。"
            "該当の語句を消し、「形の説明」(例: 値段の行・在庫数の行・見出しの行) に書き換えてから、もう一度送ってください。"
@@ -185,19 +196,24 @@ def find_hits(entries, corpus, excl):
 # 方針: 命令文から作業場所や本文の出どころを推し量らない。
 # git push と gh の本文の操作は「決まった形」だけを通し、それ以外はすべて止める。
 
-PUSH_MSG = "git push は `git -C <worktree の絶対パス> push -u origin <ブランチ>` の形で、ほかの命令とつながずに単独で流してください"
-GH_MSG = "本文は Write で作ったファイルを `--body-file <絶対パス>` で渡してください (または一重引用符の `--body '...'`)。ほかの命令とつながず単独で流してください"
+PUSH_MSG = "git push は `git -C <worktree の絶対パス> push -u origin <ブランチ>` の形で、ほかの命令とつなげずに単独で流してください"
+GH_MSG = "本文は Write で作ったファイルを `--body-file <絶対パス>` で渡してください (または一重引用符の `--body '...'`)。ほかの命令とつなげずに単独で流してください"
 SAFE_CHARS = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_@%+=:,./-")
 SHELLS = {"sh", "bash", "zsh", "dash", "ksh", "eval", "source", "."}
 REF_RE = re.compile(r"HEAD|[A-Za-z0-9][A-Za-z0-9/._-]*")
 REDIR_TAIL_RE = re.compile(r"\s+(?:2>&1|>>?\s*/[A-Za-z0-9_@%+=:,./-]+)\s*$")
 GH_BAD_OPTS = {"-f", "--fill", "--fill-first", "--fill-verbose", "--editor", "-e", "--web", "-w", "--template", "-T", "--recover"}
-GH_TITLE = {"--title", "-t"}
 HIST_MSG = ("送る途中の commit に書き写しがあります。新しい commit で消しても履歴に残って送られます。"
             "該当の commit を書き直すか、origin/main から作り直したブランチで送ってください。書き直しは Opus の指示を待ってください。")
 PUSH_CFG_RE = r"^(alias\.|remote\..*\.pushurl|url\..*\.pushinsteadof)"
-GH_BODY_STR = {"--body", "-b"}
-GH_BODY_FILE = {"--body-file", "-F"}
+SCOPED_CFG_RE = r"^(alias\.|include\.|includeif\.|remote\..*\.pushurl|url\..*\.pushinsteadof)"  # --local / --worktree だけに使う
+DANGER_MSG = ("repo の設定 (別名・push 先・include) や追跡ブランチ (refs/remotes) を書き換える操作、"
+              "git の送信系の命令 (send-pack・http-push) は、見張りの決まりの外なので止めます。必要なら Opus に相談してください")
+WRITE_MARK_RE = re.compile(r"(?:>|\b(?:tee|cp|mv|sed|perl|python3?|ruby|awk|dd|install|ln|node|truncate|rsync|ed)\b)")
+GIT_PATH_RE = re.compile(r"\.git(?:/[^\s'\"/;|&]+)*/(?:config(?:\.worktree)?|packed-refs)(?![\w.-])|\.git/refs/remotes|config\.worktree(?![\w.-])")
+SEND_RE = re.compile(r"\bgit\b[^;&|\n]*?\b(?:send-pack|http-push)\b|git-(?:send-pack|http-push)\b")
+INCLUDE_RE = re.compile(r"\bgit\b[^;&|\n]*?(?:\sconfig\s|\s-c\s)[^;&|\n]*?\binclude(?:if)?\.", re.I)
+REMOTES_RE = re.compile(r"\bgit\b[^;&|\n]*?\b(?:update-ref|fetch|symbolic-ref)\b[^;&|\n]*?refs/remotes")
 
 
 def _lex(cmd):
@@ -205,6 +221,17 @@ def _lex(cmd):
     lex.whitespace_split = True
     lex.commenters = ""
     return list(lex)
+
+
+def danger(cmd):
+    """repo の設定・追跡ブランチ・送信系の命令を、見張りを通らずに書き換える/使う形 -> 理由 (無ければ None)。
+    生の文字と、引用符と \\ を外した文字の両方で探す。"""
+    loose = cmd + "\n" + re.sub(r"[\\'\"]", "", cmd)
+    if SEND_RE.search(loose) or INCLUDE_RE.search(loose) or REMOTES_RE.search(loose):
+        return DANGER_MSG
+    if GIT_PATH_RE.search(loose) and WRITE_MARK_RE.search(loose):
+        return DANGER_MSG
+    return None
 
 
 def detect(cmd):
@@ -221,7 +248,7 @@ def detect(cmd):
     if (any(b in SHELLS for b in base) and any(re.fullmatch(r"-\w*c\w*", t) for t in toks)) or "eval" in base:
         loose = cmd + "\n" + re.sub(r"[\\'\"]", "", cmd)  # sh -c の中身は読まない。引用符と \\ を外した形でも目印を探す
         return (re.search(r"\bgit\b[\s\S]*\bpush\b", loose) is not None,
-                re.search(r"\bgh\b[\s\S]*\b(?:pr|issue)\b", loose) is not None)
+                re.search(r"\bgh\b[\s\S]*\b(?:pr|issue|release|repo|gist)\b", loose) is not None)
     push = any(b == "git" and "push" in toks[i + 1:] for i, b in enumerate(base))
     if not push and "git" in base:
         low = [t.lower() for t in toks]
@@ -231,8 +258,10 @@ def detect(cmd):
     for i, b in enumerate(base):
         if b != "gh":
             continue
-        for a in range(i + 1, len(toks) - 1):
-            if toks[a] in GH_ACTIONS and toks[a + 1] in GH_ACTIONS[toks[a]]:
+        for a in range(i + 1, len(toks)):
+            if toks[a] == "gist":
+                gh = True
+            if a + 1 < len(toks) and toks[a] in GH_ACTIONS and toks[a + 1] in GH_ACTIONS[toks[a]]:
                 gh = True
     return push, gh
 
@@ -306,12 +335,26 @@ def repo_slug(cwd):
     return "/".join(parts[-2:]) if len(parts) >= 2 else None
 
 
-def added_lines(cwd, sha, excludes):
+def commit_list(top, sha, excludes):
+    """送る commit の一覧 (excludes から届くものは除く)。作業場所の設定に左右されない下回りの命令で取る。"""
+    r = git(top, "rev-list", sha, "--not", *excludes)
+    if r.returncode != 0:
+        raise Block("送る commit の一覧が取れません")
+    return [x for x in r.stdout.split("\n") if re.fullmatch(r"[0-9a-f]{40}", x)]
+
+
+def added_lines(top, commits):
     """送る commit のそれぞれが足した行 + 追加・改名したファイルの名前 -> [(場所, 行, 文)]。取れなければ Block。
-    excludes (origin/main など) から届く commit は数えない。merge commit は --cc で、衝突を直した行だけ見る。"""
-    r = git(cwd, "-c", "core.quotePath=false", "-c", "log.showSignature=false", "log", "-p", "--cc", "--format=%H",
-            "--no-color", "--no-ext-diff", "--text", "--no-textconv", "--src-prefix=a/", "--dst-prefix=b/",
-            "-U0", sha, "--not", *excludes)
+    merge commit は --cc で、衝突を直した行だけ見る。diff.relative など作業場所の設定に左右されないよう、
+    下回りの diff-tree に --no-relative・--text・--no-textconv・--no-ext-diff・明示の prefix を付けて取る。"""
+    if not commits:
+        return []
+    r = subprocess.run(
+        ["git", "-C", top, "-c", "core.quotePath=false", "diff-tree", "--stdin", "-p", "--cc", "--root", "-r", "-M",
+         "--text", "--no-textconv", "--no-ext-diff", "--ignore-submodules=none", "-U0",
+         "--src-prefix=a/", "--dst-prefix=b/", "--no-relative", "--no-color"],
+        input="\n".join(commits) + "\n", capture_output=True, text=True, encoding="utf-8", errors="replace",
+        env={k: v for k, v in os.environ.items() if not k.startswith("GIT_")})
     if r.returncode != 0:
         raise Block("差分が取れません")
     out, fname, ln, in_head, ncol = [], None, 0, False, 1
@@ -349,6 +392,39 @@ def added_lines(cwd, sha, excludes):
     return out
 
 
+def tag_lines(top, ref, commits):
+    """注釈つきタグの文面。送る ref がタグのとき (入れ子も) と、送る範囲の commit を指すタグの中身を読む。"""
+    out = []
+
+    def body(obj, label):
+        r = git(top, "cat-file", "-p", obj)
+        if r.returncode != 0:
+            raise Block("タグの文面が取れません")
+        out.extend((label, n + 1, t) for n, t in enumerate(r.stdout.split("\n")))
+        return r.stdout
+
+    obj = git(top, "rev-parse", "--verify", "--quiet", ref).stdout.strip()
+    for _ in range(10):
+        if not obj:
+            break
+        t = git(top, "cat-file", "-t", obj).stdout.strip()
+        if t != "tag":
+            break
+        txt = body(obj, "タグ")
+        m = re.match(r"object ([0-9a-f]{40})", txt)
+        obj = m.group(1) if m else ""
+    if commits:
+        cs = set(commits)
+        r = git(top, "for-each-ref", "--format=%(objecttype) %(objectname) %(*objectname)", "refs/tags")
+        if r.returncode != 0:
+            raise Block("タグの一覧が取れません")
+        for ln in r.stdout.split("\n"):
+            f = ln.split(" ")
+            if len(f) >= 3 and f[0] == "tag" and f[2] in cs:
+                body(f[1], "タグ")
+    return out
+
+
 def check_push(words, repos, matched):
     v = [w[0] for w in words]
     ok = (len(v) in (6, 7) and v[0] == "git" and v[1] == "-C" and v[2].startswith("/") and v[3] == "push"
@@ -359,29 +435,36 @@ def check_push(words, repos, matched):
     path, ref = v[2], v[-1]
     if not os.path.isdir(path):
         raise Block("push の場所が存在しません")
-    if git(path, "rev-parse", "--show-toplevel").returncode != 0:
+    tl = git(path, "rev-parse", "--show-toplevel")
+    top = tl.stdout.strip()
+    if tl.returncode != 0 or not top.startswith("/"):
         raise Block("push の場所が git の repo ではありません")
-    c = git(path, "config", "--get-regexp", PUSH_CFG_RE)
+    c = git(top, "config", "--get-regexp", PUSH_CFG_RE)
     if c.returncode != 1:  # 1 = 該当なし。0 (別名や push 先の差し替えがある) とそれ以外の失敗は止める
         raise Block("この repo には別名 (alias) か push 先の差し替え (pushurl など) の設定があります")
-    slug = repo_slug(path)
+    for scope in ("--local", "--worktree"):  # この repo だけの設定。include 先の中身も別名を持ち込めるので include も止める
+        c = git(top, "config", scope, "--get-regexp", SCOPED_CFG_RE)
+        if c.returncode != 1:
+            raise Block("この repo の設定 (%s) に別名・push 先の差し替え・include があります" % scope)
+    slug = repo_slug(top)
     if slug is None or slug not in repos:
         return []  # 表に無い repo の push は照らさずに通す
     matched.append(slug)
-    if git(path, "rev-parse", "--verify", "--quiet", "origin/main^{commit}").returncode != 0:
+    if git(top, "rev-parse", "--verify", "--quiet", "origin/main^{commit}").returncode != 0:
         raise Block("表に並んだ repo (%s) に origin/main がありません" % slug)
-    r = git(path, "rev-parse", "--verify", "--quiet", ref + "^{commit}")
+    r = git(top, "rev-parse", "--verify", "--quiet", ref + "^{commit}")
     if r.returncode != 0:
         raise Block("送るブランチ %s が見つかりません" % ref)
     sha = r.stdout.strip()
     name = ref
     if ref == "HEAD":
-        s = git(path, "symbolic-ref", "--quiet", "--short", "HEAD")
+        s = git(top, "symbolic-ref", "--quiet", "--short", "HEAD")
         name = s.stdout.strip() if s.returncode == 0 else None
     excludes = ["refs/remotes/origin/main"]
-    if name and git(path, "rev-parse", "--verify", "--quiet", "refs/remotes/origin/%s^{commit}" % name).returncode == 0:
+    if name and git(top, "rev-parse", "--verify", "--quiet", "refs/remotes/origin/%s^{commit}" % name).returncode == 0:
         excludes.append("refs/remotes/origin/%s" % name)
-    return added_lines(path, sha, excludes)
+    commits = commit_list(top, sha, excludes)
+    return added_lines(top, commits) + tag_lines(top, ref, commits)
 
 
 def read_body_file(p):
@@ -395,29 +478,30 @@ def read_body_file(p):
 
 
 def check_gh(words):
-    """本文 (--body/-b/--body-file/-F) と題名 (--title/-t) は、位置や前の印に関係なく字句のどこにあっても照らす。"""
+    """本文・題名・説明の印は、gh の操作ごとの表 (GH_OPS) で、位置や前の印に関係なく字句のどこにあっても照らす。"""
     v, raws = [w[0] for w in words], [w[1] for w in words]
-    if len(v) < 3 or v[0] != "gh" or v[1] not in GH_ACTIONS or v[2] not in GH_ACTIONS[v[1]]:
-        raise Block(GH_MSG)
+    if len(v) < 3 or v[0] != "gh" or (v[1], v[2]) not in GH_OPS:
+        raise Block(GH_MSG)  # gh gist など、表に無い操作は止める
+    B_STR, B_FILE, B_TITLE = GH_OPS[(v[1], v[2])]
     body, titles, i = None, [], 3
     while i < len(v):
         t = v[i]
         key, eq, val = t.partition("=") if t.startswith("--") else (t, "", "")
         if t in GH_BAD_OPTS or key in GH_BAD_OPTS:
             raise Block(GH_MSG)
-        if key in GH_BODY_STR or key in GH_BODY_FILE or key in GH_TITLE:
+        if key in B_STR or key in B_FILE or key in B_TITLE:
             if eq:
                 value, raw, i = val, raws[i].split("=", 1)[1], i + 1
             elif i + 1 < len(v):
                 value, raw, i = v[i + 1], raws[i + 1], i + 2
             else:
                 raise Block(GH_MSG)
-            if key in GH_TITLE:
+            if key in B_TITLE:
                 titles.append(value)
                 continue
             if body is not None:
                 raise Block(GH_MSG)
-            body = ("str" if key in GH_BODY_STR else "file", value, raw)
+            body = ("str" if key in B_STR else "file", value, raw)
             continue
         if re.fullmatch(r"-[^-].+", t):
             raise Block(GH_MSG)  # 短い指定の束ね書きは読み分けない
@@ -439,6 +523,11 @@ def run(payload):
     ti = payload.get("tool_input") or {}
     cmd = ti.get("command") or ""
     push, gh = detect(cmd)
+    dg = danger(cmd)
+    if dg:
+        log_block("停止: 決まりの外 (設定・追跡ブランチ・送信系)")
+        sys.stderr.write("%s: 止めました。理由: %s\n" % (HOOK, dg))
+        return 2
     if not push and not gh:
         return 0
     try:

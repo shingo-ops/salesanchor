@@ -513,6 +513,134 @@ def main():
     check("R53 git config user.name x は通る", "git config user.name x", 0)
     check("R54 git remote -v は通る", "git remote -v", 0)
 
+    print("== 10 審査 7 回目の指摘 (作業場所の設定・送信系・include・追跡ブランチ・gh の範囲・タグ)")
+
+    def stop(name, c, want=2, cwd=T):
+        rc, err = run(c, cwd)
+        results.append(rc == want)
+        print("%s %-62s exit=%d (期待 %d)" % ("PASS" if rc == want else "FAIL", name, rc, want))
+
+    # H1: 作業場所の設定に左右されない
+    order = os.path.join(T, "order.txt")
+    write(order, "zzz\n")
+    one("rel", {"sub/a.md": "x\n", "top.md": line})
+    SUB = os.path.join(WORK, "sub")
+    for k, v in (("diff.relative", "true"), ("diff.noprefix", "true"), ("diff.mnemonicPrefix", "true"),
+                 ("diff.external", "false"), ("diff.orderFile", order), ("diff.ignoreSubmodules", "all")):
+        sh("git", "config", k, v, cwd=WORK)
+        check("H1 %s 設定 + 上の階層から -> 止まる" % k, P("rel"), 2, cwd=T)
+        check("H1 %s 設定 + 下の階層 (-C sub) から -> 止まる" % k, P("rel", path=SUB), 2, cwd=T)
+        sh("git", "config", "--unset", k, cwd=WORK)
+    check("H1 設定なし + 下の階層から -> 止まる", P("rel", path=SUB), 2, cwd=T)
+    one("relclean", {"sub/b.md": "x\n", "top2.md": "- 「%s」\n" % FAKE_NOT_IN_CORPUS})
+    sh("git", "config", "diff.relative", "true", cwd=WORK)
+    check("H1 diff.relative + 中身なし (下の階層から) -> 通る", P("relclean", path=SUB), 0, cwd=T)
+    sh("git", "config", "--unset", "diff.relative", cwd=WORK)
+
+    # H2: 送信系の命令
+    for nm, c in (("send-pack", "git -C %s send-pack %s relclean" % (WORK, ORIGIN_ROOT)),
+                  ("send-pack 単独", "git send-pack /x relclean"),
+                  ("g\\it send-pack", "g\\it send-pack /x relclean"),
+                  ("git 'send-pack'", "git -C %s 'send-pack' /x relclean" % WORK),
+                  ("git-send-pack", "git-send-pack /x relclean"),
+                  ("git http-push", "git http-push http://example.invalid/x.git relclean"),
+                  ("git ht\"\"tp-push", "git ht\"\"tp-push http://example.invalid/x.git relclean"),
+                  ("sh -c で send-pack", "sh -c 'git send-pack /x relclean'"),
+                  ("&& でつなげた send-pack", "echo a && git send-pack /x relclean")):
+        stop("H2 " + nm, c)
+    stop("H2 git log は通る", "git -C %s log --oneline -1" % WORK, 0)
+    stop("H2 send-pack と書いただけの echo は通る", "echo send-pack", 0)
+
+    # L1: include と設定ファイルの書き込み
+    for nm, c in (("git config include.path", "git config include.path /x/y.inc"),
+                  ("git -C W config includeIf", "git -C %s config includeIf.gitdir:/x/.path /y.inc" % WORK),
+                  ("git config --add include.path", "git config --add include.path /x/y.inc"),
+                  ("git -c include.path=", "git -c include.path=/x/y.inc status"),
+                  ("printf >> .git/config", "printf '[alias]\\n sy = push\\n' >> %s/.git/config" % WORK),
+                  ("tee -a .git/config", "tee -a %s/.git/config" % WORK),
+                  ("cp x .git/config", "cp /tmp/x %s/.git/config" % WORK),
+                  ("sed -i .git/config", "sed -i '' s/a/b/ %s/.git/config" % WORK),
+                  ("mv x config.worktree", "mv /tmp/x %s/.git/config.worktree" % WORK),
+                  ("echo >> config.worktree", "echo x >> %s/.git/config.worktree" % WORK),
+                  ("python で .git/config", "python3 -c \"open('%s/.git/config','a')\"" % WORK)):
+        stop("L1 " + nm, c)
+    stop("L1 cat .git/config は通る", "cat %s/.git/config" % WORK, 0)
+    stop("L1 git config user.name は通る", "git config user.name x", 0)
+    one("hcl", {"ok2.md": "- 「%s」\n" % FAKE_NOT_IN_CORPUS})
+    check("L1 設定なしの clean push -> 通る", P("hcl"), 0, cwd=T)
+    for k, v in (("include.path", "/nonexistent/x.inc"), ("includeIf.gitdir:/nonexistent/.path", "/nonexistent/y.inc")):
+        sh("git", "config", "--local", k, v, cwd=WORK)
+        check("L1 --local に %s があると push -> 止まる" % k.split(":")[0], P("hcl"), 2, cwd=T)
+        sh("git", "config", "--local", "--unset", k, cwd=WORK)
+    sh("git", "config", "extensions.worktreeConfig", "true", cwd=WORK)
+    sh("git", "config", "--worktree", "include.path", "/nonexistent/z.inc", cwd=WORK)
+    check("L1 --worktree に include.path があると push -> 止まる", P("hcl"), 2, cwd=T)
+    sh("git", "config", "--worktree", "--unset", "include.path", cwd=WORK)
+    sh("git", "config", "--worktree", "alias.sy", "push", cwd=WORK)
+    check("L1 --worktree に alias があると push -> 止まる", P("hcl"), 2, cwd=T)
+    sh("git", "config", "--worktree", "--unset", "alias.sy", cwd=WORK)
+    sh("git", "config", "--unset", "extensions.worktreeConfig", cwd=WORK)
+    check("L1 設定を戻すと push -> 通る", P("hcl"), 0, cwd=T)
+
+    # L2: 追跡ブランチを手で進める
+    for nm, c in (("update-ref refs/remotes", "git update-ref refs/remotes/origin/hcl hcl"),
+                  ("-C W update-ref refs/remotes", "git -C %s update-ref refs/remotes/origin/hcl hcl" % WORK),
+                  ("fetch . x:refs/remotes", "git -C %s fetch . hcl:refs/remotes/origin/hcl" % WORK),
+                  ("symbolic-ref refs/remotes", "git symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/main"),
+                  ("echo > .git/refs/remotes", "echo x > %s/.git/refs/remotes/origin/hcl" % WORK),
+                  ("cp x packed-refs", "cp /tmp/x %s/.git/packed-refs" % WORK)):
+        stop("L2 " + nm, c)
+    stop("L2 git fetch origin は通る", "git -C %s fetch origin" % WORK, 0)
+    stop("L2 refs/remotes を読むだけは通る", "git -C %s log -1 refs/remotes/origin/main" % WORK, 0)
+    stop("L2 packed-refs を読むだけは通る", "cat %s/.git/packed-refs" % WORK, 0)
+
+    # L3: gh の範囲
+    qh = "'「%s」'" % q
+    qc = "'「%s」'" % FAKE_NOT_IN_CORPUS
+    for nm, c in (("issue edit --body", "gh issue edit 1 --body " + qh),
+                  ("issue edit -b", "gh issue edit 1 -b " + qh),
+                  ("issue edit --title", "gh issue edit 1 --title " + qh),
+                  ("issue edit -F", "gh issue edit 1 -F " + hitbody),
+                  ("release create --notes", "gh release create v1 --notes " + qh),
+                  ("release create -n", "gh release create v1 -n " + qh),
+                  ("release create --notes-file", "gh release create v1 --notes-file " + hitbody),
+                  ("release create -F", "gh release create v1 -F " + hitbody),
+                  ("release create --title", "gh release create v1 --title " + qh + " --notes ok"),
+                  ("release create -t", "gh release create v1 -t " + qh + " --notes ok"),
+                  ("release edit --notes", "gh release edit v1 --notes " + qh),
+                  ("release edit -n", "gh release edit v1 -n " + qh),
+                  ("repo edit --description", "gh repo edit --description " + qh),
+                  ("repo edit -d", "gh repo edit -d " + qh),
+                  ("pr merge --body", "gh pr merge 1 --merge --body " + qh),
+                  ("gist create", "gh gist create " + hitbody),
+                  ("gist list", "gh gist list"),
+                  ("gist 'create'", "gh gist 'create' " + cleanbody)):
+        stop("L3 " + nm, c)
+    for nm, c in (("issue edit --add-label", "gh issue edit 1 --add-label x"),
+                  ("issue edit --body 中身なし", "gh issue edit 1 --body " + qc),
+                  ("release create --notes 中身なし", "gh release create v1 --notes " + qc),
+                  ("release create -d (draft) --notes", "gh release create v1 -d --notes 'ok'"),
+                  ("release create --generate-notes", "gh release create v1 --generate-notes"),
+                  ("release edit -F 中身なし", "gh release edit v1 -F " + cleanbody),
+                  ("repo edit --description 中身なし", "gh repo edit --description " + qc),
+                  ("repo edit -d 中身なし", "gh repo edit -d " + qc),
+                  ("pr merge --merge", "gh pr merge 1 --merge")):
+        stop("L3 " + nm + " -> 通る", c, 0)
+
+    # L4: 注釈つきタグ
+    sh("git", "checkout", "-q", "-B", "tagb", "origin/main", cwd=WORK)
+    sh("git", "tag", "-a", "tagv1", "-m", "引用「%s」" % q, cwd=WORK)
+    check("L4 送る ref がタグ (文面に書き写し) -> 止まる", P("tagv1"), 2, cwd=T)
+    sh("git", "tag", "-a", "tagv2", "-m", "ふつうの説明", cwd=WORK)
+    check("L4 送る ref がタグ (文面は clean) -> 通る", P("tagv2"), 0, cwd=T)
+    sh("git", "tag", "-a", "tagv3", "-m", "入れ子", "tagv1", cwd=WORK)
+    check("L4 タグを指すタグ (中のタグに書き写し) -> 止まる", P("tagv3"), 2, cwd=T)
+    one("tagr", {"tr.md": "- 「%s」\n" % FAKE_NOT_IN_CORPUS})
+    sh("git", "tag", "-a", "tagr1", "-m", "範囲の中 「%s」" % q, cwd=WORK)
+    check("L4 送る範囲の commit を指すタグの文面に書き写し -> 止まる", P("tagr"), 2, cwd=T)
+    sh("git", "tag", "-d", "tagr1", cwd=WORK)
+    check("L4 そのタグを消すと -> 通る", P("tagr"), 0, cwd=T)
+
     print("== 8 止めた記録")
     open(EV, "w").close()
     check("T50 記録を取るため 1 回止める", "gh pr comment 1 -b '「%s」'" % q, 2)

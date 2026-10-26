@@ -13,7 +13,7 @@
 
 ## What（何を決めたか）
 
-1. Mac で AI が打つ `git push`（足した行）と、`gh pr create/edit/comment/review`・`gh issue create/comment`（本文）を、PreToolUse:Bash の見張り `guard.py` で照らす。照らすのは決まった形だけ（push は `git -C <絶対パス> push [-u] origin <ref>`、gh の本文は `--body-file <絶対パス>`／`-F <絶対パス>` か一重引用符の `--body '…'`／`-b '…'`）。決まりの外の形は、命令文から作業場所や出どころを推し量らず、すべて止める。
+1. Mac で AI が打つ `git push`（足した行）と、`gh pr create/edit/comment/review/merge`・`gh issue create/edit/comment`・`gh release create/edit`・`gh repo edit`（本文・題名・notes・説明）を、PreToolUse:Bash の見張り `guard.py` で照らす。照らすのは決まった形だけ（push は `git -C <絶対パス> push [-u] origin <ref>`、gh の本文は `--body-file <絶対パス>`／`-F <絶対パス>` か一重引用符の `--body '…'`／`-b '…'`）。決まりの外の形は、命令文から作業場所や出どころを推し量らず、すべて止める。`gh gist` と、git の送信系の命令（`send-pack`・`http-push`）、include や `.git/config` の書き込み、`refs/remotes` を書き換える操作も止める。push で見る差分は、作業場所の設定（`diff.relative` など）に左右されない下回りの `rev-list` と `diff-tree` で、送る commit のそれぞれが足した行にする。注釈つきタグの文面も照らす。
 2. 「」『』の中の語句が、(1) 4 文字以上、(2) 除外表（状態の言葉の写し・商品名の写し・一般語の表）に無い、(3) 原文の置き場のどれかのファイルにそのまま現れる、の全部を満たすと exit 2 で止める。
 3. 原本は `scripts/agent-hooks/confidential-quote-guard/`（guard.py・install.sh・rollback.sh・tests/）。原文・表の中身・語句は repo に入れない。表は Mac の社外秘フォルダ（`~/CC報告ファイル-keep/confid-guard/`）に置く。
 4. 表が読めない・空、差分が取れない、本文の出どころが決まらないときは止める（全部拒否に倒す）。環境変数で飛ばす抜け道は作らない。誤って止まったときの直し方は、一般語の表に理由つきで足すことだけ（Opus 判断）。
@@ -37,7 +37,9 @@
 - 「push」の字を含むだけのコマンドも git push と読み、止まる側に倒れる（直近 300 件の PR 本文で該当は 2 件）。
 - 決まった形以外の push と gh の本文は止まるので、作業の手間が増える（push は単独のコマンドで流す。本文は Write で作ったファイルを `--body-file <絶対パス>` で渡す）。
 - 台本ファイル（`bash script.sh`）の中から push する場合は照らさない。
-- `alias`・`pushurl`・`pushInsteadOf` を見張りの外（PO の手作業など）で設定した場合は、別名経由の push を見分けられない。見張りを通す操作で書き換えようとするものと、設定が repo にある状態での決まった形の push は止める。
+- 見張りを通らない手段（PO の手作業、見張りが読まない Edit／Write ツール、台本ファイルの中、別のプログラム）で書いた設定は見分けられない。具体的には、`alias`・`pushurl`・`pushInsteadOf`・`include`、追跡ブランチ（`refs/remotes`）を見張りの外で書き換えると、別名経由の push や、手で進めた追跡ブランチ分の差し引きを見分けられない。見張りを通る Bash で書き換える形と、`--local`／`--worktree` の設定に別名・pushurl・pushInsteadOf・include がある状態の決まった形の push は止める。global の `include` は止めない。
+- `git notes` など、ここに挙げた以外の置き場は照らさない。
+- `gh api` のほか、`gh workflow`・`gh label`・`gh project` など、今回の一覧に無い gh の操作は照らさない。
 - 送る途中の commit に書き写しがあると、新しい commit で消しても止まる（履歴ごと送られるため）。直すには commit の書き直しか作り直しが要り、書き直しは Opus の指示を待つ。
 - PO が手で（Claude を通さず）push する場合は照らさない。git の送信前フックには移せなかった（多くの worktree で `frontend/.husky/_` が無く、フックが走らない。recon §4-2）。
 - `sh -c "…"`・`eval` の中の push や gh は、目印に当たれば止めるが、当たらなければ読めない。
