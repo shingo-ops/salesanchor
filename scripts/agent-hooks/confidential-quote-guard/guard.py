@@ -217,6 +217,7 @@ SCOPED_CFG_RE = (r"^(alias\.|include\.|includeif\.|remote\..*\.pushurl|url\..*\.
                  r"|push\.followtags|push\.pushoption|remote\..*\.(push|mirror|tagopt))")  # --local / --worktree だけに使う
 DANGER_MSG = ("repo の設定 (別名・push 先・include・タグの送り方など) や追跡ブランチ (refs/remotes)・git replace・hooks を書き換える操作、"
               "git の送信系の命令 (send-pack・http-push) は、見張りの決まりの外なので止めます。必要なら Opus に相談してください")
+NAME_MSG = "命令の名前に変数・展開・glob・[ は使えません。命令名を字で書くか、test を使ってください"
 EXPAND_MSG = "git／gh の命令に変数や展開は使えません。値を書き出して単独で流してください"
 WRITE_MARK_RE = re.compile(r"(?:>|\b(?:tee|cp|mv|sed|perl|python3?|ruby|awk|dd|install|ln|node|truncate|rsync|ed)\b)")
 GIT_PATH_RE = re.compile(r"\.git(?:/[^\s'\"/;|&]+)*/(?:config(?:\.worktree)?|packed-refs)(?![\w.-])|\.git/refs/(?:remotes|replace)|\.git/hooks(?![\w.-])|config\.worktree(?![\w.-])")
@@ -553,9 +554,9 @@ def check_words(words, aliases):
     if i >= len(words):
         return
     cw = words[i]
-    if not _plain(cw):
-        raise Block(EXPAND_MSG)
     base = cw.val.rsplit("/", 1)[-1]
+    if not _plain(cw):
+        raise Block(EXPAND_MSG if base in ("git", "gh") or (cw.exp and GITGH_RE.search(cw.val)) else NAME_MSG)
     rest = words[i + 1:]
     if base == "git":
         j = 0
@@ -708,7 +709,11 @@ def detect(cmd):
             return True, True
         return False, False
     base = [t.rsplit("/", 1)[-1] for t in toks]
-    if (any(b in SHELLS for b in base) and any(re.fullmatch(r"-\w*c\w*", t) for t in toks)) or "eval" in base:
+    ops = {";", "&&", "||", "|", "&", "(", "|&"}
+    sh_pos = [i for i, b in enumerate(base) if b in SHELLS and b not in ("source", ".", "eval") and (i == 0 or toks[i - 1] in ops)]
+    sh_stdin = bool(sh_pos) and not any(re.fullmatch(r"-\w*c\w*", t) for t in toks) and \
+        ("<<" in cmd or any(i > 0 and toks[i - 1] == "|" for i in sh_pos) or "-s" in toks)  # shell に文字列を渡す形 (-c なし)
+    if (any(b in SHELLS for b in base) and any(re.fullmatch(r"-\w*c\w*", t) for t in toks)) or "eval" in base or sh_stdin:
         loose = cmd + "\n" + re.sub(r"[\\'\"]", "", cmd)  # sh -c の中身は読まない。引用符と \\ を外した形でも目印を探す
         return (re.search(r"\bgit\b[\s\S]*\bpush\b", loose) is not None,
                 re.search(r"\bgh\b[\s\S]*\b(?:pr|issue|release|repo|gist)\b", loose) is not None)
@@ -724,8 +729,18 @@ def detect(cmd):
         for a in range(i + 1, len(toks)):
             if toks[a] == "gist":
                 gh = True
-            if a + 1 < len(toks) and toks[a] in GH_ACTIONS and toks[a + 1] in GH_ACTIONS[toks[a]]:
-                gh = True
+            if toks[a] in GH_ACTIONS:
+                j = a + 1  # 群と操作のあいだの印 (-R／--repo の値つき) を飛ばす。ほかの印があれば決まりの外として止める
+                while j < len(toks) and toks[j].startswith("-"):
+                    if toks[j] in ("-R", "--repo"):
+                        j += 2
+                    elif toks[j].startswith("--repo="):
+                        j += 1
+                    else:
+                        gh = True
+                        break
+                if j < len(toks) and toks[j] in GH_ACTIONS[toks[a]]:
+                    gh = True
     return push, gh
 
 
@@ -963,6 +978,16 @@ def read_body_file(p):
 def check_gh(words):
     """本文・題名・説明の印は、gh の操作ごとの表 (GH_OPS) で、位置や前の印に関係なく字句のどこにあっても照らす。"""
     v, raws = [w[0] for w in words], [w[1] for w in words]
+    if len(v) >= 2 and v[0] == "gh":  # 群と操作のあいだの -R／--repo を飛ばす。ほかの印は決まりの外
+        j = 2
+        while j < len(v) and v[j].startswith("-"):
+            if v[j] in ("-R", "--repo") and j + 1 < len(v):
+                j += 2
+            elif v[j].startswith("--repo="):
+                j += 1
+            else:
+                raise Block(GH_MSG)
+        v, raws = v[:2] + v[j:], raws[:2] + raws[j:]
     if len(v) < 3 or v[0] != "gh" or (v[1], v[2]) not in GH_OPS:  # release upload も表に無いので止まる
         raise Block(GH_MSG)  # gh gist など、表に無い操作は止める
     B_STR, B_FILE, B_TITLE = GH_OPS[(v[1], v[2])]

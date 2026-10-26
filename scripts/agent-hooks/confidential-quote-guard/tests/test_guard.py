@@ -871,6 +871,39 @@ def main():
     stop("R9 引用が閉じない git の命令 -> 止まる", "git -C %s commit -m 'abc" % WORK)
     stop("R9 引用が閉じない git なしの命令 -> 通る", "echo 'abc", 0)
 
+    print("== 13 審査 10 回目の指摘 (群と操作のあいだの -R・shell への文字列渡し・理由の文の分け)")
+    hq = "'「%s」'" % q
+    for nm, c in (("gh pr -R comment", G2 + " pr -R o/r comment 1 --body " + hq),
+                  ("gh pr --repo comment", G2 + " pr --repo o/r comment 1 --body " + hq),
+                  ("gh pr --repo=o/r comment", G2 + " pr --repo=o/r comment 1 --body " + hq),
+                  ("gh issue -R create", G2 + " issue -R o/r create --title x --body " + hq),
+                  ("gh release -R create", G2 + " release -R o/r create v1 --notes " + hq),
+                  ("gh pr --foo comment (知らない印)", G2 + " pr --foo comment 1 --body 'x'"),
+                  ("bash <<< 文字列の push", "bash <<< '" + P("leak13") + "'"),
+                  ("echo | bash の push", "echo '" + P("leak13") + "' | bash"),
+                  ("sh -s heredoc の gh", "sh -s <<'EOF'\n" + G2 + " pr comment 1 --body 'x'\nEOF"),
+                  ("echo | bash の gh 本文", "echo \"" + G2 + " pr comment 1 --body 'x'\" | bash")):
+        stop("R10 止まる: " + nm, c)
+    for nm, c in (("gh pr -R view", G2 + " pr -R o/r view 1"),
+                  ("gh pr -R list", G2 + " pr -R o/r list"),
+                  ("gh pr --repo=o/r view", G2 + " pr --repo=o/r view 1"),
+                  ("bash <<< echo", "bash <<< 'echo hi'"),
+                  ("echo | bash (git なし)", "echo 'ls' | bash")):
+        stop("R10 通る: " + nm, c, 0)
+    # L6: 理由の文を分ける
+    rc, err = run("[ -f x ]", T)
+    ok = rc == 2 and "命令の名前に" in err and "test" in err
+    results.append(ok)
+    print("%s %-62s exit=%d" % ("PASS" if ok else "FAIL", "R10L6 命令の位置が [ -> 命令名の理由の文", rc))
+    rc, err = run(G2 + " pr $a", T)
+    ok = rc == 2 and "git／gh の命令に変数や展開は使えません" in err
+    results.append(ok)
+    print("%s %-62s exit=%d" % ("PASS" if ok else "FAIL", "R10L6 gh pr $a -> git／gh の理由の文", rc))
+    rc, err = run("git -C %s $x origin x" % WORK, T)
+    ok = rc == 2 and "git／gh の命令に変数や展開は使えません" in err
+    results.append(ok)
+    print("%s %-62s exit=%d" % ("PASS" if ok else "FAIL", "R10L6 git の下位命令が $x -> git／gh の理由の文", rc))
+
     print("== 8 止めた記録")
     open(EV, "w").close()
     check("T50 記録を取るため 1 回止める", "gh pr comment 1 -b '「%s」'" % q, 2)
