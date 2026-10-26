@@ -200,6 +200,23 @@ def _redirect_targets(cmd):
     return out
 
 
+_MODE_RE = re.compile(r"""['"]([rwxabt+]{1,8})['"]""")
+
+
+def _open_write_mode(cmd):
+    """open( と .open( の直後 200字の中に、w・a・x・+ を含むモード文字列があれば True。
+    agent-danger-hook.sh の open_write_mode と同じ規則。変えるときは両方。"""
+    pos = cmd.find("open(")
+    while pos != -1:
+        win = cmd[pos + 5: pos + 205]
+        for m in _MODE_RE.finditer(win):
+            s = m.group(1)
+            if "w" in s or "a" in s or "x" in s or "+" in s:
+                return True
+        pos = cmd.find("open(", pos + 5)
+    return False
+
+
 def _write_words(cmd, need):
     has = any(n in cmd for n in _NEEDLES)
     for t in _redirect_targets(cmd):
@@ -217,9 +234,7 @@ def _write_words(cmd, need):
     if re.search(_INTERP, cmd):
         if any(w in cmd for w in _WCALLS):
             return True
-        if re.search(r"""open\([^)]*?,\s*(?:mode\s*=\s*)?['"][rwxabt+]*[wax+][rwxabt+]*['"]""", cmd):
-            return True
-        if re.search(r"""\.open\(\s*(?:mode\s*=\s*)?['"][rwxabt+]*[wax+][rwxabt+]*['"]""", cmd):
+        if _open_write_mode(cmd):
             return True
     return False
 

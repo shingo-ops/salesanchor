@@ -275,6 +275,20 @@ def redirect_targets(c):
         out.extend(m.group(1).split())
     return out
 
+MODE_RE = re.compile(r'[\'"]([rwxabt+]{1,8})[\'"]')
+
+def open_write_mode(c):
+    # open( と .open( の直後 200字の中に、w・a・x・+ を含むモード文字列があれば True（戻りながら探す正規表現は使わない）
+    pos = c.find('open(')
+    while pos != -1:
+        win = c[pos + 5: pos + 205]
+        for m in MODE_RE.finditer(win):
+            s = m.group(1)
+            if 'w' in s or 'a' in s or 'x' in s or '+' in s:
+                return True
+        pos = c.find('open(', pos + 5)
+    return False
+
 def write_words(c, need):
     has = any(n in c for n in NEEDLES)
     for t in redirect_targets(c):
@@ -292,9 +306,7 @@ def write_words(c, need):
     if re.search(INTERP, c):
         if any(w in c for w in WCALLS):
             return True
-        if re.search(r'open\([^)]*?,\s*(?:mode\s*=\s*)?[\'"][rwxabt+]*[wax+][rwxabt+]*[\'"]', c):
-            return True
-        if re.search(r'\.open\(\s*(?:mode\s*=\s*)?[\'"][rwxabt+]*[wax+][rwxabt+]*[\'"]', c):
+        if open_write_mode(c):
             return True
     return False
 
@@ -312,9 +324,16 @@ def bash_write_form(c):
 
 if cond:
     if cond in ('transcript', 'consent-used'):
+        # 判定には1秒の時間の上限を付け、超えたら write（cond はこの前に決まっている）
         try:
+            import signal
+            def _timeout(signum, frame):
+                raise TimeoutError()
+            signal.signal(signal.SIGALRM, _timeout)
+            signal.alarm(1)
             kind = 'write' if bash_write_form(cmd) else 'read'
-        except Exception:
+            signal.alarm(0)
+        except BaseException:
             kind = 'write'
     else:
         kind = 'inject'

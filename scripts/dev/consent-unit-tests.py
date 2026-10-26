@@ -291,7 +291,7 @@ def iso(d):
     return d.isoformat()
 since = T0 - td(86400)
 ev = [{"type": "consent_guard_blocked", "ts": iso(T0 + td(60)), "kind": "inject", "condition": "tmux-inject"},     # 区間内
-      {"type": "consent_guard_blocked", "ts": iso(T0 + td(5000)), "kind": "inject", "condition": "tmux-inject"}]   # 区間外（write は疑い）
+      {"type": "consent_guard_blocked", "ts": iso(T0 + td(5000)), "kind": "inject", "condition": "tmux-inject"}]   # 区間外（inject は疑い）
 wl([{"start": iso(T0)}, {"end": iso(T0 + td(600))}])
 wins, nw = audit.load_windows(hw)
 sus, rd, inside = audit.count_guard_split(ev, since, wins)

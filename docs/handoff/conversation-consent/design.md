@@ -307,7 +307,7 @@ PO への返事の本文（ツール呼び出しの中ではない）の、**最
   2. `sed -i`・`perl -i`・`cp`・`mv`・`dd`・`truncate`・`rm`・`ln`・`install`・`rsync`・`touch`・`chmod` が語としてあり、コマンド内に `.claude/projects/` か `consent-used` がある。
   3. `python`・`python3`・`node`・`perl`・`ruby` の行内コード（`-c`・`-e`・heredoc）に `.claude/projects/` か `consent-used` があり、かつ `open(` に `'w'`・`'a'`・`'x'`・`+` のどれか、`.write(`・`write_text`・`write_bytes`・`writeFile`・`appendFile`・`os.replace`・`os.rename`・`shutil.` のどれかがある。
   4. `cd` の行き先に `.claude/projects/` を含み、同じコマンドに 1〜3 の書き込みの語（書き先は問わない）がある。
-- 4000字を超えるコマンドは調べずに write とする（判定の時間切れを防ぐため。2026-10-26 審査 HIGH-1）。
+- 4000字を超えるコマンドは調べずに write とする（判定の時間切れを防ぐため。2026-10-26 審査 HIGH-1）。判定には1秒の時間の上限を付け、超えたら write とする（2026-10-26 再審査）。
 - 足す項目: `kind`（上の表）、`cmd_sha`（マスク前のコマンド全文の sha256 先頭16桁）、`cmd_len`（文字数）。cmd_head は今のまま（マスク・120字）。
 - 書き込みの形の判定は、§4-5 と同じく文字列照合の水準（R1 の範囲）。判定の関数は consent_check.py に置かず、agent-danger-hook.sh の CONSENT_GUARD の python の中に足す（新しいファイルを増やさない）。
 

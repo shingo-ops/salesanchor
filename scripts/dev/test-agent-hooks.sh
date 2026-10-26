@@ -296,6 +296,23 @@ if [ -f "$HOOKDIR/agent-danger-hook.sh" ]; then
     else FAIL=$((FAIL + 1)); RESULTS+=("T7-long-time 長いコマンドの所要 $((LT1 - LT0)) 秒 > 5 FAIL"); fi
   fi
   check_new_kinds T7-kind4 "$K3S" "write"
+  # 再審査 MEDIUM: 4000字ちょうどの最悪の形（open( のくり返し + 閉じない引用符）が2秒以内に exit 2 で止まり、kind が write か read で記録される
+  K4S="$(guard_kinds)"
+  WORST1="$(python3 -c 'p = "python3 -c /Users/x/.claude/projects/-p/s.jsonl " + "open(" * 267 + ", \x27"; print(p + "w" * (4000 - len(p)), end="")')"
+  WORST2="$(python3 -c 'p = "python3 -c /Users/x/.claude/projects/-p/s.jsonl " + ".open(" * 267 + "\x27"; print(p + "w" * (4000 - len(p)), end="")')"
+  LT0=$SECONDS
+  t T7-worst1 agent-danger-hook.sh W 2 "$WORST1"
+  t T7-worst2 agent-danger-hook.sh W 2 "$WORST2"
+  LT1=$SECONDS
+  if [ -z "${ONLY:-}" ]; then
+    if [ "$((LT1 - LT0))" -le 2 ]; then PASS=$((PASS + 1)); RESULTS+=("T7-worst-time 最悪の形2件(${#WORST1}・${#WORST2}字)の所要 $((LT1 - LT0)) 秒 <= 2 PASS")
+    else FAIL=$((FAIL + 1)); RESULTS+=("T7-worst-time 最悪の形の所要 $((LT1 - LT0)) 秒 > 2 FAIL"); fi
+    W_AFTER="$(guard_kinds)"; W_NEW="${W_AFTER#"$K4S"}"; W_NEW="${W_NEW# }"
+    case "$W_NEW" in
+      "write write"|"write read"|"read write"|"read read") PASS=$((PASS + 1)); RESULTS+=("T7-worst-kind kind=[$W_NEW] PASS") ;;
+      *) FAIL=$((FAIL + 1)); RESULTS+=("T7-worst-kind kind=[$W_NEW] FAIL") ;;
+    esac
+  fi
   t T7-b8  agent-danger-hook.sh W 0 'tmux ls'
   t T7-b9  agent-danger-hook.sh W 0 'ls'
 
