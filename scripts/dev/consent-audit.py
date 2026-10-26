@@ -9,7 +9,8 @@
   python3 scripts/dev/consent-audit.py --probe <session_id>
       その会話の記録で、最後の人の入力が見つかるか・何秒前か・typed の「1」か（本文は出さない）
   python3 scripts/dev/consent-audit.py --audit [--permissions]
-      過去7日の同意の台帳と記録の突き合わせ、consent_guard_blocked の件数、許可券の消費件数、K0 の遅れの数
+      過去7日の同意の台帳と記録の突き合わせ、consent_guard_blocked の件数（偽造の疑いと読み取りの空振りに分ける。
+        異常に数えるのは疑いだけ。疑いは GUARD_SUSPECT= の行で1件ずつ出す）、許可券の消費件数、K0 の遅れの数
       --permissions を併用すると、権限の設定の増減（前回の写しとの差）を台帳（permission-changes.jsonl）と照らして出す。
         異常の理由は ABNORMAL_REASON=A〜E の行（ABNORMAL= より前）、見直し期限切れは REVIEW_DUE=。
       --commit-snapshot を付けたときだけ写しを更新する（ADR-1034。定期実行だけが付ける）
@@ -184,9 +185,73 @@ def load_windows(home):
     return wins, total
 
 
+_NEEDLES = (".claude/projects/", "consent-used")
+_VERBS = r"(?<![\w.-])(?:cp|mv|dd|truncate|rm|ln|install|rsync|touch|chmod)(?![\w-])"
+_INTERP = r"(?<![\w.-])(?:python3?|node|perl|ruby)(?![\w-])"
+_WCALLS = ("write(", "write_text", "write_bytes", "writeFile", "appendFile", "os.replace", "os.rename", "shutil.")
+
+
+def _redirect_targets(cmd):
+    out = []
+    for m in re.finditer(r">\|?>?\s*([^\s|;&<>]*)", cmd):
+        out.append(m.group(1))
+    for m in re.finditer(r"(?<![\w.-])tee(?![\w-])([^|;&\n]*)", cmd):
+        out.extend(m.group(1).split())
+    return out
+
+
+def _write_words(cmd, need):
+    has = any(n in cmd for n in _NEEDLES)
+    for t in _redirect_targets(cmd):
+        if need:
+            if any(n in t for n in _NEEDLES):
+                return True
+        elif t and not t.startswith("&") and t != "/dev/null":
+            return True
+    if need and not has:
+        return False
+    if re.search(_VERBS, cmd):
+        return True
+    if re.search(r"(?<![\w.-])(?:sed|perl)(?![\w-])[^|;&\n]*\s(?:-[A-Za-z]*i|--in-place)", cmd):
+        return True
+    if re.search(_INTERP, cmd):
+        if any(w in cmd for w in _WCALLS):
+            return True
+        if re.search(r"""open\([^)]*?,\s*(?:mode\s*=\s*)?['"][rwxabt+]*[wax+][rwxabt+]*['"]""", cmd):
+            return True
+    return False
+
+
+def bash_write_form(cmd):
+    """Bash の書き込みの形（design §13-3(a) の 1〜4）。迷う形は True（write 側）。
+    agent-danger-hook.sh の CONSENT_GUARD と同じ規則。変えるときは両方。"""
+    try:
+        if _write_words(cmd, True):
+            return True
+        if re.search(r"(?<![\w.-])(?:cd|pushd)(?![\w-])[^|;&\n]*\.claude/projects/", cmd):
+            return _write_words(cmd, False)
+        return False
+    except Exception:
+        return True
+
+
+def guard_kind(e):
+    """行の種類を 'suspect'（疑い）か 'read'（空振り）で返す。kind の無い旧形式は design §13-3(b) のとおり。"""
+    kind = e.get("kind")
+    if kind in ("inject", "write"):
+        return "suspect"
+    if kind == "read":
+        return "read"
+    cond = e.get("condition")
+    if cond in ("transcript", "consent-used"):
+        return "suspect" if bash_write_form(str(e.get("cmd_head") or "")) else "read"
+    return "suspect"  # inject 系・transcript-or-ledger-write・不明な条件は疑い側
+
+
 def count_guard_split(events, since, windows):
-    """consent_guard_blocked を (本物の件数, 試験の区間に入った件数) に分ける。"""
-    real = inside = 0
+    """consent_guard_blocked を (疑いの行のリスト, 読み取りの空振り件数, 試験の区間に入った件数) に分ける。
+    区間内の行は疑い・空振りのどちらにも数えない。"""
+    suspects, reads, inside = [], 0, 0
     for e in events:
         if e.get("type") != "consent_guard_blocked":
             continue
@@ -195,9 +260,11 @@ def count_guard_split(events, since, windows):
             continue
         if any(s <= ts <= en for s, en in windows):
             inside += 1
+        elif guard_kind(e) == "suspect":
+            suspects.append(e)
         else:
-            real += 1
-    return real, inside
+            reads += 1
+    return suspects, reads, inside
 
 
 def count_types(events, since, pred):
@@ -999,15 +1066,20 @@ def run_audit(home, now, with_permissions, out, commit=False, gh_view=None, git_
     events = load_events(home)
     consumed = count_types(events, since, lambda t: t == "consent_consumed")
     windows, n_windows = load_windows(home)
-    guard_real, guard_excluded = count_guard_split(events, since, windows)
+    guard_suspects, guard_reads, guard_excluded = count_guard_split(events, since, windows)
+    guard_suspect = len(guard_suspects)
     permit = count_types(events, since, lambda t: t.endswith("_permit_consumed"))
     n_keys, unmatched = match_ledger_keys(home, since)
     total, delays = k0_delays(home, events)
     out("== 同意と権限の点検（過去%d日） ==" % DAYS)
     out("1. consent_consumed: %d 件 / 台帳の鍵 %d 件 / 記録に同意票と typed の「1」が見つからない: %d 件（0件が正常）"
         % (sum(consumed.values()), n_keys, unmatched))
-    out("2. consent_guard_blocked: %d 件（0件が正常。試験の区間 %d 個・区間内で除いた件数 %d）"
-        % (guard_real, n_windows, guard_excluded))
+    out("2. consent_guard_blocked: 疑い %d 件（0件が正常）／読み取りの空振り %d 件（参考）（試験の区間 %d 個・区間内で除いた件数 %d）"
+        % (guard_suspect, guard_reads, n_windows, guard_excluded))
+    for e in guard_suspects:
+        out("GUARD_SUSPECT=ts=%s hook=%s condition=%s cmd_sha=%s cmd_len=%s"
+            % (e.get("ts", "?"), e.get("hook", "?"), e.get("condition", "?"),
+               e.get("cmd_sha", "不明"), e.get("cmd_len", "不明")))
     out("3. 許可券の消費: %s" % (", ".join("%s=%d" % kv for kv in sorted(permit.items())) or "0 件"))
     out("K0: 直前の人の入力が typed の「1」だった呼び出し %d 件のうち、遅れ %d 件（目標: %d 件たまった時点で遅れ0）"
         % (total, delays, K0_TARGET))
@@ -1018,7 +1090,7 @@ def run_audit(home, now, with_permissions, out, commit=False, gh_view=None, git_
     changes, n_reasons = 0, 0
     if with_permissions:
         changes, n_reasons = run_permissions(home, out, now, commit, gh_view, git_run)
-    abnormal = unmatched > 0 or guard_real > 0 or n_reasons > 0
+    abnormal = unmatched > 0 or guard_suspect > 0 or n_reasons > 0
     out("ABNORMAL=%s" % ("yes" if abnormal else "no"))
     return abnormal, changes
 

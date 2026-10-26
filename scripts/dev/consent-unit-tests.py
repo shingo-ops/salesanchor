@@ -290,19 +290,72 @@ def wl(rows):
 def iso(d):
     return d.isoformat()
 since = T0 - td(86400)
-ev = [{"type": "consent_guard_blocked", "ts": iso(T0 + td(60))},     # 区間内
-      {"type": "consent_guard_blocked", "ts": iso(T0 + td(5000))}]   # 区間外
+ev = [{"type": "consent_guard_blocked", "ts": iso(T0 + td(60)), "kind": "write", "condition": "tmux-inject"},     # 区間内
+      {"type": "consent_guard_blocked", "ts": iso(T0 + td(5000)), "kind": "write", "condition": "tmux-inject"}]   # 区間外（write は疑い）
 wl([{"start": iso(T0)}, {"end": iso(T0 + td(600))}])
 wins, nw = audit.load_windows(hw)
-real, inside = audit.count_guard_split(ev, since, wins)
-rep("T0-w1", "区間内は除外・区間外は数える（本物%d 除外%d、期待 1 と 1、区間%d）" % (real, inside, nw), real == 1 and inside == 1 and nw == 1)
+sus, rd, inside = audit.count_guard_split(ev, since, wins)
+real = len(sus)
+rep("T0-w1", "区間内は除外・区間外は数える（疑い%d 空振り%d 除外%d、期待 1・0・1、区間%d）" % (real, rd, inside, nw), real == 1 and rd == 0 and inside == 1 and nw == 1)
 wl([{"start": iso(T0)}, {"end": iso(T0 + td(1801))}])
 wins, nw = audit.load_windows(hw)
-real, inside = audit.count_guard_split(ev, since, wins)
-rep("T0-w2", "30分を超える区間は除外に使わない（本物%d 除外%d、期待 2 と 0）" % (real, inside), real == 2 and inside == 0)
+sus, rd, inside = audit.count_guard_split(ev, since, wins)
+real = len(sus)
+rep("T0-w2", "30分を超える区間は除外に使わない（疑い%d 除外%d、期待 2 と 0）" % (real, inside), real == 2 and inside == 0)
 wl([{"start": iso(T0)}])
 wins, nw = audit.load_windows(hw)
-real, inside = audit.count_guard_split(ev, since, wins)
-rep("T0-w3", "end の無い区間は除外に使わない（本物%d 除外%d、期待 2 と 0）" % (real, inside), real == 2 and inside == 0)
+sus, rd, inside = audit.count_guard_split(ev, since, wins)
+real = len(sus)
+rep("T0-w3", "end の無い区間は除外に使わない（疑い%d 除外%d、期待 2 と 0）" % (real, inside), real == 2 and inside == 0)
+
+# K15: --audit の疑いと読み取りの空振りの分け（design §13-3(b)・§13-7）
+def audit_run(rows, wins_rows=None):
+    hk = newhome()
+    with open(os.path.join(hk, ".claude", "logs", "agent-events.jsonl"), "w") as f:
+        for r in rows:
+            f.write(json.dumps(r) + "\n")
+    if wins_rows is not None:
+        with open(os.path.join(hk, ".claude", "logs", "consent-selftest-windows.jsonl"), "w") as f:
+            for r in wins_rows:
+                f.write(json.dumps(r) + "\n")
+    lines = []
+    ab, _ = audit.run_audit(hk, T0 + td(10000), False, lines.append)
+    return ab, lines
+
+def gb(ts_sec, kind=None, cond="transcript", head="x", **kw):
+    r = {"type": "consent_guard_blocked", "ts": iso(T0 + td(ts_sec)), "hook": "agent-danger-hook", "condition": cond, "cmd_head": head}
+    if kind is not None:
+        r["kind"] = kind
+    r.update(kw)
+    return r
+
+ab, ln = audit_run([gb(1000, "read"), gb(2000, "read"), gb(3000, "read", "consent-used")])
+l2 = [x for x in ln if x.startswith("2. ")][0]
+rep("K15-1", "read 3件だけ: 異常なし・疑い0・空振り3・GUARD_SUSPECT なし", (not ab) and "疑い 0 件" in l2 and "空振り 3 件" in l2
+    and not any(x.startswith("GUARD_SUSPECT=") for x in ln) and "ABNORMAL=no" in ln)
+ab, ln = audit_run([gb(1000, "write", cmd_sha="abcd1234abcd1234", cmd_len=77)])
+gs = [x for x in ln if x.startswith("GUARD_SUSPECT=")]
+rep("K15-2", "write 1件: 異常あり・GUARD_SUSPECT 1行（ABNORMAL= より前・cmd_head なし）",
+    ab and len(gs) == 1 and "cmd_sha=abcd1234abcd1234" in gs[0] and "cmd_len=77" in gs[0] and "cmd_head" not in gs[0]
+    and ln.index(gs[0]) < ln.index("ABNORMAL=yes"))
+P = "~/.claude/projects/x.jsonl"
+ab, ln = audit_run([gb(1000, None, head="echo a >> " + P)])
+rep("K15-3", "旧形式の Bash で書き足しの形: 疑い", ab and any(x.startswith("GUARD_SUSPECT=") for x in ln))
+ab, ln = audit_run([gb(1000, None, head="grep x ~/.claude/projects/y.jsonl")])
+l2 = [x for x in ln if x.startswith("2. ")][0]
+rep("K15-4", "旧形式の Bash で読むだけ: 空振り・異常なし", (not ab) and "疑い 0 件" in l2 and "空振り 1 件" in l2)
+ab, ln = audit_run([gb(1000, "write")], [{"start": iso(T0 + td(500))}, {"end": iso(T0 + td(1500))}])
+l2 = [x for x in ln if x.startswith("2. ")][0]
+rep("K15-5", "試験の区間内の write: 除外（疑い0・異常なし・除外1）", (not ab) and "疑い 0 件" in l2 and "除いた件数 1" in l2)
+ab, ln = audit_run([gb(1000, None, cond="tmux-inject"), gb(2000, None, cond="transcript-or-ledger-write")])
+rep("K15-6", "旧形式の inject 系・ファイル書き込みは疑い（2行）", ab and len([x for x in ln if x.startswith("GUARD_SUSPECT=")]) == 2)
+# 書き込みの形の規則（迷う形は write 側）
+wf = audit.bash_write_form
+rep("K15-7", "書き込みの形: tee -a・sed -i・python の open 'a'・cd の後の > は write",
+    wf("echo a | tee -a " + P) and wf("sed -i s/a/b/ " + P) and wf("python3 -c \"open('" + P + "','a').write('x')\"")
+    and wf("cd ~/.claude/projects/-p && echo x > s.jsonl") and wf("cp " + P + " /tmp/z"))
+rep("K15-8", "書き込みの形: 読むだけ（grep・cat | head・python の open 読み・/dev/null への出力）は read",
+    (not wf("grep x " + P)) and (not wf("cat " + P + " | head")) and (not wf("python3 -c \"print(open('" + P + "').read())\""))
+    and (not wf("cat " + P + " 2>/dev/null")) and (not wf("cd ~/.claude/projects/-p && cat s.jsonl 2>&1")))
 
 print("DONE", flush=True)

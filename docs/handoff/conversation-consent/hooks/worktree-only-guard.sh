@@ -64,7 +64,7 @@ except Exception:
     pass
 ' 2>/dev/null)
     if [ "$CONSENT_PATH_BLOCKED" = "yes" ]; then
-      printf '{"type":"consent_guard_blocked","hook":"worktree-only-guard","condition":"transcript-or-ledger-write","tool":"%s","ts":"%s"}\n' "$TOOL_NAME" "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> "$HOME/.claude/logs/agent-events.jsonl" 2>/dev/null || true
+      printf '{"type":"consent_guard_blocked","hook":"worktree-only-guard","condition":"transcript-or-ledger-write","kind":"write","tool":"%s","ts":"%s"}\n' "$TOOL_NAME" "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> "$HOME/.claude/logs/agent-events.jsonl" 2>/dev/null || true
       echo 'BLOCKED: 会話記録・同意の台帳は書き込めません。(worktree-only-guard, ADR-1033)' >&2
       exit 2
     fi

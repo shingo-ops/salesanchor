@@ -122,7 +122,7 @@ PO への返事の本文（ツール呼び出しの中ではない）の、**最
 
 ### 4-5 偽造を防ぐ見張り（K7）
 
-止めたときは、どの見張りも agent-events.jsonl に `consent_guard_blocked`（どの条件か・cmd_head）を1行書いてから exit 2。この件数が R1 の見つける手段になる（§7）。
+止めたときは、どの見張りも agent-events.jsonl に `consent_guard_blocked`（どの条件か・kind・cmd_head・cmd_sha・cmd_len。改訂1、§13）を1行書いてから exit 2。このうち偽造の疑い（kind が inject・write）の件数が R1 の見つける手段になる（§7）。
 
 - Bash（agent-danger-hook.sh の permits-guard の直後に、同じ書き方で足す）: コマンドに次のどれかがあれば止める。
   - `.claude/projects/` と `.jsonl` の両方
@@ -184,7 +184,7 @@ PO への返事の本文（ツール呼び出しの中ではない）の、**最
 
 | # | リスク | 対処 |
 |---|---|---|
-| R1 | **受け入れるリスク（PO の受容が必要）**: AI が、文字を分けて組み立てるなどで §4-5 の見張りを逃れると、端末に「1」を送り込んだり記録に偽の行を足したりして、自分で同意を作れる。記録の突き合わせだけでは見分けられない | 文字列照合で止める（§4-5）。今の許可券も、AI が permit-danger.sh を実行すれば作れる水準（shell のフックに permit-danger.sh 実行の禁止が無いことは事実、recon.md:59。node フックと Claude Code 本体の自動判定がそれを止めるかは未確認）で、それより弱くはならない。**見つける手段**: `consent_guard_blocked` が1件でも記録されたら、この仕組みを止めて（po-rollback-consent.sh）PO に報告する。週次の consent-audit.py --audit でこの件数を数える。なお agent-events.jsonl と consent-audit.py は AI が Write/Edit で書き換えられるので、見つける手段自体も消せる（受け入れるリスクの範囲、Q6） |
+| R1 | **受け入れるリスク（PO の受容が必要）**: AI が、文字を分けて組み立てるなどで §4-5 の見張りを逃れると、端末に「1」を送り込んだり記録に偽の行を足したりして、自分で同意を作れる。記録の突き合わせだけでは見分けられない | 文字列照合で止める（§4-5）。今の許可券も、AI が permit-danger.sh を実行すれば作れる水準（shell のフックに permit-danger.sh 実行の禁止が無いことは事実、recon.md:59。node フックと Claude Code 本体の自動判定がそれを止めるかは未確認）で、それより弱くはならない。**見つける手段**: `consent_guard_blocked` のうち偽造の疑い（kind が inject・write）が1件でも記録されたら、この仕組みを止めて（po-rollback-consent.sh）PO に報告する。週次の consent-audit.py --audit でこの件数を数える。なお agent-events.jsonl と consent-audit.py は AI が Write/Edit で書き換えられるので、見つける手段自体も消せる（受け入れるリスクの範囲、Q6） |
 | R2 | 受け入れるリスク: PO が「1」の直後に取り消しを打っても、記録への書込みが遅れると見落として通る | 取り消すときは Esc で止める（Claude Code の中断）ことを PO への案内に書く |
 | R3 | フックの時点で PO の返事が記録に無い | K0 で実測。×なら案 F に切り替える設計に戻す。無いときは止まるだけで、安全側に倒れる |
 | R4 | サブエージェントの危険操作が止まる | 仕様どおり。Opus が実行する |
@@ -203,10 +203,10 @@ PO への返事の本文（ツール呼び出しの中ではない）の、**最
 
 ## 9. 維持の仕組み
 
-- 担当: Opus。週次の保守（ADR-1011 の定期実行）に、`python3 scripts/dev/consent-audit.py --audit`（台帳と記録の突き合わせ、`consent_guard_blocked` の件数）と K11・K12 の集計を足す。`consent_guard_blocked` が1件以上なら R1 の対処に従う。
+- 担当: Opus。週次の保守（ADR-1011 の定期実行）に、`python3 scripts/dev/consent-audit.py --audit`（台帳と記録の突き合わせ、`consent_guard_blocked` の件数）と K11・K12 の集計を足す。`consent_guard_blocked` のうち偽造の疑い（kind が inject・write）が1件以上なら R1 の対処に従う。
 - **権限の定期点検（PO の追加条件、2026-10-19）**: agent-console の定期実行に「同意と権限の週次点検」を1件登録し、毎週月曜 09:30 に点検用のセッションを開く。そのセッションは `python3 scripts/dev/consent-audit.py --audit --permissions` を実行し、次の4つを数えて前週と比べる。
   1. 同意で通った操作（consent_consumed）の件数と、そのうち記録に同意票と typed の「1」が見つからないもの（0件が正常）
-  2. 偽造を防ぐ見張りが止めた件数（consent_guard_blocked、0件が正常）
+  2. 偽造を防ぐ見張りが止めた件のうち偽造の疑い（consent_guard_blocked の kind が inject・write、0件が正常）。読み取りの空振りは参考の件数で異常にしない
   3. 許可券の発行・消費の件数（danger_permit_consumed ほか）
   4. 権限の設定の増減: ~/.claude/settings.json と settings.local.json の `permissions.allow`・`hooks` の登録、~/.claude/permits の券を、前回の写し（~/.claude/logs/permission-snapshot.json。consent-audit.py が書く）と比べて、増えた・消えたものの一覧
   - 1・2 が1件以上、または 4 に PO の承認記録（ADR・PR）で説明できない増減があれば、点検セッションが PO に報告する（3行型）。1・2 が1件以上なら、あわせて R1 の対処（仕組みを止める案）を選択肢に出す。異常が無ければ報告しない（結果は /tmp/CC報告ファイル/consent-weekly/ に残す）。
