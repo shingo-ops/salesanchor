@@ -408,3 +408,502 @@ rc=0
 - preflight は監視語を含むコマンドとまとめず、単独の Bash で流す。
 
 ### 14-6 報告欄（担当が追記）
+
+本報告はカード doc-agenda-nav 段1c 追補の実行結果である。
+
+枝: release/doc-agenda-nav-stage1c（開始時 HEAD 444c251fcfab2e761b20dc30a08eba196f1d4521。commit 後の sha は完了報告に記す）
+
+### preflight（[1/3]・[2/3] のみ FAIL。§12 により続行）
+```
+== executor preflight (identity=shingo-cc, mode=fix) ==
+[1/3] network -> api.github.com
+  [FAIL] GitHub API に到達不可。Mac回線ではなく実行役サンドボックスの通信OFFが濃厚。
+       => Codexをネット有効で起動 (信頼repo内: codex --sandbox danger-full-access / または config の network_access=true)
+[2/3] gh auth = shingo-cc
+  [warn] gh の active account が shingo-cc でない。gh auth switch で切り替え試行...
+  [FAIL] gh auth switch --hostname github.com --user shingo-cc に失敗。gh auth status --active で現状を確認。
+[3/3] git config user.name = shingo-cc
+  [OK]   git user.name を shingo-cc に設定
+[4/4] long-lived branch -> origin/main
+  [OK]   origin/main は存在
+==============================================
+PREFLIGHT FAIL — 上の対策を実施し再実行(深追いしない)
+rc=1
+```
+
+### 14-4-1 差分全文
+```diff
+diff --git a/scripts/agent-hooks/cloud/test.sh b/scripts/agent-hooks/cloud/test.sh
+index fb5f0cf..fe2c212 100755
+--- a/scripts/agent-hooks/cloud/test.sh
++++ b/scripts/agent-hooks/cloud/test.sh
+@@ -374,7 +374,8 @@ bcases = [  # (No, 名前, 入力, 追加env, 判定関数(rc,out,err), 期待
+  ("B1b", "rules-ack あり→通す", bash(f'python3 -c "{T0}1)" # rules-ack: {ACK}'), MRR, lambda r, o, e: r == 0 and not o.strip(), "exit0+出力なし"),
+  ("B1c", "origin/mainからルールを読む", bash(f'python3 -c "{T0}1)"'), {"CLAUDE_PROJECT_DIR": WORKTREE}, lambda r, o, e: r == 0 and hasdeny(o) and "共用商品マスタ 新規登録ルール" in o, "exit0+deny+本文"),
+  ("B2", "Write /tmp/x.py deny", pre("Write", file_path="/tmp/x.py", content=f"x = {T0}1)"), MRR, lambda r, o, e: r == 0 and hasdeny(o), "deny"),
+- ("B2b", "Write docs 配下は通す", pre("Write", file_path="/repo/docs/a.md", content=f"x = {T0}1)"), MRR, lambda r, o, e: r == 0 and not o.strip(), "出力なし"),
++ ("B2b", "Write docs 配下は通す", pre("Write", file_path="/repo/docs/a.md", content=f"x = {T0}1)"), {**MRR, "CLAUDE_PROJECT_DIR": "/repo"}, lambda r, o, e: r == 0 and not o.strip(), "出力なし"),
++ ("B2c", "リポジトリ外の docs は止める", pre("Write", file_path="/other/docs/a.md", content=f"x = {T0}1)"), {**MRR, "CLAUDE_PROJECT_DIR": "/repo"}, lambda r, o, e: r == 0 and hasdeny(o), "deny"),
+  ("B3", "UserPromptSubmit 登録ルール注入", prompt("マスタに商品を登録して"), MRR, lambda r, o, e: r == 0 and "additionalContext" in o, "additionalContext"),
+  ("B4", "python3.11 -m venv", bash("python3.11 -m venv .venv"), None, lambda r, o, e: r == 2 and "py312-guard" in e, "exit2+py312-guard"),
+  ("B4", "pip install", bash("pip install requests"), None, lambda r, o, e: r == 2 and "py312-guard" in e, "exit2+py312-guard"),
+```
+
+### 14-4-2 変更後の版（rc=1。「止めた文言」の補足行は省略、OK/NG の全行）
+```
+== CLAUDE_CODE_REMOTE=true ==
+No  ケース                        期待   実際   秒      判定
+K1  危険語1つ目                     2    2     0.064 OK
+K1  危険語3つ目                     2    2     0.075 OK
+K1  rebase系(一覧内)               2    2     0.082 OK
+K1  psql 書込(insert)            2    2     0.084 OK
+K1  psql 書込(update)            2    2     0.071 OK
+K1  psql ファイル流し込み              2    2     0.069 OK
+K1  ssh で prod へ               2    2     0.067 OK
+K1  ls                         0    0     0.158 OK
+K1  git status                 0    0     0.179 OK
+K1  grep内の語は読取り扱い              0    0     0.164 OK
+K1  commit文中の語は対象外             0    0     0.145 OK
+K1  psql 読取(select)            0    0     0.169 OK
+K1  bash heredoc本文に危険語         2    2     0.083 OK
+K1  python3 heredoc本文に危険語      2    2     0.077 OK
+K1  cat>file heredoc本文は通す      0    0     0.150 OK
+K1  cat>run.sh heredoc本文は通す    0    0     0.172 OK
+K2  MCP merge                  2    2     0.076 OK
+K2  gh pr merge                2    2     0.080 OK
+K2  gh api PUT /merge          2    2     0.069 OK
+K2  gh pr view                 0    0     0.162 OK
+K2  MCP get_me                 0    0     0.163 OK
+M1  curl PUT /merge            2    2     0.070 OK
+M2  curl --request=PUT /merge  2    2     0.062 OK
+M3  gh api graphql mergePullRequest 2    2     0.066 OK
+M4  gh api graphql 自動マージ予約     2    2     0.078 OK
+M5  gh api repos/…/merges      2    2     0.065 OK
+M6  curl GET /merge(調べるだけ)     0    0     0.164 OK
+M7  grep mergePullRequest      0    0     0.186 OK
+M8  gh api graphql 読取          0    0     0.153 OK
+K3  MCP作成 コード枝                 2    2     0.096 OK
+K3  gh pr create コード枝          2    2     0.082 OK
+K3  gh api POST pulls コード枝     2    2     0.070 OK
+K3  MCP作成 docsのみ               0    0     0.179 OK
+K3  gh pr create docsのみ        0    0     0.182 OK
+K3  git失敗なら止める                 2    2     0.069 OK
+K3  MCP head=コード枝              2    2     0.077 OK
+K3  MCP head=docs枝(owner:形式)   0    0     0.173 OK
+K3  MCP head=docs枝 節なし         2    2     0.107 OK
+K3  MCP head無し                 2    2     0.092 OK
+K3  MCP head空                  2    2     0.075 OK
+K3  MCP head不正文字               2    2     0.070 OK
+K3  gh pr create --head コード枝   2    2     0.100 OK
+K3  gh pr create --head= docs枝 0    0     0.182 OK
+K3  gh pr create -H コード枝       2    2     0.087 OK
+K3  gh api head=コード枝           2    2     0.087 OK
+K3  gh api --raw-field head=docs枝 0    0     0.176 OK
+K3  head枝が存在しない                2    2     0.070 OK
+K3  追跡参照が古い(後からコード追加)          2    2     0.090 OK
+K3  --head 2回(後がコード枝)          2    2     0.105 OK
+K3  gh api -fhead=コード枝(詰め書き)   2    2     0.091 OK
+H1  本文中の -H docs枝              2    2     0.127 OK
+H2  本文中の --head docs枝          2    2     0.091 OK
+H3  gh api 末尾ヘッダ X-A:docs枝     2    2     0.088 OK
+H4  gh api Accept ヘッダが後ろ       0    0     0.172 OK
+H5  引用符が閉じていない(shlex の道)       2    2     0.078 OK
+H7  語の途中の # (--title fix#12)   2    2     0.080 OK
+H8  gh api 語の途中の # (title=a#b) 2    2     0.068 OK
+H9  引用符の外のコメントは読めないので止める(R5)   2    2     0.086 OK
+H10 引用符の中の # は対象外              0    0     0.205 OK
+H11 コメント内の ' の後ろの行に fix#12     2    2     0.074 OK
+H12 git status # it's fine の後ろの行に fix#12 2    2     0.106 OK
+H13 行の継ぎ目の直後の #                2    2     0.062 OK
+H14 $' (ANSI-C 引用符)            2    2     0.070 OK
+H15 先頭のコメント行は読めないので止める(R5)     2    2     0.070 OK
+H16 Fix\ #12 (逃がした空白の直後の #)    2    2     0.087 OK
+H17 x\;#12 (逃がした ; の直後の #)     2    2     0.069 OK
+H18 命令文に \r を含む                2    2     0.076 OK
+H19 区切り直後のコメントは読めないので止める(R5)   2    2     0.070 OK
+H20 ;( の後ろに docs枝              2    2     0.082 OK
+H21 &&( の後ろに docs枝             2    2     0.070 OK
+H22 引用符の中の <<EOF から行頭 EOF までに本物の --head 2    2     0.085 OK
+H23 echo gh pr create の後ろの bash -c に本物の作成 2    2     0.065 OK
+H24 docs枝の作成の後ろの bash -c に本物の作成 2    2     0.071 OK
+H25 何も足さない普通の形                 0    0     0.181 OK
+H26 引用符の中の記号 (a <<b)           0    0     0.168 OK
+H27 変数 $G で本物を隠す               2    2     0.070 OK
+H28 逃がした \; で語を作る              2    2     0.069 OK
+H29 二重引用符の中の $(…)              2    2     0.075 OK
+H30 cd && gh pr create (つなぎ)   2    2     0.064 OK
+H31 単引用符の中は何でもよい               0    0     0.157 OK
+H32 二重引用符の本文(普通の文字+節の見出し)      0    0     0.174 OK
+K1  >( の中に危険語                  2    2     0.078 OK
+K1  単独&の後ろに危険語                 2    2     0.072 OK
+K1  2>&1 の後ろに危険語               2    2     0.068 OK
+K1  <( の中に危険語                  2    2     0.065 OK
+K1  ssh-keygen は通す             0    0     0.154 OK
+R1  rm -fr                     2    2     0.066 OK
+R2  rm -Rf                     2    2     0.063 OK
+R3  rm -f -r                   2    2     0.073 OK
+R4  rm --recursive             2    2     0.065 OK
+R5  /bin/rm -dfr               2    2     0.062 OK
+R6  env X=1 command rm -fr     2    2     0.064 OK
+R7  ls && rm -fr               2    2     0.063 OK
+R8  rm -f (再帰なし)               0    0     0.148 OK
+R9  rm -- -r (-r という名のファイル)    0    0     0.173 OK
+R10 grep内の rm -fr は読取り扱い       0    0     0.158 OK
+R11 commit文中の rm -fr は対象外      0    0     0.165 OK
+R12 rmdir                      0    0     0.177 OK
+R14 nice -n 5 rm -fr           2    2     0.081 OK
+E1  $( ) の中の rm -fr            2    2     0.070 OK
+E2  逆引用符の中の rm -fr             2    2     0.063 OK
+E3  ( ) 殻の中の rm -fr            2    2     0.062 OK
+E4  bash -c の中の rm -fr         2    2     0.065 OK
+E5  /bin/sh -c の中の rm -Rf      2    2     0.079 OK
+E6  eval の中の rm -fr            2    2     0.077 OK
+E7  commit 文の $( ) の中の gh pr merge 2    2     0.076 OK
+E8  $( ) の中の gh api PUT merge  2    2     0.068 OK
+E9  入れ子の $( )                  2    2     0.066 OK
+E10 bash -c の中の $( )           2    2     0.064 OK
+E11 閉じ忘れの $(                   2    2     0.064 OK
+E12 commit 本文中の rm -fr は対象外    0    0     0.168 OK
+E13 echo "$(date)"             0    0     0.163 OK
+E14 単引用符の中の $( ) は実行されない       0    0     0.144 OK
+E15 commit の heredoc 書き方       0    0     0.170 OK
+E16 算術 $(( ))                  0    0     0.175 OK
+E17 \ 付きの $(                   0    0     0.181 OK
+E18 x=$(git rev-parse HEAD)    0    0     0.175 OK
+E20 5段の入れ子の中に rm -fr           2    2     0.072 OK
+E21 5段の入れ子（中身は無害・深すぎで止める）      2    2     0.071 OK
+E22 then の直後の ( )              2    2     0.079 OK
+E23 do の直後の ( )                2    2     0.078 OK
+E24 ! の直後の ( )                 2    2     0.069 OK
+E25 time の直後の ( )              2    2     0.074 OK
+E26 bash -c -- '…'             2    2     0.064 OK
+E27 プロセス置換 <( )                2    2     0.066 OK
+E28 $((rm …) ) の形              2    2     0.065 OK
+E29 bash -c ドル付き単引用符           2    2     0.062 OK
+E30 ドル付き単引用符の \x20             2    2     0.067 OK
+E31 引用符なし \ 区切り                2    2     0.064 OK
+E32 then の直後の ( ) で gh pr merge 2    2     0.065 OK
+E33 4段の入れ子で無害                  0    0     0.143 OK
+E34 if の then ( ) 無害           0    0     0.165 OK
+E35 for の do ( ) 無害            0    0     0.172 OK
+E36 diff <( ) <( ) 無害          0    0     0.168 OK
+E37 算術の中の $( ) 無害              0    0     0.169 OK
+E38 bash -c -- 無害              0    0     0.160 OK
+E39 ドル付き単引用符 無害                0    0     0.162 OK
+E40 \u 小文字の16進で rm             2    2     0.079 OK
+E41 \U 大文字8桁で rm               2    2     0.065 OK
+E42 then( 空白なし                 2    2     0.064 OK
+E43 do( 空白なし                   2    2     0.066 OK
+E44 {( 空白なし                    2    2     0.078 OK
+E45 !( 空白なし                    2    2     0.070 OK
+E46 case a) の後の ( )            2    2     0.069 OK
+E47 case (a) の後の ( )           2    2     0.067 OK
+E48 関数 { ( ) }                 2    2     0.065 OK
+E49 関数 f() ( )                 2    2     0.069 OK
+E50 time -p ( )                2    2     0.064 OK
+E51 bash -c 'rm -f''r'         2    2     0.070 OK
+E52 bash -c r'm -fr'           2    2     0.079 OK
+E53 bash -c "rm -"'fr'         2    2     0.062 OK
+E54 bash -c $'rm -f'r\         2    2     0.083 OK
+E55 配列 a=( ) 無害                0    0     0.164 OK
+E56 二重引用符の中の ( ) 無害            0    0     0.152 OK
+E57 grep -E 'a(b)' 無害          0    0     0.159 OK
+E58 関数定義 f() { } 無害            0    0     0.160 OK
+E59 case 無害                    0    0     0.149 OK
+E60 then( 無害                   0    0     0.166 OK
+E61 bash -c 'echo a''b' 無害     0    0     0.157 OK
+E62 bash -c $'echo A' 無害       0    0     0.149 OK
+E63 bash -c $'…\u0041…' 無害     0    0     0.180 OK
+E64 不正な \u \U（サロゲート・範囲外・桁なし）は例外なく通す 0    0     0.150 OK
+K4  本文に節なし(MCP)                2    2     0.080 OK
+K4  本文に節なし(gh)                 2    2     0.068 OK
+K4  本文に節あり(MCP)                0    0     0.160 OK
+K5  Stop 英語のみ                  2    2     0.055 OK
+K5  Stop 日本語あり                 0    0     0.062 OK
+K5  Stop 続行中は通す                0    0     0.054 OK
+FC  JSON不正→止める(guard)          2    2         - OK
+FC  guard異常終了→止める              2    2         - OK
+FC  JSON不正→止める(dispatch)       2    2         - OK
+FC  JSON不正 変数なし→通す             0    0         - OK
+K5  SessionStart 決まり注入         0    0     0.057 OK
+== 便2 B1〜B6b（CLAUDE_CODE_REMOTE=true）==
+No   ケース                          期待                 実際   秒      判定
+B1   登録ルール deny(Bash)             exit0+deny         0     0.148 OK
+B1b  rules-ack あり→通す              exit0+出力なし         0     0.159 OK
+B1c  origin/mainからルールを読む          exit0+deny+本文      0     0.149 OK
+B2   Write /tmp/x.py deny         deny               0     0.151 OK
+B2b  Write docs 配下は通す             出力なし               0     0.155 OK
+B2c  リポジトリ外の docs は止める            deny               0     0.171 OK
+B3   UserPromptSubmit 登録ルール注入     additionalContext  0     0.087 OK
+B4   python3.11 -m venv           exit2+py312-guard  2     0.105 OK
+B4   pip install                  exit2+py312-guard  2     0.098 OK
+B4   virtualenv                   exit2+py312-guard  2     0.102 OK
+B4b  python3.12 -m venv           exit0              0     0.157 OK
+B4b  uv venv --python 3.12        exit0              0     0.168 OK
+B4b  git status                   exit0              0     0.168 OK
+B5   担当 timeout 300000            exit2+guard名       2     0.141 OK
+B5b  親 timeout 300000             exit0              0     0.170 OK
+B5b  担当 timeout 240000            exit0              0     0.174 OK
+B6   カード 受領確認なし                   exit2+card-lint    2     0.149 OK
+B6b  ふつうの依頼文                      exit0+出力なし         0     0.084 OK
+B7  18件中 逸脱 0件 OK
+B8  1秒以上かかった件: 0（最大 0.174 秒） OK
+== 時間切れ T1〜T5 ==
+T1  上限1秒で $(true) 1万個→止める+理由文  期待 2 実際 0 0.39秒 NG
+T2  既定の上限で echo hi→通す  期待 0 実際 0 0.04秒 OK
+T3  PreToolUse の dispatch 3項目すべて onFailure block＋先頭判定  期待 3項目 OK
+T4  手元(REMOTE 未設定・PROJECT_DIR 無効)で即 exit 0  期待 0 実際 0 0.00秒 OK
+T5  クラウド(REMOTE=true)で無害な Bash→dispatch が呼ばれて exit 0  期待 0 実際 0 OK
+T5b クラウドで dispatch.sh が見つからない→0 以外（onFailure block が効く形）  実際 127 OK
+== CLAUDE_CODE_REMOTE 未設定（K6: 全件 exit 0・出力なし）==
+K6  169件中 逸脱 0件 OK
+K7  1秒以上かかった件: 0（負荷 0.4。負荷が高い機械では参考値）
+== 結果: 1件NG ==
+```
+
+### 14-4-3 比べる版（origin/main。rc=1。T2 の後で Python が FileNotFoundError（取り出し先に .claude/settings.json が無い）で中断。T3 以降は未実行＝未確認）
+```
+== CLAUDE_CODE_REMOTE=true ==
+No  ケース                        期待   実際   秒      判定
+K1  危険語1つ目                     2    2     0.067 OK
+K1  危険語3つ目                     2    2     0.077 OK
+K1  rebase系(一覧内)               2    2     0.084 OK
+K1  psql 書込(insert)            2    2     0.076 OK
+K1  psql 書込(update)            2    2     0.094 OK
+K1  psql ファイル流し込み              2    2     0.066 OK
+K1  ssh で prod へ               2    2     0.064 OK
+K1  ls                         0    0     0.159 OK
+K1  git status                 0    0     0.159 OK
+K1  grep内の語は読取り扱い              0    0     0.157 OK
+K1  commit文中の語は対象外             0    0     0.161 OK
+K1  psql 読取(select)            0    0     0.164 OK
+K1  bash heredoc本文に危険語         2    2     0.076 OK
+K1  python3 heredoc本文に危険語      2    2     0.079 OK
+K1  cat>file heredoc本文は通す      0    0     0.195 OK
+K1  cat>run.sh heredoc本文は通す    0    0     0.181 OK
+K2  MCP merge                  2    2     0.064 OK
+K2  gh pr merge                2    2     0.083 OK
+K2  gh api PUT /merge          2    2     0.072 OK
+K2  gh pr view                 0    0     0.155 OK
+K2  MCP get_me                 0    0     0.167 OK
+M1  curl PUT /merge            2    2     0.081 OK
+M2  curl --request=PUT /merge  2    2     0.078 OK
+M3  gh api graphql mergePullRequest 2    2     0.085 OK
+M4  gh api graphql 自動マージ予約     2    2     0.078 OK
+M5  gh api repos/…/merges      2    2     0.072 OK
+M6  curl GET /merge(調べるだけ)     0    0     0.146 OK
+M7  grep mergePullRequest      0    0     0.173 OK
+M8  gh api graphql 読取          0    0     0.172 OK
+K3  MCP作成 コード枝                 2    2     0.084 OK
+K3  gh pr create コード枝          2    2     0.076 OK
+K3  gh api POST pulls コード枝     2    2     0.072 OK
+K3  MCP作成 docsのみ               0    0     0.203 OK
+K3  gh pr create docsのみ        0    0     0.183 OK
+K3  git失敗なら止める                 2    2     0.074 OK
+K3  MCP head=コード枝              2    2     0.112 OK
+K3  MCP head=docs枝(owner:形式)   0    0     0.183 OK
+K3  MCP head=docs枝 節なし         2    2     0.090 OK
+K3  MCP head無し                 2    2     0.069 OK
+K3  MCP head空                  2    2     0.066 OK
+K3  MCP head不正文字               2    2     0.073 OK
+K3  gh pr create --head コード枝   2    2     0.094 OK
+K3  gh pr create --head= docs枝 0    0     0.204 OK
+K3  gh pr create -H コード枝       2    2     0.082 OK
+K3  gh api head=コード枝           2    2     0.088 OK
+K3  gh api --raw-field head=docs枝 0    0     0.186 OK
+K3  head枝が存在しない                2    2     0.105 OK
+K3  追跡参照が古い(後からコード追加)          2    2     0.095 OK
+K3  --head 2回(後がコード枝)          2    2     0.117 OK
+K3  gh api -fhead=コード枝(詰め書き)   2    2     0.096 OK
+H1  本文中の -H docs枝              2    2     0.084 OK
+H2  本文中の --head docs枝          2    2     0.091 OK
+H3  gh api 末尾ヘッダ X-A:docs枝     2    2     0.083 OK
+H4  gh api Accept ヘッダが後ろ       0    0     0.215 OK
+H5  引用符が閉じていない(shlex の道)       2    2     0.082 OK
+H7  語の途中の # (--title fix#12)   2    2     0.083 OK
+H8  gh api 語の途中の # (title=a#b) 2    2     0.087 OK
+H9  引用符の外のコメントは読めないので止める(R5)   2    2     0.075 OK
+H10 引用符の中の # は対象外              0    0     0.160 OK
+H11 コメント内の ' の後ろの行に fix#12     2    2     0.073 OK
+H12 git status # it's fine の後ろの行に fix#12 2    2     0.071 OK
+H13 行の継ぎ目の直後の #                2    2     0.085 OK
+H14 $' (ANSI-C 引用符)            2    2     0.068 OK
+H15 先頭のコメント行は読めないので止める(R5)     2    2     0.084 OK
+H16 Fix\ #12 (逃がした空白の直後の #)    2    2     0.070 OK
+H17 x\;#12 (逃がした ; の直後の #)     2    2     0.069 OK
+H18 命令文に \r を含む                2    2     0.073 OK
+H19 区切り直後のコメントは読めないので止める(R5)   2    2     0.071 OK
+H20 ;( の後ろに docs枝              2    2     0.066 OK
+H21 &&( の後ろに docs枝             2    2     0.065 OK
+H22 引用符の中の <<EOF から行頭 EOF までに本物の --head 2    2     0.072 OK
+H23 echo gh pr create の後ろの bash -c に本物の作成 2    2     0.083 OK
+H24 docs枝の作成の後ろの bash -c に本物の作成 2    2     0.080 OK
+H25 何も足さない普通の形                 0    0     0.222 OK
+H26 引用符の中の記号 (a <<b)           0    0     0.174 OK
+H27 変数 $G で本物を隠す               2    2     0.081 OK
+H28 逃がした \; で語を作る              2    2     0.086 OK
+H29 二重引用符の中の $(…)              2    2     0.082 OK
+H30 cd && gh pr create (つなぎ)   2    2     0.079 OK
+H31 単引用符の中は何でもよい               0    0     0.189 OK
+H32 二重引用符の本文(普通の文字+節の見出し)      0    0     0.202 OK
+K1  >( の中に危険語                  2    2     0.068 OK
+K1  単独&の後ろに危険語                 2    2     0.075 OK
+K1  2>&1 の後ろに危険語               2    2     0.065 OK
+K1  <( の中に危険語                  2    2     0.082 OK
+K1  ssh-keygen は通す             0    0     0.176 OK
+R1  rm -fr                     2    2     0.079 OK
+R2  rm -Rf                     2    2     0.082 OK
+R3  rm -f -r                   2    2     0.077 OK
+R4  rm --recursive             2    2     0.069 OK
+R5  /bin/rm -dfr               2    2     0.076 OK
+R6  env X=1 command rm -fr     2    2     0.077 OK
+R7  ls && rm -fr               2    2     0.082 OK
+R8  rm -f (再帰なし)               0    0     0.178 OK
+R9  rm -- -r (-r という名のファイル)    0    0     0.164 OK
+R10 grep内の rm -fr は読取り扱い       0    0     0.189 OK
+R11 commit文中の rm -fr は対象外      0    0     0.266 OK
+R12 rmdir                      0    0     0.171 OK
+R14 nice -n 5 rm -fr           2    2     0.075 OK
+E1  $( ) の中の rm -fr            2    2     0.071 OK
+E2  逆引用符の中の rm -fr             2    2     0.072 OK
+E3  ( ) 殻の中の rm -fr            2    2     0.071 OK
+E4  bash -c の中の rm -fr         2    2     0.066 OK
+E5  /bin/sh -c の中の rm -Rf      2    2     0.080 OK
+E6  eval の中の rm -fr            2    2     0.075 OK
+E7  commit 文の $( ) の中の gh pr merge 2    2     0.076 OK
+E8  $( ) の中の gh api PUT merge  2    2     0.067 OK
+E9  入れ子の $( )                  2    2     0.071 OK
+E10 bash -c の中の $( )           2    2     0.065 OK
+E11 閉じ忘れの $(                   2    2     0.064 OK
+E12 commit 本文中の rm -fr は対象外    0    0     0.168 OK
+E13 echo "$(date)"             0    0     0.158 OK
+E14 単引用符の中の $( ) は実行されない       0    0     0.165 OK
+E15 commit の heredoc 書き方       0    0     0.157 OK
+E16 算術 $(( ))                  0    0     0.178 OK
+E17 \ 付きの $(                   0    0     0.169 OK
+E18 x=$(git rev-parse HEAD)    0    0     0.167 OK
+E20 5段の入れ子の中に rm -fr           2    2     0.080 OK
+E21 5段の入れ子（中身は無害・深すぎで止める）      2    2     0.072 OK
+E22 then の直後の ( )              2    2     0.070 OK
+E23 do の直後の ( )                2    2     0.077 OK
+E24 ! の直後の ( )                 2    2     0.063 OK
+E25 time の直後の ( )              2    2     0.063 OK
+E26 bash -c -- '…'             2    2     0.065 OK
+E27 プロセス置換 <( )                2    2     0.069 OK
+E28 $((rm …) ) の形              2    2     0.064 OK
+E29 bash -c ドル付き単引用符           2    2     0.064 OK
+E30 ドル付き単引用符の \x20             2    2     0.066 OK
+E31 引用符なし \ 区切り                2    2     0.081 OK
+E32 then の直後の ( ) で gh pr merge 2    2     0.080 OK
+E33 4段の入れ子で無害                  0    0     0.187 OK
+E34 if の then ( ) 無害           0    0     0.179 OK
+E35 for の do ( ) 無害            0    0     0.173 OK
+E36 diff <( ) <( ) 無害          0    0     0.167 OK
+E37 算術の中の $( ) 無害              0    0     0.169 OK
+E38 bash -c -- 無害              0    0     0.188 OK
+E39 ドル付き単引用符 無害                0    0     0.158 OK
+E40 \u 小文字の16進で rm             2    2     0.085 OK
+E41 \U 大文字8桁で rm               2    2     0.072 OK
+E42 then( 空白なし                 2    2     0.071 OK
+E43 do( 空白なし                   2    2     0.065 OK
+E44 {( 空白なし                    2    2     0.084 OK
+E45 !( 空白なし                    2    2     0.089 OK
+E46 case a) の後の ( )            2    2     0.074 OK
+E47 case (a) の後の ( )           2    2     0.083 OK
+E48 関数 { ( ) }                 2    2     0.084 OK
+E49 関数 f() ( )                 2    2     0.081 OK
+E50 time -p ( )                2    2     0.071 OK
+E51 bash -c 'rm -f''r'         2    2     0.073 OK
+E52 bash -c r'm -fr'           2    2     0.072 OK
+E53 bash -c "rm -"'fr'         2    2     0.082 OK
+E54 bash -c $'rm -f'r\         2    2     0.075 OK
+E55 配列 a=( ) 無害                0    0     0.163 OK
+E56 二重引用符の中の ( ) 無害            0    0     0.176 OK
+E57 grep -E 'a(b)' 無害          0    0     0.150 OK
+E58 関数定義 f() { } 無害            0    0     0.165 OK
+E59 case 無害                    0    0     0.173 OK
+E60 then( 無害                   0    0     0.156 OK
+E61 bash -c 'echo a''b' 無害     0    0     0.182 OK
+E62 bash -c $'echo A' 無害       0    0     0.161 OK
+E63 bash -c $'…\u0041…' 無害     0    0     0.146 OK
+E64 不正な \u \U（サロゲート・範囲外・桁なし）は例外なく通す 0    0     0.179 OK
+K4  本文に節なし(MCP)                2    2     0.080 OK
+K4  本文に節なし(gh)                 2    2     0.079 OK
+K4  本文に節あり(MCP)                0    0     0.196 OK
+K5  Stop 英語のみ                  2    2     0.069 OK
+K5  Stop 日本語あり                 0    0     0.068 OK
+K5  Stop 続行中は通す                0    0     0.065 OK
+FC  JSON不正→止める(guard)          2    2         - OK
+FC  guard異常終了→止める              2    2         - OK
+FC  JSON不正→止める(dispatch)       2    2         - OK
+FC  JSON不正 変数なし→通す             0    0         - OK
+K5  SessionStart 決まり注入         0    0     0.066 OK
+== 便2 B1〜B6b（CLAUDE_CODE_REMOTE=true）==
+No   ケース                          期待                 実際   秒      判定
+B1   登録ルール deny(Bash)             exit0+deny         0     0.172 OK
+B1b  rules-ack あり→通す              exit0+出力なし         0     0.161 OK
+B1c  origin/mainからルールを読む          exit0+deny+本文      0     0.163 NG
+      stdout: {"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny", "permissionDecisionReason": "ルール文書が読めないため止めました（origin/main の docs/specs/product-master/registration-rules.md を確認してく / stderr: 
+B2   Write /tmp/x.py deny         deny               0     0.165 OK
+B2b  Write docs 配下は通す             出力なし               0     0.171 OK
+B3   UserPromptSubmit 登録ルール注入     additionalContext  0     0.088 OK
+B4   python3.11 -m venv           exit2+py312-guard  2     0.107 OK
+B4   pip install                  exit2+py312-guard  2     0.100 OK
+B4   virtualenv                   exit2+py312-guard  2     0.096 OK
+B4b  python3.12 -m venv           exit0              0     0.167 OK
+B4b  uv venv --python 3.12        exit0              0     0.193 OK
+B4b  git status                   exit0              0     0.173 OK
+B5   担当 timeout 300000            exit2+guard名       2     0.141 OK
+B5b  親 timeout 300000             exit0              0     0.145 OK
+B5b  担当 timeout 240000            exit0              0     0.163 OK
+B6   カード 受領確認なし                   exit2+card-lint    0     0.102 NG
+      stdout:  / stderr: 
+B6b  ふつうの依頼文                      exit0+出力なし         0     0.089 OK
+B7  17件中 逸脱 0件 OK
+B8  1秒以上かかった件: 0（最大 0.193 秒） OK
+== 時間切れ T1〜T5 ==
+T1  上限1秒で $(true) 1万個→止める+理由文  期待 2 実際 0 0.48秒 NG
+T2  既定の上限で echo hi→通す  期待 0 実際 0 0.05秒 OK
+Traceback (most recent call last):
+  File "<stdin>", line 424, in <module>
+FileNotFoundError: [Errno 2] No such file or directory: '/tmp/tmp.4QzSwuwdF8/.claude/settings.json'
+```
+
+### 14-4-4 見張りの手元試験（rc=0、PASS 28行・FAIL 0行）
+```
+PASS T1 deny+全文
+PASS T2 正しい印はallow(出力なし)
+PASS T3 /backend/ は素通り
+PASS T4 additionalContextに全文
+PASS T5 古い印はdeny
+PASS T6 grepは素通り
+PASS T7 cat heredoc書き込みはdeny
+PASS T8 grep+リダイレクトもdeny(許容する副作用)
+PASS T9-15 出ない: 在庫表の商品名の列幅を直して。あとログイン登録画面のバグも見て
+PASS T9-15 出ない: ユーザー登録フォームで商品一覧が出ない
+PASS T9-15 出ない: マスタ画面の表示が遅い。GitHub に登録してあるワークフローも確認
+PASS T9-15 出ない: Discord の webhook を登録して商品の通知を流す
+PASS T9-15 出ない: マスタを整備して正答率を上げたい。登録はまだしない
+PASS T9-15 出ない: 商品を登録して
+PASS T9-15 出ない: PR を作って
+PASS T16-18 出る: 商品マスタに新しいカードを登録して
+PASS T16-18 出る: 共用マスタへ登録する候補一覧を出して
+PASS T16-18 出る: 販売先を顧客マスタに登録して
+PASS T19 記録置き場(keep)への Write は素通り
+PASS T20 記録置き場(tmp)への Write は素通り
+PASS T21 Bash の登録コマンドは止まる
+PASS T22 リポジトリの外の docs は止まる
+PASS T23 記録置き場の .py は止まる
+PASS T24 作業場所の docs は素通り
+PASS T25 .. で外へ出るパスは止まる
+PASS T26 記録置き場(/private/tmp)への .md は素通り
+PASS T27 絶対パスでないものは止まる
+PASS T28 段の名前そのもの(下に何も無い)は止まる
+rc=0
+```
+
+### 14-5 合否
+- B2b・B2c が OK: 合格（変更後の版 B2b OK / B2c OK）
+- 新しい NG が無い: 変更後の NG は T1 のみ。比べる版の NG（B1c・B6・T1）に T1 が含まれる。ただし比べる版は T3 以降が未実行で、完全な比較ではない（未確認）
+- 手元試験 28件 PASS・rc=0: 合格
+- 触ったファイルは scripts/agent-hooks/cloud/test.sh とこのカードの2つ: 合格
