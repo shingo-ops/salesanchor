@@ -19,7 +19,7 @@
 | B 設計仕様書 | [設計仕様書の索引](specs/README.md) | 新しいテーマを始める前、索引に載る領域に触れる前 |
 | B 設計仕様書 | 業務の仕様書 `salesanchor_system_overview.docx` 他 3 冊（リポジトリ外・PO から入手） | 業務の仕様（画面・データの意味）を確かめるとき |
 | C 設計判断（ADR） | [機能から ADR を引く索引](adr/FEATURE-INDEX.md) | 現状把握（recon）で既存の設計判断を探すとき |
-| C 設計判断（ADR） | [ADR の一覧](adr/README.md) | ADR を足す・変えるとき（一覧は `node scripts/generate-adr-index.js` で作り直す） |
+| C 設計判断（ADR） | [ADR の一覧](adr/README.md) | ADR を足す・変えるとき（一覧は `node scripts/generate-adr-index.js` で作り直してコミットする。CI「ADR index is up to date」が必須） |
 | D 領域別ルール | [frontend の決まり](../frontend/AGENTS.md) | frontend/ のファイルを触るとき |
 | D 領域別ルール | [backend の決まり](../backend/AGENTS.md) | backend/ のファイルを触るとき |
 | E 商品マスタ登録 | [商品マスタ登録の決まり](specs/product-master/registration-rules.md) | 商品マスタに商品を登録する・登録内容を直すとき |
