@@ -20,6 +20,7 @@
 | 設計パートナー長期安定体制（循環の形） | [design-partner-loop/README.md](design-partner-loop/README.md) | 公開 | 設計の担当の進め方を変える前 |
 | エージェント完結の設計体制 | [agent-complete-design/README.md](agent-complete-design/README.md) | 公開 | AI だけで設計を進める体制を変える前 |
 | 開発の無駄な停止ゼロ | [dev-continuity/README.md](dev-continuity/README.md) | 公開 | 開発が止まる原因（待ち・見張り）を直す前 |
+| 台帳と本店の守り（ledger-guard。本店に書類を置きっぱなしにせず各自の作業場所に書く守りと、台帳の書き先の分割） | [ledger-guard/README.md](ledger-guard/README.md) | 第1弾適用済み・KGI-G1達成 2026-07-04 | 本店（main の写し）を守る見張りや、台帳の書き先を変える前 |
 | GO記録の自動転記・マージ前検査 | [go-record-transcription/](../handoff/go-record-transcription/)・[LINE期限付き委任](../handoff/go-record-transcription/line-delegation.md) | 設計範囲・GO取消期限PO合意 2026-09-10・方式全体は草案/自己審査REVISE | GO の記録・マージ前の検査を変える前 |
 | 画面部品の標準（component-standard） | [component-standard.md](component-standard.md) | 公開 | 画面部品を新しく作る・変える前 |
 | UI/UXデザインシステム（design-system。トークン・共通部品・SSOT。component-standardは本テーマの子） | [design-system/README.md](design-system/README.md) | KGI・design承認済 2026-07-04 | 色・部品・画面の見た目を変える前 |
