@@ -241,3 +241,7 @@ PO「1」（2026-10-26。設計 [design.md](./design.md) §29 の案 A：~/.clau
 
 - 判定: K1 合格（200 行以下）。K9 合格のまま（6.5k 以下）。
 - 【事実】段8 の後の内訳（表示値）: ~/.claude/CLAUDE.md 2.1k・~/kb/AGENTS.md 1k・git-workflow.md 221・agents.md 528・CLAUDE.md 198・AGENTS.md 2k。
+
+## 全条件の測り直し（2026-10-26）
+
+origin/main 9351f2158。K1 197行・K2 0/5・K3 0語（§25）・K4 0・K5 4段→目次に2文書を足して 3段・K6 100%・K7 残っている・K9 6.1k・K11 186/186・K12 12/20・K10 9/20（参考）。詳細は design.md §30。
