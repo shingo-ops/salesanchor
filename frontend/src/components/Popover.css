@@ -21,6 +21,8 @@
   background: var(--bg-surface);
   border: 1px solid var(--border);
   pointer-events: auto;
+  /* パネル自体が画面より広いときの上限（design.md 4-3。左右 --space-2 ずつ） */
+  max-width: calc(100vw - var(--space-4));
 
   /* フェードイン */
   opacity: 0;
