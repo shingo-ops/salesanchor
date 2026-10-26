@@ -2,13 +2,14 @@
 
 - 1 行 1 例。`\n` は改行 1 文字を表す（それ以外の `\` はそのまま）。
 - 「止める例」は担当（agent_id あり）の Bash・Monitor の command で、止める（exit 2）。「通す例」は exit 0。
-- 設計者の試作（/tmp/CC報告ファイル/local-subagent-guard/proto-v7-judge.py）に当てた結果: 止める例 262・通す例 218、誤り 0（proto-v7-out.txt）。
+- 設計者の試作（[proto_judge.py](proto_judge.py)）に当てた結果: 止める例 263・通す例 218、誤り 0。
 - test_guard.sh はこの全例を入れる。例を足すときはこの文書と試験の両方に足す。
 
 ## 止める例
 
 ```
 git commit -m x
+export GIT_PAGER=vim
 git -C /a commit
 git -c a=b push
 cd /a && git push
@@ -485,7 +486,7 @@ zsh -lc 'git status'
 watch -n 1 git status
 PAGER=cat git log -1
 PAGER='less -R' git log -1
-git branch -vv
+export GIT_PAGER=less
 git branch -avv
 git tag -n5
 swift --version
