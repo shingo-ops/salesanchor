@@ -43,30 +43,43 @@ function calcPosition(
   const panelW = panelEl.offsetWidth;
   const panelH = panelEl.offsetHeight;
   const gap = 6; // px — トリガーとパネルの間隔
+  const margin = 8; // px — 画面端との最低間隔（ContextMenu.tsx:82 と同値・--space-2 と同値）
 
+  // パネルは position: fixed、triggerRect は getBoundingClientRect() ＝どちらも画面基準。
+  // scrollY/scrollX は足さない（design.md 4-1・recon §1）。
+  let top: number;
+  let left: number;
   switch (placement) {
     case "top":
-      return {
-        top: triggerRect.top + window.scrollY - panelH - gap,
-        left: triggerRect.left + window.scrollX + triggerRect.width / 2 - panelW / 2,
-      };
+      top = triggerRect.top - panelH - gap;
+      left = triggerRect.left + triggerRect.width / 2 - panelW / 2;
+      break;
     case "left":
-      return {
-        top: triggerRect.top + window.scrollY + triggerRect.height / 2 - panelH / 2,
-        left: triggerRect.left + window.scrollX - panelW - gap,
-      };
+      top = triggerRect.top + triggerRect.height / 2 - panelH / 2;
+      left = triggerRect.left - panelW - gap;
+      break;
     case "right":
-      return {
-        top: triggerRect.top + window.scrollY + triggerRect.height / 2 - panelH / 2,
-        left: triggerRect.right + window.scrollX + gap,
-      };
+      top = triggerRect.top + triggerRect.height / 2 - panelH / 2;
+      left = triggerRect.right + gap;
+      break;
     case "bottom":
     default:
-      return {
-        top: triggerRect.bottom + window.scrollY + gap,
-        left: triggerRect.left + window.scrollX + triggerRect.width / 2 - panelW / 2,
-      };
+      top = triggerRect.bottom + gap;
+      left = triggerRect.left + triggerRect.width / 2 - panelW / 2;
+      break;
   }
+
+  // 画面の中へ収める（ContextMenu.tsx:76-95 と同じ考え方。placement の自動反転はしない。design.md 4-2）
+  if (left + panelW + margin > window.innerWidth) {
+    left = window.innerWidth - panelW - margin;
+  }
+  if (top + panelH + margin > window.innerHeight) {
+    top = window.innerHeight - panelH - margin;
+  }
+  left = Math.max(margin, left);
+  top = Math.max(margin, top);
+
+  return { top, left };
 }
 
 export function Popover({
@@ -94,16 +107,29 @@ export function Popover({
     [isControlled, onOpenChange],
   );
 
-  // 位置計算 — パネルが DOM に入ってから測る
+  // 位置計算 — パネルが DOM に入ってから測る。開いている間は resize/scroll でも測り直す（design.md 4-4）
   useEffect(() => {
-    if (isOpen && triggerRef.current && panelRef.current) {
+    if (!isOpen || !triggerRef.current || !panelRef.current) {
+      setVisible(false);
+      return;
+    }
+    const measure = () => {
+      if (!triggerRef.current || !panelRef.current) return;
       const rect = triggerRef.current.getBoundingClientRect();
       setPos(calcPosition(rect, panelRef.current, placement));
-      // 次フレームで visible にしてアニメーションを発火させる
-      requestAnimationFrame(() => setVisible(true));
-    } else {
-      setVisible(false);
-    }
+    };
+    measure();
+    // 次フレームで visible にしてアニメーションを発火させる
+    requestAnimationFrame(() => setVisible(true));
+
+    // 開いている間だけ測り直す。中のスクロール箱でも拾えるよう capture + passive。
+    // 時間に頼る後始末は作らない（便2 の教訓＝280ms タイマーの罠）。
+    window.addEventListener("resize", measure);
+    window.addEventListener("scroll", measure, { capture: true, passive: true });
+    return () => {
+      window.removeEventListener("resize", measure);
+      window.removeEventListener("scroll", measure, { capture: true });
+    };
   }, [isOpen, placement]);
 
   // 外側クリックで閉じる

@@ -41,7 +41,13 @@
 |---|---|---|
 | アプリ側 在庫表の操作台 | `frontend/src/pages/inventory/InventoryToolbar.tsx:158,168` | `inventory-condition-filter-button`・`inventory-supplier-filter-button` |
 | アプリ側 在庫表のフィルタパネル | `frontend/src/pages/inventory/InventoryFilterPanel.tsx:119,134` | `inventory-supplier-filter-button`・`inventory-condition-filter-button`（PC のフィルタパネル内） |
-| 閲覧ページ | `frontend/src/pages/viewer/InventoryView.tsx:10` | **`layout="inline"`/`"row"` のみ＝Popover を使わない**（便1・便2 で切替済み） |
+| 閲覧ページ **PC 幅** | `frontend/src/pages/viewer/InventoryView.tsx:201-212`（providerSelect）・`:214-225`（conditionSelect） | **既定（popover）のまま＝Popover を使う**。描画は PC 枝だけ（`:547` の `isMobile ?` の else = `:565` 以降、`bottomLeft` の `:597-598`）。testid `viewer-condition-filter-button`・`viewer-provider-filter-button` |
+| 閲覧ページ **スマホ幅** | 同 `:228-310` | `layout="row"`/`"inline"` のみ＝Popover を使わない（便1・便2 で切替済み） |
+
+> **2026-10-26 訂正（一次情報で再確認）**: 初版はこの表で「閲覧ページは Popover を使わない」と書いていたが**誤り**。
+> スマホ幅はそのとおりだが、**PC 幅の `providerSelect`/`conditionSelect` は `layout` 未指定＝既定の popover**。
+> コード内のコメント `:228` 自身が「PC 側（上の popover 版 providerSelect/conditionSelect）」と明記している。
+> したがって本便の影響範囲は**アプリ側 `/inventory` に加えて閲覧ページの PC 幅**を含む。
 
 **似て非なるもの（今回は触らない）**
 
