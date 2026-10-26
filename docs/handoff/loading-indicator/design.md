@@ -200,7 +200,7 @@ PO の選択: 押すと丸と元の言葉が並ぶ（例: 丸＋「保存」）�
 - 便2〜5: 金型経由の残り（Button・HeaderButton）を 40 件以下ずつ。ディレクトリ順（pages/super-admin → pages/integrations・admin → pages の残り → features・components）。
 - 便6: 生 `<button>` 9 件を金型 Button へ。
 - 便7: 再発防止の検査（金型ボタンの children に読み込み中系キーの三項を書くと UI ガバナンス検査が赤）と、使われなくなった辞書キーの整理。
-- 便7a（card-15）= 検査。便7b = 使われなくなった辞書キーと CSS の片付け。
+- 便7a（card-15）= 検査。便7b（card-16）= 辞書 52 キーと CSS 1か所の片付け（本体辞書 47 キー・viewer 辞書 5 キー・`.outbound-translation-send-btn` の3規則）。
 
 ## 3-4 代替案
 - loadingText を残し、各所で loadingText を外す: 文言差し替えを後から書けてしまい K3 を満たさない。不採用。
@@ -223,6 +223,11 @@ PO の選択: 押すと丸と元の言葉が並ぶ（例: 丸＋「保存」）�
 ## 3-7 維持の仕組み
 - 型: Button に loadingText が無いので文言差し替えはコンパイルで止まる。
 - 検査: UI ガバナンス検査の loadingTernary（便7a）が、pages/・features/・components/ で増えたら赤にする
+
+### 3-7 残件（便7b 時点で残っているもの）
+- ChannelsPage.tsx:627・:643 の ConfirmModal の confirmLabel にある prop の三項は、検査の対象外のまま残っている。
+- 参照0の読み込み系 45 キー（keys-loadingish-zero-ref-all.tsv）は、便7b の対象外のまま辞書に残っている。
+- 検査が取りこぼすまれな形が4つある: ①同じ行の JSX テキストに `'` が2つある形、②テンプレートの入れ子、③t の第2引数に書く形、④i18n.t の呼び出し。
 
 ## 3-8 外部・過去事例の参照と我々への応用
 - 段階2（LoadingBlock 108 件）と同じ「金型を1つにして 40 件以下ずつ置換・便ごとに本番の配信 JS で確かめる」型を使う。外部事例は使わない（社内の金型移行で、段階2の実測で足りるため）。
