@@ -17,14 +17,14 @@
 
 ## 2. 欠陥(b) 画面の端で外に出る
 
-- `calcPosition` は計算結果をそのまま使い、**画面内へ収める処理が無い**（`Popover.tsx:38-70`）。
+- `calcPosition` は計算結果をそのまま使い、**画面内へ収める処理が無い**（`frontend/src/components/Popover.tsx:38-70`）。
 - `Popover.css` にも `max-width` が無い（`frontend/src/components/Popover.css:14-31`）。
 - 中身側の最小幅: `.comp-multiselect__menu--popover { min-width: var(--dropdown-min-width) }`（`frontend/src/components/MultiSelect.css:12-14`）、`--dropdown-min-width: 400px`（`frontend/src/tokens.css:447`）。
 - 便1 の実測: 画面 360px に対し **x=-29・幅418**（左右とも画面外）。
 
 ## 3. 開いている間にスクロール・リサイズしても測り直さない
 
-位置計算の `useEffect` の依存は `[isOpen, placement]` だけ（`Popover.tsx:98-107`）。`resize`・`scroll` の購読が無いので、開いたまま画面を動かすとパネルが置き去りになる。
+位置計算の `useEffect` の依存は `[isOpen, placement]` だけ（`frontend/src/components/Popover.tsx:98-107`）。`resize`・`scroll` の購読が無いので、開いたまま画面を動かすとパネルが置き去りになる。
 
 ## 4. 影響範囲（全数確認）
 
@@ -58,7 +58,7 @@
 
 | ある/ない | 中身 |
 |---|---|
-| `Popover.test.tsx` | **無い**（単体テストが1本も無い） |
+| `frontend/src/components/Popover.test.tsx` | **無い**（単体テストが1本も無い） |
 | `frontend/src/components/MultiSelect.test.tsx:80-87` | A20＝`layout` 既定が popover であること（位置は測っていない） |
 | `frontend/tests-e2e/visual-language/viewer-inventory-mobile-filter.spec.ts` | A15＝ドロワーが開いている間 `.comp-popover` が 0 件（位置は測っていない） |
 | 位置の検査 | **無い**（スクロール・画面端のどちらも固定されていない） |

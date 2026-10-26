@@ -6,7 +6,7 @@
 **recon**: `docs/handoff/popover-mold-fix/recon.md`
 **由来**: 便2（PR #4740）審査で C2 として起票、便3・便4・便5 で持ち越し
 **前便**: 便4 `docs/handoff/viewer-header-remove/design.md`（PR #4764・本番反映済み・SHA 一致で確認）
-**対象ADR**: ADR-144（UI 金型ガバナンス）／ADR-067（CSS はトークン参照のみ）／ADR-140（タップ領域44px）
+**対象ADR**: ADR-144（UI 金型ガバナンス）／ADR-067（CSS はトークン参照のみ）／ADR-140（タップ領域44px）／ADR-1019（閲覧ページ＝PC 幅で Popover を使うため・審査 R1 の訂正）
 
 ## ① 区分：A（見た目と操作の変更）
 
@@ -14,7 +14,7 @@
 |---|---|
 | PO 決定（2026-10-26） | 3案から **「記録の2欠陥＋スクロール追従」** を選択＝(a)ずれ・(b)画面外に加えて、開いている間のスクロール/リサイズでも位置を測り直す。「下に入らないときは上に出す」は**今回やらない**（⑫へ） |
 | 金型 | **`Popover` 金型の中身を直す**（新設なし・公開 props も増やさない＝呼び出し側の書き換え0） |
-| 影響画面 | ①アプリ側の在庫表 `/inventory`（操作台の絞り込み2つ・フィルタパネル）②**閲覧ページの PC 幅**（`InventoryView.tsx:201-225` の `providerSelect`/`conditionSelect` は `layout` 未指定＝既定 popover・`:597-598` の PC 枝で描画）。**閲覧ページのスマホ幅は無影響**（`layout="row"`/`"inline"`） |
+| 影響画面 | ①アプリ側の在庫表 `/inventory`（操作台の絞り込み2つ・フィルタパネル）②**閲覧ページの PC 幅**（`frontend/src/pages/viewer/InventoryView.tsx:201-225` の `providerSelect`/`conditionSelect` は `layout` 未指定＝既定 popover・`:597-598` の PC 枝で描画）。**閲覧ページのスマホ幅は無影響**（`layout="row"`/`"inline"`） |
 
 > **2026-10-26 訂正**: 初版は「閲覧ページは Popover を使っていないので無影響」と書いていたが**誤り**（recon §4 の訂正を参照）。
 > スマホ幅は無影響で合っているが、**PC 幅は Popover を使っている**。
@@ -77,7 +77,7 @@
 - どちらも**トークン参照のみ**（ADR-067）。`--space-4` = 16px・`--space-6` = 24px であることを実装時に `tokens.css` で確認し、違っていたら合う名前に差し替える。
 - 画面が十分広いとき（PC）は `min()` が `--dropdown-min-width` を選ぶので**今と同じ 400px**（K4）。
 
-### 4-4. 開いている間は測り直す（`Popover.tsx:98-107`）
+### 4-4. 開いている間は測り直す（`frontend/src/components/Popover.tsx:98-107`）
 
 位置計算の `useEffect` の中で、開いている間だけ `resize` と `scroll` を購読して同じ計算を呼ぶ。
 
@@ -88,7 +88,7 @@
 ### 4-5. 触らないもの
 
 - `Popover` の公開 props（呼び出し側は書き換え0）。
-- `ContextMenu.tsx`・`SchedulePageImpl.tsx`（どちらも自前で画面内に収めている・recon §4）。
+- `frontend/src/components/ContextMenu.tsx`・`frontend/src/pages/schedule/SchedulePageImpl.tsx`（どちらも自前で画面内に収めている・recon §4）。
 - 閲覧ページのコード（`pages/viewer/`）そのもの。**1行も触らない**（PC 幅で Popover を使っているので土台の直しは届くが、呼び出し側は不変）。
 - `--dropdown-min-width` トークンの値（400px のまま。使い方だけ変える）。
 
@@ -109,16 +109,16 @@
 | C9 | ~~選択肢1行の高さが 44px 以上（ADR-140・不変）~~ **取り下げ（2026-10-26 訂正）** | **測らない**。`MultiSelect.css:28-36` の popover 層の選択肢には `min-height` が無く（44px が付くのは `--inline`（`:42-45`）と空文言（`:77`）だけ）、便1 の実測も30px。本便は位置と幅しか触っていないので、新たに 44px を要求すると「直していない所を赤にする」ことになる。⑫ **C-tap** として起票 |
 | C10 | PC（1280px）でスクロールせずに開いた位置が**今と同じ**（ボタン中央そろえ・下 6px） | 新 spec |
 | C11 | 既存の `MultiSelect` 単体（A20 ほか）が緑 | `frontend/src/components/MultiSelect.test.tsx` |
-| C12 | 閲覧ページの既存検査（便1〜便5）が緑＝無影響の証拠 | `viewer-inventory-mobile-filter.spec.ts`・`viewer-top-compact.spec.ts`・`viewer-choice-sheet.spec.ts`・`viewer-header-remove.spec.ts` |
-| C13 | 在庫表の既存検査が緑 | `tests-e2e/visual-language/inventory-mobile-baseline.spec.ts`・`inventory-raw-text-mobile.spec.ts`・`tests-e2e/inventory-table-layout.spec.ts` |
+| C12 | 閲覧ページの既存検査（便1〜便5）が緑＝無影響の証拠 | `frontend/tests-e2e/visual-language/viewer-inventory-mobile-filter.spec.ts`・`frontend/tests-e2e/visual-language/viewer-top-compact.spec.ts`・`frontend/tests-e2e/visual-language/viewer-choice-sheet.spec.ts`・`frontend/tests-e2e/visual-language/viewer-header-remove.spec.ts` |
+| C13 | 在庫表の既存検査が緑 | `frontend/tests-e2e/visual-language/inventory-mobile-baseline.spec.ts`・`frontend/tests-e2e/visual-language/inventory-raw-text-mobile.spec.ts`・`frontend/tests-e2e/inventory-table-layout.spec.ts` |
 | C14 | 型検査が通る | `cd frontend && npx tsc --noEmit` |
-| C15 | 手元検査が通る（変更ファイルは警告0） | `cd frontend && npm run check:all` ＋ `npx eslint --max-warnings=0 <変更ファイル>`。**ただし `tests-e2e/` 配下は eslint の対象外**（`eslint.config.js` の `files` は `src/**/*.{ts,tsx}` だけ。既存 spec でも同じ「File ignored」警告が出る＝本便固有の問題ではない）。新 spec は `tsc --noEmit` で確認する |
-| C17 | 単体テストは**既定の 5 秒上限ではこの端末で時間切れになる**ものがある（`SoldOutResultsPanel.test.tsx`・`InventoryPage.toolbar.test.tsx`）。`--testTimeout=30000` を付けると緑。**本便の変更とは無関係**（読み込みに8〜10秒かかる端末の遅さ。CI は既定で緑） | `npx vitest run --config vitest.unit.config.ts --project unit --testTimeout=30000 <file>` |
-| C16 | **直す前に赤いこと**（RED-first）を記録する | 新 `Popover.test.tsx` を**先に**書いて `npx vitest run src/components/Popover.test.tsx` の赤い出力を design に貼る |
+| C15 | 手元検査が通る（変更ファイルは警告0） | `cd frontend && npm run check:all` ＋ `npx eslint --max-warnings=0 <変更ファイル>`。**ただし `frontend/tests-e2e/` 配下は eslint の対象外**（`eslint.config.js` の `files` は `src/**/*.{ts,tsx}` だけ。既存 spec でも同じ「File ignored」警告が出る＝本便固有の問題ではない）。新 spec は `tsc --noEmit` で確認する |
+| C17 | 単体テストは**既定の 5 秒上限ではこの端末で時間切れになる**ものがある（`frontend/src/pages/super-admin/components/SoldOutResultsPanel.test.tsx`・`frontend/src/pages/inventory/InventoryPage.toolbar.test.tsx`）。`--testTimeout=30000` を付けると緑。**本便の変更とは無関係**（読み込みに8〜10秒かかる端末の遅さ。CI は既定で緑） | `npx vitest run --config vitest.unit.config.ts --project unit --testTimeout=30000 <file>` |
+| C16 | **直す前に赤いこと**（RED-first）を記録する | 新 `frontend/src/components/Popover.test.tsx` を**先に**書いて `npx vitest run src/components/Popover.test.tsx` の赤い出力を design に貼る |
 
 ### RED-first の記録（C16・直す前のコードで実行）
 
-`origin/main`（`03cb7cae5`）の `Popover.tsx`（scroll 分を足す・画面内に収めない・resize/scroll を購読しない）に対して
+`origin/main`（`03cb7cae5`）の `frontend/src/components/Popover.tsx`（scroll 分を足す・画面内に収めない・resize/scroll を購読しない）に対して
 `frontend/src/components/Popover.test.tsx` を実行した結果。**9件中9件が赤**（想定どおり）。
 
 ```
@@ -154,7 +154,7 @@
 | `frontend/src/components/MultiSelect.css` | 4-3（`min-width` を `min()` で包む） |
 | `frontend/src/components/Popover.test.tsx` | **新設**（C1〜C7・C16） |
 | `frontend/tests-e2e/visual-language/popover-mold.spec.ts` | **新設**（B1〜B4・B6 の6本＝C1・C4・C5・C8・C10。C9 は取り下げ。`visual-language/` 配下でないと CI で1本も走らない） |
-| `docs/handoff/popover-mold-fix/{recon,design,review-opus}.md` | 本書類 |
+| docs/handoff/popover-mold-fix/ の recon.md・design.md・review-opus.md | 本書類 |
 | `.claude-pipeline/active-work.d/release-popover-mold-fix.md` | 台帳 |
 
 ## ⑦ 戻し方
@@ -167,8 +167,8 @@
 
 ## ⑨ 外部・過去事例の参照と我々への応用
 
-- 社内の先例 `ContextMenu.tsx:78-95`（画面内へ収める・最低間隔8px）をそのまま踏襲。**新しい流儀を増やさない**。
-- `position: fixed` に `scrollY` を足さないのは `getBoundingClientRect()` の定義どおり（画面基準）。予定表 `SchedulePageImpl.tsx:119-141` も足していない＝社内2例が既に正しい形。
+- 社内の先例 `frontend/src/components/ContextMenu.tsx:78-95`（画面内へ収める・最低間隔8px）をそのまま踏襲。**新しい流儀を増やさない**。
+- `position: fixed` に `scrollY` を足さないのは `getBoundingClientRect()` の定義どおり（画面基準）。予定表 `frontend/src/pages/schedule/SchedulePageImpl.tsx:119-141` も足していない＝社内2例が既に正しい形。
 
 ## ⑩ 弊害・トレードオフ
 
