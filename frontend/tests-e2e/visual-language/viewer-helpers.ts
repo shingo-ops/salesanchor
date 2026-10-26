@@ -108,7 +108,7 @@ export function makeViewerFixture(opts?: ViewerFixtureOptions): ViewerFixture {
 }
 
 /** トークンだけ先に入れる（ページ遷移前に addInitScript で呼ぶ） */
-async function installViewerToken(page: Page): Promise<void> {
+export async function installViewerToken(page: Page): Promise<void> {
   await page.addInitScript(
     ({ key, token }) => {
       try {
