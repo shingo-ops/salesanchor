@@ -131,3 +131,13 @@ P1〜P6 の生出力は §5 の証拠ファイルに貼る。
 ## 6. 報告
 
 - 最後の行は `DONE <HEAD の sha40>`・`BLOCKED: <理由>`・`NEEDS_DECISION: <内容>` のどれか。
+
+## 7. 直し1（2026-10-27・手元 macOS で T14 が落ちた）
+
+- 事実: 手元の /bin/bash は 3.2.57。HEAD 308c883c2 で `bash scripts/dev/test_doc_entry_weekly_check.sh` → `FAIL T14 K1_MISSING`・`PASS 37 / FAIL 1`・rc=1。3.2 では `"${1/#$HOME_DIR/\~}"` が `\~/kb/AGENTS.md` を返す（バックスラッシュが残る）。定期実行はこの Mac の bash 3.2 で動くので直す。
+- 変更はこの1か所だけ: scripts/dev/doc-entry-weekly-check.sh の `disp()` を次にする。試験・期待の値は変えない。
+  ```
+  disp() { local t='~'; printf '%s' "${1/#$HOME_DIR/$t}"; }
+  ```
+  （変数の中の `~` は展開されないので、bash 3.2 と 5 のどちらでも `~/…` になる。手元 3.2 で `~/kb/AGENTS.md`・`/other/a` を確認済み）
+- 確かめ: クラウドの bash で試験を回し `PASS 38 / FAIL 0`・rc=0。生出力を evidence-maintain-m3.md の末尾に「## 直し1」として足す。手元 3.2 の確認は Opus が行う。
