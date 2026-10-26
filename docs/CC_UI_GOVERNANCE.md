@@ -25,6 +25,7 @@ CC（Claude Code）が UI 部品を新設・修正するたびに参照するこ
 | 生 `<input type="checkbox">` | `<Checkbox>`（文字と並ぶ欄）/ `<CheckboxControl>`（表の中など単独の欄）を使うこと |
 | 生 `<input type="radio">` | `<Radio>`（文字と並ぶ欄）/ `<RadioControl>`（表の中・色見本など単独の欄）を使うこと |
 | 読み込み中の文字だけの表示（例 `<p>{t("common.loading")}</p>`）| `<LoadingBlock>`（components/loading）を使うこと。見た目は金型1か所で変わる |
+| ボタンの言葉を `{保存中 ? '保存中…' : '保存'}` のように入れ替える | 押している間は金型 Button の loading で丸を出し、言葉は元のまま（ADR-144・段階3）。pages/・features/・components/ を見る |
 | 自作タブ（className に `tab` 語を含む div/nav 等） | `<Tabs>` / `OverflowTabs` を使うこと |
 | 色直値（`#xxx` / `rgba()`）のインラインスタイル | CSS 変数 `var(--color-*)` を使うこと（ADR-067）|
 | 生 px 数値のインラインスタイル（例 `width: 24`）| デザイントークン `var(--size-*)` を使うこと（ADR-067）|
