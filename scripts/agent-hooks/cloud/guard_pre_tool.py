@@ -167,17 +167,21 @@ def _subst_bodies(t: str):
     return out
 
 
-_ANSI_ESC = re.compile(r"\\(x[0-9A-Fa-f]{1,2}|[0-7]{1,3}|.)", re.S)
+_ANSI_ESC = re.compile(r"\\(x[0-9A-Fa-f]{1,2}|u[0-9A-Fa-f]{1,4}|U[0-9A-Fa-f]{1,8}|[0-7]{1,3}|.)", re.S)
 
 
 def _ansi_c(body: str) -> str:
-    """$'…' の中身のエスケープ（\\n \\t \\\\ \\' \\" \\xHH \\NNN）を戻す。"""
+    """$'…' の中身のエスケープ（\\n \\t \\\\ \\' \\" \\xHH \\NNN \\uHHHH \\UHHHHHHHH）を戻す。
+    サロゲート・範囲外の \\u \\U は戻せないので元の文字列のまま残す。"""
     simple = {"n": "\n", "t": "\t", "r": "\r", "a": "\a", "b": "\b", "f": "\f", "v": "\v", "e": "\x1b"}
 
     def one(m):
         g = m.group(1)
         if g[0] == "x":
             return chr(int(g[1:], 16))
+        if g[0] in "uU" and len(g) > 1:
+            cp = int(g[1:], 16)
+            return m.group(0) if 0xD800 <= cp <= 0xDFFF or cp > 0x10FFFF else chr(cp)
         if g[0] in "01234567":
             return chr(int(g, 8) & 0xFF)
         return simple.get(g, g)
@@ -186,7 +190,50 @@ def _ansi_c(body: str) -> str:
 
 
 def _quoted_arg(s: str, i: int) -> str:
-    """s[i:] の先頭の引数を返す。'…' は中身、"…" はエスケープを戻した中身、引用符なしは区切りまでの残り。"""
+    """bash -c 用。s[i:] の先頭の1語をシェルの読み方で返す。引用符の外の空白か区切り（; & | < > ( ) 改行）まで、
+    $'…'（_ansi_c で戻す）・'…'・"…"（エスケープを戻す）・引用符なしの文字（\\X は X）を順につなげる。閉じ忘れは末尾まで。"""
+    n = len(s)
+    while i < n and s[i] in " \t":
+        i += 1
+    out = []
+    while i < n:
+        c = s[i]
+        if s.startswith("$'", i):
+            j = i + 2
+            while j < n and s[j] != "'":
+                j += 2 if s[j] == "\\" else 1
+            out.append(_ansi_c(s[i + 2:min(j, n)]))
+            i = j + 1
+        elif c == "'":
+            k = s.find("'", i + 1)
+            out.append(s[i + 1:] if k < 0 else s[i + 1:k])
+            i = n if k < 0 else k + 1
+        elif c == '"' or s.startswith('$"', i):
+            i += 1 if c == '"' else 2
+            j = i
+            while j < n and s[j] != '"':
+                j += 2 if s[j] == "\\" else 1
+            out.append(re.sub(r'\\(["$`\\])', r"\1", s[i:min(j, n)]))
+            i = j + 1
+        elif c == "\\":
+            if i + 1 < n and s[i + 1] != "\n":
+                out.append(s[i + 1])
+            i += 2
+        elif c in " \t\n;&|<>()":
+            break
+        else:
+            m = re.compile(r"[^\\'\"$ \t\n;&|<>()]+").match(s, i)
+            if m:
+                out.append(m.group(0))
+                i = m.end()
+            else:
+                out.append(c)
+                i += 1
+    return "".join(out)
+
+
+def _eval_arg(s: str, i: int) -> str:
+    """eval 用。s[i:] の先頭の引数を返す（最初の引用符の範囲だけ。bash -c 用は _quoted_arg）。'…' は中身、"…" はエスケープを戻した中身、引用符なしは区切りまでの残り。"""
     n = len(s)
     while i < n and s[i] in " \t":
         i += 1
@@ -216,6 +263,67 @@ _SHELL_C = re.compile(
 _EVAL = re.compile(r"(?<![\w./-])eval(?![\w.-])")
 
 
+_PAREN_KW = {"then", "do", "else", "elif", "if", "while", "until", "time", "in"}
+_WORD_BREAK = " \t\n;&|(){}<>"
+
+
+def _word_before(t: str, k: int):
+    """t[k] で終わる語（_WORD_BREAK までの連続）と、その直前の位置を返す。"""
+    j = k
+    while j >= 0 and t[j] not in _WORD_BREAK:
+        j -= 1
+    return t[j + 1:k + 1], j
+
+
+def _paren_lead_ok(t: str, i: int) -> bool:
+    """t[i] の '(' が命令の位置か。直前（空白は飛ばす）が 区間の先頭・) { !・予約語・time -p なら True。
+    $ < > = @ + * ? の直後（$( <( >( a=( 拡張パターン）と、予約語でない語の直後（関数名 f( ）は False。"""
+    k = i - 1
+    while k >= 0 and t[k] in " \t":
+        k -= 1
+    if k < 0 or t[k] in ";&|\n)":
+        return True
+    if t[k] in "$<>=@+*?":
+        return False
+    if t[k] in "{!":
+        return k == 0 or t[k - 1] in " \t\n;&|(){"
+    tok, j = _word_before(t, k)
+    if tok in _PAREN_KW:
+        return True
+    if tok == "-p":
+        while j >= 0 and t[j] in " \t":
+            j -= 1
+        return j >= 0 and _word_before(t, j)[0] == "time"
+    return False
+
+
+def _paren_shells(t: str):
+    """引用符の外にあり、命令の位置に置かれた ( … ) の中身を返す。(( は算術なので対象外。"""
+    out = []
+    n = len(t)
+    i = 0
+    dq = False
+    while i < n:
+        c = t[i]
+        if c == "\\":
+            i += 2
+            continue
+        if not dq and c == "'":
+            k = t.find("'", i + 1)
+            i = n if k < 0 else k + 1
+            continue
+        if c == '"':
+            dq = not dq
+            i += 1
+            continue
+        if not dq and c == "(" and t[i + 1:i + 2] != "(" and _paren_lead_ok(t, i):
+            body, i = _paren_body(t, i + 1)
+            out.append(body)
+            continue
+        i += 1
+    return out
+
+
 TOO_DEEP = "\x00too-deep"
 _LEAD_KW = re.compile(r"^(?:(?:then|do|else|elif|if|while|until|time|!|\{)\s+)+")
 
@@ -228,6 +336,9 @@ def _found_bodies(cmd: str):
         s = _LEAD_KW.sub("", seg.lstrip())
         if s.startswith("(") and not s.startswith("(("):
             found.append(_paren_body(s, 1)[0])
+    for b in _paren_shells(t):
+        if b not in found:
+            found.append(b)
     s = scan_text(t)
     for m in _SHELL_C.finditer(s):
         opts = [o for o in re.findall(r"(?<!\S)-[A-Za-z]\w*", m.group(1)) if "c" in o]
@@ -237,7 +348,7 @@ def _found_bodies(cmd: str):
             k += mm.end() if mm else 0
             found.append(_quoted_arg(s, k))
     for m in _EVAL.finditer(s):
-        found.append(_quoted_arg(s, m.end()))
+        found.append(_eval_arg(s, m.end()))
     return found
 
 

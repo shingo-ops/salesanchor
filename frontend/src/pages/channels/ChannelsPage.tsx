@@ -624,7 +624,8 @@ export default function ChannelsPage() {
         open={!!disconnectTarget}
         title={t("channels.disconnectTitle")}
         danger
-        confirmLabel={disconnecting ? t("channels.disconnecting") : t("channels.disconnect")}
+        confirmLabel={t("channels.disconnect")}
+        confirmLoading={disconnecting}
         message={
           <>
             <strong>{disconnectTarget?.page_name}</strong> {t("channels.disconnectConfirm")}
@@ -640,7 +641,8 @@ export default function ChannelsPage() {
         open={discordDisconnectOpen}
         title={t("channels.discordDisconnectTitle")}
         danger
-        confirmLabel={discordDisconnecting ? t("channels.discordDisconnecting") : t("channels.discordDisconnect")}
+        confirmLabel={t("channels.discordDisconnect")}
+        confirmLoading={discordDisconnecting}
         message={t("channels.discordDisconnectConfirm")}
         onConfirm={handleDiscordDisconnect}
         onCancel={() => setDiscordDisconnectOpen(false)}
