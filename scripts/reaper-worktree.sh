@@ -70,6 +70,25 @@ else
   MAIN_REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || echo "")"
 fi
 
+# ── git の繋がりの確かめ（ADR-1039 便2b-2・ADR-114 R12）────────────────────────
+# 本店に向けた git（fetch・worktree list・remove・branch -D・prune）より前に、本店の繋がりを確かめる。
+# 合わなければ何も消さずに終了コード 1。本番の走査は cwd が本店の最上位であることを求める。
+_LINK_OK=1
+if [ -z "${REAPER_WORKTREES_DIR:-}" ]; then
+  if ! git_safe_link_ok "${PWD}" "${PWD}"; then
+    _LINK_OK=0
+  elif [ -z "${MAIN_REPO_ROOT}" ] || [ "$(command realpath "${MAIN_REPO_ROOT}" 2>/dev/null)" != "$(command realpath "${PWD}" 2>/dev/null)" ]; then
+    GIT_SAFE_LINK_REASON="本店の最上位で動かしていない"
+    _LINK_OK=0
+  fi
+else
+  git_safe_link_ok "${PWD}" "${MAIN_REPO_ROOT}" || _LINK_OK=0
+fi
+if [ "${_LINK_OK}" -ne 1 ]; then
+  echo "[reaper] 元のリポジトリの git の繋がりを確かめられない（${GIT_SAFE_LINK_REASON:-不明}）。何も消さない。本店の最上位で動かしてください。" >&2
+  exit 1
+fi
+
 ACTIVE_WORK_FILE="${REAPER_ACTIVE_WORK_FILE:-${MAIN_REPO_ROOT}/.claude-pipeline/active-work.md}"
 REPO_NAME="${REAPER_REPO_NAME:-shingo-ops/salesanchor}"
 BASE_BRANCH="${REAPER_BASE_BRANCH:-main}"
@@ -93,6 +112,7 @@ SKIP_UNSAVED=()
 SKIP_NOT_MERGED=()
 SKIP_IN_USE=()
 SKIP_BASE_BRANCH=()
+SKIP_LINK=()
 # R9: 下書きを許容した部屋の「部屋のパス::相対パス」（実削除前に控える）
 DRAFT_BACKUPS=()
 
@@ -178,6 +198,15 @@ _CWD_LIST="$(lsof -a -d cwd -Fn 2>/dev/null | sed -n 's/^n//p')"
 for _IDX in "${!WT_PATHS[@]}"; do
   WORKTREE_PATH="${WT_PATHS[${_IDX}]}"
   BRANCH="${WT_BRANCHES[${_IDX}]}"
+
+  # ── チェック -1（ADR-1039 便2b-2）: 本番の走査では、git を動かす前に git の繋がりを確かめる ──
+  # 合わない部屋には git を1回も動かさず、消さない。
+  if [ -z "${REAPER_WORKTREES_DIR:-}" ]; then
+    if ! git_safe_link_ok "${WORKTREE_PATH}" "${MAIN_REPO_ROOT}"; then
+      SKIP_LINK+=("${BRANCH}（${GIT_SAFE_LINK_REASON}）")
+      continue
+    fi
+  fi
 
   # ── チェック 0: 本体ブランチ（main・develop・PR の行き先）の worktree は候補にしない ──
   case "${BRANCH}" in
@@ -358,6 +387,12 @@ echo ""
 if [ "${#SKIP_IN_USE[@]}" -gt 0 ]; then
   echo "🧑‍💻 使用中（削除しない）: ${#SKIP_IN_USE[@]} 件"
   for B in "${SKIP_IN_USE[@]}"; do echo "   - ${B}"; done
+  echo ""
+fi
+
+if [ "${#SKIP_LINK[@]}" -gt 0 ]; then
+  echo "🔗 git の繋がりが本店と合わない（削除しない）: ${#SKIP_LINK[@]} 件"
+  for B in "${SKIP_LINK[@]}"; do echo "   - ${B}"; done
   echo ""
 fi
 

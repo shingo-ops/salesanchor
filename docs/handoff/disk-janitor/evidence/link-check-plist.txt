@@ -1,0 +1,5 @@
+ops/launchd/jp.salesanchor.reaper-onlogin.plist: OK
+extract_rc=0
+bashn_rc=0
+T=/Users/tanizawashingo/.salesanchor-tools; { git -C "$T" fetch -q origin main && test -z "$(git -C "$T" status --porcelain --untracked-files=all)" && git -C "$T" checkout -q --detach origin/main && test "$(git -C "$T" rev-parse HEAD)" = "$(git -C "$T" rev-parse origin/main)"; } || { echo "reaper: 道具のコピーの更新・確認に失敗したため実行しない" >&2; exit 1; }; cd /Users/tanizawashingo/salesanchor || exit 1; bash "$T/scripts/reaper-worktree.sh" --execute; rc=$?; [ "$rc" -eq 0 ] || echo "reaper: 自動回収が終了コード $rc で終わった" >&2; exit "$rc"
+T=/Users/tanizawashingo/.salesanchor-tools; { git -C "$T" fetch -q origin main && test -z "$(git -C "$T" status --porcelain --untracked-files=all)" && git -C "$T" checkout -q --detach origin/main && test "$(git -C "$T" rev-parse HEAD)" = "$(git -C "$T" rev-parse origin/main)"; } || { echo "reaper: 道具のコピーの更新・確認に失敗したため実行しない" >&2; exit 1; }; cd /Users/tanizawashingo/salesanchor || exit 1; bash "$T/scripts/reaper-worktree.sh" --execute; rc=$?; [ "$rc" -eq 0 ] || echo "reaper: 自動回収が終了コード $rc で終わった" >&2; exit "$rc"
