@@ -817,3 +817,75 @@ K11（移した先に在るか）: 今回は移す行が無く、消す行と書
 - 31-7 戻し方: PR を revert し、本体は .bak から戻す。
 - 31-8 外部事例: 該当なし（この Mac の見張り1本の判定の締め直しで、外の事例の数値が判断を変えないため）。
 - 31-9 自己審査（Architect 役・同一 AI）: APPROVE。理由: 触る場所は1ファイルの3か所と試験だけ。今までの試験21本の意味は変えない。締めた後の判定は試験7本で両側（素通り・止まる）を確かめ、元に戻すと落ちる試験も置いた。未解決事項なし。
+
+## 32. 合格した状態を続ける仕組み（定着化）（2026-10-26・Opus 設計判断。設計案・PO 実装承認前。起点 origin/main 840eea949）
+
+- 32-1 PO 原文（2026-10-26）:「この仕組みを標準化して管理定着させて継続させるための仕組みも出来ているか事実ベースでエビデンスを確立してくれ」。目的: K1〜K12 の合格（§30）が、この先の変更で崩れたら自動で止まるか、遅くとも1週間以内に担当へ知らせが届く状態にする。
+
+### 32-2 現在地（governance 検証 2026-10-26・origin/main 840eea949。生出力 /tmp/CC報告ファイル/an-gov/。リポジトリ外）
+
+| 項目 | 今ある仕組み | 必須チェックか | 判定 |
+|---|---|---|---|
+| K1（リポジトリ内） | .github/workflows/check-claude-size.yml:12 → frontend/scripts/check-claude-size.js:24-33 | 必須（ruleset id 15777895） | 守られている |
+| K1（リポジトリ外: ~/.claude/CLAUDE.md 66・~/kb/AGENTS.md 32・~/.claude/rules/common/agents.md 23・git-workflow.md 22） | 無い（~/kb/scripts/patrol.sh:12-47 は行数を数えない） | — | 穴。合計 197 行で上限 200 まで残り3行 |
+| K2 | scripts/agent-hooks/test_master_register_rules_guard.sh はあるが CI から呼ばれない（.github/workflows/agent-hooks-test.yml:24 は review-gate だけ）。ホームの写しのずれ検知も無い | — | 穴 |
+| K3 | 無い | — | 穴 |
+| K4・K5・K6 | .github/workflows/doc-index-reachability.yml:26（`--strict` なし＝失敗しない。docs/handoff/doc-agenda-nav/check_doc_index.py:209-210）。pull_request だけ（:6-8） | 必須でない | 警告だけ。直近の PR 6回は警告 0 |
+| K7 | 無い（§維持の仕組みに予定として書いたが check_doc_index.py に実装なし） | — | 穴 |
+| K9・K12 | 人が測る。合格後の測り直しの時期・担当の記載が無い（design.md:41・:331 は段ごとだけ） | — | 穴 |
+| K11 | 人が照合（186/186） | — | 下の 32-3 D5 |
+| 文書 | ADR-1040 に維持の節が無い。「強制の仕組み」表の到達検査が「段2で新設」のまま。本文 §維持の仕組みの「まだ存在しない」が実物と食い違う | — | 古い |
+
+### 32-3 決めたこと（5つ）
+
+- D1 目次の検査を「落とす」検査にする（K4・K5・K6・K7・K3）
+  - check_doc_index.py を scripts/ci/check_doc_index.py へ移す（docs/handoff は引き継ぎの置き場。CI の部品を置かない）。元の場所には何も残さない（呼び出し元は doc-index-reachability.yml:26 の1か所だけ）。
+  - 同じスクリプトに2つの検査を足す。(a) K7: AGENTS.md に「不可逆操作は必ず PO 確認」「VPS 直作業禁止」「直接コミット禁止」が各1件以上、CLAUDE.md・frontend/CLAUDE.md・backend/CLAUDE.md に `@AGENTS.md` の行が各1件。(b) K3: recon §2-4 の9語を、CLAUDE.md・AGENTS.md・frontend/AGENTS.md・backend/AGENTS.md・frontend/CLAUDE.md・backend/CLAUDE.md で数え、2ファイル以上に出る語を数える。「日本語」は §25 の判断（別の決まり）どおり除外の表に理由つきで書く。語と除外の表はスクリプトの先頭に置く（正本は1か所）。
+  - workflow を `--strict` で動かし、job 名から「(warning only)」を外す。動く時機に `push: branches: [main]` と毎週月曜の `schedule` を足す（PR を通らない変更も拾う）。
+  - 必須チェックへの登録は D1 の PR が main で緑になった後に別の操作で行う。Ruleset の変更は CLAUDE.md の不可逆操作の一覧に入るため、PO の同意票（ADR-1033）を取ってから行う。登録しない間も、マージの手順（CI 失敗 0 を確かめてからマージ）で止まる。
+- D2 商品登録の見張りの試験を CI で動かす（K2）
+  - agent-hooks-test.yml に job「master-register guard test」を足し、test_master_register_rules_guard.sh を動かす。paths に scripts/agent-hooks/master-register-rules-guard.py と docs/specs/product-master/registration-rules.md を足す。
+  - 前提: 段1c の確かめでは T1 がクラウドで HEAD 版・main 版とも NG（今回の変更とは無関係）。job を足す前に T1 が NG になる理由を担当が調べ、試験側の誤りなら同じ PR で直す。見張り本体の誤りなら止めて Opus に返す。
+- D3 リポジトリの外を毎週点検する（K1 外・K2 の写し・K9）
+  - 新しいスクリプト scripts/dev/doc-entry-weekly-check.sh（読むだけ）。出すもの: ①K1 の合計行数。数える範囲は baseline.md「段8 の後」と同じ（~/.claude/CLAUDE.md、そこから `@` で取り込むファイル、~/.claude/rules/ の .md のうち先頭に `paths:` が無いもの、origin/main の CLAUDE.md・AGENTS.md）。②~/.claude/scripts/master-register-rules-guard.py と origin/main の scripts/agent-hooks/master-register-rules-guard.py の一致（SAME/DIFF）。③K9: origin/main の使い捨て worktree で `claude -p "/context"` を実行し、MEMORY.md を除く Memory files の表示値。最後の行に `RESULT=OK` か `RESULT=NG <理由>`。合格の線は kgi.md の値（200行・6.5k）をスクリプトの先頭に置く。
+  - agent-console の定期実行を1本足す（`ac-routine.mjs add`。Opus が打つ。名前「入口の文書 週次点検」・月曜 14:30・roleId opus-designer・closeWhenIdle）。手順: スクリプトを動かし出力を ~/CC報告ファイル-keep/doc-entry-weekly/<日付>.txt に保存、全文を読み、OK なら1行だけ返す。NG なら PO へ3行の型で報告。
+- D4 人が測る項目の時期を決める（K12）
+  - 同じ週次点検で baseline.md の最後の K12 測定日を読み、90日を過ぎたら k12-tasks.md の手順で測り直して baseline.md に追記する PR を作る（cloud_first の決まりに従い、実行はクラウドの担当）。10/20 未満なら PO へ報告。
+- D5 K11 は続けて測らない
+  - 理由: K11 は「入口から外した行が移した先に在るか」を移す段ごとに確かめる条件で、移す段（段3a〜段8）は終わった。この先は新しく移さない。入口に必ず残す決まりは D1(a) の K7 で、目次から届くことは D1 の K4 で毎回確かめる。今後また入口から決まりを移すときは、その段の設計に K11 の照合を書く（ADR-1040 の維持の節に書く）。
+
+### 32-4 文書の直し（D1〜D5 と同じ PR で）
+
+- ADR-1040 に「維持の仕組み」の節を足し、「強制の仕組み」表を実物に合わせる（到達検査 = scripts/ci/check_doc_index.py・失敗する・必須の登録状態、行数検査、週次点検）。
+- 本文 §維持の仕組みの「追加予定の守り手（…まだ存在しない）」「リポジトリ外の守り手（段7で新設案）」を、実物の名前と §32 への参照に書き換える。
+- docs/STANDARD-WORKFLOW.md に1行: 「新しい手順書・仕様書は docs/INDEX.md か docs/specs/README.md に『いつ読むか』付きで1行足す（CI『doc index reachability』で止まる）」。
+- kgi.md の運用方針に「合格後の点検: §32」を1行。
+
+### 32-5 便の分け方（1便＝1PR。変えたら測ってから次へ）
+
+| 便 | 中身 | 危険な場所に触るか |
+|---|---|---|
+| M1 | D1（スクリプト移動・K3/K7 の検査・--strict・時機の追加）＋ 32-4 の文書 | CI の workflow（workflow-lint.yml ではない） |
+| M2 | D2（T1 の原因を調べ、試験 job を足す） | CI の workflow |
+| M3 | D3・D4（週次点検スクリプト）。マージ後に Opus が定期実行を1本足す | agent-console の定期実行（Opus の許可範囲。README「ac-routine の使い方」） |
+| M4 | 必須チェックへの登録（Ruleset の変更） | **不可逆操作の一覧に入る。PO の同意票が要る** |
+
+### 32-6 受け入れ基準
+
+| 基準 | 検証方法 |
+|---|---|
+| K4・K5・K6 が崩れたら PR が赤になる | M1 の PR で、目次から1行消した使い捨ての確認用コミットで job が失敗し、戻すと成功する（2回の実行の URL を記録） |
+| K7 が崩れたら赤になる | 同じく AGENTS.md の「VPS 直作業禁止」を消したコミットで失敗、戻すと成功 |
+| K3 が崩れたら赤になる | 同じく frontend/AGENTS.md に「i18n」の本文を1行足したコミットで失敗、戻すと成功 |
+| 今の main で全部合格 | M1 の最終 HEAD で job 成功・`SUMMARY` の全項目 0 |
+| 登録の見張りの試験が CI で動く | M2 の PR で job「master-register guard test」成功。試験を1本わざと壊したコミットで失敗 |
+| 週次点検が今の値を正しく出す | M3 マージ後に手で1回動かし K1=197・SAME・K9=6.1k（±0.1k）・RESULT=OK を出す。ホームの写しに1行足した一時コピーを渡すと DIFF・RESULT=NG |
+| 定期実行が登録された | `ac-routine.mjs list` に「入口の文書 週次点検」enabled true・月曜 14:30 |
+| 必須になった | M4 の後、ruleset id 15777895 の required checks に「doc index reachability」がある（読み取りの gh api） |
+| 文書が実物と合う | ADR-1040 の「強制の仕組み」表の各行のファイルが origin/main に在る（git ls-tree） |
+
+- 32-7 リスクと対処: (1) `--strict` で他のセッションの PR が赤になる → 直近の PR 6回で警告 0、規則も各表の「追加のしかた」に書いてある。赤になった PR は目次に1行足せば通る。(2) K3 の語の数え方が誤検出する → M1 で今の main が 0 になることを受け入れ基準にする。誤検出の語は除外の表に理由つきで足す。(3) 週次点検の `claude -p "/context"` は Claude の版で表示が変わりうる → 読み取れなければ RESULT=NG（値が取れない）として知らせる（黙って合格にしない）。(4) T1 の原因が見張り本体だった場合 → M2 を止めて Opus が別に設計する。
+- 32-8 代替案と採らなかった理由: (a) ~/kb/scripts/patrol.sh に行数を足す（§維持の仕組みの旧案）→ ~/kb の記録は PO が `!` で打つ決まり（~/kb/AGENTS.md「検査」）で、PO の手が毎回要る。agent-console の定期実行は Opus が足せる。(b) K12 も毎週測る → 1回 20 実行の費用がかかり、入口の文書は毎週は変わらない。90日ごとにする。(c) 必須チェック登録を先にする → `--strict` 化の前に登録しても警告だけなので意味が無い。
+- 32-9 戻し方: 各便の PR を revert。定期実行は `ac-routine.mjs disable <id>`。必須の登録は同意票を取って外す。
+- 32-10 外部事例: 該当なし（この会社の CI と手元の定期実行の組み合わせで、外の事例の数値が判断を変えないため）。
+- 32-11 自己審査（Architect 役・同一 AI）: 下の審査役の結果を正とする。
