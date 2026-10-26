@@ -47,7 +47,7 @@ P2 で FAIL があれば: 原因を調べる。試験側の環境差（パス・
 - 必須チェック（Ruleset）への登録はしない。
 
 ## 2. 作る順
-1. `./scripts/dev/executor-preflight.sh || exit 1`
+1. 枝と HEAD を確かめる（クラウドでは executor-preflight.sh を使わない。クラウドの環境は api.github.com と gh に届かず、preflight は手元の実行役用のため。便M2 の1回目はこの手順で止まった）
 2. §0 を実行して証拠に貼る。
 3. §1-1・§1-2 を1コミット（`ci: run master-register guard test in agent-hooks-test (ADR-1040 M2)`）。
 4. `python3 -I scripts/ci/check_doc_index.py --root . --strict; echo rc=$?` が rc=0 であること（rc≠0 なら commit しない・止めて報告）。
