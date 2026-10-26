@@ -25,11 +25,11 @@
 
 ## 2. 同じコードが Modal・Sheet にも複製されている（＝同じ穴が3か所）
 
-| 金型 | 出口封じ | フォーカス可能要素の集め方 | 選択子の定義 | 使っている画面ファイル数（`src/**/*.tsx`・test/stories 除く） |
+| 金型 | 出口封じ | フォーカス可能要素の集め方 | 選択子の定義 | 使っている画面ファイル数（src/**/*.tsx・test/stories 除く） |
 |---|---|---|---|---|
-| `Drawer`（右から出るパネル） | `Drawer.tsx:101-129` | `Drawer.tsx:221-229` | `Drawer.tsx:212-219` | **35** |
-| `Modal`（真ん中の確認窓） | `Modal.tsx:82-110` | `Modal.tsx:167-175` | `Modal.tsx:158-165` | **43** |
-| `Sheet`（下から出るパネル） | `Sheet.tsx:82-110` | `Sheet.tsx:175-183` | `Sheet.tsx:166-173` | **2** |
+| `Drawer`（右から出るパネル） | `frontend/src/components/Drawer.tsx:101-129` | `frontend/src/components/Drawer.tsx:221-229` | `frontend/src/components/Drawer.tsx:212-219` | **35** |
+| `Modal`（真ん中の確認窓） | `frontend/src/components/Modal.tsx:82-110` | `frontend/src/components/Modal.tsx:167-175` | `frontend/src/components/Modal.tsx:158-165` | **43** |
+| `Sheet`（下から出るパネル） | `frontend/src/components/Sheet.tsx:82-110` | `frontend/src/components/Sheet.tsx:175-183` | `frontend/src/components/Sheet.tsx:166-173` | **2** |
 
 > 「集め方」の行範囲は `getFocusableElements` と `getFirstFocusable` の**両方**を含む（独立審査で
 > 末尾が1行足りない誤記を指摘され訂正。`Drawer` は 221-225 と 227-229）。
@@ -67,7 +67,7 @@
 
 - `frontend/src/components/Drawer.test.tsx`: テスト10件あるが **`focus` という語が1件も出てこない**＝フォーカスの検査は0件
   （内容は `size`・`onBack`・`onEscape`・✕ の4系統）。
-- `frontend/src/components/Modal.test.tsx`・`frontend/src/components/Sheet.test.tsx`: **ファイル自体が存在しない**
+- frontend/src/components/Modal.test.tsx・frontend/src/components/Sheet.test.tsx: **ファイル自体が存在しない**
   （＝この2つの金型には単体テストが1件も無い）。
 - 画面検査 `frontend/tests-e2e/visual-language/viewer-inventory-mobile-filter.spec.ts`:
   - **A13**（`:261-284`）Tab / Shift+Tab の端での回り込み。
@@ -80,8 +80,8 @@
 
 - 共通の金型は `frontend/src/components/`。**非コンポーネントの共通処理の先例**は
   `frontend/src/components/buttonAppearance.ts`、**DOM に触る再利用処理の置き場**は `frontend/src/hooks/`
-  （`useIsMobile.ts`・`useFitTableZoom.ts`・`useExpiryRefresh.ts` などと、その単体テストが同居）。
-  `frontend/src/utils/` には現在 `statusPresentation.ts` のみで DOM を触るものは無い。
+  （`frontend/src/hooks/useIsMobile.ts`・`frontend/src/hooks/useFitTableZoom.ts`・`frontend/src/hooks/useExpiryRefresh.ts` などと、その単体テストが同居）。
+  `frontend/src/utils/` には現在 `frontend/src/utils/statusPresentation.ts` のみで DOM を触るものは無い。
 - ADR-144 §1「`pages/` 配下の UI は原則 `components/` の共通金型を使う」、§4「金型が無い場合は
   実装を止め PO に報告 → 許可を得て `components/` に新設」。
 - ADR-067: 色・寸法はトークン（`var()`）参照のみ。**本件は CSS を触らない**ので対象外。
@@ -90,9 +90,9 @@
 
 - `frontend/src/pages/viewer/viewer.css`: `var(--…)` 参照 **38件** / 直値を含む行 **4行**のみ
   （`:129-132` の `left: -9999px; width: 1px; height: 1px;` ＝読み上げ専用の画面外退避）。
-- `frontend/src/pages/viewer/*.tsx`（15ファイル）の `style={{` は **全ファイル0件**。
+- frontend/src/pages/viewer/*.tsx（15ファイル）の `style={{` は **全ファイル0件**。
 - 便5 の単一選択行 `viewer-choice-row` は**定義も利用も閲覧ページだけ**
-  （定義 `viewer.css:66-79` / 利用 `InventoryView.tsx:442,459`）。値はすべてトークン参照だが
+  （定義 `viewer.css:66-79` / 利用 `frontend/src/pages/viewer/InventoryView.tsx:442,459`）。値はすべてトークン参照だが
   **共通金型としては未登録** → 在庫表へ横展開するには ADR-144 §4 の手続きが必要。**別便で起票（PO 決定）**。
 
 関連: [[salesanchor-viewer-mobile]] / ADR-144 / `docs/handoff/viewer-filter-subscreen/design.md:318`

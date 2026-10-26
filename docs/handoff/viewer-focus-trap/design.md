@@ -35,8 +35,8 @@
 
 ### 4-1. 共通の置き場を1つ新設する（`frontend/src/hooks/useFocusTrap.ts`・新規）
 
-recon §6 の作法に合わせ、**DOM に触る再利用処理は `frontend/src/hooks/`** に置く（`useIsMobile.ts`・
-`useFitTableZoom.ts` の先例。単体テストを同居させる作法も既存どおり）。この1ファイルに次の3つだけを置く。
+recon §6 の作法に合わせ、**DOM に触る再利用処理は `frontend/src/hooks/`** に置く（`frontend/src/hooks/useIsMobile.ts`・
+`frontend/src/hooks/useFitTableZoom.ts` の先例。単体テストを同居させる作法も既存どおり）。この1ファイルに次の3つだけを置く。
 
 | 公開するもの | 中身 |
 |---|---|
@@ -45,7 +45,7 @@ recon §6 の作法に合わせ、**DOM に触る再利用処理は `frontend/sr
 | `getFirstFocusable(container)` | 同上 |
 | `useFocusTrap(open, containerRef)` | 出口封じの `useEffect`。`open` が false の間は購読しない（現状と同じ） |
 
-**UI 金型の新設ではない**（`.tsx`＋`.css`＋`.stories.tsx` を伴う部品を作らない）ので ADR-144 §4 の
+**UI 金型の新設ではない**（.tsx ＋ .css ＋ .stories.tsx を伴う部品を作らない）ので ADR-144 §4 の
 「金型新設」手順の対象外。ただし共通化の是非は PO 承認済み（2026-10-26・3案から「1か所にまとめて3つ全部直す」）。
 
 ### 4-2. 出口封じに「現在地がどこでもない」枝を足す（これが C8 の直し）
@@ -89,13 +89,13 @@ Tab 以外 → 何もしない（現状どおり）
 
 ### 4-4. 触らないもの（この便の境界）
 
-- **初期フォーカス（開いたら先頭へ）と復帰（閉じたら元へ）の `useEffect`**（`Drawer.tsx:68-86`・
-  `Modal.tsx:49-67`・`Sheet.tsx:49-67`。いずれも実物で確認）は**3つに残したまま**にする。欠陥が無く、まとめると
+- **初期フォーカス（開いたら先頭へ）と復帰（閉じたら元へ）の `useEffect`**（`frontend/src/components/Drawer.tsx:68-86`・
+  `frontend/src/components/Modal.tsx:49-67`・`frontend/src/components/Sheet.tsx:49-67`。いずれも実物で確認）は**3つに残したまま**にする。欠陥が無く、まとめると
   43ファイルで使う確認窓の初期フォーカス経路まで差分に入り、審査と検査の範囲が広がるため。⑫ **E1** に起票。
 - **消えた瞬間に戻す**（`focusout` 購読）は**やらない**。PO 決定（2026-10-26・「Tab を押したときに戻す」）。
   理由: 要素が DOM から外れたときに `focusout` が飛ぶかはブラウザ依存で**この端末では測れない**（CI 1往復が必要）。
   ⑫ **E2** に起票。
-- CSS・トークン・文言・辞書（`ja.json`/`en.json`）・DB・配線（API）は一切触らない。
+- CSS・トークン・文言・辞書（ja.json / en.json）・DB・配線（API）は一切触らない。
 - 便5 の `viewer-choice-row` の金型昇格は**別便**（PO 決定。⑫ **E3**）。
 
 ## ⑤ Acceptance Criteria
@@ -114,7 +114,7 @@ RED-first（直す前のコードで実行して赤になること）を単体�
 | C8 | `getFocusableElements` が `[aria-hidden='true']` の中を除く（移設で壊れていない） | 単体 |
 | C9 | 型検査 `npx tsc --noEmit` が 0 件 | 手元 |
 | C10 | `npm run check:all` が終了0 | 手元 |
-| C11 | フォーカス可能要素の選択子の定義が**リポジトリ全体で1か所**（`grep -rn "FOCUSABLE_SELECTOR" frontend/src` が `useFocusTrap.ts` のみ） | 単体（P4 を機械で固定する） |
+| C11 | フォーカス可能要素の選択子の定義が**リポジトリ全体で1か所**（`grep -rn "FOCUSABLE_SELECTOR" frontend/src` が `frontend/src/hooks/useFocusTrap.ts` のみ） | 単体（P4 を機械で固定する） |
 | B1 | 閲覧ページ（本物の Chromium）で、絞り込み → 提供者の選択画面 → 候補にフォーカス → 自動読み直しでその候補が消える → **`document.activeElement` が `<body>` になる**（前提の固定） | 画面検査3幅 |
 | B2 | B1 の直後に Tab を押すと、フォーカスが**パネル内の先頭そのもの**（`drawer-back`）に在る | 画面検査3幅（**直す前は赤**） |
 | B2' | B1 の直後に Shift+Tab を押すと、フォーカスが**パネル内の末尾そのもの**（`viewer-filter-apply`）に在る | 画面検査3幅（**直す前は赤**） |
@@ -130,7 +130,7 @@ RED-first（直す前のコードで実行して赤になること）を単体�
 
 **B1・B2 の作り方（確定事項）**:
 - 自動読み直しは60秒間隔（recon §3）でテストの制限時間（30秒）を超えるため、**`page.clock` で時計を進める**
-  （`package-lock.json` が固定している版は **1.59.1**、入っている型定義に `clock: Clock` と
+  （`frontend/package-lock.json` が固定している版は **1.59.1**、入っている型定義に `clock: Clock` と
   `fastForward(ticks: number|string)`・`install(options?)` が実在することを 2026-10-26 に実物で確認）。
   `await page.clock.install({ time: <現在時刻> })` → `await page.clock.fastForward(60_000)`。
 - 2回目の応答だけ候補を減らすため、`frontend/tests-e2e/utils/api-mock.ts` の `MockEntry` が
@@ -161,7 +161,7 @@ RED-first（直す前のコードで実行して赤になること）を単体�
 
 ## ⑧ 削除するファイル
 
-なし（`Drawer.tsx`・`Modal.tsx`・`Sheet.tsx` の中の複製コードは削除するが、ファイルは残る）。
+なし（`frontend/src/components/Drawer.tsx`・`frontend/src/components/Modal.tsx`・`frontend/src/components/Sheet.tsx` の中の複製コードは削除するが、ファイルは残る）。
 
 ## ⑨ 外部・過去事例の参照と我々への応用
 
@@ -189,10 +189,12 @@ RED-first（直す前のコードで実行して赤になること）を単体�
 
 ## ⑪ 維持の仕組み
 
+守り手: `frontend/tests-e2e/visual-language/viewer-focus-trap.spec.ts`（CI の画面検査で毎 PR・3幅）＋ `frontend/src/hooks/useFocusTrap.test.tsx`（`npm run test:unit` と pre-commit の単体）
+
 - **C11 が「選択子の定義は1か所」を機械で固定する**ので、将来また複製すると単体テストが赤になる。
 - 3金型の出口封じは `useFocusTrap` の1か所だけになるため、次に直すときは**1回で済む**。
 - 画面検査 B1・B2 は `visual-language/` 配下に置くので CI の必須経路（`画面検査（内部）`）で毎回走る。
-- 単体テスト `useFocusTrap.test.tsx` は `npm run test:unit` と pre-commit の両方で走る。
+- 単体テスト `frontend/src/hooks/useFocusTrap.test.tsx` は `npm run test:unit` と pre-commit の両方で走る。
 
 ## ⑫ 継続（この便の後）
 
@@ -202,7 +204,7 @@ RED-first（直す前のコードで実行して赤になること）を単体�
 | E2 | 「行が消えた瞬間に先頭へ戻す」（`focusout` が DOM 除去で飛ぶかを CI の本物の Chromium で実測してから判断） |
 | E3 | 便5 の `viewer-choice-row` を共通金型へ昇格（在庫表への横展開の下準備・ADR-144 §4 の PO 許可が必要） |
 | E4 | `Modal`・`Sheet` に単体テストが1件も無い（recon §5）。最低限の歯止めを別便で足す |
-| E5 | **`Drawer`/`Sheet` を最初から `open=true` でマウントすると出口封じも初期フォーカスも1回も付かない**（既存の穴・この便の退行ではない）。`portalTarget` を `useEffect` で解決する2段構え（`Drawer.tsx:64-66`）のため、初回は ref が null、解決後の再描画では `open` が変わらず effect が再実行されない。**現在の呼び出し元 35+2 ファイルはすべて「常時マウント＋`open` を切り替える」形なので今日の実害は0**。到達経路の例: 閲覧ページ（`InventoryView.tsx:668-670` の `{isMobile && …}`）でスマホ幅で開く → PC 幅に広げる → スマホ幅へ戻す。直すなら依存に `portalTarget` を足す／`containerRef` を state 化する。単体テストの `openMold`（`useFocusTrap.test.tsx:71-75`）がこの穴を避けて false→true で開いているのは**この作りに合わせたもの**で、`{x && <Drawer open />}` と書かれても現状のテストは1件も赤くならない |
+| E5 | **`Drawer`/`Sheet` を最初から `open=true` でマウントすると出口封じも初期フォーカスも1回も付かない**（既存の穴・この便の退行ではない）。`portalTarget` を `useEffect` で解決する2段構え（`frontend/src/components/Drawer.tsx:64-66`）のため、初回は ref が null、解決後の再描画では `open` が変わらず effect が再実行されない。**現在の呼び出し元 35+2 ファイルはすべて「常時マウント＋`open` を切り替える」形なので今日の実害は0**。到達経路の例: 閲覧ページ（`frontend/src/pages/viewer/InventoryView.tsx:668-670` の `{isMobile && …}`）でスマホ幅で開く → PC 幅に広げる → スマホ幅へ戻す。直すなら依存に `portalTarget` を足す／`containerRef` を state 化する。単体テストの `openMold`（`frontend/src/hooks/useFocusTrap.test.tsx:71-75`）がこの穴を避けて false→true で開いているのは**この作りに合わせたもの**で、`{x && <Drawer open />}` と書かれても現状のテストは1件も赤くならない |
 | E6 | **パネルが2枚同時に開いているとき、最前面だけが連れ戻す**ようにする（4-2 の追記・独立審査 N-1）。いまは登録順＝背面が勝つ。モジュール内に重なり順を1本持つ形で10行程度 |
 | E7 | `C11`（選択子の定義は1か所）は **`const FOCUSABLE_SELECTOR =` という名前の完全一致**しか数えないので、別名で複製されると通る（独立審査 N-3）。歯止めを強めるなら選択子の**文字列そのもの**を探す形へ |
 

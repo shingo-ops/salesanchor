@@ -5,7 +5,7 @@
 
 **日付**: 2026-10-26 ／ **土台**: `release/viewer-focus-trap`（`origin/main` = `840eea949`）
 **審査対象**: `frontend/src/hooks/useFocusTrap.ts`（新規）・同 `.test.tsx`（新規）・
-`frontend/tests-e2e/visual-language/viewer-focus-trap.spec.ts`（新規）・`Drawer.tsx`／`Modal.tsx`／`Sheet.tsx` の差分・
+`frontend/tests-e2e/visual-language/viewer-focus-trap.spec.ts`（新規）・`frontend/src/components/Drawer.tsx`／`frontend/src/components/Modal.tsx`／`frontend/src/components/Sheet.tsx` の差分・
 `design.md`・`recon.md`
 
 ## 判定の経緯
@@ -15,7 +15,7 @@
 | 1回目 | **REQUEST_CHANGES** | ブロック1件（B-1）・非ブロック5件・書類の行番号誤記8件 |
 | 対応後 | **（下の「対応」のとおり B-1 を直し、非ブロックは ⑫ へ起票）** | 本体コードへの指摘は0件のまま |
 
-審査は本体（`useFocusTrap.ts` と3金型の繋ぎ替え）について
+審査は本体（`frontend/src/hooks/useFocusTrap.ts` と3金型の繋ぎ替え）について
 「**設計どおりで、挙動の変わる範囲も主張どおり1点だけ**。壊れる呼び出し方の全数調査でも実害が出る画面は無い」と判定した。
 
 ## ブロック級（1件・直して反映済み）
@@ -54,26 +54,26 @@
 | N-2 | `Drawer`/`Sheet` を**最初から `open=true` でマウントすると出口封じも初期フォーカスも付かない**（`portalTarget` の2段構えのため。既存の穴＝この便の退行ではない。現在の呼び出し元 37 ファイルはすべて安全な形） | ⑫ **E5** |
 | N-3 | `C11` は `const FOCUSABLE_SELECTOR =` という**名前の完全一致**しか数えない（別名の複製は通る）／`C6` は `Modal` ではほぼ無条件に緑／テスト自身の自己除外は現状効果なし | ⑫ **E7** |
 | N-4 | spec がトークン投入を写していた／幅の引数が固定値のまま可変 | **この便で直した**（`installViewerToken` を `export` して共有・引数を削除） |
-| N-5 | `useFocusTrap.ts` の `active instanceof Node &&` は不要（`contains(null)` は false） | 残置（害が無く、型の読みやすさを優先） |
+| N-5 | `frontend/src/hooks/useFocusTrap.ts` の `active instanceof Node &&` は不要（`contains(null)` は false） | 残置（害が無く、型の読みやすさを優先） |
 
 ## 書類の誤りの訂正（8件・反映済み）
 
-- `recon.md` §2 の「集め方」3件（`Drawer.tsx:221-228`→`221-229`、`Modal.tsx:167-174`→`167-175`、
-  `Sheet.tsx:175-182`→`175-183`）＝`getFirstFocusable` の閉じ括弧まで含める。
+- `recon.md` §2 の「集め方」3件（`frontend/src/components/Drawer.tsx:221-228`→`221-229`、`frontend/src/components/Modal.tsx:167-174`→`167-175`、
+  `frontend/src/components/Sheet.tsx:175-182`→`175-183`）＝`getFirstFocusable` の閉じ括弧まで含める。
 - `design.md` 4-3 の3件（`:212-228`→`212-229`、`:158-174`→`158-175`、`:166-182`→`166-183`）。
-- `recon.md` §4 `InventoryView.tsx:183-200`→**184-199**（依存配列の行は 199。183 は `prevDrawerOpenRef` の宣言）。
-- `recon.md` §3 `InventoryView.tsx:94-99`→**94-101**（`providerOptions` 94-97／`conditionOptions` 98-101）。
+- `recon.md` §4 `frontend/src/pages/viewer/InventoryView.tsx:183-200`→**184-199**（依存配列の行は 199。183 は `prevDrawerOpenRef` の宣言）。
+- `recon.md` §3 `frontend/src/pages/viewer/InventoryView.tsx:94-99`→**94-101**（`providerOptions` 94-97／`conditionOptions` 98-101）。
 
 いずれも**主張そのもの（事実関係）は正しい**ことを審査が確認している。事実誤認は0件。
 
 ## 審査が「調べたが問題なかった」と確認した主な点
 
-- 挙動が変わるのは「現在地がどこでもないときの Tab」**1点だけ**。`inPanel` が true の分岐は旧 `Drawer.tsx:107-125` と論理が完全一致。
+- 挙動が変わるのは「現在地がどこでもないときの Tab」**1点だけ**。`inPanel` が true の分岐は旧 `frontend/src/components/Drawer.tsx:107-125` と論理が完全一致。
 - `FOCUSABLE_SELECTOR`／`getFocusableElements`／`getFirstFocusable` は**値・順序・`[aria-hidden='true']` 除外まで3金型の旧実装と一字一句同じ**。
 - 公開プロパティの増減なし＝呼び出し元（`Drawer` 35／`Modal` 43／`Sheet` 2）の書き換えは **0**。
-- `Modal` はポータル先が `document.body` 直書き（`Modal.tsx:150`）＝2段構えが無いので `open={true}` 固定の5件は N-2 の穴に当たらない。
+- `Modal` はポータル先が `document.body` 直書き（`frontend/src/components/Modal.tsx:150`）＝2段構えが無いので `open={true}` 固定の5件は N-2 の穴に当たらない。
 - ドロワーの中から `Popover` を開く経路は**現状どの画面にも無い**（閲覧ページのスマホ経路は `MultiSelect layout="row"/"inline"` で Popover を通らない）＝「別の要素に居るときは何もしない」枝が意図どおり効く。
-- **`document` の keydown で Tab を見ている箇所はリポジトリ全体で `useFocusTrap.ts:55` の1本だけ**＝`preventDefault` の競合先が無い。
+- **`document` の keydown で Tab を見ている箇所はリポジトリ全体で `frontend/src/hooks/useFocusTrap.ts:55` の1本だけ**＝`preventDefault` の競合先が無い。
 - 単体テストの前提 assert は本当に前提を固定している（C2/C3 はイベント後に候補を取り直すので消えた行を数え込まない）。
 - spec の呼び順（`setViewportSize`→`addInitScript`→`clock.install`→`goto`）・`fastForward` の相手（`useViewerAutoRefresh.ts:17-23` の `setInterval`）・testid が本物の `<input type="checkbox">` に届くこと（`MultiSelect.tsx:103`→`CheckboxControl.tsx:38-45`）・`page.clock` が実在する版（1.59.1）であること。
 - `page.clock` は**このリポジトリで初使用**。万一 viewer の起動経路がタイマーに依存していると「本当の失敗ではない赤」になり得るので、**CI 1往復目は件数の行まで自分で読む**。
@@ -107,4 +107,4 @@ $ npm run test:unit（全体）
 ## 対象 ADR
 
 - **ADR-1003**: 委譲 GO の条件として Reviewer の判定が必要 → 本書がその記録。
-- **ADR-144 §4**: 金型新設には当たらない（`.tsx`＋`.css`＋`.stories.tsx` を伴う部品ではない）＝審査も妥当と判定。
+- **ADR-144 §4**: 金型新設には当たらない（.tsx ＋ .css ＋ .stories.tsx を伴う部品ではない）＝審査も妥当と判定。
