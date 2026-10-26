@@ -89,3 +89,14 @@ rc=0
 ```
 
 ## generate-adr-index.js: README.md に差分なし
+
+## §3 CI 上の失敗→成功（32-6）
+
+- 壊したコミット V5: fe8a18143054ddd19dcf5e5b27a2b3268e9ea11c（試験 T1 の行の deny を denyX に。1行だけ）
+- V5 の CI: https://github.com/shingo-ops/salesanchor/actions/runs/40346263580
+  - job「master-register guard test」が failure（https://github.com/shingo-ops/salesanchor/actions/runs/40346263580/job/121653873698）。ログの FAIL 行は `FAIL T1 deny+全文` の1行だけ
+  - job「review-gate hook test」は success
+- 戻すコミット: 250d76f9130648b7dc9eb833b575905f4308fbe2
+  - 手元試験 `bash scripts/agent-hooks/test_master_register_rules_guard.sh`: FAIL 行 0 件・rc=0（出力に集計行は無く、PASS T1〜T28 が並ぶ）
+  - `git diff aae1cddd31ff79041ad80be6e10640e36dca96c2 HEAD -- . ':!docs/handoff'` は空だった
+- 戻した後の CI の結果は Opus が PR コメントに記録する
