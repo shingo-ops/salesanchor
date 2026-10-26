@@ -53,3 +53,17 @@ export const CustomLabels: Story = {
     onCancel: () => {},
   },
 }
+
+export const ConfirmLoading: Story = {
+  name: '処理中（確定ボタンに丸）',
+  args: {
+    open: true,
+    title: '接続を解除しますか？',
+    message: '処理が終わるまで確定ボタンは押せません。',
+    danger: true,
+    confirmLabel: '解除する',
+    confirmLoading: true,
+    onConfirm: () => {},
+    onCancel: () => {},
+  },
+}
