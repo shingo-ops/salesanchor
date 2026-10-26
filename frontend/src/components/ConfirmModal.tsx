@@ -12,6 +12,8 @@ interface Props {
   danger?: boolean;
   /** 第9便: 入力未完了（例: プルダウン未選択）のときに確定を押せなくする。既定 false（後方互換） */
   confirmDisabled?: boolean;
+  /** 便8a: 押した処理が終わるまで確定ボタンに丸を出し押せなくする。既定 false（後方互換） */
+  confirmLoading?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -24,6 +26,7 @@ export default function ConfirmModal({
   cancelLabel,
   danger = false,
   confirmDisabled = false,
+  confirmLoading = false,
   onConfirm,
   onCancel,
 }: Props) {
@@ -40,6 +43,7 @@ export default function ConfirmModal({
           variant={danger ? "danger" : "primary"}
           onClick={onConfirm}
           disabled={confirmDisabled}
+          loading={confirmLoading}
           autoFocus
         >
           {resolvedConfirmLabel}
