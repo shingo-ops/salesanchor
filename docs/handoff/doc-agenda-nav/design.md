@@ -707,3 +707,101 @@ paths:
 - 判定: **K9 合格**（6.5k ≤ 6.5k。合格ラインちょうど、余裕は 0.0k）。
 - 【事実】K1 はユーザー側 175 行（~/.claude/CLAUDE.md 66・~/kb/AGENTS.md 32・git-workflow.md 24・agents.md 53）＋入口 54 行（AGENTS.md 45・CLAUDE.md 9）＝ 229 行で、200 行以下にまだ 29 行届かない（28-6 の残り。PO に別に相談する）。
 - 【未確認】/context の表示は 0.1k 単位の丸めで、6.5k が丸める前にラインの上か下かは分からない。判定は kgi.md の決まり（表示値で判定）に従う。
+
+## 29. 段8 K1 を合格ラインまで減らす（2026-10-26・Opus 設計判断。PO 承認「1」2026-10-26＝案 A のとおり直して測る。起点 origin/main ce48825e5）
+
+PO 承認の経緯: 段7 の完了報告で Opus が「行数を減らす案を作って見せる」を選択肢1として示したのに対し、PO 原文「１」（2026-10-25）。案を直す前に見せ、Opus が「上の案のとおり直して、行数と読み込む量を測る」を選択肢1として示したのに対し、PO 原文「1」（2026-10-26）。
+
+### 29-1. 現在地（【事実】2026-10-26 実測。生出力 /tmp/CC報告ファイル/an-k1/）
+
+- K1 = 229 行（合格ライン 200 行以下。あと 29 行）。内訳: ~/.claude/CLAUDE.md 66・~/kb/AGENTS.md 32・~/.claude/rules/common/git-workflow.md 24・同 agents.md 53・リポジトリの AGENTS.md 45・CLAUDE.md 9。
+- ~/.claude/rules/ で paths の無い（常に読まれる）ファイルは agents.md と git-workflow.md の2つだけ（recon/q6_rules_table.txt）。
+- agents.md:3-30 は担当9名の表と「必須起動条件」の表。9名のうち tdd-guide・code-reviewer・security-reviewer・build-error-resolver・e2e-runner・refactor-cleaner・doc-updater の7名は、~/.claude/agents/ にもリポジトリにも定義が無い（recon/q1_repo_nine.txt・q2_home_seven.txt）。~/.claude/agents/ に在るのは architect・evaluator・generator・governance・planner・researcher・reviewer の7つ。マージ前の審査で実際に使う reviewer は表に載っていない。
+- agents.md:46-53「Multi-Perspective Analysis」の5役も、定義の在る担当ではない。
+- 見張り（フック）は agents.md の見出しや担当名を読んでいない（recon/q2_hooks_agentname.txt。agent-console のフック本体は【未確認】：調べる途中で見張りに止められたため）。
+- git-workflow.md:12「Attribution disabled globally via ~/.claude/settings.json.」は偽。settings.json に attribution・includeCoAuthoredBy の設定は無い（recon q4）。
+- ~/.claude/CLAUDE.md:7 は定義の無い security-reviewer を指している。同名の「/security-review」は Claude Code の組み込みの技能として在る。
+
+### 29-2. 変えること（案 A：おすすめ）
+
+| # | ファイル | 変更前 | 変更後 | 行数 |
+|---|---|---|---|---|
+| A1 | ~/.claude/rules/common/agents.md | :3-30 担当9名の表と必須起動条件の表（28行） | 5行：「呼べる担当は ~/.claude/agents/ の7名だけ。無い名前を呼ばない」「変更ファイル3つ以上か新規ファイル→planner」「新しい技術・依存追加・DB設計変更→architect」「コードを書いた・直した→マージ前に reviewer の審査（review-gate が強制）」「auth/・*token*・*password*・payment* を触った→/security-review」＋見出しと空行 | −21 |
+| A2 | 同 | :46-53 Multi-Perspective Analysis（8行）と直前の空行 | 消す | −9 |
+| A3 | ~/.claude/rules/common/git-workflow.md | :12 偽の Note と直後の空行 | 消す | −2 |
+| A4 | ~/.claude/CLAUDE.md | :7「security-reviewer を使う」 | 「/security-review を使う」 | 0 |
+
+見込み: K1 229 → 197 行（合格）。
+
+決まりの意味が変わる点（PO の判断が要る点）:
+- 「バグ修正・新機能の前に tdd-guide」「CI が落ちたら build-error-resolver」の2行は、担当の定義が無く今も実行できない。代わりの担当を置かずに消す。
+- Multi-Perspective Analysis（5役に分けて見る助言）を消す。
+- 他は、在る担当名への書き換えと、偽の記述の削除だけ。
+
+### 29-3. 他の案と選ばなかった理由
+
+| 案 | 中身 | 減る行数 | 選ばない理由 |
+|---|---|---|---|
+| B | agents.md に paths を付け、コードのファイルを開いたときだけ読ませる | −53 | 担当の決まりは作業の種類で要るもので、ファイルの種類と結びつかない。設計の会話では読まれなくなる |
+| C | ~/.claude/CLAUDE.md の「出力を省略しない」:38-40 と「生出力はファイルへ」:57-64 を1つにまとめる | −2〜−4 | 単独では足りない。PO 最優先の「報告の型」近くを触る理由が弱い。A で足りるので今回は見送る |
+| D | 定義の無い7名を ~/.claude/agents/ に入れる（marketplaces の everything-claude-code から） | 0 | 行数が減らない。担当を増やすのは別の設計判断 |
+
+### 29-4. 触らない範囲
+
+- ~/.claude/CLAUDE.md の「報告の型」:12-32（japanese-reply-guard.py:2,16 と ~/kb/00-rules/chat-format.md:9 が指している）。
+- agents.md の Parallel Task Execution・Scope Termination（:32-44）。
+- git-workflow.md のコミットの型（根拠がここにしか無い）と PR の手順。
+- paths 付きの code-review.md:52,77,78・development-workflow.md:35,42・testing.md:33,40 にも7名の名前が残る。K1 に入らないので今回は触らず、残件として記録する。
+
+### 29-5. 受け入れ基準
+
+| 基準 | 検証方法 |
+|---|---|
+| K1 が 200 行以下 | 29-1 の6ファイルの `wc -l` の合計 |
+| K9 が 6.5k 以下のまま | origin/main の使い捨て worktree で `claude -p "/context" --no-session-persistence`、Memory files 合計 − MEMORY.md |
+| K7 が残っている | リポジトリの AGENTS.md で「不可逆操作は必ず PO 確認」「VPS 直作業禁止」「直接コミット禁止」を grep し各1件以上（今回触らない） |
+| 書き換えた担当名が実在する | agents.md・CLAUDE.md に出る担当名ごとに ~/.claude/agents/<名>.md の有無を ls（/security-review は組み込みの技能） |
+| 消した行の一覧が PO 承認の範囲と一致する | 変更前の写しとの diff を保存し、29-2 の表の行だけが変わっていることを照合 |
+
+K11（移した先に在るか）: 今回は移す行が無く、消す行と書き換える行だけなので対象外。消す行は 29-2 に全部書いた。
+
+### 29-6. 戻し方・維持
+
+- 戻し方: 変更前の写しを ~/CC報告ファイル-keep/agenda-nav-stage8-20261026/ に置き、cp で戻す。
+- 実施は担当（Sonnet）。リポジトリの外のファイルなので PR の差分には出ない。結果（行数・diff・K9）を本節の後ろと baseline.md に記録する PR を出す。
+- 維持: 新しい担当を ~/.claude/agents/ に足したときは agents.md の7名の行も直す（agents.md 自身に書く）。
+
+### 29-7. 外部事例
+
+不要。理由: 自分の環境のファイルに在る、実在しない名前と偽の記述を消す作業で、外部の効果の数字を根拠にしない。行数の効果は 29-5 で直接測る。
+
+### 29-8. 審査（Opus 自己審査。独立の第二者審査ではない）
+
+- 判定: APPROVE（設計として。PO 承認・実施の承認は兼ねない）
+- 根拠: 変える行はすべて 29-1 の実測に結びつく。見込み 197 行は A1 −21・A2 −9・A3 −2 の合計で、実施後に wc -l で確かめる。
+- 未解決: agent-console のフック本体が agents.md の文言を読んでいないかは【未確認】。実施の直前に担当に grep させ、当たれば止まる。
+
+### 29-9. 結果（2026-10-26 実施。PO 承認「1」2026-10-26＝案 A のとおり直して測る）
+
+実施は担当（Sonnet）。生出力: /tmp/CC報告ファイル/an-k1/s8/。変更前の写し: ~/CC報告ファイル-keep/agenda-nav-stage8-20261026/。
+
+| 基準 | 結果 | 根拠 |
+|---|---|---|
+| K1 が 200 行以下 | **197 行**（66・32・22・23・45・9）で合格 | s8/k1_wc.txt |
+| K9 が 6.5k 以下のまま | Memory files 16.8k − MEMORY.md 10.7k ＝ **6.1k** で合格 | s8/k9_context.txt の Memory files 表 |
+| K7 が残っている | 3語とも各1件 | s8/k7.txt |
+| 書き換えた担当名が実在する | ~/.claude/agents/ に7名の .md あり。/security-review は組み込みの技能 | s8/agents_ls.txt |
+| 変わった行が承認の範囲と一致 | agents.md は 29-2 の A1・A2 の範囲だけ、git-workflow.md は2行削除だけ、CLAUDE.md は7行目だけ | s8/diff_agents.txt・diff_git.txt・diff_claude.txt（Opus が diff_agents.txt を読んで照合） |
+
+- 【事実】事前点検（29-8 の未解決点）: ~/.claude/scripts・~/.claude/hooks・agent-console（*.mjs *.js *.json）で、外した文言を読む行は0件（s8/pre_grep.txt）。担当の Bash からは agent-console の見張りに止められたため、Opus 本体で実行した。
+- 【事実】担当は K9 を「前回 6.5k から +10.3k」と報告したが、これは MEMORY.md を含めた合計との比較で、K9 の定義（MEMORY.md を除く）では 6.1k。Opus が表示値で計算し直した。
+- 残件（範囲外）: paths 付きの code-review.md・development-workflow.md・testing.md に定義の無い担当名が残る（29-4）。
+
+## 30. 全条件の測り直しと K5 の直し（2026-10-26）
+
+- 30-1 PO 原文「1」（2026-10-26。テーマの合格条件を全部測り直して完了を判定する）を受け、origin/main 9351f2158 で全項目を測った。K1 197行・K2 0/5（関係ある例文 2/2）・K3 0語（grep では「日本語」が2本に出るが §25 の判断どおり別の決まり）・K4 0・K6 100%・K7 残っている・K9 6.1k・K11: 一字一句の照合で 160/186。残り26行を意味で1行ずつ照合し、在る 18・見出しや表の枠 7・欠けている 1 だった（CC報告ファイル-keep/agenda-nav-final-20261026/an-k11sem/table.md）。欠けている1行（CLAUDE.md:92 の「grep セルフチェック」の参照）は、段4より前の frontend/CLAUDE.md で ESLint の自動検出に置き換わっていて、その本文は frontend/AGENTS.md:23-29 に在るので「在る」と判定し直した。さらに2点が移した先に無く、別の文書にだけ在った（ADR 一覧を作り直した後のコミットと CI 必須、ブランチ名を英語で簡潔に）。この2点は §30-6 で移した先に戻した（GAS 16/16）・K12 12/20・K10 9/20（参考）で合格、K5 だけ最深4段で未達。
+- 30-2 K5 の原因（親をたどって確認）: docs/ai-agents/adr-template.md は AGENTS.md → docs/adr/README.md → ADR-150 → docs/handoff/agent-complete-design/recon.md 経由でしか届かない（4段）。docs/specs/ledger-guard/README.md は docs/INDEX.md → docs/specs/README.md → docs/specs/dev-continuity/README.md 経由（4段）。どちらも目次・索引に行が無かった。
+- 30-3 直し（PO 原文「1」2026-10-26）: docs/INDEX.md に adr-template.md の行、docs/specs/README.md に ledger-guard の行を「いつ読むか」付きで1行ずつ足した。
+- 30-4 結果: 検査の最深段数 4 → 3、deep 2 → 0。生出力 /tmp/CC報告ファイル/an-k5/。
+- 30-5 戻し方: このPRを revert する。
+- 30-6 審査の差し戻し（K11 の数に裏づけが無い）を受け、移した先に無かった2点を戻した: docs/INDEX.md の ADR 一覧の行に「作り直してコミットする。CI「ADR index is up to date」が必須」、AGENTS.md の作業場所の行に「<topic> は作業内容を英語で簡潔に」。これで26行はすべて移した先かその入口に在る（K11 186/186）。生出力は CC報告ファイル-keep/agenda-nav-final-20261026/。

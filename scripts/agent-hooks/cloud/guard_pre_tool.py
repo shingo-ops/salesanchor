@@ -8,6 +8,7 @@ import json
 import os
 import re
 import shlex
+import signal
 import subprocess
 import sys
 
@@ -522,7 +523,30 @@ def check_pr_create(tool: str, ti: dict, cmd: str, cwd: str):
     return None
 
 
+# ---------- 時間の上限（クラウドの見張りの時間切れは通す側に倒れるため、見張り自身が先に止める側へ倒す） ----------
+DEADLINE_SEC = float(os.environ.get("CLOUD_GUARD_DEADLINE_SEC", "6"))
+
+
+class _Deadline(BaseException):
+    """時間切れ。既存の広い `except Exception` に飲まれないよう BaseException にしてある。"""
+
+
+def _on_deadline(signum, frame):
+    raise _Deadline()
+
+
 def main() -> int:
+    signal.signal(signal.SIGALRM, _on_deadline)
+    signal.setitimer(signal.ITIMER_REAL, DEADLINE_SEC)
+    try:
+        return _main_body()
+    except _Deadline:
+        return block("命令文が長すぎて時間内に中身を確かめられないため止めます。命令を短く分けるか、手元で PO の承認を得て実行してください。")
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0)
+
+
+def _main_body() -> int:
     try:
         data = json.load(sys.stdin)
         if not isinstance(data, dict):

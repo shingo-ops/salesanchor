@@ -31,7 +31,7 @@ DROP TABLE / 大量DELETE / `rm -rf` / `git reset --hard` / `git push --force`�
 
 - `develop` / `main` への直接コミット禁止。`release/*` → `main` は PR 経由（直push禁止・Branch Protection で強制）
 - **PR作成前に `gh auth status` で `shingo-cc` 名義を確認。`shingo-ops` 名義でのコード変更PR作成は禁止（docs-only PR は除く）。**
-- 作業前に必ず（例外なし） `bash scripts/new-worktree.sh release/<topic>` で `origin/main` 起点の作業場所を `~/worktrees` 配下に作る
+- 作業前に必ず（例外なし） `bash scripts/new-worktree.sh release/<topic>` で `origin/main` 起点の作業場所を `~/worktrees` 配下に作る（`<topic>` は作業内容を英語で簡潔に）
 - `main` / `develop` は消さない（`git push --delete`・UI の branch delete・`gh api` の ref delete は実行しない）
 - `migrations/`・`deploy.yml`・本番 `scripts/` を含む PR は PO の「GO #PR番号」まで main にマージしない（ADR-135・ADR-136。GO は ADR-1003 により例外（PO 本人の GO が必須の7種）を除き Claude Opus 設計担当へ常時委譲。PO「委譲停止」で解除）
 - 手順の詳細（PR の作り方・Draft・break-glass・リリース PR）: `docs/specs/branch-operations/README.md`
