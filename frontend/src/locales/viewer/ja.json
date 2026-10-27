@@ -24,7 +24,11 @@
     "pageOf": "{{page}} / {{total}} ページ（全 {{count}} 件）",
     "noResults": "条件に合う商品がありません",
     "search": {
-      "placeholder": "商品名・型番・キーワードで検索"
+      "placeholder": "商品名・型番・キーワードで検索",
+      "clear": "検索語を消す",
+      "submitLabel": "検索する",
+      "recentTitle": "最近使った語",
+      "recentClear": "すべて消す"
     },
     "resetView": "リセット",
     "range": {
