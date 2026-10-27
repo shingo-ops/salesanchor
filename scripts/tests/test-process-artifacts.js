@@ -483,6 +483,154 @@ test('ADR-1003: migrationファイルが無ければBASE_SHA/HEAD_SHA無しで�
   }
 });
 
+// ── ユニットテスト: R6a 本人GOが要るPRの見分け（本物の git 差分で試す） ──────
+console.log('\n【R6a 本人GO見分けテスト】');
+
+const { mkdtempSync } = require('fs');
+const os = require('os');
+
+/** 一時 git リポジトリで「空の土台 → files を足した頭」の差分を作り、見分けの結果を返す */
+function detectInTempRepo(files) {
+  const dir = mkdtempSync(join(os.tmpdir(), 'r6a-'));
+  const git = (args) => execSync(`git ${args}`, { cwd: dir, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+  const savedCwd = process.cwd();
+  const savedBase = process.env.BASE_SHA;
+  const savedHead = process.env.HEAD_SHA;
+  try {
+    git('init -q');
+    git('config user.email t@example.com');
+    git('config user.name t');
+    git('config commit.gpgsign false');
+    writeFileSync(join(dir, 'README.txt'), 'base\n', 'utf8');
+    git('add -A');
+    git('commit -q -m base');
+    const base = git('rev-parse HEAD');
+    for (const [name, content] of Object.entries(files)) {
+      mkdirSync(path.dirname(join(dir, name)), { recursive: true });
+      writeFileSync(join(dir, name), content, 'utf8');
+    }
+    git('add -A');
+    git('commit -q -m head');
+    const head = git('rev-parse HEAD');
+    process.env.BASE_SHA = base;
+    process.env.HEAD_SHA = head;
+    process.chdir(dir);
+    return migrationsContainDropStatement(Object.keys(files));
+  } finally {
+    process.chdir(savedCwd);
+    if (savedBase !== undefined) process.env.BASE_SHA = savedBase; else delete process.env.BASE_SHA;
+    if (savedHead !== undefined) process.env.HEAD_SHA = savedHead; else delete process.env.HEAD_SHA;
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+// [名前, ファイル名, 中身, 期待値]
+const R6A_MIGRATION_CASES = [
+  // ○ 見分ける
+  ['○ 1行の表削除', 'migrations/001_a.sql', 'DROP TABLE users;\n', true],
+  ['○ 小文字・複数行にまたがる表削除', 'migrations/001_b.sql', 'drop\n  table\n  if exists users;\n', true],
+  ['○ 列削除', 'migrations/001_c.sql', 'ALTER TABLE t\n  DROP COLUMN c;\n', true],
+  ['○ スキーマ削除', 'migrations/001_d.sql', 'DROP SCHEMA tenant_x CASCADE;\n', true],
+  ['○ データベース削除', 'migrations/001_e.sql', 'DROP DATABASE x;\n', true],
+  ['○ ブロックコメントの外の表削除', 'migrations/001_f.sql', '/* 説明 */ DROP TABLE t;\n', true],
+  ['○ TRUNCATE（先頭）', 'migrations/001_g.sql', 'TRUNCATE TABLE leads;\n', true],
+  ['○ TRUNCATE（; の直後）', 'migrations/001_h.sql', 'SELECT 1;\nTRUNCATE leads;\n', true],
+  ['○ WHERE の無い DELETE', 'migrations/001_i.sql', 'DELETE FROM leads;\n', true],
+  ['○ WHERE の無い DELETE（; の直後・複数行）', 'migrations/001_j.sql', 'SELECT 1;\nDELETE\n  FROM leads\n  ;\n', true],
+  ['○ 後ろの文にだけ WHERE がある（前の DELETE は無条件）', 'migrations/001_k.sql', 'DELETE FROM a; DELETE FROM b WHERE x = 1;\n', true],
+  ['○ scripts/migrate_*.py の中の表削除', 'scripts/migrate_zz_test.py', 'cur.execute("DROP TABLE old_t")\n', true],
+  ['○ scripts/run_all_migrations.sh の中の表削除', 'scripts/run_all_migrations.sh', 'psql -c "DROP TABLE old_t"\n', true],
+  ['○ migrate_*.py の execute("TRUNCATE x")', 'scripts/migrate_zz_q1.py', 'cur.execute("TRUNCATE x")\n', true],
+  ["○ migrate_*.py の execute('DELETE FROM x')（WHERE なし）", 'scripts/migrate_zz_q2.py', "cur.execute('DELETE FROM x')\ncur.execute('SELECT 1 WHERE a')\n", true],
+  // × 見分けない
+  ['× migrate_*.py の execute("DELETE FROM x WHERE id=1")', 'scripts/migrate_zz_q3.py', 'cur.execute("DELETE FROM x WHERE id=1")\n', false],
+  ['× 引用符つきの表名で WHERE のある DELETE', 'scripts/migrate_zz_q4.py', 'cur.execute(\'DELETE FROM "x" WHERE id=1\')\n', false],
+  ['× 通常の CREATE', 'migrations/002_a.sql', 'CREATE TABLE t (id int);\n', false],
+  ['× WHERE のある DELETE', 'migrations/002_b.sql', 'DELETE FROM leads WHERE id = 1;\n', false],
+  ['× 複数行で WHERE のある DELETE', 'migrations/002_c.sql', 'DELETE FROM leads\n  USING x\n  WHERE leads.id = x.id;\n', false],
+  ['× 行コメントの中だけの表削除', 'migrations/002_d.sql', '-- DROP TABLE users;\nSELECT 1;\n', false],
+  ['× ブロックコメントの中だけの表削除', 'migrations/002_e.sql', '/*\n DROP TABLE users;\n*/\nSELECT 1;\n', false],
+  ['× 文の始めでない語（GRANT の中の TRUNCATE）', 'migrations/002_f.sql', 'GRANT TRUNCATE ON leads TO app;\n', false],
+  ['× 文の始めでない語（権限の中の DELETE）', 'migrations/002_g.sql', 'GRANT SELECT, DELETE ON leads TO app;\n', false],
+  ['× UPDATE は対象外', 'migrations/002_h.sql', 'UPDATE leads SET a = 1;\n', false],
+  ['× migrations と関係ない場所の SQL', 'docs/notes/example.sql', 'DROP TABLE users;\nTRUNCATE t;\nDELETE FROM t;\n', false],
+  ['× scripts/ の migrate でない python', 'scripts/other_tool.py', 'cur.execute("DROP TABLE x")\n', false],
+];
+
+for (const [name, file, content, expected] of R6A_MIGRATION_CASES) {
+  test(`R6a migration: ${name}`, () => {
+    assert.strictEqual(detectInTempRepo({ [file]: content }), expected);
+  });
+}
+
+test('R6a migration: 複数ファイルのうち 1 つだけ該当しても見分ける', () => {
+  assert.strictEqual(
+    detectInTempRepo({ 'migrations/003_a.sql': 'SELECT 1;\n', 'migrations/003_b.sql': 'DROP TABLE t;\n' }),
+    true
+  );
+});
+
+test('R6a migration: ファイルをまたいでも別ファイルの語はつながない（a の末尾と b の先頭）', () => {
+  assert.strictEqual(
+    detectInTempRepo({ 'migrations/003_c.sql': 'DELETE FROM t WHERE id = 1', 'migrations/003_d.sql': 'DELETE FROM t2 WHERE id = 2' }),
+    false
+  );
+});
+
+test('R6a migration: 差分が取れないとき（不正な SHA）は本人GO側に倒す', () => {
+  const savedBase = process.env.BASE_SHA;
+  const savedHead = process.env.HEAD_SHA;
+  process.env.BASE_SHA = '0000000000000000000000000000000000000000';
+  process.env.HEAD_SHA = '1111111111111111111111111111111111111111';
+  try {
+    assert.strictEqual(migrationsContainDropStatement(['migrations/009_x.sql']), true);
+  } finally {
+    if (savedBase !== undefined) process.env.BASE_SHA = savedBase; else delete process.env.BASE_SHA;
+    if (savedHead !== undefined) process.env.HEAD_SHA = savedHead; else delete process.env.HEAD_SHA;
+  }
+});
+
+test('R6a workflow-lint: 大文字・先頭 ./ ・.yaml の書き方も見分ける', () => {
+  assert.ok(hasPoOnlyExceptionPath(['.github/workflows/workflow-lint.yaml']));
+  assert.ok(hasPoOnlyExceptionPath(['./.github/workflows/workflow-lint.yml']));
+  assert.ok(hasPoOnlyExceptionPath(['.GitHub/Workflows/Workflow-Lint.YML']));
+  assert.ok(requiresPoOnlyGo(['.github/workflows/workflow-lint.yaml']));
+});
+
+test('R6a workflow-lint: 別のワークフロー・別の名前は見分けない', () => {
+  assert.ok(!hasPoOnlyExceptionPath(['.github/workflows/deploy.yml']));
+  assert.ok(!hasPoOnlyExceptionPath(['.github/workflows/workflow-lint-extra.yml']));
+  assert.ok(!hasPoOnlyExceptionPath(['docs/.github/workflows/workflow-lint.yml']));
+  assert.ok(!hasPoOnlyExceptionPath(['docs/workflow-lint.yml']));
+});
+
+function goSectionWithIssuer(issuer, prNumber) {
+  return `### GO記録\n- GO発行者: ${issuer}\n- 日時: 2026-10-27 10:00 JST\n- GO原文: GO #${prNumber}\n- バックアップ確認: 該当なし\n`;
+}
+
+test('R6a GO発行者: 委任名義の語に PO の名前が混ざっていても例外対象では通らない', () => {
+  for (const issuer of ['Shingo の委任に基づく Claude Opus 発行', 'shingo-ops 代理', 'Shingo（Opus）', 'Shingo委任']) {
+    const errors = validateGORecord(parseGORecord(goSectionWithIssuer(issuer, 2099)), '2099', { requiresPoOnly: true });
+    assert.ok(errors.some(e => e.includes('PO本人')), `通ってはいけない: ${issuer}`);
+  }
+});
+
+test('R6a GO発行者: 例外対象でなければ委任名義の混ざった書き方も今までどおり通る', () => {
+  const errors = validateGORecord(
+    parseGORecord(goSectionWithIssuer('Shingo の委任に基づく Claude Opus 発行', 2099)),
+    '2099',
+    { requiresPoOnly: false }
+  );
+  assert.deepStrictEqual(errors, []);
+});
+
+test('R6a GO発行者: 過去の本人の書き方は例外対象でも通る', () => {
+  for (const issuer of ['Shingo（shingo-ops）', 'Shingo（PO）', 'shingo-ops', 'Shingo']) {
+    const errors = validateGORecord(parseGORecord(goSectionWithIssuer(issuer, 2099)), '2099', { requiresPoOnly: true });
+    assert.deepStrictEqual(errors, [], `通るべき: ${issuer}`);
+  }
+});
+
 // ── ユニットテスト: file:line 引用検証 ───────────────────────────────────────
 console.log('\n【file:line引用テスト】');
 
