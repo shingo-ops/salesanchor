@@ -20,7 +20,7 @@ rules:
     when: ci
     fixture: ""
     evidence: "R2 で見本を置く"
-    reason: "gh auth status での名義確認は PR の外なので対象外。shingo-ops 名義のコード変更 PR は check-process-artifacts.js:813-818 が止める。書類だけの PR は検査が飛ぶ（:774）が、AGENTS.md:33 が docs-only PR を対象外にしているので妨げない。PR 作者の取得に失敗すると check-process-artifacts.js:809-810 で警告だけで通る。R2/R6 の宿題"
+    reason: "gh auth status での名義確認は PR の外なので対象外。shingo-ops 名義のコード変更 PR は check-process-artifacts.js:814-819 が止める。書類だけの PR は検査が飛ぶ（:774）が、AGENTS.md:33 が docs-only PR を対象外にしているので妨げない。PR 作者の取得に失敗すると check-process-artifacts.js:809-810 で警告だけで通る。R2/R6 の宿題"
   - id: A13
     source: AGENTS.md
     anchor: "を含む PR は PO の「GO #PR番号」まで main にマージしない"
@@ -73,7 +73,7 @@ rules:
     source: frontend/AGENTS.md
     anchor: "は必ず `:root` と `:root.force-dark` の両方に追加"
     kind: review
-    reason: "gate候補（R6）: Lint & Dark Mode Check の check-dark-parity.js:19 は src/index.css の :root と :root.force-dark だけを比べ、tokens.css・sidebar.css・各ページの CSS（どれにも :root.force-dark がある）は比べない。check-new-tokens.js:40 は tokens.css・index.css の新規トークンを PR 本文のチェック欄で自己申告させるだけ。決まり（frontend/AGENTS.md:40）は新規の色トークンすべてが対象"
+    reason: "gate候補（R6）: Lint & Dark Mode Check の check-dark-parity.js:19 は src/index.css の :root と :root.force-dark だけを比べ、tokens.css・sidebar.css・各ページの CSS（どれにも :root.force-dark がある）は比べない。frontend/scripts/check-new-tokens.js:40 は tokens.css・index.css の新規トークンを PR 本文のチェック欄で自己申告させるだけ。決まり（frontend/AGENTS.md:40）は新規の色トークンすべてが対象"
   - id: F11
     source: frontend/AGENTS.md
     anchor: "`lucide-react` からの直接 import は ESLint が禁止する"
@@ -82,16 +82,12 @@ rules:
     when: ci
     fixture: ""
     evidence: "R2 で見本を置く"
-    reason: "frontend/src の ts・tsx の lucide-react 直接 import は eslint.config.js:14・:118-131 の no-restricted-imports（error）が止める。constants/icons.tsx だけ off（:135-139）だが、決まりが唯一の窓口として許している（frontend/AGENTS.md:58-64）。frontend/ に変更が無い PR は e2e.yml:62 で検査が飛ぶが、import は frontend/ の中にしか無いので妨げない"
+    reason: "frontend/src の ts・tsx の lucide-react 直接 import は eslint.config.js:14・:118-131 の no-restricted-imports（error）が止める。constants/icons.tsx だけ off（:135-139）だが、決まりが唯一の窓口として許している（frontend/AGENTS.md:58-64）。frontend/ に変更が無い PR は e2e.yml:62 で検査が飛ぶが、import は frontend/ の中にしか無いので妨げない。no-restricted-imports は import() の動的読み込みを見ない（ESLint の仕様・実物では未確認）。決まりの文 frontend/AGENTS.md:58 は ESLint が禁止するという説明の形"
   - id: K01
     source: backend/AGENTS.md
     anchor: "`db.commit()` 直後に `reset_tenant_context()` 必須"
-    kind: gate
-    check: "ADR-072 tenant schema lint (strict mode)"
-    when: ci
-    fixture: ""
-    evidence: "R2 で見本を置く"
-    reason: "backend/app/routers/ の write endpoint の db.commit() 直後の reset_tenant_context() は lint-tenant-schema.yml:69 の strict が止める。検査は routers/ を変えた PR だけ走る（:53）が、決まりの対象も write endpoint（backend/AGENTS.md:10）なので飛んでも妨げない"
+    kind: review
+    reason: "gate候補（R6）: backend/app/routers/ の write endpoint の db.commit() 直後の reset_tenant_context() は lint-tenant-schema.yml:69 の strict が検査するが、止まらない部分がある。scripts/lint_tenant_schema.py の Rule B は commit の数と reset の数を比べるだけで「直後」かどうかを見ない（:204-225, :284-290）。tenant_table_ref を呼ぶ関数は検査を飛ばす（:285-290）。検査は routers/ を変えた PR だけ走る（lint-tenant-schema.yml:53）。決まり（backend/AGENTS.md:10）は write endpoint の commit 直後すべて"
   - id: K06
     source: backend/AGENTS.md
     anchor: "**ファイル命名規則（101番以降）**"
@@ -533,12 +529,8 @@ rules:
   - id: P097
     source: docs/ai-agents/design-partner.md
     anchor: "- PR本文必須欄（### 標準ワークフロー確認・行頭空白/ダッシュなしの平打ち"
-    kind: gate
-    check: "process-artifacts gate"
-    when: ci
-    fixture: ""
-    evidence: "R2 で見本を置く"
-    reason: "PR本文の必須欄: セクションの欠落と触るファイル欄は check-process-artifacts.js:861（欄なし）・:865（宣言外）、削除するファイル欄は :901（欄なし）・:907（宣言外）が止める。:649-651 は本検査にだけ届くので根拠にしない。書式（行頭空白・ダッシュなしの平打ち）は parseSOPDeclaration（:258-292）が読む。削除が 1 行も無い PR は :899 で削除欄の検査が飛ぶが、決まりは変更した全ファイルを書く話で削除が無ければ欄が空でも反しない。書類だけの PR（:774）は STANDARD-WORKFLOW.md:137 が対象外"
+    kind: review
+    reason: "gate候補（R6）: PR本文の必須欄: セクションの欠落と触るファイル欄は check-process-artifacts.js:861（欄なし）・:865（宣言外）、削除するファイル欄は :901（欄なし）・:907（宣言外）が止める。書式（行頭空白・ダッシュなしの平打ち）は parseSOPDeclaration（:271-284）が箇条書きも受け付けるので、平打ちでなくても通り止まらない。削除が 1 行も無い PR は「削除するファイル:」欄が無くても :899 で通る。書類だけの PR（:774）は STANDARD-WORKFLOW.md:137 が対象外"
   - id: P098
     source: docs/ai-agents/design-partner.md
     anchor: "- GO記録4欄（発行者/日時/原文/バックアップ確認）は、POの `GO #P"
@@ -707,12 +699,8 @@ rules:
   - id: P134
     source: docs/ai-agents/design-partner.md
     anchor: "- カードでファイルを追加編集させる場合、PR本文「触るファイル/削除するファイ"
-    kind: gate
-    check: "process-artifacts gate"
-    when: ci
-    fixture: ""
-    evidence: "R2 で見本を置く"
-    reason: "カードで追加編集させるファイルをPR本文『触るファイル』宣言に含める: 宣言外変更を check-process-artifacts.js:865・:907 が落とす（PR番号2600以上）。書類だけの PR（:774）は STANDARD-WORKFLOW.md:137 が対象外なので検査が飛んでも妨げない。宣言の更新を同じカードに含める部分はカードの書き方で PR の外"
+    kind: review
+    reason: "gate候補（R6）: カードで追加編集させるファイルをPR本文『触るファイル』宣言に含める: 宣言外変更は check-process-artifacts.js:865・:907 が落とす（PR番号2600以上）。ただし TOUCH_FILE_EXCLUDE_PATTERNS（:848-852。package-lock.json・比較画像・active-work.md）は照合から外れ、決まりの文書にその除外が書かれていない。書類だけの PR（:774）は STANDARD-WORKFLOW.md:137 が対象外。宣言の更新を同じカードに含める部分はカードの書き方で PR の外"
   - id: P135
     source: docs/ai-agents/design-partner.md
     anchor: "- マージ拒否「base branch is not up to date」は、"
