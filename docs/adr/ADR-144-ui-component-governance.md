@@ -100,7 +100,7 @@ required check 登録済。本 ADR では追加実装しない。
 - ADR-067: デザイントークン強制システム
 - `scripts/check-ui-governance.js`: CI ゲート本体
 - `scripts/tests/test-ui-governance.js`: 自動テスト
-- `.github/workflows/ui-governance-gate.yml`: CI ワークフロー（非必須）
+- `.github/workflows/ui-governance-gate.yml`: CI ワークフロー（main ruleset 15777895 の必須チェック。ジョブ名 UI governance gate）
 - `docs/CC_UI_GOVERNANCE.md`: CC 遵守テンプレ
 - `docs/BRANCH_PROTECTION_SETUP.md §8`: required check 登録手順（安定後）
 
