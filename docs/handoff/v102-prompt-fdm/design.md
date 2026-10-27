@@ -37,7 +37,7 @@
 - PO への報告文には「何回に1回起きるかは、まだ確かめていない。切り替えのあと数えて報告する」と書く。
 
 ## 3. 変更の内容（切り替え PR）
-1. `line_analysis_v102_svc.py:95` を `"v102-f_dm"` に、:97 を `"raw_copy_v101_f_dm"` に変える。ほかの行は触らない。
+1. `backend/app/services/line_analysis_v102_svc.py:95` を `"v102-f_dm"` に、:97 を `"raw_copy_v101_f_dm"` に変える。ほかの行は触らない。
 2. 次のファイルの固定値を f_ct から f_dm に替える。行は review1 の観点2の表のとおりで、#4128 の差分と1対1になる（行番号は origin/main 77b40a1ae。d7924ae70 からは prompt_ab.py と test_prompt_ab.py だけがずれた。recon7.txt）。
    - `backend/app/tools/prompt_ab.py:15,626`
    - `backend/tests/test_line_analysis_v102_pg.py:115`
@@ -47,7 +47,7 @@
    - :19 の「既定は f_ct」を f_dm に直す。
    - :39 は #4128 の履歴の行なので書き換えない。その下に、f_dm への切り替えの行を1行足す。行に書く sha256（64桁）は switch/recon7/4c_out.txt の id=397 の行から写す。
    - :39 の下に足す1行の中に、測定の宿題（§4。fetch_snapshot.py の絞り方を、次の正答率の測定の前に見直す）を書き添える。README の §4 は PO の判断の表なので、そこには書かない。足す1行には `v102-f_ct` と `raw_copy_v101_f_ct` の文字を書かない（§10-3 の grep で、残ってよい行の外に数えられないようにする）。この書き添えは #4128 の差分には無い追加なので、recon.md の対応表に「1対1の外の追加」と書く。
-   - `docs/handoff/v102-prompt-fdm/recon.md` と `design.md` を新しく作る。design.md には、この switch/design.md の §1（|基準|検証方法| の表）・§3・§4・§6・§7 と、§8 の外部事例欄、ADR を探した結果（ADR-1003、ADR-136-cc-bot-github-identity.md、ADR-135）を写す。仕入元の名前と投稿の本文は書かない。
+   - `docs/handoff/v102-prompt-fdm/recon.md` と `docs/handoff/v102-prompt-fdm/design.md` を新しく作る。design.md には、この switch/design.md の §1（|基準|検証方法| の表）・§3・§4・§6・§7 と、§8 の外部事例欄、ADR を探した結果（ADR-1003、ADR-136-cc-bot-github-identity.md、ADR-135）を写す。仕入元の名前と投稿の本文は書かない。
 4. 触らないもの:
    - DB
    - migrations/
@@ -137,10 +137,11 @@
 - 切り替えている間に f_dm で読んだ件は、戻しても書き換えない。必要になったら、別の便で読み直しを検討する。
 - 戻したあとに人の訂正や再解析をすると、f_dm で抽出した件も engine_version が v102-f_ct に付け替わる（svc:776,:1168）。どちらの指示書で抽出したかは、prompt_version で見分ける。
 
-## 8. 外部事例
+## 8. 外部・過去事例の参照と我々への応用
 採用しない。判断の根拠は、自社の試験（同じ157投稿を2回）と、同じ形で切り替えた #4128 の実績で足りる。外の事例は、この指示書の文面に当てはまらない。
 
 
 ## 維持の仕組み
+- 守り手: Opus（反映後の見張りの時刻決めと判定）と担当（Sonnet・読み取り鍵で数える）
 - 反映後の見張り（§7 の F1〜F3、§1 の S2〜S4）は Opus が時刻を決め、担当（Sonnet）が読み取り鍵で数える。SQL と生出力はリポジトリ外の作業記録 switch/post/ に置く。
 - 次に正答率を測る前に fetch_snapshot.py の絞り方を見直す宿題（§4）は、docs/specs/line-analysis-tuning/README.md の f_dm の行に書き添えて残す。
