@@ -89,9 +89,18 @@ function normalizeSqlText(text) {
 function sqlTextHasDestructiveStatement(text) {
   const sql = normalizeSqlText(text);
   if (/\bDROP\s+(TABLE|COLUMN|SCHEMA|DATABASE)\b/i.test(sql)) return true;
-  // TRUNCATE と DELETE は文の始め（先頭または ; の直後）にあるものだけを当てる
-  if (/(?:^|;)\s*TRUNCATE\b/i.test(sql)) return true;
+  // TRUNCATE と DELETE は文の始め（先頭・; の直後・引用符や開きかっこの直後）にあるものだけを当てる
+  if (/(?:^|[;'"(])\s*TRUNCATE\b/i.test(sql)) return true;
+  // 先頭または ; の直後: 次の ; まで
   for (const m of sql.matchAll(/(?:^|;)\s*DELETE\s+FROM\b[^;]*/gi)) {
+    if (!/\bWHERE\b/i.test(m[0])) return true;
+  }
+  // 引用符の直後: 同じ引用符が閉じるまで（または ; まで）
+  for (const m of sql.matchAll(/(['"])\s*DELETE\s+FROM\b(?:(?!\1)[^;])*/gi)) {
+    if (!/\bWHERE\b/i.test(m[0])) return true;
+  }
+  // 開きかっこの直後: 次の ; まで
+  for (const m of sql.matchAll(/\(\s*DELETE\s+FROM\b[^;]*/gi)) {
     if (!/\bWHERE\b/i.test(m[0])) return true;
   }
   return false;

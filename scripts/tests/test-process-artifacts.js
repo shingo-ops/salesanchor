@@ -540,7 +540,11 @@ const R6A_MIGRATION_CASES = [
   ['○ 後ろの文にだけ WHERE がある（前の DELETE は無条件）', 'migrations/001_k.sql', 'DELETE FROM a; DELETE FROM b WHERE x = 1;\n', true],
   ['○ scripts/migrate_*.py の中の表削除', 'scripts/migrate_zz_test.py', 'cur.execute("DROP TABLE old_t")\n', true],
   ['○ scripts/run_all_migrations.sh の中の表削除', 'scripts/run_all_migrations.sh', 'psql -c "DROP TABLE old_t"\n', true],
+  ['○ migrate_*.py の execute("TRUNCATE x")', 'scripts/migrate_zz_q1.py', 'cur.execute("TRUNCATE x")\n', true],
+  ["○ migrate_*.py の execute('DELETE FROM x')（WHERE なし）", 'scripts/migrate_zz_q2.py', "cur.execute('DELETE FROM x')\ncur.execute('SELECT 1 WHERE a')\n", true],
   // × 見分けない
+  ['× migrate_*.py の execute("DELETE FROM x WHERE id=1")', 'scripts/migrate_zz_q3.py', 'cur.execute("DELETE FROM x WHERE id=1")\n', false],
+  ['× 引用符つきの表名で WHERE のある DELETE', 'scripts/migrate_zz_q4.py', 'cur.execute(\'DELETE FROM "x" WHERE id=1\')\n', false],
   ['× 通常の CREATE', 'migrations/002_a.sql', 'CREATE TABLE t (id int);\n', false],
   ['× WHERE のある DELETE', 'migrations/002_b.sql', 'DELETE FROM leads WHERE id = 1;\n', false],
   ['× 複数行で WHERE のある DELETE', 'migrations/002_c.sql', 'DELETE FROM leads\n  USING x\n  WHERE leads.id = x.id;\n', false],
