@@ -15,7 +15,7 @@
 | ブランチ運用（develop 廃止後の開発環境） | [branch-operations/README.md](branch-operations/README.md) | 公開 | ブランチ・作業場所の作り方、PR・マージの手順を変える前 |
 | reaper 自動掃除（worktree の自動回収） | [reaper-auto-cleanup/README.md](reaper-auto-cleanup/README.md) | あるべき姿・KGI・recon・design済 2026-07-22 | 作業場所の自動回収を変える前 |
 | AI向け指示文書の「入口→目次→章→末端ページ」化（doc-agenda-nav。会話のたびに読む文書を短い入口だけにし、手順書は目次からたどって必要なときだけ読む） | [doc-agenda-nav/README.md](doc-agenda-nav/README.md) | 完了・KGI 全項目合格（2026-10-26・#4772）・ADR-1040・段1b #4775 | AI 向け指示文書の入口・目次を変える前 |
-| 決まりを機械の検査に変える（rule-enforcement。誰が作業しても決まり違反の変更が main に入らず本番に出ないように、決まりを台帳で仕分け、必須チェック・違反の見本・提出前の検査で守る） | [rule-enforcement/README.md](rule-enforcement/README.md) | KGI G1〜G5 PO 承認 2026-10-27・recon・design（審査5回目 APPROVE・#4815）・R0 調査完了（recon §12）・R0.5 以降未着手 | 決まりの文書・必須チェック・提出前の検査を変える前 |
+| 決まりを機械の検査に変える（rule-enforcement。誰が作業しても決まり違反の変更が main に入らず本番に出ないように、決まりを台帳で仕分け、必須チェック・違反の見本・提出前の検査で守る） | [rule-enforcement/README.md](rule-enforcement/README.md) | KGI G1〜G5 PO 承認 2026-10-27・recon・design（審査5回目 APPROVE・#4815）・R0 調査完了（recon §12）・R1a 台帳と検査を警告で開始（ADR-1046 Proposed）・R0.5 以降未着手 | 決まりの文書・必須チェック・提出前の検査を変える前 |
 | 文書の親子構造 標準ルール化 | doc-parent-child/README.md (doc-parent-child/README.md) | 公開 | 表紙と子文書の親子をつくる・並べ替える前 |
 | 商品マスタ | [product-master/README.md](product-master/README.md) | 公開 | 商品マスタの項目・登録・照合を変える前 |
 | 設計パートナー長期安定体制（循環の形） | [design-partner-loop/README.md](design-partner-loop/README.md) | 公開 | 設計の担当の進め方を変える前 |

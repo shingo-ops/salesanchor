@@ -125,6 +125,11 @@ const DANGEROUS_PATTERNS = [
   /^backend\/app\/ops\//,
   /^docker-compose\.ai-reader\.yml$/,
   /^docker-compose\.ai-reader-http\.yml$/,  // ADR-1042 クラウド読み取り窓口
+  // ADR-1046 決まり台帳と、その検査の入力（変更に GO 記録を要求）
+  /^docs\/specs\/rule-enforcement\/rules\.yml$/,
+  /^docs\/specs\/rule-enforcement\/rule-docs\.txt$/,
+  /^docs\/specs\/rule-enforcement\/required-checks\.txt$/,
+  /^docs\/specs\/rule-enforcement\/prod-secrets\.txt$/,
 ];
 
 const REAL_CODE_PATTERNS = [
