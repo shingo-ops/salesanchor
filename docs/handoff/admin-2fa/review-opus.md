@@ -6,7 +6,7 @@
 
 **日付**: 2026-10-27
 **審査した人**: 設計パートナー（Opus・Architect 役。設計者と同一 AI）
-**判定**: 第1版 APPROVE（自己審査）→ 別に起動した Opus の審査役が REQUEST_CHANGES（2026-10-28）→ 第2版で全12点に対処（§5）→ 再審査も REQUEST_CHANGES（必須7・任意7）→ 第3版で対処し、再審査待ち（§6）。どの判定も PO の実装承認・GO を兼ねない。
+**判定**: 第1版 APPROVE（自己審査）→ 別に起動した Opus の審査役が REQUEST_CHANGES（2026-10-28）→ 第2版で全12点に対処（§5）→ 再審査も REQUEST_CHANGES（必須7・任意7）→ 第3版で対処（§6）→ 3回目の審査も REQUEST_CHANGES（必須5・任意9）→ 第4版で対処し、再審査待ち（§7）。どの判定も PO の実装承認・GO を兼ねない。
 
 ## 1. 照合した事実（origin/main・2026-10-27 fetch 後）
 
@@ -87,7 +87,7 @@
 | 2 | 必須 | Firebase の道で会社の権限を引けない | search_path を立てるのは get_current_tenant（:300-302）だけ。get_user_system_keys（:547-552）はそれが前提 | design §3-1: set_tenant_context → get_user_system_keys → clear_tenant_context。super admin は DB を引かない。例外なら管理者扱い |
 | 3 | 必須 | トークンを出す口が漏れている | login（auth.py:238-316）・refresh（:319-347）のほかに、本件で6桁・承認待ち・パスキーの口が増える | design §3-2: 口を5つ書き、全部が共通の関数を通る。ログ行に via |
 | 4 | 必須 | cookie の path が決まっていない | refresh の cookie は /api/v1/auth（self_tokens.py:26） | design §3-4: 口を /api/v1/auth/2fa/ の下に置き、cookie 3種の path と読む口を表にした |
-| 5 | 必須 | 6桁の試行の上限に穴がある | 止まっているかは入口だけで見る（auth.py:264）。外れで record_auth_failure を呼ぶのはパスワードだけ（:249・:289） | design §3-3: 券は1人1枚、6桁の口でも locked_until を見る、外れで record_auth_failure(ip) |
+| 5 | 必須 | 6桁の試行の上限に穴がある | 止まっているかは入口だけで見る（auth.py:264）。外れで record_auth_failure を呼ぶのはパスワードだけ（:266・:289。:249 は check_auth_rate_limit。第4版で直した） | design §3-3: 券は1人1枚、6桁の口でも locked_until を見る、外れで record_auth_failure(ip) |
 | 6 | 必須 | K4 の数え方がパスキーも数えてしまう | — | design §2 K4: amr=pwd+otp かつ device=new に絞る。パスキーは device=- |
 | 7 | 必須 | 止めた2人の台本の sha256 が記録と合わない | 今の版 69f3ebf0…、実行した版 58983715…（差は2行目の注記） | deactivate-7-9/README.md に両方を書いた |
 | 任1 | 任意 | role 列を未確認と書いている | run-log.txt:4 の列名に role がある | recon.md:22 を直した |
@@ -99,3 +99,24 @@
 | 任7 | 任意 | 試験用の自動ログインの利用者 | — | design §5: 7d の前に qa-admin が管理者に当たらないことを読み取りで確かめる。失効の対象は §3-1 の判定で選ぶ |
 
 あわせて §9 に試験6つを足した（enroll は2回目も 403、自社トークンの管理者は2回目も通る、パスキーの組の refresh、Firebase で判定失敗なら 401、止めた後の券、券は1人1枚）。
+
+## 7. 第4版（2026-10-28）— 3回目の審査役の指摘と対処
+
+指摘は origin/main の実物で確かめてから直した。行番号の食い違いは2件（下の任意4・任意9）、公開してはいけない情報は0件という報告だった。
+
+| # | 区分 | 指摘 | 実物の確認 | 対処 |
+|---|---|---|---|---|
+| 1 | 必須 | 必須化の設定が変えるものが、表・refresh・二重の守り・7b の行で食い違う | design の表と refresh の 401・二重の守りの 403・7b の「判定せず記録だけ」が合わない | design §3-2: refresh は表と同じ共通の判定。二重の守りは必須化の後だけ。§5 の 7b: false の間も判定とログを行う。ADR の守り方も合わせた |
+| 2 | 必須 | IP の制限を「今と同じ」と誤って書いた | dependencies.py:201 はキャッシュに当たらない自社トークンも通る。振り分けは :207-209 | design §3-2: 意図した動きの変更として理由3つを書き、§9 に試験 |
+| 3 | 必須 | 出す口で判定が例外のとき、rollback で使い回し防止や組の入れ替えが消える | rotate_refresh_token は self_tokens.py:195-236 で書き込む | design §3-1: 出す口では書き込みの前に判定し、例外なら 503 でトークンを出さない。Firebase の道は 401 |
+| 4 | 必須 | 同時に送ると6桁を3回より多く試せる | 試行回数の減らし方が決まっていない | design §3-3: 照合の前に Redis の DECR で減らす。1人1枚は「今の券の id」1つで照合 |
+| 5 | 必須 | 待ちの画面の問い合わせが nginx の回数制限に当たる | nginx/nginx.conf:6（IP ごとに1分10回）・:144-146・:406-408（burst=5） | design §3-5 の7: 15秒ごと、いつもの機器は知らせを受けたときだけ。2台で1分8回。nginx は変えない |
+| 任1 | 任意 | パスキーの口にいつもの機器の cookie が届かない | path が /api/v1/auth/2fa | design §3-4: パスキーの後に画面が「この機器を登録」の口を1回呼ぶ |
+| 任2 | 任意 | require_super_admin を直接呼ぶ所がある | backend/app/routers/realtime_events.py:31 | design §3-2 と §5 の 7b に入れた |
+| 任3 | 任意 | users を引く回数 | dependencies.py:93-98 と :105 の2回 | design §3-2 を直した |
+| 任4 | 任意 | record_auth_failure の行番号 | auth.py:249 は check_auth_rate_limit。record_auth_failure は :266・:289 | 本書 §6 の表を直した |
+| 任5 | 任意 | 6桁の口の入口の IP の確認と、再確認の口の上限 | — | design §3-3 に書いた |
+| 任6 | 任意 | enroll の照合のしかたと request の渡し方 | :82 は request を受け取らない | design §3-2: ルートのひな形で照合、get_current_user から渡す |
+| 任7 | 任意 | K2 の「切替」がどれか | — | design §2 K2: 7d の後は毎週0。7d の前は設定済みの管理者について0 |
+| 任8 | 任意 | Firebase の道でキャッシュに当たったときの負荷 | :330・:414 の中の SET | design §3-2 に書き足した |
+| 任9 | 任意 | 金型の作り方の行の範囲 | CC_UI_GOVERNANCE.md:15 が作り方 | design §3-7 を :13-15 に |
