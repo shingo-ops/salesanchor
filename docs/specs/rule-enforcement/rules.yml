@@ -16,7 +16,7 @@ rules:
     source: AGENTS.md
     anchor: "`shingo-ops` 名義でのコード変更PR作成は禁止"
     kind: review
-    reason: "gate候補（R6）: shingo-ops 名義のコード変更 PR は check-process-artifacts.js:814-819 が止めるが、CI で動く .github/scripts/*.sh は DOCS_PATTERNS（:94 の /^\\.github\\/(?!workflows\\/)/）で書類に分けられ、そのファイルだけの PR は :774 で全部の検査が飛ぶ（審査役の実測 probe.txt、rc=0）。決まりの文書（AGENTS.md:33）はこれを対象外にしていない。PR 作者の取得に失敗すると :809-810 で警告だけで通る。gh auth status での名義確認は PR の外"
+    reason: "gate候補（R6）: shingo-ops 名義のコード変更 PR は check-process-artifacts.js:814-819 が止めるが、CI で動く .github/scripts/*.sh は DOCS_PATTERNS（:100 の /^\\.github\\/(?!workflows\\/)/）で書類に分けられ、そのファイルだけの PR は :774 で全部の検査が飛ぶ（審査役の実測 probe.txt、rc=0）。決まりの文書（AGENTS.md:33）はこれを対象外にしていない。PR 作者の取得に失敗すると :809-810 で警告だけで通る。gh auth status での名義確認は PR の外"
   - id: A13
     source: AGENTS.md
     anchor: "を含む PR は PO の「GO #PR番号」まで main にマージしない"
@@ -25,12 +25,12 @@ rules:
     when: ci
     fixture: ""
     evidence: "R2 で見本を置く"
-    reason: "migrations/・deploy.yml・本番 scripts/ を含む PR の GO 記録の有無は check-process-artifacts.js:925-931 が止める（危険パスは :115-134）。危険パスを含む PR は書類だけの PR にならないので :774 の飛びは当たらない。本番 scripts/ の範囲は ADR-135 が /^scripts\\// と決めている（ADR-135:41。backend/scripts/ は含まない。DANGEROUS_PATTERNS は check-process-artifacts.js:117）。develop→main の PR を丸ごと飛ばす条件（check-process-artifacts.js:747-750）は妨げない: develop の ruleset 16619490（enforcement active）は required_status_checks に process-artifacts gate を含むので、develop に入る変更はその時点で同じ検査を通る。新規作業での develop の使用は branch-operations/README.md:97 が禁止している。「まで main にマージしない」という順序そのものは PR の外"
+    reason: "migrations/・deploy.yml・本番 scripts/ を含む PR の GO 記録の有無は check-process-artifacts.js:925-931 が止める（危険パスは :115-133）。危険パスを含む PR は書類だけの PR にならないので :774 の飛びは当たらない。本番 scripts/ の範囲は ADR-135 が /^scripts\\// と決めている（ADR-135:41。backend/scripts/ は含まない。DANGEROUS_PATTERNS は check-process-artifacts.js:117）。develop→main の PR を丸ごと飛ばす条件（check-process-artifacts.js:747-750）は妨げない: develop の ruleset 16619490（enforcement active）は required_status_checks に process-artifacts gate を含むので、develop に入る変更はその時点で同じ検査を通る。新規作業での develop の使用は branch-operations/README.md:97 が禁止している。「まで main にマージしない」という順序そのものは PR の外"
   - id: S02
     source: docs/STANDARD-WORKFLOW.md
     anchor: "**recon証拠**：実コードへの **file:line 引用**を含み、その引用先が**実在する**こと"
     kind: review
-    reason: "gate候補（R6）: recon の file:line 引用と実在の検査は check-process-artifacts.js:685-690（本検査）が行うが、危険な場所（STANDARD-WORKFLOW.md・scripts/・migrations/ など :115-134）を触る PR は :943 でその手前で終わり recon を見ない。決まり（STANDARD-WORKFLOW.md:80-85、:129-132）は危険変更の PR も対象にしている。自律クラフト免除（:976-978）は同 :139 が認め、書類だけの PR（:774）は同 :137 が対象外にしているので妨げない"
+    reason: "gate候補（R6）: recon の file:line 引用と実在の検査は check-process-artifacts.js:685-690（本検査）が行うが、危険な場所（STANDARD-WORKFLOW.md・scripts/・migrations/ など :115-133）を触る PR は :943 でその手前で終わり recon を見ない。決まり（STANDARD-WORKFLOW.md:80-85、:129-132）は危険変更の PR も対象にしている。自律クラフト免除（:976-978）は同 :139 が認め、書類だけの PR（:774）は同 :137 が対象外にしているので妨げない"
   - id: S03
     source: docs/STANDARD-WORKFLOW.md
     anchor: "**Phase 3 設計**：各受け入れ基準に**検証方法（テスト/ゲート/Evaluator）のリンク**があること"
@@ -49,7 +49,7 @@ rules:
     when: ci
     fixture: ""
     evidence: "R2 で見本を置く"
-    reason: "migrations/・deploy.yml・本番 scripts/ を含む実装の GO 記録の有無は check-process-artifacts.js:925-931 が止める（危険パスは :115-134）。危険パスを含む PR は書類だけの PR にならないので :774 の飛びは当たらない。本番 scripts/ の範囲は ADR-135 が /^scripts\\// と決めている（ADR-135:41。backend/scripts/ は含まない。DANGEROUS_PATTERNS は check-process-artifacts.js:117）。develop→main の PR を丸ごと飛ばす条件（check-process-artifacts.js:747-750）は妨げない: develop の ruleset 16619490（enforcement active）は required_status_checks に process-artifacts gate を含むので、develop に入る変更はその時点で同じ検査を通る。新規作業での develop の使用は branch-operations/README.md:97 が禁止している。release ブランチで待つ順序そのものは PR の外（登録済みA13と同じ検査で、行が別）"
+    reason: "migrations/・deploy.yml・本番 scripts/ を含む実装の GO 記録の有無は check-process-artifacts.js:925-931 が止める（危険パスは :115-133）。危険パスを含む PR は書類だけの PR にならないので :774 の飛びは当たらない。本番 scripts/ の範囲は ADR-135 が /^scripts\\// と決めている（ADR-135:41。backend/scripts/ は含まない。DANGEROUS_PATTERNS は check-process-artifacts.js:117）。develop→main の PR を丸ごと飛ばす条件（check-process-artifacts.js:747-750）は妨げない: develop の ruleset 16619490（enforcement active）は required_status_checks に process-artifacts gate を含むので、develop に入る変更はその時点で同じ検査を通る。新規作業での develop の使用は branch-operations/README.md:97 が禁止している。release ブランチで待つ順序そのものは PR の外（登録済みA13と同じ検査で、行が別）"
   - id: F01
     source: frontend/AGENTS.md
     anchor: "ページタイトル・サブタイトルは必ず"
@@ -284,7 +284,7 @@ rules:
     source: docs/STANDARD-WORKFLOW.md
     anchor: "- PR本文: `### 標準ワークフロー確認` セクション必須。"
     kind: review
-    reason: "gate候補（R6）: PR本文に「### 標準ワークフロー確認」セクション必須: 欠落は PR番号2600以上で check-process-artifacts.js:861-863 が止める（:861 は :943 より前なので危険変更でも止まる）。しかし CI で動く .github/scripts/*.sh は DOCS_PATTERNS（:94 の /^\\.github\\/(?!workflows\\/)/）で書類に分けられ、そのファイルだけの PR は :774 で全部の検査が飛ぶ（probe.txt、rc=0）。決まりの文書（STANDARD-WORKFLOW.md:137）はこれを対象外にしていない。PR番号2600未満の猶予（:855）は新しい PR には当たらない"
+    reason: "gate候補（R6）: PR本文に「### 標準ワークフロー確認」セクション必須: 欠落は PR番号2600以上で check-process-artifacts.js:861-863 が止める（:861 は :943 より前なので危険変更でも止まる）。しかし CI で動く .github/scripts/*.sh は DOCS_PATTERNS（:100 の /^\\.github\\/(?!workflows\\/)/）で書類に分けられ、そのファイルだけの PR は :774 で全部の検査が飛ぶ（probe.txt、rc=0）。決まりの文書（STANDARD-WORKFLOW.md:137）はこれを対象外にしていない。PR番号2600未満の猶予（:855）は新しい PR には当たらない"
   - id: S044
     source: docs/STANDARD-WORKFLOW.md
     anchor: "- recon.md と design.md は必ず git add してからコ"
@@ -298,7 +298,7 @@ rules:
     when: ci
     fixture: ""
     evidence: "R2 で見本を置く"
-    reason: "ユーザー影響変更（frontend/src/・backend/app/routers/ 等）は本番前にGO記録が必須: check-process-artifacts.js:946-962 が止める。これらを含む PR は書類だけの PR（:774）にならない。develop→main の PR を丸ごと飛ばす条件（check-process-artifacts.js:747-750）は妨げない: develop の ruleset 16619490（enforcement active）は required_status_checks に process-artifacts gate を含むので、develop に入る変更はその時点で同じ検査を通る。新規作業での develop の使用は branch-operations/README.md:97 が禁止している"
+    reason: "ユーザー影響変更（frontend/src/・backend/app/routers/ 等）は本番前にGO記録が必須: check-process-artifacts.js:946-962 が止める。これらを含む PR は書類だけの PR（:774）にならない。ただし frontend/src・backend/app/routers の下の .md だけの PR は :774 で飛ぶが、.md は画面や API の動きに関わらない（読み込む箇所0件、審査役 grep）ので妨げない。develop→main の PR を丸ごと飛ばす条件（check-process-artifacts.js:747-750）は妨げない: develop の ruleset 16619490（enforcement active）は required_status_checks に process-artifacts gate を含むので、develop に入る変更はその時点で同じ検査を通る。新規作業での develop の使用は branch-operations/README.md:97 が禁止している"
   - id: S046
     source: docs/STANDARD-WORKFLOW.md
     anchor: "- **人の動作確認の当面の確認環境**は本番のみ。確認は tenant_001"
