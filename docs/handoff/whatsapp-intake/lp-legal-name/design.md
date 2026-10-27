@@ -22,7 +22,7 @@ frontend/、backend、noindex/robots、電話番号、メールアドレス、�
 |既存の英語表記・電話・メールが消えていない|git diff で削除行が代表者名行のみ・電話/メール行に差分なし|
 |LP 以外に差分がない|git diff main...HEAD --name-only が lp/ と docs/handoff/whatsapp-intake/lp-legal-name/ のみ|
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 事例調査 /tmp/CC報告ファイル/wa-verify-cases/report.md：名前を書類・Meta・サイトで同一にすることを約10件の解説が通過要因に挙げる。
 
 ## 戻し方
