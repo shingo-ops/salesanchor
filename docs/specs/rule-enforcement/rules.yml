@@ -1,0 +1,144 @@
+# 決まり台帳（正本）。書式と検査: docs/handoff/rule-enforcement/design.md §5 R1、検査 scripts/ci/check_rule_registry.py
+# R1a の初回: recon §4 で「止める」となっている決まりのうち、止めている必須チェックが required-checks.txt にあるものだけを gate で入れた。
+# それ以外の行は仕分けしていない（検査が「未仕分け」として数える）。review・exempt・not_rules への振り分けは設計担当が行う。
+# 決まりの語の一覧（下の words）・rule-docs.txt・この台帳の変更は GO 記録の要る対象（scripts/check-process-artifacts.js）。
+words: 禁止|必ず|必須|厳禁|してはならない|しない|すること|MUST|NEVER
+
+rules:
+  - id: A09
+    source: AGENTS.md
+    anchor: "`shingo-ops` 名義でのコード変更PR作成は禁止"
+    kind: gate
+    check: "process-artifacts gate"
+    when: ci
+    fixture: ""
+    evidence: "R2 で見本を置く"
+    reason: ""
+  - id: A13
+    source: AGENTS.md
+    anchor: "を含む PR は PO の「GO #PR番号」まで main にマージしない"
+    kind: gate
+    check: "process-artifacts gate"
+    when: ci
+    fixture: ""
+    evidence: "R2 で見本を置く"
+    reason: ""
+  - id: S02
+    source: docs/STANDARD-WORKFLOW.md
+    anchor: "**recon証拠**：実コードへの **file:line 引用**を含み、その引用先が**実在する**こと"
+    kind: gate
+    check: "process-artifacts gate"
+    when: ci
+    fixture: ""
+    evidence: "R2 で見本を置く"
+    reason: ""
+  - id: S03
+    source: docs/STANDARD-WORKFLOW.md
+    anchor: "**Phase 3 設計**：各受け入れ基準に**検証方法（テスト/ゲート/Evaluator）のリンク**があること"
+    kind: gate
+    check: "process-artifacts gate"
+    when: ci
+    fixture: ""
+    evidence: "R2 で見本を置く"
+    reason: ""
+  - id: S08
+    source: docs/STANDARD-WORKFLOW.md
+    anchor: "新しい手順書・仕様書は docs/INDEX.md か docs/specs/README.md に『いつ読むか』付きで1行足す"
+    kind: gate
+    check: "doc index reachability"
+    when: ci
+    fixture: ""
+    evidence: "R2 で見本を置く"
+    reason: ""
+  - id: S10
+    source: docs/STANDARD-WORKFLOW.md
+    anchor: "を含む実装は、GO（PO、または ADR-1003 に基づく Opus の委任 GO）が出るまで release ブランチで待機し main にマージしない"
+    kind: gate
+    check: "process-artifacts gate"
+    when: ci
+    fixture: ""
+    evidence: "R2 で見本を置く"
+    reason: ""
+  - id: F01
+    source: frontend/AGENTS.md
+    anchor: "ページタイトル・サブタイトルは必ず"
+    kind: gate
+    check: "Lint & Dark Mode Check (ADR-067)"
+    when: ci
+    fixture: ""
+    evidence: "R2 で見本を置く"
+    reason: ""
+  - id: F03
+    source: frontend/AGENTS.md
+    anchor: "ページ右上ボタンは必ず `headerAction` プロップ経由"
+    kind: gate
+    check: "Lint & Dark Mode Check (ADR-067)"
+    when: ci
+    fixture: ""
+    evidence: "R2 で見本を置く"
+    reason: ""
+  - id: F07
+    source: frontend/AGENTS.md
+    anchor: "UI部品新設時は必ず `components/` の金型を先確認"
+    kind: gate
+    check: "UI governance gate"
+    when: ci
+    fixture: ""
+    evidence: "R2 で見本を置く"
+    reason: ""
+  - id: F08
+    source: frontend/AGENTS.md
+    anchor: "は必ず `:root` と `:root.force-dark` の両方に追加"
+    kind: gate
+    check: "Lint & Dark Mode Check (ADR-067)"
+    when: ci
+    fixture: ""
+    evidence: "R2 で見本を置く"
+    reason: ""
+  - id: F11
+    source: frontend/AGENTS.md
+    anchor: "`lucide-react` からの直接 import は ESLint が禁止する"
+    kind: gate
+    check: "Lint & Dark Mode Check (ADR-067)"
+    when: ci
+    fixture: ""
+    evidence: "R2 で見本を置く"
+    reason: ""
+  - id: K01
+    source: backend/AGENTS.md
+    anchor: "`db.commit()` 直後に `reset_tenant_context()` 必須"
+    kind: gate
+    check: "ADR-072 tenant schema lint (strict mode)"
+    when: ci
+    fixture: ""
+    evidence: "R2 で見本を置く"
+    reason: ""
+  - id: K06
+    source: backend/AGENTS.md
+    anchor: "**ファイル命名規則（101番以降）**"
+    kind: gate
+    check: "models.py に新 Column → deploy.yml にマイグレーション追記必須"
+    when: ci
+    fixture: ""
+    evidence: "R2 で見本を置く"
+    reason: ""
+  - id: K07
+    source: backend/AGENTS.md
+    anchor: "**`deploy.yml` 登録必須**"
+    kind: gate
+    check: "models.py に新 Column → deploy.yml にマイグレーション追記必須"
+    when: ci
+    fixture: ""
+    evidence: "R2 で見本を置く"
+    reason: ""
+  - id: K11
+    source: backend/AGENTS.md
+    anchor: "**`{schema}` プレースホルダは絶対使用禁止**"
+    kind: gate
+    check: "models.py に新 Column → deploy.yml にマイグレーション追記必須"
+    when: ci
+    fixture: ""
+    evidence: "R2 で見本を置く"
+    reason: ""
+
+not_rules: []
