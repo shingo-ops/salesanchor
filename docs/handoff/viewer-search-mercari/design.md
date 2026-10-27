@@ -111,7 +111,7 @@ headerContent?: ReactNode;
 | 見出しの文字 | `--font-md`（16px 相当の既存トークンを採る） | お手本 19.7dp箱 ÷1.2 ≒ 16.4dp |
 
 **虫眼鏡のアイコンは `frontend/src/constants/icons-base.tsx` に1行足す**（いまは `X` だけ・`MagnifyingGlass` は
-`icons.tsx` 側にあり閲覧ページからは読めない）。JS は数百バイト増。
+`frontend/src/constants/icons.tsx` 側にあり閲覧ページからは読めない）。JS は数百バイト増。
 
 ### 4-6. 触らないもの（この便の境界）
 
@@ -139,15 +139,15 @@ headerContent?: ReactNode;
 | B9 | **PC(1280px) は打つたびに件数が変わり**、検索画面は開かない | 画面検査（**直す前も緑**＝退行防止） |
 | B10 | 一覧の先頭カードの y が **132px 以内のまま** | CI（既存3本の `MAX_TOP_Y`） |
 | B11 | 閲覧ページ JS が 300KB 以下 | CI |
-| U1 | 履歴: 新しい順・重複なし・最大10件 | 単体（`recentSearches.test.ts` 新規） |
+| U1 | 履歴: 新しい順・重複なし・最大10件 | 単体（`frontend/src/pages/viewer/recentSearches.test.ts` 新規） |
 | U2 | `localStorage` が使えないとき**空配列**を返し、例外を投げない | 単体（`localStorage` を壊して確認） |
-| U3 | 既存 `InventoryView.test.tsx` の T6（503 のとき検索の文字が保たれる）が**確定した語で緑のまま** | 単体（既存・必要なら期待値を `appliedQuery` に合わせて直す） |
+| U3 | 既存 `frontend/src/pages/viewer/InventoryView.test.tsx` の T6（503 のとき検索の文字が保たれる）が**確定した語で緑のまま** | 単体（既存・必要なら期待値を `appliedQuery` に合わせて直す） |
 
 **空振り対策**: B1〜B3・B5・B7 は直す前が赤。**唯一「直す前も緑」は B9（PC）** なので、
 **PC で実際に1文字打って件数が変わることを測る**（見た目ではなく件数で測る）。
 
 **置き場**: `frontend/tests-e2e/visual-language/viewer-search-mercari.spec.ts`
-（`visual-language/` 配下でないと CI で1本も走らない）。疑似応答は既存の `viewer-helpers.ts` の `gotoViewer`。
+（`visual-language/` 配下でないと CI で1本も走らない）。疑似応答は既存の `frontend/tests-e2e/visual-language/viewer-helpers.ts` の `gotoViewer`。
 
 ## ⑥ 触るファイル
 
@@ -204,10 +204,10 @@ headerContent?: ReactNode;
 
 ## ⑪ 維持の仕組み
 
-守り手:
-- 新設する画面検査 viewer-search-mercari.spec.ts（CI の画面検査で毎 PR）— 48px・ピル・確定前は絞らない・札・履歴の行69px を機械で固定。
+守り手: `frontend/tests-e2e/visual-language/viewer-search-mercari.spec.ts` ・ `frontend/src/pages/viewer/recentSearches.test.ts`
+- 新設する画面検査 frontend/tests-e2e/visual-language/viewer-search-mercari.spec.ts（CI の画面検査で毎 PR）— 48px・ピル・確定前は絞らない・札・履歴の行69px を機械で固定。
 - `frontend/src/pages/viewer/recentSearches.test.ts`（`check:all` の単体）— 履歴の決まり（新しい順・重複なし・10件・壊れても落ちない）。
-- 既存 `viewer-control-tap-size.spec.ts` B4（48px）・`viewer-top-compact.spec.ts`（上部132px）— 退行を見る。
+- 既存 `frontend/tests-e2e/visual-language/viewer-control-tap-size.spec.ts` B4（48px）・`frontend/tests-e2e/visual-language/viewer-top-compact.spec.ts`（上部132px）— 退行を見る。
 - `frontend/scripts/check-new-tokens.js`（CI）— トークン追加の理由を PR 本文に残させる。
 
 ## ⑫ 継続（この便の後）
@@ -217,7 +217,7 @@ headerContent?: ReactNode;
 | H1 | **便12b＝候補の一覧**。打つと「最近使った語」が候補に入れ替わる。中身は手元の在庫（商品名・シリーズ・提供者）から作り、**件数も出せる**。お手本の寸法は同じ69px・2段の候補あり（主14.4px／副13.6px） |
 | H2 | **便12（絞り込みパネル）**: 札の横並び・行60.7dp・パネル幅83%。順番は PO 判断 |
 | H3 | アプリの在庫表へ横展開（ADR-1019 の線引きのとおり閲覧ページが固まってから） |
-| H4 | 便10 から持ち越しの **G1（シリーズ名の幅の優先順）**・**H6（`ViewerTemplatesPage.test.tsx` の後始末）** |
+| H4 | 便10 から持ち越しの **G1（シリーズ名の幅の優先順）**・**H6（`frontend/src/pages/super-admin/ViewerTemplatesPage.test.tsx` の後始末）** |
 
 ## 対象 ADR
 

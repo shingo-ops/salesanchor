@@ -100,9 +100,9 @@ const searchField = (
 ### 2-3. アイコン
 
 - `frontend/src/constants/icons-base.tsx:50` に **`X`（✕）はある**。
-- **虫眼鏡は無い**（`MagnifyingGlass` は `icons.tsx:145` にあるが、閲覧ページが読むのは `icons-base.tsx` のみ＝
-  `InventoryView.tsx:15` は `import { ChevronRight } from "../../constants/icons-base"`）。
-  **足すなら `icons-base.tsx` に1行**。閲覧ページ JS は 260.9KB／上限300KB（`frontend/scripts/check-viewer-bundle.js`）。
+- **虫眼鏡は無い**（`MagnifyingGlass` は `frontend/src/constants/icons.tsx:145` にあるが、閲覧ページが読むのは `frontend/src/constants/icons-base.tsx` のみ＝
+  `frontend/src/pages/viewer/InventoryView.tsx:15` は `import { ChevronRight } from "../../constants/icons-base"`）。
+  **足すなら `frontend/src/constants/icons-base.tsx` に1行**。閲覧ページ JS は 260.9KB／上限300KB（`frontend/scripts/check-viewer-bundle.js`）。
 
 ### 2-4. 右から出る画面の金型
 
