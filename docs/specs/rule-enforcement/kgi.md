@@ -4,7 +4,7 @@
 
 > この文書は何か: 決まりを機械の検査に変える取り組みの合格条件。PO が画面と記録で○×を判定できる形で書く。
 
-- 状態: G1〜G5 は PO 承認済み（2026-10-27 PO 原文「1」）。下の「PO 確認待ち」2 点は設計審査1回目（REVISE）で見つかった範囲の確認で、PO の返事を待つ
+- 状態: G1〜G5 は PO 承認済み（2026-10-27 PO 原文「1」）。下の「範囲の確認」2 点も PO 承認済み（2026-10-27 PO 原文「1」。選択肢「範囲を広げる」への返事）
 - 現在地: `docs/handoff/rule-enforcement/recon.md`
 - 設計: `docs/handoff/rule-enforcement/design.md`
 
@@ -18,7 +18,7 @@
 | G4 | 関所と同じ検査を提出の前にも自動で走らせ、わざと違反した変更が提出の前に「違反あり」と分かる | 台帳で「提出前に分かる」とした全項目で、違反の見本に提出前の検査が失敗を返す |
 | G5 | 新しい決まりを足すとき、仕分けを決めないと取り込めない | 決まりの文書に決まりの行を足し台帳を変えない試しの PR が BLOCKED |
 
-## PO 確認待ち（設計審査1回目で見つかった範囲の確認）
+## 範囲の確認（設計審査で見つかった範囲。2026-10-27 PO 承認「1」）
 
 1. 決まりの文書（G1 で数える範囲）: AGENTS.md、CLAUDE.md、frontend/AGENTS.md、backend/AGENTS.md、frontend/CLAUDE.md、backend/CLAUDE.md、docs/STANDARD-WORKFLOW.md、docs/ai-agents/ 配下の全 .md、docs/specs/branch-operations/README.md。ADR は数えない（理由: 日々の作業に効く決まりは上の文書に書き写す決まりで、ADR は経緯と理由の記録）
 2. 素通りの範囲（G3）: 「素通りできる立場」に、本番に触れる main 以外の道も数える

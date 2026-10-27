@@ -5,7 +5,7 @@
 > この文書は何か: 決まりを台帳で仕分け、main の必須チェック・違反の見本・提出前の検査で守るための実現の設計。
 
 - 状態: 設計案作成済み／設計審査1回目 REVISE・2回目 REVISE・3回目 REVISE・4回目 REVISE・5回目 APPROVE（指摘は反映済み §15）／PO 計画承認 未
-- 対象: 決まりの文書（kgi.md「PO 確認待ち」1 の範囲）、main の必須チェック、本番の鍵を使う GitHub の自動作業、本番の VPS と PO の Mac にある自前の実行機、提出前の検査の入口、週次点検
+- 対象: 決まりの文書（kgi.md「範囲の確認」1 の範囲）、main の必須チェック、本番の鍵を使う GitHub の自動作業、本番の VPS と PO の Mac にある自前の実行機、提出前の検査の入口、週次点検
 - KGI（PO 承認済み 2026-10-27「1」）: `docs/specs/rule-enforcement/kgi.md`
 - 現在地: `docs/handoff/rule-enforcement/recon.md`（起点 origin/main df81bce7d）
 - 対象 ADR: `docs/adr/ADR-136-cc-bot-github-identity.md`（Ruleset の承認数を使わず「記録＋検査スクリプト」で統制。本設計も踏襲）、`docs/adr/ADR-135-release-stowaway-prevention.md`（必須チェック登録・bypass_actors）、`docs/adr/ADR-1029-review-gate-hook.md`（マージ前審査。R3 で一部置き換える §5 R3）、`docs/adr/ADR-1040-doc-agenda-nav-entry-index.md`（段階導入）、`docs/adr/ADR-1003-go-delegation-to-opus.md`（Ruleset 変更は PO 本人）
@@ -81,7 +81,7 @@
 
 ### R1 決まり台帳と台帳の検査
 
-- 決まりの文書の一覧: `docs/specs/rule-enforcement/rule-docs.txt`（kgi.md「PO 確認待ち」1 で PO が確かめた一覧をそのまま書く。glob 可）
+- 決まりの文書の一覧: `docs/specs/rule-enforcement/rule-docs.txt`（kgi.md「範囲の確認」1 で PO が確かめた一覧をそのまま書く。glob 可）
 - 台帳: docs/specs/rule-enforcement/rules.yml
   ```yaml
   rules:
@@ -204,7 +204,7 @@ exempt の決まりで手元の hook が守っているもの（例: 不可逆�
 
 ## 9. 決めてほしいこと（PO）
 
-- D0（今）: kgi.md「PO 確認待ち」の 2 点（決まりの文書の範囲・素通りの範囲を main 以外の道に広げる）
+- D0（決定済み 2026-10-27 PO 原文「1」＝範囲を広げる）: kgi.md「範囲の確認」の 2 点（決まりの文書の範囲・素通りの範囲を main 以外の道に広げる）
 - D1: この計画で R0 から進めてよいか（設計審査の合格後に聞く）
 - D2（R0 の後）: 素通りできる立場が見つかったとき、①無くす ②本番障害の復旧用に残し、使ったら知らせる、のどちらにするか。リポジトリに書き込みのできる名義（人も自動作業の鍵も）は、別のブランチの自動作業から審査の印を付けられるので、これも素通りの道として一覧に入れて見せる（§5 R3 (a)）（ADR-135:65 は「残す」と記載。R3 の後は審査なしの緊急マージにも関わる）
 - D3（R0 の後）: PIPELINE_PAT（PO 名義・admin の鍵）の扱い。R0 で使い道を全部確かめ、権限を絞った別の鍵・別の名義・起動の種類を変える、の案を示して決める
