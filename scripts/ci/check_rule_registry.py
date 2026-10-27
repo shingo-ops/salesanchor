@@ -9,7 +9,7 @@
      どちらでもない行は「未仕分け」として件数と場所（file:line）を出して失敗にする。
   C2 anchor の実在: 全項目の anchor が source の文書に今も在る。
   C3 kind ごとの必須の欄: kind は gate / review / exempt。
-     gate は check・when と、fixture か evidence。review と exempt は reason が空でない。
+     gate は check・when と、fixture か evidence。review と exempt は reason が空でなく、check を持たない（gate 以外に check を書かない）。
   C4 gate の check が docs/specs/rule-enforcement/required-checks.txt にある。
   C5 1 行は 1 項目にしか属せない（重なりは失敗）。id の重複も失敗。
   C0 入力の不備（ファイルが無い・書式が読めない）。
@@ -248,6 +248,13 @@ def _s(v):
     return v if isinstance(v, str) else ""
 
 
+def _has_value(v):
+    """欄に値が書いてあるか（文字列でも一覧でも。空文字・空の一覧は無しとみなす）。"""
+    if isinstance(v, str):
+        return bool(v.strip())
+    return bool(v)
+
+
 def _anchors_of(item):
     """項目の anchor の一覧（anchor と anchors の両方を許す）。"""
     out = []
@@ -362,6 +369,9 @@ def run(root):
         elif kind in ("review", "exempt"):
             if not _s(item.get("reason")).strip():
                 findings.append(_f("C3", "error", RULES_FILE, ln, "%s: %s には reason（理由）が要る" % (label, kind)))
+            if _has_value(item.get("check")):
+                findings.append(_f("C3", "error", RULES_FILE, ln,
+                                   "%s: check を書いてよいのは gate だけ（%s には書かない。gate 候補は reason の先頭に「gate候補（R6）: 」と書く）" % (label, kind)))
         owners.append((("rule", idx), source, anchors, label, kind))
 
     for idx, item in enumerate(not_rules):

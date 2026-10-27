@@ -1,6 +1,13 @@
-# 決まり台帳（正本）。書式と検査: docs/handoff/rule-enforcement/design.md §5 R1、検査 scripts/ci/check_rule_registry.py
-# R1a の初回: recon §4 で「止める」となっている決まりのうち、止めている必須チェックが required-checks.txt にあるものだけを gate で入れた。
-# それ以外の行は仕分けしていない（検査が「未仕分け」として数える）。review・exempt・not_rules への振り分けは設計担当が行う。
+# 決まり台帳（正本）。書式と検査: docs/handoff/rule-enforcement/design.md §5 R1、検査 scripts/ci/check_rule_registry.py、決め方 docs/adr/ADR-1047-rule-registry.md
+# 決まりの語を含む行は、すべて下の rules か not_rules のどちらかに入れる（1 行は 1 項目だけ。check_rule_registry.py が数える）。
+# id: 文書の頭文字＋番号。A=AGENTS.md C=CLAUDE.md F=frontend/AGENTS.md K=backend/AGENTS.md S=STANDARD-WORKFLOW.md
+#     AE=aeon-routing AR=agent-roles CX=codex-operations PP=design-partner-preamble P=design-partner DC=dev-commands
+#     E=evidence-registry X=executor-checklist XP=executor-preamble KP=kpi L=lessons.d T=task-template B=branch-operations/README.md
+#     最初に登録した 15 件は 2 桁（A09 など）、R1b で足した項目は 3 桁（A012 など。番号は R1b の仕分け表の通し番号）。
+# kind: gate（機械が止める。check に必須チェックの名前）／review（人が見る）／exempt（PR に痕跡が残らない）。check を書いてよいのは gate だけ。
+#   review の reason が「gate候補（R6）: 」で始まる行は、機械で○×が決まるが今は止める必須チェックが無い行（R6 で必須チェックにする対象）。
+#   「gate候補（R3）: 」は R3 で PR 側の検査にする行。
+# anchor: 出典の 1 行にだけ当たる文字列（先頭の一部でよい）。
 # 決まりの語の一覧（下の words）・rule-docs.txt・この台帳の変更は GO 記録の要る対象（scripts/check-process-artifacts.js）。
 words: 禁止|必ず|必須|厳禁|してはならない|しない|すること|MUST|NEVER
 
@@ -8,137 +15,1341 @@ rules:
   - id: A09
     source: AGENTS.md
     anchor: "`shingo-ops` 名義でのコード変更PR作成は禁止"
-    kind: gate
-    check: "process-artifacts gate"
-    when: ci
-    fixture: ""
-    evidence: "R2 で見本を置く"
-    reason: ""
+    kind: review
+    reason: "gate候補（R6）: shingo-ops 名義のコード変更 PR は check-process-artifacts.js が止めるが、書類扱いの場所の判定に検査の台本が含まれ、その変更だけの PR では検査が飛ぶ（check-process-artifacts.js の書類判定）。決まりの文書（AGENTS.md:33）はこれを対象外にしていない。PR 作者の取得に失敗すると警告だけで通る。gh auth status での名義確認は PR の外"
   - id: A13
     source: AGENTS.md
     anchor: "を含む PR は PO の「GO #PR番号」まで main にマージしない"
-    kind: gate
-    check: "process-artifacts gate"
-    when: ci
-    fixture: ""
-    evidence: "R2 で見本を置く"
-    reason: ""
+    kind: review
+    reason: "gate候補（R6）: 出典の行が含む ADR-1003 の例外（PO 本人の GO が必須の7種。ADR-1003:35-41）のうち PR の中で確かめられる部分が、本人GO 判定（check-process-artifacts.js:84 の requiresPoOnlyGo）で一部しか止まらない（判定が見ない書き方がある）。migrations/・deploy.yml・本番 scripts/ を含む PR の GO 記録の有無は check-process-artifacts.js の危険パス判定が止める。develop→main の PR を丸ごと飛ばす条件は、develop 側の ruleset 16619490 が同じ検査を必須にしているので妨げない。「まで main にマージしない」という順序そのものは PR の外"
   - id: S02
     source: docs/STANDARD-WORKFLOW.md
     anchor: "**recon証拠**：実コードへの **file:line 引用**を含み、その引用先が**実在する**こと"
-    kind: gate
-    check: "process-artifacts gate"
-    when: ci
-    fixture: ""
-    evidence: "R2 で見本を置く"
-    reason: ""
+    kind: review
+    reason: "gate候補（R6）: recon の file:line 引用と実在の検査は check-process-artifacts.js の本検査が行うが、危険扱いの場所を触る PR は本検査の手前で終わり recon を見ない。決まり（STANDARD-WORKFLOW.md:80-85、:129-132）は危険変更の PR も対象にしている。自律クラフト免除は同 :139、書類だけの PR は同 :137 が対象外にしているので妨げない"
   - id: S03
     source: docs/STANDARD-WORKFLOW.md
     anchor: "**Phase 3 設計**：各受け入れ基準に**検証方法（テスト/ゲート/Evaluator）のリンク**があること"
-    kind: gate
-    check: "process-artifacts gate"
-    when: ci
-    fixture: ""
-    evidence: "R2 で見本を置く"
-    reason: ""
+    kind: review
+    reason: "gate候補（R6）: 設計doc の検証方法リンク・外部事例欄の検査は check-process-artifacts.js の validateDesignDoc（本検査）が行うが、危険扱いの場所を触る PR は本検査の手前で終わり設計doc を見ない。決まり（STANDARD-WORKFLOW.md:83、:129-132）は危険変更の PR も対象にしている。自律クラフト免除は同 :139、書類だけの PR は同 :137 が対象外にしているので妨げない"
   - id: S08
     source: docs/STANDARD-WORKFLOW.md
     anchor: "新しい手順書・仕様書は docs/INDEX.md か docs/specs/README.md に『いつ読むか』付きで1行足す"
-    kind: gate
-    check: "doc index reachability"
-    when: ci
-    fixture: ""
-    evidence: "R2 で見本を置く"
-    reason: ""
+    kind: review
+    reason: "gate候補（R6）: doc index reachability（scripts/ci/check_doc_index.py）が見る文書の場所は、決まり（STANDARD-WORKFLOW.md:77、新しい手順書・仕様書すべて）の対象より狭い。「いつ読むか」欄が空の行は見る（BLANK_WHEN）が、新しい文書が 1 行足されたかは見ない"
   - id: S10
     source: docs/STANDARD-WORKFLOW.md
     anchor: "を含む実装は、GO（PO、または ADR-1003 に基づく Opus の委任 GO）が出るまで release ブランチで待機し main にマージしない"
-    kind: gate
-    check: "process-artifacts gate"
-    when: ci
-    fixture: ""
-    evidence: "R2 で見本を置く"
-    reason: ""
+    kind: review
+    reason: "gate候補（R6）: 出典の行が含む ADR-1003 の例外（PO 本人の GO が必須の7種。ADR-1003:35-41）のうち PR の中で確かめられる部分が、本人GO 判定（check-process-artifacts.js:84 の requiresPoOnlyGo）で一部しか止まらない（判定が見ない書き方がある）。危険 PR の GO 手順のうち、PR の中で確かめられる GO 記録セクションの有無は check-process-artifacts.js の危険パス判定が止める。マージ前のチャットでの提示と GO 原文の受領は PR の外なので対象外。develop→main の PR を丸ごと飛ばす条件は、develop 側の ruleset 16619490 が同じ検査を必須にしているので妨げない"
   - id: F01
     source: frontend/AGENTS.md
     anchor: "ページタイトル・サブタイトルは必ず"
-    kind: gate
-    check: "Lint & Dark Mode Check (ADR-067)"
-    when: ci
-    fixture: ""
-    evidence: "R2 で見本を置く"
-    reason: ""
+    kind: review
+    reason: "gate候補（R6）: raw <h2> は ESLint（frontend/eslint.config.js:139-150、error）と check-page-layout.js が止め、PageLayout の subtitleKey 抜けも check-page-layout.js が止める。しかし「PageLayout 経由」そのもの（h2 を使わず PageLayout も使わないページ）は止まらないので gate にしない。必須チェック Lint & Dark Mode Check (ADR-067) は e2e.yml:125-143 の通り lint-run の失敗で落ちる"
   - id: F03
     source: frontend/AGENTS.md
     anchor: "ページ右上ボタンは必ず `headerAction` プロップ経由"
-    kind: gate
-    check: "Lint & Dark Mode Check (ADR-067)"
-    when: ci
-    fixture: ""
-    evidence: "R2 で見本を置く"
-    reason: ""
+    kind: review
+    reason: "gate候補（R6）: 同じ行に複数の決まりがある。ページ右上ボタンの position: fixed は check-css-fixed-position.js（pages の CSS のみ）が止めるが、headerAction 経由そのもの・.page-subtitle クラスの直書き・インラインスタイル禁止は止まらず、PR で確かめられるのに止まらない部分が残るので gate にしない"
   - id: F07
     source: frontend/AGENTS.md
     anchor: "UI部品新設時は必ず `components/` の金型を先確認"
-    kind: gate
-    check: "UI governance gate"
-    when: ci
-    fixture: ""
-    evidence: "R2 で見本を置く"
-    reason: ""
+    kind: review
+    reason: "gate候補（R6）: UI governance gate（scripts/check-ui-governance.js）の対象の場所は、決まり（frontend/AGENTS.md:36、UI 部品全般）の対象より狭い。「金型を先に確認」は PR の外"
   - id: F08
     source: frontend/AGENTS.md
     anchor: "は必ず `:root` と `:root.force-dark` の両方に追加"
-    kind: gate
-    check: "Lint & Dark Mode Check (ADR-067)"
-    when: ci
-    fixture: ""
-    evidence: "R2 で見本を置く"
-    reason: ""
+    kind: review
+    reason: "gate候補（R6）: Lint & Dark Mode Check の check-dark-parity.js:19 が比べる対象は、決まり（frontend/AGENTS.md:40、新規の色トークンすべて）の対象より狭い。frontend/scripts/check-new-tokens.js:40 は PR 本文のチェック欄で自己申告させるだけ"
   - id: F11
     source: frontend/AGENTS.md
     anchor: "`lucide-react` からの直接 import は ESLint が禁止する"
-    kind: gate
-    check: "Lint & Dark Mode Check (ADR-067)"
-    when: ci
-    fixture: ""
-    evidence: "R2 で見本を置く"
-    reason: ""
+    kind: review
+    reason: "gate候補（R6）: frontend/src の lucide-react 直接 import は eslint.config.js の no-restricted-imports（error）が止める。しかし ESLint の検査の除外に入る場所と、一部の読み込み方は止まらず、決まりの文書（frontend/AGENTS.md:65）はこの除外を書いていない。今の実物では frontend/src に lucide-react の import は0件。frontend/ に変更が無い PR は検査が飛ぶが import は frontend/ の中にしか無いので妨げない"
   - id: K01
     source: backend/AGENTS.md
     anchor: "`db.commit()` 直後に `reset_tenant_context()` 必須"
-    kind: gate
-    check: "ADR-072 tenant schema lint (strict mode)"
-    when: ci
-    fixture: ""
-    evidence: "R2 で見本を置く"
-    reason: ""
+    kind: review
+    reason: "gate候補（R6）: backend/app/routers/ の write endpoint の db.commit() 直後の reset_tenant_context() は lint-tenant-schema.yml の strict が検査するが、止まらない部分がある。scripts/lint_tenant_schema.py の Rule B は commit の数と reset の数を比べるだけで「直後」かどうかを見ず、一部の関数は検査を飛ばす。検査は routers/ を変えた PR だけ走る。決まり（backend/AGENTS.md:10）は write endpoint の commit 直後すべて"
   - id: K06
     source: backend/AGENTS.md
     anchor: "**ファイル命名規則（101番以降）**"
-    kind: gate
-    check: "models.py に新 Column → deploy.yml にマイグレーション追記必須"
-    when: ci
-    fixture: ""
-    evidence: "R2 で見本を置く"
-    reason: ""
+    kind: review
+    reason: "gate候補（R6）: migration-guard.yml:81-82 は新規追加の migrations/ の一部の名前の .sql だけを対象にする。名前の作り方によって命名の検査が飛び、形式を外れても通る。決まり（backend/AGENTS.md:33）は migration ファイルすべてが対象"
   - id: K07
     source: backend/AGENTS.md
     anchor: "**`deploy.yml` 登録必須**"
-    kind: gate
-    check: "models.py に新 Column → deploy.yml にマイグレーション追記必須"
-    when: ci
-    fixture: ""
-    evidence: "R2 で見本を置く"
-    reason: ""
+    kind: review
+    reason: "gate候補（R6）: migration-guard.yml:81-82 は新規追加の migrations/ の一部の名前の .sql だけを対象にする。名前の作り方によって登録の検査が飛び、未登録でも通る。決まり（backend/AGENTS.md:34）は migration ファイルすべてが対象"
   - id: K11
     source: backend/AGENTS.md
     anchor: "**`{schema}` プレースホルダは絶対使用禁止**"
-    kind: gate
-    check: "models.py に新 Column → deploy.yml にマイグレーション追記必須"
-    when: ci
-    fixture: ""
-    evidence: "R2 で見本を置く"
-    reason: ""
+    kind: review
+    reason: "gate候補（R6）: migration-guard.yml:81-82 は新規追加の migrations/ の一部の名前の .sql だけを対象にする。名前の作り方によって、また既存ファイルの変更では {schema} の検査が飛び、プレースホルダが入っても通る。決まり（backend/AGENTS.md:39）は migration ファイルすべてが対象"
+  - id: A001
+    source: AGENTS.md
+    anchor: "- **Legacy**: `https://jarvis-claude.uk/"
+    kind: exempt
+    reason: "Legacy環境を独断で消さない、は消す操作がサーバー側で行われPRの差分に痕跡が残らない（recon A21 未確認）"
+  - id: A002
+    source: AGENTS.md
+    anchor: "- **設計判断**: `docs/adr/README.md`（自動生成）から"
+    kind: review
+    reason: "ADRを確認し記憶を根拠にしない、は読んだかどうかの判断でPR本文・設計文書の記載から人が確かめる（recon A01 no guard）"
+  - id: A003
+    source: AGENTS.md
+    anchor: "- **ADRと実装の優先順位**: 食い違いは必ず ADR を優先し、追加の安"
+    kind: review
+    reason: "ADRを優先しコードをADRへ寄せる、は食い違いの判断が要るがPR内の差分で人が確かめられる（recon A01 no guard）"
+  - id: A004
+    source: AGENTS.md
+    anchor: "## 不可逆操作は必ず PO 確認"
+    kind: exempt
+    reason: "見出し: 不可逆操作のPO確認は操作の実行時の話でPRに痕跡が残らない。ローカルのagent-danger-hookが止める（recon A02: hook）。hookは残し除外の理由は「PRの外」"
+  - id: A005
+    source: AGENTS.md
+    anchor: "**本番運用フェーズ移行後に effective**（現在は開発フェーズのため直"
+    kind: exempt
+    reason: "本番運用フェーズの常時厳禁（暗号化シークレット手動投入・PO確認なしのdestructive操作）は本番操作でPRに痕跡が残らない（recon A03 未確認）"
+  - id: A006
+    source: AGENTS.md
+    anchor: "## VPS 直作業禁止（技術的にも制限付き鍵のみ）"
+    kind: exempt
+    reason: "見出し: VPS直作業禁止は本番サーバー上の操作でPRに残らない。制限付き鍵で技術的に制限される（recon A04 未確認）"
+  - id: A007
+    source: AGENTS.md
+    anchor: "- 鍵・パスワード・トークンの値は表示しない。人間の無制限鍵（`hitoshi@"
+    kind: exempt
+    reason: "鍵・トークンの値を表示しない、は表示行為でPRに残らない（recon A06 no guard。コミット内の秘密はgitleaksの管轄で別の規則）"
+  - id: A008
+    source: AGENTS.md
+    anchor: "- `develop` / `main` への直接コミット禁止。`release"
+    kind: exempt
+    reason: "mainへの直接コミット・直pushの禁止はBranch Protectionとworktree-only-guardが止めるが、PRの差分では判定できない（recon A07: ruleset＋hook）"
+  - id: A009
+    source: AGENTS.md
+    anchor: "- 作業前に必ず（例外なし） `bash scripts/new-worktre"
+    kind: exempt
+    reason: "作業前にworktreeを作る、は作業場所の話でPRに痕跡が残らない。worktree-only-guardが止める（recon A11: hook）"
+  - id: A010
+    source: AGENTS.md
+    anchor: "- `main` / `develop` は消さない（`git push --d"
+    kind: exempt
+    reason: "main/developを消さない操作はGitHub側の操作でPRに残らない。Rulesetの削除禁止が止める（recon A12）。no 381・400と同じ決まり"
+  - id: A011
+    source: AGENTS.md
+    anchor: "- 実行役は作業開始前に必ず `./scripts/dev/executor-p"
+    kind: exempt
+    reason: "preflight実行は作業開始前の行為でPRに痕跡が残らない（recon A14 no guard）"
+  - id: A012
+    source: AGENTS.md
+    anchor: "- 手順や作業方法を答える・計画する前に、必ず目次 `docs/INDEX.md"
+    kind: exempt
+    reason: "docs/INDEXを開いてたどる、は読む行為でPRに残らない（recon A19 no guard）"
+  - id: C013
+    source: CLAUDE.md
+    anchor: "- `.claude/agents/` 変更前は必ず `git pull` で最"
+    kind: exempt
+    reason: "git pullで最新取得は作業前の手元操作でPRに痕跡が残らない（recon C02 no guard）"
+  - id: F014
+    source: frontend/AGENTS.md
+    anchor: "## PageLayout ルール（全ページ必須）"
+    kind: review
+    reason: "gate候補（R6）: 見出し: PageLayout必須。raw <h2とsubtitleKey欠落は frontend/scripts/check-page-layout.js:72-82,92-98 が止めるが、PageLayoutを使わないページ自体は止まらない。見出し行と本文行のどちらに登録するかが未定"
+  - id: F016
+    source: frontend/AGENTS.md
+    anchor: "全 UI 文字列は `t(\"key\")` 経由（JSX / aria-label"
+    kind: review
+    reason: "gate候補（R6）: 全UI文字列をt()経由にしja/enを同一キーにする: 欠落キーは check-i18n-missing-keys が一部止めるが、ハードコード日本語は local/no-japanese-literal が warn で止まらない（frontend/eslint.config.js:31）"
+  - id: F018
+    source: frontend/AGENTS.md
+    anchor: "コメント内の日本語は OK。JSX / 文字列リテラル内は必ず `t()` 経由"
+    kind: review
+    reason: "gate候補（R6）: JSX/文字列リテラル内はt()経由、はESLintがwarnのため必須チェックで止まらない（frontend/eslint.config.js:31、frontend/package.json:15は --max-warnings なし）。recon F05『未確認』に対しコードではCIで止まらないと読める"
+  - id: F019
+    source: frontend/AGENTS.md
+    anchor: "CSS プロパティを変更する際は対象クラスの子孫セレクタを必ず grep で確認"
+    kind: review
+    reason: "CSS変更時に子孫セレクタをgrepで確認、は確認結果がPRに残らず、影響はCSS差分を見て人が判断する（recon F10 partial）"
+  - id: F020
+    source: frontend/AGENTS.md
+    anchor: "`frontend/src/constants/iconSizes.ts` は生"
+    kind: review
+    reason: "gate候補（R6）: iconSizes.tsの直接編集禁止: check-icon-sync.js は iconSizes.ts と tokens.css の値の一致だけを見るため、直接編集でも値が合えば通る。生成結果との一致で機械判定できるが必須チェックはない（recon F12 partial）"
+  - id: F021
+    source: frontend/AGENTS.md
+    anchor: "**UI 文字列・ナビゲーション・コンポーネント構造を変更したら `fronte"
+    kind: review
+    reason: "gate候補（R6）: UI変更時にtests-e2eの該当specを同一PRで更新: ファイルの組で機械判定できるが必須チェックがなく、どの変更がUI変更かの線引きが要る（recon F14 no guard）"
+  - id: F022
+    source: frontend/AGENTS.md
+    anchor: "- `InboxKartePanel.tsx` の変更時は `karte-vis"
+    kind: review
+    reason: "gate候補（R6）: InboxKartePanel.tsx変更時にkarte-visual-gate.spec.tsを同一PRで更新: ファイルの組で機械判定できる。karte-gate.ymlは必須チェックに入っていない（recon F15）"
+  - id: K023
+    source: backend/AGENTS.md
+    anchor: "- 撮影 / Meta App Review 用: `tenant_review"
+    kind: exempt
+    reason: "review用テナントのパスワードをホスト側に保存、は作業者の手元操作でPRに残らない（recon K02 no guard）"
+  - id: K024
+    source: backend/AGENTS.md
+    anchor: "- 既定値 `test-corp` は空テナント。移行 / バッチ実行時は必ず明"
+    kind: exempt
+    reason: "移行・バッチ実行時にテナントを明示、は実行時のコマンド指定でPRに残らない（recon K03 no guard）"
+  - id: K025
+    source: backend/AGENTS.md
+    anchor: "詳細: `docs/adr/ADR-034-tenant-migration-a"
+    kind: exempt
+    reason: "ADR-034マージ前の新規テナント作成の4ステップ必須は本番作業の手順でPRに残らない（recon K04 no guard）"
+  - id: K027
+    source: backend/AGENTS.md
+    anchor: "**カラム削除・テーブル削除・型変更を含む migration は原則禁止。**"
+    kind: review
+    reason: "gate候補（R6）: DROP COLUMN/TABLE を含む migration は migration-guard.yml:343-389 が止める（ADR 番号が PR 本文に必要）。しかし一部の書き方の変更は止まらず、PR で確かめられるのに止まらない部分が残るので gate にしない"
+  - id: K028
+    source: backend/AGENTS.md
+    anchor: "- ❌ 要PO確認: カラム削除・リネーム、テーブル削除、型変更、データ移行を伴"
+    kind: exempt
+    reason: "PO確認してからADR起案、は人の確認でPRに痕跡が残らない（DROPの機械検出は no 27 の側）"
+  - id: K029
+    source: backend/AGENTS.md
+    anchor: "- **migration-test 段階的拡充**: migration が操"
+    kind: review
+    reason: "gate候補（R6）: migrationが触るテーブルを migration-test.yml のセットアップに足す: 突き合わせは機械化できるが、現状は暗黙にしか止まらない（recon K10 implicit only）"
+  - id: K030
+    source: backend/AGENTS.md
+    anchor: "- **カラムコメント**: 新テーブル作成時は全カラムに `COMMENT O"
+    kind: review
+    reason: "gate候補（R6）: 新テーブルの全カラムにCOMMENT ON COLUMN: migration SQLを文字列検査で機械判定できる。必須チェックなし（recon K12 no guard）"
+  - id: K031
+    source: backend/AGENTS.md
+    anchor: "- **Pydantic schema**: 全 `Field()` に `de"
+    kind: review
+    reason: "gate候補（R6）: 全Field()にdescriptionを設定: ASTで機械判定できる。必須チェックなし（recon K13 no guard）。docstringに計算式を書く部分は人が判断する"
+  - id: K032
+    source: backend/AGENTS.md
+    anchor: "- **取引先 SSOT: companies（ADR-089 完了）**: `"
+    kind: review
+    reason: "gate候補（R6）: customersテーブルを使わずcompaniesを使う: 新規参照の追加はgrepで機械判定できる。必須チェックなし（recon K14 partial）。本番DROPのPO確認必須は人の確認でexempt"
+  - id: K033
+    source: backend/AGENTS.md
+    anchor: "- **受信翻訳の標準入口**は `app.services.inbound_t"
+    kind: review
+    reason: "gate候補（R6）: 受信翻訳のenqueueは必ずenqueue_inbound_translationを使う: 別経路の呼び出しをgrepで機械判定できる。recon K15は『tests only』だが、新規の別経路を落とすテストかは未確認"
+  - id: S035
+    source: docs/STANDARD-WORKFLOW.md
+    anchor: "| **1 KGI設定** | Planner＋PO | 何を実現するかを**定"
+    kind: review
+    reason: "KGIはPO承認が必須ゲート（B区分は例外）: 承認記録の有無はPR内で見られるが、区分の判断が要る（recon S01）"
+  - id: S036
+    source: docs/STANDARD-WORKFLOW.md
+    anchor: "| **2 現在地把握（recon）** | architect | 実コードを"
+    kind: review
+    reason: "recon: file:line突合・推測禁止・着手前に既存ADRを検索: 内容の十分さは人が判断する。file:line形式は no 42 で別に扱う"
+  - id: S037
+    source: docs/STANDARD-WORKFLOW.md
+    anchor: "| **5 検証ゲート** | Reviewer＋Evaluator | コード"
+    kind: exempt
+    reason: "検証ゲートの役割表（二者APPROVE＋全必須チェックで合流）は審査の進め方で、PRの差分に痕跡が残らない。承認の強制はreview-gateフック（ADR-1029）と必須チェック側"
+  - id: S038
+    source: docs/STANDARD-WORKFLOW.md
+    anchor: "- **対象（仕様書が必須）**：危ない変更（`migrations/`・`de"
+    kind: review
+    reason: "仕様書が必須となる対象（新機能・新データ構造など）の該当判断が要る（recon S04 no guard）"
+  - id: S039
+    source: docs/STANDARD-WORKFLOW.md
+    anchor: "- **リンク必須**：recon.md・design.md・PR本文に、参照（"
+    kind: review
+    reason: "gate候補（R6）: recon/design/PR本文に設計仕様書へのリンクを載せる: 欄の有無は機械判定できるが必須チェックなし（recon S04）。リンク先が正しい仕様書かは判断が要る"
+  - id: S041
+    source: docs/STANDARD-WORKFLOW.md
+    anchor: "すべての design.md は、末尾に「## 維持の仕組み」欄を必ず置く。空欄"
+    kind: review
+    reason: "gate候補（R6）: design.md末尾に「## 維持の仕組み」欄を置く: 機械判定できるが、check-process-artifacts.js:706-718 は PR番号2600以上で warn のみ（MAINTENANCE_ENFORCE==='fail' を設定するworkflowはない）。recon S06『猶予後に止まる』と食い違う"
+  - id: S042
+    source: docs/STANDARD-WORKFLOW.md
+    anchor: "- recon.md: フルパス:行番号 で引用（例: `.github/wor"
+    kind: review
+    reason: "gate候補（R6）: recon.mdはフルパス:行番号で引用: 形式は正規表現で判定できる。process-artifacts gate は一部の引用しか見ない（check-process-artifacts.js:453以降）。全引用の検査かは未確認"
+  - id: S043
+    source: docs/STANDARD-WORKFLOW.md
+    anchor: "- PR本文: `### 標準ワークフロー確認` セクション必須。"
+    kind: review
+    reason: "gate候補（R6）: PR本文に「### 標準ワークフロー確認」セクション必須: 欠落は PR番号2600以上で check-process-artifacts.js が止める（危険変更でも止まる）。しかし書類扱いの場所の判定に検査の台本が含まれ、その変更だけの PR では検査が飛ぶ（check-process-artifacts.js の書類判定）。決まりの文書（STANDARD-WORKFLOW.md:137）はこれを対象外にしていない。PR番号2600未満の猶予は新しい PR には当たらない"
+  - id: S044
+    source: docs/STANDARD-WORKFLOW.md
+    anchor: "- recon.md と design.md は必ず git add してからコ"
+    kind: review
+    reason: "recon.md と design.md が PR に入っているか（git add 済みか）は PR の差分で見られる。コミット前の作業手順の部分は PR の外"
+  - id: S045
+    source: docs/STANDARD-WORKFLOW.md
+    anchor: "- **ユーザーに影響する変更**（現状の実体: `frontend/src/`"
+    kind: review
+    reason: "gate候補（R6）: 出典の行（ユーザー影響変更は本番前にGO記録が必須）が ADR-1003 の例外（PO 本人の GO が必須の7種、ADR-1003:35-41）に当たる変更を含みうるが、本人GO の判定（check-process-artifacts.js:84 の requiresPoOnlyGo）は一部しか止めない。ユーザー影響変更の GO 記録の有無は check-process-artifacts.js が止める。develop→main の PR を丸ごと飛ばす条件は、develop 側の ruleset 16619490 が同じ検査を必須にしているので妨げない"
+  - id: S046
+    source: docs/STANDARD-WORKFLOW.md
+    anchor: "- **人の動作確認の当面の確認環境**は本番のみ。確認は tenant_001"
+    kind: exempt
+    reason: "動作確認はtenant_001で行いtenant_004に触れない・tenant_006をQAに使わない、は本番での操作でPRに残らない"
+  - id: S047
+    source: docs/STANDARD-WORKFLOW.md
+    anchor: "tasks/todo.md・.claude-pipeline/active-wo"
+    kind: review
+    reason: "実証がないまま完了へ移してはならない: 実証の十分さは人が判断する（recon S11 no guard）"
+  - id: S048
+    source: docs/STANDARD-WORKFLOW.md
+    anchor: "抽象語（統一/改善/正常/復帰）禁止→観測可能な事象に分解。"
+    kind: review
+    reason: "抽象語禁止（観測可能な事象に分解）: 語が抽象かは人が読んで判断する"
+  - id: S049
+    source: docs/STANDARD-WORKFLOW.md
+    anchor: "4. **不明を残したまま実行しない。**"
+    kind: exempt
+    reason: "不明を残したまま実行しない、は実行者の姿勢でPRに残らない（recon S12 no guard）"
+  - id: S051
+    source: docs/STANDARD-WORKFLOW.md
+    anchor: "**どこで・誰がやっても、§1の標準フロー（KGI→recon→設計）と §2の"
+    kind: review
+    reason: "標準フローと完了定義は必ず満たす・Generatorが自己流にHowを決めない: 成果物の有無はPR内で見られるが内容は判断が要る"
+  - id: S052
+    source: docs/STANDARD-WORKFLOW.md
+    anchor: "- **terminal**：1つの Claude Code セッションが設計〜"
+    kind: review
+    reason: "terminalでも成果物（KGI/recon/設計）は必ず作る: PR内の有無は見られるが内容は判断が要る（recon S13 unknown）"
+  - id: S053
+    source: docs/STANDARD-WORKFLOW.md
+    anchor: "- **低リスクのコード**：自己申告の**自律クラフト**（バグ修正・CI修復"
+    kind: review
+    reason: "低リスクコードの自律クラフトは記録必須・無申告の素通り不可・governance監査: 申告の有無はPR内で見られるが線引きは判断が要る（recon S13）"
+  - id: S054
+    source: docs/STANDARD-WORKFLOW.md
+    anchor: "**承認役＝認可された役割。現状：PO（Shingo）＋ Claude Opus"
+    kind: review
+    reason: "承認役はPO＋Opus設計担当、PO本人のGOが必須の7例外: GO記録の有無は no 45・397 の側で止まるが、7例外に当たるかの判定は人が行う"
+  - id: S055
+    source: docs/STANDARD-WORKFLOW.md
+    anchor: "すべての出口（release→main のマージ）に**1つの必須ゲート**を置"
+    kind: exempt
+    reason: "すべての出口に1つの必須ゲートを置く、は設計方針の宣言で個別PRの差分では判定できない。ゲートの存在はRuleset設定の側"
+  - id: S056
+    source: docs/STANDARD-WORKFLOW.md
+    anchor: "- **属人的な独自変更は禁止。** 変更は次項の手順のみ。"
+    kind: review
+    reason: "属人的な独自変更は禁止（変更は次項の手順のみ）: 手順に沿うかはPR内で人が見て判断する（recon S13）"
+  - id: S057
+    source: docs/STANDARD-WORKFLOW.md
+    anchor: "- ゲートの除去・弱体化は**不可逆操作扱い＝PO確認必須**（勝手に外せない）"
+    kind: review
+    reason: "gate候補（R6）: ゲートの除去・弱体化はPO確認必須: ゲート本体の変更は機械検出できるが、自己防衛が効くのは限られたファイルだけ（check-process-artifacts.js DANGEROUS_PATTERNS）。他のworkflowは危険扱いでない"
+  - id: AR059
+    source: docs/ai-agents/agent-roles.md
+    anchor: "Sales Anchor の Codex CLI 運用では、Agent ごとに責"
+    kind: review
+    reason: "gate候補（R6）: o4-miniの使用禁止: 設定ファイルをgrepで機械判定できる。必須チェックなし。デフォルトモデルの指定は判断を含まない説明"
+  - id: AR060
+    source: docs/ai-agents/agent-roles.md
+    anchor: "- repo 全体探索は禁止する"
+    kind: exempt
+    reason: "repo全体探索の禁止は実行時の探索でPRに残らない"
+  - id: AR061
+    source: docs/ai-agents/agent-roles.md
+    anchor: "- `node_modules`、`.next`、`dist`、`build`、"
+    kind: exempt
+    reason: "node_modules等を探索しない、は実行時の行為でPRに残らない"
+  - id: CX063
+    source: docs/ai-agents/codex-operations.md
+    anchor: "| **Generator** | **Claude Code / Sonnet"
+    kind: review
+    reason: "Generatorの設計再解釈・独断変更の禁止: 設計との差は差分を読んで人が判断する"
+  - id: CX064
+    source: docs/ai-agents/codex-operations.md
+    anchor: "- Plannerが確立したエビデンスは ADR の Why セクションに必ず含"
+    kind: review
+    reason: "PlannerのエビデンスはADRのWhyに含める: ADR内にあるかは人が確かめる"
+  - id: CX065
+    source: docs/ai-agents/codex-operations.md
+    anchor: "**数値なし = 証拠なし。** 以下は採用しない:"
+    kind: review
+    reason: "数値なし=証拠なしで以下は採用しない: 根拠の数値の有無は人が判断する"
+  - id: CX066
+    source: docs/ai-agents/codex-operations.md
+    anchor: "### 禁止"
+    kind: review
+    reason: "見出し「禁止」の下に並ぶ禁止項目をまとめた行で、各項目は人が読んで判定する"
+  - id: CX068
+    source: docs/ai-agents/codex-operations.md
+    anchor: "会話メモリ・チャット履歴を根拠にした状態宣言は禁止。一次情報（ファイル・コマンド"
+    kind: review
+    reason: "会話メモリを根拠にした状態宣言の禁止: 一次情報が示されているかをPR本文で人が見る"
+  - id: CX069
+    source: docs/ai-agents/codex-operations.md
+    anchor: "### セッション開始時の必須確認（3ファイル）"
+    kind: exempt
+    reason: "見出し: セッション開始時の必須確認（3ファイル）。読む行為でPRに残らない"
+  - id: PP070
+    source: docs/ai-agents/design-partner-preamble.md
+    anchor: "- 実装依頼は必ずカード方式。docs/ai-agents/executor-p"
+    kind: exempt
+    reason: "実装依頼はカード方式で定型文を先頭に投入、は依頼文の書き方でPRに残らない"
+  - id: P073
+    source: docs/ai-agents/design-partner.md
+    anchor: "本書を読み込んだ設計パートナーは、作業に入る前に必ず次を順に行う。"
+    kind: exempt
+    reason: "冒頭に手順を順に行う、はセッション冒頭の行為でPRに残らない"
+  - id: P074
+    source: docs/ai-agents/design-partner.md
+    anchor: "2. 本書の要点を宣言する（KGIは数値化・推測禁止・1ターン1決定・素人向け説"
+    kind: exempt
+    reason: "要点を宣言する、はチャット上の発言でPRに残らない"
+  - id: P075
+    source: docs/ai-agents/design-partner.md
+    anchor: "2. 推測は禁止。事実確認を怠らない。"
+    kind: review
+    reason: "推測は禁止。事実確認を怠らない: 推測の混入は成果物を読めば人が判断できる"
+  - id: P076
+    source: docs/ai-agents/design-partner.md
+    anchor: "※ 停止の扱い（同上）: 実装役の停止は既定で設計側のエビデンス不足の信号として"
+    kind: review
+    reason: "実装役の停止を分類してから再発行／停止条件を緩めることは禁止: カードの差分を見て人が判断する"
+  - id: P077
+    source: docs/ai-agents/design-partner.md
+    anchor: "- 素人向け説明が既定。専門用語は必ず普通の言葉と例え話に直してから話す。用語の"
+    kind: exempt
+    reason: "素人向け説明・専門用語を言い換える、は会話での説明でPRに残らない"
+  - id: P078
+    source: docs/ai-agents/design-partner.md
+    anchor: "- 構造・関係・流れ・全体像を説明するときは、SVG図解を必ず添える（多層構造/"
+    kind: exempt
+    reason: "構造を説明するときはSVG図解を添える、は会話での説明でPRに残らない"
+  - id: P079
+    source: docs/ai-agents/design-partner.md
+    anchor: "- 選択肢には必ず推奨を添える（「A/B、私の推奨はA、理由は〜」）。"
+    kind: exempt
+    reason: "選択肢には推奨を添える、は会話での返答でPRに残らない"
+  - id: P080
+    source: docs/ai-agents/design-partner.md
+    anchor: "- 推測で進めない。認識が一致しない点は確認する。"
+    kind: exempt
+    reason: "推測で進めない・認識が一致しない点は確認する、は会話での行為でPRに残らない"
+  - id: P083
+    source: docs/ai-agents/design-partner.md
+    anchor: "- 危険操作（正本・関所・migrations・deploy.yml・本番scr"
+    kind: review
+    reason: "危険操作のGOはADR-1003に従う・PO発言を代筆しない: GO記録の有無は no 45・397 の側で止まるが、代筆の有無は人が突き合わせる"
+  - id: P084
+    source: docs/ai-agents/design-partner.md
+    anchor: "- ④ 書ききる: 各設計項目に file:line＋変更前後＋触らない範囲＋○"
+    kind: review
+    reason: "gate候補（R6）: 未決定語（TBD/要検討/追って決定）を残さず現場での仕様決定を禁止: 語の検出は機械判定できるが、check-process-artifacts.js にTBD検出はなく、check-guard-evaluations.js:54 は評価JSONの欄にしか効かない"
+  - id: P085
+    source: docs/ai-agents/design-partner.md
+    anchor: "2. KGI（○×で測る・数値化・抽象語禁止）"
+    kind: review
+    reason: "KGIは○×で測り数値化し抽象語を使わない: 内容は人が読んで判断する"
+  - id: P086
+    source: docs/ai-agents/design-partner.md
+    anchor: "4. recon（file:line 実物・推測禁止）"
+    kind: review
+    reason: "reconはfile:line実物で推測禁止: 内容の十分さは人が判断する。file:line形式は no 42"
+  - id: P087
+    source: docs/ai-agents/design-partner.md
+    anchor: "- あるべき姿は数値化しない（願いを普通の言葉で書く場所）。数値化はKGIから。"
+    kind: review
+    reason: "あるべき姿は数値化しない: 文書の書き方の判断で人が読んで確かめる"
+  - id: P088
+    source: docs/ai-agents/design-partner.md
+    anchor: "2. 下書き禁止: PR作成は ready で行うと明記する（--draft を"
+    kind: review
+    reason: "もう一方の行と食い違い（docs/specs/branch-operations/README.md:88「必ず Draft」と、この行「下書き禁止」は逆の文）。どちらを正とするか未決。PR の draft 状態は機械で見られるが、正が決まるまで gate 候補にもしない"
+  - id: P089
+    source: docs/ai-agents/design-partner.md
+    anchor: "4. 1便1目的: 複数の宿題を1枚に混載しない。混ざると記憶圧縮で新しい指示が"
+    kind: review
+    reason: "1便1目的で複数の宿題を混載しない: PRの範囲を見て人が判断する（recon E01 no guard）"
+  - id: P090
+    source: docs/ai-agents/design-partner.md
+    anchor: "6. 書式は実例で示す: PR欄の平打ち等の書式指定は、良い例1行と禁止形をセッ"
+    kind: exempt
+    reason: "書式は実例で示す、はカードの書き方でPRに残らない"
+  - id: P091
+    source: docs/ai-agents/design-partner.md
+    anchor: "mainとの差分に削除が無いことまでカードに書く（書き換え系・関所便で必須）。"
+    kind: exempt
+    reason: "mainとの差分に削除が無いことまでカードに書く、はカードの書き方でPRに残らない"
+  - id: P092
+    source: docs/ai-agents/design-partner.md
+    anchor: "11. 期待値は実測から引く: 行数・件数の期待値を見積りで書かない。行番号を停"
+    kind: exempt
+    reason: "期待値は実測から引く、はカードの書き方でPRに残らない"
+  - id: P093
+    source: docs/ai-agents/design-partner.md
+    anchor: "## 6. 実務の教訓（分類別・作業前に該当分類を必ず読む）"
+    kind: exempt
+    reason: "見出し: 作業前に該当分類を読む。読む行為でPRに残らない"
+  - id: P094
+    source: docs/ai-agents/design-partner.md
+    anchor: "- 教訓の書き方: 本節本文へ直接追記しない。docs/ai-agents/le"
+    kind: review
+    reason: "gate候補（R6）: §6 本文への直接追記は lessons-guard.yml:24-29 が止める（lessons-cleanup ラベルで例外）。しかし lessons.d のポストの書式（分類・出所の2行）は止まらず、PR で確かめられるのに止まらない部分が残るので gate にしない"
+  - id: P095
+    source: docs/ai-agents/design-partner.md
+    anchor: "- 出所の書式: `（YYYY-MM-DD PR #NNNN）`／`（PR #N"
+    kind: review
+    reason: "gate候補（R6）: 出所の書式 （YYYY-MM-DD PR #NNNN）等と相対参照の禁止: 正規表現で機械判定できる。scripts/・.github/ に『出所』を検査するものは見つからなかった"
+  - id: P096
+    source: docs/ai-agents/design-partner.md
+    anchor: "- マージ方式: squash 禁止。gh pr merge --merge（m"
+    kind: exempt
+    reason: "squash禁止でmerge commitを使う、はマージ操作の選択でPRの差分に残らない（recon B03: ruleset）。no 392・395と同じ決まり"
+  - id: P097
+    source: docs/ai-agents/design-partner.md
+    anchor: "- PR本文必須欄（### 標準ワークフロー確認・行頭空白/ダッシュなしの平打ち"
+    kind: review
+    reason: "gate候補（R6）: PR本文の必須欄: セクションの欠落と触るファイル欄、削除するファイル欄は check-process-artifacts.js が止める。書式の厳密さは parseSOPDeclaration（:271-284）が複数の書き方を受け付けるので、書式の違いでは止まらない。削除が 1 行も無い PR は「削除するファイル:」欄が無くても通る。書類だけの PR は STANDARD-WORKFLOW.md:137 が対象外"
+  - id: P098
+    source: docs/ai-agents/design-partner.md
+    anchor: "- GO記録4欄（発行者/日時/原文/バックアップ確認）は、POの `GO #P"
+    kind: review
+    reason: "GO記録4欄は転記してよいがPO発話と一致必須: 一致は人が突き合わせる（欄の有無は no 45 の側）"
+  - id: P099
+    source: docs/ai-agents/design-partner.md
+    anchor: "- `--admin` 等によるブランチ保護の迂回、および検問（hook）fai"
+    kind: exempt
+    reason: "--adminによる迂回・hook failed後の続行・必須チェック未完了の管理者マージ禁止: マージ操作でPRの差分に残らない"
+  - id: P100
+    source: docs/ai-agents/design-partner.md
+    anchor: "- 実装役への依頼前に「常設ルール定型文」（カードのみ実行・冒頭の上書き宣言を最"
+    kind: exempt
+    reason: "実装役への依頼前に定型文を投入、は依頼の手順でPRに残らない"
+  - id: P101
+    source: docs/ai-agents/design-partner.md
+    anchor: "- カード冒頭に「本カードの許可・禁止は過去便の禁止条項をすべて上書きする」を必"
+    kind: exempt
+    reason: "カード冒頭に上書き宣言を入れる、はカードの書き方でPRに残らない（card-lint.shが見るかは未確認）。no 119と同じ決まり"
+  - id: P102
+    source: docs/ai-agents/design-partner.md
+    anchor: "- セッション間の相談メッセージは冒頭に「転送専用・受領側は実行禁止」を明記する"
+    kind: exempt
+    reason: "相談メッセージ冒頭に『転送専用・受領側は実行禁止』を明記、はメッセージの書き方でPRに残らない"
+  - id: P103
+    source: docs/ai-agents/design-partner.md
+    anchor: "- 実行役は詰まったら停止・自力回避禁止: テスト赤・エラー時に実行役（CC）が"
+    kind: exempt
+    reason: "実行役は詰まったら停止し自力回避しない、は実行時の行為でPRに残らない。no 109と同じ決まり"
+  - id: P104
+    source: docs/ai-agents/design-partner.md
+    anchor: "- 実測は本番と同じ条件で行う。ガードの挙動が場所・ブランチに依存するなら、試験"
+    kind: review
+    reason: "実測は本番と同じ条件で行う: 試験条件の妥当性は人が判断する"
+  - id: P105
+    source: docs/ai-agents/design-partner.md
+    anchor: "- 定点観測(track-record)の未記帳行は、次の便に相乗りして記帳する"
+    kind: review
+    reason: "定点観測の未記帳行を次の便に相乗りして記帳: track-recordの差分を見て人が判断する"
+  - id: P106
+    source: docs/ai-agents/design-partner.md
+    anchor: "- セッションを跨いで引き継ぐときは、引継ぎ書類に「未記帳の定点観測行」欄を必ず"
+    kind: exempt
+    reason: "引継ぎ書類に未記帳欄を設ける、は引継ぎ書類の書き方でPRの外"
+  - id: P107
+    source: docs/ai-agents/design-partner.md
+    anchor: "- 共有台帳（active-work.md等）の片付けは、作業中にも自動登録で再増殖する（追いかけっこ・2026-07-04に2回実測 PR"
+    kind: exempt
+    reason: "共有台帳の片付けは破棄前に再diffを取る、は作業中の行為でPRに残らない"
+  - id: P108
+    source: docs/ai-agents/design-partner.md
+    anchor: "- PRの「マージ済み/未」の報告は、実測（gh pr view の state"
+    kind: exempt
+    reason: "PRのマージ済報告は実測で確定してから受理する、は報告の受け取り方でPRに残らない"
+  - id: P109
+    source: docs/ai-agents/design-partner.md
+    anchor: "- 実行役の自己修正禁止: テスト赤・エラー時に実行役（CC）が指示なく修正・コ"
+    kind: exempt
+    reason: "実行役の自己修正禁止、は実行時の行為でPRに残らない。no 103と同じ決まり"
+  - id: P110
+    source: docs/ai-agents/design-partner.md
+    anchor: "- 共有台帳（active-work.md等）の片付けは、作業中にも自動登録で再増殖する（追いかけっこ・2026-07-04に2回実測 #2"
+    kind: exempt
+    reason: "共有台帳の片付けは破棄前に再diff、は作業中の行為でPRに残らない。no 107と同じ決まり"
+  - id: P111
+    source: docs/ai-agents/design-partner.md
+    anchor: "- PR本文の必須欄検収は行頭一致（grep '^触るファイル:'）で行う。部分"
+    kind: exempt
+    reason: "PR本文の必須欄検収は行頭一致で行う、は検収コマンドの書き方でPRに残らない"
+  - id: P113
+    source: docs/ai-agents/design-partner.md
+    anchor: "- 障害対応は「読み取り診断で原因確定→最小修理→検算→GO→実行」の順を守り、"
+    kind: exempt
+    reason: "障害対応の順序（原因確定→最小修理→検算→GO→実行）、は本番操作の順序でPRに残らない"
+  - id: P114
+    source: docs/ai-agents/design-partner.md
+    anchor: "- 危険変更PRのマージ拒否「N of N required status ch"
+    kind: exempt
+    reason: "マージ系の標準手順に取り込み→再採点→マージを含める、はマージ操作でPRに残らない"
+  - id: P115
+    source: docs/ai-agents/design-partner.md
+    anchor: "- 必須status checkの個数は記憶でなくruleset実測で確認する("
+    kind: exempt
+    reason: "必須status checkの個数はruleset実測で確認する、は確認行為でPRに残らない"
+  - id: P116
+    source: docs/ai-agents/design-partner.md
+    anchor: "- 全テナント一律ALTERのmigrationはschema名決め打ちを禁止し"
+    kind: review
+    reason: "全テナント一律ALTERは動的列挙・存在チェック・冪等化: CIの実DBテストが一部落とすが（relation does not exist）、設計の妥当性は人が判断する"
+  - id: P117
+    source: docs/ai-agents/design-partner.md
+    anchor: "- マージ後の片付け報告は、削除したブランチ名がPRのheadと一致するか照合し"
+    kind: exempt
+    reason: "片付け報告は削除ブランチ名とPR headを照合してから受理する、は報告の受け取り方でPRに残らない"
+  - id: P119
+    source: docs/ai-agents/design-partner.md
+    anchor: "- 冒頭に「本カードの許可・禁止は過去便の禁止条項をすべて上書きする」宣言を置く"
+    kind: exempt
+    reason: "カード冒頭に上書き宣言を置く、はカードの書き方でPRに残らない。no 101と同じ決まり"
+  - id: P120
+    source: docs/ai-agents/design-partner.md
+    anchor: "- 禁止事項は名指しで書く（例: /review 実行禁止・ブランチ操作禁止）。"
+    kind: exempt
+    reason: "禁止事項は名指しで書く、はカードの書き方でPRに残らない"
+  - id: P121
+    source: docs/ai-agents/design-partner.md
+    anchor: "- 停止条件は肯定形で一義に書く（「前段が全緑の場合のみ次段を実行」。否定形「〜"
+    kind: exempt
+    reason: "停止条件は肯定形で書く、はカードの書き方でPRに残らない"
+  - id: P122
+    source: docs/ai-agents/design-partner.md
+    anchor: "- 書き換え範囲はアンカー完全一致で指定する（広域正規表現・絵文字アンカー禁止）"
+    kind: exempt
+    reason: "書き換え範囲はアンカー完全一致で指定、はカードの書き方でPRに残らない"
+  - id: P123
+    source: docs/ai-agents/design-partner.md
+    anchor: "- 単独便: 1つの正本PRに複数便（複数GO分）を混載しない。1便=1GO=1"
+    kind: review
+    reason: "1つの正本PRに複数便を混載しない（1便=1GO=1PR）: PRの範囲を見て人が判断する"
+  - id: P125
+    source: docs/ai-agents/design-partner.md
+    anchor: "または `[未反映・チャット合意のみ]` を必ず添える。ラベルの無い数字、および"
+    kind: exempt
+    reason: "チャット合意のみの数字にラベルを添える、は会話・カード上の書き方でPRに残らない"
+  - id: P126
+    source: docs/ai-agents/design-partner.md
+    anchor: "数字は、次セッションで無条件に「使用禁止・要再確認」として扱う。"
+    kind: exempt
+    reason: "ラベルの無い数字は使用禁止・要再確認として扱う、は次セッションでの扱いでPRに残らない"
+  - id: P127
+    source: docs/ai-agents/design-partner.md
+    anchor: "必ず1回、実装者への実測確認カードを挟んでから使う。これを「思い出せたらやる」教"
+    kind: exempt
+    reason: "実装者への実測確認カードを1回挟む、はカード運用でPRに残らない"
+  - id: P128
+    source: docs/ai-agents/design-partner.md
+    anchor: "- PR本文の修正（触るファイル/削除するファイル欄の追記等）だけでは関所は自動"
+    kind: exempt
+    reason: "PR本文修正後は新しいworkflow runのdatabaseIdを確認、は確認行為でPRに残らない"
+  - id: P129
+    source: docs/ai-agents/design-partner.md
+    anchor: "- design-partner.mdが定義する「危険操作」（本番scripts"
+    kind: exempt
+    reason: "危険操作の範囲は関所の実装を最終権威として確認する、は確認手順でPRに残らない（関所側の判定は登録済みA13/S10。DANGEROUS_PATTERNSは scripts/ 全体を危険扱い: check-process-artifacts.js:115-135）"
+  - id: P130
+    source: docs/ai-agents/design-partner.md
+    anchor: "- GO後のマージでも、hard block のはずの手元ガードが素通りしうる。"
+    kind: exempt
+    reason: "マージ完了はGitHub側メタデータで実測する、は確認行為でPRに残らない"
+  - id: P131
+    source: docs/ai-agents/design-partner.md
+    anchor: "- 設計図・仕様書は最後まで読んでから状態を判断する: 前半の節だけ読んで「未決"
+    kind: exempt
+    reason: "設計図・仕様書は最後まで読んでから状態を判断、は読む行為でPRに残らない"
+  - id: P132
+    source: docs/ai-agents/design-partner.md
+    anchor: "- 決定で古くなった記述は、消すか注釈を残す（黙って取り残さない）: あるべき姿"
+    kind: review
+    reason: "決定で古くなった記述は消すか注釈を残す: 文書の差分を見て人が判断する"
+  - id: P133
+    source: docs/ai-agents/design-partner.md
+    anchor: "- recon報告は「文書の最後まで含むか」を検収してから結論を出す: 実装役の"
+    kind: exempt
+    reason: "recon報告は文書の最後まで含むか検収してから結論を出す、は報告の検収でPRに残らない"
+  - id: P134
+    source: docs/ai-agents/design-partner.md
+    anchor: "- カードでファイルを追加編集させる場合、PR本文「触るファイル/削除するファイ"
+    kind: review
+    reason: "gate候補（R6）: カードで追加編集させるファイルをPR本文『触るファイル』宣言に含める: 宣言外変更は check-process-artifacts.js が落とす（PR番号2600以上）。ただし照合から外す名前の一覧（TOUCH_FILE_EXCLUDE_PATTERNS）があり、決まりの文書にその除外が書かれていない。書類だけの PR は STANDARD-WORKFLOW.md:137 が対象外。宣言の更新を同じカードに含める部分はカードの書き方で PR の外"
+  - id: P135
+    source: docs/ai-agents/design-partner.md
+    anchor: "- マージ拒否「base branch is not up to date」は、"
+    kind: exempt
+    reason: "base not up to dateは取り込み→push→再採点→マージ、--admin/--autoは禁止、はマージ操作でPRに残らない"
+  - id: P136
+    source: docs/ai-agents/design-partner.md
+    anchor: "- 件数と実体の数え方を混同しない。1部品にラベル複数で件数がずれ検算PASSを"
+    kind: review
+    reason: "件数と実体の数え方を混同しない（数える単位を明示）: 報告の書き方の判断で人が確かめる"
+  - id: P138
+    source: docs/ai-agents/design-partner.md
+    anchor: "- 守り手3（読まれない防止）: 設計パートナー用プロジェクトの常設指示に「まず"
+    kind: exempt
+    reason: "常設指示に『まず本書を読む』を置く、は設計パートナー用プロジェクトの設定でPRの外"
+  - id: P140
+    source: docs/ai-agents/design-partner.md
+    anchor: "- セッション冒頭に必ず「現在地の実測棚卸し」を行う。記憶で走り出さず、関連テー"
+    kind: exempt
+    reason: "セッション冒頭に現在地の実測棚卸しを行う、は会話冒頭の行為でPRに残らない"
+  - id: P141
+    source: docs/ai-agents/design-partner.md
+    anchor: "- 「不在・未着手・完了・確定」を記憶で断定しない。これらの状態主張には必ず固定"
+    kind: exempt
+    reason: "不在・未着手・完了・確定を記憶で断定しない、は発言時の行為でPRに残らない"
+  - id: P142
+    source: docs/ai-agents/design-partner.md
+    anchor: "- 色トークンの正本は docs/specs/design-tokens-sso"
+    kind: review
+    reason: "色トークンの正本はdesign-tokens-ssot側とし重複着手しない: PRの範囲を見て人が判断する"
+  - id: P143
+    source: docs/ai-agents/design-partner.md
+    anchor: "「ファイルが無い」報告は、worktreeの鮮度差で誤検知しうる: git fe"
+    kind: exempt
+    reason: "『ファイルが無い』報告前にgit show origin/main:<path>で確認、は確認行為でPRに残らない。no 341・347と同じ決まり"
+  - id: P144
+    source: docs/ai-agents/design-partner.md
+    anchor: "migration やコード変更でスキーマを指定する前に、必ずこの表を参照する。"
+    kind: exempt
+    reason: "スキーマ指定前に表を参照する、は参照行為でPRに残らない"
+  - id: P145
+    source: docs/ai-agents/design-partner.md
+    anchor: "| 4 | HIGH LIFE JPN | highlife-jpn | 本番。"
+    kind: exempt
+    reason: "表の行: highlife-jpnは migration経由のみ・PO GO必須。本番データ操作の手順でPRに残らない"
+  - id: P146
+    source: docs/ai-agents/design-partner.md
+    anchor: "| 6 | Sales Anchor App Review | tenant-r"
+    kind: exempt
+    reason: "表の行: tenant-reviewは触らない（QA用途禁止）。本番テナントでの操作でPRに残らない"
+  - id: P149
+    source: docs/ai-agents/design-partner.md
+    anchor: "- tenant_006 は Meta App Review 専用。TCG 未適"
+    kind: exempt
+    reason: "tenant_006はMeta App Review専用でQA禁止、は本番テナントでの操作でPRに残らない"
+  - id: P150
+    source: docs/ai-agents/design-partner.md
+    anchor: "- スキーマ全件カウントは禁止（CRM 系テーブルが混在するため）"
+    kind: exempt
+    reason: "スキーマ全件カウントは禁止、は実行時の操作でPRに残らない"
+  - id: P152
+    source: docs/ai-agents/design-partner.md
+    anchor: "- 自動の安全チェック（auto-mode classifier）が「危険」と判"
+    kind: exempt
+    reason: "安全チェックが止めた後に別の形で同じことを進めるのは禁止、はセッション中の行為でPRに残らない"
+  - id: P154
+    source: docs/ai-agents/design-partner.md
+    anchor: "1. 安全チェック・フック・権限に止められた（文面をそのまま貼る。言い換えない・"
+    kind: exempt
+    reason: "止められたら文面をそのまま貼り、言い換え・分割・別の道具・代行をしない、はセッション中の行為でPRに残らない。no 334と同じ決まり"
+  - id: DC155
+    source: docs/ai-agents/dev-commands.md
+    anchor: "> **重要**: `make test`（pytest）は Docker が必"
+    kind: exempt
+    reason: "make testはDockerが必須、Docker無しならmake lint-ciのみ、は手元の実行手順でPRに残らない"
+  - id: E174
+    source: docs/ai-agents/evidence-registry.md
+    anchor: "decision: \"dockerd再起動＋Dockerキャッシュ掃除＋停止コン"
+    kind: exempt
+    reason: "本番サーバーのDocker再起動・掃除手順と禁止（volume prune等）の記録で、本番操作のためPRに残らない"
+  - id: E178
+    source: docs/ai-agents/evidence-registry.md
+    anchor: "- Evidence なしのルール追加は禁止"
+    kind: review
+    reason: "Evidenceなしのルール追加を禁止: ルール追加PRにEvidenceがあるかをPR内で人が確かめる"
+  - id: X326
+    source: docs/ai-agents/executor-checklist.md
+    anchor: "> CLAUDE.md / AGENTS.md から参照される唯一の本文（ここ以"
+    kind: review
+    reason: "この文書以外に複製しない: 複製の有無は人が判断する"
+  - id: X328
+    source: docs/ai-agents/executor-checklist.md
+    anchor: "- 1便1目的。指示に無い作業・宿題の混載をしない。複数の宿題が来たら停止して分"
+    kind: review
+    reason: "1便1目的で混載しない・複数の宿題が来たら停止して分割を求める: PRの範囲を見て人が判断する（recon E01 no guard）"
+  - id: X329
+    source: docs/ai-agents/executor-checklist.md
+    anchor: "- 「削除するファイル」は git diff の実測で判定（削除・変更行のあるフ"
+    kind: review
+    reason: "gate候補（R6）: 「削除するファイル」はgit diffの実測で判定し推測・水増し・過少をしない: 宣言と差分の照合を check-process-artifacts.js が行うが、止まるのは過少（宣言していない削除）だけで、水増し（差分に無いファイルの宣言）は止まらない。削除が 1 行も無い PR は欄の検査も飛ぶ（recon E02 partial）"
+  - id: X330
+    source: docs/ai-agents/executor-checklist.md
+    anchor: "- 完了報告に、指示の全項目の消化○×自己チェックを必ず添える。"
+    kind: exempt
+    reason: "完了報告に消化○×の自己チェックを添える、は報告の書き方でPRに残らない（recon E03 no guard）"
+  - id: X331
+    source: docs/ai-agents/executor-checklist.md
+    anchor: "- 事実のみ・file:line必須・コマンド生出力をそのまま貼る。評価・提案・"
+    kind: review
+    reason: "事実のみ・file:line必須・生出力を貼る・評価提案感想を書かない: 内容は人が読んで判断する。file:line形式は no 42（recon E07 partial）"
+  - id: X332
+    source: docs/ai-agents/executor-checklist.md
+    anchor: "- 変更は指示に埋め込まれた「最終形の全文」をそのまま入れる。要約・改変・「改善"
+    kind: exempt
+    reason: "変更は指示の最終形の全文をそのまま入れ要約・改変しない: 指示（カード）がPRの外にあり、PR内では突合できない（recon E08 partial）"
+  - id: X333
+    source: docs/ai-agents/executor-checklist.md
+    anchor: "危険ファイル変更PRとして扱い、欄の平打ちとPO GOを必ず踏む。"
+    kind: review
+    reason: "gate候補（R6）: 正本は危険ファイル扱い＋PO GO: 機械判定できるが、コードではGO必須は docs/STANDARD-WORKFLOW.md のみ（check-process-artifacts.js:104-109）で、他の正本は宣言照合止まり。文書とコードが食い違う（recon E09 partial と一致）"
+  - id: X334
+    source: docs/ai-agents/executor-checklist.md
+    anchor: "1. 安全チェック・フック・権限に止められた（文面をそのまま貼る。言い換えない・"
+    kind: exempt
+    reason: "止められたら文面をそのまま貼り、言い換え・分割・別の道具・代行をしない、はセッション中の行為でPRに残らない。no 154と同じ決まり（recon E10 no guard）"
+  - id: XP336
+    source: docs/ai-agents/executor-preamble.md
+    anchor: "- カード冒頭の「本カードの許可・禁止は、過去便の禁止条項をすべて上書きする」を"
+    kind: exempt
+    reason: "カード冒頭の上書き宣言を最優先とする、は実行時の行為でPRに残らない"
+  - id: XP337
+    source: docs/ai-agents/executor-preamble.md
+    anchor: "カードに無い作業（ファイル作成・編集・台帳登録・レビュー・提案・/review等"
+    kind: exempt
+    reason: "カードに無い作業は一切しない、は実行時の行為でPRに残らない"
+  - id: XP338
+    source: docs/ai-agents/executor-preamble.md
+    anchor: "- 報告ファイルへ書き出すときは、`tee` の手前に必ず伏せ字フィルタを挟む。"
+    kind: exempt
+    reason: "報告ファイルへ書くときはteeの手前に伏せ字フィルタを挟む、は実行時の操作でPRに残らない"
+  - id: XP339
+    source: docs/ai-agents/executor-preamble.md
+    anchor: "- カードに書かれた手段が失敗した場合に、別の手段で同じ目的を達することを禁止す"
+    kind: exempt
+    reason: "カード記載の手段が失敗したら別手段で同じ目的を達しない、は実行時の行為でPRに残らない。no 374と同じ決まり"
+  - id: XP340
+    source: docs/ai-agents/executor-preamble.md
+    anchor: "- 索引先行確認: 本カードが新規のrecon/design/仕様文書の作成を含"
+    kind: exempt
+    reason: "新規recon/design作成前に索引を開いて現状を貼り、既存があれば追補に切り替える、は着手前の行為でPRに残らない"
+  - id: XP341
+    source: docs/ai-agents/executor-preamble.md
+    anchor: "ファイルが「無い」と報告する前に、ローカルの ls/find/cat だけで判定"
+    kind: exempt
+    reason: "『無い』報告前にgit show origin/main:<path>で確認し、worktreeが最新か確認する、は確認行為でPRに残らない。no 143・347と同じ決まり"
+  - id: L347
+    source: docs/ai-agents/lessons.d/20260721-server-resource-lessons.md
+    anchor: "- 「存在しない」の判断は作業ツリーでなくorigin/main実測で行う。作業"
+    kind: exempt
+    reason: "『存在しない』の判断はorigin/main実測で行う、は確認行為でPRに残らない。no 143・341と同じ決まり"
+  - id: L350
+    source: docs/ai-agents/lessons.d/20260722-design-partner-preflight.md
+    anchor: "危険操作を含むカードには、push・PR作成の前に上記の手元関所実行を必須手順と"
+    kind: exempt
+    reason: "危険操作を含むカードに手元関所の実行を必須手順として組み込む、はカードの書き方・実行時の行為でPRに残らない"
+  - id: L351
+    source: docs/ai-agents/lessons.d/20260724-guard-drill-verification.md
+    anchor: "- 合否条件は「緑になったか」でなく「どの経路で緑になったか」で書く。ラベル例外"
+    kind: exempt
+    reason: "合否条件は『どの経路で緑になったか』で書く、はカードの書き方でPRに残らない"
+  - id: L353
+    source: docs/ai-agents/lessons.d/20260724-guard-drill-verification.md
+    anchor: "- 訓練用ダミーPRは必須チェックが全緑になり得るため、証拠採取の直後にクローズ"
+    kind: exempt
+    reason: "訓練用ダミーPRは採取直後にクローズする、は運用手順でPRに残らない"
+  - id: L354
+    source: docs/ai-agents/lessons.d/20260724-merge-gate-mechanics.md
+    anchor: "- `mergeStateStatus` は照会のたびに算出される揺れる値。同一"
+    kind: exempt
+    reason: "カードの関門条件にmergeStateStatusのスナップショットを使わない、はカードの書き方でPRに残らない"
+  - id: L356
+    source: docs/ai-agents/lessons.d/20260724-merge-gate-mechanics.md
+    anchor: "- 完了待ちループの判定に「未完了の実行数 = 0」を使わない。push直後は実"
+    kind: exempt
+    reason: "完了待ちループの判定に『未完了=0』を使わない、は手元スクリプトの書き方でPRに残らない"
+  - id: L357
+    source: docs/ai-agents/lessons.d/20260724-merge-gate-mechanics.md
+    anchor: "- 既知事象への当てはめを実測より先に行わない。作業台作成の沈黙を EV-202"
+    kind: exempt
+    reason: "既知事象への当てはめを実測より先に行わない、は調査時の行為でPRに残らない"
+  - id: L358
+    source: docs/ai-agents/lessons.d/20260725-card-hygiene.md
+    anchor: "- カードの禁止事項リストに書く語と、実行コマンドに書く語は、字面が衝突しないよ"
+    kind: exempt
+    reason: "禁止語と実行コマンドの字面を衝突させない、はカードの書き方でPRに残らない"
+  - id: L359
+    source: docs/ai-agents/lessons.d/20260725-merge-waits.md
+    anchor: "- PR本文の編集だけでなく、コメント投稿（gh pr comment）も pu"
+    kind: exempt
+    reason: "待機は現HEADのSHAに紐づく実行が登録済みかつ全完了を条件にする、は手元の待機手順でPRに残らない"
+  - id: L360
+    source: docs/ai-agents/lessons.d/20260725-merge-waits.md
+    anchor: "- PR番号は作成コマンド（gh-pr-create-safe.sh）が出力する"
+    kind: exempt
+    reason: "PR番号は作成コマンドが出力する実URLから採る、は作業中の行為でPRに残らない"
+  - id: L361
+    source: docs/ai-agents/lessons.d/20260725-merge-waits.md
+    anchor: "- カードの禁止リストに入れた語（スクリプト名・コマンド名）は、そのカード内のど"
+    kind: exempt
+    reason: "カードの禁止リストの語は同じカード内のどのブロックでも実行させない、はカードの書き方でPRに残らない"
+  - id: L362
+    source: docs/ai-agents/lessons.d/20260727-prnum-adr-index.md
+    anchor: "- docs/adr/README.md は scripts/generate-"
+    kind: review
+    reason: "gate候補（R6）: 名前の表記ゆれで、索引には載るが検査が起動しない ADR がある（generate-adr-index.js と adr-index-check.yml の対象の決め方の差）。docs/adr/README.md は generate-adr-index.js の自動生成物で手動編集禁止: 手で行を足すと adr-index-check.yml の `--check` が落ちる。検査は ADR 関連ファイルの変更時だけ走るが、README.md の手編集はその対象なので飛ばない。検査が意図して比べない「最終更新: 日付」の行（generate-adr-index.js:185 の normalize）は、決まりの目的（手で行を足さない）に関わらないので妨げない"
+  - id: L363
+    source: docs/ai-agents/lessons.d/20260728-precheck-guards.md
+    anchor: "- 危険変更・正本変更のカードを組む前に、その変更に効く関所・ガードの適用条件を"
+    kind: exempt
+    reason: "危険変更のカードを組む前に関所の適用条件を実コードで確認する、は設計時の行為でPRに残らない"
+  - id: L365
+    source: docs/ai-agents/lessons.d/20260831-card-design-failures.md
+    anchor: "「どの手順で到達したか」を前提にしないこと。"
+    kind: exempt
+    reason: "『どの手順で到達したか』を前提にしない、はカードの書き方でPRに残らない"
+  - id: L367
+    source: docs/ai-agents/lessons.d/20260902-data-durability.md
+    anchor: "## 1. ログの末尾だけで期間を断定しない（分類 6-3）"
+    kind: exempt
+    reason: "見出し: ログの末尾だけで期間を断定しない。断定する行為でPRに残らない"
+  - id: L368
+    source: docs/ai-agents/lessons.d/20260902-data-durability.md
+    anchor: "二次記事は発見の手がかりにとどめ、判断の根拠にしない。"
+    kind: exempt
+    reason: "二次記事は判断の根拠にしない、は調査時の行為でPRに残らない"
+  - id: L369
+    source: docs/ai-agents/lessons.d/20260902-data-durability.md
+    anchor: "既存の番号体系に例外が混じっている前提で、採番前に衝突チェックを必ず入れる。"
+    kind: exempt
+    reason: "採番前に衝突チェックを必ず入れる、は採番時の行為でPRに残らない"
+  - id: L371
+    source: docs/ai-agents/lessons.d/20260902-data-durability.md
+    anchor: "対策: ADRを新規作成・変更する便のカードには、次の3点を必ず含める。"
+    kind: exempt
+    reason: "ADRを新規作成・変更する便のカードに3点を必ず含める、はカードの書き方でPRに残らない"
+  - id: L372
+    source: docs/ai-agents/lessons.d/20260902-data-durability.md
+    anchor: "## 5. カード外の代替手段による検問回避を明示的に禁止する（分類 6-2）"
+    kind: exempt
+    reason: "見出し: カード外の代替手段による検問回避を禁止する。実行時の行為でPRに残らない"
+  - id: L373
+    source: docs/ai-agents/lessons.d/20260902-data-durability.md
+    anchor: "対策: カードの禁止事項の定型に次の一文を加える。"
+    kind: exempt
+    reason: "カードの禁止事項の定型に一文を加える、はカードの書き方でPRに残らない"
+  - id: L374
+    source: docs/ai-agents/lessons.d/20260902-data-durability.md
+    anchor: "「カードに書かれた手段が失敗した場合に、別の手段で同じ目的を達することを禁止する"
+    kind: exempt
+    reason: "カード記載の手段が失敗したら別手段で同じ目的を達しない、は実行時の行為でPRに残らない。no 339と同じ決まり"
+  - id: L376
+    source: docs/ai-agents/lessons.d/20260904-discord-reaction-recon.md
+    anchor: "## 1. 読み取り便の停止条件を、読み取り結果に影響しない状態に置かない（分類"
+    kind: exempt
+    reason: "見出し: 読み取り便の停止条件を読み取り結果に影響しない状態に置かない。カードの書き方でPRに残らない"
+  - id: L377
+    source: docs/ai-agents/lessons.d/20260904-discord-reaction-recon.md
+    anchor: "固定SHAからの読み取り便では、作業台の状態を停止条件にしない。"
+    kind: exempt
+    reason: "固定SHAからの読み取り便では作業台の状態を停止条件にしない、はカードの書き方でPRに残らない"
+  - id: L379
+    source: docs/ai-agents/lessons.d/20260907-note-ja-merge-cleanup.md
+    anchor: "削除は失敗する」を前提に置き、削除の完了判定は必ず `git ls-remote"
+    kind: exempt
+    reason: "削除の完了判定はgit ls-remote --heads originの空で行う、は片付け時の確認行為でPRに残らない。no 380と関連"
+  - id: L380
+    source: docs/ai-agents/lessons.d/20260907-note-ja-merge-cleanup.md
+    anchor: "空で行う。gh の出力文言や実行者の注記を完了の根拠にしない。"
+    kind: exempt
+    reason: "ghの出力文言を完了の根拠にしない、は確認行為でPRに残らない。no 379と関連"
+  - id: L381
+    source: docs/ai-agents/lessons.d/20260907-note-ja-merge-cleanup.md
+    anchor: "GitHub UI と `gh api` の ref delete は CLAU"
+    kind: exempt
+    reason: "GitHub UIとgh apiのref deleteは禁止で迂回しない、は操作でPRに残らない。no 10・400と同じ決まり"
+  - id: L382
+    source: docs/ai-agents/lessons.d/20260916-haiku-readonly-governance.md
+    anchor: "## 1. Haikuに書き込み操作を委任してはならない（分類 6-3）"
+    kind: exempt
+    reason: "見出し: Haikuに書き込み操作を委任してはならない。委任はPRの外"
+  - id: T384
+    source: docs/ai-agents/task-template.md
+    anchor: "Codex Agent に作業を渡すときは、対象範囲と禁止事項を先に固定する。"
+    kind: exempt
+    reason: "Codex Agentに渡すときは対象範囲と禁止事項を先に固定する、は依頼文の書き方でPRに残らない"
+  - id: T385
+    source: docs/ai-agents/task-template.md
+    anchor: "- repo 全体探索禁止"
+    kind: exempt
+    reason: "repo全体探索禁止、は実行時の探索でPRに残らない。no 60と同じ決まり"
+  - id: T386
+    source: docs/ai-agents/task-template.md
+    anchor: "- o4-mini 使用禁止"
+    kind: review
+    reason: "gate候補（R6）: o4-mini使用禁止: 設定ファイルをgrepで機械判定できる。必須チェックなし。no 59と同じ決まり"
+  - id: T387
+    source: docs/ai-agents/task-template.md
+    anchor: "**全フィールド必須**。空欄・「???」・「TBD」は `check-task"
+    kind: review
+    reason: "gate候補（R6）: task-templateの全フィールド必須（空欄・???・TBDはcheck-task-state.shがエラー）: 機械判定できる。task-state-check.ymlは必須チェックに入っていない"
+  - id: B389
+    source: docs/specs/branch-operations/README.md
+    anchor: "main の鍵（消せない・巻き戻し禁止・レビュー必須・process-artif"
+    kind: exempt
+    reason: "mainの鍵（巻き戻し禁止・レビュー必須・gate必須）を廃止作業で弱めない、はRuleset設定の操作でPRに残らない"
+  - id: B392
+    source: docs/specs/branch-operations/README.md
+    anchor: "- 完了後 `gh pr create --base main` でPR作成 →"
+    kind: exempt
+    reason: "merge commitでマージしsquash禁止、はマージ操作の選択でPRの差分に残らない（recon B03: ruleset）。no 96・395と同じ決まり"
+  - id: B393
+    source: docs/specs/branch-operations/README.md
+    anchor: "- **release/* → main は PR 経由**（直push禁止・B"
+    kind: exempt
+    reason: "release→mainはPR経由で直push禁止、はBranch Protectionが止めPRの差分に残らない（recon A07: ruleset）。no 8と同じ決まり"
+  - id: B394
+    source: docs/specs/branch-operations/README.md
+    anchor: "- リリース相当の大きな変更は `--draft` で起票（**必ず Draft"
+    kind: review
+    reason: "もう一方の行と食い違い（docs/ai-agents/design-partner.md:172「下書き禁止」と、この行「必ず Draft」は逆の文）。どちらを正とするか未決。「リリース相当」の線引きにも判断が要る"
+  - id: B395
+    source: docs/specs/branch-operations/README.md
+    anchor: "- マージ方法は必ず \"Create a merge commit\"（squas"
+    kind: exempt
+    reason: "マージ方法は必ずmerge commit、squash禁止、はマージ操作の選択でPRの差分に残らない（recon B03: ruleset）。no 96・392と同じ決まり"
+  - id: B396
+    source: docs/specs/branch-operations/README.md
+    anchor: "- マージ前は reviewer(opus) の `VERDICT: APPRO"
+    kind: review
+    reason: "gate候補（R3）: マージ前に reviewer(opus) の VERDICT: APPROVE 行つき報告が必須。ADR-1029 のフック（手元の見張り）が強制しているが、PR の必須チェックにはまだ無い。R3 で PR 側の検査にする"
+  - id: B397
+    source: docs/specs/branch-operations/README.md
+    anchor: "- **main にマージ＝本番投入可の宣言**（ADR-135）：`migra"
+    kind: review
+    reason: "gate候補（R6）: migrations/・deploy.yml・本番scripts/を含むPRはPO GOまでmainにマージしない: GO記録の有無を check-process-artifacts.js が止める（登録済みA13/S10と同じ検査で、行が別）。出典は ADR-1003 の語を書いていないが、対象の migrations/ は ADR-1003 の例外（PO 本人の GO が必須の7種、ADR-1003:35-41）の操作を含みうる。本人GO の判定（check-process-artifacts.js:84 の requiresPoOnlyGo）は一部しか止めない。develop→main の PR を丸ごと飛ばす条件は、develop 側の ruleset 16619490 が同じ検査を必須にしているので妨げない"
+  - id: B398
+    source: docs/specs/branch-operations/README.md
+    anchor: "- **危険PR（上記パス含む）のGO手順**（ADR-136）：①マージ前にチ"
+    kind: review
+    reason: "gate候補（R6）: 出典の行が含む ADR-1003 の例外（PO 本人の GO が必須の7種。ADR-1003:35-41）のうち PR の中で確かめられる部分が、本人GO 判定（check-process-artifacts.js:84 の requiresPoOnlyGo）で一部しか止まらない（判定が見ない書き方がある）。危険 PR の GO 手順のうち、PR の中で確かめられる GO 記録セクションの有無は check-process-artifacts.js の危険パス判定が止める。マージ前のチャットでの提示と GO 原文の受領は PR の外なので対象外。develop→main の PR を丸ごと飛ばす条件は、develop 側の ruleset 16619490 が同じ検査を必須にしているので妨げない"
+  - id: B399
+    source: docs/specs/branch-operations/README.md
+    anchor: "### 長命ブランチ消失防止（develop は第3便まで残置・ロールバック用・"
+    kind: review
+    reason: "gate候補（R6）: developを新規作業で使わない: pr-base-check.yml はmain宛PRの出所しか見ず、developを起点・宛先にするPRを止める必須チェックはない（recon B06 no guard）"
+  - id: B400
+    source: docs/specs/branch-operations/README.md
+    anchor: "- `main` / `develop` に対する `git push --de"
+    kind: exempt
+    reason: "main/developの削除（push --delete・UIのbranch delete・gh apiのref delete）は実行しない、はGitHub側の操作でPRに残らない（recon A12）。no 10・381と同じ決まり"
 
-not_rules: []
+not_rules:
+  - source: frontend/AGENTS.md
+    anchor: "// ❌ 禁止（ESLint エラー）"
+    reason: "コード例中のコメント（禁止の見本）で規則ではない"
+  - source: frontend/AGENTS.md
+    anchor: "`lint-staged` により **コミット前に自動ブロック**（`--ma"
+    reason: "lint-stagedの動作説明（手元で止まる・CIの必須チェックで検査される）で、規則の本文ではない"
+  - source: backend/AGENTS.md
+    anchor: "<!-- [SELF-DESTRUCT-ADR-034] ADR-034マージ時"
+    reason: "ADR-034マージ時に節を削除する旨のHTMLコメントで規則ではない"
+  - source: docs/STANDARD-WORKFLOW.md
+    anchor: "実装の起動トリガーは**設計のハンドオフ**。ADRのpushでは発火しない。確"
+    reason: "ハンドオフが実装の起動トリガーである、という仕組みの説明で規則ではない"
+  - source: docs/STANDARD-WORKFLOW.md
+    anchor: "## 1.7 維持の仕組み欄（全designに必須・空欄不可）"
+    reason: "見出し: 維持の仕組み欄の節。規則本体は no 41"
+  - source: docs/STANDARD-WORKFLOW.md
+    anchor: "## 4. やり方の違い（準備はどちらも必須）"
+    reason: "見出し: やり方の違いの節。規則本体は次の行"
+  - source: docs/ai-agents/aeon-routing.md
+    anchor: "- 別ターミナルの TUI 起動は必須ではない"
+    reason: "『TUI起動は必須ではない』という否定形の説明で規則ではない"
+  - source: docs/ai-agents/codex-operations.md
+    anchor: "> この文書は何か：Codex（ChatGPT・Codex app / CLI）"
+    reason: "文書の目的を述べる引用ブロックで規則ではない"
+  - source: docs/ai-agents/codex-operations.md
+    anchor: "> i18n、PageLayout、CSS変数、E2E更新ルールは Claude"
+    reason: "Codex用文書がfrontend/AGENTS.mdを参照するよう案内する文で、規則の本文は参照先（no 14-22）"
+  - source: docs/ai-agents/design-partner.md
+    anchor: "> 棲み分け（重要・混同しないこと）:"
+    reason: "見出し直下の注意書き（棲み分け）で規則ではない"
+  - source: docs/ai-agents/design-partner.md
+    anchor: "## 0. セッション開始時に必ずやること（冒頭キャッチアップ手順）"
+    reason: "見出し: セッション開始時の手順の節。規則本体は no 73"
+  - source: docs/ai-agents/design-partner.md
+    anchor: "- 進め方の①KGI→②recon→③design は「役割分担」ではなく、設計"
+    reason: "KGI→recon→designは役割分担でなくモード、という説明で規則ではない"
+  - source: docs/ai-agents/design-partner.md
+    anchor: "①KGI設定（PO承認ゲート。ADR-1015 の B 区分は Opus 審査 "
+    reason: "進め方の流れの説明で規則ではない（推測禁止の語は説明文中）"
+  - source: docs/ai-agents/design-partner.md
+    anchor: "- SVGのGitHub表示の合否は「参照元がレンダリングされる画面（desig"
+    reason: "SVGの表示合否の判定場所を述べた経験則で、PRで判定する規則ではない"
+  - source: docs/ai-agents/design-partner.md
+    anchor: "### カード設計の規約（Planner用・カードを組むときに必ず満たす）"
+    reason: "見出し: カード設計の規約。規則本体は次行以降"
+  - source: docs/ai-agents/design-partner.md
+    anchor: "「新設パレット23件」がリポジトリのどこにも実在しないまま複数ターン鵜呑みにされ"
+    reason: "『新設パレット23件』が実在しなかった事例の経緯で規則ではない"
+  - source: docs/ai-agents/design-partner.md
+    anchor: "- worktreeの土台ズレは3パターンで実害が出た（2026-07-13/1"
+    reason: "worktreeの土台ズレ3パターンの事例の経緯で規則ではない"
+  - source: docs/ai-agents/design-partner.md
+    anchor: "- 未確立（正直な明記）: 守り手2・3・4の機械強制は未設計。守り手4は既存索"
+    reason: "守り手2〜4の機械強制が未設計であるという現状の明記で規則ではない"
+  - source: docs/ai-agents/design-partner.md
+    anchor: "**未使用 ID**: id=2, 7, 8, 9 は public.tenan"
+    reason: "未使用IDの事実の記載で規則ではない"
+  - source: docs/ai-agents/design-partner.md
+    anchor: "- 本番（tenant_004）と QA（tenant_001）以外に TCG "
+    reason: "TCGテーブルの存在場所の事実の記載で規則ではない"
+  - source: docs/ai-agents/design-partner.md
+    anchor: "| 役割 | 担当 | すること |"
+    reason: "表の見出し行（役割・担当・すること）で規則ではない"
+  - source: docs/ai-agents/design-partner.md
+    anchor: "### 実装者への指示に必ず入れる決まり"
+    reason: "見出し: 実装者への指示に必ず入れる決まり。規則本体は no 154"
+  - source: docs/ai-agents/executor-checklist.md
+    anchor: "> 実装役（CC・codex等）が便の作業前・commit前・PR前に必ず確認す"
+    reason: "文書の目的を述べる引用ブロックで規則ではない"
+  - source: docs/ai-agents/executor-checklist.md
+    anchor: "## §0 共通（全便で必ず）"
+    reason: "見出し: 共通チェックの節。規則本体は次行以降"
+  - source: docs/ai-agents/executor-preamble.md
+    anchor: "- GO記録・evidence-registry への書き込み禁止などの便別の禁"
+    reason: "便別の禁止はカード側に書く、という所在の説明で規則ではない"
+  - source: docs/ai-agents/executor-preamble.md
+    anchor: "ADR のファイル名は「ADR-番号-説明」の形で、説明部分を推測すると必ず外れ"
+    reason: "ADRファイル名の推測が外れる、という経験則の記述で規則ではない"
+  - source: docs/ai-agents/kpi.md
+    anchor: "| Rule Compliance Rate | `compliant_prs "
+    reason: "KPI表の行（指標名と式）で規則ではない"
+  - source: docs/ai-agents/lessons.d/20260720-required-checks-change.md
+    anchor: "- main保護の必須チェック数が変わると（今回11→37）、進行中の全PRが新"
+    reason: "必須チェック数が変わると追従が要る、という事実の記述で規則ではない"
+  - source: docs/ai-agents/lessons.d/20260721-deploy-not-done.md
+    anchor: "- 仕組み（scripts/ワークフロー）は「配備した」では完了でない。実際に動"
+    reason: "配備と完了は別、という教訓の説明で規則ではない（関所を将来設けるという記述は未実装）"
+  - source: docs/ai-agents/lessons.d/20260721-moving-target-freeze.md
+    anchor: "- 全セッション共用ファイル（本体active-work.md等）を動作中に書き"
+    reason: "共用ファイル書き換え時の対策の経緯で規則ではない"
+  - source: docs/ai-agents/lessons.d/20260722-design-partner-preflight.md
+    anchor: "セッションを跨いだ学習は成立しないため、「次から気をつける」は対策にならない。"
+    reason: "『次から気をつける』は対策にならない、という教訓の説明で規則ではない"
+  - source: docs/ai-agents/lessons.d/20260722-design-partner-preflight.md
+    anchor: "- 手元の判定文言と CI の判定文言が一字一句一致することを実測（PR #30"
+    reason: "手元とCIの判定文言が一致した実測結果の記録で規則ではない"
+  - source: docs/ai-agents/lessons.d/20260724-guard-drill-verification.md
+    anchor: "- マージ状態の語彙を混ぜない。BLOCKED=方針が禁止、UNSTABLE=必"
+    reason: "マージ状態の語彙の違いの説明で規則ではない"
+  - source: docs/ai-agents/lessons.d/20260724-merge-gate-mechanics.md
+    anchor: "- 書類のみの変更でも正本（docs/ai-agents/ 等）を含むと宣言照合"
+    reason: "書類のみの変更でも正本を含むと宣言照合に進む、という実測事実の記録（check-process-artifacts.js の判定と整合）で規則ではない"
+  - source: docs/ai-agents/lessons.d/20260831-card-design-failures.md
+    anchor: "| 7 | active-work.md が凍結済みであることを知らずDONE化"
+    reason: "原因一覧の表の行で規則ではない"
+  - source: docs/ai-agents/lessons.d/20260831-card-design-failures.md
+    anchor: "カード冒頭に「記載外のコマンドを実行しない」を明示した便では再発しなかった。"
+    reason: "上書き宣言を明示した便では再発しなかった、という結果の記録で規則ではない"
+  - source: docs/ai-agents/lessons.d/20260902-data-durability.md
+    anchor: "docs/adr/README.md は自動生成であり、CLAUDE.md に再"
+    reason: "README.mdは自動生成でCLAUDE.mdに再生成が明記されている、という事実の記述で規則ではない"
+  - source: docs/ai-agents/lessons.d/20260902-data-durability.md
+    anchor: "既存の「自力回避禁止」は修正行為を想定しており、同一目的の別手段による達成を"
+    reason: "既存の『自力回避禁止』の対象範囲の説明で規則ではない"
+  - source: docs/ai-agents/lessons.d/20260904-discord-reaction-recon.md
+    anchor: "別の手段で同じ目的を達することを禁止する」と同型の再発である。"
+    reason: "同型の再発であるという経緯の記述で規則ではない（no 339・374の関連）"
+  - source: docs/ai-agents/lessons.d/20260916-haiku-readonly-governance.md
+    anchor: "判断してCREATEをスキップし、存在しないカラム（jan_code等）への"
+    reason: "存在しないカラムを参照した事故の経緯の記述で規則ではない"
+  - source: docs/specs/branch-operations/README.md
+    anchor: "develop がこれまで手前で引き受けていたリスク管理を、廃止後は main "
+    reason: "develop廃止後の守りをmainへ移す、という設計意図の説明で規則ではない"
+  - source: docs/specs/branch-operations/README.md
+    anchor: "develop ブランチが存在しない。撤去は全工程の最後。撤去前はいつでも安全に"
+    reason: "完了条件の記述（developが存在しない）で規則ではない"
+  - source: docs/specs/branch-operations/README.md
+    anchor: "| 3 | develop が存在しない | `git ls-remote or"
+    reason: "完了条件の表の行で規則ではない"
+  - source: docs/ai-agents/evidence-registry.md
+    reason: "evidence-registryの記録行（要約・判断・経緯・原文）で、新しい決まりではない"
+    anchors:
+      - "summary: 全停止スイッチと回数上限・権限で塞ぐ・対応不要の通知はページに"
+      - "summary: 初回CI失敗はGO節欠落。Astraがlog-failedを直"
+      - "tradeoff: 仕様文書のみの変更であるため、実装コードや API には影響"
+      - "summary: plain object fixture 内の status "
+      - "summary: personal / 明示値不変 / source ガード /"
+      - "decision: 既存データの曖昧な category は埋めず、後続の読み取"
+      - "summary: docs-only PR の PayPal Sandbox s"
+      - "tradeoff: KGI を 1 本に絞ることで評価軸は明快になる一方、補助 "
+      - "tradeoff: tasks/todo.md を正本にすることで更新漏れリスク"
+      - "decision: tasks/todo.md をタスク台帳正本とし、runbo"
+      - "tradeoff: GitHub Ruleset の実登録状態は GitHub "
+      - "reference: rg -n \"<禁止モデル名>|gpt-5\\\\.5|gpt"
+      - "summary: 禁止モデル名は設定値・起動プロファイルから除去し、文書上は使用"
+      - "decision: Agent 役割、読取範囲、Evidence 必須化、rep"
+      - "summary: Playwright E2E (chromium) と pyt"
+      - "summary: \"1行返却 — fk_products_tcg_type | "
+      - "follow_up: \"(1)dockerd再起動後backend-1が自動復帰"
+      - "## 2026-07-03 PR #2751 便1b 会話ログの背骨必須化"
+      - "task: 便1b 会話ログの背骨必須化（echo経路のoutbound lea"
+      - "## 2026-06-30: 標準フローに Phase 1.5「設計仕様書（ある"
+      - "lessons: \"①マージ方式はリポ設定に合わせる(squash禁止→merg"
+      - "follow_up: \"「設計に維持の仕組み欄を必須化し関所で守らせる」新テーマ"
+      - "kpi: \"既存14テスト緑（回帰なし）＋再現テスト15追加。修正を stash"
+      - "kgi: \"KGI 5/5 達成（①既定base=main実測 ②削除3不在MI"
+      - "human_verification: \"Shingo が GO #2715 を"
+      - "decision: \"第1便完了。develop は未撤去（撤去は第3便・別途自"
+      - "## 2026-07-02: 維持の仕組み欄の必須化（正本§1.7＋関所検査A/"
+      - "summary: \"全designに維持の仕組み欄を必須化。関所が『欄と守り手の"
+      - "lessons: \"①CCが赤テストを無断で自己修正しコミットまで進める逸脱（修"
+      - "scope: \".github/workflows/worktree-integ"
+      - "fix: \"worktree検問の発火先を [main, develop] に拡"
+      - "kgi: \"KGI 5/5（①UI governance gate=main必須"
+      - "decision: \"第1.5便完了。E2E必須化は見送り（1人開発＋recon"
+      - "follow_up: \"①KGI-3実発火の追認（次にactive-work.m"
+      - "kgi: \"6争点すべて実測PASS: ①new-worktree.sh L80"
+      - "decision: \"第1便・第1.5便は完了済みが正。develop未撤去は意"
+      - "lessons: \"①並行セッションの検証は必ず実測時のmain SHAを併記す"
+      - "fix: \"4分類ルール（削除済み装置参照=撤去／develop起点手順=mai"
+      - "follow_up: \"①次セッション冒頭の要点宣言に接触面分析が含まれるかでR"
+      - "## 2026-07-03: 便1a 背骨の必須化（lead必須: deal/c"
+      - "subject: 便1a 背骨の必須化（lead必須: deal/company"
+      - "tradeoff: \"develop上の旧worktreeにmain基準の警告が"
+      - "note: \"F と G は process-artifacts gate が赤"
+      - "kgi: \"2026-07-27 04:08 JST の定期run 302162"
+      - "summary: 実装契約の自己審査APPROVE。文書承認と本番反映は別工程。"
+      - "app_form_recon: \"実登録画面の項目/権限を読取照合。PEM端末ダ"
+      - "sandbox_creation_approval: \"PO原文『進める』を初期"
+      - "revision3: \"PR #3394 MERGEDをAPI確認。GO確定JS"
+      - "observed: \"2026-09-10 PO返答『合意』はGitHub画面・"
+      - "tradeoff: ローカルpytestは未実施と明示し、CIで実統合試験が実行"
+      - "- PostgreSQL: CIの使い捨てサービス内に試験ごとのDBを作る統合試"
+      - "- migration: 既存TCG表・表なし・将来作成後・再実行、nullab"
+      - "- Gemini実測1: HEAD ff8098eec27dbcdadb60d2"
+      - "- Gemini実測2: HEAD 6b489af4d6fbc05f600eac"
+      - "- PO原文: 「GO #3393」。本セッションで受領し、PR本文のGO記録4"
+      - "PO原文「マージ」を受領。最新main取り込みは文書7件のみで競合なし、製品差分"
+      - "- 停止位置: 先行PR固有のGO受領前。#3393のGOとマージ依頼は保持し、"
+      - "POの「進める」に基づきread_only=onのDB接続で確認。固定標本19原"
+      - "実施条件: 各周で広く原文・保存結果・マスタを比較し、証拠の揃う修正をまとめて設"
+      - "全3接続のrun_distributionは07:32:05Zに安全装置#8bで"
+      - "- 同スクリプトにL32の機械実装はない。L32行・L02補足・冒頭説明を人手照"
+      - "- 同一AI自己審査APPROVE（限定した静的検査）。PO発話や個別GOは創作"
+      - "- 依頼4の評価ゲートは別設計。GOフロー設計PR #3388も自己審査REVI"
+      - "L1は既存実装を確認しPR https://github.com/shingo-"
+      - "マージ直前にmainがPR #3403で前進しBEHINDとなったため、マージw"
+      - "予約番号とActionsの起動順を分離する設計推論、公式イベント仕様、追加否定試"
+      - "- 製品実装、DB変更、実配信、機能試験は未実施。外部事例の改善率は使用しない。"
+      - "- 初回導入案を入口専用7段階へ具体化。API/workerの前後ID不変、通常"
+      - "- 最終確認: PR #3399は2026-09-10T03:07:34ZにME"
+      - "- 既存DDL列照合関数を維持。商品サービス・DB・CI・運用スクリプトは変更し"
+      - "- 原因の接触面: backend/tests/rls_bootstrap.py"
+      - "PO原文「離席するので最後まで進めてくれ、事前にPRマージも承認する」。直前の本"
+      - "- 最終HEAD a3bc636e、run 34432333829 / pyte"
+      - "- 現接続のadmin/maintainはfalse、bypass_actors"
+      - "- この記録は設置PR・マージ・機械強制・POの個別GOを完了扱いにしない。"
+      - "依頼4の実ファイル配置後検証: 67成功/失敗0/skip0（24.77秒）。証"
+      - "依頼4の設置PR提出: https://github.com/shingo-op"
+      - "- process-artifacts job102738677035は番号付き"
+      - "追補（2026-09-10）: PO原文「次に進む、また離席するのでPRマージと"
+      - "GitHub main rules APIでUI governance gate"
+      - "設計担当の直接確認: 同じリモートSHAとorigin/mainを照合。設計wo"
+      - "PO原文: 「画面統一の全体設計をした後に最終的にCIを設置する方向で進める、先"
+      - "実表示の確認手段: Browserスキルを再読し、利用可能ツールを再検索。指定さ"
+      - "全体REVISE、製品・CI未変更、実装未着手。文書はローカル保存、PR未提出。"
+      - "PO原文: 「画面確認は完了後に私が行うので実装PRマージまで進めてくれ」。完成"
+      - "実装前の衝突調査で、今回と同じ領域のOPEN PRを7件確認: #2911 色S"
+      - "#2668のSelect.tsx/FormField.cssは固定mainとの差"
+      - "設計担当がPlanner作成後にArchitectとして同一AI自己審査APPR"
+      - "CSS314候補、動的Badge33箇所166状態、動的style172項目、I"
+      - "次は設計文書PRの保存・レビュー・マージと、既存ICON5値を変えない生成便のカ"
+      - "PR #3409は2026-09-10T09:56:27Z、merge comm"
+      - "同mergeを起点に公式new-worktree.shでrelease/fron"
+      - "公開送信許可の追補: 設計担当が公開リポジトリshingo-ops/salesa"
+      - "PO原文「GO #3412」を受領。2026-09-10 20:24 JSTに受"
+      - "2026-09-10、POの管理アカウント利用GO後、shingo-opsのad"
+      - "PO原文「GO #3404」をHEAD45b9ae3677153002952bc"
+      - "PR #3412は2026-09-10T11:31:17Z、merge comm"
+      - "PO原文「離席するのでcxastragoモードと同じ条件で権限委譲するので進めて"
+      - "既存の実装・レビュー・段階別PRの承認を根拠に、公式release/fronte"
+      - "EV-20260910-FRONTEND-MOLD-20追補: 7製品原稿の限定"
+      - "PR #3420 GO追補: PO原文「GO #3420」を受領。2026-09"
+      - "PO原文「セッション上で委任した時点でGOを出せる権限を移譲されたと認識して良い"
+      - "本セッションの元委任user記録2026-09-10T12:11:22.302Z"
+      - "制御repo独立起動・Issue転記受付・状態正本への限定書込の案をdesign"
+      - "PR #3424提出済み: https://github.com/shingo-"
+      - "PR #3420はmerge a5e5a250aabe2e244ebf64c24"
+      - "follow_up: 実装、型/DOM/ブラウザー同値比較、第二レビュー、PR。"
+      - "最終検証（2026-09-11）: PR #3425 head e60f555e"
+      - "実行結果2543passed・94skipped・303warnings、92."
+      - "Google公式 https://ai.google.dev/gemini-api/docs/mod"
+      - "生ログ /tmp/reports/LITE25-ERROR-DIAGNOSTIC"
+      - "キー: ADR-075に従い既存GitHub Actions repositor"
+      - "代替: 3.5継続より単価が低く、2.5は今回拒否されたため不採用。リスクは共有"
+      - "同一AIによる自己審査APPROVE（この限定実装契約）。正確な既定値2箇所・料"
+      - "この検証後追記は不要な再API実行を避け文書だけのローカルcommitで保持し、"
+      - "商品マスタ全件表示（非表示含む）をPO承認。既存worktree引継ぎ後に一覧/"
+      - "2026-09-11 最終再検査追補: PR #3422 head e2f106"
+      - "2026-09-11 08:06 JST（受領後記録時刻）: PO原文「GO #"
+      - "PO原文「追従してPRマージを実行」を、提示済み#3418の文書保存指示として受"
+      - "PO原文「全て完了させてくれ」、登録範囲回答「単独販売の商品とセットまで（推奨）"
+      - "PR #3434検証追記（実装HEAD4c5d1893）: GitHub run"
+      - "process-artifacts gateは番号付きGO記録なしで失敗。一般的"
+      - "準備Draft PR #3433: https://github.com/shi"
+      - "PR #3433 CI追補: f09d3659の実DB CI（run345782"
+      - "根拠: 390px/英語の実CommissionPanelでは旧から横overf"
+      - "POの原因別分離・順次移行という既存許可に従い、BSA002/003/004のC"
+      - "| 操作維持・試験の型互換 | 5実部品の既存/新規保存、確認/取消、外部for"
+      - "| 最終品質 | 厳格対象lint、単独操作試験、全体coverage、既存ch"
+      - "代替は報酬表の配置修正を先行することだが、表の共通化を扱う既存計画と責務が重なる"
+      - "- 親の改訂3作業場所に未保存5ファイルを確認。読み取りのみで保持。別作業の記録"
+      - "2026-09-12: PO原文「今回geminiに判断させるのは作品IDのみ、"
+      - "EV-20260912-LINE-WORK-ID実装追記: §16.10で事前実"
+      - "summary: adc8bc4d基点、10列/必須5列、User返却とget不"
+      - "tradeoff: frontend警告218/mypy153残存。HTTP回帰"
+      - "summary: 44行10列BOM/CRLF・現行parserで44行・必須欠"
+      - "tradeoff: CSV形式検査では検索語品質を保証しない。本番鍵はタスク単位"
+      - "decision: 自己審査REVISE。新候補判断を通常promptへ追加しな"
+      - "EV-20260913-SHINSOKU-TIMEOUT-01 PR提出: ht"
+      - "EV-20260913-PRODUCT-NAME-SPACE-PUBLISH-A"
+      - "実装・CI・本番の検証結果は現時点で未取得。状態を完了としない。"
+      - "AO実装承認・担当引き継ぎ: 2026-09-13 22:34 JST、今回6件"
+      - "EV-20260914-ATTEMPT-INTEGRITY。PO原文「推測は禁止"
+      - "root本番read-onlyでgitHEAD5afb5af1、backend/"
+      - "別担当コードレビューは製品service4d255b7c/migration0c"
+      - "最終版は実行途中17/74で専用PG空き789→645MBを担当が観測。以前の2"
+      - "ローカル全試験完了をPR提出前の必須条件にしていたカード02を改訂。これはローカ"
+      - "専用試験環境は本便のみ停止/default context復元を担当へ指示。ホス"
+      - "本追補は未コミットで、既存e9の16ファイルへ自動的に追加公開しない。"
+      - "公開先shingo-ops/salesanchorへe9ac6ef6の16ファイ"
+      - "本追補の初回保存コマンドは作業ディレクトリがmainを指していたため保護hook"
+      - "CARD-PMG-ATTEMPT-RECORD-FIX-04を既存担当error"
+      - "EV-20260914-TCG-RESULT-ORDER 2026-09-15再"
+      - "基準4bad43a4。Sol候補5hash/10原文一致、親AST実測201/2"
+      - "2026-09-28 AQ保存f1935c24f remote一致、PR前val"
+      - "2026-09-28 正式提出: 255be0f550e7a67b1f2ebd9"
+      - "本人原文「GO #3839」受領・転記済み。main追従後も対象9製品/3試験は"
+      - "2026-09-29 PR #3855提出済み（https://github.c"
+      - "decision: AV-1（SelectControl に children "
+      - "summary: 必須13/13成功で merge（2026-10-05T02:"
+      - "summary: 必須CI 失敗0で merge（2026-10-16T02:2"
+      - "summary: 必須CI 42 pass・失敗0（PG 実体テスト C1/C2"
+      - "summary: 必須CI 全合格（process-artifacts gate"
+  - source: docs/ai-agents/evidence-registry.md
+    reason: "evidence-registryの記録行（要約・判断・経緯・原文）で、新しい決まりではない（process-artifactsは必須一覧外、との記述は旧情報。現在の required-checks.txt には含まれる）"
+    anchors:
+      - "follow_up: 限定修正は完了。完了根拠はpr-lifecycle-des"
+  - source: docs/ai-agents/evidence-registry.md
+    reason: "一回限りの宿題（バックアップ採取タイミングの統一）の記録で、継続する決まりではない"
+    anchors:
+      - "follow_up: public.inventory / message_tr"
+  - source: docs/ai-agents/evidence-registry.md
+    reason: "evidence-registryの記録行（要約・判断・経緯・原文）で、新しい決まりではない（GO自筆・main宛PRのブランチ名はrelease/かhotfix/、は他の文書の規則の再掲。後者は pr-base-check.yml が見るが必須外）"
+    anchors:
+      - "lessons: \"①CC が別worktree・本店へ勝手に台帳/GO を書き"
+  - source: docs/ai-agents/evidence-registry.md
+    reason: "evidence-registryの記録行（要約・判断・経緯・原文）で、新しい決まりではない（カード禁止条項の上書き宣言は他の文書の規則の再掲）"
+    anchors:
+      - "lessons: \"①カードの禁止条項は便をまたいで残存し矛盾を生む→全カード冒"
+  - source: docs/ai-agents/evidence-registry.md
+    reason: "evidence-registryの記録行（要約・判断・経緯・原文）で、新しい決まりではない（CLAUDE.md:57のGO番号必須は規則の再掲）"
+    anchors:
+      - "現状のコード修正/差分レビュー/正式CIの技術検証は完了。CLAUDE.md:5"
