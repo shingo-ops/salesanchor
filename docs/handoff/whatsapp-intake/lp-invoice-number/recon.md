@@ -13,12 +13,12 @@
 - PO 承認 2026-10-27 PO「納税者識別番号 T3810449547408も加えておいて」。
 
 ## 日本語住所が出る箇所（変更前。登録番号はこの直後に足す）
-- lp/src/components/Footer.astro:44 `<li>〒444-2141 愛知県岡崎市桑原町字緑陽台8番地312</li>`
-- lp/src/pages/privacy.astro:37 `住所: 〒444-2141 …8番地312</p>`（段落末。`<br>` を足して次行に置く）
-- lp/src/pages/terms.astro:346 `住所: 〒444-2141 …8番地312<br>`
+- `lp/src/components/Footer.astro:44` `<li>〒444-2141 愛知県岡崎市桑原町字緑陽台8番地312</li>`
+- `lp/src/pages/privacy.astro:37` `住所: 〒444-2141 …8番地312</p>`（段落末。`<br>` を足して次行に置く）
+- `lp/src/pages/terms.astro:346` `住所: 〒444-2141 …8番地312<br>`
 
 ## 共通定数・辞書
 - 無し（lp-legal-name と同じ。直書き）。Footer は全ページ共通のため全 7 ページに出る。
 
 ## デプロイ経路
-- .github/workflows/deploy.yml:3-6（main push）、:99-108（lp/dist を rsync）。= main マージで本番へ自動反映。本便は lp/ と docs/handoff/ のみで危険パスに当たらない。
+- `.github/workflows/deploy.yml:3`（main push）、`.github/workflows/deploy.yml:108`（lp/dist を rsync）。= main マージで本番へ自動反映。本便は lp/ と docs/handoff/ のみで危険パスに当たらない。
