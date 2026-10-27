@@ -14,7 +14,7 @@
 | `frontend/src/components/Sheet.test.tsx` | **存在しない** |
 | `frontend/src/components/Drawer.test.tsx` | **存在する（`it(` が10件）** |
 
-`Drawer.test.tsx` の中身（見出しの実測）: `Drawer size`（4件・既定幅480px と wide のトークン）／
+`frontend/src/components/Drawer.test.tsx` の中身（見出しの実測）: `Drawer size`（4件・既定幅480px と wide のトークン）／
 `Drawer onBack`（3件）／`Drawer onEscape`（3件）。**フォーカス関連は0件**（便7 recon §5 と一致）。
 
 > 便7（#4800）と便8（#4805）で `frontend/src/hooks/useFocusTrap.test.tsx` が
@@ -55,7 +55,7 @@
 ## 4. テストの作法（既存の先例）
 
 - 置き場は**金型の隣**（`frontend/src/components/Drawer.test.tsx` の先例）。`npm run test:unit` と
-  pre-commit の両方で走る（`vitest.unit.config.ts` の include は `src/**/*.test.{ts,tsx}`）。
+  pre-commit の両方で走る（`frontend/vitest.unit.config.ts` の include は `src/**/*.test.{ts,tsx}`）。
 - **テスト名は英語**にする（`local/no-japanese-literal` が文字列の日本語を止めるため。
   `frontend/src/hooks/useFocusTrap.test.tsx` も英語名。説明は日本語のコメントで書く）。
 - `i18n` を読み込んでから金型を描く（`frontend/src/hooks/useFocusTrap.test.tsx:19` の `import "../i18n";`）。
@@ -67,7 +67,7 @@
 ## 5. この便で入れない（触らない）もの
 
 - **製品コードは1行も変えない**（テストだけを足す便）。
-- `Drawer.test.tsx` は既存10件のまま触らない。
-- `useFocusTrap.test.tsx`（28件）も触らない。
+- `frontend/src/components/Drawer.test.tsx` は既存10件のまま触らない。
+- `frontend/src/hooks/useFocusTrap.test.tsx`（28件）も触らない。
 
 関連: `docs/handoff/drawer-inert-when-closed/design.md`（便8） / `docs/handoff/viewer-focus-trap/design.md`（便7）

@@ -8,7 +8,7 @@
 
 ## ① 区分：A（操作の変更なし・見た目の変更なし・**製品コードの変更なし**）
 
-足すのはテストファイル2本だけ。**色・寸法・文言・レイアウト・挙動は一切変わらない**（CSS も製品の `.tsx` も触らない）。
+足すのはテストファイル2本だけ。**色・寸法・文言・レイアウト・挙動は一切変わらない**（CSS も製品の .tsx も触らない）。
 
 **なぜ必要か**: `Modal` は43ファイル、`Sheet` は2ファイルで使われているのに
 **単体テストが1件も無い**（recon §1）。便7・便8 で金型の内部を2回続けて直したが、
@@ -28,7 +28,7 @@
 |---|---|---|
 | P1 | `Modal` の単体テスト件数 | **0 → 13 件**（実測。当初目標は10件以上） |
 | P2 | `Sheet` の単体テスト件数 | **0 → 9 件**（実測。当初目標は7件以上） |
-| P3 | 製品コード（`frontend/src/**` の `.tsx`・`.css` のうちテスト以外）の変更行数 | **0**（実測0） |
+| P3 | 製品コード（`frontend/src/**` の .tsx・.css のうちテスト以外）の変更行数 | **0**（実測0） |
 | P4 | 新テストのうち「製品を壊すと赤くなる」ことを確認した件数 | **22 / 22 件**（24通りの壊し方で実測。下の C3） |
 | P5 | 既存の単体テスト全体 | **この端末では判定不能**（下の「4-4 手元の全体回しは不安定」）＝CI の必須チェックが判定 |
 
@@ -58,7 +58,7 @@
 | M8 | **本体**を押しても呼ばれない | `:99` |
 | M9 | Esc を押すと `onClose` が呼ばれる | `:70-80` |
 | M10 | `footer` を渡したときだけフッタが出る（省略時は出ない） | `:119-121` |
-| M11 | `size="xl"` で `comp-modal-dialog--xl` になる（**xl は本番3画面で実使用**: `PurchaseDetailPanel.tsx:310`・`ShippingDetailPanel.tsx:383`・`V102PostEditModal.tsx:219`） | `:95` |
+| M11 | `size="xl"` で `comp-modal-dialog--xl` になる（**xl は本番3画面で実使用**: `frontend/src/components/PurchaseDetailPanel.tsx:310`・`frontend/src/components/ShippingDetailPanel.tsx:383`・`frontend/src/features/tcg-analysis-review/V102PostEditModal.tsx:219`） | `:95` |
 | M12 | 開いたら**中の最初の操作へカーソルが入る**（＝✕ ボタン） | `:61-68` |
 | M13 | 閉じたら**開く前にカーソルが居た場所へ戻る** | `:50-58` |
 
@@ -76,20 +76,20 @@
 | S8 | 開いたら**中の最初の操作へカーソルが入る**（＝`sheet-close`） | `:61-68` |
 | S9 | 閉じたら**開く前にカーソルが居た場所へ戻る** | `:50-59` |
 
-> **M11〜M13・S8〜S9 は審査（`review-opus.md` B-1・B-2）で追加した**。当初の設計は
+> **M11〜M13・S8〜S9 は審査（`docs/handoff/modal-sheet-unit-tests/review-opus.md` B-1・B-2）で追加した**。当初の設計は
 > 「単体テストでは本物のフォーカスの移動は測れない」と書いていたが、**これは事実と違っていた**
 > （既存の `frontend/src/hooks/useFocusTrap.test.tsx` が jsdom でフォーカスを測っている）。
-> その誤りのために、`Modal.tsx`/`Sheet.tsx` **本体にある** 2つの振る舞い（開いたらカーソルが入る・
+> その誤りのために、`frontend/src/components/Modal.tsx`/`frontend/src/components/Sheet.tsx` **本体にある** 2つの振る舞い（開いたらカーソルが入る・
 > 閉じたら戻る）が歯止めなしで残るところだった。**次の宿題 E1 はまさにその2つを共通化して動かす便**なので、
 > 動かす前に測れるようにしておく必要がある。
 > `size` は `sm` を測っていない（`md`・`lg`・`xl` のみ）。**単体テストは CSS を読めないので per-size のテストが
-> 測れるのは文字列の組み立て1行だけ**で、3件で足りる。4つの class が `Modal.css:42-45` に
+> 測れるのは文字列の組み立て1行だけ**で、3件で足りる。4つの class が `frontend/src/components/Modal.css:42-45` に
 > すべて定義されていることは現物を読んで確認した。
 
 ### 4-3. 触らないもの（この便の境界）
 
 - **製品コードは1行も変えない**（P3 で機械的に確認する）。
-- `Drawer.test.tsx`（既存10件）・`useFocusTrap.test.tsx`（既存28件）は**触らない**。
+- `frontend/src/components/Drawer.test.tsx`（既存10件）・`frontend/src/hooks/useFocusTrap.test.tsx`（既存28件）は**触らない**。
 - CSS・トークン・文言・辞書・DB・配線（API）・`.github/` は触らない。
 - 便8 から持ち越しの **F5**（使われていないもう一つの `Drawer`/`Modal`）・**F6**（検査側の選択子の写し）・
   **F7**（`tests-e2e` が型検査・lint の対象外）・**F8** は**別便**。
@@ -101,12 +101,12 @@
 | 回 | 条件 | 総件数 | 失敗 |
 |---|---|---|---|
 | 1 | 新テストあり・単独実行 | 1769 | **3件** |
-| 2 | 新テストあり（JSON 形式） | 1775（＝既存1753＋新規22） | **1件**（`SoldOutResultsPanel.test.tsx`） |
+| 2 | 新テストあり（JSON 形式） | 1775（＝既存1753＋新規22） | **1件**（`frontend/src/pages/super-admin/components/SoldOutResultsPanel.test.tsx`） |
 | 3 | **新テストを一時的に外して**実行 | 1719 | **5件**（`OrderLeadButtonMigration`・`InventoryPage.noechopatch`・`InventoryPage.tablelayout`・`NeedsReviewTabsPanel.timing`・`SoldOutResultsPanel`） |
 
 **新テストを外した方が失敗が多い**＝この不安定さは**元からあるもので本便とは無関係**。
 落ちるのはすべて `Modal`/`Sheet` と無関係な画面のテストで、**単独で回すと緑**
-（`SoldOutResultsPanel.test.tsx` 単独＝9件すべて緑を実測）。原因はこの端末の遅さによる時間切れ
+（`frontend/src/pages/super-admin/components/SoldOutResultsPanel.test.tsx` 単独＝9件すべて緑を実測）。原因はこの端末の遅さによる時間切れ
 （1回の全体回しに 666〜900 秒かかり、うち環境準備が 1665 秒）。
 → **「手元で全体緑」は合格基準に置けない。判定は CI の必須チェック `Frontend unit tests（内部）`** に委ねる。
 
@@ -114,9 +114,9 @@
 
 | # | 基準 | 測り方 |
 |---|---|---|
-| C1 | `Modal.test.tsx` が 10件以上・すべて緑 | **達成（13件・緑）** |
-| C2 | `Sheet.test.tsx` が 7件以上・すべて緑 | **達成（9件・緑）** |
-| C3 | **新しいテストが本当に「今の振る舞い」を見ている**ことの確認＝製品の該当行を一時的に壊すと赤になる。**22件すべてについて個別に確認する**（当初案の「4通りだけ」から審査で強化） | **達成（24通りの壊し方・狙ったテストが必ず赤・空振り0件）**。表は `review-opus.md` §2 |
+| C1 | `frontend/src/components/Modal.test.tsx` が 10件以上・すべて緑 | **達成（13件・緑）** |
+| C2 | `frontend/src/components/Sheet.test.tsx` が 7件以上・すべて緑 | **達成（9件・緑）** |
+| C3 | **新しいテストが本当に「今の振る舞い」を見ている**ことの確認＝製品の該当行を一時的に壊すと赤になる。**22件すべてについて個別に確認する**（当初案の「4通りだけ」から審査で強化） | **達成（24通りの壊し方・狙ったテストが必ず赤・空振り0件）**。表は `docs/handoff/modal-sheet-unit-tests/review-opus.md` §2 |
 | C4 | 既存の単体テスト全体 | **この端末では判定不能（④-4）**。CI の `Frontend unit tests（内部）` が判定 |
 | C5 | 型検査 `npx tsc --noEmit` が 0 件 | **達成（0件）** |
 | C6 | `npm run check:all` が終了0 | **達成（終了0）** |
@@ -128,7 +128,7 @@
 （commit しない）。当初案は代表4通りだったが、**審査で22件すべてを個別に保証する形に強化**した。
 
 - 手順は機械化した（24通りを順に適用→対象ファイルだけ実行→`git checkout --` で復帰）。
-  台本: `/tmp/.../redcheck.py` 相当（使い捨て。手順は `review-opus.md` §2 に全件の表で残す）。
+  台本は使い捨て（作業用の一時置き場に置き、リポジトリには入れない）。**24通りの全件の表は `docs/handoff/modal-sheet-unit-tests/review-opus.md` §2 に残す**。
 - **「1通り壊すと1件だけ赤」が原則**。2件赤くなった2通りは理由が説明できるものだけ（§2 の備考）。
 - **壊したまま commit しない**ことを `git status` に `M` 表示が無いことで毎回確認する（C7 と同じ測り方）。
 
@@ -186,7 +186,7 @@
 | G4 | 便7 からの **E1**（初期フォーカス・復帰の共通化）・**E2**（消えた瞬間に戻す）・**E3**（`viewer-choice-row` の金型昇格） |
 | G5 | **D2＝メルカリの表示サイズ感**（PO 決定: 他の宿題のあと・まず操作部分だけ） |
 | G6 | **既存の単体テスト5本がこの端末で時間切れで落ちる**（④-4。毎回違う・単独では緑）。CI では緑かを PR の必須チェックで確認し、CI でも落ちるなら各 spec の待ち時間を見直す別便にする |
-| G7 | **E1 の下調べ（現物で確認済み・2026-10-27）**: 初期フォーカスと復帰の複製は **2金型ではなく3金型**。`Drawer.tsx:63,72-76,85` にも同じものがある。**フォーカス復帰の塊（`Modal.tsx:50-59`＝`Sheet.tsx:50-59`）は差分0＝完全に同一**、初期フォーカスの塊は**変数名（`dialog`／`panel`）とコメントだけ違う**。便7 の `useFocusTrap.ts` と同じやり方（公開 props を増やさず hook へ寄せる）で片付く見込み。**本便で `Modal`/`Sheet` に歯止めができたので E1 は安全に着手できる**（`Drawer` は既存10件＋本便の形で追えば同様に測れる） |
+| G7 | **E1 の下調べ（現物で確認済み・2026-10-27）**: 初期フォーカスと復帰の複製は **2金型ではなく3金型**。`frontend/src/components/Drawer.tsx:63,72-76,85` にも同じものがある。**フォーカス復帰の塊（`frontend/src/components/Modal.tsx:50-59`＝`frontend/src/components/Sheet.tsx:50-59`）は差分0＝完全に同一**、初期フォーカスの塊は**変数名（`dialog`／`panel`）とコメントだけ違う**。便7 の `frontend/src/hooks/useFocusTrap.ts` と同じやり方（公開 props を増やさず hook へ寄せる）で片付く見込み。**本便で `Modal`/`Sheet` に歯止めができたので E1 は安全に着手できる**（`Drawer` は既存10件＋本便の形で追えば同様に測れる） |
 
 ## 対象 ADR
 
