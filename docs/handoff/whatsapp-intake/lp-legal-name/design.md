@@ -1,7 +1,7 @@
 # design: LP 運営者表示に正式名称（漢字）と日本語住所を足す
 
 > この文書は何か: ホームページの運営者欄に「谷澤 伸吾」と日本語の住所を足す設計。
-> 親: [recon.md](recon.md)　関連 ADR: docs/adr/ADR-1044-lp-meta-application-only.md
+> 親: [recon.md](recon.md)（docs/handoff/whatsapp-intake/lp-legal-name/recon.md）　関連 ADR: docs/adr/ADR-1044-lp-meta-application-only.md
 
 ## 目的
 Meta ビジネス認証で「ウェブサイトに正式なビジネス名『谷澤 伸吾』が表示されている必要がある」と却下された。LP の運営者表示に正式名称（漢字）と許可証どおりの日本語住所を足す。PO 承認 2026-10-27（選択肢1）。

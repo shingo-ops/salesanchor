@@ -32,5 +32,5 @@
 - Footer は全ページ共通部品のため、住所・電話は index/pricing/privacy/terms/data-deletion/deletion-status/404 の全 7 ページに出る。
 
 ## デプロイ経路
-- .github/workflows/deploy.yml:3-6 `on: push: branches: main`。同:24-26 LP build、同:99-108 `rsync -avz --delete lp/dist/` で VPS へ。= main マージで本番へ自動反映。
+- `.github/workflows/deploy.yml:3-6` `on: push: branches: main`。`.github/workflows/deploy.yml:24-26` LP build、`.github/workflows/deploy.yml:99-108` `rsync -avz --delete lp/dist/` で VPS へ。= main マージで本番へ自動反映。
 - 本便は migrations/・deploy.yml・本番 scripts/ を触らない（lp/ と docs/handoff/ のみ）。危険パスに当たらない。ただし deploy.yml は main push のたびに全体が走る（backend 変更検出ゲート deploy.yml 内 paths-filter は migrations/** と scripts/** のみ）。
