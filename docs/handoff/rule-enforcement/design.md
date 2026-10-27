@@ -77,12 +77,12 @@
 
 ### R0.5 文書の食い違いの直し
 
-- recon §9 の 5 件を直すだけの便。`process-artifacts-gate.yml` を含むので GO 記録が要る（`scripts/check-process-artifacts.js:122`）
+- recon §9 の 5 件を直すだけの便。`.github/workflows/process-artifacts-gate.yml` を含むので GO 記録が要る（`scripts/check-process-artifacts.js:122`）
 
 ### R1 決まり台帳と台帳の検査
 
 - 決まりの文書の一覧: `docs/specs/rule-enforcement/rule-docs.txt`（kgi.md「PO 確認待ち」1 で PO が確かめた一覧をそのまま書く。glob 可）
-- 台帳: `docs/specs/rule-enforcement/rules.yml`
+- 台帳: docs/specs/rule-enforcement/rules.yml
   ```yaml
   rules:
     - id: A07
@@ -100,7 +100,7 @@
       reason: "例文の中の語"
   ```
 - 決まりの語: `禁止|必ず|必須|厳禁|してはならない|しない|すること|MUST|NEVER` を含む行（語の一覧は台帳の先頭に置き、台帳と一緒に変える）
-- 検査: `scripts/ci/check_rule_registry.py`（新規）。確かめること:
+- 検査: scripts/ci/check_rule_registry.py（新規）。確かめること:
   1. **突き合わせ（G1）**: rule-docs.txt の全文書で決まりの語を含む行を全部挙げ、各行が `rules` のどれかの anchor を含むか、`not_rules` に登録されているかを確かめる。どちらでもない行は「未仕分け」として件数と場所を出して失敗。これで 85 件という数を人の数え方に頼らない
   2. 全項目の anchor が source に今も実在する（文言が消えた・変わったら気づく）
   3. `kind` が 3 種のどれか。gate は check・when と、fixture か evidence のどちらか。review と exempt は reason が空でない
@@ -109,7 +109,7 @@
   6. 決まりの語の一覧・rule-docs.txt・rules.yml・not_rules の変更は、GO 記録の要る対象にする（`scripts/check-process-artifacts.js:115-128` の一覧に docs/specs/rule-enforcement/ の rules.yml・rule-docs.txt・required-checks.txt・prod-secrets.txt の 4 つだけを足す。README などの誤字直しには GO 記録を要らないようにする）。語を消して G5 を外す道を、記録なしでは通さない
 - 限界（隠さない）: 一覧に無い言い方（「不可」「いけない」「のみ」「避ける」「don't」など）で書いた決まりは突き合わせを素通りする。R1 の初回で決まりの文書の全文から言い方を集めて語の一覧を作り、以後は審査役の確認項目に「語の一覧に無い言い方の決まりが足されていないか」を入れる
 - 1 行に決まりが 2 つ以上ある・1 つの決まりが複数行にまたがるときは、台帳の項目に `anchors:`（一覧）を持たせる。1 行は 1 項目にしか属せないとし、重なりは検査で失敗にする
-- ワークフロー: `.github/workflows/rule-registry.yml`（新規・paths なし・main 向け PR の opened／synchronize／reopened／edited）。最初は `continue-on-error`（警告）。連続 5 回の PR で誤検知 0 件なら失敗に上げ、PO が必須チェックに登録（integration_id 15368 付き）
+- ワークフロー: .github/workflows/rule-registry.yml（新規・paths なし・main 向け PR の opened／synchronize／reopened／edited）。最初は `continue-on-error`（警告）。連続 5 回の PR で誤検知 0 件なら失敗に上げ、PO が必須チェックに登録（integration_id 15368 付き）
 - `required-checks.txt` と実際の ruleset の差は、同意と権限の週次点検（`docs/handoff/permission-delegation/routine.json` と `scripts/dev/consent-audit.py`）に 1 項目足して毎週比べる（ruleset は shingo-cc で読める recon §2）
 - ADR を R1 で起案する（台帳を正本にすること、関所を一本にすること、R3 で ADR-1029:31,36 を置き換える予定を書く）
 
@@ -131,7 +131,7 @@
   - 権限は `statuses: write` と `pull-requests: read` だけ
   - 書いた名義の login が shingo-cc か shingo-ops のコメントだけを数える
   - issue_comment の経路では `github.event.issue.pull_request` があることを確かめ、PR を API で引いて head の SHA を得る。実行中に head が変わったら書かない（`scripts/run-guard-evaluation.js:37-39` の型）
-  - 手本の `scripts/run-guard-evaluation.js` は pull_request_target 専用（:46）なので流用せず、新しいスクリプト `scripts/ci/check_review_verdict.py` を作る
+  - 手本の `scripts/run-guard-evaluation.js` は pull_request_target 専用（:46）なので流用せず、新しいスクリプト scripts/ci/check_review_verdict.py を作る
 - 必須チェックへの登録は integration_id 15368 付き（審査1回目 M6。外の鍵から同じ名前の状態を付けても数えられない）
 - 対象外にする PR: 台帳の自動 DONE 化（`.github/workflows/ledger-auto-done-main.yml:138,151` が PIPELINE_PAT で作り `gh pr merge --auto` でマージ。作者は shingo-ops）。判定は新しく書かず、正本の `scripts/ci/is-ledger-done-pr.sh`（4 条件は :7-11、判定は :69-73）を呼ぶ。呼ぶ側の一覧に review-verdict を足す。一つでも外れれば対象。PIPELINE_PAT を使えば同じ形の PR を作れるが、それができるのはブランチに push できる人＝ VERDICT の行を自分で書ける人と同じ範囲なので、R3 にとって新しい穴にはならない（限界の 1 つ目と同じ）。PIPELINE_PAT は G3 の側（R5・D3）で扱い、R3 の格上げは D3 に依存しない
 - 作業の流れの変化（手間は増える）: 今は VERDICT のコメントを書くのは 30 件中 3 件（§2）。R3 の後は、マージ前に審査役の最後の行（`VERDICT: APPROVE on <sha40> PR #<番号>`）を、Opus が「確認済み」コメントにそのまま書く。書かなければマージできない
@@ -148,16 +148,16 @@
 
 ### R4 提出前に同じ検査を走らせる一本の入口
 
-- `scripts/dev/check-before-submit.sh`（新規）: 変更ファイルから、必須チェックと同じ条件（recon §3 の「動く条件」）で該当する検査スクリプトを選んで呼ぶ。呼ぶのは CI と同じスクリプト（写さない）。台帳の `when: before_submit` の項目が対象。どれを呼んだか・飛ばしたか（「CI で確かめる」）を全部表示する
+- scripts/dev/check-before-submit.sh（新規）: 変更ファイルから、必須チェックと同じ条件（recon §3 の「動く条件」）で該当する検査スクリプトを選んで呼ぶ。呼ぶのは CI と同じスクリプト（写さない）。台帳の `when: before_submit` の項目が対象。どれを呼んだか・飛ばしたか（「CI で確かめる」）を全部表示する
 - 呼び出し元:
   - 手元の Claude: `scripts/dev/validate-pr-body.sh` の最後の成功表示（:321）の前で呼ぶ（:322 は `exit 0`）。影響範囲: `scripts/gh-pr-create-safe.sh:132`、`scripts/tests/test-pr-lifecycle.py:156`（スクリプトを写して試験する）
   - 人の手と Codex: `frontend/.husky/pre-push` から呼ぶ（`--no-verify` で外せるが、外しても最後の関所で止まる）
-  - クラウドの Claude: `.claude/settings.json:79` の hook は 10 秒で打ち切り・失敗で止める設定なので、重い検査を直接呼ばない。hook は `gh pr create` と `mcp__github__` の PR 作成の前に「`scripts/dev/check-before-submit.sh` を先に流したか」を確かめるだけにする（実際の入口は `.claude/settings.json:79` から呼ばれる `scripts/agent-hooks/cloud/dispatch.sh`。流した印は作業場所の `.git/` の中の `check-before-submit.ok`（`.git/` の中なのでコミットされず .gitignore も要らない）。中身は流した時点の HEAD の SHA で、PR を作る時点の HEAD と違えば止める）
+  - クラウドの Claude: `.claude/settings.json:79` の hook は 10 秒で打ち切り・失敗で止める設定なので、重い検査を直接呼ばない。hook は `gh pr create` と `mcp__github__` の PR 作成の前に「scripts/dev/check-before-submit.sh を先に流したか」を確かめるだけにする（実際の入口は `.claude/settings.json:79` から呼ばれる `scripts/agent-hooks/cloud/dispatch.sh`。流した印は作業場所の `.git/` の中の `check-before-submit.ok`（`.git/` の中なのでコミットされず .gitignore も要らない）。中身は流した時点の HEAD の SHA で、PR を作る時点の HEAD と違えば止める）
 - 実行環境が足りない検査は「手元では飛ばした・CI で確かめる」と表示して通す（黙って通さない）
 
 ### R5 本番の鍵を main だけにする・素通りの見張り
 
-- 穴の形: リポジトリに置いた鍵は、どのブランチの、どの起動の種類（push・pull_request・手動起動）のワークフローにも渡る。手動起動 6 本だけの話ではない（例: `external-state-snapshot.yml` の手動起動、`qa-smoke.yml` の pull_request、`test-phase2-rehearsal.yml` の feature ブランチへの push。設計審査2回目の実測）。environment の鍵はその environment を参照するジョブにだけ渡り、ブランチの制限は実行の GITHUB_REF で照合される（https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment 2026-10-27 閲覧）。いま environment は `github-pages` の 1 つだけ
+- 穴の形: リポジトリに置いた鍵は、どのブランチの、どの起動の種類（push・pull_request・手動起動）のワークフローにも渡る。手動起動 6 本だけの話ではない（例: `.github/workflows/external-state-snapshot.yml` の手動起動、`.github/workflows/qa-smoke.yml` の pull_request、`.github/workflows/test-phase2-rehearsal.yml` の feature ブランチへの push。設計審査2回目の実測）。environment の鍵はその environment を参照するジョブにだけ渡り、ブランチの制限は実行の GITHUB_REF で照合される（https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment 2026-10-27 閲覧）。いま environment は `github-pages` の 1 つだけ
 - 手順:
   1. R0 で「本番の鍵の名前の一覧」を確定し、PO が承認する（`docs/specs/rule-enforcement/prod-secrets.txt`。名前だけで値は書かない）
   2. その一覧の鍵を environment「production」（main だけ）に移す。設定は PO 本人の操作。参照する全ワークフロー（deploy.yml を含む）に `environment: production` を足す。deploy.yml は GO 記録の要る対象（`scripts/check-process-artifacts.js:119`）
@@ -185,7 +185,7 @@ exempt の決まりで手元の hook が守っているもの（例: 不可逆�
 
 ## 7. 影響範囲
 
-- 新規: docs/specs/rule-enforcement/ の `rules.yml`・`rule-docs.txt`・`required-checks.txt`、`scripts/ci/check_rule_registry.py`、`scripts/ci/check_review_verdict.py`、`scripts/tests/rule-fixtures/`、`.github/workflows/rule-registry.yml`・`review-verdict.yml`、`scripts/dev/check-before-submit.sh`、`docs/specs/rule-enforcement/prod-secrets.txt`、ADR 1〜2 本
+- 新規: docs/specs/rule-enforcement/ の rules.yml・`rule-docs.txt`・`required-checks.txt`、scripts/ci/check_rule_registry.py、scripts/ci/check_review_verdict.py、`scripts/tests/rule-fixtures/`、.github/workflows/rule-registry.yml・review-verdict.yml、scripts/dev/check-before-submit.sh、`docs/specs/rule-enforcement/prod-secrets.txt`、ADR 1〜2 本
 - 変更: `scripts/dev/validate-pr-body.sh`（呼び出し）、`frontend/.husky/pre-push`（呼び出し）、`scripts/agent-hooks/cloud/dispatch.sh`（クラウドの hook。確かめるだけ）、`scripts/check-process-artifacts.js:115-128`（GO 記録の要る対象に docs/specs/rule-enforcement/ の rules.yml・rule-docs.txt・required-checks.txt・prod-secrets.txt の 4 つを足す）、`scripts/ci/is-ledger-done-pr.sh` の呼ぶ側の一覧、`docs/handoff/permission-delegation/routine.json`・`scripts/dev/consent-audit.py`（週次点検の項目）、本番の鍵を使う全ワークフロー（deploy.yml を含む。`environment:` の 1 行）、PIPELINE_PAT を使うワークフロー（D3 次第）、recon §9 の文書 5 件（R0.5）
 - 呼び出し元の確認: `scripts/gh-pr-create-safe.sh:132`、`scripts/tests/test-pr-lifecycle.py:156`、`.github/workflows/ledger-auto-done-main.yml:138,151`、`.github/workflows/auto-merge-guard.yml:15-16,31`
 - 触らない: 既存の必須チェック 16 件の中身、ruleset の承認数（ADR-136）、deploy.yml の手順の中身（足すのは `environment:` の 1 行。D3 で PIPELINE_PAT を別の鍵にするときだけ、その鍵の名前の差し替え 3 か所）、製品コード（backend/・frontend/src/）、`.github/workflows/workflow-lint.yml`
@@ -240,7 +240,7 @@ exempt の決まりで手元の hook が守っているもの（例: 不可逆�
 | G3 main 以外の道 | PO が承認した `docs/specs/rule-enforcement/prod-secrets.txt` の名前が、リポジトリの secrets の名前一覧に 0 件、environment production にだけある。production のブランチ制限は main だけ（どちらも設定の読み取り結果）。main 以外から起動した試しで鍵が渡らない |
 | G3 自前の実行機 | R0 で取った自前の実行機の一覧と、使っているワークフロー・起動の種類が、D6 で PO が決めた形になっている（設定の読み取りと `runs-on:` の数え上げ）。フォークからの PR の実行に承認が要る設定になっているか、pull_request で実行機を使うワークフローが 0 本。D6 で「main 以外から使えない」と決めたなら、main 以外から起動した試しで実行機に届かない |
 | G3 PO 名義の鍵 | PIPELINE_PAT が D3 で決めた形になっている（鍵の置き場所と範囲の読み取り結果） |
-| G4 提出前に分かる | §5 R2 の「見本を置ける検査」を check にする gate 項目は全部 `when: before_submit`（台帳検査が確かめる。空で合格にしない）。その全項目で、違反の見本を入れた変更に `scripts/dev/check-before-submit.sh` が失敗し、呼んだ検査の名前を表示 |
+| G4 提出前に分かる | §5 R2 の「見本を置ける検査」を check にする gate 項目は全部 `when: before_submit`（台帳検査が確かめる。空で合格にしない）。その全項目で、違反の見本を入れた変更に scripts/dev/check-before-submit.sh が失敗し、呼んだ検査の名前を表示 |
 | G5 決まりを足すと仕分けが要る | AGENTS.md に決まりの語を含む行を 1 行足し台帳を変えない試しの PR が、台帳検査で失敗（格上げ後は BLOCKED） |
 | 既存の動きを壊さない | 既存の必須チェック 16 件が、本テーマの PR で全部 pass |
 
@@ -253,7 +253,7 @@ exempt の決まりで手元の hook が守っているもの（例: 不可逆�
 
 ## 13. 維持の仕組み
 
-- 守り手: 人手で守る（理由: 守る機械＝台帳検査 `.github/workflows/rule-registry.yml`・`.github/workflows/review-verdict.yml`・週次点検の項目は R1・R3・R5 で作る。できた便から、この行をその機械の名前に書き換える）
+- 守り手: 人手で守る（理由: 守る機械＝台帳検査 .github/workflows/rule-registry.yml・.github/workflows/review-verdict.yml・週次点検の項目は R1・R3・R5 で作る。できた便から、この行をその機械の名前に書き換える）
 - 決まりを足す PR で仕分けを書くのは、その PR の作者。台帳検査（R1 以後）が書き忘れを止める
 - 3 段階の振り分け: 「何を守るか」は ADR（R1 で起案）に、手順は本 design と台帳に、日々の状態は週次点検の記録に残す
 
