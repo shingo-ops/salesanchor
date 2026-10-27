@@ -11,6 +11,7 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
+from google.genai import errors as genai_errors
 
 import app.tools.prompt_ab as pab
 from app.services import llm_budget
@@ -1278,3 +1279,137 @@ def test_v7_row_has_no_prompt_source_or_sha256(monkeypatch, fakes):
     # Assert
     row = _lines(fakes)[0]
     assert (row["prompt_source"], row["prompt_sha256"]) == (None, None)
+
+
+# ---------------------------------------------------------------------------
+# 一時的な失敗のやり直し（docs/handoff/prompt-ab-transient-retry/design.md §5・§9）
+# ---------------------------------------------------------------------------
+
+def _api_error(cls, code):
+    return cls(code, {"error": {"code": code, "message": "m", "status": "S"}})
+
+
+def _wrapped(code, cls=genai_errors.ServerError):
+    e = RuntimeError("Gemini API 呼び出し失敗: x")
+    e.__cause__ = _api_error(cls, code)
+    return e
+
+
+@pytest.fixture
+def sleeps(monkeypatch):
+    calls: list[float] = []
+    monkeypatch.setattr(pab.time, "sleep", calls.append)
+    return calls
+
+
+@pytest.mark.parametrize("code", [408, 429, 500, 502, 503, 504])
+def test_is_transient_true_for_retryable_codes(code):
+    assert pab._is_transient_gemini_error(_wrapped(code)) is True
+
+
+@pytest.mark.parametrize("code", [400, 404])
+def test_is_transient_false_for_client_codes(code):
+    assert pab._is_transient_gemini_error(_wrapped(code, genai_errors.ClientError)) is False
+
+
+def test_is_transient_follows_nested_cause_chain():
+    inner = _wrapped(503)
+    outer = RuntimeError("outer")
+    outer.__cause__ = inner
+    assert pab._is_transient_gemini_error(outer) is True
+
+
+def test_is_transient_false_for_non_api_errors():
+    assert pab._is_transient_gemini_error(ValueError("x")) is False
+    assert pab._is_transient_gemini_error(RuntimeError("job not found")) is False
+
+
+def test_k1_transient_503_then_success_writes_one_row(monkeypatch, fakes, sleeps):
+    attempts = {"n": 0}
+
+    def flaky(*a, **k):
+        attempts["n"] += 1
+        if attempts["n"] == 1:
+            raise _wrapped(503)
+        return _v8_result()
+
+    fakes.v8.side_effect = flaky
+    summary = _run(fakes, monkeypatch, run_ids=("r1",), retry_transient=3, retry_wait_sec=30.0)
+    assert summary.succeeded == 1 and summary.failed == 0 and summary.stop_reason is None
+    assert summary.calls == 1
+    lines = _lines(fakes)
+    assert len(lines) == 1 and lines[0]["transient_retries"] == 1
+    assert sleeps == [30.0]
+    # K5: 台帳は成功した 1 回分だけ。（この偽物の rows は v8 の呼び出し回数なので ledger_missing の回帰は見られない）
+    assert fakes.record.call_count == 1
+
+
+def test_k1_v7_config_is_also_retried(monkeypatch, fakes, sleeps):
+    attempts = {"n": 0}
+
+    def flaky(*a, **k):
+        attempts["n"] += 1
+        if attempts["n"] == 1:
+            raise _wrapped(503)
+        return {"response_text": "H|x", "usage_counts": _COUNTS, "input_tokens": 10, "output_tokens": 6}
+
+    fakes.v7.side_effect = flaky
+    summary = _run(fakes, monkeypatch, run_ids=("r1",), config="v7", retry_transient=3,
+                   thinking_level=None, include_thoughts=False, use_schema=False)
+    assert summary.succeeded == 1 and summary.failed == 0
+    assert _lines(fakes)[0]["transient_retries"] == 1
+    assert sleeps == [30.0]
+
+
+def test_k2_persistent_503_stops_after_retries_with_doubling_wait(monkeypatch, fakes, sleeps):
+    summary = _run(fakes, monkeypatch, run_ids=("r1",), v8_error=_wrapped(503), retry_transient=3,
+                   retry_wait_sec=30.0)
+    assert summary.stop_reason == "job_failed" and summary.failed == 1
+    assert sleeps == [30.0, 60.0, 120.0]
+    assert fakes.v8.call_count == 4
+    lines = _lines(fakes)
+    assert len(lines) == 1 and "error" in lines[0] and lines[0]["transient_retries"] == 3
+    assert fakes.record.call_count == 0
+
+
+@pytest.mark.parametrize("err", [_wrapped(400, genai_errors.ClientError), ValueError("bad")])
+def test_k3_non_transient_failure_is_not_retried(monkeypatch, fakes, sleeps, err):
+    summary = _run(fakes, monkeypatch, run_ids=("r1",), v8_error=err, retry_transient=3)
+    assert summary.stop_reason == "job_failed" and summary.failed == 1
+    assert sleeps == []
+    assert fakes.v8.call_count == 1
+    assert "transient_retries" not in _lines(fakes)[0]
+
+
+def test_k4_default_has_no_retry(monkeypatch, fakes, sleeps):
+    summary = _run(fakes, monkeypatch, run_ids=("r1",), v8_error=_wrapped(503))
+    assert summary.stop_reason == "job_failed"
+    assert sleeps == []
+    assert fakes.v8.call_count == 1
+    assert "transient_retries" not in _lines(fakes)[0]
+
+
+def test_parse_args_retry_defaults_and_validation():
+    base = ["--runs-file", "f", "--config", "v8", "--repeat", "1", "--max-cost-usd", "1",
+            "--test-id", "X", "--out-dir", "/o"]
+    args = pab.parse_args(base)
+    assert args.retry_transient == 0 and args.retry_wait_sec == 30.0
+    args = pab.parse_args(base + ["--retry-transient", "5", "--retry-wait-sec", "0.5"])
+    assert args.retry_transient == 5 and args.retry_wait_sec == 0.5
+    for bad in (["--retry-transient", "-1"], ["--retry-transient", "6"], ["--retry-wait-sec", "0"]):
+        with pytest.raises(SystemExit):
+            pab.parse_args(base + bad)
+
+
+def test_main_passes_retry_options_to_run_ab(monkeypatch, fakes, tmp_path):
+    runs = tmp_path / "runs.txt"
+    runs.write_text("r1\n", encoding="utf-8")
+    monkeypatch.setattr(pab, "_get_sync_session", lambda: MagicMock())
+    fake_run = MagicMock(return_value=pab.AbSummary(target_count=1, dry_run=False))
+    monkeypatch.setattr(pab, "run_ab", fake_run)
+    rc = pab.main(["--runs-file", str(runs), "--config", "v8", "--repeat", "1", "--max-cost-usd", "1",
+                   "--test-id", "T", "--out-dir", str(tmp_path / "o"),
+                   "--retry-transient", "3", "--retry-wait-sec", "30"])
+    assert rc == 0
+    kwargs = fake_run.call_args.kwargs
+    assert kwargs["retry_transient"] == 3 and kwargs["retry_wait_sec"] == 30.0
