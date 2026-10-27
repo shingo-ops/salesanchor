@@ -48,7 +48,7 @@
       "provider": "Supplier",
       "condition": "Condition",
       "clear": "Clear selection",
-      "all": "All",
+      "all": "Unspecified",
       "count": "{{count}} selected",
       "priceRange": "Price range",
       "quantityRange": "Quantity range",

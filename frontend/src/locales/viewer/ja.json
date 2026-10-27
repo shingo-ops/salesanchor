@@ -48,7 +48,7 @@
       "provider": "提供者",
       "condition": "コンディション",
       "clear": "選択をクリア",
-      "all": "すべて",
+      "all": "指定しない",
       "count": "{{count}}件",
       "priceRange": "価格の範囲",
       "quantityRange": "数量の範囲",
