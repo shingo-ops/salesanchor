@@ -224,7 +224,7 @@
 | [ADR-1043](./ADR-1043-accuracy-gold-in-db.md) | ADR-1043: 精度測定の正解表を本番 DB の専用表に置き、クラウドは読むだけの窓口から取り出す | Accepted | — | — |
 | [ADR-1044](./ADR-1044-lp-meta-application-only.md) | ADR-1044: LP は Meta 申請用：検索に載せない・事業者情報を Meta 登録と一致させる | Accepted | — | — |
 | [ADR-1045](./ADR-1045-confidential-quote-guard.md) | ADR-1045: 仕入元の原文の書き写しは、送る前に機械で照らして止める | Proposed | — | — |
-| [ADR-1046](./ADR-1046-rule-registry.md) | ADR-1046: 決まりは台帳を正本にし、台帳の検査を1つの関所にまとめる | Proposed | — | — |
+| [ADR-1047](./ADR-1047-rule-registry.md) | ADR-1047: 決まりは台帳を正本にし、台帳の検査を1つの関所にまとめる | Proposed | — | — |
 
 ## ステータス凡例
 
