@@ -120,8 +120,11 @@ for (const width of MOBILE_WIDTHS) {
     test("B5: 確定後、検索欄に「語」の札と✕が出る（✕は44px以上）", async ({ page }) => {
       await gotoViewer(page, { width, height });
       const panel = await openSearchScreen(page);
+      // 確定はキーボードの検索キー（Enter）で行う。確定ボタン viewer-search-submit は
+      // 読み上げ専用（sr-only）で画面上の大きさが 1px しかなく、Playwright の click が
+      // 当たらず18秒待って落ちるため（2026-10-28 の CI で実測）。実機の確定もこの道
       await panel.getByTestId("viewer-search-input").fill(UNIQUE_TERM);
-      await panel.getByTestId("viewer-search-submit").click();
+      await panel.getByTestId("viewer-search-input").press("Enter");
 
       const chip = page.getByTestId("viewer-search-chip");
       await expect(chip).toBeVisible();
@@ -140,8 +143,11 @@ for (const width of MOBILE_WIDTHS) {
     test("B6: 札の✕を押すと検索画面が開き、入力欄が空になり、件数は変わらない", async ({ page }) => {
       await gotoViewer(page, { width, height });
       const panel = await openSearchScreen(page);
+      // 確定はキーボードの検索キー（Enter）で行う。確定ボタン viewer-search-submit は
+      // 読み上げ専用（sr-only）で画面上の大きさが 1px しかなく、Playwright の click が
+      // 当たらず18秒待って落ちるため（2026-10-28 の CI で実測）。実機の確定もこの道
       await panel.getByTestId("viewer-search-input").fill(UNIQUE_TERM);
-      await panel.getByTestId("viewer-search-submit").click();
+      await panel.getByTestId("viewer-search-input").press("Enter");
       const afterConfirm = await rowCount(page);
       expect(afterConfirm).toBe(1);
 
@@ -155,8 +161,11 @@ for (const width of MOBILE_WIDTHS) {
     test("B7: 開き直すと「最近使った語」にその語がある。押すとその語で絞られる", async ({ page }) => {
       await gotoViewer(page, { width, height });
       const panel = await openSearchScreen(page);
+      // 確定はキーボードの検索キー（Enter）で行う。確定ボタン viewer-search-submit は
+      // 読み上げ専用（sr-only）で画面上の大きさが 1px しかなく、Playwright の click が
+      // 当たらず18秒待って落ちるため（2026-10-28 の CI で実測）。実機の確定もこの道
       await panel.getByTestId("viewer-search-input").fill(UNIQUE_TERM);
-      await panel.getByTestId("viewer-search-submit").click();
+      await panel.getByTestId("viewer-search-input").press("Enter");
 
       // ✕ を押すと検索画面が開き直る（一覧は前のまま。design.md 4-3 更新）
       await page.getByTestId("viewer-search-clear").click();
@@ -174,8 +183,11 @@ for (const width of MOBILE_WIDTHS) {
     test("B8: 「最近使った語」の行が69px・文字の左端が64px・行の中に印が1つ", async ({ page }) => {
       await gotoViewer(page, { width, height });
       let panel = await openSearchScreen(page);
+      // 確定はキーボードの検索キー（Enter）で行う。確定ボタン viewer-search-submit は
+      // 読み上げ専用（sr-only）で画面上の大きさが 1px しかなく、Playwright の click が
+      // 当たらず18秒待って落ちるため（2026-10-28 の CI で実測）。実機の確定もこの道
       await panel.getByTestId("viewer-search-input").fill(UNIQUE_TERM);
-      await panel.getByTestId("viewer-search-submit").click();
+      await panel.getByTestId("viewer-search-input").press("Enter");
 
       panel = await openSearchScreen(page);
       const row = panel.getByTestId(`viewer-recent-row-${UNIQUE_TERM}`);
@@ -194,8 +206,11 @@ for (const width of MOBILE_WIDTHS) {
     test("「すべて消す」で履歴が空になり、次に開いても最近使った語が出ない", async ({ page }) => {
       await gotoViewer(page, { width, height });
       const panel = await openSearchScreen(page);
+      // 確定はキーボードの検索キー（Enter）で行う。確定ボタン viewer-search-submit は
+      // 読み上げ専用（sr-only）で画面上の大きさが 1px しかなく、Playwright の click が
+      // 当たらず18秒待って落ちるため（2026-10-28 の CI で実測）。実機の確定もこの道
       await panel.getByTestId("viewer-search-input").fill(UNIQUE_TERM);
-      await panel.getByTestId("viewer-search-submit").click();
+      await panel.getByTestId("viewer-search-input").press("Enter");
 
       // ✕ を押すと検索画面が開き直る（design.md 4-3 更新）。そのまま「すべて消す」を押す
       await page.getByTestId("viewer-search-clear").click();
