@@ -76,72 +76,210 @@ function isMigrationPath(f) {
   return MIGRATION_PATH_PATTERNS.some(r => r.test(f));
 }
 
-// SQL のコメントを除き、空白と改行を 1 つにまとめる
-// 単引用符・二重引用符の中の -- や /* はコメントの始まりと見なさない（'' の重ねは閉じて開き直す扱いで足りる）。
-// 閉じの無いブロックコメントはコメントとして扱わない
-function normalizeSqlText(text) {
+// ── SQL の字句（PostgreSQL の決まり）──────────────────────────────────────────
+const SQL_IDENT_CHAR = /[A-Za-z0-9_$\u0080-￿]/;
+const SQL_DOLLAR_DELIM_SRC = String.raw`\$(?:[A-Za-z_\u0080-￿][A-Za-z0-9_\u0080-￿]*)?\$`;
+const SQL_DOLLAR_DELIM_RE = new RegExp(SQL_DOLLAR_DELIM_SRC, 'y');
+
+// sql[i] が E 付き文字列の始まりの単引用符か（直前が E/e で、その前が識別子の一部でない）
+function isEscapeStringQuote(sql, i) {
+  if (sql[i] !== "'") return false;
+  const p = sql[i - 1];
+  if (p !== 'E' && p !== 'e') return false;
+  const pp = sql[i - 2];
+  return pp === undefined || !SQL_IDENT_CHAR.test(pp);
+}
+
+// sql[i] の引用符（' か "）の閉じの直後の位置。閉じが無ければ -1
+// 同じ引用符を 2 つ重ねた形は中身。E 付き文字列ではバックスラッシュが次の 1 文字を中身にする
+function findQuoteEnd(sql, i) {
+  const q = sql[i];
+  const esc = isEscapeStringQuote(sql, i);
+  let j = i + 1;
+  while (j < sql.length) {
+    const c = sql[j];
+    if (esc && c === '\\') { j += 2; continue; }
+    if (c === q) {
+      if (sql[j + 1] === q) { j += 2; continue; }
+      return j + 1;
+    }
+    j++;
+  }
+  return -1;
+}
+
+// sql[i] がドル引用の開き（$tag$）ならその文字列を返す。直前が識別子の一部なら開きではない
+function dollarDelimiterAt(sql, i) {
+  if (sql[i] !== '$') return null;
+  if (i > 0 && SQL_IDENT_CHAR.test(sql[i - 1])) return null;
+  SQL_DOLLAR_DELIM_RE.lastIndex = i;
+  const m = SQL_DOLLAR_DELIM_RE.exec(sql);
+  return m ? m[0] : null;
+}
+
+// SQL のコメントを除く。引用符・E 付き文字列・ドル引用の中の -- や /* はコメントの始まりと見なさない。
+// ドル引用の中身は実行される文として同じ読み方で読み直す。ブロックコメントは入れ子を数える。
+// 閉じの無い引用・コメントは、そこから後ろを素の文のまま残す（止める側）
+function stripSqlComments(text) {
   let out = '';
   let i = 0;
   while (i < text.length) {
     const c = text[i];
     if (c === "'" || c === '"') {
-      let j = i + 1;
-      while (j < text.length && text[j] !== c) j++;
-      out += text.slice(i, j + 1);
-      i = j + 1;
+      const end = findQuoteEnd(text, i);
+      const stop = end === -1 ? text.length : end;
+      out += text.slice(i, stop);
+      i = stop;
+    } else if (c === '$') {
+      const delim = dollarDelimiterAt(text, i);
+      if (!delim) {
+        out += c;
+        i++;
+        continue;
+      }
+      const close = text.indexOf(delim, i + delim.length);
+      if (close === -1) {
+        out += delim;
+        i += delim.length;
+      } else {
+        out += delim + stripSqlComments(text.slice(i + delim.length, close)) + delim;
+        i = close + delim.length;
+      }
     } else if (c === '-' && text[i + 1] === '-') {
       const j = text.indexOf('\n', i);
       out += ' ';
       i = j === -1 ? text.length : j;
     } else if (c === '/' && text[i + 1] === '*') {
-      const j = text.indexOf('*/', i + 2);
-      if (j === -1) {
+      let depth = 1;
+      let k = i + 2;
+      while (k < text.length && depth > 0) {
+        if (text[k] === '/' && text[k + 1] === '*') { depth++; k += 2; }
+        else if (text[k] === '*' && text[k + 1] === '/') { depth--; k += 2; }
+        else k++;
+      }
+      if (depth > 0) {
         out += c;
         i++;
       } else {
         out += ' ';
-        i = j + 2;
+        i = k;
       }
     } else {
       out += c;
       i++;
     }
   }
-  return out.replace(/\s+/g, ' ').trim();
+  return out;
 }
 
-// 文の始まり: 先頭・; ・かっこ・引用符・手続きのかたまりの始まりや分岐の句・$$ の直後
-const SQL_STATEMENT_START = String.raw`(^|[;()]|['"]|\b(?:BEGIN|THEN|ELSE|LOOP)\b|\$[A-Za-z_]*\$)\s*`;
+// SQL のコメントを除き、空白と改行を 1 つにまとめる
+function normalizeSqlText(text) {
+  return stripSqlComments(text).replace(/\s+/g, ' ').trim();
+}
 
-// DELETE 文の本体を走査し、かっこの外にある WHERE の有無を返す。
-// 終わりは ; ・対応のない閉じかっこ・（引用符の直後で始まったときは）同じ引用符
-function deleteStatementHasWhere(sql, from, quote) {
+// 文の始まり: 先頭・; ・かっこ・引用符・手続きのかたまりの始まりや分岐の句・ドル引用の区切り・
+// 実行計画の前置き・準備文の AS の直後
+const SQL_STATEMENT_START = String.raw`(^|[;()]|['"]|\b(?:BEGIN|THEN|ELSE|LOOP)\b|${SQL_DOLLAR_DELIM_SRC}|\bEXPLAIN\s+(?:(?:ANALYZE|ANALYSE|VERBOSE)\s+)*|\bPREPARE\s+[^\s;()]+\s*(?:\([^()]*\)\s*)?AS\b)\s*`;
+
+// WHERE の条件が、かっこの外で定数・真偽値・演算子だけでできているか（列や関数を 1 つも参照しない）
+function isConstantCondition(cond) {
+  return cond
+    .replace(/\b(?:true|false|null|unknown|and|or|not|is)\b/gi, ' ')
+    .replace(/\b\d+(?:\.\d+)?\b/g, ' ')
+    .replace(/[=<>!+\-*/%^|&~\s]/g, '') === '';
+}
+
+// DELETE 文の本体を走査し、かっこの外にある意味のある WHERE の有無を返す。
+// 終わりは ; ・対応のない閉じかっこ・（引用符やドル引用の区切りの直後で始まったときは）同じ区切り。
+// 引用符の中身は文字として読まない。条件が定数だけなら WHERE が無いのと同じ
+function scanOutsideParens(sql, from, endToken, groups) {
   let depth = 0;
   let outside = '';
-  for (let i = from; i < sql.length; i++) {
+  let groupStart = -1;
+  let i = from;
+  while (i < sql.length) {
     const c = sql[i];
     if (c === ';') break;
-    if (quote && c === quote) break;
-    if (c === '(') { depth++; continue; }
+    if (endToken && sql.startsWith(endToken, i)) break;
+    if (c === '(') {
+      if (depth === 0) {
+        outside += ' (grp' + groups.length + ') ';
+        groupStart = i + 1;
+      }
+      depth++;
+      i++;
+      continue;
+    }
     if (c === ')') {
       if (depth === 0) break;
       depth--;
+      if (depth === 0) groups.push(sql.slice(groupStart, i));
+      i++;
       continue;
     }
+    if (c === "'" || c === '"') {
+      const end = findQuoteEnd(sql, i);
+      if (depth === 0) outside += c === '"' ? ' ident ' : ' 0 ';
+      i = end === -1 ? sql.length : end;
+      continue;
+    }
+    if (c === '$') {
+      const delim = dollarDelimiterAt(sql, i);
+      if (delim) {
+        const close = sql.indexOf(delim, i + delim.length);
+        if (close === -1) {
+          i += delim.length;
+        } else {
+          if (depth === 0) outside += ' 0 ';
+          i = close + delim.length;
+        }
+        continue;
+      }
+    }
     if (depth === 0) outside += c;
+    i++;
   }
-  return /\bWHERE\b/i.test(outside);
+  if (depth > 0) groups.push(sql.slice(groupStart));
+  return outside;
 }
 
-// ALTER TABLE の中で、列を消す略記（COLUMN を省いた削除）があるか。制約など列以外の削除は当てない
+function deleteStatementHasWhere(sql, from, endToken) {
+  let groups = [];
+  const outside = scanOutsideParens(sql, from, endToken, groups);
+  const m = /\bWHERE\b/i.exec(outside);
+  if (!m) return false;
+  let cond = outside.slice(m.index + m[0].length).split(/\bRETURNING\b/i)[0];
+  // 条件の全体を包むかっこは何重でも外してから判断する
+  for (;;) {
+    const w = /^\s*\(grp(\d+)\)\s*$/.exec(cond);
+    if (!w) break;
+    const inner = groups[Number(w[1])];
+    groups = [];
+    cond = scanOutsideParens(inner, 0, null, groups);
+  }
+  return !isConstantCondition(cond);
+}
+
+// ALTER TABLE（外部表を含む）の中で、列を消す略記（COLUMN を省いた削除）があるか。制約など列以外の削除は当てない。
+// 操作の区切り（, ）は引用符の外だけで見る
+const ALTER_TABLE_RE = /\bALTER\s+(?:FOREIGN\s+)?TABLE\s+(?:IF\s+EXISTS\s+)?(?:ONLY\s+)?(?:"(?:[^"]|"")*"|[^\s;,()"])+\s*\*?/gi;
+
 function alterTableDropsColumnShorthand(sql) {
-  for (const m of sql.matchAll(/\bALTER\s+TABLE\s+(?:IF\s+EXISTS\s+)?(?:ONLY\s+)?[^\s;,()]+\s*\*?/gi)) {
+  for (const m of sql.matchAll(ALTER_TABLE_RE)) {
     let depth = 0;
     let action = '';
     const actions = [];
-    for (let i = m.index + m[0].length; i < sql.length; i++) {
+    let i = m.index + m[0].length;
+    while (i < sql.length) {
       const c = sql[i];
       if (c === ';') break;
+      if (c === "'" || c === '"') {
+        const end = findQuoteEnd(sql, i);
+        const stop = end === -1 ? sql.length : end;
+        action += sql.slice(i, stop);
+        i = stop;
+        continue;
+      }
       if (c === '(') depth++;
       if (c === ')') {
         if (depth === 0) break;
@@ -150,9 +288,11 @@ function alterTableDropsColumnShorthand(sql) {
       if (c === ',' && depth === 0) {
         actions.push(action);
         action = '';
+        i++;
         continue;
       }
       action += c;
+      i++;
     }
     actions.push(action);
     if (actions.some(a => /^\s*DROP\s+(?!CONSTRAINT\b)\S/i.test(a))) return true;
@@ -162,30 +302,53 @@ function alterTableDropsColumnShorthand(sql) {
 
 // 1 つの文章（コメントを除く前か後のどちらか）が、表・列の削除または大量削除を含むか
 function sqlHasDestructiveStatement(sql) {
-  if (/\bDROP\s+(TABLE|COLUMN|SCHEMA|DATABASE)\b/i.test(sql)) return true;
+  if (/\bDROP\s+(?:TABLE|COLUMN|SCHEMA|DATABASE|OWNED|FOREIGN\s+TABLE)\b/i.test(sql)) return true;
   if (alterTableDropsColumnShorthand(sql)) return true;
   const startRe = new RegExp(SQL_STATEMENT_START + '(DELETE\\s+FROM\\b|TRUNCATE\\b)', 'gi');
   for (const m of sql.matchAll(startRe)) {
     if (/^TRUNCATE/i.test(m[2])) return true;
     const prefix = m[1].trim();
-    const quote = prefix === "'" || prefix === '"' ? prefix : null;
-    if (!deleteStatementHasWhere(sql, m.index + m[0].length, quote)) return true;
+    const endToken = prefix === "'" || prefix === '"' || prefix.startsWith('$') ? prefix : null;
+    if (!deleteStatementHasWhere(sql, m.index + m[0].length, endToken)) return true;
   }
   return false;
 }
 
+// シェルのヒアドキュメントの中身を取り出す（閉じの語が無ければ最後まで）
+function heredocBodies(text) {
+  const bodies = [];
+  const lines = text.split('\n');
+  for (let i = 0; i < lines.length; i++) {
+    const m = /<<-?\s*(["']?)([A-Za-z_][A-Za-z0-9_]*)\1/.exec(lines[i]);
+    if (!m) continue;
+    const body = [];
+    let j = i + 1;
+    while (j < lines.length && lines[j].trim() !== m[2]) {
+      body.push(lines[j]);
+      j++;
+    }
+    bodies.push(body.join('\n'));
+    i = j;
+  }
+  return bodies;
+}
+
 // 追加された文章が、表・列の削除または大量削除を含むか。
-// .sql は引用符を見分ける切り方でコメントを除いてから当てる。
-// .sql 以外は、素の文と、引用符を見分けずにコメントを除いた文（R6a と同じ切り方）の両方に当て、どちらかで当たれば検出する
+// .sql は PostgreSQL の字句の決まりでコメントを除いてから当てる。
+// .sql 以外は、素の文と、引用符を見分けずにコメントを除いた文（R6a と同じ切り方）の両方に当て、
+// どちらかで当たれば検出する。改行の記号（\n など）を空白に直した文と、ヒアドキュメントの中身にも同じ当て方をする
 function sqlTextHasDestructiveStatement(text, file) {
   if (/\.sql$/i.test(file || '')) return sqlHasDestructiveStatement(normalizeSqlText(text));
-  const plain = text.replace(/\s+/g, ' ').trim();
-  const legacyStripped = text
-    .replace(/\/\*[\s\S]*?\*\//g, ' ')
-    .replace(/--[^\n]*/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-  return sqlHasDestructiveStatement(plain) || sqlHasDestructiveStatement(legacyStripped);
+  const candidates = [text, text.replace(/\\[nrt]/g, ' '), ...heredocBodies(text)];
+  return candidates.some(body => {
+    const plain = body.replace(/\s+/g, ' ').trim();
+    const legacyStripped = body
+      .replace(/\/\*[\s\S]*?\*\//g, ' ')
+      .replace(/--[^\n]*/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    return sqlHasDestructiveStatement(plain) || sqlHasDestructiveStatement(legacyStripped);
+  });
 }
 
 // diff をファイルごとに分け、ファイル名と、追加行だけを改行でつないだ文章にする

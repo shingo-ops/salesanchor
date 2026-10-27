@@ -662,6 +662,89 @@ for (const [name, file, content, expected] of R6B_CASES) {
   });
 }
 
+// ── R6c: PostgreSQL の字句・文の種類・中身の無い条件・.sql 以外の包み方（本物の git 差分で試す） ──
+console.log('\n【R6c 本人GO見分けテスト】');
+
+const R6C_CASES = [
+  // 1 字句 ○
+  ["○ 1: E 付き文字列の中の \\' の後ろの -- のあとの表削除", 'migrations/r6c_a.sql', "SELECT E'\\'--'; DROP TABLE x;\n", true],
+  ["○ 1: E 付き文字列の中の \\' の後ろの /* のあとの表削除", 'migrations/r6c_b.sql', "SELECT E'\\'/*'; DROP TABLE x;\n", true],
+  ['○ 1: ドル引用の中の -- のあとの表削除', 'migrations/r6c_c.sql', 'SELECT $$--$$; DROP TABLE x;\n', true],
+  ['○ 1: ドル引用の中の /* のあとの表削除', 'migrations/r6c_d.sql', 'SELECT $$/*$$; DROP TABLE x;\n', true],
+  ['○ 1: タグに数字を含むドル引用の中の WHERE なし DELETE', 'migrations/r6c_e.sql', 'CREATE FUNCTION f() RETURNS void LANGUAGE sql AS $f1$ DELETE FROM t $f1$; SELECT f();\n', true],
+  ['○ 1: 入れ子のブロックコメントが閉じた後ろの表削除', 'migrations/r6c_f.sql', '/* a /* b */ c */ DROP TABLE x;\n', true],
+  ['○ 1: 入れ子のブロックコメントが閉じていないとき後ろの表削除（止める側）', 'migrations/r6c_g.sql', '/* a /* b */ DROP TABLE x;\n', true],
+  ['○ 1: ドル引用の中の文字列の中の -- は文字列なので後ろの表削除が当たる', 'migrations/r6c_h.sql', "DO $$ BEGIN PERFORM '--'; DROP TABLE x; END $$;\n", true],
+  // 1 字句 ×
+  ['× 1: 入れ子のブロックコメントの中だけの表削除', 'migrations/r6c_i.sql', '/* a /* b */ DROP TABLE x; */ SELECT 1;\n', false],
+  ['× 1: ドル引用の中のコメントだけの表削除', 'migrations/r6c_j.sql', 'DO $f1$ BEGIN\n /* DROP TABLE x */ NULL;\nEND $f1$;\n', false],
+  ["× 1: ドル引用の中の ' が閉じていなくても、後ろの行コメントは本物のコメント", 'migrations/r6c_k.sql', "SELECT $$it's$$;\n-- ロールバック: DROP TABLE t;\n", false],
+  ["× 1: E 付き文字列の中の \\' の後ろの行コメントは本物のコメント", 'migrations/r6c_l.sql', "SELECT E'a\\'b';\n-- ロールバック: DROP TABLE t;\n", false],
+  ["× 1: ドル引用の中の '' の重ね", 'migrations/r6c_m.sql', "CREATE FUNCTION f() RETURNS void AS $$ BEGIN RAISE NOTICE 'don''t'; END $$ LANGUAGE plpgsql;\n-- ロールバック: DROP TABLE t;\n", false],
+  // 2 文の種類 ○
+  ['○ 2: 持ち主ごとの一括削除', 'migrations/r6c_n.sql', 'DROP OWNED BY r CASCADE;\n', true],
+  ['○ 2: 外部表の削除', 'migrations/r6c_o.sql', 'DROP FOREIGN TABLE t;\n', true],
+  ['○ 2: 外部表の列の削除（略記）', 'migrations/r6c_p.sql', 'ALTER FOREIGN TABLE t DROP c;\n', true],
+  ['○ 2: 空白を含む引用符つきの名前での列削除の略記', 'migrations/r6c_q.sql', 'ALTER TABLE "my t" DROP c;\n', true],
+  ['○ 2: スキーマ付き・空白を含む引用符つきの名前での列削除の略記', 'migrations/r6c_r.sql', 'ALTER TABLE public."a b" DROP c;\n', true],
+  ['○ 2: 実行計画の測定つきの WHERE なし DELETE', 'migrations/r6c_s.sql', 'EXPLAIN ANALYZE DELETE FROM t;\n', true],
+  ['○ 2: 準備文を経由した WHERE なし DELETE', 'migrations/r6c_t.sql', 'PREPARE p AS DELETE FROM t; EXECUTE p;\n', true],
+  ['○ 2: 型つきの準備文を経由した WHERE なし DELETE', 'migrations/r6c_u.sql', 'PREPARE p (int) AS DELETE FROM t;\n', true],
+  // 2 文の種類 ×
+  ['× 2: 実行計画の測定つきでも WHERE のある DELETE', 'migrations/r6c_v.sql', 'EXPLAIN ANALYZE DELETE FROM t WHERE id = 1;\n', false],
+  ['× 2: 準備文を経由しても WHERE のある DELETE', 'migrations/r6c_w.sql', 'PREPARE p AS DELETE FROM t WHERE id = $1;\n', false],
+  ['× 2: 実行計画だけ（DELETE を含まない）', 'migrations/r6c_x.sql', 'EXPLAIN ANALYZE SELECT 1;\n', false],
+  ['× 2: 空白を含む引用符つきの名前での制約の削除', 'migrations/r6c_y.sql', 'ALTER TABLE "my t" DROP CONSTRAINT c;\n', false],
+  ['× 2: 外部表の既定値の削除', 'migrations/r6c_z.sql', 'ALTER FOREIGN TABLE t ALTER COLUMN c DROP DEFAULT;\n', false],
+  // 3 中身の無い条件 ○
+  ['○ 3: WHERE true', 'migrations/r6c_aa.sql', 'DELETE FROM t WHERE true;\n', true],
+  ['○ 3: WHERE 1 = 1', 'migrations/r6c_ab.sql', 'DELETE FROM t WHERE 1 = 1;\n', true],
+  ['○ 3: WHERE NOT false', 'migrations/r6c_ac.sql', 'DELETE FROM t WHERE NOT false;\n', true],
+  ["○ 3: WHERE 'a' = 'a'", 'migrations/r6c_ad.sql', "DELETE FROM t WHERE 'a' = 'a';\n", true],
+  ['○ 3: RETURNING の文字列に WHERE があっても条件なしと同じ', 'migrations/r6c_ae.sql', "DELETE FROM t RETURNING 'WHERE';\n", true],
+  ['○ 3: RETURNING の引用符つきの名前に where があっても条件なしと同じ', 'migrations/r6c_af.sql', 'DELETE FROM t RETURNING "where";\n', true],
+  // 3 中身の無い条件 ×
+  ['× 3: 列を参照する条件', 'migrations/r6c_ag.sql', 'DELETE FROM t WHERE id = 1;\n', false],
+  ['× 3: 列と定数を AND でつないだ条件', 'migrations/r6c_ah.sql', 'DELETE FROM t WHERE true AND id = 1;\n', false],
+  ['× 3: かっこの中に列を参照する条件', 'migrations/r6c_ai.sql', 'DELETE FROM t WHERE (id = 1);\n', false],
+  ['× 3: 関数を呼ぶ条件', 'migrations/r6c_aj.sql', 'DELETE FROM t WHERE f(1);\n', false],
+  ['○ 3: 全体を1重のかっこで包んだ定数だけの条件', 'migrations/r6c_am.sql', 'DELETE FROM t WHERE (true);\n', true],
+  ['○ 3: 全体を2重のかっこで包んだ定数だけの条件', 'migrations/r6c_an.sql', 'DELETE FROM t WHERE ((1 = 1));\n', true],
+  ['× 3: 全体を2重のかっこで包んだ列の比較', 'migrations/r6c_ao.sql', 'DELETE FROM t WHERE ((id = 1));\n', false],
+  ['× 3: 列の比較を OR で2つかっこに入れた条件', 'migrations/r6c_ap.sql', 'DELETE FROM t WHERE (a = 1) OR (b = 2);\n', false],
+  ['× 3: 途中にかっこがある普通の条件', 'migrations/r6c_aq.sql', 'DELETE FROM t WHERE (a = 1 OR b = 2) AND c = 3;\n', false],
+  ['× 3: WHERE CURRENT OF','migrations/r6c_ak.sql', 'DELETE FROM t WHERE CURRENT OF c;\n', false],
+  ['× 3: 副問い合わせを使う条件', 'migrations/r6c_al.sql', 'DELETE FROM t WHERE id IN (SELECT id FROM s);\n', false],
+  // 4 .sql 以外 ○
+  ['○ 4: シェルのヒアドキュメントの中の WHERE なし DELETE', 'scripts/run_all_migrations.sh', 'psql <<SQL\nDELETE FROM t;\nSQL\n', true],
+  ['○ 4: シェルのヒアドキュメント（引用符つきの語）の中の TRUNCATE', 'scripts/run_all_migrations.sh', "psql <<'EOF'\nTRUNCATE t;\nEOF\n", true],
+  ['○ 4: シェルのヒアドキュメントの中の WHERE true の DELETE', 'scripts/run_all_migrations.sh', 'psql <<SQL\nDELETE FROM t WHERE true;\nSQL\n', true],
+  ['○ 4: python の改行の記号から始まる文字列の中の WHERE なし DELETE', 'scripts/migrate_zz_r6c1.py', 'cur.execute("\\nDELETE FROM t")\n', true],
+  ['○ 4: python の改行の記号の後ろの TRUNCATE', 'scripts/migrate_zz_r6c2.py', "cur.execute('\\n  TRUNCATE t')\n", true],
+  // 4 .sql 以外 ×
+  ['× 4: シェルのヒアドキュメントの中の WHERE のある DELETE', 'scripts/run_all_migrations.sh', 'psql <<SQL\nDELETE FROM t WHERE id = 1;\nSQL\n', false],
+  ['× 4: シェルのヒアドキュメントの中の SELECT だけ', 'scripts/run_all_migrations.sh', 'psql <<SQL\nSELECT 1;\nSQL\n', false],
+  ['× 4: シェルのヒアドキュメントではない echo', 'scripts/run_all_migrations.sh', "echo 'DELETE log check'\n", false],
+  ['× 4: python の改行の記号から始まる文字列の中の WHERE のある DELETE', 'scripts/migrate_zz_r6c3.py', 'cur.execute("\\nDELETE FROM t WHERE id = 1")\n', false],
+  // 5 誤検知の解消
+  ["× 5: ALTER TABLE の既定値の文字列の中のコンマと DROP", 'migrations/r6c_am.sql', "ALTER TABLE t ADD c text DEFAULT 'a, DROP b';\n", false],
+  ["× 5: ALTER TABLE の既定値の二重引用符の中のコンマと DROP", 'migrations/r6c_an.sql', 'ALTER TABLE t ADD "a, DROP b" text;\n', false],
+  ["○ 5: ALTER TABLE の文字列の後ろの操作の列削除の略記", 'migrations/r6c_ao.sql', "ALTER TABLE t ADD c text DEFAULT 'a, b', DROP d;\n", true],
+  ["× 5: E 付き文字列の中の \\' の後ろの行コメント", 'migrations/r6c_ap.sql', "SELECT E'a\\'b'; -- DROP TABLE t\n", false],
+  ['○ 5: 閉じの無い単引用符から後ろは素の文として当てる', 'migrations/r6c_aq.sql', "SELECT 'a; DROP TABLE t;\n", true],
+  ['○ 5: 閉じの無いドル引用から後ろも当てる', 'migrations/r6c_ar.sql', 'SELECT $$ a; DROP TABLE t;\n', true],
+];
+
+for (const [name, file, content, expected] of R6C_CASES) {
+  test(`R6c migration: ${name}`, () => {
+    assert.strictEqual(detectInTempRepo({ [file]: content }), expected);
+  });
+}
+
+test('R6c migration: 同じ内容でも .sql 以外の場所の SQL は migration として当てない', () => {
+  assert.strictEqual(detectInTempRepo({ 'docs/notes/r6c.sql': 'DELETE FROM t WHERE true;\nDROP OWNED BY r;\n' }), false);
+});
+
 test('R6b GO発行者: PO の名前入りで委任語により止めたとき、書き写した注記は別の欄に書くと案内する', () => {
   const errors = validateGORecord(
     parseGORecord(goSectionWithIssuer('PO（Shingo）本人がチャットで発行。転記は Claude Opus', 2099)),
