@@ -16,7 +16,7 @@
 | 項目 | 内容 |
 |---|---|
 | 本番の解析 | v6（変更しない。PO：「今本番で動かしているものは触らない」） |
-| 試作版で採用確定の指示書 | `public.extraction_prompt_config` の key `raw_copy_v101_f_c`（本文の sha256 d2a6447faf0842dad134337a302ed9c9bb7b8ac9c8731bc25860a56b9d037d21。2026-10-08 合格。条件つき：§4）。前の版 `backend/app/prompts/raw_copy_v101_e.txt`（PR #3999）は残す。試作版の既定（`--prompt-name`・`--prompt-key` なし）は f_c（この PR、PO 2026-10-08「f-cを採用」）。**2026-10-11 以降の既定は f_ct**（下の行）。f_c の行は DB に残す |
+| 試作版で採用確定の指示書 | `public.extraction_prompt_config` の key `raw_copy_v101_f_c`（本文の sha256 d2a6447faf0842dad134337a302ed9c9bb7b8ac9c8731bc25860a56b9d037d21。2026-10-08 合格。条件つき：§4）。前の版 `backend/app/prompts/raw_copy_v101_e.txt`（PR #3999）は残す。試作版の既定（`--prompt-name`・`--prompt-key` なし）は f_c（この PR、PO 2026-10-08「f-cを採用」）。**既定は f_dm**（下の行。2026-10-11 から切り替えまでは f_ct）。f_c の行は DB に残す |
 | 試作版の仕入元ルール | `public.suppliers` の新しい2欄（`extraction_layout_rules`・`extraction_hard_cases`、PR #4013）だけを読む。元からある `extraction_*` の7欄は読まない |
 | 新しい2欄の中身 | 17社ぶんを本番 DB に書き込み済み（2026-10-07 13:28、照合で17社すべて一致。元の欄は変化なし）。残りの96社のルール案は手元に保留 |
 | 切り替えの順番 | 試作版のシステムの解析側を整備 → 本番を切り替える（PO 2026-10-07） |
@@ -37,6 +37,7 @@
 | 道具：指示書を DB から読む | #4030 | --prompt-key。新しい指示書は public.extraction_prompt_config にだけ置く | [prompt-ab-db-source](../../handoff/prompt-ab-db-source/) |
 | 道具：試作版の既定の指示書を f_c に | （この PR） | --config v102 で名前・key なしのとき DB の key raw_copy_v101_f_c を読む | [prototype-default-prompt-fc](../../handoff/prototype-default-prompt-fc/) |
 | 本番・試作版の既定の指示書を f_ct に | #4128 | DB の key `raw_copy_v101_f_ct`（本文の sha256 fe50593fa362da213e33663f85110381a6f3f97465553443e87ae0f0df8515fd）。engine_version は v102-f_ct。〆だけの投稿を件にする（PO 2026-10-11「切り替える」） | [v102-prompt-fct](../../handoff/v102-prompt-fct/) |
+| 本番・試作版の既定の指示書を f_dm に | （この PR） | DB の key `raw_copy_v101_f_dm`（本文の sha256 84afd2e4e0094b542d5f1dada1fef39290aa6d997135296e78601fc945ac8b0c）。engine_version は v102-f_dm。区分の見出しの下にある状態の行（傷みの注意書き）を、その下の件ごとに足す（PO 2026-10-27 承認）。測定の宿題: 次の正答率の測定の前に scripts/accuracy/fetch_snapshot.py の指示書の絞り方を見直す | [v102-prompt-fdm](../../handoff/v102-prompt-fdm/) |
 | v102：価格の行の探し直しに円・¥・￥を除いた形 | （この PR） | 価格の写しに「円」が付き原文に無いとき、除いた形でも探す（v102 のみ・見つからないときだけ）。保存済み応答 1,021 回で落ちる件 48→4、期待外の違い 0 | [v102-price-line-yen-retry](../../handoff/v102-price-line-yen-retry/) |
 | v102：価格の行の決め方の印 price_basis | （この PR） | 円・¥を除いた探し直しで見つけた件に analysis_results.price_basis = V102:yen_free。配信・要確認は不変 | [v102-price-basis](../../handoff/v102-price-basis/) |
 | v102：価格なし・数ありの件に前の価格を引き継ぐ price_basis=INHERIT:<id> | （この PR） | 価格が書かれていない数だけの行に、同じ仕入元・同じ商品×状態の前の価格（48時間以内）を引き継いだ。id は元の analysis_results.id。相場（_MARKET_SQL）の母数には入れない | `docs/handoff/remaining-n-price-inherit/` |

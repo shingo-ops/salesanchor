@@ -33,4 +33,28 @@
 
 ## #4128 との1対1の対応表
 
-（実装役が、#4128（merge 6c1c5e824）の差分と今回の差分を並べてここに書く。README の :39 の下に足す1行の「測定の宿題」の書き添えは「1対1の外の追加」と書く）
+行番号は「#4128 の親での行→今回の行」（77b40a1ae 時点）。
+
+| ファイル:行 | #4128 の変更 | 今回の変更 |
+|---|---|---|
+| `backend/app/services/line_analysis_v102_svc.py:51→95` | V102_ENGINE_VERSION f_c→f_ct | f_ct→f_dm |
+| `backend/app/services/line_analysis_v102_svc.py:53→97` | V102_PROMPT_KEY f_c→f_ct | f_ct→f_dm |
+| `backend/app/tools/prompt_ab.py:14→15` | docstring の既定 key f_c→f_ct | f_ct→f_dm |
+| `backend/app/tools/prompt_ab.py:588→626` | --prompt-name の help の既定 key f_c→f_ct | f_ct→f_dm |
+| `backend/tests/test_line_analysis_v102_pg.py:108→115` | version の前方一致 f_c→f_ct | f_ct→f_dm |
+| `backend/tests/test_line_analysis_v102_svc.py:71→72` | build_prompt_version の引数 f_c→f_ct | f_ct→f_dm |
+| `backend/tests/test_line_analysis_v102_svc.py:73→74` | key の期待値 f_c→f_ct | f_ct→f_dm |
+| `backend/tests/test_line_analysis_v102_svc.py:86→87` | V102_PROMPT の期待値 f_c→f_ct | f_ct→f_dm |
+| `backend/tests/test_line_analysis_v102_svc.py:281→312` | 偽の prompt_version f_c→f_ct | f_ct→f_dm |
+| `backend/tests/test_prompt_ab.py:104→105` | コメント内の key f_c→f_ct | f_ct→f_dm |
+| `backend/tests/test_prompt_ab.py:688→689` | V102_PROMPT の期待値 f_c→f_ct | f_ct→f_dm |
+| `backend/tests/test_prompt_ab.py:689→690` | DB 読みの key 引数 f_c→f_ct | f_ct→f_dm |
+| `backend/tests/test_prompt_ab.py:692→693` | prompt_name の期待値 f_c→f_ct | f_ct→f_dm |
+| `backend/tests/test_prompt_ab.py:697→698` | ValueError の match f_c→f_ct | f_ct→f_dm |
+| `backend/tests/test_prompt_ab.py:927→928` | prompt_name の期待値 f_c→f_ct | f_ct→f_dm |
+| `docs/specs/line-analysis-tuning/README.md:19` | 「試作版で採用確定の指示書」の行の既定の書き換え（f_c→2026-10-11 以降は f_ct） | 「既定は f_dm（…切り替えまでは f_ct）」に書き換え |
+| `docs/specs/line-analysis-tuning/README.md:39→40` | #4128 の行を足した（f_ct の行） | #4128 の行は書き換えず、直後に f_dm の行を足した。測定の宿題の書き添えは **1対1の外の追加** |
+
+- コードの変更行は #4128 と今回で同じ15行（1対1）。
+- #4128 にあって今回に無い行: `docs/handoff/v102-prompt-fct/` の design.md・recon.md の新規作成（今回は `docs/handoff/v102-prompt-fdm/` に別途ある）。
+- 今回にあって #4128 に無い行: なし（README の測定の宿題の書き添えのみ1対1の外）。
