@@ -22,7 +22,8 @@ import { gotoViewer } from "./viewer-helpers";
 
 const MOBILE_WIDTHS = [360, 390] as const;
 /** 一覧の先頭カードの y の上限（design.md ③・計算値124・余裕4px） */
-const MAX_TOP_Y = 128;
+// 便10 で検索欄とボタン行が48pxになり計算値132。docs/handoff/viewer-control-tap-size/design.md ⑤
+const MAX_TOP_Y = 132;
 /** 言語セレクトの高さの下限（design.md ③・ADR-140） */
 const MIN_TAP_PX = 44;
 

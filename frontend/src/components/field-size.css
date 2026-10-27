@@ -26,3 +26,14 @@
 .content-toolbar .field-w-sm,
 .content-toolbar .field-w-md,
 .content-toolbar .field-w-lg { margin-bottom: 0; }
+
+/* お手本（メルカリ）の操作単位 48dp。スマホのときだけ効く段で、PC の高さは
+   field-h-sm/md/lg で別に指定する（併記して使う）。
+   FormField.css の @media が .comp-field__input / .comp-field__select / .comp-select__control の
+   3つに 44px を当てるので、勝たせるために複合セレクタを併記する（幅の field-w-* と同じ型・§AW AW-2b） */
+@media (max-width: 767px) {
+  .field-h-tap,
+  .comp-select__control.field-h-tap,
+  .comp-field__select.field-h-tap,
+  .comp-field__input.field-h-tap { min-height: var(--field-h-tap, 48px); box-sizing: border-box; }
+}

@@ -13,6 +13,7 @@ import { SelectControl } from "../../components/Select";
 import { Tabs } from "../../components/Tabs";
 import { TextFieldControl } from "../../components/TextField";
 import { ChevronRight } from "../../constants/icons-base";
+import { ICON } from "../../constants/iconSizes";
 import { useIsMobile } from "../../hooks/useIsMobile";
 import { saveLocaleCookie } from "./i18n";
 import type { ViewerLang } from "./i18n";
@@ -263,7 +264,7 @@ export function InventoryView({ data }: InventoryViewProps) {
     <div className="viewer-filter-options">
       <TextFieldControl
         type="search"
-        className="field-h-md field-w-lg"
+        className="field-h-md field-h-tap field-w-lg"
         placeholder={t("viewer.filter.searchOptions")}
         aria-label={t("viewer.filter.searchOptions")}
         data-testid="viewer-filter-option-search"
@@ -290,7 +291,7 @@ export function InventoryView({ data }: InventoryViewProps) {
     <div className="viewer-filter-options">
       <TextFieldControl
         type="search"
-        className="field-h-md field-w-lg"
+        className="field-h-md field-h-tap field-w-lg"
         placeholder={t("viewer.filter.searchOptions")}
         aria-label={t("viewer.filter.searchOptions")}
         data-testid="viewer-filter-option-search"
@@ -328,7 +329,7 @@ export function InventoryView({ data }: InventoryViewProps) {
   const filterDrawerFooter = filterView === "root" ? undefined : (
     <Button
       variant="primary"
-      size="md"
+      size="lg"
       type="button"
       fullWidth
       onClick={backToFilterRoot}
@@ -359,7 +360,7 @@ export function InventoryView({ data }: InventoryViewProps) {
   const searchField = (
     <TextFieldControl
       type="search"
-      className="field-h-md field-w-md viewer-toolbar__search"
+      className="field-h-md field-h-tap field-w-md viewer-toolbar__search"
       placeholder={t("viewer.search.placeholder")}
       aria-label={t("viewer.search.placeholder")}
       data-testid="viewer-search"
@@ -411,7 +412,7 @@ export function InventoryView({ data }: InventoryViewProps) {
   const seriesTrigger = (
     <Button
       variant="ghost"
-      size="sm"
+      size="tap"
       type="button"
       layoutClassName="viewer-toolbar__series"
       data-testid="viewer-tab-select"
@@ -419,14 +420,14 @@ export function InventoryView({ data }: InventoryViewProps) {
       onClick={() => openChoicePanel("series")}
     >
       <span className="viewer-toolbar__label">{currentSeriesLabel}</span>
-      <ChevronRight className="viewer-toolbar__caret" aria-hidden />
+      <ChevronRight className="viewer-toolbar__caret" size={ICON.md} aria-hidden />
     </Button>
   );
   // スマホの「並び替え」ボタン（design.md 4-1）。sortMenu（OS 標準のプルダウン）は PC 専用のまま残す
   const sortTrigger = (
     <Button
       variant="ghost"
-      size="sm"
+      size="tap"
       type="button"
       layoutClassName="viewer-toolbar__fixed"
       data-testid="viewer-sort-menu"
@@ -434,7 +435,7 @@ export function InventoryView({ data }: InventoryViewProps) {
       onClick={() => openChoicePanel("sort")}
     >
       <span className="viewer-toolbar__label">{currentSortLabel}</span>
-      <ChevronRight className="viewer-toolbar__caret" aria-hidden />
+      <ChevronRight className="viewer-toolbar__caret" size={ICON.md} aria-hidden />
     </Button>
   );
   // パネルの行の共通の描き方（design.md 4-2）。選ぶと即反映して閉じる
@@ -551,7 +552,7 @@ export function InventoryView({ data }: InventoryViewProps) {
             {sortTrigger}
             <Button
               variant="ghost"
-              size="sm"
+              size="tap"
               type="button"
               layoutClassName="viewer-toolbar__fixed"
               data-testid="viewer-filter-toggle"

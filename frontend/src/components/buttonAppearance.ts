@@ -1,5 +1,5 @@
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger" | "outline" | "tab";
-export type ButtonSize = "sm" | "md" | "lg";
+export type ButtonSize = "sm" | "md" | "lg" | "tap";
 
 const VARIANT_CLASS: Record<ButtonVariant, string> = {
   primary:   "comp-btn--primary",
@@ -33,7 +33,7 @@ export function buttonAppearance({
   return [
     "comp-btn",
     VARIANT_CLASS[variant],
-    isTab ? "" : (size === "sm" ? "comp-btn--sm" : size === "lg" ? "comp-btn--lg" : ""),
+    isTab ? "" : (size === "sm" ? "comp-btn--sm" : size === "lg" ? "comp-btn--lg" : size === "tap" ? "comp-btn--tap" : ""),
     isTab && active ? "comp-btn--active" : "",
     fullWidth  ? "comp-btn--full"      : "",
     loading    ? "comp-btn--loading"   : "",
