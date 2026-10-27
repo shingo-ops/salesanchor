@@ -56,6 +56,16 @@ VIEWER_INVENTORY_LAST_HOLD_TS = Gauge(
     "閲覧ページの作り置きで、配信の保留を最後に確かめた時刻（UNIX 秒）",
 )
 
+OPS_MAIL_LAST_SAKURA_MAIL_TS = Gauge(
+    "salesanchor_ops_mail_last_sakura_mail_timestamp_seconds",
+    "運用の受け箱で、さくらの差出人のメールを最後に見た時刻（UNIX 秒。0 は未設定）",
+)
+
+OPS_MAIL_LAST_POLL_OK_TS = Gauge(
+    "salesanchor_ops_mail_last_poll_success_timestamp_seconds",
+    "運用の受け箱を最後に読めた時刻（UNIX 秒。0 は未設定）",
+)
+
 _VIEWER_TS_READ_TIMEOUT_SEC = 1.0
 
 
@@ -78,6 +88,18 @@ async def _update_viewer_inventory_gauges() -> None:
         return
     VIEWER_INVENTORY_UPDATED_TS.set(await _read_ts(redis_client, UPDATED_TS_KEY))
     VIEWER_INVENTORY_LAST_HOLD_TS.set(await _read_ts(redis_client, LAST_HOLD_TS_KEY))
+
+
+async def _update_ops_mail_gauges() -> None:
+    from app.services.ops_mail_notifier import LAST_POLL_OK_TS_KEY, LAST_SAKURA_MAIL_TS_KEY  # noqa: PLC0415
+
+    redis_client = get_redis()
+    if redis_client is None:
+        OPS_MAIL_LAST_SAKURA_MAIL_TS.set(0)
+        OPS_MAIL_LAST_POLL_OK_TS.set(0)
+        return
+    OPS_MAIL_LAST_SAKURA_MAIL_TS.set(await _read_ts(redis_client, LAST_SAKURA_MAIL_TS_KEY))
+    OPS_MAIL_LAST_POLL_OK_TS.set(await _read_ts(redis_client, LAST_POLL_OK_TS_KEY))
 
 
 def _handler_name(request: Request) -> str:
@@ -122,4 +144,9 @@ def register_metrics(app: FastAPI) -> None:
         except Exception:
             VIEWER_INVENTORY_UPDATED_TS.set(0)
             VIEWER_INVENTORY_LAST_HOLD_TS.set(0)
+        try:
+            await _update_ops_mail_gauges()
+        except Exception:
+            OPS_MAIL_LAST_SAKURA_MAIL_TS.set(0)
+            OPS_MAIL_LAST_POLL_OK_TS.set(0)
         return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)

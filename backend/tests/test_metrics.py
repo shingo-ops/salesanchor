@@ -33,6 +33,24 @@ async def test_metrics_endpoint_exports_http_metrics():
 
 
 @pytest.mark.asyncio
+async def test_metrics_exports_ops_mail_timestamps():
+    from unittest.mock import AsyncMock, MagicMock, patch
+
+    fake = MagicMock()
+    fake.get = AsyncMock(return_value="1761200000.0")
+    app = FastAPI()
+    register_metrics(app)
+
+    transport = ASGITransport(app=app)
+    with patch("app.metrics.get_redis", return_value=fake):
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            metrics_response = await client.get("/metrics")
+
+    assert "salesanchor_ops_mail_last_sakura_mail_timestamp_seconds 1.7612e+09" in metrics_response.text
+    assert "salesanchor_ops_mail_last_poll_success_timestamp_seconds 1.7612e+09" in metrics_response.text
+
+
+@pytest.mark.asyncio
 async def test_metrics_uses_request_path_when_route_is_missing():
     app = FastAPI()
     register_metrics(app)

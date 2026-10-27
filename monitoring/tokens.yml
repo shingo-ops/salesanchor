@@ -100,6 +100,10 @@ thresholds:
   # 復旧後の点検係（alert_rules.yml: recovery_check_alerts）
   recovery_check_stale_sec: 300  # RecoveryCheckStale: time() - salesanchor_recovery_check_last_poll_timestamp_seconds > 300
 
+  # 運用の受け箱（alert_rules.yml: ops_mail_alerts）
+  ops_mail_silent_sec:     3456000  # OpsMailSilent: time() - salesanchor_ops_mail_last_sakura_mail_timestamp_seconds > 3456000（40 日）
+  ops_mail_poll_stale_sec:   10800  # OpsMailPollStale: time() - salesanchor_ops_mail_last_poll_success_timestamp_seconds > 10800（3 時間）
+
   # ログ異常検知（loki/rules/jarvis/alerts.yml）
   brute_force_per_5m:     20    # BruteForceAttempt: > 20
   auth_failure_per_1h:    50    # SustainedAuthFailure: > 50
@@ -132,3 +136,5 @@ for_durations:
   clock_skew:         "2m"   # ClockSkew
   clock_sync_stopped: "10m"  # ClockSyncStopped
   recovery_check_stale: "5m"   # RecoveryCheckStale
+  ops_mail_silent:      "1h"   # OpsMailSilent
+  ops_mail_poll_stale:  "10m"  # OpsMailPollStale
