@@ -558,6 +558,10 @@
   /* グループ見出しフォントサイズ */
   --comp-subnav-group-title-fs: var(--font-xs);           /* 12px */
 
+  /* ── MultiSelect コンポーネント ─────────────────────────────────────────── */
+  /* layout="row" の行の高さ: お手本実測52.7dp。出典 docs/specs/design-system/visual-language/benchmark/ */
+  --comp-multiselect-row-h:     53px;
+
   /* ---- Status color tokens（MIG-04 Stage 1 — TcgLineImportPage） ---- */
   --color-error:          #b91c1c;
   --color-error-bg:       var(--color-red-50);  /* #fef2f2 — エラーバナー背景と共通 */
