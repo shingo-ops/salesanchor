@@ -15,12 +15,8 @@ rules:
   - id: A09
     source: AGENTS.md
     anchor: "`shingo-ops` 名義でのコード変更PR作成は禁止"
-    kind: gate
-    check: "process-artifacts gate"
-    when: ci
-    fixture: ""
-    evidence: "R2 で見本を置く"
-    reason: "gh auth status での名義確認は PR の外なので対象外。shingo-ops 名義のコード変更 PR は check-process-artifacts.js:814-819 が止める。書類だけの PR は検査が飛ぶ（:774）が、AGENTS.md:33 が docs-only PR を対象外にしているので妨げない。PR 作者の取得に失敗すると check-process-artifacts.js:809-810 で警告だけで通る。R2/R6 の宿題"
+    kind: review
+    reason: "gate候補（R6）: shingo-ops 名義のコード変更 PR は check-process-artifacts.js:814-819 が止めるが、CI で動く .github/scripts/*.sh は DOCS_PATTERNS（:94 の /^\\.github\\/(?!workflows\\/)/）で書類に分けられ、そのファイルだけの PR は :774 で全部の検査が飛ぶ（審査役の実測 probe.txt、rc=0）。決まりの文書（AGENTS.md:33）はこれを対象外にしていない。PR 作者の取得に失敗すると :809-810 で警告だけで通る。gh auth status での名義確認は PR の外"
   - id: A13
     source: AGENTS.md
     anchor: "を含む PR は PO の「GO #PR番号」まで main にマージしない"
@@ -29,7 +25,7 @@ rules:
     when: ci
     fixture: ""
     evidence: "R2 で見本を置く"
-    reason: "migrations/・deploy.yml・本番 scripts/ を含む PR の GO 記録の有無は check-process-artifacts.js:925-931 が止める（危険パスは :115-134）。危険パスを含む PR は書類だけの PR にならないので :774 の飛びは当たらず、飛ぶ条件は無い。「まで main にマージしない」という順序そのものは PR の外"
+    reason: "migrations/・deploy.yml・本番 scripts/ を含む PR の GO 記録の有無は check-process-artifacts.js:925-931 が止める（危険パスは :115-134）。危険パスを含む PR は書類だけの PR にならないので :774 の飛びは当たらない。本番 scripts/ の範囲は ADR-135 が /^scripts\\// と決めている（ADR-135:41。backend/scripts/ は含まない。DANGEROUS_PATTERNS は check-process-artifacts.js:117）。develop→main の PR を丸ごと飛ばす条件（check-process-artifacts.js:747-750）は妨げない: develop の ruleset 16619490（enforcement active）は required_status_checks に process-artifacts gate を含むので、develop に入る変更はその時点で同じ検査を通る。新規作業での develop の使用は branch-operations/README.md:97 が禁止している。「まで main にマージしない」という順序そのものは PR の外"
   - id: S02
     source: docs/STANDARD-WORKFLOW.md
     anchor: "**recon証拠**：実コードへの **file:line 引用**を含み、その引用先が**実在する**こと"
@@ -53,7 +49,7 @@ rules:
     when: ci
     fixture: ""
     evidence: "R2 で見本を置く"
-    reason: "migrations/・deploy.yml・本番 scripts/ を含む実装の GO 記録の有無は check-process-artifacts.js:925-931 が止める（危険パスは :115-134）。危険パスを含む PR は書類だけの PR にならないので :774 の飛びは当たらず、飛ぶ条件は無い。release ブランチで待つ順序そのものは PR の外（登録済みA13と同じ検査で、行が別）"
+    reason: "migrations/・deploy.yml・本番 scripts/ を含む実装の GO 記録の有無は check-process-artifacts.js:925-931 が止める（危険パスは :115-134）。危険パスを含む PR は書類だけの PR にならないので :774 の飛びは当たらない。本番 scripts/ の範囲は ADR-135 が /^scripts\\// と決めている（ADR-135:41。backend/scripts/ は含まない。DANGEROUS_PATTERNS は check-process-artifacts.js:117）。develop→main の PR を丸ごと飛ばす条件（check-process-artifacts.js:747-750）は妨げない: develop の ruleset 16619490（enforcement active）は required_status_checks に process-artifacts gate を含むので、develop に入る変更はその時点で同じ検査を通る。新規作業での develop の使用は branch-operations/README.md:97 が禁止している。release ブランチで待つ順序そのものは PR の外（登録済みA13と同じ検査で、行が別）"
   - id: F01
     source: frontend/AGENTS.md
     anchor: "ページタイトル・サブタイトルは必ず"
@@ -77,12 +73,8 @@ rules:
   - id: F11
     source: frontend/AGENTS.md
     anchor: "`lucide-react` からの直接 import は ESLint が禁止する"
-    kind: gate
-    check: "Lint & Dark Mode Check (ADR-067)"
-    when: ci
-    fixture: ""
-    evidence: "R2 で見本を置く"
-    reason: "frontend/src の ts・tsx の lucide-react 直接 import は eslint.config.js:14・:118-131 の no-restricted-imports（error）が止める。constants/icons.tsx だけ off（:135-139）だが、決まりが唯一の窓口として許している（frontend/AGENTS.md:58-64）。frontend/ に変更が無い PR は e2e.yml:62 で検査が飛ぶが、import は frontend/ の中にしか無いので妨げない。no-restricted-imports は import() の動的読み込みを見ない（ESLint の仕様・実物では未確認）。決まりの文 frontend/AGENTS.md:58 は ESLint が禁止するという説明の形"
+    kind: review
+    reason: "gate候補（R6）: frontend/src の ts・tsx の lucide-react 直接 import は eslint.config.js:14・:118-131 の no-restricted-imports（error）が止める。しかし eslint.config.js:13 の ignores `src/api/generated/**` に置いた import は止まらず、決まりの文書（frontend/AGENTS.md:65）はこの除外を書いていない。constants/icons.tsx だけ off（:135-139）。今の実物では icons.tsx・icons-base.tsx は @heroicons/react から読み込み、frontend/src に lucide-react の import は0件。no-restricted-imports は import() の動的読み込みを見ない（ESLint の仕様・実物では未確認）。frontend/ に変更が無い PR は e2e.yml:62 で検査が飛ぶが import は frontend/ の中にしか無いので妨げない"
   - id: K01
     source: backend/AGENTS.md
     anchor: "`db.commit()` 直後に `reset_tenant_context()` 必須"
@@ -291,12 +283,8 @@ rules:
   - id: S043
     source: docs/STANDARD-WORKFLOW.md
     anchor: "- PR本文: `### 標準ワークフロー確認` セクション必須。"
-    kind: gate
-    check: "process-artifacts gate"
-    when: ci
-    fixture: ""
-    evidence: "R2 で見本を置く"
-    reason: "PR本文に「### 標準ワークフロー確認」セクション必須: 欠落は PR番号2600以上で check-process-artifacts.js:861-863 が止める（本検査の :649-651 は危険変更・免除宣言の PR では :943・:976 で手前で終わるが、:861 は :943 より前なので危険変更でも止まる）。書類だけの PR（:774）は STANDARD-WORKFLOW.md:137 が対象外にしているので検査が飛んでも妨げない。PR番号2600未満の猶予（:855）は新しい PR には当たらない（recon S09: stops）"
+    kind: review
+    reason: "gate候補（R6）: PR本文に「### 標準ワークフロー確認」セクション必須: 欠落は PR番号2600以上で check-process-artifacts.js:861-863 が止める（:861 は :943 より前なので危険変更でも止まる）。しかし CI で動く .github/scripts/*.sh は DOCS_PATTERNS（:94 の /^\\.github\\/(?!workflows\\/)/）で書類に分けられ、そのファイルだけの PR は :774 で全部の検査が飛ぶ（probe.txt、rc=0）。決まりの文書（STANDARD-WORKFLOW.md:137）はこれを対象外にしていない。PR番号2600未満の猶予（:855）は新しい PR には当たらない"
   - id: S044
     source: docs/STANDARD-WORKFLOW.md
     anchor: "- recon.md と design.md は必ず git add してからコ"
@@ -310,7 +298,7 @@ rules:
     when: ci
     fixture: ""
     evidence: "R2 で見本を置く"
-    reason: "ユーザー影響変更（frontend/src/・backend/app/routers/ 等）は本番前にGO記録が必須: check-process-artifacts.js:946-962 が止める。これらを含む PR は書類だけの PR（:774）にならないので飛ぶ条件は無い"
+    reason: "ユーザー影響変更（frontend/src/・backend/app/routers/ 等）は本番前にGO記録が必須: check-process-artifacts.js:946-962 が止める。これらを含む PR は書類だけの PR（:774）にならない。develop→main の PR を丸ごと飛ばす条件（check-process-artifacts.js:747-750）は妨げない: develop の ruleset 16619490（enforcement active）は required_status_checks に process-artifacts gate を含むので、develop に入る変更はその時点で同じ検査を通る。新規作業での develop の使用は branch-operations/README.md:97 が禁止している"
   - id: S046
     source: docs/STANDARD-WORKFLOW.md
     anchor: "- **人の動作確認の当面の確認環境**は本番のみ。確認は tenant_001"
@@ -919,7 +907,7 @@ rules:
     when: ci
     fixture: ""
     evidence: "R2 で見本を置く"
-    reason: "docs/adr/README.md は generate-adr-index.js の自動生成物で手動編集禁止: 手で行を足すと adr-index-check.yml:29-31 の `--check` が落ちる。検査は ADR 関連ファイルの変更時だけ走る（:19-22）が、README.md の手編集はその対象（:20）なので飛ばない"
+    reason: "docs/adr/README.md は generate-adr-index.js の自動生成物で手動編集禁止: 手で行を足すと adr-index-check.yml:29-31 の `--check` が落ちる。検査は ADR 関連ファイルの変更時だけ走る（:19-22）が、README.md の手編集はその対象（:20）なので飛ばない。検査が意図して比べない「最終更新: 日付」の行（generate-adr-index.js:185 の normalize）は、決まりの目的（手で行を足さない）に関わらないので妨げない"
   - id: L363
     source: docs/ai-agents/lessons.d/20260728-precheck-guards.md
     anchor: "- 危険変更・正本変更のカードを組む前に、その変更に効く関所・ガードの適用条件を"
@@ -1053,7 +1041,7 @@ rules:
     when: ci
     fixture: ""
     evidence: "R2 で見本を置く"
-    reason: "migrations/・deploy.yml・本番scripts/を含むPRはPO GOまでmainにマージしない: GO記録の有無を check-process-artifacts.js:924-941 が止める（登録済みA13/S10と同じ検査で、行が別）"
+    reason: "migrations/・deploy.yml・本番scripts/を含むPRはPO GOまでmainにマージしない: GO記録の有無を check-process-artifacts.js:924-941 が止める（登録済みA13/S10と同じ検査で、行が別）。本番 scripts/ の範囲は ADR-135 が /^scripts\\// と決めている（ADR-135:41。backend/scripts/ は含まない。DANGEROUS_PATTERNS は check-process-artifacts.js:117）。develop→main の PR を丸ごと飛ばす条件（check-process-artifacts.js:747-750）は妨げない: develop の ruleset 16619490（enforcement active）は required_status_checks に process-artifacts gate を含むので、develop に入る変更はその時点で同じ検査を通る。新規作業での develop の使用は branch-operations/README.md:97 が禁止している"
   - id: B398
     source: docs/specs/branch-operations/README.md
     anchor: "- **危険PR（上記パス含む）のGO手順**（ADR-136）：①マージ前にチ"
@@ -1062,7 +1050,7 @@ rules:
     when: ci
     fixture: ""
     evidence: "R2 で見本を置く"
-    reason: "危険 PR の GO 手順のうち、PR の中で確かめられる GO 記録セクションの有無は check-process-artifacts.js:924-941 が止める。マージ前のチャットでの提示と GO 原文の受領は PR の外なので対象外"
+    reason: "危険 PR の GO 手順のうち、PR の中で確かめられる GO 記録セクションの有無は check-process-artifacts.js:924-941 が止める。マージ前のチャットでの提示と GO 原文の受領は PR の外なので対象外。develop→main の PR を丸ごと飛ばす条件（check-process-artifacts.js:747-750）は妨げない: develop の ruleset 16619490（enforcement active）は required_status_checks に process-artifacts gate を含むので、develop に入る変更はその時点で同じ検査を通る。新規作業での develop の使用は branch-operations/README.md:97 が禁止している"
   - id: B399
     source: docs/specs/branch-operations/README.md
     anchor: "### 長命ブランチ消失防止（develop は第3便まで残置・ロールバック用・"
