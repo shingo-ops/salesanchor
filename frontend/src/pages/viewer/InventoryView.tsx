@@ -12,11 +12,12 @@ import { RadioControl } from "../../components/RadioControl";
 import { SelectControl } from "../../components/Select";
 import { Tabs } from "../../components/Tabs";
 import { TextFieldControl } from "../../components/TextField";
-import { ChevronRight } from "../../constants/icons-base";
+import { ArrowLeft, ChevronRight, Clock, MagnifyingGlass, X } from "../../constants/icons-base";
 import { ICON } from "../../constants/iconSizes";
 import { useIsMobile } from "../../hooks/useIsMobile";
 import { saveLocaleCookie } from "./i18n";
 import type { ViewerLang } from "./i18n";
+import { addRecentSearch, clearRecentSearches, loadRecentSearches } from "./recentSearches";
 import { buildViewerColumns } from "./viewerColumns";
 import {
   DEFAULT_SORT_DIR,
@@ -70,7 +71,14 @@ export function InventoryView({ data }: InventoryViewProps) {
   const [tab, setTab] = useState(() =>
     data.rows.some((r) => r.series === MAIN_SERIES[0]) ? MAIN_SERIES[0] : TAB_ALL,
   );
-  const [query, setQuery] = useState("");
+  // 検索は「打っている途中」(draft)と「確定した語」(appliedQuery)を分ける（design.md 4-2）。
+  // 絞り込みは appliedQuery だけを見る。PC は draft を使わず appliedQuery を直接書き換える
+  // （打つたびに絞られる今までどおりの動き）。スマホは検索画面で draft を打ち、確定して
+  // appliedQuery へ入れる
+  const [draft, setDraft] = useState("");
+  const [appliedQuery, setAppliedQuery] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [freshOnly, setFreshOnly] = useState(true);
   const [providers, setProviders] = useState<string[]>([]);
   const [conditions, setConditions] = useState<string[]>([]);
@@ -113,7 +121,7 @@ export function InventoryView({ data }: InventoryViewProps) {
 
   const filters: ViewerFilters = {
     tab,
-    query,
+    query: appliedQuery,
     freshOnly,
     freshWindowHours: data.fresh_window_hours,
     providers,
@@ -126,7 +134,7 @@ export function InventoryView({ data }: InventoryViewProps) {
   const sorted = useMemo(
     () => markBlockBadges(sortRows(filterRows(allRows, filters, now), sortKey, sortDir)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [allRows, tab, query, freshOnly, data.fresh_window_hours, providers, conditions, priceMin, priceMax, qtyMin, qtyMax, sortKey, sortDir, now],
+    [allRows, tab, appliedQuery, freshOnly, data.fresh_window_hours, providers, conditions, priceMin, priceMax, qtyMin, qtyMax, sortKey, sortDir, now],
   );
   // 絞り込みボタンに出す有効な数（design.md 4-3・PO 指示に無い追加）
   const filterActiveCount =
@@ -142,6 +150,34 @@ export function InventoryView({ data }: InventoryViewProps) {
   const reset = <A,>(setter: (v: A) => void) => (v: A) => {
     setter(v);
     setPage(1);
+  };
+
+  // スマホの検索画面の行き来（design.md 4-1・4-2）。開くたびに draft を appliedQuery に合わせ、
+  // 履歴を読み直す。「←」は確定せずに閉じる。確定の道は2つ（検索キー・最近使った語の行）
+  const openSearchScreen = () => {
+    setDraft(appliedQuery);
+    setRecentSearches(loadRecentSearches());
+    setSearchOpen(true);
+  };
+  const closeSearchScreen = () => setSearchOpen(false);
+  // 確定: 画面を閉じる→ appliedQuery へ入れる→ページを1に戻す→履歴に積む（design.md 4-2・4-4）
+  const confirmSearch = (term: string) => {
+    const trimmed = term.trim();
+    reset(setAppliedQuery)(trimmed);
+    if (trimmed) setRecentSearches(addRecentSearch(trimmed));
+    setSearchOpen(false);
+  };
+  const pickRecentSearch = (term: string) => confirmSearch(term);
+  // 札の✕: お手本の実測（2026-10-28）: ✕ は語を消して入力待ちにするだけで、一覧は前のまま。
+  // appliedQuery は変えない（一覧は1件も動かさない）。draft を空にして検索画面を開く
+  const clearSearchTerm = () => {
+    setDraft("");
+    setRecentSearches(loadRecentSearches());
+    setSearchOpen(true);
+  };
+  const clearAllRecent = () => {
+    clearRecentSearches();
+    setRecentSearches([]);
   };
 
   // 画面の行き来（design.md 4-4）。候補を絞る欄は画面を離れるたびに空へ戻す
@@ -357,6 +393,7 @@ export function InventoryView({ data }: InventoryViewProps) {
     }
     setPage(1);
   };
+  // PC 専用（design.md 4-6）。打つたびに appliedQuery をその場で書き換える＝今までどおりの動き
   const searchField = (
     <TextFieldControl
       type="search"
@@ -364,9 +401,80 @@ export function InventoryView({ data }: InventoryViewProps) {
       placeholder={t("viewer.search.placeholder")}
       aria-label={t("viewer.search.placeholder")}
       data-testid="viewer-search"
-      value={query}
-      onChange={(e) => reset(setQuery)(e.target.value)}
+      value={appliedQuery}
+      onChange={(e) => reset(setAppliedQuery)(e.target.value)}
     />
+  );
+  // スマホの検索バー（design.md 4-3）。押すと検索画面が開くボタン＋確定済みの札＋✕（押せるものは入れ子にしない）
+  const mobileSearchBar = (
+    <div className="viewer-search-bar viewer-toolbar__search" data-testid="viewer-search">
+      <button
+        type="button"
+        className="viewer-search-bar__open"
+        data-testid="viewer-search-open"
+        aria-label={appliedQuery ? `${t("viewer.search.placeholder")}: ${appliedQuery}` : t("viewer.search.placeholder")}
+        onClick={openSearchScreen}
+      >
+        <MagnifyingGlass className="viewer-search-bar__icon" size={ICON.lg} aria-hidden />
+        {appliedQuery ? (
+          <span className="viewer-search-bar__chip" data-testid="viewer-search-chip">{appliedQuery}</span>
+        ) : (
+          <span className="viewer-search-bar__placeholder">{t("viewer.search.placeholder")}</span>
+        )}
+      </button>
+      {appliedQuery && (
+        <Button
+          variant="ghost"
+          size="md"
+          iconOnly
+          type="button"
+          aria-label={t("viewer.search.clear")}
+          data-testid="viewer-search-clear"
+          layoutClassName="viewer-search-bar__clear"
+          onClick={clearSearchTerm}
+        >
+          <X size={ICON.md} aria-hidden />
+        </Button>
+      )}
+    </div>
+  );
+  // 検索画面の帯の中身（Drawer の headerContent。design.md 4-1）。入力欄を DOM の先頭に置き、
+  // Drawer の「開いたら最初のフォーカス可能要素へ」に乗って入力欄へフォーカスが行くようにする
+  // （「←」は CSS の order で見た目だけ先頭に出す）。キーボードの検索キーは <form onSubmit> で受ける
+  const searchScreenHeader = (
+    <form
+      className="viewer-search-screen-header"
+      onSubmit={(e) => {
+        e.preventDefault();
+        confirmSearch(draft);
+      }}
+    >
+      <TextFieldControl
+        type="search"
+        enterKeyHint="search"
+        className="field-h-tap viewer-search-screen-header__input"
+        placeholder={t("viewer.search.placeholder")}
+        aria-label={t("viewer.search.placeholder")}
+        data-testid="viewer-search-input"
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+      />
+      <Button
+        variant="ghost"
+        size="md"
+        iconOnly
+        type="button"
+        aria-label={t("viewer.filter.back")}
+        onClick={closeSearchScreen}
+        data-testid="viewer-search-back"
+        layoutClassName="viewer-search-screen-header__back"
+      >
+        <ArrowLeft size={ICON.base} aria-hidden />
+      </Button>
+      <button type="submit" className="sr-only" data-testid="viewer-search-submit">
+        {t("viewer.search.submitLabel")}
+      </button>
+    </form>
   );
   const freshButton = (
     <Button
@@ -508,7 +616,8 @@ export function InventoryView({ data }: InventoryViewProps) {
   ];
   // リセット: 検索語・並び（既定）・ページを戻す（アプリのリセットと同じ範囲）
   const resetAll = () => {
-    setQuery("");
+    setAppliedQuery("");
+    setDraft("");
     setSortKey(DEFAULT_SORT_KEY);
     setSortDir(DEFAULT_SORT_DIR);
     setPage(1);
@@ -547,7 +656,7 @@ export function InventoryView({ data }: InventoryViewProps) {
       <main className="viewer-main">
         {isMobile ? (
           <div className="viewer-toolbar">
-            {searchField}
+            {mobileSearchBar}
             {seriesTrigger}
             {sortTrigger}
             <Button
@@ -759,6 +868,48 @@ export function InventoryView({ data }: InventoryViewProps) {
         <div className="viewer-choice-list">
           {choicePanel === "sort" ? sortChoiceRows : seriesChoiceRows}
         </div>
+      </Drawer>
+      )}
+      {isMobile && (
+      <Drawer
+        open={searchOpen}
+        onClose={closeSearchScreen}
+        title={t("viewer.search.placeholder")}
+        headerContent={searchScreenHeader}
+      >
+        <div className="viewer-recent-header">
+          <span className="viewer-recent-title" data-testid="viewer-recent-title">
+            {t("viewer.search.recentTitle")}
+          </span>
+          {recentSearches.length > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              type="button"
+              data-testid="viewer-recent-clear"
+              onClick={clearAllRecent}
+            >
+              {t("viewer.search.recentClear")}
+            </Button>
+          )}
+        </div>
+        {recentSearches.length > 0 && (
+          <ul className="viewer-recent-list">
+            {recentSearches.map((term) => (
+              <li key={term}>
+                <button
+                  type="button"
+                  className="viewer-recent-row"
+                  data-testid={`viewer-recent-row-${term}`}
+                  onClick={() => pickRecentSearch(term)}
+                >
+                  <Clock className="viewer-recent-row__icon" size={ICON.lg} aria-hidden />
+                  {term}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
       </Drawer>
       )}
       <HoverCardHost />
