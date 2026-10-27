@@ -16,7 +16,7 @@
 |---|---|---|
 | read.sql | 読み取りだけ（前後の確認） | f94bba68b2b85ae40668251badb2a4c132cb89c3645e414598c14783f80267c9 |
 | dryrun.sql | 本実行と同じ処理。最後が ROLLBACK | 1aba340368b051a210376e73a5a1a7b2174079a915f3d9be710775fb6b358e00 |
-| deactivate.sql | 本実行。2行でなければ止まる（DO ブロックの件数ガード） | 5898371548f0c5734cdff9f5edcb08c7ca14f70c316337e30fa841c65337103f |
+| deactivate.sql | 本実行。2行でなければ止まる（DO ブロックの件数ガード） | 実行した版 5898371548f0c5734cdff9f5edcb08c7ca14f70c316337e30fa841c65337103f／この記録の版 69f3ebf0f18126730643a4873ff9709da3bfc1d0f0bac1ac9818e6ed0d9684bf（差は2行目の注記だけ。公開する記録なので表示名を外した） |
 | rollback.sql | 戻し（2人を有効に戻す）。未実行 | 3f1567067ee78a6d87dc71cd6fdba2e85a0fd3a0f90db506f4bf45d52387e0f1 |
 
 - users は FORCE RLS のため、`SET LOCAL app.is_operator = 'true'` を同じトランザクションで立てる。

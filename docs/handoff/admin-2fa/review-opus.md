@@ -6,7 +6,7 @@
 
 **日付**: 2026-10-27
 **審査した人**: 設計パートナー（Opus・Architect 役。設計者と同一 AI）
-**判定**: 第1版 APPROVE（自己審査）→ 別に起動した Opus の審査役が REQUEST_CHANGES（2026-10-28）→ 第2版で全12点に対処し、再審査待ち（§5）。どの判定も PO の実装承認・GO を兼ねない。
+**判定**: 第1版 APPROVE（自己審査）→ 別に起動した Opus の審査役が REQUEST_CHANGES（2026-10-28）→ 第2版で全12点に対処（§5）→ 再審査も REQUEST_CHANGES（必須7・任意7）→ 第3版で対処し、再審査待ち（§6）。どの判定も PO の実装承認・GO を兼ねない。
 
 ## 1. 照合した事実（origin/main・2026-10-27 fetch 後）
 
@@ -75,5 +75,27 @@
 | 11 | いつもの機器の cookie の path | refresh は /api/v1/auth（self_tokens.REFRESH_COOKIE_PATH） | §3-4: path と名前を分ける |
 | 12 | メール部品の一般化 | auth_mail.py:73-93 は reset_url 専用 | §3-5 の3: 7b で共通の関数に分ける |
 
-引用の直し: recon.md の ADR-1016 の引用（:23-24 と rt:shared の :37）、手元の絶対パスを repo からの相対に、role 列の書き方（DB の列は未確認と明記）、mail_config の行を :28-35 にそろえた。
+引用の直し: recon.md の ADR-1016 の引用（:23-24 と rt:shared の :37）、手元の絶対パスを repo からの相対に、role 列の書き方（第3版で「本番に列はある・判定には使わない」に直した）、mail_config の行を :28-35 にそろえた。
 
+## 6. 第3版（2026-10-28）— 2回目の審査役の指摘と対処
+
+指摘は、どれも origin/main の実物で確かめてから直した。行番号の食い違いは0件、公開してはいけない情報は0件という報告だった。
+
+| # | 区分 | 指摘 | 実物の確認 | 対処 |
+|---|---|---|---|---|
+| 1 | 必須 | 自社トークンがキャッシュを通り、2回目から scope と amr を見ない | dependencies.py:108 が自社トークンも cache_jwt_result に書く。当たると :190-198 で返る | design §3-2: 自社トークンの振り分けを :180-185 の直後・:190 より前へ。:108 の書き込みを消す。IP の制限は Firebase の道だけ |
+| 2 | 必須 | Firebase の道で会社の権限を引けない | search_path を立てるのは get_current_tenant（:300-302）だけ。get_user_system_keys（:547-552）はそれが前提 | design §3-1: set_tenant_context → get_user_system_keys → clear_tenant_context。super admin は DB を引かない。例外なら管理者扱い |
+| 3 | 必須 | トークンを出す口が漏れている | login（auth.py:238-316）・refresh（:319-347）のほかに、本件で6桁・承認待ち・パスキーの口が増える | design §3-2: 口を5つ書き、全部が共通の関数を通る。ログ行に via |
+| 4 | 必須 | cookie の path が決まっていない | refresh の cookie は /api/v1/auth（self_tokens.py:26） | design §3-4: 口を /api/v1/auth/2fa/ の下に置き、cookie 3種の path と読む口を表にした |
+| 5 | 必須 | 6桁の試行の上限に穴がある | 止まっているかは入口だけで見る（auth.py:264）。外れで record_auth_failure を呼ぶのはパスワードだけ（:249・:289） | design §3-3: 券は1人1枚、6桁の口でも locked_until を見る、外れで record_auth_failure(ip) |
+| 6 | 必須 | K4 の数え方がパスキーも数えてしまう | — | design §2 K4: amr=pwd+otp かつ device=new に絞る。パスキーは device=- |
+| 7 | 必須 | 止めた2人の台本の sha256 が記録と合わない | 今の版 69f3ebf0…、実行した版 58983715…（差は2行目の注記） | deactivate-7-9/README.md に両方を書いた |
+| 任1 | 任意 | role 列を未確認と書いている | run-log.txt:4 の列名に role がある | recon.md:22 を直した |
+| 任2 | 任意 | ログ行を管理者以外にも出す | — | design §3-2: 管理者だけ |
+| 任3 | 任意 | 知らせの出し方と CI の表 | ADR-1016 決定4・5・8、topics.py:86 | design §3-9: 明示の publish、新しい口を NO_SIGNAL_ROUTES に |
+| 任4 | 任意 | 管理者でない人の6桁 | — | design §3-2: 本件では出さない |
+| 任5 | 任意 | 履歴に表示名が残る | 第1版のコミットに残る | マージは squash で行う |
+| 任6 | 任意 | require_permission が対象外か | — | design §3-2: 対象外と明記 |
+| 任7 | 任意 | 試験用の自動ログインの利用者 | — | design §5: 7d の前に qa-admin が管理者に当たらないことを読み取りで確かめる。失効の対象は §3-1 の判定で選ぶ |
+
+あわせて §9 に試験6つを足した（enroll は2回目も 403、自社トークンの管理者は2回目も通る、パスキーの組の refresh、Firebase で判定失敗なら 401、止めた後の券、券は1人1枚）。

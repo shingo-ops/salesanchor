@@ -19,7 +19,7 @@
 
 - super admin: `public.users.is_super_admin`（backend/app/models.py:33）。判定は `require_super_admin`（backend/app/auth/dependencies.py:516-541、:539 で偽なら 403）。
 - 会社の管理者: `user_roles → roles.system_key` が owner / admin（backend/app/auth/system_roles.py:8-9,17-19 `is_tenant_admin`）。判定は backend/app/auth/dependencies.py:547 `get_user_system_keys`、:606 `require_tenant_admin`（:613「users.role は見ない」）。
-- User モデルに role の属性は無い（backend/app/models.py:22-37）。ただし models.py:31 の注記と dependencies.py:613 の説明は `users.role` に触れている。DB に role 列が残っているかは未確認（2026-10-28 時点。migrations/ の grep では追加の文が見つからなかった）。本件では使わない。
+- User モデルに role の属性は無い（backend/app/models.py:22-37）。ただし models.py:31 の注記と dependencies.py:613 の説明は `users.role` に触れている。本番の users には role 列がある（2026-10-27 の読み取り結果 deactivate-7-9/run-log.txt:4 の列名）。管理者の判定には使わない（dependencies.py:613 と同じ）。
 
 ## 2. 今のログインと2段階の判定
 
