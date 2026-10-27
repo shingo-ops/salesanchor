@@ -45,6 +45,12 @@
 - 入れ方: 記録 SQL（`docs/handoff/v102-heading-and-unit/data/` と同じ 5 本）を docs/handoff/v102-rule-fixes/data/ に置き、PO が `!` で流す。precheck で、4 行の今の値が設計の前提（「傷み」がある）と同じことを確かめ、違えば止める。
 - 当たり方の確かめ（実装前、K1-1）: 本番の投稿全体に 4 語を当て、当たる行を全部原文で判定する（recon §3 では 6 投稿・シングル系の行 0）。
 - 再解析: 当たった投稿だけを、システム段でやり直す（`backend/app/tasks/tcg_extraction.py:736`）。
+- 実装前の確かめ（2026-10-27）:
+  - K1-1: 4 語が当たる投稿は 8、当たった項目は 7 件。全件を原文で判定し、誤爆 0・シングル系の行 0。当たった項目のうち、今の在庫表に出ているのは 2 件。
+  - 古い組は復活しない: 状態が Sealed box から Damaged sealed box に動いても、同じ商品の古い投稿の Sealed box の行は、より新しい投稿が同じ商品の行を持つため is_current に戻らない（`backend/app/services/tcg_analyzer_svc.py:2105-2125`）。
+  - 再解析は 7 job（当たった項目を持つ投稿の job）。7 job の人の修正（item_corrections）は 0 件。人の修正は再解析後も残る作りだが、今回は失われるものが無い。
+  - 前例の 5 本（上の「同じ 5 本」と §5 の前例 2）は形の前例。前例の中身は設定の INSERT（upsert）で、便1 の中身は `line_conditions` の UPDATE（4 行）。そのため WHERE に変更前の md5 一致を入れ、件数 4 でなければ失敗させ、rollback は変更前の値の全文に戻す。
+  - 記録 SQL と台本: `docs/handoff/v102-rule-fixes/data/bin1/`（README に台本の全文）。再解析する job の一覧は repo に置かない。
 
 ### 便2 F2：状態の語で単位を上書きする条件を狭める（コード）
 
