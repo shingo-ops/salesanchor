@@ -8,8 +8,9 @@
       docs/handoff/gemini-v102/design.md §3-3（v102）
       docs/handoff/gemini-supplier-rules-file/design.md §3（--supplier-rules-file）
       docs/handoff/prompt-ab-db-source/design.md §3（--prompt-key）
+      docs/handoff/prompt-ab-transient-retry/design.md §3（--retry-transient・--retry-wait-sec）
 起動: python -m app.tools.prompt_ab --runs-file F --config v7|v8|v9|v10|v101|v102 [--prompt-name raw_copy_v9_NAME|raw_copy_v101_NAME] [--prompt-key raw_copy_v101_NAME]
-        [--thinking-level L] [--no-thoughts] [--no-schema] [--temperature T] [--omit-supplier-field extraction_XXX ...] [--supplier-rules-file F] [--keep-legacy-supplier-fields] --repeat N --max-cost-usd X --test-id ID --out-dir /tmp/prompt_ab/ID [--dry-run]
+        [--thinking-level L] [--no-thoughts] [--no-schema] [--temperature T] [--omit-supplier-field extraction_XXX ...] [--supplier-rules-file F] [--keep-legacy-supplier-fields] [--retry-transient N] [--retry-wait-sec S] --repeat N --max-cost-usd X --test-id ID --out-dir /tmp/prompt_ab/ID [--dry-run]
 
 （--config v102 で --prompt-name・--prompt-key なしのときの既定の指示書は DB の key raw_copy_v101_f_ct）
 結果は out-dir の JSONL にだけ書く（1回につき1行）。DB に書くのは llm_usage_events（費用の台帳）だけで、
@@ -29,6 +30,7 @@ from dataclasses import asdict, dataclass
 from decimal import Decimal
 from pathlib import Path
 
+from google.genai import errors as genai_errors
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -86,6 +88,23 @@ from app.services.tcg_analyzer_svc import load_condition_entries, load_lookup_ma
 from app.tasks.tcg_extraction import TCG_SCHEMA, _get_sync_session, load_extraction_context
 
 logger = logging.getLogger(__name__)
+
+_TRANSIENT_CODES = frozenset({408, 429, 500, 502, 503, 504})
+_TRANSIENT_CAUSE_DEPTH = 5
+_MAX_RETRY_TRANSIENT = 5
+
+
+def _is_transient_gemini_error(exc: BaseException) -> bool:
+    """一時的な Gemini の失敗（408/429/500/502/503/504）か。__cause__ / __context__ を最大 5 段たどる。"""
+    e: BaseException | None = exc
+    for _ in range(_TRANSIENT_CAUSE_DEPTH + 1):
+        if e is None:
+            return False
+        if isinstance(e, genai_errors.APIError) and getattr(e, "code", None) in _TRANSIENT_CODES:
+            return True
+        e = e.__cause__ or e.__context__
+    return False
+
 
 _LEDGER_PURPOSE = "line_extraction_shadow"  # purpose の追加は migration（CHECK 制約）が要るため source_ref で区別
 _LEDGER_SDK = "google-genai"
@@ -458,7 +477,7 @@ def run_ab(
     test_id: str, out_dir: Path, dry_run: bool, thinking_level: str | None,
     include_thoughts: bool, use_schema: bool, temperature: float | None, prompt_name: str | None = None,
     omit_supplier_fields: list[str] | None = None, supplier_rules_file: Path | None = None,
-    prompt_key: str | None = None,
+    prompt_key: str | None = None, retry_transient: int = 0, retry_wait_sec: float = 30.0,
 ) -> AbSummary:
     summary = AbSummary(target_count=len(run_ids), dry_run=dry_run)
     rules: dict[str, dict] | None = None
@@ -511,6 +530,7 @@ def run_ab(
             row["prompt_sha256"] = prompt_sha256
             if omit_supplier_fields:
                 row["omitted_supplier_fields"] = sorted(set(omit_supplier_fields))
+            transient_retries = 0
             try:
                 if job_id not in contexts:
                     ctx_loaded = load_extraction_context(session, job_id)
@@ -521,31 +541,49 @@ def run_ab(
                 supplier_context, override = _effective_supplier_context(ctx, rules, rules_sha256, omit_supplier_fields)
                 if override is not None:
                     row["supplier_rules_override"] = override
-                if config == "v7":
-                    result = _call_v7(ctx)
-                else:
-                    schemas = {
-                        "v9": V9_RESPONSE_SCHEMA, "v10": V10_RESPONSE_SCHEMA,
-                        "v101": V101_RESPONSE_SCHEMA, "v102": V102_RESPONSE_SCHEMA,
-                    }
-                    extra = {"response_schema": schemas[config]} if config in schemas else {}
-                    result = call_gemini_raw_copy_v8(
-                        ctx.raw_text, prompt_text=v8_prompt,
-                        supplier_context=supplier_context,
-                        new_system_rules=_effective_new_system_rules(ctx, rules, omit_supplier_fields),
-                        knowledge_links=ctx.knowledge_links, thinking_level=thinking_level,
-                        include_thoughts=include_thoughts, use_schema=use_schema, temperature=temperature,
-                        **extra,
-                    )
+                wait = retry_wait_sec
+                while True:  # Gemini 呼び出し（v7・v8 系の if/else 全体）だけをやり直す
+                    try:
+                        if config == "v7":
+                            result = _call_v7(ctx)
+                        else:
+                            schemas = {
+                                "v9": V9_RESPONSE_SCHEMA, "v10": V10_RESPONSE_SCHEMA,
+                                "v101": V101_RESPONSE_SCHEMA, "v102": V102_RESPONSE_SCHEMA,
+                            }
+                            extra = {"response_schema": schemas[config]} if config in schemas else {}
+                            result = call_gemini_raw_copy_v8(
+                                ctx.raw_text, prompt_text=v8_prompt,
+                                supplier_context=supplier_context,
+                                new_system_rules=_effective_new_system_rules(ctx, rules, omit_supplier_fields),
+                                knowledge_links=ctx.knowledge_links, thinking_level=thinking_level,
+                                include_thoughts=include_thoughts, use_schema=use_schema, temperature=temperature,
+                                **extra,
+                            )
+                        break
+                    except Exception as call_exc:  # noqa: BLE001
+                        if transient_retries >= retry_transient or not _is_transient_gemini_error(call_exc):
+                            raise
+                        transient_retries += 1
+                        logger.warning(
+                            "[prompt_ab] transient error, retry %d/%d in %.0fs: run=%s repeat=%d: %s",
+                            transient_retries, retry_transient, wait, run_id, n, _safe_error_message(call_exc),
+                        )
+                        time.sleep(wait)
+                        wait *= 2
             except Exception as exc:  # noqa: BLE001
                 session.rollback()
                 summary.failed += 1
                 summary.stop_reason = "job_failed"
+                if transient_retries >= 1:
+                    row["transient_retries"] = transient_retries
                 _append_jsonl(out_path, {**row, "error": f"{type(exc).__name__}: {_safe_error_message(exc)}",
                                          "elapsed_sec": round(time.monotonic() - started, 3)})
                 logger.exception("[prompt_ab] stopped: run=%s repeat=%d", run_id, n)
                 return summary
 
+            if transient_retries >= 1:
+                row["transient_retries"] = transient_retries
             item_count, errors = _parse(config, result["response_text"], ctx.raw_text, masters)
             _append_jsonl(out_path, {
                 **row, "response_text": result["response_text"],
@@ -601,6 +639,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                    help="仕入元 id ごとに extraction_* の欄を差し替える JSON（{\"id\": {\"extraction_x\": 値 or null}}）。ファイルに無い欄は DB の値のまま、null は欄を外す。--omit-supplier-field より先に適用。v7 では効かない")
     p.add_argument("--keep-legacy-supplier-fields", action="store_true",
                    help="--config v102 のみ。既定で外す元からある7欄（LEGACY_SUPPLIER_FIELDS）を外さずに渡す（比較試験用）")
+    p.add_argument("--retry-transient", type=int, default=0,
+                   help="Gemini の一時的な失敗（408/429/500/502/503/504）のときのやり直し回数（初回を含まない）。0〜5、既定 0")
+    p.add_argument("--retry-wait-sec", type=float, default=30.0,
+                   help="1 回目のやり直しまでの待ち（秒）。2 回目以降は前回の 2 倍。既定 30")
     p.add_argument("--dry-run", action="store_true", help="対象の件数と組み立てた指示の先頭30行だけ表示する（Gemini は呼ばない）")
     args = p.parse_args(argv)
     if args.thinking_level:
@@ -634,6 +676,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             p.error(str(exc))
     if args.repeat < 1:
         p.error("--repeat は 1 以上")
+    if args.retry_transient < 0 or args.retry_transient > _MAX_RETRY_TRANSIENT:
+        p.error("--retry-transient は 0〜5")
+    if args.retry_wait_sec <= 0:
+        p.error("--retry-wait-sec は 0 より大きく")
     if args.keep_legacy_supplier_fields and args.config != "v102":
         p.error("--keep-legacy-supplier-fields は --config v102 のときだけ使えます")
     if args.config == "v102" and not args.keep_legacy_supplier_fields:
@@ -667,7 +713,8 @@ def main(argv: list[str] | None = None) -> int:
             include_thoughts=not args.no_thoughts, use_schema=not args.no_schema,
             temperature=args.temperature, prompt_name=args.prompt_name,
             omit_supplier_fields=args.omit_supplier_field, supplier_rules_file=args.supplier_rules_file,
-            prompt_key=args.prompt_key,
+            prompt_key=args.prompt_key, retry_transient=args.retry_transient,
+            retry_wait_sec=args.retry_wait_sec,
         )
     finally:
         session.close()
