@@ -31,7 +31,7 @@
 | K3 管理者でない人のログインの手順数 | 今の手順数（切替後のログイン画面で数える） | 増えない（同じ数） | 画面で数える（評価者が録画で確認） |
 | K4 初めての機器から「パスワード＋6桁」だけで管理者が入れた回数 | 未測定（仕組みが無い） | 0回 | 自動試験: 承認なしの新しい機器で 403。本番ログの `admin_login_pending` のうち承認なしで `issued` になった件数0 |
 | K5 使った6桁をもう一度使えた回数 | 未測定 | 0回 | 自動試験: 同じ数字を2回送ると2回目は 401 |
-| K6 QR の金型に直書きの色・寸法がある数 | 金型なし | 0か所 | CI（UI ガバナンスの検査）と `QrCode.stories.tsx` がカタログに出ること |
+| K6 QR の金型に直書きの色・寸法がある数 | 金型なし | 0か所 | CI（UI ガバナンスの検査）と QrCode.stories.tsx（新設予定） がカタログに出ること |
 | K7 承認の画面で、違う番号を選んで通った回数 | 未測定 | 0回 | 自動試験: 違う番号を選ぶと依頼が取り消しになり、新しい機器は入れない |
 
 ## 3. 設計
@@ -93,7 +93,7 @@
 ### 3-7. 画面
 
 - 6桁の入力: 既存の `TextFieldControl`（frontend/src/components/TextField.tsx:43）に inputMode="numeric"・autoComplete="one-time-code"・maxLength=6 を渡す。新しい金型は作らない。
-- QR の表示: 新しい金型 `frontend/src/components/QrCode.tsx`＋`QrCode.css`（var() のみ）＋`QrCode.stories.tsx`（PO 許可 2026-10-27「1」、docs/CC_UI_GOVERNANCE.md:13-14）。中身は qrcode.react 4.2.0 の QRCodeSVG。色を CSS 変数で渡せるかは未確認なので、金型を作る便で最初に確かめる。渡せない場合は SVG の path の fill を CSS（var() のみ）で上書きする形にし、どちらも駄目なら止めて相談する。
+- QR の表示: 新しい金型 frontend/src/components/QrCode.tsx（新設予定）＋QrCode.css（var() のみ）＋QrCode.stories.tsx（新設予定）（PO 許可 2026-10-27「1」、docs/CC_UI_GOVERNANCE.md:13-14）。中身は qrcode.react 4.2.0 の QRCodeSVG。色を CSS 変数で渡せるかは未確認なので、金型を作る便で最初に確かめる。渡せない場合は SVG の path の fill を CSS（var() のみ）で上書きする形にし、どちらも駄目なら止めて相談する。
 - QR の隣に、手で打つための英数字も出す（カメラが使えない人のため）。
 - 承認の画面: 既存の `Modal`・`Button`。待ちの画面: `Card`・`LoadingBlock`・`Callout`。
 - 文字はすべて `t("key")`（ja.json・en.json 同じキー。ADR-027）。
