@@ -162,6 +162,13 @@ test('ADR-1042 docker-compose.ai-reader-http.yml は dangerous 区分', () => {
   assert.strictEqual(classifyFile('docker-compose.ai-reader-http.yml'), 'dangerous');
 });
 
+test('ADR-1047 決まり台帳の4ファイルは dangerous 区分', () => {
+  for (const n of ['rules.yml', 'rule-docs.txt', 'required-checks.txt', 'prod-secrets.txt']) {
+    assert.strictEqual(classifyFile('docs/specs/rule-enforcement/' + n), 'dangerous');
+  }
+  assert.notStrictEqual(classifyFile('docs/specs/rule-enforcement/README.md'), 'dangerous');
+});
+
 test('backend/app/opsx/ は dangerous にならない（real-code）', () => {
   assert.strictEqual(classifyFile('backend/app/opsx/a.py'), 'real-code');
 });
