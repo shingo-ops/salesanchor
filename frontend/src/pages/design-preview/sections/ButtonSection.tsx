@@ -44,6 +44,13 @@ export function ButtonSection() {
             <Button variant="outline" size="lg">大 (lg)</Button>
           </div>
         </div>
+        {/* tap: お手本（メルカリ）の操作行用。文字ボタン専用（iconOnly との併用例は作らない） */}
+        <div className="dp-row">
+          <span className="dp-row-label">操作行用 (tap)</span>
+          <div className="dp-row-items">
+            <Button variant="ghost" size="tap">お手本（メルカリ）の操作行用</Button>
+          </div>
+        </div>
       </section>
 
       {/* §3: 状態 */}

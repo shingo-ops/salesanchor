@@ -3,8 +3,7 @@ name: UI Governance Gate
 # pages/ 配下に新規の生UI部品（生select / 生input text+search+省略 / 生checkbox / 生radio / 自作タブ）が
 # 追加されていないかを検査するゲート。
 #
-# ※ 非必須（non-mandatory）。安定確認後に Ruleset 追加を別途 GO で判断する。
-#    前例: .github/workflows/dangling-route-gate.yml（同様の段階導入）
+# ※ main の ruleset 15777895 の必須チェック（ジョブ名 UI governance gate）。
 #
 # 関連: docs/adr/ADR-144-ui-component-governance.md
 

@@ -27,7 +27,8 @@ const MIN_TAP_PX = 44;
 /** B5: パネルで一度に見える行数の下限（design.md ③） */
 const MIN_VISIBLE_ROWS = 8;
 /** 一覧の先頭カードの y の上限（design.md ③・便4で128に更新。docs/handoff/viewer-header-remove/design.md 4-4） */
-const MAX_TOP_Y = 128;
+// 便10 で検索欄とボタン行が48pxになり計算値132。docs/handoff/viewer-control-tap-size/design.md ⑤
+const MAX_TOP_Y = 132;
 
 // eslint-disable-next-line local/no-japanese-literal -- tests-e2e は ESLint 対象外。DB の series 名（画面文言ではない）に見せかけた fixture 専用の名前
 const SERIES_NAMES = Array.from({ length: 15 }, (_, i) => `しりーず${String(i + 1).padStart(2, "0")}`);

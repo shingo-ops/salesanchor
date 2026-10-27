@@ -1,0 +1,16 @@
+pytest (SQLite + PostgreSQL RLS)	-
+テナントスキーマ整合性チェック	-
+マイグレーションSQL 実行テスト（実DB）	-
+models.py に新 Column → deploy.yml にマイグレーション追記必須	-
+ADR-072 tenant schema lint (strict mode)	-
+Lint & Dark Mode Check (ADR-067)	-
+gitleaks（シークレット漏洩検出）	-
+CLAUDE.md line count check	-
+ADR index is up to date	-
+UI governance gate	15368
+dangling-route gate	15368
+warn-direct-lesson-edit	-
+guard-authoring/evaluation	15368
+process-artifacts gate	15368
+API contract is up to date	15368
+doc index reachability	-

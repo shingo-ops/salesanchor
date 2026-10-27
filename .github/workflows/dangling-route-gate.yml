@@ -2,7 +2,7 @@ name: Dangling Route Gate
 
 # PRで削除されたバックエンドルートがフロントエンドから参照されていないことを検証する。
 # 削除ルート × フロントエンド参照 が空でなければ PR をブロックする。
-# ※ 必須ではない（non-mandatory）。安定確認後に Ruleset 追加を別途 GO で判断する。
+# ※ main の ruleset 15777895 の必須チェック（ジョブ名 dangling-route gate）。
 
 on:
   pull_request:

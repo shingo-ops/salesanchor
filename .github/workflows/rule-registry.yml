@@ -1,0 +1,32 @@
+name: Rule Registry
+
+# 決まり台帳（docs/specs/rule-enforcement/rules.yml）の検査。
+# 決まりの語を含む行が台帳に載っているか・台帳の項目が実在するかを調べる。
+#
+# ※ 非必須（non-mandatory）。警告で開始（continue-on-error）。
+#    連続5PRで誤検知0を確認してから必須化を別途 GO で判断する（前例: ADR-1040）。
+#
+# 関連: docs/handoff/rule-enforcement/design.md §5 R1
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, edited]
+
+permissions:
+  contents: read
+
+jobs:
+  rule-registry:
+    name: rule registry
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Run rule registry tests
+        run: python3 -I scripts/tests/test_check_rule_registry.py -v
+
+      - name: Run rule registry check
+        continue-on-error: true
+        run: python3 -I scripts/ci/check_rule_registry.py --summary-file "$GITHUB_STEP_SUMMARY"

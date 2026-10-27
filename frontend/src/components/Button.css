@@ -49,6 +49,14 @@ a.comp-btn {
   font-size: var(--font-md);
 }
 
+/* お手本（メルカリ）の操作行。48dp の行に、枠なしの文字ボタンを並べる用。
+   文字は --font-sm（お手本の実測 13.4dp 相当）・横の余白は sm と同じに詰める */
+.comp-btn--tap {
+  min-height: var(--comp-btn-height-lg);
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--font-sm);
+}
+
 .comp-btn--primary {
   color: var(--comp-btn-primary-text);
   background: var(--accent);
@@ -151,12 +159,19 @@ a.comp-btn {
   min-height: var(--size-icon-btn-lg);
 }
 
+.comp-btn--tap.comp-btn--icon-only {
+  width: var(--size-icon-btn-lg);
+  height: var(--size-icon-btn-lg);
+  min-height: var(--size-icon-btn-lg);
+}
+
 @media (max-width: 767px) {
   .comp-btn {
     min-height: var(--size-icon-btn-lg);
   }
 
-  .comp-btn--lg {
+  .comp-btn--lg,
+  .comp-btn--tap {
     min-height: var(--comp-btn-height-lg);
   }
 

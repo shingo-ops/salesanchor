@@ -43,24 +43,90 @@ const TARGET_GH_REPO = 'github.com/shingo-ops/salesanchor';
 const PO_GO_ISSUERS = ['shingo-ops', 'Shingo'];
 const DELEGATED_GO_ISSUER = 'POの委任に基づくClaude Opus発行';
 const AUTHORIZED_GO_ISSUERS = [...PO_GO_ISSUERS, DELEGATED_GO_ISSUER];
+// 委任名義の語が入っていれば、PO の名前が混ざっていても本人扱いにしない
+const DELEGATION_WORDS = /委任|opus|代理/i;
 
 // ─── 委譲の例外パス（ADR-1003・PO本人のGOが必須） ────────────────────────────
 // DANGEROUS_PATTERNS と同じ regex 方式で判定する。
 const PO_ONLY_EXCEPTION_PATTERNS = [
-  /^\.github\/workflows\/workflow-lint\.yml$/,
+  /^\.github\/workflows\/workflow-lint\.ya?ml$/,
 ];
 
-function hasPoOnlyExceptionPath(files) {
-  return files.some(f => PO_ONLY_EXCEPTION_PATTERNS.some(r => r.test(f)));
+// パスの表記ゆれ（大文字小文字・先頭の ./）をならしてから当てる
+function normalizeExceptionPath(f) {
+  return String(f).trim().replace(/^(\.\/)+/, '').toLowerCase();
 }
 
-// ─── migration の DROP TABLE / DROP COLUMN 検出（ADR-1003 例外判定） ─────────
+function hasPoOnlyExceptionPath(files) {
+  return files.some(f => {
+    const p = normalizeExceptionPath(f);
+    return PO_ONLY_EXCEPTION_PATTERNS.some(r => r.test(p));
+  });
+}
+
+// ─── migration の表・列の削除／大量削除の検出（ADR-1003 例外判定） ───────────
+// 対象の場所は deploy.yml の db_migrations と同じ範囲
+const MIGRATION_PATH_PATTERNS = [
+  /^migrations\//,
+  /^scripts\/migrate_[^/]*\.py$/,
+  /^scripts\/run_all_migrations\.sh$/,
+];
+
+function isMigrationPath(f) {
+  return MIGRATION_PATH_PATTERNS.some(r => r.test(f));
+}
+
+// SQL のコメントを除き、空白と改行を 1 つにまとめる
+function normalizeSqlText(text) {
+  return text
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .replace(/--[^\n]*/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// 追加された文章が、表・列の削除または大量削除を含むか
+function sqlTextHasDestructiveStatement(text) {
+  const sql = normalizeSqlText(text);
+  if (/\bDROP\s+(TABLE|COLUMN|SCHEMA|DATABASE)\b/i.test(sql)) return true;
+  // TRUNCATE と DELETE は文の始め（先頭・; の直後・引用符や開きかっこの直後）にあるものだけを当てる
+  if (/(?:^|[;'"(])\s*TRUNCATE\b/i.test(sql)) return true;
+  // 先頭または ; の直後: 次の ; まで
+  for (const m of sql.matchAll(/(?:^|;)\s*DELETE\s+FROM\b[^;]*/gi)) {
+    if (!/\bWHERE\b/i.test(m[0])) return true;
+  }
+  // 引用符の直後: 同じ引用符が閉じるまで（または ; まで）
+  for (const m of sql.matchAll(/(['"])\s*DELETE\s+FROM\b(?:(?!\1)[^;])*/gi)) {
+    if (!/\bWHERE\b/i.test(m[0])) return true;
+  }
+  // 開きかっこの直後: 次の ; まで
+  for (const m of sql.matchAll(/\(\s*DELETE\s+FROM\b[^;]*/gi)) {
+    if (!/\bWHERE\b/i.test(m[0])) return true;
+  }
+  return false;
+}
+
+// diff をファイルごとに分け、追加行だけを改行でつないだ文章にする
+function addedTextByFile(diff) {
+  const result = [];
+  let current = null;
+  for (const line of diff.split('\n')) {
+    if (line.startsWith('diff --git ')) {
+      current = [];
+      result.push(current);
+    } else if (current && line.startsWith('+') && !line.startsWith('+++')) {
+      current.push(line.slice(1));
+    }
+  }
+  return result.map(lines => lines.join('\n'));
+}
+
 function migrationsContainDropStatement(files) {
   if (process.env.MOCK_MIGRATION_DROP_DETECTED !== undefined) {
     return process.env.MOCK_MIGRATION_DROP_DETECTED === 'true';
   }
 
-  const migrationFiles = files.filter(f => /^migrations\//.test(f));
+  const migrationFiles = files.filter(isMigrationPath);
   if (migrationFiles.length === 0) return false;
 
   const base = process.env.BASE_SHA;
@@ -70,11 +136,10 @@ function migrationsContainDropStatement(files) {
 
   try {
     const diff = execSync(
-      `git diff "${base}...${head}" -- ${migrationFiles.map(f => `"${f}"`).join(' ')}`,
-      { encoding: 'utf8' }
+      `git diff --unified=0 "${base}...${head}" -- ${migrationFiles.map(f => `"${f}"`).join(' ')}`,
+      { encoding: 'utf8', maxBuffer: 256 * 1024 * 1024 }
     );
-    const addedLines = diff.split('\n').filter(l => l.startsWith('+') && !l.startsWith('+++'));
-    return addedLines.some(l => /DROP\s+(TABLE|COLUMN)/i.test(l));
+    return addedTextByFile(diff).some(sqlTextHasDestructiveStatement);
   } catch {
     // git diff 自体が失敗した場合も fail-closed
     return true;
@@ -125,6 +190,11 @@ const DANGEROUS_PATTERNS = [
   /^backend\/app\/ops\//,
   /^docker-compose\.ai-reader\.yml$/,
   /^docker-compose\.ai-reader-http\.yml$/,  // ADR-1042 クラウド読み取り窓口
+  // ADR-1047 決まり台帳と、その検査の入力（変更に GO 記録を要求）
+  /^docs\/specs\/rule-enforcement\/rules\.yml$/,
+  /^docs\/specs\/rule-enforcement\/rule-docs\.txt$/,
+  /^docs\/specs\/rule-enforcement\/required-checks\.txt$/,
+  /^docs\/specs\/rule-enforcement\/prod-secrets\.txt$/,
 ];
 
 const REAL_CODE_PATTERNS = [
@@ -362,9 +432,9 @@ function validateGORecord(goRecord, prNumber, { requiresPoOnly = false } = {}) {
   if (!goRecord.issuer || !AUTHORIZED_GO_ISSUERS.some(a => goRecord.issuer.includes(a))) {
     errors.push(`❌ GO発行者が未記入または権限外です（「${goRecord.issuer || '未記入'}」）`);
     errors.push('   → GO権限はPO（Shingo / shingo-ops）またはADR-1003の委譲名義のみです');
-  } else if (requiresPoOnly && !PO_GO_ISSUERS.some(a => goRecord.issuer.includes(a))) {
+  } else if (requiresPoOnly && (!PO_GO_ISSUERS.some(a => goRecord.issuer.includes(a)) || DELEGATION_WORDS.test(goRecord.issuer))) {
     errors.push(`❌ この変更はADR-1003の例外対象のためPO本人のGOが必要です（委譲名義「${goRecord.issuer}」は使用不可）`);
-    errors.push('   → DROP TABLE/COLUMN を含む migration、または .github/workflows/workflow-lint.yml の変更は常にPO本人（Shingo / shingo-ops）のGOが必要です');
+    errors.push('   → 表・列を消す、または大量に消す migration、または .github/workflows/workflow-lint.yml の変更は常にPO本人（Shingo / shingo-ops）のGOが必要です');
   }
 
   if (!goRecord.date || goRecord.date.trim().length < 5) {
