@@ -5,9 +5,9 @@
 親: [docs/specs/auth-login/README.md](../../specs/auth-login/README.md)
 現状: [recon.md](recon.md)／ADR: [ADR-1048](../../adr/ADR-1048-admin-two-step-login.md)／審査: [review-opus.md](review-opus.md)
 
-**日付**: 2026-10-27（第2版 2026-10-28: Opus 審査役の REQUEST_CHANGES 指摘1〜12 を反映。第3版 同日: 2回目の審査の必須7・任意7 を反映。review-opus.md §6。第4版 同日: 3回目の審査の必須5・任意9 を反映。§7。第5版 同日: 4回目の審査の必須2・任意6 を反映。§8）
+**日付**: 2026-10-27（第2版 2026-10-28: Opus 審査役の REQUEST_CHANGES 指摘1〜12 を反映。第3版 同日: 2回目の審査の必須7・任意7 を反映。review-opus.md §6。第4版 同日: 3回目の審査の必須5・任意9 を反映。§7。第5版 同日: 4回目の審査の必須2・任意6 を反映。§8。第6版 同日: 5回目の審査の必須2・任意2 を反映。§9）
 **書いた人**: 設計パートナー（Opus・ccopusgo セッション）
-**状態**: 設計案（第5版。再審査待ち）。PO の方向の決定は下の §1 のとおり。実装は未着手。
+**状態**: 設計案（第6版。再審査待ち）。PO の方向の決定は下の §1 のとおり。実装は未着手。
 **行番号の基準**: origin/main（2026-10-28 fetch 後。backend/app と frontend/src/pages/login は本ブランチとの差 0）
 
 ## 1. PO の決定（2026-10-27 チャット原文）
@@ -60,7 +60,7 @@
 | パスワードだけ・2段階が未設定 | 必須化の後: 設定だけできるトークン（amr=["pwd"]、scope="enroll"。15分。refresh cookie は出さない）。必須化の前: 全権（記録だけ） | 全権（今のまま） |
 | パスワードだけ・2段階が設定済み | 必須化の前後どちらでも、トークンを出さない。6桁を設定済みなら §3-3 の券を作り6桁を求める。パスキーだけを設定済み（user_totp の確認済み行が無い）なら券は作らず、「パスキーで入ってください」と返す。どちらも `failed_login_count` は戻さない | 該当なし（設定の口が無い） |
 
-- **必須化の設定 `ADMIN_2FA_ENFORCED` が変えるもの**: 2段階を設定していない管理者に、全権を出すか設定用だけを出すか。もう1つは、管理者の Firebase トークンを拒むか。2段階を設定済みの管理者は、設定の値に関係なく2段階と承認を求める。これは、7d の前に3人が実際に使って確かめられるようにするためである。
+- **必須化の設定 `ADMIN_2FA_ENFORCED` が変えるもの（次の3つだけ）**: (1) 2段階を設定していない管理者に、全権を出すか設定用だけを出すか。(2) 管理者の Firebase トークンを拒むか。(3) 自社トークンのとき、`require_super_admin`・`require_tenant_admin` で amr を確かめるか（下の「二重の守り」。必須化の後だけ確かめる）。2段階を設定済みの管理者は、設定の値に関係なく2段階と承認を求める。これは、7d の前に3人が実際に使って確かめられるようにするためである。
 - **トークンの形**: 自社アクセストークンに `scope`（"full" か "enroll"）を足す。amr は今の `create_access_token(user_id, email, amr)`（backend/app/auth/self_tokens.py:86-98。今は1つの文字列を `[amr]` にする）を、複数の要素を渡せる形に広げる。
 - **トークンを出す口（必ず全部が同じ関数を通る）**: 次の5つ。どの口も、§3-1 の判定・トークンの作成・refresh の組への amr の記録・ログ行を、共通の関数1つで行う。口ごとに書き分けない。
   1. パスワード: login（backend/app/routers/auth.py:238-316）
@@ -68,13 +68,13 @@
   3. 承認待ち: §3-5 の、初めての機器が承認後にトークンを受け取る口
   4. パスキー: ADR-1013 便5 の login/verify（docs/handoff/auth-self-hosted-passkey/design.md:80「login と同じ発行処理」）
   5. refresh（auth.py:319-347）
-- **refresh で強さを引き継ぐ**: 今の refresh は `create_access_token(user_id, email, None)`（auth.py:344）で amr を捨てる。refresh の表 `auth_refresh_tokens`（migrations/20261013_160000_add_self_hosted_auth_tables.sql:68-81）に amr の列は無い。そこで 7a で同じ表に `amr TEXT[]`（NULL 可）を足し、組（family）を作る口（上の 1〜4）で必ず入れる。refresh の入れ替え（self_tokens.rotate_refresh_token）は新しい行へ同じ値を写す。今の `rotate_refresh_token` は、取り出しと失効を1文の UPDATE で行う（self_tokens.py:195-202）。そこで 7b で、入れ替えの前に `SELECT user_id, family_id, amr FROM public.auth_refresh_tokens WHERE token_hash = :h AND revoked_at IS NULL AND expires_at > :now` で読み、判定を済ませてから入れ替える（入れ替えの1文の UPDATE はそのまま残すので、同時の2回目は今までどおり落ちる）。判定が例外なら入れ替えずに 503。refresh は写した amr で、上の表と同じ共通の判定をやり直す。判定の結果が全権でない組（2段階を設定済みの管理者で amr が「webauthn」でも「pwd＋otp」でもない組、または必須化の後に未設定の管理者の組）は、全権を出さず、その組（family）をすべて失効させて 401（ログインし直し）にする。必須化の前に未設定の管理者の組は、表のとおり全権のまま記録する。amr が NULL の組（7a より前に作られた組）は「pwd だけ」と見なす。refresh では機器を見直さない。
+- **refresh で強さを引き継ぐ**: 今の refresh は `create_access_token(user_id, email, None)`（auth.py:344）で amr を捨てる。refresh の表 `auth_refresh_tokens`（migrations/20261013_160000_add_self_hosted_auth_tables.sql:68-81）に amr の列は無い。そこで 7a で同じ表に `amr TEXT[]`（NULL 可）を足し、組（family）を作る口（上の 1〜4）で必ず入れる。refresh の入れ替え（self_tokens.rotate_refresh_token）は新しい行へ同じ値を写す。今の `rotate_refresh_token` は、取り出しと失効を1文の UPDATE で行う（self_tokens.py:195-202）。そこで 7b で、入れ替えの前に `SELECT user_id, family_id, amr FROM public.auth_refresh_tokens WHERE token_hash = :h AND revoked_at IS NULL AND expires_at > :now` で読み、判定を済ませてから入れ替える（入れ替えの1文の UPDATE はそのまま残すので、同時の2回目は今までどおり落ちる）。この SELECT が0行のとき（失効済みのトークンの使い回しも0行になる）は判定を飛ばし、今までどおり `rotate_refresh_token` を呼ぶ。None が返ったら今の道（auth.py:332-336。組の失効を commit してから 401）を通す。これで使い回しの検知と組の失効は今のまま残る。判定が例外なら入れ替えずに 503。refresh は写した amr で、上の表と同じ共通の判定をやり直す。判定の結果が全権でない組（2段階を設定済みの管理者で amr が「webauthn」でも「pwd＋otp」でもない組、または必須化の後に未設定の管理者の組）は、全権を出さず、その組（family）をすべて失効させ、commit してから 401（ログインし直し）にする（auth.py:333 と同じ。rollback にしない）。必須化の前に未設定の管理者の組は、表のとおり全権のまま記録する。amr が NULL の組（7a より前に作られた組）は「pwd だけ」と見なす。refresh では機器を見直さない。
 - **自社トークンはキャッシュに入れない**: 今は自社トークンも Firebase と同じキャッシュ（300秒、backend/app/cache.py:15）に書かれ（dependencies.py:108）、キャッシュの確認（:190-198）は自社トークンの振り分け（:207-209）より前にある。このままでは2回目以降の要求が `_authenticate_self_token` を通らず、scope と amr の確認が飛ぶ。そこで 7b で次のように並べ替える。
   - 自社トークンの振り分けを、ログアウト済みの確認（:180-185）の直後、キャッシュの確認（:190）の前へ移す。
   - `_authenticate_self_token` の中のキャッシュへの書き込み（:108）を消す。自社トークンは毎回、手元で署名を確かめ、users を引く（今のキャッシュに当たらない時と同じ量。dependencies.py:93-98 と :105 の2回）。
   - **意図した動きの変更**: 今は、キャッシュに当たらない自社トークンも IP の制限の確認（:200-205。:201 の check_auth_rate_limit）を通る。並べ替えの後は、自社トークンはこの確認を通らない。理由は3つ。(1) 署名を手元で確かめるので、総当たりで当てられない。(2) 偽のトークンは今までどおり `_reject_self_token`（:74-79）が IP の失敗に数える。(3) 同じ回線のほかの人の失敗の巻き添えで、正しいトークンを持つ人が 429 で止まらない。IP の制限の確認は Firebase の道だけに残す。§9 の試験で守る。
   - この結果、キャッシュに当たる道を通るのは Firebase のトークンだけになる。
-- **自社トークンの確認で scope と amr を読む**: `_authenticate_self_token`（dependencies.py:82）が claims から amr と scope を読む。`get_current_user`（:124、request を受け取る）は、それを `request.state.auth_amr` と `request.state.auth_scope` に載せる。scope="enroll" のトークンは、`_authenticate_self_token` の中で「設定の口の一覧」以外の道なら 403 にする。今の `_authenticate_self_token` は request を受け取らない（:82）ので、7b で `get_current_user` から request を引数で渡す。照合は、メソッドとルートのひな形（`request.scope["route"].path`。ADR-1016 決定4 と同じ照合キー）で行う。一覧は §3-3・§3-4 の口で、backend の定数1か所に置く。一覧の数は試験で固定する。
+- **自社トークンの確認で scope と amr を読む**: `_authenticate_self_token`（dependencies.py:82）が claims から amr と scope を読む。`get_current_user`（:124、request を受け取る）は、それを `request.state.auth_amr` と `request.state.auth_scope` に載せる。scope="enroll" のトークンは、`_authenticate_self_token` の中で「設定の口の一覧」以外の道なら 403 にする。今の `_authenticate_self_token` は request を受け取らない（:82）ので、7b で `get_current_user` から request を引数で渡す。照合は、メソッドとルートのひな形（`request.scope["route"].path`。ADR-1016 決定4 と同じ照合キー）で行う。一覧は §3-3・§3-4 の口で、backend の定数1か所に置く。パスキーの登録の口（ADR-1013 便5、`/api/v1/auth/passkey/...`）は一覧に入れない。設定だけのトークンで設定できるのは6桁が先で、パスキーは6桁で全権を受け取った後に足す（便5 の設計がまだ確かめられていないため。PO 決定5 の「どちらで入ってもよい」は、設定の後のログインの話で、変わらない）。一覧の数は試験で固定する。
 - **二重の守り**: `require_super_admin`（dependencies.py:516）と `require_tenant_admin`（:606）は、必須化の後（`ADMIN_2FA_ENFORCED=true`）、自社トークンのとき `request.state.auth_amr` が「webauthn」か「pwd＋otp」でなければ 403。必須化の前は、出す口の判定（設定済みの管理者には2段階を求める）だけで守る。Firebase のトークンのとき（必須化の前だけ通る）は今のまま。今の `require_super_admin` は current_user しか受け取らないので、request を足す。直接呼んでいる `backend/app/routers/realtime_events.py:31`（`await require_super_admin(user)`）も 7b で直す。主な守りはトークンを出す口のほうである。`require_permission` 系（owner/admin に全権限キーを足す :597-600）はこの二重の守りの対象外で、出す口の判定だけで守る。
 - **Firebase の道**: 今は issuer が salesanchor でないトークンは Firebase の確認に回る（dependencies.py:207-213。AUTH_PROVIDER は見ない）。キャッシュに当たったトークンは、Firebase の確認と MFA の確認（:222-229）を通らずに利用者を返す（:190-198）。そこで `ADMIN_2FA_ENFORCED=true` の間は、Firebase の道で見つかった利用者が管理者（§3-1）なら 401 にする。置く場所は、キャッシュに当たった道（:198 の return の前）と、当たらない道（:258 でキャッシュに書く前）の両方。上の並べ替えにより、ここを通るのは Firebase のトークンだけである。管理者は自社ログイン（便4 で開く）だけで入る。管理者でない人は通す。キャッシュに当たった道でも毎回 §3-1 の判定を行う（super admin でない人は、文脈の設定と戻し（dependencies.py:330・:414 の中の SET）と user_roles の読み取りが要求ごとに増える）。この負荷は必須化の間だけで、便6 で Firebase の道ごと無くなる。
 - **ログ行**: 管理者（§3-1）にトークンを出すたびに、backend ログへ次の1行を出す。管理者でない人には出さない。値は id と短い語だけで、メールアドレス・番号・秘密は載せない。
@@ -120,7 +120,7 @@
 4. いつもの機器の画面に Modal で、依頼した機器のブラウザ名と時刻、候補の番号3つ、「心当たりがない」を出す（指摘9）。全権トークンを持ち、いつもの機器の cookie がある画面だけが見られる。
 5. 正しい番号を選ぶ → 依頼が承認になり、backend ログへ `admin_login_approved user_id=<id> request_id=<依頼の id>` を出す。初めての機器が待ちの口で全権トークンと「いつもの機器」cookie を受け取る。違う番号か「心当たりがない」→ 依頼を取り消し、`admin_login_rejected user_id=<id> request_id=<依頼の id>` を出す。初めての機器は入れない。本人にメールで知らせる（K7）。
 6. 回数の上限: 1人あたり承認依頼は1時間に3件まで。超えたら1時間は依頼を作らない（通知を何度も送りつける手口を防ぐ）。
-7. 問い合わせの間隔: 2段階の口は `/api/v1/auth/` の下にあるので、nginx の回数制限（nginx/nginx.conf:6 の zone=login は IP ごとに1分10回、:144-146・:406-408 で burst=5）と、login・refresh と同じ枠を使う。nginx は変えない。代わりに、初めての機器の待ちの画面は承認待ちの口を15秒ごとに問い合わせる（1分4回まで。5分で最大20回）。いつもの機器の画面は問い合わせ続けない。一覧の口を1回呼ぶのは次の4つのときだけ: SSE の知らせを受けたとき、管理者が画面を開いたとき、SSE につなぎ直したとき、タブが前に戻ったとき（メールで知ってから画面を開いた場合や、スマホのタブが寝ていて知らせを受け損ねた場合も、承認の画面が出る）。同じ回線から2台で使っても、1分の合計は「login 1・6桁 1・待ち 4・一覧 2・回答 1」の9回で、枠の10回に収まる。429 が返ったときは、待ちの画面は止まらずに次の15秒を待つ。
+7. 問い合わせの間隔: 2段階の口は `/api/v1/auth/` の下にあるので、nginx の回数制限（nginx/nginx.conf:6 の zone=login は IP ごとに1分10回、:144-146・:406-408 で burst=5）と、login・refresh と同じ枠を使う。nginx は変えない。代わりに、初めての機器の待ちの画面は承認待ちの口を15秒ごとに問い合わせる（1分4回まで。5分で最大20回）。いつもの機器の画面は問い合わせ続けない。一覧の口を1回呼ぶのは次の4つのときだけ: SSE の知らせを受けたとき、管理者が画面を開いたとき、SSE につなぎ直したとき、タブが前に戻ったとき（メールで知ってから画面を開いた場合や、スマホのタブが寝ていて知らせを受け損ねた場合も、承認の画面が出る）。4つのときが重なっても（タブが前に戻ると同時に SSE がつなぎ直す等）、画面は一覧の呼び出しを5秒に1回までにまとめる。nginx の枠は決まった1分ではなく、6秒に1回ずつ空きが戻り、ほかに5回までためておける形（rate=10r/m・burst=5）。同じ回線から2台で使っても、1分の合計は「login 1・6桁 1・待ち 4・一覧 2・回答 1・refresh 1」の10回で、ためておける5回の分の余りがある。429 が返ったときは、待ちの画面は止まらずに次の15秒を待つ。一覧と回答の口が 429 を受けたときは、承認の画面は閉じずに「少し待ってからもう一度」と出し、6秒おいて自動でもう一度試す（3回まで。それでも駄目なら手で押し直す）。
 
 ### 3-6. すべての機器を失くしたとき
 
@@ -164,7 +164,7 @@ ADR-1013 の便3（メール・PO の画面作業）→ 便4（切替）→ 便5
 | 便 | 中身 | 危ない道 |
 |---|---|---|
 | 7a | migration: user_totp・user_trusted_devices（構造だけ）、auth_refresh_tokens に amr 列 | migrations/ → PO GO（ADR-136） |
-| 7b | backend: 6桁・6桁待ちの券・いつもの機器・承認・発行の判定（login と refresh）・scope の確認・管理者の Firebase トークンの拒否・SSE の人単位の宛先と ADR-1016 の改訂・メール部品の共通化・ログ行・`realtime_events.py:31` の呼び出しの直し。設定 `ADMIN_2FA_ENFORCED`（既定 false）。false の間も判定とログ行は行い、2段階を設定済みの管理者には2段階と承認を求める。false の間に変わるのは §3-2 の2点（未設定の管理者に全権を出す・Firebase のトークンを拒まない）と、二重の守りを使わないことだけ | なし（deploy.yml を触らないこと） |
+| 7b | backend: 6桁・6桁待ちの券・いつもの機器・承認・発行の判定（login と refresh）・scope の確認・管理者の Firebase トークンの拒否・SSE の人単位の宛先と ADR-1016 の改訂・メール部品の共通化・ログ行・`realtime_events.py:31` の呼び出しの直し。設定 `ADMIN_2FA_ENFORCED`（既定 false）。false の間も判定とログ行は行い、2段階を設定済みの管理者には2段階と承認を求める。false の間に変わるのは §3-2 の「変えるもの」の3つ（未設定の管理者に全権を出す・Firebase のトークンを拒まない・二重の守りを使わない）だけ | なし（deploy.yml を触らないこと） |
 | 7c | frontend: 設定画面・6桁の画面・待ちの画面・承認の Modal・QrCode 金型 | なし |
 | 7d | 3人が設定を終えたことを K1 で確かめる。管理者の今の refresh の組を全部失効させる。そのあと `ADMIN_2FA_ENFORCED=true` にする | secrets・本番設定・本番データ → PO GO |
 
@@ -212,7 +212,7 @@ ADR-1013 の便3（メール・PO の画面作業）→ 便4（切替）→ 便5
 
 ## 9. 維持の仕組み
 
-- 自動試験（backend/tests/ に置く。7b のカードで名前を決める）: K2・K4・K5・K7 を試験で守る。あわせて、refresh で amr が引き継がれること、amr が NULL の組で管理者に全権が出ないこと、scope="enroll" で設定の口以外が 403 になること、管理者の Firebase トークンがキャッシュの有無どちらでも 401 になること、6桁の外れが `failed_login_count` に数えられパスワード成功で戻らないこと、を試験で守る。さらに次も試験で守る: scope="enroll" のトークンは2回目の要求（キャッシュの後）でも 403、自社トークンの管理者は2回目の要求でも通る、パスキーの組を refresh しても全権が続く、Firebase の道で管理者の判定が失敗したら管理者として 401、止められた後は6桁の券が使えない、新しい券を作ると古い券は使えない（1人1枚）。同じ券で6桁を同時に10本送っても照合は3回まで。自社トークンは IP の制限の確認を通らない（同じ IP の失敗が上限を超えていても、正しい自社トークンは通る）。トークンを出す口で判定が例外のとき 503 で、6桁の使い回し防止と refresh の組の入れ替えが残っている。必須化の前に、未設定の管理者は全権・設定済みの管理者はパスワードだけでは入れない。パスキーで入った後の機器の登録を2回呼んでも行は1つ、pwd＋otp のトークンでは登録できない。メールで知ってから画面を開くと承認の画面が出る。パスキーだけの管理者がパスワードで入ると券は作られずパスキーへ案内される。refresh で全権を出さない組は失効する。無い券への試行で Redis に期限なしのキーが残らない。
+- 自動試験（backend/tests/ に置く。7b のカードで名前を決める）: K2・K4・K5・K7 を試験で守る。あわせて、refresh で amr が引き継がれること、amr が NULL の組で管理者に全権が出ないこと、scope="enroll" で設定の口以外が 403 になること、管理者の Firebase トークンがキャッシュの有無どちらでも 401 になること、6桁の外れが `failed_login_count` に数えられパスワード成功で戻らないこと、を試験で守る。さらに次も試験で守る: scope="enroll" のトークンは2回目の要求（キャッシュの後）でも 403、自社トークンの管理者は2回目の要求でも通る、パスキーの組を refresh しても全権が続く、Firebase の道で管理者の判定が失敗したら管理者として 401、止められた後は6桁の券が使えない、新しい券を作ると古い券は使えない（1人1枚）。同じ券で6桁を同時に10本送っても照合は3回まで。自社トークンは IP の制限の確認を通らない（同じ IP の失敗が上限を超えていても、正しい自社トークンは通る）。トークンを出す口で判定が例外のとき 503 で、6桁の使い回し防止と refresh の組の入れ替えが残っている。必須化の前に、未設定の管理者は全権・設定済みの管理者はパスワードだけでは入れない。パスキーで入った後の機器の登録を2回呼んでも行は1つ、pwd＋otp のトークンでは登録できない。メールで知ってから画面を開くと承認の画面が出る。パスキーだけの管理者がパスワードで入ると券は作られずパスキーへ案内される。refresh で全権を出さない組は失効する。無い券への試行で Redis に期限なしのキーが残らない。失効済みの refresh を使い回すと、組が全部失効する（今の動きが残る）。全権を出さない組の失効は、401 の後も DB に残っている（commit 済み）。必須化の前は、2段階を設定していない管理者のパスワードだけの全権トークンで `require_super_admin`・`require_tenant_admin` を通る。
 - UI ガバナンスの CI（docs/CC_UI_GOVERNANCE.md）: K6。
 - 毎週の点検: K1 を本番の読み取りで数える（新しく管理者になった人が未設定のままでないか）。K2・K4 を本番ログで数える。
 - 守り手: 設計パートナー（Opus）。仕様書の索引 docs/specs/auth-login/README.md に本書を載せる。
