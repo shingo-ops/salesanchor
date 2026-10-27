@@ -74,7 +74,7 @@
   display: flex;
   align-items: center;
   width: 100%;
-  min-height: var(--size-icon-btn-lg);
+  min-height: var(--comp-multiselect-row-h);
   gap: var(--space-2);
   padding: var(--space-2) 0;
   background: none;
@@ -92,7 +92,7 @@
 
 .comp-multiselect__row-label {
   flex-shrink: 0;
-  font-size: var(--font-sm);
+  font-size: var(--font-base);
   font-weight: var(--font-weight-medium);
   color: var(--text-primary);
 }
@@ -104,7 +104,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   text-align: right;
-  font-size: var(--font-sm);
+  font-size: var(--font-base);
   color: var(--text-secondary);
 }
 
