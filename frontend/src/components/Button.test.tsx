@@ -109,6 +109,26 @@ describe('Button native contract', () => {
   });
 });
 
+describe('Button tap size (design.md docs/handoff/viewer-control-tap-size/design.md)', () => {
+  it('U1: size="tap" adds comp-btn--tap', () => {
+    render(<Button size="tap">Save</Button>);
+    const button = screen.getByRole('button');
+    expect(button.classList.contains('comp-btn--tap')).toBe(true);
+  });
+
+  it('U2: omitting size does not add comp-btn--tap', () => {
+    render(<Button>Save</Button>);
+    const button = screen.getByRole('button');
+    expect(button.classList.contains('comp-btn--tap')).toBe(false);
+  });
+
+  it('U3: variant="tab" with size="tap" does not add comp-btn--tap', () => {
+    render(<Button variant="tab" size="tap">Save</Button>);
+    const button = screen.getByRole('button');
+    expect(button.classList.contains('comp-btn--tap')).toBe(false);
+  });
+});
+
 // Public appearance overrides are rejected; native layout/events remain supported.
 const validLayout = <Button layoutClassName="caller-layout" />;
 // @ts-expect-error Button appearance belongs to Button.css.

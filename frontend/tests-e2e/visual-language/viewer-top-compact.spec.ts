@@ -24,7 +24,8 @@ const MOBILE_WIDTHS = [360, 390] as const;
 /** タップ領域の下限（ADR-140。design.md ③） */
 const MIN_TAP_PX = 44;
 /** 一覧の先頭カードの y の上限（design.md ③・K1。便4で128に更新。docs/handoff/viewer-header-remove/design.md 4-4） */
-const MAX_TOP_Y = 128;
+// 便10 で検索欄とボタン行が48pxになり計算値132。docs/handoff/viewer-control-tap-size/design.md ⑤
+const MAX_TOP_Y = 132;
 /** シリーズのタブに常時出る3つ（本便のテストでは意図的に外側のシリーズ名を使う。viewerFilter.ts の MAIN_SERIES） */
 // eslint-disable-next-line local/no-japanese-literal -- tests-e2e は ESLint 対象外。DB の series 名（画面文言ではない）
 const OTHER_SERIES = "アクア";

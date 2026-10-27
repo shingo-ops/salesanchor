@@ -164,6 +164,7 @@
   --field-h-sm:         28px;   /* 入力部品 高さ金型 sm */
   --field-h-md:         36px;   /* 入力部品 高さ金型 md */
   --field-h-lg:         44px;   /* 入力部品 高さ金型 lg */
+  --field-h-tap:        48px;   /* お手本（メルカリ）の操作単位 48dp。スマホのときだけ使う段 */
   --field-w-sm:        160px;   /* 入力部品 幅金型 sm */
   --field-w-md:        280px;   /* 入力部品 幅金型 md */
   --field-w-lg-max:    480px;   /* 入力部品 幅金型 lg 上限 */
