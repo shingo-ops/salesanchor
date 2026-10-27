@@ -306,3 +306,48 @@ exempt の決まりで手元の hook が守っているもの（例: 不可逆�
 | 5回目 should-C 実行機が範囲の文に無い | kgi.md「PO 確認待ち」2 と、design・README の「対象」に足した |
 | 5回目 should-D フォークからの道 | R5 の段落・D6・§11 の「G3 自前の実行機」に足した |
 | 5回目 nit-5・nit-6 | deploy.yml の行のずれを注記、実行機の file:line を R0 に |
+
+## R6a 本人 GO が要る PR の見分けを強くする（設計・2026-10-27）
+
+### PO の決定
+- 2026-10-27 PO「3」: 本人の許可は今のまま AI がチャットの許可を書き写す形とし、見分けの見落としだけを塞ぐ（鍵を外す案・GitHub 上で本人が承認する案は採らない）。
+- このため、本人性そのもの（記録を書いたのが本当に PO か）は機械では確かめない。残る弱点として記録する。
+
+### 目的
+ADR-1003 の例外のうち、PR の差分で確かめられるもの（表や列を消す migration・大量削除・workflow-lint.yml の変更）を、書き方の違いで見落とさないようにする。
+
+### 変更前（origin/main 0c23808 時点の事実）
+- 見分けは scripts/check-process-artifacts.js の requiresPoOnlyGo（84 行）。
+  - migration: migrations/ の追加行を 1 行ずつ DROP TABLE / DROP COLUMN の形に当てる。
+  - workflow-lint.yml: パスの完全一致 1 本。
+- 大量削除は見ていない（ADR-1003:45 も機械では見ないと明記）。
+- GO発行者欄は shingo-ops / Shingo を「含む」かで判定するため、委任名義の文に PO の名前が混ざると本人扱いになる。
+- 試験 scripts/tests/test-process-artifacts.js（133 件）は本物の git の差分で DROP を試す件が 0。
+
+### 変更後
+1. 対象の場所: migrations/ に加え、deploy.yml の db_migrations と同じ範囲（scripts/migrate_*.py・scripts/run_all_migrations.sh）。
+2. migration の見分け: ファイルの追加行をつなげ、SQL のコメントを除き、空白と改行を 1 つにまとめてから当てる。当てる形:
+   - 表や列を消す: DROP TABLE・DROP COLUMN・DROP SCHEMA・DROP DATABASE（DROP SCHEMA / DATABASE は表ごと消えるため DROP TABLE と同じ扱い）
+   - 大量削除: TRUNCATE、WHERE の無い DELETE
+   - WHERE のある DELETE・UPDATE は「大量」の線引きが ADR に無いため対象外（記録のみ・人の目）
+3. workflow-lint.yml: パスを小文字にし、先頭の ./ を除き、.yml / .yaml の両方で .github/workflows/workflow-lint を当てる。
+4. GO発行者欄: 委任名義の語（委任・Opus・代理）が入っていれば、PO の名前を含んでいても本人扱いにしない。
+5. 差分が取れないときは今と同じく「本人の GO が要る」側に倒す。
+
+### 対象外
+- 本人性の機械での確認（PO 決定により採らない）
+- 試験を CI で毎回動かすこと（今は CI から呼ばれていない。別の便）
+- ruleset・外部 GUI・force push（PR の差分に出ない）
+- ADR-1003 の文言の変更
+
+### 影響
+- 過去 180 日で表や列を消す migration はファイルにして 34、DROP SCHEMA 2、TRUNCATE 3、WHERE の無い DELETE 0。この便の後は、これらの PR に PO 本人の GO の書き写しが要る（今もの DROP TABLE / COLUMN は同じ）。
+- GO発行者欄の過去の書き方（「Shingo（shingo-ops）」「Shingo（PO）」など）は引き続き通る。
+
+### 受入条件
+- K1 試験が全件合格し、追加した試験が本物の git の差分で、上の 2〜4 の各形を ○（見分ける）と ×（見分けない）の両方で試している
+- K2 既存の 133 件が合格のまま
+- K3 この PR 自身の process-artifacts gate が緑
+
+### 戻し方
+merge commit の revert。
