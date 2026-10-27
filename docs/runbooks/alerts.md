@@ -1,6 +1,6 @@
 # 見張りのルール別 手順書
 
-この文書は何か：見張り（アラート）のルールごとの手順書です。ルールの正本は `monitoring/prometheus/alert_rules.yml`（Prometheus 32 本）と `monitoring/loki/rules/jarvis/alerts.yml`（Loki 6 本）です。各ルールの `runbook_url` はこの文書の同名の見出しを指します。見出しはルール名と同じにしてあります。札とリンクの欠けは `monitoring/scripts/check_alert_rules.py` が CI で検査します。
+この文書は何か：見張り（アラート）のルールごとの手順書です。ルールの正本は `monitoring/prometheus/alert_rules.yml`（Prometheus 34 本）と `monitoring/loki/rules/jarvis/alerts.yml`（Loki 6 本）です。各ルールの `runbook_url` はこの文書の同名の見出しを指します。見出しはルール名と同じにしてあります。札とリンクの欠けは `monitoring/scripts/check_alert_rules.py` が CI で検査します。
 
 ### 札（tier）の意味
 
@@ -334,3 +334,21 @@
 - 最初に見るもの：prod2 の `docker compose -f docker-compose.monitoring.yml ps recovery-check` と `logs --tail 50 recovery-check`。ServiceDown（job recovery-check）が同時に鳴っているか。
 - 直し方：Opus に報告する（コンテナの再起動は本番の変更なので PO の判断）。
 - 止め方：`amtool silence add alertname=RecoveryCheckStale --duration=PERIOD --comment=REASON`
+
+## OpsMailSilent
+
+- 札：ticket
+- 何が起きているか：運用の受け箱に、さくらの差出人のメールが 40 日届いていない。さくらは決済の案内を毎月送るので、業務用メールの自動転送（さくらの差出人だけを転送する設定）が切れている見込みがある。
+- 影響：さくらの点検・障害の予告が Discord に届かない。
+- 最初に見るもの：PO の業務用メールに、この 40 日の間にさくらからのメールがあるか（PO に聞く）。あれば転送の設定（Gmail の設定 → 転送とフィルタ）。無ければ、さくらが送っていないだけなので、次の決済の案内まで待つ。
+- 直し方：転送の設定を PO が直す（card-bin3.md §8-6 の手順）。直った後、次にさくらからメールが届けば自動で解決する。
+- 止め方：`amtool silence add alertname=OpsMailSilent --duration=PERIOD --comment=REASON`
+
+## OpsMailPollStale
+
+- 札：ticket
+- 何が起きているか：裏方の処理（celery）が運用の受け箱を 3 時間読めていない。
+- 影響：さくらの点検・障害のメールが Discord に届かない。
+- 最初に見るもの：同じ時間に CeleryHeartbeatStale が鳴っているか（鳴っていればその節）。prod1 の celery-worker のログの `[ops_mail]` の行（接続の失敗・ログインの失敗）。
+- 直し方：パスワードを変えた・受け箱を消したなら、PO が受け箱と GitHub の secret を直し、Opus が通常のデプロイで本番の設定に入れる。直れば自動で解決する。
+- 止め方：`amtool silence add alertname=OpsMailPollStale --duration=PERIOD --comment=REASON`
