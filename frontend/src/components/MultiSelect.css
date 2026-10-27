@@ -7,12 +7,20 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  min-width: var(--dropdown-min-width);
+}
+
+.comp-multiselect__menu--popover {
+  /* min-width は max-width より強いため、min() で包まないと画面幅より広いまま残る
+     （Popover.css の .comp-popover の max-width との組み合わせ。design.md 4-3） */
+  min-width: min(var(--dropdown-min-width), calc(100vw - var(--space-6)));
 }
 
 .comp-multiselect__list {
   display: flex;
   flex-direction: column;
+}
+
+.comp-multiselect__list--popover {
   max-height: var(--dropdown-max-h);
   overflow: auto;
 }
@@ -29,4 +37,78 @@
 
 .comp-multiselect__option:hover {
   background: var(--bg-hover);
+}
+
+.comp-multiselect__option--inline {
+  width: 100%;
+  min-height: var(--size-icon-btn-lg);
+}
+
+.comp-multiselect__inline-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.comp-multiselect__inline-label {
+  font-size: var(--font-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+}
+
+.comp-multiselect__inline-summary {
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+}
+
+/* options が空のとき、一覧の代わりに出す文言（design.md 4-2） */
+.comp-multiselect__empty {
+  padding: var(--space-2) 0;
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+}
+
+/* layout="row"（便2・design.md 4-2）: 押せる1行。左にラベル／右に現在値／右端に「>」 */
+.comp-multiselect__row {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: var(--size-icon-btn-lg);
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border-subtle);
+  font: inherit;
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.comp-multiselect__row:hover {
+  background: var(--bg-hover);
+}
+
+.comp-multiselect__row-label {
+  flex-shrink: 0;
+  font-size: var(--font-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+}
+
+.comp-multiselect__row-value {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+}
+
+.comp-multiselect__row-chevron {
+  flex-shrink: 0;
+  color: var(--text-secondary);
 }

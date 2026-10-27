@@ -1,6 +1,6 @@
 # design — マージ前の Opus 審査をフックで強制する
 
-- 状態: 設計審査済み（architect APPROVE 第5回 2026-10-18、/tmp/CC報告ファイル/review-gate-hook/arch-review-5.md）。第5版（KGI R1〜R7 は PO「y」2026-10-18。architect REVISE 第1回の指摘 1〜11・第2回の指摘 1〜8 を反映）
+- 状態: 第8版（2026-10-26 Opus 追記。§5-2・§5-3(c)・§5-4・§8 の「第8版」の行。PO が「見張り番を直す」を選んだ 2026-10-26）。それ以前: 設計審査済み（architect APPROVE 第5回 2026-10-18、/tmp/CC報告ファイル/review-gate-hook/arch-review-5.md）。第5版（KGI R1〜R7 は PO「y」2026-10-18。architect REVISE 第1回の指摘 1〜11・第2回の指摘 1〜8 を反映）
 - 関連: [recon.md](recon.md)・[ADR-1029](../../adr/ADR-1029-review-gate-hook.md)・ADR-1011（フックは AI がパッチ、PO が `!` で反映）・ADR-1003・ADR-136
 - PO 原文（2026-10-18）: 「これをhookで矯正してくれ、工程を飛ばすことなくopusに審査を依頼すること」
 
@@ -61,8 +61,11 @@ AI（Opus でも Sonnet でも）が PR をマージしようとしたとき、�
    - `agentType == "reviewer"` かつ `model` に `opus` を含むこと。見つからない・違う → 記録しない。
    - meta.json と同じディレクトリの `agent-<id>.jsonl`（`<id>` は上で `agent-` を外したもの）があれば、その中の assistant の `message.model` が全部 `claude-opus` で始まること（1 件でも違えば記録しない。ファイルが無い・assistant 0 件は遅れのため可）。
 3. `tool_input.message` の中で、正規表現 `^VERDICT: (APPROVE|REQUEST_CHANGES|REJECT) on ([0-9a-f]{40}) PR #(\d+)\s*$`（複数行モード）に当たる最後の 1 件を取る。無ければ記録しない。
+   - 第8版: 正規表現を `^VERDICT: (APPROVE|REQUEST_CHANGES|REJECT) on ([0-9a-f]{40}) PR #(\d+)(?: repo ([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+))?\s*$` にする。末尾の ` repo <owner>/<repo>` は無くてもよい（今までの行もそのまま当たる）。
 4. `APPROVE` 以外なら記録しない（R4）。
 5. `gh pr view <N> --json headRefOid,url` を `cwd` で実行し、headRefOid が VERDICT の sha と完全一致するときだけ記録する。`owner/repo` は常に url（`https://github.com/<owner>/<repo>/pull/<N>`）から作る。
+   - 第8版: VERDICT 行に ` repo <owner>/<repo>` があるときは `gh pr view <N> --repo <owner>/<repo> --json headRefOid,url` にする。返った url の owner/repo が行の値と大文字小文字を無視して一致しなければ記録しない（log の reason `repo mismatch`）。
+   - 第8版の理由（2026-10-26 実測）: 審査役が Bash で `cd` しても、SubagentHandback の入力 JSON の `cwd` は本流の作業場所（salesanchor）のままだった。別のリポジトリ（GEN-RYU-System/agent-console）の PR #85 を審査すると、record.py は salesanchor の PR #85（マージ済み・HEAD 0813da9）を見て `sha mismatch or bad url` で捨てた（log.jsonl 2026-10-26T11:19:55Z・11:25:40Z。生出力 /tmp/CC報告ファイル/discord-pdca-bin2/108-gate-recon/）。関所（gate.py）はマージする作業場所の gh で owner/repo を決めるので、` repo` つきで作った記録の名前はそのまま一致する。gate.py の照合は変えない。
 6. 記録先: $REVIEW_GATE_DIR/records/<owner>__<repo>-<N>-<sha>.json。中身: pr・repo・head・verdict・agent_id・meta_model・recorded_at（UTC ISO8601）。ディレクトリ 700、ファイル 600。
 7. 結果（記録した／しなかった理由）を `$REVIEW_GATE_DIR/log.jsonl` に 1 行足す。審査役の報告を妨げないため、常に exit 0。
 
@@ -106,6 +109,7 @@ stdin の JSON の `tool_name` で分ける。
 - `gh pr merge` に `--auto` があるときは、さらに `--match-head-commit <40桁>` があり記録の head と一致する場合だけ通す（予約後に HEAD が変わったまま自動マージされる恐れを塞ぐ。GitHub 側の予約解除条件は未確認のため止める側に倒す）。
 - 止めるときの文:
   `review-gate: PR #<N> の今の HEAD <sha の先頭 9 桁> に Opus 審査役の APPROVE がありません。Opus の審査役（subagent_type: reviewer）を起動し、報告の最後の行に「VERDICT: APPROVE on <40桁sha> PR #<N>」を書かせてください。`
+  - 第8版: この文の後ろに `別のリポジトリの PR なら、行の末尾に「 repo <owner>/<repo>」（ここでは <gh pr view の url から作った owner/repo>）を足させてください。` を続ける。
 - 判定は `$REVIEW_GATE_DIR/log.jsonl` に 1 行足す（K-a・K-b の数え元）。当たらない Bash は正規表現の前段（`merge|review-gate|REVIEW_GATE` を含まない）で即 exit 0。
 - Sonnet の Bash にも同じフックがかかる（recon.md §1）。
 
@@ -129,7 +133,9 @@ stdin の JSON の `tool_name` で分ける。
 
 ### 5-4. 審査役の最後の行の決まり（reviewer-verdict-rule.md の中身）
 
-「審査結果を SubagentHandback で返すとき、message の最後の行を必ず `VERDICT: <APPROVE|REQUEST_CHANGES|REJECT> on <40桁のHEAD sha> PR #<番号>` にする。sha は審査の直前に `gh pr view <番号> --json headRefOid -q .headRefOid` で取る。この行が無い・sha が違うと、マージの関所（ADR-1029）を通らない。」
+「審査結果を SubagentHandback で返すとき、message の最後の行を必ず `VERDICT: <APPROVE|REQUEST_CHANGES|REJECT> on <40桁のHEAD sha> PR #<番号>` にする。sha は審査の直前に `gh pr view <番号> --json headRefOid -q .headRefOid` で取る。この行が無い・sha が違うと、マージの関所（ADR-1029）を通らない。審査する PR が今の会話の作業場所と別のリポジトリにあるときは、行の末尾に ` repo <owner>/<repo>` を足す。」（最後の 1 文は第8版）
+
+- 第8版の注意: install.sh は印 `<!-- review-gate:ADR-1029 -->` があると ~/.claude/agents/reviewer.md に足さない（§5-5 の 5）。既に入っている ~/.claude/agents/reviewer.md の文は古いまま残るので、別のリポジトリの PR では、審査役を起動する側（Opus）が依頼文で ` repo <owner>/<repo>` を書かせる。リポジトリ内の reviewer-verdict-rule.md と .claude/agents/reviewer.md の文は新しい文に直す。
 
 ### 5-5. install.sh / rollback.sh（PO が `!` で実行。ADR-1011:39）
 
@@ -198,6 +204,8 @@ stdin の JSON の `tool_name` で分ける。
 | 誤止めなし（第6版） | `gh pr view 1 --json mergeable \| python3 -c "import json,sys;print(json.load(sys.stdin)['mergeable'])"`・`gh pr view 1 --json mergeable,mergeStateStatus`・`git merge origin/main`・`git log --merges` → すべて exit 0 |
 | R1（第7版） | 記録は o/r の PR 1 だけで次がすべて exit 2: `bash <<< "gh pr merge 2 --merge"`・`python3 <<< "import os;os.system('gh pr merge 2')"`・`source /dev/stdin <<< "gh pr merge 2"`・`.pr-number`=1 の作業場所で `echo 2 \| xargs gh pr merge --merge`・`gh api -X PUT repos/o/r2/pulls/1/merge`・`curl -X PUT https://api.github.com/repos/o/r2/pulls/1/merge`・`gh pr merge 1 --repo o/r --repo o/r2`・`gh pr merge 1 --merge --match-head-commit <記録sha> --match-head-commit <別sha>`・`dash -c "gh pr merge 2"`・`ksh -c "gh pr merge 2"`・`osascript -e 'do shell script "gh pr merge 2"'` |
 | R2（第7版） | 記録ありで `gh api -X PUT repos/o/r/pulls/1/merge`・`gh pr merge https://github.com/o/r/pull/1 --merge --repo o/r` → exit 0。`--repo o/r2` との不一致 → exit 2 |
+| R2（第8版） | 偽 gh は `--repo` があればその値の url を返す（既定は o/r）。`VERDICT: APPROVE on <sha> PR #1 repo x/y` → 記録 1 件（ファイル名 x__y-1-<sha>.json）。その後 `gh pr merge 1 --merge --repo x/y` → exit 0 |
+| R4（第8版） | ` repo x/y` つきで偽 gh が別の url（x/z）を返す → 記録 0 件（log reason `repo mismatch`）。` repo` の無い今までの行 → 今までどおり o__r-1-<sha>.json に 1 件。` repo x`（/ なし）・` repo x/y z`（後ろに余分）→ 行として当たらず記録 0 件 |
 | 往復 | 一時 settings.json・reviewer.md に install→rollback → 導入前と cmp で一致（導入前から空の hooks 項目がある形も含む） |
 | R7 | agent-hooks-test.yml が この PR で走り緑（PR のチェック欄で確認） |
 | 誤止めなし | `ls`・`grep -n x scripts/dev/check-pr-merge-ready.py`・`git diff -- scripts/gh-pr-merge-safe.sh`・`gh pr create --body "gh pr merge 1"`・`git commit -m "gh-pr-merge-safe.sh"`・`gh pr merge 1 --disable-auto`・`bash scripts/agent-hooks/review-gate/test_review_gate.sh`・ヒアドキュメントの本文に閉じない引用符（`don't merge yet`）がある `gh pr create`（本文はヒアドキュメントで渡す形）・`git commit -m "$(cat <<'EOF'` で始まり本文に `1)`・バッククォート 3 個の並び・閉じない引用符を含むコミット・`grep -rn "gh pr merge" docs` → すべて exit 0 |

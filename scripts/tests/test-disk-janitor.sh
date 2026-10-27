@@ -127,7 +127,8 @@ for spec in repoX:owner/x repoY:owner/wrong; do
 done
 export DJ_REPOS="${T}/repoX|owner/x|develop
 ${T}/repoY|owner/y|main
-${T}/missing|a/b|main"
+${T}/missing|a/b|main
+${GM}|owner/gm|main"
 
 snapshot() { find -P "${T}" -path "${T}/gitmain" -prune -o -path "${T}/lock.d" -prune -o -path "${T}/reaper.log" -prune -o -print 2>/dev/null | sort; }
 
@@ -173,7 +174,7 @@ check "R2 保護: package-lock.json なし" exists "${WT_NOLOCK}/node_modules"
 check "R2 保護: 14日以内に更新されたファイルあり" exists "${WT_RECENTFILE}/node_modules"
 check "R2 保護: 最終コミットが14日以内" exists "${WT_RECENTCOMMIT}/node_modules"
 check "R2 保護: 使用中（cwd にしているプロセスあり）" exists "${WT_INUSE}/node_modules"
-check "R2 保護: git log が失敗する（L1: 使っていない判定にしない）" exists "${WT_NOGIT}/node_modules"
+check "R2 保護: git の繋がりが合わない・git log が失敗する（L1: 使っていない判定にしない）" exists "${WT_NOGIT}/node_modules"
 check "R2 保護: node_modules がシンボリックリンク（リンクも指し先も残る）" both_exist "${WT_SYM}/node_modules" "${T}/outside/nm-target/f"
 check "R2 保護: 本体 salesanchor の node_modules" exists "${R_SA}/node_modules"
 check "R2 保護: 本体 agent-console の node_modules" exists "${R_AC}/node_modules"
@@ -348,6 +349,71 @@ check "ガード(ファイル): 名前が規則と一致しないものは拒否
 check "ガード(ファイル): dangling は指し先がある物を拒否" bash -c 'source "$1"; DJ_TMP_STALE_DAYS=7; ! dj_guard_file dangling "$2" "." "$3"' _ "${JANITOR}" "${DJ_ROOT_CLAUDE_TMP}/slug/uuid1/tasks/a-alive.output" "${DJ_ROOT_CLAUDE_TMP}"
 check "ガード(ファイル): dangling は宙に浮いたリンクを通す" bash -c 'source "$1"; DJ_TMP_STALE_DAYS=7; dj_guard_file dangling "$2" "." "$3"' _ "${JANITOR}" "${DJ_ROOT_CLAUDE_TMP}/slug/uuid1/tasks/a-dangling.output" "${DJ_ROOT_CLAUDE_TMP}"
 check "ガード(ファイル): 途中がシンボリックリンクなら拒否" bash -c 'source "$1"; DJ_TMP_STALE_DAYS=7; ln -s "$3" "$2/linkdir"; ! dj_guard_file f "$2/linkdir/target" "." "$2"' _ "${JANITOR}" "${DJ_ROOT_TMP_CC}" "${T}/outside6"
+
+# J1(ADR-1039): git の守りを読めないとき、何も実行せず終了コード 1。読めるときは配列が定義される
+J1_COPY="${T}/j1-copy"; mkdir -p "${J1_COPY}"
+cp "${JANITOR}" "${J1_COPY}/disk-janitor.sh"
+J1_RC=0; bash "${J1_COPY}/disk-janitor.sh" >/dev/null 2>&1 || J1_RC=$?
+check "J1: git-safe.sh が無い写しは終了コード 1 で終わる" test "${J1_RC}" -eq 1
+check "J1: git-safe.sh があれば GIT_SAFE_ARGS が定義される" bash -c 'source "$1"; [ "${#GIT_SAFE_ARGS[@]}" -gt 0 ]' _ "${JANITOR}"
+# J2: git-safe.sh が空のとき、--execute でも終了コード 1・何も消さない（bash 3.2 + set -u で配列判定が止まらない問題の対策）
+J2_COPY="${T}/j2-copy"; mkdir -p "${J2_COPY}"
+cp "${JANITOR}" "${J2_COPY}/disk-janitor.sh"; : > "${J2_COPY}/git-safe.sh"
+mkdir -p "${DJ_ROOT_SALESANCHOR}/j2probe/.npm-cache"
+J2_RC=0; J2_OUT="$(bash "${J2_COPY}/disk-janitor.sh" --execute 2>&1)" || J2_RC=$?
+check "J2: git-safe.sh が空なら終了コード 1" test "${J2_RC}" -eq 1
+check "J2: 空のとき何も消さない（置いた .npm-cache が残る）" test -d "${DJ_ROOT_SALESANCHOR}/j2probe/.npm-cache"
+check "J2: 空のとき削除の出力が無い" bash -c '! printf "%s" "$1" | grep -q "削除"' _ "${J2_OUT}"
+
+# ── J3〜J5（ADR-1039 便2b-2）: git の繋がりの確かめ ────────────────────────────────
+# 偽の置き場は gitmain の .git を worktrees 抜きで写して作る（rsync --exclude。消す操作を使わない）。
+# 作り物はすべて $T の下（終了時の既存の後片付けに任せる）。
+J_MARK="${T}/j-mark"
+J_EVIL="${T}/j-evil-gitdir"
+
+# J3: R2 の対象の worktree。追跡している README.md を同じ長さで変え、commondir を偽の置き場へ
+WT_J3="${R_WT}/repoA/wt-j3"; mkwt "${WT_J3}" br-j3; mk_nm "${WT_J3}"
+# 偽の置き場は br-j3 を作った後に写す（枝が見える形にして、判定が「繋がり」の理由で決まるようにする）
+mkdir -p "${J_EVIL}"
+rsync -a --exclude=/worktrees "${GM}/.git/" "${J_EVIL}/"
+printf '[filter "evil"]\n\tclean = touch %s; cat\n' "${J_MARK}" >> "${J_EVIL}/config"
+mkdir -p "${J_EVIL}/info"
+printf 'README.md filter=evil\n' >> "${J_EVIL}/info/attributes"
+printf 'bas2\n' > "${WT_J3}/README.md"       # 元は「base\n」（同じ5バイト）
+J3_GD="$(git -C "${GM}" rev-parse --absolute-git-dir)/worktrees/wt-j3"
+printf '%s\n' "${J_EVIL}" > "${J3_GD}/commondir"
+rm -f "${J_MARK}"
+git -C "${WT_J3}" -c core.fsmonitor=false -c core.hooksPath=/dev/null diff --no-ext-diff --no-textconv --ignore-submodules=all --numstat >/dev/null 2>&1
+check "J3-対照: 偽の置き場を読む worktree では、上書き付きの git diff でも印ができる" test -e "${J_MARK}"
+rm -f "${J_MARK}"
+age "${WT_J3}"
+# J4: 照らす一覧に無い元のリポジトリの worktree
+GM2="${T}/gitmain2"
+mkdir -p "${GM2}"
+git init -q -b main "${GM2}"
+echo base > "${GM2}/README.md"
+git -C "${GM2}" add README.md
+GIT_AUTHOR_DATE="2026-01-01T00:00:00" GIT_COMMITTER_DATE="2026-01-01T00:00:00" \
+  git -C "${GM2}" -c user.name=t -c user.email=t@t commit -q -m base
+WT_J4="${R_WT}/repoA/wt-j4"; git -C "${GM2}" worktree add -q -b br-j4 "${WT_J4}" HEAD 2>/dev/null; mk_nm "${WT_J4}"
+age "${WT_J4}"
+OUT_J34="$(bash "${JANITOR}" 2>&1)"
+echo "=== J3・J4 dry-run 出力 ==="; echo "${OUT_J34}" | sed -n '/== R2/,/^\[R2\] /p'; echo "=== ここまで ==="
+LINK_MSG="git の繋がりが知っている元のリポジトリと合わない"
+check "J3: reaper でない janitor の dry-run で印の台本が動かない" test ! -e "${J_MARK}"
+check "J3: 偽の commondir の worktree の node_modules が「残す」に入り、新しい理由の文が出る" bash -c 'grep -F "$1/node_modules" <<<"$3" | grep -q "$2"' _ "${WT_J3}" "${LINK_MSG}" "${OUT_J34}"
+check "J3: 削除候補に入らない" bash -c '! grep -F "[R2] $1/node_modules " <<<"$2"' _ "${WT_J3}" "${OUT_J34}"
+check "J4: 照らす一覧に無い元のリポジトリの worktree の node_modules が「残す」に入り、同じ文が出る" bash -c 'grep -F "$1/node_modules" <<<"$3" | grep -q "$2"' _ "${WT_J4}" "${LINK_MSG}" "${OUT_J34}"
+check "J4: 削除候補に入らない" bash -c '! grep -F "[R2] $1/node_modules " <<<"$2"' _ "${WT_J4}" "${OUT_J34}"
+
+# J5（R4）: .git/commondir を置いた作り物のリポジトリ。偽の reaper が呼ばれず、理由が出る
+JR5="${T}/repoJ5"; git init -q "${JR5}"
+git -C "${JR5}" remote add origin "git@github.com:owner/j5.git"
+printf '%s\n' "${J_EVIL}" > "${JR5}/.git/commondir"
+: > "${REAPER_LOG}"
+OUT_J5="$(DJ_REPOS="${JR5}|owner/j5|main" bash "${JANITOR}" 2>&1)"
+check "J5: そのリポジトリについて偽の reaper が呼ばれない" test ! -s "${REAPER_LOG}"
+check "J5: 理由「git の繋がりを確かめられない（残す）」が出る" grep -q "git の繋がりを確かめられない（残す）" <<<"${OUT_J5}"
 
 echo ""
 echo "=== 合計 ==="

@@ -13,10 +13,15 @@
 
 import "./platform-icon.css";
 import type { ComponentType, SVGProps } from "react";
-import { hi, ArrowUp, ArrowDown, X, ArrowTopRight, TABLE_ICONS } from "./icons-base";
+import {
+  hi, ArrowUp, ArrowDown, X, ArrowTopRight, TABLE_ICONS,
+  ArrowLeft as ArrowLeftBase, ChevronRight as ChevronRightBase,
+} from "./icons-base";
 import type { Icon, IconProps, LucideIcon } from "./icons-base";
 export type { Icon, IconProps, LucideIcon };
 export { TABLE_ICONS };
+// 便2（viewer 絞り込み副画面）: icons-base.tsx が定義。ここは再 export だけ（design.md 4-3・icons-base.tsx:2-3）
+export { ArrowLeftBase as ArrowLeft, ChevronRightBase as ChevronRight };
 
 // ============================================================
 // アイコン型定義（@phosphor-icons/react 依存を排除した独自定義）

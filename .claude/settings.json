@@ -76,9 +76,17 @@
           { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/hooks/require-status-label.sh\"", "timeout": 10 }
       ] },
       { "matcher": "Bash", "hooks": [
-          { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/scripts/agent-hooks/cloud/dispatch.sh\"", "timeout": 10 }
+          { "type": "command", "command": "[ \"$CLAUDE_CODE_REMOTE\" = \"true\" ] || exit 0; exec bash \"$CLAUDE_PROJECT_DIR/scripts/agent-hooks/cloud/dispatch.sh\"", "timeout": 10, "onFailure": "block" }
+      ] },
+      { "matcher": "Write|Edit", "hooks": [
+          { "type": "command", "command": "[ \"$CLAUDE_CODE_REMOTE\" = \"true\" ] || exit 0; exec bash \"$CLAUDE_PROJECT_DIR/scripts/agent-hooks/cloud/dispatch.sh\"", "timeout": 10, "onFailure": "block" }
       ] },
       { "matcher": "mcp__github__.*", "hooks": [
+          { "type": "command", "command": "[ \"$CLAUDE_CODE_REMOTE\" = \"true\" ] || exit 0; exec bash \"$CLAUDE_PROJECT_DIR/scripts/agent-hooks/cloud/dispatch.sh\"", "timeout": 10, "onFailure": "block" }
+      ] }
+    ],
+    "UserPromptSubmit": [
+      { "hooks": [
           { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/scripts/agent-hooks/cloud/dispatch.sh\"", "timeout": 10 }
       ] }
     ],

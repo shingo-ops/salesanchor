@@ -30,6 +30,13 @@
 #   bash scripts/reaper-worktree.sh            # dry-run（削除予定の一覧のみ）
 #   bash scripts/reaper-worktree.sh --execute  # 実削除
 
+# ── 作業場所に向ける git の守り（ADR-1039）。読めなければ何も消さずに終わる ──────
+# shellcheck source=scripts/git-safe.sh
+if ! source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/git-safe.sh" 2>/dev/null || [ -z "${GIT_SAFE_ARGS+x}" ]; then
+  echo "[reaper] git の守りを読めない（scripts/git-safe.sh）。何も消さずに終了します。" >&2
+  exit 1
+fi
+
 EXECUTE=0
 if [ "${1:-}" = "--execute" ]; then
   EXECUTE=1
@@ -63,6 +70,25 @@ else
   MAIN_REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || echo "")"
 fi
 
+# ── git の繋がりの確かめ（ADR-1039 便2b-2・ADR-114 R12）────────────────────────
+# 本店に向けた git（fetch・worktree list・remove・branch -D・prune）より前に、本店の繋がりを確かめる。
+# 合わなければ何も消さずに終了コード 1。本番の走査は cwd が本店の最上位であることを求める。
+_LINK_OK=1
+if [ -z "${REAPER_WORKTREES_DIR:-}" ]; then
+  if ! git_safe_link_ok "${PWD}" "${PWD}"; then
+    _LINK_OK=0
+  elif [ -z "${MAIN_REPO_ROOT}" ] || [ "$(command realpath "${MAIN_REPO_ROOT}" 2>/dev/null)" != "$(command realpath "${PWD}" 2>/dev/null)" ]; then
+    GIT_SAFE_LINK_REASON="本店の最上位で動かしていない"
+    _LINK_OK=0
+  fi
+else
+  git_safe_link_ok "${PWD}" "${MAIN_REPO_ROOT}" || _LINK_OK=0
+fi
+if [ "${_LINK_OK}" -ne 1 ]; then
+  echo "[reaper] 元のリポジトリの git の繋がりを確かめられない（${GIT_SAFE_LINK_REASON:-不明}）。何も消さない。本店の最上位で動かしてください。" >&2
+  exit 1
+fi
+
 ACTIVE_WORK_FILE="${REAPER_ACTIVE_WORK_FILE:-${MAIN_REPO_ROOT}/.claude-pipeline/active-work.md}"
 REPO_NAME="${REAPER_REPO_NAME:-shingo-ops/salesanchor}"
 BASE_BRANCH="${REAPER_BASE_BRANCH:-main}"
@@ -86,6 +112,7 @@ SKIP_UNSAVED=()
 SKIP_NOT_MERGED=()
 SKIP_IN_USE=()
 SKIP_BASE_BRANCH=()
+SKIP_LINK=()
 # R9: 下書きを許容した部屋の「部屋のパス::相対パス」（実削除前に控える）
 DRAFT_BACKUPS=()
 
@@ -121,7 +148,7 @@ except Exception:
 " "${_WT_ID_FILE}" 2>/dev/null || echo "")
     else
       # .worktree-id なし（旧 worktree）: git から現在ブランチ名を取得
-      _WT_BRANCH=$(git -C "${_WT_PATH}" branch --show-current 2>/dev/null || echo "")
+      _WT_BRANCH=$(git "${GIT_SAFE_ARGS[@]}" -C "${_WT_PATH}" branch --show-current 2>/dev/null || echo "")
     fi
     [ -z "${_WT_BRANCH}" ] && continue
     WT_PATHS+=("${_WT_PATH}")
@@ -172,6 +199,15 @@ for _IDX in "${!WT_PATHS[@]}"; do
   WORKTREE_PATH="${WT_PATHS[${_IDX}]}"
   BRANCH="${WT_BRANCHES[${_IDX}]}"
 
+  # ── チェック -1（ADR-1039 便2b-2）: 本番の走査では、git を動かす前に git の繋がりを確かめる ──
+  # 合わない部屋には git を1回も動かさず、消さない。
+  if [ -z "${REAPER_WORKTREES_DIR:-}" ]; then
+    if ! git_safe_link_ok "${WORKTREE_PATH}" "${MAIN_REPO_ROOT}"; then
+      SKIP_LINK+=("${BRANCH}（${GIT_SAFE_LINK_REASON}）")
+      continue
+    fi
+  fi
+
   # ── チェック 0: 本体ブランチ（main・develop・PR の行き先）の worktree は候補にしない ──
   case "${BRANCH}" in
     main|develop|"${BASE_BRANCH}")
@@ -201,8 +237,9 @@ for _IDX in "${!WT_PATHS[@]}"; do
   #   a. 未コミット・未ステージ確認
   #   b. HEAD までの全コミットが origin のどれかの ref から到達できるか（R8）
   UNSAVED=0
+  _NESTED_REPO=0
   # git status は HEAD なしの fresh init でも動く（untracked files を検出可能）
-  if git -C "${WORKTREE_PATH}" status >/dev/null 2>&1; then
+  if git "${GIT_SAFE_ARGS[@]}" -C "${WORKTREE_PATH}" status --ignore-submodules=all >/dev/null 2>&1; then
     # a. 未コミット・未ステージ確認
     # 2026-07-25 対策A: 台帳(.claude-pipeline/)のみの変更は未保存保護から除外する。
     # 理由: 完了記録が worktree 側の台帳に未コミットで残り、マージ済みの机が永続保護されていた。
@@ -210,6 +247,13 @@ for _IDX in "${!WT_PATHS[@]}"; do
     # R9(2026-10-11): 未追跡の *pr-body*.md（PR 本文の下書き）は候補として別に集め、下の検証を通ったときだけ許容する。
     #   --untracked-files=all で未追跡ディレクトリの中のファイル名まで見る。それ以外の行が1行でもあれば従来どおり保護。
     DRAFT_CANDIDATES=()
+    # ADR-1039/R11: 入れ子のリポジトリ（mode 160000）がある部屋は消さない。
+    #   status に --ignore-submodules=all を付けると入れ子の中の未保存が見えなくなるため、ここで印を見て残す。
+    #   ls-files --stage は入れ子の中に入らない。
+    if git "${GIT_SAFE_ARGS[@]}" -C "${WORKTREE_PATH}" ls-files --stage 2>/dev/null | grep -q '^160000 '; then
+      UNSAVED=1
+      _NESTED_REPO=1
+    fi
     while IFS= read -r _SLINE; do
       [ -z "${_SLINE}" ] && continue
       case "${_SLINE}" in *.claude-pipeline/*) continue ;; esac
@@ -220,15 +264,15 @@ for _IDX in "${!WT_PATHS[@]}"; do
         esac
       fi
       UNSAVED=1
-    done < <(git -C "${WORKTREE_PATH}" status --porcelain --untracked-files=all 2>/dev/null)
+    done < <(git "${GIT_SAFE_ARGS[@]}" -C "${WORKTREE_PATH}" status --porcelain --untracked-files=all --ignore-submodules=all 2>/dev/null)
 
     if [ "${UNSAVED}" -eq 0 ]; then
       # b. 取り戻せるか（R8、2026-10-10 PO 方針「後から完全に取り戻せる部屋だけ消す」）
       #    HEAD までのコミットが、origin のどれかの ref（main・各ブランチ）から到達できること。
       #    1つでも GitHub に無いコミットがあれば保護する。upstream の設定有無・向き先は問わない。
       #    コミットが1つも無い（HEAD なし）部屋は、失うコミットが無いので判定しない。
-      if git -C "${WORKTREE_PATH}" rev-parse -q --verify HEAD >/dev/null 2>&1; then
-        _UNREACH=$(git -C "${WORKTREE_PATH}" rev-list --count HEAD --not --remotes=origin 2>/dev/null) || _UNREACH="ERR"
+      if git "${GIT_SAFE_ARGS[@]}" -C "${WORKTREE_PATH}" rev-parse -q --verify HEAD >/dev/null 2>&1; then
+        _UNREACH=$(git "${GIT_SAFE_ARGS[@]}" -C "${WORKTREE_PATH}" rev-list --count HEAD --not --remotes=origin 2>/dev/null) || _UNREACH="ERR"
         if [ "${_UNREACH}" != "0" ]; then
           UNSAVED=1
         fi
@@ -274,7 +318,11 @@ for _IDX in "${!WT_PATHS[@]}"; do
   # git が存在しない場合（.git なし）は orphaned dir として UNSAVED=0 のまま（安全に削除可）
 
   if [ "${UNSAVED}" -eq 1 ]; then
-    SKIP_UNSAVED+=("${BRANCH}")
+    if [ "${_NESTED_REPO}" -eq 1 ]; then
+      SKIP_UNSAVED+=("${BRANCH}（入れ子のリポジトリがある（残す））")
+    else
+      SKIP_UNSAVED+=("${BRANCH}")
+    fi
     continue
   fi
 
@@ -339,6 +387,12 @@ echo ""
 if [ "${#SKIP_IN_USE[@]}" -gt 0 ]; then
   echo "🧑‍💻 使用中（削除しない）: ${#SKIP_IN_USE[@]} 件"
   for B in "${SKIP_IN_USE[@]}"; do echo "   - ${B}"; done
+  echo ""
+fi
+
+if [ "${#SKIP_LINK[@]}" -gt 0 ]; then
+  echo "🔗 git の繋がりが本店と合わない（削除しない）: ${#SKIP_LINK[@]} 件"
+  for B in "${SKIP_LINK[@]}"; do echo "   - ${B}"; done
   echo ""
 fi
 

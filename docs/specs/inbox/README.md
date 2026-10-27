@@ -21,6 +21,7 @@ PO: しんご
 - [ideal-state.md](./ideal-state.md) — あるべき姿（PO自筆のみの正本。Planner・Generatorは書き換えない）
 - [kgi.md](./kgi.md) — KGI（○×条件・分母の源泉・運用方針）
 - [design.md](./design.md) — 子の配置定義（配置図・配置表）
+- [track-record.md](./track-record.md) — 受信箱（inbox） track-record
 
 ## 子テーマ一覧（親→子リンク。作成され次第リンク化する）
 

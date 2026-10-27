@@ -5,13 +5,15 @@
  * PRで追加・変更された frontend/src/pages/ 配下の .tsx ファイルに
  * 新規の「生UI部品」が増えていないかを検査する。
  *
- * 検出対象（6種）:
+ * 検出対象（7種）:
  *   - 生 <select>
  *   - 生 <input type="text"|"search"|type省略>  ← 複数行対応
  *   - 生 <input type="checkbox">（AY-4d）
  *   - 生 <input type="radio">（AY-5b）
  *   - 自作タブ（classNameにtabを含むがtableを含まないトークン）
  *   - 読み込み中の文字だけの表示 t("...loading...")（<LoadingBlock> を使う）
+ *   - ボタン等の言葉を読み込み中の言葉に入れ替える三項（loadingTernary。
+ *     金型 Button の loading={条件} を使う）。この種別だけ pages/・features/・components/ を見る
  *
  * 判定方式:
  *   各変更ファイルについて BASE/HEAD 両 SHA の全文を取得し、
@@ -37,6 +39,10 @@ const path = require('path');
 
 const REPO_ROOT = path.resolve(__dirname, '..');
 const PAGES_DIR = 'frontend/src/pages/';
+const FEATURES_DIR = 'frontend/src/features/';
+const COMPONENTS_DIR = 'frontend/src/components/';
+// loadingTernary だけが見るディレクトリ（既存6種別は PAGES_DIR のみ）
+const LOADING_TERNARY_DIRS = [PAGES_DIR, FEATURES_DIR, COMPONENTS_DIR];
 
 // ---------------------------------------------------------------------------
 // ユーティリティ
@@ -60,10 +66,10 @@ function showFile(sha, filePath) {
  *   - headPath: HEAD 側のファイルパス（常に存在）
  *   - basePath: BASE 側のパス。新規追加(A)なら null、rename(R)なら旧パス
  */
-function getChangedFiles(baseSha, headSha) {
+function getChangedFiles(baseSha, headSha, dirs = [PAGES_DIR]) {
   const result = spawnSync(
     'git',
-    ['diff', '--name-status', '-M', baseSha, headSha, '--', PAGES_DIR],
+    ['diff', '--name-status', '-M', baseSha, headSha, '--', ...dirs],
     { cwd: REPO_ROOT, encoding: 'utf8' }
   );
   if (result.status !== 0) return [];
@@ -95,6 +101,21 @@ function getChangedFiles(baseSha, headSha) {
     files.push({ headPath, basePath });
   }
   return files;
+}
+
+/**
+ * 変更ファイルを検査の範囲ごとに振り分ける（git を呼ばない純粋な関数）。
+ *   legacyFiles : 既存6種別を数えるファイル（PAGES_DIR 配下のみ。今までと同じ）
+ *   loadingFiles: loadingTernary を数えるファイル（pages/・features/・components/。.test.tsx は除く）
+ */
+function splitTargets(files) {
+  const legacyFiles = files.filter((f) => f.headPath.startsWith(PAGES_DIR));
+  const loadingFiles = files.filter(
+    (f) =>
+      LOADING_TERNARY_DIRS.some((d) => f.headPath.startsWith(d)) &&
+      !f.headPath.endsWith('.test.tsx')
+  );
+  return { legacyFiles, loadingFiles };
 }
 
 // ---------------------------------------------------------------------------
@@ -361,6 +382,325 @@ function countLoadingText(content) {
 }
 
 // ---------------------------------------------------------------------------
+// 検出ロジック: ボタン等の言葉を読み込み中の言葉に入れ替える三項（loadingTernary）
+// ---------------------------------------------------------------------------
+
+// 読込キーの最後の部分に含まれていれば「読み込み中の言葉」とみなす動詞の現在進行形
+const LOADING_VERBS = [
+  'saving', 'submitting', 'sending', 'loading', 'processing', 'testing',
+  'merging', 'confirming', 'running', 'connecting', 'disconnecting',
+  'reconnecting', 'changing', 'uploading', 'downloading', 'signingIn',
+  'searching', 'calculating', 'recalculating', 'exporting', 'importing',
+  'issuing', 'syncing', 'deploying', 'committing', 'checking', 'adding',
+  'deleting', 'updating', 'creating', 'registering', 'fetching',
+  'generating', 'applying', 'resetting', 'retrying', 'verifying', 'analyzing',
+];
+
+/**
+ * 辞書キー（テンプレート文字列の `${s}.saving` も可）が読込キーか判定する。
+ * キーを "." で区切った最後の部分に LOADING_VERBS の語が含まれること。
+ * 比較は大文字小文字を区別しない。含むとは、最後の部分の先頭にあるか、
+ * 語頭が大文字（直前は小文字・数字・"}"）で、語のあとが終わりか大文字であること。
+ */
+function isLoadingKey(key) {
+  const parts = String(key).split('.');
+  const last = parts[parts.length - 1];
+  const lower = last.toLowerCase();
+  for (const verb of LOADING_VERBS) {
+    const v = verb.toLowerCase();
+    let from = 0;
+    let idx;
+    while ((idx = lower.indexOf(v, from)) !== -1) {
+      const end = idx + v.length;
+      const startOk =
+        idx === 0 || (/[A-Z]/.test(last[idx]) && /[a-z0-9}]/.test(last[idx - 1]));
+      const endOk = end === last.length || /[A-Z]/.test(last[end]);
+      if (startOk && endOk) return true;
+      from = idx + 1;
+    }
+  }
+  return false;
+}
+
+/** テンプレート文字列の ${ ... } の中身を読み飛ばし、閉じの } の次の位置を返す（閉じなければ -1） */
+function skipTemplateExpr(content, from) {
+  let depth = 1;
+  let i = from;
+  while (i < content.length) {
+    const ch = content[i];
+    if (ch === '"' || ch === "'") {
+      let j = i + 1;
+      while (j < content.length && content[j] !== ch && content[j] !== '\n') j += content[j] === '\\' ? 2 : 1;
+      if (content[j] !== ch) return -1;
+      i = j + 1;
+    } else if (ch === '`') {
+      const end = findTemplateEnd(content, i);
+      if (end === -1) return -1;
+      i = end;
+    } else if (ch === '/' && content[i + 1] === '*') {
+      const end = content.indexOf('*/', i + 2);
+      if (end === -1) return -1;
+      i = end + 2;
+    } else if (ch === '/' && content[i + 1] === '/') {
+      const end = content.indexOf('\n', i);
+      if (end === -1) return -1;
+      i = end;
+    } else if (ch === '{') {
+      depth++;
+      i++;
+    } else if (ch === '}') {
+      depth--;
+      i++;
+      if (depth === 0) return i;
+    } else {
+      i++;
+    }
+  }
+  return -1;
+}
+
+/** start のバッククォートで始まるテンプレート文字列の終わり（閉じの次の位置）を返す。閉じなければ -1 */
+function findTemplateEnd(content, start) {
+  let i = start + 1;
+  while (i < content.length) {
+    const ch = content[i];
+    if (ch === '\\') {
+      i += 2;
+    } else if (ch === '`') {
+      return i + 1;
+    } else if (ch === '$' && content[i + 1] === '{') {
+      const end = skipTemplateExpr(content, i + 2);
+      if (end === -1) return -1;
+      i = end;
+    } else {
+      i++;
+    }
+  }
+  return -1;
+}
+
+/** 文字列が来うる直前の記号 */
+const STRING_PRECEDING_CHARS = '(,=:?[{}+-*/%!&|^~;<>';
+/** 文字列が来うる直前の語 */
+const STRING_PRECEDING_WORDS = new Set([
+  'return', 'typeof', 'case', 'in', 'of', 'void', 'yield', 'await', 'delete', 'else', 'throw',
+]);
+
+/**
+ * pos の ' または " が文字列の始まりになりうるか（JSX の地の文の ' " は false）。
+ * pos より前の、空白（改行を含む）でない直前の文字で判定する。
+ */
+function canStartString(masked, pos) {
+  const p = prevNonWs(masked, pos);
+  if (p < 0) return true;
+  const ch = masked[p];
+  if (STRING_PRECEDING_CHARS.includes(ch)) return true;
+  if (/[A-Za-z0-9_$]/.test(ch)) {
+    let w = p;
+    while (w > 0 && /[A-Za-z0-9_$]/.test(masked[w - 1])) w--;
+    return STRING_PRECEDING_WORDS.has(masked.slice(w, p + 1));
+  }
+  return false;
+}
+
+/**
+ * コメントと文字列を取り除いた写しを作る（長さは同じ。文字列は区切りだけ残す）。
+ * 戻り値: { masked, strings: [{ start, end, value, quote }] }
+ */
+function maskSource(content) {
+  const re = /\/\*[\s\S]*?\*\/|\/\/[^\n]*|"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|`/g;
+  const strings = [];
+  let masked = '';
+  let last = 0;
+  let m;
+  while ((m = re.exec(content)) !== null) {
+    let text = m[0];
+    masked += content.slice(last, m.index);
+    last = m.index;
+    if (text === '`') {
+      const end = findTemplateEnd(content, m.index);
+      if (end === -1) {
+        // 閉じないテンプレートは文字列とみなさない
+        masked += '`';
+        last = m.index + 1;
+        continue;
+      }
+      text = content.slice(m.index, end);
+      re.lastIndex = end;
+    } else if ((text[0] === '"' || text[0] === "'") && !canStartString(masked, m.index)) {
+      masked += text[0];
+      last = m.index + 1;
+      re.lastIndex = m.index + 1;
+      continue;
+    }
+    const isComment = text.startsWith('/*') || text.startsWith('//');
+    if (isComment) {
+      masked += text.replace(/[^\n]/g, ' ');
+    } else {
+      const q = text[0];
+      masked += q + text.slice(1, -1).replace(/[^\n]/g, '_') + q;
+      strings.push({ start: m.index, end: m.index + text.length, value: text.slice(1, -1), quote: q });
+    }
+    last = m.index + text.length;
+  }
+  masked += content.slice(last);
+  return { masked, strings };
+}
+
+/** pos より前の、空白を除いた直前の文字の位置（なければ -1） */
+function prevNonWs(masked, pos) {
+  let i = pos - 1;
+  while (i >= 0 && /\s/.test(masked[i])) i--;
+  return i;
+}
+
+/** pos 以降の、空白を除いた次の文字の位置（なければ -1） */
+function nextNonWs(masked, pos) {
+  let i = pos;
+  while (i < masked.length && /\s/.test(masked[i])) i++;
+  return i < masked.length ? i : -1;
+}
+
+/** masked[i] が三項演算子の ? か（?? ?. ?: は除く） */
+function isTernaryQuestion(masked, i) {
+  if (masked[i] !== '?') return false;
+  const next = masked[i + 1];
+  const prev = masked[i - 1];
+  if (next === '?' || next === '.' || next === ':' || prev === '?') return false;
+  return true;
+}
+
+/**
+ * ":" の位置から後ろ向きに、同じ階層の三項演算子の "?" を探す。
+ * 区切りの "," ";" や、閉じていない括弧に当たったら null。
+ */
+function findTernaryQuestionBefore(masked, colonIdx) {
+  let depth = 0;
+  for (let i = colonIdx - 1; i >= 0; i--) {
+    const ch = masked[i];
+    if (ch === ')' || ch === ']' || ch === '}') depth++;
+    else if (ch === '(' || ch === '[' || ch === '{') {
+      if (depth === 0) return null;
+      depth--;
+    } else if (depth === 0) {
+      if (ch === ',' || ch === ';') return null;
+      if (isTernaryQuestion(masked, i)) return i;
+    }
+  }
+  return null;
+}
+
+/** "?" の位置が t( ... ) の引数の中にあるか（t(cond ? "a" : "b") の形） */
+function isInsideTCall(masked, qIdx) {
+  let depth = 0;
+  for (let i = qIdx - 1; i >= 0; i--) {
+    const ch = masked[i];
+    if (ch === ')' || ch === ']' || ch === '}') depth++;
+    else if (ch === '(' || ch === '[' || ch === '{') {
+      if (depth === 0) {
+        if (ch !== '(') return false;
+        return /(?:^|[^A-Za-z0-9_$.])(?:(?:i18n|i18next)\.)?t\s*$/.test(masked.slice(Math.max(0, i - 20), i));
+      }
+      depth--;
+    } else if (depth === 0 && (ch === ',' || ch === ';')) {
+      return false;
+    }
+  }
+  return false;
+}
+
+/** pos の式が prop の値（"=" の直後の "{" の中）にあるか */
+function isInsidePropValue(masked, pos) {
+  let paren = 0, brack = 0, brace = 0;
+  for (let i = pos - 1; i >= 0; i--) {
+    const ch = masked[i];
+    if (ch === ')') paren++;
+    else if (ch === ']') brack++;
+    else if (ch === '}') brace++;
+    else if (ch === '(') { if (paren > 0) paren--; }
+    else if (ch === '[') { if (brack > 0) brack--; }
+    else if (ch === '{') {
+      if (brace > 0) { brace--; continue; }
+      const p = prevNonWs(masked, i);
+      return p >= 0 && masked[p] === '=';
+    }
+  }
+  return false;
+}
+
+/**
+ * コンテンツ内の「読み込み中の言葉と元の言葉を入れ替える三項」の件数を返す（ui-allow 除外済み）。
+ *   (A) cond ? t("<読込キー>") : x ／ cond ? x : t("<読込キー>")
+ *   (B) t(cond ? "<読込キー>" : x) ／ t(cond ? x : "<読込キー>")
+ *   (C) cond ? "..." : x ／ cond ? x : "..."（"..." か "…" だけの文字列）
+ * 1つの三項は1件と数える。prop の値（name={...}）は数えない。
+ */
+function countLoadingTernary(content) {
+  const lines = content.split('\n');
+  const { masked, strings } = maskSource(content);
+  const seen = new Set();
+  let count = 0;
+
+  for (const s of strings) {
+    const isKey = isLoadingKey(s.value);
+    const isDots = s.quote !== '`' && (s.value === '...' || s.value === '…');
+    if (!isKey && !isDots) continue;
+
+    // t( "key" ) で包まれていれば、包みごと1つの単位にする
+    let unitStart = s.start;
+    let unitEnd = s.end;
+    let kind;
+    const before = masked.slice(Math.max(0, s.start - 40), s.start);
+    const wrap = /(?:^|[^A-Za-z0-9_$.])((?:(?:i18n|i18next)\.)?t\(\s*)$/.exec(before);
+    const after = nextNonWs(masked, s.end);
+    let wrapEnd = -1;
+    if (isKey && wrap && after !== -1) {
+      if (masked[after] === ')') {
+        wrapEnd = after + 1;
+      } else if (masked[after] === ',') {
+        // t("key", { n }) のように第2引数があるとき、t( に対応する ) までを1つの単位にする
+        let depth = 1;
+        for (let i = after + 1; i < masked.length; i++) {
+          if (masked[i] === '(') depth++;
+          else if (masked[i] === ')' && --depth === 0) { wrapEnd = i + 1; break; }
+        }
+      }
+    }
+    if (wrapEnd !== -1) {
+      unitStart = s.start - wrap[1].length;
+      unitEnd = wrapEnd;
+      kind = 'A';
+    } else if (isKey) {
+      kind = 'B';
+    } else {
+      kind = 'C';
+    }
+
+    // 三項の ? を探す
+    let q = null;
+    const pi = prevNonWs(masked, unitStart);
+    const ni = nextNonWs(masked, unitEnd);
+    if (pi >= 0 && isTernaryQuestion(masked, pi)) {
+      if (ni !== -1 && masked[ni] === ':' && masked[ni + 1] !== ':') q = pi;
+    } else if (pi >= 0 && masked[pi] === ':' && masked[pi - 1] !== ':') {
+      q = findTernaryQuestionBefore(masked, pi);
+    }
+    if (q === null || q === undefined) continue;
+    if (kind === 'B' && !isInsideTCall(masked, q)) continue;
+    if (seen.has(q)) continue;
+    if (isInsidePropValue(masked, q)) continue;
+
+    const lineIdx = getLineIndex(content, unitStart);
+    const qLineIdx = getLineIndex(content, q);
+    if (hasUiAllowBefore(lines, lineIdx) || hasUiAllowBefore(lines, qLineIdx)) continue;
+
+    seen.add(q);
+    count++;
+  }
+  return count;
+}
+
+// ---------------------------------------------------------------------------
 // 集計
 // ---------------------------------------------------------------------------
 
@@ -372,6 +712,7 @@ function countAll(content) {
     checkbox: countCheckbox(content),
     radio: countRadio(content),
     loadingText: countLoadingText(content),
+    loadingTernary: countLoadingTernary(content),
   };
 }
 
@@ -390,11 +731,19 @@ function main() {
 
   console.log(`[INFO] BASE_SHA=${BASE_SHA} HEAD_SHA=${HEAD_SHA}`);
 
-  const changedFiles = getChangedFiles(BASE_SHA, HEAD_SHA);
-  console.log(`[INFO] 対象ファイル数: ${changedFiles.length}`);
+  const allFiles = getChangedFiles(BASE_SHA, HEAD_SHA, LOADING_TERNARY_DIRS);
+  const { legacyFiles, loadingFiles } = splitTargets(allFiles);
+  const legacyPaths = new Set(legacyFiles.map((f) => f.headPath));
+  const loadingPaths = new Set(loadingFiles.map((f) => f.headPath));
+  const changedFiles = allFiles.filter(
+    (f) => legacyPaths.has(f.headPath) || loadingPaths.has(f.headPath)
+  );
+  console.log(
+    `[INFO] 対象ファイル数: ${changedFiles.length}（pages/ ${legacyFiles.length} 件・読み込み中の三項 ${loadingFiles.length} 件）`
+  );
 
   if (changedFiles.length === 0) {
-    console.log('✅ UI governance: pages/ への変更なし。チェックをスキップします。');
+    console.log('✅ UI governance: pages/・features/・components/ への変更なし。チェックをスキップします。');
     process.exit(0);
   }
 
@@ -415,9 +764,12 @@ function main() {
       checkbox: '生<input type="checkbox">',
       radio: '生<input type="radio">',
       loadingText: '読み込み中の文字だけの表示 → <LoadingBlock> を使うこと',
+      loadingTernary: 'ボタン等の言葉を読み込み中に入れ替える三項 → 金型 Button の loading={条件} を使い、言葉は元のままにすること',
     };
 
-    for (const type of ['select', 'input', 'tab', 'checkbox', 'radio', 'loadingText']) {
+    for (const type of ['select', 'input', 'tab', 'checkbox', 'radio', 'loadingText', 'loadingTernary']) {
+      // loadingTernary だけが features/・components/ も見る。既存6種別は pages/ のみ（今までと同じ）
+      if (type === 'loadingTernary' ? !loadingPaths.has(headPath) : !legacyPaths.has(headPath)) continue;
       if (headCounts[type] > baseCounts[type]) {
         violations.push({
           file: headPath,
@@ -484,6 +836,10 @@ if (require.main === module) {
     isCheckboxInput,
     countRadio,
     countLoadingText,
+    countLoadingTernary,
+    isLoadingKey,
+    LOADING_VERBS,
+    splitTargets,
     countAll,
     isRadioInput,
     extractInputTags,

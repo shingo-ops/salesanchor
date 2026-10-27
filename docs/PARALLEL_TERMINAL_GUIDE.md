@@ -78,7 +78,7 @@ cat tasks/todo.md
 重複が見つかった場合 → **STOP → しんごさんに確認してから開始する**
 
 `scripts/new-worktree.sh` を使えば active-work.md は自動で記入される（手動記入不要）。
-`tasks/todo.md` は作業完了・ブロック発生時に**手動で更新する**（ルール: `AGENTS.md §引き継ぎルール`）。
+`tasks/todo.md` は作業完了・ブロック発生時に**手動で更新する**（ルール: `docs/ai-agents/codex-operations.md §引き継ぎルール（忘れ防止）`）。
 
 ### 5. AI エージェントを並行起動するとき（P5 対策・必須）
 

@@ -2,7 +2,7 @@
 
 | 項目 | 内容 |
 |------|------|
-| ステータス | Proposed（2026-10-22） |
+| ステータス | Accepted（2026-10-24。採用の根拠: PO 承認「1」2026-10-23＝段3c に進み決まりも正式にする。入口の入れ替えはこの PR） |
 | 備考 | 設計は審査10回目 APPROVE・PR #4649 で保存済み。KGI と構造は PO 承認済み（2026-10-22 原文「1」）。入口の上限は PO 回答「1」＝90行。各段の実装は段ごとに PO の実装承認を受ける（本 ADR の起案は実装開始の承認を兼ねない）。段3c（入口の入れ替え）の前に PO の承認で Accepted に上げる |
 | 起案日 | 2026-10-22 |
 | 方針の決定者 | Shingo（PO）。設計: Claude Opus |
@@ -43,7 +43,7 @@
 
 ## Consequences（結果）
 
-- ADR-076 の §1 ルート行（120行）と §2 の命名の決まりは、本 ADR が Accepted になった時点で本 ADR の Decision 1・2 に置き換わる。frontend・backend の CLAUDE.md の上限と階層の決まりは ADR-076 のまま。
+- ADR-076 の §1 ルート行（120行）と §2 の命名の決まりは、本 ADR が Accepted になった時点で本 ADR の Decision 1・2 に置き換わる。frontend・backend の階層の決まりは ADR-076 のまま。行数の上限（frontend 90・backend 70）は段4（2026-10-25）から本文の在る同じ場所の AGENTS.md に付け、CLAUDE.md は「@AGENTS.md」だけなのでルートと同じ 10 行にする。
 - check-claude-size.js のエラー文（「ファイル名は必ず CLAUDE.md」）と LIMITS は段3c で本 ADR に合わせて直す。
 - 手順を読むのに1〜3回ファイルを開く手間が増える。開いた割合は design KGI-10 で記録する。
 - 戻し方: 各段の PR を revert する（design §8 の戻し方の列）。
@@ -53,5 +53,13 @@
 | 仕組み | 担当 | 効果 |
 |---|---|---|
 | 行数検査 CI | .github/workflows/check-claude-size.yml・frontend/scripts/check-claude-size.js | 入口が上限を超えたら失敗（段2a・段3c で対象と上限を直す） |
-| 到達検査 CI | 段2で新設 | 目次から届かない文書を数える |
+| 到達検査 CI | .github/workflows/doc-index-reachability.yml（job「doc index reachability」）・scripts/ci/check_doc_index.py | 目次から届かない文書・深さ・「いつ読むか」空欄・壊れたリンク・入口の安全の決まりの欠け（K7）・同じ決まりの重複（K3）を数え、1件でもあれば失敗（`--strict`）。必須チェック（ruleset 15777895。2026-10-27 PO の操作で登録・design §32 M4） |
+| 登録の見張りの試験 CI | .github/workflows/agent-hooks-test.yml（job「master-register guard test」）・scripts/agent-hooks/test_master_register_rules_guard.sh | 商品登録の見張り（K2）の試験を、見張り・試験・登録の決まり（docs/specs/product-master/registration-rules.md）が変わる PR で動かし、1件でも FAIL なら失敗。必須チェックではない |
+| 週次点検 | scripts/dev/doc-entry-weekly-check.sh・agent-console の定期実行「入口の文書 週次点検」（月曜 16:00） | リポジトリの外の入口の行数（K1）・登録の見張りの写しのずれ（K2）・会話の始まりの読み込み量（K9）・到達検査 CI の最新結果・同意の週次点検が動いているかを毎週見て、外れたら PO へ知らせる。K12 は90日ごとに測り直す（design §32 D3・D4） |
 | 設計持ち込みの検査 | .github/workflows/process-artifacts-gate.yml | PR に recon・design・対象 ADR の記載を求める |
+
+## 維持の仕組み
+
+- 守り手は上の表の5つ（行数検査 CI・到達検査 CI・登録の見張りの試験 CI・設計持ち込みの検査・週次点検）。到達検査は pull_request・main への push・毎週月曜に動く。
+- K11 は続けて測らない（design §32 D5 の理由: 入口から決まりを移すたびの照合で足りるため）。今後また入口から決まりを移すときは、その段の設計に K11 の照合を書く。
+- リポジトリ外の点検は週次点検（月曜 16:00）。K12 は週次点検の `K12_DUE=yes`（前回から90日超）で定期実行の会話が測り直し、baseline.md に `## 全条件の測り直し（YYYY-MM-DD）` の見出しで書く（design §32 D3・D4）。週次点検と同意の週次点検は互いの保存先の日付を見張る。

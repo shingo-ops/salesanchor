@@ -1,0 +1,113 @@
+===== disk-janitor 開始 2026-10-26 12:20:14 mode=dry-run =====
+--- df（開始）---
+Filesystem      Size    Used   Avail Capacity iused ifree %iused  Mounted on
+/dev/disk3s1   228Gi   172Gi    24Gi    88%    5.1M  254M    2%   /System/Volumes/Data
+根: /Users/tanizawashingo/worktrees /Users/tanizawashingo/agent-console-wt /Users/tanizawashingo/salesanchor /Users/tanizawashingo/agent-console /Users/tanizawashingo/Library/Application Support/agent-console/versions
+lsof: 24289 行を取得
+
+== R1 散らばった .npm-cache ==
+[R1] 削除候補: 0 件 / 0KB（0KB）、飛ばした: 0 件
+
+== R2 使っていない作業用コピーの node_modules ==
+  [飛ばす] /Users/tanizawashingo/worktrees/code-staging-recovery/release-private-product-import-recovery/frontend/node_modules （ガード: シンボリックリンク）
+  [飛ばす] /Users/tanizawashingo/worktrees/crm-app/release-invoice-b-route-fix/frontend/node_modules （ガード: シンボリックリンク）
+  [飛ばす] /Users/tanizawashingo/worktrees/crm-app/release-invoice-pdf-fixes/frontend/node_modules （ガード: シンボリックリンク）
+  [飛ばす] /Users/tanizawashingo/worktrees/salesanchor/ay5c-before-main/frontend/node_modules （14日以内に更新されたファイルあり）
+  [飛ばす] /Users/tanizawashingo/worktrees/salesanchor/release-inventory-condition-colors/frontend/node_modules （14日以内に更新されたファイルあり）
+  [飛ばす] /Users/tanizawashingo/worktrees/salesanchor/release-loading-button-bin7b/frontend/node_modules （14日以内に更新されたファイルあり）
+  [飛ばす] /Users/tanizawashingo/worktrees/salesanchor/release-viewer-message-templates/frontend/node_modules （14日以内に更新されたファイルあり）
+  [飛ばす] /Users/tanizawashingo/agent-console-wt/bin2b2-impl/node_modules （使用中（プロセスが開いている））
+  [飛ばす] /Users/tanizawashingo/agent-console-wt/card-labels-before/node_modules （14日以内に更新されたファイルあり）
+  [飛ばす] /Users/tanizawashingo/agent-console-wt/card-labels/node_modules （14日以内に更新されたファイルあり）
+[R2] 削除候補: 0 件 / 0KB（0KB）、飛ばした: 10 件
+
+== R3 agent-console の旧版 ==
+  current=v0.46.2、1つ前=v0.46.1（これらと current より新しい版は残す）
+  [飛ばす] /Users/tanizawashingo/Library/Application Support/agent-console/versions/v0.43.0 （使用中（プロセスが開いている））
+[R3] 削除候補: 0 件 / 0KB（0KB）、飛ばした: 1 件
+
+== R4 他リポジトリの作業用コピー（reaper-worktree.sh） ==
+  -- /Users/tanizawashingo/agent-console (GEN-RYU-System/agent-console, 行き先 main) reaper rc=0, 26 行 --
+     🔍 worktree を走査（全件）: git worktree list
+     
+        対象 worktree 数: 5 件
+     
+     === reaper 結果 ===
+     
+     🧑‍💻 使用中（削除しない）: 1 件
+        - release/discord-pdca-bin2b2-impl
+     
+     ⚠️  未保存あり（削除しない）: 2 件 ← 人の判断が必要
+        - release/card-labels
+        - fix/terminal-locale
+     
+     🔄 未マージ（削除しない）: 1 件
+        - release/mobile-pwa
+     
+     === ゴースト検出 ===
+        走査: /Users/tanizawashingo/worktrees/agent-console
+     
+     👻 GHOST: 0件
+     
+     🗑️  削除対象（安全条件クリア）: 1 件
+        - release/discord-pdca-bin2b2-card
+     
+     ℹ️  dry-run モード（上記は削除候補の一覧です）
+        実削除するには: bash scripts/reaper-worktree.sh --execute
+  -- /Users/tanizawashingo/ebay-gas-automation (GEN-RYU-System/bay-auto, 行き先 develop) reaper rc=0, 15 行 --
+     🔍 worktree を走査（全件）: git worktree list
+     
+        対象 worktree 数: 1 件
+     
+     === reaper 結果 ===
+     
+     🔄 未マージ（削除しない）: 1 件
+        - release/policy-ssot-masters
+     
+     === ゴースト検出 ===
+        走査: /Users/tanizawashingo/worktrees/ebay-gas-automation
+     
+     👻 GHOST: 0件
+     
+     ✅ 削除対象なし
+  -- /Users/tanizawashingo/crm-app-current (GEN-RYU-System/crm-app, 行き先 develop) reaper rc=0, 24 行 --
+     🔍 worktree を走査（全件）: git worktree list
+     
+        対象 worktree 数: 6 件
+     
+     === reaper 結果 ===
+     
+     🛡️  本体ブランチ（削除しない）: 1 件
+        - develop
+     
+     ⚠️  未保存あり（削除しない）: 4 件 ← 人の判断が必要
+        - release/demo-seed-leads
+        - release/invoice-b-route-fix
+        - release/invoice-pdf-fixes
+        - release/worklog-pr662-sha
+     
+     🔄 未マージ（削除しない）: 1 件
+        - release/demo-seed-order-lines
+     
+     === ゴースト検出 ===
+        走査: /Users/tanizawashingo/worktrees/crm-app-current
+     
+     👻 GHOST: 0件
+     
+     ✅ 削除対象なし
+  [飛ばす] /Users/tanizawashingo/crm-app-canonical-20260830 （リポジトリが無い）
+[R4] 削除候補: 1 件 / 0KB（0KB）、飛ばした: 1 件
+
+== R5 /tmp/CC報告ファイルの .md 以外 ==
+  [規則ごと飛ばす] R5/R6 見送り（HDD 写しが2日以上成功していない）
+[R5] 削除候補: 0 件 / 0KB（0KB）、飛ばした: 0 件
+
+== R6 セッションの作業メモ ==
+  [規則ごと飛ばす] R5/R6 見送り（HDD 写しが2日以上成功していない）
+[R6] 削除候補: 0 件 / 0KB（0KB）、飛ばした: 0 件
+
+--- df（終了）---
+Filesystem      Size    Used   Avail Capacity iused ifree %iused  Mounted on
+/dev/disk3s1   228Gi   172Gi    24Gi    88%    5.1M  256M    2%   /System/Volumes/Data
+===== disk-janitor 終了 2026-10-26 12:21:09 mode=dry-run 合計 1 件 / 0KB（R4 の容量は含まない） =====
+rc=0

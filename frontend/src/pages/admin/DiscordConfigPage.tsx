@@ -370,8 +370,8 @@ export default function DiscordConfigPage() {
               />
               {canEdit && (
                 <div className="dc-actions">
-                  <Button variant="primary" onClick={handleGuildSave} disabled={guildSaving}>
-                    {guildSaving ? t("common.saving") : isConnected ? t("common.save") : t("discordConfig.connect")}
+                  <Button variant="primary" onClick={handleGuildSave} disabled={guildSaving} loading={guildSaving}>
+                    {isConnected ? t("common.save") : t("discordConfig.connect")}
                   </Button>
                   {isConnected && (
                     <Button variant="ghost" onClick={handleGuildCancel} disabled={guildSaving}>
@@ -402,8 +402,8 @@ export default function DiscordConfigPage() {
             </div>
             <p className="dc-desc">{t("discordAutoSetup.description")}</p>
             <div className="dc-row">
-              <Button variant="secondary" onClick={handleAutoSetup} disabled={!isConnected || autoSetupRunning}>
-                {autoSetupRunning ? t("discordAutoSetup.running") : t("discordAutoSetup.runButton")}
+              <Button loading={autoSetupRunning} variant="secondary" onClick={handleAutoSetup} disabled={!isConnected || autoSetupRunning}>
+                {t("discordAutoSetup.runButton")}
               </Button>
               {!isConnected && <span className="dc-hint">{t("discordAutoSetup.needConnect")}</span>}
             </div>
@@ -433,16 +433,16 @@ export default function DiscordConfigPage() {
           />
           {canEdit && (
             <div className="dc-actions">
-              <Button
+              <Button loading={ticketSavingSource === "welcome"}
                 variant="secondary"
                 onClick={() => handleTicketSave("welcome")}
                 disabled={ticketSavingSource !== null}
               >
-                {ticketSavingSource === "welcome" ? t("common.saving") : t("common.save")}
+                {t("common.save")}
               </Button>
               {ticketConfig?.ticket_button_channel_id && (
-                <Button variant="secondary" onClick={handleDeployButton} disabled={deploying}>
-                  {deploying ? t("discordTicketConfig.deploying") : t("discordTicketConfig.deployButton")}
+                <Button loading={deploying} variant="secondary" onClick={handleDeployButton} disabled={deploying}>
+                  {t("discordTicketConfig.deployButton")}
                 </Button>
               )}
               {renderTicketMessage("welcome")}
@@ -524,12 +524,12 @@ export default function DiscordConfigPage() {
               </div>
               {canEdit && (
                 <div className="dc-actions">
-                  <Button
+                  <Button loading={ticketSavingSource === "details"}
                     variant="secondary"
                     onClick={() => handleTicketSave("details")}
                     disabled={ticketSavingSource !== null}
                   >
-                    {ticketSavingSource === "details" ? t("common.saving") : t("common.save")}
+                    {t("common.save")}
                   </Button>
                   {renderTicketMessage("details")}
                 </div>

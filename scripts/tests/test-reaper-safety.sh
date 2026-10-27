@@ -24,6 +24,16 @@
 #   [B-b] REAPER_BASE_BRANCH 未指定 → gh の PR 行き先判定は main（既定）
 #   [B-c] ブランチ名が main・develop・REAPER_BASE_BRANCH と同じ部屋は DONE でも削除対象に出ない（本体ブランチ保護）
 #   [B-d] 上の保護の対照: 通常ブランチの DONE の部屋は削除対象に出る
+#   [G1] 部屋の core.fsmonitor に仕込んだ印の台本が reaper の dry-run で動かない（対照: 上書きなしの git status では動く）
+#   [G2] 入れ子のリポジトリ（mode 160000）がある部屋は残し理由を出す（対照: 入れ子なしは削除候補）
+#   [G3] git-safe.sh を読めないとき終了コード 1・何も消さない
+#   [G3b] git-safe.sh が空のときも終了コード 1・何も消さない
+#   [G4] worktree の commondir を偽の置き場へ向けた部屋は、印が動かず「git の繋がりが本店と合わない」に入り削除候補に入らない（対照あり）
+#   [G5] worktree の .git ファイルを偽の gitdir へ向けた部屋も同じ
+#   [G6] 正しい worktree は「合わない」に入らず、今の判定どおり
+#   [G7] 本店の .git がシンボリックリンクなら終了コード 1・何も消さない
+#   [G8] 本店の .git/commondir が偽の置き場なら、rev-parse 段で印が動かず終了コード 1・何も消さない（対照あり）
+#   [G9] 本番の走査を worktree の中（本店の最上位でない cwd）で動かすと終了コード 1・何も消さない
 #
 # 実行方法: bash scripts/tests/test-reaper-safety.sh
 # 終了コード: 0=全PASS / 1=FAIL あり
@@ -718,6 +728,312 @@ else
   sed 's/^/    /' "${BASE_LOG_DEF}"
   FAIL=$(( FAIL + 1 ))
 fi
+
+# ── G: git の守り（ADR-1039・scripts/git-safe.sh）──────────────────────────
+# G1: 部屋の config に仕込まれた core.fsmonitor の台本が、reaper の git で動かない
+# G2: 入れ子のリポジトリ（mode 160000）がある部屋は、ほかが消す条件でも残る（理由つき）
+# G3: git-safe.sh を読めないとき、終了コード 1 で何も消さない
+G_MARK="${TMPDIR_TEST}/g1-mark"
+G_SCRIPT="${TMPDIR_TEST}/g1-fsmonitor.sh"
+cat > "${G_SCRIPT}" << GEOF
+#!/bin/bash
+touch "${G_MARK}"
+exit 0
+GEOF
+chmod +x "${G_SCRIPT}"
+
+# G1
+BRANCH_G1="feature/test/g1-fsmonitor"
+G1_DIR=$(make_worktree_dir "wt-g1" "${BRANCH_G1}")
+echo "| ${BRANCH_G1} | テスト | 2026-06-06 | DONE | #990 | | |" >> "${FAKE_ACTIVE_WORK}"
+git init "${G1_DIR}" -q 2>/dev/null
+echo ".worktree-id" > "${G1_DIR}/.git/info/exclude"
+git -C "${G1_DIR}" config core.fsmonitor "${G_SCRIPT}"
+rm -f "${G_MARK}"
+git -C "${G1_DIR}" status >/dev/null 2>&1 || true
+if [ -e "${G_MARK}" ]; then
+  echo "✅ PASS [G1-対照]: 上書きなしの git status では印の台本が動く（仕込みが効く作りだと確認）"
+  PASS=$(( PASS + 1 ))
+else
+  echo "❌ FAIL [G1-対照]: 上書きなしでも印ができません（この作りでは fsmonitor が呼ばれない）"
+  FAIL=$(( FAIL + 1 ))
+fi
+rm -f "${G_MARK}"
+OUTPUT_G1=$(run_reaper_dry)
+if [ ! -e "${G_MARK}" ]; then
+  echo "✅ PASS [G1]: reaper の dry-run で印の台本が動きませんでした"
+  PASS=$(( PASS + 1 ))
+else
+  echo "❌ FAIL [G1]: reaper の dry-run で印の台本が動きました"
+  FAIL=$(( FAIL + 1 ))
+fi
+assert_in_delete "G1+上書きしても判定は変わらない（DONE+未保存なしは削除候補）" "${BRANCH_G1}" "${OUTPUT_G1}"
+
+# G2: 入れ子のリポジトリ。対照（入れ子なし）と並べる
+G_REMOTE="${TMPDIR_TEST}/g2-remote.git"
+git init --bare "${G_REMOTE}" -q 2>/dev/null
+make_g2_room() {
+  local name="$1" branch="$2" nested="$3" dir
+  dir=$(make_worktree_dir "${name}" "${branch}")
+  echo "| ${branch} | テスト | 2026-06-06 | DONE | #991 | | |" >> "${FAKE_ACTIVE_WORK}"
+  git init "${dir}" -q 2>/dev/null
+  echo ".worktree-id" > "${dir}/.git/info/exclude"
+  git -C "${dir}" config user.email "test@test.com"
+  git -C "${dir}" config user.name "test"
+  git -C "${dir}" remote add origin "${G_REMOTE}"
+  touch "${dir}/base.txt"
+  git -C "${dir}" add base.txt
+  if [ "${nested}" = "1" ]; then
+    mkdir -p "${dir}/inner"
+    git init "${dir}/inner" -q 2>/dev/null
+    git -C "${dir}/inner" config user.email "test@test.com"
+    git -C "${dir}/inner" config user.name "test"
+    touch "${dir}/inner/x.txt"
+    git -C "${dir}/inner" add x.txt
+    git -C "${dir}/inner" commit -m "inner" -q 2>/dev/null
+    git -C "${dir}" add inner 2>/dev/null
+  fi
+  git -C "${dir}" commit -m "base" -q 2>/dev/null
+  git -C "${dir}" push origin HEAD:"refs/heads/${branch}" -q 2>/dev/null
+  git -C "${dir}" fetch origin -q 2>/dev/null
+  echo "${dir}"
+}
+BRANCH_G2_CTRL="feature/test/g2-plain"
+BRANCH_G2="feature/test/g2-nested"
+make_g2_room "wt-g2-plain" "${BRANCH_G2_CTRL}" 0 >/dev/null
+G2_DIR=$(make_g2_room "wt-g2-nested" "${BRANCH_G2}" 1)
+if git -C "${G2_DIR}" ls-files --stage | grep -q '^160000 '; then
+  echo "✅ PASS [G2-前提]: 作り物の部屋に mode 160000 がある"
+  PASS=$(( PASS + 1 ))
+else
+  echo "❌ FAIL [G2-前提]: mode 160000 の行がありません"
+  FAIL=$(( FAIL + 1 ))
+fi
+OUTPUT_G2=$(run_reaper_dry)
+assert_in_delete     "G2-対照: 入れ子なしの同じ作りの部屋は削除候補" "${BRANCH_G2_CTRL}" "${OUTPUT_G2}"
+assert_not_in_delete "G2: 入れ子のリポジトリがある部屋は残す"       "${BRANCH_G2}"      "${OUTPUT_G2}"
+if echo "${OUTPUT_G2}" | grep -A 20 "未保存あり" | grep -q "${BRANCH_G2}（入れ子のリポジトリがある（残す））"; then
+  echo "✅ PASS [G2-理由]: 理由「入れ子のリポジトリがある（残す）」が出ています"
+  PASS=$(( PASS + 1 ))
+else
+  echo "❌ FAIL [G2-理由]: 理由が出ていません"
+  FAIL=$(( FAIL + 1 ))
+fi
+
+# G3: git-safe.sh が無い写しで動かす → 終了コード 1・何も消さない
+G3_COPY="${TMPDIR_TEST}/g3-copy"
+mkdir -p "${G3_COPY}"
+cp "${REAPER}" "${G3_COPY}/reaper-worktree.sh"
+G3_RC=0
+G3_OUT=$(REAPER_WORKTREES_DIR="${FAKE_WORKTREES}" \
+  REAPER_ACTIVE_WORK_FILE="${FAKE_ACTIVE_WORK}" \
+  REAPER_REPO_NAME="test/test" REAPER_SKIP_FETCH=1 \
+  bash "${G3_COPY}/reaper-worktree.sh" 2>&1) || G3_RC=$?
+if [ "${G3_RC}" -eq 1 ] && echo "${G3_OUT}" | grep -q "git の守りを読めない" && ! echo "${G3_OUT}" | grep -q "削除対象"; then
+  echo "✅ PASS [G3]: git-safe.sh を読めないとき、終了コード 1・削除対象なしで終わりました"
+  PASS=$(( PASS + 1 ))
+else
+  echo "❌ FAIL [G3]: 終了コード=${G3_RC}"
+  echo "${G3_OUT}" | sed 's/^/    /'
+  FAIL=$(( FAIL + 1 ))
+fi
+
+# G3b: git-safe.sh が空（配列を作らない）の写しで動かす → 終了コード 1・何も消さない
+G3B_COPY="${TMPDIR_TEST}/g3b-copy"
+mkdir -p "${G3B_COPY}"
+cp "${REAPER}" "${G3B_COPY}/reaper-worktree.sh"
+: > "${G3B_COPY}/git-safe.sh"
+G3B_RC=0
+G3B_OUT=$(REAPER_WORKTREES_DIR="${FAKE_WORKTREES}" \
+  REAPER_ACTIVE_WORK_FILE="${FAKE_ACTIVE_WORK}" \
+  REAPER_REPO_NAME="test/test" REAPER_SKIP_FETCH=1 \
+  bash "${G3B_COPY}/reaper-worktree.sh" 2>&1) || G3B_RC=$?
+if [ "${G3B_RC}" -eq 1 ] && echo "${G3B_OUT}" | grep -q "git の守りを読めない" && ! echo "${G3B_OUT}" | grep -q "削除対象"; then
+  echo "✅ PASS [G3b]: git-safe.sh が空のとき、終了コード 1・削除対象なしで終わりました"
+  PASS=$(( PASS + 1 ))
+else
+  echo "❌ FAIL [G3b]: 終了コード=${G3B_RC}"
+  echo "${G3B_OUT}" | sed 's/^/    /'
+  FAIL=$(( FAIL + 1 ))
+fi
+
+# ── G4〜G9: git の繋がりの確かめ（ADR-1039 便2b-2・scripts/git-safe.sh の git_safe_link_ok / git_safe_main_ok）──
+# 本番の走査（REAPER_WORKTREES_DIR を空）で dry-run。作り物の元のリポジトリを cwd にする。
+# 作り物はすべて TMPDIR_TEST の下（終了時の既存の後片付けに任せる）。
+# 偽の置き場は、元の .git から worktrees を最初から写さない作り（rsync --exclude）。
+LK_MARK="${TMPDIR_TEST}/lk-mark"
+LK_MAIN="${TMPDIR_TEST}/linkcheck-main-${RANDOM}${RANDOM}"
+LK_REMOTE="${TMPDIR_TEST}/lk-remote.git"
+LK_ROOMS="${TMPDIR_TEST}/lk-rooms"
+LK_EVIL="${TMPDIR_TEST}/lk-evil-gitdir"
+LK_LOCK="${TMPDIR_TEST}/lk.lock.d"
+BRANCH_G4="feature/test/lk-g4-commondir"
+BRANCH_G5="feature/test/lk-g5-gitdir"
+BRANCH_G6="feature/test/lk-g6-legit"
+git init --bare "${LK_REMOTE}" -q 2>/dev/null
+git init "${LK_MAIN}" -q -b main 2>/dev/null
+git -C "${LK_MAIN}" config user.email "test@test.com"
+git -C "${LK_MAIN}" config user.name "test"
+git -C "${LK_MAIN}" remote add origin "${LK_REMOTE}"
+printf '1\n' > "${LK_MAIN}/f.txt"
+git -C "${LK_MAIN}" add f.txt
+git -C "${LK_MAIN}" commit -m "base" -q 2>/dev/null
+git -C "${LK_MAIN}" push origin HEAD:refs/heads/main -q 2>/dev/null
+git -C "${LK_MAIN}" fetch origin -q 2>/dev/null
+mkdir -p "${LK_ROOMS}"
+git -C "${LK_MAIN}" worktree add -q -b "${BRANCH_G4}" "${LK_ROOMS}/g4" HEAD 2>/dev/null
+git -C "${LK_MAIN}" worktree add -q -b "${BRANCH_G5}" "${LK_ROOMS}/g5" HEAD 2>/dev/null
+git -C "${LK_MAIN}" worktree add -q -b "${BRANCH_G6}" "${LK_ROOMS}/g6" HEAD 2>/dev/null
+{
+  echo "| ${BRANCH_G4} | テスト | 2026-06-06 | DONE | #992 | | |"
+  echo "| ${BRANCH_G5} | テスト | 2026-06-06 | DONE | #993 | | |"
+  echo "| ${BRANCH_G6} | テスト | 2026-06-06 | DONE | #994 | | |"
+} >> "${FAKE_ACTIVE_WORK}"
+# 偽の置き場: 元の .git を worktrees 抜きで写し、filter の命令を仕込む
+mkdir -p "${LK_EVIL}"
+rsync -a --exclude=/worktrees "${LK_MAIN}/.git/" "${LK_EVIL}/"
+printf '[filter "evil"]\n\tclean = touch %s; cat\n' "${LK_MARK}" >> "${LK_EVIL}/config"
+mkdir -p "${LK_EVIL}/info"
+printf '*.txt filter=evil\n' >> "${LK_EVIL}/info/attributes"
+
+# G4: worktree の commondir を偽の置き場へ。f.txt は同じ長さ（1\n → 2\n）で変える
+printf '2\n' > "${LK_ROOMS}/g4/f.txt"
+G4_GD="$(git -C "${LK_MAIN}" rev-parse --absolute-git-dir)/worktrees/g4"
+printf '%s\n' "${LK_EVIL}" > "${G4_GD}/commondir"
+rm -f "${LK_MARK}"
+git -C "${LK_ROOMS}/g4" -c core.fsmonitor=false -c core.hooksPath=/dev/null status --porcelain --ignore-submodules=all >/dev/null 2>&1 || true
+if [ -e "${LK_MARK}" ]; then
+  echo "✅ PASS [G4-対照]: 偽の置き場を読む worktree では、上書き付きの git status でも印ができる（仕込みが効く作りだと確認）"
+  PASS=$(( PASS + 1 ))
+else
+  echo "❌ FAIL [G4-対照]: 印ができません（この作りでは filter が呼ばれない）"
+  FAIL=$(( FAIL + 1 ))
+fi
+rm -f "${LK_MARK}"
+
+# G5: worktree の .git ファイルを偽の gitdir（.git/worktrees/g5 の写しで commondir を偽の置き場へ）へ
+LK_FAKE_GD="${TMPDIR_TEST}/lk-fake-gitdir-g5"
+mkdir -p "${LK_FAKE_GD}"
+rsync -a "$(git -C "${LK_MAIN}" rev-parse --absolute-git-dir)/worktrees/g5/" "${LK_FAKE_GD}/"
+printf '%s\n' "${LK_EVIL}" > "${LK_FAKE_GD}/commondir"
+printf 'gitdir: %s\n' "${LK_FAKE_GD}" > "${LK_ROOMS}/g5/.git"
+printf '2\n' > "${LK_ROOMS}/g5/f.txt"
+
+run_lk() { # <cwd> [引数...]。終了コードは LK_RC に入る
+  local cwd="$1"; shift
+  LK_RC=0
+  LK_OUT=$(cd "${cwd}" && env -u REAPER_WORKTREES_DIR \
+    REAPER_ACTIVE_WORK_FILE="${FAKE_ACTIVE_WORK}" \
+    REAPER_REPO_NAME="test/test" \
+    REAPER_SKIP_FETCH=1 \
+    REAPER_LOCK_DIR="${LK_LOCK}" \
+    bash "${REAPER}" "$@" 2>&1) || LK_RC=$?
+}
+lk_in_mismatch() { # <ブランチ> : 「git の繋がりが本店と合わない」の欄に入っているか
+  echo "${LK_OUT}" | sed -n '/git の繋がりが本店と合わない/,/^$/p' | grep -q "$1"
+}
+
+run_lk "${LK_MAIN}"
+echo ""
+echo "=== テスト G4〜G6 本番の走査 dry-run 出力 ==="
+echo "${LK_OUT}"
+if [ "${LK_RC}" -eq 0 ] && echo "${LK_OUT}" | grep -q "=== reaper 結果 ==="; then
+  echo "✅ PASS [G4-6 前提]: 本番の走査が終了コード 0 で最後まで動いた（ロックで飛ばされていない）"
+  PASS=$(( PASS + 1 ))
+else
+  echo "❌ FAIL [G4-6 前提]: 終了コード=${LK_RC}"
+  FAIL=$(( FAIL + 1 ))
+fi
+if [ ! -e "${LK_MARK}" ]; then
+  echo "✅ PASS [G4]: reaper の dry-run で印の台本が動きませんでした（commondir 偽装）"
+  PASS=$(( PASS + 1 ))
+else
+  echo "❌ FAIL [G4]: reaper の dry-run で印の台本が動きました"
+  FAIL=$(( FAIL + 1 ))
+fi
+rm -f "${LK_MARK}"
+if lk_in_mismatch "${BRANCH_G4}"; then
+  echo "✅ PASS [G4-合わない欄]: 偽の commondir の部屋が「git の繋がりが本店と合わない」に入った"
+  PASS=$(( PASS + 1 ))
+else
+  echo "❌ FAIL [G4-合わない欄]: 入っていません"
+  FAIL=$(( FAIL + 1 ))
+fi
+assert_not_in_delete "G4 偽の commondir の部屋は削除候補に入らない" "${BRANCH_G4}" "${LK_OUT}"
+if lk_in_mismatch "${BRANCH_G5}"; then
+  echo "✅ PASS [G5-合わない欄]: 偽の gitdir の部屋が「git の繋がりが本店と合わない」に入った"
+  PASS=$(( PASS + 1 ))
+else
+  echo "❌ FAIL [G5-合わない欄]: 入っていません"
+  FAIL=$(( FAIL + 1 ))
+fi
+assert_not_in_delete "G5 偽の gitdir の部屋は削除候補に入らない" "${BRANCH_G5}" "${LK_OUT}"
+if ! lk_in_mismatch "${BRANCH_G6}"; then
+  echo "✅ PASS [G6-合わない欄に入らない]: 正しい worktree は「合わない」に入っていない"
+  PASS=$(( PASS + 1 ))
+else
+  echo "❌ FAIL [G6-合わない欄に入らない]: 正しい worktree が「合わない」に入った"
+  FAIL=$(( FAIL + 1 ))
+fi
+assert_in_delete "G6 正しい worktree は今の判定どおり（DONE+未保存なしは削除候補）" "${BRANCH_G6}" "${LK_OUT}"
+
+# G9: cwd が worktree（正しい G6）→ 終了コード 1・何も消さない
+run_lk "${LK_ROOMS}/g6"
+if [ "${LK_RC}" -eq 1 ] && echo "${LK_OUT}" | grep -q "何も消さない" && ! echo "${LK_OUT}" | grep -q "削除対象"; then
+  echo "✅ PASS [G9]: cwd が worktree のとき、終了コード 1・「何も消さない」で終わりました"
+  PASS=$(( PASS + 1 ))
+else
+  echo "❌ FAIL [G9]: 終了コード=${LK_RC}"
+  echo "${LK_OUT}" | sed 's/^/    /'
+  FAIL=$(( FAIL + 1 ))
+fi
+
+# G7: 元のリポジトリの .git がシンボリックリンク → 終了コード 1・何も消さない
+LK_LINKMAIN="${TMPDIR_TEST}/linkcheck-symlink-${RANDOM}${RANDOM}"
+mkdir -p "${LK_LINKMAIN}"
+ln -s "${LK_MAIN}/.git" "${LK_LINKMAIN}/.git"
+run_lk "${LK_LINKMAIN}"
+if [ "${LK_RC}" -eq 1 ] && echo "${LK_OUT}" | grep -q "何も消さない" && ! echo "${LK_OUT}" | grep -q "削除対象"; then
+  echo "✅ PASS [G7]: 本店の .git がシンボリックリンクのとき、終了コード 1・何も消さずに終わりました"
+  PASS=$(( PASS + 1 ))
+else
+  echo "❌ FAIL [G7]: 終了コード=${LK_RC}"
+  echo "${LK_OUT}" | sed 's/^/    /'
+  FAIL=$(( FAIL + 1 ))
+fi
+
+# G8: 本店の .git/commondir を偽の置き場へ。:66・:70 の rev-parse で命令が動かないこと
+printf '2\n' > "${LK_MAIN}/f.txt"
+printf '%s\n' "${LK_EVIL}" > "${LK_MAIN}/.git/commondir"
+rm -f "${LK_MARK}"
+git -C "${LK_MAIN}" -c core.fsmonitor=false -c core.hooksPath=/dev/null diff --no-ext-diff --no-textconv --ignore-submodules=all --numstat >/dev/null 2>&1 || true
+if [ -e "${LK_MARK}" ]; then
+  echo "✅ PASS [G8-対照]: 本店の commondir を偽の置き場に向けると、上書き付きの git diff でも印ができる（仕込みが効く作りだと確認）"
+  PASS=$(( PASS + 1 ))
+else
+  echo "❌ FAIL [G8-対照]: 印ができません（この作りでは filter が呼ばれない）"
+  FAIL=$(( FAIL + 1 ))
+fi
+rm -f "${LK_MARK}"
+run_lk "${LK_MAIN}"
+rm -f "${LK_MAIN}/.git/commondir"
+printf '1\n' > "${LK_MAIN}/f.txt"
+if [ "${LK_RC}" -eq 1 ] && echo "${LK_OUT}" | grep -q "何も消さない" && ! echo "${LK_OUT}" | grep -q "削除対象"; then
+  echo "✅ PASS [G8]: 本店の commondir が仕込まれているとき、終了コード 1・何も消さずに終わりました"
+  PASS=$(( PASS + 1 ))
+else
+  echo "❌ FAIL [G8]: 終了コード=${LK_RC}"
+  echo "${LK_OUT}" | sed 's/^/    /'
+  FAIL=$(( FAIL + 1 ))
+fi
+if [ ! -e "${LK_MARK}" ]; then
+  echo "✅ PASS [G8-印]: reaper の rev-parse 段で印の台本が動きませんでした"
+  PASS=$(( PASS + 1 ))
+else
+  echo "❌ FAIL [G8-印]: reaper の rev-parse 段で印の台本が動きました"
+  FAIL=$(( FAIL + 1 ))
+fi
+rm -f "${LK_MARK}"
 
 # ── 結果 ────────────────────────────────────────────────────────────────────
 echo ""

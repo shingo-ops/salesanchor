@@ -107,8 +107,8 @@ export default function PriorityScoreOverride({ leadId, currentScore, onUpdated 
                 >
                   {t("common.cancel")}
                 </Button>
-                <Button type="submit" variant="primary" disabled={saving}>
-                  {saving ? t("common.saving") : t("common.save")}
+                <Button loading={saving} type="submit" variant="primary" disabled={saving}>
+                  {t("common.save")}
                 </Button>
               </div>
             </form>

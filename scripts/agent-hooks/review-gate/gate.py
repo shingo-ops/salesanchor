@@ -46,7 +46,8 @@ MAX_DEPTH = 5
 
 HEAD_MSG = ("review-gate: PR #%s の今の HEAD %s に Opus 審査役の APPROVE がありません。"
             "Opus の審査役（subagent_type: reviewer）を起動し、報告の最後の行に"
-            "「VERDICT: APPROVE on <40桁sha> PR #%s」を書かせてください。")
+            "「VERDICT: APPROVE on <40桁sha> PR #%s」を書かせてください。"
+            "別のリポジトリの PR なら、行の末尾に「 repo %s/%s」を足させてください。")
 
 
 class Block(Exception):
@@ -482,7 +483,7 @@ def resolve(ctx):
         except Exception:
             ok = False
         if not ok:
-            deny(HEAD_MSG % (c["n"], head[:9], c["n"]), pr=c["n"], head=head, kind=c["kind"])
+            deny(HEAD_MSG % (c["n"], head[:9], c["n"], owner, repo), pr=c["n"], head=head, kind=c["kind"])
         if c["auto"] and c["match_head"] != head:
             deny("review-gate: --auto は --match-head-commit <今の HEAD 40桁> と一緒でなければ使えません"
                  "（PR #%s の HEAD %s）。Opus の審査役の APPROVE 済みの HEAD を指定してください。"

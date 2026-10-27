@@ -19,6 +19,14 @@
 
 set -u
 
+# ── 作業場所に向ける git の守り（ADR-1039）。読めなければ何も消さずに終わる ──────
+# shellcheck source=scripts/git-safe.sh
+if ! source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/git-safe.sh" 2>/dev/null || [ -z "${GIT_SAFE_ARGS+x}" ]; then
+  echo "[disk-janitor] git の守りを読めない（scripts/git-safe.sh）。何も消さずに終了します。" >&2
+  # shellcheck disable=SC2317  # source されたときは return、直接実行なら exit
+  return 1 2>/dev/null || exit 1
+fi
+
 # ── 設定（1か所）─────────────────────────────────────────────────────────────
 dj_config() {
   local home_dir="${HOME:-/Users/tanizawashingo}"
@@ -287,12 +295,25 @@ dj_wt_unused() { # dj_wt_unused <wt>: 使っていないなら 0。理由は DJ_
       -o -name coverage -o -name storybook-static -o -name test-results -o -name playwright-report -o -name .git \) -prune \
       -o -type f -mtime "-${DJ_STALE_DAYS}" -print -quit 2>/dev/null)"
   if [ -n "${recent}" ]; then DJ_WT_REASON="${DJ_STALE_DAYS}日以内に更新されたファイルあり"; return 1; fi
-  last_ct="$(git -C "${wt}" log -1 --format=%ct 2>/dev/null)"
+  last_ct="$(git "${GIT_SAFE_ARGS[@]}" -C "${wt}" log -1 --format=%ct 2>/dev/null)"
   case "${last_ct}" in ''|*[!0-9]*) DJ_WT_REASON="最終コミット時刻を取得できない（残す）"; return 1 ;; esac
   now="$(date +%s)"
   cutoff=$(( now - DJ_STALE_DAYS * 86400 ))
   if [ "${last_ct}" -ge "${cutoff}" ]; then DJ_WT_REASON="最終コミットが${DJ_STALE_DAYS}日以内"; return 1; fi
   return 0
+}
+
+# 照らす元のリポジトリ（DJ_ROOT_SALESANCHOR と DJ_REPOS の各行のパス）のどれか1つと git の繋がりが合えば 0
+dj_link_known() { # <作業場所>
+  local wt="$1" main rpath _w _b
+  DJ_LINK_REASON="照らす元のリポジトリが無い"
+  while IFS= read -r main; do
+    [ -n "${main}" ] || continue
+    [ -d "${main}" ] || continue
+    if git_safe_link_ok "${wt}" "${main}"; then return 0; fi
+    DJ_LINK_REASON="${GIT_SAFE_LINK_REASON}"
+  done < <({ printf '%s\n' "${DJ_ROOT_SALESANCHOR}"; while IFS='|' read -r rpath _w _b; do printf '%s\n' "${rpath}"; done <<<"${DJ_REPOS}"; })
+  return 1
 }
 
 dj_rule_r2() {
@@ -317,6 +338,11 @@ dj_rule_r2() {
         cands+=("${nm}")
       done
       [ "${#cands[@]}" -gt 0 ] || continue
+      # ADR-1039 便2b-2: git の繋がりが、照らす元のリポジトリのどれとも合わない作業場所は残す
+      if ! dj_link_known "${wt}"; then
+        for c in "${cands[@]}"; do dj_skip "${c}" "git の繋がりが知っている元のリポジトリと合わない（残す）: ${DJ_LINK_REASON}"; done
+        continue
+      fi
       if ! dj_wt_unused "${wt}"; then
         for c in "${cands[@]}"; do dj_skip "${c}" "${DJ_WT_REASON}"; done
         continue
@@ -386,7 +412,10 @@ dj_rule_r4() {
   while IFS='|' read -r path want base; do
     [ -n "${path}" ] || continue
     if [ ! -d "${path}" ]; then dj_skip "${path}" "リポジトリが無い"; continue; fi
-    url="$(git -C "${path}" remote get-url origin 2>/dev/null)"
+    if ! git_safe_link_ok "${path}" "${path}"; then
+      dj_skip "${path}" "git の繋がりを確かめられない（残す）: ${GIT_SAFE_LINK_REASON}"; continue
+    fi
+    url="$(git "${GIT_SAFE_ARGS[@]}" -C "${path}" remote get-url origin 2>/dev/null)"
     got="$(printf '%s\n' "${url}" | sed -E 's#\.git$##; s#^.*[:/]([^/:]+/[^/:]+)$#\1#')"
     if [ -z "${url}" ] || [ "${got}" != "${want}" ]; then
       dj_skip "${path}" "origin が想定と違う（想定 ${want}、実測 ${got:-取得できない}）"; continue

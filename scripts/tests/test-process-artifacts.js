@@ -158,6 +158,10 @@ test('ADR-1024 docker-compose.ai-reader.yml は dangerous 区分', () => {
   assert.strictEqual(classifyFile('docker-compose.ai-reader.yml'), 'dangerous');
 });
 
+test('ADR-1042 docker-compose.ai-reader-http.yml は dangerous 区分', () => {
+  assert.strictEqual(classifyFile('docker-compose.ai-reader-http.yml'), 'dangerous');
+});
+
 test('backend/app/opsx/ は dangerous にならない（real-code）', () => {
   assert.strictEqual(classifyFile('backend/app/opsx/a.py'), 'real-code');
 });

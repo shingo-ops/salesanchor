@@ -114,12 +114,12 @@ export default function DiscordAnnouncePage() {
         {sent && <p className="text-sm text-green-600">{t("discordAnnounce.sent")}</p>}
 
         {canEdit && (
-          <Button variant="primary" size="md"
+          <Button loading={sending} variant="primary" size="md"
             onClick={handleSend}
             disabled={sending || !channelId.trim() || !message.trim()}
 
           >
-            {sending ? t("discordAnnounce.sending") : t("discordAnnounce.send")}
+            {t("discordAnnounce.send")}
           </Button>
         )}
       </div>

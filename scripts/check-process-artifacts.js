@@ -124,6 +124,7 @@ const DANGEROUS_PATTERNS = [
   // ADR-1024 読み取り道の台本・compose（変更に GO 記録を要求）
   /^backend\/app\/ops\//,
   /^docker-compose\.ai-reader\.yml$/,
+  /^docker-compose\.ai-reader-http\.yml$/,  // ADR-1042 クラウド読み取り窓口
 ];
 
 const REAL_CODE_PATTERNS = [
@@ -352,7 +353,7 @@ function validateGORecord(goRecord, prNumber, { requiresPoOnly = false } = {}) {
       '❌ PR本文に「### GO記録」セクションがありません',
       '   → 危険変更はマージ前にチャットで「3行サマリ＋バックアップ確認」をPOに提示し、',
       '     「GO #<PR番号>」を受領してからPR本文の「### GO記録」セクションに転記してください',
-      '   → 詳細: CLAUDE.md §ブランチ運用ルール',
+      '   → 詳細: docs/specs/branch-operations/README.md §8',
     ];
   }
 

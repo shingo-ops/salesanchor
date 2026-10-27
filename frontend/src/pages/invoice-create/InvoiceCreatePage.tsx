@@ -436,7 +436,7 @@ export default function InvoiceCreatePage() {
 
           <div className="form-actions">
             <Button type="button" variant="secondary" size="md" onClick={() => navigate("/invoices")}>{t("common.cancel")}</Button>
-            <Button variant="primary" size="md" type="submit" disabled={saving}>{saving ? t("common.saving") : t("invoices.createBtn")}</Button>
+            <Button loading={saving} variant="primary" size="md" type="submit" disabled={saving}>{t("invoices.createBtn")}</Button>
           </div>
         </form>
       )}

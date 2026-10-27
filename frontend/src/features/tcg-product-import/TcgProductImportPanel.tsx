@@ -80,7 +80,7 @@ export function TcgProductImportPanel({ onDone }: { onDone: () => void }) {
         <TextField type="file" accept=".csv,text/csv" label={t("productCsv.file")} disabled={busy} onChange={e => select(e.target.files?.[0] ?? null)} />
         {file && <p>{file.name}</p>}
       </section>
-      <ContentToolbar left={<HeaderButton variant="secondary" onClick={onDone} disabled={busy}>{t("productCsv.back")}</HeaderButton>} right={<HeaderButton variant="primary" onClick={() => void review()} disabled={!file || busy}>{busy ? t("common.loading") : t("productCsv.review")}</HeaderButton>} />
+      <ContentToolbar left={<HeaderButton variant="secondary" onClick={onDone} disabled={busy}>{t("productCsv.back")}</HeaderButton>} right={<HeaderButton loading={busy} variant="primary" onClick={() => void review()} disabled={!file || busy}>{t("productCsv.review")}</HeaderButton>} />
     </>}
   </>;
 }

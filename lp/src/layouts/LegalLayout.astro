@@ -9,7 +9,7 @@ export interface Props {
   noindex?: boolean;
 }
 
-const { title, description, subtitle, canonical, noindex = false } = Astro.props;
+const { title, description, subtitle, canonical, noindex = true } = Astro.props;
 ---
 
 <BaseLayout title={title} description={description} canonical={canonical} noindex={noindex}>

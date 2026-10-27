@@ -212,7 +212,8 @@ describe('staff form Button migration with real UI preferences provider', () => 
     fireEvent.click(target);
     expect(target.disabled).toBe(true);
     expect(cancelTarget.disabled).toBe(true);
-    expect(target.textContent).toBe(tr('common.submitting'));
+    expect(target.getAttribute('aria-busy')).toBe('true');
+    expect(target.textContent).toBe(tr('common.register'));
     fireEvent.click(target); fireEvent.click(cancelTarget);
     if (!target.form) throw new Error('Missing native form');
     fireEvent.submit(target.form);

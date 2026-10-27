@@ -5,6 +5,7 @@ set -u
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$HERE/../.." && pwd)"
 export MRR_RULES_FILE="${MRR_RULES_FILE:-$ROOT/docs/specs/product-master/registration-rules.md}"
+export CLAUDE_PROJECT_DIR=/repo
 G="$HERE/master-register-rules-guard.py"
 ACK="$(python3 -c 'import hashlib,sys;print(hashlib.sha256(open(sys.argv[1],"rb").read()).hexdigest()[:8])' "$MRR_RULES_FILE")"
 FAIL=0
@@ -75,4 +76,26 @@ for P in \
   O="$(mk UserPromptSubmit x x "$P" | python3 "$G")"
   echo "$O" | grep -q '"additionalContext"' && echo "$O" | grep -q "$RULES_HEAD"; check "T16-18 出る: $P" $?
 done
+# T19〜T21: 調査記録の置き場の免除（doc-agenda-nav 段1b。docs/handoff/doc-agenda-nav/card-stage1b.md §4-2）
+O="$(mk PreToolUse Write content 'create_product(x) の説明を引用したメモ' "$HOME/CC報告ファイル-keep/x.md" | python3 "$G")"
+[ -z "$O" ]; check "T19 記録置き場(keep)への Write は素通り" $?
+O="$(mk PreToolUse Write content 'create_product(x) の説明を引用したメモ' /tmp/CC報告ファイル/x.md | python3 "$G")"
+[ -z "$O" ]; check "T20 記録置き場(tmp)への Write は素通り" $?
+O="$(mk PreToolUse Bash command 'python3 /tmp/CC報告ファイル/x.py create_product(x)' | python3 "$G")"
+echo "$O" | grep -q '"permissionDecision": "deny"'; check "T21 Bash の登録コマンドは止まる" $?
+# T22〜T28: 免除は決まった場所で始まるときだけ（doc-agenda-nav 段1c。docs/handoff/doc-agenda-nav/card-stage1c.md §4-4）
+O="$(mk PreToolUse Write content 'create_product(x)' "$HOME/x/docs/a.py" | python3 "$G")"
+echo "$O" | grep -q '"permissionDecision": "deny"'; check "T22 リポジトリの外の docs は止まる" $?
+O="$(mk PreToolUse Write content 'create_product(x)' /tmp/CC報告ファイル/x.py | python3 "$G")"
+echo "$O" | grep -q '"permissionDecision": "deny"'; check "T23 記録置き場の .py は止まる" $?
+O="$(mk PreToolUse Write content 'create_product(x)' "$HOME/worktrees/salesanchor/release-a/docs/a.md" | python3 "$G")"
+[ -z "$O" ]; check "T24 作業場所の docs は素通り" $?
+O="$(mk PreToolUse Write content 'create_product(x)' /repo/backend/../../tmp/a.py | python3 "$G")"
+echo "$O" | grep -q '"permissionDecision": "deny"'; check "T25 .. で外へ出るパスは止まる" $?
+O="$(mk PreToolUse Write content 'create_product(x) の説明を引用したメモ' /private/tmp/CC報告ファイル/x.md | python3 "$G")"
+[ -z "$O" ]; check "T26 記録置き場(/private/tmp)への .md は素通り" $?
+O="$(mk PreToolUse Write content 'create_product(x)' backend/a.py | python3 "$G")"
+echo "$O" | grep -q '"permissionDecision": "deny"'; check "T27 絶対パスでないものは止まる" $?
+O="$(mk PreToolUse Write content 'create_product(x)' /repo/backend | python3 "$G")"
+echo "$O" | grep -q '"permissionDecision": "deny"'; check "T28 段の名前そのもの(下に何も無い)は止まる" $?
 exit $FAIL

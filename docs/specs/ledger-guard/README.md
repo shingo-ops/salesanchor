@@ -10,6 +10,7 @@
 - 第1弾の差分設計: [design-phase1.md](./design-phase1.md)
 - ガード配布原本: [artifacts/worktree-only-guard.v2.sh](./artifacts/worktree-only-guard.v2.sh)
 - 定点観測台帳: [track-record.md](./track-record.md)
+- design G2 — 本店main以外警告（差分設計）: [design-g2.md](./design-g2.md)
 - ステータス: 第1弾適用済み・**KGI-G1達成（2026-07-04実測・6項目全○）**。
   適用は手作業カード（ホーム側・PR不可のため。.bak-20260704で即時ロールバック可）。
   次: G2（main以外警告・リポ内小便）→ 第2弾（書き先分割・設計から）。

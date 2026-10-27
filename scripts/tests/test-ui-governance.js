@@ -18,6 +18,9 @@ const {
   countCheckbox,
   countRadio,
   countLoadingText,
+  countLoadingTernary,
+  LOADING_VERBS,
+  splitTargets,
   countAll,
   isValidUiAllow,
 } = require('../check-ui-governance');
@@ -349,6 +352,56 @@ assert(
 );
 assert('T43: t("common.save") は0件', countLoadingText('{t("common.save")}'), 0);
 assert('T44: countAll の戻りに loadingText がある', countAll('<p>{t("common.loading")}</p>').loadingText, 1);
+
+// T45-: ボタン等の言葉を読み込み中に入れ替える三項（loadingTernary）
+const lt = countLoadingTernary;
+assert('T45: (A) saving ? t(common.saving) : t(common.save) は1件', lt('<Button>{saving ? t("common.saving") : t("common.save")}</Button>'), 1);
+assert('T46: (A) 逆順 t(common.save) : t(common.saving) は1件', lt('<Button>{saving ? t("common.save") : t("common.saving")}</Button>'), 1);
+assert('T47: (B) t(saving ? "productDetail.saving" : "productDetail.save") は1件', lt('{t(saving ? "productDetail.saving" : "productDetail.save")}'), 1);
+assert('T48: (B) 逆順 t(saving ? "x.save" : "x.saving") は1件', lt('{t(saving ? "x.save" : "x.saving")}'), 1);
+assert('T49: (B) テンプレート文字列 `${s}.saving` は1件', lt('{t(saving ? `${s}.saving` : "common.save")}'), 1);
+assert('T50: (C) fetching ? "..." : t(x.fetchNow) は1件', lt('{fetching ? "..." : t("x.fetchNow")}'), 1);
+assert('T51: (C) 三点リーダー "…" も1件', lt('{fetching ? t("x.fetchNow") : "…"}'), 1);
+assert('T52: camel の t("discord.discordRoleSyncing") は1件', lt('{busy ? t("discord.discordRoleSyncing") : t("discord.discordRoleSync")}'), 1);
+assert('T53: lvStep7Loading（数字のあとの大文字）は1件', lt('{busy ? t("carrierIntegration.lvStep7Loading") : t("carrierIntegration.lvStep7Button")}'), 1);
+assert('T54: 改行をまたぐ三項も1件', lt('{saving\n  ? t("common.saving")\n  : t("common.save")}'), 1);
+assert('T55: 規則3 の結果 existing ? update : register は0件', lt('{existing ? t("common.update") : t("common.register")}'), 0);
+assert('T56: prop confirmLabel={x ? t(a.disconnecting) : t(a.disconnect)} は0件', lt('<Dialog confirmLabel={x ? t("a.disconnecting") : t("a.disconnect")} />'), 0);
+assert('T57: prop label={loading ? t(common.loading) : undefined} は0件', lt('<Block label={loading ? t("common.loading") : undefined} />'), 0);
+assert('T58: shipping / billing は0件', lt('{shipping ? t("a.shipping") : t("a.billing")}'), 0);
+assert('T59: pending ? t(a.pending) : null は0件', lt('{pending ? t("a.pending") : null}'), 0);
+assert('T60: 直前行に有効な ui-allow があれば0件', lt('{/* ui-allow: 理由 (#4762) */}\n{saving ? t("common.saving") : t("common.save")}'), 0);
+assert('T61: オブジェクトのキー { a: x, b: t(common.saving) } は0件', lt('const o = { a: x, b: t("common.saving") };'), 0);
+assert('T62: 三項でない t(common.saving) 単独は0件', lt('<p>{t("common.saving")}</p>'), 0);
+assert('T63: 2つの三項は2件', lt('{a ? t("x.saving") : t("x.save")}{b ? "..." : t("y.go")}'), 2);
+assert('T64: countAll の戻りに loadingTernary がある', countAll('{saving ? t("common.saving") : t("common.save")}').loadingTernary, 1);
+assert('T65: LOADING_VERBS は saving を含み shipping を含まない', LOADING_VERBS.includes('saving') && !LOADING_VERBS.includes('shipping'), true);
+
+// T66-: 範囲の振り分け（features/ だけが変わったら loadingTernary のみ）
+const fileOf = (p) => ({ headPath: p, basePath: p });
+const sp1 = splitTargets([fileOf('frontend/src/features/a/B.tsx')]);
+assert('T66: features/ のみの変更は既存6種別の対象0件', sp1.legacyFiles.length, 0);
+assert('T67: features/ のみの変更は loadingTernary の対象1件', sp1.loadingFiles.length, 1);
+const sp2 = splitTargets([fileOf('frontend/src/pages/P.tsx'), fileOf('frontend/src/components/C.tsx')]);
+assert('T68: pages/ は既存6種別の対象に入る', sp2.legacyFiles.length, 1);
+assert('T69: pages/ と components/ は loadingTernary の対象2件', sp2.loadingFiles.length, 2);
+assert('T70: .test.tsx は loadingTernary の対象外', splitTargets([fileOf('frontend/src/components/C.test.tsx')]).loadingFiles.length, 0);
+assert('T71: pages/ 外のほかの場所は対象外', splitTargets([fileOf('frontend/src/hooks/H.tsx')]).loadingFiles.length, 0);
+
+// T72-: 取りこぼす4つの書き方（便8c）
+assert('T72: (1) JSX の地の文の \' のあとの三項は1件', lt('<p>Don\'t {saving ? t("common.saving") : t("common.save")} it\'s</p>'), 1);
+assert('T73: (1) \' が2つ以上ある段落の中の三項は1件', lt('<p>It\'s Bob\'s and we don\'t {saving ? t("common.saving") : t("common.save")} you\'re</p>'), 1);
+assert('T74: (2) テンプレートの入れ子は1件', lt('{t(saving ? `${a ? `x` : `y`}.saving` : "common.save")}'), 1);
+assert('T75: (3) t の第2引数 {saving ? t(..., { n }) : t(..)} は1件', lt('{saving ? t("common.saving", { n }) : t("common.save")}'), 1);
+assert('T76: (3) 逆順 {saving ? t(save) : t(saving, { n })} は1件', lt('{saving ? t("common.save") : t("common.saving", { n })}'), 1);
+assert('T77: (4) i18n.t の (A) 形は1件', lt('{saving ? i18n.t("common.saving") : i18n.t("common.save")}'), 1);
+assert('T78: (4) i18n.t の (B) 形は1件', lt('{i18n.t(saving ? "common.saving" : "common.save")}'), 1);
+assert('T79: 三項のない地の文 Don\'t stop. It\'s fine. は0件', lt('<p>Don\'t stop. It\'s fine.</p>'), 0);
+assert('T80: 属性値 placeholder="Don\'t" は0件', lt('<input placeholder="Don\'t" />'), 0);
+assert('T81: t の第2引数があっても読込キーでなければ0件', lt('{x ? t("common.save", { n }) : t("common.cancel")}'), 0);
+assert('T82: prop の値の i18n.t（confirmLabel=）は0件', lt('<Dialog confirmLabel={x ? i18n.t("a.disconnecting") : i18n.t("a.disconnect")} />'), 0);
+assert('T83: obj.t("common.saving") を使った三項は0件', lt('{x ? obj.t("common.saving") : obj.t("common.save")}'), 0);
+assert('T84: ui-allow 付きの (3) は0件', lt('{/* ui-allow: 理由 (#4762) */}\n{saving ? t("common.saving", { n }) : t("common.save")}'), 0);
 
 // ---------------------------------------------------------------------------
 // 結果サマリ

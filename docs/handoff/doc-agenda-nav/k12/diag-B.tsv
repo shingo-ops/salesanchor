@@ -1,0 +1,11 @@
+題	回	開いた	INDEX	tool_use数	total_cost_usd	終了コード	最終行type	T10自動読込(system/user行に文字列)
+T1	1	0	0	6	0.2355472	0	result	
+T2	1	0	0	1	0.1682683	0	result	
+T3	1	0	0	0	0.1596974	0	result	
+T4	1	0	0	0	0.1577674	0	result	
+T5	1	0	0	1	0.1656781	0	result	
+T6	1	1	1	4	0.21686960000000002	0	result	
+T7	1	0	0	4	0.2020013	0	result	
+T8	1	0	0	3	0.2061107	0	result	
+T9	1	0	0	0	0.15742540000000002	0	result	
+T10	1	0	0	1	0.16585650000000002	0	result	0

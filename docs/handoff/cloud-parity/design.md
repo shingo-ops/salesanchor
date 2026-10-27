@@ -35,7 +35,7 @@ PO 2026-10-23「今まで通りopusには権限委譲するので決まったこ
 - japanese-reply-guard（#14）→ K5。
 - 決まりの注入（SessionStart）→ K5。
 - master-register-rules-guard（#6, #40）: すでにリポジトリ版がある。直書きのパスを `$CLAUDE_PROJECT_DIR` に置き換えて配線する。
-- python-version-guard（#43）、subagent-bash-wait-guard（#47）、card-lint-hook（#4）。
+- python-version-guard（#43）、subagent-bash-wait-guard（#47）、card-lint-hook（#4）。 → 便2（card-2.md）
 移さない:
 - worktree-only-guard（#20, 26, 28, 46）: commit/push の止めは、リポジトリの husky がクラウドでも効く（recon §3）。重ねない。
 - agent-console 関連 19件、音声 3件、別窓の作業場所争い 6件、mac-vm-guard（#44）、本店の写しの古さ警告（#48）、メモリ点検（#9）、許可拒否ログ（#17）、審査記録（#12）。

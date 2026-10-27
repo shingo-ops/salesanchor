@@ -97,4 +97,4 @@ cd frontend && npm run storybook   # → http://localhost:6006
 |---|---|
 | `docs/adr/ADR-067-design-token-enforcement.md` | トークン強制の全ルール・根拠 |
 | `docs/adr/ADR-073-design-system-kgi-rubric.md` | KGI 100% の定義と現状 |
-| `frontend/CLAUDE.md` | PageLayout / i18n / アイコンのルール |
+| `frontend/AGENTS.md` | PageLayout / i18n / アイコンのルール |

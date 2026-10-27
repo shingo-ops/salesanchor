@@ -10,6 +10,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { SelectControl } from "../../components/Select";
+import { Button } from "../../components/Button";
 import { TextareaControl } from "../../components/Textarea";
 import { TextFieldControl } from "../../components/TextField";
 
@@ -187,17 +188,17 @@ export function ManualRecordSection({ leadId, currentPlatform }: Props) {
         </div>
       )}
 
-      <button
+      <Button
         type="button"
-        className="manual-record-save-btn"
+        variant="primary"
+        size="md"
+        loading={saving}
         onClick={() => handleSave(false)}
         disabled={saving || !contentText.trim()}
         aria-label={t("inbox.manualRecord.save")}
       >
-        {saving
-          ? t("inbox.manualRecord.saving")
-          : t("inbox.manualRecord.save")}
-      </button>
+        {t("inbox.manualRecord.save")}
+      </Button>
     </div>
   );
 }

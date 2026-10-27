@@ -1,0 +1,986 @@
+#!/usr/bin/env python3
+"""confidential-quote-guard の受入試験。docs/handoff/confidential-quote-guard/design.md §4 を 1 行 1 試験にしたもの。
+
+使い方: python3 scripts/agent-hooks/confidential-quote-guard/tests/test_guard.py [guard.py のパス]
+  引数省略時は tests/ の一つ上の guard.py。install.sh は写した先の guard.py を渡して流す。
+
+本物の表・本物の記録には触れない。表は一時フォルダに作り物の原文で作る (CONFID_GUARD_DIR /
+CONFID_GUARD_EVENTS を一時フォルダへ向ける)。本物の原文・語句はこのファイルに入れない。
+最後に PASS n / FAIL m を出し、FAIL>0 なら exit 1。
+"""
+import json
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
+import time
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+GUARD = os.path.abspath(sys.argv[1]) if len(sys.argv) > 1 else os.path.join(os.path.dirname(HERE), "guard.py")
+
+# 作り物の語句だけ。仕入元の語句は入れない。
+FAKE_QUOTE = "テスト用のつくり語句ABCD"        # 原文にある・除外表に無い -> 止まる
+FAKE_QUOTE2 = "つくり語句EFGHの案内"            # 同上 (『』で使う)
+FAKE_STATUS = "つくり状態ダメージXYZ"          # 状態の写しにある
+FAKE_PRODUCT = "つくり商品名PQRS弾"            # 商品名の写しにある
+FAKE_ALLOW = "つくり一般語MNOPの言い方"        # 一般語の表にある
+FAKE_NOT_IN_CORPUS = "原文に無いつくり語句WXYZ"  # 原文に無い
+FAKE_SHORT = "つくり"                           # 3 文字
+FAKE_DIGITS = "2026-10-25 1,200"               # 数字と区切りだけ
+
+results = []
+T = tempfile.mkdtemp(prefix="cqg-test.")
+D = os.path.join(T, "tables")
+EV = os.path.join(T, "events.jsonl")
+os.makedirs(D)
+ORIGIN_ROOT = os.path.join(T, "origin")
+WORK = os.path.join(T, "work")
+OTHER = os.path.join(T, "other")
+NOMAIN = os.path.join(T, "nomain")
+
+
+def sh(*a, cwd=None):
+    r = subprocess.run(list(a), cwd=cwd, capture_output=True, text=True)
+    if r.returncode != 0:
+        raise RuntimeError("setup failed: %s %s" % (a, r.stderr[:200]))
+    return r.stdout
+
+
+def write(path, text):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(text)
+
+
+def make_tables(corpus_text=None, repos=("test/fake", "test/nomain")):
+    for f in os.listdir(D):
+        q = os.path.join(D, f)
+        shutil.rmtree(q) if os.path.isdir(q) else os.remove(q)
+    write(os.path.join(D, "raw", "msgs_1.tsv"),
+          corpus_text if corpus_text is not None else "\n".join(
+              ["1\t2026\t投稿 %s 在庫あり" % q for q in
+               (FAKE_QUOTE, FAKE_QUOTE2, FAKE_STATUS, FAKE_PRODUCT, FAKE_ALLOW, FAKE_SHORT)]) + "\n")
+    conf = ["# テスト用の置き場の表"] + ["repo: %s" % r for r in repos] + ["corpus: %s/raw/msgs_*.tsv" % D]
+    write(os.path.join(D, "confidential-corpus.conf"), "\n".join(conf) + "\n")
+    write(os.path.join(D, "status-words.txt"), FAKE_STATUS + "\n")
+    write(os.path.join(D, "product-names.txt"), FAKE_PRODUCT + "\n")
+    write(os.path.join(D, "confidential-allow.txt"), "# 語\t理由\n%s\tテスト用の一般語\n" % FAKE_ALLOW)
+
+
+def run(cmd, cwd=None, tool="Bash"):
+    env = dict(os.environ, CONFID_GUARD_DIR=D, CONFID_GUARD_EVENTS=EV, PYTHONDONTWRITEBYTECODE="1")
+    payload = {"tool_name": tool, "tool_input": {"command": cmd}, "cwd": cwd or WORK}
+    r = subprocess.run([sys.executable, GUARD], input=json.dumps(payload), capture_output=True, text=True, env=env)
+    return r.returncode, r.stderr
+
+
+def check(name, cmd, expect, cwd=None, tool="Bash"):
+    rc, err = run(cmd, cwd, tool)
+    ok = rc == expect
+    results.append(ok)
+    print("%s %-62s exit=%d (期待 %d) %s" % ("PASS" if ok else "FAIL", name, rc, expect, err.split(chr(10))[0][:48] if rc == 2 else ""))
+    if not ok:
+        print("     stderr: %s" % err.strip().replace("\n", " | ")[:300])
+    return rc, err
+
+
+def setup_repos():
+    os.makedirs(ORIGIN_ROOT)
+    bare = os.path.join(ORIGIN_ROOT, "test", "fake.git")
+    sh("git", "init", "-q", "--bare", "-b", "main", bare)
+    sh("git", "clone", "-q", bare, WORK)
+    for k, v in (("user.email", "t@example.com"), ("user.name", "t")):
+        sh("git", "config", k, v, cwd=WORK)
+    write(os.path.join(WORK, "README.md"), "base\n")
+    sh("git", "add", "-A", cwd=WORK)
+    sh("git", "commit", "-q", "-m", "base", cwd=WORK)
+    sh("git", "push", "-q", "origin", "main", cwd=WORK)
+    sh("git", "fetch", "-q", "origin", cwd=WORK)
+    # origin/main の無い repo (表に並んだ repo)
+    sh("git", "init", "-q", "-b", "main", NOMAIN)
+    sh("git", "remote", "add", "origin", "https://example.invalid/test/nomain.git", cwd=NOMAIN)
+    # 表に無い repo
+    sh("git", "init", "-q", "-b", "main", OTHER)
+    sh("git", "remote", "add", "origin", "https://example.invalid/test/other.git", cwd=OTHER)
+    for r in (NOMAIN, OTHER):
+        for k, v in (("user.email", "t@example.com"), ("user.name", "t")):
+            sh("git", "config", k, v, cwd=r)
+
+
+def branch_with(name, text, repo=None, checkout=True):
+    repo = repo or WORK
+    sh("git", "checkout", "-q", "-B", name, "origin/main", cwd=repo)
+    write(os.path.join(repo, "doc-%s.md" % name), text)
+    sh("git", "add", "-A", cwd=repo)
+    sh("git", "commit", "-q", "-m", name, cwd=repo)
+
+
+def P(ref="HEAD", path=None, flags="-u "):
+    """決まった形の push 命令。"""
+    return "git -C %s push %sorigin %s" % (path or WORK, flags, ref)
+
+
+def env_run(cmd, **extra):
+    env = dict(os.environ, CONFID_GUARD_DIR=D, CONFID_GUARD_EVENTS=EV, PYTHONDONTWRITEBYTECODE="1", **extra)
+    payload = {"tool_name": "Bash", "tool_input": {"command": cmd}, "cwd": WORK}
+    return subprocess.run([sys.executable, GUARD], input=json.dumps(payload), capture_output=True, text=True, env=env)
+
+
+def main():
+    setup_repos()
+    make_tables()
+    q = FAKE_QUOTE
+    hitbody = os.path.join(T, "hitbody.md")
+    cleanbody = os.path.join(T, "cleanbody.md")
+    write(hitbody, "確認します。「%s」\n" % q)
+    write(cleanbody, "確認します。「%s」\n" % FAKE_NOT_IN_CORPUS)
+    out = os.path.join(T, "o.txt")
+
+    print("== 1 push: 決まった形で、書き写しあり -> 止まる")
+    branch_with("hit", "# 設計\n- 「%s」と書いてある\n" % q)
+    check("T01 git -C <絶対> push -u origin HEAD", P(), 2, cwd=T)
+    rc, err = run(P(), T)
+    results.append("ABCD" in err and "doc-hit.md:2" in err)
+    print("%s %-62s" % ("PASS" if results[-1] else "FAIL", "T01b 止めた表示にファイル名と行番号と語句がある"))
+    check("T02 --set-upstream", P(flags="--set-upstream "), 2, cwd=T)
+    check("T03 -u なし", P(flags=""), 2, cwd=T)
+    branch_with("hit2", "- 『%s』\n" % FAKE_QUOTE2)
+    check("T04 『』の中も照らす", P(), 2, cwd=T)
+    branch_with("other-branch", "- 「%s」\n" % q)
+    branch_with("current-clean", "- 「%s」\n" % FAKE_NOT_IN_CORPUS)
+    check("T05 今は別ブランチ: ブランチ名で送るのを照らす", P("other-branch"), 2, cwd=T)
+    check("T06 存在しないブランチ名 -> 止まる", P("no-such-branch"), 2, cwd=T)
+    sh("git", "checkout", "-q", "other-branch", cwd=WORK)
+    check("T07 2>&1 つき", P() + " 2>&1", 2, cwd=T)
+    check("T08 > <絶対> つき", P() + " > " + out, 2, cwd=T)
+    check("T09 >> <絶対> 2>&1 つき", P() + " >> " + out + " 2>&1", 2, cwd=T)
+
+    print("== 2 push: 通る")
+    branch_with("clean", "- 「%s」\n" % FAKE_NOT_IN_CORPUS)
+    check("T10 原文に無い語句 -> 通る", P(), 0, cwd=T)
+    check("T10b 同 2>&1 / > file つき -> 通る", P() + " 2>&1 > " + out, 0, cwd=T)
+    branch_with("outside", "- %s と「の外」に書いた\n" % q)
+    check("T11 「」の外の書き写しは止めない", P(), 0, cwd=T)
+    branch_with("short", "- 「%s」\n" % FAKE_SHORT)
+    check("T12 4 文字未満は止めない", P(), 0, cwd=T)
+    branch_with("digits", "- 「%s」\n" % FAKE_DIGITS)
+    check("T13 数字と区切りだけは止めない", P(), 0, cwd=T)
+    check("T14 関係ないコマンドは通る", "ls -la", 0)
+    check("T14b git commit の文面に push の語があっても通る", 'git commit -m "fix: push の手順"', 0)
+    check("T14c git status は通る", "git status", 0)
+    check("T15 Bash 以外の道具は通る", P(), 0, tool="Edit")
+    for name, qt, label in (("st", FAKE_STATUS, "状態の写し"), ("pr", FAKE_PRODUCT, "商品名の写し"),
+                             ("al", FAKE_ALLOW, "一般語の表")):
+        branch_with("excl-" + name, "- 「%s」\n" % qt)
+        check("T16 除外表 (%s) にある語句は止めない" % label, P(), 0, cwd=T)
+
+    print("== 3 表が無い・古い・壊れている -> 止まる")
+    branch_with("hit", "- 「%s」\n" % q)
+    make_tables(corpus_text="")
+    check("T20 原文の置き場が空", P(), 2, cwd=T)
+    make_tables()
+    os.remove(os.path.join(D, "confidential-corpus.conf"))
+    check("T21 置き場の表が無い", P(), 2, cwd=T)
+    make_tables()
+    write(os.path.join(D, "confidential-corpus.conf"), "repo: test/fake\n")
+    check("T22 corpus: の行が無い", P(), 2, cwd=T)
+    make_tables()
+    write(os.path.join(D, "confidential-corpus.conf"), "repo: test/fake\ncorpus: %s/nothing/*.tsv\n" % D)
+    check("T23 置き場の行に当たるファイルが無い", P(), 2, cwd=T)
+    make_tables()
+    os.remove(os.path.join(D, "product-names.txt"))
+    check("T24 商品名の写しが無い", P(), 2, cwd=T)
+    make_tables()
+    branch_with("fresh", "- 「%s」\n" % FAKE_NOT_IN_CORPUS)
+    cf = os.path.join(D, "raw", "msgs_1.tsv")
+    old_t = time.time() - 3 * 86400
+    os.utime(cf, (old_t, old_t))
+    check("T25 写しが3日前 (上限2日) -> 止まる", P(), 2, cwd=T)
+    rc, err = run(P(), T)
+    results.append("古い" in err)
+    print("%s %-62s" % ("PASS" if results[-1] else "FAIL", "T25b 止めた理由に「古い」がある"))
+    check("T26 表に無い repo の push は写しが古くても通る", P(path=OTHER), 0, cwd=T)
+    for v in ("100", "nan", "inf", "-5", "abc", "0"):
+        r = env_run(P(), CONFID_CORPUS_MAX_AGE_DAYS=v)
+        results.append(r.returncode == 2)
+        print("%s %-62s exit=%d (期待 2)" % ("PASS" if results[-1] else "FAIL", "T27 上限の環境変数が %s でも2日のまま" % v, r.returncode))
+    new_t = time.time() - 1 * 86400
+    os.utime(cf, (new_t, new_t))
+    check("T28 写しが1日前 -> 通る", P(), 0, cwd=T)
+    make_tables()
+
+    print("== 4 場所の条件")
+    write(os.path.join(OTHER, "a.md"), "- 「%s」\n" % q)
+    sh("git", "add", "-A", cwd=OTHER)
+    sh("git", "commit", "-q", "-m", "x", cwd=OTHER)
+    check("T30 表に無い repo の push は通る", P(path=OTHER), 0, cwd=T)
+    write(os.path.join(NOMAIN, "a.md"), "x\n")
+    sh("git", "add", "-A", cwd=NOMAIN)
+    sh("git", "commit", "-q", "-m", "x", cwd=NOMAIN)
+    check("T31 表にある repo で origin/main が無い -> 止まる", P(path=NOMAIN), 2, cwd=T)
+    check("T32 パスが存在しない -> 止まる", P(path=os.path.join(T, "nonexistent")), 2, cwd=T)
+    plain = os.path.join(T, "plain")
+    os.makedirs(plain, exist_ok=True)
+    check("T33 git の repo でないパス -> 止まる", P(path=plain), 2, cwd=T)
+
+    print("== 5 決まりの外の push はすべて止まる (中身が clean でも)")
+    branch_with("clean5", "- 「%s」\n" % FAKE_NOT_IN_CORPUS)
+    sh("git", "checkout", "-q", "clean5", cwd=WORK)
+    W = WORK
+    bad = [
+        ("cd <絶対> && git push", "cd %s && git push" % W),
+        ("cd <絶対> && git push -u origin HEAD", "cd %s && git push -u origin HEAD" % W),
+        ("git push (引数なし)", "git push"),
+        ("git push origin HEAD (-C なし)", "git push origin HEAD"),
+        ("git push origin HEAD 2>&1 | tail", "git push origin HEAD 2>&1 | tail"),
+        ("git -C <絶対> push ... | tail", P() + " | tail -5"),
+        ("git -C <相対> push", "git -C rel push -u origin HEAD"),
+        ("git -C . push", "git -C . push -u origin HEAD"),
+        ("--force-with-lease", P(flags="--force-with-lease -u ")),
+        ("--force", P(flags="--force ")),
+        ("-f", P(flags="-f ")),
+        ("--no-verify", P(flags="--no-verify ")),
+        ("-n", P(flags="-n ")),
+        ("--mirror", P(flags="--mirror ")),
+        ("--all", "git -C %s push --all origin" % W),
+        ("--tags", P(flags="--tags ")),
+        ("--delete", "git -C %s push --delete origin x" % W),
+        ("origin :ref (削除)", "git -C %s push origin :x" % W),
+        ("origin HEAD:refs/heads/x", P("HEAD:refs/heads/x")),
+        ("origin +HEAD", P("+HEAD")),
+        ("refs 2 つ", "git -C %s push origin HEAD main" % W),
+        ("origin の後に ref なし", "git -C %s push origin" % W),
+        ("remote が origin でない", "git -C %s push upstream HEAD" % W),
+        ("ref が -で始まる", P("-x")),
+        ("ref に ..", P("a..b")),
+        ("GIT_DIR=… git push", "GIT_DIR=%s/.git git -C %s push -u origin HEAD" % (W, W)),
+        ("GIT_DIR=… git push (-C なし)", "GIT_DIR=%s/.git git push origin hit" % W),
+        ("export GIT_DIR=…; git push", "export GIT_DIR=%s/.git; git push origin hit" % W),
+        ("env X=1 git -C", "env X=1 " + P()),
+        ("絶対パスの git", "/usr/bin/git -C %s push -u origin HEAD" % W),
+        ("git -c core.hooksPath", "git -c core.hooksPath=/x -C %s push -u origin HEAD" % W),
+        ("--git-dir", "git --git-dir=%s/.git push origin HEAD" % W),
+        ("; で続ける", P() + "; echo ok"),
+        ("&& で続ける", P() + " && echo ok"),
+        ("|| で続ける", P() + " || echo ng"),
+        ("& で背景", P() + " &"),
+        ("| で渡す", P() + " | cat"),
+        ("改行で続ける", P() + "\necho ok"),
+        ("前に別命令 (改行)", "echo ok\n" + P()),
+        ("前に別命令 (&&)", "echo ok && " + P()),
+        ("$ を含む パス", "git -C $W push -u origin HEAD"),
+        ("二重引用符の $", 'git -C "$W" push -u origin HEAD'),
+        ("バッククォート", "git -C `pwd` push -u origin HEAD"),
+        ("$( )", "git -C $(pwd) push -u origin HEAD"),
+        ("heredoc", P() + " <<EOF\nx\nEOF"),
+        ("< で入力", P() + " < /dev/null"),
+        ("> 相対", P() + " > o.txt"),
+        ("&> ", P() + " &> " + out),
+        ("bash -c", "bash -c '%s'" % P()),
+        ("sh -c", 'sh -c "%s"' % P()),
+        ("eval", "eval '%s'" % P()),
+        ("xargs 風 (引用の中の git push)", "echo x | xargs -I{} %s" % P()),
+        ("読めない (引用が閉じない)", "git -C %s push -u origin 'HEAD" % W),
+        ("(subshell)", "(%s)" % P()),
+        ("{ }", "{ %s; }" % P()),
+    ]
+    for nm, c in bad:
+        rc, err = run(c, T)
+        ok = rc == 2 and ("git -C <worktree の絶対パス> push -u origin <ブランチ>" in err or "決まりの外" in err or "止めました" in err)
+        results.append(ok)
+        print("%s %-62s exit=%d (期待 2)" % ("PASS" if ok else "FAIL", "T40 " + nm, rc))
+    rc, err = run("cd %s && git push" % W, T)
+    results.append("単独で流してください" in err)
+    print("%s %-62s" % ("PASS" if results[-1] else "FAIL", "T40b 止めた理由に決まった形の案内がある"))
+
+    print("== 6 審査 (PR #4743) が使った形: すべて止まる")
+    C = "git commit"
+    probes = [
+        ("J1 heredoc の文に 'cd してから push を直す'", C + " -m \"$(cat <<'EOF'\nfix: 作業場所\n\ncd してから push を直す\nEOF\n)\" && git push -u origin HEAD"),
+        ("G1 heredoc の行 'cd /tmp'", C + " -m \"$(cat <<'EOF'\nfix\ncd /tmp\nEOF\n)\" && git push"),
+        ("G2 heredoc の行 'cd docs'", C + " -m \"$(cat <<'EOF'\nfix\ncd docs\nEOF\n)\" && git push"),
+        ("G3 echo 'x; cd /tmp' && git push", "echo 'x; cd /tmp' && git push"),
+        ("B1 cd ../nonexist; git push", "cd ../nonexist; git push"),
+        ("B2 cd /nonexist ; git push", "cd /nonexist ; git push"),
+        ("B3 cd -P . && git push", "cd -P . && git push"),
+        ("B4 cd -- . && git push", "cd -- . && git push"),
+        ("B5 cd -P <絶対> && git push", "cd -P %s && git push" % W),
+        ("A1 (cd OTHER && true) && git push", "(cd %s && true) && git push" % OTHER),
+        ("A3 (cd OTHER && ls) && git push", "(cd %s && ls) && git push" % OTHER),
+        ("C2 GIT_DIR=… git push origin hit", "GIT_DIR=%s/.git git push origin hit" % W),
+        ("C3 export GIT_DIR=…; git push origin hit", "export GIT_DIR=%s/.git; git push origin hit" % W),
+        ("E7 gh 本文の heredoc 'cd $W; pushd x' && git push",
+         "gh pr create --base main --body \"$(cat <<'EOF'\n手順: cd $W; pushd x\nEOF\n)\" && git push"),
+        ("E8 echo 'use; pushd' && git push", "echo 'use; pushd' && git push"),
+        ("H1 gh -b 'a <<b' 改行 gh -F file", "gh pr comment 1 -b 'use a <<b'\ngh pr comment 2 -F %s" % hitbody),
+        ("D1 cd ../w2 && gh --body-file 相対", "cd ../w2 && gh pr create --base main --body-file body.md"),
+        ("D2 cd \"$W\" && gh --body-file 相対", 'cd "$W" && gh pr create --base main --body-file body.md'),
+        ("D3 cd ../w2 && gh --body \"$(cat body.md)\"", 'cd ../w2 && gh pr create --base main --body "$(cat body.md)"'),
+        ("D4 cd ../w2 && gh -F - < body.md", "cd ../w2 && gh pr comment 1 -F - < body.md"),
+        ("D5 cd ../w2 && gh --body-file 相対 (中身なし)", "cd ../w2 && gh pr create --base main --body-file body.md"),
+        ("F13 cat file | gh -F /dev/stdin", "cat %s | gh pr comment 1 -F /dev/stdin" % cleanbody),
+        ("F14 python3 x.py | gh --body-file /dev/stdin", "python3 x.py | gh pr comment 1 --body-file /dev/stdin"),
+    ]
+    for nm, c in probes:
+        rc, err = run(c, T)
+        results.append(rc == 2)
+        print("%s %-62s exit=%d (期待 2)" % ("PASS" if rc == 2 else "FAIL", "P " + nm, rc))
+
+    print("== 7 gh の本文: 決まった形だけ照らして通す")
+    GHB = "gh pr create --base main --title t "
+    check("G01 (a) --body-file <絶対> 書き写しあり -> 止まる", GHB + "--body-file " + hitbody, 2)
+    check("G02 (a) -F <絶対> 書き写しあり -> 止まる", "gh pr comment 1 -F " + hitbody, 2)
+    check("G03 (a) --body-file=<絶対> 書き写しあり -> 止まる", GHB + "--body-file=" + hitbody, 2)
+    check("G04 (a) --body-file <絶対> 中身なし -> 通る", GHB + "--body-file " + cleanbody, 0)
+    check("G05 (a) -F <絶対> 中身なし -> 通る", "gh issue comment 1 -F " + cleanbody, 0)
+    check("G06 (b) --body '一重' 書き写しあり -> 止まる", GHB + "--body '「%s」'" % q, 2)
+    check("G07 (b) -b '一重' 書き写しあり -> 止まる", "gh pr comment 1 -b '「%s」'" % q, 2)
+    check("G08 (b) --body='一重' 書き写しあり -> 止まる", GHB + "--body='「%s」'" % q, 2)
+    check("G09 (b) 複数行の一重 書き写しあり -> 止まる", GHB + "--body '概要\n- 「%s」\n'" % q, 2)
+    check("G10 (b) --body '一重' 中身なし -> 通る", GHB + "--body '「%s」'" % FAKE_NOT_IN_CORPUS, 0)
+    check("G11 (b) -b '一重' 中身なし -> 通る", "gh pr comment 1 -b 'ok'", 0)
+    check("G12 (a) 後ろに 2>&1 / > <絶対> -> 通る", GHB + "--body-file " + cleanbody + " 2>&1 > " + out, 0)
+    check("G13 本文なしの gh pr edit (ラベルだけ) -> 通る", "gh pr edit 1 --add-label x", 0)
+    check("G14 gh pr view は対象外", "gh pr view 1 --json title", 0)
+    check("G15 gh api は対象外", "gh api repos/a/b/pulls", 0)
+    nb = [
+        ("相対パス", GHB + "--body-file body.md"),
+        ("相対パス -F", "gh pr comment 1 -F ./body.md"),
+        ("標準入力 -", "gh pr comment 1 -F -"),
+        ("--body-file -", "gh pr comment 1 --body-file -"),
+        ("/dev/stdin", "gh pr comment 1 -F /dev/stdin"),
+        ("/dev/fd/63", "gh pr comment 1 --body-file /dev/fd/63"),
+        ("/dev/null", "gh pr comment 1 --body-file /dev/null"),
+        ("存在しないファイル", "gh pr create --base main --body-file %s/none.md" % T),
+        ("存在しないファイル -F", "gh pr comment 1 -F %s/none.md" % T),
+        ("heredoc で -F -", "gh pr comment 1 -F - <<'EOF'\nok\nEOF"),
+        ("here-string", "gh pr comment 1 -F - <<< ok"),
+        ("< で入力", "gh pr comment 1 -F - < " + cleanbody),
+        ("$(cat file)", 'gh pr comment 1 --body "$(cat %s)"' % cleanbody),
+        ("heredoc 入りの --body", "gh pr comment 1 --body \"$(cat <<'EOF'\nok\nEOF\n)\""),
+        ("二重引用符", 'gh pr comment 1 --body "ok"'),
+        ("二重引用符 --body=", 'gh pr create --base main --title t --body="ok"'),
+        ("$ を含む", "gh pr comment 1 --body $B"),
+        ("バッククォート", "gh pr comment 1 --body `date`"),
+        ("引用なしの本文", "gh pr comment 1 --body ok"),
+        ("一重+二重の連結", "gh pr comment 1 --body 'a'\"b\""),
+        ("--fill", "gh pr create --fill"),
+        ("--fill-first", "gh pr create --fill-first"),
+        ("--fill-verbose", "gh pr create --fill-verbose"),
+        ("--editor", "gh pr create --editor"),
+        ("-e", "gh pr create -e"),
+        ("--web", "gh pr create --web"),
+        ("--template", "gh pr create --template t.md"),
+        ("--recover", "gh pr create --recover x"),
+        ("本文 2 つ", "gh pr comment 1 -b 'a' -F " + cleanbody),
+        ("短い指定の束ね -dF", "gh pr create --base main -dF " + cleanbody),
+        ("短い指定の束ね -bX", "gh pr comment 1 -b'ok'"),
+        ("パイプ", "cat %s | gh pr comment 1 -F %s" % (hitbody, cleanbody)),
+        ("&& で続ける", "gh pr comment 1 -b 'a' && gh pr comment 2 -F " + hitbody),
+        ("; で続ける", "gh pr comment 1 -b 'a'; gh pr comment 2 -b 'b'"),
+        ("改行で続ける", "gh pr view 1\ngh pr comment 2 -F " + hitbody),
+        ("cd で始める", "cd %s && gh pr comment 1 -F %s" % (T, cleanbody)),
+        ("絶対パスの gh", "/opt/homebrew/bin/gh pr comment 1 -F " + cleanbody),
+        ("command gh", "command gh pr comment 1 -F " + cleanbody),
+        ("bash -c", "bash -c 'gh pr comment 1 -F %s'" % cleanbody),
+        ("env X=1 gh", "env X=1 gh pr comment 1 -F " + cleanbody),
+        ("VAR=1 gh", "X=1 gh pr comment 1 -F " + cleanbody),
+        ("push と gh の同居", P() + " && gh pr comment 1 -F " + cleanbody),
+    ]
+    for nm, c in nb:
+        rc, err = run(c, T)
+        ok = rc == 2 and ("止めました" in err)
+        results.append(ok)
+        print("%s %-62s exit=%d (期待 2)" % ("PASS" if ok else "FAIL", "G20 " + nm, rc))
+    rc, err = run("gh pr comment 1 -F -", T)
+    results.append("--body-file <絶対パス>" in err and "Write" in err)
+    print("%s %-62s" % ("PASS" if results[-1] else "FAIL", "G21 止めた理由に Write と --body-file の案内がある"))
+
+    print("== 9 審査 6 回目の指摘 (gh review の印・題名・途中の commit・差分の取り方・別名)")
+    for nm, fl in (("-r", "-r"), ("-a", "-a"), ("-c", "-c"), ("--request-changes", "--request-changes"), ("--approve", "--approve")):
+        check("R01 gh pr review %s -b 書き写しあり -> 止まる" % nm, "gh pr review 1 %s -b '「%s」'" % (fl, q), 2)
+        check("R02 gh pr review %s -F 書き写しあり -> 止まる" % nm, "gh pr review 1 %s -F %s" % (fl, hitbody), 2)
+        check("R03 gh pr review %s -b 中身なし -> 通る" % nm, "gh pr review 1 %s -b 'ok'" % fl, 0)
+    check("R04 gh pr create -a x -r y -b 書き写しあり -> 止まる", "gh pr create -a x -r y -b '「%s」'" % q, 2)
+    check("R05 gh pr create --title t -r --body-file 書き写しあり -> 止まる", "gh pr create --title t -r --body-file " + hitbody, 2)
+    check("R06 gh pr create -f -> 止まる", "gh pr create -f", 2)
+    check("R06b gh issue create -f -> 止まる", "gh issue create -f", 2)
+    qt = "「%s」" % q
+    check("R10 pr create --title 書き写しあり -> 止まる", "gh pr create --title '%s' --body 'x'" % qt, 2)
+    check("R11 issue create -t 書き写しあり -> 止まる", "gh issue create -t '%s' -b 'x'" % qt, 2)
+    check("R12 pr edit --title 書き写しあり (本文なし) -> 止まる", "gh pr edit 1 --title '%s'" % qt, 2)
+    check("R13 pr edit --title=… 書き写しあり -> 止まる", "gh pr edit 1 --title='%s'" % qt, 2)
+    check("R14 題名が中身なし -> 通る", "gh pr edit 1 --title '「%s」' -b 'x'" % FAKE_NOT_IN_CORPUS, 0)
+    check("R15 pr edit --title 二重引用符 書き写しあり -> 止まる", 'gh pr edit 1 --title "%s"' % qt, 2)
+    for nm, c in (("git の \\ 逃げ", "g\\it -C %s push -u origin hit" % W),
+                  ("push の \"\" 割り", "git -C %s pus\"\"h -u origin hit" % W),
+                  ("git の '' 割り", "'gi't -C %s push -u origin hit" % W),
+                  ("gh の \\ 逃げ", "g\\h pr comment 1 -F " + hitbody),
+                  ("pr の '' 割り", "gh p''r comment 1 -F " + hitbody),
+                  ("字句に分けられない + git", "git -C %s push -u origin 'HEAD" % W),
+                  ("字句に分けられない + gh", "gh pr comment 1 -b 'x")):
+        rc, err = run(c, T)
+        results.append(rc == 2)
+        print("%s %-62s exit=%d (期待 2)" % ("PASS" if rc == 2 else "FAIL", "R20 " + nm, rc))
+    check("R21 字句に分けられず git も gh も無い -> 通る", "echo 'x", 0)
+
+    def commit_all(msg):
+        sh("git", "add", "-A", cwd=WORK)
+        sh("git", "commit", "-q", "-m", msg, cwd=WORK)
+
+    # 途中の commit
+    sh("git", "checkout", "-q", "-B", "hist", "origin/main", cwd=WORK)
+    write(os.path.join(WORK, "hist.md"), "- 「%s」\n" % q)
+    commit_all("add")
+    write(os.path.join(WORK, "hist.md"), "消した\n")
+    commit_all("remove")
+    rc, err = check("R30 足して消す 2 つの commit -> 止まる", P("hist"), 2, cwd=T)
+    results.append("書き直し" in err and "履歴に残って" in err)
+    print("%s %-62s" % ("PASS" if results[-1] else "FAIL", "R30b 止めた理由に履歴と書き直しの案内がある"))
+    # origin/main へ書き写し入りの commit を進め、それを取り込んだだけのブランチ
+    sh("git", "checkout", "-q", "-B", "mrg", "origin/main", cwd=WORK)
+    write(os.path.join(WORK, "mrg.md"), "- 「%s」\n" % FAKE_NOT_IN_CORPUS)
+    commit_all("mrg")
+    sh("git", "checkout", "-q", "-B", "adv", "origin/main", cwd=WORK)
+    write(os.path.join(WORK, "shared.md"), "base line\n")
+    write(os.path.join(WORK, "main-side.md"), "- 「%s」\n" % q)
+    commit_all("adv1")
+    sh("git", "push", "-q", "origin", "adv:main", cwd=WORK)
+    sh("git", "fetch", "-q", "origin", cwd=WORK)
+    sh("git", "checkout", "-q", "mrg", cwd=WORK)
+    sh("git", "merge", "-q", "--no-edit", "origin/main", cwd=WORK)
+    check("R31 origin/main を merge commit で取り込んだだけ (main 側に書き写し) -> 通る", P("mrg"), 0, cwd=T)
+    # 衝突を直した行
+    sh("git", "checkout", "-q", "-B", "cx", "origin/main", cwd=WORK)
+    write(os.path.join(WORK, "shared.md"), "cx line\n")
+    commit_all("cx")
+    sh("git", "checkout", "-q", "-B", "adv", "origin/main", cwd=WORK)
+    write(os.path.join(WORK, "shared.md"), "main line\n")
+    commit_all("adv2")
+    sh("git", "push", "-q", "origin", "adv:main", cwd=WORK)
+    sh("git", "fetch", "-q", "origin", cwd=WORK)
+    sh("git", "checkout", "-q", "cx", cwd=WORK)
+    subprocess.run(["git", "merge", "--no-edit", "origin/main"], cwd=WORK, capture_output=True, text=True)
+    write(os.path.join(WORK, "shared.md"), "- 「%s」\n" % q)
+    commit_all("resolve")
+    check("R32 merge の衝突を直した行に書き写し -> 止まる", P("cx"), 2, cwd=T)
+
+    # 差分の取り方
+    def one(name, files):
+        sh("git", "checkout", "-q", "-B", name, "origin/main", cwd=WORK)
+        for fn, txt in files.items():
+            write(os.path.join(WORK, fn), txt)
+        commit_all(name)
+    line = "引用「%s」\n" % q
+    one("bin", {".gitattributes": "*.txt binary\n", "note.txt": line})
+    check("R40 .gitattributes binary -> 止まる", P("bin"), 2, cwd=T)
+    one("nodiff", {".gitattributes": "*.md -diff\n", "x.md": line})
+    check("R41 .gitattributes -diff -> 止まる", P("nodiff"), 2, cwd=T)
+    one("nul", {"n.dat": "a\0b\n" + line})
+    check("R42 NUL を含むファイル -> 止まる", P("nul"), 2, cwd=T)
+    one("pref", {"pref.md": line})
+    for k in ("diff.noprefix", "diff.mnemonicPrefix"):
+        sh("git", "config", k, "true", cwd=WORK)
+        check("R43 %s=true でも -> 止まる" % k, P("pref"), 2, cwd=T)
+        sh("git", "config", "--unset", k, cwd=WORK)
+    one("fname", {"「%s」.md" % q: "x\n"})
+    check("R44 ファイル名に書き写し -> 止まる", P("fname"), 2, cwd=T)
+    sh("git", "checkout", "-q", "-B", "ren", "origin/main", cwd=WORK)
+    sh("git", "mv", "shared.md", "「%s」.md" % q, cwd=WORK)
+    commit_all("ren")
+    check("R45 改名だけ (中身は同じ) でも名前に書き写し -> 止まる", P("ren"), 2, cwd=T)
+    one("fclean", {"clean-name.md": "- 「%s」\n" % FAKE_NOT_IN_CORPUS})
+    check("R46 clean な名前と中身 -> 通る", P("fclean"), 0, cwd=T)
+
+    # 別名・push 先の差し替え
+    cfgs = (("alias.sy", "push"), ("remote.origin.pushurl", "/nonexistent/x.git"), ("url./nonexistent/.pushInsteadOf", "https://example.invalid/"))
+    for k, v in cfgs:
+        sh("git", "config", k, v, cwd=WORK)
+        check("R50 repo の設定に %s があると -> 止まる" % k, P("fclean"), 2, cwd=T)
+        sh("git", "config", "--unset", k, cwd=WORK)
+    check("R51 設定を戻すと -> 通る", P("fclean"), 0, cwd=T)
+    for nm, c in (("git config alias.sy push", "git config alias.sy push"),
+                  ("git -C W config alias.sy push", "git -C %s config alias.sy push" % W),
+                  ("git config alias.sy pu\\sh", "git config alias.sy pu\\sh"),
+                  ("git config remote.origin.pushurl x", "git config remote.origin.pushurl /x"),
+                  ("git config url.x.pushInsteadOf y", "git config url./x/.pushInsteadOf y"),
+                  ("git remote set-url --push origin x", "git remote set-url --push origin /x"),
+                  ("git -c alias.sy=push", "git -c alias.sy=push -C %s sy origin HEAD" % W)):
+        rc, err = run(c, T)
+        results.append(rc == 2)
+        print("%s %-62s exit=%d (期待 2)" % ("PASS" if rc == 2 else "FAIL", "R52 " + nm, rc))
+    check("R53 git config user.name x は通る", "git config user.name x", 0)
+    check("R54 git remote -v は通る", "git remote -v", 0)
+
+    print("== 10 審査 7 回目の指摘 (作業場所の設定・送信系・include・追跡ブランチ・gh の範囲・タグ)")
+
+    def stop(name, c, want=2, cwd=T):
+        rc, err = run(c, cwd)
+        results.append(rc == want)
+        print("%s %-62s exit=%d (期待 %d)" % ("PASS" if rc == want else "FAIL", name, rc, want))
+
+    # H1: 作業場所の設定に左右されない
+    order = os.path.join(T, "order.txt")
+    write(order, "zzz\n")
+    one("rel", {"sub/a.md": "x\n", "top.md": line})
+    SUB = os.path.join(WORK, "sub")
+    for k, v in (("diff.relative", "true"), ("diff.noprefix", "true"), ("diff.mnemonicPrefix", "true"),
+                 ("diff.external", "false"), ("diff.orderFile", order), ("diff.ignoreSubmodules", "all")):
+        sh("git", "config", k, v, cwd=WORK)
+        check("H1 %s 設定 + 上の階層から -> 止まる" % k, P("rel"), 2, cwd=T)
+        check("H1 %s 設定 + 下の階層 (-C sub) から -> 止まる" % k, P("rel", path=SUB), 2, cwd=T)
+        sh("git", "config", "--unset", k, cwd=WORK)
+    check("H1 設定なし + 下の階層から -> 止まる", P("rel", path=SUB), 2, cwd=T)
+    one("relclean", {"sub/b.md": "x\n", "top2.md": "- 「%s」\n" % FAKE_NOT_IN_CORPUS})
+    sh("git", "config", "diff.relative", "true", cwd=WORK)
+    check("H1 diff.relative + 中身なし (下の階層から) -> 通る", P("relclean", path=SUB), 0, cwd=T)
+    sh("git", "config", "--unset", "diff.relative", cwd=WORK)
+
+    # H2: 送信系の命令
+    for nm, c in (("send-pack", "git -C %s send-pack %s relclean" % (WORK, ORIGIN_ROOT)),
+                  ("send-pack 単独", "git send-pack /x relclean"),
+                  ("g\\it send-pack", "g\\it send-pack /x relclean"),
+                  ("git 'send-pack'", "git -C %s 'send-pack' /x relclean" % WORK),
+                  ("git-send-pack", "git-send-pack /x relclean"),
+                  ("git http-push", "git http-push http://example.invalid/x.git relclean"),
+                  ("git ht\"\"tp-push", "git ht\"\"tp-push http://example.invalid/x.git relclean"),
+                  ("sh -c で send-pack", "sh -c 'git send-pack /x relclean'"),
+                  ("&& でつなげた send-pack", "echo a && git send-pack /x relclean")):
+        stop("H2 " + nm, c)
+    stop("H2 git log は通る", "git -C %s log --oneline -1" % WORK, 0)
+    stop("H2 send-pack と書いただけの echo は通る", "echo send-pack", 0)
+
+    # L1: include と設定ファイルの書き込み
+    for nm, c in (("git config include.path", "git config include.path /x/y.inc"),
+                  ("git -C W config includeIf", "git -C %s config includeIf.gitdir:/x/.path /y.inc" % WORK),
+                  ("git config --add include.path", "git config --add include.path /x/y.inc"),
+                  ("git -c include.path=", "git -c include.path=/x/y.inc status"),
+                  ("printf >> .git/config", "printf '[alias]\\n sy = push\\n' >> %s/.git/config" % WORK),
+                  ("tee -a .git/config", "tee -a %s/.git/config" % WORK),
+                  ("cp x .git/config", "cp /tmp/x %s/.git/config" % WORK),
+                  ("sed -i .git/config", "sed -i '' s/a/b/ %s/.git/config" % WORK),
+                  ("mv x config.worktree", "mv /tmp/x %s/.git/config.worktree" % WORK),
+                  ("echo >> config.worktree", "echo x >> %s/.git/config.worktree" % WORK),
+                  ("python で .git/config", "python3 -c \"open('%s/.git/config','a')\"" % WORK)):
+        stop("L1 " + nm, c)
+    stop("L1 cat .git/config は通る", "cat %s/.git/config" % WORK, 0)
+    stop("L1 git config user.name は通る", "git config user.name x", 0)
+    one("hcl", {"ok2.md": "- 「%s」\n" % FAKE_NOT_IN_CORPUS})
+    check("L1 設定なしの clean push -> 通る", P("hcl"), 0, cwd=T)
+    for k, v in (("include.path", "/nonexistent/x.inc"), ("includeIf.gitdir:/nonexistent/.path", "/nonexistent/y.inc")):
+        sh("git", "config", "--local", k, v, cwd=WORK)
+        check("L1 --local に %s があると push -> 止まる" % k.split(":")[0], P("hcl"), 2, cwd=T)
+        sh("git", "config", "--local", "--unset", k, cwd=WORK)
+    sh("git", "config", "extensions.worktreeConfig", "true", cwd=WORK)
+    sh("git", "config", "--worktree", "include.path", "/nonexistent/z.inc", cwd=WORK)
+    check("L1 --worktree に include.path があると push -> 止まる", P("hcl"), 2, cwd=T)
+    sh("git", "config", "--worktree", "--unset", "include.path", cwd=WORK)
+    sh("git", "config", "--worktree", "alias.sy", "push", cwd=WORK)
+    check("L1 --worktree に alias があると push -> 止まる", P("hcl"), 2, cwd=T)
+    sh("git", "config", "--worktree", "--unset", "alias.sy", cwd=WORK)
+    sh("git", "config", "--unset", "extensions.worktreeConfig", cwd=WORK)
+    check("L1 設定を戻すと push -> 通る", P("hcl"), 0, cwd=T)
+
+    # worktree が複数あっても (拡張なし) 通常の push は通る / 拡張ありで worktree の設定に別名があれば止まる
+    WT2 = os.path.join(T, "wt2")
+    sh("git", "worktree", "add", "-q", "-B", "wt2br", WT2, "origin/main", cwd=WORK)
+    write(os.path.join(WT2, "wt2.md"), "- 「%s」\n" % FAKE_NOT_IN_CORPUS)
+    sh("git", "add", "-A", cwd=WT2)
+    sh("git", "-c", "user.email=t@example.com", "-c", "user.name=t", "commit", "-q", "-m", "wt2", cwd=WT2)
+    check("L1 worktree が複数 (拡張なし) の clean push -> 通る", P("wt2br", path=WT2), 0, cwd=T)
+    write(os.path.join(WT2, "wt2b.md"), "- 「%s」\n" % q)
+    sh("git", "add", "-A", cwd=WT2)
+    sh("git", "-c", "user.email=t@example.com", "-c", "user.name=t", "commit", "-q", "-m", "wt2b", cwd=WT2)
+    check("L1 worktree が複数 (拡張なし) で書き写しあり -> 止まる", P("wt2br", path=WT2), 2, cwd=T)
+    sh("git", "reset", "-q", "--hard", "HEAD~1", cwd=WT2)
+    sh("git", "config", "extensions.worktreeConfig", "true", cwd=WORK)
+    sh("git", "config", "--worktree", "alias.sy", "push", cwd=WT2)
+    check("L1 worktree が複数 (拡張あり) で worktree の設定に alias -> 止まる", P("wt2br", path=WT2), 2, cwd=T)
+    sh("git", "config", "--worktree", "--unset", "alias.sy", cwd=WT2)
+    check("L1 worktree が複数 (拡張あり) で設定なし -> 通る", P("wt2br", path=WT2), 0, cwd=T)
+    sh("git", "config", "--unset", "extensions.worktreeConfig", cwd=WORK)
+
+    # L2: 追跡ブランチを手で進める
+    for nm, c in (("update-ref refs/remotes", "git update-ref refs/remotes/origin/hcl hcl"),
+                  ("-C W update-ref refs/remotes", "git -C %s update-ref refs/remotes/origin/hcl hcl" % WORK),
+                  ("fetch . x:refs/remotes", "git -C %s fetch . hcl:refs/remotes/origin/hcl" % WORK),
+                  ("symbolic-ref refs/remotes", "git symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/main"),
+                  ("echo > .git/refs/remotes", "echo x > %s/.git/refs/remotes/origin/hcl" % WORK),
+                  ("cp x packed-refs", "cp /tmp/x %s/.git/packed-refs" % WORK)):
+        stop("L2 " + nm, c)
+    stop("L2 git fetch origin は通る", "git -C %s fetch origin" % WORK, 0)
+    stop("L2 refs/remotes を読むだけは通る", "git -C %s log -1 refs/remotes/origin/main" % WORK, 0)
+    stop("L2 packed-refs を読むだけは通る", "cat %s/.git/packed-refs" % WORK, 0)
+
+    # L3: gh の範囲
+    qh = "'「%s」'" % q
+    qc = "'「%s」'" % FAKE_NOT_IN_CORPUS
+    for nm, c in (("issue edit --body", "gh issue edit 1 --body " + qh),
+                  ("issue edit -b", "gh issue edit 1 -b " + qh),
+                  ("issue edit --title", "gh issue edit 1 --title " + qh),
+                  ("issue edit -F", "gh issue edit 1 -F " + hitbody),
+                  ("release create --notes", "gh release create v1 --notes " + qh),
+                  ("release create -n", "gh release create v1 -n " + qh),
+                  ("release create --notes-file", "gh release create v1 --notes-file " + hitbody),
+                  ("release create -F", "gh release create v1 -F " + hitbody),
+                  ("release create --title", "gh release create v1 --title " + qh + " --notes ok"),
+                  ("release create -t", "gh release create v1 -t " + qh + " --notes ok"),
+                  ("release edit --notes", "gh release edit v1 --notes " + qh),
+                  ("release edit -n", "gh release edit v1 -n " + qh),
+                  ("repo edit --description", "gh repo edit --description " + qh),
+                  ("repo edit -d", "gh repo edit -d " + qh),
+                  ("pr merge --body", "gh pr merge 1 --merge --body " + qh),
+                  ("gist create", "gh gist create " + hitbody),
+                  ("gist list", "gh gist list"),
+                  ("gist 'create'", "gh gist 'create' " + cleanbody)):
+        stop("L3 " + nm, c)
+    for nm, c in (("issue edit --add-label", "gh issue edit 1 --add-label x"),
+                  ("issue edit --body 中身なし", "gh issue edit 1 --body " + qc),
+                  ("release create --notes 中身なし", "gh release create v1 --notes " + qc),
+                  ("release create -d (draft) --notes", "gh release create v1 -d --notes 'ok'"),
+                  ("release create --generate-notes", "gh release create v1 --generate-notes"),
+                  ("release edit -F 中身なし", "gh release edit v1 -F " + cleanbody),
+                  ("repo edit --description 中身なし", "gh repo edit --description " + qc),
+                  ("repo edit -d 中身なし", "gh repo edit -d " + qc),
+                  ("pr merge --merge", "gh pr merge 1 --merge")):
+        stop("L3 " + nm + " -> 通る", c, 0)
+
+    # L4: 注釈つきタグ
+    sh("git", "checkout", "-q", "-B", "tagb", "origin/main", cwd=WORK)
+    sh("git", "tag", "-a", "tagv1", "-m", "引用「%s」" % q, cwd=WORK)
+    check("L4 送る ref がタグ (文面に書き写し) -> 止まる", P("tagv1"), 2, cwd=T)
+    sh("git", "tag", "-a", "tagv2", "-m", "ふつうの説明", cwd=WORK)
+    check("L4 送る ref がタグ (文面は clean) -> 通る", P("tagv2"), 0, cwd=T)
+    sh("git", "tag", "-a", "tagv3", "-m", "入れ子", "tagv1", cwd=WORK)
+    check("L4 タグを指すタグ (中のタグに書き写し) -> 止まる", P("tagv3"), 2, cwd=T)
+    one("tagr", {"tr.md": "- 「%s」\n" % FAKE_NOT_IN_CORPUS})
+    sh("git", "tag", "-a", "tagr1", "-m", "範囲の中 「%s」" % q, cwd=WORK)
+    check("L4 送る範囲の commit を指すタグの文面に書き写し -> 止まる", P("tagr"), 2, cwd=T)
+    sh("git", "tag", "-d", "tagr1", cwd=WORK)
+    check("L4 そのタグを消すと -> 通る", P("tagr"), 0, cwd=T)
+
+    print("== 11 審査 8 回目の指摘 (展開・URL の書き方・followTags・git replace・gh release・hooks)")
+    bare = os.path.join(ORIGIN_ROOT, "test", "fake.git")
+    one("leak11", {"doc11.md": "引用「%s」\n" % q})
+    G2 = "g" + "h"
+    # H1: 展開で字を隠す
+    for nm, c in (("x=push; git $x", "x=pu" + "sh; git -C %s $x origin leak11" % WORK),
+                  ("pu$'s'h", "git -C %s pu$'s'h origin leak11" % WORK),
+                  ("$(printf pu%%sh s)", "git -C %s $(printf pu%%sh s) origin leak11" % WORK),
+                  ("G=git; $G push", "G=gi" + "t; $G -C %s push origin leak11" % WORK),
+                  ("バッククォート", "git -C %s `echo push` origin leak11" % WORK),
+                  ("行末の \\", "git -C %s pu\\\nsh origin leak11" % WORK),
+                  ("gh 変数の操作", "a=comm" + "ent; " + G2 + " pr $a 1 --body '「%s」'" % q),
+                  ("gh ansi-c", G2 + " pr com$'m'ent 1 --body '「%s」'" % q),
+                  ("X=gh; $X pr comment", "X=g" + "h; $X pr comment 1 --body '「%s」'" % q),
+                  ("命令の位置が $(…)", "$(printf '%%s' gi)t -C %s push origin leak11" % WORK),
+                  ("命令の位置が $X (git の字なし)", "$X push origin leak11"),
+                  ("; の後ろの命令の位置が $X", "echo a; $X push origin leak11"),
+                  ("env $X (git の字なし)", "env $X push origin leak11"),
+                  ("波括弧展開 {git,push}", "{git,-C,%s,push,origin,leak11}" % WORK),
+                  ("glob g?t", "g?t -C %s push origin leak11" % WORK),
+                  ("glob /usr/bin/g[i]t", "/usr/bin/g[i]t -C %s push origin leak11" % WORK),
+                  ("glob g*", "g* -C %s push origin leak11" % WORK),
+                  ("glob ; の後ろ", "echo a; g?t -C %s push origin leak11" % WORK),
+                  ("glob 代入・env の後ろ", "X=1 env g?t push origin leak11"),
+                  ("glob gh", "g? pr comment 1 -F " + hitbody)):
+        stop("H1 " + nm, c)
+    for nm, c in (("echo $HOME", "echo $HOME"), ("echo `date`", "echo `date`"), ("ls $HOME/x", "ls $HOME/x"),
+                  ("X=1; echo $X", "X=1; echo $X"),
+                  ("ls *.md", "ls *.md"), ("cat a?b", "cat a?b"), ("git status -- '*.py'", "git -C %s status -- '*.py'" % WORK),
+                  ("git log -- *.md", "git -C %s log -1 -- *.md" % WORK), ("echo $(date) && ls", "echo $(date) && ls")):
+        stop("H1 git／gh なしの展開は通る: " + nm, c, 0)
+
+    # H2: URL の書き方
+    for url in ("https://github.com/TEST/FAKE.git", "https://github.com/test/fake.git/", "git@github.com:Test/Fake.git",
+                "ssh://git@github.com/test/fake", "ssh://git@github.com:22/test/fake.git/", "HTTPS://GitHub.com/Test/Fake/"):
+        sh("git", "remote", "set-url", "origin", url, cwd=WORK)
+        check("H2 origin=%s の push (書き写しあり) -> 止まる" % url, P("leak11"), 2, cwd=T)
+    sh("git", "remote", "set-url", "origin", bare, cwd=WORK)
+    for nm, c in (("remote set-url", "git -C %s remote set-url origin https://example.invalid/a/b.git" % WORK),
+                  ("remote set-url --push", "git -C %s remote set-url --push origin https://example.invalid/a/b.git" % WORK),
+                  ("remote add", "git -C %s remote add up https://example.invalid/a/b.git" % WORK),
+                  ("config remote.origin.url", "git -C %s config remote.origin.url https://example.invalid/a/b.git" % WORK),
+                  ("config remote.up.url", "git config remote.up.url x")):
+        stop("H2 " + nm, c)
+    for nm, c in (("remote -v", "git -C %s remote -v" % WORK), ("remote get-url", "git -C %s remote get-url origin" % WORK),
+                  ("config --get remote.origin.url", "git -C %s config --get remote.origin.url" % WORK),
+                  ("remote show origin", "git -C %s remote show origin" % WORK)):
+        stop("H2 読むだけは通る: " + nm, c, 0)
+
+    # H3: push の送り方を変える設定
+    one("clean11", {"ok11.md": "- 「%s」\n" % FAKE_NOT_IN_CORPUS})
+    for k in ("push.followTags", "push.pushOption", "remote.origin.push", "remote.origin.mirror", "remote.origin.tagOpt"):
+        stop("H3 git config %s の書き込み -> 止まる" % k, "git -C %s config %s true" % (WORK, k))
+        sh("git", "config", "--local", k, "refs/heads/x:refs/heads/x" if k.endswith(".push") else "true", cwd=WORK)
+        check("H3 --local に %s があると push -> 止まる" % k, P("clean11"), 2, cwd=T)
+        sh("git", "config", "--local", "--unset", k, cwd=WORK)
+    stop("H3 git -c push.followTags=true", "git -c push.followTags=true -C %s status" % WORK)
+    stop("H3 git config --get push.followTags は通る", "git -C %s config --get push.followTags" % WORK, 0)
+    sh("git", "config", "extensions.worktreeConfig", "true", cwd=WORK)
+    sh("git", "config", "--worktree", "push.followTags", "true", cwd=WORK)
+    check("H3 --worktree に push.followTags があると push -> 止まる", P("clean11"), 2, cwd=T)
+    sh("git", "config", "--worktree", "--unset", "push.followTags", cwd=WORK)
+    sh("git", "config", "--unset", "extensions.worktreeConfig", cwd=WORK)
+    check("H3 設定を戻すと push -> 通る", P("clean11"), 0, cwd=T)
+
+    # H4: git replace
+    leak_sha = sh("git", "rev-parse", "leak11", cwd=WORK).strip()
+    sh("git", "checkout", "-q", "-B", "repclean", "origin/main", cwd=WORK)
+    write(os.path.join(WORK, "doc11.md"), "clean\n")
+    sh("git", "add", "-A", cwd=WORK)
+    sh("git", "commit", "-q", "-m", "repclean", cwd=WORK)
+    clean_sha = sh("git", "rev-parse", "HEAD", cwd=WORK).strip()
+    stop("H4 git replace", "git -C %s replace %s %s" % (WORK, leak_sha, clean_sha))
+    stop("H4 git replace -d", "git replace -d %s" % leak_sha)
+    stop("H4 git update-ref refs/replace", "git -C %s update-ref refs/replace/%s %s" % (WORK, leak_sha, clean_sha))
+    stop("H4 git 'replace' (引用符)", "git -C %s 'replace' %s %s" % (WORK, leak_sha, clean_sha))
+    stop("H4 git log --grep replace は通る", "git -C %s log --grep replace -1" % WORK, 0)
+    sh("git", "replace", leak_sha, clean_sha, cwd=WORK)
+    check("H4 置き換えがある repo の push (書き写しあり) -> 止まる", P("leak11"), 2, cwd=T)
+    check("H4 置き換えがある repo の push (clean) -> 止まる", P("clean11"), 2, cwd=T)
+    sh("git", "replace", "-d", leak_sha, cwd=WORK)
+    check("H4 置き換えを消すと clean の push -> 通る", P("clean11"), 0, cwd=T)
+    check("H4 置き換えを消すと書き写しの push -> 止まる", P("leak11"), 2, cwd=T)
+
+    # H5: gh release の別の出口
+    att = os.path.join(T, "asset.bin")
+    write(att, "x\n")
+    for nm, c in (("create の添付ファイル", G2 + " release create v1 %s --notes 'x'" % att),
+                  ("create の添付 (印の後ろ)", G2 + " release create v1 --notes 'x' %s" % att),
+                  ("create --notes-from-tag", G2 + " release create v1 --notes-from-tag"),
+                  ("create --notes-from-tag=…", G2 + " release create v1 --notes-from-tag=true"),
+                  ("edit の位置引数 2 つ", G2 + " release edit v1 extra --notes 'x'"),
+                  ("upload", G2 + " release upload v1 %s" % att),
+                  ("upload --clobber", G2 + " release upload v1 %s --clobber" % att)):
+        stop("H5 " + nm, c)
+    for nm, c in (("create タグだけ + notes", G2 + " release create v1 --notes 'ok'"),
+                  ("create 印いろいろ", G2 + " release create v1 -t 'x' --notes 'ok' --draft --target main --latest=false"),
+                  ("create --generate-notes", G2 + " release create v1 --generate-notes"),
+                  ("release list", G2 + " release list"), ("release view", G2 + " release view v1")):
+        stop("H5 " + nm + " -> 通る", c, 0)
+
+    # L2: hooks
+    hk = os.path.join(WORK, ".git", "hooks", "pre-push")
+    for nm, c in (("printf > hooks", "printf '#!/bin/sh\\n' > %s" % hk), ("cp hooks", "cp /tmp/x %s" % hk),
+                  ("tee hooks", "tee %s" % hk), ("config core.hooksPath", "git -C %s config core.hooksPath /tmp/h" % WORK)):
+        stop("L2 " + nm, c)
+    stop("L2 cat hooks は通る", "cat %s" % hk, 0)
+    stop("L2 ls hooks は通る", "ls %s/.git/hooks" % WORK, 0)
+    # L1: sed -n は読むだけでも止まる (止めすぎは受け入れ)
+    stop("L1 sed -n .git/config は止まる (止めすぎ受け入れ)", "sed -n 1p %s/.git/config" % WORK)
+
+    print("== 12 審査 9 回目の指摘 (展開の決まりを絞る・gh の別の出口・複数の URL・remote の書き換え)")
+    G2 = "g" + "h"
+    cm = "git -C %s commit -m " % WORK
+    # H1: 通る (ふだんの commit の heredoc・読むだけの $)
+    body_plain = "fix: x\n\nbody\n"
+    body_push = "fix: x\n\n本文に git push origin x と書く。\"二重\" と 'it' s も。\n"
+    for nm, c in (("commit heredoc", cm + "\"$(cat <<'EOF'\n" + body_plain + "EOF\n)\""),
+                  ("commit heredoc 本文に git push・引用符", cm + "\"$(cat <<'EOF'\n" + body_push + "EOF\n)\""),
+                  ("commit heredoc 本文に 「語句」", cm + "\"$(cat <<'EOF'\n本文「%s」\nEOF\n)\"" % q),
+                  ("commit heredoc 区切りに - (<<-)", cm + "\"$(cat <<-'EOF'\n\tfix\n\tEOF\n)\""),
+                  ("commit -F 絶対パス", cm.replace("-m ", "-F ") + hitbody),
+                  ("commit -m $VAR", cm + "\"$MSG\""),
+                  ("git add $F", "git -C %s add $F" % WORK),
+                  ("git status | awk $2", "git -C %s status --short | awk '{print $2}'" % WORK),
+                  ("git log | grep 'x$'", "git -C %s log --oneline | grep 'x$'" % WORK),
+                  ("echo $PATH | grep git", "echo $PATH | tr : '\\n' | grep git"),
+                  ("git status $(pwd)", "git -C %s status $(pwd)" % WORK),
+                  ("git config --get $K", "git -C %s config --get $K" % WORK),
+                  ("for + git add $f", "for f in $(git -C %s ls-files); do git -C %s add $f; done" % (WORK, WORK)),
+                  ("コメントの $y (git なし)", "echo ok # note $y don't"),
+                  ("gh pr view $N", G2 + " pr view $N"),
+                  ("gh api $X", G2 + " api repos/$X/pulls")):
+        stop("R9H1 通る: " + nm, c, 0)
+    # H1: 止まる
+    for nm, c in (("commit の中に push", cm + "\"$(git push origin x)\""),
+                  ("commit の中に -C つきの push", cm + "\"$(git -C %s push -u origin leak11)\"" % WORK),
+                  ("commit の中の命令の位置が $X", cm + "\"$($X push)\""),
+                  ("バッククォートの中に push", "echo `git push origin x`"),
+                  ("引用符なし heredoc の中の $(git push)", "cat <<EOF\n$(git push origin x)\nEOF"),
+                  ("sh の heredoc の本文に git push", "bash <<'EOF'\ngit push origin x\nEOF"),
+                  ("-C の値が $W", "git -C $W push origin leak11"),
+                  ("-C の値が \"$W\"", "git -C \"$W\" status"),
+                  ("-c の値が $X", "git -c user.name=$X -C %s status" % WORK),
+                  ("下位命令が $x", "git -C %s $x origin leak11" % WORK),
+                  ("下位命令が glob", "git -C %s p?sh origin leak11" % WORK),
+                  ("下位命令の引用符の崩し", "git -C %s pu\"s\"h origin leak11" % WORK),
+                  ("push の引数が $B", "git -C %s push -u origin $B" % WORK),
+                  ("config の値が $X", "git -C %s config user.name $X" % WORK),
+                  ("tag の引数が $X", "git -C %s tag v1 $X" % WORK),
+                  ("remote の引数が $X", "git -C %s remote show $X" % WORK),
+                  ("gh の 2 つ目が $a", G2 + " pr $a 1"),
+                  ("gh の本文が $B", G2 + " pr comment 1 --body \"$B\""),
+                  ("gh の本文が $(cat)", G2 + " pr comment 1 --body \"$(cat %s)\"" % hitbody),
+                  ("gh の中の gh", cm + "\"$(" + G2 + " pr comment 1 -F " + hitbody + ")\""),
+                  ("glob の命令", "g?t -C %s push origin leak11" % WORK),
+                  ("決まった形の push に # のコメント", P("clean12") + " # x"),
+                  ("コメントに git push と $y", "echo ok # git push origin x $y")):
+        stop("R9H1 止まる: " + nm, c)
+    # L1: close / reopen のコメント
+    for op in ("pr close 1", "issue close 1", "pr reopen 1", "issue reopen 1"):
+        for fl in ("--comment", "-c"):
+            stop("R9L1 %s %s 書き写し -> 止まる" % (op, fl), "%s %s %s '「%s」'" % (G2, op, fl, q))
+        stop("R9L1 %s 中身なし -> 通る" % op, "%s %s --comment 'superseded'" % (G2, op), 0)
+    # L2: new は create と同じ
+    stop("R9L2 pr new --body", G2 + " pr new --title x --body '「%s」'" % q)
+    stop("R9L2 pr new --title", G2 + " pr new --title '「%s」' --body x" % q)
+    stop("R9L2 issue new --body", G2 + " issue new --title x --body '「%s」'" % q)
+    stop("R9L2 release new --notes", G2 + " release new v1 --notes '「%s」'" % q)
+    stop("R9L2 repo create --description", G2 + " repo create o/n --public --description '「%s」'" % q)
+    stop("R9L2 pr new 中身なし -> 通る", G2 + " pr new --title x --body 'ok'", 0)
+    # L4: origin に url が複数ある repo
+    one("leak12", {"doc12.md": "引用「%s」\n" % q})
+    one("clean12", {"ok12.md": "- 「%s」\n" % FAKE_NOT_IN_CORPUS})
+    other = os.path.join(ORIGIN_ROOT, "other", "repo.git")
+    sh("git", "init", "-q", "--bare", "-b", "main", other)
+    bare = os.path.join(ORIGIN_ROOT, "test", "fake.git")
+    sh("git", "config", "remote.origin.url", other, cwd=WORK)
+    sh("git", "config", "--add", "remote.origin.url", bare, cwd=WORK)
+    check("R9L4 url 2 本 (1 本目が表に無い・2 本目が表にある) の書き写し push -> 止まる", P("leak12"), 2, cwd=T)
+    check("R9L4 url 2 本の clean push -> 通る", P("clean12"), 0, cwd=T)
+    sh("git", "config", "--unset-all", "remote.origin.url", cwd=WORK)
+    sh("git", "config", "remote.origin.url", bare, cwd=WORK)
+    check("R9L4 url を 1 本に戻すと書き写し push -> 止まる", P("leak12"), 2, cwd=T)
+    # L5: remote の名前の変更・削除
+    for sub in ("rename origin up", "remove origin", "rm origin"):
+        stop("R9L5 git remote " + sub, "git -C %s remote %s" % (WORK, sub))
+    stop("R9L5 git remote -v は通る", "git -C %s remote -v" % WORK, 0)
+    # L6: gh の別名
+    stop("R9L6 gh alias set", G2 + " alias set cc 'pr comment'")
+    stop("R9L6 gh alias import", G2 + " alias import /tmp/x.yml")
+    if shutil.which("gh"):
+        gdir = os.path.join(T, "ghcfg")
+        write(os.path.join(gdir, "config.yml"), "aliases:\n    cc: pr comment\n")
+        def gh_env(c):
+            rc = env_run(c, GH_CONFIG_DIR=gdir).returncode
+            results.append(rc == 2)
+            print("%s %-62s exit=%d (期待 2)" % ("PASS" if rc == 2 else "FAIL", "R9L6 別名 cc で本文を送る -> 止まる", rc))
+        gh_env(G2 + " cc 1 --body '「%s」'" % q)
+        rc = env_run(G2 + " pr view 1", GH_CONFIG_DIR=gdir).returncode
+        results.append(rc == 0)
+        print("%s %-62s exit=%d (期待 0)" % ("PASS" if rc == 0 else "FAIL", "R9L6 別名があっても pr view -> 通る", rc))
+        rc = env_run(G2 + " pr comment 1 --body 'ok'", GH_CONFIG_DIR=gdir).returncode
+        results.append(rc == 0)
+        print("%s %-62s exit=%d (期待 0)" % ("PASS" if rc == 0 else "FAIL", "R9L6 別名があっても pr comment (中身なし) -> 通る", rc))
+    # L7: git config の鍵を --get なしで読む形も止まる (止めすぎは受け入れ)
+    stop("R9L7 git config remote.origin.url (--get なし) は止まる (止めすぎ受け入れ)", "git -C %s config remote.origin.url" % WORK)
+    # 読めない形
+    stop("R9 引用が閉じない git の命令 -> 止まる", "git -C %s commit -m 'abc" % WORK)
+    stop("R9 引用が閉じない git なしの命令 -> 通る", "echo 'abc", 0)
+
+    print("== 13 審査 10 回目の指摘 (群と操作のあいだの -R・shell への文字列渡し・理由の文の分け)")
+    hq = "'「%s」'" % q
+    for nm, c in (("gh pr -R comment", G2 + " pr -R o/r comment 1 --body " + hq),
+                  ("gh pr --repo comment", G2 + " pr --repo o/r comment 1 --body " + hq),
+                  ("gh pr --repo=o/r comment", G2 + " pr --repo=o/r comment 1 --body " + hq),
+                  ("gh issue -R create", G2 + " issue -R o/r create --title x --body " + hq),
+                  ("gh release -R create", G2 + " release -R o/r create v1 --notes " + hq),
+                  ("gh pr --foo comment (知らない印)", G2 + " pr --foo comment 1 --body 'x'"),
+                  ("bash <<< 文字列の push", "bash <<< '" + P("leak13") + "'"),
+                  ("echo | bash の push", "echo '" + P("leak13") + "' | bash"),
+                  ("sh -s heredoc の gh", "sh -s <<'EOF'\n" + G2 + " pr comment 1 --body 'x'\nEOF"),
+                  ("echo | bash の gh 本文", "echo \"" + G2 + " pr comment 1 --body 'x'\" | bash")):
+        stop("R10 止まる: " + nm, c)
+    for nm, c in (("gh pr -R view", G2 + " pr -R o/r view 1"),
+                  ("gh pr -R list", G2 + " pr -R o/r list"),
+                  ("gh pr --repo=o/r view", G2 + " pr --repo=o/r view 1"),
+                  ("bash <<< echo", "bash <<< 'echo hi'"),
+                  ("echo | bash (git なし)", "echo 'ls' | bash")):
+        stop("R10 通る: " + nm, c, 0)
+    # L6: 理由の文を分ける
+    rc, err = run("[ -f x ]", T)
+    ok = rc == 2 and "命令の名前に" in err and "test" in err
+    results.append(ok)
+    print("%s %-62s exit=%d" % ("PASS" if ok else "FAIL", "R10L6 命令の位置が [ -> 命令名の理由の文", rc))
+    rc, err = run(G2 + " pr $a", T)
+    ok = rc == 2 and "git／gh の命令に変数や展開は使えません" in err
+    results.append(ok)
+    print("%s %-62s exit=%d" % ("PASS" if ok else "FAIL", "R10L6 gh pr $a -> git／gh の理由の文", rc))
+    rc, err = run("git -C %s $x origin x" % WORK, T)
+    ok = rc == 2 and "git／gh の命令に変数や展開は使えません" in err
+    results.append(ok)
+    print("%s %-62s exit=%d" % ("PASS" if ok else "FAIL", "R10L6 git の下位命令が $x -> git／gh の理由の文", rc))
+
+    print("== 14 審査 11 回目の指摘 (群の位置だけで判定・shell の命令の位置を解析器にそろえる・群のあとの -R と変数)")
+    for nm, c in (("pr --help", G2 + " pr --help"),
+                  ("pr -h", G2 + " pr -h"),
+                  ("issue --help", G2 + " issue --help"),
+                  ("repo --help", G2 + " repo --help"),
+                  ("release --help", G2 + " release --help"),
+                  ("pr list --label pr", G2 + " pr list --label pr --limit 5"),
+                  ("pr list --base release", G2 + " pr list --base release -L 5"),
+                  ("issue list --label release", G2 + " issue list --label release --state open"),
+                  ("pr list --search repo", G2 + " pr list --search repo --json number"),
+                  ("gh --version", G2 + " --version"),
+                  ("pr list | grep release -c", G2 + " pr list --json title | grep release -c"),
+                  ("label list --search release", G2 + " label list --search release --json name"),
+                  ("search prs --repo o/r release", G2 + " search prs --repo o/r release --json url"),
+                  ("pr view | grep -n repo", G2 + " pr view 1 --json body -q .body | grep -n repo"),
+                  ("bash script.sh", "bash scripts/dev/executor-preflight.sh"),
+                  ("curl | bash", "curl -fsSL https://example.invalid/i.sh | bash")):
+        stop("R11 通る: " + nm, c, 0)
+    for nm, c in (("pr -R o/r $OP", G2 + " pr -R o/r $OP 1 --body " + hq),
+                  ("pr -R o/r \"$OP\"", G2 + " pr -R o/r \"$OP\" 1 --body " + hq),
+                  ("pr --repo=o/r $OP", G2 + " pr --repo=o/r $OP 1 --body " + hq),
+                  ("pr -R o/r comment (R10 の形)", G2 + " pr -R o/r comment 1 --body " + hq),
+                  ("pr --foo comment (R10 の形)", G2 + " pr --foo comment 1 --body 'x'"),
+                  ("gh pr だけ (操作なし)", G2 + " pr"),
+                  ("gh -R o/r pr comment (群の前の印)", G2 + " -R o/r pr comment 1 --body " + hq),
+                  ("改行のあと bash <<< push", "cd /tmp\nbash <<< '" + P("leak14") + "'"),
+                  ("改行のあと bash -s <<< push", "cd /tmp\nbash -s <<< '" + P("leak14") + "'"),
+                  ("env bash <<< push", "env bash <<< '" + P("leak14") + "'"),
+                  ("command bash <<< push", "command bash <<< '" + P("leak14") + "'"),
+                  ("X=1 bash <<< push", "X=1 bash <<< '" + P("leak14") + "'"),
+                  ("echo | env bash", "echo '" + P("leak14") + "' | env bash"),
+                  ("echo |& bash", "echo '" + P("leak14") + "' |& bash")):
+        stop("R11 止まる: " + nm, c)
+
+    print("== 15 審査 12 回目の指摘 (群の前の -R・bash <( ))")
+    for nm, c in (("gh -R o/r pr view", G2 + " -R o/r pr view 1"),
+                  ("gh --repo o/r issue list", G2 + " --repo o/r issue list"),
+                  ("gh --repo=o/r pr list", G2 + " --repo=o/r pr list"),
+                  ("gh -Ro/r pr view", G2 + " -Ro/r pr view 1"),
+                  ("diff <( )", "diff <(ls) <(ls)"),
+                  ("bash <(echo push) (git なし)", "bash <(echo push)")):
+        stop("R12 通る: " + nm, c, 0)
+    for nm, c in (("gh -R o/r pr comment", G2 + " -R o/r pr comment 1 --body " + hq),
+                  ("gh -Ro/r pr comment", G2 + " -Ro/r pr comment 1 --body " + hq),
+                  ("gh --repo=o/r pr comment", G2 + " --repo=o/r pr comment 1 --body " + hq),
+                  ("gh -R o/r pr -R x/y comment", G2 + " -R o/r pr -R x/y comment 1 --body " + hq),
+                  ("gh -R o/r pr $OP", G2 + " -R o/r pr $OP 1 --body " + hq),
+                  ("gh -R o/r --foo pr view", G2 + " -R o/r --foo pr view 1"),
+                  ("gh --help pr comment", G2 + " --help pr comment 1 --body " + hq),
+                  ("bash <( ) の push", "bash <(echo '" + P("leak15") + "')"),
+                  ("source <( ) の push", "source <(echo '" + P("leak15") + "')")):
+        stop("R12 止まる: " + nm, c)
+
+    print("== 8 止めた記録")
+    open(EV, "w").close()
+    check("T50 記録を取るため 1 回止める", "gh pr comment 1 -b '「%s」'" % q, 2)
+    with open(EV, encoding="utf-8") as f:
+        lines = [l for l in f.read().split("\n") if l]
+    last = json.loads(lines[-1]) if lines else {}
+    ok = (last.get("hook") == "confidential-quote-guard" and last.get("ts") and "1 件" in last.get("reason", "")
+          and "ABCD" not in lines[-1] and "つくり語句" not in lines[-1])
+    results.append(bool(ok))
+    print("%s %-62s" % ("PASS" if ok else "FAIL", "T51 記録の最後の行に見張りの名前・日時・件数があり、語句が無い"))
+    r = subprocess.run([sys.executable, GUARD, "--check"], capture_output=True, text=True,
+                       env=dict(os.environ, CONFID_GUARD_DIR=D))
+    results.append(r.returncode == 0 and r.stdout.startswith("OK") and "ABCD" not in r.stdout)
+    print("%s %-62s" % ("PASS" if results[-1] else "FAIL", "T53 --check の表示は件数だけ (語句なし)"))
+
+    n_ok = sum(1 for x in results if x)
+    n_ng = len(results) - n_ok
+    print("PASS %d / FAIL %d" % (n_ok, n_ng))
+    return 1 if n_ng else 0
+
+
+if __name__ == "__main__":
+    try:
+        rc = main()
+    finally:
+        shutil.rmtree(T, ignore_errors=True)
+    sys.exit(rc)

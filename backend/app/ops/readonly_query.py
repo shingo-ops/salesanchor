@@ -17,11 +17,13 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import os
 import re
 import socket
 import sys
 import time
+from dataclasses import dataclass
 from datetime import datetime, timezone
 
 MAX_SQL_BYTES = 64 * 1024
@@ -192,12 +194,13 @@ def _open_audit(path: str):
     return sock
 
 
-def _log(stderr, sql: str, rows: int, ms: int, result: str, audit) -> bool:
+def _log(stderr, sql: str, rows: int, ms: int, result: str, audit, via: str = "") -> bool:
     """AUDIT を stderr と送り口へ出す。送れたら True、送れなければ False。"""
     sha = hashlib.sha256(sql.encode("utf-8", "replace")).hexdigest()[:12]
     head = sql[:500].replace("\n", " ").replace("\r", " ")
+    via = f" via={via}" if via else ""
     ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    line = f"AUDIT ts={ts} sha={sha} rows={rows} ms={ms} result={result} sql={head}"
+    line = f"AUDIT ts={ts} sha={sha} rows={rows} ms={ms} result={result}{via} sql={head}"
     stderr.write(line + "\n")
     try:
         audit.send(f"<{AUDIT_PRI}>{AUDIT_IDENT}: {line}".encode("utf-8", "replace"))
@@ -226,29 +229,51 @@ def main(argv=None, stdin=None, stdout=None, stderr=None, connect=None, audit=No
             pass
 
 
+@dataclass
+class Result:
+    rc: int
+    body: str  # 標準出力に出す TSV
+    err: str  # 標準エラーに出す文字列（AUDIT 行を含む）
+
+
+def execute(sql_text: str, connect, audit, via: str = "") -> Result:
+    """SQL 1 文を検査・実行する。標準入出力には触れない。_run と HTTP 窓口が共用する。"""
+    stdout = io.StringIO()
+    stderr = io.StringIO()
+    rc = _execute(sql_text, stdout, stderr, connect, audit, via)
+    return Result(rc, stdout.getvalue(), stderr.getvalue())
+
+
 def _run(stdin, stdout, stderr, connect, audit) -> int:
+    raw = stdin.read(MAX_SQL_BYTES + 1)
+    if isinstance(raw, bytes):
+        raw = raw.decode("utf-8", "replace")
+    res = execute(raw, connect, audit)
+    stderr.write(res.err)
+    stdout.write(res.body)
+    return res.rc
+
+
+def _execute(raw: str, stdout, stderr, connect, audit, via: str) -> int:
     started = time.monotonic()
 
     def ms() -> int:
         return int((time.monotonic() - started) * 1000)
 
-    raw = stdin.read(MAX_SQL_BYTES + 1)
-    if isinstance(raw, bytes):
-        raw = raw.decode("utf-8", "replace")
     if len(raw.encode("utf-8", "replace")) > MAX_SQL_BYTES:
         stderr.write("rejected: SQL is larger than 64KB\n")
-        return 2 if _log(stderr, raw[:500], 0, 0, "rejected", audit) else 5
+        return 2 if _log(stderr, raw[:500], 0, 0, "rejected", audit, via) else 5
 
     try:
         check_sql(raw)
     except Rejected as e:
         stderr.write(f"rejected: {e}\n")
-        return 2 if _log(stderr, raw, 0, ms(), "rejected", audit) else 5
+        return 2 if _log(stderr, raw, 0, ms(), "rejected", audit, via) else 5
 
     url = os.environ.get("AI_READER_DATABASE_URL")
     if not url:
         stderr.write("error: AI_READER_DATABASE_URL is not set\n")
-        return 3 if _log(stderr, raw, 0, 0, "env_missing", audit) else 5
+        return 3 if _log(stderr, raw, 0, 0, "env_missing", audit, via) else 5
 
     limit = parse_limit(raw)
     if connect is None:
@@ -268,7 +293,7 @@ def _run(stdin, stdout, stderr, connect, audit) -> int:
         cur.execute(raw)
         if cur.description is None:
             stderr.write("error: statement returned no result set\n")
-            return 4 if _log(stderr, raw, 0, ms(), "no_result", audit) else 5
+            return 4 if _log(stderr, raw, 0, ms(), "no_result", audit, via) else 5
         names = [d[0] for d in cur.description]
         redact = [bool(DENY_COLUMN_RE.search(nm.lower())) for nm in names]
         fetched = cur.fetchmany(limit + 1)
@@ -279,7 +304,7 @@ def _run(stdin, stdout, stderr, connect, audit) -> int:
         kind = type(e).__name__
         code = getattr(e, "pgcode", None) or "-"
         stderr.write(f"db error: {kind} pgcode={code}\n")
-        return 4 if _log(stderr, raw, 0, ms(), f"db_error:{kind}", audit) else 5
+        return 4 if _log(stderr, raw, 0, ms(), f"db_error:{kind}", audit, via) else 5
     finally:
         if conn is not None:
             try:
@@ -292,7 +317,7 @@ def _run(stdin, stdout, stderr, connect, audit) -> int:
                 pass
 
     # AUDIT を先に送る。送れなければ結果は出さない。stdout の書き込みは DB の try の外
-    if not _log(stderr, raw, len(fetched), ms(), "ok", audit):
+    if not _log(stderr, raw, len(fetched), ms(), "ok", audit, via):
         return 5
     stdout.write("\t".join(_escape(nm) for nm in names) + "\n")
     for row in fetched:

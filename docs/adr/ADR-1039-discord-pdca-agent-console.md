@@ -2,8 +2,8 @@
 
 | 項目 | 内容 |
 |------|------|
-| ステータス | Proposed（2026-10-22） |
-| 備考 | 便2 の実装カードを出す前に PO の承認で採用に上げる。設計は PO 承認済み（2026-10-21 チャット「1」。実装の開始の承認は兼ねない）。§14 の PO の判断は 1〜5・7〜9 が出ている（下の Decision・Consequences）。6 は段階6 のときに聞く |
+| ステータス | Accepted（PO 2026-10-25 チャット「1」。「方針を正式に採用する。採用しても本番の動きは変わらず、古い Discord の受付の決めごとに置き換え済みの印が付く」への回答。起案 2026-10-22 Proposed） |
+| 備考 | 便2 の実装カードを出す前に PO の承認で採用に上げる（2026-10-25 済み。実装の開始・本番反映の承認は兼ねない）。設計は PO 承認済み（2026-10-21 チャット「1」。実装の開始の承認は兼ねない）。§14 の PO の判断は 1〜5・7〜9 が出ている（下の Decision・Consequences）。6 は段階6 のときに聞く |
 | 起案日 | 2026-10-22 |
 | 方針の決定者 | Shingo（PO）。設計: Claude Opus |
 | 置き換える | Supersedes ADR-1009（§14-4 PO「1」。本 ADR が Accepted になったときに効く） |
@@ -57,6 +57,10 @@
 
 - 監視アラートの webhook 投稿を受けることは本 ADR の範囲外（ADR-1012）。
 - 誤り報告の件の中身（指示書・専用の鍵・照合・再解析）は ADR-1025 の決まりのまま変えない（同時1・1時間6・同じ番号1回・5分以内に開く・決まった指示文）。
+- 件の作業場所（PO 2026-10-26 チャット「1」。件ごとに本店から切り離した写しにする案への回答。設計第18〜20版 §4-5「件ごとの写し」）: Discord の件のセッションの作業場所は、`scripts/new-worktree.sh` の linked worktree ではなく、agent-console の常駐サーバーが囲いの外で作る、本店から切り離した丸ごとの写し（`git clone --no-hardlinks --local`。置き場 `~/worktrees/discord-cases/<セッション id>`・枝 `release/discord-case-<id の先頭8字>`・origin/main 起点）とする。linked worktree では、囲いの中の命令が本店の共有の `.git` に書けてしまうため。
+  - 台帳への登録は `scripts/new-worktree.sh` と同じ書式で、agent-console が写しの中の `.claude-pipeline/active-work.d/` に書く（push の前の検査 `scripts/validate-pr-ownership.sh` が写しの中の台帳を読むため）。この台帳のファイルは件の PR に入ってよい。
+  - 件のセッションは `--no-verify` を使わない（commit・push の前の検査を飛ばさない）。
+  - 上限・自動回収（ADR-114 の worktree の上限・自動回収）は件の写しに当たらない。終わった件の写しの片付けは agent-console の便2b-4 で決める。
 
 ## Follow-up
 

@@ -91,7 +91,7 @@ export function LoginView({ onLoggedIn, onPreparing, onForgot, onSignup }: Login
         </p>
       )}
       <Button type="submit" fullWidth loading={busy} disabled={busy}>
-        {busy ? t("viewer.login.submitting") : t("viewer.login.submit")}
+        {t("viewer.login.submit")}
       </Button>
       <Button type="button" variant="secondary" fullWidth onClick={onForgot} data-testid="viewer-login-forgot">
         {t("viewer.login.forgot")}

@@ -268,12 +268,12 @@ export default function CarrierIntegrationPage({ carrier }: { carrier: Carrier }
           </div>
         </div>
         <div className="form-actions">
-          <Button variant="secondary" size="md"
+          <Button loading={busy} variant="secondary" size="md"
 
             disabled={busy}
             onClick={() => handleTest(env)}
           >
-            {busy ? t("carrierIntegration.testing") : t("carrierIntegration.testButton")}
+            {t("carrierIntegration.testButton")}
           </Button>
           <Button variant="secondary" size="md" disabled={busy} onClick={() => openEdit(env)}>
             {t("common.edit")}

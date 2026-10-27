@@ -25,6 +25,7 @@ scripts/                                   @shingo-ops
 # ADR-1024: AI 用の読み取り専用の道。責任者の明示（強制しない。変更の関所は process-artifacts gate の GO 記録）
 backend/app/ops/                           @shingo-ops
 docker-compose.ai-reader.yml               @shingo-ops
+docker-compose.ai-reader-http.yml          @shingo-ops
 migrations/*ai_reader*                     @shingo-ops
 migrations/*ai_ro*                         @shingo-ops
 backend/tests/ops/                         @shingo-ops

@@ -17,7 +17,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, ValidationError, model_validator
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -38,6 +38,8 @@ _bearer = HTTPBearer(auto_error=False)
 _MAX_BODY_BYTES = 262144
 _MAX_ALERTS = 100
 _JSON_LIMIT_BYTES = 4000
+_DETAIL_LIMIT_BYTES = 8000  # 表の制約は 8192（octet_length(detail::text)）。余白を残して入口で止める
+_ROUND_NOTE_MAX = 500
 
 # 注記で更新してよい列（SQL の列名に利用者の文字列を入れないための固定の一覧）
 _ANNOTATABLE_COLUMNS = (
@@ -51,6 +53,17 @@ _ANNOTATABLE_COLUMNS = (
     "fix_pr",
     "review_note",
     "detection_path",
+)
+
+# Discord 発の行（labels.source='discord'）に注記で書かせない列（ADR-1039・設計 §4-9 K15）
+_DISCORD_LOCKED_COLUMNS = frozenset(
+    {
+        "ai_started_at",
+        "detection_path",
+        "first_aid_started_at",
+        "first_aid_done_at",
+        "first_aid_result",
+    }
 )
 
 
@@ -187,6 +200,10 @@ _INSERT_EVENT_SQL = text(
 
 def _dumps(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False)
+
+
+def _now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
 
 
 def _shrink_labels(labels: dict[str, str]) -> dict[str, Any]:
@@ -346,12 +363,67 @@ class OpsIncidentFields(BaseModel):
     detection_path: Literal["alert", "human", "ai"] | None = None
 
 
+class OpsRound(BaseModel):
+    """Discord 発の件の回の記録（設計 §4-9）。accept と result の pass は別の口が書く。"""
+
+    model_config = ConfigDict(extra="forbid")
+
+    step: Literal[
+        "start",
+        "launch_failed",
+        "kept",
+        "closed",
+        "measure",
+        "result",
+        "stop",
+        "notify_failed",
+        "suspicious",
+    ]
+    n: int = Field(ge=1, le=99)
+    at: AwareDatetime
+    session_id: str | None = Field(None, min_length=1, max_length=64)
+    reservation_id: str | None = Field(None, min_length=1, max_length=64)
+    result: Literal["fail"] | None = None
+    reason: Literal[
+        "failed-3",
+        "unknown",
+        "halt",
+        "interrupted",
+        "lost",
+        "full",
+        "not_ready",
+        "failed",
+        "cwd_invalid",
+        "needs_decision",
+        "blocked",
+        "waiting_60m",
+        "no-reply",
+        "leftover",
+    ] | None = None
+
+    @model_validator(mode="after")
+    def _result_only_on_result_step(self) -> "OpsRound":
+        if (self.step == "result") != (self.result is not None):
+            raise ValueError("result is required when step is result, and not allowed otherwise")
+        return self
+
+
 class OpsIncidentAnnotation(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     kind: Literal["annotated", "first_aid", "ai"]
     note: str | None = Field(None, max_length=2000)
     fields: OpsIncidentFields = OpsIncidentFields()
+    round: OpsRound | None = None
+
+    @model_validator(mode="after")
+    def _round_rules(self) -> "OpsIncidentAnnotation":
+        if self.round is not None:
+            if self.kind != "ai":
+                raise ValueError("round requires kind ai")
+            if self.note is not None and len(self.note) > _ROUND_NOTE_MAX:
+                raise ValueError(f"note must be at most {_ROUND_NOTE_MAX} characters when round is set")
+        return self
 
 
 @router.post("/ops/incidents/{incident_id}/events")
@@ -363,44 +435,207 @@ async def annotate_incident(
 ):
     values = body.fields.model_dump(exclude_unset=True)
     columns = [c for c in _ANNOTATABLE_COLUMNS if c in values]
+    detail: dict[str, Any] = {"fields": sorted(columns), "note": body.note, "user_id": who["user_id"]}
+    if body.round is not None:
+        round_detail = body.round.model_dump(mode="json", exclude_none=True)
+        round_detail["at"] = body.round.at.astimezone(timezone.utc).isoformat()  # 送られた時差によらず UTC の "+00:00" の形にする（model_dump は "Z"、ほかの口の _now_iso は "+00:00"）
+        detail["round"] = round_detail
+    detail_json = _dumps(detail)
+    if len(detail_json.encode("utf-8")) > _DETAIL_LIMIT_BYTES:
+        raise HTTPException(status_code=422, detail="OPS_DETAIL_TOO_LARGE")
     await set_operator_context(db)
     try:
-        if columns:
-            assignments = ", ".join(f"{c} = :{c}" for c in columns)
-            row = (
-                await db.execute(
-                    text(
-                        f"UPDATE public.ops_incidents SET {assignments}, updated_at = now() "
-                        "WHERE id = :id RETURNING id"
-                    ),
-                    {**{c: values[c] for c in columns}, "id": incident_id},
-                )
-            ).first()
-        else:
-            row = (
-                await db.execute(
-                    text("SELECT id FROM public.ops_incidents WHERE id = :id"),
-                    {"id": incident_id},
-                )
-            ).first()
-        if row is None:
+        inc = (
+            await db.execute(
+                text(
+                    "SELECT id, labels->>'source' AS source "
+                    "FROM public.ops_incidents WHERE id = :id"
+                ),
+                {"id": incident_id},
+            )
+        ).mappings().first()
+        if inc is None:
             await db.rollback()
             raise HTTPException(status_code=404, detail="OPS_INCIDENT_NOT_FOUND")
+        if inc["source"] == "discord" and _DISCORD_LOCKED_COLUMNS.intersection(columns):
+            await db.rollback()
+            raise HTTPException(status_code=422, detail="OPS_FIELD_LOCKED_FOR_DISCORD")
+        if columns:
+            assignments = ", ".join(f"{c} = :{c}" for c in columns)
+            await db.execute(
+                text(
+                    f"UPDATE public.ops_incidents SET {assignments}, updated_at = now() "
+                    "WHERE id = :id"
+                ),
+                {**{c: values[c] for c in columns}, "id": incident_id},
+            )
         await db.execute(
             _INSERT_EVENT_SQL,
             {
                 "incident_id": incident_id,
                 "kind": body.kind,
                 "actor": who["actor"],
-                "detail": _dumps(
-                    {"fields": sorted(columns), "note": body.note, "user_id": who["user_id"]}
-                ),
+                "detail": detail_json,
             },
         )
         await db.commit()
     finally:
         await _clear_operator(db)
     return {"incident_id": str(incident_id), "updated_fields": sorted(columns)}
+
+
+# ---------------------------------------------------------------------------
+# Discord 発の件（ADR-1039 Decision 10・設計 §4-9）
+# ---------------------------------------------------------------------------
+
+
+class OpsHumanReport(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    message_id: str = Field(pattern=r"^[0-9]{1,20}$")
+    posted_at: AwareDatetime
+    message_url: str = Field(
+        max_length=200,
+        pattern=r"^https://discord\.com/channels/[0-9]{1,20}/[0-9]{1,20}/[0-9]{1,20}$",
+    )
+    test: bool = False
+
+    @model_validator(mode="after")
+    def _url_ends_with_message_id(self) -> "OpsHumanReport":
+        if self.message_url.rsplit("/", 1)[-1] != self.message_id:
+            raise ValueError("message_url must end with message_id")
+        return self
+
+
+_INSERT_HUMAN_INCIDENT_SQL = text(
+    """
+    INSERT INTO public.ops_incidents
+        (fingerprint, starts_at, alertname, labels, status, detection_path,
+         first_notified_at, last_notified_at, human_noticed_at)
+    VALUES
+        (:fingerprint, :posted_at, 'discord-bug-report', CAST(:labels AS jsonb), 'firing', 'human',
+         :posted_at, :posted_at, :posted_at)
+    ON CONFLICT (fingerprint, starts_at) DO NOTHING
+    RETURNING id
+    """
+)
+
+
+@router.post("/ops/incidents/human")
+async def report_human_incident(
+    body: OpsHumanReport,
+    who: dict[str, Any] = Depends(require_ops_reader),
+    db: AsyncSession = Depends(get_db),
+):
+    fingerprint = f"discord:{body.message_id}"
+    labels: dict[str, str] = {"source": "discord", "message_url": body.message_url}
+    if body.test:
+        labels["test"] = "true"
+    await set_operator_context(db)
+    try:
+        row = (
+            await db.execute(
+                _INSERT_HUMAN_INCIDENT_SQL,
+                {"fingerprint": fingerprint, "posted_at": body.posted_at, "labels": _dumps(labels)},
+            )
+        ).first()
+        inserted = row is not None
+        if inserted:
+            incident_id = row[0]
+            await db.execute(
+                _INSERT_EVENT_SQL,
+                {
+                    "incident_id": incident_id,
+                    "kind": "notified",
+                    "actor": who["actor"],
+                    "detail": _dumps(
+                        {"round": {"step": "accept", "n": 1, "at": _now_iso()}, "user_id": who["user_id"]}
+                    ),
+                },
+            )
+        else:
+            incident_id = (
+                await db.execute(
+                    text(
+                        "SELECT id FROM public.ops_incidents "
+                        "WHERE fingerprint = :fingerprint AND starts_at = :posted_at"
+                    ),
+                    {"fingerprint": fingerprint, "posted_at": body.posted_at},
+                )
+            ).scalar_one()
+        await db.commit()
+    finally:
+        await _clear_operator(db)
+    return {"incident_id": str(incident_id), "inserted": inserted}
+
+
+class OpsIncidentClose(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    n: int = Field(ge=1, le=99)
+    session_id: str = Field(min_length=1, max_length=64)
+
+
+@router.post("/ops/incidents/{incident_id}/close")
+async def close_incident(
+    incident_id: UUID,
+    body: OpsIncidentClose,
+    who: dict[str, Any] = Depends(require_ops_reader),
+    db: AsyncSession = Depends(get_db),
+):
+    await set_operator_context(db)
+    try:
+        inc = (
+            await db.execute(
+                text(
+                    "SELECT status, labels->>'source' AS source "
+                    "FROM public.ops_incidents WHERE id = :id FOR UPDATE"
+                ),
+                {"id": incident_id},
+            )
+        ).mappings().first()
+        if inc is None:
+            await db.rollback()
+            raise HTTPException(status_code=404, detail="OPS_INCIDENT_NOT_FOUND")
+        if inc["source"] != "discord":
+            await db.rollback()
+            raise HTTPException(status_code=409, detail="OPS_INCIDENT_NOT_DISCORD")
+        closed = inc["status"] != "resolved"
+        if closed:
+            await db.execute(
+                text(
+                    "UPDATE public.ops_incidents "
+                    "SET status = 'resolved', resolved_at = now(), updated_at = now() "
+                    "WHERE id = :id"
+                ),
+                {"id": incident_id},
+            )
+            await db.execute(
+                _INSERT_EVENT_SQL,
+                {
+                    "incident_id": incident_id,
+                    "kind": "resolved",
+                    "actor": who["actor"],
+                    "detail": _dumps(
+                        {
+                            "round": {
+                                "step": "result",
+                                "result": "pass",
+                                "n": body.n,
+                                "session_id": body.session_id,
+                                "at": _now_iso(),
+                            },
+                            "user_id": who["user_id"],
+                        }
+                    ),
+                },
+            )
+            await db.commit()
+        else:
+            await db.rollback()
+    finally:
+        await _clear_operator(db)
+    return {"incident_id": str(incident_id), "closed": closed}
 
 
 # ---------------------------------------------------------------------------

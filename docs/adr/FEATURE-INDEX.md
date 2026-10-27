@@ -19,6 +19,7 @@
 | 共用商品の登録 / 必須項目 / 調べたが無い / product_blank_confirmations / 細分類 | **ADR-1020** ／ ADR-155 ／ ADR-156 | 9項目必須・4項目は印で空を認める・全入口で check_required_fields。値の決め方は docs/specs/product-master/registration-rules.md |
 | 取り込み / 解析 / パイプライン / Discord 収集 | **ADR-100** ／ ADR-014 | 提供元メッセージ→生オファー |
 | まとめ売り / N枚セット / bundle_size / バルク / bulk_price_basis_unknown / bundle_unverified | **ADR-1027** ／ ADR-1021 ／ [`docs/specs/bundle-sale/README.md`](../specs/bundle-sale/README.md) | 値段を割らずまとめの数を保存・商品名の欄に「N単位セット」。バルク系だけ形 P1・P2 を足す（2026-10-21 追記）。新しい書き方の手順は [`docs/runbooks/bundle-sale-new-wording.md`](../runbooks/bundle-sale-new-wording.md) |
+| 社外秘の原文 / 書き写し / confidential-quote-guard / 送る前の見張り | **ADR-1045** ／ ADR-1043 ／ ADR-1029 | 仕入元の投稿の原文を「」『』で書き写したまま push・PR 本文・コメントで公開の置き場へ送るのを Mac の PreToolUse で止める。表は社外秘フォルダ |
 
 ## 顧客・リード・テナント
 

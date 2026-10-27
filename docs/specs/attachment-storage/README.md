@@ -27,6 +27,7 @@ PO: しんご
 - README.md（本ファイル・表紙）
 - [ideal-state.md](./ideal-state.md) — あるべき姿（PO自筆のみの正本。Planner・Generatorは書き換えない）
 - [kgi.md](./kgi.md) — KGI（○×条件・上限値・前提）
+- [to-be.md](./to-be.md) — 添付ファイルの保管 理想の設計図（To-Be）
 
 ## 背景となる実測（2026-09-01）
 

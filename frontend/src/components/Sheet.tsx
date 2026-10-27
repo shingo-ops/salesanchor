@@ -24,6 +24,7 @@ import ReactDOM from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Button } from "./Button";
 import { X } from "../constants/icons-base";
+import { useFocusTrap, useInertWhenClosed, getFirstFocusable } from "../hooks/useFocusTrap";
 import "./Sheet.css";
 
 interface SheetProps {
@@ -79,35 +80,10 @@ export function Sheet({ open, onClose, title, children, footer }: SheetProps) {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [open, onClose]);
 
-  /* フォーカストラップ */
-  useEffect(() => {
-    if (!open) return;
-    const panel = panelRef.current;
-    if (!panel) return;
-
-    const handleTab = (e: KeyboardEvent) => {
-      if (e.key !== "Tab") return;
-      const focusable = getFocusableElements(panel);
-      if (focusable.length === 0) { e.preventDefault(); return; }
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-
-      if (e.shiftKey) {
-        if (document.activeElement === first) {
-          e.preventDefault();
-          last.focus();
-        }
-      } else {
-        if (document.activeElement === last) {
-          e.preventDefault();
-          first.focus();
-        }
-      }
-    };
-
-    document.addEventListener("keydown", handleTab);
-    return () => document.removeEventListener("keydown", handleTab);
-  }, [open]);
+  /* フォーカストラップ（共通化: frontend/src/hooks/useFocusTrap.ts。design.md 4-3） */
+  useFocusTrap(open, panelRef);
+  /* 閉じている間だけ中身を無効化する（宿題 D5。docs/handoff/drawer-inert-when-closed/design.md 4-3） */
+  useInertWhenClosed(open, panelRef, portalTarget);
 
   if (!portalTarget) return null;
 
@@ -159,25 +135,3 @@ export function Sheet({ open, onClose, title, children, footer }: SheetProps) {
   );
 }
 
-/* ----------------------------------------------------------------
-   ユーティリティ（Drawer.tsx と同じ）
-   ---------------------------------------------------------------- */
-
-const FOCUSABLE_SELECTOR = [
-  "a[href]",
-  "button:not([disabled])",
-  "input:not([disabled])",
-  "select:not([disabled])",
-  "textarea:not([disabled])",
-  "[tabindex]:not([tabindex='-1'])",
-].join(",");
-
-function getFocusableElements(container: HTMLElement): HTMLElement[] {
-  return Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
-    (el) => !el.closest("[aria-hidden='true']"),
-  );
-}
-
-function getFirstFocusable(container: HTMLElement): HTMLElement | null {
-  return getFocusableElements(container)[0] ?? null;
-}
