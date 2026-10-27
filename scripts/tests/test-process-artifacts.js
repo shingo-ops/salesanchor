@@ -623,6 +623,10 @@ const R6B_CASES = [
   ['× 1: .sql の $$ の中の -- は本物のコメント', 'migrations/r6b_g.sql', 'DO $$ BEGIN\n -- DROP TABLE x\n NULL;\nEND $$;\n', false],
   ['× 1: .sql のブロックコメントだけ（前に文字列あり）', 'migrations/r6b_h.sql', "SELECT '/* a */'; /* DROP TABLE x */\n", false],
   ['× 1: .sql の ロールバック手順をコメントで書いただけ', 'migrations/r6b_i.sql', 'CREATE TABLE t (id int);\n-- ロールバック: DROP TABLE t;\n', false],
+  ['○ 1: .sql の閉じの無いブロックコメントの後ろの表削除（R6a と同じ扱い）', 'migrations/r6b_ag.sql', 'SELECT 1; /* 説明\nDROP TABLE x;\n', true],
+  ['○ 1: .sql の引用符の後ろで閉じの無い /* の後ろの表削除', 'migrations/r6b_ah.sql', "SELECT 'a'; /* DROP TABLE x;\n", true],
+  ['○ 1: py の文字列の中でコメントに挟まれた表削除（素の文でもコメントを除いた文でも当たる）', 'scripts/migrate_zz_r6b3.py', 'cur.execute("DROP/**/TABLE x")\n', true],
+  ['× 1: .sql の閉じのあるブロックコメントだけ', 'migrations/r6b_ai.sql', 'SELECT 1; /* 説明 DROP TABLE x; */\n', false],
   // 2 文の始まり ○
   ['○ 2: DO ブロックの中の WHERE なし DELETE', 'migrations/r6b_j.sql', 'DO $$ BEGIN DELETE FROM t; END $$;\n', true],
   ['○ 2: DO ブロックの中の TRUNCATE', 'migrations/r6b_k.sql', 'DO $$ BEGIN TRUNCATE t; END $$;\n', true],

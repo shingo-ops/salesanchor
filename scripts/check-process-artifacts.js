@@ -78,7 +78,7 @@ function isMigrationPath(f) {
 
 // SQL のコメントを除き、空白と改行を 1 つにまとめる
 // 単引用符・二重引用符の中の -- や /* はコメントの始まりと見なさない（'' の重ねは閉じて開き直す扱いで足りる）。
-// $$ や $tag$ は追わず、その中の -- も本物のコメントとして扱う
+// 閉じの無いブロックコメントはコメントとして扱わない
 function normalizeSqlText(text) {
   let out = '';
   let i = 0;
@@ -95,8 +95,13 @@ function normalizeSqlText(text) {
       i = j === -1 ? text.length : j;
     } else if (c === '/' && text[i + 1] === '*') {
       const j = text.indexOf('*/', i + 2);
-      out += ' ';
-      i = j === -1 ? text.length : j + 2;
+      if (j === -1) {
+        out += c;
+        i++;
+      } else {
+        out += ' ';
+        i = j + 2;
+      }
     } else {
       out += c;
       i++;
@@ -170,10 +175,17 @@ function sqlHasDestructiveStatement(sql) {
 }
 
 // 追加された文章が、表・列の削除または大量削除を含むか。
-// .sql は引用符を見分ける切り方でコメントを除いてから当てる。.sql 以外はコメントを除かず素の文に当てる
+// .sql は引用符を見分ける切り方でコメントを除いてから当てる。
+// .sql 以外は、素の文と、引用符を見分けずにコメントを除いた文（R6a と同じ切り方）の両方に当て、どちらかで当たれば検出する
 function sqlTextHasDestructiveStatement(text, file) {
   if (/\.sql$/i.test(file || '')) return sqlHasDestructiveStatement(normalizeSqlText(text));
-  return sqlHasDestructiveStatement(text.replace(/\s+/g, ' ').trim());
+  const plain = text.replace(/\s+/g, ' ').trim();
+  const legacyStripped = text
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .replace(/--[^\n]*/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return sqlHasDestructiveStatement(plain) || sqlHasDestructiveStatement(legacyStripped);
 }
 
 // diff をファイルごとに分け、ファイル名と、追加行だけを改行でつないだ文章にする
