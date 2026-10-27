@@ -248,6 +248,13 @@ def _s(v):
     return v if isinstance(v, str) else ""
 
 
+def _has_value(v):
+    """欄に値が書いてあるか（文字列でも一覧でも。空文字・空の一覧は無しとみなす）。"""
+    if isinstance(v, str):
+        return bool(v.strip())
+    return bool(v)
+
+
 def _anchors_of(item):
     """項目の anchor の一覧（anchor と anchors の両方を許す）。"""
     out = []
@@ -362,7 +369,7 @@ def run(root):
         elif kind in ("review", "exempt"):
             if not _s(item.get("reason")).strip():
                 findings.append(_f("C3", "error", RULES_FILE, ln, "%s: %s には reason（理由）が要る" % (label, kind)))
-            if _s(item.get("check")).strip():
+            if _has_value(item.get("check")):
                 findings.append(_f("C3", "error", RULES_FILE, ln,
                                    "%s: check を書いてよいのは gate だけ（%s には書かない。gate 候補は reason の先頭に「gate候補（R6）: 」と書く）" % (label, kind)))
         owners.append((("rule", idx), source, anchors, label, kind))

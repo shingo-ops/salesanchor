@@ -20,7 +20,7 @@ rules:
     when: ci
     fixture: ""
     evidence: "R2 で見本を置く"
-    reason: "gh auth status での名義確認は PR の外なので対象外。shingo-ops 名義のコード変更 PR は check-process-artifacts.js:813-818 が止める（docs-only は :774 でスキップ）"
+    reason: "gh auth status での名義確認は PR の外なので対象外。shingo-ops 名義のコード変更 PR は check-process-artifacts.js:813-818 が止める。書類だけの PR は検査が飛ぶ（:774）が、AGENTS.md:33 が docs-only PR を対象外にしているので妨げない。PR 作者の取得に失敗すると check-process-artifacts.js:809-810 で警告だけで通る。R2/R6 の宿題"
   - id: A13
     source: AGENTS.md
     anchor: "を含む PR は PO の「GO #PR番号」まで main にマージしない"
@@ -29,34 +29,22 @@ rules:
     when: ci
     fixture: ""
     evidence: "R2 で見本を置く"
-    reason: ""
+    reason: "migrations/・deploy.yml・本番 scripts/ を含む PR の GO 記録の有無は check-process-artifacts.js:925-931 が止める（危険パスは :115-134）。危険パスを含む PR は書類だけの PR にならないので :774 の飛びは当たらず、飛ぶ条件は無い。「まで main にマージしない」という順序そのものは PR の外"
   - id: S02
     source: docs/STANDARD-WORKFLOW.md
     anchor: "**recon証拠**：実コードへの **file:line 引用**を含み、その引用先が**実在する**こと"
-    kind: gate
-    check: "process-artifacts gate"
-    when: ci
-    fixture: ""
-    evidence: "R2 で見本を置く"
-    reason: ""
+    kind: review
+    reason: "gate候補（R6）: recon の file:line 引用と実在の検査は check-process-artifacts.js:685-690（本検査）が行うが、危険な場所（STANDARD-WORKFLOW.md・scripts/・migrations/ など :115-134）を触る PR は :943 でその手前で終わり recon を見ない。決まり（STANDARD-WORKFLOW.md:80-85、:129-132）は危険変更の PR も対象にしている。自律クラフト免除（:976-978）は同 :139 が認め、書類だけの PR（:774）は同 :137 が対象外にしているので妨げない"
   - id: S03
     source: docs/STANDARD-WORKFLOW.md
     anchor: "**Phase 3 設計**：各受け入れ基準に**検証方法（テスト/ゲート/Evaluator）のリンク**があること"
-    kind: gate
-    check: "process-artifacts gate"
-    when: ci
-    fixture: ""
-    evidence: "R2 で見本を置く"
-    reason: ""
+    kind: review
+    reason: "gate候補（R6）: 設計doc の検証方法リンク・外部事例欄の検査は check-process-artifacts.js:703（validateDesignDoc、本検査）が行うが、危険な場所を触る PR は :943 でその手前で終わり設計doc を見ない。決まり（STANDARD-WORKFLOW.md:83、:129-132）は危険変更の PR も対象にしている。自律クラフト免除（:976-978）は同 :139 が認め、書類だけの PR（:774）は同 :137 が対象外にしているので妨げない"
   - id: S08
     source: docs/STANDARD-WORKFLOW.md
     anchor: "新しい手順書・仕様書は docs/INDEX.md か docs/specs/README.md に『いつ読むか』付きで1行足す"
-    kind: gate
-    check: "doc index reachability"
-    when: ci
-    fixture: ""
-    evidence: "R2 で見本を置く"
-    reason: ""
+    kind: review
+    reason: "gate候補（R6）: doc index reachability（scripts/ci/check_doc_index.py）は docs/specs/ と docs/ai-agents/ の .md だけを見る（:142）。決まり（STANDARD-WORKFLOW.md:77）は新しい手順書・仕様書すべてが対象で、docs/runbooks/・docs/operations/ などに足した文書は INDEX から届くかを見ない。「いつ読むか」欄が空の行は見る（BLANK_WHEN）が、新しい文書が 1 行足されたかは見ない"
   - id: S10
     source: docs/STANDARD-WORKFLOW.md
     anchor: "を含む実装は、GO（PO、または ADR-1003 に基づく Opus の委任 GO）が出るまで release ブランチで待機し main にマージしない"
@@ -65,7 +53,7 @@ rules:
     when: ci
     fixture: ""
     evidence: "R2 で見本を置く"
-    reason: ""
+    reason: "migrations/・deploy.yml・本番 scripts/ を含む実装の GO 記録の有無は check-process-artifacts.js:925-931 が止める（危険パスは :115-134）。危険パスを含む PR は書類だけの PR にならないので :774 の飛びは当たらず、飛ぶ条件は無い。release ブランチで待つ順序そのものは PR の外（登録済みA13と同じ検査で、行が別）"
   - id: F01
     source: frontend/AGENTS.md
     anchor: "ページタイトル・サブタイトルは必ず"
@@ -79,21 +67,13 @@ rules:
   - id: F07
     source: frontend/AGENTS.md
     anchor: "UI部品新設時は必ず `components/` の金型を先確認"
-    kind: gate
-    check: "UI governance gate"
-    when: ci
-    fixture: ""
-    evidence: "R2 で見本を置く"
-    reason: ""
+    kind: review
+    reason: "gate候補（R6）: UI governance gate は frontend/src/pages/ の .tsx の生select・生input・生checkbox・生radio・自作タブの増加だけを止める（scripts/check-ui-governance.js:41,112。.stories.tsx・design-system・design-preview は :97-99 で除外）。決まり（frontend/AGENTS.md:36）は UI 部品全般で、features/・components/ の生部品（読み込み中の三項を除く）と色直値は止まらず、「金型を先に確認」は PR の外"
   - id: F08
     source: frontend/AGENTS.md
     anchor: "は必ず `:root` と `:root.force-dark` の両方に追加"
-    kind: gate
-    check: "Lint & Dark Mode Check (ADR-067)"
-    when: ci
-    fixture: ""
-    evidence: "R2 で見本を置く"
-    reason: ""
+    kind: review
+    reason: "gate候補（R6）: Lint & Dark Mode Check の check-dark-parity.js:19 は src/index.css の :root と :root.force-dark だけを比べ、tokens.css・sidebar.css・各ページの CSS（どれにも :root.force-dark がある）は比べない。check-new-tokens.js:40 は tokens.css・index.css の新規トークンを PR 本文のチェック欄で自己申告させるだけ。決まり（frontend/AGENTS.md:40）は新規の色トークンすべてが対象"
   - id: F11
     source: frontend/AGENTS.md
     anchor: "`lucide-react` からの直接 import は ESLint が禁止する"
@@ -102,7 +82,7 @@ rules:
     when: ci
     fixture: ""
     evidence: "R2 で見本を置く"
-    reason: ""
+    reason: "frontend/src の ts・tsx の lucide-react 直接 import は eslint.config.js:14・:118-131 の no-restricted-imports（error）が止める。constants/icons.tsx だけ off（:135-139）だが、決まりが唯一の窓口として許している（frontend/AGENTS.md:58-64）。frontend/ に変更が無い PR は e2e.yml:62 で検査が飛ぶが、import は frontend/ の中にしか無いので妨げない"
   - id: K01
     source: backend/AGENTS.md
     anchor: "`db.commit()` 直後に `reset_tenant_context()` 必須"
@@ -111,34 +91,22 @@ rules:
     when: ci
     fixture: ""
     evidence: "R2 で見本を置く"
-    reason: ""
+    reason: "backend/app/routers/ の write endpoint の db.commit() 直後の reset_tenant_context() は lint-tenant-schema.yml:69 の strict が止める。検査は routers/ を変えた PR だけ走る（:53）が、決まりの対象も write endpoint（backend/AGENTS.md:10）なので飛んでも妨げない"
   - id: K06
     source: backend/AGENTS.md
     anchor: "**ファイル命名規則（101番以降）**"
-    kind: gate
-    check: "models.py に新 Column → deploy.yml にマイグレーション追記必須"
-    when: ci
-    fixture: ""
-    evidence: "R2 で見本を置く"
-    reason: ""
+    kind: review
+    reason: "gate候補（R6）: migration-guard.yml:81-82 は新規追加（--diff-filter=A）の migrations/ のうち名前が数字で始まる .sql だけを対象にする。名前が数字以外で始まる .sql（add_foo.sql など）は命名の検査（:95-117）が飛び、形式を外れても通る。決まり（backend/AGENTS.md:33）は migration ファイルすべてが対象"
   - id: K07
     source: backend/AGENTS.md
     anchor: "**`deploy.yml` 登録必須**"
-    kind: gate
-    check: "models.py に新 Column → deploy.yml にマイグレーション追記必須"
-    when: ci
-    fixture: ""
-    evidence: "R2 で見本を置く"
-    reason: ""
+    kind: review
+    reason: "gate候補（R6）: migration-guard.yml:81-82 は新規追加（--diff-filter=A）の migrations/ のうち名前が数字で始まる .sql だけを対象にする。名前が数字以外で始まる .sql（add_foo.sql など）は登録の検査（:119-163）が飛び、未登録でも通る。決まり（backend/AGENTS.md:34）は migration ファイルすべてが対象"
   - id: K11
     source: backend/AGENTS.md
     anchor: "**`{schema}` プレースホルダは絶対使用禁止**"
-    kind: gate
-    check: "models.py に新 Column → deploy.yml にマイグレーション追記必須"
-    when: ci
-    fixture: ""
-    evidence: "R2 で見本を置く"
-    reason: ""
+    kind: review
+    reason: "gate候補（R6）: migration-guard.yml:81-82 は新規追加（--diff-filter=A）の migrations/ のうち名前が数字で始まる .sql だけを対象にする。名前が数字以外で始まる .sql と既存ファイルの変更は {schema} の検査（:171-）が飛び、プレースホルダが入っても通る。決まり（backend/AGENTS.md:39）は migration ファイルすべてが対象"
   - id: A001
     source: AGENTS.md
     anchor: "- **Legacy**: `https://jarvis-claude.uk/"
@@ -332,7 +300,7 @@ rules:
     when: ci
     fixture: ""
     evidence: "R2 で見本を置く"
-    reason: "PR本文に「### 標準ワークフロー確認」セクション必須: check-process-artifacts.js:649-651 が欠落をエラーにする（recon S09: stops）"
+    reason: "PR本文に「### 標準ワークフロー確認」セクション必須: 欠落は PR番号2600以上で check-process-artifacts.js:861-863 が止める（本検査の :649-651 は危険変更・免除宣言の PR では :943・:976 で手前で終わるが、:861 は :943 より前なので危険変更でも止まる）。書類だけの PR（:774）は STANDARD-WORKFLOW.md:137 が対象外にしているので検査が飛んでも妨げない。PR番号2600未満の猶予（:855）は新しい PR には当たらない（recon S09: stops）"
   - id: S044
     source: docs/STANDARD-WORKFLOW.md
     anchor: "- recon.md と design.md は必ず git add してからコ"
@@ -346,7 +314,7 @@ rules:
     when: ci
     fixture: ""
     evidence: "R2 で見本を置く"
-    reason: "ユーザー影響変更（frontend/src/・backend/app/routers/ 等）は本番前にGO記録が必須: check-process-artifacts.js:946-962 が止める"
+    reason: "ユーザー影響変更（frontend/src/・backend/app/routers/ 等）は本番前にGO記録が必須: check-process-artifacts.js:946-962 が止める。これらを含む PR は書類だけの PR（:774）にならないので飛ぶ条件は無い"
   - id: S046
     source: docs/STANDARD-WORKFLOW.md
     anchor: "- **人の動作確認の当面の確認環境**は本番のみ。確認は tenant_001"
@@ -570,7 +538,7 @@ rules:
     when: ci
     fixture: ""
     evidence: "R2 で見本を置く"
-    reason: "PR本文の必須欄: 「### 標準ワークフロー確認」は check-process-artifacts.js:649-651、触る/削除ファイル欄の書式は :863/:903 が見る"
+    reason: "PR本文の必須欄: セクションの欠落と触るファイル欄は check-process-artifacts.js:861（欄なし）・:865（宣言外）、削除するファイル欄は :901（欄なし）・:907（宣言外）が止める。:649-651 は本検査にだけ届くので根拠にしない。書式（行頭空白・ダッシュなしの平打ち）は parseSOPDeclaration（:258-292）が読む。削除が 1 行も無い PR は :899 で削除欄の検査が飛ぶが、決まりは変更した全ファイルを書く話で削除が無ければ欄が空でも反しない。書類だけの PR（:774）は STANDARD-WORKFLOW.md:137 が対象外"
   - id: P098
     source: docs/ai-agents/design-partner.md
     anchor: "- GO記録4欄（発行者/日時/原文/バックアップ確認）は、POの `GO #P"
@@ -744,7 +712,7 @@ rules:
     when: ci
     fixture: ""
     evidence: "R2 で見本を置く"
-    reason: "カードで追加編集させるファイルをPR本文『触るファイル』宣言に含める: 宣言外変更を check-process-artifacts.js:847-877 が落とす（PR番号2600以上・docs-onlyは:774でスキップ）"
+    reason: "カードで追加編集させるファイルをPR本文『触るファイル』宣言に含める: 宣言外変更を check-process-artifacts.js:865・:907 が落とす（PR番号2600以上）。書類だけの PR（:774）は STANDARD-WORKFLOW.md:137 が対象外なので検査が飛んでも妨げない。宣言の更新を同じカードに含める部分はカードの書き方で PR の外"
   - id: P135
     source: docs/ai-agents/design-partner.md
     anchor: "- マージ拒否「base branch is not up to date」は、"
@@ -843,12 +811,8 @@ rules:
   - id: X329
     source: docs/ai-agents/executor-checklist.md
     anchor: "- 「削除するファイル」は git diff の実測で判定（削除・変更行のあるフ"
-    kind: gate
-    check: "process-artifacts gate"
-    when: ci
-    fixture: ""
-    evidence: "R2 で見本を置く"
-    reason: "「削除するファイル」はgit diffの実測で判定し推測・水増し・過少をしない: 宣言と差分の照合を check-process-artifacts.js:879-920 が行う（PR番号2600以上・docs-onlyは:774でスキップ）（recon E02 partial）"
+    kind: review
+    reason: "gate候補（R6）: 「削除するファイル」はgit diffの実測で判定し推測・水増し・過少をしない: 宣言と差分の照合を check-process-artifacts.js:879-920 が行うが、止まるのは過少（宣言していない削除。:907）だけで、水増し（差分に無いファイルの宣言）は止まらない。削除が 1 行も無い PR は :899 で欄の検査も飛ぶ（recon E02 partial）"
   - id: X330
     source: docs/ai-agents/executor-checklist.md
     anchor: "- 完了報告に、指示の全項目の消化○×自己チェックを必ず添える。"
@@ -967,7 +931,7 @@ rules:
     when: ci
     fixture: ""
     evidence: "R2 で見本を置く"
-    reason: "docs/adr/README.md は generate-adr-index.js の自動生成物で手動編集禁止: 手で行を足すと adr-index-check.yml:29-31 の `--check` が落ちる"
+    reason: "docs/adr/README.md は generate-adr-index.js の自動生成物で手動編集禁止: 手で行を足すと adr-index-check.yml:29-31 の `--check` が落ちる。検査は ADR 関連ファイルの変更時だけ走る（:19-22）が、README.md の手編集はその対象（:20）なので飛ばない"
   - id: L363
     source: docs/ai-agents/lessons.d/20260728-precheck-guards.md
     anchor: "- 危険変更・正本変更のカードを組む前に、その変更に効く関所・ガードの適用条件を"

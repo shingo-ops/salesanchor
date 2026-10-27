@@ -192,6 +192,14 @@ class RegistryCheckMore(unittest.TestCase):
         rc, data, out = self._run(reg)
         self.assertEqual(rc, 1, out)
         self.assertIn("C3", self._codes(data))
+        self.assertTrue(any(f["check"] == "C3" and "gate だけ" in f["message"] for f in data["findings"]), out)
+
+    def test_review_with_check_list_fails(self):
+        extra = '    check:\n      - "chk-a"\n'
+        reg = _registry([_review("T1", "禁止の決まりその1", extra=extra), _review("T2", "必ず守る決まりその2")])
+        rc, data, out = self._run(reg)
+        self.assertEqual(rc, 1, out)
+        self.assertTrue(any(f["check"] == "C3" and "gate だけ" in f["message"] for f in data["findings"]), out)
 
     def test_duplicate_id_fails(self):
         reg = _registry([_review("T1", "禁止の決まりその1"), _review("T1", "必ず守る決まりその2")])
