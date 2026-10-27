@@ -77,48 +77,119 @@ function isMigrationPath(f) {
 }
 
 // SQL のコメントを除き、空白と改行を 1 つにまとめる
+// 単引用符・二重引用符の中の -- や /* はコメントの始まりと見なさない（'' の重ねは閉じて開き直す扱いで足りる）。
+// $$ や $tag$ は追わず、その中の -- も本物のコメントとして扱う
 function normalizeSqlText(text) {
-  return text
-    .replace(/\/\*[\s\S]*?\*\//g, ' ')
-    .replace(/--[^\n]*/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+  let out = '';
+  let i = 0;
+  while (i < text.length) {
+    const c = text[i];
+    if (c === "'" || c === '"') {
+      let j = i + 1;
+      while (j < text.length && text[j] !== c) j++;
+      out += text.slice(i, j + 1);
+      i = j + 1;
+    } else if (c === '-' && text[i + 1] === '-') {
+      const j = text.indexOf('\n', i);
+      out += ' ';
+      i = j === -1 ? text.length : j;
+    } else if (c === '/' && text[i + 1] === '*') {
+      const j = text.indexOf('*/', i + 2);
+      out += ' ';
+      i = j === -1 ? text.length : j + 2;
+    } else {
+      out += c;
+      i++;
+    }
+  }
+  return out.replace(/\s+/g, ' ').trim();
 }
 
-// 追加された文章が、表・列の削除または大量削除を含むか
-function sqlTextHasDestructiveStatement(text) {
-  const sql = normalizeSqlText(text);
-  if (/\bDROP\s+(TABLE|COLUMN|SCHEMA|DATABASE)\b/i.test(sql)) return true;
-  // TRUNCATE と DELETE は文の始め（先頭・; の直後・引用符や開きかっこの直後）にあるものだけを当てる
-  if (/(?:^|[;'"(])\s*TRUNCATE\b/i.test(sql)) return true;
-  // 先頭または ; の直後: 次の ; まで
-  for (const m of sql.matchAll(/(?:^|;)\s*DELETE\s+FROM\b[^;]*/gi)) {
-    if (!/\bWHERE\b/i.test(m[0])) return true;
+// 文の始まり: 先頭・; ・かっこ・引用符・手続きのかたまりの始まりや分岐の句・$$ の直後
+const SQL_STATEMENT_START = String.raw`(^|[;()]|['"]|\b(?:BEGIN|THEN|ELSE|LOOP)\b|\$[A-Za-z_]*\$)\s*`;
+
+// DELETE 文の本体を走査し、かっこの外にある WHERE の有無を返す。
+// 終わりは ; ・対応のない閉じかっこ・（引用符の直後で始まったときは）同じ引用符
+function deleteStatementHasWhere(sql, from, quote) {
+  let depth = 0;
+  let outside = '';
+  for (let i = from; i < sql.length; i++) {
+    const c = sql[i];
+    if (c === ';') break;
+    if (quote && c === quote) break;
+    if (c === '(') { depth++; continue; }
+    if (c === ')') {
+      if (depth === 0) break;
+      depth--;
+      continue;
+    }
+    if (depth === 0) outside += c;
   }
-  // 引用符の直後: 同じ引用符が閉じるまで（または ; まで）
-  for (const m of sql.matchAll(/(['"])\s*DELETE\s+FROM\b(?:(?!\1)[^;])*/gi)) {
-    if (!/\bWHERE\b/i.test(m[0])) return true;
-  }
-  // 開きかっこの直後: 次の ; まで
-  for (const m of sql.matchAll(/\(\s*DELETE\s+FROM\b[^;]*/gi)) {
-    if (!/\bWHERE\b/i.test(m[0])) return true;
+  return /\bWHERE\b/i.test(outside);
+}
+
+// ALTER TABLE の中で、列を消す略記（COLUMN を省いた削除）があるか。制約など列以外の削除は当てない
+function alterTableDropsColumnShorthand(sql) {
+  for (const m of sql.matchAll(/\bALTER\s+TABLE\s+(?:IF\s+EXISTS\s+)?(?:ONLY\s+)?[^\s;,()]+\s*\*?/gi)) {
+    let depth = 0;
+    let action = '';
+    const actions = [];
+    for (let i = m.index + m[0].length; i < sql.length; i++) {
+      const c = sql[i];
+      if (c === ';') break;
+      if (c === '(') depth++;
+      if (c === ')') {
+        if (depth === 0) break;
+        depth--;
+      }
+      if (c === ',' && depth === 0) {
+        actions.push(action);
+        action = '';
+        continue;
+      }
+      action += c;
+    }
+    actions.push(action);
+    if (actions.some(a => /^\s*DROP\s+(?!CONSTRAINT\b)\S/i.test(a))) return true;
   }
   return false;
 }
 
-// diff をファイルごとに分け、追加行だけを改行でつないだ文章にする
+// 1 つの文章（コメントを除く前か後のどちらか）が、表・列の削除または大量削除を含むか
+function sqlHasDestructiveStatement(sql) {
+  if (/\bDROP\s+(TABLE|COLUMN|SCHEMA|DATABASE)\b/i.test(sql)) return true;
+  if (alterTableDropsColumnShorthand(sql)) return true;
+  const startRe = new RegExp(SQL_STATEMENT_START + '(DELETE\\s+FROM\\b|TRUNCATE\\b)', 'gi');
+  for (const m of sql.matchAll(startRe)) {
+    if (/^TRUNCATE/i.test(m[2])) return true;
+    const prefix = m[1].trim();
+    const quote = prefix === "'" || prefix === '"' ? prefix : null;
+    if (!deleteStatementHasWhere(sql, m.index + m[0].length, quote)) return true;
+  }
+  return false;
+}
+
+// 追加された文章が、表・列の削除または大量削除を含むか。
+// .sql は引用符を見分ける切り方でコメントを除いてから当てる。.sql 以外はコメントを除かず素の文に当てる
+function sqlTextHasDestructiveStatement(text, file) {
+  if (/\.sql$/i.test(file || '')) return sqlHasDestructiveStatement(normalizeSqlText(text));
+  return sqlHasDestructiveStatement(text.replace(/\s+/g, ' ').trim());
+}
+
+// diff をファイルごとに分け、ファイル名と、追加行だけを改行でつないだ文章にする
 function addedTextByFile(diff) {
   const result = [];
   let current = null;
   for (const line of diff.split('\n')) {
     if (line.startsWith('diff --git ')) {
-      current = [];
+      const idx = line.lastIndexOf(' b/');
+      current = { file: idx === -1 ? '' : line.slice(idx + 3), lines: [] };
       result.push(current);
     } else if (current && line.startsWith('+') && !line.startsWith('+++')) {
-      current.push(line.slice(1));
+      current.lines.push(line.slice(1));
     }
   }
-  return result.map(lines => lines.join('\n'));
+  return result.map(r => ({ file: r.file, text: r.lines.join('\n') }));
 }
 
 function migrationsContainDropStatement(files) {
@@ -139,7 +210,7 @@ function migrationsContainDropStatement(files) {
       `git diff --unified=0 "${base}...${head}" -- ${migrationFiles.map(f => `"${f}"`).join(' ')}`,
       { encoding: 'utf8', maxBuffer: 256 * 1024 * 1024 }
     );
-    return addedTextByFile(diff).some(sqlTextHasDestructiveStatement);
+    return addedTextByFile(diff).some(r => sqlTextHasDestructiveStatement(r.text, r.file));
   } catch {
     // git diff 自体が失敗した場合も fail-closed
     return true;
@@ -435,6 +506,9 @@ function validateGORecord(goRecord, prNumber, { requiresPoOnly = false } = {}) {
   } else if (requiresPoOnly && (!PO_GO_ISSUERS.some(a => goRecord.issuer.includes(a)) || DELEGATION_WORDS.test(goRecord.issuer))) {
     errors.push(`❌ この変更はADR-1003の例外対象のためPO本人のGOが必要です（委譲名義「${goRecord.issuer}」は使用不可）`);
     errors.push('   → 表・列を消す、または大量に消す migration、または .github/workflows/workflow-lint.yml の変更は常にPO本人（Shingo / shingo-ops）のGOが必要です');
+    if (PO_GO_ISSUERS.some(a => goRecord.issuer.includes(a))) {
+      errors.push('   → 本人の発言を書き写した注記（転記した人・実行した人など）は「GO発行者」欄ではなく別の欄（変更3行など）に書き、GO発行者欄にはPO本人の名前だけを書いてください');
+    }
   }
 
   if (!goRecord.date || goRecord.date.trim().length < 5) {
