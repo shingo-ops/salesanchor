@@ -1183,11 +1183,76 @@ def test_a17(tmp):
     chk("A17-5d", "ls-remote が取れないと ABNORMAL_REASON=E tools offline", "ABNORMAL_REASON=E tools offline" in lines)
 
 
+def old_style_hook_files(env):
+    """直す前の式（.backup フォルダの中も数える。ファイル名に .backup を含むものだけ除く）で hook_files を作る。"""
+    base = os.path.join(env.claude, "scripts")
+    out = []
+    for root, dirs, names in os.walk(base):
+        for n in sorted(names):
+            if ".backup" in n:
+                continue
+            fp = os.path.join(root, n)
+            if os.path.islink(fp) or not os.path.isfile(fp):
+                continue
+            out.append("%s|%s" % (audit.sha8(os.path.relpath(fp, base)), sha_file(fp)[:8]))
+    return sorted(out)
+
+
+def test_a21(tmp):
+    def put(env, rel, text="#!/bin/bash\necho b\n"):
+        fp = os.path.join(env.claude, "scripts", rel)
+        os.makedirs(os.path.dirname(fp), exist_ok=True)
+        with open(fp, "w") as f:
+            f.write(text)
+        return fp
+
+    # A21-1: .backup/<時刻>/x.sh を足しても hook_files の件数が変わらず ABNORMAL=no
+    e = light_env(tmp, "a21-1")
+    run_audit(e, T0, commit=True)
+    n0 = len(load_json(e.snapshot)["hook_files"])
+    put(e, ".backup/20261026221349/x.sh")
+    lines = run_audit(e, T0 + td(3600), commit=True)
+    n1 = len(load_json(e.snapshot)["hook_files"])
+    chk("A21-1", ".backup/<時刻>/x.sh を足しても hook_files の件数が変わらず ABNORMAL=no",
+        n0 == n1 and "ABNORMAL=no" in lines and not reasons(lines))
+    # A21-5: 名前に .backup を含むファイルは数えない
+    put(e, "x.sh.backup")
+    lines = run_audit(e, T0 + td(7200), commit=True)
+    chk("A21-5", "名前に .backup を含むファイル（x.sh.backup）は数えない",
+        len(load_json(e.snapshot)["hook_files"]) == n0 and "ABNORMAL=no" in lines and not reasons(lines))
+    # A21-2: 直す前の式で作った前回の写し（.backup の中の要素あり）から比べても減にならず B が出ない
+    e = light_env(tmp, "a21-2")
+    put(e, ".backup/20261026221349/x.sh")
+    put(e, ".backup/20261026225412/y.sh", "#!/bin/bash\necho y\n")
+    run_audit(e, T0, commit=True)
+    snap = load_json(e.snapshot)
+    snap["hook_files"] = old_style_hook_files(e)
+    write_json(e.snapshot, snap)
+    chk("A21-2pre", "前回の写しは .backup の要素を含む（現行の式より多い）",
+        len(snap["hook_files"]) == len(audit.collect_permissions(e.home)["hook_files"]) + 2)
+    lines = run_audit(e, T0 + td(3600))
+    chk("A21-2", ".backup の下の要素は「減」にならず hook_files の B が出ない",
+        not any("hook_files" in x for x in reasons(lines)) and "ABNORMAL=no" in lines
+        and not any(x.startswith("    - ") for x in lines))
+    # A21-3: 控えのフォルダを消すと、前回の写しにあった控えの要素は「減」として出る
+    e = light_env(tmp, "a21-3")
+    put(e, ".backup/20261026221349/x.sh")
+    run_audit(e, T0, commit=True)
+    snap = load_json(e.snapshot)
+    snap["hook_files"] = old_style_hook_files(e)
+    write_json(e.snapshot, snap)
+    shutil.rmtree(os.path.join(e.claude, "scripts", ".backup"))
+    lines = run_audit(e, T0 + td(3600))
+    chk("A21-3", "控えのフォルダを消すと、その要素は「減」の行に出る",
+        any(x.startswith("    - ") for x in lines)
+        and any(x.startswith("ABNORMAL_REASON=B hook_files ") for x in lines))
+
+
 def main():
     tmp = tempfile.mkdtemp(prefix="permdel-tests-")
     try:
         for fn in (test_a1, test_a2, test_a3, test_a4, test_a18, test_a5_a6, test_a7, test_a19, test_a20, test_a8, test_a9, test_a10,
-                   test_a11_a12_a13, test_a14, test_a17):
+                   test_a11_a12_a13, test_a14, test_a17, test_a21):
             try:
                 fn(tmp)
             except Exception as ex:  # 試験自体の崩れは失敗として数える
