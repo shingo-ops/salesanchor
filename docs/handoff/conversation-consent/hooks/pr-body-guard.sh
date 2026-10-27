@@ -98,6 +98,9 @@ if [[ -n "$CMD_CD" ]] && [[ -d "$CMD_CD" ]]; then
   CWD="$CMD_CD"
 fi
 
+# 本文（--body-file の相対パス）は gh が命令を流した場所で読むので、worktree へ切り替える前の場所で読む
+BODY_CWD="$CWD"
+
 # 命令文に cd が無いときだけ、--head／PR 番号のブランチから、そのブランチの worktree を検証の場所にする。
 # ちょうど 1 つ見つかったときだけ変える。それ以外は何もしない（失敗してもフック全体は落とさない）。
 if [[ -z "$CMD_CD" ]] && [[ -n "$CWD" ]] && [[ -d "$CWD" ]]; then
@@ -216,7 +219,7 @@ fi
 # gh pr create/edit セグメントの切り分けに使わせる
 # set -e 下でExit code を確実に拾うため、代入文の外で明示的に無効化/再有効化する
 set +e
-PR_BODY="$(echo "$COMMAND" | python3 "$EXTRACT_SCRIPT" "$CWD")"
+PR_BODY="$(echo "$COMMAND" | python3 "$EXTRACT_SCRIPT" "$BODY_CWD")"
 EXTRACT_RC=$?
 set -e
 

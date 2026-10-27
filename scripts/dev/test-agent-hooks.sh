@@ -385,7 +385,7 @@ if [ -f "$HOOKDIR/pr-body-guard.sh" ] && { [ -z "${ONLY:-}" ] || [ "$ONLY" = "T9
 fi
 
 # K1〜K3: --head のブランチの worktree を検証の場所にする（標準エラーの行だけで判定）
-if [ -f "$HOOKDIR/pr-body-guard.sh" ] && { [ -z "${ONLY:-}" ] || [ "$ONLY" = "K1" ] || [ "$ONLY" = "K2" ] || [ "$ONLY" = "K3" ]; }; then
+if [ -f "$HOOKDIR/pr-body-guard.sh" ] && { [ -z "${ONLY:-}" ] || [ "$ONLY" = "K1" ] || [ "$ONLY" = "K2" ] || [ "$ONLY" = "K3" ] || [ "$ONLY" = "K7" ]; }; then
   KMAIN="$T/k-main"; KWT="$T/k-wt"; KBODY="$T/k-body.md"
   mkdir -p "$KMAIN"
   git -C "$KMAIN" init -q -b main
@@ -408,6 +408,20 @@ if [ -f "$HOOKDIR/pr-body-guard.sh" ] && { [ -z "${ONLY:-}" ] || [ "$ONLY" = "K1
   k_check K1 yes "gh pr create --head release/t-headwt --title t --body-file $KBODY"
   k_check K2 no  "gh pr create --head no-such-branch --title t --body-file $KBODY"
   k_check K3 no  "cd $KMAIN && gh pr create --head release/t-headwt --title t --body-file $KBODY"
+  # K7: 本文は元の場所（本体）で読む。rel.md は worktree にだけ置くので、読み込めずに止まる
+  if [ -z "${ONLY:-}" ] || [ "$ONLY" = "K7" ]; then
+    printf 't\n' > "$KWT/rel.md"
+    # 検証スクリプトが worktree に無いと本文を読む手前でフックが抜けるので、写しを置く
+    mkdir -p "$KWT/scripts/dev"
+    cp "$WT_ROOT/scripts/dev/validate-pr-body.sh" "$KWT/scripts/dev/validate-pr-body.sh"
+    python3 -c 'import json,sys; print(json.dumps({"tool_name":"Bash","tool_input":{"command":sys.argv[1]},"cwd":sys.argv[2]}))' "gh pr create --head release/t-headwt --title t --body-file rel.md" "$KMAIN" > "$T/in-K7.json"
+    K7_OUT="$(run_hook_err pr-body-guard.sh "$KMAIN" "$T/in-K7.json")"
+    if echo "$K7_OUT" | grep -q -e '--body-file を読み込めない'; then
+      PASS=$((PASS + 1)); RESULTS+=("K7       pr-body-guard は本文を元の場所で読む PASS")
+    else
+      FAIL=$((FAIL + 1)); RESULTS+=("K7       pr-body-guard が本文を worktree 側で読んだ FAIL")
+    fi
+  fi
 fi
 
 # T0〜T6: 判定部品 consent_check.py と consent-audit.py の単体試験（偽の会話記録・偽のホームで行う。本物の ~/.claude には書かない）
