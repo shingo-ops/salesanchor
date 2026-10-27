@@ -6,7 +6,7 @@
 
 **日付**: 2026-10-27
 **審査した人**: 設計パートナー（Opus・Architect 役。設計者と同一 AI）
-**判定**: APPROVE（設計として合格。PO の実装承認・GO を兼ねない）
+**判定**: 第1版 APPROVE（自己審査）→ 別に起動した Opus の審査役が REQUEST_CHANGES（2026-10-28）→ 第2版で全12点に対処し、再審査待ち（§5）。どの判定も PO の実装承認・GO を兼ねない。
 
 ## 1. 照合した事実（origin/main・2026-10-27 fetch 後）
 
@@ -16,11 +16,11 @@
 | ログイン情報は子表 | docs/adr/ADR-1013-self-hosted-auth-and-passkey.md:23（Decision 2） | 一致。user_totp・user_trusted_devices は子表 |
 | 6桁は範囲外・任意 | ADR-1013:30（Decision 7） | 管理者についてだけ広げる。ADR-1048 に関係を明記 |
 | refresh cookie の書き方 | backend/app/routers/auth.py:211-221（HttpOnly・Secure・SameSite strict） | いつもの機器の cookie を同じ書き方にそろえる |
-| refresh で止めた人を拒否 | backend/app/auth/self_tokens.py:227-228 | 一致 |
+| refresh で止めた人を拒否 | backend/app/auth/self_tokens.py:227-228、発行は backend/app/routers/auth.py:319-347 | 一致。ただし :344 で amr を引き継がない（第2版で対処。§3） |
 | Redis に5分・1回限り | docs/handoff/auth-self-hosted-passkey/design.md:80 | 同じ置き方 |
 | 暗号部品 | backend/app/services/encryption.py:100 | 一致 |
 | 子表の GRANT・RLS なし | migrations/20261013_160000_add_self_hosted_auth_tables.sql:3,95-101 | 同じ形にする |
-| メールが送れないときはログだけ | backend/app/services/mail_config.py:27-35 | 一致 |
+| メールが送れないときはログだけ | backend/app/services/mail_config.py:28-35 | 一致 |
 | 6桁の入力枠 | frontend/src/components/TextField.tsx:43（InputHTMLAttributes を受ける :37） | 新しい金型は不要 |
 | 金型の作法 | docs/CC_UI_GOVERNANCE.md:13-15 | QrCode は PO 許可済み（2026-10-27「1」） |
 | cryptography の版 | backend/requirements.txt:24（48.0.1） | py_webauthn 2.8.0 で両立 |
@@ -55,3 +55,25 @@
 | 管理者の last_login が全員空の理由 | 未確認。本件の判定には使わないので設計に影響なし |
 
 いずれも設計の芯（何を・どこに・どう測る）を変えない。実装に入るには、ADR-1013 便5（パスキー）の本番反映、PO の実装承認、便ごとの実装カードが要る。
+
+## 5. 第2版（2026-10-28）— 別に起動した Opus の審査役の指摘と対処
+
+第1版の自己審査は、下の 1〜8 を見落としていた。どれも実物（origin/main）で指摘どおりであることを確かめてから直した。
+
+| # | 指摘 | 実物の確認 | 対処（design.md） |
+|---|---|---|---|
+| 1 | refresh で amr を引き継げない | backend/app/routers/auth.py:344 が amr に None を渡す。auth_refresh_tokens に amr 列なし（migrations/20261013_160000:68-81） | §3-2: 7a で amr 列を足し、組に記録して写す。NULL は pwd だけと見なす。7d で管理者の組を失効 |
+| 2 | Firebase の道が残る | backend/app/auth/dependencies.py:207-213 は AUTH_PROVIDER を見ない。キャッシュに当たると :190-198 で MFA 確認なしに返る | §3-2: 必須化の間は管理者の Firebase トークンを、キャッシュの有無どちらでも 401 |
+| 3 | scope=enroll をどこで確かめるか | _authenticate_self_token（:82）は request を受け取らない。get_current_user（:124）は受け取る | §3-2: _authenticate_self_token で道の一覧と照らし、amr・scope を request.state に載せる |
+| 4 | パスワードと6桁の間の引き継ぎと失敗の上限 | パスワード成功で failed_login_count を0に戻す（auth.py:293-299） | §3-3: Redis の券（5分・3回）。2段階を設定済みの人は2段目まで通るまで数を戻さない |
+| 5 | ADR-1016 への追加が対象に無い | hub.py:28-31 の Connection に user_id なし。宛先は rt:t・rt:global・rt:shared だけ | §3-9 を新設。§4・7b に入れる。ADR-1016 の改訂の節は 7b の PR で足す |
+| 6 | K2 に scope が無い | — | §2 K2・§3-2 のログ行に scope |
+| 7 | K3 の基準値が数で無い | frontend/src/pages/login/LoginPage.tsx:91-125 は1画面・3操作 | §2 K3 を「3操作」 |
+| 8 | K4 のログ行が定義されていない | — | §3-5 に pending・approved・rejected の行と request_id |
+| 9 | 偽の画面に番号を中継される | — | §3-5 の4: 依頼した機器のブラウザ名と時刻を出す。§7 に残る危険。ADR-1048 の「埋める」を直した |
+| 10 | 判定に失敗したとき | — | §3-1: 管理者として扱う |
+| 11 | いつもの機器の cookie の path | refresh は /api/v1/auth（self_tokens.REFRESH_COOKIE_PATH） | §3-4: path と名前を分ける |
+| 12 | メール部品の一般化 | auth_mail.py:73-93 は reset_url 専用 | §3-5 の3: 7b で共通の関数に分ける |
+
+引用の直し: recon.md の ADR-1016 の引用（:23-24 と rt:shared の :37）、手元の絶対パスを repo からの相対に、role 列の書き方（DB の列は未確認と明記）、mail_config の行を :28-35 にそろえた。
+

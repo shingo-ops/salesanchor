@@ -5,9 +5,10 @@
 親: [docs/specs/auth-login/README.md](../../specs/auth-login/README.md)
 現状: [recon.md](recon.md)／ADR: [ADR-1048](../../adr/ADR-1048-admin-two-step-login.md)／審査: [review-opus.md](review-opus.md)
 
-**日付**: 2026-10-27
+**日付**: 2026-10-27（第2版 2026-10-28: Opus 審査役の REQUEST_CHANGES 指摘1〜12 を反映）
 **書いた人**: 設計パートナー（Opus・ccopusgo セッション）
-**状態**: 設計案（自己審査 APPROVE）。PO の方向の決定は下の §1 のとおり。実装は未着手。
+**状態**: 設計案（第2版。再審査待ち）。PO の方向の決定は下の §1 のとおり。実装は未着手。
+**行番号の基準**: origin/main（2026-10-28 fetch 後。backend/app と frontend/src/pages/login は本ブランチとの差 0）
 
 ## 1. PO の決定（2026-10-27 チャット原文）
 
@@ -27,9 +28,9 @@
 | 基準 | 基準値（測った日） | 目標値 | 検証方法 |
 |---|---|---|---|
 | K1 2段階の確認を設定していない有効な管理者の人数 | 3人（2026-10-27 23:20 JST 本番読み取り。パスキー0件・6桁の表なし） | 0人 | 本番 DB の読み取り: 管理者（§3-1 の判定）のうち、webauthn_credentials 0件かつ user_totp の確認済み行なしの人数 |
-| K2 管理者に「パスワードだけ」の全権トークンを出した回数 | 0回（自社ログインは未切替のため。2026-10-27） | 0回（切替後も毎週0） | backend ログの `admin_token_issued amr=` を数え、`amr=pwd` 単独が0件 |
-| K3 管理者でない人のログインの手順数 | 今の手順数（切替後のログイン画面で数える） | 増えない（同じ数） | 画面で数える（評価者が録画で確認） |
-| K4 初めての機器から「パスワード＋6桁」だけで管理者が入れた回数 | 未測定（仕組みが無い） | 0回 | 自動試験: 承認なしの新しい機器で 403。本番ログの `admin_login_pending` のうち承認なしで `issued` になった件数0 |
+| K2 管理者に「パスワードだけ」の全権トークンを出した回数 | 0回（自社ログインは未切替のため。2026-10-27） | 0回（切替後も毎週0） | backend ログの `admin_token_issued` 行（§3-2）のうち `scope=full` かつ `amr=pwd`（pwd だけ）の件数が0。自動試験でも同じ条件を確かめる |
+| K3 管理者でない人のログインの操作数 | 3操作（1画面でメール入力・パスワード入力・「ログイン」ボタン。frontend/src/pages/login/LoginPage.tsx:91-125。2026-10-28 origin/main） | 3操作のまま（6桁を設定していない人） | 7c の評価者が録画で数える |
+| K4 初めての機器から承認なしで管理者が全権を得た回数 | 未測定（仕組みが無い） | 0回 | 自動試験: 承認なしの新しい機器は全権トークンを受け取れない。本番ログ: `admin_token_issued device=new` の行の `request_id` が、`admin_login_approved` 行の `request_id` に無い件数0（§3-5 のログ行） |
 | K5 使った6桁をもう一度使えた回数 | 未測定 | 0回 | 自動試験: 同じ数字を2回送ると2回目は 401 |
 | K6 QR の金型に直書きの色・寸法がある数 | 金型なし | 0か所 | CI（UI ガバナンスの検査）と QrCode.stories.tsx（新設予定） がカタログに出ること |
 | K7 承認の画面で、違う番号を選んで通った回数 | 未測定 | 0回 | 自動試験: 違う番号を選ぶと依頼が取り消しになり、新しい機器は入れない |
@@ -39,7 +40,8 @@
 ### 3-1. 管理者の判定（正本は1か所のまま）
 
 - 管理者 = `users.is_super_admin = true` か、`get_user_system_keys`（backend/app/auth/dependencies.py:547）が owner / admin を返す人。新しい「管理者」列や名簿は作らない。
-- 判定は関数1つ `is_admin_for_2fa(user, db)` に集め、既存の `is_tenant_admin`（backend/app/auth/system_roles.py:17）を呼ぶ。
+- 判定は関数1つ `is_admin_for_2fa(user, db)` に集め、既存の `is_tenant_admin`（backend/app/auth/system_roles.py:17）を呼ぶ。`get_user_system_keys` は search_path の設定が前提なので、発行の口では会社の文脈を設定してから呼ぶ。
+- 判定が失敗したとき（DB の例外・search_path が無い等）は「管理者」として扱う（閉じる側に倒す）。管理者でない人が誤って2段階を求められることはあっても、管理者が素通りすることは無い。
 
 ### 3-2. 入り方と、出すトークン
 
@@ -49,39 +51,44 @@
 | パスワード＋6桁・いつもの機器 | 全権。amr=["pwd","otp"] | 6桁は任意（ADR-1013 Decision 7 のまま） |
 | パスワード＋6桁・初めての機器 | 承認待ち（§3-5）。承認されたら全権＋その機器を「いつもの機器」に登録 | 該当なし |
 | パスワードだけ・2段階が未設定 | 設定だけできるトークン（amr=["pwd"]、scope="enroll"。15分。refresh cookie は出さない） | 全権（今のまま） |
-| パスワードだけ・2段階が設定済み | トークンを出さない（6桁かパスキーを求める） | 全権（今のまま） |
+| パスワードだけ・2段階が設定済み | トークンを出さない（6桁かパスキーを求める。§3-3 の引き継ぎ） | 全権（今のまま） |
 
-- 発行の判定は自社ログインの発行口（backend/app/routers/auth.py:238-310 と refresh の backend/app/auth/self_tokens.py:228 付近）の1か所に置く。refresh でも同じ判定をやり直す（権限が途中で変わっても15分で揃う）。
-- 二重の守り: `require_super_admin`（backend/app/auth/dependencies.py:516）と `require_tenant_admin`（:606）でも、トークンの amr が「webauthn」か「pwd＋otp」でなければ 403。scope="enroll" のトークンは設定の口（§3-3・§3-4）以外すべて 403。
-- 発行のたびに backend ログへ `admin_token_issued user_id=<id> amr=<...> device=<known|new>` を1行出す（K2・K4 の測り方）。
-- Firebase 経路（backend/app/auth/dependencies.py:222-229）は変えない。本件は AUTH_PROVIDER=self（ADR-1013 便4）の後に効く。
+- **トークンの形**: 自社アクセストークンに `scope`（"full" か "enroll"）を足す。amr は今の `create_access_token(user_id, email, amr)`（backend/app/auth/self_tokens.py:86-98。今は1つの文字列を `[amr]` にする）を、複数の要素を渡せる形に広げる。
+- **発行の判定の場所**: 自社ログインの発行口2つ（login: backend/app/routers/auth.py:238-316、refresh: :319-347）。両方で同じ関数を呼ぶ。
+- **refresh で強さを引き継ぐ（指摘1）**: 今の refresh は `create_access_token(user_id, email, None)`（auth.py:344）で amr を捨てる。refresh の表 `auth_refresh_tokens`（migrations/20261013_160000_add_self_hosted_auth_tables.sql:68-81）に amr の列は無い。そこで 7a で同じ表に `amr TEXT[]`（NULL 可）を足し、組（family）を作る login のときに入れる。refresh の入れ替え（self_tokens.rotate_refresh_token）は新しい行へ同じ値を写す。refresh は写した amr でトークンを作り直し、そのうえで判定をやり直す。管理者で amr が「webauthn」か「pwd＋otp」でない組は、全権を出さず 401（ログインし直し）にする。amr が NULL の組（7a より前に作られた組）は「pwd だけ」と見なす。権限が途中で変わっても、15分以内に揃う。
+- **自社トークンの確認で scope と amr を読む（指摘3）**: `_authenticate_self_token`（backend/app/auth/dependencies.py:82）が claims から amr と scope を読み、`get_current_user`（:124、request を受け取る）が `request.state.auth_amr` と `request.state.auth_scope` に載せる。scope="enroll" のトークンは、`_authenticate_self_token` の中で「設定の口の一覧」（§3-3・§3-4 の口。backend の定数1か所）以外の道なら 403 にする。一覧の数は試験で固定する。
+- **二重の守り**: `require_super_admin`（dependencies.py:516）と `require_tenant_admin`（:606）は、`request.state.auth_amr` が「webauthn」か「pwd＋otp」でなければ 403。
+- **Firebase の道（指摘2）**: 今は issuer が salesanchor でないトークンは Firebase の確認に回る（dependencies.py:207-213。AUTH_PROVIDER は見ない）。さらにキャッシュに当たったトークンは Firebase の確認と MFA の確認（:222-229）を通らずに利用者を返す（:190-198）。そこで `ADMIN_2FA_ENFORCED=true` の間は、Firebase の道で見つかった利用者が管理者（§3-1）なら 401 にする。置く場所は、キャッシュに当たった道（:198 の return の前）と、当たらない道（:258 でキャッシュに書く前）の両方。管理者は自社ログイン（便4 で開く）だけで入る。管理者でない人の Firebase の道は変えない。
+- **ログ行（指摘6）**: 全権か設定用のトークンを出すたびに、backend ログへ次の1行を出す。値は id と短い語だけで、メールアドレス・番号・秘密は載せない。
+  `admin_token_issued user_id=<id> scope=<full|enroll> amr=<webauthn|pwd+otp|pwd> device=<known|new> via=<login|refresh|approval> request_id=<承認の依頼の id か ->`
 
 ### 3-3. 認証アプリの6桁
 
 - 表 `public.user_totp`（1人1行）: user_id INT PK FK users.id ON DELETE CASCADE / secret_encrypted TEXT NOT NULL / confirmed_at TIMESTAMPTZ / last_used_timecode BIGINT / created_at TIMESTAMPTZ NOT NULL DEFAULT now()。RLS なし・salesanchor_app に GRANT（ADR-1013 の表と同じ: migrations/20261013_160000_add_self_hosted_auth_tables.sql:3,95-101）。
 - 秘密は既存の `encryption.encrypt`（backend/app/services/encryption.py:100）で暗号化して保存する。新しい鍵・新しい暗号部品は作らない。列名が `_encrypted` で終わるので、読み取りの道で自動で隠れる（backend/app/ops/readonly_query.py:42）。手で入れない（CLAUDE.md ADR-025 常時厳禁）。
-- 部品: pyotp 2.10.0。`verify_and_get_timecode`（valid_window=1）で照合し、返った timecode が `last_used_timecode` 以下なら拒否（使い回し防止・K5）。成功時に `last_used_timecode` を更新する（同じ UPDATE の WHERE で古い値を条件にし、同時の2回目を落とす）。
-- 失敗回数は既存の `failed_login_count` / `locked_until`（ADR-1013 便1の列）に数える。新しい数え方は作らない。
+- 部品: pyotp 2.10.0。`verify_and_get_timecode`（valid_window=1）で照合し、返った timecode が `last_used_timecode` 以下なら拒否（使い回し防止・K5）。成功時に `last_used_timecode` を更新する（同じ UPDATE の WHERE で古い値を条件にし、同時の2回目を落とす）。pyotp の関数名と引数は 7b のカードを書く前に公式の資料で確かめる（Context7 か PyPI の公式ページ）。
+- **パスワードと6桁の間の引き継ぎ（指摘4）**: 2段階を設定済みの人のパスワードが合ったら、トークンは出さず「6桁待ちの券」を作る。券は Redis に5分・1回限りで、中身は user_id と残りの試行回数（3回）。券の id は HttpOnly・Secure・SameSite=Strict の cookie（path は 6桁の口だけ）で渡す。6桁の口は券と6桁を受け取り、合えば券を消して §3-2 の判定へ進む。3回外れたら券を消し、パスワードからやり直させる。
+- **失敗の数え方（指摘4）**: 今の login はパスワードが合うと `failed_login_count` を0に戻す（backend/app/routers/auth.py:293-299）。このままでは「パスワード→6桁を3回外す」を繰り返すと、6桁の失敗に上限が無い。そこで、2段階を設定済みの人は、パスワードが合っても `failed_login_count` を戻さない。戻すのは2段階目まで通ったときだけにする。6桁の外れも同じ `failed_login_count` に1足し、10回で15分止める（:280-285 の今の動き。新しい数え方・新しい列は作らない）。
 - 設定の流れ: 秘密を作る → QR を出す（§3-7）→ 6桁を1回打って合っていれば `confirmed_at` を入れる。合うまでは未設定のまま。
 - 2段階が設定済みの人が6桁を設定し直す・消すときは、今ある要素（パスキーか今の6桁）で確認し直す（OWASP「要素の変更は既存の要素で再確認」）。
 
 ### 3-4. いつもの機器
 
 - 表 `public.user_trusted_devices`: id BIGSERIAL PK / user_id INT FK users.id ON DELETE CASCADE / token_hash BYTEA UNIQUE NOT NULL（cookie の値の SHA-256。値そのものは保存しない）/ label TEXT（ブラウザ名など表示用）/ created_at / last_used_at / revoked_at。
-- cookie: 32バイトの乱数、HttpOnly・Secure・SameSite=Strict・有効180日。refresh cookie（backend/app/routers/auth.py:211-221）と同じ書き方にそろえる。
+- cookie: 32バイトの乱数、HttpOnly・Secure・SameSite=Strict・有効180日。書き方は refresh cookie（backend/app/routers/auth.py:211-221）にそろえる。**path は refresh の `/api/v1/auth`（self_tokens.REFRESH_COOKIE_PATH）と分け、いつもの機器を確かめる口だけに絞る（指摘11）**。名前も refresh cookie と別にする。
 - いつもの機器になる時: (1) 管理者が2段階の設定を終えた機器 (2) パスキーで入った機器 (3) 承認で入れた機器。
 - 一覧と取り消し: 管理者は自分の「いつもの機器」を画面で見て消せる。消すとその機器からの次のログインは初めて扱い。
 - 判断に場所（IP）は使わない（スマホは移動で変わるため。PO に 2026-10-27 説明済み）。
 
 ### 3-5. 初めての機器の承認（番号を選ぶ形）
 
-1. 初めての機器で「パスワード＋6桁」が合ったら、トークンは出さず承認依頼を作る。依頼は Redis に5分・1回限り（パスキーの challenge と同じ置き方: docs/handoff/auth-self-hosted-passkey/design.md:80）。中身は user_id・正しい2けたの番号・候補3つ・依頼の id。
+1. 初めての機器で「パスワード＋6桁」が合ったら、トークンは出さず承認依頼を作る。依頼は Redis に5分・1回限り（パスキーの challenge と同じ置き方: docs/handoff/auth-self-hosted-passkey/design.md:80）。中身は user_id・正しい2けたの番号・候補3つ・依頼の id・依頼した機器のブラウザ名（User-Agent から作る短い表示名）と時刻。依頼を作ったら backend ログへ `admin_login_pending user_id=<id> request_id=<依頼の id>` を1行出す（K4）。
 2. 初めての機器の画面に、正しい番号を大きく出して待つ。依頼の id は、初めての機器にだけ渡す乱数（HttpOnly・Secure・SameSite=Strict の cookie、5分）と組にして Redis に置く。承認後のトークンは、この cookie を持つ機器だけが受け取れる（依頼の id を盗み見られても、別の機器では受け取れない）。
 3. いつもの機器へ知らせる:
-   - 開いている画面: ADR-1016 の SSE 1本（`GET /api/v1/events/stream`）に人単位の宛先 `rt:u:{user_id}` を足す。新しい通り道は作らない。知らせの中身は「承認依頼がある」だけで、番号は載せない。画面は API で依頼を取りに行く。
-   - メール: 既存の送信部品（backend/app/services/auth_mail.py:73-93）で「セールスアンカーを開いて承認してください」と送る。メールに承認のボタンやリンクは置かない（偽のメールで承認させられるのを防ぐ）。メール設定が無いときは送らずログだけ（backend/app/services/mail_config.py:28-35 の今の動き）。
-4. いつもの機器の画面に Modal で候補の番号3つと「心当たりがない」を出す。全権トークンを持つ、いつもの機器の cookie がある画面だけが見られる。
-5. 正しい番号を選ぶ → 依頼が承認になり、初めての機器が待ちの口で全権トークンと「いつもの機器」cookie を受け取る。違う番号か「心当たりがない」→ 依頼を取り消し、初めての機器は入れない。本人にメールで知らせる（K7）。
+   - 開いている画面: ADR-1016 の SSE 1本（`GET /api/v1/events/stream`）に人単位の宛先 `rt:u:{user_id}` を足す。新しい通り道は作らない。知らせの中身は「承認依頼がある」という topic の名前だけで、番号は載せない。画面は API で依頼を取りに行く。必要な変更は §3-9。
+   - メール: 承認の知らせを送る。今の送信部品 `_send_reset_mail`（backend/app/services/auth_mail.py:73-93）は再設定のメール専用（本文に reset_url を差し込む）なので、7b で「件名と本文を受け取って送る」共通の関数に分け、再設定と承認の両方から呼ぶ（指摘12）。メールは「セールスアンカーを開いて承認してください」と依頼した機器のブラウザ名・時刻だけを書く。承認のボタンやリンクは置かない（偽のメールで承認させられるのを防ぐ）。メール設定が無いときは送らずログだけ（backend/app/services/mail_config.py:28-35 の今の動き）。
+4. いつもの機器の画面に Modal で、依頼した機器のブラウザ名と時刻、候補の番号3つ、「心当たりがない」を出す（指摘9）。全権トークンを持ち、いつもの機器の cookie がある画面だけが見られる。
+5. 正しい番号を選ぶ → 依頼が承認になり、backend ログへ `admin_login_approved user_id=<id> request_id=<依頼の id>` を出す。初めての機器が待ちの口で全権トークンと「いつもの機器」cookie を受け取る。違う番号か「心当たりがない」→ 依頼を取り消し、`admin_login_rejected user_id=<id> request_id=<依頼の id>` を出す。初めての機器は入れない。本人にメールで知らせる（K7）。
 6. 回数の上限: 1人あたり承認依頼は1時間に3件まで。超えたら1時間は依頼を作らない（通知を何度も送りつける手口を防ぐ）。
 
 ### 3-6. すべての機器を失くしたとき
@@ -103,34 +110,47 @@
 - pyotp 2.10.0（MIT）・qrcode.react 4.2.0（ISC）を本件で足す。
 - py_webauthn 2.8.0・@simplewebauthn/browser 14.0.0 は ADR-1013 便5（パスキー）で足す。py_webauthn 3.x は cryptography>=49 が要り、今の 48.0.1（backend/requirements.txt:24）と両立しないため 2.8.0 にする。依存の引き上げは別件。
 
+### 3-9. 即時反映（ADR-1016）への追加（指摘5）
+
+ADR-1016 は topic の範囲を tenant と global に決め（決定3）、宛先を `rt:t:{tenant_id}` と `rt:global` に決めた（決定6。ADR-1016:23-24）。改訂 2026-10-18 で `rt:shared` が足されている（:37）。人単位の宛先はどこにも無い。本件で次を足す。
+
+- topics.py に範囲 `SCOPE_USER` を足し、承認の知らせの topic をこの範囲で1つ置く。
+- 宛先 `rt:u:{user_id}` を足す。publisher はこの範囲の topic を、この宛先にだけ出す。
+- hub の接続（backend/app/realtime/hub.py:28-31 の Connection。今は tenant_id と is_super_admin だけ）に user_id を足し、配る先を決める処理（hub.py:34-45）で、同じ user_id の接続にだけ配る。
+- ADR-1016 の本文には、今までの改訂と同じ形の「改訂」の節を 7b の PR で足す（ADR-1048 が Accepted になってから）。本書の段階では ADR-1016 を書き換えない。
+
 ## 4. 対象と対象外
 
-- 対象: 管理者の2段階の必須化、認証アプリの6桁、いつもの機器、初めての機器の承認、QR の金型、SSE の人単位の宛先、承認の知らせメール。
-- 対象外: 管理者でない人への必須化（ADR-1013 Decision 7 のまま任意）、スマホの通知（Web Push。PO 2026-10-27 選ばず）、予備コード（PO の要望なし）、Firebase 経路の MFA（便6 で撤去）、パスキーそのものの実装（ADR-1013 便5）。
+- 対象: 管理者の2段階の必須化、認証アプリの6桁、いつもの機器、初めての機器の承認、QR の金型、SSE の人単位の宛先と ADR-1016 の改訂（§3-9）、承認の知らせメールと送信部品の共通化、refresh の表への amr 列、管理者の Firebase トークンの拒否。
+- 対象外: 管理者でない人への必須化（ADR-1013 Decision 7 のまま任意）、スマホの通知（Web Push。PO 2026-10-27 選ばず）、予備コード（PO の要望なし）、管理者でない人の Firebase 経路の MFA（便6 で撤去）、パスキーそのものの実装（ADR-1013 便5）。
 
 ## 5. 便の分け方と順番
 
-ADR-1013 の便3（メール・PO の画面作業）→ 便4（切替）→ 便5（パスキー）の後に置く。
+ADR-1013 の便3（メール・PO の画面作業）→ 便4（切替）→ 便5（パスキー）の後に置く。7d は便4 の後なら、便6（Firebase の撤去）を待たずに切り替えてよい。理由は、§3-2 で管理者の Firebase トークンを拒むため。
 
 | 便 | 中身 | 危ない道 |
 |---|---|---|
-| 7a | migration: user_totp・user_trusted_devices（構造だけ） | migrations/ → PO GO（ADR-136） |
-| 7b | backend: 6桁・いつもの機器・承認・発行の判定・SSE の人単位の宛先・ログ行。設定 `ADMIN_2FA_ENFORCED`（既定 false）。false の間は判定せず記録だけ | なし（deploy.yml を触らないこと） |
-| 7c | frontend: 設定画面・待ちの画面・承認の Modal・QrCode 金型 | なし |
-| 7d | 3人が設定を終えたことを K1 で確かめてから `ADMIN_2FA_ENFORCED=true` にする | secrets・本番設定 → PO GO |
+| 7a | migration: user_totp・user_trusted_devices（構造だけ）、auth_refresh_tokens に amr 列 | migrations/ → PO GO（ADR-136） |
+| 7b | backend: 6桁・6桁待ちの券・いつもの機器・承認・発行の判定（login と refresh）・scope の確認・管理者の Firebase トークンの拒否・SSE の人単位の宛先と ADR-1016 の改訂・メール部品の共通化・ログ行。設定 `ADMIN_2FA_ENFORCED`（既定 false）。false の間は判定せず記録だけ | なし（deploy.yml を触らないこと） |
+| 7c | frontend: 設定画面・6桁の画面・待ちの画面・承認の Modal・QrCode 金型 | なし |
+| 7d | 3人が設定を終えたことを K1 で確かめる。管理者の今の refresh の組を全部失効させる。そのあと `ADMIN_2FA_ENFORCED=true` にする | secrets・本番設定・本番データ → PO GO |
 
 - 7d の前に K1=0 でなければ切り替えない（PO 本人が閉め出されるのを防ぐ）。
+- 7d の組の失効は、amr 列（7a）だけでも強さは守られる。それでも、切替の前に出た組を残さないために行う（二重の守り）。失効の台本は本番データの変更の決まり（DRY-RUN・件数ガード・戻し）に従う。
 
 ## 6. 代わりの案と選んだ理由
 
 | 案 | 選ばなかった理由 |
 |---|---|
-| 6桁で入れる範囲を「新しいパスキーの登録だけ」にする | PO が「どちらでも全部使える」を選んだ（2026-10-27）。代わりに初めての機器の承認で偽の画面への弱さを埋める |
+| 6桁で入れる範囲を「新しいパスキーの登録だけ」にする | PO が「どちらでも全部使える」を選んだ（2026-10-27）。代わりに初めての機器の承認で偽の画面への弱さを小さくする（埋めきれない分は §7） |
 | 押すだけの承認（Meta 型） | 何度も送りつけられて押してしまう手口がある。番号を選ぶ形と作る量はほぼ同じ |
 | スマホの通知（Web Push） | 部品が0から。iPhone はホーム画面への追加が必要 |
 | users に 6桁の列を足す | ADR-1013 Decision 2「ログイン情報は子表」に合わない |
 | 新しい暗号部品・新しい鍵 | 既存の encryption.py で足りる |
 | 場所（IP）で「いつもと違う」を決める | 本人が移動しても止まる |
+| refresh で amr を持たず、7d で管理者の組を失効させるだけにする | 切替の後に「pwd だけ」で作られた組が残らないことを、毎回の refresh で確かめられない。列を足す方が確かめやすい |
+| 7d を便6（Firebase の撤去）の後に置く | 便6 は PO の画面作業が要り時期が読めない。管理者の Firebase トークンを拒めば足りる |
+| パスワードと6桁を1回の要求で同時に送る | 6桁を設定していない人と画面を分けにくい。券の形でも失敗の上限は §3-3 で守れる |
 
 ## 7. 危険と対処
 
@@ -139,8 +159,11 @@ ADR-1013 の便3（メール・PO の画面作業）→ 便4（切替）→ 便5
 | PO 本人が閉め出される | 7d の切替は K1=0 を確かめてから。§3-6 の運用台本。戻し: `ADMIN_2FA_ENFORCED=false` |
 | 設定前にパスワードを盗まれ、他人に6桁を設定される | 設定だけのトークンは15分・設定の口のみ。設定完了をメールで本人に知らせる。切替前に3人が設定を終える |
 | 承認の通知を何度も送られる | 番号を選ぶ形・1時間3件まで・違う番号で取り消し |
+| **残る危険**: 偽のログイン画面にパスワードと6桁を打たせ、偽の画面が本物の番号を中継して、本人に承認させる | 承認の Modal に依頼した機器のブラウザ名と時刻を出し、本人が気づける形にする。完全には防げない。完全に防げるのはパスキーだけ（NIST 3.2.5）。PO の決定5（どちらでも全部使える）を守る代わりに残る危険として記録する |
+| 管理者の判定が失敗する | 管理者として扱う（§3-1。閉じる側） |
+| 切替の前に作られた refresh の組で、弱いまま全権が続く | amr 列で毎回確かめる。7d で管理者の組を失効させる |
 | メールがまだ送れない | 画面の知らせだけでも承認できる。メールは便3 の PO 作業後に届く |
-| SSE の変更で既存の即時反映が壊れる | 宛先を足すだけ。既存の会社単位・全体の配信の試験を残す |
+| SSE の変更で既存の即時反映が壊れる | 宛先を足すだけ。既存の会社単位・全体・共通の配信の試験を残す |
 | 審査用の管理者（tenant-review）が設定できない | 対象に含める（PO 決定）。設定は PO が行う |
 
 ## 8. 外部・過去事例の参照と我々への応用
@@ -148,13 +171,13 @@ ADR-1013 の便3（メール・PO の画面作業）→ 便4（切替）→ 便5
 | 出典（日付） | 内容 | 我々への応用 | 適用の限界 |
 |---|---|---|---|
 | NIST SP 800-63B-4（2025-08-26）3.2.5・付録B | 手で打つ OTP はフィッシングに強いと見なさない。同期型パスキーは AAL2 まで | パスキーは機器を問わず全権、6桁は初めての機器で承認を要る | 連邦向けの基準。管理者に限った要求は本文に無い |
-| OWASP MFA Cheat Sheet | 格下げの防止・要素の変更は既存要素で再確認・OTP 1回限り | §3-3 の使い回し防止と再確認 | 数値の基準は無い |
+| OWASP MFA Cheat Sheet | 格下げの防止・要素の変更は既存要素で再確認・OTP 1回限り・回数制限 | §3-3 の使い回し防止・失敗の数え方・再確認 | 数値の基準は無い |
 | Google ログイン確認（support.google.com/accounts/answer/7026266） | いつもと違う入り方のときだけ番号を合わせる確認 | §3-5 の形をそのまま採る | Google は自社アプリへの通知。我々は画面＋メール |
 | Uber 2022（セキュリティ会社の記事 centrexit.com） | 押すだけの承認を繰り返し送られ、押してしまった | 番号を選ぶ形と回数の上限 | Uber の公式発表は未確認。数値は使わない |
 
 ## 9. 維持の仕組み
 
-- 自動試験（backend/tests/ に置く。7b のカードで名前を決める）: K2・K4・K5・K7 を試験で守る。
+- 自動試験（backend/tests/ に置く。7b のカードで名前を決める）: K2・K4・K5・K7 を試験で守る。あわせて、refresh で amr が引き継がれること、amr が NULL の組で管理者に全権が出ないこと、scope="enroll" で設定の口以外が 403 になること、管理者の Firebase トークンがキャッシュの有無どちらでも 401 になること、6桁の外れが `failed_login_count` に数えられパスワード成功で戻らないこと、を試験で守る。
 - UI ガバナンスの CI（docs/CC_UI_GOVERNANCE.md）: K6。
-- 毎週の点検: K1 を本番の読み取りで数える（新しく管理者になった人が未設定のままでないか）。
+- 毎週の点検: K1 を本番の読み取りで数える（新しく管理者になった人が未設定のままでないか）。K2・K4 を本番ログで数える。
 - 守り手: 設計パートナー（Opus）。仕様書の索引 docs/specs/auth-login/README.md に本書を載せる。

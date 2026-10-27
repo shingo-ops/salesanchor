@@ -17,16 +17,16 @@
 
 ## 1. 「管理者」の定義（正本）
 
-- super admin: `public.users.is_super_admin`（/Users/tanizawashingo/salesanchor/backend/app/models.py:33）。判定は `require_super_admin`（backend/app/auth/dependencies.py:516-541、:539 で偽なら 403）。
+- super admin: `public.users.is_super_admin`（backend/app/models.py:33）。判定は `require_super_admin`（backend/app/auth/dependencies.py:516-541、:539 で偽なら 403）。
 - 会社の管理者: `user_roles → roles.system_key` が owner / admin（backend/app/auth/system_roles.py:8-9,17-19 `is_tenant_admin`）。判定は backend/app/auth/dependencies.py:547 `get_user_system_keys`、:606 `require_tenant_admin`（:613「users.role は見ない」）。
-- User モデルに role 列は無い（backend/app/models.py:22-37）。
+- User モデルに role の属性は無い（backend/app/models.py:22-37）。ただし models.py:31 の注記と dependencies.py:613 の説明は `users.role` に触れている。DB に role 列が残っているかは未確認（2026-10-28 時点。migrations/ の grep では追加の文が見つからなかった）。本件では使わない。
 
 ## 2. 今のログインと2段階の判定
 
-- 自社ログイン: backend/app/routers/auth.py:238-310（Origin 照合→IP 制限→users 引き→ロック判定→Argon2 照合→失敗10回で停止→成功で last_login 更新→アクセストークン＋refresh Cookie）。
-- 自社トークンの amr（pwd か webauthn）: backend/app/auth/self_tokens.py:86-97。
+- 自社ログイン: backend/app/routers/auth.py:238-316（Origin 照合→IP 制限→users 引き→ロック判定→Argon2 照合→失敗10回で停止→成功で last_login 更新→アクセストークン＋refresh Cookie）。
+- 自社トークンの amr（pwd か webauthn）: backend/app/auth/self_tokens.py:86-98。refresh（backend/app/routers/auth.py:319-347）は `create_access_token(user_id, email, None)`（:344）で amr を引き継がない。refresh の表 `auth_refresh_tokens` に amr の列は無い（migrations/20261013_160000_add_self_hosted_auth_tables.sql:68-81）。（2026-10-28 追記）
 - 発行は AUTH_PROVIDER=self のときだけ（backend/app/auth/self_tokens.py:20 既定 firebase）。
-- MFA_REQUIRED: backend/app/auth/dependencies.py:39（既定 "true"）。Firebase 経路だけ（:222-229、`sign_in_second_factor`）。自社トークン経路（:207-209）では見ない。
+- MFA_REQUIRED: backend/app/auth/dependencies.py:39（既定 "true"）。Firebase 経路だけ（:222-229、`sign_in_second_factor`）。自社トークン経路（:207-209）では見ない。issuer が salesanchor でないトークンは AUTH_PROVIDER に関係なく Firebase の確認に回る（:207-213）。キャッシュに当たったトークンは MFA の確認を通らずに利用者を返す（:190-198）。（2026-10-28 追記）
 - パスキーの置き場: `public.webauthn_credentials`（migrations/20261013_160000_add_self_hosted_auth_tables.sql:16-32）。API は未実装（routers/auth.py に passkey の口なし）。
 - 6桁の秘密を置く列・表は無い。
 
@@ -61,7 +61,7 @@
 
 | 道 | 今あるもの | 無いもの | 根拠 |
 |---|---|---|---|
-| 開いている画面に出す | SSE 1本 `GET /api/v1/events/stream` | 宛先は会社単位と全体だけ。人単位の宛先が無い | docs/adr/ADR-1016-realtime-change-signal-standard.md:15,60; backend/app/routers/realtime_events.py:58-105; backend/app/realtime/publisher.py:19-21; backend/app/realtime/hub.py:28-30; frontend/src/lib/realtime/RealtimeProvider.tsx:81 |
+| 開いている画面に出す | SSE 1本 `GET /api/v1/events/stream` | 宛先は会社単位・全体・会社共通（rt:shared）だけ。人単位の宛先が無い | docs/adr/ADR-1016-realtime-change-signal-standard.md:15,23-24,37; backend/app/routers/realtime_events.py:58-105; backend/app/realtime/publisher.py:19-21; backend/app/realtime/hub.py:28-31,34-45; frontend/src/lib/realtime/RealtimeProvider.tsx:81 |
 | スマホの通知 | 無い（serviceWorker・pywebpush・VAPID・PushManager・webmanifest の grep 0件） | 全部 | iPhone はホーム画面に追加が必要・iOS 16.4 以降（https://webkit.org/blog/13878/web-push-for-web-apps-on-ios-and-ipados/） |
 | メール | 送信部品 backend/app/services/auth_mail.py:73-93、設定 backend/app/services/mail_config.py:28-35（4つそろわないと送らずログのみ） | 本番で送れる状態か未確認（PO の画面作業待ち docs/handoff/auth-self-hosted-passkey/card-b3.md §8 ②） | .github/workflows/deploy.yml:355-359 |
 

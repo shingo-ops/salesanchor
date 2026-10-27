@@ -1,5 +1,5 @@
 -- deactivate.sql (WRITES; PO の ! 実行; 1トランザクション; COMMIT で終わる)
--- 対象: public.users id=7 (tenant 5, 山田 太郎) と id=9 (tenant 1, Claude Tester)。is_active を true から false にするだけ。
+-- 対象: public.users id=7 (tenant 5) と id=9 (tenant 1)（どちらも試験用の利用者。公開する記録なので表示名は外した。実行した台本との差はこの注記だけ）。is_active を true から false にするだけ。
 -- users は FORCE RLS（migrations/20261016_180000_add_users_write_rls.sql）。運営文脈が無いと UPDATE は 0 行になるため app.is_operator を立てる。
 \set ON_ERROR_STOP on
 BEGIN;
