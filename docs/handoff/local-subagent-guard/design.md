@@ -7,7 +7,7 @@
   - 第4版（101b154bf）も REQUEST_CHANGES（3-1〜4 は直ったが、注釈 `#` のあとの行が判定されないなど、普段の書き方の抜けが残った。/tmp/CC報告ファイル/local-subagent-guard/review-4.md）。第5版で反映した。
   - 第5版（3e61daa71）も REQUEST_CHANGES（R1〜R6 は直ったが、gemini の起動と、引用符の無い heredoc の本文の `$( )` が判定されない。/tmp/CC報告ファイル/local-subagent-guard/review-5.md）。第6版で反映した。
   - 第1版の審査の文は会話の中にだけあり、ファイルには残していない。要点は §11 にまとめた。
-- 関連: [recon.md](recon.md)・[cases.md](cases.md)（判定の例の正本）・[ADR-1045](../../adr/ADR-1045-local-subagent-write-guard.md)・ADR-1029（前例）・ADR-1011:39（フックは AI がパッチを書き、PO が `!` で反映する）
+- 関連: [recon.md](recon.md)・[cases.md](cases.md)（判定の例の正本）・[ADR-1046](../../adr/ADR-1046-local-subagent-write-guard.md)・ADR-1029（前例）・ADR-1011:39（フックは AI がパッチを書き、PO が `!` で反映する）
 - PO の決定（2026-10-26）:
   - 「1」重い実装と試験はクラウドで行う。手元の担当は、Mac の中を見る短い調べものだけにする。
   - 「１」その決まりを仕組みで守らせるため、手元の担当の書き換え・保存・GitHub への上げを全部止める。
@@ -45,7 +45,7 @@
 | # | 指標 | 数え方 |
 |---|---|---|
 | K-a | 導入後、手元の担当の Write/Edit/MultiEdit/NotebookEdit が通った件数 = 0 | 本体が、agent-console の活動記録の PostToolUse から agent_id 付きの行を数える |
-| K-b | 導入後、本体の操作がこの見張りに止められた件数 = 0 | 試験は K2。実地では、本体の道具の結果に「ADR-1045」の文が出たら、本体がその場で記録する |
+| K-b | 導入後、本体の操作がこの見張りに止められた件数 = 0 | 試験は K2。実地では、本体の道具の結果に「ADR-1046」の文が出たら、本体がその場で記録する |
 | K-c | 導入後 1 週の ~/.claude/logs/local-subagent-guard.log の件数と、規則ごとの内訳 | 誤った止めがあれば表A・表B・表C を直す |
 
 ## 4. recon の要点（詳細は recon.md）
@@ -74,7 +74,7 @@
 | scripts/agent-hooks/local-subagent-guard/install.sh | PO が `!` で実行する（§5-5） |
 | scripts/agent-hooks/local-subagent-guard/rollback.sh | PO が `!` で実行する（§5-5） |
 | .github/workflows/agent-hooks-test.yml | job を 1 つ足し、`bash scripts/agent-hooks/local-subagent-guard/test_guard.sh` を流す。既存の review-gate の job は変えない。paths は既存の `scripts/agent-hooks/**` で足りる（§5-6） |
-| docs/adr/ADR-1045-local-subagent-write-guard.md・docs/adr/README.md | ADR と索引。索引は `node scripts/generate-adr-index.js` で作る |
+| docs/adr/ADR-1046-local-subagent-write-guard.md・docs/adr/README.md | ADR と索引。索引は `node scripts/generate-adr-index.js` で作る |
 
 使うのは Python 3 の標準ライブラリだけ。
 
@@ -107,7 +107,7 @@ guard_pre_tool の読み込み:
 
 - exit 2 で終わり、stderr に次の 1 行を出す。agent_type が無ければ「名前なし」と書く。
 
-  `手元の担当（<agent_type>）は、ファイルの書き換え・git の作業場所や履歴の変更・GitHub への書き込み・台本の実行・別の AI の起動をしません（ADR-1045・規則 <規則名>）。調べた結果を本体に返してください。書き換えが要る作業はクラウドで行います。`
+  `手元の担当（<agent_type>）は、ファイルの書き換え・git の作業場所や履歴の変更・GitHub への書き込み・台本の実行・別の AI の起動をしません（ADR-1046・規則 <規則名>）。調べた結果を本体に返してください。書き換えが要る作業はクラウドで行います。`
 
 - 止めたときだけ、`~/.claude/logs/local-subagent-guard.log`（rollback でも消さない） に 1 行足す（UTC の時刻・agent_type・tool_name・規則名）。
   - 命令文そのものは書かない。秘密が混じることがあるため。
@@ -408,7 +408,7 @@ gh api は、後ろの語を見て次の順に判定する。
 
 | 基準 | 検証方法 |
 |---|---|
-| K1 担当の Write・Edit・MultiEdit・NotebookEdit・EnterWorktree・ExitWorktree が止まる（exit 2、stderr に ADR-1045 と規則 tool） | test_guard.sh: agent_id 付きの入力 6 種 |
+| K1 担当の Write・Edit・MultiEdit・NotebookEdit・EnterWorktree・ExitWorktree が止まる（exit 2、stderr に ADR-1046 と規則 tool） | test_guard.sh: agent_id 付きの入力 6 種 |
 | K2 本体（agent_id が無い・空文字）は止まらない（exit 0）。対象は Write と、Bash の `git commit -m x`・`git push`・`claude -p x`・`bash scripts/dev/executor-preflight.sh` | test_guard.sh |
 | K3 担当の、[cases.md](cases.md) の止める例が全部止まる（Bash・Monitor の両方）。command が文字列でない入力も止まる | test_guard.sh（cases.md の例を全部、試験に入れる） |
 | K4 担当の、cases.md の通す例が全部 exit 0（Bash・Monitor の両方）。Monitor で command が無い入力も exit 0 | test_guard.sh |

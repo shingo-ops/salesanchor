@@ -1,5 +1,5 @@
 #!/bin/bash
-# rollback.sh — install.sh で足した local-subagent-guard (ADR-1045) を外す。PO が `!` で実行する。
+# rollback.sh — install.sh で足した local-subagent-guard (ADR-1046) を外す。PO が `!` で実行する。
 # settings.json の足した 1 項目（command が一致するもの）と写しだけを外す。log は消さない（K-c の記録のため）。
 # 設計: docs/handoff/local-subagent-guard/design.md §5-5
 set -eu

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""local-subagent-guard (ADR-1045) — 手元の担当（サブエージェント）の書き換え・保存・送り出しを PreToolUse で止める。
+"""local-subagent-guard (ADR-1046) — 手元の担当（サブエージェント）の書き換え・保存・送り出しを PreToolUse で止める。
 設計: docs/handoff/local-subagent-guard/design.md §5-2・§5-3。判定の例: cases.md。
 """
 import datetime
@@ -419,7 +419,7 @@ def block(agent_type, tool_name, rule):
         pass
     sys.stderr.write(
         "手元の担当（%s）は、ファイルの書き換え・git の作業場所や履歴の変更・GitHub への書き込み・台本の実行・別の AI の起動をしません"
-        "（ADR-1045・規則 %s）。調べた結果を本体に返してください。書き換えが要る作業はクラウドで行います。\n"
+        "（ADR-1046・規則 %s）。調べた結果を本体に返してください。書き換えが要る作業はクラウドで行います。\n"
         % (agent_type or "名前なし", rule))
     sys.exit(2)
 

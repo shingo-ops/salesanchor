@@ -1,5 +1,5 @@
 #!/bin/bash
-# install.sh — local-subagent-guard (ADR-1045) を ~/.claude に導入する。PO が `!` で実行する（ADR-1011:39）。
+# install.sh — local-subagent-guard (ADR-1046) を ~/.claude に導入する。PO が `!` で実行する（ADR-1011:39）。
 # 何度流しても同じ結果（冪等）。戻すときは rollback.sh。
 # 設計: docs/handoff/local-subagent-guard/design.md §5-5
 set -eu

@@ -1,4 +1,4 @@
-# 作業指示書 — 手元の担当の書き換え・保存・送り出しを止める見張り（ADR-1045 便1）
+# 作業指示書 — 手元の担当の書き換え・保存・送り出しを止める見張り（ADR-1046 便1）
 
 - 状態: 発行済み（設計 第7.2版。第8回の審査 APPROVE on acff149f9。発行は POの委任に基づく Claude Opus）
 - 枝: `release/local-subagent-guard-design`（PR #4795 に足す。新しい枝・PR は作らない）
@@ -44,7 +44,7 @@
         run: bash scripts/agent-hooks/local-subagent-guard/test_guard.sh
 ```
 
-ファイル冒頭の注釈に「scripts/agent-hooks/local-subagent-guard/ (ADR-1045) の受入試験。docs/handoff/local-subagent-guard/design.md §8。」を 1 行足す。
+ファイル冒頭の注釈に「scripts/agent-hooks/local-subagent-guard/ (ADR-1046) の受入試験。docs/handoff/local-subagent-guard/design.md §8。」を 1 行足す。
 
 ## 4. test_guard.sh の作り方
 
@@ -64,7 +64,7 @@
 ## 6. 終わり方
 
 - `bash scripts/agent-hooks/local-subagent-guard/test_guard.sh` の出力の最後の 5 行と、`git diff --stat origin/release/local-subagent-guard-design` を報告に貼る。
-- commit は 1 つ: `feat: local-subagent-guard hook (ADR-1045 便1)`。push は `git push origin HEAD:release/local-subagent-guard-design`。
+- commit は 1 つ: `feat: local-subagent-guard hook (ADR-1046 便1)`。push は `git push origin HEAD:release/local-subagent-guard-design`。
 - force push・rebase・PR の作成と編集・マージはしない。
 
 END OF CARD

@@ -1,5 +1,5 @@
 #!/bin/bash
-# test_guard.sh — local-subagent-guard (ADR-1045) の受入試験。docs/handoff/local-subagent-guard/design.md §8 の K1〜K8 と cases.md の全例。
+# test_guard.sh — local-subagent-guard (ADR-1046) の受入試験。docs/handoff/local-subagent-guard/design.md §8 の K1〜K8 と cases.md の全例。
 #
 # 使い方: bash scripts/agent-hooks/local-subagent-guard/test_guard.sh
 # 本物の ~/.claude には触れない。HOME は mktemp -d。最後に「合格 N / 不合格 M」を出し、不合格が 1 つでもあれば exit 1。
@@ -46,7 +46,7 @@ expect() { # <name> <want rc> <json> [guard]
 for t in Write Edit MultiEdit NotebookEdit EnterWorktree ExitWorktree; do
   j="$(python3 -B -c 'import json,sys;print(json.dumps({"agent_id":"t1","agent_type":"general-purpose","tool_name":sys.argv[1],"tool_input":{"file_path":"/tmp/x"}}))' "$t")"
   run "$GUARD" "$j"
-  if [ "$RC" = 2 ] && echo "$ERR" | grep -q 'ADR-1045' && echo "$ERR" | grep -q '規則 tool'; then ok "K1 $t"; else ng "K1 $t" "rc=$RC $ERR"; fi
+  if [ "$RC" = 2 ] && echo "$ERR" | grep -q 'ADR-1046' && echo "$ERR" | grep -q '規則 tool'; then ok "K1 $t"; else ng "K1 $t" "rc=$RC $ERR"; fi
 done
 
 # K2: 本体（agent_id なし・空文字）は止まらない
