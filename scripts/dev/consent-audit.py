@@ -612,6 +612,23 @@ def _settings_keys(prefix, d, snap, full):
     snap[prefix + ":autoMode.environment"] = _list_hashes(am.get("environment"))
 
 
+def _backup_path_hashes(hook_dir):
+    """名前に .backup を含むフォルダの下にあるファイルの、相対パスの sha8 の集合（読めなければ空）。"""
+    hs = set()
+    try:
+        for root, dirs, names in os.walk(hook_dir):
+            for n in names:
+                fp = os.path.join(root, n)
+                if os.path.islink(fp) or not os.path.isfile(fp):
+                    continue
+                rel = os.path.relpath(fp, hook_dir)
+                if any(".backup" in seg for seg in rel.split(os.sep)[:-1]):
+                    hs.add(sha8(rel))
+    except OSError:
+        return set()
+    return hs
+
+
 def collect_permissions(home, git_run=None, tstate=None):
     p = perm_paths(home)
     git_run = git_run or run_git
@@ -624,7 +641,7 @@ def collect_permissions(home, git_run=None, tstate=None):
     snap["danger_ops"] = _list_hashes(ops)
     files = []
     for root, dirs, names in os.walk(p["hook_dir"]):
-        dirs.sort()
+        dirs[:] = [d for d in sorted(dirs) if ".backup" not in d]
         for n in sorted(names):
             if ".backup" in n:
                 continue
@@ -986,6 +1003,9 @@ def run_permissions(home, out, now=None, commit=False, gh_view=None, git_run=Non
     tstate = tools_state(home, git_run)
     new = collect_permissions(home, git_run, tstate)
     old, old_ts = load_snapshot(snap_path)
+    if old is not None and "hook_files" in old:
+        bk = _backup_path_hashes(p["hook_dir"])
+        old["hook_files"] = [x for x in old["hook_files"] if x.split("|", 1)[0] not in bk]
     led = read_ledger(home)
     out("== 権限の設定の増減（値は出さない。短いハッシュのみ） ==")
     changed = 0

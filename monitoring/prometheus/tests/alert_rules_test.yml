@@ -1,7 +1,7 @@
 # Prometheus ルールの単体試験（promtool test rules）
 # 書式: https://prometheus.io/docs/prometheus/latest/configuration/unit_testing_rules/
 # 実行: promtool test rules monitoring/prometheus/tests/alert_rules_test.yml
-# 全 32 本が擬似の系列で鳴ること、tier と runbook_url が付くことを確かめる。
+# 全 34 本が擬似の系列で鳴ること、tier と runbook_url が付くことを確かめる。
 
 rule_files:
   - ../alert_rules.yml
@@ -977,4 +977,67 @@ tests:
     alert_rule_test:
       - eval_time: 15m
         alertname: RecoveryCheckStale
+        exp_alerts: []
+
+  - name: OpsMailSilentFiring
+    interval: 1m
+    input_series:
+      - series: 'salesanchor_ops_mail_last_sakura_mail_timestamp_seconds{job="backend", instance="app-vps"}'
+        values: '1x58000'
+    alert_rule_test:
+      - eval_time: 962h
+        alertname: OpsMailSilent
+        exp_alerts:
+          - exp_labels:
+              job: backend
+              instance: app-vps
+              severity: warning
+              tier: ticket
+            exp_annotations:
+              summary: "さくらからのメールが 40 日届いていません"
+              description: "運用の受け箱に、さくらの差出人のメールが 40d 1h 59m 59s 届いていません（閾値: 40 日。決済の案内は毎月届きます）。業務用メールの自動転送が切れている見込みがあります。"
+              runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#opsmailsilent"
+
+  - name: OpsMailSilentQuiet
+    interval: 1m
+    input_series:
+      - series: 'salesanchor_ops_mail_last_sakura_mail_timestamp_seconds{job="backend", instance="app-vps"}'
+        values: '1x58000'
+    alert_rule_test:
+      - eval_time: 900h
+        alertname: OpsMailSilent
+        exp_alerts: []
+
+  - name: OpsMailPollStaleFiring
+    interval: 1m
+    input_series:
+      - series: 'salesanchor_ops_mail_last_poll_success_timestamp_seconds{job="backend", instance="app-vps"}'
+        values: '1x300'
+    alert_rule_test:
+      - eval_time: 4h
+        alertname: OpsMailPollStale
+        exp_alerts:
+          - exp_labels:
+              job: backend
+              instance: app-vps
+              severity: warning
+              tier: ticket
+            exp_annotations:
+              summary: "運用の受け箱を 3 時間読めていません"
+              description: "さくらの点検・障害のメールを読む処理が 3h 59m 59s の間、受け箱を読めていません（閾値: 3 時間）。この間、さくらのお知らせは Discord に届きません。"
+              runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#opsmailpollstale"
+
+  - name: OpsMailUnsetQuiet
+    interval: 1m
+    input_series:
+      - series: 'salesanchor_ops_mail_last_sakura_mail_timestamp_seconds{job="backend", instance="app-vps"}'
+        values: '0x300'
+      - series: 'salesanchor_ops_mail_last_poll_success_timestamp_seconds{job="backend", instance="app-vps"}'
+        values: '0x300'
+    alert_rule_test:
+      - eval_time: 4h
+        alertname: OpsMailSilent
+        exp_alerts: []
+      - eval_time: 4h
+        alertname: OpsMailPollStale
         exp_alerts: []

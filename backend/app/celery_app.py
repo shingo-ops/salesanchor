@@ -31,6 +31,7 @@ celery_app = Celery(
         "app.tasks.translation",  # ADR-110: 翻訳バックグラウンドタスク
         "app.tasks.sa02_recon_monitor",  # SA-02 §10: 並走期間 日次突合
         "app.tasks.review_mail_monitor",  # review@salesanchor.jp 新着メール → Discord 通知
+        "app.tasks.ops_mail_monitor",  # さくらの点検・障害のメール → 運用 Discord（outage-recovery-watch 便3）
         "app.tasks.fx_rate_updater",     # 為替レート SSOT: USD/JPY を1日2回更新
         "app.tasks.tcg_mirror",          # MIG-05 Task 3: TCG マスタミラーシート 日次書き出し
         "app.tasks.tcg_extraction",      # MIG-04 Stage 2: Gemini 抽出タスク
@@ -139,6 +140,12 @@ celery_app.conf.beat_schedule = {
     # 未設定（REVIEW_MAIL_IMAP_HOST 等）の場合は no-op で安全スキップ
     "review-mail-discord-notifier": {
         "task": "app.tasks.review_mail_monitor.check_review_mail_inbox",
+        "schedule": 300.0,  # 5分
+    },
+    # 運用の受け箱を 5 分ごとに確認し、さくらの点検・障害のメールを運用 Discord へ（outage-recovery-watch 便3）
+    # 未設定（OPS_MAIL_IMAP_USER 等）の場合は no-op で安全スキップ
+    "ops-mail-discord-notifier": {
+        "task": "app.tasks.ops_mail_monitor.check_ops_mail_inbox",
         "schedule": 300.0,  # 5分
     },
     # 為替レート SSOT: USD/JPY を毎日 AM6:00 JST に取得して public.app_fx_rate_history に追記
