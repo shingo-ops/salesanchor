@@ -192,16 +192,20 @@ function isConstantCondition(cond) {
 // DELETE 文の本体を走査し、かっこの外にある意味のある WHERE の有無を返す。
 // 終わりは ; ・対応のない閉じかっこ・（引用符やドル引用の区切りの直後で始まったときは）同じ区切り。
 // 引用符の中身は文字として読まない。条件が定数だけなら WHERE が無いのと同じ
-function deleteStatementHasWhere(sql, from, endToken) {
+function scanOutsideParens(sql, from, endToken, groups) {
   let depth = 0;
   let outside = '';
+  let groupStart = -1;
   let i = from;
   while (i < sql.length) {
     const c = sql[i];
     if (c === ';') break;
     if (endToken && sql.startsWith(endToken, i)) break;
     if (c === '(') {
-      if (depth === 0) outside += ' (grp) ';
+      if (depth === 0) {
+        outside += ' (grp' + groups.length + ') ';
+        groupStart = i + 1;
+      }
       depth++;
       i++;
       continue;
@@ -209,6 +213,7 @@ function deleteStatementHasWhere(sql, from, endToken) {
     if (c === ')') {
       if (depth === 0) break;
       depth--;
+      if (depth === 0) groups.push(sql.slice(groupStart, i));
       i++;
       continue;
     }
@@ -234,9 +239,24 @@ function deleteStatementHasWhere(sql, from, endToken) {
     if (depth === 0) outside += c;
     i++;
   }
+  if (depth > 0) groups.push(sql.slice(groupStart));
+  return outside;
+}
+
+function deleteStatementHasWhere(sql, from, endToken) {
+  let groups = [];
+  const outside = scanOutsideParens(sql, from, endToken, groups);
   const m = /\bWHERE\b/i.exec(outside);
   if (!m) return false;
-  const cond = outside.slice(m.index + m[0].length).split(/\bRETURNING\b/i)[0];
+  let cond = outside.slice(m.index + m[0].length).split(/\bRETURNING\b/i)[0];
+  // 条件の全体を包むかっこは何重でも外してから判断する
+  for (;;) {
+    const w = /^\s*\(grp(\d+)\)\s*$/.exec(cond);
+    if (!w) break;
+    const inner = groups[Number(w[1])];
+    groups = [];
+    cond = scanOutsideParens(inner, 0, null, groups);
+  }
   return !isConstantCondition(cond);
 }
 

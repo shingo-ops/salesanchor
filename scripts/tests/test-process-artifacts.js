@@ -708,7 +708,12 @@ const R6C_CASES = [
   ['× 3: 列と定数を AND でつないだ条件', 'migrations/r6c_ah.sql', 'DELETE FROM t WHERE true AND id = 1;\n', false],
   ['× 3: かっこの中に列を参照する条件', 'migrations/r6c_ai.sql', 'DELETE FROM t WHERE (id = 1);\n', false],
   ['× 3: 関数を呼ぶ条件', 'migrations/r6c_aj.sql', 'DELETE FROM t WHERE f(1);\n', false],
-  ['× 3: WHERE CURRENT OF', 'migrations/r6c_ak.sql', 'DELETE FROM t WHERE CURRENT OF c;\n', false],
+  ['○ 3: 全体を1重のかっこで包んだ定数だけの条件', 'migrations/r6c_am.sql', 'DELETE FROM t WHERE (true);\n', true],
+  ['○ 3: 全体を2重のかっこで包んだ定数だけの条件', 'migrations/r6c_an.sql', 'DELETE FROM t WHERE ((1 = 1));\n', true],
+  ['× 3: 全体を2重のかっこで包んだ列の比較', 'migrations/r6c_ao.sql', 'DELETE FROM t WHERE ((id = 1));\n', false],
+  ['× 3: 列の比較を OR で2つかっこに入れた条件', 'migrations/r6c_ap.sql', 'DELETE FROM t WHERE (a = 1) OR (b = 2);\n', false],
+  ['× 3: 途中にかっこがある普通の条件', 'migrations/r6c_aq.sql', 'DELETE FROM t WHERE (a = 1 OR b = 2) AND c = 3;\n', false],
+  ['× 3: WHERE CURRENT OF','migrations/r6c_ak.sql', 'DELETE FROM t WHERE CURRENT OF c;\n', false],
   ['× 3: 副問い合わせを使う条件', 'migrations/r6c_al.sql', 'DELETE FROM t WHERE id IN (SELECT id FROM s);\n', false],
   // 4 .sql 以外 ○
   ['○ 4: シェルのヒアドキュメントの中の WHERE なし DELETE', 'scripts/run_all_migrations.sh', 'psql <<SQL\nDELETE FROM t;\nSQL\n', true],
