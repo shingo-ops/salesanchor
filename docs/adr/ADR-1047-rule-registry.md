@@ -19,6 +19,10 @@
 4. R1a は警告で始める（ステップに `continue-on-error: true`）。台帳に入れるのは、recon §4 で「止める」とされ、止めている必須チェックが `required-checks.txt` にある決まりだけ。それ以外の行の仕分け（review・exempt・not_rules）は設計担当が行い、R1a では行わない。
 5. 台帳・`rule-docs.txt`・`required-checks.txt`・`prod-secrets.txt` は、変更に GO 記録を要る対象にする（`scripts/check-process-artifacts.js` の DANGEROUS_PATTERNS に4行足す）。
 6. R3 で、ADR-1029:31,36 にある review-gate の「何を審査するか」の定めを、この台帳の review 項目に置き換える。それまで ADR-1029 は有効のまま。
+7. （R1b で追加）1行に決まりが複数ある行も、台帳では1行1項目。kind を gate にしてよいのは、その行のうち PR の中で確かめられる部分が、すべてその check で止まるときだけ。PR に痕跡が残らない部分（チャットでの提示など）は gate を妨げず、reason に「◯◯は PR の外なので対象外」と書く。PR で確かめられるのに止まらない部分が残る行は gate にしない。
+8. （R1b で追加）機械で○×が決まるが今は止める必須チェックが無い行は、kind を review にし、reason を必ず「gate候補（R6）: 」で始める（R6 の対象一覧は reason の先頭で数える）。マージ前の審査報告の行のように R3 で PR 側の検査にする行は「gate候補（R3）: 」で始める。
+9. （R1b で追加）gate 以外の kind に `check` を書かない。review か exempt に `check` があれば C3 の失敗にする。
+10. （R1b で追加）R1b で決まりの語を含む 400 行すべてを rules か not_rules に仕分けた。記録行（evidence-registry.md の not_rule）は、各 anchor が出典のちょうど1行に当たる形で not_rules に登録する。食い違う2行（design-partner.md の「下書き禁止」と branch-operations/README.md の「必ず Draft」）は review とし、どちらを正とするかは未決として reason に残す。
 
 ## Why（なぜ）
 
@@ -39,4 +43,4 @@
 
 ## 検証
 
-`scripts/tests/test_check_rule_registry.py`（未仕分けの行・消えた anchor・欠けた項目・存在しない check・重なりがそれぞれ失敗になること、通る例が通ること）と `scripts/tests/test-process-artifacts.js`（台帳の4ファイルが dangerous 区分になること）。実測の件数は R1a の PR 本文に記す。
+`scripts/tests/test_check_rule_registry.py`（未仕分けの行・消えた anchor・欠けた項目・存在しない check・重なり・review/exempt に check がある・id の重複・when の誤り・fixture のパスが無い・入力の不備がそれぞれ失敗になること、anchors の一覧と not_rules の突き合わせ、通る例が通ること）と `scripts/tests/test-process-artifacts.js`（台帳の4ファイルが dangerous 区分になること）。実測の件数は R1a の PR 本文に記す。
