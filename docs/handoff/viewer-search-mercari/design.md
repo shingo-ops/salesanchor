@@ -164,6 +164,7 @@ headerContent?: ReactNode;
 | `frontend/src/locales/viewer/ja.json` | 文言追加（最近使った語／すべて消す／検索語を消す／戻る） |
 | `frontend/src/locales/viewer/en.json` | 同（キー数を一致させる） |
 | frontend/tests-e2e/visual-language/viewer-search-mercari.spec.ts | 新規（B1〜B9） |
+| frontend/tests-e2e/visual-language/drawer-inert-closed.spec.ts | 既存。閉じたパネルの数を 2→3 に更新（定数 CLOSED_PANEL_COUNT に集約） |
 | `docs/specs/design-system/visual-language/benchmark/mercari-search-filter.md` | **お手本の正本に「検索の2段構え（履歴→候補）」と実測値を追記**（今回 ADB で測り直した一次情報） |
 | `docs/handoff/viewer-search-mercari/recon.md` | 新規 |
 | `docs/handoff/viewer-search-mercari/design.md` | 新規（本書） |
