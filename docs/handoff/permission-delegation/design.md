@@ -339,7 +339,7 @@ Claude Code の自動判定は、AI が自分の許可を変えることを止�
 
 - §4-2 の表は、hook_files を「~/.claude/scripts/ 配下の通常ファイル（.backup を除く）」と定める。実物 `scripts/dev/consent-audit.py:626-630`（collect_permissions）は、ファイル名に `.backup` を含むものだけを除き、フォルダ `~/.claude/scripts/.backup/` の中のファイルは数えている（設計と実物の食い違い。入れ忘れ）。
 - 2026-10-26 22:13・22:54 JST に PO が `docs/handoff/conversation-consent/po-apply-consent.sh --update` を実行し、`.backup/20261026221349/`・`.backup/20261026225412/` に8ファイルずつ控えができた。同日の流し直しの点検（`--commit-snapshot` なし）で、hook_files の `ABNORMAL_REASON=B` が33件出た。内訳: 控えの増16件、入れ替えた見張り2つの増と減4件（PR #4794 の想定どおり）、14:00 の点検の後にほかの作業で変わったファイルの増と減13件（増27・減6 の合計）。
-- 前回の写し（`~/.claude/logs/permission-snapshot.json`、2026-10-26 14:00 の点検）の hook_files は118件で、そのうち46件が `.backup/` の下の古い控え（2026-10-13〜10-19 の6フォルダ）。数え方: `.backup/` の下にいまあるファイル62件の相対パスの sha8 を写しと照らし、46件が一致した。
+- 前回の写し（~/.claude/logs/permission-snapshot.json、2026-10-26 14:00 の点検）の hook_files は118件で、そのうち46件が `.backup/` の下の古い控え（2026-10-13〜10-19 の6フォルダ）。数え方: `.backup/` の下にいまあるファイル62件の相対パスの sha8 を写しと照らし、46件が一致した。
 - 控えのファイルはどこからも呼ばれない。見張りとして動くのは settings.json に登録されたものだけで、登録の変化は user:hooks で見ている。
 
 ### 13-2. 変更
@@ -352,7 +352,7 @@ Claude Code の自動判定は、AI が自分の許可を変えることを止�
 
 | 基準 | 検証方法 |
 |---|---|
-| A21-1 `~/.claude/scripts/.backup/<時刻>/x.sh` を足しても hook_files の件数が変わらず、`ABNORMAL=no` | 試験（一時 HOME。`scripts/dev/permission-delegation-tests.py`） |
+| A21-1 ~/.claude/scripts/.backup/<時刻>/x.sh を足しても hook_files の件数が変わらず、`ABNORMAL=no` | 試験（一時 HOME。`scripts/dev/permission-delegation-tests.py`） |
 | A21-2 前回の写しに `.backup/` の下の要素がある（今の数え方で取った）状態から比べても、その要素は「減」にならず B が出ない | 試験（直す前の式で写しを作ってから比べる） |
 | A21-3 控えのフォルダを消すと、前回の写しにあった控えの要素は「減」として出る | 試験 |
 | A21-4 `.backup` の外に新しいファイルを置くと、今までどおり hook_files の増と B（A5 の hook_files がそのまま通る） | 既存の A5 |
