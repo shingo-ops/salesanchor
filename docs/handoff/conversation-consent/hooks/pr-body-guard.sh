@@ -98,6 +98,77 @@ if [[ -n "$CMD_CD" ]] && [[ -d "$CMD_CD" ]]; then
   CWD="$CMD_CD"
 fi
 
+# 命令文に cd が無いときだけ、--head／PR 番号のブランチから、そのブランチの worktree を検証の場所にする。
+# ちょうど 1 つ見つかったときだけ変える。それ以外は何もしない（失敗してもフック全体は落とさない）。
+if [[ -z "$CMD_CD" ]] && [[ -n "$CWD" ]] && [[ -d "$CWD" ]]; then
+  HEAD_BRANCH="$(printf '%s' "$COMMAND" | python3 -c "
+import sys, shlex, subprocess
+try:
+    w = shlex.split(sys.stdin.read())
+except Exception:
+    sys.exit(0)
+repo = ''
+rest = []
+i = 0
+while i < len(w):
+    a = w[i]
+    if a in ('-R', '--repo') and i + 1 < len(w):
+        repo = w[i + 1]; i += 2; continue
+    if a.startswith('--repo='):
+        repo = a[7:]; i += 1; continue
+    rest.append(a); i += 1
+seq = None
+for j in range(len(rest) - 2):
+    if rest[j] == 'gh' and rest[j + 1] == 'pr' and rest[j + 2] in ('create', 'edit'):
+        seq = j; break
+if seq is None:
+    sys.exit(0)
+sub = rest[seq + 2]
+args = rest[seq + 3:]
+if sub == 'create':
+    for k, a in enumerate(args):
+        if a in ('--head', '-H') and k + 1 < len(args):
+            print(args[k + 1]); break
+        if a.startswith('--head='):
+            print(a[7:]); break
+else:
+    target = next((a for a in args if not a.startswith('-')), '')
+    if target:
+        cmd = ['gh', 'pr', 'view', target]
+        if repo:
+            cmd += ['-R', repo]
+        cmd += ['--json', 'headRefName', '-q', '.headRefName']
+        try:
+            r = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+            if r.returncode == 0:
+                print(r.stdout.strip())
+        except Exception:
+            pass
+" 2>/dev/null || true)"
+  if [[ -n "$HEAD_BRANCH" ]]; then
+    HEAD_WT="$(git -C "$CWD" worktree list --porcelain 2>/dev/null | python3 -c "
+import sys
+b = 'refs/heads/' + sys.argv[1]
+hits = []
+for blk in sys.stdin.read().split('\n\n'):
+    path = ''; br = ''
+    for ln in blk.splitlines():
+        if ln.startswith('worktree '):
+            path = ln[9:]
+        elif ln.startswith('branch '):
+            br = ln[7:]
+    if path and br == b:
+        hits.append(path)
+if len(hits) == 1:
+    print(hits[0])
+" "$HEAD_BRANCH" 2>/dev/null || true)"
+    if [[ -n "$HEAD_WT" ]] && [[ -d "$HEAD_WT" ]]; then
+      CWD="$HEAD_WT"
+      echo "pr-body-guard: 作業場所を ${HEAD_BRANCH} の worktree ${HEAD_WT} にしました" >&2
+    fi
+  fi
+fi
+
 # 送り先が salesanchor 以外なら検査しない（PO 承認 2026-10-15）。送り先が決まらないときは検査を続ける。
 TARGET_REPO="$(echo "$COMMAND" | python3 -c "
 import sys, re
