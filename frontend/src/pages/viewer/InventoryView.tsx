@@ -18,6 +18,7 @@ import { useIsMobile } from "../../hooks/useIsMobile";
 import { saveLocaleCookie } from "./i18n";
 import type { ViewerLang } from "./i18n";
 import { addRecentSearch, clearRecentSearches, loadRecentSearches } from "./recentSearches";
+import { buildSuggestions } from "./searchSuggestions";
 import { buildViewerColumns } from "./viewerColumns";
 import {
   DEFAULT_SORT_DIR,
@@ -98,6 +99,9 @@ export function InventoryView({ data }: InventoryViewProps) {
   const closeChoicePanel = () => setChoicePanel("none");
 
   const allRows = useMemo(() => withIndex(data.rows), [data.rows]);
+  // 検索画面で打っている間だけ出す候補（design.md 4-1・4-2）。draft が空のときは [] になり、
+  // 検索画面は「最近使った語」を出す。698件の走査は useMemo 1回ぶんで収まる（design ⑩）
+  const suggestions = useMemo(() => buildSuggestions(allRows, draft), [allRows, draft]);
   const tabs = useMemo(() => seriesTabs(data.rows), [data.rows]);
   const others = useMemo(() => otherSeries(data.rows), [data.rows]);
   const providerOptions = useMemo(
@@ -877,38 +881,61 @@ export function InventoryView({ data }: InventoryViewProps) {
         title={t("viewer.search.placeholder")}
         headerContent={searchScreenHeader}
       >
-        <div className="viewer-recent-header">
-          <span className="viewer-recent-title" data-testid="viewer-recent-title">
-            {t("viewer.search.recentTitle")}
-          </span>
-          {recentSearches.length > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              type="button"
-              data-testid="viewer-recent-clear"
-              onClick={clearAllRecent}
-            >
-              {t("viewer.search.recentClear")}
-            </Button>
-          )}
-        </div>
-        {recentSearches.length > 0 && (
-          <ul className="viewer-recent-list">
-            {recentSearches.map((term) => (
-              <li key={term}>
-                <button
+        {draft === "" ? (
+          <>
+            <div className="viewer-recent-header">
+              <span className="viewer-recent-title" data-testid="viewer-recent-title">
+                {t("viewer.search.recentTitle")}
+              </span>
+              {recentSearches.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
                   type="button"
-                  className="viewer-recent-row"
-                  data-testid={`viewer-recent-row-${term}`}
-                  onClick={() => pickRecentSearch(term)}
+                  data-testid="viewer-recent-clear"
+                  onClick={clearAllRecent}
                 >
-                  <Clock className="viewer-recent-row__icon" size={ICON.lg} aria-hidden />
-                  {term}
-                </button>
-              </li>
-            ))}
-          </ul>
+                  {t("viewer.search.recentClear")}
+                </Button>
+              )}
+            </div>
+            {recentSearches.length > 0 && (
+              <ul className="viewer-recent-list">
+                {recentSearches.map((term) => (
+                  <li key={term}>
+                    <button
+                      type="button"
+                      className="viewer-recent-row"
+                      data-testid={`viewer-recent-row-${term}`}
+                      onClick={() => pickRecentSearch(term)}
+                    >
+                      <Clock className="viewer-recent-row__icon" size={ICON.lg} aria-hidden />
+                      {term}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
+        ) : (
+          // 打っている間は候補だけ出す（見出し無し・design.md 4-2）。当たらなければ何も出さない
+          suggestions.length > 0 && (
+            <ul className="viewer-suggestion-list">
+              {suggestions.map((term) => (
+                <li key={term}>
+                  <button
+                    type="button"
+                    className="viewer-suggestion-row"
+                    data-testid={`viewer-suggestion-row-${term}`}
+                    onClick={() => confirmSearch(term)}
+                  >
+                    <MagnifyingGlass className="viewer-suggestion-row__icon" size={ICON.lg} aria-hidden />
+                    {term}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )
         )}
       </Drawer>
       )}

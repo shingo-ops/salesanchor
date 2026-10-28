@@ -182,15 +182,18 @@ for (const width of MOBILE_WIDTHS) {
 
     test("B8: 「最近使った語」の行が69px・文字の左端が64px・行の中に印が1つ", async ({ page }) => {
       await gotoViewer(page, { width, height });
-      let panel = await openSearchScreen(page);
+      const panel = await openSearchScreen(page);
       // 確定はキーボードの検索キー（Enter）で行う。確定ボタン viewer-search-submit は
       // 読み上げ専用（sr-only）で画面上の大きさが 1px しかなく、Playwright の click が
       // 当たらず18秒待って落ちるため（2026-10-28 の CI で実測）。実機の確定もこの道
       await panel.getByTestId("viewer-search-input").fill(UNIQUE_TERM);
       await panel.getByTestId("viewer-search-input").press("Enter");
 
-      panel = await openSearchScreen(page);
-      const row = panel.getByTestId(`viewer-recent-row-${UNIQUE_TERM}`);
+      // 開き直す道は✕（札）を使う。便12b 以降、語が入った状態（viewer-search-open）で
+      // 開き直すと候補が出るため。お手本の実測（2026-10-28）どおり
+      await page.getByTestId("viewer-search-clear").click();
+      const reopened = await waitSearchScreenOpen(page);
+      const row = reopened.getByTestId(`viewer-recent-row-${UNIQUE_TERM}`);
       await expect(row).toBeVisible();
       const box = await row.boundingBox();
       expect(box).not.toBeNull();
