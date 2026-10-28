@@ -662,9 +662,8 @@ const LB_DOLLAR_DELIM_RE = new RegExp(LB_DOLLAR_DELIM_SRC, 'y');
 const LB_STATEMENT_START = String.raw`(^|[;()]|['"]|\b(?:BEGIN|THEN|ELSE|LOOP)\b|${LB_DOLLAR_DELIM_SRC}|\bEXPLAIN\s+(?:(?:ANALYZE|ANALYSE|VERBOSE)\s+)*|\bPREPARE\s+[^\s;()]+\s*(?:\([^()]*\)\s*)?AS\b)\s*`;
 const LB_ALTER_TABLE_RE = /\bALTER\s+(?:FOREIGN\s+)?TABLE\s+(?:IF\s+EXISTS\s+)?(?:ONLY\s+)?(?:"(?:[^"]|"")*"|[^\s;,()"])+\s*\*?/gi;
 
-// 繰り返しの回数の上限（入力の長さ×100＋6000 万。1 回の呼び出し全体で数える。6000 万は約 1 秒分）。届いたら lbTick が例外を投げ、呼び出し側が検出に倒す
+// 繰り返しの回数の上限（入力の長さ×100＋6000 万。1 回の呼び出し全体で数える。時間の約束ではなく回数の上限）。届いたら lbTick が例外を投げ、呼び出し側が検出に倒す
 const lbWork = { used: 0, limit: 0 };
-const LB_STATS = { limitHits: 0, errors: 0 };
 const LB_LIMIT_ERROR = { lbLimit: true };
 function lbBegin(len) {
   lbWork.used = 0;
@@ -938,8 +937,6 @@ function lbSqlTextHasDestructiveStatement(text, file) {
   try {
     return lbSqlTextHasDestructiveStatementCore(text, file);
   } catch (e) {
-    if (e === LB_LIMIT_ERROR) LB_STATS.limitHits++;
-    else LB_STATS.errors++;
     return true;
   }
 }
