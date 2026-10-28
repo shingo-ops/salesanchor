@@ -204,7 +204,8 @@
   font-weight: var(--font-weight-semi);
   color: var(--text-primary);
 }
-.viewer-recent-list {
+.viewer-recent-list,
+.viewer-suggestion-list {
   display: flex;
   flex-direction: column;
   margin: 0;
@@ -212,9 +213,12 @@
   list-style: none;
 }
 /* 69px（お手本68.7dpの最近傍）。文字は左から64px（= --field-h-tap + --space-4。
-   お手本の左の丸い印が48dpを占める分）。印（時計）はその48pxの枠の中に中央で置く
-   （position:relative + absolute。padding はそのまま保つので文字の左端は動かない） */
-.viewer-recent-row {
+   お手本の左の丸い印が48dpを占める分）。印（時計／虫眼鏡）はその48pxの枠の中に中央で置く
+   （position:relative + absolute。padding はそのまま保つので文字の左端は動かない）。
+   候補（.viewer-suggestion-row）は「打っている間だけ出す候補」（便12b design.md 4-2）で、
+   行の形は最近使った語と同じにする（印だけ虫眼鏡に描き分ける） */
+.viewer-recent-row,
+.viewer-suggestion-row {
   position: relative;
   display: flex;
   align-items: center;
@@ -230,11 +234,14 @@
   box-sizing: border-box;
   cursor: pointer;
 }
-.viewer-recent-row:hover {
+.viewer-recent-row:hover,
+.viewer-suggestion-row:hover {
   background: var(--bg-hover);
 }
-/* 時計の印（design.md 4-5。丸い背景は作らない・印だけ）。左48pxの枠の中で中央に置く */
-.viewer-recent-row__icon {
+/* 時計／虫眼鏡の印（design.md 4-5・便12b 4-2。丸い背景は作らない・印だけ）。
+   左48pxの枠の中で中央に置く */
+.viewer-recent-row__icon,
+.viewer-suggestion-row__icon {
   position: absolute;
   left: calc((var(--field-h-tap) - var(--icon-lg)) / 2);
   top: 50%;
