@@ -93,7 +93,9 @@ test.describe("visual-language: 受信箱 カルテからリードをまとめ�
     await testInfo.attach("step1-menu", { body: await page.screenshot(), contentType: "image/png" });
 
     await item.click();
-    const dialog = page.getByRole("dialog");
+    // 画面には dialog が複数ある（メニュー・絞り込み等）ので、題名でまとめる窓だけに絞る
+    // （題名は src/locales/ja.json の mergeLead.title と同じ文字）
+    const dialog = page.getByRole("dialog", { name: "リードをまとめる" });
     await expect(dialog).toBeVisible();
     await dialog.getByText(MASTER_CANDIDATE.customer_name).click();
     await testInfo.attach("step2-select", { body: await page.screenshot(), contentType: "image/png" });
