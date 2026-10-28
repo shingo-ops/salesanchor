@@ -122,4 +122,11 @@
   .comp-drawer-panel {
     width: 100%;
   }
+
+  /* mobileInset（design.md 4-1）: お手本（メルカリ）の絞り込みパネルと同じく画面の83%にし、
+     左に地を残して背景を押して閉じられるようにする。.comp-drawer-panel と同じ詳細度(0,1,0)の
+     ため、CSS の後勝ちで上の 100% を上書きする（便10 の .comp-btn--tap と同型）。 */
+  .comp-drawer-panel--mobile-inset {
+    width: var(--drawer-panel-w-mobile-inset);
+  }
 }

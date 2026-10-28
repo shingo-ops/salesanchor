@@ -16,7 +16,7 @@
  */
 
 import { expect } from "@playwright/test";
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import { mockApi } from "../utils/api-mock";
 import type { ViewerInventoryResponse, ViewerRow } from "../../src/pages/viewer/types";
 
@@ -142,4 +142,20 @@ export async function gotoViewer(
   await page.goto("/viewer/");
   await expect(page.getByTestId("viewer-filter-toggle").or(page.getByTestId("viewer-provider-filter-button"))).toBeVisible();
   return fixture;
+}
+
+/** Drawer のスライドインが収まるまで待つ。
+ *  パネルは right:0 の固定配置なので、収まると「右端＝画面の右端」になる。
+ *  左端(x)で待つと mobileInset（左に地を残す形・docs/handoff/viewer-filter-choices-mercari/design.md 4-1）
+ *  のとき永久に一致しないため、右端で待つ。全幅のパネルでも同じ判定で成立する。 */
+export async function waitPanelSlidIn(panel: Locator, page: Page): Promise<void> {
+  await expect(panel).toHaveCount(1);
+  await expect(panel).toBeVisible();
+  const viewportRight = await page.evaluate(() => document.documentElement.clientWidth);
+  await expect
+    .poll(async () => {
+      const box = await panel.boundingBox();
+      return box ? Math.round(box.x + box.width) : null;
+    })
+    .toBe(viewportRight);
 }

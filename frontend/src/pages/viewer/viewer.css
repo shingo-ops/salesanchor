@@ -87,11 +87,35 @@
   align-items: center;
   gap: var(--space-2);
 }
+/* 絞り込みドロワー root の先頭行「24時間以内のみ」（design.md 4-6）。
+   以前は金型の .comp-multiselect__option / --inline を借りていたが、4-2 で --inline の寸法を
+   選択画面向けに変えると root のこの行まで一緒に変わってしまうため、ここに同じ計算値を複製して外す。
+   見た目は便12b までと1pxも変えない */
+.viewer-fresh-check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--size-icon-btn-lg);
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--font-sm);
+  color: var(--text-primary);
+  width: 100%;
+  cursor: pointer;
+}
+/* sticky hover 対策（frontend/src/components/MultiSelect.css の .comp-multiselect__option と同じ理由） */
+@media (hover: hover) {
+  .viewer-fresh-check:hover {
+    background: var(--bg-hover);
+  }
+}
 /* 絞り込みの選択画面（provider/condition・design.md 4-4）: 候補を絞る検索欄 ＋ 一覧 */
 .viewer-filter-options {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+  /* 選択画面の一覧だけ Drawer 本文の左右余白（--space-6・Drawer.css の .comp-drawer-body）を
+     打ち消し、行をパネル全幅にする（design.md 4-3）。検索欄・見出しは余白の内側に残る */
+  --comp-multiselect-list-bleed: var(--space-6);
 }
 /* 絞り込み画面（root）の一番下。最終更新・言語（便4 design.md 4-3）。区切り線で絞り込みの項目と見分ける */
 .viewer-filter-meta {

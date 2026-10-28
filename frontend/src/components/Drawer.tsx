@@ -38,6 +38,9 @@ interface DrawerBaseProps {
   footer?: ReactNode;
   /** パネル幅。'default'（480px）/ 'wide'（1100px・スマホは全幅） */
   size?: "default" | "wide";
+  /** スマホ幅（767px以下）のときパネルを画面幅の83%にし、左に背景を残して押して閉じられるようにする。
+   *  既定 false（今までどおり画面いっぱい）。docs/handoff/viewer-filter-choices-mercari/design.md 4-1 */
+  mobileInset?: boolean;
   /** 帯の中身（戻る・題・✕）を丸ごと差し替える。渡したときだけ題の <h2> を sr-only にする
    *  （省略時は今までどおり何も変わらない。docs/handoff/viewer-search-mercari/design.md 4-1） */
   headerContent?: ReactNode;
@@ -63,6 +66,7 @@ export function Drawer({
   footer,
   size = "default",
   headerContent,
+  mobileInset = false,
 }: DrawerProps) {
   const { t }     = useTranslation();
   const titleId   = useId();
@@ -127,7 +131,7 @@ export function Drawer({
       {/* パネル本体 — DOM は常にマウント、CSS クラスでアニメーション */}
       <div
         ref={panelRef}
-        className={`comp-drawer-panel${size === "wide" ? " comp-drawer-panel--wide" : ""}${open ? " comp-drawer-panel--open" : ""}`}
+        className={`comp-drawer-panel${size === "wide" ? " comp-drawer-panel--wide" : ""}${mobileInset ? " comp-drawer-panel--mobile-inset" : ""}${open ? " comp-drawer-panel--open" : ""}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}

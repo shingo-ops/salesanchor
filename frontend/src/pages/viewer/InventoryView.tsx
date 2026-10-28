@@ -493,8 +493,10 @@ export function InventoryView({ data }: InventoryViewProps) {
     </Button>
   );
   // 絞り込みドロワーの先頭の1行（design.md 4-1）。上部の viewer-fresh-toggle とは別の testId（便2の教訓）
+  // 金型の class（comp-multiselect__option / --inline）は 4-2 の選択画面の寸法変更の巻き添えを受けるため借りない
+  // （design.md 4-6）。見た目は変えず viewer.css の .viewer-fresh-check に同じ計算値を持たせる
   const freshCheck = (
-    <label className="comp-multiselect__option comp-multiselect__option--inline">
+    <label className="viewer-fresh-check">
       <CheckboxControl
         data-testid="viewer-fresh-check"
         checked={freshOnly}
@@ -787,6 +789,7 @@ export function InventoryView({ data }: InventoryViewProps) {
         title={filterDrawerTitle}
         {...filterDrawerBackProps}
         footer={filterDrawerFooter}
+        mobileInset
       >
         {filterView === "provider" ? (
           providerOptionsView

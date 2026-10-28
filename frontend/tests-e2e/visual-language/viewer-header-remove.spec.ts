@@ -18,7 +18,7 @@
  */
 import { expect, test } from "@playwright/test";
 import type { Locator, Page } from "@playwright/test";
-import { gotoViewer } from "./viewer-helpers";
+import { gotoViewer, waitPanelSlidIn } from "./viewer-helpers";
 
 const MOBILE_WIDTHS = [360, 390] as const;
 /** 一覧の先頭カードの y の上限（design.md ③・計算値124・余裕4px） */
@@ -53,14 +53,7 @@ function openPanel(page: Page): Locator {
 async function openFilterDrawer(page: Page): Promise<Locator> {
   await page.getByTestId("viewer-filter-toggle").click();
   const panel = openPanel(page);
-  await expect(panel).toHaveCount(1);
-  await expect(panel).toBeVisible();
-  await expect
-    .poll(async () => {
-      const box = await panel.boundingBox();
-      return box ? Math.round(box.x) : null;
-    })
-    .toBe(0);
+  await waitPanelSlidIn(panel, page);
   return panel;
 }
 
