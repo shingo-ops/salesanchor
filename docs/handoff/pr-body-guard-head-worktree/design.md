@@ -11,7 +11,7 @@
 - 対象外: confidential-quote-guard（guard.py）・validate-pr-body.sh・extract-pr-body.py・settings.json・ほかの見張り。
 
 ## 3. 変更前後
-- 変更前: 検証の場所 = フックの cwd、命令文に `cd <パス>` があればそのパス（`pr-body-guard.sh:85-99`）。
+- 変更前: 検証の場所 = フックの cwd、命令文に `cd <パス>` があればそのパス（`docs/handoff/conversation-consent/hooks/pr-body-guard.sh:85-99`）。
 - 変更後: 上の決め方は**そのまま**。そのうえで、命令文に `cd` が無いときだけ、次の順で場所を足す。
   1. ブランチ名を決める。`gh pr create` は `--head <b>`・`--head=<b>`・`-H <b>`。`gh pr edit` は `edit` の次の位置引数（番号か PR の URL）を `gh pr view <それ> [-R <repo>] --json headRefName -q .headRefName` で引く（10 秒で打ち切り。`-R`/`--repo` が命令文にあれば渡す）。
   2. `git -C "$CWD" worktree list --porcelain` から `branch refs/heads/<b>` の行を持つ worktree を探す。**ちょうど 1 つ**見つかり、ディレクトリがあるときだけ、そこを検証の場所にする。標準エラーに `pr-body-guard: 作業場所を <ブランチ> の worktree <パス> にしました` を 1 行出す。
@@ -38,7 +38,7 @@
 | K3 cd があればそちらが勝つ | `cd <パス> && gh pr create --head <b>` で「作業場所を」の行が出ない |
 | K4 既存の試験が全部通る | `bash scripts/dev/test-agent-hooks.sh` が FAIL 0 |
 | K5 本物で両方の見張りを通る | 入れ替え後、本店の会話から便9の `gh pr create --head release/loading-english-literal --body-file <絶対パス>` を単独で流し、PR ができる |
-| K7 本文は元の場所で読む | 同じ試験で、worktree にだけ `rel.md` を置き cwd を本体にして `--body-file rel.md` を流すと「--body-file を読み込めない」で止まる |
+| K7 本文は元の場所で読む | 同じ試験で、worktree にだけ相対パスの本文ファイル rel.md を置き cwd を本体にして、それを --body-file に相対パスで渡すと「--body-file を読み込めない」で止まる |
 | K6 confidential-quote-guard は不変 | 入れ替え前後で `shasum ~/.claude/scripts/confidential-quote-guard/guard.py` が同じ |
 
 ## 7. 進め方
@@ -48,7 +48,7 @@
 4. PR を作る（K5 の確かめも兼ねる）→ CI → GO → 合流。
 
 ## 7a. 外部・過去事例
-- 社内の前例: pr-body-guard の cd 補正（`pr-body-guard.sh:88-99`）は 10/15 に `~` を展開しない件で止まった（memory pr_body_guard_cd）。今回も「場所の決め方」の穴で、決め方を足す直し。
+- 社内の前例: pr-body-guard の cd 補正（`docs/handoff/conversation-consent/hooks/pr-body-guard.sh:88-99`）は 10/15 に `~` を展開しない件で止まった（memory pr_body_guard_cd）。今回も「場所の決め方」の穴で、決め方を足す直し。
 - 外部事例は使わない。理由: 社内の見張り 2 本の食い違いで、外の数値が判断に効かない。
 
 ## 8. 維持の仕組み
