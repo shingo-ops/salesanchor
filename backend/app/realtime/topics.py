@@ -209,6 +209,7 @@ NO_SIGNAL_ROUTES: dict[tuple[str, str], str] = {
     ("POST", "/api/v1/leads/{lead_id}/priority-score/override"): _PENDING,
     ("POST", "/api/v1/leads/{lead_id}/priority-score/recalculate"): _PENDING,
     ("POST", "/api/v1/leads/{master_id}/merge"): _PENDING,
+    ("POST", "/api/v1/leads/{master_id}/merge/preview"): _PENDING,
     ("PATCH", "/api/v1/me/inventory-filters"): _PENDING,
     ("POST", "/api/v1/meta/connect/start"): _PENDING,
     ("DELETE", "/api/v1/meta/connect/{page_id}"): _PENDING,
