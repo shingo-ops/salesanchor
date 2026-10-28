@@ -17,13 +17,15 @@
  */
 import { expect, test } from "@playwright/test";
 import type { Locator, Page } from "@playwright/test";
-import { gotoViewer } from "./viewer-helpers";
+import { gotoViewer, waitPanelSlidIn } from "./viewer-helpers";
 
 const MOBILE_WIDTHS = [360, 390] as const;
 /** タップ領域の下限（ADR-140 の G4 と同じ測り方。design.md ③） */
 const MIN_TAP_PX = 44;
-/** A6: 選択画面で一度に見える件数（下限・上限。design.md ③・⑤） */
-const MIN_VISIBLE_OPTIONS = 8;
+/** A6: 選択画面で一度に見える件数（下限・上限。design.md ③・⑤）。
+ *  便13a（docs/handoff/viewer-filter-choices-mercari/design.md C11）で行の高さを44px→61pxに
+ *  したぶん見える件数が約28%減るため下限を引き下げる: 8 × 44/61 = 5.77 → 5 */
+const MIN_VISIBLE_OPTIONS = 5;
 const MAX_VISIBLE_OPTIONS = 20;
 
 /**
@@ -34,15 +36,7 @@ const MAX_VISIBLE_OPTIONS = 20;
 async function openFilterDrawer(page: Page): Promise<Locator> {
   await page.getByTestId("viewer-filter-toggle").click();
   const panel = page.locator('[data-testid="supplier-drawer"].comp-drawer-panel--open');
-  await expect(panel).toHaveCount(1);
-  await expect(panel).toBeVisible();
-  // スライドインの途中で測ると x が 0 でない（画面外からアニメーション中）ため収まるまで待つ
-  await expect
-    .poll(async () => {
-      const box = await panel.boundingBox();
-      return box ? Math.round(box.x) : null;
-    })
-    .toBe(0);
+  await waitPanelSlidIn(panel, page);
   return panel;
 }
 

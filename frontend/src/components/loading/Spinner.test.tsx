@@ -1,14 +1,18 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
+import i18n from '../../i18n';
 import { Spinner } from './Spinner';
 import { SaveIndicator } from './SaveIndicator';
 
+beforeEach(async () => {
+  await i18n.changeLanguage('en');
+});
 afterEach(cleanup);
 
 describe('Spinner compatibility and inherited foreground', () => {
   it('keeps the default accessible status and md size', () => {
     render(<Spinner />);
-    const spinner = screen.getByRole('status', { name: 'Loading' });
+    const spinner = screen.getByRole('status', { name: 'Loading...' });
     expect(spinner.className).toBe('sa-spinner sa-spinner--md');
     expect(spinner.hasAttribute('aria-hidden')).toBe(false);
     expect(spinner.hasAttribute('style')).toBe(false);
@@ -43,13 +47,25 @@ describe('Spinner compatibility and inherited foreground', () => {
     const { container, rerender } = render(<SaveIndicator status="idle" />);
     expect(container.childElementCount).toBe(0);
     rerender(<SaveIndicator status="saving" />);
-    const spinner = screen.getByRole('status', { name: 'Saving' });
+    const spinner = screen.getByRole('status', { name: 'Saving...' });
     expect(spinner.className).toBe('sa-spinner sa-spinner--sm');
     expect(spinner.hasAttribute('aria-hidden')).toBe(false);
-    expect(container.textContent?.trim()).toBe('Saving');
+    expect(container.textContent?.trim()).toBe('Saving...');
     rerender(<SaveIndicator status="saved" />);
     expect(screen.queryByRole('status')).toBeNull();
     expect(container.querySelector('.sa-save--saved')).not.toBeNull();
     expect(container.textContent?.trim()).toBe('Saved');
+  });
+
+  it('uses the dictionary value when no label is given', () => {
+    render(<Spinner />);
+    expect(screen.getByRole('status').getAttribute('aria-label')).toBe(i18n.t('common.loading'));
+  });
+
+  it('SaveIndicator saving/saved text comes from the dictionary', () => {
+    const { container, rerender } = render(<SaveIndicator status="saving" />);
+    expect(container.textContent?.trim()).toBe(i18n.t('common.saving'));
+    rerender(<SaveIndicator status="saved" />);
+    expect(container.textContent?.trim()).toBe(i18n.t('common.saved'));
   });
 });

@@ -37,6 +37,7 @@ import { useSSE } from "../hooks/useSSE";
 import { RealtimeProvider } from "../lib/realtime/RealtimeProvider";
 import { listConversations } from "../lib/messages";
 import ConfirmModal from "./ConfirmModal";
+import { LoadingBlock } from "./loading";
 import { ICON } from "../constants/iconSizes";
 import type { NavItem } from "../types/nav";
 
@@ -220,7 +221,7 @@ export default function DesktopShell() {
         {/* Nav */}
         <nav className="sidebar-nav-items">
           {navLoading ? (
-            <div className="sidebar-loading-dot">...</div>
+            <div className="sidebar-loading-dot"><LoadingBlock size="sm" inline /></div>
           ) : (
             <>
               {hasPermission("dashboard.view") && (

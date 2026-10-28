@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 
 export type SkeletonVariant = 'text' | 'table' | 'list' | 'card';
 
@@ -18,13 +19,14 @@ const bar = (style: CSSProperties) => <span className="sa-skeleton" style={style
  * arrival. Match the variant to the surface (table / list / card).
  */
 export function Skeleton({ variant = 'text', rows = 3, width }: SkeletonProps) {
+  const { t } = useTranslation();
   if (variant === 'text') {
     return bar({ display: 'block', height: 'var(--space-3)', width: width ?? '100%' });
   }
 
   if (variant === 'table') {
     return (
-      <div role="status" aria-label="Loading">
+      <div role="status" aria-label={t('common.loading')}>
         {Array.from({ length: rows }).map((_, i) => (
           <div key={i} className="sa-skeleton__row">
             {bar({ height: 'var(--space-3)' })}
@@ -42,7 +44,7 @@ export function Skeleton({ variant = 'text', rows = 3, width }: SkeletonProps) {
 
   if (variant === 'list') {
     return (
-      <div role="status" aria-label="Loading" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+      <div role="status" aria-label={t('common.loading')} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
         {Array.from({ length: rows }).map((_, i) => (
           <div key={i} className="sa-skeleton__list-item">
             {bar({
@@ -63,7 +65,7 @@ export function Skeleton({ variant = 'text', rows = 3, width }: SkeletonProps) {
 
   // card
   return (
-    <div role="status" aria-label="Loading" style={{ display: 'flex', flexDirection: 'column', gap: 'calc(var(--space-3) + var(--space-1))' }}>
+    <div role="status" aria-label={t('common.loading')} style={{ display: 'flex', flexDirection: 'column', gap: 'calc(var(--space-3) + var(--space-1))' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 'calc(var(--space-3) + var(--space-1))' }}>
         {bar({
           width: 'calc(var(--space-12) + var(--space-1))',

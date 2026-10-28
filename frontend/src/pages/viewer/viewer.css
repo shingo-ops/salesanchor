@@ -87,11 +87,35 @@
   align-items: center;
   gap: var(--space-2);
 }
+/* 絞り込みドロワー root の先頭行「24時間以内のみ」（design.md 4-6）。
+   以前は金型の .comp-multiselect__option / --inline を借りていたが、4-2 で --inline の寸法を
+   選択画面向けに変えると root のこの行まで一緒に変わってしまうため、ここに同じ計算値を複製して外す。
+   見た目は便12b までと1pxも変えない */
+.viewer-fresh-check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--size-icon-btn-lg);
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--font-sm);
+  color: var(--text-primary);
+  width: 100%;
+  cursor: pointer;
+}
+/* sticky hover 対策（frontend/src/components/MultiSelect.css の .comp-multiselect__option と同じ理由） */
+@media (hover: hover) {
+  .viewer-fresh-check:hover {
+    background: var(--bg-hover);
+  }
+}
 /* 絞り込みの選択画面（provider/condition・design.md 4-4）: 候補を絞る検索欄 ＋ 一覧 */
 .viewer-filter-options {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+  /* 選択画面の一覧だけ Drawer 本文の左右余白（--space-6・Drawer.css の .comp-drawer-body）を
+     打ち消し、行をパネル全幅にする（design.md 4-3）。検索欄・見出しは余白の内側に残る */
+  --comp-multiselect-list-bleed: var(--space-6);
 }
 /* 絞り込み画面（root）の一番下。最終更新・言語（便4 design.md 4-3）。区切り線で絞り込みの項目と見分ける */
 .viewer-filter-meta {
@@ -105,6 +129,151 @@
   font-size: var(--font-sm);
   color: var(--text-secondary);
 }
+/* ============================================================
+   スマホの検索バー（docs/handoff/viewer-search-mercari/design.md 4-3・4-5）
+   お手本（メルカリ）と同じ「押すと検索画面が開く」バー。高さ48px・角丸ピル。
+   未確定は虫眼鏡＋薄い文字、確定済みは虫眼鏡＋札＋✕（押せるものは入れ子にしない）。
+   ============================================================ */
+.viewer-search-bar {
+  display: flex;
+  align-items: center;
+  height: var(--field-h-tap);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  box-sizing: border-box;
+  overflow: hidden;
+}
+.viewer-search-bar__open {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 100%;
+  padding: 0 var(--space-4);
+  border: none;
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.viewer-search-bar__icon {
+  flex-shrink: 0;
+  color: var(--text-secondary);
+}
+.viewer-search-bar__placeholder {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--font-base);
+  color: var(--text-secondary);
+}
+/* 確定した語の札（design.md 4-3・K3） */
+.viewer-search-bar__chip {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  background: var(--bg-hover);
+  font-size: var(--font-base);
+  color: var(--text-primary);
+}
+/* 札の✕（design.md 4-3）。開くボタンの横に並べる（押せるものを入れ子にしない）。
+   押せる範囲は44px以上（ADR-140） */
+.viewer-search-bar__clear {
+  flex-shrink: 0;
+  min-width: var(--size-icon-btn-lg);
+  min-height: var(--size-icon-btn-lg);
+  margin-right: var(--space-1);
+}
+
+/* ============================================================
+   検索画面の帯（Drawer の headerContent。design.md 4-1）
+   入力欄を DOM の先頭に置き（Drawer の「開いたら最初のフォーカス可能要素へ」に乗る）、
+   「←」は見た目だけ先頭に出す（CSS の order）
+   ============================================================ */
+.viewer-search-screen-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+}
+.viewer-search-screen-header .viewer-search-screen-header__input {
+  /* flex-basis を 0 で明示し、金型側の width:100%（FormField.css）を
+     読み込み順に関係なく無視させる（flex-basis が auto 以外のときは width を見ない） */
+  flex: 1 1 0;
+  min-width: 0;
+}
+.viewer-search-screen-header__back {
+  order: -1;
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   「最近使った語」（design.md 4-4・4-5）
+   ============================================================ */
+.viewer-recent-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-bottom: var(--space-2);
+}
+.viewer-recent-title {
+  font-size: var(--font-md);
+  font-weight: var(--font-weight-semi);
+  color: var(--text-primary);
+}
+.viewer-recent-list,
+.viewer-suggestion-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+/* 69px（お手本68.7dpの最近傍）。文字は左から64px（= --field-h-tap + --space-4。
+   お手本の左の丸い印が48dpを占める分）。印（時計／虫眼鏡）はその48pxの枠の中に中央で置く
+   （position:relative + absolute。padding はそのまま保つので文字の左端は動かない）。
+   候補（.viewer-suggestion-row）は「打っている間だけ出す候補」（便12b design.md 4-2）で、
+   行の形は最近使った語と同じにする（印だけ虫眼鏡に描き分ける） */
+.viewer-recent-row,
+.viewer-suggestion-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: var(--comp-search-row-h);
+  padding: 0 var(--space-4) 0 calc(var(--field-h-tap) + var(--space-4));
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: var(--font-base);
+  color: var(--text-primary);
+  text-align: left;
+  box-sizing: border-box;
+  cursor: pointer;
+}
+.viewer-recent-row:hover,
+.viewer-suggestion-row:hover {
+  background: var(--bg-hover);
+}
+/* 時計／虫眼鏡の印（design.md 4-5・便12b 4-2。丸い背景は作らない・印だけ）。
+   左48pxの枠の中で中央に置く */
+.viewer-recent-row__icon,
+.viewer-suggestion-row__icon {
+  position: absolute;
+  left: calc((var(--field-h-tap) - var(--icon-lg)) / 2);
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-secondary);
+  pointer-events: none;
+}
+
 .viewer-login {
   display: flex;
   flex-direction: column;

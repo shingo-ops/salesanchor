@@ -5,7 +5,7 @@
 
 import { forwardRef } from "react";
 import type { ComponentType, SVGProps, ForwardRefExoticComponent, RefAttributes } from "react";
-import { ArrowUpIcon, ArrowDownIcon, XMarkIcon, ArrowTopRightOnSquareIcon, ArrowLeftIcon, ChevronRightIcon } from "@heroicons/react/24/solid";
+import { ArrowUpIcon, ArrowDownIcon, XMarkIcon, ArrowTopRightOnSquareIcon, ArrowLeftIcon, ChevronRightIcon, MagnifyingGlassIcon, ClockIcon } from "@heroicons/react/24/solid";
 
 /** アイコンコンポーネントが受け取る props */
 export type IconProps = {
@@ -53,6 +53,10 @@ export const ArrowTopRight = hi(ArrowTopRightOnSquareIcon);
 export const ArrowLeft = hi(ArrowLeftIcon);
 /** MultiSelect layout="row" の右端「>」用（design.md 4-2・4-3） */
 export const ChevronRight = hi(ChevronRightIcon);
+/** スマホの検索バーの虫眼鏡用（docs/handoff/viewer-search-mercari/design.md 4-5） */
+export const MagnifyingGlass = hi(MagnifyingGlassIcon);
+/** 「最近使った語」の行の左の印用（docs/handoff/viewer-search-mercari/design.md 4-5） */
+export const Clock = hi(ClockIcon);
 export const TABLE_ICONS = {
   sortAsc:  ArrowUp,
   sortDesc: ArrowDown,

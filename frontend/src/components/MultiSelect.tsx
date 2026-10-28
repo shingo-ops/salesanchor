@@ -86,7 +86,7 @@ export function MultiSelect({
   }
 
   const menuCls = `comp-multiselect__menu${layout === "popover" ? " comp-multiselect__menu--popover" : ""}`;
-  const listCls = `comp-multiselect__list${layout === "popover" ? " comp-multiselect__list--popover" : ""}`;
+  const listCls = `comp-multiselect__list${layout === "popover" ? " comp-multiselect__list--popover" : ""}${layout === "inline" ? " comp-multiselect__list--inline" : ""}`;
 
   // emptyLabel 未指定なら何も描かない（design.md 4-2・審査指摘7の修正。既存のアプリ側呼び出し元は
   // emptyLabel を渡していないため、ここで origin/main と同じ「空なら何も出ない」に保つ）
@@ -97,12 +97,27 @@ export function MultiSelect({
       key={o.value}
       className={`comp-multiselect__option${layout === "inline" ? " comp-multiselect__option--inline" : ""}`}
     >
-      <CheckboxControl
-        checked={selected.includes(o.value)}
-        onChange={() => toggle(o.value)}
-        data-testid={tid(`option-${o.value}`)}
-      />
-      {o.label}
+      {layout === "inline" ? (
+        <>
+          <span className="comp-multiselect__check-col">
+            <CheckboxControl
+              checked={selected.includes(o.value)}
+              onChange={() => toggle(o.value)}
+              data-testid={tid(`option-${o.value}`)}
+            />
+          </span>
+          <span className="comp-multiselect__option-text">{o.label}</span>
+        </>
+      ) : (
+        <>
+          <CheckboxControl
+            checked={selected.includes(o.value)}
+            onChange={() => toggle(o.value)}
+            data-testid={tid(`option-${o.value}`)}
+          />
+          {o.label}
+        </>
+      )}
     </label>
   ));
 

@@ -165,6 +165,9 @@
   --field-h-md:         36px;   /* 入力部品 高さ金型 md */
   --field-h-lg:         44px;   /* 入力部品 高さ金型 lg */
   --field-h-tap:        48px;   /* お手本（メルカリ）の操作単位 48dp。スマホのときだけ使う段 */
+  --comp-search-row-h:  69px;   /* 「最近使った語」の行の高さ（お手本68.7dpの最近傍。docs/handoff/viewer-search-mercari/design.md 4-5） */
+  --comp-multiselect-check-row-h: 61px; /* 選択画面のチェック行の高さ（お手本60.7dpの最近傍。docs/handoff/viewer-filter-choices-mercari/design.md 4-4） */
+  --comp-multiselect-check-col-w: 48px; /* 選択画面のチェック行・印の列幅（お手本48dp。docs/handoff/viewer-filter-choices-mercari/design.md 4-4） */
   --field-w-sm:        160px;   /* 入力部品 幅金型 sm */
   --field-w-md:        280px;   /* 入力部品 幅金型 md */
   --field-w-lg-max:    480px;   /* 入力部品 幅金型 lg 上限 */
@@ -434,6 +437,7 @@
   --modal-xwide-w:        1100px;  /* 特大モーダル（多項目フォーム＝商品マスタ編集の多列グリッド） */
   --drawer-panel-w-default: 480px; /* Drawer 既定幅（size="default"） */
   --drawer-panel-w-wide: var(--modal-xwide-w); /* Drawer 広幅（size="wide"・1100px） */
+  --drawer-panel-w-mobile-inset: 83%; /* スマホの Drawer を画面いっぱいにしない修飾（mobileInset）。お手本（メルカリ）300dp/360dp。docs/handoff/viewer-filter-choices-mercari/design.md 4-1 */
   --comp-table-ellipsis-max-w: var(--col-width-medium); /* DataTable ellipsis 列の最大幅（width 無指定時・200px） */
   --comp-inventory-title-max-w: var(--col-width-wide);   /* 在庫表 商品名1段の上限幅（360px） */
   --comp-inventory-text-max-w: var(--col-width-medium);  /* 在庫表 備考・発送の折り返し幅（200px） */
