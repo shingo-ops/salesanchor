@@ -27,7 +27,7 @@ recon: [docs/handoff/inbox-brushup/lead-merge-recon.md](../../../handoff/inbox-b
 - 統合のあと `publish_leads_update` を呼ばない（`backend/app/routers/leads.py:3157-3158`）。作成・更新・削除は呼ぶ（`backend/app/routers/leads.py:482-483`、`backend/app/routers/leads.py:711-712`、`backend/app/routers/leads.py:790-791`）。
 - 受信箱は、開いている相手が消えても選択を外さない（`frontend/src/pages/inbox/useInboxState.ts:240`、自分で消したときだけ外す `frontend/src/pages/inbox/useInboxState.ts:994-1002`）。
 - カルテ下の帯は相手が lead か existing_customer のときだけ出る（`frontend/src/pages/inbox/InboxKartePanel.tsx` ActionBar の `if (!primaryLabel) return null`）。
-- 権限の判定は `frontend/src/hooks/usePermissions.ts:15`（`hasPermission`）。リードの一覧は `frontend/src/pages/leads/LeadsPage.tsx:506` で `hasPermission("leads.delete") && l.status === "lead"` のときだけ統合を出す。
+- 権限の判定は `frontend/src/hooks/usePermissions.ts:16`（`usePermissions()`、`hasPermission` は `:39-`）。受信箱でも `frontend/src/pages/inbox/InboxMessageThread.tsx:103` で使っている。リードの一覧は `frontend/src/pages/leads/LeadsPage.tsx:506` で `hasPermission("leads.delete") && l.status === "lead"` のときだけ統合を出す。
 - 統合の窓 `frontend/src/components/MergeLeadModal.tsx` は loser を受け取り（`frontend/src/components/MergeLeadModal.tsx:36-43`）、成功で `onMerged(masterId)` を呼ぶ（`frontend/src/components/MergeLeadModal.tsx:122`）。素の `<button>` が2つ（`frontend/src/components/MergeLeadModal.tsx:247`、`frontend/src/components/MergeLeadModal.tsx:306-310`）。
 - 画面の試験: `frontend/playwright.config.ts` に幅 390・768・1280 の組があり、PR のたびに frontend/tests-e2e/visual-language/*.spec.ts を全部動かす（e2e.yml の「画面検査（受信箱 3幅 Playwright）」）。押す場所 44px の値は `frontend/tests-e2e/visual-language/inbox-helpers.ts:27` `MIN_TOUCH_TARGET_PX = 44`。
 
@@ -44,12 +44,13 @@ recon: [docs/handoff/inbox-brushup/lead-merge-recon.md](../../../handoff/inbox-b
 7. 監査ログ merge_absorb の `new_data` に、全13表の付け替え件数と、埋めた項目名の一覧を足す（今の形 `backend/app/routers/leads.py:3136-3144` に項目を足すだけ）。
 8. commit のあと、作成・更新・削除と同じ形で `publish_leads_update(tenant_id)` を呼ぶ（失敗しても統合は成功のまま。warning を残す）。
 9. 13表の一覧は1か所の定数に置き、計画と実行と試験が同じ定数を読む。
+10. 即時反映の登録表 `backend/app/realtime/topics.py` の `NO_SIGNAL_ROUTES` に、下見 `("POST", "/api/v1/leads/{master_id}/merge/preview")` を足す。理由の値は、ほかの下見（例 `/api/v1/conditions/import/preview`）と同じ `_PENDING`。足さないと `backend/tests/test_realtime_topics.py` の `test_every_write_route_is_in_exactly_one_table` が落ちる。統合の行（`("POST", "/api/v1/leads/{master_id}/merge")`）は `_PENDING` のまま変えない。リードの知らせは、作成・更新・削除と同じく登録表の外の `publish_leads_update` で出すため（作成・更新・削除の行も `_PENDING`）。
 
 ### 5-2 画面: 統合の窓（`frontend/src/components/MergeLeadModal.tsx`）
 
 1. 確認の段（stage "confirm"）で下見を呼び、「残す方へ移るもの」（付け替え件数が1以上の表を、日本語の名前で）と「空いている欄に入る内容」（項目名・入る値）を出す。下見の失敗はその場で文言を出し、統合のボタンを押せないようにする。
 2. 素の `<button>` 2つ（やめる・戻る）を金型 `Button` にする。
-3. 文言から「audit_logs」をなくし、PO の見本（[画面見本](https://claude.ai/artifact/WLba4Mv3Ktfepb5g546pyC)）の言葉にそろえる。ja.json と en.json の `mergeLead` のキーを直し、表の日本語名・「元に戻せません」のキーを足す。
+3. 文言から「audit_logs」をなくし、PO の見本（[画面見本](https://claude.ai/artifact/WLba4Mv3Ktfepb5g546pyC)）の言葉にそろえる。ja.json と en.json の `mergeLead` のキーを §5-6 の表のとおりに直し・足す。
 4. 色・大きさは var(--…) だけ。新しい直書きを足さない。
 
 ### 5-3 画面: 受信箱のカルテ（`frontend/src/pages/inbox/InboxKartePanel.tsx`、`frontend/src/pages/inbox/useInboxState.ts`）
@@ -75,11 +76,51 @@ recon: [docs/handoff/inbox-brushup/lead-merge-recon.md](../../../handoff/inbox-b
    - 一意の決まりの重複4件（lead_channels・lead_sales_form_selections・deal_close_reasons・customer_scores）
    - 下見が書き込まないこと1件、下見と実行の件数が一致すること1件
    - 異常系3件（自分自身・loser が lead でない・無い番号）
-   - 漏れの見張り1件: テナントの表で `lead_id` という列を持つ表の数と、13表の定数の数が一致する
+   - 漏れの見張り1件（静的な検査。DB を使わない）: `backend/app/services/tenant.py` と `migrations/*.sql` の本文から、`lead_id` 列を作る表（CREATE TABLE の中の `lead_id` 列と、`ALTER TABLE … ADD COLUMN … lead_id`）の表名を集める。その集合から「後で消された表」の除外の一覧（表名と DROP の migration のファイル名を対で持つ）を引いたものが、13表の定数と一致する。集めた表名と除外の一覧は実装の担当が報告に全部出し、設計担当が確かめる。
+   - 試験の DB の作り方: `scripts/check_test_schema_dup.py` が試験の中の CREATE TABLE を止めるので、表は手で書かない。手本は `backend/tests/test_permission_resolution_pg.py`（`tests/rls_bootstrap.py` の `bootstrap_tenant_schema` で `tenant.py` の本物の定義からテナントを作り、`_apply_migration_on_conn` で migration を流す）。13表のうち作られない表があれば、その表を作る migration を `_apply_migration_on_conn` で流す。統合は API（`POST /api/v1/leads/{master_id}/merge`）を呼んで確かめる。
 2. 画面 frontend/tests-e2e/visual-language/inbox-lead-merge.spec.ts（新規。`frontend/tests-e2e/visual-language/inbox-helpers.ts` の作り物のデータを使う。幅 390・768・1280 で動く）:
    - 権限ありで「ほかのリードとまとめる」が出る／権限なしで出ない（K6）
    - 幅 390 でメニュー項目・窓のボタンの高さ 44px 以上、`scrollWidth <= clientWidth`（K7）
-   - 手順1〜3の写真を `testInfo.attach` で残す（K8 の写真。PR の「visual-language-report」から取り出す）
+   - 手順1〜3の写真を `testInfo.attach` で残す（3幅×3枚＝9枚が出る。K8 で PO に見せるのは幅 390 と 1280 の6枚。幅 768 の3枚は記録だけ。PR の「visual-language-report」から取り出す）
+
+### 5-6 文言（ja.json / en.json の `mergeLead`）
+
+直すキー:
+
+| キー | ja | en |
+|---|---|---|
+| title | リードをまとめる | Merge leads |
+| reasonLabel | まとめる理由（任意・記録に残ります） | Reason (optional, kept in the record) |
+| confirmWarning | 元に戻せません | This cannot be undone |
+| confirmDesc1 | 「{{sourceName}}」の記録は、すべて「{{masterName}}」へ移ります。 | All records of "{{sourceName}}" will move to "{{masterName}}". |
+| confirmDesc3 | この操作は記録に残ります。 | This action is kept in the record. |
+| executeLabel | 「{{masterName}}」へまとめる | Merge into "{{masterName}}" |
+
+足すキー:
+
+| キー | ja | en |
+|---|---|---|
+| menuLabel | ほかのリードとまとめる | Merge with another lead |
+| movedTitle | 残す方へ移るもの | Moving to the kept lead |
+| filledTitle | 空いている欄に入る内容 | Blank fields to be filled |
+| nothingToFill | 埋まる欄はありません | No blank fields will be filled |
+| previewError | 中身を確かめられませんでした。もう一度お試しください。 | Could not load the preview. Please try again. |
+| tables.companies | 会社 | Companies |
+| tables.contacts | 担当者 | Contacts |
+| tables.meta_messages | メッセージ | Messages |
+| tables.lead_channels | 窓口 | Channels |
+| tables.conversation_logs | 会話の記録 | Conversation logs |
+| tables.quotes | 見積 | Quotes |
+| tables.deal_close_reasons | 成約・失注の理由 | Close reasons |
+| tables.lead_attachments | 添付ファイル | Attachments |
+| tables.lead_sales_form_selections | 販売形態の選択 | Sales form selections |
+| tables.message_labels | メッセージの分類 | Message labels |
+| tables.customer_scores | 顧客スコア | Customer scores |
+| tables.outbound_translation_drafts | 翻訳の下書き | Translation drafts |
+| tables.registration_tokens | 登録リンク | Registration links |
+
+- 「空いている欄に入る内容」の項目名は、今ある文言のキー（リードの一覧・カルテの見出し）を使う。無い項目だけ `mergeLead.fields.<列名>` を足し、日本語はカルテの見出しと同じ語にする。足したキーは報告に全部出す。
+- ja と en のキー数は一致させる（PR のチェック欄）。
 
 ## 6. 弊害・トレードオフ
 
@@ -101,14 +142,15 @@ recon: [docs/handoff/inbox-brushup/lead-merge-recon.md](../../../handoff/inbox-b
 | A1 | K1〜K5 | backend/tests/test_lead_merge_pg.py が全件合格（PR の CI） |
 | A2 | K6・K7 | inbox-lead-merge.spec.ts が幅 390・768・1280 で合格（PR の「画面検査（受信箱 3幅 Playwright）」） |
 | A3 | 直書き 0件 | 「Lint & Dark Mode Check (ADR-067)」が合格 |
-| A4 | K8 | PR の写真6枚（幅 390 と 1280・手順1〜3）を PO が見て合格 |
-| A5 | K9 | 本番で最初の統合のあと、reader 鍵の道で4表の迷子を数えて 0件 |
+| A4 | K8 | PR の写真9枚のうち、幅 390 と 1280 の手順1〜3の6枚を PO が見て合格 |
+| A5 | K9 | 本番反映の後、設計担当（Claude Opus）が受信箱の見直しの各回の始めに、reader 鍵の道で監査ログの merge_absorb の件数を見る。1件以上になった最初の回に、4表の迷子を数えて 0件 |
 
 ## 9. 維持の仕組み
 
 守り手: .github/workflows/e2e.yml と CI（バックエンドの試験・「画面検査（受信箱 3幅 Playwright）」・「Lint & Dark Mode Check (ADR-067)」）。中身は下の3つ。
 
-- 守り手（機械）: backend/tests/test_lead_merge_pg.py の漏れの見張り。テナントの表に `lead_id` を持つ表が増えると、13表の定数と数が合わず CI が落ちる。
+- 守り手（機械）: backend/tests/test_lead_merge_pg.py の漏れの見張り（静的な検査）。`tenant.py` か `migrations/` に `lead_id` を持つ表が足されると、13表の定数と合わず CI が落ちる。
+- 守り手（機械）: `backend/tests/test_realtime_topics.py` が、下見の入口が登録表に載っていることを確かめる。
 - 守り手（機械）: frontend/tests-e2e/visual-language/inbox-lead-merge.spec.ts が PR ごとに 44px とはみ出しを測る。
 - 守り手（機械）: 「Lint & Dark Mode Check (ADR-067)」が直書きを止める。
 
@@ -127,5 +169,6 @@ recon: [docs/handoff/inbox-brushup/lead-merge-recon.md](../../../handoff/inbox-b
 - 既存の仕様・ADR との整合: ADR-098（手で寄せる）・ADR-095（写さず1か所。空欄埋めは残す方の行への1回の書き込みで、二重持ちではない）・ADR-119（本 ADR で改める）と食い違わない。
 - 根拠: サーバーと画面の要所はすべて ファイル:行（lead-merge-recon.md）。本番の数は reader 鍵の道。
 - 受入基準: すべて試験か PO の目視で ○× が付く。
-- 実装範囲: §5 の6ファイル＋文言2ファイル＋試験2本。DB の形は変えない。
+- 実装範囲: §5 の6ファイル＋即時反映の登録表 `backend/app/realtime/topics.py`＋文言2ファイル＋試験2本。DB の形は変えない。
+- 再審査（2026-10-29）: 審査役（reviewer・opus）の REQUEST_CHANGES 11件を反映（下見の登録表・削除するファイルの欄・漏れの見張りを静的な検査に統一・文言 §5-6・行番号・K6/K8/K9）。
 - 未解決: migration の中の結び付きの行番号（recon §2 の未確認）は実装の担当が着手時に確かめる。結果が評価記録と違えば止まって報告させる。

@@ -14,7 +14,7 @@
 - 入口: `backend/app/routers/leads.py:2991-2995` `POST /leads/{master_id}/merge`、権限 `require_permission("leads.delete")`
 - 受け取る形: `backend/app/routers/leads.py:2986-2988` `LeadMergeRequest{loser_id, reason}`
 - loser の条件: `backend/app/routers/leads.py:3063-3064` `if loser_row["status"] != "lead":` → 400
-- 付け替え: companies（`backend/app/routers/leads.py:3073-3076`）、contacts（`backend/app/routers/leads.py:3078-3081`）、meta_messages（`backend/app/routers/leads.py:3084-3087`）、lead_channels（重複は先に削除 `backend/app/routers/leads.py:3093-3119`）の4表だけ
+- 付け替え: companies（`backend/app/routers/leads.py:3073-3076`）、contacts（`backend/app/routers/leads.py:3079-3082`）、meta_messages（`backend/app/routers/leads.py:3085-3088`）、lead_channels（重複は先に削除 `backend/app/routers/leads.py:3093-3119`）の4表だけ
 - 削除: `backend/app/routers/leads.py:3121-3125` `DELETE FROM {leads_t} WHERE id = :loser`
 - 監査ログ: `backend/app/routers/leads.py:3135-3155` merge_absorb（master の旧値と付け替え件数）・merge_delete（loser の全項目）
 - 後始末: `backend/app/routers/leads.py:3157-3158` commit とダッシュボードの控えの破棄。`publish_leads_update` は呼ばない
@@ -61,9 +61,9 @@
 基準は同じ origin/main 5b3162403。調べの生の記録は設計担当の作業メモ（作業場所の外）にある。ここには設計に使う事実だけを写す。
 
 ### 5-1 権限の判定【事実】
-- `frontend/src/hooks/usePermissions.ts:15` `usePermissions()`。`/me/permissions` を取り（`:22`）、`hasPermission(key)` で判定する（`:41-44`）。
+- `frontend/src/hooks/usePermissions.ts:16` `usePermissions()`。`/me/permissions` を取り（`:25`）、`hasPermission(key)` で判定する（`:39-`）。
 - リードの一覧での使い方: `frontend/src/pages/leads/LeadsPage.tsx:122`、統合を出す条件 `frontend/src/pages/leads/LeadsPage.tsx:506` `hasPermission("leads.delete") && l.status === "lead"`。
-- 受信箱（`frontend/src/pages/inbox/` 配下）では使っていない（`hasPermission|usePermissions|leads.delete` で検索して該当なし）。
+- 受信箱でも使っている: `frontend/src/pages/inbox/InboxMessageThread.tsx:21`（import）・`:103`（`hasPermission` を取り出す）。`leads.delete` の判定は受信箱には無い。（2026-10-29 審査の指摘で訂正）
 - サーバー: `backend/app/routers/leads.py:763`（削除）と `backend/app/routers/leads.py:2994`（統合）が `require_permission("leads.delete")`。
 
 ### 5-2 統合の窓【事実】

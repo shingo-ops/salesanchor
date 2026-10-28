@@ -39,3 +39,27 @@
 8 モーダル: SA幅 sm=420pxは参照(448-512px)より小さい。タイトル17.6pxは zernio・WhatsApp(18px)より小さく chatwoot(16px)より大きい。SAスマホのボタン44pxは参照(36-40px)より大きい
 9 連絡先パネル: SAラベル12px・値13.6pxは chatwoot(14px)より小さい。zernio・WhatsAppは無し
 10 本文基準: SA 14.4pxは参照(16px継承。pは14px)の間
+
+## 追記（2026-10-29）: WhatsApp 本体の実測との照合
+
+調べた人: 担当（Sonnet）が origin/main を読んだ。設計担当は `frontend/src/tokens.css:177,238,279` の3つを自分で確かめた。
+
+- 記録の正本: `docs/specs/design-system/visual-language/benchmark/README.md`（Android 実機で WhatsApp を測った。PO 決定 2026-10-11: dp の値をそのまま px に使う）、寸法は同じ場所の `whatsapp-reproduction-spec.md`。
+- 「Android 側で大きさを調整させた」という文言は記録に無い。記録にあるのは「Android で WhatsApp を測り、SA の画面の値をその数に合わせた」こと。
+
+| 部位 | WhatsApp 実測 | 今の SA（スマホ） | 判定 |
+|---|---|---|---|
+| 一覧の行の高さ | 76dp | 76px（`--min-height-conv-item-mobile`） | 一致 |
+| 一覧のアバター | 48dp | 48px | 一致 |
+| 一覧の右余白 | 16dp | 16px | 一致 |
+| 上の帯の高さ | 56dp | 56px | 一致 |
+| 戻るボタン | 48dp | 48px | 一致 |
+| 一覧の名前・時刻・本文 | 文字の大きさは測れていない | 16px・12px・12px | 比べられない |
+| 吹き出しの角 | 約10dp＋尾 | PC と同じ値のまま | 不一致 |
+| 吹き出しの余白 | 上下5・左17dp | 8px 12px | 不一致 |
+| 吹き出しの中の時刻 | 本文と同じ行 | 吹き出しの下 | 不一致 |
+| 入力欄の帯・枠の高さ | 55.7dp・48.3dp | スマホ用の指定なし | 不一致 |
+| 送信ボタン | 48dp | 44px | 不一致（44px の基準を選んだ） |
+
+- 【未確認】吹き出しと入力欄の指定が `frontend/src/pages/inbox/InboxPage.css` の外（会話の部品の別の CSS）にあるか。
+- 今回の「⋯」メニューと統合の窓は、上の不一致の部位に触らない。

@@ -39,17 +39,17 @@
 ## 手順
 
 1. `./scripts/dev/executor-preflight.sh || exit 1`。`git fetch --prune` のあと `git show origin/main:backend/app/routers/leads.py | grep -n "merge/preview"` で下見の入口があることを確かめる。無ければ**停止**。あれば `bash scripts/new-worktree.sh release/lead-merge-inbox` で作業場所を作る。
-2. `frontend/src/components/MergeLeadModal.tsx` を design.md §5-2 のとおり直す（確認の段で下見を出す・素の `<button>` 2つを金型 `Button` に・文言から「audit_logs」を消す）。`frontend/src/locales/ja.json` と `en.json` の `mergeLead` を直し、足りないキーを足す（表の日本語名・「元に戻せません」）。
+2. `frontend/src/components/MergeLeadModal.tsx` を design.md §5-2 のとおり直す（確認の段で下見を出す・素の `<button>` 2つを金型 `Button` に・文言から「audit_logs」を消す）。`frontend/src/locales/ja.json` と `en.json` の `mergeLead` を design.md §5-6 の表のとおりに直し・足す（文言は表から一字も変えない）。項目名の文言が無いものは §5-6 のとおり `mergeLead.fields.<列名>` を足し、足したキーを報告に全部出す。
 3. `frontend/src/pages/inbox/InboxKartePanel.tsx` の「⋯」メニューの一番下に「ほかのリードとまとめる」を足す（design.md §5-3）。条件は `hasPermission("leads.delete") && status === "lead"`（`usePermissions`）。押すと MergeLeadModal を開き、開いている相手を `source` に渡す。
 4. `frontend/src/pages/inbox/useInboxState.ts` に統合の後始末を1つ置く: 一覧から loser を外す → `selectLead(masterId)` → 一覧を取り直す。カルテへは関数として渡す。
 5. 幅 390 でメニュー項目の高さを測り（手順 7 の試験）、44px 未満なら `frontend/src/pages/inbox/InboxPage.css` の `.karte-overflow-menu button` に `min-height: var(--size-icon-btn-lg)` を足す。トークンは `frontend/src/tokens.css` に 44px と定義され、金型 `frontend/src/components/ContextMenu.css` も同じ使い方をしている（設計担当が 2026-10-28 に確認）。使う前に `grep -n -e "--size-icon-btn-lg:" frontend/src/tokens.css` で実在を確かめる。無ければ停止。
 6. `frontend/tests-e2e/visual-language/inbox-lead-merge.spec.ts` を新しく作る（`inbox-helpers.ts` の `baseMocks`・`openInboxListWithLeadStatus`・`MIN_TOUCH_TARGET_PX` を使う。`/me/permissions` と下見・統合の入口は route で作り物を返す）。中身は design.md §5-5(2):
    - 権限ありで項目が出る／`leads.delete` が無いと出ない
    - 幅 390 でメニュー項目・窓のボタンの高さが `MIN_TOUCH_TARGET_PX` 以上、`document.documentElement.scrollWidth <= clientWidth`
-   - 写真3枚を `testInfo.attach`（名前は `step1-menu`・`step2-select`・`step3-confirm`）
+   - 写真3枚を `testInfo.attach`（名前は `step1-menu`・`step2-select`・`step3-confirm`。3幅で動くので計9枚。PO に見せるのは幅 390 と 1280 の6枚）
 7. 確かめ（記録のみで続行）: `cd frontend && npx playwright test visual-language/inbox-lead-merge.spec.ts --project=vl-mobile-390 --project=vl-tablet-768 --project=vl-desktop-1280` の全文、失敗した試験名。`npm run check:all` の全文。`npm run build` の終わり20行。
-8. 差分の確かめ（記録のみで続行）: `git diff origin/main --stat`、`git diff origin/main --name-only`。
-9. PR 本文を `.github/PULL_REQUEST_TEMPLATE.md` から Write で作る。書き方はカード 1/2 の手順 8 と同じ（良い例 `触るファイル: frontend/src/components/MergeLeadModal.tsx, frontend/src/pages/inbox/InboxKartePanel.tsx`、行頭 `-` と注記は禁止、対象ADR・recon・設計は平打ち）。触るファイルは手順 8 の全部。
+8. 差分の確かめ（記録のみで続行）: `git diff origin/main --stat`、`git diff origin/main --name-only`、`git diff origin/main --numstat`（全ファイル）。
+9. PR 本文を `.github/PULL_REQUEST_TEMPLATE.md` から Write で作る。書き方はカード 1/2 の手順 8 と同じ（良い例 `触るファイル: frontend/src/components/MergeLeadModal.tsx, frontend/src/pages/inbox/InboxKartePanel.tsx`、行頭 `-` と注記は禁止、対象ADR・recon・設計は平打ち）。触るファイルは手順 8 の `--name-only` の全部。削除するファイルは手順 8 の `--numstat` で2列目（消えた行）が1以上のファイルを全部、同じ形で書く（文言を直す ja.json・en.json も入る）。2列目が全部0のときだけ `削除するファイル: なし`。
 10. `scripts/dev/validate-pr-body.sh` exit 0 → `git -C <作業場所の絶対パス> push -u origin release/lead-merge-inbox` を単独で → `gh auth status` で `shingo-cc` → `gh pr create --base main --head release/lead-merge-inbox --title "feat: 受信箱のカルテからリードをまとめる（ADR-1049）" --body-file <絶対パス>`（ready）。
 
 停止するのは: 手順 1 で下見の入口が無いとき、手順 5 でトークンが無いとき、push・PR 作成が拒否されたとき、フックに止められたとき。それ以外は記録して最後まで進む。
