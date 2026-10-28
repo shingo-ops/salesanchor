@@ -4,7 +4,7 @@
 
 親: [docs/specs/auth-login/README.md](../../specs/auth-login/README.md)
 
-**日付**: 2026-10-14
+**日付**: 2026-10-14（便3 の反映を 2026-10-29 に追記）
 **書いた人**: 設計パートナー（Opus・ccopusgo セッション）
 
 ## 状態（2026-10-14 時点・証拠つき）
@@ -15,7 +15,21 @@
 | 便1（DB の置き場・migration） | 本番反映済み | #4227 マージ 9b407b41f（2026-10-13 19:51 JST）。deploy run 38386226760 success。直前バックアップ salesanchor_db_20261013_195212.sql.gz（371M） |
 | 便2（自社ログインの心臓部・backend） | 本番反映済み | #4231 マージ 6c8a5955a（2026-10-14 00:41 JST）。CI 42 pass・fail 0。Fable セキュリティ審査 APPROVE（HEAD 1436bb344）。本番反映の確認は下の「便2 本番確認」 |
 | 便2 追補（審査 LOW 3 件の修正） | 本番反映済み | #4240 マージ 8faa13fd1（2026-10-14 06:19 JST）。必須 CI 15 pass。Fable コード審査 APPROVE（f86bd37b9）。deploy run 38469745118 success。06:23 JST に /health 200・login（正しい形の本文）404・トークンなしの logout 401（反映前と同じ） |
-| 便3〜便6 | 未着手 | 便3・便4・便6 は PO の作業（外部 GUI・秘密の追加・パスワード配布・Firebase 削除）が要る |
+| 便3（メール送信の設定） | コード本番反映済み・PO の GUI 作業済み・設定の反映待ち | #4250 マージ 955e6e96f。PO 作業と反映前の基準値は下の「便3 PO 作業と設定の反映（2026-10-29）」 |
+| 便4〜便6 | 未着手 | 便4・便6 は PO の作業（パスワード配布・Firebase 削除）が要る |
+
+### 便3 PO 作業と設定の反映（2026-10-29）
+
+手順の正本は card-b3.md §8。値（宛先・パスワード）はここに書かない。
+
+- §8 ② PO の GUI 作業（観測は名前と時刻だけ）:
+  - `gh secret list`: `SMTP_HOST`・`SMTP_PORT`・`SMTP_USER`・`SMTP_PASSWORD`・`MAIL_FROM` は 2026-10-15T15:47〜15:51Z、`AUTH_PASSWORD_RESET_ALLOWLIST` は 2026-10-28T15:55:56Z に登録。`CONTACT_NOTIFY_EMAIL` は未登録（空なら既定の宛先。card-b3 §8 ② 5）
+  - DNS（`dig +short TXT`）: `_dmarc` に `v=DMARC1; p=none; ...`、DKIM セレクタ `rs20261029._domainkey` に `v=DKIM1; k=rsa; ...` が出る
+- 反映前の基準値:
+  - main への最後の deploy は run 40716816581（2026-10-28T15:31:26Z 開始・success）。`AUTH_PASSWORD_RESET_ALLOWLIST` の登録より前なので、本番にはまだ入っていない
+  - 本番 DB（読み取り専用の道・2026-10-28T15:59〜16:00Z）: users 13 行・max(id) 84。tenant 6 は有効。試験用 Gmail と同じ email の行 0。password_reset_tokens 0 行
+  - 本番コンテナの環境変数は、読み取り専用の道では見られない（未確認）
+- §8 ③: この handoff 更新の PR（docs のみ）のマージで deploy を走らせる（deploy は main への push だけで動く。card-b3 F7）
 
 ### 便1 本番確認（2026-10-13 19:57 JST 前後・読み取りのみ）
 
@@ -40,9 +54,8 @@
 
 ## 次の一手（順番どおり）
 
-1. 便3 の実装カードを作る（design.md §6 便3）。**PO の判断待ち**: メール送信の設定（SMTP_*）を 1 か所にまとめ、発注書メール（`backend/app/services/po_mailer.py:33`）と LP 問い合わせ通知（`backend/app/routers/contact.py:41`）も実際に送る形にするか（y）、ログイン用を別名の環境変数にするか（n）。返事が来るまでカードは書かない
-2. 便3 には PO の作業が要る。さくらで送信用アドレスを作り DKIM を有効にする。DNS に DMARC を追加する。SMTP の secrets を登録する。手順書は便3 のカードに付ける
-3. 便4（切替・パスワード配布）・便6（Firebase 削除・不可逆）も PO の作業と GO が要る
+1. 便3 §8 ③ の deploy の後、§8 ④ の K5 確認（tenant 6 に試験用の利用者を 1 人入れる → 再設定の request を 1 回 → PO が Gmail で SPF・DKIM・DMARC の PASS を確かめる）
+2. 便4（切替・パスワード配布）・便6（Firebase 削除・不可逆）は PO の作業と GO が要る
 
 ## 途中で分かった注意
 
