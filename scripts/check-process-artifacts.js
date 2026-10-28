@@ -454,45 +454,98 @@ function deleteStatementHasWhere(sql, from, endToken, bs, index) {
 // 操作の区切り（, ）は引用符の外だけで見る
 const ALTER_TABLE_RE = /\bALTER\s+(?:FOREIGN\s+)?TABLE\s+(?:IF\s+EXISTS\s+)?(?:ONLY\s+)?(?:"(?:[^"]|"")*"|[^\s;,()"])+\s*\*?/gi;
 
+// ALTER TABLE の読みは、範囲（最初はファイル全体）を左から 1 回だけ字句の決まりで読んで行う。
+// 引用符・ドル引用の外、かつ操作のかっこの深さ 0 の位置にある次の ALTER TABLE の始まりでだけ読みを止める。
+// ドル引用の中身は別の範囲として、引用符の中に ALTER TABLE がある形（python の文字列など）はその引用符の中身を別の範囲として読む（引用符の中身の入れ子は 3 段まで）。
+// 閉じの無い引用・ドル引用は、その範囲の残りを 1 つの引用として扱う
 function alterTableDropsColumnShorthand(sql, bs) {
   const found = [...sql.matchAll(ALTER_TABLE_RE)];
-  for (let n = 0; n < found.length; n++) {
-    const m = found[n];
-    // 次の ALTER TABLE の始まり（引用符の外）で読みを止める。引用符を飛ばして越えた当たりは捨て、後ろの最初の当たりに取り直す
-    let nx = n + 1;
-    let nextStart = nx < found.length ? found[nx].index : sql.length;
-    let depth = 0;
-    let action = '';
-    const actions = [];
-    let i = m.index + m[0].length;
-    while (i < sql.length) {
+  if (found.length === 0) return false;
+  const starts = found.map(m => m.index);
+  const firstFrom = p => {
+    let lo = 0;
+    let hi = starts.length;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (starts[mid] < p) lo = mid + 1; else hi = mid;
+    }
+    return lo;
+  };
+  let index = null;
+  const getIndex = () => index || (index = dollarIndex(sql));
+  const hasDollar = sql.indexOf('$') !== -1;
+  let failWork = 0;
+  const failLimit = 40 * sql.length + 1000000;
+  const ranges = [[0, sql.length, 0]]; // [始まり, 終わり, 引用符の中身の入れ子の段]
+  while (ranges.length > 0) {
+    const [lo, hi, level] = ranges.pop();
+    let mi = firstFrom(lo);
+    if (mi >= found.length || starts[mi] >= hi) continue;
+    let cur = null; // { depth, from, actions: [開始位置, 終了位置][] }
+    const finish = () => {
+      cur.actions.push([cur.from, cur.to]);
+      const hit = cur.actions.some(([a, b]) => /^\s*DROP\s+(?!CONSTRAINT\b)\S/i.test(sql.slice(a, b)));
+      cur = null;
+      return hit;
+    };
+    let i = lo;
+    while (i < hi) {
+      while (mi < found.length && starts[mi] < i) mi++;
+      if (cur === null && (mi >= found.length || starts[mi] >= hi)) break;
+      if (mi < found.length && starts[mi] === i && (cur === null || cur.depth === 0)) {
+        if (cur !== null && finish()) return true;
+        const end = Math.min(found[mi].index + found[mi][0].length, hi);
+        cur = { depth: 0, from: end, to: end, actions: [] };
+        mi++;
+        i = end;
+        continue;
+      }
       const c = sql[i];
-      if (c === ';' || i >= nextStart) break;
       if (c === "'" || c === '"') {
-        const end = findQuoteEnd(sql, i, bs, 0, sql.length);
-        const stop = end === -1 ? sql.length : end;
-        action += sql.slice(i, stop);
-        i = stop;
-        while (nx < found.length && found[nx].index < i) nx++;
-        nextStart = nx < found.length ? found[nx].index : sql.length;
+        const end = findQuoteEnd(sql, i, bs, lo, hi);
+        if (end === -1) {
+          // 閉じの無い引用符は、ただの 1 字として読み進める（R6c の読み方）。失敗した探しの合計に上限を付け、使い切ったら検出に倒す
+          failWork += hi - i;
+          if (failWork > failLimit) return true;
+          if (cur) cur.to = i + 1;
+          i++;
+          continue;
+        }
+        if (level < 3 && mi < found.length && starts[mi] > i && starts[mi] < end && cur === null) {
+          ranges.push([i + 1, end - 1, level + 1]);
+        }
+        i = end;
+        if (cur) cur.to = i;
         continue;
       }
-      if (c === '(') depth++;
-      if (c === ')') {
-        if (depth === 0) break;
-        depth--;
+      if (c === '$' && hasDollar) {
+        const delim = dollarDelimiterAt(sql, i, lo);
+        if (delim) {
+          const close = nextDollar(getIndex(), delim, i + delim.length, hi);
+          if (close !== -1) {
+            if (mi < found.length && starts[mi] > i && starts[mi] < close) ranges.push([i + delim.length, close, level]);
+            i = close + delim.length;
+            if (cur) cur.to = i;
+            continue;
+          }
+          // 閉じの無いドル引用の開きは、ただの 1 字として読み進める
+        }
       }
-      if (c === ',' && depth === 0) {
-        actions.push(action);
-        action = '';
-        i++;
-        continue;
+      if (cur) {
+        if (c === ';') { if (finish()) return true; i++; continue; }
+        if (c === '(') cur.depth++;
+        else if (c === ')') {
+          if (cur.depth === 0) { if (finish()) return true; i++; continue; }
+          cur.depth--;
+        } else if (c === ',' && cur.depth === 0) {
+          cur.actions.push([cur.from, i]);
+          cur.from = i + 1;
+        }
+        cur.to = i + 1;
       }
-      action += c;
       i++;
     }
-    actions.push(action);
-    if (actions.some(a => /^\s*DROP\s+(?!CONSTRAINT\b)\S/i.test(a))) return true;
+    if (cur !== null && finish()) return true;
   }
   return false;
 }

@@ -786,6 +786,13 @@ const R6D_CASES = [
   ['○ 6: 既定値の文字列に ALTER TABLE と 2 語があり、その後ろに列の削除（python）', 'scripts/migrate_zz_r6d5.py', 'op.execute("ALTER TABLE t ALTER COLUMN a SET DEFAULT \'ALTER TABLE x y\', DROP b")\n', true],
   ['× 6: 列以外（制約）の削除だけの ALTER TABLE', 'migrations/r6d_zd.sql', 'ALTER TABLE t DROP CONSTRAINT k;\n', false],
   ['× 6: ALTER TABLE が 400 個並ぶ python の migration（列の削除なし）', 'scripts/migrate_zz_r6d6.py', 'def upgrade():\n' + 'op.execute("ALTER TABLE t ADD COLUMN c int")\n'.repeat(400), false],
+  // 前の ALTER TABLE のかっこの中にある ALTER TABLE やドル引用の字で、読みが早く止まらない
+  ['○ 6: 前の ALTER TABLE のかっこの中に別の ALTER TABLE があり、かっこの後ろに列の削除（.sql）', 'migrations/r6d_ze.sql', 'ALTER TABLE t ADD CHECK (v > 0 ALTER TABLE u), DROP b;\n', true],
+  ['○ 6: 同じ形（python）', 'scripts/migrate_zz_r6d7.py', 'op.execute("ALTER TABLE t ADD CHECK (v > 0 ALTER TABLE u), DROP b")\n', true],
+  ['○ 6: かっこの中のドル引用に ALTER TABLE があり、後ろに列の削除（.sql）', 'migrations/r6d_zf.sql', 'ALTER TABLE t ALTER COLUMN a SET DEFAULT ($$ALTER TABLE x y$$), DROP b;\n', true],
+  ['○ 6: かっこの中のドル引用に ALTER TABLE があり、後ろに列の削除（python）', 'scripts/migrate_zz_r6d8.py', 'op.execute("ALTER TABLE t ALTER COLUMN a SET DEFAULT ($$ALTER TABLE x y$$), DROP b")\n', true],
+  ['○ 6: 閉じの無い引用符の後ろの ALTER TABLE の列の削除', 'migrations/r6d_zg.sql', "ALTER TABLE t ALTER COLUMN a SET DEFAULT 'ALTER TABLE x y, DROP b;\n", true],
+  ['× 6: standard_conforming_strings off で閉じない引用が ALTER TABLE ごとに並ぶ形（列の削除なし）', 'migrations/r6d_zh.sql', "SET standard_conforming_strings = off;\nALTER TABLE t0 ADD c text DEFAULT '" + Array.from({ length: 2000 }, (_, j) => `ALTER TABLE t${j} \\' `).join('') + "';\n", false],
   // 4 standard_conforming_strings
   ["○ 3: standard_conforming_strings を off にした同じ行の \\' の後ろ", 'migrations/r6d_t.sql', "SET standard_conforming_strings = off; SELECT 'a\\'--'; DROP TABLE x;\n", true],
   ["× 3: 設定が無ければ文字列が閉じて後ろがコメント", 'migrations/r6d_u.sql', "SELECT 'a\\'-- DROP TABLE x;\n", false],
