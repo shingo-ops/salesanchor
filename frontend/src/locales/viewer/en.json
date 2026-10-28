@@ -1,7 +1,10 @@
 {
   "common": {
     "close": "Close",
-    "loading": "Loading..."
+    "loading": "Loading...",
+    "saving": "Saving...",
+    "saved": "Saved",
+    "done": "Done"
   },
   "suppliers": {
     "openFullPage": "Open full page"
