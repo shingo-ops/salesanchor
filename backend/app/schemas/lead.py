@@ -278,6 +278,26 @@ class LeadResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class LeadMergeTableCount(BaseModel):
+    """統合の下見: 表ごとの件数（ADR-1049）"""
+    table: str
+    moved: int = Field(description="残す方へ付け替わる件数")
+    deleted: int = Field(description="一意の決まりで消える、消す方の件数")
+
+
+class LeadMergeFill(BaseModel):
+    """統合の下見: 空欄に入る項目（ADR-1049）"""
+    field: str
+    current: Any = Field(None, description="残す方の今の値（空欄）")
+    new: Any = Field(None, description="入る値")
+
+
+class LeadMergePreview(BaseModel):
+    """POST /leads/{master_id}/merge/preview レスポンス（書き込みなし）"""
+    tables: list[LeadMergeTableCount]
+    fills: list[LeadMergeFill]
+
+
 class LeadStatsResponse(BaseModel):
     """GET /leads/{lead_id}/stats レスポンス（ADR-136: v_company_stats 由来）"""
     total_deal_amount: Decimal
