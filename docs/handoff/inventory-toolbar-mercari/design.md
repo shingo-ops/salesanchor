@@ -81,7 +81,7 @@ PO の「閲覧ページと全く同じに」の指示と、共通部品に触�
 中身は `frontend/src/pages/viewer/viewer.css` の `.viewer-toolbar` 系と**同じ規則**にする。
 
 ```css
-/* 閲覧ページ viewer.css の .viewer-toolbar と同じ（スマホ専用の操作台） */
+/* 閲覧ページの .viewer-toolbar と同じ（スマホ専用の操作台） */
 .inventory-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -93,7 +93,7 @@ PO の「閲覧ページと全く同じに」の指示と、共通部品に触�
 .inventory-toolbar > .inventory-toolbar__search { flex: 1 1 100%; }
 /* 2段目のボタンは中身なりの幅（viewer-toolbar__fixed と同じ） */
 .inventory-toolbar > .inventory-toolbar__fixed { flex: 0 0 auto; }
-/* パネルの中の「24時間以内」を押しやすくする（viewer.css の .viewer-fresh-check と同じ） */
+/* パネルの中の「24時間以内」を押しやすくする（閲覧ページの .viewer-fresh-check と同じ） */
 .inventory-fresh-check { min-height: var(--size-icon-btn-lg); width: 100%; }
 ```
 

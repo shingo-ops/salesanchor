@@ -11,7 +11,7 @@
 
 端末 SC-51G（1080x2340・dpr=3 ＝ CSS 幅 **360px**）の Chrome で本番
 `https://app.salesanchor.jp/inventory` を開き、DevTools Protocol で `getBoundingClientRect()` を直読みした。
-配布物は `main-Db5ehglb.js`。
+配布物のビルド名は main-Db5ehglb（ビルド後の JS）。
 
 **上部操作台 `.content-toolbar__left` の子5件は全部同じ行に並ぶ。親の枠は x=24〜312（幅288）なのに、
 子は x=654 まで伸びている。**

@@ -13,7 +13,7 @@
 | H2 | **`search` と `filterButton` は PC 分岐と共用の JSX 変数**。クラスや `size` を変えると **PC も変わる**。初版の「PC 分岐はクラスを変えないので二重に安全」は誤り。さらに初版の D9 は「並び」しか見ないので PC の劣化を検出できない | `frontend/src/pages/inventory/InventoryToolbar.tsx` | 4-1 を新設（スマホ専用の JSX 変数に分ける）。D12 で PC の検索欄の幅・詳細フィルタの `min-height`・`font-size` を固定 |
 | H3 | **既存の単体テストが必ず赤**。スマホで `.content-toolbar--two-rows` が無いこと、5つの並びを固定している | `frontend/src/pages/inventory/InventoryPage.toolbar.test.tsx` | ⑥と受け入れ基準に追加（K6 を新しい形に更新する） |
 | H4 | **`onReset` は絞り込みを戻さない**（検索語・カテゴリー・並び替え・ページだけ。詳細フィルタは意図的に保持とコメントに明記）。初版の K6「絞り込みが元に戻る」は × になる | `frontend/src/pages/inventory/InventoryPage.tsx` | K6 の文を実装に合わせて修正 |
-| H5 | **関所が落ちる**: 設計書に裸の `` `design.md` `` があり、検査9（バッククォート内の `.md` をルートから解決）で ❌ | `scripts/dev/validate-pr-body.sh` | フルパスに修正（全件確認済み） |
+| H5 | **関所が落ちる**: 設計書に裸の設計書ファイル名（フルパスでない引用）があり、検査9（バッククォート内の `.md` をルートから解決）で ❌ | `scripts/dev/validate-pr-body.sh` | フルパスに修正（全件確認済み） |
 
 ### MEDIUM
 
