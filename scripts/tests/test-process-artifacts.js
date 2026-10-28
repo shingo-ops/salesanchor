@@ -801,6 +801,7 @@ const R6D_CASES = [
   ['○ 6: python の三重引用で、引用符つきの表名に列の削除の略記', 'scripts/migrate_zz_r6d13.py', 'def upgrade():\n    op.execute("""ALTER TABLE "Products" DROP legacy_col""")\n', true],
   ['○ 6: 表名の後ろの * に続く /* が WHERE を隠す DELETE', 'migrations/r6d_zi.sql', 'DELETE FROM t*/*/ WHERE id = 1 */;\n', true],
   ['○ 6: 開きの無い */ の直後の /* が WHERE を隠す DELETE', 'migrations/r6d_zj.sql', 'DELETE FROM t */* WHERE id = 1 */;\n', true],
+  // これは受け入れた止める側の誤りを固定する試験（列の削除は無いが、上限に届くため検出に倒れる）
   ['○ 6: 下限の見分けの繰り返し上限に届く python（検出に倒れる）', 'scripts/migrate_zz_r6d14.py', 'def upgrade():\n' + Array.from({ length: 1000 }, (_, j) => `    # ALTER TABLE t${j}: note\n    op.execute("ALTER TABLE t${j} ADD COLUMN c${j} int")\n`).join(''), true],
   // 4 standard_conforming_strings
   ["○ 3: standard_conforming_strings を off にした同じ行の \\' の後ろ", 'migrations/r6d_t.sql', "SET standard_conforming_strings = off; SELECT 'a\\'--'; DROP TABLE x;\n", true],
