@@ -53,6 +53,7 @@ _TABLE_MIGRATIONS = (
     ("014_create_current_tenant_id_function.sql", False),  # lead_attachments の RLS が public.current_tenant_id() を使う
     ("090_add_lead_contact_links.sql", True),  # leads: messenger_link, discord_id
     ("091_add_leads_discord_messaging_columns.sql", True),  # leads: discord_user_id, discord_dm_channel_id
+    ("095_add_lead_social_links.sql", True),  # leads: instagram_link, whatsapp_link
     ("099_add_discord_guild_config.sql", True),  # leads: discord_role_sync_status, discord_role_sync_at
     ("20260602_120000_add_discord_ticket_config.sql", True),  # leads: discord_guild_channel_id
     ("20260604_090000_create_conversation_logs.sql", True),

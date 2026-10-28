@@ -157,6 +157,7 @@ _TENANT_LOOP_SELECTOR_RE = re.compile(r"nspname\s*(?:LIKE\s+'tenant_%'|~\s+'\^te
 _TENANT_LOOP_MIGRATIONS = {
     "090_add_lead_contact_links.sql": 1,
     "091_add_leads_discord_messaging_columns.sql": 1,
+    "095_add_lead_social_links.sql": 1,
     "099_add_discord_guild_config.sql": 1,
     "20260602_120000_add_discord_ticket_config.sql": 1,
     "20260604_090000_create_conversation_logs.sql": 2,
