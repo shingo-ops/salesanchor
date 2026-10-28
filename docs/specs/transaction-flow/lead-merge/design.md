@@ -5,7 +5,7 @@
 
 親（あるべき姿＋KGI）へのリンク: [README.md](./README.md)、[ideal-state.md](./ideal-state.md)、[kgi.md](./kgi.md)
 決定記録: [ADR-1049](../../../adr/ADR-1049-lead-merge-all-tables-and-fill-blanks.md)（Amends ADR-119）
-recon: [lead-merge-recon.md](../../../handoff/inbox-brushup/lead-merge-recon.md)
+recon: [docs/handoff/inbox-brushup/lead-merge-recon.md](../../../handoff/inbox-brushup/lead-merge-recon.md)
 日付: 2026-10-28 ／ 設計担当: Claude Opus
 
 ## 1. あるべき姿
@@ -106,7 +106,7 @@ recon: [lead-merge-recon.md](../../../handoff/inbox-brushup/lead-merge-recon.md)
 
 ## 9. 維持の仕組み
 
-守り手: CI（バックエンドの試験・「画面検査（受信箱 3幅 Playwright）」・「Lint & Dark Mode Check (ADR-067)」）。中身は下の3つ。
+守り手: .github/workflows/e2e.yml と CI（バックエンドの試験・「画面検査（受信箱 3幅 Playwright）」・「Lint & Dark Mode Check (ADR-067)」）。中身は下の3つ。
 
 - 守り手（機械）: backend/tests/test_lead_merge_pg.py の漏れの見張り。テナントの表に `lead_id` を持つ表が増えると、13表の定数と数が合わず CI が落ちる。
 - 守り手（機械）: frontend/tests-e2e/visual-language/inbox-lead-merge.spec.ts が PR ごとに 44px とはみ出しを測る。
