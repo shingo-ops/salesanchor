@@ -6,10 +6,11 @@ DB を使う試験は、実在の PostgreSQL（RLS_ADMIN_DATABASE_URL か TEST_P
 
 テナントは rls_bootstrap の bootstrap_tenant_schema で本物の定義から作る。
 テナント作成では作られない表（会話の記録・添付・分類・スコア・翻訳の下書き）は、
-その表を作る本物の migration を _apply_migration_on_conn で流して用意する（試験の中に表の定義は書かない）。
+その表・列を作る本物の migration を _apply_migration_on_conn で（試験のテナントのスキーマだけに限って）流して用意する（試験の中に表の定義は書かない）。
 """
 from __future__ import annotations
 
+import json
 import os
 import re
 import uuid
@@ -31,6 +32,7 @@ from app.routers.leads import LEAD_MERGE_TABLES
 from tests.rls_bootstrap import (
     _apply_migration_on_conn,
     bootstrap_tenant_schema,
+    public_bootstrap_lock,
     tenant_schema_lock,
 )
 
@@ -45,14 +47,20 @@ _USER_ID = 9931
 _SCHEMA = f"tenant_{_TENANT_ID:03d}"
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 
-# テナント作成では作られない表を作る本物の migration（この順で流す）
+# テナント作成では作られない表・列を作る本物の migration（この順で流す）。
+# (ファイル名, 試験のテナントのスキーマだけに流すか)。False は public だけを触る migration。
 _TABLE_MIGRATIONS = (
-    "20260604_090000_create_conversation_logs.sql",
-    "20260715_100000_add_conversation_logs_lead_fk.sql",
-    "20260902_100000_create_lead_attachments.sql",
-    "20260604_180000_analytics_agent_a_tables.sql",
-    "20260604_220000_create_translation_glossary.sql",
-    "20260604_080000_create_registration_tokens.sql",
+    ("014_create_current_tenant_id_function.sql", False),  # lead_attachments の RLS が public.current_tenant_id() を使う
+    ("090_add_lead_contact_links.sql", True),  # leads: messenger_link, discord_id
+    ("091_add_leads_discord_messaging_columns.sql", True),  # leads: discord_user_id, discord_dm_channel_id
+    ("099_add_discord_guild_config.sql", True),  # leads: discord_role_sync_status, discord_role_sync_at
+    ("20260602_120000_add_discord_ticket_config.sql", True),  # leads: discord_guild_channel_id
+    ("20260604_090000_create_conversation_logs.sql", True),
+    ("20260715_100000_add_conversation_logs_lead_fk.sql", True),
+    ("20260902_100000_create_lead_attachments.sql", True),
+    ("20260604_180000_analytics_agent_a_tables.sql", True),
+    ("20260604_220000_create_translation_glossary.sql", True),
+    ("20260604_080000_create_registration_tokens.sql", False),
 )
 
 _PUBLIC_TABLES = {s.name for s in LEAD_MERGE_TABLES if s.schema == "public"}
@@ -292,19 +300,12 @@ def _build_user() -> User:
     return u
 
 
-async def _ensure_tables(engine) -> None:
-    """13 表のうち無い表があれば、その表を作る本物の migration を流す。"""
-    async with engine.connect() as conn:
-        missing = []
-        for spec in LEAD_MERGE_TABLES:
-            schema = "public" if spec.schema == "public" else _SCHEMA
-            if await conn.scalar(text("SELECT to_regclass(:n)"), {"n": f"{schema}.{spec.name}"}) is None:
-                missing.append(spec.name)
-    if not missing:
-        return
-    async with engine.begin() as conn:
-        for filename in _TABLE_MIGRATIONS:
-            await _apply_migration_on_conn(conn, filename)
+async def _apply_table_migrations(engine) -> None:
+    """表と列を作る本物の migration を流す。全テナントを回すものは試験のテナントのスキーマだけに限る。"""
+    async with public_bootstrap_lock(engine):  # public の関数・表を同時に作り直さないよう直列にする
+        async with engine.begin() as conn:
+            for filename, scoped in _TABLE_MIGRATIONS:
+                await _apply_migration_on_conn(conn, filename, schema_name=_SCHEMA if scoped else None)
 
 
 @pytest_asyncio.fixture
@@ -330,8 +331,8 @@ async def env():
         async with tenant_schema_lock(engine, _TENANT_ID):
             if not _bootstrapped:
                 await bootstrap_tenant_schema(engine, _TENANT_ID)
+                await _apply_table_migrations(engine)
                 _bootstrapped = True
-            await _ensure_tables(engine)
             # 前の試験の行を消す（この試験用テナントだけ）
             tenant_tables = [f"{_SCHEMA}.{s.name}" for s in LEAD_MERGE_TABLES if s.schema == "tenant"]
             async with engine.begin() as conn:
@@ -520,6 +521,19 @@ async def test_unique_deal_close_reasons_duplicate_of_loser_is_dropped(env):
     assert await env.count("deal_close_reasons", loser) == 0
     assert await env.count("deal_close_reasons", master) == 2
     assert await env.total("deal_close_reasons") == 2
+    # 消えた loser 側の行は、全項目が監査ログ merge_absorb に残る（手で戻す材料）
+    audit = await env.run(
+        f"SELECT new_data FROM {_SCHEMA}.audit_logs WHERE action = 'merge_absorb' AND record_id = :m",
+        {"m": master},
+    )
+    assert len(audit) == 1
+    new_data = audit[0]["new_data"]
+    if isinstance(new_data, str):
+        new_data = json.loads(new_data)
+    assert new_data["deleted_duplicates"]["deal_close_reasons"] == 1
+    kept = new_data["deleted_rows"]["deal_close_reasons"]
+    assert len(kept) == 1
+    assert kept[0]["lead_id"] == loser and "reason_id" in kept[0] and "id" in kept[0]
 
 
 @requires_pg

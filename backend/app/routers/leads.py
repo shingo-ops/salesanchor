@@ -3152,17 +3152,20 @@ async def _execute_lead_merge(
     params = {"master": master_row["id"], "loser": loser_row["id"], "tenant_id": tenant_id}
     moved: dict[str, int] = {}
     deleted: dict[str, int] = {}
+    deleted_rows: dict[str, list[dict]] = {}
 
     for spec in LEAD_MERGE_TABLES:
         if not spec.unique:
             deleted[spec.name] = 0
             continue
         ref = _merge_table_ref(db, tenant_id, spec)
+        where = " WHERE l.lead_id = :loser" + _merge_scope_sql(spec, "l") + _merge_dup_where(spec, ref)
+        # 手で戻すときの材料: 消す前に行の全項目を取る（監査ログへ入れる）
+        rows = (await db.execute(text(f"SELECT l.* FROM {ref} AS l{where}"), params)).mappings().all()
+        if rows:
+            deleted_rows[spec.name] = [jsonable_encoder(dict(r)) for r in rows]
         deleted[spec.name] = (await db.execute(
-            text(
-                f"DELETE FROM {ref} AS l WHERE l.lead_id = :loser"
-                + _merge_scope_sql(spec, "l") + _merge_dup_where(spec, ref)
-            ),
+            text(f"DELETE FROM {ref} AS l{where}"),
             params,
         )).rowcount or 0
 
@@ -3191,7 +3194,12 @@ async def _execute_lead_merge(
         text(f"DELETE FROM {leads_t} WHERE id = :loser AND tenant_id = :tenant_id"),
         {"loser": loser_row["id"], "tenant_id": tenant_id},
     )
-    return {"moved": moved, "deleted": deleted, "filled_fields": filled_fields}
+    return {
+        "moved": moved,
+        "deleted": deleted,
+        "deleted_rows": deleted_rows,
+        "filled_fields": filled_fields,
+    }
 
 
 @router.post(
@@ -3263,6 +3271,7 @@ async def merge_leads(
         "reassigned_channels": moved["lead_channels"],
         "reassigned_tables": moved,
         "deleted_duplicates": result["deleted"],
+        "deleted_rows": result["deleted_rows"],
         "filled_fields": result["filled_fields"],
         "reason": body.reason,
     }

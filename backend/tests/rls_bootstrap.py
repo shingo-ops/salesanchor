@@ -151,8 +151,30 @@ async def _apply_migration(admin_engine, filename: str) -> None:
         await _apply_migration_on_conn(conn, filename)
 
 
+# 全テナントを回す正本 migration のうち、リード統合の試験（test_lead_merge_pg.py）が流すもの。
+# 値は「テナントを選ぶ条件」が SQL に現れる回数（ずれたら検知して止める）。
+_TENANT_LOOP_SELECTOR_RE = re.compile(r"nspname\s*(?:LIKE\s+'tenant_%'|~\s+'\^tenant_(?:\\d|\[0-9\])\+\$')")
+_TENANT_LOOP_MIGRATIONS = {
+    "090_add_lead_contact_links.sql": 1,
+    "091_add_leads_discord_messaging_columns.sql": 1,
+    "099_add_discord_guild_config.sql": 1,
+    "20260602_120000_add_discord_ticket_config.sql": 1,
+    "20260604_090000_create_conversation_logs.sql": 2,
+    "20260715_100000_add_conversation_logs_lead_fk.sql": 1,
+    "20260902_100000_create_lead_attachments.sql": 1,
+    "20260604_180000_analytics_agent_a_tables.sql": 1,
+    "20260604_220000_create_translation_glossary.sql": 2,
+}
+
+
 def _scope_tenant_migration(sql: str, filename: str, schema_name: str) -> str:
     """テスト用の正本SQLを、要求された一つの数値テナントに限定する。"""
+    if filename in _TENANT_LOOP_MIGRATIONS:
+        if not re.fullmatch(r"tenant_[0-9]+", schema_name):
+            raise ValueError("Invalid test tenant schema")
+        if len(_TENANT_LOOP_SELECTOR_RE.findall(sql)) != _TENANT_LOOP_MIGRATIONS[filename]:
+            raise ValueError("Canonical tenant selector changed; review required")
+        return _TENANT_LOOP_SELECTOR_RE.sub(lambda m: f"{m.group(0)} AND nspname = '{schema_name}'", sql)
     selectors = {
         "20260611_100000_create_channel_masters.sql": "\n        WHERE nspname ~ '^tenant_\\d+$'\n",
         "20260614_100000_create_sales_form_tables.sql": "\n    WHERE nspname LIKE 'tenant_%'\n",
