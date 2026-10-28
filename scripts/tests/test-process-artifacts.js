@@ -793,6 +793,9 @@ const R6D_CASES = [
   ['○ 6: かっこの中のドル引用に ALTER TABLE があり、後ろに列の削除（python）', 'scripts/migrate_zz_r6d8.py', 'op.execute("ALTER TABLE t ALTER COLUMN a SET DEFAULT ($$ALTER TABLE x y$$), DROP b")\n', true],
   ['○ 6: 閉じの無い引用符の後ろの ALTER TABLE の列の削除', 'migrations/r6d_zg.sql', "ALTER TABLE t ALTER COLUMN a SET DEFAULT 'ALTER TABLE x y, DROP b;\n", true],
   ['× 6: standard_conforming_strings off で閉じない引用が ALTER TABLE ごとに並ぶ形（列の削除なし）', 'migrations/r6d_zh.sql', "SET standard_conforming_strings = off;\nALTER TABLE t0 ADD c text DEFAULT '" + Array.from({ length: 2000 }, (_, j) => `ALTER TABLE t${j} \\' `).join('') + "';\n", false],
+  ['○ 6: python の注釈に ALTER TABLE の字があり、後ろの execute の文字列に列の削除の略記', 'scripts/migrate_zz_r6d9.py', 'def upgrade():\n    # ALTER TABLE products: remove old column\n    op.execute("ALTER TABLE products DROP legacy_col")\n', true],
+  ['○ 6: python の注釈の ALTER TABLE のあと、execute の文字列が ; で終わる列の削除の略記', 'scripts/migrate_zz_r6d10.py', 'def upgrade():\n    # use ALTER TABLE here\n    op.execute("ALTER TABLE products DROP legacy_col;")\n', true],
+  ['× 6: python の注釈に ALTER TABLE の字があり、後ろの execute は制約の削除だけ', 'scripts/migrate_zz_r6d11.py', 'def upgrade():\n    # ALTER TABLE products: note\n    op.execute("ALTER TABLE products DROP CONSTRAINT k")\n', false],
   // 4 standard_conforming_strings
   ["○ 3: standard_conforming_strings を off にした同じ行の \\' の後ろ", 'migrations/r6d_t.sql', "SET standard_conforming_strings = off; SELECT 'a\\'--'; DROP TABLE x;\n", true],
   ["× 3: 設定が無ければ文字列が閉じて後ろがコメント", 'migrations/r6d_u.sql', "SELECT 'a\\'-- DROP TABLE x;\n", false],

@@ -456,8 +456,8 @@ const ALTER_TABLE_RE = /\bALTER\s+(?:FOREIGN\s+)?TABLE\s+(?:IF\s+EXISTS\s+)?(?:O
 
 // ALTER TABLE の読みは、範囲（最初はファイル全体）を左から 1 回だけ字句の決まりで読んで行う。
 // 引用符・ドル引用の外、かつ操作のかっこの深さ 0 の位置にある次の ALTER TABLE の始まりでだけ読みを止める。
-// ドル引用の中身は別の範囲として、引用符の中に ALTER TABLE がある形（python の文字列など）はその引用符の中身を別の範囲として読む（引用符の中身の入れ子は 3 段まで）。
-// 閉じの無い引用・ドル引用は、その範囲の残りを 1 つの引用として扱う
+// ドル引用の中身は別の範囲として、引用符の中に ALTER TABLE がある形（python の文字列など）は、外側で ALTER TABLE を読んでいる途中でも、その引用符の中身を別の範囲として読み直す（引用符の中身の入れ子は 3 段まで）。
+// 閉じの無い引用・ドル引用の開きは、R6c と同じく 1 字として読み進める（失敗した探しの合計に上限を付け、超えたら検出）
 function alterTableDropsColumnShorthand(sql, bs) {
   const found = [...sql.matchAll(ALTER_TABLE_RE)];
   if (found.length === 0) return false;
@@ -501,6 +501,12 @@ function alterTableDropsColumnShorthand(sql, bs) {
         continue;
       }
       const c = sql[i];
+      if (bs && level > 0 && c === '\\') {
+        // バックスラッシュを逃がし記号として読む読み方では、引用符の中身の \' は引用符の開きではない
+        i += 2;
+        if (cur) cur.to = Math.min(i, hi);
+        continue;
+      }
       if (c === "'" || c === '"') {
         const end = findQuoteEnd(sql, i, bs, lo, hi);
         if (end === -1) {
@@ -511,7 +517,7 @@ function alterTableDropsColumnShorthand(sql, bs) {
           i++;
           continue;
         }
-        if (level < 3 && mi < found.length && starts[mi] > i && starts[mi] < end && cur === null) {
+        if (level < 3 && mi < found.length && starts[mi] > i && starts[mi] < end) {
           ranges.push([i + 1, end - 1, level + 1]);
         }
         i = end;
