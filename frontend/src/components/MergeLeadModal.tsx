@@ -5,14 +5,15 @@
  *   ソースリード（loser = 消える側）を既存の master リードへ吸収させる UI。
  *   会社統合の MergeCompanyModal と同じ 2 段階 UI を踏襲。
  *
- *   loser に紐づく meta_messages・lead_channels が全て master に付け替えられ、
- *   loser のリードレコードは削除される。
+ *   loser に紐づく記録（lead_id を持つ13表）が全て master に付け替えられ、
+ *   master の空欄だけが loser の値で埋まる。loser のリードレコードは削除される（ADR-1049）。
+ *   確認の段で下見（merge/preview）を呼び、移るものと埋まる欄を先に見せる。
  *
  * 安全策:
  *   1. loser が lead 状態以外の場合は backend が 400 を返す。
  *      フロントでも convertedError メッセージを分かりやすく表示する。
  *   2. 確定前に「取り消せません」の警告ダイアログ
- *   3. 任意の reason 入力欄（audit_logs に記録）
+ *   3. 任意の reason 入力欄（操作の記録に残る）
  */
 
 import { useEffect, useMemo, useState, FormEvent } from "react";
@@ -109,7 +110,11 @@ export default function MergeLeadModal({ open, source, onMerged, onCancel }: Pro
   const [previewError, setPreviewError] = useState(false);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      // 閉じたときも最初の段に戻す（確認の段のまま閉じると次に開いたとき古い組で下見が走るため）
+      setStage("select");
+      return;
+    }
     setSelectedId(null);
     setSelectedSnapshot(null);
     setReason("");
