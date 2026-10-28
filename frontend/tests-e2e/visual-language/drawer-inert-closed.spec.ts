@@ -18,7 +18,8 @@
  *     コンディションの行 + 価格の上下限（2） + 数量の上下限（2） + 言語切替 = 9
  *   シリーズ・並び替えドロワー（閉じている既定のシリーズ一覧。series はフィクスチャで常に
  *     空文字のため tabs が空＝「すべて」の1行のみ）＝ ✕ ボタン + 「すべて」の行 = 2
- *   合計 11（>=10）。2枚のパネルを合わせた数であることに注意（1枚だけでは足りない）。
+ *   検索の画面（便12a で増えた3枚目）＝ 入力欄 + 「←」 + 読み上げ用の確定ボタン = 3
+ *   合計 14（>=10）。3枚のパネルを合わせた数であることに注意（1枚だけでは足りない）。
  *
  * スマホ幅が必要なので project の既定幅に関わらず spec 側で明示的に setViewportSize する
  * （design ⑤「作り方」・frontend/AGENTS.md の作法。viewer-focus-trap.spec.ts と同じ理由）。
@@ -101,13 +102,18 @@ async function readFocusLocation(page: Page): Promise<{ insideClosedPanel: boole
   });
 }
 
+/** 閲覧ページで閉じたまま描かれるパネルの数（絞り込み・シリーズ/並び替え・検索）。
+ *  便12a で検索の画面が増えて 2→3 になった。1か所に置いて、増えたときに直す場所を1つに保つ */
+const CLOSED_PANEL_COUNT = 3;
+
 test.describe("visual-language: 閉じている Drawer の中身を無い物として扱う（宿題 D5）", () => {
-  test("B1: 開いた直後、閉じた .comp-drawer-panel が2枚あり、両方の inert が true（前提の固定）", async ({ page }) => {
+  test("B1: 開いた直後、閉じた .comp-drawer-panel が3枚あり、すべての inert が true（前提の固定）", async ({ page }) => {
     await page.setViewportSize(MOBILE);
     await gotoViewer(page);
 
-    // 前提1: 閉じたパネルが2枚（絞り込み・シリーズ/並び替え）
-    await expect(closedPanels(page)).toHaveCount(2);
+    // 前提1: 閉じたパネルが3枚（絞り込み・シリーズ/並び替え・検索）。
+    // 検索は便12a（docs/handoff/viewer-search-mercari/design.md 4-1）で増えた3枚目
+    await expect(closedPanels(page)).toHaveCount(CLOSED_PANEL_COUNT);
     // 前提2: 開いているパネルは0枚（両方とも閉じて始まる。recon.md §4）
     await expect(openPanel(page)).toHaveCount(0);
     // 前提3: その中にフォーカスできる要素が10個以上ある（ファイル冒頭の内訳を参照。空振り防止）
@@ -116,7 +122,7 @@ test.describe("visual-language: 閉じている Drawer の中身を無い物と�
 
     // 本題: 両方の inert が true
     const flags = await closedPanelInertFlags(page);
-    expect(flags).toHaveLength(2);
+    expect(flags).toHaveLength(CLOSED_PANEL_COUNT);
     expect(flags.every((v) => v === true)).toBe(true);
   });
 
@@ -125,7 +131,7 @@ test.describe("visual-language: 閉じている Drawer の中身を無い物と�
     await gotoViewer(page);
 
     // B1 と同じ前提をこのテスト単体でも確かめる（このテストだけ実行しても空振りで緑にならないように）
-    await expect(closedPanels(page)).toHaveCount(2);
+    await expect(closedPanels(page)).toHaveCount(CLOSED_PANEL_COUNT);
     const focusableCount = await countFocusableInClosedPanels(page);
     expect(focusableCount).toBeGreaterThanOrEqual(10);
 

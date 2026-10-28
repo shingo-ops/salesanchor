@@ -9,6 +9,9 @@
  * - 閉じたら元の要素へフォーカス復帰
  * - onOpenFullPage が渡された場合は「フルページで開く↗」ボタンをヘッダに表示
  * - onBack が渡された場合は題の左に「← 戻る」ボタンをヘッダに表示（省略時は今までどおり何も出ない。design.md 4-1）
+ * - headerContent が渡された場合は帯の中身（戻る・題・✕）を丸ごと差し替える。題の <h2> は
+ *   aria-labelledby の相手として残したまま sr-only にする（省略時は今までどおり。
+ *   docs/handoff/viewer-search-mercari/design.md 4-1）
  * - a11y: role="dialog" / aria-modal / aria-labelledby
  * - ReactDOM.createPortal で document.body にマウント
  * - z-index: --z-drawer (301) — Modal の overlay は --z-modal (400) で前面
@@ -35,6 +38,9 @@ interface DrawerBaseProps {
   footer?: ReactNode;
   /** パネル幅。'default'（480px）/ 'wide'（1100px・スマホは全幅） */
   size?: "default" | "wide";
+  /** 帯の中身（戻る・題・✕）を丸ごと差し替える。渡したときだけ題の <h2> を sr-only にする
+   *  （省略時は今までどおり何も変わらない。docs/handoff/viewer-search-mercari/design.md 4-1） */
+  headerContent?: ReactNode;
 }
 
 /** onBack を渡すときは backLabel（読み上げ名）も必須にする。片方だけでは
@@ -56,6 +62,7 @@ export function Drawer({
   backLabel,
   footer,
   size = "default",
+  headerContent,
 }: DrawerProps) {
   const { t }     = useTranslation();
   const titleId   = useId();
@@ -127,45 +134,54 @@ export function Drawer({
         data-testid="supplier-drawer"
       >
         {/* ヘッダ */}
-        <div className="comp-drawer-header">
-          {onBack && (
-            <Button
-              variant="ghost"
-              size="md"
-              iconOnly
-              aria-label={backLabel}
-              onClick={onBack}
-              data-testid="drawer-back"
-              layoutClassName="comp-drawer-header-back"
-            >
-              <ArrowLeft size={20} aria-hidden="true" />
-            </Button>
+        <div className={`comp-drawer-header${headerContent ? " comp-drawer-header--custom" : ""}`}>
+          {headerContent ? (
+            <>
+              <h2 id={titleId} className="comp-drawer-title sr-only">{title}</h2>
+              {headerContent}
+            </>
+          ) : (
+            <>
+              {onBack && (
+                <Button
+                  variant="ghost"
+                  size="md"
+                  iconOnly
+                  aria-label={backLabel}
+                  onClick={onBack}
+                  data-testid="drawer-back"
+                  layoutClassName="comp-drawer-header-back"
+                >
+                  <ArrowLeft size={20} aria-hidden="true" />
+                </Button>
+              )}
+              <h2 id={titleId} className="comp-drawer-title">{title}</h2>
+              <div className="comp-drawer-header-actions">
+                {onOpenFullPage && (
+                  <Button
+                    variant="ghost"
+                    size="md"
+                    iconOnly
+                    aria-label={t("suppliers.openFullPage")}
+                    onClick={onOpenFullPage}
+                    data-testid="drawer-open-fullpage"
+                  >
+                    <ArrowTopRight size={18} aria-hidden="true" />
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  size="md"
+                  iconOnly
+                  aria-label={t("common.close")}
+                  onClick={onClose}
+                  data-testid="drawer-close"
+                >
+                  <X size={20} aria-hidden="true" />
+                </Button>
+              </div>
+            </>
           )}
-          <h2 id={titleId} className="comp-drawer-title">{title}</h2>
-          <div className="comp-drawer-header-actions">
-            {onOpenFullPage && (
-              <Button
-                variant="ghost"
-                size="md"
-                iconOnly
-                aria-label={t("suppliers.openFullPage")}
-                onClick={onOpenFullPage}
-                data-testid="drawer-open-fullpage"
-              >
-                <ArrowTopRight size={18} aria-hidden="true" />
-              </Button>
-            )}
-            <Button
-              variant="ghost"
-              size="md"
-              iconOnly
-              aria-label={t("common.close")}
-              onClick={onClose}
-              data-testid="drawer-close"
-            >
-              <X size={20} aria-hidden="true" />
-            </Button>
-          </div>
         </div>
 
         {/* 本体 */}

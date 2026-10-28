@@ -83,6 +83,13 @@
   flex-shrink: 0;
 }
 
+/* headerContent 指定時（題は sr-only で場所を取らない）: 中身を帯いっぱいに広げる
+   （docs/handoff/viewer-search-mercari/design.md 4-1） */
+.comp-drawer-header--custom > :not(.sr-only) {
+  flex: 1;
+  min-width: 0;
+}
+
 /* ----------------------------------------------------------------
    本体（スクロール可）
    ---------------------------------------------------------------- */

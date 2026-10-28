@@ -76,72 +76,792 @@ function isMigrationPath(f) {
   return MIGRATION_PATH_PATTERNS.some(r => r.test(f));
 }
 
+// ── SQL の字句（PostgreSQL の決まり）──────────────────────────────────────────
+const SQL_IDENT_CHAR = /[A-Za-z0-9_$\u0080-￿]/;
+const SQL_DOLLAR_DELIM_SRC = String.raw`\$(?:[A-Za-z_\u0080-￿][A-Za-z0-9_\u0080-￿]*)?\$`;
+const SQL_DOLLAR_DELIM_RE = new RegExp(SQL_DOLLAR_DELIM_SRC, 'y');
+
+// 長い入力で時間がかかり過ぎないための上限（文を読み進めた字数の合計）。使い切ったら止める側（検出）に倒す
+const work = { left: 0, exceeded: false };
+function resetWork(len) {
+  work.left = 60 * len + 2000000;
+  work.exceeded = false;
+}
+
+// sql[i] が E 付き文字列の始まりの単引用符か（直前が E/e で、その前が識別子の一部でない）。
+// bs（standard_conforming_strings = off）のときは、普通の文字列もバックスラッシュを逃がし記号として読む。
+// lo は今読んでいる範囲の始まり（その手前の字は見ない）
+function isEscapeStringQuote(sql, i, lo, bs) {
+  if (sql[i] !== "'") return false;
+  if (bs) return true;
+  if (i - 1 < lo) return false;
+  const p = sql[i - 1];
+  if (p !== 'E' && p !== 'e') return false;
+  return i - 2 < lo || !SQL_IDENT_CHAR.test(sql[i - 2]);
+}
+
+// sql[i] の引用符（' か "）の閉じの直後の位置。hi（範囲の終わり）までに閉じが無ければ -1
+// 同じ引用符を 2 つ重ねた形は中身。E 付き文字列ではバックスラッシュが次の 1 文字を中身にする
+function findQuoteEnd(sql, i, bs, lo, hi) {
+  const q = sql[i];
+  const esc = isEscapeStringQuote(sql, i, lo, bs);
+  let j = i + 1;
+  while (j < hi) {
+    const c = sql[j];
+    if (esc && c === '\\') { j += 2; continue; }
+    if (c === q) {
+      if (j + 1 < hi && sql[j + 1] === q) { j += 2; continue; }
+      return j + 1;
+    }
+    j++;
+  }
+  return -1;
+}
+
+// sql[i] がドル引用の開き（$tag$）ならその文字列を返す。直前が識別子の一部なら開きではない
+function dollarDelimiterAt(sql, i, lo) {
+  if (sql[i] !== '$') return null;
+  if (i > lo && SQL_IDENT_CHAR.test(sql[i - 1])) return null;
+  SQL_DOLLAR_DELIM_RE.lastIndex = i;
+  const m = SQL_DOLLAR_DELIM_RE.exec(sql);
+  return m ? m[0] : null;
+}
+
+// 区切り（$tag$）が文のどこにあるかを 1 回の読みで集める（タグごとの位置の昇順）。
+// タグの大文字小文字は区別する（PostgreSQL の決まり）。閉じを探すたびに先頭から読み直さないための表
+function dollarIndex(text) {
+  const map = new Map();
+  let p = text.indexOf('$');
+  while (p !== -1) {
+    SQL_DOLLAR_DELIM_RE.lastIndex = p;
+    const m = SQL_DOLLAR_DELIM_RE.exec(text);
+    if (m) {
+      const list = map.get(m[0]);
+      if (list) list.push(p); else map.set(m[0], [p]);
+    }
+    p = text.indexOf('$', p + 1);
+  }
+  return map;
+}
+
+// from 以降で最初の delim の位置。区切り全体が limit までに収まらなければ -1
+function nextDollar(index, delim, from, limit) {
+  const list = index.get(delim);
+  if (!list) return -1;
+  let lo = 0;
+  let hi = list.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (list[mid] < from) lo = mid + 1; else hi = mid;
+  }
+  return lo < list.length && list[lo] + delim.length <= limit ? list[lo] : -1;
+}
+
+// ブロックコメントの始まりの位置 → 入れ子を数えて閉じる位置の直後。1 回の読みで全部求める（閉じの無い始まりは載らない）
+function blockCommentMap(text) {
+  const map = new Map();
+  const stack = [];
+  let p = 0;
+  let o = text.indexOf('/*');
+  let c = text.indexOf('*/');
+  for (;;) {
+    if (o !== -1 && o < p) o = text.indexOf('/*', p);
+    if (c !== -1 && c < p) c = text.indexOf('*/', p);
+    if (o === -1 && c === -1) break;
+    if (c === -1 || (o !== -1 && o < c)) {
+      stack.push(o);
+      p = o + 2;
+    } else {
+      if (stack.length > 0) {
+        map.set(stack.pop(), c + 2);
+        p = c + 2;
+      } else {
+        // 開きが積まれていないときの */ は閉じとして扱わず 1 字だけ進める（直後の /* もコメントの開き）
+        p = c + 1;
+      }
+    }
+  }
+  return map;
+}
+
+// SQL のコメントを除く。引用符・E 付き文字列・ドル引用の中の -- や /* はコメントの始まりと見なさない。
+// ドル引用の中身は実行される文として、その範囲だけで同じ読み方で読み直す（入れ子は繰り返しで読む）。
+// ブロックコメントは入れ子を数える。閉じの無い引用・コメントは、その範囲の残りを素の文のまま残す（止める側）
+function stripSqlComments(text, bs) {
+  const index = dollarIndex(text);
+  let comments = null;
+  const out = [];
+  const frames = [];
+  let lo = 0;
+  let hi = text.length;
+  let i = 0;
+  let run = 0; // まだ書き出していない素の部分の始まり
+  for (;;) {
+    if (i >= hi) {
+      if (frames.length === 0) break;
+      // ドル引用の中身を読み終えた。閉じの区切りは素の部分として続きに含める
+      if (hi > run) out.push(text.slice(run, hi));
+      const f = frames.pop();
+      run = hi;
+      i = hi + f.delim.length;
+      lo = f.lo;
+      hi = f.hi;
+      continue;
+    }
+    const c = text[i];
+    if (c === "'" || c === '"') {
+      const end = findQuoteEnd(text, i, bs, lo, hi);
+      i = end === -1 ? hi : end;
+    } else if (c === '$') {
+      let delim = dollarDelimiterAt(text, i, lo);
+      if (delim && i + delim.length > hi) delim = null;
+      if (!delim) {
+        i++;
+        continue;
+      }
+      const close = nextDollar(index, delim, i + delim.length, hi);
+      if (close === -1) {
+        i += delim.length;
+      } else {
+        const bodyStart = i + delim.length;
+        if (bodyStart > run) out.push(text.slice(run, bodyStart));
+        frames.push({ delim, lo, hi });
+        lo = bodyStart;
+        hi = close;
+        i = bodyStart;
+        run = bodyStart;
+      }
+    } else if (c === '-' && text[i + 1] === '-') {
+      let j = text.indexOf('\n', i);
+      if (j === -1 || j > hi) j = hi;
+      if (i > run) out.push(text.slice(run, i));
+      out.push(' ');
+      i = j;
+      run = j;
+    } else if (c === '/' && text[i + 1] === '*') {
+      if (!comments) comments = blockCommentMap(text);
+      const k = comments.get(i);
+      if (k === undefined || k > hi) {
+        i++; // 閉じが無い: 素の文のまま 1 字進めて読み続ける（後ろの行コメントの除去と引用の読みも続ける）
+      } else {
+        if (i > run) out.push(text.slice(run, i));
+        out.push(' ');
+        i = k;
+        run = k;
+      }
+    } else {
+      i++;
+    }
+  }
+  if (hi > run) out.push(text.slice(run, hi));
+  return out.join('');
+}
+
 // SQL のコメントを除き、空白と改行を 1 つにまとめる
-// 単引用符・二重引用符の中の -- や /* はコメントの始まりと見なさない（'' の重ねは閉じて開き直す扱いで足りる）。
-// 閉じの無いブロックコメントはコメントとして扱わない
-function normalizeSqlText(text) {
+function normalizeSqlText(text, bs) {
+  return stripSqlComments(text, bs).replace(/\s+/g, ' ').trim();
+}
+
+// 文の始まり: 先頭・; ・かっこ・引用符・手続きのかたまりの始まりや分岐の句・ドル引用の区切り・
+// ルール定義の DO [ALSO|INSTEAD]・実行計画の前置き・準備文の AS の直後
+const SQL_STATEMENT_START = String.raw`(^|[;()]|['"]|\b(?:BEGIN|THEN|ELSE|LOOP)\b|\bDO\s+(?:(?:ALSO|INSTEAD)\s+)?|${SQL_DOLLAR_DELIM_SRC}|\bEXPLAIN\s+(?:(?:ANALYZE|ANALYSE|VERBOSE)\s+)*|\bPREPARE\s+[^\s;()]+\s*(?:\([^()]*\)\s*)?AS\b)\s*`;
+
+// 準備文の型の指定にかっこが入れ子になる形（PREPARE p (numeric(10,2)) AS ...）
+const SQL_PREPARE_NESTED_RE = /\bPREPARE\s+(?:"(?:[^"]|"")*"|[^\s;()"]+)\s*\(/gi;
+const SQL_AFTER_PREPARE_RE = /\s*AS\b\s*(DELETE\s+FROM\b|TRUNCATE\b)/iy;
+const PREPARE_TYPE_LIST_MAX = 4000;
+
+// open のかっこに対応する閉じかっこの位置。; が先に来る・長すぎる・閉じが無いときは -1
+function findClosingParen(sql, open) {
+  let depth = 0;
+  const stop = Math.min(sql.length, open + PREPARE_TYPE_LIST_MAX);
+  for (let j = open; j < stop; j++) {
+    const c = sql[j];
+    if (c === ';') return -1;
+    if (c === '(') depth++;
+    else if (c === ')') {
+      depth--;
+      if (depth === 0) return j;
+    }
+  }
+  return -1;
+}
+
+// ── WHERE の条件が「中身が無い」か ───────────────────────────────────────────
+// 条件から、文字列・数・:: の型変換・真偽値と NULL・演算子と語・かっことカンマを取り除いて、何も残らなければ中身が無い。
+// 列名・引用符つきの名前・関数・$1 などの引数・%s などの差し込み記号が 1 つでも残れば中身がある
+const SQL_TYPE_SRC = String.raw`(?:double\s+precision|character\s+varying|bit\s+varying|(?:time|timestamp)(?:\s*\(\s*\d+\s*\))?\s+with(?:out)?\s+time\s+zone|[A-Za-z_][A-Za-z0-9_$.]*)(?:\s*\[\s*\d*\s*\])*`;
+const COND_CAST_RE = new RegExp(String.raw`::\s*` + SQL_TYPE_SRC, 'gi');
+const COND_AS_TYPE_RE = new RegExp(String.raw`\bAS\s+` + SQL_TYPE_SRC, 'gi');
+const COND_WORDS_RE = /\b(?:true|false|null|unknown|and|or|not|is|in|between|symmetric|asymmetric|like|ilike|similar|to|distinct|from|any|all|some|cast|as)\b/gi;
+const COND_RADIX_RE = /0[xX][0-9a-fA-F_]+|0[oO][0-7_]+|0[bB][01_]+/g;
+const COND_NUMBER_RE = /\d[\d_]*(?:\.[\d_]*)?(?:[eE][+-]?\d+)?|\.\d[\d_]*(?:[eE][+-]?\d+)?/g;
+const COND_PUNCT_RE = /[=<>!+\-*/%^|&~(),.\s]/g;
+
+function conditionResidue(s) {
+  return s
+    .replace(COND_CAST_RE, ' ')
+    .replace(COND_AS_TYPE_RE, ' ')
+    .replace(COND_WORDS_RE, ' ')
+    .replace(COND_RADIX_RE, ' ')
+    .replace(COND_NUMBER_RE, ' ')
+    .replace(COND_PUNCT_RE, '');
+}
+
+const isWs = (c) => c === 32 || (c >= 9 && c <= 13);
+const isAsciiLetter = (c) => (c >= 65 && c <= 90) || (c >= 97 && c <= 122);
+const isWordChar = (c) => isAsciiLetter(c) || (c >= 48 && c <= 57) || c === 95;
+
+// 条件（文字列は目印に置き換え済み）が中身の無い条件か。
+// 条件の全体を包むかっこは何重でも外す。かっこの外の OR でつながった枝のうち 1 つでも中身が無ければ、条件全体を中身が無いと扱う。
+// かっこの入れ子が深くても呼び出しを重ねないよう、枝は順に取り出して読む
+function isHollowCondition(cond) {
+  const n = cond.length;
+  const match = new Int32Array(n).fill(-1);
+  const stack = [];
+  for (let i = 0; i < n; i++) {
+    const c = cond.charCodeAt(i);
+    if (c === 40) stack.push(i);
+    else if (c === 41 && stack.length > 0) match[stack.pop()] = i;
+  }
+  for (const o of stack) match[o] = n; // 閉じの無いかっこは最後まで
+  const pending = [[0, n]];
+  while (pending.length > 0) {
+    let [a, b] = pending.pop();
+    for (;;) {
+      while (a < b && isWs(cond.charCodeAt(a))) a++;
+      while (b > a && isWs(cond.charCodeAt(b - 1))) b--;
+      if (a < b && cond.charCodeAt(a) === 40) {
+        if (match[a] === b - 1) { a++; b--; continue; }
+        if (match[a] === n && b === n) { a++; continue; }
+      }
+      break;
+    }
+    if (a >= b) return true;
+    const branches = [];
+    let start = a;
+    let k = a;
+    while (k < b) {
+      const c = cond.charCodeAt(k);
+      if (c === 40) {
+        k = match[k] === n ? b : match[k] + 1;
+        continue;
+      }
+      if (isAsciiLetter(c) && (k === a || !isWordChar(cond.charCodeAt(k - 1)))) {
+        let e = k + 1;
+        while (e < b && isWordChar(cond.charCodeAt(e))) e++;
+        if (e - k === 2 && (c === 79 || c === 111) && (cond.charCodeAt(k + 1) | 32) === 114) {
+          branches.push([start, k]);
+          start = e;
+        }
+        k = e;
+        continue;
+      }
+      k++;
+    }
+    if (branches.length === 0) {
+      if (conditionResidue(cond.slice(a, b)) === '') return true;
+      continue;
+    }
+    branches.push([start, b]);
+    for (const br of branches) pending.push(br);
+  }
+  return false;
+}
+
+// ── DELETE 文の本体 ───────────────────────────────────────────────────────
+const SQL_SCAN_SPECIAL = /[;()'"$]/g;
+
+// 文字列・ドル引用の前に付く記号（E / B / X / N / U&）の長さ。文字列の一部として扱う
+function stringPrefixLength(sql, i, from) {
+  if (i - 1 < from) return 0;
+  const p = sql[i - 1];
+  if (/[EeBbXxNn]/.test(p) && (i - 2 < from || !SQL_IDENT_CHAR.test(sql[i - 2]))) return 1;
+  if (p === '&' && i - 2 >= from && /[Uu]/.test(sql[i - 2]) && (i - 3 < from || !SQL_IDENT_CHAR.test(sql[i - 3]))) return 2;
+  return 0;
+}
+
+// from から 1 回だけ読み進め、文の終わりまでの本体を返す。文字列は目印（' 0 '）に、引用符つきの名前は
+// ' ident ' に置き換える。終わりは ; ・対応のない閉じかっこ・（引用符やドル引用の区切りの直後で始まったときは）同じ区切り
+function maskStatement(sql, from, endToken, bs, index) {
+  const n = sql.length;
+  const parts = [];
+  let depth = 0;
+  let run = from;
+  let i = from;
+  for (;;) {
+    SQL_SCAN_SPECIAL.lastIndex = i;
+    const m = SQL_SCAN_SPECIAL.exec(sql);
+    if (!m) { i = n; break; }
+    work.left -= m.index - i + 1;
+    if (work.left < 0) { work.exceeded = true; i = m.index; break; }
+    i = m.index;
+    const c = sql[i];
+    if (endToken && sql.startsWith(endToken, i)) break;
+    if (c === ';') break;
+    if (c === '(') { depth++; i++; continue; }
+    if (c === ')') {
+      if (depth === 0) break;
+      depth--;
+      i++;
+      continue;
+    }
+    if (c === "'" || c === '"') {
+      const plen = c === "'" ? Math.min(stringPrefixLength(sql, i, from), i - run) : 0;
+      if (i - plen > run) parts.push(sql.slice(run, i - plen));
+      parts.push(c === '"' ? ' ident ' : ' 0 ');
+      const end = findQuoteEnd(sql, i, bs, 0, n);
+      i = end === -1 ? n : end;
+      run = i;
+      continue;
+    }
+    const delim = dollarDelimiterAt(sql, i, 0);
+    if (!delim) { i++; continue; }
+    if (i > run) parts.push(sql.slice(run, i));
+    const close = nextDollar(index, delim, i + delim.length, n);
+    if (close === -1) {
+      i += delim.length;
+    } else {
+      parts.push(' 0 ');
+      i = close + delim.length;
+    }
+    run = i;
+  }
+  if (i > run) parts.push(sql.slice(run, i));
+  return parts.join('');
+}
+
+// DELETE 文を走査し、意味のある WHERE の有無を返す。条件が中身の無いものだけなら WHERE が無いのと同じ
+function deleteStatementHasWhere(sql, from, endToken, bs, index) {
+  const body = maskStatement(sql, from, endToken, bs, index);
+  const n = body.length;
+  let depth = 0;
+  let whereEnd = -1;
+  let returningAt = n;
+  for (let i = 0; i < n; i++) {
+    const c = body.charCodeAt(i);
+    if (c === 40) { depth++; continue; }
+    if (c === 41) { depth--; continue; }
+    if (depth === 0 && isAsciiLetter(c) && (i === 0 || !isWordChar(body.charCodeAt(i - 1)))) {
+      let e = i + 1;
+      while (e < n && isWordChar(body.charCodeAt(e))) e++;
+      const word = body.slice(i, e);
+      if (whereEnd < 0 && /^where$/i.test(word)) whereEnd = e;
+      else if (whereEnd >= 0 && /^returning$/i.test(word)) { returningAt = i; break; }
+      i = e - 1;
+    }
+  }
+  if (whereEnd < 0) return false;
+  return !isHollowCondition(body.slice(whereEnd, returningAt));
+}
+
+// ALTER TABLE（外部表を含む）の中で、列を消す略記（COLUMN を省いた削除）があるか。制約など列以外の削除は当てない。
+// 操作の区切り（, ）は引用符の外だけで見る
+const ALTER_TABLE_RE = /\bALTER\s+(?:FOREIGN\s+)?TABLE\s+(?:IF\s+EXISTS\s+)?(?:ONLY\s+)?(?:"(?:[^"]|"")*"|[^\s;,()"])+\s*\*?/gi;
+
+// ALTER TABLE の読みは、範囲（最初はファイル全体）を左から 1 回だけ字句の決まりで読んで行う。
+// 引用符・ドル引用の外、かつ操作のかっこの深さ 0 の位置にある次の ALTER TABLE の始まりでだけ読みを止める。
+// ドル引用の中身は別の範囲として、引用符の中に ALTER TABLE がある形（python の文字列など）は、外側で ALTER TABLE を読んでいる途中でも、その引用符の中身を別の範囲として読み直す（引用符の中身の入れ子は 3 段まで）。
+// 閉じの無い引用・ドル引用の開きは、R6c と同じく 1 字として読み進める（失敗した探しの合計に上限を付け、超えたら検出）
+function alterTableDropsColumnShorthand(sql, bs) {
+  const found = [...sql.matchAll(ALTER_TABLE_RE)];
+  if (found.length === 0) return false;
+  const starts = found.map(m => m.index);
+  const firstFrom = p => {
+    let lo = 0;
+    let hi = starts.length;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (starts[mid] < p) lo = mid + 1; else hi = mid;
+    }
+    return lo;
+  };
+  let index = null;
+  const getIndex = () => index || (index = dollarIndex(sql));
+  const hasDollar = sql.indexOf('$') !== -1;
+  let failWork = 0;
+  const failLimit = 40 * sql.length + 1000000;
+  const ranges = [[0, sql.length, 0]]; // [始まり, 終わり, 引用符の中身の入れ子の段]
+  while (ranges.length > 0) {
+    const [lo, hi, level] = ranges.pop();
+    let mi = firstFrom(lo);
+    if (mi >= found.length || starts[mi] >= hi) continue;
+    let cur = null; // { depth, from, actions: [開始位置, 終了位置][] }
+    const finish = () => {
+      cur.actions.push([cur.from, cur.to]);
+      const hit = cur.actions.some(([a, b]) => /^\s*DROP\s+(?!CONSTRAINT\b)\S/i.test(sql.slice(a, b)));
+      cur = null;
+      return hit;
+    };
+    let i = lo;
+    while (i < hi) {
+      while (mi < found.length && starts[mi] < i) mi++;
+      if (cur === null && (mi >= found.length || starts[mi] >= hi)) break;
+      if (mi < found.length && starts[mi] === i && (cur === null || cur.depth === 0)) {
+        if (cur !== null && finish()) return true;
+        const end = Math.min(found[mi].index + found[mi][0].length, hi);
+        cur = { depth: 0, from: end, to: end, actions: [] };
+        mi++;
+        i = end;
+        continue;
+      }
+      const c = sql[i];
+      if (bs && level > 0 && c === '\\') {
+        // バックスラッシュを逃がし記号として読む読み方では、引用符の中身の \' は引用符の開きではない
+        i += 2;
+        if (cur) cur.to = Math.min(i, hi);
+        continue;
+      }
+      if (c === "'" || c === '"') {
+        const end = findQuoteEnd(sql, i, bs, lo, hi);
+        if (end === -1) {
+          // 閉じの無い引用符は、ただの 1 字として読み進める（R6c の読み方）。失敗した探しの合計に上限を付け、使い切ったら検出に倒す
+          failWork += hi - i;
+          if (failWork > failLimit) return true;
+          if (cur) cur.to = i + 1;
+          i++;
+          continue;
+        }
+        if (level < 3 && mi < found.length && starts[mi] > i && starts[mi] < end) {
+          ranges.push([i + 1, end - 1, level + 1]);
+        }
+        i = end;
+        if (cur) cur.to = i;
+        continue;
+      }
+      if (c === '$' && hasDollar) {
+        const delim = dollarDelimiterAt(sql, i, lo);
+        if (delim) {
+          const close = nextDollar(getIndex(), delim, i + delim.length, hi);
+          if (close !== -1) {
+            if (mi < found.length && starts[mi] > i && starts[mi] < close) ranges.push([i + delim.length, close, level]);
+            i = close + delim.length;
+            if (cur) cur.to = i;
+            continue;
+          }
+          // 閉じの無いドル引用の開きは、ただの 1 字として読み進める
+        }
+      }
+      if (cur) {
+        if (c === ';') { if (finish()) return true; i++; continue; }
+        if (c === '(') cur.depth++;
+        else if (c === ')') {
+          if (cur.depth === 0) { if (finish()) return true; i++; continue; }
+          cur.depth--;
+        } else if (c === ',' && cur.depth === 0) {
+          cur.actions.push([cur.from, i]);
+          cur.from = i + 1;
+        }
+        cur.to = i + 1;
+      }
+      i++;
+    }
+    if (cur !== null && finish()) return true;
+  }
+  return false;
+}
+
+// 1 つの文章（コメントを除く前か後のどちらか）が、表・列の削除または大量削除を含むか。
+// 長すぎて読み切れないときは止める側（含む）に倒す
+function sqlHasDestructiveStatement(sql, bs) {
+  resetWork(sql.length);
+  if (/\bDROP\s+(?:TABLE|COLUMN|SCHEMA|DATABASE|OWNED|FOREIGN\s+TABLE)\b/i.test(sql)) return true;
+  if (alterTableDropsColumnShorthand(sql, bs)) return true;
+  let index = null;
+  const getIndex = () => index || (index = dollarIndex(sql));
+  const startRe = new RegExp(SQL_STATEMENT_START + '(DELETE\\s+FROM\\b|TRUNCATE\\b)', 'gi');
+  for (const m of sql.matchAll(startRe)) {
+    if (/^TRUNCATE/i.test(m[2])) return true;
+    const prefix = m[1].trim();
+    const endToken = prefix === "'" || prefix === '"' || prefix.startsWith('$') ? prefix : null;
+    if (!deleteStatementHasWhere(sql, m.index + m[0].length, endToken, bs, getIndex())) return true;
+    if (work.exceeded) return true;
+  }
+  for (const m of sql.matchAll(SQL_PREPARE_NESTED_RE)) {
+    const close = findClosingParen(sql, m.index + m[0].length - 1);
+    if (close === -1) continue;
+    SQL_AFTER_PREPARE_RE.lastIndex = close + 1;
+    const a = SQL_AFTER_PREPARE_RE.exec(sql);
+    if (!a) continue;
+    if (/^TRUNCATE/i.test(a[1])) return true;
+    if (!deleteStatementHasWhere(sql, SQL_AFTER_PREPARE_RE.lastIndex, null, bs, getIndex())) return true;
+    if (work.exceeded) return true;
+  }
+  return work.exceeded;
+}
+
+// シェルのヒアドキュメントの中身を取り出す（閉じの語が無ければ最後まで）。
+// 終わりの語は引用符つき・バックスラッシュ始まりも認める。psql 命令の行（バックスラッシュで始まる行）は文の区切りとして ; に置き換える
+function heredocBodies(text) {
+  const bodies = [];
+  const lines = text.split('\n');
+  for (let i = 0; i < lines.length; i++) {
+    const m = /<<-?\s*(?:(["'])([A-Za-z_][A-Za-z0-9_]*)\1|\\?([A-Za-z_][A-Za-z0-9_]*))/.exec(lines[i]);
+    if (!m) continue;
+    const word = m[2] || m[3];
+    const body = [];
+    let j = i + 1;
+    while (j < lines.length && lines[j].trim() !== word) {
+      body.push(/^\s*\\/.test(lines[j]) ? ';' : lines[j]);
+      j++;
+    }
+    bodies.push(body.join('\n'));
+    i = j;
+  }
+  return bodies;
+}
+
+// 引用符を見分けずにコメントを除く（R6a と同じ切り方）。閉じの無い /* は、そこから後ろを残す
+function stripCommentsLegacy(body) {
+  let out = '';
+  let from = 0;
+  for (;;) {
+    const open = body.indexOf('/*', from);
+    if (open === -1) break;
+    const close = body.indexOf('*/', open + 2);
+    if (close === -1) break;
+    out += body.slice(from, open) + ' ';
+    from = close + 2;
+  }
+  return (out + body.slice(from)).replace(/--[^\n]*/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+// standard_conforming_strings を off にしている書き方（そのファイルでは普通の文字列もバックスラッシュが逃がし記号になる）
+const SCS_OFF_RE = /standard_conforming_strings['"\s,=]*(?:to\s+)?['"]?(?:off|false|no|f|n|0)\b/i;
+
+// 追加された文章が、表・列の削除または大量削除を含むか。
+// .sql は PostgreSQL の字句の決まりでコメントを除いてから当てる。
+// .sql 以外は、素の文と、引用符を見分けずにコメントを除いた文（R6a と同じ切り方）の両方に当て、
+// どちらかで当たれば検出する。python の文字列の改行の記号（\n など）を実際の改行・空白に直した文と、ヒアドキュメントの中身にも同じ当て方をする。
+// standard_conforming_strings を off にしているときは、バックスラッシュを逃がし記号として読む読み方でも当て、どちらかで当たれば検出する
+function sqlTextHasDestructiveStatementNew(text, file) {
+  const modes = SCS_OFF_RE.test(text) ? [false, true] : [false];
+  if (/\.sql$/i.test(file || '')) {
+    return modes.some(bs => sqlHasDestructiveStatement(normalizeSqlText(text, bs), bs));
+  }
+  const candidates = [
+    text,
+    text.replace(/\\([nrt])/g, (_, c) => (c === 't' ? ' ' : '\n')),
+    ...heredocBodies(text),
+  ];
+  return candidates.some(body => {
+    const plain = body.replace(/\s+/g, ' ').trim();
+    const legacyStripped = stripCommentsLegacy(body);
+    return modes.some(bs => sqlHasDestructiveStatement(plain, bs) || sqlHasDestructiveStatement(legacyStripped, bs));
+  });
+}
+
+// ── 下限の見分け（R6c の見分けを中身を変えずに残したもの）──────────────────────
+// 新しい見分けが R6c より弱くなる形を、形ごとの直しではなく作りで防ぐ。最終の判定は
+// 「新しい見分けで当たる、または下限の見分けで当たる」。
+// 関数名と定数名は lb（lower bound）を付けて新しい見分けと分けてある。読みの中身は origin/main（R6c）と同じ。
+// 足したのは、繰り返しの回数を数える仕掛け（lbTick）だけ。上限に届いたとき、深い入れ子などで例外が出たときは、検出に倒す（止める側）
+const LB_IDENT_CHAR = /[A-Za-z0-9_$\u0080-￿]/;
+const LB_DOLLAR_DELIM_SRC = String.raw`\$(?:[A-Za-z_\u0080-￿][A-Za-z0-9_\u0080-￿]*)?\$`;
+const LB_DOLLAR_DELIM_RE = new RegExp(LB_DOLLAR_DELIM_SRC, 'y');
+const LB_STATEMENT_START = String.raw`(^|[;()]|['"]|\b(?:BEGIN|THEN|ELSE|LOOP)\b|${LB_DOLLAR_DELIM_SRC}|\bEXPLAIN\s+(?:(?:ANALYZE|ANALYSE|VERBOSE)\s+)*|\bPREPARE\s+[^\s;()]+\s*(?:\([^()]*\)\s*)?AS\b)\s*`;
+const LB_ALTER_TABLE_RE = /\bALTER\s+(?:FOREIGN\s+)?TABLE\s+(?:IF\s+EXISTS\s+)?(?:ONLY\s+)?(?:"(?:[^"]|"")*"|[^\s;,()"])+\s*\*?/gi;
+
+// 繰り返しの回数の上限（入力の長さ×100＋6000 万。1 回の呼び出し全体で数える。時間の約束ではなく回数の上限）。届いたら lbTick が例外を投げ、呼び出し側が検出に倒す
+const lbWork = { used: 0, limit: 0 };
+const LB_LIMIT_ERROR = { lbLimit: true };
+function lbBegin(len) {
+  lbWork.used = 0;
+  lbWork.limit = 100 * len + 60000000;
+}
+function lbTick(n) {
+  lbWork.used += n;
+  if (lbWork.used > lbWork.limit) throw LB_LIMIT_ERROR;
+}
+
+function lbIsEscapeStringQuote(sql, i) {
+  if (sql[i] !== "'") return false;
+  const p = sql[i - 1];
+  if (p !== 'E' && p !== 'e') return false;
+  const pp = sql[i - 2];
+  return pp === undefined || !LB_IDENT_CHAR.test(pp);
+}
+
+function lbFindQuoteEnd(sql, i) {
+  const q = sql[i];
+  const esc = lbIsEscapeStringQuote(sql, i);
+  let j = i + 1;
+  while (j < sql.length) {
+    const c = sql[j];
+    if (esc && c === '\\') { j += 2; continue; }
+    if (c === q) {
+      if (sql[j + 1] === q) { j += 2; continue; }
+      lbTick(j - i);
+      return j + 1;
+    }
+    j++;
+  }
+  lbTick(j - i);
+  return -1;
+}
+
+function lbDollarDelimiterAt(sql, i) {
+  if (sql[i] !== '$') return null;
+  if (i > 0 && LB_IDENT_CHAR.test(sql[i - 1])) return null;
+  LB_DOLLAR_DELIM_RE.lastIndex = i;
+  const m = LB_DOLLAR_DELIM_RE.exec(sql);
+  return m ? m[0] : null;
+}
+
+function lbStripSqlComments(text) {
   let out = '';
   let i = 0;
   while (i < text.length) {
+    lbTick(1);
     const c = text[i];
     if (c === "'" || c === '"') {
-      let j = i + 1;
-      while (j < text.length && text[j] !== c) j++;
-      out += text.slice(i, j + 1);
-      i = j + 1;
+      const end = lbFindQuoteEnd(text, i);
+      const stop = end === -1 ? text.length : end;
+      out += text.slice(i, stop);
+      i = stop;
+    } else if (c === '$') {
+      const delim = lbDollarDelimiterAt(text, i);
+      if (!delim) {
+        out += c;
+        i++;
+        continue;
+      }
+      const close = text.indexOf(delim, i + delim.length);
+      lbTick((close === -1 ? text.length : close) - i);
+      if (close === -1) {
+        out += delim;
+        i += delim.length;
+      } else {
+        out += delim + lbStripSqlComments(text.slice(i + delim.length, close)) + delim;
+        i = close + delim.length;
+      }
     } else if (c === '-' && text[i + 1] === '-') {
       const j = text.indexOf('\n', i);
+      lbTick((j === -1 ? text.length : j) - i);
       out += ' ';
       i = j === -1 ? text.length : j;
     } else if (c === '/' && text[i + 1] === '*') {
-      const j = text.indexOf('*/', i + 2);
-      if (j === -1) {
+      let depth = 1;
+      let k = i + 2;
+      while (k < text.length && depth > 0) {
+        if (text[k] === '/' && text[k + 1] === '*') { depth++; k += 2; }
+        else if (text[k] === '*' && text[k + 1] === '/') { depth--; k += 2; }
+        else k++;
+      }
+      lbTick(k - i);
+      if (depth > 0) {
         out += c;
         i++;
       } else {
         out += ' ';
-        i = j + 2;
+        i = k;
       }
     } else {
       out += c;
       i++;
     }
   }
-  return out.replace(/\s+/g, ' ').trim();
+  return out;
 }
 
-// 文の始まり: 先頭・; ・かっこ・引用符・手続きのかたまりの始まりや分岐の句・$$ の直後
-const SQL_STATEMENT_START = String.raw`(^|[;()]|['"]|\b(?:BEGIN|THEN|ELSE|LOOP)\b|\$[A-Za-z_]*\$)\s*`;
+function lbNormalizeSqlText(text) {
+  return lbStripSqlComments(text).replace(/\s+/g, ' ').trim();
+}
 
-// DELETE 文の本体を走査し、かっこの外にある WHERE の有無を返す。
-// 終わりは ; ・対応のない閉じかっこ・（引用符の直後で始まったときは）同じ引用符
-function deleteStatementHasWhere(sql, from, quote) {
+function lbIsConstantCondition(cond) {
+  return cond
+    .replace(/\b(?:true|false|null|unknown|and|or|not|is)\b/gi, ' ')
+    .replace(/\b\d+(?:\.\d+)?\b/g, ' ')
+    .replace(/[=<>!+\-*/%^|&~\s]/g, '') === '';
+}
+
+function lbScanOutsideParens(sql, from, endToken, groups) {
   let depth = 0;
   let outside = '';
-  for (let i = from; i < sql.length; i++) {
+  let groupStart = -1;
+  let i = from;
+  while (i < sql.length) {
+    lbTick(1);
     const c = sql[i];
     if (c === ';') break;
-    if (quote && c === quote) break;
-    if (c === '(') { depth++; continue; }
+    if (endToken && sql.startsWith(endToken, i)) break;
+    if (c === '(') {
+      if (depth === 0) {
+        outside += ' (grp' + groups.length + ') ';
+        groupStart = i + 1;
+      }
+      depth++;
+      i++;
+      continue;
+    }
     if (c === ')') {
       if (depth === 0) break;
       depth--;
+      if (depth === 0) groups.push(sql.slice(groupStart, i));
+      i++;
       continue;
     }
+    if (c === "'" || c === '"') {
+      const end = lbFindQuoteEnd(sql, i);
+      if (depth === 0) outside += c === '"' ? ' ident ' : ' 0 ';
+      i = end === -1 ? sql.length : end;
+      continue;
+    }
+    if (c === '$') {
+      const delim = lbDollarDelimiterAt(sql, i);
+      if (delim) {
+        const close = sql.indexOf(delim, i + delim.length);
+        lbTick((close === -1 ? sql.length : close) - i);
+        if (close === -1) {
+          i += delim.length;
+        } else {
+          if (depth === 0) outside += ' 0 ';
+          i = close + delim.length;
+        }
+        continue;
+      }
+    }
     if (depth === 0) outside += c;
+    i++;
   }
-  return /\bWHERE\b/i.test(outside);
+  if (depth > 0) groups.push(sql.slice(groupStart));
+  return outside;
 }
 
-// ALTER TABLE の中で、列を消す略記（COLUMN を省いた削除）があるか。制約など列以外の削除は当てない
-function alterTableDropsColumnShorthand(sql) {
-  for (const m of sql.matchAll(/\bALTER\s+TABLE\s+(?:IF\s+EXISTS\s+)?(?:ONLY\s+)?[^\s;,()]+\s*\*?/gi)) {
+function lbDeleteStatementHasWhere(sql, from, endToken) {
+  let groups = [];
+  const outside = lbScanOutsideParens(sql, from, endToken, groups);
+  const m = /\bWHERE\b/i.exec(outside);
+  if (!m) return false;
+  let cond = outside.slice(m.index + m[0].length).split(/\bRETURNING\b/i)[0];
+  for (;;) {
+    lbTick(1);
+    const w = /^\s*\(grp(\d+)\)\s*$/.exec(cond);
+    if (!w) break;
+    const inner = groups[Number(w[1])];
+    groups = [];
+    cond = lbScanOutsideParens(inner, 0, null, groups);
+  }
+  return !lbIsConstantCondition(cond);
+}
+
+function lbAlterTableDropsColumnShorthand(sql) {
+  for (const m of sql.matchAll(LB_ALTER_TABLE_RE)) {
     let depth = 0;
     let action = '';
     const actions = [];
-    for (let i = m.index + m[0].length; i < sql.length; i++) {
+    let i = m.index + m[0].length;
+    while (i < sql.length) {
+      lbTick(1);
       const c = sql[i];
       if (c === ';') break;
+      if (c === "'" || c === '"') {
+        const end = lbFindQuoteEnd(sql, i);
+        const stop = end === -1 ? sql.length : end;
+        action += sql.slice(i, stop);
+        i = stop;
+        continue;
+      }
       if (c === '(') depth++;
       if (c === ')') {
         if (depth === 0) break;
@@ -150,9 +870,11 @@ function alterTableDropsColumnShorthand(sql) {
       if (c === ',' && depth === 0) {
         actions.push(action);
         action = '';
+        i++;
         continue;
       }
       action += c;
+      i++;
     }
     actions.push(action);
     if (actions.some(a => /^\s*DROP\s+(?!CONSTRAINT\b)\S/i.test(a))) return true;
@@ -160,32 +882,69 @@ function alterTableDropsColumnShorthand(sql) {
   return false;
 }
 
-// 1 つの文章（コメントを除く前か後のどちらか）が、表・列の削除または大量削除を含むか
-function sqlHasDestructiveStatement(sql) {
-  if (/\bDROP\s+(TABLE|COLUMN|SCHEMA|DATABASE)\b/i.test(sql)) return true;
-  if (alterTableDropsColumnShorthand(sql)) return true;
-  const startRe = new RegExp(SQL_STATEMENT_START + '(DELETE\\s+FROM\\b|TRUNCATE\\b)', 'gi');
+function lbSqlHasDestructiveStatement(sql) {
+  if (/\bDROP\s+(?:TABLE|COLUMN|SCHEMA|DATABASE|OWNED|FOREIGN\s+TABLE)\b/i.test(sql)) return true;
+  if (lbAlterTableDropsColumnShorthand(sql)) return true;
+  const startRe = new RegExp(LB_STATEMENT_START + '(DELETE\\s+FROM\\b|TRUNCATE\\b)', 'gi');
   for (const m of sql.matchAll(startRe)) {
+    lbTick(1);
     if (/^TRUNCATE/i.test(m[2])) return true;
     const prefix = m[1].trim();
-    const quote = prefix === "'" || prefix === '"' ? prefix : null;
-    if (!deleteStatementHasWhere(sql, m.index + m[0].length, quote)) return true;
+    const endToken = prefix === "'" || prefix === '"' || prefix.startsWith('$') ? prefix : null;
+    if (!lbDeleteStatementHasWhere(sql, m.index + m[0].length, endToken)) return true;
   }
   return false;
 }
 
-// 追加された文章が、表・列の削除または大量削除を含むか。
-// .sql は引用符を見分ける切り方でコメントを除いてから当てる。
-// .sql 以外は、素の文と、引用符を見分けずにコメントを除いた文（R6a と同じ切り方）の両方に当て、どちらかで当たれば検出する
+function lbHeredocBodies(text) {
+  const bodies = [];
+  const lines = text.split('\n');
+  for (let i = 0; i < lines.length; i++) {
+    const m = /<<-?\s*(["']?)([A-Za-z_][A-Za-z0-9_]*)\1/.exec(lines[i]);
+    if (!m) continue;
+    const body = [];
+    let j = i + 1;
+    while (j < lines.length && lines[j].trim() !== m[2]) {
+      body.push(lines[j]);
+      j++;
+    }
+    bodies.push(body.join('\n'));
+    i = j;
+  }
+  return bodies;
+}
+
+// R6c の sqlTextHasDestructiveStatement の中身。繰り返しの回数は 1 回の呼び出し全体で数える
+function lbSqlTextHasDestructiveStatementCore(text, file) {
+  lbBegin(text.length);
+  if (/\.sql$/i.test(file || '')) {
+    return lbSqlHasDestructiveStatement(lbNormalizeSqlText(text));
+  }
+  const candidates = [text, text.replace(/\\[nrt]/g, ' '), ...lbHeredocBodies(text)];
+  return candidates.some(body => {
+    const plain = body.replace(/\s+/g, ' ').trim();
+    const legacyStripped = body
+      .replace(/\/\*[\s\S]*?\*\//g, ' ')
+      .replace(/--[^\n]*/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    return lbSqlHasDestructiveStatement(plain) || lbSqlHasDestructiveStatement(legacyStripped);
+  });
+}
+
+// 下限の見分け。上限に届いたとき・例外（入れ子が深すぎる等）のときは検出に倒す
+function lbSqlTextHasDestructiveStatement(text, file) {
+  try {
+    return lbSqlTextHasDestructiveStatementCore(text, file);
+  } catch (e) {
+    return true;
+  }
+}
+
+// 最終の判定: 新しい見分けで当たる、または下限の見分け（R6c と同じ読み）で当たる。
+// 新しい見分けが R6c より弱くなる形があっても、下限の見分けが検出に戻す
 function sqlTextHasDestructiveStatement(text, file) {
-  if (/\.sql$/i.test(file || '')) return sqlHasDestructiveStatement(normalizeSqlText(text));
-  const plain = text.replace(/\s+/g, ' ').trim();
-  const legacyStripped = text
-    .replace(/\/\*[\s\S]*?\*\//g, ' ')
-    .replace(/--[^\n]*/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-  return sqlHasDestructiveStatement(plain) || sqlHasDestructiveStatement(legacyStripped);
+  return sqlTextHasDestructiveStatementNew(text, file) || lbSqlTextHasDestructiveStatement(text, file);
 }
 
 // diff をファイルごとに分け、ファイル名と、追加行だけを改行でつないだ文章にする
@@ -1151,6 +1910,7 @@ module.exports = {
   validateMaintenanceSection,
   hasPoOnlyExceptionPath,
   migrationsContainDropStatement,
+  sqlTextHasDestructiveStatement,
   requiresPoOnlyGo,
 };
 
