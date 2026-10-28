@@ -70,7 +70,7 @@ ADR-136 §承認フロー v2 の「④ GO 権限は PO（Shingo）単独」の�
 
 この節は決定（「例外」節の 7 項目）を変えない。「例外」節の後半にある「機械で見る範囲」の説明が、その後の検査の強化（docs/handoff/rule-enforcement/design.md の R6a〜R6d、PR #4823・#4826・#4829・#4830）で実装より狭くなったため、今の実装を記す。判定の正本は `scripts/check-process-artifacts.js` の `requiresPoOnlyGo` である。
 
-- 見る対象のファイル: `migrations/` 配下に加え、migration を流す scripts の Python とシェル（`isMigrationPath`）。
+- 見る対象のファイル: `migrations/` 配下に加え、`scripts/migrate_*.py` と `scripts/run_all_migrations.sh`（`isMigrationPath`）。
 - 削除の文: 「例外」節の 1 項目目に挙げた表と列の削除に加え、同じく構造を消す文（スキーマ・データベース・外部テーブル等の削除、列の語を省いた列の削除）も本人 GO が要る側に倒す。
 - 大量 DELETE: migration の中の TRUNCATE と、条件の無い DELETE（中身の無い条件を含む）は機械で見て本人 GO が要る側に倒す。条件のある DELETE の件数は見ない（従来どおり手順で担保）。
 - workflow-lint: 拡張子 `.yaml` と表記のゆれも同じ扱い。
