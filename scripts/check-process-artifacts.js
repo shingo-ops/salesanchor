@@ -157,11 +157,34 @@ function nextDollar(index, delim, from, limit) {
   return lo < list.length && list[lo] + delim.length <= limit ? list[lo] : -1;
 }
 
+// ブロックコメントの始まりの位置 → 入れ子を数えて閉じる位置の直後。1 回の読みで全部求める（閉じの無い始まりは載らない）
+function blockCommentMap(text) {
+  const map = new Map();
+  const stack = [];
+  let p = 0;
+  let o = text.indexOf('/*');
+  let c = text.indexOf('*/');
+  for (;;) {
+    if (o !== -1 && o < p) o = text.indexOf('/*', p);
+    if (c !== -1 && c < p) c = text.indexOf('*/', p);
+    if (o === -1 && c === -1) break;
+    if (c === -1 || (o !== -1 && o < c)) {
+      stack.push(o);
+      p = o + 2;
+    } else {
+      if (stack.length > 0) map.set(stack.pop(), c + 2);
+      p = c + 2;
+    }
+  }
+  return map;
+}
+
 // SQL のコメントを除く。引用符・E 付き文字列・ドル引用の中の -- や /* はコメントの始まりと見なさない。
 // ドル引用の中身は実行される文として、その範囲だけで同じ読み方で読み直す（入れ子は繰り返しで読む）。
 // ブロックコメントは入れ子を数える。閉じの無い引用・コメントは、その範囲の残りを素の文のまま残す（止める側）
 function stripSqlComments(text, bs) {
   const index = dollarIndex(text);
+  let comments = null;
   const out = [];
   const frames = [];
   let lo = 0;
@@ -211,15 +234,10 @@ function stripSqlComments(text, bs) {
       i = j;
       run = j;
     } else if (c === '/' && text[i + 1] === '*') {
-      let depth = 1;
-      let k = i + 2;
-      while (k < hi && depth > 0) {
-        if (text[k] === '/' && text[k + 1] === '*') { depth++; k += 2; }
-        else if (text[k] === '*' && text[k + 1] === '/') { depth--; k += 2; }
-        else k++;
-      }
-      if (depth > 0) {
-        i = hi; // 閉じが無い: この範囲の残りは素の文のまま
+      if (!comments) comments = blockCommentMap(text);
+      const k = comments.get(i);
+      if (k === undefined || k > hi) {
+        i++; // 閉じが無い: 素の文のまま 1 字進めて読み続ける（後ろの行コメントの除去と引用の読みも続ける）
       } else {
         if (i > run) out.push(text.slice(run, i));
         out.push(' ');
@@ -437,15 +455,18 @@ function deleteStatementHasWhere(sql, from, endToken, bs, index) {
 const ALTER_TABLE_RE = /\bALTER\s+(?:FOREIGN\s+)?TABLE\s+(?:IF\s+EXISTS\s+)?(?:ONLY\s+)?(?:"(?:[^"]|"")*"|[^\s;,()"])+\s*\*?/gi;
 
 function alterTableDropsColumnShorthand(sql, bs) {
-  for (const m of sql.matchAll(ALTER_TABLE_RE)) {
+  const found = [...sql.matchAll(ALTER_TABLE_RE)];
+  for (let n = 0; n < found.length; n++) {
+    const m = found[n];
+    // 次の ALTER TABLE の始まり（引用符の外）で読みを止める。各文字を 1 回しか読まない
+    const nextStart = n + 1 < found.length ? found[n + 1].index : sql.length;
     let depth = 0;
     let action = '';
     const actions = [];
     let i = m.index + m[0].length;
     while (i < sql.length) {
       const c = sql[i];
-      if (c === ';') break;
-      if (--work.left < 0) { work.exceeded = true; return false; }
+      if (c === ';' || i >= nextStart) break;
       if (c === "'" || c === '"') {
         const end = findQuoteEnd(sql, i, bs, 0, sql.length);
         const stop = end === -1 ? sql.length : end;
@@ -1526,6 +1547,7 @@ module.exports = {
   validateMaintenanceSection,
   hasPoOnlyExceptionPath,
   migrationsContainDropStatement,
+  sqlTextHasDestructiveStatement,
   requiresPoOnlyGo,
 };
 

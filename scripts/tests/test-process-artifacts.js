@@ -36,6 +36,7 @@ const {
   validateDesignDoc,
   hasPoOnlyExceptionPath,
   migrationsContainDropStatement,
+  sqlTextHasDestructiveStatement,
   requiresPoOnlyGo,
 } = require(SCRIPT);
 
@@ -772,6 +773,13 @@ const R6D_CASES = [
   ['○ 2: ルールの DO ALSO の WHERE なし DELETE', 'migrations/r6d_q.sql', 'CREATE RULE r AS ON INSERT TO v DO ALSO DELETE FROM t;\n', true],
   ['× 2: かっこが入れ子の型指定の準備文でも WHERE のある DELETE', 'migrations/r6d_r.sql', 'PREPARE p (numeric(10,2)) AS DELETE FROM t WHERE id = $1;\n', false],
   ['× 2: ルールの DO ALSO の WHERE のある DELETE', 'migrations/r6d_s.sql', 'CREATE RULE r AS ON INSERT TO v DO ALSO DELETE FROM t WHERE id = 1;\n', false],
+  ['○ 2: ルールの DO INSTEAD でかっこに複数の文を並べた中の WHERE なし DELETE', 'migrations/r6d_v.sql', 'CREATE RULE r AS ON UPDATE TO v DO INSTEAD (DELETE FROM t WHERE id = 1; DELETE FROM u);\n', true],
+  ['× 2: ルールの DO INSTEAD でかっこに複数の文を並べても全部に WHERE がある', 'migrations/r6d_w.sql', 'CREATE RULE r AS ON UPDATE TO v DO INSTEAD (DELETE FROM t WHERE id = 1; DELETE FROM u WHERE id = 2);\n', false],
+  ['× 1: OR の枝がすべて列を参照する条件', 'migrations/r6d_x.sql', 'DELETE FROM t WHERE (a OR b) OR (c AND d = 1);\n', false],
+  // 3 ドル引用のタグは大文字小文字を区別する
+  ['○ 3: 大文字のタグのドル引用の中の WHERE なし DELETE', 'migrations/r6d_y.sql', 'DO $A$ BEGIN DELETE FROM t; END $A$;\n', true],
+  ['× 3: 大文字小文字違いのタグでは閉じず、同じタグで閉じたあとの行コメントは本物のコメント', 'migrations/r6d_z.sql', 'SELECT $A$ x $a$ y $A$; -- DROP TABLE t\n', false],
+  ['○ 3: 閉じの無いブロックコメントの後ろの行コメントも R6c と同じに扱う（コメントの外の表削除）', 'migrations/r6d_za.sql', '/* a\nSELECT 1; -- memo\nDROP TABLE t;\n', true],
   // 4 standard_conforming_strings
   ["○ 3: standard_conforming_strings を off にした同じ行の \\' の後ろ", 'migrations/r6d_t.sql', "SET standard_conforming_strings = off; SELECT 'a\\'--'; DROP TABLE x;\n", true],
   ["× 3: 設定が無ければ文字列が閉じて後ろがコメント", 'migrations/r6d_u.sql', "SELECT 'a\\'-- DROP TABLE x;\n", false],
@@ -794,8 +802,10 @@ test('R6d 長い入力: 入れ子の深いかっこの条件が 1 秒以内に�
   const n = 10000;
   const sql = 'DELETE FROM t WHERE ' + '('.repeat(n) + 'true' + ')'.repeat(n) + ';\n';
   const t0 = Date.now();
-  assert.strictEqual(detectInTempRepo({ 'migrations/r6d_deep1.sql': sql }), true);
-  assert.ok(Date.now() - t0 < 1000);
+  const result = sqlTextHasDestructiveStatement(sql, 'migrations/r6d_deep1.sql');
+  const ms = Date.now() - t0;
+  assert.strictEqual(result, true);
+  assert.ok(ms < 1000, `${ms}ms`);
 });
 
 test('R6d 長い入力: 入れ子の深いドル引用が 1 秒以内に終わり例外を出さない', () => {
@@ -803,15 +813,21 @@ test('R6d 長い入力: 入れ子の深いドル引用が 1 秒以内に終わ�
   let open = '';
   let close = '';
   for (let i = 0; i < n; i++) { open += `$t${i}$ `; close = ` $t${i}$` + close; }
+  const sql = open + 'SELECT 1' + close + ';\n';
   const t0 = Date.now();
-  assert.strictEqual(typeof detectInTempRepo({ 'migrations/r6d_deep2.sql': open + 'SELECT 1' + close + ';\n' }), 'boolean');
-  assert.ok(Date.now() - t0 < 1000);
+  const result = sqlTextHasDestructiveStatement(sql, 'migrations/r6d_deep2.sql');
+  const ms = Date.now() - t0;
+  assert.strictEqual(result, false);
+  assert.ok(ms < 1000, `${ms}ms`);
 });
 
 test('R6d 長い入力: 閉じの無いブロックコメントが大量にあっても 1 秒以内に終わる', () => {
+  const sql = '/*'.repeat(20000) + '\n';
   const t0 = Date.now();
-  assert.strictEqual(typeof detectInTempRepo({ 'migrations/r6d_deep3.sql': '/*'.repeat(20000) + '\n' }), 'boolean');
-  assert.ok(Date.now() - t0 < 1000);
+  const result = sqlTextHasDestructiveStatement(sql, 'migrations/r6d_deep3.sql');
+  const ms = Date.now() - t0;
+  assert.strictEqual(result, false);
+  assert.ok(ms < 1000, `${ms}ms`);
 });
 
 test('R6b GO発行者: PO の名前入りで委任語により止めたとき、書き写した注記は別の欄に書くと案内する', () => {
