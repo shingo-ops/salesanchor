@@ -45,21 +45,23 @@
 調べた人: 担当（Sonnet）が origin/main を読んだ。設計担当は `frontend/src/tokens.css:177,238,279` の3つを自分で確かめた。
 
 - 記録の正本: `docs/specs/design-system/visual-language/benchmark/README.md`（Android 実機で WhatsApp を測った。PO 決定 2026-10-11: dp の値をそのまま px に使う）、寸法は同じ場所の `whatsapp-reproduction-spec.md`。
-- 「Android 側で大きさを調整させた」という文言は記録に無い。記録にあるのは「Android で WhatsApp を測り、SA の画面の値をその数に合わせた」こと。
+- 記録にあるのは、Android 実機で WhatsApp を測ったこと（`docs/specs/design-system/visual-language/benchmark/README.md:7-9`）と、dp の値を px として採用する PO 決定（同 :35）。合わせ終えた部位と、まだの部位は下の表のとおり。
+- 大きさを Android 側で調整させたという記述は見つからない。探した範囲: `docs/specs/design-system/visual-language/` に「調整」は0件（審査役 2026-10-29）。担当は docs/ と frontend/ を Android・アンドロイド・Termux・調整・実機の語で探して該当なし。
 
-| 部位 | WhatsApp 実測 | 今の SA（スマホ） | 判定 |
+| 部位 | WhatsApp 実測 | 今の SA（スマホ）と出典 | 判定 |
 |---|---|---|---|
-| 一覧の行の高さ | 76dp | 76px（`--min-height-conv-item-mobile`） | 一致 |
-| 一覧のアバター | 48dp | 48px | 一致 |
-| 一覧の右余白 | 16dp | 16px | 一致 |
-| 上の帯の高さ | 56dp | 56px | 一致 |
-| 戻るボタン | 48dp | 48px | 一致 |
+| 一覧の行の高さ | 76dp | 76px（`frontend/src/tokens.css:279`） | 一致 |
+| 一覧のアバター | 48dp | 48px（`frontend/src/tokens.css:238`） | 一致 |
+| 一覧の右余白 | 16dp | 16px（`frontend/src/pages/inbox/InboxPage.css:1243`） | 一致 |
+| 上の帯の高さ | 56dp | 56px（`frontend/src/tokens.css:177`） | 一致 |
+| 戻るボタン | 48dp | 48px（`frontend/src/pages/inbox/InboxPage.css:1165-1166`、`frontend/src/tokens.css:467`） | 一致 |
 | 一覧の名前・時刻・本文 | 文字の大きさは測れていない | 16px・12px・12px | 比べられない |
-| 吹き出しの角 | 約10dp＋尾 | PC と同じ値のまま | 不一致 |
-| 吹き出しの余白 | 上下5・左17dp | 8px 12px | 不一致 |
+| 吹き出しの角 | 約10dp＋尾 | PC と同じ値のまま（`frontend/src/tokens.css:98-99`、`frontend/src/pages/inbox/InboxPage.css:516,522`） | 不一致 |
+| 吹き出しの内側の余白 | 2dp | 8px 12px | 不一致 |
+| 吹き出しの置き場（行の左から・上下） | 17dp・5dp | 【未確認】 | 比べられない |
 | 吹き出しの中の時刻 | 本文と同じ行 | 吹き出しの下 | 不一致 |
 | 入力欄の帯・枠の高さ | 55.7dp・48.3dp | スマホ用の指定なし | 不一致 |
-| 送信ボタン | 48dp | 44px | 不一致（44px の基準を選んだ） |
+| 送信ボタン | 48dp | 44px（`frontend/src/pages/inbox/InboxPage.css:1190-1193`、`frontend/src/tokens.css:163`） | 不一致（44px の基準を選んだ） |
 
 - 【未確認】吹き出しと入力欄の指定が `frontend/src/pages/inbox/InboxPage.css` の外（会話の部品の別の CSS）にあるか。
 - 今回の「⋯」メニューと統合の窓は、上の不一致の部位に触らない。

@@ -23,9 +23,9 @@ recon: [docs/handoff/inbox-brushup/lead-merge-recon.md](../../../handoff/inbox-b
 ## 4. recon
 
 [lead-merge-recon.md](../../../handoff/inbox-brushup/lead-merge-recon.md)。要点:
-- 付け替えは4表だけ（`backend/app/routers/leads.py:3073-3119`）。conversation_logs は RESTRICT（`migrations/20260715_100000_add_conversation_logs_lead_fk.sql:19-20`）で、会話の記録を持つリードを消す方にすると 500。
+- 付け替えは4表だけ（`backend/app/routers/leads.py:3073-3119`）。conversation_logs は RESTRICT（`migrations/20260715_100000_add_conversation_logs_lead_fk.sql:19-22`）で、会話の記録を持つリードを消す方にすると 500。
 - 統合のあと `publish_leads_update` を呼ばない（`backend/app/routers/leads.py:3157-3158`）。作成・更新・削除は呼ぶ（`backend/app/routers/leads.py:482-483`、`backend/app/routers/leads.py:711-712`、`backend/app/routers/leads.py:790-791`）。
-- 受信箱は、開いている相手が消えても選択を外さない（`frontend/src/pages/inbox/useInboxState.ts:240`、自分で消したときだけ外す `frontend/src/pages/inbox/useInboxState.ts:994-1002`）。
+- 受信箱は、開いている相手が消えても選択を外さない（`frontend/src/pages/inbox/useInboxState.ts:240`、外すのは自分で除外・削除したときだけ `frontend/src/pages/inbox/useInboxState.ts:983-1002`）。
 - カルテ下の帯は相手が lead か existing_customer のときだけ出る（`frontend/src/pages/inbox/InboxKartePanel.tsx` ActionBar の `if (!primaryLabel) return null`）。
 - 権限の判定は `frontend/src/hooks/usePermissions.ts:16`（`usePermissions()`、`hasPermission` は `:39-`）。受信箱でも `frontend/src/pages/inbox/InboxMessageThread.tsx:103` で使っている。リードの一覧は `frontend/src/pages/leads/LeadsPage.tsx:506` で `hasPermission("leads.delete") && l.status === "lead"` のときだけ統合を出す。
 - 統合の窓 `frontend/src/components/MergeLeadModal.tsx` は loser を受け取り（`frontend/src/components/MergeLeadModal.tsx:36-43`）、成功で `onMerged(masterId)` を呼ぶ（`frontend/src/components/MergeLeadModal.tsx:122`）。素の `<button>` が2つ（`frontend/src/components/MergeLeadModal.tsx:247`、`frontend/src/components/MergeLeadModal.tsx:306-310`）。
@@ -77,7 +77,7 @@ recon: [docs/handoff/inbox-brushup/lead-merge-recon.md](../../../handoff/inbox-b
    - 下見が書き込まないこと1件、下見と実行の件数が一致すること1件
    - 異常系3件（自分自身・loser が lead でない・無い番号）
    - 漏れの見張り1件（静的な検査。DB を使わない）: `backend/app/services/tenant.py` と migrations/ 配下の SQL の本文から、`lead_id` 列を作る表（CREATE TABLE の中の `lead_id` 列と、`ALTER TABLE … ADD COLUMN … lead_id`）の表名を集める。その集合から「後で消された表」の除外の一覧（表名と DROP の migration のファイル名を対で持つ）を引いたものが、13表の定数と一致する。集めた表名と除外の一覧は実装の担当が報告に全部出し、設計担当が確かめる。
-   - 試験の DB の作り方: `scripts/check_test_schema_dup.py` が試験の中の CREATE TABLE を止めるので、表は手で書かない。手本は `backend/tests/test_permission_resolution_pg.py`（`backend/tests/rls_bootstrap.py` の `bootstrap_tenant_schema` で `backend/app/services/tenant.py` の本物の定義からテナントを作り、`_apply_migration_on_conn` で migration を流す）。13表のうち作られない表があれば、その表を作る migration を `_apply_migration_on_conn` で流す。統合は API（`POST /api/v1/leads/{master_id}/merge`）を呼んで確かめる。
+   - 試験の DB の作り方: `scripts/check_test_schema_dup.py` が試験の中の CREATE TABLE を止めるので、表は手で書かない。手本は `backend/tests/test_permission_resolution_pg.py`（`backend/tests/rls_bootstrap.py` の `bootstrap_tenant_schema` で `backend/app/services/tenant.py` の本物の定義からテナントを作り、`_apply_migration_on_conn` で migration を流す）。API の呼び方の手本は `backend/tests/test_priority_prospects_pg_rls.py:103,137-139`。13表のうち作られない表があれば、その表を作る migration を `_apply_migration_on_conn` で流す。統合は API（`POST /api/v1/leads/{master_id}/merge`）を呼んで確かめる。
 2. 画面 frontend/tests-e2e/visual-language/inbox-lead-merge.spec.ts（新規。`frontend/tests-e2e/visual-language/inbox-helpers.ts` の作り物のデータを使う。幅 390・768・1280 で動く）:
    - 権限ありで「ほかのリードとまとめる」が出る／権限なしで出ない（K6）
    - 幅 390 でメニュー項目・窓のボタンの高さ 44px 以上、`scrollWidth <= clientWidth`（K7）

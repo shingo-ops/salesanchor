@@ -29,7 +29,7 @@
 | contacts | FK（`backend/app/services/tenant.py:241,457`） | 付け替える | 移る |
 | meta_messages | FK ON DELETE SET NULL（`backend/app/services/tenant.py:1025`） | 付け替える | 移る |
 | lead_channels | FK ON DELETE CASCADE（`backend/app/services/tenant.py:1047`） | 付け替える | 移る |
-| conversation_logs | FK ON DELETE RESTRICT（`migrations/20260715_100000_add_conversation_logs_lead_fk.sql:19-20`） | 付け替えない | **削除が止まり 500** |
+| conversation_logs | FK ON DELETE RESTRICT（`migrations/20260715_100000_add_conversation_logs_lead_fk.sql:19-22`） | 付け替えない | **削除が止まり 500** |
 | quotes | FK（`backend/app/services/tenant.py:798`） | 付け替えない | 行があれば止まる |
 | deal_close_reasons | FK・UNIQUE(lead_id, reason_id)（`backend/app/services/tenant.py:835,838`） | 付け替えない | 行があれば止まる |
 | lead_attachments | FK ON DELETE CASCADE（`migrations/20260902_100000_create_lead_attachments.sql`） | 付け替えない | 黙って消える |
@@ -49,7 +49,7 @@
 
 ## 4. 画面側【事実】
 
-- 統合の窓: `frontend/src/components/MergeLeadModal.tsx`。loser を受け取る形（`frontend/src/components/MergeLeadModal.tsx:35-43`）。送信は `frontend/src/components/MergeLeadModal.tsx:118`。呼び出し元はリードの一覧の1か所。
+- 統合の窓: `frontend/src/components/MergeLeadModal.tsx`。loser を受け取る形（`frontend/src/components/MergeLeadModal.tsx:36-43`）。送信は `frontend/src/components/MergeLeadModal.tsx:118`。呼び出し元はリードの一覧の1か所。
 - 受信箱のカルテ下の帯: `frontend/src/pages/inbox/InboxKartePanel.tsx:261`（ActionBar）、`frontend/src/pages/inbox/InboxKartePanel.tsx:370-375`（相手が lead / existing_customer のときだけ出す）、「⋯」は手作りの並び（`frontend/src/pages/inbox/InboxKartePanel.tsx:385-430`）
 - スマホではカルテが画面いっぱいに開く: `frontend/src/pages/inbox/InboxPage.css:1332-1350`
 - 金型のメニュー: `frontend/src/components/ContextMenu.tsx`（項目の型 `{key,label,icon?,onSelect,danger?}`、区切り線の型は無い）
