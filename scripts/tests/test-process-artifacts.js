@@ -780,6 +780,12 @@ const R6D_CASES = [
   ['○ 3: 大文字のタグのドル引用の中の WHERE なし DELETE', 'migrations/r6d_y.sql', 'DO $A$ BEGIN DELETE FROM t; END $A$;\n', true],
   ['× 3: 大文字小文字違いのタグでは閉じず、同じタグで閉じたあとの行コメントは本物のコメント', 'migrations/r6d_z.sql', 'SELECT $A$ x $a$ y $A$; -- DROP TABLE t\n', false],
   ['○ 3: 閉じの無いブロックコメントの後ろの行コメントも R6c と同じに扱う（コメントの外の表削除）', 'migrations/r6d_za.sql', '/* a\nSELECT 1; -- memo\nDROP TABLE t;\n', true],
+  // 引用符の中に ALTER TABLE の字がある形でも、列を消す略記を見逃さない
+  ['○ 6: 既定値の文字列に ALTER TABLE と 2 語があり、その後ろに列の削除（.sql）', 'migrations/r6d_zb.sql', "ALTER TABLE t ALTER COLUMN a SET DEFAULT 'alter table x y', DROP b;\n", true],
+  ['○ 6: 引用符つきの名前に ALTER TABLE があり、その後ろに列の削除（.sql）', 'migrations/r6d_zc.sql', 'ALTER TABLE t ADD COLUMN "ALTER TABLE q r" int, DROP b;\n', true],
+  ['○ 6: 既定値の文字列に ALTER TABLE と 2 語があり、その後ろに列の削除（python）', 'scripts/migrate_zz_r6d5.py', 'op.execute("ALTER TABLE t ALTER COLUMN a SET DEFAULT \'ALTER TABLE x y\', DROP b")\n', true],
+  ['× 6: 列以外（制約）の削除だけの ALTER TABLE', 'migrations/r6d_zd.sql', 'ALTER TABLE t DROP CONSTRAINT k;\n', false],
+  ['× 6: ALTER TABLE が 400 個並ぶ python の migration（列の削除なし）', 'scripts/migrate_zz_r6d6.py', 'def upgrade():\n' + 'op.execute("ALTER TABLE t ADD COLUMN c int")\n'.repeat(400), false],
   // 4 standard_conforming_strings
   ["○ 3: standard_conforming_strings を off にした同じ行の \\' の後ろ", 'migrations/r6d_t.sql', "SET standard_conforming_strings = off; SELECT 'a\\'--'; DROP TABLE x;\n", true],
   ["× 3: 設定が無ければ文字列が閉じて後ろがコメント", 'migrations/r6d_u.sql', "SELECT 'a\\'-- DROP TABLE x;\n", false],

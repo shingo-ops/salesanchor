@@ -458,8 +458,9 @@ function alterTableDropsColumnShorthand(sql, bs) {
   const found = [...sql.matchAll(ALTER_TABLE_RE)];
   for (let n = 0; n < found.length; n++) {
     const m = found[n];
-    // 次の ALTER TABLE の始まり（引用符の外）で読みを止める。各文字を 1 回しか読まない
-    const nextStart = n + 1 < found.length ? found[n + 1].index : sql.length;
+    // 次の ALTER TABLE の始まり（引用符の外）で読みを止める。引用符を飛ばして越えた当たりは捨て、後ろの最初の当たりに取り直す
+    let nx = n + 1;
+    let nextStart = nx < found.length ? found[nx].index : sql.length;
     let depth = 0;
     let action = '';
     const actions = [];
@@ -472,6 +473,8 @@ function alterTableDropsColumnShorthand(sql, bs) {
         const stop = end === -1 ? sql.length : end;
         action += sql.slice(i, stop);
         i = stop;
+        while (nx < found.length && found[nx].index < i) nx++;
+        nextStart = nx < found.length ? found[nx].index : sql.length;
         continue;
       }
       if (c === '(') depth++;
