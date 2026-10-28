@@ -1,5 +1,6 @@
 import { useEffect, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import { CloseIcon } from './icons';
 
 export interface DrawerProps {
@@ -14,6 +15,7 @@ export interface DrawerProps {
  * Closes on overlay click and Escape.
  */
 export function Drawer({ open, onClose, title, children }: DrawerProps) {
+  const { t } = useTranslation();
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -29,7 +31,7 @@ export function Drawer({ open, onClose, title, children }: DrawerProps) {
       <aside className={`sa-drawer${open ? ' sa-drawer--open' : ''}`} role="dialog" aria-modal="true" aria-hidden={!open}>
         <header className="sa-drawer__header">
           <span className="sa-drawer__title">{title}</span>
-          <button onClick={onClose} aria-label="Close" className="sa-drawer__close">
+          <button onClick={onClose} aria-label={t('common.close')} className="sa-drawer__close">
             <CloseIcon className="sa-drawer__close-icon" />
           </button>
         </header>

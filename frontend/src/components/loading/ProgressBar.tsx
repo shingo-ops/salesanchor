@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import { CheckIcon } from './icons';
 
 export type ProgressVariant = 'linear' | 'striped' | 'circular';
@@ -18,6 +19,7 @@ const clamp = (n: number) => Math.max(0, Math.min(100, Math.round(n)));
  * (CSV import, upload, bulk shipping). Shows success color + check at 100%.
  */
 export function ProgressBar({ value, variant = 'linear', label }: ProgressBarProps) {
+  const { t } = useTranslation();
   const pct = clamp(value);
   const done = pct >= 100;
 
@@ -48,7 +50,7 @@ export function ProgressBar({ value, variant = 'linear', label }: ProgressBarPro
       {label && (
         <div className="sa-progress__head">
           <span className="sa-progress__label" data-done={done ? 'true' : undefined}>
-            {done ? 'Done' : label}
+            {done ? t('common.done') : label}
           </span>
           <span className="sa-progress__pct" data-done={done ? 'true' : undefined}>
             {done ? <CheckIcon className="sa-progress__check" /> : `${pct}%`}

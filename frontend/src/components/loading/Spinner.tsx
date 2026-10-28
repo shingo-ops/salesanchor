@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+import { useTranslation } from 'react-i18next';
 import '../../loading-animations.css';
 
 export type SpinnerSize = 'sm' | 'md' | 'lg';
@@ -23,10 +24,11 @@ export interface SpinnerProps {
  * Circular loading indicator. Use for partial loads: inside modals,
  * while a table refetches, search-result waits.
  */
-export function Spinner({ size = 'md', color, onAccent, tone = 'default', decorative = false, className, label = 'Loading' }: SpinnerProps) {
+export function Spinner({ size = 'md', color, onAccent, tone = 'default', decorative = false, className, label }: SpinnerProps) {
+  const { t } = useTranslation();
   const style = tone !== 'inherit' && color ? ({ borderTopColor: color } as CSSProperties) : undefined;
   const cls = ['sa-spinner', `sa-spinner--${size}`, onAccent ? 'sa-spinner--on-accent' : '', tone === 'inherit' ? 'sa-spinner--inherit' : '', className]
     .filter(Boolean)
     .join(' ');
-  return <span role={decorative ? undefined : "status"} aria-label={decorative ? undefined : label} aria-hidden={decorative || undefined} className={cls} style={style} />;
+  return <span role={decorative ? undefined : "status"} aria-label={decorative ? undefined : (label ?? t('common.loading'))} aria-hidden={decorative || undefined} className={cls} style={style} />;
 }

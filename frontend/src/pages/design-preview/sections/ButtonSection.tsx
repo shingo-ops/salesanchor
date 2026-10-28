@@ -3,6 +3,7 @@
  * §3 ボタン — 状態
  * §4 アイコンボタン — 実例
  */
+import { useTranslation } from "react-i18next";
 import { Button } from "../../../components/Button";
 import { X, PAGE_ICONS, INBOX_ACTION_ICONS, NAV_ICONS } from "../../../constants/icons";
 import { ICON } from "../../../constants/iconSizes";
@@ -17,6 +18,7 @@ const VARIANT_LABEL: Record<string, string> = {
 };
 
 export function ButtonSection() {
+  const { t } = useTranslation();
   return (
     <>
       {/* §2: 種類 × サイズ */}
@@ -77,8 +79,8 @@ export function ButtonSection() {
         <div className="dp-row">
           <span className="dp-row-label">読み込み中 (loading)</span>
           <div className="dp-row-items">
-            <Button variant="primary" loading>保存中...</Button>
-            <Button variant="secondary" loading>読み込み中</Button>
+            <Button variant="primary" loading>{t("common.saving")}</Button>
+            <Button variant="secondary" loading>{t("common.loading")}</Button>
           </div>
         </div>
         <div className="dp-row">
