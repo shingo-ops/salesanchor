@@ -273,6 +273,8 @@ PR をそのまま revert すれば元に戻る。新設したトークンは無
 
 ## ⑪ 維持の仕組み
 
+守り手: `frontend/tests-e2e/visual-language/inventory-toolbar-mercari.spec.ts`（D1〜D12・CI の画面検査で毎回走る）
+
 - D1〜D13 を CI の画面検査に常設する（`visual-language/` 配下に置く。直下に置くと1本も走らない）。
 - D12（PC 不変）を入れることで、以後の便で PC を壊したらすぐ赤になる。
 - D10（高さ112px以下）で、文言が伸びて3行になる退行を捕まえる。
