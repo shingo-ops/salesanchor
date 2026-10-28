@@ -75,7 +75,7 @@ state は `draft`（打っている途中）・`appliedQuery`（確定）・`sea
 
 ## 5. 数と大きさ
 
-- 本番の行数は **698件**（2026-10-28 実測）。1ページ50件（`viewerFilter.ts:9` の `PER_PAGE`）。
+- 本番の行数は **698件**（2026-10-28 実測）。1ページ50件（`frontend/src/pages/viewer/viewerFilter.ts:9` の `PER_PAGE`）。
 - 候補は打つたびに作り直すが、698件の走査は `useMemo` 1回ぶんで収まる見込み（計測して design に残す）。
 - 閲覧ページ JS の上限は 300KB（`frontend/scripts/check-viewer-bundle.js`）。便12a 時点の実測は CI ログに出る。
 

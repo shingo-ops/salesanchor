@@ -58,7 +58,7 @@ buildSuggestions(rows: ViewerRow[], draft: string, limit = 10): string[]
 
 ### 4-2. 画面の切り替え ― 空なら履歴・打っていれば候補
 
-`InventoryView.tsx` の検索画面の中身を次の形にする（**お手本どおり。見出しは候補には付けない**＝recon §1 F1）:
+`frontend/src/pages/viewer/InventoryView.tsx` の検索画面の中身を次の形にする（**お手本どおり。見出しは候補には付けない**＝recon §1 F1）:
 
 | `draft` | 出すもの |
 |---|---|
@@ -92,7 +92,7 @@ buildSuggestions(rows: ViewerRow[], draft: string, limit = 10): string[]
 | B5 | **当たらない語**を打つと候補が0件（**最近使った語も出ない**） | 画面検査・2幅（**直す前は赤**＝いまは履歴が出たまま） |
 | B6 | 確定した語がある状態で**検索欄を押して開き直す**と、入力に語が残り**候補が出る**（最近使った語は出ない） | 画面検査・2幅（**お手本の実測 recon §1 F8 に合わせた形**） |
 | B7 | 既存 B7・「すべて消す」（最近使った語）が**緑のまま** | CI（確認のみ） |
-| B8 | 既存 `viewer-search-mercari.spec.ts` の B8（最近使った語の行の寸法）を**札の✕の道**に替える | CI（道順だけ替え、測る値 69px/64px/印1つ は変えない） |
+| B8 | 既存 `frontend/tests-e2e/visual-language/viewer-search-mercari.spec.ts` の B8（最近使った語の行の寸法）を**札の✕の道**に替える | CI（道順だけ替え、測る値 69px/64px/印1つ は変えない） |
 | B9 | PC（1280px）は今までどおり | CI（既存 B9） |
 | U1 | 空の `draft` では候補0件 | 単体 |
 | U2 | **先頭一致が、途中一致より先**に並ぶ | 単体 |
@@ -108,7 +108,7 @@ U2・U3・U5 は**実際に壊して赤になることを審査側で確かめ�
 **本便の spec は10本以内**（2幅×5本＝B1+B4／B2／B3／B5／B6）に抑える。
 **実際の実行回数は3倍になる**（`vl-mobile-390`・`vl-tablet-768`・`vl-desktop-1280` の3 project が
 `visual-language/` 配下を全部拾うため。spec 側で幅を指定しても project は減らない＝10本→**30回**。`--list` で実測）。
-既存 `viewer-search-mercari.spec.ts` も 19本→**57回**で動いており、これが社内の既定（project を絞る先例は無い）。
+既存 `frontend/tests-e2e/visual-language/viewer-search-mercari.spec.ts` も 19本→**57回**で動いており、これが社内の既定（project を絞る先例は無い）。
 
 ## ⑥ 触るファイル
 
@@ -146,7 +146,7 @@ frontend/tests-e2e/visual-language/viewer-search-mercari.spec.ts
   右端の「→」は飾りで、独立した押せる部品ではない（F2 で確認）。
 - **社内の先例**: 便12a の「最近使った語」の行（69px・文字左64px・印は絶対配置）をそのまま使う。
 - **踏まない罠（便12a で実測）**: 読み上げ専用ボタンは Playwright の click が当たらない／
-  Drawer を増やすと `drawer-inert-closed.spec.ts` の枚数が赤（本便は Drawer を増やさない）。
+  Drawer を増やすと `frontend/tests-e2e/visual-language/drawer-inert-closed.spec.ts` の枚数が赤（本便は Drawer を増やさない）。
 
 ## ⑩ 弊害・トレードオフ
 
@@ -175,7 +175,7 @@ frontend/tests-e2e/visual-language/viewer-search-mercari.spec.ts
 | H1 | **絞り込みパネルの仕上げ**（札の横並び・行60.7dp・パネル幅83%）＝旧・便12 |
 | H2 | アプリの在庫表へ横展開（ADR-1019 の線引きのとおり） |
 | H3 | **画面検査の持ち時間10分**（余裕45秒）を別便で直す |
-| H4 | 便10 から持ち越しの G1（シリーズ名の幅）・H6（`ViewerTemplatesPage.test.tsx` の後始末） |
+| H4 | 便10 から持ち越しの G1（シリーズ名の幅）・H6（`frontend/src/pages/super-admin/ViewerTemplatesPage.test.tsx` の後始末） |
 | H5 | お手本の**未確認2点**（履歴の上限／候補0件のときの表示）は、必要になったときに1手ずつ測る |
 
 ## 対象 ADR
