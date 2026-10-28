@@ -3,7 +3,7 @@
 > このファイルは `scripts/generate-adr-index.js` により自動生成されます。
 > **手動編集禁止。** ADR ファイルを追加・変更後に `node scripts/generate-adr-index.js` を実行してください。
 
-最終更新: 2026-10-26 / ADR 総数: 205 件
+最終更新: 2026-10-28 / ADR 総数: 207 件
 
 ## 維持ルール（整合性を保つ・必須）
 
@@ -224,6 +224,8 @@
 | [ADR-1043](./ADR-1043-accuracy-gold-in-db.md) | ADR-1043: 精度測定の正解表を本番 DB の専用表に置き、クラウドは読むだけの窓口から取り出す | Accepted | — | — |
 | [ADR-1044](./ADR-1044-lp-meta-application-only.md) | ADR-1044: LP は Meta 申請用：検索に載せない・事業者情報を Meta 登録と一致させる | Accepted | — | — |
 | [ADR-1045](./ADR-1045-confidential-quote-guard.md) | ADR-1045: 仕入元の原文の書き写しは、送る前に機械で照らして止める | Proposed | — | — |
+| [ADR-1047](./ADR-1047-rule-registry.md) | ADR-1047: 決まりは台帳を正本にし、台帳の検査を1つの関所にまとめる | Proposed | — | — |
+| [ADR-1048](./ADR-1048-admin-two-step-login.md) | ADR-1048: 管理者のログインは2段階の確認を必須にし、初めての機器からはいつもの機器で番号を選んで承認する | Proposed | — | — |
 
 ## ステータス凡例
 

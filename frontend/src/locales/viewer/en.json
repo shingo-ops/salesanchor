@@ -27,7 +27,11 @@
     "pageOf": "Page {{page}} of {{total}} ({{count}} items)",
     "noResults": "No items match your conditions",
     "search": {
-      "placeholder": "Search by name, model number or keyword"
+      "placeholder": "Search by name, model number or keyword",
+      "clear": "Clear search term",
+      "submitLabel": "Search",
+      "recentTitle": "Recent searches",
+      "recentClear": "Clear all"
     },
     "resetView": "Reset",
     "range": {
@@ -51,7 +55,7 @@
       "provider": "Supplier",
       "condition": "Condition",
       "clear": "Clear selection",
-      "all": "All",
+      "all": "Unspecified",
       "count": "{{count}} selected",
       "priceRange": "Price range",
       "quantityRange": "Quantity range",

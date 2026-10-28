@@ -39,12 +39,13 @@ export const Danger: Story = {
 }
 
 export const Sizes: Story = {
-  name: 'サイズ比較 (sm / md / lg)',
+  name: 'サイズ比較 (sm / md / lg / tap)',
   render: () => (
     <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
       <Button variant="primary" size="sm">Small</Button>
       <Button variant="primary" size="md">Medium</Button>
       <Button variant="primary" size="lg">Large</Button>
+      <Button variant="ghost" size="tap">お手本（メルカリ）の操作行用</Button>
     </div>
   ),
 }

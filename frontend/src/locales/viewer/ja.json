@@ -27,7 +27,11 @@
     "pageOf": "{{page}} / {{total}} ページ（全 {{count}} 件）",
     "noResults": "条件に合う商品がありません",
     "search": {
-      "placeholder": "商品名・型番・キーワードで検索"
+      "placeholder": "商品名・型番・キーワードで検索",
+      "clear": "検索語を消す",
+      "submitLabel": "検索する",
+      "recentTitle": "最近使った語",
+      "recentClear": "すべて消す"
     },
     "resetView": "リセット",
     "range": {
@@ -51,7 +55,7 @@
       "provider": "提供者",
       "condition": "コンディション",
       "clear": "選択をクリア",
-      "all": "すべて",
+      "all": "指定しない",
       "count": "{{count}}件",
       "priceRange": "価格の範囲",
       "quantityRange": "数量の範囲",

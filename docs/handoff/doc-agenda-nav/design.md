@@ -325,7 +325,7 @@ KPI は各段（§8）の完了ごとに上表の該当行を再測定する。
 - 守り手: （既存・必須チェック。ruleset 実測 recon2/c10-rules.txt）.github/workflows/check-claude-size.yml（job「CLAUDE.md line count check」）、process-artifacts-gate.yml（「process-artifacts gate」）、adr-index-check.yml（「ADR index is up to date」）
 - 到達検査の守り手: .github/workflows/doc-index-reachability.yml（job「doc index reachability」）・scripts/ci/check_doc_index.py。`--strict` で失敗する。CLAUDE.md↔AGENTS.md の見出し重複は K3 の語の重複検査と行数検査で代えた。詳細と続きは §32
 - 担当と数え方: 担当は本テーマの台帳（.claude-pipeline/active-work.d/ の本テーマの1枚）を持つ Opus セッション。昇格の判定は `gh run list --workflow doc-index-reachability.yml --event pull_request --limit 5` の5件すべてで警告0件であることを、各段の完了時に台帳へ記録して数える（警告件数は job の要約に1行で出す作りにする・段2のカードに書く）
-- リポジトリ外（CI が見えない）の守り手（段7で新設案・PO の実装承認待ち）: ~/kb/scripts/patrol.sh（毎週月曜 09:00 に Discord 通知。今の点検4項目は recon2 c11）に「会話開始時に自動で読まれるユーザー側ファイルの合計行数」を1項目足す
+- リポジトリ外（CI が見えない）の守り手: scripts/dev/doc-entry-weekly-check.sh を agent-console の定期実行「入口の文書 週次点検」（月曜 16:00）が動かす（K1・K2 の写し・K9・到達検査 CI の最新結果・同意の週次点検の見張り。K12 は90日ごと）。~/kb/scripts/patrol.sh に足す旧案は採らない（§32-8 (a)）。詳細は §32 D3・D4
 - 対象: 入口が再び太ること／目次から辿れない手順書が増えること／同じ決まりが2か所に戻ること／安全の決まりが入口から消えること／ユーザー側の常時読込が再び増えること
 - 今ない仕組み（事実）: 指示文書の行数・リンク・索引を点検する定期 job は無い（STANDARD-WORKFLOW.md:167「governance が定期的に点検」に対応する定期 workflow は見つからず。governance 検証 2026-10-22）。近いものとして .github/workflows/claude-md-staleness-check.yml（四半期ごと・CLAUDE.md の最終更新が90日超なら Issue 化 :45-56）があるが、見るのは更新日だけ。上の2つで埋める
 - 関所なしの部分: 「AI が目次を実際に辿ったか」→ CI では見えない（Read の有無は CI に残らない）。担当の Opus が段3c・段4 の後に K10・K12 を baseline.md の手順で測り直す（練習問題20回）。実際の作業の常時記録は持たない

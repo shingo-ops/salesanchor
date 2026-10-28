@@ -101,6 +101,7 @@ develop ブランチが存在しない。撤去は全工程の最後。撤去前
 - `--delete-branch` は feature head のみ許可し、長命ブランチには使わない
 - `./scripts/dev/executor-preflight.sh` は `origin/main` の存在を毎回確認する（#2715 で main-only 化済み）
 - もし `main` / `develop` が欠落していたら、作業は止めて PO に報告する
+- 現状の事実（2026-10-27 実測）: develop ブランチと専用 ruleset 16619490（Protect develop branch・enforcement active）は今も残っている。新規作業では使わない（方針は上記のまま変えない）
 
 ---
 

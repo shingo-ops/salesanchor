@@ -24,7 +24,7 @@ import ReactDOM from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Button } from "./Button";
 import { X } from "../constants/icons-base";
-import { useFocusTrap, getFirstFocusable } from "../hooks/useFocusTrap";
+import { useFocusTrap, useInertWhenClosed, getFirstFocusable } from "../hooks/useFocusTrap";
 import "./Sheet.css";
 
 interface SheetProps {
@@ -82,6 +82,8 @@ export function Sheet({ open, onClose, title, children, footer }: SheetProps) {
 
   /* フォーカストラップ（共通化: frontend/src/hooks/useFocusTrap.ts。design.md 4-3） */
   useFocusTrap(open, panelRef);
+  /* 閉じている間だけ中身を無効化する（宿題 D5。docs/handoff/drawer-inert-when-closed/design.md 4-3） */
+  useInertWhenClosed(open, panelRef, portalTarget);
 
   if (!portalTarget) return null;
 

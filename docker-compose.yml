@@ -245,6 +245,10 @@ services:
       - REVIEW_MAIL_WEBMAIL_URL=${REVIEW_MAIL_WEBMAIL_URL:-}
       - REVIEW_MAIL_DISCORD_WEBHOOK=${REVIEW_MAIL_DISCORD_WEBHOOK:-}
       - REVIEW_MAIL_DISCORD_MENTION=${REVIEW_MAIL_DISCORD_MENTION:-}
+      # 運用の受け箱（さくらの点検・障害のメール → 運用 Discord。outage-recovery-watch 便3）。接続先は REVIEW_MAIL_IMAP_HOST/PORT を使う
+      - OPS_MAIL_IMAP_USER=${OPS_MAIL_IMAP_USER:-}
+      - OPS_MAIL_IMAP_PASSWORD=${OPS_MAIL_IMAP_PASSWORD:-}
+      - OPS_MAIL_DISCORD_WEBHOOK=${OPS_MAIL_DISCORD_WEBHOOK:-}
       # TCG スキーマ名（TENANT-01: 環境変数化・未設定時は tenant_004）
       - TCG_SCHEMA=${TCG_SCHEMA:-tenant_004}
       # Google Sheets SA キーファイル（backend サービスと同パターン）

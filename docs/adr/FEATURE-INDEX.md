@@ -31,6 +31,7 @@
 | 権限 / role / 認証 / Firebase | ADR-023 ／ ADR-032 | 認証3層同期・カスタム認証ドメイン |
 | password_hash / bcrypt / 認証情報 DB 保存 | **ADR-138** | password_hash 列廃止（Firebase 専一）。列削除 recon では ORM モデル定義確認必須 |
 | ログイン / パスキー / WebAuthn / 生体認証 / パスワード再設定 / 自社認証 | **ADR-1013** | Firebase から自社サーバーへ移行・Argon2id・パスキー・再設定メール。ADR-138 を覆す |
+| 管理者の2段階の確認 / 二段階認証 / MFA / TOTP / 認証アプリ / 新しい機器の承認 | **ADR-1048** | 管理者はパスキーかパスワード＋6桁が必須・初めての機器はいつもの機器で番号を選んで承認 |
 
 ## 横断・運用・プロセス
 
@@ -38,13 +39,13 @@
 |---|---|---|
 | i18n / 国際化 / ja.json / en.json | **ADR-027** | 全 UI 文字列 `t()` 経由・キー同期必須 |
 | リリース / release PR / develop→main / branch protection | **ADR-050** | merge commit のみ（squash 禁止＝back-merge 構造バグ防止）・Ruleset 15777895 |
-| リリース相乗り防止 / 危険変更の develop 入口関所 / develop=出荷可能 | **ADR-135** | 危険変更(migrations/deploy.yml/scripts)は PO GO まで feature で待機・develop マージ＝本番投入可宣言。CODEOWNERS/PRテンプレ済、Ruleset B/C は PO GO 待ち |
+| リリース相乗り防止 / 危険変更の develop 入口関所 / develop=出荷可能 | **ADR-135** | 危険変更(migrations/deploy.yml/scripts)は PO GO まで feature で待機・develop マージ＝本番投入可宣言。CODEOWNERS/PRテンプレ済、B（B-2 方式）・C（main 必須チェック追加）・D・E も実施済み（ADR-135:32-60） |
 | 自動マージ / human-in-the-loop / develop 自動 merge | **ADR-056** | develop は AI 自動 merge・main は人間。通知集約 |
 | 並行開発 / worktree / AEON / Evidence | **ADR-086** | 複数エージェント並行開発の標準化 |
 | 標準ワークフロー / SOP / process-artifacts gate | **ADR-121** ／ ADR-112 ／ [`docs/STANDARD-WORKFLOW.md`](../STANDARD-WORKFLOW.md) | KGI→recon→設計の関所 |
 | 設計仕様書 / あるべき姿 / 仕様書索引 | **ADR-121** ／ [`docs/specs/README.md`](../specs/README.md) | 領域→設計仕様書の地図。索引に載る領域に触れる開発は仕様書を先に読む |
 | Claude Code 運用ガードレール / SessionStart hook | **ADR-042** | 運用ガードレール・hook 整備 |
-| CLAUDE.md / AGENTS.md / 入口の行数 / 目次 / 指示文書の構成 | **ADR-1040**（Proposed） ／ ADR-076 | 入口→目次→章→末端。本文の正本は AGENTS.md・入口の上限90行（ADR-076 のルート上限と命名を一部改訂） |
+| CLAUDE.md / AGENTS.md / 入口の行数 / 目次 / 指示文書の構成 | **ADR-1040**（Accepted） ／ ADR-076 | 入口→目次→章→末端。本文の正本は AGENTS.md・入口の上限90行（ADR-076 のルート上限と命名を一部改訂） |
 | 担当者アイコン / 英語名必須 / Discord webhook 送信 / avatar | **ADR-159** ／ ADR-091 | Discord 返信を担当者の名（given_name_en）とアイコンで送る・Bot 名義では送らない（便A=アイコン+英語名必須 / 便B=webhook 送信） |
 | 24時間保守運用 / 障害記録 / 応急処置 / routines / アラート札 page・auto・ticket | **ADR-1012**（Proposed） ／ ADR-1009 ／ ADR-115 | 経路の正本は Alertmanager・障害記録の正本はアプリ DB・AI は PR で修理（ADR-136 の GO）・C は予備 |
 | Meta / Facebook / Instagram / Webhook | ADR-024 ／ ADR-025 ／ ADR-041 ／ ADR-026 | 連携整備・フォールバック・mid TEXT 化 |
