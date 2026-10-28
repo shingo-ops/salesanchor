@@ -45,6 +45,53 @@ interface Props {
 const PER_PAGE_CAP = 100;
 const SEARCH_DEBOUNCE_MS = 250;
 
+/** 下見（POST /leads/{master_id}/merge/preview）の返り値。backend の LeadMergePreview と同じ形 */
+interface MergePreview {
+  tables: { table: string; moved: number; deleted: number }[];
+  fills: { field: string; current: unknown; new: unknown }[];
+}
+
+/** 空欄に入る項目名の文言キー。カルテ・一覧の既存キーを使い、無いものだけ mergeLead.fields.* */
+const FILL_FIELD_LABEL_KEYS: Record<string, string> = {
+  customer_name: "leads.customerName",
+  company_name: "leads.companyName",
+  email: "leads.email",
+  phone: "leads.phone",
+  channel_type: "leads.channelType",
+  initiative: "leads.initiative",
+  type: "leads.type",
+  temperature: "leads.temperature",
+  estimated_scale: "leads.estimatedScale",
+  customer_type: "leads.customerType",
+  response_speed: "leads.responseSpeed",
+  monthly_forecast: "leads.monthlyForecast",
+  assigned_to: "mergeLead.fields.assigned_to",
+  notes: "leads.notes",
+  next_action: "leads.nextAction",
+  next_action_date: "leads.nextActionDate",
+  challenge: "leads.challenge",
+  meeting_memo: "leads.meetingMemo",
+  meeting_impression: "leads.meetingImpression",
+  cs_memo: "leads.csMemo",
+  sales_form: "leads.salesForm",
+  competitor_check: "leads.competitorCheck",
+  per_order_amount: "leads.perOrderAmount",
+  monthly_frequency: "leads.monthlyFrequency",
+  nickname: "leads.nickname",
+  country: "leads.country",
+  target_titles: "leads.targetTitles",
+  messenger_link: "leads.messengerLink",
+  discord_id: "mergeLead.fields.discord_id",
+  instagram_link: "leads.instagramLink",
+  whatsapp_link: "leads.whatsappLink",
+};
+
+function formatFillValue(v: unknown): string {
+  if (Array.isArray(v)) return v.join(", ");
+  if (v === null || v === undefined) return "";
+  return String(v);
+}
+
 export default function MergeLeadModal({ open, source, onMerged, onCancel }: Props) {
   const { t } = useTranslation();
   const [candidates, setCandidates] = useState<LeadOption[]>([]);
@@ -57,6 +104,9 @@ export default function MergeLeadModal({ open, source, onMerged, onCancel }: Pro
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resultsCapped, setResultsCapped] = useState(false);
+  const [preview, setPreview] = useState<MergePreview | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -65,7 +115,35 @@ export default function MergeLeadModal({ open, source, onMerged, onCancel }: Pro
     setReason("");
     setStage("select");
     setError(null);
+    setPreview(null);
+    setPreviewError(false);
   }, [open]);
+
+  // 確認の段に入ったら下見を呼ぶ（書き込まない）。失敗したら統合のボタンを押せなくする。
+  useEffect(() => {
+    if (!open || stage !== "confirm" || selectedId === null) return;
+    let cancelled = false;
+    setPreview(null);
+    setPreviewError(false);
+    setPreviewLoading(true);
+    api
+      .post<MergePreview>(`/leads/${selectedId}/merge/preview`, {
+        loser_id: source.id,
+        reason: null,
+      })
+      .then((res) => {
+        if (!cancelled) setPreview(res);
+      })
+      .catch(() => {
+        if (!cancelled) setPreviewError(true);
+      })
+      .finally(() => {
+        if (!cancelled) setPreviewLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, stage, selectedId, source.id]);
 
   useEffect(() => {
     if (!open) return;
@@ -244,9 +322,9 @@ export default function MergeLeadModal({ open, source, onMerged, onCancel }: Pro
             </div>
 
             <div className="form-actions">
-              <button type="button" onClick={onCancel}>
+              <Button variant="secondary" size="md" type="button" onClick={onCancel}>
                 {t("common.cancel")}
-              </button>
+              </Button>
               <Button variant="primary" size="md"
                 type="button"
 
@@ -287,6 +365,38 @@ export default function MergeLeadModal({ open, source, onMerged, onCancel }: Pro
               </ul>
             </div>
 
+            {previewLoading && <LoadingBlock />}
+            {previewError && <div className="error-banner">{t("mergeLead.previewError")}</div>}
+            {preview && (
+              <div style={{ marginBottom: "var(--space-4)", fontSize: "var(--font-base)" }}>
+                <strong>{t("mergeLead.movedTitle")}</strong>
+                <ul style={{ marginTop: "var(--space-1)", marginBottom: "var(--space-3)", paddingLeft: "var(--space-5)" }}>
+                  {preview.tables
+                    .filter((row) => row.moved >= 1)
+                    .map((row) => (
+                      <li key={row.table}>
+                        {t(`mergeLead.tables.${row.table}`, { defaultValue: row.table })}: {row.moved}
+                      </li>
+                    ))}
+                </ul>
+                <strong>{t("mergeLead.filledTitle")}</strong>
+                {preview.fills.length === 0 ? (
+                  <p style={{ marginTop: "var(--space-1)", color: "var(--text-muted)" }}>
+                    {t("mergeLead.nothingToFill")}
+                  </p>
+                ) : (
+                  <ul style={{ marginTop: "var(--space-1)", marginBottom: 0, paddingLeft: "var(--space-5)" }}>
+                    {preview.fills.map((f) => (
+                      <li key={f.field}>
+                        {FILL_FIELD_LABEL_KEYS[f.field] ? t(FILL_FIELD_LABEL_KEYS[f.field]) : f.field}
+                        : {formatFillValue(f.new)}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+
             {reason.trim() && (
               <div
                 style={{
@@ -303,18 +413,20 @@ export default function MergeLeadModal({ open, source, onMerged, onCancel }: Pro
             )}
 
             <div className="form-actions">
-              <button
+              <Button
+                variant="secondary"
+                size="md"
                 type="button"
                 onClick={() => setStage("select")}
                 disabled={submitting}
               >
                 {t("common.back")}
-              </button>
+              </Button>
               <Button variant="danger" size="md"
                 type="submit"
 
                 loading={submitting}
-                disabled={submitting}
+                disabled={submitting || previewLoading || previewError || !preview}
               >
                 {t("mergeLead.executeLabel", { masterName: selected.customer_name })}
               </Button>
