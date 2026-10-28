@@ -17,7 +17,7 @@
 |---|---|
 | [ideal-state.md](./ideal-state.md) | PO の言葉（原文のまま） |
 | [kgi.md](./kgi.md) | 合格条件（数と ○×） |
-| [recon.md](./recon.md) | 今の作り（ファイル:行） |
+| [lead-merge-recon.md](../../../handoff/inbox-brushup/lead-merge-recon.md) | 今の作り（ファイル:行） |
 | [design.md](./design.md) | 直し方・画面・試験・大きさの基準・維持の仕組み |
 
 ## 境界

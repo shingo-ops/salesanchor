@@ -5,7 +5,7 @@
 
 親（あるべき姿＋KGI）へのリンク: [README.md](./README.md)、[ideal-state.md](./ideal-state.md)、[kgi.md](./kgi.md)
 決定記録: [ADR-1049](../../../adr/ADR-1049-lead-merge-all-tables-and-fill-blanks.md)（Amends ADR-119）
-recon: [recon.md](./recon.md)
+recon: [lead-merge-recon.md](../../../handoff/inbox-brushup/lead-merge-recon.md)
 日付: 2026-10-28 ／ 設計担当: Claude Opus
 
 ## 1. あるべき姿
@@ -22,14 +22,14 @@ recon: [recon.md](./recon.md)
 
 ## 4. recon
 
-[recon.md](./recon.md)。要点:
+[lead-merge-recon.md](../../../handoff/inbox-brushup/lead-merge-recon.md)。要点:
 - 付け替えは4表だけ（`backend/app/routers/leads.py:3073-3119`）。conversation_logs は RESTRICT（`migrations/20260715_100000_add_conversation_logs_lead_fk.sql:19-20`）で、会話の記録を持つリードを消す方にすると 500。
-- 統合のあと `publish_leads_update` を呼ばない（`backend/app/routers/leads.py:3157-3158`）。作成・更新・削除は呼ぶ（`leads.py:482-483`、`leads.py:711-712`、`leads.py:790-791`）。
-- 受信箱は、開いている相手が消えても選択を外さない（`frontend/src/pages/inbox/useInboxState.ts:240`、自分で消したときだけ外す `useInboxState.ts:994-1002`）。
+- 統合のあと `publish_leads_update` を呼ばない（`backend/app/routers/leads.py:3157-3158`）。作成・更新・削除は呼ぶ（`backend/app/routers/leads.py:482-483`、`backend/app/routers/leads.py:711-712`、`backend/app/routers/leads.py:790-791`）。
+- 受信箱は、開いている相手が消えても選択を外さない（`frontend/src/pages/inbox/useInboxState.ts:240`、自分で消したときだけ外す `frontend/src/pages/inbox/useInboxState.ts:994-1002`）。
 - カルテ下の帯は相手が lead か existing_customer のときだけ出る（`frontend/src/pages/inbox/InboxKartePanel.tsx` ActionBar の `if (!primaryLabel) return null`）。
 - 権限の判定は `frontend/src/hooks/usePermissions.ts:15`（`hasPermission`）。リードの一覧は `frontend/src/pages/leads/LeadsPage.tsx:506` で `hasPermission("leads.delete") && l.status === "lead"` のときだけ統合を出す。
-- 統合の窓 `frontend/src/components/MergeLeadModal.tsx` は loser を受け取り（`MergeLeadModal.tsx:36-43`）、成功で `onMerged(masterId)` を呼ぶ（`MergeLeadModal.tsx:122`）。素の `<button>` が2つ（`MergeLeadModal.tsx:247`、`MergeLeadModal.tsx:306-310`）。
-- 画面の試験: `frontend/playwright.config.ts` に幅 390・768・1280 の組があり、PR のたびに `frontend/tests-e2e/visual-language/*.spec.ts` を全部動かす（e2e.yml の「画面検査（受信箱 3幅 Playwright）」）。押す場所 44px の値は `frontend/tests-e2e/visual-language/inbox-helpers.ts:27` `MIN_TOUCH_TARGET_PX = 44`。
+- 統合の窓 `frontend/src/components/MergeLeadModal.tsx` は loser を受け取り（`frontend/src/components/MergeLeadModal.tsx:36-43`）、成功で `onMerged(masterId)` を呼ぶ（`frontend/src/components/MergeLeadModal.tsx:122`）。素の `<button>` が2つ（`frontend/src/components/MergeLeadModal.tsx:247`、`frontend/src/components/MergeLeadModal.tsx:306-310`）。
+- 画面の試験: `frontend/playwright.config.ts` に幅 390・768・1280 の組があり、PR のたびに frontend/tests-e2e/visual-language/*.spec.ts を全部動かす（e2e.yml の「画面検査（受信箱 3幅 Playwright）」）。押す場所 44px の値は `frontend/tests-e2e/visual-language/inbox-helpers.ts:27` `MIN_TOUCH_TARGET_PX = 44`。
 
 ## 5. design（作り方）
 
@@ -39,9 +39,9 @@ recon: [recon.md](./recon.md)
 2. 下見の入口 `POST /leads/{master_id}/merge/preview`（体は統合と同じ `LeadMergeRequest`、権限も同じ `leads.delete`）。計画だけを返し、書き込まない。返す形は新しい型 `LeadMergePreview`。
 3. 統合 `POST /leads/{master_id}/merge` は、同じ計画を作ってから実行する。入出力の形は今のまま（`LeadResponse`）。
 4. 付け替える表は recon §2 の13表。順番は「一意の決まりがある表の重複を消す → 13表の `lead_id` を付け替える → 空欄を埋める → loser を消す」。public.registration_tokens は `tenant_id` も条件に入れる。
-5. 一意の決まりがある表: lead_channels（今の手順 `leads.py:3093-3119` のまま）、lead_sales_form_selections・deal_close_reasons（master に同じ組み合わせがあれば loser の行を消す）、customer_scores（master に行があれば loser の行を消す）。
+5. 一意の決まりがある表: lead_channels（今の手順 `backend/app/routers/leads.py:3093-3119` のまま）、lead_sales_form_selections・deal_close_reasons（master に同じ組み合わせがあれば loser の行を消す）、customer_scores（master に行があれば loser の行を消す）。
 6. 空欄を埋める: `_UPDATABLE_COLUMNS` から status・prospect_rank を除いた項目で、master が NULL・空文字・空の配列のとき、loser の値が空でなければ入れる。master に値があれば変えない。
-7. 監査ログ merge_absorb の `new_data` に、全13表の付け替え件数と、埋めた項目名の一覧を足す（今の形 `leads.py:3136-3144` に項目を足すだけ）。
+7. 監査ログ merge_absorb の `new_data` に、全13表の付け替え件数と、埋めた項目名の一覧を足す（今の形 `backend/app/routers/leads.py:3136-3144` に項目を足すだけ）。
 8. commit のあと、作成・更新・削除と同じ形で `publish_leads_update(tenant_id)` を呼ぶ（失敗しても統合は成功のまま。warning を残す）。
 9. 13表の一覧は1か所の定数に置き、計画と実行と試験が同じ定数を読む。
 
@@ -52,7 +52,7 @@ recon: [recon.md](./recon.md)
 3. 文言から「audit_logs」をなくし、PO の見本（[画面見本](https://claude.ai/artifact/WLba4Mv3Ktfepb5g546pyC)）の言葉にそろえる。ja.json と en.json の `mergeLead` のキーを直し、表の日本語名・「元に戻せません」のキーを足す。
 4. 色・大きさは var(--…) だけ。新しい直書きを足さない。
 
-### 5-3 画面: 受信箱のカルテ（`frontend/src/pages/inbox/InboxKartePanel.tsx`、`useInboxState.ts`）
+### 5-3 画面: 受信箱のカルテ（`frontend/src/pages/inbox/InboxKartePanel.tsx`、`frontend/src/pages/inbox/useInboxState.ts`）
 
 1. ActionBar の「⋯」メニューの一番下に「ほかのリードとまとめる」を足す。出す条件は `hasPermission("leads.delete") && status === "lead"`（一覧と同じ条件）。今のメニューの作り（`karte-overflow-menu`・`karte-overflow-item`）に足す。
 2. 押すと MergeLeadModal を開き、開いている相手を loser として渡す。
@@ -68,7 +68,7 @@ recon: [recon.md](./recon.md)
 
 ### 5-5 試験
 
-1. サーバー `backend/tests/test_lead_merge_pg.py`（新規。既存の PostgreSQL を使う試験と同じ形）:
+1. サーバー backend/tests/test_lead_merge_pg.py（新規。既存の PostgreSQL を使う試験と同じ形）:
    - 13表それぞれに loser の行を1件置いて統合 → 200、13表で `lead_id = loser` が 0件（13件）
    - 会話の記録を持つ loser（K1）、添付と販売形態の選択の行数が変わらない（K3）
    - 空欄埋め2件（K4）、残す方の番号が変わらず loser は 404（K5）
@@ -76,7 +76,7 @@ recon: [recon.md](./recon.md)
    - 下見が書き込まないこと1件、下見と実行の件数が一致すること1件
    - 異常系3件（自分自身・loser が lead でない・無い番号）
    - 漏れの見張り1件: テナントの表で `lead_id` という列を持つ表の数と、13表の定数の数が一致する
-2. 画面 `frontend/tests-e2e/visual-language/inbox-lead-merge.spec.ts`（新規。`inbox-helpers.ts` の作り物のデータを使う。幅 390・768・1280 で動く）:
+2. 画面 frontend/tests-e2e/visual-language/inbox-lead-merge.spec.ts（新規。`frontend/tests-e2e/visual-language/inbox-helpers.ts` の作り物のデータを使う。幅 390・768・1280 で動く）:
    - 権限ありで「ほかのリードとまとめる」が出る／権限なしで出ない（K6）
    - 幅 390 でメニュー項目・窓のボタンの高さ 44px 以上、`scrollWidth <= clientWidth`（K7）
    - 手順1〜3の写真を `testInfo.attach` で残す（K8 の写真。PR の「visual-language-report」から取り出す）
@@ -98,16 +98,18 @@ recon: [recon.md](./recon.md)
 
 | # | 基準 | 検証方法 |
 |---|---|---|
-| A1 | K1〜K5 | `backend/tests/test_lead_merge_pg.py` が全件合格（PR の CI） |
-| A2 | K6・K7 | `inbox-lead-merge.spec.ts` が幅 390・768・1280 で合格（PR の「画面検査（受信箱 3幅 Playwright）」） |
+| A1 | K1〜K5 | backend/tests/test_lead_merge_pg.py が全件合格（PR の CI） |
+| A2 | K6・K7 | inbox-lead-merge.spec.ts が幅 390・768・1280 で合格（PR の「画面検査（受信箱 3幅 Playwright）」） |
 | A3 | 直書き 0件 | 「Lint & Dark Mode Check (ADR-067)」が合格 |
 | A4 | K8 | PR の写真6枚（幅 390 と 1280・手順1〜3）を PO が見て合格 |
 | A5 | K9 | 本番で最初の統合のあと、reader 鍵の道で4表の迷子を数えて 0件 |
 
 ## 9. 維持の仕組み
 
-- 守り手（機械）: `backend/tests/test_lead_merge_pg.py` の漏れの見張り。テナントの表に `lead_id` を持つ表が増えると、13表の定数と数が合わず CI が落ちる。
-- 守り手（機械）: `frontend/tests-e2e/visual-language/inbox-lead-merge.spec.ts` が PR ごとに 44px とはみ出しを測る。
+守り手: CI（バックエンドの試験・「画面検査（受信箱 3幅 Playwright）」・「Lint & Dark Mode Check (ADR-067)」）。中身は下の3つ。
+
+- 守り手（機械）: backend/tests/test_lead_merge_pg.py の漏れの見張り。テナントの表に `lead_id` を持つ表が増えると、13表の定数と数が合わず CI が落ちる。
+- 守り手（機械）: frontend/tests-e2e/visual-language/inbox-lead-merge.spec.ts が PR ごとに 44px とはみ出しを測る。
 - 守り手（機械）: 「Lint & Dark Mode Check (ADR-067)」が直書きを止める。
 
 ## 10. 接触面分析
@@ -123,7 +125,7 @@ recon: [recon.md](./recon.md)
 
 判定: **APPROVE（設計合格）**
 - 既存の仕様・ADR との整合: ADR-098（手で寄せる）・ADR-095（写さず1か所。空欄埋めは残す方の行への1回の書き込みで、二重持ちではない）・ADR-119（本 ADR で改める）と食い違わない。
-- 根拠: サーバーと画面の要所はすべて ファイル:行（recon.md）。本番の数は reader 鍵の道。
+- 根拠: サーバーと画面の要所はすべて ファイル:行（lead-merge-recon.md）。本番の数は reader 鍵の道。
 - 受入基準: すべて試験か PO の目視で ○× が付く。
 - 実装範囲: §5 の6ファイル＋文言2ファイル＋試験2本。DB の形は変えない。
 - 未解決: migration の中の結び付きの行番号（recon §2 の未確認）は実装の担当が着手時に確かめる。結果が評価記録と違えば止まって報告させる。

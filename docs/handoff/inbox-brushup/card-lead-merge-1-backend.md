@@ -4,7 +4,7 @@
 
 - 設計: `docs/specs/transaction-flow/lead-merge/design.md` §5-1・§5-5(1)・§8 A1
 - 決定: `docs/adr/ADR-1049-lead-merge-all-tables-and-fill-blanks.md`
-- 現状: `docs/specs/transaction-flow/lead-merge/recon.md`
+- 現状: `docs/handoff/inbox-brushup/lead-merge-recon.md`
 - 実装の承認: PO 2026-10-28「決めた内容を記録に残してクローンの大きさを測り、作る」
 - 2/2（画面）は本カードの PR がマージされてから出す。
 
@@ -30,7 +30,7 @@
 
 - sleep で待たない。CI の終わりを待たない（PR の URL を報告して終える）。
 - ファイルの作成と編集は Write / Edit ツールで行う。ヒアドキュメントで書かない。
-- PR を作る前に `scripts/dev/validate-pr-body.sh` で exit 0 を確かめる。
+- PR を作る前に `bash scripts/dev/validate-pr-body.sh < <本文ファイルの絶対パス>`（本文は標準入力で渡す）で exit 0 を確かめる。
 - フックや自動判定に止められたら、言い換えて再試行しない。止まった手順・最後のコマンド・理由の原文を報告して終える。
 - 禁止: マージ、`migrations/` の変更、`frontend/` の変更、本番への接続、`/review` の実行、ほかのブランチの操作、GO 記録への書き込み。
 - 仕入元の投稿の原文を PR 本文・コミットに書き写さない。
@@ -38,7 +38,7 @@
 ## 手順
 
 1. `./scripts/dev/executor-preflight.sh || exit 1` を実行する。続けて `bash scripts/new-worktree.sh release/lead-merge-backend` で作業場所を作り、以後その中で作業する。`git log -1 --oneline` と `git status --short` を記録する。
-2. 着手時の確かめ（記録のみで続行）: recon.md §2 の13表について、結び付きの決まり（FK・ON DELETE・UNIQUE）を `backend/app/services/tenant.py` と `migrations/` で開き、ファイル:行を記録する。recon.md §2 の表と違う表が1つでもあれば、その表名と出典を記録して**ここで停止**する（設計の前提が変わるため）。
+2. 着手時の確かめ（記録のみで続行）: lead-merge-recon.md §2 の13表について、結び付きの決まり（FK・ON DELETE・UNIQUE）を `backend/app/services/tenant.py` と `migrations/` で開き、ファイル:行を記録する。lead-merge-recon.md §2 の表と違う表が1つでもあれば、その表名と出典を記録して**ここで停止**する（設計の前提が変わるため）。
 3. `backend/app/routers/leads.py` の統合（`POST /leads/{master_id}/merge`）を design.md §5-1 の1〜9のとおり直す。
    - 13表の一覧は1か所の定数にする（表名・列名・一意の決まりの種類）。
    - 空欄の判定: NULL・空文字（前後の空白を除いて空）・空の配列。status と prospect_rank は対象外。
@@ -53,7 +53,7 @@
    - 良い例: `触るファイル: backend/app/routers/leads.py, backend/app/schemas/lead.py, backend/tests/test_lead_merge_pg.py`
    - 禁止形: 行頭に `-` を付けた箇条書き、同じ行に注記を付ける
    - `削除するファイル: なし`（消すファイルが無いとき）
-   - `対象ADR: docs/adr/ADR-1049-lead-merge-all-tables-and-fill-blanks.md`、`recon: docs/specs/transaction-flow/lead-merge/recon.md`、`設計: docs/specs/transaction-flow/lead-merge/design.md`（平打ち）
+   - `対象ADR: docs/adr/ADR-1049-lead-merge-all-tables-and-fill-blanks.md`、`recon: docs/handoff/inbox-brushup/lead-merge-recon.md`、`設計: docs/specs/transaction-flow/lead-merge/design.md`（平打ち）
    - 触るファイルは手順 7 の `--name-only` の全部（上の良い例は形の例。実際の一覧に合わせる）
 9. `scripts/dev/validate-pr-body.sh` を exit 0 まで確かめる → `git -C <作業場所の絶対パス> push -u origin release/lead-merge-backend` を単独で実行 → `gh auth status` で `shingo-cc` を確かめる → `gh pr create --base main --head release/lead-merge-backend --title "fix: リードの統合で13表を付け替え空欄を埋める（ADR-1049）" --body-file <絶対パス>`（ready。`--draft` を付けない）。
 

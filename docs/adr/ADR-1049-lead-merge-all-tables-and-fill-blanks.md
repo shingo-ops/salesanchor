@@ -9,7 +9,7 @@ Amends ADR-119
 | 起案日 | 2026-10-28 |
 | 方針の決定者 | Shingo（PO） |
 | 関連 | ADR-119（統合の元の決定。本 ADR で改める）、ADR-098（自動で同一人物と判定しない）、ADR-095（同じ事実は1か所）、ADR-096（顧客は永続）、ADR-067（デザイントークン） |
-| 設計 | `docs/specs/transaction-flow/lead-merge/design.md`、現状 `docs/specs/transaction-flow/lead-merge/recon.md` |
+| 設計 | `docs/specs/transaction-flow/lead-merge/design.md`、現状 `docs/handoff/inbox-brushup/lead-merge-recon.md` |
 
 ---
 

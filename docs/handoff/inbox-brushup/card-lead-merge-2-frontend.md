@@ -4,7 +4,7 @@
 
 - 設計: `docs/specs/transaction-flow/lead-merge/design.md` §5-2〜§5-4・§5-5(2)・§8 A2・A3
 - 決定: `docs/adr/ADR-1049-lead-merge-all-tables-and-fill-blanks.md`
-- 現状: `docs/specs/transaction-flow/lead-merge/recon.md` §4・§5
+- 現状: `docs/handoff/inbox-brushup/lead-merge-recon.md` §4・§5
 - 前提: カード 1/2 の PR（下見の入口）が main にマージ済み。手順 1 で確かめる。
 - 実装の承認: PO 2026-10-28「決めた内容を記録に残してクローンの大きさを測り、作る」
 
@@ -30,7 +30,7 @@
 
 - sleep で待たない。CI の終わりを待たない。
 - ファイルの作成と編集は Write / Edit ツールで行う。
-- PR を作る前に `scripts/dev/validate-pr-body.sh` で exit 0 を確かめる。
+- PR を作る前に `bash scripts/dev/validate-pr-body.sh < <本文ファイルの絶対パス>`（本文は標準入力で渡す）で exit 0 を確かめる。
 - フックや自動判定に止められたら、言い換えて再試行しない。原文を報告して終える。
 - 禁止: マージ、`backend/` の変更、`migrations/` の変更、CI 設定の変更、本番への接続、`/review` の実行、GO 記録への書き込み。
 - 直書き禁止: 色・大きさ・余白は `var(--…)` と金型だけ。新しいトークンを作らない。足りない値があれば停止して報告する。
