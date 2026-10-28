@@ -65,6 +65,18 @@ describe("Drawer onBack (A19・design.md 4-1)", () => {
   });
 });
 
+describe("Drawer mobileInset (docs/handoff/viewer-filter-choices-mercari/design.md 4-1)", () => {
+  it("U3: does not add comp-drawer-panel--mobile-inset when mobileInset is omitted (default unchanged)", () => {
+    render(<Drawer open onClose={() => undefined} title="T">x</Drawer>);
+    expect(panel().className).not.toContain("comp-drawer-panel--mobile-inset");
+  });
+
+  it("U4: adds comp-drawer-panel--mobile-inset when mobileInset is true", () => {
+    render(<Drawer open onClose={() => undefined} title="T" mobileInset>x</Drawer>);
+    expect(panel().className).toContain("comp-drawer-panel--mobile-inset");
+  });
+});
+
 describe("Drawer onEscape (design.md 4-4)", () => {
   it("calls onEscape, not onClose, on Escape when onEscape is given", () => {
     const onClose = vi.fn();

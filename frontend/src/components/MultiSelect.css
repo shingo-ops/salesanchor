@@ -25,6 +25,12 @@
   overflow: auto;
 }
 
+/* 選択画面（layout="inline"）の一覧だけパネル全幅にする打ち消し幅。既定0pxのため他画面は1pxも動かない
+   （design.md 4-3）。呼び出し側（viewer.css の .viewer-filter-options）が --space-6 を渡す */
+.comp-multiselect__list--inline {
+  margin-inline: calc(-1 * var(--comp-multiselect-list-bleed, 0px));
+}
+
 .comp-multiselect__option {
   display: flex;
   align-items: center;
@@ -35,13 +41,36 @@
   cursor: pointer;
 }
 
-.comp-multiselect__option:hover {
-  background: var(--bg-hover);
+/* タップしたままだと指が離れても :hover が残る端末があるため、ホバー自体が成立する環境
+   （マウス等）に限る（sticky hover。frontend/src/pages/inbox/InboxPage.css の形に倣う） */
+@media (hover: hover) {
+  .comp-multiselect__option:hover {
+    background: var(--bg-hover);
+  }
 }
 
+/* 選択画面の行（design.md 4-2）: 印に左48pxの枠を与え、行の文字を14.4pxにする。
+   印の枠が左padding分を持つため、行の padding-left は0（お手本48dpの基準）。
+   choose（お手本§3-1）: 選んだ合図はチェックの四角の塗りだけ。行の背景は変えない
+   （:hover はスマホでも sticky hover として残ることがあるため、上の @media (hover: hover) で
+   マウス等のみに絞って退避させている） */
 .comp-multiselect__option--inline {
   width: 100%;
-  min-height: var(--size-icon-btn-lg);
+  min-height: var(--comp-multiselect-check-row-h);
+  gap: 0;
+  padding: 0 var(--space-4) 0 0;
+  font-size: var(--font-base);
+}
+
+.comp-multiselect__check-col {
+  flex: 0 0 var(--comp-multiselect-check-col-w);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.comp-multiselect__option-text {
+  min-width: 0;
 }
 
 .comp-multiselect__inline-head {

@@ -86,6 +86,13 @@ describe("MultiSelect", () => {
     expect(document.querySelector(".comp-multiselect__list--popover")).toBeTruthy();
   });
 
+  it("U2: layout=\"popover\" does not wrap the check/text (PC and other screens stay unchanged, design.md 4-2)", () => {
+    setup(["a"]);
+    fireEvent.click(screen.getByTestId("ms-button"));
+    expect(document.querySelector(".comp-multiselect__check-col")).toBeNull();
+    expect(document.querySelector(".comp-multiselect__option-text")).toBeNull();
+  });
+
   describe("layout=\"inline\"", () => {
     function setupInline(selected: string[], onChange = vi.fn()) {
       render(
@@ -111,6 +118,15 @@ describe("MultiSelect", () => {
         expect(screen.getByTestId(`ms-option-${o.value}`)).toBeTruthy();
       }
       expect(document.querySelectorAll(".comp-multiselect__option--inline")).toHaveLength(OPTIONS.length);
+    });
+
+    it("U1: wraps the check and the text in comp-multiselect__check-col / comp-multiselect__option-text for each row (design.md 4-2)", () => {
+      setupInline([]);
+      expect(document.querySelectorAll(".comp-multiselect__check-col")).toHaveLength(OPTIONS.length);
+      expect(document.querySelectorAll(".comp-multiselect__option-text")).toHaveLength(OPTIONS.length);
+      for (const o of OPTIONS) {
+        expect(screen.getByTestId(`ms-option-${o.value}`).closest(".comp-multiselect__check-col")).toBeTruthy();
+      }
     });
 
     it("hides 'clear' when nothing is selected, shows it once something is", () => {

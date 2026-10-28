@@ -16,7 +16,7 @@
  */
 import { expect, test } from "@playwright/test";
 import type { Locator, Page } from "@playwright/test";
-import { gotoViewer } from "./viewer-helpers";
+import { gotoViewer, waitPanelSlidIn } from "./viewer-helpers";
 
 const MOBILE_WIDTHS = [360, 390] as const;
 /** design.md ③P1: 項目の行の高さ（お手本実測52.7dp→53px） */
@@ -32,14 +32,7 @@ const EXPECTED_FONT_SIZE = "14.4px";
 async function openFilterDrawer(page: Page): Promise<Locator> {
   await page.getByTestId("viewer-filter-toggle").click();
   const panel = page.locator('[data-testid="supplier-drawer"].comp-drawer-panel--open');
-  await expect(panel).toHaveCount(1);
-  await expect(panel).toBeVisible();
-  await expect
-    .poll(async () => {
-      const box = await panel.boundingBox();
-      return box ? Math.round(box.x) : null;
-    })
-    .toBe(0);
+  await waitPanelSlidIn(panel, page);
   return panel;
 }
 

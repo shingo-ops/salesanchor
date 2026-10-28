@@ -29,7 +29,7 @@
  */
 import { expect, test } from "@playwright/test";
 import type { Locator, Page } from "@playwright/test";
-import { gotoViewer } from "./viewer-helpers";
+import { gotoViewer, waitPanelSlidIn as waitFilterPanelSlidIn } from "./viewer-helpers";
 
 const MOBILE_WIDTHS = [360, 390] as const;
 /** B4b: PC 幅（design.md ⑤。PC は1px も動かさない固定） */
@@ -57,15 +57,7 @@ async function expectNoPageOverflow(page: Page): Promise<void> {
 async function openFilterDrawer(page: Page): Promise<Locator> {
   await page.getByTestId("viewer-filter-toggle").click();
   const panel = page.locator('[data-testid="supplier-drawer"].comp-drawer-panel--open');
-  await expect(panel).toHaveCount(1);
-  await expect(panel).toBeVisible();
-  // スライドインの途中で測ると x が 0 でない（画面外からアニメーション中）ため収まるまで待つ
-  await expect
-    .poll(async () => {
-      const box = await panel.boundingBox();
-      return box ? Math.round(box.x) : null;
-    })
-    .toBe(0);
+  await waitFilterPanelSlidIn(panel, page);
   return panel;
 }
 
