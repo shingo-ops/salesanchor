@@ -172,8 +172,13 @@ function blockCommentMap(text) {
       stack.push(o);
       p = o + 2;
     } else {
-      if (stack.length > 0) map.set(stack.pop(), c + 2);
-      p = c + 2;
+      if (stack.length > 0) {
+        map.set(stack.pop(), c + 2);
+        p = c + 2;
+      } else {
+        // 開きが積まれていないときの */ は閉じとして扱わず 1 字だけ進める（直後の /* もコメントの開き）
+        p = c + 1;
+      }
     }
   }
   return map;
@@ -629,7 +634,7 @@ const SCS_OFF_RE = /standard_conforming_strings['"\s,=]*(?:to\s+)?['"]?(?:off|fa
 // .sql 以外は、素の文と、引用符を見分けずにコメントを除いた文（R6a と同じ切り方）の両方に当て、
 // どちらかで当たれば検出する。python の文字列の改行の記号（\n など）を実際の改行・空白に直した文と、ヒアドキュメントの中身にも同じ当て方をする。
 // standard_conforming_strings を off にしているときは、バックスラッシュを逃がし記号として読む読み方でも当て、どちらかで当たれば検出する
-function sqlTextHasDestructiveStatement(text, file) {
+function sqlTextHasDestructiveStatementNew(text, file) {
   const modes = SCS_OFF_RE.test(text) ? [false, true] : [false];
   if (/\.sql$/i.test(file || '')) {
     return modes.some(bs => sqlHasDestructiveStatement(normalizeSqlText(text, bs), bs));
@@ -644,6 +649,305 @@ function sqlTextHasDestructiveStatement(text, file) {
     const legacyStripped = stripCommentsLegacy(body);
     return modes.some(bs => sqlHasDestructiveStatement(plain, bs) || sqlHasDestructiveStatement(legacyStripped, bs));
   });
+}
+
+// ── 下限の見分け（R6c の見分けを中身を変えずに残したもの）──────────────────────
+// 新しい見分けが R6c より弱くなる形を、形ごとの直しではなく作りで防ぐ。最終の判定は
+// 「新しい見分けで当たる、または下限の見分けで当たる」。
+// 関数名と定数名は lb（lower bound）を付けて新しい見分けと分けてある。読みの中身は origin/main（R6c）と同じ。
+// 足したのは、繰り返しの回数を数える仕掛け（lbTick）だけ。上限に届いたとき、深い入れ子などで例外が出たときは、検出に倒す（止める側）
+const LB_IDENT_CHAR = /[A-Za-z0-9_$\u0080-￿]/;
+const LB_DOLLAR_DELIM_SRC = String.raw`\$(?:[A-Za-z_\u0080-￿][A-Za-z0-9_\u0080-￿]*)?\$`;
+const LB_DOLLAR_DELIM_RE = new RegExp(LB_DOLLAR_DELIM_SRC, 'y');
+const LB_STATEMENT_START = String.raw`(^|[;()]|['"]|\b(?:BEGIN|THEN|ELSE|LOOP)\b|${LB_DOLLAR_DELIM_SRC}|\bEXPLAIN\s+(?:(?:ANALYZE|ANALYSE|VERBOSE)\s+)*|\bPREPARE\s+[^\s;()]+\s*(?:\([^()]*\)\s*)?AS\b)\s*`;
+const LB_ALTER_TABLE_RE = /\bALTER\s+(?:FOREIGN\s+)?TABLE\s+(?:IF\s+EXISTS\s+)?(?:ONLY\s+)?(?:"(?:[^"]|"")*"|[^\s;,()"])+\s*\*?/gi;
+
+// 繰り返しの回数の上限（入力の長さ×100＋6000 万。1 回の呼び出し全体で数える。6000 万は約 1 秒分）。届いたら lbTick が例外を投げ、呼び出し側が検出に倒す
+const lbWork = { used: 0, limit: 0 };
+const LB_STATS = { limitHits: 0, errors: 0 };
+const LB_LIMIT_ERROR = { lbLimit: true };
+function lbBegin(len) {
+  lbWork.used = 0;
+  lbWork.limit = 100 * len + 60000000;
+}
+function lbTick(n) {
+  lbWork.used += n;
+  if (lbWork.used > lbWork.limit) throw LB_LIMIT_ERROR;
+}
+
+function lbIsEscapeStringQuote(sql, i) {
+  if (sql[i] !== "'") return false;
+  const p = sql[i - 1];
+  if (p !== 'E' && p !== 'e') return false;
+  const pp = sql[i - 2];
+  return pp === undefined || !LB_IDENT_CHAR.test(pp);
+}
+
+function lbFindQuoteEnd(sql, i) {
+  const q = sql[i];
+  const esc = lbIsEscapeStringQuote(sql, i);
+  let j = i + 1;
+  while (j < sql.length) {
+    const c = sql[j];
+    if (esc && c === '\\') { j += 2; continue; }
+    if (c === q) {
+      if (sql[j + 1] === q) { j += 2; continue; }
+      lbTick(j - i);
+      return j + 1;
+    }
+    j++;
+  }
+  lbTick(j - i);
+  return -1;
+}
+
+function lbDollarDelimiterAt(sql, i) {
+  if (sql[i] !== '$') return null;
+  if (i > 0 && LB_IDENT_CHAR.test(sql[i - 1])) return null;
+  LB_DOLLAR_DELIM_RE.lastIndex = i;
+  const m = LB_DOLLAR_DELIM_RE.exec(sql);
+  return m ? m[0] : null;
+}
+
+function lbStripSqlComments(text) {
+  let out = '';
+  let i = 0;
+  while (i < text.length) {
+    lbTick(1);
+    const c = text[i];
+    if (c === "'" || c === '"') {
+      const end = lbFindQuoteEnd(text, i);
+      const stop = end === -1 ? text.length : end;
+      out += text.slice(i, stop);
+      i = stop;
+    } else if (c === '$') {
+      const delim = lbDollarDelimiterAt(text, i);
+      if (!delim) {
+        out += c;
+        i++;
+        continue;
+      }
+      const close = text.indexOf(delim, i + delim.length);
+      lbTick((close === -1 ? text.length : close) - i);
+      if (close === -1) {
+        out += delim;
+        i += delim.length;
+      } else {
+        out += delim + lbStripSqlComments(text.slice(i + delim.length, close)) + delim;
+        i = close + delim.length;
+      }
+    } else if (c === '-' && text[i + 1] === '-') {
+      const j = text.indexOf('\n', i);
+      lbTick((j === -1 ? text.length : j) - i);
+      out += ' ';
+      i = j === -1 ? text.length : j;
+    } else if (c === '/' && text[i + 1] === '*') {
+      let depth = 1;
+      let k = i + 2;
+      while (k < text.length && depth > 0) {
+        if (text[k] === '/' && text[k + 1] === '*') { depth++; k += 2; }
+        else if (text[k] === '*' && text[k + 1] === '/') { depth--; k += 2; }
+        else k++;
+      }
+      lbTick(k - i);
+      if (depth > 0) {
+        out += c;
+        i++;
+      } else {
+        out += ' ';
+        i = k;
+      }
+    } else {
+      out += c;
+      i++;
+    }
+  }
+  return out;
+}
+
+function lbNormalizeSqlText(text) {
+  return lbStripSqlComments(text).replace(/\s+/g, ' ').trim();
+}
+
+function lbIsConstantCondition(cond) {
+  return cond
+    .replace(/\b(?:true|false|null|unknown|and|or|not|is)\b/gi, ' ')
+    .replace(/\b\d+(?:\.\d+)?\b/g, ' ')
+    .replace(/[=<>!+\-*/%^|&~\s]/g, '') === '';
+}
+
+function lbScanOutsideParens(sql, from, endToken, groups) {
+  let depth = 0;
+  let outside = '';
+  let groupStart = -1;
+  let i = from;
+  while (i < sql.length) {
+    lbTick(1);
+    const c = sql[i];
+    if (c === ';') break;
+    if (endToken && sql.startsWith(endToken, i)) break;
+    if (c === '(') {
+      if (depth === 0) {
+        outside += ' (grp' + groups.length + ') ';
+        groupStart = i + 1;
+      }
+      depth++;
+      i++;
+      continue;
+    }
+    if (c === ')') {
+      if (depth === 0) break;
+      depth--;
+      if (depth === 0) groups.push(sql.slice(groupStart, i));
+      i++;
+      continue;
+    }
+    if (c === "'" || c === '"') {
+      const end = lbFindQuoteEnd(sql, i);
+      if (depth === 0) outside += c === '"' ? ' ident ' : ' 0 ';
+      i = end === -1 ? sql.length : end;
+      continue;
+    }
+    if (c === '$') {
+      const delim = lbDollarDelimiterAt(sql, i);
+      if (delim) {
+        const close = sql.indexOf(delim, i + delim.length);
+        lbTick((close === -1 ? sql.length : close) - i);
+        if (close === -1) {
+          i += delim.length;
+        } else {
+          if (depth === 0) outside += ' 0 ';
+          i = close + delim.length;
+        }
+        continue;
+      }
+    }
+    if (depth === 0) outside += c;
+    i++;
+  }
+  if (depth > 0) groups.push(sql.slice(groupStart));
+  return outside;
+}
+
+function lbDeleteStatementHasWhere(sql, from, endToken) {
+  let groups = [];
+  const outside = lbScanOutsideParens(sql, from, endToken, groups);
+  const m = /\bWHERE\b/i.exec(outside);
+  if (!m) return false;
+  let cond = outside.slice(m.index + m[0].length).split(/\bRETURNING\b/i)[0];
+  for (;;) {
+    lbTick(1);
+    const w = /^\s*\(grp(\d+)\)\s*$/.exec(cond);
+    if (!w) break;
+    const inner = groups[Number(w[1])];
+    groups = [];
+    cond = lbScanOutsideParens(inner, 0, null, groups);
+  }
+  return !lbIsConstantCondition(cond);
+}
+
+function lbAlterTableDropsColumnShorthand(sql) {
+  for (const m of sql.matchAll(LB_ALTER_TABLE_RE)) {
+    let depth = 0;
+    let action = '';
+    const actions = [];
+    let i = m.index + m[0].length;
+    while (i < sql.length) {
+      lbTick(1);
+      const c = sql[i];
+      if (c === ';') break;
+      if (c === "'" || c === '"') {
+        const end = lbFindQuoteEnd(sql, i);
+        const stop = end === -1 ? sql.length : end;
+        action += sql.slice(i, stop);
+        i = stop;
+        continue;
+      }
+      if (c === '(') depth++;
+      if (c === ')') {
+        if (depth === 0) break;
+        depth--;
+      }
+      if (c === ',' && depth === 0) {
+        actions.push(action);
+        action = '';
+        i++;
+        continue;
+      }
+      action += c;
+      i++;
+    }
+    actions.push(action);
+    if (actions.some(a => /^\s*DROP\s+(?!CONSTRAINT\b)\S/i.test(a))) return true;
+  }
+  return false;
+}
+
+function lbSqlHasDestructiveStatement(sql) {
+  if (/\bDROP\s+(?:TABLE|COLUMN|SCHEMA|DATABASE|OWNED|FOREIGN\s+TABLE)\b/i.test(sql)) return true;
+  if (lbAlterTableDropsColumnShorthand(sql)) return true;
+  const startRe = new RegExp(LB_STATEMENT_START + '(DELETE\\s+FROM\\b|TRUNCATE\\b)', 'gi');
+  for (const m of sql.matchAll(startRe)) {
+    lbTick(1);
+    if (/^TRUNCATE/i.test(m[2])) return true;
+    const prefix = m[1].trim();
+    const endToken = prefix === "'" || prefix === '"' || prefix.startsWith('$') ? prefix : null;
+    if (!lbDeleteStatementHasWhere(sql, m.index + m[0].length, endToken)) return true;
+  }
+  return false;
+}
+
+function lbHeredocBodies(text) {
+  const bodies = [];
+  const lines = text.split('\n');
+  for (let i = 0; i < lines.length; i++) {
+    const m = /<<-?\s*(["']?)([A-Za-z_][A-Za-z0-9_]*)\1/.exec(lines[i]);
+    if (!m) continue;
+    const body = [];
+    let j = i + 1;
+    while (j < lines.length && lines[j].trim() !== m[2]) {
+      body.push(lines[j]);
+      j++;
+    }
+    bodies.push(body.join('\n'));
+    i = j;
+  }
+  return bodies;
+}
+
+// R6c の sqlTextHasDestructiveStatement の中身。繰り返しの回数は 1 回の呼び出し全体で数える
+function lbSqlTextHasDestructiveStatementCore(text, file) {
+  lbBegin(text.length);
+  if (/\.sql$/i.test(file || '')) {
+    return lbSqlHasDestructiveStatement(lbNormalizeSqlText(text));
+  }
+  const candidates = [text, text.replace(/\\[nrt]/g, ' '), ...lbHeredocBodies(text)];
+  return candidates.some(body => {
+    const plain = body.replace(/\s+/g, ' ').trim();
+    const legacyStripped = body
+      .replace(/\/\*[\s\S]*?\*\//g, ' ')
+      .replace(/--[^\n]*/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    return lbSqlHasDestructiveStatement(plain) || lbSqlHasDestructiveStatement(legacyStripped);
+  });
+}
+
+// 下限の見分け。上限に届いたとき・例外（入れ子が深すぎる等）のときは検出に倒す
+function lbSqlTextHasDestructiveStatement(text, file) {
+  try {
+    return lbSqlTextHasDestructiveStatementCore(text, file);
+  } catch (e) {
+    if (e === LB_LIMIT_ERROR) LB_STATS.limitHits++;
+    else LB_STATS.errors++;
+    return true;
+  }
+}
+
+// 最終の判定: 新しい見分けで当たる、または下限の見分け（R6c と同じ読み）で当たる。
+// 新しい見分けが R6c より弱くなる形があっても、下限の見分けが検出に戻す
+function sqlTextHasDestructiveStatement(text, file) {
+  return sqlTextHasDestructiveStatementNew(text, file) || lbSqlTextHasDestructiveStatement(text, file);
 }
 
 // diff をファイルごとに分け、ファイル名と、追加行だけを改行でつないだ文章にする
