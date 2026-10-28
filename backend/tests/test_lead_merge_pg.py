@@ -335,7 +335,10 @@ async def env():
                 await _apply_table_migrations(engine)
                 _bootstrapped = True
             # 前の試験の行を消す（この試験用テナントだけ）
+            # 監査ログも空にする: leads の番号は RESTART IDENTITY で毎回 1 から振り直されるため、
+            # 前の試験の merge_absorb が同じ record_id で残り、件数の確認がずれる
             tenant_tables = [f"{_SCHEMA}.{s.name}" for s in LEAD_MERGE_TABLES if s.schema == "tenant"]
+            tenant_tables.append(f"{_SCHEMA}.audit_logs")
             async with engine.begin() as conn:
                 await conn.execute(
                     text(f"TRUNCATE {_SCHEMA}.leads, {', '.join(tenant_tables)} RESTART IDENTITY CASCADE")
