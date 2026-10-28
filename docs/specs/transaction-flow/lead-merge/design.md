@@ -76,8 +76,8 @@ recon: [docs/handoff/inbox-brushup/lead-merge-recon.md](../../../handoff/inbox-b
    - 一意の決まりの重複4件（lead_channels・lead_sales_form_selections・deal_close_reasons・customer_scores）
    - 下見が書き込まないこと1件、下見と実行の件数が一致すること1件
    - 異常系3件（自分自身・loser が lead でない・無い番号）
-   - 漏れの見張り1件（静的な検査。DB を使わない）: `backend/app/services/tenant.py` と `migrations/*.sql` の本文から、`lead_id` 列を作る表（CREATE TABLE の中の `lead_id` 列と、`ALTER TABLE … ADD COLUMN … lead_id`）の表名を集める。その集合から「後で消された表」の除外の一覧（表名と DROP の migration のファイル名を対で持つ）を引いたものが、13表の定数と一致する。集めた表名と除外の一覧は実装の担当が報告に全部出し、設計担当が確かめる。
-   - 試験の DB の作り方: `scripts/check_test_schema_dup.py` が試験の中の CREATE TABLE を止めるので、表は手で書かない。手本は `backend/tests/test_permission_resolution_pg.py`（`tests/rls_bootstrap.py` の `bootstrap_tenant_schema` で `tenant.py` の本物の定義からテナントを作り、`_apply_migration_on_conn` で migration を流す）。13表のうち作られない表があれば、その表を作る migration を `_apply_migration_on_conn` で流す。統合は API（`POST /api/v1/leads/{master_id}/merge`）を呼んで確かめる。
+   - 漏れの見張り1件（静的な検査。DB を使わない）: `backend/app/services/tenant.py` と migrations/ 配下の SQL の本文から、`lead_id` 列を作る表（CREATE TABLE の中の `lead_id` 列と、`ALTER TABLE … ADD COLUMN … lead_id`）の表名を集める。その集合から「後で消された表」の除外の一覧（表名と DROP の migration のファイル名を対で持つ）を引いたものが、13表の定数と一致する。集めた表名と除外の一覧は実装の担当が報告に全部出し、設計担当が確かめる。
+   - 試験の DB の作り方: `scripts/check_test_schema_dup.py` が試験の中の CREATE TABLE を止めるので、表は手で書かない。手本は `backend/tests/test_permission_resolution_pg.py`（`backend/tests/rls_bootstrap.py` の `bootstrap_tenant_schema` で `backend/app/services/tenant.py` の本物の定義からテナントを作り、`_apply_migration_on_conn` で migration を流す）。13表のうち作られない表があれば、その表を作る migration を `_apply_migration_on_conn` で流す。統合は API（`POST /api/v1/leads/{master_id}/merge`）を呼んで確かめる。
 2. 画面 frontend/tests-e2e/visual-language/inbox-lead-merge.spec.ts（新規。`frontend/tests-e2e/visual-language/inbox-helpers.ts` の作り物のデータを使う。幅 390・768・1280 で動く）:
    - 権限ありで「ほかのリードとまとめる」が出る／権限なしで出ない（K6）
    - 幅 390 でメニュー項目・窓のボタンの高さ 44px 以上、`scrollWidth <= clientWidth`（K7）
@@ -149,7 +149,7 @@ recon: [docs/handoff/inbox-brushup/lead-merge-recon.md](../../../handoff/inbox-b
 
 守り手: .github/workflows/e2e.yml と CI（バックエンドの試験・「画面検査（受信箱 3幅 Playwright）」・「Lint & Dark Mode Check (ADR-067)」）。中身は下の3つ。
 
-- 守り手（機械）: backend/tests/test_lead_merge_pg.py の漏れの見張り（静的な検査）。`tenant.py` か `migrations/` に `lead_id` を持つ表が足されると、13表の定数と合わず CI が落ちる。
+- 守り手（機械）: backend/tests/test_lead_merge_pg.py の漏れの見張り（静的な検査）。`backend/app/services/tenant.py` か `migrations/` に `lead_id` を持つ表が足されると、13表の定数と合わず CI が落ちる。
 - 守り手（機械）: `backend/tests/test_realtime_topics.py` が、下見の入口が登録表に載っていることを確かめる。
 - 守り手（機械）: frontend/tests-e2e/visual-language/inbox-lead-merge.spec.ts が PR ごとに 44px とはみ出しを測る。
 - 守り手（機械）: 「Lint & Dark Mode Check (ADR-067)」が直書きを止める。
