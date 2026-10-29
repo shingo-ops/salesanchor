@@ -15,6 +15,7 @@ from unittest.mock import AsyncMock, patch
 from urllib.parse import urlsplit, urlunsplit
 
 import pytest
+from fastapi import BackgroundTasks
 from starlette.requests import Request
 from starlette.responses import Response
 
@@ -486,17 +487,14 @@ async def _run_register(admin_engine, app_engine) -> None:
         def __getattr__(self, name):
             return getattr(self._inner, name)
 
-    async def _claim(*_a, **_k):
-        return None
-
-    with patch("app.routers.auth.record_audit_log", new=AsyncMock()), \
-         patch("app.routers.auth.set_tenant_claim", new=_claim):
+    with patch("app.routers.auth.record_audit_log", new=AsyncMock()):
         async with _session(app_engine) as db:
             await mod.register_user(
                 UserRegister(
                     email="newcomer984@example.com", username="newcomer", full_name="N",
-                    tenant_code=f"tenant_{_TENANT_A}", firebase_uid="fb-984",
+                    tenant_code=f"tenant_{_TENANT_A}",
                 ),
+                _request(origin=_ORIGIN), BackgroundTasks(),
                 _NoRolesDb(db), SimpleNamespace(id=999, is_super_admin=True),
             )
 

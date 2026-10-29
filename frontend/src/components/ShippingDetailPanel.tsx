@@ -22,7 +22,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api, ApiError } from "../lib/api";
-import { auth } from "../lib/firebase";
+import { getAccessToken } from "../lib/auth/selfAuth";
 import { Modal } from "./Modal";
 import { Button } from "./Button";
 import { SelectControl } from "./Select";
@@ -311,9 +311,7 @@ export default function ShippingDetailPanel({
     setError("");
     setDownloading(true);
     try {
-      const user = auth.currentUser;
-      if (!user) throw new Error(t("common.notAuthenticated"));
-      const token = await user.getIdToken();
+      const token = await getAccessToken();
       const res = await fetch(
         `/api/v1/orders/${orderId}/shipping/elogi-csv`,
         { headers: { Authorization: `Bearer ${token}` } },

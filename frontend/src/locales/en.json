@@ -111,6 +111,10 @@
     "updateSummary": "Total: {{total}} / Valid: {{ready}} / Blocked: {{blocked}}",
     "addProduct": "Add product"
   },
+  "appUpdate": {
+    "message": "A new version is available",
+    "reload": "Reload"
+  },
   "common": {
     "loading": "Loading...",
     "select": "Select",
@@ -664,6 +668,34 @@
     "sendResetEmail": "Send reset email",
     "resetEmailSent": "Password reset email sent. Please check your inbox.",
     "backToLogin": "Back to sign in"
+  },
+  "authError": {
+    "invalidCredentials": "The email address or password is incorrect.",
+    "forbiddenOrigin": "Please reload the page and try again.",
+    "unavailable": "This action is not available right now.",
+    "tooManyAttempts": "Too many attempts. Please wait a while and try again.",
+    "resetLinkInvalid": "The link is invalid or has expired. Please request a new reset email.",
+    "currentPasswordWrong": "The current password is incorrect.",
+    "passwordTooShort": "Enter a password of at least 15 characters.",
+    "passwordTooLong": "Enter a password of 64 characters or fewer.",
+    "passwordTooCommon": "That password is too common. Please choose a different one.",
+    "validation": "Please check what you entered.",
+    "default": "Something went wrong. Please wait a while and try again."
+  },
+  "resetPasswordPage": {
+    "subtitle": "Choose a new password using the link from your email.",
+    "title": "Set your password",
+    "newPassword": "New password",
+    "confirmPassword": "New password (confirm)",
+    "hint": "Use 15 to 64 characters.",
+    "submit": "Set password",
+    "mismatch": "The new passwords do not match.",
+    "missingTokenTitle": "This link is not valid",
+    "missingTokenBody": "Open the link from the email again, or request a new reset email from the login page.",
+    "errorTitle": "Could not set the password",
+    "doneTitle": "Your password is set",
+    "doneBody": "Please log in with your new password.",
+    "goToLogin": "Go to login"
   },
   "language": {
     "label": "Language",

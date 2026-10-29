@@ -38,6 +38,30 @@ Sales Anchor
 """
 
 
+INVITE_SUBJECT = "【Sales Anchor】初回パスワードの設定 / Set your Sales Anchor password"
+
+_INVITE_BODY = """Sales Anchor のアカウントが作成されました。
+下のリンクから 72 時間以内に最初のパスワードを設定してください。
+
+{reset_url}
+
+このリンクは 1 回だけ使えます。
+心当たりがない場合は、このメールを破棄してください。
+
+---------------------------------------------
+A Sales Anchor account has been created for you.
+Please set your first password within 72 hours using the link below.
+
+{reset_url}
+
+This link can be used only once.
+If you did not expect this, please ignore this email.
+---------------------------------------------
+
+Sales Anchor
+"""
+
+
 VIEWER_RESET_SUBJECT = "【Sales Anchor】在庫閲覧ページのパスワード再発行 / Inventory viewer password reset"
 
 _VIEWER_RESET_BODY = """Sales Anchor 在庫閲覧ページのパスワード再発行の申請を受け付けました。
@@ -96,6 +120,11 @@ def _send_reset_mail(to_addr: str, reset_url: str, subject: str, body: str) -> N
 def send_password_reset_email(to_addr: str, reset_url: str) -> None:
     """BackgroundTasks から呼ぶ同期関数。例外は外に出さずログに残す（応答はもう返っている）。"""
     _send_reset_mail(to_addr, reset_url, RESET_SUBJECT, _RESET_BODY)
+
+
+def send_invite_email(to_addr: str, reset_url: str) -> None:
+    """初回設定メール（ADR-1013 便4a）。BackgroundTasks から呼ぶ。"""
+    _send_reset_mail(to_addr, reset_url, INVITE_SUBJECT, _INVITE_BODY)
 
 
 def send_viewer_password_reset_email(to_addr: str, reset_url: str) -> None:

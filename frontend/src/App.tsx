@@ -9,6 +9,7 @@ import DesktopShell from "./components/DesktopShell";
 import MobileShell from "./components/MobileShell";
 import { useIsMobile } from "./hooks/useIsMobile";
 import LoginPage from "./pages/login/LoginPage";
+import ResetPasswordPage from "./pages/reset-password/ResetPasswordPage";
 import DashboardPage from "./pages/dashboard/DashboardPage";
 import FollowUpsPage from "./pages/dashboard/FollowUpsPage";
 import FunnelLeadsPage from "./pages/dashboard/FunnelLeadsPage";
@@ -113,6 +114,7 @@ import RegisterPage from "./pages/register/RegisterPage";
 import RegisterAddressPage from "./pages/register/RegisterAddressPage";
 import RegisterChangeBillingPage from "./pages/register/RegisterChangeBillingPage";
 import { Toaster } from "./components/loading";
+import { AppUpdateNotice } from "./components/AppUpdateNotice";
 import "./sidebar.css";
 import "./topbar.css";
 import "./components.css";
@@ -152,8 +154,11 @@ function App() {
           <LocaleProvider>
             <ThemeProvider>
               <Toaster />
+              <AppUpdateNotice />
               <Routes>
                 <Route path="/login" element={<LoginPage />} />
+                {/* ADR-1013: パスワード再設定・初回設定（メールのリンクから来る。認証不要） */}
+                <Route path="/reset-password" element={<ResetPasswordPage />} />
                 {/* ADR-SA-03: 顧客登録フォーム（認証不要・トークン署名で検証） */}
                 <Route path="/register" element={<RegisterPage />} />
                 <Route path="/register/address" element={<RegisterAddressPage />} />
