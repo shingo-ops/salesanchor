@@ -23,7 +23,6 @@ from app.auth.dependencies import (
 from app.auth.password_policy import check_password
 from app.auth.passwords import hash_password, needs_rehash, verify_password
 from app.auth.schemas import UserRegister, UserResponse
-from app.schemas.auth import PasswordChange
 from app.cache import (
     PASSWORD_RESET_REQUEST_MAX,
     blacklist_token,
@@ -34,6 +33,7 @@ from app.cache import (
 )
 from app.database import get_db
 from app.models import Tenant, User
+from app.schemas.auth import PasswordChange
 from app.services.audit import record_audit_log
 from app.services.auth_mail import send_invite_email, send_password_reset_email
 from app.services.invite import create_invite_token, invite_enabled, invite_url
