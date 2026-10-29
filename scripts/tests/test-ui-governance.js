@@ -19,6 +19,7 @@ const {
   countRadio,
   countLoadingText,
   countLoadingTernary,
+  countEnglishUiLiteral,
   LOADING_VERBS,
   splitTargets,
   countAll,
@@ -402,6 +403,27 @@ assert('T81: t の第2引数があっても読込キーでなければ0件', lt(
 assert('T82: prop の値の i18n.t（confirmLabel=）は0件', lt('<Dialog confirmLabel={x ? i18n.t("a.disconnecting") : i18n.t("a.disconnect")} />'), 0);
 assert('T83: obj.t("common.saving") を使った三項は0件', lt('{x ? obj.t("common.saving") : obj.t("common.save")}'), 0);
 assert('T84: ui-allow 付きの (3) は0件', lt('{/* ui-allow: 理由 (#4762) */}\n{saving ? t("common.saving", { n }) : t("common.save")}'), 0);
+
+// E1-: 英語の直書き（englishUiLiteral）
+const en = countEnglishUiLiteral;
+assert('E1: <span>No data</span> は1件', en('<span>No data</span>'), 1);
+assert('E2: aria-label="Close" は1件', en('<input aria-label="Close" />'), 1);
+assert('E3: placeholder={"Search..."} は1件', en('<input placeholder={"Search..."} />'), 1);
+assert('E4: {emptyState ?? \'No data\'} は1件', en("{emptyState ?? 'No data'}"), 1);
+assert('E5: 番号なし ui-allow は無効で除外されず1件', en('{/* ui-allow: x */}\n<p>Send failed</p>'), 1);
+assert('E6: <span>{t("common.noData")}</span> は0件', en('<span>{t("common.noData")}</span>'), 0);
+assert('E7: aria-label={t(...)} は0件', en('<input aria-label={t("common.close")} />'), 0);
+assert('E8: アロー関数と比較演算子は0件', en('const f = (a) => a > 0 && b < c;'), 0);
+assert('E9: useState<string>("") は0件', en('useState<string>("")'), 0);
+assert('E10: {variant ?? \'primary\'}（空白のない既定値）は0件', en("{variant ?? 'primary'}"), 0);
+assert('E11: className="foo bar" と日本語の中身は0件', en('<div className="foo bar">中身</div>'), 0);
+assert('E12: 日本語の文は0件', en('<p>送信に失敗しました</p>'), 0);
+assert('E13: 有効な ui-allow の次の行は0件', en('{/* ui-allow: 固有名詞の見本 (#1) */}\n<span>No data</span>'), 0);
+assert('E14: コメントの中は0件', en('// <span>No data</span>'), 0);
+assert('E15: .test.tsx は englishFiles に入らない', splitTargets([fileOf('frontend/src/components/C.test.tsx')]).englishFiles.length, 0);
+assert('E16: components/ の .tsx は englishFiles に入る', splitTargets([fileOf('frontend/src/components/C.tsx')]).englishFiles.length, 1);
+assert('E17: countAll の戻りに englishUiLiteral がある', countAll('<span>No data</span>').englishUiLiteral, 1);
+assert('E18: (A) と (C) の両方に当たる文字列は1件', en("<input placeholder={x || 'Search items'} />"), 1);
 
 // ---------------------------------------------------------------------------
 // 結果サマリ
