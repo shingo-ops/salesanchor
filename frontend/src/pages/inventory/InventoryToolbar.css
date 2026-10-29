@@ -16,3 +16,47 @@
 
 /* パネルの中の「24時間以内」を押しやすくする（閲覧ページ viewer.css の .viewer-fresh-check と同じ） */
 .inventory-fresh-check { min-height: var(--size-icon-btn-lg); width: 100%; }
+
+/* 種別のボタン（design.md 4-2・4-4）。閲覧ページ viewer.css の .viewer-toolbar__series と同じ規則。
+   1行に収まることを運任せにしない（ADR-067: flex の数値と min-width は色・寸法のトークン対象外） */
+.inventory-toolbar > .inventory-toolbar__series {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* 枠なしボタン（種別・並び替え）の中の文字（design.md 4-4）。長い種別名を … で切る */
+.inventory-toolbar__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* 下向きの山形（ChevronRight を回転。アイコンを足さない。design.md 4-4） */
+.inventory-toolbar__caret {
+  transform: rotate(90deg);
+  flex-shrink: 0;
+}
+/* 種別・並び替えのパネルの行一覧（design.md 4-4） */
+.inventory-choice-list {
+  display: flex;
+  flex-direction: column;
+}
+.inventory-choice-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: var(--size-icon-btn-lg);
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--font-sm);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+.inventory-choice-row__label { min-width: 0; }
+/* タップした行に色を残さない（便13a の教訓。写す元 viewer.css は囲めていない＝⑫ M1 に起票） */
+@media (hover: hover) {
+  .inventory-choice-row:hover { background: var(--bg-hover); }
+}
+/* 詳細フィルタの中に移した注記は折り返す（審査 H2。white-space: nowrap を付けないこと） */
+.inventory-notice { margin: 0; font-size: var(--font-xs); color: var(--text-secondary); }
