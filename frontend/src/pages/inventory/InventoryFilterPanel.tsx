@@ -8,7 +8,7 @@
  *   - 表示する列（列トグル）
  *   - 表示条件: 形態 / 在庫・予約 の複数選択（包含フィルタ）
  */
-import type { Dispatch, SetStateAction } from "react";
+import type { Dispatch, ReactNode, SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/Button";
 import { ContentToolbarRange } from "../../components/ContentToolbar";
@@ -53,6 +53,8 @@ interface Props {
   freshWindowHours: number | undefined;
   onReset: () => void;
   onClose: () => void;
+  /** スマホだけ: 上部（Tabs の end）から移した注記（design.md 4-5）。showSupplierSelect が真のときだけ出す */
+  notice?: ReactNode;
 }
 
 export default function InventoryFilterPanel({
@@ -91,6 +93,7 @@ export default function InventoryFilterPanel({
   freshWindowHours,
   onReset,
   onClose,
+  notice,
 }: Props) {
   const { t } = useTranslation();
 
@@ -138,6 +141,9 @@ export default function InventoryFilterPanel({
           onChange={onFreshToggle}
         />
       )}
+      {/* 注記（design.md 4-5）: 便1 で先頭に置いた「24時間以内」のすぐ下に出す。showSupplierSelect
+          （＝スマホ）のときだけ。PC は Tabs の end のまま（InventoryPage.tsx）。 */}
+      {showSupplierSelect && notice}
 
       {showSupplierSelect && (
         <MultiSelect
