@@ -114,7 +114,7 @@ run_sql() {
 ## 8. 選ばなかった案と理由
 - 案A: parse_logs を毎回作って消すのをやめる。毎回全件流す作り自体（ADR-1005 段階2）の話で、PO の判断が要る。今回は「どの migration がロックで待っても1秒で離す」形にして、同じ形の別の migration（conditions のビュー作り直しなど）にも効かせる。
 - 案B: DB やロール全体に lock_timeout を付ける。アプリの接続も同じロールで、アプリ側の待ちの挙動が変わる。公式でも全体設定は非推奨。
-- 案C: Python の移行（run_py）にも付ける。asyncpg が PGOPTIONS を読むかは【未確認】で、20本それぞれの接続を変える必要がある。観測した deadlock 4件は全部 run_sql 側（recon §3・§5）。便2以降の候補に残す。（2026-10-29 PO「1」で docs/handoff/deploy-db-stall/design.md へ。対象は21本、入口方式）
+- 案C: Python の移行（run_py）にも付ける。asyncpg が PGOPTIONS を読むかは【未確認】で、20本それぞれの接続を変える必要がある。観測した deadlock 4件は全部 run_sql 側（recon §3・§5）。便2以降の候補に残す。
 
 ## 9. 弊害・トレードオフ
 - 途中まで流れたファイルを流し直す → 全件2周の CI（`.github/workflows/migration-test.yml:1828-1839`）で再実行が通ることを確かめ済み。BEGIN を持つ13本は失敗時に巻き戻る。
@@ -135,7 +135,7 @@ run_sql() {
 | 4 | PR・GO 記録（委任 GO。DROP を含む migration の追加・変更は無い）・マージ | Opus |
 | 5 | 入れ替え後の K6・K7 測定（3回分） | Sonnet が集計、Opus が判定 |
 | 便2（保留・PO 2026-10-22「1」） | 5秒の8ファイルを1秒へ。DROP を含む2本は PO 本人の GO | PO 判断 → 保留。K7 の残り2回で、5秒の8ファイルに由来する待ちが出たら再相談（:366 の条件） |
-| 便3（未承認） | run_py の接続にも付ける | 設計から（2026-10-29 PO「1」で docs/handoff/deploy-db-stall/design.md へ。対象は21本、入口方式） |
+| 便3（未承認） | run_py の接続にも付ける | 設計から |
 
 ## 12. 継続（維持の仕組み）
 - 守り手: `scripts/run_all_migrations.sh`（値の正本と再試行）、`tests/sandbox/migration-run-sql-retry.sh`（挙動の試験。run_sql を変えたら流す）、`docs/adr/ADR-1037-migration-lock-timeout.md`（決まり）。
