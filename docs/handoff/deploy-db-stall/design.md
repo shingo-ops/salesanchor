@@ -311,15 +311,15 @@ PR ごとの静的点検にも1つ足す（第8版）:
 | 控えの接続の名前 | なし（pg_dump の既定） | 本番反映から呼ぶとき `salesanchor_backup_deploy`、cron から呼ぶとき `salesanchor_backup_cron` |
 | run_sql の接続の名前 | なし | `salesanchor_migration`（Python と同じ名前） |
 | 移行の TERM・HUP・INT | trap なし | backup.sh と同じく exit 143・129・130 に変え、EXIT の trap（ai_ro の作り直し）を必ず通す |
-| 取り残しの片付け | なし | 新しい `scripts/deploy-db-orphan-cleanup.sh` を、(1) 控えの段の最初 (2) 移行の段の最初 (3) 控えか移行の段が失敗したときの新しい段、で呼ぶ |
+| 取り残しの片付け | なし | 新しい scripts/deploy-db-orphan-cleanup.sh を、(1) 控えの段の最初 (2) 移行の段の最初 (3) 控えか移行の段が失敗したときの新しい段、で呼ぶ |
 
 ### 16-3. 名前の正本
-- 新しい `scripts/lib/db-app-names.sh` に3つの名前を置く（SA_APPNAME_MIGRATION=salesanchor_migration、SA_APPNAME_BACKUP_DEPLOY=salesanchor_backup_deploy、SA_APPNAME_BACKUP_CRON=salesanchor_backup_cron）。backup.sh・run_all_migrations.sh・片付けのスクリプトはこれを source する。
+- 新しい scripts/lib/db-app-names.sh に3つの名前を置く（SA_APPNAME_MIGRATION=salesanchor_migration、SA_APPNAME_BACKUP_DEPLOY=salesanchor_backup_deploy、SA_APPNAME_BACKUP_CRON=salesanchor_backup_cron）。backup.sh・run_all_migrations.sh・片付けのスクリプトはこれを source する。
 - `scripts/migration_py_entry.py` の APP_NAME は Python なので source できない。CI の試験（下の C4）で、lib の SA_APPNAME_MIGRATION と入口の APP_NAME が同じ文字列であることを確かめる（ずれたら赤）。
 - 控えの名前は backup.sh の第1引数で決める。引数なし＝cron（今の crontab の行を変えない）。`deploy` のときだけ deploy の名前。それ以外の引数は rc=2 で止める。名前は `docker compose exec -T -e PGAPPNAME=<名前> postgres pg_dump …` で渡す（libpq は PGAPPNAME を application_name に使う。PostgreSQL 16 文書 libpq 34.15。実装 PR の B5 で pg_stat_activity に出ることを確かめる）。
 - run_sql は `docker exec -e PGAPPNAME=<名前> -e PGOPTIONS=… -i postgres psql …` にする。log_lock_holders と ai_ro の作り直し（EXIT の trap）は名前を付けない（片付けの対象にしない。止めると後始末が止まる）。
 
-### 16-4. 片付けのスクリプト `scripts/deploy-db-orphan-cleanup.sh`
+### 16-4. 片付けのスクリプト scripts/deploy-db-orphan-cleanup.sh
 呼ばれたときに残っている「本番反映の控え・移行」は、すべて前の本番反映の取り残しとみなせる。理由: 本番反映は1本ずつ動き（16-1）、片付けを呼ぶ位置はどれも「同じ本番反映の控え・移行が動いていない」時点だから。毎朝3時の控え（cron の名前）は対象にしない。
 1. サーバー側のスクリプトを止める: 引数が完全に一致するプロセスだけを探す（`pgrep -x -f` で `bash scripts/run_all_migrations.sh` と `bash scripts/backup.sh deploy`）。部分一致は使わない（ssh-action の段の bash は台本全体を引数に持つので、部分一致だと自分の段を止める）。見つかったら TERM を送る。
 2. DB 側の接続を止める: `pg_stat_activity` で application_name が SA_APPNAME_MIGRATION か SA_APPNAME_BACKUP_DEPLOY、かつ自分以外の接続に `pg_terminate_backend`。移行は1ファイル1取引なので（Python）、止めた取引は戻る。run_sql のファイルは取引でまとめていないので、止めた位置より前の文は残る。どちらも冪等の前提（`scripts/run_all_migrations.sh` :13・§4-4）で、次の本番反映が全件を流し直す。
@@ -377,4 +377,4 @@ PR ごとの静的点検にも1つ足す（第8版）:
 ### 16-11. 戻し方・計画
 - 戻し方: この PR を revert して main にマージ。次の本番反映から今の形に戻る。backup.sh は引数なしの動きが今と同じなので cron は影響を受けない。DB は変えない。
 - 計画: (1) 本節の Architect 審査（新しく起動） (2) Sonnet が実装・CI・赤の実演 (3) reviewer（opus、新しく起動） (4) 本番に出すのは段3の K3-4〜K3-6 と段1の K8・K9 がそろった後。委任 GO（deploy.yml と本番 scripts を含む。ADR-1003 の例外7種には当たらない。移行・DROP は無い） (5) K2-4〜K2-6 (6) 段4の詳細設計へ。
-- 継続: 名前の正本は `scripts/lib/db-app-names.sh`。守り手: `.github/workflows/backup-script-test.yml`（C1〜C7）。
+- 継続: 名前の正本は scripts/lib/db-app-names.sh。守り手: `.github/workflows/backup-script-test.yml`（C1〜C7）。
