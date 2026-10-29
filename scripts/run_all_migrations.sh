@@ -72,7 +72,7 @@ run_py() {
   shift
   STEP=$((STEP + 1))
   echo ">>> [${STEP}/${TOTAL}] python ${script} $*"
-  local attempt=1 rc errlog
+  local attempt=1 rc errlog tee_pid
   errlog="$(mktemp)"
   while true; do
     rc=0
@@ -81,8 +81,9 @@ run_py() {
     docker exec \
       -e DATABASE_URL="${ADMIN_DATABASE_URL:-$DATABASE_URL}" \
       -e MIGRATION_LOCK_TIMEOUT="${SQL_LOCK_TIMEOUT}" \
-      "$@" -w /app "${BACKEND}" python scripts/migration_py_entry.py "${script}" 2>"${errlog}" || rc=$?
-    cat "${errlog}" >&2
+      "$@" -w /app "${BACKEND}" python scripts/migration_py_entry.py "${script}" 2> >(tee "${errlog}" >&2) || rc=$?
+    tee_pid=$!
+    wait "${tee_pid}" || true
     if [ "${rc}" -eq 0 ]; then
       rm -f "${errlog}"
       return 0
