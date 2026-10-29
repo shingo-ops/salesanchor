@@ -1,0 +1,115 @@
+# design: 画面に出る英語の直書きを辞書の言葉にする（english-literal-i18n）
+
+- 親: [ADR-027 UI 国際化](../../adr/ADR-027-ui-internationalization.md) ／ [design-system](../../specs/design-system/README.md)
+- ひとこと: 日本語の画面に出る英語の決まり文句を辞書の言葉に置きかえ、新しく英語を直書きしたら申請のときに止まるようにする。
+- 現在地の根拠: [recon.md](recon.md)（以下 R§ で参照）。`scripts/check-ui-governance.js` の行番号は便1 実装前の版（d9b0c1771）のもの
+- 状態: Opus 自己審査済み。PO 承認 2026-10-29「1」（選択肢の言葉は日本語にそろえ、この案で進める）。便1 のカード発行済み（[card-1.md](card-1.md)）。
+- 区分（STANDARD-WORKFLOW 1.8）: 既存テーマ ADR-027 の延長。新 ADR は作らず、例外の書き方だけ ADR-027 に追記する（§3-4）。
+
+## 1. KGI（PO 承認 2026-10-29）
+
+| # | 達成した状態 | 数え方 |
+|---|---|---|
+| K1 | R§3・R§4・R§6 の対象（DataTable 11・受信箱 12＋時刻2関数・その他 9・選択肢 28・`HTTP ${status}` 5・`String(e)` 11）の英語直書きが 0 件 | 便ごとのカードに対象 file:line の一覧を付け、その行に英語の文字列が残っていないことを grep で確認 |
+| K2 | 英語の直書きを新しく足した申請が自動で × になる | 便1 で、わざと英語を1つ足した試しの変更で検査が × になり、外すと ○ になる |
+| K3 | 日本語の画面で、対象の場所に英語が出ない | 便ごとに PO が画面を見る（例: 受信箱の送信失敗が「送信に失敗しました」） |
+| K4 | 既存の試験がすべて通り、「無いこと」を確かめる試験が空振りしない | CI 緑＋ R§7 の試験を新しい言葉で書き直したことを差分で確認 |
+
+## 2. 直し方
+
+### 2-1. 守りを先に入れる（便1）
+- `scripts/check-ui-governance.js` に数える項目 `englishUiLiteral` を足す。既存の差分方式（`:773` `headCounts>baseCounts`）をそのまま使い、増えた分だけ止める。今ある分は止めない。
+- 数える形（正規表現。ESLint は使わない＝今ある分（基準値 70件、card-1 §3 の実測）で編集のたびに止まるのを避けるため）:
+  - JSX の文字（`>` と `<` の間）に英字2文字以上の語がある
+  - `aria-label`・`placeholder`・`title`・`alt`・`label` 属性の文字列に英字2文字以上の語がある
+  - `?? 'Xxx'` ／ `|| 'Xxx'` の英文の既定値
+- 対象: `frontend/src/pages`・`features`・`components` の .tsx（.test.tsx を除く）。除外は今の検査と同じ（stories・design-system・design-preview、`scripts/check-ui-governance.js:96-99`）。.ts の英文（`frontend/src/pages/schedule/schedule-utils.ts:188`・`frontend/src/pages/inbox/useInboxState.ts:387`・`frontend/src/lib/api.ts`）は JSX でないため検査では拾わず、便ごとの grep で 0 を確かめる。
+- CI（`.github/workflows/ui-governance-gate.yml:27-38`）は依存を入れずに node だけで動くため、構文解析の道具は使わず、今ある `maskSource`（`:510`）で文字列とコメントを除いた写しの上で数える。
+- 例外: 既存の `ui-allow: <理由> (#番号)`（`:130`・`:144`）をそのまま使う。
+- 検査が拾えない形（例: 関数が返す英文、`String(e)`）は残る。それは便ごとの grep で 0 を確かめ、K1 で数える。
+
+### 2-2. DataTable（便2）
+- `frontend/src/components/DataTable.tsx` に `useTranslation` を入れ、aria の11行と既定の空表示を `common.dataTable.*` のキーにする。
+- 使っている76か所は変えない（emptyState を渡す34か所はそのまま、渡さない42か所は新しい既定の言葉が出る）。
+
+### 2-3. 受信箱（便3）
+- R§3-2 の12行を `t()` にする。既存キー（`inbox.noLead`・`dashboard.priorityFallbackLead`）を優先して使う。
+- 時刻の言葉: `frontend/src/pages/inbox/InboxKartePanel.tsx:86` の elapsedLabel(iso, t) を共通の場所へ出し、`frontend/src/pages/inbox/inbox.types.ts:132-144` relativeTime と `:150` formatAbsolute を置きかえる。`en-US` 固定をやめ、i18n の今の言語を使う。置き場は既存の共通処理の置き場をカード作成時に実物で確かめて指定する。
+
+### 2-4. その他の画面（便4）
+- R§3-3 の9行を `t()` にする。`frontend/src/pages/schedule/schedule-utils.ts:188` は既存の `schedule.holiday`・`schedule.shiftLabel` を使う。
+
+### 2-5. 選択肢の言葉を1つにまとめる（便5・PO の決定のあと）
+- 同じ値の訳は辞書の1組のキーだけにする（SSOT）。28行の手書きと、生の値を出す9か所を、その1組のキーで出す。
+- 1つの値に訳が2通りある所（R§4 最後）は、どちらにそろえるかを PO が決める。推奨は §4。
+
+### 2-6. エラーの言葉（便6）
+- `frontend/src/lib/api.ts` の `HTTP ${status}` 5か所を、i18n のキー（例 `common.error.http`、状態番号を差し込む）にする。
+- `String(e)` 11か所を、画面に出る所だけ共通のエラー文にする。
+
+### 2-7. 便の順番
+便1（守り）→ 便2 → 便3 → 便4 → 便5 → 便6。便1 を先に入れ、直している間に増えないようにする。1便ずつ反映して測ってから次へ進む。
+
+## 3. 範囲
+
+### 3-1. 対象
+R§3（直すべき 32行＋時刻2関数）、R§4（選択肢 28行＋生表示9か所）、R§6（`HTTP ${status}` 5・`String(e)` 11）。
+
+### 3-2. 対象外（理由つき）
+- 登録フォームの国名 190件: ADR-126 `:83-87` が公開フォームを英語既定と決めている。変えるなら別テーマ。
+- 本番マスタの値（"Paper" など）: 保存値そのもので、直書きではない。マスタの訳は別テーマ。【未確認】の材料は R§8。
+- バックエンドの detail の英語: 画面側ではない。
+- 辞書の en.json の値: 英語の画面で英語が出るのは正しい。
+
+### 3-3. 触らないもの
+DB・バックエンド・migration・運用スクリプト・CI 設定ファイル（`.github/workflows/`）。便1 は `scripts/check-ui-governance.js` だけを変える。
+
+### 3-4. 固有名詞の扱い（決めごと）
+- BOX・Discord・LINE などの固有名詞も、画面に出す言葉は `t()` を通す。ja の値は同じ英字でよい。理由: ADR-027 `:62` が「全 UI ラベルの i18n 化」と決めており、例外を作ると検査の除外が増える。
+- これにより「BOX」「Discord Bot ID」は PO の決定が不要になる。ADR-027 にこの1行を追記する。
+
+## 4. PO の決定（2026-10-29「1」）
+
+選択肢の言葉の訳は日本語にそろえる（R§4）。
+- 決定: 日本語にそろえる（温度は 高/中/低、規模は 小/中/大、照合は「完全一致」）。理由: 受信箱の右の欄（`frontend/src/pages/inbox/InboxKartePanel.tsx:638-640`）がすでに日本語で、ふだん使う画面の言葉に合わせると目にする変化が少ない。
+- 影響: 見込み客の一覧と編集画面で、Hot/Warm/Cold が 高/中/低 に変わる。
+
+## 5. 受入条件
+
+| 基準 | 検証方法 |
+|---|---|
+| K1 対象行に英語直書きが残らない | 便のカードの file:line 一覧に grep をかけ 0 件（生出力を保存） |
+| K2 新しい英語が止まる | 便1 の試しの変更で `check-ui-governance.js` が非0終了、外すと0終了 |
+| K2 今ある分では止まらない | 便1 の PR 自体が CI 緑 |
+| K3 日本語の画面に英語が出ない | 便ごとに PO 目視（画面名と場所をカードに書く） |
+| K4 試験が通る | CI の frontend 試験が緑。R§7 の試験の差分を確認 |
+| キー同期 | `check-i18n-missing-keys.js` が0終了（ja/en 同じキー） |
+| 訳が1つ | 便5 後、同じ値のキーが辞書に1組だけであることを grep で確認 |
+
+## 6. 弊害とリスク
+
+| リスク | 対処 |
+|---|---|
+| 正規表現が英語のクラス名やキーまで数える | 数えるのは JSX の文字と特定の属性だけ。基準値との差だけ見るので、誤って数えても今ある分では止まらない |
+| 拾えない形で英語が増える | 検査の限界として明記。便ごとに grep で確認 |
+| 言葉で探す試験が壊れる・空振りする | R§7 の試験を同じ便で書き直す。「無いこと」の試験は新しい言葉で書き直す |
+| 時刻の言葉の形が変わる | ja/en の両方で出力を試験で固定する |
+| 選択肢の訳を変えると利用者が戸惑う | PO の決定のあとに行い、変わる画面を先に伝える |
+
+## 7. 維持の仕組み
+- 守り手: `scripts/check-ui-governance.js` の `englishUiLiteral`（CI の UI ガバナンス検査で毎回動く）。
+- 例外: `ui-allow: <理由> (#番号)`（ADR-144）。
+- 0件に達したあとは、ESLint の規則（no-japanese-literal と同じ形）へ上げるかを別に決める。
+
+## 8. 外部・過去事例
+- 過去事例: 「読み込み中の表示を部品にそろえる」テーマ（`docs/handoff/loading-indicator/design.md`）。同じ `check-ui-governance.js` の差分方式（loadingTernary）で、増やさない守りを先に入れ、便ごとに減らして完了した（memory project_loading_indicator）。今回はこの型をそのまま使う。
+- 外部事例: 数値つきの直接の根拠が無いため、成功の証明には使わない。英語を拾う道具として eslint-plugin-i18next がある【未確認: 仕様は Context7 で未確認】。今回は使わない（理由: 既存の差分方式で足り、依存を増やさない）。
+
+## 9. 戻し方
+- 便ごとに PR を分ける。戻すときはその PR の merge commit を revert する。DB・バックエンドは触らないので、戻しは画面だけで終わる。
+
+## 10. Opus 自己審査（同一AIによる審査。独立した第二者レビューではない）
+
+- 判定: APPROVE（§4 は PO が 2026-10-29 に決定済み）
+- 根拠: 対象はすべて recon の file:line に基づく。守りは既存の差分方式を使い、新しい依存を足さない。対象外に理由がある。受入条件は ○× で判定できる。
+- 未解決: 便3 の共通関数の置き場はカード作成時に実物で決める。R§8 の【未確認】は対象外の範囲で、設計の合否に影響しない。

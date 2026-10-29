@@ -14,6 +14,8 @@
  *   - 読み込み中の文字だけの表示 t("...loading...")（<LoadingBlock> を使う）
  *   - ボタン等の言葉を読み込み中の言葉に入れ替える三項（loadingTernary。
  *     金型 Button の loading={条件} を使う）。この種別だけ pages/・features/・components/ を見る
+ *   - 英語の直書き（englishUiLiteral。JSX の文字・aria-label 等の属性・?? 'English text' の既定値。
+ *     t("key") を使う）。loadingTernary と同じ pages/・features/・components/ を見る
  *
  * 判定方式:
  *   各変更ファイルについて BASE/HEAD 両 SHA の全文を取得し、
@@ -43,6 +45,8 @@ const FEATURES_DIR = 'frontend/src/features/';
 const COMPONENTS_DIR = 'frontend/src/components/';
 // loadingTernary だけが見るディレクトリ（既存6種別は PAGES_DIR のみ）
 const LOADING_TERNARY_DIRS = [PAGES_DIR, FEATURES_DIR, COMPONENTS_DIR];
+// englishUiLiteral が見るディレクトリ（中身は LOADING_TERNARY_DIRS と同じ。意味を分けるため別名）
+const ENGLISH_LITERAL_DIRS = [PAGES_DIR, FEATURES_DIR, COMPONENTS_DIR];
 
 // ---------------------------------------------------------------------------
 // ユーティリティ
@@ -107,6 +111,7 @@ function getChangedFiles(baseSha, headSha, dirs = [PAGES_DIR]) {
  * 変更ファイルを検査の範囲ごとに振り分ける（git を呼ばない純粋な関数）。
  *   legacyFiles : 既存6種別を数えるファイル（PAGES_DIR 配下のみ。今までと同じ）
  *   loadingFiles: loadingTernary を数えるファイル（pages/・features/・components/。.test.tsx は除く）
+ *   englishFiles: englishUiLiteral を数えるファイル（pages/・features/・components/。.test.tsx は除く）
  */
 function splitTargets(files) {
   const legacyFiles = files.filter((f) => f.headPath.startsWith(PAGES_DIR));
@@ -115,7 +120,12 @@ function splitTargets(files) {
       LOADING_TERNARY_DIRS.some((d) => f.headPath.startsWith(d)) &&
       !f.headPath.endsWith('.test.tsx')
   );
-  return { legacyFiles, loadingFiles };
+  const englishFiles = files.filter(
+    (f) =>
+      ENGLISH_LITERAL_DIRS.some((d) => f.headPath.startsWith(d)) &&
+      !f.headPath.endsWith('.test.tsx')
+  );
+  return { legacyFiles, loadingFiles, englishFiles };
 }
 
 // ---------------------------------------------------------------------------
@@ -700,6 +710,47 @@ function countLoadingTernary(content) {
   return count;
 }
 
+/**
+ * コンテンツ内の英語の直書きの件数を返す（ui-allow 除外済み）。英語の語は英字2文字以上。
+ *   (A) aria-label・placeholder・title・alt・label 属性の文字列
+ *   (B) JSX の文字（> と < の間）
+ *   (C) ?? 'English text' ／ || 'English text' の英文の既定値（空白と英語の語の両方がある文字列）
+ * 1つの文字列が (A) と (C) の両方に当たっても1件と数える。
+ */
+function countEnglishUiLiteral(content) {
+  const lines = content.split('\n');
+  const { masked, strings } = maskSource(content);
+  const hasWord = (v) => /[A-Za-z]{2,}/.test(v);
+  let count = 0;
+
+  // (A) 属性の文字列 と (C) 英文の既定値
+  for (const s of strings) {
+    if (s.quote === '`') continue;
+    const before = masked.slice(0, s.start);
+    const isAttr = /\b(aria-label|placeholder|title|alt|label)=\{?\s*$/.test(before) && hasWord(s.value);
+    const isDefault = /(\?\?|\|\|)\s*$/.test(before) && /\s/.test(s.value) && hasWord(s.value);
+    if (!isAttr && !isDefault) continue;
+    if (hasUiAllowBefore(lines, getLineIndex(content, s.start))) continue;
+    count++;
+  }
+
+  // (B) JSX の文字
+  const re = />([^<>{}]*)</g;
+  let m;
+  while ((m = re.exec(masked)) !== null) {
+    const prev = masked[m.index - 1];
+    if (prev === '=' || prev === '-') continue;
+    const inner = m[1];
+    if (/[();=&|?]/.test(inner)) continue;
+    const next = masked[m.index + m[0].length];
+    if (next === undefined || !/[/A-Za-z]/.test(next)) continue;
+    if (!hasWord(inner)) continue;
+    if (hasUiAllowBefore(lines, getLineIndex(content, m.index))) continue;
+    count++;
+  }
+  return count;
+}
+
 // ---------------------------------------------------------------------------
 // 集計
 // ---------------------------------------------------------------------------
@@ -713,6 +764,7 @@ function countAll(content) {
     radio: countRadio(content),
     loadingText: countLoadingText(content),
     loadingTernary: countLoadingTernary(content),
+    englishUiLiteral: countEnglishUiLiteral(content),
   };
 }
 
@@ -732,14 +784,15 @@ function main() {
   console.log(`[INFO] BASE_SHA=${BASE_SHA} HEAD_SHA=${HEAD_SHA}`);
 
   const allFiles = getChangedFiles(BASE_SHA, HEAD_SHA, LOADING_TERNARY_DIRS);
-  const { legacyFiles, loadingFiles } = splitTargets(allFiles);
+  const { legacyFiles, loadingFiles, englishFiles } = splitTargets(allFiles);
   const legacyPaths = new Set(legacyFiles.map((f) => f.headPath));
   const loadingPaths = new Set(loadingFiles.map((f) => f.headPath));
+  const englishPaths = new Set(englishFiles.map((f) => f.headPath));
   const changedFiles = allFiles.filter(
-    (f) => legacyPaths.has(f.headPath) || loadingPaths.has(f.headPath)
+    (f) => legacyPaths.has(f.headPath) || loadingPaths.has(f.headPath) || englishPaths.has(f.headPath)
   );
   console.log(
-    `[INFO] 対象ファイル数: ${changedFiles.length}（pages/ ${legacyFiles.length} 件・読み込み中の三項 ${loadingFiles.length} 件）`
+    `[INFO] 対象ファイル数: ${changedFiles.length}（pages/ ${legacyFiles.length} 件・読み込み中の三項 ${loadingFiles.length} 件・英語の直書き ${englishFiles.length} 件）`
   );
 
   if (changedFiles.length === 0) {
@@ -765,11 +818,13 @@ function main() {
       radio: '生<input type="radio">',
       loadingText: '読み込み中の文字だけの表示 → <LoadingBlock> を使うこと',
       loadingTernary: 'ボタン等の言葉を読み込み中に入れ替える三項 → 金型 Button の loading={条件} を使い、言葉は元のままにすること',
+      englishUiLiteral: '英語の直書き → t("key") を使い、ja.json と en.json に同じキーを足すこと（固有名詞も t() を通す。ADR-027 追記）',
     };
 
-    for (const type of ['select', 'input', 'tab', 'checkbox', 'radio', 'loadingText', 'loadingTernary']) {
-      // loadingTernary だけが features/・components/ も見る。既存6種別は pages/ のみ（今までと同じ）
-      if (type === 'loadingTernary' ? !loadingPaths.has(headPath) : !legacyPaths.has(headPath)) continue;
+    for (const type of ['select', 'input', 'tab', 'checkbox', 'radio', 'loadingText', 'loadingTernary', 'englishUiLiteral']) {
+      // loadingTernary・englishUiLiteral だけが features/・components/ も見る。既存6種別は pages/ のみ（今までと同じ）
+      const scope = type === 'loadingTernary' ? loadingPaths : type === 'englishUiLiteral' ? englishPaths : legacyPaths;
+      if (!scope.has(headPath)) continue;
       if (headCounts[type] > baseCounts[type]) {
         violations.push({
           file: headPath,
@@ -837,6 +892,7 @@ if (require.main === module) {
     countRadio,
     countLoadingText,
     countLoadingTernary,
+    countEnglishUiLiteral,
     isLoadingKey,
     LOADING_VERBS,
     splitTargets,
