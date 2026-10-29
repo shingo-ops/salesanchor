@@ -136,7 +136,7 @@
 
 ## 維持の仕組み
 
-- 守り手: 人手で守る（実装 PR で新しい試験 backend/tests/test_api_error_retry_governance.py を守り手に差し替える）
+- 守り手: `backend/tests/test_api_error_retry_governance.py`
 - 対象: 諦めた投稿の知らせの条件と二度送らない仕組み、毎週月曜の数の知らせ
 - 関所なしの場合: 条件・目安・予定を変える PR は、この design.md の受入条件と ADR-1050 を見直してから出す。
 
