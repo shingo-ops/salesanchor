@@ -1,0 +1,10 @@
+{
+  "check": "ADR index is up to date",
+  "rules": [],
+  "expect": "pass",
+  "argv": [
+    "node",
+    "scripts/generate-adr-index.js",
+    "--check"
+  ]
+}

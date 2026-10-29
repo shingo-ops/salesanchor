@@ -1,0 +1,9 @@
+{
+  "check": "CLAUDE.md line count check",
+  "rules": [],
+  "expect": "pass",
+  "argv": [
+    "node",
+    "frontend/scripts/check-claude-size.js"
+  ]
+}

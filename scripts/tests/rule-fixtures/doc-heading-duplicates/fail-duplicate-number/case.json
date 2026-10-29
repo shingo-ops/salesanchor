@@ -1,0 +1,10 @@
+{
+  "check": "process-artifacts gate",
+  "rules": [],
+  "expect": "fail",
+  "expect_output": "FAIL: docs/ai-agents/design-partner.md に重複する節番号があります",
+  "argv": [
+    "bash",
+    "scripts/check-doc-heading-duplicates.sh"
+  ]
+}

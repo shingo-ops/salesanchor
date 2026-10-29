@@ -1,0 +1,2 @@
+run_sql migrations/a.sql
+run_sql migrations/a.sql

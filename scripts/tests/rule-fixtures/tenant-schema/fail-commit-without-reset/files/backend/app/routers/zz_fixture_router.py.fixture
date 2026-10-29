@@ -1,0 +1,7 @@
+from fastapi import APIRouter, Depends
+router = APIRouter()
+
+@router.post("/x")
+async def make_x(db=None, tenant_id: int = Depends(get_current_tenant)):
+    await db.commit()
+    return {}

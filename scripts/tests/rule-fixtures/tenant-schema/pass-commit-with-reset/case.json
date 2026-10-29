@@ -1,0 +1,12 @@
+{
+  "check": "ADR-072 tenant schema lint (strict mode)",
+  "rules": [],
+  "expect": "pass",
+  "argv": [
+    "python3",
+    "scripts/lint_tenant_schema.py",
+    "--mode",
+    "strict",
+    "backend/app/routers/"
+  ]
+}

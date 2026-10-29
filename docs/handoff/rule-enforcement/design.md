@@ -513,7 +513,7 @@ APPROVE。根拠: 目的が見本の件数で判定でき、K2/K3 で後退と�
 5. .github/workflows/rule-registry.yml に setup-node（他のゲートと同じ版）と、試し役を流す手順を 1 つ足す。手順は失敗で止まる（continue-on-error を付けない）。ジョブは必須チェックではないので、マージは止めない（§3-5 の段階導入。必須への格上げは PO の登録で、R2a の外）。timeout-minutes は実測を見て決め、10 分を超えない。
 
 ### 対象外（後の作業）
-- R2b: 残りの 8 本（generate-adr-index.js --check、check-claude-size.js、lint_tenant_schema.py、check-doc-heading-duplicates.sh、check-migration-value-writes.py、check-migration-column-churn.js、check-migration-duplicate-registration.sh、check-lessons-section.sh）の見本。check-lessons-section.sh は自分では失敗を返さず、失敗の判定は lessons-guard.yml の中にあるため、見本ではなく evidence（実際に止まった PR）で代える。
+- R2b: 残りの 8 本（generate-adr-index.js --check、frontend/scripts/check-claude-size.js、lint_tenant_schema.py、check-doc-heading-duplicates.sh、check-migration-value-writes.py、check-migration-column-churn.js、check-migration-duplicate-registration.sh、check-lessons-section.sh）の見本。check-lessons-section.sh は自分では失敗を返さず、失敗の判定は lessons-guard.yml の中にあるため、見本ではなく evidence（実際に止まった PR）で代える。
 - R2c: CI で動いていない既存の試験 4 本を CI で動かす。
 - 経路ごとの試し（§5 R2 の最後の項目。手元の Claude・クラウドの Claude・PO 名義・Codex から違反の PR を出す）。Codex を使っているかは R0 で確定していない（recon §12 に記載なし）。
 - 台帳の kind・check_rule_registry.py の変更、gate への格上げ、必須チェックへの登録。
@@ -536,3 +536,58 @@ merge commit の revert。
 
 ### 審査（Opus 自己審査・2026-10-29）
 APPROVE。根拠: 目的が見本の件数（止まった割合）と K2 の弱めた試しで判定できる。入力の渡し方は 4 本とも実物で確かめた（r2-recon2）。PO の選択（2026-10-29「1」）の範囲で、台帳の kind と必須チェックの登録は変えない。未解決: なし（UI governance gate の違反の形は既存の試験から実装時に選び、報告で示す）。
+
+## R2b 残りの検査に違反の見本を足す（設計・2026-10-29）
+
+### 前提（origin/main 16ec7021b の事実。調べの生出力は手元の /tmp/CC報告ファイル/r2b-recon/）
+- 2026-10-29 PO「1」で、R2a と同じ形の見本を残りの検査にも足す作業を選んだ。
+- R2a の「対象外」に挙げた 8 本のうち 7 本は、試し役 scripts/tests/run_rule_fixtures.py を変えずに、使い捨ての写しで違反の見本が exit 1、正しい見本が exit 0 になることを確かめた（run_all.txt の最終行「違反の見本 13 件中 13 件で止まった・正しい見本 14 件中 14 件で通った」）。7 本とも標準の道具だけで動き、node_modules・外部の Python の部品・docker・DB・ネットワークは要らない。
+- 7 本と、それを呼ぶ必須チェック（docs/specs/rule-enforcement/required-checks.txt の名前）:
+  - scripts/generate-adr-index.js --check → ADR index is up to date（adr-index-check.yml:31）
+  - frontend/scripts/check-claude-size.js → CLAUDE.md line count check（check-claude-size.yml:38-40）。R2a の節で scripts/check-claude-size.js と書いたのは場所の誤り。
+  - scripts/lint_tenant_schema.py --mode strict backend/app/routers/ → ADR-072 tenant schema lint (strict mode)（lint-tenant-schema.yml:69）
+  - scripts/check-doc-heading-duplicates.sh（引数なし）→ process-artifacts gate（process-artifacts-gate.yml:47）
+  - scripts/check-migration-value-writes.py → models.py に新 Column → deploy.yml にマイグレーション追記必須（migration-guard.yml:407・:424・:437）
+  - scripts/check-migration-column-churn.js → 同じ（migration-guard.yml:552）
+  - scripts/check-migration-duplicate-registration.sh → 同じ（migration-guard.yml:556）
+- scripts/check-lessons-section.sh は自分では常に exit 0 で、数を出すだけ。落とす判定（数が 0 でなく、例外の印が無いとき失敗）は lessons-guard.yml:24-29 の中にある。
+
+### 目的
+R2a と同じく、今ある必須チェックが「止める」と言っている違反を、わざと作った見本で毎回の PR で確かめる。試せる検査を 4 本から 11 本にする。
+
+### 変更後
+1. scripts/tests/rule-fixtures/ に、上の 7 本それぞれについて違反の見本 1 つ以上・正しい見本 1 つ以上を足す。形は R2a と同じ（case.json・files/・base_files/・`.fixture`）。試し役は変えない。
+2. 見本の入れ方は、CI での呼び方にできるだけ合わせる:
+   - generate-adr-index.js: 違反は ADR の文書を 1 つ足して目次を直さない。正しい見本は変更なし。
+   - check-claude-size.js: argv は `node frontend/scripts/check-claude-size.js`。違反は AGENTS.md を上限を超える行数に差し替える。正しい見本は変更なし。
+   - lint_tenant_schema.py: argv は CI と同じ `--mode strict backend/app/routers/`。違反は commit の直後に reset が無い道を 1 つ足す。正しい見本は同じ道で reset を足したもの。
+   - check-doc-heading-duplicates.sh: argv は CI と同じ引数なし。違反は既定で読む文書の 1 つ（docs/ai-agents/design-partner.md）を、写しの中で、節の番号が重なる小さな文書に差し替える。正しい見本は変更なし。
+   - check-migration-value-writes.py: 違反は守る表に値を書く migration を足し、`diff {BASE} {HEAD} --check 7`。正しい見本は構造だけを変える migration で同じ範囲を全部の確認で流すものと、`repo` を変更なしで流すもの。
+   - check-migration-column-churn.js: 本物の登録表は大きいため、検査が持つ差し替えの環境変数（MIGRATIONS_SCRIPT_OVERRIDE・ALLOWLIST_OVERRIDE）で小さな登録表と空の例外表を渡す。違反は同じ列を足して消す。正しい見本は足すだけ。
+   - check-migration-duplicate-registration.sh: `--migrations-script` で小さな登録表を渡す。違反は同じ行を 2 回登録。正しい見本は重なりなし。
+3. rules 欄: rules.yml の reason にその検査の名前が出てくる id で、見本の違反が当たるものだけ（調べでは generate-adr-index.js が L362、lint_tenant_schema.py が K01。ほかは空）。実装時に rules.yml の reason を読んで確かめる。
+4. docs/handoff/rule-enforcement/design.md の R2a 節の check-claude-size.js の場所を直す（frontend/scripts/）。
+5. rule-registry.yml は変えない（timeout 10 分の中に収まることを K5 で測る。収まらなければ止まって報告する）。
+
+### 対象外
+- check-lessons-section.sh: 見本は置かない。試し役は終了コードで判定するが、この検査は常に exit 0 で、落とす判定はワークフローの中にある。見本で試すには判定を argv に書き写す必要があり、写しがワークフローとずれても気づけないため。R2a の設計どおり、実際に止まった PR の記録（evidence）で代える。evidence の調べは後の作業。
+- 差し替えの環境変数・引数を使う 2 本（column-churn・duplicate-registration）は、本物の登録表と本物の例外表そのものは試さない（検査の判定の部分だけを試す）。
+- R2c（CI で動いていない既存の試験を CI で動かす）、R4、台帳の kind・必須チェックの登録は変えない。
+
+### 受入条件
+- K1 試し役が CI（rule registry のジョブ）と手元の両方で exit 0。11 本の検査それぞれに違反と正しい見本が 1 つ以上あり、違反の見本は全部止まり、正しい見本は全部通る。
+- K2 弱めたら気づく: 使い捨ての写しで、今回の 7 本それぞれを「常に成功で終わる」ように書き換えると、試し役が exit 1 になり、その検査の違反の見本の名前を出す（書き換えはコミットしない）。
+- K3 この PR で必須チェック 16 件が全部 pass（見本を足したことで新しく落ちるものが無い）。
+- K4 実行後に使い捨ての写しと一時フォルダが残らない。
+- K5 rule registry のジョブ全体の所要時間を CI の記録で測り、PR 本文に書く。10 分の上限の半分（5 分）を超えたら、マージせず止まって報告する。
+
+### リスクと対処
+- Linux と macOS の道具の違い（awk・sed・grep）で、手元では通り CI で落ちる → K1 を CI で確かめる。落ちたら見本ではなく原因を調べて報告する。
+- 見本のファイルが本物の migration・ADR・文書として他の検査に当たる → `.fixture` を付けて置く（K3）。
+- 見本の数が増えて遅くなる → K5 で測る。
+
+### 戻し方
+merge commit の revert。
+
+### 審査（Opus 自己審査・2026-10-29）
+APPROVE。根拠: 7 本とも試し役を変えずに違反と正しい見本の結果を写しで確かめた（r2b-recon/run_all.txt）。lessons は判定がワークフローの中にあり、R2a で決めた evidence の扱いを変えない。差し替えを使う 2 本と doc-heading は CI の呼び方との差を対象外に明記した。未解決: なし。
