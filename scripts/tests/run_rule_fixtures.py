@@ -23,6 +23,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -32,6 +33,10 @@ RULES_YML = os.path.join(ROOT, "docs", "specs", "rule-enforcement", "rules.yml")
 SUFFIX = ".fixture"
 TIMEOUT_SEC = 120
 WORKERS = 4
+# 元のリポジトリへの worktree add / remove は 1 本ずつ（git の登録・index を壊し合わないため。検査の実行は並列）
+WT_LOCK = threading.Lock()
+# 片付けに失敗して残った写しのパス（あれば試し役は exit 1）
+LEFTOVERS = []
 # 呼び出し元の環境から引き継がない変数（見本の結果が呼び出し元で変わらないように）
 DROP_ENV = {"BASE_SHA", "HEAD_SHA", "CHANGED_FILES", "LOCAL_PRECHECK", "MAINTENANCE_ENFORCE",
             "PR_NUMBER", "REPO", "HEAD_REF", "BASE_REF"}
@@ -156,10 +161,12 @@ def place(src_dir, dst_root):
 def run_case(c):
     """1 件を試す。戻り値: (合格か, 終了コード, 出力, 理由)"""
     tmp = tempfile.mkdtemp(prefix="rule-fixture-")
-    wt = os.path.join(tmp, "wt")
+    # git が登録名に使うフォルダ名を見本ごとに変える（重なると wt1 などに振り直され壊し合う）
+    wt = os.path.join(tmp, "wt-" + re.sub(r"[^A-Za-z0-9_.-]", "_", c["_label"]))
     added = False
     try:
-        git(ROOT, "worktree", "add", "--detach", wt, "HEAD")
+        with WT_LOCK:
+            git(ROOT, "worktree", "add", "--detach", wt, "HEAD")
         added = True
         base = git(wt, "rev-parse", "HEAD")
         base_dir = os.path.join(c["_dir"], "base_files")
@@ -209,11 +216,19 @@ def run_case(c):
         return True, r.returncode, out, ""
     finally:
         if added:
-            subprocess.run(["git", "-C", ROOT, "worktree", "remove", "--force", wt],
-                           capture_output=True, text=True, env=git_env())
-        shutil.rmtree(tmp, ignore_errors=True)
-        subprocess.run(["git", "-C", ROOT, "worktree", "prune"], capture_output=True, text=True,
-                       env=git_env())
+            removed = False
+            for _ in range(3):
+                with WT_LOCK:
+                    r = subprocess.run(["git", "-C", ROOT, "worktree", "remove", "--force", wt],
+                                       capture_output=True, text=True, env=git_env())
+                if r.returncode == 0:
+                    removed = True
+                    break
+                time.sleep(0.5)
+            if not removed:
+                LEFTOVERS.append(wt)
+        if not any(x.startswith(tmp) for x in LEFTOVERS):
+            shutil.rmtree(tmp, ignore_errors=True)
 
 
 def main():
@@ -260,7 +275,11 @@ def main():
     print("違反の見本 %d 件中 %d 件で止まった・正しい見本 %d 件中 %d 件で通った・"
           "見本が一部を止めている決まり %d 件（%.1f 秒）"
           % (fail_total, fail_ok, pass_total, pass_ok, len(rules_covered), time.time() - t0))
-    if errors or ng:
+    if LEFTOVERS:
+        print("NG 片付けに失敗して残った写し:")
+        for x in LEFTOVERS:
+            print("   " + x)
+    if errors or ng or LEFTOVERS:
         if ng:
             print("期待と違った見本: " + ", ".join(ng))
         sys.exit(1)

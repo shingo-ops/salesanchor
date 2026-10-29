@@ -5,6 +5,7 @@ name: Rule Registry
 #
 # ※ 非必須（non-mandatory）。警告で開始（continue-on-error）。
 #    連続5PRで誤検知0を確認してから必須化を別途 GO で判断する（前例: ADR-1040）。
+#    ただし「Run rule fixtures」の手順は continue-on-error を付けず、失敗で止まる（ジョブ自体は必須チェックではない）。
 #
 # 関連: docs/handoff/rule-enforcement/design.md §5 R1
 
