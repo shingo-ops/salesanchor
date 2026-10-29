@@ -69,7 +69,6 @@ function hasPoOnlyExceptionPath(files) {
 const MIGRATION_PATH_PATTERNS = [
   /^migrations\//,
   /^scripts\/migrate_[^/]*\.py$/,
-  /^scripts\/migration_py_entry\.py$/,
   /^scripts\/run_all_migrations\.sh$/,
 ];
 

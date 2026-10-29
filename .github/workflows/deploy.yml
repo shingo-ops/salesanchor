@@ -53,12 +53,10 @@ jobs:
             #   - scripts/run_all_migrations.sh : マイグレーションの唯一の実行経路（SSoT）
             #   - scripts/migrate_*.py     : run_all_migrations.sh から run_py で呼ばれる
             #                                個別マイグレーションスクリプト本体
-            #   - scripts/migration_py_entry.py : run_py が全 Python 移行を動かす入口（ADR-1037 拡張）
             db_migrations:
               - 'migrations/**'
               - 'scripts/run_all_migrations.sh'
               - 'scripts/migrate_*.py'
-              - 'scripts/migration_py_entry.py'
 
       - name: Check previous deploy completed
         id: gate
