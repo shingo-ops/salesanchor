@@ -8,6 +8,8 @@ import type { AuthErrorContext } from "../../lib/auth/authErrorMessage";
 import { isSelfAuth } from "../../lib/auth/provider";
 import { Button } from "../../components/Button";
 import { TextFieldControl } from "../../components/TextField";
+import { PasswordFieldControl } from "../../components/PasswordField";
+import { TextLink } from "../../components/TextLink";
 
 type Mode = "signIn" | "reset";
 
@@ -111,20 +113,21 @@ export default function LoginPage() {
               </div>
               <div className="form-group">
                 <label htmlFor="password">{t("login.password")}</label>
-                <TextFieldControl
+                <PasswordFieldControl
                   variant="login"
                   id="password"
-                  type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   autoComplete="current-password"
                 />
-                <Button type="button" variant="secondary" size="sm" onClick={switchToReset}>
-                  {t("login.forgotPassword")}
-                </Button>
+                <div className="login-forgot-row">
+                  <TextLink onClick={switchToReset}>
+                    {t("login.forgotPassword")}
+                  </TextLink>
+                </div>
               </div>
-              <Button loading={loading} variant="primary" size="lg" fullWidth type="submit" disabled={loading}>
+              <Button loading={loading} variant="primary" size="auth" shape="pill" fullWidth type="submit" disabled={loading}>
                 {t("login.signIn")}
               </Button>
             </form>
@@ -150,14 +153,14 @@ export default function LoginPage() {
                     autoComplete="email"
                   />
                 </div>
-                <Button loading={loading} variant="primary" size="lg" fullWidth type="submit" disabled={loading}>
+                <Button loading={loading} variant="primary" size="auth" shape="pill" fullWidth type="submit" disabled={loading}>
                   {t("login.sendResetEmail")}
                 </Button>
               </form>
             )}
-            <Button type="button" variant="secondary" size="sm" onClick={switchToSignIn}>
+            <TextLink onClick={switchToSignIn}>
               {t("login.backToLogin")}
-            </Button>
+            </TextLink>
           </>
         )}
       </div>
