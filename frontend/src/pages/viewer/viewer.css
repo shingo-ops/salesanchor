@@ -37,11 +37,16 @@
 .viewer-toolbar > .viewer-toolbar__search {
   flex: 1 1 100%;
 }
+/* シリーズのボタン（design.md 4-1・4-2・4-4）。在庫表 InventoryToolbar.css の .inventory-toolbar__series と
+   同じ規則。検索欄と同じく1行を独り占めし、名前の全部が出る。
+   justify-content: flex-start が無いと .comp-btn の center 指定で名前が行の中央に浮く（実機で確認）。
+   text-overflow は直下にテキストが無く効かないため置かない（… を出すのは .viewer-toolbar__label 側）。
+   overflow: hidden は約19文字を超える名前が将来出たときの歯止めとして残す */
 .viewer-toolbar > .viewer-toolbar__series {
-  flex: 1 1 0;
+  flex: 1 1 100%;
+  justify-content: flex-start;
   min-width: 0;
   overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 .viewer-toolbar > .viewer-toolbar__fixed {

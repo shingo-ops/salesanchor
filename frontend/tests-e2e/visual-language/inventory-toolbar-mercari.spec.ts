@@ -36,8 +36,9 @@ const PC_WIDTH = 1280;
 const MIN_TAP_HEIGHT = 48;
 /** D7: パネルの中の「24時間以内」の押せる高さ下限（ADR-140） */
 const MIN_FRESH_CHECK_HEIGHT = 44;
-/** D10: 上部操作台（.inventory-toolbar）の高さ上限（design.md ③ P5＝48＋間隔12＋48＋上下の余白） */
-const MAX_TOOLBAR_HEIGHT = 120;
+/** D10: 上部操作台（.inventory-toolbar）の高さ上限（design.md ③ P5＝48＋間隔12＋48＋上下の余白）。
+ *  本便（toolbar-series-name-full-width）でシリーズが単独行になり3段168pxになったため180に更新 */
+const MAX_TOOLBAR_HEIGHT = 180;
 /** D2: 検索欄の幅は .inventory-toolbar の幅の95%以上（design.md ③ P3） */
 const SEARCH_WIDTH_RATIO = 0.95;
 
@@ -187,7 +188,7 @@ for (const width of MOBILE_WIDTHS) {
       await expect(page.locator(".inventory-toolbar")).toHaveCount(1);
     });
 
-    test("D10: .inventory-toolbar の高さが120px以下（3行に折り返していないこと・P5）", async ({ page }) => {
+    test("D10: .inventory-toolbar の高さが180px以下（4行に折り返していないこと・P5）", async ({ page }) => {
       await gotoInventory(page, { width, height });
 
       const box = await page.locator(".inventory-toolbar").boundingBox();
