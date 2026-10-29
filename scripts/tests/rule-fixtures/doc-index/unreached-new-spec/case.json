@@ -1,0 +1,7 @@
+{
+  "check": "doc index reachability",
+  "rules": ["S08"],
+  "expect": "fail",
+  "expect_output": "UNREACHED docs/ai-agents/zz-fixture-unreached.md",
+  "argv": ["python3", "-I", "scripts/ci/check_doc_index.py", "--root", ".", "--strict"]
+}
