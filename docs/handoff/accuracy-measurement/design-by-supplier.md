@@ -7,7 +7,7 @@ mode: handoff
 
 この文書は何か: 今ある正答率の採点（正解表と採点の道具）を変えずに、同じ採点結果を仕入元ごと・商品の種類ごとにも分けて出すための設計です。あわせて、出た数字をどう確かめて根拠にするかを決めます。
 
-- 状態: 設計案作成済み・設計審査済み（自己審査・下の §12）・成功の条件 PO 合意済み（2026-10-28 チャット「条件については合意」）・設計そのものは PO 承認待ち・実装未着手
+- 状態: 設計案作成済み・設計審査済み（自己審査・下の §12）・成功の条件 PO 合意済み（2026-10-28 チャット「条件については合意」）・設計 PO 承認済み（2026-10-29 チャット、選択肢「1. この設計で作る準備に進む」に「１」と回答。§6 の幅の列を含む）・実装未着手（§8 の未確認2点の解消と実装カードが先）
 - 区分: 既存テーマ line-analysis-tuning の延長（親 design.md の続き）
 - 社外秘: 仕入元名・投稿 id・仕入元ごとの表は `~/CC報告ファイル-keep/` に置く。リポジトリには決まり・全体の集計値・sha256 だけを書く（親 design.md と同じ扱い）。
 
@@ -116,9 +116,11 @@ mode: handoff
 | 1 | 道具を足す（`--groups` と分けた表・幅の列・合計の照合）＋対応表を取る道具＋作り物の試験 | `scripts/accuracy/` だけ。製品コード・DB は変えない | 無し |
 | 2 | 本番の材料で測り、V2〜V5 を通す。結果を非公開ページで見せる | 何も変えない（読むだけ） | 表を見て、どこから直すかを決める |
 
-実装の前に確かめること（未確認。段1のカードを出す前に Sonnet が読み取りで確かめる）:
-- 読むだけの窓口に `source_messages`・`supplier_channels`・共用商品マスタの中分類の列が出ているか（ai_ro の表名は「スキーマ__表名」の形）。出ていなければ窓口の追加が要り、別の判断になる。
-- 中分類の列名と、正解表の商品番号（A1）からたどる道。
+実装の前に確かめること（2026-10-29 Sonnet が migrations を読んで確認。本番の実物はまだ）:
+- 窓口の作り方: `migrations/20261017_130100_create_ai_ro_views.sql:25-60` は public の全表に `ai_ro.public__<表名>` を作り、拒否の正規表現（同:23）に当たる列だけを除く。`supplier_channel_id`・`supplier_id`・`work_id`・`id`・`code`・`name_ja` は当たらない。→ 出ている見込み（事実はファイル、本番は未確認）。
+- 投稿→仕入元: `source_messages.supplier_channel_id` → `supplier_channels.supplier_id`（`migrations/20260921_110000_pipeline_tables_public.sql:11-17,20-22`）。
+- 中分類: `public.type_master`（`migrations/20260922_030000_product_format_game_links.sql:9`）。商品からは `public.products.work_id` でたどる（ADR-1026 で `type_master_id` を削除、`migrations/20261017_210000_drop_products_type_master_id.sql:1`。ADR-1038 も type_master を中分類の親とする）。
+- 未確認で残るもの: (a) 本番の窓口に上の列が本当に出ているか（`information_schema.columns` を窓口で引く。窓口の鍵が手元に無いため、段1の初めにクラウドの作業で引く）。(b) 正解表の A1 の値が `products` のどの列と同じか。どちらかが外れたら段1を止めて設計に戻す。
 
 ## 9. 選ばなかった案
 
@@ -153,11 +155,11 @@ mode: handoff
   - agent-console の予約済みの測定（見出しの決まりの試し・売り切れの毎朝点検）とは、見る行も道具も重ならない。
 - 未解決:
   - 読むだけの窓口に仕入元と中分類の表が出ているか（§8）。
-  - §6 の幅の列は KGI に無い追加。PO の設計承認で確かめる。
-  - 採点の試験が CI で走っているか（維持の仕組みの節）。
+  - §6 の幅の列は KGI に無い追加。→ 2026-10-29 PO 承認で解消（幅の列を残す案を選択）。
+  - 採点の試験が CI で走っているか → 走らないと確認（維持の仕組みの節）。
 
 ## 維持の仕組み
 
 - 守り手: 道具の試験（V1・V2 は `scripts/accuracy/test_score_v102.py` に入れる）と、人手の記帳（§7。Opus が測るたびに track-record.md に1行）。
-- CI で走るかは未確認: `.github/workflows/test.yml:20,46` は `scripts/**` の変更で起動するが、pytest は `working-directory: backend` で `pytest -q` を流す（`:207-242`）。`scripts/accuracy/` の試験が集められているかは確かめていない。集められていなければ、段1の中で `python3 -m pytest scripts/accuracy -q` を手で流した結果を PR に貼る。CI に足すかは CI 設定の変更なので、別に判断する。
+- CI では走らない（2026-10-29 確認）: `.github/workflows/test.yml:207-208` の pytest は `working-directory: backend`、実行は `pytest -q --tb=short`（`:241`）で、`backend/pyproject.toml:54` の `testpaths = ["tests"]` により `backend/tests` だけを集める。`.github/workflows/` に `scripts/accuracy` の語は 0 件。→ 段1では `python3 -m pytest scripts/accuracy -q` を流した結果を PR に貼る。CI に足すかは CI 設定の変更なので、別に判断する。
 - 関所なしの部分の理由: 仕入元ごとの表は社外秘で CI から読めない。V3〜V5 は測るたびに Opus が確かめ、その合否を track-record.md の同じ行に書く。
