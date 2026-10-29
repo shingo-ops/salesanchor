@@ -111,6 +111,10 @@
     "updateSummary": "全{{total}}件 / 更新可能{{ready}}件 / 要修正{{blocked}}件",
     "addProduct": "新規追加"
   },
+  "appUpdate": {
+    "message": "新しい版があります",
+    "reload": "更新"
+  },
   "common": {
     "loading": "読み込み中...",
     "select": "選択",
