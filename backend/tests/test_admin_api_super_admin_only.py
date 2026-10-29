@@ -92,9 +92,7 @@ async def test_unauthenticated_is_rejected(path, body):
 
 async def test_register_function_body_rejects_non_super_admin():
     """二重防御: 依存を外して関数を直接呼んでも、関数内で 403 になる。"""
-    from fastapi import HTTPException
-
-    from fastapi import BackgroundTasks
+    from fastapi import BackgroundTasks, HTTPException
     from starlette.requests import Request
 
     from app.routers.auth import register_user
