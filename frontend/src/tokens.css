@@ -45,6 +45,11 @@
   --role-page-title-color:  var(--text-primary);
   --role-page-title-lh:     var(--line-height-tight);
 
+  /* ログイン画面の見出し（色は --text-muted のまま。color の role は作らない） */
+  --role-auth-title-size:   var(--font-3xl);
+  --role-auth-title-weight: var(--font-weight-normal);
+  --role-auth-title-lh:     var(--line-height-tight);
+
   /* セクション見出し（営業・財務などのグループ名） */
   --role-section-title-size:   var(--font-lg);
   --role-section-title-weight: var(--font-weight-semi);
@@ -337,7 +342,7 @@
   --search-bar-max-w:        480px;  /* トップバー検索フォーム最大幅 */
 
   /* ---- Auth / Login page ---- */
-  --card-login-max-w:        400px;  /* ログインカード最大幅 */
+  --card-login-max-w:        464px;  /* ログインカード最大幅（中身の幅 384px = 464 − 左右 padding 80。ChatGPT 実測。login-round-inputs/design.md §7.4） */
   --login-logo-max-w:        280px;  /* ログインロゴ最大幅 */
 
   /* ---- Coming Soon page ---- */
@@ -465,9 +470,11 @@
 
   /* ボタン角丸 */
   --comp-btn-height-lg:        48px;
+  --comp-btn-height-auth:      52px;                   /* size="auth"（ログイン画面だけ。ChatGPT 実測） */
   --comp-btn-focus-width:      2px;
   --comp-btn-focus-offset:     2px;
   --comp-btn-radius:           var(--radius-md);       /* 6px — btn-ghost 実値と一致 */
+  --comp-btn-radius-pill:      var(--radius-full);     /* shape="pill"（ログイン画面だけ） */
 
   /* カード角丸 */
   --comp-card-radius:          var(--radius-lg);       /* 8px — .card / db-section-card と一致 */
@@ -485,11 +492,14 @@
      ================================================================ */
 
   /* 入力コントロール角丸（ボタンと同じコントロール系） */
-  --comp-input-radius:         var(--radius-md);       /* 6px — btn-* と同一 */
+  --comp-input-radius:         var(--radius-full);     /* 1行の入力欄・選ぶ欄。完全に丸い（design-system/design.md の入力欄の節） */
+  --comp-textarea-radius:      var(--radius-xl);       /* 複数行の欄 12px */
+  --comp-checkbox-radius:      var(--radius-md);       /* チェック欄 6px */
 
   /* 入力コントロール サイズ（高さ） */
   --comp-input-height-sm:      28px;                   /* small バリアント最小高 */
   --comp-input-height-mobile:  44px;                   /* WCAG 2.5.5 タッチターゲット最小高 */
+  --comp-input-height-auth:    56px;                   /* login variant の高さ（ChatGPT 実測） */
 
   /* ================================================================
      標準コンポーネントトークン（Task 3C — 2026-06-08 追加）
