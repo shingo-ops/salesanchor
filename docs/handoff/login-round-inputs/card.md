@@ -1,10 +1,10 @@
 # 実装カード — ログイン画面の並び替え・丸いボタン・入力欄の角を丸くする
 
-> この文書は何か：docs/handoff/login-round-inputs/design.md（第4版・Opus 審査役 APPROVE）を実装するための作業指示書です。frontend だけの変更を 1 本の PR にします。DB・API・設定・CI は変えません。共有レイアウト frontend/src/pages-layout.css を触るので、PR には GO 記録が要ります（§10）。
+> この文書は何か：docs/handoff/login-round-inputs/design.md（第5版）を実装するための作業指示書です。frontend だけの変更を 1 本の PR にします。DB・API・設定・CI は変えません。共有レイアウト frontend/src/pages-layout.css を触るので、PR には GO 記録が要ります（§10）。
 
 - 設計: docs/handoff/login-round-inputs/design.md（§3 表・§4〜§7・§8 受け入れ基準・§9 リスク）。現状: 同じフォルダの recon.md。この 3 文書は、実装の前に別の docs PR で main に入れる（§8 （１））
 - 対象ADR: ADR-067（デザイントークン強制）、ADR-144（UI は金型）、ADR-027（画面の文言は t()）、ADR-1013（ログイン自社化。:126 の書き換えだけ）
-- 状態: 第5版（第1版 REVISE は HIGH 1・MEDIUM 6・LOW 6、第2版 REVISE は MEDIUM 2・LOW 7、第3版 REVISE は MEDIUM 3・LOW 5、第4版 REVISE は MEDIUM 1・LOW 2。すべて反映。第5版は APPROVE（LOW 2 は反映済み）。記録 /tmp/CC報告ファイル/login-round/review-card-1.md〜review-card-5.md）。**PO の実装承認前（実装未着手）**
+- 状態: 第6版（2026-10-30。design.md 第5版の §7.4 ログイン画面の寸法・K11・auth のボタンを入れた）。第1〜4版 REVISE、第5版 APPROVE（記録 /tmp/CC報告ファイル/login-round/review-card-1.md〜review-card-5.md）。第6版は Opus 審査役 REVISE（review-card-6.md。HIGH 1・MEDIUM 3・LOW 4）。同じ版で反映し、再審査 review-card-7.md も REVISE（MEDIUM 1: 手順 7 が auth を使うのに型の追加が後の手順だった。LOW 3）。同じ版で反映（手順 4-2 を新設し、画面側と試験の書き換えを手順 7 へ）。再審査 review-card-8.md は APPROVE（LOW 2: 行番号のずれの注記・手順 7 の shape="pill"。同じ版で反映）。PO の実装承認は 2026-10-29 に出ている。実装未着手
 - 担当: 実装 Sonnet（クラウド）／コード審査 Opus（reviewer）／PR 起票・GO・マージ・反映確認 Opus（手元）／目視 PO
 
 ## 0. 読んだ節（docs/handoff/design-partner-card-ops/guards/）
@@ -42,13 +42,15 @@
 4. Button・ButtonLink の `shape?: "default" | "pill"`（§5）と、使ってよい場所を強制する試験（K8）
 5. 新しい部品 TextLink（§6.1）と PasswordFieldControl（§6.2）
 6. ログイン画面・再設定画面の差し替え（§7.1・§7.2）と、割れる試験の直し（§7.3）
-7. 仕様書の書き戻し（§9 の「仕様書の『6px』の記述が残る」の行・§1 の :126）
+7. 仕様書と注記の書き戻し（§9 の「仕様書の『6px』の記述が残る」の行と「仕様書と部品の注記が大きさ sm/md/lg のまま残る」の行（:1115 の auth・Button.tsx:8）・§1 の :126）
+8. ログイン画面の寸法（§7.4）: `--card-login-max-w` の値の変更、トークン 5 つ（欄とボタンの高さ 2 つ・見出しの役割 3 つ）の新設、login variant の高さと余白、Button の size="auth"、login 節の余白と見出し
 
 入れない（design.md §2 の対象外のとおり）:
 - 「または」の区切り線・パスキーのボタン（ADR-1013 便5）
 - 利用規約のリンク・浮く見出し・LoginView の並び・チャット画面の入力の外枠・radio/range/file・MultiSelect の引き金
 - ログイン・再設定以外のパスワード欄への目のマーク
-- 色・高さ・文字の大きさ
+- 色（全画面）。高さ・文字の大きさはログイン画面の §7.4 のほかは変えない
+- ログインの箱・ロゴ・入力欄の見出し・フォーカスの見た目は変えない（design.md §2）
 
 ## 2. 前提の事実（2026-10-29・origin/main fd85b946a 基準。frontend・tests/qa-smoke・docs/specs は 46f2009b1 と差なし）
 
@@ -72,6 +74,7 @@
 | F14 | frontend/src/pages-layout.css は PR の検査で「共有レイアウト＝変更に GO 記録が要る」に入る。frontend/src を触るので、利用者影響の変更としても GO 記録が要る（同ファイル :1052-1053・:1857-1866）。GO 記録の必須項目は GO発行者・日時・GO原文（GO # の後ろに PR の番号）・バックアップ確認 | `scripts/check-process-artifacts.js:1027`（origin/main fd85b946a）・同ファイルの validateGORecord |
 | F15 | check:new-tokens は手元では常に通る（PR 本文を読む検査のため） | `frontend/scripts/check-new-tokens.js:22-24` |
 | F16 | 再設定画面は URL に `?token=` が無いと送信ボタンを出さない | カード審査 1 回目 M-4 |
+| F17 | `--card-login-max-w`（400px）を使うのは pages-layout.css:207 だけ。login variant は FormField.css:409-422 で `min-height: 0`・`padding: var(--space-3) var(--space-4)`。Button の大きさの対応は buttonAppearance.ts:2・:36、lg は Button.css:46-50、スマホの @media は :168-183。`.form-group` の下の余白は components.css:8 の `--space-4`。小見出しは pages-layout.css:228-232 | origin/main 2bd97122a（/tmp/CC報告ファイル/login-round/recon2/） |
 
 ## 3. 触るファイル（これ以外は触らない）
 
@@ -86,15 +89,16 @@
 - `frontend/src/constants/icons.tsx`（EyeSlashOutline と PASSWORD_FIELD_ICONS）
 - `frontend/src/pages/login/LoginPage.tsx`
 - `frontend/src/pages/reset-password/ResetPasswordPage.tsx`
-- `frontend/src/pages-layout.css`（login 節の余白と、未使用の `.login-forgot-link` :237-252・`.login-back-link` :264-279 の削除。GO 記録が要る。F14）
+- `frontend/src/pages-layout.css`（login 節の余白・小見出し・`.login-forgot-row`（design.md §7.4）と、未使用の `.login-forgot-link` :237-252・`.login-back-link` :264-279 の削除。GO 記録が要る。F14）
 - `frontend/src/locales/ja.json`・`frontend/src/locales/en.json`
 - `frontend/src/pages/design-preview/sections/TokenSection.tsx`
+- `frontend/src/pages/login/LoginPage.test.tsx`（:80-89 の試験だけ。design.md §7.3）
 - `frontend/tests-e2e/login.spec.ts`・`frontend/tests-e2e/scene1-dashboard.spec.ts`・`tests/qa-smoke/utils/real-backend.ts`・`tests/qa-smoke/scene-01.spec.ts`
-- `docs/specs/design-system/design.md`（:260・:276・:537・:811・:834・:1115 と入力欄・ボタンの節）
+- `docs/specs/design-system/design.md`（:260・:276・:537・:811・:834・:1115 と入力欄・ボタンの節。:1115 には大きさ auth とログイン画面の寸法も書く）
 - `docs/handoff/auth-self-hosted-passkey/design.md`（:126 だけ）
 - `frontend/tests-e2e/karte-visual-gate.spec.ts-snapshots/karte-customer-company-chromium-linux.png`・`karte-lead-deal-chromium-linux.png`（担当は触らない。Opus が §8 （５）で作り直して同じ PR に入れる）
 
-触らない試験: `frontend/src/pages/login/LoginPage.test.tsx`・`frontend/src/pages/reset-password/ResetPasswordPage.test.tsx`・`frontend/src/components/AllLegacyButtonOperationMigration.test.tsx`。変更なしで通る見込み（design.md §7.3）。落ちたら §6 B3
+触らない試験: `frontend/src/pages/login/LoginPage.test.tsx` の :80-89 以外・`frontend/src/pages/reset-password/ResetPasswordPage.test.tsx`・`frontend/src/components/AllLegacyButtonOperationMigration.test.tsx`。変更なしで通る見込み（design.md §7.3）。落ちたら §6 B3
 
 ファイルを丸ごと消すことはしない。ただし PR 本文の「削除するファイル:」には、`git diff --numstat` で消した行が 1 以上の全ファイルを同一行カンマ区切りで書く（check-process-artifacts.js:1796-1821・guards/05-pr.md:20・:31。材料は §12 （８））
 
@@ -110,11 +114,12 @@
 2. FormField.css・Checkbox.css（§4.2）: :65-68 の段に textarea の角を 1 行足す。1 行の欄と選ぶ欄の variant は `var(--comp-input-radius)`、複数行の variant は `var(--comp-textarea-radius)`。tabbar :243・tab :499・embedded :289 は触らない。左右余白は :139・:190・:342・:202 の 4 か所だけ `var(--space-3)`。Checkbox.css:41 は `var(--comp-checkbox-radius)`
 3. 部品集の外（§4.3）: 最初に作業場所で `git grep -n "AnalysisDashboardPanel" -- .claude-pipeline/` を流し、追跡されている台帳に AnalysisDashboardPanel.css を触る別の作業があるかを探す（§6 B1。F11）。InboxPage.css :1419-1425 は角と左右余白、:2115-2118 は border-radius の行を消す
 4. ボタンの shape（§5）: `ButtonShape` を buttonAppearance.ts から export。Button と ButtonLink で取り出して渡し、ButtonLink は void の一覧にも足す。Button.css の末尾（:183 より後ろ・@media の外）に `.comp-btn--pill`。試験と stories を足す。`buttonShapeUsage.test.ts` は srOnlySsot.test.ts:8-24 と同じく node:fs で frontend/src 配下の tsx を読み、許可パス以外の `shape="pill"`・`shape={"pill"}`・`shape={'pill'}` が 0 件であることを試す。許可パスは design.md §5 のとおりで、次の 5 つだけ: `frontend/src/pages/login/` 配下・`frontend/src/components/Button.stories.tsx`・`frontend/src/components/Button.test.tsx`・`frontend/src/components/ButtonLink.test.tsx`・`frontend/src/pages/design-preview/` 配下
+4-2. ログイン画面の寸法のトークンと auth の大きさ（design.md §7.4。手順 7 より前に入れる。手順 7 が size="auth" を使うため。この段の行番号は origin/main のもので、手前の手順の編集でずれるので、`--comp-btn-height-lg`・`--comp-input-height-mobile`・`ButtonSize`・`.comp-btn--lg`・`@media` の文字で場所を探す）: tokens.css の `--card-login-max-w` を 464px にし、コメントに「中身の幅 384px（ChatGPT 実測。design.md §7.4）」と書く。`--comp-btn-height-auth: 52px` を tokens.css:467（`--comp-btn-height-lg`）の次の行に、`--comp-input-height-auth: 56px` を :492（`--comp-input-height-mobile`）の次の行に新設する。見出しの役割の変数 `--role-auth-title-size: var(--font-3xl)`・`--role-auth-title-weight: var(--font-weight-normal)`・`--role-auth-title-lh: var(--line-height-tight)` を :42-46 のページタイトルの塊の後ろに「ログイン画面の見出し」の注記を付けて新設する。TokenSection.tsx に 5 行足す。FormField.css の login variant を `min-height: var(--comp-input-height-auth)`・`padding: 0 var(--space-5)` にする。buttonAppearance.ts の `ButtonSize` に "auth" を足し、:36 に auth の対応を足す。Button.css の lg の次に `.comp-btn--auth`（`min-height: var(--comp-btn-height-auth)`・`padding: var(--space-3) var(--space-5)`・`font-size: var(--font-md)`）、:173-176 の @media の中にも `.comp-btn--auth { min-height: var(--comp-btn-height-auth); }`。Button.stories.tsx に auth の story、Button.test.tsx に「size="auth" で class comp-btn--auth が付く」試験を足す。buttonShapeUsage.test.ts は `size="auth"`・`size={"auth"}`・`size={'auth'}` も同じ許可パスで数える。
 5. TextLink（§6.1）: onClick と to のどちらか片方だけを型で強制。見た目はすべてトークン。pages-layout.css の未使用 2 規則は、消す前に `git grep -n "login-forgot-link\|login-back-link" -- frontend/src` で CSS 以外 0 件を確かめる
 6. PasswordFieldControl（§6.2）: 引数の形・アイコン・読み上げ（aria-pressed は付けない）・右余白・置き方・詳細度 (0,3,0) は design.md §6.2 のとおり。shape は付けない。IconToggleButton は使わない
-7. 画面（§7.1・§7.2）: LoginPage は :114-122・:123-125・:127-129・:153・:158-160。ja `login.forgotPassword` を「パスワードをお忘れですか？」に。ResetPasswordPage は :67-74・:78-85
+7. 画面（§7.1・§7.2）: LoginPage は :114-122・:123-125・:127-129・:153・:158-160。ja `login.forgotPassword` を「パスワードをお忘れですか？」に。ResetPasswordPage は :67-74・:78-85。あわせて design.md §7.4 の画面側を入れる: pages-layout.css の login 節に `.login-card .form-group { margin-bottom: var(--space-5); }` と `.login-forgot-row { margin-top: var(--space-2); }` を足し、`.login-subtitle` を font-size・font-weight・line-height の 3 つを上の role 変数にし、`margin: 0 0 var(--space-5)` にする。色（今の `var(--text-muted)`）は変えない。auth と icon-only は組み合わせない（Button.css:142-148 の icon-only が勝つため）。LoginPage はログインボタンと :153 を size="auth"・shape="pill" にし（design.md §7.1）、TextLink を `<div className="login-forgot-row">` で包んでパスワードの `.form-group` の中に入れる。LoginPage.test.tsx:80-89 は試験の名前を「forgot-password and back-to-login are TextLink components」にし、:84・:88 の `comp-btn--secondary` の確かめを TextLink の根の class の確かめに替える（role button の取り方 :83・:87 は変えない）
 8. 試験の直し（§7.3）: 先に `git grep -n 'getByLabel("パスワード"' -- frontend tests` を流し、6 か所と一致するかを報告する。一致すれば全部 `{ exact: true }` を足す。login.spec.ts の文言の行（:26・:36・:37・:60・:78・:86）を新しい文言に
-9. 仕様書の書き戻し（design.md §9・§1）
+9. 仕様書と注記の書き戻し（design.md §9・§1）。Button.tsx:8 の注記 `size: sm / md / lg` を `size: sm / md / lg / tap / auth（auth はログイン画面だけ）` にする
 10. commit: `git add` は §3 のファイルを名前で 1 つずつ指定する（`git add -A`・`git add .` は使わない）。commit の文は 1 行目 `feat: round inputs and login layout`。段を分けてよい（例: `feat: add input radius tokens`・`feat: add TextLink and PasswordField`）
 
 ## 5. 確かめ方（担当が実行し、生の最終行を報告に貼る）
@@ -125,10 +130,10 @@
 - frontend で `npm run lint`
 - frontend で `npx vitest run --config vitest.unit.config.ts --project unit src/components src/pages/login src/pages/reset-password`（F13）
 - frontend で `npm run check:css-values`・`npm run check:stories`・`npm run check:i18n-missing-keys`・`npm run check:icon-sync`・`npm run check:dark-parity`（1 コマンドずつ）
-- check:new-tokens は手元では確かめにならない（F15）。PR 本文に PR テンプレの新トークンの 4 項目を書き、トークン 3 つの名前（`--comp-textarea-radius`・`--comp-checkbox-radius`・`--comp-btn-radius-pill`）を載せる文を作り、最後の返答に書く（§12 （６））
+- check:new-tokens は手元では確かめにならない（F15）。PR 本文に PR テンプレの新トークンの 4 項目を書き、トークン 8 つの名前（`--comp-textarea-radius`・`--comp-checkbox-radius`・`--comp-btn-radius-pill`・`--comp-input-height-auth`・`--comp-btn-height-auth`・`--role-auth-title-size`・`--role-auth-title-weight`・`--role-auth-title-lh`）と、値を変えた `--comp-input-radius`・`--card-login-max-w` を載せる文を作り、最後の返答に書く（§12 （６））
 - frontend で `npm run build`
 - K7: 作業場所で `git grep -n "border-radius" -- frontend/src/components/FormField.css` の全行を報告に貼る
-- K8 の効き目: 許可パスの外に一時ファイル `frontend/src/components/__shapeProbe.tsx` を作り、中身は Button を import して `shape="pill"` を付けた 1 行の部品だけにする。frontend で `npx vitest run --config vitest.unit.config.ts --project unit src/components/buttonShapeUsage.test.ts` を流して落ちることを 1 回確かめ、一時ファイルを消し、同じコマンドで緑に戻ることを確かめ、作業場所で `git status --short` を流して残っていないことを示す
+- K8 の効き目: 許可パスの外に一時ファイル `frontend/src/components/__shapeProbe.tsx` を作り、中身は Button を import して `shape="pill"` を付けた 1 行の部品だけにする。frontend で `npx vitest run --config vitest.unit.config.ts --project unit src/components/buttonShapeUsage.test.ts` を流して落ちることを 1 回確かめ、一時ファイルを消し、同じコマンドで緑に戻ることを確かめ、作業場所で `git status --short` を流して残っていないことを示す。`size="auth"` だけを付けた一時ファイルでも同じ手順を 1 回流す
 - 生の部品と色の直書き（commit の後）: 作業場所で `git diff --name-only origin/main...HEAD -- '*.tsx'` で変えた tsx の一覧を出し、その各ファイルに `grep -nE "<button|<input|#[0-9a-fA-F]{3,6}\b|rgb\("` を流して 0 件（`ui-allow:` の例外コメント付きと、新設 TextLink.tsx の button 要素は部品そのものなので除き、報告に行番号を書く）
 - 計測（担当が行う。値だけを返答の表に書く。写真は撮らない）:
   - ブラウザ: frontend で `npm run test:e2e:install`（失敗したら B9）。これが入れるのは @playwright/test 1.59.1 用のブラウザ（package.json:13・:92。単体の playwright 1.60.0 とは版が違う）
@@ -138,6 +143,7 @@
   - K2: `/login` で目のマークの切り替え・位置。幅 1280px と 390px
   - K3: `/login` のログインボタンが 9999px。`/reset-password?token=probe`（F16。値は送らない）の送信ボタンが 6px
   - K4〜K6: design.md §8 の story を `http://localhost:6006/iframe.html?id=` の後ろに story の id を付けた URL で開いて計測（商品編集の欄の値は TextField の ControlProductEdit と Select・Textarea の product-edit の story。sm の欄の story も 1 つ測る。sm の欄には長い値を入れ、input の `scrollWidth` と `clientWidth` も返答に書く）
+  - K11: `/login` を幅 1280px と 390px で開き、design.md §8 K11 の項目を全部測る（間は getBoundingClientRect の上端と下端の差）
   - 返答の表は「基準・URL か story の id・要素・測った値・期待値・○×」の列にする
 
 ## 6. 分岐ごとの対処
@@ -154,16 +160,17 @@
 | B8 | §3 に無いファイルで、入力欄の角を書いている所が見つかった | 直さずに報告する（recon §C の仕分けの外。Opus が判断） |
 | B9 | ブラウザの導入・開発サーバー・Storybook がクラウドで動かない、または画面が開けない | 起動のコマンドと最後の 50 行を返答に書き、測れた分だけ出す。push までは進める。測れなかった分は Opus が判断する |
 | B10 | `npm ci` か `npm run generate:api-types` が失敗する | 最後の 50 行を報告して止まる |
+| B11 | K11 の値が ±1px に入らない | CSS を詳細度や直書きで合わせず、測った値と効いている規則（DevTools 相当の `getComputedStyle` の値）を報告して止まる |
 
 ## 7. 受け入れ基準
 
-design.md §8 の K1〜K10 をそのまま使う。担当が確かめるのは K1〜K8（§5 の計測と試験）。K9 は Opus が PR の checks と本番反映後の qa-smoke の手動実行で、K10 は PO が本番で目視する。
+design.md §8 の K1〜K11 をそのまま使う。担当が確かめるのは K1〜K8 と K11（§5 の計測と試験）。K9 は Opus が PR の checks と本番反映後の qa-smoke の手動実行で、K10 は PO が本番で目視する。
 
 | 基準 | 検証方法 |
 |---|---|
-| K1〜K6 | §5 の計測の表（design.md §8 の値と一致） |
+| K1〜K6・K11 | §5 の計測の表（design.md §8 の値と一致） |
 | K7 | §5 の git grep の全行 |
-| K8 | buttonShapeUsage.test.ts が緑で、許可パス外に書くと落ちる |
+| K8 | buttonShapeUsage.test.ts が緑で、許可パス外に pill か auth を書くと落ちる |
 | K9 | CI 全部緑（Opus）。本番反映後に `gh workflow run qa-smoke.yml` で 1 回緑（Opus） |
 | K10 | PO の目視（ログイン・再設定・カルテ。スマホで目のマークを押したとき・押したあと） |
 
@@ -199,13 +206,13 @@ frontend だけの変更（DB・API・設定・CI の変更なし）。PR を re
 
 ## 11. 未解決（審査で確かめる）
 
-- なし（設計の未決事項は design.md 第4版で解消。スマホで目のマークの背景がはみ出す件は Opus 判断で受け入れ、K10 で PO が見る。共有レイアウトの GO 記録は委任 GO で出すと Opus が決めた）
+- なし（設計の未決事項は design.md 第5版で解消。スマホで目のマークの背景がはみ出す件は Opus 判断で受け入れ、K10 で PO が見る。共有レイアウトの GO 記録は委任 GO で出すと Opus が決めた）
 
 ## 12. 担当の返答の形
 
 担当は card.md を変えない。最後の返答の本文に、次を順に書く（Opus が保存する）:
 （１）冒頭に「本報告はカード login-round-inputs の実行結果である」と作業場所のフルパス
-（２）§4 の手順ごとの結果（○か、止まった手順と理由）と、B1〜B10 のどれに当たったか
+（２）§4 の手順ごとの結果（○か、止まった手順と理由）と、B1〜B11 のどれに当たったか
 （３）§5 の各確かめのコマンドと、生の最終行
 （４）K7 の git grep の全行と、生の部品・色の直書きの行番号
 （５）計測の表（§5 の列）
