@@ -2,6 +2,7 @@ import { LoadingBlock } from "../../components/loading";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
+import { getAccessToken } from "../../lib/auth/selfAuth";
 import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
 import { ContentToolbar } from "../../components/ContentToolbar";
@@ -34,7 +35,7 @@ export default function ERPPage() {
       const resp = await fetch("/api/v1/erp/export-invoices", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${await (await import("../../lib/firebase-auth")).getAuth().currentUser?.getIdToken()}`,
+          Authorization: `Bearer ${await getAccessToken()}`,
           "Content-Type": "application/json",
         },
       });

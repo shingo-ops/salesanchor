@@ -3,10 +3,18 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../../contexts/AuthContext";
 import { firebaseErrorMessage } from "../../lib/firebaseErrorMessage";
+import { authErrorMessage } from "../../lib/auth/authErrorMessage";
+import type { AuthErrorContext } from "../../lib/auth/authErrorMessage";
+import { isSelfAuth } from "../../lib/auth/provider";
 import { Button } from "../../components/Button";
 import { TextFieldControl } from "../../components/TextField";
 
 type Mode = "signIn" | "reset";
+
+// 自社ログインのときは自社 API の応答から、Firebase のときは Firebase のエラーコードから文言を作る
+function loginErrorMessage(err: unknown, t: (key: string) => string, context: AuthErrorContext): string {
+  return isSelfAuth() ? authErrorMessage(err, t, context) : firebaseErrorMessage(err, t);
+}
 
 export default function LoginPage() {
   const { t } = useTranslation();
@@ -40,7 +48,7 @@ export default function LoginPage() {
       navigate(from, { replace: true });
     } catch (err) {
       // KGI-4: Firebase の生エラー文字列を i18n キー経由に変換
-      setError(firebaseErrorMessage(err, t));
+      setError(loginErrorMessage(err, t, "login"));
     } finally {
       setLoading(false);
     }
@@ -55,7 +63,7 @@ export default function LoginPage() {
       await sendPasswordReset(email);
       setResetSent(true);
     } catch (err) {
-      setError(firebaseErrorMessage(err, t));
+      setError(loginErrorMessage(err, t, "resetRequest"));
     } finally {
       setLoading(false);
     }
@@ -112,13 +120,9 @@ export default function LoginPage() {
                   required
                   autoComplete="current-password"
                 />
-                <button
-                  type="button"
-                  className="login-forgot-link"
-                  onClick={switchToReset}
-                >
+                <Button type="button" variant="secondary" size="sm" onClick={switchToReset}>
                   {t("login.forgotPassword")}
-                </button>
+                </Button>
               </div>
               <Button loading={loading} variant="primary" size="lg" fullWidth type="submit" disabled={loading}>
                 {t("login.signIn")}
@@ -151,9 +155,9 @@ export default function LoginPage() {
                 </Button>
               </form>
             )}
-            <button type="button" className="login-back-link" onClick={switchToSignIn}>
+            <Button type="button" variant="secondary" size="sm" onClick={switchToSignIn}>
               {t("login.backToLogin")}
-            </button>
+            </Button>
           </>
         )}
       </div>

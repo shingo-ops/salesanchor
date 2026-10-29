@@ -7,6 +7,10 @@ import {
 } from "../../lib/firebase-auth";
 import { auth } from "../../lib/firebase";
 import { firebaseErrorMessage } from "../../lib/firebaseErrorMessage";
+import { authErrorMessage } from "../../lib/auth/authErrorMessage";
+import { isSelfAuth } from "../../lib/auth/provider";
+import { adoptAccessToken } from "../../lib/auth/selfAuth";
+import { api } from "../../lib/api";
 import { ACCOUNT_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 import { Button } from "../../components/Button";
@@ -27,8 +31,29 @@ export default function SecuritySection() {
       setError(t("accountSettings.passwordMismatch"));
       return;
     }
-    if (form.next.length < 8) {
+    const selfMode = isSelfAuth();
+    // 自社ログインの長さ・よく使われるパスワードの決まりは backend が判定する（422 の識別子を文言にする）
+    if (!selfMode && form.next.length < 8) {
       setError(t("accountSettings.passwordTooShort"));
+      return;
+    }
+
+    if (selfMode) {
+      setChanging(true);
+      try {
+        const res = await api.post<{ access_token?: string | null; expires_in?: number | null }>(
+          "/auth/password/change",
+          { current_password: form.current, new_password: form.next },
+        );
+        // 他の端末の更新用トークンは失効するので、今の端末は応答の新しいトークンに入れ替える
+        if (res.access_token && res.expires_in) adoptAccessToken(res.access_token, res.expires_in);
+        setSuccess(true);
+        setForm({ current: "", next: "", confirm: "" });
+      } catch (err) {
+        setError(authErrorMessage(err, t, "passwordChange"));
+      } finally {
+        setChanging(false);
+      }
       return;
     }
 

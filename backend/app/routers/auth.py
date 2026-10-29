@@ -9,20 +9,21 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request,
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, EmailStr, Field
-from sqlalchemy import select, text
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import self_tokens
 from app.auth.dependencies import (
     _get_client_ip,
     clear_tenant_context,
+    get_current_user,
     require_super_admin,
     set_tenant_context,
 )
 from app.auth.password_policy import check_password
 from app.auth.passwords import hash_password, needs_rehash, verify_password
 from app.auth.schemas import UserRegister, UserResponse
-from app.auth.utils import set_tenant_claim
+from app.schemas.auth import PasswordChange
 from app.cache import (
     PASSWORD_RESET_REQUEST_MAX,
     blacklist_token,
@@ -34,7 +35,8 @@ from app.cache import (
 from app.database import get_db
 from app.models import Tenant, User
 from app.services.audit import record_audit_log
-from app.services.auth_mail import send_password_reset_email
+from app.services.auth_mail import send_invite_email, send_password_reset_email
+from app.services.invite import create_invite_token, invite_enabled, invite_url
 
 router = APIRouter()
 security = HTTPBearer()
@@ -43,6 +45,8 @@ security = HTTPBearer()
 @router.post("/register", response_model=UserResponse, status_code=201)
 async def register_user(
     data: UserRegister,
+    request: Request,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_super_admin),
 ):
@@ -50,15 +54,17 @@ async def register_user(
     ユーザー登録API（super admin のみ実行可能）。
 
     フロー:
-      ① super admin 権限を確認
+      ① Origin と super admin 権限を確認
       ② tenant_codeからテナントを検索
       ③ 同じメールアドレスのユーザーがいないか確認（いれば409）
-      ④ usersテーブルにユーザーを作成
-      ⑤ Firebaseカスタムクレームにテナントを設定
+      ④ usersテーブルにユーザーを作成（パスワードは NULL）
+      ⑤ AUTH_PROVIDER=self のとき、初回設定の鍵（purpose=invite・72時間）を作り、
+         commit の後に初回設定メールを送る（firebase の間は鍵もメールも作らない）
 
     注意:
-      - 認証は Firebase Authentication が担当。DB にパスワードは保存しない。
+      - パスワードは本人が初回設定メールのリンクから決める（ADR-1013 便4a）。
     """
+    _require_app_origin(request)
     # super admin 権限チェック（require_super_admin との二重防御）
     if not getattr(current_user, "is_super_admin", False):
         raise HTTPException(
@@ -80,9 +86,10 @@ async def register_user(
             detail="テナントコードが無効です",
         )
 
-    # メールアドレスの重複チェック
+    # メールアドレスの重複チェック（小文字で照合する）
+    email = data.email.strip().lower()
     result = await db.execute(
-        select(User).where(User.email == data.email)
+        select(User).where(func.lower(User.email) == email)
     )
     if result.scalar_one_or_none():
         raise HTTPException(
@@ -90,12 +97,12 @@ async def register_user(
             detail="このメールアドレスは既に登録されています",
         )
 
-    # ユーザー作成（認証は Firebase が担当、DB にパスワードは保存しない）
+    # ユーザー作成（パスワードは NULL。初回設定メールのリンクで本人が決める）
     await set_tenant_context(db, tenant.id)
     user = User(
         tenant_id=tenant.id,
         username=data.username,
-        email=data.email,
+        email=email,
         full_name=data.full_name,
         is_active=True,
     )
@@ -137,19 +144,13 @@ async def register_user(
         )
         await invalidate_user_permissions(tenant.id, user.id)
 
-    # FirebaseカスタムクレームにテナントIDを埋め込み（同期APIをスレッドで実行）
-    import asyncio
-    try:
-        await asyncio.to_thread(set_tenant_claim, data.firebase_uid, tenant.id)
-    except Exception:
-        await db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Firebase連携に失敗しました。再度お試しください",
-        )
+    invite_raw = await create_invite_token(db, user.id) if invite_enabled() else None
 
     await db.commit()
     await db.refresh(user)
+
+    if invite_raw is not None:
+        background_tasks.add_task(send_invite_email, user.email, invite_url(invite_raw))
 
     return user
 
@@ -185,6 +186,7 @@ async def logout(
 # ── 自社ログイン（ADR-1013 便2。AUTH_PROVIDER=self のときだけ有効） ────────────
 
 INVALID_CREDENTIALS = "invalid_credentials"
+INVALID_TOKEN_DETAIL = "無効な認証トークンです"
 
 
 class SelfLoginRequest(BaseModel):
@@ -235,6 +237,30 @@ def _invalid_credentials() -> HTTPException:
     return HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=INVALID_CREDENTIALS)
 
 
+async def _count_login_failure(db: AsyncSession, user_row, ip: str, now: datetime) -> None:
+    """照合失敗を口座単位で数え、上限で停止期限を入れる（login と password/change で共通）。commit まで行う。"""
+    await set_tenant_context(db, user_row.tenant_id)
+    counted = (
+        await db.execute(
+            text(
+                "UPDATE public.users SET failed_login_count = failed_login_count + 1 "
+                "WHERE id = :id RETURNING failed_login_count"
+            ),
+            {"id": user_row.id},
+        )
+    ).scalar_one()
+    if counted >= self_tokens.LOGIN_FAIL_LIMIT:
+        await db.execute(
+            text(
+                "UPDATE public.users SET locked_until = :until, failed_login_count = 0 WHERE id = :id"
+            ),
+            {"until": now + self_tokens.LOGIN_LOCK_DURATION, "id": user_row.id},
+        )
+    await clear_tenant_context(db)
+    await db.commit()
+    await record_auth_failure(ip)
+
+
 @router.post("/login", response_model=SelfTokenResponse)
 async def self_login(
     data: SelfLoginRequest,
@@ -267,26 +293,7 @@ async def self_login(
         raise _invalid_credentials()
 
     if not await asyncio.to_thread(verify_password, user_row.password_argon2_hash, data.password):
-        await set_tenant_context(db, user_row.tenant_id)
-        counted = (
-            await db.execute(
-                text(
-                    "UPDATE public.users SET failed_login_count = failed_login_count + 1 "
-                    "WHERE id = :id RETURNING failed_login_count"
-                ),
-                {"id": user_row.id},
-            )
-        ).scalar_one()
-        if counted >= self_tokens.LOGIN_FAIL_LIMIT:
-            await db.execute(
-                text(
-                    "UPDATE public.users SET locked_until = :until, failed_login_count = 0 WHERE id = :id"
-                ),
-                {"until": now + self_tokens.LOGIN_LOCK_DURATION, "id": user_row.id},
-            )
-        await clear_tenant_context(db)
-        await db.commit()
-        await record_auth_failure(ip)
+        await _count_login_failure(db, user_row, ip, now)
         raise _invalid_credentials()
 
     await set_tenant_context(db, user_row.tenant_id)
@@ -489,3 +496,106 @@ async def password_reset_confirm(
     )
     await db.commit()
     return PasswordResetDone(status="password_updated")
+
+
+# ── パスワード変更（ADR-1013 便4a。AUTH_PROVIDER に関係なく動く） ─────────────
+
+class PasswordChangeResponse(BaseModel):
+    status: str = Field(default="password_updated", description="パスワードを更新した")
+    access_token: str | None = Field(default=None, description="新しい自社アクセストークン（自社ログインが有効なときだけ）")
+    token_type: str | None = Field(default=None, description="トークン種別")
+    expires_in: int | None = Field(default=None, description="アクセストークンの有効秒数")
+
+
+@router.post("/password/change", response_model=PasswordChangeResponse)
+async def password_change(
+    data: PasswordChange,
+    request: Request,
+    response: Response,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """ログイン中の本人のパスワード変更。
+
+    照合失敗は 400 invalid_credentials（401 は画面が「ログインが切れた」と読むため使わない）。
+    成功でその人の更新用トークンを全部失効させ、自社ログインが有効なときだけ今の端末に
+    新しいアクセストークンと更新用 Cookie を出し直す。
+    """
+    _require_app_origin(request)
+    ip = _get_client_ip(request)
+    if await check_auth_rate_limit(ip):
+        raise HTTPException(status_code=429, detail="too_many_attempts")
+
+    now = datetime.now(timezone.utc)
+    user_row = (
+        await db.execute(
+            text(
+                "SELECT id, email, tenant_id, is_active, password_argon2_hash, failed_login_count, locked_until "
+                "FROM public.users WHERE id = :id"
+            ),
+            {"id": current_user.id},
+        )
+    ).first()
+    if user_row is None or not user_row.is_active:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=INVALID_TOKEN_DETAIL)
+
+    locked_until = self_tokens._as_utc(user_row.locked_until)
+    if locked_until is not None and locked_until > now:
+        await asyncio.to_thread(verify_password, None, data.current_password)
+        await record_auth_failure(ip)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=INVALID_CREDENTIALS)
+
+    if not await asyncio.to_thread(verify_password, user_row.password_argon2_hash, data.current_password):
+        await _count_login_failure(db, user_row, ip, now)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=INVALID_CREDENTIALS)
+
+    reason = check_password(data.new_password)
+    if reason is not None:
+        raise HTTPException(status_code=422, detail=reason)
+
+    new_hash = await asyncio.to_thread(hash_password, data.new_password)
+    # アクセストークンの iat は秒単位なので、変更時刻も秒に切り捨てて保存する（同じ秒に出す新トークンを拒否しない）
+    changed_at = now.replace(microsecond=0)
+    await set_tenant_context(db, user_row.tenant_id)
+    await db.execute(
+        text(
+            "UPDATE public.users SET password_argon2_hash = :h, password_changed_at = :at, "
+            "failed_login_count = 0, locked_until = NULL WHERE id = :uid"
+        ),
+        {"h": new_hash, "at": changed_at, "uid": user_row.id},
+    )
+    await clear_tenant_context(db)
+    await db.execute(
+        text(
+            "UPDATE public.auth_refresh_tokens SET revoked_at = :now "
+            "WHERE user_id = :uid AND revoked_at IS NULL"
+        ),
+        {"now": now, "uid": user_row.id},
+    )
+    await record_audit_log(
+        db,
+        tenant_id=user_row.tenant_id,
+        user_id=user_row.id,
+        action="update",
+        table_name="users",
+        record_id=user_row.id,
+        new_data={"event": "password_changed"},
+    )
+
+    issued: PasswordChangeResponse
+    if self_tokens.is_issuance_enabled():
+        raw, expires_at = await self_tokens.issue_refresh_token(
+            db, user_row.id, request.headers.get("user-agent")
+        )
+        await db.commit()
+        _set_refresh_cookie(response, raw, expires_at)
+        issued = PasswordChangeResponse(
+            status="password_updated",
+            access_token=self_tokens.create_access_token(user_row.id, user_row.email, "pwd"),
+            token_type="bearer",
+            expires_in=self_tokens.ACCESS_TOKEN_TTL_SECONDS,
+        )
+    else:
+        await db.commit()
+        issued = PasswordChangeResponse(status="password_updated")
+    return issued

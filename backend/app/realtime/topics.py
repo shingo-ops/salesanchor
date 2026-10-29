@@ -121,6 +121,7 @@ NO_SIGNAL_ROUTES: dict[tuple[str, str], str] = {
     ("POST", "/api/v1/ops/incidents/{incident_id}/close"): "保守 API ADR-1012: 運用者向けで画面更新の通知対象外",
     ("POST", "/api/v1/auth/password-reset/confirm"): _PENDING,
     ("POST", "/api/v1/auth/password-reset/request"): _PENDING,
+    ("POST", "/api/v1/auth/password/change"): _PENDING,
     ("POST", "/api/v1/auth/refresh"): _PENDING,
     ("POST", "/api/v1/auth/register"): _PENDING,
     ("POST", "/api/v1/bots"): _PENDING,

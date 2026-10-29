@@ -16,19 +16,24 @@ class UserRegister(BaseModel):
 
     email は EmailStr ではなく簡易バリデーション（validate_email_loose）を使う。
     .local 等のRFC予約TLDも識別子として許容するため。実在性チェックは
-    上流のFirebase Auth側で担保される。認証は Firebase が担当するため
-    パスワードフィールドは持たない。
+    上流のFirebase Auth側で担保される。パスワードは受け取らない
+    （初回設定メールのリンクから本人が決める。ADR-1013 便4a）。
     """
     email: str = Field(min_length=3, max_length=255)
     username: str = Field(min_length=1, max_length=255)
     full_name: str | None = None
     tenant_code: str = Field(min_length=1, max_length=50)
-    firebase_uid: str = Field(min_length=1, max_length=128)
 
     @field_validator("email")
     @classmethod
     def check_email(cls, v: str) -> str:
         return validate_email_loose(v)
+
+
+class PasswordChange(BaseModel):
+    """パスワード変更リクエスト（ログイン中）。新パスワードの決まりは password_policy で見る。"""
+    current_password: str = Field(min_length=1, max_length=1024)
+    new_password: str = Field(min_length=1, max_length=1024)
 
 
 class UserLogin(BaseModel):

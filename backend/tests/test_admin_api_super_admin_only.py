@@ -20,8 +20,8 @@ REGISTER_BODY = {
     "email": "new@example.com",
     "username": "newuser",
     "tenant_code": "other-tenant",
-    "firebase_uid": "uid-123",
 }
+_ORIGIN = "https://app.salesanchor.jp"
 ENDPOINTS = [
     pytest.param(TENANT_PATH, TENANT_BODY, id="admin-tenants"),
     pytest.param(REGISTER_PATH, REGISTER_BODY, id="auth-register"),
@@ -60,7 +60,7 @@ async def _post(path, body):
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        return await client.post(path, json=body)
+        return await client.post(path, json=body, headers={"origin": _ORIGIN})
 
 
 @pytest.mark.parametrize("path,body", ENDPOINTS)
@@ -94,12 +94,18 @@ async def test_register_function_body_rejects_non_super_admin():
     """二重防御: 依存を外して関数を直接呼んでも、関数内で 403 になる。"""
     from fastapi import HTTPException
 
+    from fastapi import BackgroundTasks
+    from starlette.requests import Request
+
     from app.routers.auth import register_user
     from app.schemas.auth import UserRegister
 
+    request = Request({"type": "http", "headers": [(b"origin", _ORIGIN.encode())]})
     with pytest.raises(HTTPException) as exc:
         await register_user(
             data=UserRegister(**REGISTER_BODY),
+            request=request,
+            background_tasks=BackgroundTasks(),
             db=None,
             current_user=_make_user(is_super_admin=False),
         )

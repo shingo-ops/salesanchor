@@ -79,7 +79,7 @@ migration は構造のみ・1回実行（ADR-1007）。値の投入は migration
 | POST `passkey/register/options`・`passkey/register/verify` | ログイン中 | py_webauthn で登録。`userVerification=required`、`residentKey=required`。user handle（`user.id`）は users.id を 8 バイトの固定長にしたもの（メール等の個人情報は入れない） | 顔・指紋の確認を必須にする |
 | POST `passkey/login/options`・`passkey/login/verify` | なし（端末が候補を出す） | options は challenge と、それを引くための使い捨て ID を返す（challenge は Redis に 5 分・1 回限り、鍵はその ID）。verify は ID で challenge を取り出して消し、`userVerification=required` で照合。成功でアクセストークン＋更新用 Cookie（login と同じ発行処理） | `sign_count`: 保存値と新値がどちらも 0 なら許可（同期型パスキーは 0 のまま）。保存値が 0 より大きく、新値が保存値以下なら拒否し、監査記録に残す（複製の疑い） |
 | GET/DELETE `passkeys` | ログイン中 | 自分のパスキーの一覧・削除 | 他人のものは触れない |
-| POST `register`（既存 `backend/app/routers/auth.py:23` を置き換え・super admin 専用のまま） | email・氏名・テナント・ロール | users を `password_argon2_hash` NULL で作り、purpose=invite の鍵を作って「初回設定メール」を送る。メールのリンクは再設定ページと同じ | 審査 HIGH-2。Firebase 撤去後に新しい人を作る経路。表は増やさない |
+| POST `register`（既存 `backend/app/routers/auth.py:43` を置き換え・super admin 専用のまま） | email・氏名・テナント・ロール | users を `password_argon2_hash` NULL で作り、purpose=invite の鍵を作って「初回設定メール」を送る（`AUTH_PROVIDER=self` のときだけ。firebase の間は users の行だけ作り、鍵もメールも作らない）。メールのリンクは再設定ページと同じ。担当者の追加（`POST /api/v1/staff`）で新しく利用者ができたときも同じ初回設定メールを送る（既存の利用者を足したときは送らない） | 審査 HIGH-2。Firebase 撤去後に新しい人を作る経路。表は増やさない |
 
 ### パスキーの RP ID（登録したパスキーが結びつくドメイン）
 - **RP ID = app.salesanchor.jp、確認するオリジン = https://app.salesanchor.jp**（PO 2026-10-13「y」・審査 HIGH-4）。ログインする場所はアプリの画面だけなので範囲を最小にする。後から変えると、登録済みのパスキーが全部使えなくなる。
@@ -128,7 +128,7 @@ migration は構造のみ・1回実行（ADR-1007）。値の投入は migration
 | アカウント設定 セキュリティ（`frontend/src/pages/account-settings/SecuritySection.tsx`） | パスワード変更を自社 API に。パスキー一覧（名前・登録日・最後に使った日）・追加・削除 | `Button`・`TextFieldControl`・`DataTable`（`frontend/src/components/DataTable.tsx`）・`ConfirmModal`（削除確認） |
 | 認証の土台（`frontend/src/contexts/AuthContext.tsx`・`frontend/src/lib/api.ts`・`frontend/src/hooks/useSSE.ts`・`frontend/src/components/ShippingDetailPanel.tsx`） | `getIdToken()` を「メモリのアクセストークン（切れていたら refresh）」に置き換え。Bearer 方式は変えない。起動時の手順: ページを開く → メモリにトークンが無い → refresh を 1 回だけ呼ぶ → 401 ならログイン画面へ。401 のときの自動 refresh は 1 回まで（`nginx/nginx.conf` の `/api/v1/auth/` は 10 回/分・burst 5 の制限があり、繰り返すとすぐ 429 になるため） | — |
 | e2e の試験用の迂回（`frontend/src/lib/firebase-auth.ts` の開発時の偽ユーザーと `frontend/tests-e2e/utils/auth.ts`） | 便4 で、自社方式でも同じように迂回できる形に移す（開発ビルドのときだけ有効。本番ビルドには入らない） | — |
-| 誤りの文言（`frontend/src/lib/firebaseErrorMessage.ts`） | 自社 API の誤りコード用に置き換え（ファイル名も変更） | — |
+| 誤りの文言（`frontend/src/lib/firebaseErrorMessage.ts`） | 自社 API の誤りコード用に `frontend/src/lib/auth/authErrorMessage.ts` を新設して置き換える（firebaseErrorMessage.ts は便6 まで残す） | — |
 
 - 新しい文言はすべて `t("key")`。ja.json と en.json に同じキー（ADR-027）。キー名は既存の `login.*`・`accountSettings.*` の下に足す。
 - 上の表に無い部品が必要になったら、作らずに設計者へ戻す（金型を先に登録する判断は設計者と PO）。
@@ -137,7 +137,7 @@ migration は構造のみ・1回実行（ADR-1007）。値の投入は migration
 
 | 面 | 接触 | 対処 |
 |---|---|---|
-| 人 | 使用中の 10 人（recon P3・P12）。切替日に全員のパスワードが変わる | 発行ファイルを PO が配る（§6 便4）。切替日を事前に告知。審査用（id=10）も含む |
+| 人 | 使用中の人（便4b の試し実行の件数。recon P3・P12 の時点は 10 人）。切替日に全員のパスワードが変わる | 発行ファイルを PO が配る（§6 便4）。切替日を事前に告知。審査用（id=10）も含む |
 | エージェント | 設計・実装・確認は Sonnet／Fable。本番の書き込みは危険便の GO 後だけ | 発行スクリプトは PO の端末から実行し、平文はサーバーに残さない |
 | 機械 | CI: 多数のテストは `get_current_user` を差し替えて迂回（影響小。数え方で 38〜54 ファイル。差し替えの本体は `backend/tests/conftest.py`）。`.github/workflows/qa-smoke.yml`（本番 Firebase 実ログイン・直近 5 回失敗 recon P11）と `.github/workflows/rotate-qa-firebase.yml` | 便6 で自社ログイン版に置き換え・削除 |
 | データ | public.users に 4 列、新 3 表。人の名簿は増やさない | 構造だけの migration（便1）。値はアプリと発行スクリプトだけが書く |
@@ -154,14 +154,15 @@ migration は構造のみ・1回実行（ADR-1007）。値の投入は migration
 | 便1 | migration: §2 の列と表（構造のみ） | **危険** | 列と表は残してコードが使わない（削除は別便・PO GO） | 本番で `\d public.users` と新 3 表が §2 と一致。今のログインに影響なし（ログイン成功数が前日と同程度） |
 | 便2 | backend: パスワード照合・トークン発行／更新／失効・口座ロック・§4 の振り分け・`AUTH_PROVIDER` スイッチ（既定 firebase）。依存追加 `argon2-cffi` | 無（コードのみ）。認証のためセキュリティ審査必須 | revert | 単体・結合テスト緑。本番では既定 firebase のため挙動不変（ログイン成功数が前日と同程度） |
 | 便3 | メール: SMTP を backend に渡す（`docker-compose.yml`・`.github/workflows/deploy.yml`）、再設定 API、メール文面（ja/en）。**便3 の間は、再設定の口は環境変数 `AUTH_PASSWORD_RESET_ALLOWLIST`（試験用アドレスだけ）に載った email にしか送らない**（審査 MEDIUM-6。切替前に実ユーザーへメールが届いて混乱しないように）。画面は Firebase のままなので、K5 は試験用アドレスに対して API を直接呼んで送る。試験用アドレスは、使用中の 10 人とは別に、試験用テナント（tenant 6 `tenant-review`）に試験ユーザーとして 1 人作る（email は便3 のカードに明記。この人は K1 の対象外）。PO の GUI: さくらで送信用アドレス作成・DKIM 有効化、DNS に DMARC 追加 | **危険**（compose・deploy・secrets） | 環境変数を外せば送信停止（`backend/app/services/email_sender.py:40` が送らずログだけになる） | K5: Gmail 試験アカウントの受信箱に届き、ヘッダの SPF・DKIM・DMARC が pass |
-| 便4 | 切替: `AUTH_JWT_SECRET` を GitHub の secret に追加し、`.github/workflows/deploy.yml` と `docker-compose.yml` で backend に渡す（審査 HIGH-3）。画面を自社 API に（`VITE_AUTH_PROVIDER=self`。ビルド変数なので `frontend/Dockerfile` の ARG・`docker-compose.yml` の build args・`.github/workflows/deploy.yml` に追加）、再設定ページ、ログイン画面の金型化、`AUTH_PROVIDER=self`、`AUTH_PASSWORD_RESET_ALLOWLIST` を外す、`register` を §3 の形に置き換え、**初回パスワード発行スクリプト backend/scripts/issue_initial_passwords.py（新設）**（審査 HIGH-5。`backend/Dockerfile` は backend/ 配下だけをイメージに入れるため、リポジトリ直下の scripts/ には置かない） | **危険**（backend/scripts・deploy・compose・secrets） | 便4 の PR を revert する PR を main にマージし、deploy を走らせる（`AUTH_PROVIDER` と `VITE_AUTH_PROVIDER` が firebase に戻り、画面もビルドし直される。`scripts/blue-green-cutover.sh` は前のイメージを残さないため、ビルドからやり直す）。Firebase のユーザーと元のパスワードは便6 まで残るので、元どおりログインできる。ただし便4 の後に新しく登録した人は Firebase にいないため、戻した状態ではログインできない（戻す前に人数を確かめる） | K1: 発行ファイルの行数 10・使用中の 10 人の last_login が切替後に更新。K4: 試験ユーザーで再設定を実演 |
+| 便4a | 画面と API の残り（初期値は Firebase のまま・本番のログインは変わらない）: `POST /api/v1/auth/password/change`、`register` を §3 の形に置き換え、担当者の追加（`POST /api/v1/staff`）で新しく利用者ができたときも、`AUTH_PROVIDER=self` なら初回設定メールを送る（既存の利用者を足したときは送らない）、画面の自社ログイン層（ビルド変数 `VITE_AUTH_PROVIDER` が `self` のときだけ自社 API。未設定・`firebase` は今と同じ動き）、再設定ページ `/reset-password`、ログイン画面の金型化、アカウント設定のパスワード変更、誤りの文言 `frontend/src/lib/auth/authErrorMessage.ts` | 無（コードのみ）。認証のためセキュリティ審査必須 | revert（初期値が firebase なので利用者への影響は無い） | K0: マージ・deploy 後も本番のログインは今と同じ（login は 404・PO が今のパスワードでログインできる）。見た目の変化はログイン画面の 2 つのボタンが枠付きの補助ボタンになることだけ |
+| 便4b | 切替: `AUTH_JWT_SECRET` を GitHub の secret に追加し、`.github/workflows/deploy.yml` と `docker-compose.yml` で backend に渡す（審査 HIGH-3）。`AUTH_PROVIDER=self`、画面は `VITE_AUTH_PROVIDER=self`（ビルド変数なので `frontend/Dockerfile` の ARG・`docker-compose.yml` の build args・`.github/workflows/deploy.yml` に追加）、`AUTH_PASSWORD_RESET_ALLOWLIST` を外す、**初回パスワード発行スクリプト backend/scripts/issue_initial_passwords.py（新設）**（審査 HIGH-5。`backend/Dockerfile` は backend/ 配下だけをイメージに入れるため、リポジトリ直下の scripts/ には置かない。id 2 も発行の対象） | **危険**（backend/scripts・deploy・compose・secrets） | 便4b は revert しない（`.env` の `AUTH_PROVIDER=self` が残り、backend が self のままになるため）。heredoc の `AUTH_PROVIDER` と `VITE_AUTH_PROVIDER` を `firebase` に変える前進 PR をマージして deploy する（消す一覧は残す。画面もビルドし直される）。Firebase のユーザーと元のパスワードは便6 まで残るので、元どおりログインできる。ただし便4b の後に新しく登録した人は Firebase にいないため、戻した状態ではログインできない（戻す前に人数を確かめる） | K1: 発行ファイルの行数＝便4b の試し実行の件数・使用中の人の last_login が切替後に更新。K4: 試験ユーザーで再設定を実演 |
 | 便5 | パスキー: 登録・ログイン・一覧・削除（backend＋画面）。依存追加 `webauthn`（py_webauthn）・`@simplewebauthn/browser`。ボタンは端末がパスキーに対応しているときだけ表示（環境変数のスイッチは作らない＝compose・deploy を触らない） | 無（migration は便1 で済。compose・deploy も触らない） | revert（登録済みのパスキーの行は残るが使われない） | K2: PO の端末で顔か指紋だけでログイン（画面録画）・`webauthn_credentials` に 1 行 |
 | 便6 | Firebase 撤去: `firebase-admin` と Firebase SDK の除去、§4 の Firebase 分岐削除、`backend/app/auth/utils.py`（カスタムクレーム）と `backend/app/schemas/auth.py` の `firebase_uid` の除去（審査 HIGH-2）、`nginx/nginx.conf:82` の CSP から Firebase 用の許可を外す、credentials のマウント除去（`docker-compose.yml:69` ほか）、運用スクリプト・CI・監視の置き換え（`scripts/setup_review_tenant.py`・`.github/workflows/qa-smoke.yml`・`.github/workflows/rotate-qa-firebase.yml`・`scripts/snapshot/firebase.sh`・`scripts/smoke/external-firebase.sh`・`docs/external-state-contract.yml`）、`bcrypt` の除去（`backend/requirements.txt:10`）、**Firebase の登録ユーザー削除** | **危険・不可逆**（外部 GUI／secrets） | 削除前に PO の Mac で Firebase の書き出しを暗号化して保管（便6 カードに手順） | K3: Firebase の書き出しで総数 0。ADR-032 を Superseded に |
 | 次のテーマ | 二段階認証（認証アプリ）を任意設定で追加 | — | — | PO 2026-10-13 の言葉どおり別テーマで設計 |
 
 ### 便4 初回パスワード発行の手順（平文をサーバーにもリポジトリにも残さない）
 1. PO の Mac で `umask 077` の後、`ssh prod1 "docker exec astro-webapp-backend-1 python -m scripts.issue_initial_passwords --apply"`（コンテナ内の作業場所は /app ＝ backend/ なので、新設する backend/scripts/issue_initial_passwords.py がこの名前で呼べる）の標準出力を、PO の Mac のファイル（例: ~/Documents/salesanchor-initial-passwords-YYYYMMDD.tsv・権限 600）へ直接書き出す。
-2. スクリプトは「`is_active=true` かつ `password_argon2_hash` が NULL」の全員（PO 2026-10-13「y」・recon P3 で 10 人。便3 の試験ユーザーは便3 で password_argon2_hash が入るため自然に外れる）に、ランダム 20 文字を作り Argon2id で `password_argon2_hash` に保存し、`users.id`・メール・パスワードの 3 列を標準出力に出す。サーバー側のファイル・ログには平文を書かない（ログは件数だけ）。
+2. スクリプトは「`is_active=true` かつ `password_argon2_hash` が NULL」の全員（PO 2026-10-13「y」・recon P3 の時点で 10 人。実際の対象者数は便4b の試し実行の件数。便3 の試験ユーザーは便3 で password_argon2_hash が入るため自然に外れる）に、ランダム 20 文字を作り Argon2id で `password_argon2_hash` に保存し、`users.id`・メール・パスワードの 3 列を標準出力に出す。サーバー側のファイル・ログには平文を書かない（ログは件数だけ）。
 3. 既に `password_argon2_hash` がある人は飛ばす（2 回実行しても上書きしない）。`--apply` なしは件数だけ表示する試し実行。
 4. PO が各人に伝え終えたら、ファイルを削除する（Mac の記憶装置では「上書きして完全に消す」ことは約束できないため、手順書には「削除」と「ゴミ箱に残っていないことの確認」だけを書く）。
 5. 発行対象のうち id=2（テスト用アドレス）と id=10（審査用）は実在の利用者ではないため、K1 の「ログインできる」の確認は PO が発行ファイルの値で行う。
@@ -189,7 +190,7 @@ migration は構造のみ・1回実行（ADR-1007）。値の投入は migration
 
 | 基準 | 検証方法 |
 |------|---------|
-| K1: 発行ファイルの行数＝対象者数（便4 の試し実行で表示される「is_active=true かつ password_argon2_hash が NULL」の件数。2026-10-13 時点 10 人・便3 の試験ユーザーは含まない）、対象者全員が新パスワードでログインできる | 便4 実施後、ファイル行数（`wc -l`、値は見ない）と、`public.users.last_login` が切替時刻より後の is_active 利用者の数（login API が成功時に last_login を更新する。今のコードは更新していない＝`git grep last_login` で認証コードに 0 件） |
+| K1: 発行ファイルの行数＝対象者数（便4 の試し実行で表示される「is_active=true かつ password_argon2_hash が NULL」の件数。2026-10-13 時点 10 人。実際の件数は便4b の試し実行の値・便3 の試験ユーザーは含まない）、対象者全員が新パスワードでログインできる | 便4 実施後、ファイル行数（`wc -l`、値は見ない）と、`public.users.last_login` が切替時刻より後の is_active 利用者の数（login API が成功時に last_login を更新する。`backend/app/routers/auth.py` の login が更新済み） |
 | K2: パスワードを打たずに顔か指紋だけでログインできる | PO の端末で実演し画面録画。`webauthn_credentials` に PO の users.id の行が 1 行以上（件数のみ読み取り） |
 | K3: Firebase の登録ユーザー 0、ログイン情報は §2 の置き場だけ | 便6 後に Firebase の書き出しで総数 0。`git grep -i firebase` が許可した例外（ADR・過去の handoff）以外 0 |
 | K4: 再設定メールのリンクで新パスワードを設定してログインできる。リンクは 1 回で無効・30 分で無効 | 試験ユーザーで実演＋結合テスト（使用済み・期限切れ・別人の鍵を拒否） |

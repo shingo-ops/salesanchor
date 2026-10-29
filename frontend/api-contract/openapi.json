@@ -22498,6 +22498,77 @@
         "title": "ParallelReportResponse",
         "type": "object"
       },
+      "PasswordChange": {
+        "description": "パスワード変更リクエスト（ログイン中）。新パスワードの決まりは password_policy で見る。",
+        "properties": {
+          "current_password": {
+            "maxLength": 1024,
+            "minLength": 1,
+            "title": "Current Password",
+            "type": "string"
+          },
+          "new_password": {
+            "maxLength": 1024,
+            "minLength": 1,
+            "title": "New Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "current_password",
+          "new_password"
+        ],
+        "title": "PasswordChange",
+        "type": "object"
+      },
+      "PasswordChangeResponse": {
+        "properties": {
+          "access_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "新しい自社アクセストークン（自社ログインが有効なときだけ）",
+            "title": "Access Token"
+          },
+          "expires_in": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "アクセストークンの有効秒数",
+            "title": "Expires In"
+          },
+          "status": {
+            "default": "password_updated",
+            "description": "パスワードを更新した",
+            "title": "Status",
+            "type": "string"
+          },
+          "token_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "トークン種別",
+            "title": "Token Type"
+          }
+        },
+        "title": "PasswordChangeResponse",
+        "type": "object"
+      },
       "PasswordResetAccepted": {
         "properties": {
           "status": {
@@ -36067,18 +36138,12 @@
         "type": "object"
       },
       "UserRegister": {
-        "description": "ユーザー登録リクエスト\n\nemail は EmailStr ではなく簡易バリデーション（validate_email_loose）を使う。\n.local 等のRFC予約TLDも識別子として許容するため。実在性チェックは\n上流のFirebase Auth側で担保される。認証は Firebase が担当するため\nパスワードフィールドは持たない。",
+        "description": "ユーザー登録リクエスト\n\nemail は EmailStr ではなく簡易バリデーション（validate_email_loose）を使う。\n.local 等のRFC予約TLDも識別子として許容するため。実在性チェックは\n上流のFirebase Auth側で担保される。パスワードは受け取らない\n（初回設定メールのリンクから本人が決める。ADR-1013 便4a）。",
         "properties": {
           "email": {
             "maxLength": 255,
             "minLength": 3,
             "title": "Email",
-            "type": "string"
-          },
-          "firebase_uid": {
-            "maxLength": 128,
-            "minLength": 1,
-            "title": "Firebase Uid",
             "type": "string"
           },
           "full_name": {
@@ -36108,8 +36173,7 @@
         "required": [
           "email",
           "username",
-          "tenant_code",
-          "firebase_uid"
+          "tenant_code"
         ],
         "title": "UserRegister",
         "type": "object"
@@ -39325,6 +39389,53 @@
         ]
       }
     },
+    "/api/v1/auth/password/change": {
+      "post": {
+        "description": "ログイン中の本人のパスワード変更。\n\n照合失敗は 400 invalid_credentials（401 は画面が「ログインが切れた」と読むため使わない）。\n成功でその人の更新用トークンを全部失効させ、自社ログインが有効なときだけ今の端末に\n新しいアクセストークンと更新用 Cookie を出し直す。",
+        "operationId": "password_change_api_v1_auth_password_change_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasswordChangeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Password Change",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/api/v1/auth/refresh": {
       "post": {
         "description": "更新用 Cookie を入れ替え、新しいアクセストークンを返す。",
@@ -39349,7 +39460,7 @@
     },
     "/api/v1/auth/register": {
       "post": {
-        "description": "ユーザー登録API（super admin のみ実行可能）。\n\nフロー:\n  ① super admin 権限を確認\n  ② tenant_codeからテナントを検索\n  ③ 同じメールアドレスのユーザーがいないか確認（いれば409）\n  ④ usersテーブルにユーザーを作成\n  ⑤ Firebaseカスタムクレームにテナントを設定\n\n注意:\n  - 認証は Firebase Authentication が担当。DB にパスワードは保存しない。",
+        "description": "ユーザー登録API（super admin のみ実行可能）。\n\nフロー:\n  ① Origin と super admin 権限を確認\n  ② tenant_codeからテナントを検索\n  ③ 同じメールアドレスのユーザーがいないか確認（いれば409）\n  ④ usersテーブルにユーザーを作成（パスワードは NULL）\n  ⑤ AUTH_PROVIDER=self のとき、初回設定の鍵（purpose=invite・72時間）を作り、\n     commit の後に初回設定メールを送る（firebase の間は鍵もメールも作らない）\n\n注意:\n  - パスワードは本人が初回設定メールのリンクから決める（ADR-1013 便4a）。",
         "operationId": "register_user_api_v1_auth_register_post",
         "requestBody": {
           "content": {
