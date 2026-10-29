@@ -48,7 +48,7 @@ recon: [docs/handoff/inbox-brushup/lead-merge-recon.md](../../../handoff/inbox-b
 
 ### 5-2 画面: 統合の窓（`frontend/src/components/MergeLeadModal.tsx`）
 
-1. 確認の段（stage "confirm"）で下見を呼び、「残す方へ移るもの」（付け替え件数が1以上の表を、日本語の名前で）と「空いている欄に入る内容」（項目名・入る値）を出す。下見の失敗はその場で文言を出し、統合のボタンを押せないようにする。
+1. 確認の段（stage "confirm"）で下見を呼び、「移るもの」（付け替え件数が1以上の表を「名前 件数」で並べる。1つも無いときは「移るものはありません」）と「空いている欄に入るもの」（「項目名 値」を並べる。無いときは「埋まる欄はありません」）を出す。区切りの「・」と「項目名 値」の組み立ては翻訳のキー（listSeparator・filledItem）に置く。リードの番号は画面に出さない。下見の失敗はその場で文言を出し、統合のボタンを押せないようにする。
 2. 素の `<button>` 2つ（やめる・戻る）を金型 `Button` にする。
 3. 文言から「audit_logs」をなくし、PO の見本（[画面見本](https://claude.ai/artifact/WLba4Mv3Ktfepb5g546pyC)）の言葉にそろえる。ja.json と en.json の `mergeLead` のキーを §5-6 の表のとおりに直し・足す。
 4. 色・大きさは var(--…) だけ。新しい直書きを足さない。
@@ -85,24 +85,29 @@ recon: [docs/handoff/inbox-brushup/lead-merge-recon.md](../../../handoff/inbox-b
 
 ### 5-6 文言（ja.json / en.json の `mergeLead`）
 
+2026-10-29 PO の見直し（番号を出さない・アプリらしい確認画面）に合わせて改めた。表は ja.json / en.json の今の値（消したキー confirmDesc1〜3・col_* は外した）。
+
 直すキー:
 
 | キー | ja | en |
 |---|---|---|
 | title | リードをまとめる | Merge leads |
 | reasonLabel | まとめる理由（任意・記録に残ります） | Reason (optional, kept in the record) |
-| confirmWarning | 元に戻せません | This cannot be undone |
-| confirmDesc1 | 「{{sourceName}}」の記録は、すべて「{{masterName}}」へ移ります。 | All records of "{{sourceName}}" will move to "{{masterName}}". |
-| confirmDesc3 | この操作は記録に残ります。 | This action is kept in the record. |
-| executeLabel | 「{{masterName}}」へまとめる | Merge into "{{masterName}}" |
+| confirmTitle | 「{{sourceName}}」を「{{masterName}}」に統合しますか？ | Merge "{{sourceName}}" into "{{masterName}}"? |
+| confirmWarning | 元に戻せません。「{{sourceName}}」は一覧から消えます。 | This cannot be undone. "{{sourceName}}" will be removed from the list. |
+| executeLabel | 統合する | Merge |
 
 足すキー:
 
 | キー | ja | en |
 |---|---|---|
 | menuLabel | ほかのリードとまとめる | Merge with another lead |
-| movedTitle | 残す方へ移るもの | Moving to the kept lead |
-| filledTitle | 空いている欄に入る内容 | Blank fields to be filled |
+| movedTitle | 移るもの | What moves over |
+| movedItem | {{name}} {{count}}件 | {{name}} {{count}} |
+| nothingToMove | 移るものはありません | Nothing to move |
+| listSeparator | ・ | ", " （カンマとスペース） |
+| filledTitle | 空いている欄に入るもの | What fills empty fields |
+| filledItem | {{field}} {{value}} | {{field}}: {{value}} |
 | nothingToFill | 埋まる欄はありません | No blank fields will be filled |
 | previewError | 中身を確かめられませんでした。もう一度お試しください。 | Could not load the preview. Please try again. |
 | tables.companies | 会社 | Companies |

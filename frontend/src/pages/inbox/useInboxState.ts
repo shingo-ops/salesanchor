@@ -122,6 +122,8 @@ export interface UseInboxStateReturn {
   convertError: string | null;
   handleCancelConvert: () => void;
   handleConfirmConvert: (assignedToUserId: number) => void;
+  /** ADR-1049: リード統合の後始末（一覧から消した方を外す → 残す方を選ぶ → 一覧を取り直す） */
+  handleLeadMerged: (loserId: number, masterId: number) => void;
 
   // 送信エリア
   draft: string;
@@ -955,6 +957,13 @@ export function useInboxState(): UseInboxStateReturn {
     navigate("/invoices/new");
   }, [navigate]);
 
+  // ADR-1049: リード統合の後始末。一覧から loser を外す → 残す方を選ぶ → 一覧を取り直す。
+  const handleLeadMerged = useCallback((loserId: number, masterId: number) => {
+    setConversations((prev) => prev.filter((c) => c.lead_id !== loserId));
+    selectLead(masterId);
+    void loadConversations();
+  }, [selectLead, loadConversations]);
+
   // ---------------------------------------------------------------------------
   // アクション
   // ---------------------------------------------------------------------------
@@ -1128,6 +1137,7 @@ export function useInboxState(): UseInboxStateReturn {
     convertError,
     handleCancelConvert,
     handleConfirmConvert,
+    handleLeadMerged,
 
     // 送信エリア
     draft,
