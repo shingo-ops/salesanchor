@@ -466,3 +466,26 @@ async def test_notify_lead_assigned_message_never_has_lead_code(notifier_env, na
         notifier_env, lead_id=32, customer_name=name, lead_code="LD-00032")
     assert "LD-00032" not in message
     assert "LD-" not in message
+
+
+@pytest.mark.asyncio
+async def test_notify_lead_assigned_message_for_null_name(notifier_env):
+    """テスト用 DB は customer_name が NOT NULL のため、リード表だけ NULL を返す副問い合わせに差し替える。"""
+    from app.auth.dependencies import tenant_table_ref as real_ref
+
+    def fake_ref(db, tenant_id, table):
+        if table == "leads":
+            return "(SELECT 34 AS id, NULL AS customer_name)"
+        return real_ref(db, tenant_id, table)
+
+    db = notifier_env
+    await _insert_staff(db, tenant_id=999, user_id=8, surname_jp="佐藤", given_name_jp="花子",
+                        discord_user_id=None)
+    await db.commit()
+    with patch("app.services.lead_assign_notifier.tenant_table_ref", new=fake_ref), \
+         patch("app.services.lead_assign_notifier.send_discord_notification",
+               new=AsyncMock()) as mock_send:
+        await notify_lead_assigned(tenant_id=999, lead_id=34, assigned_to_user_id=8)
+    message = mock_send.await_args.kwargs["message"]
+    assert "名前の無いリード" in message
+    assert "LD-" not in message

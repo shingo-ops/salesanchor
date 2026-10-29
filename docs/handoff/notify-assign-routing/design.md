@@ -240,7 +240,7 @@ async def notify_lead_assigned(tenant_id: int, lead_id: int, assigned_to_user_id
                 {"uid": assigned_to_user_id},
             )).mappings().first()
             lead_row = (await db.execute(
-                text(f"SELECT lead_code, customer_name FROM {leads_t} WHERE id = :lid"),
+                text(f"SELECT customer_name FROM {leads_t} WHERE id = :lid"),
                 {"lid": lead_id},
             )).mappings().first()
             if not lead_row:
@@ -366,7 +366,7 @@ await api.post("/notification-channels", {
 
 ---
 
-### 3-7. 通知の文面（PO 判断 Q4 待ち・実装はどちらでも差し替え可能な形にする）
+### 3-7. 通知の文面（PO 決定済み（2026-10-29、末尾の節）・実装はどちらでも差し替え可能な形にする）
 
 既存 Meta 通知は「個人情報を載せない」方針（`backend/app/routers/webhook.py:931` のコメント）。自社内サーバー向けに顧客名を出すかは PO 判断。
 

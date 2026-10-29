@@ -1176,6 +1176,7 @@
     "messagePlaceholder": "メッセージを入力... (Enterで送信、Shift+Enterで改行)",
     "sendDisabled7d": "メッセージウィンドウが期限切れ（7日）。メッセージを送信できません。",
     "discordNotLinked": "Discord未連携",
+    "unnamedLead": "名前の無いリード",
     "discordChannelMissing": "顧客がチケットを開くと返信できます",
     "attachImage": "画像を添付",
     "dropImageHere": "ここに画像をドロップ",
