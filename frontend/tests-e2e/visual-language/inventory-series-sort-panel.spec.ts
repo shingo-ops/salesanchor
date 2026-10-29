@@ -250,12 +250,26 @@ test.describe(`visual-language: 在庫表 種別・並び替えパネル ${MOBIL
     expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
   });
 
-  test("F2: inventory-tab-select のラベルの使える幅が240px以上", async ({ page }) => {
+  // F2 は「ラベルの clientWidth」では測れない。ラベルは flex item で中身なりに縮むため、
+  // 1行を独り占めしていても「ポケモン」なら 52px にしかならない（本番実機で実測）。
+  // 名前に使える余地は「ボタンの内側 − 左右の余白 − 山形 − すき間」で求める（実機で262px）。
+  test("F2: inventory-tab-select の中で種別の名前に使える余地が240px以上", async ({ page }) => {
     await gotoInventory(page, { width, height });
-    const label = page.getByTestId("inventory-tab-select").locator(".inventory-toolbar__label");
-    await expect(label).toBeVisible();
-    const clientWidth = await label.evaluate((el) => el.clientWidth);
-    expect(clientWidth).toBeGreaterThanOrEqual(240);
+    const trigger = page.getByTestId("inventory-tab-select");
+    await expect(trigger).toBeVisible();
+    const room = await trigger.evaluate((btn) => {
+      const cs = getComputedStyle(btn);
+      const caret = btn.querySelector(".inventory-toolbar__caret");
+      const gap = parseFloat(cs.columnGap) || 0;
+      return (
+        btn.clientWidth -
+        parseFloat(cs.paddingLeft) -
+        parseFloat(cs.paddingRight) -
+        (caret ? caret.getBoundingClientRect().width : 0) -
+        gap
+      );
+    });
+    expect(room).toBeGreaterThanOrEqual(240);
   });
 
   test("F3: 並び替えに「価格が安い順」を選んだ状態でも種別の名前が切れない", async ({ page }) => {

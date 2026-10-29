@@ -148,7 +148,7 @@ API への問い合わせ・文言・DOM の構造は**一切変えない**。**
 | # | 測ること |
 |---|---|
 | F1 | `inventory-tab-select` の中の `.inventory-toolbar__label` が**切れていない**（`scrollWidth <= clientWidth`） |
-| F2 | 同じラベルの**使える幅が 240px 以上**（将来また押し潰されたら赤。**mock は変えない**＝審査 B3） |
+| F2 | 種別のボタンの中で**名前に使える余地が 240px 以上**（将来また押し潰されたら赤。**mock は変えない**＝審査 B3）。**ラベルの `clientWidth` では測れない**（flex item は中身なりに縮むので「ポケモン」なら 52px にしかならない＝本番実機で確認）。「ボタンの `clientWidth` − 左右の余白 − 山形 − すき間」で求める（実機で 262px） |
 | F3 | **並び替えに「価格が安い順」を選んだ状態**でも F1 が成り立つ（本番実機で 0px になった状態の再現） |
 | F4 | 種別のボタンが**1行を独り占め**している（`inventory-tab-select` の y が `inventory-sort-menu` の y と**異なる**／ボタンの幅が `.inventory-toolbar` の `clientWidth` と等しい）。あわせて**ラベルの左端が「並び替え」のラベルの左端と同じ**（審査 M1 の中央寄せの退行を捕まえる） |
 | F5 | **空振り防止**: `page.addStyleTag` で `.inventory-toolbar > .inventory-toolbar__series { flex: 1 1 0 !important; }` を当てると F1 が**赤になる**ことを同じブラウザで確かめる（`!important` が要る＝審査 M8。先例 `frontend/tests-e2e/visual-language/viewer-control-tap-size.spec.ts` の B7c） |
