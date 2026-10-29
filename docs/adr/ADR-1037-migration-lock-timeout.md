@@ -37,7 +37,7 @@
 ## 対象外（この ADR では決めない）
 
 - `SET LOCAL lock_timeout = '5s'` を持つ 8 ファイル（そのトランザクションの中では5秒待つ）。2本は DROP を含み、変えるには PO 本人の GO が要る。
-- run_py（Python の移行）の接続。
+- （対象外だったが 2026-10-29 に拡張で対象にした）run_py（Python の移行）の接続。下の「拡張」を参照。
 - parse_logs を毎回作って消すこと（ADR-1005 の段階2で扱う）。
 
 ## 結果
@@ -71,3 +71,10 @@
   - K7 は 1/3（slow=0・error=0）。この回は ai_ro のビューを外す run_sql（計測を始める前）で鍵待ちがあったが、計測は trap の後から始まるため、その分は数えていない（design §14-3）。
   - 生の記録: Mac の /tmp/CC報告ファイル/k7-probe/deploy-39634747232.txt（リポジトリ外）。
 - 2026-10-22 便2 は保留（PO「1」）。調べた時点で、5秒の8ファイルに由来する待ちは入れ替え3回で0件、read probe も slow=0。K7 の残り2回で該当ファイルの待ちが出たら再相談する。根拠: docs/handoff/migration-lock-timeout/design.md の便2の行と :366。
+
+## 拡張（2026-10-29・deploy-db-stall 段1）
+
+- 2026-10-29 に本番反映の Python の移行が約113分ロックを待ち、アプリの読み取りを止めた。PO「1」で、run_py（Python の移行）の接続にも同じロック待ち1秒と流し直しを付けることにした。設計は docs/handoff/deploy-db-stall/design.md（第7版 APPROVE）。
+- 付け方は入口方式。run_py が移行を直接ではなく `scripts/migration_py_entry.py` 経由で動かし、入口が `create_async_engine` を差し替えて接続ごとに lock_timeout（`SQL_LOCK_TIMEOUT` と同じ値）と application_name=salesanchor_migration を付ける。移行本体は変えない。
+- 流し直しの判定文字列・回数・間隔・全体上限（合計40回）は run_sql と共有する。
+- 見張りは `.github/workflows/migration-test.yml`（S1・S2・P1〜P3）と `tests/sandbox/migration-run-sql-retry.sh`（R1〜R4）。
