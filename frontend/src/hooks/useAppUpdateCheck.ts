@@ -26,6 +26,7 @@ export function useAppUpdateCheck(): boolean {
     if (available) return;
     let cancelled = false;
     let inflight = false;
+    let abortTimer: number | undefined;
     let lastCheckedAt = Date.now();
 
     const check = async () => {
@@ -37,7 +38,7 @@ export function useAppUpdateCheck(): boolean {
       if (!current) return;
       inflight = true;
       const controller = new AbortController();
-      const abortTimer = window.setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+      abortTimer = window.setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
       try {
         const res = await fetch("/", { cache: "no-store", signal: controller.signal });
         if (!res.ok) return;
@@ -58,6 +59,7 @@ export function useAppUpdateCheck(): boolean {
     const timer = window.setInterval(() => void check(), CHECK_INTERVAL_MS);
     return () => {
       cancelled = true;
+      window.clearTimeout(abortTimer);
       document.removeEventListener("visibilitychange", onVisibility);
       window.clearInterval(timer);
     };

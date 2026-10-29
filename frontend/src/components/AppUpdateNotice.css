@@ -1,40 +1,79 @@
 /**
- * AppUpdateNotice — 画面の上の中央に小さく出す「新しい版があります」
- * ADR-067: 余白・z-index・寸法はすべて CSS 変数参照のみ（色は Callout / Button の金型側）
+ * AppUpdateNotice — 画面の上に白いカードで出す「新しい版があります」
+ * 形は既存の知らせ（loading-animations.css の .sa-toast）にそろえる。
+ * ADR-067: 色・余白・角・影・z-index・寸法はすべて CSS 変数参照のみ
  */
 
 .app-update-notice {
   position: fixed; /* fixed-ok: 殻の外の全画面共通の知らせ（Toaster と同じ階層） */
-  top: calc(env(safe-area-inset-top, 0px) + var(--space-2));
-  left: 50%;
-  transform: translateX(-50%);
+  top: var(--space-4);
+  right: var(--space-4);
   width: calc(var(--space-10) * 9);
   max-width: calc(100% - var(--space-4) * 2);
   box-sizing: border-box;
   z-index: var(--z-toast);
-}
-
-.app-update-notice .comp-callout {
-  flex-direction: row;
+  display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-surface);
+  border: var(--space-1px) solid var(--border);
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
+  animation: app-update-notice-in var(--duration-toast-in) var(--ease-enter);
 }
 
-.app-update-notice .comp-callout__title {
-  flex: 1 1 auto;
-}
-
-.app-update-notice .comp-callout__body {
+.app-update-notice__icon {
   flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--space-8);
+  height: var(--space-8);
+  box-sizing: border-box;
+  border: var(--space-1px) solid var(--accent);
+  border-radius: var(--radius-full);
+  color: var(--accent);
+  font-size: var(--font-md);
+  line-height: 1;
+}
+
+.app-update-notice__message {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--text-primary);
+  font-size: var(--font-sm);
+}
+
+/* 地の色が無い控えめなボタン: 文字だけ accent にする（形・高さは金型 Button のまま） */
+.app-update-notice .comp-btn--ghost {
+  flex: 0 0 auto;
+  color: var(--accent);
+}
+
+@keyframes app-update-notice-in {
+  from {
+    transform: translateY(calc(var(--space-4) * -1));
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 @media (max-width: 767px) {
   .app-update-notice {
-    left: var(--space-4);
-    right: var(--space-4);
+    top: calc(env(safe-area-inset-top, 0px) + var(--space-2));
+    left: var(--space-3);
+    right: var(--space-3);
     width: auto;
     max-width: none;
-    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-update-notice {
+    animation: none;
   }
 }

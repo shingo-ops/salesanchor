@@ -3,8 +3,8 @@
  * — 「新しい版があります・更新」の知らせの画面検査（受入条件 K6）
  *
  * design: docs/handoff/app-update-notice/design.md §5 K6。
- * 幅 390（vl-mobile-390）と 1280（vl-desktop-1280）で、知らせが出た状態の写真を撮り、
- * 横のはみ出しが無いこと・ボタンの高さが 44px 以上であることを測る。
+ * 幅 390（vl-mobile-390）では上に横いっぱい、幅 1280（vl-desktop-1280）では右上に白いカードで出た状態の写真を撮り、
+ * 横のはみ出しが無いこと・幅 390 でボタンの高さが 44px 以上であることを測る。
  *
  * 知らせの出し方（本体に試験専用の抜け道は足さない）:
  *  ・試験は Vite 開発サーバーで動くため、入口の script は /assets/main-*.js の形ではない。
@@ -19,7 +19,7 @@ const MIN_TAP_PX = 44;
 const TARGET_PROJECTS = ["vl-mobile-390", "vl-desktop-1280"];
 
 test.describe("app-update-notice (K6)", () => {
-  test("shows the notice at the top without horizontal overflow, with a 44px+ button", async ({ page }, testInfo) => {
+  test("shows the white card at the top (full width on mobile, top-right on desktop) without overflow", async ({ page }, testInfo) => {
     test.skip(!TARGET_PROJECTS.includes(testInfo.project.name), "390 と 1280 のみ");
 
     await openInboxList(page);
@@ -54,9 +54,23 @@ test.describe("app-update-notice (K6)", () => {
     const notice = page.getByTestId("app-update-notice");
     await expect(notice).toBeVisible({ timeout: 10_000 });
 
+    // 出るときの動き（上から降りる 350ms）が終わるまで待ってから位置を測る
+    await page.waitForTimeout(600);
     const box = await notice.boundingBox();
     expect(box).not.toBeNull();
     expect(box!.y).toBeLessThan(40);
+    const viewportWidth = page.viewportSize()!.width;
+    if (testInfo.project.name === "vl-mobile-390") {
+      // 上・横いっぱい（左右に余白を取る）
+      expect(box!.x).toBeGreaterThan(0);
+      expect(box!.x + box!.width).toBeLessThanOrEqual(viewportWidth);
+      expect(box!.width).toBeGreaterThan(viewportWidth * 0.9);
+    } else {
+      // 右上: 右端が画面右寄り、左端が画面中央より右
+      expect(box!.x + box!.width).toBeGreaterThan(viewportWidth * 0.9);
+      expect(box!.x + box!.width).toBeLessThanOrEqual(viewportWidth);
+      expect(box!.x).toBeGreaterThan(viewportWidth / 2);
+    }
 
     const { scrollWidth, innerWidth } = await page.evaluate(() => ({
       scrollWidth: document.documentElement.scrollWidth,

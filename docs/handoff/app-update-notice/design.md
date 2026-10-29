@@ -36,10 +36,11 @@
    - 今の名前は document の script 要素（type=module で assets の main を指すもの）から取る。取れない（開発サーバーなど）ときは何もしない。
 2. 確かめる時: アプリが裏から表に戻ったとき（visibilitychange で visible）と、表に出ている間の10分ごと。どちらも前回から60秒以内なら確かめない。裏にいる間は確かめない。
 3. 新しい版を見つけたら確かめるのをやめ、知らせを出したままにする。閉じるボタンは置かない。
-4. 知らせ: 画面の上の中央に小さく出す。中身は「新しい版があります」の文と「更新」ボタン（金型 Button）。押すと window.location.reload() を1回呼ぶ。
+4. 知らせ: 画面の上に、白いカードで小さく出す。中身は丸い枠の中の回る矢印の印、「新しい版があります」の文、「更新」ボタン（金型 Button）。押すと window.location.reload() を1回呼ぶ。
    - 置き場所: App.tsx の Toaster の隣（PC・スマホ・殻の無い画面すべてに出る）。
-   - 見た目: 既存の金型（Callout の info と Button）の組み合わせ。色・余白・z-index は token だけ（ADR-067）。z-index は var(--z-toast)。上の余白は calc(env(safe-area-inset-top, 0px) + var(--space-2))。position: fixed には既存例どおり fixed-ok の注記。
-   - スマホ幅（〜767px）では左右に余白を取って横いっぱい。ボタンの高さは 44px 以上。
+   - 見た目（2026-10-29 PO が見本3案から「2. 白いカードを上に」を選んだ。見本: 白い地・薄い枠・角丸・影のカード。上から降りてくる）: 既存の知らせ（Toast、frontend/src/loading-animations.css の .sa-toast）と同じ形にそろえる。地は var(--bg-surface)、枠は var(--border)、角は var(--radius-lg)、影は既存の影の token、出るときの動きは var(--duration-toast-in) と var(--ease-enter) で上から下へ。「更新」ボタンは地の色が無い控えめな金型 Button（文字は var(--accent)）。印は既存の icon から選び、無ければ文字の印で代える。色・余白・z-index は token だけ（ADR-067）。z-index は var(--z-toast)。上の余白は calc(env(safe-area-inset-top, 0px) + var(--space-2))。position: fixed には既存例どおり fixed-ok の注記。動きを減らす設定（prefers-reduced-motion）では動かさない。
+   - スマホ幅（〜767px）では上に、左右に余白を取って横いっぱい。ボタンの高さは 44px 以上。
+   - パソコン幅では右上に、幅を決めて出す（見本どおり）。既存の知らせと重なることがあるが、知らせは4秒で消えるので受け入れる。
    - Storybook の見張り（check:stories）に合わせ、見た目だけの AppUpdateNoticeView と stories を置く。
 5. 文言（t() 経由、ja/en 同じキー）: appUpdate.message「新しい版があります」/「A new version is available」、appUpdate.reload「更新」/「Reload」。
 6. 失敗したとき（通信できない・入口の形が違う・返事が来ない）: 何も出さず次の時を待つ。エラーを画面に出さない。入口の取り直しは10秒で打ち切る（返事が来ないまま次の確かめが止まらないようにする）。
@@ -57,7 +58,7 @@
 | K3: 裏にいる間と、見つけたあとは取りに行かない。10分ごとに確かめる | 単体試験 `frontend/src/hooks/useAppUpdateCheck.test.ts`（K3） |
 | K4: 今の名前が取れない・通信に失敗したとき、出さず例外も投げない | 単体試験 `frontend/src/hooks/useAppUpdateCheck.test.ts`（K4） |
 | K5: 「更新」を押すと読み込み直しが1回。押さない限り呼ばれない | 単体試験 `frontend/src/components/AppUpdateNotice.test.tsx`（K5） |
-| K6: 幅 390・1280 で上に出て、横のはみ出しが無い。幅 390 ではボタン 44px 以上（指で押す幅だけの決まり。幅 1280 は金型 Button の標準の高さ） | CI 画面試験 `frontend/tests-e2e/visual-language/app-update-notice.spec.ts`（写真を PO に見せる） |
+| K6: 幅 390 では上に横いっぱい、幅 1280 では右上に白いカードで出て、横のはみ出しが無い。幅 390 ではボタン 44px 以上（指で押す幅だけの決まり。幅 1280 は金型 Button の標準の高さ） | CI 画面試験 `frontend/tests-e2e/visual-language/app-update-notice.spec.ts`（写真を PO に見せる） |
 | K7: check:all と build が通り、ja と en のキー数が一致する | CI（npm run check:all、npm run build） |
 | K8: この版を入れて一度完全に閉じて開き直したあと、次の本番の版で知らせが出て、押すと新しくなる | PO の実機（次の本番の版が出たとき） |
 
@@ -74,7 +75,7 @@
 
 - 入口の形が変わり名前が取れなくなる → 対策: 取れないときは何もしない（K4）。知らせが出ないだけで、壊れはしない。
 - 入口を取りに行く回数が増える → 対策: 1人あたり10分に1回と戻ったとき（60秒に1回まで）。入口は約 1.3KB。
-- 新しい金型に当たるか（ADR-144 §4）→ 対策: 既存の Callout と Button の組み合わせで、新しい色・部品の決まりを足さない。実装担当が条文（docs/adr/ADR-144-ui-component-governance.md の §4）を確かめ、当たらないと判断した。設計担当もこれを採る。
+- 新しい金型に当たるか（ADR-144 §4）→ 対策: 既存の知らせ（Toast）の形と Button の組み合わせで、新しい色・部品の決まりを足さない（見た目の変更後に実装担当が §4 を確かめ直す）。実装担当が条文（docs/adr/ADR-144-ui-component-governance.md の §4）を確かめ、当たらないと判断した。設計担当もこれを採る。
 - 最初の1回はこの仕組みが古い画面に届かない → 対策: PO に一度だけ完全に閉じて開き直してもらう（K8）。
 - 戻し方: この PR を revert する。DB・サーバーは変えないので画面だけが戻る。
 

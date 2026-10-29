@@ -161,4 +161,16 @@ describe("useAppUpdateCheck", () => {
     await comeBack(30 * 60_000);
     expect(fetchMock).not.toHaveBeenCalled();
   });
+
+  it("clears the pending abort timer on unmount", async () => {
+    const fetchMock = vi.fn(() => new Promise<Response>(() => undefined));
+    vi.stubGlobal("fetch", fetchMock);
+    const { unmount } = renderHook(() => useAppUpdateCheck());
+    await comeBack(61_000);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const before = vi.getTimerCount();
+    unmount();
+    // interval と打ち切り用タイマーの2つが片付く
+    expect(vi.getTimerCount()).toBe(before - 2);
+  });
 });
