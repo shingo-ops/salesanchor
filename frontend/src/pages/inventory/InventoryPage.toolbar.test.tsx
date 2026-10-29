@@ -122,18 +122,21 @@ describe('InventoryPage toolbar (PC)', () => {
 });
 
 describe('InventoryPage toolbar (mobile)', () => {
-  it('K6: keeps the single-row order and moves condition/range into the detail panel', async () => {
+  it('K6: no ContentToolbar on mobile, shows .inventory-toolbar, hides reset/fresh at top, and moves them (plus condition/range) into the detail panel', async () => {
     stubMatchMedia(true);
     await setup();
-    expect(document.querySelector('.content-toolbar--two-rows')).toBeNull();
+    expect(document.querySelector('.content-toolbar')).toBeNull();
+    expect(document.querySelector('.inventory-toolbar')).not.toBeNull();
+    expect(screen.queryByTestId('inventory-reset-sort')).toBeNull();
+    expect(screen.queryByTestId('inventory-fresh-toggle')).toBeNull();
     expect(screen.queryByTestId('inventory-price-min')).toBeNull();
     expect(screen.queryByTestId('inventory-condition-filter-button')).toBeNull();
-    const order = ['inventory-search', 'inventory-reset-sort', 'inventory-fresh-toggle', 'inventory-sort-menu', 'inventory-filter-toggle']
+    const order = ['inventory-search', 'inventory-sort-menu', 'inventory-filter-toggle']
       .map((id) => screen.getByTestId(id));
     for (let i = 0; i < order.length - 1; i++) expect(before(order[i], order[i + 1])).toBe(true);
     fireEvent.click(screen.getByTestId('inventory-filter-toggle'));
     const panel = await screen.findByTestId('inventory-filter-panel');
-    for (const id of ['inventory-condition-filter-button', 'inventory-price-min', 'inventory-qty-max']) {
+    for (const id of ['inventory-fresh-check', 'inventory-condition-filter-button', 'inventory-price-min', 'inventory-qty-max', 'inventory-reset-in-panel']) {
       expect(panel.contains(screen.getByTestId(id))).toBe(true);
     }
   });

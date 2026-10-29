@@ -382,6 +382,15 @@ export default function InventoryPage() {
     setShowConditions(new Set(next));
     setPage(1);
   };
+  const onFreshToggle = () => { setFreshOnly((v) => !v); setPage(1); };
+  // 「詳細フィルタ」の文字に出す、効いている絞り込みの数（design.md 4-5。閲覧ページ
+  // InventoryView.tsx の filterActiveCount と同じ数え方をそのまま写す）。
+  const filterActiveCount =
+    (freshOnly ? 1 : 0) +
+    (selectedSupplierIds.length > 0 ? 1 : 0) +
+    (showConditions.size > 0 ? 1 : 0) +
+    (priceMin || priceMax ? 1 : 0) +
+    (qtyMin || qtyMax ? 1 : 0);
   const supplierOptions = supplierFacet.map((s) => ({ value: String(s.id), label: s.name ?? `#${s.id}` }));
   const toggleHiddenCategory = (c: string) => {
     setHiddenCategories((prev) => {
@@ -449,7 +458,7 @@ export default function InventoryPage() {
         onReset={resetAll}
         freshOnly={freshOnly}
         freshWindowHours={freshWindowHours}
-        onFreshToggle={() => { setFreshOnly((v) => !v); setPage(1); }}
+        onFreshToggle={onFreshToggle}
         sortField={sortField}
         sortDir={sortDir}
         onSortMenuChange={(value) => {
@@ -480,6 +489,7 @@ export default function InventoryPage() {
         filterEnabled={filterEnabled}
         showFilterPanel={showFilterPanel}
         onFilterPanelToggle={() => setShowFilterPanel((v) => !v)}
+        filterActiveCount={filterActiveCount}
       />
 
       {/* フィルタ ポップアップ（ON/OFF・仕入元・カテゴリー・列の取捨。ユーザー別に永続化） */}
@@ -515,6 +525,10 @@ export default function InventoryPage() {
           setPriceMin={setPriceMin}
           priceMax={priceMax}
           setPriceMax={setPriceMax}
+          freshOnly={freshOnly}
+          onFreshToggle={onFreshToggle}
+          freshWindowHours={freshWindowHours}
+          onReset={resetAll}
           onClose={() => setShowFilterPanel(false)}
         />
       )}

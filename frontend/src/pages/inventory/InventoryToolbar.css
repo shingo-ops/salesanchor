@@ -1,0 +1,18 @@
+/* InventoryToolbar — スマホ専用の操作台（design.md 4-3）。
+   閲覧ページ frontend/src/pages/viewer/viewer.css の .viewer-toolbar と同じ規則
+   （スマホは ContentToolbar を使わず、ページ側で折り返す flex を1枚持つ）。 */
+
+.inventory-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin: var(--space-3) 0;
+}
+/* 検索欄は1段目を独り占めする＝次の行に折り返させる（.viewer-toolbar__search と同じ） */
+.inventory-toolbar > .inventory-toolbar__search { flex: 1 1 100%; }
+/* 2段目のボタンは中身なりの幅（.viewer-toolbar__fixed と同じ） */
+.inventory-toolbar > .inventory-toolbar__fixed { flex: 0 0 auto; }
+
+/* パネルの中の「24時間以内」を押しやすくする（閲覧ページ viewer.css の .viewer-fresh-check と同じ） */
+.inventory-fresh-check { min-height: var(--size-icon-btn-lg); width: 100%; }
