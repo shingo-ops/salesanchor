@@ -7,6 +7,7 @@
  */
 import { useTranslation } from "react-i18next";
 import { useAppUpdateCheck } from "../hooks/useAppUpdateCheck";
+import { SCHEDULE_SETTINGS_ICONS } from "../constants/icons";
 import { Button } from "./Button";
 import "./AppUpdateNotice.css";
 
@@ -16,12 +17,14 @@ export interface AppUpdateNoticeViewProps {
   onReload: () => void;
 }
 
+const RefreshIcon = SCHEDULE_SETTINGS_ICONS.sync;
+
 /** 見た目だけ（版の確認は持たない）。Storybook と AppUpdateNotice が使う */
 export function AppUpdateNoticeView({ message, reloadLabel, onReload }: AppUpdateNoticeViewProps) {
   return (
     <div className="app-update-notice" data-testid="app-update-notice" role="status" aria-live="polite">
       <span className="app-update-notice__icon" aria-hidden="true">
-        ↻
+        <RefreshIcon className="app-update-notice__icon-svg" aria-hidden="true" />
       </span>
       <span className="app-update-notice__message">{message}</span>
       <Button variant="ghost" size="md" onClick={onReload}>

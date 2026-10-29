@@ -34,8 +34,12 @@
   border: var(--space-1px) solid var(--accent);
   border-radius: var(--radius-full);
   color: var(--accent);
-  font-size: var(--font-md);
   line-height: 1;
+}
+
+.app-update-notice__icon-svg {
+  width: var(--icon-md);
+  height: var(--icon-md);
 }
 
 .app-update-notice__message {
