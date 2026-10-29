@@ -33,6 +33,7 @@ API への問い合わせ・文言・DOM の構造は**一切変えない**。**
 ## ③ KPI（機械で測る値）
 
 本番の実機（幅360・dpr3・`app.salesanchor.jp/inventory`）で Chrome DevTools から直読みした値。
+測り方と生の値は `docs/handoff/toolbar-series-name-full-width/recon.md` §1〜§3（現在地の調査）に置いた。
 「使える幅」＝ `.inventory-toolbar__label` の `clientWidth`、「必要な幅」＝ 同 `scrollWidth`。
 
 | # | 値 | いま（本番実機） | この便の後 | 出どころ |
@@ -206,6 +207,24 @@ F5 と同じ空振り防止が手に入り、**宣言を1本も増やさずに�
 `frontend/tests-e2e/visual-language/popover-mold.spec.ts`／`frontend/tests-e2e/horizontal-overflow.spec.ts`／`frontend/tests-e2e/inventory-table-layout.spec.ts`／
 `frontend/tests-e2e/visual-language/inventory-raw-text-mobile.spec.ts`／`frontend/tests-e2e/visual-language/drawer-inert-closed.spec.ts`／`frontend/tests-e2e/visual-language/viewer-focus-trap.spec.ts`／
 単体テスト（jsdom は寸法を持たない）。`visual-language/` に画面写真の比較（`toHaveScreenshot`）は**0件**。
+
+### 5-4. 受け入れ基準の表
+
+調査の出どころは `docs/handoff/toolbar-series-name-full-width/recon.md`。
+E・D・A・B の番号は既存の画面検査、F は本便で新設する判定。
+
+| 基準 | 検証方法 |
+|---|---|
+| L1 在庫表のスマホで、選ばれている種別の名前が最後まで読める | F1（`inventory-tab-select` 配下の `.inventory-toolbar__label` で `scrollWidth <= clientWidth`）＋ 本番の実機（幅360）を Chrome DevTools で実測 |
+| L2 並び替えで「価格が安い順」を選んでも名前が消えない | F3（並び替えを変えた後に F1 と同じ測り方をする） |
+| L3 種別のボタンが1行を独り占めし、下の行に並び替えと詳細フィルタが並ぶ | F4（`inventory-tab-select` の y が `inventory-sort-menu` と異なる／ボタン幅が `.inventory-toolbar` の `clientWidth` と一致／ラベルの左端が並び替えと揃う） |
+| L4 並び替えのボタンの文字も切れない | `flex: 0 0 auto` のまま構造上縮まないことを CSS で担保し、本番の実機で実測する（判定は置かない＝常に緑の空振りになるため・審査 M2） |
+| L5 閲覧ページのスマホでも L1〜L4 と同じ | 既存 B7a（シリーズ名が切れていない）＋ B7c・B7d（壊すと切れる）＋ A2・B2・B8（シリーズが単独の行） |
+| L6 パネルの開閉と選んだときの動きは今までどおり | 既存 E1〜E14（在庫表）・B4〜B6（閲覧ページ）が緑のまま |
+| L7 PC は何も変わらない | 既存 E14・A12・B13（PC では `tab-select` が0件）＋ 変更した規則がスマホ分岐のクラスにしか付かないこと |
+| Q5 操作台の高さが168px（3段）で4段にならない | E11・D10（`MAX_TOOLBAR_HEIGHT = 180`）＋ 本番の実機で実測 |
+| Q6・Q7 画面外の操作が0・横スクロールが0のまま | E2（子の右端が画面幅以内）と既存の横スクロール検査 |
+| 空振り防止（この検査が本当に赤になる） | F5（在庫表）・B7c・B7d（閲覧ページ）で `flex: 1 1 0` に戻し、同じブラウザで赤になることを確かめる |
 
 ## ⑥ 触るファイル
 
