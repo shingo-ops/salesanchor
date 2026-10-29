@@ -73,6 +73,7 @@ import {
   ChatBubbleOvalLeftIcon as ChatBubbleOvalLeftOutlineIcon,
   TruckIcon as TruckOutlineIcon,
   EyeIcon as EyeOutlineIcon,
+  EyeSlashIcon as EyeSlashOutlineIcon,
   Cog8ToothIcon as Cog8ToothOutlineIcon,
   PencilSquareIcon as PencilSquareOutlineIcon,
   TrashIcon as TrashOutlineIcon,
@@ -150,6 +151,7 @@ const TrashOutline        = hi(TrashOutlineIcon);
 const CommandLine         = hi(CommandLineIcon);
 const BanknotesOutline    = hi(BanknotesOutlineIcon);
 const EyeOutline          = hi(EyeOutlineIcon);
+const EyeSlashOutline     = hi(EyeSlashOutlineIcon);
 const ArrowPathOutline    = hi(ArrowPathIcon);
 const ArrowLeft           = hi(ArrowLeftIcon);
 const BellOutline         = hi(BellOutlineIcon);
@@ -358,6 +360,11 @@ export const SCHEDULE_POPOVER_ICONS = {
   edit:   PencilSquareOutline,  // PencilSquareIcon outline
   delete: TrashOutline,         // TrashIcon outline
   close:  XOutline,             // XMarkIcon outline
+} satisfies Record<string, Icon>;
+
+export const PASSWORD_FIELD_ICONS = {
+  show: EyeOutline,       // 隠れているとき（押すと見える）
+  hide: EyeSlashOutline,  // 見えているとき（押すと隠れる）
 } satisfies Record<string, Icon>;
 
 export const SCHEDULE_SETTINGS_ICONS = {

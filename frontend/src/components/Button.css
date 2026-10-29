@@ -49,6 +49,13 @@ a.comp-btn {
   font-size: var(--font-md);
 }
 
+/* auth: ログイン画面だけ（ChatGPT 実測の高さ 52px）。icon-only とは組み合わせない */
+.comp-btn--auth {
+  min-height: var(--comp-btn-height-auth);
+  padding: var(--space-3) var(--space-5);
+  font-size: var(--font-md);
+}
+
 /* お手本（メルカリ）の操作行。48dp の行に、枠なしの文字ボタンを並べる用。
    文字は --font-sm（お手本の実測 13.4dp 相当）・横の余白は sm と同じに詰める */
 .comp-btn--tap {
@@ -175,9 +182,18 @@ a.comp-btn {
     min-height: var(--comp-btn-height-lg);
   }
 
+  .comp-btn--auth {
+    min-height: var(--comp-btn-height-auth);
+  }
+
   .comp-btn.comp-btn--icon-only {
     width: var(--size-icon-btn-lg);
     height: var(--size-icon-btn-lg);
     min-height: var(--size-icon-btn-lg);
   }
+}
+
+/* shape="pill": 完全に丸い形（ログイン画面だけ）。icon-only との組み合わせでも丸くなるよう @media の外・末尾に置く */
+.comp-btn--pill {
+  border-radius: var(--comp-btn-radius-pill);
 }
