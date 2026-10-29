@@ -1,0 +1,6 @@
+router = APIRouter()
+
+
+@router.get("/zzfixture/ping")
+async def ping():
+    return {"ok": True}

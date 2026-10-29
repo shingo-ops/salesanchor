@@ -480,3 +480,59 @@ ADR-1003 の説明: 2026-10-28 に ADR-1003 末尾へ実装の現状を追記し
 
 ### 審査（Opus 自己審査・2026-10-28）
 APPROVE。根拠: 目的が見本の件数で判定でき、K2/K3 で後退と誤検知の増加、K4 で速さを数で見る。仕様の根拠は公式文書で確認済み。事業判断が要る点は無い（PO 決定「3」の範囲内の見分けの強化）。未解決: なし。
+
+## R2a 今ある検査が止めている部分を違反の見本で試す（設計・2026-10-29）
+
+### 前提（origin/main c350824c4 の事実）
+- 台帳 docs/specs/rule-enforcement/rules.yml の 205 項目は review 88・exempt 117・gate 0。review のうち 48 項目は reason が「gate候補」で始まる（検査が一部だけ止めている決まり）。§5 R2 は「gate の各項目に見本を置く」としていたため、このままでは見本を置く対象が 0 件になる。
+- 見本を置ける検査 12 本（§5 R2）は、どれも node_modules・外部の Python の部品・docker・DB なしで動く。GitHub API を使うのは scripts/check-process-artifacts.js だけで、MOCK_PR_BODY（:1733）・MOCK_PR_AUTHOR（:1711）・MOCK_ORIGIN_MAIN_FILES（:1145）を渡せば API なしで動く。
+- 既存の試験のうち、CI で動いていないものがある: scripts/tests/test-process-artifacts.js、scripts/test_lint_tenant_schema.py、scripts/tests/test-migration-column-churn.js、scripts/tests/test-migration-duplicate-registration.js（.github/workflows に呼ぶ行が無い）。
+- .github/workflows/rule-registry.yml は main 向け PR で動く。権限は contents: read だけ、checkout は既定（fetch-depth 1）、setup-node は無い。必須チェックではない。
+- 2026-10-29 PO「1」: 完全に止まる決まりが 0 件のため、今の検査が止めている部分だけを違反の見本で試す進め方を選んだ。
+- 調べの生出力: 手元の /tmp/CC報告ファイル/r2-recon/ と /tmp/CC報告ファイル/r2-recon2/。
+
+### 目的
+今ある必須チェックが「止める」と言っている違反を、わざと作った見本で本当に止めることを毎回の PR で確かめる。検査がこっそり弱くなったら、その PR で気づける。止まった割合（違反の見本のうち失敗になった数）を数で出す。
+
+### 変更後
+1. 見本は「決まり」ではなく「検査」ごとに置く。1 つの見本は、1 つの必須チェックが呼ぶスクリプトに、1 つの入力を食べさせたときの期待（失敗 か 成功）を持つ。見本が一部を止めている決まりの id を書けるようにする（台帳の review の項目でよい）。台帳の kind は変えない。完全に止まる決まり（gate）の数は 0 のまま。
+2. 置き場は scripts/tests/rule-fixtures/<検査の短い名前>/<見本の名前>/。中身:
+   - case.json: `check`（必須チェックの名前。docs/specs/rule-enforcement/required-checks.txt にあること）、`rules`（id の一覧。rules.yml に実在すること。空でもよい）、`expect`（`fail` か `pass`）、`expect_output`（fail のとき必須。失敗の出力に必ず含まれる文字列。別の理由で落ちたものを「止まった」と数えないため）、`argv`（実行する命令。`{BASE}` `{HEAD}` を差し込める）、`env`（渡す環境変数。PR 本文はファイルで渡せる）、`delete`（消すファイルの一覧。任意）。
+   - files/: HEAD の側で上書きまたは足すファイル。base_files/（任意）: BASE の側で先に足しておくファイル（例: 消される側の API の道を、本物のファイルを写さずに用意するため）。どちらも名前の末尾に `.fixture` を付けて置き、試すときに外す（見本のファイルがリポジトリの中で本物の migration・文書・画面のファイルとして他の検査に当たらないため）。
+3. 試し役 scripts/tests/run_rule_fixtures.py（新規・Python の標準ライブラリだけ）:
+   - 見本ごとに、今の HEAD から使い捨ての git の写しを作る。base_files/ があれば置いて 1 コミット作り、それを BASE とする（無ければ写しの HEAD が BASE）。そのうえで files/ を置き delete を消して 1 コミット作り、それを HEAD とする。写しの中で argv を実行し、終了コードと出力を見る。終わったら写しを必ず片付ける。コミットの名前は環境変数で渡し、全体の git の設定は変えない。
+   - 判定: expect が fail なら「終了コードが 0 以外、かつ expect_output が出力にある」で合格。pass なら「終了コードが 0」で合格。
+   - 最後に「違反の見本 N 件中 N 件で止まった・正しい見本 M 件中 M 件で通った・見本が一部を止めている決まり K 件」を表示する。1 件でも期待と違えば exit 1。
+   - case.json の形（必須の欄・check が required-checks.txt にある・rules が rules.yml にある）が崩れていても exit 1。
+4. 最初の見本（R2a）は、パスに関係なく毎回走る必須チェック 4 本に置く。各検査に違反の見本を 1 つ以上・正しい見本を 1 つ以上:
+   - process-artifacts gate（scripts/check-process-artifacts.js）: 例として、コードの変更で PR 本文に「触るファイル」の宣言が無い、migrations/ を足して GO 記録が無い。正しい見本は、違反の見本の 1 つと同じ変更で足りない欄を足したもの。
+   - UI governance gate（scripts/check-ui-governance.js）: 既存の試験が失敗を期待している形の 1 つを、本物のファイルの差分で作る。
+   - dangling-route gate（scripts/check-dangling-routes.js）: 画面から呼ばれている API の道を消す。正しい見本は、どこからも呼ばれていない道を消す、またはどこも消さない。
+   - doc index reachability（scripts/ci/check_doc_index.py --root . --strict）: 目次から届かない新しい仕様書を足す。正しい見本は、同じ仕様書を docs/specs/README.md に「いつ読むか」付きで 1 行足して届くようにしたもの。
+   - 見本は、止まると分かっている形だけにする。すり抜ける形は公開のリポジトリに置かない。
+5. .github/workflows/rule-registry.yml に setup-node（他のゲートと同じ版）と、試し役を流す手順を 1 つ足す。手順は失敗で止まる（continue-on-error を付けない）。ジョブは必須チェックではないので、マージは止めない（§3-5 の段階導入。必須への格上げは PO の登録で、R2a の外）。timeout-minutes は実測を見て決め、10 分を超えない。
+
+### 対象外（後の作業）
+- R2b: 残りの 8 本（generate-adr-index.js --check、check-claude-size.js、lint_tenant_schema.py、check-doc-heading-duplicates.sh、check-migration-value-writes.py、check-migration-column-churn.js、check-migration-duplicate-registration.sh、check-lessons-section.sh）の見本。check-lessons-section.sh は自分では失敗を返さず、失敗の判定は lessons-guard.yml の中にあるため、見本ではなく evidence（実際に止まった PR）で代える。
+- R2c: CI で動いていない既存の試験 4 本を CI で動かす。
+- 経路ごとの試し（§5 R2 の最後の項目。手元の Claude・クラウドの Claude・PO 名義・Codex から違反の PR を出す）。Codex を使っているかは R0 で確定していない（recon §12 に記載なし）。
+- 台帳の kind・check_rule_registry.py の変更、gate への格上げ、必須チェックへの登録。
+
+### 受入条件
+- K1 試し役が CI（rule registry のジョブ）と手元の両方で exit 0。表示が「違反の見本 N 件中 N 件で止まった」「正しい見本 M 件中 M 件で通った」で、N は 4 以上・M は 4 以上。4 本の検査のそれぞれに違反と正しい見本が 1 つ以上ある。
+- K2 弱めたら気づく: 手元の使い捨ての写しで、4 本の検査それぞれを「常に成功で終わる」ように書き換えると、試し役が exit 1 になり、その検査の違反の見本の名前を表示する（書き換えはコミットしない）。expect_output を実際に出ない文字列にした見本も exit 1 になる。
+- K3 見本のファイルが他の検査に当たらない: この PR で必須チェック 16 件が全部 pass（見本を足したことで新しく落ちるものが無い）。
+- K4 片付け: 試し役の実行後に、使い捨ての写し（git worktree list に出るもの・一時フォルダ）が残らない。見本の途中で失敗したときも残らない。
+- K5 速さ: rule registry のジョブ全体の所要時間を CI の記録で測り、PR 本文に書く。
+
+### リスクと対処
+- 見本が別の理由で落ちて「止まった」と数えてしまう → expect_output を必須にし、K2 で出ない文字列の見本が落ちることを確かめる。
+- 見本のファイルが本物の migration や文書として他の検査に当たる → `.fixture` を付けて置く（K3）。
+- 使い捨ての写しが残る → 片付けを必ず通る形にする（K4）。
+- 検査の側の正しい変更で見本が合わなくなる → 失敗の表示に見本の名前と期待を出す。直し方は見本を今の検査に合わせて直すこと（検査を弱めた結果なら、それが気づくべき変化）。
+
+### 戻し方
+merge commit の revert。
+
+### 審査（Opus 自己審査・2026-10-29）
+APPROVE。根拠: 目的が見本の件数（止まった割合）と K2 の弱めた試しで判定できる。入力の渡し方は 4 本とも実物で確かめた（r2-recon2）。PO の選択（2026-10-29「1」）の範囲で、台帳の kind と必須チェックの登録は変えない。未解決: なし（UI governance gate の違反の形は既存の試験から実装時に選び、報告で示す）。

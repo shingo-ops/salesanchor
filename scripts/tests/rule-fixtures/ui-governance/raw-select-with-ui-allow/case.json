@@ -1,0 +1,7 @@
+{
+  "check": "UI governance gate",
+  "rules": [],
+  "expect": "pass",
+  "argv": ["node", "scripts/check-ui-governance.js"],
+  "env": {"BASE_SHA": "{BASE}", "HEAD_SHA": "{HEAD}"}
+}

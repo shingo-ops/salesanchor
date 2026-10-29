@@ -20,9 +20,13 @@ jobs:
   rule-registry:
     name: rule registry
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
 
       - name: Run rule registry tests
         run: python3 -I scripts/tests/test_check_rule_registry.py -v
@@ -30,3 +34,6 @@ jobs:
       - name: Run rule registry check
         continue-on-error: true
         run: python3 -I scripts/ci/check_rule_registry.py --summary-file "$GITHUB_STEP_SUMMARY"
+
+      - name: Run rule fixtures
+        run: python3 -I scripts/tests/run_rule_fixtures.py
