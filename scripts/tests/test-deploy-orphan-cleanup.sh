@@ -365,7 +365,8 @@ C1C_RC=0
 ( cd "${ROOT}" && env ${BE} bash scripts/backup.sh foo ) >"${D}/out.txt" 2>&1 || C1C_RC=$?
 ok_if "C1 backup.sh foo は rc=2（実際 ${C1C_RC}）" test "${C1C_RC}" -eq 2
 ok_if "C1 backup.sh foo は控えを作らない" test "$(count_glob "${D}/bk" 'salesanchor_db_*.sql.gz')" = "0"
-ok_if "C1 backup.sh foo は backup.log に FAILED 行を書かない" test "$(grep -c 'Backup FAILED' "${D}/bk/backup.log" 2>/dev/null || true)" = "0"
+no_failed_line() { ! grep -qs 'Backup FAILED' "${D}/bk/backup.log"; }
+ok_if "C1 backup.sh foo は backup.log に FAILED 行を書かない" no_failed_line
 
 D="${TMP}/c1d"
 BE=$(backup_env "${D}")
