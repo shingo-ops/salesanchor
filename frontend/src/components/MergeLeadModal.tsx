@@ -300,7 +300,7 @@ export default function MergeLeadModal({ open, source, onMerged, onCancel }: Pro
                       alignItems: "center",
                       gap: "var(--space-3)",
                       boxSizing: "border-box",
-                      minHeight: "var(--size-icon-btn-lg)",
+                      minHeight: "var(--comp-table-row-h-default)",
                       padding: "var(--space-2) var(--space-3)",
                       borderBottom: "1px solid var(--border-light)",
                       cursor: "pointer",
@@ -374,26 +374,30 @@ export default function MergeLeadModal({ open, source, onMerged, onCancel }: Pro
               <div style={{ marginBottom: "var(--space-4)", fontSize: "var(--font-base)" }}>
                 <strong>{t("mergeLead.movedTitle")}</strong>
                 <p style={{ margin: "var(--space-1) 0 var(--space-3)", color: "var(--text-muted)", overflowWrap: "anywhere" }}>
-                  {preview.tables
-                    .filter((row) => row.moved >= 1)
-                    .map((row) =>
-                      t("mergeLead.movedItem", {
-                        name: t(`mergeLead.tables.${row.table}`, { defaultValue: row.table }),
-                        count: row.moved,
-                      }),
-                    )
-                    .join("・")}
+                  {preview.tables.some((row) => row.moved >= 1)
+                    ? preview.tables
+                        .filter((row) => row.moved >= 1)
+                        .map((row) =>
+                          t("mergeLead.movedItem", {
+                            name: t(`mergeLead.tables.${row.table}`, { defaultValue: row.table }),
+                            count: row.moved,
+                          }),
+                        )
+                        .join(t("mergeLead.listSeparator"))
+                    : t("mergeLead.nothingToMove")}
                 </p>
                 <strong>{t("mergeLead.filledTitle")}</strong>
                 <p style={{ margin: "var(--space-1) 0 0", color: "var(--text-muted)", overflowWrap: "anywhere" }}>
                   {preview.fills.length === 0
                     ? t("mergeLead.nothingToFill")
                     : preview.fills
-                        .map(
-                          (f) =>
-                            `${FILL_FIELD_LABEL_KEYS[f.field] ? t(FILL_FIELD_LABEL_KEYS[f.field]) : f.field} ${formatFillValue(f.new)}`,
+                        .map((f) =>
+                          t("mergeLead.filledItem", {
+                            field: FILL_FIELD_LABEL_KEYS[f.field] ? t(FILL_FIELD_LABEL_KEYS[f.field]) : f.field,
+                            value: formatFillValue(f.new),
+                          }),
                         )
-                        .join("・")}
+                        .join(t("mergeLead.listSeparator"))}
                 </p>
               </div>
             )}

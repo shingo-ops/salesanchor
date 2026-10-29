@@ -97,7 +97,8 @@ test.describe("visual-language: 受信箱 カルテからリードをまとめ�
     // （題名は src/locales/ja.json の mergeLead.title と同じ文字）
     const dialog = page.getByRole("dialog", { name: "リードをまとめる" });
     await expect(dialog).toBeVisible();
-    // リードの番号（コード）は窓のどの段にも出さない
+    // 候補が出そろうのを待ってから、リードの番号（コード）は窓のどの段にも出さないことを確かめる
+    await expect(dialog.getByText(MASTER_CANDIDATE.customer_name)).toBeVisible();
     await expect(dialog.getByText("LEAD-2026")).toHaveCount(0);
     if (isMobile) {
       const row = await dialog.locator('[data-testid="merge-candidate-row"]').first().boundingBox();
