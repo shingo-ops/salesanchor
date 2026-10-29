@@ -176,7 +176,7 @@ for (const width of MOBILE_WIDTHS) {
       expect(box!.width).toBeGreaterThanOrEqual(MIN_SERIES_LABEL_WIDTH_PX);
     });
 
-    test("B8: 3つの高さ・配置（y が同じ・右端が画面幅以内・ページの横はみ出し無し）", async ({ page }) => {
+    test("B8: 3つの高さ・配置（シリーズは単独の行・並び替えと絞り込みは同じ行・右端が画面幅以内・ページの横はみ出し無し）", async ({ page }) => {
       await gotoViewer(page, { width, height });
       const series = page.getByTestId("viewer-tab-select");
       const sort = page.getByTestId("viewer-sort-menu");
@@ -194,7 +194,8 @@ for (const width of MOBILE_WIDTHS) {
       expect(sortBox).not.toBeNull();
       expect(filterBox).not.toBeNull();
 
-      expect(seriesBox!.y).toBe(sortBox!.y);
+      // 本便（toolbar-series-name-full-width）でシリーズが1行を独り占めする（審査 B1）
+      expect(seriesBox!.y).not.toBe(sortBox!.y);
       expect(sortBox!.y).toBe(filterBox!.y);
 
       for (const box of [seriesBox!, sortBox!, filterBox!]) {
@@ -206,16 +207,19 @@ for (const width of MOBILE_WIDTHS) {
   });
 }
 
-// B7c・B7d は「壊した状態を作って切れることを検出できる」ことを示す（design.md ⑤。
-// 便6〜便9 で3便連続で B7a 相当の検査が空振りだったため、本便はここで証明する）。
+// B7c・B7d は「壊した状態を作って切れることを検出できる」ことを示す（design.md ⑤5-2・審査 B2）。
+// 本便（toolbar-series-name-full-width）でシリーズが1行を独り占めすると使える幅が約262pxになり、
+// 文字を16pxにしても山形を24pxにしても既定ラベル「すべて」はもう切れない。
+// そこで壊し方を「flex を 1 1 0 に戻す」に差し替える。B7c=flex を戻すだけで切れる／
+// B7d=flex を戻したうえで山形も24pxにしても切れる、の2本で空振り防止を保つ（2本とも意味のある壊し方）。
 // 360px だけでよい（recon §4: 390px では採用案の余りが38pxあり、どちらを壊しても切れない）。
 test.describe("visual-language: 閲覧ページ シリーズ名が切れることの検出（空振り対策）360px", () => {
   const width = 360;
   const height = 700;
 
-  test("B7c: 操作ボタンの文字を16pxに差し替えると、シリーズ名が切れる", async ({ page }) => {
+  test("B7c: シリーズの flex を 1 1 0 に戻すと、シリーズ名が切れる", async ({ page }) => {
     await gotoViewer(page, { width, height });
-    await page.addStyleTag({ content: '[data-testid="viewer-tab-select"], [data-testid="viewer-sort-menu"], [data-testid="viewer-filter-toggle"] { font-size: 16px !important; }' });
+    await page.addStyleTag({ content: '.viewer-toolbar > .viewer-toolbar__series { flex: 1 1 0 !important; }' });
 
     const label = page.getByTestId("viewer-tab-select").locator(".viewer-toolbar__label");
     await expect(label).toBeVisible();
@@ -226,9 +230,12 @@ test.describe("visual-language: 閲覧ページ シリーズ名が切れるこ�
     expect(scrollWidth).toBeGreaterThan(clientWidth);
   });
 
-  test("B7d: 山形を24pxに差し替えると、シリーズ名が切れる", async ({ page }) => {
+  test("B7d: flex を 1 1 0 に戻したうえで山形も24pxにすると、シリーズ名が切れる", async ({ page }) => {
     await gotoViewer(page, { width, height });
-    await page.addStyleTag({ content: ".viewer-toolbar__caret { width: 24px !important; height: 24px !important; }" });
+    await page.addStyleTag({
+      content:
+        '.viewer-toolbar > .viewer-toolbar__series { flex: 1 1 0 !important; } .viewer-toolbar__caret { width: 24px !important; height: 24px !important; }',
+    });
 
     const label = page.getByTestId("viewer-tab-select").locator(".viewer-toolbar__label");
     await expect(label).toBeVisible();

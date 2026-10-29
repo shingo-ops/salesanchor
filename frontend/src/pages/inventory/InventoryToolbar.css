@@ -17,13 +17,16 @@
 /* パネルの中の「24時間以内」を押しやすくする（閲覧ページ viewer.css の .viewer-fresh-check と同じ） */
 .inventory-fresh-check { min-height: var(--size-icon-btn-lg); width: 100%; }
 
-/* 種別のボタン（design.md 4-2・4-4）。閲覧ページ viewer.css の .viewer-toolbar__series と同じ規則。
-   1行に収まることを運任せにしない（ADR-067: flex の数値と min-width は色・寸法のトークン対象外） */
+/* 種別のボタン（design.md 4-1・4-2・4-4）。閲覧ページ viewer.css の .viewer-toolbar__series と同じ規則。
+   検索欄と同じく1行を独り占めし、名前の全部が出る（ADR-067: flex の数値と100%は色・寸法のトークン対象外）。
+   justify-content: flex-start が無いと .comp-btn の center 指定で名前が行の中央に浮く（実機で確認）。
+   text-overflow は直下にテキストが無く効かないため置かない（… を出すのは .inventory-toolbar__label 側）。
+   overflow: hidden は約19文字を超える名前が将来出たときの歯止めとして残す */
 .inventory-toolbar > .inventory-toolbar__series {
-  flex: 1 1 0;
+  flex: 1 1 100%;
+  justify-content: flex-start;
   min-width: 0;
   overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 /* 枠なしボタン（種別・並び替え）の中の文字（design.md 4-4）。長い種別名を … で切る */
