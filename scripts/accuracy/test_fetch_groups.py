@@ -88,3 +88,39 @@ def test_http_error_writes_nothing(tmp_path, monkeypatch):
     out = tmp_path / "g.tsv"
     assert fgr.main(["--keys", k, "--out", str(out)]) == 1
     assert not out.exists()
+
+
+def test_columns_sql_has_limit_and_column_filter():
+    sql = fgr.columns_sql()
+    assert sql.startswith("-- limit=%d\n" % fgr.fg.ROW_LIMIT)
+    assert "column_name in (" in sql
+    for cols in fgr.NEEDED.values():
+        for c in cols:
+            assert "'%s'" % c in sql
+
+
+def test_sql_without_limit_line_is_stopped(monkeypatch):
+    win = Window()
+    monkeypatch.setattr(fgr.fg, "post", win)
+    with pytest.raises(fgr.Stop) as e:
+        fgr.query("http://x", "select 1", None, ["a"])
+    assert e.value.code == 1 and "-- limit=" in str(e.value)
+    assert win.seen == []
+
+
+def test_blocked_when_columns_reply_hits_limit(tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(fgr.fg, "ROW_LIMIT", len(ALL_COLS))
+    monkeypatch.setattr(fgr.fg, "post", Window())
+    k = keys_file(tmp_path, [["k1", U1, "10"]])
+    out = tmp_path / "g.tsv"
+    assert fgr.main(["--keys", k, "--out", str(out)]) == 1
+    assert "BLOCKED:" in capsys.readouterr().err
+    assert not out.exists()
+
+
+def test_passes_when_all_needed_columns_returned(tmp_path, monkeypatch):
+    monkeypatch.setattr(fgr.fg, "post", Window(sup={U1: "7"}))
+    k = keys_file(tmp_path, [["k1", U1, ""]])
+    out = tmp_path / "g.tsv"
+    assert fgr.main(["--keys", k, "--out", str(out)]) == 0
+    assert out.exists()

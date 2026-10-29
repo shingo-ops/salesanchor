@@ -42,10 +42,15 @@ class Stop(Exception):
         self.code = code
 
 
+LIMIT_RE = re.compile(r"\A-- limit=([0-9]+)\n")
+
+
 def columns_sql():
     names = ", ".join("'%s'" % t for t in NEEDED)
-    return ("select table_name, column_name from information_schema.columns "
-            "where table_schema = 'ai_ro' and table_name in (%s)" % names)
+    cols = ", ".join("'%s'" % c for c in sorted({c for cs in NEEDED.values() for c in cs}))
+    return ("-- limit=%d\nselect table_name, column_name from information_schema.columns "
+            "where table_schema = 'ai_ro' and table_name in (%s) and column_name in (%s)"
+            % (fg.ROW_LIMIT, names, cols))
 
 
 def supplier_sql(msg_ids):
@@ -62,7 +67,11 @@ def category_sql(product_ids):
             "where p.id in (%s)" % (fg.ROW_LIMIT, ids))
 
 
-def query(url, sql, token, header):
+def query(url, sql, token, header, label="STOP"):
+    m = LIMIT_RE.match(sql)
+    if not m:
+        raise Stop("STOP: 窓口に送るSQLの先頭に -- limit= 行がありません", 1)
+    limit = int(m.group(1))
     status, rc, body = fg.post(url, sql, token)
     if status != 200 or rc != "0":
         raise Stop("STOP: http=%s rc=%s %s" % (status, rc or "-", fg.first_line(body)), 1)
@@ -72,13 +81,15 @@ def query(url, sql, token, header):
     if not lines or lines[0].split("\t") != header:
         raise Stop("STOP: 応答の見出しが想定と違います", 1)
     rows = [l.split("\t") for l in lines[1:]]
-    if len(rows) >= fg.ROW_LIMIT or any(len(r) != len(header) for r in rows):
+    if len(rows) >= limit:
+        raise Stop("%s: 応答が上限%d行に達した(打ち切りの恐れ)" % (label, limit), 1)
+    if any(len(r) != len(header) for r in rows):
         raise Stop("STOP: 応答の行数または列数が想定と違います", 1)
     return rows
 
 
 def check_columns(url, token):
-    rows = query(url, columns_sql(), token, ["table_name", "column_name"])
+    rows = query(url, columns_sql(), token, ["table_name", "column_name"], "BLOCKED")
     have = {(r[0], r[1]) for r in rows}
     for t, cols in NEEDED.items():
         for c in cols:
