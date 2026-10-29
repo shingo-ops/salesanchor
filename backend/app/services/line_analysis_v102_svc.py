@@ -14,6 +14,7 @@ import hashlib
 import json
 import logging
 import os
+import time
 import uuid
 from collections.abc import Callable
 from dataclasses import replace as dataclass_replace
@@ -26,7 +27,12 @@ from sqlalchemy.orm import Session
 
 from app.services import tcg_analyzer_svc as analyzer
 from app.services.extraction_judgement_svc import build_cond_terms, order_from_pattern
-from app.services.gemini_extraction_svc import _GEMINI_MODEL, _classify_error, _safe_error_message
+from app.services.gemini_extraction_svc import (
+    _GEMINI_MODEL,
+    _HTTP_STATUS_RE,
+    _classify_error,
+    _safe_error_message,
+)
 from app.services.gemini_raw_copy_v8 import build_prompt_v8, call_gemini_raw_copy_v8
 from app.services.gemini_raw_copy_v101 import (
     _NONE as _SHIP_NONE,
@@ -453,6 +459,18 @@ def _record_usage(session: Session, result: dict, extraction_job_id: str, attemp
         logger.exception("[line_analysis] 費用の台帳に書けませんでした: job=%s", extraction_job_id)
 
 
+# 一時的に断られたときの、その場での送り直し（design: docs/handoff/api-error-auto-retry/design.md A）。
+_TRANSIENT_HTTP_CODES = frozenset({429, 500, 502, 503, 504})
+_IMMEDIATE_RETRY_DELAYS = (2, 8)  # 秒。最初の呼び出しの後 2秒、さらに 8秒
+_IMMEDIATE_RETRY_BUDGET_SECONDS = 90  # 最初の呼び出しからこれを過ぎたらその場の送り直しはしない
+
+
+def _is_transient_http(exc: Exception) -> bool:
+    """例外の文字列から HTTP 番号を拾い、一時的な断られ方（429・5xx の一部）なら True。番号が無ければ False。"""
+    codes = {int(m) for m in _HTTP_STATUS_RE.findall(str(exc))}
+    return bool(codes & _TRANSIENT_HTTP_CODES)
+
+
 def _call_gemini(session: Session, ctx, prompt_text: str, extraction_job_id: str, recorder) -> dict:
     """Gemini を呼ぶ。recorder があれば呼ぶ前に試行を記録し（job を running にする）、失敗は固定コードの RecordError にする。"""
     supplier_context = without_legacy_supplier_fields(ctx.supplier_context)
@@ -470,19 +488,38 @@ def _call_gemini(session: Session, ctx, prompt_text: str, extraction_job_id: str
             },
         })
     session.commit()  # 外部呼び出しの間、DB の取引を持ち越さない
-    try:
-        return call_gemini_raw_copy_v8(
-            ctx.raw_text, prompt_text=prompt_text, supplier_context=supplier_context,
-            knowledge_links=ctx.knowledge_links, thinking_level=V102_THINKING_LEVEL, include_thoughts=True,
-            use_schema=True, temperature=None, response_schema=V102_RESPONSE_SCHEMA, new_system_rules=new_rules,
-        )
-    except SoftTimeLimitExceeded:
-        raise
-    except Exception as exc:
-        if recorder is None:
+    started = time.monotonic()
+    retries_used = 0
+    while True:
+        try:
+            result = call_gemini_raw_copy_v8(
+                ctx.raw_text, prompt_text=prompt_text, supplier_context=supplier_context,
+                knowledge_links=ctx.knowledge_links, thinking_level=V102_THINKING_LEVEL, include_thoughts=True,
+                use_schema=True, temperature=None, response_schema=V102_RESPONSE_SCHEMA, new_system_rules=new_rules,
+            )
+        except SoftTimeLimitExceeded:
             raise
-        recorder.record_error_detail({"raw": _safe_error_message(exc), "category": _classify_error(exc)})
-        raise RecordError("API_ERROR") from None
+        except Exception as exc:
+            if (
+                _is_transient_http(exc)
+                and retries_used < len(_IMMEDIATE_RETRY_DELAYS)
+                and time.monotonic() - started < _IMMEDIATE_RETRY_BUDGET_SECONDS
+            ):
+                delay = _IMMEDIATE_RETRY_DELAYS[retries_used]
+                retries_used += 1
+                logger.warning(
+                    "[line_analysis] 一時的な失敗のため送り直し: job=%s 回目=%d HTTP=%s",
+                    extraction_job_id, retries_used, _safe_error_message(exc),
+                )
+                time.sleep(delay)
+                continue
+            if recorder is None:
+                raise
+            recorder.record_error_detail({"raw": _safe_error_message(exc), "category": _classify_error(exc)})
+            raise RecordError("API_ERROR") from None
+        if retries_used:
+            logger.info("[line_analysis] 送り直しで成功: job=%s 回目=%d", extraction_job_id, retries_used)
+        return result
 
 
 def run_v102_extraction(session: Session, extraction_job_id: str, *, recorder=None) -> dict:

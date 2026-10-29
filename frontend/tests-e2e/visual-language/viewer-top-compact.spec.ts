@@ -32,7 +32,8 @@ const MOBILE_WIDTHS = [360, 390] as const;
 const MIN_TAP_PX = 44;
 /** 一覧の先頭カードの y の上限（design.md ③・K1。便4で128に更新。docs/handoff/viewer-header-remove/design.md 4-4） */
 // 便10 で検索欄とボタン行が48pxになり計算値132。docs/handoff/viewer-control-tap-size/design.md ⑤
-const MAX_TOP_Y = 132;
+// 本便（toolbar-series-name-full-width）でシリーズが単独行になり段が1つ増え、計算値192＋余裕12で204。
+const MAX_TOP_Y = 204;
 /** シリーズのタブに常時出る3つ（本便のテストでは意図的に外側のシリーズ名を使う。viewerFilter.ts の MAIN_SERIES） */
 // eslint-disable-next-line local/no-japanese-literal -- tests-e2e は ESLint 対象外。DB の series 名（画面文言ではない）
 const OTHER_SERIES = "アクア";
@@ -99,7 +100,7 @@ for (const width of MOBILE_WIDTHS) {
       expect(y).toBeLessThanOrEqual(MAX_TOP_Y);
     });
 
-    test("A2・A3・A4: シリーズ・並び替え・絞り込みが1行に並び、検索欄は単独で1行", async ({ page }) => {
+    test("A2・A3・A4: シリーズは単独の行、並び替え・絞り込みは同じ行に並び、検索欄も単独で1行", async ({ page }) => {
       await gotoViewer(page, { width, height });
       const search = page.getByTestId("viewer-search");
       const series = page.getByTestId("viewer-tab-select");
@@ -117,11 +118,13 @@ for (const width of MOBILE_WIDTHS) {
       expect(sortBox).not.toBeNull();
       expect(filterBox).not.toBeNull();
 
-      // A2: シリーズ・並び替え・絞り込みの y が同じ（1行に並ぶ）
-      expect(seriesBox!.y).toBe(sortBox!.y);
+      // A2: シリーズは単独の行（並び替え・絞り込みと y が異なる。本便でシリーズが1行を独り占めする）
+      expect(seriesBox!.y).not.toBe(sortBox!.y);
+
+      // A2b: 並び替え・絞り込みは同じ行
       expect(sortBox!.y).toBe(filterBox!.y);
 
-      // A4: 検索欄は単独の1行（シリーズと y が違う）
+      // A4: 検索欄も単独の1行（シリーズと y が違う）
       expect(searchBox!.y).not.toBe(seriesBox!.y);
 
       // A3: 3つの右端が画面幅以内・高さが44px以上

@@ -111,6 +111,10 @@
     "updateSummary": "全{{total}}件 / 更新可能{{ready}}件 / 要修正{{blocked}}件",
     "addProduct": "新規追加"
   },
+  "appUpdate": {
+    "message": "新しい版があります",
+    "reload": "更新"
+  },
   "common": {
     "loading": "読み込み中...",
     "select": "選択",
@@ -664,6 +668,34 @@
     "sendResetEmail": "再設定メールを送信",
     "resetEmailSent": "再設定メールを送信しました。メールをご確認ください。",
     "backToLogin": "ログイン画面に戻る"
+  },
+  "authError": {
+    "invalidCredentials": "メールアドレスまたはパスワードが正しくありません。",
+    "forbiddenOrigin": "画面を開き直してから、もう一度お試しください。",
+    "unavailable": "この操作は現在ご利用いただけません。",
+    "tooManyAttempts": "試行回数が多すぎます。しばらく待ってからお試しください。",
+    "resetLinkInvalid": "リンクが無効か、有効期限が切れています。もう一度、再設定メールをご請求ください。",
+    "currentPasswordWrong": "現在のパスワードが正しくありません。",
+    "passwordTooShort": "パスワードは15文字以上で入力してください。",
+    "passwordTooLong": "パスワードは64文字以内で入力してください。",
+    "passwordTooCommon": "よく使われるパスワードのため使えません。別のパスワードにしてください。",
+    "validation": "入力内容を確認してください。",
+    "default": "エラーが発生しました。しばらく待ってからお試しください。"
+  },
+  "resetPasswordPage": {
+    "subtitle": "メールのリンクから、新しいパスワードを決めます。",
+    "title": "パスワードの設定",
+    "newPassword": "新しいパスワード",
+    "confirmPassword": "新しいパスワード（確認）",
+    "hint": "15文字以上64文字以内で入力してください。",
+    "submit": "パスワードを設定",
+    "mismatch": "新しいパスワードが一致しません。",
+    "missingTokenTitle": "リンクが正しくありません",
+    "missingTokenBody": "メールに記載されたリンクをもう一度開くか、ログイン画面から再設定メールをご請求ください。",
+    "errorTitle": "パスワードを設定できませんでした",
+    "doneTitle": "パスワードを設定しました",
+    "doneBody": "新しいパスワードでログインしてください。",
+    "goToLogin": "ログイン画面へ"
   },
   "language": {
     "label": "言語",

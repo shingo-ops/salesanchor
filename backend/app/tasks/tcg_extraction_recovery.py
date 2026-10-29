@@ -266,6 +266,99 @@ def retry_analysis_failed_jobs(session) -> list[str]:
     return enqueued
 
 
+# 一時的に断られた解析（extraction_jobs.error_message='API_ERROR'）を数分後に自動で送り直す。
+# 設計: docs/handoff/api-error-auto-retry/design.md B。新しい列・migration なし。
+API_ERROR_RETRY_MIN_AGE_MINUTES = 5
+API_ERROR_RETRY_MAX_ATTEMPTS = 3
+API_ERROR_RETRY_LOOKBACK_HOURS = 24
+MAX_API_ERROR_RETRY_PER_RUN = 20
+
+
+def retry_transient_api_error_jobs(session) -> list[str]:
+    """一時的な断られ方で error になった v102 job を、items を消して pending に戻し、その id を返す（投入は呼び出し側）。
+
+    置き換え済みの投稿・永続的な失敗・試行3回以上は対象外。戻しの UPDATE が 1 行のときだけ id を集める。
+    """
+    from app.services.line_analysis_v102_svc import V102_PROMPT_VERSION_PREFIX  # noqa: PLC0415
+
+    rows = session.execute(
+        text(
+            f"""
+            SELECT ej.id
+            FROM {TCG_SCHEMA}.extraction_jobs ej
+            JOIN {TCG_SCHEMA}.source_messages sm ON sm.id = ej.source_message_id
+            JOIN LATERAL (
+                SELECT ea.phase, ea.finished_at, ea.validation_result
+                FROM {TCG_SCHEMA}.extraction_attempts ea
+                WHERE ea.extraction_job_id = ej.id
+                ORDER BY ea.started_at DESC, ea.id DESC
+                LIMIT 1
+            ) latest_attempt ON true
+            WHERE ej.status = 'error'
+              AND ej.error_message = 'API_ERROR'
+              AND ej.prompt_version LIKE :prefix
+              AND ej.created_at > NOW() - (:lookback_hours || ' hours')::interval
+              AND sm.is_active = TRUE
+              AND sm.superseded_by IS NULL
+              AND latest_attempt.phase = 'failed'
+              AND latest_attempt.finished_at < NOW() - (:min_age || ' minutes')::interval
+              AND (
+                  latest_attempt.validation_result->>'category' IN ('gemini_rate_limit', 'gemini_timeout')
+                  OR (
+                      latest_attempt.validation_result->>'category' = 'gemini_http_error'
+                      AND (
+                          latest_attempt.validation_result->>'raw' LIKE '%(HTTP 429)'
+                          OR latest_attempt.validation_result->>'raw' LIKE '%(HTTP 500)'
+                          OR latest_attempt.validation_result->>'raw' LIKE '%(HTTP 502)'
+                          OR latest_attempt.validation_result->>'raw' LIKE '%(HTTP 503)'
+                          OR latest_attempt.validation_result->>'raw' LIKE '%(HTTP 504)'
+                      )
+                  )
+              )
+              AND (
+                  SELECT COUNT(*) FROM {TCG_SCHEMA}.extraction_attempts ea2
+                  WHERE ea2.extraction_job_id = ej.id
+              ) < :max_attempts
+            ORDER BY ej.created_at ASC
+            LIMIT :max_retry
+            """
+        ),
+        {
+            "prefix": V102_PROMPT_VERSION_PREFIX + "%",
+            "lookback_hours": API_ERROR_RETRY_LOOKBACK_HOURS,
+            "min_age": API_ERROR_RETRY_MIN_AGE_MINUTES,
+            "max_attempts": API_ERROR_RETRY_MAX_ATTEMPTS,
+            "max_retry": MAX_API_ERROR_RETRY_PER_RUN,
+        },
+    ).fetchall()
+
+    reset_ids: list[str] = []
+    for row in rows:
+        job_id = str(row[0])
+        try:
+            # 手動の送り直し（tcg_diagnostics_svc.retry_extraction）と同じ手順: items を消してから pending に戻す
+            session.execute(
+                text(f"DELETE FROM {TCG_SCHEMA}.extraction_items WHERE extraction_job_id = :ej"),
+                {"ej": job_id},
+            )
+            updated = session.execute(
+                text(
+                    f"UPDATE {TCG_SCHEMA}.extraction_jobs SET status = 'pending' "
+                    "WHERE id = :ej AND status = 'error' AND error_message = 'API_ERROR'"
+                ),
+                {"ej": job_id},
+            )
+            if updated.rowcount != 1:
+                session.rollback()
+                continue
+            session.commit()
+            reset_ids.append(job_id)
+        except Exception as exc:  # noqa: BLE001
+            session.rollback()
+            logger.exception("[tcg_extraction_recovery] 一時的な失敗の送り直しに失敗: ej=%s err=%s", job_id, type(exc).__name__)
+    return reset_ids
+
+
 def _run_recovery() -> dict:
     engine = _get_sync_engine()
     try:
@@ -274,12 +367,19 @@ def _run_recovery() -> dict:
             recovered_running_ids = recover_stale_running_jobs(session)
             stale_pending_ids = find_stale_pending_job_ids(session)
             analysis_retry_ids = retry_analysis_failed_jobs(session)
+            api_error_retry_ids = retry_transient_api_error_jobs(session)
     finally:
         engine.dispose()
 
+    # 停滞 pending と、いま pending に戻した id を重複なく（順は保って）1回で投入する
+    enqueue_ids = list(dict.fromkeys([*stale_pending_ids, *api_error_retry_ids]))
     reenqueue_result = {"enqueued": 0, "skipped": 0}
-    if stale_pending_ids:
-        reenqueue_result = asyncio.run(_reenqueue_stale_pending_jobs(stale_pending_ids))
+    if enqueue_ids:
+        reenqueue_result = asyncio.run(_reenqueue_stale_pending_jobs(enqueue_ids))
+    logger.info(
+        "[tcg_extraction_recovery] 一時的な失敗の送り直し: 対象%d件 投入%d件",
+        len(api_error_retry_ids), reenqueue_result.get("enqueued", 0),
+    )
 
     result = {
         "recovered_running_count": len(recovered_running_ids),
@@ -289,6 +389,7 @@ def _run_recovery() -> dict:
         "reenqueued": reenqueue_result.get("enqueued", 0),
         "reenqueue_skipped": reenqueue_result.get("skipped", 0),
         "analysis_retry_count": len(analysis_retry_ids),
+        "api_error_retry_count": len(api_error_retry_ids),
     }
 
     if recovered_running_ids or stale_pending_ids:

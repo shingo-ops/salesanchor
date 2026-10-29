@@ -489,3 +489,137 @@ def test_validate_settings_rejects_short_previous_secret(monkeypatch):
     monkeypatch.setenv("AUTH_JWT_SECRET_PREVIOUS", "tiny")
     with pytest.raises(RuntimeError):
         self_tokens.validate_settings()
+
+
+# ── 10. パスワード変更（便4a） ────────────────────────────────
+
+NEW_PASSWORD = "brand new long password 2026 ok"
+
+
+@pytest.fixture
+def as_user():
+    """get_current_user を差し替える（認証そのものは §9 で確かめ済み）。"""
+    from types import SimpleNamespace
+
+    from app.auth.dependencies import get_current_user
+    from app.main import app
+
+    app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(id=USER_ID)
+    yield
+    app.dependency_overrides.pop(get_current_user, None)
+
+
+@pytest.fixture(autouse=True)
+def noop_audit():
+    with patch("app.routers.auth.record_audit_log", new=AsyncMock()):
+        yield
+
+
+async def _change(http, current=PASSWORD, new=NEW_PASSWORD, origin=ORIGIN):
+    headers = {"origin": origin} if origin else {}
+    return await http.post(
+        f"{AUTH_PATH}/password/change", json={"current_password": current, "new_password": new}, headers=headers
+    )
+
+
+async def test_password_change_success_issues_new_token_and_revokes_old_refresh(
+    http, db_session, password_hash, as_user
+):
+    await _insert_user(db_session, hash_value=password_hash)
+    old_cookie = await _login_cookie(http)
+
+    resp = await _change(http)
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["status"] == "password_updated"
+    # 新アクセストークンで保護された口（get_current_user）が通る
+    user = await _current_user(db_session, body["access_token"])
+    assert user.id == USER_ID
+    # 今の端末には新しい更新用 Cookie が出る
+    new_cookie = resp.cookies.get("sa_refresh")
+    assert new_cookie and new_cookie != old_cookie
+    assert (await _refresh(http, new_cookie)).status_code == 200
+    # 古い更新用トークンは即時に失効
+    assert (await _refresh(http, old_cookie)).status_code == 401
+    row = await _row(db_session, "SELECT password_argon2_hash, password_changed_at FROM users WHERE id = :id", id=USER_ID)
+    assert passwords.verify_password(row.password_argon2_hash, NEW_PASSWORD) is True
+    assert self_tokens._as_utc(row.password_changed_at).microsecond == 0
+
+
+async def test_password_change_rejects_old_access_token_when_cache_is_empty(
+    http, db_session, password_hash, as_user
+):
+    """保持（Redis の 300 秒）が空の状態では、変更前のアクセストークンは 401（保持中は最大 300 秒通る＝F31）。"""
+    await _insert_user(db_session, hash_value=password_hash)
+    # iat は秒単位なので、変更時刻（秒に切り捨て）より確実に前にする
+    old_token = _token(iat_offset=-5)
+    assert (await _current_user(db_session, old_token)).id == USER_ID
+
+    assert (await _change(http)).status_code == 200
+
+    with pytest.raises(HTTPException) as exc:
+        await _current_user(db_session, old_token)
+    assert exc.value.status_code == 401
+
+
+async def test_password_change_wrong_current_counts_failure_and_returns_400(
+    http, db_session, password_hash, as_user
+):
+    await _insert_user(db_session, hash_value=password_hash)
+
+    resp = await _change(http, current="not the right password")
+
+    assert resp.status_code == 400
+    assert resp.json()["detail"] == "invalid_credentials"
+    row = await _row(db_session, "SELECT failed_login_count FROM users WHERE id = :id", id=USER_ID)
+    assert row.failed_login_count == 1
+
+
+async def test_password_change_short_new_password_is_422(http, db_session, password_hash, as_user):
+    await _insert_user(db_session, hash_value=password_hash)
+
+    resp = await _change(http, new="x" * 14)
+
+    assert resp.status_code == 422
+    assert resp.json()["detail"] == "password_too_short"
+
+
+async def test_password_change_wrong_origin_is_403(http, db_session, password_hash, as_user):
+    await _insert_user(db_session, hash_value=password_hash)
+
+    assert (await _change(http, origin="https://salesanchor.jp")).status_code == 403
+    assert (await _change(http, origin=None)).status_code == 403
+
+
+async def test_password_change_user_without_hash_is_400(http, db_session, as_user):
+    await _insert_user(db_session, hash_value=None)
+
+    resp = await _change(http)
+
+    assert resp.status_code == 400
+    assert resp.json()["detail"] == "invalid_credentials"
+
+
+async def test_password_change_firebase_revokes_refresh_but_issues_nothing(
+    http, db_session, password_hash, as_user, monkeypatch
+):
+    await _insert_user(db_session, hash_value=password_hash)
+    cookie = await _login_cookie(http)
+    monkeypatch.setenv("AUTH_PROVIDER", "firebase")
+    monkeypatch.delenv("AUTH_JWT_SECRET", raising=False)
+
+    resp = await _change(http)
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["status"] == "password_updated"
+    assert body["access_token"] is None
+    assert "sa_refresh" not in resp.headers.get("set-cookie", "")
+    live = await _row(
+        db_session,
+        "SELECT COUNT(*) AS n FROM auth_refresh_tokens WHERE user_id = :id AND revoked_at IS NULL",
+        id=USER_ID,
+    )
+    assert live.n == 0
+    assert cookie

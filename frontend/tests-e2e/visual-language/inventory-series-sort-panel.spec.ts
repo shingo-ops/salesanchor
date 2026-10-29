@@ -25,8 +25,9 @@ const PC_WIDTH = 1280;
 const MIN_TAP_HEIGHT = 48;
 /** パネルの行の押せる高さ下限（design.md ③ P7・ADR-140） */
 const MIN_ROW_HEIGHT = 44;
-/** .inventory-toolbar の高さ上限（design.md ③ P5） */
-const MAX_TOOLBAR_HEIGHT = 120;
+/** .inventory-toolbar の高さ上限（design.md ③ P5）。
+ *  本便（toolbar-series-name-full-width）でシリーズが単独行になり3段168pxになったため180に更新 */
+const MAX_TOOLBAR_HEIGHT = 180;
 
 /** 種別・並び替えのパネル（design.md 4-3。Drawer は共通で data-testid="supplier-drawer"。
  *  在庫表には設定パネル・行の詳細パネルも同じ testid を持つため、開いている方だけに絞る） */
@@ -232,6 +233,104 @@ test.describe(`visual-language: 在庫表 種別・並び替えパネル ${MOBIL
     expect(result.found).toBe(true);
     expect((result.mediaText ?? "").replace(/\s+/g, "")).toBe("(hover:hover)");
   });
+
+  // F1〜F5: docs/handoff/toolbar-series-name-full-width/design.md ⑤5-1。
+  // 測る対象は inventory-tab-select の配下の .inventory-toolbar__label に限定する
+  // （並び替え側にも同じクラスがあるが flex: 0 0 auto で構造上絶対に切れないため、
+  // .first() 等で拾うと常に緑の空振りになる＝審査 M2）。幅360のみ。
+
+  test("F1: inventory-tab-select の中の種別の名前が切れていない（scrollWidth <= clientWidth）", async ({ page }) => {
+    await gotoInventory(page, { width, height });
+    const label = page.getByTestId("inventory-tab-select").locator(".inventory-toolbar__label");
+    await expect(label).toBeVisible();
+    const { scrollWidth, clientWidth } = await label.evaluate((el) => ({
+      scrollWidth: el.scrollWidth,
+      clientWidth: el.clientWidth,
+    }));
+    expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
+  });
+
+  // F2 は「ラベルの clientWidth」では測れない。ラベルは flex item で中身なりに縮むため、
+  // 1行を独り占めしていても「ポケモン」なら 52px にしかならない（本番実機で実測）。
+  // 名前に使える余地は「ボタンの内側 − 左右の余白 − 山形 − すき間」で求める（実機で262px）。
+  test("F2: inventory-tab-select の中で種別の名前に使える余地が240px以上", async ({ page }) => {
+    await gotoInventory(page, { width, height });
+    const trigger = page.getByTestId("inventory-tab-select");
+    await expect(trigger).toBeVisible();
+    const room = await trigger.evaluate((btn) => {
+      const cs = getComputedStyle(btn);
+      const caret = btn.querySelector(".inventory-toolbar__caret");
+      const gap = parseFloat(cs.columnGap) || 0;
+      return (
+        btn.clientWidth -
+        parseFloat(cs.paddingLeft) -
+        parseFloat(cs.paddingRight) -
+        (caret ? caret.getBoundingClientRect().width : 0) -
+        gap
+      );
+    });
+    expect(room).toBeGreaterThanOrEqual(240);
+  });
+
+  test("F3: 並び替えに「価格が安い順」を選んだ状態でも種別の名前が切れない", async ({ page }) => {
+    await gotoInventory(page, { width, height });
+    const sortTrigger = page.getByTestId("inventory-sort-menu");
+    await sortTrigger.click();
+    const panel = openPanel(page);
+    await waitPanelSlidIn(panel);
+    await panel.getByTestId("inventory-sort-option-unit_price:asc").click();
+    await expect(openPanel(page)).toHaveCount(0);
+    await expect(sortTrigger).toHaveText("価格が安い順");
+
+    const label = page.getByTestId("inventory-tab-select").locator(".inventory-toolbar__label");
+    await expect(label).toBeVisible();
+    const { scrollWidth, clientWidth } = await label.evaluate((el) => ({
+      scrollWidth: el.scrollWidth,
+      clientWidth: el.clientWidth,
+    }));
+    expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
+  });
+
+  test("F4: inventory-tab-select が1行を独り占めしている（y が inventory-sort-menu と異なる／幅が .inventory-toolbar と同じ／ラベルの左端が並び替えと揃う）", async ({ page }) => {
+    await gotoInventory(page, { width, height });
+    const typeTrigger = page.getByTestId("inventory-tab-select");
+    const sortTrigger = page.getByTestId("inventory-sort-menu");
+    await expect(typeTrigger).toBeVisible();
+    await expect(sortTrigger).toBeVisible();
+
+    const [typeBox, sortBox, toolbarWidth] = await Promise.all([
+      typeTrigger.boundingBox(),
+      sortTrigger.boundingBox(),
+      page.locator(".inventory-toolbar").evaluate((el) => el.clientWidth),
+    ]);
+    expect(typeBox).not.toBeNull();
+    expect(sortBox).not.toBeNull();
+    expect(typeBox!.y).not.toBe(sortBox!.y);
+    expect(Math.round(typeBox!.width)).toBe(toolbarWidth);
+
+    const [typeLabelBox, sortLabelBox] = await Promise.all([
+      typeTrigger.locator(".inventory-toolbar__label").boundingBox(),
+      sortTrigger.locator(".inventory-toolbar__label").boundingBox(),
+    ]);
+    expect(typeLabelBox).not.toBeNull();
+    expect(sortLabelBox).not.toBeNull();
+    expect(Math.round(typeLabelBox!.x)).toBe(Math.round(sortLabelBox!.x));
+  });
+
+  test("F5: 空振り防止。flex を 1 1 0 に戻すと種別の名前が切れる（scrollWidth > clientWidth）", async ({ page }) => {
+    await gotoInventory(page, { width, height });
+    await page.addStyleTag({
+      content: ".inventory-toolbar > .inventory-toolbar__series { flex: 1 1 0 !important; }",
+    });
+
+    const label = page.getByTestId("inventory-tab-select").locator(".inventory-toolbar__label");
+    await expect(label).toBeVisible();
+    const { scrollWidth, clientWidth } = await label.evaluate((el) => ({
+      scrollWidth: el.scrollWidth,
+      clientWidth: el.clientWidth,
+    }));
+    expect(scrollWidth).toBeGreaterThan(clientWidth);
+  });
 });
 
 // E2・E11: 審査 H5 に基づき、このペアだけ360/390の両方を測る。
@@ -250,7 +349,7 @@ for (const width of [MOBILE_WIDTH, SECOND_MOBILE_WIDTH]) {
       for (const right of rights) expect(right).toBeLessThanOrEqual(width + 0.5);
     });
 
-    test("E11: .inventory-toolbar の高さが120px以下（3行に折り返していないこと）", async ({ page }) => {
+    test("E11: .inventory-toolbar の高さが180px以下（4行に折り返していないこと）", async ({ page }) => {
       await gotoInventory(page, { width, height });
 
       const box = await page.locator(".inventory-toolbar").boundingBox();

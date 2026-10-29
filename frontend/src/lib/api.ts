@@ -1,6 +1,6 @@
 /**
  * APIクライアント。
- * Firebase IDトークンをAuthorizationヘッダーに自動付与する。
+ * アクセストークン（Firebase の ID トークン、または自社ログインのトークン）をAuthorizationヘッダーに自動付与する。
  *
  * 変更履歴:
  *   2026-04-17: デプロイ直後の一時的な 502/503/504 エラーで画面が崩れる問題対策として
@@ -23,9 +23,10 @@ export class ApiError extends Error {
   }
 }
 
-import { auth } from "./firebase";
 import i18n from "../i18n";
 import { getClientId } from "./realtime/clientId";
+import { isSelfAuth } from "./auth/provider";
+import { expireSession, getAccessToken, selfRefresh } from "./auth/selfAuth";
 
 const API_BASE = "/api/v1";
 
@@ -37,18 +38,16 @@ const MAX_RETRIES = 3;
 const BASE_DELAY_MS = 500;
 // fetchタイムアウト（ミリ秒）。重いSQLが最適化されたら 10_000 に短縮予定
 const FETCH_TIMEOUT_MS = 25_000;
-// Firebase getIdToken() タイムアウト（ミリ秒）。
-// getIdToken() は fetch() の前に呼ばれるため FETCH_TIMEOUT の AbortController に
+// getAccessToken()（Firebase の getIdToken() や自社の refresh）のタイムアウト（ミリ秒）。
+// トークン取得は fetch() の前に呼ばれるため FETCH_TIMEOUT の AbortController に
 // 守られない。Promise.race でここでタイムアウトを設けることで永久ペンディングを防ぐ。
 const AUTH_TIMEOUT_MS = 10_000;
 // Blob取得（CSVエクスポート等）のタイムアウト（ミリ秒）
 const BLOB_FETCH_TIMEOUT_MS = 120_000;
 
 async function getAuthHeaders(): Promise<HeadersInit> {
-  const user = auth.currentUser;
-  if (!user) throw new Error(i18n.t("common.notAuthenticated"));
   const token = await Promise.race([
-    user.getIdToken(),
+    getAccessToken(),
     new Promise<never>((_, reject) =>
       setTimeout(
         () => reject(new Error(i18n.t("common.authTimeout"))),
@@ -64,6 +63,40 @@ async function getAuthHeaders(): Promise<HeadersInit> {
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// 401 がログインの切れた印になる自社 API の口（refresh しない口の中で、画面をログイン画面へ移すもの）
+const SESSION_END_PATHS = new Set(["/auth/password/change", "/auth/logout"]);
+
+/**
+ * fetch の 401 を自社ログインの規則で扱う（自社ログインのときだけ。Firebase のときは素通し）。
+ * - /auth/ で始まる口の 401 では refresh しない（login・refresh 自身の 401 で往復しないため）。
+ *   そのうち password/change・logout の 401 はログインが切れた印なので、セッションを捨てる
+ * - それ以外の口の 401 は refresh を 1 回送り、成功したら元の要求を 1 回だけ送り直す
+ *   （401 は backend が処理の前に断った印なので、POST などでも二重にならない）
+ * - 送り直しも 401、または refresh が失敗したら、セッションを捨てる（ProtectedRoute がログイン画面へ移す）
+ */
+async function fetchWithReauth(url: string, init: RequestInit, path: string): Promise<Response> {
+  const res = await fetch(url, init);
+  if (res.status !== 401 || !isSelfAuth()) return res;
+
+  if (path.startsWith("/auth/")) {
+    if (SESSION_END_PATHS.has(path)) expireSession();
+    return res;
+  }
+  let token: string;
+  try {
+    token = await selfRefresh();
+  } catch {
+    expireSession();
+    return res;
+  }
+  const retried = await fetch(url, {
+    ...init,
+    headers: { ...(init.headers as Record<string, string>), Authorization: `Bearer ${token}` },
+  });
+  if (retried.status === 401) expireSession();
+  return retried;
+}
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers = await getAuthHeaders();
@@ -84,11 +117,15 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
     try {
-      const res = await fetch(`${API_BASE}${path}`, {
-        ...options,
-        headers: { ...headers, ...options.headers },
-        signal: controller.signal,
-      });
+      const res = await fetchWithReauth(
+        `${API_BASE}${path}`,
+        {
+          ...options,
+          headers: { ...headers, ...options.headers },
+          signal: controller.signal,
+        },
+        path,
+      );
 
       // 5xx 系の一時エラーはリトライ
       if (RETRYABLE_STATUS.has(res.status) && attempt < maxRetries) {
@@ -143,7 +180,11 @@ async function requestBlob(path: string): Promise<Blob> {
     const blobTimeoutId = setTimeout(() => blobController.abort(), BLOB_FETCH_TIMEOUT_MS);
 
     try {
-      const res = await fetch(`${API_BASE}${path}`, { method: "GET", headers: authOnly, signal: blobController.signal });
+      const res = await fetchWithReauth(
+        `${API_BASE}${path}`,
+        { method: "GET", headers: authOnly, signal: blobController.signal },
+        path,
+      );
       if (RETRYABLE_STATUS.has(res.status) && attempt < MAX_RETRIES) {
         lastError = new Error(`HTTP ${res.status}`);
         continue;
@@ -175,11 +216,11 @@ async function requestBlob(path: string): Promise<Blob> {
 async function requestForm<T>(path: string, body: FormData): Promise<T> {
   const headers = await getAuthHeaders();
   const { "Content-Type": _ct, ...authOnly } = headers as Record<string, string>;
-  const res = await fetch(`${API_BASE}${path}`, {
-    method: "POST",
-    headers: authOnly,
-    body,
-  });
+  const res = await fetchWithReauth(
+    `${API_BASE}${path}`,
+    { method: "POST", headers: authOnly, body },
+    path,
+  );
   if (!res.ok) {
     const errBody = await res.json().catch(() => ({}));
     const detail = (errBody as { detail?: unknown }).detail;

@@ -228,4 +228,115 @@ T8_HOLDERS="$(grep -c 'lock holders (xact > 1s):' "$OUT_DIR/t8.log" || true)"
 if [ "$T8_RC" -eq 0 ] && [ "$T8_HOLDERS" -eq 1 ]; then pass "T8 rc=0 lock_holders=1"; else fail "T8 rc=${T8_RC} lock_holders=${T8_HOLDERS}"; fi
 reset_defaults
 
+# ===== R1〜R4: 本物の run_py（入口経由・流し直し）。ADR-1037 の拡張 =====
+# run_py は本物を上の EXTRACT から読み込む（写しは作らない）。docker は python を含む呼び出しだけ偽物にし、
+# ほか（dsql・log_lock_holders）は本物へ渡す。R1〜R4 が終わったら関数を消し、T1〜T8 に影響させない。
+echo "=== R: run_py（偽の python 呼び出し）==="
+if printf '%s\n' "$EXTRACT" | grep -q '^run_py() {'; then pass "R0 run_py is inside the extracted range"; else fail "R0 run_py not in extracted range"; fi
+BACKEND="sb-fake-backend"
+DATABASE_URL="postgresql://fake/fake"
+ADMIN_DATABASE_URL="postgresql://fake/fake"
+FAKE_COUNT_FILE="$OUT_DIR/fake_count"
+FAKE_MODE=""
+docker() {
+  case " $* " in
+    *" python "*)
+      local n
+      n=$(( $(cat "$FAKE_COUNT_FILE" 2>/dev/null || echo 0) + 1 ))
+      echo "$n" > "$FAKE_COUNT_FILE"
+      case "$FAKE_MODE" in
+        once_then_ok)
+          if [ "$n" -eq 1 ]; then
+            echo "fake-python: sqlalchemy.exc.DBAPIError: canceling statement due to lock timeout" >&2
+            return 1
+          fi
+          echo "fake-python: running attempt $n" >&2
+          return 0 ;;
+        always_lock)
+          echo "fake-python: canceling statement due to lock timeout" >&2
+          return 1 ;;
+        other_error)
+          echo "fake-python: ZeroDivisionError: division by zero" >&2
+          return 1 ;;
+      esac
+      return 99 ;;
+    *) command docker "$@" ;;
+  esac
+}
+count_calls() { cat "$FAKE_COUNT_FILE" 2>/dev/null || echo 0; }
+
+# R1: 1回目だけロック待ちで失敗 → 流し直して成功。実行中の行が標準エラーに出ている
+echo "=== R1: run_py の流し直し ==="
+reset_defaults
+SQL_RETRY_SLEEP_SEC=1
+rm -f "$FAKE_COUNT_FILE"; FAKE_MODE=once_then_ok
+run_py "scripts/migrate_fake.py" >"$OUT_DIR/r1.out" 2>"$OUT_DIR/r1.err"
+R1_RC=$?
+echo "--- run_py stdout (R1) ---"; cat "$OUT_DIR/r1.out"; echo "--- run_py stderr (R1) ---"; cat "$OUT_DIR/r1.err"
+R1_RETRY="$(count_retry "$OUT_DIR/r1.err")"; R1_RETRY_OUT="$(count_retry "$OUT_DIR/r1.out")"
+R1_LIVE="$(grep -c 'fake-python: running attempt 2' "$OUT_DIR/r1.err" || true)"
+if [ "$R1_RC" -eq 0 ] && [ "$((R1_RETRY + R1_RETRY_OUT))" -eq 1 ] && [ "$R1_LIVE" -ge 1 ] && [ "$(count_calls)" -eq 2 ]; then
+  pass "R1 rc=0 retry=1 live_line=${R1_LIVE} calls=2"
+else
+  fail "R1 rc=${R1_RC} retry=$((R1_RETRY + R1_RETRY_OUT)) live_line=${R1_LIVE} calls=$(count_calls)"
+fi
+
+# R2: 毎回ロック待ちで失敗 → 上限3回で止まる
+echo "=== R2: run_py の上限 ==="
+reset_defaults
+SQL_RETRY_MAX_ATTEMPTS=3
+SQL_RETRY_SLEEP_SEC=1
+rm -f "$FAKE_COUNT_FILE"; FAKE_MODE=always_lock
+s=$(date +%s%N)
+run_py "scripts/migrate_fake.py" >"$OUT_DIR/r2.out" 2>"$OUT_DIR/r2.err"
+R2_RC=$?
+e=$(date +%s%N)
+R2_MS=$(( (e - s) / 1000000 ))
+echo "--- run_py stdout (R2) ---"; cat "$OUT_DIR/r2.out"
+if [ "$R2_RC" -ne 0 ] && grep -q 'retry limit reached' "$OUT_DIR/r2.out" && [ "$R2_MS" -lt 10000 ] && [ "$(count_calls)" -eq 3 ]; then
+  pass "R2 rc=${R2_RC} limit reached elapsed=${R2_MS}ms calls=3"
+else
+  fail "R2 rc=${R2_RC} elapsed=${R2_MS}ms calls=$(count_calls) limit_line=$(grep -c 'retry limit reached' "$OUT_DIR/r2.out" || true)"
+fi
+
+# R3: ほかのエラーは流し直さず即停止
+echo "=== R3: ほかのエラーは即停止 ==="
+reset_defaults
+SQL_RETRY_SLEEP_SEC=1
+rm -f "$FAKE_COUNT_FILE"; FAKE_MODE=other_error
+run_py "scripts/migrate_fake.py" >"$OUT_DIR/r3.out" 2>"$OUT_DIR/r3.err"
+R3_RC=$?
+echo "--- run_py stdout (R3) ---"; cat "$OUT_DIR/r3.out"
+R3_RETRY=$(( $(count_retry "$OUT_DIR/r3.out") + $(count_retry "$OUT_DIR/r3.err") ))
+if [ "$R3_RC" -ne 0 ] && [ "$R3_RETRY" -eq 0 ] && [ "$(count_calls)" -eq 1 ]; then
+  pass "R3 rc=${R3_RC} retry=0 calls=1"
+else
+  fail "R3 rc=${R3_RC} retry=${R3_RETRY} calls=$(count_calls)"
+fi
+
+# R4: 全体の上限を run_sql と共有する（run_sql で1回使った後、SQL_RETRY_BUDGET=2 だと run_py は1回しか流し直さない）
+echo "=== R4: run_sql と run_py で全体の上限を共有 ==="
+reset_defaults
+SQL_RETRY_SLEEP_SEC=1
+SQL_RETRY_BUDGET=2
+REPO_DIR="$OUT_DIR"
+make_fail_sql "$OUT_DIR/r4.sql" seq_r4 1
+run_sql "r4.sql" >"$OUT_DIR/r4_sql.log" 2>&1
+R4_SQL_RC=$?
+REPO_DIR="$(pwd)"
+rm -f "$FAKE_COUNT_FILE"; FAKE_MODE=always_lock
+run_py "scripts/migrate_fake.py" >"$OUT_DIR/r4.out" 2>"$OUT_DIR/r4.err"
+R4_RC=$?
+echo "--- run_py stdout (R4) ---"; cat "$OUT_DIR/r4.out"
+R4_RETRY="$(count_retry "$OUT_DIR/r4.out")"
+if [ "$R4_SQL_RC" -eq 0 ] && [ "$R4_RC" -ne 0 ] && [ "$R4_RETRY" -eq 1 ] && grep -q 'retry limit reached' "$OUT_DIR/r4.out" && [ "$(count_calls)" -eq 2 ]; then
+  pass "R4 sql_rc=0 py_rc=${R4_RC} py_retry=1 (shared budget stop) calls=2"
+else
+  fail "R4 sql_rc=${R4_SQL_RC} py_rc=${R4_RC} py_retry=${R4_RETRY} calls=$(count_calls)"
+fi
+
+# 偽の docker を消して T1〜T8 に影響させない
+unset -f docker count_calls
+reset_defaults
+
 if [ "$RESULT" -eq 0 ]; then echo "RESULT: PASS"; else echo "RESULT: FAIL"; exit 1; fi
