@@ -128,7 +128,7 @@ API への問い合わせ・文言・DOM の構造は**一切変えない**。**
 ### 4-3. 触らないもの（境界）
 
 - `frontend/src/components/` 配下すべて（金型は不変）
-- JSX（`InventoryToolbar.tsx` / `InventoryView.tsx`）・文言（`ja.json` / `en.json`）・`data-testid`
+- JSX（`frontend/src/pages/inventory/InventoryToolbar.tsx` / `frontend/src/pages/viewer/InventoryView.tsx`）・文言（`frontend/src/locales/ja.json` / `frontend/src/locales/en.json` / `frontend/src/locales/viewer/ja.json`）・`data-testid`
 - 絞り込みと並び替えの計算・API への問い合わせ・パネルの開閉の作り
 - PC 分岐（`ContentToolbar` 側）
 
@@ -171,7 +171,7 @@ API への問い合わせ・文言・DOM の構造は**一切変えない**。**
 
 → **壊し方を「`flex` を `1 1 0` に戻す」に差し替える**。これで閲覧ページ側にも
 F5 と同じ空振り防止が手に入り、**宣言を1本も増やさずに済む**。
-既存の **B7a**（シリーズ名が切れていないこと・`viewer-control-tap-size.spec.ts`）が
+既存の **B7a**（シリーズ名が切れていないこと・`frontend/tests-e2e/visual-language/viewer-control-tap-size.spec.ts`）が
 そのまま閲覧ページ側の F1 相当になる。
 
 ### 5-3. 段が増えることで**必ず赤になる既存の検査**（本便で同時に直す）
@@ -201,10 +201,10 @@ F5 と同じ空振り防止が手に入り、**宣言を1本も増やさずに�
   1段増えて 12+168+12 = 192。**在庫表と同じ+12の余裕を取って 204** にする
   （この端末では Playwright が動かず手元で測れないため、1px の端数で赤にしない）。
 
-**赤にならないと確認したもの**（審査が1件ずつ根拠を確認）: `viewer-filter-panel-mercari.spec.ts`／
-`viewer-inventory-mobile-filter.spec.ts`／`inventory-mobile-baseline.spec.ts`（`console.log` が主体）／
-`popover-mold.spec.ts`／`horizontal-overflow.spec.ts`／`inventory-table-layout.spec.ts`／
-`inventory-raw-text-mobile.spec.ts`／`drawer-inert-closed.spec.ts`／`viewer-focus-trap.spec.ts`／
+**赤にならないと確認したもの**（審査が1件ずつ根拠を確認）: `frontend/tests-e2e/visual-language/viewer-filter-panel-mercari.spec.ts`／
+`frontend/tests-e2e/visual-language/viewer-inventory-mobile-filter.spec.ts`／`frontend/tests-e2e/visual-language/inventory-mobile-baseline.spec.ts`（`console.log` が主体）／
+`frontend/tests-e2e/visual-language/popover-mold.spec.ts`／`frontend/tests-e2e/horizontal-overflow.spec.ts`／`frontend/tests-e2e/inventory-table-layout.spec.ts`／
+`frontend/tests-e2e/visual-language/inventory-raw-text-mobile.spec.ts`／`frontend/tests-e2e/visual-language/drawer-inert-closed.spec.ts`／`frontend/tests-e2e/visual-language/viewer-focus-trap.spec.ts`／
 単体テスト（jsdom は寸法を持たない）。`visual-language/` に画面写真の比較（`toHaveScreenshot`）は**0件**。
 
 ## ⑥ 触るファイル
@@ -219,11 +219,11 @@ F5 と同じ空振り防止が手に入り、**宣言を1本も増やさずに�
 | `frontend/tests-e2e/visual-language/viewer-choice-sheet.spec.ts` | `MAX_TOP_Y` を204へ・B1〜B3 を新しい段の形に |
 | `frontend/tests-e2e/visual-language/viewer-header-remove.spec.ts` | `MAX_TOP_Y` を204へ・C1 の題 |
 | `frontend/tests-e2e/visual-language/viewer-control-tap-size.spec.ts` | **B8 を新しい段の形に**・**B7c/B7d の壊し方を `flex: 1 1 0` に差し替え** |
-| `docs/handoff/toolbar-series-name-full-width/design.md` ／ 同 `review-opus.md` | 本書類 |
+| `docs/handoff/toolbar-series-name-full-width/design.md` ／ 同 `docs/handoff/toolbar-series-name-full-width/review-opus.md` | 本書類 |
 
-**mock（`inventory-helpers.ts` / `viewer-helpers.ts`）は1行も変えない**。
-種別を1件足すと `inventory-series-sort-panel.spec.ts:107` の `toHaveCount(4)` が赤になり、
-`InventoryPage.tsx` が PC に「その他」のプルダウンを増やすので **PC の DOM まで変わる**（審査 B3）。
+**mock（`frontend/tests-e2e/visual-language/inventory-helpers.ts` / `frontend/tests-e2e/visual-language/viewer-helpers.ts`）は1行も変えない**。
+種別を1件足すと `frontend/tests-e2e/visual-language/inventory-series-sort-panel.spec.ts:107` の `toHaveCount(4)` が赤になり、
+`frontend/src/pages/inventory/InventoryPage.tsx` が PC に「その他」のプルダウンを増やすので **PC の DOM まで変わる**（審査 B3）。
 
 ## ⑦ 戻し方
 
@@ -275,7 +275,7 @@ B7c・B7d＝空振り防止）。CI の画面検査で毎回走る。
 | **便4（④）** | 在庫表の検索を「押すと検索画面が開く」形に |
 | M1 | 閲覧ページの `.viewer-choice-row:hover` が `@media (hover: hover)` で囲まれていない（便2 で起票ずみ） |
 | M2 | **`frontend/src/components/Button.css` の `:hover` が `@media (hover: hover)` で囲まれていない**（審査 M7）。スマホでタップした跡が残る。金型なので影響範囲が広く、単独の便で扱う |
-| M3 | 閲覧ページの fixture（`viewer-helpers.ts`）のシリーズ名が空または5文字で、**長い名前での検証ができない**（審査 M3）。長い名前の fixture を足す便 |
+| M3 | 閲覧ページの fixture（`frontend/tests-e2e/visual-language/viewer-helpers.ts`）のシリーズ名が空または5文字で、**長い名前での検証ができない**（審査 M3）。長い名前の fixture を足す便 |
 
 ## 対象 ADR
 

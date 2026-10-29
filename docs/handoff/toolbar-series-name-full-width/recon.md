@@ -67,7 +67,7 @@ Chrome DevTools Protocol で直読みした値と、**作業ツリーのファ�
 
 ### 触ってはいけないもの
 - `frontend/tests-e2e/visual-language/inventory-helpers.ts` の種別 mock（3件）。
-  1件足すと `inventory-series-sort-panel.spec.ts` の E5（`toHaveCount(4)`）が赤になり、
+  1件足すと `frontend/tests-e2e/visual-language/inventory-series-sort-panel.spec.ts` の E5（`toHaveCount(4)`）が赤になり、
   `frontend/src/pages/inventory/InventoryPage.tsx` が PC に「その他」のプルダウンを足すので PC の DOM も変わる。
 
 ## 5. CI の持ち時間
