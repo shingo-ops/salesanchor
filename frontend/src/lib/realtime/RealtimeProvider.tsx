@@ -4,7 +4,7 @@
  */
 import { useEffect, useMemo, useRef, type ReactNode } from "react";
 
-import { auth } from "../firebase";
+import { getAccessToken, hasSession } from "../auth/selfAuth";
 import { RealtimeContext, type RealtimeEvent, type RealtimeHandler, type RealtimeApi } from "./context";
 import { getClientId } from "./clientId";
 
@@ -59,14 +59,13 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     }
 
     async function connect(): Promise<void> {
-      const user = auth.currentUser;
-      if (!user) {
+      if (!hasSession()) {
         scheduleReconnect();
         return;
       }
       let token: string;
       try {
-        token = await user.getIdToken();
+        token = await getAccessToken();
       } catch {
         scheduleReconnect();
         return;

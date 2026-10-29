@@ -7,7 +7,7 @@
  */
 import { useCallback, useEffect, useRef } from "react";
 
-import { auth } from "../lib/firebase";
+import { getAccessToken, hasSession } from "../lib/auth/selfAuth";
 
 const SSE_INIT_RETRY_MS = 2_000;
 const SSE_MAX_RETRY_MS = 300_000; // 5 分
@@ -30,12 +30,11 @@ export function useSSE({ endpoint, onUpdate }: UseSSEOptions): void {
     retryRef.current = SSE_INIT_RETRY_MS;
 
     async function connect(): Promise<void> {
-      const user = auth.currentUser;
-      if (!user || cancelledRef.current) return;
+      if (!hasSession() || cancelledRef.current) return;
 
       let token: string;
       try {
-        token = await user.getIdToken();
+        token = await getAccessToken();
       } catch {
         scheduleReconnect();
         return;

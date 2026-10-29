@@ -13,7 +13,7 @@ CRUD を提供する。UI設定は ネストで含めて返す/更新する。
 import logging
 import uuid
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, UploadFile, status
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -40,6 +40,8 @@ from app.schemas.staff import (
     StaffUpdate,
 )
 from app.services.audit import record_audit_log
+from app.services.auth_mail import send_invite_email
+from app.services.invite import create_invite_token, invite_enabled, invite_url
 from app.services.role_assignment import assign_single_role
 from app.services.staff_avatar import (
     AVATAR_MAX_BYTES,
@@ -66,11 +68,12 @@ def _new_placeholder_code() -> str:
 
 async def _resolve_user_for_new_staff(
     db: AsyncSession, tenant_id: int, data: StaffCreate,
-) -> int:
+) -> tuple[int, bool]:
     """POST /staff 用: 名簿に紐付ける users.id を決める（既存を再利用 or 新規作成。ADR-1008 決定5）。
 
     同じ email の users が、同テナントで名簿なし → それを使う / 同テナントで名簿あり → 409 /
     別テナント → 409 / 無し → 作る。呼び出し側のトランザクション内で実行する（commit しない）。
+    戻り値は (users.id, 新しく作ったか)。
     """
     found = await db.execute(
         text("SELECT id, tenant_id FROM public.users WHERE lower(email) = lower(:email) LIMIT 1"),
@@ -92,7 +95,7 @@ async def _resolve_user_for_new_staff(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="このメールアドレスのスタッフはすでに登録されています",
             )
-        return int(existing["id"])
+        return int(existing["id"]), False
 
     display_name = f"{data.surname_jp} {data.given_name_jp}"
     created = await db.execute(
@@ -103,7 +106,7 @@ async def _resolve_user_for_new_staff(
         """),
         {"tid": tenant_id, "name": display_name, "email": data.primary_email},
     )
-    return int(created.scalar_one())
+    return int(created.scalar_one()), True
 
 
 router = APIRouter()
@@ -584,7 +587,8 @@ async def get_staff(staff_id: int, db: AsyncSession = Depends(get_db),
 
 @router.post("/staff", response_model=StaffResponse, status_code=201,
              dependencies=[Depends(require_permission("staff.create"))])
-async def create_staff(data: StaffCreate, db: AsyncSession = Depends(get_db),
+async def create_staff(data: StaffCreate, background_tasks: BackgroundTasks,
+                       db: AsyncSession = Depends(get_db),
                        tenant_id: int = Depends(get_current_tenant),
                        current_user: User = Depends(get_current_user)):
     if data.user_id is not None:
@@ -595,7 +599,7 @@ async def create_staff(data: StaffCreate, db: AsyncSession = Depends(get_db),
     # staff_code は常にサーバー側で自動採番する（クライアント指定は受け付けない）
     staff_code = _new_placeholder_code()
     try:
-        user_id = await _resolve_user_for_new_staff(db, tenant_id, data)
+        user_id, user_created = await _resolve_user_for_new_staff(db, tenant_id, data)
         result = await db.execute(
             text("""
                 INSERT INTO staff (
@@ -635,9 +639,13 @@ async def create_staff(data: StaffCreate, db: AsyncSession = Depends(get_db),
             action="create", table_name="staff", record_id=new_id,
             new_data=data.model_dump(exclude_none=True, mode="json"),
         )
+        # 新しく利用者ができたときだけ、AUTH_PROVIDER=self なら初回設定の鍵を同じトランザクションで作る
+        invite_raw = await create_invite_token(db, user_id) if user_created and invite_enabled() else None
         await db.commit()
         await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2
         await invalidate_user_permissions(tenant_id, user_id)
+        if invite_raw is not None:
+            background_tasks.add_task(send_invite_email, data.primary_email, invite_url(invite_raw))
     except HTTPException:
         await db.rollback()
         raise

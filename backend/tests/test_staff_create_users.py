@@ -231,3 +231,74 @@ async def test_patch_with_firebase_uid_is_ignored(client, db_session):
     stored = (await db_session.execute(text(
         "SELECT firebase_uid FROM staff WHERE id = :id"), {"id": staff_id})).scalar()
     assert stored is None
+
+
+# ── 初回設定メール（ADR-1013 便4a。新しく利用者ができたときだけ・AUTH_PROVIDER=self のときだけ） ──
+
+_SELF_SECRET = "test-secret-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+
+
+async def _invite_count(db_session, email: str) -> int:
+    return (await db_session.execute(text(
+        "SELECT COUNT(*) FROM password_reset_tokens t JOIN users u ON u.id = t.user_id "
+        "WHERE lower(u.email) = :e AND t.purpose = 'invite'"), {"e": email.lower()})).scalar()
+
+
+@pytest.fixture
+async def invite_sender(db_session):
+    from unittest.mock import MagicMock, patch
+
+    import sqlalchemy as sa
+
+    with patch("app.routers.staff.send_invite_email", new=MagicMock()) as m:
+        yield m
+    # 他の試験（test_password_reset.py）が表全体の件数を数えるので、作った鍵を残さない
+    await db_session.rollback()
+    await db_session.execute(sa.delete(sa.table("password_reset_tokens")))
+    await db_session.commit()
+
+
+@pytest.mark.asyncio
+async def test_new_user_gets_invite_key_and_one_mail_when_self(client, db_session, invite_sender, monkeypatch):
+    monkeypatch.setenv("AUTH_PROVIDER", "self")
+    monkeypatch.setenv("AUTH_JWT_SECRET", _SELF_SECRET)
+    await _seed_role(db_session)
+
+    res = await client.post("/api/v1/staff", json=_body("invite-new@example.com"))
+
+    assert res.status_code == 201, res.text
+    assert await _invite_count(db_session, "invite-new@example.com") == 1
+    assert invite_sender.call_count == 1
+    to_addr, url = invite_sender.call_args.args
+    assert to_addr == "invite-new@example.com"
+    assert "/reset-password?token=" in url
+
+
+@pytest.mark.asyncio
+async def test_new_user_gets_no_invite_when_firebase(client, db_session, invite_sender, monkeypatch):
+    monkeypatch.setenv("AUTH_PROVIDER", "firebase")
+    await _seed_role(db_session)
+
+    res = await client.post("/api/v1/staff", json=_body("invite-fb@example.com"))
+
+    assert res.status_code == 201, res.text
+    assert await _invite_count(db_session, "invite-fb@example.com") == 0
+    assert invite_sender.call_count == 0
+
+
+@pytest.mark.asyncio
+async def test_existing_user_gets_no_invite_even_when_self(client, db_session, invite_sender, monkeypatch):
+    monkeypatch.setenv("AUTH_PROVIDER", "self")
+    monkeypatch.setenv("AUTH_JWT_SECRET", _SELF_SECRET)
+    await _seed_role(db_session)
+    await db_session.execute(text(
+        "INSERT INTO users (tenant_id, username, email, role, is_active) "
+        "VALUES (999, 'old', 'invite-existing@example.com', 'user', TRUE)"
+    ))
+    await db_session.commit()
+
+    res = await client.post("/api/v1/staff", json=_body("invite-existing@example.com"))
+
+    assert res.status_code == 201, res.text
+    assert await _invite_count(db_session, "invite-existing@example.com") == 0
+    assert invite_sender.call_count == 0
