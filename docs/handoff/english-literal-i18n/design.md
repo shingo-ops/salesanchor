@@ -23,28 +23,28 @@
   - JSX の文字（`>` と `<` の間）に英字2文字以上の語がある
   - `aria-label`・`placeholder`・`title`・`alt`・`label` 属性の文字列に英字2文字以上の語がある
   - `?? 'Xxx'` ／ `|| 'Xxx'` の英文の既定値
-- 対象: `frontend/src/pages`・`features`・`components` の .tsx（.test.tsx を除く）。除外は今の検査と同じ（stories・design-system・design-preview、`scripts/check-ui-governance.js:96-99`）。.ts の英文（`schedule-utils.ts:188`・`useInboxState.ts:387`・`lib/api.ts`）は JSX でないため検査では拾わず、便ごとの grep で 0 を確かめる。
+- 対象: `frontend/src/pages`・`features`・`components` の .tsx（.test.tsx を除く）。除外は今の検査と同じ（stories・design-system・design-preview、`scripts/check-ui-governance.js:96-99`）。.ts の英文（`frontend/src/pages/schedule/schedule-utils.ts:188`・`frontend/src/pages/inbox/useInboxState.ts:387`・`frontend/src/lib/api.ts`）は JSX でないため検査では拾わず、便ごとの grep で 0 を確かめる。
 - CI（`.github/workflows/ui-governance-gate.yml:27-38`）は依存を入れずに node だけで動くため、構文解析の道具は使わず、今ある `maskSource`（`:510`）で文字列とコメントを除いた写しの上で数える。
 - 例外: 既存の `ui-allow: <理由> (#番号)`（`:130`・`:144`）をそのまま使う。
 - 検査が拾えない形（例: 関数が返す英文、`String(e)`）は残る。それは便ごとの grep で 0 を確かめ、K1 で数える。
 
 ### 2-2. DataTable（便2）
-- `DataTable.tsx` に `useTranslation` を入れ、aria の11行と既定の空表示を `common.dataTable.*` のキーにする。
+- `frontend/src/components/DataTable.tsx` に `useTranslation` を入れ、aria の11行と既定の空表示を `common.dataTable.*` のキーにする。
 - 使っている76か所は変えない（emptyState を渡す34か所はそのまま、渡さない42か所は新しい既定の言葉が出る）。
 
 ### 2-3. 受信箱（便3）
 - R§3-2 の12行を `t()` にする。既存キー（`inbox.noLead`・`dashboard.priorityFallbackLead`）を優先して使う。
-- 時刻の言葉: `InboxKartePanel.tsx:86` の elapsedLabel(iso, t) を共通の場所へ出し、`inbox.types.ts:132-144` relativeTime と `:150` formatAbsolute を置きかえる。`en-US` 固定をやめ、i18n の今の言語を使う。置き場は既存の共通処理の置き場をカード作成時に実物で確かめて指定する。
+- 時刻の言葉: `frontend/src/pages/inbox/InboxKartePanel.tsx:86` の elapsedLabel(iso, t) を共通の場所へ出し、`frontend/src/pages/inbox/inbox.types.ts:132-144` relativeTime と `:150` formatAbsolute を置きかえる。`en-US` 固定をやめ、i18n の今の言語を使う。置き場は既存の共通処理の置き場をカード作成時に実物で確かめて指定する。
 
 ### 2-4. その他の画面（便4）
-- R§3-3 の9行を `t()` にする。`schedule-utils.ts:188` は既存の `schedule.holiday`・`schedule.shiftLabel` を使う。
+- R§3-3 の9行を `t()` にする。`frontend/src/pages/schedule/schedule-utils.ts:188` は既存の `schedule.holiday`・`schedule.shiftLabel` を使う。
 
 ### 2-5. 選択肢の言葉を1つにまとめる（便5・PO の決定のあと）
 - 同じ値の訳は辞書の1組のキーだけにする（SSOT）。28行の手書きと、生の値を出す9か所を、その1組のキーで出す。
 - 1つの値に訳が2通りある所（R§4 最後）は、どちらにそろえるかを PO が決める。推奨は §4。
 
 ### 2-6. エラーの言葉（便6）
-- `lib/api.ts` の `HTTP ${status}` 5か所を、i18n のキー（例 `common.error.http`、状態番号を差し込む）にする。
+- `frontend/src/lib/api.ts` の `HTTP ${status}` 5か所を、i18n のキー（例 `common.error.http`、状態番号を差し込む）にする。
 - `String(e)` 11か所を、画面に出る所だけ共通のエラー文にする。
 
 ### 2-7. 便の順番
@@ -71,7 +71,7 @@ DB・バックエンド・migration・運用スクリプト・CI 設定ファイ
 ## 4. PO の決定（2026-10-29「1」）
 
 選択肢の言葉の訳は日本語にそろえる（R§4）。
-- 決定: 日本語にそろえる（温度は 高/中/低、規模は 小/中/大、照合は「完全一致」）。理由: 受信箱の右の欄（`InboxKartePanel.tsx:638-640`）がすでに日本語で、ふだん使う画面の言葉に合わせると目にする変化が少ない。
+- 決定: 日本語にそろえる（温度は 高/中/低、規模は 小/中/大、照合は「完全一致」）。理由: 受信箱の右の欄（`frontend/src/pages/inbox/InboxKartePanel.tsx:638-640`）がすでに日本語で、ふだん使う画面の言葉に合わせると目にする変化が少ない。
 - 影響: 見込み客の一覧と編集画面で、Hot/Warm/Cold が 高/中/低 に変わる。
 
 ## 5. 受入条件
