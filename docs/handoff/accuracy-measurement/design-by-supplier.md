@@ -60,7 +60,7 @@ mode: handoff
 分け方の決まり:
 - 仕入元: 投稿の仕入元（`source_messages.supplier_channel_id` → `supplier_channels.supplier_id`。`migrations/20260921_110000_pipeline_tables_public.sql:11-22`）。
 - 商品の種類: **正解の**商品（正解表の A1）の中分類で分ける。システムが選んだ商品で分けると、商品を取り違えた件が別の種類に数えられ、弱い種類が見えなくなるため。正解が「未登録」「商品でない」の件は、その名前の種類にまとめる。
-- 段の切り分けは今と同じ。システム段は「Gemini が行の範囲を正しく読めた件」だけで数える（`score_v102.py:227-244`, `:274-278` の `e1ok`）。分けた表でもこの決まりを変えない。
+- 段の切り分けは今と同じ。システム段は「Gemini が行の範囲を正しく読めた件」だけで数える（`scripts/accuracy/score_v102.py:227-244`, `:274-278` の `e1ok`）。分けた表でもこの決まりを変えない。
 
 ## 5. 測り方の確かめ方（物差しが正しいことの根拠）
 
@@ -121,6 +121,7 @@ mode: handoff
 - 投稿→仕入元: `source_messages.supplier_channel_id` → `supplier_channels.supplier_id`（`migrations/20260921_110000_pipeline_tables_public.sql:11-17,20-22`）。
 - 中分類: `public.type_master`（`migrations/20260922_030000_product_format_game_links.sql:9`）。商品からは `public.products.work_id` でたどる（ADR-1026 で `type_master_id` を削除、`migrations/20261017_210000_drop_products_type_master_id.sql:1`。ADR-1038 も type_master を中分類の親とする）。
 - 未確認で残るもの: (a) 本番の窓口に上の列が本当に出ているか（`information_schema.columns` を窓口で引く。窓口の鍵が手元に無いため、段1の初めにクラウドの作業で引く）。(b) 正解表の A1 の値が `products` のどの列と同じか。どちらかが外れたら段1を止めて設計に戻す。
+- 確認結果（2026-10-29 クラウドで窓口の information_schema.columns を引いた。表名と列名だけ）: (a) は上の列がすべて出ていた（products の商品番号は id）。(b) は段2 でシステムが付けた商品で分けるため、段2 の分け方には影響しない（[recon-by-supplier.md](./recon-by-supplier.md)）。
 
 ## 9. 選ばなかった案
 
@@ -138,9 +139,9 @@ mode: handoff
 | マスタが直って中分類が変わる | 対応表にマスタの更新時刻を残す。変わったら前の回と直接比べない |
 | 仕入元の名前が PR に混ざる | 道具は番号しか扱わない。PR の前に grep で 0 件を確かめる |
 
-## 11. 外部事例の参照と我々への応用
+## 11. 外部・過去事例の参照と我々への応用
 
-- GokuMohandas/Made-With-ML（2026-10-28 確認。最終更新 2026-03-04）: `madewithml/evaluate.py:143-145` で、評価を `overall`（全体）・`per_class`（種類ごと）・`slices`（条件ごと）の3つに分けて出す。→ 全体の表を残したまま、種類ごと・仕入元ごとの表を足す形を借りる。
+- GokuMohandas/Made-With-ML（2026-10-28 確認。最終更新 2026-03-04）: madewithml/evaluate.py の 143〜145 行 で、評価を `overall`（全体）・`per_class`（種類ごと）・`slices`（条件ごと）の3つに分けて出す。→ 全体の表を残したまま、種類ごと・仕入元ごとの表を足す形を借りる。
 - DataTalksClub/mlops-zoomcamp（2026-10-28 確認。最終更新 2026-10-15）: 監視の章（05-monitoring/07-data-quality.md）は「警告は調べる合図。止めるのは事業の危険が見合うときだけ」「閾値は持ち主と決める」と書く。→ 「参考」の線（20件）は PO と決め、数字だけで自動に直さない。
 - 適用の限界: どちらも自分で学習させる前提の教材で、数値（件数の線や点数）は Sales Anchor に当てはまらない。数値の根拠には使わない。
 - 社内の事例: 10/07 の再採点で、独立した2人が数え直して件数を一致させた（track-record.md）。→ V4 の手数えを2人で別々に行う形を引き継ぐ。
@@ -150,7 +151,7 @@ mode: handoff
 - 判定: REVISE（§8 の未確認2点が解けるまで、実装に進めない）
 - 整合:
   - 親 design.md の採点の決まり（9項目・3つの段・答え無しは分母に入れない）と食い違わない。
-  - 段の切り分けは `score_v102.py:227-278` の実物と合っている。
+  - 段の切り分けは `scripts/accuracy/score_v102.py:227-278` の実物と合っている。
   - 社外秘の扱いは親 design.md と `scripts/accuracy/README.md` と同じ。
   - agent-console の予約済みの測定（見出しの決まりの試し・売り切れの毎朝点検）とは、見る行も道具も重ならない。
 - 未解決:
