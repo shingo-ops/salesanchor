@@ -1,0 +1,9 @@
+{
+  "check": "dangling-route gate",
+  "rules": [],
+  "expect": "fail",
+  "expect_output": "dangling route 検出",
+  "argv": ["node", "scripts/check-dangling-routes.js"],
+  "env": {"BASE_SHA": "{BASE}", "HEAD_SHA": "{HEAD}"},
+  "delete": ["backend/app/routers/zzfixture.py"]
+}

@@ -85,7 +85,7 @@ describe('InventoryPage type tabs (Tabs mold attached to the table)', () => {
     await waitFor(() => expect(lastInventoryUrl()).not.toContain('work_code='));
   });
 
-  it('K5b: on mobile the tab row still renders but the card view has no attached-top class', async () => {
+  it('K5b (reversed by design.md 4-1): on mobile the tab row is gone (type picked via inventory-tab-select instead) and the card view has no attached-top class', async () => {
     Object.defineProperty(window, 'matchMedia', {
       configurable: true,
       writable: true,
@@ -97,7 +97,8 @@ describe('InventoryPage type tabs (Tabs mold attached to the table)', () => {
     });
     renderPage();
     await screen.findByTestId('inventory-row-r1');
-    expect(screen.getByRole('tablist')).toBeTruthy();
+    expect(screen.queryByRole('tablist')).toBeNull();
+    expect(screen.getByTestId('inventory-tab-select')).toBeTruthy();
     expect(document.querySelector('.comp-table--attached-top')).toBeNull();
   });
 });

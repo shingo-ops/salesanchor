@@ -90,7 +90,12 @@ export async function installInventoryMocks(
       hidden_categories: [],
       hidden_columns: [],
     },
-    "GET /products/tcg-types": [{ code: "pokemon_booster_box", name_ja: "ポケモン" }],
+    // design.md 4-3・審査 M8: 種別パネルの行が意味を持つよう3件以上にする（MAIN_TCG_CODES 全件）。
+    "GET /products/tcg-types": [
+      { code: "pokemon_booster_box", name_ja: "ポケモン" },
+      { code: "one_piece", name_ja: "ワンピース" },
+      { code: "dragon_ball", name_ja: "ドラゴンボール" },
+    ],
     "GET /inventory/raw-texts": {
       items: makeRawTextItems(rawTexts),
     },
