@@ -1537,6 +1537,7 @@
   border: none;
   background: transparent;
   padding: var(--space-2) var(--space-3);
+  min-height: var(--size-icon-btn-lg); /* 押す場所 44px（ADR-1049・金型 ContextMenu と同じ値） */
   font-size: var(--font-sm);
   color: var(--text-primary);
   cursor: pointer;

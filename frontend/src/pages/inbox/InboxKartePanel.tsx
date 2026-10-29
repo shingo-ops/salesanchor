@@ -13,6 +13,8 @@ import { TextareaControl } from "../../components/Textarea";
 import { TextFieldControl } from "../../components/TextField";
 import ConfirmModal from "../../components/ConfirmModal";
 import { LoadingBlock } from "../../components/loading";
+import MergeLeadModal from "../../components/MergeLeadModal";
+import { usePermissions } from "../../hooks/usePermissions";
 
 interface CardForm {
   nickname?: string | null;
@@ -74,6 +76,8 @@ interface Props {
   convertError: string | null;
   handleCancelConvert: () => void;
   handleConfirmConvert: (assignedToUserId: number) => void;
+  // ADR-1049: リード統合の後始末（useInboxState が持つ）
+  handleLeadMerged: (loserId: number, masterId: number) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -108,8 +112,11 @@ export function InboxKartePanel({
   handleConvertLead, handleCreateInvoice,
   showConvertModal, convertAssigneeOptions, convertAssigneeLoading, convertAssigneeError,
   convertSaving, convertError, handleCancelConvert, handleConfirmConvert,
+  handleLeadMerged,
 }: Props) {
   const { t } = useTranslation();
+  const { hasPermission } = usePermissions();
+  const [mergeOpen, setMergeOpen] = useState(false);
   const [guildId, setGuildId] = useState<string | null>(null);
   // 第9便: 商談化の確認ポップアップ内のプルダウン選択（モーダルが閉じたら毎回リセットする）
   const [selectedAssigneeId, setSelectedAssigneeId] = useState("");
@@ -263,6 +270,19 @@ export function InboxKartePanel({
             leadId={leadDetail.id}
             onConvertLead={handleConvertLead}
             onCreateInvoice={handleCreateInvoice}
+            canMerge={hasPermission("leads.delete")}
+            onMerge={() => setMergeOpen(true)}
+          />
+
+          {/* ADR-1049: ほかのリードとまとめる（開いている相手が消える側） */}
+          <MergeLeadModal
+            open={mergeOpen}
+            source={{ id: leadDetail.id, lead_code: leadDetail.lead_code, customer_name: leadDetail.customer_name }}
+            onMerged={(masterId) => {
+              setMergeOpen(false);
+              handleLeadMerged(leadDetail.id, masterId);
+            }}
+            onCancel={() => setMergeOpen(false)}
           />
 
           {/* 第9便（2026-10-14・PO決定）: 商談化の確認ポップアップ。
@@ -329,12 +349,14 @@ export function InboxKartePanel({
 // ---------------------------------------------------------------------------
 
 function ActionBar({
-  status, leadId, onConvertLead, onCreateInvoice,
+  status, leadId, onConvertLead, onCreateInvoice, canMerge, onMerge,
 }: {
   status: string;
   leadId: number;
   onConvertLead: () => void;
   onCreateInvoice: () => void;
+  canMerge: boolean;
+  onMerge: () => void;
 }) {
   const { t } = useTranslation();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -432,6 +454,18 @@ function ActionBar({
                 {t("registration.copyLink")}
               </Button>
             </div>
+          )}
+          {/* ADR-1049: 一覧の統合と同じ条件（leads.delete 権限 かつ status=lead） */}
+          {canMerge && status === "lead" && (
+            <button
+              type="button"
+              role="menuitem"
+              className="karte-overflow-item"
+              data-testid="karte-menu-merge"
+              onClick={() => { setMenuOpen(false); onMerge(); }}
+            >
+              {t("mergeLead.menuLabel")}
+            </button>
           )}
         </div>
       )}

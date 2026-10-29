@@ -5,14 +5,15 @@
  *   ソースリード（loser = 消える側）を既存の master リードへ吸収させる UI。
  *   会社統合の MergeCompanyModal と同じ 2 段階 UI を踏襲。
  *
- *   loser に紐づく meta_messages・lead_channels が全て master に付け替えられ、
- *   loser のリードレコードは削除される。
+ *   loser に紐づく記録（lead_id を持つ13表）が全て master に付け替えられ、
+ *   master の空欄だけが loser の値で埋まる。loser のリードレコードは削除される（ADR-1049）。
+ *   確認の段で下見（merge/preview）を呼び、移るものと埋まる欄を先に見せる。
  *
  * 安全策:
  *   1. loser が lead 状態以外の場合は backend が 400 を返す。
  *      フロントでも convertedError メッセージを分かりやすく表示する。
  *   2. 確定前に「取り消せません」の警告ダイアログ
- *   3. 任意の reason 入力欄（audit_logs に記録）
+ *   3. 任意の reason 入力欄（操作の記録に残る）
  */
 
 import { useEffect, useMemo, useState, FormEvent } from "react";
@@ -25,6 +26,9 @@ import { RadioControl } from "./RadioControl";
 import { TextareaControl } from "./Textarea";
 import { TextFieldControl } from "./TextField";
 import { LoadingBlock } from "./loading";
+import { Warning } from "../constants/icons";
+import { ICON } from "../constants/iconSizes";
+import { useIsMobile } from "../hooks/useIsMobile";
 
 interface LeadOption {
   id: number;
@@ -45,8 +49,56 @@ interface Props {
 const PER_PAGE_CAP = 100;
 const SEARCH_DEBOUNCE_MS = 250;
 
+/** 下見（POST /leads/{master_id}/merge/preview）の返り値。backend の LeadMergePreview と同じ形 */
+interface MergePreview {
+  tables: { table: string; moved: number; deleted: number }[];
+  fills: { field: string; current: unknown; new: unknown }[];
+}
+
+/** 空欄に入る項目名の文言キー。カルテ・一覧の既存キーを使い、無いものだけ mergeLead.fields.* */
+const FILL_FIELD_LABEL_KEYS: Record<string, string> = {
+  customer_name: "leads.customerName",
+  company_name: "leads.companyName",
+  email: "leads.email",
+  phone: "leads.phone",
+  channel_type: "leads.channelType",
+  initiative: "leads.initiative",
+  type: "leads.type",
+  temperature: "leads.temperature",
+  estimated_scale: "leads.estimatedScale",
+  customer_type: "leads.customerType",
+  response_speed: "leads.responseSpeed",
+  monthly_forecast: "leads.monthlyForecast",
+  assigned_to: "mergeLead.fields.assigned_to",
+  notes: "leads.notes",
+  next_action: "leads.nextAction",
+  next_action_date: "leads.nextActionDate",
+  challenge: "leads.challenge",
+  meeting_memo: "leads.meetingMemo",
+  meeting_impression: "leads.meetingImpression",
+  cs_memo: "leads.csMemo",
+  sales_form: "leads.salesForm",
+  competitor_check: "leads.competitorCheck",
+  per_order_amount: "leads.perOrderAmount",
+  monthly_frequency: "leads.monthlyFrequency",
+  nickname: "leads.nickname",
+  country: "leads.country",
+  target_titles: "leads.targetTitles",
+  messenger_link: "leads.messengerLink",
+  discord_id: "mergeLead.fields.discord_id",
+  instagram_link: "leads.instagramLink",
+  whatsapp_link: "leads.whatsappLink",
+};
+
+function formatFillValue(v: unknown): string {
+  if (Array.isArray(v)) return v.join(", ");
+  if (v === null || v === undefined) return "";
+  return String(v);
+}
+
 export default function MergeLeadModal({ open, source, onMerged, onCancel }: Props) {
   const { t } = useTranslation();
+  const isMobile = useIsMobile();
   const [candidates, setCandidates] = useState<LeadOption[]>([]);
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -57,15 +109,50 @@ export default function MergeLeadModal({ open, source, onMerged, onCancel }: Pro
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resultsCapped, setResultsCapped] = useState(false);
+  const [preview, setPreview] = useState<MergePreview | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState(false);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      // 閉じたときも最初の段に戻す（確認の段のまま閉じると次に開いたとき古い組で下見が走るため）
+      setStage("select");
+      return;
+    }
     setSelectedId(null);
     setSelectedSnapshot(null);
     setReason("");
     setStage("select");
     setError(null);
+    setPreview(null);
+    setPreviewError(false);
   }, [open]);
+
+  // 確認の段に入ったら下見を呼ぶ（書き込まない）。失敗したら統合のボタンを押せなくする。
+  useEffect(() => {
+    if (!open || stage !== "confirm" || selectedId === null) return;
+    let cancelled = false;
+    setPreview(null);
+    setPreviewError(false);
+    setPreviewLoading(true);
+    api
+      .post<MergePreview>(`/leads/${selectedId}/merge/preview`, {
+        loser_id: source.id,
+        reason: null,
+      })
+      .then((res) => {
+        if (!cancelled) setPreview(res);
+      })
+      .catch(() => {
+        if (!cancelled) setPreviewError(true);
+      })
+      .finally(() => {
+        if (!cancelled) setPreviewLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, stage, selectedId, source.id]);
 
   useEffect(() => {
     if (!open) return;
@@ -107,7 +194,11 @@ export default function MergeLeadModal({ open, source, onMerged, onCancel }: Pro
     return null;
   }, [candidates, selectedId, selectedSnapshot]);
 
-  const sourceCode = source.lead_code ?? `#${source.id}`;
+  /** 窓の下のボタン行。スマホ幅は横いっぱいを縦に2つ（上が主操作）、PC 幅は右寄せの横並び */
+  const actionsStyle = isMobile
+    ? ({ flexDirection: "column-reverse", alignItems: "stretch" } as const)
+    : undefined;
+  const actionsSize = isMobile ? "lg" : "md";
 
   const handleConfirmSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -136,9 +227,23 @@ export default function MergeLeadModal({ open, source, onMerged, onCancel }: Pro
   return (
     <Modal open={open} onClose={onCancel} title={t("mergeLead.title")} size="md">
       <div className="modal-content-wide">
-        <p style={{ color: "var(--text-muted)", fontSize: "var(--font-base)", marginTop: "var(--space-1)" }}>
-          {t("mergeLead.sourceDesc", { name: source.customer_name, code: sourceCode })}
-        </p>
+        {stage === "select" && (
+          <p style={{ color: "var(--text-muted)", fontSize: "var(--font-base)", marginTop: "var(--space-1)" }}>
+            {t("mergeLead.sourceDesc", { name: source.customer_name })}
+          </p>
+        )}
+        {stage === "confirm" && selected && (
+          <p
+            style={{
+              fontSize: "var(--font-md)",
+              fontWeight: "var(--font-weight-semi)",
+              color: "var(--text-primary)",
+              marginTop: "var(--space-1)",
+            }}
+          >
+            {t("mergeLead.confirmTitle", { sourceName: source.customer_name, masterName: selected.customer_name })}
+          </p>
+        )}
 
         {error && <div className="error-banner">{error}</div>}
 
@@ -186,49 +291,36 @@ export default function MergeLeadModal({ open, source, onMerged, onCancel }: Pro
                   {t("mergeLead.noResults")}
                 </p>
               ) : (
-                <table className="data-table" style={{ marginBottom: 0 }}>
-                  <thead>
-                    <tr>
-                      <th style={{ width: 'var(--col-width-checkbox)' }}></th>
-                      <th>{t("mergeLead.col_code")}</th>
-                      <th>{t("mergeLead.col_name")}</th>
-                      <th>{t("mergeLead.col_status")}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {candidates.map((c) => (
-                      <tr
-                        key={c.id}
-                        onClick={() => {
-                          setSelectedId(c.id);
-                          setSelectedSnapshot(c);
-                        }}
-                        style={{
-                          cursor: "pointer",
-                          background: c.id === selectedId ? "var(--warning-bg)" : undefined,
-                        }}
-                      >
-                        <td>
-                          <RadioControl
-                            name="master-candidate"
-                            checked={c.id === selectedId}
-                            onChange={() => {
-                              setSelectedId(c.id);
-                              setSelectedSnapshot(c);
-                            }}
-                          />
-                        </td>
-                        <td>{c.lead_code ?? `#${c.id}`}</td>
-                        <td>{c.customer_name}</td>
-                        <td>
-                          <span className={`badge badge-${getStatusPresentation("lead", c.status).badgeVariant}`}>
-                            {t(`leads.statusCode.${c.status}`, { defaultValue: c.status })}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                candidates.map((c) => (
+                  <label
+                    key={c.id}
+                    data-testid="merge-candidate-row"
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "var(--space-3)",
+                      boxSizing: "border-box",
+                      minHeight: "var(--comp-table-row-h-default)",
+                      padding: "var(--space-2) var(--space-3)",
+                      borderBottom: "1px solid var(--border-light)",
+                      cursor: "pointer",
+                      background: c.id === selectedId ? "var(--link-active-bg)" : undefined,
+                    }}
+                  >
+                    <RadioControl
+                      name="master-candidate"
+                      checked={c.id === selectedId}
+                      onChange={() => {
+                        setSelectedId(c.id);
+                        setSelectedSnapshot(c);
+                      }}
+                    />
+                    <span style={{ flex: 1, minWidth: 0, overflowWrap: "anywhere" }}>{c.customer_name}</span>
+                    <span className={`badge badge-${getStatusPresentation("lead", c.status).badgeVariant}`}>
+                      {t(`leads.statusCode.${c.status}`, { defaultValue: c.status })}
+                    </span>
+                  </label>
+                ))
               )}
             </div>
 
@@ -243,13 +335,12 @@ export default function MergeLeadModal({ open, source, onMerged, onCancel }: Pro
               />
             </div>
 
-            <div className="form-actions">
-              <button type="button" onClick={onCancel}>
+            <div className="form-actions" style={actionsStyle}>
+              <Button variant="secondary" size={actionsSize} fullWidth={isMobile} type="button" onClick={onCancel}>
                 {t("common.cancel")}
-              </button>
-              <Button variant="primary" size="md"
+              </Button>
+              <Button variant="primary" size={actionsSize} fullWidth={isMobile}
                 type="button"
-
                 disabled={!selected}
                 onClick={() => setStage("confirm")}
               >
@@ -261,31 +352,55 @@ export default function MergeLeadModal({ open, source, onMerged, onCancel }: Pro
 
         {stage === "confirm" && selected && (
           <form onSubmit={handleConfirmSubmit}>
-            <div
+            <p
               style={{
-                background: "var(--warning-bg)",
-                border: "1px solid var(--warning-text)",
-                padding: "var(--space-3)",
-                borderRadius: "var(--radius-sm)",
-                marginBottom: "var(--space-4)",
+                display: "flex",
+                alignItems: "flex-start",
+                gap: "var(--space-2)",
+                margin: "0 0 var(--space-4)",
+                fontSize: "var(--font-base)",
+                color: "var(--danger-text)",
               }}
             >
-              <strong>{t("mergeLead.confirmWarning")}</strong>
-              <ul style={{ marginTop: "var(--space-2)", marginBottom: 0, paddingLeft: "var(--space-5)" }}>
-                <li>
-                  {t("mergeLead.confirmDesc1", {
-                    sourceName: source.customer_name,
-                    sourceCode,
-                    masterName: selected.customer_name,
-                    masterCode: selected.lead_code ?? `#${selected.id}`,
-                  })}
-                </li>
-                <li>
-                  {t("mergeLead.confirmDesc2", { sourceName: source.customer_name })}
-                </li>
-                <li>{t("mergeLead.confirmDesc3")}</li>
-              </ul>
-            </div>
+              <span style={{ display: "inline-flex", flexShrink: 0, paddingTop: "var(--space-1)" }}>
+                <Warning size={ICON.md} />
+              </span>
+              <span>{t("mergeLead.confirmWarning", { sourceName: source.customer_name })}</span>
+            </p>
+
+            {previewLoading && <LoadingBlock />}
+            {previewError && <div className="error-banner">{t("mergeLead.previewError")}</div>}
+            {preview && (
+              <div style={{ marginBottom: "var(--space-4)", fontSize: "var(--font-base)" }}>
+                <strong>{t("mergeLead.movedTitle")}</strong>
+                <p style={{ margin: "var(--space-1) 0 var(--space-3)", color: "var(--text-muted)", overflowWrap: "anywhere" }}>
+                  {preview.tables.some((row) => row.moved >= 1)
+                    ? preview.tables
+                        .filter((row) => row.moved >= 1)
+                        .map((row) =>
+                          t("mergeLead.movedItem", {
+                            name: t(`mergeLead.tables.${row.table}`, { defaultValue: row.table }),
+                            count: row.moved,
+                          }),
+                        )
+                        .join(t("mergeLead.listSeparator"))
+                    : t("mergeLead.nothingToMove")}
+                </p>
+                <strong>{t("mergeLead.filledTitle")}</strong>
+                <p style={{ margin: "var(--space-1) 0 0", color: "var(--text-muted)", overflowWrap: "anywhere" }}>
+                  {preview.fills.length === 0
+                    ? t("mergeLead.nothingToFill")
+                    : preview.fills
+                        .map((f) =>
+                          t("mergeLead.filledItem", {
+                            field: FILL_FIELD_LABEL_KEYS[f.field] ? t(FILL_FIELD_LABEL_KEYS[f.field]) : f.field,
+                            value: formatFillValue(f.new),
+                          }),
+                        )
+                        .join(t("mergeLead.listSeparator"))}
+                </p>
+              </div>
+            )}
 
             {reason.trim() && (
               <div
@@ -302,21 +417,23 @@ export default function MergeLeadModal({ open, source, onMerged, onCancel }: Pro
               </div>
             )}
 
-            <div className="form-actions">
-              <button
+            <div className="form-actions" style={actionsStyle}>
+              <Button
+                variant="secondary"
+                size={actionsSize}
+                fullWidth={isMobile}
                 type="button"
                 onClick={() => setStage("select")}
                 disabled={submitting}
               >
                 {t("common.back")}
-              </button>
-              <Button variant="danger" size="md"
+              </Button>
+              <Button variant="primary" size={actionsSize} fullWidth={isMobile}
                 type="submit"
-
                 loading={submitting}
-                disabled={submitting}
+                disabled={submitting || previewLoading || previewError || !preview}
               >
-                {t("mergeLead.executeLabel", { masterName: selected.customer_name })}
+                {t("mergeLead.executeLabel")}
               </Button>
             </div>
           </form>
