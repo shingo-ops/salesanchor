@@ -6,7 +6,7 @@
 - 対象ADR: ADR-027（文字は t() 経由・2026-10-29 追記）、ADR-144（ui-allow の書式）
 - 実行場所: クラウド。push までを行う。PR は手元で作る（scripts/agent-hooks/cloud/rules.md）
 - Opus の設計判断:
-  - 判断1: ESLint の規則ではなく、差分方式の `scripts/check-ui-governance.js` に種別を足す。理由: 今ある英語の直書き（約85か所）を編集するたびに止めない。増えた分だけ止める（`:773`）
+  - 判断1: ESLint の規則ではなく、差分方式の `scripts/check-ui-governance.js` に種別を足す。理由: 今ある英語の直書き（基準値 70件、§3 の実測）を編集するたびに止めない。増えた分だけ止める（`:773`）
   - 判断2: 構文解析の道具は使わない。理由: CI（`.github/workflows/ui-governance-gate.yml:27-38`）は依存を入れず node だけで動く。今ある `maskSource`（`:510`）の写しの上で数える
   - 判断3: 対象は .tsx だけ（今の `getChangedFiles` `:96` と同じ）。.ts の英文は後の便で grep で確かめる
   - 判断4: 誤って数えにくい3つの形だけを数える（§1-2）。拾えない形があることは design.md §6 に限界として書いてある

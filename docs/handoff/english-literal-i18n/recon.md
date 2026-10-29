@@ -41,7 +41,7 @@
 - 行番号注記: 調査一覧の `InboxMessageThread:443/561`・`InboxThreadHeaderMobile:114` は再読で `445/563`・`116` が正（2行ずれ）。
 
 ### 3-3. その他の画面（9行）
-- 【事実】`frontend/src/pages/notifications/NotificationsPage.tsx:128,155,183`、`frontend/src/pages/badges/BadgesPage.tsx:86`（User #）、`frontend/src/pages/channels/ChannelsPage.tsx:493`（Page ID:）、`frontend/src/pages/integrations/FedexLabelValidationTab.tsx:51`（done）、`frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx:310`（ERP Key:）、`frontend/src/pages/schedule/schedule-utils.ts:188`（Holiday/Shift → `SchedulePageImpl.tsx:638/708/791`）、`frontend/src/pages/company-detail/CompanyBasicTab.tsx:92`（pending_dedup_review）。
+- 【事実】`frontend/src/pages/notifications/NotificationsPage.tsx:128,155,183`、`frontend/src/pages/badges/BadgesPage.tsx:86`（User #）、`frontend/src/pages/channels/ChannelsPage.tsx:493`（Page ID:）、`frontend/src/pages/integrations/FedexLabelValidationTab.tsx:51`（done）、`frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx:310`（ERP Key:）、`frontend/src/pages/schedule/schedule-utils.ts:188`（Holiday/Shift → `frontend/src/pages/schedule/SchedulePageImpl.tsx:638`・`:708`・`:791`）、`frontend/src/pages/company-detail/CompanyBasicTab.tsx:92`（pending_dedup_review）。
 
 ### 3-4. 直さなくてよいと判定した1件
 - 【事実】「BOX」: `frontend/src/locales/ja.json:5337` でも BOX と呼んでいる。→ design §3-4 で扱いを決める。
@@ -64,7 +64,7 @@
 - 【事実】`inbox.noLead`、`dashboard.priorityFallbackLead`（'Lead #{{id}}'）、`schedule.holiday`・`schedule.shiftLabel`、`inbox.elapsedJustNow`・`elapsedMinutesAgo` 等、`leads.estimatedScale_*`、`matchTypeRegex/Literal/Default`。
 - 新しいキーが要る: Send failed・(no body)・Human Agent・User #・Page ID・ERP Key・Filter by Page・You:・DataTable の aria 系・Pokemon の例の placeholder。
 - 見積もり（手数え・機械集計ではない）: 既存キーで直せる約15行、新キーが要る約59行。
-- 【事実】言語に合わせた時刻の共通関数は無い。局所: `frontend/src/pages/inbox/InboxKartePanel.tsx:86` elapsedLabel(iso,t)（export なし）、`frontend/src/features/tcg-analysis-review/formatDateTime.ts:2`、`schedule-utils.ts:108/112/121`。
+- 【事実】言語に合わせた時刻の共通関数は無い。局所: `frontend/src/pages/inbox/InboxKartePanel.tsx:86` elapsedLabel(iso,t)（export なし）、`frontend/src/features/tcg-analysis-review/formatDateTime.ts:2`、`frontend/src/pages/schedule/schedule-utils.ts:108`・`:112`・`:121`。
 
 ## 6. エラーの言葉
 - 【事実】行き先不明だった6か所は英語のまま画面に出ない: `frontend/src/contexts/AuthContext.tsx:104` は非表示（ErrorBoundary 無し・grep 確認）、`frontend/src/lib/firebase-auth.ts:177` は firebaseError.default に置換、register の resolveErrorCode 3か所は全枝が辞書語、ViewerApiError は `t("viewer.error.*")` に置換。
