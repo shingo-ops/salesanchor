@@ -1,5 +1,6 @@
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger" | "outline" | "tab";
-export type ButtonSize = "sm" | "md" | "lg" | "tap";
+export type ButtonSize = "sm" | "md" | "lg" | "tap" | "auth";
+export type ButtonShape = "default" | "pill";
 
 const VARIANT_CLASS: Record<ButtonVariant, string> = {
   primary:   "comp-btn--primary",
@@ -13,6 +14,7 @@ const VARIANT_CLASS: Record<ButtonVariant, string> = {
 interface ButtonAppearanceOptions {
   variant: ButtonVariant;
   size: ButtonSize;
+  shape?: ButtonShape;
   fullWidth?: boolean;
   loading?: boolean;
   active?: boolean;
@@ -23,6 +25,7 @@ interface ButtonAppearanceOptions {
 export function buttonAppearance({
   variant,
   size,
+  shape = "default",
   fullWidth = false,
   loading = false,
   active = false,
@@ -33,7 +36,8 @@ export function buttonAppearance({
   return [
     "comp-btn",
     VARIANT_CLASS[variant],
-    isTab ? "" : (size === "sm" ? "comp-btn--sm" : size === "lg" ? "comp-btn--lg" : size === "tap" ? "comp-btn--tap" : ""),
+    isTab ? "" : (size === "sm" ? "comp-btn--sm" : size === "lg" ? "comp-btn--lg" : size === "tap" ? "comp-btn--tap" : size === "auth" ? "comp-btn--auth" : ""),
+    shape === "pill" ? "comp-btn--pill" : "",
     isTab && active ? "comp-btn--active" : "",
     fullWidth  ? "comp-btn--full"      : "",
     loading    ? "comp-btn--loading"   : "",

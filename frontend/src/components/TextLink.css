@@ -1,0 +1,24 @@
+/* TextLink — 枠のない文字リンク（login-round-inputs/design.md §6.1）。値はすべてトークン */
+.comp-text-link {
+  display: inline;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: var(--font-sm);
+  color: var(--accent);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.comp-text-link:hover {
+  color: var(--accent-hover);
+  text-decoration: underline;
+}
+
+.comp-text-link:focus-visible {
+  text-decoration: underline;
+  outline: var(--comp-btn-focus-width) solid var(--comp-btn-focus-color);
+  outline-offset: var(--comp-btn-focus-offset);
+}

@@ -5,7 +5,7 @@ import { PageLayout } from "../../components/PageLayout";
 import { Button } from "../../components/Button";
 import { ButtonLink } from "../../components/ButtonLink";
 import { Callout } from "../../components/Callout";
-import { TextFieldControl } from "../../components/TextField";
+import { PasswordFieldControl } from "../../components/PasswordField";
 import { selfConfirmPasswordReset } from "../../lib/auth/selfAuth";
 import { authErrorMessage } from "../../lib/auth/authErrorMessage";
 
@@ -64,9 +64,8 @@ export default function ResetPasswordPage() {
           <p>{t("resetPasswordPage.hint")}</p>
           <div className="form-group">
             <label htmlFor="reset_new_password">{t("resetPasswordPage.newPassword")}</label>
-            <TextFieldControl
+            <PasswordFieldControl
               id="reset_new_password"
-              type="password"
               value={form.next}
               onChange={set("next")}
               autoComplete="new-password"
@@ -75,9 +74,8 @@ export default function ResetPasswordPage() {
           </div>
           <div className="form-group">
             <label htmlFor="reset_confirm_password">{t("resetPasswordPage.confirmPassword")}</label>
-            <TextFieldControl
+            <PasswordFieldControl
               id="reset_confirm_password"
-              type="password"
               value={form.confirm}
               onChange={set("confirm")}
               autoComplete="new-password"

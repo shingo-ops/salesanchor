@@ -1419,7 +1419,7 @@
 .right-panel-field {
   width: 100%; box-sizing: border-box;
   background: var(--karte-field-bg); border: 0.5px solid var(--karte-field-bd); /* 見本 .fbox: tokens にて定義 */
-  border-radius: var(--radius-md); padding: var(--karte-field-py) var(--karte-field-px); /* 見本 .fbox: 7px 9px, radius 6px */
+  border-radius: var(--comp-input-radius); padding: var(--karte-field-py) var(--space-3); /* 隣の karte 欄（金型）と角・左右余白をそろえる */
   font-size: var(--font-sm); color: var(--text-primary);
   font-family: inherit;
   transition: border-color var(--transition-micro);
@@ -2114,7 +2114,6 @@ input[type="date"].karte-field-empty:not(:focus)::-webkit-datetime-edit { color:
    金型（FormField.css の .comp-input--search）に詳細度で勝つため2クラスで書く。 */
 .inbox-mobile-search-row .inbox-search-input {
   height: var(--comp-btn-height-lg);
-  border-radius: var(--radius-full);
   padding-left: calc(var(--space-4) + var(--size-icon-btn));
   padding-right: var(--space-4);
 }

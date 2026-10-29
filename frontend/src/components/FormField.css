@@ -63,6 +63,7 @@
 
 /* ── 2. Textarea 専用 (0,1,0)  ── */
 .comp-field__textarea {
+  border-radius: var(--comp-textarea-radius);
   min-height: var(--textarea-min-h);
   resize: vertical;
 }
@@ -136,7 +137,7 @@
 .comp-field__input--sm,
 .comp-field--sm .comp-field__select,
 .comp-select__control--sm {
-  padding: var(--space-1) var(--space-2);
+  padding: var(--space-1) var(--space-3);
   font-size: var(--font-sm);
   min-height: var(--comp-input-height-sm);
 }
@@ -187,7 +188,7 @@
 
 .comp-field--sm .comp-select--no-indicator,
 .comp-select__control--sm.comp-select--no-indicator {
-  padding-right: var(--space-2);
+  padding-right: var(--space-3);
 }
 
 .comp-field--lg .comp-select--no-indicator,
@@ -199,9 +200,9 @@
 /* karte: InboxPage.css right-panel-field（枠幅は金型の 1px。出典は 0.5px だが DPR1/DPR2 の Chromium 描画は同一（aw1-equivalence）） */
 .comp-select__control.comp-select--karte {
   min-height: 0;
-  padding: var(--karte-field-py) var(--karte-field-px);
+  padding: var(--karte-field-py) var(--space-3);
   border-color: var(--karte-field-bd);
-  border-radius: var(--radius-md);
+  border-radius: var(--comp-input-radius);
   background-color: var(--karte-field-bg);
   background-image: none;
   background-position: initial;
@@ -222,7 +223,7 @@
   min-height: 0;
   height: var(--size-icon-btn);
   padding: var(--space-1) var(--space-5) var(--space-1) var(--space-3);
-  border-radius: var(--radius-pill);
+  border-radius: var(--comp-input-radius);
   font-family: revert;
   font-size: var(--font-sm);
   line-height: normal;
@@ -264,7 +265,7 @@
   min-height: var(--inbox-textarea-min-h);
   padding: var(--karte-field-py) var(--karte-field-px);
   border-color: var(--karte-field-bd);
-  border-radius: var(--radius-md);
+  border-radius: var(--comp-textarea-radius);
   background-color: var(--karte-field-bg);
   font-size: var(--font-sm);
   line-height: normal;
@@ -339,9 +340,9 @@
 /* karte: InboxPage.css right-panel-field（見本 .fbox。枠幅は金型の 1px。出典は 0.5px だが Chromium の描画は同一（ay2a-equivalence）） */
 .comp-field__input.comp-input--karte {
   min-height: auto;
-  padding: var(--karte-field-py) var(--karte-field-px);
+  padding: var(--karte-field-py) var(--space-3);
   border-color: var(--karte-field-bd);
-  border-radius: var(--radius-md);
+  border-radius: var(--comp-input-radius);
   background-color: var(--karte-field-bg);
   font-size: var(--font-sm);
   line-height: normal;
@@ -362,7 +363,7 @@
   min-height: auto;
   padding: calc(var(--space-2) + 1.5px) var(--space-3) calc(var(--space-2) + 1.5px) calc(var(--space-3) + 16px + var(--space-2));
   border-color: var(--border-strong);
-  border-radius: var(--radius-md);
+  border-radius: var(--comp-input-radius);
   background-color: var(--bg-subtle);
   font-family: revert;
   line-height: normal;
@@ -381,7 +382,7 @@
 .comp-field__input.comp-input--schedule {
   min-height: var(--comp-input-height-sm);
   padding: 0 var(--space-3);
-  border-radius: var(--radius-md);
+  border-radius: var(--comp-input-radius);
   font-family: revert;
   font-size: var(--font-sm);
   line-height: normal;
@@ -392,7 +393,7 @@
 .comp-field__input.comp-input--composer {
   min-height: auto;
   border: none;
-  border-radius: var(--radius-md);
+  border-radius: var(--comp-input-radius);
   background-color: var(--bg-primary);
   font: inherit;
   resize: vertical;
@@ -408,10 +409,10 @@
 /* login: pages-layout.css login-card（Meta 風ログインフォーム。design.md §AY-2b） */
 .comp-field__input.comp-input--login {
   width: 100%;
-  min-height: 0;
-  padding: var(--space-3) var(--space-4);
+  min-height: var(--comp-input-height-auth);
+  padding: 0 var(--space-5);
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: var(--comp-input-radius);
   background: var(--bg-surface);
   color: var(--text-primary);
   font-family: revert;
@@ -431,7 +432,7 @@
 .comp-field__input.comp-input--product-edit {
   min-height: auto;
   border-color: var(--border-strong);
-  border-radius: var(--radius-sm);
+  border-radius: var(--comp-input-radius);
   font-family: revert;
   line-height: normal;
   transition: initial;
@@ -447,7 +448,7 @@
   max-width: none;
   padding-right: var(--space-3);
   border-color: var(--border-strong);
-  border-radius: var(--radius-sm);
+  border-radius: var(--comp-input-radius);
   background-image: none;
   background-repeat: revert;
   background-position: revert;
@@ -466,7 +467,7 @@
 /* product-edit: company-forms.css の商品編集 textarea（同上。design.md §AY-3a） */
 .comp-field__textarea.comp-textarea--product-edit {
   border-color: var(--border-strong);
-  border-radius: var(--radius-sm);
+  border-radius: var(--comp-textarea-radius);
   font-family: revert;
   line-height: normal;
   transition: initial;
