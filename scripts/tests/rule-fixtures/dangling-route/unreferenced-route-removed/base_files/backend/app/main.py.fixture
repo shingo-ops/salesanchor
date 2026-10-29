@@ -1,0 +1,3 @@
+from app.routers import zzfixture
+
+app.include_router(zzfixture.router, prefix="/api/v1", tags=["zzfixture"])
