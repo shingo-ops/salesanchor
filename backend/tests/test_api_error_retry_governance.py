@@ -6,6 +6,7 @@ DB・Redis・Discord はすべて偽物。
 """
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -164,3 +165,46 @@ class TestT7GivenUpMessage:
         assert lines[-1] == "要確認の画面で手でやり直してください。"
         assert "断られ方 503" in lines[1]
         assert "2026-10-29 09:00" in lines[1]
+
+
+class TestT8T9T10WeeklySql:
+    def test_no_string_concat_interval(self):
+        sql = str(weekly._COUNT_SQL)
+        assert "|| '" not in sql
+        assert "make_interval(days => :days)" in sql
+        assert "make_interval(hours => :lookback_hours)" in sql
+
+    def test_params(self):
+        params = weekly._params()
+        assert params["prefix"].endswith("%")
+        assert params["days"] == 7
+        assert params["max_attempts"] == 3
+        assert params["lookback_hours"] == 24
+
+    def test_compiles_with_asyncpg_dialect_and_given_up_conditions(self):
+        from sqlalchemy.dialects.postgresql import asyncpg
+
+        compiled = str(weekly._COUNT_SQL.compile(dialect=asyncpg.dialect()))
+        assert "sm.superseded_by IS NULL" in compiled
+        assert "sm.is_active = TRUE" in compiled
+        assert "latest.phase = 'failed'" in compiled
+
+
+class TestT11RunReport:
+    def test_run_report_sends_built_message(self):
+        counts = {"transient_jobs": 3, "recovered_jobs": 2, "given_up_jobs": 1}
+        result = MagicMock()
+        result.mappings.return_value.one.return_value = counts
+        db = MagicMock()
+        db.execute = AsyncMock(return_value=result)
+        session_cm = MagicMock()
+        session_cm.__aenter__ = AsyncMock(return_value=db)
+        session_cm.__aexit__ = AsyncMock(return_value=False)
+        post = AsyncMock(return_value=True)
+        with patch("app.database.AsyncSessionLocal", return_value=session_cm), \
+             patch.object(weekly, "_get_webhook_url", return_value="https://example.invalid/hook"), \
+             patch.object(weekly, "_post_discord_webhook", post):
+            out = asyncio.run(weekly._run_report())
+        post.assert_called_once()
+        assert post.call_args.args[1] == weekly.build_message(counts)
+        assert out == {"counts": counts, "sent": True}

@@ -21,35 +21,46 @@ logger = logging.getLogger(__name__)
 WEEKLY_DAYS = 7
 ATTENTION_TRANSIENT_JOBS = 20
 
-_TRANSIENT_CONDITION = """
-    EXISTS (
-        SELECT 1 FROM {schema}.extraction_attempts ea
-        WHERE ea.extraction_job_id = ej.id
-          AND ea.phase = 'failed'
-          AND (
-              ea.validation_result->>'category' IN ('gemini_rate_limit', 'gemini_timeout')
-              OR (
-                  ea.validation_result->>'category' = 'gemini_http_error'
-                  AND (
-                      ea.validation_result->>'raw' LIKE '%(HTTP 429)'
-                      OR ea.validation_result->>'raw' LIKE '%(HTTP 500)'
-                      OR ea.validation_result->>'raw' LIKE '%(HTTP 502)'
-                      OR ea.validation_result->>'raw' LIKE '%(HTTP 503)'
-                      OR ea.validation_result->>'raw' LIKE '%(HTTP 504)'
-                  )
-              )
-          )
+def _transient_condition(alias: str) -> str:
+    """一時的な断られ方（429・500・502・503・504・タイムアウト・レート制限）の条件。alias は extraction_attempts の別名。"""
+    return f"""
+    {alias}.phase = 'failed'
+    AND (
+        {alias}.validation_result->>'category' IN ('gemini_rate_limit', 'gemini_timeout')
+        OR (
+            {alias}.validation_result->>'category' = 'gemini_http_error'
+            AND (
+                {alias}.validation_result->>'raw' LIKE '%(HTTP 429)'
+                OR {alias}.validation_result->>'raw' LIKE '%(HTTP 500)'
+                OR {alias}.validation_result->>'raw' LIKE '%(HTTP 502)'
+                OR {alias}.validation_result->>'raw' LIKE '%(HTTP 503)'
+                OR {alias}.validation_result->>'raw' LIKE '%(HTTP 504)'
+            )
+        )
     )
-""".format(schema=TCG_SCHEMA)
+"""
 
-_GIVEN_UP_CONDITION = """
+
+_TRANSIENT_CONDITION = f"""
+    EXISTS (
+        SELECT 1 FROM {TCG_SCHEMA}.extraction_attempts ea
+        WHERE ea.extraction_job_id = ej.id
+          AND {_transient_condition("ea")}
+    )
+"""
+
+# tcg_extraction_recovery.find_given_up_api_error_jobs と同じ意味（置き換え済みの投稿・一時的でない断られ方は数えない）
+_GIVEN_UP_CONDITION = f"""
     ej.status = 'error'
     AND ej.error_message = 'API_ERROR'
+    AND sm.is_active = TRUE
+    AND sm.superseded_by IS NULL
+    AND {_transient_condition("latest")}
     AND (
-        (SELECT COUNT(*) FROM {schema}.extraction_attempts ea2 WHERE ea2.extraction_job_id = ej.id) >= :max_attempts
-        OR ej.created_at < NOW() - (:lookback_hours || ' hours')::interval
+        (SELECT COUNT(*) FROM {TCG_SCHEMA}.extraction_attempts ea2 WHERE ea2.extraction_job_id = ej.id) >= :max_attempts
+        OR ej.created_at < NOW() - make_interval(hours => :lookback_hours)
     )
-""".format(schema=TCG_SCHEMA)
+"""
 
 _COUNT_SQL = text(f"""
 SELECT
@@ -57,8 +68,16 @@ SELECT
   count(*) FILTER (WHERE ej.status = 'done') AS recovered_jobs,
   count(*) FILTER (WHERE {_GIVEN_UP_CONDITION}) AS given_up_jobs
 FROM {TCG_SCHEMA}.extraction_jobs ej
+LEFT JOIN {TCG_SCHEMA}.source_messages sm ON sm.id = ej.source_message_id
+LEFT JOIN LATERAL (
+    SELECT ea3.phase, ea3.validation_result
+    FROM {TCG_SCHEMA}.extraction_attempts ea3
+    WHERE ea3.extraction_job_id = ej.id
+    ORDER BY ea3.started_at DESC, ea3.id DESC
+    LIMIT 1
+) latest ON true
 WHERE ej.prompt_version LIKE :prefix
-  AND ej.created_at > NOW() - (:days || ' days')::interval
+  AND ej.created_at > NOW() - make_interval(days => :days)
   AND {_TRANSIENT_CONDITION}
 """)
 
