@@ -1470,6 +1470,7 @@
       "allCategories": "全TCGシリーズ",
       "otherTypes": "その他"
     },
+    "typeSelect": "種別",
     "resetSort": "リセット",
     "offerType": {
       "in_stock": "在庫",
@@ -1545,6 +1546,7 @@
     "sortBy": "{{col}}で並べ替え",
     "sortMenu": {
       "placeholder": "並び替え",
+      "default": "発売日が新しい順（既定）",
       "priceAsc": "価格が安い順",
       "stockDesc": "在庫が多い順",
       "postedDesc": "投稿が新しい"

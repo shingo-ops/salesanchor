@@ -14,7 +14,7 @@ import { api } from "../../lib/api";
 import { PageLayout } from "../../components/PageLayout";
 import { HoverCardHost } from "../../components/HoverCard";
 import InventoryFilterPanel from "./InventoryFilterPanel";
-import InventoryToolbar from "./InventoryToolbar";
+import InventoryToolbar, { SORT_MENU_VALUES, buildSortOptions, buildTypeOptions, inventoryChoiceRow } from "./InventoryToolbar";
 import { Button } from "../../components/Button";
 import { SelectControl } from "../../components/Select";
 import { HeaderButton } from "../../components/HeaderButton";
@@ -57,6 +57,9 @@ const PER_PAGE = 50;
 /** タブに常時出す主な3つ（type_master.code）。それ以外は「その他」プルダウンへ。
  *  閲覧ページ viewerFilter.ts の MAIN_SERIES・GAS index.html の MAIN_SERIES と対応（名前を変えたら両方直す） */
 const MAIN_TCG_CODES: readonly string[] = ["pokemon_booster_box", "one_piece", "dragon_ball"];
+
+// 種別・並び替えのパネル（design.md 4-3）。絞り込みドロワー（showFilterPanel）とは別物
+type InventoryChoicePanel = "none" | "series" | "sort";
 
 
 // 表示条件「在庫・予約」の選択肢（固定 2 値）。
@@ -166,6 +169,11 @@ export default function InventoryPage() {
   const [windowHours, setWindowHours] = useState<number | null | undefined>(undefined);
   // 中分類マスタ（type_master.code → 日本語名）。カテゴリー列を日本語表示するために使う。
   const [tcgTypes, setTcgTypes] = useState<{ code: string; name_ja: string }[]>([]);
+  // 種別・並び替えのパネル（design.md 4-3。閲覧ページ InventoryView.tsx の choicePanel と同じ作り）。
+  // Drawer は InventoryToolbar.tsx ではなくここ（親のページ）が持つ（表示専用部品の契約を守る）
+  const [choicePanel, setChoicePanel] = useState<InventoryChoicePanel>("none");
+  const openChoicePanel = (p: "series" | "sort") => setChoicePanel(p);
+  const closeChoicePanel = () => setChoicePanel("none");
 
   const totalPages = useMemo(() => (total === 0 ? 1 : Math.ceil(total / PER_PAGE)), [total]);
   // カテゴリーは常にコード順（文字コード昇順）で左から並べる（プルダウン・詳細フィルタ共通）。
@@ -174,6 +182,26 @@ export default function InventoryPage() {
     (c: string) => !filterEnabled || !hiddenColumns.has(c),
     [filterEnabled, hiddenColumns],
   );
+  // 種別の選択肢（design.md 4-3・審査 H3）: 「すべて」＋ MAIN_TCG_CODES（定数3件・常に先頭）＋
+  // それ以外の tcgTypes。tcgTypes が空（取得失敗）でも主要3件は必ず出る＝今までのタブと同じ保証。
+  const typeOptions = useMemo(
+    () => buildTypeOptions(MAIN_TCG_CODES, tcgTypes, t("common.all")),
+    [tcgTypes, t],
+  );
+  // 種別ボタンの文字（design.md 4-2）: 「すべて」はそのまま、それ以外は上の一覧から引く
+  // （見つからなければ code のまま＝今のタブのラベルと同じ規則）。
+  const currentTypeLabel = activeTab === "all"
+    ? t("common.all")
+    : typeOptions.find((o) => o.code === activeTab)?.name ?? activeTab;
+  // 並び替えの3択（PC の sortMenu とパネルの行が同じ一覧を見る。design.md 4-2）。
+  const sortOptions = useMemo(() => buildSortOptions(t), [t]);
+  const sortMenuValue = `${sortField}:${sortDir}`;
+  const isCustomSort = SORT_MENU_VALUES.includes(sortMenuValue);
+  // 並び替えボタンの文字（design.md 4-2）: 3択のどれかなら名前、そうでなければ「並び替え」
+  // （＝「既定」を選ぶと文字は「並び替え」に戻る。審査 M1）。
+  const currentSortLabel = isCustomSort
+    ? sortOptions.find((o) => o.value === sortMenuValue)?.label ?? t("inventory.sortMenu.placeholder")
+    : t("inventory.sortMenu.placeholder");
 
   const columns = useMemo(() => {
     const base = buildInventoryColumns({ t, colVisible, fmtOfferedAt });
@@ -368,11 +396,84 @@ export default function InventoryPage() {
     setDebouncedQ(searchQ);
     setPage(1);
   };
+  // 並び替えの変更（PC の select とスマホのパネルの3択が両方呼ぶ。design.md 4-3）。
+  // value が空（＝「既定」）なら release_date:desc に戻す。
+  const onSortMenuChange = (value: string) => {
+    const [field, dir] = value.split(":");
+    if (!field) {
+      setSortField("release_date");
+      setSortDir("desc");
+    } else {
+      setSortField(field);
+      setSortDir(dir === "asc" ? "asc" : "desc");
+    }
+    setPage(1);
+  };
   // 期間の注記に出す時間: 24時間以内が ON なら、その窓と掲載期間の小さい方（掲載期間が 0 なら 24時間側）。
   const noticeHours =
     freshOnly && freshWindowHours !== undefined
       ? windowHours && windowHours > 0 ? Math.min(freshWindowHours, windowHours) : freshWindowHours
       : windowHours;
+  // 注記の文言の組み立て（windowHours による3通りの出し分け。design.md 4-5・1文字も変えない）。
+  // PC は Tabs の end、スマホは詳細フィルタの中、どちらも同じ文言を使う（同時には出ない）。
+  const noticeContent =
+    windowHours === undefined
+      ? null
+      : windowHours === null
+        ? t("inventory.distributionOff")
+        : noticeHours === 0
+          ? t("inventory.windowUnlimited")
+          : t("inventory.expiryWarning", { hours: noticeHours });
+  // スマホだけ: 詳細フィルタの中に移した注記（design.md 4-5）。white-space: nowrap を外し、
+  // .inventory-notice を当てて折り返す（PC 側の Tabs end は別に組み立てる＝ nowrap のまま）。
+  const mobileNotice = (
+    <p data-testid="inventory-expiry-warning" className="inventory-notice">
+      {"※"}
+      {noticeContent}
+    </p>
+  );
+  // 種別のパネルの行（design.md 4-3）: typeOptions（「すべて」＋主要3件＋その他）をそのまま並べる。
+  const seriesChoiceRows = typeOptions.map((o) =>
+    inventoryChoiceRow({
+      name: "inventory-type-choice",
+      value: o.code,
+      checked: activeTab === o.code,
+      testId: `inventory-type-option-${o.code}`,
+      label: o.name,
+      pick: () => {
+        setActiveTab(o.code);
+        setPage(1);
+        closeChoicePanel();
+      },
+    }),
+  );
+  // 並び替えのパネルの行（design.md 4-3）: 先頭「既定」＋3択。既定の値は release_date:desc。
+  const sortChoiceRows = [
+    inventoryChoiceRow({
+      name: "inventory-sort-choice",
+      value: "release_date:desc",
+      checked: !isCustomSort,
+      testId: "inventory-sort-option-release_date:desc",
+      label: t("inventory.sortMenu.default"),
+      pick: () => {
+        onSortMenuChange("");
+        closeChoicePanel();
+      },
+    }),
+    ...sortOptions.map((o) =>
+      inventoryChoiceRow({
+        name: "inventory-sort-choice",
+        value: o.value,
+        checked: sortMenuValue === o.value,
+        testId: `inventory-sort-option-${o.value}`,
+        label: o.label,
+        pick: () => {
+          onSortMenuChange(o.value);
+          closeChoicePanel();
+        },
+      }),
+    ),
+  ];
 
   const onSupplierChange = (next: string[]) => {
     setSelectedSupplierIds(next);
@@ -461,17 +562,10 @@ export default function InventoryPage() {
         onFreshToggle={onFreshToggle}
         sortField={sortField}
         sortDir={sortDir}
-        onSortMenuChange={(value) => {
-          const [field, dir] = value.split(":");
-          if (!field) {
-            setSortField("release_date");
-            setSortDir("desc");
-          } else {
-            setSortField(field);
-            setSortDir(dir === "asc" ? "asc" : "desc");
-          }
-          setPage(1);
-        }}
+        onSortMenuChange={onSortMenuChange}
+        currentTypeLabel={currentTypeLabel}
+        currentSortLabel={currentSortLabel}
+        onOpenChoice={openChoicePanel}
         supplierOptions={supplierOptions}
         selectedSupplierIds={selectedSupplierIds}
         onSupplierChange={onSupplierChange}
@@ -530,6 +624,7 @@ export default function InventoryPage() {
           freshWindowHours={freshWindowHours}
           onReset={resetAll}
           onClose={() => setShowFilterPanel(false)}
+          notice={mobileNotice}
         />
       )}
 
@@ -543,49 +638,60 @@ export default function InventoryPage() {
         {t("common.loading")}
       </div>
 
-      {/* TCG種別タブ: すべて/ポケモン/ワンピース/ドラゴンボール＋その他プルダウン＋注記（右端）。表にくっつける */}
-      <Tabs
-        variant="underline"
-        size="md"
-        items={[
-          { key: "all", label: t("common.all") },
-          ...MAIN_TCG_CODES.map((code) => ({ key: code, label: tcgTypes.find((tt) => tt.code === code)?.name_ja ?? code })),
-        ]}
-        activeKey={activeTab === "all" || MAIN_TCG_CODES.includes(activeTab) ? activeTab : ""}
-        onChange={(key) => { setActiveTab(key); setPage(1); }}
-        extra={
-          tcgTypes.filter((tt) => !MAIN_TCG_CODES.includes(tt.code)).length > 0 ? (
-            <SelectControl
-              variant="tab"
-              value={activeTab === "all" || MAIN_TCG_CODES.includes(activeTab) ? "" : activeTab}
-              onChange={(e) => { if (e.target.value) { setActiveTab(e.target.value); setPage(1); } }}
-              aria-label={t("inventory.filter.otherTypes")}
+      {/* TCG種別タブ: すべて/ポケモン/ワンピース/ドラゴンボール＋その他プルダウン＋注記（右端）。表にくっつける。
+          スマホでは描かない（design.md 4-1。種別は inventory-tab-select のパネルへ、注記は詳細フィルタの中へ） */}
+      {!isMobile && (
+        <Tabs
+          variant="underline"
+          size="md"
+          items={[
+            { key: "all", label: t("common.all") },
+            ...MAIN_TCG_CODES.map((code) => ({ key: code, label: tcgTypes.find((tt) => tt.code === code)?.name_ja ?? code })),
+          ]}
+          activeKey={activeTab === "all" || MAIN_TCG_CODES.includes(activeTab) ? activeTab : ""}
+          onChange={(key) => { setActiveTab(key); setPage(1); }}
+          extra={
+            tcgTypes.filter((tt) => !MAIN_TCG_CODES.includes(tt.code)).length > 0 ? (
+              <SelectControl
+                variant="tab"
+                value={activeTab === "all" || MAIN_TCG_CODES.includes(activeTab) ? "" : activeTab}
+                onChange={(e) => { if (e.target.value) { setActiveTab(e.target.value); setPage(1); } }}
+                aria-label={t("inventory.filter.otherTypes")}
+              >
+                <option value="">{t("inventory.filter.otherTypes")}</option>
+                {tcgTypes
+                  .filter((tt) => !MAIN_TCG_CODES.includes(tt.code))
+                  .map((tt) => (
+                    <option key={tt.code} value={tt.code}>{tt.name_ja}</option>
+                  ))}
+              </SelectControl>
+            ) : undefined
+          }
+          end={
+            <p
+              data-testid="inventory-expiry-warning"
+              style={{ margin: 0, fontSize: "var(--font-xs)", color: "var(--text-secondary)", whiteSpace: "nowrap" }}
             >
-              <option value="">{t("inventory.filter.otherTypes")}</option>
-              {tcgTypes
-                .filter((tt) => !MAIN_TCG_CODES.includes(tt.code))
-                .map((tt) => (
-                  <option key={tt.code} value={tt.code}>{tt.name_ja}</option>
-                ))}
-            </SelectControl>
-          ) : undefined
-        }
-        end={
-          <p
-            data-testid="inventory-expiry-warning"
-            style={{ margin: 0, fontSize: "var(--font-xs)", color: "var(--text-secondary)", whiteSpace: "nowrap" }}
-          >
-            {"※"}
-            {windowHours === undefined
-              ? null
-              : windowHours === null
-                ? t("inventory.distributionOff")
-                : noticeHours === 0
-                  ? t("inventory.windowUnlimited")
-                  : t("inventory.expiryWarning", { hours: noticeHours })}
-          </p>
-        }
-      />
+              {"※"}
+              {noticeContent}
+            </p>
+          }
+        />
+      )}
+
+      {/* 種別・並び替えのパネル（design.md 4-3）。スマホだけにマウントする（PC に増やすと
+          supplier-drawer / drawer-close が PC にも1枚増える＝審査 M4） */}
+      {isMobile && (
+        <Drawer
+          open={choicePanel !== "none"}
+          onClose={closeChoicePanel}
+          title={choicePanel === "sort" ? t("inventory.sortMenu.placeholder") : t("inventory.typeSelect")}
+        >
+          <div className="inventory-choice-list">
+            {choicePanel === "sort" ? sortChoiceRows : seriesChoiceRows}
+          </div>
+        </Drawer>
+      )}
 
       <DataTable
         columns={columns}
