@@ -4,7 +4,7 @@
 
 - 設計: docs/handoff/auth-self-hosted-passkey/design.md §3（:73-82・:103）・§5 画面（:127-130）・§6 便4（:157）・手順（:162-167）・受け入れ基準（:192・:195）・告知（:140・:221）
 - 対象ADR: ADR-1013（本テーマ）、ADR-027（画面の文言は t()）、ADR-144（UI は金型）、ADR-075（秘密は GitHub Secrets）、ADR-135・ADR-136（危険PRの GO）
-- 状態: 第5版。Opus 審査役の 5 回目の審査で APPROVE（2026-10-29。1〜4 回目は REVISE で、指摘はすべて反映。5 回目の LOW-10 も反映）。審査記録 /tmp/CC報告ファイル/auth-b4-recon2/review-card-b4-1.md〜review-card-b4-5.md。便を 4a・4b の 2 PR に分けるのは design.md:157（1 便）からの変更で、PO の合意を得て design.md に書き戻す。**PO の実装承認前（実装未着手）**
+- 状態: 第6版。Opus 審査役の 5 回目の審査で APPROVE（2026-10-29。1〜4 回目は REVISE で、指摘はすべて反映。5 回目の LOW-10 も反映）。審査記録 /tmp/CC報告ファイル/auth-b4-recon2/review-card-b4-1.md〜review-card-b4-5.md。第6版は書式検査のための節（§0・受領確認・§0-2・終わりの印）を足し、PR #4847 のマージ前審査（APPROVE on a3f709d64）の LOW-A〜C を反映した。便を 4a・4b の 2 PR に分けるのは design.md:157（1 便）からの変更で、PO が 2026-10-29 にチャットで合意した（選択肢「2回に分ける」に「1」と回答）。design.md への書き戻しは便4a の PR で行う。**PO の実装承認前（実装未着手）**
 - 担当: 実装 Sonnet／コード審査 Opus（reviewer）／GO・マージ・反映確認 Opus／秘密の登録・初回パスワードの配布・切り替え日の決定 PO
 
 ## 0. 読んだ節（docs/handoff/design-partner-card-ops/guards/）
@@ -167,24 +167,24 @@
 ## 5. 確かめ方（担当が実行し、生の最終行を報告に貼る）
 
 便4a:
-- `cd backend && pytest tests/test_self_auth.py tests/test_password_reset.py tests/test_register_invite.py -q`。試験に入れる項目:
+- `cd /Users/tanizawashingo/worktrees/salesanchor/release-auth-b4a-self-login-ui/backend && pytest tests/test_self_auth.py tests/test_password_reset.py tests/test_register_invite.py -q`。試験に入れる項目:
   - password/change: 成功の応答の新アクセストークンで保護された口が 200／古い更新用トークンの refresh が 401／古いアクセストークンは Redis の保持なし（試験で保持を空にする）の状態で 401（保持中は最大 300 秒通る。F31。K8 の注記）／照合失敗で `failed_login_count` が 1 増え 400 `invalid_credentials`／新パスワード 14 文字で 422 `password_too_short`／Origin 違いで 403／firebase（秘密なし）では `get_current_user` を差し替えて呼び、新トークンも Cookie も返さず、更新用トークンの失効だけ行う／hash が NULL の人は 400
   - register と担当者の追加: self のとき invite の鍵が 1 行・送信関数の呼び出し 1 回（送信関数を差し替えて数える）／firebase のとき鍵 0 行・送信 0 回／既存の利用者を使った担当者の追加は鍵 0 行・送信 0 回
-- `cd frontend && npx vitest run src/pages/login src/pages/reset-password src/pages/account-settings src/lib/auth`
-- `cd frontend && npx tsc --noEmit`・`npm run lint`・`npm run build`
+- `cd /Users/tanizawashingo/worktrees/salesanchor/release-auth-b4a-self-login-ui/frontend && npx vitest run src/pages/login src/pages/reset-password src/pages/account-settings src/lib/auth`
+- `cd /Users/tanizawashingo/worktrees/salesanchor/release-auth-b4a-self-login-ui/frontend && npx tsc --noEmit`・`npm run lint`・`npm run build`
 - `git grep -n "VITE_AUTH_PROVIDER" -- frontend/src` が `provider.ts` だけ
 - 変更した画面ファイルに `grep -nE "<button|<input|#[0-9a-fA-F]{3,6}\b|rgb\("` で 0 件（`ui-allow:` の例外コメント付きを除く。design.md:205）
-- `cd frontend && npm run check:i18n-missing-keys` が通る（ja/en のキー差分 0）
+- `cd /Users/tanizawashingo/worktrees/salesanchor/release-auth-b4a-self-login-ui/frontend && npm run check:i18n-missing-keys` が通る（ja/en のキー差分 0）
 - `git grep -n "localStorage\|sessionStorage" -- frontend/src/lib/auth` が 0 件
 - e2e（`Frontend E2E (Playwright)`。開発サーバーで動く）が VITE_AUTH_PROVIDER 無しで今と同じく通る
 - `provider.ts` の単体試験: 未設定・`firebase`・`SELF`・空文字は firebase、`self` だけ self
 - 画面の試験: firebase のときのログインは Firebase の関数を呼び、`/api/v1/auth/login` を呼ばない。本番での確かめは K0（login 404）
 - 画面の試験（§4.2 3-1）: `/api/v1/auth/` の口の 401 では refresh しない／それ以外の口の 401 で refresh 1 回・元の要求の送り直し 1 回／送り直しの 401 でログイン画面へ
-- `cd backend && pytest tests/test_staff*.py -q`（新しい利用者のときだけ鍵 1 行・既存のときは 0 行）
+- `cd /Users/tanizawashingo/worktrees/salesanchor/release-auth-b4a-self-login-ui/backend && pytest tests/test_staff*.py -q`（新しい利用者のときだけ鍵 1 行・既存のときは 0 行）
 
 便4b:
-- `cd backend && pytest tests/test_issue_initial_passwords.py -q`（`--apply` なしで書かない・`--apply` で件数分の行・2 回目は 0 件・件数は標準エラー）。RLS の試験は F26 の型で `RLS_TEST_DATABASE_URL` を使い、スーパーユーザーの接続では行わない。ログ（caplog）とファイルへの書き込みに、作ったパスワードの平文が 0 件であること（K11）
-- `cd backend && python -m scripts.issue_initial_passwords --help` が動く
+- `cd /Users/tanizawashingo/worktrees/salesanchor/release-auth-b4b-switch/backend && pytest tests/test_issue_initial_passwords.py -q`（`--apply` なしで書かない・`--apply` で件数分の行・2 回目は 0 件・件数は標準エラー）。RLS の試験は F26 の型で `RLS_TEST_DATABASE_URL` を使い、スーパーユーザーの接続では行わない。ログ（caplog）とファイルへの書き込みに、作ったパスワードの平文が 0 件であること（K11）
+- `cd /Users/tanizawashingo/worktrees/salesanchor/release-auth-b4b-switch/backend && python -m scripts.issue_initial_passwords --help` が動く
 - deploy.yml の消す一覧と heredoc の両方に新しいキーがあることを grep で示す
 
 ## 6. 分岐ごとの対処
@@ -237,11 +237,16 @@
 
 - 便4a: `release/auth-b4a-self-login-ui`。区分は通常（危険パスなし）。reviewer の APPROVE と CI 全部で Opus がマージ
 - 便4b: `release/auth-b4b-switch`。危険便。ADR-136 の GO 記録を PR 本文に残す
+- 作業場所は Opus が new-worktree.sh で作ってから担当に渡す（作る手順と、作業場所へ cd して進める手順を分ける。guards/04-worktree.md）。担当は最初に、§0-2 のフルパスを `ls -1d` に渡し、`git worktree list` と合わせて実在を確かめる
+- 段ごとに実在を確かめる（guards/05-pr.md）。便4a の例（便4b はフルパスとブランチを §0-2・本節の便4b の値にする）:
+  - commit のあと `git -C /Users/tanizawashingo/worktrees/salesanchor/release-auth-b4a-self-login-ui log --oneline -1`
+  - push は `git -C /Users/tanizawashingo/worktrees/salesanchor/release-auth-b4a-self-login-ui push -u origin release/auth-b4a-self-login-ui` をほかの命令とつなげず単独で流し、`git -C /Users/tanizawashingo/worktrees/salesanchor/release-auth-b4a-self-login-ui status -sb` で追跡先を確かめる
+  - PR は作業場所へ cd してから `bash scripts/gh-pr-create-safe.sh --base main --head release/auth-b4a-self-login-ui --title "…" --body-file /tmp/CC報告ファイル/auth-b4a/pr-body.md` で作り、出力の PR 番号で `gh pr view` に `--json headRefOid` を付けて HEAD を確かめる
 
 ## 11. 未解決（審査で確かめる）
 
 - id 2（Firebase に居ない使用中の利用者）を発行の対象にするか（PO 判断）。対象にすると、戻したときに入れなくなる人に数える
-- 便を 4a・4b に分けること（PO の合意）
+- 便を 4a・4b に分けること → 解決: PO が 2026-10-29 に合意
 - 担当者の追加で新しくできた利用者にも初回設定メールを送ること（design.md に無い追加。PO の合意）
 - 切り替え日と告知の文（PO 判断）
 - F17 パスワードを持つ人の数（発行スクリプトの試し実行で分かる）
