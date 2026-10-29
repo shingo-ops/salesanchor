@@ -1,0 +1,40 @@
+/**
+ * AppUpdateNotice — 画面の上の中央に小さく出す「新しい版があります」
+ * ADR-067: 余白・z-index・寸法はすべて CSS 変数参照のみ（色は Callout / Button の金型側）
+ */
+
+.app-update-notice {
+  position: fixed; /* fixed-ok: 殻の外の全画面共通の知らせ（Toaster と同じ階層） */
+  top: calc(env(safe-area-inset-top, 0px) + var(--space-2));
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(var(--space-10) * 9);
+  max-width: calc(100% - var(--space-4) * 2);
+  box-sizing: border-box;
+  z-index: var(--z-toast);
+}
+
+.app-update-notice .comp-callout {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: var(--shadow-md);
+}
+
+.app-update-notice .comp-callout__title {
+  flex: 1 1 auto;
+}
+
+.app-update-notice .comp-callout__body {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 767px) {
+  .app-update-notice {
+    left: var(--space-4);
+    right: var(--space-4);
+    width: auto;
+    max-width: none;
+    transform: none;
+  }
+}
