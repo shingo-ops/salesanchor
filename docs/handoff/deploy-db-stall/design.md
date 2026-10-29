@@ -95,6 +95,8 @@ sandbox 試験（手で起動。ADR-1037 の試験を広げる）:
 - R4 全体上限の共有: run_sql で再試行を1回使った後、`SQL_RETRY_BUDGET=2` で run_py が2回目の再試行をしない。
 - R5 裏の読み取り監視と一緒に動かしても戻る（第8版で追加。本番で止まった形を再現する）: `tests/sandbox/migration-read-probe.sh` と同じ抜き出しで read_probe_start を取り出し、裏の輪を動かしたまま、本物の run_py を偽コマンド（rc 0 と、1回目 lock timeout→2回目 rc 0 の2通り）で呼ぶ。全体を `timeout 30` で包み、30秒以内に戻って rc 0・"lock conflict; retry" の回数が期待どおりであること。終わったら裏の輪を止め、残っていないことを確かめる（輪は `kill -0` で親の死を見て2秒以内に抜ける。`scripts/run_all_migrations.sh` :127）。第7版の形（tee と `$!` の wait）に戻すとこの試験が rc=124（timeout）で赤になることを、実装 PR で1度示し結果を貼る。
   - R5 の偽コマンドは、PATH の先頭に置く外部の実行ファイル（例 `$OUT_DIR/bin/docker`）にする。シェル関数の docker() は R5 では使わない。理由: 関数だと親の bash がリダイレクトを行い `$!` がプロセス置換を指すので、第7版の形でも wait が戻り、試験が緑になる（§14-1）。偽物にするのは BACKEND 宛ての呼び出しだけで、それ以外（読み取り監視・log_lock_holders）は本物の docker の絶対パスへ渡す（`docker` と書くと自分自身を呼び続ける）。再試行の間隔は `SQL_RETRY_SLEEP_SEC=1` に下げる。make_parent（`tests/sandbox/migration-read-probe.sh` :68-82）と同じく別の bash で流し、その bash を `timeout 30` で包む。
+  - R5 は `tests/sandbox/migration-read-probe.sh` に置く（監視の抜き出し :43、`SQL_LOCK_TIMEOUT=` 〜 run_sql の抜き出し :53、make_parent が揃っているため）。偽 docker は別のプロセスなので、シェル変数は見えない。偽物にする相手は固定のコンテナ名（例 `sb-fake-backend`）を BACKEND に入れて引数で見分ける。動きの切り替えと回数は export した環境変数かファイルで渡す。本物の docker の絶対パスは PATH を変える前に `command -v docker` で取っておく。make_parent は BACKEND・DATABASE_URL を設定しないので、R5 の側で足す。
+  - 赤の実演は、本番の bash 5.2 と同じ 5.x（sandbox-test の ubuntu-latest。試験が `bash=` を出す）で `$!` の動きを確かめる役も兼ねる（§14-1 の未確認を埋める）。実演が rc=124 にならなかったら、試験を直して赤にしようとせず止まり、設計担当に戻す。
 - R1〜R4 の偽コマンドの差し込み方（関数の上書きか変数か）は実装役が決めてよい。本物の run_py の文面は写さず抜き出す。
 
 PR ごとの静的点検にも1つ足す（第8版）:
@@ -174,14 +176,14 @@ PR ごとの静的点検にも1つ足す（第8版）:
 - 第7版（本書）: 上の指摘を §4-1・§6（K9 の判定・除外）・§9 に反映。APPROVE（2026-10-29、Architect 新規起動。K9 の行の形・Actions の時刻・lock holders の明細を本番反映 run 40810424800 の生ログで照合）。条件として付いた4点（時刻の突き合わせの区間と候補が複数のときの決め方／ADR-1037 の K7 との数え方の違い／除外は使わない／run_py の開始行の echo を変えない）は、同じ日に §4-2・§6 へ追記済み。K9 の文面だけで、実装・CI には影響しない。
 
 - 第8版（本書）: §14 の本番の失敗を受けて §4 の表・§4-2・§4-3（R5・S3）・§6（K5b）・§9・§14 を直した。REVISE（2026-10-29、Architect 新規起動。直し方そのものは合格）。指摘: R5 の偽コマンドが関数だと第7版の形でも緑になる／§4-2 に wait の文が残る／S3 の範囲・コメント・grep の書き方／ログが後から出る影響の書き過ぎ。
-- 第8.1版: 上の指摘を §4-2・§4-3（R5・S3）・§9・§14-1 に反映。審査は下に追記する。
+- 第8.1版: 上の指摘を §4-2・§4-3（R5・S3）・§9・§14-1 に反映。APPROVE（2026-10-29、Architect 新規起動。S3 を今の main〔0件〕と第7版〔3件とも当たる〕に実際に流して確認。R5 は sandbox の postgres と ubuntu-latest で作れ、監視が失敗しても判定は成り立つ）。条件として付いた文面3点（§14-2 の S3 の書き方／R5 の置き場所と偽 docker への値の渡し方・§13／赤にならなかったときは止まる）は、同じ日に §4-3・§13・§14-2 へ追記済み。
 
 ## 13. 継続（維持の仕組み）
 - 付け忘れ・差し替え漏れ: 守り手: `.github/workflows/migration-test.yml`（S1・S2。PR で `scripts/run_all_migrations.sh`・scripts/migrate_*.py・入口が変わると走る）。
 - 抜き出し範囲（`^SQL_LOCK_TIMEOUT=` 〜 run_sql の閉じ括弧）: 守り手: `tests/sandbox/migration-run-sql-retry.sh` と `tests/sandbox/migration-read-probe.sh`（どちらも抜き出しに失敗すると止まる）。
 - 値の正本: `scripts/run_all_migrations.sh` の SQL_LOCK_TIMEOUT だけ。
 - 移行の範囲（db_migrations と MIGRATION_PATH_PATTERNS）を揃えること: 人手で守る（`scripts/check-process-artifacts.js` :68-73 のコメントが両者を揃えると定めている）。
-- run_sql と run_py の再試行の動き: 守り手: `tests/sandbox/migration-run-sql-retry.sh`（手で起動。run_all_migrations.sh の再試行部分を変える PR で実行し、結果を PR に貼る）。
+- run_sql と run_py の再試行の動き: 守り手: `tests/sandbox/migration-run-sql-retry.sh`（手で起動。run_all_migrations.sh の再試行部分を変える PR で実行し、結果を PR に貼る）。読み取り監視と一緒に動かしたときに戻ること（R5）: 守り手: `tests/sandbox/migration-read-probe.sh`（同じく手で起動）と、PR ごとの S3。
 
 ## 14. 第8版の改訂（第7版の実装が本番で止まった）
 ### 14-1. 事実（2026-10-29）
@@ -194,7 +196,7 @@ PR ごとの静的点検にも1つ足す（第8版）:
 
 ### 14-2. 変更
 - run_py の標準エラーは run_sql（`scripts/run_all_migrations.sh` :84-85 の `2>"${errlog}" || rc=$?` と `cat "${errlog}" >&2`）と同じ形にする。プロセス置換・`$!`・wait を使わない（§4-2）。
-- 試験に R5（読み取り監視を動かしたまま run_py が戻る）と S3（run_py の定義に `$!`・`>(`・`wait` が無い）を足す（§4-3、K5b）。
+- 試験に R5（読み取り監視を動かしたまま run_py が戻る）と S3（抜き出し範囲全体のコメント以外に `$!`・`>(`・`wait` が無い）を足す（§4-3、K5b）。
 - ほかの §4〜§13 は第7版のまま（入口方式・値・再試行・K8/K9 は変えない）。実装は #4861 の差分を入れ直し、run_py の標準エラーの部分と試験だけを変える。
 
 ### 14-3. 選ばなかった案
