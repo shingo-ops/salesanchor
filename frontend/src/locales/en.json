@@ -1176,6 +1176,7 @@
     "messagePlaceholder": "Type a message... (Enter to send, Shift+Enter for new line)",
     "sendDisabled7d": "Messaging window has expired (7 days). Cannot send messages.",
     "discordNotLinked": "Discord not linked",
+    "unnamedLead": "Unnamed lead",
     "discordChannelMissing": "You can reply once the customer opens a ticket",
     "attachImage": "Attach image",
     "dropImageHere": "Drop image here",
@@ -1469,6 +1470,7 @@
       "allCategories": "All TCG series",
       "otherTypes": "Other"
     },
+    "typeSelect": "Type",
     "resetSort": "Reset",
     "offerType": {
       "in_stock": "In stock",
@@ -1544,6 +1546,7 @@
     "sortBy": "Sort by {{col}}",
     "sortMenu": {
       "placeholder": "Sort",
+      "default": "Newest release date (default)",
       "priceAsc": "Price: low to high",
       "stockDesc": "Quantity: high to low",
       "postedDesc": "Newest posts"

@@ -1,0 +1,10 @@
+export default function FixturePage() {
+  return (
+    <div>
+      {/* ui-allow: 見本の確認用 (#1) */}
+      <select>
+        <option value="a">A</option>
+      </select>
+    </div>
+  );
+}

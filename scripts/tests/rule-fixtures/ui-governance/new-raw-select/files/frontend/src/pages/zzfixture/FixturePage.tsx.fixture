@@ -1,0 +1,9 @@
+export default function FixturePage() {
+  return (
+    <div>
+      <select>
+        <option value="a">A</option>
+      </select>
+    </div>
+  );
+}

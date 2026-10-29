@@ -1,0 +1,17 @@
+{
+  "check": "process-artifacts gate",
+  "rules": [],
+  "expect": "pass",
+  "argv": ["node", "scripts/check-process-artifacts.js"],
+  "env": {
+    "MOCK_PR_AUTHOR": "shingo-cc",
+    "MOCK_ORIGIN_MAIN_FILES": "",
+    "PR_NUMBER": "9999",
+    "REPO": "shingo-ops/salesanchor",
+    "HEAD_REF": "release/rule-fixture-sample",
+    "BASE_REF": "main",
+    "BASE_SHA": "{BASE}",
+    "HEAD_SHA": "{HEAD}"
+  },
+  "env_files": {"MOCK_PR_BODY": "pr-body.md"}
+}

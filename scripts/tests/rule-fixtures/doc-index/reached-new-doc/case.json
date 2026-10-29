@@ -1,0 +1,6 @@
+{
+  "check": "doc index reachability",
+  "rules": [],
+  "expect": "pass",
+  "argv": ["python3", "-I", "scripts/ci/check_doc_index.py", "--root", ".", "--strict"]
+}
