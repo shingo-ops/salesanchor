@@ -49,6 +49,9 @@ const setup = async (filters: Record<string, unknown> = { enabled: false, merge_
 };
 const before = (a: HTMLElement, b: HTMLElement) =>
   Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+// Drawer は閉じても中身を DOM に残す（frontend/src/components/Drawer.tsx「DOM は常にマウント」）。
+// 開閉は --open クラスで見る（先例 frontend/src/pages/viewer/InventoryView.test.tsx）
+const openPanel = () => document.querySelector('.comp-drawer-panel--open') as HTMLElement | null;
 
 beforeEach(async () => {
   vi.resetAllMocks();
@@ -122,19 +125,65 @@ describe('InventoryPage toolbar (PC)', () => {
 });
 
 describe('InventoryPage toolbar (mobile)', () => {
-  it('K6: keeps the single-row order and moves condition/range into the detail panel', async () => {
+  it('K6: no ContentToolbar on mobile, shows .inventory-toolbar (search -> type -> sort -> detail filter), hides reset/fresh at top, and moves them (plus condition/range) into the detail panel', async () => {
     stubMatchMedia(true);
     await setup();
-    expect(document.querySelector('.content-toolbar--two-rows')).toBeNull();
+    expect(document.querySelector('.content-toolbar')).toBeNull();
+    expect(document.querySelector('.inventory-toolbar')).not.toBeNull();
+    expect(screen.queryByTestId('inventory-reset-sort')).toBeNull();
+    expect(screen.queryByTestId('inventory-fresh-toggle')).toBeNull();
     expect(screen.queryByTestId('inventory-price-min')).toBeNull();
     expect(screen.queryByTestId('inventory-condition-filter-button')).toBeNull();
-    const order = ['inventory-search', 'inventory-reset-sort', 'inventory-fresh-toggle', 'inventory-sort-menu', 'inventory-filter-toggle']
+    // design.md 4-2: 4つ（検索・種別・並び替え・詳細フィルタ）。並び替えはボタン（select ではない）
+    const order = ['inventory-search', 'inventory-tab-select', 'inventory-sort-menu', 'inventory-filter-toggle']
       .map((id) => screen.getByTestId(id));
     for (let i = 0; i < order.length - 1; i++) expect(before(order[i], order[i + 1])).toBe(true);
+    expect(screen.getByTestId('inventory-sort-menu').tagName).not.toBe('SELECT');
     fireEvent.click(screen.getByTestId('inventory-filter-toggle'));
     const panel = await screen.findByTestId('inventory-filter-panel');
-    for (const id of ['inventory-condition-filter-button', 'inventory-price-min', 'inventory-qty-max']) {
+    for (const id of ['inventory-fresh-check', 'inventory-condition-filter-button', 'inventory-price-min', 'inventory-qty-max', 'inventory-reset-in-panel']) {
       expect(panel.contains(screen.getByTestId(id))).toBe(true);
     }
+    // 注記（design.md 4-5）: 詳細フィルタの中で全文読める（上には存在しない）
+    expect(panel.contains(screen.getByTestId('inventory-expiry-warning'))).toBe(true);
+  });
+
+  it('K7 (design.md 4-2・K4): tapping inventory-tab-select opens a panel; picking a type applies it and closes; picking the same type again also closes', async () => {
+    stubMatchMedia(true);
+    await setup();
+    expect(openPanel()).toBeNull();
+    fireEvent.click(screen.getByTestId('inventory-tab-select'));
+    const panel = openPanel();
+    expect(panel).not.toBeNull();
+    const option = screen.getByTestId('inventory-type-option-one_piece');
+    expect(panel?.contains(option)).toBe(true);
+    fireEvent.click(option);
+    await waitFor(() => expect(lastCall()).toContain('work_code=one_piece'));
+    expect(openPanel()).toBeNull();
+
+    // すでに選ばれている行をもう一度押しても閉じる（K4）
+    fireEvent.click(screen.getByTestId('inventory-tab-select'));
+    expect(openPanel()).not.toBeNull();
+    fireEvent.click(screen.getByTestId('inventory-type-option-one_piece'));
+    expect(openPanel()).toBeNull();
+  });
+
+  it('K8 (design.md 4-2・K6): tapping inventory-sort-menu opens a panel; a non-default pick shows its label, then "default" reverts to the placeholder', async () => {
+    stubMatchMedia(true);
+    await setup();
+    const sortTrigger = screen.getByTestId('inventory-sort-menu');
+    fireEvent.click(sortTrigger);
+    expect(openPanel()?.contains(screen.getByTestId('inventory-sort-option-unit_price:asc'))).toBe(true);
+    fireEvent.click(screen.getByTestId('inventory-sort-option-unit_price:asc'));
+    await waitFor(() => expect(lastCall()).toContain('sort=unit_price'));
+    expect(openPanel()).toBeNull();
+    expect(screen.getByTestId('inventory-sort-menu').textContent).toContain(en.inventory.sortMenu.priceAsc);
+
+    fireEvent.click(screen.getByTestId('inventory-sort-menu'));
+    expect(openPanel()).not.toBeNull();
+    fireEvent.click(screen.getByTestId('inventory-sort-option-release_date:desc'));
+    await waitFor(() => expect(lastCall()).toContain('sort=release_date'));
+    expect(openPanel()).toBeNull();
+    expect(screen.getByTestId('inventory-sort-menu').textContent).toContain(en.inventory.sortMenu.placeholder);
   });
 });

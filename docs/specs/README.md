@@ -47,6 +47,7 @@
 | ├ 状態マスタ（condition） | （作成予定） | 未 | 状態マスタを作る・変える前（仕様書はまだ無い） |
 | └ 単位マスタ（unit） | （作成予定） | 未 | 単位マスタを作る・変える前（仕様書はまだ無い） |
 | 取引フロー（lead→deal→company→order・SSOT） | [transaction-flow/README.md](transaction-flow/README.md) | KGI承認済 2026-07-02 | 引き合い・商談・会社・注文のつながりを変える前 |
+| リードをまとめる（lead-merge。取引フローの子。13表の付け替え・空欄だけ埋める・受信箱カルテの「⋯」から） | [transaction-flow/lead-merge/README.md](transaction-flow/lead-merge/README.md)（関連: ADR-1049, 119） | あるべき姿=PO発言転記・設計審査済み 2026-10-28 | 同じお客さまの2件のリードをまとめる機能を変える前 |
 | DB設計のSSOT化（db-ssot。同じ事実は1か所・データ分散防止。会話/予測値/金額/分類の重複解消） | [db-ssot/README.md](db-ssot/README.md) | あるべき姿・KGI確定 2026-07-09 | DB に表・列を足す・変える前 |
 | 文書体系（ナレッジベース） | [doc-estate/README.md](./doc-estate/README.md) | KGI承認済 | docs/ の文書の置き場所を決める前 |
 | 教訓の1便1ファイル化（lessons-guard。design-partner.md §6追記衝突の根絶） | [lessons-guard/README.md](./lessons-guard/README.md) | 設計中 | 教訓メモを書く・清書する前 |

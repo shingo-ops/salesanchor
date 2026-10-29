@@ -1,0 +1,6 @@
+router = APIRouter()
+
+
+@router.get("/zzfixture/unused")
+async def unused():
+    return {"ok": True}

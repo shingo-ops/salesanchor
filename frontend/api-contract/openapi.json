@@ -14761,6 +14761,53 @@
         "title": "LeadCustomerType",
         "type": "string"
       },
+      "LeadMergeFill": {
+        "description": "統合の下見: 空欄に入る項目（ADR-1049）",
+        "properties": {
+          "current": {
+            "description": "残す方の今の値（空欄）",
+            "title": "Current"
+          },
+          "field": {
+            "title": "Field",
+            "type": "string"
+          },
+          "new": {
+            "description": "入る値",
+            "title": "New"
+          }
+        },
+        "required": [
+          "field"
+        ],
+        "title": "LeadMergeFill",
+        "type": "object"
+      },
+      "LeadMergePreview": {
+        "description": "POST /leads/{master_id}/merge/preview レスポンス（書き込みなし）",
+        "properties": {
+          "fills": {
+            "items": {
+              "$ref": "#/components/schemas/LeadMergeFill"
+            },
+            "title": "Fills",
+            "type": "array"
+          },
+          "tables": {
+            "items": {
+              "$ref": "#/components/schemas/LeadMergeTableCount"
+            },
+            "title": "Tables",
+            "type": "array"
+          }
+        },
+        "required": [
+          "tables",
+          "fills"
+        ],
+        "title": "LeadMergePreview",
+        "type": "object"
+      },
       "LeadMergeRequest": {
         "properties": {
           "loser_id": {
@@ -14785,6 +14832,32 @@
           "loser_id"
         ],
         "title": "LeadMergeRequest",
+        "type": "object"
+      },
+      "LeadMergeTableCount": {
+        "description": "統合の下見: 表ごとの件数（ADR-1049）",
+        "properties": {
+          "deleted": {
+            "description": "一意の決まりで消える、消す方の件数",
+            "title": "Deleted",
+            "type": "integer"
+          },
+          "moved": {
+            "description": "残す方へ付け替わる件数",
+            "title": "Moved",
+            "type": "integer"
+          },
+          "table": {
+            "title": "Table",
+            "type": "string"
+          }
+        },
+        "required": [
+          "table",
+          "moved",
+          "deleted"
+        ],
+        "title": "LeadMergeTableCount",
         "type": "object"
       },
       "LeadResponse": {
@@ -47675,7 +47748,7 @@
     },
     "/api/v1/leads/{master_id}/merge": {
       "post": {
-        "description": "リードの重複統合（loser → master へ全副テーブルを付け替え、loser を削除）。\n\n認可: `leads.delete` 権限が必要（統合は実質 loser の DELETE を含むため）。\n\nguard（v1）:\n    loser.status != 'lead' → 400 ブロック。\n    master の状態は許可。\n\n処理順序（同一トランザクション）:\n  1. master / loser を FOR UPDATE ロック（昇順 ID・デッドロック防止）\n  2. guard チェック\n  3. loser の lead_channels 行を補完（lead_channels から gap 分を拾う）\n  4. FK 付け替え: companies / contacts の lead_id → master\n  5. meta_messages の lead_id → master（SET NULL 任せにしない・履歴保持）\n  6. lead_channels の lead_id → master（重複は DO NOTHING で吸収）\n  7. loser 削除\n  8. 監査ログ 2 件",
+        "description": "リードの重複統合（loser → master へ 13 表を付け替え、空欄を埋め、loser を削除）。\n\n認可: `leads.delete` 権限が必要（統合は実質 loser の DELETE を含むため）。\n\nguard: loser.status != 'lead' → 400。master の状態は許可。\n\n処理順序（同一トランザクション。ADR-1049）:\n  1. master / loser を FOR UPDATE ロック（昇順 ID・デッドロック防止）と guard\n  2. 計画を作る（付け替え件数・一意の決まりで消す件数・埋まる項目）\n  3. 一意の決まりがある表の loser 側の重複を消す\n  4. 13 表の lead_id を master へ付け替える\n  5. master の空欄を loser の値で埋める（master に値があれば変えない）\n  6. loser 削除\n  7. 監査ログ 2 件 → commit → 知らせ",
         "operationId": "merge_leads_api_v1_leads__master_id__merge_post",
         "parameters": [
           {
@@ -47726,6 +47799,64 @@
           }
         ],
         "summary": "Merge Leads",
+        "tags": [
+          "leads"
+        ]
+      }
+    },
+    "/api/v1/leads/{master_id}/merge/preview": {
+      "post": {
+        "description": "統合の下見（書き込まない）。統合と同じ計画の関数を使い、件数と埋まる項目を返す。",
+        "operationId": "preview_merge_leads_api_v1_leads__master_id__merge_preview_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "master_id",
+            "required": true,
+            "schema": {
+              "title": "Master Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LeadMergeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeadMergePreview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Preview Merge Leads",
         "tags": [
           "leads"
         ]

@@ -46,6 +46,7 @@ export default function InboxPage() {
     handleConvertLead, handleCreateInvoice,
     showConvertModal, convertAssigneeOptions, convertAssigneeLoading, convertAssigneeError,
     convertSaving, convertError, handleCancelConvert, handleConfirmConvert,
+    handleLeadMerged,
     karteTab, setKarteTab,
     selectedConversation, avatarErrors, handleAvatarError,
   } = state;
@@ -264,6 +265,7 @@ export default function InboxPage() {
             convertError={convertError}
             handleCancelConvert={handleCancelConvert}
             handleConfirmConvert={handleConfirmConvert}
+            handleLeadMerged={handleLeadMerged}
           />
         </div>
       </PageLayout>

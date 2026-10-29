@@ -8,7 +8,7 @@
  *   - 表示する列（列トグル）
  *   - 表示条件: 形態 / 在庫・予約 の複数選択（包含フィルタ）
  */
-import type { Dispatch, SetStateAction } from "react";
+import type { Dispatch, ReactNode, SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/Button";
 import { ContentToolbarRange } from "../../components/ContentToolbar";
@@ -47,7 +47,14 @@ interface Props {
   setPriceMin: (v: string) => void;
   priceMax: string;
   setPriceMax: (v: string) => void;
+  /** スマホだけ true: パネルの先頭に「24時間以内」、末尾に「リセット」を出す（design.md 4-6） */
+  freshOnly: boolean;
+  onFreshToggle: () => void;
+  freshWindowHours: number | undefined;
+  onReset: () => void;
   onClose: () => void;
+  /** スマホだけ: 上部（Tabs の end）から移した注記（design.md 4-5）。showSupplierSelect が真のときだけ出す */
+  notice?: ReactNode;
 }
 
 export default function InventoryFilterPanel({
@@ -81,7 +88,12 @@ export default function InventoryFilterPanel({
   setPriceMin,
   priceMax,
   setPriceMax,
+  freshOnly,
+  onFreshToggle,
+  freshWindowHours,
+  onReset,
   onClose,
+  notice,
 }: Props) {
   const { t } = useTranslation();
 
@@ -115,6 +127,24 @@ export default function InventoryFilterPanel({
         maxWidth: "44rem",
       }}
     >
+      {/* スマホだけ: 上部から移した「24時間以内」をパネルの先頭に（design.md 4-6） */}
+      {showSupplierSelect && (
+        <Checkbox
+          label={
+            freshWindowHours === undefined
+              ? t("inventory.view.freshOnly", { hours: "" })
+              : t("inventory.view.freshOnly", { hours: freshWindowHours })
+          }
+          data-testid="inventory-fresh-check"
+          className="inventory-fresh-check"
+          checked={freshOnly}
+          onChange={onFreshToggle}
+        />
+      )}
+      {/* 注記（design.md 4-5）: 便1 で先頭に置いた「24時間以内」のすぐ下に出す。showSupplierSelect
+          （＝スマホ）のときだけ。PC は Tabs の end のまま（InventoryPage.tsx）。 */}
+      {showSupplierSelect && notice}
+
       {showSupplierSelect && (
         <MultiSelect
           testId="inventory-supplier-filter"
@@ -271,6 +301,15 @@ export default function InventoryFilterPanel({
           </div>
         </div>
       </div>
+
+      {/* スマホだけ: 上部から移した「リセット」をパネルの末尾（「閉じる」の直前）に（design.md 4-6） */}
+      {showSupplierSelect && (
+        <div>
+          <Button variant="secondary" size="sm" type="button" data-testid="inventory-reset-in-panel" onClick={onReset}>
+            {t("inventory.resetSort")}
+          </Button>
+        </div>
+      )}
 
       <div>
         <Button variant="secondary" size="sm" type="button" onClick={onClose}>

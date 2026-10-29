@@ -1176,6 +1176,7 @@
     "messagePlaceholder": "メッセージを入力... (Enterで送信、Shift+Enterで改行)",
     "sendDisabled7d": "メッセージウィンドウが期限切れ（7日）。メッセージを送信できません。",
     "discordNotLinked": "Discord未連携",
+    "unnamedLead": "名前の無いリード",
     "discordChannelMissing": "顧客がチケットを開くと返信できます",
     "attachImage": "画像を添付",
     "dropImageHere": "ここに画像をドロップ",
@@ -1469,6 +1470,7 @@
       "allCategories": "全TCGシリーズ",
       "otherTypes": "その他"
     },
+    "typeSelect": "種別",
     "resetSort": "リセット",
     "offerType": {
       "in_stock": "在庫",
@@ -1544,6 +1546,7 @@
     "sortBy": "{{col}}で並べ替え",
     "sortMenu": {
       "placeholder": "並び替え",
+      "default": "発売日が新しい順（既定）",
       "priceAsc": "価格が安い順",
       "stockDesc": "在庫が多い順",
       "postedDesc": "投稿が新しい"
@@ -1560,6 +1563,7 @@
     },
     "filterPanel": {
       "button": "詳細フィルタ",
+      "buttonWithCount": "詳細フィルタ ({{count}})",
       "enable": "フィルタを有効化（自分用の表示設定を適用）",
       "categories": "TCGシリーズの表示／非表示",
       "columns": "表示する列",
@@ -2330,25 +2334,48 @@
     "reasonTitle": "マージ理由"
   },
   "mergeLead": {
-    "title": "リードを統合",
-    "sourceDesc": "「{{name}}」（{{code}}）を別のリードに吸収させます。",
-    "selectMaster": "統合先（残す側）のリードを選択",
-    "searchPlaceholder": "顧客名 / リードコードで絞り込み（サーバー検索）",
-    "resultsCapped": "候補が{{count}}件に達しました。目的のリードが下のリストに無い場合は、顧客名 / コードで絞り込んでください。",
+    "title": "リードをまとめる",
+    "sourceDesc": "「{{name}}」を別のリードに統合しますか？",
+    "selectMaster": "残す方のリードを選んでください",
+    "searchPlaceholder": "名前で探す",
+    "resultsCapped": "候補が{{count}}件に達しました。目的のリードが下のリストに無い場合は、名前で絞り込んでください。",
     "noResults": "該当するリードがありません",
-    "reasonLabel": "統合理由（任意 / audit_logs に記録）",
+    "reasonLabel": "まとめる理由（任意・記録に残ります）",
     "reasonPlaceholder": "例: Discord の新規受信を既存顧客に紐づけ",
-    "nextStep": "次へ（統合内容を確認）",
-    "confirmWarning": "確認: この操作は取り消せません",
-    "confirmDesc1": "「{{sourceName}}」（{{sourceCode}}）に紐づくメッセージ・チャンネル情報が全て「{{masterName}}」（{{masterCode}}）に付け替えられます。",
-    "confirmDesc2": "「{{sourceName}}」のリードレコードは削除されます。",
-    "confirmDesc3": "監査ログ (audit_logs) に操作内容が記録されます。",
-    "executeLabel": "「{{masterName}}」へ統合を実行",
-    "col_code": "コード",
-    "col_name": "顧客名",
-    "col_status": "ステータス",
+    "nextStep": "次へ",
+    "confirmTitle": "「{{sourceName}}」を「{{masterName}}」に統合しますか？",
+    "confirmWarning": "元に戻せません。「{{sourceName}}」は一覧から消えます。",
+    "executeLabel": "統合する",
     "reasonTitle": "統合理由",
-    "convertedError": "成約済みのリードは「消す側」にできません。残す側に指定してください。"
+    "convertedError": "成約済みのリードは「消す側」にできません。残す側に指定してください。",
+    "menuLabel": "ほかのリードとまとめる",
+    "movedTitle": "移るもの",
+    "movedItem": "{{name}} {{count}}件",
+    "nothingToMove": "移るものはありません",
+    "listSeparator": "・",
+    "filledItem": "{{field}} {{value}}",
+    "filledTitle": "空いている欄に入るもの",
+    "nothingToFill": "埋まる欄はありません",
+    "previewError": "中身を確かめられませんでした。もう一度お試しください。",
+    "tables": {
+      "companies": "会社",
+      "contacts": "担当者",
+      "meta_messages": "メッセージ",
+      "lead_channels": "窓口",
+      "conversation_logs": "会話の記録",
+      "quotes": "見積",
+      "deal_close_reasons": "成約・失注の理由",
+      "lead_attachments": "添付ファイル",
+      "lead_sales_form_selections": "販売形態の選択",
+      "message_labels": "メッセージの分類",
+      "customer_scores": "顧客スコア",
+      "outbound_translation_drafts": "翻訳の下書き",
+      "registration_tokens": "登録リンク"
+    },
+    "fields": {
+      "assigned_to": "担当者",
+      "discord_id": "Discord ID"
+    }
   },
   "mergeContact": {
     "title": "担当者を統合",

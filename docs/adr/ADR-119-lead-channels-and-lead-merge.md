@@ -1,6 +1,6 @@
 # ADR-119: lead_channels テーブル + リード統合エンドポイント
 
-**Status**: Accepted（実装中）
+**Status**: Accepted（2026-10-28 に統合の付け替え表・loser の条件・lead_channels を書く経路を改めた: Amended by ADR-1049 → [ADR-1049](ADR-1049-lead-merge-all-tables-and-fill-blanks.md)）
 **Date**: 2026-06-07
 **Author**: Hikky-dev
 **PO**: shingo-ops

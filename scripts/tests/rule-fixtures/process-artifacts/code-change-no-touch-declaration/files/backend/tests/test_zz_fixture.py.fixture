@@ -1,0 +1,2 @@
+def test_zz_fixture():
+    assert True

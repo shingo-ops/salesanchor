@@ -17,9 +17,10 @@ import logging
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import Optional
+from typing import NamedTuple, Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -27,7 +28,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.dependencies import (
     get_current_tenant,
     get_current_user,
+    is_postgresql,
     require_permission,
+    reset_tenant_context,
     tenant_table_ref,
 )
 from app.cache import invalidate_dashboard_cache
@@ -36,6 +39,7 @@ from app.models import User
 from app.schemas.lead import (
     LeadConvertRequest,
     LeadCreate,
+    LeadMergePreview,
     LeadResponse,
     LeadStatsResponse,
     LeadStatus,
@@ -2979,13 +2983,243 @@ async def stream_leads_updates(
 
 
 # ---------------------------------------------------------------------------
-# ADR-119: リード統合（merge）エンドポイント
+# ADR-119 / ADR-1049: リード統合（merge）エンドポイント
 # ---------------------------------------------------------------------------
 
 
 class LeadMergeRequest(BaseModel):
     loser_id: int = Field(..., description="吸収されて削除される側のリード ID")
     reason: Optional[str] = Field(None, description="統合の理由（audit_logs に記録）")
+
+
+class _MergeTable(NamedTuple):
+    """統合で lead_id を付け替える表 1 つ分の定義。
+
+    schema: "tenant"（テナントスキーマ）か "public"
+    unique: 一意の決まりの種類（None / "channel" / "pair" / "single"）
+    dup_sql: 一意の決まりで loser 側を消す条件（loser 行 = l、master 行 = m の別名）
+    tenant_scoped: public の表で tenant_id も条件に入れるか
+    """
+
+    name: str
+    schema: str
+    unique: Optional[str] = None
+    dup_sql: Optional[str] = None
+    tenant_scoped: bool = False
+
+
+# 13 表の一覧（計画・実行・試験が同じ定数を読む。ADR-1049）
+LEAD_MERGE_TABLES: tuple[_MergeTable, ...] = (
+    _MergeTable("companies", "tenant"),
+    _MergeTable("contacts", "tenant"),
+    _MergeTable("meta_messages", "tenant"),
+    _MergeTable(
+        "lead_channels", "tenant", "channel",
+        "m.platform = l.platform AND m.external_id = l.external_id",
+    ),
+    _MergeTable("conversation_logs", "tenant"),
+    _MergeTable("quotes", "tenant"),
+    _MergeTable("deal_close_reasons", "tenant", "pair", "m.reason_id = l.reason_id"),
+    _MergeTable("lead_attachments", "tenant"),
+    _MergeTable("lead_sales_form_selections", "tenant", "pair", "m.option_id = l.option_id"),
+    _MergeTable("message_labels", "tenant"),
+    _MergeTable("customer_scores", "tenant", "single", "TRUE"),
+    _MergeTable("outbound_translation_drafts", "tenant"),
+    _MergeTable("registration_tokens", "public", tenant_scoped=True),
+)
+
+# 空欄埋めの対象外（状態と見込度ランクは統合で変えない）
+_MERGE_FILL_EXCLUDED = {"status", "prospect_rank"}
+_MERGE_FILL_COLUMNS = tuple(sorted(_UPDATABLE_COLUMNS - _MERGE_FILL_EXCLUDED))
+
+
+def _merge_is_blank(value) -> bool:
+    """NULL・空文字（空白のみを含む）・空の配列を「空欄」とみなす。"""
+    if value is None:
+        return True
+    if isinstance(value, str):
+        return value.strip() == ""
+    if isinstance(value, (list, tuple, set, dict)):
+        return len(value) == 0
+    return False
+
+
+def _merge_table_ref(db: AsyncSession, tenant_id: int, spec: _MergeTable) -> str:
+    if spec.schema == "public":
+        return f"public.{spec.name}" if is_postgresql(db) else spec.name
+    return tenant_table_ref(db, tenant_id, spec.name)
+
+
+def _merge_scope_sql(spec: _MergeTable, alias: str) -> str:
+    return f" AND {alias}.tenant_id = :tenant_id" if spec.tenant_scoped else ""
+
+
+def _merge_dup_where(spec: _MergeTable, table_ref: str) -> str:
+    """一意の決まりで消す loser 行の条件（"l" が loser 行）。無ければ空文字。"""
+    if not spec.unique:
+        return ""
+    return (
+        " AND EXISTS (SELECT 1 FROM " + table_ref + " m WHERE m.lead_id = :master"
+        + _merge_scope_sql(spec, "m") + " AND " + str(spec.dup_sql) + ")"
+    )
+
+
+async def _load_merge_pair(
+    db: AsyncSession, tenant_id: int, master_id: int, loser_id: int, *, lock: bool
+):
+    """master / loser を読み、入力の検査を行う（自分自身・無い番号・loser が lead でない）。"""
+    if master_id == loser_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="master_id と loser_id が同じです。自己マージはできません。",
+        )
+    leads_t = tenant_table_ref(db, tenant_id, "leads")
+    low_id, high_id = min(master_id, loser_id), max(master_id, loser_id)
+    suffix = "FOR UPDATE" if lock else ""
+    res = await db.execute(
+        text(f"""
+            SELECT {_LEAD_COLUMNS}
+            FROM {leads_t}
+            WHERE id IN (:id1, :id2) AND tenant_id = :tenant_id
+            ORDER BY id
+            {suffix}
+        """),
+        {"id1": low_id, "id2": high_id, "tenant_id": tenant_id},
+    )
+    rows_by_id = {r["id"]: r for r in res.mappings().all()}
+    master_row = rows_by_id.get(master_id)
+    loser_row = rows_by_id.get(loser_id)
+    if not master_row:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"master リード (id={master_id}) が見つかりません",
+        )
+    if not loser_row:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"loser リード (id={loser_id}) が見つかりません",
+        )
+    if loser_row["status"] != "lead":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"loser リード (id={loser_id}) は統合できない状態です（status={loser_row['status']}）。"
+                "lead 状態以外のリードを loser にすることはサポートしていません。"
+            ),
+        )
+    return master_row, loser_row
+
+
+async def _plan_lead_merge(
+    db: AsyncSession, tenant_id: int, master_row, loser_row
+) -> dict:
+    """統合の計画（書き込まない）。
+
+    返す形:
+      tables: [{table, moved, deleted}]  moved = 付け替わる件数、deleted = 一意の決まりで消える loser 側の件数
+      fills:  [{field, current, new}]    master が空欄で loser に値がある項目
+    """
+    params = {"master": master_row["id"], "loser": loser_row["id"], "tenant_id": tenant_id}
+    tables = []
+    for spec in LEAD_MERGE_TABLES:
+        ref = _merge_table_ref(db, tenant_id, spec)
+        total = (await db.execute(
+            text(f"SELECT count(*) FROM {ref} l WHERE l.lead_id = :loser" + _merge_scope_sql(spec, "l")),
+            params,
+        )).scalar_one()
+        deleted = 0
+        if spec.unique:
+            deleted = (await db.execute(
+                text(
+                    f"SELECT count(*) FROM {ref} l WHERE l.lead_id = :loser"
+                    + _merge_scope_sql(spec, "l") + _merge_dup_where(spec, ref)
+                ),
+                params,
+            )).scalar_one()
+        tables.append({"table": spec.name, "moved": int(total) - int(deleted), "deleted": int(deleted)})
+
+    fills = []
+    for col in _MERGE_FILL_COLUMNS:
+        if _merge_is_blank(master_row[col]) and not _merge_is_blank(loser_row[col]):
+            fills.append({"field": col, "current": master_row[col], "new": loser_row[col]})
+    return {"tables": tables, "fills": fills}
+
+
+async def _execute_lead_merge(
+    db: AsyncSession, tenant_id: int, master_row, loser_row, plan: dict
+) -> dict:
+    """計画を実行する。順番: 重複を消す → 13 表を付け替える → 空欄を埋める → loser を消す。"""
+    params = {"master": master_row["id"], "loser": loser_row["id"], "tenant_id": tenant_id}
+    moved: dict[str, int] = {}
+    deleted: dict[str, int] = {}
+    deleted_rows: dict[str, list[dict]] = {}
+
+    for spec in LEAD_MERGE_TABLES:
+        if not spec.unique:
+            deleted[spec.name] = 0
+            continue
+        ref = _merge_table_ref(db, tenant_id, spec)
+        where = " WHERE l.lead_id = :loser" + _merge_scope_sql(spec, "l") + _merge_dup_where(spec, ref)
+        # 手で戻すときの材料: 消す前に行の全項目を取る（監査ログへ入れる）
+        rows = (await db.execute(text(f"SELECT l.* FROM {ref} AS l{where}"), params)).mappings().all()
+        if rows:
+            deleted_rows[spec.name] = [jsonable_encoder(dict(r)) for r in rows]
+        deleted[spec.name] = (await db.execute(
+            text(f"DELETE FROM {ref} AS l{where}"),
+            params,
+        )).rowcount or 0
+
+    for spec in LEAD_MERGE_TABLES:
+        ref = _merge_table_ref(db, tenant_id, spec)
+        scope = " AND tenant_id = :tenant_id" if spec.tenant_scoped else ""
+        moved[spec.name] = (await db.execute(
+            text(f"UPDATE {ref} SET lead_id = :master WHERE lead_id = :loser{scope}"),
+            params,
+        )).rowcount or 0
+
+    leads_t = tenant_table_ref(db, tenant_id, "leads")
+    filled_fields = [f["field"] for f in plan["fills"]]
+    if filled_fields:
+        sets = ", ".join(f"{c} = :fill_{c}" for c in filled_fields)
+        fill_params = {f"fill_{f['field']}": f["new"] for f in plan["fills"]}
+        await db.execute(
+            text(
+                f"UPDATE {leads_t} SET {sets}, updated_at = NOW() "
+                "WHERE id = :master AND tenant_id = :tenant_id"
+            ),
+            {**fill_params, "master": master_row["id"], "tenant_id": tenant_id},
+        )
+
+    await db.execute(
+        text(f"DELETE FROM {leads_t} WHERE id = :loser AND tenant_id = :tenant_id"),
+        {"loser": loser_row["id"], "tenant_id": tenant_id},
+    )
+    return {
+        "moved": moved,
+        "deleted": deleted,
+        "deleted_rows": deleted_rows,
+        "filled_fields": filled_fields,
+    }
+
+
+@router.post(
+    "/leads/{master_id}/merge/preview",
+    response_model=LeadMergePreview,
+    dependencies=[Depends(require_permission("leads.delete"))],
+)
+async def preview_merge_leads(
+    master_id: int,
+    body: LeadMergeRequest,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),
+):
+    """統合の下見（書き込まない）。統合と同じ計画の関数を使い、件数と埋まる項目を返す。"""
+    master_row, loser_row = await _load_merge_pair(
+        db, tenant_id, master_id, body.loser_id, lock=False
+    )
+    plan = await _plan_lead_merge(db, tenant_id, master_row, loser_row)
+    return LeadMergePreview(**jsonable_encoder(plan))
 
 
 @router.post(
@@ -3000,145 +3234,45 @@ async def merge_leads(
     tenant_id: int = Depends(get_current_tenant),
     current_user: User = Depends(get_current_user),
 ):
-    """リードの重複統合（loser → master へ全副テーブルを付け替え、loser を削除）。
+    """リードの重複統合（loser → master へ 13 表を付け替え、空欄を埋め、loser を削除）。
 
     認可: `leads.delete` 権限が必要（統合は実質 loser の DELETE を含むため）。
 
-    guard（v1）:
-        loser.status != 'lead' → 400 ブロック。
-        master の状態は許可。
+    guard: loser.status != 'lead' → 400。master の状態は許可。
 
-    処理順序（同一トランザクション）:
-      1. master / loser を FOR UPDATE ロック（昇順 ID・デッドロック防止）
-      2. guard チェック
-      3. loser の lead_channels 行を補完（lead_channels から gap 分を拾う）
-      4. FK 付け替え: companies / contacts の lead_id → master
-      5. meta_messages の lead_id → master（SET NULL 任せにしない・履歴保持）
-      6. lead_channels の lead_id → master（重複は DO NOTHING で吸収）
-      7. loser 削除
-      8. 監査ログ 2 件
+    処理順序（同一トランザクション。ADR-1049）:
+      1. master / loser を FOR UPDATE ロック（昇順 ID・デッドロック防止）と guard
+      2. 計画を作る（付け替え件数・一意の決まりで消す件数・埋まる項目）
+      3. 一意の決まりがある表の loser 側の重複を消す
+      4. 13 表の lead_id を master へ付け替える
+      5. master の空欄を loser の値で埋める（master に値があれば変えない）
+      6. loser 削除
+      7. 監査ログ 2 件 → commit → 知らせ
     """
     loser_id = body.loser_id
-
-    if master_id == loser_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="master_id と loser_id が同じです。自己マージはできません。",
-        )
+    master_row, loser_row = await _load_merge_pair(db, tenant_id, master_id, loser_id, lock=True)
+    plan = await _plan_lead_merge(db, tenant_id, master_row, loser_row)
+    result = await _execute_lead_merge(db, tenant_id, master_row, loser_row, plan)
+    moved = result["moved"]
 
     leads_t = tenant_table_ref(db, tenant_id, "leads")
-    lc_t = tenant_table_ref(db, tenant_id, "lead_channels")
-    mm_t = tenant_table_ref(db, tenant_id, "meta_messages")
-    co_t = tenant_table_ref(db, tenant_id, "companies")
-    ct_t = tenant_table_ref(db, tenant_id, "contacts")
-
-    # 1) master / loser を昇順 FOR UPDATE ロック（デッドロック防止）
-    low_id, high_id = min(master_id, loser_id), max(master_id, loser_id)
-    locked_res = await db.execute(
-        text(f"""
-            SELECT {_LEAD_COLUMNS}
-            FROM {leads_t}
-            WHERE id IN (:id1, :id2) AND tenant_id = :tenant_id
-            ORDER BY id
-            FOR UPDATE
-        """),
-        {"id1": low_id, "id2": high_id, "tenant_id": tenant_id},
-    )
-    locked_rows = locked_res.mappings().all()
-    rows_by_id = {r["id"]: r for r in locked_rows}
-    master_row = rows_by_id.get(master_id)
-    loser_row = rows_by_id.get(loser_id)
-
-    if not master_row:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"master リード (id={master_id}) が見つかりません",
-        )
-    if not loser_row:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"loser リード (id={loser_id}) が見つかりません",
-        )
-
-    # 2) guard: lead 状態以外の loser は統合しない
-    if loser_row["status"] != "lead":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=(
-                f"loser リード (id={loser_id}) は統合できない状態です（status={loser_row['status']}）。"
-                "lead 状態以外のリードを loser にすることはサポートしていません。"
-            ),
-        )
-
-    # 3) FK 付け替え: companies / contacts（NO ON DELETE のため先に付け替え）
-    reassigned_companies = (await db.execute(
-        text(f"UPDATE {co_t} SET lead_id = :master WHERE lead_id = :loser"),
-        {"master": master_id, "loser": loser_id},
-    )).rowcount or 0
-
-    reassigned_contacts = (await db.execute(
-        text(f"UPDATE {ct_t} SET lead_id = :master WHERE lead_id = :loser"),
-        {"master": master_id, "loser": loser_id},
-    )).rowcount or 0
-
-    # 5) meta_messages を明示的に master へ付け替え（ON DELETE SET NULL に委ねず履歴保持）
-    reassigned_messages = (await db.execute(
-        text(f"UPDATE {mm_t} SET lead_id = :master WHERE lead_id = :loser"),
-        {"master": master_id, "loser": loser_id},
-    )).rowcount or 0
-
-    # 6) lead_channels を master へ再ポイント
-    #    UNIQUE (platform, external_id) 制約があるため、master 側に既に同一チャンネルが
-    #    あれば DO NOTHING で loser 側を捨てる（同一チャンネルは 1 lead に紐づく）。
-    #    PostgreSQL では ON CONFLICT ... DO NOTHING でも rowcount は 0 になるため、
-    #    重複チャンネルは先に削除してから付け替える。
-    dup_channels_res = await db.execute(
-        text(f"""
-            SELECT lc_loser.id
-            FROM {lc_t} lc_loser
-            WHERE lc_loser.lead_id = :loser
-              AND EXISTS (
-                  SELECT 1 FROM {lc_t} lc_master
-                  WHERE lc_master.lead_id = :master
-                    AND lc_master.platform = lc_loser.platform
-                    AND lc_master.external_id = lc_loser.external_id
-              )
-        """),
-        {"loser": loser_id, "master": master_id},
-    )
-    dup_channel_ids = [r[0] for r in dup_channels_res.fetchall()]
-    if dup_channel_ids:
-        await db.execute(
-            text(f"DELETE FROM {lc_t} WHERE id = ANY(:ids)"),
-            {"ids": dup_channel_ids},
-        )
-
-    reassigned_channels = (await db.execute(
-        text(f"UPDATE {lc_t} SET lead_id = :master WHERE lead_id = :loser"),
-        {"master": master_id, "loser": loser_id},
-    )).rowcount or 0
-
-    # 7) loser 削除（status が lead であることを guard 済み）
-    await db.execute(
-        text(f"DELETE FROM {leads_t} WHERE id = :loser AND tenant_id = :tenant_id"),
-        {"loser": loser_id, "tenant_id": tenant_id},
-    )
-
-    # master の最新状態を取得
     updated_res = await db.execute(
         text(f"SELECT {_LEAD_COLUMNS} FROM {leads_t} WHERE id = :id AND tenant_id = :tid"),
         {"id": master_id, "tid": tenant_id},
     )
     master_updated = updated_res.mappings().first()
 
-    # 8) 監査ログ 2 件
     merge_summary = {
         "loser_id": loser_id,
         "loser_customer_name": loser_row["customer_name"],
-        "reassigned_companies": reassigned_companies,
-        "reassigned_contacts": reassigned_contacts,
-        "reassigned_messages": reassigned_messages,
-        "reassigned_channels": reassigned_channels,
+        "reassigned_companies": moved["companies"],
+        "reassigned_contacts": moved["contacts"],
+        "reassigned_messages": moved["meta_messages"],
+        "reassigned_channels": moved["lead_channels"],
+        "reassigned_tables": moved,
+        "deleted_duplicates": result["deleted"],
+        "deleted_rows": result["deleted_rows"],
+        "filled_fields": result["filled_fields"],
         "reason": body.reason,
     }
     await record_audit_log(
@@ -3155,14 +3289,17 @@ async def merge_leads(
     )
 
     await db.commit()
+    await reset_tenant_context(db, tenant_id)
     await invalidate_dashboard_cache(tenant_id)
+    try:
+        from app.services.sse_pubsub import publish_leads_update
+        await publish_leads_update(tenant_id)
+    except Exception:
+        logging.warning("[Leads] SSE publish 失敗（リード統合継続）: tenant_id=%s", tenant_id)
 
     logger.info(
-        "[merge_leads] tenant=%d master=%d ← loser=%d "
-        "(companies=%d contacts=%d messages=%d channels=%d)",
-        tenant_id, master_id, loser_id,
-        reassigned_companies, reassigned_contacts,
-        reassigned_messages, reassigned_channels,
+        "[merge_leads] tenant=%d master=%d ← loser=%d moved=%s deleted=%s filled=%s",
+        tenant_id, master_id, loser_id, moved, result["deleted"], result["filled_fields"],
     )
 
     return LeadResponse(**master_updated)
