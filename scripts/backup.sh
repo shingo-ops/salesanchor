@@ -12,21 +12,49 @@
 set -euo pipefail
 
 DATE=$(date +%Y%m%d_%H%M%S)
-BACKUP_DIR="/home/ubuntu/backups/postgres"
-COMPOSE_FILE="/home/ubuntu/salesanchor/docker-compose.yml"
+# 保存先と compose ファイルは試験のために外から変えられる（本番の cron・本番反映は渡さないので既定値のまま）
+BACKUP_DIR="${SALESANCHOR_BACKUP_DIR:-/home/ubuntu/backups/postgres}"
+COMPOSE_FILE="${SALESANCHOR_BACKUP_COMPOSE_FILE:-/home/ubuntu/salesanchor/docker-compose.yml}"
 DB_USER="${POSTGRES_USER:-jarvis}"
 DB_NAME="${POSTGRES_DB:-jarvis_db}"
 RETENTION_DAYS=30
 BACKUP_PREFIX="salesanchor_db"
+# pg_dump が表のロックを待つ上限（ミリ秒）。値の正本はここだけ（docs/handoff/deploy-db-stall/design.md §15）
+PG_DUMP_LOCK_WAIT_MS=120000
 
 mkdir -p "${BACKUP_DIR}"
 
+# 強制終了などで残った書き途中のファイルのうち、1日より古いものを消す
+# （同時に動く別の控えの書き途中を消さないため、1日以内のものは残す）
+find "${BACKUP_DIR}" -name "${BACKUP_PREFIX}_*.sql.gz.partial" -mmin +1440 -delete
+
 BACKUP_FILE="${BACKUP_DIR}/${BACKUP_PREFIX}_${DATE}.sql.gz"
 
-# PostgreSQLのフルバックアップ（圧縮）
+# 終了時の片付けと記録。BACKUP_FILE を決めた後に置く（set -u のため）。
+# 消すのは自分の .partial だけ（glob で消さない）。失敗したときだけ FAILED の行を残す。
+on_exit() {
+  local rc=$?
+  rm -f "${BACKUP_FILE}.partial"
+  if [ "${rc}" -ne 0 ]; then
+    echo "[$(date)] Backup FAILED rc=${rc}" >> "${BACKUP_DIR}/backup.log" || true
+  fi
+  exit "${rc}"
+}
+trap on_exit EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+trap 'exit 129' HUP
+
+# 書き途中のファイルも持ち主だけが読めるようにする
+OLD_UMASK=$(umask)
+umask 077
+
+# PostgreSQLのフルバックアップ（圧縮）。書き途中は .partial に書き、成功したら本名にする
 docker compose -f "${COMPOSE_FILE}" exec -T postgres \
-  pg_dump -U "${DB_USER}" "${DB_NAME}" \
-  | gzip > "${BACKUP_FILE}"
+  pg_dump -U "${DB_USER}" --lock-wait-timeout="${PG_DUMP_LOCK_WAIT_MS}" "${DB_NAME}" \
+  | gzip > "${BACKUP_FILE}.partial"
+mv "${BACKUP_FILE}.partial" "${BACKUP_FILE}"
+umask "${OLD_UMASK}"
 
 # ファイルの権限を制限（所有者のみ読み書き可能）
 chmod 600 "${BACKUP_FILE}"

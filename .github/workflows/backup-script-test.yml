@@ -1,0 +1,42 @@
+name: Backup Script Test
+
+# scripts/backup.sh の試験（pg_dump のロック待ちの上限・書き途中を残さない・本物の PostgreSQL 16 での確認）。
+# 偽の docker と、使い捨ての PostgreSQL 16 のコンテナだけを使う。本番には触れない。
+# docs/handoff/deploy-db-stall/design.md §15-4。
+# ※ 必須チェック（Branch Protection）には登録しない。
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/backup.sh'
+      - 'scripts/tests/test-backup-*.sh'
+      - '.github/workflows/backup-script-test.yml'
+  push:
+    paths:
+      - 'scripts/backup.sh'
+      - 'scripts/tests/test-backup-*.sh'
+      - '.github/workflows/backup-script-test.yml'
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: backup.sh test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+
+      # B3 既存の2本（今まで CI で動いていなかった）
+      - name: Run test-backup-retention.sh
+        run: bash scripts/tests/test-backup-retention.sh
+
+      - name: Run test-backup-timestamp.sh
+        run: bash scripts/tests/test-backup-timestamp.sh
+
+      # B2（偽の docker）・B1（実物の PostgreSQL 16 で pg_dump の上限）・B4（本物の backup.sh）
+      - name: Run test-backup-lock-wait.sh (B1, B2, B4)
+        env:
+          REQUIRE_DOCKER: '1'
+        run: bash scripts/tests/test-backup-lock-wait.sh
