@@ -491,3 +491,8 @@ backend/app/schemas/notification.py, backend/app/routers/notifications.py, backe
 | C3 | 既存の生 checkbox 30 箇所超の金型移行 | ADR-144:66-69 に従い別トラック・1 ページ 1 部品 |
 | C4 | レポート通知の実装 | PO が必要と判断した時点で着手（Celery beat の土台はある: `backend/app/celery_app.py:58-150`） |
 | C5 | 本番 `notification_channels` の現状確認（U1） | 本 PR で `event_types` が画面に出るようになってから実機で確認 |
+
+## PO の決定（2026-10-29）: 担当割当の通知はお客さんの名前で知らせる
+
+- 担当割当の Discord 通知は、リードの番号ではなくお客さんの名前（leads.customer_name）で知らせる。名前が空のときは「名前の無いリード」と出し、番号には戻さない（PO 回答「1」）。
+- 背景: PO は同日「リード番号はアプリ全体で画面に出さない。CSV の取り込み・書き出しのときだけ使う」と決めた（記録は docs/handoff/inbox-brushup/README.md、ADR-1049 の一連の作業）。
