@@ -1,68 +1,52 @@
-# 実装カード — deploy-db-stall 段1（Sonnet）
+# 実装カード — deploy-db-stall 段1 作り直し（第8.1版・Sonnet）
 
-受領確認: 着手前に「カード deploy-db-stall 段1 を受領」と1行返す。
+受領確認: 着手前に「カード deploy-db-stall 段1 作り直しを受領」と1行返す。
 
-読んだ節と照合結果（docs/handoff/design-partner-card-ops/guards/ から）:
-- guards/00-common.md: 1手順1コマンド、出力に上限、待つ道具は gh pr checks、報告に無い出力を成功と扱わない → 手順7を commit・push・PR の3段に分け、各段で git log と .pr-number を確かめる形にした。
-- guards/05-pr.md: PR は gh-pr-create-safe.sh、触るファイルは同じ行にカンマ区切り、削除するファイルは git diff --cached --stat で確かめて列挙、scripts/ と deploy.yml は危険パスで GO 記録が要る（GO は設計担当が出す。実行役は書かない）。
-- guards/07-migration.md: 新しい移行の登録はしない（本件は移行を足さない）。文書 PR の skipping は実行ではない → P1〜P3 が実際に走ったことを CI のログで確かめる。
-
-- 設計: docs/handoff/deploy-db-stall/design.md §4（§4-1〜§4-5）と §6（main に合流済み、PR #4860、第7版 APPROVE）。設計の文面がこのカードと食い違ったら設計を正とし、止めて NEEDS_DECISION。
+- 設計: docs/handoff/deploy-db-stall/design.md 第8.1版（§4・§6・§14。このブランチに commit 済み、Architect APPROVE）。設計の文面がこのカードと食い違ったら設計を正とし、止めて NEEDS_DECISION。
 - PO 承認: 2026-10-29「1」（正式な設計にまとめ、審査に通してから1つずつ直す）。
-- 作業場所: origin/main 起点で `bash scripts/new-worktree.sh release/py-migration-lock-timeout` を本店 /Users/tanizawashingo/salesanchor から実行して作る。作業場所の絶対パスは new-worktree.sh の出力から取り、報告に書く。以後 git は必ずその絶対パスを git -C に渡して使う。cd と変数入りのパスは使わない。
-- 最初に作業場所で executor-preflight.sh を実行し、出力をファイルに保存する。落ちたら BLOCKED。
-- ファイルの編集は Edit/Write ツールで行う。Bash の heredoc・sed・python で書き換えない。
+- 経緯: 第7版の実装 PR #4861（merge 46f2009b）は run_py の `$!` の wait で本番反映が止まり、PR #4862（merge fd85b946）で戻した。今回は #4861 を入れ直し、run_py の標準エラーの扱いと試験だけを変える。
+- 作業場所（作成済み）: /Users/tanizawashingo/worktrees/design-inbox-brushup/release-py-migration-lock-timeout-v2（ブランチ release/py-migration-lock-timeout-v2、origin/main fd85b946 起点）。git は必ず `git -C <この絶対パス>` で使う。cd と変数入りのパスは使わない。
+- 最初に作業場所で `./scripts/dev/executor-preflight.sh` を実行し、出力を /tmp/CC報告ファイル/deploy-db-stall/impl-v2/preflight.txt に保存する。落ちたら BLOCKED。
+- ファイルの編集は Edit/Write ツールで行う（git revert を除く）。
+- 生出力はすべて /tmp/CC報告ファイル/deploy-db-stall/impl-v2/ に保存する。
 
 ## やること
-1. scripts/migration_py_entry.py を新しく作る（§4-1 のとおり）。
-   - MIGRATION_LOCK_TIMEOUT が空でないときだけ create_async_engine を差し替える。
-   - server_settings の写しに lock_timeout を上書きし、application_name=salesanchor_migration は無いときだけ足す。
-   - sys.argv を [本物のパス, *残りの引数] にし、runpy.run_path(本物のパス, run_name="__main__") で動かす。SystemExit を握らない。
-   - finally で標準エラーに1行だけ出す。値が1s のときは「migration_py_entry: lock_timeout=1s applied to N engine(s)」。値なしは「migration_py_entry: lock_timeout=unset applied to 0 engine(s)」。
-   - logging を設定しない。表・列の削除や大量削除の語をコメントにも書かない。
-2. scripts/run_all_migrations.sh を変える（§4-2 のとおり）。
-   - run_py の定義を log_lock_holders の後・run_sql の前へ移し、入口経由で動かす。docker exec への指定（"$@"）は -w の前に残す。
-   - 再試行の判定文字列・回数・間隔・全体上限を run_sql と共有する。set -e で途中終了しない受け方にする。
-   - 標準エラーは tee で写しながら出し、判定の前にプロセス置換の番号を wait する。
-   - 開始行の echo の文面、値4つ、log_lock_holders、run_sql の外から見た動き、read-probe、EXIT trap、移行の登録行は変えない。
-3. 起動条件の3か所に入口を足す（§4-3 冒頭、K6b）。
-   - .github/workflows/migration-test.yml の paths-filter。
-   - .github/workflows/deploy.yml の db_migrations と、その説明コメント1行。
-   - scripts/check-process-artifacts.js の MIGRATION_PATH_PATTERNS。scripts/tests/test-process-artifacts.js に入口が移行の範囲に入る試験を1件足す。
-4. 試験を足す（§4-3）。
-   - migration-test.yml の migration-test-run ジョブに S1・S2・P1・P2・P3 を置く。
-   - tests/sandbox/migration-run-sql-retry.sh に R1〜R4 を足す（偽 docker 関数は python を含む呼び出しだけ偽物にし、終わったら消す）。
-5. 文書（§4-5）。
-   - docs/adr/ADR-1037-migration-lock-timeout.md の対象外の行を直し、追記する。
-   - docs/handoff/migration-lock-timeout/design.md の2か所をつなぐ。
-   - node scripts/generate-adr-index.js で目次を作り直す。
-   - このカードを docs/handoff/deploy-db-stall/card-1.md として置く。
-6. 確かめる（生出力は /tmp/CC報告ファイル/deploy-db-stall/impl/ に保存）。
-   - bash -n で変えたシェルの構文。
-   - node scripts/tests/test-process-artifacts.js。
-   - K4 の実演: 一時コピーで from sqlalchemy.ext.asyncio.engine import の行を足すと S1 が赤になることを1度示す（本物のファイルは変えない）。示せなければ未確認と書く。
-7. commit・push・PR を3段に分け、各段のあとで確かめてから次へ進む。
-   - commit: メッセージは「feat: Python の移行にもロック待ち1秒と再試行を付ける (ADR-1037 拡張・段1)」。末尾に Co-Authored-By の行（Claude Opus 5.5、noreply@anthropic.com）を付ける。終わったら git log -1 で確かめる。
-   - push: 作業場所の絶対パスを git -C に渡し、push -u origin release/py-migration-lock-timeout を単独で実行する。
-   - PR: bash scripts/gh-pr-create-safe.sh で起票し、本文は Write で作ったファイルを渡す。shingo-cc 名義を確かめる。本文に recon・設計・対象ADR ADR-1037・PO承認・触るファイル全部・削除するファイルを書く。Evaluator は画面の変更なしで省略と書く。GO 記録の欄は作らない。終わったら .pr-number と gh pr list --head の番号が一致するか確かめる。
-8. sandbox 試験を流す。
-   - gh workflow run sandbox-test.yml --ref release/py-migration-lock-timeout で migration-run-sql-retry と migration-read-probe を流す。
-   - 完了は gh run list --workflow sandbox-test.yml --branch release/py-migration-lock-timeout --json で確かめる。sleep で待たない。終わっていなければ、その事実を報告して止まる。
-   - 結果とログを /tmp/CC報告ファイル/deploy-db-stall/impl/ に保存する。PR の CI の結果は gh pr checks で保存する。
-9. 失敗の原因が試験の書き方なら、試験だけ直して再実行してよい（最大2回）。設計どおりの部分を変えたくなったら止めて NEEDS_DECISION。
+1. #4861 を入れ直す: `git -C <作業場所> revert --no-edit fd85b946a132f466a1358e44cc1e20f4340c7ac8`。衝突したら止めて BLOCKED。終わったら git log -2 と git show --stat HEAD を保存。
+2. docs/handoff/deploy-db-stall/card-1.md を、このカードの全文で上書きする（Write）。
+3. scripts/run_all_migrations.sh の run_py（§4-2・§14-2）:
+   - 標準エラーを `2>"${errlog}" || rc=$?` で一時ファイルに書き、次の行で `cat "${errlog}" >&2`。run_sql（同じファイルの run_sql の該当行）と同じ形にする。
+   - tee・プロセス置換・`$!`・wait を消す。共通関数に出す場合も、抜き出し範囲（`^SQL_LOCK_TIMEOUT=` 〜 run_sql の閉じ括弧）の中のコメント以外に `$!`・`>(`・単語の wait が残らないこと。コメントにもこの3つを書かない。
+   - ほか（入口経由・再試行・開始行の echo 等）は #4861 のまま変えない。
+4. S3 を .github/workflows/migration-test.yml の S2 と同じ段に足す（§4-3）: 抜き出し範囲をコメント行（`^[[:space:]]*#`）を除いて取り、`grep -F '$!'`・`grep -F '>('`・`grep -wE 'wait'` のどれかが当たれば失敗。一時コピーで第7版の行（`git show 46f2009b:scripts/run_all_migrations.sh`）に対して流すと赤、今の版で緑になることを手元で示し保存する。
+5. R5 を tests/sandbox/migration-read-probe.sh に足す（§4-3 の R5 の項を全部読んでから作る）:
+   - 偽 docker は PATH の先頭に置く外部の実行ファイル。シェル関数は使わない。
+   - BACKEND は固定名（例 sb-fake-backend）。引数にその名前がある呼び出しだけ偽物にし、ほかは PATH を変える前に `command -v docker` で取った本物の絶対パスへ渡す。
+   - 動きの切り替え（rc 0／1回目 lock timeout→2回目 rc 0）と回数は export した環境変数かファイルで渡す。
+   - make_parent と同じく別の bash で「抜き出しを eval → read_probe_start → run_py」を流し、その bash を `timeout 30` で包む。BACKEND・DATABASE_URL は R5 の側で足す。`SQL_RETRY_SLEEP_SEC=1`。
+   - 判定: 30秒以内に rc 0、"lock conflict; retry" の回数が期待どおり、終わった後に裏の輪が残っていない。
+   - R1〜R4 は #4861 のまま（tests/sandbox/migration-run-sql-retry.sh）。
+6. ADR-1037 と docs/handoff/migration-lock-timeout/design.md の追記は #4861 のまま。足りなければ「第8版で run_py の標準エラーを run_sql と同じ形にした（docs/handoff/deploy-db-stall/design.md §14）」を ADR-1037 の追記に1行足す。ADR を変えたら `node scripts/generate-adr-index.js`。
+7. 確かめる: bash -n（変えたシェル全部）、`node scripts/tests/test-process-artifacts.js`、S3 の赤緑（手順4）。
+8. commit・push・PR を3段に分け、各段のあとで確かめる。
+   - commit: 「feat: Python の移行にもロック待ち1秒と再試行を付ける（作り直し・待ち方を直す）」。末尾に `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`。git log -3 で確かめる。
+   - push: `git -C <作業場所> push -u origin release/py-migration-lock-timeout-v2` を単独で。
+   - PR: `bash scripts/gh-pr-create-safe.sh` で起票。本文は Write で作ったファイルを --body-file で渡す。shingo-cc 名義を確かめる。本文に recon・設計（第8.1版）・対象ADR ADR-1037・PO承認・#4861/#4862 との関係・触るファイル全部（設計書を含む）・削除するファイル（git diff origin/main --stat で確かめる）。Evaluator は画面の変更なしで Skip。GO 記録の欄は作らない（設計担当が書く）。.pr-number と gh pr list --head の番号が一致するか確かめる。
+9. sandbox 試験を GitHub で流す: `gh workflow run sandbox-test.yml --ref release/py-migration-lock-timeout-v2` で migration-read-probe（R5 を含む）と migration-run-sql-retry を流す（入力名は sandbox-test.yml を読んで決める）。完了は gh run list --json で確かめ、sleep で待たない。終わっていなければその事実を報告して止まる。
+10. 赤の実演（K5b）: 一時ブランチ（push しない）か一時コピーで run_py を第7版の形（`git show 46f2009b:scripts/run_all_migrations.sh` の run_py）に戻し、R5 が rc=124 で赤になることを sandbox-test で1度示す。GitHub で流すため一時ブランチを push する必要があるなら、release/py-migration-lock-timeout-v2-red という名前で push し、結果を取ったら報告に書く（消すのは設計担当が判断する）。PR は作らない。
 
 ## 想定される分岐
-- P1 の読み取りの最大が1500ms を超える、または失敗まで3秒以上かかる → 設計の前提が崩れるので NEEDS_DECISION。
-- S1 が今ある26本のどれかで赤になる → 前提（26本とも同じ取り込み方）が崩れたので NEEDS_DECISION。
-- run_py を移した後に read-probe の試験が抜き出しに失敗する → 範囲の置き方を見直す。直せなければ BLOCKED。
-- check-process-artifacts が入口を危険な形と判定して止める → 入口の語を見直す。言い換えで逃げず、原因の語を報告する。
+- 手順10の実演が rc=124 にならない → 試験を直して赤にしようとせず止まり、NEEDS_DECISION（bash 5.x の `$!` の動きが設計の前提と違う可能性）。
+- R5 の緑の側が30秒を超える → NEEDS_DECISION。
+- S3 が今の版で赤になる → 当たった行を報告して NEEDS_DECISION。
+- revert の再適用で衝突 → BLOCKED。
+- P1〜P3・S1・S2 が #4861 のときと違って赤になる → 試験の書き方の誤りなら直して再実行（最大2回）。設計どおりの部分を変えたくなったら NEEDS_DECISION。
 - push・PR 起票が見張りに止められる → 言い換えず BLOCKED。
 
 ## 停止と報告
-- 迷ったら停止し、DONE / BLOCKED: 理由 / NEEDS_DECISION: 問い のどれかで設計担当に返す。
-- 報告には、作業場所の絶対パス、HEAD、PR 番号、各試験の PASS/FAIL、保存したファイルのパスを書く。
+- DONE / BLOCKED: 理由 / NEEDS_DECISION: 問い のどれかで返す。
+- 報告には、作業場所の絶対パス、HEAD、PR 番号、各試験（S1〜S3・P1〜P3・R1〜R5・既存 T1〜T8/T1〜T9）の PASS/FAIL と run の番号、赤の実演の rc、保存したファイルのパスを書く。生出力のみ。推測で埋めない。
 
 ## 禁止
-- 移行21本と migrations/ の中身を変えない。本番に触らない。マージしない。
+- 移行21本と migrations/ の中身を変えない。本番に触らない。マージしない。force push しない。main/develop に push しない。
 
 END OF CARD

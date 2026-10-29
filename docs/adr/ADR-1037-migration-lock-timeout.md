@@ -77,4 +77,5 @@
 - 2026-10-29 に本番反映の Python の移行が約113分ロックを待ち、アプリの読み取りを止めた。PO「1」で、run_py（Python の移行）の接続にも同じロック待ち1秒と流し直しを付けることにした。設計は docs/handoff/deploy-db-stall/design.md（第7版 APPROVE）。
 - 付け方は入口方式。run_py が移行を直接ではなく `scripts/migration_py_entry.py` 経由で動かし、入口が `create_async_engine` を差し替えて接続ごとに lock_timeout（`SQL_LOCK_TIMEOUT` と同じ値）と application_name=salesanchor_migration を付ける。移行本体は変えない。
 - 流し直しの判定文字列・回数・間隔・全体上限（合計40回）は run_sql と共有する。
-- 見張りは `.github/workflows/migration-test.yml`（S1・S2・P1〜P3）と `tests/sandbox/migration-run-sql-retry.sh`（R1〜R4）。
+- 見張りは `.github/workflows/migration-test.yml`（S1〜S3・P1〜P3）、`tests/sandbox/migration-run-sql-retry.sh`（R1〜R4）、`tests/sandbox/migration-read-probe.sh`（R5）。
+- 第8版で run_py の標準エラーを run_sql と同じ形（一時ファイルに書いてから出す）にした。最初の入れ方（PR #4861）はプロセス置換の後に裏の番号を待つ書き方で、本番反映が止まり PR #4862 で戻した（docs/handoff/deploy-db-stall/design.md §14）。

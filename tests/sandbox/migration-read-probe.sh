@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# 試験: scripts/run_all_migrations.sh の read_probe_start / read_probe_stop（移行中の読み取り計測）T1〜T9（ADR-1037 便1.2）。
+# 試験: scripts/run_all_migrations.sh の read_probe_start / read_probe_stop（移行中の読み取り計測）T1〜T9（ADR-1037 便1.2）と、
+# R5（裏の計測を動かしたまま本物の run_py が戻ること。ADR-1037 の拡張・第8版）。
 # 計測の本体は「# >>> read-probe begin」〜「# <<< read-probe end」を本物から切り出して使う（写しは作らない）。
 # 使い捨て postgres:16 のみ（jarvis / jarvis_db）。パスワードは試験専用の固定値（秘密ではない）。本番・secrets には触れない。
 # リポジトリ直下で実行する。
@@ -241,5 +242,78 @@ if [ "$RETRY_PROBE" = 0 ] && [ "$AIRO_PROBE_N" = 1 ] && [ "$AIRO_PROBE_IF" = 1 ]
 else
   fail "T9 retry=${RETRY_PROBE} airo=${AIRO_PROBE_N} airo_if=${AIRO_PROBE_IF}"
 fi
+
+# --- R5: 裏の読み取り監視を動かしたまま、本物の run_py が戻る（ADR-1037 の拡張・第8版。deploy-db-stall design.md §4-3・§14） ---
+# 第7版は run_py の中で「プロセス置換の後に直前の裏の番号を待つ」書き方をしていて、裏の監視の輪の番号を待って戻らなかった。
+# 偽の docker はシェル関数ではなく PATH の先頭に置く外部の実行ファイルにする（関数だと親の bash が
+# リダイレクトを行い、第7版の形でも戻ってしまい、この試験が緑になる）。偽物にするのは BACKEND 宛ての呼び出しだけ。
+# ほか（読み取り監視・log_lock_holders）は、PATH を変える前に取った本物の docker の絶対パスへ渡す。
+echo "=== R5: 裏の読み取り監視と一緒に動かしても run_py が30秒以内に戻る ==="
+R5_REAL_DOCKER="$(command -v docker)"
+mkdir -p "$OUT_DIR/bin"
+cat > "$OUT_DIR/bin/docker" <<'FAKE_DOCKER_EOF'
+#!/usr/bin/env bash
+# 引数に sb-fake-backend がある呼び出しだけ偽物。動きは環境変数 R5_MODE、回数は R5_COUNT_FILE で渡される。
+fake=0
+for a in "$@"; do
+  [ "$a" = "sb-fake-backend" ] && fake=1
+done
+if [ "$fake" = 0 ]; then exec "$R5_REAL_DOCKER" "$@"; fi
+n=$(( $(cat "$R5_COUNT_FILE" 2>/dev/null || echo 0) + 1 ))
+echo "$n" > "$R5_COUNT_FILE"
+case "${R5_MODE:-ok}" in
+  ok)
+    echo "fake-python: running attempt $n" >&2
+    exit 0 ;;
+  once_then_ok)
+    if [ "$n" -eq 1 ]; then
+      echo "fake-python: sqlalchemy.exc.DBAPIError: canceling statement due to lock timeout" >&2
+      exit 1
+    fi
+    echo "fake-python: running attempt $n" >&2
+    exit 0 ;;
+esac
+exit 99
+FAKE_DOCKER_EOF
+chmod +x "$OUT_DIR/bin/docker"
+echo "R5 real_docker=${R5_REAL_DOCKER} fake_docker=$OUT_DIR/bin/docker"
+if [ -x "$R5_REAL_DOCKER" ] && [ "$R5_REAL_DOCKER" != "$OUT_DIR/bin/docker" ]; then
+  pass "R5 real docker path resolved before PATH change"
+else
+  fail "R5 real docker path not resolved (${R5_REAL_DOCKER})"
+fi
+
+# $1=名前 $2=偽 docker の動き $3=期待する流し直しの回数 $4=期待する偽 docker の呼び出し回数
+r5_case() {
+  local tag="$1" mode="$2" want_retry="$3" want_calls="$4"
+  rm -f "$OUT_DIR/r5-$tag.count" "$OUT_DIR/r5-$tag.log"
+  make_parent "r5-$tag.sh" "$NAME" "BACKEND=sb-fake-backend
+DATABASE_URL=postgresql://fake/fake
+eval \"\$(cat $OUT_DIR/runsql.sh)\"" 'if run_py scripts/migrate_fake.py; then echo "RUN_PY_RESULT=ok"; else echo "RUN_PY_RESULT=fail"; fi; read_probe_stop'
+  local t0=$SECONDS rc sec retries calls pid alive i
+  env PATH="$OUT_DIR/bin:$PATH" R5_REAL_DOCKER="$R5_REAL_DOCKER" R5_MODE="$mode" R5_COUNT_FILE="$OUT_DIR/r5-$tag.count" \
+    READ_PROBE_TABLES="sb_a sb_b" READ_PROBE_INTERVAL_SEC=1 SQL_LOCK_TIMEOUT=1s SQL_RETRY_SLEEP_SEC=1 \
+    timeout 30 bash "$OUT_DIR/r5-$tag.sh" >"$OUT_DIR/r5-$tag.log" 2>&1
+  rc=$?
+  sec=$(( SECONDS - t0 ))
+  cat "$OUT_DIR/r5-$tag.log"
+  retries="$(grep -ac 'lock conflict; retry [0-9]' "$OUT_DIR/r5-$tag.log" || true)"
+  calls="$(cat "$OUT_DIR/r5-$tag.count" 2>/dev/null || echo 0)"
+  pid="$(cat "$OUT_DIR/r5-$tag.sh.pid" 2>/dev/null)"
+  alive=yes
+  for i in $(seq 1 16); do
+    if [ -z "$pid" ] || ! kill -0 "$pid" 2>/dev/null; then alive=no; break; fi
+    sleep 0.25
+  done
+  echo "R5 ${tag} rc=${rc} seconds=${sec} retries=${retries} fake_calls=${calls} probe_pid=${pid:-none} probe_alive=${alive}"
+  if [ "$rc" = 0 ] && grep -aq 'RUN_PY_RESULT=ok' "$OUT_DIR/r5-$tag.log" && [ "$retries" = "$want_retry" ] \
+     && [ "$calls" = "$want_calls" ] && [ "$alive" = no ] && [ "$sec" -lt 30 ]; then
+    pass "R5 ${tag} rc=0 seconds=${sec} retries=${retries} calls=${calls} probe gone"
+  else
+    fail "R5 ${tag} rc=${rc} (124=timeout) seconds=${sec} retries=${retries}(want ${want_retry}) calls=${calls}(want ${want_calls}) probe_alive=${alive}"
+  fi
+}
+r5_case ok ok 0 1
+r5_case retry once_then_ok 1 2
 
 if [ "$RESULT" -eq 0 ]; then echo "RESULT: PASS"; else echo "RESULT: FAIL"; exit 1; fi

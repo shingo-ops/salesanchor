@@ -1008,6 +1008,20 @@ jobs:
           echo "$body" | grep -q 'MIGRATION_LOCK_TIMEOUT' || { echo "::error::S2 run_py が MIGRATION_LOCK_TIMEOUT を渡していない"; exit 1; }
           echo "✅ S2 run_py は入口と MIGRATION_LOCK_TIMEOUT を通す"
 
+      # S3: 裏の作業を待つ書き方が無いこと（ADR-1037 第8版。第7版は run_py でプロセス置換の後に裏の番号を待ち、本番で止まった）。
+      # 見る範囲は sandbox 試験 R1〜R5 の抜き出しと同じ（SQL_LOCK_TIMEOUT= の行 〜 run_sql の閉じ括弧）。コメント行は除く。
+      - name: S3 再試行の範囲に裏の作業を待つ書き方が無いこと
+        run: |
+          set -u
+          range=$(awk '/^SQL_LOCK_TIMEOUT=/{p=1} p{print} p&&/^run_sql\(\) \{/{r=1} r&&/^}/{exit}' scripts/run_all_migrations.sh | grep -vE '^[[:space:]]*#' || true)
+          [ -n "$range" ] || { echo "::error::S3 抜き出し範囲が空"; exit 1; }
+          bad=0
+          if echo "$range" | grep -nF '$!'; then echo "::error::S3 直前の裏の作業の番号を使う書き方がある"; bad=1; fi
+          if echo "$range" | grep -nF '>('; then echo "::error::S3 プロセス置換がある"; bad=1; fi
+          if echo "$range" | grep -nwE 'wait'; then echo "::error::S3 裏の作業を待つ書き方がある"; bad=1; fi
+          [ "$bad" = 0 ] || exit 1
+          echo "✅ S3 抜き出し範囲（$(echo "$range" | wc -l | tr -d ' ') 行）に裏の作業を待つ書き方なし"
+
       # P1: 別接続が suppliers の読み取りロックを 6 秒持つ間、入口経由の移行は 1 秒で諦め、
       #     ほかの読み取りの最大待ちは 1500ms 以内、移行は 3 秒未満で失敗する。
       - name: P1 Python 移行のロック待ちは 1 秒で諦め、読み取りを待たせない
