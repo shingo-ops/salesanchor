@@ -34,7 +34,7 @@ async def notify_lead_assigned(tenant_id: int, lead_id: int, assigned_to_user_id
                 {"uid": assigned_to_user_id},
             )).mappings().first()
             lead_row = (await db.execute(
-                text(f"SELECT lead_code, customer_name FROM {leads_t} WHERE id = :lid"),
+                text(f"SELECT customer_name FROM {leads_t} WHERE id = :lid"),
                 {"lid": lead_id},
             )).mappings().first()
             if not lead_row:
@@ -45,11 +45,13 @@ async def notify_lead_assigned(tenant_id: int, lead_id: int, assigned_to_user_id
             did = str((staff_row or {}).get("discord_user_id") or "")
             mention = [did] if did.isdigit() else None       # 数字以外は渡さない
 
-            # customer_name は SELECT 済みだが文面には使わない（案イ・PO 判断待ち）。
-            # PO 判断待ち: 顧客名を出す場合はここに追加（design.md §3-7 案ア）。
-            # 切替時は上の lead_row["customer_name"] を使う（SELECT 済みの列を使う）。
+            # PO が 2026-10-29 に「お客さんの名前で知らせる」と決めた（リード番号は画面・通知に出さない）。
+            # 名前の出どころは受信箱の見出しと同じ leads.customer_name
+            # （frontend/src/pages/inbox/InboxMessageThread.tsx:437 の lead.customer_name）。
+            # 名前が空のときも番号には戻さず、固定の文言を出す。
+            customer = (lead_row.get("customer_name") or "").strip() or "名前の無いリード"
             title = "🤝 商談化：担当アサイン"
-            message = f"リード: {lead_row['lead_code']}\n担当: {name}"
+            message = f"お客さん: {customer}\n担当: {name}"
 
             await send_discord_notification(
                 db=db, tenant_id=tenant_id,

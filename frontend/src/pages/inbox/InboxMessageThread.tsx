@@ -442,7 +442,7 @@ export function InboxMessageThread({
         <h3 className="inbox-center-title" style={{ flex: 1, minWidth: 0 }}>
           {messagesData?.lead?.customer_name
             || selectedConversation?.customer_name
-            || `Lead #${selectedLeadId}`}
+            || t("inbox.unnamedLead")}
           {/* AC1.6: Discord 未連携バッジ */}
           {messagesData?.lead?.platform === "discord" && !leadDetail?.discord_user_id && (
             <span className="discord-unlinked-badge" title={t("inbox.discordNotLinked")}>

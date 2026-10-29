@@ -429,3 +429,63 @@ async def test_notify_lead_assigned_sets_tenant_context_for_tenant_b_only(notifi
     mock_ctx.assert_awaited_once_with(db, 2)
     # tenant 1 で呼ばれていないこと（コピペ・固定値化の防止）
     assert mock_ctx.await_args.args[1] != 1
+
+
+async def _run_assign_notify(db, *, lead_id, customer_name, lead_code):
+    await _insert_staff(db, tenant_id=999, user_id=8, surname_jp="佐藤", given_name_jp="花子",
+                        discord_user_id=None)
+    await _insert_lead(db, tenant_id=999, lead_id=lead_id, customer_name=customer_name,
+                       lead_code=lead_code)
+    await db.commit()
+    with patch("app.services.lead_assign_notifier.send_discord_notification",
+               new=AsyncMock()) as mock_send:
+        await notify_lead_assigned(tenant_id=999, lead_id=lead_id, assigned_to_user_id=8)
+    assert mock_send.await_count == 1
+    return mock_send.await_args.kwargs["message"]
+
+
+@pytest.mark.asyncio
+async def test_notify_lead_assigned_message_has_customer_name(notifier_env):
+    message = await _run_assign_notify(
+        notifier_env, lead_id=30, customer_name="山田商事", lead_code="LD-00030")
+    assert "山田商事" in message
+    assert "佐藤 花子" in message
+
+
+@pytest.mark.asyncio
+async def test_notify_lead_assigned_message_for_empty_name(notifier_env):
+    message = await _run_assign_notify(
+        notifier_env, lead_id=31, customer_name="  ", lead_code="LD-00031")
+    assert "名前の無いリード" in message
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("name", ["山田商事", ""])
+async def test_notify_lead_assigned_message_never_has_lead_code(notifier_env, name):
+    message = await _run_assign_notify(
+        notifier_env, lead_id=32, customer_name=name, lead_code="LD-00032")
+    assert "LD-00032" not in message
+    assert "LD-" not in message
+
+
+@pytest.mark.asyncio
+async def test_notify_lead_assigned_message_for_null_name(notifier_env):
+    """テスト用 DB は customer_name が NOT NULL のため、リード表だけ NULL を返す副問い合わせに差し替える。"""
+    from app.auth.dependencies import tenant_table_ref as real_ref
+
+    def fake_ref(db, tenant_id, table):
+        if table == "leads":
+            return "(SELECT 34 AS id, NULL AS customer_name)"
+        return real_ref(db, tenant_id, table)
+
+    db = notifier_env
+    await _insert_staff(db, tenant_id=999, user_id=8, surname_jp="佐藤", given_name_jp="花子",
+                        discord_user_id=None)
+    await db.commit()
+    with patch("app.services.lead_assign_notifier.tenant_table_ref", new=fake_ref), \
+         patch("app.services.lead_assign_notifier.send_discord_notification",
+               new=AsyncMock()) as mock_send:
+        await notify_lead_assigned(tenant_id=999, lead_id=34, assigned_to_user_id=8)
+    message = mock_send.await_args.kwargs["message"]
+    assert "名前の無いリード" in message
+    assert "LD-" not in message
