@@ -51,7 +51,7 @@ umask 077
 
 # PostgreSQLのフルバックアップ（圧縮）。書き途中は .partial に書き、成功したら本名にする
 docker compose -f "${COMPOSE_FILE}" exec -T postgres \
-  pg_dump -U "${DB_USER}" --lock-wait-timeout="${PG_DUMP_LOCK_WAIT_MS}" "${DB_NAME}" \
+  pg_dump -U "${DB_USER}" "${DB_NAME}" \
   | gzip > "${BACKUP_FILE}.partial"
 mv "${BACKUP_FILE}.partial" "${BACKUP_FILE}"
 umask "${OLD_UMASK}"
