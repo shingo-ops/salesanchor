@@ -29,7 +29,8 @@
  */
 import { expect, test } from "@playwright/test";
 import type { Locator, Page } from "@playwright/test";
-import { gotoViewer, waitPanelSlidIn as waitFilterPanelSlidIn } from "./viewer-helpers";
+import { gotoViewer, installViewerMocks, makeConditionValues, makeProviderNames, makeViewerRows, waitPanelSlidIn as waitFilterPanelSlidIn } from "./viewer-helpers";
+import type { ViewerFixture } from "./viewer-helpers";
 
 const MOBILE_WIDTHS = [360, 390] as const;
 /** B4b: PC 幅（design.md ⑤。PC は1px も動かさない固定） */
@@ -44,6 +45,13 @@ const CARET_WIDTH_PX = 16;
 const PC_SEARCH_MIN_HEIGHT = "36px";
 /** B7b: シリーズのラベル枠の下限（1文字分。design.md ⑤） */
 const MIN_SERIES_LABEL_WIDTH_PX = 13.6;
+
+/** B7c: 長いシリーズ名の fixture 用（14文字）。viewer-helpers.ts の既定 fixture は series が空で、
+ *  既定ラベル「すべて」(42px) では flex を戻しても切れないことが CI で判明したため用意する */
+// eslint-disable-next-line local/no-japanese-literal -- tests-e2e は ESLint 対象外。DB の series 名（画面文言ではない）に見せかけた fixture 専用の名前
+const LONG_SERIES = "しりーずのとてもながいなまえ";
+// eslint-disable-next-line local/no-japanese-literal -- 同上
+const OTHER_SERIES_NAMES = ["しりーず02", "しりーず03"];
 
 async function expectNoPageOverflow(page: Page): Promise<void> {
   const { scrollWidth, innerWidth } = await page.evaluate(() => ({
@@ -75,6 +83,25 @@ async function waitPanelSlidIn(panel: Locator): Promise<void> {
       return box ? Math.round(box.x) : null;
     })
     .toBe(0);
+}
+
+/** 長いシリーズ名を含む fixture で閲覧ページを開く
+ *  （frontend/tests-e2e/visual-language/viewer-choice-sheet.spec.ts の gotoViewerWithSeries と同じ作り） */
+async function gotoViewerWithLongSeries(page: Page, width: number, height: number): Promise<void> {
+  const names = [LONG_SERIES, ...OTHER_SERIES_NAMES];
+  const providers = makeProviderNames(5);
+  const conditions = makeConditionValues(2);
+  const base = makeViewerRows(names.length, providers, conditions);
+  const rows = base.map((r, i) => ({ ...r, series: names[i] }));
+  const fixture: ViewerFixture = {
+    providers,
+    conditions,
+    response: { updated_at: new Date().toISOString(), fresh_window_hours: 24, rows },
+  };
+  await page.setViewportSize({ width, height });
+  await installViewerMocks(page, fixture);
+  await page.goto("/viewer/");
+  await expect(page.getByTestId("viewer-tab-select")).toBeVisible();
 }
 
 /** 高さちょうど・文字ちょうどを測る対象（design.md ⑤ B1・B2） */
@@ -210,24 +237,42 @@ for (const width of MOBILE_WIDTHS) {
 // B7c・B7d は「壊した状態を作って切れることを検出できる」ことを示す（design.md ⑤5-2・審査 B2）。
 // 本便（toolbar-series-name-full-width）でシリーズが1行を独り占めすると使える幅が約262pxになり、
 // 文字を16pxにしても山形を24pxにしても既定ラベル「すべて」はもう切れない。
-// そこで壊し方を「flex を 1 1 0 に戻す」に差し替える。B7c=flex を戻すだけで切れる／
-// B7d=flex を戻したうえで山形も24pxにしても切れる、の2本で空振り防止を保つ（2本とも意味のある壊し方）。
+//
+// B7c: 壊し方は「flex を 1 1 0 に戻す」。ただし既定ラベル「すべて」(42px) は、戻したときに残る幅も
+// 約45pxあるため切れない（PR #4859 の CI 1回目で3実行とも scrollWidth 42 = clientWidth 42 を実測。
+// 審査 B2 の「flex を戻すだけで切れる」という予測が外れた点）。そこで B7c は
+// 「長いシリーズ名を選んでから戻す」形にする。本物の不具合（長い名前＋狭い枠）に近く、宣言は1本のまま
+// （画面検査は13.5分/15分で余裕が小さいので実行数を増やさない）。
+// B7d は既定ラベルのままで成立する（flex を戻す＋山形24pxなら 42px > 残り幅）ので触らない。
 // 360px だけでよい（recon §4: 390px では採用案の余りが38pxあり、どちらを壊しても切れない）。
 test.describe("visual-language: 閲覧ページ シリーズ名が切れることの検出（空振り対策）360px", () => {
   const width = 360;
   const height = 700;
 
-  test("B7c: シリーズの flex を 1 1 0 に戻すと、シリーズ名が切れる", async ({ page }) => {
-    await gotoViewer(page, { width, height });
-    await page.addStyleTag({ content: '.viewer-toolbar > .viewer-toolbar__series { flex: 1 1 0 !important; }' });
+  test("B7c: 長いシリーズ名は全部出るが、flex を 1 1 0 に戻すと切れる", async ({ page }) => {
+    await gotoViewerWithLongSeries(page, width, height);
 
-    const label = page.getByTestId("viewer-tab-select").locator(".viewer-toolbar__label");
+    const trigger = page.getByTestId("viewer-tab-select");
+    await trigger.click();
+    const panel = openPanel(page);
+    await waitPanelSlidIn(panel);
+    await panel.getByTestId(`viewer-series-option-${LONG_SERIES}`).click();
+    expect(await openPanel(page).count()).toBe(0);
+    await expect(trigger).toHaveText(LONG_SERIES);
+
+    const label = trigger.locator(".viewer-toolbar__label");
     await expect(label).toBeVisible();
-    const { scrollWidth, clientWidth } = await label.evaluate((el) => ({
-      scrollWidth: el.scrollWidth,
-      clientWidth: el.clientWidth,
-    }));
-    expect(scrollWidth).toBeGreaterThan(clientWidth);
+    const measure = () =>
+      label.evaluate((el) => ({ scrollWidth: el.scrollWidth, clientWidth: el.clientWidth }));
+
+    // 本便の CSS（flex: 1 1 100%）では長い名前でも切れない
+    const kept = await measure();
+    expect(kept.scrollWidth).toBeLessThanOrEqual(kept.clientWidth + 1);
+
+    // 元の flex: 1 1 0 に戻すと切れる＝この測り方が本当に赤になることの確認
+    await page.addStyleTag({ content: '.viewer-toolbar > .viewer-toolbar__series { flex: 1 1 0 !important; }' });
+    const broken = await measure();
+    expect(broken.scrollWidth).toBeGreaterThan(broken.clientWidth);
   });
 
   test("B7d: flex を 1 1 0 に戻したうえで山形も24pxにすると、シリーズ名が切れる", async ({ page }) => {

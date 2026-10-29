@@ -175,6 +175,17 @@ F5 と同じ空振り防止が手に入り、**宣言を1本も増やさずに�
 既存の **B7a**（シリーズ名が切れていないこと・`frontend/tests-e2e/visual-language/viewer-control-tap-size.spec.ts`）が
 そのまま閲覧ページ側の F1 相当になる。
 
+**CI 1回目の実測で判った訂正（2026-10-29・PR #4859 run 40861129002）**: B7c の「`flex` を戻すだけで
+切れる」は**外れ**だった。3実行とも `scrollWidth 42 = clientWidth 42` で、既定ラベル「すべて」(42px) は
+`flex: 1 1 0` に戻したときに残る約45pxに収まってしまう（recon §3 の案1 が45pxだったのと一致）。
+在庫表の F5 が緑なのは「詳細フィルタ (1)」が長く残り幅が13pxだから。
+→ **B7c を「長いシリーズ名（14文字）を選んでから `flex` を戻す」形に差し替えた**。
+同じ test の中で「本便の CSS では切れない」と「戻すと切れる」の両方を測るので、宣言は1本のまま
+（画面検査は13.5分/15分で余裕が小さい）。fixture は spec の中で作る
+（`frontend/tests-e2e/visual-language/viewer-choice-sheet.spec.ts` の `gotoViewerWithSeries` と同じ作りで、
+共有の `frontend/tests-e2e/visual-language/viewer-helpers.ts` は1行も変えない）。
+B7d（`flex` を戻す＋山形24px）は既定ラベルのままで緑なので触らない。
+
 ### 5-3. 段が増えることで**必ず赤になる既存の検査**（本便で同時に直す）
 
 実際にファイルを読んで確認した一覧。**判定の中身ではなく前提（2段であること）が変わるため赤になる**。
