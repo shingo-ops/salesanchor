@@ -11,6 +11,21 @@
 
 set -euo pipefail
 
+# 接続の名前は第1引数で決める（docs/handoff/deploy-db-stall/design.md §16-3）。
+# 引数なし = cron（crontab の行は変えない）。deploy = 本番反映の控えの段。それ以外は rc=2。
+# trap を置くより前に判定する（rc=2 のとき backup.log に FAILED 行を書かない）。
+# cron は cwd が $HOME なので、lib は BASH_SOURCE からの絶対位置で読む。
+# shellcheck disable=SC1091
+source "$(dirname "${BASH_SOURCE[0]}")/lib/db-app-names.sh"
+case "${1:-}" in
+  "") PG_APPNAME="${SA_APPNAME_BACKUP_CRON}" ;;
+  deploy) PG_APPNAME="${SA_APPNAME_BACKUP_DEPLOY}" ;;
+  *)
+    echo "usage: backup.sh [deploy]" >&2
+    exit 2
+    ;;
+esac
+
 DATE=$(date +%Y%m%d_%H%M%S)
 # 保存先と compose ファイルは試験のために外から変えられる（本番の cron・本番反映は渡さないので既定値のまま）
 BACKUP_DIR="${SALESANCHOR_BACKUP_DIR:-/home/ubuntu/backups/postgres}"
@@ -50,7 +65,7 @@ OLD_UMASK=$(umask)
 umask 077
 
 # PostgreSQLのフルバックアップ（圧縮）。書き途中は .partial に書き、成功したら本名にする
-docker compose -f "${COMPOSE_FILE}" exec -T postgres \
+docker compose -f "${COMPOSE_FILE}" exec -T -e "PGAPPNAME=${PG_APPNAME}" postgres \
   pg_dump -U "${DB_USER}" --lock-wait-timeout="${PG_DUMP_LOCK_WAIT_MS}" "${DB_NAME}" \
   | gzip > "${BACKUP_FILE}.partial"
 mv "${BACKUP_FILE}.partial" "${BACKUP_FILE}"
