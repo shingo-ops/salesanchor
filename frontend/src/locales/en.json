@@ -1560,6 +1560,7 @@
     },
     "filterPanel": {
       "button": "Advanced filters",
+      "buttonWithCount": "Advanced filters ({{count}})",
       "enable": "Enable filter (apply my saved view)",
       "categories": "Show / hide TCG series",
       "columns": "Visible columns",

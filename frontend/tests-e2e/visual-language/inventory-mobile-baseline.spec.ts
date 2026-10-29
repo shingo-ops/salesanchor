@@ -216,22 +216,53 @@ test.describe("visual-language: 在庫表ベースライン計測 — 一覧（�
         const overflowingTotal = overflowAll.length;
         const overflowing = overflowAll.slice(0, 40);
 
-        const toolbarLeftEl = document.querySelector(".content-toolbar__left");
+        // スマホは便1（design.md 4-2）で ContentToolbar を使わなくなり、.content-toolbar__left は
+        // 描かれなくなった。.inventory-toolbar があればその子を直接測る（スマホ・1枚だけ）。
+        // 無ければ（PC）従来どおり .content-toolbar__left を全件（2段になると row ごとに複数できる
+        // ため、単数の querySelector では1段目しか測れず黙って壊れる＝便0の罠。design.md 設計 ⑥）。
+        const inventoryToolbarEl = document.querySelector(".inventory-toolbar");
+        const toolbarLeftEls = Array.from(document.querySelectorAll(".content-toolbar__left"));
         const toolbarParentEl = document.querySelector(".content-toolbar");
-        const toolbar = toolbarLeftEl
+        const toolbar = inventoryToolbarEl
           ? (() => {
-              const children = Array.from(toolbarLeftEl.children);
-              const firstY = children.length > 0 ? children[0].getBoundingClientRect().y : null;
+              const children = Array.from(inventoryToolbarEl.children).map((child) => ({ child, rowIndex: 0 }));
+              const firstY = children.length > 0 ? children[0].child.getBoundingClientRect().y : null;
               return {
                 found: true,
-                rect: rectOf(toolbarLeftEl),
+                rowCount: 1,
+                rects: [rectOf(inventoryToolbarEl)],
                 childCount: children.length,
-                children: children.map((child) => {
+                children: children.map(({ child, rowIndex }) => {
                   const r = child.getBoundingClientRect();
                   return {
                     tag: child.tagName.toLowerCase(),
                     testid: child.getAttribute("data-testid"),
                     rect: rectOf(child),
+                    rowIndex,
+                    sameRowAsFirst: firstY != null && Math.abs(r.y - firstY) < 2,
+                  };
+                }),
+                toolbarParent: rectOf(inventoryToolbarEl),
+              };
+            })()
+          : toolbarLeftEls.length > 0
+          ? (() => {
+              const children = toolbarLeftEls.flatMap((el, rowIndex) =>
+                Array.from(el.children).map((child) => ({ child, rowIndex })),
+              );
+              const firstY = children.length > 0 ? children[0].child.getBoundingClientRect().y : null;
+              return {
+                found: true,
+                rowCount: toolbarLeftEls.length,
+                rects: toolbarLeftEls.map((el) => rectOf(el)),
+                childCount: children.length,
+                children: children.map(({ child, rowIndex }) => {
+                  const r = child.getBoundingClientRect();
+                  return {
+                    tag: child.tagName.toLowerCase(),
+                    testid: child.getAttribute("data-testid"),
+                    rect: rectOf(child),
+                    rowIndex,
                     sameRowAsFirst: firstY != null && Math.abs(r.y - firstY) < 2,
                   };
                 }),

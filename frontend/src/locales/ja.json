@@ -1560,6 +1560,7 @@
     },
     "filterPanel": {
       "button": "詳細フィルタ",
+      "buttonWithCount": "詳細フィルタ ({{count}})",
       "enable": "フィルタを有効化（自分用の表示設定を適用）",
       "categories": "TCGシリーズの表示／非表示",
       "columns": "表示する列",

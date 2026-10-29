@@ -47,6 +47,11 @@ interface Props {
   setPriceMin: (v: string) => void;
   priceMax: string;
   setPriceMax: (v: string) => void;
+  /** スマホだけ true: パネルの先頭に「24時間以内」、末尾に「リセット」を出す（design.md 4-6） */
+  freshOnly: boolean;
+  onFreshToggle: () => void;
+  freshWindowHours: number | undefined;
+  onReset: () => void;
   onClose: () => void;
 }
 
@@ -81,6 +86,10 @@ export default function InventoryFilterPanel({
   setPriceMin,
   priceMax,
   setPriceMax,
+  freshOnly,
+  onFreshToggle,
+  freshWindowHours,
+  onReset,
   onClose,
 }: Props) {
   const { t } = useTranslation();
@@ -115,6 +124,21 @@ export default function InventoryFilterPanel({
         maxWidth: "44rem",
       }}
     >
+      {/* スマホだけ: 上部から移した「24時間以内」をパネルの先頭に（design.md 4-6） */}
+      {showSupplierSelect && (
+        <Checkbox
+          label={
+            freshWindowHours === undefined
+              ? t("inventory.view.freshOnly", { hours: "" })
+              : t("inventory.view.freshOnly", { hours: freshWindowHours })
+          }
+          data-testid="inventory-fresh-check"
+          className="inventory-fresh-check"
+          checked={freshOnly}
+          onChange={onFreshToggle}
+        />
+      )}
+
       {showSupplierSelect && (
         <MultiSelect
           testId="inventory-supplier-filter"
@@ -271,6 +295,15 @@ export default function InventoryFilterPanel({
           </div>
         </div>
       </div>
+
+      {/* スマホだけ: 上部から移した「リセット」をパネルの末尾（「閉じる」の直前）に（design.md 4-6） */}
+      {showSupplierSelect && (
+        <div>
+          <Button variant="secondary" size="sm" type="button" data-testid="inventory-reset-in-panel" onClick={onReset}>
+            {t("inventory.resetSort")}
+          </Button>
+        </div>
+      )}
 
       <div>
         <Button variant="secondary" size="sm" type="button" onClick={onClose}>
