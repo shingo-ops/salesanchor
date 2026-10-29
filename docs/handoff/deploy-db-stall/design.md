@@ -80,7 +80,7 @@
 
 `.github/workflows/migration-test.yml`（PR ごとに自動）。S1・S2・P1〜P3 はすべて migration-test-run ジョブ（:964 の段があるジョブ、DATABASE_URL あり）に置く。migration-full-dryrun（:1112）には置かない:
 - S1 付け忘れ・差し替え漏れの静的点検: `^run_py[[:space:]]` の呼び先全部について、(a) `sqlalchemy.ext.asyncio.engine` の出現が0件、(b) create_async_engine を取り込む行がすべて `from sqlalchemy.ext.asyncio import` の形（1行でも別の形があれば赤。「正しい形が1行ある」では判定しない）、(c) 同期の `create_engine(` が0件。`asyncpg.connect(`・psycopg の直接使用も無いこと（差し替えを通らない接続のため）。違えば赤。`モジュール.create_async_engine(` の書き方は差し替えが効くので止めない。手本は :1666- の静的点検。新しい移行が別の書き方で足されたらここで止まる。
-- S2 run_py が入口を通ること: run_py の定義の中に `migration_py_entry.py` と `MIGRATION_LOCK_TIMEOUT` があること（grep）。
+- S2 run_py が入口を通ること: run_py の定義の中に migration_py_entry.py と `MIGRATION_LOCK_TIMEOUT` があること（grep）。
 - P1 待たせる時間と例外の文字列: 既存の「Sprint 1 マイグレーションを適用」のうち :964 側（同名の段が :1649 の別ジョブにもある）の後に段を足す。別の psql が `BEGIN; LOCK TABLE public.suppliers IN ACCESS SHARE MODE;` のまま6秒保持する。保持役がロックを取ったことを pg_locks で確かめてから（sleep で待たない）、`PYTHONPATH=backend MIGRATION_LOCK_TIMEOUT=1s python scripts/migration_py_entry.py scripts/migrate_inventory_sprint1.py` を流す（:964 の段と同じ PYTHONPATH。P2・P3 も同じ）。その間0.5秒ごとに `SELECT 1 FROM public.suppliers LIMIT 1` の時間を測る。判定: 移行は rc≠0、標準エラーに "canceling statement due to lock timeout" がある（P4 を兼ねる）、読み取りの最大 ≤ 1500ms、移行が失敗するまで 3秒未満（測り始めは保持役のロックを pg_locks で確かめた後、入口を起動する直前）。前提の表・テナントはこの段より前の段が作ったものを使う（新しく作らない）。
 - P2 環境変数が無いときは今と同じ: 保持なしで P1 と同じ scripts/migrate_inventory_sprint1.py を入口経由に流して rc 0、差し替え回数の行が「lock_timeout=unset applied to 0」。MIGRATION_LOCK_TIMEOUT が空の文字列のときも「無し」と同じに扱う（入口でそう作る）。
 - P3 差し替えが効く: 保持なしで同じ移行を `MIGRATION_LOCK_TIMEOUT=1s` で流して rc 0、差し替え回数の行が「applied to 1」。
