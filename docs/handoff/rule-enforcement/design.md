@@ -497,7 +497,7 @@ APPROVE。根拠: 目的が見本の件数で判定でき、K2/K3 で後退と�
 ### 変更後
 1. 見本は「決まり」ではなく「検査」ごとに置く。1 つの見本は、1 つの必須チェックが呼ぶスクリプトに、1 つの入力を食べさせたときの期待（失敗 か 成功）を持つ。見本が一部を止めている決まりの id を書けるようにする（台帳の review の項目でよい）。台帳の kind は変えない。完全に止まる決まり（gate）の数は 0 のまま。
 2. 置き場は scripts/tests/rule-fixtures/<検査の短い名前>/<見本の名前>/。中身:
-   - case.json: `check`（必須チェックの名前。docs/specs/rule-enforcement/required-checks.txt にあること）、`rules`（id の一覧。rules.yml に実在すること。空でもよい）、`expect`（`fail` か `pass`）、`expect_output`（fail のとき必須。失敗の出力に必ず含まれる文字列。別の理由で落ちたものを「止まった」と数えないため）、`argv`（実行する命令。`{BASE}` `{HEAD}` を差し込める）、`env`（渡す環境変数。PR 本文はファイルで渡せる）、`delete`（消すファイルの一覧。任意）。
+   - case.json: `check`（必須チェックの名前。docs/specs/rule-enforcement/required-checks.txt にあること）、`rules`（id の一覧。rules.yml に実在すること。空でもよい）、`expect`（`fail` か `pass`）、`expect_output`（fail のとき必須。失敗の出力に必ず含まれる文字列。別の理由で落ちたものを「止まった」と数えないため）、`argv`（実行する命令。`{BASE}` `{HEAD}` を差し込める）、`env`（渡す環境変数）、`env_files`（環境変数の名前と、見本のフォルダの中のファイルの組。中身をその変数に入れる。PR 本文を渡すため。任意）、`delete`（消すファイルの一覧。任意）。
    - files/: HEAD の側で上書きまたは足すファイル。base_files/（任意）: BASE の側で先に足しておくファイル（例: 消される側の API の道を、本物のファイルを写さずに用意するため）。どちらも名前の末尾に `.fixture` を付けて置き、試すときに外す（見本のファイルがリポジトリの中で本物の migration・文書・画面のファイルとして他の検査に当たらないため）。
 3. 試し役 scripts/tests/run_rule_fixtures.py（新規・Python の標準ライブラリだけ）:
    - 見本ごとに、今の HEAD から使い捨ての git の写しを作る。base_files/ があれば置いて 1 コミット作り、それを BASE とする（無ければ写しの HEAD が BASE）。そのうえで files/ を置き delete を消して 1 コミット作り、それを HEAD とする。写しの中で argv を実行し、終了コードと出力を見る。終わったら写しを必ず片付ける。コミットの名前は環境変数で渡し、全体の git の設定は変えない。
@@ -508,7 +508,7 @@ APPROVE。根拠: 目的が見本の件数で判定でき、K2/K3 で後退と�
    - process-artifacts gate（scripts/check-process-artifacts.js）: 例として、コードの変更で PR 本文に「触るファイル」の宣言が無い、migrations/ を足して GO 記録が無い。正しい見本は、違反の見本の 1 つと同じ変更で足りない欄を足したもの。
    - UI governance gate（scripts/check-ui-governance.js）: 既存の試験が失敗を期待している形の 1 つを、本物のファイルの差分で作る。
    - dangling-route gate（scripts/check-dangling-routes.js）: 画面から呼ばれている API の道を消す。正しい見本は、どこからも呼ばれていない道を消す、またはどこも消さない。
-   - doc index reachability（scripts/ci/check_doc_index.py --root . --strict）: 目次から届かない新しい仕様書を足す。正しい見本は、同じ仕様書を docs/specs/README.md に「いつ読むか」付きで 1 行足して届くようにしたもの。
+   - doc index reachability（scripts/ci/check_doc_index.py --root . --strict）: 目次から届かない新しい文書を足す。正しい見本は、目次から既にリンクで届くフォルダ（docs/ai-agents/lessons.d/）に新しい文書を足したもの（実装時に変更。どちらも「目次から届くかどうか」だけを分ける見本で、意図は同じ）。
    - 見本は、止まると分かっている形だけにする。すり抜ける形は公開のリポジトリに置かない。
 5. .github/workflows/rule-registry.yml に setup-node（他のゲートと同じ版）と、試し役を流す手順を 1 つ足す。手順は失敗で止まる（continue-on-error を付けない）。ジョブは必須チェックではないので、マージは止めない（§3-5 の段階導入。必須への格上げは PO の登録で、R2a の外）。timeout-minutes は実測を見て決め、10 分を超えない。
 
