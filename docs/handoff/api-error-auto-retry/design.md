@@ -117,6 +117,7 @@ migration・列の追加・Gemini の呼び出しの作り（`backend/app/servic
 - 混んでいる最中に送り直しが重なる → すぐの送り直しは1件につき2回まで。数分後の送り直しは5分待ち・10分ごと・1回20件・3秒ずつずらす（既存 _COUNTDOWN_STEP）。
 - 時間切れは重い投稿で毎回起きうる → すぐの送り直しはしない。数分後の送り直しも合計3回で止まる。
 - 「(HTTP NNN)」は文字列から拾っている（`backend/app/services/gemini_extraction_svc.py:185`）ので、番号を取り違える可能性がある → 取り違えても回数の上限で止まる。
+- 戻した job が pending の間は、配信の安全装置 #8b が配信を止める（`backend/app/services/tcg_distribution_svc.py:918`）。戻した job がまた失敗しても自分では配信を起こさない → 新しい投稿が失敗したときと同じ性質で、次の投稿・定期配信で解消する（マージ前審査 review-opus.md 細部3 で追記）。
 - 戻し方: この PR を revert。DB の形は変えないので、戻しても残るものは無い。
 
 ## 計画票
