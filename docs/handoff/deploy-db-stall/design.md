@@ -290,9 +290,9 @@ PR ごとの静的点検にも1つ足す（第8版）:
 - 計画: (1) 本節の Architect 審査（新しく起動） (2) Sonnet が実装・CI (3) reviewer（opus、新しく起動）の審査 (4) 委任 GO（本番 scripts を含み ADR-135・136 の GO 対象。ADR-1003 の例外7種には当たらない。移行・DROP は無い）・マージ (5) K3-4〜K3-6 と、段1の K8・K9 を同じ本番反映で測る (6) 段2の詳細設計へ。
 - 継続: 値の正本は backup.sh の PG_DUMP_LOCK_WAIT_MS だけ。守り手: `.github/workflows/backup-script-test.yml`（B1〜B4。実装 PR で作る）。
 
-## 16. 段2 詳細設計 — 本番反映が時間切れで切れたとき、サーバーに残った控え・移行を片付ける（第3版）
-状態: 設計案（第3版）。実装未着手。段3の本番測定（K3-4〜K3-6）と段1の K8・K9 の残りがそろうまで本番には出さない（§3 の順番）。
-審査の記録: 第1版 REVISE（2026-10-30、Architect 新規起動。§16-1 の外部の主張・行番号・名前の付け方・id と Finalize への影響は合格）。指摘: R1 控えの段は前回のコードで動くので初回に片付けのスクリプトが無く本番反映が止まり続ける／R2 接続を1回しか切らない／R3 赤の実演が赤にならない／R4 本物の移行スクリプトの trap の試験が無い／R5 待ち60秒が ai_ro の作り直しの最悪より短い／R6 手で止めた回が対象外。条件 1〜7（paths・lib の読み方・S3 の範囲・B5 の書き間違い・ADR-1037 の追記・ADR-1005 との関係・pgrep の正規表現）。第2版で 16-1・16-3〜16-11 に反映した。第2版 REVISE（2026-10-30、Architect 新規起動。R1・R5・R6・条件2〜7 は合格。if 文の動き・古い backup.sh に引数を渡しても rc=0・取り消しの条件式を手元の実測と文書で照合）。指摘: N1 C3 は1回だけ切る版でも緑になる（TERM を先に送ると trap がすぐ動く）／N2 C8 は TERM の trap の有無を区別できない（trap が無くても TERM で EXIT の trap は動く。違いは前面を待つかどうか）／N3 失敗のときの段に cd が無く毎回 skipped になる／N4 プロセスが見つからない取り残しの接続を切り直さない。条件: C-a 時間計算に ai_ro の作り直しが入っていない／C-b C9 が deploy.yml の本文を読まない・paths／C-c ジョブの時間の上限。第3版で 16-2・16-4・16-5・16-6 に反映した。
+## 16. 段2 詳細設計 — 本番反映が時間切れで切れたとき、サーバーに残った控え・移行を片付ける（第3.1版）
+状態: 設計案（第3.1版）。実装未着手。段3の本番測定（K3-4〜K3-6）と段1の K8・K9 の残りがそろうまで本番には出さない（§3 の順番）。
+審査の記録: 第1版 REVISE（2026-10-30、Architect 新規起動。§16-1 の外部の主張・行番号・名前の付け方・id と Finalize への影響は合格）。指摘: R1 控えの段は前回のコードで動くので初回に片付けのスクリプトが無く本番反映が止まり続ける／R2 接続を1回しか切らない／R3 赤の実演が赤にならない／R4 本物の移行スクリプトの trap の試験が無い／R5 待ち60秒が ai_ro の作り直しの最悪より短い／R6 手で止めた回が対象外。条件 1〜7（paths・lib の読み方・S3 の範囲・B5 の書き間違い・ADR-1037 の追記・ADR-1005 との関係・pgrep の正規表現）。第2版で 16-1・16-3〜16-11 に反映した。第2版 REVISE（2026-10-30、Architect 新規起動。R1・R5・R6・条件2〜7 は合格。if 文の動き・古い backup.sh に引数を渡しても rc=0・取り消しの条件式を手元の実測と文書で照合）。指摘: N1 C3 は1回だけ切る版でも緑になる（TERM を先に送ると trap がすぐ動く）／N2 C8 は TERM の trap の有無を区別できない（trap が無くても TERM で EXIT の trap は動く。違いは前面を待つかどうか）／N3 失敗のときの段に cd が無く毎回 skipped になる／N4 プロセスが見つからない取り残しの接続を切り直さない。条件: C-a 時間計算に ai_ro の作り直しが入っていない／C-b C9 が deploy.yml の本文を読まない・paths／C-c ジョブの時間の上限。第3版で 16-2・16-4・16-5・16-6 に反映した。第3版 条件付き APPROVE（2026-10-30、Architect 新規起動。N1〜N4・C-a〜C-c は直っていると、DB を使わない手元の模擬（bash 3.2）で照合）。条件: M1 試験用 DB のコンテナ名が片付けの固定名と違う／M2 C8 の偽 docker の指定（止める run_sql の位置・REPO_DIR・順番の判定の細かさ・TERM の送り先）／M3 16-4 の9 の重なる条件が控えと移行の段の起動条件の違いを見ていない／M4 ai_ro の作り直しは5文／M5 失敗のときの段の台本に set -e。任意: trap を置く位置。第3.1版で 16-1・16-2・16-4・16-5・16-6 に反映した。
 
 ### 16-1. 事実（2026-10-30 調べ。行番号は origin/main）
 - 本番反映（`.github/workflows/deploy.yml`）のサーバー側の段は全部 `appleboy/ssh-action@v1` で、`command_timeout` を書いていない（with に command_timeout・request_pty の指定は0件）。既定は 10m（appleboy/ssh-action v1 の action.yml :28-30）。
@@ -304,7 +304,7 @@ PR ごとの静的点検にも1つ足す（第8版）:
 - いまの目印: Python の移行の接続は application_name=salesanchor_migration（`scripts/migration_py_entry.py` :40、MIGRATION_LOCK_TIMEOUT があるとき）。run_sql の psql（`scripts/run_all_migrations.sh` :114）と pg_dump（`scripts/backup.sh` :53-55）には付けていない。読み取り監視は sa_read_probe（:160）。
 - 開始時に取り残しを止める仕組みは無い（deploy.yml と scripts/ に pkill・pg_terminate_backend・pg_cancel_backend・killall の該当0件。試験の後始末だけ）。
 - `scripts/run_all_migrations.sh` の trap は EXIT の1つだけ（:245）。TERM・HUP・INT の trap は無い。`scripts/backup.sh` は INT・TERM・HUP を exit に変えている（:44-46）。
-- ai_ro の作り直し（EXIT の trap、:226-243）は `migrations/20261017_130100_create_ai_ro_views.sql` を1文30秒の上限（:223・:239）で流す。中身は BEGIN〜COMMIT の中の3文（DROP SCHEMA … CASCADE・CREATE・DO）。lock_timeout は付いていない。最悪は約90秒＋読み取り監視の停止（2秒以内、:127）。
+- ai_ro の作り直し（EXIT の trap、:226-243）は `migrations/20261017_130100_create_ai_ro_views.sql` を1文30秒の上限（:223・:239）で流す。中身は BEGIN〜COMMIT の中の5文（DROP SCHEMA … CASCADE・CREATE SCHEMA・DO・GRANT 2文。ファイルの :8・:9・:11・:78・:79）。lock_timeout は付いていない。GRANT 2文は ai_ro の中の自分で作ったものが相手なので、ほかの接続のロックを待たないと見込む（まだ確かめていない）。最悪約90秒は DROP・CREATE・DO の3文の上限の和。最悪は約90秒＋読み取り監視の停止（2秒以内、:127）。
 - 本番 prod1 の ps（2026-10-29 15:31Z、読み取りのみ）: backup.sh・run_all_migrations.sh・pg_dump・docker exec の行は0本。いま取り残しは無い。
 - 段1・段3の後、ロック待ちの上限はどちらも10分より短い。移行は最悪約458秒（§9）、控えは待ち120秒＋ふだん約120秒（§15-3）。よって段2が受け持つのは「ロック待ち以外の理由で10分を超えた回」「手で止めた回」と「段1・段3の上限の見込み違い」の後始末。
 
@@ -314,7 +314,7 @@ PR ごとの静的点検にも1つ足す（第8版）:
 | 控えと移行の段の時間切れ | 書いていない（既定 10m） | 2つの段に `command_timeout: 10m` を書く（値は今と同じ。既定が変わっても動きが変わらないようにする） |
 | 控えの接続の名前 | なし（pg_dump の既定） | 本番反映から呼ぶとき salesanchor_backup_deploy、cron から呼ぶとき salesanchor_backup_cron |
 | run_sql の接続の名前 | なし | salesanchor_migration（Python と同じ名前） |
-| 移行の TERM・HUP・INT | trap なし（TERM を受けると前面の docker exec を待たずに終わり、EXIT の trap が前面と並んで ai_ro を作り直す。第2版の審査の実測 t1） | backup.sh と同じく exit 143・129・130 に変える。前面の文が終わってから EXIT の trap が ai_ro を作り直す（実測 t2）。作り直しが、止めた移行の文と同時に走らない |
+| 移行の TERM・HUP・INT | trap なし（TERM を受けると前面の docker exec を待たずに終わり、EXIT の trap が前面と並んで ai_ro を作り直す。第2版の審査の実測 t1） | backup.sh と同じく exit 143・129・130 に変える。置く位置は EXIT の trap（:245）のすぐ隣。前面の文が終わってから EXIT の trap が ai_ro を作り直す（実測 t2）。作り直しが、止めた移行の文と同時に走らない |
 | 取り残しの片付け | なし | 新しい片付けのスクリプト（scripts/deploy-db-orphan-cleanup.sh）を、(1) 控えの段の最初 (2) 移行の段の最初 (3) 控えか移行の段が失敗・取り消しになったときの新しい段、で呼ぶ。サーバーにまだ無いときは何もせず通る |
 
 ### 16-3. 名前の正本
@@ -335,18 +335,19 @@ PR ごとの静的点検にも1つ足す（第8版）:
 5. 記録: 見つけた数・切った回数・残った数を1行ずつ出す（`>>> [cleanup] scripts=<n> backends=<n> remaining=<n>`）。SQL の文面と接続元アドレスは出さない（公開ログ。:62 と同じ方針）。
 6. 残った（120秒で消えない）ときは rc=1 で止め、その段を失敗にする。KILL は送らない（ai_ro の作り直しや控えの書き途中の片付けを飛ばさないため。人が見て判断する）。
 7. 見つからないときは何もせず rc=0。ふだんの本番反映はこの形。
-8. DB への問い合わせは `docker exec astro-webapp-postgres-1 psql -U jarvis -d jarvis_db`（run_all_migrations.sh :24-25 と同じ）。`statement_timeout=5s`・`lock_timeout=1s` を付ける。名前は付けない。
-9. 時間の上限: §9 の最悪458秒は移行の実測82.3秒に再試行40回を足したもので、移行が失敗で終わるときの ai_ro の作り直し（最悪約90秒、16-1）を含まない。移行の段の最悪は「最初の片付け（最悪120秒＋問い合わせ）＋458秒＋作り直し約90秒」≒670秒で、600秒を超え得る。重なるのは「前の本番反映の後始末の段も、今回の控えの段の最初の片付けも、取り残しを片付けきれなかった」回だけ（控えの段の最初の片付けが先に同じ取り残しを止めるので、ふだんは移行の段の最初の片付けは数秒）。超えて段が切れた場合は、失敗のときの段（16-5）がその取り残しを止める。控えの段は「片付け（最悪約125秒）＋待ち120秒＋ふだん約120秒」≒365秒。
+8. DB への問い合わせは `docker exec astro-webapp-postgres-1 psql -U jarvis -d jarvis_db`（run_all_migrations.sh :24-25 と同じ）。コンテナ名はスクリプトに固定で書き、外から変えられるようにはしない（本番の値を1か所に保つ。試験は 16-6 で入れ物の名前を本番にそろえる）。`statement_timeout=5s`・`lock_timeout=1s` を付ける。名前は付けない。
+9. 時間の上限: §9 の最悪458秒は移行の実測82.3秒に再試行40回を足したもので、移行が失敗で終わるときの ai_ro の作り直し（最悪約90秒、16-1）を含まない。移行の段の最悪は「最初の片付け（最悪120秒＋問い合わせ）＋458秒＋作り直し約90秒」≒670秒で、600秒を超え得る。控えの段は db_migrations（deploy.yml :198、範囲が狭い）、移行の段は migrations（:592、backend・scripts・deploy.yml まで含む）で動くので、控えの段が動かず移行の段の最初の片付けだけが取り残しに当たる本番反映はふだんからあり得る（:48-50 の記録では25件中 migrations 16件・db_migrations 3件）。片付けが rc=1 で終わると set -e で移行は始まらない。よって670秒に近づくのは「移行の段の最初の片付けが120秒近くかかり、最後に消しきれた」回だけ。前の本番反映の失敗のときの段（16-5）が先に片付けているので、まれと見込む。超えて段が切れた場合は、失敗のときの段がその取り残しを止める。控えの段は「片付け（最悪約125秒）＋待ち120秒＋ふだん約120秒」≒365秒。
 
 ### 16-5. deploy.yml の変更
 - 3か所とも、片付けは「サーバーにファイルがあるときだけ呼ぶ」書き方にする: `if [ -f scripts/deploy-db-orphan-cleanup.sh ]; then bash scripts/deploy-db-orphan-cleanup.sh; else echo ">>> [cleanup] skipped: script not present (old checkout)"; fi`。理由: 控えの段と失敗のときの段は前回のコードで動き得る（16-1）。無いときに rc=127 で止まると、本番反映が手で直すまで通らなくなる。
 - 「Pre-deploy DB backup」: id を backup にする。`command_timeout: 10m` を足す。台本の `bash scripts/backup.sh` の前に片付けを置き、`bash scripts/backup.sh deploy` に変える。
 - 「Run database migrations」: id を migrate にする。`command_timeout: 10m` を足す。`bash scripts/run_all_migrations.sh` の前に片付けを置く（この段は今回のコードで動くので、ファイルは必ずある。書き方は3か所でそろえる）。
-- 新しい段「Clean up DB orphans after failure」: 「Run database migrations」の直後に置く。条件は `always() && (steps.backup.outcome == 'failure' || steps.backup.outcome == 'cancelled' || steps.migrate.outcome == 'failure' || steps.migrate.outcome == 'cancelled')`（手で止めた回の outcome は cancelled で、failure() は偽になるため）。中身は `cd /home/ubuntu/salesanchor` と片付けだけ（ssh の段は $HOME から始まり、if 文は相対パスでファイルを探すので、cd が無いと毎回 skipped になる。ほかの段もはじめに cd している、deploy.yml :209・:244・:604・:621・:643）。`command_timeout: 5m`。この段の結果は、後ろの「Finalize」（if: always()）と「Emergency block /design/」（if: failure()）の動きを変えない（本番反映全体は既に失敗か取り消し）。
+- 新しい段「Clean up DB orphans after failure」: 「Run database migrations」の直後に置く。条件は `always() && (steps.backup.outcome == 'failure' || steps.backup.outcome == 'cancelled' || steps.migrate.outcome == 'failure' || steps.migrate.outcome == 'cancelled')`（手で止めた回の outcome は cancelled で、failure() は偽になるため）。中身は `set -e`・`cd /home/ubuntu/salesanchor`・片付けの if 文をこの順に書くだけ（set -e が無いと cd が失敗しても段は緑のまま何もしない。ssh の段は $HOME から始まり、if 文は相対パスでファイルを探すので、cd が無いと毎回 skipped になる。ほかの段もはじめに cd している、deploy.yml :209・:244・:604・:621・:643）。`command_timeout: 5m`。この段の結果は、後ろの「Finalize」（if: always()）と「Emergency block /design/」（if: failure()）の動きを変えない（本番反映全体は既に失敗か取り消し）。
 - 時間切れで段が切れた直後に片付けるので、取り残しが次の本番反映まで残らない。次の本番反映の段の最初の片付けは、この段自体が動かなかったとき（Actions 側の障害など）の保険。
 - `cancel-in-progress` と他の段は変えない。
 
 ### 16-6. 試験（PR の CI。`.github/workflows/backup-script-test.yml` の入れ物（§15-4、postgres:16 の compose）を使う。新しいジョブを同じファイルに足す）
+- 入れ物の compose ファイルに `name: astro-webapp` を書き、コンテナ名を本番と同じ astro-webapp-postgres-1 にする。理由: §15-4 の試験（scripts/tests/test-backup-lock-wait.sh）は名前を書かずに一時フォルダの compose/ に作るので、コンテナ名が本番と違う。そのままだと片付けは試験用 DB を見に行けず、C2・C3 は赤、C5・C6 は何も確かめずに緑になる。試験の最初に `docker inspect astro-webapp-postgres-1` が動くことを確かめ、動かなければ FAIL にする。
 - paths に足す（pull_request と push の両方）: scripts/lib/db-app-names.sh・scripts/deploy-db-orphan-cleanup.sh・`scripts/migration_py_entry.py`・`scripts/run_all_migrations.sh`・`.github/workflows/deploy.yml`・新しい試験のファイル（名前の正本だけ、または deploy.yml だけを変える PR でも C4・C9 が動くように）。
 - 新しいジョブの `timeout-minutes: 15`。見積もり: 入れ物の起動 約1分＋C2 最悪約125秒＋C7 120〜135秒＋C3 約10秒＋C1・C4〜C6・C8・C9 合わせて約1分 ≒ 約7分。15分は今のジョブと同じで、見積もりの約2倍。
 - C1 名前が付く: `bash scripts/backup.sh deploy` を流している間に pg_stat_activity を見て、application_name=salesanchor_backup_deploy の接続が1本ある。引数なしでは salesanchor_backup_cron。`bash scripts/backup.sh foo` は rc=2 で控えを作らず、backup.log に FAILED 行を書かない。cwd を $HOME にして絶対パスで呼んでも lib を読める。
@@ -356,8 +357,8 @@ PR ごとの静的点検にも1つ足す（第8版）:
 - C5 部分一致で止めない: `bash -c "…; bash scripts/run_all_migrations.sh; …"` の形の bash を裏で動かしておき、片付けの後も残っている（ssh-action の段と同じ形を止めない）。cron の名前の控えの接続（引数なしの backup.sh を握りで待たせる）も残っている。
 - C6 何も無いとき: rc=0・出力は `scripts=0 backends=0 remaining=0`。
 - C7 残ったら止まる: TERM を無視する偽スクリプト（trap '' TERM）で、片付けが120秒後に rc=1 になる（所要 120〜135秒）。
-- C8 本物の移行スクリプトの trap: 本物の run_all_migrations.sh を、`.github/workflows/migration-test.yml` の S3・R5 と同じ考え方の偽 docker（PATH の先頭に置く外部の実行ファイル）の上で動かす。偽 docker は、最初の移行の run_sql の呼び出しでだけ sleep 300 し、ai_ro の作り直し・preflight・docker cp など、ほかの呼び出しはすぐ rc=0 で返す。呼ばれるたびに「開始・終了・引数・時刻」を1行ずつ記録のファイルに書く。REPO_DIR などスクリプトが求める環境変数は試験用の一時フォルダを指す。run_sql の sleep に入ったことを記録で確かめてから、スクリプトの bash に TERM を送る。数秒おいて偽 docker の sleep を止めて前面を終わらせる。判定: rc=143、標準出力に `>>> [final] psql < migrations/20261017_130100_create_ai_ro_views.sql` の行がある、記録のファイルで「ai_ro の作り直しの最初の呼び出しの開始」が「止めた run_sql の呼び出しの終了」より後。TERM の trap が無いと、スクリプトは前面を待たずに終わり、EXIT の trap が止めた run_sql と並んで作り直しを始めるので、順番の判定が赤になる（第2版の審査の実測 t1、手元の bash 3.2）。本番の bash 5 で同じ動きかは確かめていない。C8 は CI の Ubuntu（bash 5）で動くので、そこで確かめる。
-- C9 古いサーバーのコード: `.github/workflows/deploy.yml` の本文から、id が backup・migrate の段と「Clean up DB orphans after failure」の段の台本を抜き出す（YAML として読む）。判定: 3つとも `cd /home/ubuntu/salesanchor` の行が片付けの if 文より前にある・3つの if 文が16-5の文と一字一句同じ・抜き出した if 文を片付けのファイルが無い一時フォルダで `set -e` の下で流すと rc=0 と skipped の行が出る。
+- C8 本物の移行スクリプトの trap: 本物の run_all_migrations.sh を、`.github/workflows/migration-test.yml` の S3・R5 と同じ考え方の偽 docker（PATH の先頭に置く外部の実行ファイル）の上で動かす。偽 docker は、EXIT の trap（:245）の後の最初の run_sql（:255、013 のファイル）の呼び出しでだけ sleep 300 し、:215 の drop・ai_ro の作り直し・preflight・docker cp など、ほかの呼び出しはすぐ rc=0 で返す（:215 の drop は trap より前なので、そこで止めると正しい実装でも [final] 行が出ない）。呼ばれるたびに「開始・終了・引数」を1行ずつ、1つの記録のファイルに追記する。REPO_DIR は checkout の根を指す（一時フォルダにすると preflight（:205-208）と :114・:232 が migrations を見つけられず止まる）。スクリプトは `bash scripts/run_all_migrations.sh &` で起動し、TERM はそのとき得た `$!` にだけ送る（pgrep で探すと、同じ命令行を持つ読み取り監視の子 :150-174 にも当たる）。013 の sleep に入ったことを記録で確かめてから TERM を送る。数秒おいて偽 docker の sleep を止めて前面を終わらせる。判定: rc=143、標準出力に `>>> [final] psql < migrations/20261017_130100_create_ai_ro_views.sql` の行がある、記録のファイルの行の順で「ai_ro の作り直しの最初の呼び出しの開始」が「止めた run_sql の呼び出しの終了」より後（秒単位の時刻では同じ秒になるので、時刻ではなく行の順で比べる）。判定は、止めた run_sql の終了の行が記録に書かれるのを待ってから行う（赤の側で、終了の行より先に判定しないため）。TERM の trap が無いと、スクリプトは前面を待たずに終わり、EXIT の trap が止めた run_sql と並んで作り直しを始めるので、順番の判定が赤になる（第2版の審査の実測 t1、手元の bash 3.2）。本番の bash 5 で同じ動きかは確かめていない。C8 は CI の Ubuntu（bash 5）で動くので、そこで確かめる。
+- C9 古いサーバーのコード: `.github/workflows/deploy.yml` の本文から、id が backup・migrate の段と「Clean up DB orphans after failure」の段の台本を抜き出す（YAML として読む。道具は `pip install pyyaml` で入れる。前例 `.github/workflows/monitoring-check.yml` :45）。判定: 3つとも `set -e`・`cd /home/ubuntu/salesanchor`・片付けの if 文がこの順にある・3つの if 文が16-5の文と一字一句同じ・抜き出した if 文を片付けのファイルが無い一時フォルダで `set -e` の下で流すと rc=0 と skipped の行が出る。
 - 赤の実演（実装 PR で1回、結果を PR に貼る）: (1) pgrep の完全一致を部分一致に変えると C5 が赤 (2) 16-4 の3の「切り続ける」を1回だけ切る形に戻すと C3 が赤（前面の子が2回目の pg_sleep(300) を始め、親は120秒で消えない） (3) run_all_migrations.sh の TERM の trap を外すと C8 が赤（作り直しが止めた run_sql の終了より前に始まり、順番の判定が赤） (4) deploy.yml の失敗のときの段から `cd /home/ubuntu/salesanchor` を消すと C9 が赤。
 
 ### 16-7. 受け入れ基準
