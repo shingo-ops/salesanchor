@@ -262,7 +262,7 @@ PR ごとの静的点検にも1つ足す（第8版）:
 - B4 本物の backup.sh を本物の pg_dump で: 入れ物の compose ファイルを SALESANCHOR_BACKUP_COMPOSE_FILE で渡し、SALESANCHOR_BACKUP_DIR と BACKUP_TEXTFILE_DIR は一時フォルダにする。B1 の握りの接続はすべて止めておく。偽 docker では `docker compose exec` に渡す引数の書き間違いを捕まえられないので、この項を置く。
   - B4a 成功: rc=0。できた控えを gunzip すると、作った表の CREATE TABLE がある。
   - B4b 上限で止まる: B1a と同じ握りを作り（ただし `pg_sleep(300)` にして、120秒の上限より長く握る）、本物の backup.sh を流す。判定: rc≠0、所要は120秒以上・180秒未満、`.partial` が0本、`salesanchor_db_*.sql.gz` が増えない、backup.log に FAILED 行がある。backup.sh の定数が本物の pg_dump に届いて上限で止まることを一続きで確かめる（約2分かかる）。終わったら握りを止める。
-- 置き場所: 新しいワークフロー `.github/workflows/backup-script-test.yml` を1つ作る。手本は `.github/workflows/deploy-script-test.yml`（偽 docker の単体試験・必須チェックにしない、という同じ形）。`scripts/backup.sh`・`scripts/tests/test-backup-*.sh`・試験本体・このワークフロー自身が変わった PR と、手での起動で走らせる。必須チェックにはしない（必須チェックの変更は PO 本人の操作）。ワークフローを足したときに「CI設定整合性チェック」への登録が要るかは未確認で、実装 PR の CI で確かめる。
+- 置き場所: 新しいワークフロー `.github/workflows/backup-script-test.yml` を1つ作る。手本は `.github/workflows/deploy-script-test.yml`（偽 docker の単体試験・必須チェックにしない、という同じ形）。`scripts/backup.sh`・scripts/tests/ の test-backup- で始まるシェル（`scripts/tests/test-backup-lock-wait.sh` など）・試験本体・このワークフロー自身が変わった PR と、手での起動で走らせる。必須チェックにはしない（必須チェックの変更は PO 本人の操作）。ワークフローを足したときに「CI設定整合性チェック」への登録が要るかは未確認で、実装 PR の CI で確かめる。
 
 ### 15-5. 受け入れ基準
 | 基準 | 検証方法 |
