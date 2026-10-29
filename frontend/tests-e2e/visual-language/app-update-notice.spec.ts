@@ -66,9 +66,12 @@ test.describe("app-update-notice (K6)", () => {
 
     const btn = notice.getByRole("button");
     await expect(btn).toBeVisible();
-    const btnBox = await btn.boundingBox();
-    expect(btnBox).not.toBeNull();
-    expect(btnBox!.height).toBeGreaterThanOrEqual(MIN_TAP_PX);
+    // Button の 44px は max-width 767px の中だけの決まり（Button.css）。PC 幅は標準の 36px なので 390 のときだけ測る
+    if (testInfo.project.name === "vl-mobile-390") {
+      const btnBox = await btn.boundingBox();
+      expect(btnBox).not.toBeNull();
+      expect(btnBox!.height).toBeGreaterThanOrEqual(MIN_TAP_PX);
+    }
 
     await testInfo.attach("app-update-notice", {
       body: await page.screenshot(),

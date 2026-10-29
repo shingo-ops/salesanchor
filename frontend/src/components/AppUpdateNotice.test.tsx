@@ -7,6 +7,7 @@ vi.mock('../hooks/useAppUpdateCheck', () => ({ useAppUpdateCheck }));
 vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 
 const reload = vi.fn();
+const originalLocation = window.location;
 
 beforeEach(() => {
   reload.mockReset();
@@ -16,6 +17,7 @@ beforeEach(() => {
   });
 });
 afterEach(() => {
+  Object.defineProperty(window, 'location', { configurable: true, value: originalLocation });
   cleanup();
   useAppUpdateCheck.mockReset();
 });

@@ -42,7 +42,7 @@
    - スマホ幅（〜767px）では左右に余白を取って横いっぱい。ボタンの高さは 44px 以上。
    - Storybook の見張り（check:stories）に合わせ、見た目だけの AppUpdateNoticeView と stories を置く。
 5. 文言（t() 経由、ja/en 同じキー）: appUpdate.message「新しい版があります」/「A new version is available」、appUpdate.reload「更新」/「Reload」。
-6. 失敗したとき（通信できない・入口の形が違う）: 何も出さず次の時を待つ。エラーを画面に出さない。
+6. 失敗したとき（通信できない・入口の形が違う・返事が来ない）: 何も出さず次の時を待つ。エラーを画面に出さない。入口の取り直しは10秒で打ち切る（返事が来ないまま次の確かめが止まらないようにする）。
 
 対象外: 自動の読み込み直し、閲覧ページ（別の入口）、Service Worker・manifest、nginx・Dockerfile・deploy.yml・backend の変更、コード分割を足したときの読み込み失敗への対処（今は lazy が0件）。
 
@@ -57,7 +57,7 @@
 | K3: 裏にいる間と、見つけたあとは取りに行かない。10分ごとに確かめる | 単体試験 `frontend/src/hooks/useAppUpdateCheck.test.ts`（K3） |
 | K4: 今の名前が取れない・通信に失敗したとき、出さず例外も投げない | 単体試験 `frontend/src/hooks/useAppUpdateCheck.test.ts`（K4） |
 | K5: 「更新」を押すと読み込み直しが1回。押さない限り呼ばれない | 単体試験 `frontend/src/components/AppUpdateNotice.test.tsx`（K5） |
-| K6: 幅 390・1280 で上に出て、横のはみ出しが無く、ボタン 44px 以上 | CI 画面試験 `frontend/tests-e2e/visual-language/app-update-notice.spec.ts`（写真を PO に見せる） |
+| K6: 幅 390・1280 で上に出て、横のはみ出しが無い。幅 390 ではボタン 44px 以上（指で押す幅だけの決まり。幅 1280 は金型 Button の標準の高さ） | CI 画面試験 `frontend/tests-e2e/visual-language/app-update-notice.spec.ts`（写真を PO に見せる） |
 | K7: check:all と build が通り、ja と en のキー数が一致する | CI（npm run check:all、npm run build） |
 | K8: この版を入れて一度完全に閉じて開き直したあと、次の本番の版で知らせが出て、押すと新しくなる | PO の実機（次の本番の版が出たとき） |
 

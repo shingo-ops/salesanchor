@@ -58,7 +58,7 @@ describe("useAppUpdateCheck", () => {
     expect(result.current).toBe(false);
     await comeBack(61_000);
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock).toHaveBeenCalledWith("/", { cache: "no-store" });
+    expect(fetchMock).toHaveBeenCalledWith("/", expect.objectContaining({ cache: "no-store" }));
     expect(result.current).toBe(true);
   });
 
@@ -133,6 +133,25 @@ describe("useAppUpdateCheck", () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response(html(NEWER), { status: 500 })));
     await comeBack(61_000);
     expect(result.current).toBe(false);
+  });
+
+  it("aborts a fetch that never answers after 10 seconds and fetches again on the next check", async () => {
+    const fetchMock = vi.fn(
+      (_url: string, init?: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError")));
+        }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const { result } = renderHook(() => useAppUpdateCheck());
+    await comeBack(61_000);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      vi.advanceTimersByTime(10_000);
+    });
+    expect(result.current).toBe(false);
+    await comeBack(61_000);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it("clears listeners on unmount", async () => {

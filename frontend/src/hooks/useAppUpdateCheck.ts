@@ -10,6 +10,7 @@ import { useEffect, useState } from "react";
  */
 const CHECK_INTERVAL_MS = 10 * 60 * 1000;
 const MIN_GAP_MS = 60 * 1000;
+const FETCH_TIMEOUT_MS = 10 * 1000;
 const ENTRY_PATTERN = /\/assets\/main-[A-Za-z0-9_-]+\.js/;
 
 function currentEntryName(): string | null {
@@ -35,14 +36,17 @@ export function useAppUpdateCheck(): boolean {
       const current = currentEntryName();
       if (!current) return;
       inflight = true;
+      const controller = new AbortController();
+      const abortTimer = window.setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
       try {
-        const res = await fetch("/", { cache: "no-store" });
+        const res = await fetch("/", { cache: "no-store", signal: controller.signal });
         if (!res.ok) return;
         const latest = ENTRY_PATTERN.exec(await res.text())?.[0];
         if (latest && latest !== current && !cancelled) setAvailable(true);
       } catch {
         // 黙って次の時を待つ
       } finally {
+        window.clearTimeout(abortTimer);
         inflight = false;
       }
     };
