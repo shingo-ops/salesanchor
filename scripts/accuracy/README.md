@@ -27,3 +27,8 @@
 - errors.tsv と inputs.sha256 は投稿 id を含むので社外秘。リポジトリ・PR・コメントに載せない。
 - 手元 Mac の Python 3.14 では環境変数 SSL_CERT_FILE=/etc/ssl/cert.pem を付ける。
 - 窓口は同時 1 本で、入口に速度の上限（1秒に2本・続けて5本まで）がある。道具は 429 のとき 1・2・4・8 秒待ってやり直し、それでも 429 なら何も書かずに止まる。クラウドと手元を同時に走らせない。
+
+## 仕入元ごと・中分類ごとに分ける（by_group.py / fetch_groups.py）
+- 判定表（`key	項目	判定`。判定は OK / NG / NOWORD）と対応表（`key	仕入元	中分類`）から、`overall.tsv`・`by_supplier.tsv`・`by_category.tsv`（正しい・違う・答え無し・正答率・Wilson 95% の幅・20件未満は「参考」）を出す: `python3 -I scripts/accuracy/by_group.py --verdicts V.tsv --groups G.tsv --out-dir <出力先>`。出力先はリポジトリの外だけ。分けた数の合計が全体と合わなければ何も書かず終了コード3。
+- 対応表は窓口から作る: `python3 -I scripts/accuracy/fetch_groups.py --keys K.tsv --out G.tsv`（K は `key	msg_id	product_id`）。仕入元は supplier_id の数字だけ。窓口に列が無ければ `BLOCKED:` で終了コード1。
+- 出力・対応表・判定表は社外秘。リポジトリ・PR に載せない。
