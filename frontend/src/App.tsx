@@ -114,6 +114,7 @@ import RegisterPage from "./pages/register/RegisterPage";
 import RegisterAddressPage from "./pages/register/RegisterAddressPage";
 import RegisterChangeBillingPage from "./pages/register/RegisterChangeBillingPage";
 import { Toaster } from "./components/loading";
+import { AppUpdateNotice } from "./components/AppUpdateNotice";
 import "./sidebar.css";
 import "./topbar.css";
 import "./components.css";
@@ -153,6 +154,7 @@ function App() {
           <LocaleProvider>
             <ThemeProvider>
               <Toaster />
+              <AppUpdateNotice />
               <Routes>
                 <Route path="/login" element={<LoginPage />} />
                 {/* ADR-1013: パスワード再設定・初回設定（メールのリンクから来る。認証不要） */}

@@ -111,6 +111,10 @@
     "updateSummary": "Total: {{total}} / Valid: {{ready}} / Blocked: {{blocked}}",
     "addProduct": "Add product"
   },
+  "appUpdate": {
+    "message": "A new version is available",
+    "reload": "Reload"
+  },
   "common": {
     "loading": "Loading...",
     "select": "Select",
