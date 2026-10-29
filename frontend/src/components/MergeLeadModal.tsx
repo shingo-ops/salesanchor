@@ -26,6 +26,9 @@ import { RadioControl } from "./RadioControl";
 import { TextareaControl } from "./Textarea";
 import { TextFieldControl } from "./TextField";
 import { LoadingBlock } from "./loading";
+import { Warning } from "../constants/icons";
+import { ICON } from "../constants/iconSizes";
+import { useIsMobile } from "../hooks/useIsMobile";
 
 interface LeadOption {
   id: number;
@@ -95,6 +98,7 @@ function formatFillValue(v: unknown): string {
 
 export default function MergeLeadModal({ open, source, onMerged, onCancel }: Props) {
   const { t } = useTranslation();
+  const isMobile = useIsMobile();
   const [candidates, setCandidates] = useState<LeadOption[]>([]);
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -190,7 +194,11 @@ export default function MergeLeadModal({ open, source, onMerged, onCancel }: Pro
     return null;
   }, [candidates, selectedId, selectedSnapshot]);
 
-  const sourceCode = source.lead_code ?? `#${source.id}`;
+  /** 窓の下のボタン行。スマホ幅は横いっぱいを縦に2つ（上が主操作）、PC 幅は右寄せの横並び */
+  const actionsStyle = isMobile
+    ? ({ flexDirection: "column-reverse", alignItems: "stretch" } as const)
+    : undefined;
+  const actionsSize = isMobile ? "lg" : "md";
 
   const handleConfirmSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -219,9 +227,23 @@ export default function MergeLeadModal({ open, source, onMerged, onCancel }: Pro
   return (
     <Modal open={open} onClose={onCancel} title={t("mergeLead.title")} size="md">
       <div className="modal-content-wide">
-        <p style={{ color: "var(--text-muted)", fontSize: "var(--font-base)", marginTop: "var(--space-1)" }}>
-          {t("mergeLead.sourceDesc", { name: source.customer_name, code: sourceCode })}
-        </p>
+        {stage === "select" && (
+          <p style={{ color: "var(--text-muted)", fontSize: "var(--font-base)", marginTop: "var(--space-1)" }}>
+            {t("mergeLead.sourceDesc", { name: source.customer_name })}
+          </p>
+        )}
+        {stage === "confirm" && selected && (
+          <p
+            style={{
+              fontSize: "var(--font-md)",
+              fontWeight: "var(--font-weight-semi)",
+              color: "var(--text-primary)",
+              marginTop: "var(--space-1)",
+            }}
+          >
+            {t("mergeLead.confirmTitle", { sourceName: source.customer_name, masterName: selected.customer_name })}
+          </p>
+        )}
 
         {error && <div className="error-banner">{error}</div>}
 
@@ -269,49 +291,36 @@ export default function MergeLeadModal({ open, source, onMerged, onCancel }: Pro
                   {t("mergeLead.noResults")}
                 </p>
               ) : (
-                <table className="data-table" style={{ marginBottom: 0 }}>
-                  <thead>
-                    <tr>
-                      <th style={{ width: 'var(--col-width-checkbox)' }}></th>
-                      <th>{t("mergeLead.col_code")}</th>
-                      <th>{t("mergeLead.col_name")}</th>
-                      <th>{t("mergeLead.col_status")}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {candidates.map((c) => (
-                      <tr
-                        key={c.id}
-                        onClick={() => {
-                          setSelectedId(c.id);
-                          setSelectedSnapshot(c);
-                        }}
-                        style={{
-                          cursor: "pointer",
-                          background: c.id === selectedId ? "var(--warning-bg)" : undefined,
-                        }}
-                      >
-                        <td>
-                          <RadioControl
-                            name="master-candidate"
-                            checked={c.id === selectedId}
-                            onChange={() => {
-                              setSelectedId(c.id);
-                              setSelectedSnapshot(c);
-                            }}
-                          />
-                        </td>
-                        <td>{c.lead_code ?? `#${c.id}`}</td>
-                        <td>{c.customer_name}</td>
-                        <td>
-                          <span className={`badge badge-${getStatusPresentation("lead", c.status).badgeVariant}`}>
-                            {t(`leads.statusCode.${c.status}`, { defaultValue: c.status })}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                candidates.map((c) => (
+                  <label
+                    key={c.id}
+                    data-testid="merge-candidate-row"
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "var(--space-3)",
+                      boxSizing: "border-box",
+                      minHeight: "var(--size-icon-btn-lg)",
+                      padding: "var(--space-2) var(--space-3)",
+                      borderBottom: "1px solid var(--border-light)",
+                      cursor: "pointer",
+                      background: c.id === selectedId ? "var(--link-active-bg)" : undefined,
+                    }}
+                  >
+                    <RadioControl
+                      name="master-candidate"
+                      checked={c.id === selectedId}
+                      onChange={() => {
+                        setSelectedId(c.id);
+                        setSelectedSnapshot(c);
+                      }}
+                    />
+                    <span style={{ flex: 1, minWidth: 0, overflowWrap: "anywhere" }}>{c.customer_name}</span>
+                    <span className={`badge badge-${getStatusPresentation("lead", c.status).badgeVariant}`}>
+                      {t(`leads.statusCode.${c.status}`, { defaultValue: c.status })}
+                    </span>
+                  </label>
+                ))
               )}
             </div>
 
@@ -326,13 +335,12 @@ export default function MergeLeadModal({ open, source, onMerged, onCancel }: Pro
               />
             </div>
 
-            <div className="form-actions">
-              <Button variant="secondary" size="md" type="button" onClick={onCancel}>
+            <div className="form-actions" style={actionsStyle}>
+              <Button variant="secondary" size={actionsSize} fullWidth={isMobile} type="button" onClick={onCancel}>
                 {t("common.cancel")}
               </Button>
-              <Button variant="primary" size="md"
+              <Button variant="primary" size={actionsSize} fullWidth={isMobile}
                 type="button"
-
                 disabled={!selected}
                 onClick={() => setStage("confirm")}
               >
@@ -344,61 +352,49 @@ export default function MergeLeadModal({ open, source, onMerged, onCancel }: Pro
 
         {stage === "confirm" && selected && (
           <form onSubmit={handleConfirmSubmit}>
-            <div
+            <p
               style={{
-                background: "var(--warning-bg)",
-                border: "1px solid var(--warning-text)",
-                padding: "var(--space-3)",
-                borderRadius: "var(--radius-sm)",
-                marginBottom: "var(--space-4)",
+                display: "flex",
+                alignItems: "flex-start",
+                gap: "var(--space-2)",
+                margin: "0 0 var(--space-4)",
+                fontSize: "var(--font-base)",
+                color: "var(--danger-text)",
               }}
             >
-              <strong>{t("mergeLead.confirmWarning")}</strong>
-              <ul style={{ marginTop: "var(--space-2)", marginBottom: 0, paddingLeft: "var(--space-5)" }}>
-                <li>
-                  {t("mergeLead.confirmDesc1", {
-                    sourceName: source.customer_name,
-                    sourceCode,
-                    masterName: selected.customer_name,
-                    masterCode: selected.lead_code ?? `#${selected.id}`,
-                  })}
-                </li>
-                <li>
-                  {t("mergeLead.confirmDesc2", { sourceName: source.customer_name })}
-                </li>
-                <li>{t("mergeLead.confirmDesc3")}</li>
-              </ul>
-            </div>
+              <span style={{ display: "inline-flex", flexShrink: 0, paddingTop: "var(--space-1)" }}>
+                <Warning size={ICON.md} />
+              </span>
+              <span>{t("mergeLead.confirmWarning", { sourceName: source.customer_name })}</span>
+            </p>
 
             {previewLoading && <LoadingBlock />}
             {previewError && <div className="error-banner">{t("mergeLead.previewError")}</div>}
             {preview && (
               <div style={{ marginBottom: "var(--space-4)", fontSize: "var(--font-base)" }}>
                 <strong>{t("mergeLead.movedTitle")}</strong>
-                <ul style={{ marginTop: "var(--space-1)", marginBottom: "var(--space-3)", paddingLeft: "var(--space-5)" }}>
+                <p style={{ margin: "var(--space-1) 0 var(--space-3)", color: "var(--text-muted)", overflowWrap: "anywhere" }}>
                   {preview.tables
                     .filter((row) => row.moved >= 1)
-                    .map((row) => (
-                      <li key={row.table}>
-                        {t(`mergeLead.tables.${row.table}`, { defaultValue: row.table })}: {row.moved}
-                      </li>
-                    ))}
-                </ul>
+                    .map((row) =>
+                      t("mergeLead.movedItem", {
+                        name: t(`mergeLead.tables.${row.table}`, { defaultValue: row.table }),
+                        count: row.moved,
+                      }),
+                    )
+                    .join("・")}
+                </p>
                 <strong>{t("mergeLead.filledTitle")}</strong>
-                {preview.fills.length === 0 ? (
-                  <p style={{ marginTop: "var(--space-1)", color: "var(--text-muted)" }}>
-                    {t("mergeLead.nothingToFill")}
-                  </p>
-                ) : (
-                  <ul style={{ marginTop: "var(--space-1)", marginBottom: 0, paddingLeft: "var(--space-5)" }}>
-                    {preview.fills.map((f) => (
-                      <li key={f.field}>
-                        {FILL_FIELD_LABEL_KEYS[f.field] ? t(FILL_FIELD_LABEL_KEYS[f.field]) : f.field}
-                        : {formatFillValue(f.new)}
-                      </li>
-                    ))}
-                  </ul>
-                )}
+                <p style={{ margin: "var(--space-1) 0 0", color: "var(--text-muted)", overflowWrap: "anywhere" }}>
+                  {preview.fills.length === 0
+                    ? t("mergeLead.nothingToFill")
+                    : preview.fills
+                        .map(
+                          (f) =>
+                            `${FILL_FIELD_LABEL_KEYS[f.field] ? t(FILL_FIELD_LABEL_KEYS[f.field]) : f.field} ${formatFillValue(f.new)}`,
+                        )
+                        .join("・")}
+                </p>
               </div>
             )}
 
@@ -417,23 +413,23 @@ export default function MergeLeadModal({ open, source, onMerged, onCancel }: Pro
               </div>
             )}
 
-            <div className="form-actions">
+            <div className="form-actions" style={actionsStyle}>
               <Button
                 variant="secondary"
-                size="md"
+                size={actionsSize}
+                fullWidth={isMobile}
                 type="button"
                 onClick={() => setStage("select")}
                 disabled={submitting}
               >
                 {t("common.back")}
               </Button>
-              <Button variant="danger" size="md"
+              <Button variant="primary" size={actionsSize} fullWidth={isMobile}
                 type="submit"
-
                 loading={submitting}
                 disabled={submitting || previewLoading || previewError || !preview}
               >
-                {t("mergeLead.executeLabel", { masterName: selected.customer_name })}
+                {t("mergeLead.executeLabel")}
               </Button>
             </div>
           </form>

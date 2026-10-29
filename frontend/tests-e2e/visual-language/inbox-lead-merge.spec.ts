@@ -97,12 +97,20 @@ test.describe("visual-language: 受信箱 カルテからリードをまとめ�
     // （題名は src/locales/ja.json の mergeLead.title と同じ文字）
     const dialog = page.getByRole("dialog", { name: "リードをまとめる" });
     await expect(dialog).toBeVisible();
+    // リードの番号（コード）は窓のどの段にも出さない
+    await expect(dialog.getByText("LEAD-2026")).toHaveCount(0);
+    if (isMobile) {
+      const row = await dialog.locator('[data-testid="merge-candidate-row"]').first().boundingBox();
+      expect(row, "候補の行の矩形が取れない").not.toBeNull();
+      expect(row!.height, "候補の行の高さが基準未満").toBeGreaterThanOrEqual(MIN_TOUCH_TARGET_PX);
+    }
     await dialog.getByText(MASTER_CANDIDATE.customer_name).click();
     await testInfo.attach("step2-select", { body: await page.screenshot(), contentType: "image/png" });
 
     await dialog.locator(".form-actions button").last().click();
-    await expect(dialog.getByText("残す方へ移るもの")).toBeVisible({ timeout: 10_000 });
+    await expect(dialog.getByText("移るもの", { exact: true })).toBeVisible({ timeout: 10_000 });
     await expect(dialog.getByText("taro@example.com")).toBeVisible();
+    await expect(dialog.getByText("LEAD-2026")).toHaveCount(0);
     await testInfo.attach("step3-confirm", { body: await page.screenshot(), contentType: "image/png" });
 
     if (isMobile) {
