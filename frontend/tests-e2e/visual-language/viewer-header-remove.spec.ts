@@ -23,7 +23,8 @@ import { gotoViewer, waitPanelSlidIn } from "./viewer-helpers";
 const MOBILE_WIDTHS = [360, 390] as const;
 /** 一覧の先頭カードの y の上限（design.md ③・計算値124・余裕4px） */
 // 便10 で検索欄とボタン行が48pxになり計算値132。docs/handoff/viewer-control-tap-size/design.md ⑤
-const MAX_TOP_Y = 132;
+// 本便（toolbar-series-name-full-width）でシリーズが単独行になり段が1つ増え、計算値192＋余裕12で204。
+const MAX_TOP_Y = 204;
 /** 言語セレクトの高さの下限（design.md ③・ADR-140） */
 const MIN_TAP_PX = 44;
 
@@ -60,7 +61,7 @@ async function openFilterDrawer(page: Page): Promise<Locator> {
 for (const width of MOBILE_WIDTHS) {
   const height = 844;
   test.describe(`visual-language: 閲覧ページ ヘッダー削除 ${width}px`, () => {
-    test("C1: 一覧の先頭カードの y が128px以内", async ({ page }) => {
+    test("C1: 一覧の先頭カードの y が204px以内", async ({ page }) => {
       await gotoViewer(page, { width, height });
       const y = await firstCardY(page);
       expect(y).toBeLessThanOrEqual(MAX_TOP_Y);
