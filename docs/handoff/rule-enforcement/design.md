@@ -541,7 +541,7 @@ APPROVE。根拠: 目的が見本の件数（止まった割合）と K2 の弱�
 
 ### 前提（origin/main 16ec7021b の事実。調べの生出力は手元の /tmp/CC報告ファイル/r2b-recon/）
 - 2026-10-29 PO「1」で、R2a と同じ形の見本を残りの検査にも足す作業を選んだ。
-- R2a の「対象外」に挙げた 8 本のうち 7 本は、試し役 scripts/tests/run_rule_fixtures.py を変えずに、使い捨ての写しで違反の見本が exit 1、正しい見本が exit 0 になることを確かめた（run_all.txt の最終行「違反の見本 13 件中 13 件で止まった・正しい見本 14 件中 14 件で通った」）。7 本とも標準の道具だけで動き、node_modules・外部の Python の部品・docker・DB・ネットワークは要らない。
+- R2a の「対象外」に挙げた 8 本のうち 7 本は、試し役 scripts/tests/run_rule_fixtures.py を変えずに、使い捨ての写しで違反の見本が exit 1、正しい見本が exit 0 になることを確かめた（run_all.txt の最終行「違反の見本 13 件中 13 件で止まった・正しい見本 14 件中 14 件で通った」。この数は調べの写しで作った見本の数で、lessons の見本を含む。実装の数は R2a の 10 件を含めて違反 12・正しい 13）。7 本とも標準の道具だけで動き、node_modules・外部の Python の部品・docker・DB・ネットワークは要らない。
 - 7 本と、それを呼ぶ必須チェック（docs/specs/rule-enforcement/required-checks.txt の名前）:
   - scripts/generate-adr-index.js --check → ADR index is up to date（adr-index-check.yml:31）
   - frontend/scripts/check-claude-size.js → CLAUDE.md line count check（check-claude-size.yml:38-40）。R2a の節で scripts/check-claude-size.js と書いたのは場所の誤り。
@@ -572,6 +572,8 @@ R2a と同じく、今ある必須チェックが「止める」と言ってい�
 ### 対象外
 - check-lessons-section.sh: 見本は置かない。試し役は終了コードで判定するが、この検査は常に exit 0 で、落とす判定はワークフローの中にある。見本で試すには判定を argv に書き写す必要があり、写しがワークフローとずれても気づけないため。R2a の設計どおり、実際に止まった PR の記録（evidence）で代える。evidence の調べは後の作業。
 - 差し替えの環境変数・引数を使う 2 本（column-churn・duplicate-registration）は、本物の登録表と本物の例外表そのものは試さない（検査の判定の部分だけを試す）。
+- check-migration-value-writes.py は、違反の見本を check 7 だけに置く。check 8 と repo（全件走査）の失敗の道には違反の見本を置かない（正しい見本だけ）。正しい見本の `--check all` は CI に無い呼び方（CI は 7 と 8 を別々に流す）。
+- check-claude-size.js は、CI では frontend を作業場所にして流すが、見本は根から流す。検査は根の場所をスクリプト自身の場所から求める（check-claude-size.js:18）ため、結果は変わらない。
 - R2c（CI で動いていない既存の試験を CI で動かす）、R4、台帳の kind・必須チェックの登録は変えない。
 
 ### 受入条件
@@ -590,4 +592,5 @@ R2a と同じく、今ある必須チェックが「止める」と言ってい�
 merge commit の revert。
 
 ### 審査（Opus 自己審査・2026-10-29）
-APPROVE。根拠: 7 本とも試し役を変えずに違反と正しい見本の結果を写しで確かめた（r2b-recon/run_all.txt）。lessons は判定がワークフローの中にあり、R2a で決めた evidence の扱いを変えない。差し替えを使う 2 本と doc-heading は CI の呼び方との差を対象外に明記した。未解決: なし。
+APPROVE。根拠: 7 本とも試し役を変えずに違反と正しい見本の結果を写しで確かめた（r2b-recon/run_all.txt）。lessons は判定がワークフローの中にあり、R2a で決めた evidence の扱いを変えない。差し替えを使う 2 本・value-writes・claude-size は CI の呼び方との差を対象外に明記した（doc-heading は CI と同じ引数なし）。未解決: なし。
+- 実装後の審査（Opus 審査役・39f944f5a）: must 0。should は必須チェック 2 件（GO 原文の未記入・ブランチの起点の遅れ）で、手続きで解く。nit 4 件のうち 3 件（調べの数・value-writes と claude-size の差の明記・自己審査の文）をこの節で直した。expect_output をより狭くする nit は、今の見本の組み合わせで別の理由と取り違えないため直さない。
