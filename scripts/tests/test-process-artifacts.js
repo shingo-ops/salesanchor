@@ -541,6 +541,7 @@ const R6A_MIGRATION_CASES = [
   ['○ 後ろの文にだけ WHERE がある（前の DELETE は無条件）', 'migrations/001_k.sql', 'DELETE FROM a; DELETE FROM b WHERE x = 1;\n', true],
   ['○ scripts/migrate_*.py の中の表削除', 'scripts/migrate_zz_test.py', 'cur.execute("DROP TABLE old_t")\n', true],
   ['○ scripts/run_all_migrations.sh の中の表削除', 'scripts/run_all_migrations.sh', 'psql -c "DROP TABLE old_t"\n', true],
+  ['○ scripts/migration_py_entry.py（Python 移行の入口）の中の表削除', 'scripts/migration_py_entry.py', 'cur.execute("DROP TABLE old_t")\n', true],
   ['○ migrate_*.py の execute("TRUNCATE x")', 'scripts/migrate_zz_q1.py', 'cur.execute("TRUNCATE x")\n', true],
   ["○ migrate_*.py の execute('DELETE FROM x')（WHERE なし）", 'scripts/migrate_zz_q2.py', "cur.execute('DELETE FROM x')\ncur.execute('SELECT 1 WHERE a')\n", true],
   // × 見分けない
