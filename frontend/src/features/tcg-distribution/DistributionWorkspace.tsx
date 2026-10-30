@@ -34,8 +34,8 @@ export const DistributionWorkspace = forwardRef<DistributionWorkspaceHandle, Dis
       setLoadError("");
       listTargets()
         .then(setTargets)
-        .catch((e: unknown) => setLoadError(e instanceof Error ? e.message : String(e)));
-    }, []);
+        .catch((e: unknown) => setLoadError(e instanceof Error ? e.message : t("common.unknownError")));
+    }, [t]);
 
     useEffect(() => {
       loadTargets();

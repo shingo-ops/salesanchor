@@ -4,7 +4,7 @@
  * GET /tcg/distribution/preview の結果を表示する。
  * 全件配信ボタンを押すと確認ダイアログを経て POST /tcg/distribution/run を呼ぶ。
  */
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { INBOX_ACTION_ICONS, NAV_ICONS, Check, Warning } from "../../constants/icons";
@@ -27,14 +27,14 @@ export function DistributionPreview({ onRefreshTargets }: Props) {
   const [runResult, setRunResult] = useState<RunResult | null>(null);
   const [runError, setRunError] = useState("");
 
-  const loadPreview = () => {
+  const loadPreview = useCallback(() => {
     setLoadError("");
     api.get<PreviewData>("/tcg/distribution/preview")
       .then(setPreview)
-      .catch((e: unknown) => setLoadError(e instanceof Error ? e.message : String(e)));
-  };
+      .catch((e: unknown) => setLoadError(e instanceof Error ? e.message : t("common.unknownError")));
+  }, [t]);
 
-  useEffect(() => { loadPreview(); }, []);
+  useEffect(() => { loadPreview(); }, [loadPreview]);
 
   const handleRunAll = async () => {
     setShowConfirm(false);
@@ -47,7 +47,7 @@ export function DistributionPreview({ onRefreshTargets }: Props) {
       onRefreshTargets();
       loadPreview();
     } catch (e: unknown) {
-      setRunError(e instanceof Error ? e.message : String(e));
+      setRunError(e instanceof Error ? e.message : t("common.unknownError"));
     } finally {
       setRunning(false);
     }
