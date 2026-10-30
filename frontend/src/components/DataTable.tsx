@@ -23,6 +23,7 @@
  *   - 水平スクロールはラッパー (.comp-table) が担当。
  */
 import { useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { ReactNode, KeyboardEvent, MouseEvent } from 'react';
 import { TABLE_ICONS } from '../constants/icons-base';
 import { useIsMobile } from '../hooks/useIsMobile';
@@ -172,6 +173,7 @@ export function DataTable<T = Record<string, unknown>>({
   mobileCards = false,
   attachedTop = false,
 }: DataTableProps<T>) {
+  const { t } = useTranslation();
   const isMobile = useIsMobile();
   const cardMode = mobileCards && isMobile;
   const useFrame = !cardMode && (stickyHeader || fitToWidth);
@@ -254,7 +256,7 @@ export function DataTable<T = Record<string, unknown>>({
         type="button"
         onClick={() => onPageChange(Math.max(1, page - 1))}
         disabled={page <= 1 || paginationDisabled}
-        aria-label="previous page"
+        aria-label={t('common.dataTable.previousPage')}
         data-testid={paginationTestIds?.prev}
       >
         {prevPageLabel}
@@ -266,7 +268,7 @@ export function DataTable<T = Record<string, unknown>>({
         type="button"
         onClick={() => onPageChange(page + 1)}
         disabled={!hasNextPage || paginationDisabled}
-        aria-label="next page"
+        aria-label={t('common.dataTable.nextPage')}
         data-testid={paginationTestIds?.next}
       >
         {nextPageLabel}
@@ -287,9 +289,9 @@ export function DataTable<T = Record<string, unknown>>({
       })
       .map(({ col }) => col);
     return (
-      <div className={['comp-table-frame', className].filter(Boolean).join(' ')} role="region" aria-label="data table">
+      <div className={['comp-table-frame', className].filter(Boolean).join(' ')} role="region" aria-label={t('common.dataTable.table')}>
         {data.length === 0 ? (
-          <div className="comp-table__empty">{emptyState ?? 'No data'}</div>
+          <div className="comp-table__empty">{emptyState ?? t('common.noData')}</div>
         ) : (
           <div className="comp-table-cards" role="list">
             {data.map((row) => {
@@ -318,7 +320,7 @@ export function DataTable<T = Record<string, unknown>>({
                     <CheckboxControl
                       checked={isSelected}
                       onChange={() => toggleRow(key)}
-                      aria-label={`select row ${key}`}
+                      aria-label={t('common.dataTable.selectRow', { key })}
                     />
                   )}
                   {cardColumns.map((col) => {
@@ -347,12 +349,12 @@ export function DataTable<T = Record<string, unknown>>({
       <thead>
         <tr className="comp-table__head-row">
           {selectable && (
-            <th className={`comp-table__th comp-table__th--check${checkStickyCls}`} aria-label="select all">
+            <th className={`comp-table__th comp-table__th--check${checkStickyCls}`} aria-label={t('common.dataTable.selectAll')}>
               <CheckboxControl
                 checked={allSelected}
                 indeterminate={someSelected}
                 onChange={toggleAll}
-                aria-label="select all rows"
+                aria-label={t('common.dataTable.selectAllRows')}
               />
             </th>
           )}
@@ -401,7 +403,7 @@ export function DataTable<T = Record<string, unknown>>({
               className="comp-table__empty"
               colSpan={columns.length + (selectable ? 1 : 0)}
             >
-              {emptyState ?? 'No data'}
+              {emptyState ?? t('common.noData')}
             </td>
           </tr>
         ) : (
@@ -431,7 +433,7 @@ export function DataTable<T = Record<string, unknown>>({
                     <CheckboxControl
                       checked={isSelected}
                       onChange={() => toggleRow(key)}
-                      aria-label={`select row ${key}`}
+                      aria-label={t('common.dataTable.selectRow', { key })}
                     />
                   </td>
                 )}
@@ -465,7 +467,7 @@ export function DataTable<T = Record<string, unknown>>({
   // 今までと同じ DOM（見出し固定・縮小なし）
   if (!useFrame) {
     return (
-      <div className={wrapperCls} role="region" aria-label="data table">
+      <div className={wrapperCls} role="region" aria-label={t('common.dataTable.table')}>
         {table}
         {pagination}
       </div>
@@ -479,7 +481,7 @@ export function DataTable<T = Record<string, unknown>>({
     </div>
   );
   return (
-    <div ref={frameRef} className="comp-table-frame" role="region" aria-label="data table">
+    <div ref={frameRef} className="comp-table-frame" role="region" aria-label={t('common.dataTable.table')}>
       {fitToWidth ? (
         <div ref={fitCardRef} className="comp-table-fit__card">{scrollBox}</div>
       ) : scrollBox}
