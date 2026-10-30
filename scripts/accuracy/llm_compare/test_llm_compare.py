@@ -113,15 +113,16 @@ with open(os.environ["FAKE_COUNT"], "a") as f: f.write("x")
 n = len(open(os.environ["FAKE_COUNT"]).read())
 fail_at = int(os.environ.get("FAKE_AT", "2"))
 model = a[a.index("--model") + 1]
-d = {"is_error": False, "num_turns": 1, "result": "", "structured_output": {"items": [{"lines": [1], "price": "1", "quantity": "1"}]},
-     "usage": {"input_tokens": 5, "output_tokens": 7, "cache_creation_input_tokens": 0, "cache_read_input_tokens": 0,
+d = {"is_error": False, "num_turns": 2, "result": "", "structured_output": {"items": [{"lines": [1], "price": "1", "quantity": "1"}]},
+     "usage": {"iterations": [{"type": "message"}], "input_tokens": 5, "output_tokens": 7, "cache_creation_input_tokens": 0, "cache_read_input_tokens": 0,
                "output_tokens_details": {"thinking_tokens": 3}},
      "modelUsage": {"claude-%s-5-5" % model: {}}, "duration_ms": 10, "total_cost_usd": 0.01}
 if n == fail_at:
     if mode == "rc": sys.exit(3)
     if mode == "iserror": d["is_error"] = True
     if mode == "model": d["modelUsage"]["claude-other-1"] = {}
-    if mode == "turns": d["num_turns"] = 2
+    if mode == "turns": d["num_turns"] = 1
+    if mode == "iters": d["usage"]["iterations"] = [{}, {}]
     if mode == "hang": time.sleep(30)
 print(json.dumps(d))
 '''
@@ -252,7 +253,29 @@ class RunClaudeTest(unittest.TestCase):
     def test_stop_is_error(self): self.stops(mode="iserror", at=2)
     def test_stop_mixed_model(self): self.stops(mode="model", at=2)
     def test_stop_turns(self): self.stops(mode="turns", at=2)
+    def test_stop_iterations(self): self.stops(mode="iters", at=2)
     def test_stop_timeout(self): self.stops(mode="hang", at=2, timeout=1)
+
+    def check(self, **kw):
+        d = {"is_error": False, "num_turns": 1, "result": "text", "structured_output": None,
+             "usage": {"iterations": [{"type": "message"}]}, "modelUsage": {"claude-haiku-5-5": {}}}
+        d.update(kw)
+        return rc.check_response("haiku", 0, json.dumps(d))
+
+    def test_check_no_structured_output_one_turn_passes(self):
+        self.assertEqual(self.check()["result"], "text")
+
+    def test_check_no_structured_output_two_turns_stops(self):
+        with self.assertRaises(rc.Stop):
+            self.check(num_turns=2)
+
+    def test_check_two_iterations_stops(self):
+        with self.assertRaises(rc.Stop):
+            self.check(usage={"iterations": [{}, {}]})
+
+    def test_check_no_iterations_stops(self):
+        with self.assertRaises(rc.Stop):
+            self.check(usage={"input_tokens": 1})
 
     def test_api_key_env_refuses(self):
         self.env["ANTHROPIC_API_KEY"] = "x"

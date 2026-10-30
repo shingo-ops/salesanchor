@@ -30,7 +30,7 @@
 ## run_claude.py の決まり
 - 対象は JSONL の repeat=1 の成功行。成功行の並び N 番目 = index の通し番号 N。続きの test-id があるときは `--pair JSONL:INDEX` を足す。
 - 実施前: ANTHROPIC_API_KEY・ANTHROPIC_AUTH_TOKEN が空であること、`claude --version`・`claude auth status` のログイン種別の欄（loggedIn・authMethod・apiProvider・subscriptionType とサブスクか否か）だけを OUT.preflight.json に記録する。メール等の個人の値は保存しない。
-- 異常（rc≠0、is_error≠false、時間切れ 600 秒、modelUsage が指定モデル1種だけでない、num_turns≠1、答えが空、文字列の sha256 不一致）で即停止し OUT.stop.txt に時刻と件数。待って再開しない。続きは人が `--resume`。
+- 異常（rc≠0、is_error≠false、時間切れ 600 秒、modelUsage が指定モデル1種だけでない、呼び出しが1回でない（iterations≠1件）・num_turns が決まりと違う（structured_output ありで2、なしで1）、答えが空、文字列の sha256 不一致）で即停止し OUT.stop.txt に時刻と件数。待って再開しない。続きは人が `--resume`。
 - `--bare` は使わない。答えの欄は `--response-field auto`（structured_output があればそれ、なければ result）。実際にどちらに入るかは設計 §6 手順（４）の試しの1件（`--limit 1`）で確かめ、結果を記録する。
 
 ## 後片付けと補足

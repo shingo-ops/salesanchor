@@ -5,7 +5,7 @@
       --prompt-dir DIR --pair llmcmp-g1.jsonl:llmcmp-g1.index.tsv [--pair 続き.jsonl:続き.index.tsv] --out OUT.jsonl
 
 ・対象は JSONL の repeat=1 の成功行（error 欄なし）。成功行の並び順 N 番目 = index の通し番号 N（capture_prompt_ab.py）。
-・順番に1件ずつ。rc≠0・is_error=true・時間切れ・別モデル混入・num_turns≠1・答えが空 のどれかで、理由を問わず即停止
+・順番に1件ずつ。rc≠0・is_error=true・時間切れ・別モデル混入・呼び出しが1回でない（iterations≠1件）・num_turns が決まりと違う（structured_output ありで2、なしで1）・答えが空 のどれかで、理由を問わず即停止
   （時刻と件数を OUT.stop.txt に記録。待って再開しない）。--resume は「成功済みの job を飛ばして続きから」の明示指定のときだけ。
 ・--bare は使わない（API の鍵だけになりサブスクで動かない）。
 """
@@ -105,8 +105,13 @@ def check_response(model, rc, stdout, timed_out=False):
     mu = d.get("modelUsage")
     if not isinstance(mu, dict) or len(mu) != 1 or model not in next(iter(mu)):
         raise Stop("modelUsage が指定したモデル1種だけではない: %s" % (sorted(mu) if isinstance(mu, dict) else mu))
-    if d.get("num_turns") != 1:
-        raise Stop("num_turns=%r" % (d.get("num_turns"),))
+    usage = d.get("usage")
+    it = usage.get("iterations") if isinstance(usage, dict) else None
+    if not isinstance(it, list) or len(it) != 1:
+        raise Stop("iterations=%s" % (len(it) if isinstance(it, list) else type(it).__name__))
+    want = 2 if d.get("structured_output") is not None else 1
+    if d.get("num_turns") != want:
+        raise Stop("num_turns=%r structured_output=%s" % (d.get("num_turns"), "あり" if want == 2 else "なし"))
     return d
 
 
