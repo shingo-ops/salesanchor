@@ -13,9 +13,9 @@ mode: handoff
 
 ## 読んだ節と照合（Opus、2026-10-31）
 
-- guards/00-common.md: プレースホルダを残さない（§5 のパスは実名で書いた）・出力に上限（報告は数だけ）・報告に無い出力を成功と扱わない（§7 で git log を確かめる）。○
-- guards/03-file.md・guards/05-pr.md: 触るファイルを §1 で全部挙げた。PR は手元で shingo-cc 名義（Sonnet は push まで）。○
-- guards/10-executor.md: 散文で組み立てを頼まない（§2・§4 で形と期待値を全部書いた）。○
+- docs/handoff/design-partner-card-ops/guards/00-common.md: プレースホルダを残さない（§5 のパスは実名で書いた）・出力に上限（報告は数だけ）・報告に無い出力を成功と扱わない（§7 で git log を確かめる）。○
+- docs/handoff/design-partner-card-ops/guards/03-file.md・docs/handoff/design-partner-card-ops/guards/05-pr.md: 触るファイルを §1 で全部挙げた。PR は手元で shingo-cc 名義（Sonnet は push まで）。○
+- docs/handoff/design-partner-card-ops/guards/10-executor.md: 散文で組み立てを頼まない（§2・§4 で形と期待値を全部書いた）。○
 - 受領確認: 着手前に、報告の1行目へ「受領確認: card-regression-bin1 を読んだ」と書く。
 
 ## 1. 作るもの・触らないもの
@@ -34,7 +34,7 @@ python3 -I scripts/accuracy/score_v102.py --gold G.tsv --snapshot-dir DIR --out-
 
 - `--verdicts-out` を付けないとき: 今と1バイトも同じ出力（`result.tsv`・`errors.tsv`・`inputs.sha256`・画面の2行）。
 - 付けたとき: 上に加えて V.tsv を書く。V.tsv の置き場所も `check_out_dir()`（`score_v102.py:312-324`）と同じ検査を通す。リポジトリの中なら `STOP:` で終了コード2、何も書かない。
-- V.tsv の形: タブ区切り・UTF-8・改行 `\n`・最後の行にも改行。1行目は見出し `key	項目	判定`（`by_group.py` の判定表と同じ見出し）。
+- V.tsv の形: タブ区切り・UTF-8・改行 `\n`・最後の行にも改行。1行目は見出し `key	項目	判定`（`scripts/accuracy/by_group.py` の判定表と同じ見出し。ただし判定に `SKIP` を含むため、by_group.py にはそのまま渡せない。段2の計算専用）。
   - key: 正解表のデータ行の番号（`read_tsv()` が返す `gold` の並びで 1 から数える）。
   - 判定: `OK` / `NG` / `NOWORD` / `SKIP`。`ok`→`OK`、`ng`→`NG`、`na`→`NOWORD`、`skip`→`SKIP`。
 - 除外が `ALL` の行（`score_v102.py:214-215`）は1行も書かない。
@@ -48,9 +48,9 @@ python3 -I scripts/accuracy/score_v102.py --gold G.tsv --snapshot-dir DIR --out-
 ## 3. 書き方の決まり
 
 - `score()` の戻り値の形は変えない。判定を集める入れ物は、`score()` に任意の引数（例 `verdicts=None`）を足して受け取る。`None` のときは何もしない。
-- 正解表の行の番号は、`score()` の最初で `gold` の並びから作る（例: 行の辞書 → 番号 の対応）。`by_post` の作り方は変えない。
+- 正解表の行の番号は、`score()` の最初で `gold` の並びから作る（`{id(g): i for i, g in enumerate(gold, 1)}` で作り、`id(g)` で引く。`gold` の行の辞書は採点の間に作り直さない）。`by_post` の作り方は変えない。
 - 集計（`T`）・`errors` の中身と並びは変えない。
-- 書く前に §5 V2 の照合を自分で行う。合わなければ何も書かずに `STOP: 判定の数が集計と合いません` に続けて項目名 で終了コード2。
+- 書く前に §5 V2 の照合を自分で行う。合わなければ V.tsv だけを書かずに（`result.tsv`・`errors.tsv`・`inputs.sha256` はいつもどおり書く） `STOP: 判定の数が集計と合いません` に続けて項目名 で終了コード2。
 
 ## 4. 試験（作り物のデータだけ）
 

@@ -15,9 +15,9 @@ mode: handoff
 ## 今の姿（事実）
 
 ### 採点の道具
-- `scripts/accuracy/score_v102.py:181-282` `score()` は正解表の全行を採点する。`除外` が `ALL` の行は飛ばす（:206-207・:212-213）。
-- 判定は項目ごとに ok / ng / na / skip（:161-178 `judge()`）。読み落としは `c1` に数える（:208-210・:215-217）。
-- 出力は集計（`result.tsv`、:285-300 `result_rows()`）と、違った件だけの一覧（`errors.tsv`、:352-353）。**正しかった件を含む行ごとの判定は出力しない。**
+- `scripts/accuracy/score_v102.py:181-282` `score()` は正解表の全行を採点する。`除外` が `ALL` の行は飛ばす（:209・:214-215）。
+- 判定は項目ごとに ok / ng / na / skip（:161-178 `judge()`）。読み落としは `c1` に数える（:207-210・:217-219）。
+- 出力は集計（`result.tsv`、:285-301 `result_rows()`）と、違った件だけの一覧（`errors.tsv`、:352-353）。**正しかった件を含む行ごとの判定は出力しない。**
 - `docs/handoff/accuracy-measurement/card-by-group-bin1.md:14` は「後の score_v102 も、この形（1件×1項目＝1行の判定表）に直してから渡す」と書くが、直す道具は本線に無い（`scripts/accuracy/` の一覧に該当なし）。
 - `scripts/accuracy/by_group.py`（169 行）は判定表 `key 項目 判定` を受けて仕入元ごとの正答率と Wilson の幅を出す（`scripts/accuracy/README.md:32`）。回帰の計算は無い。
 - 道具はどれも標準ライブラリだけで書かれている（`scripts/accuracy/README.md:3`）。
