@@ -57,18 +57,20 @@
 
 事実（recon §4-2）:
 - 2026-10-31 03:00 JST の手動実行（run 41103098245・41103007617）で S3〜S6 が 2 回とも失敗。8 件の失敗はすべて `page.waitForLoadState("networkidle")` の行（`tests/prod-check/prod-ui.spec.ts:40,57,72,84`）で 30 秒切れ。その手前の「画面に出たか」の確かめ（検索欄が見える等）は全部通っている
-- ログイン後はアプリが `/api/v1/events/stream` を `fetch` で開いたままにする（`frontend/src/lib/realtime/RealtimeProvider.tsx:11,77`）。`networkidle` は「通信が 500 ミリ秒 0 件」を待つので、開いたままの通信があると成り立たない
+- ログイン後はアプリが開いたままの通信を `fetch` で最大 3 本持つ（2026-10-31 設計審査の指摘 M1 で 1 本から訂正）: `/api/v1/events/stream`（`frontend/src/lib/realtime/RealtimeProvider.tsx:77-84`）、`/api/v1/conversations/stream`（全画面の枠 `frontend/src/components/DesktopShell.tsx:138`・`frontend/src/components/MobileShell.tsx:108`）、`/api/v1/leads/stream`（`frontend/src/pages/leads/LeadsPage.tsx:185`）。後ろの 2 本は `frontend/src/hooks/useSSE.ts:45-51` 経由。3 本とも頭書き `Accept: text/event-stream` を付ける（`frontend/src/hooks/useSSE.ts:48`・`frontend/src/lib/realtime/RealtimeProvider.tsx:80`。`git grep -n "text/event-stream" origin/main -- frontend/src` でこの 2 か所だけ）。`networkidle` は「通信が 500 ミリ秒 0 件」を待つので、開いたままの通信があると成り立たない
+- 権限の無い開いたままの通信は 403 で切れ、2 秒・4 秒…の間隔でつなぎ直す（`frontend/src/hooks/useSSE.ts:57-59`）。これも同じ頭書きなので数えない
 - それまでの合格（run 41006073342）は秘密が未登録で S2〜S8 を飛ばしていただけ（`6 skipped`）
 - 確かめ方: 直した後の手動実行で S1〜S8 が合格すれば、原因がこの待ち方だったことの確認にもなる（G0）
 
 直し方:
 - 新しいファイル `tests/prod-check/settle.ts` に「開き終わった」の決め方を 1 か所だけ置く（便1 もこれを使う。決め方を 2 か所に書かない）
-  - `LONG_LIVED_API_PATHS = ["/api/v1/events/stream"]`
+  - `STREAM_ACCEPT = "text/event-stream"`（開いたままの通信の見分け方。道すじの一覧は持たない。新しい開いたままの通信が増えても、アプリが同じ頭書きを付ける限り直さなくてよい）
   - `LOADING_SELECTOR = '.sa-loading-block, .sa-skeleton, .loading-screen, .loading-indicator, [aria-busy="true"]'`
-  - `trackApi(page)`: その page の `request`・`requestfinished`・`requestfailed` を見て、道すじが `/api/` で始まり `LONG_LIVED_API_PATHS` に無い通信の「終わっていない数」と「最後に終わった時刻」を持つ
+  - `trackApi(page)`: その page の `request`・`requestfinished`・`requestfailed` を見て、道すじが `/api/` で始まり、頭書き `accept`（`request.headers()` の小文字の名前）に `STREAM_ACCEPT` を含まない通信の「終わっていない数」と「最後に始まった・終わった時刻」を持つ
   - `waitSettled(page, tracker, opts?)`: 5-3 の 3 条件（既定 `minMs: 500`・`quietMs: 1000`・`capMs: 30000`）が揃うまで 100 ミリ秒ごとに確かめる。揃えば `{ settled: true, elapsedMs }`、上限なら `{ settled: false, elapsedMs }` を返す
 - `tests/prod-check/prod-ui.spec.ts` の `await page.waitForLoadState("networkidle");` 5 か所（:40,:57,:72,:84,:89）を、`expect((await waitSettled(page, api)).settled, "画面が 30 秒で開き終わらない").toBe(true);` に置き換える。`api` は各 test の最初（`login()` より前）に `const api = trackApi(page);` で作る
 - それ以外の行・`tests/prod-check/login.ts`・ワークフローは便0 では触らない
+- 見込みの危険（設計審査 M2）: S3 は `console` の error を全部数える（`tests/prod-check/prod-ui.spec.ts:31-34,41`）。全画面の枠が未読の会話の一覧と会話の開いたままの通信を呼び（`frontend/src/components/DesktopShell.tsx:128-138`）、どちらも `messaging.view` が要る（`backend/app/routers/meta_inbox.py:866-867`）。点検用の人がこの権限を持たなければ 403 の読み込み失敗が error として数えられ、待ちを直した後に S3 が別の理由で落ちうる。点検用の人の権限は未確認（recon §8 U4）。対処: 便0 の手動実行で S3 の失敗文（件数と文の種類だけ。中身の番号は出ない）を見てから決める。待ち方の直しと S3 の数え方の直しは 1 つずつ行い、混ぜない
 
 ### 5-1. 全体の流れ（便1）
 
@@ -101,7 +103,7 @@
 - 次の 3 つが同時に成り立った時点で「開き終わった」とみなす
   - 0 から 500 ミリ秒以上たった
   - 読み込み中の印（`.sa-loading-block`・`.sa-skeleton`・`.loading-screen`・`.loading-indicator`・`[aria-busy="true"]`）が画面に 1 つも見えない
-  - `/api/` への通信のうち終わっていないものが 0 件の状態が 1000 ミリ秒続いた。ただし `/api/v1/events/stream`（ずっと開いている通信）は数えない
+  - `/api/` への通信のうち終わっていないものが 0 件の状態が 1000 ミリ秒続いた。ただし頭書き `Accept: text/event-stream` の通信（ずっと開いている通信 3 本と、そのつなぎ直し）は数えない
 - 記録する秒数 = 「最後の `/api/` 通信の応答が終わった時刻」と「読み込み中の印が消えた時刻」の遅い方 − 0
 - 45 秒たっても開き終わらなければ打ち切り、「時間切れ」と記録する
 - 段の全体が 40 分を超えたら、残りの画面は測らずに「時間切れで未測定」と記録して表を出す

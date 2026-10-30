@@ -78,7 +78,7 @@
 
 | 事実 | 根拠 |
 |---|---|
-| ログイン中はずっと開いたままの通信 `/api/v1/events/stream` がある。「通信が全部終わったら表示完了」と数えると、どの画面も終わらない | `frontend/src/lib/realtime/RealtimeProvider.tsx:11,77` |
+| ログイン中はずっと開いたままの通信が最大 3 本ある（`/api/v1/events/stream`・`/api/v1/conversations/stream`・リード一覧だけ `/api/v1/leads/stream`）。「通信が全部終わったら表示完了」と数えると、どの画面も終わらない。3 本とも `Accept: text/event-stream` を付ける（2026-10-31 設計審査 M1 で 1 本から訂正） | `frontend/src/lib/realtime/RealtimeProvider.tsx:77-84`・`frontend/src/hooks/useSSE.ts:45-51`・`frontend/src/components/DesktopShell.tsx:138`・`frontend/src/pages/leads/LeadsPage.tsx:185` |
 | 5 秒ごとに読み直す画面がある（取り込みの進み具合） | `frontend/src/features/tcg-import-workflow/useImportWorkflow.ts:61` |
 | 読み込み中の印: `.sa-loading-block`・`.sa-skeleton`・`.loading-screen`・`.loading-indicator`・`[aria-busy="true"]` | `frontend/src/components/loading/`、`frontend/src/components/ProtectedRoute.tsx:16` |
 | アプリは service worker を登録していない（`git grep` 0 件） | 同フォルダ measure の調査 |
@@ -93,3 +93,4 @@
 - U1: 点検用の人で 135 画面のうち、何画面が中身まで出るか（403 にならないか）→ 初回の記録で数える
 - U2: 実行記録の保存日数の設定値（API が 403。上の 410/読める の境目から 90 日前後までしか言えない）
 - U3: 点検用の人がどちらの会社か（tenant_001 か tenant_002）→ 今回の設計は会社を問わない（読むだけ）
+- U4: 点検用の人が `messaging.view` を持つか（`docs/handoff/qa-smoke-rebuild/design.md:187` は「`*.view` だけ」とだけ書く）→ 便0 の手動実行の S3 の結果で分かる
