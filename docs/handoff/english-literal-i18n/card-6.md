@@ -9,7 +9,7 @@
   - 判断1: 設計の例 `common.error.http` は使えない（`common.error` は既に「エラー」という文字の値で、下にキーを置けない）。代わりに `common.httpError` を足す。値は ja「リクエストに失敗しました（{{status}}）」、en「Request failed (HTTP {{status}})」。既存の `common.requestFailed`（リクエストに失敗しました / Request failed）と言葉をそろえた
   - 判断2: 状態番号は文の中に残す。`TypeMasterPanel.tsx:139` の `e.message.includes("409")` が番号で判定しているため
   - 判断3: `api.ts:132`・`:189` の `new Error(\`HTTP ...\`)` は、読み比べると利用者に届かない（最後の回は `attempt < maxRetries` が偽になり `!res.ok` の ApiError に進む。ループの後の `throw lastError` に来るのは TypeError の続きだけ）。それでも英語の直書きなので、同じキーにする。`useInboxState.ts:348` の `/^HTTP 50[23]/` の枝は、ApiError の 502/503 を1つ目の枝が先に拾うため、効き目は変わらない。`useInboxState.ts` は触らない
-  - 判断4: 設計の5か所に加え、同じ形の `frontend/src/lib/auth/selfAuth.ts:23` も直す（設計の対象の数え漏れ。中身は同じ「詳しい理由が無いときの言葉」）
+  - 判断4（実装時に改めた）: 同じ形の `frontend/src/lib/auth/selfAuth.ts:23` は、この便では直さない。実装担当の点検で、selfAuth.ts は i18n の読み込みを遅らせるため静的 import を持たず（`:165-166` は関数の中の動的 import だけ）、`:23` の同期のコンストラクタから辞書を引けないと分かった。静的 import を足すと読み込みの順番が変わり、影響を確かめていない。設計（§2-6）の対象5か所には入っていない。残りの1か所として記録する
   - 判断5: `String(e)` 11か所（e が Error でないものを投げたときだけ出る）は、`common.unknownError` を足してそれにする。値は ja「不明なエラーが発生しました」、en「An unknown error occurred」。既存の共通キーには「理由の分からないエラー」を表す1語が無い（`common.error` は「エラー」の1語で、単独で出す画面（DiagnosticsDrawer など）では意味が伝わらない）
   - 判断6: 保存値・通信の中身・ApiError の status と responseDetail は変えない。エラーの class も変えない
 
@@ -22,7 +22,6 @@
 | `frontend/src/lib/api.ts:189` | `:132` と同じ | `:132` と同じ |
 | `frontend/src/lib/api.ts:194` | `body \|\| \`HTTP ${res.status}\`` | `body \|\| i18n.t("common.httpError", { status: res.status })` |
 | `frontend/src/lib/api.ts:230` | `\|\| \`HTTP ${res.status}\`;` | `\|\| i18n.t("common.httpError", { status: res.status });` |
-| `frontend/src/lib/auth/selfAuth.ts:23` | `super(detail ?? \`HTTP ${status}\`);` | `super(detail ?? i18n.t("common.httpError", { status }));`（同じファイルの既存の `i18n` の import を使う。無ければ NEEDS_DECISION:） |
 | `frontend/src/features/tcg-analysis-review/DiagnosticsDrawer.tsx:52` | `e instanceof Error ? e.message : String(e)` | `e instanceof Error ? e.message : t("common.unknownError")` |
 | `frontend/src/features/tcg-analysis-review/SupplierDetailView.tsx:70`・`:77` | 同上 | 同上 |
 | `frontend/src/features/tcg-analysis-review/SupplierQualityList.tsx:47` | 同上 | 同上 |
@@ -41,13 +40,13 @@
 - 既存のキーの値は変えない。消すキーは無い
 
 ## 3. 触らない範囲
-- `useInboxState.ts`・`TypeMasterPanel.tsx`・`authErrorMessage.ts`・試験の入力に `"HTTP 500"` などを使っている既存の試験（`ReviewCsvPanel.test.tsx:86`・`authErrorMessage.test.ts:39`・e2e `error-scenarios-502-429.spec.ts:105`）
+- `selfAuth.ts`（判断4）・`useInboxState.ts`・`TypeMasterPanel.tsx`・`authErrorMessage.ts`・試験の入力に `"HTTP 500"` などを使っている既存の試験（`ReviewCsvPanel.test.tsx:86`・`authErrorMessage.test.ts:39`・e2e `error-scenarios-502-429.spec.ts:105`）
 - バックエンド・`scripts/`・`.github/workflows/`・stories
 - 文書: design.md・recon.md
 
 ## 4. 実測（生出力は `/tmp/CC報告ファイル/english-literal-i18n/bin6/impl/`）
 - 最初に `cd frontend && npm ci`
-- 残りが0: `git grep -n 'HTTP \${' HEAD -- frontend/src/lib` が0行。`git grep -n 'String(e)' HEAD -- 'frontend/src/*.tsx' ':!*.test.tsx'` が0行
+- 残りが0: `git grep -n 'HTTP \${' HEAD -- frontend/src/lib/api.ts` が0行（`frontend/src/lib/auth/selfAuth.ts:23` の1行は判断4 により残る）。`git grep -n 'String(e)' HEAD -- 'frontend/src/*.tsx' ':!*.test.tsx'` が0行
 - 検査: `BASE_SHA=<merge-base> HEAD_SHA=HEAD node scripts/check-ui-governance.js` exit 0
 - 辞書: `npm run check:i18n-missing-keys` exit 0
 - 試験を足す: `frontend/src/lib/api.httpError.test.ts`（既存の `lib/api.no-double-prefix.test.ts` の fetch の差し替え方に合わせる）。detail が空の 409 の応答で、投げられる ApiError の status が 409、message が `i18n.t("common.httpError", { status: 409 })` と同じで `"409"` を含むこと。日本語の文字は試験に書かない
