@@ -233,10 +233,10 @@ export function ConditionsMasterPanel() {
   };
 
   const MATCH_TYPE_OPTIONS = [
-    { value: "KEYWORD", label: t(`${f}.matchTypeKeyword`) },
-    { value: "REGEX",   label: t(`${f}.matchTypeRegex`) },
-    { value: "LITERAL", label: t(`${f}.matchTypeLiteral`) },
-    { value: "DEFAULT", label: t(`${f}.matchTypeDefault`) },
+    { value: "KEYWORD", label: t("ruleManagement.matchType.KEYWORD") },
+    { value: "REGEX",   label: t("ruleManagement.matchType.REGEX") },
+    { value: "LITERAL", label: t("ruleManagement.matchType.LITERAL") },
+    { value: "DEFAULT", label: t("ruleManagement.matchType.DEFAULT") },
   ];
 
   const EFFECT_OPTIONS = [
@@ -254,7 +254,11 @@ export function ConditionsMasterPanel() {
         return unitName ? `${defName} ${unitName}` : defName;
       },
     },
-    { key: "match_type", header: t(`${f}.matchType`) },
+    {
+      key: "match_type",
+      header: t(`${f}.matchType`),
+      renderCell: row => t(`ruleManagement.matchType.${row.match_type}`, { defaultValue: row.match_type }),
+    },
     { key: "app_kubun", header: t(`${f}.appKubun`), renderCell: row => row.app_kubun ?? "—" },
     { key: "priority", header: t(`${f}.priority`), renderCell: row => row.priority ?? "—" },
     {

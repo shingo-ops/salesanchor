@@ -6,7 +6,7 @@
  * ADR-144: 金型クラスのみ使用。
  */
 import { LoadingBlock } from "../../components/loading";
-import { useEffect, useRef, useState, FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
@@ -81,16 +81,16 @@ const toForm = (n: TcgNoteMaster): NoteFormState => ({
   label_template_en: n.label_template_en ?? "",
 });
 
-const MATCH_TYPE_OPTIONS = [
-  { value: "LITERAL", label: "LITERAL" },
-  { value: "REGEX", label: "REGEX" },
-  { value: "DEFAULT", label: "DEFAULT" },
-];
+const MATCH_TYPE_VALUES = ["LITERAL", "REGEX", "DEFAULT"];
 
 const PER_PAGE = 100;
 
 export default function NoteMasterPage() {
   const { t } = useTranslation();
+  const matchTypeOptions = useMemo(
+    () => MATCH_TYPE_VALUES.map(value => ({ value, label: t(`ruleManagement.matchType.${value}`) })),
+    [t],
+  );
   const navigate = useNavigate();
   const { hasPermission } = usePermissions();
   const exportLock = useRef(false);
@@ -226,7 +226,7 @@ export default function NoteMasterPage() {
     {
       key: "match_type",
       header: t(`${f}.matchType`),
-      renderCell: n => <span className="badge">{n.match_type}</span>,
+      renderCell: n => <span className="badge">{t(`ruleManagement.matchType.${n.match_type}`, { defaultValue: n.match_type })}</span>,
     },
     { key: "priority", header: t(`${f}.priority`) },
     {
@@ -297,7 +297,7 @@ export default function NoteMasterPage() {
         <div className="form-group">
           <Select
             label={t(`${f}.matchType`)}
-            options={MATCH_TYPE_OPTIONS}
+            options={matchTypeOptions}
             value={formState.match_type}
             onChange={e => setFormState({ ...formState, match_type: e.target.value })}
             fullWidth

@@ -5,7 +5,7 @@
  * ADR-027: 全UI文字列は t("key") 経由。
  * ADR-144: 金型クラスのみ使用。
  */
-import { useCallback, useEffect, useRef, useState, FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../../../lib/api";
@@ -78,16 +78,16 @@ const toForm = (n: TcgNoteMaster): NoteFormState => ({
   label_template_en: n.label_template_en ?? "",
 });
 
-const MATCH_TYPE_OPTIONS = [
-  { value: "LITERAL", label: "LITERAL" },
-  { value: "REGEX", label: "REGEX" },
-  { value: "DEFAULT", label: "DEFAULT" },
-];
+const MATCH_TYPE_VALUES = ["LITERAL", "REGEX", "DEFAULT"];
 
 const PER_PAGE = 100;
 
 export function NoteMasterPanel() {
   const { t } = useTranslation();
+  const matchTypeOptions = useMemo(
+    () => MATCH_TYPE_VALUES.map(value => ({ value, label: t(`ruleManagement.matchType.${value}`) })),
+    [t],
+  );
   const navigate = useNavigate();
   const exportLock = useRef(false);
   const [exporting, setExporting] = useState(false);
@@ -190,7 +190,7 @@ export function NoteMasterPanel() {
     {
       key: "match_type",
       header: t(`${f}.matchType`),
-      renderCell: row => <span className="badge">{row.match_type}</span>,
+      renderCell: row => <span className="badge">{t(`ruleManagement.matchType.${row.match_type}`, { defaultValue: row.match_type })}</span>,
     },
     { key: "priority", header: t(`${f}.priority`) },
     {
@@ -283,7 +283,7 @@ export function NoteMasterPanel() {
             <div className="form-group">
               <Select
                 label={t(`${f}.matchType`)}
-                options={MATCH_TYPE_OPTIONS}
+                options={matchTypeOptions}
                 value={form.match_type}
                 onChange={e => setForm({ ...form, match_type: e.target.value })}
                 fullWidth

@@ -1945,9 +1945,6 @@
     "note": "Note",
     "matchType": "Match Type",
     "effect": "Effect",
-    "matchTypeRegex": "Regex",
-    "matchTypeLiteral": "Literal",
-    "matchTypeDefault": "Default",
     "effectOutput": "Output",
     "effectExclude": "Exclude",
     "search": "Search by status ID or canonical name",
@@ -2677,10 +2674,6 @@
         "excludeKw": "Which words should cause exclusion?",
         "isActive": "Active?",
         "matchType": "How to search for the words?",
-        "matchTypeKeyword": "Keyword",
-        "matchTypeRegex": "Regex",
-        "matchTypeLiteral": "Literal",
-        "matchTypeDefault": "Default",
         "effect": "What to do when found?",
         "effectOutput": "Detect and show",
         "effectExclude": "Detect and exclude",
@@ -5288,6 +5281,7 @@
       "RELEASE_AHEAD": "Release date"
     },
     "matchType": {
+      "KEYWORD": "Keyword",
       "REGEX": "Regex",
       "LITERAL": "Literal",
       "DEFAULT": "Default",
