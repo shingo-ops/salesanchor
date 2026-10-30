@@ -186,9 +186,9 @@ export default function ContactEditPage() {
             value={form.status}
             onChange={(e) => setForm({ ...form, status: e.target.value })}
             options={[
-              { value: "active", label: "active" },
-              { value: "inactive", label: "inactive" },
-              { value: "archived", label: "archived" },
+              { value: "active", label: t("customers.status_active") },
+              { value: "inactive", label: t("customers.status_inactive") },
+              { value: "archived", label: t("customers.status_archived") },
               { value: "pending_dedup_review", label: t("contacts.statusPendingDedupOption") },
             ]}
           />
