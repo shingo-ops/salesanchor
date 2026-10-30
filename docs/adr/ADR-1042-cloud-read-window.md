@@ -6,7 +6,7 @@
 | 備考 | PO 2026-10-22「クラウドでもいまと変わらない環境を構築したい、本番への読み取りも、hookも」。PO 2026-10-23 チャット「1」：本番を読むだけの窓口を設計し、設計書と確かめ方の表を見てから本番に手を入れる。PO 2026-10-23 チャット「1」：確かめ方 K1〜K9 で進め、実装・確認・本番反映まで行う |
 | 起案日 | 2026-10-23 |
 | 方針の決定者 | Shingo（PO）。方式の選択は Opus（PO の委任に基づく。ADR-1003） |
-| 関連 | ADR-1024（AI の本番 DB 読み取りの道）、ADR-1025（専用鍵の受け口）、ADR-1017（fail-closed）、ADR-1003（GO 委任） |
+| 関連 | ADR-1024（AI の本番 DB 読み取りの道）、ADR-1025（専用鍵の受け口）、ADR-1017（fail-closed）、ADR-1003（GO 委任）、ADR-1052（本 ADR を改める。ADR-1052 が Accepted になったときに効く） |
 | 設計 | `docs/handoff/cloud-read-window/design.md`、現状 `docs/handoff/cloud-read-window/recon.md` |
 
 ---
@@ -44,3 +44,16 @@
 ## 検証
 
 design.md §2 の K1〜K9。
+
+## 改訂
+
+### 改訂（クラウドの相談係の窓口、2026-10-30）
+
+- 経緯: Discord の投稿を合図に、クラウドの相談係 AI が本番を読む（ADR-1052）。設計: [design.md](../handoff/cloud-case-ai/design.md)。
+- 今の窓口（`ai-reader-http`・`api.salesanchor.jp` の入口・`READ_WINDOW_TOKEN`）は変えない。
+- 相談係専用に、同じ作りの容器 `ai-reader-cloud-http` を足す。接続はロール ai_reader_cloud（読むのは伏せたビュー ai_cloud だけ）。鍵は `CASE_AGENT_TOKEN`（正本は GitHub secret・90 日更新）。compose のプロジェクト名は今の窓口と分ける。
+- 受けるヘッダの名前と値の頭は、環境変数 `READ_WINDOW_TOKEN_HEADER`・`READ_WINDOW_TOKEN_PREFIX` で選べるようにする。既定は今と同じ（`X-Read-Window-Token`・頭なし）。相談係の容器だけ `Authorization`・`Bearer `。クラウドの network secret が 1 つのホストに 1 つ・ヘッダ 1 行だったため（ADR-1052 段0）。記録の印も環境変数 `READ_WINDOW_AUDIT_VIA` で分ける（既定 `https`、相談係は `https-case`）。
+- 不採用の案「新しいサブドメイン」を、相談係の道に限って採る。理由: api.salesanchor.jp には公開の書き込み口があり、パス分けでは相談係 AI から隠せない。相談係 AI が届くのは `case-api.salesanchor.jp` の決まった 3 つの道だけにし、今の 443 の server ブロック全部で TLS の名前が case-api なら 421 を返す。DNS はプロキシなし（グレー雲）で作る。プロキシを入れる場合はこの守りを作り直す。
+- 値を返す口は backend にも本窓口にも置かず、専用容器 `ai-unmask-http` に置く（本 ADR の「値を返す口を backend に置かない」の考えを保つ）。
+- 戻し方: ADR-1052 の「戻し方」の順で行う。今の窓口は変えていないので、戻しても今の窓口の利用者に影響しない。
+- 本改訂は ADR-1052 が Accepted になったときに効く。
