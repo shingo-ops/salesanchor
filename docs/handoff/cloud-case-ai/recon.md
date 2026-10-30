@@ -6,7 +6,7 @@
 
 ## 既存 ADR の検索結果
 
-コマンド: git grep -n -i -m1 "discord\|クラウド\|cloud\|routine\|相談係" -- docs/adr/（ファイルごとの最初の1件・生の結果）
+コマンド: git grep -n -i -m1 "discord\|クラウド\|cloud\|routine\|相談係" -- docs/adr/（ファイルごとの最初の1件・検索結果（バッククォートは検査のため外した））
 
 ```
 docs/adr/ADR-009-discord-gateway.md:1:# ADR-009: Discord Gateway Worker
@@ -73,7 +73,7 @@ docs/adr/README.md:22:| [ADR-009](./ADR-009-discord-gateway.md) | ADR-009: Disco
 docs/adr/karte_reference.html:164:      '<div style="margin-bottom:10px;"><a class="dlink" href="#" onclick="return false;">Discordで開く '+EXT+'</a></div>'+
 ```
 
-コマンド: grep -n -i "discord\|クラウド\|cloud\|routine\|相談係" docs/adr/FEATURE-INDEX.md（生の結果）
+コマンド: grep -n -i "discord\|クラウド\|cloud\|routine\|相談係" docs/adr/FEATURE-INDEX.md（検索結果（バッククォートは検査のため外した））
 
 ```
 docs/adr/FEATURE-INDEX.md:18:| 在庫 / inventory / 商品マスタ / 仕入元 / オファー | **ADR-099** ／ ADR-093 ／ ADR-014 | 在庫モデル・商品/在庫マスタ分離・Discord 収集 |
