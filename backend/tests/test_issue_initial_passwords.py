@@ -11,6 +11,7 @@ from __future__ import annotations
 import logging
 import subprocess
 import sys
+import uuid
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
@@ -24,56 +25,63 @@ from tests.test_users_rls import ADMIN_PG_URL, APP_PG_URL, _TENANT_A, _fresh
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent
 
-_FLOOR = 9100  # 試験用の利用者 id（conftest の種より大きい）
-_MINE = {
-    _FLOOR + 1: ("a@example.com", 1, None),
-    _FLOOR + 2: ("b@example.com", 1, None),
-    _FLOOR + 3: ("c@example.com", 0, None),  # 停止中
-    _FLOOR + 4: ("d@example.com", 1, "$argon2id$existing"),  # 設定済み
+# 試験用の利用者（id は DB に採番させる。他の試験の固定 id と重ならない）
+_SPEC = {
+    "a": (1, None),  # 発行対象
+    "b": (1, None),  # 発行対象
+    "c": (0, None),  # 停止中
+    "d": (1, "$argon2id$existing"),  # 設定済み
 }
 
 
 async def _seed(session):
-    """session の取引の中に試験用の利用者を入れる。commit しない。"""
-    for uid, (email, active, h) in _MINE.items():
-        await session.execute(
+    """session の取引の中に試験用の利用者を入れる。commit しない。(conn, {名前: id}) を返す。"""
+    ids = {}
+    for name, (active, h) in _SPEC.items():
+        r = await session.execute(
             text(
-                "INSERT INTO users (id, tenant_id, email, is_active, password_argon2_hash) "
-                "VALUES (:id, 999, :e, :a, :h)"
+                "INSERT INTO users (tenant_id, email, is_active, password_argon2_hash) "
+                "VALUES (999, :e, :a, :h)"
             ),
-            {"id": uid, "e": email, "a": active, "h": h},
+            {"e": f"b4b-{name}-{uuid.uuid4().hex}@example.com", "a": active, "h": h},
         )
-    return await session.connection()
+        ids[name] = r.lastrowid
+    return await session.connection(), ids
 
 
-async def _hashes(conn):
-    rows = (await conn.execute(text("SELECT id, password_argon2_hash FROM users WHERE id > :f"), {"f": _FLOOR})).all()
+async def _hashes(conn, ids):
+    """自分が入れた id の行だけを見る。"""
+    rows = (await conn.execute(
+        text("SELECT id, password_argon2_hash FROM users WHERE id IN (:a, :b, :c, :d)"),
+        {k: v for k, v in zip("abcd", ids.values())},
+    )).all()
     return dict(rows)
 
 
 async def test_dry_run_returns_count_and_writes_nothing(db_session):
     base, _ = await mod.issue(await db_session.connection(), apply=False)
-    conn = await _seed(db_session)
+    conn, ids = await _seed(db_session)
     n, issued = await mod.issue(conn, apply=False)
     assert n == base + 2 and issued == []
-    h = await _hashes(conn)
-    assert h[_FLOOR + 1] is None and h[_FLOOR + 2] is None and h[_FLOOR + 3] is None
-    assert h[_FLOOR + 4] == "$argon2id$existing"
+    h = await _hashes(conn, ids)
+    assert h[ids["a"]] is None and h[ids["b"]] is None and h[ids["c"]] is None
+    assert h[ids["d"]] == "$argon2id$existing"
     await db_session.rollback()
 
 
 async def test_apply_issues_for_each_target_and_second_run_is_zero(db_session):
-    conn = await _seed(db_session)
+    conn, ids = await _seed(db_session)
     n, issued = await mod.issue(conn, apply=True)
     assert n == len(issued) and n >= 2
-    ids = {uid for uid, _e, _p in issued}
-    assert {_FLOOR + 1, _FLOOR + 2} <= ids and not ({_FLOOR + 3, _FLOOR + 4} & ids)
-    h = await _hashes(conn)
+    got = {uid for uid, _e, _p in issued}
+    assert {ids["a"], ids["b"]} <= got and not ({ids["c"], ids["d"]} & got)
+    h = await _hashes(conn, ids)
     for uid, _email, plain in issued:
         assert len(plain) == 20
         assert verify_password((await conn.execute(
             text("SELECT password_argon2_hash FROM users WHERE id = :i"), {"i": uid})).scalar(), plain)
-    assert h[_FLOOR + 3] is None and h[_FLOOR + 4] == "$argon2id$existing"  # 停止中・設定済みは触らない
+    assert h[ids["a"]] and h[ids["b"]]  # 自分の対象 2 人に設定された
+    assert h[ids["c"]] is None and h[ids["d"]] == "$argon2id$existing"  # 停止中・設定済みは触らない
     n2, issued2 = await mod.issue(conn, apply=True)
     assert n2 == 0 and issued2 == []
     await db_session.rollback()
@@ -96,18 +104,18 @@ class _ZeroRowsOnSecondUpdate:
 
 
 async def test_abort_when_an_update_hits_zero_rows_and_rollback_undoes_all(db_session):
-    conn = await _seed(db_session)
+    conn, ids = await _seed(db_session)
     with pytest.raises(mod.IssueAborted):
         await mod.issue(_ZeroRowsOnSecondUpdate(conn), apply=True)
     await db_session.rollback()  # main がやること
-    h = await _hashes(await db_session.connection())
+    h = await _hashes(await db_session.connection(), ids)
     assert h == {}  # 試験用の利用者ごと取り消されている（1 人目の書き込みも残らない）
     await db_session.rollback()
 
 
 async def test_no_plaintext_in_logs_or_files(db_session, caplog, tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
-    conn = await _seed(db_session)
+    conn, _ids = await _seed(db_session)
     with caplog.at_level(logging.DEBUG):
         _n, issued = await mod.issue(conn, apply=True)
     assert len(issued) >= 2
@@ -153,7 +161,7 @@ async def test_rls_operator_context_required_then_applied_then_second_run_zero()
     """K7。使い捨て DB で、運営の文脈なしなら中止、ありなら件数分、2 回目は 0 件。"""
     async with _fresh() as (admin_engine, app_engine):
         async with admin_engine.begin() as c:
-            for uid in (_FLOOR + 1, _FLOOR + 2):
+            for uid in (9101, 9102):
                 await c.execute(
                     text(
                         "INSERT INTO public.users (id, tenant_id, username, email, is_active) "
@@ -167,12 +175,16 @@ async def test_rls_operator_context_required_then_applied_then_second_run_zero()
             with pytest.raises(mod.IssueAborted):
                 await mod.issue(c, apply=True, operator_context=False)
             await c.rollback()
+        async with admin_engine.connect() as ac:
+            hs = (await ac.execute(text(
+                "SELECT count(*) FROM public.users WHERE id IN (9101, 9102) AND password_argon2_hash IS NOT NULL"))).scalar()
+            assert hs == 0  # 取り消され、試験用 2 人は NULL のまま
         # 運営の文脈あり → 試験用の 2 人を含めて書ける。2 回目は 0 件
         async with app_engine.connect() as c:
             await c.begin()
             n, issued = await mod.issue(c, apply=True)
             ids = {uid for uid, _e, _p in issued}
-            assert n == len(issued) and {_FLOOR + 1, _FLOOR + 2} <= ids
+            assert n == len(issued) and {9101, 9102} <= ids
             n2, issued2 = await mod.issue(c, apply=True)
             assert n2 == 0 and issued2 == []
             await c.rollback()
