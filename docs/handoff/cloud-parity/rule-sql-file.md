@@ -1,6 +1,6 @@
 # クラウドの決まり: SQL の手順ファイルを書くときの例外（設計）
 
-- 状態: 設計案 第3版（Opus 作成）。1回目の審査 REVISE（MEDIUM 3・LOW 4）、2回目の審査 REVISE（MEDIUM 2・LOW 3）を反映。3回目の審査 APPROVE（2026-10-31、LOW 2 件を反映）。PO 許可待ち。審査役（新規 opus）の再審査 → PO 許可 → クラウド Sonnet が実装。
+- 状態: 設計案 第3版（Opus 作成）。1回目の審査 REVISE（MEDIUM 3・LOW 4）、2回目の審査 REVISE（MEDIUM 2・LOW 3）を反映。3回目の審査 APPROVE（2026-10-31、LOW 2 件を反映）。PO 実装承認済み（2026-10-31、PO「1」＝この例外を安全確認に入れる）。実装はクラウド Sonnet。審査役（新規 opus）の再審査 → PO 許可 → クラウド Sonnet が実装。
 - 発端: 2026-10-31、PO「1」（安全確認に、本番に出す前の手順ファイルを作るときだけの狭い例外を設ける）。
 - 関係: docs/handoff/cloud-parity/design.md の K1（クラウドで危険操作を Bash で「実行」しようとすると止まる）。docs/handoff/cloud-case-ai/stage1-card.md §4-B。
 
