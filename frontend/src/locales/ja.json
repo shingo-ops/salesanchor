@@ -116,6 +116,14 @@
     "reload": "更新"
   },
   "common": {
+    "dataTable": {
+      "previousPage": "前のページ",
+      "nextPage": "次のページ",
+      "table": "データ表",
+      "selectAll": "すべて選択",
+      "selectAllRows": "すべての行を選択",
+      "selectRow": "{{key}} の行を選択"
+    },
     "showPassword": "パスワードを表示",
     "hidePassword": "パスワードを隠す",
     "loading": "読み込み中...",
@@ -1223,6 +1231,11 @@
     "windowWarning": "メッセージウィンドウ: 残り24時間未満",
     "windowOpen": "メッセージウィンドウ オープン",
     "noLead": "リードが見つかりません。",
+    "filterByPage": "ページで絞り込む",
+    "youPrefix": "あなた: ",
+    "humanAgentLabel": "ヒューマンエージェント",
+    "noBody": "（本文なし）",
+    "meAvatar": "自分",
     "lead": "リード",
     "unread": "未読",
     "tabAll": "すべてのメッセージ",
@@ -3529,6 +3542,7 @@
     "outbound": {
       "title": "英訳プレビュー（送信前確認）",
       "buttonTitle": "英訳プレビュー",
+      "buttonShort": "EN",
       "originalLabel": "原文（日本語）",
       "draftLabel": "英訳下書き（編集可）",
       "generateBtn": "英訳を生成",

@@ -172,7 +172,7 @@ export function InboxConversationList({
             fullWidth
             value={pageIdFilter}
             onChange={(e) => onPageFilterChange(e.target.value)}
-            aria-label="Filter by Page"
+            aria-label={t("inbox.filterByPage")}
           >
             <option value="">{t("inbox.allPages")}</option>
             {availablePageIds.map((pid) => (

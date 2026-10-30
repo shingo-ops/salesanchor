@@ -2,7 +2,7 @@
 
 - 親: [ADR-027 UI 国際化](../../adr/ADR-027-ui-internationalization.md) ／ [design-system](../../specs/design-system/README.md)
 - ひとこと: 日本語の画面に出る英語の決まり文句を辞書の言葉に置きかえ、新しく英語を直書きしたら申請のときに止まるようにする。
-- 現在地の根拠: [recon.md](recon.md)（以下 R§ で参照）。`scripts/check-ui-governance.js` の行番号は便1 実装前の版（d9b0c1771）のもの
+- 現在地の根拠: [recon.md](recon.md)（`docs/handoff/english-literal-i18n/recon.md`。以下 R§ で参照）。`scripts/check-ui-governance.js` の行番号は便1 実装前の版（d9b0c1771）のもの
 - 状態: Opus 自己審査済み。PO 承認 2026-10-29「1」（選択肢の言葉は日本語にそろえ、この案で進める）。便1 のカード発行済み（[card-1.md](card-1.md)）。
 - 区分（STANDARD-WORKFLOW 1.8）: 既存テーマ ADR-027 の延長。新 ADR は作らず、例外の書き方だけ ADR-027 に追記する（§3-4）。
 

@@ -560,18 +560,18 @@ export function InboxMessageThread({
                 {...(canReact ? bindLongPress(msg.id) : {})}
                 title={
                   failed
-                    ? `Send failed: ${msg.error_code}${msg.error_message ? ` — ${msg.error_message}` : ""}`
-                    : formatAbsolute(msg.created_at)
+                    ? `${t("inbox.sendError.generic")}${t("inbox.sendError.codeSuffix", { code: msg.error_code })}${msg.error_message ? ` — ${msg.error_message}` : ""}`
+                    : formatAbsolute(msg.created_at, i18n.language)
                 }
               >
                 {msg.message_tag && !failed && (
                   <div style={{ fontSize: "var(--font-2xs)", opacity: "var(--opacity-secondary)", marginBottom: "var(--space-1)", fontWeight: "var(--font-weight-semi)" }}>
-                    {msg.message_tag === "HUMAN_AGENT" ? "Human Agent" : msg.message_tag}
+                    {msg.message_tag === "HUMAN_AGENT" ? t("inbox.humanAgentLabel") : msg.message_tag}
                   </div>
                 )}
                 {failed && (
                   <div style={{ fontSize: "var(--font-2xs)", fontWeight: "var(--font-weight-semi)", marginBottom: "var(--space-1)" }}>
-                    Send failed ({msg.error_code})
+                    {t("inbox.sendError.generic")}{t("inbox.sendError.codeSuffix", { code: msg.error_code })}
                   </div>
                 )}
                 {msg.attachment_type === "image" && (msg.attachment_url || resolvedUrl[msg.id]) ? (
@@ -611,7 +611,7 @@ export function InboxMessageThread({
                     {t("inbox.imageSent")}
                   </span>
                 ) : (
-                  <div>{msg.message_text || "(no body)"}</div>
+                  <div>{msg.message_text || t("inbox.noBody")}</div>
                 )}
 
                 {/* Translation section */}
@@ -633,7 +633,7 @@ export function InboxMessageThread({
                 )}
 
                 <div className={`msg-time${outbound ? "" : " inbound"}`}>
-                  {relativeTime(msg.created_at)}
+                  {relativeTime(msg.created_at, t, i18n.language)}
                   {/* Translate button */}
                   {msg.message_id && msg.message_text && !failed && (
                     <button
@@ -774,7 +774,7 @@ export function InboxMessageThread({
           )}
           <div className="send-top-row">
             <div className="conv-avatar" style={{ width: 'var(--size-thread-avatar)', height: 'var(--size-thread-avatar)', fontSize: "var(--font-xs)", flexShrink: 0 }}>
-              Me
+              {t("inbox.meAvatar")}
             </div>
             <div className="send-input-wrap">
               <TextareaControl
@@ -828,7 +828,7 @@ export function InboxMessageThread({
                 aria-label={t("translation.outbound.buttonTitle")}
               >
                 <INBOX_ACTION_ICONS.translate size={ICON.sm} aria-hidden="true" />
-                <span className="inbox-translate-outbound-label">EN</span>
+                <span className="inbox-translate-outbound-label">{t("translation.outbound.buttonShort")}</span>
               </button>
             )}
             <button

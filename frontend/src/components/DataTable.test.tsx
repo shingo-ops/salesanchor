@@ -1,9 +1,15 @@
+/* eslint-disable local/no-japanese-literal -- テスト: 日本語の読み上げ名・空の表示が辞書どおりに出ることを検証する（ADR-027・precedent: InboxMessageThread.discordSendError.test.tsx） */
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { DataTable, type DataTableColumn } from "./DataTable";
 import { useIsMobile } from "../hooks/useIsMobile";
+import i18n from "../i18n";
 
 vi.mock("../hooks/useIsMobile", () => ({ useIsMobile: vi.fn(() => false) }));
+
+beforeAll(async () => {
+  await i18n.changeLanguage("en");
+});
 
 afterEach(() => {
   cleanup();
@@ -114,5 +120,71 @@ describe("DataTable selection", () => {
     expect(box.classList.contains("comp-checkbox-control")).toBe(true);
     fireEvent.click(box);
     expect(fn).toHaveBeenCalledWith(new Set(["2"]));
+  });
+});
+
+describe("DataTable i18n labels", () => {
+  const TWO_ROWS: Row[] = [
+    { id: "1", name: "a" },
+    { id: "2", name: "b" },
+  ];
+
+  afterEach(async () => {
+    await i18n.changeLanguage("en");
+  });
+
+  it("shows the Japanese empty text in ja when data is empty and no emptyState is given", async () => {
+    await i18n.changeLanguage("ja");
+    render(<DataTable<Row> columns={[{ key: "name", header: "Name" }]} data={[]} rowKey={(row) => row.id} />);
+    expect(screen.getByText("データなし")).toBeTruthy();
+  });
+
+  it("names the next-page button in Japanese in ja", async () => {
+    await i18n.changeLanguage("ja");
+    render(
+      <DataTable<Row>
+        columns={[{ key: "name", header: "Name" }]}
+        data={DATA}
+        rowKey={(row) => row.id}
+        page={1}
+        onPageChange={() => {}}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "次のページ" })).toBeTruthy();
+  });
+
+  it("names the select-all and row checkboxes in Japanese in ja", async () => {
+    await i18n.changeLanguage("ja");
+    render(
+      <DataTable<Row>
+        columns={[{ key: "name", header: "Name" }]}
+        data={TWO_ROWS}
+        rowKey={(row) => row.id}
+        selectable
+        selectedKeys={new Set()}
+        onSelectChange={() => {}}
+      />,
+    );
+    expect(screen.getByRole("checkbox", { name: "すべての行を選択" })).toBeTruthy();
+    expect(screen.getByRole("checkbox", { name: "2 の行を選択" })).toBeTruthy();
+  });
+
+  it("shows No data in en when data is empty and no emptyState is given", () => {
+    render(<DataTable<Row> columns={[{ key: "name", header: "Name" }]} data={[]} rowKey={(row) => row.id} />);
+    expect(screen.getByText("No data")).toBeTruthy();
+  });
+
+  it("shows the given emptyState instead of the default text", async () => {
+    await i18n.changeLanguage("ja");
+    render(
+      <DataTable<Row>
+        columns={[{ key: "name", header: "Name" }]}
+        data={[]}
+        rowKey={(row) => row.id}
+        emptyState={<span>空です</span>}
+      />,
+    );
+    expect(screen.getByText("空です")).toBeTruthy();
+    expect(screen.queryByText("データなし")).toBeNull();
   });
 });

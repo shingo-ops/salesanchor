@@ -116,6 +116,14 @@
     "reload": "Reload"
   },
   "common": {
+    "dataTable": {
+      "previousPage": "previous page",
+      "nextPage": "next page",
+      "table": "data table",
+      "selectAll": "select all",
+      "selectAllRows": "select all rows",
+      "selectRow": "select row {{key}}"
+    },
     "showPassword": "Show password",
     "hidePassword": "Hide password",
     "loading": "Loading...",
@@ -1223,6 +1231,11 @@
     "windowWarning": "Messaging window: less than 24h remaining",
     "windowOpen": "Messaging window open",
     "noLead": "Lead not found.",
+    "filterByPage": "Filter by Page",
+    "youPrefix": "You: ",
+    "humanAgentLabel": "Human Agent",
+    "noBody": "(no body)",
+    "meAvatar": "Me",
     "lead": "Lead",
     "unread": "unread",
     "tabAll": "All Messages",
@@ -3529,6 +3542,7 @@
     "outbound": {
       "title": "English Preview (Review before send)",
       "buttonTitle": "English Preview",
+      "buttonShort": "EN",
       "originalLabel": "Original (Japanese)",
       "draftLabel": "English draft (editable)",
       "generateBtn": "Generate English Draft",
