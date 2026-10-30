@@ -4,10 +4,21 @@
  * 各 test 名は通知文にそのまま出る。何が壊れたか分かる名前にする。
  */
 
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import { creds, login, signOut } from "./login";
 
 const NO_ERROR_BANNER = ".error-banner";
+
+// API の返事そのものを待つ。goto/click/fill の「前」に呼んで、あとで await する（返事の取りこぼし防止）
+function apiOk(page: Page, pathRe: RegExp) {
+  return page.waitForResponse(
+    (r) => r.request().method() === "GET" && pathRe.test(new URL(r.url()).pathname),
+    { timeout: 20_000 },
+  );
+}
+const COMPANIES_API = /^\/api\/v1\/companies$/;
+const LEADS_API = /^\/api\/v1\/leads$/;
+const COMPANY_DETAIL_API = /^\/api\/v1\/companies\/[^/]+$/;
 const SKIP_REASON = "点検用の人の秘密情報が未登録";
 
 test.describe("本番の画面点検", () => {
@@ -50,12 +61,16 @@ test.describe("本番の画面点検", () => {
     const { email, password } = c!;
     await login(page, email, password);
 
+    const companies = apiOk(page, COMPANIES_API);
     await page.goto("/crm/companies");
+    expect((await companies).status(), "会社一覧の API の応答").toBeLessThan(400);
     await expect(page.getByPlaceholder("顧客名・コードで検索...")).toBeVisible();
     await expect(page.locator(NO_ERROR_BANNER)).toHaveCount(0);
     await expect(page.locator(".error-message")).toHaveCount(0);
 
+    const leads = apiOk(page, LEADS_API);
     await page.goto("/crm/leads");
+    expect((await leads).status(), "リード一覧の API の応答").toBeLessThan(400);
     await page.waitForURL((url) => url.pathname === "/crm/leads");
     await expect(page.locator("main")).toBeVisible();
     await expect(page.locator(NO_ERROR_BANNER)).toHaveCount(0);
@@ -67,10 +82,20 @@ test.describe("本番の画面点検", () => {
     test.skip(!c, SKIP_REASON);
     const { email, password } = c!;
     await login(page, email, password);
+    const first = apiOk(page, COMPANIES_API);
     await page.goto("/crm/companies");
+    expect((await first).status(), "会社一覧の API の応答").toBeLessThan(400);
     const box = page.getByPlaceholder("顧客名・コードで検索...");
     await expect(box).toBeVisible();
+    const searched = page.waitForResponse(
+      (r) => {
+        const u = new URL(r.url());
+        return r.request().method() === "GET" && COMPANIES_API.test(u.pathname) && u.searchParams.get("search") === "テスト";
+      },
+      { timeout: 20_000 },
+    );
     await box.fill("テスト");
+    expect((await searched).status(), "会社検索の API の応答").toBeLessThan(400);
     await expect(box).toHaveValue("テスト");
     await expect(page.locator(NO_ERROR_BANNER)).toHaveCount(0);
   });
@@ -80,13 +105,18 @@ test.describe("本番の画面点検", () => {
     test.skip(!c, SKIP_REASON);
     const { email, password } = c!;
     await login(page, email, password);
+    const list = apiOk(page, COMPANIES_API);
     await page.goto("/crm/companies");
+    expect((await list).status(), "会社一覧の API の応答").toBeLessThan(400);
     await expect(page.getByPlaceholder("顧客名・コードで検索...")).toBeVisible();
-    await page.locator('main a[href^="/companies/"]').first().waitFor({ timeout: 10_000 }).catch(() => {});
+    await expect(page.locator("main .sa-loading-block")).toHaveCount(0);
     const link = page.locator('main a[href^="/companies/"]').first();
     test.skip((await link.count()) === 0, "会社 0 件");
+    const detail = apiOk(page, COMPANY_DETAIL_API);
     await link.click();
+    expect((await detail).status(), "会社詳細の API の応答").toBeLessThan(400);
     await page.waitForURL(/\/crm\/companies\/[^/]+$/);
+    await expect(page.locator("main .sa-loading-block")).toHaveCount(0);
     await expect(page.locator(NO_ERROR_BANNER)).toHaveCount(0);
     await expect(page.locator("main")).toBeVisible();
   });
