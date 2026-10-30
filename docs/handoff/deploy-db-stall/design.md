@@ -405,7 +405,7 @@ PR ごとの静的点検にも1つ足す（第8版）:
 
 ## 17. 段4 詳細設計 — アプリの全ての DB 接続に名前を付け、ロック待ちのログを出す（第1.1版）
 状態: 設計審査済み（第1版 条件付き APPROVE、条件 A1〜A4 は第1.1版で反映。条件どおりに入っていれば再審査は要らない、と審査役が明記）。
-審査の記録: 第1版 条件付き APPROVE（2026-10-30、Architect 新規起動。17-1 の行番号・同期16行が psycopg2 の URL に置き換えていること・SQLAlchemy の connect_args・psycopg2 のキーワード・asyncpg の server_settings を実物と公式資料で照合）。必須: A1 C4-1 の判定の形（`**` で渡す辞書）／A2 25本目の接続（`backend/app/ops/readonly_query.py` :282・:289）／A3 smoke [7b] の見張りの範囲が狭くなる／A4 片付けのスクリプトも名前を読む。推奨 B1〜B7 と 4b の補足も反映した。段4は 4a（名前を付ける）と 4b（ロック待ちのログ）に分け、4a を詳細、4b を概要とする。4a を本番に出すのは、段2の K2-5〜K2-7 がそろった後（§3 の順番）。4b は 4a の本番測定（K4-5）の後に詳細設計する。
+審査の記録: 第1版 条件付き APPROVE（2026-10-30、Architect 新規起動。17-1 の行番号・同期16行が psycopg2 の URL に置き換えていること・SQLAlchemy の connect_args・psycopg2 のキーワード・asyncpg の server_settings を実物と公式資料で照合）。必須: A1 C4-1 の判定の形（`**` で渡す辞書）／A2 25本目の接続（`backend/app/ops/readonly_query.py` :282・:289）／A3 smoke [7b] の見張りの範囲が狭くなる／A4 片付けのスクリプトも名前を読む。推奨 B1〜B7 と 4b の補足も反映した。マージ前の審査（reviewer、opus 新規起動、391105c2f）で B5・A4 の継続の行・B2〜B4 の置き場所の漏れを指摘され、同じ第1.1版の中で直した。段4は 4a（名前を付ける）と 4b（ロック待ちのログ）に分け、4a を詳細、4b を概要とする。4a を本番に出すのは、段2の K2-5〜K2-7 がそろった後（§3 の順番）。4b は 4a の本番測定（K4-5）の後に詳細設計する。
 
 ### 17-1. 事実（2026-10-30 調べ。行番号は origin/main ddbe41261）
 - 10/29 にロックを握っていたのは、名前の無い salesanchor_app の接続1本だった（§2）。名前が無いので、どのコンテナのどの処理かを特定できていない。
@@ -455,8 +455,8 @@ PR ごとの静的点検にも1つ足す（第8版）:
   (3) (1)・(2) のキーに渡す値が、同じファイルの中で正本の関数の呼び出しを代入した変数（または、そのキーを持つ辞書の変数。`backend/app/database.py` :13-15・:24-33 の `_connect_args` を `_engine_kwargs` に入れて `**` で渡す形）。
   これ以外は赤。対象外は許可リストに理由付きで書く: `backend/app/ops/readonly_query.py` :282・:289（DB ユーザーが ai_reader で、K4-5 が数えるアプリの接続ではない。A2）。見つけた呼び出しの数が「24＋許可リストの数」より少なければ赤にする（試験が何も見ずに緑になるのを防ぐ）。
 - C4-2 名前の表: 全部の名前が63文字以内・salesanchor_ で始まる・重複なし。backend の main が salesanchor_backend であること（smoke [7a] の前提）。`scripts/lib/db-app-names.sh` の3つの名前と重ならないこと（A4）。`scripts/smoke_test_post_deploy.sh` の [7b] に書く4つの名前が、表の main の4つと同じであること（A3）。
-- C4-3 役割の書き忘れ: `docker-compose.yml` を YAML として読み、build が ./backend のサービスのうち backend 以外は、environment の SA_PROCESS_ROLE が表の役割の1つであること。backend には SA_PROCESS_ROLE が無いこと。environment は `- KEY=value` の並びの形で書かれているので、その形を読む。YAML を読む道具（PyYAML）は直接の依存ではなく uvicorn[standard] 経由で入っている。実装で直接の依存に書くかを決め、本節に書く。
-- C4-4 実際に名乗る: 試験の PostgreSQL（`.github/workflows/test.yml` の pytest の job :114-242。test.yml の変更は要らない）につなぎ、同期・非同期・create_pool の各1本で `SELECT current_setting('application_name')` が表の名前と一致する。SA_PROCESS_ROLE を worker にしたときと無いときの2通り。DB が無いときは skip にせず赤にする。
+- C4-3 役割の書き忘れ: `docker-compose.yml` を YAML として読み、build が ./backend のサービスのうち backend 以外は、environment の SA_PROCESS_ROLE が表の役割の1つであること。backend には SA_PROCESS_ROLE が無いこと。environment は今は `- KEY=value` の並びの形で書かれている。試験は並びの形と `KEY: value` の辞書の形の両方を読む。YAML を読む道具（PyYAML）は直接の依存ではなく uvicorn[standard] 経由で入っている。依存は足さず、この経路を使う（入らなくなったら C4-3 が import で赤になって気づける）。
+- C4-4 実際に名乗る: 試験の PostgreSQL（`.github/workflows/test.yml` の pytest の job :114-242。test.yml の変更は要らない）につなぎ、同期・非同期・create_pool の各1本で `SELECT current_setting('application_name')` が表の名前と一致する。SA_PROCESS_ROLE を worker にしたときと無いときの2通り。CI（環境変数 GITHUB_ACTIONS が true）で DB が無いときは skip にせず赤にする。手元で DB なしに流すときは skip にする。
 - 赤の実演（実装 PR で1回、結果を PR に貼る）: (1) 同期の1行から名前を外すと C4-1 が赤 (2) `backend/app/database.py` の `_connect_args` から名前を外すと C4-1 が赤（`**` で渡す形を本当に見ているか） (3) 別の名前に入れた psycopg2.connect を許可リストの外に1つ足すと C4-1 が赤 (4) celery-worker の SA_PROCESS_ROLE を消すと C4-3 が赤 (5) 非同期用の関数が server_settings を返さない形にすると C4-4 が赤。
 
 ### 17-4. 受け入れ基準
@@ -487,6 +487,7 @@ PR ごとの静的点検にも1つ足す（第8版）:
 
 ### 17-7. 範囲外（記録のみ）
 - scripts の手で流す道具（create_engine などが54行）と backend/scripts・backend/tcg_migration/scripts（6行）。本番反映からは run_py（名前付き、`scripts/migration_py_entry.py` :40）だけが呼ばれる。手で流すときの名前は、K4-5 で jarvis の名前の無い接続が残ったときに考える。
+- 名前の無い jarvis の接続の候補（K4-5 で残ったときに調べる）: postgres-exporter（`docker-compose.exporters.yml` :30-34。本番で動いているかはまだ確かめていない）と、手で流す道具。
 - 移行の入口（`scripts/migration_py_entry.py` :40）は setdefault で名前を足すので、アプリの engine を import して使う移行は、アプリの名前を名乗る。今登録されている26本の移行では起きない（審査で照合）。起きると段2の片付けの対象から外れるので、新しい Python の移行を足すときに見る（人手で守る）。
 - idle_in_transaction_session_timeout（取引を開いたまま放置した接続を切る）: アプリの動きを変えるので、段4に入れない。4a で名前が分かった後に、別の段として考える。
 - 毎日 02:00 JST のアイコン取得の作業（`backend/app/tasks/avatar.py`）は、取引を開いたまま外の API を1件ずつ呼ぶ。10/29 06:42Z の時刻とは重ならない。K4-5 の3回目でこの作業の接続を見る。
@@ -501,5 +502,5 @@ PR ごとの静的点検にも1つ足す（第8版）:
 
 ### 17-9. 戻し方・計画・継続
 - 戻し方（4a）: 実装 PR を revert して main にマージ。次の本番反映から今の名前に戻る。DB は変えない。
-- 計画: (1) 本節の Architect 審査（新しく起動） (2) 設計 PR をマージ (3) 段2の K2-5〜K2-7 がそろった後、Sonnet が 4a を実装・CI・赤の実演・ADR-1037 の追記（名前の正本の場所と役割の環境変数） (4) reviewer（opus、新しく起動） (5) 委任 GO で本番へ（backend・`docker-compose.yml`・`scripts/smoke_test_post_deploy.sh` を含む。移行・DROP・秘密の値は無い） (6) K4-5・K4-6 (7) 4b の詳細設計。
-- 継続: 名前の正本は 4a で置く新しいモジュール（場所は実装 PR で本節に書く）。守り手: backend の pytest（C4-1〜C4-4、実装 PR で足す）。
+- 計画: (1) 本節の Architect 審査（新しく起動） (2) 設計 PR をマージ (3) 段2の K2-5〜K2-7 がそろった後、実装の前に reader 鍵の道で usename・application_name の列を1回引けることを確かめる。そのあと Sonnet が 4a を実装・CI・赤の実演・ADR-1037 の追記（名前の正本の場所と役割の環境変数） (4) reviewer（opus、新しく起動） (5) 委任 GO で本番へ（backend・`docker-compose.yml`・`scripts/smoke_test_post_deploy.sh` を含む。移行・DROP・秘密の値は無い） (6) K4-5・K4-6 (7) 4b の詳細設計。
+- 継続: 名前の正本は2か所ある。アプリの接続の名前は 4a で置く新しいモジュール（場所は実装 PR で本節に書く）。本番反映の控え・移行の名前は `scripts/lib/db-app-names.sh`（段2）。分ける理由は、シェルの台本は Python を読めず、アプリはシェルの lib を読めないから（17-2）。2つが重ならないことは C4-2 が守る。守り手: backend の pytest（C4-1〜C4-4、実装 PR で足す）と `.github/workflows/backup-script-test.yml`（C1〜C9）。
