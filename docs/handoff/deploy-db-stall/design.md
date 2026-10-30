@@ -5,7 +5,7 @@
 
 **対象ADR**: ADR-1037（拡張。新規 ADR は作らない）。関連 ADR-1005・ADR-1003・ADR-135・ADR-136  
 **日付**: 2026-10-29  
-**担当**: Planner（Opus）。状態（2026-10-30）: 段1は第8.1版で本番反映済み（PR #4864、本番測定3/3回で K8・K9a 合格、K9b は該当なし）。段3は §15 で本番反映済み（PR #4867、K3-4〜K3-6 合格。K3-4 は PO 2026-10-30 の決定で手の3回に置き換えた）。段2は §16 の設計が審査済み・マージ済み（PR #4868）、実装 PR #4872 は本番に出す準備中（K3-4〜K3-6 がそろったため）  
+**担当**: Planner（Opus）。状態（2026-10-30）: 段1は第8.1版で本番反映済み（PR #4864、本番測定3/3回で K8・K9a 合格、K9b は該当なし）。段3は §15 で本番反映済み（PR #4867、K3-4〜K3-6 合格。K3-4 は PO 2026-10-30 の決定で手の3回に置き換えた）。段2は §16 の設計が審査済み・マージ済み（PR #4868）、実装 PR #4872 は 2026-10-30 に本番反映済み（K2-5・K2-6 は1/3回合格、K2-7 は翌朝3時）。段4は §17 に設計案  
 **PO の選択**: 2026-10-29「1」（この順番で正式な設計にまとめ、審査に通してから1つずつ直す）
 
 ---
@@ -31,9 +31,9 @@
 | 段 | 内容 | 本番への影響の種類 | 状態 |
 |---|---|---|---|
 | 1 | Python の移行（run_py）にもロック待ち1秒と再試行を付ける（§4） | 本番 scripts・deploy.yml の db_migrations・CI（委任 GO。ADR-1003 の例外7種に当たらない） | 本番反映済み（PR #4864）。本番測定3/3回で合格（2026-10-30） |
-| 2 | 本番反映が時間切れのとき、サーバー側の移行・バックアップも止める。開始時に取り残しを片付ける | deploy.yml | §16 の設計マージ済み（PR #4868）。実装 PR #4872。段3の K3-4〜K3-6 がそろったので本番へ（K3-4 は PO 2026-10-30 の決定で手の3回に代えた） |
+| 2 | 本番反映が時間切れのとき、サーバー側の移行・バックアップも止める。開始時に取り残しを片付ける | deploy.yml | §16 の設計マージ済み（PR #4868）。実装 PR #4872 は 2026-10-30 に本番反映済み。K2-5・K2-6 は1/3回合格（移行のある本番反映を待つ）、K2-7 は翌朝3時 |
 | 3 | `scripts/backup.sh` :27-29 の pg_dump にロック待ちの上限を付ける | 本番 scripts | §15 で実装・本番反映済み（PR #4867）。K3-4〜K3-6 合格（K3-4 は手の3回で代えた。§15 の状態の行） |
-| 4 | アプリの同期接続に名前を付ける。ロック待ちログを有効にする | backend・DB 設定 | 段2の後に詳細設計 |
+| 4 | アプリの同期接続に名前を付ける。ロック待ちログを有効にする | backend・DB 設定 | §17 に設計案（4a 名前を付ける・4b ロック待ちのログ）。本番は段2の K2-5〜K2-7 の後 |
 | 5 | 056 など、流し直しのたびに排他ロックを取る書き方をやめる（存在を確かめてから DROP、または適用済みの記録） | migrations/（PO 本人の GO の要否を確認） | 段4の後に詳細設計 |
 
 段1を先にする理由: 段1だけで「アプリが2時間止まる」形が「最大1秒待って離す」形に変わる。段2〜5は止まった後の後始末と原因の特定で、効き目は段1より小さい。
@@ -402,3 +402,104 @@ PR ごとの静的点検にも1つ足す（第8版）:
 - 戻し方: この PR を revert して main にマージ。次の本番反映から今の形に戻る。backup.sh は引数なしの動きが今と同じなので cron は影響を受けない。片付けのスクリプトがサーバーに残っても、呼ぶ行が無くなるので動かない。DB は変えない。
 - 計画: (1) 本節の Architect 審査（新しく起動） (2) Sonnet が実装・CI・赤の実演・ADR-1037 の追記 (3) reviewer（opus、新しく起動） (4) 本番に出すのは段3の K3-4〜K3-6 と段1の K8・K9 がそろった後。委任 GO（deploy.yml と本番 scripts を含む。ADR-1003 の例外7種には当たらない。移行・DROP は無い） (5) K2-5〜K2-7 (6) 段4の詳細設計へ。
 - 継続: 名前の正本は scripts/lib/db-app-names.sh。守り手: `.github/workflows/backup-script-test.yml`（C1〜C9）。手で移行を流すときは本番反映が動いていないことを Actions の画面で確かめる（人手で守る）。
+
+## 17. 段4 詳細設計 — アプリの全ての DB 接続に名前を付け、ロック待ちのログを出す（第1.1版）
+状態: 設計審査済み（第1版 条件付き APPROVE、条件 A1〜A4 は第1.1版で反映。条件どおりに入っていれば再審査は要らない、と審査役が明記）。
+審査の記録: 第1版 条件付き APPROVE（2026-10-30、Architect 新規起動。17-1 の行番号・同期16行が psycopg2 の URL に置き換えていること・SQLAlchemy の connect_args・psycopg2 のキーワード・asyncpg の server_settings を実物と公式資料で照合）。必須: A1 C4-1 の判定の形（`**` で渡す辞書）／A2 25本目の接続（`backend/app/ops/readonly_query.py` :282・:289）／A3 smoke [7b] の見張りの範囲が狭くなる／A4 片付けのスクリプトも名前を読む。推奨 B1〜B7 と 4b の補足も反映した。段4は 4a（名前を付ける）と 4b（ロック待ちのログ）に分け、4a を詳細、4b を概要とする。4a を本番に出すのは、段2の K2-5〜K2-7 がそろった後（§3 の順番）。4b は 4a の本番測定（K4-5）の後に詳細設計する。
+
+### 17-1. 事実（2026-10-30 調べ。行番号は origin/main ddbe41261）
+- 10/29 にロックを握っていたのは、名前の無い salesanchor_app の接続1本だった（§2）。名前が無いので、どのコンテナのどの処理かを特定できていない。
+- `scripts/run_all_migrations.sh` の log_lock_holders は、移行が待ちで失敗したときに、開いている接続の application_name と握っている表を出す（段1）。名前の無い接続は空欄で出るので、相手を特定できない。
+- アプリ（backend/app）の中で DB 接続を作る行は24行。名前を付けているのは5行だけ: `backend/app/database.py` :15（salesanchor_backend）・:70（salesanchor_admin_ops）、`backend/app/tasks/tcg_extraction.py` :790、`backend/app/tasks/tcg_extraction_recovery.py` :170、`backend/app/tasks/viewer_inventory_cache.py` :117。残り19行は名前が無い（celery の同期 create_engine 12行、`backend/app/tasks/priority_scoring_check.py` :83 の psycopg2.connect、`backend/app/tasks/buyback_scraper.py` :29、`backend/app/services/email_sender.py` :38、`backend/app/services/gemini_extraction_svc.py` :105・:154、`backend/app/services/tcg_product_master_svc.py` :828、`backend/app/discord_gateway/reaction_writer.py` :35 の asyncpg.create_pool）。調べの全表は作業メモ（社内）にある。同期の16行は全部 psycopg2 の URL に置き換えてから作っている（審査で照合）。
+- これとは別に、`backend/app/ops/readonly_query.py` :282・:289 が psycopg2.connect を別の名前に入れてから呼ぶ（25本目）。DB ユーザーは ai_reader で、アプリの salesanchor_app・jarvis の接続ではない。
+- 同期の engine を作る関数 `_get_sync_engine` は11ファイルに1つずつ別々にあり、共通の関数は無い。
+- `backend/app/database.py` は celery-worker・celery-beat・discord-gateway でも import されるので、そこでの接続も「salesanchor_backend」と名乗る。名前があっても、どのコンテナかが分からない。
+- backend・celery-worker・celery-beat・discord-gateway の4つは同じ backend のビルドで動く（`docker-compose.yml` :63・:215・:310・:354）。役割を区別する環境変数は今は無い。
+- celery-worker・celery-beat・discord-gateway は本番反映の `docker compose up`（`.github/workflows/deploy.yml` :466）で起動し、compose の environment が効く。backend は `scripts/blue-green-cutover.sh` の docker run で起動し、渡るのは .env のキー（:81-84）と :98-99 の2つだけ。compose の environment は backend に効かない。
+- 今のアプリの名前を読んでいるのは `scripts/smoke_test_post_deploy.sh` :125・:133（salesanchor_backend で salesanchor_app と jarvis の接続を区別する確認 [7a]・[7b]）と `scripts/test_rollback_simulation.sh` :91 だけ（backend/app と docs 以外を git grep。監視の設定に該当0件）。
+- 名前で接続を切る仕組みもある。`scripts/deploy-db-orphan-cleanup.sh` :50 は、`scripts/lib/db-app-names.sh` の salesanchor_migration・salesanchor_backup_deploy の接続を pg_terminate_backend で切る（段2）。アプリの名前がこれと重なると、本番反映のたびにアプリの接続が切られる。
+- smoke [7b]（`scripts/smoke_test_post_deploy.sh` :131-137）は「jarvis で salesanchor_backend と名乗る接続が0本」を見る。今は worker・gateway も salesanchor_backend と名乗るので、それらが jarvis でつないでも見つかる。
+- asyncpg は application_name を接続の引数で受けず、server_settings で渡す（ADR-115 :9、`backend/app/database.py` :11-13）。asyncpg 0.31.0 は環境変数 PGAPPNAME を読まない（公式の connect_utils.py）。psycopg2 は libpq の接続の引数 application_name を渡せる（PostgreSQL 16 文書 libpq の接続の引数の節）。
+- 本番 DB の設定（10/30 reader 鍵の道）: log_lock_waits=off、log_connections=off、log_line_prefix は時刻と番号だけ、ログは stderr。
+- ロック待ちのログ（PostgreSQL 16 proc.c）は deadlock_timeout（既定1秒）を過ぎてから出て、握っている接続の番号（pid）を書く。名前は書かない。
+
+### 17-2. 変更前 → 変更後（4a）
+| 項目 | 変更前 | 変更後 |
+|---|---|---|
+| 名前の正本 | 5か所に文字列で直書き | backend/app の中に新しいモジュールを1つ置き、名前の表を持たせる（置き場所は実装で既存の共通モジュールの並びに合わせ、本節を直す） |
+| コンテナの区別 | なし | 環境変数 SA_PROCESS_ROLE。celery-worker=worker・celery-beat=beat・discord-gateway=gateway を `docker-compose.yml` の environment に書く。backend には書かない（無いときの既定が backend）。.env と blue-green の台本は変えない |
+| 名前の形 | ばらばら | `salesanchor_<役割>_<道>`。ただし今の5つの名前は保つ（下の表） |
+| 名前の無い接続の作り方 | 19行 | 0行（CI の試験で守る） |
+
+名前の表（正本に置く。全部63文字以内・すべて salesanchor_ で始まる・重複なし）:
+| 役割 | 道 | 名前 | 使う DB ユーザー | 理由 |
+|---|---|---|---|---|
+| backend | main（database.py の engine） | salesanchor_backend | アプリ用（DATABASE_URL） | 今のまま。smoke [7a]・[7b] が読む |
+| backend | admin（database.py の admin_engine） | salesanchor_admin_ops | 管理用（ADMIN_DATABASE_URL） | 今のまま |
+| worker・beat・gateway | main・admin | salesanchor_<役割>_main・salesanchor_<役割>_admin | main はアプリ用・admin は管理用 | backend と取り違えないため |
+| worker | distribute・extraction_recovery・viewer_cache | 今の3つの名前のまま | 実装で各行の URL を表に書く | celery-worker だけで動く |
+| どの役割でも | 上以外の道（同期の engine・buyback・email・gemini の2つ・product master・priority・reaction・data_deletion） | salesanchor_<役割>_<道> | 実装で各行の URL を表に書く（data_deletion は管理用） | 道の名はファイル名を基にし、実装で表に全部書く |
+
+- 名前の正本は2か所になる。アプリの名前はこの Python の表、本番反映の控え・移行の名前は `scripts/lib/db-app-names.sh`（段2）。理由: シェルの台本は Python を読めず、アプリはシェルの lib を読めない。2つの重なりは C4-2 が止める（片付けのスクリプトがアプリの接続を切らないため）。
+
+- 名前を返す関数は1つにする。あわせて、同期用の `{"application_name": 名前}` と、SQLAlchemy の非同期用の `{"server_settings": {"application_name": 名前}}` を返す小さな関数を置く。各行は自分で文字列を書かず、これを呼ぶ。asyncpg.create_pool には server_settings で渡す。
+- 役割は、名前の関数が呼ばれたときに環境変数から読む（import のときに固定しない。試験で役割を変えて確かめられるように）。
+- smoke [7b] を広げる（A3）: 「jarvis で salesanchor_backend と名乗る接続が0本」を「jarvis で表の main の4つ（salesanchor_backend・salesanchor_worker_main・salesanchor_beat_main・salesanchor_gateway_main）のどれかと名乗る接続が0本」に変える（`scripts/smoke_test_post_deploy.sh` :131-137）。今と同じく worker・gateway の main の接続も見張る。台本の4つの名前が表の main の名前と同じことを C4-2 で確かめる。[7a] は今のまま（backend の接続を数える）。
+- SA_PROCESS_ROLE が表に無い値のときは、止めずに役割を unknown として名前を作る（salesanchor_unknown_<道>）。綴りの誤りで本番の worker が起動しなくなるのを避ける。誤りは CI の試験 C4-3 で捕まえる。
+- 接続の他の設定（prepared_statement_cache_size など）は変えない。connect_args が既にある行は、名前の分を足すだけにする。
+
+### 17-3. 試験（PR の CI。`.github/workflows/test.yml` で流れる backend の pytest に足す）
+- C4-1 名前の無い接続を作らない: backend/app の全 .py を ast で読み、create_engine・create_async_engine・psycopg2.connect・asyncpg.connect・asyncpg.create_pool の呼び出し（別の名前に入れてから呼ぶ形も含める。例 `backend/app/ops/readonly_query.py` :282・:289）を全部見つける。前例 `backend/tests/test_no_exception_text_in_http_detail.py` :62-68。合格とする形は次の3つだけ（A1）:
+  (1) 呼び出しの引数に、名前の正本の関数の呼び出しを直接書く（engine は connect_args=、psycopg2.connect は application_name=、create_pool は server_settings=）。
+  (2) 呼び出しの引数の `**辞書` の中に、(1) と同じキーで正本の関数の呼び出しがある。
+  (3) (1)・(2) のキーに渡す値が、同じファイルの中で正本の関数の呼び出しを代入した変数（または、そのキーを持つ辞書の変数。`backend/app/database.py` :13-15・:24-33 の `_connect_args` を `_engine_kwargs` に入れて `**` で渡す形）。
+  これ以外は赤。対象外は許可リストに理由付きで書く: `backend/app/ops/readonly_query.py` :282・:289（DB ユーザーが ai_reader で、K4-5 が数えるアプリの接続ではない。A2）。見つけた呼び出しの数が「24＋許可リストの数」より少なければ赤にする（試験が何も見ずに緑になるのを防ぐ）。
+- C4-2 名前の表: 全部の名前が63文字以内・salesanchor_ で始まる・重複なし。backend の main が salesanchor_backend であること（smoke [7a] の前提）。`scripts/lib/db-app-names.sh` の3つの名前と重ならないこと（A4）。`scripts/smoke_test_post_deploy.sh` の [7b] に書く4つの名前が、表の main の4つと同じであること（A3）。
+- C4-3 役割の書き忘れ: `docker-compose.yml` を YAML として読み、build が ./backend のサービスのうち backend 以外は、environment の SA_PROCESS_ROLE が表の役割の1つであること。backend には SA_PROCESS_ROLE が無いこと。environment は `- KEY=value` の並びの形で書かれているので、その形を読む。YAML を読む道具（PyYAML）は直接の依存ではなく uvicorn[standard] 経由で入っている。実装で直接の依存に書くかを決め、本節に書く。
+- C4-4 実際に名乗る: 試験の PostgreSQL（`.github/workflows/test.yml` の pytest の job :114-242。test.yml の変更は要らない）につなぎ、同期・非同期・create_pool の各1本で `SELECT current_setting('application_name')` が表の名前と一致する。SA_PROCESS_ROLE を worker にしたときと無いときの2通り。DB が無いときは skip にせず赤にする。
+- 赤の実演（実装 PR で1回、結果を PR に貼る）: (1) 同期の1行から名前を外すと C4-1 が赤 (2) `backend/app/database.py` の `_connect_args` から名前を外すと C4-1 が赤（`**` で渡す形を本当に見ているか） (3) 別の名前に入れた psycopg2.connect を許可リストの外に1つ足すと C4-1 が赤 (4) celery-worker の SA_PROCESS_ROLE を消すと C4-3 が赤 (5) 非同期用の関数が server_settings を返さない形にすると C4-4 が赤。
+
+### 17-4. 受け入れ基準
+| 基準 | 検証方法 |
+|---|---|
+| K4-1 名前の無い接続の作り方が0 | C4-1 PASS |
+| K4-2 名前の表と役割の書き方が決まりに合う | C4-2・C4-3 PASS |
+| K4-3 接続が表の名前を名乗る | C4-4 PASS |
+| K4-4 試験が壊れた実装を捕まえる | 赤の実演（17-3） |
+| K4-5 本番: 本番反映の後、時刻を変えた3回（反映の直後・1時間後・翌日 02:10 JST の毎日のアイコン取得の作業の最中）に、reader 鍵の道で pg_stat_activity を見て、usename が salesanchor_app・jarvis の接続のうち `coalesce(application_name,'')=''` のものが0本。名前ごとの本数を記録する | reader 鍵の道の記録 |
+| K4-6 本番: 本番反映の確認 smoke の [7a]・[7b] が PASS のまま（[7b] は広げた形） | 本番反映ログ |
+- reader の権限では、ほかのユーザーの接続の application_name と usename は見え、state・backend_type・client_addr は空になる（PostgreSQL 16 pgstatfuncs.c :335-351・:619-635、審査で照合）。よって数え方は usename で絞る形にする。実際に引けるかは、実装 PR の前に1回 reader 鍵の道で確かめる（まだ確かめていない）。
+- 3回目の時刻にアイコン取得の作業が終わっていたら（作業の長さはまだ確かめていない）、その回は作業の接続を見られない。そのときは翌日の 02:00〜02:05 JST に見直し、それでも見られなければ、C4-4 で代える。
+- K4-5 で jarvis の名前の無い接続が残ったら、4b に進まずに止める。アプリの外（手で流す道具・監視など）の接続とみなして出どころを調べる。reader では接続元の場所が見えないので、prod1 の ss と docker ps（読み取りだけ）で調べる。候補は postgres-exporter（`docker-compose.exporters.yml` :30-34。本番で動いているかはまだ確かめていない）。記録は社内のみ。
+
+### 17-5. 選ばなかった案
+- 名前を環境変数 PGAPPNAME だけで渡す: asyncpg が読まない（17-1）。アプリの接続の大半は asyncpg。
+- 役割を .env に足して backend にも書く: .env は秘密の値を置くファイルで、本番反映の台本が作る。役割は秘密ではないので、変える場所を増やさない。backend は既定で足りる。
+- 役割をホスト名やコマンドの行から自動で判断する: blue-green の backend はホスト名がコンテナ id で、判断の決まりが見えにくい。compose に1行書く方が読める。
+- 同期の engine を1つの共通関数にまとめ直す: 11ファイルの作りを変えることになり、名前を付ける目的より広い。今回は名前だけを足す。
+- 今の5つの名前も新しい形にそろえる: smoke [7] が salesanchor_backend を読む。変える利点が小さく、壊す危険がある。
+
+### 17-6. 弊害・トレードオフ
+- worker・beat・gateway の main の接続の名前が salesanchor_backend から変わる。smoke [7a] は backend の接続だけを数えることになる（backend は salesanchor_backend のまま名乗るので、0 にはならない）。[7b] は表の main の4つに広げるので、見張りの範囲は今と同じ。
+- smoke の台本（本番 scripts）を変えるので、本番反映の確認の段の動きが変わる。名前の一覧がずれると [7b] が見落とすので、C4-2 で表と照らす。
+- 新しいコンテナを足すときに SA_PROCESS_ROLE を書き忘れると、backend と名乗る。C4-3 が `docker-compose.yml` のサービスを見て止める。compose の外で docker run するコンテナは対象外。
+- アプリの動きは変わらない（接続の名前だけ）。接続の数・取引の長さも変わらない。
+
+### 17-7. 範囲外（記録のみ）
+- scripts の手で流す道具（create_engine などが54行）と backend/scripts・backend/tcg_migration/scripts（6行）。本番反映からは run_py（名前付き、`scripts/migration_py_entry.py` :40）だけが呼ばれる。手で流すときの名前は、K4-5 で jarvis の名前の無い接続が残ったときに考える。
+- 移行の入口（`scripts/migration_py_entry.py` :40）は setdefault で名前を足すので、アプリの engine を import して使う移行は、アプリの名前を名乗る。今登録されている26本の移行では起きない（審査で照合）。起きると段2の片付けの対象から外れるので、新しい Python の移行を足すときに見る（人手で守る）。
+- idle_in_transaction_session_timeout（取引を開いたまま放置した接続を切る）: アプリの動きを変えるので、段4に入れない。4a で名前が分かった後に、別の段として考える。
+- 毎日 02:00 JST のアイコン取得の作業（`backend/app/tasks/avatar.py`）は、取引を開いたまま外の API を1件ずつ呼ぶ。10/29 06:42Z の時刻とは重ならない。K4-5 の3回目でこの作業の接続を見る。
+
+### 17-8. 4b の概要（4a の本番測定の後に詳細設計）
+- 目的: 次にロック待ちが起きたら、待った接続と握った接続の名前が、本番の DB のログに残るようにする。
+- 候補: log_lock_waits=on。log_line_prefix に %a（application_name）を足す。log_line_prefix は設定ファイルかサーバーの起動の引数でしか変えられない（PostgreSQL 16 文書）ので、ALTER SYSTEM と設定の読み直し（pg_reload_conf）で行う案を軸にする。DB の再起動はしない。
+- 握った側はログに番号（pid）だけが出る。番号から名前を引くには、log_connections を on にして接続の始まりの行（名前を含む）を残す必要がある。接続は約55本/10分なので、増えるログは1日あたり数 MB の見込み（今のログは約0.5MB/日、Loki で30日保持）。要否と量は 4b の設計で実測から決める。
+- 移行のロック待ちの上限（1秒）は deadlock_timeout（1秒）と同じなので、移行自身の待ちのログは出ないことがある。アプリの読み取りの待ち（上限なし）は1秒後に必ず出る。4b ではこの差を受け入れ基準に書く。
+- ALTER SYSTEM は DB のデータの場所の postgresql.auto.conf に書くので、リポジトリに残らない。設定の正本をどこに置くか（移行のファイル・手順書と、本番の値を読む確認）を 4b で決める。
+- 決める点: 実行の道（移行のファイルか、手順書に沿った1回の操作か）。ADR-1003 の例外7種に当たるかを 4b の設計で確かめる。
+
+### 17-9. 戻し方・計画・継続
+- 戻し方（4a）: 実装 PR を revert して main にマージ。次の本番反映から今の名前に戻る。DB は変えない。
+- 計画: (1) 本節の Architect 審査（新しく起動） (2) 設計 PR をマージ (3) 段2の K2-5〜K2-7 がそろった後、Sonnet が 4a を実装・CI・赤の実演・ADR-1037 の追記（名前の正本の場所と役割の環境変数） (4) reviewer（opus、新しく起動） (5) 委任 GO で本番へ（backend・`docker-compose.yml`・`scripts/smoke_test_post_deploy.sh` を含む。移行・DROP・秘密の値は無い） (6) K4-5・K4-6 (7) 4b の詳細設計。
+- 継続: 名前の正本は 4a で置く新しいモジュール（場所は実装 PR で本節に書く）。守り手: backend の pytest（C4-1〜C4-4、実装 PR で足す）。
