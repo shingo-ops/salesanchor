@@ -9,7 +9,7 @@
 #   「gate候補（R3）: 」は R3 で PR 側の検査にする行。
 # anchor: 出典の 1 行にだけ当たる文字列（先頭の一部でよい）。
 # 決まりの語の一覧（下の words）・rule-docs.txt・この台帳の変更は GO 記録の要る対象（scripts/check-process-artifacts.js）。
-words: 禁止|必ず|必須|厳禁|てはならない|しない|すること|ないこと|不可(?!逆)|認めない|限る|不要|が必要|必要がある|してよい|要る|止める|避け|MUST|NEVER
+words: 禁止|必ず|必須|厳禁|[てで]はならない|しない|すること|ないこと|不可(?!逆)|認めない|限る|不要|が必要|必要がある|してよい|要る|止める|避け|MUST|NEVER
 
 rules:
   - id: A09
@@ -917,6 +917,11 @@ rules:
     anchor: "- マージの前に、番号の若い PR がマ"
     kind: exempt
     reason: "マージの前に番号の若い PR の動きを確かめ、動いていれば先に通す決まり。確認は作業の途中の動きで、PR に痕跡が残らない（executor-checklist の取り合い回避と同じ内容）"
+  - id: P174
+    source: docs/ai-agents/design-partner.md
+    anchor: "エビデンスが未確立のまま、設計・実装・判定に進んで"
+    kind: review
+    reason: "エビデンスが未確立のまま設計・実装・判定に進んではならない、という禁止の決まり。設計の審査で人が、根拠なしに進めていないかを見る。機械で○×は決められない"
   - id: DC155
     source: docs/ai-agents/dev-commands.md
     anchor: "> **重要**: `make test`（pytest）は Docker が必"
@@ -1026,7 +1031,7 @@ rules:
     source: docs/ai-agents/executor-preamble.md
     anchor: "- 書類だけのPRでも、正本（docs/"
     kind: review
-    reason: "gate候補（R6）: 書類だけの PR でも正本を含めば関所が宣言照合を行う動きは、check-process-artifacts.js:1690 が出力する。飛ぶ条件があるか（危険扱いの場所を触る PR の手前終了など）は未確認"
+    reason: "gate候補（R6）: 書類だけの PR でも正本を含めば関所が宣言照合を行う動きは、check-process-artifacts.js:1689-1691 が出力して先へ進み、触るファイル・削除するファイルの照合（:1766-1825）に入る。飛ぶ条件は 2 つ。develop から main への PR は :1658-1661 で終わる。PR 番号が 2600 未満または数字でないときは :1766 と :1791 の照合が飛ぶ（今の PR 番号では当たらない）。危険扱いの場所を触る PR は書類だけの扱いにならず :1685 の自動スキップに入らないうえ、照合（:1766-1825）は危ない変更の分岐（:1836）より前なので飛ばない"
   - id: XP343
     source: docs/ai-agents/executor-preamble.md
     anchor: "- recon / design は実フ"
