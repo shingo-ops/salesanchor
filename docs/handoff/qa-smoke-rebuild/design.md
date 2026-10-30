@@ -1,11 +1,12 @@
 # 本番の自動点検（qa-smoke）を直すか作り直すかの設計案
 
 - 作成日: 2026-10-30
+- recon: docs/handoff/qa-smoke-rebuild/recon.md
 - 作成: 設計担当（Claude）／読み取りと下書きのみ。リポジトリ編集・実行・本番接続はしていない
-- 第2版（2026-10-30 Opus 審査 REVISE を反映）: 審査記録 `/tmp/CC報告ファイル/qa-smoke-review/review.md`。追加調査の生出力 `/tmp/CC報告ファイル/qa-smoke-review/sonnet/`
+- 第2版（2026-10-30 Opus 審査 REVISE を反映）: 審査記録 docs/handoff/qa-smoke-rebuild/review.md（同じ内容を repo に写した版）。追加調査の生出力 `/tmp/CC報告ファイル/qa-smoke-review/sonnet/`
 - 根拠の基準: `origin/main` = `f41b95411ca3f7b8aa4616c806275d42fa93c3de`（`/tmp/CC報告ファイル/qa-smoke-recon2/origin-main-sha.txt`）
 - 調査の生出力: `/tmp/CC報告ファイル/qa-smoke-recon/`、`/tmp/CC報告ファイル/qa-smoke-recon2/`、`/tmp/CC報告ファイル/qa-smoke-design/raw/`、`/tmp/CC報告ファイル/auth-status-1030/`
-- 形式: `docs/STANDARD-WORKFLOW.md`（raw/STANDARD-WORKFLOW.md）の design.md の型（KGI／現在地の引用／`|基準|検証方法|`／外部事例／維持の仕組み）
+- 形式: `docs/STANDARD-WORKFLOW.md`の design.md の型（KGI／現在地の引用／`|基準|検証方法|`／外部事例／維持の仕組み）
 
 ---
 
@@ -48,32 +49,32 @@ K1〜K4 は数で判定、K5 のみ PO 判定。
 
 | 項目 | 事実 | 根拠 |
 |---|---|---|
-| 実行場所 | self-hosted runner `salesanchor-vps` | `origin/main:.github/workflows/qa-smoke.yml:58` `runs-on: [self-hosted, salesanchor-vps]` |
+| 実行場所 | self-hosted runner `salesanchor-vps` | `.github/workflows/qa-smoke.yml:46` `runs-on: [self-hosted, salesanchor-vps]` |
 | runner の実体 | 監視サーバー prod2 で `/home/ubuntu/actions-runner` が service 稼働 | `qa-smoke-recon/host/`（prod2 の調査記録）3-4 行目 |
-| 頻度 | 毎週月曜 03:00 JST の 1 回＋手動＋`tests/qa-smoke/**`・`scripts/qa/**` を触る PR | `qa-smoke.yml:12,39-41`（`qa-smoke-recon/wf.yml`） |
-| 手順 | checkout → node 22 → `npm ci` → Playwright ブラウザ導入（`--with-deps`）→ `scripts/qa/reset-tenant.sh`（DB 初期化）→ Playwright 30 本 → `cleanup-smoke-data.sh` → 成果物保存 | `qa-smoke.yml:101-150` |
-| DB 接続先 | `DATABASE_URL: ${{ secrets.QA_TENANT006_DATABASE_URL }}`（値は見ていない） | `qa-smoke.yml:64` |
-| 不合格時の通知 | **Discord 通知の step は無い**。`QA_DISCORD_WEBHOOK_URL` は reset 開始/完了用で任意 | `qa-smoke.yml:35,112`／`wf.yml:128-160` に通知 step なし |
-| 試験の中身 | scene-01〜09、`test(` 30 本。scene-01 は email+password で UI ログイン（Firebase）。`psqlCount`／`db-assert.ts` で DB を直接数える試験が 12 か所 | `qa-smoke-recon2/test-titles.txt`、`scenes-head.txt`（`grep -c "psqlCount\|db-assert"` = 12） |
+| 頻度 | 毎週月曜 03:00 JST の 1 回＋手動＋`tests/qa-smoke/**`・`scripts/qa/**` を触る PR | 止血前の版（origin/main）の .github/workflows/qa-smoke.yml の 12,39-41 行目（調査記録 qa-smoke-recon の wf.yml） |
+| 手順 | checkout → node 22 → `npm ci` → Playwright ブラウザ導入（`--with-deps`）→ `scripts/qa/reset-tenant.sh`（DB 初期化）→ Playwright 30 本 → `scripts/qa/cleanup-smoke-data.sh` → 成果物保存 | `.github/workflows/qa-smoke.yml:86-140` |
+| DB 接続先 | `DATABASE_URL: ${{ secrets.QA_TENANT006_DATABASE_URL }}`（値は見ていない） | `.github/workflows/qa-smoke.yml:52` |
+| 不合格時の通知 | **Discord 通知の step は無い**。`QA_DISCORD_WEBHOOK_URL` は reset 開始/完了用で任意 | `.github/workflows/qa-smoke.yml:33,100`（調査記録 qa-smoke-recon の wf.yml 128-160 行目に通知 step なし） |
+| 試験の中身 | scene-01〜09、`test(` 30 本。scene-01 は email+password で UI ログイン（Firebase）。`psqlCount`／`tests/qa-smoke/utils/db-assert.ts` で DB を直接数える試験が 12 か所 | `qa-smoke-recon2/test-titles.txt`、`scenes-head.txt`（`grep -c "psqlCount\|db-assert"` = 12） |
 
 ### 2-2. 失敗の事実（4 か月間なにも見張れていない）
 
 | 事実 | 根拠 |
 |---|---|
-| 直近 30 回すべて `failure`（2026-06-21 〜 2026-10-29） | `qa-smoke-recon/runs.json`（30 件、conclusion は failure のみ） |
+| 直近 30 回すべて `failure`（2026-06-21 〜 2026-10-29） | 調査記録 qa-smoke-recon の runs.json（30 件、conclusion は failure のみ） |
 | 直接の原因①: ブラウザ導入で `sudo: a password is required` | `qa-smoke-recon/log-40925191476.txt:11-15` |
 | 直接の原因②（①を越えても）: prod2 に `psql` が無い | `qa-smoke-recon/log.txt`（以前の run）、`host/prod2-detail.txt` |
 | 直接の原因③（②を越えても）: prod2 から prod1 の 5432 に届かない。トンネルは 19100/19187/19113/19121/13100 のみで 5432 は無い。compose の postgres は `ports` 無し（「ホストには公開しない」） | `host/prod2-dbpath.txt:30-34`（`prod1-5432-closed`／`local-5432-closed`）、`qa-smoke-recon2/grep-tunnel.txt`、`compose.txt:407` |
-| 同じ runner の `external-state-snapshot.yml` も直近 8 回の schedule がすべて failure | `qa-smoke-recon/runs.json` と同条件で取得した一覧（recon 記録） |
+| 同じ runner の `.github/workflows/external-state-snapshot.yml` も直近 8 回の schedule がすべて failure | 調査記録 qa-smoke-recon の runs.json と同条件で取得した一覧（recon 記録） |
 | 最後に成功した日は 2026-06-19 14:24 JST（手動実行）。直近 200 件で成功 2・失敗 150・取消 48 | `qa-smoke-review/sonnet/`（Q6） |
 
 ### 2-3. なぜ前提がずれたか
 
 | 事実 | 根拠 |
 |---|---|
-| ADR-078 は「runner はアプリサーバー prod1 に置く（同じ箱なので DB に届く）」前提 | `qa-smoke-recon2/ADR-078.txt`（行 38 付近） |
-| ADR-080 で監視スタックと runner を prod2 へ移した。2026-09-30 の追記で「トンネルは ADR の記載と異なる」 | `qa-smoke-recon2/ADR-080.txt`（行 170-173） |
-| qa-smoke.yml は ADR-078 前提のまま（`runs-on` と DB 直結の手順が残っている） | `qa-smoke.yml:58,64,101-120` |
+| ADR-078 は「runner はアプリサーバー prod1 に置く（同じ箱なので DB に届く）」前提 | `docs/adr/ADR-078-vps-runner-registration.md:38` |
+| ADR-080 で監視スタックと runner を prod2 へ移した。2026-09-30 の追記で「トンネルは ADR の記載と異なる」 | `docs/adr/ADR-080-monitoring-vps-separation.md:170-173` |
+| qa-smoke.yml は ADR-078 前提のまま（`runs-on` と DB 直結の手順が残っている） | `.github/workflows/qa-smoke.yml:46,52,86-118` |
 
 【事実】runner の引っ越し（ADR-080）のとき、qa-smoke の前提（DB 直結）を一緒に見直さなかった。これは設計の入れ忘れ。
 
@@ -81,14 +82,14 @@ K1〜K4 は数で判定、K5 のみ PO 判定。
 
 | 事実 | 根拠 |
 |---|---|
-| `seed-tenant.sql` は `tenant_006` の 7 表を `TRUNCATE ... RESTART IDENTITY CASCADE` | `qa-smoke-recon2/seed.txt`（seed-tenant.sql:76-94） |
+| `scripts/qa/seed-tenant.sql` は `tenant_006` の 7 表を `TRUNCATE ... RESTART IDENTITY CASCADE` | `qa-smoke-recon2/seed.txt`（`scripts/qa/seed-tenant.sql:76-94`） |
 | `public.meta_page_routing` から tenant_id=6 を DELETE、`public.users` から `email LIKE 'qa-%@salesanchor.jp'` を **テナント条件なしで** DELETE | 同上 seed-tenant.sql:76-94、`cleanup.txt`（cleanup-smoke-data.sh:107） |
 | `public.tenants` の id=6 の settings を UPDATE で置き換え | seed-tenant.sql:301-307 |
 | `set_config('app.is_operator','true')` で RLS を越える操作者として実行 | `seed.txt` |
 | PR #2332 の説明は「public 非接触」と書いているが、上の通り public の 3 表に触れている | `qa-smoke-recon2/pr2332.txt` と seed.txt の突合 |
-| secrets に `QA_*_PASSWORD_HASH`・`QA_*_FIREBASE_UID`・`QA_TENANT006_DATABASE_URL` が存在（値は見ていない） | `qa-smoke.yml:25-36`、`qa-smoke-recon/ess.json`（名前のみ） |
-| `docs/STANDARD-WORKFLOW.md` は「tenant_006 は Meta App Review 撮影専用テナント（QA 用途禁止）」 | `raw/STANDARD-WORKFLOW.md`（該当行） |
-| ADR-038 は tenant_006 を QA ゲートとして使う決定 | `qa-smoke-recon2/ADR-038-qa-smoke-suite.md.txt` |
+| secrets に `QA_*_PASSWORD_HASH`・`QA_*_FIREBASE_UID`・`QA_TENANT006_DATABASE_URL` が存在（値は見ていない） | `.github/workflows/qa-smoke.yml:25-33,94-100`、調査記録 qa-smoke-recon の ess.json（名前のみ） |
+| `docs/STANDARD-WORKFLOW.md` は「tenant_006 は Meta App Review 撮影専用テナント（QA 用途禁止）」 | `docs/STANDARD-WORKFLOW.md:98` |
+| ADR-038 は tenant_006 を QA ゲートとして使う決定 | `docs/adr/ADR-038-qa-smoke-suite.md` |
 
 【事実】会社の決まり（tenant_006 は QA 禁止）と ADR-038（tenant_006 を QA で初期化する）は食い違っている。どちらが正か **未確認**（PO 判断の対象。§11 D3）。
 
@@ -96,11 +97,11 @@ K1〜K4 は数で判定、K5 のみ PO 判定。
 
 | 見張り | 何を見るか | 根拠 |
 |---|---|---|
-| Uptime Kuma（prod2） | `https://app.salesanchor.jp/`、`https://api.salesanchor.jp/api/health`、LP などの HTTP 応答。30〜60 秒間隔。失敗 2 分で `KumaMonitorDown`（critical, page） | `raw/ADR-069.md`（監視対象表）、`raw/alert_rules.yml:141-153` |
-| deploy.yml 配備後スモーク（prod1 内で docker exec） | RLS の有効・方針・アプリ役の接続・`/api/health` | `raw/smoke_test_post_deploy.sh`（195 行、docker exec psql）、`deploy.yml:611-622` |
-| deploy.yml Step 6 健康確認＋自動ロールバック | 配備直後の `/api/health` | `deploy.yml:677-788` |
-| FedEx live smoke（スイッチ `FEDEX_SMOKE_ENABLED`、失敗で Discord） | FedEx 連携 | `deploy.yml:627-672`、ADR-124 |
-| smoke 専用トークン経路（ADR-1017） | `SMOKE_SERVICE_TOKEN` 一致時に `SMOKE_SERVICE_EMAIL` の利用者として API に入れる。super admin なら拒否（fail-closed）。本番 .env には `FEDEX_SMOKE_API_TOKEN`／`FEDEX_SMOKE_USER_EMAIL` が流し込まれている | `origin/main:backend/app/auth/dependencies.py:43-46,149-171`、`deploy.yml:345-346` |
+| Uptime Kuma（prod2） | `https://app.salesanchor.jp/`、`https://api.salesanchor.jp/api/health`、LP などの HTTP 応答。30〜60 秒間隔。失敗 2 分で `KumaMonitorDown`（critical, page） | `docs/adr/ADR-069-uptime-kuma-activation.md`（監視対象表）、`monitoring/prometheus/alert_rules.yml:141-153` |
+| deploy.yml 配備後スモーク（prod1 内で docker exec） | RLS の有効・方針・アプリ役の接続・`/api/health` | `scripts/smoke_test_post_deploy.sh`（195 行、docker exec psql）、`.github/workflows/deploy.yml:611-622` |
+| deploy.yml Step 6 健康確認＋自動ロールバック | 配備直後の `/api/health` | `.github/workflows/deploy.yml:677-788` |
+| FedEx live smoke（スイッチ `FEDEX_SMOKE_ENABLED`、失敗で Discord） | FedEx 連携 | `.github/workflows/deploy.yml:627-672`、ADR-124 |
+| smoke 専用トークン経路（ADR-1017） | `SMOKE_SERVICE_TOKEN` 一致時に `SMOKE_SERVICE_EMAIL` の利用者として API に入れる。super admin なら拒否（fail-closed）。本番 .env には `FEDEX_SMOKE_API_TOKEN`／`FEDEX_SMOKE_USER_EMAIL` が流し込まれている | `backend/app/auth/dependencies.py:43-46,149-171`、`.github/workflows/deploy.yml:345-346` |
 
 【事実】「サイトが落ちた」「API が死んだ」「配備で壊れた」はすでに見張られている。**見張られていないのは「ログインして画面を操作したときに壊れていないか」（ログイン→一覧→検索→詳細が動くか）** で、qa-smoke だけがそこを担っていた。
 
@@ -108,9 +109,9 @@ K1〜K4 は数で判定、K5 のみ PO 判定。
 
 | 事実 | 根拠 |
 |---|---|
-| ADR-1013 Consequences: qa-smoke／rotate-qa-firebase／snapshot／smoke は便6で置き換える | `qa-smoke-recon2/ADR-1013.txt`（行 43） |
-| 便4a（#4858）は合流済み。`AUTH_PROVIDER` 既定は firebase。便4b（切替）は PO の日付待ち | `/tmp/CC報告ファイル/auth-status-1030/handoff.md`、`prs-recent.txt` |
-| ADR-1048（管理者 2FA）の設計は「7 日前に qa-admin と SMOKE_SERVICE_EMAIL の利用者が管理者でないことを確認」 | `auth-status-1030/design.md:160-166` |
+| ADR-1013 Consequences: qa-smoke／rotate-qa-firebase／snapshot／smoke は便6で置き換える | `docs/adr/ADR-1013-self-hosted-auth-and-passkey.md:43` |
+| 便4a（#4858）は合流済み。`AUTH_PROVIDER` 既定は firebase。便4b（切替）は PO の日付待ち | 調査記録 auth-status-1030 の handoff.md と prs-recent.txt |
+| ADR-1048（管理者 2FA）の設計は「7 日前に qa-admin と SMOKE_SERVICE_EMAIL の利用者が管理者でないことを確認」 | `docs/handoff/admin-2fa/design.md:172` |
 | scene-01 のログインは Firebase の email+password 前提（「Firebase auth が生きていることの確認」の試験あり） | `test-titles.txt`（scene-01 行 41） |
 
 【事実】いまの点検は Firebase 前提で、ログイン切替後にそのままでは動かない。切替の前後で「ログインのやり方」だけ差し替えられる作りにしておく必要がある。
@@ -119,8 +120,8 @@ K1〜K4 は数で判定、K5 のみ PO 判定。
 
 | 事実 | 根拠 |
 |---|---|
-| `e2e.yml` の「画面検査」job は `ubuntu-24.04`（GitHub 提供）で `npx playwright install --with-deps chromium` を実行し成果物を保存 | `raw/e2e.yml:152-220` |
-| `sandbox-test.yml` が存在（一時 VM は GitHub 上で） | `git ls-tree origin/main .github/workflows/`（出力に `sandbox-test.yml`）、メモリ #4403 |
+| `.github/workflows/e2e.yml` の「画面検査」job は `ubuntu-24.04`（GitHub 提供）で `npx playwright install --with-deps chromium` を実行し成果物を保存 | `.github/workflows/e2e.yml:152-220` |
+| `.github/workflows/sandbox-test.yml` が存在（一時 VM は GitHub 上で） | `git ls-tree origin/main .github/workflows/`（出力に sandbox-test.yml）、メモリ #4403 |
 
 ---
 
@@ -176,7 +177,7 @@ B で失うもの（正直に）
 
 ### 5-2. どこで動かすか
 
-- GitHub 提供 runner `ubuntu-24.04`（`e2e.yml:157` と同じ）。
+- GitHub 提供 runner `ubuntu-24.04`（`.github/workflows/e2e.yml:157` と同じ）。
 - self-hosted runner（prod2）は使わない。理由: sudo 不可・psql 無し・prod1 DB に届かない（§2-2）。B は DB を使わないので self-hosted の利点が無い。
 - 本番への経路は HTTPS（`app.salesanchor.jp`・`api.salesanchor.jp`）のみ。
 - 【未確認】Cloudflare が GitHub の送信元 IP を bot として弾くか。→ §10 U1。
@@ -211,14 +212,14 @@ B で失うもの（正直に）
 
 ### 5-6. 通知
 
-- 不合格のとき、既存の `DISCORD_WEBHOOK_OWNER_PING`（deploy.yml:670,683 で使用中）へ 1 通。新しい webhook は作らない（入口を増やさない）。
+- 不合格のとき、既存の `DISCORD_WEBHOOK_OWNER_PING`（`.github/workflows/deploy.yml:670,683` で使用中）へ 1 通。新しい webhook は作らない（入口を増やさない）。
 - 通知文: 「本番の画面点検が不合格。壊れていたのは: ログイン／一覧／検索／詳細 のどれか。実行ページへのリンク」。
 - 合格時は通知しない（通知の慣れを防ぐ）。週 1 回、月曜に「先週 7/7 合格」の 1 行を送るかは PO 判断（§11 D4）。
-- 成果物（trace／screenshot）は GitHub Actions の artifact に 14 日保存（現行と同じ `qa-smoke.yml:143-150`）。
+- 成果物（trace／screenshot）は GitHub Actions の artifact に 14 日保存（現行と同じ `.github/workflows/qa-smoke.yml:125-140`）。
 
 ### 5-7. ログイン切替（ADR-1013）の前後と staging
 
-- ログイン手順は `tests/prod-check/login.ts` のような **1 ファイル** に閉じ込める。切替前は Firebase の email+password、切替後は自社ログイン。試験本体は触らない。
+- ログイン手順は tests/prod-check/login.ts のような **1 ファイル** に閉じ込める。切替前は Firebase の email+password、切替後は自社ログイン。試験本体は触らない。
 - 切替の当日: 便4b の実施直後に手動実行して合格を確認する（K2 の試験も兼ねる）。
 - 便6（ADR-1013 の置き換え便）では、本設計の点検を「便6の受け皿」とし、便6側で新しい点検を別に作らない（SSOT）。
 - staging: 【未確認】本番と同じ構成の staging の有無 → §10 U2。無い場合、書き込み系の点検は便6で用意する試験環境に送り、本設計の範囲外とする。
@@ -227,13 +228,13 @@ B で失うもの（正直に）
 
 | 種別 | パス | 内容 |
 |---|---|---|
-| 新規 | `.github/workflows/prod-ui-check.yml` | B の WF（ubuntu-24.04、毎日、Discord） |
-| 新規 | `tests/prod-check/playwright.config.ts`、`tests/prod-check/login.ts`、`tests/prod-check/*.spec.ts` | S1〜S8 |
+| 新規 | .github/workflows/prod-ui-check.yml | B の WF（ubuntu-24.04、毎日、Discord） |
+| 新規 | tests/prod-check/playwright.config.ts、tests/prod-check/login.ts、tests/prod-check/ 配下の spec ファイル | S1〜S8 |
 | 変更 | `.github/workflows/qa-smoke.yml` | schedule と pull_request を外し `workflow_dispatch` のみ残す（即日の止血）。B の K1 達成後に削除便 |
-| 変更 | `docs/adr/ADR-038-*.md` | Superseded by 新 ADR |
-| 変更 | `docs/adr/ADR-080-*.md` | 追記: runner は prod2 で DB 不達。qa-smoke は B へ |
-| 変更 | `docs/adr/ADR-1013-*.md` | 便6の「置き換え」先を本設計に紐付け |
-| 新規 | `docs/adr/ADR-1051-prod-ui-black-box-check.md`（番号は仮。ADR-1050 まで存在を確認済み） | 本設計の決定 |
+| 変更 | docs/adr/ の ADR-038 ファイル | Superseded by 新 ADR |
+| 変更 | docs/adr/ の ADR-080 ファイル | 追記: runner は prod2 で DB 不達。qa-smoke は B へ |
+| 変更 | docs/adr/ の ADR-1013 ファイル | 便6の「置き換え」先を本設計に紐付け |
+| 新規 | 新規 docs/adr/ADR-1051-prod-ui-black-box-check.md（番号は仮。ADR-1050 まで存在を確認済み） | 本設計の決定 |
 | 変更 | `docs/STANDARD-WORKFLOW.md` | tenant_006 の扱いを PO 判断に合わせて整合 |
 | 触らない | `scripts/qa/*`、`tests/qa-smoke/*` | 削除便まで残置（戻し用） |
 
@@ -278,21 +279,23 @@ B で失うもの（正直に）
 
 ## 維持の仕組み
 
+守り手: 人手で守る（作り直しの仕組みはまだ無いため。新しい点検を入れる PR で、毎週の定期点検に『直近7日の成功数』を足して関所にする）
+
 | 何を | 誰が／何が | どう |
 |---|---|---|
 | 毎日の実行と不合格通知 | GitHub Actions（schedule）→ Discord | 人の手なしで回る。合格は無通知 |
 | 「走っていない」こと自体の検知 | 週次の定期点検（agent-console 定期実行、ADR-1011／#4247）に「prod-ui-check の直近 7 日の成功数」を 1 行追加 | 0〜6 なら Discord。今回の「4 か月間 failure に気づかなかった」の再発防止 |
-| ログイン切替への追随 | `tests/prod-check/login.ts` の 1 ファイル | 便4b の作業手順書に「login.ts を差し替え → 手動実行」を 1 行入れる |
+| ログイン切替への追随 | tests/prod-check/login.ts（新規）の 1 ファイル | 便4b の作業手順書に「login.ts を差し替え → 手動実行」を 1 行入れる |
 | 点検の中身の見直し | 画面を大きく変える PR（`frontend/src/pages/**`）に CLAUDE.md 経由で「prod-check が壊れないか」の確認項目 | 既存の `docs/ai-agents/executor-checklist.md` に 1 項目追加 |
 | 旧資産の始末 | K1 達成後の削除便（qa-smoke.yml／scripts/qa／tests/qa-smoke／QA_* secrets） | ADR-1051 の Consequences に期限を書く |
 
 ---
 
-## 8. 外部事例
+## 8. 外部・過去事例の参照と我々への応用
 
 | 事例 | 出典 | 何が使えるか | 使えない範囲 |
 |---|---|---|---|
-| GitHub 提供 runner で Playwright を定期実行する社内前例 | `origin/main:.github/workflows/e2e.yml:152-220`（画面検査 job） | ブラウザ導入手順・cache・成果物保存をそのまま流用できる | e2e.yml はモック相手。本番相手の認証・通知は本設計で追加 |
+| GitHub 提供 runner で Playwright を定期実行する社内前例 | `.github/workflows/e2e.yml:152-220`（画面検査 job） | ブラウザ導入手順・cache・成果物保存をそのまま流用できる | e2e.yml はモック相手。本番相手の認証・通知は本設計で追加 |
 | Playwright 公式ドキュメント「CI」「GitHub Actions」 | playwright.dev の Continuous Integration ページ（本設計の作成時に外部取得はしていないため **版・日付は未確認**。実装便で Context7 で確認する） | `npx playwright install --with-deps` を ubuntu runner で使う形は公式の推奨 | 数値（所要時間など）は本設計では引用しない |
 | 「synthetic monitoring（合成監視）」の考え方 | 一般的な監視の分類（出典を本設計では取得していない。**実装便で出典を添える**） | 「本番に対して利用者と同じ操作を定期的に行い、壊れを先に見つける」＝本設計の B の考え方 | 具体的な製品の数値は引用しない |
 
@@ -307,7 +310,7 @@ B で失うもの（正直に）
 | 0 | 止血: qa-smoke.yml の schedule／pull_request を外す（手動のみ残す） | ADR-038 に「停止中」追記 | 通常 PR（危険パスでない）。審査役 APPROVE |
 | 1 | 新 ADR-1051（仮）起案: 本番 UI 外側点検。ADR-038 を Superseded、ADR-080 追記、ADR-1013 便6の受け皿を紐付け | ADR-1051 新規／038・080・1013 改訂 | **PO 承認（ADR）** |
 | 2 | 点検利用者 1 名を管理画面で作成（Firebase にも）、secrets 2 件追加 | — | **PO 確認（secrets 変更は不可逆操作の一覧に該当）** |
-| 3 | 新 WF＋試験 S1〜S8 を PR。手動実行 1 回で合格・不合格通知を確認 | — | 通常 PR。危険パス（`deploy.yml`・`migrations/`・本番 `scripts/`）を含まないので GO 記録は不要 |
+| 3 | 新 WF＋試験 S1〜S8 を PR。手動実行 1 回で合格・不合格通知を確認 | — | 通常 PR。危険パス（deploy.yml・`migrations/`・本番 `scripts/`）を含まないので GO 記録は不要 |
 | 4 | 14 日観測（K1）。定期点検に「走っているか」を追加 | — | 結果報告のみ |
 | 5 | 旧資産の削除便（WF・scripts/qa・tests/qa-smoke・QA_* secrets 9 件） | ADR-1051 Consequences | **PO 確認（secrets 削除）** |
 | 便4b 当日 | login.ts 差し替え＋手動実行 | ADR-1013 | 便4b の GO に含める |
