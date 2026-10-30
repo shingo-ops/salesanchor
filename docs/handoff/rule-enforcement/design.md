@@ -735,3 +735,56 @@ APPROVE。根拠：足りない所は R2c の K2 で実測済み（11 passed の
 
 ### Opus 自己審査（同じ AI の審査。独立の審査は PR で別の審査役が行う）
 APPROVE。根拠：語ごとの数は再現した読み方で数えた。変える場所は台帳と設計書だけ。第2段に回したものと理由を書いた。未解決：「〜ない」の正規表現は第1段のあとに決める。
+
+## R4a 提出前の一本の入口（第1段：入口の台本と試験だけ）
+
+### なぜ
+必須チェック 16 件を手元で 1 回の命令で流す入口が無い（recon.md:199）。提出してから CI で落ち、直して出し直す手戻りがある。2026-10-30 PO「2,1」と続く「1」で、この入口を作ると決めた。KGI G4（kgi.md:18）。
+
+### 調べた事実（origin/main a6d33ae2、生出力 /tmp/CC報告ファイル/r4-recon/・/tmp/CC報告ファイル/r4-measure/）
+- 必須 16 件の命令と要るもの（r4-recon の表）。DB・redis が要る（pytest・テナントスキーマ整合性・マイグレーション実DB 2 ジョブ）、GitHub のイベントと権限が要る（guard-authoring/evaluation の評価本体）、PR 本文が要る（process-artifacts gate・migration-guard の 2 step）、npm ci と uv が要る（Lint & Dark Mode・API contract）ものは手元の入口に向かない
+- 手元で流せた 15 項目は main で失敗 0。所要秒：check_doc_index 9.0・check_rule_registry 0.9・lint_tenant_schema 2.4・check-claude-size 1.4・generate-adr-index 0.5・ui-governance 0.3・dangling-routes 17.8・check-lessons-section 0.3・migration-registration-exists 0.6・migration-guard の台本群 約 30・doc-heading-duplicates 0.1・test_check_rule_registry 14.4。重いもの：test-guard-evaluations 122.7、run_rule_fixtures 全件 375.3（--only 1 種で 33.6）、gitleaks dir 135.9
+- 手元は Python 3.14・Node 24、CI は Python 3.12・Node 22（guard-authoring だけ 24）
+- 台帳（rules.yml）に when 列は 0 件、gate 項目も 0 件。設計 §R4（design.md:149-157）の「台帳の when: before_submit の gate 項目を選ぶ」は、今は選ぶ対象が無い
+- 手元用の道はすでに 2 つある：validate-pr-body.sh:288-319 が LOCAL_PRECHECK=1 で process-artifacts を事前に流す（PR 作成時）、husky pre-commit が check-claude-size と lint_tenant_schema を流す
+
+### 何を作るか（第1段）
+- scripts/dev/check-before-submit.sh（新規、design.md:151 の名前どおり）
+  - 変更ファイルの一覧は分岐点から取る。2 点で比べる検査には CI と同じく origin/main の SHA を渡す。枝が main より遅れていれば表示する（2026-10-30 審査を受けた Opus 判断）。fetch はしない（使った origin/main の SHA を表示する）。まだ commit していない変更があれば「commit してから流す」と表示して終了コード 2
+  - 黙って通る道をふさぐ（2026-10-30 審査の指摘）: 必須一覧が無い・0 件、`--only` の値が無い・知らない id、流した検査が 0 件は終了コード 2。壊れた case.json・見本の選別の python が落ちたときは × で終了コード 1。一部だけ流した必須名は △（終了コードには影響しない）
+  - CI と同じ台本を呼ぶ（写さない）。速い組（上の速いもの、合計約 80 秒）は変更ファイルに関係なく毎回流す。main で全部通ることを確かめてあるので、落ちたら自分の変更が原因とわかる
+  - 違反の見本（run_rule_fixtures.py）は、変更ファイルが見本の case.json の argv にある台本か、その見本のフォルダの中にあるときだけ、その見本を `--only` で流す（どの見本を流すかは見本のデータから決め、台本に一覧を書き写さない）
+  - 重い組（test-guard-evaluations、見本の全件）は `--full` を付けたときだけ流す。付けないときは「CI で確かめる」と名前を表示する
+  - 手元で流さないもの（DB が要る 3 件・評価本体・PR 本文が要るもの・npm ci と uv が要る 2 件・gitleaks の履歴走査）は、名前と理由を「CI で確かめる」として全部表示する（黙って通さない）。process-artifacts は「PR 作成時に validate-pr-body.sh が確かめる」と表示
+  - check-lessons-section の SEC6_ADDED が 0 でなければ、失敗ではなく「PR に lessons-cleanup ラベルが要る」と注意を表示（ラベルは提出後にしか付けられないため）
+  - 最後に、流した検査ごとの ○×と秒、飛ばした検査と理由、手元と CI の版の違い（python3・node の版）を表示。1 つでも × なら終了コード 1、全部 ○ なら 0
+- 補助の指定：`--list-fixtures`（今の変更で選ばれる見本の名前だけ表示して終わる）と `--only <検査の id,…>`（検査を絞る）は、試験を速くするための補助
+- 試験（scripts/tests/ に新規。既存の試験の流れ方に合わせる）
+  - main と同じ中身の写しで流すと終了コード 0 で、流した検査の名前がすべて出る
+  - 違反を 1 つ入れた写し（例：tenant schema の違反の見本、doc index の切れたリンク）で流すと終了コード 1 で、落ちた検査の名前が出る
+  - 見本のフォルダの台本を触ったときだけ、その見本が --only で選ばれる
+  - commit していない変更があると終了コード 2
+- 台帳との結び付け（when 列を読んで選ぶ）は、gate 項目が台帳に入る段（R6）で足す。今は対象が 0 件なので作らない
+
+### 第2段以降に回すもの
+- R4b：validate-pr-body.sh の成功表示の前（:321）と frontend/.husky/pre-push から呼ぶ（design.md:152-153）。入口の所要時間と誤って止める数を第1段で見てから
+- R4c：クラウドの Claude の「流したか」の印（design.md:154-156）
+- gitleaks の履歴走査を手元でどう流すか（今の手元の見張りでは `gitleaks git` が止まる）
+
+### 受入条件
+- K1：main と同じ中身で流して終了コード 0。所要秒を測って表示（速い組の目安 120 秒以内）
+- K2：違反を入れた写しで終了コード 1、落ちた検査の名前が出る（少なくとも 2 種類の違反で）
+- K3：飛ばした検査がすべて名前と理由付きで表示される。必須 16 件の名前（required-checks.txt）が、流したか飛ばしたかのどちらかで全部出る
+- K4：試験が手元で rc=0。試験は rule-registry.yml の existing-rule-tests に 1 step 足して毎回流す（2026-10-30 Opus 判断。理由: CI で流れない試験は壊れても気づけない）
+- K5：必須 16 件 pass。scripts/ を触るので GO 記録を付ける
+- K6：変えるのは check-before-submit.sh・試験・design.md と、rule-registry.yml の existing-rule-tests への 1 step 追加だけ（試験を毎回流すため。2026-10-30 Opus 判断。理由: CI で流れない試験は壊れても気づけない）。呼ぶ側の台本・既存の検査・他のワークフローは変えない
+- 実測（事実）：K1b の所要は 124.4 秒で目安の 120 秒を超えた。同じ時間帯に他の処理が走っていて機械が混んでいたため（K1 の空いているときは 88.9 秒）
+
+### リスクと対処
+- 手元と CI の版の違いで結果が食い違う → 版を表示し、最後の判定は CI（入口は補助。ideal-state.md:15）
+- 遅くて使われない → 速い組だけを既定にし、秒を表示して第2段で見直す
+- 必須チェックの一覧が増えたのに入口が追従しない → K3 の試験で required-checks.txt の全件が表示されることを確かめる（名前が足りなければ試験が落ちる）
+- 戻し方：revert（呼ぶ側はまだ無いので影響は入口だけ）
+
+### Opus 自己審査（同じ AI の審査。独立の審査は PR で別の審査役が行う）
+APPROVE。根拠：命令と所要秒は main で実測した。CI と同じ台本を呼ぶ。設計 §R4 との違い（台帳の when 列を今は読まない）は対象 0 件という事実による順番の入れ替えで、目的（提出前に同じ検査を流す）は変えない。未解決：gitleaks の手元での流し方。
