@@ -14,7 +14,14 @@ const BASE_URL = process.env.PROD_CHECK_BASE_URL || "https://app.salesanchor.jp"
 export const SKIP_REASON = "点検用の人の秘密情報が未登録";
 
 type WorkerFixtures = { loggedInContext: BrowserContext | null };
-type TestFixtures = { authedPage: Page };
+type TestFixtures = { authedPage: Page; authPacing: void };
+
+// /api/v1/auth/ は 10r/m・burst=5・nodelay なので、1 件ぶんの枠が戻るのに 6 秒かかる。
+// 画面は goto のたびに refresh を 1 件呼び、1 つの test が使う auth 系は最大 3 件
+// （refresh 401・login・refresh）。6 秒 × 3 = 18 秒 + 余裕で、test の始まり同士を 20 秒空ける。
+const AUTH_SPACING_MS = 20_000;
+// 前の test の始まりの時刻（同じ worker の中で共有。再試行も 1 本の test として数える）
+let lastTestStartedAt: number | null = null;
 
 export const test = base.extend<TestFixtures, WorkerFixtures>({
   // 秘密情報が無いときは null（authedPage 側で skip にする）。ログインは worker の最初の 1 回だけ。
@@ -37,7 +44,27 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
     { scope: "worker" },
   ],
 
-  authedPage: async ({ loggedInContext }, use) => {
+  // 全 test で自動で動く。2 本目以降は前の test の始まりから 20 秒たつまで待つ。
+  // 待ちは test の timeout に含めない（待った分だけ timeout を足す）。
+  // 共有ログイン（loggedInContext）はこの後に動く: authedPage が authPacing を先に並べているので、
+  // ログインの前にも同じ待ちがかかる。
+  authPacing: [
+    async ({}, use, testInfo) => {
+      if (lastTestStartedAt !== null) {
+        const waitMs = Math.max(0, lastTestStartedAt + AUTH_SPACING_MS - Date.now());
+        if (waitMs > 0) {
+          testInfo.setTimeout(testInfo.timeout + waitMs);
+          await new Promise((resolve) => setTimeout(resolve, waitMs));
+        }
+      }
+      lastTestStartedAt = Date.now();
+      await use();
+    },
+    { auto: true },
+  ],
+
+  authedPage: async ({ authPacing, loggedInContext }, use) => {
+    void authPacing;
     test.skip(!loggedInContext, SKIP_REASON);
     const page = await loggedInContext!.newPage();
     await use(page);
