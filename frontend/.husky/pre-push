@@ -57,7 +57,8 @@ if [ -f "$CBS_SCRIPT" ]; then
       echo "提出前の入口: 流した印あり（今の HEAD と同じ）。入口は流さずに通す。"
     else
       echo "提出前の入口を流します（約 90〜190 秒。先に bash scripts/dev/check-before-submit.sh を手で流せば待たずに済みます）"
-      CHECK_BEFORE_SUBMIT_CALLER=pre-push bash "$CBS_SCRIPT" < /dev/null
+      # git は hook に GIT_DIR などを渡すため、別の repo を作る入口の試しが狂わないよう消す（https://git-scm.com/docs/githooks DESCRIPTION 節）
+      ( unset $(git rev-parse --local-env-vars); CHECK_BEFORE_SUBMIT_CALLER=pre-push bash "$CBS_SCRIPT" < /dev/null )
       CBS_RC=$?
       if [ "$CBS_RC" = "1" ]; then
         echo ""

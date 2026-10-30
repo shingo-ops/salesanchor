@@ -253,9 +253,10 @@ class CheckBeforeSubmit(unittest.TestCase):
             os.remove(own)
         self.commit("test: install pre-push")
 
-    def run_prepush(self, stdin_text):
+    def run_prepush(self, stdin_text, extra_env=None):
         env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
         env["TMPDIR"] = self.tmp
+        env.update(extra_env or {})
         r = subprocess.run(["sh", PREPUSH_REL, "origin", "dummy"], cwd=self.wt, env=env, input=stdin_text,
                            capture_output=True, text=True, timeout=900)
         return r.returncode, (r.stdout or "") + (r.stderr or "")
@@ -335,6 +336,14 @@ class CheckBeforeSubmit(unittest.TestCase):
             self.assertEqual(rc, 0, out)
             self.assertIn("飛ばした", out)
         self.assertEqual(self.log_rows(), [])
+
+    def test_prepush_works_when_git_passes_git_dir_env(self):
+        # git は hook に GIT_DIR・GIT_WORK_TREE を渡す。入口の中の試し（別の repo を作る）が狂わないこと
+        self.install_prepush()
+        rc, out = self.run_prepush(self.push_line(), {"GIT_DIR": os.path.join(self.wt, ".git"),
+                                                      "GIT_WORK_TREE": self.wt})
+        self.assertEqual(rc, 0, out)
+        self.assertEqual(self.read_stamp(), git(self.wt, "rev-parse", "HEAD"))
 
     def test_prepush_stops_on_violation_and_writes_no_stamp(self):
         src = os.path.join(ROOT, "scripts/tests/rule-fixtures/tenant-schema/fail-commit-without-reset/files/"

@@ -821,6 +821,7 @@ APPROVE。根拠：命令と所要秒は main で実測した。CI と同じ台�
   - 印がすでに HEAD と同じなら流さずに通す（先に手で流していれば push は待たない）
   - 終了コード 1（× がある）→ push を止める。表示に「直してから push。CI でも同じ検査が落ちる」と書く
   - 終了コード 2（commit していない変更がある・origin/main が無い など、入口が使えない）→ 理由を表示して通す（判定できないものは止めない。最後は CI が止める）
+  - 入口はサブシェルで git の環境変数（GIT_DIR など）を消してから呼ぶ（git は hook にこれらを渡すため。https://git-scm.com/docs/githooks 2026-10-30 閲覧）
 - scripts/dev/validate-pr-body.sh
   - 成功表示（:321）の前で印を確かめる。印が無い・HEAD と違うときは「提出前の入口をまだ流していません」と知らせ、記録に 1 行足す。この段では終了コードは変えない（止めない）
 - 試験（scripts/tests/test_check_before_submit.py に足す）
