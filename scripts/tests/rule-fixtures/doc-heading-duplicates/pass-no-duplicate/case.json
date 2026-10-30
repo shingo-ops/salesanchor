@@ -1,0 +1,9 @@
+{
+  "check": "process-artifacts gate",
+  "rules": [],
+  "expect": "pass",
+  "argv": [
+    "bash",
+    "scripts/check-doc-heading-duplicates.sh"
+  ]
+}

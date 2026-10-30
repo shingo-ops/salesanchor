@@ -1,0 +1,16 @@
+{
+  "check": "models.py に新 Column → deploy.yml にマイグレーション追記必須",
+  "rules": [],
+  "expect": "fail",
+  "expect_output": "MIGRATION GUARD FAILED (チェック7)",
+  "argv": [
+    "python3",
+    "-I",
+    "scripts/check-migration-value-writes.py",
+    "diff",
+    "{BASE}",
+    "{HEAD}",
+    "--check",
+    "7"
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "check": "models.py に新 Column → deploy.yml にマイグレーション追記必須",
+  "rules": [],
+  "expect": "fail",
+  "expect_output": "MIGRATION DUPLICATE REGISTRATION CHECK FAILED",
+  "argv": [
+    "bash",
+    "scripts/check-migration-duplicate-registration.sh",
+    "--migrations-script",
+    "fixture-tmp/run_all.sh"
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "check": "CLAUDE.md line count check",
+  "rules": [],
+  "expect": "fail",
+  "expect_output": "AGENTS.md: 81行（上限80行）",
+  "argv": [
+    "node",
+    "frontend/scripts/check-claude-size.js"
+  ]
+}

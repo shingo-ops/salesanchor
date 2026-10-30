@@ -1,0 +1,11 @@
+{
+  "check": "models.py に新 Column → deploy.yml にマイグレーション追記必須",
+  "rules": [],
+  "expect": "pass",
+  "argv": [
+    "python3",
+    "-I",
+    "scripts/check-migration-value-writes.py",
+    "repo"
+  ]
+}

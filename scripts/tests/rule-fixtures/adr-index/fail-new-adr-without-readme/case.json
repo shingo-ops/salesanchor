@@ -1,0 +1,13 @@
+{
+  "check": "ADR index is up to date",
+  "rules": [
+    "L362"
+  ],
+  "expect": "fail",
+  "expect_output": "docs/adr/README.md が最新の状態ではありません",
+  "argv": [
+    "node",
+    "scripts/generate-adr-index.js",
+    "--check"
+  ]
+}
