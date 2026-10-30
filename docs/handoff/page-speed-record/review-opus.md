@@ -38,3 +38,15 @@
 - should: 件数と制限の説明を直す。beforeAll の page の作り方を決める
 
 対応（同日・設計担当 Opus）: design.md 5-0b に、まとめ全体の skip・beforeAll の guard・page の作り方（`baseURL` を明示して渡す）・件数 11 件・制限の説明の書き直しを入れた。再審査に回す
+
+## 4 回目（5-0b 再審査・HEAD 547e2198b・2026-10-31 04:44 JST・クラウド Opus 読むだけ・run cse_01W47tdhwC95VoY43uEYDSPD）
+
+判定: APPROVE（must 0 件・should 2 件）
+
+- 公式文書（playwright.dev）はクラウドの通信制限で読めなかった（未確認）。代わりに Playwright 1.63.0 の型定義と実装を読んで確かめた
+- 1 ○: まとめの本体の `test.skip(条件, 理由)` は、まとめ全体に skip の印を付ける（`playwright/lib/common/index.js` の `_modifier`）
+- 2 ○: 手で作る context に `use` の `baseURL`・devices は引き継がれない（引き継ぐのは `context` fixture 専用の `_combinedContextOptions`）。明示して渡す設計は正しい。trace・screenshot・video は作られない
+- 3 ○: config が `./login` を読んでも問題は無い
+- 4 ○: 11 件で前回と一致
+- should 1: 「使う速さは戻る速さを超えない」は 2 件を使う操作では成り立たない。「2 件を使うのは S2・S7 の 2 回だけで、超過は 5 件のまとめ枠が吸収する」に書き直す → design.md 5-0b に反映
+- should 2: S9 の置き場所と authPace を明記する → design.md 5-0b に反映
