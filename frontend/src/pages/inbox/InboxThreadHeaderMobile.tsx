@@ -107,13 +107,13 @@ export function InboxThreadHeaderMobile({
   const BackIcon = SCHEDULE_SETTINGS_ICONS.back;
   // 既存の会話ヘッダー（InboxMessageThread.tsx）とまったく同じロジック:
   // アバターの頭文字は名前が無ければ "?"（getInitials の既定）、
-  // 見出しの文字は名前が無ければ "Lead #<id>" にフォールバックする。
+  // 見出しの文字は名前が無ければ 辞書の「リード #番号」 にフォールバックする。
   const customerNameForAvatar =
     messagesData?.lead?.customer_name
     || selectedConversation?.customer_name;
   const customerNameForTitle =
     customerNameForAvatar
-    || `Lead #${selectedLeadId}`;
+    || t("dashboard.priorityFallbackLead", { id: selectedLeadId });
   // PC と同じ条件（InboxMessageThread.tsx の <header className="inbox-center-header">
   // 内の Discord 未連携バッジと同一式）。新しい状態は作らない（SSOT 遵守）。
   // 落とすとスマホの利用者だけがこの情報に気づけなくなるため残す（PO 判断・2026-10-14）。

@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { ACCOUNT_ICONS, NAV_ICONS, SCHEDULE_SETTINGS_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 import { api } from "../../lib/api";
-import { getInitials, parseDate } from "./inbox.types";
+import { elapsedLabel, getInitials, parseDate } from "./inbox.types";
 import { getStatusPresentation } from "../../utils/statusPresentation";
 import type { LeadDetail, KarteTabKey, SalesFormSelectionState, ConvertAssigneeOption } from "./inbox.types";
 import { SalesFormMultiSelect } from "./SalesFormMultiSelect";
@@ -83,22 +83,6 @@ interface Props {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-type TFn = (key: string, opts?: Record<string, unknown>) => string;
-
-
-function elapsedLabel(iso: string | null, t: TFn): string {
-  const d = parseDate(iso);
-  if (!d) return "—";
-  const diffSec = Math.floor((Date.now() - d.getTime()) / 1000);
-  if (diffSec < 60) return t("inbox.elapsedJustNow");
-  const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) return t("inbox.elapsedMinutesAgo", { count: diffMin });
-  const diffHour = Math.floor(diffMin / 60);
-  if (diffHour < 24) return t("inbox.elapsedHoursAgo", { count: diffHour });
-  const diffDay = Math.floor(diffHour / 24);
-  return t("inbox.elapsedDaysAgo", { count: diffDay });
-}
 
 // ---------------------------------------------------------------------------
 // Main component
