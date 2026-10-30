@@ -353,11 +353,13 @@ Discord 投稿（許可リストの人だけ）
   - ADR-1039 で置き換える Decision: 6（件の囲い→相談係はクラウド。件のセッションは囲いのまま）、7（行き先）、12（正本は ops-incident-agent.md のまま。写しを専用リポジトリへ）。
 - 新しい仕様書: S docs/specs/cloud-case-ai/{README,ideal-state,kgi}.md。索引 S docs/specs/README.md に 1 行足す。
 
-## 12. 外部事例
+## 12. 外部・過去事例の参照と我々への応用
 - 公式 docs（G）: proxy の範囲、コネクタの既定、secret の仕組み。数値: VM 4vCPU/16GB、/fire 30 回/時/routine・100 回/時/アカウント、保存 30 日（学習オフ）。
 - 列を伏せて期限付きで開ける形は、DB の「動的データマスク」と「必要な時だけの閲覧許可（just-in-time access）」の考え方。本設計の成功の証明には使わない（直接の数値根拠なし）。判定は T0〜T13 の実測で行う。
+- 我々への応用: 公式 docs の数値は §4-4 の設定と §5 の上限に使う。列を伏せて期限付きで開ける考え方は §4-1・§4-2 の形に使う。
 
 ## 維持の仕組み
+- 守り手: Opus（設計と週次点検の結果の確認）・agent-console の定期実行（週次点検 4-6）・CI（T7・T10）。PO は週次点検の知らせを受ける。
 - CI: 分類漏れと allow の理由漏れで落ちる（T10）。nginx の 443 のブロック数と 421 の include の数が合わなければ落ちる（T7）。置き場は S .github/workflows/ の既存の backend 試験に足す。ワークフロー名は段1の実装カードで実物を見て確定する（設計合格の前提にしない）。
 - デプロイ: S scripts/run_all_migrations.sh が最初に ai_cloud を外し、trap が毎回作り直して持ち主の権限を付け直す。分類表は ai_cloud_meta にあるので消えない。
 - 週次点検: agent-console の定期実行（4-6）。点検記録が無い週を K6 で数える。
