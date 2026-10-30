@@ -55,6 +55,8 @@
 
 ### 5-0. 便0: 今の点検の待ち方を直す
 
+> 2026-10-31 追記: 同じ不具合を別の担当が PR #4923 で先に直し、本線へ入った（`tests/prod-check/fixtures.ts` で worker ごとに 1 回ログイン・test の間を 20 秒あける）。本書の PR は `tests/prod-check/prod-ui.spec.ts` を #4923 の版のままにし、5-0・5-0b のうち prod-ui.spec.ts の書き換えは取り下げた。残るのは `tests/prod-check/settle.ts`（速さの記録が使う）と `tests/prod-check/login.ts` の `authPace`・`BASE_URL` と `tests/prod-check/playwright.config.ts` の `BASE_URL` の読み込み。以下の 5-0・5-0b は経緯として残す。
+
 事実（recon §4-2）:
 - 2026-10-31 03:00 JST の手動実行（run 41103098245・41103007617）で S3〜S6 が 2 回とも失敗。8 件の失敗はすべて `page.waitForLoadState("networkidle")` の行（`tests/prod-check/prod-ui.spec.ts:40,57,72,84`）で 30 秒切れ。その手前の「画面に出たか」の確かめ（検索欄が見える等）は全部通っている
 - ログイン後はアプリが開いたままの通信を `fetch` で最大 3 本持つ（2026-10-31 設計審査の指摘 M1 で 1 本から訂正）: `/api/v1/events/stream`（`frontend/src/lib/realtime/RealtimeProvider.tsx:77-84`）、`/api/v1/conversations/stream`（全画面の枠 `frontend/src/components/DesktopShell.tsx:138`・`frontend/src/components/MobileShell.tsx:108`）、`/api/v1/leads/stream`（`frontend/src/pages/leads/LeadsPage.tsx:185`）。後ろの 2 本は `frontend/src/hooks/useSSE.ts:45-51` 経由。3 本とも頭書き `Accept: text/event-stream` を付ける（`frontend/src/hooks/useSSE.ts:48`・`frontend/src/lib/realtime/RealtimeProvider.tsx:80`。`git grep -n "text/event-stream" origin/main -- frontend/src` でこの 2 か所だけ）。`networkidle` は「通信が 500 ミリ秒 0 件」を待つので、開いたままの通信があると成り立たない
@@ -117,7 +119,7 @@
 | ファイル | 変更 |
 |---|---|
 | `tests/prod-check/settle.ts` | 便0 で新規（5-0）。便1 で戻り値に時刻を 2 つ足す |
-| `tests/prod-check/prod-ui.spec.ts` | 便0 だけ: 待ち方 5 か所の置き換え（5-0）。便1 では触らない |
+| `tests/prod-check/prod-ui.spec.ts` | 触らない（PR #4923 の版のまま。5-0 の追記） |
 | tests/prod-check/page-speed-targets.ts | 新規。測る画面 135 件の表（5-4） |
 | tests/prod-check/page-speed.spec.ts | 新規。測る本体（5-3・5-5・5-6） |
 | tests/prod-check/page-speed.config.ts | 新規。この段だけの Playwright 設定 |
