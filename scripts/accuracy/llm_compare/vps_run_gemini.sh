@@ -20,7 +20,7 @@ RD=${RD:-/Users/tanizawashingo/CC報告ファイル-keep/accuracy-gold-20261020/
 HERE=$(cd "$(dirname "$0")" && pwd)
 K="-i $HOME/.ssh/manual-only/id_ed25519 ubuntu@49.212.137.46"
 BASE=/home/ubuntu/fhd-test/llmcmp
-printf '%s\n' "$TID" | grep -Eq '^llmcmp-[a-z0-9-]+$' || { echo "ABORT: test-id は ^llmcmp-[a-z0-9-]+\$ のみ（SQL と ssh 命令に入るため）"; exit 1; }
+[[ "$TID" =~ ^llmcmp-[a-z0-9-]+$ ]] || { echo "ABORT: test-id は ^llmcmp-[a-z0-9-]+\$ のみ（SQL と ssh 命令に入るため）"; exit 1; }
 [ -f "$RUNS" ] || { echo "ABORT: runs が無い"; exit 1; }
 REMAIN=0
 if [ "$MODE" != dry ]; then

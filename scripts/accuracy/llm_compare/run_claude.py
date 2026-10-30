@@ -51,17 +51,29 @@ def load_pairs(pairs):
         except (OSError, ValueError, StopIteration) as e:
             raise Stop("index を読めない（行が壊れている／無い）: %s: %s" % (index, type(e).__name__))
         serial = 0
-        for line in open(jsonl, encoding="utf-8"):
-            if not line.strip():
-                continue
-            r = json.loads(line)
-            if r.get("error"):
-                continue
-            serial += 1
-            if r.get("repeat") == 1:
-                if serial not in idx:
-                    raise Stop("index に通し番号 %d が無い: %s" % (serial, index))
-                out.append((r["job_id"], serial, idx[serial][0], test_id))
+        try:
+            f = open(jsonl, encoding="utf-8")
+        except OSError as e:
+            raise Stop("JSONL を開けない: %s: %s" % (jsonl, type(e).__name__))
+        with f:
+            for lineno, line in enumerate(f, 1):
+                if not line.strip():
+                    continue
+                try:
+                    r = json.loads(line)
+                except ValueError:
+                    raise Stop("JSONL の %d 行目が JSON ではない: %s" % (lineno, jsonl))  # 行の中身は書かない
+                if not isinstance(r, dict):
+                    raise Stop("JSONL の %d 行目が JSON オブジェクトではない: %s" % (lineno, jsonl))
+                if r.get("error"):
+                    continue
+                serial += 1
+                if r.get("repeat") == 1:
+                    if serial not in idx:
+                        raise Stop("index に通し番号 %d が無い: %s" % (serial, index))
+                    if "job_id" not in r:
+                        raise Stop("JSONL の %d 行目に job_id が無い: %s" % (lineno, jsonl))
+                    out.append((r["job_id"], serial, idx[serial][0], test_id))
         if serial != len(idx):
             raise Stop("JSONL の成功行 %d 件と index %d 件が合わない: %s" % (serial, len(idx), jsonl))
     ids = [j for j, _, _, _ in out]

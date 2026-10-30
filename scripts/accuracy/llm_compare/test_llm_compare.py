@@ -212,6 +212,26 @@ class RunClaudeTest(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertIn("index を読めない", open(os.path.join(self.d, "m2.jsonl.stop.txt"), encoding="utf-8").read())
 
+    def test_broken_jsonl_is_recorded(self):
+        idxp = os.path.join(self.d, "tx.index.tsv")
+        secret = "SECRET-VALUE-XYZ"
+        cases = {
+            "nofile": (os.path.join(self.d, "nope.jsonl"), None, "開けない"),
+            "badjson": (os.path.join(self.d, "bj.jsonl"), '{"job_id": "a", "repeat": 1}\n' + secret + "{\n", "JSON ではない"),
+            "nojob": (os.path.join(self.d, "nj.jsonl"), '{"repeat": 1, "x": "' + secret + '"}\n', "job_id が無い"),
+        }
+        for name, (path, body, want) in cases.items():
+            if body is not None:
+                open(path, "w").write(body)
+            out = os.path.join(self.d, name + ".jsonl.out")
+            code = rc.main(["--model", "haiku", "--schema", os.path.join(self.d, "s.json"), "--prompt-dir", self.pd,
+                            "--pair", "%s:%s" % (path, idxp), "--out", out, "--claude-bin", self.fake, "--skip-preflight"],
+                           env=self.env)
+            self.assertEqual(code, 1, name)
+            stop = open(out + ".stop.txt", encoding="utf-8").read()
+            self.assertIn(want, stop, name)
+            self.assertNotIn(secret, stop, name)  # 値は書かない
+
     def test_all_ok_uses_repeat1_only(self):
         self.assertEqual(self.run_rc(), 0)
         L = self.lines()
@@ -420,6 +440,8 @@ class ScriptsTest(unittest.TestCase):
                           (("llmcmp-g1", runs), "run か dry"),
                           (("llmcmp-g1;x", runs, "dry", "0" * 40), "test-id"),
                           (("llmcmp-G1", runs, "dry", "0" * 40), "test-id"),
+                          (("llmcmp-a\n;id", runs, "dry", "0" * 40), "test-id"),
+                          (("llmcmp-a;id\nllmcmp-b", runs, "dry", "0" * 40), "test-id"),
                           (("llmcmp-", runs, "dry", "0" * 40), "test-id")):
             r = subprocess.run(["bash", sh, *args], capture_output=True, text=True, timeout=30)
             self.assertNotEqual(r.returncode, 0, args)
