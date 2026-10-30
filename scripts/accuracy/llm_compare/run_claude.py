@@ -42,11 +42,14 @@ def load_pairs(pairs):
         jsonl, index = pair.rsplit(":", 1)
         test_id = os.path.basename(index)[: -len(".index.tsv")]
         idx = {}
-        with open(index, encoding="utf-8") as f:
-            next(f)
-            for line in f:
-                s, sha, chars = line.rstrip("\n").split("\t")
-                idx[int(s)] = (sha, int(chars))
+        try:
+            with open(index, encoding="utf-8") as f:
+                next(f)
+                for line in f:
+                    s, sha, chars = line.rstrip("\n").split("\t")
+                    idx[int(s)] = (sha, int(chars))
+        except (OSError, ValueError, StopIteration) as e:
+            raise Stop("index を読めない（行が壊れている／無い）: %s: %s" % (index, type(e).__name__))
         serial = 0
         for line in open(jsonl, encoding="utf-8"):
             if not line.strip():
@@ -191,7 +194,10 @@ def main(argv=None, runner=subprocess.run, env=None):
             if job_id in done_ids:
                 continue
             path = os.path.join(a.prompt_dir, "%s_%04d_%s.txt" % (test_id, serial, sha))
-            data = open(path, "rb").read()
+            try:
+                data = open(path, "rb").read()
+            except OSError:
+                raise Stop("文字列のファイルを開けない: %s" % os.path.basename(path))
             if hashlib.sha256(data).hexdigest() != sha:
                 raise Stop("文字列の sha256 が名前と違う: %s" % os.path.basename(path))
             started = time.monotonic()

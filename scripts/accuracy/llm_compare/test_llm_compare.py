@@ -197,6 +197,21 @@ class RunClaudeTest(unittest.TestCase):
         stop = open(os.path.join(self.d, "o2.jsonl.stop.txt"), encoding="utf-8").read()
         self.assertIn("index に通し番号 1 が無い", stop)
 
+    def test_missing_prompt_file_and_broken_index_are_recorded(self):
+        # 文字列のファイルが無い
+        for f in os.listdir(self.pd):
+            os.unlink(os.path.join(self.pd, f))
+        self.assertEqual(self.run_rc(out="m1.jsonl", extra=("--skip-preflight",)), 1)
+        self.assertIn("開けない", open(os.path.join(self.d, "m1.jsonl.stop.txt"), encoding="utf-8").read())
+        # index の行が壊れている
+        bad = os.path.join(self.d, "bad2.index.tsv")
+        open(bad, "w").write("serial\tsha256\tchars\nnot-a-number\tabc\n")
+        code = rc.main(["--model", "haiku", "--schema", os.path.join(self.d, "s.json"), "--prompt-dir", self.pd,
+                        "--pair", "%s:%s" % (os.path.join(self.d, "tx.jsonl"), bad),
+                        "--out", os.path.join(self.d, "m2.jsonl"), "--claude-bin", self.fake, "--skip-preflight"], env=self.env)
+        self.assertEqual(code, 1)
+        self.assertIn("index を読めない", open(os.path.join(self.d, "m2.jsonl.stop.txt"), encoding="utf-8").read())
+
     def test_all_ok_uses_repeat1_only(self):
         self.assertEqual(self.run_rc(), 0)
         L = self.lines()
@@ -395,6 +410,21 @@ class ScriptsTest(unittest.TestCase):
             self.assertIn(needle, s)
         self.assertNotIn("--max-cost-usd 5.00", s)
         self.assertNotIn("grep -A2 'healthcheck:'", s)
+
+    def test_run_gemini_rejects_bad_mode_and_test_id(self):
+        runs = os.path.join(tempfile.mkdtemp(), "r.txt")
+        open(runs, "w").write("x\n")
+        self.addCleanup(shutil.rmtree, os.path.dirname(runs))
+        sh = os.path.join(HERE, "vps_run_gemini.sh")
+        for args, msg in ((("llmcmp-g1", runs, "dyr", "0" * 40), "run か dry"),
+                          (("llmcmp-g1", runs), "run か dry"),
+                          (("llmcmp-g1;x", runs, "dry", "0" * 40), "test-id"),
+                          (("llmcmp-G1", runs, "dry", "0" * 40), "test-id"),
+                          (("llmcmp-", runs, "dry", "0" * 40), "test-id")):
+            r = subprocess.run(["bash", sh, *args], capture_output=True, text=True, timeout=30)
+            self.assertNotEqual(r.returncode, 0, args)
+            self.assertIn(msg, r.stdout + r.stderr, args)
+        self.assertIn("remote.log に残る", self.read("vps_run_gemini.sh"))
 
     def test_fetch_checks_expected_sha(self):
         self.assertIn("84afd2e4e0094b542d5f1dada1fef39290aa6d997135296e78601fc945ac8b0c", self.read("fetch_results.sh"))

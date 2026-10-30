@@ -1,17 +1,18 @@
 #!/bin/bash
 # Gemini を prompt_ab で解かせ、渡した文字列を残す（design.md §5-1, §5-5）。PO が ! で実行する台本。AI は実行しない。
-# 使い方: bash vps_run_gemini.sh <test-id> <runs-file(Mac)> [dry] <origin/main の sha(40桁)>
+# 使い方: bash vps_run_gemini.sh <test-id> <runs-file(Mac)> run|dry <origin/main の40桁sha>
 #   第4引数 = Mac で git ls-remote origin refs/heads/main した sha（本番の HEAD と照らす）。
 #   環境変数 RD = 読み取り専用鍵で SQL を流す rd.sh のパス（使った額の合計を読む。無ければ止まる）。
-#   例: bash vps_run_gemini.sh llmcmp-g1 /path/to/runs.txt dry      # まず dry（Gemini を呼ばない。指示書の sha256 の行を確かめる）
-#       bash vps_run_gemini.sh llmcmp-g1 /path/to/runs.txt          # 本番の試験（約 300 回、上限 5.00 USD）
+#   例: bash vps_run_gemini.sh llmcmp-g1 /path/to/runs.txt dry <sha>  # まず dry（Gemini を呼ばない。指示書の sha256 の行を確かめる）
+#       bash vps_run_gemini.sh llmcmp-g1 /path/to/runs.txt run <sha>  # 本番の試験（約 300 回、上限 5.00 USD）
 #   途中で止まったら、未完了の job だけの runs ファイルで test-id を llmcmp-g2 にして続きを流す（別名なので上書きされない）。
 # 別の箱: docker compose run --rm --no-deps（本番 worker とは別コンテナ）。-e PYTHONPATH=/app が必須（backend/Dockerfile:4 は PYTHONPATH 無し）。
 # 健康診断の上書き（no-health.yml）を必ず付ける: 付けないと約2.5分で unhealthy になり本番の警報が鳴る（RUNBOOK_fdm.md:12-17）。
 set -u
 TID=${1:?test-id}
 RUNS=${2:?runs file}
-MODE=${3:-run}
+MODE=${3:?run か dry}
+case "$MODE" in run|dry) ;; *) echo "ABORT: 第3引数は run か dry（\"$MODE\" は不可）"; exit 1;; esac
 ORIGIN_MAIN=${4:-}
 TOTAL_USD=5.00   # llmcmp-* 全体の合計上限（test-id ごとではない）。使った分を引いた残りを --max-cost-usd に渡す
 MIN_REMAIN=1.00
@@ -19,7 +20,7 @@ RD=${RD:-/Users/tanizawashingo/CC報告ファイル-keep/accuracy-gold-20261020/
 HERE=$(cd "$(dirname "$0")" && pwd)
 K="-i $HOME/.ssh/manual-only/id_ed25519 ubuntu@49.212.137.46"
 BASE=/home/ubuntu/fhd-test/llmcmp
-case "$TID" in llmcmp-*) ;; *) echo "ABORT: test-id は llmcmp- で始める"; exit 1;; esac
+printf '%s\n' "$TID" | grep -Eq '^llmcmp-[a-z0-9-]+$' || { echo "ABORT: test-id は ^llmcmp-[a-z0-9-]+\$ のみ（SQL と ssh 命令に入るため）"; exit 1; }
 [ -f "$RUNS" ] || { echo "ABORT: runs が無い"; exit 1; }
 REMAIN=0
 if [ "$MODE" != dry ]; then
@@ -115,5 +116,6 @@ else
   # 長いので VPS 側で裏で動かす。終わりの確認: ssh ... "tail -3 $BASE/$TID.out" に LLMCMP_DONE_$TID が出る（約1時間）
   ssh $K "nohup bash $BASE/remote_run.sh $TID run $REMAIN > $BASE/$TID.remote.log 2>&1 < /dev/null &"
   echo "起動した。終わりの確認: ssh $K \"tail -3 $BASE/$TID.out\"  （LLMCMP_DONE_$TID が出たら終わり）"
+  echo "起動前の止め（healthcheck・他の稼働・既存ファイル・dry の sha 照合）で止まった理由は $BASE/$TID.remote.log に残る: ssh $K \"cat $BASE/$TID.remote.log\""
   echo "止めたいとき: ssh $K \"docker stop llmcmp-$TID\""
 fi

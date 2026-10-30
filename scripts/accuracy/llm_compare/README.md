@@ -36,5 +36,5 @@
 ## 後片付けと補足
 - 試験が終わったら、PO が本番サーバーの `/home/ubuntu/fhd-test/llmcmp/` を消す（社外秘の文字列が残るため）。`!` で実行する。AI は実行しない。削除の一行は、PO が内容を確かめてから自分で書く。
 - vps_convert.sh は、動いている worker の中で JSONL を 4 本変換する（参照の台本より 1 本多い）。
-- 費用の上限は llmcmp-* 全体で 5.00 USD（test-id ごとではない）。残りが 1.00 USD 未満なら vps_run_gemini.sh は止まる。第4引数に origin/main の sha、環境変数 RD に読み取り専用鍵の rd.sh を渡す。
+- 費用の上限は llmcmp-* 全体で 5.00 USD（test-id ごとではない）。残りが 1.00 USD 未満なら vps_run_gemini.sh は止まる。使い方は `vps_run_gemini.sh <test-id> <runs> run|dry <origin/main の40桁sha>`（第3引数は run か dry のどちらかだけ。それ以外は止まる）。環境変数 RD に読み取り専用鍵の rd.sh を渡す。
 - summarize.py の --usage は `LABEL=JSONL:repeat` も受ける（Gemini は repeat ごとに別の列）。
