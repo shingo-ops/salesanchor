@@ -58,7 +58,8 @@ Haiku と Sonnet は別々に判定する。「Gemini 平均」は Gemini 3回�
 - 入力: 取り寄せた文字列と index、JSONL（repeat=1 の job_id 対応）、モデル名（haiku / sonnet）。
 - 1件ごとに `claude -p --model <m> --effort high --output-format json --json-schema <v102_response_schema.json の中身> --tools "" --setting-sources "" --strict-mcp-config --no-session-persistence --system-prompt "与えられた指示に従い、指定の JSON だけを返してください。"`。文字列は標準入力で渡す。cwd は空の一時フォルダ。1件の時間切れ 600秒。
 - 順番に1件ずつ。rc≠0・is_error=true・時間切れのどれかで、理由を問わず即停止し、時刻と件数を記録する（待って再開しない）。
-- 1件ごとに、modelUsage の中身が指定したモデル1種だけで、num_turns=1 であることを確かめる。違えば停止。
+- 1件ごとに、modelUsage の中身が指定したモデル1種だけで、AI への呼び出しが1回だけ（usage.iterations が1件）であることを確かめる。違えば停止。
+  - num_turns は、`--json-schema` を付けると 2 になる（2026-10-31 実測。作りものの短い文で、付けると num_turns=2・iterations 1件・structured_output あり、付けないと num_turns=1。生出力 /tmp/CC報告ファイル/llm-compare/probe-turns/）。このため num_turns は「structured_output があるときは 2、無いときは 1」を正常とし、それ以外は停止する。
 - 出力: Gemini の JSONL と同じ欄（job_id, repeat=1, config="claude-<m>", response_text, usage_raw, elapsed_sec, errors）＋ Claude の生 JSON 全文。response_text に入れる欄（result か structured_output か）は手順（４）の結果で決め、カードの記録に書く。
 - 実施前に記録: claude --version、§4「サブスクで動く」の確認（値は伏せる）。
 
@@ -76,7 +77,7 @@ Haiku と Sonnet は別々に判定する。「Gemini 平均」は Gemini 3回�
 （１）準備（AI）: 道具と台本を作り審査を通す。gold_v1.tsv と score_v102.py の sha256 を記録。V102_RESPONSE_SCHEMA を JSON に書き出す。
 （２）job id の対応（AI、読み取りの窓口）: 100投稿の source_message_id → extraction_jobs.id。1投稿に1件でなければ止まる。N（§4）と直近30日の Gemini 費用もここで数える。
 （３）Gemini（PO が ! で実行）: vps_run_gemini.sh。取り寄せ。
-（４）Claude 1件の試し（AI、手元）: haiku で1件。確かめる: `--tools ""` と `--json-schema` を一緒に使えるか／答えが result と structured_output のどちらに入るか／num_turns=1 か／thinking_tokens > 0 か（--effort high が効くか）／thinking が output の内数か／標準入力で渡せるか／定義に追加の制約を求められないか。どれかが不可なら止めて設計へ戻す。
+（４）Claude 1件の試し（AI、手元）: haiku で1件。確かめる: `--tools ""` と `--json-schema` を一緒に使えるか／答えが result と structured_output のどちらに入るか／呼び出しが1回か（iterations 1件。num_turns は §5-2 の決まり）／thinking_tokens > 0 か（--effort high が効くか）／thinking が output の内数か／標準入力で渡せるか／定義に追加の制約を求められないか。どれかが不可なら止めて設計へ戻す。
 （５）Claude（AI、手元）: haiku 100件 → sonnet 100件。（３）と同じ日、作業の少ない時間帯。
 （６）変換（PO が ! で実行）: vps_convert.sh。取り寄せ。
 （７）採点と表（AI、手元）: split → score_v102.py → summarize.py。§4 の「本番の解析結果に書いた件数0件」を数える。
