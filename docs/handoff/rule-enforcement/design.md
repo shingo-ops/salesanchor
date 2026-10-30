@@ -643,3 +643,9 @@ merge commit の revert。
 
 ### 審査（Opus 自己審査・2026-10-30）
 APPROVE。根拠: 4 本とも今の main で通ることを写しで確かめた（r2c-recon/2-*.txt）。py の 1 本が直接の実行では空振りする点は、pytest で流し、試験 0 件で落ちる性質で防ぐ。workflow-lint.yml と Branch Protection には触れないため、ADR-1003 の本人 GO の例外に当たらない。未解決: CI での所要時間と、履歴 1 件の checkout で動くか（K1・K3 で確かめる）。
+
+### 追記（CI の 1 回目の結果・2026-10-30）
+- 事実: 7f8d24c8 の existing rule tests は、工程の成果物の検査の試験で 324 PASS / 2 FAIL（run 41001128041）。落ちたのは LOCAL_PRECHECK の 2 件で、どちらも「LOCAL_PRECHECK は CI では使えません」で止まった。他の 3 本の手順は前の手順の失敗で動いていない。
+- 原因: 検査は `LOCAL_PRECHECK` と `GITHUB_ACTIONS === 'true'` の併用を止める（scripts/check-process-artifacts.js:1642）。試験は手元での事前検査を真似るため LOCAL_PRECHECK=1 を渡すが、CI の実行環境の GITHUB_ACTIONS=true をそのまま子に引き継ぐ。手元では GITHUB_ACTIONS が無いので通る。
+- 対処: その手順だけ `env -u GITHUB_ACTIONS node scripts/tests/test-process-artifacts.js` で流し、手元と同じ条件にする。試験と検査の中身は変えない。CI での併用を止める決まりは、試験が自分で GITHUB_ACTIONS=true を渡す 1 件（test-process-artifacts.js:2039）で引き続き試される。
+- 他の 3 本の手順も、この修正後の CI で初めて結果が出る。そこで落ちたら同じように原因を調べて止まる。

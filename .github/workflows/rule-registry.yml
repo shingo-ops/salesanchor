@@ -61,7 +61,7 @@ jobs:
         run: uv pip install --system pytest
 
       - name: 工程の成果物の検査の試験
-        run: node scripts/tests/test-process-artifacts.js
+        run: env -u GITHUB_ACTIONS node scripts/tests/test-process-artifacts.js
 
       - name: migration 列の増減の検査の試験
         run: node scripts/tests/test-migration-column-churn.js
