@@ -43,7 +43,7 @@ export function DistributionTargetList({ targets, onRefresh }: Props) {
       await deleteTarget(target.id);
       onRefresh();
     } catch (e: unknown) {
-      setActionError(e instanceof Error ? e.message : String(e));
+      setActionError(e instanceof Error ? e.message : t("common.unknownError"));
     }
   };
 
@@ -56,7 +56,7 @@ export function DistributionTargetList({ targets, onRefresh }: Props) {
       setRunResults((prev) => ({ ...prev, [target.id]: result }));
       onRefresh();
     } catch (e: unknown) {
-      setActionError(e instanceof Error ? e.message : String(e));
+      setActionError(e instanceof Error ? e.message : t("common.unknownError"));
     } finally {
       setRunning(null);
     }

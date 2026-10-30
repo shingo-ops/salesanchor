@@ -67,16 +67,16 @@ export function SupplierDetailView({ supplierId, supplierName, onBack }: { suppl
 
     api.get<SourceApiResponse>(`/tcg/suppliers/${supplierId}/source`)
       .then((res) => { if (res.found) { setRawText(res.raw_text); setSourceMessageId(res.source_message_id); } })
-      .catch((e: unknown) => { setError(e instanceof Error ? e.message : String(e)); })
+      .catch((e: unknown) => { setError(e instanceof Error ? e.message : t("common.unknownError")); })
       .finally(() => { sourceLoaded.current = true; checkDone(); });
 
     const params = new URLSearchParams({ provider: supplierName, offset: '0', limit: '500', strip_raw_text: 'true' });
     if (selectedWorkId) params.set('work_id', selectedWorkId);
     api.get<ItemsApiResponse>(`/tcg/analysis-results?${params.toString()}`)
       .then((res) => { setItems(res.items || []); setItemTotal(res.total); setWorks(res.works || []); })
-      .catch((e: unknown) => { setError(e instanceof Error ? e.message : String(e)); })
+      .catch((e: unknown) => { setError(e instanceof Error ? e.message : t("common.unknownError")); })
       .finally(() => { itemsLoaded.current = true; checkDone(); });
-  }, [supplierId, supplierName, refreshKey, selectedWorkId]);
+  }, [supplierId, supplierName, refreshKey, selectedWorkId, t]);
 
   const jumpToLine = (line: number) => {
     jumpSequence.current += 1;
