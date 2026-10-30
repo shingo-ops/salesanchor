@@ -1,0 +1,322 @@
+== CLAUDE_CODE_REMOTE=true ==
+No  ケース                        期待   実際   秒      判定
+K1  危険語1つ目                     2    2     0.106 OK
+      止めた文言: BLOCKED(cloud): 'DROP TABLE' は不可逆操作です。クラウドでは行えません。手元で PO の承認を得て実行してください。
+K1  危険語3つ目                     2    2     0.094 OK
+      止めた文言: BLOCKED(cloud): 'rm -rf' は不可逆操作です。クラウドでは行えません。手元で PO の承認を得て実行してください。
+K1  rebase系(一覧内)               2    2     0.081 OK
+      止めた文言: BLOCKED(cloud): 'git rebase' は不可逆操作です。クラウドでは行えません。手元で PO の承認を得て実行してください。
+K1  psql 書込(insert)            2    2     0.065 OK
+      止めた文言: BLOCKED(cloud): psql の書込系 SQL は止めます（本番 DB への書込はクラウドでは行えません）。
+K1  psql 書込(update)            2    2     0.080 OK
+      止めた文言: BLOCKED(cloud): psql の書込系 SQL は止めます（本番 DB への書込はクラウドでは行えません）。
+K1  psql ファイル流し込み              2    2     0.082 OK
+      止めた文言: BLOCKED(cloud): psql への流し込みは中身を問わず止めます（本番 DB への書込はクラウドでは行えません）。
+K1  ssh で prod へ               2    2     0.065 OK
+      止めた文言: BLOCKED(cloud): 本番サーバーへの ssh はクラウドでは行えません。
+K1  ls                         0    0     0.149 OK
+K1  git status                 0    0     0.185 OK
+K1  grep内の語は読取り扱い              0    0     0.149 OK
+K1  commit文中の語は対象外             0    0     0.148 OK
+K1  psql 読取(select)            0    0     0.166 OK
+K1  bash heredoc本文に危険語         2    2     0.084 OK
+      止めた文言: BLOCKED(cloud): 'DROP TABLE' は不可逆操作です。クラウドでは行えません。手元で PO の承認を得て実行してください。
+K1  python3 heredoc本文に危険語      2    2     0.071 OK
+      止めた文言: BLOCKED(cloud): 'DROP TABLE' は不可逆操作です。クラウドでは行えません。手元で PO の承認を得て実行してください。
+K1  cat>file heredoc本文は通す      0    0     0.209 OK
+K1  cat>run.sh heredoc本文は通す    0    0     0.168 OK
+K2  MCP merge                  2    2     0.065 OK
+      止めた文言: BLOCKED(cloud): PR のマージはクラウドでは行いません（マージの GO と照合は手元の Opus が行います）。
+K2  gh pr merge                2    2     0.070 OK
+      止めた文言: BLOCKED(cloud): gh pr merge はクラウドでは行いません（マージは手元で行います）。
+K2  gh api PUT /merge          2    2     0.089 OK
+      止めた文言: BLOCKED(cloud): gh api によるマージ(PUT …/merge)はクラウドでは行いません。
+K2  gh pr view                 0    0     0.181 OK
+K2  MCP get_me                 0    0     0.157 OK
+M1  curl PUT /merge            2    2     0.082 OK
+      止めた文言: BLOCKED(cloud): PUT …/merge によるマージはクラウドでは行いません（マージは手元で行います）。
+M2  curl --request=PUT /merge  2    2     0.077 OK
+      止めた文言: BLOCKED(cloud): PUT …/merge によるマージはクラウドでは行いません（マージは手元で行います）。
+M3  gh api graphql mergePullRequest 2    2     0.074 OK
+      止めた文言: BLOCKED(cloud): GraphQL によるマージ・自動マージの予約はクラウドでは行いません（マージは手元で行います）。
+M4  gh api graphql 自動マージ予約     2    2     0.083 OK
+      止めた文言: BLOCKED(cloud): GraphQL によるマージ・自動マージの予約はクラウドでは行いません（マージは手元で行います）。
+M5  gh api repos/…/merges      2    2     0.091 OK
+      止めた文言: BLOCKED(cloud): 枝を直接まとめる API(…/merges)はクラウドでは行いません（マージは手元で行います）。
+M6  curl GET /merge(調べるだけ)     0    0     0.184 OK
+M7  grep mergePullRequest      0    0     0.185 OK
+M8  gh api graphql 読取          0    0     0.175 OK
+K3  MCP作成 コード枝                 2    2     0.094 OK
+      止めた文言: BLOCKED(cloud): コード変更を含む枝は push までにし、PR は手元で shingo-cc 名義で作ってください。（コード側の変更: src/x.py）
+K3  gh pr create コード枝          2    2     0.071 OK
+      止めた文言: BLOCKED(cloud): コード変更を含む枝は push までにし、PR は手元で shingo-cc 名義で作ってください。（コード側の変更: src/x.py）
+K3  gh api POST pulls コード枝     2    2     0.069 OK
+      止めた文言: BLOCKED(cloud): コード変更を含む枝は push までにし、PR は手元で shingo-cc 名義で作ってください。（コード側の変更: src/x.py）
+K3  MCP作成 docsのみ               0    0     0.201 OK
+K3  gh pr create docsのみ        0    0     0.177 OK
+K3  git失敗なら止める                 2    2     0.076 OK
+      止めた文言: BLOCKED(cloud): 枝の変更ファイルを git で取れなかったため止めます: fetch に失敗: fatal: not a git repository (or any of the parent directories): .git
+K3  MCP head=コード枝              2    2     0.094 OK
+      止めた文言: BLOCKED(cloud): コード変更を含む枝は push までにし、PR は手元で shingo-cc 名義で作ってください。（コード側の変更: src/x.py）
+K3  MCP head=docs枝(owner:形式)   0    0     0.178 OK
+K3  MCP head=docs枝 節なし         2    2     0.091 OK
+      止めた文言: BLOCKED(cloud): PR 本文に「### 標準ワークフロー確認」の節がありません。入れてから作り直してください。
+K3  MCP head無し                 2    2     0.074 OK
+      止めた文言: BLOCKED(cloud): 枝の変更ファイルを git で取れなかったため止めます: PR の作成元(head)が指定されていません
+K3  MCP head空                  2    2     0.066 OK
+      止めた文言: BLOCKED(cloud): 枝の変更ファイルを git で取れなかったため止めます: PR の作成元(head)が指定されていません
+K3  MCP head不正文字               2    2     0.074 OK
+      止めた文言: BLOCKED(cloud): 枝の変更ファイルを git で取れなかったため止めます: 作成元の枝名に使えない文字があります: a;b
+K3  gh pr create --head コード枝   2    2     0.080 OK
+      止めた文言: BLOCKED(cloud): コード変更を含む枝は push までにし、PR は手元で shingo-cc 名義で作ってください。（コード側の変更: src/x.py）
+K3  gh pr create --head= docs枝 0    0     0.191 OK
+K3  gh pr create -H コード枝       2    2     0.094 OK
+      止めた文言: BLOCKED(cloud): コード変更を含む枝は push までにし、PR は手元で shingo-cc 名義で作ってください。（コード側の変更: src/x.py）
+K3  gh api head=コード枝           2    2     0.081 OK
+      止めた文言: BLOCKED(cloud): コード変更を含む枝は push までにし、PR は手元で shingo-cc 名義で作ってください。（コード側の変更: src/x.py）
+K3  gh api --raw-field head=docs枝 0    0     0.162 OK
+K3  head枝が存在しない                2    2     0.071 OK
+      止めた文言: BLOCKED(cloud): 枝の変更ファイルを git で取れなかったため止めます: fetch に失敗: fatal: couldn't find remote ref refs/heads/nosuchbr
+K3  追跡参照が古い(後からコード追加)          2    2     0.086 OK
+      止めた文言: BLOCKED(cloud): コード変更を含む枝は push までにし、PR は手元で shingo-cc 名義で作ってください。（コード側の変更: src/late.py）
+K3  --head 2回(後がコード枝)          2    2     0.084 OK
+      止めた文言: BLOCKED(cloud): コード変更を含む枝は push までにし、PR は手元で shingo-cc 名義で作ってください。（コード側の変更: src/x.py）
+K3  gh api -fhead=コード枝(詰め書き)   2    2     0.082 OK
+      止めた文言: BLOCKED(cloud): コード変更を含む枝は push までにし、PR は手元で shingo-cc 名義で作ってください。（コード側の変更: src/x.py）
+H1  本文中の -H docs枝              2    2     0.085 OK
+      止めた文言: BLOCKED(cloud): コード変更を含む枝は push までにし、PR は手元で shingo-cc 名義で作ってください。（コード側の変更: src/x.py）
+H2  本文中の --head docs枝          2    2     0.101 OK
+      止めた文言: BLOCKED(cloud): コード変更を含む枝は push までにし、PR は手元で shingo-cc 名義で作ってください。（コード側の変更: src/x.py）
+H3  gh api 末尾ヘッダ X-A:docs枝     2    2     0.085 OK
+      止めた文言: BLOCKED(cloud): コード変更を含む枝は push までにし、PR は手元で shingo-cc 名義で作ってください。（コード側の変更: src/x.py）
+H4  gh api Accept ヘッダが後ろ       0    0     0.181 OK
+H5  引用符が閉じていない(shlex の道)       2    2     0.067 OK
+      止めた文言: BLOCKED(cloud): 枝の変更ファイルを git で取れなかったため止めます: PR を作る命令は、gh だけの1行で書いてください（つなぎ・変数・置き換えがあると作成元を正しく読めないため止めます）: 引用符が閉じていません
+H7  語の途中の # (--title fix#12)   2    2     0.083 OK
+      止めた文言: BLOCKED(cloud): 枝の変更ファイルを git で取れなかったため止めます: PR を作る命令は、gh だけの1行で書いてください（つなぎ・変数・置き換えがあると作成元を正しく読めないため止めます）: つなぎ・変数・置き換えなどの記号があり、正しく読めません
+H8  gh api 語の途中の # (title=a#b) 2    2     0.078 OK
+      止めた文言: BLOCKED(cloud): 枝の変更ファイルを git で取れなかったため止めます: PR を作る命令は、gh だけの1行で書いてください（つなぎ・変数・置き換えがあると作成元を正しく読めないため止めます）: つなぎ・変数・置き換えなどの記号があり、正しく読めません
+H9  引用符の外のコメントは読めないので止める(R5)   2    2     0.064 OK
+      止めた文言: BLOCKED(cloud): 枝の変更ファイルを git で取れなかったため止めます: PR を作る命令は、gh だけの1行で書いてください（つなぎ・変数・置き換えがあると作成元を正しく読めないため止めます）: つなぎ・変数・置き換えなどの記号があり、正しく読めません
+H10 引用符の中の # は対象外              0    0     0.179 OK
+H11 コメント内の ' の後ろの行に fix#12     2    2     0.067 OK
+      止めた文言: BLOCKED(cloud): 枝の変更ファイルを git で取れなかったため止めます: PR を作る命令は、gh だけの1行で書いてください（つなぎ・変数・置き換えがあると作成元を正しく読めないため止めます）: つなぎ・変数・置き換えなどの記号があり、正しく読めません
+H12 git status # it's fine の後ろの行に fix#12 2    2     0.076 OK
+      止めた文言: BLOCKED(cloud): 枝の変更ファイルを git で取れなかったため止めます: PR を作る命令は、gh だけの1行で書いてください（つなぎ・変数・置き換えがあると作成元を正しく読めないため止めます）: つなぎ・変数・置き換えなどの記号があり、正しく読めません
+H13 行の継ぎ目の直後の #                2    2     0.084 OK
+      止めた文言: BLOCKED(cloud): 枝の変更ファイルを git で取れなかったため止めます: PR を作る命令は、gh だけの1行で書いてください（つなぎ・変数・置き換えがあると作成元を正しく読めないため止めます）: つなぎ・変数・置き換えなどの記号があり、正しく読めません
+H14 $' (ANSI-C 引用符)            2    2     0.066 OK
+      止めた文言: BLOCKED(cloud): 枝の変更ファイルを git で取れなかったため止めます: PR を作る命令は、gh だけの1行で書いてください（つなぎ・変数・置き換えがあると作成元を正しく読めないため止めます）: つなぎ・変数・置き換えなどの記号があり、正しく読めません
+H15 先頭のコメント行は読めないので止める(R5)     2    2     0.082 OK
+      止めた文言: BLOCKED(cloud): 枝の変更ファイルを git で取れなかったため止めます: PR を作る命令は、gh だけの1行で書いてください（つなぎ・変数・置き換えがあると作成元を正しく読めないため止めます）: つなぎ・変数・置き換えなどの記号があり、正しく読めません
+H16 Fix\ #12 (逃がした空白の直後の #)    2    2     0.064 OK
+      止めた文言: BLOCKED(cloud): 枝の変更ファイルを git で取れなかったため止めます: PR を作る命令は、gh だけの1行で書いてください（つなぎ・変数・置き換えがあると作成元を正しく読めないため止めます）: つなぎ・変数・置き換えなどの記号があり、正しく読めません
+H17 x\;#12 (逃がした ; の直後の #)     2    2     0.063 OK
+      止めた文言: BLOCKED(cloud): 枝の変更ファイルを git で取れなかったため止めます: PR を作る命令は、gh だけの1行で書いてください（つなぎ・変数・置き換えがあると作成元を正しく読めないため止めます）: つなぎ・変数・置き換えなどの記号があり、正しく読めません
+H18 命令文に \r を含む                2    2     0.073 OK
+      止めた文言: BLOCKED(cloud): 枝の変更ファイルを git で取れなかったため止めます: 命令文に復帰文字(\r)があり、正しく読めません
+H19 区切り直後のコメントは読めないので止める(R5)   2    2     0.073 OK
+      止めた文言: BLOCKED(cloud): 枝の変更ファイルを git で取れなかったため止めます: PR を作る命令は、gh だけの1行で書いてください（つなぎ・変数・置き換えがあると作成元を正しく読めないため止めます）: つなぎ・変数・置き換えなどの記号があり、正しく読めません
+H20 ;( の後ろに docs枝              2    2     0.065 OK
+      止めた文言: BLOCKED(cloud): 枝の変更ファイルを git で取れなかったため止めます: PR を作る命令は、gh だけの1行で書いてください（つなぎ・変数・置き換えがあると作成元を正しく読めないため止めます）: つなぎ・変数・置き換えなどの記号があり、正しく読めません
+H21 &&( の後ろに docs枝             2    2     0.063 OK
+      止めた文言: BLOCKED(cloud): 枝の変更ファイルを git で取れなかったため止めます: PR を作る命令は、gh だけの1行で書いてください（つなぎ・変数・置き換えがあると作成元を正しく読めないため止めます）: つなぎ・変数・置き換えなどの記号があり、正しく読めません
+H22 引用符の中の <<EOF から行頭 EOF までに本物の --head 2    2     0.075 OK
+      止めた文言: BLOCKED(cloud): 枝の変更ファイルを git で取れなかったため止めます: PR を作る命令は、gh だけの1行で書いてください（つなぎ・変数・置き換えがあると作成元を正しく読めないため止めます）: つなぎ・変数・置き換えなどの記号があり、正しく読めません
+H23 echo gh pr create の後ろの bash -c に本物の作成 2    2     0.086 OK
+      止めた文言: BLOCKED(cloud): 枝の変更ファイルを git で取れなかったため止めます: PR を作る命令は、gh だけの1行で書いてください（つなぎ・変数・置き換えがあると作成元を正しく読めないため止めます）: つなぎ・変数・置き換えなどの記号があり、正しく読めません
+H24 docs枝の作成の後ろの bash -c に本物の作成 2    2     0.073 OK
+      止めた文言: BLOCKED(cloud): 枝の変更ファイルを git で取れなかったため止めます: PR を作る命令は、gh だけの1行で書いてください（つなぎ・変数・置き換えがあると作成元を正しく読めないため止めます）: つなぎ・変数・置き換えなどの記号があり、正しく読めません
+H25 何も足さない普通の形                 0    0     0.177 OK
+H26 引用符の中の記号 (a <<b)           0    0     0.171 OK
+H27 変数 $G で本物を隠す               2    2     0.068 OK
+      止めた文言: BLOCKED(cloud): 枝の変更ファイルを git で取れなかったため止めます: PR を作る命令は、gh だけの1行で書いてください（つなぎ・変数・置き換えがあると作成元を正しく読めないため止めます）: つなぎ・変数・置き換えなどの記号があり、正しく読めません
+H28 逃がした \; で語を作る              2    2     0.063 OK
+      止めた文言: BLOCKED(cloud): 枝の変更ファイルを git で取れなかったため止めます: PR を作る命令は、gh だけの1行で書いてください（つなぎ・変数・置き換えがあると作成元を正しく読めないため止めます）: つなぎ・変数・置き換えなどの記号があり、正しく読めません
+H29 二重引用符の中の $(…)              2    2     0.066 OK
+      止めた文言: BLOCKED(cloud): 枝の変更ファイルを git で取れなかったため止めます: PR を作る命令は、gh だけの1行で書いてください（つなぎ・変数・置き換えがあると作成元を正しく読めないため止めます）: 二重引用符の中に $ ` \ があり、正しく読めません
+H30 cd && gh pr create (つなぎ)   2    2     0.063 OK
+      止めた文言: BLOCKED(cloud): 枝の変更ファイルを git で取れなかったため止めます: PR を作る命令は、gh だけの1行で書いてください（つなぎ・変数・置き換えがあると作成元を正しく読めないため止めます）: つなぎ・変数・置き換えなどの記号があり、正しく読めません
+H31 単引用符の中は何でもよい               0    0     0.174 OK
+H32 二重引用符の本文(普通の文字+節の見出し)      0    0     0.194 OK
+K1  >( の中に危険語                  2    2     0.073 OK
+      止めた文言: BLOCKED(cloud): 'DROP TABLE' は不可逆操作です。クラウドでは行えません。手元で PO の承認を得て実行してください。
+K1  単独&の後ろに危険語                 2    2     0.070 OK
+      止めた文言: BLOCKED(cloud): 'DROP TABLE' は不可逆操作です。クラウドでは行えません。手元で PO の承認を得て実行してください。
+K1  2>&1 の後ろに危険語               2    2     0.065 OK
+      止めた文言: BLOCKED(cloud): 'DROP TABLE' は不可逆操作です。クラウドでは行えません。手元で PO の承認を得て実行してください。
+K1  <( の中に危険語                  2    2     0.065 OK
+      止めた文言: BLOCKED(cloud): 'DROP TABLE' は不可逆操作です。クラウドでは行えません。手元で PO の承認を得て実行してください。
+K1  ssh-keygen は通す             0    0     0.142 OK
+R1  rm -fr                     2    2     0.080 OK
+      止めた文言: BLOCKED(cloud): rm の再帰削除（-r／-R／--recursive）はクラウドでは行えません。手元で PO の承認を得て実行してください。
+R2  rm -Rf                     2    2     0.079 OK
+      止めた文言: BLOCKED(cloud): 'rm -rf' は不可逆操作です。クラウドでは行えません。手元で PO の承認を得て実行してください。
+R3  rm -f -r                   2    2     0.079 OK
+      止めた文言: BLOCKED(cloud): rm の再帰削除（-r／-R／--recursive）はクラウドでは行えません。手元で PO の承認を得て実行してください。
+R4  rm --recursive             2    2     0.065 OK
+      止めた文言: BLOCKED(cloud): rm の再帰削除（-r／-R／--recursive）はクラウドでは行えません。手元で PO の承認を得て実行してください。
+R5  /bin/rm -dfr               2    2     0.068 OK
+      止めた文言: BLOCKED(cloud): rm の再帰削除（-r／-R／--recursive）はクラウドでは行えません。手元で PO の承認を得て実行してください。
+R6  env X=1 command rm -fr     2    2     0.064 OK
+      止めた文言: BLOCKED(cloud): rm の再帰削除（-r／-R／--recursive）はクラウドでは行えません。手元で PO の承認を得て実行してください。
+R7  ls && rm -fr               2    2     0.068 OK
+      止めた文言: BLOCKED(cloud): rm の再帰削除（-r／-R／--recursive）はクラウドでは行えません。手元で PO の承認を得て実行してください。
+R8  rm -f (再帰なし)               0    0     0.166 OK
+R9  rm -- -r (-r という名のファイル)    0    0     0.151 OK
+R10 grep内の rm -fr は読取り扱い       0    0     0.155 OK
+R11 commit文中の rm -fr は対象外      0    0     0.153 OK
+R12 rmdir                      0    0     0.144 OK
+R14 nice -n 5 rm -fr           2    2     0.063 OK
+      止めた文言: BLOCKED(cloud): rm の再帰削除（-r／-R／--recursive）はクラウドでは行えません。手元で PO の承認を得て実行してください。
+E1  $( ) の中の rm -fr            2    2     0.068 OK
+      止めた文言: BLOCKED(cloud): rm の再帰削除（-r／-R／--recursive）はクラウドでは行えません。手元で PO の承認を得て実行してください。
+E2  逆引用符の中の rm -fr             2    2     0.065 OK
+      止めた文言: BLOCKED(cloud): rm の再帰削除（-r／-R／--recursive）はクラウドでは行えません。手元で PO の承認を得て実行してください。
+E3  ( ) 殻の中の rm -fr            2    2     0.073 OK
+      止めた文言: BLOCKED(cloud): rm の再帰削除（-r／-R／--recursive）はクラウドでは行えません。手元で PO の承認を得て実行してください。
+E4  bash -c の中の rm -fr         2    2     0.066 OK
+      止めた文言: BLOCKED(cloud): rm の再帰削除（-r／-R／--recursive）はクラウドでは行えません。手元で PO の承認を得て実行してください。
+E5  /bin/sh -c の中の rm -Rf      2    2     0.073 OK
+      止めた文言: BLOCKED(cloud): 'rm -rf' は不可逆操作です。クラウドでは行えません。手元で PO の承認を得て実行してください。
+E6  eval の中の rm -fr            2    2     0.066 OK
+      止めた文言: BLOCKED(cloud): rm の再帰削除（-r／-R／--recursive）はクラウドでは行えません。手元で PO の承認を得て実行してください。
+E7  commit 文の $( ) の中の gh pr merge 2    2     0.091 OK
+      止めた文言: BLOCKED(cloud): gh pr merge はクラウドでは行いません（マージは手元で行います）。
+E8  $( ) の中の gh api PUT merge  2    2     0.069 OK
+      止めた文言: BLOCKED(cloud): gh api によるマージ(PUT …/merge)はクラウドでは行いません。
+E9  入れ子の $( )                  2    2     0.069 OK
+      止めた文言: BLOCKED(cloud): rm の再帰削除（-r／-R／--recursive）はクラウドでは行えません。手元で PO の承認を得て実行してください。
+E10 bash -c の中の $( )           2    2     0.080 OK
+      止めた文言: BLOCKED(cloud): rm の再帰削除（-r／-R／--recursive）はクラウドでは行えません。手元で PO の承認を得て実行してください。
+E11 閉じ忘れの $(                   2    2     0.065 OK
+      止めた文言: BLOCKED(cloud): rm の再帰削除（-r／-R／--recursive）はクラウドでは行えません。手元で PO の承認を得て実行してください。
+E12 commit 本文中の rm -fr は対象外    0    0     0.150 OK
+E13 echo "$(date)"             0    0     0.142 OK
+E14 単引用符の中の $( ) は実行されない       0    0     0.146 OK
+E15 commit の heredoc 書き方       0    0     0.142 OK
+E16 算術 $(( ))                  0    0     0.146 OK
+E17 \ 付きの $(                   0    0     0.149 OK
+E18 x=$(git rev-parse HEAD)    0    0     0.142 OK
+E20 5段の入れ子の中に rm -fr           2    2     0.067 OK
+      止めた文言: BLOCKED(cloud): 埋め込んだ命令の入れ子が深すぎて中身を確かめられないため止めます。入れ子を浅くするか、手元で PO の承認を得て実行してください。
+E21 5段の入れ子（中身は無害・深すぎで止める）      2    2     0.079 OK
+      止めた文言: BLOCKED(cloud): 埋め込んだ命令の入れ子が深すぎて中身を確かめられないため止めます。入れ子を浅くするか、手元で PO の承認を得て実行してください。
+E22 then の直後の ( )              2    2     0.062 OK
+      止めた文言: BLOCKED(cloud): rm の再帰削除（-r／-R／--recursive）はクラウドでは行えません。手元で PO の承認を得て実行してください。
+E23 do の直後の ( )                2    2     0.064 OK
+      止めた文言: BLOCKED(cloud): rm の再帰削除（-r／-R／--recursive）はクラウドでは行えません。手元で PO の承認を得て実行してください。
+E24 ! の直後の ( )                 2    2     0.087 OK
+      止めた文言: BLOCKED(cloud): rm の再帰削除（-r／-R／--recursive）はクラウドでは行えません。手元で PO の承認を得て実行してください。
+E25 time の直後の ( )              2    2     0.077 OK
+      止めた文言: BLOCKED(cloud): rm の再帰削除（-r／-R／--recursive）はクラウドでは行えません。手元で PO の承認を得て実行してください。
+E26 bash -c -- '…'             2    2     0.070 OK
+      止めた文言: BLOCKED(cloud): rm の再帰削除（-r／-R／--recursive）はクラウドでは行えません。手元で PO の承認を得て実行してください。
+E27 プロセス置換 <( )                2    2     0.082 OK
+      止めた文言: BLOCKED(cloud): rm の再帰削除（-r／-R／--recursive）はクラウドでは行えません。手元で PO の承認を得て実行してください。
+E28 $((rm …) ) の形              2    2     0.072 OK
+      止めた文言: BLOCKED(cloud): rm の再帰削除（-r／-R／--recursive）はクラウドでは行えません。手元で PO の承認を得て実行してください。
+E29 bash -c ドル付き単引用符           2    2     0.063 OK
+      止めた文言: BLOCKED(cloud): rm の再帰削除（-r／-R／--recursive）はクラウドでは行えません。手元で PO の承認を得て実行してください。
+E30 ドル付き単引用符の \x20             2    2     0.064 OK
+      止めた文言: BLOCKED(cloud): rm の再帰削除（-r／-R／--recursive）はクラウドでは行えません。手元で PO の承認を得て実行してください。
+E31 引用符なし \ 区切り                2    2     0.079 OK
+      止めた文言: BLOCKED(cloud): rm の再帰削除（-r／-R／--recursive）はクラウドでは行えません。手元で PO の承認を得て実行してください。
+E32 then の直後の ( ) で gh pr merge 2    2     0.065 OK
+      止めた文言: BLOCKED(cloud): gh pr merge はクラウドでは行いません（マージは手元で行います）。
+E33 4段の入れ子で無害                  0    0     0.156 OK
+E34 if の then ( ) 無害           0    0     0.156 OK
+E35 for の do ( ) 無害            0    0     0.175 OK
+E36 diff <( ) <( ) 無害          0    0     0.159 OK
+E37 算術の中の $( ) 無害              0    0     0.171 OK
+E38 bash -c -- 無害              0    0     0.166 OK
+E39 ドル付き単引用符 無害                0    0     0.197 OK
+E40 \u 小文字の16進で rm             2    2     0.078 OK
+      止めた文言: BLOCKED(cloud): rm の再帰削除（-r／-R／--recursive）はクラウドでは行えません。手元で PO の承認を得て実行してください。
+E41 \U 大文字8桁で rm               2    2     0.070 OK
+      止めた文言: BLOCKED(cloud): rm の再帰削除（-r／-R／--recursive）はクラウドでは行えません。手元で PO の承認を得て実行してください。
+E42 then( 空白なし                 2    2     0.063 OK
+      止めた文言: BLOCKED(cloud): rm の再帰削除（-r／-R／--recursive）はクラウドでは行えません。手元で PO の承認を得て実行してください。
+E43 do( 空白なし                   2    2     0.064 OK
+      止めた文言: BLOCKED(cloud): rm の再帰削除（-r／-R／--recursive）はクラウドでは行えません。手元で PO の承認を得て実行してください。
+E44 {( 空白なし                    2    2     0.076 OK
+      止めた文言: BLOCKED(cloud): rm の再帰削除（-r／-R／--recursive）はクラウドでは行えません。手元で PO の承認を得て実行してください。
+E45 !( 空白なし                    2    2     0.065 OK
+      止めた文言: BLOCKED(cloud): rm の再帰削除（-r／-R／--recursive）はクラウドでは行えません。手元で PO の承認を得て実行してください。
+E46 case a) の後の ( )            2    2     0.071 OK
+      止めた文言: BLOCKED(cloud): rm の再帰削除（-r／-R／--recursive）はクラウドでは行えません。手元で PO の承認を得て実行してください。
+E47 case (a) の後の ( )           2    2     0.079 OK
+      止めた文言: BLOCKED(cloud): rm の再帰削除（-r／-R／--recursive）はクラウドでは行えません。手元で PO の承認を得て実行してください。
+E48 関数 { ( ) }                 2    2     0.075 OK
+      止めた文言: BLOCKED(cloud): rm の再帰削除（-r／-R／--recursive）はクラウドでは行えません。手元で PO の承認を得て実行してください。
+E49 関数 f() ( )                 2    2     0.072 OK
+      止めた文言: BLOCKED(cloud): rm の再帰削除（-r／-R／--recursive）はクラウドでは行えません。手元で PO の承認を得て実行してください。
+E50 time -p ( )                2    2     0.063 OK
+      止めた文言: BLOCKED(cloud): rm の再帰削除（-r／-R／--recursive）はクラウドでは行えません。手元で PO の承認を得て実行してください。
+E51 bash -c 'rm -f''r'         2    2     0.068 OK
+      止めた文言: BLOCKED(cloud): rm の再帰削除（-r／-R／--recursive）はクラウドでは行えません。手元で PO の承認を得て実行してください。
+E52 bash -c r'm -fr'           2    2     0.075 OK
+      止めた文言: BLOCKED(cloud): rm の再帰削除（-r／-R／--recursive）はクラウドでは行えません。手元で PO の承認を得て実行してください。
+E53 bash -c "rm -"'fr'         2    2     0.066 OK
+      止めた文言: BLOCKED(cloud): rm の再帰削除（-r／-R／--recursive）はクラウドでは行えません。手元で PO の承認を得て実行してください。
+E54 bash -c $'rm -f'r\         2    2     0.071 OK
+      止めた文言: BLOCKED(cloud): rm の再帰削除（-r／-R／--recursive）はクラウドでは行えません。手元で PO の承認を得て実行してください。
+E55 配列 a=( ) 無害                0    0     0.139 OK
+E56 二重引用符の中の ( ) 無害            0    0     0.148 OK
+E57 grep -E 'a(b)' 無害          0    0     0.140 OK
+E58 関数定義 f() { } 無害            0    0     0.139 OK
+E59 case 無害                    0    0     0.157 OK
+E60 then( 無害                   0    0     0.141 OK
+E61 bash -c 'echo a''b' 無害     0    0     0.156 OK
+E62 bash -c $'echo A' 無害       0    0     0.144 OK
+E63 bash -c $'…\u0041…' 無害     0    0     0.141 OK
+E64 不正な \u \U（サロゲート・範囲外・桁なし）は例外なく通す 0    0     0.154 OK
+K4  本文に節なし(MCP)                2    2     0.077 OK
+      止めた文言: BLOCKED(cloud): PR 本文に「### 標準ワークフロー確認」の節がありません。入れてから作り直してください。
+K4  本文に節なし(gh)                 2    2     0.072 OK
+      止めた文言: BLOCKED(cloud): PR 本文に「### 標準ワークフロー確認」の節がありません。入れてから作り直してください。
+K4  本文に節あり(MCP)                0    0     0.169 OK
+K5  Stop 英語のみ                  2    2     0.063 OK
+      止めた文言: 直前の応答に日本語がありません。ユーザーへの応答は常に日本語で書きます。同じ内容を日本語で書き直してください（コード・コマンド・識別子はそのままでよい）。
+K5  Stop 日本語あり                 0    0     0.065 OK
+K5  Stop 続行中は通す                0    0     0.055 OK
+FC  JSON不正→止める(guard)          2    2         - OK
+FC  guard異常終了→止める              2    2         - OK
+      止めた文言: BLOCKED(cloud): 見張りの内部エラーのため止めます（終了コード 1）。
+FC  JSON不正→止める(dispatch)       2    2         - OK
+FC  JSON不正 変数なし→通す             0    0         - OK
+K5  SessionStart 決まり注入         0    0     0.054 OK
+== 便2 B1〜B6b（CLAUDE_CODE_REMOTE=true）==
+No   ケース                          期待                 実際   秒      判定
+B1   登録ルール deny(Bash)             exit0+deny         0     0.149 OK
+B1b  rules-ack あり→通す              exit0+出力なし         0     0.139 OK
+B1c  origin/mainからルールを読む          exit0+deny+本文      0     0.144 OK
+B2   Write /tmp/x.py deny         deny               0     0.142 OK
+B2b  Write docs 配下は通す             出力なし               0     0.150 OK
+B2c  リポジトリ外の docs は止める            deny               0     0.167 OK
+B3   UserPromptSubmit 登録ルール注入     additionalContext  0     0.087 OK
+B4   python3.11 -m venv           exit2+py312-guard  2     0.100 OK
+B4   pip install                  exit2+py312-guard  2     0.092 OK
+B4   virtualenv                   exit2+py312-guard  2     0.094 OK
+B4b  python3.12 -m venv           exit0              0     0.160 OK
+B4b  uv venv --python 3.12        exit0              0     0.149 OK
+B4b  git status                   exit0              0     0.147 OK
+B5   担当 timeout 300000            exit2+guard名       2     0.128 OK
+B5b  親 timeout 300000             exit0              0     0.153 OK
+B5b  担当 timeout 240000            exit0              0     0.138 OK
+B6   カード 受領確認なし                   exit2+card-lint    2     0.140 OK
+B6b  ふつうの依頼文                      exit0+出力なし         0     0.089 OK
+B7  18件中 逸脱 0件 OK
+B8  1秒以上かかった件: 0（最大 0.167 秒） OK
+== 時間切れ T1〜T5 ==
+T1  上限1秒で $(true) 1万個→止める+理由文  期待 2 実際 0 0.42秒 NG
+      止めた文言: 
+T2  既定の上限で echo hi→通す  期待 0 実際 0 0.06秒 OK
+T3  PreToolUse の dispatch 3項目すべて onFailure block＋先頭判定  期待 3項目 OK
+T4  手元(REMOTE 未設定・PROJECT_DIR 無効)で即 exit 0  期待 0 実際 0 0.00秒 OK
+T5  クラウド(REMOTE=true)で無害な Bash→dispatch が呼ばれて exit 0  期待 0 実際 0 OK
+T5b クラウドで dispatch.sh が見つからない→0 以外（onFailure block が効く形）  実際 127 OK
+== CLAUDE_CODE_REMOTE 未設定（K6: 全件 exit 0・出力なし）==
+K6  169件中 逸脱 0件 OK
+K7  1秒以上かかった件: 0（負荷 0.3。負荷が高い機械では参考値）
+== 結果: 1件NG ==
