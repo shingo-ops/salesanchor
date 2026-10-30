@@ -7,11 +7,14 @@
 #   bash scripts/dev/check-before-submit.sh --list-fixtures   # 今の変更で選ばれる見本の名前だけ表示して終わる
 #   bash scripts/dev/check-before-submit.sh --only a,b # 検査の id を絞る（試験と切り分け用）
 #
-# 終了コード: 0 = 流した検査が全部 ○ / 1 = 1 つでも × / 2 = commit していない変更がある（または origin/main が無い）
+# 終了コード: 0 = 流した検査が全部 ○ / 1 = 1 つでも × / 2 = 入口が使えない
+#   （commit していない変更・origin/main が無い・必須一覧が読めないか 0 件・--only の値が無いか知らない id・流した検査が 0 件）
 #
 # 決まり:
 #   ・CI と同じ台本を呼ぶ（検査の中身は写さない）。呼び方は各ワークフローの記述に合わせてある
-#   ・比べる元は origin/main との分岐点。fetch はしない（使った origin/main の SHA を表示する）
+#   ・変更ファイルの一覧は origin/main との分岐点から取る。2 点で比べる検査（ui-governance・dangling-route・value-writes）には
+#     CI の pull_request.base.sha に揃えて origin/main の SHA を渡す。枝が main より遅れていれば表示する
+#   ・fetch はしない（使った origin/main の SHA を表示する）
 #   ・流さない必須チェックは名前と理由を「CI で確かめる」として全部表示する（黙って通さない）。
 #     名前は docs/specs/rule-enforcement/required-checks.txt から読む（台本に名前の一覧は持たない）
 #   ・最後の判定は CI。この入口は提出前の補助（手元と CI は python・node の版が違う）
@@ -26,8 +29,12 @@ while test $# -gt 0; do
   case "$1" in
     --full) FULL=1 ;;
     --list-fixtures) LIST_FIX=1 ;;
-    --only) shift; ONLY="${1:-}" ;;
-    -h|--help) sed -n 2,14p "$0"; exit 0 ;;
+    --only)
+      if test $# -lt 2 || test -z "$2" || test "${2#--}" != "$2"; then
+        echo "--only には検査の id（カンマ区切り）を渡してください。終了コード 2"; exit 2
+      fi
+      shift; ONLY="$1" ;;
+    -h|--help) sed -n 2,16p "$0"; exit 0 ;;
     *) echo "不明な引数: $1" >&2; exit 2 ;;
   esac
   shift
@@ -36,10 +43,32 @@ done
 cd "$(git rev-parse --show-toplevel)" || exit 2
 REQ_FILE="docs/specs/rule-enforcement/required-checks.txt"
 
+# --only の id が知らないものなら止める（黙って 0 件にしない）。fixture-<見本名> は選ばれた見本の id
+KNOWN_IDS="doc-index rule-registry tenant-lint claude-size adr-index ui-tests ui-gate dangling dangling-tests lessons migreg-exists migreg-tests mg-7 mg-8 mg-repo mg-vw-tests mg-churn mg-dupreg heading-dup test-rule-registry fixture-select guard-eval fixtures-all"
+if test -n "$ONLY"; then
+  for oid in $(printf '%s' "$ONLY" | tr ',' ' '); do
+    case " $KNOWN_IDS " in *" $oid "*) continue ;; esac
+    case "$oid" in fixture-?*) continue ;; esac
+    echo "--only に知らない id があります: ${oid}（終了コード 2）"
+    echo "使える id: ${KNOWN_IDS} と fixture-<見本名>"
+    exit 2
+  done
+fi
+
 # --- commit していない変更があれば止める（見本の runner は commit 済みの HEAD から写しを作るため） ---
 if test -n "$(git status --porcelain)"; then
   echo "commit していない変更があります。commit してから流してください（終了コード 2）。"
   git status --short | head -20
+  exit 2
+fi
+
+# 必須チェックの一覧が読めない・0 件なら、何を流していないか示せないので止める
+if ! test -r "$REQ_FILE"; then
+  echo "必須チェックの一覧が読めません: ${REQ_FILE}（終了コード 2）"
+  exit 2
+fi
+if test "$(grep -cvE '^[[:space:]]*(#|$)' "$REQ_FILE")" = "0"; then
+  echo "必須チェックの一覧が 0 件です: ${REQ_FILE}（終了コード 2）"
   exit 2
 fi
 
@@ -49,25 +78,43 @@ HEAD_SHA=$(git rev-parse HEAD)
 CHANGED=$(git diff --name-only "${BASE_SHA}...HEAD")
 
 # --- 変更ファイルから選ぶ見本（case.json の argv にある台本、または見本のフォルダの中） ---
-FIX_SHORTS=$(printf '%s\n' "$CHANGED" | python3 -I -c '
+FIX_OUT=$(printf '%s\n' "$CHANGED" | python3 -I -c '
 import sys, json, glob
 changed = set(l.strip() for l in sys.stdin if l.strip())
 root = "scripts/tests/rule-fixtures"
 out = set()
+errs = []
 for cj in glob.glob(root + "/*/*/case.json"):
     short = cj.split("/")[-3]
     try:
-        argv = json.load(open(cj, encoding="utf-8")).get("argv", [])
-    except Exception:
+        with open(cj, encoding="utf-8") as fh:
+            argv = json.load(fh).get("argv", [])
+    except Exception as e:
+        errs.append("ERR:" + cj + " を読めない（" + type(e).__name__ + "）")
         continue
     prefix = root + "/" + short + "/"
     if any(a in changed for a in argv if isinstance(a, str)) or any(f.startswith(prefix) for f in changed):
         out.add(short)
 print("\n".join(sorted(out)))
-')
+print("\n".join(errs))
+sys.exit(1 if errs else 0)
+' 2>&1)
+FIX_RC=$?
+FIX_ERR=""
+FIX_SHORTS=""
+if test "$FIX_RC" = "0" || printf '%s\n' "$FIX_OUT" | grep -q '^ERR:'; then
+  FIX_ERR=$(printf '%s\n' "$FIX_OUT" | grep '^ERR:' | sed 's/^ERR://')
+  FIX_SHORTS=$(printf '%s\n' "$FIX_OUT" | grep -v '^ERR:' | grep .)
+else
+  FIX_ERR="見本の選別の python が落ちました（終了コード ${FIX_RC}）: $(printf '%s\n' "$FIX_OUT" | tail -n 3 | tr '\n' ' ')"
+fi
 
 if test "$LIST_FIX" = "1"; then
   printf '%s\n' "$FIX_SHORTS"
+  if test -n "$FIX_ERR"; then
+    printf '%s\n' "$FIX_ERR" >&2
+    exit 1
+  fi
   exit 0
 fi
 
@@ -76,7 +123,12 @@ now() { perl -MTime::HiRes=time -e 'printf "%.2f", time'; }
 elapsed() { perl -e 'printf "%.1f", $ARGV[1] - $ARGV[0]' "$1" "$2"; }
 
 echo "== 提出前の検査（check-before-submit）=="
-echo "比べる元: origin/main = ${MAIN_SHA}（分岐点 ${BASE_SHA}）"
+echo "比べる元: 2 点で比べる検査 = origin/main ${MAIN_SHA} / 変更ファイルの一覧・3 点で比べる検査 = 分岐点 ${BASE_SHA}"
+LAG_NOTE=""
+if test "$MAIN_SHA" != "$BASE_SHA"; then
+  LAG_NOTE="注意: この枝は main より遅れている。main を取り込んでから流すと CI と同じ結果になる"
+  echo "$LAG_NOTE"
+fi
 echo "HEAD: ${HEAD_SHA}"
 echo "変更ファイル: $(printf '%s\n' "$CHANGED" | grep -c . ) 件 / ログ置き場: ${LOGDIR}"
 echo ""
@@ -105,7 +157,7 @@ run_check() {
   fi
   local t0 t1 secs rc
   t0=$(now)
-  ( cd "$dir" && "$@" ) > "${LOGDIR}/${id}.log" 2>&1
+  ( cd "$dir" && "$@" ) < /dev/null > "${LOGDIR}/${id}.log" 2>&1
   rc=$?
   t1=$(now)
   secs=$(elapsed "$t0" "$t1")
@@ -131,8 +183,8 @@ run_check tenant-lint "lint_tenant_schema (strict)" "tenant schema lint" . pytho
 run_check claude-size "check-claude-size" "line count" frontend node scripts/check-claude-size.js
 run_check adr-index "generate-adr-index --check" "ADR index" . node scripts/generate-adr-index.js --check
 run_check ui-tests "test-ui-governance" "UI governance" . node scripts/tests/test-ui-governance.js
-run_check ui-gate "check-ui-governance" "UI governance" . env BASE_SHA="$BASE_SHA" HEAD_SHA="$HEAD_SHA" node scripts/check-ui-governance.js
-run_check dangling "check-dangling-routes" "dangling-route" . env BASE_SHA="$BASE_SHA" HEAD_SHA="$HEAD_SHA" node scripts/check-dangling-routes.js
+run_check ui-gate "check-ui-governance" "UI governance" . env BASE_SHA="$MAIN_SHA" HEAD_SHA="$HEAD_SHA" node scripts/check-ui-governance.js
+run_check dangling "check-dangling-routes" "dangling-route" . env BASE_SHA="$MAIN_SHA" HEAD_SHA="$HEAD_SHA" node scripts/check-dangling-routes.js
 run_check dangling-tests "test-dangling-routes" "dangling-route" . node scripts/tests/test-dangling-routes.js
 
 # check-lessons-section: SEC6_ADDED が 0 でなければ失敗ではなく注意（ラベルは提出後にしか付けられない）
@@ -162,8 +214,8 @@ run_check migreg-exists "check-migration-registration-exists" "実行テスト�
 run_check migreg-tests "test-migration-registration-exists" "実行テスト（実DB）" . node scripts/tests/test-migration-registration-exists.js
 
 # migration-guard.yml のうち、独立した台本ファイルを呼ぶ step だけ（ワークフロー内に直接書かれた grep 等は CI で確かめる）
-run_check mg-7 "migration-value-writes diff --check 7" "新 Column" . python3 scripts/check-migration-value-writes.py diff "$BASE_SHA" "$HEAD_SHA" --check 7
-run_check mg-8 "migration-value-writes diff --check 8" "新 Column" . python3 scripts/check-migration-value-writes.py diff "$BASE_SHA" "$HEAD_SHA" --check 8
+run_check mg-7 "migration-value-writes diff --check 7" "新 Column" . python3 scripts/check-migration-value-writes.py diff "$MAIN_SHA" "$HEAD_SHA" --check 7
+run_check mg-8 "migration-value-writes diff --check 8" "新 Column" . python3 scripts/check-migration-value-writes.py diff "$MAIN_SHA" "$HEAD_SHA" --check 8
 run_check mg-repo "migration-value-writes repo" "新 Column" . python3 scripts/check-migration-value-writes.py repo
 run_check mg-vw-tests "test_migration_value_writes" "新 Column" . python3 scripts/tests/test_migration_value_writes.py -v
 # 次の 2 つは migration-guard.yml の detect_churn_paths と同じ条件のときだけ流す
@@ -181,12 +233,26 @@ run_check test-rule-registry "test_check_rule_registry" "-" . python3 -I scripts
 # 違反の見本: 変更が見本の台本・見本のフォルダに当たるときだけ、その見本を --only で流す
 echo ""
 echo "-- 違反の見本（変更に関係するものだけ）--"
+if selected fixture-select; then
+  if test -n "$FIX_ERR"; then
+    record fixture-select "見本の選別（case.json）" "-" 1 "0.0" ""
+    echo "  × 見本の選別（case.json）                           (終了コード 1)"
+    printf '%s\n' "$FIX_ERR" | sed 's/^/    | /'
+  else
+    record fixture-select "見本の選別（case.json）" "-" 0 "0.0" ""
+    printf '  ○ %-48s %6s 秒\n' "見本の選別（case.json）" "0.0"
+  fi
+else
+  record fixture-select "見本の選別（case.json）" "-" skip 0 "--only で選ばれていない"
+fi
 if test -z "$FIX_SHORTS"; then
   echo "  - 変更に関係する見本はありません（全件は --full で流せます）"
 else
-  for short in $FIX_SHORTS; do
+  while IFS= read -r short; do
     run_check "fixture-${short}" "run_rule_fixtures --only ${short}" "-" . python3 -I scripts/tests/run_rule_fixtures.py --only "$short"
-  done
+  done <<EOF_SHORTS
+$FIX_SHORTS
+EOF_SHORTS
 fi
 
 echo ""
@@ -226,8 +292,10 @@ partial_for() { # 一部だけ流した必須名の注記
 echo ""
 echo "== 必須チェック（${REQ_FILE}）=="
 FAILS=0
+RAN=0
 i=0
 while test $i -lt $N; do
+  if test "${R_RC[$i]}" != "skip"; then RAN=$((RAN + 1)); fi
   if test "${R_RC[$i]}" != "0" && test "${R_RC[$i]}" != "skip"; then FAILS=$((FAILS + 1)); fi
   i=$((i + 1))
 done
@@ -250,8 +318,10 @@ while IFS= read -r line || test -n "$line"; do
   done
   if test $ran -gt 0 && test $bad -gt 0; then
     echo "  × ${name} — 手元で流して落ちた"
+  elif test $ran -gt 0 && test -n "$(partial_for "$name")"; then
+    echo "  △ ${name} — 一部だけ手元で流した。残りは CI で確かめる$(partial_for "$name")"
   elif test $ran -gt 0; then
-    echo "  ○ ${name} — 手元で流した$(partial_for "$name")"
+    echo "  ○ ${name} — 手元で流した"
   else
     echo "  - ${name} — CI で確かめる（$(reason_for "$name")）"
   fi
@@ -278,10 +348,15 @@ echo "  手元: $(python3 --version 2>&1) / node $(node --version 2>&1)"
 echo "  CI  : Python 3.12 / node 22（guard-authoring だけ 24）"
 echo "  版が違うので、最後の判定は CI です（この入口は提出前の補助）"
 echo ""
-echo "合計 ${TOTAL} 秒 / 必須 ${REQ_TOTAL} 件を表示 / 落ちた検査 ${FAILS} 件 / ログ ${LOGDIR}"
+echo "合計 ${TOTAL} 秒 / 必須 ${REQ_TOTAL} 件を表示 / 流した検査 ${RAN} 件 / 落ちた検査 ${FAILS} 件 / ログ ${LOGDIR}（消さずに残します）"
+test -n "$LAG_NOTE" && echo "$LAG_NOTE"
 if test $FAILS -gt 0; then
   echo "結果: × （終了コード 1）"
   exit 1
+fi
+if test $RAN -eq 0; then
+  echo "結果: 流した検査が 0 件でした。何も確かめていないので通しません（終了コード 2）"
+  exit 2
 fi
 echo "結果: ○ 流した検査は全部通りました（終了コード 0）"
 exit 0

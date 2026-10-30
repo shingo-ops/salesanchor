@@ -10,6 +10,9 @@
   2 違反を 1 つ入れた写しで流すと終了コード 1・落ちた検査の名前が出る（違反 2 種類）
   3 見本の台本・見本のフォルダを触ったときだけ、その見本が選ばれる
   4 commit していない変更があると終了コード 2
+  5 必須一覧が無い・0 件なら 2 / --only の値が無い・知らない id なら 2 / 流した検査が 0 件なら 2
+  6 壊れた case.json は × で終了コード 1
+  7 main より遅れた枝では「遅れている」と表示する（遅れていなければ出さない）
 設計: docs/handoff/rule-enforcement/design.md の R4a
 """
 import os
@@ -57,6 +60,7 @@ def required_names():
 class CheckBeforeSubmit(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.mkdtemp(prefix="cbs-test-")
+        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
         self.wt = os.path.join(self.tmp, "wt")
         # 本体のリポジトリの参照（origin/main など）を書き換えないよう、独立した写しを作る。
         # CI の浅い clone（origin/main が無い・履歴が 1 件）でも動くよう、今の HEAD を取り込み、
@@ -74,9 +78,6 @@ class CheckBeforeSubmit(unittest.TestCase):
         os.chmod(dst, 0o755)
         self.commit("test: copy script")
 
-    def tearDown(self):
-        shutil.rmtree(self.tmp, ignore_errors=True)
-
     def commit(self, msg):
         git(self.wt, "add", "-A")
         git(self.wt, "-c", "commit.gpgsign=false", "commit", "--no-verify", "-q", "--allow-empty", "-m", msg)
@@ -92,6 +93,7 @@ class CheckBeforeSubmit(unittest.TestCase):
 
     def run_script(self, *args):
         env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+        env["TMPDIR"] = self.tmp  # 入口のログ置き場も、終わりに消す一時フォルダの中に作らせる
         r = subprocess.run(["bash", SCRIPT_REL] + list(args), cwd=self.wt, env=env,
                            capture_output=True, text=True, timeout=600)
         return r.returncode, (r.stdout or "") + (r.stderr or "")
@@ -106,6 +108,8 @@ class CheckBeforeSubmit(unittest.TestCase):
                       "generate-adr-index --check", "check-dangling-routes", "test_check_rule_registry"):
             self.assertIn("○ " + label, out)
         self.assertIn("CI で確かめる", out)
+        self.assertIn("△ ", out)  # 一部だけ流した必須名は ○ にしない
+        self.assertNotIn("遅れている", out)
         self.assertIn("Python 3.12", out)
         self.assertIn("合計", out)
 
@@ -156,6 +160,58 @@ class CheckBeforeSubmit(unittest.TestCase):
         rc, out = self.run_script()
         self.assertEqual(rc, 2, out)
         self.assertIn("commit していない変更", out)
+
+    # 5 黙って通る道をふさぐ（すべて --only で速くしてある）
+    def test_missing_or_empty_required_list_exits_2(self):
+        req = "docs/specs/rule-enforcement/required-checks.txt"
+        os.remove(os.path.join(self.wt, req))
+        self.commit("test: remove required list")
+        rc, out = self.run_script("--only", "rule-registry")
+        self.assertEqual(rc, 2, out)
+        self.assertIn("必須チェックの一覧が読めません", out)
+        with open(os.path.join(self.wt, req), "w", encoding="utf-8") as fh:
+            fh.write("# コメントだけ\n\n")
+        self.commit("test: empty required list")
+        rc, out = self.run_script("--only", "rule-registry")
+        self.assertEqual(rc, 2, out)
+        self.assertIn("0 件", out)
+
+    def test_bad_only_value_exits_2(self):
+        rc, out = self.run_script("--only", "no-such-check")
+        self.assertEqual(rc, 2, out)
+        self.assertIn("知らない id", out)
+        rc, out = self.run_script("--only")
+        self.assertEqual(rc, 2, out)
+        self.assertIn("--only には", out)
+
+    def test_zero_checks_ran_exits_2(self):
+        # guard-eval は --full のときだけ流れる。--full 無しで選ぶと 1 件も流れない
+        rc, out = self.run_script("--only", "guard-eval")
+        self.assertEqual(rc, 2, out)
+        self.assertIn("0 件", out)
+
+    # 6 壊れた case.json
+    def test_broken_case_json_fails(self):
+        self.put("scripts/tests/rule-fixtures/zz-broken/zz-case/case.json", "{ これは JSON ではない\n")
+        self.commit("test: broken case.json")
+        rc, out = self.run_script("--only", "fixture-select")
+        self.assertEqual(rc, 1, out)
+        self.assertIn("× 見本の選別", out)
+        self.assertIn("zz-broken/zz-case/case.json", out)
+        rc, out = self.run_script("--list-fixtures")
+        self.assertEqual(rc, 1, out)
+
+    # 7 main より遅れた枝
+    def test_lagging_branch_shows_notice(self):
+        git(self.wt, "checkout", "-q", "--detach", "HEAD")
+        self.put("docs/zz-main-advance.md", "x\n")
+        self.commit("test: main advances")
+        git(self.wt, "update-ref", "refs/remotes/origin/main", "HEAD")
+        git(self.wt, "checkout", "-q", "--detach", "HEAD~1")  # この枝は main より 1 つ遅れる
+        rc, out = self.run_script("--only", "rule-registry")
+        self.assertEqual(rc, 0, out)
+        self.assertIn("この枝は main より遅れている。main を取り込んでから流すと CI と同じ結果になる", out)
+        self.assertGreaterEqual(out.count("この枝は main より遅れている"), 2)  # 最初と最後
 
 
 if __name__ == "__main__":
