@@ -60,6 +60,7 @@
 | `VITE_FIREBASE_API_KEY` | ✅ | frontend に焼き込まれる Firebase API キー（FIREBASE_API_KEY と同値） |
 | `VITE_FIREBASE_AUTH_DOMAIN` | ✅ | frontend に焼き込まれる Auth ドメイン（ADR-032 により `auth.salesanchor.jp`） |
 | `VITE_GCP_PROJECT_ID` | ✅ | frontend に焼き込まれる GCP プロジェクト ID |
+| `VITE_AUTH_PROVIDER` | optional | 画面のログイン方式。ちょうど `self` のときだけ自社 API（未設定・`firebase` は Firebase。ADR-1013 便4b） |
 
 **運用注意**:
 - 未設定だと frontend が `auth/invalid-api-key` で真っ白画面。docker compose build 前に必ず確認。
@@ -107,7 +108,9 @@
 | `SMTP_PASSWORD` | optional | SMTP パスワード | (送信用アドレスのパスワード。`$`・`#`・引用符・空白は使わない) |
 | `MAIL_FROM` | optional | 差出人 | `support@salesanchor.jp` |
 | `CONTACT_NOTIFY_EMAIL` | optional | 問い合わせ通知の宛先（空なら `support@salesanchor.jp`） | `support@salesanchor.jp` |
-| `AUTH_PASSWORD_RESET_ALLOWLIST` | optional | パスワード再設定メールの送信許可（カンマ区切り。`AUTH_PROVIDER=firebase` の間はここに載った email にだけ送る。空・未設定なら誰にも送らない） | `tester@example.com` |
+| `AUTH_PASSWORD_RESET_ALLOWLIST` | optional | パスワード再設定メールの送信許可（カンマ区切り。`AUTH_PROVIDER=firebase` の間はここに載った email にだけ送る。空・未設定なら誰にも送らない）。`self` の間は使われない。firebase に戻したときだけ読む | `tester@example.com` |
+| `AUTH_PROVIDER` | optional | ログイン方式（`self`=自社ログイン / `firebase`=既定。ADR-1013 便4b で deploy.yml が `self` を書く） | `self` |
+| `AUTH_JWT_SECRET` | self のとき必須 | 自社トークンの署名鍵（32 文字以上・`AUTH_VIEWER_JWT_SECRET` と別の値。GitHub Secret から deploy.yml が書く） | (GitHub Secret) |
 
 **運用注意**: `SMTP_HOST`・`SMTP_USER`・`SMTP_PASSWORD`・`MAIL_FROM` のどれかが空なら idle（ログのみ）。Meta App Review はメール必須ではないので最小構成可。
 

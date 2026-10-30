@@ -125,7 +125,7 @@ export default function NotificationsPage() {
         <form onSubmit={handleSubmit}>
           {/* eslint-disable-next-line local/no-japanese-literal -- TODO: placeholder を翻訳キーに統合（ADR-027 既知負債） */}
           <div className="form-group"><label>{t("settings.channelName")} *</label><TextFieldControl required value={form.channel_name} onChange={e => setForm({ ...form, channel_name: e.target.value })} placeholder="例: #crm-activity" /></div>
-          <div className="form-group"><label>Webhook URL *</label><TextFieldControl required value={form.webhook_url} onChange={e => setForm({ ...form, webhook_url: e.target.value })} placeholder="https://discord.com/api/webhooks/..." /></div>
+          <div className="form-group"><label>{t("notifications.webhookUrlLabel")} *</label><TextFieldControl required value={form.webhook_url} onChange={e => setForm({ ...form, webhook_url: e.target.value })} placeholder="https://discord.com/api/webhooks/..." /></div>
           <div className="form-group">
             <label>{t("notifications.eventTypesLabel")}</label>
             {eventTypes.map((et) => (
@@ -152,7 +152,7 @@ export default function NotificationsPage() {
       >
         <form onSubmit={handleEditSubmit}>
           <div className="form-group"><label>{t("settings.channelName")} *</label><TextFieldControl required value={editForm.channel_name} onChange={e => setEditForm({ ...editForm, channel_name: e.target.value })} /></div>
-          <div className="form-group"><label>Webhook URL *</label><TextFieldControl required value={editForm.webhook_url} onChange={e => setEditForm({ ...editForm, webhook_url: e.target.value })} /></div>
+          <div className="form-group"><label>{t("notifications.webhookUrlLabel")} *</label><TextFieldControl required value={editForm.webhook_url} onChange={e => setEditForm({ ...editForm, webhook_url: e.target.value })} /></div>
           <div className="form-group">
             <label>{t("notifications.eventTypesLabel")}</label>
             {eventTypes.map((et) => (
@@ -180,7 +180,7 @@ export default function NotificationsPage() {
           },
           {
             key: "webhook_url",
-            header: "Webhook URL",
+            header: t("notifications.webhookUrlLabel"),
             renderCell: (ch) => (
               <span className="mono" style={{ maxWidth: 'var(--col-width-url)', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ch.webhook_url}</span>
             ),

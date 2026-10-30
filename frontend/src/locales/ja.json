@@ -1368,6 +1368,7 @@
     }
   },
   "channels": {
+    "pageIdLabel": "ページID:",
     "title": "チャンネル (Meta連携)",
     "connect": "Facebookページを接続",
     "disconnect": "切断",
@@ -1697,6 +1698,7 @@
     }
   },
   "invoices": {
+    "erpKeyLabel": "ERPキー:",
     "subtitle": "請求書の作成と管理ができます。",
     "detailSubtitle": "請求書の内容確認と発行・入金・取消の操作を行います",
     "createSubtitle": "新しい請求書を作成します",
@@ -2152,6 +2154,7 @@
     "subtitle": "Webhook通知チャネルを設定・管理します。"
   },
   "notifications": {
+    "webhookUrlLabel": "Webhook URL",
     "eventTypesLabel": "この送信先に送る通知",
     "eventTypesEmpty": "（未選択）",
     "eventTypesColumn": "通知の種類",
@@ -3219,6 +3222,7 @@
     "englishNameRequired": "英語の名前（姓・名）を入力してください。Discordで返信するときに必要です。"
   },
   "badges": {
+    "userFallback": "ユーザー #{{id}}",
     "subtitle": "バッジと達成条件を管理します。",
     "badgeCount": "バッジ数",
     "badgeList": "バッジ一覧",

@@ -1368,6 +1368,7 @@
     }
   },
   "channels": {
+    "pageIdLabel": "Page ID:",
     "title": "Channels (Meta integration)",
     "connect": "Connect a Facebook Page",
     "disconnect": "Disconnect",
@@ -1697,6 +1698,7 @@
     }
   },
   "invoices": {
+    "erpKeyLabel": "ERP Key:",
     "subtitle": "Create and manage invoices.",
     "detailSubtitle": "Review the invoice and issue, record payment, or void it",
     "createSubtitle": "Create a new invoice",
@@ -2152,6 +2154,7 @@
     "subtitle": "Configure and manage Webhook notification channels."
   },
   "notifications": {
+    "webhookUrlLabel": "Webhook URL",
     "eventTypesLabel": "Notifications sent to this destination",
     "eventTypesEmpty": "(none selected)",
     "eventTypesColumn": "Notification types",
@@ -3219,6 +3222,7 @@
     "englishNameRequired": "Please enter your English name (last and first). It is required to reply on Discord."
   },
   "badges": {
+    "userFallback": "User #{{id}}",
     "subtitle": "Manage badges and achievement conditions.",
     "badgeCount": "Badges",
     "badgeList": "Badge list",
