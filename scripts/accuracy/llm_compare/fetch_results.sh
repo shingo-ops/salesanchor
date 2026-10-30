@@ -40,7 +40,9 @@ for t in tids:
         shas.add(r.get("prompt_sha256"))
 diff = [j for j, s in by_job.items() if len(s) != 1]
 print("投稿=%d  repeat 間で文字列が違う投稿=%d  指示書の sha256 の種類=%d" % (len(by_job), len(diff), len(shas)))
-if diff or len(shas) != 1:
+EXPECT = "84afd2e4e0094b542d5f1dada1fef39290aa6d997135296e78601fc945ac8b0c"
+if diff or shas != {EXPECT}:
+    print("指示書の sha256 が期待値と違う:", sorted(map(str, shas)), "期待", EXPECT)
     bad += 1
 print("照合:", "OK" if not bad else "NG")
 sys.exit(1 if bad else 0)

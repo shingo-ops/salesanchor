@@ -4,12 +4,13 @@
   python3 -I summarize.py --out-dir OUT \
       --score gemini1=DIR --score gemini2=DIR --score gemini3=DIR --score haiku=DIR --score sonnet=DIR \
       --gemini gemini1 --gemini gemini2 --gemini gemini3 --claude haiku --claude sonnet \
-      [--usage gemini1=JSONL ...] [--daily-n N] [--gemini-30d-cost-usd X --fx-yen Y --claude-extra-yen Z] \
+      [--usage gemini1=JSONL:1 --usage gemini2=JSONL:2 --usage haiku=JSONL ...] [--daily-n N] [--gemini-30d-cost-usd X --fx-yen Y --claude-extra-yen Z] \
       [--md5-before S --md5-after S --ledger-rows N --gemini-calls N]
   DIR は score_v102.py の --out-dir（result.tsv がある）。--out-dir は集計値だけ（社外秘の元データは入れない）。
 """
 import argparse
 import csv
+from fractions import Fraction
 import json
 import os
 import statistics
@@ -28,7 +29,7 @@ class Bad(Exception):
 
 
 def read_result(d):
-    """result.tsv → {(項目, 段): {"ok","ng","na","rate"(float or None),"count"(int or None)}}"""
+    """result.tsv → {(項目, 段): {"ok","ng","na","rate"(float or None),"frac"(Fraction or None),"count"(int or None)}}"""
     path = os.path.join(d, "result.tsv")
     out = {}
     with open(path, encoding="utf-8", newline="") as f:
@@ -45,13 +46,26 @@ def read_result(d):
                 continue
             okn, ngn = int(ok), int(ng)
             den = okn + ngn
-            out[(item, stage)] = {"ok": okn, "ng": ngn, "na": int(na or 0), "rate": (100.0 * okn / den) if den else None}
+            out[(item, stage)] = {"ok": okn, "ng": ngn, "na": int(na or 0), "rate": (100.0 * okn / den) if den else None,
+                                "frac": Fraction(100 * okn, den) if den else None}
     return out
 
 
-def read_usage(path):
-    """JSONL → 件数・トークン・時間。Gemini と Claude で定義が違う（design §3）。"""
+def split_spec(spec):
+    """'JSONL' または 'JSONL:repeat' → (path, repeat or None)。repeat は末尾が :数字 のときだけ。"""
+    head, sep, tail = spec.rpartition(":")
+    if sep and tail.isdigit() and head:
+        return head, int(tail)
+    return spec, None
+
+
+def read_usage(spec):
+    """JSONL（または JSONL:repeat）→ 件数・トークン・時間。Gemini と Claude で定義が違う（design §3）。
+    repeat を付けると、その repeat の行だけを数える（Gemini は repeat ごとに別の列で出す）。"""
+    path, rep = split_spec(spec)
     rows = [json.loads(l) for l in open(path, encoding="utf-8") if l.strip()]
+    if rep is not None:
+        rows = [r for r in rows if r.get("repeat") == rep]
     ok = [r for r in rows if not r.get("error") and r.get("response_text")]
     is_claude = bool(ok) and str(ok[0].get("config", "")).startswith("claude-")
     inp = out = think = 0
@@ -71,7 +85,8 @@ def read_usage(path):
            "elapsed_max": max(el) if el else None, "claude": is_claude}
     if is_claude:
         res["list_cost_usd"] = sum((r.get("total_cost_usd") or 0) for r in ok)
-        res["duration_ms_median"] = statistics.median([r["duration_ms"] for r in ok if r.get("duration_ms") is not None] or [0])
+        dm = [r["duration_ms"] for r in ok if r.get("duration_ms") is not None]
+        res["duration_ms_median"] = statistics.median(dm) if dm else None
     return res
 
 
@@ -86,23 +101,26 @@ def build(results, gemini, claude, usage, opts):
     gmean = {}
     for key in JUDGE_RATE + REF:
         gs = [results[g][key]["rate"] for g in gemini if key in results[g] and results[g][key].get("rate") is not None]
-        gmean[key] = sum(gs) / len(gs) if gs else None
+        fs = [results[g][key]["frac"] for g in gemini if key in results[g] and results[g][key].get("frac") is not None]
+        gmean[key] = sum(fs) / len(fs) if fs else None  # 比べるのは Fraction（整数の ok/ng から作る）。float では比べない
         row = [key[0], key[1], "判定" if key in JUDGE_RATE else "参考"]
         for l in labels:
             row.append(fmt(results[l].get(key, {}).get("rate")) + "%" if results[l].get(key, {}).get("rate") is not None else "-")
-        row += [fmt(gmean[key]) + "%" if gmean[key] is not None else "-",
+        row += [fmt(float(gmean[key])) + "%" if gmean[key] is not None else "-",
                 ("%.1f〜%.1f%%" % (min(gs), max(gs))) if gs else "-"]
         table.append(row)
     for key in JUDGE_COUNT:
         gs = [results[g][key]["count"] for g in gemini if key in results[g]]
-        gmean[key] = sum(gs) / len(gs) if gs else None
+        gmean[key] = Fraction(sum(gs), len(gs)) if gs else None
         table.append([key[0], "件数", "判定"] + [fmt(results[l].get(key, {}).get("count")) for l in labels]
-                     + [fmt(gmean[key]), ("%d〜%d" % (min(gs), max(gs))) if gs else "-"])
+                     + [fmt(float(gmean[key])) if gmean[key] is not None else "-", ("%d〜%d" % (min(gs), max(gs))) if gs else "-"])
     # トークン・時間（並べるだけ）
     for name, fn in (("入力トークン合計", lambda u: u["input"]), ("出力トークン合計", lambda u: u["output"]),
                      ("考えたトークン合計", lambda u: u["think"]), ("成功件数", lambda u: u["ok"]),
                      ("1件の時間 中央値(秒)", lambda u: u["elapsed_median"]), ("1件の時間 最大(秒)", lambda u: u["elapsed_max"]),
-                     ("合計時間(秒)", lambda u: u["elapsed_total"])):
+                     ("合計時間(秒)", lambda u: u["elapsed_total"]),
+                     ("duration_ms 中央値(Claudeのみ)", lambda u: u.get("duration_ms_median")),
+                     ("定価換算 合計USD(Claudeのみ・参考。実際の請求ではない)", lambda u: "%.4f" % u["list_cost_usd"] if "list_cost_usd" in u else None)):
         row = [name, "使用量", "参考"]
         for l in labels:
             row.append(fmt(fn(usage[l])) if l in usage else "-")
@@ -110,8 +128,8 @@ def build(results, gemini, claude, usage, opts):
     # 合否
     verdict = []
     for c in claude:
-        ok_rate = all(results[c].get(k, {}).get("rate") is not None and gmean[k] is not None
-                      and results[c][k]["rate"] >= gmean[k] for k in JUDGE_RATE)
+        ok_rate = all(results[c].get(k, {}).get("frac") is not None and gmean[k] is not None
+                      and results[c][k]["frac"] >= gmean[k] for k in JUDGE_RATE)
         ok_cnt = all(results[c].get(k, {}).get("count") is not None and gmean[k] is not None
                      and results[c][k]["count"] <= gmean[k] for k in JUDGE_COUNT)
         verdict.append([c, "正答率", "合格" if (ok_rate and ok_cnt) else "不合格",
@@ -183,13 +201,18 @@ def kv(items):
     return out
 
 
+def usage_paths(items):
+    """--usage の LABEL=JSONL[:repeat] → {LABEL: JSONL のパス（repeat 抜き）}"""
+    return {k: split_spec(v)[0] for k, v in kv(items).items()}
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--out-dir", required=True)
     ap.add_argument("--score", action="append", required=True, help="LABEL=score_v102 の出力フォルダ")
     ap.add_argument("--gemini", action="append", required=True)
     ap.add_argument("--claude", action="append", default=[])
-    ap.add_argument("--usage", action="append", help="LABEL=JSONL")
+    ap.add_argument("--usage", action="append", help="LABEL=JSONL か LABEL=JSONL:repeat（Gemini は repeat ごと）")
     ap.add_argument("--expected-posts", type=int, default=100)
     ap.add_argument("--daily-n", type=int)
     ap.add_argument("--gemini-30d-cost-usd", type=float)
@@ -207,7 +230,7 @@ def main(argv=None):
             if l not in results:
                 raise Bad("--score に無い名前: " + l)
         usage = {k: read_usage(v) for k, v in kv(a.usage).items()}
-        stopped = {c: os.path.exists(p + ".stop.txt") for c, p in kv(a.usage).items()}
+        stopped = {c: os.path.exists(p + ".stop.txt") for c, p in usage_paths(a.usage).items()}
         opts = dict(expected_posts=a.expected_posts, daily_n=a.daily_n, gemini_30d_usd=a.gemini_30d_cost_usd,
                     fx_yen=a.fx_yen, claude_extra_yen=a.claude_extra_yen, md5_before=a.md5_before,
                     md5_after=a.md5_after, ledger_rows=a.ledger_rows, gemini_calls=a.gemini_calls, stopped=stopped)

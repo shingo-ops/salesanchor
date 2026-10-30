@@ -124,12 +124,30 @@ def record_stop(path, reason, done, total):
                 % (datetime.now(timezone.utc).isoformat(), reason, done, total))
 
 
+LOGIN_KEYS = ("loggedIn", "authMethod", "apiProvider", "subscriptionType")  # ログイン種別を示す欄だけ残す（メール等は残さない）
+
+
+def redact_auth(text):
+    """`claude auth status` の出力から、ログイン種別を示す欄だけを取り出す。全文は保存しない。"""
+    try:
+        d = json.loads(text)
+    except ValueError:
+        return {"parsed": False}
+    if not isinstance(d, dict):
+        return {"parsed": False}
+    out = {k: d[k] for k in LOGIN_KEYS if k in d and isinstance(d[k], (bool, str, int, type(None)))}
+    out["parsed"] = True
+    out["subscription"] = bool(d.get("subscriptionType"))
+    return out
+
+
 def preflight(claude_bin, env, runner=subprocess.run):
     check_env(env)
     info = {}
     for key, args in (("version", ["--version"]), ("auth_status", ["auth", "status"])):
         p = runner([claude_bin] + args, capture_output=True, text=True, timeout=60)
-        info[key] = (p.stdout or p.stderr or "").strip()
+        text = (p.stdout or p.stderr or "").strip()
+        info[key] = redact_auth(text) if key == "auth_status" else text
         if p.returncode != 0:
             raise Stop("claude %s が rc=%s" % (" ".join(args), p.returncode))
     return info
@@ -154,9 +172,7 @@ def main(argv=None, runner=subprocess.run, env=None):
     stop_path = a.out + ".stop.txt"
     schema_text = json.dumps(json.load(open(a.schema, encoding="utf-8")), ensure_ascii=False)
     cmd = build_cmd(a.claude_bin, a.model, schema_text, a.effort)
-    targets = load_pairs(a.pair)
-    if a.limit:
-        targets = targets[: a.limit]
+    targets = []
     done_ids = set()
     if os.path.exists(a.out):
         if not a.resume:
@@ -164,6 +180,9 @@ def main(argv=None, runner=subprocess.run, env=None):
         done_ids = {json.loads(l)["job_id"] for l in open(a.out, encoding="utf-8") if l.strip()}
     done = len(done_ids)
     try:
+        targets = load_pairs(a.pair)  # 止まったら stop.txt に残す
+        if a.limit:
+            targets = targets[: a.limit]
         if not a.skip_preflight:
             info = preflight(a.claude_bin, env, runner)
             with open(a.out + ".preflight.json", "w", encoding="utf-8") as f:

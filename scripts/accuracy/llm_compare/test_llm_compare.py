@@ -6,6 +6,7 @@
 （無ければ skip）。claude は偽の命令（一時フォルダに作る小さな python スクリプト）に差し替える。
 """
 import csv
+from fractions import Fraction
 import hashlib
 import json
 import os
@@ -102,7 +103,7 @@ mode = os.environ.get("FAKE_MODE", "ok")
 if a[:1] == ["--version"]:
     print("fake 0.0"); sys.exit(0)
 if a[:2] == ["auth", "status"]:
-    print("logged in (fake)"); sys.exit(0)
+    print(os.environ.get("FAKE_AUTH", "logged in (fake)")); sys.exit(0)
 assert "--bare" not in a
 for need in ("--tools", "--setting-sources", "--strict-mcp-config", "--no-session-persistence", "--json-schema", "--system-prompt"):
     assert need in a, need
@@ -167,6 +168,34 @@ class RunClaudeTest(unittest.TestCase):
     def lines(self, out="o.jsonl"):
         p = os.path.join(self.d, out)
         return [json.loads(l) for l in open(p)] if os.path.exists(p) else []
+
+    def test_auth_status_is_redacted(self):
+        secret = "someone@example.invalid"
+        os.environ["FAKE_AUTH"] = json.dumps({"loggedIn": True, "authMethod": "claude.ai", "email": secret,
+                                              "orgName": "ORG-X", "subscriptionType": "max"})
+        try:
+            self.assertEqual(self.run_rc(), 0)
+        finally:
+            os.environ.pop("FAKE_AUTH", None)
+        txt = open(os.path.join(self.d, "o.jsonl.preflight.json"), encoding="utf-8").read()
+        self.assertNotIn(secret, txt)
+        self.assertNotIn("ORG-X", txt)
+        got = json.loads(txt)["auth_status"]
+        self.assertEqual(got, {"loggedIn": True, "authMethod": "claude.ai", "subscriptionType": "max",
+                               "parsed": True, "subscription": True})
+        # JSON でない出力は全文を残さない
+        self.assertEqual(rc.redact_auth("name@example.invalid logged in"), {"parsed": False})
+
+    def test_load_pairs_stop_is_recorded(self):
+        bad_idx = os.path.join(self.d, "bad.index.tsv")
+        open(bad_idx, "w").write("serial\tsha256\tchars\n")  # 成功行より index が少ない
+        code = rc.main(["--model", "haiku", "--schema", os.path.join(self.d, "s.json"), "--prompt-dir", self.pd,
+                        "--pair", "%s:%s" % (os.path.join(self.d, "tx.jsonl"), bad_idx),
+                        "--out", os.path.join(self.d, "o2.jsonl"), "--claude-bin", self.fake, "--skip-preflight"],
+                       env=self.env)
+        self.assertEqual(code, 1)
+        stop = open(os.path.join(self.d, "o2.jsonl.stop.txt"), encoding="utf-8").read()
+        self.assertIn("index に通し番号 1 が無い", stop)
 
     def test_all_ok_uses_repeat1_only(self):
         self.assertEqual(self.run_rc(), 0)
@@ -252,6 +281,7 @@ class SplitSummarizeTest(unittest.TestCase):
                        check=True, capture_output=True)
         mine, ref = sm.read_result(out), sm.read_result(SCORE_REF)
         self.assertEqual(mine, ref)
+        self.assertEqual(mine[("E1", "Gemini")].pop("frac"), Fraction(100 * 1441, 1480))
         self.assertEqual(mine[("E1", "Gemini")], {"ok": 1441, "ng": 39, "na": 0, "rate": 100.0 * 1441 / 1480})
         self.assertEqual(mine[("C1読み落とし", "件数")], {"count": 2})
         summ = os.path.join(self.d, "sum")
@@ -275,9 +305,99 @@ class SplitSummarizeTest(unittest.TestCase):
         self.assertEqual((ug["input"], ug["output"], ug["think"]), (10, 3, 4))
         self.assertEqual((uc["input"], uc["output"], uc["think"]), (6, 7, 4))
 
+    def _result_dir(self, name, rates, counts=(0, 0)):
+        """rates = {E1,E2,E3: (ok, ng)}、counts = (C1読み落とし, 余分)。result.tsv だけの小さな出力フォルダ"""
+        d = os.path.join(self.d, name)
+        os.makedirs(d)
+        with open(os.path.join(d, "result.tsv"), "w", encoding="utf-8", newline="") as f:
+            w = csv.writer(f, delimiter="\t")
+            w.writerow(["項目", "段", "OK", "NG", "対象外", "率"])
+            for k, (ok, ng) in rates.items():
+                w.writerow([k, "Gemini", ok, ng, 0, ""])
+            w.writerow(["C1読み落とし", "件数", 0, counts[0], 0, ""])
+            w.writerow(["余分", "件数", 0, counts[1], 0, ""])
+        return d
+
+    def test_tie_passes_with_fraction(self):
+        # Gemini 3回の率 1/3・1/3・2/3 → 平均 4/9。Claude は 4/9 ちょうど。float の平均だと 44.44444444444445 > 44.44444444444444 で落ちる
+        e = lambda ok, ng: {"E1": (ok, ng), "E2": (ok, ng), "E3": (ok, ng)}  # noqa: E731
+        gs = [self._result_dir("g1", e(1, 2)), self._result_dir("g2", e(1, 2)), self._result_dir("g3", e(2, 1))]
+        c = self._result_dir("c", e(4, 5))
+        floats = [100.0 * 1 / 3, 100.0 * 1 / 3, 100.0 * 2 / 3]
+        self.assertFalse(100.0 * 4 / 9 >= sum(floats) / 3)  # float なら落ちる＝この試験が意味を持つ
+        out = os.path.join(self.d, "sumtie")
+        self.assertEqual(sm.main(["--out-dir", out, "--score", "g1=" + gs[0], "--score", "g2=" + gs[1], "--score", "g3=" + gs[2],
+                                  "--score", "c=" + c, "--gemini", "g1", "--gemini", "g2", "--gemini", "g3", "--claude", "c"]), 0)
+        md = open(os.path.join(out, "summary.md"), encoding="utf-8").read()
+        self.assertIn("| c | 正答率 | 合格 |", md)
+        # 1件だけ足りなければ不合格
+        c2 = self._result_dir("c2", e(4, 6))
+        out2 = os.path.join(self.d, "sumtie2")
+        sm.main(["--out-dir", out2, "--score", "g1=" + gs[0], "--score", "g2=" + gs[1], "--score", "g3=" + gs[2],
+                 "--score", "c=" + c2, "--gemini", "g1", "--gemini", "g2", "--gemini", "g3", "--claude", "c"])
+        self.assertIn("| c | 正答率 | 不合格 |", open(os.path.join(out2, "summary.md"), encoding="utf-8").read())
+
+    def test_usage_repeat_spec_and_table_rows(self):
+        g = os.path.join(self.d, "g.jsonl")
+        with open(g, "w") as f:
+            for rep, el in ((1, 1.0), (2, 2.0), (3, 4.0)):
+                f.write(json.dumps({"job_id": "j", "repeat": rep, "config": "v102", "response_text": "x", "elapsed_sec": el,
+                                    "usage_raw": {"prompt_token_count": 10 * rep}}) + "\n")
+        self.assertEqual(sm.split_spec(g + ":2"), (g, 2))
+        self.assertEqual(sm.split_spec(g), (g, None))
+        self.assertEqual(sm.read_usage(g + ":2")["input"], 20)
+        self.assertEqual(sm.read_usage(g + ":3")["calls"], 1)
+        self.assertEqual(sm.read_usage(g)["calls"], 3)
+        c = os.path.join(self.d, "c.jsonl")
+        with open(c, "w") as f:
+            for i, dm in enumerate((100, 300, 200)):
+                f.write(json.dumps({"job_id": "j%d" % i, "repeat": 1, "config": "claude-haiku", "response_text": "x",
+                                    "elapsed_sec": 1.0, "duration_ms": dm, "total_cost_usd": 0.25,
+                                    "usage_raw": {"input_tokens": 1, "output_tokens": 1}}) + "\n")
+        self.assertEqual(sm.read_usage(c)["duration_ms_median"], 200)
+        self.assertAlmostEqual(sm.read_usage(c)["list_cost_usd"], 0.75)
+        e = {"E1": (1, 1), "E2": (1, 1), "E3": (1, 1)}
+        d1, d2, dc = self._result_dir("a1", e), self._result_dir("a2", e), self._result_dir("ac", e)
+        out = os.path.join(self.d, "sumrep")
+        self.assertEqual(sm.main(["--out-dir", out, "--score", "g1=" + d1, "--score", "g2=" + d2, "--score", "c=" + dc,
+                                  "--gemini", "g1", "--gemini", "g2", "--claude", "c",
+                                  "--usage", "g1=" + g + ":1", "--usage", "g2=" + g + ":2", "--usage", "c=" + c,
+                                  "--expected-posts", "3"]), 0)
+        md = open(os.path.join(out, "summary.md"), encoding="utf-8").read()
+        self.assertIn("| 入力トークン合計 | 使用量 | 参考 | 10 | 20 | 3 |", md)
+        self.assertIn("| duration_ms 中央値(Claudeのみ) | 使用量 | 参考 | - | - | 200 |", md)
+        self.assertIn("| - | - | 0.7500 |", md)
+        self.assertIn("定価換算 合計USD", md)
+
     def test_summarize_refuses_inside_repo(self):
         with self.assertRaises(sm.Bad):
             sm.check_out_dir(os.path.join(HERE, "out"))
+
+
+class ScriptsTest(unittest.TestCase):
+    """VPS／Mac 台本の構文と、REVISE で足した止めが入っていること（実行はしない）"""
+
+    def read(self, name):
+        return open(os.path.join(HERE, name), encoding="utf-8").read()
+
+    def test_bash_syntax(self):
+        for n in ("vps_run_gemini.sh", "vps_convert.sh", "fetch_results.sh"):
+            r = subprocess.run(["bash", "-n", os.path.join(HERE, n)], capture_output=True, text=True)
+            self.assertEqual(r.returncode, 0, n + r.stderr)
+
+    def test_run_gemini_guards(self):
+        s = self.read("vps_run_gemini.sh")
+        for needle in ("docker compose config --format json",           # R1
+                       '"$BASE/out/$TID.jsonl"', '"$BASE/out/$TID.index.tsv"', '"$BASE/$TID.out"',   # R2
+                       "prompt_ab:llmcmp-%", "TOTAL_USD=5.00", "MIN_REMAIN=1.00", '--max-cost-usd "$REMAIN"',  # R3
+                       "deploy.yml", "rev-parse HEAD", "--retry-transient",   # R4
+                       "84afd2e4e0094b542d5f1dada1fef39290aa6d997135296e78601fc945ac8b0c"):
+            self.assertIn(needle, s)
+        self.assertNotIn("--max-cost-usd 5.00", s)
+        self.assertNotIn("grep -A2 'healthcheck:'", s)
+
+    def test_fetch_checks_expected_sha(self):
+        self.assertIn("84afd2e4e0094b542d5f1dada1fef39290aa6d997135296e78601fc945ac8b0c", self.read("fetch_results.sh"))
 
 
 if __name__ == "__main__":
