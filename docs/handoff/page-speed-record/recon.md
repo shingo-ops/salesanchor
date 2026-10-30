@@ -45,7 +45,7 @@
 |---|---|
 | `.github/workflows/prod-ui-check.yml` が毎日 JST 07:00（cron `0 22 * * *`）と手動で動く。機械は `ubuntu-24.04` | `.github/workflows/prod-ui-check.yml:6-14,26` |
 | 配備中は 10 分待って見送る | 同 `:29-52` |
-| 点検の本体は `tests/prod-check/` の 3 ファイル。設定の `testDir` は `.`（同じ場所の `*.spec.ts` を全部動かす） | `tests/prod-check/playwright.config.ts:19` |
+| 点検の本体は `tests/prod-check/` の 3 ファイル。設定の `testDir` は `.`（同じ場所の、名前が .spec.ts で終わるファイルを全部動かす） | `tests/prod-check/playwright.config.ts:19` |
 | 不合格のときだけ Discord に知らせる（`if: failure()`） | `.github/workflows/prod-ui-check.yml:108-141` |
 | 仕事全体の時間上限は 20 分 | 同 `:27` |
 | ログインする人は見るだけの役割（`dashboard.view`・`goals.view`・`customers.view`・`leads.view`）。tenant_001 のテスト用か tenant_002 の未使用の人 | `docs/handoff/qa-smoke-rebuild/design.md:188-192,369` |
