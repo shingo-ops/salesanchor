@@ -109,9 +109,15 @@ test.describe("本番の画面点検", () => {
   // 点検用の人のメールでは行わない（失敗を重ねると締め出されるため）
   test("S7 間違ったパスワードでは入れない", async ({ page }) => {
     await page.goto("/login");
-    await page.getByLabel("メールアドレス").fill("prod-ui-check-nobody@example.invalid");
+    // .invalid は EmailStr が形の誤りとして弾く（422）。弾かれない予約ドメイン example.com を使う
+    await page.getByLabel("メールアドレス").fill("prod-ui-check-nobody@example.com");
     await page.getByLabel("パスワード", { exact: true }).fill("prod-ui-check-wrong-password-0");
+    const loginRes = page.waitForResponse(
+      (r) => r.request().method() === "POST" && new URL(r.url()).pathname === "/api/v1/auth/login",
+      { timeout: 20_000 },
+    );
     await page.getByRole("button", { name: "ログイン" }).click();
+    expect((await loginRes).status(), "ログイン API の応答（パスワード違いは 401）").toBe(401);
     await expect(page.locator(".error-message")).toBeVisible();
     expect(new URL(page.url()).pathname).toBe("/login");
   });
