@@ -7,7 +7,7 @@
 | 起案日 | 2026-10-22 |
 | 方針の決定者 | Shingo（PO）。設計: Claude Opus |
 | 置き換える | Supersedes ADR-1009（§14-4 PO「1」。本 ADR が Accepted になったときに効く） |
-| 関連 | ADR-1009（置き換える受付）、ADR-1012（24時間保守。Decision 5 に追記）、ADR-1025（誤り報告。受け口・順番待ち・全停止を共通にする）、ADR-136（危険 PR の GO）、ADR-1003（GO の委任）、ADR-1033（会話の合意） |
+| 関連 | ADR-1009（置き換える受付）、ADR-1012（24時間保守。Decision 5 に追記）、ADR-1025（誤り報告。受け口・順番待ち・全停止を共通にする）、ADR-136（危険 PR の GO）、ADR-1003（GO の委任）、ADR-1033（会話の合意）、ADR-1052（本 ADR を改める。ADR-1052 が Accepted になったときに効く） |
 | 設計 | agent-console リポジトリ `docs/handoff/discord-pdca/design.md`・`recon.md`（agent-console PR #67 で保存。第0段の結果は同じ設計書に追記する） |
 
 ---
@@ -67,3 +67,13 @@
 - 便2 の実装カードを出す前に PO の承認で採用に上げる。そのとき ADR-1009 のステータスを「本 ADR による置き換え済み」に直す。
 - §14-6（月次成績表での Discord 発の行の数え方）は段階6 の設計のときに聞く。
 - 便2 の K17 で名義の判定①〜⑤（別の名義の鍵を取り出す道・書く仕事）を確かめ、通らなければ PO に戻す。
+
+## 改訂
+
+### 改訂（調べる役はクラウドの相談係 AI、2026-10-30）
+
+- 経緯: Mac の囲いで件の作業を動かすと Mac が重くなる（PO）。囲いの受入も 4 つ中 2 つの合格で止まった。PO は Discord の投稿を「自律的に保守が始まるトリガー」とし、外への情報の持ち出しを禁止した（ADR-1052）。設計: salesanchor リポジトリ [design.md](../handoff/cloud-case-ai/design.md)。
+- Decision 6 を改める: 投稿を受けて最初に調べる役は、Mac の `discord-case` 役ではなく、クラウドの相談係 AI（ADR-1052）にする。相談係 AI の報告を受けた後の件のセッションは、今までどおり `discord-case` 役（囲い・行き先の許可・`filesystem.denyRead`）で開く。全権の管理者としては開かない。
+- Decision 7 を改める（行き先）: 相談係 AI が届くのは `case-api.salesanchor.jp` だけ。鍵はクラウドの network secret の `CASE_AGENT_TOKEN` 1 つで、環境変数には置かない。agent-console が使う `CASE_ADMIN_TOKEN`・`OPS_API_TOKEN` は手元の Keychain だけに置き、件の囲いと判断役には渡さない。
+- Decision 12 を改める: 指示書の正本は `docs/ai-agents/ops-incident-agent.md` の 1 か所のまま。相談係 AI の専用リポジトリの CLAUDE.md は写しにし、CI で正本とのハッシュ一致を確かめる。
+- 本改訂は ADR-1052 が Accepted になったときに効く。
