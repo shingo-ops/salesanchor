@@ -5,6 +5,7 @@ linter の出力を確認する。
 """
 from __future__ import annotations
 
+import subprocess
 import sys
 import tempfile
 import textwrap
@@ -225,3 +226,71 @@ def test_schema_qualified_text_is_not_flagged():
     violations = lint_file(p)
     # has_helper=True なので Rule A も Rule B も発火しないはず
     assert violations == []
+
+
+# ──────────────────────────────────────────────────────────────────
+# 終了コード (CI と同じく別プロセスの命令として流す)
+# ──────────────────────────────────────────────────────────────────
+# CI の必須チェックは `python3 scripts/lint_tenant_schema.py --mode strict <path>` の
+# 終了コードだけで止まるかを決める。lint_file() だけでは sys.exit(main()) を通った
+# 終了コードを確かめられないため、命令として流して returncode を見る。
+
+_LINT_SCRIPT = _SCRIPT_DIR / "lint_tenant_schema.py"
+
+_VIOLATION_SRC = """
+    from sqlalchemy import text
+
+    @router.post("/leads")
+    async def create_lead(
+        db: AsyncSession = Depends(get_db),
+        tenant_id: int = Depends(get_current_tenant),
+    ):
+        await db.execute(text("INSERT INTO leads (id) VALUES (1)"))
+        await db.commit()
+"""
+
+_CLEAN_SRC = """
+    from sqlalchemy import text
+
+    @router.post("/leads")
+    async def create_lead(
+        db: AsyncSession = Depends(get_db),
+        tenant_id: int = Depends(get_current_tenant),
+    ):
+        leads_t = tenant_table_ref(db, tenant_id, "leads")
+        await db.execute(text(f"INSERT INTO {leads_t} ..."))
+        await db.commit()
+        await reset_tenant_context(db, tenant_id)
+"""
+
+
+def _run_lint(mode: str, src: str) -> "subprocess.CompletedProcess[str]":
+    """一時ファイルを作って linter を別プロセスで流し、終了後に一時ファイルを消す。"""
+    p = _write_tmp(src)
+    try:
+        return subprocess.run(
+            [sys.executable, str(_LINT_SCRIPT), "--mode", mode, str(p)],
+            capture_output=True,
+            text=True,
+        )
+    finally:
+        p.unlink(missing_ok=True)
+
+
+def test_strict_mode_violation_exits_1():
+    """strict + 違反ファイル → 終了コード 1、stderr に failing CI。"""
+    r = _run_lint("strict", _VIOLATION_SRC)
+    assert r.returncode == 1
+    assert "mode=strict: failing CI" in r.stderr
+
+
+def test_strict_mode_clean_exits_0():
+    """strict + 正しいファイル → 終了コード 0。"""
+    r = _run_lint("strict", _CLEAN_SRC)
+    assert r.returncode == 0
+
+
+def test_warning_mode_violation_exits_0():
+    """warning + 違反ファイル → 終了コード 0 (strict との取り違えに気づく)。"""
+    r = _run_lint("warning", _VIOLATION_SRC)
+    assert r.returncode == 0

@@ -649,3 +649,46 @@ APPROVE。根拠: 4 本とも今の main で通ることを写しで確かめた
 - 原因: 検査は `LOCAL_PRECHECK` と `GITHUB_ACTIONS === 'true'` の併用を止める（scripts/check-process-artifacts.js:1642）。試験は手元での事前検査を真似るため LOCAL_PRECHECK=1 を渡すが、CI の実行環境の GITHUB_ACTIONS=true をそのまま子に引き継ぐ。手元では GITHUB_ACTIONS が無いので通る。
 - 対処: その手順だけ `env -u GITHUB_ACTIONS node scripts/tests/test-process-artifacts.js` で流し、手元と同じ条件にする。試験と検査の中身は変えない。CI での併用を止める決まりは、試験が自分で GITHUB_ACTIONS=true を渡す 1 件（test-process-artifacts.js:2039）で引き続き試される。
 - 他の 3 本の手順も、この修正後の CI で初めて結果が出る。そこで落ちたら同じように原因を調べて止まる。
+
+## R2d tenant schema 検査の「違反なら失敗で終わる」部分を試す（設計・2026-10-30）
+
+### 前提（origin/main ba3e9207d の事実。調べの生出力は手元の /tmp/CC報告ファイル/lint-strict-recon/）
+- 2026-10-30 PO「２」で、R2c で見つかった足りない所をふさぐ作業を選んだ。
+- R2c の K2 で、scripts/lint_tenant_schema.py の strict の `return 1` を `return 0` に弱めても、scripts/test_lint_tenant_schema.py は 11 passed のまま通った。試験は `lint_file()` だけを呼び、`main()` と終了コードを試していない（試験 13〜18 行は lint_file だけを import）。
+- 必須チェック「ADR-072 tenant schema lint (strict mode)」は `python3 scripts/lint_tenant_schema.py --mode strict backend/app/routers/` を呼ぶ（lint-tenant-schema.yml:66-69）。止まるかどうかは、この命令の終了コードだけで決まる。
+- `main(argv)`（lint_tenant_schema.py:306）は引数のパスだけを走査し、git やネットワークに依存しない（325-333 行）。違反があれば strict で 1、warning で 0、違反がなければ 0 を返す（356-367 行）。最後は `sys.exit(main())`（370-371 行）。旗は `--mode strict` で、`--strict` は無い。
+- 一時の違反ファイル・正しいファイルで実測：命令として流すと strict＋違反は rc=1（stderr に `mode=strict: failing CI`）、strict＋正しいは rc=0、warning＋違反は rc=0（d_*.txt）。
+
+### 目的
+CI と同じ「命令として流したときの終了コード」を試験で確かめ、strict の失敗の返し方が壊れたら R2c で足した毎回の試験で気づけるようにする。
+
+### 変更後
+1. scripts/test_lint_tenant_schema.py に試験を 3 件足す。検査の本体を、CI と同じく別のプロセスの命令として流す（`subprocess.run([sys.executable, <scripts の絶対パス>/lint_tenant_schema.py, "--mode", ..., <一時ファイル>], capture_output=True, text=True)`）。
+   - strict＋違反ファイル → returncode が 1、stderr に `mode=strict: failing CI` を含む。
+   - strict＋正しいファイル → returncode が 0。
+   - warning＋違反ファイル → returncode が 0（strict と warning の取り違えに気づくため）。
+2. 違反ファイル・正しいファイルは既存の `_write_tmp` で作る。パスは必ず明示する（既定の `backend/app/routers` は実行場所で変わるため使わない）。
+3. 既存の 11 件と検査の本体は変えない。ワークフローも変えない（R2c の existing rule tests が毎回 pytest で流す）。
+
+### 選んだ理由
+`main()` を直接呼ぶ形より、命令として流す形を選ぶ。CI が見るのは `sys.exit(main())` を通った終了コードで、そこまで含めて試せるため。実測で、絶対パスで呼べば実行場所に依存しなかった。
+
+### 対象外
+- 検査の本体・既存の試験・ワークフローの変更。
+- 試験だけを変える PR では、必須チェック「ADR-072 tenant schema lint」は変更の絞り込みにより検査を飛ばして pass になる。この PR の試験の確かめは existing rule tests で行う。
+
+### 受入条件
+- K1 手元と CI の existing rule tests で `python3 -m pytest -q scripts/test_lint_tenant_schema.py` が 14 passed。
+- K2 弱めたら気づく：使い捨ての写しで、strict の `return 1` を `return 0` に弱めると、足した試験が落ちて pytest が exit 0 以外になる。strict と warning の判定を入れ替える弱め方でも 1 回試す。書き換えはコミットしない。
+- K3 この PR で必須チェック 16 件が pass、existing rule tests が success。
+- K4 一時ファイル・使い捨ての写しが残らない（足した試験が作る一時ファイルも、試験の中で消す）。
+
+### リスクと対処
+- 足した試験が一時ファイルを残す → 試験の中で消す（K4）。
+- CI の Python の版と手元の違い → K1 で CI でも確かめる。
+
+### 戻し方
+merge commit の revert。
+
+### 審査（Opus 自己審査・2026-10-30）
+APPROVE。根拠：足りない所は R2c の K2 で実測済み（11 passed のまま通った）。命令として流す形は調べで rc=1/0/0 を実測済み。検査・ワークフロー・必須チェックの登録に触れないため、ADR-1003 の本人 GO の例外に当たらない。未解決：なし（CI での結果は K1・K3 で確かめる）。
