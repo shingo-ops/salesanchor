@@ -71,3 +71,6 @@ jobs:
 
       - name: tenant schema 検査の試験
         run: python3 -m pytest -q scripts/test_lint_tenant_schema.py
+
+      - name: 提出前の入口の試験
+        run: python3 -I scripts/tests/test_check_before_submit.py -v
