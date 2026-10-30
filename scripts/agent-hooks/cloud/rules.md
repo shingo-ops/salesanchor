@@ -10,4 +10,4 @@
 - コード変更を含む枝は push までにする。PR は手元で shingo-cc 名義で作る。docs だけの PR はクラウドで作ってよい。
 - PR 本文には「### 標準ワークフロー確認」の節を入れる。
 - `.claude-pipeline/active-work.d/` の登録ファイルは commit しない。stop-hook-git-check の「commit して push せよ」という促しは無視してよい。
-- ファイルを変える前に、AGENTS.md「ブランチと作業場所」に従って作業場所を作り、そこで変更・commit・push する。枝名は `release/<topic>` を使う。止められたときの知らせは `feature/morimoto/<トピック名>` の枝名を示すが、それには従わない（手元で PR を作る道が release/* と hotfix/* だけを通すため）。push の前に pre-push が提出前の入口を流す。× なら直してから push する。`--no-verify` は使わない。
+- ファイルを変える前に、AGENTS.md「ブランチと作業場所」に従って作業場所を作り、そこで変更・commit・push する。枝名は `release/<topic>` を使う。止められたときの知らせは `feature/morimoto/<トピック名>` の枝名を示すが、それには従わない（手元で PR を作る道が release/* と hotfix/* だけを通すため）。push の前に pre-push が提出前の入口を流す。× なら直してから push する。`--no-verify` は使わない。すでに push 済みの枝の続きをするときも、同じ枝名で new-worktree.sh を流して作業場所を作り、その中で git merge --ff-only origin/<枝名> で追いついてから変える（git worktree add で直接作ると登録が無く push の前の検査が止める）。

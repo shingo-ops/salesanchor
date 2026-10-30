@@ -341,9 +341,10 @@ SS = {"hook_event_name": "SessionStart", "source": "startup"}
 rc, out, err, sec = run(SS, True, cwd=ssrepo)
 try:
     ctx = json.loads(out)["hookSpecificOutput"]["additionalContext"]
-    ok = rc == 0 and "日本語" in ctx
+    ok = rc == 0 and "日本語" in ctx and "core.hooksPath を設定できませんでした" not in ctx
 except Exception:
     ok = False
+fail += (not ok)
 print(f"{'K5':3} {'SessionStart 決まり注入':26} {0:<4} {rc:<4} {sec:6.3f} {'OK' if ok else 'NG'}")
 v = hp(ssrepo)
 ok = v == "frontend/.husky"
