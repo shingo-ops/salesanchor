@@ -82,7 +82,7 @@
 - 本番の入口の記録（Loki `{job="containerlogs"}`、点検の機械の IP だけ）で、この 3 分間に `/api/v1/auth/` への通信が 31 件あった。うち 429（多すぎる）が 7 件: ログイン 2 件（19:16:18・19:17:48）と、会社一覧での読み直し（`/api/v1/auth/refresh`）5 件（19:16:56〜19:17:34。参照元 `/crm/companies`）
 - 429 は入口（nginx）の制限: `/api/v1/auth/` は 1 つの IP から 1 分 10 件、まとめて 5 件まで（`nginx/nginx.conf:6`・`nginx/nginx.conf:144-146`（もう 1 つの入口 `nginx/nginx.conf:406-408` も同じ））
 - 新しい画面を読み込むたびに、アプリは `/api/v1/auth/refresh` を 1 回呼ぶ。ログイン画面では、まだ入っていないので 401 が返る。これは毎回起きる正常な動き（記録の 401 はすべてこの形。19:16:10 から 19:18:21 まで、参照元 `/login` の refresh は毎回 401）
-- 今の点検は test ごとにログインし直す（`tests/prod-check/prod-ui.spec.ts` S3〜S6・S8 の `login()`）。1 回のログインで `/api/v1/auth/` を 3 件使い、`page.goto` 1 回でさらに 1 件使う。このため 1 分 10 件を超える
+- 今の点検は test ごとにログインし直す（`tests/prod-check/prod-ui.spec.ts` S3〜S6・S8 の `login()`）。1 回のログインで `/api/v1/auth/` を 2 件使う（`/login` を開いたときの refresh 401 と POST login。ログイン直後は読み込み直しが無く refresh を呼ばない: `frontend/src/lib/auth/selfAuth.ts:103-106`・`frontend/src/pages/login/LoginPage.tsx:50`。設計審査 5-0b の項目 1）。`page.goto` 1 回でさらに 1 件使う（`frontend/src/contexts/AuthContext.tsx:104-108`）。このため 1 分 10 件を超える
 - つながり: 会社一覧の読み直しが 429 になる → アプリはログイン画面に戻る → 検索欄が出ない（S5・S6）。ログインが 429 になる → ログイン後の画面に着かない（S3 の再試行・S8）。S3 の 401 は、ログイン画面で出る正常な 401 を、S3 が `login()` より前から数えていたため
 - 同じ時間帯に 403 は 0 件（設計審査 M2 の心配は起きていない。recon §8 U4 は「403 は出ていない」まで確認）
 - Playwright の公式文書（https://playwright.dev/docs/test-retries 2026-10-31 確認。Context7 は月の上限で使えず、直接確認）: `test.describe.configure({ mode: 'serial' })` では 1 つ落ちると残りは飛ばし、再試行はまとめて最初からやり直す。1 つの page を `beforeAll` で作って test の間で使い回す書き方が載っている
@@ -90,10 +90,13 @@
 直し方（入口の制限は本番を守る仕組みなので変えない。点検の側を制限の内側に収める）:
 - `tests/prod-check/login.ts` に `authPace()` を足す。前回の呼び出しから 8 秒たつまで待つ。最初の呼び出しも、ファイルを読み込んだ時刻から 8 秒待つ（再試行は別の作業者で最初からなので、その分も数える）。8 秒の根拠は `nginx/nginx.conf:6` の 1 分 10 件（6 秒に 1 件）より遅くするため、と注に書く
 - ログイン後の点検（S2〜S6・S8）を 1 つの `test.describe` にまとめ、`mode: 'serial'` にする。page は `beforeAll` で 1 つ作り、`api = trackApi(page)` もそこで 1 回だけ作る。ログインは S2 の 1 回だけにする（S3〜S6・S8 の `login()` を消す）
+- 秘密情報が無いときは、まとめ全体を飛ばす（設計審査 5-0b の must）。まとめの本体の最初に `test.skip(!creds(), SKIP_REASON);` を 1 行置き、S2 の中の `test.skip` は消す。`beforeAll` の最初にも `if (!creds()) return;` を置き、page を作らない。`afterAll` は `await context?.close();`。S2 は `const { email, password } = creds()!;` で読む（ADR-1051 の「秘密情報が未登録なら skip」を保つ）
+- page の作り方: `beforeAll(async ({ browser }) => { context = await browser.newContext({ ...devices["Desktop Chrome"], baseURL: BASE_URL }); context.setDefaultTimeout(15_000); context.setDefaultNavigationTimeout(30_000); page = await context.newPage(); api = trackApi(page); })`。手で作る context に config の `use` が引き継がれるかは公式文書（https://playwright.dev/docs/api/class-browser 2026-10-31 確認）に書いていないため、引き継ぎに頼らず値を渡す。`BASE_URL` は `tests/prod-check/login.ts` に `export const BASE_URL = process.env.PROD_CHECK_BASE_URL || "https://app.salesanchor.jp";` として置き、`playwright.config.ts:16` もこれを読む形に替える（値を 2 か所に書かない）。trace・スクリーンショット・動画は手で作る context では既定で作られない（ADR-1051 を保つ）
 - `page.goto(...)` と `login()` と `signOut()` の前に `await authPace();` を置く（`/api/v1/auth/` を使う操作の前だけ）
 - S3 の console error は、S3 の始めに数え始める（S2 のログインが済んだ後）。数え方はそのまま全部数える
 - S1 と S7 は、まとめの外に置いたまま（ログインしていない page で動く）。S7 は S8 の後に動かす（ファイルの並び順を S8 の後へ移す）。S1・S7 の `page.goto` の前にも `await authPace();` を置く
-- 1 回の点検で `/api/v1/auth/` を使う数の見込み: S1 1・S2 3・S3 1・S4 2・S5 1・S6 1・S8 2・S7 2 = 13 件。8 秒おきの操作 11 回でおよそ 90 秒。入口が許す数は 5 + 90 ÷ 6 = 20 件。再試行でもう 1 回まわっても、90 秒で 15 件戻るので 13 件を下回らない
+- 1 回の点検で `/api/v1/auth/` を使う数の見込み（設計審査 5-0b がコードから数えた値）: S1 1・S2 2・S3 1・S4 2・S5 1・S6 1・S8 1（logout だけ。ログアウト後は読み込み直しが無い）・S7 2 = 11 件。authPace を通る操作は 9〜10 回でおよそ 80 秒
+- 制限に当たらない理由: 入口は 6 秒に 1 件ずつ枠が戻り、まとめて使えるのは 5 件まで（`nginx/nginx.conf:6`・`nginx/nginx.conf:145`）。使わなかった枠は 5 件より多く貯まらない。点検は 8 秒おきに動き、1 回の操作で使うのは多くて 2 件なので、使う速さが戻る速さを超え続けることがなく、5 件の枠を使い切らない。再試行でもう 1 回まわっても同じ間隔なので同じ
 - 触らない: `nginx/nginx.conf`・`tests/prod-check/settle.ts`・ワークフロー・backend・frontend
 - 便1 への影響: 便1 は 1 回のログインのあと、読み込み直しなしで画面を切り替える（5-1）。このため refresh を使わず、135 画面でも制限に当たらない。便1 のカードに「`page.goto` は最初の 1 回だけ」と書く
 
