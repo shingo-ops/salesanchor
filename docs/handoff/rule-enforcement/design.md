@@ -788,3 +788,75 @@ APPROVE。根拠：語ごとの数は再現した読み方で数えた。変え�
 
 ### Opus 自己審査（同じ AI の審査。独立の審査は PR で別の審査役が行う）
 APPROVE。根拠：命令と所要秒は main で実測した。CI と同じ台本を呼ぶ。設計 §R4 との違い（台帳の when 列を今は読まない）は対象 0 件という事実による順番の入れ替えで、目的（提出前に同じ検査を流す）は変えない。未解決：gitleaks の手元での流し方。
+
+## R4b 提出前の入口を push の前に自動で呼ぶ（第2段・2026-10-30 PO「1」で着手）
+
+### 目的
+- 提出前の入口（scripts/dev/check-before-submit.sh）を、人・Codex・Claude が流し忘れても push の前に自動で流す。CI で落ちてから直す手戻りを減らす
+- 守りの本体は引き続き CI の必須チェック。入口は手戻りを減らす補助（ideal-state.md:15）
+
+### 現状（事実。2026-10-30 origin/main b334e2448 で調査）
+- frontend/.husky/pre-push（35 行）は rebase 中の止め・validate-pr-ownership.sh・active-work 書式の 3 つだけで、重い検査は無い
+- core.hooksPath は scripts/new-worktree.sh:115 で作業場所ごとに frontend/.husky を指す。クラウドでも husky は効いた（docs/handoff/cloud-parity/recon.md:23,33）
+- validate-pr-body.sh は scripts/gh-pr-create-safe.sh:132 と、手元の PR 本文の見張り（正本 docs/handoff/conversation-consent/hooks/pr-body-guard.sh:189-248。`gh pr create` と `gh pr edit` の両方の前に走る）から呼ばれる。見張りの登録（~/.claude/settings.json:282-285）に timeout の指定は無い
+- validate-pr-body.sh は `git rev-parse --show-toplevel`（:9）の作業場所の HEAD とブランチで既存の事前検査をしている（:301-304）
+- 入口の所要は速い組で 88.9 秒（空き）〜124.4 秒（混雑）、直し後の実測 188.8 秒（§R4a K1・K1b）
+- 入口は commit していない変更があると終了コード 2（check-before-submit.sh:59-63）
+
+### §R4 の当初案から変える点と理由
+1. validate-pr-body.sh の中で入口を流すのはやめる。理由: ①validate-pr-body.sh は `gh pr edit` の前にも走るので、本文を直すたびに 90〜190 秒かかる ②見張りの中で長い処理を流すと、見張りの時間切れに当たるおそれがある。代わりに、入口が全部 ○ のときに書く「流した印」を、validate-pr-body.sh が確かめる（クラウド向けに §R4 が決めた印と同じもの。印を 1 つにそろえる）
+2. 印が無いときに PR 作成を止めるのは、まだしない。この段では知らせだけを出し、件数を数える。理由: 誤って止める数をまだ測っていない（§R4a「第2段以降に回すもの」）。全セッションの PR 作成を一度に止める変更は、測ってから入れる（変更は一度に 1 つ）
+
+### 変えること
+- 入口（check-before-submit.sh）
+  - 全部 ○（終了コード 0）で、かつ `--only` を付けずに流したときだけ、印を書く。置き場は `$(git rev-parse --git-dir)/check-before-submit.ok`（作業場所ごとの git の管理場所。コミットされない。作業場所では `.git` がファイルなので §R4 の「.git/ の中」をこの形に読み替える）。中身は流した時点の HEAD の 40 桁 SHA 1 行
+  - 流すたびに 1 行の記録を `$(git rev-parse --git-common-dir)/check-before-submit.log` に足す（時刻 UTC・ブランチ・HEAD・終了コード・秒・呼び元（手動か pre-push か））。K8 の測定に使う
+  - 審査の残り 4 件
+    - (a) `--only fixture-select` だけでは「流した検査 0 件なら終了コード 2」を抜けないようにする（選別の行を流した数に数えない）
+    - (b) 見本の名前が `select` のときは終了コード 2 で止める（選別の id と重なるため）
+    - (c) 変えない。理由: 変更ファイルの一覧を分岐点との 3 点比較で取るのは、CI が pull_request で比べる統合後の差と同じ範囲になるため。main より遅れた枝で 2 点比較にすると、main 側の変更まで拾ってしまう
+    - (d) 必須一覧の数え方を 1 つにそろえる（行頭に空白がある `#` の行も注記として数えない。:70 と :304 を同じ規則にする）
+- frontend/.husky/pre-push（既存 3 つの後ろに足す）
+  - push される中身が今の HEAD と同じときだけ、入口を流す。違う中身の push や削除のときは「手元の確認は飛ばした」と表示して通す
+  - 印がすでに HEAD と同じなら流さずに通す（先に手で流していれば push は待たない）
+  - 終了コード 1（× がある）→ push を止める。表示に「直してから push。CI でも同じ検査が落ちる」と書く
+  - 終了コード 2（commit していない変更がある・origin/main が無い など、入口が使えない）→ 理由を表示して通す（判定できないものは止めない。最後は CI が止める）
+  - 入口はサブシェルで git の環境変数（GIT_DIR など）を消してから呼ぶ（git は hook にこれらを渡すため。https://git-scm.com/docs/githooks 2026-10-30 閲覧）
+- scripts/dev/validate-pr-body.sh
+  - 成功表示（:321）の前で印を確かめる。印が無い・HEAD と違うときは「提出前の入口をまだ流していません」と知らせ、記録に 1 行足す。この段では終了コードは変えない（止めない）
+- 試験（scripts/tests/test_check_before_submit.py に足す）
+  - 全部 ○ で印が書かれる。× のとき・`--only` のときは書かれない
+  - (a)(b)(d) の直しを確かめる
+  - pre-push: × なら止まる。印が HEAD と同じなら入口を流さない。commit していない変更があっても止めない。HEAD と違う中身の push は流さない
+  - validate-pr-body.sh: 印が無いと知らせが出て、終了コードは今と同じ
+- 手順の文書：docs/ai-agents/executor-checklist.md §0 に「push の前に入口を流す（Claude は Bash の timeout を 600000 にする）。流さないと pre-push が流し、Bash の既定の 2 分で切れることがある」を 1 行足す
+
+### 変えないこと
+- CI のワークフロー・必須チェック・Ruleset・既存の検査の台本
+- 手元の PR 本文の見張り（~/.claude/scripts/pr-body-guard.sh）とクラウドの見張り（scripts/agent-hooks/cloud/。印を確かめるのは R4c）
+- `--no-verify` の扱い（すでに決まりで禁止。外しても CI で止まる）
+
+### 受入条件
+- K1：main と同じ中身の作業場所で push の前の処理だけを流すと、入口が流れて通り、印が HEAD と同じになる。秒が記録に残る
+- K2：違反を入れた写しでは push の前の処理が終了コード 1 で止まる
+- K3：印が HEAD と同じなら、push の前の処理は入口を流さずに 5 秒以内で通る
+- K4：commit していない変更があっても push の前の処理は止めない（理由を表示）
+- K5：validate-pr-body.sh は印が無くても今と同じ終了コード。知らせの文と記録の 1 行が出る
+- K6：審査の残り (a)(b)(d) が試験で確かめられ、(c) は理由を設計に残した
+- K7：試験が手元と CI（rule-registry.yml の existing-rule-tests。§R4a で足した step）で rc=0。必須 16 件 pass
+- K8（反映後の測定）：反映から 7 日の記録で、push の前に止めた回数・そのうち誤って止めた回数・入口の秒の中央値を数える。誤って止めた回数が 0 なら、PR 作成で止める段（R4b-2）へ進む。1 回でもあれば原因を直してから
+
+### リスクと対処
+- push が 90〜190 秒待つ → 先に手で流せば待たない（K3）。手順の文書に書く
+- Claude の Bash の既定 2 分で push が切れる → push は中断されるだけで何も壊れない。手順の文書に timeout 600000 を書く
+- 入口の誤りで全員の push が止まる → 終了コード 2（入口が使えない）は止めない。× の誤りが出たら revert で戻す
+- 同じ Mac で複数のセッションが同時に流して遅くなる → 秒を記録し K8 で見る
+- 戻し方：merge commit を revert（印と記録は git の管理場所の中のファイルなので、残っても害はない）
+
+### 影響範囲（呼び出し元の全走査）
+- frontend/.husky/pre-push：new-worktree.sh で作った全作業場所の push（人・Codex・Claude・クラウド）
+- validate-pr-body.sh：gh-pr-create-safe.sh:132、手元の PR 本文の見張り、試験 scripts/tests/test-pr-lifecycle.py:156・scripts/dev/test-agent-hooks.sh:416
+- check-before-submit.sh：試験 scripts/tests/test_check_before_submit.py のみ（§R4a で新設）
+
+### Opus 自己審査（同じ AI の審査。独立の審査は PR で別の審査役が行う）
+APPROVE。根拠：呼び出し元・時間切れ・所要秒は origin/main と §R4a の実測で確かめた。§R4 からの変更は、止める範囲を狭める側（知らせだけ・判定できないときは通す）で、PO が承認した目的（提出前に同じ検査を流す）は変えない。未解決：pre-push で流したときの実際の秒（K1・K8 で測る）。
