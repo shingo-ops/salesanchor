@@ -43,12 +43,13 @@ interface EmailTemplate {
 }
 
 function StepHeader({ num, title, done }: { num: number; title: string; done?: boolean }) {
+  const { t } = useTranslation();
   return (
     <div className="lv-step-header">
       <span className={`lv-step-num ${done ? "lv-step-num--done" : ""}`}>{num}</span>
       <strong>{title}</strong>
       {/* done indicator is CSS-only (::after pseudo-element) to avoid hardcoded non-i18n characters */}
-      {done && <span className="lv-step-badge-done" aria-label="done" />}
+      {done && <span className="lv-step-badge-done" aria-label={t("common.done")} />}
     </div>
   );
 }
