@@ -121,9 +121,9 @@ export default function StatusMasterPage() {
   const f = "statusMaster";
 
   const MATCH_TYPE_OPTIONS = [
-    { value: "REGEX", label: t(`${f}.matchTypeRegex`) },
-    { value: "LITERAL", label: t(`${f}.matchTypeLiteral`) },
-    { value: "DEFAULT", label: t(`${f}.matchTypeDefault`) },
+    { value: "REGEX", label: t("ruleManagement.matchType.REGEX") },
+    { value: "LITERAL", label: t("ruleManagement.matchType.LITERAL") },
+    { value: "DEFAULT", label: t("ruleManagement.matchType.DEFAULT") },
   ];
 
   const EFFECT_OPTIONS = [
@@ -194,7 +194,11 @@ export default function StatusMasterPage() {
   const columns: DataTableColumn<StatusEntry>[] = [
     { key: "status_id", header: t(`${f}.statusId`), renderCell: s => <span className="mono">{s.status_id}</span> },
     { key: "canonical", header: t(`${f}.canonical`) },
-    { key: "match_type", header: t(`${f}.matchType`) },
+    {
+      key: "match_type",
+      header: t(`${f}.matchType`),
+      renderCell: r => t(`ruleManagement.matchType.${r.match_type}`, { defaultValue: r.match_type }),
+    },
     { key: "effect", header: t(`${f}.effect`) },
     { key: "priority", header: t(`${f}.priority`) },
     {

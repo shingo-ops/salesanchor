@@ -383,9 +383,9 @@ export default function LeadsPage() {
             onChange={(e) => setCreateForm({ ...createForm, temperature: e.target.value })}
             placeholder={t("common.notSet")}
             options={[
-              { value: "Hot", label: t("leads.temp_hot") },
-              { value: "Warm", label: t("leads.temp_warm") },
-              { value: "Cold", label: t("leads.temp_cold") },
+              { value: "Hot", label: t("leads.temperature_hot") },
+              { value: "Warm", label: t("leads.temperature_warm") },
+              { value: "Cold", label: t("leads.temperature_cold") },
             ]}
           />
           <Select
@@ -394,9 +394,9 @@ export default function LeadsPage() {
             onChange={(e) => setCreateForm({ ...createForm, estimated_scale: e.target.value })}
             placeholder={t("common.notSet")}
             options={[
-              { value: "Small", label: t("leads.scale_small") },
-              { value: "Medium", label: t("leads.scale_medium") },
-              { value: "Large", label: t("leads.scale_large") },
+              { value: "Small", label: t("leads.estimatedScale_small") },
+              { value: "Medium", label: t("leads.estimatedScale_medium") },
+              { value: "Large", label: t("leads.estimatedScale_large") },
             ]}
           />
           <Select
@@ -483,7 +483,7 @@ export default function LeadsPage() {
           { key: "customer_name", header: t("leads.customerName") },
           { key: "company_name", header: t("leads.companyName"), renderCell: (l) => l.company_name || "-" },
           { key: "status", header: t("leads.status"), renderCell: (l) => <span className={`badge badge-${getStatusPresentation("lead", l.status).badgeVariant}`}>{translateLeadStatus(l.status)}</span> },
-          { key: "temperature", header: t("leads.temperature"), renderCell: (l) => l.temperature || "-" },
+          { key: "temperature", header: t("leads.temperature"), renderCell: (l) => (l.temperature ? t(`leads.temperature_${l.temperature.toLowerCase()}`, { defaultValue: l.temperature }) : "-") },
           { key: "prospect_rank", header: t("leads.prospectRank"), renderCell: (l) => rankBadge(l.prospect_rank) },
         ];
         const priorityCol: DataTableColumn<Lead> = {

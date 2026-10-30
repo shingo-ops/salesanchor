@@ -219,9 +219,9 @@ export function InboxProfileModal({
                 <SelectControl variant="karte" fullWidth value={cardForm.temperature ?? ""}
                   onChange={(e) => handleCardFieldChange("temperature", e.target.value || null)} onBlur={handleCardFieldBlur}>
                   <option value="">—</option>
-                  <option value="Hot">Hot</option>
-                  <option value="Warm">Warm</option>
-                  <option value="Cold">Cold</option>
+                  <option value="Hot">{t("leads.temperature_hot")}</option>
+                  <option value="Warm">{t("leads.temperature_warm")}</option>
+                  <option value="Cold">{t("leads.temperature_cold")}</option>
                 </SelectControl>
               </div>
               <hr className="right-panel-divider" />
@@ -230,9 +230,9 @@ export function InboxProfileModal({
                 <SelectControl variant="karte" fullWidth value={cardForm.estimated_scale ?? ""}
                   onChange={(e) => handleCardFieldChange("estimated_scale", e.target.value || null)} onBlur={handleCardFieldBlur}>
                   <option value="">—</option>
-                  <option value="Small">Small</option>
-                  <option value="Medium">Medium</option>
-                  <option value="Large">Large</option>
+                  <option value="Small">{t("leads.estimatedScale_small")}</option>
+                  <option value="Medium">{t("leads.estimatedScale_medium")}</option>
+                  <option value="Large">{t("leads.estimatedScale_large")}</option>
                 </SelectControl>
               </div>
               <div className="right-panel-row">
