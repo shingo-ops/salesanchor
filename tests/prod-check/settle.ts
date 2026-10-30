@@ -1,5 +1,5 @@
 /**
- * 本番の画面点検の「開き終わった」の決め方（ADR-1053）。点検と速さの記録の両方がここを使う。
+ * 本番の全画面の速さの記録が使う「開き終わった」の決め方（ADR-1053）。今の点検（prod-ui.spec.ts）は fixtures.ts の待ち方のままで、ここを使わない。
  * networkidle は使わない（ログイン中は開いたままの通信があり成り立たないため）。
  */
 
@@ -18,9 +18,12 @@ export type ApiTracker = {
   inFlight: () => number;
   /** 最後に /api/ の通信が始まった・終わった時刻（ミリ秒） */
   lastChangeAt: () => number;
+  /** 最後に /api/ の通信が終わった時刻（ミリ秒） */
+  lastEndAt: () => number;
 };
 
-function isTrackedApi(req: Request): boolean {
+/** 数える通信か: 道すじが /api/ で始まり、開いたままの通信（SSE）ではない */
+export function isTrackedApi(req: Request): boolean {
   let path: string;
   try {
     path = new URL(req.url()).pathname;
@@ -35,17 +38,20 @@ function isTrackedApi(req: Request): boolean {
 export function trackApi(page: Page): ApiTracker {
   const pending = new Set<Request>();
   let lastChange = Date.now();
+  let lastEnd = Date.now();
   page.on("request", (req) => {
     if (!isTrackedApi(req)) return;
     pending.add(req);
     lastChange = Date.now();
   });
   const done = (req: Request) => {
-    if (pending.delete(req)) lastChange = Date.now();
+    if (!pending.delete(req)) return;
+    lastChange = Date.now();
+    lastEnd = lastChange;
   };
   page.on("requestfinished", done);
   page.on("requestfailed", done);
-  return { inFlight: () => pending.size, lastChangeAt: () => lastChange };
+  return { inFlight: () => pending.size, lastChangeAt: () => lastChange, lastEndAt: () => lastEnd };
 }
 
 export type SettleOptions = { minMs?: number; quietMs?: number; capMs?: number };
@@ -56,6 +62,10 @@ export type SettleResult = {
   inFlight: number;
   /** 終わった時点の、見えている読み込み中の印の数 */
   loading: number;
+  /** 最後に /api/ の通信が終わった時刻（ミリ秒。呼ぶ前のこともある） */
+  lastApiEndAt: number;
+  /** 読み込み中の印が最後に消えた時刻（ミリ秒。一度も見えなければ呼んだ時刻） */
+  loadingGoneAt: number;
 };
 
 async function visibleLoadingCount(page: Page): Promise<number> {
@@ -84,21 +94,30 @@ export async function waitSettled(
   const quietMs = opts.quietMs ?? 1000;
   const capMs = opts.capMs ?? 30_000;
   const start = Date.now();
+  let loadingGoneAt = start;
+  let sawLoading = false;
   for (;;) {
+    const loading = await visibleLoadingCount(page);
     const now = Date.now();
     const elapsedMs = now - start;
-    if (elapsedMs >= minMs && tracker.inFlight() === 0 && now - tracker.lastChangeAt() >= quietMs) {
-      const loading = await visibleLoadingCount(page);
-      if (loading === 0) return { settled: true, elapsedMs, inFlight: 0, loading };
+    if (loading > 0) {
+      sawLoading = true;
+    } else if (sawLoading) {
+      sawLoading = false;
+      loadingGoneAt = now;
+    }
+    const times = { lastApiEndAt: tracker.lastEndAt(), loadingGoneAt };
+    if (loading === 0 && elapsedMs >= minMs && tracker.inFlight() === 0 && now - tracker.lastChangeAt() >= quietMs) {
+      return { settled: true, elapsedMs, inFlight: 0, loading, ...times };
     }
     if (elapsedMs >= capMs) {
-      return { settled: false, elapsedMs, inFlight: tracker.inFlight(), loading: await visibleLoadingCount(page) };
+      return { settled: false, elapsedMs, inFlight: tracker.inFlight(), loading, ...times };
     }
     await page.waitForTimeout(100);
   }
 }
 
-/** 点検用: 開き終わらなければ、終わっていない通信と読み込み中の印の数を添えて失敗させる */
+/** 開き終わらなければ、終わっていない通信と読み込み中の印の数を添えて失敗させる（今は呼ぶ所が無い。合否を付ける点検に使うときのために残す） */
 export async function expectSettled(page: Page, tracker: ApiTracker): Promise<void> {
   const r = await waitSettled(page, tracker);
   expect(
