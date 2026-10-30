@@ -6,6 +6,7 @@
 
 import { test, expect } from "@playwright/test";
 import { creds, login, signOut } from "./login";
+import { expectSettled, trackApi } from "./settle";
 
 const NO_ERROR_BANNER = ".error-banner";
 const SKIP_REASON = "点検用の人の秘密情報が未登録";
@@ -32,16 +33,18 @@ test.describe("本番の画面点検", () => {
     page.on("console", (msg) => {
       if (msg.type() === "error") errors.push(msg.text());
     });
+    const api = trackApi(page);
     const c = creds();
     test.skip(!c, SKIP_REASON);
     const { email, password } = c!;
     await login(page, email, password);
     await page.goto("/");
-    await page.waitForLoadState("networkidle");
+    await expectSettled(page, api);
     expect(errors, `console.error が ${errors.length} 件`).toHaveLength(0);
   });
 
   test("S4 会社一覧とリード一覧が開く", async ({ page }) => {
+    const api = trackApi(page);
     const c = creds();
     test.skip(!c, SKIP_REASON);
     const { email, password } = c!;
@@ -54,13 +57,14 @@ test.describe("本番の画面点検", () => {
 
     await page.goto("/crm/leads");
     await page.waitForURL((url) => url.pathname === "/crm/leads");
-    await page.waitForLoadState("networkidle");
+    await expectSettled(page, api);
     await expect(page.locator("main")).toBeVisible();
     await expect(page.locator(NO_ERROR_BANNER)).toHaveCount(0);
     await expect(page.locator(".error-message")).toHaveCount(0);
   });
 
   test("S5 会社一覧の検索", async ({ page }) => {
+    const api = trackApi(page);
     const c = creds();
     test.skip(!c, SKIP_REASON);
     const { email, password } = c!;
@@ -69,24 +73,25 @@ test.describe("本番の画面点検", () => {
     const box = page.getByPlaceholder("顧客名・コードで検索...");
     await expect(box).toBeVisible();
     await box.fill("テスト");
-    await page.waitForLoadState("networkidle");
+    await expectSettled(page, api);
     await expect(box).toHaveValue("テスト");
     await expect(page.locator(NO_ERROR_BANNER)).toHaveCount(0);
   });
 
   test("S6 会社の詳細が開く", async ({ page }) => {
+    const api = trackApi(page);
     const c = creds();
     test.skip(!c, SKIP_REASON);
     const { email, password } = c!;
     await login(page, email, password);
     await page.goto("/crm/companies");
     await expect(page.getByPlaceholder("顧客名・コードで検索...")).toBeVisible();
-    await page.waitForLoadState("networkidle");
+    await expectSettled(page, api);
     const link = page.locator('main a[href^="/companies/"]').first();
     test.skip((await link.count()) === 0, "会社 0 件");
     await link.click();
     await page.waitForURL(/\/crm\/companies\/[^/]+$/);
-    await page.waitForLoadState("networkidle");
+    await expectSettled(page, api);
     await expect(page.locator(NO_ERROR_BANNER)).toHaveCount(0);
     await expect(page.locator("main")).toBeVisible();
   });
