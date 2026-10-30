@@ -116,6 +116,14 @@
     "reload": "Reload"
   },
   "common": {
+    "dataTable": {
+      "previousPage": "previous page",
+      "nextPage": "next page",
+      "table": "data table",
+      "selectAll": "select all",
+      "selectAllRows": "select all rows",
+      "selectRow": "select row {{key}}"
+    },
     "showPassword": "Show password",
     "hidePassword": "Hide password",
     "loading": "Loading...",
