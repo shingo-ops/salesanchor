@@ -490,7 +490,7 @@ export default function ChannelsPage() {
                   </div>
                   <div style={{ fontSize: "var(--font-sm)", color: "var(--text-muted)", lineHeight: 1.7 }}>
                     <div>
-                      <strong>Page ID:</strong> <span className="mono">{ch.page_id}</span>
+                      <strong>{t("channels.pageIdLabel")}</strong> <span className="mono">{ch.page_id}</span>
                     </div>
                     {ch.instagram_username && (
                       <div>
