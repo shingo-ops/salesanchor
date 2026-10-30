@@ -197,6 +197,8 @@
     "nextPage": "Next →",
     "saved": "Saved",
     "requestFailed": "Request failed",
+    "httpError": "Request failed (HTTP {{status}})",
+    "unknownError": "An unknown error occurred",
     "blobFetchFailed": "Failed to fetch file",
     "downloadFailed": "Download failed",
     "devOnly": "DEV only",
