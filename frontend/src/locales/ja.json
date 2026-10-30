@@ -1172,7 +1172,7 @@
     "companyLabel": "所属顧客情報 *",
     "displayName": "表示名",
     "primaryContactHint": "主担当者（顧客情報あたり 1 人のみ。切替時に他は自動解除）",
-    "statusPendingDedupOption": "pending_dedup_review（重複確認待ち）",
+    "statusPendingDedupOption": "重複確認待ち",
     "pendingDedupCount": "重複確認待ち: {{count}} 件",
     "confirmAsDistinct": "別人として確定",
     "confirmAsDistinctFull": "別人として確定（active 化）",
@@ -1193,7 +1193,7 @@
       "active": "有効",
       "inactive": "無効",
       "archived": "アーカイブ",
-      "pending_dedup_review": "重複確認中"
+      "pending_dedup_review": "重複確認待ち"
     }
   },
   "inbox": {

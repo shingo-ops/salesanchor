@@ -1172,7 +1172,7 @@
     "companyLabel": "Client Profile *",
     "displayName": "Display name",
     "primaryContactHint": "Primary contact (only one per client profile; others auto-cleared on switch)",
-    "statusPendingDedupOption": "pending_dedup_review (pending dedup)",
+    "statusPendingDedupOption": "Pending Dedup Review",
     "pendingDedupCount": "Pending dedup review: {{count}}",
     "confirmAsDistinct": "Confirm as distinct",
     "confirmAsDistinctFull": "Confirm as distinct (activate)",
@@ -1193,7 +1193,7 @@
       "active": "Active",
       "inactive": "Inactive",
       "archived": "Archived",
-      "pending_dedup_review": "Pending Review"
+      "pending_dedup_review": "Pending Dedup Review"
     }
   },
   "inbox": {
