@@ -10,6 +10,12 @@
 # 終了コード: 0 = 流した検査が全部 ○ / 1 = 1 つでも × / 2 = 入口が使えない
 #   （commit していない変更・origin/main が無い・必須一覧が読めないか 0 件・--only の値が無いか知らない id・流した検査が 0 件）
 #
+# 印と記録（R4b）:
+#   ・終了コード 0 かつ --only なしのときだけ、$(git rev-parse --git-dir)/check-before-submit.ok に HEAD の SHA を 1 行書く
+#     （それ以外では既存の印を消さない。HEAD が違えば無効になる）
+#   ・毎回の終わりに $(git rev-parse --git-common-dir)/check-before-submit.log へ 1 行足す
+#     （時刻 UTC・ブランチ・HEAD・終了コード・秒・呼び元。呼び元は環境変数 CHECK_BEFORE_SUBMIT_CALLER、無ければ manual）
+#
 # 決まり:
 #   ・CI と同じ台本を呼ぶ（検査の中身は写さない）。呼び方は各ワークフローの記述に合わせてある
 #   ・変更ファイルの一覧は origin/main との分岐点から取る。2 点で比べる検査（ui-governance・dangling-route・value-writes）には
@@ -41,6 +47,23 @@ while test $# -gt 0; do
 done
 
 cd "$(git rev-parse --show-toplevel)" || exit 2
+
+# --- 記録（R4b）: どの道で終わっても 1 行足す。書けなくても入口の結果は変えない ---
+_cbs_now() { perl -MTime::HiRes=time -e 'printf "%.2f", time'; }
+CBS_T0=$(_cbs_now)
+_cbs_log() {
+  local rc=$? t1 secs common head branch caller
+  t1=$(_cbs_now)
+  secs=$(perl -e 'printf "%.1f", $ARGV[1] - $ARGV[0]' "$CBS_T0" "$t1" 2>/dev/null)
+  common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) || return $rc
+  head=$(git rev-parse HEAD 2>/dev/null)
+  branch=$(git branch --show-current 2>/dev/null)
+  caller="${CHECK_BEFORE_SUBMIT_CALLER:-manual}"
+  printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$branch" "$head" "$rc" "$secs" "$caller" \
+    >> "${common}/check-before-submit.log" 2>/dev/null
+  return $rc
+}
+trap _cbs_log EXIT
 REQ_FILE="docs/specs/rule-enforcement/required-checks.txt"
 
 # --only の id が知らないものなら止める（黙って 0 件にしない）。fixture-<見本名> は選ばれた見本の id
@@ -107,6 +130,12 @@ if test "$FIX_RC" = "0" || printf '%s\n' "$FIX_OUT" | grep -q '^ERR:'; then
   FIX_SHORTS=$(printf '%s\n' "$FIX_OUT" | grep -v '^ERR:' | grep .)
 else
   FIX_ERR="見本の選別の python が落ちました（終了コード ${FIX_RC}）: $(printf '%s\n' "$FIX_OUT" | tail -n 3 | tr '\n' ' ')"
+fi
+
+# 見本のフォルダの名前が select だと、選別の id（fixture-select）と重なるので止める
+if test -d "scripts/tests/rule-fixtures/select"; then
+  echo "見本のフォルダの名前が select です（scripts/tests/rule-fixtures/select）。選別の id（fixture-select）と重なるため名前を変えてください（終了コード 2）"
+  exit 2
 fi
 
 if test "$LIST_FIX" = "1"; then
@@ -295,13 +324,15 @@ FAILS=0
 RAN=0
 i=0
 while test $i -lt $N; do
-  if test "${R_RC[$i]}" != "skip"; then RAN=$((RAN + 1)); fi
+  # 見本の選別（fixture-select）は検査ではなく前処理なので、流した検査の数に数えない
+  if test "${R_RC[$i]}" != "skip" && test "${R_ID[$i]}" != "fixture-select"; then RAN=$((RAN + 1)); fi
   if test "${R_RC[$i]}" != "0" && test "${R_RC[$i]}" != "skip"; then FAILS=$((FAILS + 1)); fi
   i=$((i + 1))
 done
 REQ_TOTAL=0
 while IFS= read -r line || test -n "$line"; do
-  case "$line" in ''|'#'*) continue ;; esac
+  trimmed="${line#"${line%%[![:space:]]*}"}"  # 件数の確認（grep）と同じ規則: 空行・行頭の空白のあとの # は数えない
+  case "$trimmed" in ''|'#'*) continue ;; esac
   name="${line%%$'\t'*}"
   REQ_TOTAL=$((REQ_TOTAL + 1))
   ran=0; bad=0
@@ -359,4 +390,11 @@ if test $RAN -eq 0; then
   exit 2
 fi
 echo "結果: ○ 流した検査は全部通りました（終了コード 0）"
+# 全部 ○ で --only なしのときだけ、流した印を書く（書けなくても結果は変えない）
+if test -z "$ONLY"; then
+  STAMP_DIR=$(git rev-parse --path-format=absolute --git-dir 2>/dev/null)
+  if test -n "$STAMP_DIR" && printf '%s\n' "$HEAD_SHA" > "${STAMP_DIR}/check-before-submit.ok" 2>/dev/null; then
+    echo "流した印を書きました: ${STAMP_DIR}/check-before-submit.ok"
+  fi
+fi
 exit 0
