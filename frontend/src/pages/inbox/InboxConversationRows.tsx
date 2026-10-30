@@ -41,7 +41,7 @@ export function InboxConversationRows({
   selectedLeadId, avatarErrors, handleAvatarError, selectLead, toggleSelectConv,
   selectMode, selectedLeadIds, unreadOnly, longPressHandlersFor,
 }: InboxConversationRowsProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   return (
     <div className="inbox-conversation-list">
@@ -120,17 +120,17 @@ export function InboxConversationRows({
               <div className="conv-info">
                 <div className="conv-header">
                   <span className={`conv-name${(conv.unread_count ?? 0) > 0 ? " unread" : ""}`}>
-                    {conv.customer_name ?? `Lead #${conv.lead_id}`}
+                    {conv.customer_name ?? t("dashboard.priorityFallbackLead", { id: conv.lead_id })}
                   </span>
                   {conv.lead_status && (
                     <span className="conv-status-badge">{t(`leads.statusCode.${conv.lead_status}`, { defaultValue: conv.lead_status })}</span>
                   )}
-                  <span className="conv-time">{relativeTime(conv.last_message_at)}</span>
+                  <span className="conv-time">{relativeTime(conv.last_message_at, t, i18n.language)}</span>
                 </div>
                 <div className="conv-preview">
                   <span className={`conv-preview-text${conv.unread_count > 0 ? " unread" : ""}`}>
                     {conv.last_message_direction === "outbound" && (
-                      <span style={{ opacity: "var(--opacity-muted)" }}>You: </span>
+                      <span style={{ opacity: "var(--opacity-muted)" }}>{t("inbox.youPrefix")}</span>
                     )}
                     {conv.last_message_text ?? ""}
                   </span>
