@@ -233,9 +233,9 @@ export default function LeadEditPage() {
             onChange={(e) => setForm({ ...form, temperature: e.target.value })}
             options={[
               { value: "", label: t("common.notSet") },
-              { value: "Hot", label: t("leads.temp_hot") },
-              { value: "Warm", label: t("leads.temp_warm") },
-              { value: "Cold", label: t("leads.temp_cold") },
+              { value: "Hot", label: t("leads.temperature_hot") },
+              { value: "Warm", label: t("leads.temperature_warm") },
+              { value: "Cold", label: t("leads.temperature_cold") },
             ]}
           />
           <Select
@@ -244,9 +244,9 @@ export default function LeadEditPage() {
             onChange={(e) => setForm({ ...form, estimated_scale: e.target.value })}
             options={[
               { value: "", label: t("common.notSet") },
-              { value: "Small", label: t("leads.scale_small") },
-              { value: "Medium", label: t("leads.scale_medium") },
-              { value: "Large", label: t("leads.scale_large") },
+              { value: "Small", label: t("leads.estimatedScale_small") },
+              { value: "Medium", label: t("leads.estimatedScale_medium") },
+              { value: "Large", label: t("leads.estimatedScale_large") },
             ]}
           />
           <Select
