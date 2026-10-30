@@ -42,7 +42,7 @@ export const PasswordFieldControl = forwardRef<HTMLInputElement, PasswordFieldCo
           aria-label={visible ? t("common.hidePassword") : t("common.showPassword")}
           onClick={() => setVisible((v) => !v)}
         >
-          <ToggleIcon size={ICON.md} aria-hidden="true" />
+          <ToggleIcon size={ICON.base} aria-hidden="true" />
         </Button>
       </div>
     );
