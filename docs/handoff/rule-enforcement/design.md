@@ -860,3 +860,65 @@ APPROVE。根拠：命令と所要秒は main で実測した。CI と同じ台�
 
 ### Opus 自己審査（同じ AI の審査。独立の審査は PR で別の審査役が行う）
 APPROVE。根拠：呼び出し元・時間切れ・所要秒は origin/main と §R4a の実測で確かめた。§R4 からの変更は、止める範囲を狭める側（知らせだけ・判定できないときは通す）で、PO が承認した目的（提出前に同じ検査を流す）は変えない。未解決：pre-push で流したときの実際の秒（K1・K8 で測る）。
+
+## R4c クラウドの AI の変更にも提出前の入口を効かせる（第3段・2026-10-30 PO「1,2」の 2 で着手）
+
+### 目的
+- クラウドの AI が push する変更でも、提出前の入口（scripts/dev/check-before-submit.sh）が push の前に必ず流れるようにする
+- クラウドで push した枝の PR を手元で作るとき、「入口を流していない」と誤って数えないようにする。R4b の K8（7 日の記録で誤って止めた回数を数える）と、その次の R4b-2（PR 作成で止める段）が正しく判断できるようにする
+
+### 現状（事実。2026-10-30〜31 に origin/main 45b705884 で調査）
+- クラウドの実物（一回実行 cse_01W47tdg9DdSZmuoQCyNVKVm、2026-10-30 15:05Z）
+  - 入口が使う道具はすべてある：git 2.43.0・bash 5.2.21・perl 5.38.2・python3 3.11.17・node v22.22.0・GNU coreutils 9.4（mktemp・tail・cut）・grep 3.11・sed 4.9
+  - 取ってきた直後のリポジトリ（/home/user/salesanchor）では core.hooksPath が未設定（`git config --get core.hooksPath` の終了コード 1）。この状態で push すると frontend/.husky/pre-push は流れない
+  - scripts/new-worktree.sh で作業場所を作ると、:115 の `git -C <作業場所> config core.hooksPath frontend/.husky` が共通の設定（/home/user/salesanchor/.git/config）に書かれ、以後は pre-push が流れる
+  - 作業場所で pre-push を送信前の処理として流すと、終了コード 0・8 秒。印（check-before-submit.ok）は HEAD と同じ SHA になり、記録に `… 0 7.9 pre-push` の 1 行が足された
+- クラウドの決まり（scripts/agent-hooks/cloud/rules.md:9-10）は「調べる・作る・push する」まで。コードを含む枝は push までで、PR は手元で shingo-cc 名義で作る。作業場所を new-worktree.sh で作る決まりは rules.md に無い
+- クラウドの見張り（scripts/agent-hooks/cloud/guard_pre_tool.py:623-634 check_pr_create）は、コードを含む枝の PR 作成をすでに止めている。クラウドで作れる PR は文書だけ
+- 手元で PR を作る道は 2 つ
+  - scripts/gh-pr-create-safe.sh：今の作業場所のブランチの PR だけを作る（:105-109。:123-130 で手元の HEAD と origin の HEAD の一致を確かめる）。印の照合は正しい
+  - 手元の PR 本文の見張り（正本 docs/handoff/conversation-consent/hooks/pr-body-guard.sh）：`gh pr create --head <枝>` の枝の作業場所が手元にちょうど 1 つあるときだけ、そこを検証の場所にする（:104-170）。無ければ命令を流した作業場所のまま validate-pr-body.sh を呼ぶ（:245）
+- validate-pr-body.sh:322-329 は、検証の場所の HEAD と印を比べ、違えば知らせを出して記録に `nostamp` の 1 行を足す。クラウドで push した枝は手元に作業場所が無いため、PR を作るたびに「命令を流した作業場所のブランチと HEAD」で `nostamp` が記録される。これは別の枝の記録で、K8 の数を水増しし、R4b-2 で止める段に進むと毎回誤って止める元になる
+
+### §R4 の当初案から変える点と理由
+1. クラウドの見張りで PR 作成の前に印を確かめる案（§R4 の「クラウドの Claude」）はやめる。代わりに、クラウドでも pre-push が必ず流れるようにする。理由：①クラウドで作れる PR は文書だけで、コードの PR は手元で作る（rules.md:10・guard_pre_tool.py:623-634）。見張りで確かめても、肝心のコードの変更には効かない ②pre-push は push のたびに流れ、クラウドでも 8 秒で終わった（上の実物）③クラウドの記録はその実行が終わると消えるため、見張りで数えても K8 に使えない
+2. R4b の K8 の 7 日は、この段の 便1 を手元に入れた時刻から数え直す。理由：それより前の `nostamp` の行は、クラウドの枝の分と本当に流し忘れた分を後から分けられない（記録の行は命令を流した作業場所のブランチ名で書かれる）。PO の決定は「11/6 以降に判断」なので、数え始めが遅れても決定の範囲に収まる
+
+### 変えること
+- 便1（手元で PR を作るときの照らし合わせ）
+  - docs/handoff/conversation-consent/hooks/pr-body-guard.sh：`gh pr create --head` または `gh pr edit` の対象の枝（:107 からの HEAD_BRANCH）が分かったときは、validate-pr-body.sh に環境変数 `CBS_PR_HEAD_REF=<枝>` を渡す
+  - scripts/dev/validate-pr-body.sh：`CBS_PR_HEAD_REF` があり、検証の場所のブランチと違うときは、印を比べない。知らせは「この枝の入口は push した側（クラウドなど）の pre-push が流した。手元の印は無い」に変え、記録には `<枝>` と `refs/remotes/origin/<枝>` の SHA（取れなければ `-`）で `otherhead` の 1 行を足す。終了コードは今と同じ（止めない）
+  - 試験：scripts/dev/test-agent-hooks.sh と scripts/tests/test-pr-lifecycle.py に、①`CBS_PR_HEAD_REF` が今のブランチと違うと `otherhead` が記録され `nostamp` は記録されない ②同じか無いときは今と同じ動き、を足す
+  - 手元の見張りの入れ替え：正本を ~/.claude/scripts/pr-body-guard.sh へ写すのは PO の `!` で行う（見張りの登録は PO が行う決まり。AGENTS.md「作業の型」）。写す台本は scratchpad に用意する
+- 便2（クラウドで pre-push を必ず流す）
+  - scripts/agent-hooks/cloud/session_start.py：決まり（rules.md）を渡す前に、`git -C <リポジトリ直下> config core.hooksPath frontend/.husky` を流す（new-worktree.sh:115 と同じ値。失敗しても決まりは渡し、知らせに 1 行足す）。dispatch.sh:2 でクラウドのときだけ動くので、手元には効かない
+  - scripts/agent-hooks/cloud/rules.md：「push の前に pre-push が提出前の入口を流す。× なら直してから push。`--no-verify` は使わない」を 1 行足す
+  - 試験：scripts/dev/test-agent-hooks.sh に、一時 repo で session_start.py を流すと core.hooksPath が frontend/.husky になり、決まりの JSON も出る、を足す
+
+### 変えないこと
+- クラウドの見張り guard_pre_tool.py（PR 作成の判定）・dispatch.sh・.claude/settings.json
+- check-before-submit.sh・frontend/.husky/pre-push・gh-pr-create-safe.sh
+- CI のワークフロー・必須チェック・Ruleset
+- 別件として記録だけするもの：guard_pre_tool.py:400 が整形前の命令文で `psql` を探すため、読むだけの grep の検索の形にある `\|psql` でも止まる（2026-10-30 の一回実行で実際に止まった）。R4c とは別の便で直す（変更は一度に 1 つ）
+
+### 受入条件
+- K1（便1）：手元で、作業場所の無い枝を `--head` に付けて validate-pr-body.sh の道を通すと、記録に `otherhead` と枝名の 1 行が足され、`nostamp` は足されない。終了コードは今と同じ
+- K2（便1）：今の作業場所の枝の PR では、印が無ければ今と同じ `nostamp`、HEAD と同じなら記録なし
+- K3（便2）：クラウドの一回実行で、取ってきた直後のリポジトリ直下（new-worktree.sh を流さない）で core.hooksPath が frontend/.husky になっている
+- K4（便2）：クラウドの一回実行で、文書だけを変えた試しの枝を実際に `git push` すると、push の表示に提出前の入口の結果が出て、印が HEAD と同じになる。試しの枝は確かめた後に消す（main・develop ではない release/ の試しの枝だけ）
+- K5：試験が手元と CI で rc=0。必須 16 件 pass
+- K6（反映後）：便1 を手元に入れた時刻から 7 日の記録で、`nostamp` と `otherhead` を分けて数える。R4b の K8 の判断は `nostamp` だけで行う
+
+### リスクと対処
+- 便1 の見張りの入れ替えは PO の `!` が要る → 入れるまで K6 の数え始めを遅らせる。台本 1 行で済む形にする
+- クラウドの pre-push が × で push を止め、クラウドの AI が `--no-verify` で外す → rules.md に禁止を書く。外しても CI の必須チェックで止まる
+- クラウドの環境が変わり、入口の道具が欠ける → 入口は終了コード 2（使えない）で止めずに通し、CI が止める（R4b の決まりのまま）
+- 戻し方：merge commit を revert。便1 の見張りは、前の正本を ~/.claude/scripts/ へ写し直す。便2 で書いた core.hooksPath は、その一回実行の箱の中だけの設定で、実行が終われば消える
+
+### 影響範囲（呼び出し元の全走査）
+- pr-body-guard.sh：手元の Claude の `gh pr create`・`gh pr edit`（~/.claude/settings.json の登録）。試験 scripts/dev/test-agent-hooks.sh
+- validate-pr-body.sh：gh-pr-create-safe.sh:132（`CBS_PR_HEAD_REF` を渡さないので今と同じ動き）、pr-body-guard.sh、試験 test-pr-lifecycle.py:156・test-agent-hooks.sh:416
+- session_start.py：dispatch.sh の SessionStart（クラウドだけ）。試験 test-agent-hooks.sh
+
+### Opus 自己審査（同じ AI の審査。独立の審査は PR で別の審査役が行う）
+APPROVE。根拠：クラウドの道具・core.hooksPath・pre-push の実行と秒は、クラウドの一回実行の出力で確かめた。手元の PR 作成の 2 つの道と印の照合は origin/main の行番号で確かめた。§R4 からの変更（見張りで確かめる案をやめる）は、効かない場所に検査を置くのをやめて、push の前に必ず流す側に寄せるもの。PO が承認した目的は変えない。止める範囲は広げない（便1 は記録の分け方、便2 は今の作業場所での動きをリポジトリ直下にもそろえるだけ）。未解決：実際の `git push` でクラウドの pre-push が流れるか（K4 で確かめる。これまでの試しは送信前の処理を直接流したもの）。
