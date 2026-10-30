@@ -49,12 +49,12 @@ function DiagnosticsSection({ diagKey, titleKey, open, highlight, onRetry }: Sec
         setRows(res.rows);
       })
       .catch((e: unknown) => {
-        setError(e instanceof Error ? e.message : String(e));
+        setError(e instanceof Error ? e.message : t("common.unknownError"));
       })
       .finally(() => {
         setLoading(false);
       });
-  }, [diagKey, open]);
+  }, [diagKey, open, t]);
 
   const handleRetryClick = () => {
     if (!onRetry || retrying) return;

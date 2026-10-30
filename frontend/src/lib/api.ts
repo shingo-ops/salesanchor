@@ -129,7 +129,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
       // 5xx 系の一時エラーはリトライ
       if (RETRYABLE_STATUS.has(res.status) && attempt < maxRetries) {
-        lastError = new Error(`HTTP ${res.status}`);
+        lastError = new Error(i18n.t("common.httpError", { status: res.status }));
         continue;
       }
 
@@ -140,7 +140,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
         const message =
           typeof detail === "string"
             ? detail
-            : detail?.detail || `HTTP ${res.status}`;
+            : detail?.detail || i18n.t("common.httpError", { status: res.status });
         throw new ApiError(message, res.status, detail);
       }
       if (res.status === 204) return undefined as T;
@@ -186,12 +186,12 @@ async function requestBlob(path: string): Promise<Blob> {
         path,
       );
       if (RETRYABLE_STATUS.has(res.status) && attempt < MAX_RETRIES) {
-        lastError = new Error(`HTTP ${res.status}`);
+        lastError = new Error(i18n.t("common.httpError", { status: res.status }));
         continue;
       }
       if (!res.ok) {
         const body = await res.text().catch(() => "");
-        throw new ApiError(body || `HTTP ${res.status}`, res.status, body);
+        throw new ApiError(body || i18n.t("common.httpError", { status: res.status }), res.status, body);
       }
       return await res.blob();
     } catch (err) {
@@ -227,7 +227,7 @@ async function requestForm<T>(path: string, body: FormData): Promise<T> {
     const message =
       typeof detail === "string"
         ? detail
-        : (detail as { detail?: string })?.detail || `HTTP ${res.status}`;
+        : (detail as { detail?: string })?.detail || i18n.t("common.httpError", { status: res.status });
     throw new ApiError(message, res.status, detail);
   }
   if (res.status === 204) return undefined as T;

@@ -88,7 +88,7 @@ export function DistributionTargetForm({ target, onClose, onSaved }: Props) {
         return;
       }
     } catch (e: unknown) {
-      setAccessError(e instanceof Error ? e.message : String(e));
+      setAccessError(e instanceof Error ? e.message : t("common.unknownError"));
       setSaving(false);
       return;
     }
@@ -116,7 +116,7 @@ export function DistributionTargetForm({ target, onClose, onSaved }: Props) {
       }
       onSaved();
     } catch (e: unknown) {
-      setAccessError(e instanceof Error ? e.message : String(e));
+      setAccessError(e instanceof Error ? e.message : t("common.unknownError"));
     } finally {
       setSaving(false);
     }
