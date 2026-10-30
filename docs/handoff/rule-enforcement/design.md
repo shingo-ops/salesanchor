@@ -593,4 +593,145 @@ merge commit の revert。
 
 ### 審査（Opus 自己審査・2026-10-29）
 APPROVE。根拠: 7 本とも試し役を変えずに違反と正しい見本の結果を写しで確かめた（r2b-recon/run_all.txt）。lessons は判定がワークフローの中にあり、R2a で決めた evidence の扱いを変えない。差し替えを使う 2 本・value-writes・claude-size は CI の呼び方との差を対象外に明記した（doc-heading は CI と同じ引数なし）。未解決: なし。
-- 実装後の審査（Opus 審査役・39f944f5a）: must 0。should は必須チェック 2 件（GO 原文の未記入・ブランチの起点の遅れ）で、手続きで解く。nit 4 件のうち 3 件（調べの数・value-writes と claude-size の差の明記・自己審査の文）をこの節で直した。expect_output をより狭くする nit は、今の見本の組み合わせで別の理由と取り違えないため直さない。
+- 実装後の審査（Opus 審査役・39f944f5a）: must 0。should は必須チェック 2 件（GO 原文の未記入・ブランチの起点の遅れ）で、手続きで解く。nit 5 件のうち 4 件（調べの数・value-writes と claude-size の差の明記・自己審査の文）をこの節で直した。expect_output をより狭くする nit は、今の見本の組み合わせで別の理由と取り違えないため直さない。
+
+## R2c CI で動いていない既存の試験 4 本を毎回の PR で動かす（設計・2026-10-30）
+
+### 前提（origin/main 5195ecc1d の事実。調べの生出力は手元の /tmp/CC報告ファイル/r2c-recon/）
+- 2026-10-29 PO「1」で、毎回は動いていない既存の試験 4 本を毎回動かす作業を選んだ。
+- 4 本は .github/workflows のどこからも呼ばれていない（79 ファイルを名前で探して 0 件。1-grep.txt）。backend の pytest は testpaths が tests のため scripts/ の試験を拾わない（backend/pyproject.toml:54）。
+- 4 本は今の main で全部通る（2-*.txt）:
+  - scripts/tests/test-process-artifacts.js: `node` で exit 0、326 PASS / 0 FAIL。手元の Mac で 4 分 15 秒。検査を子プロセスで何百回も起動するため遅い。実行中に docs/handoff/_test_tmp/ を作る。
+  - scripts/tests/test-migration-column-churn.js: exit 0、13 passed、2.5 秒。
+  - scripts/tests/test-migration-duplicate-registration.js: exit 0、3 passed、0.5 秒。
+  - scripts/test_lint_tenant_schema.py: `python3 -m pytest -q` で 11 passed、約 1 秒。`python3 -I` で直接流すと試験の関数が 1 つも呼ばれず、何も確かめないまま exit 0 になる（2-lint-tenant.txt が空）。
+- 要るもの: js の 3 本は node の標準部品と git だけ。py の 1 本は pytest だけ。docker・DB・ネットワークは要らない。
+- 4 本が試す検査と、それを呼ぶ必須チェック: check-process-artifacts.js → process-artifacts gate、lint_tenant_schema.py → ADR-072 tenant schema lint (strict mode)、check-migration-column-churn.js と check-migration-duplicate-registration.sh → migration-guard.yml の中の手順（552・556 行）。
+- rule-registry.yml の rule registry ジョブは必須チェックではなく、timeout 10 分、setup-node 22 あり、setup-python と pytest の導入は無い。pytest の入れ方の手本は hook-test.yml:37-44（setup-python 3.12 → setup-uv → `uv pip install --system pytest`）。
+
+### 目的
+R2a・R2b の見本は「検査が違反を止めるか」を 1 件ずつ試す。既存の 4 本は同じ検査を細かい場合分けで試している（合わせて 353 件）。これが毎回動いていないため、検査の細かい部分が壊れても気づけない。4 本を毎回の PR で動かし、壊れたらその PR で気づけるようにする。
+
+### 変更後
+1. .github/workflows/rule-registry.yml に、rule registry と並んで走る別のジョブ `existing-rule-tests`（名前「existing rule tests」）を足す。毎回の PR で動く（on は今のまま。paths の絞り込みはしない）。
+2. ジョブの手順: checkout@v5 → setup-node@v5（'22'）→ setup-python@v5（'3.12'）→ setup-uv@v4 → `uv pip install --system pytest` → 4 本を 1 手順ずつ流す（js は `node <path>`、py は `python3 -m pytest -q scripts/test_lint_tenant_schema.py`）。どの手順も continue-on-error にしない。
+3. timeout-minutes は 15。test-process-artifacts.js が遅いため、rule registry の 10 分とは分ける。
+4. py の 1 本は必ず pytest で流す（`python3 -I` では何も試さずに通るため）。pytest は試験が 1 件も集まらないと exit 5 で落ちるので、試験の関数の名前が変わって空振りすることも防げる。
+5. 必須チェックには登録しない（登録は Branch Protection の変更で、PO 本人の判断が要るため）。
+6. docs/handoff/rule-enforcement/design.md の R2b 節の末尾行にある数え誤り「nit 4 件のうち 3 件」を「nit 5 件のうち 4 件」に直す（R2b の審査で次の変更で直すとした分）。
+
+### 対象外
+- 4 本の試験と検査の中身は変えない。
+- 必須チェックへの登録（Branch Protection の変更）。
+- check-lessons-section.sh を実際に止まった記録で確かめる作業、提出前の一本の入口（R4）、語の一覧の作り直し（R1c）。
+- test-process-artifacts.js を速くすること（K3 で測り、上限を超えたときだけ別に考える）。
+
+### 受入条件
+- K1 この PR で、existing rule tests ジョブが success。4 本それぞれの手順が success で、最後の行（326 PASS・13 passed・3 passed・11 passed）が出ている。
+- K2 弱めたら気づく: 使い捨ての写しで 4 本が試す検査をそれぞれ 1 か所ずつ弱めて（違反を見逃す形に書き換えて）流すと、その試験が exit 0 以外になる。4 本それぞれ 1 回。書き換えはコミットしない。
+- K3 ジョブ全体の所要時間を CI の記録で測り、PR 本文に書く。15 分の上限の半分（7 分 30 秒）を超えたらマージせず止まって報告する。
+- K4 この PR で必須チェック 16 件が全部 pass。
+- K5 実行後に使い捨ての写しと一時フォルダが手元に残らない。
+
+### リスクと対処
+- checkout の既定は履歴 1 件だけ。test-process-artifacts.js などが履歴を要ると CI で落ちる → K1 で確かめる。落ちたら、そのジョブだけ fetch-depth: 0 にする（ほかは変えない）。理由を報告に書く。
+- Linux と macOS の道具の違いで、手元では通り CI で落ちる → K1 で確かめる。落ちたら試験を直さず、原因を調べて報告する。
+- 毎回の PR で数分の実行が増える → K3 で測る。
+
+### 戻し方
+merge commit の revert。
+
+### 審査（Opus 自己審査・2026-10-30）
+APPROVE。根拠: 4 本とも今の main で通ることを写しで確かめた（r2c-recon/2-*.txt）。py の 1 本が直接の実行では空振りする点は、pytest で流し、試験 0 件で落ちる性質で防ぐ。workflow-lint.yml と Branch Protection には触れないため、ADR-1003 の本人 GO の例外に当たらない。未解決: CI での所要時間と、履歴 1 件の checkout で動くか（K1・K3 で確かめる）。
+
+### 追記（CI の 1 回目の結果・2026-10-30）
+- 事実: 7f8d24c8 の existing rule tests は、工程の成果物の検査の試験で 324 PASS / 2 FAIL（run 41001128041）。落ちたのは LOCAL_PRECHECK の 2 件で、どちらも「LOCAL_PRECHECK は CI では使えません」で止まった。他の 3 本の手順は前の手順の失敗で動いていない。
+- 原因: 検査は `LOCAL_PRECHECK` と `GITHUB_ACTIONS === 'true'` の併用を止める（scripts/check-process-artifacts.js:1642）。試験は手元での事前検査を真似るため LOCAL_PRECHECK=1 を渡すが、CI の実行環境の GITHUB_ACTIONS=true をそのまま子に引き継ぐ。手元では GITHUB_ACTIONS が無いので通る。
+- 対処: その手順だけ `env -u GITHUB_ACTIONS node scripts/tests/test-process-artifacts.js` で流し、手元と同じ条件にする。試験と検査の中身は変えない。CI での併用を止める決まりは、試験が自分で GITHUB_ACTIONS=true を渡す 1 件（test-process-artifacts.js:2039）で引き続き試される。
+- 他の 3 本の手順も、この修正後の CI で初めて結果が出る。そこで落ちたら同じように原因を調べて止まる。
+
+## R2d tenant schema 検査の「違反なら失敗で終わる」部分を試す（設計・2026-10-30）
+
+### 前提（origin/main ba3e9207d の事実。調べの生出力は手元の /tmp/CC報告ファイル/lint-strict-recon/）
+- 2026-10-30 PO「２」で、R2c で見つかった足りない所をふさぐ作業を選んだ。
+- R2c の K2 で、scripts/lint_tenant_schema.py の strict の `return 1` を `return 0` に弱めても、scripts/test_lint_tenant_schema.py は 11 passed のまま通った。試験は `lint_file()` だけを呼び、`main()` と終了コードを試していない（試験 13〜18 行は lint_file だけを import）。
+- 必須チェック「ADR-072 tenant schema lint (strict mode)」は `python3 scripts/lint_tenant_schema.py --mode strict backend/app/routers/` を呼ぶ（lint-tenant-schema.yml:66-69）。止まるかどうかは、この命令の終了コードだけで決まる。
+- `main(argv)`（lint_tenant_schema.py:306）は引数のパスだけを走査し、git やネットワークに依存しない（325-333 行）。違反があれば strict で 1、warning で 0、違反がなければ 0 を返す（356-367 行）。最後は `sys.exit(main())`（370-371 行）。旗は `--mode strict` で、`--strict` は無い。
+- 一時の違反ファイル・正しいファイルで実測：命令として流すと strict＋違反は rc=1（stderr に `mode=strict: failing CI`）、strict＋正しいは rc=0、warning＋違反は rc=0（d_*.txt）。
+
+### 目的
+CI と同じ「命令として流したときの終了コード」を試験で確かめ、strict の失敗の返し方が壊れたら R2c で足した毎回の試験で気づけるようにする。
+
+### 変更後
+1. scripts/test_lint_tenant_schema.py に試験を 3 件足す。検査の本体を、CI と同じく別のプロセスの命令として流す（`subprocess.run([sys.executable, <scripts の絶対パス>/lint_tenant_schema.py, "--mode", ..., <一時ファイル>], capture_output=True, text=True)`）。
+   - strict＋違反ファイル → returncode が 1、stderr に `mode=strict: failing CI` を含む。
+   - strict＋正しいファイル → returncode が 0。
+   - warning＋違反ファイル → returncode が 0（strict と warning の取り違えに気づくため）。
+2. 違反ファイル・正しいファイルは既存の `_write_tmp` で作る。パスは必ず明示する（既定の `backend/app/routers` は実行場所で変わるため使わない）。
+3. 既存の 11 件と検査の本体は変えない。ワークフローも変えない（R2c の existing rule tests が毎回 pytest で流す）。
+
+### 選んだ理由
+`main()` を直接呼ぶ形より、命令として流す形を選ぶ。CI が見るのは `sys.exit(main())` を通った終了コードで、そこまで含めて試せるため。実測で、絶対パスで呼べば実行場所に依存しなかった。
+
+### 対象外
+- 検査の本体・既存の試験・ワークフローの変更。
+- 試験だけを変える PR では、必須チェック「ADR-072 tenant schema lint」は変更の絞り込みにより検査を飛ばして pass になる。この PR の試験の確かめは existing rule tests で行う。
+
+### 受入条件
+- K1 手元と CI の existing rule tests で `python3 -m pytest -q scripts/test_lint_tenant_schema.py` が 14 passed。
+- K2 弱めたら気づく：使い捨ての写しで、strict の `return 1` を `return 0` に弱めると、足した試験が落ちて pytest が exit 0 以外になる。strict と warning の判定を入れ替える弱め方でも 1 回試す。書き換えはコミットしない。
+- K3 この PR で必須チェック 16 件が pass、existing rule tests が success。
+- K4 一時ファイル・使い捨ての写しが残らない（足した試験が作る一時ファイルも、試験の中で消す）。
+
+### リスクと対処
+- 足した試験が一時ファイルを残す → 試験の中で消す（K4）。
+- CI の Python の版と手元の違い → K1 で CI でも確かめる。
+
+### 戻し方
+merge commit の revert。
+
+### 審査（Opus 自己審査・2026-10-30）
+APPROVE。根拠：足りない所は R2c の K2 で実測済み（11 passed のまま通った）。命令として流す形は調べで rc=1/0/0 を実測済み。検査・ワークフロー・必須チェックの登録に触れないため、ADR-1003 の本人 GO の例外に当たらない。未解決：なし（CI での結果は K1・K3 で確かめる）。
+
+## R1c-1 決まりの語の一覧を広げる（第1段：言い方のはっきりした語）
+
+### なぜ
+台帳の語の一覧（rules.yml:12）は 9 語だけで、一覧に無い言い方で書いた決まりは突き合わせを素通りする（§5 R1 の限界、ADR-1047 条文の取りこぼし）。2026-10-30 PO「2,1」で、語の一覧の作り直しを先に進めると決めた。
+
+### 調べた事実（origin/main 162cb754、生出力 /tmp/CC報告ファイル/r1c-words/）
+- check_rule_registry.py と同じ読み方（44 本・5786 行・全行）で再現し、今の語の一覧で 412 行に当たることを確かめた
+- 一覧に当たらない 5374 行で、言い方ごとの行数（重なりあり）：「〜ない」で終わる動詞の否定 227（うち記録の文書 evidence-registry.md 133・lessons.d 21）、のみ 142（記録 89）、だけ 70（記録 33）、べき 33（大半が「あるべき姿」）、不可 32（「不可逆」を含む）、が必要 24、不要 19、ないこと 9、止める 8、避け 7、してよい 7、限る 6、ならない 5（うち「進んではならない」など、「して」でない形が design-partner.md:32 の 1 行。新しい語でも当たらない残りは evidence-registry.md:1271・:1493 の記録の行で「緑にならない」等の形）、認めない 4、要る 4、必要がある 3。英語は only 62 のほかは 0〜7
+- 下の第1段の語で新しく当たった行は 117 行（529 − 412。「不可逆」だけの行を除いた和集合。check_rule_registry.py の実測）。足した項目は 116 件（rules 205→254 で 49、not_rules 49→116 で 67）。差 1 は STANDARD-WORKFLOW.md:83 が既存の S03 の anchor にすでに当たるため（新しい項目が要らない）
+
+### 何を変えるか（第1段）
+- rules.yml:12 の words を次にする：
+  `禁止|必ず|必須|厳禁|[てで]はならない|しない|すること|ないこと|不可(?!逆)|認めない|限る|不要|が必要|必要がある|してよい|要る|止める|避け|MUST|NEVER`
+  - 「してはならない」は「「てはならない」「ではならない」」に広げる（「進んではならない」を拾うため。今の 2 行は引き続き当たる）
+  - 「不可」は「不可逆」を除く
+- 新しく当たった行をすべて rules か not_rules に入れる（ADR-1047 条文7〜10 と R1b の書き方に従う。1 行 1 項目。id は文書の頭文字＋各文書の次の空き番号）
+  - 機械で○×が決まるが今は止める必須チェックが無い行は review で reason を「gate候補（R6）: 」で始める
+  - 今回 gate は足さない（足すには止める必須チェックと見本が要る。R2 の範囲）
+  - 記録の文書（evidence-registry.md・lessons.d）の行は、過去の出来事の記録なら not_rules にし reason にそう書く
+- 検査の台本（check_rule_registry.py）・rule-docs.txt・required-checks.txt・ワークフローは変えない
+
+### 第2段以降に回すもの（理由）
+- 「〜ない」で終わる動詞の否定（227 行）：件数が多く、第1段と混ぜると審査で見落とす。第1段の結果を見てから、正規表現と仕分けを別の PR で行う（変更は一度に1つ）
+- のみ・だけ・べき・only：見本 10 行ずつで説明文が大半（「〜のみ追加」「あるべき姿」など）。語として足すと決まりでない行が大半になる。第2段のあとに残りとして数を測って報告する
+- 週次点検への「required-checks.txt と ruleset の差」（spec README:26 の R1c 後半）：PO が今回選んだのは語の一覧の作り直しなので、別の作業にする
+
+### 受入条件
+- K1：`python3 -I scripts/ci/check_rule_registry.py` の未仕分けが 0・error 0。決まりの語を含む行が 412 より増え、増えた行はすべて既存か新しい項目に当たる（差は理由を書く）
+- K2：新しく足した項目すべてに reason があり、kind は review・exempt・not_rules のどれか（gate 0 のまま）。gate候補の数を報告する
+- K3：語ごとの新しく当たった行の数を報告し、上の調べの数（不可逆を除く）と食い違いがあれば理由を書く
+- K4：`python3 -I scripts/tests/test_check_rule_registry.py`（27 件）・run_rule_fixtures.py・`check_doc_index.py --root . --strict` が rc=0
+- K5：この PR の必須チェック 16 件が pass、rule registry と existing rule tests が success
+- K6：変えたファイルは rules.yml と design.md だけ
+
+### リスクと対処
+- 仕分けの誤り（決まりを not_rules にする）→ 審査役が新しい項目から見本を取って出典の行と照らす。not_rules の reason は「なぜ決まりでないか」を1文で書く
+- 不可(?!逆) は「不可視」「不可能」にも当たる（今は lessons.d の不可視文字の行・kpi.md:185・evidence-registry.md:1270 で、いずれも決まりでない行として分けた）。語を絞るのは第2段で数を見て決める
+- 語の一覧の変更は GO 記録の要る変更（check-process-artifacts.js）→ GO 記録を書く
+- 戻し方：revert（検査は警告のまま。必須チェックではない）
+
+### Opus 自己審査（同じ AI の審査。独立の審査は PR で別の審査役が行う）
+APPROVE。根拠：語ごとの数は再現した読み方で数えた。変える場所は台帳と設計書だけ。第2段に回したものと理由を書いた。未解決：「〜ない」の正規表現は第1段のあとに決める。
