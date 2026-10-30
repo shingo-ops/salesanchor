@@ -180,12 +180,12 @@ export function normalizeEvent(event: ApiCalendarEvent): ScheduleItem {
   };
 }
 
-export function normalizeShift(shift: ApiShift): ScheduleItem {
+export function normalizeShift(shift: ApiShift, t: (key: string) => string): ScheduleItem {
   const start = parseDateTime(shift.shift_date, shift.start_time);
   const end = parseDateTime(shift.shift_date, shift.end_time);
   return {
     id: `shift-${shift.id}`,
-    title: shift.shift_type === "holiday" ? "Holiday" : "Shift",
+    title: shift.shift_type === "holiday" ? t("schedule.holiday") : t("schedule.shiftLabel"),
     start,
     end,
     allDay: false,

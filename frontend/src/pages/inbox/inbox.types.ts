@@ -128,26 +128,36 @@ export function parseDate(iso: string | null | undefined): Date | null {
   return isNaN(d.getTime()) ? null : d;
 }
 
-/** 現時刻を起点に「N 分前」「N 時間前」等の相対表記。 */
-export function relativeTime(iso: string | null): string {
+export type TFn = (key: string, opts?: Record<string, unknown>) => string;
+
+/** 現時刻を起点にした経過表記（たった今・N分前・N時間前・N日前）。 */
+export function elapsedLabel(iso: string | null, t: TFn): string {
   const d = parseDate(iso);
   if (!d) return "—";
   const diffSec = Math.floor((Date.now() - d.getTime()) / 1000);
-  if (diffSec < 60) return "just now";
+  if (diffSec < 60) return t("inbox.elapsedJustNow");
   const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) return `${diffMin}m ago`;
+  if (diffMin < 60) return t("inbox.elapsedMinutesAgo", { count: diffMin });
   const diffHour = Math.floor(diffMin / 60);
-  if (diffHour < 24) return `${diffHour}h ago`;
+  if (diffHour < 24) return t("inbox.elapsedHoursAgo", { count: diffHour });
   const diffDay = Math.floor(diffHour / 24);
-  if (diffDay < 7) return `${diffDay}d ago`;
-  return d.toLocaleDateString("en-US", { month: "2-digit", day: "2-digit" });
+  return t("inbox.elapsedDaysAgo", { count: diffDay });
+}
+
+/** 現時刻を起点に「N 分前」等の相対表記。7日以上前は今の言語の月日。 */
+export function relativeTime(iso: string | null, t: TFn, lang: string): string {
+  const d = parseDate(iso);
+  if (!d) return "—";
+  const diffDay = Math.floor((Date.now() - d.getTime()) / 86_400_000);
+  if (diffDay < 7) return elapsedLabel(iso, t);
+  return d.toLocaleDateString(lang, { month: "2-digit", day: "2-digit" });
 }
 
 /** `2026-04-30 14:25` 形式の絶対時刻（吹き出しの hover タイトル用）。 */
-export function formatAbsolute(iso: string | null): string {
+export function formatAbsolute(iso: string | null, lang: string): string {
   const d = parseDate(iso);
   if (!d) return "—";
-  return d.toLocaleString("en-US", {
+  return d.toLocaleString(lang, {
     year: "numeric", month: "2-digit", day: "2-digit",
     hour: "2-digit", minute: "2-digit",
   });

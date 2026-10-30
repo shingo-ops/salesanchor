@@ -97,7 +97,7 @@ export default function InboxPage() {
         aria-label={t("faq.title")}
         data-tooltip={t("faq.title")}
       >
-        FAQ
+        {t("faq.title")}
       </Button>
       <button
         type="button"

@@ -307,7 +307,7 @@ export default function InvoiceDetailPage() {
           <div><strong>{t("invoices.paidAt")}:</strong> {invoice.paid_at ? new Date(invoice.paid_at).toLocaleDateString() : "-"}</div>
           <div><strong>{t("invoices.exchangeRateJpy")}:</strong> {invoice.exchange_rate_jpy ?? "-"}</div>
           <div><strong>{t("invoices.exchangeRateUsd")}:</strong> {invoice.exchange_rate_usd ?? "-"}</div>
-          <div><strong>ERP Key:</strong> <span className="mono">{invoice.erp_key || "-"}</span></div>
+          <div><strong>{t("invoices.erpKeyLabel")}</strong> <span className="mono">{invoice.erp_key || "-"}</span></div>
           {invoice.void_reason && <div style={{ gridColumn: "1 / -1" }}><strong>{t("invoices.voidReasonLabel")}:</strong> {invoice.void_reason}</div>}
           {invoice.notes && <div style={{ gridColumn: "1 / -1" }}><strong>{t("common.notes")}:</strong> {invoice.notes}</div>}
         </div>

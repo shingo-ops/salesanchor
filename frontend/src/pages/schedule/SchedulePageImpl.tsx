@@ -939,7 +939,7 @@ export default function SchedulePage() {
           nextEvents.push(...normalizedEvents);
         }
         if (shiftsResult.status === "fulfilled") {
-          nextEvents.push(...shiftsResult.value.map(normalizeShift));
+          nextEvents.push(...shiftsResult.value.map((shift) => normalizeShift(shift, t)));
         }
         if (!cancelled) {
           setEvents(nextEvents);

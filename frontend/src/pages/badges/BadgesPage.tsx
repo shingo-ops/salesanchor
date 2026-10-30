@@ -83,7 +83,7 @@ export default function BadgesPage() {
                   {leaderboard.map((e, i) => (
                     <tr key={e.user_id}>
                       <td style={{ fontWeight: i < 3 ? "var(--font-weight-bold)" : "var(--font-weight-normal)" }}>{i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}`}</td>
-                      <td>{e.username || `User #${e.user_id}`}</td>
+                      <td>{e.username || t("badges.userFallback", { id: e.user_id })}</td>
                       <td>{e.badge_count}</td>
                       <td style={{ fontWeight: "var(--font-weight-semi)" }}>{e.total_points} pt</td>
                     </tr>

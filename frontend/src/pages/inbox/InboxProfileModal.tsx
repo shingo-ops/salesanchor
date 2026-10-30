@@ -173,7 +173,7 @@ export function InboxProfileModal({
                 <span className="right-panel-label">{t("leads.targetTitles")}</span>
                 <TextFieldControl variant="karte" type="text" value={cardForm.target_titles ?? ""}
                   onChange={(e) => handleCardFieldChange("target_titles", e.target.value)}
-                  onBlur={handleCardFieldBlur} placeholder="Pokemon, One Piece, ..." />
+                  onBlur={handleCardFieldBlur} placeholder={t("leads.targetTitlesPlaceholder")} />
               </div>
               <div className="right-panel-row">
                 <span className="right-panel-label">{t("leads.salesForm")}</span>
