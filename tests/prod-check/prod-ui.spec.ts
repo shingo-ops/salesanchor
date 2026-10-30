@@ -37,7 +37,10 @@ test.describe("本番の画面点検", () => {
     const { email, password } = c!;
     await login(page, email, password);
     await page.goto("/");
-    await page.waitForLoadState("networkidle");
+    // 画面は常時接続（新着の知らせ）を持つため networkidle にならない。読み込み完了＋5秒の間に出たエラーを数える
+    await page.waitForLoadState("load");
+    await expect(page.locator("main")).toBeVisible();
+    await page.waitForTimeout(5_000);
     expect(errors, `console.error が ${errors.length} 件`).toHaveLength(0);
   });
 
@@ -54,7 +57,6 @@ test.describe("本番の画面点検", () => {
 
     await page.goto("/crm/leads");
     await page.waitForURL((url) => url.pathname === "/crm/leads");
-    await page.waitForLoadState("networkidle");
     await expect(page.locator("main")).toBeVisible();
     await expect(page.locator(NO_ERROR_BANNER)).toHaveCount(0);
     await expect(page.locator(".error-message")).toHaveCount(0);
@@ -69,7 +71,6 @@ test.describe("本番の画面点検", () => {
     const box = page.getByPlaceholder("顧客名・コードで検索...");
     await expect(box).toBeVisible();
     await box.fill("テスト");
-    await page.waitForLoadState("networkidle");
     await expect(box).toHaveValue("テスト");
     await expect(page.locator(NO_ERROR_BANNER)).toHaveCount(0);
   });
@@ -81,12 +82,11 @@ test.describe("本番の画面点検", () => {
     await login(page, email, password);
     await page.goto("/crm/companies");
     await expect(page.getByPlaceholder("顧客名・コードで検索...")).toBeVisible();
-    await page.waitForLoadState("networkidle");
+    await page.locator('main a[href^="/companies/"]').first().waitFor({ timeout: 10_000 }).catch(() => {});
     const link = page.locator('main a[href^="/companies/"]').first();
     test.skip((await link.count()) === 0, "会社 0 件");
     await link.click();
     await page.waitForURL(/\/crm\/companies\/[^/]+$/);
-    await page.waitForLoadState("networkidle");
     await expect(page.locator(NO_ERROR_BANNER)).toHaveCount(0);
     await expect(page.locator("main")).toBeVisible();
   });
