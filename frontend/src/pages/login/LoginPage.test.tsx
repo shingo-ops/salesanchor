@@ -77,15 +77,15 @@ describe("LoginPage (Firebase default)", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("forgot-password and back-to-login are secondary Button components", () => {
+  it("forgot-password and back-to-login are TextLink components", () => {
     renderLogin();
 
     const forgot = screen.getByRole("button", { name: tr("login.forgotPassword") });
-    expect(forgot.className).toContain("comp-btn--secondary");
+    expect(forgot.className).toContain("comp-text-link");
 
     fireEvent.click(forgot);
     const back = screen.getByRole("button", { name: tr("login.backToLogin") });
-    expect(back.className).toContain("comp-btn--secondary");
+    expect(back.className).toContain("comp-text-link");
   });
 
   it("reset email is sent through the Firebase function", async () => {

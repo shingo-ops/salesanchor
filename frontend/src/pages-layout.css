@@ -228,27 +228,23 @@
 .login-subtitle {
   text-align: center;
   color: var(--text-muted);
-  margin: 0 0 var(--space-2);
+  font-size: var(--role-auth-title-size);
+  font-weight: var(--role-auth-title-weight);
+  line-height: var(--role-auth-title-lh);
+  margin: 0 0 var(--space-5);
+}
+
+/* ログイン画面の縦の間（ChatGPT 実測 20px。components.css の .form-group は全画面で使うので触らない） */
+.login-card .form-group {
+  margin-bottom: var(--space-5);
+}
+
+/* パスワード欄のすぐ下の文字リンク（TextLink） */
+.login-forgot-row {
+  margin-top: var(--space-2);
 }
 
 /* Meta 風ログインフォーム — 入力欄は FormField.css の comp-input--login（design.md §AY-2b） */
-
-/* パスワード再設定リンク（パスワード入力欄の下） */
-.login-forgot-link {
-  display: block;
-  text-align: right;
-  font-size: var(--font-sm);
-  color: var(--accent);
-  margin-top: var(--space-1);
-  cursor: pointer;
-  background: none;
-  border: none;
-  padding: 0;
-  text-decoration: underline;
-}
-.login-forgot-link:hover {
-  color: var(--accent-hover);
-}
 
 /* 再設定メール送信成功メッセージ */
 .login-success-message {
@@ -258,24 +254,6 @@
   padding: var(--space-3) var(--space-4);
   font-size: var(--font-sm);
   margin-bottom: var(--space-4);
-}
-
-/* ログイン画面に戻るリンク */
-.login-back-link {
-  display: block;
-  text-align: center;
-  font-size: var(--font-sm);
-  color: var(--accent);
-  margin-top: var(--space-4);
-  cursor: pointer;
-  background: none;
-  border: none;
-  padding: 0;
-  text-decoration: underline;
-  width: 100%;
-}
-.login-back-link:hover {
-  color: var(--accent-hover);
 }
 
 /* KGI-5: モバイル（<=767px）でのログインカード余白縮小 */

@@ -124,6 +124,8 @@
       "selectAllRows": "select all rows",
       "selectRow": "select row {{key}}"
     },
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
     "loading": "Loading...",
     "select": "Select",
     "selectAll": "Select all",

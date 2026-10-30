@@ -28,7 +28,8 @@ const MIN_TAP_PX = 44;
 const MIN_VISIBLE_ROWS = 8;
 /** 一覧の先頭カードの y の上限（design.md ③・便4で128に更新。docs/handoff/viewer-header-remove/design.md 4-4） */
 // 便10 で検索欄とボタン行が48pxになり計算値132。docs/handoff/viewer-control-tap-size/design.md ⑤
-const MAX_TOP_Y = 132;
+// 本便（toolbar-series-name-full-width）でシリーズが単独行になり段が1つ増え、計算値192＋余裕12で204。
+const MAX_TOP_Y = 204;
 
 // eslint-disable-next-line local/no-japanese-literal -- tests-e2e は ESLint 対象外。DB の series 名（画面文言ではない）に見せかけた fixture 専用の名前
 const SERIES_NAMES = Array.from({ length: 15 }, (_, i) => `しりーず${String(i + 1).padStart(2, "0")}`);
@@ -157,7 +158,7 @@ async function countVisibleChoiceRows(panel: Locator, testIdPrefix: string, inne
 for (const width of MOBILE_WIDTHS) {
   const height = 844;
   test.describe(`visual-language: 閲覧ページ choice sheet ${width}px`, () => {
-    test("B1・B2・B3: 3つのボタンが枠なしで1行に並び、44px以上・画面内、main の中の select は0件", async ({ page }) => {
+    test("B1・B2・B3: 3つのボタンが枠なし。シリーズは単独の行、並び替え・絞り込みは同じ行で、44px以上・画面内、main の中の select は0件", async ({ page }) => {
       await gotoViewer(page, { width, height });
       const series = page.getByTestId("viewer-tab-select");
       const sort = page.getByTestId("viewer-sort-menu");
@@ -173,7 +174,7 @@ for (const width of MOBILE_WIDTHS) {
         expect(style.border).toBe("rgba(0, 0, 0, 0)");
       }
 
-      // B2: 1行に並ぶ・44px以上・右端が画面幅以内
+      // B2: シリーズは単独の行、並び替え・絞り込みは同じ行・44px以上・右端が画面幅以内
       const [seriesBox, sortBox, filterBox] = await Promise.all([
         series.boundingBox(),
         sort.boundingBox(),
@@ -182,7 +183,7 @@ for (const width of MOBILE_WIDTHS) {
       expect(seriesBox).not.toBeNull();
       expect(sortBox).not.toBeNull();
       expect(filterBox).not.toBeNull();
-      expect(seriesBox!.y).toBe(sortBox!.y);
+      expect(seriesBox!.y).not.toBe(sortBox!.y);
       expect(sortBox!.y).toBe(filterBox!.y);
       for (const box of [seriesBox!, sortBox!, filterBox!]) {
         expect(box.height).toBeGreaterThanOrEqual(MIN_TAP_PX);

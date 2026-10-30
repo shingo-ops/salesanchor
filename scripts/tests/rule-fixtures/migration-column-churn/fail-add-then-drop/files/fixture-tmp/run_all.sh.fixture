@@ -1,0 +1,2 @@
+run_sql migrations/fx_add.sql
+run_sql migrations/fx_drop.sql

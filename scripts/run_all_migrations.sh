@@ -24,6 +24,10 @@ BACKEND="astro-webapp-backend-1"
 POSTGRES="astro-webapp-postgres-1"
 PSQL="psql -U jarvis -d jarvis_db -v ON_ERROR_STOP=1"
 
+# 接続の名前の正本（deploy-db-stall §16-3）。cd の前に、このスクリプトの位置から読む。
+# shellcheck disable=SC1091
+source "$(dirname "${BASH_SOURCE[0]}")/lib/db-app-names.sh"
+
 cd "${REPO_DIR}"
 
 # SA-18 Phase2: bootstrap ステップが別 SSH セッションで .env に書いた
@@ -46,18 +50,6 @@ STEP=0
 
 TOTAL=$(grep -cE '^run_(sql|py)[[:space:]]' "$0" 2>/dev/null || echo 0)
 
-run_py() {
-  local script="$1"
-  shift
-  STEP=$((STEP + 1))
-  echo ">>> [${STEP}/${TOTAL}] python ${script} $*"
-  # SA-18 Phase2: Python マイグレーションは DDL を含むため ADMIN_DATABASE_URL で実行。
-  # ADMIN_DATABASE_URL 未設定時は DATABASE_URL にフォールバック（後方互換）。
-  docker exec \
-    -e DATABASE_URL="${ADMIN_DATABASE_URL:-$DATABASE_URL}" \
-    "$@" -w /app "${BACKEND}" python "${script}"
-}
-
 # 稼働中のアプリとロックを取り合ったら、同じファイルを流し直す（全 migration は冪等で、
 # CI のドライラン2周目で再実行が通ることを確かめている）。ほかのエラーは今までどおり即停止。
 # ロック待ちは1秒で諦める。待っている間は後から来た在庫表などの読み取りも止まるため（ADR-1037）。
@@ -67,11 +59,53 @@ SQL_RETRY_MAX_ATTEMPTS="${SQL_RETRY_MAX_ATTEMPTS:-40}"
 SQL_RETRY_SLEEP_SEC="${SQL_RETRY_SLEEP_SEC:-3}"
 SQL_RETRY_BUDGET="${SQL_RETRY_BUDGET:-40}"
 SQL_RETRY_USED=0
+# 流し直しの判定に使う文字列（run_sql と run_py で共有。ADR-1037 の拡張）
+SQL_RETRY_PATTERN="deadlock detected|canceling statement due to lock timeout"
 # 鍵が取れなかったときの手がかり: 開始から1秒を超えて開いている接続（ADR-1037 便1.1）
 # 公開リポジトリの Actions ログに出るため、SQL の文面・接続元アドレスは出さない（命令の先頭1語と表名だけ）
 log_lock_holders() {
   echo ">>> [${STEP}/${TOTAL}] lock holders (xact > 1s):"
   docker exec -e PGOPTIONS="-c lock_timeout=1s -c statement_timeout=5s" "${POSTGRES}" ${PSQL} -At -F ' | ' -c "SELECT a.pid, a.usename, a.application_name, a.state, coalesce(a.wait_event_type, '-'), round(extract(epoch FROM now() - a.xact_start))::int AS xact_sec, upper(coalesce(substring(a.query from '^[[:space:]]*([A-Za-z]+)'), '-')) AS cmd, coalesce((SELECT string_agg(DISTINCT c.relname || ':' || l.mode, ',') FROM pg_locks l JOIN pg_class c ON c.oid = l.relation WHERE l.pid = a.pid AND l.granted AND l.database = (SELECT oid FROM pg_database WHERE datname = current_database()) AND c.relkind IN ('r', 'p', 'v')), '-') AS locks FROM pg_stat_activity a WHERE a.pid <> pg_backend_pid() AND a.backend_type = 'client backend' AND a.xact_start < now() - interval '1 second' ORDER BY a.xact_start" 2>&1 | sed "s/^/>>> [${STEP}\/${TOTAL}]   /" || true
+}
+# Python の移行は本物を直接ではなく入口 scripts/migration_py_entry.py 経由で動かす（ADR-1037 の拡張）。
+# 入口が MIGRATION_LOCK_TIMEOUT を見て create_async_engine を差し替え、接続ごとにロック待ちを SQL_LOCK_TIMEOUT にする。
+# 差し替えは暗黙なので、入口が終了時に「applied to N engine(s)」を標準エラーへ出す。移行本体は触らない。
+# ロック待ちで失敗したら run_sql と同じ判定・回数・間隔・全体上限で同じファイルを流し直す。ほかのエラーは即停止。
+run_py() {
+  local script="$1"
+  shift
+  STEP=$((STEP + 1))
+  echo ">>> [${STEP}/${TOTAL}] python ${script} $*"
+  local attempt=1 rc errlog
+  errlog="$(mktemp)"
+  while true; do
+    rc=0
+    # SA-18 Phase2: Python マイグレーションは DDL を含むため ADMIN_DATABASE_URL で実行。
+    # ADMIN_DATABASE_URL 未設定時は DATABASE_URL にフォールバック（後方互換）。
+    docker exec \
+      -e DATABASE_URL="${ADMIN_DATABASE_URL:-$DATABASE_URL}" \
+      -e MIGRATION_LOCK_TIMEOUT="${SQL_LOCK_TIMEOUT}" \
+      "$@" -w /app "${BACKEND}" python scripts/migration_py_entry.py "${script}" 2>"${errlog}" || rc=$?
+    cat "${errlog}" >&2
+    if [ "${rc}" -eq 0 ]; then
+      rm -f "${errlog}"
+      return 0
+    fi
+    if grep -qE "${SQL_RETRY_PATTERN}" "${errlog}"; then
+      [ "${attempt}" -eq 1 ] && log_lock_holders
+      if [ "${attempt}" -lt "${SQL_RETRY_MAX_ATTEMPTS}" ] && [ "${SQL_RETRY_USED}" -lt "${SQL_RETRY_BUDGET}" ]; then
+        attempt=$((attempt + 1))
+        SQL_RETRY_USED=$((SQL_RETRY_USED + 1))
+        echo ">>> [${STEP}/${TOTAL}] lock conflict; retry ${attempt}/${SQL_RETRY_MAX_ATTEMPTS} in ${SQL_RETRY_SLEEP_SEC}s (total ${SQL_RETRY_USED}/${SQL_RETRY_BUDGET}): ${script}"
+        sleep "${SQL_RETRY_SLEEP_SEC}"
+        continue
+      fi
+      echo ">>> [${STEP}/${TOTAL}] lock conflict; retry limit reached (file ${attempt}/${SQL_RETRY_MAX_ATTEMPTS}, total ${SQL_RETRY_USED}/${SQL_RETRY_BUDGET}): ${script}"
+      log_lock_holders
+    fi
+    rm -f "${errlog}"
+    return "${rc}"
+  done
 }
 run_sql() {
   local file="$1"
@@ -81,13 +115,13 @@ run_sql() {
   errlog="$(mktemp)"
   while true; do
     rc=0
-    docker exec -e PGOPTIONS="-c lock_timeout=${SQL_LOCK_TIMEOUT}" -i "${POSTGRES}" ${PSQL} < "${REPO_DIR}/${file}" 2>"${errlog}" || rc=$?
+    docker exec -e PGAPPNAME="${SA_APPNAME_MIGRATION:-salesanchor_migration}" -e PGOPTIONS="-c lock_timeout=${SQL_LOCK_TIMEOUT}" -i "${POSTGRES}" ${PSQL} < "${REPO_DIR}/${file}" 2>"${errlog}" || rc=$?
     cat "${errlog}" >&2
     if [ "${rc}" -eq 0 ]; then
       rm -f "${errlog}"
       return 0
     fi
-    if grep -qE "deadlock detected|canceling statement due to lock timeout" "${errlog}"; then
+    if grep -qE "${SQL_RETRY_PATTERN}" "${errlog}"; then
       [ "${attempt}" -eq 1 ] && log_lock_holders
       if [ "${attempt}" -lt "${SQL_RETRY_MAX_ATTEMPTS}" ] && [ "${SQL_RETRY_USED}" -lt "${SQL_RETRY_BUDGET}" ]; then
         attempt=$((attempt + 1))
@@ -213,6 +247,11 @@ _ai_ro_create_on_exit() {
   exit "${rc}"
 }
 trap _ai_ro_create_on_exit EXIT
+# deploy-db-stall §16-2: TERM・HUP・INT は backup.sh と同じく exit に変える（EXIT の trap が動く）。
+# 前面の docker exec が終わってから trap が動くので、ai_ro の作り直しは止めた文と同時に走らない。
+trap 'exit 130' INT
+trap 'exit 143' TERM
+trap 'exit 129' HUP
 # ADR-1037 便1.2: trap の後で計測を始める（どこで落ちても上の trap が止める）
 read_probe_start
 

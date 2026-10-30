@@ -11,22 +11,65 @@
 
 set -euo pipefail
 
+# 接続の名前は第1引数で決める（docs/handoff/deploy-db-stall/design.md §16-3）。
+# 引数なし = cron（crontab の行は変えない）。deploy = 本番反映の控えの段。それ以外は rc=2。
+# trap を置くより前に判定する（rc=2 のとき backup.log に FAILED 行を書かない）。
+# cron は cwd が $HOME なので、lib は BASH_SOURCE からの絶対位置で読む。
+# shellcheck disable=SC1091
+source "$(dirname "${BASH_SOURCE[0]}")/lib/db-app-names.sh"
+case "${1:-}" in
+  "") PG_APPNAME="${SA_APPNAME_BACKUP_CRON}" ;;
+  deploy) PG_APPNAME="${SA_APPNAME_BACKUP_DEPLOY}" ;;
+  *)
+    echo "usage: backup.sh [deploy]" >&2
+    exit 2
+    ;;
+esac
+
 DATE=$(date +%Y%m%d_%H%M%S)
-BACKUP_DIR="/home/ubuntu/backups/postgres"
-COMPOSE_FILE="/home/ubuntu/salesanchor/docker-compose.yml"
+# 保存先と compose ファイルは試験のために外から変えられる（本番の cron・本番反映は渡さないので既定値のまま）
+BACKUP_DIR="${SALESANCHOR_BACKUP_DIR:-/home/ubuntu/backups/postgres}"
+COMPOSE_FILE="${SALESANCHOR_BACKUP_COMPOSE_FILE:-/home/ubuntu/salesanchor/docker-compose.yml}"
 DB_USER="${POSTGRES_USER:-jarvis}"
 DB_NAME="${POSTGRES_DB:-jarvis_db}"
 RETENTION_DAYS=30
 BACKUP_PREFIX="salesanchor_db"
+# pg_dump が表のロックを待つ上限（ミリ秒）。値の正本はここだけ（docs/handoff/deploy-db-stall/design.md §15）
+PG_DUMP_LOCK_WAIT_MS=120000
 
 mkdir -p "${BACKUP_DIR}"
 
+# 強制終了などで残った書き途中のファイルのうち、1日より古いものを消す
+# （同時に動く別の控えの書き途中を消さないため、1日以内のものは残す）
+find "${BACKUP_DIR}" -name "${BACKUP_PREFIX}_*.sql.gz.partial" -mmin +1440 -delete
+
 BACKUP_FILE="${BACKUP_DIR}/${BACKUP_PREFIX}_${DATE}.sql.gz"
 
-# PostgreSQLのフルバックアップ（圧縮）
-docker compose -f "${COMPOSE_FILE}" exec -T postgres \
-  pg_dump -U "${DB_USER}" "${DB_NAME}" \
-  | gzip > "${BACKUP_FILE}"
+# 終了時の片付けと記録。BACKUP_FILE を決めた後に置く（set -u のため）。
+# 消すのは自分の .partial だけ（glob で消さない）。失敗したときだけ FAILED の行を残す。
+on_exit() {
+  local rc=$?
+  rm -f "${BACKUP_FILE}.partial"
+  if [ "${rc}" -ne 0 ]; then
+    echo "[$(date)] Backup FAILED rc=${rc}" >> "${BACKUP_DIR}/backup.log" || true
+  fi
+  exit "${rc}"
+}
+trap on_exit EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+trap 'exit 129' HUP
+
+# 書き途中のファイルも持ち主だけが読めるようにする
+OLD_UMASK=$(umask)
+umask 077
+
+# PostgreSQLのフルバックアップ（圧縮）。書き途中は .partial に書き、成功したら本名にする
+docker compose -f "${COMPOSE_FILE}" exec -T -e "PGAPPNAME=${PG_APPNAME}" postgres \
+  pg_dump -U "${DB_USER}" --lock-wait-timeout="${PG_DUMP_LOCK_WAIT_MS}" "${DB_NAME}" \
+  | gzip > "${BACKUP_FILE}.partial"
+mv "${BACKUP_FILE}.partial" "${BACKUP_FILE}"
+umask "${OLD_UMASK}"
 
 # ファイルの権限を制限（所有者のみ読み書き可能）
 chmod 600 "${BACKUP_FILE}"

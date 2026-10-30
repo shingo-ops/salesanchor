@@ -38,6 +38,16 @@ export const Danger: Story = {
   args: { variant: 'danger', children: '削除' },
 }
 
+export const Pill: Story = {
+  name: 'shape="pill" — 完全に丸い形（ログイン画面だけ）',
+  args: { variant: 'primary', shape: 'pill', children: 'ボタン' },
+}
+
+export const Auth: Story = {
+  name: 'size="auth" — 高さ 52px（ログイン画面だけ）',
+  args: { variant: 'primary', size: 'auth', shape: 'pill', fullWidth: true, children: 'ログイン' },
+}
+
 export const Sizes: Story = {
   name: 'サイズ比較 (sm / md / lg / tap)',
   render: () => (

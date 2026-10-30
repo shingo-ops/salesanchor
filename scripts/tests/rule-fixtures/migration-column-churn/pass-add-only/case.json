@@ -1,0 +1,13 @@
+{
+  "check": "models.py に新 Column → deploy.yml にマイグレーション追記必須",
+  "rules": [],
+  "expect": "pass",
+  "env": {
+    "MIGRATIONS_SCRIPT_OVERRIDE": "fixture-tmp/run_all.sh",
+    "ALLOWLIST_OVERRIDE": "fixture-tmp/allow.json"
+  },
+  "argv": [
+    "node",
+    "scripts/check-migration-column-churn.js"
+  ]
+}
