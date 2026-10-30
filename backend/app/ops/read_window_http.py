@@ -6,7 +6,10 @@ POST /api/v1/ops/read-window/query に SQL を 1 文送ると、readonly_query.e
 
 注意:
 - 既存の app.* を import しない（DATABASE_URL に触れる可能性があるため）。
-- 鍵は環境変数 READ_WINDOW_TOKEN。空・未設定なら常に 401。ヘッダは X-Read-Window-Token のみ。
+- 鍵は環境変数 READ_WINDOW_TOKEN。空・未設定なら常に 401。
+- 受けるヘッダは要求ごとに環境変数 READ_WINDOW_TOKEN_HEADER（空なら X-Read-Window-Token）で決め、
+  値の頭に READ_WINDOW_TOKEN_PREFIX（既定は空）が要る。合わなければ 401。相談係の容器だけ Authorization・"Bearer "。
+- 記録の印 via は READ_WINDOW_AUDIT_VIA（空なら https）。相談係の容器だけ https-case。
 - 同時に実行するのは 1 本だけ。2 本目は 429。
 """
 
@@ -50,7 +53,7 @@ def _run_query(sql_text: str) -> readonly_query.Result:
     except OSError:
         return readonly_query.Result(5, "", "")
     try:
-        return readonly_query.execute(sql_text, _connect, audit, via="https")
+        return readonly_query.execute(sql_text, _connect, audit, via=os.environ.get("READ_WINDOW_AUDIT_VIA", "") or "https")
     finally:
         try:
             audit.close()
@@ -60,7 +63,12 @@ def _run_query(sql_text: str) -> readonly_query.Result:
 
 async def query(request: Request) -> Response:
     expected = os.environ.get("READ_WINDOW_TOKEN", "")
-    given = request.headers.get(TOKEN_HEADER, "")
+    header = os.environ.get("READ_WINDOW_TOKEN_HEADER", "") or TOKEN_HEADER
+    prefix = os.environ.get("READ_WINDOW_TOKEN_PREFIX", "")
+    given = request.headers.get(header, "")
+    if not given.startswith(prefix):
+        return _reply(401, "unauthorized")
+    given = given[len(prefix) :]
     if not expected or not secrets.compare_digest(given.encode("utf-8"), expected.encode("utf-8")):
         return _reply(401, "unauthorized")
 

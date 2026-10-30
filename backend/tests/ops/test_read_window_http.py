@@ -218,3 +218,64 @@ def test_get_is_405_and_other_path_404(env):
     client, _, _ = env
     assert client.get(URL, headers=GOOD).status_code == 405
     assert client.post("/other", content="SELECT 1", headers=GOOD).status_code == 404
+
+
+# ── ADR-1052 段1: 相談係の容器の形（Authorization: Bearer・via=https-case）。既定は上の試験どおり今と同じ ──
+CASE_ENV = {
+    "READ_WINDOW_TOKEN_HEADER": "Authorization",
+    "READ_WINDOW_TOKEN_PREFIX": "Bearer ",
+    "READ_WINDOW_AUDIT_VIA": "https-case",
+}
+
+
+@pytest.fixture
+def case_env(env, monkeypatch):
+    for k, v in CASE_ENV.items():
+        monkeypatch.setenv(k, v)
+    return env
+
+
+def test_default_window_rejects_bearer_only_and_accepts_custom_header(env):
+    client, _, conns = env
+    assert client.post(URL, content="SELECT 1", headers={"Authorization": f"Bearer {TOKEN}"}).status_code == 401
+    assert conns == []
+    assert client.post(URL, content="SELECT 1", headers=GOOD).status_code == 200
+
+
+def test_case_window_accepts_bearer_only_and_records_https_case(case_env):
+    client, audit, _ = case_env
+    r = client.post(URL, content="SELECT 1", headers={"Authorization": f"Bearer {TOKEN}"})
+    assert r.status_code == 200
+    assert any(b"via=https-case" in m for m in audit.sent)
+    assert not any(b"via=https " in m or b"via=https\n" in m for m in audit.sent)
+
+
+@pytest.mark.parametrize(
+    "headers",
+    [
+        {"Authorization": TOKEN},  # Bearer なし
+        {"Authorization": f"Basic {TOKEN}"},
+        {"Authorization": "Bearer wrong"},
+        {rw.TOKEN_HEADER: TOKEN},  # 旧ヘッダだけ
+        {},
+    ],
+)
+def test_case_window_unauthorized(case_env, headers):
+    client, _, conns = case_env
+    assert client.post(URL, content="SELECT 1", headers=headers).status_code == 401
+    assert conns == []
+
+
+def test_case_window_empty_token_is_401_for_everything(case_env, monkeypatch):
+    client, _, conns = case_env
+    monkeypatch.setenv("READ_WINDOW_TOKEN", "")
+    for h in ({"Authorization": "Bearer "}, {"Authorization": "Bearer x"}, {rw.TOKEN_HEADER: ""}, {}):
+        assert client.post(URL, content="SELECT 1", headers=h).status_code == 401
+    assert conns == []
+
+
+def test_empty_header_env_falls_back_to_default(env, monkeypatch):
+    client, _, _ = env
+    monkeypatch.setenv("READ_WINDOW_TOKEN_HEADER", "")
+    monkeypatch.setenv("READ_WINDOW_AUDIT_VIA", "")
+    assert client.post(URL, content="SELECT 1", headers=GOOD).status_code == 200
