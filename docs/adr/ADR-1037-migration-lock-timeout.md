@@ -79,3 +79,8 @@
 - 流し直しの判定文字列・回数・間隔・全体上限（合計40回）は run_sql と共有する。
 - 見張りは `.github/workflows/migration-test.yml`（S1〜S3・P1〜P3）、`tests/sandbox/migration-run-sql-retry.sh`（R1〜R4）、`tests/sandbox/migration-read-probe.sh`（R5）。
 - 第8版で run_py の標準エラーを run_sql と同じ形（一時ファイルに書いてから出す）にした。最初の入れ方（PR #4861）はプロセス置換の後に裏の番号を待つ書き方で、本番反映が止まり PR #4862 で戻した（docs/handoff/deploy-db-stall/design.md §14）。
+
+## 追記（2026-10-30・deploy-db-stall 段2）
+
+- `application_name=salesanchor_migration` の意味を広げた。run_py に加えて run_sql の接続にも付く（`PGAPPNAME`）。さらに、本番反映の取り残しを片付ける `scripts/deploy-db-orphan-cleanup.sh` が、この名前の接続を切る目印として使う。名前の正本は `scripts/lib/db-app-names.sh`。
+- 控え（backup.sh）にも `salesanchor_backup_deploy`（本番反映）と `salesanchor_backup_cron`（毎朝3時。片付けの対象外）を付けた。設計は docs/handoff/deploy-db-stall/design.md §16。

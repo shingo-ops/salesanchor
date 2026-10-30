@@ -342,7 +342,7 @@ test.describe("Scene 1: Dashboard Overview", () => {
     await page.goto("/login");
 
     await expect(page.getByLabel("メールアドレス")).toBeVisible();
-    await expect(page.getByLabel("パスワード")).toBeVisible();
+    await expect(page.getByLabel("パスワード", { exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "ログイン" })).toBeVisible();
   });
 

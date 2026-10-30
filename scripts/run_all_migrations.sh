@@ -24,6 +24,10 @@ BACKEND="astro-webapp-backend-1"
 POSTGRES="astro-webapp-postgres-1"
 PSQL="psql -U jarvis -d jarvis_db -v ON_ERROR_STOP=1"
 
+# 接続の名前の正本（deploy-db-stall §16-3）。cd の前に、このスクリプトの位置から読む。
+# shellcheck disable=SC1091
+source "$(dirname "${BASH_SOURCE[0]}")/lib/db-app-names.sh"
+
 cd "${REPO_DIR}"
 
 # SA-18 Phase2: bootstrap ステップが別 SSH セッションで .env に書いた
@@ -111,7 +115,7 @@ run_sql() {
   errlog="$(mktemp)"
   while true; do
     rc=0
-    docker exec -e PGOPTIONS="-c lock_timeout=${SQL_LOCK_TIMEOUT}" -i "${POSTGRES}" ${PSQL} < "${REPO_DIR}/${file}" 2>"${errlog}" || rc=$?
+    docker exec -e PGAPPNAME="${SA_APPNAME_MIGRATION:-salesanchor_migration}" -e PGOPTIONS="-c lock_timeout=${SQL_LOCK_TIMEOUT}" -i "${POSTGRES}" ${PSQL} < "${REPO_DIR}/${file}" 2>"${errlog}" || rc=$?
     cat "${errlog}" >&2
     if [ "${rc}" -eq 0 ]; then
       rm -f "${errlog}"
@@ -243,6 +247,11 @@ _ai_ro_create_on_exit() {
   exit "${rc}"
 }
 trap _ai_ro_create_on_exit EXIT
+# deploy-db-stall §16-2: TERM・HUP・INT は backup.sh と同じく exit に変える（EXIT の trap が動く）。
+# 前面の docker exec が終わってから trap が動くので、ai_ro の作り直しは止めた文と同時に走らない。
+trap 'exit 130' INT
+trap 'exit 143' TERM
+trap 'exit 129' HUP
 # ADR-1037 便1.2: trap の後で計測を始める（どこで落ちても上の trap が止める）
 read_probe_start
 

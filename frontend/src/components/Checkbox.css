@@ -38,7 +38,7 @@
   width: 1.1em;
   height: 1.1em;
   border: 1px solid var(--border);
-  border-radius: var(--comp-input-radius);
+  border-radius: var(--comp-checkbox-radius);
   background: var(--bg-surface);
   accent-color: var(--accent);
   cursor: pointer;

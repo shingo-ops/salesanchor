@@ -3,7 +3,7 @@
 > このファイルは `scripts/generate-adr-index.js` により自動生成されます。
 > **手動編集禁止。** ADR ファイルを追加・変更後に `node scripts/generate-adr-index.js` を実行してください。
 
-最終更新: 2026-10-29 / ADR 総数: 208 件
+最終更新: 2026-10-30 / ADR 総数: 209 件
 
 ## 維持ルール（整合性を保つ・必須）
 
@@ -227,6 +227,7 @@
 | [ADR-1047](./ADR-1047-rule-registry.md) | ADR-1047: 決まりは台帳を正本にし、台帳の検査を1つの関所にまとめる | Proposed | — | — |
 | [ADR-1048](./ADR-1048-admin-two-step-login.md) | ADR-1048: 管理者のログインは2段階の確認を必須にし、初めての機器からはいつもの機器で番号を選んで承認する | Proposed | — | — |
 | [ADR-1049](./ADR-1049-lead-merge-all-tables-and-fill-blanks.md) | ADR-1049: リードの統合は13表すべてを付け替え、残す方の空欄だけを埋め、受信箱のカルテからも開ける | Accepted | Amends ADR-119 | — |
+| [ADR-1050](./ADR-1050-api-error-auto-retry.md) | ADR-1050: 一時的に断られた解析は自動で送り直し、諦めた分は知らせる | Proposed | — | — |
 
 ## ステータス凡例
 

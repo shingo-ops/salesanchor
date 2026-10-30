@@ -116,6 +116,8 @@
     "reload": "Reload"
   },
   "common": {
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
     "loading": "Loading...",
     "select": "Select",
     "selectAll": "Select all",

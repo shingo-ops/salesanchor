@@ -10,11 +10,23 @@ on:
     paths:
       - 'scripts/backup.sh'
       - 'scripts/tests/test-backup-*.sh'
+      - 'scripts/lib/db-app-names.sh'
+      - 'scripts/deploy-db-orphan-cleanup.sh'
+      - 'scripts/migration_py_entry.py'
+      - 'scripts/run_all_migrations.sh'
+      - 'scripts/tests/test-deploy-orphan-cleanup.sh'
+      - '.github/workflows/deploy.yml'
       - '.github/workflows/backup-script-test.yml'
   push:
     paths:
       - 'scripts/backup.sh'
       - 'scripts/tests/test-backup-*.sh'
+      - 'scripts/lib/db-app-names.sh'
+      - 'scripts/deploy-db-orphan-cleanup.sh'
+      - 'scripts/migration_py_entry.py'
+      - 'scripts/run_all_migrations.sh'
+      - 'scripts/tests/test-deploy-orphan-cleanup.sh'
+      - '.github/workflows/deploy.yml'
       - '.github/workflows/backup-script-test.yml'
   workflow_dispatch:
 
@@ -40,3 +52,26 @@ jobs:
         env:
           REQUIRE_DOCKER: '1'
         run: bash scripts/tests/test-backup-lock-wait.sh
+
+  orphan-cleanup:
+    name: deploy orphan cleanup test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+
+      # C9 が deploy.yml を読むのに使う
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install pyyaml
+        run: pip install pyyaml
+
+      # C1〜C9（design §16-6）。入れ物の名前を本番と同じ astro-webapp-postgres-1 にする
+      - name: Run test-deploy-orphan-cleanup.sh (C1-C9)
+        env:
+          REQUIRE_DOCKER: '1'
+        run: bash scripts/tests/test-deploy-orphan-cleanup.sh

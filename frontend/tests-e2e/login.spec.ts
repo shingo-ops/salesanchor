@@ -23,25 +23,25 @@ test.describe("LoginPage KGI検証", () => {
   });
 
   // ─── KGI-1: パスワード再設定 UI フロー ────────────────────────────────────────
-  test("KGI-1: 「パスワードをお忘れの方」クリックで再設定モードに切り替わる", async ({
+  test("KGI-1: 「パスワードをお忘れですか？」クリックで再設定モードに切り替わる", async ({
     page,
   }) => {
     await page.goto("/login");
 
     // 初期状態: ログインフォーム
     await expect(page.getByLabel("メールアドレス")).toBeVisible();
-    await expect(page.getByLabel("パスワード")).toBeVisible();
+    await expect(page.getByLabel("パスワード", { exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "ログイン" })).toBeVisible();
 
-    // 「パスワードをお忘れの方」クリック
-    await page.getByRole("button", { name: "パスワードをお忘れの方" }).click();
+    // 「パスワードをお忘れですか？」クリック
+    await page.getByRole("button", { name: "パスワードをお忘れですか？" }).click();
 
     // 再設定フォームに切り替わる
     await expect(page.getByText("パスワード再設定")).toBeVisible();
     await expect(page.getByRole("button", { name: "再設定メールを送信" })).toBeVisible();
     await expect(page.getByRole("button", { name: "ログイン画面に戻る" })).toBeVisible();
     // パスワード入力欄は非表示
-    await expect(page.getByLabel("パスワード")).not.toBeVisible();
+    await expect(page.getByLabel("パスワード", { exact: true })).not.toBeVisible();
   });
 
   test("KGI-1: 再設定メール送信成功で成功メッセージが表示され、フォームが非表示になる", async ({
@@ -57,7 +57,7 @@ test.describe("LoginPage KGI検証", () => {
     });
 
     await page.goto("/login");
-    await page.getByRole("button", { name: "パスワードをお忘れの方" }).click();
+    await page.getByRole("button", { name: "パスワードをお忘れですか？" }).click();
 
     // メールアドレスを入力して送信
     await page.getByLabel("メールアドレス").fill("test@example.com");
@@ -75,15 +75,15 @@ test.describe("LoginPage KGI検証", () => {
 
   test("KGI-1: 「ログイン画面に戻る」でサインインモードに戻る", async ({ page }) => {
     await page.goto("/login");
-    await page.getByRole("button", { name: "パスワードをお忘れの方" }).click();
+    await page.getByRole("button", { name: "パスワードをお忘れですか？" }).click();
     await page.getByRole("button", { name: "ログイン画面に戻る" }).click();
 
     // ログインフォームに戻る
     await expect(page.getByLabel("メールアドレス")).toBeVisible();
-    await expect(page.getByLabel("パスワード")).toBeVisible();
+    await expect(page.getByLabel("パスワード", { exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "ログイン" })).toBeVisible();
     await expect(
-      page.getByRole("button", { name: "パスワードをお忘れの方" }),
+      page.getByRole("button", { name: "パスワードをお忘れですか？" }),
     ).toBeVisible();
   });
 
