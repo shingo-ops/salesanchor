@@ -386,7 +386,7 @@ export function useInboxState(): UseInboxStateReturn {
       msgTransientErrorCountRef.current = 0;
     } catch (e) {
       if (e instanceof ApiError && e.status === 404) {
-        setMsgError("Lead not found.");
+        setMsgError(t("inbox.noLead"));
         msgTransientErrorCountRef.current = 0;
       } else {
         const isTransient =
@@ -794,7 +794,7 @@ export function useInboxState(): UseInboxStateReturn {
         const detail = e.responseDetail as { reason?: string; error_code?: number } | null;
         setSendErrorReason(detail?.reason ?? "generic");
         setSendErrorCode(detail?.error_code ?? null);
-        setSendError(e.message || "Send failed");
+        setSendError(e.message || t("inbox.sendError.generic"));
       } else if (e instanceof Error) {
         setSendErrorReason("generic");
         setSendErrorCode(null);
@@ -802,12 +802,12 @@ export function useInboxState(): UseInboxStateReturn {
       } else {
         setSendErrorReason("generic");
         setSendErrorCode(null);
-        setSendError("Send failed");
+        setSendError(t("inbox.sendError.generic"));
       }
     } finally {
       setSending(false);
     }
-  }, [sending, canSend, selectedLeadId, trimmedDraft, attachedFile, clearAttachment, loadMessages, loadConversations]);
+  }, [sending, canSend, selectedLeadId, trimmedDraft, attachedFile, clearAttachment, loadMessages, loadConversations, t]);
 
   const retrySend = useCallback(
     () => submitSend({ draftId: failedDraftIdRef.current }),

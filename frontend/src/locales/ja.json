@@ -116,6 +116,14 @@
     "reload": "更新"
   },
   "common": {
+    "dataTable": {
+      "previousPage": "前のページ",
+      "nextPage": "次のページ",
+      "table": "データ表",
+      "selectAll": "すべて選択",
+      "selectAllRows": "すべての行を選択",
+      "selectRow": "{{key}} の行を選択"
+    },
     "showPassword": "パスワードを表示",
     "hidePassword": "パスワードを隠す",
     "loading": "読み込み中...",
@@ -1223,6 +1231,11 @@
     "windowWarning": "メッセージウィンドウ: 残り24時間未満",
     "windowOpen": "メッセージウィンドウ オープン",
     "noLead": "リードが見つかりません。",
+    "filterByPage": "ページで絞り込む",
+    "youPrefix": "あなた: ",
+    "humanAgentLabel": "ヒューマンエージェント",
+    "noBody": "（本文なし）",
+    "meAvatar": "自分",
     "lead": "リード",
     "unread": "未読",
     "tabAll": "すべてのメッセージ",
@@ -1361,6 +1374,7 @@
     }
   },
   "channels": {
+    "pageIdLabel": "ページID:",
     "title": "チャンネル (Meta連携)",
     "connect": "Facebookページを接続",
     "disconnect": "切断",
@@ -1690,6 +1704,7 @@
     }
   },
   "invoices": {
+    "erpKeyLabel": "ERPキー:",
     "subtitle": "請求書の作成と管理ができます。",
     "detailSubtitle": "請求書の内容確認と発行・入金・取消の操作を行います",
     "createSubtitle": "新しい請求書を作成します",
@@ -2145,6 +2160,7 @@
     "subtitle": "Webhook通知チャネルを設定・管理します。"
   },
   "notifications": {
+    "webhookUrlLabel": "Webhook URL",
     "eventTypesLabel": "この送信先に送る通知",
     "eventTypesEmpty": "（未選択）",
     "eventTypesColumn": "通知の種類",
@@ -3212,6 +3228,7 @@
     "englishNameRequired": "英語の名前（姓・名）を入力してください。Discordで返信するときに必要です。"
   },
   "badges": {
+    "userFallback": "ユーザー #{{id}}",
     "subtitle": "バッジと達成条件を管理します。",
     "badgeCount": "バッジ数",
     "badgeList": "バッジ一覧",
@@ -3529,6 +3546,7 @@
     "outbound": {
       "title": "英訳プレビュー（送信前確認）",
       "buttonTitle": "英訳プレビュー",
+      "buttonShort": "EN",
       "originalLabel": "原文（日本語）",
       "draftLabel": "英訳下書き（編集可）",
       "generateBtn": "英訳を生成",
