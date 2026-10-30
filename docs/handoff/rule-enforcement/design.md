@@ -593,4 +593,53 @@ merge commit の revert。
 
 ### 審査（Opus 自己審査・2026-10-29）
 APPROVE。根拠: 7 本とも試し役を変えずに違反と正しい見本の結果を写しで確かめた（r2b-recon/run_all.txt）。lessons は判定がワークフローの中にあり、R2a で決めた evidence の扱いを変えない。差し替えを使う 2 本・value-writes・claude-size は CI の呼び方との差を対象外に明記した（doc-heading は CI と同じ引数なし）。未解決: なし。
-- 実装後の審査（Opus 審査役・39f944f5a）: must 0。should は必須チェック 2 件（GO 原文の未記入・ブランチの起点の遅れ）で、手続きで解く。nit 4 件のうち 3 件（調べの数・value-writes と claude-size の差の明記・自己審査の文）をこの節で直した。expect_output をより狭くする nit は、今の見本の組み合わせで別の理由と取り違えないため直さない。
+- 実装後の審査（Opus 審査役・39f944f5a）: must 0。should は必須チェック 2 件（GO 原文の未記入・ブランチの起点の遅れ）で、手続きで解く。nit 5 件のうち 4 件（調べの数・value-writes と claude-size の差の明記・自己審査の文）をこの節で直した。expect_output をより狭くする nit は、今の見本の組み合わせで別の理由と取り違えないため直さない。
+
+## R2c CI で動いていない既存の試験 4 本を毎回の PR で動かす（設計・2026-10-30）
+
+### 前提（origin/main 5195ecc1d の事実。調べの生出力は手元の /tmp/CC報告ファイル/r2c-recon/）
+- 2026-10-29 PO「1」で、毎回は動いていない既存の試験 4 本を毎回動かす作業を選んだ。
+- 4 本は .github/workflows のどこからも呼ばれていない（79 ファイルを名前で探して 0 件。1-grep.txt）。backend の pytest は testpaths が tests のため scripts/ の試験を拾わない（backend/pyproject.toml:54）。
+- 4 本は今の main で全部通る（2-*.txt）:
+  - scripts/tests/test-process-artifacts.js: `node` で exit 0、326 PASS / 0 FAIL。手元の Mac で 4 分 15 秒。検査を子プロセスで何百回も起動するため遅い。実行中に docs/handoff/_test_tmp/ を作る。
+  - scripts/tests/test-migration-column-churn.js: exit 0、13 passed、2.5 秒。
+  - scripts/tests/test-migration-duplicate-registration.js: exit 0、3 passed、0.5 秒。
+  - scripts/test_lint_tenant_schema.py: `python3 -m pytest -q` で 11 passed、約 1 秒。`python3 -I` で直接流すと試験の関数が 1 つも呼ばれず、何も確かめないまま exit 0 になる（2-lint-tenant.txt が空）。
+- 要るもの: js の 3 本は node の標準部品と git だけ。py の 1 本は pytest だけ。docker・DB・ネットワークは要らない。
+- 4 本が試す検査と、それを呼ぶ必須チェック: check-process-artifacts.js → process-artifacts gate、lint_tenant_schema.py → ADR-072 tenant schema lint (strict mode)、check-migration-column-churn.js と check-migration-duplicate-registration.sh → migration-guard.yml の中の手順（552・556 行）。
+- rule-registry.yml の rule registry ジョブは必須チェックではなく、timeout 10 分、setup-node 22 あり、setup-python と pytest の導入は無い。pytest の入れ方の手本は hook-test.yml:37-44（setup-python 3.12 → setup-uv → `uv pip install --system pytest`）。
+
+### 目的
+R2a・R2b の見本は「検査が違反を止めるか」を 1 件ずつ試す。既存の 4 本は同じ検査を細かい場合分けで試している（合わせて 353 件）。これが毎回動いていないため、検査の細かい部分が壊れても気づけない。4 本を毎回の PR で動かし、壊れたらその PR で気づけるようにする。
+
+### 変更後
+1. .github/workflows/rule-registry.yml に、rule registry と並んで走る別のジョブ `existing-rule-tests`（名前「existing rule tests」）を足す。毎回の PR で動く（on は今のまま。paths の絞り込みはしない）。
+2. ジョブの手順: checkout@v5 → setup-node@v5（'22'）→ setup-python@v5（'3.12'）→ setup-uv@v4 → `uv pip install --system pytest` → 4 本を 1 手順ずつ流す（js は `node <path>`、py は `python3 -m pytest -q scripts/test_lint_tenant_schema.py`）。どの手順も continue-on-error にしない。
+3. timeout-minutes は 15。test-process-artifacts.js が遅いため、rule registry の 10 分とは分ける。
+4. py の 1 本は必ず pytest で流す（`python3 -I` では何も試さずに通るため）。pytest は試験が 1 件も集まらないと exit 5 で落ちるので、試験の関数の名前が変わって空振りすることも防げる。
+5. 必須チェックには登録しない（登録は Branch Protection の変更で、PO 本人の判断が要るため）。
+6. docs/handoff/rule-enforcement/design.md の R2b 節の末尾行にある数え誤り「nit 4 件のうち 3 件」を「nit 5 件のうち 4 件」に直す（R2b の審査で次の変更で直すとした分）。
+
+### 対象外
+- 4 本の試験と検査の中身は変えない。
+- 必須チェックへの登録（Branch Protection の変更）。
+- check-lessons-section.sh を実際に止まった記録で確かめる作業、提出前の一本の入口（R4）、語の一覧の作り直し（R1c）。
+- test-process-artifacts.js を速くすること（K3 で測り、上限を超えたときだけ別に考える）。
+
+### 受入条件
+- K1 この PR で、existing rule tests ジョブが success。4 本それぞれの手順が success で、最後の行（326 PASS・13 passed・3 passed・11 passed）が出ている。
+- K2 弱めたら気づく: 使い捨ての写しで 4 本が試す検査をそれぞれ 1 か所ずつ弱めて（違反を見逃す形に書き換えて）流すと、その試験が exit 0 以外になる。4 本それぞれ 1 回。書き換えはコミットしない。
+- K3 ジョブ全体の所要時間を CI の記録で測り、PR 本文に書く。15 分の上限の半分（7 分 30 秒）を超えたらマージせず止まって報告する。
+- K4 この PR で必須チェック 16 件が全部 pass。
+- K5 実行後に使い捨ての写しと一時フォルダが手元に残らない。
+
+### リスクと対処
+- checkout の既定は履歴 1 件だけ。test-process-artifacts.js などが履歴を要ると CI で落ちる → K1 で確かめる。落ちたら、そのジョブだけ fetch-depth: 0 にする（ほかは変えない）。理由を報告に書く。
+- Linux と macOS の道具の違いで、手元では通り CI で落ちる → K1 で確かめる。落ちたら試験を直さず、原因を調べて報告する。
+- 毎回の PR で数分の実行が増える → K3 で測る。
+
+### 戻し方
+merge commit の revert。
+
+### 審査（Opus 自己審査・2026-10-30）
+APPROVE。根拠: 4 本とも今の main で通ることを写しで確かめた（r2c-recon/2-*.txt）。py の 1 本が直接の実行では空振りする点は、pytest で流し、試験 0 件で落ちる性質で防ぐ。workflow-lint.yml と Branch Protection には触れないため、ADR-1003 の本人 GO の例外に当たらない。未解決: CI での所要時間と、履歴 1 件の checkout で動くか（K1・K3 で確かめる）。

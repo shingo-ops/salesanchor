@@ -38,3 +38,36 @@ jobs:
 
       - name: Run rule fixtures
         run: python3 -I scripts/tests/run_rule_fixtures.py
+
+  existing-rule-tests:
+    name: existing rule tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: uv を入れる
+        uses: astral-sh/setup-uv@v4
+
+      - name: pytest を入れる
+        run: uv pip install --system pytest
+
+      - name: 工程の成果物の検査の試験
+        run: node scripts/tests/test-process-artifacts.js
+
+      - name: migration 列の増減の検査の試験
+        run: node scripts/tests/test-migration-column-churn.js
+
+      - name: migration 重複登録の検査の試験
+        run: node scripts/tests/test-migration-duplicate-registration.js
+
+      - name: tenant schema 検査の試験
+        run: python3 -m pytest -q scripts/test_lint_tenant_schema.py
