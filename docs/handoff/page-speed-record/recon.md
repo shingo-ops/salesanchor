@@ -63,6 +63,18 @@
 | ログイン後に開いたままになる通信は `fetch` で開く（EventSource ではない） | `frontend/src/lib/realtime/RealtimeProvider.tsx:77-84` |
 | 毎日の自動実行（schedule）はまだ 1 回も動いていない（実行一覧は手動の 4 件だけ）。次は 2026-10-31 07:00 JST | /tmp/CC報告ファイル/speed-check/runs/history.json |
 
+### 4-3. 待ち方を直した後の残りの失敗は、ログインの回数制限が原因（2026-10-31 判明）
+
+| 事実 | 根拠 |
+|---|---|
+| run 41113702544（HEAD fdf0e4798・2026-10-30 19:15 UTC 手動）: 3 failed・1 flaky・4 passed。S4 は合格。networkidle の 30 秒切れは 0 件 | /tmp/CC報告ファイル/speed-check/bin0-run-log.txt の 398-407 行 |
+| S3 1 回目: console error 1 件 `Failed to load resource: the server responded with a status of 401 ()`。S3 再試行・S8 1 回目: `page.waitForURL` 30 秒切れ（`tests/prod-check/login.ts:23`）。S5・S6: `getByPlaceholder('顧客名・コードで検索...')` が 10 秒で見えない | 同 log 410-571 行 |
+| 検索欄の文字は本線と同じ（`frontend/src/locales/ja.json:1136`・`frontend/src/pages/companies/CompaniesPage.tsx:392`）。同じ文字で S4 は通っている | `git grep -n "顧客名・コードで検索" origin/main -- frontend/src` |
+| 本番の入口の記録で、点検の IP から `/api/v1/auth/` への通信が 3 分で 31 件。429 が 7 件（ログイン 2・refresh 5）。refresh の 429 の参照元は `/crm/companies`。403 は 0 件 | /tmp/CC報告ファイル/speed-check/bin0-auth-requests.txt・bin0-4xx.txt（Grafana の Loki `{job="containerlogs"}` を IP で絞った） |
+| 入口の制限: `/api/v1/auth/` は IP ごと 1 分 10 件・まとめて 5 件まで、超えたら 429 | `nginx/nginx.conf:6`・`nginx/nginx.conf:144-146`（もう 1 つの入口 `nginx/nginx.conf:406-408` も同じ） |
+| ログイン画面を開くたびに refresh が 401 になる（まだ入っていないため）。記録の 401 はすべて参照元 `/login` の refresh | 同 bin0-auth-requests.txt |
+| Playwright の serial mode: 1 つ落ちると残りは飛ばし、再試行はまとめてやり直す。page を `beforeAll` で 1 つ作って使い回す例がある | https://playwright.dev/docs/test-retries （2026-10-31 直接確認。Context7 は月の上限で使えなかった） |
+
 ## 5. 開くだけで書き込む GET（測るときに止める）
 
 画面を開いただけで本番のデータが変わる道。生出力 /tmp/CC報告ファイル/speed-check/safety/SUMMARY.md（呼び出しを 4 段までたどった検査 `get_reach.tsv` 9352 行）
@@ -93,4 +105,4 @@
 - U1: 点検用の人で 135 画面のうち、何画面が中身まで出るか（403 にならないか）→ 初回の記録で数える
 - U2: 実行記録の保存日数の設定値（API が 403。上の 410/読める の境目から 90 日前後までしか言えない）
 - U3: 点検用の人がどちらの会社か（tenant_001 か tenant_002）→ 今回の設計は会社を問わない（読むだけ）
-- U4: 点検用の人が `messaging.view` を持つか（`docs/handoff/qa-smoke-rebuild/design.md:187` は「`*.view` だけ」とだけ書く）→ 便0 の手動実行の S3 の結果で分かる
+- U4: 点検用の人が `messaging.view` を持つか（`docs/handoff/qa-smoke-rebuild/design.md:187` は「`*.view` だけ」とだけ書く）→ 便0 の手動実行（run 41113702544）の時間帯に 403 は 0 件（§4-3）。権限そのものは未確認のまま
