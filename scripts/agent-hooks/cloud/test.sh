@@ -107,6 +107,8 @@ add("K1", "psql 読取(select)", bash('psql -c "select 1"'), 0)
 add("K1", "bash heredoc本文に危険語", bash(f"bash <<EOF\necho hi\n{ops[0]} foo\nEOF"), 2)
 add("K1", "python3 heredoc本文に危険語", bash(f"python3 - <<'PYX'\nprint(1)\n# {ops[0]}\nPYX"), 2)
 add("K1", "cat>file heredoc本文は通す", bash(f"cat > note.txt <<EOF\n{ops[0]} の説明\nEOF"), 0)
+add("K1", "cat>migrations/*.sql heredoc本文は通す", bash("cat > migrations/x.sql <<'EOF'\n" + next(o for o in ops if o.startswith("TRUNC")) + " t;\nEOF"), 0)
+add("K1", "sed -i で SQL に危険語は止める", bash("sed -i 's/a/" + next(o for o in ops if o.startswith("TRUNC")) + " t/' migrations/x.sql"), 2)
 add("K1", "cat>run.sh heredoc本文は通す", bash(f"cat > run.sh <<'EOF'\n{ops[0]}\nEOF"), 0)
 # K2
 add("K2", "MCP merge", pre("mcp__github__merge_pull_request", owner="o", repo="r", pullNumber=1), 2)
@@ -281,12 +283,12 @@ add("K5", "Stop 英語のみ", {"hook_event_name": "Stop", "last_assistant_messa
 add("K5", "Stop 日本語あり", {"hook_event_name": "Stop", "last_assistant_message": "完了しました。"}, 0)
 add("K5", "Stop 続行中は通す", {"hook_event_name": "Stop", "stop_hook_active": True, "last_assistant_message": "Done."}, 0)
 
-def run(inp, remote):
+def run(inp, remote, cwd=None):
     env = dict(os.environ)
     env.pop("CLAUDE_CODE_REMOTE", None)
     if remote: env["CLAUDE_CODE_REMOTE"] = "true"
     t = time.time()
-    p = subprocess.run(["bash", DISPATCH], input=json.dumps(inp), capture_output=True, text=True, env=env)
+    p = subprocess.run(["bash", DISPATCH], input=json.dumps(inp), capture_output=True, text=True, env=env, cwd=cwd)
     return p.returncode, p.stdout, p.stderr, time.time() - t
 
 fail = 0
@@ -329,15 +331,43 @@ ok = p.returncode == 0 and not p.stdout and not p.stderr
 fail += (not ok)
 print(f"{'FC':3} {'JSON不正 変数なし→通す':26} {0:<4} {p.returncode:<4} {'-':>6} {'OK' if ok else 'NG'}")
 
-# K5 SessionStart
-rc, out, err, sec = run({"hook_event_name": "SessionStart", "source": "startup"}, True)
+# K5 SessionStart（書き込み先は一時 repo だけ。本体の .git/config は書かない）
+def hp(path):
+    p = subprocess.run(["git", "-C", path, "config", "--get", "core.hooksPath"], capture_output=True, text=True)
+    return p.stdout.strip()
+HOST = os.path.abspath(os.path.join(D, "..", "..", ".."))
+host_before = hp(HOST)
+ssrepo = os.path.join(tmp, "ssrepo"); os.makedirs(ssrepo)
+sh("git", "init", "-q", cwd=ssrepo)
+SS = {"hook_event_name": "SessionStart", "source": "startup"}
+rc, out, err, sec = run(SS, True, cwd=ssrepo)
 try:
     ctx = json.loads(out)["hookSpecificOutput"]["additionalContext"]
-    ok = rc == 0 and "日本語" in ctx
+    ok = rc == 0 and "日本語" in ctx and "core.hooksPath を設定できませんでした" not in ctx
 except Exception:
     ok = False
 fail += (not ok)
 print(f"{'K5':3} {'SessionStart 決まり注入':26} {0:<4} {rc:<4} {sec:6.3f} {'OK' if ok else 'NG'}")
+v = hp(ssrepo)
+ok = v == "frontend/.husky"
+fail += (not ok)
+print(f"{'K5':3} {'SessionStart hooksPath設定':26} {'frontend/.husky':<4} {v:<4} {'-':>6} {'OK' if ok else 'NG'}")
+ss_nogit = os.path.join(tmp, "ss_nogit"); os.makedirs(ss_nogit)
+_o = os.environ.get("GIT_CEILING_DIRECTORIES"); os.environ["GIT_CEILING_DIRECTORIES"] = tmp
+rc, out, err, sec = run(SS, True, cwd=ss_nogit)
+if _o is None: os.environ.pop("GIT_CEILING_DIRECTORIES")
+else: os.environ["GIT_CEILING_DIRECTORIES"] = _o
+try:
+    ctx = json.loads(out)["hookSpecificOutput"]["additionalContext"]
+    ok = rc == 0 and "core.hooksPath を設定できませんでした" in ctx and "日本語" in ctx
+except Exception:
+    ok = False
+fail += (not ok)
+print(f"{'K5':3} {'SessionStart git無し→通す':26} {0:<4} {rc:<4} {sec:6.3f} {'OK' if ok else 'NG'}")
+host_after = hp(HOST)
+ok = host_before == host_after
+fail += (not ok)
+print(f"{'K5':3} {'本体hooksPath 前後同じ':26} {host_before or '-':<4} {host_after or '-':<4} {'-':>6} {'OK' if ok else 'NG'}")
 
 # ---- 便2: B1〜B8（card-2.md §4-7）。商品作成の命令名は master-register-rules-guard.py の TARGETS から組み立てる ----
 import hashlib, importlib.util
@@ -458,7 +488,7 @@ print("== CLAUDE_CODE_REMOTE 未設定（K6: 全件 exit 0・出力なし）==")
 allinp = [c[2] for c in cases] + [{"hook_event_name": "SessionStart", "source": "startup"}]
 bad = 0
 for inp in allinp:
-    rc, out, err, sec = run(inp, False)
+    rc, out, err, sec = run(inp, False, cwd=ssrepo if inp.get("hook_event_name") == "SessionStart" else None)
     if rc != 0 or out or err: bad += 1
 fail += (bad > 0)
 print(f"K6  {len(allinp)}件中 逸脱 {bad}件 {'OK' if bad == 0 else 'NG'}")
