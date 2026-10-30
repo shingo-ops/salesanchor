@@ -49,7 +49,7 @@
 | 担当者アイコン / 英語名必須 / Discord webhook 送信 / avatar | **ADR-159** ／ ADR-091 | Discord 返信を担当者の名（given_name_en）とアイコンで送る・Bot 名義では送らない（便A=アイコン+英語名必須 / 便B=webhook 送信） |
 | 24時間保守運用 / 障害記録 / 応急処置 / routines / アラート札 page・auto・ticket | **ADR-1012**（Proposed） ／ ADR-1009 ／ ADR-115 | 経路の正本は Alertmanager・障害記録の正本はアプリ DB・AI は PR で修理（ADR-136 の GO）・C は予備 |
 | Meta / Facebook / Instagram / Webhook | ADR-024 ／ ADR-025 ／ ADR-041 ／ ADR-026 | 連携整備・フォールバック・mid TEXT 化 |
-| クラウドの相談係 AI / Discord 発の保守 / 個人の値を伏せたビュー ai_cloud / 解除申請 | **ADR-1052**（Proposed） ／ ADR-1024 ／ ADR-1042 ／ ADR-1039 | Discord は合図だけ・外へ出さない・中身は申請して Opus が許可・case-api だけに届く |
+| クラウドの相談係 AI / Discord 発の保守 / 個人の値を伏せたビュー ai_cloud / 解除申請 | **ADR-1052**（Accepted） ／ ADR-1024 ／ ADR-1042 ／ ADR-1039 | Discord は合図だけ・外へ出さない・中身は申請して Opus が許可・case-api だけに届く |
 
 ## インフラ / デプロイ / nginx
 
