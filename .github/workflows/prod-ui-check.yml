@@ -31,10 +31,18 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          n=$(gh run list --repo "${{ github.repository }}" --workflow deploy.yml --status in_progress --json databaseId --jq length)
+          count_active() {
+            total=0
+            for st in in_progress queued waiting; do
+              c=$(gh run list --repo "${{ github.repository }}" --workflow deploy.yml --status "$st" --json databaseId --jq length)
+              total=$((total + ${c:-0}))
+            done
+            echo "$total"
+          }
+          n=$(count_active)
           if [ "${n:-0}" -ge 1 ]; then
             sleep 600
-            n=$(gh run list --repo "${{ github.repository }}" --workflow deploy.yml --status in_progress --json databaseId --jq length)
+            n=$(count_active)
           fi
           if [ "${n:-0}" -ge 1 ]; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
@@ -96,19 +104,6 @@ jobs:
           SMOKE_E2E_PASSWORD: ${{ secrets.SMOKE_E2E_PASSWORD }}
           PROD_CHECK_FORCE_FAIL: ${{ inputs.force_fail && '1' || '' }}
         run: ./frontend/node_modules/.bin/playwright test --config tests/prod-check/playwright.config.ts
-
-      - name: Upload report
-        if: ${{ !cancelled() && steps.gate.outputs.skip != 'true' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: prod-ui-check-report
-          path: |
-            tests/prod-check/playwright-report
-            tests/prod-check/results.json
-            tests/prod-check/test-results
-            test-results
-          retention-days: 14
-          if-no-files-found: ignore
 
       - name: 不合格を Discord に知らせる
         if: failure() && steps.gate.outputs.skip != 'true'

@@ -12,7 +12,8 @@ const SKIP_REASON = "点検用の人の秘密情報が未登録";
 
 test.describe("本番の画面点検", () => {
   test("S1 画面が開く（ログイン画面）", async ({ page }) => {
-    await page.goto("/login");
+    const res = await page.goto("/login");
+    expect(res?.status(), "ログイン画面の応答").toBe(200);
     await expect(page.getByLabel("メールアドレス")).toBeVisible();
     await expect(page.getByLabel("パスワード", { exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "ログイン" })).toBeVisible();
@@ -49,12 +50,14 @@ test.describe("本番の画面点検", () => {
     await page.goto("/crm/companies");
     await expect(page.getByPlaceholder("顧客名・コードで検索...")).toBeVisible();
     await expect(page.locator(NO_ERROR_BANNER)).toHaveCount(0);
+    await expect(page.locator(".error-message")).toHaveCount(0);
 
     await page.goto("/crm/leads");
     await page.waitForURL((url) => url.pathname === "/crm/leads");
     await page.waitForLoadState("networkidle");
     await expect(page.locator("main")).toBeVisible();
     await expect(page.locator(NO_ERROR_BANNER)).toHaveCount(0);
+    await expect(page.locator(".error-message")).toHaveCount(0);
   });
 
   test("S5 会社一覧の検索", async ({ page }) => {

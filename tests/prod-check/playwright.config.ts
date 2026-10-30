@@ -3,6 +3,7 @@
  *
  * 本番 (https://app.salesanchor.jp) を画面から見るだけの点検。書き込みはしない。
  * 旧 tests/qa-smoke とは別資産（X-QA-Smoke ヘッダは付けない）。
+ * リポジトリが公開なので、入力値が残る trace・html・スクリーンショットは作らない（ADR-1051）。
  *
  * 環境変数:
  *   PROD_CHECK_BASE_URL  点検先 (default: https://app.salesanchor.jp)
@@ -23,16 +24,12 @@ export default defineConfig({
   timeout: 60_000,
   expect: { timeout: 10_000 },
 
-  reporter: [
-    ["list"],
-    ["html", { open: "never", outputFolder: "playwright-report" }],
-    ["json", { outputFile: "results.json" }],
-  ],
+  reporter: [["list"], ["json", { outputFile: "results.json" }]],
 
   use: {
     baseURL: BASE_URL,
-    trace: "retain-on-failure",
-    screenshot: "only-on-failure",
+    trace: "off",
+    screenshot: "off",
     video: "off",
     actionTimeout: 15_000,
     navigationTimeout: 30_000,
