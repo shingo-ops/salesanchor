@@ -1,5 +1,14 @@
 {
   "common": {
+    "noData": "No data",
+    "dataTable": {
+      "previousPage": "previous page",
+      "nextPage": "next page",
+      "table": "data table",
+      "selectAll": "select all",
+      "selectAllRows": "select all rows",
+      "selectRow": "select row {{key}}"
+    },
     "close": "Close",
     "loading": "Loading...",
     "saving": "Saving...",
