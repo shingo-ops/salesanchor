@@ -1,0 +1,4 @@
+.claude-pipeline/active-work.d/release-cloud-rule-sql-file.md
+docs/handoff/cloud-parity/rule-sql-file.md
+scripts/agent-hooks/cloud/rules.md
+scripts/agent-hooks/cloud/test.sh

@@ -107,6 +107,8 @@ add("K1", "psql 読取(select)", bash('psql -c "select 1"'), 0)
 add("K1", "bash heredoc本文に危険語", bash(f"bash <<EOF\necho hi\n{ops[0]} foo\nEOF"), 2)
 add("K1", "python3 heredoc本文に危険語", bash(f"python3 - <<'PYX'\nprint(1)\n# {ops[0]}\nPYX"), 2)
 add("K1", "cat>file heredoc本文は通す", bash(f"cat > note.txt <<EOF\n{ops[0]} の説明\nEOF"), 0)
+add("K1", "cat>migrations/*.sql heredoc本文は通す", bash("cat > migrations/x.sql <<'EOF'\n" + next(o for o in ops if o.startswith("TRUNC")) + " t;\nEOF"), 0)
+add("K1", "sed -i で SQL に危険語は止める", bash("sed -i 's/a/" + next(o for o in ops if o.startswith("TRUNC")) + " t/' migrations/x.sql"), 2)
 add("K1", "cat>run.sh heredoc本文は通す", bash(f"cat > run.sh <<'EOF'\n{ops[0]}\nEOF"), 0)
 # K2
 add("K2", "MCP merge", pre("mcp__github__merge_pull_request", owner="o", repo="r", pullNumber=1), 2)
