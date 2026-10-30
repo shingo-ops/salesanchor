@@ -31,7 +31,7 @@
 
 | # | 合格条件 | 測り方 | 合格ライン |
 |---|---|---|---|
-| G0（便0） | 毎朝の点検 S1〜S8 が、点検用の人で最後まで動いて合格する | 作業ブランチで手動実行 1 回、実行記録の `passed` の数 | 8 passed・0 failed |
+| G0（便0） | 毎朝の点検 S1〜S8 が、点検用の人で最後まで動いて合格する | 作業ブランチで手動実行 1 回、実行記録の `passed`・`failed`・`skipped` の数 | 0 failed。8 passed、または S6 だけが「会社 0 件」で skip の 7 passed・1 skipped（2026-10-31 設計再審査 should 1） |
 | G1 | 毎朝の点検の実行記録に「画面の速さ（遅い順）」の表が出る | 手動実行 1 回の実行記録の要約を開く | 表が在る=1 |
 | G2 | 表に載る画面の数（測れた＋測れなかった理由つき） | 表の行数を数える | 135/135 |
 | G3 | 測るあいだに本番へ送った書き込み（ログインとその続き以外） | 表の下の「止めた送信」と、Prometheus の同じ時間帯の POST/PATCH/PUT/DELETE の回数 | 0 件 |
@@ -67,10 +67,12 @@
   - `STREAM_ACCEPT = "text/event-stream"`（開いたままの通信の見分け方。道すじの一覧は持たない。新しい開いたままの通信が増えても、アプリが同じ頭書きを付ける限り直さなくてよい）
   - `LOADING_SELECTOR = '.sa-loading-block, .sa-skeleton, .loading-screen, .loading-indicator, [aria-busy="true"]'`
   - `trackApi(page)`: その page の `request`・`requestfinished`・`requestfailed` を見て、道すじが `/api/` で始まり、頭書き `accept`（`request.headers()` の小文字の名前）に `STREAM_ACCEPT` を含まない通信の「終わっていない数」と「最後に始まった・終わった時刻」を持つ
-  - `waitSettled(page, tracker, opts?)`: 5-3 の 3 条件（既定 `minMs: 500`・`quietMs: 1000`・`capMs: 30000`）が揃うまで 100 ミリ秒ごとに確かめる。揃えば `{ settled: true, elapsedMs }`、上限なら `{ settled: false, elapsedMs }` を返す
-- `tests/prod-check/prod-ui.spec.ts` の `await page.waitForLoadState("networkidle");` 5 か所（:40,:57,:72,:84,:89）を、`expect((await waitSettled(page, api)).settled, "画面が 30 秒で開き終わらない").toBe(true);` に置き換える。`api` は各 test の最初（`login()` より前）に `const api = trackApi(page);` で作る
+  - `waitSettled(page, tracker, opts?)`: 5-3 の 3 条件（既定 `minMs: 500`・`quietMs: 1000`・`capMs: 30000`）が揃うまで 100 ミリ秒ごとに確かめる。揃えば `{ settled: true, elapsedMs, inFlight, loading }`、上限なら `{ settled: false, elapsedMs, inFlight, loading }` を返す（`inFlight` = 終わっていない `/api/` の通信の数、`loading` = 見えている読み込み中の印の数。どちらも数だけで、道すじや中身は持たない）
+  - `expectSettled(page, tracker)`: `waitSettled` を呼び、開き終わらなければ「画面が 30 秒で開き終わらない（終わっていない通信 N 件・読み込み中の印 M 件）」の文で失敗させる（2026-10-31 設計再審査 should 3。打ち切りの原因を数で見分けるため）
+- `tests/prod-check/prod-ui.spec.ts` の `await page.waitForLoadState("networkidle");` 5 か所（:40,:57,:72,:84,:89）を、`await expectSettled(page, api);` に置き換える。`api` は各 test の最初（`login()` より前）に `const api = trackApi(page);` で作る
 - それ以外の行・`tests/prod-check/login.ts`・ワークフローは便0 では触らない
 - 見込みの危険（設計審査 M2）: S3 は `console` の error を全部数える（`tests/prod-check/prod-ui.spec.ts:31-34,41`）。全画面の枠が未読の会話の一覧と会話の開いたままの通信を呼び（`frontend/src/components/DesktopShell.tsx:128-138`）、どちらも `messaging.view` が要る（`backend/app/routers/meta_inbox.py:866-867`）。点検用の人がこの権限を持たなければ 403 の読み込み失敗が error として数えられ、待ちを直した後に S3 が別の理由で落ちうる。点検用の人の権限は未確認（recon §8 U4）。対処: 便0 の手動実行で S3 の失敗文（件数と文の種類だけ。中身の番号は出ない）を見てから決める。待ち方の直しと S3 の数え方の直しは 1 つずつ行い、混ぜない
+- S3 が 403 の error で落ちたときの扱い（2026-10-31 設計再審査 should 2）: 待ち方の直しだけではマージしない（毎朝の誤った知らせが S3 の 1 件として残るため）。同じ PR に、S3 の数え方の直しを別の commit として足し、もう 1 回手動実行して G0 を数えてからマージする。数え方を直す前に、手動実行の記録で error の件数と文の種類を確かめる。数え方の直しでは、公開の実行記録には件数だけを出し、error の文そのもの（道すじの番号を含みうる）は出さない
 
 ### 5-1. 全体の流れ（便1）
 
