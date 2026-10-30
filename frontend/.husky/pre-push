@@ -33,3 +33,40 @@ if echo "$CHANGED_FILES" | grep -q "\.claude-pipeline/active-work\.md"; then
     bash "$FORMAT_SCRIPT" || exit 1
   fi
 fi
+
+# 提出前の入口（R4b）: push する中身が今の HEAD と同じときだけ、CI と同じ検査を手元で先に流す
+# 補助であり、守りの本体は CI。入口が使えないとき（終了コード 2）は理由を表示して通す
+CBS_SCRIPT="$(git rev-parse --show-toplevel)/scripts/dev/check-before-submit.sh"
+if [ -f "$CBS_SCRIPT" ]; then
+  CBS_HEAD="$(git rev-parse HEAD 2>/dev/null)"
+  CBS_SKIP=""
+  CBS_LINES=0
+  while read -r CBS_LREF CBS_LSHA CBS_RREF CBS_RSHA; do
+    [ -z "$CBS_LSHA" ] && continue
+    CBS_LINES=$((CBS_LINES + 1))
+    case "$CBS_LSHA" in
+      *[!0]*) [ "$CBS_LSHA" = "$CBS_HEAD" ] || CBS_SKIP=1 ;;
+      *) CBS_SKIP=1 ;; # local sha が全部 0 = 削除
+    esac
+  done
+  if [ "$CBS_LINES" = "0" ] || [ -n "$CBS_SKIP" ]; then
+    echo "手元の確認（提出前の入口）は飛ばした: push する中身が今の HEAD と違う（または削除・変更なし）。CI で確かめる。"
+  else
+    CBS_STAMP="$(git rev-parse --absolute-git-dir)/check-before-submit.ok"
+    if [ -f "$CBS_STAMP" ] && [ "$(cat "$CBS_STAMP" 2>/dev/null)" = "$CBS_HEAD" ]; then
+      echo "提出前の入口: 流した印あり（今の HEAD と同じ）。入口は流さずに通す。"
+    else
+      echo "提出前の入口を流します（約 90〜190 秒。先に bash scripts/dev/check-before-submit.sh を手で流せば待たずに済みます）"
+      # git は hook に GIT_DIR などを渡すため、別の repo を作る入口の試しが狂わないよう消す（https://git-scm.com/docs/githooks DESCRIPTION 節）
+      ( unset $(git rev-parse --local-env-vars); CHECK_BEFORE_SUBMIT_CALLER=pre-push bash "$CBS_SCRIPT" < /dev/null )
+      CBS_RC=$?
+      if [ "$CBS_RC" = "1" ]; then
+        echo ""
+        echo "🚫 push を中断しました: 提出前の入口に × があります。直してから push してください。CI でも同じ検査が落ちます。"
+        exit 1
+      elif [ "$CBS_RC" = "2" ]; then
+        echo "提出前の入口は使えない状態でした（上の理由を参照。終了コード 2）。判定できないので止めずに通します。最後は CI が止めます。"
+      fi
+    fi
+  fi
+fi

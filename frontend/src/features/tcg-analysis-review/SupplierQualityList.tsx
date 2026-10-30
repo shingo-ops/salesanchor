@@ -44,9 +44,9 @@ export function SupplierQualityList({ onSelectSupplier }: { onSelectSupplier: (s
   useEffect(() => {
     api.get<ApiResponse>('/tcg/supplier-quality-summaries')
       .then((res) => { setSummaries(res.summaries.map(mapSummary)); })
-      .catch((e: unknown) => { setError(e instanceof Error ? e.message : String(e)); })
+      .catch((e: unknown) => { setError(e instanceof Error ? e.message : t("common.unknownError")); })
       .finally(() => { setLoading(false); });
-  }, []);
+  }, [t]);
 
   if (loading) return <LoadingBlock />;
   if (error) return <p style={{ color: 'var(--color-error)' }}>{error}</p>;

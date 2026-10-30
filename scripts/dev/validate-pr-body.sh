@@ -318,5 +318,17 @@ if ! env -u GITHUB_ACTIONS \
   exit 1
 fi
 
+# 提出前の入口（R4b）の「流した印」を確かめる。この段では知らせだけで、終了コードは変えない
+CBS_STAMP_DIR="$(git -C "$REPO_ROOT" rev-parse --absolute-git-dir 2>/dev/null || true)"
+CBS_STAMP_SHA="$(cat "${CBS_STAMP_DIR}/check-before-submit.ok" 2>/dev/null || true)"
+if [[ -z "$CBS_STAMP_DIR" || "$CBS_STAMP_SHA" != "$PRECHECK_HEAD_SHA" ]]; then
+  echo "⚠️ 提出前の入口（scripts/dev/check-before-submit.sh）をまだ流していません（今の HEAD）。今は知らせだけです" >&2
+  CBS_COMMON="$(git -C "$REPO_ROOT" rev-parse --path-format=absolute --git-common-dir 2>/dev/null || true)"
+  if [[ -n "$CBS_COMMON" ]]; then
+    printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$PRECHECK_HEAD_REF" "$PRECHECK_HEAD_SHA" "nostamp" "0" "validate-pr-body" \
+      >> "${CBS_COMMON}/check-before-submit.log" 2>/dev/null || true
+  fi
+fi
+
 echo "✅ PR本文検証OK"
 exit 0

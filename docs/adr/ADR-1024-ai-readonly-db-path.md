@@ -6,7 +6,7 @@
 | 備考 | PO 承認済み（2026-10-17 チャット、原文 y）。Q0「読むだけの DB 利用者と読むだけの鍵で進める」、Q1「全テナントを読めるようにする」、Q2「強めた構成（ビュー専用スキーマ ai_ro を最初から入れる等）で進める」。いずれも原文は「y」 |
 | 起案日 | 2026-10-17 |
 | 方針の決定者 | Shingo（PO） |
-| 関連 | ADR-079（監視用の読み取り鍵。混ぜない）、ADR-SA-18（アプリの DB 最小権限ロール）、ADR-136 の GO 手順（CLAUDE.md:57）、ADR-113（設計持ち込みの様式） |
+| 関連 | ADR-079（監視用の読み取り鍵。混ぜない）、ADR-SA-18（アプリの DB 最小権限ロール）、ADR-136 の GO 手順（CLAUDE.md:57）、ADR-113（設計持ち込みの様式）、ADR-1052（本 ADR を改める。ADR-1052 が Accepted になったときに効く） |
 | 設計・根拠 | [design.md](../handoff/ai-readonly-db-path/design.md)、[recon.md](../handoff/ai-readonly-db-path/recon.md)、[card-bin3a.md](../handoff/ai-readonly-db-path/card-bin3a.md) |
 
 ---
@@ -120,6 +120,15 @@ PostgreSQL の仕様の一部（ビューの持ち主の権限で行の制限が
   - ACCESS EXCLUSIVE の持ち主がいた回: 3秒で打ち切られ、rc=3 のまま、ビューは0本。
 - 記録だけの T8: 移行の途中で SIGTERM を受けた回の終了コードは143。trap は「失敗」の行を出さずに作成まで流れた。信号で止まった場合の扱いは本件の範囲外とする。
 - PO 承認: テーマは「1」、成功条件の案に「確立したなら進める」（2026-10-21）。
+
+### 改訂（クラウドの相談係の道、2026-10-30）
+
+- 経緯: Discord の投稿を合図に、クラウドの相談係 AI が本番を読む（ADR-1052）。相談係 AI には個人の値を渡さない。設計: [design.md](../handoff/cloud-case-ai/design.md)。
+- 本 ADR の道（Mac の AI・今の HTTPS の窓口・ai_reader・ai_ro）は変えない。クラウドの相談係 AI の道だけを、新しいスキーマ ai_cloud（型で伏せたビュー）とロール ai_reader_cloud にする。ai_reader_cloud は ai_reader と同じ属性（NOBYPASSRLS・CONNECTION LIMIT 2・`log_statement = 'all'`・読み取り専用）で、ai_cloud の USAGE と SELECT だけを持つ。
+- デプロイの最初で ai_ro と並べて ai_cloud も外し、最後の trap で ai_ro とは別の手順として作る。片方の作成が失敗しても、もう片方は試す。終了コードは変えない。
+- BYPASSRLS の例外: Decision と不採用の案では BYPASSRLS を付けないとした。値を返す DB 関数 ops_case.unmask_fetch の持ち主 ai_unmask_owner だけに BYPASSRLS を付ける。理由は、tenant の表の RLS で、許可した行が 0 件にならないようにするため。ai_unmask_owner は NOLOGIN で、決まった形の関数（SECURITY DEFINER・search_path 固定・EXECUTE は ai_unmask だけ）の中からしか使えない。持つ権限は、拒否表を除いた表の SELECT と、ops_case の決まった表・列だけ。
+- 本改訂は ADR-1052 が Accepted になったときに効く。
+- PO 決定: 「1」（伏せるのはクラウドの相談係 AI が読む道だけ。Mac の AI は今の ai_ro のまま。2026-10-30）。
 
 ## 関連 ADR
 

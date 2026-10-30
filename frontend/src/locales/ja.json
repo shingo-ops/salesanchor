@@ -197,6 +197,8 @@
     "nextPage": "次へ →",
     "saved": "保存しました",
     "requestFailed": "リクエストに失敗しました",
+    "httpError": "リクエストに失敗しました（{{status}}）",
+    "unknownError": "不明なエラーが発生しました",
     "blobFetchFailed": "ファイルの取得に失敗しました",
     "downloadFailed": "ダウンロードに失敗しました",
     "devOnly": "開発環境専用",
