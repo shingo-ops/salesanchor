@@ -242,11 +242,14 @@ fi
 if [[ -n "$CWD" ]] && [[ -d "$CWD" ]]; then
   cd "$CWD"
 fi
-VALIDATE_ENV=()
 if [[ -n "${HEAD_BRANCH:-}" ]]; then
-  VALIDATE_ENV=("CBS_PR_HEAD_REF=${HEAD_BRANCH}")
+  VALIDATE_OK=0
+  echo "$PR_BODY" | env "CBS_PR_HEAD_REF=${HEAD_BRANCH}" bash "$VALIDATE_SCRIPT" || VALIDATE_OK=$?
+else
+  VALIDATE_OK=0
+  echo "$PR_BODY" | bash "$VALIDATE_SCRIPT" || VALIDATE_OK=$?
 fi
-if echo "$PR_BODY" | env "${VALIDATE_ENV[@]}" bash "$VALIDATE_SCRIPT"; then
+if [[ "$VALIDATE_OK" -eq 0 ]]; then
   exit 0
 else
   _hook_blocked_log "pr-body-guard" "BLOCKED [pr-body-guard]: validate-pr-body.sh が不合格 (PR本文の検証失敗)"
