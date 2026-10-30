@@ -385,7 +385,7 @@ if [ -f "$HOOKDIR/pr-body-guard.sh" ] && { [ -z "${ONLY:-}" ] || [ "$ONLY" = "T9
 fi
 
 # K1〜K3: --head のブランチの worktree を検証の場所にする（標準エラーの行だけで判定）
-if [ -f "$HOOKDIR/pr-body-guard.sh" ] && { [ -z "${ONLY:-}" ] || [ "$ONLY" = "K1" ] || [ "$ONLY" = "K2" ] || [ "$ONLY" = "K3" ] || [ "$ONLY" = "K7" ]; }; then
+if [ -f "$HOOKDIR/pr-body-guard.sh" ] && { [ -z "${ONLY:-}" ] || [ "$ONLY" = "K1" ] || [ "$ONLY" = "K2" ] || [ "$ONLY" = "K3" ] || [ "$ONLY" = "K7" ] || [ "$ONLY" = "K8" ]; }; then
   KMAIN="$T/k-main"; KWT="$T/k-wt"; KBODY="$T/k-body.md"
   mkdir -p "$KMAIN"
   git -C "$KMAIN" init -q -b main
@@ -420,6 +420,30 @@ if [ -f "$HOOKDIR/pr-body-guard.sh" ] && { [ -z "${ONLY:-}" ] || [ "$ONLY" = "K1
       PASS=$((PASS + 1)); RESULTS+=("K7       pr-body-guard は本文を元の場所で読む PASS")
     else
       FAIL=$((FAIL + 1)); RESULTS+=("K7       pr-body-guard が本文を worktree 側で読んだ FAIL")
+    fi
+  fi
+  # K8: --head の枝が分かるときだけ validate-pr-body.sh に CBS_PR_HEAD_REF=<枝> を渡す（偽の validate が環境変数を書き出す）
+  if [ -z "${ONLY:-}" ] || [ "$ONLY" = "K8" ]; then
+    K8_OUT="$T/k8-env.txt"
+    mkdir -p "$KWT/scripts/dev"
+    printf '#!/usr/bin/env bash\nprintf "%%s" "${CBS_PR_HEAD_REF-UNSET}" > "%s"\ncat > /dev/null\n' "$K8_OUT" > "$KWT/scripts/dev/validate-pr-body.sh"
+    k8_run() {
+      rm -f "$K8_OUT"
+      python3 -c 'import json,sys; print(json.dumps({"tool_name":"Bash","tool_input":{"command":sys.argv[1]},"cwd":sys.argv[2]}))' "$1" "$KMAIN" > "$T/in-K8.json"
+      run_hook_err pr-body-guard.sh "$KMAIN" "$T/in-K8.json" > /dev/null || true
+      cat "$K8_OUT" 2>/dev/null || echo "NOFILE"
+    }
+    k8_got="$(k8_run "gh pr create --head release/t-headwt --title t --body-file $KBODY")"
+    if [ "$k8_got" = "release/t-headwt" ]; then
+      PASS=$((PASS + 1)); RESULTS+=("K8       pr-body-guard は --head の枝を CBS_PR_HEAD_REF で渡す PASS")
+    else
+      FAIL=$((FAIL + 1)); RESULTS+=("K8       pr-body-guard が CBS_PR_HEAD_REF を渡さない（得た値=$k8_got） FAIL")
+    fi
+    k8_got2="$(k8_run "cd $KMAIN && gh pr create --head release/t-headwt --title t --body-file $KBODY")"
+    if [ "$k8_got2" = "UNSET" ] || [ "$k8_got2" = "NOFILE" ]; then
+      PASS=$((PASS + 1)); RESULTS+=("K8b      pr-body-guard は cd を含む形では CBS_PR_HEAD_REF を渡さない PASS")
+    else
+      FAIL=$((FAIL + 1)); RESULTS+=("K8b      cd を含む形で CBS_PR_HEAD_REF を渡した（得た値=$k8_got2） FAIL")
     fi
   fi
 fi
