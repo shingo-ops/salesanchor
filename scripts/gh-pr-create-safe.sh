@@ -129,7 +129,7 @@ SHA_PATTERN='^[0-9a-fA-F]{40}$'
 [[ "$BASE_SHA" =~ $SHA_PATTERN ]] || fail "origin/mainが40桁SHAではありません"
 [[ "$LOCAL_SHA" == "$REMOTE_SHA" ]] || fail "local HEADとorigin headが一致しません"
 
-printf '%s' "$PR_BODY" | env -u PR_BODY_VALIDATE_SKIP bash scripts/dev/validate-pr-body.sh
+printf '%s' "$PR_BODY" | env -u PR_BODY_VALIDATE_SKIP -u CBS_PR_HEAD_REF bash scripts/dev/validate-pr-body.sh
 
 echo "✅ PR作成前検査通過: ${ACTUAL_HEAD} → main (${LOCAL_SHA})"
 env GH_HOST=github.com GH_REPO=github.com/shingo-ops/salesanchor \

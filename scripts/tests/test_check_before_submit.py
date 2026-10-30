@@ -408,6 +408,86 @@ class CheckBeforeSubmit(unittest.TestCase):
         self.assertEqual(r2.returncode, r1.returncode, r2.stdout + r2.stderr)
         self.assertNotIn("まだ流していません", r2.stderr)
 
+    def _vrepo(self):
+        """validate-pr-body.sh を流せる使い捨て repo（枝 release/t・印なし）と、流す関数を返す"""
+        repo = os.path.join(self.tmp, "vrepo")
+        os.makedirs(os.path.join(repo, "scripts/dev"))
+        os.makedirs(os.path.join(repo, "docs/handoff/t"))
+        for rel in ("scripts/check-process-artifacts.js", "scripts/detect-external-api-change.js", VALIDATE_REL):
+            shutil.copyfile(os.path.join(ROOT, rel), os.path.join(repo, rel))
+        with open(os.path.join(repo, "scripts/target.sh"), "w") as fh:
+            fh.write("#!/bin/sh\necho base\n")
+        with open(os.path.join(repo, "docs/handoff/t/recon.md"), "w") as fh:
+            fh.write("# recon\n")
+        with open(os.path.join(repo, "docs/handoff/t/design.md"), "w") as fh:
+            fh.write("# design\n\n## 外部・過去事例の参照と我々への応用\n該当なし（内部手順）\n\n"
+                     "## 維持の仕組み\n守り手: scripts/target.sh\n")
+        subprocess.run(["git", "init", "-q", "-b", "main", repo], check=True, env=git_env())
+        git(repo, "add", "-A")
+        git(repo, "-c", "commit.gpgsign=false", "commit", "--no-verify", "-q", "-m", "main")
+        git(repo, "update-ref", "refs/remotes/origin/main", "HEAD")
+        git(repo, "checkout", "-q", "-b", "release/t")
+        with open(os.path.join(repo, "scripts/target.sh"), "w") as fh:
+            fh.write("#!/bin/sh\necho changed\n")
+        git(repo, "add", "-A")
+        git(repo, "-c", "commit.gpgsign=false", "commit", "--no-verify", "-q", "-m", "change")
+        bin_dir = os.path.join(self.tmp, "bin")
+        os.makedirs(bin_dir)
+        with open(os.path.join(bin_dir, "gh"), "w") as fh:
+            fh.write("#!/bin/sh\necho shingo-cc\n")
+        os.chmod(os.path.join(bin_dir, "gh"), 0o755)
+        body = ("### 標準ワークフロー確認\n- 対象ADR: ADR-113\n- recon: docs/handoff/t/recon.md\n"
+                "- 設計: docs/handoff/t/design.md\n触るファイル: scripts/target.sh\n削除するファイル: scripts/target.sh\n")
+        base_env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_") and k != "CBS_PR_HEAD_REF"}
+        base_env["PATH"] = bin_dir + os.pathsep + base_env["PATH"]
+
+        def run(head_ref=None):
+            env = dict(base_env)
+            if head_ref is not None:
+                env["CBS_PR_HEAD_REF"] = head_ref
+            return subprocess.run(["bash", VALIDATE_REL], cwd=repo, env=env, input=body,
+                                  capture_output=True, text=True, timeout=120)
+
+        def rows():
+            path = os.path.join(repo, ".git", "check-before-submit.log")
+            if not os.path.exists(path):
+                return []
+            with open(path, encoding="utf-8") as fh:
+                return [ln.split("\t") for ln in fh.read().strip().split("\n") if ln]
+        return repo, run, rows
+
+    # 12 CBS_PR_HEAD_REF が今のブランチと違うと、印を比べず otherhead を 1 行だけ記録する（nostamp は足さない）
+    def test_validate_pr_body_otherhead(self):
+        repo, run, rows = self._vrepo()
+        r = run("release/other-cloud")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("PR本文検証OK", r.stdout)
+        self.assertIn("push した側（クラウドなど）の pre-push が流した", r.stderr)
+        self.assertNotIn("まだ流していません", r.stderr)
+        got = rows()
+        self.assertEqual(len(got), 1, got)
+        self.assertEqual(len(got[0]), 6, got)
+        self.assertEqual((got[0][1], got[0][2], got[0][3], got[0][4], got[0][5]),
+                         ("release/other-cloud", "-", "otherhead", "0", "validate-pr-body"))
+        self.assertNotIn("nostamp", [x[3] for x in got])
+
+    # 13 CBS_PR_HEAD_REF が今のブランチと同じ・無いときは今と同じ（印が無ければ nostamp、印が HEAD と同じなら記録なし）
+    def test_validate_pr_body_same_or_unset_head_ref(self):
+        repo, run, rows = self._vrepo()
+        for ref in (None, "release/t"):
+            r = run(ref)
+            self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+            self.assertIn("まだ流していません", r.stderr)
+            self.assertNotIn("push した側", r.stderr)
+        self.assertEqual([x[3] for x in rows()], ["nostamp", "nostamp"])
+        with open(os.path.join(repo, ".git", "check-before-submit.ok"), "w") as fh:
+            fh.write(git(repo, "rev-parse", "HEAD") + "\n")
+        for ref in (None, "release/t"):
+            r = run(ref)
+            self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+            self.assertNotIn("まだ流していません", r.stderr)
+        self.assertEqual(len(rows()), 2, rows())
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
