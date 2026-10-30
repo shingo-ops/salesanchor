@@ -13,12 +13,12 @@ def set_hooks_path():
     """成功なら None、失敗なら理由の短い文を返す。例外は外に出さない。"""
     try:
         p = subprocess.run(["git", "rev-parse", "--show-toplevel"], stdin=subprocess.DEVNULL,
-                           capture_output=True, text=True, timeout=10)
-        top = p.stdout.strip()
+                           capture_output=True, text=True, timeout=4)
+        top =p.stdout.strip()
         if p.returncode != 0 or not top:
             return "git リポジトリの場所を取れませんでした"
         q = subprocess.run(["git", "-C", top, "config", "core.hooksPath", HOOKS_PATH], stdin=subprocess.DEVNULL,
-                           capture_output=True, text=True, timeout=10)
+                           capture_output=True, text=True, timeout=4)
         if q.returncode != 0:
             return "git config が失敗しました"
         return None
