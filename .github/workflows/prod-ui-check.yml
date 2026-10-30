@@ -1,0 +1,146 @@
+name: prod-ui-check
+
+# 本番の画面点検（毎朝 JST 07:00）。見るだけで、書き込みはしない。
+# 合格のときは何も送らない。不合格のときだけ Discord に送る（ADR-1051）。
+
+on:
+  schedule:
+    - cron: "0 22 * * *"
+  workflow_dispatch:
+    inputs:
+      force_fail:
+        description: "通知の試験用: わざと落とす点検を足す"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: prod-ui-check
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: 配備中の確認
+        id: gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          n=$(gh run list --repo "${{ github.repository }}" --workflow deploy.yml --status in_progress --json databaseId --jq length)
+          if [ "${n:-0}" -ge 1 ]; then
+            sleep 600
+            n=$(gh run list --repo "${{ github.repository }}" --workflow deploy.yml --status in_progress --json databaseId --jq length)
+          fi
+          if [ "${n:-0}" -ge 1 ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "配備中のため見送り" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout
+        if: steps.gate.outputs.skip != 'true'
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        if: steps.gate.outputs.skip != 'true'
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        if: steps.gate.outputs.skip != 'true'
+        working-directory: frontend
+        run: npm ci
+
+      - name: Get Playwright version
+        if: steps.gate.outputs.skip != 'true'
+        id: pw
+        working-directory: frontend
+        run: |
+          PW_VERSION=$(node -p "require('@playwright/test/package.json').version")
+          echo "version=$PW_VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        if: steps.gate.outputs.skip != 'true'
+        uses: actions/cache@v4
+        id: pw-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
+
+      - name: Install Playwright browsers
+        if: steps.gate.outputs.skip != 'true' && steps.pw-cache.outputs.cache-hit != 'true'
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Install system deps (chromium)
+        if: steps.gate.outputs.skip != 'true' && steps.pw-cache.outputs.cache-hit == 'true'
+        working-directory: frontend
+        run: npx playwright install-deps chromium
+
+      - name: 本番の画面点検を実行
+        if: steps.gate.outputs.skip != 'true'
+        env:
+          CI: "true"
+          # tests/prod-check は frontend の外にあるので @playwright/test の置き場を教える
+          NODE_PATH: ${{ github.workspace }}/frontend/node_modules
+          SMOKE_E2E_EMAIL: ${{ secrets.SMOKE_E2E_EMAIL }}
+          SMOKE_E2E_PASSWORD: ${{ secrets.SMOKE_E2E_PASSWORD }}
+          PROD_CHECK_FORCE_FAIL: ${{ inputs.force_fail && '1' || '' }}
+        run: ./frontend/node_modules/.bin/playwright test --config tests/prod-check/playwright.config.ts
+
+      - name: Upload report
+        if: ${{ !cancelled() && steps.gate.outputs.skip != 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: prod-ui-check-report
+          path: |
+            tests/prod-check/playwright-report
+            tests/prod-check/results.json
+            tests/prod-check/test-results
+            test-results
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - name: 不合格を Discord に知らせる
+        if: failure() && steps.gate.outputs.skip != 'true'
+        env:
+          DISCORD_WEBHOOK_OWNER_PING: ${{ secrets.DISCORD_WEBHOOK_OWNER_PING }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -z "${DISCORD_WEBHOOK_OWNER_PING:-}" ]; then
+            echo "webhook が未設定のため通知を送りません"
+            exit 0
+          fi
+          payload=$(python3 - <<'PY'
+          import json, os
+          names = []
+          def walk(suite):
+              for spec in suite.get("specs", []):
+                  if not spec.get("ok", True):
+                      names.append(spec.get("title", "不明な点検"))
+              for s in suite.get("suites", []):
+                  walk(s)
+          try:
+              with open("tests/prod-check/results.json", encoding="utf-8") as f:
+                  data = json.load(f)
+              for s in data.get("suites", []):
+                  walk(s)
+          except Exception:
+              pass
+          label = " / ".join(names) if names else "点検を最後まで実行できませんでした"
+          content = "🚨 本番の画面点検が不合格: %s。%s" % (label, os.environ.get("RUN_URL", ""))
+          print(json.dumps({"content": content, "username": "Prod UI Check"}, ensure_ascii=False))
+          PY
+          )
+          curl -s -X POST "$DISCORD_WEBHOOK_OWNER_PING" \
+            -H "Content-Type: application/json" \
+            -d "$payload" > /dev/null || true
