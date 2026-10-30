@@ -9,9 +9,7 @@ name: QA Smoke Suite (ADR-038)
 #
 # Trigger:
 #   - workflow_dispatch     手動 (Evaluator / Generator が任意に走らせる)
-#   - schedule (weekly)     毎週月曜 03:00 JST (18:00 UTC Sunday)
-#   - pull_request          tests/qa-smoke/ または scripts/qa/ が変更されたとき
-#                           (毎 PR 走らせると prod 負荷になるため変更時のみ)
+#   - schedule / pull_request は 2026-10-30 に停止（PO 決定。本番 DB を初期化する作りで、6/19 以降一度も完走していないため。作り直しは docs/handoff/qa-smoke-rebuild/design.md）
 #
 # Runner:
 #   - **self-hosted** (VPS or 同等ネットワーク経路内のホスト)
@@ -36,16 +34,6 @@ name: QA Smoke Suite (ADR-038)
 
 on:
   workflow_dispatch:
-  schedule:
-    # 毎週月曜 03:00 JST (= 18:00 UTC Sun)
-    - cron: '0 18 * * 0'
-  pull_request:
-    branches:
-      - main
-      - develop
-    paths:
-      - 'tests/qa-smoke/**'
-      - 'scripts/qa/**'
 
 concurrency:
   # 同時実行禁止 (tenant_006 を共有するため race condition を防ぐ)

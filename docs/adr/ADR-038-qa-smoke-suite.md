@@ -129,3 +129,5 @@ seed 内容:
 
 ### シーン選択ルール
 evaluator.md「qa-smoke 実行ポリシー」セクション参照
+
+2026-10-30: 自動実行（毎週・PR）を停止。手動のみ。作り直しの設計は docs/handoff/qa-smoke-rebuild/design.md（PO 決定）
