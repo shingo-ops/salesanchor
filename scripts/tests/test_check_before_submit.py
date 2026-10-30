@@ -3,8 +3,8 @@
 
 実行: python3 scripts/tests/test_check_before_submit.py -v
 
-使い捨ての git の写し（worktree）を HEAD から作り、入口の台本は今の作業場所のものを写して commit する。
-違反は写しの中だけに入れ、終わったら必ず写しを remove する（本体のリポジトリには何も書かない）。
+使い捨ての git の写し（独立した clone。本体の参照は書き換えない）を HEAD から作り、入口の台本は今の作業場所のものを写して commit する。
+違反は写しの中だけに入れ、終わったら必ず写しを消す（本体のリポジトリには何も書かない）。
 試すこと:
   1 main と同じ中身で流すと終了コード 0・必須チェックの全件の名前・流した検査の名前が出る
   2 違反を 1 つ入れた写しで流すと終了コード 1・落ちた検査の名前が出る（違反 2 種類）
@@ -58,8 +58,15 @@ class CheckBeforeSubmit(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.mkdtemp(prefix="cbs-test-")
         self.wt = os.path.join(self.tmp, "wt")
-        git(ROOT, "worktree", "add", "--detach", self.wt, "HEAD")
-        self.added = True
+        # 本体のリポジトリの参照（origin/main など）を書き換えないよう、独立した写しを作る。
+        # CI の浅い clone（origin/main が無い・履歴が 1 件）でも動くよう、今の HEAD を取り込み、
+        # それを「main と同じ中身」の origin/main として写しの中だけに置く。
+        os.makedirs(self.wt)
+        git(self.wt, "init", "-q")
+        git(self.wt, "fetch", "-q", "--depth", "1", ROOT, "HEAD")
+        head = git(self.wt, "rev-parse", "FETCH_HEAD")
+        git(self.wt, "checkout", "-q", "--detach", head)
+        git(self.wt, "update-ref", "refs/remotes/origin/main", head)
         # 入口の台本は今の作業場所のものを写す（commit 前でも試せる）
         dst = os.path.join(self.wt, SCRIPT_REL)
         os.makedirs(os.path.dirname(dst), exist_ok=True)
@@ -68,9 +75,6 @@ class CheckBeforeSubmit(unittest.TestCase):
         self.commit("test: copy script")
 
     def tearDown(self):
-        if self.added:
-            subprocess.run(["git", "-C", ROOT, "worktree", "remove", "--force", self.wt],
-                           capture_output=True, text=True, env=git_env())
         shutil.rmtree(self.tmp, ignore_errors=True)
 
     def commit(self, msg):
