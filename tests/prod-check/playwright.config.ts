@@ -16,6 +16,8 @@ import { BASE_URL } from "./login";
 
 export default defineConfig({
   testDir: ".",
+  // 速さの記録（page-speed.config.ts）は今の点検に混ぜない
+  testIgnore: ["page-speed.spec.ts"],
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: 1,
