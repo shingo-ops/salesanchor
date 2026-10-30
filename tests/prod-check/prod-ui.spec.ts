@@ -4,7 +4,8 @@
  * 各 test 名は通知文にそのまま出る。何が壊れたか分かる名前にする。
  */
 
-import { test, expect, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { test, expect, SKIP_REASON } from "./fixtures";
 import { creds, login, signOut } from "./login";
 
 const NO_ERROR_BANNER = ".error-banner";
@@ -19,7 +20,6 @@ function apiOk(page: Page, pathRe: RegExp) {
 const COMPANIES_API = /^\/api\/v1\/companies$/;
 const LEADS_API = /^\/api\/v1\/leads$/;
 const COMPANY_DETAIL_API = /^\/api\/v1\/companies\/[^/]+$/;
-const SKIP_REASON = "点検用の人の秘密情報が未登録";
 
 test.describe("本番の画面点検", () => {
   test("S1 画面が開く（ログイン画面）", async ({ page }) => {
@@ -38,15 +38,12 @@ test.describe("本番の画面点検", () => {
     await expect(page).toHaveURL(/\/(dashboard)?$/);
   });
 
-  test("S3 ダッシュボードにエラーが出ない", async ({ page }) => {
+  test("S3 ダッシュボードにエラーが出ない", async ({ authedPage: page }) => {
+    // ログイン済みの page を作ったあとから数える（/login を開いたときの refresh 401 は正常な動き）
     const errors: string[] = [];
     page.on("console", (msg) => {
       if (msg.type() === "error") errors.push(msg.text());
     });
-    const c = creds();
-    test.skip(!c, SKIP_REASON);
-    const { email, password } = c!;
-    await login(page, email, password);
     await page.goto("/");
     // 画面は常時接続（新着の知らせ）を持つため networkidle にならない。読み込み完了＋5秒の間に出たエラーを数える
     await page.waitForLoadState("load");
@@ -55,11 +52,7 @@ test.describe("本番の画面点検", () => {
     expect(errors, `console.error が ${errors.length} 件`).toHaveLength(0);
   });
 
-  test("S4 会社一覧とリード一覧が開く", async ({ page }) => {
-    const c = creds();
-    test.skip(!c, SKIP_REASON);
-    const { email, password } = c!;
-    await login(page, email, password);
+  test("S4 会社一覧とリード一覧が開く", async ({ authedPage: page }) => {
 
     const companies = apiOk(page, COMPANIES_API);
     await page.goto("/crm/companies");
@@ -77,11 +70,7 @@ test.describe("本番の画面点検", () => {
     await expect(page.locator(".error-message")).toHaveCount(0);
   });
 
-  test("S5 会社一覧の検索", async ({ page }) => {
-    const c = creds();
-    test.skip(!c, SKIP_REASON);
-    const { email, password } = c!;
-    await login(page, email, password);
+  test("S5 会社一覧の検索", async ({ authedPage: page }) => {
     const first = apiOk(page, COMPANIES_API);
     await page.goto("/crm/companies");
     expect((await first).status(), "会社一覧の API の応答").toBeLessThan(400);
@@ -100,11 +89,7 @@ test.describe("本番の画面点検", () => {
     await expect(page.locator(NO_ERROR_BANNER)).toHaveCount(0);
   });
 
-  test("S6 会社の詳細が開く", async ({ page }) => {
-    const c = creds();
-    test.skip(!c, SKIP_REASON);
-    const { email, password } = c!;
-    await login(page, email, password);
+  test("S6 会社の詳細が開く", async ({ authedPage: page }) => {
     const list = apiOk(page, COMPANIES_API);
     await page.goto("/crm/companies");
     expect((await list).status(), "会社一覧の API の応答").toBeLessThan(400);
