@@ -138,7 +138,7 @@ migration・列の追加・Gemini の呼び出しの作り（`backend/app/servic
 
 ## 維持の仕組み
 
-- 守り手: 人手で守る（実装 PR で新規テスト test_api_error_auto_retry.py を守り手に差し替える）
+- 守り手: `backend/tests/test_api_error_auto_retry.py`（2026-10-29 #4854 で追加。続ける仕組みは docs/handoff/api-error-retry-governance/design.md）
 - 対象: `backend/app/services/line_analysis_v102_svc.py` のすぐの送り直しの回数・待ち時間と、`backend/app/tasks/tcg_extraction_recovery.py` の数分後の送り直しの条件・上限
 - 関所なしの場合: 回数・待ち時間・条件を変える PR は、この design.md の G1〜G4 と「待ち時間の根拠」を見直してから出す。
 

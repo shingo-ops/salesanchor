@@ -75,6 +75,20 @@ describe("ButtonLink native link contract", () => {
     expect(parent).not.toHaveBeenCalled();
     expect(screen.getByTestId("location").textContent).toBe("/next");
   });
+
+  it("shape=\"pill\" adds comp-btn--pill and does not leak a shape attribute to <a>", () => {
+    render(<ButtonLink href="/x" shape="pill">Go</ButtonLink>);
+    const anchor = screen.getByRole("link", { name: "Go" });
+    expect(anchor.classList.contains("comp-btn--pill")).toBe(true);
+    expect(anchor.hasAttribute("shape")).toBe(false);
+  });
+
+  it("shape=\"pill\" on a Router Link does not leak a shape attribute", () => {
+    renderRouterLink(<ButtonLink to="/next" shape="pill">Next</ButtonLink>);
+    const anchor = screen.getByRole("link", { name: "Next" });
+    expect(anchor.classList.contains("comp-btn--pill")).toBe(true);
+    expect(anchor.hasAttribute("shape")).toBe(false);
+  });
 });
 
 const validAnchor = <ButtonLink href="/invoice" />;

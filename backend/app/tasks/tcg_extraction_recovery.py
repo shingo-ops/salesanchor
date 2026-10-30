@@ -359,6 +359,151 @@ def retry_transient_api_error_jobs(session) -> list[str]:
     return reset_ids
 
 
+# 送り直しても終わらなかった解析を管理者用 Discord へ1回だけ知らせる。設計: docs/handoff/api-error-retry-governance/design.md A（ADR-1050）。
+API_ERROR_GIVEN_UP_WINDOW_HOURS = 48
+API_ERROR_GIVEN_UP_REDIS_PREFIX = "api_error_given_up:notified:"
+API_ERROR_GIVEN_UP_REDIS_TTL_SECONDS = 7 * 24 * 60 * 60
+API_ERROR_GIVEN_UP_LIST_LIMIT = 10
+_GIVEN_UP_PROVIDER_UNKNOWN = "不明"
+
+
+def find_given_up_api_error_jobs(session) -> list[dict]:
+    """試行3回以上、または24時間を過ぎて送り直しの対象から外れた API_ERROR の v102 job（48時間以内）を古い順に返す。"""
+    from app.services.line_analysis_v102_svc import V102_PROMPT_VERSION_PREFIX  # noqa: PLC0415
+
+    rows = session.execute(
+        text(
+            f"""
+            SELECT ej.id, ej.created_at,
+                   COALESCE(
+                       substring(latest_attempt.validation_result->>'raw' FROM '\\(HTTP ([0-9]+)\\)$'),
+                       latest_attempt.validation_result->>'category'
+                   ) AS reject_code,
+                   COALESCE(ps.name, :unknown) AS provider
+            FROM {TCG_SCHEMA}.extraction_jobs ej
+            JOIN {TCG_SCHEMA}.source_messages sm ON sm.id = ej.source_message_id
+            LEFT JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id = sm.supplier_channel_id
+            LEFT JOIN public.suppliers ps ON ps.id = sc.supplier_id
+            JOIN LATERAL (
+                SELECT ea.phase, ea.finished_at, ea.validation_result
+                FROM {TCG_SCHEMA}.extraction_attempts ea
+                WHERE ea.extraction_job_id = ej.id
+                ORDER BY ea.started_at DESC, ea.id DESC
+                LIMIT 1
+            ) latest_attempt ON true
+            WHERE ej.status = 'error'
+              AND ej.error_message = 'API_ERROR'
+              AND ej.prompt_version LIKE :prefix
+              AND ej.created_at > NOW() - (:window_hours || ' hours')::interval
+              AND sm.is_active = TRUE
+              AND sm.superseded_by IS NULL
+              AND latest_attempt.phase = 'failed'
+              AND (
+                  latest_attempt.validation_result->>'category' IN ('gemini_rate_limit', 'gemini_timeout')
+                  OR (
+                      latest_attempt.validation_result->>'category' = 'gemini_http_error'
+                      AND (
+                          latest_attempt.validation_result->>'raw' LIKE '%(HTTP 429)'
+                          OR latest_attempt.validation_result->>'raw' LIKE '%(HTTP 500)'
+                          OR latest_attempt.validation_result->>'raw' LIKE '%(HTTP 502)'
+                          OR latest_attempt.validation_result->>'raw' LIKE '%(HTTP 503)'
+                          OR latest_attempt.validation_result->>'raw' LIKE '%(HTTP 504)'
+                      )
+                  )
+              )
+              AND (
+                  (
+                      SELECT COUNT(*) FROM {TCG_SCHEMA}.extraction_attempts ea2
+                      WHERE ea2.extraction_job_id = ej.id
+                  ) >= :max_attempts
+                  OR ej.created_at < NOW() - (:lookback_hours || ' hours')::interval
+              )
+            ORDER BY ej.created_at ASC
+            """
+        ),
+        {
+            "prefix": V102_PROMPT_VERSION_PREFIX + "%",
+            "window_hours": API_ERROR_GIVEN_UP_WINDOW_HOURS,
+            "lookback_hours": API_ERROR_RETRY_LOOKBACK_HOURS,
+            "max_attempts": API_ERROR_RETRY_MAX_ATTEMPTS,
+            "unknown": _GIVEN_UP_PROVIDER_UNKNOWN,
+        },
+    ).fetchall()
+    return [
+        {"id": str(r[0]), "created_at": r[1], "reject_code": r[2], "provider": r[3]}
+        for r in rows
+    ]
+
+
+def build_given_up_message(rows: list[dict]) -> str:
+    from datetime import timezone  # noqa: PLC0415
+    from zoneinfo import ZoneInfo  # noqa: PLC0415
+
+    jst = ZoneInfo("Asia/Tokyo")
+    lines = [f"⚠️ 解析を3回送り直しても終わらなかった投稿が {len(rows)} 件あります（ADR-1050）"]
+    for r in rows[:API_ERROR_GIVEN_UP_LIST_LIMIT]:
+        created = r.get("created_at")
+        if created is not None and created.tzinfo is None:
+            created = created.replace(tzinfo=timezone.utc)
+        stamp = created.astimezone(jst).strftime("%Y-%m-%d %H:%M") if created is not None else "-"
+        lines.append(f"・{r.get('provider')} {stamp} 断られ方 {r.get('reject_code')}")
+    rest = len(rows) - API_ERROR_GIVEN_UP_LIST_LIMIT
+    if rest > 0:
+        lines.append(f"ほか {rest} 件")
+    lines.append("要確認の画面で手でやり直してください。")
+    return "\n".join(lines)
+
+
+def _get_redis():
+    """同期 Redis クライアント。使えなければ None。"""
+    try:
+        import redis  # noqa: PLC0415
+
+        client = redis.from_url(os.getenv("REDIS_URL", "redis://redis:6379/0"), decode_responses=True)
+        client.ping()
+        return client
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("[tcg_extraction_recovery] Redis unavailable (skip): %s", type(exc).__name__)
+        return None
+
+
+def notify_given_up_api_error_jobs(session) -> int:
+    """諦めた job をまだ知らせていない分だけ1通で Discord に送り、送った件数を返す。失敗しても 0 を返し送り直しは止めない。"""
+    try:
+        from app.services.discord_notifier import _get_webhook_url, _post_discord_webhook  # noqa: PLC0415
+
+        url = _get_webhook_url()
+        if not url:
+            logger.warning("ADMIN_NOTIFICATION_DISCORD_WEBHOOK is not set; skip given-up API_ERROR notice")
+            return 0
+        client = _get_redis()
+        if client is None:
+            return 0
+        pending = []
+        for row in find_given_up_api_error_jobs(session):
+            key = f"{API_ERROR_GIVEN_UP_REDIS_PREFIX}{row['id']}"
+            try:
+                if client.exists(key):
+                    continue
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("[tcg_extraction_recovery] Redis check failed: %s", type(exc).__name__)
+                continue
+            pending.append(row)
+        if not pending:
+            return 0
+        if not asyncio.run(_post_discord_webhook(url, build_given_up_message(pending))):
+            return 0
+        for row in pending:
+            try:
+                client.set(f"{API_ERROR_GIVEN_UP_REDIS_PREFIX}{row['id']}", "1", ex=API_ERROR_GIVEN_UP_REDIS_TTL_SECONDS)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("[tcg_extraction_recovery] Redis set failed: %s", type(exc).__name__)
+        return len(pending)
+    except Exception:  # noqa: BLE001
+        logger.exception("[tcg_extraction_recovery] 諦めた解析の知らせに失敗")
+        return 0
+
+
 def _run_recovery() -> dict:
     engine = _get_sync_engine()
     try:
@@ -368,6 +513,7 @@ def _run_recovery() -> dict:
             stale_pending_ids = find_stale_pending_job_ids(session)
             analysis_retry_ids = retry_analysis_failed_jobs(session)
             api_error_retry_ids = retry_transient_api_error_jobs(session)
+            given_up_notified = notify_given_up_api_error_jobs(session)
     finally:
         engine.dispose()
 
@@ -390,7 +536,10 @@ def _run_recovery() -> dict:
         "reenqueue_skipped": reenqueue_result.get("skipped", 0),
         "analysis_retry_count": len(analysis_retry_ids),
         "api_error_retry_count": len(api_error_retry_ids),
+        "given_up_notified": given_up_notified,
     }
+    if given_up_notified:
+        logger.warning("[tcg_extraction_recovery] 送り直しても終わらなかった解析を知らせた: %d件", given_up_notified)
 
     if recovered_running_ids or stale_pending_ids:
         logger.warning(

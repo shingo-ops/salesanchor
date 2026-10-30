@@ -127,6 +127,23 @@ describe('Button tap size (design.md docs/handoff/viewer-control-tap-size/design
     const button = screen.getByRole('button');
     expect(button.classList.contains('comp-btn--tap')).toBe(false);
   });
+
+  it('shape="pill" adds comp-btn--pill and does not leak a shape attribute', () => {
+    render(<Button shape="pill">Save</Button>);
+    const button = screen.getByRole('button');
+    expect(button.classList.contains('comp-btn--pill')).toBe(true);
+    expect(button.hasAttribute('shape')).toBe(false);
+  });
+
+  it('default shape does not add comp-btn--pill', () => {
+    render(<Button>Save</Button>);
+    expect(screen.getByRole('button').classList.contains('comp-btn--pill')).toBe(false);
+  });
+
+  it('size="auth" adds comp-btn--auth', () => {
+    render(<Button size="auth">Save</Button>);
+    expect(screen.getByRole('button').classList.contains('comp-btn--auth')).toBe(true);
+  });
 });
 
 // Public appearance overrides are rejected; native layout/events remain supported.

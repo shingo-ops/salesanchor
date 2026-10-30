@@ -116,6 +116,8 @@
     "reload": "更新"
   },
   "common": {
+    "showPassword": "パスワードを表示",
+    "hidePassword": "パスワードを隠す",
     "loading": "読み込み中...",
     "select": "選択",
     "selectAll": "全選択",
@@ -663,7 +665,7 @@
     "email": "メールアドレス",
     "password": "パスワード",
     "signIn": "ログイン",
-    "forgotPassword": "パスワードをお忘れの方",
+    "forgotPassword": "パスワードをお忘れですか？",
     "resetPassword": "パスワード再設定",
     "sendResetEmail": "再設定メールを送信",
     "resetEmailSent": "再設定メールを送信しました。メールをご確認ください。",

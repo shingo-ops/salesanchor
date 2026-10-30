@@ -123,7 +123,7 @@ migration は構造のみ・1回実行（ADR-1007）。値の投入は migration
 
 | 画面 | 変更 | 使う金型 |
 |---|---|---|
-| ログイン（`frontend/src/pages/login/LoginPage.tsx`） | Firebase 呼び出しを自社 API に。「顔・指紋でログイン」ボタンを追加（端末が対応しているときだけ表示）。生 `<button>`（:115「パスワードを忘れた」・:154「ログインへ戻る」）を金型 `Button` の `variant="secondary"`（補助）に置き換える | `Button`・`TextFieldControl`（既存）。`frontend/src/components/buttonAppearance.ts:1` に文字リンク風の種類は無いため、新しい種類は足さず secondary を使う |
+| ログイン（`frontend/src/pages/login/LoginPage.tsx`） | Firebase 呼び出しを自社 API に。「顔・指紋でログイン」ボタンを追加（端末が対応しているときだけ表示）。生 `<button>`（:115「パスワードを忘れた」・:154「ログインへ戻る」）を文字リンクの金型 `TextLink` に置き換える（login-round-inputs/design.md） | `Button`・`TextFieldControl`（既存）。`frontend/src/components/buttonAppearance.ts:1` に文字リンク風の種類は無いため、文字リンクは TextLink を使う（login-round-inputs/design.md） |
 | パスワード再設定（新ページ `/reset-password?token=`） | 新パスワード 2 回入力 → confirm | `Button`・`TextFieldControl`・`Callout`（結果表示） |
 | アカウント設定 セキュリティ（`frontend/src/pages/account-settings/SecuritySection.tsx`） | パスワード変更を自社 API に。パスキー一覧（名前・登録日・最後に使った日）・追加・削除 | `Button`・`TextFieldControl`・`DataTable`（`frontend/src/components/DataTable.tsx`）・`ConfirmModal`（削除確認） |
 | 認証の土台（`frontend/src/contexts/AuthContext.tsx`・`frontend/src/lib/api.ts`・`frontend/src/hooks/useSSE.ts`・`frontend/src/components/ShippingDetailPanel.tsx`） | `getIdToken()` を「メモリのアクセストークン（切れていたら refresh）」に置き換え。Bearer 方式は変えない。起動時の手順: ページを開く → メモリにトークンが無い → refresh を 1 回だけ呼ぶ → 401 ならログイン画面へ。401 のときの自動 refresh は 1 回まで（`nginx/nginx.conf` の `/api/v1/auth/` は 10 回/分・burst 5 の制限があり、繰り返すとすぐ 429 になるため） | — |

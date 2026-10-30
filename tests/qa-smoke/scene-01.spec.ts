@@ -41,7 +41,7 @@ test.describe("Scene 01: Auth & Roles (real backend)", { tag: ['@scene-01'] }, (
   test("間違ったパスワードでは login 失敗 (Firebase auth が生きていることの確認)", async ({ page }) => {
     await page.goto("/login");
     await page.getByLabel("メールアドレス").fill(QA_USERS.admin.email);
-    await page.getByLabel("パスワード").fill("definitely-wrong-password-for-smoke");
+    await page.getByLabel("パスワード", { exact: true }).fill("definitely-wrong-password-for-smoke");
     await page.getByRole("button", { name: "ログイン" }).click();
 
     // エラー表示を待つ — 文言は frontend 実装に依存するため緩く正規表現で

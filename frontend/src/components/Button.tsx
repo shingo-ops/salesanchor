@@ -5,7 +5,8 @@
  * TypeScript の型で規格外 variant / size をコンパイルエラーにする。
  *
  * - variant: primary / secondary / ghost / danger / outline / tab
- * - size:    sm / md / lg
+ * - size:    sm / md / lg / tap / auth（auth はログイン画面だけ）
+ * - shape:   default / pill（pill はログイン画面だけ）
  * - options: fullWidth / loading / iconOnly(aria-label必須) / active(tab用)
  *
  *
@@ -16,14 +17,16 @@ import { forwardRef } from "react";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { Spinner } from "./loading";
 import { buttonAppearance } from "./buttonAppearance";
-import type { ButtonSize, ButtonVariant } from "./buttonAppearance";
+import type { ButtonShape, ButtonSize, ButtonVariant } from "./buttonAppearance";
 import "./Button.css";
 
-export type { ButtonSize, ButtonVariant } from "./buttonAppearance";
+export type { ButtonShape, ButtonSize, ButtonVariant } from "./buttonAppearance";
 
 interface ButtonOwnProps {
   variant?: ButtonVariant;
   size?: ButtonSize;
+  /** pill は完全に丸い形。ログイン画面だけで使う（buttonShapeUsage.test.ts が強制） */
+  shape?: ButtonShape;
   fullWidth?: boolean;
   loading?: boolean;
   /** tab variant でのみ選択状態を表す */
@@ -40,6 +43,7 @@ export type ButtonProps = ButtonOwnProps & Omit<ButtonHTMLAttributes<HTMLButtonE
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button({
   variant = "primary",
   size = "md",
+  shape = "default",
   fullWidth = false,
   loading = false,
   active = false,
@@ -51,7 +55,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   ...rest
 }, ref) {
   const isTab = variant === "tab";
-  const classes = buttonAppearance({ variant, size, fullWidth, loading, active, iconOnly, layoutClassName });
+  const classes = buttonAppearance({ variant, size, shape, fullWidth, loading, active, iconOnly, layoutClassName });
 
   return (
     <button
