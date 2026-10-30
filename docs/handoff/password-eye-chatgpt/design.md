@@ -1,6 +1,6 @@
 # design: パスワード欄の目の印を見本（ChatGPT）に合わせる
 
-区分: B-2（ADR-1015）。根拠は recon.md（同じフォルダ）。
+区分: B-2（ADR-1015）。根拠は docs/handoff/password-eye-chatgpt/recon.md。関係 ADR: ADR-067・ADR-144・ADR-1013（自社ログインの画面）・ADR-1015。
 
 ## 目的
 ログイン画面と再設定画面の目の印の大きさと位置を、ChatGPT の実測（recon.md の表）に合わせる。
@@ -42,5 +42,6 @@ docs/handoff/login-round-inputs/design.md §6.2（:132-133）の余白と位置�
 ChatGPT（OpenAI）のパスワード入力画面を 2026-10-30 に実測した値だけを使う（recon.md）。他社の事例は、PO が見本を ChatGPT と決めたため不要。
 
 ## 維持の仕組み
+- 守り手: check:css-values（frontend の check:all）と ADR-067 の pre-commit（生の px を止める関所）
 - 寸法はトークンだけで書くので、check:css-values と ADR-067 の pre-commit が生の px を止める
 - 目の印は PasswordField の金型 1 か所にあり、ログインと再設定の両画面が同じ金型を使う

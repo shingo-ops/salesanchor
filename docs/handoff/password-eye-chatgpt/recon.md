@@ -12,6 +12,7 @@
 - 目の印の正本の設計: docs/handoff/login-round-inputs/design.md §6.2（:125-137）。寸法の根拠は「ボタンの幅ぶん空ける」だけで、見本の実測は無い（同 §7.4 の ChatGPT 実測に目の印の項目は無い）
 
 ## 変更前（origin/main で確認）
+引用元: `frontend/src/components/PasswordField.tsx:45`、`frontend/src/components/PasswordField.css:10`、`frontend/src/components/PasswordField.css:17`、`frontend/src/components/PasswordField.css:23`、`frontend/src/tokens.css:230`、`frontend/src/pages/login/LoginPage.tsx:116`、`frontend/src/pages/reset-password/ResetPasswordPage.tsx:67`
 - /Users/tanizawashingo/salesanchor/frontend/src/components/PasswordField.tsx:45 `<ToggleIcon size={ICON.md} aria-hidden="true" />`（16px）
 - /Users/tanizawashingo/salesanchor/frontend/src/components/PasswordField.css:10 `padding-right: calc(var(--size-icon-btn-sm) + var(--space-2));`
 - /Users/tanizawashingo/salesanchor/frontend/src/components/PasswordField.css:17 `right: var(--space-1);`（4px）
