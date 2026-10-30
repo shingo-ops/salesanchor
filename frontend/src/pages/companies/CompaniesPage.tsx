@@ -29,6 +29,7 @@ import { ButtonLink } from "../../components/ButtonLink";
 import { TextareaControl } from "../../components/Textarea";
 import { TextFieldControl } from "../../components/TextField";
 import { LoadingBlock } from "../../components/loading";
+import { getStatusPresentation } from "../../utils/statusPresentation";
 
 const PHONE_RE = /^(\+?\d{10,15}|0\d{9,10})$/;
 const validatePhoneClient = (raw: string): string | null => {
@@ -405,7 +406,7 @@ export default function CompaniesPage() {
             <Link to={`/companies/${c.id}`}>{companyDisplayName(c)}</Link>
           )},
           { key: "industry", header: t("companies.industry"), renderCell: (c) => c.industry || "-" },
-          { key: "status", header: t("common.status"), renderCell: (c) => <span className={`status-badge status-${c.status}`}>{c.status}</span> },
+          { key: "status", header: t("common.status"), renderCell: (c) => <span className={`status-badge status-${c.status}`}>{t(getStatusPresentation("company", c.status).labelKey ?? c.status)}</span> },
           { key: "billing", header: t("companies.billing"), renderCell: (c) => addressDisplay(defaultAddress(c, "billing")) },
           { key: "delivery", header: t("companies.delivery"), renderCell: (c) => addressDisplay(defaultAddress(c, "delivery")) },
           { key: "actions", header: t("common.actions"), renderCell: (c) => (
@@ -508,10 +509,10 @@ export default function CompaniesPage() {
                   <div className="form-row">
                     <label>{t("common.status")}</label>
                     <SelectControl fullWidth value={createForm.status} onChange={(e) => setCreateForm({ ...createForm, status: e.target.value })}>
-                      <option value="active">active</option>
-                      <option value="inactive">inactive</option>
-                      <option value="archived">archived</option>
-                      <option value="pending_dedup_review">pending_dedup_review</option>
+                      <option value="active">{t("customers.status_active")}</option>
+                      <option value="inactive">{t("customers.status_inactive")}</option>
+                      <option value="archived">{t("customers.status_archived")}</option>
+                      <option value="pending_dedup_review">{t("customers.status_pending_dedup")}</option>
                     </SelectControl>
                   </div>
                   <div className="form-row">
