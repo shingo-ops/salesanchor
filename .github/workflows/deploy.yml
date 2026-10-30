@@ -195,12 +195,14 @@ jobs:
       #   実際に DB を変更しうるパスだけの `db_migrations` フィルタを使う）。
       # ============================================
       - name: Pre-deploy DB backup
+        id: backup
         if: steps.gate.outputs.db_migrations == 'true'
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 10m
           script: |
             set -e
             echo "============================================"
@@ -208,7 +210,8 @@ jobs:
             echo "============================================"
             cd /home/ubuntu/salesanchor
 
-            bash scripts/backup.sh
+            if [ -f scripts/deploy-db-orphan-cleanup.sh ]; then bash scripts/deploy-db-orphan-cleanup.sh; else echo ">>> [cleanup] skipped: script not present (old checkout)"; fi
+            bash scripts/backup.sh deploy
             LATEST=$(ls -t /home/ubuntu/backups/postgres/salesanchor_db_*.sql.gz 2>/dev/null | head -1)
             if [ -z "${LATEST}" ]; then
               echo "❌ Backup file not found after backup.sh"
@@ -589,12 +592,14 @@ jobs:
           ADMIN_DATABASE_URL: ${{ secrets.ADMIN_DATABASE_URL }}
 
       - name: Run database migrations
+        id: migrate
         if: ${{ success() && steps.gate.outputs.migrations == 'true' }}
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 10m
           script: |
             set -e
             echo "============================================"
@@ -602,11 +607,27 @@ jobs:
             echo "============================================"
 
             cd /home/ubuntu/salesanchor
+            if [ -f scripts/deploy-db-orphan-cleanup.sh ]; then bash scripts/deploy-db-orphan-cleanup.sh; else echo ">>> [cleanup] skipped: script not present (old checkout)"; fi
             bash scripts/run_all_migrations.sh
 
             echo "============================================"
             echo "Migrations done."
             echo "============================================"
+
+      # deploy-db-stall §16-5: 控え・移行の段が失敗・取り消し（時間切れ・手で止めた回を含む）になったとき、
+      # サーバーに残った取り残しをすぐ片付ける。手で止めた回の outcome は cancelled（failure() は偽）。
+      - name: Clean up DB orphans after failure
+        if: ${{ always() && (steps.backup.outcome == 'failure' || steps.backup.outcome == 'cancelled' || steps.migrate.outcome == 'failure' || steps.migrate.outcome == 'cancelled') }}
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 5m
+          script: |
+            set -e
+            cd /home/ubuntu/salesanchor
+            if [ -f scripts/deploy-db-orphan-cleanup.sh ]; then bash scripts/deploy-db-orphan-cleanup.sh; else echo ">>> [cleanup] skipped: script not present (old checkout)"; fi
 
       # SA-19: Post-deploy smoke tests (SA-18 Phase2)
       - name: Post-deploy smoke tests (SA-19)
