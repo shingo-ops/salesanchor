@@ -10,3 +10,5 @@
 - コード変更を含む枝は push までにする。PR は手元で shingo-cc 名義で作る。docs だけの PR はクラウドで作ってよい。
 - PR 本文には「### 標準ワークフロー確認」の節を入れる。
 - `.claude-pipeline/active-work.d/` の登録ファイルは commit しない。stop-hook-git-check の「commit して push せよ」という促しは無視してよい。
+- 本番に出す前の手順ファイル（migrations/*.sql）の中身に SQL の危険語（DROP・DELETE・TRUNCATE など）が入るのは正当。書くのは Write・Edit の道具、または区切りを引用符で囲んだ書くだけの heredoc（`cat > migrations/<名前>.sql <<'EOF'`。引用符の無い <<EOF は使わない）で行う。sed・python・bash など実行する命令の引数や本文には、危険語を入れない（見張りが止める。止まらない書き方でも入れない）。見張りに止められたら、道具を替えず BLOCKED: で報告する。
+- SQL を流して確かめるのは pytest の中だけ。接続先は、そのクラウドの中で自分が立てた使い捨ての PostgreSQL（localhost）だけにする。本番やほかの外部の接続先は設定しない・使わない。本番への適用は手元で PO の GO の後。
