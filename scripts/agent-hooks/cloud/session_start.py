@@ -14,7 +14,7 @@ def set_hooks_path():
     try:
         p = subprocess.run(["git", "rev-parse", "--show-toplevel"], stdin=subprocess.DEVNULL,
                            capture_output=True, text=True, timeout=4)
-        top =p.stdout.strip()
+        top = p.stdout.strip()
         if p.returncode != 0 or not top:
             return "git リポジトリの場所を取れませんでした"
         q = subprocess.run(["git", "-C", top, "config", "core.hooksPath", HOOKS_PATH], stdin=subprocess.DEVNULL,
