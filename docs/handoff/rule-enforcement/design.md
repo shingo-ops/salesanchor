@@ -833,7 +833,7 @@ APPROVE。根拠：命令と所要秒は main で実測した。CI と同じ台�
 
 ### 変えないこと
 - CI のワークフロー・必須チェック・Ruleset・既存の検査の台本
-- 手元の PR 本文の見張り（~/.claude/scripts/pr-body-guard.sh）とクラウドの見張り（scripts/agent-hooks/cloud/。印を確かめるのは R4c）
+- 手元の PR 本文の見張り（~/.claude/scripts/pr-body-guard.sh）とクラウドの見張り（scripts/agent-hooks/cloud/。印を確かめるのは R4c）。2026-10-31 注記：R4c では見張りで印を確かめる案をやめ、クラウドでも pre-push を流す形にした（§R4c）
 - `--no-verify` の扱い（すでに決まりで禁止。外しても CI で止まる）
 
 ### 受入条件
@@ -860,3 +860,79 @@ APPROVE。根拠：命令と所要秒は main で実測した。CI と同じ台�
 
 ### Opus 自己審査（同じ AI の審査。独立の審査は PR で別の審査役が行う）
 APPROVE。根拠：呼び出し元・時間切れ・所要秒は origin/main と §R4a の実測で確かめた。§R4 からの変更は、止める範囲を狭める側（知らせだけ・判定できないときは通す）で、PO が承認した目的（提出前に同じ検査を流す）は変えない。未解決：pre-push で流したときの実際の秒（K1・K8 で測る）。
+
+## R4c クラウドの AI の変更にも提出前の入口を効かせる（第3段・2026-10-30 PO「1,2」の 2 で着手）
+
+### 目的
+- クラウドの AI が push する変更でも、提出前の入口（scripts/dev/check-before-submit.sh）が push の前に必ず流れるようにする
+- クラウドで push した枝の PR を手元で作るとき、「入口を流していない」と誤って数えないようにする。R4b の K8（7 日の記録で誤って止めた回数を数える）と、その次の R4b-2（PR 作成で止める段）が正しく判断できるようにする
+
+### 現状（事実。2026-10-30〜31 に origin/main 45b705884・29d962f9b で調査）
+- クラウドの実物（一回実行 cse_01W47tdg9DdSZmuoQCyNVKVm、2026-10-30 15:05Z）
+  - 入口が使う道具はすべてある：git 2.43.0・bash 5.2.21・perl 5.38.2・python3 3.11.17・node v22.22.0・GNU coreutils 9.4（mktemp・tail・cut）・grep 3.11・sed 4.9
+  - 取ってきた直後のリポジトリ（/home/user/salesanchor）では core.hooksPath が未設定（`git config --get core.hooksPath` の終了コード 1）。この状態で push すると frontend/.husky/pre-push は流れない
+  - scripts/new-worktree.sh で作業場所を作ると、:115 の `git -C <作業場所> config core.hooksPath frontend/.husky` が共通の設定（/home/user/salesanchor/.git/config）に書かれ、以後は pre-push が流れる
+  - 作業場所で pre-push を送信前の処理として流すと、終了コード 0・8 秒。印（check-before-submit.ok）は HEAD と同じ SHA になり、記録に `… 0 7.9 pre-push` の 1 行が足された
+- クラウドの実物（一回実行 cse_01W47tdf5Z62r4bG1uaJCwWY、2026-10-30 15:17Z）：new-worktree.sh で作った作業場所（/root/worktrees/salesanchor/release-r4c-cloud-design-doc）から実際に `git push` すると、所有権の検査が通り（「オーナーシップチェック通過」）、入口が流れて rc=0・12 秒。印は作業場所の git ディレクトリに HEAD と同じ SHA で書かれた
+- frontend/.husky/pre-push は、入口より前に scripts/validate-pr-ownership.sh を呼ぶ。この検査は、作業場所（`${AGENT_WORKTREE_BASE}`＝`${HOME}/worktrees` か `<本体>/.claude/worktrees` の下）の外からの push（:51-67）と、active-work に登録の無い枝（:84-94）を exit 1 で止める
+- クラウドの決まり（scripts/agent-hooks/cloud/rules.md:9-10）は「調べる・作る・push する」まで。コードを含む枝は push までで、PR は手元で shingo-cc 名義で作る。作業場所を new-worktree.sh で作る決まりは rules.md に無い（AGENTS.md「ブランチと作業場所」には「作業前に必ず（例外なし）」とある）
+- 今あるクラウドの定期実行・一回実行は 5 件で、定期のものは無い。push するものはすべて new-worktree.sh で作業場所を作ってから push している（2026-10-31 に RemoteTrigger の一覧で確かめた）
+- クラウドの見張り（scripts/agent-hooks/cloud/guard_pre_tool.py:623-634 check_pr_create）は、コードを含む枝の PR 作成をすでに止めている。クラウドで作れる PR は文書だけ
+- クラウドの SessionStart は scripts/agent-hooks/cloud/dispatch.sh:53-55 が `python3 session_start.py rules.md` を流すだけで、標準入力は渡さない。dispatch.sh:2 で `CLAUDE_CODE_REMOTE` のときだけ動く
+- 手元で PR を作る道は 2 つ
+  - scripts/gh-pr-create-safe.sh：今の作業場所のブランチの PR だけを作る（:105-109。:123-130 で手元の HEAD と origin の HEAD の一致を確かめる）。印の照合は正しい
+  - 手元の PR 本文の見張り（正本 docs/handoff/conversation-consent/hooks/pr-body-guard.sh）：`gh pr create --head <枝>` の枝の作業場所が手元にちょうど 1 つあるときだけ、そこを検証の場所にする（:104-173）。無ければ命令を流した作業場所のまま validate-pr-body.sh を呼ぶ（:245）。命令文に `cd` があるときは枝を求めない（:106）
+- validate-pr-body.sh:322-329 は、検証の場所の HEAD と印を比べ、違えば知らせを出して記録に `nostamp` の 1 行を足す。クラウドで push した枝は手元に作業場所が無いため、PR を作るたびに「命令を流した作業場所のブランチと HEAD」で `nostamp` が記録される。これは別の枝の記録で、K8 の数を水増しし、R4b-2 で止める段に進むと毎回誤って止める元になる
+- CI で流れる試験は .github/workflows/rule-registry.yml:64-76 の分だけで、validate-pr-body.sh の `nostamp` を試すのは scripts/tests/test_check_before_submit.py（:361-403）。scripts/dev/test-agent-hooks.sh・scripts/tests/test-pr-lifecycle.py・scripts/agent-hooks/cloud/test.sh は CI では流れない
+
+### §R4 の当初案から変える点と理由
+1. クラウドの見張りで PR 作成の前に印を確かめる案（§R4 の「クラウドの Claude」、§R4b の「変えないこと」の注記）はやめる。代わりに、クラウドでも pre-push が必ず流れるようにする。理由：①クラウドで作れる PR は文書だけで、コードの PR は手元で作る（rules.md:10・guard_pre_tool.py:623-634）。見張りで確かめても、肝心のコードの変更には効かない ②pre-push は push のたびに流れ、クラウドでも 8〜12 秒で終わった（上の実物）③クラウドの記録はその実行が終わると消えるため、見張りで数えても K8 に使えない
+2. R4b の K8 の 7 日は、この段の 便1 を手元に入れた時刻から数え直す。理由：それより前の `nostamp` の行は、クラウドの枝の分と本当に流し忘れた分を後から分けられない（記録の行は命令を流した作業場所のブランチ名で書かれる）。PO の決定は「11/6 以降に判断」なので、数え始めが遅れても決定の範囲に収まる
+
+### 変えること
+- 便1（手元で PR を作るときの照らし合わせ）
+  - docs/handoff/conversation-consent/hooks/pr-body-guard.sh：`gh pr create --head` または `gh pr edit` の対象の枝（:107 からの HEAD_BRANCH）が分かったときは、validate-pr-body.sh に環境変数 `CBS_PR_HEAD_REF=<枝>` を渡す
+  - scripts/dev/validate-pr-body.sh：`CBS_PR_HEAD_REF` があり、検証の場所のブランチと違うときは、印を比べない。知らせは「この枝の入口は push した側（クラウドなど）の pre-push が流した。手元の印は無い」に変え、記録に `otherhead` の 1 行を足す。行の 6 列は既存とそろえる：時刻・`<枝>`・`refs/remotes/origin/<枝>` の SHA（取れなければ `-`）・`otherhead`・`0`・`validate-pr-body`。終了コードは今と同じ（止めない）
+  - scripts/gh-pr-create-safe.sh:132：`env -u PR_BODY_VALIDATE_SKIP` に `-u CBS_PR_HEAD_REF` を足す（手元の shell に残った値で照合を飛ばさないため。この道は今の作業場所の枝だけなので値は要らない）
+  - 試験（CI で流れる scripts/tests/test_check_before_submit.py の :361-403 の並びに足す）：①`CBS_PR_HEAD_REF` が今のブランチと違うと `otherhead` の 6 列の行が記録され `nostamp` は記録されない ②同じか無いときは今と同じ動き。scripts/dev/test-agent-hooks.sh（手元だけ）には pr-body-guard.sh が `--head` の枝を `CBS_PR_HEAD_REF` で渡すことを足す
+  - 手元の見張りの入れ替え：正本を ~/.claude/scripts/pr-body-guard.sh へ写すのは PO の `!` で行う（見張りの登録は PO が行う決まり。AGENTS.md「作業の型」）。写す台本は scratchpad に用意する
+  - 限界：命令文に `cd` がある形（`cd X && gh pr create --head <枝>`）では枝を求めないため、今と同じく `nostamp` が残る（pr-body-guard.sh:106）。K6 ではこの形の行を数えから外せないので、PR 作成は `--head` 単独の形で行う決まり（いまの運用）を続ける
+- 便2（クラウドで pre-push を必ず流す）
+  - scripts/agent-hooks/cloud/rules.md：「作業を始めたら、ファイルを変える前に `bash scripts/new-worktree.sh release/<topic>` で作業場所を作り、そこで変更・commit・push する（AGENTS.md「ブランチと作業場所」と同じ）。push の前に pre-push が提出前の入口を流す。× なら直してから push。`--no-verify` は使わない」を足す
+  - scripts/agent-hooks/cloud/session_start.py：決まり（rules.md）を渡す前に、プロセスの今の場所で `git rev-parse --show-toplevel` を流し、取れたらその場所に `git config core.hooksPath frontend/.husky` を書く（new-worktree.sh:115 と同じ値）。取れない・失敗したときは書かずに決まりだけ渡し、知らせに 1 行足す（止めない）。dispatch.sh は変えない
+  - これで止める範囲が広がる点（はっきり書く）：作業場所を作らずにリポジトリ直下から push すると、入口より前に所有権の検査が「worktree 外での作業は禁止」と new-worktree.sh の手順を出して exit 1 で止める。今は hooksPath が未設定のため、この push は検査なしで通っている。止まるのは AGENTS.md で「例外なし」と決まっている作業場所の決まりに反する push だけで、今ある 5 件の実行はどれも作業場所から push しているので止まらない（上の実物）。止められたら作業場所を作り直して push すればよい
+  - 試験：scripts/agent-hooks/cloud/test.sh の K5（:332-340）に、一時 repo を今の場所にして SessionStart を流すと、その一時 repo の core.hooksPath が frontend/.husky になり、決まりの JSON も出る、を足す。手元で流すときも書き込み先は一時 repo だけ（手元の本体の .git/config は書かない）ことを、流す前後の本体の値の比較で確かめる。この試験は CI では流れない（手元とクラウドで流す）
+
+### 変えないこと
+- クラウドの見張り guard_pre_tool.py（PR 作成の判定）・dispatch.sh・.claude/settings.json
+- check-before-submit.sh・frontend/.husky/pre-push・validate-pr-ownership.sh
+- CI のワークフロー・必須チェック・Ruleset
+- 別件として記録だけするもの：
+  - guard_pre_tool.py:400 が整形前の命令文で `psql` を探すため、読むだけの grep の検索の形にある `\|psql` でも止まる（2026-10-30 の一回実行で実際に止まった）。R4c とは別の便で直す（変更は一度に 1 つ）
+  - validate-pr-body.sh:301-304 の事前検査（process-artifacts）は、命令を流した作業場所の差分と枝で動く。クラウドの枝の PR では別の枝の差分を見る。前からある挙動で、R4c では変えない
+
+### 受入条件
+- K1（便1）：手元で、作業場所の無い枝を `CBS_PR_HEAD_REF` に入れて validate-pr-body.sh を流すと、記録に `otherhead` と枝名の 6 列の 1 行が足され、`nostamp` は足されない。終了コードは今と同じ
+- K2（便1）：`CBS_PR_HEAD_REF` が無いか今の作業場所の枝と同じなら、印が無ければ今と同じ `nostamp`、HEAD と同じなら記録なし
+- K3（便2）：クラウドの一回実行で、取ってきた直後のリポジトリ直下（new-worktree.sh を流さない）で core.hooksPath が frontend/.husky になっている
+- K4（便2）：クラウドの一回実行で、①new-worktree.sh で作った作業場所から文書だけを変えた試しの枝を実際に `git push` すると、push の表示に提出前の入口の結果が出て rc=0、印が HEAD と同じになる ②リポジトリ直下で別の試しの枝を作って `git push` すると、所有権の検査の「worktree 外での作業は禁止」で rc≠0 になり、枝は origin に作られない。①の試しの枝は確かめた後に消す（main・develop ではない release/ の試しの枝だけ）
+- K5：CI の必須 16 件 pass（足した試験 test_check_before_submit.py を含む）。CI で流れない試験（test-agent-hooks.sh・cloud/test.sh）は手元で rc=0、cloud/test.sh はクラウドの一回実行でも rc=0。手元の本体の core.hooksPath は試験の前後で同じ
+- K6（反映後・R4b の K8 の材料）：便1 を手元に入れた時刻から 7 日の記録で、`nostamp` と `otherhead` を分けて数え、表にして PO に示す。R4b の K8 の判断は `nostamp` だけで行う。K6 自体は数えて示せば ○
+
+### リスクと対処
+- 便1 の見張りの入れ替えは PO の `!` が要る → 入れるまで K6 の数え始めを遅らせる。台本 1 行で済む形にする
+- 便2 で、作業場所を作らずに直下から push する実行が止まる → rules.md に手順を書き、所有権の検査の知らせにも同じ手順が出る。止まっても枝は origin に作られないだけで、作業場所を作って push し直せば戻る
+- クラウドの pre-push が × で push を止め、クラウドの AI が `--no-verify` で外す → rules.md に禁止を書く。外しても CI の必須チェックで止まる
+- クラウドの環境が変わり、入口の道具が欠ける → 入口は終了コード 2（使えない）で止めずに通し、CI が止める（R4b の決まりのまま）
+- 戻し方：merge commit を revert。便1 の見張りは、前の正本を ~/.claude/scripts/ へ写し直す。便2 で書いた core.hooksPath は、その一回実行の箱の中だけの設定で、実行が終われば消える
+
+### 影響範囲（呼び出し元の全走査）
+- pr-body-guard.sh：手元の Claude の `gh pr create`・`gh pr edit`（~/.claude/settings.json の登録）。試験 scripts/dev/test-agent-hooks.sh
+- validate-pr-body.sh：gh-pr-create-safe.sh:132（`CBS_PR_HEAD_REF` を外して渡すので今と同じ動き）、pr-body-guard.sh、試験 scripts/tests/test_check_before_submit.py:33・:361-403、test-pr-lifecycle.py:156・test-agent-hooks.sh:416
+- session_start.py：dispatch.sh の SessionStart（クラウドだけ）。試験 scripts/agent-hooks/cloud/test.sh の K5（:332-340）
+- frontend/.husky/pre-push → scripts/validate-pr-ownership.sh：便2 でクラウドの直下の push でも流れるようになる（止める範囲が広がる点として上に記載）
+- 記録ファイル check-before-submit.log を読む台本：origin/main を探した範囲では試験だけ
+
+### 審査
+- 1 回目（reviewer・opus、2026-10-31）：REVISE。採否に関わる指摘 2 件（①便2 の直下の hooksPath 設定で、直下からの push が所有権の検査で止まるのに「止める範囲は広げない」と書いていた ②足す試験が CI で流れず K5 が何も確かめない）と軽い指摘 5 件（session_start の場所の求め方・§R4b の古い注記・`CBS_PR_HEAD_REF` の受け継ぎ・`cd` 形の限界・記録行の列）。すべてこの版に入れた
+- Opus 自己審査（同じ AI の審査）：APPROVE。根拠：行番号は reviewer が origin/main で一致を確かめた。直下からの push が止まる点は、AGENTS.md の「例外なし」の決まりに反する push だけで、今ある実行は 5 件とも作業場所から push している（RemoteTrigger の一覧）。止める範囲の広がりを隠さずに書き、戻し方を書いた。試験は CI で流れるファイルに足す。未解決：session_start が動くときのプロセスの今の場所がリポジトリの中か（K3 で確かめる。外なら書かずに知らせだけで、止めない）
