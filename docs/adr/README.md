@@ -229,7 +229,7 @@
 | [ADR-1049](./ADR-1049-lead-merge-all-tables-and-fill-blanks.md) | ADR-1049: リードの統合は13表すべてを付け替え、残す方の空欄だけを埋め、受信箱のカルテからも開ける | Accepted | Amends ADR-119 | — |
 | [ADR-1050](./ADR-1050-api-error-auto-retry.md) | ADR-1050: 一時的に断られた解析は自動で送り直し、諦めた分は知らせる | Proposed | — | — |
 | [ADR-1051](./ADR-1051-prod-ui-black-box-check.md) | ADR-1051: 本番の画面点検は、GitHub 提供の機械から HTTPS で見るだけの利用者がログインして毎日行い、本番 DB には触らない | Accepted | — | — |
-| [ADR-1052](./ADR-1052-cloud-case-ai.md) | ADR-1052: Discord の投稿を合図に、クラウドの相談係 AI が個人の値を伏せた本番を読み、中身は申請して Opus が許可したときだけ見る | Proposed | Amends ADR-1024, Amends ADR-1042, Amends ADR-1039 | — |
+| [ADR-1052](./ADR-1052-cloud-case-ai.md) | ADR-1052: Discord の投稿を合図に、クラウドの相談係 AI が個人の値を伏せた本番を読み、中身は申請して Opus が許可したときだけ見る | Accepted | Amends ADR-1024, Amends ADR-1042, Amends ADR-1039 | — |
 
 ## ステータス凡例
 
