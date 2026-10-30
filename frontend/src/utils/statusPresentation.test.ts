@@ -92,11 +92,11 @@ describe("STATUS_PRESENTATION_MAP — 網羅性", () => {
     "success", "danger", "warning", "info", "neutral",
   ]);
 
-  it("全12ドメインが存在する", () => {
+  it("全13ドメインが存在する", () => {
     const expected: StatusDomain[] = [
       "lead", "quote", "invoice", "deal", "order",
       "purchaseOrder", "parseStatus", "staff", "bot", "prospectRank", "erpJobStatus",
-      "contact",
+      "contact", "company",
     ];
     for (const d of expected) {
       expect(STATUS_PRESENTATION_MAP[d], `domain "${d}" が存在しない`).toBeDefined();
@@ -131,6 +131,20 @@ describe("STATUS_PRESENTATION_MAP — 網羅性", () => {
         Object.keys(statuses).length,
         `domain "${domain}" にエントリがない`,
       ).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe("STATUS_PRESENTATION_MAP — company", () => {
+  it("company の4値が customers の辞書キーを指す", () => {
+    const expected: Record<string, string> = {
+      active: "customers.status_active",
+      inactive: "customers.status_inactive",
+      archived: "customers.status_archived",
+      pending_dedup_review: "customers.status_pending_dedup",
+    };
+    for (const [status, key] of Object.entries(expected)) {
+      expect(getStatusPresentation("company", status).labelKey).toBe(key);
     }
   });
 });

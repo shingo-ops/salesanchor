@@ -86,10 +86,10 @@ export function CompanyBasicTab({
       <div className="form-row"><label>{t("common.status")}</label>
         <SelectControl fullWidth disabled={!canEdit} value={basicForm.status}
           onChange={(e) => { setBasicForm({ ...basicForm, status: e.target.value }); setBasicDirty(true); }}>
-          <option value="active">active</option>
-          <option value="inactive">inactive</option>
-          <option value="archived">archived</option>
-          <option value="pending_dedup_review">pending_dedup_review</option>
+          <option value="active">{t("customers.status_active")}</option>
+          <option value="inactive">{t("customers.status_inactive")}</option>
+          <option value="archived">{t("customers.status_archived")}</option>
+          <option value="pending_dedup_review">{t("customers.status_pending_dedup")}</option>
         </SelectControl>
       </div>
       <div className="form-row"><label>{t("common.notes")}</label>

@@ -11,6 +11,7 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { getStatusPresentation } from "../../utils/statusPresentation";
 import { usePermissions } from "../../hooks/usePermissions";
 import { api } from "../../lib/api";
 import { Button } from "../../components/Button";
@@ -93,7 +94,7 @@ export default function CompanyDetailPage() {
         subtitleKey="companies.detailSubtitle"
         headerAction={
             <div className="page-header-actions">
-              <span className={`status-badge status-${company.status}`}>{company.status}</span>
+              <span className={`status-badge status-${company.status}`}>{t(getStatusPresentation("company", company.status).labelKey ?? company.status)}</span>
             </div>
         }
       >
