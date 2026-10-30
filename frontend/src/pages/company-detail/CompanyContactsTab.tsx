@@ -8,6 +8,7 @@
 
 import { FormEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { getStatusPresentation } from "../../utils/statusPresentation";
 import { STATUS_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 import type { Company, Contact, ContactFormState } from "./company-detail.types";
@@ -120,7 +121,7 @@ export function CompanyContactsTab({
                 <td>{c.is_primary_contact ? <STATUS_ICONS.check size={ICON.sm} aria-hidden="true" /> : ""}</td>
                 <td>{c.primary_email || "-"}</td>
                 <td>{c.primary_phone || "-"}</td>
-                <td><span className={`status-badge status-${c.status}`}>{c.status}</span></td>
+                <td><span className={`status-badge status-${c.status}`}>{t(getStatusPresentation("contact", c.status).labelKey ?? c.status)}</span></td>
                 <td>
                   <Button size="sm" variant="secondary" onClick={() => openChannelForm(c)}>
                     {t("contactChannel.addTitle")}
@@ -196,9 +197,9 @@ export function CompanyContactsTab({
               value={contactForm.status}
               onChange={(e) => setContactForm({ ...contactForm, status: e.target.value })}
               options={[
-                { value: "active", label: "active" },
-                { value: "inactive", label: "inactive" },
-                { value: "archived", label: "archived" },
+                { value: "active", label: t("customers.status_active") },
+                { value: "inactive", label: t("customers.status_inactive") },
+                { value: "archived", label: t("customers.status_archived") },
               ]}
             />
             <div className="form-row">

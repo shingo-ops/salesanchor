@@ -1,7 +1,7 @@
 /**
  * ステータス → 見た目の SSoT（決定レイヤー①）
  *
- * 全 11 ステータスドメインを (domain, status) → { bucket, badgeVariant, labelKey }
+ * 全 13 ステータスドメインを (domain, status) → { bucket, badgeVariant, labelKey }
  * の形式で一元管理する。ページ側は自前で色・クラスを決定しないこと。
  *
  * 参照: docs/handoff/decision-layer-01/design.md
@@ -23,7 +23,7 @@ export interface StatusPresentation {
   labelKey?: string;
 }
 
-/** 11 ステータスドメイン */
+/** 13 ステータスドメイン */
 export type StatusDomain =
   | "lead"
   | "quote"
@@ -36,7 +36,8 @@ export type StatusDomain =
   | "bot"
   | "prospectRank"
   | "erpJobStatus"
-  | "contact";
+  | "contact"
+  | "company";
 
 const NEUTRAL_FALLBACK: StatusPresentation = {
   bucket: "neutral",
@@ -166,6 +167,12 @@ export const STATUS_PRESENTATION_MAP: Record<StatusDomain, Record<string, Status
     inactive:             { bucket: "neutral",  badgeVariant: "neutral", labelKey: "contacts.statusCode.inactive" },
     archived:             { bucket: "neutral",  badgeVariant: "neutral", labelKey: "contacts.statusCode.archived" },
     pending_dedup_review: { bucket: "warning",  badgeVariant: "pending", labelKey: "contacts.statusCode.pending_dedup_review" },
+  },
+  company: {
+    active:               { bucket: "success", badgeVariant: "won",     labelKey: "customers.status_active" },
+    inactive:             { bucket: "neutral",  badgeVariant: "neutral", labelKey: "customers.status_inactive" },
+    archived:             { bucket: "neutral",  badgeVariant: "neutral", labelKey: "customers.status_archived" },
+    pending_dedup_review: { bucket: "warning",  badgeVariant: "pending", labelKey: "customers.status_pending_dedup" },
   },
 };
 

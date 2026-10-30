@@ -13,6 +13,7 @@
 import { useEffect, useState, FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { getStatusPresentation } from "../../utils/statusPresentation";
 import { api } from "../../lib/api";
 import { Modal } from "../../components/Modal";
 import { Button } from "../../components/Button";
@@ -345,9 +346,9 @@ export default function ContactsPage() {
             </div>
             <div className="form-row"><label>{t("common.status")}</label>
               <SelectControl fullWidth value={createForm.status} onChange={(e) => setCreateForm({ ...createForm, status: e.target.value })}>
-                <option value="active">active</option>
-                <option value="inactive">inactive</option>
-                <option value="archived">archived</option>
+                <option value="active">{t("customers.status_active")}</option>
+                <option value="inactive">{t("customers.status_inactive")}</option>
+                <option value="archived">{t("customers.status_archived")}</option>
               </SelectControl>
             </div>
             <div className="form-row"><label>{t("common.notes")}</label>
@@ -393,7 +394,7 @@ export default function ContactsPage() {
           { key: "primary_email", header: t("common.email"), renderCell: (c) => c.primary_email || "-" },
           { key: "primary_phone", header: t("common.phone"), renderCell: (c) => c.primary_phone || "-" },
           { key: "is_primary_contact", header: t("contacts.isPrimary"), renderCell: (c) => c.is_primary_contact ? <STATUS_ICONS.check size={ICON.sm} aria-hidden="true" /> : "" },
-          { key: "status", header: t("common.status"), renderCell: (c) => <span className={`status-badge status-${c.status}`}>{c.status}</span> },
+          { key: "status", header: t("common.status"), renderCell: (c) => <span className={`status-badge status-${c.status}`}>{t(getStatusPresentation("contact", c.status).labelKey ?? c.status)}</span> },
           { key: "channels", header: t("nav.channels"), renderCell: (c) =>
             c.contact_channels.length > 0 ? <ContactChannelLinks contactId={c.id} /> : null
           },
