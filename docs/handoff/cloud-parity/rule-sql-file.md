@@ -1,6 +1,6 @@
 # クラウドの決まり: SQL の手順ファイルを書くときの例外（設計）
 
-- 状態: 設計案 第3版（Opus 作成）。1回目の審査 REVISE（MEDIUM 3・LOW 4）、2回目の審査 REVISE（MEDIUM 2・LOW 3）を反映。3回目の審査 APPROVE（2026-10-31、LOW 2 件を反映）。PO 実装承認済み（2026-10-31、PO「1」＝この例外を安全確認に入れる）。実装はクラウド Sonnet。審査役（新規 opus）の再審査 → PO 許可 → クラウド Sonnet が実装。
+- 状態: 設計案 第3版（Opus 作成）。1回目の審査 REVISE（MEDIUM 3・LOW 4）、2回目の審査 REVISE（MEDIUM 2・LOW 3）を反映。3回目の審査 APPROVE（2026-10-31、LOW 2 件を反映）。PO 実装承認済み（2026-10-31、PO「1」＝この例外を安全確認に入れる）。実装済み（クラウド Sonnet、573d23efa・d46fbec5a）。マージ前のコード審査 APPROVE（審査役 opus、head 3294e87c9。記録: review-opus-rule-sql-file.md）。受入 4 行目はマージ後に判定する。
 - 発端: 2026-10-31、PO「1」（安全確認に、本番に出す前の手順ファイルを作るときだけの狭い例外を設ける）。
 - 関係: docs/handoff/cloud-parity/design.md の K1（クラウドで危険操作を Bash で「実行」しようとすると止まる）。docs/handoff/cloud-case-ai/stage1-card.md §4-B。
 
@@ -49,7 +49,7 @@
 |---|---|
 | rules.md に 3-1 の 2 項目があり、ほかの行は変わらない | `git diff origin/main -- scripts/agent-hooks/cloud/rules.md` が 2 行の追加だけ |
 | test.sh の新しい 2 行が OK、ほかの行の結果は変更前と同じ | 変更前と変更後に `bash scripts/agent-hooks/cloud/test.sh` を流し生出力を残す。新しい 2 行が OK。機械の速さで結果が変わる時間の項目（B8・K7・T1）を除き、全部の行の OK/NG が変更前と行ごとに一致（審査時の変更前の実測は 2 回で NG の行が B8・T1 と入れ替わった。どちらも時間の項目） |
-| 変えたのは 2 ファイルと本設計書・作業中の登録・試験の証拠だけ | `git diff --name-only origin/main...HEAD` が rules.md・test.sh・本設計書・.claude-pipeline/active-work.d/release-cloud-rule-sql-file.md と、証拠フォルダ docs/handoff/cloud-parity/rule-sql-file-evidence/ の 3 ファイル（test-before.txt・test-after.txt・diff-names.txt）だけ。証拠フォルダは実装依頼で Opus が保存を指示したもの（設計の第3版で書き漏らしたため、実装後に追記） |
+| 変えたのは 2 ファイルと本設計書・作業中の登録・試験の証拠だけ | `git diff --name-only origin/main...HEAD` が rules.md・test.sh・本設計書・.claude-pipeline/active-work.d/release-cloud-rule-sql-file.md と、証拠フォルダ docs/handoff/cloud-parity/rule-sql-file-evidence/ の 3 ファイル（test-before.txt・test-after.txt・diff-names.txt）だけ。証拠フォルダは実装依頼で Opus が保存を指示したもの（設計の第3版で書き漏らしたため、実装後に追記）。加えて、マージ前の審査の記録 docs/handoff/cloud-parity/review-opus-rule-sql-file.md（PR の決まりで必須） |
 | クラウドで段1の SQL を決まりどおり書ける | 段1の実装のやり直しで ①migrations の SQL が push されている ②その書き込みが Write・Edit・引用符付きの cat heredoc のどれかだと実行記録で確かめられる ③SQL の危険語による BLOCKED が 0 件。この行はこの PR のマージ後、段1の実装のやり直しが終わった時に Opus が判定し、段1の引き継ぎ文書に記録する |
 
 ## 8. 戻し方
