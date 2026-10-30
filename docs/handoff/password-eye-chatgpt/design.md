@@ -12,7 +12,7 @@
 ## 変更（数値はすべて既存トークン。ADR-067・ADR-144）
 | 箇所 | 変更前 | 変更後 |
 |---|---|---|
-| PasswordField.tsx アイコン | `ICON.md`（16px） | `ICON.base`（20px・`--icon-base`） |
+| PasswordField.tsx アイコン | アイコン定数 md（16px） | アイコン定数 base（20px・`--icon-base`） |
 | PasswordField.css ボタンの right（PC） | `var(--space-1)`（4px） | `var(--space-4)`（16px）→ 印の右端は 16+(28−20)/2 = 20px |
 | 同（767px 以下） | なし（4px） | `var(--space-2)`（8px）→ 8+(44−20)/2 = 20px |
 | 入力欄の右余白 | PC `calc(28px+8px)`・狭い画面 `calc(44px+8px)` | 両方 `var(--space-12)`（48px）→ 文字と印の間 約8px |
@@ -38,9 +38,9 @@ docs/handoff/login-round-inputs/design.md §6.2（:132-133）の余白と位置�
 - 狭い画面で入力欄の右余白（48px）がボタンの左端（右から 52px）より 4px 狭い。印の左端は右から 40px なので文字は印に重ならない。ボタンの透明な端 4px が文字の上に重なるだけで、押すと表示の切り替えになる。見本の ChatGPT もボタンは印と同じ 20px で、この差は受け入れる
 - 戻し方: この PR を revert する
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 ChatGPT（OpenAI）のパスワード入力画面を 2026-10-30 に実測した値だけを使う（recon.md）。他社の事例は、PO が見本を ChatGPT と決めたため不要。
 
-## 維持する仕組み
+## 維持の仕組み
 - 寸法はトークンだけで書くので、check:css-values と ADR-067 の pre-commit が生の px を止める
 - 目の印は PasswordField の金型 1 か所にあり、ログインと再設定の両画面が同じ金型を使う
