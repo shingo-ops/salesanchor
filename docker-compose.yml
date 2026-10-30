@@ -131,7 +131,10 @@ services:
       - SMTP_PASSWORD=${SMTP_PASSWORD:-}
       - MAIL_FROM=${MAIL_FROM:-}
       - CONTACT_NOTIFY_EMAIL=${CONTACT_NOTIFY_EMAIL:-}
-      - AUTH_PASSWORD_RESET_ALLOWLIST=${AUTH_PASSWORD_RESET_ALLOWLIST:-}
+      # ADR-1013 便4b: 自社ログインへの切り替え。.env に AUTH_PROVIDER=self が入る。
+      # 戻すときは deploy.yml の heredoc を firebase に変える前進 PR（revert はしない）
+      - AUTH_PROVIDER=${AUTH_PROVIDER:-firebase}
+      - AUTH_JWT_SECRET=${AUTH_JWT_SECRET:-}
       # ADR-1019 段2: 閲覧者のトークンの鍵。この行が無いと .env に値があっても os.getenv が空になる。
       - AUTH_VIEWER_JWT_SECRET=${AUTH_VIEWER_JWT_SECRET:-}
       # ADR-1012 段階2 便B: 保守 API の鍵（空なら口は全部 401）
@@ -184,6 +187,7 @@ services:
         VITE_FIREBASE_AUTH_DOMAIN: ${VITE_FIREBASE_AUTH_DOMAIN}
         VITE_GCP_PROJECT_ID: ${VITE_GCP_PROJECT_ID}
         VITE_FUNNEL_DASHBOARD: ${VITE_FUNNEL_DASHBOARD}
+        VITE_AUTH_PROVIDER: ${VITE_AUTH_PROVIDER:-firebase}
     restart: unless-stopped
     healthcheck:
       # localhost が IPv6 (::1) に解決され nginx の IPv4-only listen と

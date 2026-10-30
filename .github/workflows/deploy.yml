@@ -315,6 +315,9 @@ jobs:
               -e '/^CONTACT_NOTIFY_EMAIL=/d' \
               -e '/^AUTH_PASSWORD_RESET_ALLOWLIST=/d' \
               -e '/^AUTH_VIEWER_JWT_SECRET=/d' \
+              -e '/^AUTH_PROVIDER=/d' \
+              -e '/^AUTH_JWT_SECRET=/d' \
+              -e '/^VITE_AUTH_PROVIDER=/d' \
               -e '/^OPS_API_TOKEN=/d' \
               -e '/^OPS_INGEST_TOKEN=/d' \
               -e '/^ERROR_REPORT_AGENT_TOKEN=/d' \
@@ -363,8 +366,10 @@ jobs:
             SMTP_PASSWORD='${{ secrets.SMTP_PASSWORD }}'
             MAIL_FROM='${{ secrets.MAIL_FROM }}'
             CONTACT_NOTIFY_EMAIL='${{ secrets.CONTACT_NOTIFY_EMAIL }}'
-            AUTH_PASSWORD_RESET_ALLOWLIST='${{ secrets.AUTH_PASSWORD_RESET_ALLOWLIST }}'
             AUTH_VIEWER_JWT_SECRET='${{ secrets.AUTH_VIEWER_JWT_SECRET }}'
+            AUTH_PROVIDER='self'
+            AUTH_JWT_SECRET='${{ secrets.AUTH_JWT_SECRET }}'
+            VITE_AUTH_PROVIDER='self'
             OPS_API_TOKEN='${{ secrets.OPS_API_TOKEN }}'
             OPS_INGEST_TOKEN='${{ secrets.OPS_INGEST_TOKEN }}'
             ERROR_REPORT_AGENT_TOKEN='${{ secrets.ERROR_REPORT_AGENT_TOKEN }}'
