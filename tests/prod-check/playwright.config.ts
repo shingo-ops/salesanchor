@@ -12,8 +12,7 @@
  */
 
 import { defineConfig, devices } from "@playwright/test";
-
-const BASE_URL = process.env.PROD_CHECK_BASE_URL || "https://app.salesanchor.jp";
+import { BASE_URL } from "./login";
 
 export default defineConfig({
   testDir: ".",

@@ -1,18 +1,22 @@
 /**
- * 本番の画面点検 S1〜S8（見るだけ。書き込み操作はしない）
+ * 本番の画面点検 S1〜S9（見るだけ。書き込み操作はしない）
  *
  * 各 test 名は通知文にそのまま出る。何が壊れたか分かる名前にする。
+ * 入口の回数制限（nginx/nginx.conf:6）に当たらないよう、ログインは S2 の 1 回だけにし、
+ * /api/v1/auth/ を使う操作の前に authPace() を呼ぶ（docs/handoff/page-speed-record/design.md 5-0b）。
  */
 
-import { test, expect } from "@playwright/test";
-import { creds, login, signOut } from "./login";
-import { expectSettled, trackApi } from "./settle";
+import { test, expect, devices } from "@playwright/test";
+import type { BrowserContext, ConsoleMessage, Page } from "@playwright/test";
+import { BASE_URL, authPace, creds, login, signOut } from "./login";
+import { expectSettled, trackApi, type ApiTracker } from "./settle";
 
 const NO_ERROR_BANNER = ".error-banner";
 const SKIP_REASON = "点検用の人の秘密情報が未登録";
 
 test.describe("本番の画面点検", () => {
   test("S1 画面が開く（ログイン画面）", async ({ page }) => {
+    await authPace();
     const res = await page.goto("/login");
     expect(res?.status(), "ログイン画面の応答").toBe(200);
     await expect(page.getByLabel("メールアドレス")).toBeVisible();
@@ -20,84 +24,106 @@ test.describe("本番の画面点検", () => {
     await expect(page.getByRole("button", { name: "ログイン" })).toBeVisible();
   });
 
-  test("S2 ログイン", async ({ page }) => {
-    const c = creds();
-    test.skip(!c, SKIP_REASON);
-    const { email, password } = c!;
-    await login(page, email, password);
-    await expect(page).toHaveURL(/\/(dashboard)?$/);
-  });
+  // ログイン後の点検。1 つの page を使い回し、ログインは S2 の 1 回だけ。
+  // 1 つ落ちたら残りは飛ばし、再試行はまとめて最初からやり直す。
+  test.describe("ログイン後", () => {
+    test.describe.configure({ mode: "serial" });
+    test.skip(!creds(), SKIP_REASON);
 
-  test("S3 ダッシュボードにエラーが出ない", async ({ page }) => {
-    const errors: string[] = [];
-    page.on("console", (msg) => {
-      if (msg.type() === "error") errors.push(msg.text());
+    let context: BrowserContext | undefined;
+    let page: Page;
+    let api: ApiTracker;
+
+    test.beforeAll(async ({ browser }) => {
+      if (!creds()) return;
+      // 手で作る context には config の use が引き継がれないため、同じ値を渡す（playwright.config.ts の use と揃える）
+      context = await browser.newContext({ ...devices["Desktop Chrome"], baseURL: BASE_URL });
+      context.setDefaultTimeout(15_000);
+      context.setDefaultNavigationTimeout(30_000);
+      page = await context.newPage();
+      api = trackApi(page);
     });
-    const api = trackApi(page);
-    const c = creds();
-    test.skip(!c, SKIP_REASON);
-    const { email, password } = c!;
-    await login(page, email, password);
-    await page.goto("/");
-    await expectSettled(page, api);
-    expect(errors, `console.error が ${errors.length} 件`).toHaveLength(0);
-  });
 
-  test("S4 会社一覧とリード一覧が開く", async ({ page }) => {
-    const api = trackApi(page);
-    const c = creds();
-    test.skip(!c, SKIP_REASON);
-    const { email, password } = c!;
-    await login(page, email, password);
+    test.afterAll(async () => {
+      await context?.close();
+    });
 
-    await page.goto("/crm/companies");
-    await expect(page.getByPlaceholder("顧客名・コードで検索...")).toBeVisible();
-    await expect(page.locator(NO_ERROR_BANNER)).toHaveCount(0);
-    await expect(page.locator(".error-message")).toHaveCount(0);
+    test("S2 ログイン", async () => {
+      const { email, password } = creds()!;
+      await authPace();
+      await login(page, email, password);
+      await expect(page).toHaveURL(/\/(dashboard)?$/);
+    });
 
-    await page.goto("/crm/leads");
-    await page.waitForURL((url) => url.pathname === "/crm/leads");
-    await expectSettled(page, api);
-    await expect(page.locator("main")).toBeVisible();
-    await expect(page.locator(NO_ERROR_BANNER)).toHaveCount(0);
-    await expect(page.locator(".error-message")).toHaveCount(0);
-  });
+    test("S3 ダッシュボードにエラーが出ない", async () => {
+      // S2 のログインが済んだ後から数える（ログイン画面で出る正常な 401 を数えない）
+      const errors: string[] = [];
+      const onConsole = (msg: ConsoleMessage) => {
+        if (msg.type() === "error") errors.push(msg.text());
+      };
+      page.on("console", onConsole);
+      try {
+        await authPace();
+        await page.goto("/");
+        await expectSettled(page, api);
+        expect(errors, `console.error が ${errors.length} 件`).toHaveLength(0);
+      } finally {
+        page.off("console", onConsole);
+      }
+    });
 
-  test("S5 会社一覧の検索", async ({ page }) => {
-    const api = trackApi(page);
-    const c = creds();
-    test.skip(!c, SKIP_REASON);
-    const { email, password } = c!;
-    await login(page, email, password);
-    await page.goto("/crm/companies");
-    const box = page.getByPlaceholder("顧客名・コードで検索...");
-    await expect(box).toBeVisible();
-    await box.fill("テスト");
-    await expectSettled(page, api);
-    await expect(box).toHaveValue("テスト");
-    await expect(page.locator(NO_ERROR_BANNER)).toHaveCount(0);
-  });
+    test("S4 会社一覧とリード一覧が開く", async () => {
+      await authPace();
+      await page.goto("/crm/companies");
+      await expect(page.getByPlaceholder("顧客名・コードで検索...")).toBeVisible();
+      await expect(page.locator(NO_ERROR_BANNER)).toHaveCount(0);
+      await expect(page.locator(".error-message")).toHaveCount(0);
 
-  test("S6 会社の詳細が開く", async ({ page }) => {
-    const api = trackApi(page);
-    const c = creds();
-    test.skip(!c, SKIP_REASON);
-    const { email, password } = c!;
-    await login(page, email, password);
-    await page.goto("/crm/companies");
-    await expect(page.getByPlaceholder("顧客名・コードで検索...")).toBeVisible();
-    await expectSettled(page, api);
-    const link = page.locator('main a[href^="/companies/"]').first();
-    test.skip((await link.count()) === 0, "会社 0 件");
-    await link.click();
-    await page.waitForURL(/\/crm\/companies\/[^/]+$/);
-    await expectSettled(page, api);
-    await expect(page.locator(NO_ERROR_BANNER)).toHaveCount(0);
-    await expect(page.locator("main")).toBeVisible();
+      await authPace();
+      await page.goto("/crm/leads");
+      await page.waitForURL((url) => url.pathname === "/crm/leads");
+      await expectSettled(page, api);
+      await expect(page.locator("main")).toBeVisible();
+      await expect(page.locator(NO_ERROR_BANNER)).toHaveCount(0);
+      await expect(page.locator(".error-message")).toHaveCount(0);
+    });
+
+    test("S5 会社一覧の検索", async () => {
+      await authPace();
+      await page.goto("/crm/companies");
+      const box = page.getByPlaceholder("顧客名・コードで検索...");
+      await expect(box).toBeVisible();
+      await box.fill("テスト");
+      await expectSettled(page, api);
+      await expect(box).toHaveValue("テスト");
+      await expect(page.locator(NO_ERROR_BANNER)).toHaveCount(0);
+    });
+
+    test("S6 会社の詳細が開く", async () => {
+      await authPace();
+      await page.goto("/crm/companies");
+      await expect(page.getByPlaceholder("顧客名・コードで検索...")).toBeVisible();
+      await expectSettled(page, api);
+      const link = page.locator('main a[href^="/companies/"]').first();
+      test.skip((await link.count()) === 0, "会社 0 件");
+      // 画面の中の移動（読み込み直しは起きない）なので authPace は要らない
+      await link.click();
+      await page.waitForURL(/\/crm\/companies\/[^/]+$/);
+      await expectSettled(page, api);
+      await expect(page.locator(NO_ERROR_BANNER)).toHaveCount(0);
+      await expect(page.locator("main")).toBeVisible();
+    });
+
+    test("S8 ログアウト", async () => {
+      await authPace();
+      await signOut(page);
+      await expect(page).toHaveURL(/\/login$/);
+    });
   });
 
   // 点検用の人のメールでは行わない（失敗を重ねると締め出されるため）
   test("S7 間違ったパスワードでは入れない", async ({ page }) => {
+    await authPace();
     await page.goto("/login");
     await page.getByLabel("メールアドレス").fill("prod-ui-check-nobody@example.invalid");
     await page.getByLabel("パスワード", { exact: true }).fill("prod-ui-check-wrong-password-0");
@@ -106,18 +132,10 @@ test.describe("本番の画面点検", () => {
     expect(new URL(page.url()).pathname).toBe("/login");
   });
 
-  test("S8 ログアウト", async ({ page }) => {
-    const c = creds();
-    test.skip(!c, SKIP_REASON);
-    const { email, password } = c!;
-    await login(page, email, password);
-    await signOut(page);
-    await expect(page).toHaveURL(/\/login$/);
-  });
-
   // 通知の試験用。PROD_CHECK_FORCE_FAIL=1 のときだけ足す（必ず落ちる）
   if (process.env.PROD_CHECK_FORCE_FAIL === "1") {
     test("S9 通知の試験（わざと落とす）", async ({ page }) => {
+      await authPace();
       await page.goto("/login");
       await expect(page.getByText("prod-ui-check-force-fail-zzz")).toBeVisible({ timeout: 3_000 });
     });
