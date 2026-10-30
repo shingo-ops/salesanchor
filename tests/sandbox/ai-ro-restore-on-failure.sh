@@ -196,5 +196,95 @@ grep -aq 'recreating ai_ro views anyway' "$OUT_DIR/t8.log" && T8_A="yes"
 grep -aq 'ai_ro views created:' "$OUT_DIR/t8.log" && T8_B="yes"
 echo "T8 (record only) child_rc=${T8_RC} recreating_line=${T8_A} created_line=${T8_B} bash=${BASH_VERSION}"
 
-if [ "$RESULT" = 0 ]; then echo "ALL PASS (T1-T7)"; else echo "SOME FAILED (T1-T7)"; fi
+# --- T12（ADR-1052 段1）: ai_ro とは別の手順で ai_cloud を作る。4 つの回 ---
+echo "=== T12: ai_cloud の外しと作成（①ふつう ②列削除・型変更が止まらない ③ai_ro 作成の失敗 ④ai_cloud 作成の失敗） ==="
+CLOUD_DROP_SQL=migrations/20261024_100200_drop_ai_cloud_views.sql
+CLOUD_CREATE_SQL=migrations/20261024_100300_create_ai_cloud_views.sql
+AIRO_CREATE_SQL=migrations/20261017_130100_create_ai_ro_views.sql
+ensure_role; reset_state
+for f in migrations/20261024_100000_create_ai_cloud_meta.sql migrations/20261024_100100_create_ai_reader_cloud_role.sql; do
+  docker exec -i "$NAME" "${PSQL_ARR[@]}" < "$f" >/dev/null 2>&1 || echo "T12 setup: ${f} の適用に失敗"
+done
+dsql "DROP TABLE IF EXISTS public.sb_items; CREATE TABLE public.sb_items (id int, name text, api_token text, tags text[], meta jsonb);
+      INSERT INTO public.sb_items VALUES (1,'alice','secret-a','{x,y}','{\"k\":1}');" >/dev/null
+reset_cloud_state() { docker exec -i "$NAME" "${PSQL_ARR[@]}" < "$CLOUD_DROP_SQL" >/dev/null; }
+cloud_views() { dsql "SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='ai_cloud' AND c.relkind='v';"; }
+log_rows() { dsql "SELECT count(*) FROM ai_cloud_meta.build_log;"; }
+last_log() { dsql "SELECT ok::text || '/' || coalesce(error_class,'-') FROM ai_cloud_meta.build_log ORDER BY built_at DESC, ctid DESC LIMIT 1;"; }
+masked_name() { dsql "SELECT name FROM ai_cloud.public__sb_items;"; }
+
+# ① ふつう
+reset_state; reset_cloud_state; L0="$(log_rows)"
+make_child c12a.sh "true" "$NAME"
+bash "$OUT_DIR/c12a.sh" >"$OUT_DIR/t12a.log" 2>&1; T12A_RC=$?
+cat "$OUT_DIR/t12a.log"
+T12A_AIRO="$(count_views)"; T12A_CL="$(cloud_views)"; T12A_LAST="$(last_log)"; T12A_ROWS=$(( $(log_rows) - L0 ))
+T12A_NAME="$(masked_name)"
+echo "T12① rc=${T12A_RC} ai_ro_views=${T12A_AIRO} ai_cloud_views=${T12A_CL} log=${T12A_LAST} new_log_rows=${T12A_ROWS} name=${T12A_NAME}"
+if [ "$T12A_RC" = 0 ] && [ "${T12A_AIRO:-0}" -gt 0 ] && [ "${T12A_CL:-0}" -gt 0 ] && [ "$T12A_LAST" = "true/-" ] && [ "$T12A_ROWS" = 1 ] \
+   && [ "$T12A_NAME" != "alice" ] && printf '%s' "$T12A_NAME" | grep -q '^masked:len=5:ascii$'; then
+  pass "T12① both built, name masked, build_log +1 (ok)"
+else
+  fail "T12① rc=${T12A_RC}"
+fi
+
+# ② ai_cloud に載っている列を消す・型を変える migration が止まらない（①で ai_cloud のビューが残っている状態から始める）
+L0="$(log_rows)"
+make_child c12b.sh "docker exec -i \"\$POSTGRES\" \$PSQL < \"\$REPO_DIR/$CLOUD_DROP_SQL\"
+docker exec -i \"\$POSTGRES\" \$PSQL < \"\$REPO_DIR/$DROP_SQL\"
+docker exec -i \"\$POSTGRES\" \$PSQL -c \"ALTER TABLE public.sb_items DROP COLUMN name\"
+docker exec -i \"\$POSTGRES\" \$PSQL -c \"ALTER TABLE public.sb_items ALTER COLUMN id TYPE bigint\"
+true" "$NAME"
+bash "$OUT_DIR/c12b.sh" >"$OUT_DIR/t12b.log" 2>&1; T12B_RC=$?
+cat "$OUT_DIR/t12b.log"
+T12B_CL="$(cloud_views)"; T12B_LAST="$(last_log)"; T12B_ROWS=$(( $(log_rows) - L0 ))
+T12B_ID="$(dsql "SELECT data_type FROM information_schema.columns WHERE table_schema='public' AND table_name='sb_items' AND column_name='id';")"
+T12B_PASS="$(dsql "SELECT count(*) FROM ai_cloud_meta.build_columns WHERE view_name='public__sb_items' AND mode='pass';")"
+echo "T12② rc=${T12B_RC} ai_cloud_views=${T12B_CL} id_type=${T12B_ID} log=${T12B_LAST} new_log_rows=${T12B_ROWS} pass_columns=${T12B_PASS}"
+if [ "$T12B_RC" = 0 ] && [ "${T12B_CL:-0}" -gt 0 ] && [ "$T12B_ID" = bigint ] && [ "$T12B_LAST" = "true/-" ] && [ "$T12B_ROWS" = 1 ]; then
+  pass "T12② column drop and type change not blocked, ai_cloud rebuilt"
+else
+  fail "T12② rc=${T12B_RC}"
+fi
+
+# ③④ 作成 SQL を壊した作業場所（REPO_DIR を切り替える。本物の SQL は写して使う）
+BROKEN="$OUT_DIR/broken-repo"
+mkdir -p "$BROKEN/migrations"
+cp "$AIRO_CREATE_SQL" "$BROKEN/$AIRO_CREATE_SQL"
+cp "$CLOUD_CREATE_SQL" "$BROKEN/$CLOUD_CREATE_SQL"
+
+# ③ ai_ro の作成を失敗させる（ai_cloud はできる）
+printf 'SELECT * FROM no_such_table_airo;\n' > "$BROKEN/$AIRO_CREATE_SQL"
+reset_state; reset_cloud_state; L0="$(log_rows)"
+make_child c12c.sh "REPO_DIR=\"$BROKEN\"
+exit 3" "$NAME"
+bash "$OUT_DIR/c12c.sh" >"$OUT_DIR/t12c.log" 2>&1; T12C_RC=$?
+cat "$OUT_DIR/t12c.log"
+T12C_AIRO="$(count_views)"; T12C_CL="$(cloud_views)"; T12C_LAST="$(last_log)"; T12C_ROWS=$(( $(log_rows) - L0 ))
+echo "T12③ rc=${T12C_RC} ai_ro_views=${T12C_AIRO} ai_cloud_views=${T12C_CL} log=${T12C_LAST} new_log_rows=${T12C_ROWS}"
+if [ "$T12C_RC" = 3 ] && grep -aq 'ai_ro views の作成に失敗' "$OUT_DIR/t12c.log" && [ "$T12C_AIRO" = 0 ] \
+   && [ "${T12C_CL:-0}" -gt 0 ] && [ "$T12C_LAST" = "true/-" ] && [ "$T12C_ROWS" = 1 ]; then
+  pass "T12③ ai_ro failed, ai_cloud built, rc=3"
+else
+  fail "T12③ rc=${T12C_RC}"
+fi
+
+# ④ ai_cloud の作成を失敗させる（ai_ro はできる）。build_log に失敗の 1 行（ok=false・psql_failed）
+cp "$AIRO_CREATE_SQL" "$BROKEN/$AIRO_CREATE_SQL"
+printf 'SELECT * FROM no_such_table_cloud;\n' > "$BROKEN/$CLOUD_CREATE_SQL"
+reset_state; reset_cloud_state; L0="$(log_rows)"
+make_child c12d.sh "REPO_DIR=\"$BROKEN\"
+exit 3" "$NAME"
+bash "$OUT_DIR/c12d.sh" >"$OUT_DIR/t12d.log" 2>&1; T12D_RC=$?
+cat "$OUT_DIR/t12d.log"
+T12D_AIRO="$(count_views)"; T12D_CL="$(cloud_views)"; T12D_LAST="$(last_log)"; T12D_ROWS=$(( $(log_rows) - L0 ))
+echo "T12④ rc=${T12D_RC} ai_ro_views=${T12D_AIRO} ai_cloud_views=${T12D_CL} log=${T12D_LAST} new_log_rows=${T12D_ROWS}"
+if [ "$T12D_RC" = 3 ] && grep -aq 'ai_cloud views の作成に失敗' "$OUT_DIR/t12d.log" && [ "${T12D_AIRO:-0}" -gt 0 ] \
+   && [ "$T12D_CL" = 0 ] && [ "$T12D_LAST" = "false/psql_failed" ] && [ "$T12D_ROWS" = 1 ]; then
+  pass "T12④ ai_cloud failed (build_log false/psql_failed), ai_ro built, rc=3"
+else
+  fail "T12④ rc=${T12D_RC}"
+fi
+
+if [ "$RESULT" = 0 ]; then echo "ALL PASS (T1-T7, T12)"; else echo "SOME FAILED (T1-T7, T12)"; fi
 exit "$RESULT"

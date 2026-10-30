@@ -7,6 +7,7 @@
 #   C1 名前が付く / C2 控えの取り残しを止める / C3 移行の形の取り残しを止める
 #   C5 部分一致で止めない / C6 何も無いとき / C7 残ったら止まる   docker 要
 #   C8 本物の run_all_migrations.sh の TERM の trap（偽 docker） docker 不要（bash 5 要）
+#   C10 ai_cloud の外しの失敗で ai_ro を外さず trap の前に止まる（偽 docker） docker 不要（bash 5 要）
 #
 # 実行: bash scripts/tests/test-deploy-orphan-cleanup.sh
 # docker が使えないとき: 既定では docker の要る試験を SKIP。REQUIRE_DOCKER=1 なら docker が無いこと自体を FAIL にする（CI）。
@@ -183,8 +184,8 @@ else
   cat > "${FB8}/docker" <<'EOF'
 #!/bin/bash
 # 偽の docker。呼ばれるたびに START / END を1行ずつ記録に追記する。
-# PGAPPNAME=salesanchor_migration と -i を両方持つ呼び出し（run_sql）の「2回目」だけ眠る
-# （1回目は drop。読み取り監視の呼び出しは -i を持たないので数えない）
+# PGAPPNAME=salesanchor_migration と -i を両方持つ呼び出し（run_sql）の「3回目」だけ眠る
+# （1回目は ai_cloud の drop、2回目は ai_ro の drop。読み取り監視の呼び出しは -i を持たないので数えない）
 id=$$
 args="$*"
 echo "START ${id} ${args}" >> "${FAKE_LOG}"
@@ -193,7 +194,7 @@ case "${args}" in
     n=$(cat "${FAKE_CNT}" 2>/dev/null || echo 0)
     n=$((n + 1))
     echo "${n}" > "${FAKE_CNT}"
-    if [ "${n}" -eq 2 ]; then
+    if [ "${n}" -eq 3 ]; then
       echo "${id}" > "${FAKE_HELD}"
       sleep 300 &
       echo $! > "${FAKE_SLEEPPID}"
@@ -231,6 +232,44 @@ EOF
     ok_if "C8 作り直しの開始が止めた run_sql の終了より後（行 ${L_RE:-?} > ${L_END:-?}）" test "${L_RE:-0}" -gt "${L_END:-999999}"
     if [ "${FAIL}" -ne 0 ]; then sed 's/^/  | /' "${D8}/out.txt" | tail -30; fi
   fi
+fi
+
+# ---------------------------------------------------------------- C10
+echo "=== C10: ai_cloud の外し（1回目の run_sql）が失敗したとき、ai_ro を外さず trap の前で止まる（偽 docker） ==="
+if [ "${BASH_VERSINFO[0]}" -lt 5 ]; then
+  echo "SKIP: C10（bash 5 が要る。read probe が EPOCHREALTIME を使う）"
+else
+  D10="${TMP}/c10"
+  FB10="${D10}/bin"
+  mkdir -p "${FB10}"
+  cat > "${FB10}/docker" <<'EOF'
+#!/bin/bash
+# 偽の docker。呼ばれるたびに START を記録する。
+# PGAPPNAME=salesanchor_migration と -i を両方持つ呼び出し（run_sql）の「1回目」（ai_cloud の外し）だけ exit 1 する。
+args="$*"
+echo "START $$ ${args}" >> "${FAKE_LOG}"
+case "${args}" in
+  *"PGAPPNAME=salesanchor_migration"*" -i "*)
+    n=$(cat "${FAKE_CNT}" 2>/dev/null || echo 0)
+    n=$((n + 1))
+    echo "${n}" > "${FAKE_CNT}"
+    if [ "${n}" -eq 1 ]; then
+      exit 1
+    fi
+    ;;
+esac
+exit 0
+EOF
+  chmod +x "${FB10}/docker"
+  : > "${D10}/log"
+  R10=0
+  ( cd "${ROOT}" && env PATH="${FB10}:${PATH}" REPO_DIR="${ROOT}" FAKE_LOG="${D10}/log" FAKE_CNT="${D10}/cnt" \
+      bash scripts/run_all_migrations.sh ) >"${D10}/out.txt" 2>&1 || R10=$?
+  ok_if "C10 ① スクリプトの終了コードが 0 以外（実際 ${R10}）" test "${R10}" -ne 0
+  ok_if "C10 ② 標準出力に ai_cloud の外しの行がある" grep -qE '^>>> \[[0-9]+/[0-9]+\] psql < migrations/[0-9_]+_drop_ai_cloud_views\.sql$' "${D10}/out.txt"
+  ok_if "C10 ② ai_ro の外しの行が無い（ai_ro を外していない）" test -z "$(grep -E 'psql < .*125900_drop_ai_ro_views\.sql' "${D10}/out.txt")"
+  ok_if "C10 ③ 記録に VERBOSITY=terse を含む START が無い（trap の前で止まった）" test -z "$(grep '^START .*VERBOSITY=terse' "${D10}/log")"
+  if [ "${FAIL}" -ne 0 ]; then sed 's/^/  | /' "${D10}/out.txt" | tail -30; fi
 fi
 
 # ---------------------------------------------------------------- docker が要る試験
