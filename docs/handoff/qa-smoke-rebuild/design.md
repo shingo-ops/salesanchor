@@ -192,7 +192,7 @@ B で失うもの（正直に）
 - どのテナントか: **PO 判断（§11 D3）**。候補は tenant_001（STANDARD-WORKFLOW で QA 用）。tenant_004（HIGH LIFE JPN 実データ）は使わない。tenant_006 は「撮影専用・QA 禁止」の決まりがあるため既定では使わない。
 - 作り方: 名簿の画面（`POST /staff`）から通常の手順で 1 名作る（手動 INSERT をしない。ADR-025）。利用者・名簿の行・役割・招待が 1 回でできる。Firebase 側の利用者は要らない（自社ログインに切替済み。`AUTH_PROVIDER=self`、`.github/workflows/deploy.yml:370-372`）。
   - 【事実】2026-10-30 17:38 UTC に tenant_001 へ 1 名作成（名簿 EMP-00002「点検 自動」、super admin ではない）。既存の人では条件を満たす人がいなかった（会社1は2名で、1名は管理者、1名は停止中のオーナー。停止の解除と同格の役割の付け替えは API が許さない。会社2は0名）。D6 の「新しく作らない」からの変更で、PO 承認待ち。
-  - パスワードは機械で作った英数字 20 字（パスワードの決まりは 15〜64 字、`backend/app/services/password_policy.py:11-32`）。値は誰も画面に出さず、secrets にだけ置いた。
+  - パスワードは機械で作った英数字 20 字（パスワードの決まりは 15〜64 字、`backend/app/auth/password_policy.py:11-32`）。値は誰も画面に出さず、secrets にだけ置いた。
 - 秘密情報: GitHub secrets に `SMOKE_E2E_EMAIL`／`SMOKE_E2E_PASSWORD` の 2 件。既存の `QA_*` 9 件は B の稼働確認後に削除候補（§7-2）。
 - ADR-1017 の `SMOKE_SERVICE_TOKEN` 経路は使わない。理由: その経路は Firebase と MFA を飛ばすので、「ログインが壊れていないか」を見る S2・S7 の点検ができない。API 単体点検には将来使える（§10 U4）。
 
@@ -217,7 +217,7 @@ B で失うもの（正直に）
 - 不合格のとき、既存の `DISCORD_WEBHOOK_OWNER_PING`（`.github/workflows/deploy.yml:670,683` で使用中）へ 1 通。新しい webhook は作らない（入口を増やさない）。
 - 通知文: 「本番の画面点検が不合格。壊れていたのは: ログイン／一覧／検索／詳細 のどれか。実行ページへのリンク」。
 - 合格時は通知しない（通知の慣れを防ぐ）。週 1 回、月曜に「先週 7/7 合格」の 1 行を送るかは PO 判断（§11 D4）。
-- 成果物（trace／screenshot／html レポート）は作らず、結果の記録（`results.json`・`test-results`）も含めて artifact に上げない（2026-10-30 審査 HIGH-1 で変更）。リポジトリは公開で、artifact は誰でも落とせる。Playwright の trace と html は fill した値（点検用の人のメール・パスワード）を記録する（Playwright 1.59.1 `playwright-core/lib/coreBundle.js:4001` の `Fill "{value}"`）。不合格の中身は Actions のログ（GitHub が secrets の値を伏せる）と Discord の通知で見る。
+- 成果物（trace／screenshot／html レポート）は作らず、点検が実行中に作る結果の記録（tests/prod-check の results.json と test-results の置き場）も含めて artifact に上げない（2026-10-30 審査 HIGH-1 で変更）。リポジトリは公開で、artifact は誰でも落とせる。Playwright の trace と html は fill した値（点検用の人のメール・パスワード）を記録する（Playwright 1.59.1 `playwright-core/lib/coreBundle.js:4001` の `Fill "{value}"`）。不合格の中身は Actions のログ（GitHub が secrets の値を伏せる）と Discord の通知で見る。
 
 ### 5-7. ログイン切替（ADR-1013）の前後と staging
 
@@ -228,7 +228,7 @@ B で失うもの（正直に）
   （２）そのため `tests/prod-check/fixtures.ts` で、ログインを worker で 1 回だけ行い、その画面の状態を S3〜S6 で使い回す。点検の始まり同士は 20 秒あける（1 件の枠が戻るのに 6 秒 × 1 点検で使う auth 系最大 3 件＋余裕）。
   （３）ログイン後の画面は知らせの常時接続（`/api/v1/events/stream`・`/api/v1/conversations/stream`）を持ち続け、networkidle が成り立たない。画面の表示と、一覧・検索・詳細の API の返事（400 未満）を待つ。
   （４）S7 の宛先は予約ドメイン `example.com`。`.invalid` は EmailStr（`backend/app/routers/auth.py:193`）が形の誤りとして 422 で弾くため、パスワード違いの確かめにならなかった。今はログイン API が 401 を返すことを確かめる。
-  （５）限界: 点検が落ちて再試行するときは新しい worker になり、最初の 20 秒の待ちが無くなる（`fixtures.ts` のコメント「再試行も 1 本の test として数える」と食い違う）。落ちたときだけの話で、合格を偽る向きではない。
+  （５）限界: 点検が落ちて再試行するときは新しい worker になり、最初の 20 秒の待ちが無くなる（`tests/prod-check/fixtures.ts` のコメント「再試行も 1 本の test として数える」と食い違う）。落ちたときだけの話で、合格を偽る向きではない。
 - 切替の当日: 便4b の実施直後に手動実行して合格を確認する（K2 の試験も兼ねる）。
 - 便6（ADR-1013 の置き換え便）では、本設計の点検を「便6の受け皿」とし、便6側で新しい点検を別に作らない（SSOT）。
 - staging: 【未確認】本番と同じ構成の staging の有無 → §10 U2。無い場合、書き込み系の点検は便6で用意する試験環境に送り、本設計の範囲外とする。
