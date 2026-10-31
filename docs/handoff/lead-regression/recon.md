@@ -5,7 +5,7 @@
 
 **仕事名**: リードのカルテ項目と商談のやり取りから、成約しやすい型を回帰分析で見つける土台づくり  
 **日付**: 2026-10-31  
-**対象ADR**: ADR-015（リードの土台・返信速度）、ADR-119（lead_channels）、ADR-108（店舗の形の複数選択）、ADR-109（状態の不変コード）  
+**対象ADR**: ADR-015（リードの土台・返信速度）、ADR-119（lead_channels）、ADR-109（状態の不変コード）、ADR-1049（lead_id を持つ13表）。店舗の形の複数選択は ADR-108 の本文には無く、コードの説明（`backend/app/schemas/lead.py:179`）にだけある  
 **担当**: Claude Opus（設計担当。読み取りのみ。書き込みは一切していない）  
 **基準**: origin/main 5c13bfbef
 
@@ -38,7 +38,7 @@
 
 | 引用先 `path:line` | 確認内容 |
 |-------------------|---------|
-| `backend/app/routers/analytics.py:963` | 属性ごとの成約率。軸は経路・国・店舗の形・温度・返信の速さの5つ（977〜981行）。1項目ずつ見る |
+| `backend/app/routers/analytics.py:1108` | 属性ごとの成約率の入口 /analytics/conversion-by-attribute（応答の型は963〜981行）。軸は経路・国・店舗の形・温度・返信の速さの5つ（読む欄は986〜990行。店舗の形は leads.sales_form を読む＝988行）。1項目ずつ見る |
 | `backend/app/routers/analytics.py:984` | 件数の少ない値は全体の率へ寄せる（k=10。式は1010行） |
 | `backend/app/routers/analytics.py:1813` | 成約しやすさ×見込み金額の優先リスト（priority-prospects） |
 | `frontend/src/pages/dashboard/DashboardPage.tsx:1` | ダッシュボード画面。同じフォルダに PriorityProspectsSection・FunnelReasonsPage など |
@@ -82,7 +82,7 @@ tenant_006 はリード 74・成約 8 があるが、Meta の審査専用なの�
 - シュリンク付き/ノーシュリンクの箱の扱い: リードに項目が無い（`git grep -i shrink` はリード関係で 0 件。当たったのは解析の指示書だけ）。
 - 扱う商材: 選択式の項目が無く、自由記述 target_titles だけ。
 - 成約した日・状態が変わった日の履歴: 履歴の表が無い（`git grep` で status_history・converted_at・won_at など 0 件）。updated_at は状態以外の変更でも変わるので代わりにならない。
-- 返信の速さの自動計測（ADR-015 §3）: 列は作られたが、書き込む処理がどこにも無い（`git grep first_response_at` は表の定義・migration・文書だけ）。docs/specs/db-ssot/handover.md 131行と docs/specs/management-center/lead/data-dictionary.md 49〜50行で「未実装・削除候補」と記録済み。
+- 返信の速さの自動計測（ADR-015 §3）: 列は作られたが、書き込む処理がどこにも無い（`git grep first_response_at` は表の定義・migration・文書だけ）。docs/specs/db-ssot/handover.md 131行は3列とも「SSOT化完了後の削除候補（記録のみ）」。docs/specs/management-center/lead/data-dictionary.md は first_inquiry_at・first_response_at（49〜50行）が「残す・要調査」、first_response_seconds（51行）だけが「捨てる候補」。
   - SSOT の観点: 返信の速さはメッセージ表の送受信の時刻から計算できる。別の列に写して持つとデータが2か所に分かれるので、設計では「メッセージ表から計算する」を第一候補にする（設計で決める。ここでは事実だけ）。
 - Instagram・Facebook の会話は Meta の受け口（webhook）からしか入らない。手で入れる入口（`backend/app/routers/conv_logs.py:247`）は自動の経路を拒む。そのため、Instagram・Facebook のリードに「過去の日時のテスト用のやり取り」を正規の入口で入れる道は無い。
 
@@ -93,9 +93,9 @@ tenant_006 はリード 74・成約 8 があるが、Meta の審査専用なの�
 | `backend/app/tasks/avatar.py:306` | 毎日 2:00 の顔写真の取り直しは、過去30日の受信で page_id がある行だけ Meta に問い合わせる（317行で page_id が空なら飛ばす）。テナント001の Meta 接続設定（tenant_meta_config）は 0 件 |
 | `backend/app/tasks/sa02_recon_monitor.py:74` | 毎朝 8:00 の突合は meta_messages を created_at が当日の行だけ数え、Discord に送る（127行） |
 | `backend/app/services/translation_monitor.py:61` | 毎時の翻訳の見張りは直近60分（created_at）の受信だけ数える |
-| `backend/app/services/inbound_translation.py:21` | 自動翻訳の依頼は webhook（`backend/app/routers/webhook.py:924`）と Discord の受け口からだけ出る。表への直接の書き込みでは出ない |
+| `backend/app/services/inbound_translation.py:21` | 自動翻訳の依頼は webhook（`backend/app/routers/webhook.py:924`）・Discord の受け口・会話の記録を手で入れる入口（`backend/app/routers/conv_logs.py:129` の _fire_translation）から出る。どれも入口を通ったときだけで、表への直接の書き込みでは出ない（2026-10-31 設計審査の指摘で訂正） |
 | `frontend/src/pages/inbox/InboxMessageThread.tsx:350` | 画面の翻訳は人が押したときだけ（押すと Gemini を使う） |
-| `backend/app/routers/leads.py:1770` | Meta への送信はこの入口からだけ。表への直接の書き込みでは送られない |
+| `backend/app/routers/leads.py:1770` | Meta への送信の入口（文字）。画像は `backend/app/routers/leads.py:2406`。どちらも人の操作で通る入口で、表への直接の書き込みでは送られない（2026-10-31 設計審査の指摘で訂正） |
 | 本番 ai_ro.tenant_001__meta_messages の列 | page_id・is_manual・occurred_at・deleted_at・raw_payload（jsonb）がある。今の4行はすべて discord・page_id 空・occurred_at 空・raw_payload 空（時刻は created_at だけ） |
 | 本番 ai_ro.tenant_001__leads の列 | 54列。jsonb の列は無い。lead_code・notes がある。テスト用の目印に使える専用の列は無い |
 | `git grep is_test / test_seed / is_demo`（backend・migrations・scripts・docs/adr） | テスト用データの目印の決まりはリポジトリに無い |
