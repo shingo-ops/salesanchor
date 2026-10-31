@@ -50,3 +50,17 @@
 - 4 ○: 11 件で前回と一致
 - should 1: 「使う速さは戻る速さを超えない」は 2 件を使う操作では成り立たない。「2 件を使うのは S2・S7 の 2 回だけで、超過は 5 件のまとめ枠が吸収する」に書き直す → design.md 5-0b に反映
 - should 2: S9 の置き場所と authPace を明記する → design.md 5-0b に反映
+
+## 5 回目（5-8 便2 と実装カード・HEAD 3d365130b・2026-10-31 10:30 JST・クラウド Opus 読むだけ・run cse_01W47tdfYPP8GkSWSvtuU3gc）
+
+判定: APPROVE（must 0 件・should 4 件）
+
+- 1 ○: 在庫表の印は読み込み後 `visibility: hidden` で残る（`frontend/src/pages/inventory/InventoryPage.tsx:631-636`）。見えている印は visible なので数え落とさない
+- 2 ○: 送り直しは 502/503/504 と TypeError だけ（`frontend/src/lib/api.ts:34,108-110,153`）。409 はすぐ止まる。手数料の画面はエラーを出して読み込み中を終える（`frontend/src/pages/commission-settings/CommissionSettingsPage.tsx:113-126`）。fulfill はブラウザの中で答え、本番に届かない
+- 3 ○: 移り先 3 つは `frontend/src/App.tsx:198-199・351-352・375-376` と一致。表の並びで直前の行が移り先になる画面は無い
+- 4 ○: 5 つの理由の判定順に漏れなし。requestfinished は 4xx でも起きる
+- 5 ○: 型は成り立つ。6 ○: 触らない範囲は明確
+- should 1: render の引数の順（forbiddenApis は blocked の次）を明記 → カード 4-5・4-14 に書いてある
+- should 2: MissReason の値の形 → カード 4-1 に全文の値を書いてある（`番号を拾えず（一覧が 403）` など）
+- should 3: blockedBefore は leaveIfSame の後・goInApp の直前で取る → カード 4-12 はその位置
+- should 4: redirect の行が別の画面へ移ったときの道すじの欄 → `A → B` のまま状態「別の画面へ移った」とする（カード 4-12・4-13 のとおり）
