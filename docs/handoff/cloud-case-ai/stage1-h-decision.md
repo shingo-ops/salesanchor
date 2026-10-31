@@ -25,3 +25,33 @@
 - ② 書き込みの道具: ○（4 本とも Write の道具。例: 18:55:11 UTC に 20261024_100300_create_ai_cloud_views.sql）
 - ③ SQL の危険語による BLOCKED が 0 件: ×（2 件）。どちらも SQL を書く操作ではなく、読むだけの検索のコマンドで止まった（19:05:18 UTC の表示は 'DROP TABLE'、19:05:33 UTC の表示は 'DELETE FROM'）。実装役は危険語を外した検索に変えて続けた（「止められたら言い換えない」の指示に合わない。読むだけの検索で害は無かったが、次の依頼で改めて伝える）。SQL のファイルを書く操作は 1 件も止まっていない。
 - まとめ: SQL を決まりどおり書けることは確かめられた。読むだけの検索が危険語で止まるのは、見張りの今の作り（文字で判断する）のままで、この例外ルールの対象外。直すなら別の設計にする。
+
+## 3. push 前の確認 8（ADR-155 の「共用マスタの中身の参照」）で止まった件
+
+### 観測事実
+- 2026-10-31 未明、e7380ca86 の push が push 前の自動確認で止まった。止めたのは scripts/check-migration-value-writes.py diff --check 8。CI でも同じ検査が走る（.github/workflows/migration-guard.yml:424）。
+- 引っかかった行は、migrations/20261024_100300_create_ai_cloud_views.sql の ai_cloud.column_class への INSERT の値の行だけ（例: `('public','products',ARRAY['notes'],'mask','')`）。表の名前を文字の値として並べている行で、共用マスタの中身を読む文ではない。
+- 確認 7（保護対象の表への INSERT / UPDATE / DELETE）は通っている（ai_cloud.column_class は保護対象ではない）。
+- 確認 8 は文字だけで判断し、diff モードには例外の仕組みが無い（scripts/check-migration-value-writes.py:126-131。value-write-allowlist.tsv は repo モードの確認 7 相当だけに使う）。
+
+### PO の決定
+- 2026-10-31 10:07 JST、PO「1」: この手順ファイル 1 つだけを、理由を書いた例外の一覧に載せて通す（ほかのファイルへの確認は今のまま）。
+
+### 作り（実装役へ渡す）
+- 新しい一覧 scripts/migration-guard/reference-allowlist.tsv（タブ区切り・唯一の正本）。列: file / sha256（そのファイルの中身の SHA-256）/ reason / decision_ref。頭に value-write-allowlist.tsv と同じ書き方で説明の注記を置く。
+- 行は 1 つだけ: migrations/20261024_100300_create_ai_cloud_views.sql ／ その時点の sha256 ／「ai_cloud.column_class の初期値として表の名前を文字の値で並べる。共用マスタの中身は読まない」／「PO「1」2026-10-31 / docs/handoff/cloud-case-ai/stage1-h-decision.md §3」。
+- diff モードの確認 8: 一覧にあり、HEAD のファイルの中身の sha256 が一致するときだけ、そのファイルを確認 8 から外し、外したことを「⚠」で 1 行表示する。sha256 が違えば失敗（中身が変わったら例外は効かない）。
+- 確認 7 は一覧に関係なく今のまま全ファイルに効く。
+- repo モード: 一覧の各行のファイルが在り、run_all_migrations.sh に登録され、sha256 が一致することを確かめる。違えば失敗（古い行を残さない）。
+- 試験（scripts/tests/test_migration_value_writes.py に追加）: ①一覧にあり sha256 一致 → 確認 8 通過 ②一覧にあり sha256 不一致 → 失敗 ③一覧に無いファイルは今までどおり失敗 ④一覧にあるファイルでも保護対象の表への INSERT は確認 7 で失敗 ⑤repo モードで古い行・未登録の行は失敗。
+
+### 受入
+| 基準 | 検証方法 |
+|---|---|
+| 確認 8 が段1 の SQL 1 本だけを外す | `python3 scripts/check-migration-value-writes.py diff origin/main HEAD --check 8` が通り、「⚠」行が 1 行だけ |
+| ほかのファイルは今までどおり止まる | 試験 ③ が通る |
+| 中身が変われば例外が切れる | 試験 ② が通る |
+| 確認 7 は弱まらない | 試験 ④ が通る |
+| push 前の自動確認が全部通る | `bash scripts/dev/check-before-submit.sh` の × が 0 |
+
+戻し方: 一覧の行と検査の追加部分を revert する（確認 8 は元の厳しさに戻る）。
