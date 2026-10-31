@@ -1,12 +1,12 @@
-# 段A 実装カード（知らない機械からのログインを止める・第2版）
+# 段A 実装カード（知らない機械からのログインを止める・第3版）
 
 - 対象: docs/handoff/auth-new-device-approval/design.md 第6.1版 §3（D1〜D16）・§4 段A（A-1・A-2・A-3）・§6・§7。ADR-1055（Proposed）。合格の基準は kgi.md の K1〜K9（PO 承認済 2026-11-01）。
 - 中身の正本: 何をどう作るかは design.md §4 段A の文のとおりに作る。このカードは「順番・先に確かめること・止まる条件・受入」を足す。design.md とこのカードが食い違うときは止まって Opus へ返す（自分で選ばない）。
 - 根拠の写し: S=origin/main bf3ad441638ed1084c50c5528a435a294b01469f。design.md の行番号は基準 7e9155163 で読んだもので、S までに本線が進んでいる。実装の前に §3(a) で行を合わせ直す。§0 V-2 の行は origin/main dc99a062e でも同じだった（第1版の審査）。
 - 前提: このカードと design.md・kgi.md・ADR-1055 は、設計書だけの PR で本線に入れてから流す。手順1 の後に origin/main に docs/handoff/auth-new-device-approval/design.md が無ければ、停止して BLOCKED: で返す。
 - 読んだ節: docs/handoff/design-partner-card-ops/guards/00-common.md・guards/03-file.md・guards/04-worktree.md・guards/05-pr.md・guards/07-migration.md・guards/10-executor.md・scripts/agent-hooks/cloud/rules.md。実行役はクラウドの Sonnet。作業場所の作り方はクラウドの決まり（S scripts/agent-hooks/cloud/rules.md:15）を正とする。.pr-number・gh-pr-create-safe.sh・gh-pr-merge-safe.sh はクラウドでは使わない。PR は設計担当（Opus）が手元で scripts/gh-pr-create-safe.sh で作る。出力には上限を付ける。待つために sleep を使わない。
-- 状態: 第2版（Opus 作成）。第1版の審査 REVISE（要修正3・軽微5）を直した。
-- 受領確認: 実装役は着手の最初の報告に「段A カード 第2版 前半（または後半）を受け取った・S=bf3ad4416」と書く。
+- 状態: 第3版（Opus 作成）。第1版の審査 REVISE（要修正3・軽微5）と第2版の審査 REVISE（要修正1・軽微5）を直した。
+- 受領確認: 実装役は着手の最初の報告に「段A カード 第3版 前半（または後半）を受け取った・S=bf3ad4416」と書く。
 
 ## 0. 設計からの直し（V）
 - V-1 2回に分けて流す（変更は一度に1つ・1回の作業の量を抑える）。同じ枝 release/new-device-approval-stage-a に積む。PR は後半の push の後に1つだけ作る（design.md の「PR-A」は1つのまま）。
@@ -55,13 +55,13 @@
 | 25 | frontend/src/pages/login/LoginPage.tsx | — | 待ちの表示 | 後半 |
 | 26 | 新 frontend/src/features/auth/LoginApprovalWatcher.tsx（と試験） | 無い | A-3 のとおり | 後半 |
 | 26a | frontend/src/components/DesktopShell.tsx | :204 RealtimeProvider・:197-198 管理の案内の並び | :204 の内側に #26 と #26b を置く。:198 の後に { to: "/super-admin/login-requests", labelKey: "nav.superAdminLoginRequests" } を足す | 後半 |
-| 26b | 新 frontend/src/features/auth/RecoveryCodePrompt.tsx（と試験） | 無い | design.md:158 の案内。ログイン後に GET /auth/recovery-codes/status の残りが0のとき Modal を1回出す（「作る」で POST /auth/recovery-codes・10個を1回だけ表示してコピー／「あとで」で閉じる）。閉じたことはそのタブの sessionStorage に覚え、同じタブでは出し直さない（読み書きは try/catch） | 後半 |
+| 26b | 新 frontend/src/features/auth/RecoveryCodePrompt.tsx（と試験） | 無い | design.md:158 の案内。ログイン後に GET /auth/recovery-codes/status の残りが0のとき Modal を1回出す（「作る」で POST /auth/recovery-codes・10個を1回だけ表示してコピー／「あとで」で閉じる）。出したことは sessionStorage に「人の id とそのログインの番号」を鍵にして覚え、同じログインの間は出し直さない。ログインの番号はトークンの sid を使う（無ければ人の id とログインした時刻）。signIn の成功時とログアウト時に印を消す。読み書きは try/catch で、読めなければ出す側に倒す。新しいタブで同じログインのままなら出さない | 後半 |
 | 26c | frontend/src/components/MobileShell.tsx | :198 RealtimeProvider・:187 管理の案内の並び | :198 の内側に #26 と #26b を置く。:187 の並びに nav.superAdminLoginRequests を同じ形で足す | 後半 |
 | 27 | frontend/src/pages/account-settings/SecuritySection.tsx | — | 機械の一覧と予備の合言葉 | 後半 |
-| 28 | 新 frontend/src/pages/super-admin/LoginRequestsPage.tsx（と試験） | 無い | 許可待ちの一覧。見出しは t("nav.superAdminLoginRequests")（check:nav-sync） | 後半 |
-| 28a | frontend/src/App.tsx | :89-103 の super-admin の import・:302 の /super-admin/fx-rate の Route | 同じ並びに import と /super-admin/login-requests の Route を足す（fx-rate の Route と同じ守りで包む） | 後半 |
-| 29 | frontend/src/lib/realtime/topics.ts | — | USER_TOPICS の話題を足す | 後半 |
-| 30 | frontend/src/locales/ja.json・en.json | — | A-3 の i18n キー（同じキーを両方に） | 後半 |
+| 28 | 新 frontend/src/pages/super-admin/LoginRequestsPage.tsx（と試験） | 無い | 許可待ちの一覧。見出しは t("nav.superAdminLoginRequests")（横の案内と同じ言葉にそろえるため） | 後半 |
+| 28a | frontend/src/App.tsx | :89-103 の super-admin の import・:302 の /super-admin/fx-rate の Route | 同じ並びに import と /super-admin/login-requests の Route を足す（包みは足さない。fx-rate と同じく、ページの中で super admin でなければ 403 の表示を出す。App.tsx:300 のコメントの形） | 後半 |
+| 29 | frontend/src/lib/realtime/topics.ts | :2-5 の TOPICS（キー: "話題の名前" の形） | TOPICS に authLoginRequest: "auth.login_request" を同じ形で1行足す。値に話題の名前以外（"user" など）を書かない（backend/tests/test_realtime_topics.py:129-133 が `:\s*"…"` の値を全部拾って backend と比べるため）。#22 の試験と同じ回に入れる | 前半 |
+| 30 | frontend/src/locales/ja.json・en.json | — | A-3 の i18n キーと、横の案内の nav.superAdminLoginRequests（同じキーを両方に） | 後半 |
 | 31 | frontend/api-contract/openapi.json | — | backend の口を足した後に書き出す。schema.d.ts は入れない | 後半 |
 
 ## 2. 触らない範囲
@@ -80,7 +80,7 @@
 - (f) 新しい表の名前が既にある: S の migrations と backend に user_trusted_devices・auth_login_requests・user_recovery_codes・trusted_device_id の語が無いことを grep で確かめる。有れば停止する。
 - (g) migration の登録検査: bash scripts/check-migration-registration-exists.sh と scripts/check-migration-value-writes.py が通ること（commit の後に check-before-submit がまとめて流す）。通らなければ、出力を付けて停止する。
 - (h) lint_tenant_schema: 新しい表は public に置き tenant に置かない。scripts/lint_tenant_schema.py の strict（check-before-submit が流す）が落ちたら停止する。
-- (k) 画面の置き場: #26a・#26c・#28a の行が S と違い、同じ形の並びが見つからないときは停止する。管理の案内の並びに足す形が fx-rate の行と違う形（icon 等が要る）なら、その形に合わせ、報告に書く。
+- (k) 画面の置き場: #26a・#26c・#28a の行が S と違い、同じ形の並びが見つからないときは停止する。手本は、DesktopShell は :197-198 の { to, labelKey } の行、MobileShell は :185-190 の viewers の resolveItem(key, labelKey, アイコン, 道筋) の形（アイコンは NAV_ICONS.saasAdmin）。
 - (i) PostgreSQL: pytest の PG の試験（ops/test_ai_cloud_views.py など）は、クラウドの中で自分が立てた localhost の PostgreSQL でだけ流す。立てられなければ SQLite の試験だけ流し、報告に「PG の試験は CI で確かめる」と書く（止まらない）。
 - (j) 依存: pip install -r backend/requirements.txt で maxminddb==3.2.0 が入ること。入らなければ停止する。
 
@@ -91,6 +91,8 @@
   cd "$(git rev-parse --show-toplevel)" && git fetch origin main
   cd "$(git rev-parse --show-toplevel)" && bash scripts/new-worktree.sh release/new-device-approval-stage-a
   cd <W> && git rev-parse HEAD origin/main
+  cd <W> && test -f docs/handoff/auth-new-device-approval/design.md && echo design-ok
+  （design-ok が出なければ停止して BLOCKED:。）
   （2行が同じことを確かめ、sha を報告に書く。違えば停止して BLOCKED:）
 手順2. design.md とこのカードを読み、§3 の (a)(c)(f) を確かめる。
   cd <W> && sed -n 1,245p docs/handoff/auth-new-device-approval/design.md
@@ -103,7 +105,7 @@
   cd <W> && shasum -a 256 migrations/20261024_100300_create_ai_cloud_views.sql
   cd <W> && wc -l docs/handoff/cloud-case-ai/stage1-column-class.tsv
   （tsv が 1055 行でなければ停止する。）
-手順5. §1 の #10〜#23 を作る（A-2）。ADR の目次を作り直す。
+手順5. §1 の #10〜#23 と #29 を作る（A-2。#29 は frontend のファイルだが前半に入れる）。ADR の目次を作り直す。
   cd <W> && node scripts/generate-adr-index.js
 手順6. backend の試験を流す（出力は /tmp に置き、作業場所に残さない）。
   cd <W>/backend && ENVIRONMENT=test python -m pytest tests/test_new_device_approval.py tests/test_viewer_isolation.py tests/test_realtime_topics.py tests/test_realtime_middleware.py -q > /tmp/stageA-pytest-1.txt 2>&1
@@ -119,7 +121,7 @@
   cd <W> && git add .github/workflows/migration-guard.yml .github/workflows/migration-test.yml docs/handoff/cloud-case-ai/stage1-column-class.tsv docker-compose.yml backend/requirements.txt
   cd <W> && git add backend/app/auth backend/app/cli backend/app/routers/auth.py backend/app/routers/login_approvals.py backend/app/routers/super_admin_login_requests.py backend/app/main.py
   cd <W> && git add backend/app/realtime backend/app/routers/realtime_events.py backend/app/services/auth_mail.py backend/app/middleware/audit.py backend/app/tasks/maintenance.py backend/app/celery_app.py
-  cd <W> && git add backend/tests/test_new_device_approval.py backend/tests/test_viewer_isolation.py backend/tests/test_realtime_topics.py backend/tests/ops/test_ai_cloud_views.py backend/tests/conftest.py
+  cd <W> && git add frontend/src/lib/realtime/topics.ts backend/tests/test_new_device_approval.py backend/tests/test_viewer_isolation.py backend/tests/test_realtime_topics.py backend/tests/ops/test_ai_cloud_views.py backend/tests/conftest.py
   cd <W> && git status --short | head -80
   （celery_app.py の場所が backend/app/celery_app.py でなければ実物の場所で add する。README.md は generate-adr-index.js で変わったときだけ git add docs/adr/README.md。add した後に §1 に無いファイルが入っていれば git restore --staged で外す。）
   cd <W> && git commit -m "feat: 知らない機械からのログインを止める仕組みの土台（段A前半・既定は止めない）"
@@ -143,7 +145,7 @@
 手順13. frontend の依存を入れる。
   cd <W>/frontend && npm ci > /tmp/stageA-npm.txt 2>&1
   cd <W>/frontend && tail -5 /tmp/stageA-npm.txt
-手順14. §1 の #24〜#30 を作る（A-3）。金型だけを使う（docs/CC_UI_GOVERNANCE.md）。文字は全部 t()。生の select・input・自作のタブ・色の直値を使わない。
+手順14. §1 の #24〜#28a と #30 を作る（A-3。#29 は前半で済んでいる）。金型だけを使う（docs/CC_UI_GOVERNANCE.md）。文字は全部 t()。生の select・input・自作のタブ・色の直値を使わない。
 手順15. API の形を書き出す。
   cd <W>/backend && pip install -r requirements.txt > /tmp/stageA-pip2.txt 2>&1
   cd <W>/backend && ENVIRONMENT=test python -m tools.export_openapi ../frontend/api-contract/openapi.json
@@ -167,7 +169,7 @@
   cd <W> && git add frontend/src/pages/login/LoginPage.tsx frontend/src/features/auth frontend/src/components/DesktopShell.tsx frontend/src/components/MobileShell.tsx frontend/src/App.tsx
   cd <W> && git add frontend/src/pages/account-settings/SecuritySection.tsx frontend/src/pages/super-admin/LoginRequestsPage.tsx frontend/src/locales/ja.json frontend/src/locales/en.json frontend/api-contract/openapi.json
   cd <W> && git status --short | head -80
-  （frontend/src/lib/realtime/topics.ts（#29）・§3(b) で直した試験・新しい試験のファイルは、実物の名前で同じく add する。§1 に無いファイルが入っていれば git restore --staged で外す。）
+  （§3(b) で直した試験・新しい試験のファイルは、実物の名前で同じく add する。§1 に無いファイルが入っていれば git restore --staged で外す。）
   cd <W> && git commit -m "feat: ログイン画面の待ち表示・いつもの機械の許可の小窓・機械の一覧（段A後半）"
 手順19. commit が在ることを確かめ、提出前の入口を流してから push する。
   cd <W> && git log -3 --oneline
