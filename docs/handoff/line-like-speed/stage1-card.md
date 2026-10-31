@@ -4,15 +4,15 @@
 - 根拠の写し: S=origin/main dc99a062e（Merge #4957）。行番号はすべてこの sha。実装の前に最新の origin/main で行を合わせ直す（§3(a)）。
 - 読んだ節: docs/handoff/design-partner-card-ops/guards/00-common.md・guards/03-file.md・guards/04-worktree.md・guards/05-pr.md・guards/10-executor.md・scripts/agent-hooks/cloud/rules.md。照合: 全命令は cd <W> で始める（00-common:5）・出力は tail/head で上限を付ける（00-common:10）・新しいファイルは丸ごとの全文で渡す（03-file:30）・作業場所は new-worktree.sh で作り出力をパイプに通さない（04-worktree:45・:55）・PR は実行役が作らない（05-pr。設計担当が手元で作る）。出力をファイルに残す命令と tail で読む命令は別の行に分けた（00-common:6）。
 - 実行役はクラウドの Sonnet。作業場所の作り方はクラウドの決まり（S scripts/agent-hooks/cloud/rules.md:15）を正とする。.pr-number・gh-pr-create-safe.sh は使わない。出力には上限を付ける。待つために sleep を使わない。
-- 状態: 第 2 版（第 1 版の審査 REVISE の直す点 8 件を入れた。審査の記録は枝 release/line-like-speed-stage1-review-v1 の docs/handoff/line-like-speed/review-stage1-card-v1.md）。
-- 受領確認: 実装役は着手の最初の報告に「段 1 カード 第 2 版を受け取った・S=dc99a062e」と書く。
+- 状態: 第 3 版（第 1 版の審査 REVISE の直す点 8 件と、第 2 版の審査 REVISE の直す点 3 件を入れた。審査の記録は枝 release/line-like-speed-stage1-review-v1 の docs/handoff/line-like-speed/review-stage1-card-v1.md と、枝 release/line-like-speed-stage1-review-v2 の docs/handoff/line-like-speed/review-stage1-card-v2.md）。
+- 受領確認: 実装役は着手の最初の報告に「段 1 カード 第 3 版を受け取った・S=dc99a062e」と書く。
 - 段 1 は画面をまだ変えない。画面が useApiQuery を使い始めるのは段 2 から。
 
 ## 0. 設計からの直し・詳しくした点（V1。設計の合格線は変えない）
 - V1-1 K5 の「画面の試験」: 段 1 では画面を変えないので、試しの部品（Probe）を本物の QueryClient・QueryAuthSync と一緒に描いて確かめる（§4-F の T4・T5・T8・T9）。本物の画面での K5 は、最初に画面を移す段 2 の受入で同じ流れを確かめる。
 - V1-2 消す時刻: QueryAuthSync は useLayoutEffect で消す。理由: 画面の部品が写しを取りに行くのは描いた後の useEffect（passive）の中。useLayoutEffect はそれより先に動くので、新しい人の取りに行く前に消し終わる。React の StrictMode（S frontend/src/main.tsx:9）で 2 回動いても、前と同じ uid なら何もしない。この理由は T8 で守る（試しの部品を QueryAuthSync より前に置くと、useEffect では新しい人の中身が出ないまま止まる。審査 v1 項目 2 で確かめた）。
 - V1-3 消した後に新しい人の写しが cache から外れたままにならないこと（消した写しを開いている部品が抱えたまま、取り直しが届かない形）を試験で確かめる（§4-F の T5。取り直しの関数で api.get がもう 1 回呼ばれる）。落ちたら直し方を自分で考えず停止する。
-- V1-4 部品の版: `@tanstack/react-query` を **5.104.4 に固定**して入れる（`^` を付けない）。理由: 公開から 2 週間以上たった版にする（5.104.4 は 2026-10-17 公開、5.104.5 は 10-19、5.105.0 は 10-26・npm view の time の値。設計担当が 2026-11-01 に確かめた）。peerDependencies は react ^18 || ^19 と @types/react ^18 || ^19（docs/handoff/line-like-speed/sources.md C・審査 v1 項目 5 の npm view の出力）で、今の react ^18.3.1（S frontend/package.json:86）と @types/react ^18.3.18（S frontend/package.json:102）に合う。
+- V1-4 部品の版: `@tanstack/react-query` を **5.104.4 に固定**して入れる（`^` を付けない）。理由: 公開から 2 週間以上たった版にする（5.104.4 は 2026-10-17 公開、5.104.5 は 10-19、5.105.0 は 10-26・npm view の time の値。設計担当が 2026-11-01 に確かめた）。peerDependencies は react ^18 || ^19 と @types/react ^18 || ^19（docs/handoff/line-like-speed/sources.md C・審査 v1 項目 5 の npm view の出力）で、今の react ^18.3.1（S frontend/package.json:85）と @types/react ^18.3.18（S frontend/package.json:101）に合う。
 - V1-5 部品の動きの確かめ（設計担当・2026-11-01）: Context7 はこの月の上限で使えなかった（応答「Monthly quota exceeded」）。起動の決まりに従い、公式の文書を直接読んだ。
   - tanstack.com/query/v5/docs/reference/QueryClient: cancelQueries は「Cancels outgoing fetches」・既定 revert true・返す Promise は reject しない。resetQueries は初めの状態に戻し「Active queries among the matched set are then refetched」。clear() は「Clears both the query cache and the mutation cache」。
   - 同 guides/important-defaults: 既定は stale 扱い（staleTime 0）・使われない写しは 5 分で捨てる・失敗は 3 回送り直す。
@@ -37,7 +37,7 @@
 - backend/・migrations/・.github/workflows/・scripts/・tests/prod-check/・frontend/viewer/ は触らない（design §3-3）。
 - frontend/src/lib/api.ts（通信・送り直し・401 の扱い）・frontend/src/contexts/AuthContext.tsx・frontend/src/lib/auth/ は触らない。
 - 画面（frontend/src/pages/）・部品（frontend/src/components/）・CSS・ja.json・en.json は触らない（段 1 は画面を変えない）。
-- App.tsx はルートの中身を変えない。足すのは import 3 行・コメント 1 行・包む 4 行だけ（BrowserRouter とその中の行は字下げが半角空白 2 つ深くなるだけ）。
+- App.tsx はルートの中身を変えない。足すのは import 3 行・コメント 1 行・包む 3 行（`<QueryClientProvider client={queryClient}>`・`<QueryAuthSync />`・`</QueryClientProvider>`）だけ（BrowserRouter とその中の行は字下げが半角空白 2 つ深くなるだけ）。
 - QueryClient を apiQuery.ts の外で作らない（試験の中でも作らない。試験は同じ 1 個を使い、毎回 clear する）。
 - ブラウザの保存に写しを書く部品（persist）を入れない。staleTime を設定しない（既定 0）。
 
@@ -169,7 +169,7 @@ import { queryClient } from "./lib/query/apiQuery";
       </QueryClientProvider>
     </AuthProvider>
 ```
-- 確かめ: `git diff -w origin/main -- frontend/src/App.tsx` で、足した行（import 3 行・コメント 1 行・包む 4 行）だけが出て、消えた行が 0 であること（§5 A4）。
+- 確かめ: `git diff -w origin/main -- frontend/src/App.tsx` で、足した行（import 3 行・コメント 1 行・包む 3 行の計 7 行）だけが出て、消えた行が 0 であること（§5 A4）。
 
 ## 4-E. 動きの説明（設計 §3-2 との対応）
 - key: `["api", uid, ...言葉, { query }]`（§4-B apiQueryKey）。
@@ -441,7 +441,8 @@ describe("logout does not refetch the old user's copies (T9)", () => {
   （2 行が同じことを確かめる。違えば停止して BLOCKED: で報告する。main は取り込まない。reset・rebase・force・merge・pull は使わない）
   cd <W> && ./scripts/dev/executor-preflight.sh > /tmp/stage1-preflight.txt 2>&1
   cd <W> && grep -n "FAIL" /tmp/stage1-preflight.txt | head -20
-  （FAIL の行が `gh auth switch --hostname github.com --user shingo-cc` の失敗の 1 件と、その結果の `PREFLIGHT FAIL` の行だけなら続ける。理由: クラウドには gh の名義が無い。この確かめは PR を作る名義のためで、PR は設計担当が手元で shingo-cc 名義を確かめてから作る。ほかの FAIL が 1 件でもあれば停止し、BLOCKED: で grep の出力を報告する。）
+  cd <W> && grep -n "origin/main は存在" /tmp/stage1-preflight.txt | head -3
+  （FAIL の行が次の 3 つのうちのどれかだけなら続ける: `GitHub API に到達不可` の 1 件・`gh auth switch --hostname github.com --user shingo-cc` の失敗の 1 件・その結果の `PREFLIGHT FAIL` の行。理由: クラウドには gh の名義が無く、PR は設計担当が手元で shingo-cc 名義を確かめてから作る。またクラウドの通信の通り道は api.github.com への HEAD の問い合わせを 400 で返す（審査 v2 項目 4）が、git の取り寄せと push は通る。続ける時は、同じファイルの `[4/4]` の次の行が `[OK]   origin/main は存在` であることを上の 2 つ目の grep で確かめ、無ければ停止する。ほかの FAIL が 1 件でもあれば停止し、BLOCKED: で grep の出力を報告する。）
 手順2. 依存を入れ、TanStack を足す。
   cd <W>/frontend && npm ci > /tmp/stage1-ci.txt 2>&1
   cd <W> && tail -5 /tmp/stage1-ci.txt
