@@ -322,6 +322,7 @@ jobs:
               -e '/^OPS_INGEST_TOKEN=/d' \
               -e '/^ERROR_REPORT_AGENT_TOKEN=/d' \
               -e '/^READ_WINDOW_TOKEN=/d' \
+              -e '/^CASE_AGENT_TOKEN=/d' \
               -e '/^COMPOSE_FILE=/d' \
               .env
             # YAML `|` ブロックの共通インデント (12 スペース) はパース時に自動除去される。
@@ -374,6 +375,7 @@ jobs:
             OPS_INGEST_TOKEN='${{ secrets.OPS_INGEST_TOKEN }}'
             ERROR_REPORT_AGENT_TOKEN='${{ secrets.ERROR_REPORT_AGENT_TOKEN }}'
             READ_WINDOW_TOKEN='${{ secrets.READ_WINDOW_TOKEN }}'
+            CASE_AGENT_TOKEN='${{ secrets.CASE_AGENT_TOKEN }}'
             COMPOSE_FILE=docker-compose.yml:docker-compose.exporters.yml
             ENV_EOF
             # 件1（docs/handoff/deploy-secrets-dollar-quote/design.md）: 値に ' か改行があると単一引用符が壊れる。
@@ -528,6 +530,24 @@ jobs:
             fi
             docker compose -p astro-webapp-readwindow -f docker-compose.ai-reader-http.yml up -d --build=false --force-recreate \
               || echo "::warning::ai-reader-http を起こせませんでした（アプリの反映には影響しません）"
+
+      # ADR-1052 段1: 相談係専用の読む窓口（ai-reader-cloud-http）を起こす。今の窓口とは別の容器・別の鍵（CASE_AGENT_TOKEN）。
+      # 付け足しの機能なので、失敗してもアプリの反映は止めない（警告だけ出す）。
+      - name: Start ai-reader-cloud-http (case agent read window)
+        if: ${{ success() }}
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /home/ubuntu/salesanchor
+            if [ ! -r /home/ubuntu/.config/salesanchor/ai-reader-cloud.env ]; then
+              echo "::warning::ai-reader-cloud.env が読めないため ai-reader-cloud-http を起こしません"
+              exit 0
+            fi
+            docker compose -p astro-webapp-casewindow -f docker-compose.ai-reader-cloud-http.yml up -d --build=false --force-recreate \
+              || echo "::warning::ai-reader-cloud-http を起こせませんでした（アプリの反映には影響しません）"
 
       # SA-18 Phase2: salesanchor_app ロールの bootstrap（冪等）
       # migrations より前に実行する。ADMIN_DATABASE_URL を .env に注入。

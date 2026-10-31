@@ -1,0 +1,88 @@
+== 提出前の検査（check-before-submit）==
+比べる元: 2 点で比べる検査 = origin/main 5c13bfbef4d343b1f9f6cad8f182a05a59327fb9 / 変更ファイルの一覧・3 点で比べる検査 = 分岐点 5c13bfbef4d343b1f9f6cad8f182a05a59327fb9
+HEAD: 93ba85459baf355dac87347b1fa50e372f44866f
+変更ファイル: 28 件 / ログ置き場: /tmp/check-before-submit.15Xe9U
+
+-- 速い組（毎回）--
+  ○ check_doc_index --strict                            0.8 秒
+  ○ check_rule_registry                                 0.1 秒
+  ○ lint_tenant_schema (strict)                         0.5 秒
+  ○ check-claude-size                                   0.1 秒
+  ○ generate-adr-index --check                          0.1 秒
+  ○ test-ui-governance                                  0.1 秒
+  ○ check-ui-governance                                 0.0 秒
+  ○ check-dangling-routes                               1.0 秒
+  ○ test-dangling-routes                                0.2 秒
+  ○ check-lessons-section                               0.0 秒
+  ○ check-migration-registration-exists                 0.0 秒
+  ○ test-migration-registration-exists                  0.1 秒
+  ○ migration-value-writes diff --check 7               0.1 秒
+  ○ migration-value-writes diff --check 8               0.1 秒
+  ○ migration-value-writes repo                         0.1 秒
+  ○ test_migration_value_writes                         5.9 秒
+  ○ check-migration-column-churn                        0.1 秒
+  ○ check-migration-duplicate-registration              0.0 秒
+  ○ check-doc-heading-duplicates                        0.0 秒
+  ○ test_check_rule_registry                            1.0 秒
+
+-- 違反の見本（変更に関係するものだけ）--
+  ○ 見本の選別（case.json）                      0.0 秒
+  ○ run_rule_fixtures --only migration-value-writes     5.2 秒
+
+-- 重い組（--full のときだけ）--
+  - test-guard-evaluations (node --test)             CI で確かめる（約 120 秒。--full で流せます）
+  - run_rule_fixtures（全件）                    CI で確かめる（約 375 秒。--full で流せます）
+
+== 必須チェック（docs/specs/rule-enforcement/required-checks.txt）==
+  - pytest (SQLite + PostgreSQL RLS) — CI で確かめる（DB・redis が要る）
+  - テナントスキーマ整合性チェック — CI で確かめる（DB が要る）
+  △ マイグレーションSQL 実行テスト（実DB） — 一部だけ手元で流した。残りは CI で確かめる（登録ファイルの存在確認だけ。実DBでの実行は CI）
+  △ models.py に新 Column → deploy.yml にマイグレーション追記必須 — 一部だけ手元で流した。残りは CI で確かめる（独立した台本の step だけ。ワークフロー内に直接書かれた step は CI）
+  ○ ADR-072 tenant schema lint (strict mode) — 手元で流した
+  - Lint & Dark Mode Check (ADR-067) — CI で確かめる（npm ci が要り時間がかかる）
+  - gitleaks（シークレット漏洩検出） — CI で確かめる（履歴の走査は手元の見張りで止まるため、この段では流さない）
+  ○ CLAUDE.md line count check — 手元で流した
+  ○ ADR index is up to date — 手元で流した
+  ○ UI governance gate — 手元で流した
+  ○ dangling-route gate — 手元で流した
+  ○ warn-direct-lesson-edit — 手元で流した
+  - guard-authoring/evaluation — CI で確かめる（評価本体は GitHub のイベントと権限が要る（台本の試験は --full で流せる））
+  - process-artifacts gate — CI で確かめる（PR 本文が要る。PR 作成時に validate-pr-body.sh が確かめる）
+  - API contract is up to date — CI で確かめる（uv と npm ci が要る）
+  ○ doc index reachability — 手元で流した
+
+== 流した検査 ==
+  ○ check_doc_index --strict                            0.8 秒
+  ○ check_rule_registry                                 0.1 秒
+  ○ lint_tenant_schema (strict)                         0.5 秒
+  ○ check-claude-size                                   0.1 秒
+  ○ generate-adr-index --check                          0.1 秒
+  ○ test-ui-governance                                  0.1 秒
+  ○ check-ui-governance                                 0.0 秒
+  ○ check-dangling-routes                               1.0 秒
+  ○ test-dangling-routes                                0.2 秒
+  ○ check-lessons-section                               0.0 秒
+  ○ check-migration-registration-exists                 0.0 秒
+  ○ test-migration-registration-exists                  0.1 秒
+  ○ migration-value-writes diff --check 7               0.1 秒
+  ○ migration-value-writes diff --check 8               0.1 秒
+  ○ migration-value-writes repo                         0.1 秒
+  ○ test_migration_value_writes                         5.9 秒
+  ○ check-migration-column-churn                        0.1 秒
+  ○ check-migration-duplicate-registration              0.0 秒
+  ○ check-doc-heading-duplicates                        0.0 秒
+  ○ test_check_rule_registry                            1.0 秒
+  ○ 見本の選別（case.json）                      0.0 秒
+  ○ run_rule_fixtures --only migration-value-writes     5.2 秒
+  - test-guard-evaluations (node --test)             流していない: CI で確かめる（約 120 秒。--full で流せます）
+  - run_rule_fixtures（全件）                    流していない: CI で確かめる（約 375 秒。--full で流せます）
+
+== 版の違い（手元と CI）==
+  手元: Python 3.11.18 / node v22.23.4
+  CI  : Python 3.12 / node 22（guard-authoring だけ 24）
+  版が違うので、最後の判定は CI です（この入口は提出前の補助）
+
+合計 15.9 秒 / 必須 16 件を表示 / 流した検査 21 件 / 落ちた検査 0 件 / ログ /tmp/check-before-submit.15Xe9U（消さずに残します）
+結果: ○ 流した検査は全部通りました（終了コード 0）
+流した印を書きました: /home/user/salesanchor/.git/worktrees/release-cloud-case-ai-stage1/check-before-submit.ok
+rc=0

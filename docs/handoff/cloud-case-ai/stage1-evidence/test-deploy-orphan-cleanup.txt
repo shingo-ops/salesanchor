@@ -1,0 +1,24 @@
+=== C4: 名前の正本 ===
+PASS: C4 lib の移行の名前が空でない（salesanchor_migration）
+PASS: C4 lib の移行の名前と migration_py_entry.py の APP_NAME が同じ（salesanchor_migration / salesanchor_migration）
+PASS: C4 控え（本番反映）の名前が salesanchor_backup_deploy
+PASS: C4 控え（cron）の名前が salesanchor_backup_cron
+=== C9: 古いサーバーのコード（deploy.yml の台本） ===
+  | OK: backup(id) set -e < cd < if 文、文面一致、ファイルが無いとき rc=0 と skipped
+  | OK: migrate(id) set -e < cd < if 文、文面一致、ファイルが無いとき rc=0 と skipped
+  | OK: 失敗のときの段 set -e < cd < if 文、文面一致、ファイルが無いとき rc=0 と skipped
+PASS: C9 deploy.yml の3つの段の台本（set -e → cd → if 文・一字一句・古いサーバーで rc=0）
+=== C8: 本物の run_all_migrations.sh の TERM の trap（偽 docker） ===
+PASS: C8 013 の run_sql の呼び出しで眠った（記録で確認）
+PASS: C8 rc=143（実際 143）
+PASS: C8 標準出力に [final] psql < ai_ro の作成 SQL の行
+PASS: C8 止めた run_sql の終了の行が記録にある
+PASS: C8 作り直しの最初の呼び出しの開始が記録にある
+PASS: C8 作り直しの開始が止めた run_sql の終了より後（行 69 > 68）
+=== C10: ai_cloud の外し（1回目の run_sql）が失敗したとき、ai_ro を外さず trap の前で止まる（偽 docker） ===
+PASS: C10 ① スクリプトの終了コードが 0 以外（実際 1）
+PASS: C10 ② 標準出力に ai_cloud の外しの行がある
+PASS: C10 ② ai_ro の外しの行が無い（ai_ro を外していない）
+PASS: C10 ③ 記録に VERBOSITY=terse を含む START が無い（trap の前で止まった）
+SKIP: C1〜C3・C5〜C7（docker が使えない。CI で確かめる）
+ALL PASSED (docker の要る試験は SKIP)

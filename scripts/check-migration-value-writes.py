@@ -8,13 +8,16 @@
   python3 scripts/check-migration-value-writes.py diff BASE HEAD [--check 7|8|all]
       PR の差分を検査する（チェック 7・8）。新規ファイルは全体、変更されたファイルは「追加された行」だけを見る。
       neutralize（値の書き込みを外し、コメントと NOTICE を足す）編集は通る。
+      チェック 8 だけは、reference-allowlist.tsv にあり sha256 が一致するファイルを外す（チェック 7 は常に全ファイルに効く）。
   python3 scripts/check-migration-value-writes.py repo
       scripts/run_all_migrations.sh に登録された全ファイルを走査し、値の書き込みを持つファイルが
       value-write-allowlist.tsv にあることを確かめる（許可一覧に古い行が残っていても失敗する）。
+      reference-allowlist.tsv の各行も、ファイルが在り・run_all_migrations.sh に書かれ・sha256 が一致することを確かめる。
 """
 from __future__ import annotations
 
 import argparse
+import hashlib
 import re
 import subprocess
 import sys
@@ -24,6 +27,7 @@ ROOT = Path(__file__).resolve().parent.parent
 GUARD_DIR = ROOT / "scripts" / "migration-guard"
 TABLES_FILE = GUARD_DIR / "protected-tables.txt"
 ALLOWLIST_FILE = GUARD_DIR / "value-write-allowlist.tsv"
+REFERENCE_ALLOWLIST_FILE = GUARD_DIR / "reference-allowlist.tsv"
 RUNNER = ROOT / "scripts" / "run_all_migrations.sh"
 
 MIGRATION_PATH = re.compile(r"^migrations/[0-9].*\.sql$")
@@ -93,6 +97,25 @@ def git(*args: str) -> str:
     return subprocess.run(["git", *args], cwd=ROOT, capture_output=True, text=True, check=True).stdout
 
 
+def git_bytes(*args: str) -> bytes:
+    return subprocess.run(["git", *args], cwd=ROOT, capture_output=True, check=True).stdout
+
+
+def load_reference_allowlist(path: Path = REFERENCE_ALLOWLIST_FILE) -> dict[str, tuple[str, str]]:
+    """チェック 8 の例外の一覧: file -> (sha256, reason)。ファイルが無ければ空。"""
+    rows: dict[str, tuple[str, str]] = {}
+    if not path.is_file():
+        return rows
+    for number, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+        if not raw.strip() or raw.lstrip().startswith("#"):
+            continue
+        cols = raw.split("\t")
+        if len(cols) < 4 or not all(c.strip() for c in cols[:4]):
+            raise SystemExit(f"{path}:{number}: 列は file<TAB>sha256<TAB>reason<TAB>decision_ref の 4 つが必要です")
+        rows[cols[0].strip()] = (cols[1].strip().lower(), cols[2].strip())
+    return rows
+
+
 # ---------------------------------------------------------------- diff モード（チェック 7・8）
 def changed_migrations(base: str, head: str) -> list[tuple[str, list[str], str]]:
     """(状態 A/M/R, 差分を取るパス, 新しいパス)。migrations/ の .sql だけ。"""
@@ -121,7 +144,9 @@ def run_diff(base: str, head: str, check: str) -> int:
     tables = load_tables()
     regexes = build_regexes(tables)
     reference = build_reference_regex(tables)
+    ref_allow = load_reference_allowlist()
     files = changed_migrations(base, head)
+    exempted: list[str] = []
     failed7: list[str] = []
     failed8: list[str] = []
     for status, paths, new in files:
@@ -134,10 +159,24 @@ def run_diff(base: str, head: str, check: str) -> int:
         if hits and check in ("7", "all"):
             failed7.append(f"--- {Path(new).name} ---")
             failed7.extend(f"  {kind} {table}: {line}" for _, kind, table, line in hits)
-        if check in ("8", "all"):
+        exempt = False
+        stale_exception = False
+        if check in ("8", "all") and new in ref_allow:
+            want, reason = ref_allow[new]
+            actual = hashlib.sha256(git_bytes("show", f"{head}:{new}")).hexdigest()
+            if actual == want:
+                exempt = True
+                exempted.append(f"⚠ 例外の一覧により確認 8 から外した: {new}（{reason}）")
+            else:
+                stale_exception = True
+                failed8.append(f"--- {Path(new).name} ---")
+                failed8.append(f"  中身が変わったので例外は効かない（一覧 sha256={want} / 今 {actual}）")
+                failed8.append(f"  例外の一覧を直すか、中身を戻す: {REFERENCE_ALLOWLIST_FILE.relative_to(ROOT)}")
+        if check in ("8", "all") and not exempt:
             bad = [ln.strip() for ln in lines if reference.search(ln) and not ALLOW_PATTERN.search(ln)]
             if bad:
-                failed8.append(f"--- {Path(new).name} ---")
+                if not stale_exception:
+                    failed8.append(f"--- {Path(new).name} ---")
                 failed8.extend(f"  {line}" for line in bad)
     if not files:
         print("✅ 追加・変更された migrations/*.sql なし — チェック 7・8 スキップ")
@@ -154,6 +193,8 @@ def run_diff(base: str, head: str, check: str) -> int:
         else:
             print(f"✅ 共用マスタテーブルへのデータ操作なし（{len(files)} ファイル）— チェック7 通過")
     if check in ("8", "all"):
+        if exempted:
+            print("\n".join(exempted))
         if failed8:
             status_code = 1
             print("❌ MIGRATION GUARD FAILED (チェック8)")
@@ -198,6 +239,24 @@ def scan_registered() -> dict[str, set[str]]:
     return flagged
 
 
+def reference_allowlist_problems() -> list[str]:
+    """チェック 8 の例外の一覧の各行: ファイルが在り・run_all_migrations.sh にパスが書かれ・sha256 が一致すること。"""
+    problems = []
+    runner_text = RUNNER.read_text(encoding="utf-8")
+    for path, (want, _reason) in sorted(load_reference_allowlist().items()):
+        file = ROOT / path
+        if not file.is_file():
+            problems.append(f"例外の一覧の行が、無いファイルを指している（古い行。行を消す）: {path}")
+            continue
+        # run_sql 行ではなく変数で指定されるファイルもあるため、パスの文字が書かれていることで判定する
+        if path not in runner_text:
+            problems.append(f"例外の一覧の行が、scripts/run_all_migrations.sh に書かれていないファイルを指している: {path}")
+        actual = hashlib.sha256(file.read_bytes()).hexdigest()
+        if actual != want:
+            problems.append(f"例外の一覧の sha256 が今の中身と違う（中身が変わったので例外は効かない）: {path}")
+    return problems
+
+
 def run_repo() -> int:
     registered = set(registered_files())
     flagged = scan_registered()
@@ -215,11 +274,13 @@ def run_repo() -> int:
             problems.append(f"許可一覧の行が、登録されていない（または無い）ファイルを指している: {path}")
         elif path not in flagged:
             problems.append(f"許可一覧の古い行（このファイルに値の書き込みはもう無い。行を消す）: {path}")
+    problems.extend(reference_allowlist_problems())
     if problems:
         print("❌ MIGRATION GUARD FAILED (全件走査)")
         print("\n".join(f"  - {p}" for p in problems))
         print("直し方: 値の書き込みは migration から外す（neutralize）か、残すものは理由つきで")
         print("scripts/migration-guard/value-write-allowlist.tsv に書く。外したファイルの行は同じ PR で消す。")
+        print("確認 8 の例外は scripts/migration-guard/reference-allowlist.tsv（中身を変えたら sha256 も直す）。")
         return 1
     print(f"✅ 登録された {len(registered)} ファイルを走査: 値の書き込みを持つ {len(flagged)} ファイル = 許可一覧 {len(allow)} 行 — 全件走査 通過")
     return 0
