@@ -39563,7 +39563,7 @@
     },
     "/api/v1/auth/passkey/prompt": {
       "get": {
-        "description": "ログイン直後のパスキー登録（自動作成・案内）を出してよいか。",
+        "description": "ログイン直後のパスキー登録（自動作成・案内）を出してよいか。\n\n読むだけの口なので出どころの確認はしない（ブラウザは同じサイトあての GET に Origin を付けない）。\n本人の Bearer トークンが要るので、他のサイトからは読めない。",
         "operationId": "passkey_prompt_status_api_v1_auth_passkey_prompt_get",
         "responses": {
           "200": {
