@@ -1,4 +1,4 @@
-# 段2 実装カード（設計第4.6版の追補・第6版）
+# 段2 実装カード（設計第4.6版の追補・第6.1版）
 
 - 対象: docs/handoff/cloud-case-ai/design.md 第4.6版 §4-2・§4-3・§7（T2〜T6c・T7）・§9 の段2。ADR-1052（Accepted）。
 - 根拠の写し: S=origin/main 8c6f52813（Merge #4942）。行番号はすべてこの sha。実装の前に最新の origin/main で行を合わせ直す（§3(a)）。
@@ -81,6 +81,12 @@
 | L1 good の書き出しに失敗すると、動いている設定より古い good が残り、後で 1c がそれで作り直す | 失敗したら good と tmp を消す。⑧ の期待を「good が無い」に直す（§4-E の 1 の 5・§5） |
 | L2 §1 の #9 の行が 1c の新しい形を書いていない | 書き足す（§1 #9） |
 
+## 0-7. 第6版の実装の途中で見つかった直し（第6.1版・2026-10-31 Opus）
+| 見つかったこと | 直し（場所） |
+|---|---|
+| §4-C の GET /ops/case/audit-inputs は ai_cloud_meta.build_log を読むが、§4-A の salesanchor_app の権限に build_log の SELECT が無い（実装役が commit d961939cf で 1 行足して【要確認】とした） | 採る。§4-A に書き足す。build_log の列は built_at・ok・view_count・failed_count・error_class だけで値は無い（S origin/main:migrations/20261024_100000_create_ai_cloud_meta.sql:22-28）。口は ADMIN の鍵だけ（§4-C）。migration の【要確認】の注記は、この節を指す注記に替える |
+| §3(j)(k)(m) の公式文書が読めない（手元は Context7 の月の上限・ページを読む担当は手元で起動できない見張り、クラウドは docs.docker.com と docs.github.com に届かない） | (k) は本物の実行の記録で確かめた（§3(k) に結果）。(j)(m) は文書でなく本物の docker で確かめる。試験 #16 を足し、GitHub の試験場（sandbox-test）で Opus が流して生出力を残す（§3(j)(m)・§1 #16） |
+
 ## 1. 触るファイル（変更前→変更後）
 | # | ファイル | 今（S） | 変える形 |
 |---|---|---|---|
@@ -98,6 +104,7 @@
 | 12 | 新 backend/tests/ops/test_nginx_case_api_guard.py | 無し | §4-F の #13 の数え合わせ（#10 の仕事から走らせる） |
 | 13 | 新 backend/tests/ops/test_unmask_http.py・新 backend/tests/test_ops_case_router.py | 無し | §4-G |
 | 14 | 新 scripts/tests/nginx-case-api-guard.sh | 無し | §4-F。#10 の仕事が本物の nginx に curl と openssl で当てる台本 |
+| 16 | 新 tests/sandbox/compose-run-nginx-mount.sh | 無し | §3(j)(m) を本物の docker compose で確かめる試験（§3(j)(m) の「試験 #16 の形」）。S tests/sandbox/README.md の決まり（secrets・本番を使わない・trap で片付け・失敗時は先に docker logs） |
 | 15 | docs/handoff/cloud-case-ai/design.md | :176-177・:179・:210・:146・:366 | V5-1〜V5-4 と V5-3（:366 の CI の置き場）に合わせる（このカードの PR で直す。実装の PR では触らない） |
 
 ## 2. 触らない範囲
@@ -119,9 +126,12 @@
 - (h) nginx の材料: S nginx/nginx.conf の変数を通さない proxy_pass の宛先は IP だけ（:235・:252・:265・:589 の 49.212.160.98）で、名前の解決は要らない。ssl_certificate の道は 5 つ（:35-36・:75-76・:339-340・:575-576・:629-630）＋ case-api の 1 つ。最新の origin/main でこの数が違えば、#11 の偽の証明書の数を合わせる。読む物（htpasswd.d・/var/www の各所）を全部数える。
 - (i) 容器のイメージ: ai-unmask-http も astro-webapp-backend を使う（S docker-compose.ai-reader-cloud-http.yml:15）。psycopg2 がイメージに入っているか（S backend/app/ops/readonly_query.py:280-289 が使っている）。
 - (j) nginx の前の点検の形: `docker compose run --rm --no-deps -T nginx nginx -t` が、compose の nginx の取り付け（S docker-compose.yml:11-19）と networks（frontnet）をそのまま使い、ports を開かないこと（docker compose の公式文書 `run` の項。--service-ports を付けない限り ports は開かない）。Context7 か公式文書で確かめ、違えば止めて Opus へ。
+  - 第6.1版: 公式文書は読めない（§0-7）。試験 #16 で確かめる。試験 #16 の形（(m) と同じ台本）: S docker-compose.yml の nginx と同じ版のイメージ・同じ形（単一ファイルの `./x/nginx.conf:/etc/nginx/conf.d/default.conf:ro`・`ports` に 443 を 1 つ・networks frontnet）の小さな compose を /tmp に作り、`up -d` で 1 つ起こした状態で次を流して生出力を出す: ① `docker compose run --rm --no-deps -T nginx nginx -t` が 0 で終わる（起きている容器と同じ ports を開こうとすれば、ぶつかって失敗する） ② 同じ run で `cat /etc/nginx/conf.d/default.conf` が compose の取り付けの中身 ③ `docker compose run -d --no-deps --name probe-run nginx sleep 60` で起こした run の容器を `docker inspect` して、NetworkSettings.Networks に `<project>_frontnet` があり、NetworkSettings.Ports に HostPort が無い（見た後に `docker rm -f probe-run`） ④ 中身の壊れた設定を取り付けたときに nginx -t が 0 でない（点検が本当に効く）。どれかが違えば止めて Opus へ。
 - (k) 失敗を後ろへ送る形: GitHub Actions で `continue-on-error: true` の手順が失敗したとき、`steps.<id>.outcome` が failure・`conclusion` が success になり、後ろの `success()` の手順が動くこと（公式文書の steps の文脈の項）。違えば止めて Opus へ。あわせて、`continue-on-error` で落ちた手順の後でも、後ろの `failure()` の手順（S :1106・:1124）が動かず、1b が `exit 1` してから動くことを確かめる（公式文書の expressions の項には continue-on-error との関係が書かれていない。偽の流れで 1 回試して生出力を出す）。
+  - 第6.1版・Opus が確かめた結果（実装役は試さなくてよい）: このリポジトリの S .github/workflows/security-scan.yml は同じ形（`id` と `continue-on-error: true` の手順の後に、状態の関数を書かない `if: steps.<id>.outcome == 'failure'` の手順＝暗黙の `success() &&` の手順が 2 つ、最後に `exit 1` の手順）。その本物の実行 40598055892（2026-10-27 22:52 UTC・schedule）の手順の記録（`gh run view 40598055892 --json jobs`）で、2 つの仕事とも: 検査の手順の conclusion が success、後ろの 2 つの手順が skipped でなく success（＝outcome が failure で、かつ success() が真のまま）、`exit 1` の手順が failure で仕事が failure。よって「outcome は failure・conclusion は success・後ろの success() の手順は動く・最後の exit 1 で全体が失敗の表示」は事実。`failure()` は success() と同じ「前の手順の結果」を見るので、success() が真のままの間は failure() は偽（S :1106・:1124 は 1b の後にだけ動く）。この最後の 1 文は記録からの推論で、試した記録ではない。1c は自分で nginx -t を通してから作り直すので、仮に早く動いても壊れた設定で作り直さない（§4-E の 1c）。
 - (l) CI の IPv6: GitHub のランナーで `--network host` の nginx が [::]:443 で待ち受け、::1 に届くか。最初に 1 回だけ試し、届かなければ止めて Opus へ（IPv6 の試験を外すかは Opus が決める）。
 - (m) 戻り先の点検の形: `docker compose run --rm --no-deps -T -v /home/ubuntu/salesanchor/.deploy_prev_nginx.conf:/etc/nginx/conf.d/default.conf:ro nginx nginx -t` で、サービスの取り付け（S docker-compose.yml:11）が同じ道の -v で置き換わるかを docker compose の公式文書と sandbox で確かめる。置き換わらない・重なりでエラーなら、`-v …:/tmp/candidate.conf:ro` と `--entrypoint sh` で、`/etc/nginx/nginx.conf` の `include /etc/nginx/conf.d/*.conf;` を `/tmp/candidate.conf` に替えた写しを /tmp に作り `nginx -t -c` で試す形にする。どちらも動かなければ止めて Opus へ。
+  - 第6.1版: 試験 #16 に足す: ⑤ 同じ compose で `run --rm --no-deps -T -v <別の中身のファイル>:/etc/nginx/conf.d/default.conf:ro nginx sh -c 'cat /etc/nginx/conf.d/default.conf; nginx -t'` が 0 で終わり、cat が -v の中身（サービスの取り付けの中身でない） ⑥ -v に壊れた設定を渡すと nginx -t が 0 でない ⑦ 取り付け元のファイルを `mv` で別の中身に入れ替えた後（git reset と同じく inode が替わる）、`up -d --no-deps --force-recreate nginx` で作り直した容器の中身が新しい中身。⑤ が違えば、上の `/tmp/candidate.conf` と `nginx -t -c` の形で書き、その形も試験 #16 で確かめる。実装役は #9 を ⑤ が通る前提の形で書き、試験 #16 を push する。Opus が手元から `gh workflow run sandbox-test.yml --ref release/cloud-case-ai-stage2 -f test=compose-run-nginx-mount` で流し、結果で形を決める。
 - (n) 置くファイル: `.deploy_nginx_good.conf` と `.deploy_prev_nginx.conf` が、S deploy.yml の `git reset --hard`（:258・:765）で消えないこと（追跡していないファイルは reset で消えない）。deploy.yml に `git clean` が無いことを数える。あれば止めて Opus へ。
 - (済) 証明書: 2026-10-31 16:46 に PO の `!` で取得済み（certbot の webroot・今の名前と同じ形）。ホスト側の道は /home/ubuntu/salesanchor/certbot/conf/live/case-api.salesanchor.jp/（容器の中では S docker-compose.yml:19 の取り付けで /etc/letsencrypt/live/case-api.salesanchor.jp/。S docs/PHASE5_DOMAIN_CUTOVER_RUNBOOK.md:29）。マージの直前に Opus が PO の `!` の確認台本で、ホスト側の fullchain.pem と privkey.pem があることを ls でもう一度確かめる（中身は読まない。§4）。
 
@@ -138,7 +148,7 @@
   - ops_case のスキーマの USAGE（前例の ops_incidents は public にあるので写せる前例が無い。付けないと backend の口がどれも表と is_denied_source に届かない）。
   - cases: SELECT・INSERT・UPDATE。reports: SELECT・INSERT。unmask_reads: SELECT。audits: SELECT・INSERT。deny_tables: SELECT。
   - unmask_requests: SELECT・INSERT と、列を絞った `UPDATE (status, decided_by, decision_reason, approved_minutes, expires_at)`（read_count は backend から変えられない。FOR UPDATE は 1 列以上の UPDATE 権限で足りる。PostgreSQL 16 公式文書 SELECT の「The Locking Clause」）。
-  - ai_cloud_meta の USAGE と build_columns の SELECT（申請の受付で列を確かめるため。中身は名前だけで値は無い）。is_denied_source の EXECUTE（is_denied_source は PUBLIC から REVOKE し、salesanchor_app と ai_unmask_owner にだけ GRANT する。unmask_fetch の中から呼ぶため持ち主にも要る）。
+  - ai_cloud_meta の USAGE と build_columns の SELECT（申請の受付で列を確かめるため。中身は名前だけで値は無い）。build_log の SELECT（§4-C の audit-inputs が最新の行の ok・失敗の数を読むため。列は数と ok と失敗の種類だけ。第6.1版 §0-7）。is_denied_source の EXECUTE（is_denied_source は PUBLIC から REVOKE し、salesanchor_app と ai_unmask_owner にだけ GRANT する。unmask_fetch の中から呼ぶため持ち主にも要る）。
 - ロール（段1の S migrations/20261024_100100_create_ai_reader_cloud_role.sql の DO の形。属性が違えば RAISE EXCEPTION）:
   - ai_unmask_owner: NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION BYPASSRLS。
   - ai_unmask: LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS CONNECTION LIMIT 2。パスワードは付けない（§4 の PO の `!`）。
