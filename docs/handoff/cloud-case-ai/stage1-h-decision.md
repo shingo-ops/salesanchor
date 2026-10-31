@@ -3,7 +3,7 @@
 ## 1. §3(h) 試験 DB の列と分類表の差（9 列）
 
 ### 観測事実
-- 実装役の報告: 試験 DB（tests/rls_bootstrap.py の作り方）で、分類の無い「そのまま」でない列が 9 つ（stage1-evidence/pytest-test_ai_cloud_views.txt:20-29）。
+- 実装役の報告: 試験 DB（tests/rls_bootstrap.py の作り方）で、分類の無い「そのまま」でない列が 9 つ（除外を入れる前の回の実行記録。今の stage1-evidence/pytest-test_ai_cloud_views.txt は除外後の合格回で、9 列の行は無い）。
   - public.tenants.company_name・public.users.firebase_uid
   - tenant_001.suppliers の 7 列（supplier_code・name・contact_name・email・phone・address・notes）
 - 本番の確認（2026-10-31 04:09 JST、reader 鍵の道・ai_reader で pg_attribute。AUDIT sha=a40f10a0a8a5 rows=7）:
