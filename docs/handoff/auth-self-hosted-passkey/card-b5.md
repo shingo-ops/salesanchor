@@ -6,7 +6,7 @@
 - 前提を決めている別の設計: docs/handoff/admin-2fa/design.md（ADR-1048。:57・:66-70・:77・:109・:142）
 - 現在地: docs/handoff/auth-self-hosted-passkey/recon-b5.md（origin/main 5c13bfbef 基準。以下「recon Qn」）
 - 対象ADR: ADR-1013（本テーマ）、ADR-1048（発行の共通関数・amr）、ADR-027（文言は t()）、ADR-144（UI は金型）、ADR-025（手動 INSERT 禁止。このカードは手動 INSERT をしない）
-- 状態: 第4版（2026-10-31 Opus）。第1版（5157d338c）の審査は REVISE（MAJOR 4・MINOR 14）。第2版（f6b3e3b09）の審査は REVISE（MAJOR 1・MINOR 7）。第3版（21cbffa6b）の審査は REVISE（MAJOR 2・MINOR 3）。第4版で全件を反映した（末尾「改訂の記録」）。PO の実装承認は 2026-10-31（「1」＝審査に通れば便5 と ADR-1048 便7a〜7d を止めずに本番まで進める）。**実装未着手**
+- 状態: 第4.1版（2026-10-31 Opus）。第4版（5049f83e5）の審査は APPROVE（MAJOR 0・MINOR 4）。第4.1版で MINOR 4 件を文言として反映した。第1版（5157d338c）の審査は REVISE（MAJOR 4・MINOR 14）。第2版（f6b3e3b09）の審査は REVISE（MAJOR 1・MINOR 7）。第3版（21cbffa6b）の審査は REVISE（MAJOR 2・MINOR 3）。第4版で全件を反映した（末尾「改訂の記録」）。PO の実装承認は 2026-10-31（「1」＝審査に通れば便5 と ADR-1048 便7a〜7d を止めずに本番まで進める）。**実装未着手**
 - 担当: 実装 クラウドの Sonnet／コード審査 Opus（reviewer）／マージ・反映確認 Opus（PO の委任）／K2 の実演 PO
 
 ## 0. 読んだ節（docs/handoff/design-partner-card-ops/guards/）
@@ -95,8 +95,8 @@
   - UUID の列には str を渡している（self_tokens.py:164・:172。本番の PostgreSQL でも動いている）。sqlite の型の変換は conftest.py:270-280（`register_adapter`）
   - CI の pytest は `test.yml:207-242`（SQLite の全部＋PostgreSQL の RLS 試験）
   - 全部の口を数える既存の試験が 2 つある。CI は全件を流す（.github/workflows/test.yml「Run pytest (full suite + PostgreSQL RLS)」の `pytest -q --tb=short`）
-    - `backend/tests/test_realtime_topics.py:68-73`: 書き込みの口（POST/PUT/PATCH/DELETE）は全部、`backend/app/realtime/topics.py` の `WRITE_ROUTE_TOPICS`（:20）か `NO_SIGNAL_ROUTES`（:86）のどちらか一方に載っていないと落ちる。auth の口は :100-126 に `_PENDING`（:83）で並ぶ。前例: 便4a の 51915ba57 は password/change を足した
-    - `backend/tests/test_viewer_isolation.py:27-55・:91-114`: 閲覧者のトークンで全部の口を叩き、401 以外を返した口が `_PUBLIC_NO_AUTH_ROUTES`（:27。auth は :41-45）に無ければ落ちる
+    - `backend/tests/test_realtime_topics.py:34-39`（`test_every_write_route_is_in_exactly_one_table`。表にあって実在しない口は :108-111 で落ちる）: 書き込みの口（POST/PUT/PATCH/DELETE）は全部、`backend/app/realtime/topics.py` の `WRITE_ROUTE_TOPICS`（:20）か `NO_SIGNAL_ROUTES`（:86）のどちらか一方に載っていないと落ちる。auth の口は :100-101 と :122-126 の 2 か所に `_PENDING`（:83）で並ぶ（間は viewer・ops の行）。並び順を確かめる試験は無い。前例: 便4a の 51915ba57 は password/change を足した
+    - `backend/tests/test_viewer_isolation.py:27-55・:96-117`（`test_viewer_token_gets_401_on_every_app_route`）: 閲覧者のトークンで全部の口を叩き、401 以外を返した口が `_PUBLIC_NO_AUTH_ROUTES`（:27。auth は :41-45）に無ければ落ちる
   - 画面の単体試験は `npm run test:unit`＝`vitest run --config vitest.unit.config.ts --project unit`（package.json:44）。型の生成は `npm run generate:api-types`（package.json:10。`src/api/generated/schema.d.ts` を作る）
 
 ## 3. 触るファイル（これ以外は触らない）
@@ -197,7 +197,7 @@ def _issue_session_tokens(
 - py_webauthn の parse と verify は**同じ try の中**に置く。`except (WebAuthnException, ValueError)` でまとめて受ける（F8。`userHandle` の解読は `binascii.Error`＝`ValueError` を出す）
 - 返す detail は識別子だけ
 - 全部の口を数える既存の試験（F13）に合わせる:
-  - `topics.py` の `NO_SIGNAL_ROUTES` の auth の行（:100-126）に、アルファベット順で次の 5 行を `_PENDING` で足す: `("DELETE", "/api/v1/auth/passkeys/{passkey_id}")`・`("POST", "/api/v1/auth/passkey/login/options")`・`("POST", "/api/v1/auth/passkey/login/verify")`・`("POST", "/api/v1/auth/passkey/register/options")`・`("POST", "/api/v1/auth/passkey/register/verify")`。`WRITE_ROUTE_TOPICS` には足さない
+  - `topics.py` の `NO_SIGNAL_ROUTES` の auth のまとまり :122-126 の、`("POST", "/api/v1/auth/password/change")`（:124）の直後に、次の順で 5 行を `_PENDING` で足す: `("POST", "/api/v1/auth/passkey/login/options")`・`("POST", "/api/v1/auth/passkey/login/verify")`・`("POST", "/api/v1/auth/passkey/register/options")`・`("POST", "/api/v1/auth/passkey/register/verify")`・`("DELETE", "/api/v1/auth/passkeys/{passkey_id}")`。`WRITE_ROUTE_TOPICS` には足さない
   - `test_viewer_isolation.py` の `_PUBLIC_NO_AUTH_ROUTES` の auth の行（:41-45）に、ログイン前の 2 本 `("POST", "/api/v1/auth/passkey/login/options")`・`("POST", "/api/v1/auth/passkey/login/verify")` を足す。この 2 本はトークンを見ない（§4.4 の作り）。ログイン後の 4 本は `get_current_user` を通るので足さない（閲覧者のトークンで 401 になる）
 - `record_audit_log` は、`tenant_id=利用者の tenant_id`・`user_id=利用者の id` で呼ぶ。tenant の文脈の外で呼ぶ（password/change と同じ順＝F6）
 
@@ -393,7 +393,7 @@ CREATE TABLE IF NOT EXISTS webauthn_credentials (
 6. `cd "${WT}" && cd backend && ENVIRONMENT=test python -m tools.export_openapi ../frontend/api-contract/openapi.json 2>&1 | tail -5` の後に `cd "${WT}" && cd frontend && npm run generate:api-types 2>&1 | tail -5`。書き出した `frontend/api-contract/openapi.json` はコミットする（CI「API contract is up to date」＝api-contract-check.yml:31-53 が差分で落とすため。ADR-1010。前例 51915ba57）。続けて `cd "${WT}" && git status --short frontend/api-contract/` を貼る（コミット後は空）
 7. `cd "${WT}" && cd frontend && npx vitest run --config vitest.unit.config.ts --project unit src/lib/auth src/pages/login src/pages/account-settings src/components/AllLegacyButtonOperationMigration.test.tsx 2>&1 | tail -20`
 8. `cd "${WT}" && cd frontend && npx tsc --noEmit -p . 2>&1 | tail -10`
-9. `cd "${WT}" && cd frontend && npm run lint 2>&1 | tail -15`
+9. `cd "${WT}" && cd frontend && npm run check:all 2>&1 | tail -30`（CI の frontend-check.yml と同じ。lint を含む）。続けて `cd "${WT}" && cd backend && ruff check app/ 2>&1 | tail -10`（CI の test.yml:84-86 と同じ）
 10. `cd "${WT}" && node -e "const a=require('./frontend/src/locales/ja.json'),b=require('./frontend/src/locales/en.json');const k=o=>Object.entries(o).flatMap(([x,v])=>typeof v==='object'?k(v).map(y=>x+'.'+y):[x]);const A=k(a),B=new Set(k(b));console.log(A.filter(x=>!B.has(x)).length, k(b).filter(x=>!new Set(A).has(x)).length)"`（`0 0`）
 11. `cd "${WT}" && grep -c "_issue_session_tokens" backend/app/routers/auth.py`（定義 1＋呼び出し 4＝`5`）
 12. `cd "${WT}" && git diff --name-only origin/main...HEAD | tail -40`（§3 の一覧と一致すること）
@@ -434,13 +434,13 @@ backend/tests/test_passkeys.py に入れる試験:
   - `selfPasskeyLogin` は options → startAuthentication → verify の順に呼び、トークンを受け取る（@simplewebauthn/browser は vi.mock）
   - `passkeyBrowserError` は NotAllowedError で `"cancelled"`、InvalidStateError で `"exists"` を返す
 - LoginPage.test.tsx（本物の AuthProvider のまま。`mock.self = true` で自社ログインにする）
-  - `vi.mock("../../lib/auth/passkey", async (orig) => ({ ...(await orig()), passkeySupported: () => mock.passkey, selfPasskeyLogin: mock.selfPasskeyLogin }))` を足す。`passkeyBrowserError` は本物のまま。`mock`（:8 の vi.hoisted）に `passkey: true`・`selfPasskeyLogin: vi.fn()` を足す
+  - `vi.mock("../../lib/auth/passkey", async (orig) => ({ ...(await orig()), passkeySupported: () => mock.passkey, selfPasskeyLogin: mock.selfPasskeyLogin }))` を足す。`passkeyBrowserError` は本物のまま。`mock`（:8 の vi.hoisted）に `passkey: false`・`selfPasskeyLogin: vi.fn()` を足す（既定は偽。既存の Firebase の試験＝beforeEach :54 `mock.self = false` でボタンが出ないように、対応端末の試験の中だけ `mock.self = true`・`mock.passkey = true` にしてから描く）
   - 対応端末でボタンが出る。非対応では出ない
   - 押すと AuthProvider を通って `selfPasskeyLogin` が 1 回呼ばれ、処理中は両方のボタンが押せない
   - 取り消しで `authError.passkeyCancelled`、401 で `authError.passkeyFailed`（パスワードの文言が出ない）
 - PasskeySection.test.tsx: 一覧・0 件の表示・追加・削除の確認窓から api.delete・409 の 2 つの文言・InvalidStateError で passkeyExists
 - authErrorMessage.test.ts: `"passkey"` の 401・400×2・409×2・503。既存の 4 つの文脈の結果が変わらないこと
-- SecuritySection.test.tsx: まず偽物を直す。:7 の `mock` に `get: vi.fn()`・`delete: vi.fn()` を足し、beforeEach で `mock.get.mockReset().mockResolvedValue({ items: [] })` とする。:23 の差し替えを `api: { get: mock.get, post: mock.post, delete: mock.delete }` にする（便5 の後は既存の試験でも PasskeySection が描かれ、一覧を読むため）。その上で: 自社ログインでパスキーの節が、セキュリティの `<section>` の中ではなく後ろの兄弟として出る（`container.querySelectorAll(".account-settings-section")` が 2 つで、入れ子でない）。Firebase では出ない。既存の試験は全部そのまま通る
+- SecuritySection.test.tsx: まず偽物を直す。:7 の `mock` に `get: vi.fn()`・`delete: vi.fn()` を足し、beforeEach の render（:48）より前に `mock.get.mockReset().mockResolvedValue({ items: [] })` を置く。「Firebase では出ない」の確かめは、試験の中で `cleanup()` → `mock.self = false` → 描き直す（beforeEach は `mock.self = true` で描くため）。:23 の差し替えを `api: { get: mock.get, post: mock.post, delete: mock.delete }` にする（便5 の後は既存の試験でも PasskeySection が描かれ、一覧を読むため）。その上で: 自社ログインでパスキーの節が、セキュリティの `<section>` の中ではなく後ろの兄弟として出る（`container.querySelectorAll(".account-settings-section")` が 2 つで、入れ子でない）。Firebase では出ない。既存の試験は全部そのまま通る
 - apiReauth.test.ts: `/auth/passkeys` と `/auth/passkey/register/options` の 401 は更新を 1 回送って元の要求を送り直す。`/auth/login` などほかの `/auth/` の 401 は今までどおり更新しない（:97 の試験がそのまま通る）
 
 ## 6. 分岐ごとの対処
@@ -556,5 +556,11 @@ PR を revert して deploy する。登録済みのパスキーの行は残る�
   - MINOR-1 api.ts の行番号を実物（:68・:69-77・:78-99・:82）に直し、理由の文を先回りの更新に合わせた（F11・§4.5 (7)）
   - MINOR-2 T5b を本物の parse と `"A"` にした
   - MINOR-3 test_self_auth.py の行番号・F11 の言い過ぎ・Redis の偽物は async・§6 の並びを直した
+
+- 第4.1版（2026-10-31）: 第4版 5049f83e5 の審査（reviewer opus・APPROVE）の MINOR 4 件を反映
+  - MINOR-a 試験の行番号を :34-39・:96-117 にし、topics.py に足す場所を :124 の直後に決め、並びを path の順にした
+  - MINOR-b 手元の確かめを CI と同じ `npm run check:all` と `ruff check app/` にした（§5-9）
+  - MINOR-c LoginPage.test.tsx の偽物の既定を偽にした
+  - MINOR-d SecuritySection.test.tsx の get の設定の置き場と、Firebase の描き直しを書いた
 
 END OF CARD
