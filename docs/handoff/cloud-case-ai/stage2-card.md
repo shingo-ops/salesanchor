@@ -1,4 +1,4 @@
-# 段2 実装カード（設計第4.6版の追補・第6版）
+# 段2 実装カード（設計第4.6版の追補・第6.4版）
 
 - 対象: docs/handoff/cloud-case-ai/design.md 第4.6版 §4-2・§4-3・§7（T2〜T6c・T7）・§9 の段2。ADR-1052（Accepted）。
 - 根拠の写し: S=origin/main 8c6f52813（Merge #4942）。行番号はすべてこの sha。実装の前に最新の origin/main で行を合わせ直す（§3(a)）。
@@ -81,6 +81,38 @@
 | L1 good の書き出しに失敗すると、動いている設定より古い good が残り、後で 1c がそれで作り直す | 失敗したら good と tmp を消す。⑧ の期待を「good が無い」に直す（§4-E の 1 の 5・§5） |
 | L2 §1 の #9 の行が 1c の新しい形を書いていない | 書き足す（§1 #9） |
 
+## 0-7. 第6版の実装の途中で見つかった直し（第6.1版・2026-10-31 Opus）
+| 見つかったこと | 直し（場所） |
+|---|---|
+| §4-C の GET /ops/case/audit-inputs は ai_cloud_meta.build_log を読むが、§4-A の salesanchor_app の権限に build_log の SELECT が無い（実装役が commit d961939cf で 1 行足して【要確認】とした） | 採る。§4-A に書き足す。build_log の列は built_at・ok・view_count・failed_count・error_class だけで値は無い（S origin/main:migrations/20261024_100000_create_ai_cloud_meta.sql:22-28）。口は ADMIN の鍵だけ（§4-C）。migration の【要確認】の注記は、この節を指す注記に替える |
+| §3(j)(k)(m) の公式文書が読めない（手元は Context7 の月の上限・ページを読む担当は手元で起動できない見張り、クラウドは docs.docker.com と docs.github.com に届かない） | (k) は本物の実行の記録で確かめた（§3(k) に結果）。(j)(m) は文書でなく本物の docker で確かめる。試験 #16 を足し、GitHub の試験場（sandbox-test）で Opus が流して生出力を残す（§3(j)(m)・§1 #16） |
+
+## 0-8. 第6.1版の実装の CI で見つかった直し（第6.2版・2026-10-31 Opus）
+どれも CI が要る付けたしで、作る物の形と守りは変えない。
+| 見つかったこと | 直し（場所） |
+|---|---|
+| 試験 #16（sandbox-test 実行 41196506145・先頭 ab7197912）は ①〜⑦ がすべて PASS。§3(m) の ⑤ が通ったので、#9 の 1 の 2 は `-v` の形のままでよい | 直しなし（記録だけ） |
+| Migration SQL Test の migration-test-run（実行 41196171461）が `migrations/20261031_200000_create_ops_case.sql:19: ERROR: relation "public.ops_incidents" does not exist` で落ちる。この仕事は変わった migration だけを、S .github/workflows/migration-test.yml の手書きの土台の上で流す。土台に public.ops_incidents が無い（全部を流す migration-full-dryrun は success） | S .github/workflows/migration-test.yml の migration-test-run の土台（`PUBLIC_SQL` の終わりの前。ほかの前提の表と同じ「本番作成済み・前提として登録する」の注記の形）に、S migrations/20261016_100000_create_ops_incident_tables.sql:5-35 の public.ops_incidents の CREATE TABLE IF NOT EXISTS を写す（§1 #17） |
+| API Contract Check（実行 41196171546）が、§4-C の口 8 つが frontend/api-contract/openapi.json に無いと落ちる。今の /api/v1/ops/* の口（incidents・control・error-reports など）はこの表に載っている | 落ちた記録の案内どおり `cd backend && ENVIRONMENT=test python -m tools.export_openapi ../frontend/api-contract/openapi.json` で作り直す。手で書かない（§1 #18） |
+
+## 0-9. 第6.2版の実装の CI と本線の取り込みで見つかった直し（第6.3版・2026-10-31 Opus）
+どれも本線に合わせる付けたしで、作る物の形と守りは変えない。
+| 見つかったこと | 直し（場所） |
+|---|---|
+| PR が本線と食い違い（mergeable CONFLICTING）、pull_request の CI が新しい先頭で動かない。食い違いは S scripts/run_all_migrations.sh の 1 か所だけ（`git merge-tree --write-tree --name-only origin/main HEAD`）。本線（2fa6d499d・ADR-1013 便6）が同じ行の位置に `run_sql migrations/20261031_200000_add_passkey_enroll_prompt_skips.sql` を足した | origin/main を取り込む（merge。rebase と force push はしない）。食い違いの行は両方残し、本線の passkey の 2 行（注記と run_sql）を先、この PR の 2 行を後にする。2 つの表は互いに触らない |
+| 上の本線の migration と、この PR の migration の刻印が同じ 20261031_200000。S .github/workflows/migration-guard.yml:287-331 の「タイムスタンプ重複チェック」が、新規の刻印が main 既存と同じなら落とす（origin/main に 20261031_210000 は無い） | この PR の migration を `git mv` で migrations/20261031_210000_create_ops_case.sql に変える（中身は変えない）。参照 4 か所を同じ名前に直す: S scripts/run_all_migrations.sh の run_sql の行・S backend/tests/ops/test_ops_case_db.py:41・S backend/tests/test_ops_case_router.py:151・S .github/workflows/migration-test.yml の ops_incidents の注記（§1 #17 で足した 2 行目）。§0-8 の古い名前は落ちた記録の引用なので直さない（§1 #1・#2・#11・#17 の範囲） |
+| Backend Tests（実行 41196171581）が `tests/test_realtime_topics.py::test_every_write_route_is_in_exactly_one_table` の 1 件だけで落ちる（1 failed, 7630 passed）。§4-C の書き込みの口 5 つ（POST /api/v1/ops/case/audits・/api/v1/ops/case/unmask-requests/{request_id}/decision・/api/v1/ops/case/{incident_id}/report・/api/v1/ops/case/{incident_id}/ticket・/api/v1/ops/case/{incident_id}/unmask-requests）が、ADR-1016 の 2 つの表のどちらにも無い。今の /api/v1/ops/* の書き込みの口は S backend/app/realtime/topics.py:116-121 で NO_SIGNAL_ROUTES に「運用者向けで画面更新の通知対象外」として載っている | S backend/app/realtime/topics.py の NO_SIGNAL_ROUTES の :121 の次に、上の 5 つを足す。理由は `"相談係 ADR-1052 段2: 運用者向けで画面更新の通知対象外"`。WRITE_ROUTE_TOPICS には足さない（§1 #19） |
+| 本線の取り込みで backend の口が変わりうる | 取り込みの後で §1 #18 と同じ命令で frontend/api-contract/openapi.json を作り直す。手で書かない |
+
+## 0-10. 第6.3版の CI で見つかった直し（第6.4版・2026-10-31 Opus）
+§0-8 と同じ種類の付けたしで、作る物の形と守りは変えない。§0-8 では最初の 1 つ目の失敗（:19）しか見ずに直したため、その先の前提を見落とした。今回は migration が外から読む物を全部洗った。
+| 見つかったこと | 直し（場所） |
+|---|---|
+| Migration SQL Test の migration-test-run（実行 41197975056・先頭 4a3abf696）が `migrations/20261031_210000_create_ops_case.sql:516: ERROR: relation "ai_cloud_meta.build_columns" does not exist` で落ちる。migration が自分で作らずに読む物は、`grep -noE '\b(public\|ai_cloud_meta\|ai_cloud)\.[a-z_]+'` で全部洗うと public.ops_incidents（§0-8 で足し済み）・ai_cloud_meta.build_columns・ai_cloud_meta.build_log の 3 つだけ。ロールは自分で作る ai_unmask・ai_unmask_owner と、有無を確かめてから使う salesanchor_app だけ | S .github/workflows/migration-test.yml の migration-test-run の土台（§0-8 で足した public.ops_incidents の次）に、S migrations/20261024_100000_create_ai_cloud_meta.sql:10 の `CREATE SCHEMA IF NOT EXISTS ai_cloud_meta;` と :22-37 の build_log・build_columns の CREATE TABLE IF NOT EXISTS を写す（列・制約はそのまま。column_class・関数・COMMENT は写さない）。注記は「本番作成済み・前提として登録する」の 2 行の形（§1 #17） |
+| 同じ種類の見落としを二度と通さない | 実装役は push の前に、土台の SQL（migration-test-run の土台の手順にある heredoc の SQL を上から順に全部）を空の postgres に流し、その上で migration を 2 回流して両方通る生出力を出す。流すのは pytest の中だけ（S scripts/agent-hooks/cloud/rules.md:14。psql を直に叩く形はクラウドの見張りが止める・実行 6 で確認）。接続先はクラウドの中で自分が立てた使い捨ての localhost だけ。確かめ用の pytest は使い捨てでコミットしない。postgres が使えなければ BLOCKED: で止める（CI 任せにしない） |
+| 審査（4a3abf696・REVISE）の M1: test-schema-dup gate が S backend/tests/ops/test_ops_case_db.py:153-169・S backend/tests/test_ops_case_router.py:141-147 の CREATE TABLE（各 6）で赤 | 直さない（Opus 判断）。理由: ①表は見せ方の作り方を試すための作り物（plain_demo・text_pk・has_secret・two_pk）と、伏せる表の判定を試す最小の代役（tenant_001.leads・viewer_accounts）で、本番の表の定義の写しではない ②この gate は必須ではない（S docs/specs/process-hardening/design-pillar3.md:96）③文字列を組み替えて検査をすり抜ける書き方はしない。片付けは後の便で一覧（pillar3-inventory.md）への登録として扱う |
+| 審査の L2: decide_request が知らない id に 404 を返す（§4-C は「pending でなければ 409」だけ） | 追認する。知らない id は 404、ある id で pending でなければ 409。コードは変えない |
+
 ## 1. 触るファイル（変更前→変更後）
 | # | ファイル | 今（S） | 変える形 |
 |---|---|---|---|
@@ -98,6 +130,10 @@
 | 12 | 新 backend/tests/ops/test_nginx_case_api_guard.py | 無し | §4-F の #13 の数え合わせ（#10 の仕事から走らせる） |
 | 13 | 新 backend/tests/ops/test_unmask_http.py・新 backend/tests/test_ops_case_router.py | 無し | §4-G |
 | 14 | 新 scripts/tests/nginx-case-api-guard.sh | 無し | §4-F。#10 の仕事が本物の nginx に curl と openssl で当てる台本 |
+| 16 | 新 tests/sandbox/compose-run-nginx-mount.sh | 無し | §3(j)(m) を本物の docker compose で確かめる試験（§3(j)(m) の「試験 #16 の形」）。S tests/sandbox/README.md の決まり（secrets・本番を使わない・trap で片付け・失敗時は先に docker logs） |
+| 17 | S .github/workflows/migration-test.yml | migration-test-run の土台に public.ops_incidents・ai_cloud_meta.build_log・ai_cloud_meta.build_columns が無い | §0-8・§0-10。土台に public.ops_incidents と、スキーマ ai_cloud_meta と build_log・build_columns の CREATE を足す。ほかの行は変えない |
+| 18 | S frontend/api-contract/openapi.json | §4-C の口 8 つが無い | §0-8。export_openapi で作り直す（生成物。手で書かない） |
+| 19 | S backend/app/realtime/topics.py | §4-C の書き込みの口 5 つが ADR-1016 の表に無い | §0-9。NO_SIGNAL_ROUTES の :121 の次に 5 つを足す。ほかの行は変えない |
 | 15 | docs/handoff/cloud-case-ai/design.md | :176-177・:179・:210・:146・:366 | V5-1〜V5-4 と V5-3（:366 の CI の置き場）に合わせる（このカードの PR で直す。実装の PR では触らない） |
 
 ## 2. 触らない範囲
@@ -119,9 +155,12 @@
 - (h) nginx の材料: S nginx/nginx.conf の変数を通さない proxy_pass の宛先は IP だけ（:235・:252・:265・:589 の 49.212.160.98）で、名前の解決は要らない。ssl_certificate の道は 5 つ（:35-36・:75-76・:339-340・:575-576・:629-630）＋ case-api の 1 つ。最新の origin/main でこの数が違えば、#11 の偽の証明書の数を合わせる。読む物（htpasswd.d・/var/www の各所）を全部数える。
 - (i) 容器のイメージ: ai-unmask-http も astro-webapp-backend を使う（S docker-compose.ai-reader-cloud-http.yml:15）。psycopg2 がイメージに入っているか（S backend/app/ops/readonly_query.py:280-289 が使っている）。
 - (j) nginx の前の点検の形: `docker compose run --rm --no-deps -T nginx nginx -t` が、compose の nginx の取り付け（S docker-compose.yml:11-19）と networks（frontnet）をそのまま使い、ports を開かないこと（docker compose の公式文書 `run` の項。--service-ports を付けない限り ports は開かない）。Context7 か公式文書で確かめ、違えば止めて Opus へ。
+  - 第6.1版: 公式文書は読めない（§0-7）。試験 #16 で確かめる。試験 #16 の形（(m) と同じ台本）: S docker-compose.yml の nginx と同じ版のイメージ・同じ形（単一ファイルの `./x/nginx.conf:/etc/nginx/conf.d/default.conf:ro`・`ports` に 443 を 1 つ・networks frontnet）の小さな compose を /tmp に作り、`up -d` で 1 つ起こした状態で次を流して生出力を出す: ① `docker compose run --rm --no-deps -T nginx nginx -t` が 0 で終わる（起きている容器と同じ ports を開こうとすれば、ぶつかって失敗する） ② 同じ run で `cat /etc/nginx/conf.d/default.conf` が compose の取り付けの中身 ③ `docker compose run -d --no-deps --name probe-run nginx sleep 60` で起こした run の容器を `docker inspect` して、NetworkSettings.Networks に `<project>_frontnet` があり、NetworkSettings.Ports に HostPort が無い（見た後に `docker rm -f probe-run`） ④ 中身の壊れた設定を取り付けたときに nginx -t が 0 でない（点検が本当に効く）。どれかが違えば止めて Opus へ。
 - (k) 失敗を後ろへ送る形: GitHub Actions で `continue-on-error: true` の手順が失敗したとき、`steps.<id>.outcome` が failure・`conclusion` が success になり、後ろの `success()` の手順が動くこと（公式文書の steps の文脈の項）。違えば止めて Opus へ。あわせて、`continue-on-error` で落ちた手順の後でも、後ろの `failure()` の手順（S :1106・:1124）が動かず、1b が `exit 1` してから動くことを確かめる（公式文書の expressions の項には continue-on-error との関係が書かれていない。偽の流れで 1 回試して生出力を出す）。
+  - 第6.1版・Opus が確かめた結果（実装役は試さなくてよい）: このリポジトリの S .github/workflows/security-scan.yml は同じ形（`id` と `continue-on-error: true` の手順の後に、状態の関数を書かない `if: steps.<id>.outcome == 'failure'` の手順＝暗黙の `success() &&` の手順が 2 つ、最後に `exit 1` の手順）。その本物の実行 40598055892（2026-10-27 22:52 UTC・schedule）の手順の記録（`gh run view 40598055892 --json jobs`）で、2 つの仕事とも: 検査の手順の conclusion が success、後ろの 2 つの手順が skipped でなく success（＝outcome が failure で、かつ success() が真のまま）、`exit 1` の手順が failure で仕事が failure。よって「outcome は failure・conclusion は success・後ろの success() の手順は動く・最後の exit 1 で全体が失敗の表示」は事実。`failure()` は success() と同じ「前の手順の結果」を見るので、success() が真のままの間は failure() は偽（S :1106・:1124 は 1b の後にだけ動く）。この最後の 1 文は記録からの推論で、試した記録ではない。1c は自分で nginx -t を通してから作り直すので、仮に早く動いても壊れた設定で作り直さない（§4-E の 1c）。
 - (l) CI の IPv6: GitHub のランナーで `--network host` の nginx が [::]:443 で待ち受け、::1 に届くか。最初に 1 回だけ試し、届かなければ止めて Opus へ（IPv6 の試験を外すかは Opus が決める）。
 - (m) 戻り先の点検の形: `docker compose run --rm --no-deps -T -v /home/ubuntu/salesanchor/.deploy_prev_nginx.conf:/etc/nginx/conf.d/default.conf:ro nginx nginx -t` で、サービスの取り付け（S docker-compose.yml:11）が同じ道の -v で置き換わるかを docker compose の公式文書と sandbox で確かめる。置き換わらない・重なりでエラーなら、`-v …:/tmp/candidate.conf:ro` と `--entrypoint sh` で、`/etc/nginx/nginx.conf` の `include /etc/nginx/conf.d/*.conf;` を `/tmp/candidate.conf` に替えた写しを /tmp に作り `nginx -t -c` で試す形にする。どちらも動かなければ止めて Opus へ。
+  - 第6.1版: 試験 #16 に足す: ⑤ 同じ compose で `run --rm --no-deps -T -v <別の中身のファイル>:/etc/nginx/conf.d/default.conf:ro nginx sh -c 'cat /etc/nginx/conf.d/default.conf; nginx -t'` が 0 で終わり、cat が -v の中身（サービスの取り付けの中身でない） ⑥ -v に壊れた設定を渡すと nginx -t が 0 でない ⑦ 取り付け元のファイルを `mv` で別の中身に入れ替えた後（git reset と同じく inode が替わる）、`up -d --no-deps --force-recreate nginx` で作り直した容器の中身が新しい中身。⑤ が違えば、上の `/tmp/candidate.conf` と `nginx -t -c` の形で書き、その形も試験 #16 で確かめる。実装役は #9 を ⑤ が通る前提の形で書き、試験 #16 を push する。Opus が手元から `gh workflow run sandbox-test.yml --ref release/cloud-case-ai-stage2 -f test=compose-run-nginx-mount` で流し、結果で形を決める。
 - (n) 置くファイル: `.deploy_nginx_good.conf` と `.deploy_prev_nginx.conf` が、S deploy.yml の `git reset --hard`（:258・:765）で消えないこと（追跡していないファイルは reset で消えない）。deploy.yml に `git clean` が無いことを数える。あれば止めて Opus へ。
 - (済) 証明書: 2026-10-31 16:46 に PO の `!` で取得済み（certbot の webroot・今の名前と同じ形）。ホスト側の道は /home/ubuntu/salesanchor/certbot/conf/live/case-api.salesanchor.jp/（容器の中では S docker-compose.yml:19 の取り付けで /etc/letsencrypt/live/case-api.salesanchor.jp/。S docs/PHASE5_DOMAIN_CUTOVER_RUNBOOK.md:29）。マージの直前に Opus が PO の `!` の確認台本で、ホスト側の fullchain.pem と privkey.pem があることを ls でもう一度確かめる（中身は読まない。§4）。
 
@@ -138,7 +177,7 @@
   - ops_case のスキーマの USAGE（前例の ops_incidents は public にあるので写せる前例が無い。付けないと backend の口がどれも表と is_denied_source に届かない）。
   - cases: SELECT・INSERT・UPDATE。reports: SELECT・INSERT。unmask_reads: SELECT。audits: SELECT・INSERT。deny_tables: SELECT。
   - unmask_requests: SELECT・INSERT と、列を絞った `UPDATE (status, decided_by, decision_reason, approved_minutes, expires_at)`（read_count は backend から変えられない。FOR UPDATE は 1 列以上の UPDATE 権限で足りる。PostgreSQL 16 公式文書 SELECT の「The Locking Clause」）。
-  - ai_cloud_meta の USAGE と build_columns の SELECT（申請の受付で列を確かめるため。中身は名前だけで値は無い）。is_denied_source の EXECUTE（is_denied_source は PUBLIC から REVOKE し、salesanchor_app と ai_unmask_owner にだけ GRANT する。unmask_fetch の中から呼ぶため持ち主にも要る）。
+  - ai_cloud_meta の USAGE と build_columns の SELECT（申請の受付で列を確かめるため。中身は名前だけで値は無い）。build_log の SELECT（§4-C の audit-inputs が最新の行の ok・失敗の数を読むため。列は数と ok と失敗の種類だけ。第6.1版 §0-7）。is_denied_source の EXECUTE（is_denied_source は PUBLIC から REVOKE し、salesanchor_app と ai_unmask_owner にだけ GRANT する。unmask_fetch の中から呼ぶため持ち主にも要る）。
 - ロール（段1の S migrations/20261024_100100_create_ai_reader_cloud_role.sql の DO の形。属性が違えば RAISE EXCEPTION）:
   - ai_unmask_owner: NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION BYPASSRLS。
   - ai_unmask: LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS CONNECTION LIMIT 2。パスワードは付けない（§4 の PO の `!`）。
