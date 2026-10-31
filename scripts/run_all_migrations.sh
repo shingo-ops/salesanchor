@@ -1203,3 +1203,5 @@ run_sql migrations/20261024_100100_create_ai_reader_cloud_role.sql
 run_sql migrations/20261031_200000_add_passkey_enroll_prompt_skips.sql
 # ADR-1052 段2: 相談係の件・申請・値を1回だけ返す関数（スキーマ ops_case・ロール ai_unmask_owner / ai_unmask。パスワードは PO が別途設定・冪等）
 run_sql migrations/20261031_210000_create_ops_case.sql
+# ADR-1055 段A: 知らない機械からのログインの許可の置き場（表3つ＋列4つ・追加のみ・値は入らない・冪等）
+run_sql migrations/20261101_120000_add_new_device_approval.sql
