@@ -48,7 +48,7 @@ Haiku と Sonnet は別々に判定する。「Gemini 平均」は Gemini 3回�
 ## 5. 変更前後と作るもの
 製品コード（backend/・frontend/・migrations/・本番の deploy）は変えない。試験用の道具を scripts/accuracy/llm_compare/ に新しく置く（本番には配られない。CI では走らない）。
 
-### 5-1 Gemini を解かせ、渡した文字列を残す: `capture_prompt_ab.py`（新規）
+### 5-1 Gemini を解かせ、渡した文字列を残す: `scripts/accuracy/llm_compare/capture_prompt_ab.py`（新規）
 - 本番サーバーの別の箱の中で動かす。prompt_ab は `from app.services.gemini_raw_copy_v8 import build_prompt_v8, call_gemini_raw_copy_v8`（prompt_ab.py:47-49）で読み込み、モジュール内の名前で呼ぶ（:555）。差し替えるのは `app.tools.prompt_ab.call_gemini_raw_copy_v8`。gemini_raw_copy_v8 モジュール側を差し替えても効かない。
 - 包み: 元の関数を呼び、**成功して返った後だけ**、同じ引数で build_prompt_v8 を呼んで文字列を保存する（一時的な失敗のやり直し :550-573 では保存しない）。保存名は `<test-id>_<通し番号 4桁>_<sha256>.txt`、index は `<test-id>.index.tsv`（通し番号, sha256, 文字数）。test-id ごとに別名なので、続きを別の test-id で流しても上書き・重複しない。
 - 起動の引数: `--config v102 --runs-file /fhd/llmcmp/runs.txt --out-dir /fhd/llmcmp/out --test-id llmcmp-g1 --prompt-key raw_copy_v101_f_dm --thinking-level high --retry-transient 3 --repeat 3 --max-cost-usd 5.00`。必須の引数（prompt_ab.py:624-634）をすべて含む。
@@ -56,7 +56,7 @@ Haiku と Sonnet は別々に判定する。「Gemini 平均」は Gemini 3回�
 - 途中で止まったら（前回は503続きで265回目に停止、RESULT-20261027.md:3）: 未完了の job だけの runs ファイルで test-id `llmcmp-g2` として続きを流し、JSONL を結合する。
 - 費用: 前回の実績 314回で約3.83USD（1回 約0.012USD）。300回の見込み 約3.6USD。上限 5.00USD。prompt_ab は「超えた後に止まる」（:208-215）。上限で止まり3回そろわなかったら、そろった回数で採点し、回数を表に書く（1回もそろわない投稿は C1 に数えられる :210-214）。
 
-### 5-2 Claude を解かせる: `run_claude.py`（新規、手元の Mac で動かす。理由は §9）
+### 5-2 Claude を解かせる: `scripts/accuracy/llm_compare/run_claude.py`（新規、手元の Mac で動かす。理由は §9）
 - 入力: 取り寄せた文字列と index、JSONL（repeat=1 の job_id 対応）、モデル名（haiku / sonnet）。
 - 1件ごとに `claude -p --model <m> --effort high --output-format json --json-schema <v102_response_schema.json の中身> --tools "" --setting-sources "" --strict-mcp-config --no-session-persistence --system-prompt "与えられた指示に従い、指定の JSON だけを返してください。"`。文字列は標準入力で渡す。cwd は空の一時フォルダ。1件の時間切れ 600秒。
 - 順番に1件ずつ。rc≠0・is_error=true・時間切れのどれかで、理由を問わず即停止し、時刻と件数を記録する（待って再開しない）。
@@ -67,13 +67,13 @@ Haiku と Sonnet は別々に判定する。「Gemini 平均」は Gemini 3回�
 
 ### 5-3 採点用の形にする
 - 3種（Gemini 3回分・Claude 2種）の JSONL を本番サーバーの箱へ置き、**1回の起動で全部まとめて** fhd_snapshot.py convert（読み取りのみ。既存の道具を scripts/accuracy/llm_compare/ に写して sha256 を記録）で TSV にする。
-- `split_snapshot.py`（新規、手元）: convert の出力（先頭に tag・repeat・source_message の3列＋14列、fhd_snapshot.py:241, :267）を、(tag, repeat) ごとに別フォルダ、その中で投稿ごとの <投稿id>.tsv に分け、先頭3列を落とす（score_v102.py の --snapshot-dir の形 :18-21）。
+- `scripts/accuracy/llm_compare/split_snapshot.py`（新規、手元）: convert の出力（先頭に tag・repeat・source_message の3列＋14列、fhd_snapshot.py:241, :267）を、(tag, repeat) ごとに別フォルダ、その中で投稿ごとの <投稿id>.tsv に分け、先頭3列を落とす（score_v102.py の --snapshot-dir の形 :18-21）。
 
-### 5-4 並べる: `summarize.py`（新規、手元）
+### 5-4 並べる: `scripts/accuracy/llm_compare/summarize.py`（新規、手元）
 - score_v102.py の出力（Gemini 3回・Claude 2種）、トークン量、時間、費用、§4 の合否を1枚の表（CSV と Markdown）にする。
 
 ### 5-5 起動の台本（新規）
-- `vps_run_gemini.sh`、`vps_convert.sh`、`fetch_results.sh`: PO が ! で打つ台本。箱は RUNBOOK_fdm.md と同じく `docker compose run --rm --no-deps -T --name llmcmp-<id> -v /home/ubuntu/fhd-test/llmcmp:/fhd/llmcmp -e PYTHONPATH=/app celery-worker python /fhd/llmcmp/capture_prompt_ab.py …`。ファイルを直接動かすと /app が読み込み先に入らない（backend/Dockerfile:4 は WORKDIR /app、PYTHONPATH の設定なし）ので、`-e PYTHONPATH=/app` を必ず付け、ファイルの先頭でも sys.path に /app を足す。capture_prompt_ab.py は差し替えの後に `app.tools.prompt_ab.main(argv)` を呼ぶ。**健康診断の上書き（no-health.yml、RUNBOOK_fdm.md:12-17）を必ず付ける**（付けないと本番の警報が鳴る恐れ）。起動前に healthcheck と /bin/true を確かめ、120秒で健全にならなければ docker stop。道具は /fhd/llmcmp/ に置いて動かす（作業場所 /app は書けない）。
+- `scripts/accuracy/llm_compare/vps_run_gemini.sh`、`scripts/accuracy/llm_compare/vps_convert.sh`、`scripts/accuracy/llm_compare/fetch_results.sh`: PO が ! で打つ台本。箱は RUNBOOK_fdm.md と同じく `docker compose run --rm --no-deps -T --name llmcmp-<id> -v /home/ubuntu/fhd-test/llmcmp:/fhd/llmcmp -e PYTHONPATH=/app celery-worker python /fhd/llmcmp/capture_prompt_ab.py …`。ファイルを直接動かすと /app が読み込み先に入らない（backend/Dockerfile:4 は WORKDIR /app、PYTHONPATH の設定なし）ので、`-e PYTHONPATH=/app` を必ず付け、ファイルの先頭でも sys.path に /app を足す。capture_prompt_ab.py は差し替えの後に `app.tools.prompt_ab.main(argv)` を呼ぶ。**健康診断の上書き（no-health.yml、RUNBOOK_fdm.md:12-17）を必ず付ける**（付けないと本番の警報が鳴る恐れ）。起動前に healthcheck と /bin/true を確かめ、120秒で健全にならなければ docker stop。道具は /fhd/llmcmp/ に置いて動かす（作業場所 /app は書けない）。
 
 ## 6. 手順（人の ! 実行の部分は PO）
 （１）準備（AI）: 道具と台本を作り審査を通す。gold_v1.tsv と score_v102.py の sha256 を記録。V102_RESPONSE_SCHEMA を JSON に書き出す。
@@ -109,10 +109,10 @@ Haiku と Sonnet は別々に判定する。「Gemini 平均」は Gemini 3回�
 ## 10. 戻し方
 - 製品は変えないので戻すものは無い。試験の道具は scripts/accuracy/llm_compare/ を消せば消える。本番サーバーの箱は `docker stop`、置いたファイルは §6（８）で消す。
 
-## 11. 維持する担当・仕組み
+## 11. 維持の仕組み（維持する担当）
 - 一回きりの試し。結果（集計値だけ）は ~/CC報告ファイル-keep/llm-compare-20261030/ と、この design.md の末尾の結果欄に残す。続けるかは結果を見て PO が決める。
 
-## 12. 外部事例
+## 12. 外部・過去事例の参照と我々への応用
 - 使わない。理由: 判断の根拠はこの会社の正解表で実際に回した数で作る指示（PO「エビデンス確立して答えてくれ」）であり、他社の数は条件が違って比べられないため。
 
 ## 13. 実装カード（PO 承認後に Sonnet へ渡す）
