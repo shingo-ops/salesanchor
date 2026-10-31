@@ -1276,6 +1276,16 @@ jobs:
           echo "✅ 全検証パス"
       # ── Step 5: PR で変更された生 SQL マイグレーションを実行 ─────────────────────
       # {schema} プレースホルダ含む旧テンプレート（018, 019 等）は検出時に除外済み
+      - name: 変更 SQL の前提の移行を先に実行（ai_cloud_meta・ai_reader_cloud）
+        if: steps.detect.outputs.has_sql_changes == 'true' && contains(steps.detect.outputs.changed_sql, 'migrations/20261024_100300_create_ai_cloud_views.sql')
+        run: |
+          # 20261024_100300 は 100000（ai_cloud_meta）と 100100（ai_reader_cloud）が先に流れている前提（run_all_migrations.sh と同じ順）
+          for sqlfile in migrations/20261024_100000_create_ai_cloud_meta.sql migrations/20261024_100100_create_ai_reader_cloud_role.sql; do
+            echo "▶ $sqlfile を前提として実行中..."
+            psql -h localhost -U jarvis -d jarvis_db -v ON_ERROR_STOP=1 -f "$sqlfile"
+            echo "✅ $sqlfile 成功"
+          done
+
       - name: 変更 SQL を 1回目実行（実行可否・構文チェック）
         if: steps.detect.outputs.has_sql_changes == 'true'
         run: |
