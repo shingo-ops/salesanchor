@@ -997,7 +997,7 @@ APPROVE。根拠：呼び出し元・時間切れ・所要秒は origin/main と
   - ①一時の git リポジトリに frontend/package.json を写し、`npm run prepare --prefix <一時>/frontend` を流すと rc=0 で、一時のリポジトリの core.hooksPath が `frontend/.husky` になる。一時のリポジトリに `git worktree add` で作った作業場所（`.git` がファイル）でも同じく流し、共通の設定に書かれることを確かめる。読み戻しは `git --git-dir=<一時>/.git config --local --get core.hooksPath` で行う（:46 の git_env() は GIT_CONFIG_COUNT で core.hooksPath を /dev/null に上書きするため、そのまま `--get` で読むと /dev/null が返る。審査役の実測 E）
   - ②git の無い一時の場所（frontend の一つ上に `.git` が無い所）で同じく流すと rc=0（`--git-dir` を明示すると git は上の階を探さないので、GIT_CEILING_DIRECTORIES は要らない）
   - ③git の無い PATH で流すと rc=0。PATH は、一時の bin に node・npm・sh だけの別名を置いてそれだけにする（ubuntu では /bin が /usr/bin の別名で git と sh が同じ場所にあり、/usr/bin を抜くと npm が sh を起動できずに落ち、git が無いからの失敗と取り違えるため）
-  - ④外の一時の git リポジトリ `<outer>` の一番上より 1 段以上深い所（`<outer>/sub/frontend/package.json`）に、`.git` の無い写しを置いて流すと rc=0 で、`<outer>` の core.hooksPath が流す前と同じ。`<outer>/frontend` の直下に置く形は上の「限界」のとおり書き換わるので、試験の場所にしない（prepare を変えたり試験を外したりして合わせない）
+  - ④外の一時の git リポジトリ `<outer>` の一番上より 1 段以上深い所（`<outer>/sub/frontend` の下の package.json）に、`.git` の無い写しを置いて流すと rc=0 で、`<outer>` の core.hooksPath が流す前と同じ。`<outer>/frontend` の直下に置く形は上の「限界」のとおり書き換わるので、試験の場所にしない（prepare を変えたり試験を外したりして合わせない）
   - ⑤package.json の prepare・new-worktree.sh・session_start.py の HOOKS_PATH の 3 か所の値が同じ（どれかを変えて食い違えば落ちる）。scripts/agent-hooks/cloud/test.sh:352 の期待値は足さない。test.sh は CI で流れない（§R4c の 889 行）が、session_start.py の値と食い違えば手元・クラウドで test.sh を流したときに落ちる（3 回目の審査で実測）。3 か所をそろえて変える PR では、test.sh:352 も手で直す
   - 試験の中で手元の本体の .git/config を書かないことを、流す前後の値の比較で確かめる
 - 便3 で変えるのは上の frontend/package.json・new-worktree.sh（注記だけ）・rules.md・test_check_before_submit.py と、工程の記録の文書だけで、それ以外は変えない
