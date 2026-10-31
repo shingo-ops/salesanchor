@@ -124,4 +124,9 @@ REVISE とした理由は次の2つ。
 
 ## 見張りに止められた文面
 
-この審査の途中で止められた命令は無かった。
+審査の途中では止められた命令は無かった。報告を commit するとき、指示どおり本店の場所（/home/user/salesanchor）で `git switch -c` してから commit したところ、commit の見張りに止められた。文面:
+
+🚫 commit を中断しました: worktree 外での作業は禁止されています。
+   正しい手順: bash scripts/new-worktree.sh feature/morimoto/<トピック名>
+
+言い換えて流し直すことはしていない。AGENTS.md「ブランチと作業場所」とクラウドの決まりに従い、本店に作った同名の枝（push 前・中身はこの報告だけ）を消し、`bash scripts/new-worktree.sh release/lead-regression-design-v8-report` で作業場所を作った。その中で `git switch -C release/lead-regression-design-v8-report origin/release/lead-regression-recon` を流して、指示どおり 86861832d を起点にしてから commit した（知らせの feature/morimoto/ の枝名には従っていない）。
