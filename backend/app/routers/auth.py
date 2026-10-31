@@ -9,6 +9,7 @@ from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response, status
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from jose import JWTError
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import func, select, text
 from sqlalchemy.exc import IntegrityError
@@ -687,14 +688,108 @@ def _iso(value) -> str | None:
     return value.isoformat()
 
 
+class PasskeyRegisterOptionsRequest(BaseModel):
+    auto: bool = False
+
+
+class PasskeyPromptStatus(BaseModel):
+    can_auto: bool
+    show_prompt: bool
+
+
+def _is_fresh_password_login(request: Request, user: User) -> bool:
+    """パスワードを打って FRESH_LOGIN_SECONDS 以内の合図か（便6 の自動作成と案内だけに使う）。"""
+    header = request.headers.get("authorization", "")
+    if not header.lower().startswith("bearer "):
+        return False
+    token = header[7:].strip()
+    if self_tokens.peek_issuer(token) != self_tokens.ISSUER:
+        return False
+    try:
+        claims = self_tokens.decode_access_token(token)
+        issued_at = int(claims["iat"])
+    except (JWTError, ValueError, KeyError, TypeError):
+        return False
+    now = int(datetime.now(timezone.utc).timestamp())
+    return (
+        claims.get("sub") == str(user.id)
+        and claims.get("amr") == ["pwd"]
+        and 0 <= now - issued_at <= passkeys.FRESH_LOGIN_SECONDS
+    )
+
+
+async def _passkey_count(db: AsyncSession, user_id: int) -> int:
+    row = (
+        await db.execute(
+            text("SELECT count(*) AS n FROM public.webauthn_credentials WHERE user_id = :uid"),
+            {"uid": user_id},
+        )
+    ).one()
+    return int(row.n)
+
+
+async def _recent_prompt_skips(db: AsyncSession, user_id: int) -> int:
+    since = datetime.now(timezone.utc) - timedelta(days=passkeys.PROMPT_SKIP_WINDOW_DAYS)
+    row = (
+        await db.execute(
+            text(
+                "SELECT count(*) AS n FROM public.passkey_enroll_prompt_skips "
+                "WHERE user_id = :uid AND skipped_at > :since"
+            ),
+            {"uid": user_id, "since": since},
+        )
+    ).one()
+    return int(row.n)
+
+
+@router.get("/passkey/prompt", response_model=PasskeyPromptStatus)
+async def passkey_prompt_status(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """ログイン直後のパスキー登録（自動作成・案内）を出してよいか。"""
+    _require_app_origin(request)
+    if not _is_fresh_password_login(request, current_user):
+        return PasskeyPromptStatus(can_auto=False, show_prompt=False)
+    count = await _passkey_count(db, current_user.id)
+    skips = await _recent_prompt_skips(db, current_user.id)
+    return PasskeyPromptStatus(
+        can_auto=count < passkeys.MAX_PASSKEYS_PER_USER,
+        show_prompt=count == 0 and skips < passkeys.PROMPT_SKIP_LIMIT,
+    )
+
+
+@router.post("/passkey/prompt/skip", status_code=204)
+async def passkey_prompt_skip(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """「今はスキップ」の記録。"""
+    _require_app_origin(request)
+    if not _is_fresh_password_login(request, current_user):
+        raise HTTPException(status_code=403, detail="auto_not_allowed")
+    await db.execute(
+        text("INSERT INTO public.passkey_enroll_prompt_skips (user_id) VALUES (:uid)"),
+        {"uid": current_user.id},
+    )
+    await db.commit()
+    return Response(status_code=204)
+
+
 @router.post("/passkey/register/options", response_model=PasskeyChallengeResponse)
 async def passkey_register_options(
     request: Request,
+    data: PasskeyRegisterOptionsRequest | None = None,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """パスキー登録の options を作る（ログイン中の本人だけ）。"""
     _require_app_origin(request)
+    auto = bool(data and data.auto)
+    if auto and not _is_fresh_password_login(request, current_user):
+        raise HTTPException(status_code=403, detail="auto_not_allowed")
     rows = (
         await db.execute(
             text("SELECT credential_id FROM public.webauthn_credentials WHERE user_id = :uid"),
@@ -706,7 +801,9 @@ async def passkey_register_options(
     options = passkeys.registration_options(
         current_user.id, current_user.email, [bytes(r.credential_id) for r in rows]
     )
-    challenge_id = await passkeys.store_challenge("reg", str(current_user.id), options.challenge)
+    challenge_id = await passkeys.store_challenge(
+        "reg_auto" if auto else "reg", str(current_user.id), options.challenge
+    )
     return PasskeyChallengeResponse(challenge_id=challenge_id, options=json.loads(options_to_json(options)))
 
 
@@ -719,9 +816,17 @@ async def passkey_register_verify(
 ):
     """パスキー登録の応答を確かめ、公開鍵を保存する。"""
     _require_app_origin(request)
+    auto = False
     challenge = await passkeys.take_challenge("reg", str(current_user.id), data.challenge_id)
     if challenge is None:
+        challenge = await passkeys.take_challenge("reg_auto", str(current_user.id), data.challenge_id)
+        auto = challenge is not None
+    if challenge is None:
         raise HTTPException(status_code=400, detail="challenge_expired")
+    # 自動作成の道だけは UP・UV の印を求めない（ブラウザが裏で作るため）。設定画面の道は今のまま。
+    verify_extra = {"require_user_presence": False, "require_user_verification": False} if auto else {
+        "require_user_verification": True
+    }
     try:
         parsed = parse_registration_credential_json(data.credential)
         verified = verify_registration_response(
@@ -729,7 +834,7 @@ async def passkey_register_verify(
             expected_challenge=challenge,
             expected_rp_id=self_tokens.rp_id(),
             expected_origin=self_tokens.rp_origin(),
-            require_user_verification=True,
+            **verify_extra,
         )
     except (WebAuthnException, ValueError):
         raise HTTPException(status_code=400, detail="passkey_invalid")
@@ -771,7 +876,7 @@ async def passkey_register_verify(
         action="create",
         table_name="webauthn_credentials",
         record_id=row.id,
-        new_data={"event": "passkey_registered"},
+        new_data={"event": "passkey_registered", "auto": auto},
     )
     await db.commit()
     return PasskeyCreated(id=row.id, label=label, created_at=_iso(row.created_at))
