@@ -68,11 +68,14 @@ export type SettleResult = {
   loadingGoneAt: number;
 };
 
+/** 見えている読み込み中の印の数。visibility: hidden で残っているだけの印（在庫表の印など）は数えない（設計 5-8） */
 async function visibleLoadingCount(page: Page): Promise<number> {
   try {
     return await page.evaluate(
       (sel) =>
-        Array.from(document.querySelectorAll(sel)).filter((el) => el.getClientRects().length > 0).length,
+        Array.from(document.querySelectorAll(sel)).filter(
+          (el) => el.getClientRects().length > 0 && getComputedStyle(el).visibility === "visible",
+        ).length,
       LOADING_SELECTOR,
     );
   } catch {

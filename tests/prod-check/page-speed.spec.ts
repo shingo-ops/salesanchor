@@ -20,7 +20,14 @@ const STAGE_LIMIT_MS = 40 * 60 * 1000;
 /** ワークフローはリポジトリの根から動かす */
 const OUT_FILE = "tests/prod-check/page-speed.md";
 
-type Status = "測れた" | "時間切れ" | "番号を拾えず" | "別の画面へ移った" | "エラー" | "時間切れで未測定";
+/** 番号の要る画面で、一覧から番号を拾えなかった理由（設計 5-8） */
+type MissReason =
+  | "番号を拾えず（一覧が 403）"
+  | "番号を拾えず（一覧がほかの失敗）"
+  | "番号を拾えず（一覧が空）"
+  | "番号を拾えず（一覧の形が違う）"
+  | "番号を拾えず（一覧の応答なし）";
+type Status = "測れた" | "時間切れ" | MissReason | "別の画面へ移った" | "エラー" | "時間切れで未測定";
 type Row = {
   route: string;
   seconds: number | null;
@@ -28,6 +35,8 @@ type Row = {
   api: number;
   forbidden: number;
   serverError: number;
+  /** その画面を開くあいだに関所が止めた数 */
+  blocked: number;
   slowest: string;
   slowestSeconds: number | null;
 };
@@ -102,22 +111,23 @@ function emptyRow(target: SpeedTarget, status: Status): Row {
     api: 0,
     forbidden: 0,
     serverError: 0,
+    blocked: 0,
     slowest: "",
     slowestSeconds: null,
   };
 }
 
-/** 一覧画面を開き、一覧 API の応答の先頭の id を拾う。番号はメモリの中だけで使い、表にも記録にも出さない */
+/** 一覧画面を開き、一覧 API の応答の先頭の id を拾う。番号はメモリの中だけで使い、表にも記録にも出さない。拾えなければ理由を返す */
 async function pickId(
   page: Page,
   api: ApiTracker,
   target: Extract<SpeedTarget, { kind: "needs-id" }>,
-): Promise<string | null> {
+): Promise<{ id: string } | { miss: MissReason }> {
   await leaveIfSame(page, api, target.listPage);
   const responseP = page
     .waitForResponse(
       (r) => {
-        if (r.request().method() !== "GET" || r.status() !== 200) return false;
+        if (r.request().method() !== "GET") return false;
         try {
           return new URL(r.url()).pathname === target.listApi;
         } catch {
@@ -130,17 +140,27 @@ async function pickId(
   await goInApp(page, target.listPage);
   const response = await responseP;
   await waitSettled(page, api, { capMs: CAP_MS });
-  if (!response) return null;
+  if (!response) return { miss: "番号を拾えず（一覧の応答なし）" };
+  if (response.status() === 403) return { miss: "番号を拾えず（一覧が 403）" };
+  if (response.status() !== 200) return { miss: "番号を拾えず（一覧がほかの失敗）" };
   const body: unknown = await response.json().catch(() => null);
-  if (!Array.isArray(body) || body.length === 0) return null;
+  if (!Array.isArray(body)) return { miss: "番号を拾えず（一覧の形が違う）" };
+  if (body.length === 0) return { miss: "番号を拾えず（一覧が空）" };
   const first: unknown = body[0];
-  if (typeof first !== "object" || first === null) return null;
+  if (typeof first !== "object" || first === null) return { miss: "番号を拾えず（一覧の形が違う）" };
   const id = (first as { id?: unknown }).id;
-  if (typeof id !== "string" && typeof id !== "number") return null;
-  return String(id);
+  if (typeof id !== "string" && typeof id !== "number") return { miss: "番号を拾えず（一覧の形が違う）" };
+  return { id: String(id) };
 }
 
-function render(rows: Row[], blocked: Map<string, number>, auth429: number, startedAt: Date, loggedIn: boolean): string {
+function render(
+  rows: Row[],
+  blocked: Map<string, number>,
+  forbiddenApis: Map<string, number>,
+  auth429: number,
+  startedAt: Date,
+  loggedIn: boolean,
+): string {
   const measured = rows.filter((r) => r.status === "測れた");
   const bySecondsDesc = (a: Row, b: Row) => (b.seconds ?? 0) - (a.seconds ?? 0);
   const clean = measured.filter((r) => r.forbidden === 0).sort(bySecondsDesc);
@@ -148,7 +168,7 @@ function render(rows: Row[], blocked: Map<string, number>, auth429: number, star
   const others = rows.filter((r) => r.status !== "測れた");
   const sec = (v: number | null) => (v === null ? "—" : v.toFixed(1));
   const line = (r: Row) =>
-    `| \`${r.route}\` | ${sec(r.seconds)} | ${r.status} | ${r.api} | ${r.forbidden} | ${r.serverError} | ${r.slowest ? `\`${r.slowest}\`` : "—"} | ${sec(r.slowestSeconds)} |`;
+    `| \`${r.route}\` | ${sec(r.seconds)} | ${r.status} | ${r.api} | ${r.forbidden} | ${r.serverError} | ${r.blocked} | ${r.slowest ? `\`${r.slowest}\`` : "—"} | ${sec(r.slowestSeconds)} |`;
   const when = startedAt.toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" });
   const out: string[] = [
     "## 画面の速さ（判定なし・遅い順）",
@@ -157,12 +177,14 @@ function render(rows: Row[], blocked: Map<string, number>, auth429: number, star
     `- 画面の数: ${rows.length}（測れた・403 なし ${clean.length}／測れた・403 あり ${withForbidden.length}／測れなかった ${others.length}）`,
     "- 秒 = 画面切り替えの命令から「最後の API の応答が終わった時刻」と「読み込み中の印が消えた時刻」の遅い方まで",
     "- 最初に開いた画面だけ、部品の読み込みの時間が入る。測るあいだはブラウザの保存（キャッシュ）を使わない",
+    "- 止めた送信 = その画面を開くあいだに、本番を守るために止めた通信の数。止めた通信の本当の時間は秒に入っていない",
+    "- `A → B` の行は、A を開くと中の B へ移る画面。B に着くまでの秒",
     "",
   ];
   if (!loggedIn) out.push("**ログインできなかったため、画面は測っていない。**", "");
   out.push(
-    "| 画面 | 秒 | 状態 | API の数 | 403 | 5xx | いちばん遅い API | その秒 |",
-    "|---|---|---|---|---|---|---|---|",
+    "| 画面 | 秒 | 状態 | API の数 | 403 | 5xx | 止めた送信 | いちばん遅い API | その秒 |",
+    "|---|---|---|---|---|---|---|---|---|",
     ...clean.map(line),
     ...withForbidden.map(line),
     ...others.map(line),
@@ -170,6 +192,8 @@ function render(rows: Row[], blocked: Map<string, number>, auth429: number, star
     `- 止めた送信: ${[...blocked.values()].reduce((a, b) => a + b, 0)} 件`,
   );
   for (const [k, n] of [...blocked.entries()].sort()) out.push(`  - \`${k}\`: ${n} 件`);
+  out.push(`- 403 が返った API（応答の数）: ${[...forbiddenApis.values()].reduce((a, b) => a + b, 0)} 件`);
+  for (const [k, n] of [...forbiddenApis.entries()].sort()) out.push(`  - \`${k}\`: ${n} 件`);
   out.push(`- ログイン関係の 429: ${auth429} 件`, "");
   return out.join("\n");
 }
@@ -183,6 +207,8 @@ test("全画面の速さを記録する（判定なし）", async ({ page, conte
   const stageStart = Date.now();
   const rows: Row[] = [];
   const blocked = new Map<string, number>();
+  const forbiddenApis = new Map<string, number>();
+  let blockedTotal = 0;
   let auth429 = 0;
   let loggedIn = false;
 
@@ -206,6 +232,12 @@ test("全画面の速さを記録する（判定なし）", async ({ page, conte
     }
     const key = `${method} ${pathShape(path)}`;
     blocked.set(key, (blocked.get(key) ?? 0) + 1);
+    blockedTotal += 1;
+    if (writesOnRead) {
+      // abort すると、アプリは通信の失敗として 0.5・1・2 秒待って送り直し、その待ちが秒に入る。409 は送り直さない（設計 5-8）
+      await route.fulfill({ status: 409, contentType: "application/json", body: "{}" });
+      return;
+    }
     await route.abort();
   });
 
@@ -215,7 +247,10 @@ test("全画面の速さを記録する（判定なし）", async ({ page, conte
     const bucket = hits;
     const res = await req.response().catch(() => null);
     const t = req.timing();
-    bucket.push({ shape: apiShape(req.url()), ms: t.responseEnd >= 0 ? t.responseEnd : 0, status: res ? res.status() : 0 });
+    const shape = apiShape(req.url());
+    const status = res ? res.status() : 0;
+    if (status === 403) forbiddenApis.set(shape, (forbiddenApis.get(shape) ?? 0) + 1);
+    bucket.push({ shape, ms: t.responseEnd >= 0 ? t.responseEnd : 0, status });
   });
   page.on("response", (res) => {
     try {
@@ -240,21 +275,26 @@ test("全画面の速さを記録する（判定なし）", async ({ page, conte
       try {
         let url = target.route;
         if (target.kind === "needs-id") {
-          const id = await pickId(page, api, target);
-          if (id === null) {
-            rows.push(emptyRow(target, "番号を拾えず"));
+          const picked = await pickId(page, api, target);
+          if ("miss" in picked) {
+            rows.push(emptyRow(target, picked.miss));
             continue;
           }
-          url = target.route.replace(":id", encodeURIComponent(id));
+          url = target.route.replace(":id", encodeURIComponent(picked.id));
         }
+        // 中の画面へ移るだけの道すじは、移った先に着いたかで確かめる
+        const expected = target.kind === "redirect" ? target.to : url;
         await leaveIfSame(page, api, url);
         const bucket: ApiHit[] = [];
         hits = bucket;
+        const blockedBefore = blockedTotal;
         const navStart = Date.now();
         await goInApp(page, url);
         const r = await waitSettled(page, api, { capMs: CAP_MS });
         hits = [];
         const row = emptyRow(target, "測れた");
+        if (target.kind === "redirect") row.route = `${target.route} → ${target.to}`;
+        row.blocked = blockedTotal - blockedBefore;
         row.api = bucket.length;
         row.forbidden = bucket.filter((h) => h.status === 403).length;
         row.serverError = bucket.filter((h) => h.status >= 500).length;
@@ -265,7 +305,7 @@ test("全画面の速さを記録する（判定なし）", async ({ page, conte
         }
         if (!r.settled) {
           row.status = "時間切れ";
-        } else if (!landed(page, url)) {
+        } else if (!landed(page, expected)) {
           row.status = "別の画面へ移った";
         } else {
           row.seconds = (Math.max(navStart, r.lastApiEndAt, r.loadingGoneAt) - navStart) / 1000;
@@ -278,6 +318,6 @@ test("全画面の速さを記録する（判定なし）", async ({ page, conte
       }
     }
   } finally {
-    writeFileSync(OUT_FILE, render(rows, blocked, auth429, startedAt, loggedIn), "utf8");
+    writeFileSync(OUT_FILE, render(rows, blocked, forbiddenApis, auth429, startedAt, loggedIn), "utf8");
   }
 });
