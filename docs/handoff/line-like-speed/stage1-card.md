@@ -2,6 +2,7 @@
 
 - 対象: docs/handoff/line-like-speed/design.md §3-2（部品）・§3-3（触らない範囲）・§3-4 の段 1・§3-5 の K5・§3-7。ADR-1054（Accepted）。
 - 根拠の写し: S=origin/main dc99a062e（Merge #4957）。行番号はすべてこの sha。実装の前に最新の origin/main で行を合わせ直す（§3(a)）。
+- 読んだ節: docs/handoff/design-partner-card-ops/guards/00-common.md・guards/03-file.md・guards/04-worktree.md・guards/05-pr.md・guards/10-executor.md・scripts/agent-hooks/cloud/rules.md。照合: 全命令は cd <W> で始める（00-common:5）・出力は tail/head で上限を付ける（00-common:10）・新しいファイルは丸ごとの全文で渡す（03-file:30）・作業場所は new-worktree.sh で作り出力をパイプに通さない（04-worktree:45・:55）・PR は実行役が作らない（05-pr。設計担当が手元で作る）。出力をファイルに残す命令と tail で読む命令は別の行に分けた（00-common:6）。
 - 実行役はクラウドの Sonnet。作業場所の作り方はクラウドの決まり（S scripts/agent-hooks/cloud/rules.md:15）を正とする。.pr-number・gh-pr-create-safe.sh は使わない。出力には上限を付ける。待つために sleep を使わない。
 - 状態: 第 1 版（審査前）。
 - 受領確認: 実装役は着手の最初の報告に「段 1 カード 第 1 版を受け取った・S=dc99a062e」と書く。
@@ -388,19 +389,26 @@ describe("defaults (T7)", () => {
   cd <W> && git rev-parse HEAD origin/release/line-like-speed-stage1-card
   （2 行が同じことを確かめる。違えば停止して BLOCKED: で報告する。main は取り込まない。reset・rebase・force・merge・pull は使わない）
 手順2. 依存を入れ、TanStack を足す。
-  cd <W>/frontend && npm ci > /tmp/stage1-ci.txt 2>&1; tail -5 /tmp/stage1-ci.txt
+  cd <W>/frontend && npm ci > /tmp/stage1-ci.txt 2>&1
+  cd <W> && tail -5 /tmp/stage1-ci.txt
   cd <W>/frontend && npm view @tanstack/react-query@5.104.4 version peerDependencies --json
-  cd <W>/frontend && npm install @tanstack/react-query@5.104.4 --save-exact > /tmp/stage1-install.txt 2>&1; tail -5 /tmp/stage1-install.txt
+  cd <W>/frontend && npm install @tanstack/react-query@5.104.4 --save-exact > /tmp/stage1-install.txt 2>&1
+  cd <W> && tail -5 /tmp/stage1-install.txt
   cd <W> && git diff --stat frontend/package.json frontend/package-lock.json
 手順3. §4-B・§4-C・§4-F の全文で #3・#4・#6 を作り、§4-D のとおり #5 を直す。
 手順4. 試験を流す（この 1 ファイルだけ・全部の試験・型・lint）。
-  cd <W>/frontend && npx vitest run --config vitest.unit.config.ts --project unit src/lib/query > /tmp/stage1-unit.txt 2>&1; tail -30 /tmp/stage1-unit.txt
-  cd <W>/frontend && npm run test:unit > /tmp/stage1-unit-all.txt 2>&1; tail -15 /tmp/stage1-unit-all.txt
-  cd <W>/frontend && npx tsc --noEmit -p . > /tmp/stage1-tsc.txt 2>&1; tail -20 /tmp/stage1-tsc.txt
-  cd <W>/frontend && npx eslint --max-warnings=0 src/lib/query src/App.tsx > /tmp/stage1-lint.txt 2>&1; tail -20 /tmp/stage1-lint.txt
+  cd <W>/frontend && npx vitest run --config vitest.unit.config.ts --project unit src/lib/query > /tmp/stage1-unit.txt 2>&1
+  cd <W> && tail -30 /tmp/stage1-unit.txt
+  cd <W>/frontend && npm run test:unit > /tmp/stage1-unit-all.txt 2>&1
+  cd <W> && tail -15 /tmp/stage1-unit-all.txt
+  cd <W>/frontend && npx tsc --noEmit -p . > /tmp/stage1-tsc.txt 2>&1
+  cd <W> && tail -20 /tmp/stage1-tsc.txt
+  cd <W>/frontend && npx eslint --max-warnings=0 src/lib/query src/App.tsx > /tmp/stage1-lint.txt 2>&1
+  cd <W> && tail -20 /tmp/stage1-lint.txt
   （tsc が generate:api-types の型が無くて落ちる時は、先に `cd <W>/frontend && npm run generate:api-types` を流してからもう一度。）
 手順5. 本番と同じ形で組み立てられるか確かめる。
-  cd <W>/frontend && npm run build > /tmp/stage1-build.txt 2>&1; tail -15 /tmp/stage1-build.txt
+  cd <W>/frontend && npm run build > /tmp/stage1-build.txt 2>&1
+  cd <W> && tail -15 /tmp/stage1-build.txt
 手順6. 変わったファイルが §1 の #1〜#6 だけか確かめる（#7〜#9 は設計担当の commit 済み）。
   cd <W> && git status --short | head -20
   cd <W> && git diff -w origin/main -- frontend/src/App.tsx | head -60
