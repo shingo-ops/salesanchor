@@ -1,7 +1,7 @@
 # design: 全画面を LINE のような使い心地にする
 
 作成: 2026-10-31 Claude Opus（設計担当）。
-**状態**: KGI は PO 承認済み（2026-10-31 選択「1」）。§3 以降は設計案（審査 2 回目 REVISE を受けて直した第 3 版・PO 未承認）。
+**状態**: KGI は PO 承認済み（2026-10-31 選択「1」）。§3 以降は設計案（審査 3 回目 REVISE を受けて直した第 4 版・PO 未承認）。
 現在地: docs/handoff/line-like-speed/recon.md
 
 ## 1. KGI（PO 承認済み 2026-10-31「1」）
@@ -33,30 +33,32 @@ PO の言葉: 「LINEみたいな使い心地は出来る？」（意味は「�
 | ログアウト | メモリの session を消すだけ（selfAuth.ts:67） | 同じ時に写しも全部消す |
 
 ### 3-2. 部品
-- 写しの置き場: TanStack Query（@tanstack/react-query 5 系）を 1 つ入れる。新しい部品の追加なので ADR を起こす（下書き: docs/adr/ 新番号、本件 PR に同梱）。選んだ理由と比べたもの → §3-6。
+- 写しの置き場: TanStack Query（@tanstack/react-query 5 系）を 1 つ入れる。新しい部品の追加なので ADR を起こす。起案は設計担当（Claude Opus）で、Proposed の下書きを本件 PR に同梱する（docs/adr/ 新番号）。PO の採用で Accepted にし、Accepted になるまで段 1 以降を始めない。選んだ理由と比べたもの → §3-6。
 - 置き場は 1 つだけ: frontend/src/lib/query/ に QueryClient を 1 個作り、App.tsx の AuthProvider の内側・BrowserRouter の外側に QueryClientProvider を置く（App.tsx:151-152 の間）。ほかの場所で QueryClient を作らない。
 - 取り方は 1 つだけ: 同じ場所に `useApiQuery(path)` を作り、中で今の `api.get`（frontend/src/lib/api.ts:241）を呼ぶ。通信・再送・401 の扱いは api.ts のまま（二重にしない）。TanStack 側の再送は 0 にする（api.ts が既に 3 回送り直すため。既定 retry 3 のままだと最大 16 回になる）。
 - 写しの名前（key）: `["api", user.uid, path]`。user は useAuth()（AuthContext.tsx:167）、uid は AuthUser.uid（AuthContext.tsx:30）。自社ログインでは同じ人なら同じ user を返す（AuthContext.tsx:53）ので、同じ人のまま写しが消えることはない。user が null の間は取りに行かない（enabled: false）。人が変われば別の写しになる（X3 対策の二重目）。
 - 写しを正本にしない: staleTime 0（既定のまま）＝写しは「出すだけ」で、画面を開くたび・タブに戻るたびに必ずサーバーから取り直す。写しはメモリだけに持ち、ブラウザの保存に書かない（persist の追加はしない）。使われない写しは 30 分で捨てる（gcTime を 30 分に設定。既定の 5 分だと、5 分を過ぎて戻った画面が初回と同じ形になるため）。useQuery の結果を useState に写し替えない（X5）。
-- 書き込みの後: 今の api.post/patch/delete はそのまま。成功したら、その画面の写しを invalidateQueries で取り直す（自分の変更は SSE の合図では来ないため・useRealtimeRefresh.ts の origin 判定）。
-- 合図: useRealtimeRefresh(topics, () => queryClient.invalidateQueries(...)) で受ける。合図の名前の表（topics.py / topics.ts）は今のまま 1 か所。
+- 取り直す写しの決め方（審査 3 回目の指摘）: 各画面は、自分が読む path を画面のファイルの中の 1 つの定数に置き、useApiQuery とその画面の取り直しの両方がその定数を使う。取り直しは `queryClient.invalidateQueries({ queryKey: ["api", uid, path] })` を、その定数の path ごとに呼ぶ（key の先頭一致なので、同じ path の写しだけが取り直される）。合図の名前と path の対応を集めた新しい表は作らない（写しの決め方が 2 か所に分かれるため）。
+- 書き込みの後: 今の api.post/patch/delete はそのまま。成功したら、上の決め方でその画面の写しを取り直す（自分の変更は SSE の合図では来ないため・useRealtimeRefresh.ts:56 の origin 判定）。
+- 合図: useRealtimeRefresh(topics, reload) の reload に、上の取り直しを渡す（ADR-1016 決定7 の形のまま）。合図の名前の表は今のまま backend/app/realtime/topics.py が正本で、画面側の frontend/src/lib/realtime/topics.ts は手書きの写し（backend/tests/test_realtime_topics.py:129-133 が同じ集合かを確かめる）。
 - ログアウト・人の入れ替わり: QueryClientProvider は AuthProvider の内側なので、AuthProvider（AuthContext.tsx:90・:105）の中からは写しに触れない。そこで frontend/src/lib/query/ に小さな部品 QueryAuthSync を作り、QueryClientProvider の直下に置く（画面は描かない）。この部品が useAuth().user?.uid を見て、前の uid と今の uid が違ったら（null になった時を含む）、cancelQueries → resetQueries → queryClient.clear() → getMutationCache().clear() の順に消す（X4 の順）。user の変化は 3 つの道すべてから届く: Firebase の onAuthStateChanged（:90）、自社ログインの subscribeSession（:105）、api.ts の 401 → expireSession → notify（selfAuth.ts:67-71）→ :105 の道。
 - 見た目: 新しい金型は作らない（金型の新規登録＝ADR-144 §4 の PO 許可は不要）。初回は今の LoadingBlock 金型（class sa-loading-block）。取り直し中は中身を残し、既存の金型 Spinner（components/loading/Spinner.tsx・size "sm"・class sa-spinner。部品の説明に「while a table refetches」と書かれた用途そのもの）を、各画面の既存の見出し・道具欄の中に置く。新しい CSS は書かない。置き場に新しい CSS が要ると分かった画面は、その便を止めて PO に聞く（ADR-144 §4）。
 - Spinner は測る道具の「読み込み中の印」の目印（settle.ts の LOADING_SELECTOR）に入っていないので、K1 の「前の中身が出た」を邪魔しない。目印の一覧は変えない。
 - 在庫表の生の印（InventoryPage.tsx:631-639 の文字だけの div）は、在庫表を移す便で Spinner に置き換える（今は金型違反・recon §4 U1）。
 
 ### 3-3. 触らない範囲
-- backend・DB・migrations・deploy.yml・本番 scripts は触らない（段 5 の合図追加だけは backend の topics.py に載せる。別便・別審査）。
+- backend・DB・migrations・deploy.yml・本番 scripts は触らない。
+- 段 5 の境目（審査 3 回目の指摘）: 段 5 は画面のまとまりごとに別便・別審査。1 便の中身は (1) backend/app/realtime/topics.py で、そのまとまりの書き込みルートを NO_SIGNAL_ROUTES から WRITE_ROUTE_TOPICS へ移す（新しい合図の名前を足すときは同じ便で frontend/src/lib/realtime/topics.ts にも足し、test_realtime_topics.py:129-133 を緑にする）、(2) その画面に useRealtimeRefresh を足す、の 2 つだけ。DB・migrations・deploy.yml・本番 scripts は段 5 でも触らない。段 5 の各便の設計は、段 4 までが終わってから別に書いて審査に出す。
 - api.ts の通信の中身・ログインの仕組み・閲覧ページ（viewer/）は触らない。
 - 画面の見た目・文言は変えない（i18n キーも増やさない。印の金型に文言が要るときは ja/en 同時に足す）。
 
 ### 3-4. 段階（1 便 1 PR・変更→反映→測定→次）
 | 段 | 中身 | 合格の線 |
 |---|---|---|
-| 0 | 測る仕組みだけ足す（§3-5 の画面の中の記録係）。U1 の数は段 0 の前に u1-count.py を流し直して確かめる。今の値を基準として 1 回記録 | 135 画面の K1・K3 の基準値が記録に出る。試しの 3 画面で、記録係の時刻と動画のコマの時刻の差が 0.05 秒以内 |
+| 0 | 測る仕組みだけ足す（§3-5 の画面の中の記録係）。U1 の数は段 0 の前に u1-count.py を流し直して確かめる。「135 画面とファイルの対応表」を作る（毎朝の記録の画面の一覧 × App.tsx のルート → 画面のファイル。部品の中の画面はその親のファイル）。今の値を基準として 1 回記録 | 135 画面の K1・K3 の基準値が記録に出る。対応表の 135 行すべてにファイルがある。試しの 3 画面で、記録係の時刻と動画のコマの時刻の差が 0.05 秒以内。「A の画面の部品が描かれた」の見分け方を design に書き足し、その版が審査に通ってから段 2 へ進む |
 | 1 | 置き場・取り方・ログアウトで消す、の土台だけ（画面はまだ変えない）＋ K5 の試験 | 試験: A でログイン→画面を開く→ログアウト→B でログイン→A の中身が 0 件。単体試験で retry が 1 回の失敗で 4 回以内 |
 | 2 | 試しに 3 画面だけ変える（ChannelMastersPage・CompaniesPage・ほか 1 つ。使う頻度は PO に聞かず、中身を消す形の代表を選ぶ） | 3 画面で K1 ≤0.1 秒、K2 ≤2 秒、取り直した後の中身が DB と一致（tenant 001） |
-| 3 | 残りを 10 画面ずつ（u1-count.py の分け方で 中身を消す 62・このファイルで取らない 24・ほかの印 7・印なし 3。三項 58 本は便ごとに 1 本ずつ形を確かめてから変える） | 毎便の後に毎朝の記録で K1・K2 が悪化していない |
+| 3 | 残りを 10 画面ずつ。直す相手は段 0 の対応表に出たファイルだけ（ルートの無い BadgesPage・BuddyPage は対応表に出なければ直さない・recon §4 U1）。u1-count.py の分け方は 中身を消す 62・このファイルで取らない 24・ほかの印 7・印なし 3。三項 58 本は便ごとに 1 本ずつ形を確かめてから変える | 毎便の後に毎朝の記録で K1・K2 が悪化していない |
 | 4 | 見張り: 「読み込み中に中身を消す形」の数を数える検査を CI に足し、数が増えたら赤（減るのは可）。段 3 の最後で 0 にして固定 | CI に検査があり、わざと 1 本足すと赤 |
 | 5 | K4: 合図の無い画面の書き込みに合図を足す（画面のまとまりごと・backend 便） | tenant 001 で別の人として変更→開いている画面に 5 秒以内 |
 
@@ -93,7 +95,7 @@ PO の言葉: 「LINEみたいな使い心地は出来る？」（意味は「�
 - 段 0 の毎朝の記録に K1・K3 を足し、2 秒・0.1 秒を超えた画面を知らせる（知らせの作りは別便）。
 - 新しい画面は useApiQuery を使う、を frontend/CLAUDE.md ではなく CI の検査で強制する（CLAUDE.md の追加判定 1 に従う）。
 
-## 4. 外部事例（生: /tmp/CC報告ファイル/page-speed/line/external-cases-cache.md）
+## 4. 外部事例（原文の確認記録: docs/handoff/line-like-speed/sources.md B）
 | # | 何 | 5W2H の要点 | 数値 | 本件への使い方 |
 |---|---|---|---|---|
 | X1 成功 | ShipSecAI/studio PR #298（2026-02-17〜18） | 開発チームが 13 領域を Zustand から TanStack Query へ・11 store 削除 | API 呼び出し 10→8（-20%）・DOM 2,091→1,444（-31%）・画面移動時の追加通信 0・CLS 0.00 | 画面移動で取り直しが消える根拠。規模が違うので数は本件の約束にしない |
