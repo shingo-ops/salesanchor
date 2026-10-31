@@ -5,7 +5,7 @@
 # 接続確認について: pg_hba はループバック宛の host が trust のため、postgres 容器の中からの
 #   TCP 接続では scram の確かめにならない（docs/handoff/ai-readonly-db-path/recon.md:40）。
 #   接続確認は「次のデプロイ後に窓口の容器から」行い、この台本では行わない。
-# 記録について: 同じ接続で log_statement=none と log_min_error_statement=panic にしてから ALTER ROLE を流す。psql の出力は捨てる（失敗時は「失敗: 4. ...」の 1 行だけ出る）。
+# 記録について: 同じ接続で log_statement=none・log_min_error_statement=panic・log_min_duration_statement=-1・pg_stat_statements.track_utility=off にしてから ALTER ROLE を流す。psql の出力は捨てる（失敗時は「失敗: 4. ...」の 1 行だけ出る）。
 set -euo pipefail
 umask 077
 
@@ -18,13 +18,17 @@ CUR="$DIR/ai-reader.env"
 NEW="$DIR/ai-reader-cloud.env"
 step="開始"
 tmp=""
+rerun_ok=0
 
 on_exit() {
   rc=$?
   unset pw url newurl
   [ -n "$tmp" ] && rm -f "$tmp"
   if [ "$rc" -ne 0 ]; then
-    echo "失敗: 「${step}」で止まりました。${NEW} が無ければ、もう一度実行してよい（パスワードは作り直されます）。"
+    echo "失敗: 「${step}」で止まりました。"
+    if [ "$rerun_ok" = "1" ]; then
+      echo "${NEW} が無ければ、もう一度実行してよい（パスワードは作り直されます）。"
+    fi
   fi
 }
 trap on_exit EXIT
@@ -61,7 +65,8 @@ step="3. パスワードの生成"
 pw="$(openssl rand -hex 32)"
 
 step="4. DB の ai_reader_cloud にパスワードを設定"
-printf "SET log_statement = 'none';\nSET log_min_error_statement = 'panic';\nALTER ROLE ai_reader_cloud PASSWORD '%s';\n" "$pw" \
+rerun_ok=1
+printf "SET log_statement = 'none';\nSET log_min_error_statement = 'panic';\nSET log_min_duration_statement = -1;\nSET pg_stat_statements.track_utility = off;\nALTER ROLE ai_reader_cloud PASSWORD '%s';\n" "$pw" \
   | docker exec -i astro-webapp-postgres-1 psql -U jarvis -d jarvis_db -v ON_ERROR_STOP=1 -q >/dev/null 2>&1
 
 step="5. 新しい env の書き込み"
@@ -73,6 +78,7 @@ mv "$tmp" "$NEW"
 tmp=""
 
 step="6. 確かめ"
+rerun_ok=0
 chk() { if "${@:2}"; then echo "○ $1"; else echo "× $1"; fi; }
 is_cloud_line() { case "$(cat "$NEW")" in AI_READER_DATABASE_URL=postgresql://ai_reader_cloud:*) return 0 ;; *) return 1 ;; esac; }
 chk "新しい env がある" test -f "$NEW"
