@@ -43,11 +43,11 @@ def write(path, head, rows):
             f.write("\t".join(r.get(h, "") for h in head) + "\n")
 
 
-def run_score(gold, snaps):
+def run_score(gold, snaps, **kw):
     by = {}
     for r in snaps:
         by.setdefault(r.pop("_post", "P1"), []).append(r)
-    return sc.score(gold, by)
+    return sc.score(gold, by, **kw)
 
 
 def t(T, item, stage):
@@ -152,6 +152,19 @@ def test_a4_unknown_stops():
         run_score([grow()], [srow(status="Backorder")])
     with pytest.raises(sc.Stop):
         run_score([grow(A4_status="保留")], [srow()])
+
+
+def test_a4_none_stops_without_extra_arg():
+    with pytest.raises(sc.Stop):
+        run_score([grow()], [srow(status="none")])
+
+
+def test_a4_extra_system_none_counts_as_ng():
+    T, errors, *_ = run_score([grow()], [srow(status="none")], a4_extra_system=["none"])
+    assert t(T, "A4", "通し") == (0, 1, 0)
+    assert t(T, "A4", "システム") == (0, 1, 0)
+    assert any(e[2] == "A4" and e[5] == "none" for e in errors)
+    assert sc.a4_extra_counts({"P1": [srow(status="none"), srow(status="none")]}, ["none"]) == {"none": 2}
 
 
 def test_unexpected_exclusion_stops():

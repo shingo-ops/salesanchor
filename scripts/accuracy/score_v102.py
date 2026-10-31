@@ -100,11 +100,11 @@ def check_spelling(gold, snaps):
         raise Stop("綴りが揃わない値の組: %r" % (problems,))
 
 
-def a4_table(gold, snaps):
+def a4_table(gold, snaps, extra_system=()):
     counts = {}
     for r in snaps:
         counts[r["status"]] = counts.get(r["status"], 0) + 1
-    unknown = [v for v in counts if v not in A4_MAP.values()]
+    unknown = [v for v in counts if v not in A4_MAP.values() and v not in extra_system]
     gunknown = [r["A4_status"] for r in gold if r["A4_status"] not in A4_MAP and r["A4_status"] not in NO_ANSWER]
     if unknown or gunknown:
         raise Stop("A4 の読み替え表に無い値: system=%r gold=%r" % (unknown, sorted(set(gunknown))))
@@ -178,13 +178,24 @@ def judge(g, it, field):
     return None, gv, None  # 呼び出し側で値を比べる
 
 
-def score(gold, snap_by_post):
+def a4_extra_counts(snap_by_post, extra_system):
+    """読み替え表に無いが --a4-extra-system で採点を続けた値と件数。"""
+    counts = {}
+    for rs in snap_by_post.values():
+        for r in rs:
+            v = r["status"]
+            if v in extra_system and v not in A4_MAP.values():
+                counts[v] = counts.get(v, 0) + 1
+    return counts
+
+
+def score(gold, snap_by_post, a4_extra_system=()):
     all_snaps = [r for rs in snap_by_post.values() for r in rs]
     for g in gold:
         if g["除外"] not in EXCL_ALLOWED:
             raise Stop("想定外の除外の書き方: %r" % g["除外"])
     check_spelling(gold, all_snaps)
-    table = a4_table(gold, all_snaps)
+    table = a4_table(gold, all_snaps, a4_extra_system)
 
     by_post = {}
     for g in gold:
@@ -336,6 +347,8 @@ def main(argv=None):
     ap.add_argument("--gold", required=True)
     ap.add_argument("--snapshot-dir", required=True)
     ap.add_argument("--out-dir", required=True)
+    ap.add_argument("--a4-extra-system", action="append", default=[],
+                    help="A4 の読み替え表に無いシステム側の status 値。渡した値は不一致(NG)として採点を続ける")
     a = ap.parse_args(argv)
     try:
         check_out_dir(a.out_dir)
@@ -345,7 +358,7 @@ def main(argv=None):
         for f in files:
             rows = read_tsv(os.path.join(a.snapshot_dir, f), SNAP_COLS)
             snap_by_post[f[:-4]] = rows  # 全行を使う（is_current では絞らない）
-        T, errors, c1, extra, nocur, nofile, table = score(gold, snap_by_post)
+        T, errors, c1, extra, nocur, nofile, table = score(gold, snap_by_post, a.a4_extra_system)
         os.makedirs(a.out_dir, exist_ok=True)
         write_tsv(os.path.join(a.out_dir, "result.tsv"),
                   ["項目", "段", "正しい", "違う", "答え無し", "正答率"], result_rows(T, c1, extra))
@@ -362,6 +375,10 @@ def main(argv=None):
     # 画面には件数だけ（時刻・パスは出力ファイルに入れない）
     print("写しの行が無い投稿=%d (うち写しファイル無し=%d)" % (nocur, nofile))
     print("A4読み替え表: " + " / ".join("%s=%s(%d)" % (k, v[0], v[1]) for k, v in table.items()))
+    extra_counts = a4_extra_counts(snap_by_post, a.a4_extra_system)
+    if extra_counts:
+        print("A4読み替え表に無いが採点を続けた値: " + " / ".join(
+            "%s(%d)" % (k, n) for k, n in sorted(extra_counts.items())))
     return 0
 
 
