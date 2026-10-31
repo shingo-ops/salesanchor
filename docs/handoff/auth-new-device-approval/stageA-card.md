@@ -1,12 +1,12 @@
-# 段A 実装カード（知らない機械からのログインを止める・第3版）
+# 段A 実装カード（知らない機械からのログインを止める・第4版）
 
 - 対象: docs/handoff/auth-new-device-approval/design.md 第6.1版 §3（D1〜D16）・§4 段A（A-1・A-2・A-3）・§6・§7。ADR-1055（Proposed）。合格の基準は kgi.md の K1〜K9（PO 承認済 2026-11-01）。
 - 中身の正本: 何をどう作るかは design.md §4 段A の文のとおりに作る。このカードは「順番・先に確かめること・止まる条件・受入」を足す。design.md とこのカードが食い違うときは止まって Opus へ返す（自分で選ばない）。
 - 根拠の写し: S=origin/main bf3ad441638ed1084c50c5528a435a294b01469f。design.md の行番号は基準 7e9155163 で読んだもので、S までに本線が進んでいる。実装の前に §3(a) で行を合わせ直す。§0 V-2 の行は origin/main dc99a062e でも同じだった（第1版の審査）。
 - 前提: このカードと design.md・kgi.md・ADR-1055 は、設計書だけの PR で本線に入れてから流す。手順1 の後に origin/main に docs/handoff/auth-new-device-approval/design.md が無ければ、停止して BLOCKED: で返す。
 - 読んだ節: docs/handoff/design-partner-card-ops/guards/00-common.md・guards/03-file.md・guards/04-worktree.md・guards/05-pr.md・guards/07-migration.md・guards/10-executor.md・scripts/agent-hooks/cloud/rules.md。実行役はクラウドの Sonnet。作業場所の作り方はクラウドの決まり（S scripts/agent-hooks/cloud/rules.md:15）を正とする。.pr-number・gh-pr-create-safe.sh・gh-pr-merge-safe.sh はクラウドでは使わない。PR は設計担当（Opus）が手元で scripts/gh-pr-create-safe.sh で作る。出力には上限を付ける。待つために sleep を使わない。
-- 状態: 第3版（Opus 作成）。第1版の審査 REVISE（要修正3・軽微5）と第2版の審査 REVISE（要修正1・軽微5）を直した。
-- 受領確認: 実装役は着手の最初の報告に「段A カード 第3版 前半（または後半）を受け取った・S=bf3ad4416」と書く。
+- 状態: 第4版（Opus 作成）。第1版の審査 REVISE（要修正3・軽微5）と第2版の審査 REVISE（要修正1・軽微5）と第3版の審査 REVISE（要修正1・軽微1）を直した。
+- 受領確認: 実装役は着手の最初の報告に「段A カード 第4版 前半（または後半）を受け取った・S=bf3ad4416」と書く。
 
 ## 0. 設計からの直し（V）
 - V-1 2回に分けて流す（変更は一度に1つ・1回の作業の量を抑える）。同じ枝 release/new-device-approval-stage-a に積む。PR は後半の push の後に1つだけ作る（design.md の「PR-A」は1つのまま）。
@@ -55,7 +55,7 @@
 | 25 | frontend/src/pages/login/LoginPage.tsx | — | 待ちの表示 | 後半 |
 | 26 | 新 frontend/src/features/auth/LoginApprovalWatcher.tsx（と試験） | 無い | A-3 のとおり | 後半 |
 | 26a | frontend/src/components/DesktopShell.tsx | :204 RealtimeProvider・:197-198 管理の案内の並び | :204 の内側に #26 と #26b を置く。:198 の後に { to: "/super-admin/login-requests", labelKey: "nav.superAdminLoginRequests" } を足す | 後半 |
-| 26b | 新 frontend/src/features/auth/RecoveryCodePrompt.tsx（と試験） | 無い | design.md:158 の案内。ログイン後に GET /auth/recovery-codes/status の残りが0のとき Modal を1回出す（「作る」で POST /auth/recovery-codes・10個を1回だけ表示してコピー／「あとで」で閉じる）。出したことは sessionStorage に「人の id とそのログインの番号」を鍵にして覚え、同じログインの間は出し直さない。ログインの番号はトークンの sid を使う（無ければ人の id とログインした時刻）。signIn の成功時とログアウト時に印を消す。読み書きは try/catch で、読めなければ出す側に倒す。新しいタブで同じログインのままなら出さない | 後半 |
+| 26b | 新 frontend/src/features/auth/RecoveryCodePrompt.tsx（と試験） | 無い | design.md:158 の案内。ログイン後に GET /auth/recovery-codes/status の残りが0のとき Modal を1回出す（「作る」で POST /auth/recovery-codes・10個を1回だけ表示してコピー／「あとで」で閉じる）。出したことは localStorage に「人の id と sid」を鍵にして覚え、同じログインの間は別のタブでも出し直さない。sid は frontend/src/lib/auth/selfAuth.ts:74 の readClaims を sid も返すように広げて読む（design.md D8・D16 で access token に sid が入り、refresh でも引き継がれる）。sid の無い古いトークンのときは鍵を人の id だけにする。signIn の成功時とログアウト時に印を消す。読み書きは try/catch で、読めなければ出す側に倒す | 後半 |
 | 26c | frontend/src/components/MobileShell.tsx | :198 RealtimeProvider・:187 管理の案内の並び | :198 の内側に #26 と #26b を置く。:187 の並びに nav.superAdminLoginRequests を同じ形で足す | 後半 |
 | 27 | frontend/src/pages/account-settings/SecuritySection.tsx | — | 機械の一覧と予備の合言葉 | 後半 |
 | 28 | 新 frontend/src/pages/super-admin/LoginRequestsPage.tsx（と試験） | 無い | 許可待ちの一覧。見出しは t("nav.superAdminLoginRequests")（横の案内と同じ言葉にそろえるため） | 後半 |
