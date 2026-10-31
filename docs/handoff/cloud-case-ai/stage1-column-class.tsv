@@ -67,7 +67,18 @@ public	auth_events	client_ip	mask		character varying
 public	auth_events	event_type	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
 public	auth_events	method	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
 public	auth_events	path	mask		character varying
+public	auth_events	reason	mask		character varying
 public	auth_events	user_agent	mask		character varying
+public	auth_login_requests	candidates	mask		character varying
+public	auth_login_requests	decided_note	mask		character varying
+public	auth_login_requests	decided_via	mask		character varying
+public	auth_login_requests	ip	mask		character varying
+public	auth_login_requests	label	mask		character varying
+public	auth_login_requests	location	mask		character varying
+public	auth_login_requests	match_number	mask		character
+public	auth_login_requests	reject_reason	mask		character varying
+public	auth_login_requests	status	mask		character varying
+public	auth_login_requests	user_agent	mask		character varying
 public	buyback_alert_rules	card_game	mask		text
 public	buyback_alert_rules	direction	allow	値の決まり buyback_alert_rules_direction_check で値が限られる	text
 public	buyback_alert_rules	name	mask		text
@@ -454,6 +465,14 @@ public	type_master	code	allow	共用マスタ（運営が入れる一覧）。�
 public	type_master	name_en	allow	【名前を含む】共用マスタ（運営が入れる一覧）。作品のタイプ名	character varying
 public	type_master	name_ja	allow	【名前を含む】共用マスタ（運営が入れる一覧）。同上	character varying
 public	user_inventory_filters	filters	mask		jsonb
+public	user_recovery_codes	code_id	mask		character
+public	user_trusted_devices	created_ip	mask		character varying
+public	user_trusted_devices	created_location	mask		character varying
+public	user_trusted_devices	created_via	mask		character varying
+public	user_trusted_devices	label	mask		character varying
+public	user_trusted_devices	last_ip	mask		character varying
+public	user_trusted_devices	last_location	mask		character varying
+public	user_trusted_devices	user_agent	mask		character varying
 public	users	email	mask		character varying
 public	users	full_name	mask		character varying
 public	users	locale	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying

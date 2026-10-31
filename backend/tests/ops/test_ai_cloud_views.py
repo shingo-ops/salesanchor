@@ -33,6 +33,7 @@ _META_SQL = "20261024_100000_create_ai_cloud_meta.sql"
 _ROLE_SQL = "20261024_100100_create_ai_reader_cloud_role.sql"
 _CREATE_SQL = "20261024_100300_create_ai_cloud_views.sql"
 _DROP_SQL = "20261024_100200_drop_ai_cloud_views.sql"
+_DEVICE_APPROVAL_SQL = "20261101_120000_add_new_device_approval.sql"
 _DENY_RE = re.compile(r"^password|_encrypted$|_secret|_token|hash|^secret|^api_key|private_key|credential")
 _NAME_RE = re.compile(
     r"(name|email|mail|phone|tel|fax|addr|zip|postal|message|text|body|note|comment|memo|sender|display|contact"
@@ -474,7 +475,7 @@ def test_role_migration_is_idempotent(pg):
     # meta の migration も冪等（分類表の中身は消えない）
     n0 = _rows(pg, "SELECT count(*) FROM ai_cloud_meta.column_class")[0][0]
     c.execute(_read(_META_SQL))
-    assert _rows(pg, "SELECT count(*) FROM ai_cloud_meta.column_class")[0][0] == n0 == 1035
+    assert _rows(pg, "SELECT count(*) FROM ai_cloud_meta.column_class")[0][0] == n0 == 1054
 
 
 # ---------------------------------------------------------------- T10（CI の見張り）
@@ -561,6 +562,54 @@ def test_t10_classification_covers_real_shaped_tables(cluster):
         conn.close()
         cur = cluster.control.cursor()
         cur.execute(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)')
+
+
+# ADR-1055 段A: 新しい3表と auth_events の新しい列（合計 19 列）に column_class の行があることを名前で確かめる。
+_DEVICE_APPROVAL_CLASSIFIED = {
+    ("user_trusted_devices", c)
+    for c in ("label", "user_agent", "created_via", "created_ip", "created_location", "last_ip", "last_location")
+} | {
+    ("auth_login_requests", c)
+    for c in (
+        "status", "match_number", "candidates", "label", "user_agent", "ip", "location",
+        "decided_via", "decided_note", "reject_reason",
+    )
+} | {("user_recovery_codes", "code_id"), ("auth_events", "reason")}  # fmt: skip
+
+
+def test_t10_new_device_approval_columns_are_classified(pg):
+    """本便の migration を流した PG で、新しい 19 列に column_class の行があり、分類の漏れが無い。
+
+    小さな表の DB（pg）で、トランザクションの中に本番の今の形の対象の表を作って本便の migration を流し、
+    終わったら ROLLBACK で戻す（他の試験に表を残さない）。"""
+    assert len(_DEVICE_APPROVAL_CLASSIFIED) == 19
+    rows = _rows(pg, "SELECT table_name, column_name FROM ai_cloud_meta.column_class WHERE schema_pattern = 'public'")
+    have = {(r[0], r[1]) for r in rows}
+    missing = _DEVICE_APPROVAL_CLASSIFIED - have
+    assert missing == set(), f"column_class に行が無い: {sorted(missing)}"
+
+    c = pg.cursor()
+    c.execute("SET ROLE aic_owner")
+    c.execute("BEGIN")
+    try:
+        c.execute("CREATE TABLE public.users (id integer PRIMARY KEY)")
+        c.execute(
+            "CREATE TABLE public.auth_events (id serial PRIMARY KEY, event_type varchar(50), path varchar(255),"
+            " method varchar(10), status_code integer, client_ip varchar(45), user_agent varchar(500),"
+            " duration_ms integer, created_at timestamptz DEFAULT now())"
+        )
+        c.execute("CREATE TABLE public.auth_refresh_tokens (id bigserial PRIMARY KEY, user_id integer)")
+        c.execute(_read(_DEVICE_APPROVAL_SQL))
+        c.execute(_read(_DEVICE_APPROVAL_SQL))  # 冪等
+        new_tables = {"user_trusted_devices", "auth_login_requests", "user_recovery_codes"}
+        gaps = [
+            g for g in _classification_gaps(pg)
+            if g[1] in new_tables or (g[1], g[2]) == ("auth_events", "reason")
+        ]
+        assert gaps == []
+    finally:
+        c.execute("ROLLBACK")
+        c.execute("RESET ROLE")
 
 
 def test_t10_detects_added_columns(pg):

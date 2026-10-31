@@ -416,3 +416,32 @@ async def is_token_blacklisted(token: str) -> bool:
     except Exception:
         logger.warning("ブラックリスト確認失敗: fail-openとして認証を継続")
         return False
+
+
+# ── 失効した更新トークンの組（ADR-1055 D8） ───────────────────────
+
+FAMILY_REVOKED_TTL = 900  # アクセストークンの寿命（ACCESS_TOKEN_TTL_SECONDS）と同じ
+
+
+async def mark_family_revoked(sid: str) -> None:
+    """失効した組の id を置く。この組のアクセストークンを、寿命が切れるまで拒む。
+    Redis が読めないときは何もしない（ブラックリストと同じ fail-open。更新トークンの失効は DB なので 900 秒後には切れる）。"""
+    r = get_redis()
+    if not r:
+        return
+    try:
+        await r.set(f"auth:fam_revoked:{sid}", "1", ex=FAMILY_REVOKED_TTL)
+    except Exception:
+        logger.warning("失効した組の記録に失敗: 組の失効は DB に入っている")
+
+
+async def is_family_revoked(sid: str) -> bool:
+    """組が失効しているか。Redis が読めないときは False（fail-open・ブラックリストと同じ）。"""
+    r = get_redis()
+    if not r:
+        return False
+    try:
+        return await r.exists(f"auth:fam_revoked:{sid}") > 0
+    except Exception:
+        logger.warning("失効した組の確認に失敗: fail-open として認証を継続")
+        return False

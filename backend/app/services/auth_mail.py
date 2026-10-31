@@ -130,3 +130,65 @@ def send_invite_email(to_addr: str, reset_url: str) -> None:
 def send_viewer_password_reset_email(to_addr: str, reset_url: str) -> None:
     """閲覧ページ用の再発行メール（ADR-1019）。BackgroundTasks から呼ぶ。"""
     _send_reset_mail(to_addr, reset_url, VIEWER_RESET_SUBJECT, _VIEWER_RESET_BODY)
+
+
+NEW_DEVICE_SUBJECT = "【Sales Anchor】新しい機械からのログイン / Login from a new device"
+
+_NEW_DEVICE_BODY = """Sales Anchor に、新しい機械からのログインがありました。
+
+日時（日本時間）: {when}
+機械: {device}
+場所の目安: {location}
+{note}
+心当たりがなければ、いつもの機械でアプリを開いて「私ではない」を押し、パスワードを変えてください。
+このメールにリンクはありません。
+
+---------------------------------------------
+There was a login to Sales Anchor from a new device.
+
+Time (JST): {when}
+Device: {device}
+Approximate location: {location}
+
+If this was not you, open the app on a device you usually use, press "This is not me", and change your password.
+This email contains no links.
+---------------------------------------------
+
+{geo_credit}
+Sales Anchor
+"""
+
+GEO_CREDIT = "IP Geolocation by DB-IP"  # リンクは入れない（メールにリンクを入れない決まり）
+
+
+def send_new_device_mail(
+    to_addr: str, *, when: str, device: str, location: str | None, note: str | None = None
+) -> None:
+    """新しい機械からのログインの知らせ（ADR-1055 K2）。BackgroundTasks から呼ぶ同期関数。
+
+    リンクを入れない。パスワード・番号・Cookie の値は入れない。失敗しても外に出さずログに残す。
+    """
+    settings = smtp_settings()
+    if settings is None:
+        logger.info("[auth_mail] SMTP not configured, skipping new device mail")
+        return
+    try:
+        body = _NEW_DEVICE_BODY.format(
+            when=when,
+            device=device,
+            location=location or "不明 / unknown",
+            note=(note + "\n") if note else "",
+            geo_credit=GEO_CREDIT if location else "",
+        )
+        msg = MIMEMultipart("alternative")
+        msg["From"] = settings.mail_from
+        msg["To"] = to_addr
+        msg["Subject"] = NEW_DEVICE_SUBJECT
+        msg.attach(MIMEText(body, "plain", "utf-8"))
+        with smtplib.SMTP(settings.host, settings.port, timeout=15) as smtp:
+            smtp.starttls()
+            smtp.login(settings.user, settings.password)
+            smtp.send_message(msg)
+        logger.info("[auth_mail] new device mail sent (to=%s)", _mask_addr(to_addr))
+    except Exception as e:  # noqa: BLE001
+        logger.error("[auth_mail] new device mail failed (to=%s): %s", _mask_addr(to_addr), type(e).__name__)

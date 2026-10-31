@@ -110,6 +110,21 @@ celery_app.conf.beat_schedule = {
         "task": "app.tasks.maintenance.purge_viewer_accounts",
         "schedule": crontab(hour=5, minute=45),
     },
+    # 新しい機械の許可（ADR-1055）: 期限切れの許可依頼を5分ごとに expired にし、人宛ての合図を送る
+    "expire-login-requests": {
+        "task": "app.tasks.maintenance.expire_login_requests",
+        "schedule": 300.0,  # 5分
+    },
+    # 新しい機械の許可（ADR-1055）: 古い許可依頼と、取り消し・未使用の機械の片付け（毎日 AM6:00）
+    "purge-new-device-records": {
+        "task": "app.tasks.maintenance.purge_new_device_records",
+        "schedule": crontab(hour=6, minute=0),
+    },
+    # 場所の目安の元データ（DB-IP City Lite）を毎月3日 AM4:00 に取り込む（ADR-1055 D9。失敗しても認証は止めない）
+    "refresh-geoip-db": {
+        "task": "app.tasks.maintenance.refresh_geoip_db",
+        "schedule": crontab(day_of_month=3, hour=4, minute=0),
+    },
     # 仕入元オファー (public.inventory) の時間失効: expires_at を過ぎた行を 30分ごとに削除
     # QA 2026-05-30: F6 承認時に expires_at=offered_at+18h を付与する時間失効モデル。
     # 30分粒度なので実際の寿命は 18h〜18.5h。在庫数 (stock_quantity) は触らない。

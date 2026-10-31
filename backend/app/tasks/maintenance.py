@@ -245,6 +245,152 @@ def purge_viewer_accounts():
     return result
 
 
+# 新しい機械の許可（ADR-1055）。環境変数にしない（設計書 A-2「片付け」の値）
+LOGIN_REQUEST_RETENTION_DAYS = 90  # 許可依頼を残す日数
+DEVICE_UNUSED_DAYS = 180  # この日数使わない機械は失効扱い（devices.py の DEVICE_IDLE_DAYS と同じ）
+DEVICE_AFTER_REVOKE_DAYS = 90  # 取り消し・失効扱いから消すまで
+
+
+@shared_task(
+    name="app.tasks.maintenance.purge_new_device_records",
+    max_retries=3,
+    default_retry_delay=60,
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    retry_backoff_max=300,
+    retry_jitter=True,
+)
+def purge_new_device_records():
+    """90日より古い許可依頼と、取り消し・180日未使用から90日たった機械を消す（ADR-1055 A-2「片付け」）。
+
+    public の表なのでテナント文脈は使わない。件数だけログに出す。
+    """
+    engine = _get_sync_engine()
+    Session = sessionmaker(engine)
+    with Session() as session:
+        requests_deleted = session.execute(
+            text(
+                "DELETE FROM public.auth_login_requests "
+                "WHERE created_at < NOW() - make_interval(days => :d)"
+            ),
+            {"d": LOGIN_REQUEST_RETENTION_DAYS},
+        ).rowcount
+        devices_deleted = session.execute(
+            text(
+                "DELETE FROM public.user_trusted_devices "
+                "WHERE (revoked_at IS NOT NULL AND revoked_at < NOW() - make_interval(days => :after)) "
+                "   OR (revoked_at IS NULL AND COALESCE(last_used_at, created_at) "
+                "       < NOW() - make_interval(days => :unused + :after))"
+            ),
+            {"after": DEVICE_AFTER_REVOKE_DAYS, "unused": DEVICE_UNUSED_DAYS},
+        ).rowcount
+        session.commit()
+    result = {"login_requests": max(requests_deleted, 0), "devices": max(devices_deleted, 0)}
+    logger.info("新しい機械の許可の片付け: %s", result)
+    return result
+
+
+@shared_task(
+    name="app.tasks.maintenance.expire_login_requests",
+    max_retries=3,
+    default_retry_delay=30,
+    autoretry_for=(Exception,),
+)
+def expire_login_requests():
+    """期限切れの pending を expired にする（5分ごと・ADR-1055）。
+
+    決まった人の、ほかのいつもの機械の小窓も閉じるため、人宛ての合図（auth.login_request）を送る。
+    合図の失敗は無視する（fail-open）。
+    """
+    from app.realtime.publisher import publish_user_change_sync
+    from app.realtime.topics import TOPIC_AUTH_LOGIN_REQUEST
+
+    engine = _get_sync_engine()
+    Session = sessionmaker(engine)
+    with Session() as session:
+        rows = session.execute(
+            text(
+                "UPDATE public.auth_login_requests SET status = 'expired', decided_at = NOW() "
+                "WHERE status = 'pending' AND expires_at < NOW() RETURNING user_id"
+            )
+        ).fetchall()
+        session.commit()
+    user_ids = sorted({int(r[0]) for r in rows})
+    for uid in user_ids:
+        publish_user_change_sync(uid, TOPIC_AUTH_LOGIN_REQUEST)
+    logger.info("許可依頼の期限切れ: %d件（%d人）", len(rows), len(user_ids))
+    return {"expired": len(rows), "users": len(user_ids)}
+
+
+def _geoip_url(year: int, month: int) -> str:
+    return f"https://download.db-ip.com/free/dbip-city-lite-{year:04d}-{month:02d}.mmdb.gz"
+
+
+@shared_task(name="app.tasks.maintenance.refresh_geoip_db")
+def refresh_geoip_db():
+    """場所の目安の元データ（DB-IP City Lite・MMDB）を取り込む（毎月3日・ADR-1055 D9）。
+
+    一時ファイルに落として rename で入れ替える。落とせなくても認証は止めない（例外は外に出さず結果に書く）。
+    書き先はコードの既定の場所（worker は GEOIP_DB_PATH を受け取らない）。
+    """
+    import gzip
+    import shutil
+    from datetime import datetime, timezone
+    from pathlib import Path
+
+    import requests
+
+    from app.auth import geo
+
+    dest = Path(geo.DEFAULT_GEOIP_PATH)
+    now = datetime.now(timezone.utc)
+    candidates = [(now.year, now.month)]
+    prev_year, prev_month = (now.year, now.month - 1) if now.month > 1 else (now.year - 1, 12)
+    candidates.append((prev_year, prev_month))
+    last_error = "unknown"
+    try:
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        tmp = dest.with_name(dest.name + ".tmp")
+        for year, month in candidates:
+            try:
+                resp = requests.get(_geoip_url(year, month), stream=True, timeout=(10, 120))
+                if resp.status_code != 200:
+                    last_error = f"http_{resp.status_code}"
+                    continue
+                with tmp.open("wb") as out, gzip.GzipFile(fileobj=resp.raw) as gz:
+                    shutil.copyfileobj(gz, out)
+                tmp.replace(dest)
+                logger.info("geoip: %04d-%02d を取り込み（%d バイト）", year, month, dest.stat().st_size)
+                return {"status": "ok", "month": f"{year:04d}-{month:02d}", "bytes": dest.stat().st_size}
+            except Exception as e:  # noqa: BLE001
+                last_error = type(e).__name__
+    except Exception as e:  # noqa: BLE001
+        last_error = type(e).__name__
+    logger.warning("geoip: 取り込みに失敗（認証は止めない）: %s", last_error)
+    return {"status": "failed", "error": last_error}
+
+
+def _geoip_missing_on_start(**_kwargs) -> None:
+    """worker の起動時にファイルが無ければ、1回だけ取りに行く。失敗しても何もしない。"""
+    try:
+        from pathlib import Path
+
+        from app.auth import geo
+
+        if not Path(geo.DEFAULT_GEOIP_PATH).exists():
+            refresh_geoip_db.delay()
+    except Exception:  # noqa: BLE001
+        logger.warning("geoip: 起動時の取り込みの依頼に失敗（認証は止めない）")
+
+
+try:
+    from celery.signals import worker_ready
+
+    worker_ready.connect(_geoip_missing_on_start, weak=False)
+except Exception:  # noqa: BLE001
+    pass
+
+
 @shared_task(
     name="app.tasks.maintenance.purge_expired_inventory_offers",
     max_retries=3,

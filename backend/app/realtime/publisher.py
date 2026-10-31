@@ -19,6 +19,7 @@ RT_REDIS_URL = _base.rsplit("/", 1)[0] + "/3"
 CHANNEL_GLOBAL = "rt:global"
 CHANNEL_SHARED = "rt:shared"
 CHANNEL_TENANT_PREFIX = "rt:t:"
+CHANNEL_USER_PREFIX = "rt:u:"
 CHANNEL_PATTERN = "rt:*"
 
 _async_client: Optional[aioredis.Redis] = None
@@ -27,6 +28,10 @@ _sync_client: Optional[redis.Redis] = None
 
 def tenant_channel(tenant_id: int) -> str:
     return f"{CHANNEL_TENANT_PREFIX}{int(tenant_id)}"
+
+
+def user_channel(user_id: int) -> str:
+    return f"{CHANNEL_USER_PREFIX}{int(user_id)}"
 
 
 def _channel_for(scope: str, tenant_id: Optional[int]) -> Optional[str]:
@@ -87,3 +92,20 @@ def publish_change_sync(
         _get_sync().publish(channel, _payload(topic, origin))
     except Exception:
         logger.warning("realtime publish(sync) 失敗（処理は継続）: topic=%s", topic, exc_info=True)
+
+
+async def publish_user_change(user_id: int, topic: str, origin: Optional[str] = None) -> None:
+    """人宛ての合図を1つ送る（ADR-1055）。中身は topic と origin だけ（依頼の id などは入れない）。
+    人宛ての送り口は、この async と publish_user_change_sync の2つだけ。"""
+    try:
+        await _get_async().publish(user_channel(user_id), _payload(topic, origin))
+    except Exception:
+        logger.warning("realtime publish(user) 失敗（処理は継続）: topic=%s", topic, exc_info=True)
+
+
+def publish_user_change_sync(user_id: int, topic: str, origin: Optional[str] = None) -> None:
+    """Celery 等の同期コード用。中身は publish_user_change と同じ。"""
+    try:
+        _get_sync().publish(user_channel(user_id), _payload(topic, origin))
+    except Exception:
+        logger.warning("realtime publish(user,sync) 失敗（処理は継続）: topic=%s", topic, exc_info=True)
