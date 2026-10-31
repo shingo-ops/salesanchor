@@ -127,3 +127,10 @@ leads の列は backend/app/services/tenant.py:355〜407（作るときの定義
 PreToolUse:Bash hook error: [[ "$CLAUDE_CODE_REMOTE" = "true" ] || exit 0; exec bash "$CLAUDE_PROJECT_DIR/scripts/agent-hooks/cloud/dispatch.sh"]: BLOCKED(cloud): 'rm -rf' は不可逆操作です。クラウドでは行えません。手元で PO の承認を得て実行してください。
 
 言い換えて流し直すことはしていない。点検は行わず、この評価は Write の道具で書いた本文のままとした。origin/main の読み取りは git show と grep だけで、ほかに止められた命令は無い。
+
+このほか、依頼文どおり本店の checkout で git switch -c してから commit したところ、commit の入口（見張りではなく commit のフック）に止められた。文面:
+
+🚫 commit を中断しました: worktree 外での作業は禁止されています。
+   正しい手順: bash scripts/new-worktree.sh feature/morimoto/<トピック名>
+
+言い換えはせず、クラウドの決まり（scripts/agent-hooks/cloud/rules.md）どおり bash scripts/new-worktree.sh release/lead-regression-fable-eval-report で作業場所を作り、その中で git switch -C release/lead-regression-fable-eval-report origin/release/lead-regression-recon で枝の先頭を 8242dfced に合わせてから、同じファイルを commit した。feature/morimoto/ の枝名には従っていない。
