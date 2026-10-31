@@ -1,4 +1,4 @@
-# 段2 実装カード（設計第4.6版の追補・第6.2版）
+# 段2 実装カード（設計第4.6版の追補・第6.3版）
 
 - 対象: docs/handoff/cloud-case-ai/design.md 第4.6版 §4-2・§4-3・§7（T2〜T6c・T7）・§9 の段2。ADR-1052（Accepted）。
 - 根拠の写し: S=origin/main 8c6f52813（Merge #4942）。行番号はすべてこの sha。実装の前に最新の origin/main で行を合わせ直す（§3(a)）。
@@ -95,6 +95,15 @@
 | Migration SQL Test の migration-test-run（実行 41196171461）が `migrations/20261031_200000_create_ops_case.sql:19: ERROR: relation "public.ops_incidents" does not exist` で落ちる。この仕事は変わった migration だけを、S .github/workflows/migration-test.yml の手書きの土台の上で流す。土台に public.ops_incidents が無い（全部を流す migration-full-dryrun は success） | S .github/workflows/migration-test.yml の migration-test-run の土台（`PUBLIC_SQL` の終わりの前。ほかの前提の表と同じ「本番作成済み・前提として登録する」の注記の形）に、S migrations/20261016_100000_create_ops_incident_tables.sql:5-35 の public.ops_incidents の CREATE TABLE IF NOT EXISTS を写す（§1 #17） |
 | API Contract Check（実行 41196171546）が、§4-C の口 8 つが frontend/api-contract/openapi.json に無いと落ちる。今の /api/v1/ops/* の口（incidents・control・error-reports など）はこの表に載っている | 落ちた記録の案内どおり `cd backend && ENVIRONMENT=test python -m tools.export_openapi ../frontend/api-contract/openapi.json` で作り直す。手で書かない（§1 #18） |
 
+## 0-9. 第6.2版の実装の CI と本線の取り込みで見つかった直し（第6.3版・2026-10-31 Opus）
+どれも本線に合わせる付けたしで、作る物の形と守りは変えない。
+| 見つかったこと | 直し（場所） |
+|---|---|
+| PR が本線と食い違い（mergeable CONFLICTING）、pull_request の CI が新しい先頭で動かない。食い違いは S scripts/run_all_migrations.sh の 1 か所だけ（`git merge-tree --write-tree --name-only origin/main HEAD`）。本線（2fa6d499d・ADR-1013 便6）が同じ行の位置に `run_sql migrations/20261031_200000_add_passkey_enroll_prompt_skips.sql` を足した | origin/main を取り込む（merge。rebase と force push はしない）。食い違いの行は両方残し、本線の passkey の 2 行（注記と run_sql）を先、この PR の 2 行を後にする。2 つの表は互いに触らない |
+| 上の本線の migration と、この PR の migration の刻印が同じ 20261031_200000。S .github/workflows/migration-guard.yml:287-331 の「タイムスタンプ重複チェック」が、新規の刻印が main 既存と同じなら落とす（origin/main に 20261031_210000 は無い） | この PR の migration を `git mv` で migrations/20261031_210000_create_ops_case.sql に変える（中身は変えない）。参照 4 か所を同じ名前に直す: S scripts/run_all_migrations.sh の run_sql の行・S backend/tests/ops/test_ops_case_db.py:41・S backend/tests/test_ops_case_router.py:151・S .github/workflows/migration-test.yml の ops_incidents の注記（§1 #17 で足した 2 行目）。§0-8 の古い名前は落ちた記録の引用なので直さない（§1 #1・#2・#11・#17 の範囲） |
+| Backend Tests（実行 41196171581）が `tests/test_realtime_topics.py::test_every_write_route_is_in_exactly_one_table` の 1 件だけで落ちる（1 failed, 7630 passed）。§4-C の書き込みの口 5 つ（POST /api/v1/ops/case/audits・/api/v1/ops/case/unmask-requests/{request_id}/decision・/api/v1/ops/case/{incident_id}/report・/api/v1/ops/case/{incident_id}/ticket・/api/v1/ops/case/{incident_id}/unmask-requests）が、ADR-1016 の 2 つの表のどちらにも無い。今の /api/v1/ops/* の書き込みの口は S backend/app/realtime/topics.py:116-121 で NO_SIGNAL_ROUTES に「運用者向けで画面更新の通知対象外」として載っている | S backend/app/realtime/topics.py の NO_SIGNAL_ROUTES の :121 の次に、上の 5 つを足す。理由は `"相談係 ADR-1052 段2: 運用者向けで画面更新の通知対象外"`。WRITE_ROUTE_TOPICS には足さない（§1 #19） |
+| 本線の取り込みで backend の口が変わりうる | 取り込みの後で §1 #18 と同じ命令で frontend/api-contract/openapi.json を作り直す。手で書かない |
+
 ## 1. 触るファイル（変更前→変更後）
 | # | ファイル | 今（S） | 変える形 |
 |---|---|---|---|
@@ -115,6 +124,7 @@
 | 16 | 新 tests/sandbox/compose-run-nginx-mount.sh | 無し | §3(j)(m) を本物の docker compose で確かめる試験（§3(j)(m) の「試験 #16 の形」）。S tests/sandbox/README.md の決まり（secrets・本番を使わない・trap で片付け・失敗時は先に docker logs） |
 | 17 | S .github/workflows/migration-test.yml | migration-test-run の土台に public.ops_incidents が無い | §0-8。土台に public.ops_incidents の CREATE TABLE IF NOT EXISTS を 1 つ足す。ほかの行は変えない |
 | 18 | S frontend/api-contract/openapi.json | §4-C の口 8 つが無い | §0-8。export_openapi で作り直す（生成物。手で書かない） |
+| 19 | S backend/app/realtime/topics.py | §4-C の書き込みの口 5 つが ADR-1016 の表に無い | §0-9。NO_SIGNAL_ROUTES の :121 の次に 5 つを足す。ほかの行は変えない |
 | 15 | docs/handoff/cloud-case-ai/design.md | :176-177・:179・:210・:146・:366 | V5-1〜V5-4 と V5-3（:366 の CI の置き場）に合わせる（このカードの PR で直す。実装の PR では触らない） |
 
 ## 2. 触らない範囲
