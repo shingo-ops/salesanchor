@@ -363,7 +363,7 @@ Discord 投稿（許可リストの人だけ）
 
 ## 維持の仕組み
 - 守り手: Opus（設計と週次点検の結果の確認）・agent-console の定期実行（週次点検 4-6）・CI（T7・T10）。PO は週次点検の知らせを受ける。
-- CI: 分類漏れと allow の理由漏れで落ちる（T10）。nginx の 443 のブロック数と 421 の行の数が合わなければ落ちる（T7）。置き場は S .github/workflows/ の既存の backend 試験に足す。ワークフロー名は段1の実装カードで実物を見て確定する（設計合格の前提にしない）。
+- CI: 分類漏れと allow の理由漏れで落ちる（T10）。nginx の 443 のブロック数と 421 の行の数が合わなければ落ちる（T7）。置き場は新しい .github/workflows/nginx-config-check.yml（段2 実装カードの V5-3。test.yml は触らない）。ワークフロー名は段1の実装カードで実物を見て確定する（設計合格の前提にしない）。
 - デプロイ: S scripts/run_all_migrations.sh が最初に ai_cloud を外し、trap が毎回作り直して持ち主の権限を付け直す。分類表は ai_cloud_meta にあるので消えない。
 - 週次点検: agent-console の定期実行（4-6）。点検記録が無い週を K6 で数える。
 - 鍵: 相談係用の CASE_AGENT_TOKEN（ai-reader-cloud-http・backend の口・ai-unmask-http が受ける）は 90 日で更新する（ADR-1042:19）。正本は GitHub secret。CASE_ADMIN_TOKEN・OPS_API_TOKEN は手元の Keychain に置く。
