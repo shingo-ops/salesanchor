@@ -26,6 +26,9 @@ from app.cache import get_redis
 
 CHALLENGE_TTL_SECONDS = 300
 MAX_PASSKEYS_PER_USER = 10
+FRESH_LOGIN_SECONDS = 300
+PROMPT_SKIP_WINDOW_DAYS = 180
+PROMPT_SKIP_LIMIT = 3
 RP_NAME = "Sales Anchor"
 LABEL_MAX = 64
 
@@ -40,7 +43,7 @@ def _key(kind: str, owner: str, challenge_id: str) -> str:
 
 
 async def store_challenge(kind: str, owner: str, challenge: bytes) -> str:
-    """challenge を Redis に 300 秒だけ置き、challenge_id を返す。kind は reg か login。"""
+    """challenge を Redis に 300 秒だけ置き、challenge_id を返す。kind は reg・reg_auto・login。"""
     redis = get_redis()
     if redis is None:
         raise HTTPException(status_code=503, detail="unavailable")

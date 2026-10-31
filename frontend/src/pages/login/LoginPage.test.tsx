@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { createInstance } from "i18next";
 import { I18nextProvider } from "react-i18next";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import en from "../../locales/en.json";
 
@@ -9,6 +9,11 @@ const mock = vi.hoisted(() => ({
   self: false,
   passkey: false,
   selfPasskeyLogin: vi.fn(),
+  getPasskeyPrompt: vi.fn(),
+  conditionalCreateSupported: vi.fn(),
+  autoRegisterPasskey: vi.fn(),
+  skipPasskeyPrompt: vi.fn(),
+  registerPasskey: vi.fn(),
   signInWithEmailAndPassword: vi.fn(),
   sendPasswordResetEmail: vi.fn(),
 }));
@@ -28,6 +33,11 @@ vi.mock("../../lib/auth/passkey", async (orig) => ({
   ...(await orig<typeof import("../../lib/auth/passkey")>()),
   passkeySupported: () => mock.passkey,
   selfPasskeyLogin: mock.selfPasskeyLogin,
+  getPasskeyPrompt: mock.getPasskeyPrompt,
+  conditionalCreateSupported: mock.conditionalCreateSupported,
+  autoRegisterPasskey: mock.autoRegisterPasskey,
+  skipPasskeyPrompt: mock.skipPasskeyPrompt,
+  registerPasskey: mock.registerPasskey,
 }));
 
 import { AuthProvider } from "../../contexts/AuthContext";
@@ -50,6 +60,24 @@ function renderLogin() {
   );
 }
 
+async function renderLoginWithHome() {
+  render(
+    <I18nextProvider i18n={instance}>
+      <MemoryRouter initialEntries={["/login"]}>
+        <AuthProvider>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/" element={<div data-testid="after-login" />} />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>
+    </I18nextProvider>,
+  );
+  // 起動時の refresh（401）が終わる前にログインすると、その失効がログイン結果を消して user が立たない。終わるまで待つ
+  await waitFor(() => expect(fetchMock.mock.calls.some(([u]) => u === "/api/v1/auth/refresh")).toBe(true));
+  await new Promise((resolve) => setTimeout(resolve, 0));
+}
+
 async function fillAndSubmit() {
   fireEvent.change(screen.getByLabelText(tr("login.email")), { target: { value: "a@example.com" } });
   fireEvent.change(screen.getByLabelText(tr("login.password")), { target: { value: "secret-password-1" } });
@@ -61,6 +89,11 @@ beforeEach(async () => {
   mock.self = false;
   mock.passkey = false;
   mock.selfPasskeyLogin.mockReset();
+  mock.getPasskeyPrompt.mockReset().mockResolvedValue({ can_auto: false, show_prompt: false });
+  mock.conditionalCreateSupported.mockReset().mockResolvedValue(true);
+  mock.autoRegisterPasskey.mockReset().mockResolvedValue("created");
+  mock.skipPasskeyPrompt.mockReset().mockResolvedValue(undefined);
+  mock.registerPasskey.mockReset().mockResolvedValue(undefined);
   mock.signInWithEmailAndPassword.mockReset().mockResolvedValue({});
   mock.sendPasswordResetEmail.mockReset().mockResolvedValue(undefined);
   fetchMock = vi.fn();
@@ -213,5 +246,133 @@ describe("LoginPage (passkey button)", () => {
 
     expect(await screen.findByText(tr("authError.passkeyFailed"))).toBeTruthy();
     expect(screen.queryByText(tr("authError.invalidCredentials"))).toBeNull();
+  });
+});
+
+describe("LoginPage (enroll after password sign-in)", () => {
+  beforeEach(() => {
+    mock.self = true;
+    mock.passkey = true;
+    // user を立てるため、sub と email を持つ読める JWT を返す（"a.b.c" だと user が null のままで守りを試せない）
+    const jwt = `h.${btoa(JSON.stringify({ sub: "u1", email: "a@example.com" }))}.s`;
+    fetchMock.mockImplementation((url: string) =>
+      Promise.resolve(
+        url === "/api/v1/auth/login"
+          ? new Response(JSON.stringify({ access_token: jwt, token_type: "bearer", expires_in: 900 }), { status: 200 })
+          : new Response(JSON.stringify({ detail: "invalid_credentials" }), { status: 401 }),
+      ),
+    );
+  });
+
+  it("L1 unsupported device: no prompt, goes on", async () => {
+    mock.passkey = false;
+    await renderLoginWithHome();
+    await fillAndSubmit();
+    await waitFor(() => expect(fetchMock.mock.calls.some(([u]) => u === "/api/v1/auth/login")).toBe(true));
+    expect(mock.getPasskeyPrompt).not.toHaveBeenCalled();
+    expect(screen.queryByText(tr("login.passkeyPromptTitle"))).toBeNull();
+    expect(await screen.findByTestId("after-login")).toBeTruthy();
+  });
+
+  it("L2 auto create succeeds: no prompt", async () => {
+    mock.getPasskeyPrompt.mockResolvedValue({ can_auto: true, show_prompt: true });
+    await renderLoginWithHome();
+    await fillAndSubmit();
+    await waitFor(() => expect(mock.autoRegisterPasskey).toHaveBeenCalledTimes(1));
+    expect(screen.queryByText(tr("login.passkeyPromptTitle"))).toBeNull();
+    expect(await screen.findByTestId("after-login")).toBeTruthy();
+  });
+
+  it("L3 not_allowed + show_prompt: prompt shown, skip records once", async () => {
+    mock.getPasskeyPrompt.mockResolvedValue({ can_auto: true, show_prompt: true });
+    mock.autoRegisterPasskey.mockResolvedValue("not_allowed");
+    await renderLoginWithHome();
+    await fillAndSubmit();
+    expect(await screen.findByText(tr("login.passkeyPromptTitle"))).toBeTruthy();
+    expect(screen.queryByTestId("after-login")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: tr("login.passkeyPromptSkip") }));
+    await waitFor(() => expect(mock.skipPasskeyPrompt).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.queryByText(tr("login.passkeyPromptTitle"))).toBeNull());
+    expect(await screen.findByTestId("after-login")).toBeTruthy();
+  });
+
+  it("L4 not_allowed + no show_prompt: no prompt", async () => {
+    mock.getPasskeyPrompt.mockResolvedValue({ can_auto: true, show_prompt: false });
+    mock.autoRegisterPasskey.mockResolvedValue("not_allowed");
+    await renderLoginWithHome();
+    await fillAndSubmit();
+    await waitFor(() => expect(mock.autoRegisterPasskey).toHaveBeenCalledTimes(1));
+    expect(screen.queryByText(tr("login.passkeyPromptTitle"))).toBeNull();
+    expect(mock.skipPasskeyPrompt).not.toHaveBeenCalled();
+    expect(await screen.findByTestId("after-login")).toBeTruthy();
+  });
+
+  it("L5 getPasskeyPrompt fails: no prompt, goes on", async () => {
+    mock.getPasskeyPrompt.mockRejectedValue(new Error("down"));
+    await renderLoginWithHome();
+    await fillAndSubmit();
+    await waitFor(() => expect(mock.getPasskeyPrompt).toHaveBeenCalledTimes(1));
+    expect(screen.queryByText(tr("login.passkeyPromptTitle"))).toBeNull();
+    expect(mock.autoRegisterPasskey).not.toHaveBeenCalled();
+    expect(await screen.findByTestId("after-login")).toBeTruthy();
+  });
+
+  it("L6 register button calls registerPasskey once even when it fails", async () => {
+    mock.getPasskeyPrompt.mockResolvedValue({ can_auto: false, show_prompt: true });
+    mock.registerPasskey.mockRejectedValue(new Error("cancelled"));
+    await renderLoginWithHome();
+    await fillAndSubmit();
+    expect(await screen.findByText(tr("login.passkeyPromptTitle"))).toBeTruthy();
+    expect(screen.queryByTestId("after-login")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: tr("login.passkeyPromptRegister") }));
+    await waitFor(() => expect(mock.registerPasskey).toHaveBeenCalledTimes(1));
+    expect(mock.registerPasskey).toHaveBeenCalledWith("");
+    await waitFor(() => expect(screen.queryByText(tr("login.passkeyPromptTitle"))).toBeNull());
+    expect(await screen.findByTestId("after-login")).toBeTruthy();
+  });
+
+  it("L7 does not navigate away while getPasskeyPrompt is pending (!enrolling guard)", async () => {
+    let resolvePrompt: (v: { can_auto: boolean; show_prompt: boolean }) => void = () => {};
+    mock.getPasskeyPrompt.mockReturnValue(
+      new Promise((resolve) => {
+        resolvePrompt = resolve;
+      }),
+    );
+    await renderLoginWithHome();
+    await fillAndSubmit();
+    await waitFor(() => expect(mock.getPasskeyPrompt).toHaveBeenCalledTimes(1));
+    expect(screen.queryByTestId("after-login")).toBeNull();
+    resolvePrompt({ can_auto: false, show_prompt: true });
+    expect(await screen.findByText(tr("login.passkeyPromptTitle"))).toBeTruthy();
+    expect(screen.queryByTestId("after-login")).toBeNull();
+  });
+
+  it("L8 auto create failed + show_prompt: prompt shown", async () => {
+    mock.getPasskeyPrompt.mockResolvedValue({ can_auto: true, show_prompt: true });
+    mock.autoRegisterPasskey.mockResolvedValue("failed");
+    await renderLoginWithHome();
+    await fillAndSubmit();
+    expect(await screen.findByText(tr("login.passkeyPromptTitle"))).toBeTruthy();
+    expect(screen.queryByTestId("after-login")).toBeNull();
+  });
+
+  it("L9 auto create exists: no prompt", async () => {
+    mock.getPasskeyPrompt.mockResolvedValue({ can_auto: true, show_prompt: true });
+    mock.autoRegisterPasskey.mockResolvedValue("exists");
+    await renderLoginWithHome();
+    await fillAndSubmit();
+    await waitFor(() => expect(mock.autoRegisterPasskey).toHaveBeenCalledTimes(1));
+    expect(screen.queryByText(tr("login.passkeyPromptTitle"))).toBeNull();
+    expect(await screen.findByTestId("after-login")).toBeTruthy();
+  });
+
+  it("L10 auto create failed + no show_prompt: no prompt", async () => {
+    mock.getPasskeyPrompt.mockResolvedValue({ can_auto: true, show_prompt: false });
+    mock.autoRegisterPasskey.mockResolvedValue("failed");
+    await renderLoginWithHome();
+    await fillAndSubmit();
+    await waitFor(() => expect(mock.autoRegisterPasskey).toHaveBeenCalledTimes(1));
+    expect(screen.queryByText(tr("login.passkeyPromptTitle"))).toBeNull();
+    expect(await screen.findByTestId("after-login")).toBeTruthy();
   });
 });

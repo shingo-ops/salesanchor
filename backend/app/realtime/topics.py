@@ -126,6 +126,7 @@ NO_SIGNAL_ROUTES: dict[tuple[str, str], str] = {
     ("POST", "/api/v1/auth/passkey/login/verify"): _PENDING,
     ("POST", "/api/v1/auth/passkey/register/options"): _PENDING,
     ("POST", "/api/v1/auth/passkey/register/verify"): _PENDING,
+    ("POST", "/api/v1/auth/passkey/prompt/skip"): "ログイン直後の案内 ADR-1013: 本人の案内を出すかどうかの記録だけで画面更新の通知対象外",
     ("DELETE", "/api/v1/auth/passkeys/{passkey_id}"): _PENDING,
     ("POST", "/api/v1/auth/refresh"): _PENDING,
     ("POST", "/api/v1/auth/register"): _PENDING,

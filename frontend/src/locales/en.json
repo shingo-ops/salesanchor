@@ -680,7 +680,11 @@
     "sendResetEmail": "Send reset email",
     "resetEmailSent": "Password reset email sent. Please check your inbox.",
     "backToLogin": "Back to sign in",
-    "signInWithPasskey": "Sign in with face or fingerprint"
+    "signInWithPasskey": "Sign in with face or fingerprint",
+    "passkeyPromptTitle": "Sign in with your face or fingerprint?",
+    "passkeyPromptBody": "Next time, sign in instantly with your face or fingerprint instead of your password.",
+    "passkeyPromptRegister": "Set up",
+    "passkeyPromptSkip": "Skip for now"
   },
   "authError": {
     "invalidCredentials": "The email address or password is incorrect.",

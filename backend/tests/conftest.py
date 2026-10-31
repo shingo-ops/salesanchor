@@ -323,6 +323,8 @@ async def test_engine():
             statement = statement.replace("public.password_reset_tokens", "password_reset_tokens")
         if "public.webauthn_credentials" in statement:
             statement = statement.replace("public.webauthn_credentials", "webauthn_credentials")
+        if "public.passkey_enroll_prompt_skips" in statement:
+            statement = statement.replace("public.passkey_enroll_prompt_skips", "passkey_enroll_prompt_skips")
         # SQLite は FOR UPDATE をサポートしない（ファイルレベルロックで代替）。
         if " FOR UPDATE" in statement:
             statement = statement.replace(" FOR UPDATE", "")
@@ -1378,6 +1380,14 @@ async def setup_test_db(test_engine):
                 label TEXT,
                 created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 last_used_at TIMESTAMP
+            )
+        """))
+        # ADR-1013 便6: public.passkey_enroll_prompt_skips の SQLite 版（BIGSERIAL→INTEGER, TIMESTAMPTZ→TIMESTAMP）
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS passkey_enroll_prompt_skips (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                skipped_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
             )
         """))
         # テストユーザー投入
