@@ -16,6 +16,13 @@
    - デプロイ後、deploy の「Start ai-reader-cloud-http」の手順に警告（::warning::）が出ていない。
    - DB 接続の確かめは、デプロイ後に窓口の容器から行う（B は postgres 容器内の接続を確かめに使わない。ループバック宛 host は trust のため scram の確かめにならない: docs/handoff/ai-readonly-db-path/recon.md:40）。
 
+## 途中で止まったとき
+
+- A で GitHub secret が ○・Keychain が × のとき: A をもう一度流すと「既にあります」で止まる。`gh secret delete CASE_AGENT_TOKEN -R shingo-ops/salesanchor` で secret を消してから A を流し直す（値は作り直されるので、前の値は使わない）。
+- A で GitHub secret が × のとき: そのまま A を流し直してよい（Keychain が ○ なら先に `security delete-generic-password -s salesanchor-case-agent-token` で消す）。
+- B で「失敗: 「4. ...」」のとき: 新しい env はまだ無いので、そのまま B を流し直してよい（パスワードは作り直される）。
+- B で「失敗: 「5. ...」」のとき: 新しい env が無ければ、そのまま B を流し直してよい。
+
 ## 戻し方
 
 - GitHub secret: `gh secret delete CASE_AGENT_TOKEN -R shingo-ops/salesanchor`

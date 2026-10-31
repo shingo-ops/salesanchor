@@ -5,6 +5,7 @@
 # 接続確認について: pg_hba はループバック宛の host が trust のため、postgres 容器の中からの
 #   TCP 接続では scram の確かめにならない（docs/handoff/ai-readonly-db-path/recon.md:40）。
 #   接続確認は「次のデプロイ後に窓口の容器から」行い、この台本では行わない。
+# 記録について: 同じ接続で log_statement=none と log_min_error_statement=panic にしてから ALTER ROLE を流す。psql の出力は捨てる（失敗時は「失敗: 4. ...」の 1 行だけ出る）。
 set -euo pipefail
 umask 077
 
@@ -50,7 +51,7 @@ if [ "$lines" != "1" ] || [ "$prefix_ok" != "○" ]; then
   echo "止まりました: 今の env が想定の形（1 行・AI_READER_DATABASE_URL=postgresql://ai_reader: で始まる）ではありません。"
   exit 1
 fi
-rest="${url#*@}"
+rest="${url##*@}"
 if [ "$rest" = "$url" ] || [ -z "$rest" ]; then
   echo "止まりました: 今の env の URL に @ 以降（host:port/db）が見つかりません。"
   exit 1
@@ -60,8 +61,8 @@ step="3. パスワードの生成"
 pw="$(openssl rand -hex 32)"
 
 step="4. DB の ai_reader_cloud にパスワードを設定"
-printf "SET log_statement = 'none';\nALTER ROLE ai_reader_cloud PASSWORD '%s';\n" "$pw" \
-  | docker exec -i astro-webapp-postgres-1 psql -U jarvis -d jarvis_db -v ON_ERROR_STOP=1 -q
+printf "SET log_statement = 'none';\nSET log_min_error_statement = 'panic';\nALTER ROLE ai_reader_cloud PASSWORD '%s';\n" "$pw" \
+  | docker exec -i astro-webapp-postgres-1 psql -U jarvis -d jarvis_db -v ON_ERROR_STOP=1 -q >/dev/null 2>&1
 
 step="5. 新しい env の書き込み"
 newurl="AI_READER_DATABASE_URL=postgresql://ai_reader_cloud:${pw}@${rest}"
