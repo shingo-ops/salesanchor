@@ -5,6 +5,7 @@
 """
 from __future__ import annotations
 
+import hashlib
 import os
 import shutil
 import subprocess
@@ -209,6 +210,111 @@ class RepoMode(unittest.TestCase):
         self.repo.write("migrations/20260101_000000_a.sql", NEUTRALIZED)
         self.allowlist()
         self.assertEqual(self.repo.run("repo").returncode, 0)
+
+
+REFERENCE_ROW = """-- 初期値
+INSERT INTO ai_cloud.column_class (table_name) VALUES
+    ('products'),
+    ('tenants');
+"""
+
+
+def sha256_of(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+class ReferenceAllowlist(unittest.TestCase):
+    """確認 8 の例外の一覧（reference-allowlist.tsv）。一覧の場所は一時リポジトリの scripts/migration-guard/。"""
+
+    NAME = "20261024_100300_create_ai_cloud_views.sql"
+    PATH = f"migrations/{NAME}"
+
+    def setUp(self) -> None:
+        self.repo = TempRepo()
+        self.addCleanup(self.repo.cleanup)
+        self.repo.write("migrations/20260101_000000_a.sql", STRUCTURE_ONLY)
+        self.base = self.repo.commit("base")
+
+    def listing(self, *rows: tuple[str, str]) -> None:
+        text = "# test\n" + "".join(f"{f}\t{sha}\ttest reason\ttest ref\n" for f, sha in rows)
+        self.repo.write("scripts/migration-guard/reference-allowlist.tsv", text)
+
+    def diff(self, check: str = "all") -> subprocess.CompletedProcess[str]:
+        head = self.repo.commit("change")
+        return self.repo.run("diff", self.base, head, "--check", check)
+
+    def test_listed_with_matching_sha_passes_check8(self) -> None:
+        self.repo.write(self.PATH, REFERENCE_ROW)
+        self.listing((self.PATH, sha256_of(REFERENCE_ROW)))
+        result = self.diff("8")
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertIn(f"⚠ 例外の一覧により確認 8 から外した: {self.PATH}（test reason）", result.stdout)
+
+    def test_listed_with_mismatching_sha_fails(self) -> None:
+        self.repo.write(self.PATH, REFERENCE_ROW)
+        self.listing((self.PATH, sha256_of("別の中身\n")))
+        result = self.diff("8")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("中身が変わったので例外は効かない", result.stdout)
+        self.assertNotIn("外した", result.stdout)
+
+    def test_unlisted_file_still_fails(self) -> None:
+        self.repo.write(self.PATH, REFERENCE_ROW)
+        self.listing()
+        result = self.diff("8")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("MIGRATION GUARD FAILED (チェック8)", result.stdout)
+
+    def test_other_file_is_not_exempted_by_listing_another(self) -> None:
+        self.repo.write(self.PATH, REFERENCE_ROW)
+        self.repo.write("migrations/20261024_100400_other.sql", REFERENCE_ROW)
+        self.listing((self.PATH, sha256_of(REFERENCE_ROW)))
+        result = self.diff("8")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("20261024_100400_other.sql", result.stdout)
+
+    def test_listed_file_with_write_to_protected_table_fails_check7(self) -> None:
+        text = REFERENCE_ROW + "INSERT INTO public.permissions (key) VALUES ('x');\n"
+        self.repo.write(self.PATH, text)
+        self.listing((self.PATH, sha256_of(text)))
+        result = self.diff("all")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("MIGRATION GUARD FAILED (チェック7)", result.stdout)
+        self.assertIn("外した", result.stdout)  # 確認 8 は外れるが、確認 7 は効く
+
+    def repo_with(self, *, sha: str | None, registered: bool = True, text: str = REFERENCE_ROW, listed: bool = True) -> None:
+        self.repo.write(self.PATH, text)
+        self.repo.write("scripts/migration-guard/value-write-allowlist.tsv", "# test\n")
+        if registered:
+            (self.repo.dir / "scripts" / "run_all_migrations.sh").write_text(
+                f'#!/bin/bash\nAI_CLOUD_CREATE_SQL="{self.PATH}"\n', encoding="utf-8"
+            )
+        if listed:
+            self.listing((self.PATH, sha or sha256_of(text)))
+
+    def test_repo_mode_valid_row_passes(self) -> None:
+        self.repo_with(sha=None)
+        result = self.repo.run("repo")
+        self.assertEqual(result.returncode, 0, result.stdout)
+
+    def test_repo_mode_stale_sha_fails(self) -> None:
+        self.repo_with(sha=sha256_of("古い中身\n"))
+        result = self.repo.run("repo")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("sha256 が今の中身と違う", result.stdout)
+
+    def test_repo_mode_unregistered_row_fails(self) -> None:
+        self.repo_with(sha=None, registered=False)
+        result = self.repo.run("repo")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("書かれていない", result.stdout)
+
+    def test_repo_mode_row_for_missing_file_fails(self) -> None:
+        self.repo_with(sha=None)
+        (self.repo.dir / self.PATH).unlink()
+        result = self.repo.run("repo")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("無いファイル", result.stdout)
 
 
 class DryrunReport(unittest.TestCase):

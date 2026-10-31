@@ -178,13 +178,20 @@ def judge(g, it, field):
     return None, gv, None  # 呼び出し側で値を比べる
 
 
-def score(gold, snap_by_post):
+def score(gold, snap_by_post, verdicts=None):
     all_snaps = [r for rs in snap_by_post.values() for r in rs]
     for g in gold:
         if g["除外"] not in EXCL_ALLOWED:
             raise Stop("想定外の除外の書き方: %r" % g["除外"])
     check_spelling(gold, all_snaps)
     table = a4_table(gold, all_snaps)
+
+    key_of = {id(g): i for i, g in enumerate(gold, 1)}
+    vmap = {"ok": "OK", "ng": "NG", "na": "NOWORD", "skip": "SKIP"}
+
+    def vrec(g, item, verdict):
+        if verdicts is not None:
+            verdicts.append((key_of[id(g)], item, vmap[verdict]))
 
     by_post = {}
     for g in gold:
@@ -207,6 +214,9 @@ def score(gold, snap_by_post):
         if not items:
             nocur_posts += 1
             c1 += sum(1 for g in golds if g["除外"] != "ALL")
+            for g in golds:
+                if g["除外"] != "ALL":
+                    vrec(g, "C1", "ng")
             continue
         pairs, ex = match_post(golds, items)
         extra += len(ex)
@@ -216,7 +226,9 @@ def score(gold, snap_by_post):
             it = pairs.get(gi)
             if it is None:
                 c1 += 1
+                vrec(g, "C1", "ng")
                 continue
+            vrec(g, "C1", "ok")
             res = {}
 
             def rec(stage, field, verdict, gv, sv):
@@ -227,6 +239,7 @@ def score(gold, snap_by_post):
             v, gv, sv = judge(g, it, "E1")
             e1ok = v == "ok"
             rec("Gemini", "E1", v, gv, sv)
+            vrec(g, "E1", v)
             # E2 / E3
             for fld, graw, sraw_g, sraw_s in (("E2", "E2_price", "raw_price", "price_normalized"),
                                               ("E3", "E3_quantity", "raw_quantity", "quantity_normalized")):
@@ -242,6 +255,9 @@ def score(gold, snap_by_post):
                 rec("Gemini", fld, *gres)
                 if e1ok:
                     rec("システム", fld, *sres)
+                    vrec(g, fld, sres[0])
+                else:
+                    vrec(g, fld, "skip")
             # A1..A5
             for fld in ("A1", "A2", "A3", "A4", "A5"):
                 v, gv, sv = judge(g, it, fld)
@@ -269,6 +285,7 @@ def score(gold, snap_by_post):
                             v = "ok" if norm_ship(sv) == "" else "ng"
                         else:
                             v = "ok" if norm_ship(sv) == norm_ship(gv) else "ng"
+                vrec(g, fld, v)
                 if v == "skip":
                     continue
                 rec("通し", fld, v, gv, sv)
@@ -279,7 +296,34 @@ def score(gold, snap_by_post):
                 if fld == "A4" and g["A4_status"] == "予約":
                     tl(("A4予約", "通し")).add(v)
     errors.sort(key=lambda e: (e[0], pline_num({"price_line": e[1]}), e[2], e[3]))
+    if verdicts is not None:
+        order = {n: i for i, n in enumerate(VERDICT_ITEMS)}
+        verdicts.sort(key=lambda r: (r[0], order[r[1]]))
     return T, errors, c1, extra, nocur_posts, unmatched_snapshot_posts, table
+
+
+VERDICT_ITEMS = ("C1", "E1", "E2", "E3", "A1", "A2", "A3", "A4", "A5")
+
+
+def check_verdicts(T, c1, verdicts):
+    """V.tsv の数を result.tsv の元（T・c1）と照らす。合わない項目名のリストを返す。"""
+    cnt = {}
+    for _, item, v in verdicts:
+        cnt.setdefault(item, {}).setdefault(v, 0)
+        cnt[item][v] += 1
+
+    def got(item, v):
+        return cnt.get(item, {}).get(v, 0)
+
+    bad = []
+    if got("C1", "NG") != c1:
+        bad.append("C1")
+    for item, stage in (("E1", "Gemini"), ("E2", "システム"), ("E3", "システム"),
+                        ("A1", "通し"), ("A2", "通し"), ("A3", "通し"), ("A4", "通し"), ("A5", "通し")):
+        t = T.get((item, stage), Tally())
+        if (got(item, "OK"), got(item, "NG"), got(item, "NOWORD")) != (t.ok, t.ng, t.na):
+            bad.append(item)
+    return bad
 
 
 def result_rows(T, c1, extra):
@@ -336,16 +380,20 @@ def main(argv=None):
     ap.add_argument("--gold", required=True)
     ap.add_argument("--snapshot-dir", required=True)
     ap.add_argument("--out-dir", required=True)
+    ap.add_argument("--verdicts-out")
     a = ap.parse_args(argv)
     try:
         check_out_dir(a.out_dir)
+        if a.verdicts_out:
+            check_out_dir(os.path.dirname(os.path.abspath(a.verdicts_out)))
         gold = read_tsv(a.gold, GOLD_COLS)
         snap_by_post = {}
         files = sorted(f for f in os.listdir(a.snapshot_dir) if f.endswith(".tsv"))
         for f in files:
             rows = read_tsv(os.path.join(a.snapshot_dir, f), SNAP_COLS)
             snap_by_post[f[:-4]] = rows  # 全行を使う（is_current では絞らない）
-        T, errors, c1, extra, nocur, nofile, table = score(gold, snap_by_post)
+        verdicts = [] if a.verdicts_out else None
+        T, errors, c1, extra, nocur, nofile, table = score(gold, snap_by_post, verdicts)
         os.makedirs(a.out_dir, exist_ok=True)
         write_tsv(os.path.join(a.out_dir, "result.tsv"),
                   ["項目", "段", "正しい", "違う", "答え無し", "正答率"], result_rows(T, c1, extra))
@@ -356,6 +404,12 @@ def main(argv=None):
             ents += [(f, sha256_file(os.path.join(a.snapshot_dir, f))) for f in files]
             for n, h in sorted(ents):
                 f.write("%s  %s\n" % (h, n))
+        if verdicts is not None:
+            bad = check_verdicts(T, c1, verdicts)
+            if bad:
+                raise Stop("判定の数が集計と合いません " + " ".join(bad))
+            os.makedirs(os.path.dirname(os.path.abspath(a.verdicts_out)), exist_ok=True)
+            write_tsv(a.verdicts_out, ["key", "項目", "判定"], verdicts)
     except Stop as e:
         print("STOP: %s" % e, file=sys.stderr)
         return 2

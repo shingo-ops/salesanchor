@@ -1,0 +1,96 @@
+bash=5.2.21(1)-release EPOCHREALTIME=1793386855.829402
+T6 extracted lines (read-probe block) from scripts/run_all_migrations.sh: 65 begin_marks=1 end_marks=1
+PASS T6 read-probe block 65 lines
+T6 extracted lines: run_sql=83 ai_ro=35
+=== T1: 鍵の取り合いが無いまま6秒回す ===
+>>> [final] read probe: n=6 slow=0 error=0 invalid=0 max=50ms
+T1 (record) rc=0 n=6 slow=0 error=0 invalid=0 normal_max_ms=50
+PASS T1 n=6 slow=0 error=0 invalid=0 max=50ms
+=== T2: 別の接続が sb_a の ACCESS EXCLUSIVE を6秒持つ ===
+>>> [final] read probe slow: 2026-10-30T19:01:02Z 3045ms
+>>> [final] read probe: n=3 slow=1 error=1 invalid=0 max=3045ms
+T2 rc=0 slow=1 error=1 max=3045 slow_lines=1 bad_format_lines=0
+PASS T2 slow=1 error=1 max=3045ms
+PASS slow line format (1 lines)
+=== T7: sb_prod を読むトランザクション6秒 + 本物の run_sql(1s, 間隔0) が後ろで待つ ===
+>>> [1/1] psql < t7.sql
+BEGIN
+ERROR:  canceling statement due to lock timeout
+>>> [1/1] lock holders (xact > 1s):
+>>> [1/1]   4649 | jarvis | psql | active | Timeout | 2 | BEGIN | sb_prod:AccessShareLock
+>>> [1/1] lock conflict; retry 2/40 in 0s (total 1/40): t7.sql
+BEGIN
+ERROR:  canceling statement due to lock timeout
+>>> [1/1] lock conflict; retry 3/40 in 0s (total 2/40): t7.sql
+BEGIN
+ERROR:  canceling statement due to lock timeout
+>>> [1/1] lock conflict; retry 4/40 in 0s (total 3/40): t7.sql
+BEGIN
+ERROR:  canceling statement due to lock timeout
+>>> [1/1] lock conflict; retry 5/40 in 0s (total 4/40): t7.sql
+BEGIN
+LOCK TABLE
+COMMIT
+RUN_SQL_RESULT=ok
+>>> [final] read probe: n=4 slow=0 error=0 invalid=0 max=1042ms
+T7 rc=0 max=1042 slow=0 sa_read_probe_lock_wait_seen=1 run_sql_retries=4
+PASS T7 max=1042ms slow=0 lock_wait_seen=1 retries=4 run_sql ok
+=== T3: 計測の後に rc=3 で終わる（本物の trap から止める） ===
+>>> [final] read probe: n=2 slow=0 error=0 invalid=0 max=43ms
+>>> [final] script failed rc=3; recreating ai_ro views anyway
+>>> [final] psql < migrations/20261017_130100_create_ai_ro_views.sql
+BEGIN
+NOTICE:  schema "ai_ro" does not exist, skipping
+DROP SCHEMA
+CREATE SCHEMA
+NOTICE:  ai_ro views created: 3, columns excluded: 0, failed: 0 []
+DO
+GRANT
+GRANT
+COMMIT
+>>> [final] psql < migrations/20261024_100300_create_ai_cloud_views.sql
+BEGIN
+ERROR:  schema "ai_cloud_meta" does not exist
+⚠️ ai_cloud views の作成に失敗（ai_cloud は外れたまま＝相談係は読めない）
+ERROR:  relation "ai_cloud_meta.build_log" does not exist at character 13
+⚠️ ai_cloud_meta.build_log への失敗の記録にも失敗
+T3 rc=3 final_lines=1 child_pid=4820 child_alive=no
+PASS T3 rc=3 final line shown, child gone
+=== T8: 親を kill -9 しても計測の子が自分で終わる ===
+T8 child_alive_before_kill=yes child_alive_after=no seconds_to_exit=2 (limit 2 intervals + 2s slack = 4s)
+PASS T8 child exited by itself in 2s
+=== T4: 計測の表の1つが無い ===
+>>> [final] read probe: n=4 slow=0 error=4 invalid=0 max=47ms
+T4 rc=0 error=4 final_lines=1
+PASS T4 error=4
+=== T4b: 存在しない入れ物 ===
+>>> [final] read probe: n=4 slow=0 error=4 invalid=0 max=4ms
+T4b rc=0 error=4 final_lines=1
+PASS T4b error=4
+=== T5: 公開ログ（T1〜T8 の出力をまとめたもの）に SQL と表名が無い ===
+T5 corpus_lines=42 select_lines=0 table_name_lines=0
+PASS T5 select_lines=0 table_name_lines=0
+=== T9: 既存試験の切り出し範囲 ===
+T9 retry_extract_read_probe_lines=0 airo_extract_read_probe_lines=1 airo_if_declare_lines=1
+9:  if declare -F read_probe_stop >/dev/null; then read_probe_stop || true; fi
+PASS T9 extract ranges ok
+=== R5: 裏の読み取り監視と一緒に動かしても run_py が30秒以内に戻る ===
+R5 real_docker=/tmp/claude-0/-home-user-salesanchor/ad4d4ea6-3405-5371-bf58-f445cb8de056/scratchpad/shim/docker fake_docker=/tmp/tmp.o4huZpaHk7/bin/docker
+PASS R5 real docker path resolved before PATH change
+>>> [1/1] python scripts/migrate_fake.py 
+fake-python: running attempt 1
+RUN_PY_RESULT=ok
+>>> [final] read probe: n=0 slow=0 error=0 invalid=0 max=0ms
+R5 ok rc=0 seconds=0 retries=0 fake_calls=1 probe_pid=4999 probe_alive=no
+PASS R5 ok rc=0 seconds=0 retries=0 calls=1 probe gone
+>>> [1/1] python scripts/migrate_fake.py 
+fake-python: sqlalchemy.exc.DBAPIError: canceling statement due to lock timeout
+>>> [1/1] lock holders (xact > 1s):
+>>> [1/1] lock conflict; retry 2/40 in 1s (total 1/40): scripts/migrate_fake.py
+fake-python: running attempt 2
+RUN_PY_RESULT=ok
+>>> [final] read probe: n=1 slow=0 error=0 invalid=0 max=59ms
+R5 retry rc=0 seconds=1 retries=1 fake_calls=2 probe_pid=5028 probe_alive=no
+PASS R5 retry rc=0 seconds=1 retries=1 calls=2 probe gone
+RESULT: PASS
+--- docker logs (tail 40) ---

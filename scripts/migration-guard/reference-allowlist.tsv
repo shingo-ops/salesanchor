@@ -1,0 +1,7 @@
+# migration の確認 8（共用マスタの中身の参照）の例外の一覧。唯一の正本。
+# scripts/check-migration-value-writes.py diff が、ここにあり sha256 が一致するファイルを確認 8 から外す（外したことは出力に出す）。
+# 列（タブ区切り）: file / sha256（HEAD のそのファイルの中身の sha256sum）/ reason / decision_ref
+# 規則: (1) 確認 7（値の書き込み）は一覧に関係なく全ファイルに効く。(2) 一覧にあっても sha256 が違えば、そのファイルは失敗（中身が変わったので例外は効かない）。
+#       (3) repo モードは、各行のファイルが在り・scripts/run_all_migrations.sh にパスが書かれ・sha256 が一致することを確かめる。違えば失敗（古い行を残さない）。
+#       (4) 1 ファイル 1 行。理由は読んで確かめたことだけを書く。
+migrations/20261024_100300_create_ai_cloud_views.sql	29df848859f2de8be787a3a3acae7f195165b98e2695807131627b90afd81eef	ai_cloud.column_class の初期値として表の名前を文字の値で並べる。共用マスタの中身は読まない	PO「1」2026-10-31 / docs/handoff/cloud-case-ai/stage1-h-decision.md §3

@@ -1,0 +1,62 @@
+# ADR-1052 段1: 相談係専用の「読むだけ」HTTP 窓口 ai-reader-cloud-http（ai_reader_cloud で ai_cloud を読む）。
+# 本体の docker-compose.yml・docker-compose.ai-reader.yml は変えない（別ファイル・別プロジェクト）。
+# 起動（deploy.yml が行う）: docker compose -p astro-webapp-casewindow -f docker-compose.ai-reader-cloud-http.yml up -d --build=false --force-recreate
+# 止める: docker stop ai-reader-cloud-http（止め続けるには GitHub secret CASE_AGENT_TOKEN も消す。空なら全員 401）
+# 接続情報の正本は VPS の /home/ubuntu/.config/salesanchor/ai-reader-cloud.env の1か所（値はここに写さない）。
+# 窓口の鍵は deploy が .env に書く CASE_AGENT_TOKEN（今の窓口の READ_WINDOW_TOKEN とは別の値）。空なら全員 401。
+# 受けるヘッダは Authorization: Bearer <鍵>。記録の印 via は https-case。
+# AUDIT は /dev/log → auth.log → Loki。結果は残さない（logging none）。ports は公開しない（nginx からだけ）。
+# name は astro-webapp-casewindow：deploy の --remove-orphans に消されないよう本体と別プロジェクトにする。
+# .env の COMPOSE_PROJECT_NAME が top-level の name: より優先されるため、起動は必ず -p astro-webapp-casewindow を付ける。
+name: astro-webapp-casewindow
+
+services:
+  ai-reader-cloud-http:
+    # backend と同じイメージ（astro-webapp-backend）。deploy の docker compose build で作られる。
+    image: astro-webapp-backend
+    container_name: ai-reader-cloud-http
+    command:
+      - uvicorn
+      - app.ops.read_window_http:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8080"
+      - --workers
+      - "1"
+      - --no-access-log
+    env_file:
+      - /home/ubuntu/.config/salesanchor/ai-reader-cloud.env
+    environment:
+      READ_WINDOW_TOKEN: ${CASE_AGENT_TOKEN:-}
+      READ_WINDOW_TOKEN_HEADER: Authorization
+      READ_WINDOW_TOKEN_PREFIX: "Bearer "
+      READ_WINDOW_AUDIT_VIA: https-case
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 128m
+    restart: unless-stopped
+    logging:
+      driver: "none"
+    volumes:
+      - type: bind
+        source: /dev/log
+        target: /dev/log
+        bind:
+          create_host_path: false
+    networks:
+      - frontnet
+      - backnet
+
+networks:
+  frontnet:
+    external: true
+    name: astro-webapp_frontnet
+  backnet:
+    external: true
+    name: astro-webapp_backnet

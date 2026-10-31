@@ -214,6 +214,11 @@ preflight_registered_files() {
 
 preflight_registered_files
 
+# ADR-1052 段1: ai_cloud（相談係用の伏せたビュー）も同じ理由で先頭で外す。ai_ro を外す前に置く
+# （ここで失敗しても ai_ro は外れていないので、今の読む窓口は止まらない）。この行はずっと残す（戻すときも消さない）。
+# 作成は下の EXIT trap が ai_ro とは別の手順で行う。
+run_sql migrations/20261024_100200_drop_ai_cloud_views.sql
+
 # ADR-1024: ai_ro ビューを一覧の先頭で外す。ビューが依存していると、後続 migration の
 # DROP / ALTER（列削除・型変更・表の作り直し）が止まるため。作成は下の EXIT trap が最後に行う。
 run_sql migrations/20261017_125900_drop_ai_ro_views.sql
@@ -225,6 +230,9 @@ run_sql migrations/20261017_125900_drop_ai_ro_views.sql
 # （TOTAL は ^run_ 行を数えるため、ここでは run_sql を使わず直接流す）
 AI_RO_CREATE_SQL="migrations/20261017_130100_create_ai_ro_views.sql"
 AI_RO_CREATE_TIMEOUT="${AI_RO_CREATE_TIMEOUT:-30s}"
+# ADR-1052 段1: ai_cloud の作成（trap の中で ai_ro の後に別の手順で流す。ai_ro の失敗でも試す・逆も同じ）
+AI_CLOUD_CREATE_SQL="migrations/20261024_100300_create_ai_cloud_views.sql"
+AI_CLOUD_CREATE_TIMEOUT="${AI_CLOUD_CREATE_TIMEOUT:-30s}"
 _ai_ro_create_on_exit() {
   local rc=$?
   trap - EXIT
@@ -235,14 +243,22 @@ _ai_ro_create_on_exit() {
   echo ">>> [final] psql < ${AI_RO_CREATE_SQL}"
   if [ ! -f "${REPO_DIR}/${AI_RO_CREATE_SQL}" ]; then
     echo "⚠️ ${AI_RO_CREATE_SQL} が見つかりません（ai_ro は外れたまま＝AI は読めない）"
-    exit "${rc}"
-  fi
   # ビューは AI が読むための補助。作成に失敗しても入れ替えの成否は変えず、「読めない」側に倒す
   # 1文ごとの上限。打ち切り（57014）は作成 SQL の WHEN others に捕まらず、全体が戻って下の警告に入る
   # VERBOSITY=terse: エラーは重さ・本文・位置だけにし、CONTEXT（SQL 文）を公開ログに出さない
-  if ! docker exec -e PGOPTIONS="-c statement_timeout=${AI_RO_CREATE_TIMEOUT}" -i "${POSTGRES}" ${PSQL} -v VERBOSITY=terse < "${REPO_DIR}/${AI_RO_CREATE_SQL}"; then
+  elif ! docker exec -e PGOPTIONS="-c statement_timeout=${AI_RO_CREATE_TIMEOUT}" -i "${POSTGRES}" ${PSQL} -v VERBOSITY=terse < "${REPO_DIR}/${AI_RO_CREATE_SQL}"; then
     echo "⚠️ ai_ro views の作成に失敗（ai_ro は外れたまま＝AI は読めない）"
-    exit "${rc}"
+  fi
+  # ADR-1052 段1: ai_cloud は ai_ro の結果に関わらず試す（失敗しても終了コードは変えない）
+  echo ">>> [final] psql < ${AI_CLOUD_CREATE_SQL}"
+  if [ ! -f "${REPO_DIR}/${AI_CLOUD_CREATE_SQL}" ]; then
+    echo "⚠️ ${AI_CLOUD_CREATE_SQL} が見つかりません（ai_cloud は外れたまま＝相談係は読めない）"
+  elif ! docker exec -e PGOPTIONS="-c statement_timeout=${AI_CLOUD_CREATE_TIMEOUT}" -i "${POSTGRES}" ${PSQL} -v VERBOSITY=terse < "${REPO_DIR}/${AI_CLOUD_CREATE_SQL}"; then
+    echo "⚠️ ai_cloud views の作成に失敗（ai_cloud は外れたまま＝相談係は読めない）"
+    # 全体が戻ると build_log に書けないため、ここで失敗の 1 行を書く（これも失敗したら警告だけ）
+    if ! docker exec -e PGOPTIONS="-c statement_timeout=${AI_CLOUD_CREATE_TIMEOUT}" -i "${POSTGRES}" ${PSQL} -v VERBOSITY=terse -c "INSERT INTO ai_cloud_meta.build_log(ok, error_class) VALUES (false, 'psql_failed')"; then
+      echo "⚠️ ai_cloud_meta.build_log への失敗の記録にも失敗"
+    fi
   fi
   exit "${rc}"
 }
@@ -1171,3 +1187,7 @@ run_sql migrations/20261022_100000_products_format_in_work_fk.sql
 run_sql migrations/20261022_110000_product_formats_drop_type_master_id.sql
 # ADR-1043 便1: 精度測定の正解表の表 2 つ（空の表を作るだけ。値は書かない・冪等）
 run_sql migrations/20261023_180000_create_accuracy_gold.sql
+# ADR-1052 段1: 相談係用 ai_cloud の部品（分類表・記録・生成関数。値は入らない・冪等）。ai_reader の後に置く
+run_sql migrations/20261024_100000_create_ai_cloud_meta.sql
+# ADR-1052 段1: 相談係用の読み取り専用ロール ai_reader_cloud（パスワードは PO が別途設定・冪等）
+run_sql migrations/20261024_100100_create_ai_reader_cloud_role.sql

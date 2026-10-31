@@ -1,0 +1,233 @@
+T6 extracted lines from scripts/run_all_migrations.sh: 35
+T6 first: AI_RO_CREATE_SQL="migrations/20261017_130100_create_ai_ro_views.sql"
+T6 last:  trap _ai_ro_create_on_exit EXIT
+PASS T6 extracted 35 lines, ends with trap line
+23:  deny constant text := '^password|_encrypted$|_secret|_token|hash|^secret|^api_key|private_key|credential';
+=== T1: ai_reader あり・失敗(exit 3) でも作り直す ===
+NOTICE:  schema "ai_ro" does not exist, skipping
+>>> [final] script failed rc=3; recreating ai_ro views anyway
+>>> [final] psql < migrations/20261017_130100_create_ai_ro_views.sql
+BEGIN
+NOTICE:  schema "ai_ro" does not exist, skipping
+DROP SCHEMA
+CREATE SCHEMA
+NOTICE:  ai_ro views created: 1, columns excluded: 1, failed: 0 []
+DO
+GRANT
+GRANT
+COMMIT
+>>> [final] psql < migrations/20261024_100300_create_ai_cloud_views.sql
+BEGIN
+ERROR:  schema "ai_cloud_meta" does not exist
+⚠️ ai_cloud views の作成に失敗（ai_cloud は外れたまま＝相談係は読めない）
+ERROR:  relation "ai_cloud_meta.build_log" does not exist at character 13
+⚠️ ai_cloud_meta.build_log への失敗の記録にも失敗
+T1 rc=3 created_N=1 view_count=1 has_sb_items=1 api_token_cols=0
+PASS T1 rc=3, recreated N=1, api_token hidden
+=== T2: ai_reader あり・成功(true) ===
+NOTICE:  drop cascades to view ai_ro.public__sb_items
+>>> [final] psql < migrations/20261017_130100_create_ai_ro_views.sql
+BEGIN
+NOTICE:  schema "ai_ro" does not exist, skipping
+DROP SCHEMA
+CREATE SCHEMA
+NOTICE:  ai_ro views created: 1, columns excluded: 1, failed: 0 []
+DO
+GRANT
+GRANT
+COMMIT
+>>> [final] psql < migrations/20261024_100300_create_ai_cloud_views.sql
+BEGIN
+ERROR:  schema "ai_cloud_meta" does not exist
+⚠️ ai_cloud views の作成に失敗（ai_cloud は外れたまま＝相談係は読めない）
+ERROR:  relation "ai_cloud_meta.build_log" does not exist at character 13
+⚠️ ai_cloud_meta.build_log への失敗の記録にも失敗
+PASS T2 rc=0 view exists
+=== T3: ai_reader 無し・失敗(exit 3) ===
+NOTICE:  drop cascades to view ai_ro.public__sb_items
+>>> [final] script failed rc=3; recreating ai_ro views anyway
+>>> [final] psql < migrations/20261017_130100_create_ai_ro_views.sql
+BEGIN
+NOTICE:  schema "ai_ro" does not exist, skipping
+DROP SCHEMA
+CREATE SCHEMA
+NOTICE:  ai_ro views created: 1, columns excluded: 1, failed: 0 []
+DO
+ERROR:  role "ai_reader" does not exist
+⚠️ ai_ro views の作成に失敗（ai_ro は外れたまま＝AI は読めない）
+>>> [final] psql < migrations/20261024_100300_create_ai_cloud_views.sql
+BEGIN
+ERROR:  schema "ai_cloud_meta" does not exist
+⚠️ ai_cloud views の作成に失敗（ai_cloud は外れたまま＝相談係は読めない）
+ERROR:  relation "ai_cloud_meta.build_log" does not exist at character 13
+⚠️ ai_cloud_meta.build_log への失敗の記録にも失敗
+PASS T3 rc=3 warning shown views=0
+=== T4: 成功(true)・作成だけ失敗（存在しないコンテナ） ===
+NOTICE:  schema "ai_ro" does not exist, skipping
+>>> [final] psql < migrations/20261017_130100_create_ai_ro_views.sql
+Error: No such container: no-such-container-airo
+⚠️ ai_ro views の作成に失敗（ai_ro は外れたまま＝AI は読めない）
+>>> [final] psql < migrations/20261024_100300_create_ai_cloud_views.sql
+Error: No such container: no-such-container-airo
+⚠️ ai_cloud views の作成に失敗（ai_cloud は外れたまま＝相談係は読めない）
+Error: No such container: no-such-container-airo
+⚠️ ai_cloud_meta.build_log への失敗の記録にも失敗
+PASS T4 rc=0 warning shown
+=== T5: ほかの接続が ACCESS SHARE を持っていても作成は待たない ===
+NOTICE:  schema "ai_ro" does not exist, skipping
+>>> [final] psql < migrations/20261017_130100_create_ai_ro_views.sql
+BEGIN
+NOTICE:  schema "ai_ro" does not exist, skipping
+DROP SCHEMA
+CREATE SCHEMA
+NOTICE:  ai_ro views created: 1, columns excluded: 1, failed: 0 []
+DO
+GRANT
+GRANT
+COMMIT
+>>> [final] psql < migrations/20261024_100300_create_ai_cloud_views.sql
+BEGIN
+ERROR:  schema "ai_cloud_meta" does not exist
+⚠️ ai_cloud views の作成に失敗（ai_cloud は外れたまま＝相談係は読めない）
+ERROR:  relation "ai_cloud_meta.build_log" does not exist at character 13
+⚠️ ai_cloud_meta.build_log への失敗の記録にも失敗
+T5 create_ms=164 read_ms=55 rc=0
+PASS T5 create_ms=164 read_ms=55
+=== T7: ACCESS EXCLUSIVE を持たれても上限(3s)で打ち切る ===
+NOTICE:  drop cascades to view ai_ro.public__sb_items
+--- pg_locks (T7, 作成の後) ---
+3859|AccessExclusiveLock|t|sb_items
+>>> [final] script failed rc=3; recreating ai_ro views anyway
+>>> [final] psql < migrations/20261017_130100_create_ai_ro_views.sql
+BEGIN
+NOTICE:  schema "ai_ro" does not exist, skipping
+DROP SCHEMA
+CREATE SCHEMA
+ERROR:  canceling statement due to statement timeout
+⚠️ ai_ro views の作成に失敗（ai_ro は外れたまま＝AI は読めない）
+>>> [final] psql < migrations/20261024_100300_create_ai_cloud_views.sql
+BEGIN
+ERROR:  schema "ai_cloud_meta" does not exist
+⚠️ ai_cloud views の作成に失敗（ai_cloud は外れたまま＝相談係は読めない）
+ERROR:  relation "ai_cloud_meta.build_log" does not exist at character 13
+⚠️ ai_cloud_meta.build_log への失敗の記録にも失敗
+T7 elapsed_sec=3 rc=3 views=0 context_lines=0 sql_statement_lines=0
+PASS T7 elapsed_sec=3 rc=3 views=0 context_lines=0 sql_statement_lines=0
+=== T8: 移行の途中で SIGTERM（記録だけ） ===
+NOTICE:  schema "ai_ro" does not exist, skipping
+>>> [final] psql < migrations/20261017_130100_create_ai_ro_views.sql
+BEGIN
+NOTICE:  schema "ai_ro" does not exist, skipping
+DROP SCHEMA
+CREATE SCHEMA
+NOTICE:  ai_ro views created: 1, columns excluded: 1, failed: 0 []
+DO
+GRANT
+GRANT
+COMMIT
+>>> [final] psql < migrations/20261024_100300_create_ai_cloud_views.sql
+BEGIN
+ERROR:  schema "ai_cloud_meta" does not exist
+⚠️ ai_cloud views の作成に失敗（ai_cloud は外れたまま＝相談係は読めない）
+ERROR:  relation "ai_cloud_meta.build_log" does not exist at character 13
+⚠️ ai_cloud_meta.build_log への失敗の記録にも失敗
+T8 (record only) child_rc=143 recreating_line=no created_line=yes bash=5.2.21(1)-release
+=== T12: ai_cloud の外しと作成（①ふつう ②列削除・型変更が止まらない ③ai_ro 作成の失敗 ④ai_cloud 作成の失敗） ===
+NOTICE:  drop cascades to view ai_ro.public__sb_items
+NOTICE:  schema "ai_ro" does not exist, skipping
+NOTICE:  schema "ai_cloud" does not exist, skipping
+>>> [final] psql < migrations/20261017_130100_create_ai_ro_views.sql
+BEGIN
+NOTICE:  schema "ai_ro" does not exist, skipping
+DROP SCHEMA
+CREATE SCHEMA
+NOTICE:  ai_ro views created: 1, columns excluded: 1, failed: 0 []
+DO
+GRANT
+GRANT
+COMMIT
+>>> [final] psql < migrations/20261024_100300_create_ai_cloud_views.sql
+BEGIN
+TRUNCATE TABLE
+INSERT 0 1035
+NOTICE:  schema "ai_cloud" does not exist, skipping
+DROP SCHEMA
+CREATE SCHEMA
+NOTICE:  ai_cloud views created: 1, failed: 0
+DO
+GRANT
+GRANT
+COMMIT
+T12① rc=0 ai_ro_views=1 ai_cloud_views=1 log=true/- new_log_rows=1 name=masked:len=5:ascii
+PASS T12① both built, name masked, build_log +1 (ok)
+NOTICE:  drop cascades to view ai_cloud.public__sb_items
+DROP SCHEMA
+NOTICE:  drop cascades to view ai_ro.public__sb_items
+DROP SCHEMA
+ALTER TABLE
+ALTER TABLE
+>>> [final] psql < migrations/20261017_130100_create_ai_ro_views.sql
+BEGIN
+NOTICE:  schema "ai_ro" does not exist, skipping
+DROP SCHEMA
+CREATE SCHEMA
+NOTICE:  ai_ro views created: 1, columns excluded: 1, failed: 0 []
+DO
+GRANT
+GRANT
+COMMIT
+>>> [final] psql < migrations/20261024_100300_create_ai_cloud_views.sql
+BEGIN
+TRUNCATE TABLE
+INSERT 0 1035
+NOTICE:  schema "ai_cloud" does not exist, skipping
+DROP SCHEMA
+CREATE SCHEMA
+NOTICE:  ai_cloud views created: 1, failed: 0
+DO
+GRANT
+GRANT
+COMMIT
+T12② rc=0 ai_cloud_views=1 id_type=bigint log=true/- new_log_rows=1 pass_columns=1
+PASS T12② column drop and type change not blocked, ai_cloud rebuilt
+NOTICE:  drop cascades to view ai_ro.public__sb_items
+NOTICE:  drop cascades to view ai_cloud.public__sb_items
+>>> [final] script failed rc=3; recreating ai_ro views anyway
+>>> [final] psql < migrations/20261017_130100_create_ai_ro_views.sql
+ERROR:  relation "no_such_table_airo" does not exist at character 15
+⚠️ ai_ro views の作成に失敗（ai_ro は外れたまま＝AI は読めない）
+>>> [final] psql < migrations/20261024_100300_create_ai_cloud_views.sql
+BEGIN
+TRUNCATE TABLE
+INSERT 0 1035
+NOTICE:  schema "ai_cloud" does not exist, skipping
+DROP SCHEMA
+CREATE SCHEMA
+NOTICE:  ai_cloud views created: 1, failed: 0
+DO
+GRANT
+GRANT
+COMMIT
+T12③ rc=3 ai_ro_views=0 ai_cloud_views=1 log=true/- new_log_rows=1
+PASS T12③ ai_ro failed, ai_cloud built, rc=3
+NOTICE:  schema "ai_ro" does not exist, skipping
+NOTICE:  drop cascades to view ai_cloud.public__sb_items
+>>> [final] script failed rc=3; recreating ai_ro views anyway
+>>> [final] psql < migrations/20261017_130100_create_ai_ro_views.sql
+BEGIN
+NOTICE:  schema "ai_ro" does not exist, skipping
+DROP SCHEMA
+CREATE SCHEMA
+NOTICE:  ai_ro views created: 1, columns excluded: 1, failed: 0 []
+DO
+GRANT
+GRANT
+COMMIT
+>>> [final] psql < migrations/20261024_100300_create_ai_cloud_views.sql
+ERROR:  relation "no_such_table_cloud" does not exist at character 15
+⚠️ ai_cloud views の作成に失敗（ai_cloud は外れたまま＝相談係は読めない）
+INSERT 0 1
+T12④ rc=3 ai_ro_views=1 ai_cloud_views=0 log=false/psql_failed new_log_rows=1
+PASS T12④ ai_cloud failed (build_log false/psql_failed), ai_ro built, rc=3
+ALL PASS (T1-T7, T12)
+--- docker logs (tail 40) ---
