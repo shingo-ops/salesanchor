@@ -1652,6 +1652,7 @@
   "quotes": {
     "title": "Quotes",
     "newQuote": "New Quote",
+    "createSubtitle": "Create a new quote",
     "quoteCode": "Quote code",
     "customer": "Customer",
     "salesRep": "Sales rep",

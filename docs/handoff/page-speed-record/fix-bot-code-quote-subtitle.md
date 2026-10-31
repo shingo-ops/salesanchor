@@ -56,3 +56,23 @@ def _pending_bot_code() -> str:
 
 ## 最後の返事
 1 行目に DONE / BLOCKED: <理由> / NEEDS_DECISION: <問い> のどれか。続けて push した HEAD の sha、手順ごとの生出力。
+
+## 実装の結果
+
+(1) `cd backend && <venv>/bin/python -m pytest tests/test_bots_owner_users.py -q`
+```
+FAIL Required test coverage of 60% not reached. Total coverage: 29.53%
+6 passed, 1 warning in 21.55s
+```
+（1 ファイルだけ流したため全体カバレッジの閾値で FAIL 表示。試験自体は 6 件すべて passed）
+
+(2)
+```
+新しい見積を作成します | Create a new quote
+```
+
+(3) `node scripts/check-i18n-missing-keys.js`
+```
+✅ i18n key check PASSED (all prefixes)
+   viewer 入口から届く viewer 外のファイル: 39 件
+```
