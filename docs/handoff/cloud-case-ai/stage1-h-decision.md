@@ -55,3 +55,32 @@
 | push 前の自動確認が全部通る | `bash scripts/dev/check-before-submit.sh` の × が 0 |
 
 戻し方: 一覧の行と検査の追加部分を revert する（確認 8 は元の厳しさに戻る）。
+
+## 4. CI「マイグレーションSQL 実行（内部）」で ai_reader が無く止まった件
+
+### 観測事実
+- PR #4932（HEAD 90e2e6ab2）で「マイグレーションSQL 実行（内部）」が失敗した（run 41162867710 / job 124424123732）。同じ run の「マイグレーション全件ドライラン（実DB）」は pass（job 124424123746）。
+- 内部の試しは、変わった SQL だけを空に近い試験 DB で流す（.github/workflows/migration-test.yml:1222「変更 SQL を 1回目実行」）。この DB には ai_reader が無い。
+- 止まった行は migrations/20261024_100000_create_ai_cloud_meta.sql:187 `GRANT USAGE ON SCHEMA ai_cloud_meta TO ai_reader;`（エラー: role "ai_reader" does not exist）。
+- 本番と全件ドライランでは、ai_reader を作る migrations/20261017_130000_create_ai_reader_role.sql が先に流れる（scripts/run_all_migrations.sh:1164。段1の meta は :1191）。
+- 前例の migrations/20261017_130100_create_ai_ro_views.sql:78-79 が通ったのは、ロールを作る SQL が同じ PR に入っていたため（b2b49ec2f）。
+- カードはこの試しが空の DB から始まることを想定していなかった（設計の入れ忘れ）。
+
+### 判断
+- meta.sql:187-188 の 2 行の GRANT を、pg_roles に ai_reader があるときだけ実行する DO ブロックに包む。無いときは RAISE NOTICE で「ai_reader が無いため付けない」と 1 行出す。
+- 本番の動きは変わらない（本番には ai_reader がある。AUDIT は reader 鍵の道＝ai_reader で取れている）。
+- 本番で付け損ねれば、カード §5 の「build_log の最新行を ai_reader で読む」測定で見つかる。黙って抜けたままにはならない。
+- 採らない案:
+  - (B) CI の手順で ai_reader を先に作る。workflow の変更はカード §2 の範囲外。
+  - (C) ai_reader を作る SQL を段1で直す。カード §2 で触らないと決めている。
+- 確認 8 の例外（§3）は migrations/20261024_100300 の sha だけに効く。meta.sql の変更は例外に関係しない。
+
+### 受入
+| 基準 | 検証方法 |
+|---|---|
+| ai_reader が無い DB で meta.sql が通る | ai_reader を作らない使い捨て PG で 4 本を 2 回流し、エラー 0・NOTICE 1 行 |
+| ai_reader がある DB では今までどおり権限が付く | ai_reader を作った使い捨て PG で流し、has_schema_privilege と 3 表の has_table_privilege が t |
+| 既存の試験が通る | test_ai_cloud_views 全件 PASSED |
+| CI | 「マイグレーションSQL 実行（内部）」と「全件ドライラン」が pass |
+
+戻し方: DO ブロックを外して元の 2 行に戻す（CI の内部の試しは再び止まる）。
