@@ -39,7 +39,7 @@ K1 の件数は PO 決定 2026-11-01「1」（約470件）で変えた（成約�
 | K3b | 偏りが無い: 同じ 200回で、15項目それぞれの推定の平均（対数で平均して戻す）が仕込んだ値の 0.90倍〜1.11倍 | 200回分の平均を §3-2 の表と突き合わせ、15項目すべて範囲内で ○ |
 | K3c | 壊れた仕組みを見逃さない: 成約の印だけを無作為に並べ替えた 200回分で、15項目それぞれ「幅が差なし（1）を含む回数」が 180回以上 | 並べ替えた 200回分の結果表で数え、15項目すべて 180以上で ○ |
 | K3d | 本番に入れた後も同じ答え: 本番のテナント001から分析の入口で計算した15項目の推定値と幅が、本番の外で同じ種から同じ計算をした値と小数4桁まで一致 | 2つの結果表を突き合わせ、15項目すべて一致で ○。どちらも §4-1 と同じ時刻の列を読む |
-| K4 | ダッシュボードに結果の表が出る。部品はすべて登録済みの金型とデザイントークンだけ（ADR-144・ADR-067）。アイコンは `frontend/src/constants/icons.tsx` からだけ使う（frontend/AGENTS.md 57〜64行）。画面の文字はすべて t() 経由で ja・en 両方にある（ADR-027） | PO が画面で目視 ○×／`npm run check:all`（frontend/AGENTS.md 42行）が通る／i18n の点検（frontend/AGENTS.md 21〜24行）が通る／UI の点検 `scripts/check-ui-governance.js`（docs/adr/ADR-144-ui-component-governance.md 41〜47行）が通る／ダッシュボードの E2E（`frontend/tests-e2e/scene1-dashboard.spec.ts`・見本 `frontend/tests-e2e/fixtures/mock-dashboard.json`）を同じ PR で直して通る（frontend/AGENTS.md 67〜77行）。UI の点検が見るのは `frontend/src/pages/**/*.tsx` だけ（docs/adr/ADR-144-ui-component-governance.md 43行・134行。components/・features/ は見ない）なので、欄のファイルの置き場を実装カードで決め、点検の対象外に置くときは、設計審査役（Opus）がマージ前のレビューで金型だけを使っていることを確かめ、PO の目視と合わせて ○ とする。既存の並びの欄（frontend/src/pages/dashboard/PriorityProspectsSection.tsx）と同じ frontend/src/pages/dashboard/ に置けば UI の点検の対象に入るので、こちらを先に検討する |
+| K4 | ダッシュボードに結果の表が出る。部品はすべて登録済みの金型とデザイントークンだけ（ADR-144・ADR-067）。アイコンは `frontend/src/constants/icons.tsx` からだけ使う（frontend/AGENTS.md 57〜64行）。画面の文字はすべて t() 経由で ja・en 両方にある（ADR-027） | PO が画面で目視 ○×／`npm run check:all`（frontend/AGENTS.md 42行）が通る／i18n の点検（frontend/AGENTS.md 21〜24行）が通る／UI の点検 `scripts/check-ui-governance.js`（docs/adr/ADR-144-ui-component-governance.md 41〜47行）が通る／ダッシュボードの E2E（`frontend/tests-e2e/scene1-dashboard.spec.ts`・見本 `frontend/tests-e2e/fixtures/mock-dashboard.json`）を同じ PR で直して通る（frontend/AGENTS.md 67〜77行）。UI の点検が見るのは frontend/src/pages の下の .tsx だけ（docs/adr/ADR-144-ui-component-governance.md 43行・134行。components/・features/ は見ない）なので、欄のファイルの置き場を実装カードで決め、点検の対象外に置くときは、設計審査役（Opus）がマージ前のレビューで金型だけを使っていることを確かめ、PO の目視と合わせて ○ とする。既存の並びの欄（frontend/src/pages/dashboard/PriorityProspectsSection.tsx）と同じ frontend/src/pages/dashboard/ に置けば UI の点検の対象に入るので、こちらを先に検討する |
 | K5 | テスト用データが外へ何も起こさない: ①テナント004・006 に書かない。(a) 書き込みの SQL ファイルを流す前に機械で点検し、書き込み先の表名がすべて `tenant_001.` で始まり、ほかのテナントの名前・public の表名・search_path の切り替えが 0件 (b) 流した後、テナント004・006 の §6-1 の数える表に、テスト用の目印（lead_code `TLR-`、message_id・external_message_id・external_id `tlr-`）の行が 0件 ②テナント001で、テスト用データに関わる「Meta への送信の記録」と「翻訳の記録」が、書き込みを始めた時刻より後に 0件。送信の記録は audit_logs の action が meta_message_sent・meta_message_send_failed で、new_data の lead_id がテスト用リードの id の行。翻訳の記録は message_translations の message_id が `tlr-` で始まるか、テスト用リードの conversation_logs の id から作った `conv_log_<id>` の行 ③テスト用の行のうち、meta_messages の created_at・conversation_logs の occurred_at と created_at が、書き込む日の2日前より後のものが 0件（§3-3 と同じ） | ①(a) は SQL ファイルの文字の点検（実装カードで点検の道具を決める）、①(b)・②・③ は読み取りの道で書き込みの直後に数える（ai_ro に tenant_001__audit_logs・tenant_001__message_translations があることを 2026-10-31 15:13 JST に確認済み）。書き込みを始めた時刻は実行の記録に残す。②の meta_messages の送信の行は、テスト用データ自体が入れるので②には含めない |
 | K6 | 消す手順を流すと、テスト用の行が §6-1 の表すべてで 0件になり、元からある行は1行も消えない（audit_logs は消さない表なので 0件の対象から外し、件数だけを報告する。数え方は §6-1） | §6-1 手順0 で元の行の id の一覧（leads・meta_messages・conversation_logs・tenant_sales_form_options）を記録し、手順9 で同じ id がすべて残っていることを突き合わせる。テスト用の行は目印と、書き込みのときに記録したテスト用リードの id の一覧で数えて 0件 |
 
@@ -251,7 +251,7 @@ audit_logs は消さない（監査の記録を手で消すと、記録の役目
 
 消す手順は大量の削除に当たるため PO 本人が流す（§8 #4）。
 
-## 7. 外部事例
+## 7. 外部・過去事例の参照と我々への応用
 
 不要。仕組みの確認は「答えを仕込んだデータで取り戻せるか」（K3）で直接測るため、外部の数値を根拠に使わない。
 
@@ -267,6 +267,7 @@ audit_logs は消さない（監査の記録を手で消すと、記録の役目
 
 ## 9. 維持の仕組み
 
+- 守り手: backend/tests/test_lead_conversion_factors.py（計算の試験）と backend/tests/test_lead_regression_generate.py（テスト用データの SQL の書き込み先の点検。K5①(a)）を CI の pytest で毎回流す
 - 消す手順（§6-1）は実装と同じ PR に入れ、試し流しで確かめてから本番に入れる。
 - 自前の計算が statsmodels と一致し続けることを試験で守る（§4-2）。
 - 本物のリードが成約 150件を超えたら、同じ計算を本物に切り替える（目安。PO 判断）。切り替える前に、次の点検表をすべて決める（Fable の評価 項目3 3-2・項目4 #2〜#6）。決まっていない点が1つでもあれば切り替えない。
