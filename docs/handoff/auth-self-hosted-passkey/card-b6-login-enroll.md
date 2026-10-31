@@ -57,6 +57,7 @@
 - `frontend/src/pages/login/LoginPage.test.tsx`
 - `frontend/src/locales/ja.json`
 - `frontend/src/locales/en.json`
+- `frontend/api-contract/openapi.json`（審査で書き漏れが分かり追加。作り直しは `docs/handoff/auth-self-hosted-passkey/card-b6-fix.md`）
 
 ## 4. 作り方
 
