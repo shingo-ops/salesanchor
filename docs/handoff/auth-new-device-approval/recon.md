@@ -221,10 +221,10 @@
   - ログインした場所・機械の一覧、セッションの一覧、「ほかをログアウト」に当たる画面・口: 無い。
   - 試験: frontend/src/pages/account-settings/SecuritySection.test.tsx・PasskeySection.test.tsx。
   - Storybook: frontend/src/pages/account-settings/AccountSettings.stories.tsx。
-- 部品（frontend/src/components/ 直下。`.tsx` の金型）: Button.tsx・ButtonLink.tsx・Modal.tsx・ConfirmModal.tsx・DataTable.tsx・Drawer.tsx・Sheet.tsx・Callout.tsx・Card.tsx・Badge.tsx・EmptyState.tsx・ListRow.tsx・TextField.tsx・PasswordField.tsx・Textarea.tsx・Select.tsx・Toggle.tsx・Checkbox.tsx・Radio.tsx・ChoiceCardGroup.tsx・Tabs.tsx・Stack.tsx・TextLink.tsx・Tooltip.tsx・Popover.tsx・PageLayout.tsx。小さな表示: frontend/src/components/loading/ に LoadingBlock・Toast・Spinner・Skeleton・SaveIndicator・ProgressBar など。
+- 部品（frontend/src/components/ 直下。.tsx の金型）: Button.tsx・ButtonLink.tsx・Modal.tsx・ConfirmModal.tsx・DataTable.tsx・Drawer.tsx・Sheet.tsx・Callout.tsx・Card.tsx・Badge.tsx・EmptyState.tsx・ListRow.tsx・TextField.tsx・PasswordField.tsx・Textarea.tsx・Select.tsx・Toggle.tsx・Checkbox.tsx・Radio.tsx・ChoiceCardGroup.tsx・Tabs.tsx・Stack.tsx・TextLink.tsx・Tooltip.tsx・Popover.tsx・PageLayout.tsx。小さな表示: frontend/src/components/loading/ に LoadingBlock・Toast・Spinner・Skeleton・SaveIndicator・ProgressBar など。
   - 無いもの: QR コード、数字を選ぶ部品、6桁入力欄（`ls frontend/src/components/*Qr*` はヒットなし。他は名前を確認）。ADR-1048 は QR 金型の新設に PO 許可済みと書く（docs/adr/ADR-1048-admin-two-step-login.md:6）。
 - UI ガバナンス（docs/CC_UI_GOVERNANCE.md、64行）の要点
-  - 部品を作る前に frontend/src/components/ に金型があるか確認し、あれば必ず使う。無ければ作らず止めて報告（PO 許可を得てから金型を登録）。docs/CC_UI_GOVERNANCE.md:9-17。金型の作法は `Xxx.tsx` + `Xxx.css`（var() のみ）+ `Xxx.stories.tsx`。
+  - 部品を作る前に frontend/src/components/ に金型があるか確認し、あれば必ず使う。無ければ作らず止めて報告（PO 許可を得てから金型を登録）。docs/CC_UI_GOVERNANCE.md:9-17。金型の作法は Xxx.tsx + `Xxx.css`（var() のみ）+ Xxx.stories.tsx。
   - 禁止（CI が赤）: 生 select／生 input（text・checkbox・radio）／読み込み中の文字だけの表示（LoadingBlock を使う）／ボタンの言葉を保存中に入れ替える（Button の loading を使う）／自作タブ／色の直値／生 px のインラインスタイル。docs/CC_UI_GOVERNANCE.md:21-33。
   - どうしても必要なら `{/* ui-allow: <理由> (#<課題番号>) */}`。新規 ui-allow は人間のレビュー必須。docs/CC_UI_GOVERNANCE.md:35-52。
   - CI: scripts/check-ui-governance.js、.github/workflows/ui-governance-gate.yml。
@@ -269,7 +269,7 @@
 ## J. DB の変え方
 
 ### 【事実】
-- migration の置き場: リポジトリ直下 migrations/。命名 `migrations/YYYYMMDD_HHMMSS_description.sql`（backend/AGENTS.md「Migration 適用経路」。連番は禁止で CI が強制）。例: migrations/20261013_160000_add_self_hosted_auth_tables.sql。
+- migration の置き場: リポジトリ直下 migrations/。命名 migrations/YYYYMMDD_HHMMSS_description.sql（backend/AGENTS.md「Migration 適用経路」。連番は禁止で CI が強制）。例: migrations/20261013_160000_add_self_hosted_auth_tables.sql。
 - 登録の決まり（2か所に書かれていて食い違いがある）
   - backend/AGENTS.md は「`.github/workflows/deploy.yml` の『新しいマイグレーションはここに追加』コメント直前に psql 実行ステップを追記」と書く。
   - 実際の deploy.yml は `.github/workflows/deploy.yml:228` で「新マイグレーション追加時は deploy.yml ではなく run_all_migrations.sh に追記する」と書き、`.github/workflows/deploy.yml:232` のステップ2は scripts/run_all_migrations.sh を呼ぶだけ。
