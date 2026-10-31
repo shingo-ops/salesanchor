@@ -1,0 +1,564 @@
+# 段 0a 実装カード（画面の中の記録係と、戻った時・押した時の秒の基準）
+
+- 対象: docs/handoff/line-like-speed/design.md §3-4 の段 0・§3-5 の K1・K3・§3-7 のメモリの基準。ADR-1054（Accepted）・ADR-1053・ADR-1051。
+- 根拠の写し: S=origin/main 9e2023359（Merge #4946）。行番号はすべてこの sha。実装の前に最新の origin/main で行を合わせ直す（§3(a)）。
+- 読んだ節: docs/handoff/design-partner-card-ops/guards/00-common.md・guards/03-file.md・guards/04-worktree.md・guards/05-pr.md・guards/10-executor.md。照合の結果: 実行役はクラウドの Sonnet で、作業場所は自分の写しの中。new-worktree.sh・.pr-number・gh-pr-create-safe.sh は手元の作業場所の決まりなので、このカードでは使わない（§4-E）。出力には上限を付ける。待つために sleep を使わない。
+- 状態: 第 1 版（審査前）。
+- 受領確認: 実装役は着手の最初の報告に「段 0a カード 第 1 版を受け取った・S=9e2023359」と書く。
+
+## 0. 設計からの直し（V0。どれも測り方の直しで、作る物と合格の線は変えない）
+- V0-1 動画の突き合わせをやめる: 設計 §3-4 の段 0 の合格線「試しの 3 画面で、記録係の時刻と動画のコマの時刻の差が 0.05 秒以内」は採れない。
+  - 理由: 公開リポジトリなので trace・スクリーンショット・html レポートは作らない（S docs/adr/ADR-1051-prod-ui-black-box-check.md:25）。速さの記録の設定も動画を作らない（S tests/prod-check/page-speed.config.ts:5・:27）。本番の画面の動画には中身が映る。
+  - 代わり: 本番に繋がない「試しのページ」（page.setContent で作る空の画面）で、ページの中の時計で書き換えた時刻が分かっている変化を起こす。記録係が出した時刻との差を見る。戻った時の形を 3 つ・押した時の形を 1 つ、計 4 件。すべて差 50 ミリ秒（0.05 秒）以内で合格（§4-A の runRecorderProbe）。
+  - 精度の試しは毎朝の記録の中でも毎回流す。不合格の朝は戻った時・押した時の秒を出さず、「精度の試しが不合格」と書く（数を出さない。誤った数を基準にしない）。
+- V0-2 「A の画面の部品が描かれた」の見分け方（設計 §3-5 K1 で段 0 に決めるとした点）:
+  - 構造の印: 中身の場所（S frontend/src/components/DesktopShell.tsx:400 main.app-content・S frontend/src/components/MobileShell.tsx:201 main.mobile-content）の要素を、上から幅優先で最大 400 個・深さ 6 まで並べる。各要素の「タグ名とクラス名（並べ替えたもの）」だけを 1 つの数に縮める。文字・値・属性は読まない。
+  - 「A が描かれた」= A へ切り替える命令の後で、中身の場所の中の読み込み中の印（S tests/prod-check/settle.ts:13-14 の LOADING_SELECTOR）が 0 個で、構造の印が「A を最初に開き終えた時の構造の印」と同じになった最初のコマ。
+  - 測れない時は数を出さず、訳を書く: 行き先 B と A の構造の印が同じ時は「見分けられず（行き先と同じ形）」。10 秒のうちに同じにならない時は「10 秒で見分けられず」（時刻で変わる部品などで構造が毎回変わる画面）。
+- V0-3 K3 の押し方: PC の横のメニューの項目を本当に押す（S DesktopShell.tsx:228-322 の a.sidebar-item、S :87-94 の a.sidebar-sub-item）。
+  - 中の項目は、まとめのボタン（S :70-74 button.sidebar-accordion-btn）を開かないと描かれない（S :84 の isExpanded && isOpen）。まとめを開く操作と、項目に指を乗せて横のメニューが広がる動き（S :154-158）は、時間に数えない。時間は押した時刻（pointerdown）から数える。
+  - 押した後は指を中身の場所へ移して、横のメニューを閉じる（S :148-152）。時間に数えない。
+  - メニューに項目が無い画面（番号の要る画面・中の区切りの画面・点検用の人に出ない項目）は「メニューに無い」と書く。押した時の秒は道すじが固定の画面（S page-speed-targets.ts の kind ""・95 件）だけで測る。
+  - 押す前の 1 秒のうちに中身の場所が動いていた時は、押したせいの変化と分けられないので「押す前も動いていた」と書き、数を出さない。
+  - スマホの下のメニューは段 0a では測らない（速さの記録は PC の画面だけで動く・S page-speed.config.ts:34-37）。
+- V0-4 段 0 を 2 つに分ける（変更は一度に 1 つ）: 段 0a=このカード（記録係と基準の記録・tests/prod-check だけ）。段 0b=次のカード（135 画面とファイルの対応表・u1-count.py の流し直し・書類だけ）。段 2 へ進むのは、段 0a と段 0b の両方の受入が合格してから（設計 §3-4 の段 0 の合格線は変えない）。
+- V0-5 メモリの基準（設計 §3-7）: 毎朝の記録の最後に、ブラウザの JS ヒープの使用量を 1 つ書く（Chromium だけが持つ performance.memory.usedJSHeapSize）。値は粗く丸められることがある。無ければ「測れず」と書く。段 3 の比べる相手にする。
+
+## 1. 触るファイル（変更前→変更後）
+| # | ファイル | 変更前 | 変更後 |
+|---|---|---|---|
+| 1 | tests/prod-check/screen-recorder.ts | 無い | 新しく作る。記録係の script と読み出し・精度の試し（§4-A） |
+| 2 | tests/prod-check/page-speed.spec.ts | 開き終わるまでの秒だけを測る（S :1-323） | 精度の試しの test を足す。各画面で戻った時の秒を測る。最後に押した時の秒とメモリを測る。表に 3 列と説明を足す（§4-B） |
+| 3 | docs/handoff/line-like-speed/design.md | 段 0 の合格線に動画の突き合わせ | このカードの V0 を反映済み（設計担当が書いた。実装役は触らない） |
+| 4 | docs/handoff/line-like-speed/stage0-card.md | 無い | このカード（設計担当が書いた。実装役は触らない） |
+
+## 2. 触らない範囲
+- frontend/・backend/・migrations/・.github/workflows/・scripts/ は触らない。
+- tests/prod-check の playwright.config.ts・prod-ui.spec.ts・fixtures.ts・login.ts・settle.ts・page-speed-targets.ts・page-speed.config.ts は触らない。
+- page-speed.spec.ts の今の秒の決め方（S :291-312 の navStart と :311 の式）・表の今の 9 列の並びと説明の行（S :170-197）・関所の通す／止めるの判定（S :216-242 の isRead・writesOnRead・authCall と route.continue／fulfill／abort）は変えない。足すのは「数えるか」の切り替えだけ（§4-B(e)）。
+- 表に出すのは、道すじの形・秒・数・決まった訳の言葉だけ。構造の印の数そのもの・画面の文字・番号は出さない（ADR-1053:22・:29）。
+
+## 3. 実装役が先に確かめること（想定分岐つき）
+- (a) 最新の origin/main で、§1 #2 と §2 の行番号が S と同じか。違えば、中身が同じ行に合わせ直して報告に書く。中身が変わっていたら停止して報告する。
+- (b) tests/prod-check/page-speed-targets.ts の SPEED_TARGETS が 135 件・kind "" が 95 件か。違えば数を報告に書き、そのまま進める（押した時の秒の対象は kind "" の数になる）。
+- (c) Context7 で Playwright の次の 4 点を確かめ、出典を報告に書く: page.addInitScript({ content }) が次の画面読み込みから効くこと／page.waitForFunction(fn, arg, { timeout, polling: 数 }) の形／page.evaluate に文字の式を渡せること／locator.count・hover・click・waitFor の形。合わなければ、合う形に直して報告に書く。Context7 が使えなければ公式文書（playwright.dev）で確かめ、その旨を書く。
+- (d) MDN で Event.timeStamp と performance.now() が同じ時計か、performance.memory が Chromium だけの値かを確かめ、出典を報告に書く。違えば停止して報告する。
+- (e) DesktopShell が使われる横幅か: 速さの記録は Desktop Chrome（S page-speed.config.ts:36）。frontend の中で PC とスマホの殻を分ける幅の値を読み、1280 が PC 側か確かめる。PC 側でなければ停止して報告する。
+- (f) 自分の写しで Playwright の chromium を入れられるか（§4-D 手順2）。入れられなければ、試験を流さずに §4-D の残りを進め、報告に「BLOCKED: chromium を入れられない」と書く（設計担当が別の場所で流す）。
+
+## 4-A. #1 の中身（tests/prod-check/screen-recorder.ts・新しく作る・全文）
+```ts
+/**
+ * 画面の中の記録係（docs/handoff/line-like-speed/design.md §3-5・stage0-card.md §0）
+ *
+ * ブラウザの中で毎コマ、中身の場所（main）の「構造の印」と読み込み中の印の数を記録する。
+ * あわせて、中身の場所の DOM が変わった時刻と、押した時刻（pointerdown）を残す。
+ * 画面の文字・値は読まない。構造の印はタグ名とクラス名だけを数に縮めたもので、外へは時刻と数だけを返す（ADR-1053）。
+ */
+
+import type { Page } from "@playwright/test";
+import { LOADING_SELECTOR } from "./settle";
+
+/** 中身の場所（DesktopShell.tsx の main.app-content・MobileShell.tsx の main.mobile-content） */
+export const CONTAINER_SELECTOR = "main.app-content, main.mobile-content";
+/** 構造の印に入れる要素の数と深さの上限（毎コマの重さを抑える） */
+const SIG_MAX_ELEMENTS = 400;
+const SIG_MAX_DEPTH = 6;
+/** 残すコマと DOM の変化の数の上限（60 コマ/秒で約 33 秒分） */
+const KEEP = 2000;
+/** 精度の試しの合格線（ミリ秒） */
+export const PROBE_LIMIT_MS = 50;
+/** 押した時の試しで、押してから中身を変えるまでの待ち（ミリ秒） */
+const PROBE_TAP_DELAY_MS = 150;
+
+type Rec = {
+  sigNow: () => string;
+  firstMatch: (since: number, want: string) => number;
+  pointerAt: () => number;
+  firstMutationAfter: (since: number) => number;
+  lastMutationBefore: (until: number) => number;
+};
+
+declare global {
+  interface Window {
+    __saRec?: Rec;
+  }
+}
+
+/** ブラウザの中で動く記録係。page.addInitScript({ content }) か page.evaluate で入れる */
+export const RECORDER_SOURCE = `(() => {
+  if (window.__saRec) return;
+  const CONTAINER = ${JSON.stringify(CONTAINER_SELECTOR)};
+  const LOADING = ${JSON.stringify(LOADING_SELECTOR)};
+  const MAX_EL = ${SIG_MAX_ELEMENTS};
+  const MAX_DEPTH = ${SIG_MAX_DEPTH};
+  const KEEP = ${KEEP};
+  const frames = [];
+  const mutations = [];
+  let pointerAt = -1;
+  const sig = (root) => {
+    let h = 2166136261;
+    let n = 0;
+    const queue = [[root, 0]];
+    for (let i = 0; i < queue.length && n < MAX_EL; i++) {
+      const el = queue[i][0];
+      const d = queue[i][1];
+      const s = el.tagName + "." + Array.from(el.classList).sort().join(".") + "|";
+      for (let k = 0; k < s.length; k++) { h ^= s.charCodeAt(k); h = Math.imul(h, 16777619); }
+      n++;
+      if (d < MAX_DEPTH) for (const c of el.children) queue.push([c, d + 1]);
+    }
+    return (h >>> 0).toString(16) + ":" + n;
+  };
+  const read = () => {
+    const c = document.querySelector(CONTAINER);
+    return c ? { sig: sig(c), loading: c.querySelectorAll(LOADING).length } : { sig: "", loading: -1 };
+  };
+  const keep = (arr, v) => { arr.push(v); if (arr.length > KEEP) arr.splice(0, arr.length - KEEP); };
+  const tick = () => {
+    const r = read();
+    keep(frames, { t: performance.now(), sig: r.sig, loading: r.loading });
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+  new MutationObserver((records) => {
+    const c = document.querySelector(CONTAINER);
+    if (!c) return;
+    if (records.some((r) => c === r.target || c.contains(r.target))) keep(mutations, performance.now());
+  }).observe(document, { subtree: true, childList: true, attributes: true, characterData: true });
+  window.addEventListener("pointerdown", (e) => { pointerAt = e.timeStamp; }, true);
+  window.__saRec = {
+    sigNow: () => read().sig,
+    firstMatch: (since, want) => {
+      const f = frames.find((x) => x.t >= since && x.loading === 0 && x.sig === want);
+      return f ? f.t : -1;
+    },
+    pointerAt: () => pointerAt,
+    firstMutationAfter: (since) => {
+      const m = mutations.find((x) => x >= since);
+      return m === undefined ? -1 : m;
+    },
+    lastMutationBefore: (until) => {
+      let v = -1;
+      for (const x of mutations) { if (x < until) v = x; else break; }
+      return v;
+    },
+  };
+})();`;
+
+/** 今の中身の場所の構造の印。中身の場所が無ければ空文字 */
+export async function sigNow(page: Page): Promise<string> {
+  return page.evaluate(() => window.__saRec?.sigNow() ?? "");
+}
+
+/** since 以後で、読み込み中の印が 0 個かつ構造の印が want と同じ最初のコマの時刻。capMs で見つからなければ -1 */
+export async function waitMatch(page: Page, since: number, want: string, capMs: number): Promise<number> {
+  try {
+    await page.waitForFunction(
+      ({ s, w }) => (window.__saRec?.firstMatch(s, w) ?? -1) >= 0,
+      { s: since, w: want },
+      { timeout: capMs, polling: 100 },
+    );
+  } catch {
+    return -1;
+  }
+  return page.evaluate(({ s, w }) => window.__saRec?.firstMatch(s, w) ?? -1, { s: since, w: want });
+}
+
+/** since 以後で、中身の場所の DOM が最初に変わった時刻。capMs で見つからなければ -1 */
+export async function waitMutation(page: Page, since: number, capMs: number): Promise<number> {
+  try {
+    await page.waitForFunction((s) => (window.__saRec?.firstMutationAfter(s) ?? -1) >= 0, since, {
+      timeout: capMs,
+      polling: 100,
+    });
+  } catch {
+    return -1;
+  }
+  return page.evaluate((s) => window.__saRec?.firstMutationAfter(s) ?? -1, since);
+}
+
+/** until より前で、中身の場所の DOM が最後に変わった時刻。無ければ -1 */
+export async function lastMutationBefore(page: Page, until: number): Promise<number> {
+  return page.evaluate((u) => window.__saRec?.lastMutationBefore(u) ?? -1, until);
+}
+
+/** 押した時刻（pointerdown の Event.timeStamp）。まだ押していなければ -1 */
+export async function pointerAt(page: Page): Promise<number> {
+  return page.evaluate(() => window.__saRec?.pointerAt() ?? -1);
+}
+
+export type ProbeResult = { passed: number; total: number; maxDiffMs: number };
+
+const PROBE_HTML =
+  '<!doctype html><html><body><aside id="sidebar-panel"><a class="sidebar-item" href="#probe">probe</a></aside>' +
+  '<main class="app-content"></main></body></html>';
+
+/**
+ * 記録係の精度の試し（本番に繋がない・stage0-card.md V0-1）。
+ * ページの中の時計で書き換えた時刻が分かっている変化を起こし、記録係が出した時刻との差を見る。
+ * 戻った時の形 3 つ（部品が少ない・表 200 行・深い入れ子）と押した時の形 1 つ。差が PROBE_LIMIT_MS 以内で合格。
+ */
+export async function runRecorderProbe(page: Page): Promise<ProbeResult> {
+  await page.setContent(PROBE_HTML);
+  await page.evaluate(RECORDER_SOURCE);
+  const diffs: number[] = [];
+  for (const shape of ["few", "rows", "deep"] as const) {
+    const r = await page.evaluate(
+      (s) =>
+        new Promise<{ since: number; want: string; changedAt: number }>((resolve) => {
+          const main = document.querySelector("main.app-content") as HTMLElement;
+          const htmlA =
+            s === "few"
+              ? '<div class="a-card"></div><div class="a-card"></div><div class="a-card"></div>'
+              : s === "rows"
+                ? `<table class="a-table"><tbody>${'<tr class="a-row"><td></td><td></td></tr>'.repeat(200)}</tbody></table>`
+                : `${'<div class="a-level">'.repeat(10)}${"</div>".repeat(10)}`;
+          main.innerHTML = htmlA;
+          const want = window.__saRec?.sigNow() ?? "";
+          main.innerHTML = '<section class="b-page"><p class="b-line"></p></section>';
+          const since = performance.now();
+          setTimeout(() => {
+            main.innerHTML = '<div class="sa-loading-block"></div>';
+            setTimeout(() => {
+              main.innerHTML = htmlA;
+              resolve({ since, want, changedAt: performance.now() });
+            }, 300);
+          }, 200);
+        }),
+      shape,
+    );
+    const at = await waitMatch(page, r.since, r.want, 5_000);
+    diffs.push(at < 0 ? Number.POSITIVE_INFINITY : at - r.changedAt);
+  }
+  await page.evaluate((delay) => {
+    const link = document.querySelector("a.sidebar-item") as HTMLElement;
+    link.addEventListener(
+      "click",
+      (e) => {
+        e.preventDefault();
+        setTimeout(() => {
+          const main = document.querySelector("main.app-content") as HTMLElement;
+          main.replaceChildren(document.createElement("div"));
+          (window as unknown as { __probeChangedAt?: number }).__probeChangedAt = performance.now();
+        }, delay);
+      },
+      { once: true },
+    );
+  }, PROBE_TAP_DELAY_MS);
+  const before = await pointerAt(page);
+  await page.click("a.sidebar-item");
+  const pointer = await pointerAt(page);
+  const mut = pointer > before ? await waitMutation(page, pointer, 5_000) : -1;
+  const changedAt = await page.evaluate(
+    () => (window as unknown as { __probeChangedAt?: number }).__probeChangedAt ?? -1,
+  );
+  diffs.push(
+    pointer <= before || mut < 0 || changedAt < 0
+      ? Number.POSITIVE_INFINITY
+      : Math.max(Math.abs(mut - changedAt), Math.abs(changedAt - pointer - PROBE_TAP_DELAY_MS)),
+  );
+  const passed = diffs.filter((d) => d >= 0 && d <= PROBE_LIMIT_MS).length;
+  return { passed, total: diffs.length, maxDiffMs: Math.max(...diffs) };
+}
+```
+
+## 4-B. #2 の中身（tests/prod-check/page-speed.spec.ts の直し）
+- (a) import（S :13 の次の行）に足す:
+```ts
+import {
+  CONTAINER_SELECTOR,
+  PROBE_LIMIT_MS,
+  RECORDER_SOURCE,
+  lastMutationBefore,
+  pointerAt,
+  runRecorderProbe,
+  sigNow,
+  waitMatch,
+  waitMutation,
+  type ProbeResult,
+} from "./screen-recorder";
+```
+- (b) 定数（S :21 の次）に足す:
+```ts
+/** 戻った時の秒を待つ上限（K1） */
+const K1_CAP_MS = 10_000;
+/** 押してから最初の変化を待つ上限（K3） */
+const K3_CAP_MS = 5_000;
+/** 押す前に中身の場所が動いていなかったと見なす長さ */
+const K3_QUIET_MS = 1_000;
+/** 戻った時・押した時を測るあいだは、止めた送信と 403 の合計に数えない（今の表の合計を変えないため） */
+const extra = { on: false };
+```
+- (c) 型（S :30 の Status の次）と Row（S :31-42）に足す:
+```ts
+type ExtraNote =
+  | ""
+  | "見分けられず（行き先と同じ形）"
+  | "10 秒で見分けられず"
+  | "メニューに無い"
+  | "押す前も動いていた"
+  | "5 秒で変化なし"
+  | "別の画面へ移った"
+  | "時間切れで未測定"
+  | "精度の試しが不合格"
+  | "エラー";
+```
+  Row に `k1Seconds: number | null; k1Note: ExtraNote; k3Seconds: number | null; k3Note: ExtraNote;` を足す。emptyRow（S :106-118）は `k1Seconds: null, k1Note: "", k3Seconds: null, k3Note: ""` を足す。
+- (d) goInApp（S :72-79）を、切り替えの命令の直前のページの時計の時刻を返す形にする（ほかの呼び出しは戻り値を使わないので、そのまま動く）:
+```ts
+/** アプリの中で画面を切り替える（読み込み直しなし）。react-router の BrowserRouter は popstate で location を読み直す。切り替えの直前のページの時計（performance.now）を返す */
+async function goInApp(page: Page, url: string): Promise<number> {
+  return page.evaluate((to) => {
+    const prev = window.history.state as { idx?: unknown } | null;
+    const idx = (prev && typeof prev.idx === "number" ? prev.idx : 0) + 1;
+    const at = performance.now();
+    window.history.pushState({ usr: null, key: Math.random().toString(36).slice(2, 10), idx }, "", to);
+    window.dispatchEvent(new PopStateEvent("popstate", { state: window.history.state }));
+    return at;
+  }, url);
+}
+```
+- (e) 関所（S :233-235）と requestfinished（S :252）は、数えるかだけを切り替える。止める／通す動きは同じ:
+```ts
+    const key = `${method} ${pathShape(path)}`;
+    if (!extra.on) {
+      blocked.set(key, (blocked.get(key) ?? 0) + 1);
+      blockedTotal += 1;
+    }
+```
+```ts
+    if (status === 403 && !extra.on) forbiddenApis.set(shape, (forbiddenApis.get(shape) ?? 0) + 1);
+```
+- (f) 戻った時の秒を測る関数を、emptyRow の次に足す:
+```ts
+/** 戻った時の秒（K1・設計 §3-5・stage0-card.md V0-2）。A を開き終えた今の状態から、別の画面 B へ移り、また A へ切り替える */
+async function measureReturn(page: Page, api: ApiTracker, url: string, expected: string, row: Row): Promise<void> {
+  const want = await sigNow(page);
+  const other = SPEED_TARGETS.find((t) => t.kind === "" && t.route !== url && t.route !== expected);
+  if (!other || want === "") {
+    row.k1Note = "見分けられず（行き先と同じ形）";
+    return;
+  }
+  await goInApp(page, other.route);
+  await waitSettled(page, api, { capMs: CAP_MS });
+  if ((await sigNow(page)) === want) {
+    row.k1Note = "見分けられず（行き先と同じ形）";
+    return;
+  }
+  const t0 = await goInApp(page, url);
+  const at = await waitMatch(page, t0, want, K1_CAP_MS);
+  await waitSettled(page, api, { capMs: CAP_MS });
+  if (!landed(page, expected)) {
+    row.k1Note = "別の画面へ移った";
+    return;
+  }
+  if (at < 0) {
+    row.k1Note = "10 秒で見分けられず";
+    return;
+  }
+  row.k1Seconds = (at - t0) / 1000;
+}
+```
+- (g) 押した時の秒を測る関数を、measureReturn の次に足す:
+```ts
+/** 押してから最初の変化の秒（K3・設計 §3-5・stage0-card.md V0-3）。メニューを開く操作と指を乗せる動きは数えない */
+async function measureTap(page: Page, api: ApiTracker, route: string, row: Row): Promise<void> {
+  await leaveIfSame(page, api, route);
+  const link = page
+    .locator(
+      `aside#sidebar-panel a.sidebar-item[href="${route}"], aside#sidebar-panel a.sidebar-sub-item[href="${route}"]`,
+    )
+    .first();
+  if ((await link.count()) === 0) {
+    const buttons = page.locator("aside#sidebar-panel button.sidebar-accordion-btn");
+    const n = await buttons.count();
+    for (let i = 0; i < n && (await link.count()) === 0; i++) {
+      if ((await buttons.nth(i).getAttribute("aria-expanded")) !== "true") await buttons.nth(i).click();
+      await link.waitFor({ state: "attached", timeout: 1_000 }).catch(() => undefined);
+    }
+  }
+  if ((await link.count()) === 0) {
+    row.k3Note = "メニューに無い";
+    return;
+  }
+  await link.hover();
+  await page.locator("aside#sidebar-panel.sidebar-expanded").waitFor({ timeout: 2_000 }).catch(() => undefined);
+  // 前の画面の動きが止むのを待つ（最大 5 秒）。止まなければ下で「押す前も動いていた」になる
+  await page
+    .waitForFunction(
+      (q) => {
+        const now = performance.now();
+        const last = window.__saRec?.lastMutationBefore(now) ?? -1;
+        return last < 0 || now - last >= q;
+      },
+      K3_QUIET_MS,
+      { timeout: 5_000, polling: 100 },
+    )
+    .catch(() => undefined);
+  const before = await pointerAt(page);
+  await link.click();
+  const pointer = await pointerAt(page);
+  const last = pointer > before ? await lastMutationBefore(page, pointer) : -1;
+  const mut = pointer > before ? await waitMutation(page, pointer, K3_CAP_MS) : -1;
+  await waitSettled(page, api, { capMs: CAP_MS });
+  const box = await page.locator(CONTAINER_SELECTOR).first().boundingBox();
+  if (box) await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  if (pointer <= before) {
+    row.k3Note = "エラー";
+  } else if (!landed(page, route)) {
+    row.k3Note = "別の画面へ移った";
+  } else if (last >= 0 && pointer - last < K3_QUIET_MS) {
+    row.k3Note = "押す前も動いていた";
+  } else if (mut < 0) {
+    row.k3Note = "5 秒で変化なし";
+  } else {
+    row.k3Seconds = (mut - pointer) / 1000;
+  }
+}
+```
+- (h) 精度の試しの test を、S :201 の test の前に足す（秘密情報が無くても流れる。実装役が手元で流せる）:
+```ts
+test("記録係の精度を確かめる（本番に繋がない）", async ({ page }) => {
+  const r = await runRecorderProbe(page);
+  if (r.passed !== r.total) {
+    throw new Error(`記録係の精度の試し: ${r.total} 件中 ${r.passed} 件合格・いちばん大きい差 ${r.maxDiffMs} ms（合格線 ${PROBE_LIMIT_MS} ms）`);
+  }
+});
+```
+- (i) 本体の test（S :201-323）に足す:
+  - S :242（関所の終わり）の次に、記録係を入れて精度の試しを流す:
+```ts
+  await page.addInitScript({ content: RECORDER_SOURCE });
+  const probePage = await context.newPage();
+  const probe = await runRecorderProbe(probePage).catch((): ProbeResult => ({ passed: 0, total: 4, maxDiffMs: Number.POSITIVE_INFINITY }));
+  await probePage.close();
+  const recorderOk = probe.passed === probe.total;
+  let heapMb: number | null = null;
+```
+  - S :312（秒を入れる else の閉じ）と S :313（rows.push）のあいだに、戻った時の秒を足す:
+```ts
+        if (row.status === "測れた" && recorderOk) {
+          extra.on = true;
+          try {
+            await measureReturn(page, api, url, expected, row);
+          } catch {
+            row.k1Note = "エラー";
+          } finally {
+            extra.on = false;
+          }
+        } else if (row.status === "測れた") {
+          row.k1Note = "精度の試しが不合格";
+        }
+```
+  - S :319（for の閉じ）の次に、押した時の秒とメモリを足す（rows は SPEED_TARGETS と同じ順に 1 件ずつ入っている）:
+```ts
+    for (let i = 0; i < SPEED_TARGETS.length && i < rows.length; i++) {
+      const target = SPEED_TARGETS[i];
+      const row = rows[i];
+      if (target.kind !== "" || row.status !== "測れた") continue;
+      if (!recorderOk) {
+        row.k3Note = "精度の試しが不合格";
+        continue;
+      }
+      if (Date.now() - stageStart > STAGE_LIMIT_MS) {
+        row.k3Note = "時間切れで未測定";
+        continue;
+      }
+      extra.on = true;
+      try {
+        await measureTap(page, api, target.route, row);
+      } catch {
+        row.k3Note = "エラー";
+      } finally {
+        extra.on = false;
+      }
+    }
+    heapMb = await page
+      .evaluate(() => {
+        const m = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory;
+        return m ? m.usedJSHeapSize / 1048576 : null;
+      })
+      .catch(() => null);
+```
+  - S :321 の render の呼び出しに `probe, heapMb` を足す。
+- (j) render（S :156-199）に足す（今の 9 列と説明の行はそのまま。後ろに足すだけ）:
+  - 引数に `probe: ProbeResult, heapMb: number | null` を足す。`const sec2 = (v: number | null) => (v === null ? "—" : v.toFixed(2));` を足す。
+  - 各行の最後に 3 列 `| ${sec2(r.k1Seconds)} | ${sec2(r.k3Seconds)} | ${[r.k1Note, r.k3Note].filter(Boolean).join("・") || "—"} |` を足す。見出しの行に `| 戻った時の秒 | 押して最初の変化の秒 | 戻った時・押した時の訳 |`、区切りの行に `|---|---|---|` を足す。
+  - 説明の行（S :181 の次）に足す:
+```ts
+    "- 戻った時の秒 = 開き終えた画面 A から別の画面 B へ移り、また A へ切り替えた命令から、中身の場所に読み込み中の印が無く、A を開き終えた時と同じ構造（タグとクラス名だけで比べる）が描かれた最初のコマまで（K1）",
+    "- 押して最初の変化の秒 = 横のメニューの項目を押した時刻から、中身の場所が最初に変わった時刻まで（K3）。メニューを開く操作と指を乗せる動きは数えない。道すじが固定の画面だけ",
+    `- 記録係の精度の試し（本番に繋がない）: ${probe.total} 件中 ${probe.passed} 件合格・いちばん大きい差 ${Number.isFinite(probe.maxDiffMs) ? `${probe.maxDiffMs.toFixed(1)} ms` : "見つからず"}（合格線 ${PROBE_LIMIT_MS} ms）`,
+```
+  - 最後の合計の行（S :197 の次）に足す:
+```ts
+  out.push(
+    `- 戻った時の秒を測れた画面: ${rows.filter((r) => r.k1Seconds !== null).length}`,
+    `- 押して最初の変化の秒を測れた画面: ${rows.filter((r) => r.k3Seconds !== null).length}`,
+    `- ブラウザのメモリ（JS ヒープ・測り終えた時）: ${heapMb === null ? "測れず" : `${heapMb.toFixed(0)} MB`}`,
+    "",
+  );
+```
+  ただし S :197 の最後の "" は、この out.push の前で 1 つにまとめる（空行が 2 つ続かないように、S :197 の `""` を消してここに置く）。
+
+## 4-C. 試験
+- 精度の試しの test（§4-B(h)）が、実装役の手元で 4 件中 4 件合格すること。
+- 本体の test は秘密情報が無いと skip される（S :203）。実装役は本番に繋がない。本番の記録は、マージの後に設計担当が毎朝の記録を手で 1 回動かして確かめる（§5）。
+
+## 4-D. 実装役の手順（自分の写しの中・1 手順 1 命令）
+手順1. 自分の写しの根で、ブランチ release/line-like-speed-stage0 を取ってくる（設計担当が §1 #3・#4 を push 済み）。
+  cd "$(git rev-parse --show-toplevel)" && git fetch origin release/line-like-speed-stage0
+手順2. frontend の依存と chromium を入れる。入れられなければ §3(f) に従う。
+  cd "$(git rev-parse --show-toplevel)/frontend" && npm ci
+  cd "$(git rev-parse --show-toplevel)/frontend" && npx playwright install chromium
+手順3. §4-A の全文で tests/prod-check/screen-recorder.ts を作る。§4-B のとおり page-speed.spec.ts を直す。
+手順4. 精度の試しだけを流し、出力をファイルに残す。
+  cd "$(git rev-parse --show-toplevel)" && NODE_PATH="$(git rev-parse --show-toplevel)/frontend/node_modules" ./frontend/node_modules/.bin/playwright test --config tests/prod-check/page-speed.config.ts -g "記録係の精度" > /tmp/stage0a-probe.txt 2>&1
+  cd "$(git rev-parse --show-toplevel)" && tail -20 /tmp/stage0a-probe.txt
+手順5. 本体の test が秘密情報なしで skip されることを確かめる。
+  cd "$(git rev-parse --show-toplevel)" && NODE_PATH="$(git rev-parse --show-toplevel)/frontend/node_modules" ./frontend/node_modules/.bin/playwright test --config tests/prod-check/page-speed.config.ts > /tmp/stage0a-all.txt 2>&1
+  cd "$(git rev-parse --show-toplevel)" && tail -20 /tmp/stage0a-all.txt
+手順6. 変わったファイルが §1 の #1・#2 だけか確かめる。
+  cd "$(git rev-parse --show-toplevel)" && git status --short | head -20
+手順7. commit する。
+  cd "$(git rev-parse --show-toplevel)" && git add tests/prod-check/screen-recorder.ts tests/prod-check/page-speed.spec.ts
+  cd "$(git rev-parse --show-toplevel)" && git commit -m "test: 画面の中の記録係と戻った時・押した時の秒の基準（段0a）"
+手順8. commit が在ることを確かめてから push する。
+  cd "$(git rev-parse --show-toplevel)" && git log -3 --oneline
+  cd "$(git rev-parse --show-toplevel)" && git push -u origin HEAD:release/line-like-speed-stage0
+手順9. 報告を返す。PR は作らない（設計担当が作る）。
+
+## 4-E. 手元の作業場所の決まりとの違い
+- 実装役はクラウドで動く。new-worktree.sh・.pr-number・gh-pr-create-safe.sh・gh-pr-merge-safe.sh は手元の作業場所の決まりなので使わない。PR の作成・審査・マージは設計担当が手元で行う。
+
+## 4. GO と承認・PO の操作
+- PO の実装承認: 設計と ADR-1054 の採用・作り始め（2026-10-31 PO 選択「1」）。このカードの審査合格の後に、設計担当がクラウドの Sonnet へ渡す。
+- 触るのは tests/prod-check と書類だけで、migrations・deploy.yml・本番 scripts を含まない（番号付き GO の要る危ない PR ではない）。マージは PO の委任に基づき設計担当（Claude Opus）が、マージ前の審査役の APPROVE の後に行う。
+- PO が操作することはない。
+
+## 5. 受入（○×）
+| # | 基準 | 検証方法 |
+|---|---|---|
+| A1 | 精度の試しが手元で 4 件中 4 件合格 | 実装役の /tmp/stage0a-probe.txt の最後の行（passed） |
+| A2 | 秘密情報なしで本体の test が skip され、精度の試しが pass | /tmp/stage0a-all.txt に「1 passed」「1 skipped」 |
+| A3 | 変わったのは §1 の 4 ファイルだけ | gh pr diff --name-only |
+| A4 | 今の秒の式（S :311）・関所の判定（S :225-232）・今の 9 列が変わっていない | gh pr diff で該当行に - が無い |
+| A5 | マージの後、毎朝の記録を手で 1 回動かし、精度の試しが 4/4 合格と表に出る | 実行記録の要約の「記録係の精度の試し」の行 |
+| A6 | 同じ回で、135 行すべてが「戻った時の秒」に数か訳を持つ（「測れた」行に限る）。押した時の秒は kind "" の行が数か訳を持つ | 要約の表を数える（設計担当） |
+| A7 | 同じ回で、画面の速さの段が 40 分の上限の中で終わり、「時間切れで未測定」が 0 行 | 要約の表と段の時間 |
+| A8 | 要約に画面の文字・番号・構造の印の数が出ていない | 新しい 3 列が数字・「—」・§4-B(c) の決まった言葉だけ |
+| A9 | 同じ回で、メモリの行が MB か「測れず」で出る | 要約の最後の行 |
+
+- A5〜A9 の回の値を、K1・K3・メモリの基準として docs/handoff/line-like-speed/design.md §3-4 に設計担当が書き足す（段 0b のカードと同じ PR にしない）。
+
+## 6. 戻し方
+- マージの commit を git revert する PR を 1 つ出す。本番の画面・DB には何も入っていないので、戻すのはこの記録だけ。
+- 毎朝の記録の段は continue-on-error（S .github/workflows/prod-ui-check.yml:146）なので、この段が失敗しても朝の画面点検の合否と知らせは変わらない。
+
+## 停止と報告
+- §3 で「停止」とした時、試験が 4 件中 4 件にならない時、§2 の触らない範囲を変えないと進めない時は、そこで停止する。
+- 停止したら、何を実行し何が返ったかの生の出力（/tmp の報告ファイルの tail）を付けて、BLOCKED: か NEEDS_DECISION: で始まる報告を返す。推測で直さない。
+- 終わったら DONE: で始まる報告に、§3 の確かめた結果・出典、手順4・5 の tail、push した sha を書く。
+
+END OF CARD
