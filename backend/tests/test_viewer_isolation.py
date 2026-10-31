@@ -40,6 +40,8 @@ _PUBLIC_NO_AUTH_ROUTES: frozenset[tuple[str, str]] = frozenset(
         ("GET", "/metrics"),
         ("POST", "/api/v1/auth/login"),
         ("POST", "/api/v1/auth/logout"),
+        ("POST", "/api/v1/auth/passkey/login/options"),
+        ("POST", "/api/v1/auth/passkey/login/verify"),
         ("POST", "/api/v1/auth/password-reset/confirm"),
         ("POST", "/api/v1/auth/password-reset/request"),
         ("POST", "/api/v1/auth/refresh"),

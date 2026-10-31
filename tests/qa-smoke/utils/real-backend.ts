@@ -26,11 +26,15 @@ export type QaRole = "admin" | "staff" | "viewer";
  */
 export async function login(page: Page, role: QaRole): Promise<void> {
   const cred = QA_USERS[role];
+  // 点検のブラウザでは顔・指紋（パスキー）を使えない扱いにし、ログイン直後の登録案内を出さない（本番に記録を残さない・ADR-1013）
+  await page.addInitScript(() => {
+    Object.defineProperty(globalThis, "PublicKeyCredential", { value: undefined, configurable: true });
+  });
   await page.goto("/login", { waitUntil: "domcontentloaded" });
 
   await page.getByLabel("メールアドレス").fill(cred.email);
   await page.getByLabel("パスワード", { exact: true }).fill(cred.password);
-  await page.getByRole("button", { name: "ログイン" }).click();
+  await page.getByRole("button", { name: "ログイン", exact: true }).click();
 
   // ログイン成功後は `/` (Dashboard) に遷移する想定。最大 navigationTimeout 待機。
   await page.waitForURL((u) => u.pathname === "/" || u.pathname === "/dashboard", {

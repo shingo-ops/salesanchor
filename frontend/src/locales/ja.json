@@ -679,7 +679,12 @@
     "resetPassword": "パスワード再設定",
     "sendResetEmail": "再設定メールを送信",
     "resetEmailSent": "再設定メールを送信しました。メールをご確認ください。",
-    "backToLogin": "ログイン画面に戻る"
+    "backToLogin": "ログイン画面に戻る",
+    "signInWithPasskey": "顔・指紋でログイン",
+    "passkeyPromptTitle": "顔や指紋でログインできるようにしますか",
+    "passkeyPromptBody": "次からはパスワードを入れずに、顔や指紋だけですぐにログインできます。",
+    "passkeyPromptRegister": "登録する",
+    "passkeyPromptSkip": "今はスキップ"
   },
   "authError": {
     "invalidCredentials": "メールアドレスまたはパスワードが正しくありません。",
@@ -692,7 +697,12 @@
     "passwordTooLong": "パスワードは64文字以内で入力してください。",
     "passwordTooCommon": "よく使われるパスワードのため使えません。別のパスワードにしてください。",
     "validation": "入力内容を確認してください。",
-    "default": "エラーが発生しました。しばらく待ってからお試しください。"
+    "default": "エラーが発生しました。しばらく待ってからお試しください。",
+    "passkeyFailed": "顔・指紋でのログインに失敗しました。パスワードでログインするか、もう一度お試しください。",
+    "passkeyExpired": "時間切れです。もう一度お試しください。",
+    "passkeyCancelled": "顔・指紋の確認が取り消されました。もう一度お試しください。",
+    "passkeyExists": "この端末のパスキーはすでに登録されています。",
+    "passkeyLimit": "パスキーは10個まで登録できます。"
   },
   "resetPasswordPage": {
     "subtitle": "メールのリンクから、新しいパスワードを決めます。",
@@ -1652,6 +1662,7 @@
   "quotes": {
     "title": "見積管理",
     "newQuote": "新規見積",
+    "createSubtitle": "新しい見積を作成します",
     "quoteCode": "見積コード",
     "customer": "顧客",
     "salesRep": "営業担当",
@@ -3199,6 +3210,21 @@
     "passwordMismatch": "新しいパスワードが一致しません",
     "passwordTooShort": "パスワードは8文字以上で入力してください",
     "passwordChanged": "パスワードを変更しました",
+    "passkeyTitle": "顔・指紋でのログイン（パスキー）",
+    "passkeyDescription": "この端末の顔認証・指紋認証でログインできるようにします。顔や指紋のデータは端末から出ません。",
+    "passkeyLabel": "名前（例: 仕事用iPhone）",
+    "passkeyAdd": "この端末を登録",
+    "passkeyAdded": "登録しました。",
+    "passkeyColName": "名前",
+    "passkeyColCreated": "登録日",
+    "passkeyColLastUsed": "最後に使った日",
+    "passkeyUnnamed": "名前なし",
+    "passkeyNeverUsed": "まだ使っていません",
+    "passkeyEmpty": "登録されたパスキーはありません。",
+    "passkeyDelete": "削除",
+    "passkeyDeleteTitle": "パスキーを削除しますか",
+    "passkeyDeleteMessage": "削除すると、この端末の顔・指紋ではログインできなくなります。パスワードでのログインはそのまま使えます。",
+    "passkeyUnsupported": "この端末・ブラウザはパスキーに対応していません。",
     "sectionPreferences": "環境設定",
     "darkModeLabel": "ダークモード",
     "languageLabel": "言語",

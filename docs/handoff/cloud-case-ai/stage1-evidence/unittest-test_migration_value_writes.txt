@@ -1,0 +1,44 @@
+test_added_dynamic_schema_insert_fails (scripts.tests.test_migration_value_writes.DiffMode.test_added_dynamic_schema_insert_fails)
+tenant ループの動的なスキーマ名（%I.）でも見逃さない（今のチェック 7 の穴）。 ... ok
+test_added_insert_on_protected_table_fails (scripts.tests.test_migration_value_writes.DiffMode.test_added_insert_on_protected_table_fails) ... ok
+test_added_policy_on_protected_table_passes_check8 (scripts.tests.test_migration_value_writes.DiffMode.test_added_policy_on_protected_table_passes_check8) ... ok
+test_added_policy_plus_insert_fails_check7 (scripts.tests.test_migration_value_writes.DiffMode.test_added_policy_plus_insert_fails_check7) ... ok
+test_added_select_from_protected_table_fails_check8_but_structure_passes (scripts.tests.test_migration_value_writes.DiffMode.test_added_select_from_protected_table_fails_check8_but_structure_passes) ... ok
+test_added_structure_change_passes_check8 (scripts.tests.test_migration_value_writes.DiffMode.test_added_structure_change_passes_check8) ... ok
+test_added_update_on_products_fails (scripts.tests.test_migration_value_writes.DiffMode.test_added_update_on_products_fails) ... ok
+test_neutralization_edit_passes (scripts.tests.test_migration_value_writes.DiffMode.test_neutralization_edit_passes)
+値の書き込みを外し、コメントと NOTICE を足す編集は通る（#3544 の形）。 ... ok
+test_new_file_with_insert_fails_and_structure_only_passes (scripts.tests.test_migration_value_writes.DiffMode.test_new_file_with_insert_fails_and_structure_only_passes) ... ok
+test_no_migration_change_is_a_pass (scripts.tests.test_migration_value_writes.DiffMode.test_no_migration_change_is_a_pass) ... ok
+test_reindented_existing_write_is_not_flagged (scripts.tests.test_migration_value_writes.DiffMode.test_reindented_existing_write_is_not_flagged)
+字下げだけの変更（同じ文面が削除側にもある）は、新しい値の書き込みとは数えない。 ... ok
+test_word_boundary_does_not_flag_similar_names (scripts.tests.test_migration_value_writes.DiffMode.test_word_boundary_does_not_flag_similar_names) ... ok
+test_exclusion_for_unregistered_file_is_rejected (scripts.tests.test_migration_value_writes.DryrunReport.test_exclusion_for_unregistered_file_is_rejected) ... ok
+test_run_exits_nonzero_when_a_file_fails (scripts.tests.test_migration_value_writes.DryrunReport.test_run_exits_nonzero_when_a_file_fails)
+強制: 落ちたファイルが1本でもあれば終了コードは 1。 ... ok
+test_run_exits_zero_when_all_pass (scripts.tests.test_migration_value_writes.DryrunReport.test_run_exits_zero_when_all_pass)
+全部通れば終了コードは 0。 ... ok
+test_set_is_registered_minus_exclusions (scripts.tests.test_migration_value_writes.DryrunReport.test_set_is_registered_minus_exclusions) ... ok
+test_dryrun_exclusions_are_valid (scripts.tests.test_migration_value_writes.RealRepo.test_dryrun_exclusions_are_valid) ... ok
+test_protected_tables_include_the_four_added_masters (scripts.tests.test_migration_value_writes.RealRepo.test_protected_tables_include_the_four_added_masters) ... ok
+test_repo_scan_passes_with_the_committed_allowlist (scripts.tests.test_migration_value_writes.RealRepo.test_repo_scan_passes_with_the_committed_allowlist) ... ok
+test_listed_file_with_write_to_protected_table_fails_check7 (scripts.tests.test_migration_value_writes.ReferenceAllowlist.test_listed_file_with_write_to_protected_table_fails_check7) ... ok
+test_listed_with_matching_sha_passes_check8 (scripts.tests.test_migration_value_writes.ReferenceAllowlist.test_listed_with_matching_sha_passes_check8) ... ok
+test_listed_with_mismatching_sha_fails (scripts.tests.test_migration_value_writes.ReferenceAllowlist.test_listed_with_mismatching_sha_fails) ... ok
+test_other_file_is_not_exempted_by_listing_another (scripts.tests.test_migration_value_writes.ReferenceAllowlist.test_other_file_is_not_exempted_by_listing_another) ... ok
+test_repo_mode_row_for_missing_file_fails (scripts.tests.test_migration_value_writes.ReferenceAllowlist.test_repo_mode_row_for_missing_file_fails) ... ok
+test_repo_mode_stale_sha_fails (scripts.tests.test_migration_value_writes.ReferenceAllowlist.test_repo_mode_stale_sha_fails) ... ok
+test_repo_mode_unregistered_row_fails (scripts.tests.test_migration_value_writes.ReferenceAllowlist.test_repo_mode_unregistered_row_fails) ... ok
+test_repo_mode_valid_row_passes (scripts.tests.test_migration_value_writes.ReferenceAllowlist.test_repo_mode_valid_row_passes) ... ok
+test_unlisted_file_still_fails (scripts.tests.test_migration_value_writes.ReferenceAllowlist.test_unlisted_file_still_fails) ... ok
+test_flagged_file_in_allowlist_passes (scripts.tests.test_migration_value_writes.RepoMode.test_flagged_file_in_allowlist_passes) ... ok
+test_flagged_file_not_in_allowlist_fails (scripts.tests.test_migration_value_writes.RepoMode.test_flagged_file_not_in_allowlist_fails) ... ok
+test_neutralized_file_with_its_row_removed_passes (scripts.tests.test_migration_value_writes.RepoMode.test_neutralized_file_with_its_row_removed_passes) ... ok
+test_row_for_unregistered_file_fails (scripts.tests.test_migration_value_writes.RepoMode.test_row_for_unregistered_file_fails) ... ok
+test_stale_allowlist_row_fails (scripts.tests.test_migration_value_writes.RepoMode.test_stale_allowlist_row_fails) ... ok
+test_tables_mismatch_fails (scripts.tests.test_migration_value_writes.RepoMode.test_tables_mismatch_fails) ... ok
+
+----------------------------------------------------------------------
+Ran 34 tests in 5.644s
+
+OK

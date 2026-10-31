@@ -32,3 +32,7 @@
 - 判定表（`key	項目	判定`。判定は OK / NG / NOWORD）と対応表（`key	仕入元	中分類`）から、`overall.tsv`・`by_supplier.tsv`・`by_category.tsv`（正しい・違う・答え無し・正答率・Wilson 95% の幅・20件未満は「参考」）を出す: `python3 -I scripts/accuracy/by_group.py --verdicts V.tsv --groups G.tsv --out-dir <出力先>`。出力先はリポジトリの外だけ。分けた数の合計が全体と合わなければ何も書かず終了コード3。
 - 対応表は窓口から作る: `python3 -I scripts/accuracy/fetch_groups.py --keys K.tsv --out G.tsv`（K は `key	msg_id	product_id`）。仕入元は supplier_id の数字だけ。窓口に列が無ければ `BLOCKED:` で終了コード1。
 - 出力・対応表・判定表は社外秘。リポジトリ・PR に載せない。
+
+## 行ごとの判定を書き出す（--verdicts-out）
+- `score_v102.py` に `--verdicts-out V.tsv` を足すと、上の出力に加えて正解表の行ごとの判定表（`key	項目	判定`。項目は C1・E1〜E3・A1〜A5、判定は OK / NG / NOWORD / SKIP。除外 ALL の行は書かない）を書く。置き場所はリポジトリの外だけ。付けないときの出力は変わらない。
+- 判定表の数は `result.tsv` と照合し、合わなければ `STOP: 判定の数が集計と合いません` で終了コード2（V.tsv は書かない）。SKIP を含むので `by_group.py` にはそのまま渡せない（段2の計算専用）。社外秘。

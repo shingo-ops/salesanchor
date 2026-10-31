@@ -33,10 +33,14 @@ export function creds(): { email: string; password: string } | null {
 }
 
 export async function login(page: Page, email: string, password: string): Promise<void> {
+  // 点検のブラウザでは顔・指紋（パスキー）を使えない扱いにし、ログイン直後の登録案内を出さない（本番に記録を残さない・ADR-1013）
+  await page.addInitScript(() => {
+    Object.defineProperty(globalThis, "PublicKeyCredential", { value: undefined, configurable: true });
+  });
   await page.goto("/login");
   await page.getByLabel("メールアドレス").fill(email);
   await page.getByLabel("パスワード", { exact: true }).fill(password);
-  await page.getByRole("button", { name: "ログイン" }).click();
+  await page.getByRole("button", { name: "ログイン", exact: true }).click();
   await page.waitForURL(
     (url) => url.pathname === "/" || url.pathname === "/dashboard",
     { timeout: 30_000 },

@@ -1,0 +1,25 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.3.5, pluggy-1.7.0 -- /var/tmp/venv312/bin/python
+rootdir: /root/worktrees/salesanchor/release-cloud-case-ai-stage1/backend
+configfile: pyproject.toml
+plugins: xdist-3.6.1, platformdirs-4.14.0, asyncio-0.25.3, anyio-4.15.1, cov-6.1.1
+asyncio: mode=Mode.AUTO, asyncio_default_fixture_loop_scope=function
+collecting ... collected 15 items
+
+tests/ops/test_ai_cloud_views.py::test_meta_migration_without_ai_reader PASSED [  6%]
+tests/ops/test_ai_cloud_views.py::test_meta_grants_with_ai_reader PASSED [ 13%]
+tests/ops/test_ai_cloud_views.py::test_view_built_and_logged PASSED      [ 20%]
+tests/ops/test_ai_cloud_views.py::test_t1_masked_values_and_shapes PASSED [ 26%]
+tests/ops/test_ai_cloud_views.py::test_t1_classification_applied PASSED  [ 33%]
+tests/ops/test_ai_cloud_views.py::test_t1_read_paths_do_not_leak PASSED  [ 40%]
+tests/ops/test_ai_cloud_views.py::test_t1b_statistics_and_explain_do_not_leak PASSED [ 46%]
+tests/ops/test_ai_cloud_views.py::test_c_view_owner_passes_rls_like_ai_ro PASSED [ 53%]
+tests/ops/test_ai_cloud_views.py::test_m8_privileges PASSED              [ 60%]
+tests/ops/test_ai_cloud_views.py::test_m8_acceptance_masks_counted PASSED [ 66%]
+tests/ops/test_ai_cloud_views.py::test_t10b_role_with_other_attributes_stops_migration PASSED [ 73%]
+tests/ops/test_ai_cloud_views.py::test_role_migration_is_idempotent PASSED [ 80%]
+tests/ops/test_ai_cloud_views.py::test_t10_classification_covers_real_shaped_tables PASSED [ 86%]
+tests/ops/test_ai_cloud_views.py::test_t10_detects_added_columns PASSED  [ 93%]
+tests/ops/test_ai_cloud_views.py::test_allow_without_reason_is_rejected_by_table PASSED [100%]
+
+============================== 15 passed in 1.04s ==============================

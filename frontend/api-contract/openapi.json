@@ -8503,6 +8503,44 @@
         "title": "DealSummary",
         "type": "object"
       },
+      "DecisionBody": {
+        "additionalProperties": false,
+        "properties": {
+          "decision": {
+            "enum": [
+              "approved",
+              "denied"
+            ],
+            "title": "Decision",
+            "type": "string"
+          },
+          "minutes": {
+            "anyOf": [
+              {
+                "maximum": 15.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minutes"
+          },
+          "reason": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "decision",
+          "reason"
+        ],
+        "title": "DecisionBody",
+        "type": "object"
+      },
       "DeployButtonResponse": {
         "properties": {
           "channel_id": {
@@ -22498,6 +22536,198 @@
         "title": "ParallelReportResponse",
         "type": "object"
       },
+      "PasskeyChallengeResponse": {
+        "properties": {
+          "challenge_id": {
+            "description": "challenge の引換券（300 秒・1 回限り）",
+            "title": "Challenge Id",
+            "type": "string"
+          },
+          "options": {
+            "description": "WebAuthn の options（ブラウザへそのまま渡す）",
+            "title": "Options",
+            "type": "object"
+          }
+        },
+        "required": [
+          "challenge_id",
+          "options"
+        ],
+        "title": "PasskeyChallengeResponse",
+        "type": "object"
+      },
+      "PasskeyCreated": {
+        "properties": {
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          }
+        },
+        "required": [
+          "id",
+          "created_at"
+        ],
+        "title": "PasskeyCreated",
+        "type": "object"
+      },
+      "PasskeyItem": {
+        "properties": {
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used At"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "PasskeyItem",
+        "type": "object"
+      },
+      "PasskeyList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PasskeyItem"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "PasskeyList",
+        "type": "object"
+      },
+      "PasskeyLoginVerify": {
+        "properties": {
+          "challenge_id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Challenge Id",
+            "type": "string"
+          },
+          "credential": {
+            "title": "Credential",
+            "type": "object"
+          }
+        },
+        "required": [
+          "challenge_id",
+          "credential"
+        ],
+        "title": "PasskeyLoginVerify",
+        "type": "object"
+      },
+      "PasskeyPromptStatus": {
+        "properties": {
+          "can_auto": {
+            "title": "Can Auto",
+            "type": "boolean"
+          },
+          "show_prompt": {
+            "title": "Show Prompt",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "can_auto",
+          "show_prompt"
+        ],
+        "title": "PasskeyPromptStatus",
+        "type": "object"
+      },
+      "PasskeyRegisterOptionsRequest": {
+        "properties": {
+          "auto": {
+            "default": false,
+            "title": "Auto",
+            "type": "boolean"
+          }
+        },
+        "title": "PasskeyRegisterOptionsRequest",
+        "type": "object"
+      },
+      "PasskeyRegisterVerify": {
+        "properties": {
+          "challenge_id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Challenge Id",
+            "type": "string"
+          },
+          "credential": {
+            "title": "Credential",
+            "type": "object"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "端末の名前（任意）",
+            "title": "Label"
+          }
+        },
+        "required": [
+          "challenge_id",
+          "credential"
+        ],
+        "title": "PasskeyRegisterVerify",
+        "type": "object"
+      },
       "PasswordChange": {
         "description": "パスワード変更リクエスト（ログイン中）。新パスワードの決まりは password_policy で見る。",
         "properties": {
@@ -35967,6 +36197,49 @@
         "title": "UnitUpdate",
         "type": "object"
       },
+      "UnmaskRequestBody": {
+        "additionalProperties": false,
+        "properties": {
+          "column_names": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Column Names",
+            "type": "array"
+          },
+          "reason": {
+            "maxLength": 1000,
+            "minLength": 20,
+            "title": "Reason",
+            "type": "string"
+          },
+          "row_keys": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 200,
+            "minItems": 1,
+            "title": "Row Keys",
+            "type": "array"
+          },
+          "view_name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "View Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "view_name",
+          "column_names",
+          "row_keys",
+          "reason"
+        ],
+        "title": "UnmaskRequestBody",
+        "type": "object"
+      },
       "UnresolvedResponse": {
         "properties": {
           "import_job_id": {
@@ -39300,6 +39573,286 @@
           }
         ],
         "summary": "Logout",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/passkey/login/options": {
+      "post": {
+        "description": "パスキーでのログインの options を作る（認証なし）。",
+        "operationId": "passkey_login_options_api_v1_auth_passkey_login_options_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyChallengeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Passkey Login Options",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/passkey/login/verify": {
+      "post": {
+        "description": "パスキーの応答を確かめてログインさせる。失敗はどの理由でも同じ 401。",
+        "operationId": "passkey_login_verify_api_v1_auth_passkey_login_verify_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasskeyLoginVerify"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SelfTokenResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Passkey Login Verify",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/passkey/prompt": {
+      "get": {
+        "description": "ログイン直後のパスキー登録（自動作成・案内）を出してよいか。\n\n読むだけの口なので出どころの確認はしない（ブラウザは同じサイトあての GET に Origin を付けない）。\n本人の Bearer トークンが要るので、他のサイトからは読めない。",
+        "operationId": "passkey_prompt_status_api_v1_auth_passkey_prompt_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyPromptStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Passkey Prompt Status",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/passkey/prompt/skip": {
+      "post": {
+        "description": "「今はスキップ」の記録。",
+        "operationId": "passkey_prompt_skip_api_v1_auth_passkey_prompt_skip_post",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Passkey Prompt Skip",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/passkey/register/options": {
+      "post": {
+        "description": "パスキー登録の options を作る（ログイン中の本人だけ）。",
+        "operationId": "passkey_register_options_api_v1_auth_passkey_register_options_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/PasskeyRegisterOptionsRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Data"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyChallengeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Passkey Register Options",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/passkey/register/verify": {
+      "post": {
+        "description": "パスキー登録の応答を確かめ、公開鍵を保存する。",
+        "operationId": "passkey_register_verify_api_v1_auth_passkey_register_verify_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasskeyRegisterVerify"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyCreated"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Passkey Register Verify",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/passkeys": {
+      "get": {
+        "description": "本人のパスキーの一覧。",
+        "operationId": "passkey_list_api_v1_auth_passkeys_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Passkey List",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/passkeys/{passkey_id}": {
+      "delete": {
+        "description": "本人のパスキーを 1 件消す。他人のものも「無い」と同じ 404。",
+        "operationId": "passkey_delete_api_v1_auth_passkeys__passkey_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "passkey_id",
+            "required": true,
+            "schema": {
+              "title": "Passkey Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Passkey Delete",
         "tags": [
           "auth"
         ]
@@ -48873,6 +49426,430 @@
         "summary": "Ingest Alertmanager",
         "tags": [
           "ops"
+        ]
+      }
+    },
+    "/api/v1/ops/case/audit-inputs": {
+      "get": {
+        "description": "点検の材料。申請・判断・読み出しの数と、ai_cloud の作成の結果の数だけ（値は無い）。",
+        "operationId": "audit_inputs_api_v1_ops_case_audit_inputs_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 7,
+              "title": "Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Audit Inputs Api V1 Ops Case Audit Inputs Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Audit Inputs",
+        "tags": [
+          "ops-case"
+        ]
+      }
+    },
+    "/api/v1/ops/case/audits": {
+      "post": {
+        "description": "週次点検の結果を 1 行残す（64KB まで）。",
+        "operationId": "post_audit_api_v1_ops_case_audits_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Post Audit Api V1 Ops Case Audits Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Post Audit",
+        "tags": [
+          "ops-case"
+        ]
+      }
+    },
+    "/api/v1/ops/case/pending": {
+      "get": {
+        "description": "判断待ちの申請（理由・列・行の数・作った時刻）と、24 時間以内に自動で断った行。値は無い。",
+        "operationId": "list_pending_api_v1_ops_case_pending_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response List Pending Api V1 Ops Case Pending Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Pending",
+        "tags": [
+          "ops-case"
+        ]
+      }
+    },
+    "/api/v1/ops/case/unmask-requests/{request_id}": {
+      "get": {
+        "description": "その件の申請だけ（別の件の札・存在しない申請は 403）。値は無い。",
+        "operationId": "get_unmask_request_api_v1_ops_case_unmask_requests__request_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Request Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Case-Ticket",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Case-Ticket"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Get Unmask Request Api V1 Ops Case Unmask Requests  Request Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Unmask Request",
+        "tags": [
+          "ops-case"
+        ]
+      }
+    },
+    "/api/v1/ops/case/unmask-requests/{request_id}/decision": {
+      "post": {
+        "description": "申請の許可・拒否。pending 以外は 409。expires_at は backend が決める（許可のときだけ）。",
+        "operationId": "decide_request_api_v1_ops_case_unmask_requests__request_id__decision_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecisionBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Decide Request Api V1 Ops Case Unmask Requests  Request Id  Decision Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Decide Request",
+        "tags": [
+          "ops-case"
+        ]
+      }
+    },
+    "/api/v1/ops/case/{incident_id}/report": {
+      "post": {
+        "description": "報告（1 件 1 通。2 回目は 409。本文は 32KB まで）。",
+        "operationId": "post_report_api_v1_ops_case__incident_id__report_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "incident_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Incident Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Case-Ticket",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Case-Ticket"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Post Report Api V1 Ops Case  Incident Id  Report Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Post Report",
+        "tags": [
+          "ops-case"
+        ]
+      }
+    },
+    "/api/v1/ops/case/{incident_id}/ticket": {
+      "post": {
+        "description": "件の札を作る。あれば上書き（前の札は使えなくなる）。札は応答で 1 回だけ返す。",
+        "operationId": "create_ticket_api_v1_ops_case__incident_id__ticket_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "incident_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Incident Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Create Ticket Api V1 Ops Case  Incident Id  Ticket Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Ticket",
+        "tags": [
+          "ops-case"
+        ]
+      }
+    },
+    "/api/v1/ops/case/{incident_id}/unmask-requests": {
+      "post": {
+        "description": "値を見たい申請。検査を通れば pending で 1 行。3 つ目は自動で断る（409）。",
+        "operationId": "post_unmask_request_api_v1_ops_case__incident_id__unmask_requests_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "incident_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Incident Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Case-Ticket",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Case-Ticket"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnmaskRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Post Unmask Request Api V1 Ops Case  Incident Id  Unmask Requests Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Post Unmask Request",
+        "tags": [
+          "ops-case"
         ]
       }
     },

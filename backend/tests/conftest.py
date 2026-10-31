@@ -11,6 +11,7 @@ PostgreSQL固有のスキーマ分離はモックし、認証もモックする�
     customers/deals の拡張カラム、require_permission のバイパス）
 """
 
+import json
 import os
 
 # app.database が import される前に DATABASE_URL を SQLite に差し替える
@@ -278,6 +279,8 @@ async def test_engine():
         )
         dbapi_conn.create_function("LPAD", 3, lambda s, n, pad: str(s).rjust(int(n), pad))
         sqlite3.register_adapter(Decimal, lambda d: float(d))
+        # webauthn_credentials.transports（TEXT[]）に list[str] を渡すための互換
+        sqlite3.register_adapter(list, json.dumps)
         # SQLite は FK 制約がデフォルト OFF。ON DELETE CASCADE と 409 テストのために ON にする
         dbapi_conn.execute("PRAGMA foreign_keys = ON")
         # SQLite の LIKE をデフォルトで case-insensitive 化
@@ -318,6 +321,10 @@ async def test_engine():
             statement = statement.replace("public.auth_refresh_tokens", "auth_refresh_tokens")
         if "public.password_reset_tokens" in statement:
             statement = statement.replace("public.password_reset_tokens", "password_reset_tokens")
+        if "public.webauthn_credentials" in statement:
+            statement = statement.replace("public.webauthn_credentials", "webauthn_credentials")
+        if "public.passkey_enroll_prompt_skips" in statement:
+            statement = statement.replace("public.passkey_enroll_prompt_skips", "passkey_enroll_prompt_skips")
         # SQLite は FOR UPDATE をサポートしない（ファイルレベルロックで代替）。
         if " FOR UPDATE" in statement:
             statement = statement.replace(" FOR UPDATE", "")
@@ -1356,6 +1363,31 @@ async def setup_test_db(test_engine):
                 expires_at TIMESTAMP NOT NULL,
                 used_at TIMESTAMP,
                 created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
+        # ADR-1013 便5: public.webauthn_credentials の SQLite 版（BYTEA→BLOB, UUID→TEXT, TEXT[]→TEXT, BIGSERIAL→INTEGER）
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS webauthn_credentials (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                credential_id BLOB NOT NULL UNIQUE,
+                public_key BLOB NOT NULL,
+                sign_count INTEGER NOT NULL DEFAULT 0,
+                transports TEXT NOT NULL DEFAULT '[]',
+                backup_eligible BOOLEAN NOT NULL DEFAULT FALSE,
+                backup_state BOOLEAN NOT NULL DEFAULT FALSE,
+                aaguid TEXT,
+                label TEXT,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                last_used_at TIMESTAMP
+            )
+        """))
+        # ADR-1013 便6: public.passkey_enroll_prompt_skips の SQLite 版（BIGSERIAL→INTEGER, TIMESTAMPTZ→TIMESTAMP）
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS passkey_enroll_prompt_skips (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                skipped_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
             )
         """))
         # テストユーザー投入

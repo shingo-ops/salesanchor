@@ -25,6 +25,7 @@ from app.auth.dependencies import (
     get_current_tenant,
     get_current_user,
     require_permission,
+    reset_tenant_context,
     tenant_table_ref,
 )
 from app.database import get_db
@@ -129,6 +130,11 @@ async def _ensure_owner_user_exists(db: AsyncSession, user_id: int, tenant_id: i
                             detail="指定の担当者はこのテナントに存在しません")
 
 
+def _pending_bot_code() -> str:
+    """自動採番の前に一時的に入れる仮コード。列 VARCHAR(20) に収まる 20 文字。"""
+    return f"BOT-P-{uuid.uuid4().hex[:14]}"
+
+
 @router.post("/bots", response_model=BotCreatedResponse, status_code=201,
              dependencies=[Depends(require_permission("bots.create"))])
 async def create_bot(data: BotCreate, db: AsyncSession = Depends(get_db),
@@ -137,7 +143,7 @@ async def create_bot(data: BotCreate, db: AsyncSession = Depends(get_db),
     await _ensure_owner_user_exists(db, data.owner_staff_id, tenant_id)
 
     explicit_code = data.bot_code and data.bot_code.strip()
-    bot_code = explicit_code if explicit_code else f"BOT-PENDING-{uuid.uuid4().hex}"
+    bot_code = explicit_code if explicit_code else _pending_bot_code()
     plain_key, key_hash = _generate_api_key()
 
     bots_t = tenant_table_ref(db, tenant_id, "bots")
@@ -173,6 +179,7 @@ async def create_bot(data: BotCreate, db: AsyncSession = Depends(get_db),
             new_data={**data.model_dump(exclude_none=True, mode="json"), "api_key": "(redacted)"},
         )
         await db.commit()
+        await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
     except IntegrityError as e:
         await db.rollback()
         logger.warning("create_bot IntegrityError: tenant=%d err=%s", tenant_id, e.orig)
@@ -233,6 +240,7 @@ async def update_bot(bot_id: int, data: BotUpdate,
         old_data=dict(old_row), new_data=data.model_dump(exclude_unset=True, mode="json"),
     )
     await db.commit()
+    await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
 
     fetched = await db.execute(
         text(f"SELECT {_BOT_COLS} FROM {bots_t} b LEFT JOIN {staff_t} s ON s.user_id = b.owner_staff_id WHERE b.id = :id"),
@@ -264,6 +272,7 @@ async def rotate_bot_api_key(bot_id: int, db: AsyncSession = Depends(get_db),
         new_data={"api_key": "(redacted)"},
     )
     await db.commit()
+    await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
 
     fetched = await db.execute(
         text(f"SELECT {_BOT_COLS} FROM {bots_t} b LEFT JOIN {staff_t} s ON s.user_id = b.owner_staff_id WHERE b.id = :id"),

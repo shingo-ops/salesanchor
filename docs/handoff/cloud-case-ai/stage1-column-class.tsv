@@ -1,0 +1,1036 @@
+schema_pattern	table	column	class	reason	data_type
+public	accuracy_gold_rows	a1_product_id	mask		text
+public	accuracy_gold_rows	a2_condition	mask		text
+public	accuracy_gold_rows	a3_unit	mask		text
+public	accuracy_gold_rows	a4_basis	mask		text
+public	accuracy_gold_rows	a4_status	mask		text
+public	accuracy_gold_rows	a5_ship	mask		text
+public	accuracy_gold_rows	allowed_lines	mask		text
+public	accuracy_gold_rows	e2_price	mask		text
+public	accuracy_gold_rows	e3_quantity	mask		text
+public	accuracy_gold_rows	exclusion	mask		text
+public	accuracy_gold_rows	gold_version	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	text
+public	accuracy_gold_rows	hesitation	mask		text
+public	accuracy_gold_rows	lines	mask		text
+public	accuracy_gold_rows	po_check	mask		text
+public	accuracy_gold_rows	price_line	mask		text
+public	accuracy_gold_rows	ruling_basis	mask		text
+public	accuracy_gold_versions	file_sha256	mask		text
+public	accuracy_gold_versions	gold_version	mask	値の決まりが値の一覧でなく文字の形だけのため伏せる（初期は最小）	text
+public	accuracy_gold_versions	note	mask		text
+public	analysis_error_report_events	actor	mask		text
+public	analysis_error_report_events	kind	allow	値の決まり analysis_error_report_events_kind_check で値が限られる	text
+public	analysis_error_report_events	payload	mask		jsonb
+public	analysis_error_report_fields	expected_value	mask		jsonb
+public	analysis_error_report_fields	field_name	mask		text
+public	analysis_error_report_fields	system_value	mask		jsonb
+public	analysis_error_reports	discord_message_id	mask		text
+public	analysis_error_reports	report_code	mask		character varying
+public	analysis_error_reports	reported_by	mask		text
+public	analysis_error_reports	status	allow	値の決まり analysis_error_reports_status_check で値が限られる	text
+public	analysis_results	condition_basis	mask		character varying
+public	analysis_results	condition_canonical	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+public	analysis_results	engine_version	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+public	analysis_results	exclusion	mask		text
+public	analysis_results	note_ja	mask		text
+public	analysis_results	pid_basis	mask		character varying
+public	analysis_results	price_basis	mask		character varying
+public	analysis_results	review_reasons	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	text
+public	analysis_results	ship_en	mask		text
+public	analysis_results	ship_ja	mask		text
+public	analysis_results	status	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+public	analysis_results	unit_basis	mask		text
+public	analysis_results	unit_canonical	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+public	analysis_results	unit_confidence	mask		text
+public	analysis_results	unit_infer_reason	mask		text
+public	analysis_results	unit_inferred	mask		text
+public	analysis_run_snapshots	condition_basis	mask		character varying
+public	analysis_run_snapshots	condition_canonical	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+public	analysis_run_snapshots	engine_version	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+public	analysis_run_snapshots	exclusion	mask		text
+public	analysis_run_snapshots	note_ja	mask		text
+public	analysis_run_snapshots	pid_basis	mask		character varying
+public	analysis_run_snapshots	review_reasons	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	text
+public	analysis_run_snapshots	status	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+public	analysis_run_snapshots	unit_canonical	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+public	analysis_runs	engine_version	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+public	analysis_runs	run_type	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+public	analysis_runs	triggered_by	mask		character varying
+public	app_fx_rate_history	currency	allow	共用マスタ（運営が入れる一覧）。通貨の記号	character varying
+public	app_fx_rates	currency	allow	共用マスタ（運営が入れる一覧）。通貨の記号	character varying
+public	audit_log	action	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+public	audit_log	changed_by	mask		character varying
+public	audit_log	new_values	mask		text
+public	audit_log	old_values	mask		text
+public	audit_log	table_name	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+public	auth_events	client_ip	mask		character varying
+public	auth_events	event_type	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+public	auth_events	method	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+public	auth_events	path	mask		character varying
+public	auth_events	user_agent	mask		character varying
+public	buyback_alert_rules	card_game	mask		text
+public	buyback_alert_rules	direction	allow	値の決まり buyback_alert_rules_direction_check で値が限られる	text
+public	buyback_alert_rules	name	mask		text
+public	buyback_alert_rules	price_grade	mask		text
+public	buyback_alert_rules	product_type	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	text
+public	buyback_alert_rules	shop_code	mask		text
+public	buyback_shop_products	card_game	mask		text
+public	buyback_shop_products	external_product_id	mask		text
+public	buyback_shop_products	image_url	mask		text
+public	buyback_shop_products	match_candidates	mask		jsonb
+public	buyback_shop_products	match_status	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	text
+public	buyback_shop_products	product_name	mask		text
+public	buyback_shop_products	product_type	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	text
+public	buyback_shop_products	shop_code	mask		text
+public	condition_definitions	code	allow	共用マスタ（運営が入れる一覧）。共用の一覧表の記号（tenant 側も一覧表だけに出る）	character varying
+public	condition_definitions	name	allow	【名前を含む】共用マスタ（運営が入れる一覧）。状態の一覧の名前	character varying
+public	condition_definitions	name_en	allow	【名前を含む】共用マスタ（運営が入れる一覧）。状態の一覧の英語名	character varying
+public	countries	code	allow	共用マスタ（運営が入れる一覧）。共用の一覧表の記号（tenant 側も一覧表だけに出る）	character
+public	countries	dial_code	mask		text
+public	countries	name	allow	【名前を含む】共用マスタ（運営が入れる一覧）。国名の一覧	text
+public	data_access_events	client_ip	mask		character varying
+public	data_access_events	event_type	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+public	data_access_events	method	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+public	data_access_events	path	mask		character varying
+public	data_access_events	user_agent	mask		character varying
+public	data_access_events	user_email	mask		character varying
+public	data_deletion_logs	channel	mask		character varying
+public	data_deletion_logs	confirmation_code	mask		character varying
+public	data_deletion_logs	data_items_deleted	mask		jsonb
+public	data_deletion_logs	error_message	mask		text
+public	data_deletion_logs	handled_by	mask		character varying
+public	data_deletion_logs	identifier_type	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+public	data_deletion_logs	identifier_value	mask		character varying
+public	data_deletion_logs	request_id	mask		character varying
+public	data_deletion_logs	status	allow	値の決まり data_deletion_logs_status_check で値が限られる	character varying
+public	data_deletion_logs	user_type	allow	値の決まり data_deletion_logs_user_type_check で値が限られる	character varying
+public	extraction_attempts	code_version	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	text
+public	extraction_attempts	error_code	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	text
+public	extraction_attempts	input_payload	mask		jsonb
+public	extraction_attempts	input_sha256	mask		text
+public	extraction_attempts	parsed_items	mask		jsonb
+public	extraction_attempts	phase	allow	値の決まり pub_extraction_attempts_phase_check で値が限られる	text
+public	extraction_attempts	prompt_version	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	text
+public	extraction_attempts	requested_model	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	text
+public	extraction_attempts	response_sha256	mask		text
+public	extraction_attempts	response_text	mask		text
+public	extraction_attempts	thought_summaries	mask		jsonb
+public	extraction_attempts	validation_result	mask		jsonb
+public	extraction_items	raw_memo	mask		text
+public	extraction_items	raw_price	mask		text
+public	extraction_items	raw_product_code	mask		text
+public	extraction_items	raw_product_name	mask		text
+public	extraction_items	raw_quantity	mask		text
+public	extraction_items	raw_state	mask		text
+public	extraction_items	raw_unit	mask		text
+public	extraction_items	raw_work_name	mask		text
+public	extraction_items	raw_work_source_line_span	mask		text
+public	extraction_items	resolved_product_code	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	text
+public	extraction_items	source_lines	mask		ARRAY
+public	extraction_jobs	error_message	mask		text
+public	extraction_jobs	gemini_unsure	mask		jsonb
+public	extraction_jobs	prompt_version	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+public	extraction_jobs	review_reasons	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	text
+public	extraction_jobs	status	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+public	extraction_jobs	system_review_detail	mask		jsonb
+public	extraction_jobs	work_reference_sha256	mask		text
+public	extraction_jobs	work_reference_snapshot	mask		jsonb
+public	extraction_prompt_config	prompt_key	allow	共用マスタ（運営が入れる一覧）。指示書の呼び名	character varying
+public	extraction_prompt_config	prompt_text	mask		text
+public	fedex_etd_images	environment	allow	値の決まり fedex_etd_images_environment_check で値が限られる	text
+public	fedex_etd_images	fedex_image_index	mask		text
+public	fedex_etd_images	image_type	allow	値の決まり fedex_etd_images_image_type_check で値が限られる	text
+public	google_webhook_subscriptions	calendar_id	mask		character varying
+public	google_webhook_subscriptions	channel_id	mask		character varying
+public	google_webhook_subscriptions	resource_id	mask		character varying
+public	import_job_messages	relation_kind	allow	値の決まり pub_import_job_messages_relation_kind_check で値が限られる	text
+public	import_jobs	filename	mask		text
+public	import_jobs	pending_messages	mask		jsonb
+public	import_jobs	raw_sha256	mask		character varying
+public	import_jobs	review_status	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	text
+public	import_jobs	status	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+public	import_jobs	unresolved_names	mask		jsonb
+public	import_jobs	uploaded_by	mask		text
+public	ingestion_jobs	error_message	mask		text
+public	ingestion_jobs	status	allow	値の決まり ingestion_jobs_status_check で値が限られる	character varying
+public	ingestion_jobs	trigger	allow	値の決まり ingestion_jobs_trigger_check で値が限られる	character varying
+public	inventory	grade	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+public	inventory	notes_en	mask		text
+public	inventory	notes_ja	mask		text
+public	inventory	offer_type	allow	値の決まり inventory_offer_type_check で値が限られる	character varying
+public	inventory	raw_condition	mask		text
+public	inventory	seal	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+public	inventory	search_cond	mask		character varying
+public	inventory	ship_timing	allow	値の決まり inventory_ship_timing_check で値が限られる	character varying
+public	inventory	source	mask		character varying
+public	inventory	source_kind	allow	値の決まり inventory_source_kind_check で値が限られる	character varying
+public	inventory	status	allow	値の決まり inventory_status_check で値が限られる	character varying
+public	inventory	unit	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+public	inventory_aggregation_rules	condition	allow	共用マスタ（運営が入れる一覧）。商品の状態の決まった言葉	text
+public	inventory_movements	notes	mask		text
+public	inventory_movements	source_type	allow	値の決まり inventory_movements_source_type_check で値が限られる	character varying
+public	item_corrections	corrected_by	mask		text
+public	item_corrections	field_name	mask		text
+public	item_corrections	human_value	mask		text
+public	item_corrections	system_value	mask		text
+public	knowledge_rules	category	allow	共用マスタ（運営が入れる一覧）。共用の一覧の区分（tenant 側の予定表の区分は利用者が書くため含めない）	character varying
+public	knowledge_rules	description	mask		text
+public	knowledge_rules	language	allow	値の決まり knowledge_rules_language_check で値が限られる	character
+public	knowledge_rules	normalized_to	mask		text
+public	knowledge_rules	pattern	mask		text
+public	knowledge_rules	pattern_type	mask		character varying
+public	line_condition_aliases	alias_text	mask		text
+public	line_condition_aliases	lang	allow	共用マスタ（運営が入れる一覧）。言語の記号	character varying
+public	line_conditions	app_kubun	allow	共用マスタ（運営が入れる一覧）。区分の決まった言葉	character varying
+public	line_conditions	canonical	allow	共用マスタ（運営が入れる一覧）。状態・単位の正規の決まった言葉	text
+public	line_conditions	code	allow	共用マスタ（運営が入れる一覧）。共用の一覧表の記号（tenant 側も一覧表だけに出る）	character varying
+public	line_conditions	effect	allow	共用マスタ（運営が入れる一覧）。決まりの効き方の決まった言葉	text
+public	line_conditions	exclude_kw	mask		text
+public	line_conditions	match_type	allow	共用マスタ（運営が入れる一覧）。照合方法の決まった言葉	text
+public	line_conditions	note	mask		text
+public	line_conditions	search_kw	mask		text
+public	line_conditions	value_group	allow	値の決まり line_conditions_value_group_check で値が限られる	text
+public	line_import_devices	name	mask		character varying
+public	line_import_devices	scope	allow	値の決まり line_import_devices_scope_check で値が限られる	character varying
+public	line_import_devices	tcg_schema	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+public	line_unit_aliases	alias_text	mask		text
+public	line_unit_aliases	lang	allow	共用マスタ（運営が入れる一覧）。言語の記号	character varying
+public	line_unit_ignore_phrases	note	mask		text
+public	line_unit_ignore_phrases	phrase	mask		text
+public	line_units	canonical	allow	共用マスタ（運営が入れる一覧）。状態・単位の正規の決まった言葉	text
+public	line_units	code	allow	共用マスタ（運営が入れる一覧）。共用の一覧表の記号（tenant 側も一覧表だけに出る）	character varying
+public	line_units	kubun	allow	共用マスタ（運営が入れる一覧）。区分の決まった言葉	character varying
+public	line_units	name_en	allow	【名前を含む】共用マスタ（運営が入れる一覧）。単位の一覧の英語名	text
+public	line_units	name_ja	allow	【名前を含む】共用マスタ（運営が入れる一覧）。単位の一覧の日本語名	text
+public	link_templates	channel	mask		character varying
+public	link_templates	notes	mask		text
+public	link_templates	required_ids	mask		jsonb
+public	link_templates	url_pattern	mask		text
+public	llm_usage_events	model	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	text
+public	llm_usage_events	purpose	allow	値の決まり llm_usage_events_purpose_check で値が限られる	text
+public	llm_usage_events	sdk	allow	値の決まり llm_usage_events_sdk_check で値が限られる	text
+public	llm_usage_events	source_ref	mask		text
+public	meta_page_routing	instagram_business_account_id	mask		character varying
+public	meta_page_routing	page_id	mask		character varying
+public	meta_page_routing	schema_name	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	text
+public	ops_control	changed_by	mask		text
+public	ops_control	reason	mask		text
+public	ops_incident_events	actor	mask		text
+public	ops_incident_events	detail	mask		jsonb
+public	ops_incident_events	kind	allow	値の決まり ops_incident_events_kind_check で値が限られる	text
+public	ops_incidents	alertname	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	text
+public	ops_incidents	annotations	mask		jsonb
+public	ops_incidents	detection_path	mask		text
+public	ops_incidents	fingerprint	mask		text
+public	ops_incidents	first_aid_result	mask		text
+public	ops_incidents	labels	mask		jsonb
+public	ops_incidents	review_note	mask		text
+public	ops_incidents	root_cause	mask		text
+public	ops_incidents	severity	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	text
+public	ops_incidents	status	allow	値の決まり ops_incidents_status_check で値が限られる	text
+public	password_reset_tokens	purpose	allow	値の決まり ck_password_reset_tokens_purpose で値が限られる	text
+public	payment_fee_settings	currency	mask	テナントの利用者が画面から書ける表のため伏せる（初期は最小）	character varying
+public	payment_fee_settings	fee_type	mask	テナントの利用者が画面から書ける表のため伏せる（初期は最小）	character varying
+public	payment_fee_settings	note	mask		text
+public	payment_fee_settings	service	mask		character varying
+public	payment_fee_settings	source_url	mask		text
+public	payment_fee_settings	threshold_rule	mask		character varying
+public	permissions	action	allow	共用マスタ（運営が入れる一覧）。操作の種類（作成・更新など）の決まった言葉	character varying
+public	permissions	category	allow	共用マスタ（運営が入れる一覧）。共用の一覧の区分（tenant 側の予定表の区分は利用者が書くため含めない）	character varying
+public	permissions	description	mask		character varying
+public	permissions	display_name_en	allow	【名前を含む】共用マスタ（運営が入れる一覧）。権限の表示名	character varying
+public	permissions	display_name_jp	allow	【名前を含む】共用マスタ（運営が入れる一覧）。権限の表示名	character varying
+public	permissions	key	mask		character varying
+public	permissions	permission_group	allow	共用マスタ（運営が入れる一覧）。権限の組	character varying
+public	permissions	resource	allow	共用マスタ（運営が入れる一覧）。権限の対象の呼び名	character varying
+public	pokemon_dex	name_en	allow	【名前を含む】共用マスタ（運営が入れる一覧）。作品のキャラクター名（実在の人ではない）	character varying
+public	pokemon_dex	name_ja	allow	【名前を含む】共用マスタ（運営が入れる一覧）。同上	character varying
+public	pokemon_dex	region	allow	共用マスタ（運営が入れる一覧）。作品の地方区分	character varying
+public	product_attribute_masters	attribute	mask		character varying
+public	product_attribute_masters	code	allow	共用マスタ（運営が入れる一覧）。共用の一覧表の記号（tenant 側も一覧表だけに出る）	character varying
+public	product_attribute_masters	label_en	allow	共用マスタ（運営が入れる一覧）。商品の属性の表示名	character varying
+public	product_attribute_masters	label_ja	allow	共用マスタ（運営が入れる一覧）。同上	character varying
+public	product_blank_confirmations	confirmed_by	mask		text
+public	product_blank_confirmations	field_code	mask		text
+public	product_blank_confirmations	note	mask		text
+public	product_exclude_keywords	keyword	mask		text
+public	product_format_game_links	alias	mask		character varying
+public	product_formats	code	allow	共用マスタ（運営が入れる一覧）。共用の一覧表の記号（tenant 側も一覧表だけに出る）	character varying
+public	product_formats	name	allow	【名前を含む】共用マスタ（運営が入れる一覧）。商品形式の一覧の名前	character varying
+public	product_formats	name_en	allow	【名前を含む】共用マスタ（運営が入れる一覧）。同上の英語名	character varying
+public	product_kinds	code	allow	共用マスタ（運営が入れる一覧）。共用の一覧表の記号（tenant 側も一覧表だけに出る）	character varying
+public	product_kinds	name	allow	【名前を含む】共用マスタ（運営が入れる一覧）。商品種類の一覧の名前	character varying
+public	product_kinds	name_en	allow	【名前を含む】共用マスタ（運営が入れる一覧）。同上の英語名	character varying
+public	product_lines	code	allow	共用マスタ（運営が入れる一覧）。共用の一覧表の記号（tenant 側も一覧表だけに出る）	character varying
+public	product_lines	name	allow	【名前を含む】共用マスタ（運営が入れる一覧）。商品系統の一覧の名前	character varying
+public	product_lines	name_en	allow	【名前を含む】共用マスタ（運営が入れる一覧）。同上の英語名	character varying
+public	product_packagings	count_source	mask		text
+public	product_packagings	count_source_urls	mask		ARRAY
+public	product_packagings	note	mask		text
+public	product_packagings	updated_by	mask		text
+public	product_packagings	weight_source	mask		text
+public	product_packagings	weight_source_urls	mask		ARRAY
+public	product_search_keywords	keyword	mask		text
+public	products	card_number	mask	テナントの利用者が画面から書ける表のため伏せる（初期は最小）	character varying
+public	products	category	mask	テナントの利用者が画面から書ける表のため伏せる（初期は最小）	character varying
+public	products	category_class	mask	テナントの利用者が画面から書ける表のため伏せる（初期は最小）	text
+public	products	description	mask		text
+public	products	exclude_keywords	mask		text
+public	products	expansion_code	mask	テナントの利用者が画面から書ける表のため伏せる（初期は最小）	character varying
+public	products	hs_code	mask	テナントの利用者が画面から書ける表のため伏せる（初期は最小）	character varying
+public	products	image_url	mask		character varying
+public	products	item	mask	テナントの利用者が画面から書ける表のため伏せる（初期は最小）	character varying
+public	products	jan_code	mask	テナントの利用者が画面から書ける表のため伏せる（初期は最小）	character varying
+public	products	language	mask	テナントの利用者が画面から書ける表のため伏せる（初期は最小）	character varying
+public	products	mark	mask	テナントの利用者が画面から書ける表のため伏せる（初期は最小）	character varying
+public	products	material	mask	テナントの利用者が画面から書ける表のため伏せる（初期は最小）	character varying
+public	products	name	mask	テナントの利用者が画面から書ける表のため伏せる（初期は最小）	character varying
+public	products	name_en	mask	テナントの利用者が画面から書ける表のため伏せる（初期は最小）	character varying
+public	products	notes	mask		text
+public	products	product_code	mask	テナントの利用者が画面から書ける表のため伏せる（初期は最小）	character varying
+public	products	product_kind	mask	テナントの利用者が画面から書ける表のため伏せる（初期は最小）	character varying
+public	products	rarity	mask	テナントの利用者が画面から書ける表のため伏せる（初期は最小）	character varying
+public	products	related_series	mask		character varying
+public	products	required_output_value	mask		character varying
+public	products	search_keywords	mask		text
+public	products	set_type	mask	テナントの利用者が画面から書ける表のため伏せる（初期は最小）	character varying
+public	products	status	mask	テナントの利用者が画面から書ける表のため伏せる（初期は最小）	character varying
+public	quantity_units	code	allow	共用マスタ（運営が入れる一覧）。共用の一覧表の記号（tenant 側も一覧表だけに出る）	character varying
+public	quantity_units	name	allow	【名前を含む】共用マスタ（運営が入れる一覧）。数え方の一覧の名前	character varying
+public	quantity_units	name_en	allow	【名前を含む】共用マスタ（運営が入れる一覧）。同上の英語名	character varying
+public	registration_tokens	type	allow	値の決まり registration_tokens_type_check で値が限られる	character varying
+public	review_reason_codes	code	allow	共用マスタ（運営だけが入れる一覧）。要確認の理由の記号（英小文字・数字・_ だけ）	text
+public	review_reason_codes	fix_stage	allow	値の決まり review_reason_codes_fix_stage_check で値が限られる	text
+public	review_reason_codes	source	mask		text
+public	rule_test_cases	expected_canonical	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	text
+public	rule_test_cases	expected_effect	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	text
+public	rule_test_cases	input_text	mask		text
+public	rule_test_cases	note	mask		text
+public	rule_test_run_results	actual_canonical	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	text
+public	rule_test_run_results	actual_effect	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	text
+public	rule_test_run_results	expected_canonical	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	text
+public	rule_test_run_results	expected_effect	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	text
+public	rule_test_run_results	input_text	mask		text
+public	rule_test_runs	error_message	mask		text
+public	rule_test_runs	started_by	mask		text
+public	rule_test_runs	state	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	text
+public	source_messages	raw_sha256	mask		character varying
+public	source_messages	raw_text	mask		text
+public	supplier_aliases	alias_text	mask		character varying
+public	supplier_aliases	language	allow	値の決まり supplier_aliases_language_check で値が限られる	character
+public	supplier_aliases	source	mask		character varying
+public	supplier_channels	channel	mask		character varying
+public	supplier_channels	external_id	mask		text
+public	supplier_discord_routing	discord_channel_id	mask		character varying
+public	supplier_discord_routing	discord_guild_id	mask		character varying
+public	supplier_discord_routing	notes	mask		text
+public	suppliers	address	mask		text
+public	suppliers	address1	mask		character varying
+public	suppliers	address2	mask		character varying
+public	suppliers	city	mask		character varying
+public	suppliers	contact_name	mask		character varying
+public	suppliers	default_language	allow	値の決まり suppliers_default_language_check で値が限られる	character
+public	suppliers	email	mask		character varying
+public	suppliers	extraction_default_unit	mask		text
+public	suppliers	extraction_example_text	mask		text
+public	suppliers	extraction_hard_cases	mask		text
+public	suppliers	extraction_layout_rules	mask		text
+public	suppliers	extraction_notes	mask		text
+public	suppliers	extraction_order_pattern	mask		text
+public	suppliers	extraction_price_format	mask		text
+public	suppliers	extraction_qty_format	mask		text
+public	suppliers	extraction_ship_format	mask		text
+public	suppliers	extraction_state_format	mask		text
+public	suppliers	line_name	mask		character varying
+public	suppliers	name	mask		character varying
+public	suppliers	notes	mask		text
+public	suppliers	phone	mask		character varying
+public	suppliers	postal_code	mask_bare	短い個人の値で、長さだけでも絞り込みの手がかりになるため長さも出さない	character varying
+public	suppliers	prefecture	mask		character varying
+public	suppliers	supplier_code	mask		character varying
+public	suppliers	supplier_type	mask		character varying
+public	tcg_distribution_settings	key	mask		text
+public	tcg_distribution_settings	note	mask		text
+public	tcg_distribution_settings	value	mask		text
+public	tcg_distribution_targets	last_result	mask		text
+public	tcg_distribution_targets	name	mask		text
+public	tcg_distribution_targets	review_sheet_name	mask		text
+public	tcg_distribution_targets	sheet_name	mask		text
+public	tcg_distribution_targets	spreadsheet_id	mask		text
+public	tcg_manufacturers	alt_name	mask		text
+public	tcg_manufacturers	code	allow	共用マスタ（運営が入れる一覧）。共用の一覧表の記号（tenant 側も一覧表だけに出る）	character varying
+public	tcg_manufacturers	display_name	allow	【名前を含む】共用マスタ（運営が入れる一覧）。メーカー名（会社名で人の名前ではない）	text
+public	tcg_normalization_rules	field	mask		text
+public	tcg_normalization_rules	from_val	mask		text
+public	tcg_normalization_rules	normalization_rule_id	mask		text
+public	tcg_normalization_rules	note	mask		text
+public	tcg_normalization_rules	rule_type	allow	共用マスタ（運営が入れる一覧）。決まりの種類	text
+public	tcg_normalization_rules	to_val	mask		text
+public	tcg_note_master	category	mask	テナントの利用者が画面から書ける表のため伏せる（初期は最小）	text
+public	tcg_note_master	exclude_keywords	mask		text
+public	tcg_note_master	label_en	mask	テナントの利用者が画面から書ける表のため伏せる（初期は最小）	text
+public	tcg_note_master	label_ja	mask	テナントの利用者が画面から書ける表のため伏せる（初期は最小）	text
+public	tcg_note_master	label_template	mask		text
+public	tcg_note_master	label_template_en	mask		text
+public	tcg_note_master	match_type	mask	テナントの利用者が画面から書ける表のため伏せる（初期は最小）	text
+public	tcg_note_master	search_keywords	mask		text
+public	tcg_note_master	search_pattern	mask		text
+public	tcg_product_categories	code	mask	テナントの利用者が画面から書ける表のため伏せる（初期は最小）	character varying
+public	tcg_product_categories	display_name	mask	テナントの利用者が画面から書ける表のため伏せる（初期は最小）	text
+public	tcg_product_categories	kubun_type	mask	テナントの利用者が画面から書ける表のため伏せる（初期は最小）	character varying
+public	tcg_product_import_jobs	executed_by	mask		text
+public	tcg_product_import_jobs	filename	mask		text
+public	tcg_product_import_jobs	raw_sha256	mask		character varying
+public	tcg_product_import_jobs	status	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+public	tcg_product_import_rows	japanese_title	mask		text
+public	tcg_product_import_rows	mark	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	text
+public	tcg_product_import_rows	messages	mask		text
+public	tcg_product_import_rows	product_code	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+public	tcg_product_import_rows	result	mask		character varying
+public	tcg_series	alt_name	mask		text
+public	tcg_series	code	allow	共用マスタ（運営が入れる一覧）。共用の一覧表の記号（tenant 側も一覧表だけに出る）	character varying
+public	tcg_series	display_name	allow	【名前を含む】共用マスタ（運営が入れる一覧）。シリーズの表示名	text
+public	tcg_series_master	category	allow	共用マスタ（運営が入れる一覧）。共用の一覧の区分（tenant 側の予定表の区分は利用者が書くため含めない）	character varying
+public	tcg_series_master	name_en	allow	【名前を含む】共用マスタ（運営が入れる一覧）。シリーズ名	character varying
+public	tcg_series_master	name_ja	allow	【名前を含む】共用マスタ（運営が入れる一覧）。シリーズ名	character varying
+public	tcg_series_master	series_code	allow	共用マスタ（運営が入れる一覧）。シリーズの番号	character varying
+public	tcg_series_master	tcg_type	allow	共用マスタ（運営が入れる一覧）。カードゲームの種類	character varying
+public	tcg_status_master	canonical	mask	テナントの利用者が画面から書ける表のため伏せる（初期は最小）	text
+public	tcg_status_master	effect	mask	テナントの利用者が画面から書ける表のため伏せる（初期は最小）	text
+public	tcg_status_master	exclude_pattern	mask		text
+public	tcg_status_master	match_type	mask	テナントの利用者が画面から書ける表のため伏せる（初期は最小）	text
+public	tcg_status_master	note	mask		text
+public	tcg_status_master	search_pattern	mask		text
+public	tcg_status_master	status_id	mask	テナントの利用者が画面から書ける表のため伏せる（初期は最小）	character varying
+public	tcg_unit_evidence_rules	evidence_type	allow	共用マスタ（運営が入れる一覧）。根拠の種類の決まった言葉	text
+public	tcg_unit_evidence_rules	id	mask		text
+public	tcg_unit_evidence_rules	note	mask		text
+public	tcg_unit_evidence_rules	structure_pattern	mask		text
+public	tenant_carrier_credentials	carrier	allow	値の決まり credentials_carrier_check で値が限られる	text
+public	tenant_carrier_credentials	environment	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	text
+public	tenant_carrier_credentials	last_test_message	mask		text
+public	tenant_deletion_audit	actor_email	mask		text
+public	tenant_deletion_audit	error_message	mask		text
+public	tenant_deletion_audit	meta	mask		jsonb
+public	tenant_deletion_audit	mode	allow	値の決まり audit_mode_check で値が限られる	text
+public	tenant_deletion_audit	status	allow	値の決まり audit_status_check で値が限られる	text
+public	tenant_deletion_audit	tenant_code	mask		text
+public	tenant_deletion_audit	tenant_name	mask		text
+public	tenant_discord_config	guild_id	mask		character varying
+public	tenant_discord_ticket_config	large_channel_id	mask		character varying
+public	tenant_discord_ticket_config	large_role_name	mask		character varying
+public	tenant_discord_ticket_config	small_channel_id	mask		character varying
+public	tenant_discord_ticket_config	small_role_name	mask		character varying
+public	tenant_discord_ticket_config	staff_role_id	mask		character varying
+public	tenant_discord_ticket_config	ticket_button_channel_id	mask		character varying
+public	tenant_discord_ticket_config	ticket_category_id	mask		character varying
+public	tenant_discord_ticket_config	welcome_template	mask		text
+public	tenant_features	feature_key	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	text
+public	tenant_google_calendar_config	calendar_id	mask		text
+public	tenant_google_calendar_config	sync_mode	allow	値の決まり calendar_config_sync_mode_check で値が限られる	character varying
+public	tenant_google_drive_config	account_email	mask		text
+public	tenant_google_drive_config	folder_id	mask		text
+public	tenant_paypal_config	environment	allow	値の決まり config_environment_check で値が限られる	text
+public	tenant_paypal_config	webhook_id	mask		text
+public	tenant_settings	default_currency	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+public	tenant_settings	document_language	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+public	tenant_settings	duty_incoterms	mask		character varying
+public	tenant_settings	inventory_agg_filter	mask		character varying
+public	tenant_settings	issue_mode	allow	値の決まり issue_mode_check で値が限られる	character varying
+public	tenant_settings	spreadsheet_phase	mask		text
+public	tenants	settings	mask		jsonb
+public	tenants	tenant_code	mask		character varying
+public	tenants	tenant_name	mask		character varying
+public	trainer_dex	era	allow	共用マスタ（運営が入れる一覧）。作品の時代区分	character varying
+public	trainer_dex	name_en	allow	【名前を含む】共用マスタ（運営が入れる一覧）。作品の登場人物名（実在の人ではない）	character varying
+public	trainer_dex	name_ja	allow	【名前を含む】共用マスタ（運営が入れる一覧）。同上	character varying
+public	translation_glossary	language_pair	mask	テナントの利用者が画面から書ける表のため伏せる（初期は最小）	character varying
+public	translation_glossary	notes	mask		text
+public	translation_glossary	source_ref	mask		character varying
+public	translation_glossary	source_term	mask		text
+public	translation_glossary	target_text	mask		text
+public	translation_glossary	term_type	mask	テナントの利用者が画面から書ける表のため伏せる（初期は最小）	character varying
+public	type_master	code	allow	共用マスタ（運営が入れる一覧）。共用の一覧表の記号（tenant 側も一覧表だけに出る）	character varying
+public	type_master	name_en	allow	【名前を含む】共用マスタ（運営が入れる一覧）。作品のタイプ名	character varying
+public	type_master	name_ja	allow	【名前を含む】共用マスタ（運営が入れる一覧）。同上	character varying
+public	user_inventory_filters	filters	mask		jsonb
+public	users	email	mask		character varying
+public	users	full_name	mask		character varying
+public	users	locale	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+public	users	role	mask		character varying
+public	users	theme	mask		character varying
+public	users	username	mask		character varying
+public	viewer_accounts	discord_channel_id	mask		character varying
+public	viewer_accounts	discord_user_id	mask		character varying
+public	viewer_accounts	email	mask		text
+public	viewer_accounts	inventory_issue	mask		text
+public	viewer_accounts	line_name	mask		text
+public	viewer_accounts	status	allow	値の決まり ck_viewer_accounts_status で値が限られる	text
+public	viewer_discord_config	guild_id	mask		character varying
+public	viewer_discord_config	reception_channel_id	mask		character varying
+public	viewer_discord_config	staff_role_id	mask		character varying
+public	viewer_discord_config	ticket_category_id	mask		character varying
+public	viewer_login_events	client_ip	mask		character varying
+public	viewer_login_events	event_type	allow	値の決まり ck_viewer_login_events_event_type で値が限られる	text
+public	viewer_login_events	user_agent	mask		character varying
+public	viewer_login_tokens	purpose	allow	値の決まり ck_viewer_login_tokens_purpose で値が限られる	text
+public	viewer_login_tokens	token_sha256	mask		bytea
+public	viewer_message_templates	body	mask		text
+public	viewer_message_templates	key	mask		text
+public	viewer_status_changes	action	allow	値の決まり ck_viewer_status_changes_action で値が限られる	text
+public	viewer_status_changes	actor	mask		text
+public	viewer_status_changes	from_status	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	text
+public	viewer_status_changes	to_status	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	text
+public	webauthn_credentials	label	mask		text
+public	webauthn_credentials	public_key	mask		bytea
+public	webauthn_credentials	transports	mask		ARRAY
+public	weight_classes	code	allow	共用マスタ（運営が入れる一覧）。共用の一覧表の記号（tenant 側も一覧表だけに出る）	character varying
+public	weight_classes	name	allow	【名前を含む】共用マスタ（運営が入れる一覧）。重さ区分の一覧の名前	character varying
+public	weight_classes	name_en	allow	【名前を含む】共用マスタ（運営が入れる一覧）。同上の英語名	character varying
+tenant_*	analysis_results	condition_basis	mask		character varying
+tenant_*	analysis_results	condition_canonical	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	analysis_results	engine_version	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	analysis_results	exclusion	mask		text
+tenant_*	analysis_results	note_ja	mask		text
+tenant_*	analysis_results	pid_basis	mask		character varying
+tenant_*	analysis_results	review_reasons	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	text
+tenant_*	analysis_results	status	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	analysis_results	unit_basis	mask		text
+tenant_*	analysis_results	unit_canonical	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	analysis_results	unit_confidence	mask		text
+tenant_*	analysis_results	unit_infer_reason	mask		text
+tenant_*	analysis_results	unit_inferred	mask		text
+tenant_*	analysis_run_snapshots	condition_basis	mask		character varying
+tenant_*	analysis_run_snapshots	condition_canonical	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	analysis_run_snapshots	engine_version	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	analysis_run_snapshots	exclusion	mask		text
+tenant_*	analysis_run_snapshots	note_ja	mask		text
+tenant_*	analysis_run_snapshots	pid_basis	mask		character varying
+tenant_*	analysis_run_snapshots	review_reasons	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	text
+tenant_*	analysis_run_snapshots	status	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	analysis_run_snapshots	unit_canonical	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	analysis_runs	engine_version	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	analysis_runs	run_type	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	analysis_runs	triggered_by	mask		character varying
+tenant_*	archives	archived_data	mask		jsonb
+tenant_*	archives	source_table	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	audit_log	action	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	audit_log	changed_by	mask		character varying
+tenant_*	audit_log	new_values	mask		text
+tenant_*	audit_log	old_values	mask		text
+tenant_*	audit_log	table_name	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	audit_logs	action	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	audit_logs	new_data	mask		jsonb
+tenant_*	audit_logs	old_data	mask		jsonb
+tenant_*	audit_logs	table_name	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	badge_definitions	criteria	mask		character varying
+tenant_*	badge_definitions	description	mask		character varying
+tenant_*	badge_definitions	icon	mask		character varying
+tenant_*	badge_definitions	name	mask		character varying
+tenant_*	bots	bot_code	mask		character varying
+tenant_*	bots	discord_user_id	mask		character varying
+tenant_*	bots	display_name	mask		character varying
+tenant_*	bots	purpose	allow	値の決まり bots_purpose_check で値が限られる	character varying
+tenant_*	bots	sender_email	mask		character varying
+tenant_*	bots	status	allow	値の決まり bots_status_check で値が限られる	character varying
+tenant_*	buddy_feedbacks	context	mask		text
+tenant_*	buddy_feedbacks	feedback_type	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	buddy_feedbacks	reason	mask		text
+tenant_*	buddy_pairs	notes	mask		text
+tenant_*	calendar_events	calendar_type	allow	値の決まり calendar_events_calendar_type_check で値が限られる	character varying
+tenant_*	calendar_events	category	mask		character varying
+tenant_*	calendar_events	description	mask		text
+tenant_*	calendar_events	google_calendar_id	mask		character varying
+tenant_*	calendar_events	google_event_id	mask		character varying
+tenant_*	calendar_events	location	mask		text
+tenant_*	calendar_events	source	mask		character varying
+tenant_*	calendar_events	sync_origin_id	mask		character varying
+tenant_*	calendar_events	sync_status	allow	値の決まり calendar_events_sync_status_check で値が限られる	character varying
+tenant_*	calendar_events	title	mask		character varying
+tenant_*	calendar_owner_settings	color	mask		character varying
+tenant_*	calendar_owner_settings	share_mode	allow	値の決まり calendar_owner_settings_share_mode_check で値が限られる	character varying
+tenant_*	channel_masters	connection_type	allow	値の決まり channel_masters_connection_type_check で値が限られる	character varying
+tenant_*	channel_masters	display_name	mask		character varying
+tenant_*	channel_masters	platform	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	close_reasons	label	mask		text
+tenant_*	close_reasons	type	allow	値の決まり close_reasons_type_check で値が限られる	character varying
+tenant_*	companies	billing_display_name	mask		character varying
+tenant_*	companies	company_code	mask		character varying
+tenant_*	companies	fedex_account	mask		character varying
+tenant_*	companies	industry	mask		character varying
+tenant_*	companies	monthly_forecast_source	mask		character varying
+tenant_*	companies	name	mask		character varying
+tenant_*	companies	name_en	mask		character varying
+tenant_*	companies	normalized_name	mask		character varying
+tenant_*	companies	notes	mask		text
+tenant_*	companies	payment_recipient_name	mask		character varying
+tenant_*	companies	priority_focus	mask		character varying
+tenant_*	companies	shipping_note	mask		text
+tenant_*	companies	status	allow	値の決まり companies_status_check で値が限られる	character varying
+tenant_*	companies	website	mask		character varying
+tenant_*	company_addresses	address_line_1	mask		character varying
+tenant_*	company_addresses	address_line_2	mask		character varying
+tenant_*	company_addresses	address_line_3	mask		character varying
+tenant_*	company_addresses	address_type	allow	値の決まり company_addresses_address_type_check で値が限られる	character varying
+tenant_*	company_addresses	branch_name	mask		character varying
+tenant_*	company_addresses	city	mask		character varying
+tenant_*	company_addresses	country_code	mask		character
+tenant_*	company_addresses	email	mask		character varying
+tenant_*	company_addresses	name	mask		character varying
+tenant_*	company_addresses	state	mask_bare	短い個人の値で、長さだけでも絞り込みの手がかりになるため長さも出さない	character varying
+tenant_*	company_addresses	tax_id	mask_bare	短い個人の値で、長さだけでも絞り込みの手がかりになるため長さも出さない	character varying
+tenant_*	company_addresses	telephone	mask		character varying
+tenant_*	company_addresses	zip	mask_bare	短い個人の値で、長さだけでも絞り込みの手がかりになるため長さも出さない	character varying
+tenant_*	company_discord	channel_id	mask		character varying
+tenant_*	company_discord	guild_id	mask		character varying
+tenant_*	company_discord	invoice_webhook	mask		text
+tenant_*	company_discord	shipment_webhook	mask		text
+tenant_*	company_discord	user_id	mask		character varying
+tenant_*	company_sales_channels	channel	mask		character varying
+tenant_*	condition_aliases	alias_text	mask		text
+tenant_*	condition_aliases	lang	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	conditions	app_kubun	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	conditions	canonical	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	text
+tenant_*	conditions	code	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	conditions	effect	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	text
+tenant_*	conditions	exclude_kw	mask		text
+tenant_*	conditions	match_type	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	text
+tenant_*	conditions	search_kw	mask		text
+tenant_*	contact_contact_channels	channel	mask		character varying
+tenant_*	contact_contact_channels	guild_id	mask		character varying
+tenant_*	contact_contact_channels	purpose	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	contact_discord	channel_id	mask		character varying
+tenant_*	contact_discord	invoice_webhook	mask		text
+tenant_*	contact_discord	shipment_webhook	mask		text
+tenant_*	contact_discord	user_id	mask		character varying
+tenant_*	contact_emails	email	mask		character varying
+tenant_*	contact_emails	purpose	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	contacts	contact_code	mask		character varying
+tenant_*	contacts	department	mask		character varying
+tenant_*	contacts	display_name	mask		character varying
+tenant_*	contacts	given_name	mask		character varying
+tenant_*	contacts	job_title	mask		character varying
+tenant_*	contacts	notes	mask		text
+tenant_*	contacts	primary_email	mask		character varying
+tenant_*	contacts	primary_phone	mask		character varying
+tenant_*	contacts	status	allow	値の決まり contacts_status_check で値が限られる	character varying
+tenant_*	contacts	surname	mask		character varying
+tenant_*	conversation_logs	analysis	mask		jsonb
+tenant_*	conversation_logs	channel_identity	mask		character varying
+tenant_*	conversation_logs	channel_type	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	conversation_logs	content_text	mask		text
+tenant_*	conversation_logs	direction	allow	値の決まり conversation_logs_direction_check で値が限られる	character varying
+tenant_*	conversation_logs	external_message_id	mask		character varying
+tenant_*	conversation_logs	original_language	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	conversation_logs	raw_payload	mask		jsonb
+tenant_*	conversation_logs	sender	mask		character varying
+tenant_*	conversation_logs	status	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	conversation_logs	translated_text	mask		text
+tenant_*	customer_scores	override_note	mask		text
+tenant_*	customer_scores	signal_summary	mask		jsonb
+tenant_*	customer_scores	tier	allow	値の決まり customer_scores_tier_check で値が限られる	character varying
+tenant_*	discord_channel_webhooks	channel_id	mask		text
+tenant_*	discord_channel_webhooks	webhook_id	mask		text
+tenant_*	erp_sync_logs	direction	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	erp_sync_logs	error_message	mask		text
+tenant_*	erp_sync_logs	status	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	erp_sync_logs	sync_type	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	extraction_attempts	code_version	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	text
+tenant_*	extraction_attempts	error_code	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	text
+tenant_*	extraction_attempts	input_payload	mask		jsonb
+tenant_*	extraction_attempts	input_sha256	mask		text
+tenant_*	extraction_attempts	parsed_items	mask		jsonb
+tenant_*	extraction_attempts	phase	allow	値の決まり extraction_attempts_phase_check で値が限られる	text
+tenant_*	extraction_attempts	prompt_version	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	text
+tenant_*	extraction_attempts	requested_model	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	text
+tenant_*	extraction_attempts	response_sha256	mask		text
+tenant_*	extraction_attempts	response_text	mask		text
+tenant_*	extraction_attempts	validation_result	mask		jsonb
+tenant_*	extraction_items	raw_memo	mask		text
+tenant_*	extraction_items	raw_price	mask		text
+tenant_*	extraction_items	raw_product_name	mask		text
+tenant_*	extraction_items	raw_quantity	mask		text
+tenant_*	extraction_items	raw_state	mask		text
+tenant_*	extraction_items	raw_unit	mask		text
+tenant_*	extraction_items	raw_work_name	mask		text
+tenant_*	extraction_items	raw_work_source_line_span	mask		text
+tenant_*	extraction_items	resolved_product_code	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	text
+tenant_*	extraction_jobs	error_message	mask		text
+tenant_*	extraction_jobs	prompt_version	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	extraction_jobs	status	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	extraction_jobs	work_reference_sha256	mask		text
+tenant_*	extraction_jobs	work_reference_snapshot	mask		jsonb
+tenant_*	goals	kpi_type	allow	値の決まり goals_kpi_type_check で値が限られる	character varying
+tenant_*	goals	period_type	allow	値の決まり goals_period_type_check で値が限られる	character varying
+tenant_*	import_job_messages	relation_kind	allow	値の決まり import_job_messages_relation_kind_check で値が限られる	text
+tenant_*	import_jobs	filename	mask		text
+tenant_*	import_jobs	pending_messages	mask		jsonb
+tenant_*	import_jobs	raw_sha256	mask		character varying
+tenant_*	import_jobs	review_status	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	text
+tenant_*	import_jobs	status	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	import_jobs	unresolved_names	mask		jsonb
+tenant_*	import_jobs	uploaded_by	mask		text
+tenant_*	invoice_items	condition	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	invoice_items	hs_code	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	invoice_items	name_en	mask		character varying
+tenant_*	invoice_items	product_name	mask		character varying
+tenant_*	invoice_items	unit	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	invoices	bill_to_snapshot	mask		jsonb
+tenant_*	invoices	currency	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	invoices	duty_policy_snapshot	mask		jsonb
+tenant_*	invoices	erp_key	mask		character varying
+tenant_*	invoices	fx_rate_snapshot	mask		jsonb
+tenant_*	invoices	invoice_number	mask		character varying
+tenant_*	invoices	issue_mode	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	invoices	notes	mask		text
+tenant_*	invoices	payment_method	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	invoices	paypal_approval_url	mask		text
+tenant_*	invoices	paypal_copy_pdf	mask		bytea
+tenant_*	invoices	paypal_invoicer_view_url	mask		text
+tenant_*	invoices	paypal_order_id	mask		text
+tenant_*	invoices	pdf_url	mask		character varying
+tenant_*	invoices	ship_to_snapshot	mask		jsonb
+tenant_*	invoices	status	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	invoices	void_reason	mask		character varying
+tenant_*	item_corrections	corrected_by	mask		text
+tenant_*	item_corrections	field_name	mask		text
+tenant_*	item_corrections	human_value	mask		text
+tenant_*	item_corrections	system_value	mask		text
+tenant_*	item_notes	note_text	mask		text
+tenant_*	item_notes	note_type	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	lead_attachments	content_type	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	lead_attachments	file_path	mask		text
+tenant_*	lead_attachments	message_id	mask		character varying
+tenant_*	lead_attachments	original_filename	mask		text
+tenant_*	lead_attachments	platform	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	lead_channels	display_name	mask		character varying
+tenant_*	lead_channels	external_id	mask		character varying
+tenant_*	lead_channels	platform	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	lead_playbook	assignment_condition	mask		character varying
+tenant_*	lead_playbook	assignment_message	mask		text
+tenant_*	lead_playbook	assignment_method	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	lead_playbook	country_assignment_map	mask		jsonb
+tenant_*	lead_playbook	greeting_message	mask		text
+tenant_*	lead_playbook	name	mask		character varying
+tenant_*	lead_playbook	questions	mask		jsonb
+tenant_*	lead_sales_form_selections	other_text	mask		text
+tenant_*	leads	ai_collection_state	mask		character varying
+tenant_*	leads	challenge	mask		text
+tenant_*	leads	channel_type	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	leads	company_name	mask		character varying
+tenant_*	leads	country	mask		character varying
+tenant_*	leads	cs_memo	mask		text
+tenant_*	leads	currency	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	leads	customer_name	mask		character varying
+tenant_*	leads	customer_type	mask		character varying
+tenant_*	leads	discord_dm_channel_id	mask		character varying
+tenant_*	leads	discord_guild_channel_id	mask		character varying
+tenant_*	leads	discord_id	mask		character varying
+tenant_*	leads	discord_role_sync_status	mask		character varying
+tenant_*	leads	discord_user_id	mask		character varying
+tenant_*	leads	email	mask		character varying
+tenant_*	leads	english_name	mask		character varying
+tenant_*	leads	estimated_scale	mask		character varying
+tenant_*	leads	initiative	mask		character varying
+tenant_*	leads	instagram_link	mask		character varying
+tenant_*	leads	lead_code	mask		character varying
+tenant_*	leads	meeting_impression	mask		character varying
+tenant_*	leads	meeting_memo	mask		text
+tenant_*	leads	messenger_link	mask		character varying
+tenant_*	leads	monthly_forecast_source	mask		character varying
+tenant_*	leads	next_action	mask		character varying
+tenant_*	leads	nickname	mask		character varying
+tenant_*	leads	notes	mask		text
+tenant_*	leads	phone	mask		character varying
+tenant_*	leads	prospect_rank	mask		character varying
+tenant_*	leads	response_speed	mask		character varying
+tenant_*	leads	sales_form	mask		character varying
+tenant_*	leads	status	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	leads	target_titles	mask		character varying
+tenant_*	leads	temperature	mask		character varying
+tenant_*	leads	type	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	leads	whatsapp_link	mask		character varying
+tenant_*	message_labels	direction	allow	値の決まり message_labels_direction_check で値が限られる	character varying
+tenant_*	message_labels	label	mask		character varying
+tenant_*	message_labels	source	mask		character varying
+tenant_*	message_translations	engine	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	message_translations	message_id	mask		text
+tenant_*	message_translations	original_language	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	message_translations	target_language	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	message_translations	translated_text	mask		text
+tenant_*	meta_message_reactions	emoji_id	mask		text
+tenant_*	meta_message_reactions	emoji_name	mask		text
+tenant_*	meta_message_reactions	reactor_discord_user_id	mask		text
+tenant_*	meta_message_reactions	reactor_display_name	mask		text
+tenant_*	meta_messages	analysis	mask		jsonb
+tenant_*	meta_messages	attachment_type	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	meta_messages	attachment_url	mask		text
+tenant_*	meta_messages	channel_identity	mask		character varying
+tenant_*	meta_messages	direction	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	meta_messages	error_code	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	meta_messages	error_message	mask		text
+tenant_*	meta_messages	message_id	mask		text
+tenant_*	meta_messages	message_tag	mask		character varying
+tenant_*	meta_messages	message_text	mask		text
+tenant_*	meta_messages	messaging_type	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	meta_messages	original_language	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	meta_messages	page_id	mask		character varying
+tenant_*	meta_messages	platform	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	meta_messages	raw_payload	mask		jsonb
+tenant_*	meta_messages	recipient_id	mask		character varying
+tenant_*	meta_messages	sender_id	mask		character varying
+tenant_*	meta_messages	sender_name	mask		character varying
+tenant_*	meta_messages	status	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	notification_channels	channel_name	mask		character varying
+tenant_*	notification_channels	channel_type	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	notification_channels	event_types	mask		text
+tenant_*	notification_channels	webhook_url	mask		character varying
+tenant_*	notification_logs	error_message	mask		text
+tenant_*	notification_logs	event_type	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	notification_logs	message	mask		text
+tenant_*	notification_logs	status	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	notification_logs	title	mask		character varying
+tenant_*	order_commissions	notes	mask		text
+tenant_*	order_commissions	role	mask		text
+tenant_*	order_financials	notes	mask		text
+tenant_*	order_items	condition	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	order_items	hs_code	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	order_items	name_en	mask		character varying
+tenant_*	order_items	product_name	mask		character varying
+tenant_*	order_items	sku	mask		character varying
+tenant_*	order_items	unit	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	order_purchase_details	carrier_name	mask		text
+tenant_*	order_purchase_details	purchase_note	mask		text
+tenant_*	order_purchase_details	purchase_staff	mask		text
+tenant_*	order_purchase_details	purchase_status	allow	値の決まり order_purchase_details_purchase_status_check で値が限られる	text
+tenant_*	order_purchase_details	supplier_name	mask		text
+tenant_*	order_purchase_details	supplier_url	mask		text
+tenant_*	order_purchase_details	transaction_no	mask		text
+tenant_*	order_purchase_details	waybill_no	mask		text
+tenant_*	order_shipping_details	address1	mask		character varying
+tenant_*	order_shipping_details	address2	mask		character varying
+tenant_*	order_shipping_details	address3	mask		character varying
+tenant_*	order_shipping_details	address_type	allow	値の決まり order_shipping_details_address_type_check で値が限られる	character varying
+tenant_*	order_shipping_details	carrier	allow	値の決まり order_shipping_details_carrier_check で値が限られる	character varying
+tenant_*	order_shipping_details	city	mask		character varying
+tenant_*	order_shipping_details	confirmed_currency	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	order_shipping_details	country_code	mask		character varying
+tenant_*	order_shipping_details	email	mask		character varying
+tenant_*	order_shipping_details	fedex_id	mask		character varying
+tenant_*	order_shipping_details	hs_code	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	order_shipping_details	inspection_status	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	order_shipping_details	item_description	mask		character varying
+tenant_*	order_shipping_details	label_drive_url	mask		text
+tenant_*	order_shipping_details	packing_memo	mask		text
+tenant_*	order_shipping_details	packing_type	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	order_shipping_details	phone	mask		character varying
+tenant_*	order_shipping_details	pickup_confirmation_code	mask		character varying
+tenant_*	order_shipping_details	recipient_name	mask		character varying
+tenant_*	order_shipping_details	ship_memo	mask		text
+tenant_*	order_shipping_details	ship_method	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	order_shipping_details	state_code	mask		character varying
+tenant_*	order_shipping_details	surcharges	mask		jsonb
+tenant_*	order_shipping_details	tax_id	mask_bare	短い個人の値で、長さだけでも絞り込みの手がかりになるため長さも出さない	character varying
+tenant_*	order_shipping_details	tax_number	mask_bare	短い個人の値で、長さだけでも絞り込みの手がかりになるため長さも出さない	character varying
+tenant_*	order_shipping_details	tracking_number	mask		character varying
+tenant_*	order_shipping_details	zip_code	mask_bare	短い個人の値で、長さだけでも絞り込みの手がかりになるため長さも出さない	character varying
+tenant_*	orders	currency	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	orders	notes	mask		text
+tenant_*	orders	order_number	mask		character varying
+tenant_*	orders	shipping_carrier	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	orders	shipping_country	mask		character varying
+tenant_*	orders	status	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	orders	tracking_number	mask		character varying
+tenant_*	outbound_translation_drafts	draft_text	mask		text
+tenant_*	outbound_translation_drafts	final_text	mask		text
+tenant_*	outbound_translation_drafts	flagged_terms	mask		jsonb
+tenant_*	outbound_translation_drafts	model	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	outbound_translation_drafts	original_text	mask		text
+tenant_*	own_inventory	condition	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	own_inventory	note_en	mask		text
+tenant_*	own_inventory	note_ja	mask		text
+tenant_*	own_inventory	status	allow	値の決まり own_inventory_status_check で値が限られる	character varying
+tenant_*	paypal_disputes	currency	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	text
+tenant_*	paypal_disputes	dispute_id	mask		text
+tenant_*	paypal_disputes	pp_status	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	text
+tenant_*	paypal_disputes	raw	mask		jsonb
+tenant_*	paypal_disputes	reason	mask		text
+tenant_*	product_exclude_keywords	keyword	mask		text
+tenant_*	product_search_keywords	keyword	mask		text
+tenant_*	products	card_number	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	products	category	mask		character varying
+tenant_*	products	condition	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	products	expansion_code	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	products	image_url	mask		character varying
+tenant_*	products	jan_code	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	products	language	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	products	mark	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	products	name_en	mask		character varying
+tenant_*	products	name_ja	mask		character varying
+tenant_*	products	notes	mask		text
+tenant_*	products	product_code	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	products	rarity	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	products	status	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	purchase_orders	company_name_snapshot	mask		character varying
+tenant_*	purchase_orders	contact_info_snapshot	mask		text
+tenant_*	purchase_orders	notes	mask		text
+tenant_*	purchase_orders	po_number	mask		character varying
+tenant_*	purchase_orders	status	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	quote_items	condition	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	quote_items	hs_code	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	quote_items	name_en	mask		character varying
+tenant_*	quote_items	product_name	mask		character varying
+tenant_*	quote_items	unit	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	quotes	currency	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	quotes	delivery_info	mask		text
+tenant_*	quotes	notes	mask		text
+tenant_*	quotes	pdf_url	mask		character varying
+tenant_*	quotes	quote_code	mask		character varying
+tenant_*	quotes	shipping_carrier	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	quotes	shipping_country	mask		character varying
+tenant_*	quotes	status	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	roles	color	mask		character varying
+tenant_*	roles	description	mask		character varying
+tenant_*	roles	name	mask		character varying
+tenant_*	roles	system_key	mask		text
+tenant_*	shifts	notes	mask		text
+tenant_*	shifts	shift_type	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	shipping_rates	carrier	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	shipping_rates	currency	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	shipping_rates	zone	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	shipping_zones	carrier	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	shipping_zones	country_code	mask		character varying
+tenant_*	shipping_zones	country_name	mask		character varying
+tenant_*	shipping_zones	zone	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	source_messages	raw_sha256	mask		character varying
+tenant_*	source_messages	raw_text	mask		text
+tenant_*	staff	discord_user_id	mask		character varying
+tenant_*	staff	firebase_uid	mask		character varying
+tenant_*	staff	given_name_en	mask		character varying
+tenant_*	staff	given_name_jp	mask		character varying
+tenant_*	staff	given_name_kana	mask		character varying
+tenant_*	staff	phone	mask		character varying
+tenant_*	staff	primary_email	mask		character varying
+tenant_*	staff	staff_code	mask		character varying
+tenant_*	staff	status	allow	値の決まり staff_status_check で値が限られる	character varying
+tenant_*	staff	surname_en	mask		character varying
+tenant_*	staff	surname_jp	mask		character varying
+tenant_*	staff	surname_kana	mask		character varying
+tenant_*	staff_emails	email	mask		character varying
+tenant_*	staff_emails	purpose	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	staff_reports	ai_feedback	mask		text
+tenant_*	staff_reports	challenges	mask		text
+tenant_*	staff_reports	goals	mask		text
+tenant_*	staff_reports	period	mask		character varying
+tenant_*	staff_reports	report_code	mask		character varying
+tenant_*	staff_reports	report_type	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	staff_reports	review	mask		text
+tenant_*	staff_reports	reviewer_comment	mask		text
+tenant_*	staff_reports	self_evaluation	mask		text
+tenant_*	supplier_channels	channel	mask		character varying
+tenant_*	supplier_channels	external_id	mask		text
+tenant_*	tcg_distribution_settings	key	mask		text
+tenant_*	tcg_distribution_settings	note	mask		text
+tenant_*	tcg_distribution_settings	value	mask		text
+tenant_*	tcg_distribution_targets	last_result	mask		text
+tenant_*	tcg_distribution_targets	name	mask		text
+tenant_*	tcg_distribution_targets	sheet_name	mask		text
+tenant_*	tcg_distribution_targets	spreadsheet_id	mask		text
+tenant_*	tcg_major_categories	code	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	tcg_major_categories	description	mask		text
+tenant_*	tcg_major_categories	display_name	mask		text
+tenant_*	tcg_manufacturers	alt_name	mask		text
+tenant_*	tcg_manufacturers	code	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	tcg_manufacturers	display_name	mask		text
+tenant_*	tcg_product_categories	code	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	tcg_product_categories	display_name	mask		text
+tenant_*	tcg_product_categories	kubun_type	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	tcg_product_import_jobs	executed_by	mask		text
+tenant_*	tcg_product_import_jobs	filename	mask		text
+tenant_*	tcg_product_import_jobs	raw_sha256	mask		character varying
+tenant_*	tcg_product_import_jobs	status	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	tcg_product_import_rows	japanese_title	mask		text
+tenant_*	tcg_product_import_rows	mark	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	text
+tenant_*	tcg_product_import_rows	messages	mask		text
+tenant_*	tcg_product_import_rows	product_code	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	tcg_product_import_rows	result	mask		character varying
+tenant_*	tcg_series	alt_name	mask		text
+tenant_*	tcg_series	code	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	tcg_series	display_name	mask		text
+tenant_*	tcg_suppliers	code	mask		character varying
+tenant_*	tcg_suppliers	name	mask		text
+tenant_*	tcg_unit_evidence_rules	evidence_type	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	text
+tenant_*	tcg_unit_evidence_rules	id	mask		text
+tenant_*	tcg_unit_evidence_rules	note	mask		text
+tenant_*	tcg_unit_evidence_rules	structure_pattern	mask		text
+tenant_*	teams	description	mask		character varying
+tenant_*	teams	name	mask		character varying
+tenant_*	tenant_calibrations	label_weights	mask		jsonb
+tenant_*	tenant_commission_settings	commission_rates	mask		jsonb
+tenant_*	tenant_meta_config	granted_scopes	mask		jsonb
+tenant_*	tenant_meta_config	instagram_business_account_id	mask		character varying
+tenant_*	tenant_meta_config	instagram_username	mask		character varying
+tenant_*	tenant_meta_config	notes	mask		text
+tenant_*	tenant_meta_config	page_id	mask		character varying
+tenant_*	tenant_meta_config	page_name	mask		character varying
+tenant_*	tenant_meta_config	subscribed_fields	mask		jsonb
+tenant_*	tenant_profile	address	mask		text
+tenant_*	tenant_profile	company_name	mask		character varying
+tenant_*	tenant_profile	company_name_en	mask		character varying
+tenant_*	tenant_profile	default_language	allow	値の決まり default_language_check で値が限られる	character
+tenant_*	tenant_profile	email	mask		character varying
+tenant_*	tenant_profile	phone	mask		character varying
+tenant_*	tenant_profile	seal_image_url	mask		text
+tenant_*	tenant_profile	website	mask		character varying
+tenant_*	tenant_sales_form_options	label	mask		character varying
+tenant_*	tenant_sales_form_options	value	mask		character varying
+tenant_*	tenant_suppliers	code	mask		character varying
+tenant_*	tenant_suppliers	name	mask		text
+tenant_*	unit_aliases	alias_text	mask		text
+tenant_*	unit_aliases	lang	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	units	canonical	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	text
+tenant_*	units	code	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	units	kubun	mask	値の決まりが無く自由に入る列のため伏せる（初期は最小）	character varying
+tenant_*	unparsed_lines	line_text	mask		text
+tenant_*	unparsed_lines	reason	mask		character varying
+public	analysis_run_snapshots	snapshotted_at	allow	数・日付・uuid・真偽の型で文字を持たない（型で通る。名前の見張りに当たるため行を置く）	timestamp with time zone
+public	analysis_soldout_extra_targets	ref_message_id	allow	数・日付・uuid・真偽の型で文字を持たない（型で通る。名前の見張りに当たるため行を置く）	uuid
+public	condition_definitions	display_order	allow	数・日付・uuid・真偽の型で文字を持たない（型で通る。名前の見張りに当たるため行を置く）	integer
+public	condition_definitions	line_id	allow	数・日付・uuid・真偽の型で文字を持たない（型で通る。名前の見張りに当たるため行を置く）	integer
+public	extraction_attempts	source_message_id	allow	数・日付・uuid・真偽の型で文字を持たない（型で通る。名前の見張りに当たるため行を置く）	uuid
+public	extraction_jobs	source_message_id	allow	数・日付・uuid・真偽の型で文字を持たない（型で通る。名前の見張りに当たるため行を置く）	uuid
+public	import_job_messages	source_message_id	allow	数・日付・uuid・真偽の型で文字を持たない（型で通る。名前の見張りに当たるため行を置く）	uuid
+public	import_jobs	message_count	allow	数・日付・uuid・真偽の型で文字を持たない（型で通る。名前の見張りに当たるため行を置く）	integer
+public	import_jobs	messages_linked_at	allow	数・日付・uuid・真偽の型で文字を持たない（型で通る。名前の見張りに当たるため行を置く）	timestamp with time zone
+public	item_corrections	source_message_id	allow	数・日付・uuid・真偽の型で文字を持たない（型で通る。名前の見張りに当たるため行を置く）	uuid
+public	line_units	line_id	allow	数・日付・uuid・真偽の型で文字を持たない（型で通る。名前の見張りに当たるため行を置く）	integer
+public	llm_usage_events	discord_inbound_message_id	allow	数・日付・uuid・真偽の型で文字を持たない（型で通る。名前の見張りに当たるため行を置く）	integer
+public	permissions	display_order	allow	数・日付・uuid・真偽の型で文字を持たない（型で通る。名前の見張りに当たるため行を置く）	integer
+public	product_formats	display_order	allow	数・日付・uuid・真偽の型で文字を持たない（型で通る。名前の見張りに当たるため行を置く）	integer
+public	product_formats	line_id	allow	数・日付・uuid・真偽の型で文字を持たない（型で通る。名前の見張りに当たるため行を置く）	integer
+public	product_kinds	display_order	allow	数・日付・uuid・真偽の型で文字を持たない（型で通る。名前の見張りに当たるため行を置く）	integer
+public	product_line_available_units	product_line_id	allow	数・日付・uuid・真偽の型で文字を持たない（型で通る。名前の見張りに当たるため行を置く）	integer
+public	product_lines	display_order	allow	数・日付・uuid・真偽の型で文字を持たない（型で通る。名前の見張りに当たるため行を置く）	integer
+public	products	display_order	allow	数・日付・uuid・真偽の型で文字を持たない（型で通る。名前の見張りに当たるため行を置く）	integer
+public	products	product_line_id	allow	数・日付・uuid・真偽の型で文字を持たない（型で通る。名前の見張りに当たるため行を置く）	integer
+public	quantity_units	display_order	allow	数・日付・uuid・真偽の型で文字を持たない（型で通る。名前の見張りに当たるため行を置く）	integer
+public	weight_classes	display_order	allow	数・日付・uuid・真偽の型で文字を持たない（型で通る。名前の見張りに当たるため行を置く）	integer
+tenant_*	analysis_run_snapshots	snapshotted_at	allow	数・日付・uuid・真偽の型で文字を持たない（型で通る。名前の見張りに当たるため行を置く）	timestamp with time zone
+tenant_*	contact_contact_channels	contact_id	allow	数・日付・uuid・真偽の型で文字を持たない（型で通る。名前の見張りに当たるため行を置く）	integer
+tenant_*	contact_discord	contact_id	allow	数・日付・uuid・真偽の型で文字を持たない（型で通る。名前の見張りに当たるため行を置く）	integer
+tenant_*	contact_emails	contact_id	allow	数・日付・uuid・真偽の型で文字を持たない（型で通る。名前の見張りに当たるため行を置く）	integer
+tenant_*	contacts	is_primary_contact	allow	数・日付・uuid・真偽の型で文字を持たない（型で通る。名前の見張りに当たるため行を置く）	boolean
+tenant_*	conversation_logs	contact_id	allow	数・日付・uuid・真偽の型で文字を持たない（型で通る。名前の見張りに当たるため行を置く）	integer
+tenant_*	extraction_attempts	source_message_id	allow	数・日付・uuid・真偽の型で文字を持たない（型で通る。名前の見張りに当たるため行を置く）	uuid
+tenant_*	extraction_jobs	source_message_id	allow	数・日付・uuid・真偽の型で文字を持たない（型で通る。名前の見張りに当たるため行を置く）	uuid
+tenant_*	import_job_messages	source_message_id	allow	数・日付・uuid・真偽の型で文字を持たない（型で通る。名前の見張りに当たるため行を置く）	uuid
+tenant_*	import_jobs	message_count	allow	数・日付・uuid・真偽の型で文字を持たない（型で通る。名前の見張りに当たるため行を置く）	integer
+tenant_*	import_jobs	messages_linked_at	allow	数・日付・uuid・真偽の型で文字を持たない（型で通る。名前の見張りに当たるため行を置く）	timestamp with time zone
+tenant_*	invoices	contact_id	allow	数・日付・uuid・真偽の型で文字を持たない（型で通る。名前の見張りに当たるため行を置く）	integer
+tenant_*	item_corrections	source_message_id	allow	数・日付・uuid・真偽の型で文字を持たない（型で通る。名前の見張りに当たるため行を置く）	uuid
+tenant_*	message_labels	message_id	allow	数・日付・uuid・真偽の型で文字を持たない（型で通る。名前の見張りに当たるため行を置く）	integer
+tenant_*	meta_message_reactions	meta_message_id	allow	数・日付・uuid・真偽の型で文字を持たない（型で通る。名前の見張りに当たるため行を置く）	integer
+tenant_*	meta_messages	contact_id	allow	数・日付・uuid・真偽の型で文字を持たない（型で通る。名前の見張りに当たるため行を置く）	integer
+tenant_*	orders	contact_id	allow	数・日付・uuid・真偽の型で文字を持たない（型で通る。名前の見張りに当たるため行を置く）	integer
+tenant_*	outbound_translation_drafts	meta_message_id	allow	数・日付・uuid・真偽の型で文字を持たない（型で通る。名前の見張りに当たるため行を置く）	integer
+tenant_*	quotes	contact_id	allow	数・日付・uuid・真偽の型で文字を持たない（型で通る。名前の見張りに当たるため行を置く）	integer

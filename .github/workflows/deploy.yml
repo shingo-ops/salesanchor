@@ -322,6 +322,8 @@ jobs:
               -e '/^OPS_INGEST_TOKEN=/d' \
               -e '/^ERROR_REPORT_AGENT_TOKEN=/d' \
               -e '/^READ_WINDOW_TOKEN=/d' \
+              -e '/^CASE_AGENT_TOKEN=/d' \
+              -e '/^CASE_ADMIN_TOKEN=/d' \
               -e '/^COMPOSE_FILE=/d' \
               .env
             # YAML `|` ブロックの共通インデント (12 スペース) はパース時に自動除去される。
@@ -374,6 +376,8 @@ jobs:
             OPS_INGEST_TOKEN='${{ secrets.OPS_INGEST_TOKEN }}'
             ERROR_REPORT_AGENT_TOKEN='${{ secrets.ERROR_REPORT_AGENT_TOKEN }}'
             READ_WINDOW_TOKEN='${{ secrets.READ_WINDOW_TOKEN }}'
+            CASE_AGENT_TOKEN='${{ secrets.CASE_AGENT_TOKEN }}'
+            CASE_ADMIN_TOKEN='${{ secrets.CASE_ADMIN_TOKEN }}'
             COMPOSE_FILE=docker-compose.yml:docker-compose.exporters.yml
             ENV_EOF
             # 件1（docs/handoff/deploy-secrets-dollar-quote/design.md）: 値に ' か改行があると単一引用符が壊れる。
@@ -494,7 +498,16 @@ jobs:
       # nginx 再起動中（~2-3s）に brief な 502 窓が生じるが、nginx 設定を変えない
       # 通常デプロイ（backend/frontend のみ）ではこのステップは実行されない。
       # ============================================
+      #
+      # ADR-1052 段2 #9 の 1: 作り直しの前に本番と同じ取り付けで nginx -t を通し、通らなければ作り直さない。
+      # 作り直しの後に起きているかと 443 の応答を確かめ、だめなら戻り先の nginx.conf に自動で戻す。
+      #   .deploy_nginx_good.conf = 最後に後の確認まで通った設定 / .deploy_prev_nginx.conf = 今回の戻り先
+      #   （どちらも /home/ubuntu/salesanchor の直下・git に入れない。.deploy_prev_sha と同じ扱い）
+      # continue-on-error: この手順が失敗しても後ろの手順は今と同じに流れ、Finalize の後の
+      # 「Fail if nginx recreate failed」でデプロイ全体が失敗の表示になる。
       - name: Recreate nginx (apply config/volume changes)
+        id: nginx_recreate
+        continue-on-error: true
         if: ${{ success() && steps.gate.outputs.nginx == 'true' }}
         uses: appleboy/ssh-action@v1
         with:
@@ -504,12 +517,86 @@ jobs:
           script: |
             set -e
             cd /home/ubuntu/salesanchor
+
+            # 作り直しの後の確認: 最大 15 秒・1 秒ごとに「起きている」かつ「443 の応答が 000 でない」。
+            # curl の終了コードが 0 でなくても止まらずに次の秒へ（呼ぶ側は set +e の中）。
+            _nginx_confirm() {
+              _c_i=1
+              while [ "${_c_i}" -le 15 ]; do
+                _running=$(docker inspect --format='{{.State.Running}}' astro-webapp-nginx-1 2>/dev/null)
+                _code=$(curl -sk -o /dev/null -w '%{http_code}' --max-time 5 --resolve app.salesanchor.jp:443:127.0.0.1 https://app.salesanchor.jp/ 2>/dev/null)
+                echo "  確認 ${_c_i}/15: running=${_running} http=${_code}"
+                if [ "${_running}" = "true" ] && [ -n "${_code}" ] && [ "${_code}" != "000" ]; then
+                  return 0
+                fi
+                sleep 1
+                _c_i=$((_c_i + 1))
+              done
+              return 1
+            }
+
+            # 1. 戻り先の用意
+            PREV=$(cat .deploy_prev_sha 2>/dev/null || true)
+            rm -f .deploy_prev_nginx.conf
+            if [ -s .deploy_nginx_good.conf ]; then
+              # 最後に起きた設定を正とする（PREV の設定は、前のデプロイで点検に落ちていれば壊れている）
+              cp .deploy_nginx_good.conf .deploy_prev_nginx.conf || true
+            elif [ -n "${PREV}" ] && git cat-file -e "${PREV}:nginx/nginx.conf" 2>/dev/null; then
+              git show "${PREV}:nginx/nginx.conf" > .deploy_prev_nginx.conf || true
+            fi
+            if [ ! -s .deploy_prev_nginx.conf ]; then
+              echo "::error::戻り先の nginx.conf を用意できません"
+              exit 1
+            fi
+
+            # 2. 戻り先の点検（本番と同じ取り付けで）。通らなければ作り直さない
+            if ! docker compose run --rm --no-deps -T -v /home/ubuntu/salesanchor/.deploy_prev_nginx.conf:/etc/nginx/conf.d/default.conf:ro nginx nginx -t; then
+              echo "::error::戻り先の nginx.conf が nginx -t に通りません。作り直しません"
+              exit 1
+            fi
+
+            # 3. 新しい設定の点検（本番の取り付け＝証明書・htpasswd.d・/var/www をそのまま使う）
+            if ! docker compose run --rm --no-deps -T nginx nginx -t; then
+              # 後ろで nginx を作り直す手順が起きても壊れた設定を読まないよう、作業の写しを戻り先に替える
+              cp .deploy_prev_nginx.conf nginx/nginx.conf
+              echo "::error::新しい nginx.conf が nginx -t に通りません。作り直しません（今の nginx は前の設定のまま動き続けます）"
+              exit 1
+            fi
+
+            # 4〜6. 作り直し・後の確認・自動で戻す。途中の失敗で戻す部分まで届かなくならないよう set +e で囲む
+            set +e
             echo "nginx config/volume change detected — force-recreating nginx container..."
             docker compose up -d --no-deps --force-recreate nginx
-            echo "nginx recreated. Waiting 3s for startup..."
-            sleep 3
-            docker inspect --format='{{.State.Status}}' astro-webapp-nginx-1
-            echo "nginx force-recreate done."
+            _up_rc=$?
+            _confirmed=1
+            if [ "${_up_rc}" -eq 0 ]; then
+              echo "nginx recreated. Confirming (max 15s)..."
+              _nginx_confirm
+              _confirmed=$?
+            else
+              echo "::error::docker compose up が終了コード ${_up_rc} で終わりました"
+            fi
+
+            if [ "${_confirmed}" -eq 0 ]; then
+              # 5. 通った設定を最後に起きた設定として残す（途中で切れた good を残さない）
+              if cp nginx/nginx.conf .deploy_nginx_good.conf.tmp && mv .deploy_nginx_good.conf.tmp .deploy_nginx_good.conf; then
+                echo "ℹ️  最後に起きた nginx の設定を .deploy_nginx_good.conf に残しました"
+              else
+                # 動いている設定より古い good を残さない（1c がそれで作り直さないため）
+                rm -f .deploy_nginx_good.conf .deploy_nginx_good.conf.tmp
+                echo "::warning::最後に起きた nginx の設定を残せませんでした"
+              fi
+              echo "nginx force-recreate done."
+              exit 0
+            fi
+
+            # 6. 戻り先に自動で戻して作り直す（.deploy_nginx_good.conf は書き換えない）
+            echo "::error::nginx が作り直しの後に起きていません — 戻り先の nginx.conf に戻して作り直します"
+            cp .deploy_prev_nginx.conf nginx/nginx.conf
+            docker compose up -d --no-deps --force-recreate nginx
+            _nginx_confirm
+            echo "戻した後の確認の結果: $?（0 = 起きている）"
+            exit 1
 
       # ADR-1042: AI 読み取り窓口（ai-reader-http）を起こす。付け足しの機能なので、
       # 失敗してもアプリの反映は止めない（警告だけ出す）。image は backend と同じ astro-webapp-backend。
@@ -528,6 +615,42 @@ jobs:
             fi
             docker compose -p astro-webapp-readwindow -f docker-compose.ai-reader-http.yml up -d --build=false --force-recreate \
               || echo "::warning::ai-reader-http を起こせませんでした（アプリの反映には影響しません）"
+
+      # ADR-1052 段1: 相談係専用の読む窓口（ai-reader-cloud-http）を起こす。今の窓口とは別の容器・別の鍵（CASE_AGENT_TOKEN）。
+      # 付け足しの機能なので、失敗してもアプリの反映は止めない（警告だけ出す）。
+      - name: Start ai-reader-cloud-http (case agent read window)
+        if: ${{ success() }}
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /home/ubuntu/salesanchor
+            if [ ! -r /home/ubuntu/.config/salesanchor/ai-reader-cloud.env ]; then
+              echo "::warning::ai-reader-cloud.env が読めないため ai-reader-cloud-http を起こしません"
+              exit 0
+            fi
+            docker compose -p astro-webapp-casewindow -f docker-compose.ai-reader-cloud-http.yml up -d --build=false --force-recreate \
+              || echo "::warning::ai-reader-cloud-http を起こせませんでした（アプリの反映には影響しません）"
+
+      # ADR-1052 段2: 値を 1 回だけ返す口（ai-unmask-http）を起こす。相談係の鍵（CASE_AGENT_TOKEN）で守る。
+      # 付け足しの機能なので、失敗してもアプリの反映は止めない（警告だけ出す）。
+      - name: Start ai-unmask-http (case agent unmask read)
+        if: ${{ success() }}
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /home/ubuntu/salesanchor
+            if [ ! -r /home/ubuntu/.config/salesanchor/ai-unmask.env ]; then
+              echo "::warning::ai-unmask.env が読めないため ai-unmask-http を起こしません"
+              exit 0
+            fi
+            docker compose -p astro-webapp-unmask -f docker-compose.ai-unmask-http.yml up -d --build=false --force-recreate \
+              || echo "::warning::ai-unmask-http を起こせませんでした（アプリの反映には影響しません）"
 
       # SA-18 Phase2: salesanchor_app ロールの bootstrap（冪等）
       # migrations より前に実行する。ADMIN_DATABASE_URL を .env に注入。
@@ -847,6 +970,15 @@ jobs:
             echo "Deployment completed successfully!"
             echo "============================================"
 
+      # ADR-1052 段2 #9 の 1b: Recreate nginx は continue-on-error で後ろの手順（Bootstrap・移行・smoke・Finalize）を
+      # 今と同じに流す。その代わり、Finalize の後ここで止めて、デプロイ全体を失敗の表示にする（Verify は動かない）。
+      # 失敗の知らせは GitHub の既定のものだけ（PO と Opus への知らせは段4）。
+      - name: Fail if nginx recreate failed
+        if: ${{ always() && steps.nginx_recreate.outcome == 'failure' }}
+        run: |
+          echo "::error::nginx の作り直しの手順が失敗しました（戻り先の用意・点検・後の確認のどれか）"
+          exit 1
+
       - name: Verify deployment
         if: success()
         uses: appleboy/ssh-action@v1
@@ -1095,7 +1227,38 @@ jobs:
             echo "🚨 Smoke FAIL検出 — /design/ を緊急遮断します"
             rm -f "${HTPASSWD}"
             cd /home/ubuntu/salesanchor
-            docker compose up -d --no-deps --force-recreate nginx
+            # ADR-1052 段2 #9 の 1c: 点検に通らない設定で作り直さない（第3版の審査 H1）。
+            # 作業の写しの設定は nginx -t しか通っていない、または点検もしていない回がある
+            # （Recreate が飛んだ回・Finalize の自動ロールバックの後・good が無い回）。
+            # 最後に後の確認まで通った設定（.deploy_nginx_good.conf）があれば、作業の写しをそれに替えてから点検する。
+            # 作業の写しは次のデプロイの reset で戻る。
+            if [ -s .deploy_nginx_good.conf ]; then
+              cp .deploy_nginx_good.conf nginx/nginx.conf
+              echo "ℹ️  作業の写しの nginx.conf を最後に起きた設定（.deploy_nginx_good.conf）に替えました"
+            else
+              echo "ℹ️  .deploy_nginx_good.conf が無いため、作業の写しの nginx.conf のまま点検します（点検だけ通った設定で作り直すことになります）"
+            fi
+            if ! docker compose run --rm --no-deps -T nginx nginx -t; then
+              echo "::warning::nginx の設定が点検に通らないため作り直しません"
+            else
+              docker compose up -d --no-deps --force-recreate nginx
+              # 作り直しの後の確認（#9 の 1 の 5 と同じ形）。この手順は失敗の中なので、落ちても戻す先は無い。結果は記録に残すだけ
+              _c_i=1
+              while [ "${_c_i}" -le 15 ]; do
+                _running=$(docker inspect --format='{{.State.Running}}' astro-webapp-nginx-1 2>/dev/null)
+                _code=$(curl -sk -o /dev/null -w '%{http_code}' --max-time 5 --resolve app.salesanchor.jp:443:127.0.0.1 https://app.salesanchor.jp/ 2>/dev/null)
+                echo "  確認 ${_c_i}/15: running=${_running} http=${_code}"
+                if [ "${_running}" = "true" ] && [ -n "${_code}" ] && [ "${_code}" != "000" ]; then
+                  echo "✅ nginx の確認が通りました（http=${_code}）"
+                  break
+                fi
+                sleep 1
+                _c_i=$((_c_i + 1))
+              done
+              if [ "${_c_i}" -gt 15 ]; then
+                echo "::warning::nginx の作り直しの後の確認が 15 秒の間に通りませんでした（戻す先はありません。結果の記録のみ）"
+              fi
+            fi
             sleep 3
             _block=$(curl -s -o /dev/null -w "%{http_code}" \
               --max-time 10 https://app.salesanchor.jp/design/ 2>/dev/null || echo "FAIL")
