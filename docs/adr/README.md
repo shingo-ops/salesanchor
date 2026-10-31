@@ -3,7 +3,7 @@
 > このファイルは `scripts/generate-adr-index.js` により自動生成されます。
 > **手動編集禁止。** ADR ファイルを追加・変更後に `node scripts/generate-adr-index.js` を実行してください。
 
-最終更新: 2026-10-31 / ADR 総数: 211 件
+最終更新: 2026-10-31 / ADR 総数: 212 件
 
 ## 維持ルール（整合性を保つ・必須）
 
@@ -230,6 +230,7 @@
 | [ADR-1050](./ADR-1050-api-error-auto-retry.md) | ADR-1050: 一時的に断られた解析は自動で送り直し、諦めた分は知らせる | Proposed | — | — |
 | [ADR-1051](./ADR-1051-prod-ui-black-box-check.md) | ADR-1051: 本番の画面点検は、GitHub 提供の機械から HTTPS で見るだけの利用者がログインして毎日行い、本番 DB には触らない | Accepted | — | — |
 | [ADR-1052](./ADR-1052-cloud-case-ai.md) | ADR-1052: Discord の投稿を合図に、クラウドの相談係 AI が個人の値を伏せた本番を読み、中身は申請して Opus が許可したときだけ見る | Accepted | Amends ADR-1024, Amends ADR-1042, Amends ADR-1039 | — |
+| [ADR-1053](./ADR-1053-prod-page-speed-record.md) | ADR-1053: 本番の画面点検の「開き終わった」の決め方を 1 か所にし、全画面の開く速さを毎日記録する（合格ラインはまだ決めない） | Accepted | — | — |
 
 ## ステータス凡例
 
