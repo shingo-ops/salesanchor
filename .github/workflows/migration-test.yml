@@ -960,7 +960,7 @@ jobs:
             updated_at               TIMESTAMP WITH TIME ZONE DEFAULT NOW()
           );
           -- public.ops_incidents: migrations/20261016_100000_create_ops_incident_tables.sql で本番作成済み。
-          --   20261031_200000_create_ops_case.sql が参照するため前提として登録する。
+          --   20261031_210000_create_ops_case.sql が参照するため前提として登録する。
           CREATE TABLE IF NOT EXISTS public.ops_incidents (
               id                    UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
               fingerprint           TEXT        NOT NULL,

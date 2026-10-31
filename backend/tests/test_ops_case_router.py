@@ -148,7 +148,7 @@ async def env(monkeypatch):
     a.execute(_read("20261024_100000_create_ai_cloud_meta.sql"))
     a.execute(_read("20261024_100300_create_ai_cloud_views.sql"))
     a.execute("RESET ROLE")
-    a.execute(_read("20261031_200000_create_ops_case.sql"))
+    a.execute(_read("20261031_210000_create_ops_case.sql"))
 
     # backend の接続は salesanchor_app（接続のとき role を切り替える。パスワードを持たない試験 DB 用）
     engine = create_async_engine(_asyncpg_url(dbname), echo=False, connect_args={"server_settings": {"role": "salesanchor_app"}})

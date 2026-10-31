@@ -38,7 +38,7 @@ _AI_READER_SQL = "20261017_130000_create_ai_reader_role.sql"
 _META_SQL = "20261024_100000_create_ai_cloud_meta.sql"
 _ROLE_SQL = "20261024_100100_create_ai_reader_cloud_role.sql"
 _CREATE_SQL = "20261024_100300_create_ai_cloud_views.sql"
-_CASE_SQL = "20261031_200000_create_ops_case.sql"
+_CASE_SQL = "20261031_210000_create_ops_case.sql"
 
 _ROLES = (
     "ai_unmask",

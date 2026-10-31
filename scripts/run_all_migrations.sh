@@ -1202,4 +1202,4 @@ run_sql migrations/20261024_100100_create_ai_reader_cloud_role.sql
 # ADR-1013 便6: ログイン直後のパスキー登録の案内のスキップ記録（空の表を作るだけ・冪等）
 run_sql migrations/20261031_200000_add_passkey_enroll_prompt_skips.sql
 # ADR-1052 段2: 相談係の件・申請・値を1回だけ返す関数（スキーマ ops_case・ロール ai_unmask_owner / ai_unmask。パスワードは PO が別途設定・冪等）
-run_sql migrations/20261031_200000_create_ops_case.sql
+run_sql migrations/20261031_210000_create_ops_case.sql
