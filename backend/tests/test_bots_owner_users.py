@@ -108,3 +108,19 @@ async def test_create_bot_blank_code_gets_sequential_code(seeded):
     assert res.status_code == 201, res.text
     body = res.json()
     assert body["bot_code"] == f"BOT-{body['id']:05d}"
+
+
+@pytest.mark.asyncio
+async def test_create_bot_resets_tenant_context_after_commit(seeded):
+    """ADR-072 Phase 2.5: commit の後に会社の文脈を付け直してから読み直す。"""
+    from unittest.mock import ANY
+
+    payload = _payload(_SAME_TENANT_USER_ID)
+    payload["bot_code"] = ""
+    with patch("app.routers.bots.record_audit_log", new=AsyncMock()), patch(
+        "app.routers.bots.reset_tenant_context", new=AsyncMock()
+    ) as reset_mock:
+        res = await seeded.post("/api/v1/bots", json=payload)
+    assert res.status_code == 201, res.text
+    assert reset_mock.await_count >= 1
+    reset_mock.assert_any_await(ANY, 999)

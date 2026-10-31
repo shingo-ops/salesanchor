@@ -76,3 +76,23 @@ from app.auth.dependencies import (
 | bots.py の commit の後に表を読む 3 か所すべてで、直後に reset_tenant_context を呼ぶ | `grep -n "reset_tenant_context" backend/app/routers/bots.py` で import＋3 行 |
 | 試験が通る | `pytest tests/test_bots_owner_users.py -q` が全件 passed |
 | 本番反映後、tenant 001 で画面からコード空欄で登録し 500 にならず、Bot コードが BOT-00003 の形で付く（○×） | 画面操作と Loki の POST /api/v1/bots が 201 |
+
+## 実装の結果
+
+(1) `cd backend && <venv>/bin/python -m pytest tests/test_bots_owner_users.py -q` の末尾:
+```
+TOTAL                                                43147  30393    30%
+FAIL Required test coverage of 60% not reached. Total coverage: 29.56%
+7 passed, 1 warning in 24.29s
+```
+（カバレッジの× は 1 ファイルだけ流したための全体値。試験は 7 件すべて passed）
+
+(2) `grep -n "reset_tenant_context" backend/app/routers/bots.py`:
+```
+28:    reset_tenant_context,
+182:        await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
+243:    await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
+275:    await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
+```
+
+既存の update の試験は他テナントの担当者を断る試験（commit に届かない）で、成功する update と rotate の試験は無いため、足していない。
