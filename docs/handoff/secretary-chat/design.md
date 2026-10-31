@@ -36,14 +36,14 @@ ADR: [../../adr/ADR-1056-secretary-chat.md](../../adr/ADR-1056-secretary-chat.md
 - アプリ全体の管理者の印（`users.is_super_admin`）を持つのは id 1（テナント 1）と id 3（テナント 4）の 2 人だけ。この印は PO と担当エンジニアだけに付ける決まり（PO 2026-10-07）。
 
 決め: 次の 2 つが両方そろった人だけ使える。画面の印の出し分けと backend の許可の両方に同じ条件を入れる（画面だけでは守りにならない。r2 §D）。
-1. 会社の入口: `public.tenant_features` に `(1,'secretary_chat',true)` と `(4,'secretary_chat',true)` の行がある（`require_feature`、`dependencies.py:652-682`）。
-2. 人の入口: `is_super_admin` が true（`require_super_admin`、`dependencies.py:516-545`）。
+1. 会社の入口: `public.tenant_features` に `(1,'secretary_chat',true)` と `(4,'secretary_chat',true)` の行がある（`require_feature`、`backend/app/auth/dependencies.py:652-682`）。
+2. 人の入口: `is_super_admin` が true（`require_super_admin`、`backend/app/auth/dependencies.py:516-545`）。
 
 - 使う人を広げるときは、2 を新しい権限キーに置き換える（第2段の判断）。今は新しい権限キーを作らない（変更を小さくするため）。
 
 ## 5. 仕組みの流れ
 1. 画面: 利用者がチャットに書く → `POST /api/v1/assistant/messages`（本文 `{text}`）。
-2. backend（新しい router `assistant.py`）:
+2. backend（新しい router backend/app/routers/assistant.py）:
    - 守り: `get_current_tenant`、`require_feature("secretary_chat")`、`require_super_admin`。
    - `secretary-agent` に `{text, now}` を送る。`now` は日本時間の今の日時。会社の名前やデータは送らない。
 3. 容器 `secretary-agent`: Claude Code を次の形で 1 回だけ動かし、決まった形の JSON を返す（公式の根拠は r2 §A）。
@@ -55,9 +55,9 @@ ADR: [../../adr/ADR-1056-secretary-chat.md](../../adr/ADR-1056-secretary-chat.md
      - 予定: `{"kind":"event","title","start","end|null","is_all_day","location|null","description|null"}`（日時は `+09:00` 付きの ISO 8601）
      - わからない頼み: `{"kind":"unknown","reply"}`
    - `structured_output` 欄が無いときは `result` 欄の文字を JSON として読む。どちらでも、backend 側で型の検査（pydantic）に通らなければ「うまく読めませんでした」と返す（r2 §A の注意）。
-4. backend: 名前を、今の会社のデータから読み取りだけで探す（新しい service `secretary_resolve.py`。今のログインの会社の範囲だけを読む）。
-   - 会社: 会社名で探す（`companies.py:291-319` と同じ列）。候補を最大 5 件。
-   - 担当者: 決まった会社の中で名前で探す（`contacts.py:258-283` と同じ列）。候補を最大 5 件。
+4. backend: 名前を、今の会社のデータから読み取りだけで探す（新しい service backend/app/services/secretary_resolve.py。今のログインの会社の範囲だけを読む）。
+   - 会社: 会社名で探す（`backend/app/routers/companies.py:291-319` と同じ列）。候補を最大 5 件。
+   - 担当者: 決まった会社の中で名前で探す（`backend/app/routers/contacts.py:258-283` と同じ列）。候補を最大 5 件。
    - 品物: 品物の名前は文字のまま使う（`InvoiceItemInput` は `product_id` が無くても作れる。r2 §E）。
    - 単価: AI に決めさせない。利用者の文に値段があればその数、無ければ空欄。空欄があると「作る」を押せない。
    - 予定の終わりが無いときは、始まりの 1 時間後にする（下書きに見せる）。
@@ -114,12 +114,12 @@ ADR: [../../adr/ADR-1056-secretary-chat.md](../../adr/ADR-1056-secretary-chat.md
 | K6 空きメモリ 0.4GB 以上 | 試し中 10 秒ごとの記録の最小値 |
 
 ## 11. 進め方（1 段ずつ・反映→測定→次）
-- 段1（PR A・画面の部品だけ）: 右下の印 `FloatingActionButton` と吹き出し `ChatBubble` の金型を `components/` に登録する（`Xxx.tsx`・`Xxx.css`（`var()` だけ）・`Xxx.stories.tsx`。`docs/CC_UI_GOVERNANCE.md:5-19`）。PO の許可は 2026-11-01 の「必要な権限は全て」による。
+- 段1（PR A・画面の部品だけ）: 右下の印 `FloatingActionButton` と吹き出し `ChatBubble` の金型を `components/` に登録する（部品名.tsx・部品名.css（var() だけ）・部品名.stories.tsx。`docs/CC_UI_GOVERNANCE.md:5-19`）。PO の許可は 2026-11-01 の「必要な権限は全て」による。
 - 段2（PR B・危険な変更を含むので GO が要る）: backend の口・名前探し・容器・compose・deploy.yml・`tenant_features` の行を入れる migration・画面のチャットの窓・i18n（ja/en 同じキー）・試験。
 - 段3: 本番反映を 4 点で確かめる（届いた・動いた・形・指標）。ログイン情報が無い間は「準備ができていません」が出ることを確かめる。
 - 段4（PO がログイン情報を入れたあと）: K2〜K6 の試し。合格したら、Codex・Grok を 1 つずつ、または使う人を広げる判断を PO に聞く。
 
-## 12. 外部事例
+## 12. 外部・過去事例の参照と我々への応用
 - 使わない。この形（月額契約の CLI をアプリの中の秘書に使う）の、数字の付いた直接の事例を確かめていないため。数字は作らない。
 
 ## 維持の仕組み
