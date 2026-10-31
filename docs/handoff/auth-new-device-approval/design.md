@@ -1,6 +1,6 @@
 # 設計書: 知らない機械からのログインは、いつもの機械で許可するまで入れない
 
-- 状態: 設計案 第2版（Opus 作成）。第1版は審査で REVISE（下の「審査記録」）。第2版で指摘21件を反映し、ホーム画面のアプリへの通知（段W・D13）を足した
+- 状態: 設計案 第3版（Opus 作成）。第1版・第2版は審査で REVISE（下の「審査記録」）。第2版で指摘21件、第3版で要修正7件・軽微9件・判定の書き方2件を反映した
 - 対応 ADR: ADR-1055（本 PR で Proposed として起案）。ADR-1013（自社ログイン）の続き。ADR-1048（管理者だけの2段階ログイン・Proposed・未実装）の「機械を覚える」「番号で許可する」部分を全員向けに広げて取り込む。ADR-1016（即時反映）に人単位の宛先を足す改訂の注記を入れる
 - 合格の基準: docs/handoff/auth-new-device-approval/kgi.md（K1〜K9・PO 承認済 2026-11-01）
 - 事実の出どころ: docs/handoff/auth-new-device-approval/recon.md（基準 7e9155163）。本書で `recon:B` のように節を指す。第2版で足した事実は本書に行番号で書く（基準 7e9155163・作業枝 13ea58557 で読んだ）
@@ -43,11 +43,12 @@
 | D8 | 全部ログアウト | 共通関数 `revoke_user_sessions(db, user_id, except_family_id=None, device_id=None)` を1つ作り、既存の直書き2か所（`auth.py:524-529`・`:611-616`）もこれに置き換える。アクセストークンに組の id `sid` を入れ、失効した組の id を Redis `auth:fam_revoked:{sid}`（TTL 900秒）に置いて、毎回の確かめで拒否する。Redis が読めないときは、既存のブラックリスト（`backend/app/cache.py:403-418`・読めなければ通す）と同じく通す（危険は §7） | recon:C「専用の関数が無い」「アクセストークンは最長900秒生きる」 |
 | D9 | 場所の目安 | DB-IP IP to City Lite（CC BY 4.0・MMDB・毎月）を `maxminddb`（Apache-2.0・3.2.0）で読む。ファイルが無い・読めないときは「不明」。場所を出す画面とメールに「IP Geolocation by DB-IP」のリンクを付ける。IP は判定に使わない | 前段に中継なし＝X-Real-IP が本当の IP（DNS 確認・recon:D）。MaxMind はアカウントが要る |
 | D10 | 機械の種類 | User-Agent から自前の小さな関数で「iPhone・Safari」「Mac・Chrome」等を作る（依存を足さない） | 依存を増やさない |
-| D11 | 切り替え | 環境変数 `AUTH_DEVICE_APPROVAL=off\|enforce`（既定 off）。**off は今と全く同じ動き**（機械の登録も印の発行もしない）。enforce は PR-B で deploy.yml に入れる。off の間も表は作られ、管理用の命令での印の発行（D12）はできる | D4 の締切と合わせ、off の間に作られた組を「締切前の組」として一度だけ登録するため（審査 軽微1） |
+| D11 | 切り替え | 環境変数 `AUTH_DEVICE_APPROVAL=off\|enforce`（既定 off）。**off はログインの止め方が今と同じ**（機械の登録も印の発行もしない。D8 の `sid` と失効の確かめだけは off でも効く）。enforce は PR-B で deploy.yml に入れる。off の間も表は作られ、管理用の命令での印の発行（D12）はできる | D4 の締切と合わせ、off の間に作られた組を「締切前の組」として一度だけ登録するため（審査 軽微1） |
 | D12 | 点検専用の人（本番 user87） | 管理用の命令 `python -m app.cli.issue_trusted_device --user-id <id> --label prod-ui-check` で印を1つ発行し、表示せずに GitHub の秘密 `SMOKE_E2E_DEVICE_TOKEN` へ直接流す。点検はログイン前に `sa_device` を付ける | 例外を作らず全員に効かせる |
 | D13 | アプリを閉じているときの知らせ | ホーム画面のアプリへの通知（web push）を足す（段W）。iPhone はホーム画面に追加したアプリで iOS 16.4 以降・本人が「通知を許可」を押したときだけ（WebKit 公式・kgi.md:39）。許可していない機械は、画面（SSE）とメールで知らせる | K2「いつものスマホかパソコンに1分以内」を、アプリを閉じていても満たすため（審査で指摘・kgi.md:39 の通知手段） |
 | D14 | 予備の合言葉の形 | 1個 = 見出し4文字＋本体10文字（Crockford base32・本体は50ビット）を `ABCD-EFGHJ-KMNPQ` の形で見せる。DB は見出し（その人の中で一意）と本体の argon2（既存 `hash_password`）を置く。照合は見出しで1件に絞ってから argon2 を1回だけ。間違いは依頼の `failed_code_attempts`（5回で依頼を `rejected`）と、口座の失敗回数 `_count_login_failure`（`auth.py:283-304`）の両方に数える | 審査 要修正3。総当たりと照合の重さを抑える。合言葉もパスワードと同じ「推測される鍵」として口座の停止に数える |
-| D15 | 同時の操作 | 決める操作は1行の条件付き更新で1回だけ通す。approve/reject は `UPDATE ... SET status=... WHERE id=:id AND status='pending' AND expires_at>now() RETURNING`。poll の発行は `UPDATE ... SET status='completed' WHERE id=:id AND status='approved' RETURNING` が1行返したときだけ。承認・拒否する側は、組に取り消されていない `trusted_device_id` があることを同じ確かめの中で求める（無ければ 403） | 審査 要修正4。二重発行・取り消された機械からの承認を防ぐ |
+| D15 | 同時の操作と本人の確かめ | 決める操作は1行の条件付き更新で1回だけ通す。approve/reject は `UPDATE public.auth_login_requests SET status=... WHERE id=:id AND user_id=:current_user_id AND status='pending' AND expires_at>now() RETURNING id`（**本人の依頼だけ**）。1行も返らなければ、id が無い・他人の依頼・決まり済みのどれでも 404 `not_found`（他人の依頼の有無を漏らさない）。poll の発行は `UPDATE ... SET status='completed' WHERE id=:id AND status='approved' RETURNING` が1行返したときだけ（poll は `sa_login_pending` の hash で依頼を引くので本人の確かめはこの Cookie）。`GET pending` は `WHERE user_id=:current_user_id AND status='pending' AND expires_at>now()`。承認・拒否する側は D16 の `sid` の組に取り消されていない `trusted_device_id` があることを求める（無ければ 403 `device_not_trusted`）。違う番号は 200 `{status:"rejected", reason:"wrong_number"}` | 第1版 要修正4・第2版 要修正1。二重発行・他人の依頼の操作・取り消された機械からの承認を防ぐ |
+| D16 | 承認する側の組の取り方 | アクセストークンの `sid`（D8）を唯一の出どころにする。`backend/app/auth/dependencies.py` に `get_current_session(request, cred) -> CurrentSession(user, sid, trusted_device_id)` を足す（`get_current_user` の後に自社トークンの claims を `decode_access_token` で読み直し、`sid` で `auth_refresh_tokens` の組の `trusted_device_id`（取り消されていない最新の行）を引く）。`sid` が無いトークン（本便より前の発行）は 403 `session_upgrade_required`（画面は更新を1回して再試行する）。承認・拒否・機械の一覧の「この機械」・機械の取り消し・購読の登録はこの依存を使う | 第2版 要修正2。「押した機械以外の全部のログアウト」で残す組を一義にする |
 
 ## 4. 変更内容（段ごと）
 
@@ -63,15 +64,23 @@
 - 守りの検査に新しい表を登録する
   - `.github/workflows/migration-guard.yml:224` の `PUBLIC_TABLES` に `user_trusted_devices auth_login_requests user_recovery_codes` を足す（段W で `user_push_subscriptions`）
 - クラウドの相談係 AI に見せる列の分類（ai_cloud）を、同じ PR で3か所そろえて直す（審査 要修正7）
-  - 正本 `migrations/20261024_100300_create_ai_cloud_views.sql` の INSERT（:13〜。`auth_events` は :48-50）に、新しい表の全列と `auth_events` の新しい列を足す。hash・IP・UA・場所・label・candidates・match_number・code_id・decided_note は `mask`、id・時刻・status・created_via・reason・is_new_device・件数は「そのまま」
-  - 元の表 `docs/handoff/cloud-case-ai/stage1-column-class.tsv`（`auth_events` は :66-70）に同じ行を足す
+  - 決まり（実物）: 列名が `_DENY_RE`（`backend/tests/ops/test_ai_cloud_views.py:36`・`migrations/20261024_100000_create_ai_cloud_meta.sql` の deny と同じ）に当たる列は自動で外れるので行を足さない（`token_hash`・`pending_token_hash`・`device_token_hash`・`code_hash`）。`_PASS_TYPES`（:43-46・int・bool・timestamptz・uuid など）の列は行が要らない。それ以外の型の列は行が要る。1列1行（SQL は表ごとに ARRAY でまとめ、unnest で1列1行になる `20261024_100300:13-14`）
+  - 足す行（全部 `mask`・理由は空。allow は使わない）
+    | 表 | 列 |
+    |---|---|
+    | user_trusted_devices | label・user_agent・created_via・created_ip・created_location・last_ip・last_location（7） |
+    | auth_login_requests | status・match_number・candidates・label・user_agent・ip・location・decided_via・decided_note・reject_reason（10） |
+    | user_recovery_codes | code_id（1） |
+    | auth_events | reason（1） |
+  - 合計19行。正本 `migrations/20261024_100300_create_ai_cloud_views.sql` の INSERT（:13〜）に表ごとの1行で足し、冒頭の説明（:3）の「1035 行」を「1054 行」に直す
+  - 元の表 `docs/handoff/cloud-case-ai/stage1-column-class.tsv`（`auth_events` は :66-70）に同じ19行を足す（列の型の欄は character varying または character）
   - `scripts/migration-guard/reference-allowlist.tsv:7` の sha256 を直した後の値に更新する
-  - 試験 `backend/tests/ops/test_ai_cloud_views.py:477` の件数 1035 を、足した行の数だけ増やす（T10 `:519` が通ること）
+  - 試験 `backend/tests/ops/test_ai_cloud_views.py:477` の `1035` を `1054` にする（T10 `:519` が通ること）。`docs/handoff/cloud-case-ai/stage1-column-class.tsv` は1036行→1055行（見出し1行＋1054行）
   - 本便の migration は 20261024_100300 より後に流れ、`scripts/run_all_migrations.sh:233-260` の EXIT trap で見え方が作り直される
 - 試験の表定義を4か所そろえる（審査 要修正9）
   - `backend/tests/conftest.py:320-321`（public の名前を外す置き換え）に新しい表3つを足す
   - `backend/tests/conftest.py:1341-1343` の SQLite 版に新しい表3つと `trusted_device_id` 列を足す
-  - `backend/tests/rls_bootstrap.py` に新しい表3つを足す
+  - `backend/tests/rls_bootstrap.py` は**直さない**。理由: この起動の一覧（:14-34）には users・auth_refresh_tokens・auth_events を作る migration が1つも無く、新しい表だけを足すと FK の先が無い。新しい列の分類の漏れは、T10 ではなく `test_ai_cloud_views.py` に足す試験（本便の migration を流した PG で、上の19列に `column_class` の行があることを名前で確かめる）で守る
   - `.github/workflows/migration-test.yml:1338-1352` の auth_events の最小定義に新しい列を足す
 
 #### A-2 backend
@@ -86,33 +95,42 @@
 - `backend/app/auth/recovery_codes.py`（D14）: `generate(db, user_id) -> list[str]`・`verify(db, user_id, code) -> id|None`・`remaining(db, user_id)`
 - `backend/app/auth/geo.py`: `lookup(ip) -> str|None`。`GEOIP_DB_PATH`（既定 `/geoip/dbip-city-lite.mmdb`）を `maxminddb.open_database(path, maxminddb.Mode.MMAP)` で開き、ファイルの更新時刻が変わったら開き直す。私用の IP・失敗は None。都市・地域・国を「Tokyo, Japan」の形（名前は ja があれば ja、無ければ en）。`backend/requirements.txt` に `maxminddb==3.2.0`
 - 場所の元データ（審査 要修正12）: Celery の月次作業 `refresh_geoip_db`（毎月3日）を **celery-worker で動かす**。`https://download.db-ip.com/free/dbip-city-lite-YYYY-MM.mmdb.gz` を名前付き volume `geoip` に落とし、一時ファイル→rename で入れ替える。`docker-compose.yml` で volume `geoip` を celery-worker（:219）には書き込みで、backend には読み取り専用 `:ro` で `/geoip` に付ける。celery-beat（:314）には付けない。起動時にファイルが無ければ worker が1回だけ取りに行く。落とせなくても認証は止めない
-- `backend/app/auth/self_tokens.py`: `create_access_token` に `sid`（組の id）を足す。`issue_refresh_token` に `trusted_device_id` 引数。`rotate_refresh_token` は組の `trusted_device_id` を引き継ぎ、返り値に入れる
+- `backend/app/auth/self_tokens.py`（変更前→変更後。呼び出し元は `auth.py:357,381,630,988` と `self_tokens.py:240` の5か所で全部）
+  - `create_access_token(user_id, email, amr)` → `create_access_token(user_id, email, amr, sid: str | None = None)`。`sid` があれば claims に入れる（既存の試験 `test_viewer_api.py:183` 等は引数を変えずに通る）
+  - `issue_refresh_token(db, user_id, user_agent, family_id=None, family_created_at=None) -> tuple[str, datetime]` → 引数に `trusted_device_id: int | None = None` を足し、INSERT の列に入れる。戻り値の形は変えない。新しい組を作る呼び出し元（`auth.py:357,630,988`）は、先に `family_id = str(uuid.uuid4())` を作って渡し、その値を `sid` に使う
+  - `rotate_refresh_token(...) -> tuple[int, str, datetime] | None` → `RotatedRefresh(user_id, raw, expires_at, family_id, family_created_at, trusted_device_id) | None`（NamedTuple）。SELECT と RETURNING に `trusted_device_id` を足し、新しい行へ引き継ぐ。呼び出し元は `auth.py:381` だけ
+- `backend/app/routers/auth.py:233` の `_issue_session_tokens(response, raw, expires_at, user_id, email, amr)` → 末尾に `sid: str` を足し（必須）、`create_access_token(..., sid=sid)` に渡す。呼び出し元 `:361,:392,:634,:990` は全部 `sid` を渡す
 - `backend/app/auth/dependencies.py`: ブラックリスト確認（①）の直後、キャッシュ（②）より前に、自社トークンなら署名を確かめて `sid` を取り、`auth:fam_revoked:{sid}` があれば 401。`sid` の無い古いトークンは最長900秒で切れるので通す
 - `backend/app/routers/auth.py`
-  - login（:307-366）: パスワードが正しい後、`last_login` 更新の前に判定。(1) `AUTH_DEVICE_APPROVAL=off` → 今まで通り（何も足さない）。(2) 印がいつもの機械 → 発行し `trusted_device_id` を付け、印 Cookie を延長。(3) D5 に当たる → 登録して発行。(4) それ以外 → `auth_login_requests` を作り、Cookie `sa_login_pending`（path `/api/v1/auth/login-requests`・30分・HttpOnly・Secure・Strict）を付けて、**`JSONResponse(status_code=202)`** で `{status:"device_approval_required", match_number, expires_in, has_trusted_device, has_recovery_codes}` を返す（`response_model=SelfTokenResponse` は 200 のまま残し、OpenAPI には `responses={202: ...}` で書く）。トークンは出さない。1人1時間に依頼は5件まで（超えたら 429 `too_many_requests`）。知らせ（下）を送る。`last_login` は入れた時だけ更新
+  - login（:307-366）: パスワードが正しい後、`last_login` 更新の前に判定。(1) `AUTH_DEVICE_APPROVAL=off` → 今まで通り（機械の登録はしない。`sid` だけは入る）。(2) 印がいつもの機械 → 発行し `trusted_device_id` を付け、印 Cookie を延長。(3) D5 に当たる → 登録して発行。(4) それ以外 → `auth_login_requests` を作り、Cookie `sa_login_pending`（path `/api/v1/auth/login-requests`・30分・HttpOnly・Secure・Strict）を付けて、**`JSONResponse(status_code=202)` を作り、その応答オブジェクト自身に `set_cookie` する**（FastAPI は引数の `response` に付けた Cookie を、JSONResponse を直接返すと捨てる。既存の例は refresh の失敗 `auth.py:382-386` が返す応答に `_clear_refresh_cookie` を付けている）。中身は `{status:"device_approval_required", match_number, expires_in, has_trusted_device, has_recovery_codes}` を返す（`response_model=SelfTokenResponse` は 200 のまま残し、OpenAPI には `responses={202: ...}` で書く）。トークンは出さない。1人1時間に依頼は5件まで（超えたら 429 `too_many_requests`）。知らせ（下）を送る。`last_login` は入れた時だけ更新
   - refresh（:369-401）: 組の機械が取り消されていたら 401。組に機械が無いときは D4。あれば `touch_device`
   - passkey verify（:901-995）: enforce のときだけ D3。知らない機械なら `passkey` で登録しメールで知らせる
-  - password reset confirm（:524-529）・password change（:611-616）: 直書きを `revoke_user_sessions` に置き換え（動きは同じ）。change の新しい組には今の機械を結び付ける
+  - password reset confirm（:524-529）・password change（:611-616）: 直書きを `revoke_user_sessions` に置き換え（動きは同じ）。change の新しい組には、今の組（D16 の `sid`）の `trusted_device_id` を引き継ぐ。今の組に機械が無ければ、D4 と同じ条件（締切前の組）で今の `sa_device` を登録して結び付け、締切後なら機械なしの組にせず 403 `device_not_trusted`
   - logout（:165-190）: 変更なし（印は残す＝次から聞かれない）
   - 新しい口（すべて `/api/v1/auth/` 配下＝nginx の login 枠 `nginx/nginx.conf:6,145` の中）
     - `POST /auth/login-requests/poll`（待つ機械・`sa_login_pending`）: pending→`{status:"pending"}`、approved→D15 の条件付き更新で `completed` にできたときだけ、印を登録（`device_approval`/`admin_approval`）し発行。rejected/expired→`{status}` と Cookie 消去。画面は15秒ごと
     - `POST /auth/login-requests/recovery`（待つ機械）`{code}`: D14。合えば合言葉を使用済みにし、印を登録（`recovery_code`）して発行
     - `GET /auth/login-requests/pending`（いつもの機械）: 自分宛ての pending（id・機械の種類・場所・時刻・候補3つ）
-    - `POST /auth/login-requests/{id}/approve` `{number}`（いつもの機械）: D15。正しければ approved、違えば rejected（`wrong_number`）
-    - `POST /auth/login-requests/{id}/reject`（いつもの機械）: D15。rejected ＋ `revoke_user_sessions(except_family_id=今の組)`
-    - `GET /auth/devices`・`DELETE /auth/devices/{id}`（K8）
+    - `POST /auth/login-requests/{request_id}/approve` `{number}`（いつもの機械・D16）: D15。正しければ 200 approved、違えば 200 rejected（`wrong_number`）
+    - `POST /auth/login-requests/{request_id}/reject`（いつもの機械・D16）: D15。rejected ＋ `revoke_user_sessions(except_family_id=今の組)`
+    - `GET /auth/devices`・`DELETE /auth/devices/{device_id}`（K8・本人の機械だけ。他人の id は 404）
     - `GET /auth/recovery-codes/status`（残り数）・`POST /auth/recovery-codes`（10個を作って1回だけ返す。古い未使用は無効に）
   - 状態を変える口（approve・reject・recovery・poll・devices DELETE・recovery-codes POST）は `_require_app_origin`（:215）を通す
-- 管理者（K7・審査 要修正5）: 新しいファイル `backend/app/routers/super_admin_login_requests.py`。既存の決まり（`backend/app/routers/super_admin_tenants.py:38` の `@router.delete("/super-admin/tenants/{tenant_id}")`、`backend/app/main.py:654` の `prefix="/api/v1", tags=["super-admin"]`）に合わせ、`GET /super-admin/login-requests?status=pending`・`POST /super-admin/login-requests/{id}/approve` `{note}`。`require_super_admin`（`dependencies.py:516`）と `_require_app_origin` を通す（`_require_app_origin` は `backend/app/auth/origin.py` に移して auth.py と両方から読む）。自分の依頼は 403。`note`（本人確認の方法・必須・200字まで）を `decided_note` に、許可した人を `decided_by_user_id` に残し、`auth_events` に `reason='approved_admin'`。本人確認の手順は §9
+- 管理者（K7・審査 要修正5）: 新しいファイル `backend/app/routers/super_admin_login_requests.py`。既存の決まり（`backend/app/routers/super_admin_tenants.py:38` の `@router.delete("/super-admin/tenants/{tenant_id}")`、`backend/app/main.py:654` の `prefix="/api/v1", tags=["super-admin"]`）に合わせ、`GET /super-admin/login-requests?status=pending`・`POST /super-admin/login-requests/{request_id}/approve` `{note}`。`require_super_admin`（`dependencies.py:516`）と `_require_app_origin` を通す（`_require_app_origin` は `backend/app/auth/origin.py` に移して auth.py と両方から読む）。自分の依頼は 403。`note`（本人確認の方法・必須・200字まで）を `decided_note` に、許可した人を `decided_by_user_id` に残し、`auth_events` に `reason='approved_admin'`。本人確認の手順は §9
 - 知らせ（K2）
   - 即時（ADR-1016 の SSE に人単位の宛先を足す・審査 要修正6）
     - `backend/app/realtime/topics.py`: `SCOPE_USER = "user"`、話題 `TOPIC_AUTH_LOGIN_REQUEST = "auth.login_request"`、人宛ての話題の表 `USER_TOPICS: dict[str,str] = {TOPIC_AUTH_LOGIN_REQUEST: SCOPE_USER}`
     - `backend/app/realtime/publisher.py:32-40` の `_channel_for` に `scope=="user"` → `rt:u:{user_id}` を足し、`publish_change`・`publish_change_sync` に `user_id` 引数を足す。中身は `_payload`（:42）のまま topic と origin だけ（依頼の id も入れない）
-    - `backend/app/realtime/hub.py:28-31` の `Connection` に `user_id: int` を足し、`_targets`（:34-46）で `rt:u:` は `user_id` が同じときだけ真
-    - `backend/app/routers/realtime_events.py:80` で `Connection(..., user_id=current_user.id)` を渡す
+    - `backend/app/realtime/hub.py:27-31` の `Connection`（`@dataclass(eq=False)`・`queue` に既定値あり）に `user_id: int | None = None` を `queue` より前に足し、`_targets`（:34-46）で `rt:u:` は `conn.user_id` が同じときだけ真（None なら偽）。既存の試験 `backend/tests/test_realtime_middleware.py:164` の `_conn` はそのまま通る
+    - `backend/app/routers/realtime_events.py:80` で `Connection(tenant_id=tenant_id, is_super_admin=is_super_admin, user_id=user_id)` を渡す（`user_id` は :73 の変数）
     - 送る時: 依頼を作った時・決まった時（approved/rejected/expired）。決まった時にも送るので、ほかのいつもの機械の小窓も閉じる（審査 軽微5）
     - `USER_TOPICS` を `backend/tests/test_realtime_topics.py:129-133` の一致の確かめと `frontend` の topics.ts に入れる
-    - 新しい口（上の全部と管理者の2つ）を `NO_SIGNAL_ROUTES`（`topics.py:86〜`）に理由付きで並べる。理由は「人宛ての合図は口の中で直接送る（書き込みの口の自動合図にしない）」
+    - `NO_SIGNAL_ROUTES`（`topics.py:86〜`）には**書き込みの口だけ**を並べる（`backend/tests/test_realtime_topics.py:19` の `_write_routes` は POST/PUT/PATCH/DELETE だけを集め、`:108` が表にある GET を「存在しない道」として落とすため）。理由は「人宛ての合図は口の中で直接送る（書き込みの口の自動合図にしない）」。並べる道は次の全部（段W の3つは PR-W で足す）
+      - `("POST", "/api/v1/auth/login-requests/poll")`・`("POST", "/api/v1/auth/login-requests/recovery")`・`("POST", "/api/v1/auth/login-requests/{request_id}/approve")`・`("POST", "/api/v1/auth/login-requests/{request_id}/reject")`
+      - `("DELETE", "/api/v1/auth/devices/{device_id}")`・`("POST", "/api/v1/auth/recovery-codes")`
+      - `("POST", "/api/v1/super-admin/login-requests/{request_id}/approve")`
+      - 段W: `("POST", "/api/v1/auth/push-subscriptions")`・`("DELETE", "/api/v1/auth/push-subscriptions/{subscription_id}")`
+      - パスの引数名は上の名前で作る（表とルートの文字列を一致させるため）
     - ADR-1016 に「人単位の宛先 `rt:u:` を足した（ADR-1055）」の改訂の注記を足す
   - メール: `backend/app/services/auth_mail.py` に `send_new_device_mail`（`_send_reset_mail` :97 と同じ SMTP）。時刻（日本時間）・機械の種類・場所の目安・「心当たりがなければ、いつもの機械でアプリを開いて『私ではない』を押し、パスワードを変えてください」。**リンクを入れない**。DB-IP の表示を1行入れる。送信は BackgroundTasks（失敗しても依頼は作る）
 - 記録（K9・D7）: 各口で `request.state.auth_audit = {"user_id", "reason", "is_new_device", "event_type"(任意)}`。`backend/app/middleware/audit.py` の認証の記録（:225-254）で、`request.state.auth_audit` があればその値を INSERT に足し、`event_type` があればそれを使う（202 は `auth_pending`）。reason は `ok`・`bad_password`・`unknown_user`・`inactive`・`locked`・`rate_limited`・`device_approval_required`・`approved_device`・`approved_admin`・`approved_recovery`・`rejected`・`wrong_number`・`expired`・`recovery_code_wrong`・`passkey_new_device`・`first_login`・`bootstrap`。パスワード・合言葉・Cookie の値は書かない
@@ -121,7 +139,7 @@
 
 #### A-3 frontend（金型だけを使う。`docs/CC_UI_GOVERNANCE.md`・ADR-144・ADR-067。全文字は `t()`・ja/en 同じキー）
 
-- `frontend/src/lib/auth/selfAuth.ts`（審査 要修正10）: 今の `postAuth`（:95）と `selfLogin`（:104-105）は 202 も成功として受け、トークンの無い応答を `adoptAccessToken` に渡してしまう。`selfLogin` の戻り値を `{kind:"ok"} | {kind:"approval_required", matchNumber, expiresIn, hasTrustedDevice, hasRecoveryCodes}` にし、202 を見分ける。呼び出し元を全部直す（作業時に `grep -rn "selfLogin(" frontend/src` で全部挙げる）
+- `frontend/src/lib/auth/selfAuth.ts`（審査 要修正10）: 今の `postAuth`（:95）と `selfLogin`（:104-105）は 202 も成功として受け、トークンの無い応答を `adoptAccessToken` に渡してしまう。`selfLogin` の戻り値を `{kind:"ok"} | {kind:"approval_required", matchNumber, expiresIn, hasTrustedDevice, hasRecoveryCodes}` にし、202 を見分ける。呼び出し元は `frontend/src/contexts/AuthContext.tsx:128` の `signIn` だけ（`grep -rn "selfLogin(" frontend/src` で確かめ、他にあれば止めて報告）。`signIn` は戻り値をそのまま返し、ログイン画面は `approval_required` のとき待ちの表示に切り替える。行番号は `postAuth` が :88、`selfLogin` が :103
 - ログイン画面 `frontend/src/pages/login/LoginPage.tsx`: 待ちの表示に切り替える（番号を大きく・残り時間・「予備の合言葉で入る」・「いつもの機械も合言葉も無いとき」の説明）。15秒ごとに poll。poll が 429 を受けたら「少し待ってから続けます」を出し、30秒ごとに下げる（審査 軽微3）。部品は既存の Stack・Button・TextFieldControl・TextLink・Modal
 - いつもの機械の小窓 `frontend/src/features/auth/LoginApprovalWatcher.tsx`: **`DesktopShell.tsx:204` と `MobileShell.tsx:198` の両方の RealtimeProvider の内側**に置く（審査 要修正11）。SSE の `auth.login_request`・画面を開いたとき・つなぎ直し・タブに戻ったときに `GET pending`（5秒に1回までにまとめる）。Modal に機械の種類・場所・時刻、番号ボタン3つ、「私ではない」（danger）。pending が0件になったら閉じる。拒否後はパスワード変更への案内
 - アカウント設定 `frontend/src/pages/account-settings/SecuritySection.tsx` の並び: 「ログインしている機械」（DataTable・「この機械」印・ログアウト ConfirmModal）と「予備の合言葉」（残り数・作り直し ConfirmModal・10個を1回だけ表示してコピー）。場所の列の下に DB-IP の表示
@@ -133,16 +151,16 @@
 
 - 部品: `pywebpush==2.5.0`（MPL-2.0・2026-08-29 公開・PyPI で確認。Context7 は月の上限で使えず公式を直接確認）
 - 鍵: VAPID の鍵の組を1回作り、本番の .env に `WEBPUSH_VAPID_PRIVATE_KEY`（秘密）・`WEBPUSH_VAPID_PUBLIC_KEY`・`WEBPUSH_VAPID_SUBJECT` を置く。GitHub の秘密に `gh secret set` で直接流し（値は表示しない）、deploy.yml の .env 書き出し（`deploy.yml:364-378` の `NAME='${{ secrets.NAME }}'` の形）と古い行の削除（`:318-320`）に3行ずつ足す。未設定なら通知を送らず、画面とメールだけで動く
-- migration: `public.user_push_subscriptions`（id / user_id FK CASCADE / trusted_device_id FK CASCADE（いつもの機械にだけ送る） / endpoint TEXT UNIQUE / p256dh TEXT / auth TEXT / created_at / last_success_at / failed_count SMALLINT / revoked_at）。全列 COMMENT。`PUBLIC_TABLES` に足す。ai_cloud の分類3か所と試験の件数を段A と同じやり方で足す（endpoint・p256dh・auth は `mask`）。試験の表定義4か所にも足す
-- backend: `POST /auth/push-subscriptions`（いつもの機械のログイン中だけ・今の機械に結び付け）・`DELETE /auth/push-subscriptions/{id}`・`GET /auth/push-public-key`。依頼の作成時に、その人のいつもの機械（取り消されていない）の購読へ送る。中身は「新しい機械からのログインの許可依頼」と機械の種類・場所・時刻だけ（番号は送らない）。404/410 の返事で購読を取り消す。送信は BackgroundTasks（失敗しても依頼は作る）。新しい口は `NO_SIGNAL_ROUTES` に理由付きで足し、状態を変える口は `_require_app_origin` を通す
-- frontend: `frontend/public/manifest.webmanifest`（name・icons は既存の `apple-touch-icon.png`・`display: standalone`・`start_url: /`）、`frontend/index.html` に manifest の link、`frontend/public/sw.js`（push で通知を出す・通知を押すとアプリを開き、開いた画面は LoginApprovalWatcher が依頼を出す。キャッシュはしない＝今の配信の動きを変えない）。アカウント設定の「ログインしている機械」の上に「この機械に通知を出す」（金型 `frontend/src/components/Toggle.tsx`）。iPhone でホーム画面に追加していないときは、その手順を `t()` の文で出す
+- migration: `public.user_push_subscriptions`（id / user_id FK CASCADE / trusted_device_id FK CASCADE（いつもの機械にだけ送る） / endpoint TEXT UNIQUE / p256dh TEXT / auth TEXT / created_at / last_success_at / failed_count SMALLINT / revoked_at）。全列 COMMENT。`PUBLIC_TABLES` に足す。ai_cloud の分類3か所と試験の件数を段A と同じやり方で足す（endpoint・p256dh・auth の3行を `mask`・理由は空。件数は 1054→1057、tsv は 1055→1058 行。合わなければ止めて報告）。試験の表定義4か所にも足す
+- backend: `POST /auth/push-subscriptions`（いつもの機械のログイン中だけ・今の機械に結び付け）・`DELETE /auth/push-subscriptions/{subscription_id}`（本人の購読だけ・他人の id は 404）・`GET /auth/push-public-key`。依頼の作成時に、その人のいつもの機械（取り消されていない）の購読へ送る。中身は「新しい機械からのログインの許可依頼」と機械の種類・場所・時刻だけ（番号は送らない）。404/410 の返事で購読を取り消す。送信は BackgroundTasks（失敗しても依頼は作る）。書き込みの口（POST と DELETE の2つ）だけを `NO_SIGNAL_ROUTES` に理由付きで足し（GET は足さない）、状態を変える口は `_require_app_origin` を通す
+- frontend: `frontend/public/manifest.webmanifest`（name・icons は既存の `apple-touch-icon.png`・`display: standalone`・`start_url: /`）、`frontend/index.html` に manifest の link、`frontend/public/sw.js`（push で通知を出す・通知を押すとアプリを開き、開いた画面は LoginApprovalWatcher が依頼を出す。キャッシュはしない＝今の配信の動きを変えない）。アカウント設定の「ログインしている機械」の上に「この機械に通知を出す」（金型 `frontend/src/components/Toggle.tsx`）。iPhone でホーム画面に追加していないときは、その手順を `t()` の文で出す。ホーム画面のアプリは Safari と Cookie の置き場が別になることがある（【未確認】）。別なら、ホーム画面のアプリは最初に1回だけ「新しい機械」として許可が要る。設計はそのまま動く（新しい機械として扱うだけ）。案内文に「ホーム画面に追加したら、最初に一度だけ許可が要ることがあります」と入れる
 - 試験: pytest で依頼1件につき送信関数が購読ごとに1回・410 で取り消し・取り消された機械の購読へは送らない。Vitest で購読の切り替えの表示条件
 - 本番の確かめ: PO の機械での通知の目視は、PO が「通知を許可」を押した後になる（自動では確かめられない）。自動で確かめるのは送信の記録（last_success_at）
 
 ### 段B（PR-B・deploy.yml を含む＝危険 PR・GO 要。段A・段W の本番反映と B-0 の後）
 
 - B-0（本番作業・PR なし）: 本番 backend で管理用の命令を実行し、出力を画面に出さずに `gh secret set SMOKE_E2E_DEVICE_TOKEN` へ流す。値は記録しない。`user_trusted_devices` の user87・`created_via='cli'` の件数（1行）だけ reader 鍵で確かめる
-- B-1 `tests/prod-check/login.ts`（ログインの1か所の置き場・審査 要修正13）: `SMOKE_E2E_DEVICE_TOKEN` があれば、ログイン前に `context.addCookies([{name:"sa_device", value, domain:"app.salesanchor.jp", path:"/api/v1/auth", secure:true, httpOnly:true, sameSite:"Strict"}])` を呼ぶ。呼び出し元の `tests/prod-check/fixtures.ts`（newContext）と `page-speed.spec.ts:480` の両方がこれを通る。`.github/workflows/prod-ui-check.yml:104-105,153-154` の env に1行ずつ足す
+- B-1 `tests/prod-check/login.ts`（ログインの1か所の置き場・審査 要修正13）: `login(page, ...)`（:35）の最初で、`SMOKE_E2E_DEVICE_TOKEN` があれば `page.context().addCookies([{name:"sa_device", value, url: new URL("/api/v1/auth", BASE_URL).toString(), secure:true, httpOnly:true, sameSite:"Strict"}])` を呼ぶ。`url` で付けるので Cookie は画面と同じ host（既定 `https://app.salesanchor.jp`・:11）の path `/api/v1/auth` になる。画面は認証を同じ host の `/api/v1/auth`（`frontend/src/lib/auth/selfAuth.ts:12` の相対パス）に送り、本物の `sa_device` も同じ host・同じ path に付くので一致する。受入で「Cookie を付けたログインが 200」を確かめる。呼び出し元の `tests/prod-check/fixtures.ts`（newContext）と `page-speed.spec.ts:480` の両方がこれを通る。`.github/workflows/prod-ui-check.yml:104-105,153-154` の env に1行ずつ足す
 - B-2 `.github/workflows/deploy.yml:371` 付近の .env 書き出しに `AUTH_DEVICE_APPROVAL='enforce'` と `AUTH_DEVICE_BOOTSTRAP_CUTOFF='<固定値 UTC>'`（D4）を足し、`:318-320` の古い行の削除にも足す。docker-compose.yml の backend env の `AUTH_PROVIDER`（:134-136）の並びに `AUTH_DEVICE_APPROVAL=${AUTH_DEVICE_APPROVAL:-off}`・`AUTH_DEVICE_BOOTSTRAP_CUTOFF=${AUTH_DEVICE_BOOTSTRAP_CUTOFF:-}`（段A で入れておく。空なら D4 の登録をしない）
 - 反映が締切までに終わらなかったら、締切を直す PR を出し直す（締切を過ぎた状態で enforce を始めない）
 
@@ -156,17 +174,18 @@
 
 | 基準 | 検証方法 |
 |---|---|
-| K1 | pytest: enforce で印なし login → 202・トークン無し・`auth_events.event_type='auth_pending'`・reason `device_approval_required`。Vitest: `selfLogin` が 202 で `approval_required` を返し、トークンを取り込まない。本番: 受入の自動試験（新しいブラウザで user87 のログイン）→ 202 と画面の文言をスクリーンショット |
-| K2 | pytest: 依頼で SSE 宛先 `rt:u:{id}` に1件（別の人の接続には届かない）・メール送信関数が1回（リンクなし・時刻・機械・場所）・購読へ送信関数が1回。本番: 印付きのブラウザで依頼から pending 表示までの秒数を計測（60秒以内）。web push は送信の記録 `last_success_at` が依頼の時刻から60秒以内 |
-| K3 | pytest: 正しい番号で approve → poll がトークンと印を返す。同じ依頼に poll を2回同時に送っても発行は1回。取り消された機械の組からの approve は 403。本番: 受入試験で待つ側が入れる |
-| K4 | pytest: reject → poll が rejected、押した組以外の組が全部 revoked、他の組の古いアクセストークンが次の要求で 401。approve と reject を同時に送ると片方だけ通る。本番: 3つ目のブラウザが 401 になる |
+| K1 | pytest: enforce で印なし login → 202・トークン無し・応答の Set-Cookie に `sa_login_pending`（HttpOnly・Secure・SameSite=Strict・path `/api/v1/auth/login-requests`）がある・`auth_events.event_type='auth_pending'`・reason `device_approval_required`。Vitest: `selfLogin` が 202 で `approval_required` を返し、トークンを取り込まない。本番: 受入の自動試験（新しいブラウザで user87 のログイン）→ 202 と画面の文言をスクリーンショット |
+| K2 | pytest: 依頼で SSE 宛先 `rt:u:{id}` に1件（別の人の接続には届かない）・メール送信関数が1回（リンクなし・時刻・機械・場所）・購読へ送信関数が1回。本番: 印付きのブラウザで依頼から pending 表示までの秒数を計測（60秒以内）＝○×。web push の「届いて出た」は、PO の機械で「通知を許可」を押してもらった後に1回試す（自動の確かめは送り先が 201 を返し `last_success_at` が依頼の時刻から60秒以内まで）。PO の目視が済むまで web push の部分は「判定待ち」とし、K2 全体の ○ は画面とメールで判定する |
+| K3 | pytest: 正しい番号で approve → poll がトークンと印を返す。別の人の依頼 id の approve は 404・状態は変わらない。`sid` の無いトークンは 403。同じ依頼に poll を2回同時に送っても発行は1回。取り消された機械の組からの approve は 403。本番: 受入試験で待つ側が入れる |
+| K4 | pytest: 別の人の依頼 id の reject は 404・誰もログアウトしない。reject → poll が rejected、押した組以外の組が全部 revoked、他の組の古いアクセストークンが次の要求で 401。approve と reject を同時に送ると片方だけ通る。本番: 3つ目のブラウザが 401 になる |
 | K5 | pytest: 許可済みの印で login → 200。D4 の境界（締切1秒前の組は登録・ちょうどは 401）。本番: K3 のブラウザで再ログインして 200 |
 | K6 | pytest: 合言葉で入れる・同じ合言葉2回目は失敗・10個作られる・生の値は DB に無い・間違いで口座の失敗回数が1増える。本番: user87 で作り直し→1個で入る→同じ値で失敗 |
-| K7 | pytest: 管理者の口で approve → 待つ側が入れる・`decided_by_user_id`・`decided_note`・`auth_events.reason='approved_admin'`・自分の依頼は 403・super admin 以外 403・note 無しは 422・出どころ違いは 403。本番: user87 の依頼を作り、PO のブラウザ（super admin でログイン済みのもの）で管理画面から許可し、reader 鍵で `decided_by_user_id` と `auth_events` を確かめる。PO のブラウザが使えないときは、本番の 403 の確かめまでにして、許可の目視は「PO の目視待ち」として残す |
+| K7 | pytest: 管理者の口で approve → 待つ側が入れる・`decided_by_user_id`・`decided_note`・`auth_events.reason='approved_admin'`・自分の依頼は 403・super admin 以外 403・note 無しは 422・出どころ違いは 403。本番: user87 の依頼を作り、PO のブラウザ（super admin でログイン済みのもの）で管理画面から許可し、reader 鍵で `decided_by_user_id` と `auth_events` を確かめる。PO のブラウザが使えないときは K7 の本番は「判定待ち」とし、受入を完了とは書かない（pytest の ○ と本番の 403 の ○ は別に書く） |
 | K8 | pytest: 一覧に日時・場所・種類。DELETE で結び付いた組が revoked、その機械のアクセストークンが 401。本番: 受入試験で一覧の件数と取り消し後の 401 |
 | K9 | pytest: 成功・失敗・許可待ちそれぞれで auth_events に user_id・reason・is_new_device。middleware から口の `request.state` が読める。どの列にもパスワード・合言葉の文字列が無い。本番: reader 鍵で受入時刻以降の user87 の行の reason 別件数 |
 | 点検が止まらない | PR-B 後の prod-ui-check の手動実行が緑（画面点検と速さの記録の両方） |
-| 相談係 AI の見え方 | migration-test の T10 が緑。本番: 反映後の `ai_cloud_meta.build_log` の最新行が ok |
+| 相談係 AI の見え方 | migration-test の T10 と新しい19列の試験が緑。本番: 反映後の `ai_cloud_meta.build_log` の最新行が ok・`column_class` が1054行（PR-W 後は1057行） |
+| 場所データの大きさ | 本番: 取り込んだ MMDB の大きさと、取り込み前後の backend の使用メモリ（上限 512M・`docker-compose.yml:166`）を記録する。使用が上限の8割を超えたら場所の表示を止める（`GEOIP_DB_PATH` を空にする）。大きさは【未確認】 |
 
 ## 7. リスクと対処
 
@@ -179,11 +198,13 @@
 | 待ちの poll が nginx の login 枠（10回/分・追加5）を使う | 15秒ごと＝4回/分。429 で30秒に下げる。一覧の取得は5秒に1回までにまとめる |
 | 場所のデータが取れない | 「不明」と出すだけで認証は止めない |
 | 全員がいつもの機械を失う | 予備の合言葉、最後は super admin 2人（PO・担当エンジニア）の管理画面 |
+| 前にログインしたことがあるのに、切替の日にログイン中の機械が無い人（本番で1人。有効9人－ログイン中3人－一度もログインしていない5人） | D4 にも D5 にも当たらない。次にパスワードで入るときは許可待ちになり、いつもの機械も合言葉も無いので、super admin が本人確認のうえ許可する（K7 の道）。パスキーがあればそのまま入れる。切替の日に reader 鍵でこの人数を数え直し、PO への完了報告で「この人は次のログインで管理者の許可が要る」と伝える |
+| off から enforce に戻すとき、締切を新しくしないと off の間にできた組が 401 になる | 戻した後にもう一度 enforce にするときは、締切を新しい固定値にする PR を出す |
 | super admin 自身がいつもの機械と合言葉を両方失う | もう1人の super admin が許可する（自分の依頼は自分で許可できない） |
 | メールが点検専用の人のアドレスへ飛ぶ | 印付きの点検は依頼を作らないので送られない。受入試験の分だけ |
 | 通知を許可していない iPhone は、アプリを閉じていると知らせが出ない | メールで知らせる。設定画面で通知の手順を出す |
 
-戻し方: `AUTH_DEVICE_APPROVAL` を off に戻す（deploy.yml の1行を戻す PR）。off は今と全く同じ動き。表と列は残しても害は無い（追加だけ）。web push は VAPID の秘密を消せば送らない。
+戻し方: `AUTH_DEVICE_APPROVAL` を off に戻す（deploy.yml の1行を戻す PR）。off はログインの止め方と機械の登録が今と同じ。違いは1つで、アクセストークンに `sid` が入り、失効した組のアクセストークンも拒まれる（守りが強くなる側）。表と列は残しても害は無い（追加だけ）。web push は VAPID の秘密を消せば送らない。
 
 ## 8. 外部事例
 
@@ -217,6 +238,15 @@
   - 軽微: off は登録しない（D11）／Redis 停止時（D8・§7）／poll の 429（A-3）／SSE が残る（§7）／ほかの小窓を閉じる（A-2 知らせ）／D5 の危険（§7）／管理者の本人確認の手順（§9）
 - 足したもの: アプリを閉じているときの通知（D13・段W）。kgi.md:39 の通知手段に合わせた
 
-### 第2版
+### 第2版（4a872fe5d）: REVISE
+
+- 審査役: 新しく起動した Opus の reviewer（2026-11-01）
+- 結果: `VERDICT: REVISE on 4a872fe5d design`。重大0・要修正7・軽微9
+- 第3版での反映
+  - 要修正: 他人の依頼の操作を防ぐ（D15）／承認する側の組の取り方（D16・self_tokens と `_issue_session_tokens` の変更前後）／202 の Cookie の付け方（A-2 login）／NO_SIGNAL_ROUTES は書き込みの口だけ（A-2 知らせ）／rls_bootstrap は直さず別の試験で守る（A-1）／列の分類の19行と件数1054（A-1）／前にログインしたが機械の無い1人（§7）
+  - 軽微: Connection の user_id の置き方と既存試験／呼び出し元 AuthContext の signIn／prod-check の Cookie を `page.context()` と `url` で付ける／締切後のパスワード変更／戻した後の締切／off の違い／違う番号の状態番号／iPhone のホーム画面アプリの Cookie（未確認として案内文に）／場所データの大きさ（未確認として受入で測る）
+  - 判定の書き方: K2 の web push と K7 の本番を「判定待ち」として分けた
+
+### 第3版
 
 （ここに審査役の VERDICT を追記する）
