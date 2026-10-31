@@ -1,6 +1,9 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { AuthProvider } from "./contexts/AuthContext";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { QueryAuthSync } from "./lib/query/QueryAuthSync";
+import { queryClient } from "./lib/query/apiQuery";
 import { UiPrefsProvider } from "./contexts/UiPrefsContext";
 import { LocaleProvider } from "./contexts/LocaleContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
@@ -149,267 +152,271 @@ function App() {
   //   - インデント階層が PR diff として読みやすくなる
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <UiPrefsProvider>
-          <LocaleProvider>
-            <ThemeProvider>
-              <Toaster />
-              <AppUpdateNotice />
-              <Routes>
-                <Route path="/login" element={<LoginPage />} />
-                {/* ADR-1013: パスワード再設定・初回設定（メールのリンクから来る。認証不要） */}
-                <Route path="/reset-password" element={<ResetPasswordPage />} />
-                {/* ADR-SA-03: 顧客登録フォーム（認証不要・トークン署名で検証） */}
-                <Route path="/register" element={<RegisterPage />} />
-                <Route path="/register/address" element={<RegisterAddressPage />} />
-                <Route path="/register/change-billing" element={<RegisterChangeBillingPage />} />
-                {/* フルスクリーン専用ルート: 認証あり・シェル（サイドバー/ヘッダー）なし */}
-                <Route element={<ProtectedRoute><Outlet /></ProtectedRoute>}>
-                  <Route path="/management-center/integrations/:carrier/setup-guide" element={<CarrierSetupGuidePage />} />
-                </Route>
-                <Route
-                  element={
-                    <ProtectedRoute>
-                      <ShellSwitch />
-                    </ProtectedRoute>
-                  }
-                >
-                  <Route path="/" element={<DashboardPage />} />
-                  <Route path="/dashboard/follow-ups" element={<FollowUpsPage />} />
-                  <Route path="/dashboard/leads" element={<FunnelLeadsPage />} />
-                  <Route path="/dashboard/revenue" element={<FunnelRevenuePage />} />
-                  <Route path="/dashboard/reasons" element={<FunnelReasonsPage />} />
-                  <Route path="/goals/settings" element={<GoalSettingPage />} />
-
-                  {/* 旧ルート後方互換リダイレクト（/crm/* ハブへ転送） */}
-                  <Route path="/leads"         element={<Navigate to="/crm/leads"     replace />} />
-                  <Route path="/crm/leads/:id/edit" element={<LeadEditPage />} />
-                  <Route path="/customers"     element={<Navigate to="/crm/companies"  replace />} />
-                  <Route path="/companies"     element={<Navigate to="/crm/companies"  replace />} />
-                  <Route path="/companies/:id" element={<CompanyIdRedirect />} />
-                  <Route path="/contacts"      element={<Navigate to="/crm/contacts"   replace />} />
-                  <Route path="/contacts/:id/edit" element={<ContactEditPage />} />
-                  <Route path="/archive"       element={<Navigate to="/crm/archive"    replace />} />
-
-                  {/* Phase 1-D Sprint 4: Meta Inbox UI（左ペイン会話 + 右ペインメッセージ） */}
-                  <Route path="/lead-chat" element={<InboxPage />} />
-
-                  {/* 顧客管理ハブ: 左サブナビ + 右コンテンツのシェル。権限に基づいて項目を制御 */}
-                  <Route path="/crm" element={<CustomerHubPage />}>
-                    <Route index element={<Navigate to="/crm/leads" replace />} />
-                    {/* Phase 1-B-2 Step 5c-1: 新 B2B モデル（会社 + 担当者） */}
-                    <Route path="leads"           element={<LeadsPage />} />
-                    <Route path="companies"       element={<CompaniesPage />} />
-                    {/* Step 5c-2: 会社詳細ページ（multi_branch 住所編集 + 担当者タブ） */}
-                    <Route path="companies/:id"   element={<CompanyDetailPage />} />
-                    <Route path="contacts"        element={<ContactsPage />} />
-                    <Route path="archive"         element={<ArchivesPage />} />
+      {/* ADR-1054: 写しの置き場は 1 か所。AuthProvider の内側・BrowserRouter の外側 */}
+      <QueryClientProvider client={queryClient}>
+        <QueryAuthSync />
+        <BrowserRouter>
+          <UiPrefsProvider>
+            <LocaleProvider>
+              <ThemeProvider>
+                <Toaster />
+                <AppUpdateNotice />
+                <Routes>
+                  <Route path="/login" element={<LoginPage />} />
+                  {/* ADR-1013: パスワード再設定・初回設定（メールのリンクから来る。認証不要） */}
+                  <Route path="/reset-password" element={<ResetPasswordPage />} />
+                  {/* ADR-SA-03: 顧客登録フォーム（認証不要・トークン署名で検証） */}
+                  <Route path="/register" element={<RegisterPage />} />
+                  <Route path="/register/address" element={<RegisterAddressPage />} />
+                  <Route path="/register/change-billing" element={<RegisterChangeBillingPage />} />
+                  {/* フルスクリーン専用ルート: 認証あり・シェル（サイドバー/ヘッダー）なし */}
+                  <Route element={<ProtectedRoute><Outlet /></ProtectedRoute>}>
+                    <Route path="/management-center/integrations/:carrier/setup-guide" element={<CarrierSetupGuidePage />} />
                   </Route>
-
-                  {/* 外部買取店の買取価格 */}
-                  <Route path="/buyback-prices" element={<BuybackPricesPage />} />
-
-                  {/* 在庫表（最終ユーザー向け offers ビュー / ADR-093 Phase 2） */}
-                  <Route path="/inventory" element={<InventoryPage />} />
-                  {/* 自社在庫（A在庫）管理（ADR SA-04/05） */}
-                  <Route path="/own-inventory" element={<OwnInventoryPage />} />
-                  {/* 商品マスタ CRUD（管理者向けに退避。操作は Page 内 hasPermission で制御） */}
-                  <Route path="/admin/products/new" element={<ProductEditPage />} />
-                  <Route path="/admin/products/:id/edit" element={<ProductEditPage />} />
-                  <Route path="/admin/products" element={<ProductsPage />} />
-
-                  {/* 見積・請求 */}
-                  <Route path="/quotes/new" element={<QuoteCreatePage />} />
-                  <Route path="/quotes/:id" element={<QuoteDetailPage />} />
-                  <Route path="/quotes" element={<QuotesPage />} />
-                  <Route path="/invoices/new" element={<InvoiceCreatePage />} />
-                  <Route path="/invoices/:id" element={<InvoiceDetailPage />} />
-                  <Route path="/invoices" element={<InvoicesPage />} />
-
-                  {/* レポート */}
-                  <Route path="/reports" element={<StaffReportsPage />} />
-
-                  {/* FAQ */}
                   <Route
-                    path="/faq"
                     element={
-                      <ComingSoonPage
-                        title={t("faq.title")}
-                        description={t("faq.description")}
-                      />
+                      <ProtectedRoute>
+                        <ShellSwitch />
+                      </ProtectedRoute>
                     }
-                  />
+                  >
+                    <Route path="/" element={<DashboardPage />} />
+                    <Route path="/dashboard/follow-ups" element={<FollowUpsPage />} />
+                    <Route path="/dashboard/leads" element={<FunnelLeadsPage />} />
+                    <Route path="/dashboard/revenue" element={<FunnelRevenuePage />} />
+                    <Route path="/dashboard/reasons" element={<FunnelReasonsPage />} />
+                    <Route path="/goals/settings" element={<GoalSettingPage />} />
 
-                  {/* 管理 */}
-                  <Route path="/orders" element={<OrdersPage />} />
-                  {/* 区切り4 (ADR-021 改修): 売上管理 / 報酬管理（受注管理から分離） */}
-                  <Route path="/sales" element={<SalesPage />} />
-                  <Route path="/commissions" element={<CommissionsPage />} />
-                  {/* ADR-021 Phase 5 / Sprint 5: 報酬設定（テナント別 rate 編集） */}
-                  <Route
-                    path="/commission-settings"
-                    element={<CommissionSettingsPage />}
-                  />
-                  <Route path="/staff" element={<StaffPage />} />
-                  <Route path="/staff/:id/edit" element={<StaffEditPage />} />
-                  <Route path="/bots" element={<BotsPage />} />
-                  <Route path="/bots/:id/edit" element={<BotEditPage />} />
-                  <Route path="/teams" element={<TeamsPage />} />
-                  <Route path="/teams/:id/edit" element={<TeamEditPage />} />
-                  <Route path="/roles" element={<RolesPage />} />
-                  <Route path="/data" element={<ERPPage />} />
-                  <Route path="/suppliers" element={<SuppliersPage />} />
-                  <Route path="/suppliers/import" element={<SupplierImportTenantPage />} />
-                  <Route path="/management-center/units/import" element={<UnitImportTenantPage />} />
-                  <Route path="/management-center/conditions/import" element={<ConditionImportTenantPage />} />
-                  <Route path="/management-center/status-master/import" element={<StatusMasterImportTenantPage />} />
-                  <Route path="/management-center/note-master/import" element={<NoteMasterImportTenantPage />} />
-                  <Route path="/management-center/product-categories/import" element={<ProductCategoriesImportTenantPage />} />
-                  <Route path="/suppliers/:id/edit" element={<SupplierEditPage />} />
-                  <Route path="/shifts" element={<ShiftsPage />} />
-                  <Route path="/schedule" element={<SchedulePage />} />
-                  <Route path="/schedule/settings" element={<ScheduleSettingsPage />} />
+                    {/* 旧ルート後方互換リダイレクト（/crm/* ハブへ転送） */}
+                    <Route path="/leads"         element={<Navigate to="/crm/leads"     replace />} />
+                    <Route path="/crm/leads/:id/edit" element={<LeadEditPage />} />
+                    <Route path="/customers"     element={<Navigate to="/crm/companies"  replace />} />
+                    <Route path="/companies"     element={<Navigate to="/crm/companies"  replace />} />
+                    <Route path="/companies/:id" element={<CompanyIdRedirect />} />
+                    <Route path="/contacts"      element={<Navigate to="/crm/contacts"   replace />} />
+                    <Route path="/contacts/:id/edit" element={<ContactEditPage />} />
+                    <Route path="/archive"       element={<Navigate to="/crm/archive"    replace />} />
 
-                  {/* Phase 1-D Sprint 3: Meta Inbox 接続管理 */}
-                  <Route path="/channels" element={<ChannelsPage />} />
-                  {/* Facebook OAuth dialog からの redirect_uri。code/state を backend へ送信し /channels に戻す */}
-                  <Route
-                    path="/channels/oauth/callback"
-                    element={<OAuthCallbackPage />}
-                  />
+                    {/* Phase 1-D Sprint 4: Meta Inbox UI（左ペイン会話 + 右ペインメッセージ） */}
+                    <Route path="/lead-chat" element={<InboxPage />} />
 
-                  {/* 設定 */}
-                  <Route path="/settings" element={<NotificationsPage />} />
-                  {/* 個人アカウント設定 */}
-                  <Route path="/account/settings" element={<AccountSettingsPage />} />
+                    {/* 顧客管理ハブ: 左サブナビ + 右コンテンツのシェル。権限に基づいて項目を制御 */}
+                    <Route path="/crm" element={<CustomerHubPage />}>
+                      <Route index element={<Navigate to="/crm/leads" replace />} />
+                      {/* Phase 1-B-2 Step 5c-1: 新 B2B モデル（会社 + 担当者） */}
+                      <Route path="leads"           element={<LeadsPage />} />
+                      <Route path="companies"       element={<CompaniesPage />} />
+                      {/* Step 5c-2: 会社詳細ページ（multi_branch 住所編集 + 担当者タブ） */}
+                      <Route path="companies/:id"   element={<CompanyDetailPage />} />
+                      <Route path="contacts"        element={<ContactsPage />} />
+                      <Route path="archive"         element={<ArchivesPage />} />
+                    </Route>
 
-                  {/* その他 */}
-                  <Route
-                    path="/templates"
-                    element={
-                      <ComingSoonPage
-                        title={t("templates.title")}
-                        description={t("templates.description")}
-                      />
-                    }
-                  />
+                    {/* 外部買取店の買取価格 */}
+                    <Route path="/buyback-prices" element={<BuybackPricesPage />} />
 
-                  {/* AY-2g: 旧スタンドアロンページ3つは LINE解析へ転送（対応表は legacyPageRedirects.ts） */}
-                  {LEGACY_SUPER_ADMIN_REDIRECTS.map(r => <Route key={r.from} path={r.from} element={<Navigate to={r.to} replace />} />)}
-                  <Route path="/super-admin/tcg-product-master/import" element={<TcgProductImportPage />} />
-                  {/* 為替レート SSOT (is_super_admin 限定、Page 内で 403 ガード) */}
-                  <Route
-                    path="/super-admin/fx-rate"
-                    element={<FxRatePage />}
-                  />
-                  {/* CC_TASK_DISTUI-01: 配信先管理 (is_super_admin 限定) */}
-                  <Route
-                    path="/super-admin/tcg-distribution"
-                    element={<TcgDistributionPage />}
-                  />
-                  {/* MIG-04 Stage 1: LINE エクスポート取り込み (is_super_admin 限定) */}
-                  <Route
-                    path="/super-admin/tcg-line-import"
-                    element={<TcgLineImportPage />}
-                  />
-                  {/* CARD-ANALYSIS-RULE-P6-UI: 解析管理（完売ルール・日付ルール） (is_super_admin 限定) */}
-                  <Route
-                    path="/super-admin/analysis-rules"
-                    element={<AnalysisRulesPage />}
-                  />
-                  <Route
-                    path="/super-admin/supplier-extraction-rules"
-                    element={<SupplierExtractionRulesPage />}
-                  />
-                  <Route
-                    path="/super-admin/masters/suppliers/import"
-                    element={<SupplierImportPage />}
-                  />
-                  <Route
-                    path="/super-admin/masters/units/import"
-                    element={<UnitImportPage />}
-                  />
-                  <Route
-                    path="/super-admin/masters/conditions/import"
-                    element={<ConditionImportPage />}
-                  />
-                  <Route
-                    path="/super-admin/masters/status-master/import"
-                    element={<StatusMasterImportPage />}
-                  />
-                  <Route
-                    path="/super-admin/masters/note-master/import"
-                    element={<NoteMasterImportPage />}
-                  />
-                  <Route
-                    path="/super-admin/masters/product-categories/import"
-                    element={<ProductCategoriesImportPage />}
-                  />
-                  <Route path="/super-admin/viewers" element={<ViewerAccountsPage />} />
-                  <Route path="/super-admin/viewer-templates" element={<ViewerTemplatesPage />} />
-                  {/* SaaS 管理者ハブ（ボトムタブ統合） */}
-                  <Route path="/admin" element={<AdminHubPage />}>
-                    <Route index element={<Navigate to="tenant-profile" replace />} />
-                    {/* Sprint 8 / F8: テナント admin (tenant.profile.edit / view) */}
-                    <Route path="tenant-profile"      element={<TenantProfilePage />} />
-                    {/* ADR-106: テナントポリシー設定 (tenant.profile.edit / view) */}
-                    <Route path="tenant-policy"       element={<TenantPolicyPage />} />
-                    {/* Sprint D2: Discord Guild 設定 (tenant.profile.edit / view) */}
-                    <Route path="discord-config"      element={<DiscordConfigPage />} />
-                    {/* ADR-091 KPI4: Discord アナウンス投稿 */}
-                    <Route path="discord-announce"    element={<DiscordAnnouncePage />} />
-                    {/* テナント admin（tenant.inventory_visibility.edit 権限が必要、Page 内で 403 ガード） */}
-                    <Route path="inventory-visibility" element={<InventoryVisibilityPage />} />
-                    {/* SA-02 Stage 3: 手動チャネル管理 */}
-                    <Route path="channel-masters" element={<ChannelMastersPage />} />
+                    {/* 在庫表（最終ユーザー向け offers ビュー / ADR-093 Phase 2） */}
+                    <Route path="/inventory" element={<InventoryPage />} />
+                    {/* 自社在庫（A在庫）管理（ADR SA-04/05） */}
+                    <Route path="/own-inventory" element={<OwnInventoryPage />} />
+                    {/* 商品マスタ CRUD（管理者向けに退避。操作は Page 内 hasPermission で制御） */}
+                    <Route path="/admin/products/new" element={<ProductEditPage />} />
+                    <Route path="/admin/products/:id/edit" element={<ProductEditPage />} />
+                    <Route path="/admin/products" element={<ProductsPage />} />
+
+                    {/* 見積・請求 */}
+                    <Route path="/quotes/new" element={<QuoteCreatePage />} />
+                    <Route path="/quotes/:id" element={<QuoteDetailPage />} />
+                    <Route path="/quotes" element={<QuotesPage />} />
+                    <Route path="/invoices/new" element={<InvoiceCreatePage />} />
+                    <Route path="/invoices/:id" element={<InvoiceDetailPage />} />
+                    <Route path="/invoices" element={<InvoicesPage />} />
+
+                    {/* レポート */}
+                    <Route path="/reports" element={<StaffReportsPage />} />
+
+                    {/* FAQ */}
+                    <Route
+                      path="/faq"
+                      element={
+                        <ComingSoonPage
+                          title={t("faq.title")}
+                          description={t("faq.description")}
+                        />
+                      }
+                    />
+
+                    {/* 管理 */}
+                    <Route path="/orders" element={<OrdersPage />} />
+                    {/* 区切り4 (ADR-021 改修): 売上管理 / 報酬管理（受注管理から分離） */}
+                    <Route path="/sales" element={<SalesPage />} />
+                    <Route path="/commissions" element={<CommissionsPage />} />
+                    {/* ADR-021 Phase 5 / Sprint 5: 報酬設定（テナント別 rate 編集） */}
+                    <Route
+                      path="/commission-settings"
+                      element={<CommissionSettingsPage />}
+                    />
+                    <Route path="/staff" element={<StaffPage />} />
+                    <Route path="/staff/:id/edit" element={<StaffEditPage />} />
+                    <Route path="/bots" element={<BotsPage />} />
+                    <Route path="/bots/:id/edit" element={<BotEditPage />} />
+                    <Route path="/teams" element={<TeamsPage />} />
+                    <Route path="/teams/:id/edit" element={<TeamEditPage />} />
+                    <Route path="/roles" element={<RolesPage />} />
+                    <Route path="/data" element={<ERPPage />} />
+                    <Route path="/suppliers" element={<SuppliersPage />} />
+                    <Route path="/suppliers/import" element={<SupplierImportTenantPage />} />
+                    <Route path="/management-center/units/import" element={<UnitImportTenantPage />} />
+                    <Route path="/management-center/conditions/import" element={<ConditionImportTenantPage />} />
+                    <Route path="/management-center/status-master/import" element={<StatusMasterImportTenantPage />} />
+                    <Route path="/management-center/note-master/import" element={<NoteMasterImportTenantPage />} />
+                    <Route path="/management-center/product-categories/import" element={<ProductCategoriesImportTenantPage />} />
+                    <Route path="/suppliers/:id/edit" element={<SupplierEditPage />} />
+                    <Route path="/shifts" element={<ShiftsPage />} />
+                    <Route path="/schedule" element={<SchedulePage />} />
+                    <Route path="/schedule/settings" element={<ScheduleSettingsPage />} />
+
+                    {/* Phase 1-D Sprint 3: Meta Inbox 接続管理 */}
+                    <Route path="/channels" element={<ChannelsPage />} />
+                    {/* Facebook OAuth dialog からの redirect_uri。code/state を backend へ送信し /channels に戻す */}
+                    <Route
+                      path="/channels/oauth/callback"
+                      element={<OAuthCallbackPage />}
+                    />
+
+                    {/* 設定 */}
+                    <Route path="/settings" element={<NotificationsPage />} />
+                    {/* 個人アカウント設定 */}
+                    <Route path="/account/settings" element={<AccountSettingsPage />} />
+
+                    {/* その他 */}
+                    <Route
+                      path="/templates"
+                      element={
+                        <ComingSoonPage
+                          title={t("templates.title")}
+                          description={t("templates.description")}
+                        />
+                      }
+                    />
+
+                    {/* AY-2g: 旧スタンドアロンページ3つは LINE解析へ転送（対応表は legacyPageRedirects.ts） */}
+                    {LEGACY_SUPER_ADMIN_REDIRECTS.map(r => <Route key={r.from} path={r.from} element={<Navigate to={r.to} replace />} />)}
+                    <Route path="/super-admin/tcg-product-master/import" element={<TcgProductImportPage />} />
+                    {/* 為替レート SSOT (is_super_admin 限定、Page 内で 403 ガード) */}
+                    <Route
+                      path="/super-admin/fx-rate"
+                      element={<FxRatePage />}
+                    />
+                    {/* CC_TASK_DISTUI-01: 配信先管理 (is_super_admin 限定) */}
+                    <Route
+                      path="/super-admin/tcg-distribution"
+                      element={<TcgDistributionPage />}
+                    />
+                    {/* MIG-04 Stage 1: LINE エクスポート取り込み (is_super_admin 限定) */}
+                    <Route
+                      path="/super-admin/tcg-line-import"
+                      element={<TcgLineImportPage />}
+                    />
+                    {/* CARD-ANALYSIS-RULE-P6-UI: 解析管理（完売ルール・日付ルール） (is_super_admin 限定) */}
+                    <Route
+                      path="/super-admin/analysis-rules"
+                      element={<AnalysisRulesPage />}
+                    />
+                    <Route
+                      path="/super-admin/supplier-extraction-rules"
+                      element={<SupplierExtractionRulesPage />}
+                    />
+                    <Route
+                      path="/super-admin/masters/suppliers/import"
+                      element={<SupplierImportPage />}
+                    />
+                    <Route
+                      path="/super-admin/masters/units/import"
+                      element={<UnitImportPage />}
+                    />
+                    <Route
+                      path="/super-admin/masters/conditions/import"
+                      element={<ConditionImportPage />}
+                    />
+                    <Route
+                      path="/super-admin/masters/status-master/import"
+                      element={<StatusMasterImportPage />}
+                    />
+                    <Route
+                      path="/super-admin/masters/note-master/import"
+                      element={<NoteMasterImportPage />}
+                    />
+                    <Route
+                      path="/super-admin/masters/product-categories/import"
+                      element={<ProductCategoriesImportPage />}
+                    />
+                    <Route path="/super-admin/viewers" element={<ViewerAccountsPage />} />
+                    <Route path="/super-admin/viewer-templates" element={<ViewerTemplatesPage />} />
+                    {/* SaaS 管理者ハブ（ボトムタブ統合） */}
+                    <Route path="/admin" element={<AdminHubPage />}>
+                      <Route index element={<Navigate to="tenant-profile" replace />} />
+                      {/* Sprint 8 / F8: テナント admin (tenant.profile.edit / view) */}
+                      <Route path="tenant-profile"      element={<TenantProfilePage />} />
+                      {/* ADR-106: テナントポリシー設定 (tenant.profile.edit / view) */}
+                      <Route path="tenant-policy"       element={<TenantPolicyPage />} />
+                      {/* Sprint D2: Discord Guild 設定 (tenant.profile.edit / view) */}
+                      <Route path="discord-config"      element={<DiscordConfigPage />} />
+                      {/* ADR-091 KPI4: Discord アナウンス投稿 */}
+                      <Route path="discord-announce"    element={<DiscordAnnouncePage />} />
+                      {/* テナント admin（tenant.inventory_visibility.edit 権限が必要、Page 内で 403 ガード） */}
+                      <Route path="inventory-visibility" element={<InventoryVisibilityPage />} />
+                      {/* SA-02 Stage 3: 手動チャネル管理 */}
+                      <Route path="channel-masters" element={<ChannelMastersPage />} />
+                    </Route>
+
+                    {/* ADR-069: デザインシステム パーツ保管庫（開発環境専用） */}
+                    {import.meta.env.DEV && (
+                      <Route path="/design-system" element={<DesignSystemPage />} />
+                    )}
+                    {/* Task 1C: コンポーネント標準プレビュー（ログイン後 URL 直打ちで確認可・ナビ未掲載） */}
+                    <Route path="/design-preview" element={<DesignPreviewPage />} />
+
+                    {/* 管理センター: 左サブナビ + 右コンテンツのシェル。権限に基づいて項目を制御 */}
+                    <Route path="/management-center" element={<ManagementCenterPage />}>
+                      <Route index element={<Navigate to="staff" replace />} />
+                      <Route path="teams"               element={<TeamsPage />} />
+                      <Route path="staff"               element={<StaffPage />} />
+                      <Route path="shifts"              element={<ShiftsPage />} />
+                      <Route path="roles"               element={<RolesPage />} />
+                      <Route path="inventory-visibility" element={<InventoryVisibilityPage />} />
+                      <Route path="commission"          element={<CommissionSettingsPage />} />
+                      <Route path="tenant-profile"      element={<TenantProfilePage />} />
+                      {/* 管理センター左メニューを保ったまま開くため /admin/* と同じページを再掲 */}
+                      <Route path="tenant-policy"       element={<TenantPolicyPage />} />
+                      <Route path="discord-config"      element={<DiscordConfigPage />} />
+                      <Route path="discord-announce"    element={<DiscordAnnouncePage />} />
+                      <Route path="channel-masters"     element={<ChannelMastersPage />} />
+                      <Route path="channels"            element={<ChannelsPage />} />
+                      <Route path="bots"                element={<BotsPage />} />
+                      <Route path="suppliers"           element={<SuppliersPage />} />
+                      <Route path="status-master"       element={<StatusMasterPage />} />
+                      <Route path="conditions"          element={<ConditionsPage />} />
+                      <Route path="product-categories" element={<ProductCategoriesPage />} />
+                      <Route path="units"              element={<UnitsPage />} />
+                      <Route path="note-master"        element={<NoteMasterPage />} />
+                      <Route path="data"                element={<ERPPage />} />
+                      {/* API 連携（各サービスとも現状は「現在作成中」プレースホルダー） */}
+                      <Route path="integrations/google-drive" element={<GoogleDriveIntegrationPage />} />
+                      <Route path="integrations/fedex"        element={<CarrierIntegrationPage carrier="fedex" />} />
+                      <Route path="integrations/dhl"          element={<CarrierIntegrationPage carrier="dhl" />} />
+                      <Route path="integrations/ups"          element={<CarrierIntegrationPage carrier="ups" />} />
+                      <Route path="integrations/paypal"       element={<PaypalIntegrationPage />} />
+                      <Route path="notifications"       element={<NotificationsPage />} />
+                      <Route path="reports"             element={<StaffReportsPage />} />
+                    </Route>
                   </Route>
-
-                  {/* ADR-069: デザインシステム パーツ保管庫（開発環境専用） */}
-                  {import.meta.env.DEV && (
-                    <Route path="/design-system" element={<DesignSystemPage />} />
-                  )}
-                  {/* Task 1C: コンポーネント標準プレビュー（ログイン後 URL 直打ちで確認可・ナビ未掲載） */}
-                  <Route path="/design-preview" element={<DesignPreviewPage />} />
-
-                  {/* 管理センター: 左サブナビ + 右コンテンツのシェル。権限に基づいて項目を制御 */}
-                  <Route path="/management-center" element={<ManagementCenterPage />}>
-                    <Route index element={<Navigate to="staff" replace />} />
-                    <Route path="teams"               element={<TeamsPage />} />
-                    <Route path="staff"               element={<StaffPage />} />
-                    <Route path="shifts"              element={<ShiftsPage />} />
-                    <Route path="roles"               element={<RolesPage />} />
-                    <Route path="inventory-visibility" element={<InventoryVisibilityPage />} />
-                    <Route path="commission"          element={<CommissionSettingsPage />} />
-                    <Route path="tenant-profile"      element={<TenantProfilePage />} />
-                    {/* 管理センター左メニューを保ったまま開くため /admin/* と同じページを再掲 */}
-                    <Route path="tenant-policy"       element={<TenantPolicyPage />} />
-                    <Route path="discord-config"      element={<DiscordConfigPage />} />
-                    <Route path="discord-announce"    element={<DiscordAnnouncePage />} />
-                    <Route path="channel-masters"     element={<ChannelMastersPage />} />
-                    <Route path="channels"            element={<ChannelsPage />} />
-                    <Route path="bots"                element={<BotsPage />} />
-                    <Route path="suppliers"           element={<SuppliersPage />} />
-                    <Route path="status-master"       element={<StatusMasterPage />} />
-                    <Route path="conditions"          element={<ConditionsPage />} />
-                    <Route path="product-categories" element={<ProductCategoriesPage />} />
-                    <Route path="units"              element={<UnitsPage />} />
-                    <Route path="note-master"        element={<NoteMasterPage />} />
-                    <Route path="data"                element={<ERPPage />} />
-                    {/* API 連携（各サービスとも現状は「現在作成中」プレースホルダー） */}
-                    <Route path="integrations/google-drive" element={<GoogleDriveIntegrationPage />} />
-                    <Route path="integrations/fedex"        element={<CarrierIntegrationPage carrier="fedex" />} />
-                    <Route path="integrations/dhl"          element={<CarrierIntegrationPage carrier="dhl" />} />
-                    <Route path="integrations/ups"          element={<CarrierIntegrationPage carrier="ups" />} />
-                    <Route path="integrations/paypal"       element={<PaypalIntegrationPage />} />
-                    <Route path="notifications"       element={<NotificationsPage />} />
-                    <Route path="reports"             element={<StaffReportsPage />} />
-                  </Route>
-                </Route>
-              </Routes>
-            </ThemeProvider>
-          </LocaleProvider>
-        </UiPrefsProvider>
-      </BrowserRouter>
+                </Routes>
+              </ThemeProvider>
+            </LocaleProvider>
+          </UiPrefsProvider>
+        </BrowserRouter>
+      </QueryClientProvider>
     </AuthProvider>
   );
 }
