@@ -110,6 +110,8 @@
 |---|---|
 | Migration SQL Test の migration-test-run（実行 41197975056・先頭 4a3abf696）が `migrations/20261031_210000_create_ops_case.sql:516: ERROR: relation "ai_cloud_meta.build_columns" does not exist` で落ちる。migration が自分で作らずに読む物は、`grep -noE '\b(public\|ai_cloud_meta\|ai_cloud)\.[a-z_]+'` で全部洗うと public.ops_incidents（§0-8 で足し済み）・ai_cloud_meta.build_columns・ai_cloud_meta.build_log の 3 つだけ。ロールは自分で作る ai_unmask・ai_unmask_owner と、有無を確かめてから使う salesanchor_app だけ | S .github/workflows/migration-test.yml の migration-test-run の土台（§0-8 で足した public.ops_incidents の次）に、S migrations/20261024_100000_create_ai_cloud_meta.sql:10 の `CREATE SCHEMA IF NOT EXISTS ai_cloud_meta;` と :22-37 の build_log・build_columns の CREATE TABLE IF NOT EXISTS を写す（列・制約はそのまま。column_class・関数・COMMENT は写さない）。注記は「本番作成済み・前提として登録する」の 2 行の形（§1 #17） |
 | 同じ種類の見落としを二度と通さない | 実装役は push の前に、土台の SQL（`PUBLIC_SQL` の中身）を空の postgres に流し、その上で migration を 2 回流して両方 0 で終わる生出力を出す。postgres が使えなければ BLOCKED: で止める（CI 任せにしない） |
+| 審査（4a3abf696・REVISE）の M1: test-schema-dup gate が S backend/tests/ops/test_ops_case_db.py:153-169・S backend/tests/test_ops_case_router.py:141-147 の CREATE TABLE（各 6）で赤 | 直さない（Opus 判断）。理由: ①表は見せ方の作り方を試すための作り物（plain_demo・text_pk・has_secret・two_pk）と、伏せる表の判定を試す最小の代役（tenant_001.leads・viewer_accounts）で、本番の表の定義の写しではない ②この gate は必須ではない（S docs/specs/process-hardening/design-pillar3.md:96）③文字列を組み替えて検査をすり抜ける書き方はしない。片付けは後の便で一覧（pillar3-inventory.md）への登録として扱う |
+| 審査の L2: decide_request が知らない id に 404 を返す（§4-C は「pending でなければ 409」だけ） | 追認する。知らない id は 404、ある id で pending でなければ 409。コードは変えない |
 
 ## 1. 触るファイル（変更前→変更後）
 | # | ファイル | 今（S） | 変える形 |
