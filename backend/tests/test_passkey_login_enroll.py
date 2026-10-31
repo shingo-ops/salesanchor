@@ -321,3 +321,25 @@ async def test_t7_login_challenge_not_taken_as_registration(http, db_session, as
         headers=_headers(_token("pwd")),
     )
     assert resp.status_code == 400
+
+
+# ── T8 本物のブラウザと同じ送り方（同じサイトあての GET は Origin を付けない） ──
+
+
+async def test_t8_prompt_get_without_origin_like_a_browser(http, db_session, as_user):
+    await _insert_user(db_session)
+    url = f"{AUTH_PATH}/passkey/prompt"
+
+    resp = await http.get(url, headers={"authorization": f"Bearer {_token('pwd')}"})
+    assert resp.status_code == 200
+    assert resp.json() == {"can_auto": True, "show_prompt": True}
+
+    resp = await http.get(url, headers={"authorization": f"Bearer {_token(None)}"})
+    assert resp.status_code == 200
+    assert resp.json() == {"can_auto": False, "show_prompt": False}
+
+    # 読むだけの口なので、他のサイトの Origin でも出どころでは断らない
+    resp = await http.get(
+        url, headers={"authorization": f"Bearer {_token('pwd')}", "origin": "https://evil.example"}
+    )
+    assert resp.status_code == 200

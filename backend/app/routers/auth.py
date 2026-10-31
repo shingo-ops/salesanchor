@@ -748,8 +748,11 @@ async def passkey_prompt_status(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """ログイン直後のパスキー登録（自動作成・案内）を出してよいか。"""
-    _require_app_origin(request)
+    """ログイン直後のパスキー登録（自動作成・案内）を出してよいか。
+
+    読むだけの口なので出どころの確認はしない（ブラウザは同じサイトあての GET に Origin を付けない）。
+    本人の Bearer トークンが要るので、他のサイトからは読めない。
+    """
     if not _is_fresh_password_login(request, current_user):
         return PasskeyPromptStatus(can_auto=False, show_prompt=False)
     count = await _passkey_count(db, current_user.id)
