@@ -76,3 +76,12 @@ FAIL Required test coverage of 60% not reached. Total coverage: 29.53%
 ✅ i18n key check PASSED (all prefixes)
    viewer 入口から届く viewer 外のファイル: 39 件
 ```
+
+## 外部・過去事例の参照と我々への応用
+外部事例は使わない。理由: 原因は「仮の値が列の長さを超える」という本リポジトリ内の事実（本番ログと migration の列定義）で特定でき、直し方も同じ関数の中の 1 行で閉じるため。
+過去事例: 仕入先（SP-{id:05d}）・見積（QT-{id:05d}）は仮コードを入れずに INSERT 後に採番している（backend/app/routers の create_supplier・create_quote）。Bot は bot_code が NOT NULL のため仮コードが要る。そのため仮コードを列に収まる長さにする方を選んだ。
+
+## 維持の仕組み
+- 仮コードの長さは `test_pending_bot_code_fits_column` が毎回の CI で確かめる。列の長さを変えずに仮コードを長くすると、この試験が落ちる。
+- 翻訳キーの抜けは frontend の `check-i18n-missing-keys.js`（CI）が見る。今回の抜けは、この点検が `subtitleKey` に渡す文字列を拾えずに見逃した。点検を広げるかは別の件として扱う（今回の範囲外）。
+- 本番の画面の速さの記録（ADR-1053）が毎朝 Bot・見積の画面を開くので、表示の崩れに気づく道が残る。
