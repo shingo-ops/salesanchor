@@ -35,12 +35,45 @@
 
 | 表 | 入れるもの | 入れ方 | 目印 |
 |---|---|---|---|
-| leads | 400件。状態（成約 120・失注 など）、種類（Inbound/Outbound）、経路、国、店舗の形、温度 | 直接書く（PO 許可・テナント001だけ） | lead_code を `TLR-` で始める（専用の列が無いため。§8 #3） |
+| leads | 400件。状態（成約 120・失注 280）、きっかけ（initiative）、経路、国、温度 | 直接書く（PO 許可・テナント001だけ） | lead_code を `TLR-` で始める（専用の列が無いため。§8 #3） |
+| tenant_sales_form_options | テナント001の店舗の形の選択肢5つ（テナント004と同じ値） | 直接書く | 入れた5行の id を記録し、消す手順で消す |
+| lead_sales_form_selections | 400件それぞれの店舗の形（1つ） | 直接書く | テスト用リードを消すと一緒に消える（ON DELETE CASCADE） |
 | lead_channels | Instagram・Facebook のリードの経路 | 直接書く | external_id を `tlr-` で始める |
 | meta_messages | Instagram・Facebook のやり取り（受信・送信の時刻） | 直接書く | raw_payload に `{"seed":"lead-regression-v1"}`、message_id を `tlr-` で始める |
 | conversation_logs | WhatsApp・電話のやり取り | 直接書く（同じ目印で消せるようにする） | raw_payload に同じ目印 |
 
 返信の速さは「やり取りの表の受信と送信の時刻」から計算する。リードの表へ写して持たない（データを2か所に分けない）。
+
+### 3-1. どの欄に入れるか（正本の確認。2026-10-31 origin/main 802c49ad5 で照合）
+
+| 分析に使う項目 | 入れる欄（正本） | 根拠 | 入れない欄 |
+|---|---|---|---|
+| 相手から来たか・こちらから営業したか | leads.initiative（inbound / outbound） | docs/specs/db-ssot/classification-master/design.md §2-2（type は initiative に統合して廃止。PO 確定 2026-07-13）。`backend/app/routers/analytics.py:1747` も initiative を使う | leads.type |
+| 経路 | leads.channel_type ＋ lead_channels（instagram / messenger / whatsapp） | channel_masters の6つ（下調べ §4）。`backend/app/services/tenant.py:1045` | — |
+| 国 | leads.country に2文字の国コード | 国の台帳 public.countries の code CHAR(2)（migrations/20260621_010000_create_countries_master.sql 7行）。`backend/app/schemas/lead.py:28` で国コードとして読む | 国名の文字 |
+| 店舗の形 | lead_sales_form_selections（選択肢は tenant_sales_form_options） | カルテの入力画面が書く先（`frontend/src/pages/inbox/InboxKartePanel.tsx:592`、`backend/app/routers/leads.py:634`）。テナント001には選択肢が 0 件のため、テナント004と同じ5つ（実店舗・ECサイト・ライブ配信・卸・代理店・その他）をテナント001の選択肢に入れる | leads.sales_form（§10 の食い違い参照） |
+| 温度 | leads.temperature（Hot / Warm / Cold） | `backend/app/schemas/lead.py:47` | — |
+| 成約したか | leads.status（成約 existing_customer・失注 lost） | `backend/app/schemas/lead.py:31`（ADR-109） | deals |
+| 返信の速さ・やり取りの回数 | meta_messages（instagram・messenger）と conversation_logs（whatsapp）の時刻から計算 | 下調べ §5 | leads.response_speed・first_response_at |
+
+### 3-2. 仕込む傾向（K3 の答え合わせの表）
+
+テスト用データは、乱数の種を固定した作り方で作る。下の「仕込む強さ」で成約しやすさを決め、成約がちょうど 120件になるよう基準の高さを合わせる。
+
+| 項目 | 比べ方 | 仕込む強さ（オッズ比） |
+|---|---|---|
+| 相手から来た | こちらから営業した、と比べて | 2.0 |
+| 店舗の形が卸・代理店 | それ以外と比べて | 2.5 |
+| こちらの最初の返信が1時間以内 | 1時間より遅い、と比べて | 1.8 |
+| 相手の返信が平均6時間以内 | 6時間より遅い、と比べて | 1.6 |
+| 経路が WhatsApp | Facebook と比べて | 1.5 |
+| 経路が Instagram | Facebook と比べて | 1.0（仕込まない） |
+| 国 | 比べる国どうし | 1.0（仕込まない） |
+| 温度 | Hot・Warm・Cold どうし | 1.0（仕込まない） |
+| やり取りの回数 | 回数が多いほど | 1.0（仕込まない） |
+
+- 本番に入れる前に、同じ作り方・同じ種で手元で計算し、K3 が ○ になることを確かめる。○ にならなければ本番には入れず、結果を PO に報告する。
+- これは「計算と画面が正しく動くか」を確かめるためのもので、本物の傾向ではない。画面と報告にもそう書く。
 
 ### 自動で動くものを止める条件（下調べ §6 の事実に基づく）
 
@@ -50,7 +83,7 @@
 
 ## 4. 分析と画面
 
-- 計算: 成約したか（はい/いいえ）を、種類・経路・国・店舗の形・こちらの返信の速さ・相手の返信の速さ・やり取りの回数で同時に見る（ロジスティック回帰）。1つの項目につき成約が 10件以上の決まり（先行の設計と同じ）。
+- 計算: 成約したか（はい/いいえ）を、きっかけ・経路・国・店舗の形・温度・こちらの返信の速さ・相手の返信の速さ・やり取りの回数で同時に見る（ロジスティック回帰）。1つの項目につき成約が 10件以上の決まり（先行の設計と同じ）。
 - 画面: 既存の「属性ごとの成約率」（`backend/app/routers/analytics.py:963`）の隣に結果の表を足す。部品は登録済みの金型だけを使う（どの金型を使うかは実装カードで file:line まで決める）。
 - 読み方の注意（画面にも出す）: これは「成約しやすさの目印」で原因ではない。こちらの返信の速さには「見込みの高い相手ほど急いで返す」逆向きの影響が混ざる。
 
@@ -76,10 +109,15 @@
 
 | # | 未決 | 解消方法 |
 |---|---|---|
-| 1 | シュリンク付き/ノーシュリンクの扱い・扱う商材をどう持つか（項目が無い。足すと表の作り替え＝本番の変更になる） | PO に聞く（今回は外して先に進める／項目を足してから進める） |
+| 1 | シュリンク付き/ノーシュリンクの扱い・扱う商材をどう持つか（項目が無い。足すと表の作り替え＝本番の変更になる） | 解決（PO 2026-10-31「1」）: 今回は外し、先に仕組みが正しく動くかを確かめる。欄を足す作業はあとで別に設計する |
 | 2 | 成約した日（状態が変わった履歴）の表が無い | 今回の分析（成約したか）には要らない。成約までの日数を見たいなら別の設計 |
 | 3 | 目印を lead_code に入れてよいか | 解決（2026-10-31）: lead_code は VARCHAR(20)・テナント内で重複不可（migrations/003_add_phase1_tenant_tables.sql 78・97行）。採番は `LD-` と id（`backend/app/routers/leads.py:469`・`backend/app/routers/webhook.py:577`）。`LD-` を前提に読む処理は backend・frontend に無い（git grep、試験と見本を除く）。`TLR-00001` 形式を使える |
 | 4 | 本番のテナント001へ書く手段（読み取りの道は書けない） | 既存の決まり（PO 2026-09-30「意思決定までは私が行い合意した内容についてはopusに権限委譲する」）に合わせる: SQL ファイルを本フォルダに置く → 想定件数・戻しの SQL を PO に示し合意 → 読み取りで事前確認 → 試し流し（最後に取り消す）→ 件数が合えば本番 → 読み取りで事後確認。1つのまとまりで流し、件数の見張りを付ける。消す手順（K6）は大量の削除に当たるため PO 本人が流す。実行の道具は実装カードで決める |
+
+## 10. 見つけた食い違い（今回は直さない・記録だけ）
+
+- 店舗の形が2か所にある。カルテの入力画面は lead_sales_form_selections に書く（`frontend/src/pages/inbox/InboxKartePanel.tsx:592`）。一方で既存の「属性ごとの成約率」は leads.sales_form を読む（`backend/app/routers/analytics.py:977`）。そのため、画面で入れた店舗の形は既存の成約率に出ない。今回の分析は入力画面と同じ lead_sales_form_selections を読む。既存の成約率の直しは別の設計にする。
+- 将来の正本は「店舗形態の台帳1つ（共有＋テナント独自）」と決まっている（docs/specs/db-ssot/classification-master/design.md §7）が、まだ作られていない（migrations に該当なし）。台帳ができたら、今回の分析の読み先もそこへ移す。
 
 ## 9. 維持の仕組み
 
