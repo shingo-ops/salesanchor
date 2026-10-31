@@ -1,4 +1,4 @@
-# 段2 実装カード（設計第4.6版の追補・第6.1版）
+# 段2 実装カード（設計第4.6版の追補・第6.2版）
 
 - 対象: docs/handoff/cloud-case-ai/design.md 第4.6版 §4-2・§4-3・§7（T2〜T6c・T7）・§9 の段2。ADR-1052（Accepted）。
 - 根拠の写し: S=origin/main 8c6f52813（Merge #4942）。行番号はすべてこの sha。実装の前に最新の origin/main で行を合わせ直す（§3(a)）。
@@ -87,6 +87,14 @@
 | §4-C の GET /ops/case/audit-inputs は ai_cloud_meta.build_log を読むが、§4-A の salesanchor_app の権限に build_log の SELECT が無い（実装役が commit d961939cf で 1 行足して【要確認】とした） | 採る。§4-A に書き足す。build_log の列は built_at・ok・view_count・failed_count・error_class だけで値は無い（S origin/main:migrations/20261024_100000_create_ai_cloud_meta.sql:22-28）。口は ADMIN の鍵だけ（§4-C）。migration の【要確認】の注記は、この節を指す注記に替える |
 | §3(j)(k)(m) の公式文書が読めない（手元は Context7 の月の上限・ページを読む担当は手元で起動できない見張り、クラウドは docs.docker.com と docs.github.com に届かない） | (k) は本物の実行の記録で確かめた（§3(k) に結果）。(j)(m) は文書でなく本物の docker で確かめる。試験 #16 を足し、GitHub の試験場（sandbox-test）で Opus が流して生出力を残す（§3(j)(m)・§1 #16） |
 
+## 0-8. 第6.1版の実装の CI で見つかった直し（第6.2版・2026-10-31 Opus）
+どれも CI が要る付けたしで、作る物の形と守りは変えない。
+| 見つかったこと | 直し（場所） |
+|---|---|
+| 試験 #16（sandbox-test 実行 41196506145・先頭 ab7197912）は ①〜⑦ がすべて PASS。§3(m) の ⑤ が通ったので、#9 の 1 の 2 は `-v` の形のままでよい | 直しなし（記録だけ） |
+| Migration SQL Test の migration-test-run（実行 41196171461）が `migrations/20261031_200000_create_ops_case.sql:19: ERROR: relation "public.ops_incidents" does not exist` で落ちる。この仕事は変わった migration だけを、S .github/workflows/migration-test.yml の手書きの土台の上で流す。土台に public.ops_incidents が無い（全部を流す migration-full-dryrun は success） | S .github/workflows/migration-test.yml の migration-test-run の土台（`PUBLIC_SQL` の終わりの前。ほかの前提の表と同じ「本番作成済み・前提として登録する」の注記の形）に、S migrations/20261016_100000_create_ops_incident_tables.sql:5-35 の public.ops_incidents の CREATE TABLE IF NOT EXISTS を写す（§1 #17） |
+| API Contract Check（実行 41196171546）が、§4-C の口 8 つが frontend/api-contract/openapi.json に無いと落ちる。今の /api/v1/ops/* の口（incidents・control・error-reports など）はこの表に載っている | 落ちた記録の案内どおり `cd backend && ENVIRONMENT=test python -m tools.export_openapi ../frontend/api-contract/openapi.json` で作り直す。手で書かない（§1 #18） |
+
 ## 1. 触るファイル（変更前→変更後）
 | # | ファイル | 今（S） | 変える形 |
 |---|---|---|---|
@@ -105,6 +113,8 @@
 | 13 | 新 backend/tests/ops/test_unmask_http.py・新 backend/tests/test_ops_case_router.py | 無し | §4-G |
 | 14 | 新 scripts/tests/nginx-case-api-guard.sh | 無し | §4-F。#10 の仕事が本物の nginx に curl と openssl で当てる台本 |
 | 16 | 新 tests/sandbox/compose-run-nginx-mount.sh | 無し | §3(j)(m) を本物の docker compose で確かめる試験（§3(j)(m) の「試験 #16 の形」）。S tests/sandbox/README.md の決まり（secrets・本番を使わない・trap で片付け・失敗時は先に docker logs） |
+| 17 | S .github/workflows/migration-test.yml | migration-test-run の土台に public.ops_incidents が無い | §0-8。土台に public.ops_incidents の CREATE TABLE IF NOT EXISTS を 1 つ足す。ほかの行は変えない |
+| 18 | S frontend/api-contract/openapi.json | §4-C の口 8 つが無い | §0-8。export_openapi で作り直す（生成物。手で書かない） |
 | 15 | docs/handoff/cloud-case-ai/design.md | :176-177・:179・:210・:146・:366 | V5-1〜V5-4 と V5-3（:366 の CI の置き場）に合わせる（このカードの PR で直す。実装の PR では触らない） |
 
 ## 2. 触らない範囲
