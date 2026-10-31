@@ -260,6 +260,14 @@ _ai_ro_create_on_exit() {
       echo "⚠️ ai_cloud_meta.build_log への失敗の記録にも失敗"
     fi
   fi
+  # ADR-1052 段2: ai_unmask_owner の権限を今の ai_cloud の元の表に合わせて付け直す（違う表だけ変える）
+  # ai_cloud の作成が失敗した回も呼ぶ（build_columns は前のまま残るので、前と同じ表に付く）。終了コードは変えない
+  echo ">>> [final] grant ai_unmask_owner"
+  local _gu_start=${SECONDS}
+  if ! docker exec -e PGOPTIONS="-c statement_timeout=${AI_CLOUD_CREATE_TIMEOUT}" -i "${POSTGRES}" ${PSQL} -v VERBOSITY=terse -c 'SELECT ops_case.grant_unmask_owner();'; then
+    echo "⚠️ ai_unmask_owner の権限の付け直しに失敗（値を返す口は前の権限のまま）"
+  fi
+  echo ">>> [final] grant ai_unmask_owner done in $((SECONDS - _gu_start))s"
   exit "${rc}"
 }
 trap _ai_ro_create_on_exit EXIT
@@ -1191,3 +1199,5 @@ run_sql migrations/20261023_180000_create_accuracy_gold.sql
 run_sql migrations/20261024_100000_create_ai_cloud_meta.sql
 # ADR-1052 段1: 相談係用の読み取り専用ロール ai_reader_cloud（パスワードは PO が別途設定・冪等）
 run_sql migrations/20261024_100100_create_ai_reader_cloud_role.sql
+# ADR-1052 段2: 相談係の件・申請・値を1回だけ返す関数（スキーマ ops_case・ロール ai_unmask_owner / ai_unmask。パスワードは PO が別途設定・冪等）
+run_sql migrations/20261031_200000_create_ops_case.sql
