@@ -110,8 +110,8 @@ else
   echo "✅ worktree を作成しました: ${WORKTREE_DIR}"
 
   # ── pre-push フックを worktree で有効化 ──────────────────────────────────────
-  # husky の prepare スクリプトが core.hooksPath を frontend/.husky/_ に上書きするため、
-  # worktree 固有の設定で frontend/.husky を直接指定する（npm install の影響を受けない）
+  # 書き先は共通の設定（本体の .git/config）で、worktree 固有の設定ではない。
+  # frontend/package.json の prepare も同じ値（frontend/.husky）を共通の設定に書くので、npm install を流しても値は変わらない
   git -C "${WORKTREE_DIR}" config core.hooksPath frontend/.husky
 
   # ── UUID ライフサイクル管理（.worktree-id を発行）────────────────────────────
