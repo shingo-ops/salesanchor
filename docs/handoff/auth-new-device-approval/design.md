@@ -1,6 +1,6 @@
 # 設計書: 知らない機械からのログインは、いつもの機械で許可するまで入れない
 
-- 状態: 設計案 第6版（Opus 作成）。第1版〜第5版は審査で REVISE（下の「審査記録」）。第2版で指摘21件、第3版で要修正7件・軽微9件・判定の書き方2件、第4版で要修正4件・軽微9件、第5版で要修正3件・軽微10件、第6版で要修正1件・軽微6件を反映した
+- 状態: 設計 第6.1版（Opus 作成・第6版で審査 APPROVE）。第1版〜第5版は審査で REVISE（下の「審査記録」）。第2版で指摘21件、第3版で要修正7件・軽微9件・判定の書き方2件、第4版で要修正4件・軽微9件、第5版で要修正3件・軽微10件、第6版で要修正1件・軽微6件を反映した
 - 対応 ADR: ADR-1055（本 PR で Proposed として起案）。ADR-1013（自社ログイン）の続き。ADR-1048（管理者だけの2段階ログイン・Proposed・未実装）の「機械を覚える」「番号で許可する」部分を全員向けに広げて取り込む。ADR-1016（即時反映）に人単位の宛先を足す改訂の注記を入れる
 - 合格の基準: docs/handoff/auth-new-device-approval/kgi.md（K1〜K9・PO 承認済 2026-11-01）
 - 事実の出どころ: docs/handoff/auth-new-device-approval/recon.md（基準 7e9155163）。本書で `recon:B` のように節を指す。第2版で足した事実は本書に行番号で書く（基準 7e9155163・作業枝 13ea58557 で読んだ）
@@ -94,7 +94,7 @@
   - `revoke_user_sessions(...)`（D8）→ 失効した組 id を返し、Redis に `auth:fam_revoked:{sid}` を置く
   - `describe_user_agent(ua) -> str`（D10）
 - `backend/app/auth/recovery_codes.py`（D14）: `generate(db, user_id) -> list[str]`・`verify(db, user_id, code) -> id|None`・`remaining(db, user_id)`
-- `backend/app/auth/geo.py`: `lookup(ip) -> str|None`。`GEOIP_DB_PATH`（既定 `/geoip/dbip-city-lite.mmdb`。PR-A で `docker-compose.yml` の backend の environment に `GEOIP_DB_PATH=${GEOIP_DB_PATH-/geoip/dbip-city-lite.mmdb}` を足す＝.env で空にすると場所の表示が止まる。第5版 審査 軽微2）を `maxminddb.open_database(path, maxminddb.Mode.MMAP)` で開き、ファイルの更新時刻が変わったら開き直す。私用の IP・失敗は None。都市・地域・国を「Tokyo, Japan」の形（名前は ja があれば ja、無ければ en）。`backend/requirements.txt` に `maxminddb==3.2.0`
+- `backend/app/auth/geo.py`: `lookup(ip) -> str|None`。`GEOIP_DB_PATH`（既定 `/geoip/dbip-city-lite.mmdb`。PR-A で `docker-compose.yml` の backend の environment に `GEOIP_DB_PATH=${GEOIP_DB_PATH-/geoip/dbip-city-lite.mmdb}` を足す＝.env で空にすると場所の表示が止まる。空のときはファイルを開かずに None を返す。celery-worker には渡さないので、取り込みの作業はコードの既定の場所に書く。.env では空にする以外の値を入れない。第5版 審査 軽微2）を `maxminddb.open_database(path, maxminddb.Mode.MMAP)` で開き、ファイルの更新時刻が変わったら開き直す。私用の IP・失敗は None。都市・地域・国を「Tokyo, Japan」の形（名前は ja があれば ja、無ければ en）。`backend/requirements.txt` に `maxminddb==3.2.0`
 - 場所の元データ（審査 要修正12）: Celery の月次作業 `refresh_geoip_db`（毎月3日）を **celery-worker で動かす**。`https://download.db-ip.com/free/dbip-city-lite-YYYY-MM.mmdb.gz` を名前付き volume `geoip` に落とし、一時ファイル→rename で入れ替える。`docker-compose.yml` で volume `geoip` を celery-worker（:219）には書き込みで、backend には読み取り専用 `:ro` で `/geoip` に付ける。celery-beat（:314）には付けない。起動時にファイルが無ければ worker が1回だけ取りに行く。落とせなくても認証は止めない
 - `backend/app/auth/self_tokens.py`（変更前→変更後。呼び出し元は `auth.py:357,381,630,988` と `self_tokens.py:240` の5か所で全部）
   - `create_access_token(user_id, email, amr)` → `create_access_token(user_id, email, amr, sid: str | None = None)`。`sid` があれば claims に入れる（既存の試験 `test_viewer_api.py:183` 等は引数を変えずに通る）
@@ -109,7 +109,7 @@
   - password reset confirm（:524-529）: 直書きを `revoke_user_sessions` に置き換え（動きは同じ。新しい組は出さない）
   - password change（:553-641・取り消しは :611-616）: 直書きを `revoke_user_sessions` に置き換え（動きは同じ）。新しい組の出し方（:629-641 の `is_issuance_enabled()` のとき）を切り替えで分ける
     - off: 今と同じ。新しい組は `trusted_device_id` なしで出し、`sid` だけ入れる。`sid` の無い古いトークンでも通す。機械の登録はしない
-    - enforce: D16 の `resolve_current_session` を本体の中で呼んで今の組を引き、その `trusted_device_id` を新しい組に引き継ぐ。`sid` の無いトークンは 403 `session_upgrade_required`（パスワードは変えない。確かめる位置は、現在のパスワードの照合 `auth.py:590` の後・パスワードの UPDATE `auth.py:598` より前）。今の組に機械が無い場合は、`CurrentSession.family_created_at` が締切より前なら機械を登録して結び付け、返す応答に `sa_device` の Cookie を付ける（refresh で登録したときと同じ付け方）。締切後は、同じ位置（UPDATE より前）で 403 `device_not_trusted` を返す（パスワードも組も変えない）
+    - enforce: D16 の `resolve_current_session` を本体の中で呼んで今の組を引き、その `trusted_device_id` を新しい組に引き継ぐ。`sid` の無いトークンは 403 `session_upgrade_required`（パスワードは変えない。確かめる位置は、現在のパスワードの照合 `auth.py:591` の後・新パスワードの検査 `check_password`（:595）と `hash_password`（:599）より前。UPDATE は :603-605）。今の組に機械が無い場合は、`CurrentSession.family_created_at` が締切より前なら機械を登録して結び付け、返す応答に `sa_device` の Cookie を付ける（refresh で登録したときと同じ付け方）。締切後は、同じ位置（UPDATE より前）で 403 `device_not_trusted` を返す（パスワードも組も変えない）
     - 試験: off と enforce の両方で、変更後の組の `trusted_device_id` と、403 のときにパスワードが変わっていないことを確かめる
   - logout（:165-190）: 変更なし（印は残す＝次から聞かれない）
   - 新しい口（一覧の取得 `GET /api/v1/login-approvals/pending` だけは `/api/v1/auth/` の外。それ以外は `/api/v1/auth/` 配下＝nginx の login 枠 `nginx/nginx.conf:6,145` の中）
@@ -163,7 +163,7 @@
 ### 段W（PR-W・段A の後・段B の前。migration を含む＝危険 PR・GO 要）ホーム画面のアプリへの通知（web push・D13）
 
 - 部品: `pywebpush==2.5.0`（MPL-2.0・2026-08-29 公開・PyPI で確認。Context7 は月の上限で使えず公式を直接確認）
-- 入れ物へ渡す（第5版 審査 要修正M1）: `docker-compose.yml` には `env_file` が無く、backend の環境変数は名前を1つずつ並べる（:128-142・例 :136 `AUTH_PROVIDER=${AUTH_PROVIDER:-firebase}`）。PR-W で backend の environment に `WEBPUSH_VAPID_PRIVATE_KEY=${WEBPUSH_VAPID_PRIVATE_KEY:-}`・`WEBPUSH_VAPID_PUBLIC_KEY=${WEBPUSH_VAPID_PUBLIC_KEY:-}`・`WEBPUSH_VAPID_SUBJECT=${WEBPUSH_VAPID_SUBJECT:-}` の3行を足す。足さないと .env に書いても入れ物に届かず、何も言わずに送らなくなる。本番反映後に `docker compose exec -T backend printenv` で名前が3つあることだけを確かめる（値は出さない。`printenv | cut -d= -f1 | grep WEBPUSH` の形）
+- 入れ物へ渡す（第5版 審査 要修正M1）: `docker-compose.yml` には `env_file` が無く、backend の環境変数は名前を1つずつ並べる（:65-144・例 :136 `AUTH_PROVIDER=${AUTH_PROVIDER:-firebase}`）。PR-W で backend の environment に `WEBPUSH_VAPID_PRIVATE_KEY=${WEBPUSH_VAPID_PRIVATE_KEY:-}`・`WEBPUSH_VAPID_PUBLIC_KEY=${WEBPUSH_VAPID_PUBLIC_KEY:-}`・`WEBPUSH_VAPID_SUBJECT=${WEBPUSH_VAPID_SUBJECT:-}` の3行を足す。足さないと .env に書いても入れ物に届かず、何も言わずに送らなくなる。本番反映後に `docker compose exec -T backend printenv` で名前が3つあることだけを確かめる（値は出さない。`printenv | cut -d= -f1 | grep WEBPUSH` の形）
 - 鍵: VAPID の鍵の組を1回作り、本番の .env に `WEBPUSH_VAPID_PRIVATE_KEY`（秘密）・`WEBPUSH_VAPID_PUBLIC_KEY`・`WEBPUSH_VAPID_SUBJECT` を置く。GitHub の秘密に `gh secret set` で直接流し（値は表示しない）、deploy.yml の .env 書き出し（`deploy.yml:364-378` の `NAME='${{ secrets.NAME }}'` の形）と古い行の削除（`:318-320`）に3行ずつ足す。未設定なら通知を送らず、画面とメールだけで動く
 - migration: `public.user_push_subscriptions`（id BIGSERIAL PK / user_id FK CASCADE / trusted_device_id FK CASCADE（いつもの機械にだけ送る） / endpoint TEXT UNIQUE / p256dh TEXT / auth TEXT / created_at / last_success_at / failed_count SMALLINT / revoked_at）。全列 COMMENT。`PUBLIC_TABLES` に足す。ai_cloud の分類3か所と試験の件数を段A と同じやり方で足す（endpoint・p256dh・auth の3行を `mask`・理由は空。件数は 1054→1057、tsv は 1055→1058 行。合わなければ止めて報告）。試験の表定義4か所にも足す
 - backend: `POST /auth/push-subscriptions`（いつもの機械のログイン中だけ・今の機械に結び付け）・`DELETE /auth/push-subscriptions/{subscription_id}`（本人の購読だけ・他人の id は 404）・`GET /auth/push-public-key`（`get_current_user` を通す。ログイン中の画面だけが読むため。閲覧者のトークンは 401 になり、閲覧者の隔離の試験はそのまま通る）。依頼の作成時に、その人のいつもの機械（取り消されていない）の購読へ送る。中身は「新しい機械からのログインの許可依頼」と機械の種類・場所・時刻だけ（番号は送らない）。404/410 の返事で購読を取り消す。送信は BackgroundTasks（失敗しても依頼は作る）。書き込みの口（POST と DELETE の2つ）だけを `NO_SIGNAL_ROUTES` に理由付きで足し（GET は足さない）、状態を変える口は `_require_app_origin` を通す
@@ -287,6 +287,8 @@
   - 要修正: web push の鍵3つを `docker-compose.yml` の backend の環境変数に渡す（段W）
   - 軽微: 型ファイルは PR に入れない／`GEOIP_DB_PATH` も入れ物に渡す／期限切れを知らせる同期の送り口／パスワード変更で確かめる位置／2表の id の型／閲覧者の隔離の試験の説明文の本数
 
-### 第6版
+### 第6版（18b7c2128）: APPROVE
 
-（ここに審査役の VERDICT を追記する）
+- 審査役: 新しく起動した Opus の reviewer（2026-11-01）
+- 結果: `VERDICT: APPROVE on 18b7c2128 design`。要修正0・軽微3。前回の要修正1件・軽微6件は反映済みと確認された
+- 第6.1版で軽微3件を反映した（パスワード変更の行番号と確かめる位置／`GEOIP_DB_PATH` が空のときと celery-worker の扱い／docker-compose の環境変数の範囲の行番号）。中身の決定は変えていない
