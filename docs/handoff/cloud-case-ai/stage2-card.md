@@ -1,9 +1,9 @@
-# 段2 実装カード（設計第4.6版の追補・第2版）
+# 段2 実装カード（設計第4.6版の追補・第4版）
 
 - 対象: docs/handoff/cloud-case-ai/design.md 第4.6版 §4-2・§4-3・§7（T2〜T6c・T7）・§9 の段2。ADR-1052（Accepted）。
 - 根拠の写し: S=origin/main 8c6f52813（Merge #4942）。行番号はすべてこの sha。実装の前に最新の origin/main で行を合わせ直す（§3(a)）。
 - 前提（済み）: 段1 本番反映・受入合格（#4932・#4940）。case-api.salesanchor.jp はさくらの DNS に登録済み、証明書は 2026-10-31 16:46 に取得（期限 2027-01-29。PO の `!`）。
-- 状態: 第3版（第1版・第2版の審査 REVISE を受けた直し。§0-2・§0-3）。
+- 状態: 第4版（第1版〜第3版の審査 REVISE を受けた直し。§0-2・§0-3・§0-4）。
 
 ## 0. 設計からの直し（V5。どれも事実に合わせる直しで、守りの強さは変えない）
 - V5-1 DNS: 設計 §4-3（design.md:179）・§4-4（:210）の「Cloudflare・グレー雲」は事実と違う。case-api の名前はさくらの DNS（ns1/ns2.dns.ne.jp）にあり、プロキシは無い。SNI はそのまま nginx に届く（守りの前提は満たす）。design.md の 2 行をこのカードと同じ PR で直す。プロキシを入れる場合に守りを作り直す約束は残す。
@@ -56,6 +56,17 @@
 | L-N8 CI の「同じ応答」は中継する名前では意味が薄い | 書き添える（§4-F） |
 | L-N9 戻すのは nginx.conf だけ | §6 に 1 行足す |
 
+## 0-4. 第3版の審査（REVISE・HIGH 1・MEDIUM 2・LOW 4）への対応
+| 指摘 | 対応（場所） |
+|---|---|
+| H1 点検で止まって失敗の表示になると、S :1106「Emergency block /design/」が点検に落ちた設定で nginx を作り直し、全部の入口が止まる | 両側で守る。(b) nginx の手順で点検に落ちたら、作業の写しを戻り先の設定に替えてから止める。(a) Emergency の手順を変え、作り直しの前に nginx -t を通し、通らなければ作り直さない（§1 #9・§4-E の 1 の 3 と 1c・§3(k)・§5） |
+| M1 `set -e` のため、作り直しや確認の途中の失敗で戻す部分まで届かない | 作り直し・後の確認・戻すをまとめて `set +e` で囲む（Finalize の health check と同じ形）。compose up が 0 でない回・curl が 000 の回を受入に足す（§4-E の 1 の 4〜6・§5 ④） |
+| M2 戻り先がひとつ前の記録の設定なので、前の回に点検で落ちた壊れた設定に戻ることがある | 後の確認まで通った設定を `.deploy_nginx_good.conf` に残し、それを戻り先にする。無いときだけひとつ前の記録から書き出す。作り直しの前に戻り先も nginx -t を通す（§4-E の 1 の 1・2・5・§3(m)(n)・§5 ⑤⑥・§6） |
+| L1 salesanchor_app に ops_case のスキーマの USAGE が無い | 付ける。#11 に SELECT と is_denied_source の試験を足す（§4-A・§5） |
+| L2 S :1124 は失敗の知らせを送らない（記録に出すだけ） | 書き方を事実に合わせる。PO と Opus への知らせは段4（§4-E の 1b） |
+| L3 `.deploy_prev_sha` が無いと `cat` が 0 でなく `set -e` で理由を出さずに止まる | `|| true` を付け、空なら理由の印を出して止める（§4-E の 1 の 1） |
+| L4 題と状態の行が古い | 第4版に直す（冒頭） |
+
 ## 1. 触るファイル（変更前→変更後）
 | # | ファイル | 今（S） | 変える形 |
 |---|---|---|---|
@@ -67,7 +78,7 @@
 | 6 | 新 docker-compose.ai-unmask-http.yml | 無し | S docker-compose.ai-reader-cloud-http.yml の写し（§4-E） |
 | 7 | S docker-compose.yml | backend の environment :135-144 に OPS_API_TOKEN・OPS_INGEST_TOKEN・ERROR_REPORT_AGENT_TOKEN | 同じ所に `CASE_AGENT_TOKEN=${CASE_AGENT_TOKEN:-}`・`CASE_ADMIN_TOKEN=${CASE_ADMIN_TOKEN:-}` の 2 行 |
 | 8 | S nginx/nginx.conf | 667 行。443 のブロックは jarvis :32-33・app :70-73・api :334-337・monitor :570-573・salesanchor.jp :624-627 | §4-F（map 1 つ・limit_req_zone 1 つ・421 の行 5 つ・case-api のブロック 1 つ） |
-| 9 | S .github/workflows/deploy.yml | :325 の sed で CASE_AGENT_TOKEN 行を消す。:378 で書く。:499-514「Recreate nginx」は作り直して状態を出すだけ。:534-550 で ai-reader-cloud-http を起こす | :325 の sed に `-e '/^CASE_ADMIN_TOKEN=/d'`。:378 の次に `CASE_ADMIN_TOKEN='${{ secrets.CASE_ADMIN_TOKEN }}'`。:499-514 を §4-E の形（id と continue-on-error・前の点検・後の確認・自動で戻す）に。Finalize（:723）の後・Verify（:870）の前に「nginx の手順が失敗なら止める」手順を足す。:550 の後に「Start ai-unmask-http」（§4-E） |
+| 9 | S .github/workflows/deploy.yml | :325 の sed で CASE_AGENT_TOKEN 行を消す。:378 で書く。:499-514「Recreate nginx」は作り直して状態を出すだけ。:534-550 で ai-reader-cloud-http を起こす | :325 の sed に `-e '/^CASE_ADMIN_TOKEN=/d'`。:378 の次に `CASE_ADMIN_TOKEN='${{ secrets.CASE_ADMIN_TOKEN }}'`。:499-514 を §4-E の形（id と continue-on-error・前の点検・後の確認・自動で戻す）に。Finalize（:723）の後・Verify（:870）の前に「nginx の手順が失敗なら止める」手順を足す。:1106-1122「Emergency block /design/」の作り直しの前に nginx -t を足す（§4-E の 1c）。:550 の後に「Start ai-unmask-http」（§4-E） |
 | 10 | 新 .github/workflows/nginx-config-check.yml | 無し | §4-F の #11 |
 | 11 | 新 backend/tests/ops/test_ops_case_db.py | 無し | T2〜T6c の DB 側（§4-G） |
 | 12 | 新 backend/tests/ops/test_nginx_case_api_guard.py | 無し | §4-F の #13 の数え合わせ（#10 の仕事から走らせる） |
@@ -94,8 +105,10 @@
 - (h) nginx の材料: S nginx/nginx.conf の変数を通さない proxy_pass の宛先は IP だけ（:235・:252・:265・:589 の 49.212.160.98）で、名前の解決は要らない。ssl_certificate の道は 5 つ（:35-36・:75-76・:339-340・:575-576・:629-630）＋ case-api の 1 つ。最新の origin/main でこの数が違えば、#11 の偽の証明書の数を合わせる。読む物（htpasswd.d・/var/www の各所）を全部数える。
 - (i) 容器のイメージ: ai-unmask-http も astro-webapp-backend を使う（S docker-compose.ai-reader-cloud-http.yml:15）。psycopg2 がイメージに入っているか（S backend/app/ops/readonly_query.py:280-289 が使っている）。
 - (j) nginx の前の点検の形: `docker compose run --rm --no-deps -T nginx nginx -t` が、compose の nginx の取り付け（S docker-compose.yml:11-19）と networks（frontnet）をそのまま使い、ports を開かないこと（docker compose の公式文書 `run` の項。--service-ports を付けない限り ports は開かない）。Context7 か公式文書で確かめ、違えば止めて Opus へ。
-- (k) 失敗を後ろへ送る形: GitHub Actions で `continue-on-error: true` の手順が失敗したとき、`steps.<id>.outcome` が failure・`conclusion` が success になり、後ろの `success()` の手順が動くこと（公式文書の steps の文脈の項）。違えば止めて Opus へ。あわせて、デプロイが失敗の表示になると S deploy.yml:1106「Emergency block /design/ on smoke FAIL」（`if: failure()`）と :1124 の失敗の知らせが動くことを報告に書く（今の失敗のときと同じ動き）。
+- (k) 失敗を後ろへ送る形: GitHub Actions で `continue-on-error: true` の手順が失敗したとき、`steps.<id>.outcome` が failure・`conclusion` が success になり、後ろの `success()` の手順が動くこと（公式文書の steps の文脈の項）。違えば止めて Opus へ。あわせて、`continue-on-error` で落ちた手順の後でも、後ろの `failure()` の手順（S :1106・:1124）が動かず、1b が `exit 1` してから動くことを確かめる（公式文書の expressions の項には continue-on-error との関係が書かれていない。偽の流れで 1 回試して生出力を出す）。
 - (l) CI の IPv6: GitHub のランナーで `--network host` の nginx が [::]:443 で待ち受け、::1 に届くか。最初に 1 回だけ試し、届かなければ止めて Opus へ（IPv6 の試験を外すかは Opus が決める）。
+- (m) 戻り先の点検の形: `docker compose run --rm --no-deps -T -v /home/ubuntu/salesanchor/.deploy_prev_nginx.conf:/etc/nginx/conf.d/default.conf:ro nginx nginx -t` で、サービスの取り付け（S docker-compose.yml:11）が同じ道の -v で置き換わるかを docker compose の公式文書と sandbox で確かめる。置き換わらない・重なりでエラーなら、`-v …:/tmp/candidate.conf:ro` と `--entrypoint sh` で、`/etc/nginx/nginx.conf` の `include /etc/nginx/conf.d/*.conf;` を `/tmp/candidate.conf` に替えた写しを /tmp に作り `nginx -t -c` で試す形にする。どちらも動かなければ止めて Opus へ。
+- (n) 置くファイル: `.deploy_nginx_good.conf` と `.deploy_prev_nginx.conf` が、S deploy.yml の `git reset --hard`（:258・:765）で消えないこと（追跡していないファイルは reset で消えない）。deploy.yml に `git clean` が無いことを数える。あれば止めて Opus へ。
 - (済) 証明書: 2026-10-31 16:46 に PO の `!` で取得済み（certbot の webroot・今の名前と同じ形）。ホスト側の道は /home/ubuntu/salesanchor/certbot/conf/live/case-api.salesanchor.jp/（容器の中では S docker-compose.yml:19 の取り付けで /etc/letsencrypt/live/case-api.salesanchor.jp/。S docs/PHASE5_DOMAIN_CUTOVER_RUNBOOK.md:29）。マージの直前に Opus が PO の `!` の確認台本で、ホスト側の fullchain.pem と privkey.pem があることを ls でもう一度確かめる（中身は読まない。§4）。
 
 ## 4-A. #1 の中身（migrations/<日時>_create_ops_case.sql）
@@ -108,6 +121,7 @@
   - audits: id bigserial PK・ran_at timestamptz NOT NULL DEFAULT now()・findings jsonb NOT NULL・finding_count integer NOT NULL。
   - deny_tables: table_name text PRIMARY KEY・reason text NOT NULL。中身は §3(d) の 10 行（表の名前だけ。スキーマは問わず、public でも tenant_* でも同じ名前なら拒否）。`TRUNCATE` してから `INSERT`（ファイルが正本。段1の column_class と同じ）。
 - RLS と backend の権限: cases・reports・unmask_requests・unmask_reads・audits は ops_incidents と同じ形（§3(g)）。salesanchor_app には次だけ。DELETE・TRUNCATE は REVOKE。
+  - ops_case のスキーマの USAGE（前例の ops_incidents は public にあるので写せる前例が無い。付けないと backend の口がどれも表と is_denied_source に届かない）。
   - cases: SELECT・INSERT・UPDATE。reports: SELECT・INSERT。unmask_reads: SELECT。audits: SELECT・INSERT。deny_tables: SELECT。
   - unmask_requests: SELECT・INSERT と、列を絞った `UPDATE (status, decided_by, decision_reason, approved_minutes, expires_at)`（read_count は backend から変えられない。FOR UPDATE は 1 列以上の UPDATE 権限で足りる。PostgreSQL 16 公式文書 SELECT の「The Locking Clause」）。
   - ai_cloud_meta の USAGE と build_columns の SELECT（申請の受付で列を確かめるため。中身は名前だけで値は無い）。is_denied_source の EXECUTE（is_denied_source は PUBLIC から REVOKE し、salesanchor_app と ai_unmask_owner にだけ GRANT する。unmask_fetch の中から呼ぶため持ち主にも要る）。
@@ -195,13 +209,20 @@
 - #6: S docker-compose.ai-reader-cloud-http.yml の写し。name と -p は astro-webapp-unmask、container_name ai-unmask-http、command は `uvicorn app.ops.unmask_http:app --host 0.0.0.0 --port 8080 --workers 1 --no-access-log`、env_file は /home/ubuntu/.config/salesanchor/ai-unmask.env、environment は `CASE_AGENT_TOKEN: ${CASE_AGENT_TOKEN:-}` だけ。read_only・tmpfs /tmp・cap_drop ALL・no-new-privileges・mem_limit 128m・logging none・/dev/log・frontnet と backnet は同じ。ports は無し。上の説明の行も同じ形で書く。
 - #9 の 1（S :499-514「Recreate nginx」を次の形に。if の条件は今のまま）:
   0. 手順に `id: nginx_recreate` と `continue-on-error: true` を付ける（§3(k)。この手順が失敗しても、後ろの Bootstrap・移行・smoke・Finalize は今と同じに流れる）。
-  1. 戻り先の用意: `PREV=$(cat .deploy_prev_sha 2>/dev/null)` が空でなく、`git cat-file -e "${PREV}:nginx/nginx.conf"` が通り、`git show "${PREV}:nginx/nginx.conf" > /home/ubuntu/salesanchor/.deploy_prev_nginx.conf` の結果が空でない。どれかがだめなら作り直さずに `exit 1`。
-  2. 前の点検: `docker compose run --rm --no-deps -T nginx nginx -t`（本番の取り付け＝証明書・htpasswd.d・/var/www をそのまま使う。§3(j)）。通らなければ作り直さずに `exit 1`（今の nginx は前の設定のまま動き続ける）。
-  3. 作り直し: 今と同じ `docker compose up -d --no-deps --force-recreate nginx`。
-  4. 後の確認: 最大 15 秒、1 秒ごとに `docker inspect --format='{{.State.Running}}' astro-webapp-nginx-1` が true、かつホストから `curl -sk -o /dev/null -w '%{http_code}' --resolve app.salesanchor.jp:443:127.0.0.1 https://app.salesanchor.jp/` が 000 でない。
-  5. 4 がだめなら自動で戻す（この部分は `set +e` で囲み、途中で失敗しても最後まで進む）: `cp /home/ubuntu/salesanchor/.deploy_prev_nginx.conf nginx/nginx.conf` → もう一度作り直し → 4 と同じ確認の結果を出して `exit 1`。作業の写しは次のデプロイの `git reset --hard origin/main` で戻る。
-- #9 の 1b（Finalize（S :723）の後・Verify deployment（S :870）の前に新しい手順）: 「Fail if nginx recreate failed」。`if: ${{ always() && steps.nginx_recreate.outcome == 'failure' }}`。`echo "::error::nginx の作り直しの手順が失敗しました（前の点検・戻り先の用意・後の確認のどれか）"` と `exit 1`。これでデプロイ全体が失敗の表示になり、Verify は動かず、失敗の知らせ（S :1124）が届く。
-- 点検で止まった回の本番の状態: backend・DB の移行・smoke は新しい形で済み、nginx だけが前の設定のまま。新しい設定にしか無い入口（case-api）だけが使えない。次にすることは直す PR を出すこと（次のデプロイは S deploy.yml:63-79 の gate で nginx の手順も流れる）。
+  - 置くファイル（どれも /home/ubuntu/salesanchor の直下。git に入れない。.deploy_prev_sha と同じ扱い。§3(n)）: `.deploy_nginx_good.conf`＝最後に後の確認まで通った設定。`.deploy_prev_nginx.conf`＝今回の戻り先。
+  1. 戻り先の用意（`PREV=$(cat .deploy_prev_sha 2>/dev/null || true)`）:
+     - `.deploy_nginx_good.conf` があって空でなければ、それを `.deploy_prev_nginx.conf` に写す（最後に起きた設定を正とする。PREV の設定は、前のデプロイで点検に落ちていれば壊れている）。
+     - 無ければ（この形の初回）、PREV が空でなく `git cat-file -e "${PREV}:nginx/nginx.conf"` が通るときだけ `git show "${PREV}:nginx/nginx.conf" > .deploy_prev_nginx.conf`。
+     - どちらもできない・結果が空なら、理由の印（`::error::戻り先の nginx.conf を用意できません`）を出し、作り直さずに `exit 1`（作業の写しの nginx.conf は新しいまま残る。この回の Emergency の手順は #9 の 1c が守る）。
+  2. 戻り先の点検: `.deploy_prev_nginx.conf` を本番と同じ取り付けで `nginx -t`（形は §3(m)）。通らなければ作り直さずに `exit 1`。
+  3. 新しい設定の点検: `docker compose run --rm --no-deps -T nginx nginx -t`（本番の取り付け＝証明書・htpasswd.d・/var/www をそのまま使う。§3(j)）。通らなければ、作業の写しを戻り先に替えてから（`cp .deploy_prev_nginx.conf nginx/nginx.conf`。後ろで nginx を作り直す手順が起きても壊れた設定を読まないため）、作り直さずに `exit 1`（今の nginx は前の設定のまま動き続ける）。
+  4. 4〜6 はまとめて `set +e` で囲む（S deploy.yml:743-752 の Finalize の health check と同じ形）。作り直し: 今と同じ `docker compose up -d --no-deps --force-recreate nginx`。
+  5. 後の確認: 最大 15 秒、1 秒ごとに `docker inspect --format='{{.State.Running}}' astro-webapp-nginx-1` が true、かつホストから `curl -sk -o /dev/null -w '%{http_code}' --resolve app.salesanchor.jp:443:127.0.0.1 https://app.salesanchor.jp/` が 000 でない（curl の終了コードが 0 でなくても止まらずに次の秒へ）。通ったら `cp nginx/nginx.conf .deploy_nginx_good.conf` して手順を成功で終える。
+  6. 4 が 0 でない、または 5 が 15 秒の間に通らなければ自動で戻す: `cp .deploy_prev_nginx.conf nginx/nginx.conf` → もう一度作り直し → 5 と同じ確認の結果を出して `exit 1`（`.deploy_nginx_good.conf` は書き換えない）。作業の写しは次のデプロイの `git reset --hard origin/main` で戻る。
+- #9 の 1b（Finalize（S :723）の後・Verify deployment（S :870）の前に新しい手順）: 「Fail if nginx recreate failed」。`if: ${{ always() && steps.nginx_recreate.outcome == 'failure' }}`。`echo "::error::nginx の作り直しの手順が失敗しました（戻り先の用意・点検・後の確認のどれか）"` と `exit 1`。これでデプロイ全体が失敗の表示になり、Verify は動かない。S :1124 の手順は記録に出すだけで、どこにも送らない（届くのは GitHub の既定の失敗の知らせだけ）。PO と Opus への知らせは段4（agent-console）で扱い、段2では足さない。
+- #9 の 1c（S :1106-1122「Emergency block /design/ on smoke FAIL」を変える。`if: failure()` のまま）: htpasswd を消した後、作り直しの前に `docker compose run --rm --no-deps -T nginx nginx -t` を通す。通らなければ作り直さず、`::warning::nginx の設定が点検に通らないため作り直しません` を出す（全部の入口を止めないことを優先する）。通れば今と同じに作り直す。今の手順は、どの失敗の回でも作業の写しの設定で nginx を作り直すので、点検に落ちた設定でも作り直してしまう（第3版の審査 H1）。
+- 失敗の表示になった回は、1c が /design/ を閉じる（htpasswd を消す）。次に成功したデプロイで htpasswd が作り直され、元に戻る（S deploy.yml:1104 の説明と :125「Setup design-site htpasswd (idempotent)」）。
+- 点検で止まった回の本番の状態: backend・DB の移行・smoke は新しい形で済み、nginx だけが前の設定のまま。新しい設定にしか無い入口（case-api）だけが使えない。次にすることは直す PR を出すこと（次のデプロイは S deploy.yml:63-79 の gate で nginx の手順も流れる。戻り先は `.deploy_nginx_good.conf` なので、壊れた設定には戻らない）。
 - #9 の 2: :550 の後に「Start ai-unmask-http (case agent unmask read)」。S :534-550 と同じ形で、ai-unmask.env が読めなければ警告して起こさない、起こせなくても警告だけ（アプリの反映は止めない）。`docker compose -p astro-webapp-unmask -f docker-compose.ai-unmask-http.yml up -d --build=false --force-recreate`。
 
 ## 4-F. #8・#10・#12・#14 の中身（nginx と CI）
@@ -272,7 +293,8 @@
 | 口の決まり | CI の #13 が緑 |
 | T7（CI 側）・文法・末尾の点・IPv4 と IPv6 | #10 が緑（#12 の数え合わせ・nginx -t・#14 の台本）。421 の行を 1 つ消すと #12 が落ちる試験がある |
 | trap を切り出す既存の試験 | S tests/sandbox/ai-ro-restore-on-failure.sh・S tests/sandbox/migration-read-probe.sh・S scripts/tests/test-deploy-orphan-cleanup.sh の C8 が合格（生出力） |
-| nginx の作り直しの守り | #9 の 1 と 1b を偽の docker か sandbox で、次の 3 つの回を生出力で示す: ① 前の点検が通らない → 作り直しをせず nginx の手順が失敗、後ろの手順（Bootstrap・移行・smoke の代わりの印）は動き、1b でデプロイが失敗の表示 ② .deploy_prev_sha が空 → 作り直しをせず失敗 ③ 作り直した後に起きない → 戻り先の nginx.conf に戻して作り直し、失敗の表示（戻す途中の 1 か所をわざと失敗させても作り直しまで進む） |
+| nginx の作り直しの守り | #9 の 1・1b・1c を偽の docker か sandbox で、次の回を生出力で示す: ① 新しい設定の点検が通らない → 作り直しをせず、作業の写しが戻り先に替わり、nginx の手順が失敗。後ろの手順（Bootstrap・移行・smoke の代わりの印）は動き、1b でデプロイが失敗の表示。1c は点検が通る（戻り先の設定）ので作り直す ② .deploy_prev_sha が空で good も無い → 作り直しをせず失敗。1c は点検に落ちるので作り直さない ③ 戻り先の点検に落ちる → 作り直さず失敗 ④ 作り直した後に起きない（curl が 000 と終了コード 7 を返す回・compose up が 0 でない回の 2 つ）→ 戻り先に戻して作り直し、失敗の表示 ⑤ 前の回で点検に落ちた後の次の回で、戻り先が `.deploy_nginx_good.conf`（PREV の壊れた設定ではない） ⑥ 成功の回で `.deploy_nginx_good.conf` が新しい設定になる |
+| backend の DB の権限 | #11 に、salesanchor_app で ops_case.cases を SELECT でき、is_denied_source を呼べる試験がある |
 | nginx が止まらない（本番） | デプロイの「Recreate nginx」で前の点検・後の確認が通った記録がある。その後、app・api・monitor・salesanchor.jp・jarvis-claude.uk の 5 つの入口の `/` の応答コードと Location がデプロイ前と同じ（デプロイ前に同じ curl で基準値を取る） |
 | T7（本番の通し） | 手元の curl で（IPv4）: case-api の TLS で Host を 5 つの名前にそれぞれ替える → 5 つとも 421。api の TLS（`--connect-to`）で Host を case-api → 421。case-api の `/`・`/api/v1/auth/login`・`/api/v1/ops/case/pending`・ticket・decision・audits・audit-inputs・uuid でない {id} → 404。case-api の 3 つの道に鍵なしで送る → 401（容器が起きる前の /ops/unmask/read は 503） |
 | 管理の口は api だけ | api.salesanchor.jp の /api/v1/ops/case/pending に鍵なし → 401（404 でない＝届いている） |
@@ -289,5 +311,5 @@
 - ops_case の表・ロール・関数は残っても届く人がいない。消すのは PO の判断。
 - nginx が起きない場合:
   - 前の点検・戻り先の用意で止まった回: 今の nginx は前の設定のまま動いている。backend と DB の移行は済んでいる（#9 の 1 の「点検で止まった回の本番の状態」）。直す PR を出す。
-  - 作り直した後に起きない回: #9 の 1 の 4 が前の nginx.conf に自動で戻して作り直す。それでも起きなければ、PO の `!` で `cd /home/ubuntu/salesanchor && cp .deploy_prev_nginx.conf nginx/nginx.conf; docker compose up -d --no-deps --force-recreate nginx`（台本は Opus が先に用意する。.deploy_prev_nginx.conf が無ければ git のひとつ前の記録から書き出す）。あわせて直前のマージを戻す PR を EMERGENCY の手順（S docs/BRANCH_PROTECTION_SETUP.md §4）で出す。
+  - 作り直した後に起きない回: #9 の 1 の 6 が戻り先に自動で戻して作り直す。それでも起きなければ、PO の `!` で `cd /home/ubuntu/salesanchor && cp .deploy_nginx_good.conf nginx/nginx.conf; docker compose up -d --no-deps --force-recreate nginx`（台本は Opus が先に用意する。最後に起きた設定に戻す。.deploy_nginx_good.conf が無いときだけ .deploy_prev_nginx.conf を使い、どちらも先に #9 の 1 の 2 と同じ形で nginx -t を通す）。あわせて直前のマージを戻す PR を EMERGENCY の手順（S docs/BRANCH_PROTECTION_SETUP.md §4）で出す。
   - 戻すのは nginx.conf だけ。compose の nginx の部分（取り付け・イメージ）を変えた PR では、戻すものに docker-compose.yml を含める（この PR は backend の env しか変えないので当たらない）。
