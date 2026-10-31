@@ -22,6 +22,7 @@
 7. 記録は既存の `public.auth_events` に、誰か・理由・初めての機械か を足して残す。許可待ち（202）は `auth_pending` として成功と分ける。パスワード・合言葉・Cookie の値は残さない。
 8. 場所の目安は DB-IP IP to City Lite（CC BY 4.0）を読み、出す画面とメールに出どころを表示する。読めなければ「不明」とし、認証は止めない。
 9. 入れ方は `AUTH_DEVICE_APPROVAL`（off / enforce・既定 off）。off はログインの止め方が今と同じ（機械の登録もしない。6 の失効の確かめだけは off でも効く）。点検専用の人には管理用の命令で印を発行し、点検はその印でログインする。
+10. 新しい表（`user_trusted_devices`・`auth_login_requests`・`user_recovery_codes`・`user_push_subscriptions`）には RLS を付けない。ADR-1018 Decision 6 が認証トークンの表に付けないと決めたのと同じ理由で、ログイン前・会社が決まる前に hash の一致で1行を引くため。生の値は保存せず hash だけを置き、本人の行は `user_id` で絞る。
 
 ## Why（なぜ）
 
