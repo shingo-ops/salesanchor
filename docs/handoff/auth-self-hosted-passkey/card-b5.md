@@ -434,7 +434,7 @@ backend/tests/test_passkeys.py に入れる試験:
   - `selfPasskeyLogin` は options → startAuthentication → verify の順に呼び、トークンを受け取る（@simplewebauthn/browser は vi.mock）
   - `passkeyBrowserError` は NotAllowedError で `"cancelled"`、InvalidStateError で `"exists"` を返す
 - LoginPage.test.tsx（本物の AuthProvider のまま。`mock.self = true` で自社ログインにする）
-  - `vi.mock("../../lib/auth/passkey", async (orig) => ({ ...(await orig()), passkeySupported: () => mock.passkey, selfPasskeyLogin: mock.selfPasskeyLogin }))` を足す。`passkeyBrowserError` は本物のまま。`mock`（:8 の vi.hoisted）に `passkey: false`・`selfPasskeyLogin: vi.fn()` を足す（既定は偽。既存の Firebase の試験＝beforeEach :54 `mock.self = false` でボタンが出ないように、対応端末の試験の中だけ `mock.self = true`・`mock.passkey = true` にしてから描く）
+  - `vi.mock("../../lib/auth/passkey", async (orig) => ({ ...(await orig()), passkeySupported: () => mock.passkey, selfPasskeyLogin: mock.selfPasskeyLogin }))` を足す。`passkeyBrowserError` は本物のまま。`mock`（:8 の vi.hoisted）に `passkey: false`・`selfPasskeyLogin: vi.fn()` を足す（既定は偽。既存の Firebase の試験＝beforeEach :54 `mock.self = false` でボタンが出ないように、対応端末の試験の中だけ `mock.self = true`・`mock.passkey = true` にしてから描く）。既存の beforeEach（:52-62）に `mock.passkey = false` と `mock.selfPasskeyLogin.mockReset()` を足し、試験の順番で結果が変わらないようにする
   - 対応端末でボタンが出る。非対応では出ない
   - 押すと AuthProvider を通って `selfPasskeyLogin` が 1 回呼ばれ、処理中は両方のボタンが押せない
   - 取り消しで `authError.passkeyCancelled`、401 で `authError.passkeyFailed`（パスワードの文言が出ない）
@@ -562,5 +562,6 @@ PR を revert して deploy する。登録済みのパスキーの行は残る�
   - MINOR-b 手元の確かめを CI と同じ `npm run check:all` と `ruff check app/` にした（§5-9）
   - MINOR-c LoginPage.test.tsx の偽物の既定を偽にした
   - MINOR-d SecuritySection.test.tsx の get の設定の置き場と、Firebase の描き直しを書いた
+  - 追加の審査（119095e22・APPROVE）の MINOR 1 件: LoginPage.test.tsx の beforeEach で mock.passkey と selfPasskeyLogin を戻すことを書いた
 
 END OF CARD
