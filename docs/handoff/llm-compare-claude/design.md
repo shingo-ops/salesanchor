@@ -118,6 +118,7 @@ Haiku と Sonnet は別々に判定する。「Gemini 平均」は Gemini 3回�
 ## 13. 実装カード（PO 承認後に Sonnet へ渡す）
 - 作るファイル: scripts/accuracy/llm_compare/{capture_prompt_ab.py, run_claude.py, split_snapshot.py, summarize.py, fhd_snapshot.py（写し・sha256 を README に記録）, v102_response_schema.json, vps_run_gemini.sh, vps_convert.sh, fetch_results.sh, README.md}
 - 触らない: backend/, frontend/, migrations/, .github/, scripts/accuracy/score_v102.py, 本番の設定。
+  - 注記（実施後）: score_v102.py は実施中に --a4-extra-system を足した。渡さないときの動きは元と同じで、試験を足した（「## 結果」末尾の実施中の直し、review-opus.md を参照）。
 - 守ること: §5-1 の差し替え先（prompt_ab 側の名前）／成功後だけ保存／test-id ごとの別名／§5-2 の停止条件と確かめ／`--bare` 不使用／§5-3 の一括 convert と split の分け方／§5-5 の健康診断の上書き。
 - 試験（手元）:
   - split_snapshot.py: 手元の f_ct の写し（~/CC報告ファイル-keep/accuracy-gold-20261020/sample/snapshot/ の100ファイル）に tag="f_ct"・repeat=1・source_message=<投稿id> の3列を先頭に付けて1本の TSV にしたものを入力にし、分けた結果が元の100ファイルとバイト単位で一致すること。
