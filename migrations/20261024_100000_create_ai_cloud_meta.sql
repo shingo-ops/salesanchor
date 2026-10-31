@@ -3,6 +3,7 @@
 -- ai_cloud を DROP SCHEMA CASCADE しても消えないよう、ai_cloud の外に置く。
 -- 中身は表と列の名前・件数だけで、値は入らない。
 -- 権限: PUBLIC から全部外す。ai_reader にだけ USAGE と 3 表の SELECT。ai_reader_cloud には何も付けない。
+--       ai_reader が無い DB では付けない（CI の内部の試し用。stage1-h-decision.md §4）。
 --       関数 build_views() の EXECUTE はだれにも付けない（呼ぶのは持ち主の jarvis だけ）。
 -- ビューの作成そのものは 20261024_100300_create_ai_cloud_views.sql（一覧に載せず EXIT trap から流す）。
 
@@ -184,5 +185,13 @@ REVOKE ALL ON SCHEMA ai_cloud_meta FROM PUBLIC;
 REVOKE ALL ON ALL TABLES IN SCHEMA ai_cloud_meta FROM PUBLIC;
 REVOKE ALL ON FUNCTION ai_cloud_meta.build_views() FROM PUBLIC;
 
-GRANT USAGE ON SCHEMA ai_cloud_meta TO ai_reader;
-GRANT SELECT ON ai_cloud_meta.column_class, ai_cloud_meta.build_log, ai_cloud_meta.build_columns TO ai_reader;
+DO $grant$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ai_reader') THEN
+    EXECUTE 'GRANT USAGE ON SCHEMA ai_cloud_meta TO ai_reader';
+    EXECUTE 'GRANT SELECT ON ai_cloud_meta.column_class, ai_cloud_meta.build_log, ai_cloud_meta.build_columns TO ai_reader';
+  ELSE
+    RAISE NOTICE 'ai_reader が無いため ai_cloud_meta の権限は付けない';
+  END IF;
+END
+$grant$;
