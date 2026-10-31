@@ -22,7 +22,18 @@ PO の依頼: 「LINEみたいな使い心地は出来る？」→ 意味は「�
 - この秒は「初めて開いて、通信が全部終わり読み込み中の印が消えるまで」（docs/handoff/page-speed-record/design.md 5-3）。一度見た画面に戻ったときの秒・押してから最初に何か変わるまでの秒は、今は測っていない。
 - 測る場所は GitHub の機械（外のコンピューター）。PO のスマホでの秒は まだ確かめていない。
 
-## 4. 未確認
-- U1: 118 ファイルのうち、何画面が「開くたびに読み込み中の印を出して表を消す」形か。
-- U2: PO が実際によく使う画面と、PO のスマホでの体感の秒。
-- U3: 手元にデータを残すときの容量と、会社を切り替える操作があるか（super admin の会社切替）。
+## 4. 未確認 → 確かめた結果
+- U1（確かめた 2026-10-31）: frontend/src/pages の画面ファイル 93 本を、同じ基準 8c6f52813 で script により分類（生の結果: /tmp/CC報告ファイル/page-speed/line/r2-raw.txt）。
+  - 読み込み中は中身を消して印だけ出す: 61 本（早めに return 7 本・`{loading ? <LoadingBlock/> : 表}` の三項 54 本）。正規表現は early `if\s*\(\s*!?\w*[Ll]oading\w*[^)]*\)\s*(\{\s*)?return\b`、tern `\{\s*\w*[Ll]oading\w*\s*\?`。
+  - 例: frontend/src/pages/admin/ChannelMastersPage.tsx:36 `setLoading(true)`→:79-80 `{loading ? (<LoadingBlock />`。frontend/src/pages/companies/CompaniesPage.tsx:400-401 同じ形。
+  - 表を残したまま取り直す例（手本）: frontend/src/pages/inventory/InventoryPage.tsx:226 `setLoading(true)`・:282 useRealtimeRefresh・:636 `visibility: loading ? "visible" : "hidden"`（印を重ねるだけで表は消さない）。
+  - ほかの形の印: 13 本。印なし: 4 本。ファイルの中で取得しない（子の部品か hook で取る）: 15 本。
+  - 読み込み中の金型は frontend/src/components/loading/LoadingBlock.tsx:16（components/loading/index.ts:4 から出す）。使うファイル 109。骨組み表示（Skeleton）の金型は無い。
+- U3（確かめた 2026-10-31）: 会社を切り替える画面の操作は無い。`switchTenant|X-Tenant|impersonat|tenantSelect|setTenant` を frontend/src で探して 0 件。tenant_id は型の項目にだけ出る。
+  - ただしログアウトはページを読み直さない: frontend/src/contexts/AuthContext.tsx:139-150 の signOut は自社ログインでは `api.post("/auth/logout")`→`expireSession()` だけ。frontend/src/lib/auth/selfAuth.ts:67-70 の expireSession はメモリの session を null にして notify するだけ。api.ts の 401・期限切れの道（:86・:93・:100）も expireSession を呼ぶ。→ 手元に写しを持つなら、session が変わった知らせ（selfAuth.ts:49 subscribeSession／AuthContext.tsx:90 onAuthStateChanged・:105 subscribeSession）で必ず消す必要がある。
+  - ブラウザの保存（localStorage）を使う場所: firebase-auth.ts:74・:77、inbox/useInboxState.ts:488・:508（下書き）・:520（受信箱の設定）、viewer/api.ts:20・:28（閲覧ページの鍵）。画面の中身（DB のデータ）は保存していない。
+  - 容量: 写しはメモリだけに持ち（ブラウザの保存に書かない）、使われない写しは 5 分で捨てる既定（TanStack Query gcTime 既定 5 分・/tmp/CC報告ファイル/page-speed/line/lib-docs.md）にすれば、上限はその時開いた画面の分だけ。
+- 部品の包み順: frontend/src/main.tsx は `<App/>` だけ。frontend/src/App.tsx:151-155 が AuthProvider > BrowserRouter > UiPrefsProvider > LocaleProvider > ThemeProvider。即時反映の受け口 RealtimeProvider は DesktopShell.tsx:204・MobileShell.tsx:198（ログイン後のシェルの中）。
+- 即時反映の合図の名前は今 2 つだけ: backend/app/realtime/topics.py の `tcg.review`・`tcg.inventory`（生: /tmp/CC報告ファイル/page-speed/line/realtime-raw.txt）。合図の受け方は frontend/src/hooks/useRealtimeRefresh.ts（自分の変更は無視・1.5 秒まとめ・裏のタブは保留・再接続で 1 回）。→ 135 画面の多くは今は合図を出す書き込みが無い。
+- 測り方: tests/prod-check/page-speed.spec.ts:72-79 の goInApp はページを読み直さずに画面を移る（pushState＋popstate）。秒は :291-310 で `max(navStart, 最後の通信の終わり, 読み込み中の印が消えた時) - navStart`。→ 同じページの中で 2 回目に開けば K1 を今の仕組みのまま測れる。
+- U2: PO が実際によく使う画面と、PO のスマホでの体感の秒。→ まだ確かめていない（K6 で PO に触ってもらうときに聞く）。
