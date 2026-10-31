@@ -211,6 +211,33 @@
 - page-speed.config.ts: `testMatch: "page-speed.spec.ts"`、`retries: 0`、`workers: 1`、`timeout: 45 * 60 * 1000`、`reporter: [["list"]]`、`trace`・`screenshot`・`video` は `off`、ブラウザは今の設定と同じ Desktop Chrome、`baseURL` は今と同じ決め方（`PROD_CHECK_BASE_URL` か本番）
 - 秘密が未登録のときは、今の点検と同じく test.skip（理由「点検用の人の秘密情報が未登録」）
 
+### 5-8. 便2: 測れなかった画面と、止めた通信で秒が膨らむ画面を直す（PO 2026-10-31 選択「1」）
+
+本線の初回の記録（run 41130360554・2026-10-31 06:34 JST・本線 ab44694）で、測れなかった画面が 11、止めた通信で秒が膨らんだ画面が 2 あった。原因を実物で確かめた。
+
+| 画面 | 記録 | 原因（観測） | 直し方 |
+|---|---|---|---|
+| `/inventory` | 時間切れ（45 秒） | 読み込み中の印 `.loading-indicator` は読み込みが終わっても消えず、`visibility: hidden` になるだけ（`frontend/src/pages/inventory/InventoryPage.tsx:631-638`）。`tests/prod-check/settle.ts` の `visibleLoadingCount` は `getClientRects().length > 0` で数える（`tests/prod-check/settle.ts:75`）。`visibility: hidden` の要素は箱が残るので 1 と数える（Chrome で同じ要素を作り `getClientRects().length` = 1・`getComputedStyle().visibility` = `hidden` を確かめた） | 見えている印だけを数える: `getClientRects().length > 0 && getComputedStyle(el).visibility === "visible"`。`visibility` は親から受け継ぐので、親が隠れていても数えない |
+| `/commission-settings` 3.6 秒・`/management-center/commission` 3.5 秒 | 測れた（秒が膨らむ） | 関所が `GET /api/v1/tenant-commission-settings` を `route.abort()` で止める（`tests/prod-check/page-speed.spec.ts:200-209`）。アプリの通信は失敗（TypeError）を GET なら 3 回まで 0.5・1・2 秒待って送り直す（`frontend/src/lib/api.ts:34-38,108-157`）。待ちの合計 3.5 秒が秒に入る。止めた件数 8 = 2 画面 × 4 回と合う | 書き込む GET は abort でなく `route.fulfill({ status: 409, contentType: "application/json", body: "{}" })` で返す。409 は送り直しの対象（502/503/504 と通信の失敗）ではないので待ちが入らない。止めることは変えない（行が無い会社で INSERT するため・recon §5） |
+| `/crm`・`/admin`・`/management-center` | 別の画面へ移った | 3 つとも中の既定の画面へ移るだけの道すじ（`frontend/src/App.tsx:198-199` → `/crm/leads`、`:351-352` → `/admin/tenant-profile`、`:375-376` → `/management-center/staff`）。移った先は別の行で測れている | 表の種類に `redirect`（移る先 `to` 付き）を足す。移った先が `to` なら「測れた」とし、道すじの欄は `/crm → /crm/leads` の形で出す。`to` でなければ今と同じ「別の画面へ移った」 |
+| 番号の要る 7 画面（`/admin/products/:id/edit`・`/quotes/:id`・`/invoices/:id`・`/staff/:id/edit`・`/bots/:id/edit`・`/teams/:id/edit`・`/suppliers/:id/edit`） | 番号を拾えず | 一覧の API はどれも配列を返す（`backend/app/routers/products.py:134-136`・`backend/app/routers/quotes.py:73-75`・`backend/app/routers/invoices.py:181-183`・`backend/app/routers/staff.py:532`・`backend/app/routers/bots.py:62`・`backend/app/routers/teams.py:55-57`・`backend/app/routers/suppliers.py:141`）。一覧の画面ではどれも 403 が出ている（`/invoices` は API 1 本で 403 1 件、その API が `/api/v1/invoices`）。7 本とも 403 と【推測】。ほかの 6 本はどの API が 403 か今の表では分からない【未確認】 | この便では権限は変えない（点検用の人は最小の権限・ADR-1017）。理由を表で確かめられるようにする: 「番号を拾えず」を「番号を拾えず（一覧が 403）」「番号を拾えず（一覧がほかの失敗）」「番号を拾えず（一覧が空）」「番号を拾えず（一覧の形が違う）」「番号を拾えず（一覧の応答なし）」の 5 つに分ける（一覧の API の応答を状態に関係なく待ち、状態の番号で分ける）。表の下に「403 が返った API」を道すじの形と件数で出す。権限を広げるかは D2 で PO が決める |
+
+あわせて、審査 #4928 の S2: 速さの段に `timeout-minutes: 46` を付ける（試験の上限 45 分 + 1 分。段の前の 3 段は合わせて最悪 14 分で、仕事の上限 60 分に収まる）。
+
+表の列を 1 つ足す: 「止めた送信」（その画面を開いているあいだに関所が止めた数）。止めた通信がある画面は、その通信の本当の時間が秒に入っていないことが分かる。
+
+変えるファイル: `tests/prod-check/settle.ts`（`visibleLoadingCount` の 1 か所）・`tests/prod-check/page-speed.spec.ts`・`tests/prod-check/page-speed-targets.ts`（型 1 か所と 3 行）・`.github/workflows/prod-ui-check.yml`（1 行）。今の点検（`tests/prod-check/prod-ui.spec.ts`・`tests/prod-check/fixtures.ts`）は触らない。
+
+受入（本線へ入れる前に作業ブランチで 1 回動かす）:
+
+| 基準 | 検証方法 |
+|---|---|
+| H1 在庫表が測れる | 表の `/inventory` が「測れた」で秒が出る |
+| H2 手数料 2 画面に送り直しの待ちが入らない | 2 画面の秒が 1.0 秒未満（いちばん遅い API は前回 0.2 秒）。止めた送信の `GET /api/v1/tenant-commission-settings` が 2 件（2 画面 × 1 回） |
+| H3 移るだけの 3 画面が測れる | `/crm → /crm/leads`・`/admin → /admin/tenant-profile`・`/management-center → /management-center/staff` の 3 行が「測れた」 |
+| H4 番号の要る 7 画面の理由が分かる | 7 行の状態が括弧付きの理由になり、表の下に「403 が返った API」がある |
+| H5 前の基準を保つ | G1〜G6（135 行・書き込み 0・番号が出ない・今の点検 8 passed・429 が 0） |
+
 ## 6. 弊害・トレードオフ
 
 | 弊害 | 対処 |
@@ -273,6 +300,8 @@
 | 4 | 便1 の実装カードで 5-2 の残りのファイル → push | クラウドの Sonnet |
 | 5 | 便1 の作業ブランチで手動実行 1 回、G1〜G6 を数える → 審査 → CI 緑 → マージ | Opus |
 | 6 | main で手動実行 1 回、表を PO に遅い順で報告し、秒数の合格ラインを決めてもらう | Opus → PO |
+| 7 | 便2（5-8）の設計をクラウドで審査 → 実装カード → push | Opus → クラウドの Sonnet |
+| 8 | 便2 の作業ブランチで手動実行 1 回、H1〜H5 を数える → マージ前の審査 → CI 緑 → マージ → main で 1 回 | Opus |
 
 ## 12. 未決（PO が決めること）
 
