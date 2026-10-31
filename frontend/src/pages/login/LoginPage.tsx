@@ -62,7 +62,8 @@ export default function LoginPage() {
       const status = await getPasskeyPrompt();
       if (status.can_auto && (await conditionalCreateSupported())) {
         const result = await autoRegisterPasskey();
-        if (result !== "not_allowed") return navigate(from, { replace: true });
+        // 作れた・登録済みなら案内は要らない。断られた・失敗・打ち切りは案内へ進む
+        if (result === "created" || result === "exists") return navigate(from, { replace: true });
       }
       if (status.show_prompt) {
         setPromptOpen(true);

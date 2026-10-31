@@ -346,4 +346,33 @@ describe("LoginPage (enroll after password sign-in)", () => {
     expect(await screen.findByText(tr("login.passkeyPromptTitle"))).toBeTruthy();
     expect(screen.queryByTestId("after-login")).toBeNull();
   });
+
+  it("L8 auto create failed + show_prompt: prompt shown", async () => {
+    mock.getPasskeyPrompt.mockResolvedValue({ can_auto: true, show_prompt: true });
+    mock.autoRegisterPasskey.mockResolvedValue("failed");
+    await renderLoginWithHome();
+    await fillAndSubmit();
+    expect(await screen.findByText(tr("login.passkeyPromptTitle"))).toBeTruthy();
+    expect(screen.queryByTestId("after-login")).toBeNull();
+  });
+
+  it("L9 auto create exists: no prompt", async () => {
+    mock.getPasskeyPrompt.mockResolvedValue({ can_auto: true, show_prompt: true });
+    mock.autoRegisterPasskey.mockResolvedValue("exists");
+    await renderLoginWithHome();
+    await fillAndSubmit();
+    await waitFor(() => expect(mock.autoRegisterPasskey).toHaveBeenCalledTimes(1));
+    expect(screen.queryByText(tr("login.passkeyPromptTitle"))).toBeNull();
+    expect(await screen.findByTestId("after-login")).toBeTruthy();
+  });
+
+  it("L10 auto create failed + no show_prompt: no prompt", async () => {
+    mock.getPasskeyPrompt.mockResolvedValue({ can_auto: true, show_prompt: false });
+    mock.autoRegisterPasskey.mockResolvedValue("failed");
+    await renderLoginWithHome();
+    await fillAndSubmit();
+    await waitFor(() => expect(mock.autoRegisterPasskey).toHaveBeenCalledTimes(1));
+    expect(screen.queryByText(tr("login.passkeyPromptTitle"))).toBeNull();
+    expect(await screen.findByTestId("after-login")).toBeTruthy();
+  });
 });
