@@ -9,7 +9,7 @@
 **担当**: Claude Opus（設計担当。読み取りのみ。書き込みは一切していない）  
 **基準**: origin/main 5c13bfbef
 
-- 状態: 下調べ済み（読み取りのみ）。KGI 未承認・設計 未作成・実装 未着手。テナント001へのテスト用データの投入は未実施（設計と PO の明示の承認が要る）。
+- 状態: 下調べ済み（読み取りのみ）。KGI 未承認・設計 下書き（`docs/handoff/lead-regression/design.md`）・実装 未着手。テナント001へのテスト用データの投入は未実施（設計と PO の明示の承認が要る）。
 - PO の方針（2026-10-31）: 本物の記録がほぼ無いなら、テナント001にテスト用のデータを入れて、どんな分析ができ、画面でどう見えるかを確かめる（選択肢2）。推測禁止・配線と DB の SSOT 厳守・データの分散禁止・画面の部品はデザイントークンと金型を守る。分からないことは PO に聞く。
 
 ---
@@ -86,15 +86,31 @@ tenant_006 はリード 74・成約 8 があるが、Meta の審査専用なの�
   - SSOT の観点: 返信の速さはメッセージ表の送受信の時刻から計算できる。別の列に写して持つとデータが2か所に分かれるので、設計では「メッセージ表から計算する」を第一候補にする（設計で決める。ここでは事実だけ）。
 - Instagram・Facebook の会話は Meta の受け口（webhook）からしか入らない。手で入れる入口（`backend/app/routers/conv_logs.py:247`）は自動の経路を拒む。そのため、Instagram・Facebook のリードに「過去の日時のテスト用のやり取り」を正規の入口で入れる道は無い。
 
+## 6. やり取りの表へ直接書いたときに自動で動くもの（コードと本番の事実。2026-10-31 14:10〜14:13 JST）
+
+| 引用先 `path:line` ／ 本番の読み取り | 確認内容 |
+|---|---|
+| `backend/app/tasks/avatar.py:306` | 毎日 2:00 の顔写真の取り直しは、過去30日の受信で page_id がある行だけ Meta に問い合わせる（317行で page_id が空なら飛ばす）。テナント001の Meta 接続設定（tenant_meta_config）は 0 件 |
+| `backend/app/tasks/sa02_recon_monitor.py:74` | 毎朝 8:00 の突合は meta_messages を created_at が当日の行だけ数え、Discord に送る（127行） |
+| `backend/app/services/translation_monitor.py:61` | 毎時の翻訳の見張りは直近60分（created_at）の受信だけ数える |
+| `backend/app/services/inbound_translation.py:21` | 自動翻訳の依頼は webhook（`backend/app/routers/webhook.py:924`）と Discord の受け口からだけ出る。表への直接の書き込みでは出ない |
+| `frontend/src/pages/inbox/InboxMessageThread.tsx:350` | 画面の翻訳は人が押したときだけ（押すと Gemini を使う） |
+| `backend/app/routers/leads.py:1770` | Meta への送信はこの入口からだけ。表への直接の書き込みでは送られない |
+| 本番 ai_ro.tenant_001__meta_messages の列 | page_id・is_manual・occurred_at・deleted_at・raw_payload（jsonb）がある。今の4行はすべて discord・page_id 空・occurred_at 空・raw_payload 空（時刻は created_at だけ） |
+| 本番 ai_ro.tenant_001__leads の列 | 54列。jsonb の列は無い。lead_code・notes がある。テスト用の目印に使える専用の列は無い |
+| `git grep is_test / test_seed / is_demo`（backend・migrations・scripts・docs/adr） | テスト用データの目印の決まりはリポジトリに無い |
+
+結論: 時刻を「書き込む日の2日以上前」にし、page_id を空にすれば、Meta への問い合わせ・翻訳・見張りの知らせはどれも動かない。
+
 ## 不明点リスト
 
 | # | 不明点 | 解消方法 | 状態 |
 |---|-------|---------|------|
-| 1 | Instagram・Facebook のリードのテスト用のやり取りをどう入れるか（正規の入口が無い） | PO に聞く（手入力の経路だけでやり取りを入れる／やり取りは入れない 等） | 未解決（PO 判断待ち） |
+| 1 | Instagram・Facebook のリードのテスト用のやり取りをどう入れるか（正規の入口が無い） | PO 判断（2026-10-31「2」：やり取りの表に直接書く。同日「テストデータなのでテナント001では今回は許可する」） | 解決（テナント001だけ・今回だけ） |
 | 2 | シュリンクの扱い・扱う商材・成約日をどう持つか（項目が無い） | 設計で案を出し PO に聞く | 未解決（設計で扱う） |
-| 3 | テナント001の各カルテ項目の空欄率 | 読み取りの道で数える | 未解決（設計前に数える） |
+| 3 | テナント001の各カルテ項目の空欄率 | 読み取りの道で数えた（2026-10-31 14:11）: リード2件（id 4・6）とも国・店舗の形・温度・返信の速さ・扱う作品は空。状態は2件とも lead | 解決 |
 
-**未解決ゼロ確認**: 未解決 3件。#1 は PO の判断が要るため、解消まで設計を確定しない。
+**未解決ゼロ確認**: 未解決 1件（#2）。設計で案を出し PO に聞く。
 
 ---
 
