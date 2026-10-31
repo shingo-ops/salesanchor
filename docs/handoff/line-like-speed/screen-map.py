@@ -89,6 +89,19 @@ def section_panels():
     return out
 
 
+def child_pages(path):
+    """画面のファイルが読み込む、別の *Page.tsx（親の中で中身を描く部品）を行つきで返す。"""
+    p = pathlib.Path(path)
+    if not path or not p.exists():
+        return []
+    text = p.read_text(encoding="utf-8")
+    out = []
+    for m in re.finditer(r'^import\s+(?:\w+|\{[^}]*\})\s+from\s+"(\.{1,2}/[^"]*Page)";', text, re.M):
+        target = (p.parent / m.group(1)).resolve().relative_to(pathlib.Path.cwd().resolve())
+        out.append(f"{p.name}:{text.count(chr(10), 0, m.start()) + 1} で読む → {target}.tsx")
+    return out
+
+
 def u1_classes():
     res = subprocess.run([sys.executable, "-I", str(U1)], capture_output=True, text=True, check=True)
     return {row.split("\t")[0]: row.split("\t")[1] for row in res.stdout.splitlines() if "\t" in row}
@@ -125,9 +138,12 @@ def main():
             d = find_route(routes, to)
             df = imports.get(d["elem"], "") if d else ""
             inner = f"行き先 {to} → {df or '見つからず'}"
+        else:
+            inner = "・".join(child_pages(f))
         line = f"App.tsx:{r['line']}" if r else "無い"
         print(f"| {n} | `{route}` | {kind or '固定'} | {line} | {f or '無い'} | {u1_of(cls, f)} | {inner} |")
     files = {imports.get(r["elem"]) for r in routes if r["elem"]}
+    files |= {c.split(" → ")[1] for f in list(files) if f for c in child_pages(f)}
     pages = sorted(p for p in (SRC / "pages").rglob("*Page.tsx") if not p.name.endswith(".test.tsx"))
     absent = [str(p) for p in pages if str(p) not in files
               and not any(str(p) in fs for _, fs in panels.values())]

@@ -1,24 +1,28 @@
 # 135 画面とファイルの対応表（段 0b）
 
 作り方: リポジトリの根で `python3 docs/handoff/line-like-speed/screen-map.py`（読むだけ）。下の表はその出力をそのまま貼ったもの（2026-11-01 Claude Opus・基準 origin/main 1896879cb）。
-読むもの: 毎朝の記録の画面の一覧 `tests/prod-check/page-speed-targets.ts`（135 行）× `frontend/src/App.tsx` のルート（入れ子をたどる）→ 画面のファイル。`?section=` の画面は `frontend/src/pages/super-admin/AnalysisRulesPage.tsx` の分岐で描かれる部品のファイルも書く。行き先が別の画面（redirect）は行き先のファイルも書く。
+読むもの: 毎朝の記録の画面の一覧 `tests/prod-check/page-speed-targets.ts`（135 行）× `frontend/src/App.tsx` のルート（入れ子をたどる）→ 画面のファイル。`?section=` の画面は `frontend/src/pages/super-admin/AnalysisRulesPage.tsx` の分岐で描かれる部品のファイルも書く。行き先が別の画面（redirect）は行き先のファイルも書く。ほかの画面は、そのファイルが読み込む別の *Page.tsx（親の中で中身を描く部品）を書く。
 
 ## 結果
 - 135 行すべてにファイルがある（ファイルが無い行 0）。design.md §3-4 の段 0 の合格線「対応表の 135 行すべてにファイルがある」に合う。
-- 表に出る画面のファイルは 87 本。*Page.tsx 96 本のうち、ルートからも分岐からも読まれないのは 3 本: `frontend/src/pages/badges/BadgesPage.tsx`・`frontend/src/pages/buddy/BuddyPage.tsx`・`frontend/src/pages/buyback-prices/BuybackByProductPage.tsx`。3 本とも表に出ない → recon §4 U1 の決まりどおり、段 3 で直す相手にしない。
+- ファイルの列に出る画面のファイルは 87 本。
+- `frontend/src/pages/buyback-prices/BuybackByProductPage.tsx` はルートを持たないが、表の 19 行目（/buyback-prices）の右の列に出る。BuybackPricesPage.tsx:34 で読み、:44 で最初の表示が product、:392-393 で product の時に中身を描く。つまり /buyback-prices を開いた時に最初に描かれる中身。→ 段 3 で /buyback-prices を直す時は、このファイルも相手にする。
+  - u1-count.py はこのファイルを N_nofetch_in_file に分ける。ただし実物は BuybackByProductPage.tsx:61-62 で、`api` と `.get` が別の行に分かれてデータを取っている（u1-count.py の正規表現は 1 行の `api.get` だけを数える）。段 3 の前に、このファイルを数え方の取りこぼしとして扱う。
+- `frontend/src/pages/badges/BadgesPage.tsx`・`frontend/src/pages/buddy/BuddyPage.tsx` の 2 本は、ルートからも分岐からも画面のファイルからも読まれない（試験 FormActionButtonMigration.test.tsx:6・:8 だけが読む・recon §4 U1）。表に出ない → 段 3 で直す相手にしない。
+- 右の列には、ほかに CarrierSetupGuidePage.tsx:14 → ComingSoonPage.tsx（carrier 3 行）と、AnalysisRulesPage.tsx:42 → SupplierExtractionRulesPage.tsx（64 行目）が出る。後者は section=extraction-rules の部品と同じファイル。
 - `?section=import`（65 行目）は、ページの分岐に当たる枝が無い。そのため直接開くと、中身の場所に部品が描かれない（横のメニューで押した時だけ `/super-admin/tcg-line-import` へ移る・AnalysisRulesPage.tsx:109-111）。段 1〜3 で直す部品は無い。
 - `?section=accuracy-management` の部品は、別ファイルではなく同じファイルの中にある（AnalysisRulesPage.tsx:60）。
 - U1 の列は u1-count.py の分け方で、画面のファイルについてだけ書く（`?section=` の部品は *Page.tsx ではないので数えない）。`?section=` の 25 行と行き先が別の画面 3 行の「N_nofetch_in_file」は、取ってくるのが中の部品や行き先だという意味。段 3 で `?section=` を直す時は、右の列の部品のファイルを相手にする。
 
 ## u1-count.py の流し直し（段 0b）
-基準 origin/main 1896879cb で流した結果: `# total 96 A_clear=62 C_noindicator=3 N_nofetch_in_file=24 X_other_indicator=7`。recon §4 U1 の数（中身を消す 62・このファイルで取らない 24・ほかの印 7・印なし 3）と同じ。96 行の出力は、段 0a の時の流し直しとも 1 字違わず同じ（cmp で一致）。
+基準 origin/main 1896879cb で流した結果: `# total 96 A_clear=62 C_noindicator=3 N_nofetch_in_file=24 X_other_indicator=7`。recon §4 U1 の数（中身を消す 62・このファイルで取らない 24・ほかの印 7・印なし 3）と同じ。
 
 ## 表
 | # | 画面の道すじ | 種類 | App.tsx の行 | ファイル | U1 | 中で描かれる部品・行き先 |
 |---|---|---|---|---|---|---|
-| 1 | `/management-center/integrations/fedex/setup-guide` | carrier | App.tsx:168 | frontend/src/pages/integrations/CarrierSetupGuidePage.tsx | N_nofetch_in_file |  |
-| 2 | `/management-center/integrations/dhl/setup-guide` | carrier | App.tsx:168 | frontend/src/pages/integrations/CarrierSetupGuidePage.tsx | N_nofetch_in_file |  |
-| 3 | `/management-center/integrations/ups/setup-guide` | carrier | App.tsx:168 | frontend/src/pages/integrations/CarrierSetupGuidePage.tsx | N_nofetch_in_file |  |
+| 1 | `/management-center/integrations/fedex/setup-guide` | carrier | App.tsx:168 | frontend/src/pages/integrations/CarrierSetupGuidePage.tsx | N_nofetch_in_file | CarrierSetupGuidePage.tsx:14 で読む → frontend/src/pages/coming-soon/ComingSoonPage.tsx |
+| 2 | `/management-center/integrations/dhl/setup-guide` | carrier | App.tsx:168 | frontend/src/pages/integrations/CarrierSetupGuidePage.tsx | N_nofetch_in_file | CarrierSetupGuidePage.tsx:14 で読む → frontend/src/pages/coming-soon/ComingSoonPage.tsx |
+| 3 | `/management-center/integrations/ups/setup-guide` | carrier | App.tsx:168 | frontend/src/pages/integrations/CarrierSetupGuidePage.tsx | N_nofetch_in_file | CarrierSetupGuidePage.tsx:14 で読む → frontend/src/pages/coming-soon/ComingSoonPage.tsx |
 | 4 | `/` | 固定 | App.tsx:177 | frontend/src/pages/dashboard/DashboardPage.tsx | A_clear |  |
 | 5 | `/dashboard/follow-ups` | 固定 | App.tsx:178 | frontend/src/pages/dashboard/FollowUpsPage.tsx | A_clear |  |
 | 6 | `/dashboard/leads` | 固定 | App.tsx:179 | frontend/src/pages/dashboard/FunnelLeadsPage.tsx | A_clear |  |
@@ -34,7 +38,7 @@
 | 16 | `/crm/companies/:id` | needs-id | App.tsx:204 | frontend/src/pages/company-detail/CompanyDetailPage.tsx | A_clear |  |
 | 17 | `/crm/contacts` | 固定 | App.tsx:205 | frontend/src/pages/contacts/ContactsPage.tsx | A_clear |  |
 | 18 | `/crm/archive` | 固定 | App.tsx:206 | frontend/src/pages/archives/ArchivesPage.tsx | A_clear |  |
-| 19 | `/buyback-prices` | 固定 | App.tsx:210 | frontend/src/pages/buyback-prices/BuybackPricesPage.tsx | N_nofetch_in_file |  |
+| 19 | `/buyback-prices` | 固定 | App.tsx:210 | frontend/src/pages/buyback-prices/BuybackPricesPage.tsx | N_nofetch_in_file | BuybackPricesPage.tsx:34 で読む → frontend/src/pages/buyback-prices/BuybackByProductPage.tsx |
 | 20 | `/inventory` | 固定 | App.tsx:213 | frontend/src/pages/inventory/InventoryPage.tsx | X_other_indicator |  |
 | 21 | `/own-inventory` | 固定 | App.tsx:215 | frontend/src/pages/inventory/OwnInventoryPage.tsx | A_clear |  |
 | 22 | `/admin/products/new` | 固定 | App.tsx:217 | frontend/src/pages/products/ProductEditPage.tsx | N_nofetch_in_file |  |
@@ -79,7 +83,7 @@
 | 61 | `/super-admin/fx-rate` | 固定 | App.tsx:301 | frontend/src/pages/super-admin/FxRatePage.tsx | X_other_indicator |  |
 | 62 | `/super-admin/tcg-distribution` | 固定 | App.tsx:306 | frontend/src/pages/super-admin/TcgDistributionPage.tsx | N_nofetch_in_file |  |
 | 63 | `/super-admin/tcg-line-import` | 固定 | App.tsx:311 | frontend/src/pages/super-admin/TcgLineImportPage.tsx | X_other_indicator |  |
-| 64 | `/super-admin/analysis-rules` | 固定 | App.tsx:316 | frontend/src/pages/super-admin/AnalysisRulesPage.tsx | N_nofetch_in_file |  |
+| 64 | `/super-admin/analysis-rules` | 固定 | App.tsx:316 | frontend/src/pages/super-admin/AnalysisRulesPage.tsx | N_nofetch_in_file | AnalysisRulesPage.tsx:42 で読む → frontend/src/pages/super-admin/SupplierExtractionRulesPage.tsx |
 | 65 | `/super-admin/analysis-rules?section=import` | section | App.tsx:316 | frontend/src/pages/super-admin/AnalysisRulesPage.tsx | N_nofetch_in_file | 分岐なし（中身の場所に部品が描かれない） |
 | 66 | `/super-admin/analysis-rules?section=accuracy-management` | section | App.tsx:316 | frontend/src/pages/super-admin/AnalysisRulesPage.tsx | N_nofetch_in_file | AnalysisRulesPage.tsx:164 → frontend/src/pages/super-admin/AnalysisRulesPage.tsx:60 |
 | 67 | `/super-admin/analysis-rules?section=needs-review` | section | App.tsx:316 | frontend/src/pages/super-admin/AnalysisRulesPage.tsx | N_nofetch_in_file | AnalysisRulesPage.tsx:165 → frontend/src/pages/super-admin/components/NeedsReviewTabsPanel.tsx |
