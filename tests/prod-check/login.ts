@@ -36,7 +36,7 @@ export async function login(page: Page, email: string, password: string): Promis
   await page.goto("/login");
   await page.getByLabel("メールアドレス").fill(email);
   await page.getByLabel("パスワード", { exact: true }).fill(password);
-  await page.getByRole("button", { name: "ログイン" }).click();
+  await page.getByRole("button", { name: "ログイン", exact: true }).click();
   await page.waitForURL(
     (url) => url.pathname === "/" || url.pathname === "/dashboard",
     { timeout: 30_000 },
