@@ -23,8 +23,10 @@ PO の依頼: 「LINEみたいな使い心地は出来る？」→ 意味は「�
 - 測る場所は GitHub の機械（外のコンピューター）。PO のスマホでの秒は まだ確かめていない。
 
 ## 4. 未確認 → 確かめた結果
-- U1（確かめた 2026-10-31）: frontend/src/pages の画面ファイル 93 本を、同じ基準 8c6f52813 で script により分類（生の結果: /tmp/CC報告ファイル/page-speed/line/r2-raw.txt）。
-  - 読み込み中は中身を消して印だけ出す: 58 本（早めに return 4 本・`{loading ? <LoadingBlock/> : 表}` の三項 54 本）。正規表現で当たった早めの return 7 本のうち 3 本は中身を消す形ではなかった（審査 1 回目の指摘で 1 本ずつ確かめた）: ScheduleSettingsPage.tsx:52・ViewerTemplatesPage.tsx:72 は useEffect の中の return、SupplierExtractionRulesPage.tsx:456 は権限確認中の return null。三項 54 本は 1 本ずつは まだ確かめていない（段 3 の各便で確かめる）。正規表現は early `if\s*\(\s*!?\w*[Ll]oading\w*[^)]*\)\s*(\{\s*)?return\b`、tern `\{\s*\w*[Ll]oading\w*\s*\?`。
+- U1（数え直し 2026-10-31・審査 2 回目の指摘で再現できる形にした）: 数え方は docs/handoff/line-like-speed/u1-count.py（リポジトリの根で `python3 docs/handoff/line-like-speed/u1-count.py`。読むだけ）。対象は frontend/src/pages の *Page.tsx（*.test.tsx を除く）96 本（前の版の 93 本は BadgesPage・BuddyPage・BuybackByProductPage の 3 本を数え漏らしていた）。結果（基準 8c6f52813・origin/main 344c08f と frontend/src に差分なし）:
+  - 読み込み中は中身を消して印だけ出す（A_clear）: 62 本。正規表現 early `if\s*\(\s*!?\w*[Ll]oading\w*[^)]*\)\s*(\{\s*)?return\b`（中身を消す形でない 3 行は script の NOT_CLEARING に理由付きで除外: ScheduleSettingsPage.tsx:52・ViewerTemplatesPage.tsx:72 は useEffect の中の return、SupplierExtractionRulesPage.tsx:456 は権限確認中の return null）、tern `\{\s*\w*[Ll]oading\w*\s*\?`（58 本）。三項の 1 本ずつの形は まだ確かめていない（段 3 の各便で確かめる）。
+  - このファイルに api.get が無い（N_nofetch_in_file。子の部品・hook で取るか、取得しない）: 24 本。ほかの印を出す（X_other_indicator）: 7 本。印なし（C_noindicator）: 3 本。
+  - 前の版の分け方（61/13/4/15）は分け方の決まりが残っていないので使わない。
   - 例: frontend/src/pages/admin/ChannelMastersPage.tsx:36 `setLoading(true)`→:79-80 `{loading ? (<LoadingBlock />`。frontend/src/pages/companies/CompaniesPage.tsx:400-401 同じ形。
   - 表を残したまま取り直す例: frontend/src/pages/inventory/InventoryPage.tsx:226 `setLoading(true)`・:282 useRealtimeRefresh・:631-639 で表は消さない。ただし印は金型ではなく生の `<div className="loading-indicator">{t("common.loading")}</div>`（文字だけの印・CC_UI_GOVERNANCE が禁じる形）なので、手本にはしない。在庫表の取り直し間隔は 5 秒＋0〜3 秒のずれ（InventoryPage.tsx:110-121・ADR-1016 改訂 2026-10-18 の PO 決定）。
   - ほかの形の印: 13 本。印なし: 4 本。ファイルの中で取得しない（子の部品か hook で取る）: 15 本。
