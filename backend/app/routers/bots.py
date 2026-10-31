@@ -25,6 +25,7 @@ from app.auth.dependencies import (
     get_current_tenant,
     get_current_user,
     require_permission,
+    reset_tenant_context,
     tenant_table_ref,
 )
 from app.database import get_db
@@ -178,6 +179,7 @@ async def create_bot(data: BotCreate, db: AsyncSession = Depends(get_db),
             new_data={**data.model_dump(exclude_none=True, mode="json"), "api_key": "(redacted)"},
         )
         await db.commit()
+        await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
     except IntegrityError as e:
         await db.rollback()
         logger.warning("create_bot IntegrityError: tenant=%d err=%s", tenant_id, e.orig)
@@ -238,6 +240,7 @@ async def update_bot(bot_id: int, data: BotUpdate,
         old_data=dict(old_row), new_data=data.model_dump(exclude_unset=True, mode="json"),
     )
     await db.commit()
+    await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
 
     fetched = await db.execute(
         text(f"SELECT {_BOT_COLS} FROM {bots_t} b LEFT JOIN {staff_t} s ON s.user_id = b.owner_staff_id WHERE b.id = :id"),
@@ -269,6 +272,7 @@ async def rotate_bot_api_key(bot_id: int, db: AsyncSession = Depends(get_db),
         new_data={"api_key": "(redacted)"},
     )
     await db.commit()
+    await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
 
     fetched = await db.execute(
         text(f"SELECT {_BOT_COLS} FROM {bots_t} b LEFT JOIN {staff_t} s ON s.user_id = b.owner_staff_id WHERE b.id = :id"),
