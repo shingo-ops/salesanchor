@@ -680,7 +680,11 @@
     "sendResetEmail": "再設定メールを送信",
     "resetEmailSent": "再設定メールを送信しました。メールをご確認ください。",
     "backToLogin": "ログイン画面に戻る",
-    "signInWithPasskey": "顔・指紋でログイン"
+    "signInWithPasskey": "顔・指紋でログイン",
+    "passkeyPromptTitle": "顔や指紋でログインできるようにしますか",
+    "passkeyPromptBody": "次からはパスワードを入れずに、顔や指紋だけですぐにログインできます。",
+    "passkeyPromptRegister": "登録する",
+    "passkeyPromptSkip": "今はスキップ"
   },
   "authError": {
     "invalidCredentials": "メールアドレスまたはパスワードが正しくありません。",
