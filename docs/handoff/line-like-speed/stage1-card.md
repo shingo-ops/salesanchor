@@ -4,32 +4,33 @@
 - 根拠の写し: S=origin/main dc99a062e（Merge #4957）。行番号はすべてこの sha。実装の前に最新の origin/main で行を合わせ直す（§3(a)）。
 - 読んだ節: docs/handoff/design-partner-card-ops/guards/00-common.md・guards/03-file.md・guards/04-worktree.md・guards/05-pr.md・guards/10-executor.md・scripts/agent-hooks/cloud/rules.md。照合: 全命令は cd <W> で始める（00-common:5）・出力は tail/head で上限を付ける（00-common:10）・新しいファイルは丸ごとの全文で渡す（03-file:30）・作業場所は new-worktree.sh で作り出力をパイプに通さない（04-worktree:45・:55）・PR は実行役が作らない（05-pr。設計担当が手元で作る）。出力をファイルに残す命令と tail で読む命令は別の行に分けた（00-common:6）。
 - 実行役はクラウドの Sonnet。作業場所の作り方はクラウドの決まり（S scripts/agent-hooks/cloud/rules.md:15）を正とする。.pr-number・gh-pr-create-safe.sh は使わない。出力には上限を付ける。待つために sleep を使わない。
-- 状態: 第 1 版（審査前）。
-- 受領確認: 実装役は着手の最初の報告に「段 1 カード 第 1 版を受け取った・S=dc99a062e」と書く。
+- 状態: 第 2 版（第 1 版の審査 REVISE の直す点 8 件を入れた。審査の記録は枝 release/line-like-speed-stage1-review-v1 の docs/handoff/line-like-speed/review-stage1-card-v1.md）。
+- 受領確認: 実装役は着手の最初の報告に「段 1 カード 第 2 版を受け取った・S=dc99a062e」と書く。
 - 段 1 は画面をまだ変えない。画面が useApiQuery を使い始めるのは段 2 から。
 
 ## 0. 設計からの直し・詳しくした点（V1。設計の合格線は変えない）
-- V1-1 K5 の「画面の試験」: 段 1 では画面を変えないので、試しの部品（Probe）を本物の QueryClient・QueryAuthSync と一緒に描いて確かめる（§4-F の T4・T5）。本物の画面での K5 は、最初に画面を移す段 2 の受入で同じ流れを確かめる。
-- V1-2 消す時刻: QueryAuthSync は useLayoutEffect で消す。理由: 画面の部品が写しを取りに行くのは描いた後の useEffect（passive）の中。useLayoutEffect はそれより先に動くので、新しい人の取りに行く前に消し終わる。React の StrictMode（S frontend/src/main.tsx:9）で 2 回動いても、前と同じ uid なら何もしない。
+- V1-1 K5 の「画面の試験」: 段 1 では画面を変えないので、試しの部品（Probe）を本物の QueryClient・QueryAuthSync と一緒に描いて確かめる（§4-F の T4・T5・T8・T9）。本物の画面での K5 は、最初に画面を移す段 2 の受入で同じ流れを確かめる。
+- V1-2 消す時刻: QueryAuthSync は useLayoutEffect で消す。理由: 画面の部品が写しを取りに行くのは描いた後の useEffect（passive）の中。useLayoutEffect はそれより先に動くので、新しい人の取りに行く前に消し終わる。React の StrictMode（S frontend/src/main.tsx:9）で 2 回動いても、前と同じ uid なら何もしない。この理由は T8 で守る（試しの部品を QueryAuthSync より前に置くと、useEffect では新しい人の中身が出ないまま止まる。審査 v1 項目 2 で確かめた）。
 - V1-3 消した後に新しい人の写しが cache から外れたままにならないこと（消した写しを開いている部品が抱えたまま、取り直しが届かない形）を試験で確かめる（§4-F の T5。取り直しの関数で api.get がもう 1 回呼ばれる）。落ちたら直し方を自分で考えず停止する。
-- V1-4 部品の版: `@tanstack/react-query` を **5.104.4 に固定**して入れる（`^` を付けない）。理由: 公開から 2 週間以上たった版にする（5.104.4 は 2026-10-17 公開、5.104.5 は 10-19、5.105.0 は 10-26・npm view の time の値。設計担当が 2026-11-01 に確かめた）。peerDependencies は react ^18 || ^19（docs/handoff/line-like-speed/sources.md C）で、今の react ^18.3.1（S frontend/package.json:86）に合う。
+- V1-4 部品の版: `@tanstack/react-query` を **5.104.4 に固定**して入れる（`^` を付けない）。理由: 公開から 2 週間以上たった版にする（5.104.4 は 2026-10-17 公開、5.104.5 は 10-19、5.105.0 は 10-26・npm view の time の値。設計担当が 2026-11-01 に確かめた）。peerDependencies は react ^18 || ^19 と @types/react ^18 || ^19（docs/handoff/line-like-speed/sources.md C・審査 v1 項目 5 の npm view の出力）で、今の react ^18.3.1（S frontend/package.json:86）と @types/react ^18.3.18（S frontend/package.json:102）に合う。
 - V1-5 部品の動きの確かめ（設計担当・2026-11-01）: Context7 はこの月の上限で使えなかった（応答「Monthly quota exceeded」）。起動の決まりに従い、公式の文書を直接読んだ。
   - tanstack.com/query/v5/docs/reference/QueryClient: cancelQueries は「Cancels outgoing fetches」・既定 revert true・返す Promise は reject しない。resetQueries は初めの状態に戻し「Active queries among the matched set are then refetched」。clear() は「Clears both the query cache and the mutation cache」。
   - 同 guides/important-defaults: 既定は stale 扱い（staleTime 0）・使われない写しは 5 分で捨てる・失敗は 3 回送り直す。
   - 同 guides/query-invalidation: invalidateQueries は頭の一致（`['todos']` は `['todos', { page: 1 }]` も取り直す）。exact: true の時だけ完全一致。
-  - clear() が開いている画面に知らせるかは公式の文書に書いていない（X4 の issue #2157 は知らせないと書く）。だから設計どおり cancel → reset → clear の順にする。clear() は mutation の写しも消すと文書にあるが、設計 §3-2 の順のとおり getMutationCache().clear() も残す（害はない）。
+  - clear() が開いている画面に知らせるかは公式の文書に書いていない（X4 の issue #2157 は知らせないと書く）。だから cancel → 各写しを初めに戻す → clear の順にする。
+  - resetQueries は使わない: 初めに戻した後に active の写しを取り直す（query-core queryClient.js:280-283）。消す時はまだ画面の部品が前の人の key に付いている（付け替えは useBaseQuery の useEffect）ので、前の人の写しをその場で取り直してしまう（審査 v1 項目 3 で、api.get が利用者 null のまま 1 回呼ばれた）。代わりに各写しの Query.reset()（公開の型にある・query.js:165-168。destroy の後に初めの状態にし、開いている画面に知らせる）を使う。T9 で守る。ADR-1054 の「開いている画面に知らせる順で写しを全部消す」は変わらない。clear() は mutation の写しも消すと文書にあるが、設計 §3-2 の順のとおり getMutationCache().clear() も残す（害はない）。
 
 ## 1. 触るファイル（変更前→変更後）
 | # | ファイル | 変更前 | 変更後 |
 |---|---|---|---|
-| 1 | frontend/package.json | dependencies に TanStack なし（S :72-92） | `"@tanstack/react-query": "5.104.4"` を 1 行足す（§4-A） |
+| 1 | frontend/package.json | dependencies に TanStack なし（S :71-91） | `"@tanstack/react-query": "5.104.4"` を 1 行足す（§4-A） |
 | 2 | frontend/package-lock.json | 同上 | npm の命令で書き換わる分だけ（手で書かない） |
 | 3 | frontend/src/lib/query/apiQuery.ts | 無い | 新しく作る。QueryClient 1 個・path の区切り・key・useApiQuery・invalidateApi（§4-B 全文） |
 | 4 | frontend/src/lib/query/QueryAuthSync.tsx | 無い | 新しく作る。利用者が変わったら写しを全部消す（§4-C 全文） |
 | 5 | frontend/src/App.tsx | AuthProvider の直下が BrowserRouter（S :151-152・:412-413） | 間に QueryClientProvider と QueryAuthSync を置く（§4-D） |
-| 6 | frontend/src/lib/query/apiQuery.test.tsx | 無い | 新しく作る。T1〜T7（§4-F 全文） |
+| 6 | frontend/src/lib/query/apiQuery.test.tsx | 無い | 新しく作る。T1〜T9（§4-F 全文） |
 | 7 | docs/handoff/line-like-speed/stage1-card.md | 無い | このカード（設計担当が書いた。実装役は触らない） |
-| 8 | docs/handoff/line-like-speed/design.md | §3-4-2 まで | §3-4-3 に段 1 のカードの場所を書き足し済み（設計担当が書いた。実装役は触らない） |
+| 8 | docs/handoff/line-like-speed/design.md | §3-2 の消す順が resetQueries・§3-4-2 まで | §3-2 の消す順を「取り消し → 各写しを初めに戻す → 消す」に直し、§3-4-3 に段 1 のカードの場所を書き足し済み（設計担当が書いた。実装役は触らない） |
 | 9 | .claude-pipeline/active-work.d/release-line-like-speed-stage1-card.md | 無い | 作業の札（設計担当が書いた。実装役は触らない） |
 
 ## 2. 触らない範囲
@@ -41,9 +42,9 @@
 - ブラウザの保存に写しを書く部品（persist）を入れない。staleTime を設定しない（既定 0）。
 
 ## 3. 実装役が先に確かめること（想定分岐つき）
-- (a) 最新の origin/main で、§1 #1 の S :72-92、#5 の S :151-152・:412-413、S frontend/src/lib/api.ts:36・:99-155・:237-250、S frontend/src/contexts/AuthContext.tsx:29-34・:167-191 が S と同じか。行がずれただけなら合わせ直して報告に書く。中身が変わっていたら停止して報告する。
+- (a) 最新の origin/main で、§1 #1 の S :71-91、#5 の S :151-152・:412-413、S frontend/src/lib/api.ts:36・:81-167・:237-250、S frontend/src/contexts/AuthContext.tsx:29-34・:167-191 が S と同じか。行がずれただけなら合わせ直して報告に書く。中身が変わっていたら停止して報告する。
 - (b) frontend/package.json に `@tanstack/react-query` がまだ無いこと。もう有れば停止して報告する（誰かが先に入れた）。
-- (c) `npm view @tanstack/react-query@5.104.4 version peerDependencies --json` の出力を報告に書く。5.104.4 が無い・react 18 が peer に無い時は停止して報告する。
+- (c) `npm view @tanstack/react-query@5.104.4 version peerDependencies --json` の出力を報告に書く。5.104.4 が無い時、peer に react 18 か @types/react 18 が無い時（今の react ^18.3.1・@types/react ^18.3.18 のどちらかが外れる時）は停止して報告する。
 - (d) frontend/src/lib/query/ がまだ無いこと。有れば停止して報告する。
 - (e) 試験で `Response` や `crypto.randomUUID` が無いと落ちたら（jsdom の差）、試験の中の偽の応答は §4-F のとおり素の物（status・ok・json）で作ってあるので、それ以外の原因なら停止して生の出力を報告する。
 - (f) T5 が落ちたら（V1-3）、停止して NEEDS_DECISION: で生の出力を返す。消し方を自分で替えない。
@@ -136,9 +137,11 @@ export function QueryAuthSync(): null {
   useLayoutEffect(() => {
     if (previousUid.current === uid) return;
     previousUid.current = uid;
-    // clear() だけでは開いている画面に知らせないので、取り消し → 初めに戻す → 消す の順にする
+    // clear() だけでは開いている画面に知らせないので、取り消し → 写しを初めに戻す → 消す の順にする。
+    // resetQueries() は開いている写しをその場で取り直す（前の人の key で通信が出る）ので使わず、
+    // 各写しの reset() で開いている画面に知らせるだけにする。
     void queryClient.cancelQueries();
-    void queryClient.resetQueries();
+    queryClient.getQueryCache().getAll().forEach((query) => query.reset());
     queryClient.clear();
     queryClient.getMutationCache().clear();
   }, [uid, queryClient]);
@@ -171,13 +174,13 @@ import { queryClient } from "./lib/query/apiQuery";
 ## 4-E. 動きの説明（設計 §3-2 との対応）
 - key: `["api", uid, ...言葉, { query }]`（§4-B apiQueryKey）。
 - 取り直し: invalidateApi が `["api", uid, ...頭の言葉]` で頭の一致を使う（V1-5 の公式文書）。
-- 消す: QueryAuthSync が uid の変化（null を含む）で cancel → reset → clear → mutation の写しを消す（§4-C）。
+- 消す: QueryAuthSync が uid の変化（null を含む）で 取り消し → 各写しを初めに戻す（開いている画面に知らせる・取り直さない）→ clear → mutation の写しを消す（§4-C）。
 - 送り直し: TanStack は 0（§4-B）。api.ts の 3 回（S api.ts:36）だけなので、1 回の取りに行きで fetch は最大 4 回（T3）。
 
 ## 4-F. #6 frontend/src/lib/query/apiQuery.test.tsx（新しく作る・全文）
 ```tsx
 /**
- * ADR-1054 段 1: 写しの置き場の土台の試験（T1〜T7）。
+ * ADR-1054 段 1: 写しの置き場の土台の試験（T1〜T9）。
  * QueryClient はアプリと同じ 1 個（apiQuery.ts の queryClient）を使い、毎回消す。
  */
 import { StrictMode, type ReactNode } from "react";
@@ -290,12 +293,12 @@ describe("K5: user change clears copies (T4)", () => {
         releases.push(() => resolve(`secret-${uid}` as never));
       }) as never;
     });
-    const tree = (
+    const tree = () => (
       <Tree>
         <Probe path="/companies" testId="k5" />
       </Tree>
     );
-    const { rerender } = render(tree);
+    const { rerender } = render(tree());
     await waitFor(() => expect(screen.getByTestId("k5").textContent).toBe("secret-uid-A"));
 
     let seenA = 0;
@@ -305,12 +308,12 @@ describe("K5: user change clears copies (T4)", () => {
     observer.observe(document.body, { subtree: true, childList: true, characterData: true });
 
     auth.user = null;
-    rerender(tree);
+    rerender(tree());
     expect(screen.getByTestId("k5").textContent).toBe("");
     expect(keysWithUid("uid-A")).toBe(0);
 
     auth.user = { uid: "uid-B" };
-    rerender(tree);
+    rerender(tree());
     expect(screen.getByTestId("k5").textContent).toBe("");
     await waitFor(() => expect(releases.length).toBeGreaterThan(0));
     act(() => {
@@ -327,16 +330,16 @@ describe("K5: user change clears copies (T4)", () => {
 describe("direct switch A -> B keeps B reachable (T5)", () => {
   it("after switching, invalidateApi for B refetches B", async () => {
     const spy = vi.spyOn(api, "get").mockImplementation(async (path: string) => `${auth.user?.uid}:${path}` as never);
-    const tree = (
+    const tree = () => (
       <Tree>
         <Probe path="/companies" testId="sw" />
       </Tree>
     );
-    const { rerender } = render(tree);
+    const { rerender } = render(tree());
     await waitFor(() => expect(screen.getByTestId("sw").textContent).toBe("uid-A:/companies"));
 
     auth.user = { uid: "uid-B" };
-    rerender(tree);
+    rerender(tree());
     await waitFor(() => expect(screen.getByTestId("sw").textContent).toBe("uid-B:/companies"));
     expect(keysWithUid("uid-A")).toBe(0);
     expect(keysWithUid("uid-B")).toBe(1);
@@ -352,17 +355,17 @@ describe("direct switch A -> B keeps B reachable (T5)", () => {
 describe("same user does not clear (T6)", () => {
   it("rerender with the same uid under StrictMode keeps the copy", async () => {
     vi.spyOn(api, "get").mockImplementation(async (path: string) => `keep:${path}` as never);
-    const tree = (
+    const tree = () => (
       <StrictMode>
         <Tree>
           <Probe path="/companies" testId="same" />
         </Tree>
       </StrictMode>
     );
-    const { rerender } = render(tree);
+    const { rerender } = render(tree());
     await waitFor(() => expect(screen.getByTestId("same").textContent).toBe("keep:/companies"));
     auth.user = { uid: "uid-A" };
-    rerender(tree);
+    rerender(tree());
     expect(screen.getByTestId("same").textContent).toBe("keep:/companies");
     expect(keysWithUid("uid-A")).toBe(1);
   });
@@ -374,6 +377,54 @@ describe("defaults (T7)", () => {
     expect(defaults?.retry).toBe(0);
     expect(defaults?.gcTime).toBe(30 * 60 * 1000);
     expect(defaults?.staleTime).toBeUndefined();
+  });
+});
+
+describe("clear runs before any passive effect (T8)", () => {
+  it("a reader placed before QueryAuthSync still gets B after A -> B", async () => {
+    const spy = vi.spyOn(api, "get").mockImplementation(async (path: string) => `${auth.user?.uid}:${path}` as never);
+    const tree = () => (
+      <QueryClientProvider client={queryClient}>
+        <Probe path="/companies" testId="early" />
+        <QueryAuthSync />
+      </QueryClientProvider>
+    );
+    const { rerender } = render(tree());
+    await waitFor(() => expect(screen.getByTestId("early").textContent).toBe("uid-A:/companies"));
+
+    auth.user = { uid: "uid-B" };
+    rerender(tree());
+    await waitFor(() => expect(screen.getByTestId("early").textContent).toBe("uid-B:/companies"));
+    expect(keysWithUid("uid-A")).toBe(0);
+    expect(keysWithUid("uid-B")).toBe(1);
+
+    spy.mockClear();
+    await act(async () => {
+      await invalidateApi("uid-B", ["companies"]);
+    });
+    expect(spy).toHaveBeenCalledWith("/companies");
+  });
+});
+
+describe("logout does not refetch the old user's copies (T9)", () => {
+  it("api.get is not called between logout and the next login", async () => {
+    const spy = vi.spyOn(api, "get").mockImplementation(async (path: string) => `${auth.user?.uid}:${path}` as never);
+    const tree = () => (
+      <Tree>
+        <Probe path="/companies" testId="nofetch" />
+      </Tree>
+    );
+    const { rerender } = render(tree());
+    await waitFor(() => expect(screen.getByTestId("nofetch").textContent).toBe("uid-A:/companies"));
+    spy.mockClear();
+
+    auth.user = null;
+    rerender(tree());
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+    expect(spy).not.toHaveBeenCalled();
+    expect(queryClient.getQueryCache().getAll().filter((query) => query.state.fetchStatus === "fetching").length).toBe(0);
   });
 });
 ```
@@ -388,6 +439,9 @@ describe("defaults (T7)", () => {
   cd <W> && git switch -C release/line-like-speed-stage1-card origin/release/line-like-speed-stage1-card
   cd <W> && git rev-parse HEAD origin/release/line-like-speed-stage1-card
   （2 行が同じことを確かめる。違えば停止して BLOCKED: で報告する。main は取り込まない。reset・rebase・force・merge・pull は使わない）
+  cd <W> && ./scripts/dev/executor-preflight.sh > /tmp/stage1-preflight.txt 2>&1
+  cd <W> && grep -n "FAIL" /tmp/stage1-preflight.txt | head -20
+  （FAIL の行が `gh auth switch --hostname github.com --user shingo-cc` の失敗の 1 件と、その結果の `PREFLIGHT FAIL` の行だけなら続ける。理由: クラウドには gh の名義が無い。この確かめは PR を作る名義のためで、PR は設計担当が手元で shingo-cc 名義を確かめてから作る。ほかの FAIL が 1 件でもあれば停止し、BLOCKED: で grep の出力を報告する。）
 手順2. 依存を入れ、TanStack を足す。
   cd <W>/frontend && npm ci > /tmp/stage1-ci.txt 2>&1
   cd <W> && tail -5 /tmp/stage1-ci.txt
@@ -396,7 +450,9 @@ describe("defaults (T7)", () => {
   cd <W> && tail -5 /tmp/stage1-install.txt
   cd <W> && git diff --stat frontend/package.json frontend/package-lock.json
 手順3. §4-B・§4-C・§4-F の全文で #3・#4・#6 を作り、§4-D のとおり #5 を直す。
-手順4. 試験を流す（この 1 ファイルだけ・全部の試験・型・lint）。
+手順4. 型を作ってから試験を流す（この 1 ファイルだけ・全部の試験・型・lint）。作る型（frontend/src/api/generated/）は .gitignore:128 で除かれるので commit に入らない。
+  cd <W>/frontend && npm run generate:api-types > /tmp/stage1-gen.txt 2>&1
+  cd <W> && tail -3 /tmp/stage1-gen.txt
   cd <W>/frontend && npx vitest run --config vitest.unit.config.ts --project unit src/lib/query > /tmp/stage1-unit.txt 2>&1
   cd <W> && tail -30 /tmp/stage1-unit.txt
   cd <W>/frontend && npm run test:unit > /tmp/stage1-unit-all.txt 2>&1
@@ -405,7 +461,6 @@ describe("defaults (T7)", () => {
   cd <W> && tail -20 /tmp/stage1-tsc.txt
   cd <W>/frontend && npx eslint --max-warnings=0 src/lib/query src/App.tsx > /tmp/stage1-lint.txt 2>&1
   cd <W> && tail -20 /tmp/stage1-lint.txt
-  （tsc が generate:api-types の型が無くて落ちる時は、先に `cd <W>/frontend && npm run generate:api-types` を流してからもう一度。）
 手順5. 本番と同じ形で組み立てられるか確かめる。
   cd <W>/frontend && npm run build > /tmp/stage1-build.txt 2>&1
   cd <W> && tail -15 /tmp/stage1-build.txt
@@ -428,7 +483,7 @@ describe("defaults (T7)", () => {
 ## 5. 受入（○×）
 | # | 基準 | 検証方法 |
 |---|---|---|
-| A1 | T1〜T7 がすべて合格（K5: A の中身が B のログイン後に DOM に出た回数 0・A の写しの数 0／retry: fetch 4 回／invalidateApi: companies の 4 つが取り直され contacts は取り直されない） | /tmp/stage1-unit.txt の最後（7 passed）と、PR の CI「Lint & Dark Mode Check (ADR-067)」の中の unit-run が success |
+| A1 | T1〜T9 がすべて合格（K5: A の中身が B のログイン後に DOM に出た回数 0・A の写しの数 0／retry: fetch 4 回／invalidateApi: companies の 4 つが取り直され contacts は取り直されない／T8: 試しの部品を QueryAuthSync より前に置いても B の中身が出る／T9: ログアウトの後 50 ms の間に api.get 0 回・取りに行き中の写し 0） | /tmp/stage1-unit.txt の最後（9 passed）と、PR の CI「Lint & Dark Mode Check (ADR-067)」の中の unit-run が success |
 | A2 | 全部の画面の試験・型・lint・組み立てが通る | /tmp/stage1-unit-all.txt・stage1-tsc.txt・stage1-lint.txt・stage1-build.txt の最後と、PR の必須の確認 16 件が pass |
 | A3 | 変わったのは §1 の 9 ファイルだけ | gh pr diff --name-only |
 | A4 | App.tsx は空白を除くと足した行だけ（消えた行 0・ルートの中身は同じ） | git diff -w origin/main -- frontend/src/App.tsx |
@@ -443,7 +498,7 @@ describe("defaults (T7)", () => {
 - マージの commit を git revert する PR を 1 つ出す。画面はまだ写しを使っていない（useApiQuery を呼ぶ画面 0）ので、戻しても画面の動きは今と同じ。DB には何も入っていない。
 
 ## 停止と報告
-- §3 で「停止」とした時、試験が 7 件中 7 件にならない時、§2 の触らない範囲を変えないと進めない時は、そこで停止する。
+- §3 で「停止」とした時、試験が 9 件中 9 件にならない時、§2 の触らない範囲を変えないと進めない時は、そこで停止する。
 - 停止したら、何を実行し何が返ったかの生の出力（/tmp の報告ファイルの tail）を付けて、BLOCKED: か NEEDS_DECISION: で始まる報告を返す。推測で直さない。
 - 終わったら DONE: で始まる報告に、§3 の確かめた結果、手順2・4・5 の tail、push した sha を書く。
 
