@@ -6,6 +6,7 @@ const mock = vi.hoisted(() => ({
   startAuthentication: vi.fn(),
   startRegistration: vi.fn(),
   post: vi.fn(),
+  get: vi.fn(),
 }));
 
 vi.mock("../firebase", () => ({ auth: { currentUser: null } }));
@@ -15,9 +16,16 @@ vi.mock("@simplewebauthn/browser", () => ({
   startAuthentication: mock.startAuthentication,
   startRegistration: mock.startRegistration,
 }));
-vi.mock("../api", () => ({ api: { post: mock.post } }));
+vi.mock("../api", () => ({ api: { post: mock.post, get: mock.get } }));
 
-import { passkeyBrowserError, passkeySupported, registerPasskey, selfPasskeyLogin } from "./passkey";
+import {
+  autoRegisterPasskey,
+  conditionalCreateSupported,
+  passkeyBrowserError,
+  passkeySupported,
+  registerPasskey,
+  selfPasskeyLogin,
+} from "./passkey";
 import { currentAccessToken, expireSession } from "./selfAuth";
 
 let fetchMock: ReturnType<typeof vi.fn>;
@@ -29,6 +37,7 @@ beforeEach(() => {
   mock.startAuthentication.mockReset();
   mock.startRegistration.mockReset();
   mock.post.mockReset();
+  mock.get.mockReset();
   expireSession();
   fetchMock = vi.fn();
   vi.stubGlobal("fetch", fetchMock);
@@ -109,5 +118,85 @@ describe("passkeyBrowserError", () => {
     expect(passkeyBrowserError(named("InvalidStateError"))).toBe("exists");
     expect(passkeyBrowserError(named("Other"))).toBeNull();
     expect(passkeyBrowserError("string")).toBeNull();
+  });
+});
+
+describe("conditionalCreateSupported", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("is false when getClientCapabilities is missing", async () => {
+    vi.stubGlobal("PublicKeyCredential", {});
+    expect(await conditionalCreateSupported()).toBe(false);
+  });
+
+  it("is true only when conditionalCreate is true", async () => {
+    vi.stubGlobal("PublicKeyCredential", { getClientCapabilities: async () => ({ conditionalCreate: true }) });
+    expect(await conditionalCreateSupported()).toBe(true);
+    vi.stubGlobal("PublicKeyCredential", { getClientCapabilities: async () => ({ conditionalCreate: false }) });
+    expect(await conditionalCreateSupported()).toBe(false);
+  });
+
+  it("is false when it throws", async () => {
+    vi.stubGlobal("PublicKeyCredential", {
+      getClientCapabilities: async () => {
+        throw new Error("boom");
+      },
+    });
+    expect(await conditionalCreateSupported()).toBe(false);
+  });
+});
+
+describe("autoRegisterPasskey", () => {
+  const named = (name: string) => {
+    const e = new Error(name);
+    e.name = name;
+    return e;
+  };
+
+  beforeEach(() => {
+    mock.post.mockImplementation((path: string) =>
+      Promise.resolve(path.endsWith("/options") ? { challenge_id: "c1", options: { challenge: "x" } } : {}),
+    );
+  });
+
+  it("created: options with auto, conditional registration, then verify", async () => {
+    mock.startRegistration.mockResolvedValue({ id: "cred" });
+    expect(await autoRegisterPasskey()).toBe("created");
+    expect(mock.post).toHaveBeenCalledWith("/auth/passkey/register/options", { auto: true });
+    expect(mock.startRegistration).toHaveBeenCalledWith({ optionsJSON: { challenge: "x" }, useAutoRegister: true });
+    expect(mock.post).toHaveBeenCalledWith("/auth/passkey/register/verify", {
+      challenge_id: "c1",
+      credential: { id: "cred" },
+      label: "",
+    });
+  });
+
+  it("InvalidStateError is exists", async () => {
+    mock.startRegistration.mockRejectedValue(named("InvalidStateError"));
+    expect(await autoRegisterPasskey()).toBe("exists");
+  });
+
+  it("NotAllowedError is not_allowed", async () => {
+    mock.startRegistration.mockRejectedValue(named("NotAllowedError"));
+    expect(await autoRegisterPasskey()).toBe("not_allowed");
+  });
+
+  it("other errors are failed", async () => {
+    mock.startRegistration.mockRejectedValue(new Error("other"));
+    expect(await autoRegisterPasskey()).toBe("failed");
+  });
+
+  it("gives up after 10 seconds", async () => {
+    vi.useFakeTimers();
+    try {
+      mock.startRegistration.mockReturnValue(new Promise(() => {}));
+      const pending = autoRegisterPasskey();
+      await vi.advanceTimersByTimeAsync(10_000);
+      expect(await pending).toBe("failed");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
