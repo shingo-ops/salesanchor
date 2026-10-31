@@ -32,7 +32,7 @@ interface Session {
   expiresAt: number;
 }
 
-interface TokenResponse {
+export interface TokenResponse {
   access_token: string;
   expires_in: number;
 }
@@ -85,7 +85,7 @@ export function readClaims(token: string): { sub: string; email: string } | null
   }
 }
 
-async function postAuth<T>(path: string, body?: unknown): Promise<T> {
+export async function postAuth<T>(path: string, body?: unknown): Promise<T> {
   const res = await fetch(`${AUTH_BASE}${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

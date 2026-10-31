@@ -15,6 +15,7 @@ import { ACCOUNT_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 import { Button } from "../../components/Button";
 import { TextFieldControl } from "../../components/TextField";
+import PasskeySection from "./PasskeySection";
 
 export default function SecuritySection() {
   const { t } = useTranslation();
@@ -81,6 +82,7 @@ export default function SecuritySection() {
     setForm((prev) => ({ ...prev, [k]: e.target.value }));
 
   return (
+    <>
     <section className="account-settings-section">
       <div className="account-settings-section-title">
         <ACCOUNT_ICONS.security size={ICON.md} aria-hidden="true" />
@@ -134,5 +136,7 @@ export default function SecuritySection() {
         </div>
       </form>
     </section>
+    {isSelfAuth() && <PasskeySection />}
+    </>
   );
 }

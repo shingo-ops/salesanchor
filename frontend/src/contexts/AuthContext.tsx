@@ -14,6 +14,7 @@ import {
 } from "../lib/firebase-auth";
 import { api } from "../lib/api";
 import { isSelfAuth } from "../lib/auth/provider";
+import { selfPasskeyLogin } from "../lib/auth/passkey";
 import {
   currentAccessToken,
   expireSession,
@@ -36,6 +37,7 @@ interface AuthContextType {
   user: AuthUser | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
+  signInWithPasskey: () => Promise<void>;
   signOut: () => Promise<void>;
   sendPasswordReset: (email: string) => Promise<void>;
 }
@@ -129,6 +131,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await signInWithEmailAndPassword(auth, email, password);
   };
 
+  const signInWithPasskey = async () => {
+    if (!selfMode) return;
+    await selfPasskeyLogin();
+  };
+
   const signOut = async () => {
     if (selfMode) {
       try {
@@ -151,7 +158,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signOut, sendPasswordReset }}>
+    <AuthContext.Provider value={{ user, loading, signIn, signInWithPasskey, signOut, sendPasswordReset }}>
       {children}
     </AuthContext.Provider>
   );
@@ -174,6 +181,7 @@ export function useAuth() {
       user: fakeUser,
       loading: false,
       signIn: async () => {},
+      signInWithPasskey: async () => {},
       signOut: async () => {},
       sendPasswordReset: async () => {},
     };

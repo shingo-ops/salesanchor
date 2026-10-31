@@ -6,7 +6,9 @@ import { firebaseErrorMessage } from "../../lib/firebaseErrorMessage";
 import { authErrorMessage } from "../../lib/auth/authErrorMessage";
 import type { AuthErrorContext } from "../../lib/auth/authErrorMessage";
 import { isSelfAuth } from "../../lib/auth/provider";
+import { passkeyBrowserError, passkeySupported } from "../../lib/auth/passkey";
 import { Button } from "../../components/Button";
+import { Stack } from "../../components/Stack";
 import { TextFieldControl } from "../../components/TextField";
 import { PasswordFieldControl } from "../../components/PasswordField";
 import { TextLink } from "../../components/TextLink";
@@ -26,7 +28,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<Mode>("signIn");
   const [resetSent, setResetSent] = useState(false);
-  const { signIn, sendPasswordReset, user, loading: authLoading } = useAuth();
+  const { signIn, signInWithPasskey, sendPasswordReset, user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -51,6 +53,23 @@ export default function LoginPage() {
     } catch (err) {
       // KGI-4: Firebase の生エラー文字列を i18n キー経由に変換
       setError(loginErrorMessage(err, t, "login"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePasskeySignIn = async () => {
+    setError("");
+    setLoading(true);
+    try {
+      await signInWithPasskey();
+      navigate(from, { replace: true });
+    } catch (err) {
+      setError(
+        passkeyBrowserError(err) === "cancelled"
+          ? t("authError.passkeyCancelled")
+          : authErrorMessage(err, t, "passkey"),
+      );
     } finally {
       setLoading(false);
     }
@@ -98,6 +117,7 @@ export default function LoginPage() {
           <>
             <p className="login-subtitle">{t("login.signIn")}</p>
             {error && <div className="error-message">{error}</div>}
+            <Stack gap="3">
             <form onSubmit={handleSignIn}>
               <div className="form-group">
                 <label htmlFor="email">{t("login.email")}</label>
@@ -131,6 +151,21 @@ export default function LoginPage() {
                 {t("login.signIn")}
               </Button>
             </form>
+            {passkeySupported() && (
+              <Button
+                loading={loading}
+                variant="outline"
+                size="auth"
+                shape="pill"
+                fullWidth
+                type="button"
+                disabled={loading}
+                onClick={() => void handlePasskeySignIn()}
+              >
+                {t("login.signInWithPasskey")}
+              </Button>
+            )}
+            </Stack>
           </>
         ) : (
           <>
