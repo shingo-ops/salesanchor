@@ -679,7 +679,8 @@
     "resetPassword": "Reset password",
     "sendResetEmail": "Send reset email",
     "resetEmailSent": "Password reset email sent. Please check your inbox.",
-    "backToLogin": "Back to sign in"
+    "backToLogin": "Back to sign in",
+    "signInWithPasskey": "Sign in with face or fingerprint"
   },
   "authError": {
     "invalidCredentials": "The email address or password is incorrect.",
@@ -692,7 +693,12 @@
     "passwordTooLong": "Enter a password of 64 characters or fewer.",
     "passwordTooCommon": "That password is too common. Please choose a different one.",
     "validation": "Please check what you entered.",
-    "default": "Something went wrong. Please wait a while and try again."
+    "default": "Something went wrong. Please wait a while and try again.",
+    "passkeyFailed": "Sign-in with face or fingerprint failed. Sign in with your password or try again.",
+    "passkeyExpired": "Timed out. Please try again.",
+    "passkeyCancelled": "Face or fingerprint check was cancelled. Please try again.",
+    "passkeyExists": "A passkey for this device is already registered.",
+    "passkeyLimit": "You can register up to 10 passkeys."
   },
   "resetPasswordPage": {
     "subtitle": "Choose a new password using the link from your email.",
@@ -3199,6 +3205,21 @@
     "passwordMismatch": "New passwords do not match",
     "passwordTooShort": "Password must be at least 8 characters",
     "passwordChanged": "Password changed successfully",
+    "passkeyTitle": "Sign in with face or fingerprint (passkeys)",
+    "passkeyDescription": "Lets you sign in with this device's face or fingerprint check. Your face or fingerprint data never leaves the device.",
+    "passkeyLabel": "Name (e.g. work iPhone)",
+    "passkeyAdd": "Register this device",
+    "passkeyAdded": "Registered.",
+    "passkeyColName": "Name",
+    "passkeyColCreated": "Registered",
+    "passkeyColLastUsed": "Last used",
+    "passkeyUnnamed": "Unnamed",
+    "passkeyNeverUsed": "Not used yet",
+    "passkeyEmpty": "No passkeys registered.",
+    "passkeyDelete": "Delete",
+    "passkeyDeleteTitle": "Delete this passkey?",
+    "passkeyDeleteMessage": "You will no longer be able to sign in with this device's face or fingerprint. Password sign-in still works.",
+    "passkeyUnsupported": "This device or browser does not support passkeys.",
     "sectionPreferences": "Preferences",
     "darkModeLabel": "Dark mode",
     "languageLabel": "Language",

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import os
 import secrets
 from datetime import datetime, timedelta, timezone
@@ -10,9 +11,14 @@ from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import func, select, text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from webauthn import options_to_json, verify_authentication_response, verify_registration_response
+from webauthn.helpers import parse_authentication_credential_json, parse_registration_credential_json
+from webauthn.helpers.exceptions import WebAuthnException
+from webauthn.helpers.structs import CredentialDeviceType
 
-from app.auth import self_tokens
+from app.auth import passkeys, self_tokens
 from app.auth.dependencies import (
     _get_client_ip,
     clear_tenant_context,
@@ -223,6 +229,14 @@ def _set_refresh_cookie(response: Response, raw: str, expires_at: datetime) -> N
     )
 
 
+def _issue_session_tokens(
+    response: Response, raw: str, expires_at: datetime, user_id: int, email: str, amr: str | None
+) -> str:
+    """更新用 Cookie を付け、アクセストークンを返す。トークンを出す口は全部ここを通る（ADR-1048 admin-2fa/design.md:66）。"""
+    _set_refresh_cookie(response, raw, expires_at)
+    return self_tokens.create_access_token(user_id, email, amr)
+
+
 def _clear_refresh_cookie(response: Response | JSONResponse) -> None:
     response.delete_cookie(
         self_tokens.REFRESH_COOKIE_NAME,
@@ -315,9 +329,9 @@ async def self_login(
         db, user_row.id, request.headers.get("user-agent")
     )
     await db.commit()
-    _set_refresh_cookie(response, raw, expires_at)
+    access = _issue_session_tokens(response, raw, expires_at, user_row.id, user_row.email, "pwd")
     return SelfTokenResponse(
-        access_token=self_tokens.create_access_token(user_row.id, user_row.email, "pwd"),
+        access_token=access,
         token_type="bearer",
         expires_in=self_tokens.ACCESS_TOKEN_TTL_SECONDS,
     )
@@ -346,9 +360,9 @@ async def self_refresh(
         await db.execute(text("SELECT email FROM public.users WHERE id = :id"), {"id": user_id})
     ).scalar_one()
     await db.commit()
-    _set_refresh_cookie(response, new_raw, expires_at)
+    access = _issue_session_tokens(response, new_raw, expires_at, user_id, email, None)
     return SelfTokenResponse(
-        access_token=self_tokens.create_access_token(user_id, email, None),
+        access_token=access,
         token_type="bearer",
         expires_in=self_tokens.ACCESS_TOKEN_TTL_SECONDS,
     )
@@ -588,10 +602,10 @@ async def password_change(
             db, user_row.id, request.headers.get("user-agent")
         )
         await db.commit()
-        _set_refresh_cookie(response, raw, expires_at)
+        access = _issue_session_tokens(response, raw, expires_at, user_row.id, user_row.email, "pwd")
         issued = PasswordChangeResponse(
             status="password_updated",
-            access_token=self_tokens.create_access_token(user_row.id, user_row.email, "pwd"),
+            access_token=access,
             token_type="bearer",
             expires_in=self_tokens.ACCESS_TOKEN_TTL_SECONDS,
         )
@@ -599,3 +613,303 @@ async def password_change(
         await db.commit()
         issued = PasswordChangeResponse(status="password_updated")
     return issued
+
+
+# ── パスキー（ADR-1013 便5。顔・指紋でのログイン） ───────────────────────────────
+
+
+class PasskeyChallengeResponse(BaseModel):
+    challenge_id: str = Field(description="challenge の引換券（300 秒・1 回限り）")
+    options: dict = Field(description="WebAuthn の options（ブラウザへそのまま渡す）")
+
+
+class PasskeyRegisterVerify(BaseModel):
+    challenge_id: str = Field(min_length=1, max_length=64)
+    credential: dict
+    label: str | None = Field(default=None, description="端末の名前（任意）")
+
+
+class PasskeyLoginVerify(BaseModel):
+    challenge_id: str = Field(min_length=1, max_length=64)
+    credential: dict
+
+
+class PasskeyCreated(BaseModel):
+    id: int
+    label: str | None = None
+    created_at: str
+
+
+class PasskeyItem(BaseModel):
+    id: int
+    label: str | None = None
+    created_at: str | None = None
+    last_used_at: str | None = None
+
+
+class PasskeyList(BaseModel):
+    items: list[PasskeyItem]
+
+
+def _iso(value) -> str | None:
+    if value is None:
+        return None
+    if isinstance(value, str):
+        return value
+    return value.isoformat()
+
+
+@router.post("/passkey/register/options", response_model=PasskeyChallengeResponse)
+async def passkey_register_options(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """パスキー登録の options を作る（ログイン中の本人だけ）。"""
+    _require_app_origin(request)
+    rows = (
+        await db.execute(
+            text("SELECT credential_id FROM public.webauthn_credentials WHERE user_id = :uid"),
+            {"uid": current_user.id},
+        )
+    ).all()
+    if len(rows) >= passkeys.MAX_PASSKEYS_PER_USER:
+        raise HTTPException(status_code=409, detail="passkey_limit")
+    options = passkeys.registration_options(
+        current_user.id, current_user.email, [bytes(r.credential_id) for r in rows]
+    )
+    challenge_id = await passkeys.store_challenge("reg", str(current_user.id), options.challenge)
+    return PasskeyChallengeResponse(challenge_id=challenge_id, options=json.loads(options_to_json(options)))
+
+
+@router.post("/passkey/register/verify", response_model=PasskeyCreated, status_code=201)
+async def passkey_register_verify(
+    data: PasskeyRegisterVerify,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """パスキー登録の応答を確かめ、公開鍵を保存する。"""
+    _require_app_origin(request)
+    challenge = await passkeys.take_challenge("reg", str(current_user.id), data.challenge_id)
+    if challenge is None:
+        raise HTTPException(status_code=400, detail="challenge_expired")
+    try:
+        parsed = parse_registration_credential_json(data.credential)
+        verified = verify_registration_response(
+            credential=parsed,
+            expected_challenge=challenge,
+            expected_rp_id=self_tokens.rp_id(),
+            expected_origin=self_tokens.rp_origin(),
+            require_user_verification=True,
+        )
+    except (WebAuthnException, ValueError):
+        raise HTTPException(status_code=400, detail="passkey_invalid")
+
+    label = (data.label or "").strip()[: passkeys.LABEL_MAX] or None
+    now = datetime.now(timezone.utc)
+    try:
+        row = (
+            await db.execute(
+                text(
+                    "INSERT INTO public.webauthn_credentials "
+                    "(user_id, credential_id, public_key, sign_count, transports, backup_eligible, "
+                    "backup_state, aaguid, label, created_at) "
+                    "VALUES (:uid, :cid, :pk, :sc, :tr, :be, :bs, :aaguid, :label, :now) "
+                    "RETURNING id, created_at"
+                ),
+                {
+                    "uid": current_user.id,
+                    "cid": verified.credential_id,
+                    "pk": verified.credential_public_key,
+                    "sc": verified.sign_count,
+                    "tr": [t.value for t in (parsed.response.transports or [])],
+                    "be": verified.credential_device_type == CredentialDeviceType.MULTI_DEVICE,
+                    "bs": verified.credential_backed_up,
+                    "aaguid": verified.aaguid,
+                    "label": label,
+                    "now": now,
+                },
+            )
+        ).one()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(status_code=409, detail="passkey_exists")
+    await clear_tenant_context(db)
+    await record_audit_log(
+        db,
+        tenant_id=current_user.tenant_id,
+        user_id=current_user.id,
+        action="create",
+        table_name="webauthn_credentials",
+        record_id=row.id,
+        new_data={"event": "passkey_registered"},
+    )
+    await db.commit()
+    return PasskeyCreated(id=row.id, label=label, created_at=_iso(row.created_at))
+
+
+@router.post("/passkey/login/options", response_model=PasskeyChallengeResponse)
+async def passkey_login_options(request: Request):
+    """パスキーでのログインの options を作る（認証なし）。"""
+    _require_issuance_enabled()
+    _require_app_origin(request)
+    ip = _get_client_ip(request)
+    if await check_auth_rate_limit(ip):
+        raise HTTPException(status_code=429, detail="too_many_attempts")
+    options = passkeys.authentication_options()
+    challenge_id = await passkeys.store_challenge("login", "-", options.challenge)
+    return PasskeyChallengeResponse(challenge_id=challenge_id, options=json.loads(options_to_json(options)))
+
+
+@router.post("/passkey/login/verify", response_model=SelfTokenResponse)
+async def passkey_login_verify(
+    data: PasskeyLoginVerify,
+    request: Request,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+):
+    """パスキーの応答を確かめてログインさせる。失敗はどの理由でも同じ 401。"""
+    _require_issuance_enabled()
+    _require_app_origin(request)
+    ip = _get_client_ip(request)
+    if await check_auth_rate_limit(ip):
+        raise HTTPException(status_code=429, detail="too_many_attempts")
+
+    async def fail() -> HTTPException:
+        await record_auth_failure(ip)
+        return _invalid_credentials()
+
+    challenge = await passkeys.take_challenge("login", "-", data.challenge_id)
+    if challenge is None:
+        raise await fail()
+    try:
+        parsed = parse_authentication_credential_json(data.credential)
+    except (WebAuthnException, ValueError):
+        raise await fail()
+
+    cred = (
+        await db.execute(
+            text(
+                "SELECT c.id, c.user_id, c.public_key, c.sign_count, u.email, u.tenant_id, u.is_active "
+                "FROM public.webauthn_credentials c JOIN public.users u ON u.id = c.user_id "
+                "WHERE c.credential_id = :cid"
+            ),
+            {"cid": parsed.raw_id},
+        )
+    ).first()
+    if cred is None or not cred.is_active:
+        raise await fail()
+    # ライブラリは user handle を照らさないので、持ち主をここで確かめる
+    if parsed.response.user_handle is None or parsed.response.user_handle != passkeys.user_handle(cred.user_id):
+        raise await fail()
+
+    # 使用回数はライブラリには照らさせず（0 を渡す）、署名が通った後に自分で照らす
+    try:
+        verified = verify_authentication_response(
+            credential=parsed,
+            expected_challenge=challenge,
+            expected_rp_id=self_tokens.rp_id(),
+            expected_origin=self_tokens.rp_origin(),
+            credential_public_key=bytes(cred.public_key),
+            credential_current_sign_count=0,
+            require_user_verification=True,
+        )
+    except (WebAuthnException, ValueError):
+        raise await fail()
+
+    if passkeys.sign_count_rejected(cred.sign_count, verified.new_sign_count):
+        await record_audit_log(
+            db,
+            tenant_id=cred.tenant_id,
+            user_id=cred.user_id,
+            action="update",
+            table_name="webauthn_credentials",
+            record_id=cred.id,
+            new_data={
+                "event": "passkey_sign_count_rejected",
+                "stored": cred.sign_count,
+                "received": verified.new_sign_count,
+            },
+        )
+        await db.commit()
+        raise await fail()
+
+    now = datetime.now(timezone.utc)
+    await db.execute(
+        text(
+            "UPDATE public.webauthn_credentials SET sign_count = :n, backup_state = :b, last_used_at = :now "
+            "WHERE id = :id"
+        ),
+        {"n": verified.new_sign_count, "b": verified.credential_backed_up, "now": now, "id": cred.id},
+    )
+    await set_tenant_context(db, cred.tenant_id)
+    await db.execute(
+        text("UPDATE public.users SET last_login = :now WHERE id = :uid"),
+        {"now": now, "uid": cred.user_id},
+    )
+    await clear_tenant_context(db)
+    raw, expires_at = await self_tokens.issue_refresh_token(db, cred.user_id, request.headers.get("user-agent"))
+    await db.commit()
+    access = _issue_session_tokens(response, raw, expires_at, cred.user_id, cred.email, "webauthn")
+    return SelfTokenResponse(
+        access_token=access,
+        token_type="bearer",
+        expires_in=self_tokens.ACCESS_TOKEN_TTL_SECONDS,
+    )
+
+
+@router.get("/passkeys", response_model=PasskeyList)
+async def passkey_list(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """本人のパスキーの一覧。"""
+    rows = (
+        await db.execute(
+            text(
+                "SELECT id, label, created_at, last_used_at FROM public.webauthn_credentials "
+                "WHERE user_id = :uid ORDER BY created_at"
+            ),
+            {"uid": current_user.id},
+        )
+    ).all()
+    return PasskeyList(
+        items=[
+            PasskeyItem(
+                id=r.id, label=r.label, created_at=_iso(r.created_at), last_used_at=_iso(r.last_used_at)
+            )
+            for r in rows
+        ]
+    )
+
+
+@router.delete("/passkeys/{passkey_id}", status_code=204)
+async def passkey_delete(
+    passkey_id: int,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """本人のパスキーを 1 件消す。他人のものも「無い」と同じ 404。"""
+    _require_app_origin(request)
+    row = (
+        await db.execute(
+            text("DELETE FROM public.webauthn_credentials WHERE id = :id AND user_id = :uid RETURNING id"),
+            {"id": passkey_id, "uid": current_user.id},
+        )
+    ).first()
+    if row is None:
+        raise HTTPException(status_code=404, detail="passkey_not_found")
+    await clear_tenant_context(db)
+    await record_audit_log(
+        db,
+        tenant_id=current_user.tenant_id,
+        user_id=current_user.id,
+        action="delete",
+        table_name="webauthn_credentials",
+        record_id=passkey_id,
+        new_data={"event": "passkey_deleted"},
+    )
+    await db.commit()
+    return Response(status_code=204)

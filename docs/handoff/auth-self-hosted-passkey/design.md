@@ -156,7 +156,7 @@ migration は構造のみ・1回実行（ADR-1007）。値の投入は migration
 | 便3 | メール: SMTP を backend に渡す（`docker-compose.yml`・`.github/workflows/deploy.yml`）、再設定 API、メール文面（ja/en）。**便3 の間は、再設定の口は環境変数 `AUTH_PASSWORD_RESET_ALLOWLIST`（試験用アドレスだけ）に載った email にしか送らない**（審査 MEDIUM-6。切替前に実ユーザーへメールが届いて混乱しないように）。画面は Firebase のままなので、K5 は試験用アドレスに対して API を直接呼んで送る。試験用アドレスは、使用中の 10 人とは別に、試験用テナント（tenant 6 `tenant-review`）に試験ユーザーとして 1 人作る（email は便3 のカードに明記。この人は K1 の対象外）。PO の GUI: さくらで送信用アドレス作成・DKIM 有効化、DNS に DMARC 追加 | **危険**（compose・deploy・secrets） | 環境変数を外せば送信停止（`backend/app/services/email_sender.py:40` が送らずログだけになる） | K5: Gmail 試験アカウントの受信箱に届き、ヘッダの SPF・DKIM・DMARC が pass |
 | 便4a | 画面と API の残り（初期値は Firebase のまま・本番のログインは変わらない）: `POST /api/v1/auth/password/change`、`register` を §3 の形に置き換え、担当者の追加（`POST /api/v1/staff`）で新しく利用者ができたときも、`AUTH_PROVIDER=self` なら初回設定メールを送る（既存の利用者を足したときは送らない）、画面の自社ログイン層（ビルド変数 `VITE_AUTH_PROVIDER` が `self` のときだけ自社 API。未設定・`firebase` は今と同じ動き）、再設定ページ `/reset-password`、ログイン画面の金型化、アカウント設定のパスワード変更、誤りの文言 `frontend/src/lib/auth/authErrorMessage.ts` | 無（コードのみ）。認証のためセキュリティ審査必須 | revert（初期値が firebase なので利用者への影響は無い） | K0: マージ・deploy 後も本番のログインは今と同じ（login は 404・PO が今のパスワードでログインできる）。見た目の変化はログイン画面の 2 つのボタンが枠付きの補助ボタンになることだけ |
 | 便4b | 切替: `AUTH_JWT_SECRET` を GitHub の secret に追加し、`.github/workflows/deploy.yml` と `docker-compose.yml` で backend に渡す（審査 HIGH-3）。`AUTH_PROVIDER=self`、画面は `VITE_AUTH_PROVIDER=self`（ビルド変数なので `frontend/Dockerfile` の ARG・`docker-compose.yml` の build args・`.github/workflows/deploy.yml` に追加）、`AUTH_PASSWORD_RESET_ALLOWLIST` を外す、**初回パスワード発行スクリプト backend/scripts/issue_initial_passwords.py（新設）**（審査 HIGH-5。`backend/Dockerfile` は backend/ 配下だけをイメージに入れるため、リポジトリ直下の scripts/ には置かない。id 2 も発行の対象） | **危険**（backend/scripts・deploy・compose・secrets） | 便4b は revert しない（`.env` の `AUTH_PROVIDER=self` が残り、backend が self のままになるため）。heredoc の `AUTH_PROVIDER` と `VITE_AUTH_PROVIDER` を `firebase` に変える前進 PR をマージして deploy する（消す一覧は残す。画面もビルドし直される）。Firebase のユーザーと元のパスワードは便6 まで残るので、元どおりログインできる。ただし便4b の後に新しく登録した人は Firebase にいないため、戻した状態ではログインできない（戻す前に人数を確かめる） | K1: 発行ファイルの行数＝便4b の試し実行の件数・使用中の人の last_login が切替後に更新。K4: 試験ユーザーで再設定を実演 |
-| 便5 | パスキー: 登録・ログイン・一覧・削除（backend＋画面）。依存追加 `webauthn`（py_webauthn）・`@simplewebauthn/browser`。ボタンは端末がパスキーに対応しているときだけ表示（環境変数のスイッチは作らない＝compose・deploy を触らない） | 無（migration は便1 で済。compose・deploy も触らない） | revert（登録済みのパスキーの行は残るが使われない） | K2: PO の端末で顔か指紋だけでログイン（画面録画）・`webauthn_credentials` に 1 行 |
+| 便5 | パスキー: 登録・ログイン・一覧・削除（backend＋画面）。依存追加 `webauthn`（py_webauthn）・`@simplewebauthn/browser`。ボタンは端末がパスキーに対応しているときだけ表示（環境変数のスイッチは作らない＝compose・deploy を触らない）。実装で決めたこと: pyOpenSSL 26.2.0 固定（cryptography 48 と両立する唯一の版）／使用回数の照合は署名の確認の後／user handle の持ち主を照らす／口座の停止は見ない（U1）／端末の候補名に email（U2） | 無（migration は便1 で済。compose・deploy も触らない） | revert（登録済みのパスキーの行は残るが使われない） | K2: PO の端末で顔か指紋だけでログイン（画面録画）・`webauthn_credentials` に 1 行 |
 | 便6 | Firebase 撤去: `firebase-admin` と Firebase SDK の除去、§4 の Firebase 分岐削除、`backend/app/auth/utils.py`（カスタムクレーム）と `backend/app/schemas/auth.py` の `firebase_uid` の除去（審査 HIGH-2）、`nginx/nginx.conf:82` の CSP から Firebase 用の許可を外す、credentials のマウント除去（`docker-compose.yml:69` ほか）、運用スクリプト・CI・監視の置き換え（`scripts/setup_review_tenant.py`・`.github/workflows/qa-smoke.yml`・`.github/workflows/rotate-qa-firebase.yml`・`scripts/snapshot/firebase.sh`・`scripts/smoke/external-firebase.sh`・`docs/external-state-contract.yml`）、`bcrypt` の除去（`backend/requirements.txt:10`）、**Firebase の登録ユーザー削除** | **危険・不可逆**（外部 GUI／secrets） | 削除前に PO の Mac で Firebase の書き出しを暗号化して保管（便6 カードに手順） | K3: Firebase の書き出しで総数 0。ADR-032 を Superseded に |
 | 次のテーマ | 二段階認証（認証アプリ）を任意設定で追加 | — | — | PO 2026-10-13 の言葉どおり別テーマで設計 |
 
@@ -218,6 +218,7 @@ migration は構造のみ・1回実行（ADR-1007）。値の投入は migration
 
 ## 弊害・トレードオフ
 
+- パスキーの登録の前に、もう一度の本人確認は求めない（U4）。盗まれたアクセストークンで他人がパスキーを足すおそれはあるが、アクセストークンはメモリだけで寿命 900 秒、更新用 Cookie は HttpOnly、登録・削除は監査記録に残り、一覧で本人が消せる。管理者は ADR-1048 便7 の 2 段階の確認で強める
 - パスワードの暗号化データを自社で持つ（ADR-138 で減らした攻撃面が戻る）→ Argon2id・口座ロック・漏洩一覧照合で守る。DB のバックアップにも含まれる点は既存のバックアップ保護に従う
 - 切替日に全員のパスワードが変わる → 事前告知と、PO による配布。困った人は再設定メールで自分で直せる（便3 が便4 より先）
 - 秘密が 2 種増える（`AUTH_JWT_SECRET`・SMTP）→ 危険便（便3・便4）で PO の GO。鍵の入れ替え手順は §3「トークン」
@@ -240,6 +241,7 @@ migration は構造のみ・1回実行（ADR-1007）。値の投入は migration
 ## 維持の仕組み
 
 - 守り手: 人手で守る（ログインの安全に関わる検査は、便2・便5 で作るテストが守る。ファイルはまだ無いため、各便のカードで、テストのパスをこの欄に追記する）
+- 便5 のテスト: `backend/tests/test_passkeys.py`・`frontend/src/lib/auth/passkey.test.ts`・`frontend/src/pages/account-settings/PasskeySection.test.tsx`。毎朝の画面点検の利用者はパスキーを持たず、パスキーの口を通らない（U3）。そのため、パスキーの口は pytest（CI の必須の確かめ）で守る
 - 対象: ① ログイン情報が §2 の置き場以外に増えない ② 発行したパスワードの平文がサーバー・リポジトリに残らない ③ 画面の部品が金型だけ ④ SMOKE_SERVICE_TOKEN の順序が先頭のまま
 
 ---

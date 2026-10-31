@@ -7,6 +7,8 @@ import en from "../../locales/en.json";
 
 const mock = vi.hoisted(() => ({
   self: false,
+  passkey: false,
+  selfPasskeyLogin: vi.fn(),
   signInWithEmailAndPassword: vi.fn(),
   sendPasswordResetEmail: vi.fn(),
 }));
@@ -22,9 +24,14 @@ vi.mock("../../lib/firebase-auth", () => ({
   signOut: vi.fn(),
 }));
 vi.mock("../../lib/auth/provider", () => ({ isSelfAuth: () => mock.self }));
+vi.mock("../../lib/auth/passkey", async (orig) => ({
+  ...(await orig<typeof import("../../lib/auth/passkey")>()),
+  passkeySupported: () => mock.passkey,
+  selfPasskeyLogin: mock.selfPasskeyLogin,
+}));
 
 import { AuthProvider } from "../../contexts/AuthContext";
-import { expireSession } from "../../lib/auth/selfAuth";
+import { SelfAuthError, expireSession } from "../../lib/auth/selfAuth";
 import LoginPage from "./LoginPage";
 
 let instance = createInstance();
@@ -52,6 +59,8 @@ async function fillAndSubmit() {
 beforeEach(async () => {
   window.history.pushState({}, "", "/login");
   mock.self = false;
+  mock.passkey = false;
+  mock.selfPasskeyLogin.mockReset();
   mock.signInWithEmailAndPassword.mockReset().mockResolvedValue({});
   mock.sendPasswordResetEmail.mockReset().mockResolvedValue(undefined);
   fetchMock = vi.fn();
@@ -147,5 +156,62 @@ describe("LoginPage (self login)", () => {
 
     expect(await screen.findByText(tr("login.resetEmailSent"))).toBeTruthy();
     expect(mock.sendPasswordResetEmail).not.toHaveBeenCalled();
+  });
+});
+
+describe("LoginPage (passkey button)", () => {
+  beforeEach(() => {
+    mock.self = true;
+    fetchMock.mockImplementation(() =>
+      Promise.resolve(new Response(JSON.stringify({ detail: "invalid_credentials" }), { status: 401 })),
+    );
+  });
+
+  it("is shown only when the device supports passkeys", () => {
+    mock.passkey = false;
+    renderLogin();
+    expect(screen.queryByRole("button", { name: tr("login.signInWithPasskey") })).toBeNull();
+
+    cleanup();
+    mock.passkey = true;
+    renderLogin();
+    expect(screen.getByRole("button", { name: tr("login.signInWithPasskey") })).toBeTruthy();
+  });
+
+  it("calls selfPasskeyLogin once through AuthProvider and disables both buttons while running", async () => {
+    mock.passkey = true;
+    let finish!: () => void;
+    mock.selfPasskeyLogin.mockReturnValue(new Promise<void>((resolve) => { finish = resolve; }));
+    renderLogin();
+
+    fireEvent.click(screen.getByRole("button", { name: tr("login.signInWithPasskey") }));
+
+    await waitFor(() => expect(mock.selfPasskeyLogin).toHaveBeenCalledTimes(1));
+    const buttons = screen.getAllByRole("button").filter((b) => b.getAttribute("type") !== null);
+    expect(buttons.filter((b) => (b as HTMLButtonElement).disabled).length).toBeGreaterThanOrEqual(2);
+    finish();
+  });
+
+  it("cancelled shows the cancelled message", async () => {
+    mock.passkey = true;
+    const cancelled = new Error("cancelled");
+    cancelled.name = "NotAllowedError";
+    mock.selfPasskeyLogin.mockRejectedValue(cancelled);
+    renderLogin();
+
+    fireEvent.click(screen.getByRole("button", { name: tr("login.signInWithPasskey") }));
+
+    expect(await screen.findByText(tr("authError.passkeyCancelled"))).toBeTruthy();
+  });
+
+  it("401 shows the passkey message, not the password message", async () => {
+    mock.passkey = true;
+    mock.selfPasskeyLogin.mockRejectedValue(new SelfAuthError(401, "invalid_credentials"));
+    renderLogin();
+
+    fireEvent.click(screen.getByRole("button", { name: tr("login.signInWithPasskey") }));
+
+    expect(await screen.findByText(tr("authError.passkeyFailed"))).toBeTruthy();
+    expect(screen.queryByText(tr("authError.invalidCredentials"))).toBeNull();
   });
 });

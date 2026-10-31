@@ -9,7 +9,7 @@ import InvoiceDetailPage from '../pages/invoice-detail/InvoiceDetailPage';
 import en from '../locales/en.json';
 import ja from '../locales/ja.json';
 
-const auth = vi.hoisted(() => ({ signIn: vi.fn(), sendPasswordReset: vi.fn() }));
+const auth = vi.hoisted(() => ({ signIn: vi.fn(), signInWithPasskey: vi.fn(), sendPasswordReset: vi.fn() }));
 const api = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), delete: vi.fn() }));
 vi.mock('../contexts/AuthContext', () => ({
   useAuth: () => ({ ...auth, user: null, loading: false }),

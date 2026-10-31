@@ -7,6 +7,8 @@ import en from "../../locales/en.json";
 const mock = vi.hoisted(() => ({
   self: true,
   post: vi.fn(),
+  get: vi.fn(),
+  delete: vi.fn(),
   updatePassword: vi.fn(),
   reauthenticate: vi.fn(),
 }));
@@ -20,7 +22,7 @@ vi.mock("../../lib/firebase-auth", () => ({
 }));
 vi.mock("../../lib/api", async () => {
   const actual = await vi.importActual<typeof import("../../lib/api")>("../../lib/api");
-  return { ...actual, api: { post: mock.post } };
+  return { ...actual, api: { get: mock.get, post: mock.post, delete: mock.delete } };
 });
 
 import { ApiError } from "../../lib/api";
@@ -28,7 +30,8 @@ import { currentAccessToken, expireSession } from "../../lib/auth/selfAuth";
 import SecuritySection from "./SecuritySection";
 
 let instance = createInstance();
-const tr = (key: string) => String(instance.t(key));
+let view: ReturnType<typeof render>;
+const tr =(key: string) => String(instance.t(key));
 
 function submit(current: string, next: string, confirm: string) {
   fireEvent.change(screen.getByLabelText(tr("accountSettings.currentPassword")), { target: { value: current } });
@@ -40,12 +43,14 @@ function submit(current: string, next: string, confirm: string) {
 beforeEach(async () => {
   mock.self = true;
   mock.post.mockReset();
+  mock.get.mockReset().mockResolvedValue({ items: [] });
+  mock.delete.mockReset();
   mock.updatePassword.mockReset().mockResolvedValue(undefined);
   mock.reauthenticate.mockReset().mockResolvedValue({});
   expireSession();
   instance = createInstance();
   await instance.init({ lng: "en", resources: { en: { translation: en } }, interpolation: { escapeValue: false } });
-  render(<I18nextProvider i18n={instance}><SecuritySection /></I18nextProvider>);
+  view = render(<I18nextProvider i18n={instance}><SecuritySection /></I18nextProvider>);
 });
 afterEach(() => {
   cleanup();
@@ -82,6 +87,24 @@ describe("SecuritySection (self login)", () => {
 
     expect(screen.getByText(tr("accountSettings.passwordMismatch"))).toBeTruthy();
     expect(mock.post).not.toHaveBeenCalled();
+  });
+});
+
+describe("SecuritySection passkey section", () => {
+  it("is a sibling frame after the security section, not nested, for self login", async () => {
+    await waitFor(() => expect(mock.get).toHaveBeenCalledWith("/auth/passkeys"));
+    const sections = view.container.querySelectorAll(".account-settings-section");
+    expect(sections).toHaveLength(2);
+    expect(sections[0].contains(sections[1])).toBe(false);
+    expect(sections[1].textContent).toContain(tr("accountSettings.passkeyTitle"));
+  });
+
+  it("is not shown with Firebase", () => {
+    cleanup();
+    mock.self = false;
+    const rendered = render(<I18nextProvider i18n={instance}><SecuritySection /></I18nextProvider>);
+
+    expect(rendered.container.querySelectorAll(".account-settings-section")).toHaveLength(1);
   });
 });
 
