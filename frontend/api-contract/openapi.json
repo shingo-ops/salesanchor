@@ -22629,6 +22629,35 @@
         "title": "PasskeyLoginVerify",
         "type": "object"
       },
+      "PasskeyPromptStatus": {
+        "properties": {
+          "can_auto": {
+            "title": "Can Auto",
+            "type": "boolean"
+          },
+          "show_prompt": {
+            "title": "Show Prompt",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "can_auto",
+          "show_prompt"
+        ],
+        "title": "PasskeyPromptStatus",
+        "type": "object"
+      },
+      "PasskeyRegisterOptionsRequest": {
+        "properties": {
+          "auto": {
+            "default": false,
+            "title": "Auto",
+            "type": "boolean"
+          }
+        },
+        "title": "PasskeyRegisterOptionsRequest",
+        "type": "object"
+      },
       "PasskeyRegisterVerify": {
         "properties": {
           "challenge_id": {
@@ -39532,10 +39561,74 @@
         ]
       }
     },
+    "/api/v1/auth/passkey/prompt": {
+      "get": {
+        "description": "ログイン直後のパスキー登録（自動作成・案内）を出してよいか。",
+        "operationId": "passkey_prompt_status_api_v1_auth_passkey_prompt_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyPromptStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Passkey Prompt Status",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/passkey/prompt/skip": {
+      "post": {
+        "description": "「今はスキップ」の記録。",
+        "operationId": "passkey_prompt_skip_api_v1_auth_passkey_prompt_skip_post",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Passkey Prompt Skip",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/api/v1/auth/passkey/register/options": {
       "post": {
         "description": "パスキー登録の options を作る（ログイン中の本人だけ）。",
         "operationId": "passkey_register_options_api_v1_auth_passkey_register_options_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/PasskeyRegisterOptionsRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Data"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "content": {
@@ -39546,6 +39639,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "security": [

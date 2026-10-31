@@ -97,3 +97,57 @@ async def test_app_role_can_insert_and_count(app_engine):
             )
         ).one()
     assert row.n >= 1
+
+
+@pytest.mark.asyncio(loop_scope="module")
+async def test_migration_regrants_after_revoke(admin_engine, app_engine):
+    """GRANT を取り消してから migration を流し直すと、権限が戻ること（CI の既定権限に頼らない）。"""
+    async with admin_engine.begin() as conn:
+        await conn.execute(text("REVOKE ALL ON TABLE public.passkey_enroll_prompt_skips FROM salesanchor_app"))
+        await conn.execute(
+            text("REVOKE ALL ON SEQUENCE public.passkey_enroll_prompt_skips_id_seq FROM salesanchor_app")
+        )
+        revoked = (
+            await conn.execute(
+                text("SELECT has_table_privilege('salesanchor_app', 'public.passkey_enroll_prompt_skips', 'INSERT')")
+            )
+        ).scalar_one()
+    assert revoked is False
+
+    await _run_migration(admin_engine)
+
+    async with admin_engine.begin() as conn:
+        can_insert = (
+            await conn.execute(
+                text("SELECT has_table_privilege('salesanchor_app', 'public.passkey_enroll_prompt_skips', 'INSERT')")
+            )
+        ).scalar_one()
+        can_select = (
+            await conn.execute(
+                text("SELECT has_table_privilege('salesanchor_app', 'public.passkey_enroll_prompt_skips', 'SELECT')")
+            )
+        ).scalar_one()
+        can_use_seq = (
+            await conn.execute(
+                text(
+                    "SELECT has_sequence_privilege("
+                    "'salesanchor_app', 'public.passkey_enroll_prompt_skips_id_seq', 'USAGE')"
+                )
+            )
+        ).scalar_one()
+    assert can_insert is True
+    assert can_select is True
+    assert can_use_seq is True
+
+    async with app_engine.begin() as conn:
+        await conn.execute(
+            text("INSERT INTO public.passkey_enroll_prompt_skips (user_id) VALUES (:uid)"),
+            {"uid": _USER_ID},
+        )
+        row = (
+            await conn.execute(
+                text("SELECT count(*) AS n FROM public.passkey_enroll_prompt_skips WHERE user_id = :uid"),
+                {"uid": _USER_ID},
+            )
+        ).one()
+    assert row.n >= 1
