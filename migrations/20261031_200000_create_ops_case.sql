@@ -502,6 +502,8 @@ BEGIN
         -- 申請の受付で列を確かめる（中身は名前だけで値は無い）
         GRANT USAGE ON SCHEMA ai_cloud_meta TO salesanchor_app;
         GRANT SELECT ON ai_cloud_meta.build_columns TO salesanchor_app;
+        -- 【要確認】カード §4-A に無い追加: GET /ops/case/audit-inputs が build_log の件数を読むため（件数と失敗の種類だけで値は無い）
+        GRANT SELECT ON ai_cloud_meta.build_log TO salesanchor_app;
         GRANT EXECUTE ON FUNCTION ops_case.is_denied_source(text) TO salesanchor_app;
     ELSE
         RAISE NOTICE 'salesanchor_app が無いため backend の権限は付けない';
