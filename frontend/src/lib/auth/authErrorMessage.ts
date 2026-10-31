@@ -4,7 +4,7 @@
  * Firebase 用の firebaseErrorMessage.ts は便6 まで残す。
  */
 
-export type AuthErrorContext = "login" | "resetRequest" | "resetConfirm" | "passwordChange";
+export type AuthErrorContext = "login" | "resetRequest" | "resetConfirm" | "passwordChange" | "passkey";
 
 interface StatusLike {
   status: number;
@@ -27,6 +27,22 @@ function detailOf(err: StatusLike): string | null {
 export function authErrorMessage(err: unknown, t: (key: string) => string, context: AuthErrorContext): string {
   if (!isStatusLike(err)) return t("authError.default");
   const detail = detailOf(err);
+
+  // パスキーの口: パスワードの話（invalidCredentials など）を画面に出さない
+  if (context === "passkey") {
+    switch (err.status) {
+      case 401:
+        return t("authError.passkeyFailed");
+      case 400:
+        return detail === "challenge_expired" ? t("authError.passkeyExpired") : t("authError.passkeyFailed");
+      case 409:
+        if (detail === "passkey_exists") return t("authError.passkeyExists");
+        if (detail === "passkey_limit") return t("authError.passkeyLimit");
+        break;
+      case 503:
+        return t("authError.unavailable");
+    }
+  }
 
   switch (err.status) {
     case 401:

@@ -127,4 +127,28 @@ describe("401 handling (self login)", () => {
     expect(calls("/api/v1/auth/refresh")).toHaveLength(0);
     expect(currentAccessToken()).toBe("tok-old");
   });
+
+  it("401 on passkey register/list/delete endpoints: one refresh, then the request is retried once", async () => {
+    for (const [method, path] of [
+      ["post", "/auth/passkey/register/options"],
+      ["get", "/auth/passkeys"],
+    ] as const) {
+      fetchMock.mockClear();
+      adoptAccessToken("tok-old", 900);
+      let first = true;
+      handler = (url) => {
+        if (url === "/api/v1/auth/refresh") return json(200, { access_token: "tok-new", token_type: "bearer", expires_in: 900 });
+        if (first) {
+          first = false;
+          return json(401, { detail: "invalid token" });
+        }
+        return json(200, { ok: true });
+      };
+
+      await expect(method === "post" ? api.post(path, {}) : api.get(path)).resolves.toEqual({ ok: true });
+
+      expect(calls("/api/v1/auth/refresh")).toHaveLength(1);
+      expect(calls(`/api/v1${path}`)).toHaveLength(2);
+    }
+  });
 });

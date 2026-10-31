@@ -66,11 +66,14 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // 401 がログインの切れた印になる自社 API の口（refresh しない口の中で、画面をログイン画面へ移すもの）
 const SESSION_END_PATHS = new Set(["/auth/password/change", "/auth/logout"]);
+// ログイン後に使うパスキーの口（登録・一覧・削除）。/auth/ 配下でも 401 では更新を 1 回送る
+const REAUTH_AUTH_PREFIXES = ["/auth/passkey/register/", "/auth/passkeys"];
 
 /**
  * fetch の 401 を自社ログインの規則で扱う（自社ログインのときだけ。Firebase のときは素通し）。
  * - /auth/ で始まる口の 401 では refresh しない（login・refresh 自身の 401 で往復しないため）。
  *   そのうち password/change・logout の 401 はログインが切れた印なので、セッションを捨てる
+ *   パスキーの登録・一覧・削除はログイン後の口なので、ほかの口と同じく更新する
  * - それ以外の口の 401 は refresh を 1 回送り、成功したら元の要求を 1 回だけ送り直す
  *   （401 は backend が処理の前に断った印なので、POST などでも二重にならない）
  * - 送り直しも 401、または refresh が失敗したら、セッションを捨てる（ProtectedRoute がログイン画面へ移す）
@@ -79,7 +82,7 @@ async function fetchWithReauth(url: string, init: RequestInit, path: string): Pr
   const res = await fetch(url, init);
   if (res.status !== 401 || !isSelfAuth()) return res;
 
-  if (path.startsWith("/auth/")) {
+  if (path.startsWith("/auth/") && !REAUTH_AUTH_PREFIXES.some((p) => path.startsWith(p))) {
     if (SESSION_END_PATHS.has(path)) expireSession();
     return res;
   }

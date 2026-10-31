@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 DEFAULT_AUTH_PROVIDER = "firebase"  # firebase | self
 DEFAULT_RP_ORIGIN = "https://app.salesanchor.jp"
+DEFAULT_RP_ID = "app.salesanchor.jp"
 ISSUER = "salesanchor"
 ACCESS_TOKEN_TTL_SECONDS = 900
 REFRESH_ABSOLUTE_TTL = timedelta(days=30)
@@ -48,6 +49,11 @@ def _secret_previous() -> str:
 
 def rp_origin() -> str:
     return os.getenv("AUTH_RP_ORIGIN", DEFAULT_RP_ORIGIN)
+
+
+def rp_id() -> str:
+    """パスキーが結びつくドメイン（design.md:85。後から変えると登録済みのパスキーが全部使えなくなる）。"""
+    return os.getenv("AUTH_RP_ID", DEFAULT_RP_ID)
 
 
 def cookie_secure() -> bool:

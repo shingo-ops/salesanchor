@@ -22,6 +22,9 @@ discord.py==2.4.0
 # Phase 1-D: Fernet 暗号化（Meta Page Access Token の保管）
 # python-jose[cryptography] が transitive に持ち込むが、用途が異なるため直接依存として明示
 cryptography==48.0.1
+# ADR-1013 便5: パスキー。pyOpenSSL 26.2.0 は cryptography 48 と両立する唯一の版（26.3.0 以降と webauthn 3.x は cryptography>=49）
+webauthn==2.8.0
+pyOpenSSL==26.2.0
 # Sprint 4 (F4): Gemini 2.5 Flash LLM フォールバック（在庫メッセージ解析）
 # structured output (response_mime_type=application/json + response_schema) を使うため 0.8.0+
 google-generativeai>=0.8.0,<0.9.0

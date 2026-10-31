@@ -50,4 +50,20 @@ describe("authErrorMessage", () => {
     const out = msg(new SelfAuthError(500, "internal secret text"));
     expect(out).toBe("authError.default");
   });
+
+  it("passkey context never shows the password message", () => {
+    expect(msg(new SelfAuthError(401, "invalid_credentials"), "passkey")).toBe("authError.passkeyFailed");
+    expect(msg(new SelfAuthError(400, "challenge_expired"), "passkey")).toBe("authError.passkeyExpired");
+    expect(msg(new ApiError("passkey_invalid", 400, "passkey_invalid"), "passkey")).toBe("authError.passkeyFailed");
+    expect(msg(new ApiError("passkey_exists", 409, "passkey_exists"), "passkey")).toBe("authError.passkeyExists");
+    expect(msg(new ApiError("passkey_limit", 409, "passkey_limit"), "passkey")).toBe("authError.passkeyLimit");
+    expect(msg(new SelfAuthError(503, "unavailable"), "passkey")).toBe("authError.unavailable");
+    expect(msg(new SelfAuthError(429, "too_many_attempts"), "passkey")).toBe("authError.tooManyAttempts");
+  });
+
+  it("existing contexts are unchanged by the passkey context", () => {
+    expect(msg(new SelfAuthError(401, null), "login")).toBe("authError.invalidCredentials");
+    expect(msg(new SelfAuthError(400, null), "passwordChange")).toBe("authError.currentPasswordWrong");
+    expect(msg(new SelfAuthError(409, "passkey_exists"), "login")).toBe("authError.default");
+  });
 });
