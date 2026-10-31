@@ -14,7 +14,7 @@ Context7: 今月の回数切れ（"Monthly quota exceeded"）→ 起動指示の
 ## B. 外部事例（元 external-cases-cache.md）
 
 クラウドの調べ2本の結果:
-- 画面の作り調べ（cse_01W47tdgY3KhiNJUGR9J6FFJ）: DONE。ただし get_run_log の報告が途中で切れ、分類は Sonnet 自身が「おおよそ」と書いた → 同じ基準 8c6f52813 で手元の script で数え直した（r2-raw.txt）。
+- 画面の作り調べ（cse_01W47tdgY3KhiNJUGR9J6FFJ）: DONE。ただし get_run_log の報告が途中で切れ、分類は Sonnet 自身が「おおよそ」と書いた → 同じ基準 8c6f52813 で数え直した。数え方はリポジトリの docs/handoff/line-like-speed/u1-count.py、結果は recon.md §4 U1（誰でも流し直せる）。
 - 外部事例（cse_01W47tdeQtQiCizm6mAy5ZAP）: BLOCKED。クラウドの通信の許可リストで dev.to・basedash.com・upd.dev などが止まった → 手元で WebSearch・WebFetch で確かめた（下）。
 
 ## X1 成功・数値あり: ShipSecAI/studio PR #298

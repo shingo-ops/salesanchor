@@ -1,7 +1,7 @@
 # design: 全画面を LINE のような使い心地にする
 
 作成: 2026-10-31 Claude Opus（設計担当）。
-**状態**: KGI は PO 承認済み（2026-10-31 選択「1」）。§3 以降は設計案（審査 3 回目 REVISE を受けて直した第 4 版・PO 未承認）。
+**状態**: KGI は PO 承認済み（2026-10-31 選択「1」）。§3 以降は設計案（審査 4 回目 REVISE を受けて直した第 5 版・PO 未承認）。
 現在地: docs/handoff/line-like-speed/recon.md
 
 ## 1. KGI（PO 承認済み 2026-10-31「1」）
@@ -33,12 +33,12 @@ PO の言葉: 「LINEみたいな使い心地は出来る？」（意味は「�
 | ログアウト | メモリの session を消すだけ（selfAuth.ts:67） | 同じ時に写しも全部消す |
 
 ### 3-2. 部品
-- 写しの置き場: TanStack Query（@tanstack/react-query 5 系）を 1 つ入れる。新しい部品の追加なので ADR を起こす。起案は設計担当（Claude Opus）で、Proposed の下書きを本件 PR に同梱する（docs/adr/ 新番号）。PO の採用で Accepted にし、Accepted になるまで段 1 以降を始めない。選んだ理由と比べたもの → §3-6。
+- 写しの置き場: TanStack Query（@tanstack/react-query 5 系）を 1 つ入れる。新しい部品の追加なので ADR を起こす。起案は設計担当（Claude Opus）で、Proposed の下書きを本件 PR に同梱した（docs/adr/ADR-1054-screen-data-cache.md）。PO の採用で Accepted にし、Accepted になるまで段 1 以降を始めない。選んだ理由と比べたもの → §3-6。
 - 置き場は 1 つだけ: frontend/src/lib/query/ に QueryClient を 1 個作り、App.tsx の AuthProvider の内側・BrowserRouter の外側に QueryClientProvider を置く（App.tsx:151-152 の間）。ほかの場所で QueryClient を作らない。
 - 取り方は 1 つだけ: 同じ場所に `useApiQuery(path)` を作り、中で今の `api.get`（frontend/src/lib/api.ts:241）を呼ぶ。通信・再送・401 の扱いは api.ts のまま（二重にしない）。TanStack 側の再送は 0 にする（api.ts が既に 3 回送り直すため。既定 retry 3 のままだと最大 16 回になる）。
-- 写しの名前（key）: `["api", user.uid, path]`。user は useAuth()（AuthContext.tsx:167）、uid は AuthUser.uid（AuthContext.tsx:30）。自社ログインでは同じ人なら同じ user を返す（AuthContext.tsx:53）ので、同じ人のまま写しが消えることはない。user が null の間は取りに行かない（enabled: false）。人が変われば別の写しになる（X3 対策の二重目）。
+- 写しの名前（key）: `["api", user.uid, basePath, query]`。useApiQuery が path を最初の「?」で 2 つに分ける（basePath＝「?」より前、query＝後ろ。無ければ空文字）。検索の条件を path に足して取る画面があるため（例: frontend/src/pages/companies/CompaniesPage.tsx:211 `/companies?${parts.join("&")}`。`git grep -lE 'api\.get(<[^>]*>)?\(\s*`[^`]*\$\{' origin/main -- frontend/src/pages` で 22 ファイル・審査 4 回目）。user は useAuth()（AuthContext.tsx:167）、uid は AuthUser.uid（AuthContext.tsx:30）。自社ログインでは同じ人なら同じ user を返す（AuthContext.tsx:53）ので、同じ人のまま写しが消えることはない。user が null の間は取りに行かない（enabled: false）。人が変われば別の写しになる（X3 対策の二重目）。
 - 写しを正本にしない: staleTime 0（既定のまま）＝写しは「出すだけ」で、画面を開くたび・タブに戻るたびに必ずサーバーから取り直す。写しはメモリだけに持ち、ブラウザの保存に書かない（persist の追加はしない）。使われない写しは 30 分で捨てる（gcTime を 30 分に設定。既定の 5 分だと、5 分を過ぎて戻った画面が初回と同じ形になるため）。useQuery の結果を useState に写し替えない（X5）。
-- 取り直す写しの決め方（審査 3 回目の指摘）: 各画面は、自分が読む path を画面のファイルの中の 1 つの定数に置き、useApiQuery とその画面の取り直しの両方がその定数を使う。取り直しは `queryClient.invalidateQueries({ queryKey: ["api", uid, path] })` を、その定数の path ごとに呼ぶ（key の先頭一致なので、同じ path の写しだけが取り直される）。合図の名前と path の対応を集めた新しい表は作らない（写しの決め方が 2 か所に分かれるため）。
+- 取り直す写しの決め方（審査 3 回目の指摘）: 各画面は、自分が読む basePath（「?」を含まない）を画面のファイルの中の 1 つの定数に置き、useApiQuery とその画面の取り直しの両方がその定数を使う。取り直しは `queryClient.invalidateQueries({ queryKey: ["api", uid, basePath] })` を、その定数の basePath ごとに呼ぶ（key の先頭一致なので、同じ basePath の写しは検索の条件が何であっても全部取り直される。条件の違う写しを取り逃さない）。段 1 の試験で「条件つきの写し 2 つが 1 回の取り直しで両方取り直される」を確かめる。合図の名前と path の対応を集めた新しい表は作らない（写しの決め方が 2 か所に分かれるため）。
 - 書き込みの後: 今の api.post/patch/delete はそのまま。成功したら、上の決め方でその画面の写しを取り直す（自分の変更は SSE の合図では来ないため・useRealtimeRefresh.ts:56 の origin 判定）。
 - 合図: useRealtimeRefresh(topics, reload) の reload に、上の取り直しを渡す（ADR-1016 決定7 の形のまま）。合図の名前の表は今のまま backend/app/realtime/topics.py が正本で、画面側の frontend/src/lib/realtime/topics.ts は手書きの写し（backend/tests/test_realtime_topics.py:129-133 が同じ集合かを確かめる）。
 - ログアウト・人の入れ替わり: QueryClientProvider は AuthProvider の内側なので、AuthProvider（AuthContext.tsx:90・:105）の中からは写しに触れない。そこで frontend/src/lib/query/ に小さな部品 QueryAuthSync を作り、QueryClientProvider の直下に置く（画面は描かない）。この部品が useAuth().user?.uid を見て、前の uid と今の uid が違ったら（null になった時を含む）、cancelQueries → resetQueries → queryClient.clear() → getMutationCache().clear() の順に消す（X4 の順）。user の変化は 3 つの道すべてから届く: Firebase の onAuthStateChanged（:90）、自社ログインの subscribeSession（:105）、api.ts の 401 → expireSession → notify（selfAuth.ts:67-71）→ :105 の道。
