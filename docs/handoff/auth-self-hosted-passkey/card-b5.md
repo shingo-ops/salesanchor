@@ -6,7 +6,7 @@
 - 前提を決めている別の設計: docs/handoff/admin-2fa/design.md（ADR-1048。:57・:66-70・:77・:109・:142）
 - 現在地: docs/handoff/auth-self-hosted-passkey/recon-b5.md（origin/main 5c13bfbef 基準。以下「recon Qn」）
 - 対象ADR: ADR-1013（本テーマ）、ADR-1048（発行の共通関数・amr）、ADR-027（文言は t()）、ADR-144（UI は金型）、ADR-025（手動 INSERT 禁止。このカードは手動 INSERT をしない）
-- 状態: 第3版（2026-10-31 Opus）。第1版（5157d338c）の審査は REVISE（MAJOR 4・MINOR 14）。第2版（f6b3e3b09）の審査は REVISE（MAJOR 1・MINOR 7）。第3版で全件を反映した（末尾「改訂の記録」）。PO の実装承認は 2026-10-31（「1」＝審査に通れば便5 と ADR-1048 便7a〜7d を止めずに本番まで進める）。**実装未着手**
+- 状態: 第4版（2026-10-31 Opus）。第1版（5157d338c）の審査は REVISE（MAJOR 4・MINOR 14）。第2版（f6b3e3b09）の審査は REVISE（MAJOR 1・MINOR 7）。第3版（21cbffa6b）の審査は REVISE（MAJOR 2・MINOR 3）。第4版で全件を反映した（末尾「改訂の記録」）。PO の実装承認は 2026-10-31（「1」＝審査に通れば便5 と ADR-1048 便7a〜7d を止めずに本番まで進める）。**実装未着手**
 - 担当: 実装 クラウドの Sonnet／コード審査 Opus（reviewer）／マージ・反映確認 Opus（PO の委任）／K2 の実演 PO
 
 ## 0. 読んだ節（docs/handoff/design-partner-card-ops/guards/）
@@ -77,9 +77,9 @@
   - 誤りの文言は、同じファイルの `loginErrorMessage`（:17-19。自社ログインなら `authErrorMessage`、そうでなければ Firebase 用）で作る。成功後は :50 の `navigate(from, { replace: true })`
   - 自社ログインの判定は `isSelfAuth()`（`frontend/src/lib/auth/provider.ts:19-21`）。ログインの呼び出しは `selfAuth.ts:88-106`（`postAuth`・`selfLogin`）→ `AuthContext.tsx:124-130`
   - `selfAuth.ts` で `postAuth`（:88）と `TokenResponse`（:35）は export されていない。`adoptAccessToken`（:61）は export 済み
-  - `AuthContext.tsx` の型は :38-40、Provider の値は :154、開発用の代わりの値は :170-179（`signIn`・`signOut`・`sendPasswordReset`）。useAuth の偽物は `AllLegacyButtonOperationMigration.test.tsx:12-15` だけ。`LoginPage.test.tsx` は本物の `AuthProvider`（:26・:38）を描き、偽物にしているのは `lib/firebase`・`lib/firebase-auth`・`lib/auth/provider`（:14-24。`isSelfAuth: () => mock.self`）
+  - `AuthContext.tsx` の型は :38-40、Provider の値は :154、開発用の代わりの値は :170-179（`signIn`・`signOut`・`sendPasswordReset`）。AuthContext を vi.mock で偽物にする試験はほかにもあるが、`signIn` を持ち LoginPage を描く偽物は `AllLegacyButtonOperationMigration.test.tsx:12-15` だけ。`LoginPage.test.tsx` は本物の `AuthProvider`（:26・:38）を描き、偽物にしているのは `lib/firebase`・`lib/firebase-auth`・`lib/auth/provider`（:14-24。`isSelfAuth: () => mock.self`）
   - アカウント設定は `frontend/src/pages/account-settings/SecuritySection.tsx`。外枠は `return (`（:83）の `<section className="account-settings-section">`（:84）〜`</section>`（:136）。見出しは :85-89。`AccountSettingsPage.tsx:13` から呼ばれ、各節は `.account-settings-layout`（account-settings.css:3-8。縦並び・間は `--space-8`）の子として並ぶ。`.account-settings-section` は枠線・角丸・内側の余白つき（account-settings.css:10-18）。試験は `SecuritySection.test.tsx`
-  - 画面の API 呼び出しの 401（lib/api.ts:44-65 `fetchWithReauth`）: `/auth/` で始まる口の 401 では更新をしない（:48-51）。更新しないうえでログイン切れとして扱う口は `SESSION_END_PATHS`（:34。password/change・logout）。試験は `frontend/src/lib/auth/apiReauth.test.ts`
+  - 画面の API 呼び出しの 401（lib/api.ts:78-99 `fetchWithReauth`。説明の注釈は :69-77）: `/auth/` で始まる口の 401 では更新をしない（:82-85）。更新しないうえでログイン切れとして扱う口は `SESSION_END_PATHS`（:68。password/change・logout）。アクセスの期限は、切れる 30 秒前に先回りで更新される（selfAuth.ts:15 `EXPIRY_MARGIN_MS`・:144-146 `ensureSelfToken`）。試験は `frontend/src/lib/auth/apiReauth.test.ts`
   - API の形の正本は `frontend/api-contract/openapi.json`。CI「API contract is up to date」（.github/workflows/api-contract-check.yml:9）は `ENVIRONMENT=test python -m tools.export_openapi ../frontend/api-contract/openapi.json`（:31-35）で書き出し、差分が出たら落とす（:50-53）。口を足すと必ず変わる（前例: 便4a の 51915ba57 は openapi.json を一緒にコミットした）
   - 金型: `DataTable`（components/DataTable.tsx。空の表示は `emptyState?: ReactNode`＝:94、スマホのカード表示は `mobileCards?`＝:127）・`ConfirmModal`（components/ConfirmModal.tsx:21）・`Button`・`TextFieldControl`・`Stack`（components/Stack.tsx。縦に積む・`gap` は `--space-N`）
   - Button の種類は `primary | secondary | ghost | danger | outline | tab`（components/buttonAppearance.ts:1）
@@ -94,6 +94,9 @@
   - SQLite の作りは conftest.py に有る。`public.` を外す書き換えは :317-320、SQLite 版の表は :1334-1361。どちらも `auth_refresh_tokens`・`password_reset_tokens` だけで、**`webauthn_credentials` は無い**
   - UUID の列には str を渡している（self_tokens.py:164・:172。本番の PostgreSQL でも動いている）。sqlite の型の変換は conftest.py:270-280（`register_adapter`）
   - CI の pytest は `test.yml:207-242`（SQLite の全部＋PostgreSQL の RLS 試験）
+  - 全部の口を数える既存の試験が 2 つある。CI は全件を流す（.github/workflows/test.yml「Run pytest (full suite + PostgreSQL RLS)」の `pytest -q --tb=short`）
+    - `backend/tests/test_realtime_topics.py:68-73`: 書き込みの口（POST/PUT/PATCH/DELETE）は全部、`backend/app/realtime/topics.py` の `WRITE_ROUTE_TOPICS`（:20）か `NO_SIGNAL_ROUTES`（:86）のどちらか一方に載っていないと落ちる。auth の口は :100-126 に `_PENDING`（:83）で並ぶ。前例: 便4a の 51915ba57 は password/change を足した
+    - `backend/tests/test_viewer_isolation.py:27-55・:91-114`: 閲覧者のトークンで全部の口を叩き、401 以外を返した口が `_PUBLIC_NO_AUTH_ROUTES`（:27。auth は :41-45）に無ければ落ちる
   - 画面の単体試験は `npm run test:unit`＝`vitest run --config vitest.unit.config.ts --project unit`（package.json:44）。型の生成は `npm run generate:api-types`（package.json:10。`src/api/generated/schema.d.ts` を作る）
 
 ## 3. 触るファイル（これ以外は触らない）
@@ -120,6 +123,9 @@
 - frontend/src/pages/login/LoginPage.test.tsx
 - frontend/src/pages/account-settings/SecuritySection.tsx（返す中身を `<>`〜`</>` で包み、`</section>` の後に `<PasskeySection />` を置くだけ。§4.5 (5)）
 - frontend/src/lib/api.ts（パスキーの口の 401 で更新を許すだけ。§4.5 (7)）
+- frontend/src/pages/account-settings/SecuritySection.test.tsx（api の偽物に get・delete を足し、試験を足す。§5）
+- backend/app/realtime/topics.py（`NO_SIGNAL_ROUTES` に 5 行足すだけ。§4.4）
+- backend/tests/test_viewer_isolation.py（`_PUBLIC_NO_AUTH_ROUTES` に 2 行足すだけ。§4.4）
 - frontend/src/lib/auth/apiReauth.test.ts
 - frontend/api-contract/openapi.json（§5-6 で書き出したものをそのままコミット。手で書かない）
 - frontend/src/lib/auth/authErrorMessage.ts
@@ -190,6 +196,9 @@ def _issue_session_tokens(
 - POST と DELETE は全部、最初に `_require_app_origin(request)` を通す（design.md:75）
 - py_webauthn の parse と verify は**同じ try の中**に置く。`except (WebAuthnException, ValueError)` でまとめて受ける（F8。`userHandle` の解読は `binascii.Error`＝`ValueError` を出す）
 - 返す detail は識別子だけ
+- 全部の口を数える既存の試験（F13）に合わせる:
+  - `topics.py` の `NO_SIGNAL_ROUTES` の auth の行（:100-126）に、アルファベット順で次の 5 行を `_PENDING` で足す: `("DELETE", "/api/v1/auth/passkeys/{passkey_id}")`・`("POST", "/api/v1/auth/passkey/login/options")`・`("POST", "/api/v1/auth/passkey/login/verify")`・`("POST", "/api/v1/auth/passkey/register/options")`・`("POST", "/api/v1/auth/passkey/register/verify")`。`WRITE_ROUTE_TOPICS` には足さない
+  - `test_viewer_isolation.py` の `_PUBLIC_NO_AUTH_ROUTES` の auth の行（:41-45）に、ログイン前の 2 本 `("POST", "/api/v1/auth/passkey/login/options")`・`("POST", "/api/v1/auth/passkey/login/verify")` を足す。この 2 本はトークンを見ない（§4.4 の作り）。ログイン後の 4 本は `get_current_user` を通るので足さない（閲覧者のトークンで 401 になる）
 - `record_audit_log` は、`tenant_id=利用者の tenant_id`・`user_id=利用者の id` で呼ぶ。tenant の文脈の外で呼ぶ（password/change と同じ順＝F6）
 
 **POST `/passkey/register/options`**（`get_current_user`・入力なし）
@@ -337,10 +346,10 @@ def _issue_session_tokens(
 - 既存の 4 つの文脈の振る舞いは変えない
 
 (7) `lib/api.ts`（ログインしてから使うパスキーの口の 401）
-- 理由: 今は `/auth/` で始まる口の 401 では更新をしない（:48-51）。このままだと、アクセスの期限（15 分）が切れた後に一覧・追加・削除を押すと、更新されずに失敗の文言が出る
-- `SESSION_END_PATHS`（:34）の隣に `const REAUTH_AUTH_PREFIXES = ["/auth/passkey/register/", "/auth/passkeys"];` を置く
-- :48 の条件を `if (path.startsWith("/auth/") && !REAUTH_AUTH_PREFIXES.some((p) => path.startsWith(p)))` にする。それ以外は変えない
-- :36-43 の説明の注釈に「パスキーの登録・一覧・削除はログイン後の口なので、ほかの口と同じく更新する」を 1 行足す
+- 理由: 今は `/auth/` で始まる口の 401 では更新をしない（:82-85）。期限は切れる前に先回りで更新される（F11）。それでも先回りの後に失効した場合などは 401 になり、パスキーの口だけ更新されずに失敗の文言が出る。ほかの口と同じく 1 回だけ更新する（design.md:129「401 のときの自動 refresh は 1 回まで」）
+- `SESSION_END_PATHS`（:68）の隣に `const REAUTH_AUTH_PREFIXES = ["/auth/passkey/register/", "/auth/passkeys"];` を置く
+- :82 の条件を `if (path.startsWith("/auth/") && !REAUTH_AUTH_PREFIXES.some((p) => path.startsWith(p)))` にする。それ以外は変えない
+- :69-77 の説明の注釈に「パスキーの登録・一覧・削除はログイン後の口なので、ほかの口と同じく更新する」を 1 行足す
 - ログイン前の login/options・login/verify は `postAuth`（selfAuth.ts:88）で送り、api.ts を通らないので、この変更の影響を受けない
 
 ### 4.6 試験の DB（backend/tests/conftest.py）
@@ -379,7 +388,7 @@ CREATE TABLE IF NOT EXISTS webauthn_credentials (
 1. `cd "${WT}" && cd backend && pip install -r requirements.txt 2>&1 | tail -5`
 2. `cd "${WT}" && cd backend && pip check 2>&1 | tail -5`（「No broken requirements found.」が出ること）
 3. `cd "${WT}" && cd backend && python -c "import webauthn, OpenSSL, cryptography; print(webauthn.__version__, OpenSSL.__version__, cryptography.__version__)"`（`2.8.0 26.2.0 48.0.1`）
-4. `cd "${WT}" && cd backend && python -m pytest tests/test_passkeys.py tests/test_self_auth.py -q 2>&1 | tail -15`
+4. `cd "${WT}" && cd backend && python -m pytest tests/test_passkeys.py tests/test_self_auth.py tests/test_realtime_topics.py tests/test_viewer_isolation.py -q 2>&1 | tail -15`
 5. `cd "${WT}" && cd frontend && npm ci 2>&1 | tail -5`
 6. `cd "${WT}" && cd backend && ENVIRONMENT=test python -m tools.export_openapi ../frontend/api-contract/openapi.json 2>&1 | tail -5` の後に `cd "${WT}" && cd frontend && npm run generate:api-types 2>&1 | tail -5`。書き出した `frontend/api-contract/openapi.json` はコミットする（CI「API contract is up to date」＝api-contract-check.yml:31-53 が差分で落とすため。ADR-1010。前例 51915ba57）。続けて `cd "${WT}" && git status --short frontend/api-contract/` を貼る（コミット後は空）
 7. `cd "${WT}" && cd frontend && npx vitest run --config vitest.unit.config.ts --project unit src/lib/auth src/pages/login src/pages/account-settings src/components/AllLegacyButtonOperationMigration.test.tsx 2>&1 | tail -20`
@@ -392,9 +401,9 @@ CREATE TABLE IF NOT EXISTS webauthn_credentials (
 backend/tests/test_passkeys.py に入れる試験:
 - py_webauthn の照合関数は `monkeypatch` で差し替え、実物の暗号は使わない
 - 差し替えるのは `app.auth.passkeys` と `app.routers.auth` が import した名前（`verify_registration_response`・`verify_authentication_response`・`parse_authentication_credential_json`・`parse_registration_credential_json`）
-- Redis は、`get`・`set`（`ex` を受ける）・`getdel` を持つ辞書の偽物を渡す。差し替える先は `app.auth.passkeys.get_redis`（passkeys.py は `from app.cache import get_redis` で読むため、`app.cache.get_redis` を差し替えても効かない）
-- 監査記録は表を読まずに確かめる: `app.routers.auth.record_audit_log` を `AsyncMock` で差し替え（test_self_auth.py:507-510 の `noop_audit` と同じ形）、`await_args_list` の `new_data["event"]` を数える。以下「監査に〜」はこの数え方
-- 後片付けは test_self_auth.py の `cleanup_self_auth`（:64-71）と同じ形で、webauthn_credentials も消す
+- Redis は、`async def` の `get`・`set`（`ex` を受ける）・`getdel` を持つ辞書の偽物を渡す（cache.py:8 は `redis.asyncio` なので、呼ぶ側は `await` する）。差し替える先は `app.auth.passkeys.get_redis`（passkeys.py は `from app.cache import get_redis` で読むため、`app.cache.get_redis` を差し替えても効かない）
+- 監査記録は表を読まずに確かめる: `app.routers.auth.record_audit_log` を `AsyncMock` で差し替え（test_self_auth.py:512-515 の `noop_audit` と同じ形）、`await_args_list` の `new_data["event"]` を数える。以下「監査に〜」はこの数え方
+- 後片付けは test_self_auth.py の `cleanup_self_auth`（:70-77）と同じ形で、webauthn_credentials も消す
 
 試験の中身:
 - T1 login/options: 200。`challenge_id` が返り、偽の Redis に 300 秒で入る
@@ -406,7 +415,7 @@ backend/tests/test_passkeys.py に入れる試験:
   - 保存値 0・新値 0 → 200（design.md:80・:202）
 - T4b 署名の照合が失敗する応答（verify が `InvalidAuthenticationResponse` を投げる）→ 401。監査に `passkey_sign_count_rejected` は 0 回。`verify_authentication_response` に渡った `credential_current_sign_count` が 0 である
 - T5 表に無い credential → 401。`is_active=false` の人 → 401。user_handle が別の人 → 401。user_handle が無い → 401。応答の本文は T4・T5 で全部同じ
-- T5b `userHandle` が base64url として壊れた文字列（例 `"!!!"`）→ 401（500 にならない）。register の credential が壊れた base64url → 400 `passkey_invalid`
+- T5b 壊れた `userHandle`: この試験だけ `parse_authentication_credential_json` を差し替えず本物を使う。id・rawId・type・response は正しい形にし、`userHandle` だけを `"A"`（長さが 4 の倍数より 1 多く、解読で `binascii.Error` が出る）にする → 401（500 にならない）。`"!!!"` は解読で b'' になり誤りが出ないので使わない。register の credential が壊れた base64url → 400 `passkey_invalid`
 - T6 `AUTH_PROVIDER=firebase` で、login/options と login/verify が 404（design.md:103）
 - T7 Origin が違う・無いとき、5 本の POST/DELETE の口が全部 403
 - T8 register:
@@ -431,7 +440,7 @@ backend/tests/test_passkeys.py に入れる試験:
   - 取り消しで `authError.passkeyCancelled`、401 で `authError.passkeyFailed`（パスワードの文言が出ない）
 - PasskeySection.test.tsx: 一覧・0 件の表示・追加・削除の確認窓から api.delete・409 の 2 つの文言・InvalidStateError で passkeyExists
 - authErrorMessage.test.ts: `"passkey"` の 401・400×2・409×2・503。既存の 4 つの文脈の結果が変わらないこと
-- SecuritySection.test.tsx: 自社ログインでパスキーの節が、セキュリティの `<section>` の中ではなく後ろの兄弟として出る（`container.querySelectorAll(".account-settings-section")` が 2 つで、入れ子でない）。Firebase では出ない。既存の試験は全部そのまま通る
+- SecuritySection.test.tsx: まず偽物を直す。:7 の `mock` に `get: vi.fn()`・`delete: vi.fn()` を足し、beforeEach で `mock.get.mockReset().mockResolvedValue({ items: [] })` とする。:23 の差し替えを `api: { get: mock.get, post: mock.post, delete: mock.delete }` にする（便5 の後は既存の試験でも PasskeySection が描かれ、一覧を読むため）。その上で: 自社ログインでパスキーの節が、セキュリティの `<section>` の中ではなく後ろの兄弟として出る（`container.querySelectorAll(".account-settings-section")` が 2 つで、入れ子でない）。Firebase では出ない。既存の試験は全部そのまま通る
 - apiReauth.test.ts: `/auth/passkeys` と `/auth/passkey/register/options` の 401 は更新を 1 回送って元の要求を送り直す。`/auth/login` などほかの `/auth/` の 401 は今までどおり更新しない（:97 の試験がそのまま通る）
 
 ## 6. 分岐ごとの対処
@@ -443,8 +452,9 @@ backend/tests/test_passkeys.py に入れる試験:
 - B5 `get_current_user` が `/api/v1/auth` 配下で別の振る舞いをする（試験で 401 になる等）→ 停止
 - B6 SQLite で `register_adapter(list, ...)` が効かない、または aiosqlite が list を拒む → 停止（本番のコードに DB ごとの分岐を入れない）
 - B7 §5-8 の tsc が、パスキーと関係ないファイルで落ちる → 落ちたファイルと行を報告して停止。`@simplewebauthn/browser` の型が見つからない（TS2307 など）ときも、型の宣言を自作せずに停止
-- B9 §5-6 の書き出しで、パスキーの口以外の差分が openapi.json に出る → コミットせずに停止し、差分の行数と最初の 40 行を報告
 - B8 フック・CI に止められた → 言い換えずに停止し、原文を報告
+- B9 §5-6 の書き出しで、パスキーの口以外の差分が openapi.json に出る → コミットせずに停止し、差分の行数と最初の 40 行を報告
+- B10 §5-4 の test_realtime_topics.py・test_viewer_isolation.py が、§4.4 で足した行のあとも落ちる → 落ちた口の一覧を報告して停止（表から口を外す・試験を緩める直しはしない）
 
 ## 7. 受け入れ基準
 
@@ -539,5 +549,12 @@ PR を revert して deploy する。登録済みのパスキーの行は残る�
   - MINOR-G パスキーの口の 401 で更新する（§3・§4.5 (7)・§5）
   - MINOR-H 壊れた userHandle で 500 にしない（F8・§4.4・T5b）
   - F11 の SecuritySection の行番号を実物（:83-136）に直した
+
+- 第4版（2026-10-31）: 第3版 21cbffa6b の審査（reviewer opus・REVISE）を反映
+  - MAJOR-1 全部の口を数える既存の試験 2 つに新しい口を載せる（F13・§3・§4.4・§5-4・B10）
+  - MAJOR-2 SecuritySection.test.tsx を触るファイルに入れ、api の偽物に get・delete を足す（§3・§5）
+  - MINOR-1 api.ts の行番号を実物（:68・:69-77・:78-99・:82）に直し、理由の文を先回りの更新に合わせた（F11・§4.5 (7)）
+  - MINOR-2 T5b を本物の parse と `"A"` にした
+  - MINOR-3 test_self_auth.py の行番号・F11 の言い過ぎ・Redis の偽物は async・§6 の並びを直した
 
 END OF CARD
