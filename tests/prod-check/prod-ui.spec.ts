@@ -27,7 +27,7 @@ test.describe("本番の画面点検", () => {
     expect(res?.status(), "ログイン画面の応答").toBe(200);
     await expect(page.getByLabel("メールアドレス")).toBeVisible();
     await expect(page.getByLabel("パスワード", { exact: true })).toBeVisible();
-    await expect(page.getByRole("button", { name: "ログイン" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "ログイン", exact: true })).toBeVisible();
   });
 
   test("S2 ログイン", async ({ page }) => {
@@ -116,7 +116,7 @@ test.describe("本番の画面点検", () => {
       (r) => r.request().method() === "POST" && new URL(r.url()).pathname === "/api/v1/auth/login",
       { timeout: 20_000 },
     );
-    await page.getByRole("button", { name: "ログイン" }).click();
+    await page.getByRole("button", { name: "ログイン", exact: true }).click();
     expect((await loginRes).status(), "ログイン API の応答（パスワード違いは 401）").toBe(401);
     await expect(page.locator(".error-message")).toBeVisible();
     expect(new URL(page.url()).pathname).toBe("/login");
