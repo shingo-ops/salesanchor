@@ -8,7 +8,7 @@
 |---|---|---|
 | capture_prompt_ab.py | prompt_ab の `call_gemini_raw_copy_v8`（prompt_ab 側の名前）を包み、成功後だけ渡した文字列を保存 | 本番サーバーの別の箱 |
 | vps_run_gemini.sh | 上の起動台本（dry あり。健康診断の上書き・`-e PYTHONPATH=/app`） | PO が ! で |
-| vps_convert.sh | 3種の JSONL を1回の起動でまとめて fhd_snapshot.py convert | PO が ! で |
+| vps_convert.sh | 3種の JSONL を、別の箱で1回の起動でまとめて fhd_snapshot.py convert（`run` で裏で起動 → `fetch` で取り寄せ） | PO が ! で |
 | fetch_results.sh | 取り寄せと照合（成功行数 = 文字列数、repeat 間の同一、指示書 sha256） | PO が ! で |
 | run_claude.py | claude CLI（サブスク）で同じ文字列を1件ずつ解く。異常で即停止 | 手元の Mac |
 | split_snapshot.py | convert の出力を (tag, repeat) ごと・投稿ごとの TSV に分ける | 手元 |
@@ -35,6 +35,6 @@
 
 ## 後片付けと補足
 - 試験が終わったら、PO が本番サーバーの `/home/ubuntu/fhd-test/llmcmp/` を消す（社外秘の文字列が残るため）。`!` で実行する。AI は実行しない。削除の一行は、PO が内容を確かめてから自分で書く。
-- vps_convert.sh は、動いている worker の中で JSONL を 4 本変換する（参照の台本より 1 本多い）。
+- vps_convert.sh は、別の箱（`docker compose run --rm --no-deps`、本番 worker の外）で JSONL を 4 本まとめて変換する（参照の台本より 1 本多い）。使い方は `vps_convert.sh run <出力フォルダ> <origin/main の40桁sha> <jsonl...>`、終わったら `vps_convert.sh fetch <出力フォルダ>`。置き場は VPS の `/home/ubuntu/fhd-test/llmcmp/convert`（fetch が jsonl だけ消す。snap_all.tsv などは残る）。jsonl の名前（拡張子を除く）は `^[a-z0-9-]+$` のみ。
 - 費用の上限は llmcmp-* 全体で 5.00 USD（test-id ごとではない）。残りが 1.00 USD 未満なら vps_run_gemini.sh は止まる。使い方は `vps_run_gemini.sh <test-id> <runs> run|dry <origin/main の40桁sha>`（第3引数は run か dry のどちらかだけ。それ以外は止まる）。環境変数 RD に読み取り専用鍵の rd.sh を渡す。
 - summarize.py の --usage は `LABEL=JSONL:repeat` も受ける（Gemini は repeat ごとに別の列）。
