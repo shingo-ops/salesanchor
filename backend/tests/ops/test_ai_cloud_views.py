@@ -505,7 +505,18 @@ def test_t10_classification_covers_real_shaped_tables(cluster):
         c.execute(_read(_CREATE_SQL))
         tenant_schemas = _rows(conn, "SELECT nspname FROM pg_namespace WHERE nspname LIKE 'tenant\\_%'")
         assert tenant_schemas, "tenant_* のスキーマが作れていない"
-        gaps = _classification_gaps(conn)
+        # 試験の足場（tests/rls_bootstrap.py）だけにある列。本番には無い（2026-10-31 04:09 JST に reader の道で確認、
+        # AUDIT sha=a40f10a0a8a5。本番の suppliers は public.suppliers だけで分類表に 25 行ある）。
+        # docs/handoff/cloud-case-ai/stage1-h-decision.md §1
+        scaffold_only = {
+            ("public", "tenants", "company_name"),
+            ("public", "users", "firebase_uid"),
+            *(
+                ("tenant_001", "suppliers", col)
+                for col in ("supplier_code", "name", "contact_name", "email", "phone", "address", "notes")
+            ),
+        }
+        gaps = [g for g in _classification_gaps(conn) if g[:3] not in scaffold_only]
         print(f"T10 gaps={len(gaps)}")
         for g in gaps:
             print("T10 GAP", g)
