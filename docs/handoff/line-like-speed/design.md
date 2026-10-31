@@ -74,6 +74,9 @@ PO の言葉: 「LINEみたいな使い心地は出来る？」（意味は「�
 - 対応表は docs/handoff/line-like-speed/screen-file-map.md（作り方 docs/handoff/line-like-speed/screen-map.py・基準 origin/main 1896879cb）。135 行すべてにファイルがある。ファイルの列に出る画面のファイルは 87 本。ルートの無い BuybackByProductPage は /buyback-prices の中身として表に出るので、段 3 で /buyback-prices と一緒に直す。BadgesPage・BuddyPage は表に出ないので、段 3 で直さない。
 - u1-count.py の流し直しは 中身を消す 62・このファイルで取らない 24・ほかの印 7・印なし 3 で、recon §4 U1 と同じ。
 
+#### 3-4-3. 段 1 の作業指示書
+- 段 1（写しの置き場・取り方・利用者が変わったら消す、の土台と K5 の試験）の作業指示書は docs/handoff/line-like-speed/stage1-card.md。段 1 は画面を変えない。本物の画面での K5 は段 2 の受入で確かめる（stage1-card.md V1-1）。
+
 ### 3-5. 測り方（|基準|検証方法|）
 | 基準 | 検証方法 |
 |---|---|
