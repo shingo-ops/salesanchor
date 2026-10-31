@@ -82,6 +82,18 @@ FAIL Required test coverage of 60% not reached. Total coverage: 29.53%
 過去事例: 仕入先（SP-{id:05d}）・見積（QT-{id:05d}）は仮コードを入れずに INSERT 後に採番している（backend/app/routers の create_supplier・create_quote）。Bot は bot_code が NOT NULL のため仮コードが要る。そのため仮コードを列に収まる長さにする方を選んだ。
 
 ## 維持の仕組み
+守り手: backend/tests/test_bots_owner_users.py（CI の pytest）, frontend/scripts/check-i18n-missing-keys.js（CI）
 - 仮コードの長さは `test_pending_bot_code_fits_column` が毎回の CI で確かめる。列の長さを変えずに仮コードを長くすると、この試験が落ちる。
 - 翻訳キーの抜けは frontend の `check-i18n-missing-keys.js`（CI）が見る。今回の抜けは、この点検が `subtitleKey` に渡す文字列を拾えずに見逃した。点検を広げるかは別の件として扱う（今回の範囲外）。
 - 本番の画面の速さの記録（ADR-1053）が毎朝 Bot・見積の画面を開くので、表示の崩れに気づく道が残る。
+
+## 参照と受け入れ基準
+- 現在地の調べ: docs/handoff/page-speed-record/recon.md（画面の速さの記録の調べ。今回の不具合は見本データを入れる作業中に本番で見つけた）
+- 対象 ADR: ADR-027（画面の文字はすべて翻訳キー経由・ja/en 同じキー）。直し 2 はこの決まりの抜けを埋める。
+
+| 基準 | 検証方法 |
+|---|---|
+| 仮コードが 20 文字以内 | `test_pending_bot_code_fits_column` が通る（CI の pytest） |
+| コード空欄の Bot 登録が 201 で `BOT-{id:05d}` になる | `test_create_bot_blank_code_gets_sequential_code` が通る。本番反映後、tenant 001 で画面からコード空欄で登録し 500 にならないこと（○×） |
+| 見積の新規画面の副題が文として出る | 本番反映後に /quotes/new を開き「新しい見積を作成します」と出ること（○×） |
+| ja/en のキーが一致 | `check-i18n-missing-keys.js` が PASSED |
