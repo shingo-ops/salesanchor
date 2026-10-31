@@ -117,8 +117,8 @@ async def register_user(
     await clear_tenant_context(db)
 
     # 監査ログ記録（パスワード等の機密情報は記録しない）
-    await record_audit_log(
-        db=db,
+    await _record_auth_audit(
+        db,
         tenant_id=tenant.id,
         user_id=user.id,
         action="create",
@@ -245,6 +245,34 @@ def _clear_refresh_cookie(response: Response | JSONResponse) -> None:
         httponly=True,
         samesite="strict",
     )
+
+
+async def _record_auth_audit(
+    db: AsyncSession,
+    *,
+    tenant_id: int,
+    user_id: int,
+    action: str,
+    table_name: str,
+    record_id: int | None,
+    new_data: dict,
+) -> None:
+    """自社ログインの監査記録を書く。
+
+    audit_logs の行の制限は app.tenant_id を整数に直すため、空のままだと 500 になる。
+    会社を指定してから書き、書いたら空に戻す（便5 追補）。
+    """
+    await set_tenant_context(db, tenant_id)
+    await record_audit_log(
+        db,
+        tenant_id=tenant_id,
+        user_id=user_id,
+        action=action,
+        table_name=table_name,
+        record_id=record_id,
+        new_data=new_data,
+    )
+    await clear_tenant_context(db)
 
 
 def _invalid_credentials() -> HTTPException:
@@ -499,7 +527,7 @@ async def password_reset_confirm(
         ),
         {"now": now, "uid": user_row.id},
     )
-    await record_audit_log(
+    await _record_auth_audit(
         db,
         tenant_id=user_row.tenant_id,
         user_id=user_row.id,
@@ -586,7 +614,7 @@ async def password_change(
         ),
         {"now": now, "uid": user_row.id},
     )
-    await record_audit_log(
+    await _record_auth_audit(
         db,
         tenant_id=user_row.tenant_id,
         user_id=user_row.id,
@@ -736,7 +764,7 @@ async def passkey_register_verify(
         await db.rollback()
         raise HTTPException(status_code=409, detail="passkey_exists")
     await clear_tenant_context(db)
-    await record_audit_log(
+    await _record_auth_audit(
         db,
         tenant_id=current_user.tenant_id,
         user_id=current_user.id,
@@ -819,7 +847,7 @@ async def passkey_login_verify(
         raise await fail()
 
     if passkeys.sign_count_rejected(cred.sign_count, verified.new_sign_count):
-        await record_audit_log(
+        await _record_auth_audit(
             db,
             tenant_id=cred.tenant_id,
             user_id=cred.user_id,
@@ -902,7 +930,7 @@ async def passkey_delete(
     if row is None:
         raise HTTPException(status_code=404, detail="passkey_not_found")
     await clear_tenant_context(db)
-    await record_audit_log(
+    await _record_auth_audit(
         db,
         tenant_id=current_user.tenant_id,
         user_id=current_user.id,
