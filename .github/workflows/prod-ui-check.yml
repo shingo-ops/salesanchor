@@ -24,7 +24,8 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    # 速さの記録の段（最大 40 分で打ち切る）を含めて 60 分
+    timeout-minutes: 60
     steps:
       - name: 配備中の確認
         id: gate
@@ -139,3 +140,19 @@ jobs:
           curl -s -X POST "$DISCORD_WEBHOOK_OWNER_PING" \
             -H "Content-Type: application/json" \
             -d "$payload" > /dev/null || true
+
+      # 全画面の速さを記録する（ADR-1053）。判定も知らせもしない。この段の失敗で仕事全体を失敗にしない
+      - name: 画面の速さを記録（判定なし）
+        if: always() && steps.gate.outputs.skip != 'true'
+        continue-on-error: true
+        # 試験の上限 45 分 + 1 分。この段が延びても仕事の上限 60 分の中で終わらせる（設計 5-8）
+        timeout-minutes: 46
+        env:
+          CI: "true"
+          NODE_PATH: ${{ github.workspace }}/frontend/node_modules
+          SMOKE_E2E_EMAIL: ${{ secrets.SMOKE_E2E_EMAIL }}
+          SMOKE_E2E_PASSWORD: ${{ secrets.SMOKE_E2E_PASSWORD }}
+        run: |
+          ./frontend/node_modules/.bin/playwright test --config tests/prod-check/page-speed.config.ts || status=$?
+          if [ -f tests/prod-check/page-speed.md ]; then cat tests/prod-check/page-speed.md >> "$GITHUB_STEP_SUMMARY"; fi
+          exit "${status:-0}"
