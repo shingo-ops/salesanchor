@@ -1,6 +1,6 @@
 # 設計 — ログイン直後のパスキー登録（ADR-1013 便6）
 
-現在地: [recon-login-enroll.md](recon-login-enroll.md)。対象 ADR: ADR-1013（自社ログイン・パスキー）。守る ADR: ADR-027（i18n）・ADR-144（UI 金型）・ADR-025（手動 INSERT 禁止）・ADR-135/136（migration を含む PR の GO）。
+現在地: [recon-login-enroll.md](recon-login-enroll.md)（docs/handoff/auth-self-hosted-passkey/recon-login-enroll.md）。対象 ADR: ADR-1013（自社ログイン・パスキー）。守る ADR: ADR-027（i18n）・ADR-144（UI 金型）・ADR-025（手動 INSERT 禁止）・ADR-135/136（migration を含む PR の GO）。
 
 ## 1. 目的（PO の言葉）
 
@@ -157,7 +157,7 @@ CREATE INDEX IF NOT EXISTS idx_passkey_enroll_prompt_skips_user_at
 - 自動作成の道の守り: A1・A2 の pytest が CI で毎回走る（UV を外す範囲が広がったら赤）
 - スキップの決まりの数（300 秒・180 日・3 回）は passkeys.py の定数 1 か所だけに置く
 - 14 日後の KPI を ADR-1013 の記録に残す
-- 守り手: Claude Opus（ADR-1013 の担当。14 日後の KPI 記録と、試験が赤になったときの直し）
+- 守り手: Claude Opus（ADR-1013 の担当。14 日後の KPI 記録と、試験が赤になったときの直し）。見張りの試験: backend/tests/test_passkey_login_enroll.py・backend/tests/test_origin_check_not_on_get.py。見張りの試験: backend/tests/test_passkey_login_enroll.py・backend/tests/test_origin_check_not_on_get.py
 
 ## 11. 設計相談と審査の記録
 
