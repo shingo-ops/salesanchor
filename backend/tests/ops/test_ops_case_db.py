@@ -697,3 +697,58 @@ def test_grant_unmask_owner_revokes_when_table_is_added_to_deny_tables(pg):
         c.execute("DELETE FROM ops_case.deny_tables WHERE table_name = 'text_pk'")
         assert _one(pg, "SELECT ops_case.grant_unmask_owner()") == 1
     assert _owner_can_select(pg, "public.text_pk") is True
+
+
+# ---------------------------------------------------------------------------------------------------
+# HTTP 口 unmask_http の通し（実 DB。ロール ai_unmask に切り替えた接続で関数を呼ぶ）
+# ---------------------------------------------------------------------------------------------------
+def test_unmask_http_end_to_end_with_real_db(pg, monkeypatch):
+    import psycopg2
+    from starlette.testclient import TestClient
+
+    from app.ops import unmask_http as uh
+
+    class _Audit:
+        def __init__(self):
+            self.sent = []
+
+        def send(self, data):
+            self.sent.append(data.decode("utf-8"))
+
+        def close(self):
+            pass
+
+    audit = _Audit()
+    dsn = _psycopg_url(ADMIN_PG_URL, pg.info.dbname)
+
+    def connect(_url):
+        conn = psycopg2.connect(dsn, options="-c role=ai_unmask")
+        return conn
+
+    monkeypatch.setenv("CASE_AGENT_TOKEN", "case-agent-token-e2e")
+    monkeypatch.setenv("AI_UNMASK_DATABASE_URL", "postgresql://unused")
+    monkeypatch.setattr(uh, "_connect", connect)
+    monkeypatch.setattr(uh.readonly_query, "_open_audit", lambda path: audit)
+    client = TestClient(uh.app)
+
+    case = _Case(pg)
+    rid = case.make_request("tenant_001__leads", ["customer_name"], ["11111111-1111-1111-1111-111111111111"])
+    headers = {"Authorization": "Bearer case-agent-token-e2e", "X-Case-Ticket": case.ticket}
+    r = client.post("/ops/unmask/read", json={"request_id": str(rid)}, headers=headers)
+    assert r.status_code == 200, r.text
+    assert r.json()["rows"][0]["customer_name"] == _RAW_NAME
+    assert _read_count(pg, rid) == 1
+    assert _RAW_NAME not in "".join(audit.sent) and case.ticket not in "".join(audit.sent)
+    # 2 回目は 403 used。値は出ない
+    r2 = client.post("/ops/unmask/read", json={"request_id": str(rid)}, headers=headers)
+    assert r2.status_code == 403 and r2.json() == {"error": "used"}
+    # 別の札は 403 ticket
+    bad = client.post(
+        "/ops/unmask/read", json={"request_id": str(rid)}, headers={**headers, "X-Case-Ticket": "wrong-ticket"}
+    )
+    assert bad.status_code == 403 and bad.json() == {"error": "ticket"}
+    # 型に合わない行のキーは 403 read_failed で、キーの値が応答に入らない
+    rid3 = case.make_request("tenant_001__leads", ["customer_name"], ["abc"])
+    r3 = client.post("/ops/unmask/read", json={"request_id": str(rid3)}, headers=headers)
+    assert r3.status_code == 403 and r3.json() == {"error": "read_failed"} and "abc" not in r3.text
+    assert _read_count(pg, rid3) == 0
