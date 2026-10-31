@@ -12,7 +12,7 @@
 
 | 対象 | 対象外 |
 |---|---|
-| 社内の利用者のパスワードでのログイン直後（`LoginPage.tsx` `handleSignIn`） | パスキーでのログイン、更新用トークンでの復帰、閲覧ページ（viewer）のログイン、Firebase のログイン |
+| 社内の利用者のパスワードでのログイン直後（`frontend/src/pages/login/LoginPage.tsx` `handleSignIn`） | パスキーでのログイン、更新用トークンでの復帰、閲覧ページ（viewer）のログイン、Firebase のログイン |
 | 自動作成の登録の受け付け（サーバー） | 設定画面の登録の決まり（今のまま UP・UV 必須） |
 | スキップの記録（新しい表 1 つ） | 管理者の 2 段階の確認（ADR-1048。別の便） |
 
@@ -42,7 +42,7 @@
 
 当てはめ: 4 社とも「ログイン直後に聞く」と「設定画面だけ」で登録の数が大きく違う（Microsoft 99% 対 1% 未満、Yahoo! JAPAN 97% 対 3%）。SA は十数名の社内利用なので数の大きさはそのまま使わない。向きだけを使う。
 
-道具の仕様の確認: Context7 は月の上限で使えなかった。代わりに公式配布物を直接確認した（@simplewebauthn/browser 14.0.0 の `startRegistration.js`、py_webauthn v2.8.0 の `verify_registration_response.py`、Chrome 公式の 2 ページ。recon §2・§3）。
+道具の仕様の確認: Context7 は月の上限で使えなかった。代わりに公式配布物を直接確認した（@simplewebauthn/browser 14.0.0 の startRegistration.js、py_webauthn v2.8.0 の verify_registration_response.py、Chrome 公式の 2 ページ。recon §2・§3）。
 
 ## 5. 技術 How
 
@@ -52,7 +52,7 @@
 - `Authorization: Bearer` の値を取り、`self_tokens.peek_issuer(token) == self_tokens.ISSUER` でなければ False
 - `self_tokens.decode_access_token(token)` を呼ぶ（`get_current_user` が先に同じ値を検証済み。ここは `amr`・`iat` を読むためだけ）。例外は False
 - `claims["sub"] == str(user.id)` かつ `claims.get("amr") == ["pwd"]` かつ `now - claims["iat"] <= FRESH_LOGIN_SECONDS`（passkeys.py に `FRESH_LOGIN_SECONDS = 300`）なら True
-- 理由: 更新用トークンで作り直した合図には `amr` が無い（`auth.py:391`）。パスキーのログインは `["webauthn"]`。パスワード変更（`auth.py:633`）も `["pwd"]` で、パスワードを打った直後なので含めてよい
+- 理由: 更新用トークンで作り直した合図には `amr` が無い（`backend/app/routers/auth.py:391`）。パスキーのログインは `["webauthn"]`。パスワード変更（`backend/app/routers/auth.py:633`）も `["pwd"]` で、パスワードを打った直後なので含めてよい
 
 (2) 新しい口 `GET /api/v1/auth/passkey/prompt`（`get_current_user`・`_require_app_origin`）。返り値 `{"can_auto": bool, "show_prompt": bool}`。
 - `fresh = _is_fresh_password_login(...)`、`count` = 本人のパスキー数、`skips` = 直近 `PROMPT_SKIP_WINDOW_DAYS = 180` 日のスキップ数
@@ -62,7 +62,7 @@
 
 (3) 新しい口 `POST /api/v1/auth/passkey/prompt/skip`（同じ依存）。`fresh` でなければ 403 `{"detail": "auto_not_allowed"}`。`public.passkey_enroll_prompt_skips` に 1 行足し 204。監査記録は付けない（ログインの安全に関わらない表示の記録のため）
 
-(4) `POST /passkey/register/options` に本文 `{"auto": bool}`（既定 false・今の呼び方 `{}` はそのまま通る）。今の口は本文を受けていない（`auth.py:688-693`）ので、`PasskeyRegisterOptionsRequest(BaseModel): auto: bool = False` を足し、引数 `data: PasskeyRegisterOptionsRequest | None = None` で受ける。
+(4) `POST /passkey/register/options` に本文 `{"auto": bool}`（既定 false・今の呼び方 `{}` はそのまま通る）。今の口は本文を受けていない（`backend/app/routers/auth.py:688-693`）ので、`PasskeyRegisterOptionsRequest(BaseModel): auto: bool = False` を足し、引数 `data: PasskeyRegisterOptionsRequest | None = None` で受ける。
 - `auto` が true で `fresh` でなければ 403 `auto_not_allowed`
 - challenge は `store_challenge("reg_auto" if auto else "reg", ...)`
 
@@ -73,7 +73,7 @@
 
 ### 5-2. DB（migration 1 本）
 
-`migrations/<日時>_add_passkey_enroll_prompt_skips.sql`（`20261013_160000_add_self_hosted_auth_tables.sql` と同じ形）
+`migrations/20261031_200000_add_passkey_enroll_prompt_skips.sql`（`migrations/20261013_160000_add_self_hosted_auth_tables.sql` と同じ形）
 
 ```sql
 CREATE TABLE IF NOT EXISTS public.passkey_enroll_prompt_skips (
@@ -89,7 +89,7 @@ CREATE INDEX IF NOT EXISTS idx_passkey_enroll_prompt_skips_user_at
 ```
 
 - 置き場の理由: 人ごとの設定の表は無い（recon §4）。`public.users` に列を足すと「6 か月で 3 回」を数えられない。1 か所（この表）だけに置き、ほかへ写さない
-- 試験用の SQLite 版を `backend/tests/conftest.py` の `webauthn_credentials` の隣に足す（`public.` を外す置換 `conftest.py:324-325` にも足す）
+- 試験用の SQLite 版を `backend/tests/conftest.py` の `webauthn_credentials` の隣に足す（`public.` を外す置換 `backend/tests/conftest.py:324-325` にも足す）
 - `scripts/run_all_migrations.sh` の末尾（今の最後は `run_sql migrations/20261024_100100_create_ai_reader_cloud_role.sql`）に `run_sql` で登録する（guards/07-migration.md「置くだけだと MIGRATION GUARD が落ちる」）
 - 相談係用の伏せたビュー（ADR-1052）: 新しい表に文字の列は無い（id・user_id・skipped_at）。分類の無い文字の列は自動で伏せる決まり（`backend/tests/ops/test_ai_cloud_views.py:301`）なので、分類表 `migrations/20261024_100300_create_ai_cloud_views.sql` は変えない
 
@@ -108,7 +108,7 @@ CREATE INDEX IF NOT EXISTS idx_passkey_enroll_prompt_skips_user_at
 3. `can_auto` かつ `conditionalCreateSupported()` なら `autoRegisterPasskey()`。`not_allowed` 以外の結果（作れた・既にある・失敗）は navigate
 4. （自動作成を試さなかった、または `not_allowed`）`show_prompt` なら案内を開く。でなければ navigate
 - 案内は金型 `Modal`（`size="sm"`）＋ `Button` 2 つ。「登録する」→ `registerPasskey("")`→ 結果に関わらず navigate（キャンセルは黙って続ける）。「今はスキップ」と閉じる操作 → `skipPasskeyPrompt()` → navigate
-- 新しい文言は `login.passkeyPromptTitle`・`login.passkeyPromptBody`・`login.passkeyPromptRegister`・`login.passkeyPromptSkip` を `ja.json`・`en.json` の両方に（ADR-027）。文言は Microsoft の「速さ」を前に出す（例: 「次からは顔や指紋だけで、すぐにログインできます」）
+- 新しい文言は `login.passkeyPromptTitle`・`login.passkeyPromptBody`・`login.passkeyPromptRegister`・`login.passkeyPromptSkip` を `frontend/src/locales/ja.json`・`frontend/src/locales/en.json` の両方に（ADR-027）。文言は Microsoft の「速さ」を前に出す（例: 「次からは顔や指紋だけで、すぐにログインできます」）
 - 色・大きさの直書きはしない（ADR-144）
 
 ## 6. 受け入れ基準
@@ -134,7 +134,7 @@ CREATE INDEX IF NOT EXISTS idx_passkey_enroll_prompt_skips_user_at
 
 | 弊害 | 対処 |
 |---|---|
-| 自動作成の道だけ UP・UV の印を求めない（設定画面より弱い） | 使えるのは「パスワードを打って 5 分以内の合図」と「その合図で取った reg_auto の challenge（5 分で失効・1 回きり）」の両方がそろう時だけ。Chrome 公式の決まりと同じ。ログインに使うときは今のまま UV を求める（`passkeys.py` の認証側は変えない） |
+| 自動作成の道だけ UP・UV の印を求めない（設定画面より弱い） | 使えるのは「パスワードを打って 5 分以内の合図」と「その合図で取った reg_auto の challenge（5 分で失効・1 回きり）」の両方がそろう時だけ。Chrome 公式の決まりと同じ。ログインに使うときは今のまま UV を求める（`backend/app/auth/passkeys.py` の認証側は変えない） |
 | 合図を盗まれると、盗んだ人の端末のパスキーを足されうる | 合図そのものが既に全操作の鍵で、新しく増える危険ではない。5 分の窓で狭める。登録は監査記録に `auto` 付きで残る |
 | ログインが遅くなる | 自動作成は 10 秒で打ち切り。どの失敗でも先へ進む |
 | K-1（同じ種類のミスを通さない）: 便5 は記録部品を代役にして本番の 500 を見逃した | A4 の PostgreSQL 試験を必須にし、カードの「本物と同じ形で試す試験」欄に書く |
@@ -157,6 +157,7 @@ CREATE INDEX IF NOT EXISTS idx_passkey_enroll_prompt_skips_user_at
 - 自動作成の道の守り: A1・A2 の pytest が CI で毎回走る（UV を外す範囲が広がったら赤）
 - スキップの決まりの数（300 秒・180 日・3 回）は passkeys.py の定数 1 か所だけに置く
 - 14 日後の KPI を ADR-1013 の記録に残す
+- 守り手: Claude Opus（ADR-1013 の担当。14 日後の KPI 記録と、試験が赤になったときの直し）
 
 ## 11. 設計相談と審査の記録
 
@@ -169,10 +170,10 @@ CREATE INDEX IF NOT EXISTS idx_passkey_enroll_prompt_skips_user_at
 
 確かめたこと（`git show origin/main:` で実物照合）:
 - 合図の `amr` は配列 `["pwd"]`（`backend/app/auth/self_tokens.py:92-104`）。有効期間 900 秒（同 :24）なので 300 秒の窓はその内側
-- challenge の置き場の鍵に kind が入る（`passkeys.py:48` `_key(kind, owner, challenge_id)`）→ `reg` と `reg_auto` は混ざらず、`reg` で取れなければ `reg_auto` を試す順で取り違えない。`store_challenge` の説明文「kind は reg か login」に `reg_auto` を書き足す
-- 今の options の口は本文を受けない（`auth.py:688-693`）→ §5-1 (4) で既定 false の本文を足す。設定画面の呼び方（`PasskeySection.tsx:58` → `registerPasskey(label)`）は変わらない
-- verify は空の名前を「名前なし」に直す（`auth.py:738` `... or None`）→ 案内からの `registerPasskey("")` は通る
-- 設定画面の verify の UV 必須（`auth.py:727-733`）は変えない
+- challenge の置き場の鍵に kind が入る（`backend/app/auth/passkeys.py:48` `_key(kind, owner, challenge_id)`）→ `reg` と `reg_auto` は混ざらず、`reg` で取れなければ `reg_auto` を試す順で取り違えない。`store_challenge` の説明文「kind は reg か login」に `reg_auto` を書き足す
+- 今の options の口は本文を受けない（`backend/app/routers/auth.py:688-693`）→ §5-1 (4) で既定 false の本文を足す。設定画面の呼び方（`frontend/src/pages/account-settings/PasskeySection.tsx:58` → `registerPasskey(label)`）は変わらない
+- verify は空の名前を「名前なし」に直す（`backend/app/routers/auth.py:738` `... or None`）→ 案内からの `registerPasskey("")` は通る
+- 設定画面の verify の UV 必須（`backend/app/routers/auth.py:727-733`）は変えない
 
 残る事項（設計合格を妨げない）:
 - 案内を 5 分より長く開いたままスキップすると 403 になり、スキップが数えられない。画面は失敗を無視して先へ進む。次回も案内が出るだけで害は無い

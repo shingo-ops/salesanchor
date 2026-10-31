@@ -12,14 +12,14 @@
 ## 1. ログイン成功後の流れ（frontend）
 
 - パスワードでのログインは `frontend/src/pages/login/LoginPage.tsx:45-59` の `handleSignIn`。`await signIn(email, password)`（:50）の直後に `navigate(from, { replace: true })`（:52）
-- パスキーでのログインは別の関数 `handlePasskeySignIn`（`LoginPage.tsx:61-76`）→ **パスワード経路だけに処理を足せる**
-- ログイン済みで /login を開くと自動で移る `useEffect`（`LoginPage.tsx:39-43`）がある。更新用トークンでの復帰もここを通るので、`user` の出現をきっかけにすると、パスワードを打っていない時にも出てしまう → `handleSignIn` の中だけに足す
+- パスキーでのログインは別の関数 `handlePasskeySignIn`（`frontend/src/pages/login/LoginPage.tsx:61-76`）→ **パスワード経路だけに処理を足せる**
+- ログイン済みで /login を開くと自動で移る `useEffect`（`frontend/src/pages/login/LoginPage.tsx:39-43`）がある。更新用トークンでの復帰もここを通るので、`user` の出現をきっかけにすると、パスワードを打っていない時にも出てしまう → `handleSignIn` の中だけに足す
 - 初回パスワード変更の強制は社内の利用者には無い（`password_must_change` は viewer 側だけ: `backend/app/auth/viewer_dependencies.py:51`）
 
 ## 2. 今のパスキー登録
 
 - 部品: `frontend/src/lib/auth/passkey.ts:38-49` `registerPasskey(label)` が options 取得 → `startRegistration({ optionsJSON })`（:43）→ verify
-- 誤りの見分け: `passkey.ts:52-57`（NotAllowedError→cancelled、InvalidStateError→exists）
+- 誤りの見分け: `frontend/src/lib/auth/passkey.ts:52-57`（NotAllowedError→cancelled、InvalidStateError→exists）
 - 設定画面: `frontend/src/pages/account-settings/PasskeySection.tsx`（名前を入れて登録・一覧・削除。`ConfirmModal` を使用）
 - 道具: `frontend/package.json:78` `"@simplewebauthn/browser": "14.0.0"`
 - 14.0.0 の `startRegistration` は `useAutoRegister`（既定 false）を受け、true のときだけ `mediation = 'conditional'` を付ける。失敗は `identifyRegistrationError` で投げ直す（公式配布物 https://unpkg.com/@simplewebauthn/browser@14.0.0/esm/methods/startRegistration.js を 2026-10-31 に直接確認。Context7 は月の上限で使えなかった）
@@ -27,14 +27,14 @@
 
 ## 3. サーバー側（backend）
 
-- 登録 options: `backend/app/routers/auth.py:690-710`。本人の既存パスキーを `exclude_credentials` に入れる（`backend/app/auth/passkeys.py:76`）。上限 10 個で 409（`auth.py:704-705`・`passkeys.py` `MAX_PASSKEYS_PER_USER = 10`）
-- options の決まり: `passkeys.py:72-74` resident_key REQUIRED・user_verification REQUIRED
-- 登録 verify: `auth.py:713-777`。`verify_registration_response(..., require_user_verification=True)`（:727-733）。challenge は `take_challenge("reg", user_id, challenge_id)`（:722）
+- 登録 options: `backend/app/routers/auth.py:690-710`。本人の既存パスキーを `exclude_credentials` に入れる（`backend/app/auth/passkeys.py:76`）。上限 10 個で 409（`backend/app/routers/auth.py:704-705`・`backend/app/auth/passkeys.py` `MAX_PASSKEYS_PER_USER = 10`）
+- options の決まり: `backend/app/auth/passkeys.py:72-74` resident_key REQUIRED・user_verification REQUIRED
+- 登録 verify: `backend/app/routers/auth.py:713-777`。`verify_registration_response(..., require_user_verification=True)`（:727-733）。challenge は `take_challenge("reg", user_id, challenge_id)`（:722）
 - 道具: `backend/requirements.txt` `webauthn==2.8.0`。`verify_registration_response` は `require_user_presence: bool = True`・`require_user_verification: bool = False` を受ける（公式 https://raw.githubusercontent.com/duo-labs/py_webauthn/v2.8.0/webauthn/registration/verify_registration_response.py を 2026-10-31 に確認）
 - **自動作成では、端末が「本人がその場にいた」「顔・指紋で確かめた」の印を立てないことがある**（Chrome 公式: サーバーは自動作成のとき UP・UV の印を無視する）→ 今の verify（UV 必須・UP 既定で必須）では自動作成の登録が 400 になる
-- ログインの合図（アクセストークン）: `backend/app/auth/self_tokens.py:92-104` に `iat`（発行時刻）と `amr`（ログイン方法）。`amr` は パスワードのログイン `auth.py:360` とパスワード変更 `auth.py:633` で `"pwd"`、パスキーのログイン `auth.py:882` で `"webauthn"`、更新 `auth.py:391` で付けない
+- ログインの合図（アクセストークン）: `backend/app/auth/self_tokens.py:92-104` に `iat`（発行時刻）と `amr`（ログイン方法）。`amr` は パスワードのログイン `backend/app/routers/auth.py:360` とパスワード変更 `backend/app/routers/auth.py:633` で `"pwd"`、パスキーのログイン `backend/app/routers/auth.py:882` で `"webauthn"`、更新 `backend/app/routers/auth.py:391` で付けない
 - 合図の読み取りは `backend/app/auth/dependencies.py:82-109`（`_authenticate_self_token`）。`claims` は口（endpoint）に渡っていない
-- 監査記録は `_record_auth_audit`（`auth.py:250`）。#4942 の直しで会社を指定してから書く
+- 監査記録は `_record_auth_audit`（`backend/app/routers/auth.py:250`）。#4942 の直しで会社を指定してから書く
 
 ## 4. 「スキップ」の回数と日時の置き場
 
@@ -45,8 +45,8 @@
 ## 5. 画面の金型
 
 - `frontend/src/components/Modal.tsx:25-` `Modal({ open, onClose, title, size, dismissOnOverlay, children, footer })`
-- `Button`・`Stack` は LoginPage が既に使用（`LoginPage.tsx:10-11`）
-- パスキーの文言は `frontend/src/locales/ja.json`・`en.json` の `accountSettings.passkey*`・`authError.passkey*`
+- `Button`・`Stack` は LoginPage が既に使用（`frontend/src/pages/login/LoginPage.tsx:10-11`）
+- パスキーの文言は `frontend/src/locales/ja.json`・`frontend/src/locales/en.json` の `accountSettings.passkey*`・`authError.passkey*`
 
 ## 6. 試験
 
