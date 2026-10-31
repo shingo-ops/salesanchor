@@ -1,6 +1,6 @@
 # 設計書: 知らない機械からのログインは、いつもの機械で許可するまで入れない
 
-- 状態: 設計案 第5版（Opus 作成）。第1版〜第4版は審査で REVISE（下の「審査記録」）。第2版で指摘21件、第3版で要修正7件・軽微9件・判定の書き方2件、第4版で要修正4件・軽微9件、第5版で要修正3件・軽微10件を反映した
+- 状態: 設計案 第6版（Opus 作成）。第1版〜第5版は審査で REVISE（下の「審査記録」）。第2版で指摘21件、第3版で要修正7件・軽微9件・判定の書き方2件、第4版で要修正4件・軽微9件、第5版で要修正3件・軽微10件、第6版で要修正1件・軽微6件を反映した
 - 対応 ADR: ADR-1055（本 PR で Proposed として起案）。ADR-1013（自社ログイン）の続き。ADR-1048（管理者だけの2段階ログイン・Proposed・未実装）の「機械を覚える」「番号で許可する」部分を全員向けに広げて取り込む。ADR-1016（即時反映）に人単位の宛先を足す改訂の注記を入れる
 - 合格の基準: docs/handoff/auth-new-device-approval/kgi.md（K1〜K9・PO 承認済 2026-11-01）
 - 事実の出どころ: docs/handoff/auth-new-device-approval/recon.md（基準 7e9155163）。本書で `recon:B` のように節を指す。第2版で足した事実は本書に行番号で書く（基準 7e9155163・作業枝 13ea58557 で読んだ）
@@ -58,7 +58,7 @@
 
 - `public.user_trusted_devices`: id BIGSERIAL PK / user_id BIGINT NOT NULL FK CASCADE / token_hash BYTEA NOT NULL / label VARCHAR(100) / user_agent VARCHAR(500) / created_via VARCHAR(20) NOT NULL CHECK IN ('bootstrap','first_login','passkey','device_approval','recovery_code','admin_approval','cli') / created_ip VARCHAR(45) / created_location VARCHAR(200) / created_at TIMESTAMPTZ NOT NULL DEFAULT now() / last_used_at TIMESTAMPTZ / last_ip VARCHAR(45) / last_location VARCHAR(200) / revoked_at TIMESTAMPTZ。UNIQUE(user_id, token_hash)。索引 user_id
 - `public.auth_login_requests`: id UUID PK / user_id FK CASCADE / status VARCHAR(20) CHECK IN ('pending','approved','rejected','expired','completed') / match_number CHAR(2) / candidates VARCHAR(8)（例 "47,12,85"） / pending_token_hash BYTEA UNIQUE / device_token_hash BYTEA（待つ機械に既にある印の hash・無ければ NULL） / label VARCHAR(100) / user_agent VARCHAR(500) / ip VARCHAR(45) / location VARCHAR(200) / created_at TIMESTAMPTZ NOT NULL DEFAULT now() / expires_at TIMESTAMPTZ NOT NULL / decided_at TIMESTAMPTZ / decided_via VARCHAR(20) CHECK IN ('device','admin','recovery_code') / decided_by_user_id BIGINT NULL FK SET NULL / decided_device_id BIGINT NULL FK SET NULL / decided_note VARCHAR(200)（管理者の許可のときだけ必須・本人確認の方法） / reject_reason VARCHAR(30) / failed_code_attempts SMALLINT DEFAULT 0。索引 (user_id, created_at DESC)・(status, expires_at)
-- `public.user_recovery_codes`: id / user_id FK CASCADE / code_id CHAR(4)（見出し） / code_hash TEXT（本体の argon2） / created_at TIMESTAMPTZ NOT NULL DEFAULT now() / used_at TIMESTAMPTZ / revoked_at TIMESTAMPTZ（作り直しで古い未使用に入れる。行は消さない） / used_request_id UUID NULL。制約ではなく部分索引 `CREATE UNIQUE INDEX IF NOT EXISTS ... ON public.user_recovery_codes (user_id, code_id) WHERE used_at IS NULL AND revoked_at IS NULL`（PostgreSQL の UNIQUE 制約は WHERE を付けられないため）
+- `public.user_recovery_codes`: id BIGSERIAL PK / user_id FK CASCADE / code_id CHAR(4)（見出し） / code_hash TEXT（本体の argon2） / created_at TIMESTAMPTZ NOT NULL DEFAULT now() / used_at TIMESTAMPTZ / revoked_at TIMESTAMPTZ（作り直しで古い未使用に入れる。行は消さない） / used_request_id UUID NULL。制約ではなく部分索引 `CREATE UNIQUE INDEX IF NOT EXISTS ... ON public.user_recovery_codes (user_id, code_id) WHERE used_at IS NULL AND revoked_at IS NULL`（PostgreSQL の UNIQUE 制約は WHERE を付けられないため）
 - `public.auth_refresh_tokens` に `trusted_device_id BIGINT NULL REFERENCES public.user_trusted_devices(id) ON DELETE SET NULL`＋索引
 - `public.auth_events` に `user_id BIGINT NULL`・`reason VARCHAR(50) NULL`・`is_new_device BOOLEAN NULL`＋索引 (user_id, created_at DESC)
 - RLS と権限（第4版 審査 軽微）: 新しい表（段A の3つ・段W の1つ）には RLS を付けない。ADR-1018 Decision 6 が認証トークン3表に RLS を付けないと決めた理由と同じで、ログイン前・会社が決まる前に、印や依頼の hash の一致で1行を引くため（会社別の RLS を付けるとログインが止まる）。代わりの守りも同じで、生の値は保存せず hash だけを置き、本人の行は `user_id` で絞る。ADR-1055 にこの扱いを書く。権限は前例 `migrations/20261013_160000_add_self_hosted_auth_tables.sql` と同じ形で `salesanchor_app` に表の `SELECT, INSERT, UPDATE, DELETE` と sequence の `USAGE, SELECT` を明示する（作業の最初に前例の GRANT の行を読み、同じ書き方にそろえる）
@@ -94,7 +94,7 @@
   - `revoke_user_sessions(...)`（D8）→ 失効した組 id を返し、Redis に `auth:fam_revoked:{sid}` を置く
   - `describe_user_agent(ua) -> str`（D10）
 - `backend/app/auth/recovery_codes.py`（D14）: `generate(db, user_id) -> list[str]`・`verify(db, user_id, code) -> id|None`・`remaining(db, user_id)`
-- `backend/app/auth/geo.py`: `lookup(ip) -> str|None`。`GEOIP_DB_PATH`（既定 `/geoip/dbip-city-lite.mmdb`）を `maxminddb.open_database(path, maxminddb.Mode.MMAP)` で開き、ファイルの更新時刻が変わったら開き直す。私用の IP・失敗は None。都市・地域・国を「Tokyo, Japan」の形（名前は ja があれば ja、無ければ en）。`backend/requirements.txt` に `maxminddb==3.2.0`
+- `backend/app/auth/geo.py`: `lookup(ip) -> str|None`。`GEOIP_DB_PATH`（既定 `/geoip/dbip-city-lite.mmdb`。PR-A で `docker-compose.yml` の backend の environment に `GEOIP_DB_PATH=${GEOIP_DB_PATH-/geoip/dbip-city-lite.mmdb}` を足す＝.env で空にすると場所の表示が止まる。第5版 審査 軽微2）を `maxminddb.open_database(path, maxminddb.Mode.MMAP)` で開き、ファイルの更新時刻が変わったら開き直す。私用の IP・失敗は None。都市・地域・国を「Tokyo, Japan」の形（名前は ja があれば ja、無ければ en）。`backend/requirements.txt` に `maxminddb==3.2.0`
 - 場所の元データ（審査 要修正12）: Celery の月次作業 `refresh_geoip_db`（毎月3日）を **celery-worker で動かす**。`https://download.db-ip.com/free/dbip-city-lite-YYYY-MM.mmdb.gz` を名前付き volume `geoip` に落とし、一時ファイル→rename で入れ替える。`docker-compose.yml` で volume `geoip` を celery-worker（:219）には書き込みで、backend には読み取り専用 `:ro` で `/geoip` に付ける。celery-beat（:314）には付けない。起動時にファイルが無ければ worker が1回だけ取りに行く。落とせなくても認証は止めない
 - `backend/app/auth/self_tokens.py`（変更前→変更後。呼び出し元は `auth.py:357,381,630,988` と `self_tokens.py:240` の5か所で全部）
   - `create_access_token(user_id, email, amr)` → `create_access_token(user_id, email, amr, sid: str | None = None)`。`sid` があれば claims に入れる（既存の試験 `test_viewer_api.py:183` 等は引数を変えずに通る）
@@ -109,7 +109,7 @@
   - password reset confirm（:524-529）: 直書きを `revoke_user_sessions` に置き換え（動きは同じ。新しい組は出さない）
   - password change（:553-641・取り消しは :611-616）: 直書きを `revoke_user_sessions` に置き換え（動きは同じ）。新しい組の出し方（:629-641 の `is_issuance_enabled()` のとき）を切り替えで分ける
     - off: 今と同じ。新しい組は `trusted_device_id` なしで出し、`sid` だけ入れる。`sid` の無い古いトークンでも通す。機械の登録はしない
-    - enforce: D16 の `resolve_current_session` を本体の中で呼んで今の組を引き、その `trusted_device_id` を新しい組に引き継ぐ。`sid` の無いトークンは 403 `session_upgrade_required`（パスワードは変えない＝取り消しより前に確かめる）。今の組に機械が無い場合は、`CurrentSession.family_created_at` が締切より前なら機械を登録して結び付け、返す応答に `sa_device` の Cookie を付ける（refresh で登録したときと同じ付け方）。締切後は、取り消しより前に 403 `device_not_trusted` を返す（パスワードも組も変えない）
+    - enforce: D16 の `resolve_current_session` を本体の中で呼んで今の組を引き、その `trusted_device_id` を新しい組に引き継ぐ。`sid` の無いトークンは 403 `session_upgrade_required`（パスワードは変えない。確かめる位置は、現在のパスワードの照合 `auth.py:590` の後・パスワードの UPDATE `auth.py:598` より前）。今の組に機械が無い場合は、`CurrentSession.family_created_at` が締切より前なら機械を登録して結び付け、返す応答に `sa_device` の Cookie を付ける（refresh で登録したときと同じ付け方）。締切後は、同じ位置（UPDATE より前）で 403 `device_not_trusted` を返す（パスワードも組も変えない）
     - 試験: off と enforce の両方で、変更後の組の `trusted_device_id` と、403 のときにパスワードが変わっていないことを確かめる
   - logout（:165-190）: 変更なし（印は残す＝次から聞かれない）
   - 新しい口（一覧の取得 `GET /api/v1/login-approvals/pending` だけは `/api/v1/auth/` の外。それ以外は `/api/v1/auth/` 配下＝nginx の login 枠 `nginx/nginx.conf:6,145` の中）
@@ -121,7 +121,7 @@
     - `GET /auth/devices`・`DELETE /auth/devices/{device_id}`（K8・本人の機械だけ。他人の id は 404）
     - `GET /auth/recovery-codes/status`（残り数）・`POST /auth/recovery-codes`（10個を作って1回だけ返す。古い未使用は無効に）
   - 状態を変える口（approve・reject・recovery・poll・devices DELETE・recovery-codes POST）は `_require_app_origin`（:215）を通す
-  - 閲覧者の隔離の試験（第4版 審査 要修正1）: poll と recovery はトークンを見ずに `sa_login_pending` の Cookie だけで動くので、閲覧者のトークンでも 401 にならない（試験では Origin が無く 403）。`backend/tests/test_viewer_isolation.py` の `_PUBLIC_NO_AUTH_ROUTES` に `("POST", "/api/v1/auth/login-requests/poll")` と `("POST", "/api/v1/auth/login-requests/recovery")` を理由のコメント付きで足す。理由は、既にある `("POST", "/api/v1/auth/login")` と同じく、ログイン前の口でトークンから得られる権限が無いこと。ほかの新しい口は全部 `get_current_user`・`get_current_session`・`require_super_admin` のどれかを通すので 401 になる（その試験はそのまま通る）
+  - 閲覧者の隔離の試験（第4版 審査 要修正1）: poll と recovery はトークンを見ずに `sa_login_pending` の Cookie だけで動くので、閲覧者のトークンでも 401 にならない（試験では Origin が無く 403）。`backend/tests/test_viewer_isolation.py` の `_PUBLIC_NO_AUTH_ROUTES` に `("POST", "/api/v1/auth/login-requests/poll")` と `("POST", "/api/v1/auth/login-requests/recovery")` を理由のコメント付きで足し、表の上の説明（`test_viewer_isolation.py:24` の「実測 26 本」）を足した後の本数に直す。理由は、既にある `("POST", "/api/v1/auth/login")` と同じく、ログイン前の口でトークンから得られる権限が無いこと。ほかの新しい口は全部 `get_current_user`・`get_current_session`・`require_super_admin` のどれかを通すので 401 になる（その試験はそのまま通る）
   - 許可で入ったときの `last_login`（第4版 審査 軽微）: poll と recovery で発行したときも、login（`auth.py:345`）と同じく `failed_login_count = 0, locked_until = NULL, last_login = :now` を更新する。書き方も login と同じで、users を書く直前だけその人の会社の文脈を張り、書いたら戻す（ADR-1018 便C）
   - 回数の枠（第3版 審査 要修正C）: nginx は `/api/v1/auth/` を送信元ごとに 10回/分・ためられる5回（`nginx/nginx.conf:6,144-146`）で絞り、本番の自動点検はこの枠に合わせて1つの試験で refresh・login を最大3回と決めている（`tests/prod-check/fixtures.ts:20-21`・`tests/prod-check/login.ts:13-15`）。いつもの機械の小窓は画面を開くたび・つなぎ直し・タブに戻るたびに一覧を読むので、この枠の中に置くと点検と普段の画面の両方で 429 が出うる
     - そこで一覧は新しいファイル `backend/app/routers/login_approvals.py` の `GET /api/v1/login-approvals/pending`（`main.py` で `prefix="/api/v1"`）に置く。nginx では `location /api/`（`nginx/nginx.conf:219-221`・30回/秒・ためられる50回）に入り、login の枠を使わない。nginx の設定は変えない
@@ -134,7 +134,7 @@
     - `backend/app/realtime/publisher.py:19-22` に `CHANNEL_USER_PREFIX = "rt:u:"` と `user_channel(user_id) -> str`（`tenant_channel` :28 と同じ形）を足し、人宛ての送り口 `publish_user_change(user_id, topic, origin=None)` を足す（`publish_change` :64 と同じ作りで、宛先だけ `user_channel`。中身は `_payload`（:42）のまま topic と origin だけ・依頼の id は入れない）。`_channel_for`（:32-40）は変えない（人宛ては scope で選ばず、この送り口だけが使う）。`CHANNEL_PATTERN = "rt:*"`（:22）のままで `rt:u:` も受け取れる
     - `backend/app/realtime/hub.py:27-31` の `Connection`（`@dataclass(eq=False)`・`queue` に既定値あり）に `user_id: int | None = None` を `queue` より前に足し、`_targets`（:34-46）で `rt:u:` は `conn.user_id` が同じときだけ真（None なら偽）。既存の試験 `backend/tests/test_realtime_middleware.py:164` の `_conn` はそのまま通る
     - `backend/app/routers/realtime_events.py:80` で `Connection(tenant_id=tenant_id, is_super_admin=is_super_admin, user_id=user_id)` を渡す（`user_id` は :73 の変数）
-    - 送る時: 依頼を作った時・決まった時（approved/rejected/expired）。決まった時にも送るので、ほかのいつもの機械の小窓も閉じる（審査 軽微5）
+    - 送る時: 依頼を作った時・決まった時（approved/rejected/expired）。決まった時にも送るので、ほかのいつもの機械の小窓も閉じる（審査 軽微5）。expired にするのは Celery の同期の作業（`backend/app/tasks/maintenance.py`）なので、既存の `publish_change_sync`（`publisher.py:77-88`）と同じ形の `publish_user_change_sync(user_id, topic, origin=None)` も足す。人宛ての送り口は、この async と sync の2つだけにする
     - `USER_TOPICS` を `backend/tests/test_realtime_topics.py:129-133` の一致の確かめと `frontend` の topics.ts に入れる
     - `NO_SIGNAL_ROUTES`（`topics.py:86〜`）には**書き込みの口だけ**を並べる（`backend/tests/test_realtime_topics.py:19` の `_write_routes` は POST/PUT/PATCH/DELETE だけを集め、`:108` が表にある GET を「存在しない道」として落とすため）。理由は「人宛ての合図は口の中で直接送る（書き込みの口の自動合図にしない）」。並べる道は次の全部（段W の3つは PR-W で足す）
       - `("POST", "/api/v1/auth/login-requests/poll")`・`("POST", "/api/v1/auth/login-requests/recovery")`・`("POST", "/api/v1/auth/login-requests/{request_id}/approve")`・`("POST", "/api/v1/auth/login-requests/{request_id}/reject")`
@@ -157,18 +157,19 @@
 - アカウント設定 `frontend/src/pages/account-settings/SecuritySection.tsx` の並び: 「ログインしている機械」（DataTable・「この機械」印・ログアウト ConfirmModal）と「予備の合言葉」（残り数・作り直し ConfirmModal・10個を1回だけ表示してコピー）。場所の列の下に DB-IP の表示
 - 最初のログイン（D5）と合言葉0個の人: ログイン後に1回、合言葉を作る案内の Modal
 - 管理画面 `frontend/src/pages/super-admin/`: 「ログインの許可待ち」一覧（DataTable・許可 ConfirmModal に本人確認の方法の入力欄＝TextFieldControl・必須）
-- API の形の検査（第4版 審査 軽微）: 口を足したので、backend を直した後に `cd backend && ENVIRONMENT=test python -m tools.export_openapi ../frontend/api-contract/openapi.json` と `cd frontend && npm run generate:api-types` を流し、変わった `frontend/api-contract/openapi.json` と `frontend/src/api/generated/schema.d.ts` を同じ PR に入れる（入れないと CI の形の検査で落ちる）
+- API の形の検査（第4版 審査 軽微）: 口を足したので、backend を直した後に `cd backend && ENVIRONMENT=test python -m tools.export_openapi ../frontend/api-contract/openapi.json` と `cd frontend && npm run generate:api-types` を流し、変わった `frontend/api-contract/openapi.json` を同じ PR に入れる（`frontend/src/api/generated/schema.d.ts` は `.gitignore:128` で記録の対象外なので入れない）（入れないと CI の形の検査で落ちる）
 - i18n キーは `login.deviceApproval.*`・`accountSettings.devices.*`・`accountSettings.recoveryCodes.*`・`superAdmin.loginRequests.*`（ja.json :674 付近・:3193 付近の並びに合わせる）
 
 ### 段W（PR-W・段A の後・段B の前。migration を含む＝危険 PR・GO 要）ホーム画面のアプリへの通知（web push・D13）
 
 - 部品: `pywebpush==2.5.0`（MPL-2.0・2026-08-29 公開・PyPI で確認。Context7 は月の上限で使えず公式を直接確認）
+- 入れ物へ渡す（第5版 審査 要修正M1）: `docker-compose.yml` には `env_file` が無く、backend の環境変数は名前を1つずつ並べる（:128-142・例 :136 `AUTH_PROVIDER=${AUTH_PROVIDER:-firebase}`）。PR-W で backend の environment に `WEBPUSH_VAPID_PRIVATE_KEY=${WEBPUSH_VAPID_PRIVATE_KEY:-}`・`WEBPUSH_VAPID_PUBLIC_KEY=${WEBPUSH_VAPID_PUBLIC_KEY:-}`・`WEBPUSH_VAPID_SUBJECT=${WEBPUSH_VAPID_SUBJECT:-}` の3行を足す。足さないと .env に書いても入れ物に届かず、何も言わずに送らなくなる。本番反映後に `docker compose exec -T backend printenv` で名前が3つあることだけを確かめる（値は出さない。`printenv | cut -d= -f1 | grep WEBPUSH` の形）
 - 鍵: VAPID の鍵の組を1回作り、本番の .env に `WEBPUSH_VAPID_PRIVATE_KEY`（秘密）・`WEBPUSH_VAPID_PUBLIC_KEY`・`WEBPUSH_VAPID_SUBJECT` を置く。GitHub の秘密に `gh secret set` で直接流し（値は表示しない）、deploy.yml の .env 書き出し（`deploy.yml:364-378` の `NAME='${{ secrets.NAME }}'` の形）と古い行の削除（`:318-320`）に3行ずつ足す。未設定なら通知を送らず、画面とメールだけで動く
-- migration: `public.user_push_subscriptions`（id / user_id FK CASCADE / trusted_device_id FK CASCADE（いつもの機械にだけ送る） / endpoint TEXT UNIQUE / p256dh TEXT / auth TEXT / created_at / last_success_at / failed_count SMALLINT / revoked_at）。全列 COMMENT。`PUBLIC_TABLES` に足す。ai_cloud の分類3か所と試験の件数を段A と同じやり方で足す（endpoint・p256dh・auth の3行を `mask`・理由は空。件数は 1054→1057、tsv は 1055→1058 行。合わなければ止めて報告）。試験の表定義4か所にも足す
+- migration: `public.user_push_subscriptions`（id BIGSERIAL PK / user_id FK CASCADE / trusted_device_id FK CASCADE（いつもの機械にだけ送る） / endpoint TEXT UNIQUE / p256dh TEXT / auth TEXT / created_at / last_success_at / failed_count SMALLINT / revoked_at）。全列 COMMENT。`PUBLIC_TABLES` に足す。ai_cloud の分類3か所と試験の件数を段A と同じやり方で足す（endpoint・p256dh・auth の3行を `mask`・理由は空。件数は 1054→1057、tsv は 1055→1058 行。合わなければ止めて報告）。試験の表定義4か所にも足す
 - backend: `POST /auth/push-subscriptions`（いつもの機械のログイン中だけ・今の機械に結び付け）・`DELETE /auth/push-subscriptions/{subscription_id}`（本人の購読だけ・他人の id は 404）・`GET /auth/push-public-key`（`get_current_user` を通す。ログイン中の画面だけが読むため。閲覧者のトークンは 401 になり、閲覧者の隔離の試験はそのまま通る）。依頼の作成時に、その人のいつもの機械（取り消されていない）の購読へ送る。中身は「新しい機械からのログインの許可依頼」と機械の種類・場所・時刻だけ（番号は送らない）。404/410 の返事で購読を取り消す。送信は BackgroundTasks（失敗しても依頼は作る）。書き込みの口（POST と DELETE の2つ）だけを `NO_SIGNAL_ROUTES` に理由付きで足し（GET は足さない）、状態を変える口は `_require_app_origin` を通す
 - frontend: `frontend/public/manifest.webmanifest`（name・icons は既存の `apple-touch-icon.png`・`display: standalone`・`start_url: /`）、`frontend/index.html` に manifest の link、`frontend/public/sw.js`（push で通知を出す・通知を押すとアプリを開き、開いた画面は LoginApprovalWatcher が依頼を出す。キャッシュはしない＝今の配信の動きを変えない）。アカウント設定の「ログインしている機械」の上に「この機械に通知を出す」（金型 `frontend/src/components/Toggle.tsx`）。iPhone でホーム画面に追加していないときは、その手順を `t()` の文で出す。ホーム画面のアプリは Safari と Cookie の置き場が別になることがある（【未確認】）。別なら、ホーム画面のアプリは最初に1回だけ「新しい機械」として許可が要る。設計はそのまま動く（新しい機械として扱うだけ）。案内文に「ホーム画面に追加したら、最初に一度だけ許可が要ることがあります」と入れる
 - 試験: pytest で依頼1件につき送信関数が購読ごとに1回・410 で取り消し・取り消された機械の購読へは送らない。Vitest で購読の切り替えの表示条件
-- API の形の検査（段A と同じ）: 口を足したので `cd backend && ENVIRONMENT=test python -m tools.export_openapi ../frontend/api-contract/openapi.json` と `cd frontend && npm run generate:api-types` を流し、変わった `frontend/api-contract/openapi.json` と `frontend/src/api/generated/schema.d.ts` を同じ PR に入れる
+- API の形の検査（段A と同じ）: 口を足したので `cd backend && ENVIRONMENT=test python -m tools.export_openapi ../frontend/api-contract/openapi.json` と `cd frontend && npm run generate:api-types` を流し、変わった `frontend/api-contract/openapi.json` を同じ PR に入れる（`frontend/src/api/generated/schema.d.ts` は `.gitignore:128` で記録の対象外なので入れない）
 - 本番の確かめ: PO の機械での通知の目視は、PO が「通知を許可」を押した後になる（自動では確かめられない）。自動で確かめるのは送信の記録（last_success_at）
 
 ### 段B（PR-B・deploy.yml を含む＝危険 PR・GO 要。段A・段W の本番反映と B-0 の後）
@@ -278,6 +279,14 @@
   - 要修正: poll と recovery を閲覧者の隔離の試験の「認証なしの口」の表に理由付きで足し、push-public-key は認証ありにした（A-2）／管理者の許可の記録の引数を決め、K7 で確かめる項目に足した（A-2 管理者・§6）／publisher の古い行を消し、人宛ての送り口の1つに絞った（A-2）
   - 軽微: 自動点検の行番号／PR-A と PR-W の API の形の作り直し／`signIn` の偽物の試験／`backend/app/cli/__init__.py`／新しい4表に RLS を付けない理由と GRANT／新しい口の見出しの「すべて」／`family_created_at`／パスワード変更で登録したときの Cookie／D16 を本体の関数と依存に分けた／許可で入ったときの `last_login`
 
-### 第5版
+### 第5版（efec40dc7）: REVISE
+
+- 審査役: 新しく起動した Opus の reviewer（2026-11-01）
+- 結果: `VERDICT: REVISE on efec40dc7 design`。要修正1・軽微6。前回の要修正3件・軽微10件は反映済みと確認された
+- 第6版での反映
+  - 要修正: web push の鍵3つを `docker-compose.yml` の backend の環境変数に渡す（段W）
+  - 軽微: 型ファイルは PR に入れない／`GEOIP_DB_PATH` も入れ物に渡す／期限切れを知らせる同期の送り口／パスワード変更で確かめる位置／2表の id の型／閲覧者の隔離の試験の説明文の本数
+
+### 第6版
 
 （ここに審査役の VERDICT を追記する）
