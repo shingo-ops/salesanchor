@@ -961,3 +961,94 @@ APPROVE。根拠：呼び出し元・時間切れ・所要秒は origin/main と
 - 4 回目（reviewer・opus、2026-10-31）：REVISE。行番号はすべて origin/main と一致し、3 回目の指摘にはすべて応えていた。採否に関わる指摘 1 件（K6 の「R4b の K8 の判断は nostamp だけで行う」が、§R4b:847 の K8（push の前に止めた回数）の定義を書き換えたように読める）と、任意の指摘 4 件（便1 より前の作業場所から作る PR は古い validate-pr-body.sh で nostamp を残す・K4③ の ○ の条件に npm ci の rc と値を入れる・rules.md は AGENTS.md の写しにせず参照にする・便ごとに「これ以外は変えない」を書く）。すべてこの版に入れた
 - 5 回目（reviewer・opus、2026-10-31）：APPROVE。採否に関わる指摘なし。任意の指摘 2 件（古い作業場所の行を外すときは枝名でなく記録の 3 列目の SHA で確かめる。枝はマージ後に消されるため。SHA が無い行・rc=128 の行は別に数え、~/salesanchor へ戻る道も同じに扱う／便2 の試験の項目を便2 の並びの中へ移す）。どちらもこの版に入れた
 - Opus 自己審査（同じ AI の審査）：APPROVE。根拠：pre-commit:2-25・:21、validate-pr-ownership.sh:62-63、agent-config.sh:39、test.sh:284-290、required-checks.txt、rule-registry.yml:42-43・:76、package.json:47 を origin/main で読んで確かめた。直下で止まるのは AGENTS.md の「例外なし」の決まりに反する commit と push だけで、今ある実行は 5 件とも作業場所で commit・push している（RemoteTrigger の一覧）。止める範囲の広がりを隠さずに書き、戻し方を書いた。未解決：session_start が動くときのプロセスの今の場所がリポジトリの中か（K3）、npm ci のあとも入口が流れるか（K4③）、.git/hooks に独自の hook があるか（K3）。どれも便2 の受入で確かめ、満たさなければ便2 を本番に入れない
+
+## R4c 便3 部品を入れ直しても、ほかの場所で確認が止まらないようにする（2026-10-31 PO「1」で着手）
+
+### 目的
+- どの作業場所で `npm ci` / `npm install`（frontend の部品の入れ直し）を流しても、ほかの作業場所とリポジトリ直下で commit・push の前の確認（frontend/.husky の pre-commit・pre-push）が止まらないようにする
+- 確認の場所の値（`frontend/.husky`）を書く所を増やさず、3 か所の値が食い違えば CI の試験で落ちるようにする
+
+### 現状（事実。2026-10-31 に origin/main d092648f7 で調査）
+- frontend/package.json:47 の prepare は `cd .. && husky frontend/.husky`。husky は :112 の `^9.1.7`
+- husky v9.1.7 の動き（Context7 は月の上限で使えなかったため、本起動指示の代替として公式の元の版 typicode/husky v9.1.7 の index.js と husky を直接読んだ）：HUSKY=0・場所に `..` を含む・`.git` が無い、のどれかなら何もせず終わる。それ以外は `git config core.hooksPath <場所>/_` を書き、`<場所>/_/` に `.gitignore`（`*`）・`h`・14 個の hook の入口を作る。入口は `h` を呼び、`h` は本物の hook（`<場所>/<名前>`）が無ければ 0 で終わり、あれば `PATH` に node_modules/.bin を足して `sh -e <本物>` で流す
+- 作業場所はすべて 1 つの共通の設定（`<本体>/.git/config`）を使う（extensions.worktreeConfig は無い）。手元の今の値は `git config --show-origin --get core.hooksPath` で `file:/Users/tanizawashingo/salesanchor/.git/config frontend/.husky`
+- このため、ある作業場所 W で npm ci を流すと、共通の設定が `frontend/.husky/_` になる。`_` は `.gitignore` で git に入らず、W にしか作られない。ほかの場所では `frontend/.husky/_/pre-commit` が無いので、git は hook を 1 つも流さない
+  - クラウドの実測（#4924 のコメント、一回実行 cse_01W47tdfN51d8zWD6t1je6un）：npm ci の前は直下の push が「worktree 外での作業は禁止」で rc=1、直下の commit が「commit を中断しました」で rc=1。W で npm ci のあとは値が `frontend/.husky/_` になり、直下の commit が rc=0 で通った
+  - 手元でも同じ仕組み（docs/handoff/confidential-quote-guard/recon.md:82-87 で、手元の作業場所 51 のうち `_` があるのは 4 だった）
+- scripts/new-worktree.sh:115 は共通の設定に `frontend/.husky` を書き戻す。:113-114 の注記は「worktree 固有の設定」と書くが、実際は共通の設定に書く（上の `--show-origin`）。scripts/agent-hooks/cloud/session_start.py:9 も同じ値を書く
+- frontend/.husky の中身は pre-commit と pre-push の 2 つで、git の上でどちらも実行できる形（`git ls-tree` で 100755）。1 行目は `#!/bin/sh`。手元とクラウドは今も `frontend/.husky` を直接使って流れている（§R4c K4①）
+- pre-commit は部品の道具を `node_modules/.bin/lint-staged` などの形で直接呼び、`PATH` の追加に頼らない
+- npm ci / npm install を流す所：CI のワークフロー（api-contract-check・e2e・frontend-check・karte-gate・prod-ui-check・qa-smoke・security-scan）。deploy.yml:94 の npm ci は lp/ で、lp/package.json に prepare は無い
+- CI で npm ci のあとに commit・push するのは karte-gate.yml:98-99（手で流す workflow_dispatch のときだけ）。今は husky の `_` を通して hook が流れている
+- frontend/Dockerfile は `WORKDIR /app`・`COPY package*.json ./`・`RUN npm install`。本番の画面の箱は deploy.yml:433・:762 の `docker compose build`（docker-compose.yml:184 の context ./frontend）で作られる。箱の中では prepare の `cd ..` が `/` に行き、`.git` が無いので husky は何もせず終わる。node:20-slim に git が入っているかはまだ確かめていない（下の新しい prepare は、どちらでも 0 で終わる形にする）
+- prepare が 0 以外で終わると npm install / npm ci が失敗する。本番の画面の箱が作れなくなる
+- HUSKY を使う所は scripts・.github・frontend/package.json・frontend/Dockerfile に無い（git grep で 0 件）。~/.config/husky も手元に無い
+
+### 変えること（便3。実装はクラウドの Sonnet、PO の実装承認の後）
+- frontend/package.json:47 の prepare を `git --git-dir=../.git config core.hooksPath frontend/.husky || exit 0` に変える
+  - 共通の設定に new-worktree.sh・session_start.py と同じ値を書く。npm ci を流しても値が `frontend/.husky` のままになり、どの場所でも hook が流れる
+  - `--git-dir=../.git` にするのは、husky の「`..` に `.git` があるときだけ書く」歯止め（index.js の `.git` の有無の確かめ）を残すため。`git -C ..` だと上の階へリポジトリを探しに行き、frontend の写しを別のリポジトリ（例：~/kb）の中に置いて npm install すると、そのリポジトリの hook の場所を書き換える（審査役の実測 A）。`--git-dir=../.git` なら作業場所（`.git` がファイル）でも共通の設定に書け（実測 C）、外のリポジトリの中の写しでは `fatal: not in a git directory` の rc=128 で終わり書き換えない（実測 D）。実測 D は書く値を `zzz` にして流し、外のリポジトリの値が前の値のままだった。実測の台本と生出力はこの設計の PR のコメントに残す
+  - 限界：`--git-dir=../.git` は一つ上の階だけを見る。外のリポジトリの一番上の直下に `frontend` として写した場合だけは、そのリポジトリの値を書く（2 回目の審査の実測 b2。outer2/frontend で rc=0、outer2 の値が書き換わった。outer/sub/frontend では書き換わらなかった）。これは husky が元から持つ歯止めと同じ範囲で、今の husky もその場合は `frontend/.husky/_` を書くので後退ではない
+  - `.git` が無い・git が無い・書けないときは 0 で終わる（`exit 0` は sh でも Windows の cmd でも通る）。git の失敗の文面は出るが、部品の入れ直しは止めない
+  - 箱の中では `../.git` が `/.git` になり、git があれば「git の場所でない」で失敗、無ければ「見つからない」で失敗し、どちらも 0 で終わる
+- scripts/new-worktree.sh:113-114 の注記を事実に直す（共通の設定に書くこと、prepare も同じ値を書くこと）。:115 の命令は変えない
+- scripts/agent-hooks/cloud/rules.md の続きの手順の「reset・rebase・force・merge は使わない」に pull を足す（pull は取り込みを含むため。前回の審査の任意の指摘）
+- 試験（CI で毎回流れる scripts/tests/test_check_before_submit.py に足す。.github/workflows/rule-registry.yml:76）
+  - ①一時の git リポジトリに frontend/package.json を写し、`npm run prepare --prefix <一時>/frontend` を流すと rc=0 で、一時のリポジトリの core.hooksPath が `frontend/.husky` になる。一時のリポジトリに `git worktree add` で作った作業場所（`.git` がファイル）でも同じく流し、共通の設定に書かれることを確かめる。読み戻しは `git --git-dir=<一時>/.git config --local --get core.hooksPath` で行う（:46 の git_env() は GIT_CONFIG_COUNT で core.hooksPath を /dev/null に上書きするため、そのまま `--get` で読むと /dev/null が返る。審査役の実測 E）
+  - ②git の無い一時の場所（frontend の一つ上に `.git` が無い所）で同じく流すと rc=0（`--git-dir` を明示すると git は上の階を探さないので、GIT_CEILING_DIRECTORIES は要らない）
+  - ③git の無い PATH で流すと rc=0。PATH は、一時の bin に node・npm・sh だけの別名を置いてそれだけにする（ubuntu では /bin が /usr/bin の別名で git と sh が同じ場所にあり、/usr/bin を抜くと npm が sh を起動できずに落ち、git が無いからの失敗と取り違えるため）
+  - ④外の一時の git リポジトリ `<outer>` の一番上より 1 段以上深い所（`<outer>/sub/frontend` の下の package.json）に、`.git` の無い写しを置いて流すと rc=0 で、`<outer>` の core.hooksPath が流す前と同じ。`<outer>/frontend` の直下に置く形は上の「限界」のとおり書き換わるので、試験の場所にしない（prepare を変えたり試験を外したりして合わせない）
+  - ⑤package.json の prepare・new-worktree.sh・session_start.py の HOOKS_PATH の 3 か所の値が同じ（どれかを変えて食い違えば落ちる）。scripts/agent-hooks/cloud/test.sh:352 の期待値は足さない。test.sh は CI で流れない（§R4c の 889 行）が、session_start.py の値と食い違えば手元・クラウドで test.sh を流したときに落ちる（3 回目の審査で実測）。3 か所をそろえて変える PR では、test.sh:352 も手で直す
+  - 試験の中で手元の本体の .git/config を書かないことを、流す前後の値の比較で確かめる
+- 便3 で変えるのは上の frontend/package.json・new-worktree.sh（注記だけ）・rules.md・test_check_before_submit.py と、工程の記録の文書だけで、それ以外は変えない
+- PR は scripts/ に触るため ADR-135 の承認と GO の記録が要る。ADR-1003 の例外 7 種には当たらないので、Claude Opus への委任 GO で記録する
+
+### 変えないこと
+- husky の部品そのもの（devDependencies の husky・package-lock.json）。prepare から呼ばなくなるので使われなくなるが、外すと部品の表が変わるため別の便にする
+- frontend/.husky/pre-commit・pre-push・validate-pr-ownership.sh・check-before-submit.sh・session_start.py・CI のワークフロー・必須チェック・frontend/Dockerfile
+- 作業場所に残っている frontend/.husky/_ は消さない（使われなくなるだけで、git には入らない）
+
+### ほかの案と選ばなかった理由
+- 作業場所ごとの設定（extensions.worktreeConfig）：リポジトリの形を変え、すべての作業場所と道具に効く。husky は `--worktree` を付けずに書くので、共通の設定への書き込みは残る。戻すのも重い
+- 本体の絶対の場所を値にする：本体の写しは origin/main より大きく古い（5380 件）ので、古い hook が流れる
+- HUSKY=0 を皆に設定してもらう：手元・クラウド・CI のすべてで守らせる仕組みが無い
+- prepare から台本（scripts/ の下）を呼ぶ：本番の箱は frontend/ だけを context にし、npm install の時点では package*.json しか無いので、台本が見つからず失敗する
+
+### 変わる動き（はっきり書く）
+- HUSKY=0 で hook を外す道が無くなる（使っている所は 0 件）
+- 外のリポジトリの一番上の直下に frontend として写して npm install すると、そのリポジトリの値を `frontend/.husky` に書く（今の husky は `frontend/.husky/_` を書く。範囲は同じ）
+- husky の `_` を通したときの `sh -e` と `PATH` への node_modules/.bin の追加が無くなり、手元・クラウドと同じく `#!/bin/sh` で直接流れる。karte-gate の手で流すときの commit・push もこの形になる。机上の読みでは、`sh -e` のときは提出前の入口が「使えない（終了コード 2）」で終わると push が止まり、R4b の「2 は通す」と違っていた。便3 の後は R4b の決まりどおり通す（実測はしていない）
+- 便3 のマージより前に作った作業場所で npm ci を流すと、古い prepare（husky）が流れて値が `frontend/.husky/_` に戻る。古い作業場所が残る間はこの穴が残る。new-worktree.sh を流すたびに直るが、それまでの間はほかの場所の hook が止まる → K3 で数える
+- §R4c の K4③ は「npm ci のあと値が `frontend/.husky/_`」を ○ の条件にしていた。便3 の後はその値にならない。便2 の受入は済んでいる（#4924 のコメント）ので、K4③ は書き換えず、便3 の K2 で置きかえる
+
+### 受入条件
+- K1（CI）：試験①〜⑤が pass（job「existing rule tests」。必須 16 件ではないため、マージの前に結果を目で確かめて GO の記録に書く）。必須 16 件（required-checks.txt）も pass。frontend/package.json を変えるので frontend 側の検査（frontend-check・e2e・karte-gate など）が流れ、新しい prepare を通った npm ci が rc=0 で済むことも、その PR の実行の結果で確かめて GO の記録に書く
+- K2（クラウドの一回実行、マージの後）：
+  - ①new-worktree.sh で作った作業場所 W で `npm ci --prefix W/frontend` が rc=0、そのあと `git config --get core.hooksPath` が `frontend/.husky`
+  - ②①のあと、直下で試しの 1 行を commit すると「commit を中断しました」で rc≠0、commit は作られない（確かめた後に変更を戻す）。直下で新しい commit を含まない試しの枝を push すると「worktree 外での作業は禁止」で rc≠0、`git ls-remote` が空
+  - ③①のあと、W で試しの 1 行を commit・push すると提出前の入口の結果が出て rc=0、印が新しい HEAD と同じ
+  - ④git の無い一時の場所に frontend/package.json と package-lock.json を写して `npm run prepare` を流すと rc=0（本番の箱の作り方の代わり。docker がクラウドにあれば `docker build frontend` の builder 段の rc も記録する）
+  - 試しの枝は確かめた後に消す。消せないとき（前回は HTTP 403）はその事実を書く
+- K3（反映後・手元）：便3 のマージから 7 日目以降に、R4b の K8 を数えるときに Claude Opus 設計担当が手元で 1 回確かめる（同じ時に数えるので、新しい定期の仕組みは作らない）。①`git config --local --get core.hooksPath` が `frontend/.husky` ②~/worktrees と <本体>/.claude/worktrees の下と、本体の `<本体>/frontend/.husky/_/h` で、便3 のマージ時刻より後に作られた `frontend/.husky/_/h` の数（`find … -path '*/frontend/.husky/_/h' -newermt '<マージ時刻>'`。husky は流すたびに `_/h` を写し直すので、古い prepare が流れた回数の代わりになる。本体の写しも古いので対象に入れる）。①が `frontend/.husky` で ②が 0 なら ○。②が 1 以上なら、その作業場所と枝を表にして PO に示す（× ではなく、古い作業場所が残っている印として扱い、new-worktree.sh で作り直すか片付けるかを PO に聞く）。①が `_` なら × とし、出どころを調べる
+- K4（本番）：便3 のマージの後の最初の deploy で、画面の箱の `docker compose build` が成功する（deploy.yml の実行の結果と、本番の画面 https://app.salesanchor.jp/ が開くこと）。build の所要時間も記録する（package.json が変わるので、`COPY package*.json` の段の作り置きが使えず npm install を最初からやり直す。前の deploy の時間と並べる）。失敗したら merge commit を revert する。本物の node:20-slim の箱で新しい prepare が初めて流れるのはこの K4 である（手元にも審査の場にも docker が動いておらず、K2④ にも docker が無ければ「.git の無い場所」「git の無い PATH」の 2 つが代わりの確かめになる）
+
+### リスクと対処
+- 新しい prepare が箱の中で 0 以外で終わり、本番の画面の箱が作れない → `|| exit 0` で必ず 0 で終わる。試験②③（K1）・K2④で git の無い場所・git の無い PATH を確かめてからマージする。deploy.yml:433・:440-442 は 3 回失敗すると止まり、今の箱は動いたまま（K4 で確かめ、失敗なら revert）。revert が入るまでの間は、ほかの変更の deploy も止まる
+- 本番の deploy で npm install を最初からやり直すため、時間と prod1 のディスクの使用が一時的に増える → K4 で時間を記録する。deploy.yml:844 の作り置きの片付け（`docker builder prune`）は変えない
+- 古い作業場所の npm ci で値が `_` に戻る → K3 で数える。new-worktree.sh・クラウドの session_start.py が毎回書き戻す。本体（/Users/tanizawashingo/salesanchor）の写しも古いので、本体で npm ci を流すと同じく戻る（K3② の対象に入れる）
+- 戻し方：merge commit を revert。prepare が husky に戻り、今と同じ動きになる。共通の設定の値は次の npm ci か new-worktree.sh で書き換わる
+
+### 影響範囲（呼び出し元の全走査）
+- frontend/package.json の prepare：手元・クラウドの npm ci / npm install、CI の npm ci（上の 7 ワークフロー）、本番の箱の npm install（frontend/Dockerfile、deploy.yml:433・:762）
+- core.hooksPath を書く所：new-worktree.sh:115・session_start.py:9（同じ値）。読む・使う所：git の commit・push のたび。試験 scripts/agent-hooks/cloud/test.sh:334-370（値 `frontend/.husky` を確かめる。変えない）
+- `-c core.hooksPath=/dev/null` で一時的に外す台本（git-safe.sh:9・試験 3 本）：コマンドの上の値が勝つので影響なし
+- rules.md：クラウドの会話すべて（dispatch.sh の SessionStart）
+- 影響なし：.github/workflows/hook-test.yml と scripts/test_pre_commit_hook.py（paths は frontend/.husky/** で、pull_request の先は develop だけ。frontend/.husky は変えない）
+- 見張りとの関係：confidential-quote-guard の guard.py:229（CFG_KEY_RE）は AI が core.hooksPath を書く命令を止めるが、prepare は npm を通して書くので見張りの外。prepare の値を変えて `npm run prepare` を流せばどんな値でも書ける。ただ今の husky も場所の引数で同じことができるので新しい穴ではない。値は試験⑤で CI に固定され、prepare の値だけを変える PR は落ちる（3 か所をそろえて変える PR は通るので、審査で見る）
+- 直前の §R4c の 879 行の「new-worktree.sh:112-114 の注記」は、実際は :113-114（:112 は見出しのコメント）。便3 の現状の記述は :113-114 で書いている
+
+### 審査
+- 1 回目（reviewer・opus、2026-10-31）：REVISE。行番号・中身・husky v9.1.7 の動き・`sh -e` の読みはすべて origin/main と公式の元に一致。採否に関わる指摘 2 件（①`git -C ..` は husky の「`..` に `.git` があるときだけ」の歯止めを失い、別のリポジトリの中の写しでその設定を書き換える。実測 A ②K3 に ○× の基準・回数・誰が見るかが無い）と任意の指摘 9 件（PATH の外し方・`--local` で読む・パスの書き方と 879 行の行番号・frontend 側の検査の npm ci を証拠に・hook-test.yml を影響なしとして挙げる・見張りとの関係・本番の作り置きが使えない時間・node:20-slim の git は未確認のまま・revert までほかの deploy も止まる）。①は `--git-dir=../.git` に変え試験④を足した。②は K3 を書き直した。任意は 8 件をこの版に入れ、node:20-slim の git は未確認のまま（どちらでも 0 で終わる形で、K2④ が代わりの確かめ）
+- 2 回目（reviewer・opus、新規、2026-10-31）：REVISE。事実 18 項目は origin/main と一致（ずれは test.sh の行番号 1 件）。一時の場所での実験で、本体・作業場所・npm ci・`.git` の無い場所・git の無い PATH・壊れた gitdir・書けない設定・GIT_DIR の指定はすべて期待どおり。採否に関わる指摘 1 件：外のリポジトリの一番上の直下に frontend として写すと書き換わる（実測 b2）ため、試験④の置き場所が決まっておらず、文面が事実より広い。→ 試験④を `<outer>/sub/frontend` と明記し、限界を「変えること」と「変わる動き」に足した。任意 5 件（K3② に本体を入れる・試験②の GIT_CEILING_DIRECTORIES は要らない・test.sh の行番号・試験⑤に test.sh を足すか・本物の箱は K4 が初めて）はすべてこの版に入れた（試験⑤には足さない理由を書いた）。生出力は scratchpad の rev3/ に残し、PR のコメントに載せる
+- 3 回目（reviewer・opus、新規、2026-10-31）：APPROVE。採否に関わる指摘なし。test.sh が session_start.py を流して値を比べることを、値を変えた写しで NG が 1 件増えることで実測。任意 3 件（試験⑤の理由は test.sh が CI で流れないことを書き分ける・見張りとの関係は「prepare だけを変える PR」・リスクの「K1②③」は「試験②③」）はこの版に入れた。未確認のまま残るもの：node:20-slim の git（どちらでも 0 で終わる形）、試験③の別名の PATH が ubuntu で通るか（K1 の CI の結果で確かめる）
+- Claude Opus 設計担当の判定：APPROVE（3 回目の審査と同じ。未確認の 2 件はどちらも K1・K4 の実測で ○× が決まり、設計の採否を変えない）
