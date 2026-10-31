@@ -1658,6 +1658,7 @@
   "quotes": {
     "title": "見積管理",
     "newQuote": "新規見積",
+    "createSubtitle": "新しい見積を作成します",
     "quoteCode": "見積コード",
     "customer": "顧客",
     "salesRep": "営業担当",
