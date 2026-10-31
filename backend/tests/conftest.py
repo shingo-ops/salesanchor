@@ -1874,3 +1874,16 @@ async def client(db_session):
             yield ac
 
     app.dependency_overrides.clear()
+
+
+# 相談係AIの第2段階の試験（backend/tests/ops/test_ops_case_db.py・backend/tests/test_ops_case_router.py）用:
+# 本番の表の写しではなく、主キーの形・秘密の列・拒否表の名前を試すための作り物の表。
+# 持ち主を superuser でない役にして使い捨ての DB に作るため、bootstrap_tenant_schema は使わない。
+OPS_CASE_PLAIN_DEMO_DDL = "CREATE TABLE public.plain_demo (id integer PRIMARY KEY, memo text, email text)"
+OPS_CASE_TEXT_PK_DDL = "CREATE TABLE public.text_pk (code text PRIMARY KEY, memo text)"
+OPS_CASE_SMALL_PK_DDL = "CREATE TABLE public.small_pk (id smallint PRIMARY KEY, memo text)"
+OPS_CASE_HAS_SECRET_DDL = "CREATE TABLE public.has_secret (id integer PRIMARY KEY, memo text, api_token text)"
+OPS_CASE_TWO_PK_DDL = "CREATE TABLE public.two_pk (a integer, b integer, memo text, PRIMARY KEY (a, b))"
+OPS_CASE_TENANT_LEADS_DDL = "CREATE TABLE tenant_001.leads (id uuid PRIMARY KEY, customer_name text, email text)"
+OPS_CASE_TENANT_LEADS_NO_EMAIL_DDL = "CREATE TABLE tenant_001.leads (id uuid PRIMARY KEY, customer_name text)"
+OPS_CASE_TENANT_VIEWER_ACCOUNTS_DDL = "CREATE TABLE tenant_001.viewer_accounts (id integer PRIMARY KEY, note text)"
