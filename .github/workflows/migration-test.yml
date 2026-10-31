@@ -996,6 +996,26 @@ jobs:
               CONSTRAINT ops_incidents_labels_size_check CHECK (octet_length(labels::text) <= 4096),
               CONSTRAINT ops_incidents_annotations_size_check CHECK (octet_length(annotations::text) <= 4096)
           );
+          -- ai_cloud_meta.build_log / build_columns: migrations/20261024_100000_create_ai_cloud_meta.sql で本番作成済み。
+          --   20261031_210000_create_ops_case.sql が参照するため前提として登録する。
+          CREATE SCHEMA IF NOT EXISTS ai_cloud_meta;
+
+          CREATE TABLE IF NOT EXISTS ai_cloud_meta.build_log (
+            built_at timestamptz NOT NULL DEFAULT now(),
+            ok boolean NOT NULL,
+            view_count integer,
+            failed_count integer,
+            error_class text
+          );
+
+          CREATE TABLE IF NOT EXISTS ai_cloud_meta.build_columns (
+            view_name text NOT NULL,
+            column_name text NOT NULL,
+            source text NOT NULL,
+            source_type text NOT NULL,
+            class text,
+            mode text NOT NULL CHECK (mode IN ('pass', 'mask', 'mask_bare', 'excluded'))
+          );
           PUBLIC_SQL
 
       # ── Step 2: Sprint 1 を適用（Sprint 2 の前提条件）──────────────────────────
