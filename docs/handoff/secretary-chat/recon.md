@@ -1,5 +1,7 @@
 origin/main HEAD: dc99a062e2c409aeb1a851a01b8bd0fa09ac3b64
 
+この文書は、秘書チャットを作る前に今のアプリの仕組みを調べた記録です。親: [../../specs/secretary-chat/README.md](../../specs/secretary-chat/README.md)
+
 # 秘書チャット（テナント001・004）事前調査
 
 調査のみ。製品コード・DB・設定は変更していない。本番には接続していない。パスは作業場所（release/secretary-chat-recon）基準。生の測定出力は `docs/handoff/secretary-chat/recon-raw.txt`。
