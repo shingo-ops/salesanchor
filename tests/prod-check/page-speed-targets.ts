@@ -6,6 +6,7 @@
 
 export type SpeedTarget =
   | { route: string; kind: "" | "carrier" | "section" }
+  | { route: string; kind: "redirect"; to: string }
   | { route: string; kind: "needs-id"; listPage: string; listApi: string };
 
 export const SPEED_TARGETS: SpeedTarget[] = [
@@ -21,7 +22,7 @@ export const SPEED_TARGETS: SpeedTarget[] = [
   { route: "/crm/leads/:id/edit", kind: "needs-id", listPage: "/crm/leads", listApi: "/api/v1/leads" },
   { route: "/contacts/:id/edit", kind: "needs-id", listPage: "/crm/contacts", listApi: "/api/v1/contacts" },
   { route: "/lead-chat", kind: "" },
-  { route: "/crm", kind: "" },
+  { route: "/crm", kind: "redirect", to: "/crm/leads" },
   { route: "/crm/leads", kind: "" },
   { route: "/crm/companies", kind: "" },
   { route: "/crm/companies/:id", kind: "needs-id", listPage: "/crm/companies", listApi: "/api/v1/companies" },
@@ -107,7 +108,7 @@ export const SPEED_TARGETS: SpeedTarget[] = [
   { route: "/super-admin/masters/product-categories/import", kind: "" },
   { route: "/super-admin/viewers", kind: "" },
   { route: "/super-admin/viewer-templates", kind: "" },
-  { route: "/admin", kind: "" },
+  { route: "/admin", kind: "redirect", to: "/admin/tenant-profile" },
   { route: "/admin/tenant-profile", kind: "" },
   { route: "/admin/tenant-policy", kind: "" },
   { route: "/admin/discord-config", kind: "" },
@@ -116,7 +117,7 @@ export const SPEED_TARGETS: SpeedTarget[] = [
   { route: "/admin/channel-masters", kind: "" },
   { route: "/design-system", kind: "" },
   { route: "/design-preview", kind: "" },
-  { route: "/management-center", kind: "" },
+  { route: "/management-center", kind: "redirect", to: "/management-center/staff" },
   { route: "/management-center/teams", kind: "" },
   { route: "/management-center/staff", kind: "" },
   { route: "/management-center/shifts", kind: "" },
