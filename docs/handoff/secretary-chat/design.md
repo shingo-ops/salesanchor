@@ -3,7 +3,7 @@
 この文書は、右下のチャットで頼んだ内容を AI が決まった形に直し、利用者が下書きを確かめて「作る」を押したときだけ今の機能で請求書・予定を作る仕組みの設計です。
 
 親: [../../specs/secretary-chat/README.md](../../specs/secretary-chat/README.md)
-現状の調べ: [recon.md](recon.md)（origin/main dc99a062e 基準）・[recon2.md](recon2.md)（origin/main 508e86036 基準。以下「r2 §X」）
+現状の調べ: [docs/handoff/secretary-chat/recon.md](recon.md)（origin/main dc99a062e 基準）・[recon2.md](recon2.md)（origin/main 508e86036 基準。以下「r2 §X」）
 KGI: [../../specs/secretary-chat/kgi.md](../../specs/secretary-chat/kgi.md)（PO 承認済み 2026-11-01）
 ADR: [../../adr/ADR-1056-secretary-chat.md](../../adr/ADR-1056-secretary-chat.md)（案）
 

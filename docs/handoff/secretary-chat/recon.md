@@ -75,7 +75,7 @@ backend/app/routers/google_calendar.py:
 - **請求書**: RLS あり（上記）。
 - **予定（calendar_events）**: `calendar_events` を含む migration は migrations/078_create_calendar_events_tenant.sql のみで、そこにも tenant.py にも ROW LEVEL / POLICY の記述は見つからなかった（grep 0件）。予定の表は RLS が付いていない可能性が高いが、本番 DB の実状態は未確認。
 - 値の渡し方: `set_tenant_context`（backend/app/auth/dependencies.py:330）、`get_current_tenant`（:263）、`reset_tenant_context`（:392）、`clear_tenant_context`（:414、backend/app/database.py:46 の get_db の finally から呼ぶ）。
-- 素通りの接続: `admin_engine` / `get_admin_db`（backend/app/database.py の ADMIN_DATABASE_URL、DDL・テナント横断用）。使う口: routers/products.py:647, routers/super_admin_tenants.py:110, routers/admin.py:25、tasks/data_deletion.py:40-59。docker-compose.yml:67 ほかで ADMIN_DATABASE_URL を渡している。通常の接続は `salesanchor_app`（NOBYPASSRLS とコメントに記載、dependencies.py:333）。実際の本番ロール属性は未確認。
+- 素通りの接続: `admin_engine` / `get_admin_db`（backend/app/database.py の ADMIN_DATABASE_URL、DDL・テナント横断用）。使う口: backend/app/routers/products.py:647, backend/app/routers/super_admin_tenants.py:110, backend/app/routers/admin.py:25、tasks/data_deletion.py:40-59。docker-compose.yml:67 ほかで ADMIN_DATABASE_URL を渡している。通常の接続は `salesanchor_app`（NOBYPASSRLS とコメントに記載、dependencies.py:333）。実際の本番ロール属性は未確認。
 
 ## 4. テナントごとの機能の出し分け
 
