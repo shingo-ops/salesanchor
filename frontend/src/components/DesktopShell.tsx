@@ -35,6 +35,8 @@ import { usePermissions } from "../hooks/usePermissions";
 import { useSuperAdmin } from "../hooks/useSuperAdmin";
 import { useSSE } from "../hooks/useSSE";
 import { RealtimeProvider } from "../lib/realtime/RealtimeProvider";
+import LoginApprovalWatcher from "../features/auth/LoginApprovalWatcher";
+import RecoveryCodePrompt from "../features/auth/RecoveryCodePrompt";
 import { listConversations } from "../lib/messages";
 import ConfirmModal from "./ConfirmModal";
 import { LoadingBlock } from "./loading";
@@ -196,12 +198,15 @@ export default function DesktopShell() {
     { to: "/buyback-prices",                          labelKey: "nav.buybackPrices" },
     { to: "/super-admin/fx-rate",                     labelKey: "nav.superAdminFxRate" },
     { to: "/super-admin/viewers",                     labelKey: "nav.superAdminViewers" },
+    { to: "/super-admin/login-requests",              labelKey: "nav.superAdminLoginRequests" },
   ] : [];
 
   const moreItems: NavItem[] = [];
 
   return (
     <RealtimeProvider>
+    <LoginApprovalWatcher />
+    <RecoveryCodePrompt />
     <div className="app-shell">
       {/* ============ Sidebar ============ */}
       <aside

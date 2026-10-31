@@ -94,9 +94,9 @@ describe("SecuritySection passkey section", () => {
   it("is a sibling frame after the security section, not nested, for self login", async () => {
     await waitFor(() => expect(mock.get).toHaveBeenCalledWith("/auth/passkeys"));
     const sections = view.container.querySelectorAll(".account-settings-section");
-    expect(sections).toHaveLength(2);
-    expect(sections[0].contains(sections[1])).toBe(false);
-    expect(sections[1].textContent).toContain(tr("accountSettings.passkeyTitle"));
+    expect(sections).toHaveLength(4);
+    expect(sections[0].contains(sections[3])).toBe(false);
+    expect(sections[3].textContent).toContain(tr("accountSettings.passkeyTitle"));
   });
 
   it("is not shown with Firebase", () => {

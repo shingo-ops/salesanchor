@@ -90,6 +90,7 @@ import AdminHubPage from "./pages/admin/AdminHubPage";
 import ChannelMastersPage from "./pages/admin/ChannelMastersPage";
 import ManagementCenterPage from "./pages/management-center/ManagementCenterPage";
 import FxRatePage from "./pages/super-admin/FxRatePage";
+import LoginRequestsPage from "./pages/super-admin/LoginRequestsPage";
 import ViewerAccountsPage from "./pages/super-admin/ViewerAccountsPage";
 import ViewerTemplatesPage from "./pages/super-admin/ViewerTemplatesPage";
 import TcgProductImportPage from "./pages/super-admin/TcgProductImportPage";
@@ -307,6 +308,11 @@ function App() {
                     <Route
                       path="/super-admin/fx-rate"
                       element={<FxRatePage />}
+                    />
+                    {/* ADR-1055: ログインの許可待ち (is_super_admin 限定、Page 内で 403 の表示) */}
+                    <Route
+                      path="/super-admin/login-requests"
+                      element={<LoginRequestsPage />}
                     />
                     {/* CC_TASK_DISTUI-01: 配信先管理 (is_super_admin 限定) */}
                     <Route

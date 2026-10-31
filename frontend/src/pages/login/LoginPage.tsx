@@ -1,4 +1,4 @@
-import { useState, FormEvent, useEffect } from "react";
+import { useState, FormEvent, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../../contexts/AuthContext";
@@ -6,6 +6,8 @@ import { firebaseErrorMessage } from "../../lib/firebaseErrorMessage";
 import { authErrorMessage } from "../../lib/auth/authErrorMessage";
 import type { AuthErrorContext } from "../../lib/auth/authErrorMessage";
 import { isSelfAuth } from "../../lib/auth/provider";
+import { SelfAuthError, pollLoginRequest, recoverLoginRequest } from "../../lib/auth/selfAuth";
+import type { LoginApprovalRequired } from "../../lib/auth/selfAuth";
 import {
   autoRegisterPasskey,
   conditionalCreateSupported,
@@ -15,7 +17,9 @@ import {
   registerPasskey,
   skipPasskeyPrompt,
 } from "../../lib/auth/passkey";
+import { clearRecoveryPromptMarksForCurrentUser } from "../../features/auth/RecoveryCodePrompt";
 import { Button } from "../../components/Button";
+import { Callout } from "../../components/Callout";
 import { Modal } from "../../components/Modal";
 import { Stack } from "../../components/Stack";
 import { TextFieldControl } from "../../components/TextField";
@@ -23,6 +27,17 @@ import { PasswordFieldControl } from "../../components/PasswordField";
 import { TextLink } from "../../components/TextLink";
 
 type Mode = "signIn" | "reset";
+
+/** 待つ機械が許可を確かめる間隔（ミリ秒）。429 を受けたら下の間隔に下げる */
+const POLL_INTERVAL_MS = 15_000;
+const POLL_BACKOFF_MS = 30_000;
+
+function formatRemaining(seconds: number): string {
+  const safe = Math.max(0, seconds);
+  const minutes = Math.floor(safe / 60);
+  const rest = String(safe % 60).padStart(2, "0");
+  return `${minutes}:${rest}`;
+}
 
 // 自社ログインのときは自社 API の応答から、Firebase のときは Firebase のエラーコードから文言を作る
 function loginErrorMessage(err: unknown, t: (key: string) => string, context: AuthErrorContext): string {
@@ -41,6 +56,16 @@ export default function LoginPage() {
   const [enrolling, setEnrolling] = useState(false);
   const [promptOpen, setPromptOpen] = useState(false);
   const [promptBusy, setPromptBusy] = useState(false);
+  // 知らない機械からのログイン（202）: いつもの機械で許可するまで待つ（ADR-1055）
+  const [approval, setApproval] = useState<LoginApprovalRequired | null>(null);
+  const [deadline, setDeadline] = useState(0);
+  const [now, setNow] = useState(() => Date.now());
+  const [pollNotice, setPollNotice] = useState("");
+  const [recoveryOpen, setRecoveryOpen] = useState(false);
+  const [recoveryCode, setRecoveryCode] = useState("");
+  const [recoveryBusy, setRecoveryBusy] = useState(false);
+  const [recoveryError, setRecoveryError] = useState("");
+  const pollDelayRef = useRef(POLL_INTERVAL_MS);
   const { signIn, signInWithPasskey, sendPasswordReset, user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -54,6 +79,55 @@ export default function LoginPage() {
       navigate(from, { replace: true });
     }
   }, [authLoading, user, navigate, from, enrolling, promptOpen]);
+
+  // 待ちの間: 残り時間を1秒ごとに更新し、15秒ごとに許可を確かめる（429 のときは30秒ごと）
+  useEffect(() => {
+    if (!approval) return;
+    const tick = setInterval(() => setNow(Date.now()), 1_000);
+    return () => clearInterval(tick);
+  }, [approval]);
+
+  useEffect(() => {
+    if (!approval) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    pollDelayRef.current = POLL_INTERVAL_MS;
+    const stop = (message: string) => {
+      setApproval(null);
+      setPollNotice("");
+      setError(message);
+    };
+    const run = async () => {
+      try {
+        const status = await pollLoginRequest();
+        if (cancelled) return;
+        pollDelayRef.current = POLL_INTERVAL_MS;
+        setPollNotice("");
+        if (status === "rejected") return stop(t("login.deviceApproval.rejected"));
+        if (status === "expired") return stop(t("login.deviceApproval.expired"));
+        // completed: トークンを受けた。user が立つので上の自動遷移が進む
+        if (status === "completed") {
+          clearRecoveryPromptMarksForCurrentUser();
+          return;
+        }
+      } catch (err) {
+        if (cancelled) return;
+        if (err instanceof SelfAuthError && err.status === 429) {
+          pollDelayRef.current = POLL_BACKOFF_MS;
+          setPollNotice(t("login.deviceApproval.rateLimited"));
+        } else if (err instanceof SelfAuthError && (err.status === 401 || err.status === 404)) {
+          return stop(t("login.deviceApproval.expired"));
+        }
+        // 通信の失敗などは次の回でやり直す
+      }
+      timer = setTimeout(() => void run(), pollDelayRef.current);
+    };
+    timer = setTimeout(() => void run(), pollDelayRef.current);
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [approval, t]);
 
   // パスワードでログインした直後: 裏で作る → できなければ案内。どこで失敗しても必ず元の画面へ進む
   const afterPasswordSignIn = async () => {
@@ -110,7 +184,15 @@ export default function LoginPage() {
     setLoading(true);
     setEnrolling(true);
     try {
-      await signIn(email, password);
+      const result = await signIn(email, password);
+      if (result.kind === "approval_required") {
+        setApproval(result);
+        setDeadline(Date.now() + result.expiresIn * 1000);
+        setNow(Date.now());
+        setEnrolling(false);
+        setLoading(false);
+        return;
+      }
     } catch (err) {
       // KGI-4: Firebase の生エラー文字列を i18n キー経由に変換
       setError(loginErrorMessage(err, t, "login"));
@@ -158,6 +240,32 @@ export default function LoginPage() {
     }
   };
 
+  const cancelApproval = () => {
+    setApproval(null);
+    setPollNotice("");
+    setError("");
+  };
+
+  const handleRecovery = async (e?: FormEvent) => {
+    e?.preventDefault();
+    if (recoveryBusy) return;
+    setRecoveryError("");
+    setRecoveryBusy(true);
+    try {
+      await recoverLoginRequest(recoveryCode.trim());
+      clearRecoveryPromptMarksForCurrentUser();
+      setRecoveryOpen(false);
+    } catch (err) {
+      setRecoveryError(
+        err instanceof SelfAuthError && err.status === 400
+          ? t("login.deviceApproval.recoveryWrong")
+          : authErrorMessage(err, t, "login"),
+      );
+    } finally {
+      setRecoveryBusy(false);
+    }
+  };
+
   const switchToReset = () => {
     setMode("reset");
     setError("");
@@ -181,7 +289,28 @@ export default function LoginPage() {
           className="login-logo"
         />
 
-        {mode === "signIn" ? (
+        {approval ? (
+          <Stack gap="3">
+            <p className="login-subtitle">{t("login.deviceApproval.title")}</p>
+            {error && <div className="error-message">{error}</div>}
+            <p>{t("login.deviceApproval.body")}</p>
+            <Callout variant="info" title={t("login.deviceApproval.numberLabel")}>
+              <strong data-testid="login-approval-number">{approval.matchNumber}</strong>
+            </Callout>
+            <p>{t("login.deviceApproval.remaining", { time: formatRemaining(Math.ceil((deadline - now) / 1000)) })}</p>
+            {pollNotice && <div className="login-success-message">{pollNotice}</div>}
+            {approval.hasRecoveryCodes && (
+              <Button variant="outline" size="auth" shape="pill" fullWidth type="button" onClick={() => setRecoveryOpen(true)}>
+                {t("login.deviceApproval.useRecoveryCode")}
+              </Button>
+            )}
+            {!approval.hasTrustedDevice && !approval.hasRecoveryCodes && (
+              <p>{t("login.deviceApproval.noTrustedDevice")}</p>
+            )}
+            <p>{t("login.deviceApproval.help")}</p>
+            <TextLink onClick={cancelApproval}>{t("login.deviceApproval.cancel")}</TextLink>
+          </Stack>
+        ) : mode === "signIn" ? (
           <>
             <p className="login-subtitle">{t("login.signIn")}</p>
             {error && <div className="error-message">{error}</div>}
@@ -267,6 +396,40 @@ export default function LoginPage() {
           </>
         )}
       </div>
+      <Modal
+        open={recoveryOpen}
+        size="sm"
+        title={t("login.deviceApproval.recoveryTitle")}
+        onClose={() => setRecoveryOpen(false)}
+        footer={
+          <>
+            <Button variant="secondary" disabled={recoveryBusy} onClick={() => setRecoveryOpen(false)}>
+              {t("common.cancel")}
+            </Button>
+            <Button
+              variant="primary"
+              loading={recoveryBusy}
+              disabled={recoveryBusy || recoveryCode.trim() === ""}
+              onClick={() => void handleRecovery()}
+            >
+              {t("login.deviceApproval.recoverySubmit")}
+            </Button>
+          </>
+        }
+      >
+        <form onSubmit={handleRecovery}>
+          <p>{t("login.deviceApproval.recoveryHelp")}</p>
+          {recoveryError && <div className="error-message">{recoveryError}</div>}
+          <label htmlFor="recovery-code">{t("login.deviceApproval.recoveryLabel")}</label>
+          <TextFieldControl
+            variant="login"
+            id="recovery-code"
+            value={recoveryCode}
+            onChange={(e) => setRecoveryCode(e.target.value)}
+            autoComplete="one-time-code"
+          />
+        </form>
+      </Modal>
       <Modal
         open={promptOpen}
         size="sm"

@@ -210,6 +210,148 @@
         "title": "AddressType",
         "type": "string"
       },
+      "AdminApproveBody": {
+        "properties": {
+          "note": {
+            "description": "本人確認の方法（必須・200字まで）",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "note"
+        ],
+        "title": "AdminApproveBody",
+        "type": "object"
+      },
+      "AdminApproveResult": {
+        "properties": {
+          "status": {
+            "default": "approved",
+            "description": "許可した",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "title": "AdminApproveResult",
+        "type": "object"
+      },
+      "AdminLoginRequestItem": {
+        "properties": {
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "依頼した日時",
+            "title": "Created At"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "依頼した人のメールアドレス",
+            "title": "Email"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "期限",
+            "title": "Expires At"
+          },
+          "full_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "依頼した人の名前",
+            "title": "Full Name"
+          },
+          "id": {
+            "description": "依頼の ID（UUID）",
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "待つ機械の種類",
+            "title": "Label"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "場所の目安（IP Geolocation by DB-IP）",
+            "title": "Location"
+          },
+          "status": {
+            "description": "依頼の状態",
+            "title": "Status",
+            "type": "string"
+          },
+          "user_id": {
+            "description": "依頼した人",
+            "title": "User Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "user_id",
+          "status"
+        ],
+        "title": "AdminLoginRequestItem",
+        "type": "object"
+      },
+      "AdminLoginRequestList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AdminLoginRequestItem"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "AdminLoginRequestList",
+        "type": "object"
+      },
       "AggregatedRow": {
         "properties": {
           "cells": {
@@ -8559,6 +8701,90 @@
         "title": "DeployButtonResponse",
         "type": "object"
       },
+      "DeviceItem": {
+        "properties": {
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "登録した日時",
+            "title": "Created At"
+          },
+          "created_via": {
+            "description": "登録の経路",
+            "title": "Created Via",
+            "type": "string"
+          },
+          "id": {
+            "description": "機械の ID",
+            "title": "Id",
+            "type": "integer"
+          },
+          "is_current": {
+            "description": "いま使っている機械か",
+            "title": "Is Current",
+            "type": "boolean"
+          },
+          "label": {
+            "description": "機械の種類（例 iPhone・Safari）",
+            "title": "Label",
+            "type": "string"
+          },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "最後に使った日時",
+            "title": "Last Used At"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "場所の目安（IP Geolocation by DB-IP）",
+            "title": "Location"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "created_via",
+          "is_current"
+        ],
+        "title": "DeviceItem",
+        "type": "object"
+      },
+      "DeviceList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DeviceItem"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "DeviceList",
+        "type": "object"
+      },
       "DexImportApplyRequest": {
         "properties": {
           "entries": {
@@ -16849,6 +17075,153 @@
         "title": "LlmUsageTotal",
         "type": "object"
       },
+      "LoginApprovalRequired": {
+        "description": "知らない機械からのログイン（202）。トークンは出さない。いつもの機械で許可するまで待つ（ADR-1055）。",
+        "properties": {
+          "expires_in": {
+            "description": "依頼の有効秒数",
+            "title": "Expires In",
+            "type": "integer"
+          },
+          "has_recovery_codes": {
+            "description": "予備の合言葉が残っているか",
+            "title": "Has Recovery Codes",
+            "type": "boolean"
+          },
+          "has_trusted_device": {
+            "description": "いつもの機械があるか",
+            "title": "Has Trusted Device",
+            "type": "boolean"
+          },
+          "match_number": {
+            "description": "待つ機械に出す2けたの番号",
+            "title": "Match Number",
+            "type": "string"
+          },
+          "status": {
+            "default": "device_approval_required",
+            "description": "許可待ち",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "match_number",
+          "expires_in",
+          "has_trusted_device",
+          "has_recovery_codes"
+        ],
+        "title": "LoginApprovalRequired",
+        "type": "object"
+      },
+      "LoginRequestApprove": {
+        "properties": {
+          "number": {
+            "description": "待つ機械に出ている2けたの番号",
+            "maxLength": 8,
+            "minLength": 1,
+            "title": "Number",
+            "type": "string"
+          }
+        },
+        "required": [
+          "number"
+        ],
+        "title": "LoginRequestApprove",
+        "type": "object"
+      },
+      "LoginRequestDecision": {
+        "properties": {
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "拒否の理由（wrong_number など）",
+            "title": "Reason"
+          },
+          "status": {
+            "description": "approved＝許可／rejected＝拒否",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "LoginRequestDecision",
+        "type": "object"
+      },
+      "LoginRequestPollResponse": {
+        "properties": {
+          "access_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "入れたときだけ。自社アクセストークン（Bearer）",
+            "title": "Access Token"
+          },
+          "expires_in": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "アクセストークンの有効秒数",
+            "title": "Expires In"
+          },
+          "status": {
+            "description": "pending・rejected・expired・completed。completed でトークンがあれば入れた",
+            "title": "Status",
+            "type": "string"
+          },
+          "token_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "トークン種別",
+            "title": "Token Type"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "LoginRequestPollResponse",
+        "type": "object"
+      },
+      "LoginRequestRecovery": {
+        "properties": {
+          "code": {
+            "description": "予備の合言葉（ABCD-EFGHJ-KMNPQ の形）",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "title": "LoginRequestRecovery",
+        "type": "object"
+      },
       "LookupOption": {
         "properties": {
           "id": {
@@ -23492,6 +23865,93 @@
         "title": "PendingJobDetail",
         "type": "object"
       },
+      "PendingLoginRequest": {
+        "properties": {
+          "candidates": {
+            "description": "番号の候補3つ（正しい番号は待つ機械に出ている）",
+            "items": {
+              "type": "string"
+            },
+            "title": "Candidates",
+            "type": "array"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "依頼した日時",
+            "title": "Created At"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "期限",
+            "title": "Expires At"
+          },
+          "id": {
+            "description": "依頼の ID（UUID）",
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "待つ機械の種類（例 iPhone・Safari）",
+            "title": "Label"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "場所の目安（IP Geolocation by DB-IP）",
+            "title": "Location"
+          }
+        },
+        "required": [
+          "id",
+          "candidates"
+        ],
+        "title": "PendingLoginRequest",
+        "type": "object"
+      },
+      "PendingLoginRequestList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PendingLoginRequest"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "PendingLoginRequestList",
+        "type": "object"
+      },
       "PendingReviewItem": {
         "properties": {
           "card_game": {
@@ -28712,6 +29172,37 @@
           "confident"
         ],
         "title": "RecipientLanguageResponse",
+        "type": "object"
+      },
+      "RecoveryCodesCreated": {
+        "properties": {
+          "codes": {
+            "description": "作った予備の合言葉（このとき1回だけ見せる）",
+            "items": {
+              "type": "string"
+            },
+            "title": "Codes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "codes"
+        ],
+        "title": "RecoveryCodesCreated",
+        "type": "object"
+      },
+      "RecoveryCodesStatus": {
+        "properties": {
+          "remaining": {
+            "description": "使える予備の合言葉の残り数",
+            "title": "Remaining",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "remaining"
+        ],
+        "title": "RecoveryCodesStatus",
         "type": "object"
       },
       "RegisterRequest": {
@@ -39511,15 +40002,157 @@
         ]
       }
     },
+    "/api/v1/auth/devices": {
+      "get": {
+        "description": "本人の「ログインしている機械」の一覧（K8）。場所の目安の出どころは IP Geolocation by DB-IP。",
+        "operationId": "device_list_api_v1_auth_devices_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Device List",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/devices/{device_id}": {
+      "delete": {
+        "description": "本人の機械を取り消す。結び付いた組は失効し、その機械のアクセストークンも次の要求で 401。他人の id は 404。",
+        "operationId": "device_revoke_api_v1_auth_devices__device_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "device_id",
+            "required": true,
+            "schema": {
+              "title": "Device Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Device Revoke",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/api/v1/auth/login": {
       "post": {
-        "description": "自社ログイン。失敗理由は区別せず 1 種類の文言で返す。",
+        "description": "自社ログイン。失敗理由は区別せず 1 種類の文言で返す。\n\nAUTH_DEVICE_APPROVAL=off（既定）は今までと同じ。enforce のとき、知らない機械は 202 で止める（ADR-1055）。",
         "operationId": "self_login_api_v1_auth_login_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/SelfLoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SelfTokenResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginApprovalRequired"
+                }
+              }
+            },
+            "description": "知らない機械。いつもの機械で許可するまで待つ"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Self Login",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/login-requests/poll": {
+      "post": {
+        "description": "待つ機械の確認（Cookie sa_login_pending だけで動く。画面は15秒ごと）。\n\npending → そのまま。approved → 1回だけ（条件付き更新が通ったときだけ）印を登録してトークンを出す。\nrejected・expired → 状態を返して Cookie を消す。",
+        "operationId": "login_request_poll_api_v1_auth_login_requests_poll_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginRequestPollResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Login Request Poll",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/login-requests/recovery": {
+      "post": {
+        "description": "予備の合言葉で入る（待つ機械・Cookie sa_login_pending）。\n\n間違いは依頼の failed_code_attempts（5回で依頼を rejected）と口座の失敗回数の両方に数える。\n合えば合言葉を使用済みにし、印を登録（recovery_code）してトークンを出す。",
+        "operationId": "login_request_recovery_api_v1_auth_login_requests_recovery_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequestRecovery"
               }
             }
           },
@@ -39547,7 +40180,113 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Self Login",
+        "summary": "Login Request Recovery",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/login-requests/{request_id}/approve": {
+      "post": {
+        "description": "いつもの機械で番号を選んで許可する（D1・D15）。正しい番号＝許可。違う番号＝その依頼だけ拒否（全ログアウトはしない）。\n\n本人の依頼だけを1行の条件付き更新で1回だけ決める。1行も返らなければ、id が無い・他人の依頼・決まり済みの\nどれでも 404（他人の依頼の有無を漏らさない）。取り消された機械の組からは 403 device_not_trusted。",
+        "operationId": "login_request_approve_api_v1_auth_login_requests__request_id__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequestApprove"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginRequestDecision"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Login Request Approve",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/login-requests/{request_id}/reject": {
+      "post": {
+        "description": "「私ではない」。待っていた機械は入れない。押した機械以外の組は全部ログアウト（K4）。",
+        "operationId": "login_request_reject_api_v1_auth_login_requests__request_id__reject_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginRequestDecision"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Login Request Reject",
         "tags": [
           "auth"
         ]
@@ -39984,6 +40723,60 @@
           }
         ],
         "summary": "Password Change",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/recovery-codes": {
+      "post": {
+        "description": "予備の合言葉を10個作る（作り直しもここ。古い未使用は無効になる）。生の値はこの応答の1回だけ。",
+        "operationId": "recovery_codes_create_api_v1_auth_recovery_codes_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecoveryCodesCreated"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Recovery Codes Create",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/recovery-codes/status": {
+      "get": {
+        "description": "予備の合言葉の残り数。",
+        "operationId": "recovery_codes_status_api_v1_auth_recovery_codes_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecoveryCodesStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Recovery Codes Status",
         "tags": [
           "auth"
         ]
@@ -48523,6 +49316,33 @@
         "summary": "Preview Merge Leads",
         "tags": [
           "leads"
+        ]
+      }
+    },
+    "/api/v1/login-approvals/pending": {
+      "get": {
+        "description": "自分宛ての許可待ちの一覧。本人の pending で期限内のものだけ（他人の依頼は出ない）。",
+        "operationId": "login_approvals_pending_api_v1_login_approvals_pending_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingLoginRequestList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Login Approvals Pending",
+        "tags": [
+          "auth"
         ]
       }
     },
@@ -59872,6 +60692,114 @@
           }
         ],
         "summary": "Upsert Budget",
+        "tags": [
+          "super-admin"
+        ]
+      }
+    },
+    "/api/v1/super-admin/login-requests": {
+      "get": {
+        "description": "ログインの許可待ちの一覧（pending は期限内だけ）。",
+        "operationId": "list_login_requests_api_v1_super_admin_login_requests_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "default": "pending",
+              "pattern": "^(pending|approved|rejected|expired|completed)$",
+              "title": "Status",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminLoginRequestList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Login Requests",
+        "tags": [
+          "super-admin"
+        ]
+      }
+    },
+    "/api/v1/super-admin/login-requests/{request_id}/approve": {
+      "post": {
+        "description": "管理者が許可する。自分の依頼は 403。待つ機械は poll で入る（auth_events の reason は approved_admin）。",
+        "operationId": "approve_login_request_api_v1_super_admin_login_requests__request_id__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminApproveBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminApproveResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Approve Login Request",
         "tags": [
           "super-admin"
         ]

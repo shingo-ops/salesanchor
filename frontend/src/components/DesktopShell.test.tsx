@@ -8,6 +8,8 @@ const { mockHasPermission, mockHasAny } = vi.hoisted(() => ({
   mockHasAny: vi.fn<(...keys: string[]) => boolean>(() => false),
 }));
 
+vi.mock("../features/auth/LoginApprovalWatcher", () => ({ default: () => null }));
+vi.mock("../features/auth/RecoveryCodePrompt", () => ({ default: () => null }));
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string) => key,
