@@ -3,7 +3,7 @@
 - 対象: docs/handoff/cloud-case-ai/design.md 第4.6版 §4-2・§4-3・§7（T2〜T6c・T7）・§9 の段2。ADR-1052（Accepted）。
 - 根拠の写し: S=origin/main 8c6f52813（Merge #4942）。行番号はすべてこの sha。実装の前に最新の origin/main で行を合わせ直す（§3(a)）。
 - 前提（済み）: 段1 本番反映・受入合格（#4932・#4940）。case-api.salesanchor.jp はさくらの DNS に登録済み、証明書は 2026-10-31 16:46 に取得（期限 2027-01-29。PO の `!`）。
-- 状態: 第6版（第1版〜第5版の審査 REVISE を受けた直し。§0-2〜§0-6）。
+- 状態: 第6版（第1版〜第5版の審査 REVISE を受けた直し。§0-2〜§0-6）。第6版の審査は APPROVE（LOW 1 件＝「good が無いのは初回だけ」の書き方。この版で直し済み）。
 
 ## 0. 設計からの直し（V5。どれも事実に合わせる直しで、守りの強さは変えない）
 - V5-1 DNS: 設計 §4-3（design.md:179）・§4-4（:210）の「Cloudflare・グレー雲」は事実と違う。case-api の名前はさくらの DNS（ns1/ns2.dns.ne.jp）にあり、プロキシは無い。SNI はそのまま nginx に届く（守りの前提は満たす）。design.md の 2 行をこのカードと同じ PR で直す。プロキシを入れる場合に守りを作り直す約束は残す。
@@ -70,7 +70,7 @@
 ## 0-5. 第4版の審査（REVISE・MEDIUM 1・LOW 2）への対応
 | 指摘 | 対応（場所） |
 |---|---|
-| M1 1c は作業の写しの設定で作り直すが、その設定は nginx -t しか通っていない回がある | 審査の案 (a) を採る。1c は good があれば作業の写しを good に替えてから点検し、作り直す。good が無いのはこの形の初回だけ。受入の ② を点検に落ちる回と通る回に分け、⑦ を足す（§4-E の 1c・§5） |
+| M1 1c は作業の写しの設定で作り直すが、その設定は nginx -t しか通っていない回がある | 審査の案 (a) を採る。1c は good があれば作業の写しを good に替えてから点検し、作り直す。good が無いのは、この形の初回と、good の書き出しに失敗して消した後（第6版の審査 L1）。受入の ② を点検に落ちる回と通る回に分け、⑦ を足す（§4-E の 1c・§5） |
 | L1' salesanchor_app の権限の試験が #11 の中身に無い | §4-G の #11 に足す |
 | L2 good の書き出しの失敗が黙って通り、切れた good が残りうる | tmp に書いてから mv し、失敗したら警告を出す。受入に ⑧ を足す（§4-E の 1 の 5・§5） |
 
@@ -226,7 +226,7 @@
   - 置くファイル（どれも /home/ubuntu/salesanchor の直下。git に入れない。.deploy_prev_sha と同じ扱い。§3(n)）: `.deploy_nginx_good.conf`＝最後に後の確認まで通った設定。`.deploy_prev_nginx.conf`＝今回の戻り先。
   1. 戻り先の用意（`PREV=$(cat .deploy_prev_sha 2>/dev/null || true)`）:
      - `.deploy_nginx_good.conf` があって空でなければ、それを `.deploy_prev_nginx.conf` に写す（最後に起きた設定を正とする。PREV の設定は、前のデプロイで点検に落ちていれば壊れている）。
-     - 無ければ（この形の初回）、PREV が空でなく `git cat-file -e "${PREV}:nginx/nginx.conf"` が通るときだけ `git show "${PREV}:nginx/nginx.conf" > .deploy_prev_nginx.conf`。
+     - 無ければ（この形の初回か、good の書き出しに失敗して消した後）、PREV が空でなく `git cat-file -e "${PREV}:nginx/nginx.conf"` が通るときだけ `git show "${PREV}:nginx/nginx.conf" > .deploy_prev_nginx.conf`。
      - どちらもできない・結果が空なら、理由の印（`::error::戻り先の nginx.conf を用意できません`）を出し、作り直さずに `exit 1`（作業の写しの nginx.conf は新しいまま残る。この回の Emergency の手順は #9 の 1c が守る）。
   2. 戻り先の点検: `.deploy_prev_nginx.conf` を本番と同じ取り付けで `nginx -t`（形は §3(m)）。通らなければ作り直さずに `exit 1`。
   3. 新しい設定の点検: `docker compose run --rm --no-deps -T nginx nginx -t`（本番の取り付け＝証明書・htpasswd.d・/var/www をそのまま使う。§3(j)）。通らなければ、作業の写しを戻り先に替えてから（`cp .deploy_prev_nginx.conf nginx/nginx.conf`。後ろで nginx を作り直す手順が起きても壊れた設定を読まないため）、作り直さずに `exit 1`（今の nginx は前の設定のまま動き続ける）。
@@ -234,8 +234,8 @@
   5. 後の確認: 最大 15 秒、1 秒ごとに `docker inspect --format='{{.State.Running}}' astro-webapp-nginx-1` が true、かつホストから `curl -sk -o /dev/null -w '%{http_code}' --resolve app.salesanchor.jp:443:127.0.0.1 https://app.salesanchor.jp/` が 000 でない（curl の終了コードが 0 でなくても止まらずに次の秒へ）。通ったら `cp nginx/nginx.conf .deploy_nginx_good.conf.tmp && mv .deploy_nginx_good.conf.tmp .deploy_nginx_good.conf` で書き出し（途中で切れた good を残さない）、失敗したら `rm -f .deploy_nginx_good.conf .deploy_nginx_good.conf.tmp` で古い good も消し（動いている設定より古い good で 1c が作り直さないため。第5版の審査 L1）、`::warning::最後に起きた nginx の設定を残せませんでした` を出して、手順を成功で終える（第4版の審査 L2）。
   6. 4 が 0 でない、または 5 が 15 秒の間に通らなければ自動で戻す: `cp .deploy_prev_nginx.conf nginx/nginx.conf` → もう一度作り直し → 5 と同じ確認の結果を出して `exit 1`（`.deploy_nginx_good.conf` は書き換えない）。作業の写しは次のデプロイの `git reset --hard origin/main` で戻る。
 - #9 の 1b（Finalize（S :723）の後・Verify deployment（S :870）の前に新しい手順）: 「Fail if nginx recreate failed」。`if: ${{ always() && steps.nginx_recreate.outcome == 'failure' }}`。`echo "::error::nginx の作り直しの手順が失敗しました（戻り先の用意・点検・後の確認のどれか）"` と `exit 1`。これでデプロイ全体が失敗の表示になり、Verify は動かない。S :1124 の手順は記録に出すだけで、どこにも送らない（届くのは GitHub の既定の失敗の知らせだけ）。PO と Opus への知らせは段4（agent-console）で扱い、段2では足さない。
-- #9 の 1c（S :1106-1122「Emergency block /design/ on smoke FAIL」を変える。`if: failure()` のまま）: htpasswd を消した後、作り直しの前に次の順で進める（第4版の審査 M1。作業の写しの設定は nginx -t しか通っていない、または点検もしていない回がある＝Recreate が飛んだ回（S :500 の success() が偽）・Finalize の自動ロールバックの後（S :765 で作業の写しが PREV の設定になる）・good が無い初回に手順 1・2 で止めた回）:
-  1. `.deploy_nginx_good.conf` があって空でなければ、`cp .deploy_nginx_good.conf nginx/nginx.conf`（最後に後の確認まで通った設定で作り直す。作業の写しは次のデプロイの `git reset --hard origin/main` で戻る）。無ければ（この形の初回だけ）作業の写しのまま。
+- #9 の 1c（S :1106-1122「Emergency block /design/ on smoke FAIL」を変える。`if: failure()` のまま）: htpasswd を消した後、作り直しの前に次の順で進める（第4版の審査 M1。作業の写しの設定は nginx -t しか通っていない、または点検もしていない回がある＝Recreate が飛んだ回（S :500 の success() が偽）・Finalize の自動ロールバックの後（S :765 で作業の写しが PREV の設定になる）・good が無い回（初回・書き出しに失敗して消した後）に手順 1・2 で止めた回）:
+  1. `.deploy_nginx_good.conf` があって空でなければ、`cp .deploy_nginx_good.conf nginx/nginx.conf`（最後に後の確認まで通った設定で作り直す。作業の写しは次のデプロイの `git reset --hard origin/main` で戻る）。無ければ（この形の初回か、good の書き出しに失敗して消した後）作業の写しのまま。点検だけ通った設定で作り直すことになるので、確認の結果を必ず記録に出す。
   2. `docker compose run --rm --no-deps -T nginx nginx -t` を通す。通らなければ作り直さず、`::warning::nginx の設定が点検に通らないため作り直しません` を出す（全部の入口を止めないことを優先する）。
   3. 通れば今と同じに作り直し、#9 の 1 の 5 と同じ確認の結果を記録に出す（この手順は `if: failure()` の中なので、確認に落ちても戻す先はもう無い。結果は記録に残すだけ）。今の手順は、どの失敗の回でも作業の写しの設定で nginx を作り直すので、点検に落ちた設定でも作り直してしまう（第3版の審査 H1）。
 - 失敗の表示になった回は、1c が /design/ を閉じる（htpasswd を消す）。次に成功したデプロイで htpasswd が作り直され、元に戻る（S deploy.yml:1104 の説明と :125「Setup design-site htpasswd (idempotent)」）。
