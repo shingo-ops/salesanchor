@@ -196,3 +196,123 @@ def test_deterministic_outputs(tmp_path):
                    for f in ("result.tsv", "errors.tsv", "inputs.sha256")})
     assert hs[0] == hs[1]
     assert len((tmp_path / "o1" / "result.tsv").read_text().splitlines()) == 19
+
+
+# ---- 行ごとの判定を書き出す --verdicts-out（T1〜T5） ----
+
+# T1: 変更前の本線の道具で、test_deterministic_outputs と同じ入力を流したときの sha256
+BASELINE_SHA = {
+    "result.tsv": "90d00af78d66b479c92b325f45f138868da208943c495e6e1f18e0a9b2f6adad",
+    "errors.tsv": "3c83de0c0a82e7ae3e024ab90494de0842aca1fd2d19fb48b69e199ce2c5659b",
+    "inputs.sha256": "ae43232c0fa7874b33975c303791a4a4c2fb2015628301826fd0319356b29adf",
+}
+
+ITEMS = ["C1", "E1", "E2", "E3", "A1", "A2", "A3", "A4", "A5"]
+
+
+def _run_main(gold, snap, out, extra=()):
+    return subprocess.run([sys.executable, "-I", SCRIPT, "--gold", str(gold), "--snapshot-dir", str(snap),
+                           "--out-dir", str(out), *extra], capture_output=True, text=True)
+
+
+def _make_verdict_inputs(tmp_path):
+    gold = tmp_path / "g.tsv"
+    snap = tmp_path / "snap"
+    snap.mkdir()
+    write(str(gold), G_HEAD, [
+        grow(),                                                                      # key1 全部合う
+        grow(price_line="L5", lines="L5", 除外="ALL", A1_product_id="(除外)"),        # key2 除外 ALL
+        grow(price_line="L8", lines="L8", 除外="A1", A1_product_id="(除外)"),         # key3 A1 の除外
+        grow(price_line="L11", lines="L11"),                                          # key4 E1 が違う
+        grow(投稿id="P2"),                                                            # key5 読み落とし
+    ])
+    write(str(snap / "P1.tsv"), S_HEAD, [
+        srow(),
+        srow(extraction_item_id="b", line_start="5", line_end="5", source_lines="[5]"),
+        srow(extraction_item_id="c", line_start="8", line_end="8", source_lines="[8]", product_id="zzz"),
+        srow(extraction_item_id="d", line_start="11", line_end="12", source_lines="[11, 12]"),
+    ])
+    write(str(snap / "P2.tsv"), S_HEAD, [])
+    return gold, snap
+
+
+def _expected_verdicts():
+    rows = []
+    for item in ITEMS:
+        rows.append((1, item, "OK"))
+    rows += [(3, i, "SKIP" if i == "A1" else "OK") for i in ITEMS]
+    rows += [(4, i, "NG" if i == "E1" else "SKIP" if i in ("E2", "E3") else "OK") for i in ITEMS]
+    rows.append((5, "C1", "NG"))
+    return "key\t項目\t判定\n" + "".join("%d\t%s\t%s\n" % r for r in rows)
+
+
+def test_t1_without_flag_output_unchanged(tmp_path):
+    gold = tmp_path / "g.tsv"
+    snap = tmp_path / "snap"
+    snap.mkdir()
+    write(str(gold), G_HEAD, [grow(), grow(price_line="L5", lines="L5", A2_condition="Case")])
+    write(str(snap / "P1.tsv"), S_HEAD, [srow(), srow(extraction_item_id="q", line_start="5", line_end="5", source_lines="[5]")])
+    r = _run_main(gold, snap, tmp_path / "out")
+    assert r.returncode == 0, r.stderr
+    got = {f: hashlib.sha256((tmp_path / "out" / f).read_bytes()).hexdigest() for f in BASELINE_SHA}
+    assert got == BASELINE_SHA
+
+
+def test_t2_verdicts_rows(tmp_path):
+    gold, snap = _make_verdict_inputs(tmp_path)
+    v = tmp_path / "v" / "V.tsv"
+    r = _run_main(gold, snap, tmp_path / "out", ["--verdicts-out", str(v)])
+    assert r.returncode == 0, r.stderr
+    assert v.read_bytes().decode("utf-8") == _expected_verdicts()
+
+
+def test_t3_verdicts_match_result(tmp_path):
+    gold, snap = _make_verdict_inputs(tmp_path)
+    v = tmp_path / "V.tsv"
+    r = _run_main(gold, snap, tmp_path / "out", ["--verdicts-out", str(v)])
+    assert r.returncode == 0, r.stderr
+    cnt = {}
+    for line in v.read_text(encoding="utf-8").splitlines()[1:]:
+        _, item, verdict = line.split("\t")
+        cnt[(item, verdict)] = cnt.get((item, verdict), 0) + 1
+    res = {}
+    for line in (tmp_path / "out" / "result.tsv").read_text(encoding="utf-8").splitlines()[1:]:
+        c = line.split("\t")
+        res[(c[0], c[1])] = c
+    for item, stage in (("E1", "Gemini"), ("E2", "システム"), ("E3", "システム"), ("A1", "通し"),
+                        ("A2", "通し"), ("A3", "通し"), ("A4", "通し"), ("A5", "通し")):
+        c = res[(item, stage)]
+        assert (cnt.get((item, "OK"), 0), cnt.get((item, "NG"), 0), cnt.get((item, "NOWORD"), 0)) == \
+            (int(c[2]), int(c[3]), int(c[4])), item
+    assert cnt.get(("C1", "NG"), 0) == int(res[("C1読み落とし", "件数")][3])
+
+
+def test_t3_mismatch_stops_without_verdicts(tmp_path, monkeypatch):
+    gold, snap = _make_verdict_inputs(tmp_path)
+    monkeypatch.setattr(sc, "check_verdicts", lambda T, c1, vs: ["E1"])
+    v = tmp_path / "V.tsv"
+    rc = sc.main(["--gold", str(gold), "--snapshot-dir", str(snap), "--out-dir", str(tmp_path / "out"),
+                  "--verdicts-out", str(v)])
+    assert rc == 2
+    assert not v.exists()
+    assert (tmp_path / "out" / "result.tsv").exists()
+
+
+def test_t4_verdicts_inside_repo_stops(tmp_path):
+    gold, snap = _make_verdict_inputs(tmp_path)
+    v = os.path.join(HERE, "V_should_not_exist.tsv")
+    r = _run_main(gold, snap, tmp_path / "out", ["--verdicts-out", v])
+    assert r.returncode == 2 and "STOP" in r.stderr
+    assert not os.path.exists(v)
+    assert not (tmp_path / "out").exists()
+
+
+def test_t5_verdicts_deterministic(tmp_path):
+    gold, snap = _make_verdict_inputs(tmp_path)
+    hs = []
+    for n in ("a", "b"):
+        v = tmp_path / n / "V.tsv"
+        r = _run_main(gold, snap, tmp_path / ("o" + n), ["--verdicts-out", str(v)])
+        assert r.returncode == 0, r.stderr
+        hs.append(hashlib.sha256(v.read_bytes()).hexdigest())
+    assert hs[0] == hs[1]
