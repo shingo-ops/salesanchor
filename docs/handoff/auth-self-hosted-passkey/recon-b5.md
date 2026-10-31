@@ -39,7 +39,7 @@
 - 権限: `:95-101` `salesanchor_app` ロールがあれば `GRANT SELECT, INSERT, UPDATE, DELETE ON public.webauthn_credentials, ...` と `GRANT USAGE, SELECT ON SEQUENCE public.webauthn_credentials_id_seq, ...`（`:98-99`）。
 - 同 migration の同居物（参考）: `password_reset_tokens`（:47-）、`auth_refresh_tokens`（:68-、`amr` 列は無い）。
 
-【事実】この表を使う ORM モデル・SQL は `*.py`/`*.sql`/`*.ts`/`*.tsx`/`*.sh`/`*.yml` には 1 件も無い。`backend/app/auth/self_tokens.py:4-5` のコメントのとおり、同系の表は models.py に載せず生 SQL で読み書きする方針。
+【事実】この表を使う ORM モデル・SQL は py・sql・ts・tsx・sh・yml の各ファイル には 1 件も無い。`backend/app/auth/self_tokens.py:4-5` のコメントのとおり、同系の表は models.py に載せず生 SQL で読み書きする方針。
 - 【無い】探した命令: `grep -rIn -i "webauthn_credentials" --include=*.py --include=*.sql --include=*.ts --include=*.tsx --include=*.sh --include=*.yml --include=*.yaml . --exclude-dir=node_modules`（上の migration 以外 0 件）。`grep -rIl -i webauthn --exclude-dir=node_modules --exclude-dir=.git .` の一致は migration 1 本と docs だけ（backend/app・frontend/src のコード 0 件）。
 - 参考（根拠）: `backend/app/auth/self_tokens.py:4-5` 「更新用トークンの表 public.auth_refresh_tokens は models.py に載せず、生 SQL で読み書きする（migration-guard チェック1 を避けるため）。」
 
@@ -62,7 +62,7 @@
 
 passkey の口は 【無い】（探した命令: `grep -n "passkey" backend/app/routers/auth.py` → 0 件）。
 
-### login が成功時に呼ぶもの（`self_login`、`auth.py:265-323`）
+### login が成功時に呼ぶもの（`self_login`、`backend/app/routers/auth.py:265-323`）
 - `:203` `def _require_issuance_enabled() -> None:`（`self_tokens.is_issuance_enabled()` が偽なら 404）
 - `:208` `def _require_app_origin(request: Request) -> None:` → `if request.headers.get("origin") != self_tokens.rp_origin(): raise HTTPException(status_code=403, detail="forbidden_origin")`
 - `:314-316`
@@ -103,7 +103,7 @@ passkey の口は 【無い】（探した命令: `grep -n "passkey" backend/app
 
 | 設定 | 定義 | 既定値 |
 |---|---|---|
-| `AUTH_PROVIDER` | `self_tokens.py:37-38` `def auth_provider() -> str:` → `os.getenv("AUTH_PROVIDER", DEFAULT_AUTH_PROVIDER).strip().lower()`。既定 `:20` `DEFAULT_AUTH_PROVIDER = "firebase"  # firebase | self` | `firebase` |
+| `AUTH_PROVIDER` | `backend/app/auth/self_tokens.py:37-38` `def auth_provider() -> str:` → `os.getenv("AUTH_PROVIDER", DEFAULT_AUTH_PROVIDER).strip().lower()`。既定 `:20` `DEFAULT_AUTH_PROVIDER = "firebase"  # firebase | self` | `firebase` |
 | `AUTH_JWT_SECRET` | `:41-42` `return os.getenv("AUTH_JWT_SECRET", "")`。起動時検査 `:72-83` `validate_settings()`（`self` で空なら RuntimeError、32 文字未満も RuntimeError、`MIN_SECRET_LENGTH = 32`＝`:27`） | 空 |
 | `AUTH_JWT_SECRET_PREVIOUS` | `:45-46` | 空 |
 | `AUTH_RP_ORIGIN` | `:49-50` `def rp_origin() -> str:` → `os.getenv("AUTH_RP_ORIGIN", DEFAULT_RP_ORIGIN)`。既定 `:21` `DEFAULT_RP_ORIGIN = "https://app.salesanchor.jp"` | `https://app.salesanchor.jp` |
@@ -169,22 +169,22 @@ passkey の口は 【無い】（探した命令: `grep -n "passkey" backend/app
   - `:149-155` `selfRequestPasswordReset`・`selfConfirmPasswordReset`
   - `frontend/src/lib/api.ts:29` `import { expireSession, getAccessToken, selfRefresh } from "./auth/selfAuth";`、`:67-90` 401 の再試行（`fetchWithReauth`、`:80` `if (res.status !== 401 || !isSelfAuth()) return res;`、`:83-85` `/auth/` で始まる口は refresh しない）
   - `frontend/src/contexts/AuthContext.tsx:98-122`（起動時 `selfRefresh()` と `subscribeSession`）、`:132-140` サインアウト（`api.post("/auth/logout", {})` → `expireSession()`）
-  - テスト `frontend/src/lib/auth/selfAuth.test.ts`・`apiReauth.test.ts`・`provider.test.ts`・`authErrorMessage.test.ts`
+  - テスト `frontend/src/lib/auth/selfAuth.test.ts`・`frontend/src/lib/auth/apiReauth.test.ts`・`frontend/src/lib/auth/provider.test.ts`・`frontend/src/lib/auth/authErrorMessage.test.ts`
 - パスキー関連の画面コードは 【無い】。探した命令: `grep -rln -i "passkey\|webauthn" frontend/src` → 0 件（`frontend/e2e` にも auth/login 名のファイル無し: `ls frontend/e2e | grep -i -E "auth|login"`）。
 
 ---
 
 ## Q6 利用者が自分の設定を見る画面
 
-- ページ: `frontend/src/pages/account-settings/AccountSettingsPage.tsx`（`:3` `import SecuritySection from "./SecuritySection";`、`:11-13` `<ProfileSection />` `<PreferencesSection />` `<SecuritySection />`）。同ディレクトリ: `ProfileSection.tsx`・`PreferencesSection.tsx`・`SecuritySection.tsx`・`SecuritySection.test.tsx`・`ProfileSectionAvatar.test.tsx`・`AccountSettings.stories.tsx`・`account-settings.css`。
+- ページ: `frontend/src/pages/account-settings/AccountSettingsPage.tsx`（`:3` `import SecuritySection from "./SecuritySection";`、`:11-13` `<ProfileSection />` `<PreferencesSection />` `<SecuritySection />`）。同ディレクトリ: `frontend/src/pages/account-settings/ProfileSection.tsx`・`frontend/src/pages/account-settings/PreferencesSection.tsx`・`frontend/src/pages/account-settings/SecuritySection.tsx`・`frontend/src/pages/account-settings/SecuritySection.test.tsx`・`frontend/src/pages/account-settings/ProfileSectionAvatar.test.tsx`・`frontend/src/pages/account-settings/AccountSettings.stories.tsx`・`account-settings.css`。
 - パスワード変更の画面: `frontend/src/pages/account-settings/SecuritySection.tsx`（138 行）。
   - 自社ログインのとき `:41-56` `api.post<{ access_token?: string | null; expires_in?: number | null }>("/auth/password/change", { current_password: form.current, new_password: form.next })` → `:48` `adoptAccessToken(...)`、エラー `:53` `authErrorMessage(err, t, "passwordChange")`
   - 見出し `:85-89` `<section className="account-settings-section"> <div className="account-settings-section-title"> <ACCOUNT_ICONS.security size={ICON.md} aria-hidden="true" /> {t("accountSettings.sectionSecurity")}`
   - 使っている部品（import）: `Button`（`components/Button`、`:16`）、`TextFieldControl`（`components/TextField`、`:17`）、`ACCOUNT_ICONS`（`constants/icons`）、`ICON`（`constants/iconSizes`）、`api`（`lib/api`）、`adoptAccessToken`（`lib/auth/selfAuth`）
   - フォーム部分は素の `<form>`・`<div className="form-group">`・`<label htmlFor=...>`（`:92,104,116`）。パスキーの一覧・追加・削除の UI は 【無い】（探した命令: `grep -n -i "passkey" frontend/src/pages/account-settings/SecuritySection.tsx` → 0 件）。
-  - プロフィール: `ProfileSection.tsx`。
+  - プロフィール: `frontend/src/pages/account-settings/ProfileSection.tsx`。
 - 設計書が便5 に指定している金型: `docs/handoff/auth-self-hosted-passkey/design.md:128` 「アカウント設定 セキュリティ（`frontend/src/pages/account-settings/SecuritySection.tsx`）｜パスワード変更を自社 API に。パスキー一覧（名前・登録日・最後に使った日）・追加・削除｜`Button`・`TextFieldControl`・`DataTable`（`frontend/src/components/DataTable.tsx`）・`ConfirmModal`（削除確認）」
-- 一覧に使える DataTable 金型: `frontend/src/components/DataTable.tsx`（`:147` `export function DataTable<T = Record<string, unknown>>({ columns, ...`）。関連ファイル: `DataTable.css`・`DataTable.stories.tsx`・`DataTable.test.tsx`・`DataTable.bin1.test.tsx`。
+- 一覧に使える DataTable 金型: `frontend/src/components/DataTable.tsx`（`:147` `export function DataTable<T = Record<string, unknown>>({ columns, ...`）。関連ファイル: `DataTable.css`・`frontend/src/components/DataTable.stories.tsx`・`frontend/src/components/DataTable.test.tsx`・`frontend/src/components/DataTable.bin1.test.tsx`。
   - 列定義 `:39` `export interface DataTableColumn<T = Record<string, unknown>> {`（`key: string`・`header: string`・`width?`・`ellipsis?`・`sortable?`・`align?`・`stickyLeft?`・`renderCell` は `:5` のコメント「columns : 型付き列定義（key / header / width / sortable / renderCell）」）
   - Props `:74-77` `export interface DataTableProps<T> { columns: DataTableColumn<T>[]; data: T[]; rowKey: (row: T) => string;`
   - `:22` 「セル内に日本語ラベルを埋め込まない（columns.header / emptyState を通じて渡す）。」
@@ -199,13 +199,13 @@ passkey の口は 【無い】（探した命令: `grep -n "passkey" backend/app
 
 | トップキー | 行 | 中のキー（接頭辞） |
 |---|---|---|
-| `login` | `ja.json:674-683`（en も :674-683） | `login.email`・`login.password`・`login.signIn`・`login.forgotPassword`・`login.resetPassword`・`login.sendResetEmail`・`login.resetEmailSent`・`login.backToLogin` |
+| `login` | `frontend/src/locales/ja.json:674-683`（en も :674-683） | `login.email`・`login.password`・`login.signIn`・`login.forgotPassword`・`login.resetPassword`・`login.sendResetEmail`・`login.resetEmailSent`・`login.backToLogin` |
 | `authError` | `:684-696` | `authError.invalidCredentials`・`forbiddenOrigin`・`unavailable`・`tooManyAttempts`・`resetLinkInvalid`・`currentPasswordWrong`・`passwordTooShort`・`passwordTooLong`・`passwordTooCommon`・`validation`・`default` |
 | `resetPasswordPage` | `:697-` | `subtitle`・`title`・`newPassword` ほか（パスワード再設定画面） |
 | `accountSettings` | `:3182-`（`sectionSecurity` は `:3185`、`currentPassword` は `:3196`、`passwordChanged` は `:3201`） | `accountSettings.subtitle`・`sectionProfile`・`sectionSecurity`・`changePassword`・`currentPassword`・`newPassword`・`confirmPassword`・`passwordMismatch`・`passwordTooShort`・`passwordChanged`・`sectionPreferences`・`avatar*` 等 |
 
-- `ja.json:422` にも `"sectionSecurity": "権限・セキュリティ"` がある（別の画面のキー。`accountSettings.sectionSecurity` とは別）。
-- 識別子→文言の変換: `frontend/src/lib/auth/authErrorMessage.ts`（`login` と `SecuritySection` が呼ぶ。文脈引数は `AuthErrorContext`、`LoginPage.tsx:7` で import）。
+- `frontend/src/locales/ja.json:422` にも `"sectionSecurity": "権限・セキュリティ"` がある（別の画面のキー。`accountSettings.sectionSecurity` とは別）。
+- 識別子→文言の変換: `frontend/src/lib/auth/authErrorMessage.ts`（`login` と `SecuritySection` が呼ぶ。文脈引数は `AuthErrorContext`、`frontend/src/pages/login/LoginPage.tsx:7` で import）。
 - 【無い】`passkey` 系のキー: 探した命令 `grep -n -i "passkey\|webauthn" frontend/src/locales/ja.json frontend/src/locales/en.json` → 0 件。
 
 ---
@@ -213,7 +213,7 @@ passkey の口は 【無い】（探した命令: `grep -n "passkey" backend/app
 ## Q8 auth のテスト
 
 ### backend/tests のファイル（`ls backend/tests | grep -i -E "auth|login|self_|token|password|refresh|passkey"` の結果）
-`test_discord_oauth.py`・`test_discord_oauth_rls.py`・`test_google_drive_oauth.py`・`test_issue_initial_passwords.py`・`test_meta_inbox_auth.py`・`test_meta_oauth_endpoints.py`・`test_meta_oauth_scope.py`・`test_oauth_state.py`・`test_oauth_state_extra.py`・`test_password_gen.py`・`test_password_policy.py`・`test_password_reset.py`（342 行）・`test_paypal_regtoken_rls.py`・`test_refresh_meta_tokens.py`・`test_registration_token_schema.py`・`test_self_auth.py`（625 行）・`test_smoke_auth_least_privilege.py`・`test_viewer_password.py`・`test_viewer_tokens.py`。自社ログイン本体は `test_self_auth.py`（`self_login` を叩くのは他に `test_users_rls.py`・`test_viewer_isolation.py`）。passkey のテストは 【無い】（`ls backend/tests | grep -i passkey` → 0 件）。
+`backend/tests/test_discord_oauth.py`・`backend/tests/test_discord_oauth_rls.py`・`backend/tests/test_google_drive_oauth.py`・`backend/tests/test_issue_initial_passwords.py`・`backend/tests/test_meta_inbox_auth.py`・`backend/tests/test_meta_oauth_endpoints.py`・`backend/tests/test_meta_oauth_scope.py`・`backend/tests/test_oauth_state.py`・`backend/tests/test_oauth_state_extra.py`・`backend/tests/test_password_gen.py`・`backend/tests/test_password_policy.py`・`backend/tests/test_password_reset.py`（342 行）・`backend/tests/test_paypal_regtoken_rls.py`・`backend/tests/test_refresh_meta_tokens.py`・`backend/tests/test_registration_token_schema.py`・`backend/tests/test_self_auth.py`（625 行）・`backend/tests/test_smoke_auth_least_privilege.py`・`backend/tests/test_viewer_password.py`・`backend/tests/test_viewer_tokens.py`。自社ログイン本体は `backend/tests/test_self_auth.py`（`self_login` を叩くのは他に `backend/tests/test_users_rls.py`・`backend/tests/test_viewer_isolation.py`）。passkey のテストは 【無い】（`ls backend/tests | grep -i passkey` → 0 件）。
 
 ### 代表: login の Cookie・トークンの確かめ方
 `backend/tests/test_self_auth.py:125` `async def test_login_success_returns_token_and_cookie(http, db_session, password_hash):`
@@ -232,7 +232,7 @@ passkey の口は 【無い】（探した命令: `grep -n "passkey" backend/app
 - `:45-50` `no_redis`（autouse。`app.routers.auth.check_auth_rate_limit`・`record_auth_failure`・`blacklist_token` を差し替え）
 - `:58` `_insert_user`、`:70-77` `cleanup_self_auth`（`auth_refresh_tokens` と `id >= 2000` の users を消す）、`:80-92` `http` フィクスチャ（`base_url="https://app.salesanchor.jp"`、`get_db` を `db_session` に差し替え）、`:95` `_login`（`origin` ヘッダ付き）
 - 関連: `:184` `test_login_and_refresh_404_when_provider_firebase`、`:191` `test_login_and_refresh_403_when_origin_wrong_or_missing`、`:218` `test_refresh_rotates_and_old_cookie_is_rejected`、`:303` `test_logout_revokes_refresh_and_clears_cookie`、`:525` `test_password_change_success_issues_new_token_and_revokes_old_refresh`
-- 画面側のテスト: `frontend/src/lib/auth/selfAuth.test.ts`・`apiReauth.test.ts`・`provider.test.ts`・`authErrorMessage.test.ts`、`frontend/src/pages/login/LoginPage.test.tsx`、`frontend/src/pages/account-settings/SecuritySection.test.tsx`。
+- 画面側のテスト: `frontend/src/lib/auth/selfAuth.test.ts`・`frontend/src/lib/auth/apiReauth.test.ts`・`frontend/src/lib/auth/provider.test.ts`・`frontend/src/lib/auth/authErrorMessage.test.ts`、`frontend/src/pages/login/LoginPage.test.tsx`、`frontend/src/pages/account-settings/SecuritySection.test.tsx`。
 - 設計書の守り手の記述: `docs/handoff/auth-self-hosted-passkey/design.md:242` 「ログインの安全に関わる検査は、便2・便5 で作るテストが守る。ファイルはまだ無いため、各便のカードで、テストのパスをこの欄に追記する」、受け入れ `:202` 「パスキー: 新値が保存値以下（保存値 > 0）の sign_count は拒否、challenge は 1 回で消える｜単体テスト（審査 MEDIUM-3）」。
 
 ---
