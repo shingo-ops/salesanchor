@@ -219,6 +219,42 @@ def _assert_no_raw(text_):
         assert raw not in text_, f"元の値が出た: {raw!r}"
 
 
+def test_meta_migration_without_ai_reader(cluster):
+    """ai_reader が無い DB（CI の内部の試し）でも meta の migration が 2 回通る。
+    ai_reader はクラスタ共通なので、先に存在している・他の試験が作った後では確かめられない（skip）。
+    このファイルでは pg より前に走る位置に置く。"""
+    cur = cluster.control.cursor()
+    cur.execute("SELECT 1 FROM pg_roles WHERE rolname = 'ai_reader'")
+    if cur.fetchone() is not None:
+        pytest.skip("ai_reader が既にある（クラスタ共通のロール）")
+    name, conn = _new_db(cluster.control, "ai_cloud_noreader")
+    try:
+        c = conn.cursor()
+        c.execute(_read(_META_SQL))
+        c.execute(_read(_META_SQL))
+        assert _rows(conn, "SELECT to_regclass('ai_cloud_meta.column_class') IS NOT NULL")[0][0] is True
+    finally:
+        conn.close()
+        cur.execute(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)')
+
+
+def test_meta_grants_with_ai_reader(cluster):
+    """ai_reader がある DB では、ai_cloud_meta の USAGE と 3 表の SELECT が ai_reader に付く。"""
+    name, conn = _new_db(cluster.control, "ai_cloud_reader")
+    try:
+        c = conn.cursor()
+        c.execute(_read(_AI_READER_SQL))
+        c.execute(_read(_META_SQL))
+        one = lambda sql: _rows(conn, sql)[0][0]  # noqa: E731
+        assert one("SELECT has_schema_privilege('ai_reader', 'ai_cloud_meta', 'USAGE')") is True
+        for t in ("column_class", "build_log", "build_columns"):
+            assert one(f"SELECT has_table_privilege('ai_reader', 'ai_cloud_meta.{t}', 'SELECT')") is True
+    finally:
+        conn.close()
+        cur = cluster.control.cursor()
+        cur.execute(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)')
+
+
 def test_view_built_and_logged(pg):
     """ビューができ、build_log の最新が ok=t・failed_count=0。全部が秘密列の表と写しの表は作られない。"""
     views = {r[0] for r in _rows(pg, "SELECT viewname FROM pg_views WHERE schemaname = 'ai_cloud'")}
