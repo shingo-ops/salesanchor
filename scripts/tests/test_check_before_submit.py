@@ -18,7 +18,9 @@
   9 (a) --only fixture-select だけなら終了コード 2 / (b) 見本のフォルダ select なら 2 / (d) 行頭の空白つきの # は必須に数えない
   10 pre-push: 印が HEAD と同じなら入口を流さず通す / commit していない変更でも止めない / HEAD と違う中身・削除の push は流さない / × なら止める
   11 validate-pr-body.sh: 印が無いと知らせと記録が出て、終了コードは印があるときと同じ
-設計: docs/handoff/rule-enforcement/design.md の R4a / R4b
+  R4c 便3（prepare が共通の設定に core.hooksPath を書く）
+  14 一時のリポジトリと git worktree add の作業場所の両方で共通の設定に frontend/.husky が書かれる / 15 .git の無い場所・16 git の無い PATH・17 外のリポジトリの深い所は rc=0 で外の値を変えない / 18 3 か所の値が同じ
+設計: docs/handoff/rule-enforcement/design.md の R4a / R4b / R4c 便3
 """
 import os
 import shutil
@@ -487,6 +489,110 @@ class CheckBeforeSubmit(unittest.TestCase):
             self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
             self.assertNotIn("まだ流していません", r.stderr)
         self.assertEqual(len(rows()), 2, rows())
+
+
+class PrepareHooksPath(unittest.TestCase):
+    """R4c 便3: frontend/package.json の prepare が共通の設定に core.hooksPath を書く（書き先を間違えない）。"""
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp(prefix="cbs-prepare-")
+        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+        self.src = os.path.join(ROOT, "frontend", "package.json")
+        # 本体の共通の設定を書かないことを、どの試験でも前後の値の比較で確かめる
+        self.main_before = self._read(self._common_git_dir(ROOT))
+        self.addCleanup(lambda: self.assertEqual(self._read(self._common_git_dir(ROOT)), self.main_before))
+
+    @staticmethod
+    def _clean_env():
+        return {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+
+    def _common_git_dir(self, repo):
+        out = subprocess.run(["git", "-C", repo, "rev-parse", "--path-format=absolute", "--git-common-dir"],
+                             capture_output=True, text=True, env=self._clean_env(), timeout=60)
+        return out.stdout.strip()
+
+    def _read(self, git_dir):
+        # git_env() は core.hooksPath を /dev/null に上書きするので、読むときは GIT_* を外した環境で --local を読む
+        r = subprocess.run(["git", "--git-dir=" + git_dir, "config", "--local", "--get", "core.hooksPath"],
+                           capture_output=True, text=True, env=self._clean_env(), timeout=60)
+        return r.stdout.strip() if r.returncode == 0 else None
+
+    def _frontend(self, parent):
+        d = os.path.join(parent, "frontend")
+        os.makedirs(d)
+        shutil.copy(self.src, os.path.join(d, "package.json"))
+        return d
+
+    def _prepare(self, frontend, env=None):
+        return subprocess.run(["npm", "run", "prepare", "--prefix", frontend], capture_output=True, text=True,
+                              env=env if env is not None else self._clean_env(), timeout=300)
+
+    def _repo(self, name):
+        repo = os.path.join(self.tmp, name)
+        os.makedirs(repo)
+        git(repo, "init", "-q")
+        git(repo, "commit", "-q", "--allow-empty", "-m", "init")
+        return repo
+
+    # 14 一時の git リポジトリでも git worktree add の作業場所（.git がファイル）でも、共通の設定に frontend/.husky が書かれる
+    def test_prepare_writes_common_config(self):
+        repo = self._repo("repo")
+        r = self._prepare(self._frontend(repo))
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertEqual(self._read(os.path.join(repo, ".git")), "frontend/.husky")
+        git(repo, "config", "--unset", "core.hooksPath")
+        wt = os.path.join(self.tmp, "wt")
+        git(repo, "worktree", "add", "-q", "-b", "side", wt)
+        self.assertTrue(os.path.isfile(os.path.join(wt, ".git")))
+        r = self._prepare(self._frontend(wt))
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertEqual(self._read(os.path.join(repo, ".git")), "frontend/.husky")
+
+    # 15 frontend の一つ上に .git が無い場所では何も書かず rc=0
+    def test_prepare_without_git_dir_exits_0(self):
+        os.makedirs(os.path.join(self.tmp, "nogit"))
+        r = self._prepare(self._frontend(os.path.join(self.tmp, "nogit")))
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+
+    # 16 git の無い PATH（node・npm・sh の別名だけ）でも rc=0
+    def test_prepare_without_git_on_path_exits_0(self):
+        bin_dir = os.path.join(self.tmp, "bin")
+        os.makedirs(bin_dir)
+        for name in ("node", "npm", "sh"):
+            found = shutil.which(name)
+            self.assertIsNotNone(found, name + " が PATH に無い")
+            os.symlink(found, os.path.join(bin_dir, name))
+        self.assertIsNone(shutil.which("git", path=bin_dir))
+        os.makedirs(os.path.join(self.tmp, "nogit"))
+        env = self._clean_env()
+        env["PATH"] = bin_dir
+        r = self._prepare(self._frontend(os.path.join(self.tmp, "nogit")), env=env)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+
+    # 17 外のリポジトリの一番上より深い所（<outer>/sub/frontend）の .git 無しの写しは、外のリポジトリの値を書き換えない
+    def test_prepare_does_not_touch_outer_repo(self):
+        outer = self._repo("outer")
+        git(outer, "config", "core.hooksPath", "keep-me")
+        sub = os.path.join(outer, "sub")
+        os.makedirs(sub)
+        r = self._prepare(self._frontend(sub))
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertEqual(self._read(os.path.join(outer, ".git")), "keep-me")
+
+    # 18 prepare・new-worktree.sh・session_start.py の HOOKS_PATH の 3 か所の値が同じ
+    def test_hooks_path_value_is_the_same_in_three_places(self):
+        import json
+        import re
+
+        def text(*rel):
+            with open(os.path.join(ROOT, *rel), encoding="utf-8") as fh:
+                return fh.read()
+        prepare = json.loads(text("frontend", "package.json"))["scripts"]["prepare"]
+        m1 = re.search(r"config core\.hooksPath (\S+)", prepare)
+        m2 = re.search(r'config core\.hooksPath (\S+)', text("scripts", "new-worktree.sh").split("pre-push フックを")[1])
+        m3 = re.search(r'^HOOKS_PATH = "([^"]+)"', text("scripts", "agent-hooks", "cloud", "session_start.py"), re.M)
+        self.assertTrue(m1 and m2 and m3, (m1, m2, m3))
+        self.assertEqual({m1.group(1), m2.group(1), m3.group(1)}, {"frontend/.husky"})
 
 
 if __name__ == "__main__":
