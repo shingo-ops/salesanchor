@@ -72,6 +72,7 @@ from app.routers import (
     note_master,  # 備考マスタ テナント用
     notifications,
     ops,  # ADR-1012 段階2 便B: 保守 API
+    ops_case,  # ADR-1052 段2: 相談係の件の口
     ops_error_reports,  # ADR-1025 便2: 自動セッション用の口
     order_commissions,  # ADR-021 Phase 5 / Sprint 5: 報酬計算 MVP
     order_financials,  # ADR-021 Phase 2 / Sprint 2: 売上計算 MVP
@@ -778,6 +779,9 @@ app.include_router(ops.router, prefix="/api/v1")
 
 # ADR-1025 便2: 自動セッション用の口 3 つ（専用の鍵 ERROR_REPORT_AGENT_TOKEN のみ）
 app.include_router(ops_error_reports.router, prefix="/api/v1")
+
+# ADR-1052 段2: 相談係の件の口 8 つ（専用の鍵 CASE_AGENT_TOKEN・CASE_ADMIN_TOKEN のみ。相談係の口は件の札も要る）
+app.include_router(ops_case.router, prefix="/api/v1")
 
 @app.exception_handler(OperationalError)
 async def db_operational_error_handler(request: Request, exc: OperationalError) -> JSONResponse:

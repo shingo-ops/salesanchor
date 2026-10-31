@@ -142,6 +142,9 @@ services:
       - OPS_INGEST_TOKEN=${OPS_INGEST_TOKEN:-}
       # ADR-1025 便2: 誤り報告の自動セッション用の鍵（空なら口は全部 401）
       - ERROR_REPORT_AGENT_TOKEN=${ERROR_REPORT_AGENT_TOKEN:-}
+      # ADR-1052 段2: 相談係の件の口の鍵 2 つ（空なら口は全部 401。値は deploy.yml が VPS の .env に書く）
+      - CASE_AGENT_TOKEN=${CASE_AGENT_TOKEN:-}
+      - CASE_ADMIN_TOKEN=${CASE_ADMIN_TOKEN:-}
     volumes:
       - ./firebase-credentials.json:/app/firebase-credentials.json:ro
       - ${TCG_SHEETS_SA_KEY_FILE:-/dev/null}:${TCG_SHEETS_SA_KEY_FILE:-/dev/null}:ro
