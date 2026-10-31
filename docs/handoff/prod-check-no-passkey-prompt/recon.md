@@ -31,7 +31,7 @@
 | `tests/prod-check/login.ts:35` | 点検のログイン手順（今の点検 S2〜S6・S8 と速さの記録が使う。`tests/prod-check/fixtures.ts:39`・`tests/prod-check/prod-ui.spec.ts:37`・:129・page-speed.spec.ts:480） |
 | `tests/qa-smoke/utils/real-backend.ts:27` | 手で動かす動作確認のログイン手順（scene-01〜09 が使う） |
 
-- `@simplewebauthn/browser` は 14.0.0（frontend/package.json:78）。公開版の `esm/helpers/browserSupportsWebAuthn.js`（unpkg.com で実物を読んだ）は `globalThis?.PublicKeyCredential !== undefined && typeof globalThis.PublicKeyCredential === 'function'` だけで判定する。
+- @simplewebauthn/browser は 14.0.0（frontend/package.json:78）。公開版の esm/helpers/browserSupportsWebAuthn.js（unpkg.com で実物を読んだ）は `globalThis?.PublicKeyCredential !== undefined && typeof globalThis.PublicKeyCredential === 'function'` だけで判定する。
 - 点検用の人は顔・指紋をまだ登録していない。そのため `show_prompt` が true になり、案内が開いて /login に留まる（上の 2 つの式と、30 秒移らなかった観測が一致する）。
 
 ## 不明点リスト
