@@ -502,7 +502,7 @@ BEGIN
         -- 申請の受付で列を確かめる（中身は名前だけで値は無い）
         GRANT USAGE ON SCHEMA ai_cloud_meta TO salesanchor_app;
         GRANT SELECT ON ai_cloud_meta.build_columns TO salesanchor_app;
-        -- 【要確認】カード §4-A に無い追加: GET /ops/case/audit-inputs が build_log の件数を読むため（件数と失敗の種類だけで値は無い）
+        -- 第6.1版 §0-7 で採用（audit-inputs が build_log の数を読むため。列は数と ok と失敗の種類だけ）
         GRANT SELECT ON ai_cloud_meta.build_log TO salesanchor_app;
         GRANT EXECUTE ON FUNCTION ops_case.is_denied_source(text) TO salesanchor_app;
     ELSE
