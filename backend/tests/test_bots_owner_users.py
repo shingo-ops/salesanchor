@@ -88,3 +88,23 @@ async def test_update_bot_rejects_user_of_other_tenant(seeded):
             f"/api/v1/bots/{bot_id}", json={"owner_staff_id": _OTHER_TENANT_USER_ID}
         )
     assert res.status_code == 400
+
+
+def test_pending_bot_code_fits_column():
+    from app.routers.bots import _pending_bot_code
+
+    for _ in range(100):
+        code = _pending_bot_code()
+        assert len(code) <= 20
+        assert code.startswith("BOT-P-")
+
+
+@pytest.mark.asyncio
+async def test_create_bot_blank_code_gets_sequential_code(seeded):
+    payload = _payload(_SAME_TENANT_USER_ID)
+    payload["bot_code"] = ""
+    with patch("app.routers.bots.record_audit_log", new=AsyncMock()):
+        res = await seeded.post("/api/v1/bots", json=payload)
+    assert res.status_code == 201, res.text
+    body = res.json()
+    assert body["bot_code"] == f"BOT-{body['id']:05d}"
