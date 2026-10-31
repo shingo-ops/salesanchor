@@ -3,8 +3,8 @@
      守り手: はファイルパスか「人手で守る」のみ -->
 # design — リードのカルテで成約しやすさを分析する（テナント001のテスト用データ）
 
-**日付**: 2026-11-01（第7版。第6版 8242dfced は設計審査 APPROVE（補足3件。origin/release/lead-regression-design-v6-report の docs/handoff/lead-regression/review-design-v6.md）。その後の Fable の評価（origin/release/lead-regression-fable-eval-report）で、カルテの3項目が抜けていると分かり、PO 決定 2026-11-01「1」で3項目を足して件数を増やした。審査の補足3件と評価の実装上の注意11件もここへ入れた。第6版は、第5版 59b0c012e の設計審査 REVISE・直す点5件を受けて直した。審査の全文は origin/release/lead-regression-design-v5-report の docs/handoff/lead-regression/review-design-v5.md。第4版の審査は origin/release/lead-regression-design-v4-report の review-design-v4.md。第3版の審査は origin/release/lead-regression-design-v3-report の review-design-v3.md）  
-**状態**: 設計の下書き。KGI 承認済み（K2・K3・K5・K6 は第2〜5版で測り方を直したため PO の再確認が要る。§8 #5）・設計審査 第6版 APPROVE・第7版 未審査・PO 実装承認 なし・実装 未着手。本番への書き込みは一切していない。  
+**日付**: 2026-11-01（第8版。第7版 f028a5125 の設計審査 REVISE・直す点6件（origin/release/lead-regression-design-v7-report の docs/handoff/lead-regression/review-design-v7.md）を受けて直した。直した対応は §11。第7版は、第6版 8242dfced は設計審査 APPROVE（補足3件。origin/release/lead-regression-design-v6-report の docs/handoff/lead-regression/review-design-v6.md）。その後の Fable の評価（origin/release/lead-regression-fable-eval-report）で、カルテの3項目が抜けていると分かり、PO 決定 2026-11-01「1」で3項目を足して件数を増やした。審査の補足3件と評価の実装上の注意11件もここへ入れた。第6版は、第5版 59b0c012e の設計審査 REVISE・直す点5件を受けて直した。審査の全文は origin/release/lead-regression-design-v5-report の docs/handoff/lead-regression/review-design-v5.md。第4版の審査は origin/release/lead-regression-design-v4-report の review-design-v4.md。第3版の審査は origin/release/lead-regression-design-v3-report の review-design-v3.md）  
+**状態**: 設計の下書き。KGI 承認済み（K2・K3・K5・K6 は第2〜5版で測り方を直したため PO の再確認が要る。§8 #5）・設計審査 第6版 APPROVE・第7版 REVISE・第8版 未審査・PO 実装承認 なし・実装 未着手。本番への書き込みは一切していない。  
 **下調べ**: `docs/handoff/lead-regression/recon.md`  
 **対象ADR**: ADR-015（リードの土台・返信速度）、ADR-119（lead_channels）、ADR-109（状態の不変コード）、ADR-1049（lead_id を持つ13表）、ADR-1024（本番の読み取り専用の道）、ADR-144（UI ガバナンス・金型）、ADR-067（デザイントークン）、ADR-027（画面の文字は t() 経由）  
 **基準**: origin/main 0a48f8172 で照合（第5版で足した引用は origin/main 27d1d6fbd、第6版で足した引用は origin/main 26dec7f26 で照合。その間の差分に、この設計が引くファイルの変更は backend/requirements.txt だけで、statsmodels・numpy が無いことは変わらない）  
@@ -44,8 +44,10 @@ K1 の件数は PO 決定 2026-11-01「1」（約470件）で変えた（成約�
 ### 2-1. K2・K3・K5 を直した理由
 
 - K3（第1版の審査）: 「1回のデータで、仕込んだ項目すべての 95%の幅が当たる」は、正しい仕組みでも半分ほど × になる。そこで 200回作って当たる回数を見る形にした。
-- K3 の合格の幅（第2版の審査）: 幅が当たる回数は「200回・確率 0.95」の二項分布に従う。15項目のどれか1つでも外れたら × なので、15項目まとめて「正しい仕組みを誤って × にする確率」を 5%以下にするよう、1項目あたりの許す確率を 5% ÷ 15 ≒ 0.33% にした（ボンフェローニの補正。第6版は 15項目で 0.45%）。この条件で、下と上に半分ずつ許して幅を計算すると 180〜198回（下に外れる確率 0.116%・上に外れる確率 0.040%。15項目のときと同じ幅になる）。正しい仕組み（当たる確率 0.95）なら 15項目すべて合格する確率は 97.7%。当たる確率が 0.94 なら 86.8%、0.93 なら 52.7%、0.92 なら 14.1% まで下がる（計算は 2026-11-01 に標準の Python で二項分布の確率を足し上げた。同じ計算で 15項目の場合を出すと第6版の 98.3%・90.1%・62.5%・23.8% と一致した）。少し幅が狭くなる程度の計算のずれなら合格し、大きくずれたら × になる。
-- 項目の数（第2版の審査・第7版）: 第2版は「9項目」と「14前後」が食い違っていた。第3版は §3-2 の表の 15項目に固定した（国・温度は比べる組ごとに数える）。第7版はカルテの3項目を足し、§3-2 の表の 15項目にした（想定規模は3つの値なので比べる組が2つ、顧客タイプ・相見積もりは2つの値なので各1つ。11 + 2 + 1 + 1 = 15）。Fable の評価は「14」と書いていたが、顧客タイプを3つの値と数えていた（選べる値は 信頼重視・価格重視 の2つ `backend/app/schemas/lead.py:59`〜61。空欄は値ではない）。数え直すと 15 になる。
+- K3 の合格の幅（第2版の審査）: 幅が当たる回数は「200回・確率 0.95」の二項分布に従う。15項目のどれか1つでも外れたら × なので、15項目まとめて「正しい仕組みを誤って × にする確率」を 5%以下にするよう、1項目あたりの許す確率を 5% ÷ 15 ≒ 0.33% にした（ボンフェローニの補正。第6版は 11項目で 0.45%）。この条件で、下と上に半分ずつ許して幅を計算すると 180〜198回（下に外れる確率 0.116%・上に外れる確率 0.040%。11項目のときと同じ幅になる）。当たる確率がちょうど 0.95 なら 15項目すべて合格する確率は 97.7%。当たる確率が 0.94 なら 86.8%、0.93 なら 52.7%、0.92 なら 14.1% まで下がる（計算は 2026-11-01 に標準の Python で二項分布の確率を足し上げた。同じ計算で 11項目の場合を出すと第6版の 98.3%・90.1%・62.5%・23.8% と一致した）。少し幅が狭くなる程度の計算のずれなら合格し、大きくずれたら × になる。
+- K3 の合格の見込み（第7版の審査 直す点3）: 97.7% は、幅が当たる確率をちょうど 0.95 とした値。第7版の審査の模擬計算（470件・成約 150・15項目、200回 × 10組。review-design-v7.md 項目3）では、この件数でワルドの幅が当たる確率は 0.935〜0.953 で、0.95 に届かない項目があった。そこから計算し直すと、作りが正しくても K3a は約 0.90、K3c は約 0.95、両方で約 0.85 の確率でしか合格しない。つまり 1〜2割ほどの見込みで K3 が × になる（10組のうち1組が K3c で × だった）。K3b はどの組も幅に十分な余裕があった（0.947〜1.073）。
+- K3 が × のときの切り分け（同上）: (1) 200通りの乱数の種は実装カードで前もって固定し、合格するまで種を変えて流し直すことはしない。(2) × が出たら、同じ 200通りのデータで自前の計算と statsmodels 0.15.0 を突き合わせる。推定値・標準誤差・幅がすべて小数4桁まで一致すれば、作りの誤りではなく方法（ワルドの幅）の性質による × と判断する。一致しなければ作りの誤りとして直す。(3) どちらの場合も本番には入れず、当たった回数と切り分けの結果を PO に報告し、本番に入れるかを PO に聞く（§3-2）。
+- 項目の数（第2版の審査・第7版）: 第2版は「9項目」と「14前後」が食い違っていた。第3版は §3-2 の表の 15項目に固定した（国・温度は比べる組ごとに数える）。第7版はカルテの3項目を足し、§3-2 の表の 15項目にした（想定規模は3つの値なので比べる組が2つ、顧客タイプ・相見積もりは2つの値なので各1つ。11 + 2 + 1 + 1 = 15）。Fable の評価は「14」と書いていたが、顧客タイプを3つの値と数えていた（ADR-015 §4 の表は 実店舗／オンライン／転売 の3つと書いている。docs/adr/ADR-015.md 116行。ただし実装で選べる値は 信頼重視・価格重視 の2つ `backend/app/schemas/lead.py:59`〜61。空欄は値ではない）。実装の値で数え直すと 15 になる。ADR と実装の食い違いは §10 に記録し、§8 #5⑥ で PO に確認する。
 - 件数（第7版）: 「1項目につき成約 10件以上」（§4-2）を 15項目で満たすには、成約・失注の少ない方が 150件以上いる。PO の「約470件」のまま、成約 150件・失注 320件（成約の割合 31.9%。第6版は 30%）にした。150 ÷ 15 = 10 でちょうど満たす。Fable の評価の例（467件・成約 140件）は 14項目の前提で、15項目では 140 ÷ 15 ≒ 9.3 となり満たさない。
 - K3b の幅の注意（Fable の評価 項目2）: 0.90倍〜1.11倍は、上へ約 5%の偏りまで許す。これより小さい偏りは K3b では見つからない。目的は「計算と画面が正しく動くか」で、5%未満の偏りは画面の読み方を変えないため、この幅のままにする。報告書には推定の平均の値そのものも載せる。
 - K5（第1版の審査）: 毎朝の突合は差が無くても毎日 Discord に送る（`backend/app/tasks/sa02_recon_monitor.py:127`）ので「知らせ 0件」は守れない。テスト用の行が数えられないこと（③）で測る。
@@ -61,7 +63,7 @@ K1 の件数は PO 決定 2026-11-01「1」（約470件）で変えた（成約�
 
 | 表 | 入れるもの | 本物の配線（根拠） | 本物との違い | 消すときの見分け方 |
 |---|---|---|---|---|
-| leads | 470件。状態（成約 150・失注 320）、initiative、channel_type、country、temperature、estimated_scale、customer_type、competitor_check。customer_name（空を許さない列 `backend/app/services/tenant.py:359`）は lead_code と同じ `TLR-00001` 形式の文字 | 作る入口 `backend/app/routers/leads.py:405`（type も書ける）。Instagram・Facebook の本物は、受信で `backend/app/routers/webhook.py:583` から始まる _persist_meta_message がリードを作り（646〜657行。type に 'Inbound'、status に 'lead' を書く）、アプリ外の送信（エコー）では `backend/app/routers/webhook.py:536`〜580 の _create_outbound_lead_for_echo が leads（546〜551行。type に 'Inbound' を書く）と lead_channels（569〜574行）を書く | ①type を書かない（空のまま。列は空を許す `backend/app/services/tenant.py:365`）。本物は受信の道もエコーの道も 'Inbound' を書くが、type は initiative に統合して廃止と決まっている（docs/specs/db-ssot/classification-master/design.md 42行）ので、本物の古い書き方には合わせない ②lead_code が `TLR-00001` 形式（本物は `LD-` と id。`backend/app/routers/leads.py:469`、`backend/app/routers/webhook.py:577`・673）③customer_name が `TLR-00001` 形式（本物は、受信の道で 'Messenger User'／'Instagram User' を入れたあと Meta から名前を取り直し `backend/app/routers/webhook.py:641`〜643・680〜689、エコーの道で `Messenger:` と相手の id の末尾8文字 同 543行）。'Messenger User'／'Instagram User' は、名前を取り直す決まり（同 628行）の形と同じになるので使わない ④created_at・updated_at に、そのリードの最初のメッセージの時刻を入れる（列の既定は NOW()。leads の定義は `backend/app/services/tenant.py:355` から。本物はリードが最初のメッセージのときに作られる `backend/app/routers/webhook.py:646`〜656・547〜550。NOW() のままだと、ダッシュボードの新しいリード5件 `backend/app/tasks/dashboard.py:92`〜93 にテスト用リードが並ぶ。本物は updated_at を画面で直すたびに変えるが、テスト用データは作った時刻と同じにする） | lead_code が `TLR-00001` 形式（§8 #3） |
+| leads | 470件。状態（成約 150・失注 320）、initiative、channel_type、country、temperature、estimated_scale、customer_type、competitor_check。customer_name（空を許さない列 `backend/app/services/tenant.py:359`）は lead_code と同じ `TLR-00001` 形式の文字 | 作る入口 `backend/app/routers/leads.py:405`（type も書ける）。Instagram・Facebook の本物は、受信で `backend/app/routers/webhook.py:583` から始まる _persist_meta_message がリードを作り（646〜657行。type に 'Inbound'、status に 'lead' を書く）、アプリ外の送信（エコー）では `backend/app/routers/webhook.py:536`〜580 の _create_outbound_lead_for_echo が leads（546〜551行。type に 'Inbound' を書く）と lead_channels（569〜574行）を書く | ①type を書かない（空のまま。列は空を許す `backend/app/services/tenant.py:365`）。本物は受信の道もエコーの道も 'Inbound' を書くが、type は initiative に統合して廃止と決まっている（docs/specs/db-ssot/classification-master/design.md 42行）ので、本物の古い書き方には合わせない ②lead_code が `TLR-00001` 形式（本物は `LD-` と id。`backend/app/routers/leads.py:469`、`backend/app/routers/webhook.py:577`・673）③customer_name が `TLR-00001` 形式（本物は、受信の道で 'Messenger User'／'Instagram User' を入れたあと Meta から名前を取り直し `backend/app/routers/webhook.py:641`〜643・680〜689、エコーの道で `Messenger:` と相手の id の末尾8文字 同 543行）。'Messenger User'／'Instagram User' は、名前を取り直す決まり（同 628行）の形と同じになるので使わない ④created_at・updated_at に、そのリードの最初のメッセージの時刻を入れる（列の既定は NOW()。leads の定義は `backend/app/services/tenant.py:355` から。本物はリードが最初のメッセージのときに作られる `backend/app/routers/webhook.py:646`〜657・546〜551。NOW() のままだと、ダッシュボードの新しいリード5件 `backend/app/tasks/dashboard.py:92`〜93 にテスト用リードが並ぶ。本物は updated_at を画面で直すたびに変えるが、テスト用データは作った時刻と同じにする） | lead_code が `TLR-00001` 形式（§8 #3） |
 | tenant_sales_form_options | テナント001の店舗の形の選択肢（テナント004と同じ5つ） | 選択肢はテナント004にだけ入っている（`migrations/20260614_100000_create_sales_form_tables.sql:89`） | なし | 入れた行の id を記録する |
 | lead_sales_form_selections | 470件それぞれの店舗の形（1つ） | カルテの入力画面の書き先（`backend/app/routers/leads.py:690`） | なし | テスト用リードを消すと一緒に消える（`migrations/20260614_100000_create_sales_form_tables.sql:58`） |
 | deal_close_reasons | 失注 320件それぞれの主な理由 1件 | 失注は主な理由 1件が必須（`backend/app/schemas/lead.py:183`）。書き先 `backend/app/routers/leads.py:628` | なし | テスト用リードの id（リードを消すと止まる決まり。§6-1） |
@@ -87,9 +89,9 @@ K1 の件数は PO 決定 2026-11-01「1」（約470件）で変えた（成約�
 | 国 | leads.country に2文字の国コード（US・GB・AU） | 国の台帳 public.countries の code CHAR(2)（migrations/20260621_010000_create_countries_master.sql 7行）。国コードとして読むのは `backend/app/schemas/lead.py:148`・215行 | 国名の文字 |
 | 店舗の形 | lead_sales_form_selections（選択肢は tenant_sales_form_options） | カルテの入力画面が書く先（`frontend/src/pages/inbox/InboxKartePanel.tsx:592`、`backend/app/routers/leads.py:634`）。複数選択はコードの説明（`backend/app/schemas/lead.py:179`）と ADR-1049 の13表の一覧にある | leads.sales_form（§10） |
 | 温度 | leads.temperature（Hot / Warm / Cold） | `backend/app/schemas/lead.py:47` | — |
-| 想定規模 | leads.estimated_scale（Small / Medium / Large） | 列 `backend/app/services/tenant.py:368`、値 `backend/app/schemas/lead.py:53`〜56、カルテの入力 `frontend/src/pages/inbox/InboxKartePanel.tsx:683`〜688 | — |
-| 顧客タイプ | leads.customer_type（信頼重視 / 価格重視） | 列 `backend/app/services/tenant.py:369`、値 `backend/app/schemas/lead.py:59`〜61、カルテの入力 `frontend/src/pages/inbox/InboxKartePanel.tsx:571`〜576 | — |
-| 相見積もり | leads.competitor_check（true / false） | 列 `backend/app/services/tenant.py:389`（空を許さず既定は false）、入口の型 `backend/app/schemas/lead.py:184`、カルテの入力 `frontend/src/pages/inbox/InboxKartePanel.tsx:616`〜620 | — |
+| 想定規模 | leads.estimated_scale（Small / Medium / Large） | 列 `backend/app/services/tenant.py:368`、値 `backend/app/schemas/lead.py:53`〜56、カルテの入力 `frontend/src/pages/inbox/InboxKartePanel.tsx:683`〜689 | ADR-015 §4 は「自動・テナントが設定した金額基準で分類」（docs/adr/ADR-015.md 120行）。実装は人が選ぶ（§10） |
+| 顧客タイプ | leads.customer_type（信頼重視 / 価格重視） | 列 `backend/app/services/tenant.py:369`、値 `backend/app/schemas/lead.py:59`〜61、カルテの入力 `frontend/src/pages/inbox/InboxKartePanel.tsx:572`〜577 | ADR-015 §4 は 実店舗／オンライン／転売 の3つ（docs/adr/ADR-015.md 116行。§10） |
+| 相見積もり | leads.competitor_check（true＝競合あり / false＝未確認） | 列 `backend/app/services/tenant.py:389`（空を許さず既定は false）、入口の型 `backend/app/schemas/lead.py:184`、カルテの入力 `frontend/src/pages/inbox/InboxKartePanel.tsx:665`〜677（選択肢は 空・false・true の3つ。673〜675行）。画面の表示は false が「未確認」、true が「競合あり」（`frontend/src/locales/ja.json:1006`〜1007。項目名は「競合確認」同 963行）。「なし」という選択肢は無い | — |
 | 成約したか | leads.status（成約 existing_customer・失注 lost） | `backend/app/schemas/lead.py:31`（ADR-109） | — |
 | 返信の速さ・やり取りの回数 | Instagram・Facebook は meta_messages.created_at、WhatsApp は conversation_logs.occurred_at から計算（§4-1） | 上の §3 | leads.response_speed・first_response_at |
 
@@ -113,14 +115,14 @@ K1 の件数は PO 決定 2026-11-01「1」（約470件）で変えた（成約�
 | 12 | 想定規模が Large／Small | 3つを 1/3ずつ | 1.7 |
 | 13 | 想定規模が Medium／Small | （同上） | 1.0（仕込まない） |
 | 14 | 顧客タイプが信頼重視／価格重視 | 半々 | 1.8 |
-| 15 | 相見積もりあり（true）／なし（false） | 半々 | 0.6（成約しにくい向き） |
+| 15 | 相見積もりが競合あり（true）／未確認（false） | 半々 | 0.6（成約しにくい向き） |
 
 - 返信の速さ（#3・#4）は「1時間以内か」「6時間以内か」の2つに分けた値で仕込み、分析でも同じ2つに分けて使う。時刻は、決めた側の範囲から作る（1時間以内なら 1〜59分、遅いなら 61分〜48時間。相手の返信は、6時間以内の組なら各返信を 5分〜6時間、遅い組なら 6時間1分〜72時間から取り、平均が必ず決めた側に入るようにする）。
 - 時刻の範囲（第3版の審査 直す点14・第4版の審査 直す点3）: 最初のメッセージの日時は、書き込む日の 180日前〜70日前から等しい確率で取る。相手から来たリードは、この日時が最初の受信。こちらから営業したリードは、この日時がこちらの最初の送信（§4-1 の「最初の返信」には数えない）。こちらの送信の時刻は次の2つで分ける。(1) 最初の受信のあとの最初の送信（相手から来たリードは1回目の送信、こちらから営業したリードは2回目の送信。§4-1 の「最初の返信」）は、#3 の範囲（1〜59分か 61分〜48時間）から取る。(2) それ以外のこちらの送信は、すぐ前の受信から 5分〜24時間で取る（#3・#4 の2値には使わない）。相手の返信はすべて #4 の範囲から取る。1つのメッセージの間は最長 72時間で、間は最多 19個なので、1つのリードは最長 57日（多めに見て 20回 × 72時間 = 60日）に収まり、最後のメッセージも書き込む日の 10日以上前になり、§3-3 の「2日以上前」を必ず満たす。乱数の種と時刻の作り方は実装カードで固定し、同じ種で同じデータが再現できることを試験で確かめる。
 - #12〜#15 の強さ（第7版）: 事業の実績ではなく、仕組みを確かめるための仮の値。成約しにくい向き（1 より小さい値）を確かめる項目が第6版までは無かったので、#15 を 0.6 にした。#13 は「仕込まない項目が差なしと出るか」を3値の項目でも確かめるため 1.0 にした。見込度ランクの計算（`backend/app/routers/leads.py:100`〜106）は想定規模・顧客タイプから作る値なので、prospect_rank は分析に入れない（元の項目と重なるため）。テスト用データは prospect_rank を書かない。
 - 失注の理由: 失注 320件に、テナント001の失注理由の選択肢 15個（下調べ §4）を番号順に繰り返し 1件ずつ割り当てる（320 ÷ 15 で 21〜22件ずつ。22件が5個、21件が10個）。分析には使わない。
 - 成約をちょうど 150件にする方法: 項目を割り振った後、仕込んだ強さで各リードの成約の確率を計算し、平均がちょうど 150件になる基準の高さを求める。成約するかを乱数で決め、合計がちょうど 150件になるまで成約するかの乱数だけを引き直す（項目はそのまま）。引き直した回数を記録する。合計が 150±10.1件ほどに散らばるので、平均で 25回ほどの引き直しになる（2026-11-01 計算。√(470×0.319×0.681) ≒ 10.1、ちょうど 150 になる確率は約 1/25）。合計で条件を付けても、項目ごとの強さの推定は変わらない（成約の合計は基準の高さだけに関わるため）。正しいかは K3a〜K3c で実際に確かめる。
-- K3a〜K3c は本番に入れる前に本番の外で確かめる。1つでも × なら本番には入れず、結果を PO に報告する。
+- K3a〜K3c は本番に入れる前に本番の外で確かめる。1つでも × なら本番には入れず、結果を PO に報告する。作りが正しくても 1〜2割ほどの見込みで × になること、× のときの切り分け方（statsmodels との小数4桁の突き合わせ・種は前もって固定・流し直さない）は §2-1 のとおり。
 - 1回のデータ（470件）では、強さが小さい項目（1.5 など）は「差がある」と言い切れないことがある。これは件数の限界で、仕組みの誤りではない。画面には推定の幅を出し、仕込んだ値との答え合わせは報告書で行う（§4-3）。
 - これは「計算と画面が正しく動くか」を確かめるためのもので、本物の傾向ではない。このことはテナント001の報告書に書く。画面の欄は本物のテナントにも出る形があるので、画面には「テスト用」とは出さない（§4-3）。
 
@@ -160,7 +162,7 @@ K1 の件数は PO 決定 2026-11-01「1」（約470件）で変えた（成約�
 ### 4-2. 計算
 
 - 分析に入れるリードの範囲: 状態が成約（existing_customer）か失注（lost）のリードだけ。それ以外の状態（lead など）は外し、外した件数を画面に出す。テナント001の元のリード id 4・6（状態 lead。recon.md 111行）はこの決まりで外れるので、K3d は本番でも本番の外でも 470件で計算する。
-- 成約したか（はい/いいえ）を、§3-2 の 15項目で同時に見る（ロジスティック回帰）。基準は US・Cold・Facebook・こちらから営業・卸以外・遅い返信・想定規模 Small・価格重視・相見積もりなし。
+- 成約したか（はい/いいえ）を、§3-2 の 15項目で同時に見る（ロジスティック回帰）。基準は US・Cold・Facebook・こちらから営業・卸以外・遅い返信・想定規模 Small・価格重視・相見積もり未確認（false）。画面に出す相見積もりの値の名前は、既存の t() のキー（leads.competitorCheck・competitorFound・competitorUnconfirmed）を使うか新しいキーを足すかを実装カードで決める。
 - 95%の幅は、推定値 ± 1.96 × 標準誤差（対数の上で計算して戻す。ワルドの方法）。statsmodels 0.15.0 の Logit の conf_int は既定で標準正規分布を使う同じ方法（公式説明書 statsmodels.org の LogitResults.conf_int、2026-10-31 確認。Context7 は月の上限で使えなかったため公式説明書を直接読んだ）。
 - 計算の道具: backend の requirements に statsmodels・numpy は無い（git show origin/main:backend/requirements.txt を grep して 0件）。先行の設計と同じく、本番の計算は標準ライブラリだけで書き（反復で解く方法）、試験では作り物のデータで statsmodels 0.15.0 と小数4桁まで一致することを確かめる（クラウドで実行）。依存を増やさない。
 - 件数の決まり（先行の設計と同じ「1項目につき 10件以上」を式にした）: min(成約の件数, 失注の件数) ÷ 項目の数（15）≧ 10。件数は、上の範囲に入り、回帰に使えたリード（§4-1 の空欄のリードを外した後）で数える。テスト用データは min(150, 320) ÷ 15 = 10 で満たす。本物のデータでこれを満たさない間は、画面に「件数が足りない」と出して結果を出さない。
@@ -187,10 +189,10 @@ K1 の件数は PO 決定 2026-11-01「1」（約470件）で変えた（成約�
 4. 本文: 受信は本文から言語を決める（§3）。本文は実在の人名・会社名・仕入元・投稿の文を含まない定型文にする。翻訳の依頼・Gemini を呼ぶ道は通らない（§3-3）。
 5. 作り方の正本は1か所: 本番に流す SQL ファイルも K3 の 200通りのデータも、同じ作り方のコードから種を変えて作る。失注理由と店舗の形の選択肢の id は本番で決まるので、SQL に id を直書きせず、sort_order や value で引くか RETURNING で受ける。
 6. 「返信の速さ」が画面に2種類出る: 既存の「属性ごとの成約率」と優先リストは手入力の response_speed と leads.sales_form を読む（`backend/app/routers/analytics.py:988`〜990・1844〜1851）。新しい欄はやり取りの表から計算した値と lead_sales_form_selections を読む。新しい欄の注意書き（t() のキー）に「既存の成約率とは測り方が違う」と書く。§10 にも記録した。
-7. 計算できないとき: 本物では、ある項目の値がすべて成約（またはすべて失注）になる組（完全分離）が起こり得る。反復が収束しないときは例外で落とさず「この項目は計算できない」と返す。反復の上限と収束の判定の値は実装カードで固定する。K3d の小数4桁一致のため、行の順（id 順）と同じ関数を本番と本番の外で使う。
+7. 計算できないとき: 本物では、ある項目の値がすべて成約（またはすべて失注）になる組（完全分離）が起こり得る。反復が収束しないときは例外で落とさず「この項目は計算できない」と返す。反復の上限と収束の判定の値は実装カードで固定し、statsmodels との突き合わせ（§4-2）で使う値と同じにする。K3d の小数4桁一致のため、行の順（id 順）と同じ関数を本番と本番の外で使う。
 8. 報告書の雛形: 1回のデータで「差あり」と出にくい項目を先に名前で書く。第6版での Fable の模擬計算（400件・200回）では、「差あり」と出た回数が 卸 2.5 で 190回、相手から来た 2.0 で 170回、最初の返信 1.8 で 152回、相手の返信 1.6 で 111回、WhatsApp 1.5 で 65回だった。470件・15項目での回数は K3 の実行で数えて報告書に載せる。「出なくても仕組みの誤りではない。K3 の 200回で確かめる」と書く。K3b が 5%ほどの上振れを許す点（§2-1）も添える。
 9. K5①(a) の点検: 書き込みの SQL ファイルの点検を pytest の中の静的な検査にし、CI で毎回流す（docs/adr/ADR-1049-lead-merge-all-tables-and-fill-blanks.md 38行と同じ守り方）。
-10. 外した件数の内訳: 画面の「外した件数」を、状態で外した数と、受信だけ・送信だけ・店舗の形が無い・カルテの3項目のどれかが空で外した数に分けて返す。本物で「件数が足りない」と出たとき、PO がどれが原因かを読めるようにする。
+10. 外した件数の内訳: 画面の「外した件数」を、状態で外した数と、受信だけ・送信だけ・店舗の形が無い・想定規模か顧客タイプが空で外した数に分けて返す（外すかどうかは §9 の9 で決める。決まるまでは外す。相見積もりは空を許さない列 `backend/app/services/tenant.py:389` なので、空で外れることは無い）。本物で「件数が足りない」と出たとき、PO がどれが原因かを読めるようにする。
 11. 本物に切り替える前の点検表: §9 の表を実装カードにも写す。
 
 ## 5. 対象と対象外
@@ -243,7 +245,7 @@ audit_logs は消さない（監査の記録を手で消すと、記録の役目
 | 2 | 成約した日（状態が変わった履歴）の表が無い | 今回の分析（成約したか）には要らない。成約までの日数を見たいなら別の設計 |
 | 3 | 目印を lead_code に入れてよいか | 解決: lead_code は VARCHAR(20)・テナント内で重複不可（migrations/003_add_phase1_tenant_tables.sql 78・97行）。採番は `LD-` と id（`backend/app/routers/leads.py:469`・`backend/app/routers/webhook.py:577`）。`LD-` を前提に読む処理は backend・frontend に無い（git grep、試験と見本を除く）。`TLR-00001` 形式を使える |
 | 4 | 本番のテナント001へ書く手段 | 既存の決まり（PO 2026-09-30「意思決定までは私が行い合意した内容についてはopusに権限委譲する」）に合わせる: SQL ファイルを本フォルダに置く → 想定件数・戻しの SQL を PO に示し合意 → 読み取りで事前確認（§6-1 手順0）→ 試し流し（最後に取り消す）→ 件数が合えば本番 → 読み取りで事後確認。消す手順は PO 本人が流す。実行の道具は実装カードで決める |
-| 5 | 次の5つをこの形で進めてよいか（1問にまとめて聞く）: ①K2・K3・K5・K6 の測り方（§2）②こちらから営業したリードの「最初の返信」を、最初の受信のあとの最初の送信で測る（§4-1）③分析の表をダッシュボードの「今やること」の下に新しい欄として置く（§4-3）④その欄を全テナントに出す（本物のテナント004では「件数が足りない」と出る。テナント001の表の外へは書かない）か、テナント単位の切り替え表に1行書いてテナント001だけに出すか（テナント001の表の外への書き込みが1行増える。§4-3）⑤店舗の形を複数選んだ本物のリードは「卸を含めば卸」と読む（§4-4 の2） | 設計審査が通ってから、推奨と影響を添えて PO に1問で聞く |
+| 5 | 次の6つをこの形で進めてよいか（1問にまとめて聞く）: ①K2・K3・K5・K6 の測り方（§2）②こちらから営業したリードの「最初の返信」を、最初の受信のあとの最初の送信で測る（§4-1）③分析の表をダッシュボードの「今やること」の下に新しい欄として置く（§4-3）④その欄を全テナントに出す（本物のテナント004では「件数が足りない」と出る。テナント001の表の外へは書かない）か、テナント単位の切り替え表に1行書いてテナント001だけに出すか（テナント001の表の外への書き込みが1行増える。§4-3）⑤店舗の形を複数選んだ本物のリードは「卸を含めば卸」と読む（§4-4 の2）⑥顧客タイプ・想定規模は、ADR-015 §4 の書き方（顧客タイプ3つ・想定規模は金額で自動）ではなく、今の画面で選べる値（顧客タイプ 信頼重視・価格重視の2つ、想定規模 Small・Medium・Large を人が選ぶ）のまま分析してよいか（§10） | 設計審査が通ってから、推奨と影響を添えて PO に1問で聞く |
 
 ## 9. 維持の仕組み
 
@@ -260,7 +262,7 @@ audit_logs は消さない（監査の記録を手で消すと、記録の役目
 | 5 | 「こちらの最初の返信」に、人でない返信（自動の問いかけ・定型文）を含めるか | PO | docs/adr/ADR-015.md 83〜96行 |
 | 6 | 結果を見せる範囲。今は dashboard.view を持つ人全員 | PO（営業の評価に読まれ得るため） | §4-2 |
 | 7 | 誰が・いつ状態を existing_customer に切り替えているか（本物の運用） | 本番の読み取りで確かめる | docs/specs/db-ssot/classification-master/design.md 48行 |
-| 8 | 相見積もりの「なし」と「まだ確かめていない」が区別できない件の扱い（§10） | PO | `backend/app/services/tenant.py:389` |
+| 8 | 相見積もりは画面に「なし」の選択肢が無く、false は「未確認」として入る。新しく作ったリードも既定で false（未確認）になる。本物で「競合あり／未確認」の比べ方のままでよいか、「競合なし」を足すか（§10） | PO | `backend/app/services/tenant.py:389` |
 | 9 | 想定規模・顧客タイプが空のリードの扱い（外すか、「未入力」として比べるか）。本物は今 0件の入力（Fable の評価 項目3 3-1） | 設計（Opus）。PO に報告 | §4-4 の10 |
 
 - テスト用データを消す時期（K3d と画面の確認が終わったらすぐ消すか、本物の成約が増えるまで画面の見本として残すか）は、K3d の後に PO に聞く。残す間は、テスト用リードに人が触らない運用（§3-4）を続ける。
@@ -270,9 +272,23 @@ audit_logs は消さない（監査の記録を手で消すと、記録の役目
 - 店舗の形が2か所にある。カルテの入力画面は lead_sales_form_selections に書く（`frontend/src/pages/inbox/InboxKartePanel.tsx:592`）。一方で既存の「属性ごとの成約率」は leads.sales_form を読む（`backend/app/routers/analytics.py:988`）。そのため、画面で入れた店舗の形は既存の成約率に出ない。今回の分析は入力画面と同じ lead_sales_form_selections を読む。既存の成約率の直しは別の設計にする。
 - 将来の正本は「店舗形態の台帳1つ（共有＋テナント独自）」と決まっている（docs/specs/db-ssot/classification-master/design.md 101行）が、まだ作られていない。台帳ができたら、今回の分析の読み先もそこへ移す。
 - 返信の速さが2か所にある。既存の「属性ごとの成約率」と優先リストは、カルテに手で入れる leads.response_speed（24時間以内・3日以内・3日超 `backend/app/schemas/lead.py:64`〜67）を読む（`backend/app/routers/analytics.py:990`・1844〜1851）。今回の分析は、やり取りの表の時刻から計算する（§4-1）。同じ「返信の速さ」という言葉で、測り方の違う値が画面に2つ出る（§4-4 の6）。
-- 相見積もりの列は空を許さず、既定が false（`backend/app/services/tenant.py:389`）。そのため本物では「相見積もりなし」と「まだ確かめていない」が区別できない。テスト用データは全件に true・false を入れるので K には効かない。本物に切り替える前に扱いを決める（§9 の8）。
+- 相見積もりの列は空を許さず、既定が false（`backend/app/services/tenant.py:389`）。カルテの画面には「なし」の選択肢が無く、false は「未確認」、true は「競合あり」と表示される（`frontend/src/pages/inbox/InboxKartePanel.tsx:673`〜675、`frontend/src/locales/ja.json:1006`〜1007）。新しく作ったリードは既定で false（未確認）になる。そのため分析の #15 は「競合あり／未確認」の比べ方になる。テスト用データは全件に true・false を入れるので K には効かない。本物に切り替える前に扱いを決める（§9 の8）。
+- ADR-015 §4 と実装の食い違い: ADR-015 §4 の表は、顧客タイプを 実店舗／オンライン／転売 の3つ（docs/adr/ADR-015.md 116行）、想定規模を「自動・テナントが設定した金額基準で分類」（同 120行）と書いている。実装は、顧客タイプが 信頼重視／価格重視 の2つ（`backend/app/schemas/lead.py:59`〜61）、想定規模は人が Small・Medium・Large から選ぶ（`frontend/src/pages/inbox/InboxKartePanel.tsx:683`〜689）。ADR-107 は 信頼重視／価格重視 の2つを事実として書いている（docs/adr/ADR-107-sa-analytics-agent-a-customer-priority.md 29行）。ADR-015・ADR-107 はどちらも Proposed（docs/adr/README.md 27行・120行）。AGENTS.md の「ADR と実装が食い違うときは ADR を優先」に当たるため、今の実装の値で分析してよいかを §8 #5⑥ で PO に確認する。ADR か実装のどちらを直すかは、この設計の対象外とし別に設計する。
 - 見込度ランク（prospect_rank）は想定規模・顧客タイプなどから計算される値（`backend/app/routers/leads.py:100`〜106）。元の項目と重なるので、分析には入れない。
 - 会話の記録が2つの表にある（統合の途中）。Instagram・Facebook の受信は両方、アプリからの送信は meta_messages だけ、アプリ外からの送信（エコー）は conversation_logs だけに書かれる（`backend/app/routers/webhook.py:816`〜887）。
 - 優先度の点検の数え方（scripts/check_priority_scoring_state.py 112〜123行）が、消された deals と、lead_id の無い invoices を前提にしている（§3-4）。優先度の計算の成約の側（`backend/app/services/priority_scoring.py:183`）も invoices.lead_id で結び付けている。本番での動きはどちらも未確認。
 - 本物のエコーの道は、Instagram のエコーでも leads.channel_type と lead_channels.platform を 'messenger' に固定して書く（`backend/app/routers/webhook.py:557`・573。呼び出しの 824〜829行は platform を渡さない）。そのため本物のこちらから営業した Instagram のリードは channel_type が 'messenger' になる。テスト用データは channel_type を正しく instagram にするので K には効かない。ただし本物に切り替える前（§9）の経路の読み方に関わる。
-- 本物のリードの作り方は、廃止と決まった type に 'Inbound' を書いている。エコーで作る道（`backend/app/routers/webhook.py:547`・550。initiative は 'outbound'）と、受信で作る道（`backend/app/routers/webhook.py:646`〜656）の両方。
+- 本物のリードの作り方は、廃止と決まった type に 'Inbound' を書いている。エコーで作る道（`backend/app/routers/webhook.py:546`〜551。initiative は 'outbound'）と、受信で作る道（`backend/app/routers/webhook.py:646`〜657。INSERT は 646〜651、status は 657）の両方。
+
+## 11. 第7版の審査の直す点への対応
+
+| # | 直す点 | 直した場所 |
+|---|---|---|
+| 1 | 相見積もりの false は画面で「未確認」。入力の行は 665〜677 | §3-1 の表の相見積もり、§3-2 の #15、§4-2 の基準、§9 の8、§10 |
+| 2 | ADR-015 §4 と実装の食い違いを記録し PO に確認 | §2-1 の項目の数、§3-1 の表の想定規模・顧客タイプ、§8 #5⑥、§10 |
+| 3 | K3 の合格の見込みと × のときの切り分け | §2-1 に2項目を足した、§3-2 の K3 の行 |
+| 4 | webhook.py の行の範囲の直し残し | §3 の表の④、§10 の最後の項目 |
+| 5 | §2-1 の「15項目」は「11項目」の誤り | §2-1 |
+| 6 | §4-4 の10 と §9 の9 の食い違い | §4-4 の10 |
+| 補足1 | 反復の上限・収束の値を突き合わせと同じにする | §4-4 の7 |
+| 補足2 | 想定規模の入力は 683〜689 | §3-1 の表 |
