@@ -231,7 +231,7 @@
 | [ADR-1051](./ADR-1051-prod-ui-black-box-check.md) | ADR-1051: 本番の画面点検は、GitHub 提供の機械から HTTPS で見るだけの利用者がログインして毎日行い、本番 DB には触らない | Accepted | — | — |
 | [ADR-1052](./ADR-1052-cloud-case-ai.md) | ADR-1052: Discord の投稿を合図に、クラウドの相談係 AI が個人の値を伏せた本番を読み、中身は申請して Opus が許可したときだけ見る | Accepted | Amends ADR-1024, Amends ADR-1042, Amends ADR-1039 | — |
 | [ADR-1053](./ADR-1053-prod-page-speed-record.md) | ADR-1053: 本番の画面点検の「開き終わった」の決め方を 1 か所にし、全画面の開く速さを毎日記録する（合格ラインはまだ決めない） | Accepted | — | — |
-| [ADR-1054](./ADR-1054-screen-data-cache.md) | ADR-1054: 画面が取ったデータの写しを 1 か所（TanStack Query）に置き、前に見た画面をすぐ出してから裏で取り直す | Proposed | — | — |
+| [ADR-1054](./ADR-1054-screen-data-cache.md) | ADR-1054: 画面が取ったデータの写しを 1 か所（TanStack Query）に置き、前に見た画面をすぐ出してから裏で取り直す | Accepted | — | — |
 
 ## ステータス凡例
 

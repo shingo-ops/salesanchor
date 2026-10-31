@@ -23,4 +23,5 @@
 - 生の記録: /tmp/CC報告ファイル/page-speed/line/fable-review.txt
 
 ## 残っていること
-- PO による ADR-1054 の採用（Proposed → Accepted）と実装の承認。どちらも未。
+- PO による ADR-1054 の採用と実装の承認: 済み（2026-10-31 21:55 JST 選択「1」）。
+- 段 0・段 1 の作業指示書と、その審査。
