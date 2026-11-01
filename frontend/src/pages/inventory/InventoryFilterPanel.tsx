@@ -2,17 +2,16 @@
  * 在庫表（/inventory）の詳細フィルタ パネル（ADR-093）。
  *
  * InventoryPage から切り出した表示専用コンポーネント（ページ行数上限対策）。
+ * **PC 専用**（design.md 4-2・便3でスマホは InventoryFilterDrawer に分離）。
  * 状態は親（InventoryPage）が保持し、props 経由で受け取る。
  *   - フィルタ有効化トグル
- *   - （スマホのみ）提供者・コンディション・価格・数量（PC はツールバー。常に有効）/ カテゴリーの表示・非表示（除外フィルタ）
+ *   - カテゴリーの表示・非表示（除外フィルタ）
  *   - 表示する列（列トグル）
  *   - 表示条件: 形態 / 在庫・予約 の複数選択（包含フィルタ）
  */
-import type { Dispatch, ReactNode, SetStateAction } from "react";
+import type { Dispatch, SetStateAction } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/Button";
-import { ContentToolbarRange } from "../../components/ContentToolbar";
-import { MultiSelect, type MultiSelectOption } from "../../components/MultiSelect";
 import { Checkbox } from "../../components/Checkbox";
 
 interface Props {
@@ -22,39 +21,16 @@ interface Props {
   sortedCategories: string[];
   hiddenCategories: Set<string>;
   toggleHiddenCategory: (c: string) => void;
-  /** スマホだけ true: 提供者の選択をパネルの先頭に出す（PC はツールバー） */
-  showSupplierSelect: boolean;
-  supplierOptions: MultiSelectOption[];
-  selectedSupplierIds: string[];
-  onSupplierChange: (next: string[]) => void;
   hideableColumns: string[];
   hiddenColumns: Set<string>;
   toggleHiddenColumn: (c: string) => void;
-  conditionFacet: string[];
-  showConditions: Set<string>;
-  onConditionChange: (next: string[]) => void;
   unitFacet: string[];
   showUnits: Set<string>;
   setShowUnits: Dispatch<SetStateAction<Set<string>>>;
   offerTypes: readonly string[];
   showOfferTypes: Set<string>;
   setShowOfferTypes: Dispatch<SetStateAction<Set<string>>>;
-  qtyMin: string;
-  setQtyMin: (v: string) => void;
-  qtyMax: string;
-  setQtyMax: (v: string) => void;
-  priceMin: string;
-  setPriceMin: (v: string) => void;
-  priceMax: string;
-  setPriceMax: (v: string) => void;
-  /** スマホだけ true: パネルの先頭に「24時間以内」、末尾に「リセット」を出す（design.md 4-6） */
-  freshOnly: boolean;
-  onFreshToggle: () => void;
-  freshWindowHours: number | undefined;
-  onReset: () => void;
   onClose: () => void;
-  /** スマホだけ: 上部（Tabs の end）から移した注記（design.md 4-5）。showSupplierSelect が真のときだけ出す */
-  notice?: ReactNode;
 }
 
 export default function InventoryFilterPanel({
@@ -64,36 +40,16 @@ export default function InventoryFilterPanel({
   sortedCategories,
   hiddenCategories,
   toggleHiddenCategory,
-  showSupplierSelect,
-  supplierOptions,
-  selectedSupplierIds,
-  onSupplierChange,
   hideableColumns,
   hiddenColumns,
   toggleHiddenColumn,
-  conditionFacet,
-  showConditions,
-  onConditionChange,
   unitFacet,
   showUnits,
   setShowUnits,
   offerTypes,
   showOfferTypes,
   setShowOfferTypes,
-  qtyMin,
-  setQtyMin,
-  qtyMax,
-  setQtyMax,
-  priceMin,
-  setPriceMin,
-  priceMax,
-  setPriceMax,
-  freshOnly,
-  onFreshToggle,
-  freshWindowHours,
-  onReset,
   onClose,
-  notice,
 }: Props) {
   const { t } = useTranslation();
 
@@ -127,75 +83,6 @@ export default function InventoryFilterPanel({
         maxWidth: "44rem",
       }}
     >
-      {/* スマホだけ: 上部から移した「24時間以内」をパネルの先頭に（design.md 4-6） */}
-      {showSupplierSelect && (
-        <Checkbox
-          label={
-            freshWindowHours === undefined
-              ? t("inventory.view.freshOnly", { hours: "" })
-              : t("inventory.view.freshOnly", { hours: freshWindowHours })
-          }
-          data-testid="inventory-fresh-check"
-          className="inventory-fresh-check"
-          checked={freshOnly}
-          onChange={onFreshToggle}
-        />
-      )}
-      {/* 注記（design.md 4-5）: 便1 で先頭に置いた「24時間以内」のすぐ下に出す。showSupplierSelect
-          （＝スマホ）のときだけ。PC は Tabs の end のまま（InventoryPage.tsx）。 */}
-      {showSupplierSelect && notice}
-
-      {showSupplierSelect && (
-        <MultiSelect
-          testId="inventory-supplier-filter"
-          label={t("inventory.supplierFilter.label")}
-          options={supplierOptions}
-          selected={selectedSupplierIds}
-          onChange={onSupplierChange}
-          clearLabel={t("inventory.supplierFilter.clear")}
-          allLabel={t("inventory.supplierFilter.all")}
-          countLabel={(n) => t("inventory.supplierFilter.count", { count: n })}
-        />
-      )}
-
-      {/* スマホだけ: ツールバーに出ない コンディション・価格・数量 をここに出す（常に有効。有効化スイッチの対象外） */}
-      {showSupplierSelect && (
-        <>
-          <MultiSelect
-            testId="inventory-condition-filter"
-            label={t("inventory.conditionFilter.label")}
-            options={conditionFacet.map((c) => ({ value: c, label: c }))}
-            selected={Array.from(showConditions)}
-            onChange={onConditionChange}
-            clearLabel={t("inventory.conditionFilter.clear")}
-            allLabel={t("inventory.conditionFilter.all")}
-            countLabel={(n) => t("inventory.conditionFilter.count", { count: n })}
-          />
-          <ContentToolbarRange
-            minValue={priceMin}
-            maxValue={priceMax}
-            onMinChange={(v) => { setPriceMin(v); setPage(1); }}
-            onMaxChange={(v) => { setPriceMax(v); setPage(1); }}
-            minPlaceholder={t("inventory.range.priceMin")}
-            maxPlaceholder={t("inventory.range.priceMax")}
-            minAriaLabel={t("inventory.range.priceMin")}
-            maxAriaLabel={t("inventory.range.priceMax")}
-            testIdPrefix="inventory-price"
-          />
-          <ContentToolbarRange
-            minValue={qtyMin}
-            maxValue={qtyMax}
-            onMinChange={(v) => { setQtyMin(v); setPage(1); }}
-            onMaxChange={(v) => { setQtyMax(v); setPage(1); }}
-            minPlaceholder={t("inventory.range.qtyMin")}
-            maxPlaceholder={t("inventory.range.qtyMax")}
-            minAriaLabel={t("inventory.range.qtyMin")}
-            maxAriaLabel={t("inventory.range.qtyMax")}
-            testIdPrefix="inventory-qty"
-          />
-        </>
-      )}
-
       <Checkbox
         label={t("inventory.filterPanel.enable")}
         data-testid="inventory-filter-enabled"
@@ -301,15 +188,6 @@ export default function InventoryFilterPanel({
           </div>
         </div>
       </div>
-
-      {/* スマホだけ: 上部から移した「リセット」をパネルの末尾（「閉じる」の直前）に（design.md 4-6） */}
-      {showSupplierSelect && (
-        <div>
-          <Button variant="secondary" size="sm" type="button" data-testid="inventory-reset-in-panel" onClick={onReset}>
-            {t("inventory.resetSort")}
-          </Button>
-        </div>
-      )}
 
       <div>
         <Button variant="secondary" size="sm" type="button" onClick={onClose}>
