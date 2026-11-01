@@ -891,6 +891,57 @@
         "title": "ArchiveResponse",
         "type": "object"
       },
+      "AssistantMessageIn": {
+        "properties": {
+          "text": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "AssistantMessageIn",
+        "type": "object"
+      },
+      "AssistantMessageOut": {
+        "properties": {
+          "candidates": {
+            "$ref": "#/components/schemas/Candidates"
+          },
+          "draft": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InvoiceDraft"
+              },
+              {
+                "$ref": "#/components/schemas/EventDraft"
+              },
+              {
+                "$ref": "#/components/schemas/UnknownDraft"
+              }
+            ],
+            "title": "Draft"
+          },
+          "kind": {
+            "enum": [
+              "invoice",
+              "event",
+              "unknown"
+            ],
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "draft"
+        ],
+        "title": "AssistantMessageOut",
+        "type": "object"
+      },
       "AttributeConversionAxis": {
         "properties": {
           "items": {
@@ -2428,6 +2479,44 @@
           "counts_by_game"
         ],
         "title": "BuybackPriceListResponse",
+        "type": "object"
+      },
+      "Candidate": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "Candidate",
+        "type": "object"
+      },
+      "Candidates": {
+        "properties": {
+          "companies": {
+            "items": {
+              "$ref": "#/components/schemas/Candidate"
+            },
+            "title": "Companies",
+            "type": "array"
+          },
+          "contacts": {
+            "items": {
+              "$ref": "#/components/schemas/Candidate"
+            },
+            "title": "Contacts",
+            "type": "array"
+          }
+        },
+        "title": "Candidates",
         "type": "object"
       },
       "CarrierCredentialsRequest": {
@@ -9153,6 +9242,35 @@
         "title": "DistributionTargetUpdate",
         "type": "object"
       },
+      "DraftItem": {
+        "properties": {
+          "product_name": {
+            "title": "Product Name",
+            "type": "string"
+          },
+          "quantity": {
+            "title": "Quantity",
+            "type": "integer"
+          },
+          "unit_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Price"
+          }
+        },
+        "required": [
+          "product_name",
+          "quantity"
+        ],
+        "title": "DraftItem",
+        "type": "object"
+      },
       "DriveStatus": {
         "properties": {
           "account_email": {
@@ -9530,6 +9648,62 @@
           "end"
         ],
         "title": "EventBody",
+        "type": "object"
+      },
+      "EventDraft": {
+        "properties": {
+          "calendar_type": {
+            "const": "personal",
+            "default": "personal",
+            "title": "Calendar Type",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "end": {
+            "title": "End",
+            "type": "string"
+          },
+          "is_all_day": {
+            "default": false,
+            "title": "Is All Day",
+            "type": "boolean"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          },
+          "start": {
+            "title": "Start",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "start",
+          "end"
+        ],
+        "title": "EventDraft",
         "type": "object"
       },
       "EventPatchBody": {
@@ -13280,6 +13454,72 @@
           "updated_at"
         ],
         "title": "InvoiceDetailResponse",
+        "type": "object"
+      },
+      "InvoiceDraft": {
+        "properties": {
+          "company_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company Name"
+          },
+          "contact_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Name"
+          },
+          "currency": {
+            "const": "JPY",
+            "default": "JPY",
+            "title": "Currency",
+            "type": "string"
+          },
+          "due_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Date"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DraftItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "InvoiceDraft",
         "type": "object"
       },
       "InvoiceItemInput": {
@@ -36354,6 +36594,19 @@
         "title": "UnitUpdate",
         "type": "object"
       },
+      "UnknownDraft": {
+        "properties": {
+          "reply": {
+            "title": "Reply",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reply"
+        ],
+        "title": "UnknownDraft",
+        "type": "object"
+      },
       "UnmaskRequestBody": {
         "additionalProperties": false,
         "properties": {
@@ -39692,6 +39945,52 @@
         "summary": "Restore Record",
         "tags": [
           "archives"
+        ]
+      }
+    },
+    "/api/v1/assistant/messages": {
+      "post": {
+        "operationId": "post_assistant_message_api_v1_assistant_messages_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssistantMessageIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssistantMessageOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Post Assistant Message",
+        "tags": [
+          "assistant"
         ]
       }
     },

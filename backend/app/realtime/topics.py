@@ -97,6 +97,8 @@ NO_SIGNAL_ROUTES: dict[tuple[str, str], str] = {
     ("POST", "/api/v1/admin/tenants"): _PENDING,
     ("POST", "/api/v1/archives"): _PENDING,
     ("POST", "/api/v1/archives/{archive_id}/restore"): _PENDING,
+    # ADR-1056: 下書きを返すだけで何も作らない
+    ("POST", "/api/v1/assistant/messages"): _PENDING,
     ("POST", "/api/v1/auth/login"): _PENDING,
     ("POST", "/api/v1/auth/logout"): _PENDING,
     ("POST", "/api/v1/tcg/analysis-results/client-timing"): "データを変えない。計時ログを1行残すだけ",

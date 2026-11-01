@@ -652,6 +652,41 @@ jobs:
             docker compose -p astro-webapp-unmask -f docker-compose.ai-unmask-http.yml up -d --build=false --force-recreate \
               || echo "::warning::ai-unmask-http を起こせませんでした（アプリの反映には影響しません）"
 
+      # ADR-1056 段2: チャット秘書の容器（secretary-agent）を作って起こす。付け足しの機能なので、どの手順が失敗しても
+      # アプリの反映は止めない（警告だけ出して exit 0）。段そのものが打ち切りや ssh の切断で失敗しても、
+      # 後ろの移行・smoke・Finalize が流れるよう continue-on-error: true と command_timeout: 10m を付ける。
+      # Actions のログに probe の行が無ければ、打ち切りかどうかをログで確かめ、必要なら command_timeout を上げる。
+      - name: Start secretary-agent (ADR-1056)
+        if: ${{ success() }}
+        continue-on-error: true
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 10m
+          script: |
+            cd /home/ubuntu/salesanchor
+            df -h / | tail -1
+            if ! docker build -t astro-webapp-secretary-agent ./secretary-agent; then
+              echo "::warning::secretary-agent のイメージを作れませんでした（アプリの反映には影響しません）"
+              exit 0
+            fi
+            probe_rc=0
+            docker run --rm --network astro-webapp_frontnet --read-only --cap-drop ALL --security-opt no-new-privileges:true astro-webapp-secretary-agent node /app/probe.mjs || probe_rc=$?
+            if [ "$probe_rc" -eq 1 ]; then
+              echo "::warning::K4 不合格: secretary-agent から DB か redis に届きました"
+            elif [ "$probe_rc" -ne 0 ]; then
+              echo "::warning::probe を流せませんでした（終了コード $probe_rc）"
+            fi
+            if [ ! -r /home/ubuntu/.config/salesanchor/secretary-agent.env ]; then
+              echo "::warning::secretary-agent.env が読めないため secretary-agent を起こしません"
+              exit 0
+            fi
+            docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml up -d --force-recreate --no-build \
+              || echo "::warning::secretary-agent を起こせませんでした（アプリの反映には影響しません）"
+            exit 0
+
       # SA-18 Phase2: salesanchor_app ロールの bootstrap（冪等）
       # migrations より前に実行する。ADMIN_DATABASE_URL を .env に注入。
       - name: Bootstrap salesanchor_app role (idempotent)
