@@ -16,6 +16,12 @@ import { gotoInventory, makeInventoryItems } from "./inventory-helpers";
 const WIDTH = 360;
 const HEIGHT = 800;
 const PC_WIDTH = 1280;
+/** この spec は各宣言が自前で幅（360／J7 は1280）を指定するため、project 既定の viewport を使わない。
+ *  3 project で同じことを3回測っても信号は増えないので、vl-mobile-390 の1 project だけで走らせる
+ *  （先例 frontend/tests-e2e/visual-language/app-update-notice.spec.ts:20-23）。
+ *  画面検査の持ち時間は15分（.github/workflows/e2e.yml:158）で、2026-11-01 の実測では
+ *  834件中822件で打ち切られた＝余裕がほぼ無い。9宣言×3=27実行を9実行に減らす。 */
+const TARGET_PROJECT = "vl-mobile-390";
 
 /** design.md ③ P1: パネル幅は画面幅の83%、左端xは画面幅の17%（frontend/src/tokens.css:445） */
 const PANEL_WIDTH_RATIO = 0.83;
@@ -71,7 +77,8 @@ async function expectNoPageOverflow(page: Page): Promise<void> {
 }
 
 test.describe("visual-language: 在庫表 詳細フィルタの副画面", () => {
-  test("J1: パネル幅=画面の83%±1px・左端=17%±1px（G1・P1）。地（オーバーレイ）を押すと閉じる", async ({ page }) => {
+  test("J1: パネル幅=画面の83%±1px・左端=17%±1px（G1・P1）。地（オーバーレイ）を押すと閉じる", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== TARGET_PROJECT, "幅は spec 側で指定するため1 project のみ");
     await gotoInventory(page, { width: WIDTH, height: HEIGHT });
     const outer = await openFilterDrawerOuter(page);
 
@@ -89,7 +96,8 @@ test.describe("visual-language: 在庫表 詳細フィルタの副画面", () =>
     await expect(page.locator(".comp-drawer-panel--mobile-inset.comp-drawer-panel--open")).toHaveCount(0);
   });
 
-  test("J2: root に12個が縦に並び、順番も今のまま（G2）。見える「閉じる」ボタンは0件（✕ の読み上げ名1件は除く）", async ({ page }) => {
+  test("J2: root に12個が縦に並び、順番も今のまま（G2）。見える「閉じる」ボタンは0件（✕ の読み上げ名1件は除く）", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== TARGET_PROJECT, "幅は spec 側で指定するため1 project のみ");
     await gotoInventory(page, { width: WIDTH, height: HEIGHT });
     const panel = await openFilterPanel(page);
 
@@ -129,7 +137,8 @@ test.describe("visual-language: 在庫表 詳細フィルタの副画面", () =>
     await expect(outer.getByTestId("drawer-close")).toHaveCount(1);
   });
 
-  test("J3: 「＞」の6行を押すと次の画面になり「←」が出る。「決定する」で root に戻り、選んだ名前が行の右に出る（G3）", async ({ page }) => {
+  test("J3: 「＞」の6行を押すと次の画面になり「←」が出る。「決定する」で root に戻り、選んだ名前が行の右に出る（G3）", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== TARGET_PROJECT, "幅は spec 側で指定するため1 project のみ");
     await gotoInventory(page, { width: WIDTH, height: HEIGHT });
     const panel = await openFilterPanel(page);
 
@@ -161,7 +170,8 @@ test.describe("visual-language: 在庫表 詳細フィルタの副画面", () =>
     }
   });
 
-  test("J4: 6項目すべてが一覧に効き、4項目を選ぶと「フィルタを有効化」が自動で入る（G4・G8後半・P10・P11の裏取り）", async ({ page }) => {
+  test("J4: 6項目すべてが一覧に効き、4項目を選ぶと「フィルタを有効化」が自動で入る（G4・G8後半・P10・P11の裏取り）", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== TARGET_PROJECT, "幅は spec 側で指定するため1 project のみ");
     await gotoInventory(page, { width: WIDTH, height: HEIGHT });
 
     const urls: string[] = [];
@@ -236,7 +246,8 @@ test.describe("visual-language: 在庫表 詳細フィルタの副画面", () =>
     await expect(panel.getByTestId("inventory-columns-filter-row")).toContainText("型番");
   });
 
-  test("J5: ボタンの文字は常に「詳細フィルタ」と完全一致し、数字を含まない（G5）", async ({ page }) => {
+  test("J5: ボタンの文字は常に「詳細フィルタ」と完全一致し、数字を含まない（G5）", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== TARGET_PROJECT, "幅は spec 側で指定するため1 project のみ");
     await gotoInventory(page, { width: WIDTH, height: HEIGHT });
     const toggle = page.getByTestId("inventory-filter-toggle");
     await expect(toggle).toHaveText("詳細フィルタ");
@@ -252,7 +263,8 @@ test.describe("visual-language: 在庫表 詳細フィルタの副画面", () =>
     expect(await toggle.textContent()).not.toMatch(/\(\d+\)/);
   });
 
-  test("J6: 横スクロール0・はみ出し0（G6）。パネル内の子の右端がパネル幅以内", async ({ page }) => {
+  test("J6: 横スクロール0・はみ出し0（G6）。パネル内の子の右端がパネル幅以内", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== TARGET_PROJECT, "幅は spec 側で指定するため1 project のみ");
     await gotoInventory(page, { width: WIDTH, height: HEIGHT });
     const panel = await openFilterPanel(page);
 
@@ -264,7 +276,8 @@ test.describe("visual-language: 在庫表 詳細フィルタの副画面", () =>
     await expectNoPageOverflow(page);
   });
 
-  test(`J7: PC（幅${PC_WIDTH}px）は1pxも変わらない（G7）。.content-toolbar あり／inventory-filter-panel は section／supplier-drawer の枚数が今と同じ`, async ({ page }) => {
+  test(`J7: PC（幅${PC_WIDTH}px）は1pxも変わらない（G7）。.content-toolbar あり／inventory-filter-panel は section／supplier-drawer の枚数が今と同じ`, async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== TARGET_PROJECT, "幅は spec 側で指定するため1 project のみ");
     await gotoInventory(page, { width: PC_WIDTH, height: 800 });
 
     await expect(page.locator(".content-toolbar")).toHaveCount(1);
@@ -280,7 +293,8 @@ test.describe("visual-language: 在庫表 詳細フィルタの副画面", () =>
     await expect(page.locator('[data-testid="supplier-drawer"]')).toHaveCount(1);
   });
 
-  test("J8: root の行の高さが44px以上・次の画面の行の高さが61px以上（P2・P3）。「隠す〜」の行の右の文字が読める（G8前半）", async ({ page }) => {
+  test("J8: root の行の高さが44px以上・次の画面の行の高さが61px以上（P2・P3）。「隠す〜」の行の右の文字が読める（G8前半）", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== TARGET_PROJECT, "幅は spec 側で指定するため1 project のみ");
     await gotoInventory(page, { width: WIDTH, height: HEIGHT });
     const panel = await openFilterPanel(page);
 
@@ -307,7 +321,8 @@ test.describe("visual-language: 在庫表 詳細フィルタの副画面", () =>
     expect(optionBox!.height).toBeGreaterThanOrEqual(MIN_OPTION_ROW_H);
   });
 
-  test("J9: フォーカスは次の画面で「←」へ、戻ると押した行へ移る（P8）。閉じている間は注記（inventory-expiry-warning）が0件（P9）", async ({ page }) => {
+  test("J9: フォーカスは次の画面で「←」へ、戻ると押した行へ移る（P8）。閉じている間は注記（inventory-expiry-warning）が0件（P9）", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== TARGET_PROJECT, "幅は spec 側で指定するため1 project のみ");
     await gotoInventory(page, { width: WIDTH, height: HEIGHT });
     await expect(page.getByTestId("inventory-expiry-warning")).toHaveCount(0);
 
