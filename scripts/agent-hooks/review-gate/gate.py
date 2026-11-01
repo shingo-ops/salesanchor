@@ -5,6 +5,7 @@
  (a) 記録の置き場・記録台本への書き込み/参照を止める (R6)
  (b) reviewer を opus 以外の model で起動するのを止める (R5)
  (c) PR のマージ操作は、今の HEAD に reviewer(opus) の APPROVE 記録が無ければ止める (R1-R3)
+ (d) shingo-ops/salesanchor の PR は、確かめ（CI）が全部 pass/skipping でなければ止める (ADR-1029 What 7)
 
 設計: docs/handoff/review-gate-hook/design.md §5-3 / ADR-1029
 止めるときは理由を stderr に出して exit 2。標準ライブラリのみ。
@@ -48,6 +49,14 @@ HEAD_MSG = ("review-gate: PR #%s の今の HEAD %s に Opus 審査役の APPROVE
             "Opus の審査役（subagent_type: reviewer）を起動し、報告の最後の行に"
             "「VERDICT: APPROVE on <40桁sha> PR #%s」を書かせてください。"
             "別のリポジトリの PR なら、行の末尾に「 repo %s/%s」を足させてください。")
+# ADR-1029 What 7: このリポジトリの PR は、確かめ（CI）が全部緑でなければ合流を止める
+STRICT_CHECK_REPOS = {"shingo-ops/salesanchor"}
+CHECK_OK_BUCKETS = {"pass", "skipping"}
+CHECKS_MSG = ("review-gate: PR #%s の確かめ（CI）に緑でないものがあります: %s。"
+              "必須でない確かめも含め、全部が pass か skipping になるまで待つか直してから、"
+              "もう一度合流してください。")
+CHECKS_READ_MSG = ("review-gate: PR #%s の確かめ（CI）の一覧を gh で読めないため止めます"
+                   "（一覧が空・gh の失敗・JSON でない。再実行してください）。")
 
 
 class Block(Exception):
@@ -455,6 +464,22 @@ def gh_view(n, repo, wd):
         return None
 
 
+def gh_checks(n, owner, repo, wd):
+    """[(name, bucket), ...] を返す。読めない・空・形が違うときは None。終了コードは見ない。"""
+    if not os.path.isdir(wd):
+        return None
+    cmd = [gh_path(), "pr", "checks", str(n), "--json", "name,bucket",
+           "--repo", "%s/%s" % (owner, repo)]
+    try:
+        r = subprocess.run(cmd, cwd=wd, capture_output=True, text=True, timeout=60)
+        j = json.loads(r.stdout)
+        if not isinstance(j, list) or not j:
+            return None
+        return [(str(x["name"]), str(x["bucket"])) for x in j]
+    except Exception:
+        return None
+
+
 def resolve(ctx):
     seen = {}
     if ctx.checks and re.search(r"(?<![A-Za-z0-9_])GH_(?:REPO|HOST)=", ctx.full):
@@ -488,6 +513,13 @@ def resolve(ctx):
             deny("review-gate: --auto は --match-head-commit <今の HEAD 40桁> と一緒でなければ使えません"
                  "（PR #%s の HEAD %s）。Opus の審査役の APPROVE 済みの HEAD を指定してください。"
                  % (c["n"], head[:9]), pr=c["n"], head=head, kind=c["kind"])
+        if ("%s/%s" % (owner, repo)).lower() in STRICT_CHECK_REPOS:
+            ck = gh_checks(c["n"], owner, repo, c["wd"])
+            if ck is None:
+                deny(CHECKS_READ_MSG % c["n"], pr=c["n"], head=head, kind=c["kind"])
+            bad = ["%s(%s)" % (name, bucket) for name, bucket in ck if bucket not in CHECK_OK_BUCKETS]
+            if bad:
+                deny(CHECKS_MSG % (c["n"], "、".join(bad)), pr=c["n"], head=head, kind=c["kind"])
         log({"decision": "allow", "pr": c["n"], "head": head, "kind": c["kind"]})
 
 
