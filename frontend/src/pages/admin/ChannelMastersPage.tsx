@@ -7,13 +7,14 @@
  * ルート: /admin/channel-masters
  * 権限: tenant.profile.edit（既存 admin 権限を流用）
  */
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
+import { useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
 import { PageLayout } from "../../components/PageLayout";
 import { Button } from "../../components/Button";
 import { TextFieldControl } from "../../components/TextField";
-import { LoadingBlock } from "../../components/loading";
+import { LoadingBlock, Spinner } from "../../components/loading";
 
 interface ChannelMaster {
   id: number;
@@ -23,28 +24,25 @@ interface ChannelMaster {
   is_active: boolean;
 }
 
+/** 応答は配列か { data: 配列 } のどちらか（今までの読み方のまま） */
+type ChannelMastersResponse = ChannelMaster[] | { data?: ChannelMaster[] };
+
+/** 書いた後に取り直す写しの頭（ADR-1054） */
+const CHANNEL_MASTERS_HEAD = ["channel-masters"] as const;
+
 export default function ChannelMastersPage() {
   const { t } = useTranslation();
-  const [channels, setChannels] = useState<ChannelMaster[]>([]);
-  const [loading, setLoading] = useState(true);
+  // 写しを先に出して裏で取り直す（ADR-1054 段 2）
+  const channelsQuery = useApiQuery<ChannelMastersResponse>("/channel-masters");
+  const invalidate = useInvalidateApi();
+  const channels: ChannelMaster[] = Array.isArray(channelsQuery.data)
+    ? channelsQuery.data
+    : channelsQuery.data?.data ?? [];
   const [newPlatform, setNewPlatform] = useState("");
   const [newDisplayName, setNewDisplayName] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const load = useCallback(() => {
-    setLoading(true);
-    api
-      .get<ChannelMaster[]>("/channel-masters")
-      .then((res) => {
-        const all: ChannelMaster[] = Array.isArray(res) ? res : (res as { data?: ChannelMaster[] }).data ?? [];
-        setChannels(all);
-      })
-      .catch(() => setError(t("channelMasters.loadError")))
-      .finally(() => setLoading(false));
-  }, [t]);
-
-  useEffect(() => { load(); }, [load]);
+  const shownError = error ?? (channelsQuery.isError ? t("channelMasters.loadError") : null);
 
   const handleAdd = useCallback(async () => {
     const platform = newPlatform.trim();
@@ -56,27 +54,30 @@ export default function ChannelMastersPage() {
       await api.post("/admin/channel-masters", { platform, display_name: displayName });
       setNewPlatform("");
       setNewDisplayName("");
-      load();
+      void invalidate(CHANNEL_MASTERS_HEAD);
     } catch {
       setError(t("channelMasters.saveError"));
     } finally {
       setSaving(false);
     }
-  }, [newPlatform, newDisplayName, load, t]);
+  }, [newPlatform, newDisplayName, invalidate, t]);
 
   const handleDelete = useCallback(async (id: number) => {
     setError(null);
     try {
       await api.delete(`/admin/channel-masters/${id}`);
-      load();
+      void invalidate(CHANNEL_MASTERS_HEAD);
     } catch {
       setError(t("channelMasters.deleteError"));
     }
-  }, [load, t]);
+  }, [invalidate, t]);
 
   return (
-    <PageLayout navKey="nav.channelMasters">
-      {loading ? (
+    <PageLayout
+      navKey="nav.channelMasters"
+      headerLeft={channelsQuery.isFetching && !channelsQuery.isPending ? <Spinner size="sm" /> : undefined}
+    >
+      {channelsQuery.isPending ? (
         <LoadingBlock />
       ) : (
         <>
@@ -111,7 +112,7 @@ export default function ChannelMastersPage() {
             </tbody>
           </table>
 
-          {error && <p role="alert" className="channel-masters-error">{error}</p>}
+          {shownError && <p role="alert" className="channel-masters-error">{shownError}</p>}
 
           <div className="channel-masters-add-form">
             <h3>{t("channelMasters.addTitle")}</h3>
