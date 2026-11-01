@@ -110,6 +110,9 @@ PO の言葉: 「LINEみたいな使い心地は出来る？」（意味は「�
   - 仮説（まだ確かめていない）: /me/permissions が返るまで権限で出す部分が無いので、記録係の構造の印が最初の時と合わない。このため K1 は /me/permissions の通信の秒になる。確かめ方: usePermissions を写しの置き場に載せた後に同じ 4 行を測り、0.1 秒以下になるか見る。
   - usePermissions を使う画面のファイルは 53 本ある（`git grep -l 'usePermissions()' origin/main -- frontend/src`）。段 2 のカードの範囲（3 画面）の外なので、直すには新しい作業指示書と PO の判断が要る。
 
+#### 3-4-7. 権限の写しの作業指示書
+- 段 2 の受入で K1 が 0.1 秒を超えた 4 行（§3-4-6）の理由の仮説を確かめるため、権限を読む部品 usePermissions を写しの置き場に載せる。作業指示書は docs/handoff/line-like-speed/perm-cache-card.md。ほかの使い手は変えない理由と、ログインの前に描かれない根拠は perm-cache-card.md §0 P5・P6。K5 は perm-cache-card.md §4-C の 12 本目で確かめる。PO 選択「1」（2026-11-01）。
+
 ### 3-5. 測り方（|基準|検証方法|）
 | 基準 | 検証方法 |
 |---|---|
