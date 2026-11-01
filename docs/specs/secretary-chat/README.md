@@ -23,6 +23,7 @@
 - [../../handoff/secretary-chat/recon.md](../../handoff/secretary-chat/recon.md)（現状の調べ）
 - [../../handoff/secretary-chat/recon2.md](../../handoff/secretary-chat/recon2.md)（現状の調べ 第2回）
 - [../../handoff/secretary-chat/design.md](../../handoff/secretary-chat/design.md)（設計 第3版）
+- [../../handoff/secretary-chat/card-a.md](../../handoff/secretary-chat/card-a.md)・[card-b1.md](../../handoff/secretary-chat/card-b1.md)・[card-b2.md](../../handoff/secretary-chat/card-b2.md)（実装カード）
 
 ## ステータス
 - あるべき姿: PO 発言を転記（2026-11-01）
