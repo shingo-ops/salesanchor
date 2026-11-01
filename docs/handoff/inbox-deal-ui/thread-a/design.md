@@ -75,10 +75,11 @@
 - 段ごとに1つの PR。戻すときはその PR を戻す（revert）。DB と本番データは触らない。
 
 ## 10. 維持の仕組み
+- 守り手: CI の check:css-values・check:new-tokens・ui-governance-gate と、見た目の基準写真の試験（tests-e2e/visual-language）
 - 値はトークンと金型に集め、CI（check:css-values・check:new-tokens・ui-governance-gate）が直書きの増加を止める。
 - 金型の stories を Storybook に置き、見た目の基準写真（tests-e2e/visual-language）で変化を見張る。
 
-## 11. 外部事例
+## 11. 外部・過去事例の参照と我々への応用
 - 手本は本物の WhatsApp（Android 実機の実測）。他社の再現例は使わない（要件 §1: 手本はクローンではない、PO 2026-10-29）。参考として既存の比較表（size-compare.md: chatwoot・zernio・WhatsAppClone）があるが、値の根拠にはしない。
 
 ## 12. 審査（Architect・同じ AI による自己審査）
