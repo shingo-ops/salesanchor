@@ -187,7 +187,7 @@
   --comp-chat-bubble-pad-x-mobile: 9px;               /* スマホの吹き出しの左右の内側（初期値・§7で1px刻みに決める）（card-a2 §3） */
   --comp-chat-time-line-height-mobile: 16px;          /* スマホの時刻の行の高さ（card-a2 §3） */
   --comp-chat-time-inset-mobile: 8px;                 /* スマホの時刻の右端から吹き出しの右端まで（card-a2 §3） */
-  --comp-chat-time-bottom-mobile: 3px;                /* スマホの時刻の下端（初期値・§7で決める）（card-a2 §3） */
+  --comp-chat-time-bottom-mobile: 2px;                /* スマホの時刻の下端（端末で位置合わせ済み）（card-a2 §3） */
   --comp-chat-input-radius-mobile: 24px;              /* スマホの入力欄のピルの角（伸びても変わらない）（card-a2 §3） */
   --comp-chat-input-font-mobile: 18px;                /* スマホの入力欄の文字（card-a2 §3） */
   --comp-chat-input-line-height-mobile: 21px;         /* スマホの入力欄の行の高さ（card-a2 §3） */
