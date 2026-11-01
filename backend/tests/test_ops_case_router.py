@@ -18,6 +18,14 @@ from urllib.parse import urlsplit, urlunsplit
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
+from tests.conftest import (
+    OPS_CASE_HAS_SECRET_DDL,
+    OPS_CASE_PLAIN_DEMO_DDL,
+    OPS_CASE_SMALL_PK_DDL,
+    OPS_CASE_TENANT_LEADS_NO_EMAIL_DDL,
+    OPS_CASE_TENANT_VIEWER_ACCOUNTS_DDL,
+    OPS_CASE_TWO_PK_DDL,
+)
 
 ADMIN_PG_URL = os.getenv("RLS_ADMIN_DATABASE_URL") or os.getenv("TEST_PG_URL")
 
@@ -138,13 +146,13 @@ async def env(monkeypatch):
     a.execute(f'GRANT CREATE ON DATABASE "{dbname}" TO aic_owner')
     a.execute("ALTER SCHEMA public OWNER TO aic_owner")
     a.execute("SET ROLE aic_owner")
-    a.execute("CREATE TABLE public.plain_demo (id integer PRIMARY KEY, memo text, email text)")
-    a.execute("CREATE TABLE public.small_pk (id smallint PRIMARY KEY, memo text)")
-    a.execute("CREATE TABLE public.has_secret (id integer PRIMARY KEY, memo text, api_token text)")
-    a.execute("CREATE TABLE public.two_pk (a integer, b integer, memo text, PRIMARY KEY (a, b))")
+    a.execute(OPS_CASE_PLAIN_DEMO_DDL)
+    a.execute(OPS_CASE_SMALL_PK_DDL)
+    a.execute(OPS_CASE_HAS_SECRET_DDL)
+    a.execute(OPS_CASE_TWO_PK_DDL)
     a.execute("CREATE SCHEMA tenant_001")
-    a.execute("CREATE TABLE tenant_001.leads (id uuid PRIMARY KEY, customer_name text)")
-    a.execute("CREATE TABLE tenant_001.viewer_accounts (id integer PRIMARY KEY, note text)")
+    a.execute(OPS_CASE_TENANT_LEADS_NO_EMAIL_DDL)
+    a.execute(OPS_CASE_TENANT_VIEWER_ACCOUNTS_DDL)
     a.execute(_read("20261024_100000_create_ai_cloud_meta.sql"))
     a.execute(_read("20261024_100300_create_ai_cloud_views.sql"))
     a.execute("RESET ROLE")
