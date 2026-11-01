@@ -1,7 +1,7 @@
 # design — 受信箱 会話画面 A「見た目」（スマホの吹き出し・入力欄を WhatsApp 実測へ）
 
 状態: 設計審査済み（§12）。§4 は PO 決定済み（2026-11-01「1」＝案1）。段A-1 は実装カード card-a1.md（同じフォルダ）で実装へ。段A-2 は段0の測り足し待ち（PO のスマホが要る）。
-根拠: recon.md（同じフォルダ）。成功条件: docs/handoff/inbox-deal-ui/requirements.md §11 A1〜A4（PO 承認 2026-11-01）。
+根拠: docs/handoff/inbox-deal-ui/thread-a/recon.md。成功条件: docs/handoff/inbox-deal-ui/requirements.md §11 A1〜A4（PO 承認 2026-11-01）。
 
 ## 1. 目的と利用者に見える変化
 - 目的: スマホで会話を開いたとき、吹き出しと入力欄が WhatsApp と同じ大きさ・形・置き方になる。
@@ -75,12 +75,19 @@
 - 段ごとに1つの PR。戻すときはその PR を戻す（revert）。DB と本番データは触らない。
 
 ## 10. 維持の仕組み
-- 守り手: CI の check:css-values・check:new-tokens・ui-governance-gate と、見た目の基準写真の試験（tests-e2e/visual-language）
+- 守り手: CI の check:css-values・check:new-tokens・ui-governance-gate と、見た目の基準写真の試験（frontend/tests-e2e/visual-language）
 - 値はトークンと金型に集め、CI（check:css-values・check:new-tokens・ui-governance-gate）が直書きの増加を止める。
 - 金型の stories を Storybook に置き、見た目の基準写真（tests-e2e/visual-language）で変化を見張る。
 
 ## 11. 外部・過去事例の参照と我々への応用
 - 手本は本物の WhatsApp（Android 実機の実測）。他社の再現例は使わない（要件 §1: 手本はクローンではない、PO 2026-10-29）。参考として既存の比較表（size-compare.md: chatwoot・zernio・WhatsAppClone）があるが、値の根拠にはしない。
+
+## 4-1. 吹き出しの金型を1つにまとめる（**PO 決定 2026-11-01「1」**）
+- 事実: A-1 の PR #4974 と同じ時期に、秘書のチャット（ADR-1056・PR #4976）が同じ名前の金型 `components/ChatBubble` を main に入れた。#4974 は衝突してマージできない。
+- 決定: 受信箱の金型を土台にして1つにまとめ、秘書のチャットもそれを使う。どちらの画面の見た目も変えない。
+- 案: 金型に `layout`（thread=受信箱 / panel=秘書）・`failed`・`pending`・`wide` を持たせる。色・角・余白・字・行の間隔の規則は1か所にし、2画面の違い（幅・並べ方・赤の出し方・スマホの色）は props で選ぶ。クラス名は components の慣習 `comp-` に合わせて `comp-chat-bubble` にする。
+- 退けた案: (a) 名前を変えて2つ並べる → 同じ役目の金型が2つになり SSOT に反する。(b) 秘書の金型を土台にする → PO の決定（受信箱を土台）と違う。受信箱の時刻の行・赤の枠・スマホの色を後から足すことになる。
+- 受入: 受信箱は A-1 と同じ写真比べ、秘書は写真（画素 0）と値（項目 0）の比べ。作業指示は card-a1-unify.md。
 
 ## 12. 審査（Architect・同じ AI による自己審査）
 - 第1回 判定: REVISE。理由: (1) §4 の金型の新設は ADR-144 :59-64 により PO の許可が要る。(2) U1〜U6 が測れていない。

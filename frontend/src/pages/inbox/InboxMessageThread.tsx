@@ -15,6 +15,8 @@ import { useLongPressReveal } from "./useLongPressReveal";
 import { splitReactions } from "./reactionHeart";
 import { HEART_REACTION_EMOJI } from "./reactionEmojiPresets";
 import { Button } from "../../components/Button";
+import { ChatBubble } from "../../components/ChatBubble";
+import { ChatComposer } from "../../components/ChatComposer";
 import { IconToggleButton } from "../../components/IconToggleButton";
 import { SelectControl } from "../../components/Select";
 import { TextareaControl } from "../../components/Textarea";
@@ -554,21 +556,35 @@ export function InboxMessageThread({
               <div className="msg-stack">
               <div className="msg-bubble-line" data-heart-revealed={revealedId === msg.id ? "true" : undefined}>
               {heartHover && outbound && heartButton}
-              <div
+              <ChatBubble
+                direction={outbound ? "outbound" : "inbound"}
+                failed={failed}
                 role={failed ? "alert" : undefined}
-                className={`msg-bubble${failed ? " failed" : outbound ? " outbound" : " inbound"}`}
                 {...(canReact ? bindLongPress(msg.id) : {})}
                 title={
                   failed
                     ? `${t("inbox.sendError.generic")}${t("inbox.sendError.codeSuffix", { code: msg.error_code })}${msg.error_message ? ` — ${msg.error_message}` : ""}`
                     : formatAbsolute(msg.created_at, i18n.language)
                 }
+                time={
+                  <>
+                  {relativeTime(msg.created_at, t, i18n.language)}
+                  {/* Translate button */}
+                  {msg.message_id && msg.message_text && !failed && (
+                    <button
+                      type="button"
+                      className="msg-translate-btn"
+                      onClick={() => handleTranslate(msg.message_id)}
+                      aria-label={translationState?.text ? t("inbox.showOriginal") : t("inbox.translate")}
+                      title={translationState?.text ? t("inbox.showOriginal") : t("inbox.translate")}
+                      disabled={translationState?.loading}
+                    >
+                      <INBOX_ACTION_ICONS.translate size={14} weight="fill" aria-hidden="true" />
+                    </button>
+                  )}
+                  </>
+                }
               >
-                {msg.message_tag && !failed && (
-                  <div style={{ fontSize: "var(--font-2xs)", opacity: "var(--opacity-secondary)", marginBottom: "var(--space-1)", fontWeight: "var(--font-weight-semi)" }}>
-                    {msg.message_tag === "HUMAN_AGENT" ? t("inbox.humanAgentLabel") : msg.message_tag}
-                  </div>
-                )}
                 {failed && (
                   <div style={{ fontSize: "var(--font-2xs)", fontWeight: "var(--font-weight-semi)", marginBottom: "var(--space-1)" }}>
                     {t("inbox.sendError.generic")}{t("inbox.sendError.codeSuffix", { code: msg.error_code })}
@@ -631,24 +647,7 @@ export function InboxMessageThread({
                     <span className="msg-translation-badge">{t("inbox.translatedBy")}</span>
                   </div>
                 )}
-
-                <div className={`msg-time${outbound ? "" : " inbound"}`}>
-                  {relativeTime(msg.created_at, t, i18n.language)}
-                  {/* Translate button */}
-                  {msg.message_id && msg.message_text && !failed && (
-                    <button
-                      type="button"
-                      className="msg-translate-btn"
-                      onClick={() => handleTranslate(msg.message_id)}
-                      aria-label={translationState?.text ? t("inbox.showOriginal") : t("inbox.translate")}
-                      title={translationState?.text ? t("inbox.showOriginal") : t("inbox.translate")}
-                      disabled={translationState?.loading}
-                    >
-                      <INBOX_ACTION_ICONS.translate size={14} weight="fill" aria-hidden="true" />
-                    </button>
-                  )}
-                </div>
-              </div>
+              </ChatBubble>
               {heartHover && !outbound && heartButton}
               </div>
               {canReact && (
@@ -772,84 +771,83 @@ export function InboxMessageThread({
               <span className="send-preview-filename">{attachedFile?.name}</span>
             </div>
           )}
-          <div className="send-top-row">
-            <div className="conv-avatar" style={{ width: 'var(--size-thread-avatar)', height: 'var(--size-thread-avatar)', fontSize: "var(--font-xs)", flexShrink: 0 }}>
-              {t("inbox.meAvatar")}
-            </div>
-            <div className="send-input-wrap">
-              <TextareaControl
-                ref={textareaRef}
-                variant="embedded"
-                className="inbox-textarea"
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                onKeyDown={handleKeyDownGuarded}
-                placeholder={
+          <ChatComposer
+            leading={
+              <div className="conv-avatar" style={{ width: 'var(--size-thread-avatar)', height: 'var(--size-thread-avatar)', fontSize: "var(--font-xs)", flexShrink: 0 }}>
+                {t("inbox.meAvatar")}
+              </div>
+            }
+            input={
+              <>
+                <TextareaControl
+                  ref={textareaRef}
+                  variant="embedded"
+                  className="inbox-textarea"
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  onKeyDown={handleKeyDownGuarded}
+                  placeholder={
+                    discordChannelMissing
+                      ? t("inbox.discordChannelMissing")
+                      : canSend
+                        ? t("inbox.messagePlaceholder")
+                        : t("inbox.sendDisabled7d")
+                  }
+                  rows={2}
+                  disabled={!canSend || sending}
+                />
+                {/* 隠し file input */}
+                <input
+                  ref={fileInputRef}
+                  id={fileInputId}
+                  type="file"
+                  accept="image/jpeg,image/png,image/gif,image/webp"
+                  className="sr-only"
+                  onChange={handleFileChange}
+                  disabled={!canSend || sending}
+                  aria-label={t("inbox.attachImage")}
+                />
+              </>
+            }
+            attach={{
+              icon: INBOX_ACTION_ICONS.attach,
+              label: t("inbox.attachImage"),
+              onClick: handleAttachClick,
+              disabled: !canSend || sending,
+            }}
+            trailing={
+              <>
+              {/* ADR-110: 英訳プレビューボタン（担当者が日本語で書いて英訳確認したい場合） */}
+              {canSend && trimmedDraft.length > 0 && !attachedFile && (
+                <button
+                  type="button"
+                  className="inbox-translate-outbound-btn"
+                  onClick={() => setShowOutboundPreview(true)}
+                  disabled={sending}
+                  title={t("translation.outbound.buttonTitle")}
+                  aria-label={t("translation.outbound.buttonTitle")}
+                >
+                  <INBOX_ACTION_ICONS.translate size={ICON.sm} aria-hidden="true" />
+                  <span className="inbox-translate-outbound-label">{t("translation.outbound.buttonShort")}</span>
+                </button>
+              )}
+              </>
+            }
+            send={{
+              icon: INBOX_ACTION_ICONS.send,
+              label: sending ? t("inbox.sending") : t("inbox.send"),
+              title:
                   discordChannelMissing
                     ? t("inbox.discordChannelMissing")
-                    : canSend
-                      ? t("inbox.messagePlaceholder")
-                      : t("inbox.sendDisabled7d")
-                }
-                rows={2}
-                disabled={!canSend || sending}
-              />
-              {/* 隠し file input */}
-              <input
-                ref={fileInputRef}
-                id={fileInputId}
-                type="file"
-                accept="image/jpeg,image/png,image/gif,image/webp"
-                className="sr-only"
-                onChange={handleFileChange}
-                disabled={!canSend || sending}
-                aria-label={t("inbox.attachImage")}
-              />
-              {/* クリップボタン（Meta と同配置: ピル内右端） */}
-              <button
-                type="button"
-                className="send-attach-btn"
-                onClick={handleAttachClick}
-                disabled={!canSend || sending}
-                aria-label={t("inbox.attachImage")}
-                title={t("inbox.attachImage")}
-              >
-                <INBOX_ACTION_ICONS.attach size={ICON.md} aria-hidden="true" />
-              </button>
-            </div>
-            {/* ADR-110: 英訳プレビューボタン（担当者が日本語で書いて英訳確認したい場合） */}
-            {canSend && trimmedDraft.length > 0 && !attachedFile && (
-              <button
-                type="button"
-                className="inbox-translate-outbound-btn"
-                onClick={() => setShowOutboundPreview(true)}
-                disabled={sending}
-                title={t("translation.outbound.buttonTitle")}
-                aria-label={t("translation.outbound.buttonTitle")}
-              >
-                <INBOX_ACTION_ICONS.translate size={ICON.sm} aria-hidden="true" />
-                <span className="inbox-translate-outbound-label">{t("translation.outbound.buttonShort")}</span>
-              </button>
-            )}
-            <button
-              type="button"
-              className="inbox-send-btn"
-              onClick={checkAndSend}
-              disabled={sendDisabled && !attachedFile}
-              title={
-                discordChannelMissing
-                  ? t("inbox.discordChannelMissing")
-                  : !canSend
-                    ? t("inbox.sendDisabled7d")
-                    : trimmedDraft.length === 0 && !attachedFile
-                      ? t("inbox.messagePlaceholder")
-                      : t("inbox.send")
-              }
-            >
-              <INBOX_ACTION_ICONS.send size={ICON.base} aria-hidden="true" />
-              <span className="sr-only">{sending ? t("inbox.sending") : t("inbox.send")}</span>
-            </button>
-          </div>
+                    : !canSend
+                      ? t("inbox.sendDisabled7d")
+                      : trimmedDraft.length === 0 && !attachedFile
+                        ? t("inbox.messagePlaceholder")
+                        : t("inbox.send"),
+              onClick: checkAndSend,
+              disabled: sendDisabled && !attachedFile,
+            }}
+          />
         </div>
       </div>
 

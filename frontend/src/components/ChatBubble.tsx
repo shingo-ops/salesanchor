@@ -1,34 +1,64 @@
 /**
- * ChatBubble — チャットの吹き出し金型（ADR-144・ADR-067）
+ * ChatBubble — 会話の吹き出し金型（ADR-144・ADR-067）
  *
- * 利用者は右寄せ、AI は左寄せ。色・角丸は受信箱の吹き出しと同じトークン。
- * 言葉は持たない。エラーの文言などは呼ぶ側が children で渡す（ADR-027）。
+ * layout    : thread（受信箱の会話。並べ方はページの行が持つ）/ panel（秘書のチャット。左右に自分で寄る）
+ * direction : inbound（相手・AI から）/ outbound（自分から）。時刻の寄せ方もこれで決まる
+ * failed    : 送れなかった吹き出し。thread は赤の地と枠、panel は文字だけ赤
+ * pending   : 返事を待っている間の回る印を出す
+ * wide      : 吹き出しを横いっぱいにする（下書きの票などを入れるとき）
+ * time      : 吹き出しの下端に出す時刻の行の中身。渡さなければ行を出さない
+ * children  : 本文・画像・訳など吹き出しの中身
+ * そのほかの div の属性（role・title・長押しの手当て）はそのまま外側の div に付ける。
+ *
+ * 言葉は持たない。文言は呼ぶ側が children / time で渡す（ADR-027）。
+ * 業務の意味（どの経路のメッセージか等）はこの金型に埋め込まない。
  */
+import type { HTMLAttributes, ReactNode } from 'react';
+import { Spinner } from './loading';
+import './ChatBubble.css';
 
-import type { ReactNode } from "react";
-import { Spinner } from "./loading";
-import "./ChatBubble.css";
+export type ChatBubbleDirection = 'inbound' | 'outbound';
+export type ChatBubbleLayout = 'thread' | 'panel';
 
-export interface ChatBubbleProps {
-  side: "user" | "assistant";
+export interface ChatBubbleProps extends Omit<HTMLAttributes<HTMLDivElement>, 'className' | 'children'> {
+  direction: ChatBubbleDirection;
+  layout?: ChatBubbleLayout;
+  failed?: boolean;
+  pending?: boolean;
+  wide?: boolean;
+  time?: ReactNode;
   children: ReactNode;
-  status?: "sending" | "error";
-  className?: string;
 }
 
-export function ChatBubble({ side, children, status, className }: ChatBubbleProps) {
+export function ChatBubble({
+  direction,
+  layout = 'thread',
+  failed = false,
+  pending = false,
+  wide = false,
+  time,
+  children,
+  ...rest
+}: ChatBubbleProps) {
+  const outbound = direction === 'outbound';
+  const panel = layout === 'panel';
   const classes = [
-    "comp-chat-bubble",
-    `comp-chat-bubble--${side}`,
-    status ? `comp-chat-bubble--${status}` : "",
-    className,
+    'comp-chat-bubble',
+    panel ? 'comp-chat-bubble--panel' : '',
+    // thread の failed は色を丸ごと置き換える（送信・受信の色を付けない）。panel の failed は色を残して文字だけ赤くする
+    panel || !failed ? `comp-chat-bubble--${direction}` : 'comp-chat-bubble--failed',
+    panel && failed ? 'comp-chat-bubble--error' : '',
+    wide ? 'comp-chat-bubble--wide' : '',
   ]
     .filter(Boolean)
-    .join(" ");
+    .join(' ');
   return (
-    <div className={classes}>
-      <div className="comp-chat-bubble__body">{children}</div>
-      {status === "sending" && <Spinner size="sm" tone="inherit" decorative />}
+    <div {...rest} className={classes}>
+      {panel ? <div className="comp-chat-bubble__body">{children}</div> : children}
+      {pending && <Spinner size="sm" tone="inherit" decorative />}
+      {time !== undefined && (
+        <div className={`comp-chat-bubble__time${outbound ? '' : ' comp-chat-bubble__time--inbound'}`}>{time}</div>
+      )}
     </div>
   );
 }

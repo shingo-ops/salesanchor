@@ -167,8 +167,8 @@ describe("SecretaryChat sending", () => {
     renderChat();
     await sendMessage("hi");
     expect(await screen.findByText(/Something went wrong/)).toBeTruthy();
-    expect(document.body.querySelectorAll(".comp-chat-bubble--user.comp-chat-bubble--error").length).toBe(0);
-    expect(document.body.querySelectorAll(".comp-chat-bubble--assistant.comp-chat-bubble--error").length).toBe(1);
+    expect(document.body.querySelectorAll(".comp-chat-bubble--outbound.comp-chat-bubble--error").length).toBe(0);
+    expect(document.body.querySelectorAll(".comp-chat-bubble--inbound.comp-chat-bubble--error").length).toBe(1);
   });
 });
 

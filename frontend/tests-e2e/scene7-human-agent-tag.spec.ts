@@ -105,8 +105,8 @@ test.describe("Scene 7: Human Agent Tag", () => {
     const mainArea = page.locator("main main");
     await expect(mainArea.getByText(replyText)).toBeVisible({ timeout: 10_000 });
 
-    // バブル下の "Human Agent" ラベル表示（InboxPage の message_tag === "HUMAN_AGENT" 分岐）
-    await expect(page.getByText("Human Agent", { exact: true })).toBeVisible();
+    // 吹き出しの上の "Human Agent" 表示は出さない（PO 決定 2026-11-01）。送るときの札は下の検証で見る
+    await expect(page.getByText("Human Agent", { exact: true })).toHaveCount(0);
 
     // backend response 検証（messaging_type / message_tag が正しく設定された）
     expect(sendStatusBody).toMatchObject({
