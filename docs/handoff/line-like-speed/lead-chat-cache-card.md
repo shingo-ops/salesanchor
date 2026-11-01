@@ -4,8 +4,8 @@
 - 根拠の写し: S=origin/main a6ef43ca7。行番号はすべてこの sha。実装の前に最新の origin/main で行を合わせ直す（§3(a)）。
 - 書き方の決まりは最初の画面の写しカード（docs/handoff/line-like-speed/dashboard-cache-card.md）と同じ。全命令は cd <W> で始める・出力は tail/head で上限・PR は実行役が作らない・出力をファイルに残す命令と tail で読む命令は別の行。
 - 実行役はクラウドの Sonnet。作業場所の作り方はクラウドの決まり（S scripts/agent-hooks/cloud/rules.md:15）を正とする。.pr-number・gh-pr-create-safe.sh は使わない。待つために sleep を使わない。
-- 状態: 第 4 版（設計担当 Claude Opus・2026-11-02）。第 3 版の審査（REVISE）を第 4 版で直した: 前に取りに行って失敗した条件へ戻した最初の描画で空の一覧を印なしで出さない（最後に取り終えた path を持つ。§4-C (2)(6)(7)・11 本目）・行番号の誤り（§0 P5・§4-B (1)(2)・§4-C (7)）。第 1 版の審査（REVISE・指摘 5 つ）を第 2 版で直した: lint の警告を増やさない（試験の題を英語・8 か所の依存に setConversations を必ず足す）・会話を素早く切り替えた時に前の人のカルテを入力欄に入れない・失敗の印を会話ごとに持つ・利用者が画面を出したまま変わる試験を足す・§4-D (3) の言葉。第 2 版の審査（REVISE）を第 3 版で直した: カルテの保存の途中で会話を切り替えた時、遅れて返った保存の中身で次の会話の入力欄を書かない（§4-C (12)・9 本目）・写しの無い条件へ切り替えた最初の描画で空の一覧を出さず読み込み中の印を出す（§4-C (6)・10 本目）・行番号の誤り（§3(c)・§4-C (6)・§4-D (3)）。
-- 受領確認: 実装役は着手の最初の報告に「会話の画面の写しカード 第 4 版を受け取った・S=a6ef43ca7」と書く。
+- 状態: 第 5 版（設計担当 Claude Opus・2026-11-02）。第 4 版の審査（REVISE）を第 5 版で直した: 前に失敗した条件へ戻した後に、その前の条件の取得が遅れて返っても読み込み中の印を消さない（finally で setConvLoading(false) も最後に出した取得の時だけ呼ぶ。§4-C (7) の 3 つ目・12 本目）。第 3 版の審査（REVISE）を第 4 版で直した: 前に取りに行って失敗した条件へ戻した最初の描画で空の一覧を印なしで出さない（最後に取り終えた path を持つ。§4-C (2)(6)(7)・11 本目）・行番号の誤り（§0 P5・§4-B (1)(2)・§4-C (7)）。第 1 版の審査（REVISE・指摘 5 つ）を第 2 版で直した: lint の警告を増やさない（試験の題を英語・8 か所の依存に setConversations を必ず足す）・会話を素早く切り替えた時に前の人のカルテを入力欄に入れない・失敗の印を会話ごとに持つ・利用者が画面を出したまま変わる試験を足す・§4-D (3) の言葉。第 2 版の審査（REVISE）を第 3 版で直した: カルテの保存の途中で会話を切り替えた時、遅れて返った保存の中身で次の会話の入力欄を書かない（§4-C (12)・9 本目）・写しの無い条件へ切り替えた最初の描画で空の一覧を出さず読み込み中の印を出す（§4-C (6)・10 本目）・行番号の誤り（§3(c)・§4-C (6)・§4-D (3)）。
+- 受領確認: 実装役は着手の最初の報告に「会話の画面の写しカード 第 5 版を受け取った・S=a6ef43ca7」と書く。
 
 ## 0. 何のための変更か（設計の合格線は変えない）
 - P1 最初の画面の写しの受入（prod-ui-check run 41332039643 と 41334197486・2026-11-02）で、/ の戻った時の秒（K1）は 0.04 秒と 0.05 秒になった。同じ 2 回で /lead-chat の K1 は 0.68 秒と 0.83 秒、開く秒（K2）は 0.9 秒（2 回目）。2 回目の /lead-chat の行は API の数 7・いちばん遅い API は /api/v1/conversations 0.5 秒。設計担当の手元の写しは /tmp/CC報告ファイル/dashboard-cache/measure-run41332039643.txt と measure-run41334197486.txt（リポジトリには入れない）。
@@ -26,7 +26,7 @@
 | 2 | frontend/src/lib/messages.ts | listConversations と getMessages の中で path を作る | path の作り方を conversationsPath・messagesPath に出す（§4-B） |
 | 3 | frontend/src/pages/inbox/useInboxState.ts | 4 つの取り方を useState に持つ | 写しの置き場に載せる（§4-C） |
 | 4 | frontend/src/pages/inbox/useInboxState.autoSelectBadge.test.tsx | 写しの置き場を消さない | 偽物に 2 つ足し、写しを毎回消す（§4-D） |
-| 5 | frontend/src/pages/inbox/useInboxState.cache.test.tsx | 無い | 11 本の試験（§4-E 全文） |
+| 5 | frontend/src/pages/inbox/useInboxState.cache.test.tsx | 無い | 12 本の試験（§4-E 全文） |
 | 6 | docs/handoff/line-like-speed/lead-chat-cache-card.md | 無い | このカード（設計担当が書いた。実装役は触らない） |
 | 7 | docs/handoff/line-like-speed/design.md | §3-4-10 まで | §3-4-11 に最初の画面の受入、§3-4-12 にこのカードの場所を書き足し済み（設計担当。実装役は触らない） |
 | 8 | .claude-pipeline/active-work.d/release-line-like-speed-lead-chat-card.md | 無い | 作業の札（設計担当。実装役は触らない） |
@@ -43,7 +43,7 @@
 - (b) `cd <W>/frontend && grep -n '"@tanstack/react-query"' package.json` が `"5.104.4"` の 1 行。違えば停止して報告する。
 - (c) `cd <W> && git grep -n -E "setConversations|setLeadDetail|setMessagesData|setAvailablePageIds" -- frontend/src | head -30` の行が、useInboxState.ts の中だけ（S で :218・:239・:243・:249・:340・:375・:385・:405・:414・:427・:441・:506・:629・:638・:651・:652・:944・:945・:962・:986・:996・:1008・:1043・:1052・:1061 の 25 行。:944 は注釈の行）。ほかのファイルに 1 行でもあれば停止して NEEDS_DECISION: で返す。:945・:962・:986・:996・:1008・:1043・:1052・:1061 はどれも `setConversations((prev) =>` の形（関数を渡す形）であること。1 つでも関数でない物を渡していれば停止して NEEDS_DECISION: で返す。
 - (d) 手順 4 の全部の試験で、§1 #4・#5 のほかの試験ファイルが落ちたら、試験もコードも直さずに停止し、NEEDS_DECISION: で落ちた試験の名前と生の出力（tail）を返す。
-- (e) §1 #4 の 5 本・§4-E の 11 本のどれかが落ちたら、試験を書き換えて通さない。§4-A〜§4-E の写し違いを探し、写し違いが無ければ停止して NEEDS_DECISION: で生の出力を返す。とくに K5 の試験（§4-E の 4 本目と 6 本目）と切り替えの順番の試験（7 本目と 9 本目）は、落ちたら直し方を自分で考えずに停止する。§4-E の見本の値（fixture）が型や描画に足りずに落ちた時だけ、見本の値に足りない項目を足してよい（画面のコードは変えない）。足した項目は報告に書く。
+- (e) §1 #4 の 5 本・§4-E の 12 本のどれかが落ちたら、試験を書き換えて通さない。§4-A〜§4-E の写し違いを探し、写し違いが無ければ停止して NEEDS_DECISION: で生の出力を返す。とくに K5 の試験（§4-E の 4 本目と 6 本目）と切り替えの順番の試験（7 本目と 9 本目）は、落ちたら直し方を自分で考えずに停止する。§4-E の見本の値（fixture）が型や描画に足りずに落ちた時だけ、見本の値に足りない項目を足してよい（画面のコードは変えない）。足した項目は報告に書く。
 - (f) 手順 2 で、変える前の lint の警告の数を数えておく（§1 #1〜#4）。変えた後は、#1〜#5 を合わせてその数より増えないこと（第 1 版の審査では、変える前は 0 件。commit の前の点検 lint-staged が `eslint --max-warnings=0` で、警告が 1 件でもあると commit が止まる。S frontend/package.json:54-58）。増えたら、どの決まりの警告かを tail で見て停止し、NEEDS_DECISION: で返す（§4-C (15) と §4-E の英語の題で 0 件になる見込み。自分で直し方を考えない）。eslint の react-hooks/exhaustive-deps を disable の注釈で黙らせない（S :683 にある 1 か所はそのまま残す）。
 - (g) tsc が §4-A の型（とくに update の書き換えの型）で誤りを出したら、型を as で曲げずに停止し、NEEDS_DECISION: で tsc の出力を返す。§4-C の中の `as` は書いてある所だけ。
 
@@ -224,9 +224,12 @@ const NO_CONVERSATIONS: Conversation[] = [];
 ```ts
       await cache.fetch(path, () => listConversations(conversationsFilter));
 ```
-3 つ目。S :359 の `      setConvLoading(false);`（finally の中）の次に、次の 1 行を足す（成功・失敗・送り直しの途中・取り消しのどれでも finally は通る）。
+3 つ目。S :359 の `      setConvLoading(false);`（finally の中の 1 行）を、次の 4 行にする（成功・失敗・送り直しの途中・取り消しのどれでも finally は通る）。後から出した取得があれば、前の取得の終わりでは読み込み中の印を消さない。印は最後に出した取得の終わりで消える（convLoading を true にする所は S :530 の 1 か所だけで、その直後に必ず loadConversations を呼ぶ。呼ぶたびに convRequestRef はその path になる）。
 ```ts
-      if (convRequestRef.current === path) setConvDonePath(path);
+      if (convRequestRef.current === path) {
+        setConvLoading(false);
+        setConvDonePath(path);
+      }
 ```
 4 つ目。S :361 の依存 `[platformFilter, unreadOnly, pageIdFilter, t]` を `[cache, convPath, conversationsFilter, t]` にする。ほかの行（S :341-342 の setAvatarErrors・transientErrorCountRef、S :343-357 の catch、S :358 の `} finally {` と :360 の閉じ）は変えない。
 
@@ -363,7 +366,8 @@ vi.mock("../../lib/messages", async (importOriginal) => ({
  * 7 本目 会話を素早く切り替えて前の会話のカルテが遅れて返っても入力欄に入れない・
  * 8 本目 失敗の印は失敗した会話だけに付く・9 本目 カルテの保存の途中で会話を切り替えても遅れた保存の中身を入力欄に入れない・
  * 10 本目 写しの無い条件へ切り替えた時に空の一覧を読み込み中の印なしで出さない・
- * 11 本目 前に取りに行って失敗した条件へ戻した時に空の一覧を読み込み中の印なしで出さない。試験の題は英語（lint の決まり local/no-japanese-literal）。
+ * 11 本目 前に取りに行って失敗した条件へ戻した時に空の一覧を読み込み中の印なしで出さない・
+ * 12 本目 前に失敗した条件へ戻した後に、その前の条件の取得が遅れて返っても空の一覧を読み込み中の印なしで出さない。試験の題は英語（lint の決まり local/no-japanese-literal）。
  * QueryClient はアプリと同じ 1 個（apiQuery.ts の queryClient）を使い、毎回消す。
  */
 import { act, renderHook, waitFor } from "@testing-library/react";
@@ -711,6 +715,52 @@ describe("useInboxState - query cache (ADR-1054 lead chat)", () => {
     expect(view.result.current.conversations).toEqual([]);
     view.unmount();
   });
+
+  it("when going back to a failed filter, a late response for the previous filter does not show an empty list without the loading mark", async () => {
+    const frames: { loading: boolean; count: number }[] = [];
+    const view = renderHook(() => {
+      const state = useInboxState();
+      frames.push({ loading: state.convLoading, count: state.conversations.length });
+      return state;
+    });
+    await waitFor(() => expect(view.result.current.conversations).toHaveLength(2));
+    await waitFor(() => expect(view.result.current.convLoading).toBe(false));
+    // instagram の条件で 1 回失敗させる
+    listConversationsMock.mockImplementation(() => Promise.reject(new Error("boom")));
+    act(() => {
+      view.result.current.setPlatformFilter("instagram");
+    });
+    await waitFor(() => expect(view.result.current.convError).toBe("inbox.fetchError"));
+    // 写しのある条件（all）へ戻す。この取得は手で返すまで返さない
+    let resolveAll: ((value: unknown) => void) | undefined;
+    listConversationsMock.mockReset().mockImplementation(
+      () => new Promise((resolve) => {
+        resolveAll = resolve;
+      }),
+    );
+    act(() => {
+      view.result.current.setPlatformFilter("all");
+    });
+    await waitFor(() => expect(listConversationsMock).toHaveBeenCalledTimes(1));
+    // all の取得が返る前に、前に失敗した instagram へもう一度切り替える（今度は返さない）
+    listConversationsMock.mockImplementation(never);
+    const before = frames.length;
+    act(() => {
+      view.result.current.setPlatformFilter("instagram");
+    });
+    // 遅れて all の取得が返る
+    await act(async () => {
+      resolveAll?.({ conversations: [conv(1, "Alice", "page-1")], next_cursor: null });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    const after = frames.slice(before);
+    expect(after.length).toBeGreaterThan(0);
+    // 切り替えた後のどのコマも、一覧が空なら読み込み中の印が出ている
+    expect(after.filter((frame) => frame.count === 0 && !frame.loading)).toEqual([]);
+    expect(view.result.current.convLoading).toBe(true);
+    expect(view.result.current.conversations).toEqual([]);
+    view.unmount();
+  });
 });
 ```
 - 2 本目の「最初の描画」の確かめは、renderHook が返った直後（effect の後・取りに行った物が返る前）の値を見る。取り方はどれも返らない（never）ので、出ている中身は写しから来た物だけ。
@@ -722,7 +772,9 @@ describe("useInboxState - query cache (ADR-1054 lead chat)", () => {
 - 9 本目は §4-C (12) の確かめ。保存（PATCH /leads/1）を返さないまま会話 2 へ切り替え、会話 2 の入力欄が「Bob」になった後に保存を返す。入力欄は「Bob」のまま、A の写しは保存の中身になる。今の S では、遅れた保存の中身「Alice X」が会話 2 の入力欄に入る（第 2 版の審査で probe により確かめた）。handleCardFieldBlur の型は S :112 の `() => Promise<void>`。
 - 10 本目は §4-C (6) の確かめ。描画ごとの convLoading と一覧の件数を frames に残し、送り元を instagram に切り替えた後のコマを見る。setPlatformFilter は S の返す物の名前（S :66・:1090）。第 2 版の式では、切り替えた最初のコマが「一覧 0 件・読み込み中 false」になり落ちる。今の S では最初のコマは前の一覧 2 件で、次のコマから読み込み中の印になる（S :529-532）。
 - 11 本目は §4-C (2)(6)(7) の確かめ。instagram で 1 回失敗させ（誤りの文字が inbox.fetchError になる）、写しのある all へ戻して取り終えるまで待ち（最後に取り終えた path が "/conversations" になる）、もう一度 instagram へ切り替えた後のコマを見る。instagram の写しは前の失敗で isFetched が true のまま残り、中身は無い。第 3 版の式では、切り替えた最初のコマが「一覧 0 件・読み込み中 false」になり落ちる（第 3 版の審査で probe により確かめた）。今の S では最初のコマは前の一覧が 1 コマ出て、次のコマから読み込み中の印になる。convError は S の返す物の名前（S :52・:1076）。
-- 9 本目・10 本目・11 本目が落ちた時も §3(e) に従い、直し方を自分で考えずに停止する。
+- 12 本目は §4-C (7) の 3 つ目の確かめ。instagram で 1 回失敗させ（最後に取り終えた path が instagram になる）、all へ戻し、その取得が返る前に instagram へもう一度切り替え、その後に all の取得を返す。第 4 版（finally で setConvLoading(false) をいつも呼ぶ）では、遅れた all の取得の終わりで読み込み中の印が消え、「一覧 0 件・読み込み中 false」のコマが出て落ちる（第 4 版の審査で probe により確かめた）。今の S では、遅れた all の一覧 1 件が印なしで出る（中身の条件が違う物が出る）。
+- 未確認（試していない）: 送信の後の取り直し（S :790）が、送信の途中に条件を切り替えた後で、切り替える前の loadConversations で呼ばれる場合がある。その時は convRequestRef が前の条件の path になり、今の条件の取得の終わりでは印を消さない。今の条件の取得が成功していれば一覧は写しから出る（印は data がある時は出ない）。今の条件の取得が失敗していれば、誤りの文字と取り直しの押し口の下で読み込み中の印が出たままになり、取り直しを押すと消える。第 4 版でも同じ場合に印が出たままになる（convDonePath が今の条件にならない）。審査で判断を受ける。
+- 9 本目・10 本目・11 本目・12 本目が落ちた時も §3(e) に従い、直し方を自分で考えずに停止する。
 
 ## 4-F. 実装役の手順（1 手順 1 命令。<W> は手順1 で作られた作業場所の絶対パス）
 手順1. クラウドの決まり（S scripts/agent-hooks/cloud/rules.md:15）どおり、作業場所を作り、push 済みの枝の先頭に合わせる（設計担当が §1 #6〜#8 を push 済み）。
@@ -783,7 +835,7 @@ describe("useInboxState - query cache (ADR-1054 lead chat)", () => {
 ## 5. 受入（○×）
 | # | 基準 | 検証方法 |
 |---|---|---|
-| C1 | §4-E の 11 本と §1 #4 の 5 本がすべて合格（送る path が今と同じ: §4-E 1 本目／K1: 2 本目で戻った時の最初の描画に一覧 2 件・選び肢 2 つ・読み込み中 false、自動選択の後にメッセージとカルテ／書き換えが写しに残る: 3・5 本目／K5: 4 本目（出し直し）と 6 本目（出したまま）で利用者を変えた後に前の人の一覧 0 件・メッセージとカルテが null／切り替えの順番: 7 本目で遅れて返った前の会話のカルテが入力欄に入らない／失敗の印: 8 本目／保存の途中の切り替え: 9 本目で遅れた保存の中身が次の会話の入力欄に入らない／条件の切り替え: 10 本目（写しの無い条件）と 11 本目（前に失敗した条件へ戻す）で一覧が空のコマには必ず読み込み中の印） | /tmp/lc-unit.txt の最後（2 files・16 passed）と、PR の CI の unit-run が success |
+| C1 | §4-E の 12 本と §1 #4 の 5 本がすべて合格（送る path が今と同じ: §4-E 1 本目／K1: 2 本目で戻った時の最初の描画に一覧 2 件・選び肢 2 つ・読み込み中 false、自動選択の後にメッセージとカルテ／書き換えが写しに残る: 3・5 本目／K5: 4 本目（出し直し）と 6 本目（出したまま）で利用者を変えた後に前の人の一覧 0 件・メッセージとカルテが null／切り替えの順番: 7 本目で遅れて返った前の会話のカルテが入力欄に入らない／失敗の印: 8 本目／保存の途中の切り替え: 9 本目で遅れた保存の中身が次の会話の入力欄に入らない／条件の切り替え: 10 本目（写しの無い条件）と 11 本目（前に失敗した条件へ戻す）と 12 本目（戻した後に前の条件の取得が遅れて返る）で一覧が空のコマには必ず読み込み中の印） | /tmp/lc-unit.txt の最後（2 files・17 passed）と、PR の CI の unit-run が success |
 | C2 | 全部の試験・型・lint・組み立てが通る | /tmp/lc-unit-all.txt・lc-tsc.txt・lc-lint.txt・lc-build.txt の最後と、PR の必須の確認すべてが pass |
 | C3 | 変わったのは §1 の 8 ファイルだけ | gh pr diff --name-only |
 | C4 | マージの後、毎朝の画面の記録を手で 1 回動かし、/lead-chat の行で K1（戻った時の秒）≤0.1 秒、403・5xx が 0 件、API の数が 7 以下。ほかの行は K2 の最大と 2 秒を超えた画面の数が §3-4-11 から悪化していない。/lead-chat の K1 が下がらなければ §0 P4 の仮説は誤りと記録して止まる | prod-ui-check の実行の要約（設計担当。`gh workflow run prod-ui-check.yml --ref main` の後に要約の表を読む）。測る前に、その時の本番の反映が終わっていることを確かめる |
