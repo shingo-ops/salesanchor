@@ -1,16 +1,16 @@
 ---
 mode: handoff
 title: 受信箱 会話画面 A-2 — スマホの文字の吹き出しと入力欄を WhatsApp 実測へ
-status: 実装カード（Opus 作成 2026-11-01・Architect 整合検査は §12）。PO の実装承認待ち
-base: origin/main 85a560cb2
-po_approval: 成功条件 A1〜A4 は PO 承認済み（2026-11-01）。このカードの作成は PO「1」（2026-11-01）。実装の承認はまだ。
+status: 実装カード（Opus 作成 2026-11-01・Architect 整合検査は §12・審査役 APPROVE 3bdb03e06）。PO の実装承認済み（2026-11-01）
+base: origin/main 85a560cb2（行番号の基準。§9 の対象ファイルは origin/main 8c3333a9b でも同じ中身＝git diff が空）
+po_approval: 成功条件 A1〜A4 は PO 承認済み（2026-11-01）。このカードの作成は PO「1」（2026-11-01）。実装の承認は PO「1」（2026-11-01、3回目の審査合格の報告に対して）。
 ---
 
 # card A-2 — スマホの文字の吹き出しと入力欄を実測値へ
 
 読んだ節: docs/handoff/design-partner-card-ops/guards/00-common.md・03-file.md・04-worktree.md・05-pr.md・10-executor.md。
 
-受領確認: 実行役は作業の前に「card-a2 を受け取りました。base 85a560cb2 を確かめました」と1行返す。base が違えば何もせず停止して報告する。
+受領確認: 実行役は作業の前に「card-a2 を受け取りました。対象ファイルが 85a560cb2 と同じことを確かめました」と1行返す。`git diff --quiet 85a560cb2 origin/main -- <§9 のファイル>` が 0 でなければ何もせず停止して報告する。
 停止と報告: §10 の分かれ道に当たったら、その場で停止し、当たった番号・ファイル:行・生の出力を Opus に報告する（BLOCKED: で始める）。推測で続けない。
 
 根拠: design.md §3・§5（同じフォルダ）、実測 measure-a2.md（同じフォルダ。端末の実測の写し）。行番号はすべて base。
