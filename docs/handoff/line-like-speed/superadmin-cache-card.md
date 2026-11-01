@@ -2,20 +2,22 @@
 
 - 対象: docs/handoff/line-like-speed/design.md §3-2（部品）・§3-4-8（権限の写しの受入と残り）・§3-4-9（このカード）・§3-5 の K1・K5。ADR-1054（Accepted）。
 - 根拠の写し: S=origin/main 7cc0f25e3（Merge #4974）。行番号はすべてこの sha。実装の前に最新の origin/main で行を合わせ直す（§3(a)）。
-- 読んだ節と照合は権限の写しカード（docs/handoff/line-like-speed/perm-cache-card.md の冒頭）と同じ。全命令は cd <W> で始める・出力は tail/head で上限・変えるファイルは丸ごとの全文・PR は実行役が作らない・出力をファイルに残す命令と tail で読む命令は別の行。
+- 読んだ節: 権限の写しカード（docs/handoff/line-like-speed/perm-cache-card.md:5）と同じ節（guards/00-common.md・03-file.md・04-worktree.md・05-pr.md・10-executor.md・scripts/agent-hooks/cloud/rules.md）。照合も同じ: 全命令は cd <W> で始める・出力は tail/head で上限・変えるファイルは丸ごとの全文・PR は実行役が作らない・出力をファイルに残す命令と tail で読む命令は別の行。
 - 実行役はクラウドの Sonnet。作業場所の作り方はクラウドの決まり（S scripts/agent-hooks/cloud/rules.md:15）を正とする。.pr-number・gh-pr-create-safe.sh は使わない。待つために sleep を使わない。
-- 状態: 第 1 版（設計担当 Claude Opus・2026-11-01）。審査前。
-- 受領確認: 実装役は着手の最初の報告に「運営者判定の写しカード 第 1 版を受け取った・S=7cc0f25e3」と書く。
+- 状態: 第 2 版（設計担当 Claude Opus・2026-11-01）。第 1 版はクラウドの設計審査役が REVISE（docs/handoff/line-like-speed/review-superadmin-cache-card-v1.md・ブランチ release/line-like-speed-superadmin-cache-review-v1）。直す点 1〜6 を入れた。コード（§4-A）と試験（§4-B）は審査で型・lint・単体 8 本・全部の試験（177 ファイル・1997 本）・組み立てが通り、変えていない。
+- 受領確認: 実装役は着手の最初の報告に「運営者判定の写しカード 第 2 版を受け取った・S=7cc0f25e3」と書く。
 
 ## 0. 何のための変更か（設計の合格線は変えない）
 - P1 権限の写しの受入（design §3-4-8・prod-ui-check run 41297663070・2026-11-01 19:32 JST）の後も、戻った時の秒（K1）が 0.1 秒を超える画面が残る。そのうち運営者の画面（/super-admin/ で始まる行）は、画面ごとの行が 14 行（0.17〜0.18 秒）と、分析の決まりの画面の区切りの行（/super-admin/analysis-rules?section=・0.16〜0.20 秒）。区切りの行は、要約の見出しでは 21 行で、秒が並ぶ区切りの名前は 25 個ある。この数の違いはまだ確かめていない。そのため受入（§5 C4）は数ではなく「/super-admin/ で始まる行すべて」で判定する。どの行も「いちばん遅い API」は /api/v1/me/permissions か、API が 0 本。同じく /me/permissions だけを読む /admin/tenant-policy などの行は 0.01〜0.02 秒。設計担当の手元の写しは /tmp/CC報告ファイル/stage3/k1-over-0.1.txt（リポジトリには入れない）。
-- P2 今の useSuperAdmin（S frontend/src/hooks/useSuperAdmin.ts:19-42）は、権限の写しの前の usePermissions と同じ形。写しを使わず、部品が出るたびに loading が true から始まり、useEffect で /me/permissions を取り直す。
-- P3 運営者の画面は、loading の間は中身の代わりに LoadingBlock を出す。例: S frontend/src/pages/super-admin/AnalysisRulesPage.tsx:101・:116-122、S frontend/src/pages/super-admin/TcgProductImportPage.tsx:12-14。このため戻った時も、/me/permissions が返るまで「読み込み中の印」が出たままになる。
+- P2 今の useSuperAdmin（S frontend/src/hooks/useSuperAdmin.ts:19-43）は、権限の写しの前の usePermissions と同じ形。写しを使わず、部品が出るたびに loading が true から始まり、useEffect で /me/permissions を取り直す。
+- P3 運営者の画面の多く（14 画面のうち 12）は、loading の間は中身の代わりに LoadingBlock を出す。例: S frontend/src/pages/super-admin/AnalysisRulesPage.tsx:101・:117-123、S frontend/src/pages/super-admin/TcgProductImportPage.tsx:12-14。このため戻った時も、/me/permissions が返るまで「読み込み中の印」が出たままになる。
 - P4 仮説（まだ確かめていない）: useSuperAdmin を写しの置き場（useApiQuery・S frontend/src/lib/query/apiQuery.ts:51-73）に載せると、戻った時の最初の描画に前の判定が出て、P1 の運営者の行の K1 が 0.1 秒以下になる。確かめ方は §5 C4。下がらなければ仮説は誤りと記録して止まる。
+- P4b 判定の後に自分の API を取る画面（FxRatePage.tsx:51-55・ViewerAccountsPage.tsx:148-152・ViewerTemplatesPage.tsx:71-76・TcgLineImportPage.tsx:146-150・SupplierExtractionRulesPage.tsx:189-193・AnalysisRules の区切りの NeedsReviewTabsPanel.tsx:113・SoldOutResultsPanel.tsx:55）は、変更後に K1 がその API の秒で決まる見込みがある。C4 で 0.1 秒を超えた行があれば、その行の「いちばん遅い API」を要約から書き写し、仮説の誤りがどの画面かを記録する。また TcgDistributionPage（:22-28 文字の読み込み中）と SupplierExtractionRulesPage（:456 何も出さない）は LoadingBlock を出さない。
 - P5 写しの名前は usePermissions と同じ ["api", uid, "me", "permissions", { query: "" }]（S apiQueryKey・apiQuery.ts:41-44）。同じ 1 つの写しを 2 つの部品が読むだけで、データを 2 か所に持たない。外側の枠（S frontend/src/components/DesktopShell.tsx:112）も useSuperAdmin を使うので、同じ画面の中の通信は 1 回に束ねられる。利用者が変わると QueryAuthSync が写しを全部消す（S frontend/src/lib/query/QueryAuthSync.tsx:18-28）。
-- P6 useSuperAdmin を使う部品は、どれもログインの後にしか描かれない（perm-cache-card.md §0 P5 と同じ根拠。外側の枠と SecretaryChat は ProtectedRoute の内側）。
-- P7 返す形 { isSuperAdmin, loading } は変えない。使い手 22 行（`git grep -n 'useSuperAdmin()' -- frontend/src ':!*.test.*'` の行数）は触らない。違いは 2 つだけ。(1) 取り直しの間は loading が true に戻らない。(2) 取り直しの間は前の判定のまま。運営者の権限を外された人には、取り直しが返るまでの間（今の秒で最大約 0.7 秒）運営者の画面の枠が出得る。中のデータは backend が断る（運営者の API は backend で is_super_admin を確かめる）ので、見えてはいけない中身は出ない。取り直しが失敗した時は、今と同じく運営者ではない扱い（isSuperAdmin false）にする。
-- P8 前の試験の写しが次の試験に残らないよう、新しい試験ファイルの afterEach で写しの置き場（queryClient）を消す。試験の共通の準備（S frontend/src/test-setup.ts）は変えない（perm-cache-card.md §0 P7 と同じ理由）。useSuperAdmin を使う画面の試験 11 ファイルは、どれも useSuperAdmin を vi.mock で差し替えている（`git grep -n "useSuperAdmin" -- 'frontend/src/**/*.test.*'`）ので、この変更の影響を受けない。
+- P6 useSuperAdmin を使う部品は、どれもログインの後にしか描かれない（perm-cache-card.md §0 P5 と同じ根拠。外側の枠（DesktopShell・MobileShell.tsx:78）と SecretaryChat は ProtectedRoute の内側）。
+- P7 返す形 { isSuperAdmin, loading } は変えない。使い手 21 行（`git grep -n 'useSuperAdmin()' -- frontend/src ':!*.test.*'` の 22 行から定義の useSuperAdmin.ts:19 を除いた数）は触らない。違いは 2 つだけ。(1) 取り直しの間は loading が true に戻らない。(2) 取り直しの間は前の判定のまま。運営者の権限を外された人には、取り直しが返るまでの間（今の秒で最大約 0.7 秒）運営者の画面の枠が出得る。中のデータは backend が断る（運営者の API は backend で is_super_admin を確かめる）ので、見えてはいけない中身は出ない。取り直しが失敗した時は、今と同じく運営者ではない扱い（isSuperAdmin false）にする。
+- P8 前の試験の写しが次の試験に残らないよう、新しい試験ファイルの afterEach で写しの置き場（queryClient）を消す。試験の共通の準備（S frontend/src/test-setup.ts）は変えない（perm-cache-card.md §0 P7 と同じ理由）。useSuperAdmin を使う画面の試験 13 ファイルは、どれも useSuperAdmin を vi.mock で差し替えている（`git grep -l "useSuperAdmin" -- 'frontend/src/**/*.test.*'`）ので、この変更の影響を受けない。
+- P8b InventoryPage（S frontend/src/pages/inventory/InventoryPage.tsx:146）の試験 8 ファイル（InventoryPage.*.test.tsx）は useSuperAdmin を差し替えず、api だけを差し替える。変更後はこの 8 ファイルで写しが試験の間に残る（rowdrawer は試験ごとに is_super_admin を変える・InventoryPage.rowdrawer.test.tsx:44-55）。審査で 3 回流して全部合格した。手順 4 の全部の試験でここが落ちたら §3(d) に従い、試験に queryClient.clear() を足すなどの直しを自分で考えずに停止する。
 
 ## 1. 触るファイル（変更前→変更後）
 | # | ファイル | 変更前 | 変更後 |
@@ -224,7 +226,8 @@ describe("useSuperAdmin", () => {
   cd <W> && tail -30 /tmp/sa-unit.txt
   cd <W>/frontend && npm run test:unit > /tmp/sa-unit-all.txt 2>&1
   cd <W> && tail -15 /tmp/sa-unit-all.txt
-  （落ちた試験があれば、次の命令で名前を出して §3(d) に従う: cd <W> && grep -n -E "FAIL|✗|×" /tmp/sa-unit-all.txt | head -40）
+  （落ちた試験があれば、次の命令の出力で名前を見て §3(d) に従う。）
+  cd <W> && grep -n -E "FAIL|✗|×" /tmp/sa-unit-all.txt | head -40
   cd <W>/frontend && npx tsc --noEmit -p . > /tmp/sa-tsc.txt 2>&1
   cd <W> && tail -20 /tmp/sa-tsc.txt
   cd <W>/frontend && npx eslint src/hooks/useSuperAdmin.ts src/hooks/useSuperAdmin.test.ts > /tmp/sa-lint.txt 2>&1
