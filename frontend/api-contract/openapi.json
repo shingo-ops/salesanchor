@@ -14759,6 +14759,163 @@
         "title": "LabelOverrideRequest",
         "type": "object"
       },
+      "LeadConversionExcluded": {
+        "properties": {
+          "by_status": {
+            "title": "By Status",
+            "type": "integer"
+          },
+          "missing_scale_or_type": {
+            "title": "Missing Scale Or Type",
+            "type": "integer"
+          },
+          "no_inbound": {
+            "title": "No Inbound",
+            "type": "integer"
+          },
+          "no_outbound": {
+            "title": "No Outbound",
+            "type": "integer"
+          },
+          "no_reply_pair": {
+            "title": "No Reply Pair",
+            "type": "integer"
+          },
+          "no_sales_form": {
+            "title": "No Sales Form",
+            "type": "integer"
+          },
+          "other_values": {
+            "title": "Other Values",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "by_status",
+          "other_values",
+          "no_inbound",
+          "no_outbound",
+          "no_reply_pair",
+          "no_sales_form",
+          "missing_scale_or_type"
+        ],
+        "title": "LeadConversionExcluded",
+        "type": "object"
+      },
+      "LeadConversionFactorItem": {
+        "properties": {
+          "ci_high": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ci High"
+          },
+          "ci_low": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ci Low"
+          },
+          "computable": {
+            "title": "Computable",
+            "type": "boolean"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "odds_ratio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Odds Ratio"
+          },
+          "significant": {
+            "title": "Significant",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "key",
+          "odds_ratio",
+          "ci_low",
+          "ci_high",
+          "significant",
+          "computable"
+        ],
+        "title": "LeadConversionFactorItem",
+        "type": "object"
+      },
+      "LeadConversionFactorsResponse": {
+        "properties": {
+          "excluded": {
+            "$ref": "#/components/schemas/LeadConversionExcluded"
+          },
+          "included_count": {
+            "title": "Included Count",
+            "type": "integer"
+          },
+          "item_count": {
+            "title": "Item Count",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/LeadConversionFactorItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "lost_count": {
+            "title": "Lost Count",
+            "type": "integer"
+          },
+          "required_per_item": {
+            "title": "Required Per Item",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "insufficient",
+              "not_computable"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "won_count": {
+            "title": "Won Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "status",
+          "included_count",
+          "won_count",
+          "lost_count",
+          "required_per_item",
+          "item_count",
+          "excluded",
+          "items"
+        ],
+        "title": "LeadConversionFactorsResponse",
+        "type": "object"
+      },
       "LeadConvertRequest": {
         "description": "リード→案件変換リクエスト（company/contact/title は互換窓として受理する）",
         "properties": {
@@ -39093,6 +39250,33 @@
           }
         ],
         "summary": "Funnel Stages",
+        "tags": [
+          "analytics"
+        ]
+      }
+    },
+    "/api/v1/analytics/lead-conversion-factors": {
+      "get": {
+        "description": "成約しやすさの分析（成約したか を 15 項目で同時に見るロジスティック回帰）。read-only。\n\n- 値は丸めず float のまま返す（丸めは画面だけ）\n- status: ok / insufficient（件数が足りない）/ not_computable（計算できない）",
+        "operationId": "lead_conversion_factors_summary_api_v1_analytics_lead_conversion_factors_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeadConversionFactorsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Lead Conversion Factors Summary",
         "tags": [
           "analytics"
         ]
