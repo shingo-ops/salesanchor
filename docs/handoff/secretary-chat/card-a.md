@@ -13,7 +13,7 @@
 ### 2-1. FloatingActionButton（画面の右下に浮かぶ丸い印）
 - props: `icon: ReactNode`（必須）、`label: string`（必須。aria-label と title に使う。呼ぶ側が t() で渡す）、`onClick`、`badge?: number`（0 や未指定なら出さない）、`className?`。
 - 見た目: 丸。大きさは `var(--size-icon-btn-lg)`（44px・タッチの基準）以上。位置は `position: fixed`、右と下の余白は `var(--space-4)`。
-- スマホ（MobileShell）では下のタブの帯に重ならないよう、下の余白を `calc(var(--tabbar-height) + env(safe-area-inset-bottom, 0px) + var(--space-4))` にする。`--tabbar-height` がどこで決まっているか（`frontend/src/mobile-shell.css:25` と `:102` は既定値つきで使っているだけ）を実物で確かめ、決まっている場所が無ければ tokens.css に足さず止めて報告する。
+- props に `aboveTabbar?: boolean` を足す。true のとき（スマホの殻で呼ぶ側が渡す）は、下のタブの帯に重ならないよう、下の余白を `calc(var(--tabbar-height) + env(safe-area-inset-bottom, 0px) + var(--space-4))` にする（modifier class で切り替える）。`--tabbar-height` は `frontend/src/tokens.css:183` で決まっている（設計担当が確かめた）。
 - 色は既存の色トークン（主ボタンの色と同じもの。`frontend/src/components/Button.css` の primary が使う変数）を使う。ダークでも同じ変数で切り替わること（ADR-067）。
 - 中身は金型 `Button` の icon ボタンで作れるなら、それを使い、位置だけをこの金型が持つ。作れない理由があれば .tsx の頭のコメントに書く。
 - `<button type="button">`。キーボードで押せる。フォーカスの輪は既存の金型と同じ変数。
@@ -33,7 +33,6 @@
 - 既存の金型・トークンを書き換えない（足すのは `--z-fab` だけ）。
 
 ## 4. 想定分岐（迷ったら止まる）
-- `--tabbar-height` が定義されていない → tokens.css に足さず、止めて BLOCKED で報告。
 - 主ボタンの色の変数が複数あってどれか決められない → 止めて報告（勝手に選ばない）。
 - 金型 Button で丸い icon ボタンが作れる → それを使う。作れない → 自前の `<button>` にして理由をコメント。
 
@@ -41,7 +40,7 @@
 | 基準 | 検証方法 |
 |---|---|
 | 金型の作法 | 2 部品とも .tsx・.css・.stories.tsx がある |
-| 試験 | `cd frontend && npx vitest run src/components/FloatingActionButton.test.tsx src/components/ChatBubble.test.tsx` が通る（label が aria-label に入る・badge 0 で出ない・side で class が変わる） |
+| 試験 | `cd frontend && npx vitest run src/components/FloatingActionButton.test.tsx src/components/ChatBubble.test.tsx` が通る（label が aria-label に入る・badge 0 で出ない・aboveTabbar で class が変わる・side で class が変わる） |
 | 型 | `cd frontend && npx tsc --noEmit` が通る |
 | 金型外の検査 | `node scripts/check-ui-governance.js` が通る |
 | ダークの対 | `cd frontend && npm run check:dark-parity`（色トークンを足していないので差分なし） |

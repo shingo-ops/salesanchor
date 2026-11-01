@@ -72,10 +72,10 @@
 - 会社: `GET /companies?search=`（`backend/app/routers/companies.py:291-319`。`company_code`・`name`・`normalized_name`・`billing_display_name` を `ILIKE`、権限 `customers.view`）。
 - 担当者: `GET /contacts?search=&company_id=`（`backend/app/routers/contacts.py:258-283`。`contact_code`・`display_name`・メール・電話・`surname`・`given_name` を `ILIKE`、権限 `customers.view`）。
 - 品物: `GET /products?search=`（`backend/app/routers/products.py:133-232`。空白区切りで分割した各語を複数列に `ILIKE`、一致度で並べ替え、権限 `products.view`）。専用の service 関数は無く、いずれも **router 内の SQL**（service に切り出されていない。再利用するなら関数化が要る。service 側の在庫検索は `backend/app/services/inventory_search.py` に別にあるが、請求書の品物と同じ表かは**未確認**）。
-- 請求書 `POST /invoices`（`backend/app/routers/invoices.py:337` 周辺、権限 `invoices.create`）の本文 `InvoiceCreate`（`backend/app/schemas/invoice.py:49-62`）:
+- 請求書 `POST /invoices`（`backend/app/routers/invoices.py:337` 周辺、権限 `invoices.create`）の本文 `InvoiceCreate`（`backend/app/schemas/invoice.py:39-51`（第3版で行番号を直した））:
   - 必須: `company_id`（int ≥1）・`contact_id`（int ≥1）・`items`（1 件以上）。
   - 任意: `currency`（既定 `JPY`）・`shipping_fee`・`tax_amount`・`exchange_rate_jpy`・`exchange_rate_usd`・`payment_method`・`due_date`（date）・`notes`（≤5000）。
-  - `items[]` = `InvoiceItemInput`（`:31-42`）: **必須** `product_name`（1〜255 文字）・`quantity`（int ≥1）・`unit_price`（Decimal ≥0、小数 2 桁）。任意 `product_id`（int ≥1 または null）・`name_en`・`condition`（≤50）・`unit`（≤20）・`weight`。→ 品物は `product_id` が無くても、**名前・数量・単価があれば作れる**（id への解決は必須ではない）。ただし単価は AI が決めてはならない値（決め方は別途要確認）。
+  - `items[]` = `InvoiceItemInput`（`:27-36`）: **必須** `product_name`（1〜255 文字）・`quantity`（int ≥1）・`unit_price`（Decimal ≥0、小数 2 桁）。任意 `product_id`（int ≥1 または null）・`name_en`・`condition`（≤50）・`unit`（≤20）・`weight`。→ 品物は `product_id` が無くても、**名前・数量・単価があれば作れる**（id への解決は必須ではない）。ただし単価は AI が決めてはならない値（決め方は別途要確認）。
 - 予定 `POST /calendar/events`（`backend/app/routers/calendar.py:336-361`）の `CreateEventBody`（`:102-109`）: `title: str`・`start_datetime: str`・`end_datetime: str`（以上必須）・`calendar_type: str = "shared"`（`shared` か `personal` 以外は 422、`:344`）・`description`・`location`（任意）・`is_all_day: bool = False`。
   - 日時の形式: ISO 8601 文字列。`datetime.fromisoformat(s.replace(" ", "+"))`（`backend/app/services/calendar_service.py:31-36`）。例 `2026-11-02T10:00:00+09:00`。時差なしの文字列を渡した場合の扱い（保存先の列が `timestamptz` か）は**未確認**。
   - **権限確認が無い**: `calendar.py` に `require_permission` は無く、認証のみ（旧 recon §2 と同じ観測。再確認）。

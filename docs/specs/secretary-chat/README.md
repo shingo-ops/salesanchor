@@ -22,9 +22,9 @@
 ## ぶら下がる文書（子）
 - [../../handoff/secretary-chat/recon.md](../../handoff/secretary-chat/recon.md)（現状の調べ）
 - [../../handoff/secretary-chat/recon2.md](../../handoff/secretary-chat/recon2.md)（現状の調べ 第2回）
-- [../../handoff/secretary-chat/design.md](../../handoff/secretary-chat/design.md)（設計 第2版）
+- [../../handoff/secretary-chat/design.md](../../handoff/secretary-chat/design.md)（設計 第3版）
 
 ## ステータス
 - あるべき姿: PO 発言を転記（2026-11-01）
 - KGI: PO 承認済み（2026-11-01「1」）
-- 設計: 第2版 自己審査 APPROVE（2026-11-01・同じ AI の審査）
+- 設計: 第3版（第2版への審査役の REVISE に全部答えた。再審査中）（2026-11-01・同じ AI の審査）
