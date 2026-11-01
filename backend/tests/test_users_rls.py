@@ -391,7 +391,7 @@ async def _run_login_fail(admin_engine, app_engine) -> None:
         with pytest.raises(HTTPException) as exc_info:
             await mod.self_login(
                 mod.SelfLoginRequest(email=_EMAIL_A, password="wrong"),
-                _request(origin=_ORIGIN), Response(), db,
+                _request(origin=_ORIGIN), Response(), BackgroundTasks(), db,
             )
         assert exc_info.value.status_code == 401
         await _assert_ctx_reset(db)
@@ -411,7 +411,7 @@ async def _run_login_lock(admin_engine, app_engine) -> None:
         with pytest.raises(HTTPException):
             await mod.self_login(
                 mod.SelfLoginRequest(email=_EMAIL_A, password="wrong"),
-                _request(origin=_ORIGIN), Response(), db,
+                _request(origin=_ORIGIN), Response(), BackgroundTasks(), db,
             )
         await _assert_ctx_reset(db)
 
@@ -423,7 +423,7 @@ async def _run_login_ok(admin_engine, app_engine) -> None:
     async with _session(app_engine) as db:
         res = await mod.self_login(
             mod.SelfLoginRequest(email=_EMAIL_A, password=_PASSWORD),
-            _request(origin=_ORIGIN, **{"user-agent": "pytest"}), Response(), db,
+            _request(origin=_ORIGIN, **{"user-agent": "pytest"}), Response(), BackgroundTasks(), db,
         )
         assert res.token_type == "bearer"
         await _assert_ctx_reset(db)
