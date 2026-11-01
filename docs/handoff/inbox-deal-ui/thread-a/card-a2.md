@@ -10,7 +10,7 @@ po_approval: 成功条件 A1〜A4 は PO 承認済み（2026-11-01）。この�
 
 読んだ節: docs/handoff/design-partner-card-ops/guards/00-common.md・03-file.md・04-worktree.md・05-pr.md・10-executor.md。
 
-受領確認: 実行役は作業の前に「card-a2 を受け取りました。対象ファイルが 85a560cb2 と同じことを確かめました」と1行返す。`git diff --quiet 85a560cb2 origin/main -- <§9 のファイル>` が 0 でなければ何もせず停止して報告する。
+受領確認: 実行役は作業の前に「card-a2 を受け取りました。対象ファイルが 85a560cb2 と同じことを確かめました」と1行返す。§9 のファイルを並べて `git diff --quiet 85a560cb2 origin/main --` を流し、終了コードが 0 でなければ何もせず停止して報告する。
 停止と報告: §10 の分かれ道に当たったら、その場で停止し、当たった番号・ファイル:行・生の出力を Opus に報告する（BLOCKED: で始める）。推測で続けない。
 
 根拠: design.md §3・§5（同じフォルダ）、実測 measure-a2.md（同じフォルダ。端末の実測の写し）。行番号はすべて base。
