@@ -129,3 +129,10 @@
 - コミットの最後に `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`。
 - PR は `gh pr create --base main --draft`。本文の「標準ワークフロー確認」: recon docs/handoff/secretary-chat/recon.md、設計 docs/handoff/secretary-chat/design.md、対象ADR ADR-1056, ADR-1003, ADR-1016、区分 B-2（危険パスあり）、触るファイルを全部列挙。
 - マージしない。終わったら PR の URL と受入の生の出力の置き場を返す。
+
+## 13. 改訂（2026-11-01 PR #4977 の審査を受けて・Opus 決定）
+- 直し1: migration の INSERT を `tenant_features` 表の有無で包む（CI の最小スキーマに tenant_features が無いため）。
+- 直し2: `backend/app/realtime/topics.py` の NO_SIGNAL_ROUTES に `POST /api/v1/assistant/messages` を足す（ADR-1016 の書き込みルート表の決まり）。
+- 直し3: deploy.yml の probe は終了コード 1 だけを K4 不合格とし、docker run 自体の失敗は別の警告にする（取り違え防止）。
+- 直し5: `backend/tests/test_assistant_router.py` の最上位の `from app.main import app` を関数・fixture の中へ移す（試験が早く app を読み込み、他の試験の権限モックを外すため）。
+- 触るファイルが `backend/app/realtime/topics.py` と `docs/handoff/secretary-chat/card-b1.md` の 2 つ増えた。
