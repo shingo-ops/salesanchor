@@ -1,0 +1,13 @@
+.db-lead-factors-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.db-lead-factors-note,
+.db-lead-factors-counts,
+.db-lead-factors-message {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--font-xs);
+}

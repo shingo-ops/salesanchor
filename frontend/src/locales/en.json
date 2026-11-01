@@ -841,6 +841,38 @@
     "chartActual": "Actual Revenue",
     "chartRemaining": "Forecast Remaining",
     "chartTooltipForecast": "Total Forecast",
+    "leadFactorsTitle": "Conversion factors",
+    "leadFactorsNoteCausal": "These are signs of who tends to close, not causes.",
+    "leadFactorsNoteReverse": "Reply speed is mixed with the reverse effect: we tend to reply faster to more promising leads.",
+    "leadFactorsCounts": "Included {{included}} (won {{won}}, lost {{lost}}) / Excluded {{excluded}}",
+    "leadFactorsInsufficient": "Not enough data yet (at least {{need}} won and {{need}} lost are needed).",
+    "leadFactorsNotComputableAll": "Could not be computed from these records.",
+    "leadFactorsLoading": "Loading analysis",
+    "leadFactorsError": "Could not load the analysis.",
+    "leadFactorsColItem": "Item",
+    "leadFactorsColOdds": "Strength (above 1 = closes more often)",
+    "leadFactorsColCi": "95% range",
+    "leadFactorsColSignificant": "Clear difference?",
+    "leadFactorsSignificantYes": "Yes",
+    "leadFactorsSignificantNo": "No",
+    "leadFactorsNotComputable": "Not computable",
+    "leadFactorsItem": {
+      "initiative_inbound": "Inbound (vs outbound)",
+      "sales_form_wholesale": "Wholesale (vs others)",
+      "first_reply_within_1h": "Our first reply within 1 hour",
+      "partner_reply_within_6h": "Their replies within 6 hours on average",
+      "channel_whatsapp": "WhatsApp (vs Messenger)",
+      "channel_instagram": "Instagram (vs Messenger)",
+      "country_gb": "UK (vs US)",
+      "country_au": "Australia (vs US)",
+      "temperature_hot": "Hot (vs Cold)",
+      "temperature_warm": "Warm (vs Cold)",
+      "message_count": "Messages (per one more)",
+      "scale_large": "Scale Large (vs Small)",
+      "scale_medium": "Scale Medium (vs Small)",
+      "customer_type_trust": "Values trust (vs price)",
+      "competitor_found": "Comparing other sellers (vs not)"
+    },
     "weeklyTitle": "Today's Actions",
     "weeklySubtitle": "AI ranks evidence-backed suggestions by score.",
     "weeklyAiTag": "AI Suggested",
@@ -5659,6 +5691,60 @@
       "REVIEW_CSV_DUPLICATE_ITEM": "The same item appears on more than one row.",
       "REVIEW_CSV_SAVE_FAILED": "Saving failed.",
       "unknown": "An error occurred."
+    }
+  },
+  "secretary": {
+    "open": "Ask the assistant",
+    "title": "Assistant chat",
+    "placeholder": "Tell me what you need (e.g. create an invoice for Acme)",
+    "send": "Send",
+    "create": "Create",
+    "cancel": "Cancel",
+    "thinking": "Thinking…",
+    "cancelled": "Cancelled.",
+    "priceRequired": "Some rows have no unit price. Please enter one",
+    "error": {
+      "notReady": "The assistant is not ready yet",
+      "busy": "The assistant is busy. Please wait a moment and send again",
+      "timeout": "This took too long. Please send it again",
+      "unreadable": "I could not understand that. Please rephrase",
+      "generic": "Something went wrong. Please try again"
+    },
+    "invoice": {
+      "title": "Invoice draft",
+      "company": "Company",
+      "contact": "Contact",
+      "changeCustomer": "Change company / contact",
+      "itemName": "Item name",
+      "quantity": "Quantity",
+      "unitPrice": "Unit price",
+      "addItem": "Add item",
+      "currency": "Currency",
+      "dueDate": "Due date",
+      "notes": "Notes"
+    },
+    "event": {
+      "title": "Event draft",
+      "name": "Title",
+      "allDay": "All day",
+      "startDate": "Start date",
+      "startTime": "Start time",
+      "endDate": "End date",
+      "endTime": "End time",
+      "location": "Location",
+      "description": "Description",
+      "visibility": "Visibility",
+      "personal": "Only me",
+      "shared": "Everyone in the company",
+      "sharedNote": "Visible to everyone in your company"
+    },
+    "created": {
+      "invoice": "Invoice created.",
+      "event": "Event created."
+    },
+    "link": {
+      "invoice": "Open invoice",
+      "event": "Open event"
     }
   }
 }

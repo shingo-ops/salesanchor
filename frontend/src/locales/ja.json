@@ -841,6 +841,38 @@
     "chartActual": "受注実績",
     "chartRemaining": "着地予想（残り）",
     "chartTooltipForecast": "着地予想合計",
+    "leadFactorsTitle": "成約しやすさの分析",
+    "leadFactorsNoteCausal": "成約しやすさの目印です。原因を示すものではありません。",
+    "leadFactorsNoteReverse": "返信の速さには、見込みの高い相手ほど急いで返すという逆向きの影響が混ざります。",
+    "leadFactorsCounts": "分析に入れた件数 {{included}}件（成約 {{won}}件・失注 {{lost}}件）／外した件数 {{excluded}}件",
+    "leadFactorsInsufficient": "件数が足りないため、まだ計算できません（成約・失注それぞれ {{need}}件以上が必要です）。",
+    "leadFactorsNotComputableAll": "この記録では計算できませんでした。",
+    "leadFactorsLoading": "分析を読み込み中",
+    "leadFactorsError": "分析を読み込めませんでした。",
+    "leadFactorsColItem": "項目",
+    "leadFactorsColOdds": "強さ（1より大きいほど成約しやすい）",
+    "leadFactorsColCi": "95%の幅",
+    "leadFactorsColSignificant": "差があると言えるか",
+    "leadFactorsSignificantYes": "言える",
+    "leadFactorsSignificantNo": "言えない",
+    "leadFactorsNotComputable": "計算できない",
+    "leadFactorsItem": {
+      "initiative_inbound": "相手から来た（こちらから営業より）",
+      "sales_form_wholesale": "卸・代理店（それ以外より）",
+      "first_reply_within_1h": "こちらの最初の返信が早い（1時間まで）",
+      "partner_reply_within_6h": "相手の返信が早い（平均6時間まで）",
+      "channel_whatsapp": "WhatsApp（Messenger より）",
+      "channel_instagram": "Instagram（Messenger より）",
+      "country_gb": "イギリス（アメリカより）",
+      "country_au": "オーストラリア（アメリカより）",
+      "temperature_hot": "温度感 Hot（Cold より）",
+      "temperature_warm": "温度感 Warm（Cold より）",
+      "message_count": "やり取りの回数（1回増えるごと）",
+      "scale_large": "想定規模 Large（Small より）",
+      "scale_medium": "想定規模 Medium（Small より）",
+      "customer_type_trust": "信頼重視（価格重視より）",
+      "competitor_found": "相見積もりあり（なしより）"
+    },
     "weeklyTitle": "今やること",
     "weeklySubtitle": "AIが根拠つきのおすすめを score 順に並べます。",
     "weeklyAiTag": "AI提案",
@@ -5659,6 +5691,60 @@
       "REVIEW_CSV_DUPLICATE_ITEM": "同じ件が複数の行にあります。",
       "REVIEW_CSV_SAVE_FAILED": "保存に失敗しました。",
       "unknown": "エラーが発生しました。"
+    }
+  },
+  "secretary": {
+    "open": "秘書に頼む",
+    "title": "秘書チャット",
+    "placeholder": "頼みたいことを書いてください（例: 山田商事に請求書を作って）",
+    "send": "送る",
+    "create": "作る",
+    "cancel": "やめる",
+    "thinking": "考えています…",
+    "cancelled": "やめました。",
+    "priceRequired": "単価が空の行があります。単価を入れてください",
+    "error": {
+      "notReady": "準備ができていません",
+      "busy": "いま考え中です。少し待ってから送ってください",
+      "timeout": "時間がかかりすぎました。もう一度送ってください",
+      "unreadable": "うまく読めませんでした。言い方を変えてください",
+      "generic": "うまくいきませんでした。もう一度お試しください"
+    },
+    "invoice": {
+      "title": "請求書の下書き",
+      "company": "会社",
+      "contact": "担当者",
+      "changeCustomer": "会社・担当者を変える",
+      "itemName": "品名",
+      "quantity": "数",
+      "unitPrice": "単価",
+      "addItem": "品物を足す",
+      "currency": "通貨",
+      "dueDate": "支払期限",
+      "notes": "備考"
+    },
+    "event": {
+      "title": "予定の下書き",
+      "name": "題名",
+      "allDay": "終日",
+      "startDate": "開始日",
+      "startTime": "開始時刻",
+      "endDate": "終了日",
+      "endTime": "終了時刻",
+      "location": "場所",
+      "description": "説明",
+      "visibility": "見える範囲",
+      "personal": "自分だけ",
+      "shared": "会社の全員",
+      "sharedNote": "会社の全員に見えます"
+    },
+    "created": {
+      "invoice": "請求書を作りました。",
+      "event": "予定を作りました。"
+    },
+    "link": {
+      "invoice": "請求書を開く",
+      "event": "予定を開く"
     }
   }
 }

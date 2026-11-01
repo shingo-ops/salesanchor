@@ -3,7 +3,7 @@
 > このファイルは `scripts/generate-adr-index.js` により自動生成されます。
 > **手動編集禁止。** ADR ファイルを追加・変更後に `node scripts/generate-adr-index.js` を実行してください。
 
-最終更新: 2026-10-31 / ADR 総数: 214 件
+最終更新: 2026-11-01 / ADR 総数: 215 件
 
 ## 維持ルール（整合性を保つ・必須）
 
@@ -233,6 +233,7 @@
 | [ADR-1053](./ADR-1053-prod-page-speed-record.md) | ADR-1053: 本番の画面点検の「開き終わった」の決め方を 1 か所にし、全画面の開く速さを毎日記録する（合格ラインはまだ決めない） | Accepted | — | — |
 | [ADR-1054](./ADR-1054-screen-data-cache.md) | ADR-1054: 画面が取ったデータの写しを 1 か所（TanStack Query）に置き、前に見た画面をすぐ出してから裏で取り直す | Accepted | — | — |
 | [ADR-1055](./ADR-1055-new-device-login-approval.md) | ADR-1055: 知らない機械からのログインは、いつもの機械で番号を選んで許可するまで入れない（全員） | Proposed | — | — |
+| [ADR-1056](./ADR-1056-secretary-chat.md) | ADR-1056: アプリ内のチャット秘書は、AI に会社のデータも道具も渡さず「頼みの文を決まった形に直す」だけをさせ、作成は利用者が「作る」を押したときに今の口で行う | Accepted | — | — |
 
 ## ステータス凡例
 

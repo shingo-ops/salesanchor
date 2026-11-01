@@ -33,7 +33,9 @@ _META_SQL = "20261024_100000_create_ai_cloud_meta.sql"
 _ROLE_SQL = "20261024_100100_create_ai_reader_cloud_role.sql"
 _CREATE_SQL = "20261024_100300_create_ai_cloud_views.sql"
 _DROP_SQL = "20261024_100200_drop_ai_cloud_views.sql"
-_DEVICE_APPROVAL_SQL = "20261101_120000_add_new_device_approval.sql"
+_DEVICE_APPROVAL_SQL = "20261101_130000_add_new_device_approval.sql"
+_AUTH_EVENTS_SQL = "001_create_auth_events.sql"
+_SELF_AUTH_SQL = "20261013_160000_add_self_hosted_auth_tables.sql"
 _DENY_RE = re.compile(r"^password|_encrypted$|_secret|_token|hash|^secret|^api_key|private_key|credential")
 _NAME_RE = re.compile(
     r"(name|email|mail|phone|tel|fax|addr|zip|postal|message|text|body|note|comment|memo|sender|display|contact"
@@ -577,39 +579,52 @@ _DEVICE_APPROVAL_CLASSIFIED = {
 } | {("user_recovery_codes", "code_id"), ("auth_events", "reason")}  # fmt: skip
 
 
-def test_t10_new_device_approval_columns_are_classified(pg):
-    """本便の migration を流した PG で、新しい 19 列に column_class の行があり、分類の漏れが無い。
+def test_t10_new_device_approval_columns_are_classified_on_bootstrapped_db(cluster):
+    """本番の migration 順に近い DB（bootstrap + auth の migration）に本便の migration を流し、
+    新しい 19 列に column_class の行があり、分類の漏れが無い。
 
-    小さな表の DB（pg）で、トランザクションの中に本番の今の形の対象の表を作って本便の migration を流し、
-    終わったら ROLLBACK で戻す（他の試験に表を残さない）。"""
+    public.users は tests/rls_bootstrap.py、auth_events と auth_refresh_tokens は本物の migration で作る
+    （表の形をテストに写さない）。専用の DB を作り、終わったら消す。"""
+    from sqlalchemy.ext.asyncio import create_async_engine
+
     assert len(_DEVICE_APPROVAL_CLASSIFIED) == 19
-    rows = _rows(pg, "SELECT table_name, column_name FROM ai_cloud_meta.column_class WHERE schema_pattern = 'public'")
-    have = {(r[0], r[1]) for r in rows}
-    missing = _DEVICE_APPROVAL_CLASSIFIED - have
-    assert missing == set(), f"column_class に行が無い: {sorted(missing)}"
-
-    c = pg.cursor()
-    c.execute("SET ROLE aic_owner")
-    c.execute("BEGIN")
+    name, conn = _new_db(cluster.control, "ai_cloud_t10_device")
     try:
-        c.execute("CREATE TABLE public.users (id integer PRIMARY KEY)")
-        c.execute(
-            "CREATE TABLE public.auth_events (id serial PRIMARY KEY, event_type varchar(50), path varchar(255),"
-            " method varchar(10), status_code integer, client_ip varchar(45), user_agent varchar(500),"
-            " duration_ms integer, created_at timestamptz DEFAULT now())"
-        )
-        c.execute("CREATE TABLE public.auth_refresh_tokens (id bigserial PRIMARY KEY, user_id integer)")
+        c = conn.cursor()
+        c.execute(_read(_AI_READER_SQL))
+        c.execute(_read(_ROLE_SQL))
+        c.execute(_read(_META_SQL))
+        url = _psycopg_url(ADMIN_PG_URL, name).replace("postgresql://", "postgresql+asyncpg://", 1)
+        from tests.rls_bootstrap import bootstrap_tenant_schema
+
+        async def build():
+            eng = create_async_engine(url)
+            try:
+                await bootstrap_tenant_schema(eng, 1)
+            finally:
+                await eng.dispose()
+
+        asyncio.run(build())
+        c.execute(_read(_AUTH_EVENTS_SQL))
+        c.execute(_read(_SELF_AUTH_SQL))
+        c.execute(_read(_CREATE_SQL))
+        rows = _rows(conn, "SELECT table_name, column_name FROM ai_cloud_meta.column_class WHERE schema_pattern = 'public'")
+        have = {(r[0], r[1]) for r in rows}
+        missing = _DEVICE_APPROVAL_CLASSIFIED - have
+        assert missing == set(), f"column_class に行が無い: {sorted(missing)}"
+
         c.execute(_read(_DEVICE_APPROVAL_SQL))
         c.execute(_read(_DEVICE_APPROVAL_SQL))  # 冪等
         new_tables = {"user_trusted_devices", "auth_login_requests", "user_recovery_codes"}
         gaps = [
-            g for g in _classification_gaps(pg)
+            g for g in _classification_gaps(conn)
             if g[1] in new_tables or (g[1], g[2]) == ("auth_events", "reason")
         ]
         assert gaps == []
     finally:
-        c.execute("ROLLBACK")
-        c.execute("RESET ROLE")
+        conn.close()
+        cur = cluster.control.cursor()
+        cur.execute(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)')
 
 
 def test_t10_detects_added_columns(pg):

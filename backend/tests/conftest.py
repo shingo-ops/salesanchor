@@ -1936,3 +1936,113 @@ async def client(db_session):
             yield ac
 
     app.dependency_overrides.clear()
+
+
+# 相談係AIの第2段階の試験（backend/tests/ops/test_ops_case_db.py・backend/tests/test_ops_case_router.py）用:
+# 本番の表の写しではなく、主キーの形・秘密の列・拒否表の名前を試すための作り物の表。
+# 持ち主を superuser でない役にして使い捨ての DB に作るため、bootstrap_tenant_schema は使わない。
+OPS_CASE_PLAIN_DEMO_DDL = "CREATE TABLE public.plain_demo (id integer PRIMARY KEY, memo text, email text)"
+OPS_CASE_TEXT_PK_DDL = "CREATE TABLE public.text_pk (code text PRIMARY KEY, memo text)"
+OPS_CASE_SMALL_PK_DDL = "CREATE TABLE public.small_pk (id smallint PRIMARY KEY, memo text)"
+OPS_CASE_HAS_SECRET_DDL = "CREATE TABLE public.has_secret (id integer PRIMARY KEY, memo text, api_token text)"
+OPS_CASE_TWO_PK_DDL = "CREATE TABLE public.two_pk (a integer, b integer, memo text, PRIMARY KEY (a, b))"
+OPS_CASE_TENANT_LEADS_DDL = "CREATE TABLE tenant_001.leads (id uuid PRIMARY KEY, customer_name text, email text)"
+OPS_CASE_TENANT_LEADS_NO_EMAIL_DDL = "CREATE TABLE tenant_001.leads (id uuid PRIMARY KEY, customer_name text)"
+OPS_CASE_TENANT_VIEWER_ACCOUNTS_DDL = "CREATE TABLE tenant_001.viewer_accounts (id integer PRIMARY KEY, note text)"
+
+# リード分析の試験用の表
+LEAD_REGRESSION_PG_DDL = """
+CREATE SCHEMA tenant_001;
+CREATE TABLE tenant_001.leads (
+    id SERIAL PRIMARY KEY, tenant_id INTEGER NOT NULL DEFAULT 1, lead_code VARCHAR(20),
+    customer_name VARCHAR(255) NOT NULL, channel_type VARCHAR(30), initiative VARCHAR(10), type VARCHAR(50),
+    status VARCHAR(50) DEFAULT 'lead', temperature VARCHAR(20), estimated_scale VARCHAR(20),
+    customer_type VARCHAR(50), country VARCHAR(100), competitor_check BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW());
+CREATE TABLE tenant_001.tenant_sales_form_options (
+    id SERIAL PRIMARY KEY, tenant_id INTEGER NOT NULL, label VARCHAR(100) NOT NULL, value VARCHAR(100) NOT NULL,
+    sort_order INTEGER NOT NULL DEFAULT 0, is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), UNIQUE (tenant_id, value));
+CREATE TABLE tenant_001.lead_sales_form_selections (
+    id SERIAL PRIMARY KEY, lead_id INTEGER NOT NULL REFERENCES tenant_001.leads(id) ON DELETE CASCADE,
+    option_id INTEGER NOT NULL REFERENCES tenant_001.tenant_sales_form_options(id) ON DELETE RESTRICT,
+    other_text TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), UNIQUE (lead_id, option_id));
+CREATE TABLE tenant_001.close_reasons (
+    id SERIAL PRIMARY KEY, type VARCHAR(10) NOT NULL, label TEXT NOT NULL, sort_order INTEGER NOT NULL DEFAULT 0,
+    is_active INTEGER NOT NULL DEFAULT 1, created_at TIMESTAMPTZ DEFAULT NOW(), UNIQUE (type, label));
+CREATE TABLE tenant_001.deal_close_reasons (
+    id SERIAL PRIMARY KEY, lead_id INTEGER NOT NULL REFERENCES tenant_001.leads(id),
+    reason_id INTEGER NOT NULL REFERENCES tenant_001.close_reasons(id), is_primary __PRIMARY_TYPE__ NOT NULL DEFAULT __PRIMARY_DEFAULT__,
+    UNIQUE (lead_id, reason_id));
+CREATE TABLE tenant_001.lead_channels (
+    id SERIAL PRIMARY KEY, lead_id INTEGER NOT NULL REFERENCES tenant_001.leads(id) ON DELETE CASCADE,
+    platform VARCHAR(30) NOT NULL, external_id VARCHAR(255) NOT NULL, display_name VARCHAR(255),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (platform, external_id));
+CREATE TABLE tenant_001.meta_messages (
+    id SERIAL PRIMARY KEY, tenant_id INTEGER NOT NULL DEFAULT 1,
+    lead_id INTEGER REFERENCES tenant_001.leads(id) ON DELETE SET NULL,
+    platform VARCHAR(20) NOT NULL DEFAULT 'messenger', sender_id VARCHAR(100) NOT NULL, sender_name VARCHAR(200),
+    message_id TEXT, message_text TEXT, direction VARCHAR(10) NOT NULL DEFAULT 'inbound', raw_payload JSONB,
+    created_at TIMESTAMPTZ DEFAULT NOW(), recipient_id VARCHAR(100), messaging_type VARCHAR(20),
+    message_tag VARCHAR(50), page_id VARCHAR(50), original_language VARCHAR(10), occurred_at TIMESTAMPTZ,
+    deleted_at TIMESTAMPTZ DEFAULT NULL);
+CREATE UNIQUE INDEX ON tenant_001.meta_messages (message_id) WHERE message_id IS NOT NULL;
+CREATE TABLE tenant_001.conversation_logs (
+    id SERIAL PRIMARY KEY, tenant_id INTEGER NOT NULL, lead_id INTEGER REFERENCES tenant_001.leads(id) ON DELETE RESTRICT,
+    contact_id INTEGER, company_id INTEGER, deal_id INTEGER, channel_type VARCHAR(30) NOT NULL,
+    channel_identity VARCHAR(255), direction VARCHAR(10) NOT NULL CHECK (direction IN ('inbound', 'outbound')),
+    sender VARCHAR(100), content_text TEXT, original_language VARCHAR(10), external_message_id VARCHAR(255) UNIQUE,
+    raw_payload JSONB, status VARCHAR(20) DEFAULT 'sent', translated_text TEXT, analysis JSONB,
+    occurred_at TIMESTAMPTZ NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ DEFAULT NULL, recorded_by_user_id INTEGER);
+CREATE TABLE tenant_001.meta_message_reactions (
+    id SERIAL PRIMARY KEY, tenant_id INTEGER NOT NULL DEFAULT 1,
+    meta_message_id INTEGER NOT NULL REFERENCES tenant_001.meta_messages(id) ON DELETE CASCADE,
+    emoji_name TEXT NOT NULL, reactor_discord_user_id TEXT NOT NULL);
+CREATE TABLE tenant_001.message_translations (
+    id SERIAL PRIMARY KEY, message_id TEXT NOT NULL, target_language VARCHAR(10) NOT NULL,
+    translated_text TEXT NOT NULL, UNIQUE (message_id, target_language));
+CREATE TABLE tenant_001.customer_scores (id SERIAL PRIMARY KEY, lead_id INTEGER NOT NULL);
+CREATE TABLE tenant_001.message_labels (id SERIAL PRIMARY KEY, lead_id INTEGER);
+CREATE TABLE tenant_001.quotes (id SERIAL PRIMARY KEY, lead_id INTEGER REFERENCES tenant_001.leads(id));
+CREATE TABLE tenant_001.companies (id SERIAL PRIMARY KEY, lead_id INTEGER REFERENCES tenant_001.leads(id));
+CREATE TABLE tenant_001.contacts (id SERIAL PRIMARY KEY, lead_id INTEGER REFERENCES tenant_001.leads(id));
+CREATE TABLE tenant_001.outbound_translation_drafts (id SERIAL PRIMARY KEY, lead_id INTEGER);
+CREATE TABLE tenant_001.lead_attachments (id SERIAL PRIMARY KEY, lead_id INTEGER REFERENCES tenant_001.leads(id) ON DELETE CASCADE);
+CREATE TABLE tenant_001.audit_logs (
+    id SERIAL PRIMARY KEY, tenant_id INTEGER NOT NULL DEFAULT 1, user_id INTEGER NOT NULL DEFAULT 1,
+    action VARCHAR(50) NOT NULL, table_name VARCHAR(100) NOT NULL, record_id INTEGER, old_data JSONB, new_data JSONB,
+    created_at TIMESTAMPTZ DEFAULT NOW());
+CREATE TABLE IF NOT EXISTS public.registration_tokens (
+    id SERIAL PRIMARY KEY, tenant_id INTEGER NOT NULL, lead_id INTEGER NOT NULL);
+INSERT INTO tenant_001.close_reasons (type, label, sort_order) VALUES
+  ('lost', 'r1', 1), ('lost', 'r2', 2), ('lost', 'r3', 3), ('lost', 'r4', 4), ('lost', 'r5', 5),
+  ('lost', 'r6', 6), ('lost', 'r7', 7), ('lost', 'r8', 99),
+  ('won', 'w1', 1), ('won', 'w2', 2), ('won', 'w3', 3), ('won', 'w4', 4), ('won', 'w5', 5), ('won', 'w6', 6), ('won', 'w7', 7);
+-- 元の行（本番の leads の id 4・6 と、その元のメッセージ）
+INSERT INTO tenant_001.leads (id, lead_code, customer_name, status) VALUES (4, 'LD-4', 'orig4', 'lead'), (6, 'LD-6', 'orig6', 'lead');
+INSERT INTO tenant_001.meta_messages (lead_id, platform, sender_id, message_id, direction, message_text)
+  VALUES (4, 'discord', 'd1', 'orig-m1', 'inbound', 'a'), (4, 'discord', 'd1', 'orig-m2', 'outbound', 'b');
+SELECT setval('tenant_001.leads_id_seq', 100);
+"""
+
+# リード分析の試験用の表
+LEAD_FACTORS_MSG_DDL = {
+    "meta_messages": """
+        CREATE TABLE IF NOT EXISTS meta_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, tenant_id INTEGER NOT NULL DEFAULT 999,
+            lead_id INTEGER, platform VARCHAR(20) NOT NULL DEFAULT 'messenger',
+            sender_id VARCHAR(100) NOT NULL DEFAULT 'x', message_text TEXT,
+            direction VARCHAR(10) NOT NULL DEFAULT 'inbound',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, deleted_at TIMESTAMP)
+    """,
+    "conversation_logs": """
+        CREATE TABLE IF NOT EXISTS conversation_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, tenant_id INTEGER NOT NULL DEFAULT 999,
+            lead_id INTEGER, channel_type VARCHAR(30) NOT NULL DEFAULT 'whatsapp',
+            direction VARCHAR(10) NOT NULL, content_text TEXT,
+            occurred_at TIMESTAMP NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            deleted_at TIMESTAMP)
+    """,
+}

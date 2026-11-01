@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import CompaniesPage from '../pages/companies/CompaniesPage';
 import ContactsPage from '../pages/contacts/ContactsPage';
 import SuppliersPage from '../pages/suppliers/SuppliersPage';
+import { queryClient } from '../lib/query/apiQuery';
 
 const mock = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() }));
 vi.mock('../lib/api', () => ({ api: mock }));
@@ -92,6 +93,7 @@ beforeEach(() => {
 });
 afterEach(() => {
   cleanup();
+  queryClient.clear();
   expect(fetch).not.toHaveBeenCalled();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();

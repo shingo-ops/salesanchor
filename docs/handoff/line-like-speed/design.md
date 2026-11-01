@@ -86,6 +86,52 @@ PO の言葉: 「LINEみたいな使い心地は出来る？」（意味は「�
   - 0.1〜0.2 秒増えた行: /crm → /crm/leads 0.3→0.5、/admin/products 0.5→0.6、me/permissions だけを読む画面の多くが 0.1→0.2。同じ行の「いちばん遅い API」の秒も同じだけ増えた（/api/v1/countries 0.3→0.5 など）。段 1 は画面のコードの通信を変えていない（e77c3a436 で useApiQuery を使う画面は 0）。増えた分は、同じ行のいちばん遅い API の秒の増えと同じ。原因は 1 回の比べでは決めない（表は 0.1 秒刻み）。悪化は 2 秒の線と K2 の最大では見えない、とだけ記録する。段 2 の受入のときに毎朝の記録と並べてもう一度見る。
 - 段 2 の作業指示書は、この受入の後に別の PR で出す。
 
+#### 3-4-5. 段 2 の作業指示書
+- 段 2（連絡手段・取引先・仕入先の 3 画面を、写しを先に出して裏で取り直す形に変える）の作業指示書は docs/handoff/line-like-speed/stage2-card.md。3 つ目の画面を仕入先にした理由と、本番の 5 行の基準値は stage2-card.md V2-1・V2-2。本物の画面での K5 は stage2-card.md の P2 と T12 で確かめる（本番で 2 人のログインは使わない・V2-8）。
+
+#### 3-4-6. 段 2 の本番の受入（stage2-card.md §5 の B5〜B7・2026-11-01 Claude Opus が確かめた）
+- B7 は合格。段 2 は 2026-11-01 14:39 JST に main へ入った（merge 755a8d9ec）。本番への反映（Deploy to VPS run 41277770162）は 14:46 JST に success。続く main c88f09846 の反映（run 41277926057）も 14:51 JST に success。本番 https://app.salesanchor.jp/ は開き、ブラウザの誤りの記録に TanStack 由来の誤りは 0 件。
+- B6 は合格。本番の読むだけの道（ADR-1024）で tenant_001（tenants.id 1・test-corp）を数えた。仕入先は is_active が true の行が 1 件（SP-26070 点検用仕入先）。取引先は 1 件（QA入金日テスト株式会社）。連絡手段は is_active が true の行が 6 件。生の出力は /tmp/CC報告ファイル/stage2-b6/（設計担当の手元・リポジトリには入れない）。画面の件数はまだ確かめていない。P3（書いた後に取り直した行が出る）と B3（backend を変えていない）を根拠にする。
+- B5 は不合格（5 行中 4 行で K1 が 0.1 秒を超えた）。今回の回は prod-ui-check run 41278215691（main c88f09846・反映中の待ち 10 分の後、14:56 JST から測定）。基準は stage2-card.md V2-2（run 41232464221）。
+  | 行 | 初めて開く秒（K2） | 戻った時の秒（K1）基準→今回 | 判定 |
+  |---|---|---|---|
+  | /suppliers | 0.2 以下 | 0.20→0.15 | × |
+  | /management-center/suppliers | 0.2 以下 | 0.23→0.27 | × |
+  | /crm/companies | 0.2 以下 | 0.25→0.22 | × |
+  | /admin/channel-masters | 0.2 以下 | 0.19→0.01 | ○ |
+  | /management-center/channel-masters | 0.2 以下 | 0.22→0.25 | × |
+  - 5 行の 403・5xx は 0 件。K2 は 5 行とも 2 秒以下。
+  - ほかの 130 行: K2 の最大は 1.1 秒（/inventory）・2 秒を超えた画面 0 件で、段 1 の受入（§3-4-4）と同じ。悪化なし。
+  - 測るあいだの API の数は 489（段 1）から 574 に増えた。理由はまだ確かめていない。測定の最中の 15:07 JST に、別の変更（main b3193f11a）の本番反映（run 41279538190）が始まっていた。これが数に響いたかもまだ確かめていない。
+- B5 の 4 行が遅い理由（観測した事実と、まだ確かめていない仮説を分ける）:
+  - 事実: 権限を読む部品 usePermissions（frontend/src/hooks/usePermissions.ts）は、写しの置き場を使わず、画面を開くたびに useState と useEffect で /me/permissions を取り直す。
+  - 事実: 遅かった 4 行は、どれも権限で出し分ける部分を描く。仕入先の画面はボタン（SuppliersPage.tsx:134・:139・:144・:240・:241）。取引先の画面はボタン（CompaniesPage.tsx:362・:414・:417）。外側の枠では、管理センターの横の項目（ManagementCenterPage.tsx:30・:37-54）と顧客の枠のタブ（CustomerHubPage.tsx:27・:33-44）。
+  - 事実: 速かった /admin/channel-masters は、画面（ChannelMastersPage.tsx）も外側の枠（AdminHubPage.tsx）も usePermissions を使わない。同じ画面でも管理センターの中の行は遅い。5 行中 5 行がこの分け方に合う。
+  - 仮説（まだ確かめていない）: /me/permissions が返るまで権限で出す部分が無いので、記録係の構造の印が最初の時と合わない。このため K1 は /me/permissions の通信の秒になる。確かめ方: usePermissions を写しの置き場に載せた後に同じ 4 行を測り、0.1 秒以下になるか見る。
+  - usePermissions を使う画面のファイルは 53 本ある（`git grep -l 'usePermissions()' origin/main -- frontend/src ':!*.test.*'`）。段 2 のカードの範囲（3 画面）の外なので、直すには新しい作業指示書と PO の判断が要る。
+
+#### 3-4-7. 権限の写しの作業指示書
+- 段 2 の受入で K1 が 0.1 秒を超えた 4 行（§3-4-6）の理由の仮説を確かめるため、権限を読む部品 usePermissions を写しの置き場に載せる。作業指示書は docs/handoff/line-like-speed/perm-cache-card.md。ほかの使い手は変えない理由と、ログインの前に描かれない根拠は perm-cache-card.md §0 P5・P6。K5 は perm-cache-card.md §4-B の 12 本目で確かめる。PO 選択「1」（2026-11-01）。
+- 第 1 版の審査は REVISE（2026-11-01 クラウドの Opus）。試験の共通の準備（test-setup.ts）で写しを消す形は、ほかの 8 ファイル 52 本を落とした。このため第 2 版では、写しを消すのを usePermissions.test.ts の中だけにした。
+- 次の段の課題: useApiQuery を使うほかの部品の試験ファイルでも、写しが同じファイルの次の試験に残り得る。試験の共通の準備で消す形は、api.ts が i18n を読み込む点を解いてから考える。
+
+#### 3-4-8. 権限の写しの本番の受入（2026-11-01 Claude Opus が確かめた）
+- 反映は合格。権限の写しは 2026-11-01 19:15 JST に main へ入った（merge c527abcdd）。本番への反映（Deploy to VPS run 41296672823）は 19:22 JST に success。本番 https://app.salesanchor.jp/ は 200 で開いた。
+- 測定は prod-ui-check run 41297663070（main f8910e949・c527abcdd を含む）。19:32 JST に測った。測定の前に、ほかの本番反映が走っていないことを確かめた。
+- §3-4-6 の 5 行は、5 行とも K1 が 0.1 秒以内になった。§3-4-6 の仮説（/me/permissions が返るまで構造の印が合わない）と合う。
+  | 行 | 初めて開く秒（K2） | 戻った時の秒（K1）§3-4-6→今回 | 判定 |
+  |---|---|---|---|
+  | /suppliers | 0.2 | 0.15→0.02 | ○ |
+  | /management-center/suppliers | 0.2 | 0.27→0.01 | ○ |
+  | /crm/companies | 0.2 | 0.22→0.01 | ○ |
+  | /admin/channel-masters | 0.2 | 0.01→0.01 | ○ |
+  | /management-center/channel-masters | 0.2 | 0.25→0.01 | ○ |
+  - 5 行の 403・5xx は 0 件。
+  - 135 画面すべて測れた（403 なし 100・403 あり 35・測れなかった 0）。K2 の最大は 1.2 秒（/inventory）で、2 秒を超えた画面は 0 件。
+  - 戻った時の秒を測れた画面は 128。測るあいだの API の数は 574（§3-4-6）から 462。減った理由はまだ確かめていない。
+  - 生の要約は設計担当の手元の /tmp/CC報告ファイル/perm-cache/measure-5rows.txt（リポジトリには入れない）。
+- 残り: この 5 行のほかには、K1 が 0.1 秒を超える画面が残る（例: / 0.63 秒・/admin/products 0.65 秒・/lead-chat 0.75 秒）。段 3 で直す相手。
+
 ### 3-5. 測り方（|基準|検証方法|）
 | 基準 | 検証方法 |
 |---|---|

@@ -217,3 +217,35 @@ export function getPriorityProspects(scope: "mine" = "mine"): Promise<PriorityPr
   const params = new URLSearchParams({ scope });
   return api.get<PriorityProspectsResponse>(`/analytics/priority-prospects?${params}`);
 }
+
+export interface LeadConversionFactorItem {
+  key: string;
+  odds_ratio: number | null;
+  ci_low: number | null;
+  ci_high: number | null;
+  significant: boolean;
+  computable: boolean;
+}
+
+export interface LeadConversionFactorsResponse {
+  status: "ok" | "insufficient" | "not_computable";
+  included_count: number;
+  won_count: number;
+  lost_count: number;
+  required_per_item: number;
+  item_count: number;
+  excluded: {
+    by_status: number;
+    other_values: number;
+    no_inbound: number;
+    no_outbound: number;
+    no_reply_pair: number;
+    no_sales_form: number;
+    missing_scale_or_type: number;
+  };
+  items: LeadConversionFactorItem[];
+}
+
+export function getLeadConversionFactors(): Promise<LeadConversionFactorsResponse> {
+  return api.get<LeadConversionFactorsResponse>("/analytics/lead-conversion-factors");
+}
