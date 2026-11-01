@@ -364,6 +364,12 @@ props を2つ足す。どちらも thread 用で、既定は false（今の呼�
 
 ### 13-7. 想定される分かれ道（起きたら止めて報告）
 1. MobileShell.test.tsx の Outlet のモックのせいで §13-5-2 の子を描けない → 試験の生の出力を添えて止める。モックの書き換えは Opus が決める。
+   - **Opus の決定（2026-11-02、実装役の BLOCKED 報告を受けて）**: モックの書き換えを認める。形は次のとおり。ほかの形にしない。
+     - ファイル先頭の `vi.mock` より前に `const outletState = vi.hoisted(() => ({ child: null as React.ReactNode }));` を置く（`React` の型が無ければ `import type { ReactNode } from "react"` を使い `as ReactNode`）。
+     - :44 を `Outlet: () => <div data-testid="outlet">{outletState.child}</div>,` に変える。`data-testid="outlet"` は残す（既存の試験が使う）。
+     - 試験ごとに戻すため `afterEach(() => { outletState.child = null; })` を足す（同じファイルに afterEach が既にあればその中に1行足す）。
+     - 新しい1件は、`useHideMobileTabbar(true)` を呼んで `null` を返す小さな部品をファイル内に定義し、描画の前に `outletState.child = <その部品 />` を入れる。
+     - 既存の試験の中身・期待値は変えない。
 2. `.mobile-tabbar` が見えることを前提にしたほかの e2e（mobile-shell.spec.ts・inventory-raw-text-mobile.spec.ts）が落ちる → 試験名と生の出力を報告して止める（どちらも受信箱の会話を開かないので落ちない想定）。
 3. 会話を開いた後、入力欄の帯の下に隙間が残る、または帯が画面の外に出る → 計算した高さを報告して止める。
 4. lint の決まり（hooks の置き場・context の命名・`react-refresh/only-export-components` など）に止められる → 規則名と行を報告して止める。disable を足さない。
