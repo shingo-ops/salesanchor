@@ -21,7 +21,7 @@ _UUID = "00000000-0000-4000-8000-000000000001"
 _PARAM = re.compile(r"\{([^}:]+)(?::[^}]*)?\}")
 
 # トークンを見ない公開ルート。閲覧者のトークンで得られるものは、トークン無しと同じ。
-# 認証を持たない既存ルート（2026-10-16 の実測 26 本）。閲覧者のトークンを見ないので 401 にならないが、
+# 認証を持たない既存ルート（2026-10-16 の実測 26 本。ADR-1055 で poll と recovery の2本を足した時点で 30 本）。閲覧者のトークンを見ないので 401 にならないが、
 # トークンから得られる権限は無い。ここに無いルートが 401 以外を返したら失敗する（新しい認証なしルートの検知）。
 # 足す・消すときは、そのルートがトークンを見ない公開ルートであることをレビューで確かめること。
 _PUBLIC_NO_AUTH_ROUTES: frozenset[tuple[str, str]] = frozenset(
@@ -39,6 +39,10 @@ _PUBLIC_NO_AUTH_ROUTES: frozenset[tuple[str, str]] = frozenset(
         ("GET", "/api/v1/webhook/messenger"),
         ("GET", "/metrics"),
         ("POST", "/api/v1/auth/login"),
+        # ADR-1055: 許可待ちの機械は Cookie sa_login_pending だけで動き、トークンを見ない。
+        # login と同じく、ログイン前の口でトークンから得られる権限が無い（試験では Origin が無く 403 になる）
+        ("POST", "/api/v1/auth/login-requests/poll"),
+        ("POST", "/api/v1/auth/login-requests/recovery"),
         ("POST", "/api/v1/auth/logout"),
         ("POST", "/api/v1/auth/passkey/login/options"),
         ("POST", "/api/v1/auth/passkey/login/verify"),

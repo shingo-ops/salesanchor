@@ -24,6 +24,8 @@ import {
   selfRequestPasswordReset,
   subscribeSession,
 } from "../lib/auth/selfAuth";
+import { clearRecoveryPromptMarksForCurrentUser } from "../features/auth/RecoveryCodePrompt";
+import type { SelfLoginResult } from "../lib/auth/selfAuth";
 
 /** 画面が読むログイン中の利用者の項目（Firebase の User と同じ名前）。 */
 export interface AuthUser {
@@ -36,7 +38,7 @@ export interface AuthUser {
 interface AuthContextType {
   user: AuthUser | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
+  signIn: (email: string, password: string) => Promise<SelfLoginResult>;
   signInWithPasskey: () => Promise<void>;
   signOut: () => Promise<void>;
   sendPasswordReset: (email: string) => Promise<void>;
@@ -123,12 +125,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [selfMode]);
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (email: string, password: string): Promise<SelfLoginResult> => {
     if (selfMode) {
-      await selfLogin(email, password);
-      return;
+      const result = await selfLogin(email, password);
+      // 新しいログインでは案内を出し直せるように、前のログインの印を消す
+      if (result.kind === "ok") clearRecoveryPromptMarksForCurrentUser();
+      return result;
     }
     await signInWithEmailAndPassword(auth, email, password);
+    return { kind: "ok" };
   };
 
   const signInWithPasskey = async () => {
@@ -143,6 +148,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch {
         // 通信できなくても、この端末のセッションは捨てる
       }
+      clearRecoveryPromptMarksForCurrentUser();
       expireSession();
       return;
     }
@@ -180,7 +186,7 @@ export function useAuth() {
     return {
       user: fakeUser,
       loading: false,
-      signIn: async () => {},
+      signIn: async (): Promise<SelfLoginResult> => ({ kind: "ok" }),
       signInWithPasskey: async () => {},
       signOut: async () => {},
       sendPasswordReset: async () => {},

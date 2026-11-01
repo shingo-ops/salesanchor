@@ -40,6 +40,8 @@ import { usePermissions } from "../hooks/usePermissions";
 import { useSuperAdmin } from "../hooks/useSuperAdmin";
 import { useSSE } from "../hooks/useSSE";
 import { RealtimeProvider } from "../lib/realtime/RealtimeProvider";
+import LoginApprovalWatcher from "../features/auth/LoginApprovalWatcher";
+import RecoveryCodePrompt from "../features/auth/RecoveryCodePrompt";
 import { listConversations } from "../lib/messages";
 import {
   NAV_ICONS,
@@ -188,6 +190,12 @@ export default function MobileShell() {
                 <NAV_ICONS.saasAdmin size={ICON.base} aria-hidden="true" />,
                 "/super-admin/viewers",
               ),
+              resolveItem(
+                "loginRequests",
+                "nav.superAdminLoginRequests",
+                <NAV_ICONS.saasAdmin size={ICON.base} aria-hidden="true" />,
+                "/super-admin/login-requests",
+              ),
             ]
           : []),
       ];
@@ -196,6 +204,8 @@ export default function MobileShell() {
 
   return (
     <RealtimeProvider>
+    <LoginApprovalWatcher />
+    <RecoveryCodePrompt />
     <div className="mobile-shell">
       {/* ============ Outlet ============ */}
       <main className="mobile-content">

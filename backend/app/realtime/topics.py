@@ -12,9 +12,16 @@ from __future__ import annotations
 SCOPE_TENANT = "tenant"
 SCOPE_GLOBAL = "global"
 SCOPE_SHARED = "shared"
+SCOPE_USER = "user"  # 人単位の宛先 rt:u:{id}（ADR-1055。ADR-1016 の改訂の注記）
 
 TOPIC_TCG_REVIEW = "tcg.review"
 TOPIC_TCG_INVENTORY = "tcg.inventory"
+TOPIC_AUTH_LOGIN_REQUEST = "auth.login_request"
+
+# 人宛ての話題 → 範囲。人宛ての合図は口の中で publish_user_change により直接送る（書き込みの口の自動合図にはしない）
+USER_TOPICS: dict[str, str] = {
+    TOPIC_AUTH_LOGIN_REQUEST: SCOPE_USER,
+}
 
 # {(method, route_path): (topic, scope)}
 WRITE_ROUTE_TOPICS: dict[tuple[str, str], tuple[str, str]] = {
@@ -101,6 +108,13 @@ NO_SIGNAL_ROUTES: dict[tuple[str, str], str] = {
     ("POST", "/api/v1/assistant/messages"): _PENDING,
     ("POST", "/api/v1/auth/login"): _PENDING,
     ("POST", "/api/v1/auth/logout"): _PENDING,
+    ("POST", "/api/v1/auth/login-requests/poll"): "人宛ての合図は口の中で直接送る（ADR-1055）。書き込みの口の自動合図にしない",
+    ("POST", "/api/v1/auth/login-requests/recovery"): "人宛ての合図は口の中で直接送る（ADR-1055）。書き込みの口の自動合図にしない",
+    ("POST", "/api/v1/auth/login-requests/{request_id}/approve"): "人宛ての合図は口の中で直接送る（ADR-1055）。書き込みの口の自動合図にしない",
+    ("POST", "/api/v1/auth/login-requests/{request_id}/reject"): "人宛ての合図は口の中で直接送る（ADR-1055）。書き込みの口の自動合図にしない",
+    ("DELETE", "/api/v1/auth/devices/{device_id}"): "機械の取り消しは本人の画面の応答で差し替える。人宛ての合図は口の中で直接送る（ADR-1055）",
+    ("POST", "/api/v1/auth/recovery-codes"): "予備の合言葉の作り直しは本人の画面の応答で差し替える（ADR-1055）",
+    ("POST", "/api/v1/super-admin/login-requests/{request_id}/approve"): "人宛ての合図は口の中で直接送る（ADR-1055）。書き込みの口の自動合図にしない",
     ("POST", "/api/v1/tcg/analysis-results/client-timing"): "データを変えない。計時ログを1行残すだけ",
     ("POST", "/api/v1/viewer/login"): "閲覧ページ ADR-1019: 閲覧者のログインは画面更新の通知対象外",
     ("POST", "/api/v1/viewer/logout"): "閲覧ページ ADR-1019: 閲覧者のログアウトは画面更新の通知対象外",

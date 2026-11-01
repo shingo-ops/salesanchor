@@ -12,6 +12,7 @@ import os
 import secrets
 import uuid
 from datetime import datetime, timedelta, timezone
+from typing import NamedTuple
 
 from jose import JWTError, jwt
 from sqlalchemy import text
@@ -89,7 +90,7 @@ def validate_settings() -> None:
 
 # ── アクセストークン ───────────────────────────────────────────
 
-def create_access_token(user_id: int, email: str, amr: str | None) -> str:
+def create_access_token(user_id: int, email: str, amr: str | None, sid: str | None = None) -> str:
     now = int(datetime.now(timezone.utc).timestamp())
     claims: dict = {
         "iss": ISSUER,
@@ -101,6 +102,9 @@ def create_access_token(user_id: int, email: str, amr: str | None) -> str:
     }
     if amr is not None:
         claims["amr"] = [amr]
+    if sid is not None:
+        # 更新トークンの組の id（ADR-1055 D8）。組を失効させたとき、このアクセストークンも即座に拒むための印
+        claims["sid"] = sid
     return jwt.encode(claims, _secret(), algorithm=_ALGORITHM, headers={"kid": _kid(_secret())})
 
 
@@ -165,6 +169,7 @@ async def issue_refresh_token(
     user_agent: str | None,
     family_id: str | None = None,
     family_created_at: datetime | None = None,
+    trusted_device_id: int | None = None,
 ) -> tuple[str, datetime]:
     now = _now()
     family = family_id or str(uuid.uuid4())
@@ -175,8 +180,9 @@ async def issue_refresh_token(
     await db.execute(
         text(
             "INSERT INTO public.auth_refresh_tokens "
-            "(user_id, token_hash, family_id, family_created_at, expires_at, created_at, user_agent_hash) "
-            "VALUES (:uid, :h, :fid, :fca, :exp, :now, :ua)"
+            "(user_id, token_hash, family_id, family_created_at, expires_at, created_at, user_agent_hash, "
+            "trusted_device_id) "
+            "VALUES (:uid, :h, :fid, :fca, :exp, :now, :ua, :tdid)"
         ),
         {
             "uid": user_id,
@@ -186,15 +192,25 @@ async def issue_refresh_token(
             "exp": expires_at,
             "now": now,
             "ua": ua_hash,
+            "tdid": trusted_device_id,
         },
     )
     return raw, expires_at
 
 
-async def rotate_refresh_token(
-    db: AsyncSession, raw: str, user_agent: str | None
-) -> tuple[int, str, datetime] | None:
-    """成功なら (user_id, 新しい生トークン, expires_at)。失敗は None。"""
+class RotatedRefresh(NamedTuple):
+    """更新に成功したときの結果（ADR-1055 D8・D4）。組の id と機械の結び付きを引き継ぐ。"""
+
+    user_id: int
+    raw: str
+    expires_at: datetime
+    family_id: str
+    family_created_at: datetime | None
+    trusted_device_id: int | None
+
+
+async def rotate_refresh_token(db: AsyncSession, raw: str, user_agent: str | None) -> RotatedRefresh | None:
+    """成功なら RotatedRefresh。失敗は None。"""
     now = _now()
     token_hash = _hash_token(raw)
     # 1 文で失効させて取り出す（競合しても 2 回使えない）
@@ -202,7 +218,7 @@ async def rotate_refresh_token(
         text(
             "UPDATE public.auth_refresh_tokens SET revoked_at = :now, last_used_at = :now "
             "WHERE token_hash = :h AND revoked_at IS NULL AND expires_at > :now "
-            "RETURNING user_id, family_id, family_created_at, created_at"
+            "RETURNING user_id, family_id, family_created_at, created_at, trusted_device_id"
         ),
         {"now": now, "h": token_hash},
     )
@@ -224,7 +240,7 @@ async def rotate_refresh_token(
             )
         return None
 
-    user_id, family_id, family_created_at, token_created_at = row
+    user_id, family_id, family_created_at, token_created_at, trusted_device_id = row
     user_row = (
         await db.execute(
             text("SELECT id, email, is_active, password_changed_at FROM public.users WHERE id = :uid"),
@@ -237,10 +253,16 @@ async def rotate_refresh_token(
     if changed_at is not None and changed_at > _as_utc(token_created_at):
         return None
 
+    family_start = _as_utc(family_created_at)
     new_raw, expires_at = await issue_refresh_token(
-        db, user_id, user_agent, family_id=str(family_id), family_created_at=_as_utc(family_created_at)
+        db,
+        user_id,
+        user_agent,
+        family_id=str(family_id),
+        family_created_at=family_start,
+        trusted_device_id=trusted_device_id,
     )
-    return user_id, new_raw, expires_at
+    return RotatedRefresh(user_id, new_raw, expires_at, str(family_id), family_start, trusted_device_id)
 
 
 async def revoke_refresh_token(db: AsyncSession, raw: str) -> None:

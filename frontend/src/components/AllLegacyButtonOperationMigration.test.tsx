@@ -39,7 +39,7 @@ describe('all legacy Button operation migration', () => {
     await localized.changeLanguage('en'); expect(localized.t('goals.advisorRecommended', { value: '1,234' })).toBe('Recommended 1,234');
   });
   it('submits the exact credentials once, remains pending, and navigates to the original route', async () => {
-    const pending = deferred(); auth.signIn.mockReturnValue(pending.promise); render(page());
+    const pending = deferred(); auth.signIn.mockReturnValue(pending.promise.then(() => ({ kind: 'ok' }))); render(page());
     fireEvent.change(screen.getByLabelText(String(instance.t('login.email'))), { target: { value: 'person@example.com' } });
     fireEvent.change(screen.getByLabelText(String(instance.t('login.password'))), { target: { value: 'secret' } });
     const submit = screen.getByRole('button', { name: String(instance.t('login.signIn')) }) as HTMLButtonElement;
