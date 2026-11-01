@@ -261,6 +261,10 @@ def _split_psql_meta(sql: str) -> str:
 @pytest.fixture(params=[("BOOLEAN", "FALSE"), ("INTEGER", "0")], ids=["is_primary_boolean", "is_primary_integer"])
 async def pg(request):
     import asyncpg
+    from urllib.parse import urlparse
+
+    if urlparse(PG_URL).hostname not in ("localhost", "127.0.0.1", "::1"):
+        pytest.fail("LEAD_REGRESSION_PG_URL は使い捨ての手元の DB だけ")
 
     conn = await asyncpg.connect(PG_URL)
     try:
