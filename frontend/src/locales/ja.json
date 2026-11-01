@@ -5579,5 +5579,59 @@
       "REVIEW_CSV_SAVE_FAILED": "保存に失敗しました。",
       "unknown": "エラーが発生しました。"
     }
+  },
+  "secretary": {
+    "open": "秘書に頼む",
+    "title": "秘書チャット",
+    "placeholder": "頼みたいことを書いてください（例: 山田商事に請求書を作って）",
+    "send": "送る",
+    "create": "作る",
+    "cancel": "やめる",
+    "thinking": "考えています…",
+    "cancelled": "やめました。",
+    "priceRequired": "単価が空の行があります。単価を入れてください",
+    "error": {
+      "notReady": "準備ができていません",
+      "busy": "いま考え中です。少し待ってから送ってください",
+      "timeout": "時間がかかりすぎました。もう一度送ってください",
+      "unreadable": "うまく読めませんでした。言い方を変えてください",
+      "generic": "うまくいきませんでした。もう一度お試しください"
+    },
+    "invoice": {
+      "title": "請求書の下書き",
+      "company": "会社",
+      "contact": "担当者",
+      "changeCustomer": "会社・担当者を変える",
+      "itemName": "品名",
+      "quantity": "数",
+      "unitPrice": "単価",
+      "addItem": "品物を足す",
+      "currency": "通貨",
+      "dueDate": "支払期限",
+      "notes": "備考"
+    },
+    "event": {
+      "title": "予定の下書き",
+      "name": "題名",
+      "allDay": "終日",
+      "startDate": "開始日",
+      "startTime": "開始時刻",
+      "endDate": "終了日",
+      "endTime": "終了時刻",
+      "location": "場所",
+      "description": "説明",
+      "visibility": "見える範囲",
+      "personal": "自分だけ",
+      "shared": "会社の全員",
+      "sharedNote": "会社の全員に見えます"
+    },
+    "created": {
+      "invoice": "請求書を作りました。",
+      "event": "予定を作りました。"
+    },
+    "link": {
+      "invoice": "請求書を開く",
+      "event": "予定を開く"
+    }
   }
 }
