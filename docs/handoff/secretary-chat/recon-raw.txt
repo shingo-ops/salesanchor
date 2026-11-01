@@ -1,0 +1,63 @@
+=== 測定 1 2026-10-31T16:57:44Z ===
+Linux vm 6.18.44-fc-v185 #1 SMP PREEMPT_DYNAMIC @0 x86_64 x86_64 x86_64 GNU/Linux
+4
+               total        used        free      shared  buff/cache   available
+Mem:           16091         496       15167          15         670       15594
+Swap:              0           0           0
+  PID   RSS    VSZ COMMAND
+  204 251116 5675096 /opt/claude-code/bin/claude --output-format=stream-json --verbose --settings /root/.claude/launcher-settings.json --replay-user-messages --
+  151 44776 1958416 /usr/local/bin/environment-manager task-run --stdin --session cse_01W47tdgoRHABkW5SdwjqmDJ --session-mode resume-cached --upgrade-claude-cod
+    1  6588  26140 /process_api --firecracker-init --addr 0.0.0.0:2024 --max-ws-buffer-size 32768 --block-local-connections --control-vsock-port 5001 --listen-v
+  614  3960   8008 ps -eo pid,rss,vsz,args --sort=-rss
+   84  2944   7328 sbx-telemetry-collector
+  605  2356   4476 /bin/bash -c source /root/.claude/shell-snapshots/snapshot-bash-1793465839314-em8km7.sh 2>/dev/null || true && \builtin export BUN_OPTIONS="-
+   87  2108   2960 /bin/sh -c if ! { [ ! -L /var/lib/ccr-ca-store ] && { [ ! -e /var/lib/ccr-ca-store ] || { [ -d /var/lib/ccr-ca-store ] && [ -O /var/lib/ccr-c
+  615  1688   2728 head -15
+  616   188    448 cut -c1-160
+    2     0      0 [kthreadd]
+    3     0      0 [pool_workqueue_release]
+    4     0      0 [kworker/R-rcu_gp]
+    5     0      0 [kworker/R-sync_wq]
+    6     0      0 [kworker/R-kvfree_rcu_reclaim]
+=== 測定 2 2026-10-31T16:58:44Z ===
+Linux vm 6.18.44-fc-v185 #1 SMP PREEMPT_DYNAMIC @0 x86_64 x86_64 x86_64 GNU/Linux
+4
+               total        used        free      shared  buff/cache   available
+Mem:           16091         529       15131          15         673       15561
+Swap:              0           0           0
+  PID   RSS    VSZ COMMAND
+  204 299200 5675096 /opt/claude-code/bin/claude --output-format=stream-json --verbose --settings /root/.claude/launcher-settings.json --replay-user-messages --
+  151 47288 1958416 /usr/local/bin/environment-manager task-run --stdin --session cse_01W47tdgoRHABkW5SdwjqmDJ --session-mode resume-cached --upgrade-claude-cod
+    1  6592  26144 /process_api --firecracker-init --addr 0.0.0.0:2024 --max-ws-buffer-size 32768 --block-local-connections --control-vsock-port 5001 --listen-v
+ 1312  3976   8000 ps -eo pid,rss,vsz,args --sort=-rss
+   84  2944   7328 sbx-telemetry-collector
+  605  2420   4476 /bin/bash -c source /root/.claude/shell-snapshots/snapshot-bash-1793465839314-em8km7.sh 2>/dev/null || true && \builtin export BUN_OPTIONS="-
+   87  2108   2960 /bin/sh -c if ! { [ ! -L /var/lib/ccr-ca-store ] && { [ ! -e /var/lib/ccr-ca-store ] || { [ -d /var/lib/ccr-ca-store ] && [ -O /var/lib/ccr-c
+ 1313  1696   2728 head -15
+ 1314  1676   2724 cut -c1-160
+    2     0      0 [kthreadd]
+    3     0      0 [pool_workqueue_release]
+    4     0      0 [kworker/R-rcu_gp]
+    5     0      0 [kworker/R-sync_wq]
+    6     0      0 [kworker/R-kvfree_rcu_reclaim]
+=== 測定 3 2026-10-31T16:59:44Z ===
+Linux vm 6.18.44-fc-v185 #1 SMP PREEMPT_DYNAMIC @0 x86_64 x86_64 x86_64 GNU/Linux
+4
+               total        used        free      shared  buff/cache   available
+Mem:           16091         500       15159          15         673       15590
+Swap:              0           0           0
+  PID   RSS    VSZ COMMAND
+  204 280972 5675096 /opt/claude-code/bin/claude --output-format=stream-json --verbose --settings /root/.claude/launcher-settings.json --replay-user-messages --
+  151 48436 1958416 /usr/local/bin/environment-manager task-run --stdin --session cse_01W47tdgoRHABkW5SdwjqmDJ --session-mode resume-cached --upgrade-claude-cod
+    1  6592  26144 /process_api --firecracker-init --addr 0.0.0.0:2024 --max-ws-buffer-size 32768 --block-local-connections --control-vsock-port 5001 --listen-v
+ 1564  3968   8000 ps -eo pid,rss,vsz,args --sort=-rss
+   84  2944   7328 sbx-telemetry-collector
+  605  2420   4476 /bin/bash -c source /root/.claude/shell-snapshots/snapshot-bash-1793465839314-em8km7.sh 2>/dev/null || true && \builtin export BUN_OPTIONS="-
+   87  2108   2960 /bin/sh -c if ! { [ ! -L /var/lib/ccr-ca-store ] && { [ ! -e /var/lib/ccr-ca-store ] || { [ -d /var/lib/ccr-ca-store ] && [ -O /var/lib/ccr-c
+ 1565  1692   2728 head -15
+ 1566  1676   2724 cut -c1-160
+    2     0      0 [kthreadd]
+    3     0      0 [pool_workqueue_release]
+    4     0      0 [kworker/R-rcu_gp]
+    5     0      0 [kworker/R-sync_wq]
+    6     0      0 [kworker/R-kvfree_rcu_reclaim]
