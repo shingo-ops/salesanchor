@@ -115,4 +115,19 @@ describe("useSuperAdmin", () => {
 
     await waitFor(() => expect(mockGet).toHaveBeenCalledTimes(2));
   });
+
+  it("when a refetch fails after a previous true, isSuperAdmin becomes false (fail closed)", async () => {
+    mockGet
+      .mockResolvedValueOnce({ permissions: [], is_super_admin: true })
+      .mockRejectedValueOnce(new Error("network"));
+
+    const first = renderHook(() => useSuperAdmin());
+    await waitFor(() => expect(first.result.current.isSuperAdmin).toBe(true));
+    first.unmount();
+
+    const { result } = renderHook(() => useSuperAdmin());
+    await waitFor(() => expect(mockGet).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(result.current.isSuperAdmin).toBe(false));
+    expect(result.current.loading).toBe(false);
+  });
 });

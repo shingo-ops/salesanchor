@@ -17,8 +17,8 @@ interface MePermissionsResponse {
 }
 
 export function useSuperAdmin() {
-  const { data, isPending } = useApiQuery<MePermissionsResponse>("/me/permissions");
+  const { data, isPending, error } = useApiQuery<MePermissionsResponse>("/me/permissions");
 
-  // 取得に失敗した時は data が無いので false（運営者ではない扱い・今と同じ）
-  return { isSuperAdmin: Boolean(data?.is_super_admin), loading: isPending };
+  // 取得に失敗した時は false（運営者ではない扱い・今と同じ）。取り直しが失敗すると前の data が残るので error も見る
+  return { isSuperAdmin: !error && Boolean(data?.is_super_admin), loading: isPending };
 }
