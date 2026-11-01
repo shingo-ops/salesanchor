@@ -20,3 +20,15 @@ export const signOut = async () => {};
 export const sendPasswordResetEmail = async () => {
   throw new Error('sendPasswordResetEmail is not available in Storybook');
 };
+
+export const EmailAuthProvider = {
+  credential: (email: string, password: string) => ({ email, password }),
+};
+
+export const reauthenticateWithCredential = async () => {
+  throw new Error('reauthenticateWithCredential is not available in Storybook');
+};
+
+export const updatePassword = async () => {
+  throw new Error('updatePassword is not available in Storybook');
+};
