@@ -7,9 +7,9 @@
  *
  * 変更履歴:
  *   2026-05-21: 初版（Sprint 2）
+ *   2026-11-01: 写しの置き場（useApiQuery）に載せた（ADR-1054）。usePermissions と同じ写しを読む。戻った時は前の判定を先に出し、裏で取り直す。
  */
-import { useEffect, useState } from "react";
-import { api } from "../lib/api";
+import { useApiQuery } from "../lib/query/apiQuery";
 
 interface MePermissionsResponse {
   permissions: string[];
@@ -17,27 +17,8 @@ interface MePermissionsResponse {
 }
 
 export function useSuperAdmin() {
-  const [isSuperAdmin, setIsSuperAdmin] = useState<boolean>(false);
-  const [loading, setLoading] = useState(true);
+  const { data, isPending, error } = useApiQuery<MePermissionsResponse>("/me/permissions");
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const data = await api.get<MePermissionsResponse>("/me/permissions");
-        if (!cancelled) {
-          setIsSuperAdmin(Boolean(data.is_super_admin));
-        }
-      } catch {
-        if (!cancelled) setIsSuperAdmin(false);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  return { isSuperAdmin, loading };
+  // 取得に失敗した時は false（運営者ではない扱い・今と同じ）。取り直しが失敗すると前の data が残るので error も見る
+  return { isSuperAdmin: !error && Boolean(data?.is_super_admin), loading: isPending };
 }
