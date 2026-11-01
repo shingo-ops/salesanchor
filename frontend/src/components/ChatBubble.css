@@ -1,35 +1,76 @@
-/* ChatBubble: 受信箱の吹き出し（.msg-bubble）と同じトークン */
+/**
+ * ChatBubble — 会話の吹き出し（受信箱の会話・秘書のチャットで共通）
+ * ADR-067: 全カラー・寸法は CSS 変数参照のみ
+ */
+
+/* Meta実測: バブル 16px / padding=8px 12px */
 .comp-chat-bubble {
+  max-width: 70%;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-md);
+  line-height: var(--comp-chat-bubble-line-height);
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+/* outbound バブル */
+.comp-chat-bubble--outbound {
+  background: var(--bubble-outbound-bg);
+  color: var(--on-accent);
+  border-radius: var(--radius-bubble-out);
+}
+/* inbound バブル */
+.comp-chat-bubble--inbound {
+  background: var(--bubble-inbound-bg);
+  color: var(--text-primary);
+  border-radius: var(--radius-bubble-in);
+}
+.comp-chat-bubble--failed {
+  background: var(--danger-bg);
+  color: var(--danger-text);
+  border: 2px solid var(--danger);
+  border-radius: var(--radius-xl);
+}
+.comp-chat-bubble__time {
+  font-size: var(--font-2xs);
+  opacity: var(--opacity-muted);
+  margin-top: var(--space-1);
+  text-align: right;
+}
+.comp-chat-bubble__time--inbound { text-align: left; }
+
+/* panel: 秘書のチャット。吹き出しが自分で左右に寄り、中身と回る印を横に並べる */
+.comp-chat-bubble--panel {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   box-sizing: border-box;
   max-width: 80%;
-  padding: var(--space-2) var(--space-3);
-  font-size: var(--font-md);
-  line-height: 1.45;
-  word-break: break-word;
-  white-space: pre-wrap;
 }
-
+.comp-chat-bubble--panel.comp-chat-bubble--outbound { margin-left: auto; }
+.comp-chat-bubble--panel.comp-chat-bubble--inbound { margin-right: auto; }
 .comp-chat-bubble__body {
   min-width: 0;
 }
-
-.comp-chat-bubble--user {
-  margin-left: auto;
-  color: var(--on-accent);
-  background: var(--bubble-outbound-bg);
-  border-radius: var(--radius-bubble-out);
-}
-
-.comp-chat-bubble--assistant {
-  margin-right: auto;
-  color: var(--text-primary);
-  background: var(--bubble-inbound-bg);
-  border-radius: var(--radius-bubble-in);
-}
-
 .comp-chat-bubble--error {
   color: var(--danger-text);
+}
+/* wide: 下書きの票など、横いっぱいに使う中身 */
+.comp-chat-bubble--wide {
+  max-width: 100%;
+  width: 100%;
+  white-space: normal;
+}
+
+@media (max-width: 767px) {
+  /* 4. 吹き出しを「地・面・強調色」の3役に割り当て直す。
+        1-b で下地を面の色（白）に揃えたため、受信を白にすると見えなくなる。
+        受信 = --neutral-bg（soft neutral 背景・白地で 1.23:1。元の純灰より
+               わずかに見分けやすく、他の面と同じ青みの系統に入る）
+        送信 = --accent（ネイビー・白地で 10.36:1）＋ 文字は既存の --on-accent
+        これで面は2段、強調色は送信の吹き出しぶんだけになる（お手本の構造と同じ）。
+        紫（--bubble-outbound-bg）はテーマ色と別系統なのでスマホでは使わない。
+        PC は ADR-064（Meta 完全再現・Accepted）の範囲なので触らない。 */
+  /* 秘書のチャット（panel）はこの上書きを受けない（まとめる前と同じ） */
+  .comp-chat-bubble--outbound:not(.comp-chat-bubble--panel) { background: var(--accent); }
+  .comp-chat-bubble--inbound:not(.comp-chat-bubble--panel)  { background: var(--neutral-bg); }
 }
