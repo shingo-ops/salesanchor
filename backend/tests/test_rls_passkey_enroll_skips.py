@@ -17,15 +17,15 @@ import pytest_asyncio
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 
+from tests.rls_bootstrap import public_bootstrap_lock
+
 _RLS_DB_URL: Optional[str] = os.getenv("RLS_TEST_DATABASE_URL")
 _ADMIN_URL: str = os.getenv(
     "RLS_ADMIN_DATABASE_URL",
     "postgresql+asyncpg://jarvis:testpass@localhost:5432/jarvis_test_db",
 )
 
-_MIGRATION = (
-    Path(__file__).resolve().parents[2] / "migrations" / "20261031_200000_add_passkey_enroll_prompt_skips.sql"
-)
+_MIGRATION = Path(__file__).resolve().parents[2] / "migrations" / "20261031_200000_add_passkey_enroll_prompt_skips.sql"
 _USER_ID = 991201
 
 pytestmark = pytest.mark.skipif(
@@ -51,10 +51,11 @@ async def app_engine():
 
 async def _run_migration(admin_engine) -> None:
     sql = _MIGRATION.read_text(encoding="utf-8")
-    async with admin_engine.connect() as conn:
-        raw = await conn.get_raw_connection()
-        await raw.driver_connection.execute(sql)  # 複数文をそのまま流す
-        await conn.commit()
+    async with public_bootstrap_lock(admin_engine):
+        async with admin_engine.connect() as conn:
+            raw = await conn.get_raw_connection()
+            await raw.driver_connection.execute(sql)  # 複数文をそのまま流す
+            await conn.commit()
 
 
 @pytest_asyncio.fixture(scope="module", loop_scope="module", autouse=True)
@@ -70,9 +71,7 @@ async def setup_table(admin_engine):
             {"id": _USER_ID},
         )
     yield
-    async with admin_engine.begin() as conn:
-        await conn.execute(text("DROP TABLE IF EXISTS public.passkey_enroll_prompt_skips"))
-        await conn.execute(text("DELETE FROM public.users WHERE id = :id"), {"id": _USER_ID})
+    # 後片付けはしない。共有 public の users から消すと、users を参照する表を作り直す別の試験と deadlock する（CI run 41292287006）。表も利用者も冪等に作るので残してよい
 
 
 @pytest.mark.asyncio(loop_scope="module")
