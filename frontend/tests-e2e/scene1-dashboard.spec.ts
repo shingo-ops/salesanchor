@@ -403,7 +403,24 @@ test.describe("Scene 1: Dashboard Overview", () => {
     await expect(page.getByTestId("weekly-advisor-section")).toBeVisible();
     await expect(page.getByTestId("priority-prospect-item").first()).toContainText("Blue Ocean Co.");
     await expect(page.getByTestId("weekly-advisor-item").first()).toContainText("Blue Ocean Co.");
-    await expect(page.getByTestId("lead-factors-section")).toBeVisible();
+
+    // 受注統合カード: 受注・売上 見出しが描画される（営業担当ビュー）
+    await expect(page.getByText("受注・売上", { exact: true })).toBeVisible();
+  });
+
+  test("成約しやすさの分析の欄が15行と件数を出す", async ({ page }) => {
+    await installAuthBypass(page);
+    await mockApi(page, {
+      ...commonMocks(),
+      ...dashboardMocks(),
+    });
+
+    await page.goto("/");
+
+    await expect(page.getByRole("heading", { name: "ダッシュボード" })).toBeVisible({
+      timeout: 20_000,
+    });
+    await expect(page.getByTestId("lead-factors-section")).toBeVisible({ timeout: 20_000 });
     await expect(page.getByTestId("lead-factors-row")).toHaveCount(15);
     const factorRows = page.getByTestId("lead-factors-row");
     await expect(factorRows.nth(1)).toContainText("計算できない");
@@ -412,9 +429,6 @@ test.describe("Scene 1: Dashboard Overview", () => {
     await expect(page.getByTestId("lead-factors-section")).toContainText("470");
     await expect(page.getByTestId("lead-factors-section")).toContainText("150");
     await expect(page.getByTestId("lead-factors-section")).toContainText("320");
-
-    // 受注統合カード: 受注・売上 見出しが描画される（営業担当ビュー）
-    await expect(page.getByText("受注・売上", { exact: true })).toBeVisible();
   });
 
   test("今やることのフォロー追加で lead.next_action を保存できる", async ({ page }) => {
