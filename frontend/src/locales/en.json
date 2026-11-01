@@ -5620,5 +5620,59 @@
       "REVIEW_CSV_SAVE_FAILED": "Saving failed.",
       "unknown": "An error occurred."
     }
+  },
+  "secretary": {
+    "open": "Ask the assistant",
+    "title": "Assistant chat",
+    "placeholder": "Tell me what you need (e.g. create an invoice for Acme)",
+    "send": "Send",
+    "create": "Create",
+    "cancel": "Cancel",
+    "thinking": "Thinking…",
+    "cancelled": "Cancelled.",
+    "priceRequired": "Some rows have no unit price. Please enter one",
+    "error": {
+      "notReady": "The assistant is not ready yet",
+      "busy": "The assistant is busy. Please wait a moment and send again",
+      "timeout": "This took too long. Please send it again",
+      "unreadable": "I could not understand that. Please rephrase",
+      "generic": "Something went wrong. Please try again"
+    },
+    "invoice": {
+      "title": "Invoice draft",
+      "company": "Company",
+      "contact": "Contact",
+      "changeCustomer": "Change company / contact",
+      "itemName": "Item name",
+      "quantity": "Quantity",
+      "unitPrice": "Unit price",
+      "addItem": "Add item",
+      "currency": "Currency",
+      "dueDate": "Due date",
+      "notes": "Notes"
+    },
+    "event": {
+      "title": "Event draft",
+      "name": "Title",
+      "allDay": "All day",
+      "startDate": "Start date",
+      "startTime": "Start time",
+      "endDate": "End date",
+      "endTime": "End time",
+      "location": "Location",
+      "description": "Description",
+      "visibility": "Visibility",
+      "personal": "Only me",
+      "shared": "Everyone in the company",
+      "sharedNote": "Visible to everyone in your company"
+    },
+    "created": {
+      "invoice": "Invoice created.",
+      "event": "Event created."
+    },
+    "link": {
+      "invoice": "Open invoice",
+      "event": "Open event"
+    }
   }
 }
