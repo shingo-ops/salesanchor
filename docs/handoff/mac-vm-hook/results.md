@@ -28,3 +28,18 @@ Context7 は月間上限超過（"Monthly quota exceeded"）で使えなかっ�
 既知の限界（Opus コード審査）: `$( … )`・バッククォート内、`nohup`/`exec`/`command` 前置、別行の `export COLIMA_PROFILE=x` は判定しない。AI の通常の書き方では起きにくく、H6 の観測と K5（10/31 `colima list`）で取りこぼしを検出する。
 
 補足の根拠として実機も観測した: PreToolUse フックの exit 2 と標準エラー出力でコマンドが実行されず、メッセージが AI に返った（h1_log.txt）。
+
+## 修正便 R1 の R1-6 測定（2026-11-01 09:00 JST 予約）
+- 対象期間: 入れ替え 2026-10-25 00:43 JST（2026-10-24T15:44Z）〜 2026-11-01 09:01 JST。R1 の実装結果表（R1-1〜R1-5）は PR #4711 側にある。
+- 抜き出し: ~/.claude/logs/agent-events.jsonl（118,982 行）から hook "mac-vm-guard" の記録は全期間で 8 件。最後は 2026-10-22T06:45:17Z で、対象期間内は **0 件**（hook_blocked 0・hook_permit_consumed 0・hook_internal_error 0）。生出力: /tmp/CC報告ファイル/mac-vm-hook/r1-6/all-mac-vm-guard.jsonl・window-extract.txt
+- 見張りが動いていたかの確認（0 件が「止まっていた」でないこと）:
+  - settings.json の PreToolUse(Bash) に ~/.claude/scripts/mac-vm-guard.py が登録されたまま。本体の更新時刻 2026-10-25 00:43:53、sha256 先頭 91fc182d
+  - 本体へ直接入力を流した試験（記録先は一時ファイルに切替）: profile 付き起動 → exit 2・hook_blocked と matched_part を記録／無指定の起動・echo・list → exit 0／壊れた JSON → exit 0・hook_internal_error を記録。生出力: r1-6/liveness-test.txt
+  - 期間内の会話記録（1,317 ファイル）で起動系の命令を探すと、default への起動（無指定の起動）1 種だけが見つかった。§3 では止めない形で、拒否記録も無い＝正しく通した。生出力: r1-6/vm-commands-in-transcripts.txt
+- 判定: §3 に当たらない拒否 0 件、hook_internal_error 0 件。
+
+| # | 結果 | 根拠 |
+|---|---|---|
+| R1-6 | ○ | 期間内の拒否 0 件（誤検知 0）・内部エラー 0 件。見張りは登録済みで動作試験も期待どおり |
+
+- 限界: 期間内に「止めるべき形」の命令が実際に来なかったため、本番の記録で拒否が正しく出ることは今回は観測していない（動作試験でのみ確認）。R2 候補（値を取る旗の誤検知・`&`/`nohup`/`$()` の見逃し）は R1 の記録どおり残っている。
