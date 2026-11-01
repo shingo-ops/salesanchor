@@ -4,18 +4,18 @@
 - 根拠の写し: S=origin/main e4aada182（Merge #4998）。行番号はすべてこの sha。実装の前に最新の origin/main で行を合わせ直す（§3(a)）。
 - 読んだ節と照合は運営者判定の写しカード（docs/handoff/line-like-speed/superadmin-cache-card.md:5）と同じ。全命令は cd <W> で始める・出力は tail/head で上限・PR は実行役が作らない・出力をファイルに残す命令と tail で読む命令は別の行。
 - 実行役はクラウドの Sonnet。作業場所の作り方はクラウドの決まり（S scripts/agent-hooks/cloud/rules.md:15）を正とする。.pr-number・gh-pr-create-safe.sh は使わない。待つために sleep を使わない。
-- 状態: 第 1 版（設計担当 Claude Opus・2026-11-02）。
-- 受領確認: 実装役は着手の最初の報告に「最初の画面の写しカード 第 1 版を受け取った・S=e4aada182」と書く。
+- 状態: 第 2 版（設計担当 Claude Opus・2026-11-02）。第 1 版のクラウド審査（REVISE）の指摘 1〜5 を直した: 試験の見本の path を tab=individual に・1 本目の「7」を注文の数に・優先の見込み客の items を useMemo で包む・行番号 6 か所・P7 に (5) を足す。
+- 受領確認: 実装役は着手の最初の報告に「最初の画面の写しカード 第 2 版を受け取った・S=e4aada182」と書く。
 
 ## 0. 何のための変更か（設計の合格線は変えない）
 - P1 運営者の判定の写しの受入（design §3-4-10・prod-ui-check run 41316493378・2026-11-01 23:33 JST）の後も、最初の画面（/）の戻った時の秒（K1）は 0.59 秒。同じ回でこの行の API の数は 16、いちばん遅い API は /api/v1/me/permissions 0.6 秒。設計担当の手元の写しは /tmp/CC報告ファイル/slow-two/measure-rows.txt（リポジトリには入れない）。
 - P2 / の 16 本の内訳（S のコードを読んで数えた）: 画面の本体 5 本（S frontend/src/pages/dashboard/DashboardPage.tsx:339-362・:373-385）・優先の見込み客の一覧 1 本と、一覧に出た人ごとの /leads/:id（S frontend/src/pages/dashboard/PriorityProspectsSection.tsx:142-181。本番の数は 16 から逆算すると 4 人）・今週の助言 1 本（S frontend/src/pages/dashboard/WeeklyAdvisorSection.tsx:130-152）・成約の要因 1 本（S frontend/src/pages/dashboard/LeadConversionFactorsSection.tsx:21-36）・数字の漏斗 3 本（S frontend/src/pages/dashboard/FunnelSection.tsx:458-473）・権限 1 本。本番の組み立てでは数字の漏斗が出る（本番の /assets/main-DwNaGf09.js に `Iq="live",Lq=Iq==="mock"` があり、FUNNEL_MODE は "live"）。
-- P3 5 か所とも useState と useEffect で api.get を呼び、写しの置き場を使わない。部品が出るたびに loading が true から始まり、返るまで読み込み中の印（LoadingBlock）を出す（S DashboardPage.tsx:487・:556・:592・:667、FunnelSection.tsx:496-502、PriorityProspectsSection.tsx:329-330、WeeklyAdvisorSection.tsx:300-301 付近、LeadConversionFactorsSection.tsx:82）。このため戻った時も、16 本が返るまで読み込み中の印が出たままになる。
+- P3 5 か所とも useState と useEffect で api.get を呼び、写しの置き場を使わない。部品が出るたびに loading が true から始まり、返るまで読み込み中の印（LoadingBlock）を出す（S DashboardPage.tsx:487・:556・:592・:667、FunnelSection.tsx:496-502、PriorityProspectsSection.tsx:329-330、WeeklyAdvisorSection.tsx:289-290、LeadConversionFactorsSection.tsx:82）。このため戻った時も、16 本が返るまで読み込み中の印が出たままになる。
 - P4 仮説（まだ確かめていない）: 5 か所を写しの置き場（useApiQuery・S frontend/src/lib/query/apiQuery.ts:51-73）に載せると、戻った時の最初の描画に前の中身が出て、/ の K1 が 0.1 秒以下になる。確かめ方は §5 C4。下がらなければ仮説は誤りと記録して止まる。
 - P5 写しの名前は今までと同じ形（["api", uid, …path の言葉, { query }]・S apiQueryKey・apiQuery.ts:41-44）。送る path は今と 1 文字も変えない（§4-B の作り方の関数は今の関数と同じ文字を作る）。/leads/:id の写しは、ほかの画面が同じ path を useApiQuery で読めば同じ 1 つを読む。データを 2 か所に持たない。利用者が変わると QueryAuthSync が写しを全部消す（S frontend/src/lib/query/QueryAuthSync.tsx:18-28）。
 - P6 一覧に出た人ごとの /leads/:id は、数が変わる並びなので、useApiQuery を並べて呼べない（React の決まりで、呼ぶ数を描画ごとに変えられない）。そのため写しの置き場に useApiQueries（§4-A）を 1 つ足す。中身は useApiQuery と同じ名前・同じ取り方で、TanStack Query 5.104.4 の useQueries を使う（useQueries(options, queryClient) の形は https://unpkg.com/@tanstack/react-query@5.104.4/build/modern/useQueries.d.ts で確かめた。Context7 の /tanstack/query の useQueries の項と同じ）。
-- P7 変わることは 4 つだけ。(1) 戻った時は、前の中身を出したまま裏で取り直す。取り直しの間は、見出しの横に小さい回る印（Spinner）を出す（段 2 と同じ形・S frontend/src/pages/admin/ChannelMastersPage.tsx:78）。(2) 優先の見込み客で「次の行動を足す」を保存した後は、手元で中身を書き換えず、その人の /leads/:id を取り直す（S PriorityProspectsSection.tsx:279-325 の大きな既定値の塊は消える）。(3) 今週の助言で保存した後も、その人の /leads/:id の写しを取り直す（優先の見込み客の欄に出る同じ人の中身を古いままにしないため）。(4) 誤りの出方。今は 1 度出た誤りが画面を開いている間ずっと残る（S DashboardPage.tsx:337 の error は消さない）。変更後は、どれかの取り方が誤りの時だけ誤りの画面を出す。
-- P8 数字の漏斗・優先の見込み客・今週の助言には、開発と E2E のための見本の動き（FUNNEL_MODE が "mock" の時・S frontend/src/api/funnel.ts:28-32）がある。見本の時は今と同じく通信せずに見本を出す（§4-B〜§4-F）。成約の要因は今も見本が無く、見本の時も通信する。これも変えない。
+- P7 変わることは 4 つだけ。(1) 戻った時は、前の中身を出したまま裏で取り直す。取り直しの間は、見出しの横に小さい回る印（Spinner）を出す（段 2 と同じ形・S frontend/src/pages/admin/ChannelMastersPage.tsx:78）。(2) 優先の見込み客で「次の行動を足す」を保存した後は、手元で中身を書き換えず、その人の /leads/:id を取り直す（S PriorityProspectsSection.tsx:279-325 の大きな既定値の塊は消える）。(3) 今週の助言で保存した後も、その人の /leads/:id の写しを取り直す（優先の見込み客の欄に出る同じ人の中身を古いままにしないため）。(4) 誤りの出方。今は 1 度出た誤りが画面を開いている間ずっと残る（S DashboardPage.tsx:337 の error は消さない）。変更後は、どれかの取り方が誤りの時だけ誤りの画面を出す。(5) 保存の直後に手元で次の行動を書き換えなくなる。その人の取り直しが失敗した時は、古い次の行動が残る。続けてもう一度保存する時、上書きの注意が出ないことがある。上書きされるのは、本人がその直前に保存した次の行動だけなので、受け入れる（第 1 版の審査の指摘 5）。
+- P8 数字の漏斗・優先の見込み客・今週の助言には、開発と E2E のための見本の動き（FUNNEL_MODE が "mock" の時・S frontend/src/api/funnel.ts:23-29）がある。見本の時は今と同じく通信せずに見本を出す（§4-B〜§4-F）。成約の要因は今も見本が無く、見本の時も通信する。これも変えない。
 - P9 前の試験の写しが次の試験に残らないよう、新しい試験ファイルの afterEach で写しの置き場（queryClient）を消す。試験の共通の準備（S frontend/src/test-setup.ts）は変えない。今、最初の画面と 4 つの欄を描く試験は無い（`git grep -l -E "DashboardPage|FunnelSection|PriorityProspectsSection|WeeklyAdvisorSection|LeadConversionFactorsSection" -- 'frontend/src/**/*.test.*'` が 0 行）。
 
 ## 1. 触るファイル（変更前→変更後）
@@ -85,7 +85,7 @@ export function useApiQueries<T>(paths: readonly string[]): UseQueryResult<T>[] 
 
 ## 4-B. #2 frontend/src/api/funnel.ts（4 か所を変える）
 (1) S :11-19 の見本の import から `MOCK_PRIORITY_PROSPECTS,` の 1 行を消す（優先の見込み客の欄が直接読む・§4-E）。
-(2) S :30 `const MOCK_MODE = FUNNEL_MODE === "mock";` の次の行に、次の 1 行を足す。
+(2) S :29 `const MOCK_MODE = FUNNEL_MODE === "mock";` の次の行に、次の 1 行を足す。
 ```ts
 export const FUNNEL_MOCK = MOCK_MODE;
 ```
@@ -211,7 +211,12 @@ import {
   const invalidate = useInvalidateApi();
   // 見本の時（開発・E2E）は今までどおり一覧を通信せずに出す
   const listQuery = useApiQuery<PriorityProspectsResponse>(PRIORITY_PROSPECTS_PATH, { enabled: !FUNNEL_MOCK });
-  const items: PriorityProspectItem[] = FUNNEL_MOCK ? MOCK_PRIORITY_PROSPECTS.items : listQuery.data?.items ?? [];
+  // 「?? []」が描画ごとに新しい並びを作らないよう包む（第 1 版で react-hooks/exhaustive-deps の警告が 0→1 になった）
+  const listItems = listQuery.data?.items;
+  const items: PriorityProspectItem[] = useMemo(
+    () => (FUNNEL_MOCK ? MOCK_PRIORITY_PROSPECTS.items : listItems ?? []),
+    [listItems],
+  );
   const detailQueries = useApiQueries<LeadDetail>(items.map((item) => `/leads/${item.lead_id}`));
   // 一覧と、一覧に出た人の中身がそろうまで読み込み中にする（今と同じ）。取れなかった人は名前の代わりの言葉を出す（今と同じ）
   const loading = (!FUNNEL_MOCK && listQuery.isPending) || detailQueries.some((q) => q.isPending);
@@ -226,9 +231,9 @@ import {
   }, [items, detailQueries]);
   const [composerByLeadId, setComposerByLeadId] = useState<Record<number, ComposerState>>({});
 ```
-  `detailQueries` は描画ごとに新しい配列になり、useMemo は毎回作り直す。中身は小さい（本番で 4 人）ので、このままにする。lint の react-hooks の警告（exhaustive-deps など）が出て §3(f) の数を超えたら、useMemo を外して同じ式の const にする。
+  `detailQueries` は描画ごとに新しい配列になり、leadDetails の useMemo は毎回作り直す。中身は小さい（本番で 4 人）ので、このままにする。items は useMemo で包む（第 1 版の審査で、包まないと `'items' conditional` の警告が 1 件増えた）。それでも lint の警告が §3(f) の数を超えたら停止する。
 (4) S :142-181（一覧と人ごとを取る useEffect）を消す。
-(5) S :206-218（beginFollowUp の中の `if (!currentLead) { … }` の塊）を、次で置き換える。S :220 の依存の並び `[leadDetails, updateComposer]` は `[invalidate, leadDetails, updateComposer]` にする。
+(5) S :208-219（beginFollowUp の中の `if (!currentLead) { … }` の塊）を、次で置き換える。S :220 の依存の並び `[leadDetails, updateComposer]` は `[invalidate, leadDetails, updateComposer]` にする。
 ```tsx
     if (!currentLead) {
       void invalidate(["leads", String(item.lead_id)]).finally(() => {
@@ -263,7 +268,7 @@ import {
   const error = FUNNEL_MOCK ? null : listQuery.error ? listQuery.error.message || t("common.errorLoad") : null;
 ```
 (4) S :130-152（一覧を取る useEffect）を消す。
-(5) saveFollowUp の中の S :255-261（`setLeadSnapshots((prev) => ({ … }));`）の次の行に、次の 1 行を足す。S :277 の依存の並び `[composerByCompanyId, leadSnapshots, t, updateComposer]` は `[composerByCompanyId, invalidate, leadSnapshots, t, updateComposer]` にする。
+(5) saveFollowUp の中の S :257-263（`setLeadSnapshots((prev) => ({ … }));`）の次の行に、次の 1 行を足す。S :276 の依存の並び `[composerByCompanyId, leadSnapshots, t, updateComposer]` は `[composerByCompanyId, invalidate, leadSnapshots, t, updateComposer]` にする。
 ```tsx
       void invalidate(["leads", String(action.lead_id)]);
 ```
@@ -338,15 +343,15 @@ const lead = (name: string, nextAction: string | null = null) => ({
 });
 const kpi = { pct: null, direction: "flat" };
 const pageRows: Record<string, unknown> = {
-  "/goals/summary?tab=sales": { monthly: [], weekly: [] },
+  "/goals/summary?tab=individual": { monthly: [], weekly: [] },
   "/analytics/forecast": { forecast_amount: 0, open_deal_count: 0, won_amount: 0, period_start: "2026-11-01", period_end: "2026-11-30" },
   "/analytics/followups": { overdue: [], due_today: [], upcoming: [] },
-  "/analytics/summary?period=1m&tab=sales": {
+  "/analytics/summary?period=1m&tab=individual": {
     period: "1m",
     start_date: "2026-10-02",
     end_date: "2026-11-01",
     leads: { total: 7, converted: 2, excluded: 1, conversion_rate: 28.6 },
-    orders: { total_revenue: 0, order_count: 0, active_count: 0 },
+    orders: { total_revenue: 0, order_count: 7, active_count: 0 },
     comparison: { leads_total: kpi, leads_cv_rate: kpi, orders_revenue: kpi, orders_count: kpi },
   },
   "/analytics/monthly-revenue?period=1m": { granularity: "monthly", entries: [] },
@@ -413,7 +418,7 @@ describe("dashboard revisit shows the copy first (K1)", () => {
     expect(screen.getByText("7")).toBeTruthy();
     expect(container.querySelector(".sa-loading-block")).toBeNull();
     await waitFor(() => expect(container.querySelector(".page-layout-title-row .sa-spinner")).not.toBeNull());
-    expect(spy).toHaveBeenCalledWith("/analytics/summary?period=1m&tab=sales");
+    expect(spy).toHaveBeenCalledWith("/analytics/summary?period=1m&tab=individual");
     expect(spy).toHaveBeenCalledWith(leadPath);
   });
 
@@ -505,7 +510,7 @@ describe("priority follow-up refetches the lead after saving", () => {
   });
 });
 ```
-- 2 本目は、送る path が今と 1 文字も変わらないこと（§0 P5）を確かめる。pageRows の鍵は、S の DashboardPage と 3 つの欄が tab=sales・period=1m の初めの描画で送る 9 本（画面の本体 5・優先の見込み客の一覧 1・人ごと 1・今週の助言 1・成約の要因 1）。FUNNEL_MODE は試験では "off"（.env に VITE_FUNNEL_DASHBOARD が無い）ので、数字の漏斗は 3 本目で直接描く。
+- 2 本目は、送る path が今と 1 文字も変わらないこと（§0 P5）を確かめる。pageRows の鍵は、S の DashboardPage と 3 つの欄が 初めのタブ（sales）・period=1m の初めの描画で送る 9 本（S DashboardPage.tsx:204 の toApiTab が sales を individual に変えるので、path は tab=individual）（画面の本体 5・優先の見込み客の一覧 1・人ごと 1・今週の助言 1・成約の要因 1）。FUNNEL_MODE は試験では "off"（.env に VITE_FUNNEL_DASHBOARD が無い）ので、数字の漏斗は 3 本目で直接描く。
 - 6 本目の「次の行動を足す」と「追加」のボタンの名前は、S PriorityProspectsSection.tsx の t("dashboard.weeklyAddFollowUp")・t("common.add")。名前でボタンが見つからずに落ちた時は §3(e) に従う。
 
 ## 4-I. 実装役の手順（1 手順 1 命令。<W> は手順1 で作られた作業場所の絶対パス）
