@@ -1,0 +1,807 @@
+# recon2 raw (基準 origin/main 508e86036b5b1ab519d49cd3edde888986ba6e22)
+
+## A-1 公式資料 https://code.claude.com/docs/en/cli-reference （WebFetch 2026-10-31 取得。該当行を原文のまま抜粋）
+| `--bare` | Minimal mode: skip auto-discovery of hooks, skills, custom commands, subagents, installed plugins, MCP servers, auto memory, and CLAUDE.md so scripted calls start faster. Skills in a directory you pass with `--add-dir` still load. Claude has access to Bash, file read, and file edit tools. Sets [`CLAUDE_CODE_SIMPLE`](https://code.claude.com/docs/en/env-vars). See [bare mode](https://code.claude.com/docs/en/headless.md#start-faster-with-bare-mode) | `claude --bare -p "query"` |
+| `--disallowedTools`, `--disallowed-tools` | Deny rules. A bare tool name removes the matching tools from Claude's context: `"Edit"` removes Edit, `"*"` removes every tool, and `"mcp__*"` removes every MCP tool. A scoped rule such as `Bash(rm *)` leaves the tool available and denies only calls that match [as written](https://code.claude.com/docs/en/permissions.md#bash-rule-limits). A rule naming [`EndConversation`](https://code.claude.com/docs/en/tools-reference#endconversation-tool-behavior) can't remove it while any other tool remains | `"Bash(git log *)" "Bash(git diff *)" "Edit"` |
+| `--json-schema` | Get validated JSON output matching a JSON Schema after the agent completes its workflow (print mode only). See [structured outputs](https://code.claude.com/docs/en/agent-sdk/structured-outputs.md). Claude Code exits with an error on an invalid schema and accepts the `format` keyword as an annotation without client-side validation | `claude -p --json-schema '{"type":"object","properties":{...}}' "query"` |
+| `--max-turns` | Limit the number of agentic turns (print mode only). Exits with an error when the limit is reached. No limit by default. With `--input-format stream-json`, a message still queued when the limit ends a turn stays queued and starts a new turn with its own limit | `claude -p --max-turns 3 "query"` |
+| `--model` | Sets the model for the current session with a [model alias](https://code.claude.com/docs/en/model-config.md#model-aliases) such as `sonnet`, `opus`, `haiku`, or `fable`, or a model's full name. Overrides the [`model`](https://code.claude.com/docs/en/settings-reference#model) setting and [`ANTHROPIC_MODEL`](https://code.claude.com/docs/en/model-config#environment-variables) | `claude --model claude-sonnet-5` |
+| `--no-session-persistence` | Disable session persistence so sessions are not saved to disk and cannot be resumed. Print mode only. The [`CLAUDE_CODE_SKIP_PROMPT_HISTORY`](https://code.claude.com/docs/en/env-vars) environment variable does the same in any mode | `claude -p --no-session-persistence "query"` |
+| `--output-format` | Specify output format for print mode (options: `text`, `json`, `stream-json`) | `claude -p "query" --output-format json` |
+| `--print`, `-p` | Print response without interactive mode (see [Agent SDK documentation](https://code.claude.com/docs/en/agent-sdk/overview.md) for programmatic usage details). For `--resume` on a background session that is still running, see [Resume a running background session](https://code.claude.com/docs/en/sessions.md#resume-a-running-background-session) | `claude -p "query"` |
+| `--setting-sources` | Comma-separated list of setting sources to load (`user`, `project`, `local`). See [agent view](https://code.claude.com/docs/en/agent-view.md#what-carries-over-when-you-background) and [agent teams](https://code.claude.com/docs/en/agent-teams.md#context-and-communication) for the sessions you start from this one that inherit the list | `claude --setting-sources user,project` |
+| `--strict-mcp-config` | Only use MCP servers from `--mcp-config`, ignoring all other MCP configurations. See [Exclusive control with managed-mcp.json](https://code.claude.com/docs/en/managed-mcp.md#exclusive-control-with-managed-mcp-json) for what the flag does under a managed MCP file | `claude --strict-mcp-config --mcp-config ./mcp.json` |
+| `--tools` | Restrict which built-in tools Claude can use. Use `""` to disable all, `"default"` for the default set, or tool names like `"Bash,Edit,Read"`. On macOS, Linux, and WSL, the default set leaves out `Glob` and `Grep`, as described under [Glob tool behavior](https://code.claude.com/docs/en/tools-reference.md#glob-tool-behavior). If you name one of the [task-tracking tools](https://code.claude.com/docs/en/tools-reference.md#task-tool-availability) here, Claude Code also opts the session in. The flag doesn't affect MCP tools; to deny those too, use `--disallowedTools "mcp__*"`. A list that omits [`EndConversation`](https://code.claude.com/docs/en/tools-reference#endconversation-tool-
+
+## A-2 https://code.claude.com/docs/en/headless （抜粋）
+"To get output conforming to a specific schema, use `--output-format json` with `--json-schema` and a JSON Schema definition. The response includes metadata about the request (session ID, usage, etc.) with the structured output in the `structured_output` field."
+"If a run ends without valid structured output, for example because Claude declined the request, the response has no `structured_output` field. Before your script uses `structured_output`, check that the field is present."
+"`json`: structured JSON with result, session ID, and metadata" ; "the response payload includes `total_cost_usd` and a per-model cost breakdown"
+"Claude Code exits with code 0 on success and a non-zero code when the run fails ... When a failure happens inside the run, such as missing authentication, Claude Code prints the failure as the result on stdout."
+"In bare mode, Claude Code never reads OAuth credentials or the system keychain." / "Bare mode does not read CLAUDE_CODE_OAUTH_TOKEN" (authentication page)
+"Without `--bare`, a `-p` session runs the hooks in a project's `.claude/settings.json` and connects the servers in its `.mcp.json`, even in a folder you've never trusted."
+"With Claude Code v2.1.302 or later, `claude -p` runs start in Manual mode when nothing sets a permission mode." / "In a Manual mode `claude -p` run, a call that needs approval is denied unless something approves it"
+
+## A-3 https://code.claude.com/docs/en/authentication （抜粋）
+"For CI pipelines, scripts, or other environments where interactive browser login isn't available, generate a one-year OAuth token with `claude setup-token`"
+"The command opens the same browser authorization flow as `/login`, and the token prints to the terminal after you approve access in the browser. It does not save the token anywhere; copy it and set it as the `CLAUDE_CODE_OAUTH_TOKEN` environment variable"
+"This token authenticates with your Claude subscription and requires a Pro, Max, Ultra, Team, or Enterprise plan. It can only make model requests, so it can't establish Remote Control sessions or fetch claude.ai connectors. MCP servers you configure locally still work."
+"On Linux, credentials are stored in `~/.claude/.credentials.json` with file mode `0600`."
+"Authentication precedence: ... 3. ANTHROPIC_API_KEY ... In non-interactive mode (-p), the key is always used when present. ... 5. CLAUDE_CODE_OAUTH_TOKEN ... 7. Subscription OAuth credentials from /login."
+"Once the stored login expires and can't be refreshed, each model request fails with `Login expired · Please run /login`"
+
+## A-4 https://code.claude.com/docs/en/setup （抜粋）
+"Hardware: 4 GB+ RAM, x64 or ARM64 processor"
+"Operating system: ... Ubuntu 20.04+ / Debian 10+ / Alpine Linux 3.19+"
+"curl -fsSL https://claude.ai/install.sh | bash"   (Native Install (Recommended))
+"npm install -g @anthropic-ai/claude-code" ; "The npm package requires Node.js 22 or later." ; "The installed `claude` binary does not itself invoke Node."
+"Alpine ... requires `bash` and `curl` for the install command, and `libgcc`, `libstdc++`, and `ripgrep` at runtime" (set USE_BUILTIN_RIPGREP=0)
+"Native installations automatically update in the background" ; DISABLE_AUTOUPDATER=1 / DISABLE_UPDATES
+(Docker 専用の公式インストール手順: setup ページには記載なし。devcontainer ページは authentication ページから別リンクあり: https://code.claude.com/docs/en/devcontainer.md ＝ 本調査では未読)
+
+## A-5 https://code.claude.com/docs/en/network-config#network-access-requirements （抜粋）
+`api.anthropic.com` | Claude API requests, including ... feature flag fetches, and telemetry event logging
+`claude.ai` | claude.ai account authentication
+`platform.claude.com` | ... OAuth token exchange, refresh, and revocation also go to this host for claude.ai accounts, so both Console and claude.ai sign-ins require it
+`downloads.claude.ai` | Plugin executable downloads; native installer, native auto-updater, and update version checks
+`registry.npmjs.org` | ... the package registry for npm and bun installs of Claude Code itself
+`http-intake.logs.us5.datadoghq.com` | Operational telemetry ... Optional: disable with DISABLE_TELEMETRY or DO_NOT_TRACK
+"setting CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC disables both [Datadog hosts]"
+"Claude Code does not support SOCKS proxies."
+
+## B-1 llm_budget.py purpose/sdk 集合
+# purpose: 使いみち（design.md §3-1 CHECK 制約と同一の集合）
+USAGE_PURPOSES: frozenset[str] = frozenset(
+    {
+        "line_extraction",
+        "line_extraction_shadow",
+        "inventory_parse_fallback",
+        "translation_inbound",
+        "translation_inbound_escalation",
+        "translation_outbound",
+    }
+)
+
+# sdk: どの SDK の usage_metadata から読んだか（design.md §3-1 CHECK 制約と同一の集合）
+USAGE_SDKS: frozenset[str] = frozenset({"google-genai", "google-generativeai"})
+
+## B-2 llm_budget.py 検査
+    source_ref: str | None,
+) -> dict[str, Any]:
+    if purpose not in USAGE_PURPOSES:
+        raise ValueError(f"unknown llm_usage_events purpose: {purpose!r}")
+    if sdk not in USAGE_SDKS:
+        raise ValueError(f"unknown llm_usage_events sdk: {sdk!r}")
+    cost = calculate_usage_cost(counts, model)
+
+## B-3 CHECK 制約 (migration)
+--   （~:323, ~:337-342）を「Run database migrations」（~:448-462）より先に実行する。
+--   CREATE と アプリコードの usage 書き込みロジックと バックフィル SELECT を
+--   同一 migration・同一デプロイで出すと、コード切替後～migration 実行までの間、
+--   本番の抽出処理が「テーブルが無い」または「列が無い」エラーで失敗する窓ができる。
+--   A1（表のみ、コード変更なし）を先にマージ・本番反映してから、A2（バックフィル＋
+--   アプリの書き込みコード）を出すことでこの窓を無くす。
+
+-- 1. public.llm_usage_events: 1行 = Gemini の応答1回
+CREATE TABLE IF NOT EXISTS public.llm_usage_events (
+    id                          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    occurred_at                 TIMESTAMPTZ NOT NULL DEFAULT now(),
+    purpose                     TEXT        NOT NULL,
+    tenant_id                   INTEGER,
+    model                       TEXT        NOT NULL,
+    sdk                         TEXT        NOT NULL,
+    prompt_tokens                INTEGER,
+    cached_content_tokens        INTEGER,
+    candidates_tokens            INTEGER,
+    thoughts_tokens               INTEGER,
+    tool_use_prompt_tokens        INTEGER,
+    total_tokens                  INTEGER,
+    cost_usd                    NUMERIC(12, 6),
+    extraction_attempt_id       UUID        REFERENCES public.extraction_attempts(id) ON DELETE SET NULL,
+    -- FK なし：CI の差分実行ベースラインに extraction_shadow_runs が無いため。試運転は停止中（#3864）
+    extraction_shadow_run_id    UUID,
+    discord_inbound_message_id  INTEGER,
+    source_ref                  TEXT,
+    backfilled                  BOOLEAN     NOT NULL DEFAULT false,
+    CONSTRAINT llm_usage_events_purpose_check
+        CHECK (purpose IN (
+            'line_extraction', 'line_extraction_shadow', 'inventory_parse_fallback',
+            'translation_inbound', 'translation_inbound_escalation', 'translation_outbound'
+        )),
+    CONSTRAINT llm_usage_events_sdk_check
+        CHECK (sdk IN ('google-genai', 'google-generativeai'))
+);
+
+## B-4 制約名の他の出現(migrations/backend、views は除く)
+migrations/20260930_150000_create_llm_usage_events.sql:46:    CONSTRAINT llm_usage_events_purpose_check
+migrations/20260930_150000_create_llm_usage_events.sql:51:    CONSTRAINT llm_usage_events_sdk_check
+migrations/20261024_100300_create_ai_cloud_views.sql:141:  ('public','llm_usage_events',ARRAY['purpose'],'allow','値の決まり llm_usage_events_purpose_check で値が限られる'),
+migrations/20261024_100300_create_ai_cloud_views.sql:142:  ('public','llm_usage_events',ARRAY['sdk'],'allow','値の決まり llm_usage_events_sdk_check で値が限られる'),
+backend/tests/test_llm_usage_events_migration_pg.py:57:    assert "llm_usage_events_purpose_check" in names
+backend/tests/test_llm_usage_events_migration_pg.py:58:    assert "llm_usage_events_sdk_check" in names
+
+## C-1 tenant_features DDL
+CREATE TABLE IF NOT EXISTS public.tenant_features (
+    tenant_id INTEGER NOT NULL,
+    feature_key TEXT NOT NULL,
+    enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (tenant_id, feature_key)
+);
+
+
+## C-2 tenant_features への INSERT の前例(migrations/backend/scripts/docs)
+grep: docs/handoff/secretary-chat/recon2-raw.txt: input file is also the output
+
+## C-3 require_feature
+def require_feature(feature_key: str):
+    """
+    指定された feature_key が現在のテナントで有効かチェックする Depends ファクトリ。
+    public.tenant_features テーブルに (current_tenant_id, feature_key, enabled=true) の行が
+    存在すれば通過、なければ HTTP 403 を返す。
+    require_permission と同じエラー形式に揃える。
+
+    使用例:
+        @router.get("/feature-demo/ping",
+                     dependencies=[Depends(require_feature("inventory_v2"))])
+    """
+    if not feature_key:
+        raise ValueError("require_feature には feature_key が必要です")
+
+    async def _check(
+        tenant_id: int = Depends(get_current_tenant),
+        db: AsyncSession = Depends(get_db),
+    ) -> None:
+        result = await db.execute(
+            text(
+                "SELECT 1 FROM public.tenant_features "
+                "WHERE tenant_id = :tid AND feature_key = :fkey AND enabled = true"
+            ),
+            {"tid": tenant_id, "fkey": feature_key},
+        )
+        if result.scalar_one_or_none() is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"機能が無効です: {feature_key}",
+            )
+
+
+## C-4 テナント schema 名
+    """
+    safe_id = int(user.tenant_id)
+
+    # Redisキャッシュからテナント情報を取得
+
+## C-5 Tenant/User モデル
+class Tenant(Base):
+    __tablename__ = "tenants"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_name = Column(String(255), nullable=False, unique=True)
+    tenant_code = Column(String(50), nullable=False, unique=True, index=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    is_active = Column(Boolean, default=True, index=True)
+    settings = Column(JSON, default=dict)
+
+    # リレーション
+    users = relationship("User", back_populates="tenant", cascade="all, delete-orphan")
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True)
+    username = Column(String(255), nullable=False)
+    email = Column(String(255), nullable=False, unique=True, index=True)
+    full_name = Column(String(255))
+    # spec.md v1.1 F2 (Sprint 2): マーケットプレイス中央 admin フラグ。
+    # テナント admin (role='admin') とは独立、Jarvis 運用 admin のみ true。
+    # 詳細: migrations/064_add_users_is_super_admin.sql
+    is_super_admin = Column(Boolean, default=False, nullable=False, index=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+## C-6 tenant_004 固定値の前例
+backend/app/services/tcg_distribution_svc.py:1115:            tenant_id=4,  # tenant_004
+backend/app/tasks/viewer_inventory_cache.py:63:            tenant_id=4,  # tenant_004（tcg_distribution_svc の配信エラー通知と同じ）
+
+## D-1 get_current_tenant (user.tenant_id から決定)
+
+async def get_current_tenant(
+    request: Request,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> int:
+    """
+    認証済みユーザーのtenant_idを返す。
+    JWTからではなくDB上のuser.tenant_idを使用する（IDOR脆弱性防止）。
+    URLパラメータからtenant_idを受け取ることは絶対にしない。
+
+    さらにDBセッションのsearch_pathをテナントスキーマに切り替える。
+    テナントの有効性はRedisキャッシュで高速に確認する。
+    """
+    safe_id = int(user.tenant_id)
+
+    # Redisキャッシュからテナント情報を取得
+
+## D-2 require_super_admin
+async def require_super_admin(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    """
+    Jarvis 運用 admin（マーケットプレイス中央 admin）を要求する Dependency。
+
+    背景:
+      spec.md v1.1 F2 (Sprint 2) の二層権限構造:
+        - 中央 admin (is_super_admin = true): /super-admin/masters 配下で
+          public schema のマスタを編集（knowledge_rules / supplier_aliases /
+          tcg_series_master / pokemon_dex / trainer_dex / suppliers /
+          supplier_discord_routing）
+        - テナント admin (role = 'admin'): 自テナント内の操作のみ
+          （/admin/inventory-visibility 等）
+
+    判定:
+      public.users.is_super_admin = TRUE のユーザーのみ通過。
+      テナント admin (role='admin') でも is_super_admin=false なら 403。
+
+    使用例:
+        @router.get("/super-admin/...",
+                    dependencies=[Depends(require_super_admin)])
+    """
+    if not getattr(current_user, "is_super_admin", False):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="この操作にはJarvis運用admin（中央admin）権限が必要です",
+        )
+    return current_user
+
+
+## D-3 owner/admin
+ROLE_KEY_OWNER = "owner"
+ROLE_KEY_ADMIN = "admin"
+SYSTEM_MANAGE_KEY = "system.manage"  # admin だけが持たない権限キー（唯一の定義場所）
+
+# 運営者用のロール。super admin（public.users.is_super_admin）以外には一覧に見せず、付けさせない。
+# 見分けは roles.system_key で行い、名前では分岐しない（唯一の定義場所。ADR-147 追補 2026-10-10）
+TENANT_HIDDEN_SYSTEM_KEYS = frozenset({ROLE_KEY_ADMIN})
+
+
+def is_tenant_admin(system_keys: set[str]) -> bool:
+    """owner または admin のシステムロールを持つか（権限判定の正本は user_roles。users.role は使わない）。"""
+    return bool(system_keys & {ROLE_KEY_OWNER, ROLE_KEY_ADMIN})
+
+## D-4 /me/permissions
+    keys = await load_user_permissions(db, tenant_id, current_user.id)
+    system_keys = await get_user_system_keys(db, current_user.id)
+
+    # テナント単位フィーチャーフラグ: enabled=true の feature_key を配列で返す
+    features_result = await db.execute(
+        text(
+            "SELECT feature_key FROM public.tenant_features "
+            "WHERE tenant_id = :tid AND enabled = true "
+            "ORDER BY feature_key"
+        ),
+        {"tid": tenant_id},
+    )
+    enabled_features = [row[0] for row in features_result.fetchall()]
+
+    return {
+        "permissions": sorted(keys),
+        "user_id": current_user.id,
+        # owner / admin のシステムロールを持つか（user_roles が正本。users.role は使わない）
+        "is_tenant_admin": is_tenant_admin(system_keys),
+        "is_super_admin": bool(getattr(current_user, "is_super_admin", False)),
+        # Sprint 9 / F9 v1.2: 中央 admin が自テナントの Phase 状態を取得するために必要
+        "tenant_id": tenant_id,
+        # テナント単位フィーチャーフラグ（フロント FeatureGate で使用）
+        "enabled_features": enabled_features,
+    }
+
+
+# =========================================================================
+# ロール管理
+# =========================================================================
+
+
+## D-5 テナント切替の検索(結果が空=見つからず)
+
+## D-6 useSuperAdmin
+/**
+ * 現在のユーザーが is_super_admin かどうかを判定するフック。
+ *
+ * spec.md v1.1 F2 (Sprint 2):
+ *   /api/v1/me/permissions レスポンスに is_super_admin を含めて返す。
+ *   そのレスポンスを再利用して /super-admin/masters への導線判定に使用。
+ *
+ * 変更履歴:
+ *   2026-05-21: 初版（Sprint 2）
+ */
+import { useEffect, useState } from "react";
+import { api } from "../lib/api";
+
+## E-1 invoice items/Create
+    name_en: str | None = Field(default=None, max_length=255)
+    condition: str | None = Field(default=None, max_length=50)
+    unit: str | None = Field(default=None, max_length=20)
+    quantity: int = Field(ge=1)
+    unit_price: Decimal = Field(ge=0, max_digits=15, decimal_places=2)
+    weight: Decimal | None = Field(default=None, ge=0, max_digits=10, decimal_places=3)
+
+
+class InvoiceCreate(BaseModel):
+    """請求書登録リクエスト（Step 5d 以降は company_id + contact_id 必須）"""
+    company_id: int = Field(ge=1, description="会社ID")
+    contact_id: int = Field(ge=1, description="担当者ID")
+    currency: str = Field(default="JPY", max_length=10)
+    shipping_fee: Decimal | None = Field(default=None, ge=0, max_digits=15, decimal_places=2)
+    tax_amount: Decimal | None = Field(default=None, ge=0, max_digits=15, decimal_places=2)
+    exchange_rate_jpy: Decimal | None = Field(default=None, gt=0, max_digits=12, decimal_places=4)
+    exchange_rate_usd: Decimal | None = Field(default=None, gt=0, max_digits=12, decimal_places=4)
+    payment_method: str | None = Field(default=None, max_length=50)
+    due_date: date | None = None
+    notes: str | None = Field(default=None, max_length=5000)
+    items: list[InvoiceItemInput] = Field(min_length=1)
+
+
+class InvoiceUpdate(BaseModel):
+    payment_method: str | None = Field(default=None, max_length=50)
+    due_date: date | None = None
+    exchange_rate_jpy: Decimal | None = Field(default=None, gt=0, max_digits=12, decimal_places=4)
+    exchange_rate_usd: Decimal | None = Field(default=None, gt=0, max_digits=12, decimal_places=4)
+    notes: str | None = Field(default=None, max_length=5000)
+
+## E-2 POST /invoices
+    return InvoiceDetailResponse(**dict(row), items=[InvoiceItemResponse(**i) for i in items])
+
+
+@router.post(
+    "/invoices",
+    response_model=InvoiceDetailResponse,
+    status_code=201,
+    dependencies=[Depends(require_permission("invoices.create"))],
+)
+async def create_invoice(
+    data: InvoiceCreate,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),
+):
+    """請求書を直接作成する（見積もりを経由しない場合）"""
+
+## E-3 CreateEventBody
+class CreateEventBody(BaseModel):
+    title: str
+    start_datetime: str
+    end_datetime: str
+    calendar_type: str = "shared"
+    description: Optional[str] = None
+    location: Optional[str] = None
+    is_all_day: bool = False
+
+
+## E-4 POST /calendar/events
+@router.post("/calendar/events", status_code=status.HTTP_201_CREATED, tags=["calendar"])
+async def create_event(
+    body: CreateEventBody,
+    tenant_id: int = Depends(get_current_tenant),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """アプリ内にイベントを作成し、Google Calendar に同期する。"""
+    if body.calendar_type not in ("shared", "personal"):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="calendar_type は 'shared' または 'personal' を指定してください",
+        )
+
+## E-5 _parse_dt
+def _parse_dt(s: str) -> datetime:
+    """ISO 8601 文字列を datetime に変換する。
+
+    URL クエリパラメータで '+09:00' がスペースに変換されるケース（例: '2026-06-07T00:00:00 09:00'）も対処する。
+    """
+    return datetime.fromisoformat(s.replace(" ", "+"))
+
+## E-6 companies list
+
+
+@router.get(
+    "/companies",
+    response_model=list[CompanyResponse],
+    dependencies=[Depends(require_permission("customers.view"))],
+)
+async def list_companies(
+    page: int = Query(default=1, ge=1),
+    per_page: int = Query(default=20, ge=1, le=100),
+    search: str | None = Query(default=None, max_length=255),
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),
+):
+    """会社一覧を取得。検索対象は company_code / name / normalized_name / billing_display_name。"""
+    offset = (page - 1) * per_page
+
+    if search:
+        result = await db.execute(
+            text(f"""
+                SELECT {_COMPANY_COLUMNS}
+                FROM companies
+                WHERE company_code ILIKE :search
+                   OR name ILIKE :search
+                   OR normalized_name ILIKE :search
+                   OR billing_display_name ILIKE :search
+                ORDER BY updated_at DESC
+                LIMIT :limit OFFSET :offset
+            """),
+            {"search": f"%{search}%", "limit": per_page, "offset": offset},
+        )
+
+## E-7 contacts list
+
+
+@router.get(
+    "/contacts",
+    response_model=list[ContactResponse],
+    dependencies=[Depends(require_permission("customers.view"))],
+)
+async def list_contacts(
+    page: int = Query(default=1, ge=1),
+    per_page: int = Query(default=20, ge=1, le=100),
+    search: str | None = Query(default=None, max_length=255),
+    company_id: int | None = Query(default=None, description="特定会社の担当者のみ"),
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),
+):
+    """担当者一覧。検索対象は contact_code / display_name / primary_email / primary_phone。"""
+    offset = (page - 1) * per_page
+    where_clauses = []
+    params: dict = {"limit": per_page, "offset": offset}
+
+    if search:
+        where_clauses.append(
+            "(contact_code ILIKE :search OR display_name ILIKE :search "
+            "OR primary_email ILIKE :search OR primary_phone ILIKE :search "
+            "OR surname ILIKE :search OR given_name ILIKE :search)"
+        )
+        params["search"] = f"%{search}%"
+    if company_id is not None:
+        where_clauses.append("company_id = :company_id")
+
+## E-8 products list
+
+
+@router.get(
+    "/products",
+    response_model=list[ProductResponse],
+    dependencies=[Depends(require_permission("products.view"))],
+)
+async def list_products(
+    page: int = Query(default=1, ge=1),
+    per_page: int = Query(default=20, ge=1, le=100),
+    search: str | None = Query(default=None, max_length=255),
+    category: str | None = Query(default=None, max_length=100),
+
+## F-1 DesktopShell 描画
+      </aside>
+
+      {/* ============ Main body ============ */}
+      <div className="app-body">
+        {/* Content */}
+        <main className={`app-content${isInbox ? " app-content--inbox" : ""}`}>
+          <Outlet />
+        </main>
+      </div>
+
+      {/* ============ Fixed avatar button (Chrome / Meta style) ============ */}
+      <button
+        className="avatar-btn"
+        onClick={() => setDrawerOpen(true)}
+        aria-label={t("nav.openUserMenu")}
+        data-tooltip={t("nav.openUserMenu")}
+
+## F-2 ShellSwitch
+ * ShellSwitch — useIsMobile() で DesktopShell / MobileShell を切り替える。
+ *
+ * ADR-137: CSS @media による hide/show ではなく DOM 切り替えを採用。
+ *   767px 以下 → MobileShell（hamburger + drawer）
+ *   768px 以上 → DesktopShell（collapsed sidebar）
+ *
+ * BrowserRouter 内でレンダリングされるため useIsMobile / useNavigate ともに利用可。
+ */
+function ShellSwitch() {
+  const isMobile = useIsMobile();
+  return isMobile ? <MobileShell /> : <DesktopShell />;
+}
+
+## F-3 api.ts
+export const api = {
+  get: <T>(path: string) => request<T>(path),
+  post: <T>(path: string, data: unknown) =>
+    request<T>(path, { method: "POST", body: JSON.stringify(data) }),
+  put: <T>(path: string, data: unknown) =>
+    request<T>(path, { method: "PUT", body: JSON.stringify(data) }),
+  patch: <T>(path: string, data: unknown) =>
+    request<T>(path, { method: "PATCH", body: JSON.stringify(data) }),
+  delete: (path: string) =>
+    request<void>(path, { method: "DELETE" }),
+  // spec.md v1.1 F2 (Sprint 2)
+  getBlob: (path: string) => requestBlob(path),
+  postForm: <T>(path: string, body: FormData) => requestForm<T>(path, body),
+
+## F-4 Drawer props
+interface DrawerBaseProps {
+  open: boolean;
+  onClose: () => void;
+  title: string;
+  children: ReactNode;
+  /** フルページで開くコールバック。省略時はボタン非表示 */
+  onOpenFullPage?: () => void;
+  /** Esc を押したときの処理。渡したときだけ onClose の代わりに呼ばれる（省略時は今までどおり onClose）。
+   *  背景クリックと ✕ ボタンは常に onClose のまま（design.md 4-4） */
+  onEscape?: () => void;
+  footer?: ReactNode;
+  /** パネル幅。'default'（480px）/ 'wide'（1100px・スマホは全幅） */
+  size?: "default" | "wide";
+  /** スマホ幅（767px以下）のときパネルを画面幅の83%にし、左に背景を残して押して閉じられるようにする。
+   *  既定 false（今までどおり画面いっぱい）。docs/handoff/viewer-filter-choices-mercari/design.md 4-1 */
+  mobileInset?: boolean;
+  /** 帯の中身（戻る・題・✕）を丸ごと差し替える。渡したときだけ題の <h2> を sr-only にする
+   *  （省略時は今までどおり何も変わらない。docs/handoff/viewer-search-mercari/design.md 4-1） */
+  headerContent?: ReactNode;
+}
+
+/** onBack を渡すときは backLabel（読み上げ名）も必須にする。片方だけでは
+ *  aria-label の無いアイコンボタンが作れてしまうため（審査指摘） */
+type DrawerBackProps =
+  | { onBack: () => void; backLabel: string }
+  | { onBack?: undefined; backLabel?: undefined };
+
+type DrawerProps = DrawerBaseProps & DrawerBackProps;
+
+export function Drawer({
+  open,
+  onClose,
+  title,
+  children,
+  onOpenFullPage,
+  onEscape,
+  onBack,
+  backLabel,
+  footer,
+  size = "default",
+  headerContent,
+  mobileInset = false,
+}: DrawerProps) {
+
+## F-5 z-index トークン
+
+  /* ---- Z-index ---- */
+  --z-base:           10;
+  --z-dropdown:       50;   /* ドロップダウン・オートコンプリートサジェスト */
+  --z-topbar:        100;
+  --z-sidebar:       200;
+  --z-sidebar-overlay: 210;
+  --z-backdrop:      298;
+  --z-drawer:        301;   /* avatar(300)より前面 — user-drawer-close 直接クリック可 */
+  --z-avatar:        300;
+  --z-modal:         400;
+  --z-toast:         500;
+
+
+## F-6 UI ガバナンス gate
+jobs:
+  ui-governance:
+    name: UI governance gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+
+      - name: Run UI governance tests
+        run: node scripts/tests/test-ui-governance.js
+
+      - name: Run UI governance gate
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/check-ui-governance.js
+
+## F-7 CC_UI_GOVERNANCE
+# CC UI ガバナンス遵守テンプレ（ADR-144）
+
+CC（Claude Code）が UI 部品を新設・修正するたびに参照すること。
+
+---
+
+## 必須チェック（UI 部品を実装する前に）
+
+1. **`components/` に金型があるか先に確認する**
+   - `<Select>` / `<TextField>` / `<SearchBar>` / `<Tabs>` / `<OverflowTabs>` 等が既に存在するか
+   - `frontend/src/components/` を grep または Glob で確認する
+2. **あれば必ずそれを使う**（独自実装を重複させない）
+3. **無ければ実装しない・止めて報告する**
+   - PO 許可を得てから `components/` に金型を登録してから使う
+   - 金型作法: `Xxx.tsx` + `Xxx.css`（`var()` のみ）+ `Xxx.stories.tsx`
+
+---
+
+## 禁止事項（CI ゲートが赤にする）
+
+| 禁止 | 理由 |
+|------|------|
+| 生 `<select>` | `<Select>` 金型を使うこと |
+| 生 `<input type="text"\|"search"\|省略>` | `<TextField>` / `SearchBar` 等を使うこと |
+| 生 `<input type="checkbox">` | `<Checkbox>`（文字と並ぶ欄）/ `<CheckboxControl>`（表の中など単独の欄）を使うこと |
+| 生 `<input type="radio">` | `<Radio>`（文字と並ぶ欄）/ `<RadioControl>`（表の中・色見本など単独の欄）を使うこと |
+| 読み込み中の文字だけの表示（例 `<p>{t("common.loading")}</p>`）| `<LoadingBlock>`（components/loading）を使うこと。見た目は金型1か所で変わる |
+| ボタンの言葉を `{保存中 ? '保存中…' : '保存'}` のように入れ替える | 押している間は金型 Button の loading で丸を出し、言葉は元のまま（ADR-144・段階3）。pages/・features/・components/ を見る |
+| 自作タブ（className に `tab` 語を含む div/nav 等） | `<Tabs>` / `OverflowTabs` を使うこと |
+| 色直値（`#xxx` / `rgba()`）のインラインスタイル | CSS 変数 `var(--color-*)` を使うこと（ADR-067）|
+| 生 px 数値のインラインスタイル（例 `width: 24`）| デザイントークン `var(--size-*)` を使うこと（ADR-067）|
+
+---
+
+## どうしても生実装が必要な場合の例外コメント
+
+```jsx
+{/* ui-allow: <理由> (#<課題番号>) */}
+<select value={x} onChange={f}>
+```
+
+## F-8 i18n
+import i18n from "i18next";
+import { initReactI18next } from "react-i18next";
+import en from "./locales/en.json";
+import ja from "./locales/ja.json";
+
+
+## F-9 アイコン
+77:    "@heroicons/react": "^2.2.0",
+85:    "lucide-react": "^1.14.0",
+
+## G-1 compose (ai-reader-cloud-http)
+# ADR-1052 段1: 相談係専用の「読むだけ」HTTP 窓口 ai-reader-cloud-http（ai_reader_cloud で ai_cloud を読む）。
+# 本体の docker-compose.yml・docker-compose.ai-reader.yml は変えない（別ファイル・別プロジェクト）。
+# 起動（deploy.yml が行う）: docker compose -p astro-webapp-casewindow -f docker-compose.ai-reader-cloud-http.yml up -d --build=false --force-recreate
+# 止める: docker stop ai-reader-cloud-http（止め続けるには GitHub secret CASE_AGENT_TOKEN も消す。空なら全員 401）
+# 接続情報の正本は VPS の /home/ubuntu/.config/salesanchor/ai-reader-cloud.env の1か所（値はここに写さない）。
+# 窓口の鍵は deploy が .env に書く CASE_AGENT_TOKEN（今の窓口の READ_WINDOW_TOKEN とは別の値）。空なら全員 401。
+# 受けるヘッダは Authorization: Bearer <鍵>。記録の印 via は https-case。
+# AUDIT は /dev/log → auth.log → Loki。結果は残さない（logging none）。ports は公開しない（nginx からだけ）。
+# name は astro-webapp-casewindow：deploy の --remove-orphans に消されないよう本体と別プロジェクトにする。
+# .env の COMPOSE_PROJECT_NAME が top-level の name: より優先されるため、起動は必ず -p astro-webapp-casewindow を付ける。
+name: astro-webapp-casewindow
+
+services:
+  ai-reader-cloud-http:
+    # backend と同じイメージ（astro-webapp-backend）。deploy の docker compose build で作られる。
+    image: astro-webapp-backend
+    container_name: ai-reader-cloud-http
+    command:
+      - uvicorn
+      - app.ops.read_window_http:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8080"
+      - --workers
+      - "1"
+      - --no-access-log
+    env_file:
+      - /home/ubuntu/.config/salesanchor/ai-reader-cloud.env
+    environment:
+      READ_WINDOW_TOKEN: ${CASE_AGENT_TOKEN:-}
+      READ_WINDOW_TOKEN_HEADER: Authorization
+      READ_WINDOW_TOKEN_PREFIX: "Bearer "
+      READ_WINDOW_AUDIT_VIA: https-case
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 128m
+    restart: unless-stopped
+    logging:
+      driver: "none"
+    volumes:
+      - type: bind
+        source: /dev/log
+        target: /dev/log
+        bind:
+          create_host_path: false
+    networks:
+      - frontnet
+      - backnet
+
+networks:
+  frontnet:
+    external: true
+    name: astro-webapp_frontnet
+  backnet:
+    external: true
+    name: astro-webapp_backnet
+
+## G-2 deploy.yml 起動手順
+      # ADR-1052 段1: 相談係専用の読む窓口（ai-reader-cloud-http）を起こす。今の窓口とは別の容器・別の鍵（CASE_AGENT_TOKEN）。
+      # 付け足しの機能なので、失敗してもアプリの反映は止めない（警告だけ出す）。
+      - name: Start ai-reader-cloud-http (case agent read window)
+        if: ${{ success() }}
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /home/ubuntu/salesanchor
+            if [ ! -r /home/ubuntu/.config/salesanchor/ai-reader-cloud.env ]; then
+              echo "::warning::ai-reader-cloud.env が読めないため ai-reader-cloud-http を起こしません"
+              exit 0
+            fi
+            docker compose -p astro-webapp-casewindow -f docker-compose.ai-reader-cloud-http.yml up -d --build=false --force-recreate \
+              || echo "::warning::ai-reader-cloud-http を起こせませんでした（アプリの反映には影響しません）"
+
+
+## G-3 .env へ秘密を書く行
+325:              -e '/^CASE_AGENT_TOKEN=/d' \
+326:              -e '/^CASE_ADMIN_TOKEN=/d' \
+379:            CASE_AGENT_TOKEN='${{ secrets.CASE_AGENT_TOKEN }}'
+380:            CASE_ADMIN_TOKEN='${{ secrets.CASE_ADMIN_TOKEN }}'
+619:      # ADR-1052 段1: 相談係専用の読む窓口（ai-reader-cloud-http）を起こす。今の窓口とは別の容器・別の鍵（CASE_AGENT_TOKEN）。
+637:      # ADR-1052 段2: 値を 1 回だけ返す口（ai-unmask-http）を起こす。相談係の鍵（CASE_AGENT_TOKEN）で守る。
+
+## G-4 .env 書き込みブロック
+              -e '/^AUTH_PROVIDER=/d' \
+              -e '/^AUTH_JWT_SECRET=/d' \
+              -e '/^VITE_AUTH_PROVIDER=/d' \
+              -e '/^OPS_API_TOKEN=/d' \
+              -e '/^OPS_INGEST_TOKEN=/d' \
+              -e '/^ERROR_REPORT_AGENT_TOKEN=/d' \
+              -e '/^READ_WINDOW_TOKEN=/d' \
+              -e '/^CASE_AGENT_TOKEN=/d' \
+              -e '/^CASE_ADMIN_TOKEN=/d' \
+              -e '/^COMPOSE_FILE=/d' \
+              .env
+            # YAML `|` ブロックの共通インデント (12 スペース) はパース時に自動除去される。
+            # したがって heredoc 本文の各行は実行時に行頭スペースなしで届く。
+
+## G-5 mem_limit/memory 前例
+docker-compose.ai-reader-cloud-http.yml:42:    mem_limit: 128m
+docker-compose.ai-reader-http.yml:38:    mem_limit: 128m
+docker-compose.ai-reader.yml:23:    mem_limit: 256m
+docker-compose.ai-unmask-http.yml:39:    mem_limit: 128m
+
+## G-6 前例コミットの変更ファイル
+833860119 feat: 窓口の受けるヘッダ・記録の印を環境変数で切り替え、相談係の窓口の compose を足す
+
+ backend/app/ops/read_window_http.py        | 14 +++++--
+ backend/tests/ops/test_read_window_http.py | 61 +++++++++++++++++++++++++++++
+ docker-compose.ai-reader-cloud-http.yml    | 62 ++++++++++++++++++++++++++++++
+ 3 files changed, 134 insertions(+), 3 deletions(-)
+64b31eec6 feat: ai_cloud の部品・ロール・外し・作成の SQL と、起動手順の登録、相談係の窓口の deploy 手順を足す
+
+ .github/workflows/deploy.yml                       |  20 +
+ .../20261024_100000_create_ai_cloud_meta.sql       | 188 +++++++
+ ...20261024_100100_create_ai_reader_cloud_role.sql |  28 +
+ migrations/20261024_100200_drop_ai_cloud_views.sql |   7 +
+ .../20261024_100300_create_ai_cloud_views.sql      | 624 +++++++++++++++++++++
+ scripts/run_all_migrations.sh                      |  28 +-
+ 6 files changed, 891 insertions(+), 4 deletions(-)
+ab7197912 feat: ADR-1052 段2 deploy.yml の nginx の作り直しの守りと CASE_ADMIN_TOKEN・ai-unmask-http、試験 #16
+
+ .github/workflows/deploy.yml                      | 153 ++++++++++-
+ migrations/20261031_200000_create_ops_case.sql    |   2 +-
+ scripts/tests/test-deploy-nginx-recreate-guard.sh | 298 ++++++++++++++++++++++
+ tests/sandbox/compose-run-nginx-mount.sh          | 156 +++++++++++
+ 4 files changed, 603 insertions(+), 6 deletions(-)
