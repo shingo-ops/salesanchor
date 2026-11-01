@@ -48,6 +48,11 @@ _MIGRATIONS = (
     "20261013_160000_add_self_hosted_auth_tables.sql",
     "20261016_180000_add_users_write_rls.sql",
 )
+# ADR-1055: self_login が使う機械の表と列（auth_refresh_tokens.trusted_device_id ほか）。列を足す先の auth_events を先に作る
+_DEVICE_MIGRATIONS = (
+    "001_create_auth_events.sql",
+    "20261101_130000_add_new_device_approval.sql",
+)
 _GRANT_DDL = """
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO salesanchor_app;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO salesanchor_app;
@@ -103,6 +108,8 @@ async def _fresh():
                     {"i": tid, "c": f"tenant_{tid}"},
                 )
         await _apply_migration(admin_engine, _MIGRATIONS[0])
+        for mig in _DEVICE_MIGRATIONS:
+            await _apply_migration(admin_engine, mig)
         async with admin_engine.begin() as conn:
             for uid, tid, email in ((_USER_A, _TENANT_A, _EMAIL_A), (_USER_B, _TENANT_B, _EMAIL_B)):
                 await conn.execute(
