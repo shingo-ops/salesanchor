@@ -35,8 +35,16 @@ echo "$SHA1" > "$FAKE_HEAD_FILE"
 
 cat > "$REVIEW_GATE_GH" <<'EOF'
 #!/bin/bash
-# 偽 gh: pr view だけ答える。head は $FAKE_HEAD_FILE。$FAKE_GH_FAIL があれば失敗する。
+# 偽 gh: pr view と pr checks だけ答える。head は $FAKE_HEAD_FILE。$FAKE_GH_FAIL があれば失敗する。
+# pr checks は --repo が無ければ失敗し、あれば $FAKE_CHECKS_JSON（無ければ pass 1 件）を出して $FAKE_CHECKS_RC で終わる。
 [ -n "${FAKE_GH_FAIL:-}" ] && exit 1
+if [ "$1" = "pr" ] && [ "$2" = "checks" ]; then
+  repo=""; prev=""
+  for a in "$@"; do [ "$prev" = "--repo" ] && repo="$a"; prev="$a"; done
+  [ -z "$repo" ] && exit 1
+  if [ -n "${FAKE_CHECKS_JSON:-}" ]; then printf '%s\n' "$FAKE_CHECKS_JSON"; else echo '[{"name":"t","bucket":"pass"}]'; fi
+  exit "${FAKE_CHECKS_RC:-0}"
+fi
 if [ "$1" = "pr" ] && [ "$2" = "view" ]; then
   repo="o/r"; prev=""
   for a in "$@"; do [ "$prev" = "--repo" ] && repo="$a"; prev="$a"; done
@@ -293,6 +301,30 @@ expect "誤止めなし(7) bash <<< echo hello" 0 'bash <<< "echo hello"'
 
 expect "R1(7) URL o/r と --repo o/r2 の不一致" 2 'gh pr merge https://github.com/o/r/pull/1 --merge --repo o/r2'
 expect "R2(7) URL o/r と --repo o/r の一致" 0 'gh pr merge https://github.com/o/r/pull/1 --merge --repo o/r'
+
+# ---------------------------------------------------------------- What 7: salesanchor は確かめが全部緑でなければ止める
+mk_rec_sa() { # N SHA
+  mkdir -p "$GD/records"
+  printf '{"pr":%s,"repo":"shingo-ops/salesanchor","head":"%s","verdict":"APPROVE"}' "$1" "$2" > "$GD/records/shingo-ops__salesanchor-$1-$2.json"
+}
+clear_records; echo "$SHA1" > "$FAKE_HEAD_FILE"; mk_rec 1 "$SHA1"; mk_rec_sa 1 "$SHA1"
+SA=shingo-ops/salesanchor
+CK_OK='[{"name":"lint","bucket":"pass"},{"name":"e2e","bucket":"skipping"}]'
+CK_FAIL='[{"name":"lint","bucket":"pass"},{"name":"test-schema-dup gate","bucket":"fail"}]'
+FAKE_URL_REPO=$SA FAKE_CHECKS_JSON=$CK_OK expect "C1 salesanchor 全部 pass/skipping なら通る" 0 'gh pr merge 1 --merge'
+FAKE_URL_REPO=$SA FAKE_CHECKS_JSON=$CK_FAIL expect "C2 salesanchor fail が 1 つで止める" 2 'gh pr merge 1 --merge' "$WORK" 'test-schema-dup gate(fail)'
+FAKE_URL_REPO=$SA FAKE_CHECKS_JSON=$CK_FAIL FAKE_CHECKS_RC=1 expect "C2b fail で gh が終了コード 1 でも止める" 2 'gh pr merge 1 --merge' "$WORK" 'test-schema-dup gate(fail)'
+FAKE_URL_REPO=$SA FAKE_CHECKS_JSON='[{"name":"build","bucket":"pending"}]' expect "C3 salesanchor pending で止める" 2 'gh pr merge 1 --merge' "$WORK" 'build(pending)'
+FAKE_URL_REPO=$SA FAKE_CHECKS_JSON='[{"name":"build","bucket":"cancel"}]' expect "C4 salesanchor cancel で止める" 2 'gh pr merge 1 --merge' "$WORK" 'build(cancel)'
+FAKE_URL_REPO=$SA FAKE_CHECKS_JSON='[]' expect "C5 salesanchor 一覧が空で止める" 2 'gh pr merge 1 --merge' "$WORK" '一覧を gh で読めない'
+FAKE_URL_REPO=$SA FAKE_CHECKS_JSON='no checks reported' FAKE_CHECKS_RC=1 expect "C6 salesanchor JSON でない出力で止める" 2 'gh pr merge 1 --merge' "$WORK" '一覧を gh で読めない'
+FAKE_URL_REPO=$SA FAKE_CHECKS_JSON='[{"name":"x","bucket":"weird"}]' expect "C6b salesanchor 知らない bucket で止める" 2 'gh pr merge 1 --merge' "$WORK" 'x(weird)'
+FAKE_URL_REPO=$SA FAKE_CHECKS_JSON=$CK_FAIL expect "C7 --auto --match-head-commit 一致でも fail なら止める" 2 "gh pr merge 1 --auto --merge --match-head-commit $SHA1" "$WORK" 'test-schema-dup gate(fail)'
+FAKE_URL_REPO=$SA FAKE_CHECKS_JSON=$CK_FAIL expect "C8 gh-pr-merge-safe.sh でも fail なら止める" 2 'bash scripts/gh-pr-merge-safe.sh --merge' "$GITWT" 'test-schema-dup gate(fail)'
+FAKE_URL_REPO=$SA FAKE_CHECKS_JSON=$CK_OK expect "C8b gh-pr-merge-safe.sh で全部緑なら通る" 0 'bash scripts/gh-pr-merge-safe.sh --merge' "$GITWT"
+FAKE_CHECKS_JSON=$CK_FAIL expect "C9 別のリポジトリ o/r は fail でも今までどおり通る" 0 'gh pr merge 1 --merge'
+clear_records
+FAKE_URL_REPO=$SA FAKE_CHECKS_JSON=$CK_OK expect "C10 salesanchor 全部緑でも APPROVE が無ければ審査の文で止める" 2 'gh pr merge 1 --merge' "$WORK" 'APPROVE がありません'
 
 # ---------------------------------------------------------------- install -> rollback で元に戻る
 roundtrip() { # NAME SETTINGS_JSON
