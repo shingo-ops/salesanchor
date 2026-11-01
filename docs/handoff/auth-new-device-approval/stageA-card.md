@@ -28,7 +28,7 @@
 ## 1. 触るファイル（変更前→変更後。中身は design.md の該当の文）
 | # | ファイル | 変更前（S） | 変更後 | 回 |
 |---|---|---|---|---|
-| 1 | 新 migrations/20261101_120000_add_new_device_approval.sql | 無い | A-1 の3表・2つの表への4列の追加（auth_refresh_tokens.trusted_device_id と auth_events の user_id・reason・is_new_device）・索引・全列 COMMENT・GRANT（S migrations/20261013_160000_add_self_hosted_auth_tables.sql の GRANT と同じ書き方）。冪等（IF NOT EXISTS）。RLS は付けない | 前半 |
+| 1 | 新 migrations/20261101_130000_add_new_device_approval.sql | 無い | A-1 の3表・2つの表への4列の追加（auth_refresh_tokens.trusted_device_id と auth_events の user_id・reason・is_new_device）・索引・全列 COMMENT・GRANT（S migrations/20261013_160000_add_self_hosted_auth_tables.sql の GRANT と同じ書き方）。冪等（IF NOT EXISTS）。RLS は付けない | 前半 |
 | 2 | scripts/run_all_migrations.sh | :1205 が最後の登録 | :1205 の後に #1 を run_sql で1行足す（同じ書き方の説明の行を1行付ける） | 前半 |
 | 3 | .github/workflows/migration-guard.yml | :224 PUBLIC_TABLES | 末尾に user_trusted_devices auth_login_requests user_recovery_codes | 前半 |
 | 4 | migrations/20261024_100300_create_ai_cloud_views.sql | :3 が 1035 行・:13〜 INSERT | A-1 の表の19行を表ごとに1行で足す・:3 を 1054 行に | 前半 |
@@ -118,7 +118,7 @@
   cd <W> && git status --short | head -80
   （§1 の前半の行以外のファイルが出ていたら add しない。試験の途中にできたファイル・.claude-pipeline/active-work.d/ は add しない。）
 手順8. §1 の前半のファイルを名前で add して commit する（フォルダごとの add は、下の命令に書いたフォルダ backend/app/auth・backend/app/cli・backend/app/realtime だけ可。add の後の git status で §1 に無いファイルを外す）。
-  cd <W> && git add migrations/20261101_120000_add_new_device_approval.sql migrations/20261024_100300_create_ai_cloud_views.sql scripts/run_all_migrations.sh scripts/migration-guard/reference-allowlist.tsv
+  cd <W> && git add migrations/20261101_130000_add_new_device_approval.sql migrations/20261024_100300_create_ai_cloud_views.sql scripts/run_all_migrations.sh scripts/migration-guard/reference-allowlist.tsv
   cd <W> && git add .github/workflows/migration-guard.yml .github/workflows/migration-test.yml docs/handoff/cloud-case-ai/stage1-column-class.tsv docker-compose.yml backend/requirements.txt
   cd <W> && git add backend/app/auth backend/app/cli backend/app/routers/auth.py backend/app/routers/login_approvals.py backend/app/routers/super_admin_login_requests.py backend/app/main.py
   cd <W> && git add backend/app/realtime backend/app/routers/realtime_events.py backend/app/services/auth_mail.py backend/app/middleware/audit.py backend/app/tasks/maintenance.py backend/app/celery_app.py

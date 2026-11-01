@@ -33,6 +33,9 @@ _META_SQL = "20261024_100000_create_ai_cloud_meta.sql"
 _ROLE_SQL = "20261024_100100_create_ai_reader_cloud_role.sql"
 _CREATE_SQL = "20261024_100300_create_ai_cloud_views.sql"
 _DROP_SQL = "20261024_100200_drop_ai_cloud_views.sql"
+_DEVICE_APPROVAL_SQL = "20261101_130000_add_new_device_approval.sql"
+_AUTH_EVENTS_SQL = "001_create_auth_events.sql"
+_SELF_AUTH_SQL = "20261013_160000_add_self_hosted_auth_tables.sql"
 _DENY_RE = re.compile(r"^password|_encrypted$|_secret|_token|hash|^secret|^api_key|private_key|credential")
 _NAME_RE = re.compile(
     r"(name|email|mail|phone|tel|fax|addr|zip|postal|message|text|body|note|comment|memo|sender|display|contact"
@@ -474,7 +477,7 @@ def test_role_migration_is_idempotent(pg):
     # meta の migration も冪等（分類表の中身は消えない）
     n0 = _rows(pg, "SELECT count(*) FROM ai_cloud_meta.column_class")[0][0]
     c.execute(_read(_META_SQL))
-    assert _rows(pg, "SELECT count(*) FROM ai_cloud_meta.column_class")[0][0] == n0 == 1035
+    assert _rows(pg, "SELECT count(*) FROM ai_cloud_meta.column_class")[0][0] == n0 == 1054
 
 
 # ---------------------------------------------------------------- T10（CI の見張り）
@@ -556,6 +559,67 @@ def test_t10_classification_covers_real_shaped_tables(cluster):
         print(f"T10 gaps={len(gaps)}")
         for g in gaps:
             print("T10 GAP", g)
+        assert gaps == []
+    finally:
+        conn.close()
+        cur = cluster.control.cursor()
+        cur.execute(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)')
+
+
+# ADR-1055 段A: 新しい3表と auth_events の新しい列（合計 19 列）に column_class の行があることを名前で確かめる。
+_DEVICE_APPROVAL_CLASSIFIED = {
+    ("user_trusted_devices", c)
+    for c in ("label", "user_agent", "created_via", "created_ip", "created_location", "last_ip", "last_location")
+} | {
+    ("auth_login_requests", c)
+    for c in (
+        "status", "match_number", "candidates", "label", "user_agent", "ip", "location",
+        "decided_via", "decided_note", "reject_reason",
+    )
+} | {("user_recovery_codes", "code_id"), ("auth_events", "reason")}  # fmt: skip
+
+
+def test_t10_new_device_approval_columns_are_classified_on_bootstrapped_db(cluster):
+    """本番の migration 順に近い DB（bootstrap + auth の migration）に本便の migration を流し、
+    新しい 19 列に column_class の行があり、分類の漏れが無い。
+
+    public.users は tests/rls_bootstrap.py、auth_events と auth_refresh_tokens は本物の migration で作る
+    （表の形をテストに写さない）。専用の DB を作り、終わったら消す。"""
+    from sqlalchemy.ext.asyncio import create_async_engine
+
+    assert len(_DEVICE_APPROVAL_CLASSIFIED) == 19
+    name, conn = _new_db(cluster.control, "ai_cloud_t10_device")
+    try:
+        c = conn.cursor()
+        c.execute(_read(_AI_READER_SQL))
+        c.execute(_read(_ROLE_SQL))
+        c.execute(_read(_META_SQL))
+        url = _psycopg_url(ADMIN_PG_URL, name).replace("postgresql://", "postgresql+asyncpg://", 1)
+        from tests.rls_bootstrap import bootstrap_tenant_schema
+
+        async def build():
+            eng = create_async_engine(url)
+            try:
+                await bootstrap_tenant_schema(eng, 1)
+            finally:
+                await eng.dispose()
+
+        asyncio.run(build())
+        c.execute(_read(_AUTH_EVENTS_SQL))
+        c.execute(_read(_SELF_AUTH_SQL))
+        c.execute(_read(_CREATE_SQL))
+        rows = _rows(conn, "SELECT table_name, column_name FROM ai_cloud_meta.column_class WHERE schema_pattern = 'public'")
+        have = {(r[0], r[1]) for r in rows}
+        missing = _DEVICE_APPROVAL_CLASSIFIED - have
+        assert missing == set(), f"column_class に行が無い: {sorted(missing)}"
+
+        c.execute(_read(_DEVICE_APPROVAL_SQL))
+        c.execute(_read(_DEVICE_APPROVAL_SQL))  # 冪等
+        new_tables = {"user_trusted_devices", "auth_login_requests", "user_recovery_codes"}
+        gaps = [
+            g for g in _classification_gaps(conn)
+            if g[1] in new_tables or (g[1], g[2]) == ("auth_events", "reason")
+        ]
         assert gaps == []
     finally:
         conn.close()
