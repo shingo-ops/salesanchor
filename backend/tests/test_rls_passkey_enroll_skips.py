@@ -71,10 +71,7 @@ async def setup_table(admin_engine):
             {"id": _USER_ID},
         )
     yield
-    async with public_bootstrap_lock(admin_engine):  # 共有 public の表の作り直しを他の試験と直列にする
-        async with admin_engine.begin() as conn:
-            await conn.execute(text("DROP TABLE IF EXISTS public.passkey_enroll_prompt_skips"))
-            await conn.execute(text("DELETE FROM public.users WHERE id = :id"), {"id": _USER_ID})
+    # 後片付けはしない。共有 public の users から消すと、users を参照する表を作り直す別の試験と deadlock する（CI run 41292287006）。表も利用者も冪等に作るので残してよい
 
 
 @pytest.mark.asyncio(loop_scope="module")
