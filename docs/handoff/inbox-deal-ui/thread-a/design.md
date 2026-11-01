@@ -1,6 +1,6 @@
 # design — 受信箱 会話画面 A「見た目」（スマホの吹き出し・入力欄を WhatsApp 実測へ）
 
-状態: 設計審査済み（§12）。§4 は PO 決定済み（2026-11-01「1」＝案1）。段A-1 は実装カード card-a1.md（同じフォルダ）で実装へ。段A-2 は段0の測り足し待ち（PO のスマホが要る）。
+状態: 設計審査済み（§12）。§4 は PO 決定済み（2026-11-01「1」＝案1）。段A-1 は実装カード card-a1.md（同じフォルダ）で実装へ。段0 の測り足しは 2026-11-01 に済み（measure-a2.md）。段A-2 は実装カード card-a2.md（PO の実装承認待ち）。
 根拠: docs/handoff/inbox-deal-ui/thread-a/recon.md。成功条件: docs/handoff/inbox-deal-ui/requirements.md §11 A1〜A4（PO 承認 2026-11-01）。
 
 ## 1. 目的と利用者に見える変化
@@ -17,20 +17,20 @@
 | 部位 | 目標 | 根拠 | トークン（既存 / 新規） |
 |---|---|---|---|
 | 吹き出しの角 | 10 | spec :175 | 既存 `--radius-badge`(10px) は用途違いのため使わない。新規 `--comp-chat-bubble-radius-mobile: 10px` |
-| 受信の尾 | 左上に 7 張り出す | spec :174 | 新規 `--comp-chat-bubble-tail-mobile: 7px` |
+| 受信の尾 | 左上に 7 張り出す | spec :174 | 新規 `--comp-chat-bubble-tail-w-mobile: 7px` / `--comp-chat-bubble-tail-h-mobile: 10px`（card-a2 §3） |
 | 行の左右の余白 | 17 | spec :121, :172 | 新規 `--comp-chat-row-inset-mobile: 17px`（同じ用途の段に無い値。spec 5-4 の表） |
-| 吹き出しの上下 | 5 ずつ | spec :122 | 新規 `--comp-chat-row-gap-mobile: 5px` |
+| 吹き出しの上下 | 5 ずつ | spec :122 | 新規 `--comp-chat-row-gap-group-mobile: 5px`・続きの中は `--comp-chat-row-gap-inner-mobile: 1.333px`（card-a2 §3） |
 | 本文の文字・行の間隔 | 16 / 19 | measure2 | 既存 `--font-md`(16px)、新規 `--comp-chat-line-height-mobile: 19px` |
 | 時刻の文字 | 12 | measure-cal1 | 既存 `--font-xs`(12px) |
-| 時刻の場所 | 本文と同じ行の右下、本文の右に 37 先取り、高さ 16.3、左右 6 | spec :123-125 | 新規 `--comp-chat-time-reserve-mobile: 37px`、既存 `--space-6px` |
-| 本文の内側の余白 | 段0 で決める（U5） | — | 新規 `--comp-chat-bubble-pad-x-mobile` / `-pad-y-mobile`（値は段0の測定で記入） |
+| 時刻の場所 | 本文と同じ行の右下、本文の右に 37 先取り、高さ 16.3、左右 6 | spec :123-125 | 見えない時刻の写しで場所を取る（固定の 37 は使わない）。新規 `--comp-chat-time-inset-mobile` / `-time-bottom-mobile`、既存 `--space-6px`（card-a2 §3） |
+| 本文の内側の余白 | 上下 7（高さ 33 から）・左右は初期値 9 を端末で 1px 刻みに決める（U5） | measure-a2.md U1・墨の位置 | 新規 `--comp-chat-bubble-pad-x-mobile` / `-pad-y-mobile`（最終の値と全トークンは card-a2.md §3） |
 | 入力欄の帯 | 高さ 56（48＋上下4） | spec :99-100 | 既存 `--space-1`(4px) |
-| ピル | 高さ 48・角は高さの半分・左 8 | 2026-11-01 測り直し | 既存 `--comp-btn-height-lg`(48px)・`--radius-full`・`--space-2` |
+| ピル | 高さ 48・角の丸み 24（伸びても 24 のまま）・左 8 | 2026-11-01 測り直し・measure-a2.md U4b | 既存 `--comp-btn-height-lg`(48px)・`--space-2`、新規 `--comp-chat-input-radius-mobile: 24px`（card-a2 §3） |
 | ピルの中のボタン | 48x48 | spec :101, :141 | 既存 `--comp-btn-height-lg` |
 | 入力の文字 | 18 | measure3 | 新規 `--comp-chat-input-font-mobile: 18px`（文字の段に 18 は無い。`--font-lg` は 17.6 で、測定で 17.5 は不一致だった） |
 | 送信の丸 | 直径 48・ピルとの隙間 8・右端 10 | 2026-11-01 測り直し | 既存 `--comp-btn-height-lg`・`--space-2`・`--space-10px` |
 
-- 新規トークンは色以外のみ（tokens.css の :root）。ADR-067 :125-133 の手順で追加し、ADR-067 のコンポーネントトークン表に書く。check:new-tokens のため PR 本文のチェック表を埋める。
+- 新規トークンは色以外のみ（tokens.css の :root）。ADR-067 :129-134 の手順で追加し、ADR-067 のコンポーネントトークン表に書く。check:new-tokens のため PR 本文のチェック表を埋める。
 - スマホだけに効かせる方法: 既存の作り（CSS:1112 以降の `@media (max-width: 767px)` の中で規則を差し替える）に合わせる。トークン自体を @media で上書きしない（ADR-067 :119、recon 2-2）。
 
 ## 4. 作り方の選択（**PO 決定 2026-11-01「1」＝案1**）
@@ -47,7 +47,7 @@
 - 段0 測り足し（PO のスマホが要る）: recon §3 の U1〜U6 を、同じ端末で撮って測る。同時に、端末の Chrome に見本ページを出し、本文の墨の位置が WhatsApp と合う内側の余白を 1px 刻みで決める（U5）。生出力は /tmp/CC報告ファイル/inbox-deal-ui/ に残す。入力欄の自動の伸び（U4）は、Chrome と Safari の対応を公式資料で確かめてから作り方を決める。
 - 段A-1（案1の場合）金型へ移すだけ。見た目は PC・スマホとも変えない。合格: 幅1280と幅360の前後の写真が全画素一致（「ヒューマンエージェント」の行を除く）。
 - 段A-2 スマホの値を目標値へ。合格: A1〜A4。
-- 段A-3 benchmark 記録の訂正（whatsapp-reproduction-spec.md:155 の入力欄の角を「高さの半分」に。測り直しの生出力を出典に書く）。文書だけ。
+- 段A-3 benchmark 記録の訂正（whatsapp-reproduction-spec.md:155 の入力欄の角を「24（伸びても同じ）」に。測り直しの生出力を出典に書く）。文書だけ。
 
 ## 6. 影響範囲
 - 会話画面の吹き出しと入力欄（スマホ・PC）。InboxMessageThread を使う画面は InboxPage.tsx:194 の1か所だけ。
@@ -96,4 +96,9 @@
   - (2) は未解決。段A-2 の値のうち U1〜U6 に当たるもの（内側の余白・送信側の尾・連続・幅の上限・入力欄の伸び・時刻の右端）は推測で決めない。段0（PO のスマホでの測り足し）の後に段A-2 のカードを書く。
   - 段A-1 は値を1つも変えない移し替えなので U1〜U6 に依存しない。カード card-a1.md の §12 で整合検査済み。
 - 合格している点: 既存 ADR と記録との突き合わせ済み。目標値はすべて実測の出典つき。記録の誤り（入力欄の角）は測り直して出典を残した。受入条件は写真の画素と CI で ○× が付く。スマホだけに効かせる方法は既存の作りに合わせた。
-- 次: PO が §4 を決めたら、段A-1（案1）または段0のカードを書いて正式な点検を通す。
+- 第3回（2026-11-01・段0 の測り足しの後）判定: **段A-2 は APPROVE（card-a2.md）**。
+  - (2) は解決: U1・U2・U3・U4・U6 は実測済み（measure-a2.md）。U5 は実装後に端末の Chrome で 1px 刻みに決める手順と合格の幅を card-a2 §7 に書いた。
+  - 入力欄の自動の伸び（§7 のリスク）は `field-sizing: content` を使う。公式資料で確かめた（card-a2 §3）。対応しないブラウザは今の2行のまま。
+  - 未実測で残るもの: 送信側の幅の上限と続き。U1 で4項目が左右対称だったので同じ値を使う（card-a2 §12）。
+  - 段0 で分かったことを §3 に反映: 吹き出しの上下は「続きの境目 5・続きの中 1.3」（U2）、幅の上限 286（U3）。
+- 次: PO の実装承認の後、card-a2.md で実装する。
