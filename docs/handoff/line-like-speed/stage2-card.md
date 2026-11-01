@@ -4,8 +4,8 @@
 - 根拠の写し: S=origin/main 508e86036（Merge #4965）。行番号はすべてこの sha。2026-11-01 に origin/main が 7df87ddd5 へ進んだが、増えた 2 commit は docs/adr だけで frontend/ と docs/handoff/line-like-speed/ は同じ（`git diff --stat 508e86036 7df87ddd5 -- frontend docs/handoff/line-like-speed` が空）。実装の前に最新の origin/main で行を合わせ直す（§3(a)）。
 - 読んだ節: docs/handoff/design-partner-card-ops/guards/00-common.md・guards/03-file.md・guards/04-worktree.md・guards/05-pr.md・guards/10-executor.md・scripts/agent-hooks/cloud/rules.md（段 1 カードと同じ節。照合も同じ: 全命令は cd <W> で始める・出力は tail/head で上限・新しいファイルは丸ごとの全文・作業場所は new-worktree.sh で作り出力をパイプに通さない・PR は実行役が作らない・出力をファイルに残す命令と tail で読む命令は別の行）。
 - 実行役はクラウドの Sonnet。作業場所の作り方はクラウドの決まり（S scripts/agent-hooks/cloud/rules.md:15）を正とする。.pr-number・gh-pr-create-safe.sh は使わない。出力には上限を付ける。待つために sleep を使わない。
-- 状態: 第 1 版（審査前）。
-- 受領確認: 実装役は着手の最初の報告に「段 2 カード 第 1 版を受け取った・S=508e86036」と書く。
+- 状態: 第 2 版（第 1 版の審査 REVISE を直した版・審査前）。第 1 版からの直し: §4-A の写しの関数の型（tsc が落ちた）・§4-F の react-i18next の mock（試験の読み込みで落ちた）・C3・C5・C6・G1 の行番号・P2 を K5 の守りを外すと落ちる形に強めた（P2a）。
+- 受領確認: 実装役は着手の最初の報告に「段 2 カード 第 2 版を受け取った・S=508e86036」と書く。
 
 ## 0. 設計からの直し・詳しくした点（V2。設計の合格線は変えない）
 - V2-1 3 つ目の画面は仕入先の一覧（frontend/src/pages/suppliers/SuppliersPage.tsx）にする。理由: 設計 §3-4 の段 2 は「中身を消す形の代表」。仕入先は `{loading ? <LoadingBlock /> : 表}`（S :232）でページ送りと検索のたびに通信する形で、取引先（検索だけ）・連絡手段（条件なし）と形が違う。3 画面とも本番の点検用の人（tenant 001・見るだけの役・ADR-1051 D6）で 403 なしに開ける（S の段 0a の回で 5 行とも 403 0 件）。
@@ -71,7 +71,6 @@ import { useCallback } from "react";
 import {
   QueryClient,
   useQuery,
-  type PlaceholderDataFunction,
   type QueryKey,
   type UseQueryResult,
 } from "@tanstack/react-query";
@@ -119,8 +118,9 @@ export function useApiQuery<T>(
   const uid = user?.uid ?? null;
   // 前の条件の中身は同じ人の写しの時だけ出す。利用者が変わった最初の描画では前の人の写しがまだ残っているため。
   // uid が変わったら関数を作り直す（同じ関数だと TanStack が前の結果を使い回す）。
-  const keepSameUser = useCallback<PlaceholderDataFunction<T, Error, T, QueryKey>>(
-    (previousData, previousQuery) => (previousQuery?.queryKey[1] === uid ? previousData : undefined),
+  const keepSameUser = useCallback(
+    <D,>(previousData: D | undefined, previousQuery: { queryKey: QueryKey } | undefined): D | undefined =>
+      previousQuery?.queryKey[1] === uid ? previousData : undefined,
     [uid],
   );
   return useQuery(
@@ -153,7 +153,7 @@ export function useInvalidateApi(): (head: readonly string[]) => Promise<void> {
   );
 }
 ```
-- 型の引数の並びは `PlaceholderDataFunction<TQueryFnData, TError, TQueryData, TQueryKey>`（5.104.4 の query-core types）。tsc が型の違いで落ちたら、§3(d) で見た型の並びを報告に書いて停止する（型を any で逃がさない）。
+- keepSameUser は型の指定を付けず、関数そのものを総称（`<D,>`）にする。理由: 5.104.4 の placeholderData の型は `PlaceholderDataFunction<NonFunctionGuard<TQueryData>, …>`（query-core の hydration-*.d.ts の placeholderData の行）で、中身の分からない T に `PlaceholderDataFunction<T, …>` を付けると TS2769 で落ちる（第 1 版の審査で実測）。`NonFunctionGuard` は外から使えない型。第 1 版の審査役がこの書き方で tsc 0 件・lint 0 件・T11〜T13 合格を確かめた。tsc がこの行で落ちたら、生の誤りを報告に書いて停止する（型を any で逃がさない）。
 
 ## 4-B. #2 frontend/src/pages/admin/ChannelMastersPage.tsx（全文で置き換える）
 ```tsx
@@ -323,14 +323,14 @@ import { useRef, useState, FormEvent } from "react";
 ```tsx
 import { useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
 ```
-- C3 S :37（空行）と S :38 `export default function SuppliersPage() {` の間に 2 行足す（空行は残す）。
+- C3 S :38（空行）と S :39 `export default function SuppliersPage() {` の間に 2 行足す（S :37 は `});`。:38 の空行は残し、足した 2 行の後にも空行を 1 つ置く）。
 ```tsx
 /** 書いた後に取り直す写しの頭（ADR-1054） */
 const SUPPLIERS_HEAD = ["suppliers"] as const;
 
 ```
 - C4 S :44 `  const [suppliers, setSuppliers] = useState<Supplier[]>([]);`・S :53 `  const [loading, setLoading] = useState(true);`・S :58 `  const [hasNext, setHasNext] = useState(false);` の 3 行を消す。
-- C5 S :62-77（`  const load = async () => {` から `  useEffect(() => { load(); }, [page, search]);` まで。間の eslint-disable の行も含む）を次に替える。
+- C5 S :63-77（`  const load = async () => {` から `  useEffect(() => { load(); }, [page, search]);` まで。間の eslint-disable の行も含む。S :62 の空行は残す）を次に替える。
 ```tsx
   const params = new URLSearchParams({ page: String(page), per_page: String(PER_PAGE) });
   if (search.trim()) params.set("search", search.trim());
@@ -346,7 +346,7 @@ const SUPPLIERS_HEAD = ["suppliers"] as const;
   const load = () => { void invalidate(SUPPLIERS_HEAD); };
 ```
   - 書いた後の 3 か所（S :86・:98・:105 の `load();`）はそのまま（load の中身が取り直しに替わる）。
-- C6 S :128-130 の `<PageLayout` の中、`subtitleKey="suppliers.subtitle"` の次の行に 1 行足す。
+- C6 S :130-132 の `<PageLayout` の中、S :132 `subtitleKey="suppliers.subtitle"` の次の行に 1 行足す。
 ```tsx
       headerLeft={suppliersQuery.isFetching && !suppliersQuery.isPending ? <Spinner size="sm" /> : undefined}
 ```
@@ -548,7 +548,11 @@ vi.mock("../auth/selfAuth", () => ({
   selfRefresh: vi.fn(),
 }));
 vi.mock("../../hooks/usePermissions", () => ({ usePermissions: () => ({ hasPermission: () => true }) }));
-vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({ t: (key: string) => key }),
+  // api.ts が i18n.ts を読み、i18n.ts が initReactI18next を使う（同じ書き方: src/pages/leads/LeadFormFields.test.tsx:6）
+  initReactI18next: { type: "3rdParty", init: () => {} },
+}));
 
 const supplier = { id: 63, name: "Fixture supplier", supplier_code: "S63", contact_name: null, email: null, phone: null, address: null, notes: null, is_active: true, created_at: "2026-11-01T00:00:00Z" };
 const company = { id: 41, company_code: "C41", name: "Fixture company", status: "active", addresses: [], industry: null, priority_focus: null, notes: null };
@@ -605,6 +609,35 @@ describe("revisit shows the copy first (P1)", () => {
 });
 
 describe("K5 on the real supplier screen (P2)", () => {
+  // P2a: 写しを消す部品（QueryAuthSync）を置かずに人を変える。前の人の行を出さないのは keepSameUser の守りだけになる。
+  // 守りを外す（previousData をそのまま返す）と、B の取り直しを待つ間に A の行が出てこの試験が落ちる。
+  it("without the cache clear, the uid guard alone hides A's rows (P2a)", async () => {
+    let releaseB: (rows: unknown) => void = () => {};
+    vi.spyOn(api, "get").mockImplementation(async () => {
+      const uid = auth.user?.uid;
+      if (uid === "uid-B") return new Promise((resolve) => { releaseB = resolve; }) as never;
+      return [{ ...supplier, name: `secret-${uid}` }] as never;
+    });
+    const bare = () => (
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter><SuppliersPage /></MemoryRouter>
+      </QueryClientProvider>
+    );
+    const { rerender, container } = render(bare());
+    await screen.findByText("secret-uid-A");
+
+    auth.user = { uid: "uid-B" };
+    rerender(bare());
+    expect(screen.queryByText("secret-uid-A")).toBeNull();
+    expect(container.querySelector(".sa-loading-block")).not.toBeNull();
+
+    await act(async () => {
+      releaseB([{ ...supplier, id: 64, name: "secret-uid-B" }]);
+    });
+    await screen.findByText("secret-uid-B");
+    expect(screen.queryByText("secret-uid-A")).toBeNull();
+  });
+
   it("A -> B never shows A's rows on SuppliersPage", async () => {
     let releaseB: (rows: unknown) => void = () => {};
     vi.spyOn(api, "get").mockImplementation(async () => {
@@ -690,7 +723,7 @@ describe("company search keeps the previous rows while the next ones load (P4)",
 - P1 の LoadingBlock の見分けは `.sa-loading-block`（S frontend/src/components/loading/LoadingBlock.tsx:18）。回る印の見分けは `.page-layout-title-row .sa-spinner`（S PageLayout.tsx:44・:46 と Spinner.tsx の class）。
 
 ## 4-G. #7・#8 今ある画面の試験の後片付け
-- G1 frontend/src/components/MasterSearchButtonMigration.test.tsx: S :12 `import en from '../locales/en.json';` の次に `import { queryClient } from '../lib/query/apiQuery';` を足し、S :41 の afterEach の `cleanup();` の直後に ` queryClient.clear();` を足す（同じ行の中。`afterEach(() => { cleanup(); queryClient.clear(); expect(fetch)...`）。
+- G1 frontend/src/components/MasterSearchButtonMigration.test.tsx: S :12 `import en from '../locales/en.json';` の次に `import { queryClient } from '../lib/query/apiQuery';` を足し、S :40 の afterEach の `cleanup();` の直後に ` queryClient.clear();` を足す（同じ行の中。`afterEach(() => { cleanup(); queryClient.clear(); expect(fetch)...`）。
 - G2 frontend/src/components/PageFormButtonMigration.test.tsx: S :7 `import SuppliersPage from '../pages/suppliers/SuppliersPage';` の次に `import { queryClient } from '../lib/query/apiQuery';` を足し、S :94 `  cleanup();` の次の行に `  queryClient.clear();` を足す。
 - 理由: 画面が同じ 1 個の写しの置き場を使うので、前の試験の写しが次の試験に残らないようにする。ほかの行は変えない。
 
@@ -757,7 +790,7 @@ describe("company search keeps the previous rows while the next ones load (P4)",
 ## 5. 受入（○×）
 | # | 基準 | 検証方法 |
 |---|---|---|
-| B1 | T1〜T13（T10 は無い）と P1〜P4 がすべて合格（K5: T12 で B に変えた後の描画に A の中身 0 回・P2 で本物の仕入先の画面に A の中身 0 件・A の写し 0／P1: 3 画面とも戻った時に LoadingBlock 0 個で前の行が出て、見出しの横に回る印／P3: 足す・消すの後に取り直した行が出る／P4: 検索中も前の行が出たまま） | /tmp/stage2-unit.txt の最後（2 files・18 passed）と、PR の CI の unit-run が success |
+| B1 | T1〜T13（T10 は無い）と P1〜P4 がすべて合格（K5: T12 で B に変えた後の描画に A の中身 0 回・P2 で本物の仕入先の画面に A の中身 0 件（P2a は写しを消す部品なしで守りだけ・P2 は部品ありで A の写し 0）／P1: 3 画面とも戻った時に LoadingBlock 0 個で前の行が出て、見出しの横に回る印／P3: 足す・消すの後に取り直した行が出る／P4: 検索中も前の行が出たまま） | /tmp/stage2-unit.txt の最後（2 files・19 passed。内訳: apiQuery.test.tsx 12・stage2Pages.test.tsx 7）と、PR の CI の unit-run が success |
 | B2 | 今ある画面の試験（MasterSearchButtonMigration・PageFormButtonMigration）・全部の試験・型・lint・組み立てが通る | /tmp/stage2-pages.txt・stage2-unit-all.txt・stage2-tsc.txt・stage2-lint.txt・stage2-build.txt の最後と、PR の必須の確認 16 件が pass |
 | B3 | 変わったのは §1 の 11 ファイルだけ。3 画面の表・フォーム・書く path と中身は変わっていない | gh pr diff --name-only と git diff -w（§4-H 手順6） |
 | B4 | QueryClient を作るのは apiQuery.ts の 1 か所だけ・staleTime を設定していない・写しをブラウザの保存に書かない | `git grep -n "new QueryClient" -- frontend/src` が 1 行、`git grep -n "staleTime:" -- frontend/src` が 0 行、`git grep -n -i "persist" -- frontend/src/lib/query frontend/package.json` が 0 行 |
