@@ -74,6 +74,7 @@
 | Meta（FB/IG）連携 | （仕様書未作成・関連: ADR-024, 025, 041, 026） | 未 | Facebook・Instagram との連携を変える前（関連 ADR を読む） |
 | 認証・権限・ロール（auth-roles。各社のロールと運営者 super admin の境界） | [auth-roles/README.md](auth-roles/README.md)（関連: ADR-023, 032, 138, 147, 1007） | 仕様書あり（あるべき姿=PO発言転記・KGI PO承認済み 2026-10-10） | ロール・権限を変える前 |
 | ログイン方式（auth-login。自社サーバーでのパスワード・パスキー・再設定メール） | [auth-login/README.md](auth-login/README.md)（関連: ADR-1013, 138, 1008） | 仕様書あり（あるべき姿=PO発言転記・KGI PO承認済み 2026-10-13） | ログイン・パスキー・再設定メールを変える前 |
+| アプリ内のチャット秘書（secretary-chat。右下のチャットで AI が請求書・予定の下書きを作り、利用者の「作る」で今の機能を呼ぶ。001・004 だけ） | [secretary-chat/README.md](secretary-chat/README.md)（関連: ADR-1052, 1004, 1016, 144） | 仕様書あり（あるべき姿=PO発言転記 2026-11-01・KGI 草案・設計 草案） | 右下のチャット・AI の秘書を変える前 |
 | テナント管理・RLS（tenant-rls。会社ごとのデータを DB の RLS で他社から見えなくする） | [tenant-rls/README.md](tenant-rls/README.md)（関連: ADR-1018, 145, 072, 131, 034, 036） | 仕様書あり（あるべき姿=PO発言転記・KGI PO承認済み 2026-10-15・段階①〜③ 本番反映済み 2026-10-16・KGI-1/3 ○、KGI-2 はログイン成功と画面目視が未観測） | 会社ごとのデータの分け方（RLS）を変える前 |
 | 接続元 IP の決め方（client-ip。回数制限・監査記録・セッション保護に使う IP を、利用者が書き換えられない値から 1 つの関数で決める） | [client-ip/README.md](client-ip/README.md)（関連: ADR-127, 1013, 1019） | 仕様書あり（あるべき姿=PO発言転記・KGI PO承認済み 2026-10-16・本番反映済み 2026-10-16 #4390・K1〜K4 ○・追補 S5b 端末登録 #4437 本番反映 2026-10-17・D1〜D3 ○） | 接続元 IP の扱いを変える前 |
 | 例外の中身を応答に出さない（db-error-detail。DB の失敗時に SQL 文・入力値を画面に出さず、ログにだけ残す） | [db-error-detail/README.md](db-error-detail/README.md) | 仕様書あり（あるべき姿=PO発言転記・KGI PO承認済み 2026-10-16・本番反映済み #4399・K1〜K3 ○） | エラー時の応答の中身を変える前 |
