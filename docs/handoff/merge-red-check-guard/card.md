@@ -1,11 +1,11 @@
-# 確かめが赤いままの合流を見張りで止める 実装カード（第1版）
+# 確かめが赤いままの合流を見張りで止める 実装カード（第2版）
 
 > この文書は何か（専門用語なしの1行）:
 > AI が PR を本線に入れる命令を出したとき、salesanchor の確かめが 1 つでも緑でなければ、見張りがその命令を止めるようにする作業の指示書。
 
 - 根拠の写し: S=origin/main fbee46fce811822e20265566a2de51307f189190（Merge #4980）。行番号はすべてこの sha。実装の前に最新の origin/main で行を合わせ直す（§6 の分岐1）。
 - 対象の決まり: ADR-1029（このカードの書類 PR で What 7 を追補）。
-- 状態: 第1版。設計審査はまだ。PO の実装承認はまだ。実装は承認の後。
+- 状態: 第2版（第1版の設計審査 REQUEST_CHANGES の指摘（１）試験の流し方・（３）件数の書き違いを直した）。設計審査は第2版でやり直す。
 - 設計: docs/handoff/merge-red-check-guard/design.md。下調べ: docs/handoff/merge-red-check-guard/recon.md。
 
 ## 0. 読んだ節（docs/handoff/design-partner-card-ops/guards/）
@@ -22,7 +22,7 @@
 
 ## 受領確認
 
-作業を始める前に、報告の冒頭へ「本報告はカード 確かめが赤いままの合流を見張りで止める（第1版）の実行結果である」と書くこと。
+作業を始める前に、報告の冒頭へ「本報告はカード 確かめが赤いままの合流を見張りで止める（第2版）の実行結果である」と書くこと。
 - 種類: AI の見張りの台本と、その試験だけ（scripts/agent-hooks/review-gate/ 配下の 2 ファイル）。本番のコード・migration・CI・deploy には触れない。
 
 ## 1. 目的と、PO から見える変化
@@ -178,12 +178,13 @@ FAKE_URL_REPO=$SA FAKE_CHECKS_JSON=$CK_OK expect "C10 salesanchor 全部緑で�
     cd "$HOME/worktrees/salesanchor/release-merge-red-check-guard-impl" && git branch --show-current && git log --oneline -1 && git rev-parse origin/main
     期待する出力: ls -1d と git worktree list の両方にその道が出る。道が salesanchor 以外のフォルダ名の下にできたら、以後の cd をその道に読み替えず BLOCKED: で止まる。枝は release/merge-red-check-guard-impl。先頭は origin/main と同じ sha。作業場所が作れなければ BLOCKED: で止まる
 手順2 直す前の試験を流す（基準値）
-    cd "$HOME/worktrees/salesanchor/release-merge-red-check-guard-impl" && bash scripts/agent-hooks/review-gate/test_review_gate.sh 2>&1 | tail -n 5
+    cd "$HOME/worktrees/salesanchor/release-merge-red-check-guard-impl" && bash scripts/agent-hooks/review-gate/test_review_gate.sh > /tmp/rg-base.out 2>&1; tail -n 5 /tmp/rg-base.out
+    注意: 試験は 1 回に約 130 秒かかる。手順2・手順4 の試験の命令は、Bash の timeout を 300000 にして流す。試験は 1 回だけ流し、結果はファイルから読む。
     期待する出力: 最後の行が「PASS n / FAIL 0」。n を記録する。FAIL が 1 以上なら止めて Opus へ。動かなければ分岐4
 手順3 §4 のとおりに 2 つのファイルを Edit ツールで直す（ほかのファイルは作らない・直さない）
 手順4 直した後の試験を流し、commit する
     cd "$HOME/worktrees/salesanchor/release-merge-red-check-guard-impl" && python3 -m py_compile scripts/agent-hooks/review-gate/gate.py && echo COMPILE_OK
-    cd "$HOME/worktrees/salesanchor/release-merge-red-check-guard-impl" && bash scripts/agent-hooks/review-gate/test_review_gate.sh 2>&1 | grep -E "^(FAIL|PASS: C)" ; bash scripts/agent-hooks/review-gate/test_review_gate.sh 2>&1 | tail -n 1
+    cd "$HOME/worktrees/salesanchor/release-merge-red-check-guard-impl" && bash scripts/agent-hooks/review-gate/test_review_gate.sh > /tmp/rg-after.out 2>&1; grep -E "^(FAIL|PASS: C)" /tmp/rg-after.out; tail -n 1 /tmp/rg-after.out
     cd "$HOME/worktrees/salesanchor/release-merge-red-check-guard-impl" && git diff --name-only
     cd "$HOME/worktrees/salesanchor/release-merge-red-check-guard-impl" && git add scripts/agent-hooks/review-gate/gate.py scripts/agent-hooks/review-gate/test_review_gate.sh
     cd "$HOME/worktrees/salesanchor/release-merge-red-check-guard-impl" && git commit -m "feat: block merges in review-gate when salesanchor PR checks are not all green" -m "Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>" 2>&1 | tail -n 20

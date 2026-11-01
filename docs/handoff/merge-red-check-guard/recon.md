@@ -41,5 +41,5 @@
 ## 6. 見張りの入れ方と試験
 
 - 入れ方: scripts/agent-hooks/review-gate/install.sh を PO が `!` で実行する（ADR-1029 の状態欄・ADR-1011:39）。gate.py を ~/.claude/scripts/review-gate/ に読み取り専用で写す（install.sh:15-21）。
-- 試験: scripts/agent-hooks/review-gate/test_review_gate.sh（324 行・偽の gh は :36-49 で pr view だけ答える）。CI は .github/workflows/agent-hooks-test.yml:25 が流す。
+- 試験: scripts/agent-hooks/review-gate/test_review_gate.sh（324 行・偽の gh は :36-48 で pr view だけ答える・:49 は chmod）。CI は .github/workflows/agent-hooks-test.yml:25 が流す。
 - 既存の試験はリポジトリ名を o/r で走る（:42）。salesanchor だけにかける決まりなら、既存の試験は結果が変わらない。

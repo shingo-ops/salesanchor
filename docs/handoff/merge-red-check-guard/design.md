@@ -45,7 +45,8 @@
 ## 4. 技術 How・KPI
 
 - 足すもの: 定数 2 つ（かける範囲・通す色）、止める文 1 つ、関数 gh_checks（gh_view と同じ書き方）、resolve の中の判定 1 か所。標準ライブラリのみ（gate.py の決まり :10）。
-- 試験: 偽の gh に `pr checks` の答えを足す（$FAKE_CHECKS_JSON・$FAKE_CHECKS_RC）。試験 C1〜C9 を足す。
+- 試験: 偽の gh に `pr checks` の答えを足す（$FAKE_CHECKS_JSON・$FAKE_CHECKS_RC）。試験 C1〜C10（C2b・C6b・C8b を含む 13 件）を足す。check-pr-merge-ready.py・gh api・curl の道は同じ resolve を通るので、道ごとの試験は足さない（審査の指摘（２）・後の変更で外れる恐れは受け入れる）。
+- 見張りの待ち時間: gh_checks の最長 60 秒が合流 1 回に加わる。フックの待ち時間を超えたときの扱いは未確認（審査の指摘（４））。gh_view と同じ性質のため、この件では変えない。
 - KPI: 導入後 30 日に、salesanchor で緑でない確かめのまま入った PR の数（台帳の自動合流を除く）。基準値は 10/31 の 18 件。目標 0 件。数え方は recon の merged-gate-status.txt と同じ台本で行う。
 
 ## 5. 弊害・トレードオフ
