@@ -1,7 +1,7 @@
 # recon — 受信箱 会話画面 A「見た目」（スマホの吹き出し・入力欄を WhatsApp 実測へ）
 
 - 基準: origin/main `dc99a062e2c409aeb1a851a01b8bd0fa09ac3b64`（クラウド調査の1行目）。追加の自分での確認も同じ origin/main を `git show` で読んだ（2026-11-01）。
-- 生の調査結果: `docs/handoff/inbox-deal-ui/thread-a-recon-raw.md`（枝 `release/inbox-thread-a-recon-raw` @ 8241f96e7）。手元の写し `/tmp/CC報告ファイル/inbox-deal-ui/thread-a-recon-raw.md`（219行・全行読了）。
+- 生の調査結果: `docs/handoff/inbox-deal-ui/thread-a-recon-raw.md`（枝 `release/inbox-thread-a-recon-raw` @ 8241f96e7）。219行・全行読了。
 - 2026-11-01 追記: カード作成時に origin/main `508e86036b5b1ab519d49cd3edde888986ba6e22` で TSX・CSS の該当行を読み直し、本書と card-a1.md の行番号が同じであることを確かめた（`sed -n` で各範囲の先頭と末尾を照合）。e2e がクラス名で要素を探している6本、札の値が `HUMAN_AGENT` か無しの2つだけであること（`backend/app/services/messaging_window.py:134-149`）、`humanAgentLabel` の参照が TSX:569 の1件だけであることも同じ時点で確かめた。
 - 要件と成功条件: `docs/handoff/inbox-deal-ui/requirements.md` §11（PO 承認 2026-11-01「1」）。A1〜A4 が本件の合格条件。
 - 書き方: 【事実】は file:line かコマンド出力つき。【推測】【未確認】は分けて書く。

@@ -1,7 +1,7 @@
 # design — 受信箱 会話画面 A「見た目」（スマホの吹き出し・入力欄を WhatsApp 実測へ）
 
 状態: 設計審査済み（§12）。§4 は PO 決定済み（2026-11-01「1」＝案1）。段A-1 は実装カード card-a1.md（同じフォルダ）で実装へ。段A-2 は段0の測り足し待ち（PO のスマホが要る）。
-根拠: recon.md（同じフォルダ）。成功条件: docs/handoff/inbox-deal-ui/requirements.md §11 A1〜A4（PO 承認 2026-11-01）。
+根拠: docs/handoff/inbox-deal-ui/thread-a/recon.md。成功条件: docs/handoff/inbox-deal-ui/requirements.md §11 A1〜A4（PO 承認 2026-11-01）。
 
 ## 1. 目的と利用者に見える変化
 - 目的: スマホで会話を開いたとき、吹き出しと入力欄が WhatsApp と同じ大きさ・形・置き方になる。
@@ -75,7 +75,7 @@
 - 段ごとに1つの PR。戻すときはその PR を戻す（revert）。DB と本番データは触らない。
 
 ## 10. 維持の仕組み
-- 守り手: CI の check:css-values・check:new-tokens・ui-governance-gate と、見た目の基準写真の試験（tests-e2e/visual-language）
+- 守り手: CI の check:css-values・check:new-tokens・ui-governance-gate と、見た目の基準写真の試験（frontend/tests-e2e/visual-language）
 - 値はトークンと金型に集め、CI（check:css-values・check:new-tokens・ui-governance-gate）が直書きの増加を止める。
 - 金型の stories を Storybook に置き、見た目の基準写真（tests-e2e/visual-language）で変化を見張る。
 
