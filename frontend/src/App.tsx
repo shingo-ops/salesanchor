@@ -118,6 +118,7 @@ import RegisterAddressPage from "./pages/register/RegisterAddressPage";
 import RegisterChangeBillingPage from "./pages/register/RegisterChangeBillingPage";
 import { Toaster } from "./components/loading";
 import { AppUpdateNotice } from "./components/AppUpdateNotice";
+import { SecretaryChat } from "./features/secretary/SecretaryChat";
 import "./sidebar.css";
 import "./topbar.css";
 import "./components.css";
@@ -142,7 +143,12 @@ function CompanyIdRedirect() {
  */
 function ShellSwitch() {
   const isMobile = useIsMobile();
-  return isMobile ? <MobileShell /> : <DesktopShell />;
+  return (
+    <>
+      {isMobile ? <MobileShell /> : <DesktopShell />}
+      <SecretaryChat isMobile={isMobile} />
+    </>
+  );
 }
 
 function App() {

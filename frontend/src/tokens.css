@@ -128,6 +128,7 @@
   --z-topbar:        100;
   --z-sidebar:       200;
   --z-sidebar-overlay: 210;
+  --z-fab:           250;   /* 右下の浮かぶ印: サイドバーの覆い(210)より上・幕(298)とDrawer(301)より下（チャットが開いたら幕の下に隠れる） */
   --z-backdrop:      298;
   --z-drawer:        301;   /* avatar(300)より前面 — user-drawer-close 直接クリック可 */
   --z-avatar:        300;

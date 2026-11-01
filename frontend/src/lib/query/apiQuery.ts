@@ -5,7 +5,13 @@
  * - 写しは出すだけ。staleTime は既定の 0 のままにし、開くたび・タブに戻るたびに取り直す。
  * - 写しはメモリだけに持つ（ブラウザの保存に書かない）。
  */
-import { QueryClient, useQuery, type UseQueryResult } from "@tanstack/react-query";
+import { useCallback } from "react";
+import {
+  QueryClient,
+  useQuery,
+  type QueryKey,
+  type UseQueryResult,
+} from "@tanstack/react-query";
 
 import { useAuth } from "../../contexts/AuthContext";
 import { api } from "../api";
@@ -37,15 +43,33 @@ export function apiQueryKey(uid: string, path: string): readonly unknown[] {
   return ["api", uid, ...words, { query }];
 }
 
-/** 写しを出してから裏で取り直す取り方。ログインしていない間は取りに行かない。 */
-export function useApiQuery<T>(path: string, options?: { enabled?: boolean }): UseQueryResult<T> {
+/**
+ * 写しを出してから裏で取り直す取り方。ログインしていない間は取りに行かない。
+ * keepPrevious: 条件（ページ・検索）を変えた時、前の条件の中身を出したまま取る。
+ * queryClient を直接渡すので、QueryClientProvider の外（画面の試験）でも同じ 1 個を使う。
+ */
+export function useApiQuery<T>(
+  path: string,
+  options?: { enabled?: boolean; keepPrevious?: boolean },
+): UseQueryResult<T> {
   const { user } = useAuth();
   const uid = user?.uid ?? null;
-  return useQuery({
-    queryKey: apiQueryKey(uid ?? "", path),
-    queryFn: () => api.get<T>(path),
-    enabled: uid !== null && (options?.enabled ?? true),
-  });
+  // 前の条件の中身は同じ人の写しの時だけ出す。利用者が変わった最初の描画では前の人の写しがまだ残っているため。
+  // uid が変わったら関数を作り直す（同じ関数だと TanStack が前の結果を使い回す）。
+  const keepSameUser = useCallback(
+    <D,>(previousData: D | undefined, previousQuery: { queryKey: QueryKey } | undefined): D | undefined =>
+      previousQuery?.queryKey[1] === uid ? previousData : undefined,
+    [uid],
+  );
+  return useQuery(
+    {
+      queryKey: apiQueryKey(uid ?? "", path),
+      queryFn: () => api.get<T>(path),
+      enabled: uid !== null && (options?.enabled ?? true),
+      placeholderData: options?.keepPrevious ? keepSameUser : undefined,
+    },
+    queryClient,
+  );
 }
 
 /**
@@ -55,4 +79,14 @@ export function useApiQuery<T>(path: string, options?: { enabled?: boolean }): U
 export function invalidateApi(uid: string, head: readonly string[]): Promise<void> {
   const { words } = splitApiPath(head.join("/"));
   return queryClient.invalidateQueries({ queryKey: ["api", uid, ...words] });
+}
+
+/** 画面が書いた後に使う。今の人の写しのうち、頭の言葉が同じ物を取り直す。ログインしていない時は何もしない。 */
+export function useInvalidateApi(): (head: readonly string[]) => Promise<void> {
+  const { user } = useAuth();
+  const uid = user?.uid ?? null;
+  return useCallback(
+    (head: readonly string[]) => (uid === null ? Promise.resolve() : invalidateApi(uid, head)),
+    [uid],
+  );
 }
