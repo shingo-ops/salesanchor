@@ -1,5 +1,5 @@
 /**
- * ADR-1054 段 1: 写しの置き場の土台の試験（T1〜T9）。
+ * ADR-1054 段 1: 写しの置き場の土台の試験（T1〜T9・段 2 で T11〜T13）。
  * QueryClient はアプリと同じ 1 個（apiQuery.ts の queryClient）を使い、毎回消す。
  */
 import { StrictMode, type ReactNode } from "react";
@@ -9,7 +9,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { api } from "../api";
 import { QueryAuthSync } from "./QueryAuthSync";
-import { apiQueryKey, invalidateApi, queryClient, splitApiPath, useApiQuery } from "./apiQuery";
+import { apiQueryKey, invalidateApi, queryClient, splitApiPath, useApiQuery, useInvalidateApi } from "./apiQuery";
 
 const auth = vi.hoisted(() => ({ user: { uid: "uid-A" } as { uid: string } | null }));
 
@@ -33,6 +33,25 @@ function Probe({ path, testId }: { path: string; testId: string }) {
   );
 }
 
+/** keepPrevious を使う試しの部品。描いた中身を全部 renderedData に残す（K5 で描画の途中も数える） */
+const renderedData: Array<string | undefined> = [];
+function KeepProbe({ path, testId }: { path: string; testId: string }) {
+  const q = useApiQuery<string>(path, { keepPrevious: true });
+  renderedData.push(q.data);
+  return (
+    <div>
+      <div data-testid={testId}>{q.data ?? ""}</div>
+      <div data-testid={`${testId}-placeholder`}>{String(q.isPlaceholderData)}</div>
+    </div>
+  );
+}
+
+let latestInvalidate: ((head: readonly string[]) => Promise<void>) | null = null;
+function InvalidateProbe() {
+  latestInvalidate = useInvalidateApi();
+  return null;
+}
+
 function Tree({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
@@ -54,6 +73,8 @@ afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
   auth.user = { uid: "uid-A" };
+  renderedData.length = 0;
+  latestInvalidate = null;
 });
 
 describe("splitApiPath / apiQueryKey (T1)", () => {
@@ -244,5 +265,90 @@ describe("logout does not refetch the old user's copies (T9)", () => {
     });
     expect(spy).not.toHaveBeenCalled();
     expect(queryClient.getQueryCache().getAll().filter((query) => query.state.fetchStatus === "fetching").length).toBe(0);
+  });
+});
+
+describe("keepPrevious keeps the same user's rows while the next ones load (T11)", () => {
+  it("old rows stay until the new rows arrive", async () => {
+    let release: (value: string) => void = () => {};
+    vi.spyOn(api, "get").mockImplementation(async (path: string) => {
+      if (path === "/companies?page=2") return new Promise<string>((resolve) => { release = resolve; }) as never;
+      return `rows:${path}` as never;
+    });
+    const tree = (path: string) => (
+      <Tree>
+        <KeepProbe path={path} testId="keep" />
+      </Tree>
+    );
+    const { rerender } = render(tree("/companies?page=1"));
+    await waitFor(() => expect(screen.getByTestId("keep").textContent).toBe("rows:/companies?page=1"));
+
+    rerender(tree("/companies?page=2"));
+    expect(screen.getByTestId("keep").textContent).toBe("rows:/companies?page=1");
+    expect(screen.getByTestId("keep-placeholder").textContent).toBe("true");
+
+    await act(async () => {
+      release("rows:/companies?page=2");
+    });
+    await waitFor(() => expect(screen.getByTestId("keep").textContent).toBe("rows:/companies?page=2"));
+    expect(screen.getByTestId("keep-placeholder").textContent).toBe("false");
+  });
+});
+
+describe("K5: keepPrevious never carries A's rows to B (T12)", () => {
+  it("A -> B with a slow B fetch renders A's rows 0 times", async () => {
+    let releaseB: (value: string) => void = () => {};
+    vi.spyOn(api, "get").mockImplementation(async () => {
+      const uid = auth.user?.uid;
+      if (uid === "uid-B") return new Promise<string>((resolve) => { releaseB = resolve; }) as never;
+      return `secret-${uid}` as never;
+    });
+    const tree = () => (
+      <Tree>
+        <KeepProbe path="/companies" testId="k5keep" />
+      </Tree>
+    );
+    const { rerender } = render(tree());
+    await waitFor(() => expect(screen.getByTestId("k5keep").textContent).toBe("secret-uid-A"));
+
+    const from = renderedData.length;
+    auth.user = { uid: "uid-B" };
+    rerender(tree());
+    expect(screen.getByTestId("k5keep").textContent).toBe("");
+
+    await act(async () => {
+      releaseB("secret-uid-B");
+    });
+    await waitFor(() => expect(screen.getByTestId("k5keep").textContent).toBe("secret-uid-B"));
+    expect(renderedData.slice(from).filter((data) => data === "secret-uid-A").length).toBe(0);
+    expect(keysWithUid("uid-A")).toBe(0);
+  });
+});
+
+describe("useInvalidateApi (T13)", () => {
+  it("refetches the current user's copies and does nothing when logged out", async () => {
+    const spy = vi.spyOn(api, "get").mockImplementation(async (path: string) => `${auth.user?.uid}:${path}` as never);
+    const tree = () => (
+      <Tree>
+        <Probe path="/companies?x=1" testId="inv" />
+        <InvalidateProbe />
+      </Tree>
+    );
+    const { rerender } = render(tree());
+    await waitFor(() => expect(screen.getByTestId("inv").textContent).toBe("uid-A:/companies?x=1"));
+    spy.mockClear();
+
+    await act(async () => {
+      await latestInvalidate?.(["companies"]);
+    });
+    expect(spy.mock.calls.map((call) => call[0])).toEqual(["/companies?x=1"]);
+
+    auth.user = null;
+    rerender(tree());
+    spy.mockClear();
+    await act(async () => {
+      await latestInvalidate?.(["companies"]);
+    });
+    expect(spy).not.toHaveBeenCalled();
   });
 });
