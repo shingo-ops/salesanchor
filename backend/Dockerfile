@@ -26,6 +26,8 @@ COPY . .
 # 非rootユーザーを作成して切り替え（Rootlessコンテナ）
 # コンテナが侵害されてもroot権限を取得できないようにする
 RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
+# ADR-1055: 場所のデータの置き場（名前付き volume geoip が appuser 所有で作られるように）
+RUN mkdir -p /geoip && chown appuser:appgroup /geoip
 USER appuser
 
 # ポート8000を公開（コンテナ間通信用）

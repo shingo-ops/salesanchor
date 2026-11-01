@@ -77,7 +77,7 @@ async def stream_change_signals(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="接続数が上限に達しています",
         )
-    conn = Connection(tenant_id=tenant_id, is_super_admin=is_super_admin)
+    conn = Connection(tenant_id=tenant_id, is_super_admin=is_super_admin, user_id=user_id)
     hub.register(conn)
 
     async def event_generator():

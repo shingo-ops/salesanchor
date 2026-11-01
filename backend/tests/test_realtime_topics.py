@@ -127,7 +127,9 @@ def test_super_admin_write_routes_in_signal_table_are_global():
 
 
 def test_frontend_topic_names_match_backend():
-    backend = {t for t, _s in WRITE_ROUTE_TOPICS.values()} | set(TASK_TOPICS)
+    from app.realtime.topics import USER_TOPICS
+
+    backend = {t for t, _s in WRITE_ROUTE_TOPICS.values()} | set(TASK_TOPICS) | set(USER_TOPICS)
     ts = Path(__file__).resolve().parents[2] / "frontend/src/lib/realtime/topics.ts"
     frontend = set(re.findall(r':\s*"([a-z0-9_.]+)"', ts.read_text(encoding="utf-8")))
     assert frontend == backend

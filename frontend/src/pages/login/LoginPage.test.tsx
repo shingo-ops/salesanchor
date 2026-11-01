@@ -146,6 +146,32 @@ describe("LoginPage (self login)", () => {
     mock.self = true;
   });
 
+  it("202 shows the waiting screen with the number and no navigation", async () => {
+    fetchMock.mockImplementation((url: string) =>
+      Promise.resolve(
+        url === "/api/v1/auth/login"
+          ? new Response(
+              JSON.stringify({
+                status: "device_approval_required",
+                match_number: "73",
+                expires_in: 600,
+                has_trusted_device: true,
+                has_recovery_codes: true,
+              }),
+              { status: 202 },
+            )
+          : new Response(JSON.stringify({ detail: "invalid_credentials" }), { status: 401 }),
+      ),
+    );
+    await renderLoginWithHome();
+
+    await fillAndSubmit();
+
+    await waitFor(() => expect(screen.getByTestId("login-approval-number").textContent).toBe("73"));
+    expect(screen.queryByTestId("after-login")).toBeNull();
+    expect(screen.getByRole("button", { name: tr("login.deviceApproval.useRecoveryCode") })).toBeTruthy();
+  });
+
   it("sign-in calls /api/v1/auth/login and not the Firebase function", async () => {
     // 起動時の refresh は 401、ログインは成功
     fetchMock.mockImplementation((url: string) =>

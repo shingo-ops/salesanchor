@@ -230,17 +230,31 @@ class AuditMiddleware(BaseHTTPMiddleware):
             else:
                 event_type = "auth_request"
 
+            # 口の中で入れた request.state.auth_audit（ADR-1055 D7・K9）。
+            # starlette の request.state は scope["state"] を共有するので、middleware から読める。
+            # 値は user_id・reason・is_new_device・event_type（任意）だけ。パスワード・合言葉・Cookie の値は入れない。
+            audit = getattr(request.state, "auth_audit", None)
+            audit = audit if isinstance(audit, dict) else {}
+            if audit.get("event_type"):
+                event_type = str(audit["event_type"])[:50]
+            reason = audit.get("reason")
+
             async with AsyncSessionLocal() as db:
                 await db.execute(
                     text("""
                         INSERT INTO public.auth_events
                             (event_type, path, method, status_code,
-                             client_ip, user_agent, duration_ms)
+                             client_ip, user_agent, duration_ms,
+                             user_id, reason, is_new_device)
                         VALUES
                             (:event_type, :path, :method, :status_code,
-                             :client_ip, :user_agent, :duration_ms)
+                             :client_ip, :user_agent, :duration_ms,
+                             :user_id, :reason, :is_new_device)
                     """),
                     {
+                        "user_id": audit.get("user_id"),
+                        "reason": str(reason)[:50] if reason else None,
+                        "is_new_device": audit.get("is_new_device"),
                         "event_type": event_type,
                         "path": request.url.path,
                         "method": request.method,

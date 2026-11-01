@@ -67,6 +67,7 @@ from app.routers import (
     item_corrections,  # PARITY-03 Phase 3 Stage 3: 修正履歴保存
     leads,
     line_import_devices,
+    login_approvals,  # ADR-1055: いつもの機械の小窓の一覧
     me_inventory_filters,  # ADR-093 Phase 4: 在庫表ユーザー別フィルタ設定
     meta,
     meta_inbox,  # Phase 1-D Sprint 2: OAuth 接続バックエンド
@@ -106,6 +107,7 @@ from app.routers import (
     super_admin_knowledge,
     super_admin_link_templates,  # SA-05: リンクテンプレート SSOT admin CRUD
     super_admin_llm_budget,
+    super_admin_login_requests,  # ADR-1055 K7: 管理者の許可
     super_admin_note_master,  # 備考マスタ中央 admin
     super_admin_payment_fee_settings,  # 決済手数料設定マスタ中央 admin
     super_admin_phase_switch,
@@ -242,6 +244,10 @@ register_metrics(app)
 app.include_router(health.router, prefix="/api", tags=["health"])
 # /api/v1/auth にバージョン管理を適用
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
+
+# ADR-1055: 知らない機械からのログインの許可。一覧は /api/v1/auth/ の外（login の回数の枠を使わない）
+app.include_router(login_approvals.router, prefix="/api/v1", tags=["auth"])
+app.include_router(super_admin_login_requests.router, prefix="/api/v1", tags=["super-admin"])
 # ADR-1019 段2: 閲覧専用ページの API（login・logout・inventory。閲覧者のトークンだけを見る）
 app.include_router(viewer.router, prefix="/api/v1/viewer", tags=["viewer"])
 # Meta Webhook（認証不要 - Metaのサーバーからアクセスされる）

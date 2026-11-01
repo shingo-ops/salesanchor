@@ -71,21 +71,26 @@ export function expireSession(): void {
 }
 
 /** アクセストークンの中身（表示用）。署名の確かめは backend が行うので、ここでは信用しない。 */
-export function readClaims(token: string): { sub: string; email: string } | null {
+export function readClaims(token: string): { sub: string; email: string; sid: string | null } | null {
   try {
     const payload = token.split(".")[1];
     if (!payload) return null;
     const base64 = payload.replace(/-/g, "+").replace(/_/g, "/");
     const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
-    const claims = JSON.parse(new TextDecoder().decode(bytes)) as { sub?: unknown; email?: unknown };
+    const claims = JSON.parse(new TextDecoder().decode(bytes)) as {
+      sub?: unknown;
+      email?: unknown;
+      sid?: unknown;
+    };
     if (typeof claims.sub !== "string" || typeof claims.email !== "string") return null;
-    return { sub: claims.sub, email: claims.email };
+    // sid（ログインの組の印）は新しいトークンにだけ入る。無い古いトークンは null
+    return { sub: claims.sub, email: claims.email, sid: typeof claims.sid === "string" ? claims.sid : null };
   } catch {
     return null;
   }
 }
 
-export async function postAuth<T>(path: string, body?: unknown): Promise<T> {
+async function postAuthRaw<T>(path: string, body?: unknown): Promise<{ status: number; data: T }> {
   const res = await fetch(`${AUTH_BASE}${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -97,11 +102,68 @@ export async function postAuth<T>(path: string, body?: unknown): Promise<T> {
     // detail は決まった識別子のときだけ読む。配列（入力検査の 422）や文章は読まない
     throw new SelfAuthError(res.status, typeof parsed.detail === "string" ? parsed.detail : null);
   }
-  return (await res.json().catch(() => ({}))) as T;
+  return { status: res.status, data: (await res.json().catch(() => ({}))) as T };
 }
 
-export async function selfLogin(email: string, password: string): Promise<void> {
-  const res = await postAuth<TokenResponse>("/login", { email, password });
+export async function postAuth<T>(path: string, body?: unknown): Promise<T> {
+  return (await postAuthRaw<T>(path, body)).data;
+}
+
+/** 知らない機械からのログイン（202）。トークンは無い。いつもの機械で許可するまで待つ。 */
+export interface LoginApprovalRequired {
+  kind: "approval_required";
+  matchNumber: string;
+  expiresIn: number;
+  hasTrustedDevice: boolean;
+  hasRecoveryCodes: boolean;
+}
+
+export type SelfLoginResult = { kind: "ok" } | LoginApprovalRequired;
+
+interface ApprovalRequiredResponse {
+  match_number: string;
+  expires_in: number;
+  has_trusted_device: boolean;
+  has_recovery_codes: boolean;
+}
+
+export async function selfLogin(email: string, password: string): Promise<SelfLoginResult> {
+  const { status, data } = await postAuthRaw<TokenResponse | ApprovalRequiredResponse>("/login", { email, password });
+  if (status === 202) {
+    const pending = data as ApprovalRequiredResponse;
+    return {
+      kind: "approval_required",
+      matchNumber: pending.match_number,
+      expiresIn: pending.expires_in,
+      hasTrustedDevice: pending.has_trusted_device,
+      hasRecoveryCodes: pending.has_recovery_codes,
+    };
+  }
+  const tokens = data as TokenResponse;
+  adoptAccessToken(tokens.access_token, tokens.expires_in);
+  return { kind: "ok" };
+}
+
+export type LoginRequestPollStatus = "pending" | "rejected" | "expired" | "completed";
+
+interface PollResponse {
+  status: LoginRequestPollStatus;
+  access_token?: string | null;
+  expires_in?: number | null;
+}
+
+/** 待つ機械が許可を確かめる（15秒ごと）。許可されていればトークンを受けて入る。 */
+export async function pollLoginRequest(): Promise<LoginRequestPollStatus> {
+  const res = await postAuth<PollResponse>("/login-requests/poll");
+  if (res.status === "completed" && res.access_token) {
+    adoptAccessToken(res.access_token, res.expires_in ?? 900);
+  }
+  return res.status;
+}
+
+/** 予備の合言葉で入る（待つ機械）。 */
+export async function recoverLoginRequest(code: string): Promise<void> {
+  const res = await postAuth<TokenResponse>("/login-requests/recovery", { code });
   adoptAccessToken(res.access_token, res.expires_in);
 }
 

@@ -325,6 +325,12 @@ async def test_engine():
             statement = statement.replace("public.webauthn_credentials", "webauthn_credentials")
         if "public.passkey_enroll_prompt_skips" in statement:
             statement = statement.replace("public.passkey_enroll_prompt_skips", "passkey_enroll_prompt_skips")
+        if "public.user_trusted_devices" in statement:
+            statement = statement.replace("public.user_trusted_devices", "user_trusted_devices")
+        if "public.auth_login_requests" in statement:
+            statement = statement.replace("public.auth_login_requests", "auth_login_requests")
+        if "public.user_recovery_codes" in statement:
+            statement = statement.replace("public.user_recovery_codes", "user_recovery_codes")
         # SQLite は FOR UPDATE をサポートしない（ファイルレベルロックで代替）。
         if " FOR UPDATE" in statement:
             statement = statement.replace(" FOR UPDATE", "")
@@ -1350,7 +1356,63 @@ async def setup_test_db(test_engine):
                 revoked_at TIMESTAMP,
                 created_at TIMESTAMP NOT NULL,
                 last_used_at TIMESTAMP,
-                user_agent_hash BLOB
+                user_agent_hash BLOB,
+                trusted_device_id INTEGER
+            )
+        """))
+        # ADR-1055 段A: 新しい機械の許可の3表の SQLite 版（BYTEA→BLOB, UUID→TEXT, BIGSERIAL→INTEGER, CHAR/VARCHAR→TEXT）
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS user_trusted_devices (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                token_hash BLOB NOT NULL,
+                label TEXT,
+                user_agent TEXT,
+                created_via TEXT NOT NULL,
+                created_ip TEXT,
+                created_location TEXT,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                last_used_at TIMESTAMP,
+                last_ip TEXT,
+                last_location TEXT,
+                revoked_at TIMESTAMP,
+                UNIQUE (user_id, token_hash)
+            )
+        """))
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS auth_login_requests (
+                id TEXT PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                status TEXT NOT NULL DEFAULT 'pending',
+                match_number TEXT NOT NULL,
+                candidates TEXT NOT NULL,
+                pending_token_hash BLOB NOT NULL UNIQUE,
+                device_token_hash BLOB,
+                label TEXT,
+                user_agent TEXT,
+                ip TEXT,
+                location TEXT,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                expires_at TIMESTAMP NOT NULL,
+                decided_at TIMESTAMP,
+                decided_via TEXT,
+                decided_by_user_id INTEGER,
+                decided_device_id INTEGER,
+                decided_note TEXT,
+                reject_reason TEXT,
+                failed_code_attempts INTEGER NOT NULL DEFAULT 0
+            )
+        """))
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS user_recovery_codes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                code_id TEXT NOT NULL,
+                code_hash TEXT NOT NULL,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                used_at TIMESTAMP,
+                revoked_at TIMESTAMP,
+                used_request_id TEXT
             )
         """))
         # ADR-1013 便3: public.password_reset_tokens の SQLite 版（BYTEA→BLOB, BIGSERIAL→INTEGER）

@@ -48,6 +48,11 @@ _MIGRATIONS = (
     "20261013_160000_add_self_hosted_auth_tables.sql",
     "20261016_180000_add_users_write_rls.sql",
 )
+# ADR-1055: self_login が使う機械の表と列（auth_refresh_tokens.trusted_device_id ほか）。列を足す先の auth_events を先に作る
+_DEVICE_MIGRATIONS = (
+    "001_create_auth_events.sql",
+    "20261101_130000_add_new_device_approval.sql",
+)
 _GRANT_DDL = """
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO salesanchor_app;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO salesanchor_app;
@@ -103,6 +108,8 @@ async def _fresh():
                     {"i": tid, "c": f"tenant_{tid}"},
                 )
         await _apply_migration(admin_engine, _MIGRATIONS[0])
+        for mig in _DEVICE_MIGRATIONS:
+            await _apply_migration(admin_engine, mig)
         async with admin_engine.begin() as conn:
             for uid, tid, email in ((_USER_A, _TENANT_A, _EMAIL_A), (_USER_B, _TENANT_B, _EMAIL_B)):
                 await conn.execute(
@@ -391,7 +398,7 @@ async def _run_login_fail(admin_engine, app_engine) -> None:
         with pytest.raises(HTTPException) as exc_info:
             await mod.self_login(
                 mod.SelfLoginRequest(email=_EMAIL_A, password="wrong"),
-                _request(origin=_ORIGIN), Response(), db,
+                _request(origin=_ORIGIN), Response(), BackgroundTasks(), db,
             )
         assert exc_info.value.status_code == 401
         await _assert_ctx_reset(db)
@@ -411,7 +418,7 @@ async def _run_login_lock(admin_engine, app_engine) -> None:
         with pytest.raises(HTTPException):
             await mod.self_login(
                 mod.SelfLoginRequest(email=_EMAIL_A, password="wrong"),
-                _request(origin=_ORIGIN), Response(), db,
+                _request(origin=_ORIGIN), Response(), BackgroundTasks(), db,
             )
         await _assert_ctx_reset(db)
 
@@ -423,7 +430,7 @@ async def _run_login_ok(admin_engine, app_engine) -> None:
     async with _session(app_engine) as db:
         res = await mod.self_login(
             mod.SelfLoginRequest(email=_EMAIL_A, password=_PASSWORD),
-            _request(origin=_ORIGIN, **{"user-agent": "pytest"}), Response(), db,
+            _request(origin=_ORIGIN, **{"user-agent": "pytest"}), Response(), BackgroundTasks(), db,
         )
         assert res.token_type == "bearer"
         await _assert_ctx_reset(db)

@@ -15,6 +15,7 @@ from app.realtime.publisher import (
     CHANNEL_PATTERN,
     CHANNEL_SHARED,
     CHANNEL_TENANT_PREFIX,
+    CHANNEL_USER_PREFIX,
     RT_REDIS_URL,
 )
 
@@ -28,6 +29,7 @@ _QUEUE_MAX = 100
 class Connection:
     tenant_id: int
     is_super_admin: bool
+    user_id: int | None = None  # 人宛ての合図（rt:u:）の宛先。None なら人宛ては届かない
     queue: asyncio.Queue = field(default_factory=lambda: asyncio.Queue(maxsize=_QUEUE_MAX))
 
 
@@ -37,6 +39,13 @@ def _targets(channel: str, conn: Connection) -> bool:
         return True
     if channel == CHANNEL_GLOBAL:
         return conn.is_super_admin
+    if channel.startswith(CHANNEL_USER_PREFIX):
+        if conn.user_id is None:
+            return False
+        try:
+            return int(channel[len(CHANNEL_USER_PREFIX):]) == conn.user_id
+        except ValueError:
+            return False
     if channel.startswith(CHANNEL_TENANT_PREFIX):
         try:
             return int(channel[len(CHANNEL_TENANT_PREFIX):]) == conn.tenant_id

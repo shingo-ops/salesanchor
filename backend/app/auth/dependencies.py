@@ -2,6 +2,7 @@ import asyncio
 import logging
 import os
 import secrets
+from dataclasses import dataclass
 from datetime import datetime, timezone
 
 import firebase_admin
@@ -24,6 +25,7 @@ from app.cache import (
     get_cached_jwt,
     get_cached_tenant,
     get_cached_user_permissions,
+    is_family_revoked,
     is_token_blacklisted,
     record_auth_failure,
 )
@@ -121,6 +123,17 @@ def _is_smoke_token(token: str) -> bool:
         return False
 
 
+def _verified_sid(token: str) -> str | None:
+    """自社トークンの署名を確かめ、組の id（sid）を返す。自社トークンでない・署名が合わない・sid が無いときは None。"""
+    try:
+        if self_tokens.peek_issuer(token) != self_tokens.ISSUER or not self_tokens.is_verification_enabled():
+            return None
+        sid = self_tokens.decode_access_token(token).get("sid")
+    except Exception:  # noqa: BLE001  署名の不一致などは、このあとの通常の検証が 401 にする
+        return None
+    return sid if isinstance(sid, str) and sid else None
+
+
 async def get_current_user(
     request: Request,
     cred: HTTPAuthorizationCredentials = Depends(security),
@@ -182,6 +195,16 @@ async def get_current_user(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="このトークンは無効化されています",
+        )
+
+    # ①b 失効した組のアクセストークンを拒否（ADR-1055 D8）。自社トークンだけ。
+    # 署名を確かめて sid を取り、Redis auth:fam_revoked:{sid} があれば 401。sid の無い古いトークンは最長900秒で切れるので通す。
+    # Redis が読めないときは通す（①のブラックリストと同じ fail-open。更新トークンの失効は DB なので900秒後には必ず切れる）。
+    sid = _verified_sid(token)
+    if sid is not None and await is_family_revoked(sid):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=_INVALID_TOKEN_DETAIL,
         )
 
     # ② Redisキャッシュからユーザー情報を取得
@@ -681,3 +704,59 @@ def require_feature(feature_key: str):
             )
 
     return _check
+
+
+# ── 今の組（ADR-1055 D16） ─────────────────────────────────────
+
+@dataclass(frozen=True)
+class CurrentSession:
+    """今のログイン（更新トークンの組）。trusted_device_id は取り消されていない機械だけ（無ければ None）。"""
+
+    user: User
+    sid: str
+    trusted_device_id: int | None
+    family_created_at: datetime | None
+
+
+async def resolve_current_session(request: Request, db: AsyncSession, user: User) -> CurrentSession:
+    """アクセストークンの sid を唯一の出どころに、今の組と機械を引く。
+
+    sid の無いトークン（本便より前の発行・Firebase・smoke）は 403 session_upgrade_required
+    （画面は更新を1回して再試行する）。組が全部失効していれば 401。
+    """
+    header = request.headers.get("authorization") or ""
+    scheme, _, token = header.partition(" ")
+    sid = _verified_sid(token.strip()) if scheme.lower() == "bearer" else None
+    if sid is None:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="session_upgrade_required")
+    row = (
+        await db.execute(
+            text(
+                "SELECT t.family_created_at AS family_created_at, d.id AS device_id "
+                "FROM public.auth_refresh_tokens t "
+                "LEFT JOIN public.user_trusted_devices d "
+                "  ON d.id = t.trusted_device_id AND d.revoked_at IS NULL "
+                "WHERE t.family_id = :sid AND t.user_id = :uid AND t.revoked_at IS NULL "
+                "ORDER BY t.id DESC LIMIT 1"
+            ),
+            {"sid": sid, "uid": user.id},
+        )
+    ).first()
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=_INVALID_TOKEN_DETAIL)
+    return CurrentSession(
+        user=user,
+        sid=sid,
+        trusted_device_id=int(row.device_id) if row.device_id is not None else None,
+        family_created_at=self_tokens._as_utc(row.family_created_at),
+    )
+
+
+async def get_current_session(
+    request: Request,
+    cred: HTTPAuthorizationCredentials = Depends(security),
+    db: AsyncSession = Depends(get_db),
+) -> CurrentSession:
+    """承認・拒否・機械の一覧・機械の取り消しが使う依存。get_current_user の後に resolve_current_session を呼ぶ。"""
+    user = await get_current_user(request, cred, db)
+    return await resolve_current_session(request, db, user)

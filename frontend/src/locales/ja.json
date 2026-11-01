@@ -300,6 +300,7 @@
     "conditionsMaster": "状態マスタ",
     "productCategories": "商品カテゴリ",
     "superAdminSupplierExtractionRules": "抽出ルール設定",
+    "superAdminLoginRequests": "ログインの許可待ち",
     "units": "単位マスタ",
     "noteMaster": "備考マスタ",
     "buybackPrices": "買取相場"
@@ -684,7 +685,38 @@
     "passkeyPromptTitle": "顔や指紋でログインできるようにしますか",
     "passkeyPromptBody": "次からはパスワードを入れずに、顔や指紋だけですぐにログインできます。",
     "passkeyPromptRegister": "登録する",
-    "passkeyPromptSkip": "今はスキップ"
+    "passkeyPromptSkip": "今はスキップ",
+    "deviceApproval": {
+      "title": "いつもの機械で許可してください",
+      "body": "この機械は初めてのログインです。いつもの機械に出る小窓で、下の番号を選んでください。",
+      "numberLabel": "確認の番号",
+      "remaining": "残り {{time}}",
+      "rateLimited": "少し待ってから続けます。",
+      "rejected": "ログインは許可されませんでした。心当たりがなければ、パスワードを変えてください。",
+      "expired": "許可の期限が切れました。もう一度ログインしてください。",
+      "useRecoveryCode": "予備の合言葉で入る",
+      "noTrustedDevice": "いつもの機械も予備の合言葉も無いときは、管理者に連絡して本人確認を受けてください。",
+      "help": "許可されると、この画面は自動で進みます。",
+      "cancel": "ログイン画面に戻る",
+      "recoveryTitle": "予備の合言葉で入る",
+      "recoveryHelp": "前に作った予備の合言葉を1つ入れてください。使った合言葉は使えなくなります。",
+      "recoveryLabel": "予備の合言葉",
+      "recoverySubmit": "入る",
+      "recoveryWrong": "合言葉が違うか、すでに使われています。",
+      "watcher": {
+        "title": "新しい機械からのログイン依頼",
+        "body": "あなたのアカウントに、知らない機械からログインしようとしています。",
+        "device": "機械",
+        "location": "場所の目安",
+        "time": "時刻",
+        "unknown": "不明",
+        "pickNumber": "ログインしようとしている機械に出ている番号を選んでください。",
+        "notMe": "私ではない",
+        "rejectedTitle": "ログインを拒否しました",
+        "rejectedBody": "心当たりがない場合は、念のためパスワードを変えてください。",
+        "changePassword": "パスワードを変える"
+      }
+    }
   },
   "authError": {
     "invalidCredentials": "メールアドレスまたはパスワードが正しくありません。",
@@ -2518,6 +2550,25 @@
     }
   },
   "superAdmin": {
+    "loginRequests": {
+      "subtitle": "いつもの機械も予備の合言葉も無い人のログイン依頼です。本人確認のうえ許可してください。",
+      "colUser": "名前",
+      "colEmail": "メールアドレス",
+      "colDevice": "機械",
+      "colLocation": "場所の目安",
+      "colRequested": "依頼した日時",
+      "colExpires": "期限",
+      "unknown": "不明",
+      "approve": "許可する",
+      "approveTitle": "ログインを許可しますか",
+      "approveMessage": "本人であることを確かめてから許可してください。",
+      "noteLabel": "本人確認の方法",
+      "noteHelp": "200字まで。電話で確認した、など。",
+      "approved": "許可しました。",
+      "approveError": "許可できませんでした。",
+      "loadError": "一覧を読み込めませんでした。",
+      "empty": "許可待ちの依頼はありません。"
+    },
     "title": "マスタ管理（Jarvis 運用 admin 専用）",
     "subtitle": "マーケットプレイス中央マスタの編集（全テナント共有）",
     "accessDenied": "このページには Jarvis 運用 admin（中央 admin）のみアクセスできます。",
@@ -3271,7 +3322,37 @@
     "avatarErrorSave": "画像を保存できませんでした。",
     "avatarErrorSaveAction": "もう一度試す",
     "englishNameHelp": "Discordで返信するときの表示名に使います。名（英語）は返信者として顧客に表示されます。",
-    "englishNameRequired": "英語の名前（姓・名）を入力してください。Discordで返信するときに必要です。"
+    "englishNameRequired": "英語の名前（姓・名）を入力してください。Discordで返信するときに必要です。",
+    "devices": {
+      "title": "ログインしている機械",
+      "description": "あなたのアカウントにログインしている機械の一覧です。心当たりのない機械はログアウトさせてください。",
+      "colLabel": "機械",
+      "colLocation": "場所の目安",
+      "colLastUsed": "最後に使った日時",
+      "current": "この機械",
+      "unknown": "不明",
+      "remove": "ログアウト",
+      "removeTitle": "この機械をログアウトしますか",
+      "removeMessage": "この機械は、次に使うときにもう一度許可が必要になります。",
+      "empty": "機械はありません。",
+      "geoipCredit": "場所の目安は IP Geolocation by DB-IP による推定です。"
+    },
+    "recoveryCodes": {
+      "title": "予備の合言葉",
+      "description": "いつもの機械が手元に無いときに、新しい機械でログインするための合言葉です。",
+      "remaining": "残り {{count}} 個",
+      "regenerate": "作り直す",
+      "regenerateTitle": "予備の合言葉を作り直しますか",
+      "regenerateMessage": "今ある未使用の合言葉は使えなくなります。新しい10個は作ったときに1回だけ表示されます。",
+      "shownTitle": "予備の合言葉",
+      "shownBody": "この10個は今しか表示されません。安全な場所に控えてください。",
+      "copy": "コピー",
+      "copied": "コピーしました",
+      "promptTitle": "予備の合言葉を作りませんか",
+      "promptBody": "いつもの機械が使えなくなったときに備えて、予備の合言葉を作っておくことをおすすめします。",
+      "promptCreate": "作る",
+      "promptLater": "あとで"
+    }
   },
   "badges": {
     "userFallback": "ユーザー #{{id}}",

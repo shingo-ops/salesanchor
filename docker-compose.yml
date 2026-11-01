@@ -145,7 +145,15 @@ services:
       # ADR-1052 段2: 相談係の件の口の鍵 2 つ（空なら口は全部 401。値は deploy.yml が VPS の .env に書く）
       - CASE_AGENT_TOKEN=${CASE_AGENT_TOKEN:-}
       - CASE_ADMIN_TOKEN=${CASE_ADMIN_TOKEN:-}
+      # ADR-1055 段A: 知らない機械からのログインの許可。off（既定）は今のログインと同じ。enforce は段B で deploy.yml が入れる。
+      # 締切 AUTH_DEVICE_BOOTSTRAP_CUTOFF が空なら、ログイン中だった機械の自動登録（D4）をしない。
+      - AUTH_DEVICE_APPROVAL=${AUTH_DEVICE_APPROVAL:-off}
+      - AUTH_DEVICE_BOOTSTRAP_CUTOFF=${AUTH_DEVICE_BOOTSTRAP_CUTOFF:-}
+      # 場所の目安の元データ（DB-IP City Lite）。.env で空にすると場所の表示が止まる（空以外の値は入れない）
+      - GEOIP_DB_PATH=${GEOIP_DB_PATH-/geoip/dbip-city-lite.mmdb}
     volumes:
+      # 場所の元データは celery-worker が書き、backend は読むだけ（ADR-1055 D9）
+      - geoip:/geoip:ro
       - ./firebase-credentials.json:/app/firebase-credentials.json:ro
       - ${TCG_SHEETS_SA_KEY_FILE:-/dev/null}:${TCG_SHEETS_SA_KEY_FILE:-/dev/null}:ro
       - attachments_data:/data/attachments
@@ -277,6 +285,8 @@ services:
     volumes:
       - ./firebase-credentials.json:/app/firebase-credentials.json:ro
       - ${TCG_SHEETS_SA_KEY_FILE:-/dev/null}:${TCG_SHEETS_SA_KEY_FILE:-/dev/null}:ro
+      # 場所の元データ（DB-IP）を月次で書く。worker は GEOIP_DB_PATH を受け取らず、コードの既定 /geoip/... に書く（ADR-1055 D9）
+      - geoip:/geoip
     depends_on:
       postgres:
         condition: service_healthy
@@ -563,6 +573,7 @@ volumes:
   postgres_data:
   redis_data:
   attachments_data:
+  geoip:
 
 networks:
   frontnet:

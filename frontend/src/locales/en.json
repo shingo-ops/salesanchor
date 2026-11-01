@@ -300,6 +300,7 @@
     "conditionsMaster": "Condition Master",
     "productCategories": "Product Categories",
     "superAdminSupplierExtractionRules": "Extraction Rules",
+    "superAdminLoginRequests": "Login Approvals",
     "units": "Units",
     "noteMaster": "Note Master",
     "buybackPrices": "Buyback Prices"
@@ -684,7 +685,38 @@
     "passkeyPromptTitle": "Sign in with your face or fingerprint?",
     "passkeyPromptBody": "Next time, sign in instantly with your face or fingerprint instead of your password.",
     "passkeyPromptRegister": "Set up",
-    "passkeyPromptSkip": "Skip for now"
+    "passkeyPromptSkip": "Skip for now",
+    "deviceApproval": {
+      "title": "Approve from your usual device",
+      "body": "This is a new device. On your usual device, pick the number shown below in the pop-up.",
+      "numberLabel": "Confirmation number",
+      "remaining": "{{time}} left",
+      "rateLimited": "Waiting a little before continuing.",
+      "rejected": "The sign-in was not approved. If you do not recognize it, change your password.",
+      "expired": "The approval expired. Please sign in again.",
+      "useRecoveryCode": "Sign in with a recovery code",
+      "noTrustedDevice": "If you have neither a usual device nor a recovery code, contact an administrator to verify your identity.",
+      "help": "This screen continues automatically once approved.",
+      "cancel": "Back to sign in",
+      "recoveryTitle": "Sign in with a recovery code",
+      "recoveryHelp": "Enter one of the recovery codes you created earlier. A used code cannot be used again.",
+      "recoveryLabel": "Recovery code",
+      "recoverySubmit": "Sign in",
+      "recoveryWrong": "The code is wrong or already used.",
+      "watcher": {
+        "title": "Sign-in request from a new device",
+        "body": "Someone is trying to sign in to your account from an unknown device.",
+        "device": "Device",
+        "location": "Approximate location",
+        "time": "Time",
+        "unknown": "Unknown",
+        "pickNumber": "Pick the number shown on the device that is trying to sign in.",
+        "notMe": "This is not me",
+        "rejectedTitle": "Sign-in rejected",
+        "rejectedBody": "If you do not recognize it, change your password to be safe.",
+        "changePassword": "Change password"
+      }
+    }
   },
   "authError": {
     "invalidCredentials": "The email address or password is incorrect.",
@@ -2518,6 +2550,25 @@
     }
   },
   "superAdmin": {
+    "loginRequests": {
+      "subtitle": "Sign-in requests from people with neither a usual device nor a recovery code. Verify identity before approving.",
+      "colUser": "Name",
+      "colEmail": "Email",
+      "colDevice": "Device",
+      "colLocation": "Approximate location",
+      "colRequested": "Requested",
+      "colExpires": "Expires",
+      "unknown": "Unknown",
+      "approve": "Approve",
+      "approveTitle": "Approve this sign-in?",
+      "approveMessage": "Approve only after confirming the person's identity.",
+      "noteLabel": "How identity was verified",
+      "noteHelp": "Up to 200 characters, e.g. confirmed by phone.",
+      "approved": "Approved.",
+      "approveError": "Could not approve.",
+      "loadError": "Could not load the list.",
+      "empty": "No pending requests."
+    },
     "title": "Master Data (Central Admin Only)",
     "subtitle": "Edit marketplace central masters (shared across all tenants)",
     "accessDenied": "Only Jarvis operations admins (central admins) can access this page.",
@@ -3271,7 +3322,37 @@
     "avatarErrorSave": "We could not save the image.",
     "avatarErrorSaveAction": "Try again",
     "englishNameHelp": "Used as your display name when you reply on Discord. Your first name (English) is shown to customers.",
-    "englishNameRequired": "Please enter your English name (last and first). It is required to reply on Discord."
+    "englishNameRequired": "Please enter your English name (last and first). It is required to reply on Discord.",
+    "devices": {
+      "title": "Signed-in devices",
+      "description": "Devices signed in to your account. Sign out any device you do not recognize.",
+      "colLabel": "Device",
+      "colLocation": "Approximate location",
+      "colLastUsed": "Last used",
+      "current": "This device",
+      "unknown": "Unknown",
+      "remove": "Sign out",
+      "removeTitle": "Sign out this device?",
+      "removeMessage": "This device will need approval again the next time it is used.",
+      "empty": "No devices.",
+      "geoipCredit": "Locations are estimated by IP Geolocation by DB-IP."
+    },
+    "recoveryCodes": {
+      "title": "Recovery codes",
+      "description": "Codes for signing in on a new device when your usual device is not at hand.",
+      "remaining": "{{count}} left",
+      "regenerate": "Create new codes",
+      "regenerateTitle": "Create new recovery codes?",
+      "regenerateMessage": "Your unused codes will stop working. The new 10 codes are shown only once, when created.",
+      "shownTitle": "Recovery codes",
+      "shownBody": "These 10 codes are shown only now. Keep them somewhere safe.",
+      "copy": "Copy",
+      "copied": "Copied",
+      "promptTitle": "Create recovery codes?",
+      "promptBody": "We recommend creating recovery codes in case your usual device becomes unavailable.",
+      "promptCreate": "Create",
+      "promptLater": "Later"
+    }
   },
   "badges": {
     "userFallback": "User #{{id}}",

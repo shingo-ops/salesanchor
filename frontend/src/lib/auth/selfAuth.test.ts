@@ -42,7 +42,8 @@ describe("selfAuth", () => {
     const listener = vi.fn();
     subscribeSession(listener);
 
-    await selfLogin("a@example.com", "pw");
+    const result = await selfLogin("a@example.com", "pw");
+    expect(result).toEqual({ kind: "ok" });
 
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe("/api/v1/auth/login");
@@ -52,6 +53,34 @@ describe("selfAuth", () => {
     expect(currentAccessToken()).toBe("tok-1");
     expect(hasSession()).toBe(true);
     expect(listener).toHaveBeenCalled();
+  });
+
+  it("login 202 returns approval_required and adopts no token", async () => {
+    fetchMock.mockImplementation(() =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({
+            status: "device_approval_required",
+            match_number: "42",
+            expires_in: 600,
+            has_trusted_device: true,
+            has_recovery_codes: false,
+          }),
+          { status: 202 },
+        ),
+      ),
+    );
+
+    const result = await selfLogin("a@example.com", "pw");
+
+    expect(result).toEqual({
+      kind: "approval_required",
+      matchNumber: "42",
+      expiresIn: 600,
+      hasTrustedDevice: true,
+      hasRecoveryCodes: false,
+    });
+    expect(currentAccessToken()).toBeNull();
   });
 
   it("login 401 throws SelfAuthError (status and identifier detail)", async () => {
@@ -156,7 +185,12 @@ describe("selfAuth", () => {
   });
 
   it("readClaims reads sub and email; a broken token is null", () => {
-    expect(readClaims(jwt({ sub: "42", email: "a@example.com" }))).toEqual({ sub: "42", email: "a@example.com" });
+    expect(readClaims(jwt({ sub: "42", email: "a@example.com" }))).toEqual({ sub: "42", email: "a@example.com", sid: null });
+    expect(readClaims(jwt({ sub: "42", email: "a@example.com", sid: "fam-1" }))).toEqual({
+      sub: "42",
+      email: "a@example.com",
+      sid: "fam-1",
+    });
     expect(readClaims(jwt({ sub: "42" }))).toBeNull();
     expect(readClaims("not-a-token")).toBeNull();
   });
