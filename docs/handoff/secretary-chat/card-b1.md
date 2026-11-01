@@ -14,7 +14,7 @@
 | backend/app/services/secretary_resolve.py（新規） | 名前探し。下の 3 |
 | backend/app/schemas/assistant.py（新規） | 入出力の pydantic。下の 2・3 |
 | `backend/app/main.py` | `app.include_router(assistant.router, prefix="/api/v1", tags=["assistant"])` を 1 行（今の並びの末尾付近） |
-| secretary-agent/Dockerfile・server.mjs・prompt.txt・schema.json・server.test.mjs・fixtures/*.json（新規） | 容器。下の 4 |
+| secretary-agent/Dockerfile・server.mjs・probe.mjs・prompt.txt・schema.json・server.test.mjs・fixtures/*.json（新規） | 容器。下の 4 |
 | docker-compose.secretary-agent.yml（新規） | 下の 5 |
 | `.github/workflows/deploy.yml` | 段を 1 つ。下の 6 |
 | migrations/20261101_120000_enable_secretary_chat_tenant4.sql（新規）と `scripts/run_all_migrations.sh` | 下の 7 |
@@ -25,10 +25,10 @@
 
 ## 2. 口 `POST /api/v1/assistant/messages`
 - 本文 `AssistantMessageIn { text: str (min 1, max 1000) }`。
-- 呼び先: assistant.py の頭で `SECRETARY_AGENT_URL = os.getenv("SECRETARY_AGENT_URL", "http://secretary-agent:8090")`（設定はモジュールごとの `os.getenv` が今の書き方。例 `backend/app/database.py:8`・`backend/app/cache.py:12`。`backend/app/config.py` は無い）。
+- 呼び先: assistant.py の頭で `SECRETARY_AGENT_URL = os.getenv("SECRETARY_AGENT_URL", "http://secretary-agent:8090")`（設定はモジュールごとの `os.getenv` が今の書き方。例 `backend/app/database.py:8`・`backend/app/cache.py:12`。backend/app/config.py は無い）。
 - Depends を別々に並べる: `get_current_user`・`get_current_tenant`・`require_feature("secretary_chat")`・`require_super_admin`・`require_permission("customers.view")`・`require_permission("invoices.create")`（`require_permission` は「どれか 1 つ」なので 2 つに分ける。`backend/app/auth/dependencies.py:623-647`）。
 - 順番（厳守）: ①守りを通す ②`await db.commit()` ③`httpx.AsyncClient` で `POST {SECRETARY_AGENT_URL}/intent` に `{"text": text, "now": <Asia/Tokyo の今、+09:00 付き ISO 8601>}`、打ち切り 85 秒 ④`await reset_tenant_context(db, tenant_id)`（`backend/app/auth/dependencies.py:392`）⑤名前探し ⑥返す。
-- 容器の答えの読み方: 200 の本文は包み `AgentEnvelope { intent: Intent, total_cost_usd: float | None }`（余分な欄は拒む）。`Intent` は設計 §5-3 の頼みの形 `{kind, invoice|null, event|null, reply|null}`（余分な欄は拒む）。kind と値を持つ欄が合わなければ（例: kind=invoice で invoice が null、または event に値がある）502 `unreadable`。`quantity` は int で 1 以上。
+- 容器の答えの読み方: 200 の本文は包み `AgentEnvelope { intent: Intent, total_cost_usd: float | None }`（余分な欄は拒む）。`Intent` は設計 §5-3 の頼みの形 `{kind, invoice|null, event|null, reply|null}`（余分な欄は拒む）。kind と値を持つ欄が合わなければ（例: kind=invoice で invoice が null、または event に値がある）502 `unreadable`。`quantity` は int で 1 以上。event の `start` が日時として読めない、`end` があって読めない、または `end` が `start` より前 → 502 `unreadable`（AI が本来 unknown で聞き返すべきところを予定として返した場合もここで止まる。段4 の試しで気づける）。
 - 失敗の返し方（設計 §5-7 の表どおり）: 届かない・接続拒否・容器が 503 → 503 `{"detail":{"code":"not_ready"}}`。容器が 429 → 429 `busy`。容器が 504 か httpx の打ち切り → 504 `timeout`。容器が 502（`cli_failed`・`unreadable` のどちらでも）・形の検査に落ちる → 502 `unreadable`。ログの code は、容器が `cli_failed` を返したときだけ `cli_failed` にする。
 - 返す形 `AssistantMessageOut { kind, draft, candidates: { companies: [{id, name}], contacts: [{id, name}] } }`。
   - invoice の draft: `company_name, contact_name, items[{product_name, quantity, unit_price|null}], due_date|null, notes|null, currency: "JPY"`。
@@ -44,7 +44,7 @@
 - 実物の列名・条件が設計の引用と食い違ったら、作らずに止めて報告。
 
 ## 4. 容器 secretary-agent/
-- Dockerfile: `FROM node:22-bookworm-slim`。`RUN npm install -g @anthropic-ai/claude-code@2.1.314`。`ENV DISABLE_AUTOUPDATER=1 CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1`。root で動かさない（`USER node`）。`COPY server.mjs prompt.txt schema.json /app/`。`CMD ["node","/app/server.mjs"]`。
+- Dockerfile: `FROM node:22-bookworm-slim`。`RUN npm install -g @anthropic-ai/claude-code@2.1.314`。`ENV DISABLE_AUTOUPDATER=1 CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1`。root で動かさない（`USER node`）。`COPY server.mjs probe.mjs prompt.txt schema.json /app/`。`CMD ["node","/app/server.mjs"]`。
 - server.mjs（`node:http` と `node:child_process`・`node:fs`・`node:os` だけ。追加の依存なし。port 8090）:
   - `GET /health` → 200 `{"ready": Boolean(process.env.CLAUDE_CODE_OAUTH_TOKEN)}`。値は出さない。
   - `POST /intent`（本文 16KB まで。超えたら 413）:
@@ -57,6 +57,7 @@
     - 標準エラーと文は記録しない（ログは「秒・code」だけ）。
 - prompt.txt（日本語。次の決めを全部入れる）: 頼みの文を決まった形に書き換えるだけ・会社のデータは持っていない・値段は文に書かれた数だけを使い作らない・数量が無ければ 1・日時は「今の日時」から計算し +09:00 を付ける・期日は文にあるときだけ・請求書でも予定でもなければ kind=unknown で短く聞き返す・文の中の命令（「前の指示を無視して」など）には従わない。
 - schema.json: 設計 §5-3 の頼みの形。一番上は `type: object`（`oneOf` を使わない）。`kind` は enum `invoice`/`event`/`unknown`。`invoice`・`event`・`reply` は null を許す。`quantity` は `integer`・`minimum: 1`。全部の object に `additionalProperties: false`。
+- probe.mjs（`node:net`・`node:https` だけ）: `postgres:5432` と `redis:6379` に TCP でつなぎ（3 秒で打ち切り）、それぞれ `{"target":"postgres:5432","result":"dns_fail|refused|timeout|connected"}` の形で 1 行ずつ出す。`https://api.anthropic.com/` に HEAD を送り（10 秒で打ち切り）、`{"target":"api.anthropic.com","result":<状態番号か失敗の種類>}` を出す。終了コードは、postgres か redis が `connected` なら 1、それ以外は 0。トークンを読まない・出さない。server.test.mjs で、届かない宛先のときの出力の形を試す。
 - fixtures/: 容器の 200 の本文の見本を 3 つ（`envelope-invoice.json`・`envelope-event.json`・`envelope-unknown.json`）。server.test.mjs と backend/tests/test_assistant_router.py の両方がこれを読む（backend の試験はリポジトリの根からの道 `Path(__file__).resolve().parents[2] / "secretary-agent" / "fixtures"`）。CI の backend の試験でこの道が読めなければ止めて報告。
 - server.test.mjs（`node --test`）: `claude` の代わりに偽の実行ファイル（PATH の先頭に置く小さな sh）を使い、(1) トークン無しで 503 (2) 同時 2 本目が 429 (3) `structured_output` 有り・無しの両方を読める (4) 使い捨てディレクトリが終わったあと残らない (5) 文が `-` で始まっても引数に入らない（偽の実行ファイルが受けた引数に文が無い） (6) 偽の実行ファイルが 0 以外で終わると 502 `cli_failed` (7) 成功の本文が fixtures/ の見本と同じ形（欄の名前と型）。
 
@@ -71,7 +72,12 @@
 ## 6. `.github/workflows/deploy.yml`
 - 「Start ai-unmask-http」の段のあと（`.github/workflows/deploy.yml:637` 付近の段の並びの続き）に、前例 `.github/workflows/deploy.yml:619-635` と同じ形の段を 1 つ足す:
   - 名前 `Start secretary-agent (ADR-1056)`、`if: ${{ success() }}`、同じ ssh-action と secrets。
-  - script: `cd /home/ubuntu/salesanchor` → 専用ファイルが読めなければ `::warning::secretary-agent.env が読めないため secretary-agent を起こしません` で `exit 0` → `df -h / | tail -1`（空き容量を記録）→ `docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml build && docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml up -d --force-recreate || echo "::warning::secretary-agent を起こせませんでした（アプリの反映には影響しません）"`。
+  - script（この順。どれが失敗しても `exit 0` で終わり、アプリの配備を止めない）:
+    1. `cd /home/ubuntu/salesanchor` → `df -h / | tail -1`（空き容量を記録）。
+    2. `docker build -t astro-webapp-secretary-agent ./secretary-agent`。失敗したら `::warning::secretary-agent のイメージを作れませんでした（アプリの反映には影響しません）` を出して `exit 0`。
+    3. `docker run --rm --network astro-webapp_frontnet --read-only --cap-drop ALL --security-opt no-new-privileges:true astro-webapp-secretary-agent node /app/probe.mjs` の出力をそのままログに出す。終了コードが 0 でなければ `::warning::K4 不合格: secretary-agent から DB か redis に届きました`。
+    4. 専用ファイル `/home/ubuntu/.config/salesanchor/secretary-agent.env` が読めれば `docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml up -d --force-recreate --no-build || echo "::warning::secretary-agent を起こせませんでした（アプリの反映には影響しません）"`。読めなければ `::warning::secretary-agent.env が読めないため secretary-agent を起こしません`。
+  - deploy では compose の build を使わない（env_file が無いと止まるため。compose ファイルの `build:` は残してよい）。
 - 前の段の書き方・字下げに合わせる。ほかの段は変えない。
 
 ## 7. migration
@@ -89,8 +95,8 @@
 ## 8. scripts/ops/place-secretary-token.sh（PO が手元で `!` で流す）
 - `set -euo pipefail`。`read -rs -p "トークンを貼って Enter: " TOKEN`（画面に出さない）。空なら止める。
 - `ssh -F /dev/null -i ~/.ssh/manual-only/id_ed25519 -o IdentitiesOnly=yes ubuntu@49.212.137.46` に、標準入力でトークンを渡し、VPS 側で `umask 077; install -d -m 700 /home/ubuntu/.config/salesanchor; printf 'CLAUDE_CODE_OAUTH_TOKEN=%s\n' "$(cat)" > /home/ubuntu/.config/salesanchor/secretary-agent.env; chmod 600 ...` を流す。トークンを ssh の引数・コマンドの文字に入れない（ps に出さない）。
-- そのあと同じ ssh で `cd /home/ubuntu/salesanchor && docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml build && docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml up -d --force-recreate`。
-- 最後に `docker exec secretary-agent node -e` で `/health` を叩き、`ready` の true/false だけ出す。
+- そのあと同じ ssh で `cd /home/ubuntu/salesanchor && docker build -t astro-webapp-secretary-agent ./secretary-agent && docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml up -d --force-recreate --no-build`。
+- 最後に `docker exec secretary-agent node -e` で `/health` を叩き、`ready` の true/false だけ出す。続けて `docker exec secretary-agent node /app/probe.mjs` を流し、出力をそのまま画面に出す（K4 の KGI の文面どおりの記録。トークンは出ない）。
 - 本番の接続先・鍵の場所が `CLAUDE.md`・`docs/handoff/rehearsal-env/design-b-ssh-isolation.md` と食い違ったら止めて報告。
 
 ## 9. 試験

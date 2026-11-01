@@ -16,7 +16,7 @@
 - props に `aboveTabbar?: boolean` を足す。true のとき（スマホの殻で呼ぶ側が渡す）は、下のタブの帯に重ならないよう、下の余白を `calc(var(--tabbar-height) + env(safe-area-inset-bottom, 0px) + var(--space-4))` にする（modifier class で切り替える）。`--tabbar-height` は `frontend/src/tokens.css:183` で決まっている（設計担当が確かめた）。
 - 色は既存の色トークン（主ボタンの色と同じもの。`frontend/src/components/Button.css` の primary が使う変数）を使う。ダークでも同じ変数で切り替わること（ADR-067）。
   - 設計担当の決め: 「primary は 1 画面に 1 個」（`frontend/src/components/Button.tsx:13`）は、金型 `Button` の `variant="primary"` を本文の主操作に使うときの決まり。この印は `Button` の variant ではなく、全画面に浮かぶ別の金型なので数に入れない。`Button` の variant は使わず、色の変数だけを借りる。
-- 中身は自前の `<button type="button">` にする。金型 `Button` の丸い形（`shape="pill"`）はログイン画面だけに決められている（`Button.tsx` の props のコメント・buttonShapeUsage.test.ts）ため使えない。この理由を .tsx の頭のコメントに書く。
+- 中身は自前の `<button type="button">` にする。金型 `Button` の丸い形（`shape="pill"`）はログイン画面だけに決められている（`Button.tsx` の props のコメント・buttonShapeUsage.test.ts）ため使えない。この理由を .tsx の頭のコメントに書く。ただしコメントに、shape= に続けて pill を引用符で囲んだ字をそのまま書かない（`frontend/src/components/buttonShapeUsage.test.ts:21-24` は全文を探すので試験が赤になる。「Button の丸い形はログイン画面だけ」のように書く）。
 - `<button type="button">`。キーボードで押せる。フォーカスの輪は既存の金型と同じ変数。
 
 ### 2-2. ChatBubble（チャットの吹き出し）
@@ -30,7 +30,7 @@
 
 ## 3. 守ること
 - CSS は `var()` だけ。色・px の直書き禁止（ui-governance-gate・ADR-067）。
-- 画面の言葉を金型の中に書かない（言葉は props で受ける。ADR-027）。stories の中の見本の言葉は、既存の stories と同じ書き方に合わせる。
+- 画面の言葉を金型の中に書かない（言葉は props で受ける。ADR-027）。stories の中の見本の言葉は、既存の stories と同じく `args` のオブジェクトに書く。JSX の属性や子に英語を直書きしない（`scripts/check-ui-governance.js` の英語の直書きの検査は `.stories.tsx` も見る。同 `:123-127`）。前例の書き方は `frontend/src/components/` の既存の `.stories.tsx` を実物で確かめて合わせる。
 - 既存の金型・トークンを書き換えない（足すのは `--z-fab` だけ）。
 
 ## 4. 想定分岐（迷ったら止まる）
@@ -43,7 +43,7 @@
 | 金型の作法 | 2 部品とも .tsx・.css・.stories.tsx がある |
 | 試験 | `cd frontend && npx vitest run src/components/FloatingActionButton.test.tsx src/components/ChatBubble.test.tsx` が通る（label が aria-label に入る・badge 0 で出ない・aboveTabbar で class が変わる・side で class が変わる） |
 | 型 | `cd frontend && npx tsc --noEmit` が通る |
-| 金型外の検査 | `node scripts/check-ui-governance.js` が通る |
+| 金型外の検査 | `BASE_SHA=$(git merge-base origin/main HEAD) HEAD_SHA=HEAD node scripts/check-ui-governance.js` が通る（環境変数が無いと必ず失敗する。`scripts/check-ui-governance.js:776-781`） |
 | ダークの対 | `cd frontend && npm run check:dark-parity`（色トークンを足していないので差分なし） |
 | lint | `cd frontend && npx eslint src/components/FloatingActionButton.tsx src/components/ChatBubble.tsx` |
 

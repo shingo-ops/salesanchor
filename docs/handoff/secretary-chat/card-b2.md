@@ -28,7 +28,7 @@ frontend/src/features/ が今の作法に無い置き場なら、今ある機能
 - 会話: `useState` の配列だけ（保存しない。閉じたら消す）。吹き出しは金型 `ChatBubble`。
 - 入力: 金型 `Textarea`（`frontend/src/components/Textarea.tsx`）と金型 `Button`。1000 字まで。送信中は入力と送信を止め、AI 側の吹き出しに `status="sending"`。
 - 呼び出し: `api.postWithTimeout("/assistant/messages", {text}, 100_000)`。
-- 失敗: `ApiError` の `detail.code` で `secretary.error.notReady`・`busy`・`timeout`・`unreadable` を出す。画面の 100 秒の打ち切り（`request` が投げる `AbortError`、`frontend/src/lib/api.ts:152-153`）も `secretary.error.timeout`。それ以外と通信の失敗は `secretary.error.generic`。403 は印を消す。
+- 失敗: `ApiError` の `responseDetail.code`（欄の名前は `responseDetail`。`frontend/src/lib/api.ts:16`） で `secretary.error.notReady`・`busy`・`timeout`・`unreadable` を出す。画面の 100 秒の打ち切り（`request` が投げる `AbortError`、`frontend/src/lib/api.ts:152-153`）も `secretary.error.timeout`。それ以外と通信の失敗は `secretary.error.generic`。403 は印を消す。
 - AI の文字（`unknown.reply` を含む）は React の文字としてだけ出す（`dangerouslySetInnerHTML`・Markdown の描画を使わない）。
 
 ## 3. 下書き（送る欄は全部見せて、全部直せる）
@@ -40,8 +40,8 @@ frontend/src/features/ が今の作法に無い置き場なら、今ある機能
   - 「作る」: 今の請求書の作成画面と同じ `api.post<{ id: number }>("/invoices", {...})`（`frontend/src/pages/invoice-create/InvoiceCreatePage.tsx:195`）。送るのは company_id・contact_id・currency・due_date・notes・items だけ。
 - 予定（SecretaryDraftEvent）:
   - 題名・始まり・終わり・終日・場所・説明・見える範囲（`personal` が初期。`shared` を選ぶと、その下に `t("secretary.event.sharedNote")`（「会社の全員に見えます」。Google については書かない。Google への同期は見える範囲に関係なく会社の設定で決まるため、`backend/app/services/calendar_service.py:199-205`）を出す）。
-  - 日付と時刻: 今の予定の画面と同じく、`TextFieldControl` の `type="date"` と `type="time"` を分けて置く（`frontend/src/pages/schedule/SchedulePageImpl.tsx:325-365`）。終日なら時刻を出さない。送る値は今の画面と同じ `combineDateTime`（`frontend/src/pages/schedule/schedule-utils.ts:95`）で作り、終日は 00:00〜23:59（`SchedulePageImpl.tsx:1020-1021`）。
-  - 「作る」: 今の予定の画面と同じ `api.post("/calendar/events", body)`（`frontend/src/pages/schedule/SchedulePageImpl.tsx:1032`）。body は title・start_datetime・end_datetime・is_all_day・calendar_type・description・location。今の画面が送る `category`（`SchedulePageImpl.tsx:1024`）は、口で必須でなければ送らない。必須なら止めて報告。
+  - 日付と時刻: 今の予定の画面と同じく、`TextFieldControl` の `type="date"` と `type="time"` を分けて置く（`frontend/src/pages/schedule/SchedulePageImpl.tsx:325-365`）。終日なら時刻を出さない。送る値は今の画面と同じ `combineDateTime`（`frontend/src/pages/schedule/schedule-utils.ts:95`）で作り、終日は 00:00〜23:59（`SchedulePageImpl.tsx:1020-1021`）。下書きの `start`・`end`（+09:00 付き）を欄に入れるときは、今ある `formatDateInput`（`frontend/src/pages/schedule/schedule-utils.ts:99`）と `formatTimeInput`（同 `:115`）を `new Date(start)` に使う（今の画面と同じく、ブラウザの時間帯で動く）。
+  - 「作る」: 今の予定の画面と同じ `api.post("/calendar/events", body)`（`frontend/src/pages/schedule/SchedulePageImpl.tsx:1032`）。body は title・start_datetime・end_datetime・is_all_day・calendar_type・description・location。`category` は送らない（`CreateEventBody` に無い欄。`backend/app/routers/calendar.py:102-109`）。
 - 作れたら、AI 側の吹き出しに `t("secretary.created.invoice")` か `t("secretary.created.event")` と、その請求書・予定の画面へのリンク（今のルートを実物で確かめる）。失敗したら今の口の detail をそのまま出す。
 - 入力欄はすべて今の金型（`frontend/src/components/TextField.tsx` の TextField・TextFieldControl、Select、Textarea）。Input・DatePicker という金型は無い。生の input・select は使わない（ADR-144）。
 
@@ -65,7 +65,7 @@ frontend/src/features/ が今の作法に無い置き場なら、今ある機能
 |---|---|
 | 試験 | `cd frontend && npx vitest run src/features/secretary src/lib` が通る |
 | 型 | `cd frontend && npx tsc --noEmit` |
-| 金型外の検査 | `node scripts/check-ui-governance.js` |
+| 金型外の検査 | `BASE_SHA=$(git merge-base origin/main HEAD) HEAD_SHA=HEAD node scripts/check-ui-governance.js`（環境変数が無いと必ず失敗する。`scripts/check-ui-governance.js:776-781`） |
 | 言葉 | ja/en のキーが同じ（今の i18n の検査があればそれ）。`frontend/CLAUDE.md` の grep のセルフチェックで直書きの日本語 0 件 |
 | ダーク | `cd frontend && npm run check:dark-parity` |
 | lint | `cd frontend && npx eslint src/features/secretary src/App.tsx src/lib/api.ts` |
