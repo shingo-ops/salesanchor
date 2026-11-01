@@ -10,6 +10,7 @@ import SuppliersPage from '../pages/suppliers/SuppliersPage';
 import ConditionsPage from '../pages/conditions/ConditionsPage';
 import StatusMasterPage from '../pages/status-master/StatusMasterPage';
 import en from '../locales/en.json';
+import { queryClient } from '../lib/query/apiQuery';
 
 const mock = vi.hoisted(() => ({ get: vi.fn(), getBlob: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() }));
 vi.mock('../lib/api', () => ({ api: mock }));
@@ -37,7 +38,7 @@ beforeEach(async () => {
   });
   for (const method of ['post', 'patch', 'delete'] as const) mock[method].mockImplementation(() => { throw new Error('Unexpected write'); });
 });
-afterEach(() => { cleanup(); expect(fetch).not.toHaveBeenCalled(); expect(mock.post).not.toHaveBeenCalled(); expect(mock.patch).not.toHaveBeenCalled(); expect(mock.delete).not.toHaveBeenCalled(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+afterEach(() => { cleanup(); queryClient.clear(); expect(fetch).not.toHaveBeenCalled(); expect(mock.post).not.toHaveBeenCalled(); expect(mock.patch).not.toHaveBeenCalled(); expect(mock.delete).not.toHaveBeenCalled(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 describe('master search Button migration', () => {
   it.each(remoteCases)('$kind keeps exact trimmed encoded GET through $input and clear resets page one', async ({ kind, input }) => {
