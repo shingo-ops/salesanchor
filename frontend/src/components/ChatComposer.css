@@ -10,6 +10,8 @@
   gap: var(--space-2);
   padding: var(--send-top-row-padding);
 }
+/* 左の物の包み（PC は今と同じ並び。スマホは隠す） */
+.comp-chat-composer__leading { display: contents; }
 /* 入力ラップ（Meta実測: br=18px → --radius-pill=20px 吸収済み ±2px許容） */
 .send-input-wrap {
   flex: 1;
@@ -70,8 +72,35 @@
 }
 
 @media (max-width: 767px) {
+  .send-top-row {
+    gap: var(--space-2);
+    padding: var(--space-1) var(--space-10px) var(--space-1) var(--space-2);
+  }
+  /* WhatsApp はピルの左に何も置かない（左 8 はピルの端） */
+  .comp-chat-composer__leading { display: none; }
+  .send-input-wrap {
+    min-height: var(--comp-btn-height-lg);
+    padding: 0 0 0 var(--space-14px);
+    border-radius: var(--comp-chat-input-radius-mobile);
+    align-items: flex-end;
+    gap: 0;
+  }
+  .send-attach-btn {
+    width: var(--comp-btn-height-lg);
+    height: var(--comp-btn-height-lg);
+  }
   .inbox-send-btn {
-    width: var(--size-icon-btn-lg);
-    height: var(--size-icon-btn-lg);
+    width: var(--comp-btn-height-lg);
+    height: var(--comp-btn-height-lg);
+  }
+  /* 入力欄の金型の embedded（FormField.css:286・詳しさ 0,2,0）に勝つため 3 つ重ねる */
+  .send-input-wrap .comp-field__textarea.comp-textarea--embedded {
+    field-sizing: content;
+    max-height: var(--comp-chat-input-max-h-mobile);
+    overflow-y: auto;
+    margin-block: var(--comp-chat-input-inset-y-mobile);
+    padding-block: var(--space-6px);
+    font-size: var(--comp-chat-input-font-mobile);
+    line-height: var(--comp-chat-input-line-height-mobile);
   }
 }

@@ -6,6 +6,8 @@
  * failed    : 送れなかった吹き出し。thread は赤の地と枠、panel は文字だけ赤
  * pending   : 返事を待っている間の回る印を出す
  * wide      : 吹き出しを横いっぱいにする（下書きの票などを入れるとき）
+ * tail      : 続きの最初の吹き出し。スマホで尾を付ける（PC では何も変わらない）
+ * inlineTime: 時刻を本文の最後の行の右下に入れる（スマホのみ。PC は今まで通り下の行）
  * time      : 吹き出しの下端に出す時刻の行の中身。渡さなければ行を出さない
  * children  : 本文・画像・訳など吹き出しの中身
  * そのほかの div の属性（role・title・長押しの手当て）はそのまま外側の div に付ける。
@@ -26,6 +28,8 @@ export interface ChatBubbleProps extends Omit<HTMLAttributes<HTMLDivElement>, 'c
   failed?: boolean;
   pending?: boolean;
   wide?: boolean;
+  tail?: boolean;
+  inlineTime?: boolean;
   time?: ReactNode;
   children: ReactNode;
 }
@@ -36,6 +40,8 @@ export function ChatBubble({
   failed = false,
   pending = false,
   wide = false,
+  tail = false,
+  inlineTime = false,
   time,
   children,
   ...rest
@@ -49,12 +55,19 @@ export function ChatBubble({
     panel || !failed ? `comp-chat-bubble--${direction}` : 'comp-chat-bubble--failed',
     panel && failed ? 'comp-chat-bubble--error' : '',
     wide ? 'comp-chat-bubble--wide' : '',
+    tail && !panel && !failed ? 'comp-chat-bubble--tail' : '',
+    inlineTime && !panel && !failed && time !== undefined ? 'comp-chat-bubble--inline-time' : '',
   ]
     .filter(Boolean)
     .join(' ');
   return (
     <div {...rest} className={classes}>
       {panel ? <div className="comp-chat-bubble__body">{children}</div> : children}
+      {inlineTime && !panel && !failed && time !== undefined && (
+        <span className="comp-chat-bubble__time-spacer" aria-hidden="true">
+          {time}
+        </span>
+      )}
       {pending && <Spinner size="sm" tone="inherit" decorative />}
       {time !== undefined && (
         <div className={`comp-chat-bubble__time${outbound ? '' : ' comp-chat-bubble__time--inbound'}`}>{time}</div>

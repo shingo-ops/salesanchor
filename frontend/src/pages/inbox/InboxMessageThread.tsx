@@ -533,7 +533,11 @@ export function InboxMessageThread({
             {t("inbox.noMessages")}
           </div>
         )}
-        {messagesData?.messages.map((msg) => {
+        {messagesData?.messages.map((msg, i, list) => {
+          // 続きの最初と最後（向きが変わったところで切る）。スマホの尾と行の間に使う
+          const groupStart = i === 0 || list[i - 1].direction !== msg.direction;
+          const groupEnd = i === list.length - 1 || list[i + 1].direction !== msg.direction;
+          const textOnly = msg.attachment_type !== "image";
           const outbound = msg.direction === "outbound";
           const failed = !!msg.error_code;
           const translationState = msg.message_id ? translations[msg.message_id] : undefined;
@@ -552,12 +556,14 @@ export function InboxMessageThread({
             </span>
           );
           return (
-            <div key={msg.id} className={`inbox-msg-row${outbound ? " outbound" : " inbound"}`}>
+            <div key={msg.id} className={`inbox-msg-row${outbound ? " outbound" : " inbound"}${groupStart ? " group-start" : ""}${groupEnd ? " group-end" : ""}`}>
               <div className="msg-stack">
               <div className="msg-bubble-line" data-heart-revealed={revealedId === msg.id ? "true" : undefined}>
               {heartHover && outbound && heartButton}
               <ChatBubble
                 direction={outbound ? "outbound" : "inbound"}
+                tail={groupStart}
+                inlineTime={textOnly}
                 failed={failed}
                 role={failed ? "alert" : undefined}
                 {...(canReact ? bindLongPress(msg.id) : {})}
@@ -627,7 +633,7 @@ export function InboxMessageThread({
                     {t("inbox.imageSent")}
                   </span>
                 ) : (
-                  <div>{msg.message_text || t("inbox.noBody")}</div>
+                  <div className="msg-text">{msg.message_text || t("inbox.noBody")}</div>
                 )}
 
                 {/* Translation section */}

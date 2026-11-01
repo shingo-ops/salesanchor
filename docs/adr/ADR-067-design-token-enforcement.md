@@ -67,6 +67,24 @@ src/index.css      — カラートークン（:root ライト / :root.force-dar
 | `--col-width-medium`     | `200px` | 中幅カラム |
 | `--col-width-wide`       | `360px` | 広めカラム |
 | `--comp-chat-bubble-line-height` | `1.45` | 会話の吹き出しの行の間隔（ChatBubble 金型） |
+| `--comp-chat-bubble-radius-mobile` | `10px` | スマホの吹き出しの角（card-a2 §3） |
+| `--comp-chat-bubble-tail-w-mobile` | `7px` | スマホの尾の横の張り出し（card-a2 §3） |
+| `--comp-chat-bubble-tail-h-mobile` | `10px` | スマホの尾の縦の長さ（card-a2 §3） |
+| `--comp-chat-row-inset-mobile` | `17px` | スマホの画面の端から吹き出しまで（card-a2 §3） |
+| `--comp-chat-row-gap-inner-mobile` | `1.333px` | スマホの続きの中の行の上下（吹き出しの間は2倍）（card-a2 §3） |
+| `--comp-chat-row-gap-group-mobile` | `5px` | スマホの続きの境目（最初の上・最後の下）（card-a2 §3） |
+| `--comp-chat-bubble-max-gap-mobile` | `40px` | スマホの吹き出しの幅の上限（行の幅から引く値）（card-a2 §3） |
+| `--comp-chat-line-height-mobile` | `19px` | スマホの本文の行の高さ（card-a2 §3） |
+| `--comp-chat-bubble-pad-y-mobile` | `7px` | スマホの吹き出しの上下の内側（card-a2 §3） |
+| `--comp-chat-bubble-pad-x-mobile` | `9px` | スマホの吹き出しの左右の内側（初期値・§7で1px刻みに決める）（card-a2 §3） |
+| `--comp-chat-time-line-height-mobile` | `16px` | スマホの時刻の行の高さ（card-a2 §3） |
+| `--comp-chat-time-inset-mobile` | `8px` | スマホの時刻の右端から吹き出しの右端まで（card-a2 §3） |
+| `--comp-chat-time-bottom-mobile` | `3px` | スマホの時刻の下端（初期値・§7で決める）（card-a2 §3） |
+| `--comp-chat-input-radius-mobile` | `24px` | スマホの入力欄のピルの角（伸びても変わらない）（card-a2 §3） |
+| `--comp-chat-input-font-mobile` | `18px` | スマホの入力欄の文字（card-a2 §3） |
+| `--comp-chat-input-line-height-mobile` | `21px` | スマホの入力欄の行の高さ（card-a2 §3） |
+| `--comp-chat-input-inset-y-mobile` | `7.5px` | スマホの入力欄とピルの上下の間（card-a2 §3） |
+| `--comp-chat-input-max-h-mobile` | `221px` | スマホの入力欄の高さの上限（card-a2 §3） |
 | `--col-width-url`        | `300px` | URL表示カラム |
 | `--comp-inventory-title-max-w` | `var(--col-width-wide)`（360px） | 在庫表・閲覧ページ 商品名1段の上限幅（超えた分は「…」） |
 | `--comp-inventory-text-max-w` | `var(--col-width-medium)`（200px） | 在庫表・閲覧ページ 備考・発送の折り返し幅 |
