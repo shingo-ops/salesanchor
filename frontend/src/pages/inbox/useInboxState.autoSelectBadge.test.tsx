@@ -26,6 +26,7 @@
  */
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { queryClient } from "../../lib/query/apiQuery";
 
 // 引数の型を明示する（省略すると vi.fn が 0 引数と推論され、
 // 下の markRead ラッパー経由の呼び出しが tsc で TS2554 になる）
@@ -53,6 +54,9 @@ vi.mock("react-i18next", () => ({
 // PC（非モバイル）判定に固定。自動選択はモバイルでは発火しない分岐のため。
 vi.mock("../../hooks/useIsMobile", () => ({ useIsMobile: () => false }));
 vi.mock("../../hooks/useInboxSSE", () => ({ useInboxSSE: () => undefined }));
+vi.mock("../../contexts/AuthContext", () => ({
+  useAuth: () => ({ user: { uid: "uid-test" }, loading: false }),
+}));
 vi.mock("../../lib/api", () => ({
   api: {
     get: vi.fn(() => Promise.reject(new Error("not used in this test"))),
@@ -64,7 +68,9 @@ vi.mock("../../lib/api", () => ({
     status?: number;
   },
 }));
-vi.mock("../../lib/messages", () => ({
+vi.mock("../../lib/messages", async (importOriginal) => ({
+  conversationsPath: (await importOriginal<typeof import("../../lib/messages")>()).conversationsPath,
+  messagesPath: (await importOriginal<typeof import("../../lib/messages")>()).messagesPath,
   listConversations: (...args: unknown[]) => listConversationsMock(...args),
   markRead: (...args: [number, boolean?]) => markReadMock(...args),
   markUnread: vi.fn(() => Promise.resolve({ unmarked_count: 0 })),
@@ -98,6 +104,7 @@ const CONV_FIXTURE = {
 
 describe("useInboxState - new-assignment badge: auto-select vs explicit open", () => {
   beforeEach(() => {
+    queryClient.clear();
     markReadMock.mockClear();
     markReadMock.mockImplementation((_leadId: number, _opened?: boolean) =>
       Promise.resolve({ marked_count: 0 }),
