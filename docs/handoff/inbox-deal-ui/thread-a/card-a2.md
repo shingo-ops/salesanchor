@@ -24,12 +24,12 @@ BCSS = `frontend/src/components/ChatBubble.css`、CCSS = `frontend/src/component
 
 ## 2. 変えないもの（触らない範囲）
 - 色（全部）。PC の値。秘書のチャットの見た目。
-- 画像の吹き出し（`msg.attachment_type === "image"`）の中身と並べ方。次の段で扱う。このカードでは尾と行の間だけが付く。
+- 画像の吹き出し（`msg.attachment_type === "image"`）の中身と並べ方。次の段で扱う。このカードでは尾・角 10・行の間だけが付く。内側の余白と行の高さ（§5-2 の inline-time の規則）は付かない。
 - 送れなかった吹き出し（failed）の見た目。尾も時刻の置き方の変更も付けない。
 - 翻訳ボタン・翻訳結果（B で扱う）。既読の印（C で扱う。送信側の時刻の右に印の場所を空けない）。「＋」（D）。
 - 送る・受ける・訳す・添付・ハート・長押しの動き。API・型・バックエンド・ja.json / en.json（新しい言葉は無い）。
 - 既存のクラス名の付け替え・削除（e2e は `.inbox-send-btn` で送信を探している。ほかの名前も残す）。
-- 送れなかったときの帯（TSX:724 `inbox-send-error`）の中身と色。§6-3 で `.inbox-send-area` の余白を 0 にするため、帯の左右の余白が変わらないかを K10 で確かめる。
+- 送れなかったときの帯（TSX:724 `inbox-send-error`）の中身と色。§6-3 で `.inbox-send-area` の余白を 0 にするため、帯の置き場所は §6-3 の規則で今と同じに保ち、K10 で確かめる。
 
 ## 3. 実測から決めた目標値（スマホのみ）
 
@@ -43,14 +43,14 @@ BCSS = `frontend/src/components/ChatBubble.css`、CCSS = `frontend/src/component
 | 吹き出しの幅の上限 | 286（行の幅 326 から 40 引く） | U3 | 新規 `--comp-chat-bubble-max-gap-mobile: 40px` |
 | 本文の文字・行 | 16 / 19 | design §3（measure2） | 既存 `--font-md`、新規 `--comp-chat-line-height-mobile: 19px` |
 | 1行の吹き出しの高さ | 33（上下の内側 7 ＋ 行 19） | U1 | 新規 `--comp-chat-bubble-pad-y-mobile: 7px` |
-| 本文の左右の内側 | 初期値 9（§7 で 1px 刻みに決める） | ink.txt（受信の墨 左 10.3） | 新規 `--comp-chat-bubble-pad-x-mobile: 9px` |
+| 本文の左右の内側 | 初期値 9（§7 で 1px 刻みに決める） | 墨の位置（受信の墨 左 31画素 = 10.3） | 新規 `--comp-chat-bubble-pad-x-mobile: 9px` |
 | 時刻の文字・行 | 12 / 16 | design §3（measure-cal1）・U6（時刻の枠 16.3） | 既存 `--font-xs`、新規 `--comp-chat-time-line-height-mobile: 16px` |
 | 時刻の置き方 | 本文の最後の行の右下。入らなければ次の行の右下 | U3（長文で最後の行に入る） | — |
 | 時刻の右端 | 吹き出しの右端から 8（受信の実測。送信も同じ値＝印の場所は空けない） | U6 | 新規 `--comp-chat-time-inset-mobile: 8px` |
-| 時刻の下端 | 初期値 3（§7 で決める） | ink.txt（墨の下 5.3） | 新規 `--comp-chat-time-bottom-mobile: 3px` |
+| 時刻の下端 | 初期値 3（§7 で決める） | 墨の位置（墨の下 16画素 = 5.3） | 新規 `--comp-chat-time-bottom-mobile: 3px` |
 | 本文と時刻の間 | 6 | U6（時刻の左の余白 6） | 既存 `--space-6px` |
 | 入力欄の帯 | 上下 4・左 8・右 10、ピルと送信の間 8 | spec :99-100・2026-11-01 測り直し | 既存 `--space-1` `--space-2` `--space-10px` |
-| ピル | 高さ 48（1行）・角は完全に丸・中のボタン 48x48 | U4 | 既存 `--comp-btn-height-lg` `--radius-full` |
+| ピル | 高さ 48（1行）・角の丸み 24 は伸びても変わらない・中のボタン 48x48 | U4・U4b（伸びた形の角 約 71画素 = 24） | 既存 `--comp-btn-height-lg`、新規 `--comp-chat-input-radius-mobile: 24px`（`--radius-full` は伸びると角が大きくなり文字が面の外に出るので使わない） |
 | 入力の文字・行 | 18 / 21（1行増えるごとに 21 伸びる） | design §3（measure3）・U4 | 新規 `--comp-chat-input-font-mobile: 18px` / `--comp-chat-input-line-height-mobile: 21px` |
 | 入力欄の上下の内側 | 6 ＋ ピルとの間 7.5（6+21+6+7.5x2 = 48） | U4（入力欄 32.3・ピル 48.3） | 既存 `--space-6px`、新規 `--comp-chat-input-inset-y-mobile: 7.5px` |
 | 入力欄の伸び | 上へ伸び、高さ 221 で止まり中で流れる | U4（220.7） | 新規 `--comp-chat-input-max-h-mobile: 221px` |
@@ -59,10 +59,10 @@ BCSS = `frontend/src/components/ChatBubble.css`、CCSS = `frontend/src/component
 - 送信側の幅の上限と送信側の続きは測れていない（PO の端末から送らないため）。U1 で送信と受信の 4 項目（端の 17・高さ 33・角 10・尾 7x10）が左右対称だったので、送信も同じ値にする。これは設計の判断として記録する（§12 の未実測）。
 - 入力欄の自動の伸びは CSS `field-sizing: content` を使う。【事実】MDN（Context7 /mdn/content `field-sizing`）: textarea は幅で伸びられないと高さが伸び、高さの上限で中が流れる。`rows` は効かなくなる。【事実】caniuse（2026-11-01 取得）: Chrome 123〜・Android の Chrome 156・iOS Safari 26.2〜・Firefox 152〜。対応しないブラウザでは今と同じ2行の高さのまま（壊れない）。
 
-## 4. トークン（ADR-067 :125-133 の手順）
-- `frontend/src/tokens.css` の :root、`--comp-chat-bubble-line-height`（:177）の直後に §3 の新規 17 個を、各行に「何の値か＋出典（card-a2 §3）」のコメント付きで足す。色は足さない。@media の中でトークンを上書きしない。
+## 4. トークン（ADR-067 :129-134 の手順）
+- `frontend/src/tokens.css` の :root、`--comp-chat-bubble-line-height`（:177）の直後に §3 の新規 18 個を、各行に「何の値か＋出典（card-a2 §3）」のコメント付きで足す。色は足さない。@media の中でトークンを上書きしない。
 - `tokens.css:177` のコメント末尾の「A-2 でスマホは実測 19px にする」を「スマホは --comp-chat-line-height-mobile」に直す。
-- `docs/adr/ADR-067-design-token-enforcement.md` の表（:69 の行の直後）に同じ 17 個を1行ずつ足す。
+- `docs/adr/ADR-067-design-token-enforcement.md` の表（:69 の行の直後）に同じ 18 個を1行ずつ足す。
 - PR 本文の check:new-tokens の表を埋める。
 
 ## 5. 金型の変更
@@ -86,12 +86,16 @@ props を2つ足す。どちらも thread 用で、既定は false（今の呼�
 ### 5-2 BCSS
 `@media (max-width: 767px)` の中（:64-76）に足す。全部 `:not(.comp-chat-bubble--panel)` を付ける（秘書を変えないため）。PC の規則（:1-62）は触らない。ただし PC で隙間の札を出さない規則 `.comp-chat-bubble__time-spacer { display: none; }` だけは @media の外、`.comp-chat-bubble--wide` の規則（:58-62）の直後・空行（:63）の前に足す（あとに来る @media の規則の方が詳しいので、stylelint の no-descending-specificity に当たらない）。
 ```css
+  /* 文字も画像も: 角と尾の土台 */
   .comp-chat-bubble--outbound:not(.comp-chat-bubble--panel),
   .comp-chat-bubble--inbound:not(.comp-chat-bubble--panel) {
     position: relative;
+    border-radius: var(--comp-chat-bubble-radius-mobile);
+  }
+  /* 文字の吹き出しだけ: 内側の余白と行の高さ（画像は次の段で決める） */
+  .comp-chat-bubble--inline-time:not(.comp-chat-bubble--panel) {
     padding: var(--comp-chat-bubble-pad-y-mobile) var(--comp-chat-bubble-pad-x-mobile);
     line-height: var(--comp-chat-line-height-mobile);
-    border-radius: var(--comp-chat-bubble-radius-mobile);
   }
   /* 尾: 尾の側の上の角を 0 にし、外へ三角を出す（受信=左上 / 送信=右上） */
   .comp-chat-bubble--tail.comp-chat-bubble--inbound:not(.comp-chat-bubble--panel) { border-top-left-radius: 0; }
@@ -150,7 +154,7 @@ props を2つ足す。どちらも thread 用で、既定は false（今の呼�
   .send-input-wrap {
     min-height: var(--comp-btn-height-lg);
     padding: 0 0 0 var(--space-14px);
-    border-radius: var(--radius-full);
+    border-radius: var(--comp-chat-input-radius-mobile);
     align-items: flex-end;
     gap: 0;
   }
@@ -214,14 +218,20 @@ props を2つ足す。どちらも thread 用で、既定は false（今の呼�
   /* 帯の外枠をなくし、ピルを画面の左 8 に置く */
   .inbox-send-area { padding: 0; }
   .send-card { border: none; border-radius: 0; }
+  /* 送れなかったときの帯は、外の余白 0 の前と同じ場所に置く（今の .inbox-send-area :561 の上 4・左右 12） */
+  .inbox-send-error {
+    margin-top: var(--space-1);
+    margin-left: var(--space-3);
+    margin-right: var(--space-3);
+  }
 ```
 - `.inbox-messages` の上下の余白（--space-4）は変えない。
-- この塊にすでに `.inbox-messages` / `.inbox-send-area` / `.send-card` の規則がある場合は、新しく足さずそこへ書き足す（実装前に `grep -n` で確かめて報告に書く）。
+- この塊にすでに `.inbox-messages` / `.inbox-send-area` / `.send-card` / `.inbox-send-error` の規則がある場合は、新しく足さずそこへ書き足す（実装前に `grep -n` で確かめて報告に書く）。
 
 ## 7. 墨の位置合わせ（Opus が端末で行う。実装役はしない）
 1. 実装の PR の写しで Storybook を手元で起動し、`adb reverse tcp:6006 tcp:6006` で端末の Chrome に ChatBubble のスマホの見本（英字1行・英字の長文・送信1行）を出す。
-2. 端末で撮り、ink.txt と同じ道具で、吹き出しの箱から本文の墨・時刻の墨までの画素を測る。
-3. 目標は ink.txt の値（受信: 本文の墨 左 31画素・上 29画素、時刻の墨 右 25画素・下 16画素）。±3画素（= ±1px）に入らなければ `--comp-chat-bubble-pad-x-mobile` と `--comp-chat-time-bottom-mobile` だけを 1px 刻みで直す。pad-y（7）は高さ 33 から決まるので動かさない。
+2. 端末で撮り、measure-a2.md と同じ道具（PIL の画素読み）で、吹き出しの箱から本文の墨・時刻の墨までの画素を測る。
+3. 目標は measure-a2.md「墨の位置」の表の値（受信: 本文の墨 左 31画素・上 29画素、時刻の墨 右 25画素・下 16画素）。±3画素（= ±1px）に入らなければ `--comp-chat-bubble-pad-x-mobile` と `--comp-chat-time-bottom-mobile` だけを 1px 刻みで直す。pad-y（7）は高さ 33 から決まるので動かさない。
 4. 直した値と生出力を measure-a2.md に足し、同じ PR に入れる。
 
 ## 8. 受入条件（全部 ○ で完了）
@@ -231,13 +241,13 @@ props を2つ足す。どちらも thread 用で、既定は false（今の呼�
 | K1 | 幅360（端末の Chrome）で、受信1行の吹き出しの高さ 33・角 10・尾 7x10・左端 17・時刻が本文と同じ行 | §7 と同じ撮り方で画素を測り表にする（±3画素） |
 | K2 | 続けて3件届いた会話で、尾は1件目だけ。吹き出しの間 8画素、境目 30画素 | 同上 |
 | K3 | Discord 以外の会話（ハートが付かない会話）の長文の受信で幅 858画素（286）・最後の行の右下に時刻 | 同上（ハートは行の幅を取るため InboxPage.css:1829-1843・TSX:651、Discord の会話では測らない） |
-| K4 | 入力欄 1行でピルの高さ 145画素（±3）・左端 24画素・送信の丸 144画素。改行ごとに 63画素伸び、入力欄そのもの（ピルではない）の高さ 663画素前後（実測 662）で止まる | 端末の Chrome で打ち、送らずに消す。uiautomator ではなく撮った写真で測る |
-| K5 | 本文の墨の位置が ink.txt と ±3画素 | §7 |
+| K4 | 入力欄 1行でピルの高さ 145画素（±3）・左端 24画素・送信の丸 144画素。改行ごとに 63画素伸び、入力欄そのもの（ピルではない）の高さ 663画素前後（実測 662）で止まる。伸びた形でもピルの角の丸みは 72画素（±3）で、文字が灰色の面の外に出ない | 端末の Chrome で打ち、送らずに消す。uiautomator ではなく撮った写真で測る |
+| K5 | 本文の墨の位置が measure-a2.md「墨の位置」の表と ±3画素 | §7 |
 | K6 | 新しい値はすべてトークン経由・直書き 0 件 | `npm run check:all`・ui-governance-gate・差分の grep（`style=`・数字＋px） |
 | K7 | PC（幅1280）が前後で全画素一致。秘書のチャットも幅1280と幅360で全画素一致 | A-1 と同じ写真比べ（a1-parity-result.txt の方法） |
 | K8 | 既存の試験が全部通る。ChatBubble.test に tail / inlineTime の試験を足す（class が付く・付かない、隙間の札が aria-hidden） | `npm test`・CI |
-| K10 | 送れなかったときの帯（`inbox-send-error`）を幅360で出し、帯の文字が画面の端に付いていない・前と同じ形で読める | Storybook かテスト用の画面で撮る。違えば止めて報告 |
 | K9 | PO が写真（受信の続き・長文・入力欄の1行と伸びた形）を見て合格 | 本番に出す前に PO に見せる |
+| K10 | 送れなかったときの帯（`inbox-send-error`）を幅360で出し、帯の左右が画面の端から 12px・上が 4px（前と同じ）。帯の中の見た目は前後で全画素一致 | 前（base）と後を同じ画面で撮り比べる。違えば止めて報告 |
 
 ## 9. 変更してよいファイル（これ以外は触らない）
 - frontend/src/components/ChatBubble.tsx・ChatBubble.css・ChatBubble.test.tsx・ChatBubble.stories.tsx（スマホの見本を足す）
@@ -267,6 +277,8 @@ props を2つ足す。どちらも thread 用で、既定は false（今の呼�
 - 自動の伸びは公式資料で確かめた（§3）。対応しないブラウザは今の2行のまま。
 - 弊害: 時刻の見えない写しが DOM に1つ増える（読み上げ・Tab には出ない）。時刻に翻訳ボタン（`.msg-translate-btn`）が入る吹き出しでは、そのボタンも DOM に2つになる。e2e で `.msg-translate-btn` を探す試験は base に無い（審査で確認）。単体試験で `getByText` が時刻を2つ見つける場合があるので K8 で確かめる。
 - 送れなかったときの帯は `.inbox-send-area` の余白 0 の影響を受けるので K10 で確かめる。
+- 続きの区切り（§6-1）は向きだけで決める。送れなかった吹き出しも続きに数える。送れなかった吹き出しには尾を出さないので、それが続きの最初なら、その続きに尾は出ない。送れなかったことを目立たせる今の作りを優先した判断とする。
+- 第3回（2回目の審査の指摘を反映）: ピルの角を伸びても 24 のままに（手元の写真 u4-max で測った）・画像に内側の余白を付けない・送れなかった帯の置き場所を保つ規則と K10 の判定・ADR-067 の行番号・ink.txt の出典を measure-a2.md に・K の並び・送れなかった吹き出しと続き。
 - 第2回（審査の指摘を反映）: ChatComposer.test の許可と直し方・`inert` の削除・トークン 17 個・隙間の札の規則の置き場所・e2e の記述・K3 の会話の種類・K4 の測る物・送れなかった帯。
 
 END OF CARD

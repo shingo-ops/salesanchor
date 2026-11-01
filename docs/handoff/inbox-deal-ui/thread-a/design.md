@@ -25,7 +25,7 @@
 | 時刻の場所 | 本文と同じ行の右下、本文の右に 37 先取り、高さ 16.3、左右 6 | spec :123-125 | 見えない時刻の写しで場所を取る（固定の 37 は使わない）。新規 `--comp-chat-time-inset-mobile` / `-time-bottom-mobile`、既存 `--space-6px`（card-a2 §3） |
 | 本文の内側の余白 | 上下 7（高さ 33 から）・左右は初期値 9 を端末で 1px 刻みに決める（U5） | measure-a2.md U1・墨の位置 | 新規 `--comp-chat-bubble-pad-x-mobile` / `-pad-y-mobile`（最終の値と全トークンは card-a2.md §3） |
 | 入力欄の帯 | 高さ 56（48＋上下4） | spec :99-100 | 既存 `--space-1`(4px) |
-| ピル | 高さ 48・角は高さの半分・左 8 | 2026-11-01 測り直し | 既存 `--comp-btn-height-lg`(48px)・`--radius-full`・`--space-2` |
+| ピル | 高さ 48・角の丸み 24（伸びても 24 のまま）・左 8 | 2026-11-01 測り直し・measure-a2.md U4b | 既存 `--comp-btn-height-lg`(48px)・`--space-2`、新規 `--comp-chat-input-radius-mobile: 24px`（card-a2 §3） |
 | ピルの中のボタン | 48x48 | spec :101, :141 | 既存 `--comp-btn-height-lg` |
 | 入力の文字 | 18 | measure3 | 新規 `--comp-chat-input-font-mobile: 18px`（文字の段に 18 は無い。`--font-lg` は 17.6 で、測定で 17.5 は不一致だった） |
 | 送信の丸 | 直径 48・ピルとの隙間 8・右端 10 | 2026-11-01 測り直し | 既存 `--comp-btn-height-lg`・`--space-2`・`--space-10px` |
@@ -47,7 +47,7 @@
 - 段0 測り足し（PO のスマホが要る）: recon §3 の U1〜U6 を、同じ端末で撮って測る。同時に、端末の Chrome に見本ページを出し、本文の墨の位置が WhatsApp と合う内側の余白を 1px 刻みで決める（U5）。生出力は /tmp/CC報告ファイル/inbox-deal-ui/ に残す。入力欄の自動の伸び（U4）は、Chrome と Safari の対応を公式資料で確かめてから作り方を決める。
 - 段A-1（案1の場合）金型へ移すだけ。見た目は PC・スマホとも変えない。合格: 幅1280と幅360の前後の写真が全画素一致（「ヒューマンエージェント」の行を除く）。
 - 段A-2 スマホの値を目標値へ。合格: A1〜A4。
-- 段A-3 benchmark 記録の訂正（whatsapp-reproduction-spec.md:155 の入力欄の角を「高さの半分」に。測り直しの生出力を出典に書く）。文書だけ。
+- 段A-3 benchmark 記録の訂正（whatsapp-reproduction-spec.md:155 の入力欄の角を「24（伸びても同じ）」に。測り直しの生出力を出典に書く）。文書だけ。
 
 ## 6. 影響範囲
 - 会話画面の吹き出しと入力欄（スマホ・PC）。InboxMessageThread を使う画面は InboxPage.tsx:194 の1か所だけ。
