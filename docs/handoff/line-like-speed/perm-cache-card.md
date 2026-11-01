@@ -4,7 +4,7 @@
 - 根拠の写し: S=origin/main fbee46fce（Merge #4980）。行番号はすべてこの sha。実装の前に最新の origin/main で行を合わせ直す（§3(a)）。
 - 読んだ節: 段 2 カード（docs/handoff/line-like-speed/stage2-card.md）と同じ節（guards/00-common.md・03-file.md・04-worktree.md・05-pr.md・10-executor.md・scripts/agent-hooks/cloud/rules.md）。照合も同じ: 全命令は cd <W> で始める・出力は tail/head で上限・変えるファイルは丸ごとの全文・作業場所は new-worktree.sh で作り出力をパイプに通さない・PR は実行役が作らない・出力をファイルに残す命令と tail で読む命令は別の行。
 - 実行役はクラウドの Sonnet。作業場所の作り方はクラウドの決まり（S scripts/agent-hooks/cloud/rules.md:15）を正とする。.pr-number・gh-pr-create-safe.sh は使わない。待つために sleep を使わない。
-- 状態: 第 2 版。第 1 版の審査（2026-11-01 クラウドの Opus・REVISE）の指摘 3 つを直した。(1) 8 本目の reload は結果を waitFor で待つ。(2) test-setup.ts は変えない（§1 から外し、写しを消すのは usePermissions.test.ts の中だけにした）。(3) 使い手の数を 53 行に直した。
+- 状態: 第 2 版。第 1 版の審査（2026-11-01 クラウドの Opus・REVISE）の指摘 3 つを直した。(1) 8 本目の reload は結果を waitFor で待つ。(2) test-setup.ts は変えない（§1 から外し、写しを消すのは usePermissions.test.ts の中だけにした）。(3) 使い手の数を 53 行に直した。第 2 版の審査（2026-11-01 18:36 JST クラウドの Opus）は APPROVE。カードの全文で置き換えて、権限の部品の試験 12 本が 3 回とも合格・全部の試験 1979 本合格 0 本不合格・型の誤り 0・lint の誤りと警告 0。小さな点 2 つ（見出しの番号・design の数え方の命令）は直した。
 - 受領確認: 実装役は着手の最初の報告に「権限の写しカード 第 2 版を受け取った・S=fbee46fce」と書く。
 
 ## 0. 何のための変更か（設計の合格線は変えない）
@@ -325,7 +325,7 @@ describe("usePermissions", () => {
   cd <W> && git push -u origin release/line-like-speed-perm-cache
 手順9. 報告を返す。PR は作らない（設計担当が手元で作る）。報告の 1 つの発言は 600 文字以内にして、番号付きの発言に分ける。
 
-## 4. GO と承認・PO の操作
+## 4-I. GO と承認・PO の操作
 - PO の実装承認: 2026-11-01 PO 選択「1」（権限の読み込みを写しの置き場に載せる作業指示書を作り、本番まで進める）。ADR-1054 は Accepted。このカードの審査合格の後に、設計担当がクラウドの Sonnet へ渡す。
 - 触るのは frontend の部品 1 つ・その試験と書類だけで、migrations・deploy.yml・本番 scripts を含まない（番号付き GO の要る危ない PR ではない）。main へのマージで本番の画面に出る。マージは PO の委任に基づき設計担当（Claude Opus）が、マージ前の審査役の APPROVE と必須の確認 16 件の pass の後に行う。
 - PO が操作することはない。
