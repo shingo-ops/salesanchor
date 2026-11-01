@@ -78,4 +78,10 @@
   .page-layout.page-layout--slim-header {
     height: calc(100dvh - var(--tabbar-height));
   }
+  /* 下のメニューを隠している間（mobile-shell.css の .mobile-shell--tabbar-hidden）は、
+     メニューの高さを引かず、端末の下端（safe-area）だけを引く。.mobile-content の
+     padding-bottom と同じ値なので、はみ出さない（card-a2 §13）。 */
+  .mobile-shell--tabbar-hidden .page-layout.page-layout--slim-header {
+    height: calc(100dvh - env(safe-area-inset-bottom, 0px));
+  }
 }

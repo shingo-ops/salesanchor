@@ -148,6 +148,26 @@ test.describe("visual-language: 受信箱 1画面1ページ", () => {
     await expect(page.getByRole("heading", { name: "受信箱" })).toHaveCount(1);
   });
 
+  test("スマホ: 会話を開いている間は下部タブバーが隠れ、戻ると見える", async ({ page }, testInfo) => {
+    test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
+
+    // card-a2 §13（PO 2026-11-02）: 会話を開いている間だけ下のメニューを隠す
+    await openInboxList(page);
+    await expect(page.locator(".mobile-tabbar")).toBeVisible();
+
+    await openConversation(page);
+    await expect(page.locator(".mobile-tabbar")).toBeHidden();
+    const viewport = page.viewportSize();
+    expect(viewport, "viewport が取れない").not.toBeNull();
+    const sendBox = await page.locator(".inbox-send-area").boundingBox();
+    expect(sendBox, "入力欄の帯の寸法が取得できない").not.toBeNull();
+    expect(Math.abs(sendBox!.y + sendBox!.height - viewport!.height), "入力欄の帯の下端が画面の下端と一致しない")
+      .toBeLessThanOrEqual(1);
+
+    await backButton(page).click();
+    await expect(page.locator(".mobile-tabbar")).toBeVisible();
+  });
+
   test("スマホ: 一覧ではヘッダーの操作行を出さず、絞り込みはヘッダーの右端に出る", async ({ page }, testInfo) => {
     test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
 
@@ -1414,7 +1434,7 @@ test.describe("visual-language: 受信箱 第8便（顧客ページ（カルテ�
   const panel = (page: Page): Locator => page.locator(".inbox-right-panel");
   const backBtn = (page: Page): Locator => page.locator(".karte-close-back-btn");
 
-  test("スマホ: カルテが画面全体になり、下部タブバーを覆う", async ({ page }, testInfo) => {
+  test("スマホ: カルテが画面全体になる（下部タブバーは会話を開いた時点で隠れている）", async ({ page }, testInfo) => {
     test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
 
     await openInboxList(page);
@@ -1447,7 +1467,7 @@ test.describe("visual-language: 受信箱 第8便（顧客ページ（カルテ�
     });
 
     expect(measured.panelRect, "カルテの矩形が取れない").not.toBeNull();
-    expect(measured.tabbarRect, "下部タブバーの矩形が取れない").not.toBeNull();
+    await expect(page.locator(".mobile-tabbar")).toBeHidden();
     const panelRect = measured.panelRect!;
     const tabbarRect = measured.tabbarRect!;
     const v = viewport!;
@@ -1457,15 +1477,6 @@ test.describe("visual-language: 受信箱 第8便（顧客ページ（カルテ�
     expect(Math.abs(panelRect.y), "カルテの上端が0でない").toBeLessThanOrEqual(1);
     expect(Math.abs(panelRect.width - v.width), "カルテの幅がビューポート幅と一致しない").toBeLessThanOrEqual(1);
     expect(Math.abs(panelRect.height - v.height), "カルテの高さがビューポート高さと一致しない").toBeLessThanOrEqual(1);
-
-    // 2. 下部タブバーがカルテに覆われていること（矩形がカルテの内側、かつ重なり順でも上）
-    expect(tabbarRect.y, "タブバーの上端がカルテの上端より手前").toBeGreaterThanOrEqual(panelRect.y - 1);
-    expect(tabbarRect.y + tabbarRect.height, "タブバーの下端がカルテの下端を超えている")
-      .toBeLessThanOrEqual(panelRect.y + panelRect.height + 1);
-    expect(measured.panelZIndex, "カルテの z-index が取れない").not.toBeNull();
-    expect(measured.tabbarZIndex, "タブバーの z-index が取れない").not.toBeNull();
-    expect(measured.panelZIndex!, "カルテの重なり順がタブバーより前面でない")
-      .toBeGreaterThan(measured.tabbarZIndex!);
   });
 
   test("スマホ: 左上の戻る矢印が44px以上で、押すとカルテが閉じて会話に戻る", async ({ page }, testInfo) => {
