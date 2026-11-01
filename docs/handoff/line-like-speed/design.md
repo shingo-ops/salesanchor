@@ -108,7 +108,12 @@ PO の言葉: 「LINEみたいな使い心地は出来る？」（意味は「�
   - 事実: 遅かった 4 行は、どれも権限で出し分ける部分を描く。仕入先の画面はボタン（SuppliersPage.tsx:134・:139・:144・:240・:241）。取引先の画面はボタン（CompaniesPage.tsx:362・:414・:417）。外側の枠では、管理センターの横の項目（ManagementCenterPage.tsx:30・:37-54）と顧客の枠のタブ（CustomerHubPage.tsx:27・:33-44）。
   - 事実: 速かった /admin/channel-masters は、画面（ChannelMastersPage.tsx）も外側の枠（AdminHubPage.tsx）も usePermissions を使わない。同じ画面でも管理センターの中の行は遅い。5 行中 5 行がこの分け方に合う。
   - 仮説（まだ確かめていない）: /me/permissions が返るまで権限で出す部分が無いので、記録係の構造の印が最初の時と合わない。このため K1 は /me/permissions の通信の秒になる。確かめ方: usePermissions を写しの置き場に載せた後に同じ 4 行を測り、0.1 秒以下になるか見る。
-  - usePermissions を使う画面のファイルは 53 本ある（`git grep -l 'usePermissions()' origin/main -- frontend/src`）。段 2 のカードの範囲（3 画面）の外なので、直すには新しい作業指示書と PO の判断が要る。
+  - usePermissions を使う画面のファイルは 53 本ある（`git grep -l 'usePermissions()' origin/main -- frontend/src ':!*.test.*'`）。段 2 のカードの範囲（3 画面）の外なので、直すには新しい作業指示書と PO の判断が要る。
+
+#### 3-4-7. 権限の写しの作業指示書
+- 段 2 の受入で K1 が 0.1 秒を超えた 4 行（§3-4-6）の理由の仮説を確かめるため、権限を読む部品 usePermissions を写しの置き場に載せる。作業指示書は docs/handoff/line-like-speed/perm-cache-card.md。ほかの使い手は変えない理由と、ログインの前に描かれない根拠は perm-cache-card.md §0 P5・P6。K5 は perm-cache-card.md §4-B の 12 本目で確かめる。PO 選択「1」（2026-11-01）。
+- 第 1 版の審査は REVISE（2026-11-01 クラウドの Opus）。試験の共通の準備（test-setup.ts）で写しを消す形は、ほかの 8 ファイル 52 本を落とした。このため第 2 版では、写しを消すのを usePermissions.test.ts の中だけにした。
+- 次の段の課題: useApiQuery を使うほかの部品の試験ファイルでも、写しが同じファイルの次の試験に残り得る。試験の共通の準備で消す形は、api.ts が i18n を読み込む点を解いてから考える。
 
 ### 3-5. 測り方（|基準|検証方法|）
 | 基準 | 検証方法 |
