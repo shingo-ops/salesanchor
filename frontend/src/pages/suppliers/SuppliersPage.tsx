@@ -1,11 +1,12 @@
-import { LoadingBlock } from "../../components/loading";
-import { useEffect, useRef, useState, FormEvent } from "react";
+import { LoadingBlock, Spinner } from "../../components/loading";
+import { useRef, useState, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Modal } from "../../components/Modal";
 import { Button } from "../../components/Button";
 import { Drawer } from "../../components/Drawer";
 import { api } from "../../lib/api";
+import { useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
 import ConfirmModal from "../../components/ConfirmModal";
 import { usePermissions } from "../../hooks/usePermissions";
 import { useRecordDrawer } from "../../hooks/useRecordDrawer";
@@ -36,12 +37,14 @@ const toForm = (s: Supplier): SupplierFormState => ({
   notes: s.notes ?? "",
 });
 
+/** 書いた後に取り直す写しの頭（ADR-1054） */
+const SUPPLIERS_HEAD = ["suppliers"] as const;
+
 export default function SuppliersPage() {
   const { t } = useTranslation();
   const { hasPermission } = usePermissions();
   const navigate = useNavigate();
   const exportLock = useRef(false);
-  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   // 新規作成モーダル
   const [showCreate, setShowCreate] = useState(false);
   const [createForm, setCreateForm] = useState<SupplierFormState>(emptyForm);
@@ -50,31 +53,26 @@ export default function SuppliersPage() {
     useRecordDrawer<Supplier, SupplierFormState>({ toForm, emptyForm });
 
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
   const [deleteTarget, setDeleteTarget] = useState<Supplier | null>(null);
   // QA r7: 47 件全件閲覧のため pagination 追加。backend per_page max=100
   const [page, setPage] = useState(1);
   const PER_PAGE = 100;
-  const [hasNext, setHasNext] = useState(false);
   // 検索
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
 
-  const load = async () => {
-    try {
-      const params = new URLSearchParams({ page: String(page), per_page: String(PER_PAGE) });
-      if (search.trim()) params.set("search", search.trim());
-      const data = await api.get<Supplier[]>(`/suppliers?${params.toString()}`);
-      setSuppliers(data);
-      setHasNext(data.length === PER_PAGE);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("common.fetchError"));
-    } finally {
-      setLoading(false);
-    }
-  };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { load(); }, [page, search]);
+  const params = new URLSearchParams({ page: String(page), per_page: String(PER_PAGE) });
+  if (search.trim()) params.set("search", search.trim());
+  // 写しを先に出して裏で取り直す。ページや検索を変えた時は前の行を出したまま取る（ADR-1054 段 2）
+  const suppliersQuery = useApiQuery<Supplier[]>(`/suppliers?${params.toString()}`, { keepPrevious: true });
+  const invalidate = useInvalidateApi();
+  const suppliers = suppliersQuery.data ?? [];
+  const hasNext = suppliers.length === PER_PAGE;
+  const shownError = error || (suppliersQuery.error
+    ? (suppliersQuery.error instanceof Error ? suppliersQuery.error.message : t("common.fetchError"))
+    : "");
+  /** 書いた後に一覧を取り直す（ページ・検索の違う写しも含む） */
+  const load = () => { void invalidate(SUPPLIERS_HEAD); };
 
   /* ── 新規作成（Modal） ── */
   const handleCreateSubmit = async (e: FormEvent) => {
@@ -130,6 +128,7 @@ export default function SuppliersPage() {
     <PageLayout
       navKey="nav.suppliers"
       subtitleKey="suppliers.subtitle"
+      headerLeft={suppliersQuery.isFetching && !suppliersQuery.isPending ? <Spinner size="sm" /> : undefined}
       headerAction={
         <>
           {hasPermission("suppliers.view") && (
@@ -150,7 +149,7 @@ export default function SuppliersPage() {
         </>
       }
     >
-      {error && <div className="error-message">{error}</div>}
+      {shownError && <div className="error-message">{shownError}</div>}
 
       {/* 検索バー + 新規作成ボタン */}
       <ContentToolbar
@@ -229,7 +228,7 @@ export default function SuppliersPage() {
         </form>
       </Drawer>
 
-      {loading ? <LoadingBlock /> : (() => {
+      {suppliersQuery.isPending ? <LoadingBlock /> : (() => {
         const columns: DataTableColumn<Supplier>[] = [
           { key: "supplier_code", header: t("common.code"), renderCell: (s) => <span className="mono">{s.supplier_code || "-"}</span> },
           { key: "name", header: t("suppliers.supplierName") },
@@ -256,7 +255,7 @@ export default function SuppliersPage() {
 
       {/* QA r7: 件数表示は常時、前/次 button は pagination 必要時のみ。
           管理センター内 (二重 PageLayout) でも見切れないよう sticky bottom。 */}
-      {!loading && suppliers.length > 0 && (
+      {!suppliersQuery.isPending && suppliers.length > 0 && (
         <div
           className="pagination"
           style={{
@@ -277,7 +276,7 @@ export default function SuppliersPage() {
             <Button variant="secondary" size="sm"
 
               onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page <= 1}
+              disabled={page <= 1 || suppliersQuery.isPlaceholderData}
               data-testid="suppliers-page-prev"
             >
               {t("common.prevPage")}
@@ -290,7 +289,7 @@ export default function SuppliersPage() {
             <Button variant="secondary" size="sm"
 
               onClick={() => setPage((p) => p + 1)}
-              disabled={!hasNext}
+              disabled={!hasNext || suppliersQuery.isPlaceholderData}
               data-testid="suppliers-page-next"
             >
               {t("common.nextPage")}

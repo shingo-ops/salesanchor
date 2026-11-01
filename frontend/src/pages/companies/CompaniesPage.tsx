@@ -9,10 +9,11 @@
  *   2026-06-11: 編集を Drawer 化（useRecordDrawer, ADR-122 バッチC）
  */
 
-import { useEffect, useState, FormEvent } from "react";
+import { useState, FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
+import { useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
 import { Modal } from "../../components/Modal";
 import { Button } from "../../components/Button";
 import { SelectControl } from "../../components/Select";
@@ -28,7 +29,7 @@ import { CompanyFormFields, type CompanyFormState } from "./CompanyFormFields";
 import { ButtonLink } from "../../components/ButtonLink";
 import { TextareaControl } from "../../components/Textarea";
 import { TextFieldControl } from "../../components/TextField";
-import { LoadingBlock } from "../../components/loading";
+import { LoadingBlock, Spinner } from "../../components/loading";
 import { getStatusPresentation } from "../../utils/statusPresentation";
 
 const PHONE_RE = /^(\+?\d{10,15}|0\d{9,10})$/;
@@ -182,11 +183,13 @@ const addressDisplay = (a: CompanyAddress | undefined): string => {
   return a.email || a.telephone || a.city || "-";
 };
 
+/** 書いた後に取り直す写しの頭（ADR-1054） */
+const COMPANIES_HEAD = ["companies"] as const;
+
 export default function CompaniesPage() {
   const { t } = useTranslation();
   const { hasPermission } = usePermissions();
   const navigate = useNavigate();
-  const [companies, setCompanies] = useState<Company[]>([]);
   const [search, setSearch] = useState("");
   // 新規作成モーダル
   const [showCreate, setShowCreate] = useState(false);
@@ -199,26 +202,21 @@ export default function CompaniesPage() {
     useRecordDrawer<Company, CompanyFormState>({ toForm, emptyForm: emptyEditForm });
 
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Company | null>(null);
 
-  const loadCompanies = async () => {
-    try {
-      // per_page=100 で全件を一画面に表示（highlife-jpn: 49 社、将来の増加余地あり）
-      const parts: string[] = ["per_page=100"];
-      if (search) parts.push(`search=${encodeURIComponent(search)}`);
-      const data = await api.get<Company[]>(`/companies?${parts.join("&")}`);
-      setCompanies(data);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("common.fetchError"));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { loadCompanies(); }, [search]);
+  // per_page=100 で全件を一画面に表示（highlife-jpn: 49 社、将来の増加余地あり）
+  const parts: string[] = ["per_page=100"];
+  if (search) parts.push(`search=${encodeURIComponent(search)}`);
+  // 写しを先に出して裏で取り直す。検索を変えた時は前の行を出したまま取る（ADR-1054 段 2）
+  const companiesQuery = useApiQuery<Company[]>(`/companies?${parts.join("&")}`, { keepPrevious: true });
+  const invalidate = useInvalidateApi();
+  const companies = companiesQuery.data ?? [];
+  const shownError = error || (companiesQuery.error
+    ? (companiesQuery.error instanceof Error ? companiesQuery.error.message : t("common.fetchError"))
+    : "");
+  /** 書いた後に一覧を取り直す（検索の違う写しも含む） */
+  const loadCompanies = () => { void invalidate(COMPANIES_HEAD); };
 
   const toNull = (v: string) => (v ? v : null);
 
@@ -380,10 +378,11 @@ export default function CompaniesPage() {
     <PageLayout
       navKey="nav.companies"
       subtitleKey="companies.subtitle"
+      headerLeft={companiesQuery.isFetching && !companiesQuery.isPending ? <Spinner size="sm" /> : undefined}
       headerAction={headerAction}
     >
 
-      {error && <div className="error-banner">{error}</div>}
+      {shownError && <div className="error-banner">{shownError}</div>}
       <ContentToolbar
         left={
           <TextFieldControl
@@ -397,7 +396,7 @@ export default function CompaniesPage() {
         right={pageContentActions}
       />
 
-      {loading ? (
+      {companiesQuery.isPending ? (
         <LoadingBlock />
       ) : (() => {
         const columns: DataTableColumn<Company>[] = [
