@@ -15,14 +15,15 @@
 - 見た目: 丸。大きさは `var(--size-icon-btn-lg)`（44px・タッチの基準）以上。位置は `position: fixed`、右と下の余白は `var(--space-4)`。
 - props に `aboveTabbar?: boolean` を足す。true のとき（スマホの殻で呼ぶ側が渡す）は、下のタブの帯に重ならないよう、下の余白を `calc(var(--tabbar-height) + env(safe-area-inset-bottom, 0px) + var(--space-4))` にする（modifier class で切り替える）。`--tabbar-height` は `frontend/src/tokens.css:183` で決まっている（設計担当が確かめた）。
 - 色は既存の色トークン（主ボタンの色と同じもの。`frontend/src/components/Button.css` の primary が使う変数）を使う。ダークでも同じ変数で切り替わること（ADR-067）。
-- 中身は金型 `Button` の icon ボタンで作れるなら、それを使い、位置だけをこの金型が持つ。作れない理由があれば .tsx の頭のコメントに書く。
+  - 設計担当の決め: 「primary は 1 画面に 1 個」（`frontend/src/components/Button.tsx:13`）は、金型 `Button` の `variant="primary"` を本文の主操作に使うときの決まり。この印は `Button` の variant ではなく、全画面に浮かぶ別の金型なので数に入れない。`Button` の variant は使わず、色の変数だけを借りる。
+- 中身は自前の `<button type="button">` にする。金型 `Button` の丸い形（`shape="pill"`）はログイン画面だけに決められている（`Button.tsx` の props のコメント・buttonShapeUsage.test.ts）ため使えない。この理由を .tsx の頭のコメントに書く。
 - `<button type="button">`。キーボードで押せる。フォーカスの輪は既存の金型と同じ変数。
 
 ### 2-2. ChatBubble（チャットの吹き出し）
 - props: `side: 'user' | 'assistant'`、`children: ReactNode`、`status?: 'sending' | 'error'`、`className?`。
 - 利用者の吹き出しは右寄せ、AI は左寄せ。最大幅は親の 80%。角の丸み・余白・色はトークンだけ。
 - 今ある吹き出し（`frontend/src/pages/inbox/InboxMessageThread.tsx` とその CSS）と同じトークンを使い、見た目をそろえる。inbox 側は書き換えない（対象外）。
-- `status='sending'` は既存の金型 `Spinner` を小さく添える。`error` は文字色を危険の色トークンにし、言葉は呼ぶ側が渡す。
+- `status='sending'` は既存の金型 `Spinner`（`frontend/src/components/loading/Spinner.tsx`。`Button.tsx` と同じく `./loading` から読む）を小さく添える。`error` は文字色を危険の色トークンにし、言葉は呼ぶ側が渡す。
 
 ### 2-3. z の段
 - `tokens.css` の Z-index（`frontend/src/tokens.css:126-135`）に `--z-fab: 250;` を足す（サイドバーの覆い 210 より上、背景の幕 298・Drawer 301 より下。チャットの Drawer が開いたら印は幕の下に隠れる）。コメントに理由を 1 行。
@@ -34,7 +35,7 @@
 
 ## 4. 想定分岐（迷ったら止まる）
 - 主ボタンの色の変数が複数あってどれか決められない → 止めて報告（勝手に選ばない）。
-- 金型 Button で丸い icon ボタンが作れる → それを使う。作れない → 自前の `<button>` にして理由をコメント。
+- 自前の `<button>` が ui-governance の検査（生の button の禁止など）に止められる → 止めて報告（例外の書き込みを勝手に足さない）。
 
 ## 5. 受入（実装役が自分で流して生の出力を残す）
 | 基準 | 検証方法 |
