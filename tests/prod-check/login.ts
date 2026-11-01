@@ -37,6 +37,10 @@ export async function login(page: Page, email: string, password: string): Promis
   await page.addInitScript(() => {
     Object.defineProperty(globalThis, "PublicKeyCredential", { value: undefined, configurable: true });
   });
+  // 点検のブラウザでは「予備の合言葉を作りませんか」の小窓を出さない（残りがある扱いにする・本番に記録を残さない・ADR-1055）
+  await page.route("**/api/v1/auth/recovery-codes/status", (route) =>
+    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ remaining: 10 }) }),
+  );
   await page.goto("/login");
   await page.getByLabel("メールアドレス").fill(email);
   await page.getByLabel("パスワード", { exact: true }).fill(password);
