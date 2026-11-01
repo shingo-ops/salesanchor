@@ -1,0 +1,16 @@
+{
+  "intent": {
+    "kind": "event",
+    "invoice": null,
+    "event": {
+      "title": "サンプル商事と打ち合わせ",
+      "start": "2026-11-02T15:00:00+09:00",
+      "end": null,
+      "is_all_day": false,
+      "location": "会議室A",
+      "description": null
+    },
+    "reply": null
+  },
+  "total_cost_usd": null
+}

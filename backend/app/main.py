@@ -29,6 +29,7 @@ from app.routers import (
     analysis_error_reports,  # ADR-1025 便1: 解析の誤り報告
     analytics,
     archives,
+    assistant,  # ADR-1056 段2: チャット秘書の口
     auth,
     bots,
     buyback_alerts,  # ADR-157: 買取価格変動アラートルール CRUD
@@ -782,6 +783,9 @@ app.include_router(ops_error_reports.router, prefix="/api/v1")
 
 # ADR-1052 段2: 相談係の件の口 8 つ（専用の鍵 CASE_AGENT_TOKEN・CASE_ADMIN_TOKEN のみ。相談係の口は件の札も要る）
 app.include_router(ops_case.router, prefix="/api/v1")
+
+# ADR-1056 段2: チャット秘書の口（会社の入口 secretary_chat・super admin・権限 2 つ）
+app.include_router(assistant.router, prefix="/api/v1", tags=["assistant"])
 
 @app.exception_handler(OperationalError)
 async def db_operational_error_handler(request: Request, exc: OperationalError) -> JSONResponse:
