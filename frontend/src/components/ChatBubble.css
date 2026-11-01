@@ -1,10 +1,10 @@
 /**
- * ChatBubble — 会話の吹き出し
+ * ChatBubble — 会話の吹き出し（受信箱の会話・秘書のチャットで共通）
  * ADR-067: 全カラー・寸法は CSS 変数参照のみ
  */
 
 /* Meta実測: バブル 16px / padding=8px 12px */
-.msg-bubble {
+.comp-chat-bubble {
   max-width: 70%;
   padding: var(--space-2) var(--space-3);
   font-size: var(--font-md);
@@ -13,30 +13,53 @@
   white-space: pre-wrap;
 }
 /* outbound バブル */
-.msg-bubble.outbound {
+.comp-chat-bubble--outbound {
   background: var(--bubble-outbound-bg);
   color: var(--on-accent);
   border-radius: var(--radius-bubble-out);
 }
 /* inbound バブル */
-.msg-bubble.inbound {
+.comp-chat-bubble--inbound {
   background: var(--bubble-inbound-bg);
   color: var(--text-primary);
   border-radius: var(--radius-bubble-in);
 }
-.msg-bubble.failed {
+.comp-chat-bubble--failed {
   background: var(--danger-bg);
   color: var(--danger-text);
   border: 2px solid var(--danger);
   border-radius: var(--radius-xl);
 }
-.msg-time {
+.comp-chat-bubble__time {
   font-size: var(--font-2xs);
   opacity: var(--opacity-muted);
   margin-top: var(--space-1);
   text-align: right;
 }
-.msg-time.inbound { text-align: left; }
+.comp-chat-bubble__time--inbound { text-align: left; }
+
+/* panel: 秘書のチャット。吹き出しが自分で左右に寄り、中身と回る印を横に並べる */
+.comp-chat-bubble--panel {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  box-sizing: border-box;
+  max-width: 80%;
+}
+.comp-chat-bubble--panel.comp-chat-bubble--outbound { margin-left: auto; }
+.comp-chat-bubble--panel.comp-chat-bubble--inbound { margin-right: auto; }
+.comp-chat-bubble__body {
+  min-width: 0;
+}
+.comp-chat-bubble--error {
+  color: var(--danger-text);
+}
+/* wide: 下書きの票など、横いっぱいに使う中身 */
+.comp-chat-bubble--wide {
+  max-width: 100%;
+  width: 100%;
+  white-space: normal;
+}
 
 @media (max-width: 767px) {
   /* 4. 吹き出しを「地・面・強調色」の3役に割り当て直す。
@@ -47,6 +70,7 @@
         これで面は2段、強調色は送信の吹き出しぶんだけになる（お手本の構造と同じ）。
         紫（--bubble-outbound-bg）はテーマ色と別系統なのでスマホでは使わない。
         PC は ADR-064（Meta 完全再現・Accepted）の範囲なので触らない。 */
-  .msg-bubble.outbound { background: var(--accent); }
-  .msg-bubble.inbound  { background: var(--neutral-bg); }
+  /* 秘書のチャット（panel）はこの上書きを受けない（まとめる前と同じ） */
+  .comp-chat-bubble--outbound:not(.comp-chat-bubble--panel) { background: var(--accent); }
+  .comp-chat-bubble--inbound:not(.comp-chat-bubble--panel)  { background: var(--neutral-bg); }
 }

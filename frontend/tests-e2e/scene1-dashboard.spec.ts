@@ -101,6 +101,35 @@ function dashboardMocks() {
         },
       ],
     },
+    "GET /analytics/lead-conversion-factors": {
+      status: "ok",
+      included_count: 470,
+      won_count: 150,
+      lost_count: 320,
+      required_per_item: 10,
+      item_count: 15,
+      excluded: {
+        by_status: 2, other_values: 0, no_inbound: 0, no_outbound: 0,
+        no_reply_pair: 0, no_sales_form: 0, missing_scale_or_type: 0,
+      },
+      items: [
+        { key: "initiative_inbound", odds_ratio: 2.034567, ci_low: 1.31, ci_high: 3.14, significant: true, computable: true },
+        { key: "sales_form_wholesale", odds_ratio: null, ci_low: null, ci_high: null, significant: false, computable: false },
+        { key: "first_reply_within_1h", odds_ratio: 1.1, ci_low: 0.8, ci_high: 1.5, significant: false, computable: true },
+        { key: "partner_reply_within_6h", odds_ratio: 1.1, ci_low: 0.8, ci_high: 1.5, significant: false, computable: true },
+        { key: "channel_whatsapp", odds_ratio: 1.1, ci_low: 0.8, ci_high: 1.5, significant: false, computable: true },
+        { key: "channel_instagram", odds_ratio: 1.1, ci_low: 0.8, ci_high: 1.5, significant: false, computable: true },
+        { key: "country_gb", odds_ratio: 1.1, ci_low: 0.8, ci_high: 1.5, significant: false, computable: true },
+        { key: "country_au", odds_ratio: 1.1, ci_low: 0.8, ci_high: 1.5, significant: false, computable: true },
+        { key: "temperature_hot", odds_ratio: 1.1, ci_low: 0.8, ci_high: 1.5, significant: false, computable: true },
+        { key: "temperature_warm", odds_ratio: 1.1, ci_low: 0.8, ci_high: 1.5, significant: false, computable: true },
+        { key: "message_count", odds_ratio: 1.1, ci_low: 0.8, ci_high: 1.5, significant: false, computable: true },
+        { key: "scale_large", odds_ratio: 1.1, ci_low: 0.8, ci_high: 1.5, significant: false, computable: true },
+        { key: "scale_medium", odds_ratio: 1.1, ci_low: 0.8, ci_high: 1.5, significant: false, computable: true },
+        { key: "customer_type_trust", odds_ratio: 1.1, ci_low: 0.8, ci_high: 1.5, significant: false, computable: true },
+        { key: "competitor_found", odds_ratio: 1.1, ci_low: 0.8, ci_high: 1.5, significant: false, computable: true },
+      ],
+    },
     "GET /analytics/priority-prospects": {
       scope: "mine",
       items: [
@@ -377,6 +406,29 @@ test.describe("Scene 1: Dashboard Overview", () => {
 
     // 受注統合カード: 受注・売上 見出しが描画される（営業担当ビュー）
     await expect(page.getByText("受注・売上", { exact: true })).toBeVisible();
+  });
+
+  test("成約しやすさの分析の欄が15行と件数を出す", async ({ page }) => {
+    await installAuthBypass(page);
+    await mockApi(page, {
+      ...commonMocks(),
+      ...dashboardMocks(),
+    });
+
+    await page.goto("/");
+
+    await expect(page.getByRole("heading", { name: "ダッシュボード" })).toBeVisible({
+      timeout: 20_000,
+    });
+    await expect(page.getByTestId("lead-factors-section")).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByTestId("lead-factors-row")).toHaveCount(15);
+    const factorRows = page.getByTestId("lead-factors-row");
+    await expect(factorRows.nth(1)).toContainText("計算できない");
+    await expect(factorRows.nth(0)).toContainText("言える");
+    await expect(factorRows.nth(0)).toContainText("2.03");
+    await expect(page.getByTestId("lead-factors-section")).toContainText("470");
+    await expect(page.getByTestId("lead-factors-section")).toContainText("150");
+    await expect(page.getByTestId("lead-factors-section")).toContainText("320");
   });
 
   test("今やることのフォロー追加で lead.next_action を保存できる", async ({ page }) => {

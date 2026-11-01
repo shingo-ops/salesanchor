@@ -1,0 +1,46 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "invoice", "event", "reply"],
+  "properties": {
+    "kind": { "type": "string", "enum": ["invoice", "event", "unknown"] },
+    "invoice": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["company_name", "contact_name", "items", "due_date", "notes"],
+      "properties": {
+        "company_name": { "type": ["string", "null"] },
+        "contact_name": { "type": ["string", "null"] },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["product_name", "quantity", "unit_price"],
+            "properties": {
+              "product_name": { "type": "string" },
+              "quantity": { "type": "integer", "minimum": 1 },
+              "unit_price": { "type": ["number", "null"] }
+            }
+          }
+        },
+        "due_date": { "type": ["string", "null"] },
+        "notes": { "type": ["string", "null"] }
+      }
+    },
+    "event": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["title", "start", "end", "is_all_day", "location", "description"],
+      "properties": {
+        "title": { "type": "string" },
+        "start": { "type": "string" },
+        "end": { "type": ["string", "null"] },
+        "is_all_day": { "type": "boolean" },
+        "location": { "type": ["string", "null"] },
+        "description": { "type": ["string", "null"] }
+      }
+    },
+    "reply": { "type": ["string", "null"] }
+  }
+}
