@@ -500,40 +500,6 @@
 .inbox-msg-row.inbound { justify-content: flex-start; }
 /* 吹き出し + リアクション表示の縦積み。幅上限（旧 .msg-bubble の 70%）はこの単位で持つ */
 .msg-stack { display: flex; flex-direction: column; min-width: 0; max-width: 70%; }
-/* Meta実測: バブル 16px / padding=8px 12px */
-.msg-bubble {
-  max-width: 70%;
-  padding: var(--space-2) var(--space-3);
-  font-size: var(--font-md);
-  line-height: 1.45;
-  word-break: break-word;
-  white-space: pre-wrap;
-}
-/* outbound バブル */
-.msg-bubble.outbound {
-  background: var(--bubble-outbound-bg);
-  color: var(--on-accent);
-  border-radius: var(--radius-bubble-out);
-}
-/* inbound バブル */
-.msg-bubble.inbound {
-  background: var(--bubble-inbound-bg);
-  color: var(--text-primary);
-  border-radius: var(--radius-bubble-in);
-}
-.msg-bubble.failed {
-  background: var(--danger-bg);
-  color: var(--danger-text);
-  border: 2px solid var(--danger);
-  border-radius: var(--radius-xl);
-}
-.msg-time {
-  font-size: var(--font-2xs);
-  opacity: var(--opacity-muted);
-  margin-top: var(--space-1);
-  text-align: right;
-}
-.msg-time.inbound { text-align: left; }
 
 /* ADR-088: メッセージ翻訳ボタン */
 .msg-translate-btn {
@@ -603,51 +569,10 @@
   flex-direction: column;
   overflow: hidden;
 }
-/* 上段: 送信者アバター + 入力エリア + 送信ボタン（インライン配置） */
-.send-top-row {
-  display: flex;
-  align-items: flex-end;
-  gap: var(--space-2);
-  padding: var(--send-top-row-padding);
-}
-/* 入力ラップ（Meta実測: br=18px → --radius-pill=20px 吸収済み ±2px許容） */
-.send-input-wrap {
-  flex: 1;
-  min-width: 0;
-  background: var(--bg-subtle);
-  border-radius: var(--radius-pill);
-  padding: var(--space-2) var(--space-14px);
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-}
 .inbox-textarea {
   flex: 1;
   min-width: 0;
 }
-/* 添付ボタン（ピル内右端・Meta と同配置） */
-.send-attach-btn {
-  flex-shrink: 0;
-  width: var(--size-icon-btn-sm);
-  height: var(--size-icon-btn-sm);
-  padding: 0;
-  border: none;
-  border-radius: var(--radius-full);
-  background: transparent;
-  color: var(--text-secondary);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background var(--transition-micro), color var(--transition-micro);
-}
-.send-attach-btn:hover:not(:disabled) {
-  background: var(--bg-hover);
-  color: var(--text-primary);
-}
-/* stylelint-disable-next-line no-descending-specificity -- intentional: disabled overrides hover state */
-.send-attach-btn:disabled { opacity: var(--opacity-disabled); cursor: not-allowed; }
 /* 画像プレビューエリア（送信前サムネイル） */
 .send-attachment-preview {
   display: flex;
@@ -705,29 +630,6 @@
   font-size: var(--font-sm);
 }
 
-/* 送信ボタン（アイコンのみ・円形・send-top-row 内インライン配置） */
-.inbox-send-btn {
-  width: var(--size-icon-btn);
-  height: var(--size-icon-btn);
-  padding: 0;
-  border-radius: 50%;
-  background: var(--accent);
-  color: var(--on-accent);
-  border: none;
-  cursor: pointer;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background var(--transition-micro);
-}
-.inbox-send-btn:hover:not(:disabled) { background: var(--accent-hover); }
-/* stylelint-disable-next-line no-descending-specificity -- intentional: disabled overrides hover state */
-.inbox-send-btn:disabled {
-  background: var(--bg-active);
-  color: var(--text-secondary);
-  cursor: not-allowed;
-}
 
 /* ---- 右パネル ---- */
 .inbox-right-panel {
@@ -1187,10 +1089,7 @@
      .inbox-mobile-filter-toggle は .icon-btn も併せ持つため2クラスで指定する
      （単一クラスでは components.css の .icon-btn に負ける・PR 4179 の教訓）。
      PC・タブレットには適用しない（この @media の内側のみ）。 */
-  .inbox-send-btn {
-    width: var(--size-icon-btn-lg);
-    height: var(--size-icon-btn-lg);
-  }
+  /* `.inbox-send-btn` の規則は components/ChatComposer.css へ移した（2026-11-01 A-1） */
   /* 会話ヘッダの「顧客情報」（カルテ切替）。実機実測で 90x28dp だった。
      アイコンと文言を持つので幅は中身に任せ、高さだけ 44px を下限にする。
      ヘッダの行は「一覧へ戻る」の 48dp で既に決まっているため行は高くならない。 */
@@ -1301,16 +1200,6 @@
     font-weight: var(--font-weight-semi);
   }
 
-  /* 4. 吹き出しを「地・面・強調色」の3役に割り当て直す。
-        1-b で下地を面の色（白）に揃えたため、受信を白にすると見えなくなる。
-        受信 = --neutral-bg（soft neutral 背景・白地で 1.23:1。元の純灰より
-               わずかに見分けやすく、他の面と同じ青みの系統に入る）
-        送信 = --accent（ネイビー・白地で 10.36:1）＋ 文字は既存の --on-accent
-        これで面は2段、強調色は送信の吹き出しぶんだけになる（お手本の構造と同じ）。
-        紫（--bubble-outbound-bg）はテーマ色と別系統なのでスマホでは使わない。
-        PC は ADR-064（Meta 完全再現・Accepted）の範囲なので触らない。 */
-  .msg-bubble.outbound { background: var(--accent); }
-  .msg-bubble.inbound  { background: var(--neutral-bg); }
 
   /* 5. 状態バッジ: 文字を本文基準へ、下地を面の色に合わせる
         （白地では --bg-subtle が 1.05:1 で消える） */

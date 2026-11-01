@@ -1,0 +1,77 @@
+/**
+ * ChatComposer — 会話の入力欄の行（ピル＋送信の丸）
+ * ADR-067: 全カラー・寸法は CSS 変数参照のみ
+ */
+
+/* 上段: 送信者アバター + 入力エリア + 送信ボタン（インライン配置） */
+.send-top-row {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+  padding: var(--send-top-row-padding);
+}
+/* 入力ラップ（Meta実測: br=18px → --radius-pill=20px 吸収済み ±2px許容） */
+.send-input-wrap {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg-subtle);
+  border-radius: var(--radius-pill);
+  padding: var(--space-2) var(--space-14px);
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+/* 添付ボタン（ピル内右端・Meta と同配置） */
+.send-attach-btn {
+  flex-shrink: 0;
+  width: var(--size-icon-btn-sm);
+  height: var(--size-icon-btn-sm);
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--transition-micro), color var(--transition-micro);
+}
+.send-attach-btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+/* stylelint-disable-next-line no-descending-specificity -- intentional: disabled overrides hover state */
+.send-attach-btn:disabled { opacity: var(--opacity-disabled); cursor: not-allowed; }
+
+/* 送信ボタン（アイコンのみ・円形・send-top-row 内インライン配置） */
+.inbox-send-btn {
+  width: var(--size-icon-btn);
+  height: var(--size-icon-btn);
+  padding: 0;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-accent);
+  border: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--transition-micro);
+}
+.inbox-send-btn:hover:not(:disabled) { background: var(--accent-hover); }
+/* stylelint-disable-next-line no-descending-specificity -- intentional: disabled overrides hover state */
+.inbox-send-btn:disabled {
+  background: var(--bg-active);
+  color: var(--text-secondary);
+  cursor: not-allowed;
+}
+
+@media (max-width: 767px) {
+  .inbox-send-btn {
+    width: var(--size-icon-btn-lg);
+    height: var(--size-icon-btn-lg);
+  }
+}

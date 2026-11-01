@@ -1,0 +1,48 @@
+A-1 写真比べの結果（K1）  2026-11-01
+
+判定の決まり（第3版・設計担当 Opus の決定 2026-11-01）
+- 変更前を3回(before1-3)、変更後を2回(after1-2)撮る。6場面（vl-desktop-1280 / vl-tablet-768 / vl-mobile-390 × 会話を開いた直後 / hello を入れた後）。画素は しきい値0・許容なしで比べる（pngjs）。
+- 揺れる四角 = before 同士3つの比べで違った画素を全部囲む四角。
+- ○ = ①after のどれかが before のどれかと違う画素0、または ②after と各 before の違った画素がすべて揺れる四角の中にあり、かつ違いの四角が吹き出し(.msg-bubble)・入力欄(.send-top-row)のどの四角とも重ならない。どちらでもなければ ×。
+- 理由: 変更前の同じコードを撮り直すだけで、左上(76,151)付近が揺れる（第3回の実行で desktop と tablet に出た）。
+- モックは全メッセージの message_tag を null にして撮影。写真はコミットしない。四角は [x0,y0,x1,y1]（画素座標）。
+
+## vl-desktop-1280-open  判定: ○  (①after に before と同一のものあり=true / ②=true)
+- before同士(1-2,1-3,2-3): 0 null | 16 [76,151,120,254] | 16 [76,151,120,254]
+- 揺れる四角: [76,151,120,254]
+- after と before: a1-b1: 16 [76,151,120,254] | a1-b2: 16 [76,151,120,254] | a1-b3: 0 null | a2-b1: 0 null | a2-b2: 0 null | a2-b3: 16 [76,151,120,254]
+- 部品の四角 x,y,w,h（吹き出し→入力欄、after1）: [[525,229,230.3,84.4],[522,814.7,335,72.3]]
+## vl-desktop-1280-hello  判定: ○  (①after に before と同一のものあり=true / ②=true)
+- before同士(1-2,1-3,2-3): 0 null | 7 [76,151,78,154] | 7 [76,151,78,154]
+- 揺れる四角: [76,151,78,154]
+- after と before: a1-b1: 7 [76,151,78,154] | a1-b2: 7 [76,151,78,154] | a1-b3: 0 null | a2-b1: 0 null | a2-b2: 0 null | a2-b3: 7 [76,151,78,154]
+- 部品の四角 x,y,w,h（吹き出し→入力欄、after1）: [[525,229,230.3,84.4],[522,814.7,335,72.3]]
+## vl-tablet-768-open  判定: ○  (①after に before と同一のものあり=true / ②=true)
+- before同士(1-2,1-3,2-3): 52 [76,151,298,287] | 0 null | 52 [76,151,298,287]
+- 揺れる四角: [76,151,298,287]
+- after と before: a1-b1: 52 [76,151,298,287] | a1-b2: 0 null | a1-b3: 52 [76,151,298,287] | a2-b1: 52 [76,151,298,287] | a2-b2: 0 null | a2-b3: 52 [76,151,298,287]
+- 部品の四角 x,y,w,h（吹き出し→入力欄、after1）: [[327.7,229,297,84.4],[324.7,938.7,430.3,72.3]]
+## vl-tablet-768-hello  判定: ○  (①after に before と同一のものあり=true / ②=true)
+- before同士(1-2,1-3,2-3): 52 [76,151,298,287] | 0 null | 52 [76,151,298,287]
+- 揺れる四角: [76,151,298,287]
+- after と before: a1-b1: 52 [76,151,298,287] | a1-b2: 0 null | a1-b3: 52 [76,151,298,287] | a2-b1: 52 [76,151,298,287] | a2-b2: 0 null | a2-b3: 52 [76,151,298,287]
+- 部品の四角 x,y,w,h（吹き出し→入力欄、after1）: [[327.7,229,297,84.4],[324.7,938.7,430.3,72.3]]
+## vl-mobile-390-open  判定: ○  (①after に before と同一のものあり=true / ②=true)
+- before同士(1-2,1-3,2-3): 0 null | 0 null | 0 null
+- 揺れる四角: null
+- after と before: a1-b1: 0 null | a1-b2: 0 null | a1-b3: 0 null | a2-b1: 0 null | a2-b2: 0 null | a2-b3: 0 null
+- 部品の四角 x,y,w,h（吹き出し→入力欄、after1）: [[16,82,304.3,84.4],[13,702.7,364,72.3]]
+## vl-mobile-390-hello  判定: ○  (①after に before と同一のものあり=true / ②=true)
+- before同士(1-2,1-3,2-3): 0 null | 0 null | 0 null
+- 揺れる四角: null
+- after と before: a1-b1: 0 null | a1-b2: 0 null | a1-b3: 0 null | a2-b1: 0 null | a2-b2: 0 null | a2-b3: 0 null
+- 部品の四角 x,y,w,h（吹き出し→入力欄、after1）: [[16,82,304.3,84.4],[13,702.7,364,72.3]]
+
+## (d) 違いの四角の中心の点にある要素（after の画面）
+- vl-desktop-1280-open: 点(98,203) → {"tag":"button","class":"inbox-sub-filter-pill"}
+- vl-desktop-1280-hello: 点(77,153) → {"tag":"input","class":"comp-field__input comp-input--search inbox-search-input"}
+- vl-tablet-768-open: 点(187,219) → {"tag":"div","class":"inbox-sub-filter-bar"}
+- vl-tablet-768-hello: 点(187,219) → {"tag":"div","class":"inbox-sub-filter-bar"}
+- vl-mobile-390 の2場面は違いが0のため該当なし。
+
+## 総合: 6場面すべて ○

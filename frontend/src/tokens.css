@@ -173,6 +173,7 @@
   --comp-search-row-h:  69px;   /* 「最近使った語」の行の高さ（お手本68.7dpの最近傍。docs/handoff/viewer-search-mercari/design.md 4-5） */
   --comp-multiselect-check-row-h: 61px; /* 選択画面のチェック行の高さ（お手本60.7dpの最近傍。docs/handoff/viewer-filter-choices-mercari/design.md 4-4） */
   --comp-multiselect-check-col-w: 48px; /* 選択画面のチェック行・印の列幅（お手本48dp。docs/handoff/viewer-filter-choices-mercari/design.md 4-4） */
+  --comp-chat-bubble-line-height: 1.45; /* 会話の吹き出しの行の間隔（CSS:508 の直書きを移した値。A-2 でスマホは実測 19px にする） */
   --field-w-sm:        160px;   /* 入力部品 幅金型 sm */
   --field-w-md:        280px;   /* 入力部品 幅金型 md */
   --field-w-lg-max:    480px;   /* 入力部品 幅金型 lg 上限 */

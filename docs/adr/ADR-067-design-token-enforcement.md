@@ -66,6 +66,7 @@ src/index.css      — カラートークン（:root ライト / :root.force-dar
 | `--col-width-checkbox`   | `40px`  | チェックボックス列幅 |
 | `--col-width-medium`     | `200px` | 中幅カラム |
 | `--col-width-wide`       | `360px` | 広めカラム |
+| `--comp-chat-bubble-line-height` | `1.45` | 会話の吹き出しの行の間隔（ChatBubble 金型） |
 | `--col-width-url`        | `300px` | URL表示カラム |
 | `--comp-inventory-title-max-w` | `var(--col-width-wide)`（360px） | 在庫表・閲覧ページ 商品名1段の上限幅（超えた分は「…」） |
 | `--comp-inventory-text-max-w` | `var(--col-width-medium)`（200px） | 在庫表・閲覧ページ 備考・発送の折り返し幅 |
