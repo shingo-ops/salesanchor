@@ -36,12 +36,17 @@ const stubMatchMedia = (matches: boolean) => {
 };
 
 let instance = createInstance();
-const setup = async (filters: Record<string, unknown> = { enabled: false, merge_same_post: false }) => {
+// listExtra: /inventory? 応答に重ねる値（K9・K10 が categories を足すために使う。list 定数自体は
+// 他のテストと共有するため変更しない）
+const setup = async (
+  filters: Record<string, unknown> = { enabled: false, merge_same_post: false },
+  listExtra: Record<string, unknown> = {},
+) => {
   mock.get.mockImplementation((url: string) => {
     if (url === '/me/permissions') return Promise.resolve({ permissions: [] });
     if (url === '/products/tcg-types') return Promise.resolve([]);
     if (url === '/me/inventory-filters') return Promise.resolve(filters);
-    if (url.startsWith('/inventory?')) return Promise.resolve(list);
+    if (url.startsWith('/inventory?')) return Promise.resolve({ ...list, ...listExtra });
     return Promise.reject(new Error(`Unexpected GET ${url}`));
   });
   render(<I18nextProvider i18n={instance}><MemoryRouter><InventoryPage /></MemoryRouter></I18nextProvider>);
@@ -125,27 +130,38 @@ describe('InventoryPage toolbar (PC)', () => {
 });
 
 describe('InventoryPage toolbar (mobile)', () => {
-  it('K6: no ContentToolbar on mobile, shows .inventory-toolbar (search -> type -> sort -> detail filter), hides reset/fresh at top, and moves them (plus condition/range) into the detail panel', async () => {
+  it('K6: no ContentToolbar on mobile, shows .inventory-toolbar (search -> type -> sort -> detail filter); detail-filter items live only inside the (always-mounted) drawer, not in the top toolbar', async () => {
     stubMatchMedia(true);
     await setup();
     expect(document.querySelector('.content-toolbar')).toBeNull();
     expect(document.querySelector('.inventory-toolbar')).not.toBeNull();
     expect(screen.queryByTestId('inventory-reset-sort')).toBeNull();
     expect(screen.queryByTestId('inventory-fresh-toggle')).toBeNull();
-    expect(screen.queryByTestId('inventory-price-min')).toBeNull();
+    // design.md 4-3: Drawer は閉じても中身を DOM に残す作りに変わったため、開く前から
+    // inventory-price-min 等が DOM 上に存在する。toBeNull では確かめられない（実測:
+    // 1 failed/40 passed・このテストの元の135行目 queryByTestId('inventory-price-min').toBeNull() が
+    // 落ちた。design.md 4-9 (1) の「K6 は作り替え不要」は誤り）。
+    // 「開く前は閉じている」「上の操作台の中には無い」の2つに分けて確かめる
+    expect(openPanel()).toBeNull();
+    const toolbar = document.querySelector('.inventory-toolbar')!;
+    expect(toolbar.contains(screen.getByTestId('inventory-price-min'))).toBe(false);
+    expect(toolbar.contains(screen.getByTestId('inventory-fresh-check'))).toBe(false);
+    // design.md 4-9 (1): コンディションは MultiSelect layout="row" になり、button は出ない
+    // （frontend/src/components/MultiSelect.tsx:21「button は inline/row では出さない」）。
+    // 目印は -row（inventory-condition-filter-row）に変わった
     expect(screen.queryByTestId('inventory-condition-filter-button')).toBeNull();
     // design.md 4-2: 4つ（検索・種別・並び替え・詳細フィルタ）。並び替えはボタン（select ではない）
     const order = ['inventory-search', 'inventory-tab-select', 'inventory-sort-menu', 'inventory-filter-toggle']
       .map((id) => screen.getByTestId(id));
     for (let i = 0; i < order.length - 1; i++) expect(before(order[i], order[i + 1])).toBe(true);
     expect(screen.getByTestId('inventory-sort-menu').tagName).not.toBe('SELECT');
+
     fireEvent.click(screen.getByTestId('inventory-filter-toggle'));
-    const panel = await screen.findByTestId('inventory-filter-panel');
-    for (const id of ['inventory-fresh-check', 'inventory-condition-filter-button', 'inventory-price-min', 'inventory-qty-max', 'inventory-reset-in-panel']) {
-      expect(panel.contains(screen.getByTestId(id))).toBe(true);
+    const panel = openPanel();
+    expect(panel).not.toBeNull();
+    for (const id of ['inventory-fresh-check', 'inventory-condition-filter-row', 'inventory-price-min', 'inventory-qty-max', 'inventory-reset-in-panel', 'inventory-expiry-warning']) {
+      expect(panel!.contains(screen.getByTestId(id))).toBe(true);
     }
-    // 注記（design.md 4-5）: 詳細フィルタの中で全文読める（上には存在しない）
-    expect(panel.contains(screen.getByTestId('inventory-expiry-warning'))).toBe(true);
   });
 
   it('K7 (design.md 4-2・K4): tapping inventory-tab-select opens a panel; picking a type applies it and closes; picking the same type again also closes', async () => {
@@ -185,5 +201,85 @@ describe('InventoryPage toolbar (mobile)', () => {
     await waitFor(() => expect(lastCall()).toContain('sort=release_date'));
     expect(openPanel()).toBeNull();
     expect(screen.getByTestId('inventory-sort-menu').textContent).toContain(en.inventory.sortMenu.placeholder);
+  });
+
+  it('K9 (design.md 4-5, review H2): selecting a hide-series candidate keeps a saved hidden value that is outside the candidate list', async () => {
+    stubMatchMedia(true);
+    // eslint-disable-next-line local/no-japanese-literal -- fixture value standing in for a saved category name
+    const outsideHidden = 'ZZZ_候補に無い';
+    await setup(
+      { enabled: false, merge_same_post: false, hidden_categories: [outsideHidden], hidden_columns: [] },
+      { categories: ['Card'] },
+    );
+    fireEvent.click(screen.getByTestId('inventory-filter-toggle'));
+    expect(openPanel()).not.toBeNull();
+    fireEvent.click(screen.getByTestId('inventory-category-filter-row'));
+    fireEvent.click(await screen.findByTestId('inventory-category-filter-option-Card'));
+
+    // 「(いまの集合 − 候補) ∪ next」で計算するため、候補 ['Card'] の外にある outsideHidden は
+    // PATCH の hidden_categories から消えない（design.md 4-5・審査 H2 の歯止め）
+    await waitFor(() => {
+      const calls = mock.patch.mock.calls;
+      const payload = calls[calls.length - 1]?.[1] as { hidden_categories?: string[] } | undefined;
+      expect(payload?.hidden_categories).toContain(outsideHidden);
+      expect(payload?.hidden_categories).toContain('Card');
+    });
+  });
+
+  it('K10 (design.md 4-5a, PO decision 6): picking a hide-series candidate auto-enables the "enable filter" checkbox', async () => {
+    stubMatchMedia(true);
+    await setup({ enabled: false, merge_same_post: false }, { categories: ['Card'] });
+    fireEvent.click(screen.getByTestId('inventory-filter-toggle'));
+    expect(openPanel()).not.toBeNull();
+    expect((screen.getByTestId('inventory-filter-enabled') as HTMLInputElement).checked).toBe(false);
+
+    fireEvent.click(screen.getByTestId('inventory-category-filter-row'));
+    fireEvent.click(await screen.findByTestId('inventory-category-filter-option-Card'));
+    // 「決定する」で root に戻る（root にしか inventory-filter-enabled は無い）
+    fireEvent.click(screen.getByTestId('inventory-filter-apply'));
+
+    await waitFor(() => {
+      expect((screen.getByTestId('inventory-filter-enabled') as HTMLInputElement).checked).toBe(true);
+    });
+  });
+
+  it('K11 (design.md 4-5/4-5a, review r2): hiding a column via the drawer actually removes it from the row, enables the filter, and keeps a saved hidden_columns value outside HIDEABLE_COLUMNS', async () => {
+    stubMatchMedia(true);
+    const outsideHidden = 'ZZZ_candidate_outside';
+    await setup({ enabled: false, merge_same_post: false, hidden_columns: [outsideHidden] });
+
+    // mkRow's "condition" is 'New' — the only place that literal text appears inside row r1,
+    // so it doubles as a direct signal that the "condition" column has been removed from render
+    // (frontend/src/pages/inventory/InventoryPage.tsx:276 confirms colVisible only takes effect
+    // once filterEnabled is true; frontend/src/features/inventory/inventoryColumns.tsx:217 drops
+    // the whole column — not just its value — from the columns array when hidden).
+    expect(screen.getByTestId('inventory-row-r1').textContent).toContain('New');
+
+    fireEvent.click(screen.getByTestId('inventory-filter-toggle'));
+    expect(openPanel()).not.toBeNull();
+    expect((screen.getByTestId('inventory-filter-enabled') as HTMLInputElement).checked).toBe(false);
+
+    fireEvent.click(screen.getByTestId('inventory-columns-filter-row'));
+    fireEvent.click(await screen.findByTestId('inventory-columns-filter-option-condition'));
+    fireEvent.click(screen.getByTestId('inventory-filter-apply'));
+
+    // 期待①: 有効化が自動で入る（filterEnabled が切だと colVisible は常に表示扱いなので列は消えない）
+    await waitFor(() => {
+      expect((screen.getByTestId('inventory-filter-enabled') as HTMLInputElement).checked).toBe(true);
+    });
+
+    // 期待②: 一覧の行から該当列（condition="New"）の中身が消える
+    await waitFor(() => {
+      expect(screen.getByTestId('inventory-row-r1').textContent).not.toContain('New');
+    });
+
+    // 期待③: 「(いまの集合 − 候補) ∪ next」のため、HIDEABLE_COLUMNS の外にある保存値は消えない
+    // （K9 のシリーズ版と対になる歯止め・審査 H2 相当）
+    await waitFor(() => {
+      const calls = mock.patch.mock.calls;
+      const payload = calls[calls.length - 1]?.[1] as { hidden_columns?: string[] } | undefined;
+      expect(payload?.hidden_columns).toContain(outsideHidden);
+      expect(payload?.hidden_columns).toContain('condition');
+    });
   });
 });

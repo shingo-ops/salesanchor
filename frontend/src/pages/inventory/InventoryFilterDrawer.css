@@ -1,0 +1,26 @@
+/* InventoryFilterDrawer — 在庫表（/inventory）スマホ専用の詳細フィルタパネル（design: docs/handoff/inventory-filter-subscreen/design.md 4-6）。
+   お手本 frontend/src/pages/viewer/viewer.css の .viewer-filter-body / .viewer-filter-options と同じ規則。 */
+
+/* root（最初の画面）の縦並び（.viewer-filter-body と同じ） */
+.inventory-filter-drawer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* 次の画面（候補を絞る欄＋一覧。design.md 4-6） */
+.inventory-filter-drawer-options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  /* 一覧だけ Drawer 本文の左右余白（Drawer.css の .comp-drawer-body）を打ち消し、
+     行をパネル全幅にする（design.md 4-6）。検索欄・注記は余白の内側に残る */
+  --comp-multiselect-list-bleed: var(--space-6);
+}
+
+/* 「隠す〜」2画面の説明・形態／在庫予約の既存注記（design.md 4-6・審査 M9） */
+.inventory-filter-drawer-note {
+  margin: 0;
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+}

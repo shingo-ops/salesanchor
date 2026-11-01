@@ -62,6 +62,11 @@ async function expectNoPageOverflow(page: Page): Promise<void> {
 /** 「詳細フィルタ」を押してパネルを開く（design.md 4-5。インラインのパネル本体は inventory-filter-panel） */
 async function openFilterPanel(page: Page): Promise<Locator> {
   await page.getByTestId("inventory-filter-toggle").click();
+  // 便3（inventory-filter-subscreen）以降、スマホの詳細フィルタは開く前から常にマウントされ、
+  // 閉状態は transform だけ（frontend/src/components/Drawer.css:38-45。visibility/display/opacity
+  // による非表示は無い）ため toBeVisible() だけでは「開いた」ことの証明にならない（独立審査 r2・H-2）。
+  // 本便のパネルだけが持つ mobileInset の外枠に限定して --open を確かめる
+  await expect(page.locator(".comp-drawer-panel--mobile-inset.comp-drawer-panel--open")).toHaveCount(1);
   const panel = page.getByTestId("inventory-filter-panel");
   await expect(panel).toBeVisible();
   return panel;
@@ -317,13 +322,43 @@ test.describe(`visual-language: 在庫表 種別・並び替えパネル ${MOBIL
     expect(Math.round(typeLabelBox!.x)).toBe(Math.round(sortLabelBox!.x));
   });
 
-  test("F5: 空振り防止。flex を 1 1 0 に戻すと種別の名前が切れる（scrollWidth > clientWidth）", async ({ page }) => {
+  // F5 の寄生をやめる（便3 inventory-filter-subscreen design.md 4-9 (3)）: 以前は既定の種別名
+  // 「ポケモン」の残り幅が隣（並び替え）の文言の長さに左右されていた（便3でボタンの数字が消えて
+  // 残り幅が変わるため、どちらに転ぶか予測できない＝審査 r1 と設計初版が逆の予測をした）。
+  // ここでは自前の mock で長い種別名（「マジック：ザ・ギャザリング」相当・13〜14文字）を用意し、
+  // それを選んでから flex を壊す。残り幅がどれだけ増えても収まらない長さにするため、
+  // 隣の文言の長さに合否が左右されなくなる。
+  test("F5: 空振り防止。長い種別名（自前 mock）を選んでから flex を 1 1 0 に戻すと切れる（scrollWidth > clientWidth）", async ({ page }) => {
     await gotoInventory(page, { width, height });
+
+    const LONG_NAME = "マジック：ザ・ギャザリング";
+    await page.route(/\/api\/v1\/products\/tcg-types(\?|$)/, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify([
+          { code: "pokemon_booster_box", name_ja: LONG_NAME },
+          { code: "one_piece", name_ja: "ワンピース" },
+          { code: "dragon_ball", name_ja: "ドラゴンボール" },
+        ]),
+      });
+    });
+    await page.reload();
+    await expect(page.getByTestId("inventory-row-row-1")).toBeVisible();
+
+    const trigger = page.getByTestId("inventory-tab-select");
+    await trigger.click();
+    const panel = openPanel(page);
+    await waitPanelSlidIn(panel);
+    await panel.getByTestId("inventory-type-option-pokemon_booster_box").click();
+    await expect(openPanel(page)).toHaveCount(0);
+    await expect(trigger).toContainText(LONG_NAME);
+
     await page.addStyleTag({
       content: ".inventory-toolbar > .inventory-toolbar__series { flex: 1 1 0 !important; }",
     });
 
-    const label = page.getByTestId("inventory-tab-select").locator(".inventory-toolbar__label");
+    const label = trigger.locator(".inventory-toolbar__label");
     await expect(label).toBeVisible();
     const { scrollWidth, clientWidth } = await label.evaluate((el) => ({
       scrollWidth: el.scrollWidth,

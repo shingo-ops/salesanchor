@@ -1655,7 +1655,16 @@
       "columns": "表示する列",
       "columnsNote": "在庫表に表示する列の取捨です（データの絞り込みではありません）",
       "displayConditions": "表示条件",
-      "displayConditionsNote": "選択した条件に一致する行だけを表示します（各項目で未選択なら全件）。"
+      "displayConditionsNote": "選択した条件に一致する行だけを表示します（各項目で未選択なら全件）。",
+      "back": "戻る",
+      "apply": "決定する",
+      "searchOptions": "絞り込む",
+      "hideCategories": "隠すシリーズ",
+      "hideColumns": "隠す列",
+      "hideNote": "選んだものを一覧から隠します",
+      "clear": "選択を消す",
+      "noneSelected": "なし",
+      "count": "{{count}}件選択中"
     },
     "search": {
       "placeholder": "商品名・カード番号・JAN・型番・仕入元 alias で検索",

@@ -1655,7 +1655,16 @@
       "columns": "Visible columns",
       "columnsNote": "Choose which columns appear in the table (not a data filter).",
       "displayConditions": "Display conditions",
-      "displayConditionsNote": "Show only rows matching the selected conditions (no selection in a group = all)."
+      "displayConditionsNote": "Show only rows matching the selected conditions (no selection in a group = all).",
+      "back": "Back",
+      "apply": "Done",
+      "searchOptions": "Filter options",
+      "hideCategories": "Hide series",
+      "hideColumns": "Hide columns",
+      "hideNote": "Hides the items you select from the list.",
+      "clear": "Clear selection",
+      "noneSelected": "None",
+      "count": "{{count}} selected"
     },
     "search": {
       "placeholder": "Search by product name, card number, JAN, expansion code, or supplier alias",
