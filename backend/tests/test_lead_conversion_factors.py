@@ -16,6 +16,7 @@ import pytest
 from sqlalchemy import text
 
 from app.services import lead_conversion_factors as lcf
+from tests.conftest import LEAD_FACTORS_MSG_DDL as _MSG_DDL
 
 _SCRIPTS = Path(__file__).resolve().parents[2] / "scripts" / "lead_regression"
 sys.path.insert(0, str(_SCRIPTS))
@@ -221,24 +222,6 @@ def test_gauss_jordan_inverse():
 # ── 入口（SQLite）────────────────────────────────────────────
 _URL = "/api/v1/analytics/lead-conversion-factors"
 
-_MSG_DDL = {
-    "meta_messages": """
-        CREATE TABLE IF NOT EXISTS meta_messages (
-            id INTEGER PRIMARY KEY AUTOINCREMENT, tenant_id INTEGER NOT NULL DEFAULT 999,
-            lead_id INTEGER, platform VARCHAR(20) NOT NULL DEFAULT 'messenger',
-            sender_id VARCHAR(100) NOT NULL DEFAULT 'x', message_text TEXT,
-            direction VARCHAR(10) NOT NULL DEFAULT 'inbound',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, deleted_at TIMESTAMP)
-    """,
-    "conversation_logs": """
-        CREATE TABLE IF NOT EXISTS conversation_logs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT, tenant_id INTEGER NOT NULL DEFAULT 999,
-            lead_id INTEGER, channel_type VARCHAR(30) NOT NULL DEFAULT 'whatsapp',
-            direction VARCHAR(10) NOT NULL, content_text TEXT,
-            occurred_at TIMESTAMP NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            deleted_at TIMESTAMP)
-    """,
-}
 _OPTION_ID = {"physical_store": 1, "ec_site": 2, "live_streaming": 3, "wholesale": 4, "other": 5}
 
 
