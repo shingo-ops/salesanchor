@@ -15,7 +15,6 @@ from fastapi import HTTPException
 from sqlalchemy import text
 
 from app.auth.dependencies import get_current_user, require_super_admin
-from app.main import app
 from app.routers import assistant
 
 FIXTURES = Path(__file__).resolve().parents[2] / "secretary-agent" / "fixtures"
@@ -31,6 +30,8 @@ def _fixture(name: str) -> dict:
 @pytest.fixture
 def allowed(client):
     """会社の入口・super admin の守りを通す（権限は conftest が全付与）。"""
+
+    from app.main import app
 
     async def _ok_feature():
         return None
@@ -63,6 +64,8 @@ def _respond(status: int, body=None):
 
 @pytest.mark.asyncio
 async def test_no_feature_is_403(client):
+    from app.main import app
+
     async def _no_feature():
         raise HTTPException(status_code=403, detail="機能が無効です: secretary_chat")
 
@@ -73,6 +76,8 @@ async def test_no_feature_is_403(client):
 
 @pytest.mark.asyncio
 async def test_not_super_admin_is_403(client):
+    from app.main import app
+
     async def _ok_feature():
         return None
 

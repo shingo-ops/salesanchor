@@ -672,8 +672,13 @@ jobs:
               echo "::warning::secretary-agent のイメージを作れませんでした（アプリの反映には影響しません）"
               exit 0
             fi
-            docker run --rm --network astro-webapp_frontnet --read-only --cap-drop ALL --security-opt no-new-privileges:true astro-webapp-secretary-agent node /app/probe.mjs \
-              || echo "::warning::K4 不合格: secretary-agent から DB か redis に届きました"
+            probe_rc=0
+            docker run --rm --network astro-webapp_frontnet --read-only --cap-drop ALL --security-opt no-new-privileges:true astro-webapp-secretary-agent node /app/probe.mjs || probe_rc=$?
+            if [ "$probe_rc" -eq 1 ]; then
+              echo "::warning::K4 不合格: secretary-agent から DB か redis に届きました"
+            elif [ "$probe_rc" -ne 0 ]; then
+              echo "::warning::probe を流せませんでした（終了コード $probe_rc）"
+            fi
             if [ ! -r /home/ubuntu/.config/salesanchor/secretary-agent.env ]; then
               echo "::warning::secretary-agent.env が読めないため secretary-agent を起こしません"
               exit 0
