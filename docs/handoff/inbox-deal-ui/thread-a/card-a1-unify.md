@@ -228,7 +228,7 @@ A1 の4つをクラス名だけ置き換えて残し、M の4つを panel 版に
 - M:145 `.comp-chat-bubble b` は変えない。
 
 ## 5. 作業の順番
-1. `release/inbox-chat-molds-a1` を ad4eef667 から始める（`git log -1` で確かめる。違えば止まる）。
+1. `release/inbox-chat-molds-a1` の先頭から始める。先頭は ad4eef667 の上に、このカードと design.md だけを足した docs の commit が乗った状態であること（`git log --oneline ad4eef667..HEAD` と `git diff --name-only ad4eef667 HEAD` で確かめる。docs/handoff/inbox-deal-ui/thread-a/ の外のファイルが出たら止まる）。
 2. 比べる前の写真と値を取る（§7 の before）。**origin/main fbee46fce の写し**で取る（受信箱も秘書も、今の本番と同じコード）。
 3. `git merge origin/main`（merge commit。rebase・force push はしない）。衝突は §3 の全文で解く。`docs/adr/README.md` の衝突は `node scripts/generate-adr-index.js` で作り直して解く。en.json・ja.json・tokens.css は自動で混ざることを `git diff` で確かめる（`--comp-chat-bubble-line-height` が1行だけあること・`humanAgentLabel` が無いこと）。
 4. §4 の書き換え。
@@ -269,7 +269,7 @@ A1 の4つをクラス名だけ置き換えて残し、M の4つを panel 版に
 - それ以外の A-1 のファイル（ChatComposer・InboxMessageThread.tsx・tokens.css・locales・ADR-067・scene7 spec）は merge の結果のまま触らない。
 
 ## 9. 想定される分かれ道（起きたら止めて報告）
-- ad4eef667 から始められない（ブランチの先が違う）→ 止まる。
+- §5-1 の確かめが合わない（ブランチの先が違う）→ 止まる。
 - merge で §3 以外のファイルが衝突した → 生の出力を付けて止まる。
 - U1 か U2 で1画素・1項目でも違う → 原因の候補を生の出力つきで報告して止まる。規則の並びや値を変えて合わせ込まない。
 - `Spinner` の読み込み先（`./loading`）が M と違う → 止まる。
