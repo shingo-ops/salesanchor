@@ -1,0 +1,9 @@
+{
+  "intent": {
+    "kind": "unknown",
+    "invoice": null,
+    "event": null,
+    "reply": "請求書と予定のどちらを作りますか？ 宛先や日時も教えてください。"
+  },
+  "total_cost_usd": 0.004
+}
