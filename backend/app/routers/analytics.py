@@ -14,7 +14,7 @@ from __future__ import annotations
   2026-06-13: PR2 — JST月次統一 + ファネル/フォローアップEP追加
 """
 
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from statistics import median
 from typing import Literal
 from zoneinfo import ZoneInfo
@@ -27,6 +27,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.dependencies import get_current_tenant, get_current_user, require_permission
 from app.database import get_db
 from app.models import User
+from app.schemas.lead_conversion_factors import (
+    LeadConversionExcluded,
+    LeadConversionFactorItem,
+    LeadConversionFactorsResponse,
+)
+from app.services import lead_conversion_factors as lcf
 from app.services.time import _jst_month_range_utc
 
 router = APIRouter()
@@ -2412,4 +2418,131 @@ async def weekly_advisor_defensive(
         scope=scope,
         stale_days=stale_days,
         actions=ranked_actions,
+    )
+
+
+# ─── リードの成約しやすさ（ロジスティック回帰）──────────────────────────
+# docs/handoff/lead-regression/card-a-backend.md §2・§3。計算は
+# app/services/lead_conversion_factors.py だけが行う（読むだけ・書き込みなし）。
+
+
+def _lcf_to_utc(value: object) -> datetime:
+    """DB の時刻を timezone 付き datetime にする（SQLite の文字列・naive は UTC とみなす）。"""
+    if isinstance(value, str):
+        value = datetime.fromisoformat(value)
+    assert isinstance(value, datetime)
+    if value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value
+
+
+async def _fetch_lead_conversion_inputs(
+    db: AsyncSession,
+) -> tuple[list[lcf.LeadRow], list[lcf.MessageRow]]:
+    """そのテナントの leads・店舗の形の選択・メッセージを §2-1 の形で読む。"""
+    selections: dict[int, list[str]] = {}
+    sel_rows = (
+        await db.execute(
+            text(
+                "SELECT s.lead_id AS lead_id, o.value AS value "
+                "FROM lead_sales_form_selections s "
+                "JOIN tenant_sales_form_options o ON o.id = s.option_id "
+                "ORDER BY s.lead_id, s.id"
+            )
+        )
+    ).mappings()
+    for r in sel_rows:
+        selections.setdefault(r["lead_id"], []).append(r["value"])
+
+    lead_rows = (
+        await db.execute(
+            text(
+                "SELECT id, status, initiative, channel_type, country, temperature, "
+                "estimated_scale, customer_type, competitor_check "
+                "FROM leads ORDER BY id"
+            )
+        )
+    ).mappings()
+    leads = [
+        lcf.LeadRow(
+            id=r["id"],
+            status=r["status"],
+            initiative=r["initiative"],
+            channel_type=r["channel_type"],
+            country=r["country"],
+            temperature=r["temperature"],
+            estimated_scale=r["estimated_scale"],
+            customer_type=r["customer_type"],
+            competitor_check=bool(r["competitor_check"]),
+            sales_form_values=selections.get(r["id"], []),
+        )
+        for r in lead_rows
+    ]
+
+    # 状態で外れるリードのメッセージは読まない（§2-4 の 1 が最初に当たるため結果は同じ）
+    messages: list[lcf.MessageRow] = []
+    meta_rows = (
+        await db.execute(
+            text(
+                "SELECT m.lead_id AS lead_id, m.id AS id, m.direction AS direction, "
+                "m.created_at AS ts "
+                "FROM meta_messages m JOIN leads l ON l.id = m.lead_id "
+                "WHERE m.deleted_at IS NULL "
+                "AND l.channel_type IN ('instagram', 'messenger') "
+                "AND l.status IN ('existing_customer', 'lost')"
+            )
+        )
+    ).mappings()
+    wa_rows = (
+        await db.execute(
+            text(
+                "SELECT c.lead_id AS lead_id, c.id AS id, c.direction AS direction, "
+                "c.occurred_at AS ts "
+                "FROM conversation_logs c JOIN leads l ON l.id = c.lead_id "
+                "WHERE c.deleted_at IS NULL "
+                "AND l.channel_type = 'whatsapp' "
+                "AND l.status IN ('existing_customer', 'lost')"
+            )
+        )
+    ).mappings()
+    for r in list(meta_rows) + list(wa_rows):
+        if r["ts"] is None:
+            continue
+        messages.append(
+            lcf.MessageRow(
+                lead_id=r["lead_id"],
+                id=r["id"],
+                direction=r["direction"],
+                ts=_lcf_to_utc(r["ts"]),
+            )
+        )
+    return leads, messages
+
+
+@router.get(
+    "/analytics/lead-conversion-factors",
+    response_model=LeadConversionFactorsResponse,
+    dependencies=[Depends(require_permission("dashboard.view"))],
+)
+async def lead_conversion_factors_summary(
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+):
+    """
+    成約しやすさの分析（成約したか を 15 項目で同時に見るロジスティック回帰）。read-only。
+
+    - 値は丸めず float のまま返す（丸めは画面だけ）
+    - status: ok / insufficient（件数が足りない）/ not_computable（計算できない）
+    """
+    leads, messages = await _fetch_lead_conversion_inputs(db)
+    result = lcf.analyze(leads, messages)
+    return LeadConversionFactorsResponse(
+        status=result.status,
+        included_count=result.included_count,
+        won_count=result.won_count,
+        lost_count=result.lost_count,
+        required_per_item=lcf.REQUIRED_PER_ITEM,
+        item_count=lcf.ITEM_COUNT,
+        excluded=LeadConversionExcluded(**result.excluded),
+        items=[LeadConversionFactorItem(**item) for item in result.items],
     )
