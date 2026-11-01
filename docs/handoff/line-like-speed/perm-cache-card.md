@@ -4,8 +4,8 @@
 - 根拠の写し: S=origin/main fbee46fce（Merge #4980）。行番号はすべてこの sha。実装の前に最新の origin/main で行を合わせ直す（§3(a)）。
 - 読んだ節: 段 2 カード（docs/handoff/line-like-speed/stage2-card.md）と同じ節（guards/00-common.md・03-file.md・04-worktree.md・05-pr.md・10-executor.md・scripts/agent-hooks/cloud/rules.md）。照合も同じ: 全命令は cd <W> で始める・出力は tail/head で上限・変えるファイルは丸ごとの全文・作業場所は new-worktree.sh で作り出力をパイプに通さない・PR は実行役が作らない・出力をファイルに残す命令と tail で読む命令は別の行。
 - 実行役はクラウドの Sonnet。作業場所の作り方はクラウドの決まり（S scripts/agent-hooks/cloud/rules.md:15）を正とする。.pr-number・gh-pr-create-safe.sh は使わない。待つために sleep を使わない。
-- 状態: 第 1 版（審査前）。
-- 受領確認: 実装役は着手の最初の報告に「権限の写しカード 第 1 版を受け取った・S=fbee46fce」と書く。
+- 状態: 第 2 版。第 1 版の審査（2026-11-01 クラウドの Opus・REVISE）の指摘 3 つを直した。(1) 8 本目の reload は結果を waitFor で待つ。(2) test-setup.ts は変えない（§1 から外し、写しを消すのは usePermissions.test.ts の中だけにした）。(3) 使い手の数を 53 行に直した。
+- 受領確認: 実装役は着手の最初の報告に「権限の写しカード 第 2 版を受け取った・S=fbee46fce」と書く。
 
 ## 0. 何のための変更か（設計の合格線は変えない）
 - P1 段 2 の受入（design §3-4-6）で、戻った時の秒（K1）が 0.1 秒を超えたのは 5 行中 4 行。4 行とも、画面か外側の枠が権限で出し分ける部分を描く（SuppliersPage.tsx・CompaniesPage.tsx・ManagementCenterPage.tsx・CustomerHubPage.tsx が usePermissions を使う）。速かった 1 行（/admin/channel-masters）は usePermissions を使わない。
@@ -13,33 +13,32 @@
 - P3 仮説（まだ確かめていない）: usePermissions を写しの置き場（useApiQuery・S frontend/src/lib/query/apiQuery.ts:51-73）に載せると、戻った時の最初の描画に前の権限が出て、4 行の K1 が 0.1 秒以下になる。確かめ方は §5 C4。4 行が下がらなければ仮説は誤りと記録して止まる。
 - P4 権限の写しの名前は ["api", uid, "me", "permissions", { query: "" }]（S apiQueryKey・apiQuery.ts:41-44）。利用者（uid）ごとに分かれる。利用者が変わると QueryAuthSync が写しを全部消す（S frontend/src/lib/query/QueryAuthSync.tsx:18-28）。api.ts は会社を選ぶ見出しを送らない（S frontend/src/lib/api.ts:61 は X-Client-Id だけ）。このため同じ uid で別の会社の権限が混ざる道は無い。
 - P5 usePermissions を使う部品は、どれもログインの後にしか描かれない。外側の枠 DesktopShell・MobileShell と SecretaryChat は ProtectedRoute の内側（S frontend/src/App.tsx:182-187・:147-149）。ProtectedRoute は user が無い間は中身を描かない（S frontend/src/components/ProtectedRoute.tsx:15-21）。このため「ログインしていない間は取りに行かない（loading が true のまま）」の振る舞いは画面に出ない。
-- P6 返す形（permissions・loading・error・hasPermission・hasAny・reload）は変えない。使い手 50 本（`git grep -n 'usePermissions()' -- frontend/src ':!*.test.*'`）は触らない。違いは 2 つだけ。(1) 取り直しの間は loading が true に戻らない（写しを出したまま裏で取る）。(2) 取り直しが失敗しても前の権限は消えない。
-- P7 画面の試験は、同じ 1 個の写しの置き場を使う。前の試験の写しが次の試験に残らないよう、試験の共通の準備（S frontend/src/test-setup.ts）で試験ごとに写しを消す。試験ファイルの vi.mock（api など）を効かせるため、apiQuery は静的に読み込まず、afterEach の中で読み込む。
+- P6 返す形（permissions・loading・error・hasPermission・hasAny・reload）は変えない。使い手 53 行（`git grep -n 'usePermissions()' -- frontend/src ':!*.test.*'` の行数）は触らない。違いは 2 つだけ。(1) 取り直しの間は loading が true に戻らない（写しを出したまま裏で取る）。(2) 取り直しが失敗しても前の権限は消えない。
+- P7 前の試験の写しが次の試験に残らないよう、usePermissions.test.ts の afterEach で写しの置き場（queryClient）を消す。試験の共通の準備（S frontend/src/test-setup.ts）は変えない。理由（第 1 版の審査で実測）: 共通の準備の afterEach で apiQuery を読むと api.ts が `../i18n` を読み込み、react-i18next を差し替えたほかの 8 ファイル 52 本が落ちた（main では 0 本）。usePermissions.test.ts の中だけで消す形では、全部の試験 1979 本が通った。ほかの試験ファイルの中で写しが次の試験に残り得る点は、次の段の課題として design.md に残す。
 
 ## 1. 触るファイル（変更前→変更後）
 | # | ファイル | 変更前 | 変更後 |
 |---|---|---|---|
 | 1 | frontend/src/hooks/usePermissions.ts | useState と useEffect で毎回取る（S 全 53 行） | useApiQuery で取る（§4-A 全文） |
-| 2 | frontend/src/test-setup.ts | firebase の差し替えだけ（S 全 19 行） | 試験ごとに写しを消す afterEach を足す（§4-B 全文） |
-| 3 | frontend/src/hooks/usePermissions.test.ts | 9 本（S 全 120 行） | 12 本（§4-C 全文） |
-| 4 | docs/handoff/line-like-speed/perm-cache-card.md | 無い | このカード（設計担当が書いた。実装役は触らない） |
-| 5 | docs/handoff/line-like-speed/design.md | §3-4-6 まで | §3-4-7 にこのカードの場所を書き足し済み（設計担当。実装役は触らない） |
-| 6 | .claude-pipeline/active-work.d/release-line-like-speed-perm-cache.md | 無い | 作業の札（設計担当。実装役は触らない） |
+| 2 | frontend/src/hooks/usePermissions.test.ts | 9 本（S 全 120 行） | 12 本（§4-B 全文） |
+| 3 | docs/handoff/line-like-speed/perm-cache-card.md | 無い | このカード（設計担当が書いた。実装役は触らない） |
+| 4 | docs/handoff/line-like-speed/design.md | §3-4-6 まで | §3-4-7 にこのカードの場所を書き足し済み（設計担当。実装役は触らない） |
+| 5 | .claude-pipeline/active-work.d/release-line-like-speed-perm-cache.md | 無い | 作業の札（設計担当。実装役は触らない） |
 
 ## 2. 触らない範囲
 - backend/・migrations/・.github/workflows/・scripts/・tests/prod-check/・frontend/viewer/ は触らない。
-- frontend/src/lib/query/（apiQuery.ts・QueryAuthSync.tsx）・frontend/src/lib/api.ts・frontend/src/contexts/AuthContext.tsx・frontend/src/App.tsx は触らない。
+- frontend/src/test-setup.ts・frontend/src/lib/query/（apiQuery.ts・QueryAuthSync.tsx）・frontend/src/lib/api.ts・frontend/src/contexts/AuthContext.tsx・frontend/src/App.tsx は触らない。
 - usePermissions の使い手（画面・枠・SecretaryChat）は 1 本も変えない。ほかの試験ファイルも変えない。
 - /me/permissions を別に取る useFeatures.ts・useSuperAdmin.ts・GoalSettingPage.tsx は、このカードでは変えない（次の段の候補）。
 - components/・CSS・ja.json・en.json は触らない。新しい言葉・色・寸法を足さない。
 - QueryClient を作らない。staleTime を設定しない。写しをブラウザの保存に書かない。
 
 ## 3. 実装役が先に確かめること（想定分岐つき）
-- (a) 最新の origin/main で、§1 #1〜#3 と frontend/src/lib/query/ が S と同じか（`git diff --stat fbee46fce origin/main -- frontend/src/hooks/usePermissions.ts frontend/src/hooks/usePermissions.test.ts frontend/src/test-setup.ts frontend/src/lib/query` が空か）。空でなければ停止して報告する。
+- (a) 最新の origin/main で、§1 #1〜#2・frontend/src/test-setup.ts・frontend/src/lib/query/ が S と同じか（`git diff --stat fbee46fce origin/main -- frontend/src/hooks/usePermissions.ts frontend/src/hooks/usePermissions.test.ts frontend/src/test-setup.ts frontend/src/lib/query` が空か）。空でなければ停止して報告する。
 - (b) `cd <W>/frontend && grep -n '"@tanstack/react-query"' package.json` が `"5.104.4"` の 1 行。違えば停止して報告する。
-- (c) `cd <W> && git grep -n -E "vi\.mock\(['\"]@tanstack" -- frontend/src | head -5` が 0 行。1 行でもあれば停止して NEEDS_DECISION: で返す（その試験では写しの置き場が差し替わり、§4-B の afterEach が別の物を読む）。
-- (d) 手順 4 の全部の試験で、§1 #3 のほかの試験ファイルが落ちたら、試験もコードも直さずに停止し、NEEDS_DECISION: で落ちた試験の名前と生の出力（tail）を返す。理由: 落ちる理由が「前の試験の写しが残った」か「同じ画面の 2 つの部品が 1 回の通信を分け合うようになった（get の回数が減った）」かを、設計担当が見て決めるため。
-- (e) §4-C の 12 本のどれかが落ちたら、試験を書き換えて通さない。§4-A・§4-B の写し違いを探し、写し違いが無ければ停止して NEEDS_DECISION: で生の出力を返す。とくに K5 の試験（12 本目）は、落ちたら直し方を自分で考えずに停止する。
+- (c) `cd <W> && git grep -n -E "vi\.mock\(['\"]@tanstack" -- frontend/src | head -5` が 0 行。1 行でもあれば停止して NEEDS_DECISION: で返す（その試験では写しの置き場が差し替わり、§4-B の afterEach が別の物を消す）。
+- (d) 手順 4 の全部の試験で、§1 #2 のほかの試験ファイルが落ちたら、試験もコードも直さずに停止し、NEEDS_DECISION: で落ちた試験の名前と生の出力（tail）を返す。理由: 落ちる理由が「前の試験の写しが残った」か「同じ画面の 2 つの部品が 1 回の通信を分け合うようになった（get の回数が減った）」かを、設計担当が見て決めるため。
+- (e) §4-B の 12 本のどれかが落ちたら、試験を書き換えて通さない。§4-A・§4-B の写し違いを探し、写し違いが無ければ停止して NEEDS_DECISION: で生の出力を返す。とくに K5 の試験（12 本目）は、落ちたら直し方を自分で考えずに停止する。
 - (f) 手順 2 で、変える前の lint の警告の数を数えておく。変えた後は、その数より増えないこと。増えたら直す。直せない時は停止する。
 
 ## 4-A. #1 frontend/src/hooks/usePermissions.ts（全文で置き換える）
@@ -93,44 +92,13 @@ export function usePermissions() {
 }
 ```
 
-## 4-B. #2 frontend/src/test-setup.ts（全文で置き換える）
-```ts
-/**
- * Vitest グローバルセットアップ（unit テスト専用）
- *
- * Firebase は VITE_FIREBASE_API_KEY 等の環境変数がない状態では
- * 初期化エラーを投げる。unit テストでは Firebase 本体は不要なため、
- * firebase.ts モジュールをスタブに差し替えて初期化をバイパスする。
- *
- * ADR-1054: 画面は写しの置き場（lib/query/apiQuery.ts の queryClient）を 1 個だけ使う。
- * 前の試験の写しが次の試験に残らないよう、試験ごとに消す。
- */
-
-import { afterEach, vi } from "vitest";
-
-vi.mock("./lib/firebase", () => ({
-  auth: {
-    currentUser: null,
-    onAuthStateChanged: vi.fn(),
-    signInWithEmailAndPassword: vi.fn(),
-    signOut: vi.fn(),
-  },
-  default: {},
-}));
-
-afterEach(async () => {
-  // 試験ファイルの vi.mock（api など）を効かせるため、ここでは静的に読み込まず、後で読み込む
-  const { queryClient } = await import("./lib/query/apiQuery");
-  queryClient.clear();
-});
-```
-
-## 4-C. #3 frontend/src/hooks/usePermissions.test.ts（全文で置き換える）
-- 1〜9 本目は今の 9 本と同じ。変えるのは 3 か所: (1) 利用者を試験の中で変えられるよう AuthContext を差し替える。(2) 8 本目（reload）は、取り直しの間に loading が true に戻らないので、reload の終わりを待ってから見る。(3) 10〜12 本目を足す。
+## 4-B. #2 frontend/src/hooks/usePermissions.test.ts（全文で置き換える）
+- 1〜9 本目は今の 9 本と同じ。変えるのは 4 か所: (1) 利用者を試験の中で変えられるよう AuthContext を差し替える。(2) 試験ごとに写しの置き場を消す（§0 P7）。(3) 8 本目（reload）は、取り直しの間に loading が true に戻らない。TanStack は結果の知らせを少し後にまとめて送るので、新しい権限は waitFor で待ってから見る。(4) 10〜12 本目を足す。
 ```ts
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { usePermissions } from "./usePermissions";
+import { queryClient } from "../lib/query/apiQuery";
 
 // 試験の中で利用者を変えるため、今の人を差し替えられるようにする（ADR-1054 K5）
 const auth = vi.hoisted(() => ({ user: { uid: "user-a" } as { uid: string } | null }));
@@ -151,6 +119,8 @@ const mockGet = vi.mocked(api.get);
 afterEach(() => {
   vi.clearAllMocks();
   auth.user = { uid: "user-a" };
+  // 前の試験の写しが次の試験に残らないようにする（ADR-1054）
+  queryClient.clear();
 });
 
 describe("usePermissions", () => {
@@ -246,7 +216,7 @@ describe("usePermissions", () => {
     });
 
     expect(mockGet).toHaveBeenCalledTimes(2);
-    expect(result.current.permissions.has("write:orders")).toBe(true);
+    await waitFor(() => expect(result.current.permissions.has("write:orders")).toBe(true));
   });
 
   it("calls the /me/permissions endpoint", async () => {
@@ -306,7 +276,7 @@ describe("usePermissions", () => {
 ```
 
 ## 4-H. 実装役の手順（1 手順 1 命令。<W> は手順1 で作られた作業場所の絶対パス）
-手順1. クラウドの決まり（S scripts/agent-hooks/cloud/rules.md:15）どおり、作業場所を作り、push 済みの枝の先頭に合わせる（設計担当が §1 #4〜#6 を push 済み）。
+手順1. クラウドの決まり（S scripts/agent-hooks/cloud/rules.md:15）どおり、作業場所を作り、push 済みの枝の先頭に合わせる（設計担当が §1 #3〜#5 を push 済み）。
   cd "$(git rev-parse --show-toplevel)" && bash scripts/new-worktree.sh release/line-like-speed-perm-cache
   （出力に出た作業場所の絶対パスを <W> として報告に書く。）
   cd <W> && git fetch origin release/line-like-speed-perm-cache
@@ -325,9 +295,9 @@ describe("usePermissions", () => {
   cd <W> && tail -5 /tmp/perm-ci.txt
   cd <W>/frontend && grep -n '"@tanstack/react-query"' package.json
   cd <W> && git grep -n -E "vi\.mock\(['\"]@tanstack" -- frontend/src | head -5
-  cd <W>/frontend && npx eslint src/hooks/usePermissions.ts src/hooks/usePermissions.test.ts src/test-setup.ts > /tmp/perm-lint-before.txt 2>&1
+  cd <W>/frontend && npx eslint src/hooks/usePermissions.ts src/hooks/usePermissions.test.ts > /tmp/perm-lint-before.txt 2>&1
   cd <W> && tail -5 /tmp/perm-lint-before.txt
-手順3. §4-A・§4-B・§4-C の全文で #1〜#3 を置き換える。
+手順3. §4-A・§4-B の全文で #1〜#2 を置き換える。frontend/src/test-setup.ts は変えない。
 手順4. 型を作ってから試験を流す（権限の部品の試験・全部の試験・型・lint）。作る型（frontend/src/api/generated/）は .gitignore で除かれるので commit に入らない。
   cd <W>/frontend && npm run generate:api-types > /tmp/perm-gen.txt 2>&1
   cd <W> && tail -3 /tmp/perm-gen.txt
@@ -338,17 +308,17 @@ describe("usePermissions", () => {
   （落ちた試験があれば、次の命令で名前を出して §3(d) に従う: cd <W> && grep -n -E "FAIL|✗|×" /tmp/perm-unit-all.txt | head -40）
   cd <W>/frontend && npx tsc --noEmit -p . > /tmp/perm-tsc.txt 2>&1
   cd <W> && tail -20 /tmp/perm-tsc.txt
-  cd <W>/frontend && npx eslint src/hooks/usePermissions.ts src/hooks/usePermissions.test.ts src/test-setup.ts > /tmp/perm-lint.txt 2>&1
+  cd <W>/frontend && npx eslint src/hooks/usePermissions.ts src/hooks/usePermissions.test.ts > /tmp/perm-lint.txt 2>&1
   cd <W> && tail -20 /tmp/perm-lint.txt
   （lint の警告が手順2 の数より増えていないこと・誤りが 0 であること。§3(f)。）
 手順5. 本番と同じ形で組み立てられるか確かめる。
   cd <W>/frontend && npm run build > /tmp/perm-build.txt 2>&1
   cd <W> && tail -15 /tmp/perm-build.txt
-手順6. 変わったファイルが §1 の #1〜#3 だけか確かめる。
+手順6. 変わったファイルが §1 の #1〜#2 だけか確かめる。
   cd <W> && git status --short | head -20
   cd <W> && git diff --stat origin/release/line-like-speed-perm-cache | tail -6
 手順7. commit する。
-  cd <W> && git add frontend/src/hooks/usePermissions.ts frontend/src/hooks/usePermissions.test.ts frontend/src/test-setup.ts
+  cd <W> && git add frontend/src/hooks/usePermissions.ts frontend/src/hooks/usePermissions.test.ts
   cd <W> && git commit -m "feat: 権限の読み込みを写しの置き場に載せ、戻った時に前の権限を先に出す（ADR-1054）"
 手順8. commit が在ることを確かめてから push する（--no-verify は使わない。push の前の検査が × なら直してから push。fast-forward でないと断られたら直さず BLOCKED:）。
   cd <W> && git log -3 --oneline
@@ -357,15 +327,15 @@ describe("usePermissions", () => {
 
 ## 4. GO と承認・PO の操作
 - PO の実装承認: 2026-11-01 PO 選択「1」（権限の読み込みを写しの置き場に載せる作業指示書を作り、本番まで進める）。ADR-1054 は Accepted。このカードの審査合格の後に、設計担当がクラウドの Sonnet へ渡す。
-- 触るのは frontend の部品 1 つ・試験の準備・試験と書類だけで、migrations・deploy.yml・本番 scripts を含まない（番号付き GO の要る危ない PR ではない）。main へのマージで本番の画面に出る。マージは PO の委任に基づき設計担当（Claude Opus）が、マージ前の審査役の APPROVE と必須の確認 16 件の pass の後に行う。
+- 触るのは frontend の部品 1 つ・その試験と書類だけで、migrations・deploy.yml・本番 scripts を含まない（番号付き GO の要る危ない PR ではない）。main へのマージで本番の画面に出る。マージは PO の委任に基づき設計担当（Claude Opus）が、マージ前の審査役の APPROVE と必須の確認 16 件の pass の後に行う。
 - PO が操作することはない。
 
 ## 5. 受入（○×）
 | # | 基準 | 検証方法 |
 |---|---|---|
-| C1 | §4-C の 12 本がすべて合格（K1: 10・11 本目／K5: 12 本目で利用者を変えた後の描画に前の人の権限 0 件） | /tmp/perm-unit.txt の最後（1 file・12 passed）と、PR の CI の unit-run が success |
+| C1 | §4-B の 12 本がすべて合格（K1: 10・11 本目／K5: 12 本目で利用者を変えた後の描画に前の人の権限 0 件） | /tmp/perm-unit.txt の最後（1 file・12 passed）と、PR の CI の unit-run が success |
 | C2 | 全部の試験・型・lint・組み立てが通る | /tmp/perm-unit-all.txt・perm-tsc.txt・perm-lint.txt・perm-build.txt の最後と、PR の必須の確認 16 件が pass |
-| C3 | 変わったのは §1 の 6 ファイルだけ | gh pr diff --name-only |
+| C3 | 変わったのは §1 の 5 ファイルだけ | gh pr diff --name-only |
 | C4 | マージの後、毎朝の画面の記録を手で 1 回動かし、段 2 の 5 行（design §3-4-6 の表）で K1（戻った時の秒）≤0.1 秒、K2（初めて開く秒）≤2 秒、403・5xx が 0 件。ほかの 130 行は K2 の最大と 2 秒を超えた画面の数が §3-4-6 から悪化していない。4 行の K1 が下がらなければ §0 P3 の仮説は誤りと記録して止まる | prod-ui-check の実行の要約（設計担当。`gh workflow run prod-ui-check.yml --ref main` の後に要約の表を読む）。測る前に、その時の本番の反映が終わっていることを確かめる（§3-4-6 で測定中に別の反映が始まった反省） |
 | C5 | マージの後、deploy が成功し、本番の画面が開く | deploy.yml の実行の結論 success と時刻。本番 https://app.salesanchor.jp/ が開き、ブラウザの誤りの記録に TanStack 由来の誤りが無い（設計担当） |
 

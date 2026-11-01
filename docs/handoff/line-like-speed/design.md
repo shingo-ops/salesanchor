@@ -111,7 +111,9 @@ PO の言葉: 「LINEみたいな使い心地は出来る？」（意味は「�
   - usePermissions を使う画面のファイルは 53 本ある（`git grep -l 'usePermissions()' origin/main -- frontend/src`）。段 2 のカードの範囲（3 画面）の外なので、直すには新しい作業指示書と PO の判断が要る。
 
 #### 3-4-7. 権限の写しの作業指示書
-- 段 2 の受入で K1 が 0.1 秒を超えた 4 行（§3-4-6）の理由の仮説を確かめるため、権限を読む部品 usePermissions を写しの置き場に載せる。作業指示書は docs/handoff/line-like-speed/perm-cache-card.md。ほかの使い手は変えない理由と、ログインの前に描かれない根拠は perm-cache-card.md §0 P5・P6。K5 は perm-cache-card.md §4-C の 12 本目で確かめる。PO 選択「1」（2026-11-01）。
+- 段 2 の受入で K1 が 0.1 秒を超えた 4 行（§3-4-6）の理由の仮説を確かめるため、権限を読む部品 usePermissions を写しの置き場に載せる。作業指示書は docs/handoff/line-like-speed/perm-cache-card.md。ほかの使い手は変えない理由と、ログインの前に描かれない根拠は perm-cache-card.md §0 P5・P6。K5 は perm-cache-card.md §4-B の 12 本目で確かめる。PO 選択「1」（2026-11-01）。
+- 第 1 版の審査は REVISE（2026-11-01 クラウドの Opus）。試験の共通の準備（test-setup.ts）で写しを消す形は、ほかの 8 ファイル 52 本を落とした。このため第 2 版では、写しを消すのを usePermissions.test.ts の中だけにした。
+- 次の段の課題: useApiQuery を使うほかの部品の試験ファイルでも、写しが同じファイルの次の試験に残り得る。試験の共通の準備で消す形は、api.ts が i18n を読み込む点を解いてから考える。
 
 ### 3-5. 測り方（|基準|検証方法|）
 | 基準 | 検証方法 |
