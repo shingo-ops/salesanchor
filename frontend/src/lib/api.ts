@@ -101,7 +101,11 @@ async function fetchWithReauth(url: string, init: RequestInit, path: string): Pr
   return retried;
 }
 
-async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+async function request<T>(
+  path: string,
+  options: RequestInit = {},
+  timeoutMs: number = FETCH_TIMEOUT_MS,
+): Promise<T> {
   const headers = await getAuthHeaders();
   const method = (options.method || "GET").toUpperCase();
   // POST/PATCH/PUT/DELETE は二重送信防止のためリトライしない
@@ -117,7 +121,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     }
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
       const res = await fetchWithReauth(
@@ -241,6 +245,9 @@ export const api = {
   get: <T>(path: string) => request<T>(path),
   post: <T>(path: string, data: unknown) =>
     request<T>(path, { method: "POST", body: JSON.stringify(data) }),
+  // 待ち時間を呼ぶ側で決める POST（秘書チャットの口など。既定の口の動きは変えない）
+  postWithTimeout: <T>(path: string, data: unknown, timeoutMs: number) =>
+    request<T>(path, { method: "POST", body: JSON.stringify(data) }, timeoutMs),
   put: <T>(path: string, data: unknown) =>
     request<T>(path, { method: "PUT", body: JSON.stringify(data) }),
   patch: <T>(path: string, data: unknown) =>
