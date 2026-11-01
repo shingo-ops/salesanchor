@@ -105,12 +105,12 @@ ADR: [../../adr/ADR-1056-secretary-chat.md](../../adr/ADR-1056-secretary-chat.md
   - `.env` には書かない（`.env` の全部のキーは backend に渡るため。`scripts/blue-green-cutover.sh:83-84`）。GitHub の秘密も使わない。
   - ファイルを置くのは PO 本人。PO が手元で `!` で流す台本 scripts/ops/place-secretary-token.sh（段2 で作る）が、トークンを画面に出さずに読み（`read -rs`）、VPS のファイルに書き、容器を作り直す。AI は値を見ない・書かない。
   - `ANTHROPIC_API_KEY` は容器に入れない（`-p` では API キーが優先されるため。r2 §A）。
-- deploy.yml: 前例（ai-reader の窓口の段、deploy.yml の 600〜650 行付近）と同じ形の段を 1 つ足す（第3.1版審査 MEDIUM-1 で中身を決め直した）。どの手順が失敗しても、アプリの配備は止めない（`::warning::` を出して続ける）。
+- deploy.yml: 前例（ai-reader の窓口の段、deploy.yml の 600〜650 行付近）と同じ形の段を 1 つ足す（第3.1版審査 MEDIUM-1 で中身を決め直した）。どの手順が失敗しても、アプリの配備は止めない（`::warning::` を出して続ける）。段そのものが打ち切りや ssh の切断で失敗しても後ろの移行・smoke が流れるよう、段に `continue-on-error: true` と `command_timeout: 10m` を付ける（前例 `.github/workflows/deploy.yml:510`・`:730`。第3.2版審査 MEDIUM-1）。
   1. 空き容量を記録（`df -h /`）。
   2. 専用ファイルの有無に関係なく、イメージを `docker build -t astro-webapp-secretary-agent ./secretary-agent` で作る（compose の build は env_file が無いと止まるため使わない）。
   3. 同じイメージを `docker run --rm --network astro-webapp_frontnet --read-only --cap-drop ALL --security-opt no-new-privileges:true astro-webapp-secretary-agent node /app/probe.mjs` で 1 回動かし、つながりの試しの結果（下の probe）を Actions のログに残す。トークンは渡さない。
   4. 専用ファイルが読めるときだけ `docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml up -d --force-recreate --no-build`。読めなければ `::warning::` で飛ばす。
-- probe（secretary-agent/probe.mjs。Node の標準 `node:net`・`node:https` だけ）: `postgres:5432` と `redis:6379` に TCP でつなぎ、`dns_fail`・`refused`・`timeout`（3 秒）・`connected` のどれかを 1 行ずつ JSON で出す。`https://api.anthropic.com/` に HEAD を送り、状態番号か失敗の種類を出す。K4 の合格は postgres・redis の両方が `connected` でないこと。`connected` が出たら `::warning::` に K4 不合格と書く（段3 で設計担当が読む）。
+- probe（secretary-agent/probe.mjs。Node の標準 `node:net`・`node:https` だけ）: `postgres:5432` と `redis:6379` に TCP でつなぎ、`dns_fail`・`refused`・`timeout`（3 秒）・`connected` のどれかを 1 行ずつ JSON で出す。`https://api.anthropic.com/` に HEAD を送り、状態番号か失敗の種類を出す。K4 の合格は postgres も redis も、どちらも `connected` でないこと（片方でも `connected` なら不合格）。`connected` が出たら `::warning::` に K4 不合格と書く（段3 で設計担当が読む）。
 - 古いイメージの片付けは第1段では書かない（`df -h` で記録だけする。第3.1版審査 LOW-9）。
 - 専用ファイルが無い間は容器が起動しない → backend は届かず 503 `not_ready` → 画面は「準備ができていません」。請求書・予定の機能はそのまま動く。
 
@@ -180,7 +180,7 @@ ADR: [../../adr/ADR-1056-secretary-chat.md](../../adr/ADR-1056-secretary-chat.md
 | K1 印は使える人にだけ出る | backend の試験（会社の入口なし・管理者の印なし・権限なしで 403）。本番で `tenant_features` の `secretary_chat` がテナント 4 の 1 行だけ。PO の画面に印が出る（目視） |
 | K2 請求書の下書き→「作る」で 1 件・押さねば 0 件 | 試し 5 回の件数の前後と中身の照合（トークンを置いたあと） |
 | K3 予定の下書き→「作る」で 1 件・押さねば 0 件 | 試し 5 回の照合（同上） |
-| K4 ほかの会社の値が出た件数 0 | 試験 20 問の記録。本番で容器からデータベースへの接続を試し、失敗することを記録する（KGI の判定どおり）。段3: deploy の段が同じイメージを frontnet だけで動かす probe の結果（Actions のログ）。段4: PO が流すトークンを置く台本の最後に、動いている `secretary-agent` の中で同じ probe を `docker exec` で流し、結果を画面に出す（KGI の文面どおりの記録）。postgres・redis が両方 `connected` でないこと。compose を読む試験（`secretary-agent` が backnet に入らず、DB・redis の接続の環境変数を持たない）。名前探しが今の会社だけを読む試験（`backend/tests/rls_bootstrap.py` の PostgreSQL の土台）。本番で backend の容器の環境に `CLAUDE_CODE_OAUTH_TOKEN` が無い（キーの有無だけ見る） |
+| K4 ほかの会社の値が出た件数 0 | 試験 20 問の記録。本番で容器からデータベースへの接続を試し、失敗することを記録する（KGI の判定どおり）。段3: deploy の段が同じイメージを frontnet だけで動かす probe の結果（Actions のログ）。段4: PO が流すトークンを置く台本の最後に、動いている `secretary-agent` の中で同じ probe を `docker exec` で流し、結果を画面に出す（KGI の文面どおりの記録）。postgres も redis も、どちらも `connected` でないこと（片方でも `connected` なら不合格）。compose を読む試験（`secretary-agent` が backnet に入らず、DB・redis の接続の環境変数を持たない）。名前探しが今の会社だけを読む試験（`backend/tests/rls_bootstrap.py` の PostgreSQL の土台）。本番で backend の容器の環境に `CLAUDE_CODE_OAUTH_TOKEN` が無い（キーの有無だけ見る） |
 | K5 AI が書き込んだ件数 0 | `/assistant/messages` を呼んでも請求書・予定の件数が変わらない試験。監査ログの作成者が利用者本人 |
 | K6 空きメモリ 0.4GB 以上 | 試し中 10 秒ごとの記録の最小値 |
 
@@ -237,3 +237,8 @@ ADR: [../../adr/ADR-1056-secretary-chat.md](../../adr/ADR-1056-secretary-chat.md
 - 審査の全文: 本線の外の記録 /tmp/CC報告ファイル/secretary-chat/review-design-v3_1.md。
 - MEDIUM-1 K4・U7 の本番の手順が流せない → §6-1 の deploy の段で、専用ファイルが無くても `docker build` と probe を流し、結果を Actions のログに残す形にした。§10 K4 と §11 段3 を同じ手順にそろえた。段4 は PO の台本の最後に `docker exec` で同じ probe を流す（card-b1 §4・§6・§8）。
 - LOW-1 → §6-1 の一覧の出どころを直した。LOW-2〜4 → card-a。LOW-5〜7 → card-b2。LOW-8 → card-b1 §2（start が読めなければ 502）。LOW-9 → §6-1（片付けは第1段では書かない）。
+
+## 17. 第3.2版審査（REVISE・MEDIUM 1 件）の直し先（第3.3版）
+- 審査の全文: 本線の外の記録 /tmp/CC報告ファイル/secretary-chat/review-design-v3_2.md。
+- MEDIUM-1 段そのものの失敗で後ろの移行が飛ぶ → §6-1 と card-b1 §6 に `continue-on-error: true`・`command_timeout: 10m` を足した。
+- LOW-1 合格の書き方 → §6-1・§10 を「どちらも `connected` でない（片方でも不合格）」にそろえた。LOW-2 → card-b1 §4 で probe の宛先を環境変数で差し替えられるようにした。LOW-3 → card-a の引用に `:49-50` を足した。

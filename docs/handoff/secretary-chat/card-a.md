@@ -16,7 +16,7 @@
 - props に `aboveTabbar?: boolean` を足す。true のとき（スマホの殻で呼ぶ側が渡す）は、下のタブの帯に重ならないよう、下の余白を `calc(var(--tabbar-height) + env(safe-area-inset-bottom, 0px) + var(--space-4))` にする（modifier class で切り替える）。`--tabbar-height` は `frontend/src/tokens.css:183` で決まっている（設計担当が確かめた）。
 - 色は既存の色トークン（主ボタンの色と同じもの。`frontend/src/components/Button.css` の primary が使う変数）を使う。ダークでも同じ変数で切り替わること（ADR-067）。
   - 設計担当の決め: 「primary は 1 画面に 1 個」（`frontend/src/components/Button.tsx:13`）は、金型 `Button` の `variant="primary"` を本文の主操作に使うときの決まり。この印は `Button` の variant ではなく、全画面に浮かぶ別の金型なので数に入れない。`Button` の variant は使わず、色の変数だけを借りる。
-- 中身は自前の `<button type="button">` にする。金型 `Button` の丸い形（`shape="pill"`）はログイン画面だけに決められている（`Button.tsx` の props のコメント・buttonShapeUsage.test.ts）ため使えない。この理由を .tsx の頭のコメントに書く。ただしコメントに、shape= に続けて pill を引用符で囲んだ字をそのまま書かない（`frontend/src/components/buttonShapeUsage.test.ts:21-24` は全文を探すので試験が赤になる。「Button の丸い形はログイン画面だけ」のように書く）。
+- 中身は自前の `<button type="button">` にする。金型 `Button` の丸い形（`shape="pill"`）はログイン画面だけに決められている（`Button.tsx` の props のコメント・buttonShapeUsage.test.ts）ため使えない。この理由を .tsx の頭のコメントに書く。ただしコメントに、shape= に続けて pill を引用符で囲んだ字をそのまま書かない（`frontend/src/components/buttonShapeUsage.test.ts:21-24` が探す字で、同 `:49-50` がファイルの全文を読んで探すので、試験が赤になる。「Button の丸い形はログイン画面だけ」のように書く）。
 - `<button type="button">`。キーボードで押せる。フォーカスの輪は既存の金型と同じ変数。
 
 ### 2-2. ChatBubble（チャットの吹き出し）
