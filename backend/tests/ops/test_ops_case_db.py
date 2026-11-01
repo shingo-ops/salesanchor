@@ -24,6 +24,14 @@ from pathlib import Path
 from urllib.parse import urlsplit, urlunsplit
 
 import pytest
+from tests.conftest import (
+    OPS_CASE_HAS_SECRET_DDL,
+    OPS_CASE_PLAIN_DEMO_DDL,
+    OPS_CASE_TENANT_LEADS_DDL,
+    OPS_CASE_TENANT_VIEWER_ACCOUNTS_DDL,
+    OPS_CASE_TEXT_PK_DDL,
+    OPS_CASE_TWO_PK_DDL,
+)
 
 ADMIN_PG_URL = os.getenv("RLS_ADMIN_DATABASE_URL") or os.getenv("TEST_PG_URL")
 
@@ -150,23 +158,23 @@ def pg(cluster):
         c.execute(f'GRANT CREATE ON DATABASE "{name}" TO aic_owner')
         c.execute("ALTER SCHEMA public OWNER TO aic_owner")
         c.execute("SET ROLE aic_owner")
-        c.execute("CREATE TABLE public.plain_demo (id integer PRIMARY KEY, memo text, email text)")
+        c.execute(OPS_CASE_PLAIN_DEMO_DDL)
         c.execute("INSERT INTO public.plain_demo VALUES (1, 'memo-1', %s), (2, 'memo-2', 'b@example.test')", (_RAW_EMAIL,))
-        c.execute("CREATE TABLE public.text_pk (code text PRIMARY KEY, memo text)")
+        c.execute(OPS_CASE_TEXT_PK_DDL)
         c.execute("INSERT INTO public.text_pk VALUES ('k-1', 'text-memo')")
-        c.execute("CREATE TABLE public.has_secret (id integer PRIMARY KEY, memo text, api_token text)")
+        c.execute(OPS_CASE_HAS_SECRET_DDL)
         c.execute("INSERT INTO public.has_secret VALUES (1, 'm', 'tok-very-secret')")
-        c.execute("CREATE TABLE public.two_pk (a integer, b integer, memo text, PRIMARY KEY (a, b))")
+        c.execute(OPS_CASE_TWO_PK_DDL)
         c.execute("INSERT INTO public.two_pk VALUES (1, 1, 'two-pk-memo')")
         c.execute("CREATE SCHEMA tenant_001")
-        c.execute("CREATE TABLE tenant_001.leads (id uuid PRIMARY KEY, customer_name text, email text)")
+        c.execute(OPS_CASE_TENANT_LEADS_DDL)
         c.execute(
             "INSERT INTO tenant_001.leads VALUES ('11111111-1111-1111-1111-111111111111', %s, %s),"
             " ('22222222-2222-2222-2222-222222222222', 'other', 'other@example.test')",
             (_RAW_NAME, _RAW_EMAIL),
         )
         # deny_tables にある名前（秘密列は無い＝拒否表だけで断られる）
-        c.execute("CREATE TABLE tenant_001.viewer_accounts (id integer PRIMARY KEY, note text)")
+        c.execute(OPS_CASE_TENANT_VIEWER_ACCOUNTS_DDL)
         c.execute("INSERT INTO tenant_001.viewer_accounts VALUES (1, 'viewer-note')")
         c.execute("ANALYZE")
         c.execute(_read(_META_SQL))
