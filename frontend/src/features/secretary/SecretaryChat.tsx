@@ -4,7 +4,7 @@
  * 出す条件は backend の口と同じ 4 つ（feature・super admin・customers.view・invoices.create）。
  * 会話は useState だけ（保存しない。閉じたら消す）。
  * AI の文字は React の文字としてだけ出す（HTML・Markdown として描画しない）。
- * エラー表示（status="error"）は AI 側の吹き出しにだけ使う。利用者側の吹き出しには付けない。
+ * エラー表示（failed）は AI 側の吹き出しにだけ使う。利用者側の吹き出しには付けない。
  */
 
 import { useRef, useState } from "react";
@@ -106,7 +106,7 @@ function SecretaryChatInner({ isMobile, onForbidden }: InnerProps) {
   const renderMessage = (m: ChatMessage) => {
     if (m.side === "user") {
       return (
-        <ChatBubble key={m.id} side="user">
+        <ChatBubble key={m.id} layout="panel" direction="outbound">
           {m.text}
         </ChatBubble>
       );
@@ -114,13 +114,13 @@ function SecretaryChatInner({ isMobile, onForbidden }: InnerProps) {
     switch (m.kind) {
       case "text":
         return (
-          <ChatBubble key={m.id} side="assistant" status={m.status}>
+          <ChatBubble key={m.id} layout="panel" direction="inbound" pending={m.status === "sending"} failed={m.status === "error"}>
             {m.text}
           </ChatBubble>
         );
       case "invoice":
         return (
-          <ChatBubble key={m.id} side="assistant" className="secretary-chat__draft-bubble">
+          <ChatBubble key={m.id} layout="panel" direction="inbound" wide>
             <SecretaryDraftInvoice
               draft={m.reply.draft}
               candidates={m.reply.candidates}
@@ -131,7 +131,7 @@ function SecretaryChatInner({ isMobile, onForbidden }: InnerProps) {
         );
       case "event":
         return (
-          <ChatBubble key={m.id} side="assistant" className="secretary-chat__draft-bubble">
+          <ChatBubble key={m.id} layout="panel" direction="inbound" wide>
             <SecretaryDraftEvent
               draft={m.reply.draft}
               onCreated={() => markCreated(m.id, "event", "/schedule")}
@@ -141,7 +141,7 @@ function SecretaryChatInner({ isMobile, onForbidden }: InnerProps) {
         );
       case "created":
         return (
-          <ChatBubble key={m.id} side="assistant">
+          <ChatBubble key={m.id} layout="panel" direction="inbound">
             {t(m.target === "invoice" ? "secretary.created.invoice" : "secretary.created.event")}{" "}
             <Link to={m.to} onClick={close}>
               {t(m.target === "invoice" ? "secretary.link.invoice" : "secretary.link.event")}

@@ -1823,7 +1823,7 @@ input[type="date"].karte-field-empty:not(:focus)::-webkit-datetime-edit { color:
 /* 吹き出し + 下端のリアクション表示を縦に積む（幅上限は .inbox-msg-row 直後で定義） */
 .inbox-msg-row.inbound .msg-stack { align-items: flex-start; }
 .inbox-msg-row.outbound .msg-stack { align-items: flex-end; }
-.msg-stack .msg-bubble { max-width: 100%; min-width: 0; }
+.msg-stack .comp-chat-bubble { max-width: 100%; min-width: 0; }
 
 /* 吹き出し + 外側のハート（受信=右隣 / 送信=左隣） */
 .msg-bubble-line {
