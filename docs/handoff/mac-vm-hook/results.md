@@ -35,7 +35,7 @@ Context7 は月間上限超過（"Monthly quota exceeded"）で使えなかっ�
 - 見張りが動いていたかの確認（0 件が「止まっていた」でないこと）:
   - settings.json の PreToolUse(Bash) に ~/.claude/scripts/mac-vm-guard.py が登録されたまま。本体の更新時刻 2026-10-25 00:43:53、sha256 先頭 91fc182d
   - 本体へ直接入力を流した試験（記録先は一時ファイルに切替）: profile 付き起動 → exit 2・hook_blocked と matched_part を記録／無指定の起動・echo・list → exit 0／壊れた JSON → exit 0・hook_internal_error を記録。生出力: r1-6/liveness-test.txt
-  - 期間内の会話記録（1,317 ファイル）で起動系の命令を探すと、default への起動（無指定の起動）1 種だけが見つかった。§3 では止めない形で、拒否記録も無い＝正しく通した。生出力: r1-6/vm-commands-in-transcripts.txt
+  - 期間内に更新された会話記録（1,317 ファイル）で起動系の命令を探すと、default への起動（無指定の起動）1 種だけが見つかった（本測定の会話自身を除くと 1 ファイル。実行日時が期間内かは未確認）。§3 では止めない形で、期間内に拒否記録は無い。生出力: r1-6/vm-commands-in-transcripts.txt・default-start-files.txt
 - 判定: §3 に当たらない拒否 0 件、hook_internal_error 0 件。
 
 | # | 結果 | 根拠 |
