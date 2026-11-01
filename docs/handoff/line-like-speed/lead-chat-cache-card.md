@@ -4,8 +4,8 @@
 - 根拠の写し: S=origin/main a6ef43ca7。行番号はすべてこの sha。実装の前に最新の origin/main で行を合わせ直す（§3(a)）。
 - 書き方の決まりは最初の画面の写しカード（docs/handoff/line-like-speed/dashboard-cache-card.md）と同じ。全命令は cd <W> で始める・出力は tail/head で上限・PR は実行役が作らない・出力をファイルに残す命令と tail で読む命令は別の行。
 - 実行役はクラウドの Sonnet。作業場所の作り方はクラウドの決まり（S scripts/agent-hooks/cloud/rules.md:15）を正とする。.pr-number・gh-pr-create-safe.sh は使わない。待つために sleep を使わない。
-- 状態: 第 1 版（設計担当 Claude Opus・2026-11-02）。
-- 受領確認: 実装役は着手の最初の報告に「会話の画面の写しカード 第 1 版を受け取った・S=a6ef43ca7」と書く。
+- 状態: 第 2 版（設計担当 Claude Opus・2026-11-02）。第 1 版の審査（REVISE・指摘 5 つ）を直した: lint の警告を増やさない（試験の題を英語・8 か所の依存に setConversations を必ず足す）・会話を素早く切り替えた時に前の人のカルテを入力欄に入れない・失敗の印を会話ごとに持つ・利用者が画面を出したまま変わる試験を足す・§4-D (3) の言葉。
+- 受領確認: 実装役は着手の最初の報告に「会話の画面の写しカード 第 2 版を受け取った・S=a6ef43ca7」と書く。
 
 ## 0. 何のための変更か（設計の合格線は変えない）
 - P1 最初の画面の写しの受入（prod-ui-check run 41332039643 と 41334197486・2026-11-02）で、/ の戻った時の秒（K1）は 0.04 秒と 0.05 秒になった。同じ 2 回で /lead-chat の K1 は 0.68 秒と 0.83 秒、開く秒（K2）は 0.9 秒（2 回目）。2 回目の /lead-chat の行は API の数 7・いちばん遅い API は /api/v1/conversations 0.5 秒。設計担当の手元の写しは /tmp/CC報告ファイル/dashboard-cache/measure-run41332039643.txt と measure-run41334197486.txt（リポジトリには入れない）。
@@ -25,7 +25,7 @@
 | 2 | frontend/src/lib/messages.ts | listConversations と getMessages の中で path を作る | path の作り方を conversationsPath・messagesPath に出す（§4-B） |
 | 3 | frontend/src/pages/inbox/useInboxState.ts | 4 つの取り方を useState に持つ | 写しの置き場に載せる（§4-C） |
 | 4 | frontend/src/pages/inbox/useInboxState.autoSelectBadge.test.tsx | 写しの置き場を消さない | 偽物に 2 つ足し、写しを毎回消す（§4-D） |
-| 5 | frontend/src/pages/inbox/useInboxState.cache.test.tsx | 無い | 5 本の試験（§4-E 全文） |
+| 5 | frontend/src/pages/inbox/useInboxState.cache.test.tsx | 無い | 8 本の試験（§4-E 全文） |
 | 6 | docs/handoff/line-like-speed/lead-chat-cache-card.md | 無い | このカード（設計担当が書いた。実装役は触らない） |
 | 7 | docs/handoff/line-like-speed/design.md | §3-4-10 まで | §3-4-11 に最初の画面の受入、§3-4-12 にこのカードの場所を書き足し済み（設計担当。実装役は触らない） |
 | 8 | .claude-pipeline/active-work.d/release-line-like-speed-lead-chat-card.md | 無い | 作業の札（設計担当。実装役は触らない） |
@@ -42,8 +42,8 @@
 - (b) `cd <W>/frontend && grep -n '"@tanstack/react-query"' package.json` が `"5.104.4"` の 1 行。違えば停止して報告する。
 - (c) `cd <W> && git grep -n -E "setConversations|setLeadDetail|setMessagesData|setAvailablePageIds" -- frontend/src | head -30` の行が、useInboxState.ts の中だけ（S で :218・:239・:243・:249・:340・:375・:385・:405・:414・:427・:441・:506・:629・:638・:651・:652・:945・:962・:986・:996・:1008・:1043・:1052・:1061 の 24 行）。ほかのファイルに 1 行でもあれば停止して NEEDS_DECISION: で返す。:945・:962・:986・:996・:1008・:1043・:1052・:1061 はどれも `setConversations((prev) =>` の形（関数を渡す形）であること。1 つでも関数でない物を渡していれば停止して NEEDS_DECISION: で返す。
 - (d) 手順 4 の全部の試験で、§1 #4・#5 のほかの試験ファイルが落ちたら、試験もコードも直さずに停止し、NEEDS_DECISION: で落ちた試験の名前と生の出力（tail）を返す。
-- (e) §1 #4 の 5 本・§4-E の 5 本のどれかが落ちたら、試験を書き換えて通さない。§4-A〜§4-E の写し違いを探し、写し違いが無ければ停止して NEEDS_DECISION: で生の出力を返す。とくに K5 の試験（§4-E の 4 本目）は、落ちたら直し方を自分で考えずに停止する。§4-E の見本の値（fixture）が型や描画に足りずに落ちた時だけ、見本の値に足りない項目を足してよい（画面のコードは変えない）。足した項目は報告に書く。
-- (f) 手順 2 で、変える前の lint の警告の数を数えておく（§1 #1〜#4）。変えた後は、#1〜#5 を合わせてその数より増えないこと。増えたら直す。直せない時は停止する。eslint の react-hooks/exhaustive-deps を disable の注釈で黙らせない（S :683 にある 1 か所はそのまま残す）。
+- (e) §1 #4 の 5 本・§4-E の 8 本のどれかが落ちたら、試験を書き換えて通さない。§4-A〜§4-E の写し違いを探し、写し違いが無ければ停止して NEEDS_DECISION: で生の出力を返す。とくに K5 の試験（§4-E の 4 本目と 6 本目）と切り替えの順番の試験（7 本目）は、落ちたら直し方を自分で考えずに停止する。§4-E の見本の値（fixture）が型や描画に足りずに落ちた時だけ、見本の値に足りない項目を足してよい（画面のコードは変えない）。足した項目は報告に書く。
+- (f) 手順 2 で、変える前の lint の警告の数を数えておく（§1 #1〜#4）。変えた後は、#1〜#5 を合わせてその数より増えないこと（第 1 版の審査では、変える前は 0 件。commit の前の点検 lint-staged が `eslint --max-warnings=0` で、警告が 1 件でもあると commit が止まる。S frontend/package.json:54-58）。増えたら、どの決まりの警告かを tail で見て停止し、NEEDS_DECISION: で返す（§4-C (15) と §4-E の英語の題で 0 件になる見込み。自分で直し方を考えない）。eslint の react-hooks/exhaustive-deps を disable の注釈で黙らせない（S :683 にある 1 か所はそのまま残す）。
 - (g) tsc が §4-A の型（とくに update の書き換えの型）で誤りを出したら、型を as で曲げずに停止し、NEEDS_DECISION: で tsc の出力を返す。§4-C の中の `as` は書いてある所だけ。
 
 ## 4-A. #1 frontend/src/lib/query/apiQuery.ts（1 か所を足す）
@@ -133,7 +133,7 @@ export function messagesPath(leadId: number): string {
   return api.get<MessagesResponse>(messagesPath(leadId));
 ```
 
-## 4-C. #3 frontend/src/pages/inbox/useInboxState.ts（14 か所を変える）
+## 4-C. #3 frontend/src/pages/inbox/useInboxState.ts（15 か所を変える）
 (1) import。S :13-28 の `../../lib/messages` の import に `ConversationsResponse`・`conversationsPath`・`messagesPath` を足す（並びは今の並びに合わせ、型は型の並び・関数は関数の並びに入れる）。S :14 の次に `import { useApiCache, useApiQuery } from "../../lib/query/apiQuery";` を足す。
 
 (2) S :218 を消し、S :219 は次にする（S :220 の convError は変えない）。
@@ -144,12 +144,14 @@ export function messagesPath(leadId: number): string {
 (3) S :239 の `const [availablePageIds, setAvailablePageIds] = useState<string[]>([]);` を消す。
 (4) S :243 の `const [messagesData, setMessagesData] = useState<MessagesResponse | null>(null);` を、次の 2 行にする。
 ```ts
-  const [msgFailed, setMsgFailed] = useState(false);
+  // 取りに行って失敗した会話の番号（その会話を出している時だけ中身を隠す。ほかの会話に切り替えたら関係しない）
+  const [msgFailedId, setMsgFailedId] = useState<number | null>(null);
   const [msgLoadCount, setMsgLoadCount] = useState(0);
 ```
-(5) S :249 の `const [leadDetail, setLeadDetail] = useState<LeadDetail | null>(null);` を、次の 1 行にする。
+(5) S :249 の `const [leadDetail, setLeadDetail] = useState<LeadDetail | null>(null);` を、次の 2 行にする。
 ```ts
-  const [leadFailed, setLeadFailed] = useState(false);
+  // カルテを取りに行って失敗した会話の番号（(4) と同じ考え方）
+  const [leadFailedId, setLeadFailedId] = useState<number | null>(null);
 ```
 (6) S :325（handleAvatarError の `}, []);`）と S :327 の `// ----` の間（S :326 の空行の所）に、次を足す。
 ```ts
@@ -186,9 +188,9 @@ export function messagesPath(leadId: number): string {
 
   // 選んだ会話のメッセージとカルテ（会話を選んでいない時は null。番号 0 の写しは取りに行かない見張りだけ）
   const messagesQuery = useApiQuery<MessagesResponse>(messagesPath(selectedLeadId ?? 0), { enabled: false });
-  const messagesData = selectedLeadId === null || msgFailed ? null : messagesQuery.data ?? null;
+  const messagesData = selectedLeadId === null || msgFailedId === selectedLeadId ? null : messagesQuery.data ?? null;
   const leadDetailQuery = useApiQuery<LeadDetail>(`/leads/${selectedLeadId ?? 0}`, { enabled: false });
-  const leadDetail = selectedLeadId === null || leadFailed ? null : leadDetailQuery.data ?? null;
+  const leadDetail = selectedLeadId === null || leadFailedId === selectedLeadId ? null : leadDetailQuery.data ?? null;
 ```
 あわせて、ファイルの上の方の定数の並び（関数 useInboxState の外・import の後）に、次の 1 行を足す。置く位置は、S で関数 useInboxState の宣言（`export function useInboxState`）の直前の空行の上。
 ```ts
@@ -225,17 +227,20 @@ S :361 の依存 `[platformFilter, unreadOnly, pageIdFilter, t]` を `[cache, co
 を、次にする。
 ```ts
       await cache.fetch(messagesPath(leadId), () => getMessages(leadId));
-      setMsgFailed(false);
+      setMsgFailedId((prev) => (prev === leadId ? null : prev));
       setMsgLoadCount((n) => n + 1);
 ```
-S :405 の `setMessagesData(null);` を `setMsgFailed(true);` にする。S :409 の依存 `[t]` を `[cache, t]` にする。
+S :405 の `setMessagesData(null);` を `setMsgFailedId(leadId);` にする。S :409 の依存 `[t]` を `[cache, t]` にする。
 自動スクロール（S :686-691）の依存 `[messagesData]` を `[messagesData, msgLoadCount]` にし、S :686 の注釈を次にする。
 ```ts
   // メッセージリスト末尾へ自動スクロール（中身が届くたび。写しは中身が同じなら同じ物を返すので、届いた回数も見る）
 ```
-(10) loadLeadDetail（S :411-430）を、次の全部にする。
+(10) loadLeadDetail（S :411-430）を、次の全部にする。今は 1 つの返事から leadDetail と cardForm を一緒に作るので、2 つは必ず同じ人の中身になる。写しの後は leadDetail が今選んでいる会話の写しから来るので、遅れて返った前の会話の返事で cardForm を書くと、2 つが別の人になり、保存で前の人の値が今の人に書かれる（第 1 版の審査の指摘 2）。このため、いちばん新しく呼んだ 1 本の返事だけで cardForm と失敗の印を書く。写しには、遅れた返事も今と同じく書かれる（その人の中身なので正しい）。
 ```ts
+  // いちばん新しく呼んだ loadLeadDetail の番号（遅れて返った前の呼び出しで入力欄を書かない）
+  const leadRequestRef = useRef(0);
   const loadLeadDetail = useCallback(async (leadId: number) => {
+    const request = ++leadRequestRef.current;
     const path = `/leads/${leadId}`;
     // 入力欄の中身は、下書き（localStorage）があればそれを上に重ねる
     const formFrom = (data: LeadDetail): Partial<LeadDetail> => {
@@ -255,19 +260,22 @@ S :405 の `setMessagesData(null);` を `setMsgFailed(true);` にする。S :409
     if (cached) setCardForm(formFrom(cached));
     try {
       const data = await cache.fetch(path, () => api.get<LeadDetail>(path));
-      setLeadFailed(false);
+      if (request !== leadRequestRef.current) return;
+      setLeadFailedId(null);
       if (data) setCardForm(formFrom(data));
     } catch {
-      setLeadFailed(true);
+      if (request !== leadRequestRef.current) return;
+      setLeadFailedId(leadId);
       setCardForm({});
     }
   }, [cache]);
 ```
+- `useRef` は S :8 の react の import に既にある（足さない）。
 (11) markRead（S :437-456）の依存 `[]`（S :456）を `[setConversations]` にする。中身は変えない。
 (12) handleCardFieldBlur（S :495-515）。S :506 の `setLeadDetail(updated);` を、次の 2 行にする。S :515 の依存 `[leadDetail, cardForm, t]` を `[leadDetail, cardForm, cache, t]` にする。
 ```ts
       cache.write(`/leads/${leadDetail.id}`, updated);
-      setLeadFailed(false);
+      setLeadFailedId(null);
 ```
 (13) S :629（backToList）と S :638（onPageFilterChange）の `setLeadDetail(null);` の 2 行を消す（会話を選んでいない時は leadDetail が null になる・(6)）。S :650-653 の
 ```ts
@@ -282,7 +290,19 @@ S :405 の `setMessagesData(null);` を `setMsgFailed(true);` にする。S :409
     if (selectedLeadId === null) return;
 ```
 (14) PC の自動選択（S :738 と S :744）の `convLoading` を `convShowLoading` にする（2 か所）。返す物の S :1075 の `    convLoading,` を `    convLoading: convShowLoading,` にする。
-- ほかの setConversations の呼び出し（S :441・:945・:962・:986・:996・:1008・:1043・:1052・:1061）は 1 文字も変えない（(6) の setConversations が同じ形で受ける）。これらを含む useCallback の依存に setConversations が無くても、setConversations は uid が同じ間は同じ物なので、依存に足さない。eslint が足すよう警告した時だけ、その依存に setConversations を足す（§3(f)）。
+(15) 次の 8 か所の useCallback の依存に `setConversations` を足す（必ず足す。第 1 版の審査で、足さないと eslint の react-hooks/exhaustive-deps の警告が 8 件出た）。中身は変えない。
+| S の行 | 関数 | 変更前 | 変更後 |
+|---|---|---|---|
+| :954 | 成約へ進める（:945 を含む） | `}, [leadDetail, loadLeadDetail, t]);` | `}, [leadDetail, loadLeadDetail, setConversations, t]);` |
+| :965 | handleLeadMerged | `}, [selectLead, loadConversations]);` | `}, [selectLead, loadConversations, setConversations]);` |
+| :989 | handleMarkUnread | `}, [selectedLeadId]);` | `}, [selectedLeadId, setConversations]);` |
+| :1000 | handleExclude | `}, [selectedLeadId]);` | `}, [selectedLeadId, setConversations]);` |
+| :1011 | handleDeleteLead | `}, [selectedLeadId, t]);` | `}, [selectedLeadId, setConversations, t]);` |
+| :1047 | handleBulkMarkUnread | `}, [selectedLeadIds]);` | `}, [selectedLeadIds, setConversations]);` |
+| :1055 | handleBulkExclude | `}, [selectedLeadIds, selectedLeadId]);` | `}, [selectedLeadIds, selectedLeadId, setConversations]);` |
+| :1064 | handleBulkDelete | `}, [selectedLeadIds, selectedLeadId, t]);` | `}, [selectedLeadIds, selectedLeadId, setConversations, t]);` |
+- :989 と :1000 は同じ文字の行が 2 つあるので、関数の名前で場所を決める。
+- ほかの setConversations の呼び出し（S :441・:945・:962・:986・:996・:1008・:1043・:1052・:1061）は 1 文字も変えない（(6) の setConversations が同じ形で受ける）。setConversations は uid が同じ間は同じ物なので、依存に足しても作り直しの回数は変わらない。
 
 ## 4-D. #4 frontend/src/pages/inbox/useInboxState.autoSelectBadge.test.tsx（4 か所を変える）
 (1) S :28 の次に、次の 1 行を足す。
@@ -295,7 +315,7 @@ vi.mock("../../contexts/AuthContext", () => ({
   useAuth: () => ({ user: { uid: "uid-test" }, loading: false }),
 }));
 ```
-(3) S :67 の `vi.mock("../../lib/messages", () => ({` を、次の 4 行にする（path の作り方は本物を使う）。S :68-75 の中身と S :76 の閉じ `}));` は変えない。
+(3) S :67 の `vi.mock("../../lib/messages", () => ({` を、次の 3 行にする（path の作り方は本物を使う）。S :68-75 の中身と S :76 の閉じ `}));` は変えない。
 ```ts
 vi.mock("../../lib/messages", async (importOriginal) => ({
   conversationsPath: (await importOriginal<typeof import("../../lib/messages")>()).conversationsPath,
@@ -313,7 +333,9 @@ vi.mock("../../lib/messages", async (importOriginal) => ({
  * ADR-1054 会話の画面の写し（lead-chat-cache-card.md）の試験。
  * 1 本目 送る path が今と同じ・2 本目 戻った時に一覧・選び肢・メッセージ・カルテを写しから先に出す（K1）・
  * 3 本目 手元の書き換えが写しに残る・4 本目 利用者が変わると前の人の写しを出さない（K5）・
- * 5 本目 カルテの保存の後の中身を写しに書く。
+ * 5 本目 カルテの保存の後の中身を写しに書く・6 本目 画面を出したまま利用者が変わっても前の人の写しを出さない（K5）・
+ * 7 本目 会話を素早く切り替えて前の会話のカルテが遅れて返っても入力欄に入れない・
+ * 8 本目 失敗の印は失敗した会話だけに付く。試験の題は英語（lint の決まり local/no-japanese-literal）。
  * QueryClient はアプリと同じ 1 個（apiQuery.ts の queryClient）を使い、毎回消す。
  */
 import { act, renderHook, waitFor } from "@testing-library/react";
@@ -386,6 +408,7 @@ const conv = (leadId: number, name: string, pageId: string) => ({
 const CONVS = { conversations: [conv(1, "Alice", "page-1"), conv(2, "Bob", "page-2")], next_cursor: null };
 const MESSAGES = { lead: { id: 1, platform: "messenger" }, messages: [{ id: 10, text: "hello" }] };
 const LEAD = { id: 1, customer_name: "Alice", status: "new" };
+const LEAD2 = { id: 2, customer_name: "Bob", status: "new" };
 const never = () => new Promise<never>(() => {});
 
 /** 1 回目に開いて、一覧・メッセージ・カルテが揃うまで待ち、閉じる */
@@ -398,7 +421,7 @@ async function openOnce() {
   return first;
 }
 
-describe("useInboxState - 写しの置き場（ADR-1054 会話の画面）", () => {
+describe("useInboxState - query cache (ADR-1054 lead chat)", () => {
   beforeEach(() => {
     queryClient.clear();
     localStorage.clear();
@@ -412,7 +435,7 @@ describe("useInboxState - 写しの置き場（ADR-1054 会話の画面）", () 
     apiPatchMock.mockReset();
   });
 
-  it("送る path は今と同じ文字", () => {
+  it("sends the same path strings as before", () => {
     expect(conversationsPath({})).toBe("/conversations");
     expect(conversationsPath({ unread_only: false })).toBe("/conversations");
     expect(conversationsPath({ platform: "all", unread_only: true })).toBe("/conversations?unread_only=true");
@@ -422,7 +445,7 @@ describe("useInboxState - 写しの置き場（ADR-1054 会話の画面）", () 
     expect(messagesPath(5)).toBe("/leads/5/messages");
   });
 
-  it("戻った時は、取りに行った物が返る前に、一覧・選び肢・メッセージ・カルテを写しから出す（K1）", async () => {
+  it("on return, shows list, page choices, messages and karte from the cache before any fetch returns (K1)", async () => {
     const first = await openOnce();
     expect(apiGetMock.mock.calls.map((call) => call[0])).toContain("/leads/1");
     first.unmount();
@@ -445,7 +468,7 @@ describe("useInboxState - 写しの置き場（ADR-1054 会話の画面）", () 
     second.unmount();
   });
 
-  it("既読にした書き換えは写しに残り、戻った時もそのまま出る", async () => {
+  it("keeps the mark-read change in the cache and shows it on return", async () => {
     markReadMock.mockImplementation(() => Promise.resolve({ marked_count: 1 }));
     const first = await openOnce();
     await waitFor(() =>
@@ -462,7 +485,7 @@ describe("useInboxState - 写しの置き場（ADR-1054 会話の画面）", () 
     second.unmount();
   });
 
-  it("利用者が変わると、前の人の写しを出さない（K5）", async () => {
+  it("after a user change, does not show the previous user cache on remount (K5)", async () => {
     const first = await openOnce();
     first.unmount();
 
@@ -480,7 +503,7 @@ describe("useInboxState - 写しの置き場（ADR-1054 会話の画面）", () 
     second.unmount();
   });
 
-  it("カルテを保存した後の中身を写しに書き、戻った時もそれを出す", async () => {
+  it("writes the saved karte into the cache and shows it on return", async () => {
     apiPatchMock.mockResolvedValue({ ...LEAD, customer_name: "Alice renamed" });
     const first = await openOnce();
     act(() => {
@@ -502,11 +525,74 @@ describe("useInboxState - 写しの置き場（ADR-1054 会話の画面）", () 
     expect(second.result.current.leadDetail?.customer_name).toBe("Alice renamed");
     second.unmount();
   });
+
+  it("after a user change while mounted, does not show the previous user cache (K5)", async () => {
+    const view = await openOnce();
+    listConversationsMock.mockImplementation(never);
+    getMessagesMock.mockImplementation(never);
+    apiGetMock.mockImplementation(never);
+    auth.user = { uid: "uid-B" };
+    view.rerender();
+    expect(view.result.current.conversations).toEqual([]);
+    expect(view.result.current.availablePageIds).toEqual([]);
+    expect(view.result.current.messagesData).toBeNull();
+    expect(view.result.current.leadDetail).toBeNull();
+    view.unmount();
+  });
+
+  it("when switching A to B, a late karte response for A does not fill the form", async () => {
+    let resolveA: (value: unknown) => void = () => {};
+    apiGetMock.mockImplementation((path: string) => {
+      if (path === "/leads/1") return new Promise((resolve) => { resolveA = resolve; });
+      if (path === "/leads/2") return Promise.resolve(LEAD2);
+      return Promise.reject(new Error(`not used: ${path}`));
+    });
+    const view = renderHook(() => useInboxState());
+    await waitFor(() => expect(view.result.current.selectedLeadId).toBe(1));
+    await waitFor(() => expect(apiGetMock.mock.calls.map((call) => call[0])).toContain("/leads/1"));
+    act(() => {
+      view.result.current.selectLead(2);
+    });
+    await waitFor(() => expect(view.result.current.leadDetail?.id).toBe(2));
+    expect(view.result.current.cardForm.customer_name).toBe("Bob");
+    await act(async () => {
+      resolveA(LEAD);
+    });
+    expect(view.result.current.leadDetail?.id).toBe(2);
+    expect(view.result.current.cardForm.customer_name).toBe("Bob");
+    view.unmount();
+  });
+
+  it("marks only the failed conversation, and a cached conversation shows at once", async () => {
+    const view = renderHook(() => useInboxState());
+    await waitFor(() => expect(view.result.current.messagesData).not.toBeNull());
+    act(() => {
+      view.result.current.selectLead(2);
+    });
+    await waitFor(() => expect(getMessagesMock.mock.calls.map((call) => call[0])).toContain(2));
+    await waitFor(() => expect(view.result.current.messagesData).not.toBeNull());
+
+    getMessagesMock.mockRejectedValue(new Error("boom"));
+    act(() => {
+      view.result.current.selectLead(1);
+    });
+    await waitFor(() => expect(view.result.current.messagesData).toBeNull());
+
+    getMessagesMock.mockImplementation(never);
+    act(() => {
+      view.result.current.selectLead(2);
+    });
+    expect(view.result.current.messagesData).not.toBeNull();
+    view.unmount();
+  });
 });
 ```
 - 2 本目の「最初の描画」の確かめは、renderHook が返った直後（effect の後・取りに行った物が返る前）の値を見る。取り方はどれも返らない（never）ので、出ている中身は写しから来た物だけ。
 - 5 本目の handleCardFieldChange・handleCardFieldBlur は S の useInboxState の返す物の名前（S :111 付近の型）。名前が違って落ちた時は §3(e) に従う。
-- 試験の中の「Alice」などの英字は試験の見本の値で、画面の言葉ではない（i18n の決まりの外）。
+- 試験の中の「Alice」などの英字は試験の見本の値で、画面の言葉ではない（i18n の決まりの外）。試験の題（describe・it）は英語にする。日本語の題は lint の local/no-japanese-literal の警告になる（第 1 版の審査で 6 件）。
+- 6 本目は、画面を出したまま利用者が変わった時に、写しから来る 4 つ（一覧・選び肢・メッセージ・カルテ）が前の人の物にならないことを見る。入力欄（cardForm）と選んでいる会話の番号は useState のままなので、今と同じく残る（今の動きから変わらない）。本物のアプリでは、ログアウトで利用者がいなくなると、守りの部品が画面をログインへ移し、会話の画面は閉じる（S frontend/src/components/ProtectedRoute.tsx:19-20）。このため、前の人の入力欄が次の人に見えることは、今も写しの後も起きない。QueryAuthSync が写しを消す動きはこの試験に入れない（S frontend/src/lib/query/apiQuery.test.tsx で既に試している）。
+- 推測（試していない）: 利用者が変わる時に QueryAuthSync が途中の取得を取り消すと、その取得の失敗で、一覧の上の誤りの文字が一瞬出るかもしれない。上の理由で会話の画面は閉じるので、目に見える所には出ないと考える。§5 で確かめる対象にしない。
+- 7 本目の selectLead は S の useInboxState の返す物の名前（S :1111）。8 本目の失敗は、ApiError でも TypeError でもない誤りなので、送り直しの数え（S :392-401）に入らず、すぐ失敗の印が付く。
 
 ## 4-F. 実装役の手順（1 手順 1 命令。<W> は手順1 で作られた作業場所の絶対パス）
 手順1. クラウドの決まり（S scripts/agent-hooks/cloud/rules.md:15）どおり、作業場所を作り、push 済みの枝の先頭に合わせる（設計担当が §1 #6〜#8 を push 済み）。
@@ -544,7 +630,7 @@ describe("useInboxState - 写しの置き場（ADR-1054 会話の画面）", () 
   cd <W> && tail -20 /tmp/lc-tsc.txt
   cd <W>/frontend && npx eslint src/lib/query/apiQuery.ts src/lib/messages.ts src/pages/inbox/useInboxState.ts src/pages/inbox/useInboxState.autoSelectBadge.test.tsx src/pages/inbox/useInboxState.cache.test.tsx > /tmp/lc-lint.txt 2>&1
   cd <W> && tail -20 /tmp/lc-lint.txt
-  （lint の警告が手順2 の数より増えていないこと・誤りが 0 であること。§3(f)。）
+  （lint の警告が手順2 の数より増えていないこと・誤りが 0 であること。§3(f)。手順7 の commit の前の点検は警告 0 件でないと止まる。）
 手順5. 本番と同じ形で組み立てられるか確かめる。
   cd <W>/frontend && npm run build > /tmp/lc-build.txt 2>&1
   cd <W> && tail -15 /tmp/lc-build.txt
@@ -567,14 +653,14 @@ describe("useInboxState - 写しの置き場（ADR-1054 会話の画面）", () 
 ## 5. 受入（○×）
 | # | 基準 | 検証方法 |
 |---|---|---|
-| C1 | §4-E の 5 本と §1 #4 の 5 本がすべて合格（送る path が今と同じ: §4-E 1 本目／K1: 2 本目で戻った時の最初の描画に一覧 2 件・選び肢 2 つ・読み込み中 false、自動選択の後にメッセージとカルテ／書き換えが写しに残る: 3・5 本目／K5: 4 本目で利用者を変えた後に前の人の一覧 0 件） | /tmp/lc-unit.txt の最後（2 files・10 passed）と、PR の CI の unit-run が success |
+| C1 | §4-E の 8 本と §1 #4 の 5 本がすべて合格（送る path が今と同じ: §4-E 1 本目／K1: 2 本目で戻った時の最初の描画に一覧 2 件・選び肢 2 つ・読み込み中 false、自動選択の後にメッセージとカルテ／書き換えが写しに残る: 3・5 本目／K5: 4 本目（出し直し）と 6 本目（出したまま）で利用者を変えた後に前の人の一覧 0 件・メッセージとカルテが null／切り替えの順番: 7 本目で遅れて返った前の会話のカルテが入力欄に入らない／失敗の印: 8 本目） | /tmp/lc-unit.txt の最後（2 files・13 passed）と、PR の CI の unit-run が success |
 | C2 | 全部の試験・型・lint・組み立てが通る | /tmp/lc-unit-all.txt・lc-tsc.txt・lc-lint.txt・lc-build.txt の最後と、PR の必須の確認すべてが pass |
 | C3 | 変わったのは §1 の 8 ファイルだけ | gh pr diff --name-only |
 | C4 | マージの後、毎朝の画面の記録を手で 1 回動かし、/lead-chat の行で K1（戻った時の秒）≤0.1 秒、403・5xx が 0 件、API の数が 7 以下。ほかの行は K2 の最大と 2 秒を超えた画面の数が §3-4-11 から悪化していない。/lead-chat の K1 が下がらなければ §0 P4 の仮説は誤りと記録して止まる | prod-ui-check の実行の要約（設計担当。`gh workflow run prod-ui-check.yml --ref main` の後に要約の表を読む）。測る前に、その時の本番の反映が終わっていることを確かめる |
 | C5 | マージの後、deploy が成功し、本番の画面が開く | deploy.yml の実行の結論 success と時刻。本番 https://app.salesanchor.jp/lead-chat が開く（設計担当） |
 
 - C4・C5 の結果は docs/handoff/line-like-speed/design.md §3-4 に設計担当が書き足す。
-- K5 を本番で 2 人のログインで確かめることはしない（本番でパスワードを打たない決まり）。K5 は C1 の 4 本目と、P5（写しの名前に uid が入る・利用者が変わると消える）で確かめたと記録に書く。
+- K5 を本番で 2 人のログインで確かめることはしない（本番でパスワードを打たない決まり）。K5 は C1 の 4 本目・6 本目と、P5（写しの名前に uid が入る・利用者が変わると消える）で確かめたと記録に書く。
 
 ## 6. 戻し方
 - マージの commit を git revert する PR を 1 つ出す。4 つの取り方は今の読み方（useState）に戻る。写しはメモリだけなので、戻した後に残る物は無い。DB には何も入っていない。
