@@ -37,6 +37,7 @@ import { DashboardIcons } from "../../constants/icons";
 import { FunnelSection } from "./FunnelSection";
 import { PriorityProspectsSection } from "./PriorityProspectsSection";
 import { WeeklyAdvisorSection } from "./WeeklyAdvisorSection";
+import { LeadConversionFactorsSection } from "./LeadConversionFactorsSection";
 import { FUNNEL_MODE } from "../../api/funnel";
 import "./DashboardPage.css";
 import { LoadingBlock } from "../../components/loading";
@@ -466,6 +467,7 @@ export default function DashboardPage() {
       <PriorityProspectsSection />
       {/* 今やること（W-1: 守り3種 / scope=mine） */}
       <WeeklyAdvisorSection />
+      <LeadConversionFactorsSection />
       {/* -------------------------------------------------
           固定エリア（期間変更でも不変）
       ------------------------------------------------- */}
