@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { Button } from "../../components/Button";
@@ -6,14 +6,18 @@ import { TextareaControl } from "../../components/Textarea";
 import { TextFieldControl } from "../../components/TextField";
 import { DashboardIcons } from "../../constants/icons";
 import {
-  getPriorityProspects,
+  FUNNEL_MOCK,
+  PRIORITY_PROSPECTS_PATH,
   type PriorityProspectAxisBreakdown,
   type PriorityProspectItem,
+  type PriorityProspectsResponse,
 } from "../../api/funnel";
 import type { LeadDetail } from "../inbox/inbox.types";
 import "./WeeklyAdvisorSection.css";
 import "./PriorityProspectsSection.css";
 import { LoadingBlock } from "../../components/loading";
+import { useApiQueries, useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
+import { MOCK_PRIORITY_PROSPECTS } from "../../mocks/funnelFixtures";
 
 const PriorityIcon = DashboardIcons.trendUp;
 
@@ -116,11 +120,28 @@ function leadLabel(
 
 export function PriorityProspectsSection() {
   const { t } = useTranslation();
-  const [items, setItems] = useState<PriorityProspectItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const invalidate = useInvalidateApi();
+  // 見本の時（開発・E2E）は今までどおり一覧を通信せずに出す
+  const listQuery = useApiQuery<PriorityProspectsResponse>(PRIORITY_PROSPECTS_PATH, { enabled: !FUNNEL_MOCK });
+  // 「?? []」が描画ごとに新しい並びを作らないよう包む（第 1 版で react-hooks/exhaustive-deps の警告が 0→1 になった）
+  const listItems = listQuery.data?.items;
+  const items: PriorityProspectItem[] = useMemo(
+    () => (FUNNEL_MOCK ? MOCK_PRIORITY_PROSPECTS.items : listItems ?? []),
+    [listItems],
+  );
+  const detailQueries = useApiQueries<LeadDetail>(items.map((item) => `/leads/${item.lead_id}`));
+  // 一覧と、一覧に出た人の中身がそろうまで読み込み中にする（今と同じ）。取れなかった人は名前の代わりの言葉を出す（今と同じ）
+  const loading = (!FUNNEL_MOCK && listQuery.isPending) || detailQueries.some((q) => q.isPending);
+  const error = FUNNEL_MOCK ? null : listQuery.error ? listQuery.error.message || t("common.errorLoad") : null;
+  const leadDetails = useMemo(() => {
+    const byLeadId: Record<number, LeadDetail> = {};
+    items.forEach((item, index) => {
+      const detail = detailQueries[index]?.data;
+      if (detail) byLeadId[item.lead_id] = detail;
+    });
+    return byLeadId;
+  }, [items, detailQueries]);
   const [composerByLeadId, setComposerByLeadId] = useState<Record<number, ComposerState>>({});
-  const [leadDetails, setLeadDetails] = useState<Record<number, LeadDetail>>({});
 
   const getComposer = useCallback((leadId: number): ComposerState => {
     return composerByLeadId[leadId] ?? initialComposerState();
@@ -138,47 +159,6 @@ export function PriorityProspectsSection() {
       };
     });
   }, []);
-
-  useEffect(() => {
-    let active = true;
-    setLoading(true);
-    setError(null);
-
-    getPriorityProspects("mine")
-      .then(async (res) => {
-        if (!active) return;
-        setItems(res.items);
-
-        const detailEntries = await Promise.allSettled(
-          res.items.map(async (item) => {
-            const detail = await api.get<LeadDetail>(`/leads/${item.lead_id}`);
-            return [item.lead_id, detail] as const;
-          }),
-        );
-
-        if (!active) return;
-        const nextDetails: Record<number, LeadDetail> = {};
-        for (const entry of detailEntries) {
-          if (entry.status === "fulfilled") {
-            const [leadId, detail] = entry.value;
-            nextDetails[leadId] = detail;
-          }
-        }
-        setLeadDetails(nextDetails);
-      })
-      .catch((err: unknown) => {
-        if (!active) return;
-        setError(err instanceof Error ? err.message : t("common.errorLoad"));
-      })
-      .finally(() => {
-        if (!active) return;
-        setLoading(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [t]);
 
   const beginFollowUp = useCallback((item: PriorityProspectItem) => {
     const currentLead = leadDetails[item.lead_id];
@@ -206,18 +186,11 @@ export function PriorityProspectsSection() {
     });
 
     if (!currentLead) {
-      void api.get<LeadDetail>(`/leads/${item.lead_id}`)
-        .then((detail) => {
-          setLeadDetails((prev) => ({ ...prev, [item.lead_id]: detail }));
-        })
-        .finally(() => {
-          updateComposer(item.lead_id, { loadingLead: false });
-        })
-        .catch(() => {
-          // 既存のフォロー導線は維持する。詳細取得失敗でも composer は開く。
-        });
+      void invalidate(["leads", String(item.lead_id)]).finally(() => {
+        updateComposer(item.lead_id, { loadingLead: false });
+      });
     }
-  }, [leadDetails, updateComposer]);
+  }, [invalidate, leadDetails, updateComposer]);
 
   const closeComposer = useCallback((item: PriorityProspectItem) => {
     setComposerByLeadId((prev) => {
@@ -254,53 +227,7 @@ export function PriorityProspectsSection() {
         next_action_date: current.draftDate || null,
       });
 
-      setLeadDetails((prev) => ({
-        ...prev,
-        [item.lead_id]: {
-          ...(prev[item.lead_id] ?? {
-            id: item.lead_id,
-            lead_code: null,
-            customer_name: "",
-            company_name: null,
-            email: null,
-            phone: null,
-            status: "lead",
-            temperature: null,
-            estimated_scale: null,
-            customer_type: null,
-            response_speed: null,
-            monthly_forecast: null,
-            prospect_rank: null,
-            notes: null,
-            next_action: null,
-            next_action_date: null,
-            challenge: null,
-            meeting_memo: null,
-            meeting_impression: null,
-            cs_memo: null,
-            sales_form: null,
-            competitor_check: null,
-            per_order_amount: null,
-            monthly_frequency: null,
-            nickname: null,
-            country: null,
-            target_titles: null,
-            messenger_link: null,
-            discord_id: null,
-            instagram_link: null,
-            whatsapp_link: null,
-            discord_user_id: null,
-            discord_dm_channel_id: null,
-            discord_guild_channel_id: null,
-            discord_role_sync_status: null,
-            discord_role_sync_at: null,
-            sales_form_selections: [],
-            sales_form_options: [],
-          }),
-          next_action: current.draftAction,
-          next_action_date: current.draftDate || null,
-        },
-      }));
+      void invalidate(["leads", String(item.lead_id)]);
       updateComposer(item.lead_id, {
         phase: "saved",
         saving: false,
@@ -313,7 +240,7 @@ export function PriorityProspectsSection() {
         error: err instanceof Error ? err.message : t("common.saveError"),
       });
     }
-  }, [composerByLeadId, leadDetails, t, updateComposer]);
+  }, [composerByLeadId, invalidate, leadDetails, t, updateComposer]);
 
   return (
     <div className="db-section-card db-priority-card" data-testid="priority-prospects-section">

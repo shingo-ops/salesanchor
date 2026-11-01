@@ -8,6 +8,7 @@
 import { useCallback } from "react";
 import {
   QueryClient,
+  useQueries,
   useQuery,
   type QueryKey,
   type UseQueryResult,
@@ -67,6 +68,25 @@ export function useApiQuery<T>(
       queryFn: () => api.get<T>(path),
       enabled: uid !== null && (options?.enabled ?? true),
       placeholderData: options?.keepPrevious ? keepSameUser : undefined,
+    },
+    queryClient,
+  );
+}
+
+/**
+ * 数が変わる path の並びを、1 本ずつ写しの置き場で取る（例: 一覧に出た人ごとの /leads/:id）。
+ * 写しの名前と取り方は useApiQuery と同じ。ログインしていない間は取りに行かない。
+ */
+export function useApiQueries<T>(paths: readonly string[]): UseQueryResult<T>[] {
+  const { user } = useAuth();
+  const uid = user?.uid ?? null;
+  return useQueries(
+    {
+      queries: paths.map((path) => ({
+        queryKey: apiQueryKey(uid ?? "", path),
+        queryFn: () => api.get<T>(path),
+        enabled: uid !== null,
+      })),
     },
     queryClient,
   );

@@ -4,19 +4,22 @@
  * モックデータ駆動。実API結線は frontend/src/api/funnel.ts の MOCK_MODE を変更。
  */
 
-import { type KeyboardEvent, type ReactNode, useEffect, useState } from "react";
+import { type KeyboardEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import {
-  getFunnel,
-  getRevenueSummary,
-  getFollowUps,
+  FUNNEL_MOCK,
+  followUpsPath,
+  funnelPath,
+  revenueSummaryPath,
   type FunnelResponse,
   type RevenueSummaryResponse,
   type FollowUpsResponse,
 } from "../../api/funnel";
 import "./FunnelSection.css";
 import { LoadingBlock } from "../../components/loading";
+import { useApiQuery } from "../../lib/query/apiQuery";
+import { MOCK_FUNNEL, MOCK_FOLLOW_UPS, MOCK_REVENUE_SUMMARY } from "../../mocks/funnelFixtures";
 
 // ─── 型 ─────────────────────────────────────────────────────────────────
 
@@ -449,28 +452,16 @@ export function FunnelSection({ month, viewMode }: FunnelSectionProps) {
   const navigate = useNavigate();
   const scope = viewMode === "player" ? "mine" : undefined;
 
-  const [funnel, setFunnel] = useState<FunnelResponse | null>(null);
-  const [revenue, setRevenue] = useState<RevenueSummaryResponse | null>(null);
-  const [followUps, setFollowUps] = useState<FollowUpsResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  // 見本の時（開発・E2E）は今までどおり通信しない
+  const funnelQuery = useApiQuery<FunnelResponse>(funnelPath(month, scope), { enabled: !FUNNEL_MOCK });
+  const revenueQuery = useApiQuery<RevenueSummaryResponse>(revenueSummaryPath(month, scope), { enabled: !FUNNEL_MOCK });
+  const followUpsQuery = useApiQuery<FollowUpsResponse>(followUpsPath(scope), { enabled: !FUNNEL_MOCK });
 
-  useEffect(() => {
-    setLoading(true);
-    setError("");
-    Promise.all([
-      getFunnel(month, scope),
-      getRevenueSummary(month, scope),
-      getFollowUps(scope),
-    ])
-      .then(([f, r, fu]) => {
-        setFunnel(f);
-        setRevenue(r);
-        setFollowUps(fu);
-      })
-      .catch((e: Error) => setError(e.message))
-      .finally(() => setLoading(false));
-  }, [month, scope]);
+  const funnel: FunnelResponse | null = FUNNEL_MOCK ? MOCK_FUNNEL : funnelQuery.data ?? null;
+  const revenue: RevenueSummaryResponse | null = FUNNEL_MOCK ? MOCK_REVENUE_SUMMARY : revenueQuery.data ?? null;
+  const followUps: FollowUpsResponse | null = FUNNEL_MOCK ? MOCK_FOLLOW_UPS : followUpsQuery.data ?? null;
+  const loading = !FUNNEL_MOCK && (funnelQuery.isPending || revenueQuery.isPending || followUpsQuery.isPending);
+  const error = FUNNEL_MOCK ? "" : [funnelQuery, revenueQuery, followUpsQuery].find((q) => q.error)?.error?.message ?? "";
 
   // ボトルネック判定（目標があるカードのうち達成率が最低のもの）
   const bottleneck = (() => {
