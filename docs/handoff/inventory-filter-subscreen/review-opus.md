@@ -100,3 +100,58 @@ H5（スライドアウトの見え方）・M3（行の寸法と「…」）は 
 **CI の1回目でここが想定どおりかを必ず確認する**。
 
 M6 の「何分増えるか」も未測。測ったのは件数（807）・project 数（3）・持ち時間（15分）だけ。
+
+---
+
+## r2（Opus・2026-11-01・実装に対する独立審査）: **APPROVE**（HIGH 2件を直したうえで）
+
+審査の対象は実装後の `git diff origin/main...HEAD`（PR #4983）。CI は process-artifacts gate
+（PR 本文の GO記録が未記入）以外すべて緑で、画面検査（内部）は **756 passed / 78 skipped / 失敗0**（13.6分）。
+新設の27実行（9宣言×3 project）はすべて1回目で緑、D6・D7・E10・F5 も緑。
+
+**製品コードの不具合は0件**。r1 の HIGH 5件・MEDIUM 9件はすべて現物で塞がれていることを確認した
+（H1＝目印の据え置き `frontend/src/pages/inventory/InventoryFilterDrawer.tsx:476`／H2＝向きの合成
+`frontend/src/pages/inventory/InventoryPage.tsx:513-527`＋単体 K9・K11／H3＝自動有効化 同`:508-510`／
+H4＝F5 の自前 fixture 化／H5＝中身を常に描き注記だけ `{open && …}`）。
+
+### HIGH（マージ前に直した・2件）
+
+| # | 指摘 | 自分で取った裏（一次情報） | 直し |
+|---|---|---|---|
+| H-1 | J3 の「在庫・予約」の回は**行まるごと**を `toContainText("在庫")` で見ており、**右の値が更新されていなくても緑**になる | `frontend/src/locales/ja.json` の実値: `inventory.col.offerType` = 「在庫・予約」（行の左ラベル）・`inventory.offerType.in_stock` = 「在庫」（値）。左ラベルだけで "在庫" を含む | 6ケースすべて値の要素 `.comp-multiselect__row-value` を `toHaveText` で完全一致。J8 と同じ locator |
+| H-2 | 便3 でドロワーを**常時マウント**にしたため、既存 D6・D7・E10 の `openFilterPanel()` が `toBeVisible()` だけで「開いた」を判定できなくなった（開かなくても緑になる） | `frontend/src/components/Drawer.css:38-45` の閉状態は `transform: translateX(100%)` と `transition` **だけ**。同ファイルを `visibility|display:|opacity|pointer-events` で走査しても `display: flex` の4件しか無く、**閉状態を可視判定から外す規則が存在しない**。画面外に平行移動した要素は bounding box を持つので可視扱い | 3本の `openFilterPanel()` に「本便のパネルだけが持つ `mobileInset` の外枠が `--open` で1件」を足した。既存の D6・D7・E10 の判定そのものは変えていない |
+
+### 併せて直した（追加実行0・既存宣言の中で強くした）
+
+- **M-4**: 形態・在庫予約の**自動有効化**を検査していなかった（J4 の `toBeChecked()` はシリーズの回だけ・
+  K10 はシリーズ・K11 は列）。J4 の中で、形態と在庫予約それぞれの前に有効化を一度切ってから選び直す形にした。
+- **M-2**: J8 の「行の右の文字が読める」が幅>0・文字数>0 だったため**「…」1文字でも通る**
+  （`frontend/src/components/MultiSelect.css:129-138` の `overflow:hidden; text-overflow:ellipsis`）。
+  `scrollWidth <= clientWidth`（切れていない）で測る形に替えた。
+- 実行数は3ファイルとも据え置き（自分で測った `npx playwright test --list`:
+  inventory-filter-subscreen **27**・inventory-toolbar-mercari **69**・inventory-series-sort-panel **63**）。
+
+### 宿題に回した指摘（次便・この便では直さない）
+
+| # | 内容 | 理由 |
+|---|---|---|
+| M-3 | J6 はパネル**本体**のはみ出しを測っていない（直接の子の右端だけ）。`.comp-drawer-panel` は `overflow: hidden`（`frontend/src/components/Drawer.css:36`）なので深い階層のはみ出しは黙って切られる | 測り方を足すと本当の赤を引く可能性があり、直しが CSS の設計変更に及ぶ。便4 で独立して扱う |
+| M-5 | 「24時間以内」などで候補が縮むと、隠しているのに行の右が「なし」と出る（保存値は保持されるので設定は壊れない）。候補は絞り込みでは縮まないが時間の窓では縮む（`backend/app/routers/inventory_offers.py:403` の `age_condition`） | PC も一覧に出ない点は同じ（PC は無言・スマホは「なし」と断言する差）。文言の設計が必要 |
+| L-7 | `.comp-multiselect__row:hover` が `@media (hover: hover)` の外（`frontend/src/components/MultiSelect.css:118-120`）＝既知の宿題。便3 で row をスマホで使い始めたため「実際に起きる便」になった | 共通部品の変更（4-10 の境界の外） |
+| L-2 | `frontend/src/pages/inventory/InventoryPage.toolbar.test.tsx` の K11 のコメントが `colVisible` の根拠を `:276` と書いているが実体は `:182-184` | 行番号のズレのみ |
+| L-1 | `inventory.filterPanel.buttonWithCount`（ja/en）が参照0になった | `check:all` に未使用キー検査は無い。残しても害がない |
+
+### 設計書に書き足したこと（審査 M-1）
+
+自動有効化（PO 決定6）は**4項目の共通スイッチ**を入れるので、利用者が形態だけを選んでも、保存済みの
+隠しシリーズ・隠し列・在庫予約が**同時に効き始める**。design.md ⑩ にこの波及を追記した
+（コードは PO 決定6 に忠実なので、直すのは設計書の側）。
+
+### 残る不確かさ（r2）
+
+- 実機（本番・Android 幅360）での見え方は未確認: G9（閉じる途中にパネルが空に見えないか）・
+  指を離しても `:hover` の色が残らないか（L-7）・行の右が「…」だけになる場面が実在するか。
+- H-2 の「閉じたパネルで `toBeVisible()` が真になる」は **CSS の実測（可視性を変える規則が0件）からの帰結**で、
+  ブラウザでの実測ではない。CI の緑は「開いた状態で測った結果」なのでこの反証にはならない。
+- M-1 の波及が本番の利用者に起きるか（「有効化が切なのに隠し設定が保存されている」利用者の実在）は
+  本番データを見ていないため不明。

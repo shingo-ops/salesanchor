@@ -30,6 +30,11 @@ const MIN_OPTION_ROW_H = 61;
  *  （既存 D6・D7・E10 と同じ形。frontend/tests-e2e/visual-language/inventory-toolbar-mercari.spec.ts:87-92） */
 async function openFilterPanel(page: Page): Promise<Locator> {
   await page.getByTestId("inventory-filter-toggle").click();
+  // 中身は開く前から常にマウントされ、閉状態は transform だけ（Drawer.css:38-45。
+  // visibility/display/opacity による非表示は無い）ため toBeVisible() だけでは
+  // 「開いた」ことの証明にならない（独立審査 r2・H-2）。本便のパネルだけが持つ
+  // mobileInset の外枠に限定して --open を確かめる
+  await expect(page.locator(".comp-drawer-panel--mobile-inset.comp-drawer-panel--open")).toHaveCount(1);
   const panel = page.getByTestId("inventory-filter-panel");
   await expect(panel).toBeVisible();
   return panel;
@@ -146,7 +151,13 @@ test.describe("visual-language: 在庫表 詳細フィルタの副画面", () =>
       await page.getByTestId("inventory-filter-apply").click();
 
       await expect(page.getByTestId("drawer-back")).toHaveCount(0);
-      await expect(panel.getByTestId(c.row)).toContainText(c.label);
+      // 行まるごとの toContainText だと左ラベル（例:「在庫・予約」）だけで値の文字（"在庫"）を
+      // 含んでしまい、右の値が更新されていなくても緑になる（独立審査 r2・H-1）。
+      // 値の要素（.comp-multiselect__row-value＝ MultiSelect の selectedSummary。J8 と同じ locator）
+      // を完全一致で見る。selectedSummary は1件選択時 resolveLabel(value) をそのまま返す
+      // （frontend/src/components/MultiSelect.tsx:82）ため、ここの6値は mock の表示名・ja.json の
+      // 訳文とそのまま一致する
+      await expect(panel.getByTestId(c.row).locator(".comp-multiselect__row-value")).toHaveText(c.label);
     }
   });
 
@@ -198,16 +209,24 @@ test.describe("visual-language: 在庫表 詳細フィルタの副画面", () =>
     await expect(enabledCheckbox).toBeChecked();
     await expect.poll(() => urls[urls.length - 1] ?? "").toContain("hide_categories=pokemon");
 
-    // 形態
+    // 形態（M-4: 自動有効化が形態でも効くことを、一度切ってから確かめる。自分で切ったときは
+    // 勝手に入れ直されない＝ design.md 4-5a の「空にする向きでは触らない」はここでは関係ない
+    // ＜切る操作そのものは選択の変更ではないため＞）
+    await enabledCheckbox.uncheck();
+    await expect(enabledCheckbox).not.toBeChecked();
     await panel.getByTestId("inventory-unit-filter-row").click();
     await panel.getByTestId("inventory-unit-filter-option-BOX").click();
     await page.getByTestId("inventory-filter-apply").click();
+    await expect(enabledCheckbox).toBeChecked();
     await expect.poll(() => urls[urls.length - 1] ?? "").toContain("unit_in=BOX");
 
-    // 在庫・予約
+    // 在庫・予約（M-4: 同様に一度切ってから確かめる）
+    await enabledCheckbox.uncheck();
+    await expect(enabledCheckbox).not.toBeChecked();
     await panel.getByTestId("inventory-offertype-filter-row").click();
     await panel.getByTestId("inventory-offertype-filter-option-in_stock").click();
     await page.getByTestId("inventory-filter-apply").click();
+    await expect(enabledCheckbox).toBeChecked();
     await expect.poll(() => urls[urls.length - 1] ?? "").toContain("offer_type_in=in_stock");
 
     // 隠す列: 問い合わせに語は乗らない（列の見せ方だけの変更）が、行の表示は選んだ名前に変わる
@@ -269,13 +288,16 @@ test.describe("visual-language: 在庫表 詳細フィルタの副画面", () =>
     expect(rootRowBox).not.toBeNull();
     expect(rootRowBox!.height).toBeGreaterThanOrEqual(MIN_ROOT_ROW_H);
 
-    // 既定（なにも隠していない）でも「隠すシリーズ」の行の右の文字が読める（幅>0・文字が空でない）
+    // 既定（なにも隠していない）でも「隠すシリーズ」の行の右の文字が読める＝切れていない。
+    // 幅>0・文字数>0 だけでは「…」1文字でも通ってしまう（独立審査 r2・M-2）。
+    // .comp-multiselect__row-value は overflow:hidden; text-overflow:ellipsis
+    // （frontend/src/components/MultiSelect.css:129-138）なので、切れていないことは
+    // scrollWidth <= clientWidth で測る
     const catValue = panel.getByTestId("inventory-category-filter-row").locator(".comp-multiselect__row-value");
     await expect(catValue).toBeVisible();
-    const catValueBox = await catValue.boundingBox();
-    expect(catValueBox).not.toBeNull();
-    expect(catValueBox!.width).toBeGreaterThan(0);
     expect((await catValue.textContent())?.trim().length).toBeGreaterThan(0);
+    const catOverflow = await catValue.evaluate((el) => ({ scrollWidth: el.scrollWidth, clientWidth: el.clientWidth }));
+    expect(catOverflow.scrollWidth).toBeLessThanOrEqual(catOverflow.clientWidth);
 
     await panel.getByTestId("inventory-category-filter-row").click();
     const optionRow = page.getByTestId("inventory-category-filter-option-pokemon").locator("xpath=ancestor::label[1]");

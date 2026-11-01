@@ -62,6 +62,11 @@ async function expectNoPageOverflow(page: Page): Promise<void> {
 /** 「詳細フィルタ」を押してパネルを開く（design.md 4-5。インラインのパネル本体は inventory-filter-panel） */
 async function openFilterPanel(page: Page): Promise<Locator> {
   await page.getByTestId("inventory-filter-toggle").click();
+  // 便3（inventory-filter-subscreen）以降、スマホの詳細フィルタは開く前から常にマウントされ、
+  // 閉状態は transform だけ（frontend/src/components/Drawer.css:38-45。visibility/display/opacity
+  // による非表示は無い）ため toBeVisible() だけでは「開いた」ことの証明にならない（独立審査 r2・H-2）。
+  // 本便のパネルだけが持つ mobileInset の外枠に限定して --open を確かめる
+  await expect(page.locator(".comp-drawer-panel--mobile-inset.comp-drawer-panel--open")).toHaveCount(1);
   const panel = page.getByTestId("inventory-filter-panel");
   await expect(panel).toBeVisible();
   return panel;
