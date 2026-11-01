@@ -1205,3 +1205,5 @@ run_sql migrations/20261031_200000_add_passkey_enroll_prompt_skips.sql
 run_sql migrations/20261031_210000_create_ops_case.sql
 # ADR-1056 段2: チャット秘書の会社の入口 secretary_chat をテナント 4 に足す（冪等・既にある行は上書きしない）
 run_sql migrations/20261101_120000_enable_secretary_chat_tenant4.sql
+# ADR-1055 段A: 知らない機械からのログインの許可の置き場（表3つ＋列4つ・追加のみ・値は入らない・冪等）
+run_sql migrations/20261101_130000_add_new_device_approval.sql
