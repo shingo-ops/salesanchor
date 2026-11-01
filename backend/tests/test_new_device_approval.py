@@ -760,6 +760,7 @@ async def test_k7_admin_guards(enforce, machine, db_session, password_hash):
     # note 無し・空は 422
     assert (await admin.post(url, json={}, headers=_bearer(admin_token))).status_code == 422
     assert (await admin.post(url, json={"note": ""}, headers=_bearer(admin_token))).status_code == 422
+    assert (await admin.post(url, json={"note": "   "}, headers=_bearer(admin_token))).status_code == 422
     # 出どころ違いは 403
     bad_origin = {"Authorization": f"Bearer {admin_token}", "origin": "https://evil.example"}
     assert (await admin.post(url, json={"note": "x"}, headers=bad_origin)).status_code == 403

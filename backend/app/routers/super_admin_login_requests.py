@@ -12,7 +12,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -46,6 +46,13 @@ class AdminLoginRequestList(BaseModel):
 
 class AdminApproveBody(BaseModel):
     note: str = Field(min_length=1, max_length=200, description="本人確認の方法（必須・200字まで）")
+
+    @field_validator("note")
+    @classmethod
+    def check_note(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("note must not be blank")
+        return v
 
 
 class AdminApproveResult(BaseModel):
