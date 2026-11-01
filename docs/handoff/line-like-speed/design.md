@@ -41,7 +41,7 @@ PO の言葉: 「LINEみたいな使い心地は出来る？」（意味は「�
 - 取り直す写しの決め方（審査 3 回目の指摘）: 各画面は、自分が読むデータの頭の言葉（例 `["companies"]`。id も条件も含まない）を画面のファイルの中の 1 つの定数に置き、useApiQuery に渡す path もその定数から組み立てる。取り直しは lib/query の `invalidateApi(uid, ["companies"])`（中身は `queryClient.invalidateQueries({ queryKey: ["api", uid, "companies"] })`）を呼ぶ。TanStack の先頭一致は配列の要素ごとに比べるので、`/companies?…` の一覧も `/companies/5` の詳細も、条件や id が何であっても全部取り直される。id 1 件だけを取り直したい時も、同じ関数に `["companies", "5"]` を渡せば足りる。path を区切る関数は lib/query に 1 つだけ置き、useApiQuery と invalidateApi の両方がそれを使う（先頭や途中の「/」でできる空の言葉は捨てる）。頭の言葉を 2 つ以上読む画面（例: ダッシュボード）は、定数を言葉の数だけ持ってよい（審査 6 回目の注記）。段 1 の試験で「条件つきの写し 2 つと id 入りの写し 2 つが、1 回の取り直しで 4 つとも取り直される」「別の頭の言葉（例 `contacts`）の写しは取り直されない」を確かめる。合図の名前と path の対応を集めた新しい表は作らない（写しの決め方が 2 か所に分かれるため）。
 - 書き込みの後: 今の api.post/patch/delete はそのまま。成功したら、上の決め方でその画面の写しを取り直す（自分の変更は SSE の合図では来ないため・useRealtimeRefresh.ts:56 の origin 判定）。
 - 合図: useRealtimeRefresh(topics, reload) の reload に、上の取り直しを渡す（ADR-1016 決定7 の形のまま）。合図の名前の表は今のまま backend/app/realtime/topics.py が正本で、画面側の frontend/src/lib/realtime/topics.ts は手書きの写し（backend/tests/test_realtime_topics.py:129-133 が同じ集合かを確かめる）。
-- ログアウト・人の入れ替わり: QueryClientProvider は AuthProvider の内側なので、AuthProvider（AuthContext.tsx:90・:105）の中からは写しに触れない。そこで frontend/src/lib/query/ に小さな部品 QueryAuthSync を作り、QueryClientProvider の直下に置く（画面は描かない）。この部品が useAuth().user?.uid を見て、前の uid と今の uid が違ったら（null になった時を含む）、cancelQueries → resetQueries → queryClient.clear() → getMutationCache().clear() の順に消す（X4 の順）。user の変化は 3 つの道すべてから届く: Firebase の onAuthStateChanged（:90）、自社ログインの subscribeSession（:105）、api.ts の 401 → expireSession → notify（selfAuth.ts:67-71）→ :105 の道。
+- ログアウト・人の入れ替わり: QueryClientProvider は AuthProvider の内側なので、AuthProvider（AuthContext.tsx:90・:105）の中からは写しに触れない。そこで frontend/src/lib/query/ に小さな部品 QueryAuthSync を作り、QueryClientProvider の直下に置く（画面は描かない）。この部品が useAuth().user?.uid を見て、前の uid と今の uid が違ったら（null になった時を含む）、cancelQueries → 各写しの Query.reset()（開いている画面に知らせる・取り直さない）→ queryClient.clear() → getMutationCache().clear() の順に消す（X4 の順。resetQueries は active の写しを前の人の key のままその場で取り直すので使わない。段 1 カード審査 v1 項目 3・stage1-card.md V1-5）。user の変化は 3 つの道すべてから届く: Firebase の onAuthStateChanged（:90）、自社ログインの subscribeSession（:105）、api.ts の 401 → expireSession → notify（selfAuth.ts:67-71）→ :105 の道。
 - 見た目: 新しい金型は作らない（金型の新規登録＝ADR-144 §4 の PO 許可は不要）。初回は今の LoadingBlock 金型（class sa-loading-block）。取り直し中は中身を残し、既存の金型 Spinner（components/loading/Spinner.tsx・size "sm"・class sa-spinner。部品の説明に「while a table refetches」と書かれた用途そのもの）を、各画面の既存の見出し・道具欄の中に置く。新しい CSS は書かない。置き場に新しい CSS が要ると分かった画面は、その便を止めて PO に聞く（ADR-144 §4）。
 - Spinner は測る道具の「読み込み中の印」の目印（settle.ts の LOADING_SELECTOR）に入っていないので、K1 の「前の中身が出た」を邪魔しない。目印の一覧は変えない。
 - 在庫表の生の印（InventoryPage.tsx:631-639 の文字だけの div）は、在庫表を移す便で Spinner に置き換える（今は金型違反・recon §4 U1）。
@@ -73,6 +73,18 @@ PO の言葉: 「LINEみたいな使い心地は出来る？」（意味は「�
 #### 3-4-2. 段 0b の対応表と u1-count.py の流し直し
 - 対応表は docs/handoff/line-like-speed/screen-file-map.md（作り方 docs/handoff/line-like-speed/screen-map.py・基準 origin/main 1896879cb）。135 行すべてにファイルがある。ファイルの列に出る画面のファイルは 87 本。ルートの無い BuybackByProductPage は /buyback-prices の中身として表に出るので、段 3 で /buyback-prices と一緒に直す。BadgesPage・BuddyPage は表に出ないので、段 3 で直さない。
 - u1-count.py の流し直しは 中身を消す 62・このファイルで取らない 24・ほかの印 7・印なし 3 で、recon §4 U1 と同じ。
+
+#### 3-4-3. 段 1 の作業指示書
+- 段 1（写しの置き場・取り方・利用者が変わったら消す、の土台と K5 の試験）の作業指示書は docs/handoff/line-like-speed/stage1-card.md。段 1 は画面を変えない。本物の画面での K5 は段 2 の受入で確かめる（stage1-card.md V1-1）。
+
+#### 3-4-4. 段 1 の本番の受入（stage1-card.md §5 の A7・A8・2026-11-01 Claude Opus が確かめた）
+- A7 は合格。段 1 は 2026-11-01 03:55:41 JST に main へ入った（merge e77c3a436）。本番への反映（Deploy to VPS run 41231757253）は 04:03 JST に success。本番の app.salesanchor.jp は HTTP 200 を返した。本番の中身 /assets/main-BJmK6VJ2.js には TanStack Query の文字列 "No QueryClient set" が 1 件ある。本番を Playwright で開くとログイン画面が出た。ブラウザの誤りの記録は /api/v1/auth/refresh の 401 の 1 件だけで、これはログイン前の正常な返事。TanStack 由来の誤りは 0 件。
+- A8 は合格。今回の回は prod-ui-check run 41232464221（main 8a2baf838・2026-11-01 04:18:19 JST に測定）。基準は §3-4-1 の回（run 41215836246）。
+  - 同じだった値: 画面の点検 8 passed、測った画面 135（403 なし 100・403 あり 35・未測定 0）、K2 の最大 1.1 秒（/inventory）、2 秒を超えた画面 0、戻った時の秒を測れた画面 128、押した秒を測れた画面 92（メニュー 5・命令 87）、K3 の最大 0.02 秒、JS ヒープ 18 MB。
+  - 下がった値: K1 の最大（403 なし）は 0.87 秒から 0.63 秒（/admin/products）。?section=condition-defs-master は 0.17 秒。測るあいだの API の数は 496 から 489。
+  - 記録係の精度は 4 件中 4 件合格で、いちばん大きい差は 4.9 ms（線は 50 ms）。
+  - 0.1〜0.2 秒増えた行: /crm → /crm/leads 0.3→0.5、/admin/products 0.5→0.6、me/permissions だけを読む画面の多くが 0.1→0.2。同じ行の「いちばん遅い API」の秒も同じだけ増えた（/api/v1/countries 0.3→0.5 など）。段 1 は画面のコードの通信を変えていない（e77c3a436 で useApiQuery を使う画面は 0）。増えた分は、同じ行のいちばん遅い API の秒の増えと同じ。原因は 1 回の比べでは決めない（表は 0.1 秒刻み）。悪化は 2 秒の線と K2 の最大では見えない、とだけ記録する。段 2 の受入のときに毎朝の記録と並べてもう一度見る。
+- 段 2 の作業指示書は、この受入の後に別の PR で出す。
 
 ### 3-5. 測り方（|基準|検証方法|）
 | 基準 | 検証方法 |
