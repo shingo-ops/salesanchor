@@ -17,12 +17,12 @@
 | 部位 | 目標 | 根拠 | トークン（既存 / 新規） |
 |---|---|---|---|
 | 吹き出しの角 | 10 | spec :175 | 既存 `--radius-badge`(10px) は用途違いのため使わない。新規 `--comp-chat-bubble-radius-mobile: 10px` |
-| 受信の尾 | 左上に 7 張り出す | spec :174 | 新規 `--comp-chat-bubble-tail-mobile: 7px` |
+| 受信の尾 | 左上に 7 張り出す | spec :174 | 新規 `--comp-chat-bubble-tail-w-mobile: 7px` / `--comp-chat-bubble-tail-h-mobile: 10px`（card-a2 §3） |
 | 行の左右の余白 | 17 | spec :121, :172 | 新規 `--comp-chat-row-inset-mobile: 17px`（同じ用途の段に無い値。spec 5-4 の表） |
-| 吹き出しの上下 | 5 ずつ | spec :122 | 新規 `--comp-chat-row-gap-mobile: 5px` |
+| 吹き出しの上下 | 5 ずつ | spec :122 | 新規 `--comp-chat-row-gap-group-mobile: 5px`・続きの中は `--comp-chat-row-gap-inner-mobile: 1.333px`（card-a2 §3） |
 | 本文の文字・行の間隔 | 16 / 19 | measure2 | 既存 `--font-md`(16px)、新規 `--comp-chat-line-height-mobile: 19px` |
 | 時刻の文字 | 12 | measure-cal1 | 既存 `--font-xs`(12px) |
-| 時刻の場所 | 本文と同じ行の右下、本文の右に 37 先取り、高さ 16.3、左右 6 | spec :123-125 | 新規 `--comp-chat-time-reserve-mobile: 37px`、既存 `--space-6px` |
+| 時刻の場所 | 本文と同じ行の右下、本文の右に 37 先取り、高さ 16.3、左右 6 | spec :123-125 | 見えない時刻の写しで場所を取る（固定の 37 は使わない）。新規 `--comp-chat-time-inset-mobile` / `-time-bottom-mobile`、既存 `--space-6px`（card-a2 §3） |
 | 本文の内側の余白 | 上下 7（高さ 33 から）・左右は初期値 9 を端末で 1px 刻みに決める（U5） | measure-a2.md U1・墨の位置 | 新規 `--comp-chat-bubble-pad-x-mobile` / `-pad-y-mobile`（最終の値と全トークンは card-a2.md §3） |
 | 入力欄の帯 | 高さ 56（48＋上下4） | spec :99-100 | 既存 `--space-1`(4px) |
 | ピル | 高さ 48・角は高さの半分・左 8 | 2026-11-01 測り直し | 既存 `--comp-btn-height-lg`(48px)・`--radius-full`・`--space-2` |

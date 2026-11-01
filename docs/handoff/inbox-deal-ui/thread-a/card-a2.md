@@ -28,7 +28,8 @@ BCSS = `frontend/src/components/ChatBubble.css`、CCSS = `frontend/src/component
 - 送れなかった吹き出し（failed）の見た目。尾も時刻の置き方の変更も付けない。
 - 翻訳ボタン・翻訳結果（B で扱う）。既読の印（C で扱う。送信側の時刻の右に印の場所を空けない）。「＋」（D）。
 - 送る・受ける・訳す・添付・ハート・長押しの動き。API・型・バックエンド・ja.json / en.json（新しい言葉は無い）。
-- クラス名の付け替え（e2e が `send-top-row` 等で要素を探している）。
+- 既存のクラス名の付け替え・削除（e2e は `.inbox-send-btn` で送信を探している。ほかの名前も残す）。
+- 送れなかったときの帯（TSX:724 `inbox-send-error`）の中身と色。§6-3 で `.inbox-send-area` の余白を 0 にするため、帯の左右の余白が変わらないかを K10 で確かめる。
 
 ## 3. 実測から決めた目標値（スマホのみ）
 
@@ -59,9 +60,9 @@ BCSS = `frontend/src/components/ChatBubble.css`、CCSS = `frontend/src/component
 - 入力欄の自動の伸びは CSS `field-sizing: content` を使う。【事実】MDN（Context7 /mdn/content `field-sizing`）: textarea は幅で伸びられないと高さが伸び、高さの上限で中が流れる。`rows` は効かなくなる。【事実】caniuse（2026-11-01 取得）: Chrome 123〜・Android の Chrome 156・iOS Safari 26.2〜・Firefox 152〜。対応しないブラウザでは今と同じ2行の高さのまま（壊れない）。
 
 ## 4. トークン（ADR-067 :125-133 の手順）
-- `frontend/src/tokens.css` の :root、`--comp-chat-bubble-line-height`（:177）の直後に §3 の新規 15 個を、各行に「何の値か＋出典（card-a2 §3）」のコメント付きで足す。色は足さない。@media の中でトークンを上書きしない。
+- `frontend/src/tokens.css` の :root、`--comp-chat-bubble-line-height`（:177）の直後に §3 の新規 17 個を、各行に「何の値か＋出典（card-a2 §3）」のコメント付きで足す。色は足さない。@media の中でトークンを上書きしない。
 - `tokens.css:177` のコメント末尾の「A-2 でスマホは実測 19px にする」を「スマホは --comp-chat-line-height-mobile」に直す。
-- `docs/adr/ADR-067-design-token-enforcement.md` の表（:69 の行の直後）に同じ 15 個を1行ずつ足す。
+- `docs/adr/ADR-067-design-token-enforcement.md` の表（:69 の行の直後）に同じ 17 個を1行ずつ足す。
 - PR 本文の check:new-tokens の表を埋める。
 
 ## 5. 金型の変更
@@ -75,14 +76,15 @@ props を2つ足す。どちらも thread 用で、既定は false（今の呼�
 - `tail && !panel && !failed` のとき class に `comp-chat-bubble--tail` を足す。
 - `inlineTime && !panel && !failed && time !== undefined` のとき class に `comp-chat-bubble--inline-time` を足し、children の直後・Spinner の前に次を置く:
 ```tsx
-<span className="comp-chat-bubble__time-spacer" aria-hidden="true" inert>{time}</span>
+<span className="comp-chat-bubble__time-spacer" aria-hidden="true">{time}</span>
 ```
-  - 時刻と同じ中身を見えない形で置き、その幅だけ最後の行に場所を取る（WhatsApp と同じ作り）。読み上げ・Tab 移動・押す対象にならない（aria-hidden・inert）。
-  - React 18 の型で `inert` が通らない場合は分かれ道 §10-1。
+  - 時刻と同じ中身を見えない形で置き、その幅だけ最後の行に場所を取る（WhatsApp と同じ作り）。
+  - 読み上げには出ない（aria-hidden）。スマホでは visibility:hidden、PC では display:none なので、中に翻訳ボタンが写っても Tab 移動・押す対象にならない。
+  - `inert` は付けない（@types/react 18.3.28 に無く、型で必ず落ちるため）。
 - 冒頭の説明コメントに2行足す。そのほかは変えない。
 
 ### 5-2 BCSS
-`@media (max-width: 767px)` の中（:64-76）に足す。全部 `:not(.comp-chat-bubble--panel)` を付ける（秘書を変えないため）。PC の規則（:1-62）は触らない。ただし PC で隙間の札を出さない規則 `.comp-chat-bubble__time-spacer { display: none; }` だけは @media の外に足す。
+`@media (max-width: 767px)` の中（:64-76）に足す。全部 `:not(.comp-chat-bubble--panel)` を付ける（秘書を変えないため）。PC の規則（:1-62）は触らない。ただし PC で隙間の札を出さない規則 `.comp-chat-bubble__time-spacer { display: none; }` だけは @media の外、`.comp-chat-bubble--wide` の規則（:58-62）の直後・空行（:63）の前に足す（あとに来る @media の規則の方が詳しいので、stylelint の no-descending-specificity に当たらない）。
 ```css
   .comp-chat-bubble--outbound:not(.comp-chat-bubble--panel),
   .comp-chat-bubble--inbound:not(.comp-chat-bubble--panel) {
@@ -228,24 +230,26 @@ props を2つ足す。どちらも thread 用で、既定は false（今の呼�
 |---|---|---|
 | K1 | 幅360（端末の Chrome）で、受信1行の吹き出しの高さ 33・角 10・尾 7x10・左端 17・時刻が本文と同じ行 | §7 と同じ撮り方で画素を測り表にする（±3画素） |
 | K2 | 続けて3件届いた会話で、尾は1件目だけ。吹き出しの間 8画素、境目 30画素 | 同上 |
-| K3 | 長文の受信で幅 858画素（286）・最後の行の右下に時刻 | 同上 |
-| K4 | 入力欄 1行でピルの高さ 145画素（±3）・左端 24画素・送信の丸 144画素。改行ごとに 63画素伸び、上限 663画素前後で止まる | 端末の Chrome で打ち、送らずに消す。uiautomator ではなく撮った写真で測る |
+| K3 | Discord 以外の会話（ハートが付かない会話）の長文の受信で幅 858画素（286）・最後の行の右下に時刻 | 同上（ハートは行の幅を取るため InboxPage.css:1829-1843・TSX:651、Discord の会話では測らない） |
+| K4 | 入力欄 1行でピルの高さ 145画素（±3）・左端 24画素・送信の丸 144画素。改行ごとに 63画素伸び、入力欄そのもの（ピルではない）の高さ 663画素前後（実測 662）で止まる | 端末の Chrome で打ち、送らずに消す。uiautomator ではなく撮った写真で測る |
 | K5 | 本文の墨の位置が ink.txt と ±3画素 | §7 |
 | K6 | 新しい値はすべてトークン経由・直書き 0 件 | `npm run check:all`・ui-governance-gate・差分の grep（`style=`・数字＋px） |
 | K7 | PC（幅1280）が前後で全画素一致。秘書のチャットも幅1280と幅360で全画素一致 | A-1 と同じ写真比べ（a1-parity-result.txt の方法） |
 | K8 | 既存の試験が全部通る。ChatBubble.test に tail / inlineTime の試験を足す（class が付く・付かない、隙間の札が aria-hidden） | `npm test`・CI |
+| K10 | 送れなかったときの帯（`inbox-send-error`）を幅360で出し、帯の文字が画面の端に付いていない・前と同じ形で読める | Storybook かテスト用の画面で撮る。違えば止めて報告 |
 | K9 | PO が写真（受信の続き・長文・入力欄の1行と伸びた形）を見て合格 | 本番に出す前に PO に見せる |
 
 ## 9. 変更してよいファイル（これ以外は触らない）
 - frontend/src/components/ChatBubble.tsx・ChatBubble.css・ChatBubble.test.tsx・ChatBubble.stories.tsx（スマホの見本を足す）
-- frontend/src/components/ChatComposer.tsx・ChatComposer.css・ChatComposer.stories.tsx
+- frontend/src/components/ChatComposer.tsx・ChatComposer.css・ChatComposer.test.tsx・ChatComposer.stories.tsx
+  - ChatComposer.test.tsx:47-57（順番の試験）は §5-3 の span で落ちる。`kids[0]` を「`kids[0].className` が `comp-chat-composer__leading` で、その最初の子の data-testid が `lead`」に直す。kids[1]〜[3] の確かめは変えない。ほかの試験は触らない。
 - frontend/src/pages/inbox/InboxMessageThread.tsx・InboxPage.css
 - frontend/src/tokens.css・docs/adr/ADR-067-design-token-enforcement.md
 - docs/handoff/inbox-deal-ui/thread-a/measure-a2.md（§7 の結果を足す）
 - 見た目の基準写真（tests-e2e/visual-language の幅360のもの）が落ちた場合は、撮り直しの前に止めて報告（§10-3）
 
 ## 10. 想定される分かれ道（起きたら止めて報告）
-1. `inert` が型で通らない → `{...({ inert: "" } as Record<string, string>)}` などで回避せず、止めて報告。
+1. ChatComposer.test.tsx の順番の試験以外に、§5-3 の span で落ちる試験がある → 落ちた試験名と生の出力を報告して止める。
 2. stylelint・check:css-values が新しい規則を止める → 止めた規則名と行を報告。disable を足さない（§5-4 の1件を除く）。
 3. 幅360の基準写真の試験が落ちる → 落ちた写真の名前を報告して止める（撮り直しは Opus が判断）。
 4. 幅1280 の写真比べで 1画素でも違う → 違う場所を報告して止める。
@@ -261,6 +265,8 @@ props を2つ足す。どちらも thread 用で、既定は false（今の呼�
 - 未実測で残るもの: 送信側の幅の上限と続き。U1 の左右対称 4 項目を根拠に同じ値を使う判断にした。K2・K3 は受信で判定する。PO が後日送信した長文があれば測り足す。
 - 既存との整合: ADR-067（トークン・@media で上書きしない）、ADR-144（金型の中で直す・生の要素を足さない）、ADR-027（新しい言葉なし）、design §2 の対象外（色・B・C・D・画像）を守る。e2e の探し方（クラス名）は変えない。
 - 自動の伸びは公式資料で確かめた（§3）。対応しないブラウザは今の2行のまま。
-- 弊害: 時刻の見えない写しが DOM に1つ増える（読み上げ・Tab には出ない）。単体試験で `getByText` が時刻を2つ見つける場合があるので K8 で確かめる。
+- 弊害: 時刻の見えない写しが DOM に1つ増える（読み上げ・Tab には出ない）。時刻に翻訳ボタン（`.msg-translate-btn`）が入る吹き出しでは、そのボタンも DOM に2つになる。e2e で `.msg-translate-btn` を探す試験は base に無い（審査で確認）。単体試験で `getByText` が時刻を2つ見つける場合があるので K8 で確かめる。
+- 送れなかったときの帯は `.inbox-send-area` の余白 0 の影響を受けるので K10 で確かめる。
+- 第2回（審査の指摘を反映）: ChatComposer.test の許可と直し方・`inert` の削除・トークン 17 個・隙間の札の規則の置き場所・e2e の記述・K3 の会話の種類・K4 の測る物・送れなかった帯。
 
 END OF CARD
