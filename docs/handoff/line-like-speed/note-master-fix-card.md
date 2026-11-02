@@ -1,6 +1,6 @@
 # 作業指示書: 注記マスタの一覧が 500 で開かない不具合の直し（第 2 版）
 
-- 状態: 設計案作成済み。第 1 版はクラウドの審査役（Claude Opus）が REVISE（指摘 1〜5）。第 2 版で 1〜4 を直し、5 は §7 に記録
+- 状態: 設計審査済み。第 1 版は REVISE（指摘 1〜5）。第 2 版はクラウドの審査役（Claude Opus）が APPROVE（2026-11-02 12:11 JST）。全テナントの共用の表で match_type が 3 つ以外か空の行は id 148 の 1 行だけ（本番の読み取り 2026-11-02 11:53 JST）
 - 対象 ADR: ADR-1054（段 3 の 1 回目 batch3a の受入 B5 を止めている不具合）。match_type `STATE_LITERAL` の設計は docs/handoff/tcg-product-master-growth/design-keyword.md:472-482
 - 実装役: クラウドの Sonnet。この指示書に書いた変更だけをする
 
@@ -8,7 +8,7 @@
 
 1. 本番の画面の測定（prod-ui-check run 41377463601・2026-11-02 11:37 JST）で `/management-center/note-master` の行は API 2 件・5xx 1 件・戻った時 0.20 秒。変更前の run 41371097056（10:14 JST）でも同じ 5xx 1 件・0.20 秒。
 2. 一覧の API は `backend/app/routers/note_master.py:137-152`。取った全行を `TcgNoteMasterResponse(**dict(row))` に通す。1 行でも検査に落ちると一覧全体が 500 になる。
-3. 検査は `backend/app/schemas/central_masters.py:626-630`（作る時と返す時）と `:651-655`（直す時）。許す値は `("LITERAL", "REGEX", "DEFAULT")` の 3 つだけ。
+3. 検査は `backend/app/schemas/central_masters.py:625-630`（作る時と返す時）と `:651-655`（直す時）。許す値は `("LITERAL", "REGEX", "DEFAULT")` の 3 つだけ。
 4. 本番 DB（読み取り専用の道 ADR-1024・2026-11-02 11:53 JST）: `public.tcg_note_master` の `tenant_id IS NULL OR tenant_id = 1` は 99 行。そのうち 1 行（id 148・共用・伝票剥がし跡あり・priority 1）の match_type が `STATE_LITERAL`。共用の行なので、全テナントの 1 ページ目に入る。
 5. `STATE_LITERAL` は設計どおりの値（design-keyword.md:472-482）。解析は `backend/app/services/tcg_analyzer_svc.py:1164-1167` で使う。`migrations/20260910_200000_tcg_condition_note_delivery_t004.sql:37` は `tenant_004.tcg_note_master` へ入れた。`public` の id 148 がどの道で入ったかはまだ確かめていない（直しには関係しない）。検査だけが直されていなかった。
 6. 手元で本線の `central_masters.py` を読み込み、この行と同じ値を `TcgNoteMasterResponse` に通した。`LITERAL` は通り、`STATE_LITERAL` は `ValidationError: match_type must be LITERAL, REGEX, or DEFAULT` で落ちた。
