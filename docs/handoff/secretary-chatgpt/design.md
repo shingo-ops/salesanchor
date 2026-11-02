@@ -234,6 +234,7 @@ GitHub の一時 VM（sandbox-test）で、compose と同じ条件（read_only�
 
 ## 13. 実装カードの前に済ませること
 1. 本番の `TRANSLATION_MODEL_RECEIVE`・`TRANSLATION_MODEL_SEND` が設定されているか・値（モデル名だけ。ほかの行は読まない）を確かめ、§4-1 の初めの行に書く。
+   - 途中の事実（2026-11-03 読み取りの道 ai_ro で確かめた。生出力 `prod_models_by_purpose.tsv`・`prod_translation_all.tsv`）: `llm_usage_events` に purpose が translation で始まる行は期間を問わず0行。直近30日は line_extraction 3615行・line_extraction_shadow 6081行で、どちらも gemini-3.1-flash-lite。翻訳の書き込み（`record_usage_event`）は 2026-09-30 の 3400ea80b から成功のたびに書く作りなので、本番の翻訳はそれ以降 Gemini の呼び出しが1回も成功していない（呼ばれていないのか失敗しているのかは【未確認】。翻訳の保存先 message_translations は ai_ro に無く読めない）。そのため翻訳の実際のモデルは記録からは分からず、backend の容器の環境変数を読む必要がある。`TRANSLATION_MODEL_*` は compose・deploy.yml に無い（`git grep` で `message_translator.py` だけ）。
 2. （草案済み・`docs/adr/ADR-1058-ai-job-assignments.md`・Proposed）ADR-1058 の本文を起案する（ADR-1056 の置き換え部分・解析の選択肢を増やす決まり・失敗の記録・error_code の一覧）。
 3. （済）同期セッションの工場: 共通の物は無い。新しく作らず呼び手の session に書く形にした（§4-2-3）。
 4. （済）9回目の審査（クラウド・head 6ce9947bd）で APPROVE。軽い指摘 R1〜R3 は v10 で反映（§14）。
