@@ -10,11 +10,12 @@
  *   2026-06-11: 編集を Drawer 化（useRecordDrawer, ADR-122 バッチB）
  */
 
-import { useEffect, useState, FormEvent } from "react";
+import { useMemo, useState, FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { getStatusPresentation } from "../../utils/statusPresentation";
 import { api } from "../../lib/api";
+import { useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
 import { Modal } from "../../components/Modal";
 import { Button } from "../../components/Button";
 import { SelectControl } from "../../components/Select";
@@ -33,7 +34,7 @@ import { ContactFormFields, type ContactFormState, type ContactCompany } from ".
 import { TextareaControl } from "../../components/Textarea";
 import { TextFieldControl } from "../../components/TextField";
 import { Checkbox } from "../../components/Checkbox";
-import { LoadingBlock } from "../../components/loading";
+import { LoadingBlock, Spinner } from "../../components/loading";
 
 interface Contact {
   id: number;
@@ -110,10 +111,21 @@ export default function ContactsPage() {
   const { hasPermission } = usePermissions();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [contacts, setContacts] = useState<Contact[]>([]);
-  const [companies, setCompanies] = useState<ContactCompany[]>([]);
   const [companyFilter, setCompanyFilter] = useState(searchParams.get("company_id") || "");
   const [search, setSearch] = useState("");
+  const contactParts: string[] = [];
+  if (search) contactParts.push(`search=${encodeURIComponent(search)}`);
+  if (companyFilter) contactParts.push(`company_id=${encodeURIComponent(companyFilter)}`);
+  contactParts.push("per_page=100");
+  const contactsQ = useApiQuery<Contact[]>(`/contacts?${contactParts.join("&")}`, { keepPrevious: true });
+  // 会社の選択肢は担当者の編集と同じ写し（取れなくても静かに無視・今と同じ）
+  const companiesQ = useApiQuery<ContactCompany[]>("/companies?per_page=100");
+  const contacts = contactsQ.data ?? [];
+  const companies = useMemo<ContactCompany[]>(
+    () => (companiesQ.data ?? []).map((c) => ({ id: c.id, company_code: c.company_code, name: c.name })),
+    [companiesQ.data],
+  );
+  const invalidate = useInvalidateApi();
   // 新規作成モーダル
   const [showCreate, setShowCreate] = useState(false);
   const [createForm, setCreateForm] = useState<CreateFormState>(emptyCreateForm);
@@ -122,39 +134,15 @@ export default function ContactsPage() {
     useRecordDrawer<Contact, ContactFormState>({ toForm, emptyForm: emptyEditForm });
 
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
+  const shownError = error || (contactsQ.error ? (contactsQ.error instanceof Error ? contactsQ.error.message : t("common.fetchError")) : "");
   const [submitting, setSubmitting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Contact | null>(null);
   const [dedupConfirmTarget, setDedupConfirmTarget] = useState<Contact | null>(null);
   const [dedupSubmitting, setDedupSubmitting] = useState(false);
 
   const loadContacts = async () => {
-    try {
-      const parts: string[] = [];
-      if (search) parts.push(`search=${encodeURIComponent(search)}`);
-      if (companyFilter) parts.push(`company_id=${encodeURIComponent(companyFilter)}`);
-      parts.push("per_page=100");
-      const data = await api.get<Contact[]>(`/contacts?${parts.join("&")}`);
-      setContacts(data);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("common.fetchError"));
-    } finally {
-      setLoading(false);
-    }
+    await invalidate(["contacts"]);
   };
-
-  const loadCompanies = async () => {
-    try {
-      const data = await api.get<ContactCompany[]>("/companies?per_page=100");
-      setCompanies(data.map((c) => ({ id: c.id, company_code: c.company_code, name: c.name })));
-    } catch {
-      // 静かに無視
-    }
-  };
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { loadContacts(); }, [search, companyFilter]);
-  useEffect(() => { loadCompanies(); }, []);
 
   const companyName = (company_id: number): string => {
     const c = companies.find((x) => x.id === company_id);
@@ -271,6 +259,7 @@ export default function ContactsPage() {
     <PageLayout
       navKey="nav.contacts"
       subtitleKey="contacts.subtitle"
+      headerLeft={contactsQ.isFetching && !contactsQ.isPending ? <Spinner size="sm" /> : undefined}
       headerAction={headerAction}
     >
       <ContentToolbar
@@ -294,7 +283,7 @@ export default function ContactsPage() {
         right={pageContentActions}
       />
 
-      {error && <div className="error-banner">{error}</div>}
+      {shownError && <div className="error-banner">{shownError}</div>}
 
       {/* 新規作成 Modal（全項目・既存 UX 保持） */}
       <Modal
@@ -384,7 +373,7 @@ export default function ContactsPage() {
         </form>
       </Drawer>
 
-      {loading ? (
+      {contactsQ.isPending ? (
         <LoadingBlock />
       ) : (() => {
         const columns: DataTableColumn<Contact>[] = [

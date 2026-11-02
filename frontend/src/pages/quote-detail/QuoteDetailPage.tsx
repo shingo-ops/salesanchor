@@ -6,16 +6,17 @@
  *   2026-04-17: 初版作成（Phase 2）
  */
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
+import { useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
 import { usePermissions } from "../../hooks/usePermissions";
 import { getStatusPresentation } from "../../utils/statusPresentation";
 import { PageLayout } from "../../components/PageLayout";
 import { ContentToolbar } from "../../components/ContentToolbar";
 import { Button } from "../../components/Button";
-import { LoadingBlock } from "../../components/loading";
+import { LoadingBlock, Spinner } from "../../components/loading";
 
 interface FxRateResult {
   currency: string;
@@ -57,25 +58,17 @@ export default function QuoteDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { hasPermission } = usePermissions();
-  const [quote, setQuote] = useState<QuoteDetail | null>(null);
+  const quoteQ = useApiQuery<QuoteDetail>(`/quotes/${id}`, { enabled: id !== undefined });
+  const quote = quoteQ.data ?? null;
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
+  const shownError = error || (quoteQ.error ? (quoteQ.error instanceof Error ? quoteQ.error.message : t("common.fetchError")) : "");
+  const invalidate = useInvalidateApi();
   const [fxRate, setFxRate] = useState<FxRateResult | null>(null);
   const [fxLoading, setFxLoading] = useState(false);
 
-  const load = async () => {
-    try {
-      const data = await api.get<QuoteDetail>(`/quotes/${id}`);
-      setQuote(data);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("common.fetchError"));
-    } finally {
-      setLoading(false);
-    }
+  const load = () => {
+    void invalidate(["quotes", id ?? ""]);
   };
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { load(); }, [id]);
 
   const doAction = async (action: string) => {
     try {
@@ -117,8 +110,8 @@ export default function QuoteDetailPage() {
     return n.toLocaleString();
   };
 
-  if (loading) return <div className="page"><LoadingBlock /></div>;
-  if (!quote) return <div className="page"><div className="error-message">{error || t("common.fetchError")}</div></div>;
+  if (quoteQ.isPending) return <div className="page"><LoadingBlock /></div>;
+  if (!quote) return <div className="page"><div className="error-message">{shownError || t("common.fetchError")}</div></div>;
 
   // 総重量 = Σ(数量 × 行重量)。
   const quoteTotalWeight = quote.items.reduce((s, it) => s + it.quantity * (it.weight ?? 0), 0);
@@ -127,6 +120,7 @@ export default function QuoteDetailPage() {
     <PageLayout
       titleText={`${t("quotes.title")} — ${quote.quote_code || `#${quote.id}`}`}
       subtitleKey="quotes.detailSubtitle"
+      headerLeft={quoteQ.isFetching && !quoteQ.isPending ? <Spinner size="sm" /> : undefined}
     >
       <ContentToolbar
         right={
@@ -153,7 +147,7 @@ export default function QuoteDetailPage() {
         }
       />
 
-      {error && <div className="error-message">{error}</div>}
+      {shownError && <div className="error-message">{shownError}</div>}
 
       {fxRate && (
         <div style={{ background: "var(--bg-surface)", padding: "var(--space-3)", borderRadius: "var(--radius-md)", marginBottom: "var(--space-4)", border: "1px solid var(--border)", fontSize: "var(--font-sm)" }}>
