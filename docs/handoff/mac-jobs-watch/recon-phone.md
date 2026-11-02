@@ -29,6 +29,7 @@
 
 ## 5. 足す先の見張り役（実物）
 - `scripts/mac-jobs-watch.sh`（565 行）。設定は `mjw_config`（:20-49）に 1 か所。判定する回の決まり `mjw_judged`（:178）、知らせる文 `mjw_text`（:190）、状態の読み書き `mjw_read_state`（:230）・`mjw_write_state`（:252）、状態型の判定 `mjw_detect_states`（:318）、新規・続き・復旧の振り分け `mjw_classify`（:411）、本体 `mjw_main`（:436、判定呼び出し :485・:490）。
+- 本物の通知先での手動試験の型は元の設計の K4（`docs/handoff/mac-jobs-watch/design.md:157`）。一時フォルダに入力を全部置き、本物の状態・ログには触れない。
 - 状態型の問題は「新しく出た → ⚠️ 異常」「24 時間続く → まだ続いています」「消えた → ✅ 復旧」を既に持っている（:411-）。
 - 30 分ごと＋ログイン時（ops/launchd/jp.salesanchor.mac-jobs-watch.plist:46-47 `StartInterval 1800`）。台本は道具のコピー ~/.salesanchor-tools から動き、コピーは毎日 04:00 に disk-janitor が origin/main へ更新する（ops/launchd/jp.salesanchor.disk-janitor.plist:34）。plist の PATH に /opt/homebrew/bin がある（mac-jobs-watch.plist の EnvironmentVariables）。
 - 試験 `scripts/tests/test-mac-jobs-watch.sh`（653 行）。一時フォルダと偽 launchctl・偽 curl・偽 df で動く。

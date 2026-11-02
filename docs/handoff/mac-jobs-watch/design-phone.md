@@ -2,7 +2,7 @@
 
 この文書は何か(専門用語なしの1行): PO が何もしなくても実機のスマホで確かめられる状態を保つため、AI の道具がスマホを名前で探すようにし、見えなくなったら Discord で知らせる設計。
 
-親: [README](../../specs/mac-jobs-watch/README.md)／調べた事実: [recon-phone.md](./recon-phone.md)／元の設計: [design.md](./design.md)
+親: [README](../../specs/mac-jobs-watch/README.md)／調べた事実: [docs/handoff/mac-jobs-watch/recon-phone.md](./recon-phone.md)／元の設計: [design.md](./design.md)
 
 対象 ADR: ADR-1009（通知先 webhook を見張り役と共有・読むだけ）、ADR-1015（区分 A。元の設計 design.md と同じ）。スマホとのつなぎ方を決めた ADR は無い（recon-phone.md §1）。
 
@@ -12,7 +12,7 @@
 
 PO の言葉（2026-11-02）: 「恒久的に安定させる方法は？私がやらなくても自動もしくはあなたが対応できる形」
 
-| # | 合格条件 | 測り方 | 合格ライン |
+| # | 基準 | 検証方法 | 合格ライン |
 |---|---|---|---|
 | P1 | AI の道具が、番号を決め打ちせずスマホを見つける | `bash scripts/dev/phone-serial.sh` を本物の Mac で実行 | 終了 0・1 行。行は `._adb-tls-connect._tcp` で終わる（自動のつながりを選ぶ） |
 | P2 | スマホが 1 時間以上見えなければ Discord に 1 通届き、見えたら「直りました」が 1 通届く | 試験（§4 の P㉞〜P㊸）と、本物の通知先での手動試験 1 回（§5） | 試験 FAIL 0。手動試験でログに `result=alert send=ok problems=phone-missing` と `result=recover send=ok` |
