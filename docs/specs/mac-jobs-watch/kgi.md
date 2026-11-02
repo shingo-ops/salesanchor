@@ -21,10 +21,21 @@
 |---|---|---|---|---|
 | P1 | AI の道具が番号を決め打ちせずスマホを見つける | `bash scripts/dev/phone-serial.sh` | 終了 0・1 行・`._adb-tls-connect._tcp` で終わる | ○ 2026-11-02 本物の Mac で終了 0・`adb-RFGL61DLQCW-IwMTz9._adb-tls-connect._tcp` の 1 行 |
 | P2 | 1 時間以上見えなければ 1 通、見えたら「直りました」1 通 | 試験 P㉞〜P㊸ と本物の通知先での手動試験 | FAIL 0・`result=alert send=ok problems=phone-missing`・`result=recover send=ok` | ○ 2026-11-02 試験 FAIL 0。合流後の手動試験（一時フォルダ・本物の通知先）で 0 分・30 分は送らず、60 分で `result=alert send=ok problems=phone-missing`、戻って `result=recover send=ok` |
-| P3 | つながりを切る・入れ直す命令を使わない | 差分の中の kill-server・disconnect・connect・tcpip・usb・reconnect | 0 件 | ○ 2026-11-02 審査役の検索で 0 件 |
-| P4 | スマホ再起動後、PO が何もしなくても戻る | 再起動 10 分後に P1 | 終了 0・1 行 | 未測定（「常に許可」の印を PO が確かめた後） |
+| P3 | つながりを切る・入れ直す命令を使わない（2026-11-02 PO「1」で `adb connect` だけ許す。docs/handoff/mac-jobs-watch/design-reconnect.md R4） | 差分の中の kill-server・disconnect・connect・tcpip・usb・reconnect | 0 件 | ○ 2026-11-02 審査役の検索で 0 件 |
+| P4 | スマホ再起動後、PO が何もしなくても戻る | 再起動 10 分後に P1 | 終了 0・1 行 | × 2026-11-02 「常に許可」は付いていたが、再起動でワイヤレスデバッグのスイッチが切れた（PO 目視）。スイッチを入れた後も adb 自身の探し方では見えず、番号を聞いてつないだ（[recon-reconnect.md](../../handoff/mac-jobs-watch/recon-reconnect.md)）。PO の操作をスイッチ 1 回にする直し: [design-reconnect.md](../../handoff/mac-jobs-watch/design-reconnect.md) R1〜R6 |
 | P5 | 既存の試験が今まで通り通る | `bash scripts/tests/test-mac-jobs-watch.sh` | FAIL 0 | ○ 2026-11-02 macOS で `PASS=210 FAIL=0` |
 
 見張りの間隔は 30 分のまま（plist は変えていない）。知らせが届くのは見えなくなってから 60〜90 分後。
+
+再起動後のつなぎ直し（正本は [design-reconnect.md §1](../../handoff/mac-jobs-watch/design-reconnect.md)）:
+
+| # | 基準 | 結果 |
+|---|---|---|
+| R1 | adb に無く dns-sd に見えるとき、つなぎ直して名前を出す | ○ 2026-11-02 本物の Mac で、つながりを全部外した後、元の道具は `rc=1`、新しい道具は 5 秒で `192.168.10.106:33815`・`rc=0`（番号を聞いていない）。試験 R1-1〜R1-6 も PASS |
+| R2 | 別の Android にはつながない | ○ 試験 R2-1〜R2-3 PASS |
+| R3 | dns-sd でも見えなければ終了 1 | ○ 試験 R3-1〜R3-3 PASS |
+| R4 | 増えた命令は `adb connect` だけ | ○ 台本の追加行で kill-server・disconnect・tcpip・usb・reconnect は 0 件。connect の命令は 1 か所 |
+| R5 | 1 回の呼び出しは 15 秒以内 | ○ 試験 R5-1〜R5-3 PASS |
+| R6 | 既存の試験を壊さない | ○ 2026-11-02 macOS で `PASS=228 FAIL=0`・shellcheck 0 件 |
 
 KPI: 合格した KGI の数 5/6（K6 は PO の次の再起動後に観測）。

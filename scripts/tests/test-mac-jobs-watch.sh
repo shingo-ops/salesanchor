@@ -67,10 +67,25 @@ cat > "${BIN}/adb" <<'EOS'
 #!/bin/bash
 # 偽 adb: 呼ばれた引数を adb.calls に書き、adb.out の中身を出す
 echo "$*" >> "${FAKE}/adb.calls"
+# connect が届いたら、adb.after があれば一覧をそれに入れ替える（つなぎ直しの偽物）
+if [ "${1:-}" = connect ] && [ -f "${FAKE}/adb.after" ]; then cp "${FAKE}/adb.after" "${FAKE}/adb.out"; fi
 cat "${FAKE}/adb.out" 2>/dev/null
 exit 0
 EOS
-chmod +x "${BIN}/launchctl" "${BIN}/curl" "${BIN}/df" "${BIN}/adb"
+cat > "${BIN}/dns-sd" <<'EOS'
+#!/bin/bash
+# 偽 dns-sd: -B は dnssd.B、-L <名前> は dnssd.L、-G は dnssd.G の中身を出す（無ければ何も出さない）。
+# dnssd.hang があれば出したあと止まらない（本物の dns-sd と同じ）
+echo "$*" >> "${FAKE}/dnssd.calls"
+case "${1:-}" in
+  -B) cat "${FAKE}/dnssd.B" 2>/dev/null ;;
+  -L) cat "${FAKE}/dnssd.L" 2>/dev/null ;;
+  -G) cat "${FAKE}/dnssd.G" 2>/dev/null ;;
+esac
+if [ -f "${FAKE}/dnssd.hang" ]; then exec sleep 100; fi
+exit 0
+EOS
+chmod +x "${BIN}/launchctl" "${BIN}/curl" "${BIN}/df" "${BIN}/adb" "${BIN}/dns-sd"
 PHONE_SH="${SCRIPT_DIR}/../dev/phone-serial.sh"
 
 FAKE_URL='https://discord.com/api/webhooks/TESTID/TESTTOKEN-not-real'
@@ -121,7 +136,8 @@ setup() { # setup [now]
   export MJW_DF="${BIN}/df"
   export MJW_PHONE_CMD=""
   export PHONE_ADB="${BIN}/adb"
-  unset PHONE_MODEL
+  export PHONE_DNSSD="${BIN}/dns-sd"
+  unset PHONE_MODEL PHONE_RECONNECT PHONE_NAME
   export DF_KB=52428800
   export MJW_NOW="${NOW}"
   export MJW_BOOT_SEC="${BOOT}"
@@ -747,6 +763,55 @@ eq "P㊸-2 phone_gone は前回のまま" "$(stv phone_gone)" "$(( T0 - 7200 ))"
 has_prob "phone-missing" && ok "P㊸-3 problems は前回のまま" || ng "P㊸-3 problems は前回のまま"
 export PHONE_ADB="${BIN}/adb"
 export MJW_PHONE_CMD=""
+
+# ── つなぎ直し。つなぎ直しの設計書 §4 の R1・R2・R3・R5・PHONE_RECONNECT=0 ──
+RC_INST='adb-RFGL61DLQCW-IwMTz9'
+rc_dnssd() { # rc_dnssd <name=の値>
+  printf 'Timestamp     A/R    Flags  if Domain  Service Type  Instance Name\n12:00:00.000  Add        2   4 local.  _adb-tls-connect._tcp.  %s\n' "${RC_INST}" > "${D}/fake/dnssd.B"
+  printf 'Lookup %s._adb-tls-connect._tcp.local.\n%s._adb-tls-connect._tcp.local. can be reached at Android.local.:33815 (interface 4)\n name=%s\n' "${RC_INST}" "${RC_INST}" "$1" > "${D}/fake/dnssd.L"
+  printf 'Timestamp     A/R    Flags  if Hostname  Address  TTL\n12:00:00.000  Add        2   4 Android.local.  192.168.10.106  120\n' > "${D}/fake/dnssd.G"
+}
+rc_gone() { adb_out "$(adb_hdr)"; }
+rc_back() { printf '%s\n' "$(adb_hdr)" "$(adb_line '192.168.10.106:33815')" > "${D}/fake/adb.after"; }
+nconnect() { grep -c '^connect' "${D}/fake/adb.calls" 2>/dev/null || true; }
+# R1 一覧に無い・dns-sd に SC-51G が見える → connect 1 回・IP:番号
+setup; rc_gone; rc_dnssd SC-51G; rc_back
+out="$(bash "${PHONE_SH}")"; rc=$?
+eq "R1-1 終了 0" "${rc}" "0"
+eq "R1-2 IP:番号を 1 行" "${out}" "192.168.10.106:33815"
+eq "R1-3 connect は 1 回" "$(nconnect)" "1"
+eq "R1-4 connect の引数" "$(grep '^connect' "${D}/fake/adb.calls")" "connect 192.168.10.106:33815"
+# R1 一覧に既にあるときは dns-sd を呼ばない
+setup; adb_out "$(adb_hdr)" "$(adb_line "${PH_AUTO}")"; rc_dnssd SC-51G
+out="$(bash "${PHONE_SH}")"; rc=$?
+eq "R1-5 見えているときは今まで通り" "${out}" "${PH_AUTO}"
+eq "R1-6 dns-sd を呼ばない" "$(cat "${D}/fake/dnssd.calls" 2>/dev/null | grep -c . || true)" "0"
+# R2 別の Android（name= が違う）には connect しない
+setup; rc_gone; rc_dnssd Pixel; rc_back
+out="$(bash "${PHONE_SH}")"; rc=$?
+eq "R2-1 終了 1" "${rc}" "1"
+eq "R2-2 出力なし" "${out}" ""
+eq "R2-3 connect 0 回" "$(nconnect)" "0"
+# R3 dns-sd にも見えない → 終了 1・connect しない
+setup; rc_gone
+out="$(bash "${PHONE_SH}")"; rc=$?
+eq "R3-1 終了 1" "${rc}" "1"
+eq "R3-2 出力なし" "${out}" ""
+eq "R3-3 connect 0 回" "$(nconnect)" "0"
+# R5 dns-sd が止まらなくても 15 秒以内に終わる
+setup; rc_gone; rc_dnssd SC-51G; rc_back; : > "${D}/fake/dnssd.hang"
+t0="$(date +%s)"
+out="$(bash "${PHONE_SH}")"; rc=$?
+t1="$(date +%s)"
+[ $(( t1 - t0 )) -le 15 ] && ok "R5-1 15 秒以内に終了" || ng "R5-1 15 秒以内に終了 ($(( t1 - t0 )) 秒)"
+eq "R5-2 つなぎ直せて終了 0" "${rc}" "0"
+eq "R5-3 IP:番号" "${out}" "192.168.10.106:33815"
+# PHONE_RECONNECT=0 → 今まで通り（dns-sd も connect も呼ばない）
+setup; rc_gone; rc_dnssd SC-51G; rc_back
+out="$(PHONE_RECONNECT=0 bash "${PHONE_SH}")"; rc=$?
+eq "RC0-1 終了 1" "${rc}" "1"
+eq "RC0-2 connect 0 回" "$(nconnect)" "0"
+eq "RC0-3 dns-sd を呼ばない" "$(cat "${D}/fake/dnssd.calls" 2>/dev/null | grep -c . || true)" "0"
 
 echo "----"
 echo "PASS=${PASS} FAIL=${FAIL}"
