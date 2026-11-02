@@ -37,7 +37,7 @@
     - 今ある CHECK を広げる時（llm_usage_events の purpose に `secretary_intent`、sdk に `codex-cli`・`claude-code`）は、前例 `migrations/20261020_110000_line_conditions_value_group_add_supply.sql:15-36` と同じ形にする。DO の塊の中で `pg_get_constraintdef` を見て、本便で足す値がすでに入っていれば何もしない。入っていない時だけ DROP → ADD する。条件なしで毎回 DROP → ADD すると、①後の migration がさらに広げた値の行がある時に狭い CHECK を付け直して deploy が落ちる（前例の `:5-6`・`:12-15` にある deploy 失敗と同じ壊れ方） ②流れ直すたびに解析で毎分書かれる llm_usage_events に一番強いロックを取る。ロックの待ちは1秒・最大40回（`scripts/run_all_migrations.sh:57-60`）で、psql は文ごとに commit するので、DROP の後の ADD が取れないと CHECK が外れたまま残る。
     - 段3の codex の3行の migration も同じ（provider の CHECK は段1a で codex を含めて作るので、段3で CHECK は変えない）。
     - sdk の CHECK は値を2つ足す。「何もしない」のは `codex-cli` と `claude-code` の両方が定義に入っている時だけ（片方だけ見ると、もう片方が入らないまま止まる。審査8回目 N3）。
-    - outcome と error_code の「ok なら error_code は NULL、failed なら NOT NULL」は2つの列にまたがる。列の制約として PostgreSQL 16 が受け付けるかは【未確認】。§7 1a の2回流しの試験で確かめる。受け付けない時は表の制約として名前を付け、`pg_constraint` にその名前が無い時だけ足す DO の塊にする（審査8回目 N3）。
+    - outcome と error_code の「ok なら error_code は NULL、failed なら NOT NULL」は2つの列にまたがる。列の制約として PostgreSQL 16 が受け付けるかは【未確認】。§7 1a の2回流しの試験で確かめる。受け付けない時は表の制約として名前を付け、`pg_constraint` にその名前が無い時だけ足す DO の塊にする（審査8回目 N3）。カード 1a（`card-1a.md`）では、確かめの要らない表の制約の形を最初から使う（名前 `llm_usage_events_outcome_error_code_check`。2026-11-03）。
 - provider は3つに閉じる: CHECK (provider IN ('gemini','codex','claude'))。
 - job_key は5つに閉じる: CHECK (job_key IN ('line_extraction','translation_inbound','translation_inbound_escalation','translation_outbound','secretary_intent'))。llm_usage_events の purpose と同じ名前にし、記録と担当を名前でつなぐ。
 - 初めの行は今の本番の値。解析は gemini-3.1-flash-lite（`gemini_extraction_svc.py:283`）、秘書は claude/sonnet（`secretary-agent/server.mjs:70`）。翻訳3つは本番の環境変数 `TRANSLATION_MODEL_RECEIVE`・`TRANSLATION_MODEL_SEND` の実際の値（コードの既定は両方 gemini-3.5-flash-lite、`message_translator.py:49-50`）。本番では2つとも設定されていない（2026-11-03 PO が読み取りだけの台本で backend の容器 astro-webapp-backend-1 を確かめた。生出力 `prod_translation_env.txt`）。よって翻訳3つの初めの行は gemini / gemini-3.5-flash-lite（料金表 `LLM_PRICING` にある。`llm_budget.py:81`）。
@@ -243,6 +243,7 @@ GitHub の一時 VM（sandbox-test）で、compose と同じ条件（read_only�
    - 秘書を ChatGPT にした時の最初のモデル（試験では3つとも6〜8秒で正しい形）。
    - 月額契約（ChatGPT の個人の契約）を会社のサーバーでお客さん向けの機能に使ってよいか（使い方の約束の判断。段3に入る前に。答えは「使ってよい」「スーパー管理者の試験だけ可」「不可」の3つ、進め方は §7）。
    - Claude の容器を片付ける時期（段4）。
+7. （2026-11-03）段1a のカード `docs/handoff/secretary-chatgpt/card-1a.md` を作り、card-lint で違反0（長い行の警告だけ）。実装は PO の実装の許可の後。
 6. prod1 の MemAvailable・MemTotal を読み取りの道で測り、K8 の基準値を本書に書く（段3の前）。
 
 ## 14. 審査（Architect・クラウドの Opus。同じ種類の AI による審査で、独立した第二者の審査ではない）
