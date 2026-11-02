@@ -27,7 +27,7 @@
 
 ### R2 Mac で試験が動く道
 - (a) AI（Opus 本体・手元の審査役・評価する係）が Bash で打つ命令。例: `npm test`、`npm run test:e2e`、`npx playwright test`、`pytest`。
-  - ~/.claude/agents/evaluator.md:126 と :131 に `npx playwright test --config tests/qa-smoke/playwright.config.ts` を手元で打つ手順が残る。ただし GitHub 側の qa-smoke.yml は 2026-10-30 に PO 決定で自動起動を止めている（.github/workflows/qa-smoke.yml:11）。
+  - ~/.claude/agents/evaluator.md:126 と :131 に `npx playwright test --config tests/qa-smoke/playwright.config.ts` を手元で打つ手順が残る。ただし GitHub 側の qa-smoke.yml は 2026-10-30 に PO 決定で自動起動を止めている（.github/workflows/qa-smoke.yml:12）。
 - (b) git push の直前に自動で動く確かめ: frontend/.husky/pre-push → scripts/dev/check-before-submit.sh。CI と同じ軽い検査だけを流し、重い組は CI に回す（check-before-submit.sh:5-6、:294）。
   - 記録 /Users/tanizawashingo/salesanchor/.git/check-before-submit.log（写し /tmp/CC報告ファイル/mac-test-guard/cbs.log）: 2026-10-30T13:02Z〜2026-11-02T13:04Z に 375 回、秒の中央値 23.5、最大 250.9、60 秒超 71 回。
   - PO 決定により本件では止めない（§0 の3つ目）。

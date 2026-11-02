@@ -16,7 +16,7 @@
 | T2 | 試験でない命令は今までどおり | 試験スクリプトに §3 の「止めない」列を全部入れる | 全件 exit 0 |
 | T3 | 文章の中の文字列では止まらない | `echo`・`grep`・ヒアドキュメント本文・`git commit -m` に `npm test` を含める | 全件 exit 0 |
 | T4 | 送る直前の確かめは今までどおり動く | 入れた後の最初の `git push` の記録 .git/check-before-submit.log に1行増える | 1行増え、終了コード列が 0 か 2（見張りで 1 にならない） |
-| T5 | 例外は PO の許可券だけで、AI は自分で通せない | PO が `! bash scripts/permit-danger.sh "mac test"` → 1回だけ通る。2回目は止まる | 2点とも期待どおり |
+| T5 | 例外は許可券 "mac test" だけで、1回しか通らない（AI が券を作らないことは見張りの外。§5） | PO が `! bash scripts/permit-danger.sh "mac test"` → 1回だけ通る。2回目は止まる。試験スクリプトで、違う券・期限切れ・`manual` でない券は止まる | 3点とも期待どおり |
 | T6 | 誤って止めることが無い・Mac で重い試験が動かない | 入れてから7日間、~/.claude/logs/agent-events.jsonl の `mac-test-guard` の記録を読む | 試験以外を止めた件数 0。券なしで通った試験の命令 0 |
 
 ## 2. 対象と対象外
@@ -41,6 +41,7 @@
 |---|---|---|---|
 | `npm` | 旗（`--prefix x`・`-C x`・`-w x`・`--workspace x` は値も）を飛ばした最初の語が `test`・`t`・`tst` なら止める。`run`・`run-script` の次の語が `test` で始まり `:install` で終わらないなら止める | `npm test`、`npm --prefix frontend test`、`npm run test:e2e`、`npm run test:unit` | `npm ci`、`npm run build`、`npm run test:e2e:install`、`npm run lint` |
 | `npx`・`pnpm exec`・`yarn` | 次の語（旗を飛ばす）が `vitest` か、`playwright` の次が `test` なら止める | `npx vitest run`、`npx playwright test` | `npx playwright install chromium`、`npx tsc` |
+| `pnpm`・`yarn` | npm の行と同じ（`test`・`run test*` を止め、`:install` で終わるものは通す） | `pnpm test`、`yarn test`、`yarn run test:e2e` | `yarn install`、`pnpm run build` |
 | `vitest` | 止める | `vitest run` | — |
 | `playwright` | 次が `test` なら止める | `playwright test` | `playwright install` |
 | `pytest`・`py.test` | 止める | `pytest backend/tests` | — |
@@ -54,7 +55,9 @@
 `🚫 BLOCKED [mac-test-guard]: この Mac では重い試験を回しません（8コア・8GB で時間切れが毎回出るため。PO 決定 2026-11-02）。試験は GitHub の確かめ（PR を push すると自動で回る）か、クラウドの担当に頼んでください（決まり: docs/handoff/mac-test-guard/design.md）。Mac でしか試せない場合は PO に許可券 "mac test" を依頼してください。`
 
 ## 5. 例外（許可券）
-mac-vm-guard と同じ。許可券置き場の danger-permit-*.json のうち `op == "mac test"`・`created_by == "manual"`・`expires_at` 未到来のものが1つあれば削除して通す（1回限り）。発行は既存の scripts/permit-danger.sh（変更なし）。AI による券の作成は既存 agent-danger-hook.sh の自己発行ブロックで止まる（mac-vm-hook/design.md §5 と同じ根拠）。
+mac-vm-guard と同じ。許可券置き場の danger-permit-*.json のうち `op == "mac test"`・`created_by == "manual"`・`expires_at` 未到来のものが1つあれば削除して通す（1回限り）。発行は既存の scripts/permit-danger.sh（変更なし）。
+- 見張りが守ること（試験で確かめる）: 券が無い・`op` が違う・期限切れ・`created_by` が `manual` でない券では通さない。券は1回で消える。見張り自身は券を作らない。
+- 見張りが守らないこと（2026-11-02 審査役の指摘で事実を直した）: ~/.claude/scripts/agent-danger-hook.sh:207-241 が止めるのは、命令に `.claude/permits` の文字列があるときだけ。AI が `bash scripts/permit-danger.sh "mac test"` を打つこと自体は、この見張りも既存の見張りも止めない（scripts/permit-danger.sh は op を限らず、発行者を AI と PO で見分けない。:50-51）。AI がこの券を作らないことは、CLAUDE.md「不可逆操作は必ず PO 確認」の決まりと、Claude Code の自動の許可判定に頼る。機械で止める手は全部の券に関わるので、本件の外とする（変更は一度に1つ）。手本の mac-vm-hook/design.md §5 の同じ書き方も同じ事情。
 
 ## 6. 失敗時の扱い
 内部エラーは通す（fail-open。mac-vm-guard と同じ）。見張りの不具合で全 Bash が止まる被害の方が大きいため。止めた・券を使った・内部エラーは agent-events.jsonl に1行記録する（T6 の観測源。`hook: mac-test-guard`）。
@@ -81,6 +84,7 @@ Claude Code 公式の hooks 仕様（PreToolUse で exit 2 は命令を止め、
 - リスク: ①`npm run test:*` の名前で試験でないものを止める → 両リポジトリの package.json の test で始まる名前は test:e2e・test:e2e:ui・test:e2e:install・test:e2e:vl・test:unit・test:coverage（frontend/package.json:11-14,44-45）と test:e2e（agent-console）。install だけ除外すれば残りはすべて試験。②評価する係の手元の手順が止まる → 想定どおり（案内文で GitHub へ）。
 - 未解決: なし（PreToolUse の公式の出典は §8 で確認済み）。
 - 判定: APPROVE（KGI T1〜T6 は PO 承認済み。実装カード card.md を発行）。
+- 審査役（opus・新しく起動）2026-11-02: REQUEST_CHANGES 2点 → 直した。①§3 に pnpm・yarn の行が無く card と食い違い → §3 に行を足した。②§5「AI の券の作成は既存の見張りで止まる」が事実と違う → §5・T5 を事実に合わせた（見張りの外であることを明記）。任意の指摘: qa-smoke の行番号 :11→:12 を直した。install.sh の写す前の書き込み戻し、`timeout`・`nice` を前に付けた形の止めそこねは、実装の審査で確かめる。
 
 ## 11. 維持の仕組み
 - 守り手: PreToolUse の見張り mac-test-guard（手元の全セッション・審査役・評価する係に自動で効く）。点検は Opus（T6）。
