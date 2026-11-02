@@ -40,6 +40,8 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 _VALID_SYNC_MODES = ("bidirectional", "read_only", "write_only", "none")
+# Google→アプリの取り込みを始める方式は受け付けない。取り込むと、つないだ人の Google の予定が会社の予定として全員に見える（ADR-1057）
+_ACCEPTED_SYNC_MODES = ("write_only", "none")
 _VALID_OWNER_SHARE_MODES = ("self", "view", "edit")
 _DEFAULT_OWNER_COLOR = "#1a73e8"
 
@@ -474,6 +476,11 @@ async def update_sync_mode(
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=f"sync_mode は {_VALID_SYNC_MODES} のいずれかを指定してください",
+        )
+    if body.sync_mode not in _ACCEPTED_SYNC_MODES:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Google の予定をアプリへ取り込む設定は使えません（ADR-1057）",
         )
 
     await db.execute(

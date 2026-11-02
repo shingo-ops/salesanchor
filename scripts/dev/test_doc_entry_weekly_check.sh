@@ -33,7 +33,7 @@ setup() {
   rm -rf "${T:?}/home" "${T:?}/repo"
   local H="${T:?}/home" R="${T:?}/repo"
   mkdir -p "$H/.claude/rules/common" "$H/.claude/scripts" "$H/kb" "$H/CC報告ファイル-keep/consent-weekly" \
-    "$R/scripts/agent-hooks" "$R/docs/handoff/doc-agenda-nav"
+    "$R/scripts/agent-hooks" "$R/docs/handoff/doc-agenda-nav" "$H/kb/scripts/hooks/plain-lang"
   { lines 9; echo '@~/kb/AGENTS.md'; } > "$H/.claude/CLAUDE.md"
   lines 5 > "$H/kb/AGENTS.md"
   lines 3 > "$H/.claude/rules/common/a.md"
@@ -44,6 +44,9 @@ setup() {
   lines 4 > "$R/AGENTS.md"
   echo x > "$R/scripts/agent-hooks/master-register-rules-guard.py"
   echo '## 全条件の測り直し（2027-01-01）' > "$R/docs/handoff/doc-agenda-nav/baseline.md"
+  # 図書館の点検が通る偽の hook.py と台帳（L2=0・L3_MATCH=yes になる）
+  printf '%s\n' 'CHAT_FORMAT = "~/.claude/chat-format.md"' 'SECTION = "## Sec Title"' > "$H/kb/scripts/hooks/plain-lang/hook.py"
+  printf '%s\n' '| R-nn | 節の名前 | 所在 | 種別 | 移した段 |' '|---|---|---|---|---|' > "$R/docs/handoff/doc-agenda-nav/library-ledger.md"
   export FAKE_RUN_JSON='[{"status":"completed","conclusion":"success"}]'
   export FAKE_PR_JSON='[]'
   unset FAKE_GH_RC
@@ -123,6 +126,18 @@ setup; FAKE_GH_RC=1; export FAKE_GH_RC; run
 check "T15 DOC_INDEX_CI=unreadable" has DOC_INDEX_CI=unreadable
 check "T15 K12_OPEN_PR=unreadable" has K12_OPEN_PR=unreadable
 check "T15 RESULT=NG" has_re '^RESULT=NG'
+
+# 図書館の点検の結線
+setup; run
+check "T16 BOOKS_IN_CONTEXT=skipped" has BOOKS_IN_CONTEXT=skipped
+check "T16 skipped だけでは NG にならない" has RESULT=OK
+check "T16 L2=0" has L2=0
+check "T16 L3_MATCH=yes" has L3_MATCH=yes
+
+setup; rm -f "$T/repo/docs/handoff/doc-agenda-nav/library-ledger.md"; run
+check "T17 L2=unreadable" has L2=unreadable
+check "T17 RESULT=NG に L2= が入る" has_re '^RESULT=NG.*L2=unreadable'
+check "T17 rc=1" rc_is 1
 
 echo "PASS $PASS / FAIL $FAIL"
 [ "$FAIL" -eq 0 ]

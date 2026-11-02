@@ -103,6 +103,7 @@ jobs:
           NODE_PATH: ${{ github.workspace }}/frontend/node_modules
           SMOKE_E2E_EMAIL: ${{ secrets.SMOKE_E2E_EMAIL }}
           SMOKE_E2E_PASSWORD: ${{ secrets.SMOKE_E2E_PASSWORD }}
+          SMOKE_E2E_DEVICE_TOKEN: ${{ secrets.SMOKE_E2E_DEVICE_TOKEN }}
           PROD_CHECK_FORCE_FAIL: ${{ inputs.force_fail && '1' || '' }}
         run: ./frontend/node_modules/.bin/playwright test --config tests/prod-check/playwright.config.ts
 
@@ -152,6 +153,7 @@ jobs:
           NODE_PATH: ${{ github.workspace }}/frontend/node_modules
           SMOKE_E2E_EMAIL: ${{ secrets.SMOKE_E2E_EMAIL }}
           SMOKE_E2E_PASSWORD: ${{ secrets.SMOKE_E2E_PASSWORD }}
+          SMOKE_E2E_DEVICE_TOKEN: ${{ secrets.SMOKE_E2E_DEVICE_TOKEN }}
         run: |
           ./frontend/node_modules/.bin/playwright test --config tests/prod-check/page-speed.config.ts || status=$?
           if [ -f tests/prod-check/page-speed.md ]; then cat tests/prod-check/page-speed.md >> "$GITHUB_STEP_SUMMARY"; fi

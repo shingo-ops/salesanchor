@@ -5,7 +5,14 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from app.routers.calendar import list_calendar_owners, update_calendar_owner
+from fastapi import HTTPException
+
+from app.routers.calendar import (
+    SyncModeBody,
+    list_calendar_owners,
+    update_calendar_owner,
+    update_sync_mode,
+)
 
 
 class _QueryResult:
@@ -109,3 +116,50 @@ async def test_update_calendar_owner_updates_only_provided_fields():
     # ADR-1008 P2: パス引数は users.id。名簿は user_id で引き、設定の staff_id 列には users.id を入れる
     assert db.execute.call_args_list[0].args[1] == {"user_id": 101}
     assert db.execute.call_args_list[2].args[1]["staff_id"] == 101
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("mode", ["bidirectional", "read_only"])
+async def test_update_sync_mode_rejects_inbound_modes(mode):
+    db = AsyncMock()
+    db.execute = AsyncMock()
+    with patch("app.services.google_webhook.register_webhook", AsyncMock()) as reg, patch(
+        "app.services.google_webhook.stop_webhook", AsyncMock()
+    ):
+        with pytest.raises(HTTPException) as ei:
+            await update_sync_mode(
+                body=SyncModeBody(sync_mode=mode), tenant_id=1, user=_mock_user(), db=db
+            )
+    assert ei.value.status_code == 422
+    db.execute.assert_not_called()
+    reg.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_update_sync_mode_write_only_stops_webhook():
+    db = AsyncMock()
+    db.execute = AsyncMock()
+    db.commit = AsyncMock()
+    with patch("app.routers.calendar.reset_tenant_context", AsyncMock()), patch(
+        "app.services.google_webhook.register_webhook", AsyncMock()
+    ) as reg, patch("app.services.google_webhook.stop_webhook", AsyncMock()) as stop:
+        result = await update_sync_mode(
+            body=SyncModeBody(sync_mode="write_only"), tenant_id=1, user=_mock_user(), db=db
+        )
+    assert result == {"sync_mode": "write_only"}
+    stop.assert_called_once()
+    reg.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_update_sync_mode_none():
+    db = AsyncMock()
+    db.execute = AsyncMock()
+    db.commit = AsyncMock()
+    with patch("app.routers.calendar.reset_tenant_context", AsyncMock()), patch(
+        "app.services.google_webhook.stop_webhook", AsyncMock()
+    ):
+        result = await update_sync_mode(
+            body=SyncModeBody(sync_mode="none"), tenant_id=1, user=_mock_user(), db=db
+        )
+    assert result == {"sync_mode": "none"}
