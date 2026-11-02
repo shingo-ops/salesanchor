@@ -157,6 +157,33 @@ export function platformLabel(p: string | null): string {
 // API ヘルパ
 // ---------------------------------------------------------------------------
 
+/** 会話の一覧の path（listConversations と写しの名前が同じ文字を使う。ADR-1054） */
+export function conversationsPath(
+  filter: {
+    platform?: PlatformFilter;
+    unread_only?: boolean;
+    page_id?: string;
+  } = {},
+): string {
+  const params = new URLSearchParams();
+  if (filter.platform && filter.platform !== "all") {
+    params.set("platform", filter.platform);
+  }
+  if (filter.unread_only) {
+    params.set("unread_only", "true");
+  }
+  if (filter.page_id) {
+    params.set("page_id", filter.page_id);
+  }
+  const qs = params.toString();
+  return `/conversations${qs ? `?${qs}` : ""}`;
+}
+
+/** 1 つの会話のメッセージの path（getMessages と写しの名前が同じ文字を使う。ADR-1054） */
+export function messagesPath(leadId: number): string {
+  return `/leads/${leadId}/messages`;
+}
+
 /**
  * GET /api/v1/conversations
  *
@@ -170,27 +197,14 @@ export async function listConversations(
     page_id?: string;
   } = {},
 ): Promise<ConversationsResponse> {
-  const params = new URLSearchParams();
-  if (filter.platform && filter.platform !== "all") {
-    params.set("platform", filter.platform);
-  }
-  if (filter.unread_only) {
-    params.set("unread_only", "true");
-  }
-  if (filter.page_id) {
-    params.set("page_id", filter.page_id);
-  }
-  const qs = params.toString();
-  return api.get<ConversationsResponse>(
-    `/conversations${qs ? `?${qs}` : ""}`,
-  );
+  return api.get<ConversationsResponse>(conversationsPath(filter));
 }
 
 /**
  * GET /api/v1/leads/{lead_id}/messages
  */
 export async function getMessages(leadId: number): Promise<MessagesResponse> {
-  return api.get<MessagesResponse>(`/leads/${leadId}/messages`);
+  return api.get<MessagesResponse>(messagesPath(leadId));
 }
 
 /**

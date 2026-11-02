@@ -15,7 +15,6 @@ import {
   MOCK_CHANNELS,
   MOCK_REASONS_WON,
   MOCK_REASONS_LOST,
-  MOCK_PRIORITY_PROSPECTS,
 } from "../mocks/funnelFixtures";
 
 type FunnelMode = "off" | "mock" | "live";
@@ -27,6 +26,7 @@ export const FUNNEL_MODE: FunnelMode = (() => {
 })();
 
 const MOCK_MODE = FUNNEL_MODE === "mock";
+export const FUNNEL_MOCK = MOCK_MODE;
 
 // ─── 型定義（API contract と同形） ────────────────────────────────────
 
@@ -158,24 +158,42 @@ export interface PriorityProspectsResponse {
 
 // ─── API 呼び出し ──────────────────────────────────────────────────────
 
-export function getFunnel(month: string, scope?: "mine"): Promise<FunnelResponse> {
-  if (MOCK_MODE) return Promise.resolve(MOCK_FUNNEL);
+export function funnelPath(month: string, scope?: "mine"): string {
   const params = new URLSearchParams({ month });
   if (scope) params.set("scope", scope);
-  return api.get<FunnelResponse>(`/analytics/funnel?${params}`);
+  return `/analytics/funnel?${params}`;
+}
+
+export function revenueSummaryPath(month: string, scope?: "mine"): string {
+  const params = new URLSearchParams({ month });
+  if (scope) params.set("scope", scope);
+  return `/analytics/revenue-summary?${params}`;
+}
+
+export function followUpsPath(scope?: "mine"): string {
+  const params = scope ? new URLSearchParams({ scope }) : new URLSearchParams();
+  return `/analytics/follow-ups?${params}`;
+}
+
+export const WEEKLY_ADVISOR_DEFENSIVE_PATH = `/analytics/weekly-advisor-defensive?${new URLSearchParams({ scope: "mine", period: "3m" })}`;
+
+export const PRIORITY_PROSPECTS_PATH = `/analytics/priority-prospects?${new URLSearchParams({ scope: "mine" })}`;
+
+export const LEAD_CONVERSION_FACTORS_PATH = "/analytics/lead-conversion-factors";
+
+export function getFunnel(month: string, scope?: "mine"): Promise<FunnelResponse> {
+  if (MOCK_MODE) return Promise.resolve(MOCK_FUNNEL);
+  return api.get<FunnelResponse>(funnelPath(month, scope));
 }
 
 export function getRevenueSummary(month: string, scope?: "mine"): Promise<RevenueSummaryResponse> {
   if (MOCK_MODE) return Promise.resolve(MOCK_REVENUE_SUMMARY);
-  const params = new URLSearchParams({ month });
-  if (scope) params.set("scope", scope);
-  return api.get<RevenueSummaryResponse>(`/analytics/revenue-summary?${params}`);
+  return api.get<RevenueSummaryResponse>(revenueSummaryPath(month, scope));
 }
 
 export function getFollowUps(scope?: "mine"): Promise<FollowUpsResponse> {
   if (MOCK_MODE) return Promise.resolve(MOCK_FOLLOW_UPS);
-  const params = scope ? new URLSearchParams({ scope }) : new URLSearchParams();
-  return api.get<FollowUpsResponse>(`/analytics/follow-ups?${params}`);
+  return api.get<FollowUpsResponse>(followUpsPath(scope));
 }
 
 export function getChannels(month: string, scope?: "mine"): Promise<ChannelsResponse> {
@@ -192,30 +210,6 @@ export function getReasons(
   if (MOCK_MODE)
     return Promise.resolve(type === "won" ? MOCK_REASONS_WON : MOCK_REASONS_LOST);
   return api.get<ReasonsResponse>(`/analytics/reasons?type=${type}&month=${month}`);
-}
-
-export function getWeeklyAdvisorDefensive(
-  scope: "mine" | "team" = "mine",
-  period: "1m" | "3m" | "6m" | "12m" = "3m",
-): Promise<WeeklyAdvisorResponse> {
-  if (MOCK_MODE) {
-    return Promise.resolve({
-      period,
-      scope,
-      stale_days: 14,
-      actions: [],
-    });
-  }
-  const params = new URLSearchParams({ scope, period });
-  return api.get<WeeklyAdvisorResponse>(`/analytics/weekly-advisor-defensive?${params}`);
-}
-
-export function getPriorityProspects(scope: "mine" = "mine"): Promise<PriorityProspectsResponse> {
-  if (MOCK_MODE) {
-    return Promise.resolve(MOCK_PRIORITY_PROSPECTS);
-  }
-  const params = new URLSearchParams({ scope });
-  return api.get<PriorityProspectsResponse>(`/analytics/priority-prospects?${params}`);
 }
 
 export interface LeadConversionFactorItem {
@@ -244,8 +238,4 @@ export interface LeadConversionFactorsResponse {
     missing_scale_or_type: number;
   };
   items: LeadConversionFactorItem[];
-}
-
-export function getLeadConversionFactors(): Promise<LeadConversionFactorsResponse> {
-  return api.get<LeadConversionFactorsResponse>("/analytics/lead-conversion-factors");
 }

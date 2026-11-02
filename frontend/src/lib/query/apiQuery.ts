@@ -5,9 +5,10 @@
  * - 写しは出すだけ。staleTime は既定の 0 のままにし、開くたび・タブに戻るたびに取り直す。
  * - 写しはメモリだけに持つ（ブラウザの保存に書かない）。
  */
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import {
   QueryClient,
+  useQueries,
   useQuery,
   type QueryKey,
   type UseQueryResult,
@@ -73,6 +74,25 @@ export function useApiQuery<T>(
 }
 
 /**
+ * 数が変わる path の並びを、1 本ずつ写しの置き場で取る（例: 一覧に出た人ごとの /leads/:id）。
+ * 写しの名前と取り方は useApiQuery と同じ。ログインしていない間は取りに行かない。
+ */
+export function useApiQueries<T>(paths: readonly string[]): UseQueryResult<T>[] {
+  const { user } = useAuth();
+  const uid = user?.uid ?? null;
+  return useQueries(
+    {
+      queries: paths.map((path) => ({
+        queryKey: apiQueryKey(uid ?? "", path),
+        queryFn: () => api.get<T>(path),
+        enabled: uid !== null,
+      })),
+    },
+    queryClient,
+  );
+}
+
+/**
  * 頭の言葉が同じ写しを全部取り直す（条件や id が違う写しも含む）。
  * 例: invalidateApi(uid, ["companies"]) は /companies?… も /companies/5 も取り直す。
  */
@@ -87,6 +107,49 @@ export function useInvalidateApi(): (head: readonly string[]) => Promise<void> {
   const uid = user?.uid ?? null;
   return useCallback(
     (head: readonly string[]) => (uid === null ? Promise.resolve() : invalidateApi(uid, head)),
+    [uid],
+  );
+}
+
+/**
+ * 写しを読み書きする道具（ADR-1054）。取りに行く時を画面が決める所（会話の画面）で使う。
+ * 見張り（useApiQuery）は enabled:false で置き、取りに行くのはここの fetch だけにする。
+ * 写しの名前は useApiQuery と同じ。ログインしていない時は取りに行かず、書きもしない。
+ */
+export interface ApiCache {
+  /** 取りに行き、写しに書いて返す。同じ写しを取りに行っている途中なら、その 1 本を待つ。 */
+  fetch<T>(path: string, fetcher: () => Promise<T>): Promise<T | undefined>;
+  /** 今の写しを読む（無ければ undefined）。 */
+  read<T>(path: string): T | undefined;
+  /** 頭の言葉が同じ写しを全部書き換える。写しの無い物は書き換えない。 */
+  update<T>(head: readonly string[], change: (old: T) => T): void;
+  /** 1 つの写しに書く。 */
+  write<T>(path: string, data: T): void;
+}
+
+export function useApiCache(): ApiCache {
+  const { user } = useAuth();
+  const uid = user?.uid ?? null;
+  return useMemo<ApiCache>(
+    () => ({
+      fetch: <T,>(path: string, fetcher: () => Promise<T>) =>
+        uid === null
+          ? Promise.resolve(undefined)
+          : queryClient.fetchQuery<T>({ queryKey: apiQueryKey(uid, path), queryFn: fetcher }),
+      read: <T,>(path: string) =>
+        uid === null ? undefined : queryClient.getQueryData<T>(apiQueryKey(uid, path)),
+      update: <T,>(head: readonly string[], change: (old: T) => T) => {
+        if (uid === null) return;
+        const { words } = splitApiPath(head.join("/"));
+        queryClient.setQueriesData<T>({ queryKey: ["api", uid, ...words] }, (old) =>
+          old === undefined ? undefined : change(old),
+        );
+      },
+      write: <T,>(path: string, data: T) => {
+        if (uid === null) return;
+        queryClient.setQueryData<T>(apiQueryKey(uid, path), data);
+      },
+    }),
     [uid],
   );
 }

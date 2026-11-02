@@ -17,7 +17,7 @@
  *   2026-06-13: PR4 ファネルセクション追加（モックデータ駆動）
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import {
@@ -30,7 +30,7 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
-import { api } from "../../lib/api";
+import { useApiQuery } from "../../lib/query/apiQuery";
 import { PageLayout } from "../../components/PageLayout";
 import { SelectControl } from "../../components/Select";
 import { DashboardIcons } from "../../constants/icons";
@@ -40,7 +40,7 @@ import { WeeklyAdvisorSection } from "./WeeklyAdvisorSection";
 import { LeadConversionFactorsSection } from "./LeadConversionFactorsSection";
 import { FUNNEL_MODE } from "../../api/funnel";
 import "./DashboardPage.css";
-import { LoadingBlock } from "../../components/loading";
+import { LoadingBlock, Spinner } from "../../components/loading";
 
 const TrendUpIcon = DashboardIcons.forecast;
 const BellIcon = DashboardIcons.reminder;
@@ -325,41 +325,27 @@ export default function DashboardPage() {
   const [tab, setTab] = useState<Tab>("sales");
   const [period, setPeriod] = useState<Period>("1m");
 
-  const [goals, setGoals] = useState<GoalSummary | null>(null);
-  const [forecast, setForecast] = useState<Forecast | null>(null);
-  const [followups, setFollowups] = useState<FollowUps | null>(null);
-  const [summary, setSummary] = useState<DashboardSummary | null>(null);
-  const [revenueChart, setRevenueChart] = useState<RevenueChartResponse | null>(null);
+  const goalsQuery = useApiQuery<GoalSummary>(`/goals/summary?tab=${toApiTab(tab)}`);
+  const forecastQuery = useApiQuery<Forecast>("/analytics/forecast");
+  const followupsQuery = useApiQuery<FollowUps>("/analytics/followups");
+  const summaryQuery = useApiQuery<DashboardSummary>(`/analytics/summary?period=${period}&tab=${toApiTab(tab)}`);
+  // 受注グラフ: リードビューでは不要。タブ・期間変更時に再取得
+  const chartQuery = useApiQuery<RevenueChartResponse>(`/analytics/monthly-revenue?period=${period}`, {
+    enabled: tab !== "lead",
+  });
+  const queries = [goalsQuery, forecastQuery, followupsQuery, summaryQuery, chartQuery];
 
-  const [loadingFixed, setLoadingFixed] = useState(true);
-  const [loadingPeriod, setLoadingPeriod] = useState(true);
-  const [loadingChart, setLoadingChart] = useState(true);
-  const [error, setError] = useState("");
+  const goals = goalsQuery.data ?? null;
+  const forecast = forecastQuery.data ?? null;
+  const followups = followupsQuery.data ?? null;
+  const summary = summaryQuery.data ?? null;
+  const revenueChart = chartQuery.data ?? null;
 
-  useEffect(() => {
-    setLoadingFixed(true);
-    Promise.all([
-      api.get<GoalSummary>(`/goals/summary?tab=${toApiTab(tab)}`),
-      api.get<Forecast>("/analytics/forecast"),
-      api.get<FollowUps>("/analytics/followups"),
-    ])
-      .then(([g, f, fu]) => {
-        setGoals(g);
-        setForecast(f);
-        setFollowups(fu);
-      })
-      .catch((e) => setError(e.message))
-      .finally(() => setLoadingFixed(false));
-  }, [tab]);
-
-  useEffect(() => {
-    setLoadingPeriod(true);
-    api
-      .get<DashboardSummary>(`/analytics/summary?period=${period}&tab=${toApiTab(tab)}`)
-      .then(setSummary)
-      .catch((e) => setError(e.message))
-      .finally(() => setLoadingPeriod(false));
-  }, [tab, period]);
+  const loadingFixed = goalsQuery.isPending || forecastQuery.isPending || followupsQuery.isPending;
+  const loadingPeriod = summaryQuery.isPending;
+  const loadingChart = tab !== "lead" && chartQuery.isPending;
+  const refreshing = queries.some((q) => q.isFetching && !q.isPending);
+  const error = queries.find((q) => q.error)?.error?.message ?? "";
 
   // チャートフォーマッター（t() が必要なため component 内で定義）
   const yTickFormatter = (value: number) =>
@@ -368,20 +354,6 @@ export default function DashboardPage() {
     revenueChart?.granularity === "daily"
       ? formatXDay(label)
       : formatXMonth(label, t("common.unitMonth"));
-
-  // 受注グラフ: リードビューでは不要。タブ・期間変更時に再取得
-  useEffect(() => {
-    if (tab === "lead") {
-      setLoadingChart(false);
-      return;
-    }
-    setLoadingChart(true);
-    api
-      .get<RevenueChartResponse>(`/analytics/monthly-revenue?period=${period}`)
-      .then(setRevenueChart)
-      .catch((e) => setError(e.message))
-      .finally(() => setLoadingChart(false));
-  }, [tab, period]);
 
   const fmt = (n: number | null | undefined) => {
     if (n === null || n === undefined) return "¥0";
@@ -407,6 +379,7 @@ export default function DashboardPage() {
     <PageLayout
       navKey="nav.dashboard"
       subtitleKey="dashboard.subtitle"
+      headerLeft={refreshing ? <Spinner size="sm" /> : undefined}
       headerAction={
         <div className="page-header-actions">
           {/* ファネルセクション用: 月セレクタ + ビュー切替（FUNNEL_MODE が off のとき非表示） */}

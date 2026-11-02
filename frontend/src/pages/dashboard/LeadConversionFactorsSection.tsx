@@ -1,39 +1,23 @@
-import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { DataTable, type DataTableColumn } from "../../components/DataTable";
 import { LoadingBlock } from "../../components/loading";
 import { DashboardIcons } from "../../constants/icons";
 import {
-  getLeadConversionFactors,
+  LEAD_CONVERSION_FACTORS_PATH,
   type LeadConversionFactorItem,
   type LeadConversionFactorsResponse,
 } from "../../api/funnel";
+import { useApiQuery } from "../../lib/query/apiQuery";
 import "./LeadConversionFactorsSection.css";
 
 const FactorsIcon = DashboardIcons.forecast;
 
 export function LeadConversionFactorsSection() {
   const { t, i18n } = useTranslation();
-  const [data, setData] = useState<LeadConversionFactorsResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [failed, setFailed] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    getLeadConversionFactors()
-      .then((res) => {
-        if (!cancelled) setData(res);
-      })
-      .catch(() => {
-        if (!cancelled) setFailed(true);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const factorsQuery = useApiQuery<LeadConversionFactorsResponse>(LEAD_CONVERSION_FACTORS_PATH);
+  const data = factorsQuery.data ?? null;
+  const loading = factorsQuery.isPending;
+  const failed = factorsQuery.isError;
 
   // 画面に出すときだけ小数2桁に丸める（入口は丸めない）
   function fmt(value: number | null): string {

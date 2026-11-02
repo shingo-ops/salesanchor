@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../lib/api";
@@ -6,10 +6,16 @@ import { Button } from "../../components/Button";
 import { TextareaControl } from "../../components/Textarea";
 import { TextFieldControl } from "../../components/TextField";
 import { DashboardIcons } from "../../constants/icons";
-import { getWeeklyAdvisorDefensive, type WeeklyAdvisorAction } from "../../api/funnel";
+import {
+  FUNNEL_MOCK,
+  WEEKLY_ADVISOR_DEFENSIVE_PATH,
+  type WeeklyAdvisorAction,
+  type WeeklyAdvisorResponse,
+} from "../../api/funnel";
 import type { LeadDetail } from "../inbox/inbox.types";
 import "./WeeklyAdvisorSection.css";
 import { LoadingBlock } from "../../components/loading";
+import { useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
 
 const WeeklyIcon = DashboardIcons.reminder;
 
@@ -117,39 +123,18 @@ function initialComposerState(): ComposerState {
 export function WeeklyAdvisorSection() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [actions, setActions] = useState<WeeklyAdvisorAction[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const invalidate = useInvalidateApi();
+  // 見本の時（開発・E2E）は今までどおり通信せずに空の並びを出す
+  const listQuery = useApiQuery<WeeklyAdvisorResponse>(WEEKLY_ADVISOR_DEFENSIVE_PATH, { enabled: !FUNNEL_MOCK });
+  const actions: WeeklyAdvisorAction[] = FUNNEL_MOCK ? [] : listQuery.data?.actions ?? [];
+  const loading = !FUNNEL_MOCK && listQuery.isPending;
+  const error = FUNNEL_MOCK ? null : listQuery.error ? listQuery.error.message || t("common.errorLoad") : null;
   const [composerByCompanyId, setComposerByCompanyId] = useState<Record<number, ComposerState>>({});
   const [leadSnapshots, setLeadSnapshots] = useState<Record<number, LeadSnapshot>>({});
 
   const getComposer = useCallback((companyId: number): ComposerState => {
     return composerByCompanyId[companyId] ?? initialComposerState();
   }, [composerByCompanyId]);
-
-  useEffect(() => {
-    let active = true;
-    setLoading(true);
-    setError(null);
-
-    getWeeklyAdvisorDefensive("mine", "3m")
-      .then((res) => {
-        if (!active) return;
-        setActions(res.actions);
-      })
-      .catch((err: unknown) => {
-        if (!active) return;
-        setError(err instanceof Error ? err.message : t("common.errorLoad"));
-      })
-      .finally(() => {
-        if (!active) return;
-        setLoading(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [t]);
 
   const closeComposer = useCallback((action: WeeklyAdvisorAction) => {
     setComposerByCompanyId((prev) => {
@@ -261,6 +246,7 @@ export function WeeklyAdvisorSection() {
           next_action_date: current.draftDate || null,
         },
       }));
+      void invalidate(["leads", String(action.lead_id)]);
       updateComposer(action.company_id, {
         phase: "saved",
         saving: false,
@@ -273,7 +259,7 @@ export function WeeklyAdvisorSection() {
         error: err instanceof Error ? err.message : t("common.saveError"),
       });
     }
-  }, [composerByCompanyId, leadSnapshots, t, updateComposer]);
+  }, [composerByCompanyId, invalidate, leadSnapshots, t, updateComposer]);
 
   return (
     <div className="db-section-card db-weekly-card" data-testid="weekly-advisor-section">

@@ -15,17 +15,21 @@ import { api, ApiError } from "../../lib/api";
 import { useIsMobile } from "../../hooks/useIsMobile";
 import {
   Conversation,
+  ConversationsResponse,
   MessagesResponse,
   MessagingWindow,
   PlatformFilter,
+  conversationsPath,
   getMessages,
   inferPlatform,
   listConversations,
   markRead as apiMarkRead,
   markUnread as apiMarkUnread,
+  messagesPath,
   sendImageMessage,
   sendMessage,
 } from "../../lib/messages";
+import { useApiCache, useApiQuery } from "../../lib/query/apiQuery";
 import {
   DRAFT_KEY,
   FOLLOWUP_EXCLUDED,
@@ -205,6 +209,9 @@ export interface UseInboxStateReturn {
 // eslint-disable-next-line local/no-japanese-literal -- DB value（roles.name の実値）
 const CONVERT_ASSIGNEE_ROLE_NAMES = ["営業", "マネージャー", "リーダー", "オーナー"];
 
+/** 会話が無い時の一覧（描画ごとに新しい配列を作らないため） */
+const NO_CONVERSATIONS: Conversation[] = [];
+
 export function useInboxState(): UseInboxStateReturn {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -215,8 +222,12 @@ export function useInboxState(): UseInboxStateReturn {
     : null;
 
   // 会話リスト
-  const [conversations, setConversations] = useState<Conversation[]>([]);
+  // 取りに行っている間 true。画面に出す読み込み中の印は、写しが無い時だけ（下の convShowLoading）。
   const [convLoading, setConvLoading] = useState(true);
+  // 最後に取り終えた（成功・失敗とも）一覧の path。前に失敗した条件へ戻した最初の描画で、空の一覧を印なしで出さないため
+  const [convDonePath, setConvDonePath] = useState<string | null>(null);
+  // いちばん新しく取りに行った一覧の path（遅れて返った前の条件の取得で convDonePath を書かないため）
+  const convRequestRef = useRef<string | null>(null);
   const [convError, setConvError] = useState("");
 
   // 受信箱設定（localStorage はマウント時1回だけ読む — useRef でキャッシュし再レンダリング時の再読み込みを防ぐ）
@@ -236,17 +247,19 @@ export function useInboxState(): UseInboxStateReturn {
   // Phase 1-E F14-S5: Page フィルタ
   const initialPageId = searchParams.get("page_id") || "";
   const [pageIdFilter, setPageIdFilter] = useState<string>(initialPageId);
-  const [availablePageIds, setAvailablePageIds] = useState<string[]>([]);
 
   // 選択中会話
   const [selectedLeadId, setSelectedLeadId] = useState<number | null>(initialLeadId);
-  const [messagesData, setMessagesData] = useState<MessagesResponse | null>(null);
+  // 取りに行って失敗した会話の番号（その会話を出している時だけ中身を隠す。ほかの会話に切り替えたら関係しない）
+  const [msgFailedId, setMsgFailedId] = useState<number | null>(null);
+  const [msgLoadCount, setMsgLoadCount] = useState(0);
   const [avatarErrors, setAvatarErrors] = useState<Set<number>>(new Set());
   const [msgLoading, setMsgLoading] = useState(false);
   const [msgError, setMsgError] = useState("");
 
   // 右パネル (顧客カルテ)
-  const [leadDetail, setLeadDetail] = useState<LeadDetail | null>(null);
+  // カルテを取りに行って失敗した会話の番号（(4) と同じ考え方）
+  const [leadFailedId, setLeadFailedId] = useState<number | null>(null);
   const [cardForm, setCardForm] = useState<Partial<LeadDetail>>({});
   const [cardSaveStatus, setCardSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [cardSaveError, setCardSaveError] = useState("");
@@ -326,18 +339,55 @@ export function useInboxState(): UseInboxStateReturn {
   }, []);
 
   // ---------------------------------------------------------------------------
+  // 写しの置き場（ADR-1054）: 戻った時は前の中身を先に出す。取りに行くのは下の load* だけ
+  // ---------------------------------------------------------------------------
+
+  const cache = useApiCache();
+  const conversationsFilter = useMemo(() => ({
+    platform: platformFilter === "all" ? undefined : platformFilter,
+    unread_only: unreadOnly,
+    page_id: pageIdFilter || undefined,
+  }), [platformFilter, unreadOnly, pageIdFilter]);
+  const convPath = conversationsPath(conversationsFilter);
+  const conversationsQuery = useApiQuery<ConversationsResponse>(convPath, { enabled: false });
+  const conversations = conversationsQuery.data?.conversations ?? NO_CONVERSATIONS;
+  // 写しが無い間の読み込み中の印。条件を変えた最初の描画（下の effect の前）も、まだ一度も取っていない時・
+  // 最後に取り終えたのが今の条件でない時（前に失敗した条件へ戻した時）は印を出す
+  const convShowLoading = conversationsQuery.data === undefined
+    && (convLoading || !conversationsQuery.isFetched || convDonePath !== convPath);
+  // 一覧の中を手元で書き換える。条件の違う一覧の写しにも同じ書き換えをする。
+  const setConversations = useCallback((change: (prev: Conversation[]) => Conversation[]) => {
+    cache.update<ConversationsResponse>(["conversations"], (old) =>
+      Array.isArray(old.conversations) ? { ...old, conversations: change(old.conversations) } : old,
+    );
+  }, [cache]);
+
+  // 送り元のページの選び肢（絞り込みなしの一覧から作る）
+  const allConversationsQuery = useApiQuery<ConversationsResponse>(conversationsPath({}), { enabled: false });
+  const availablePageIds = useMemo(() => Array.from(
+    new Set(
+      (allConversationsQuery.data?.conversations || [])
+        .map((c) => c.page_id)
+        .filter((p): p is string => !!p),
+    ),
+  ).sort(), [allConversationsQuery.data]);
+
+  // 選んだ会話のメッセージとカルテ（会話を選んでいない時は null。番号 0 の写しは取りに行かない見張りだけ）
+  const messagesQuery = useApiQuery<MessagesResponse>(messagesPath(selectedLeadId ?? 0), { enabled: false });
+  const messagesData = selectedLeadId === null || msgFailedId === selectedLeadId ? null : messagesQuery.data ?? null;
+  const leadDetailQuery = useApiQuery<LeadDetail>(`/leads/${selectedLeadId ?? 0}`, { enabled: false });
+  const leadDetail = selectedLeadId === null || leadFailedId === selectedLeadId ? null : leadDetailQuery.data ?? null;
+
+  // ---------------------------------------------------------------------------
   // データ取得
   // ---------------------------------------------------------------------------
 
   const loadConversations = useCallback(async () => {
     setConvError("");
+    const path = convPath;
+    convRequestRef.current = path;
     try {
-      const data = await listConversations({
-        platform: platformFilter === "all" ? undefined : platformFilter,
-        unread_only: unreadOnly,
-        page_id: pageIdFilter || undefined,
-      });
-      setConversations(data.conversations || []);
+      await cache.fetch(path, () => listConversations(conversationsFilter));
       setAvatarErrors(new Set());
       transientErrorCountRef.current = 0;
     } catch (e) {
@@ -356,33 +406,25 @@ export function useInboxState(): UseInboxStateReturn {
       const msg = e instanceof ApiError ? e.message : t("inbox.fetchError");
       setConvError(msg);
     } finally {
-      setConvLoading(false);
+      if (convRequestRef.current === path) {
+        setConvLoading(false);
+        setConvDonePath(path);
+      }
     }
-  }, [platformFilter, unreadOnly, pageIdFilter, t]);
+  }, [cache, convPath, conversationsFilter, t]);
 
-  // Page ID ドロップダウン用（フィルタなしで初回取得）
+  // Page ID ドロップダウン用（フィルタなしの一覧を初回取得。選び肢は上の availablePageIds が写しから作る）
   useEffect(() => {
-    let cancelled = false;
-    listConversations({}).then((data) => {
-      if (cancelled) return;
-      const ids = Array.from(
-        new Set(
-          (data.conversations || [])
-            .map((c) => c.page_id)
-            .filter((p): p is string => !!p),
-        ),
-      ).sort();
-      setAvailablePageIds(ids);
-    }).catch(() => {});
-    return () => { cancelled = true; };
-  }, []);
+    cache.fetch(conversationsPath({}), () => listConversations({})).catch(() => {});
+  }, [cache]);
 
   const loadMessages = useCallback(async (leadId: number) => {
     setMsgError("");
     setMsgLoading(true);
     try {
-      const data = await getMessages(leadId);
-      setMessagesData(data);
+      await cache.fetch(messagesPath(leadId), () => getMessages(leadId));
+      setMsgFailedId((prev) => (prev === leadId ? null : prev));
+      setMsgLoadCount((n) => n + 1);
       msgTransientErrorCountRef.current = 0;
     } catch (e) {
       if (e instanceof ApiError && e.status === 404) {
@@ -402,32 +444,44 @@ export function useInboxState(): UseInboxStateReturn {
         const msg = e instanceof ApiError ? e.message : t("inbox.fetchError");
         setMsgError(msg);
       }
-      setMessagesData(null);
+      setMsgFailedId(leadId);
     } finally {
       setMsgLoading(false);
     }
-  }, [t]);
+  }, [cache, t]);
 
+  // いちばん新しく呼んだ loadLeadDetail の番号（遅れて返った前の呼び出しで入力欄を書かない）
+  const leadRequestRef = useRef(0);
   const loadLeadDetail = useCallback(async (leadId: number) => {
-    try {
-      const data = await api.get<LeadDetail>(`/leads/${leadId}`);
-      setLeadDetail(data);
+    const request = ++leadRequestRef.current;
+    const path = `/leads/${leadId}`;
+    // 入力欄の中身は、下書き（localStorage）があればそれを上に重ねる
+    const formFrom = (data: LeadDetail): Partial<LeadDetail> => {
       try {
         const raw = localStorage.getItem(DRAFT_KEY(leadId));
         if (raw) {
           const savedDraft = JSON.parse(raw) as Partial<LeadDetail>;
-          setCardForm({ ...data, ...savedDraft });
-        } else {
-          setCardForm({ ...data });
+          return { ...data, ...savedDraft };
         }
       } catch {
-        setCardForm({ ...data });
+        // 下書きが読めない時は写しだけで作る
       }
+      return { ...data };
+    };
+    // 写しがあれば、取りに行く前に入力欄を写しで埋める（戻った時に空の欄を出さない）
+    const cached = cache.read<LeadDetail>(path);
+    if (cached) setCardForm(formFrom(cached));
+    try {
+      const data = await cache.fetch(path, () => api.get<LeadDetail>(path));
+      if (request !== leadRequestRef.current) return;
+      setLeadFailedId(null);
+      if (data) setCardForm(formFrom(data));
     } catch {
-      setLeadDetail(null);
+      if (request !== leadRequestRef.current) return;
+      setLeadFailedId(leadId);
       setCardForm({});
     }
-  }, []);
+  }, [cache]);
 
   // opened=true は「利用者が実際に会話を開いた」ことを表す。受信箱の「新規」バッジ
   // （is_new_assignment）を消すのはこの場合のみ（design.md §3-3）。PC の先頭会話の
@@ -453,7 +507,7 @@ export function useInboxState(): UseInboxStateReturn {
     } catch {
       // 既読化失敗は致命的ではないので無視
     }
-  }, []);
+  }, [setConversations]);
 
   // ---------------------------------------------------------------------------
   // Discord リアクション送信 / 取り消し
@@ -496,6 +550,7 @@ export function useInboxState(): UseInboxStateReturn {
     if (!leadDetail) return;
     setCardSaveStatus("saving");
     setCardSaveError("");
+    const request = leadRequestRef.current;
     try {
       const payload = Object.fromEntries(
         Object.entries(cardForm)
@@ -503,8 +558,9 @@ export function useInboxState(): UseInboxStateReturn {
           .map(([k, v]) => [k, v === "" ? null : v])
       );
       const updated = await api.patch<LeadDetail>(`/leads/${leadDetail.id}`, payload);
-      setLeadDetail(updated);
-      setCardForm({ ...updated });
+      cache.write(`/leads/${leadDetail.id}`, updated);
+      setLeadFailedId(null);
+      if (request === leadRequestRef.current) setCardForm({ ...updated });
       localStorage.removeItem(DRAFT_KEY(leadDetail.id));
       setCardSaveStatus("saved");
       setTimeout(() => setCardSaveStatus((s) => s === "saved" ? "idle" : s), 2000);
@@ -512,7 +568,7 @@ export function useInboxState(): UseInboxStateReturn {
       setCardSaveStatus("error");
       setCardSaveError(e instanceof Error ? e.message : t("common.saveError"));
     }
-  }, [leadDetail, cardForm, t]);
+  }, [leadDetail, cardForm, cache, t]);
 
   const updateInboxSetting = useCallback(<K extends keyof InboxSettings>(key: K, value: InboxSettings[K]) => {
     setInboxSettings((prev) => {
@@ -626,7 +682,6 @@ export function useInboxState(): UseInboxStateReturn {
 
   const backToList = useCallback(() => {
     setSelectedLeadId(null);
-    setLeadDetail(null);
     const params = new URLSearchParams(searchParams);
     params.delete("lead_id");
     setSearchParams(params, { replace: true });
@@ -635,7 +690,6 @@ export function useInboxState(): UseInboxStateReturn {
   const onPageFilterChange = useCallback((value: string) => {
     setPageIdFilter(value);
     setSelectedLeadId(null);
-    setLeadDetail(null);
     const params = new URLSearchParams(searchParams);
     if (value) {
       params.set("page_id", value);
@@ -647,11 +701,7 @@ export function useInboxState(): UseInboxStateReturn {
   }, [searchParams, setSearchParams]);
 
   useEffect(() => {
-    if (selectedLeadId === null) {
-      setMessagesData(null);
-      setLeadDetail(null);
-      return;
-    }
+    if (selectedLeadId === null) return;
     loadMessages(selectedLeadId);
     // PC の自動選択（先頭会話の自動選択）が直前に selectLead を呼んだ場合は
     // 「開いた」扱いにしない（design.md 修正2 / PO 決定「案ア」）。
@@ -683,12 +733,12 @@ export function useInboxState(): UseInboxStateReturn {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedLeadId, loadMessages, markRead, loadLeadDetail]);
 
-  // メッセージリスト末尾へ自動スクロール
+  // メッセージリスト末尾へ自動スクロール（中身が届くたび。写しは中身が同じなら同じ物を返すので、届いた回数も見る）
   useEffect(() => {
     if (!messagesData) return;
     const el = messageListRef.current;
     if (el) el.scrollTop = el.scrollHeight;
-  }, [messagesData]);
+  }, [messagesData, msgLoadCount]);
 
   // ---------------------------------------------------------------------------
   // フィルタリング（useMemo）
@@ -735,13 +785,13 @@ export function useInboxState(): UseInboxStateReturn {
   const isMobile = useIsMobile();
   useEffect(() => {
     if (isMobile) return;
-    if (selectedLeadId !== null || convLoading || filteredConversations.length === 0) return;
+    if (selectedLeadId !== null || convShowLoading || filteredConversations.length === 0) return;
     // 受信箱「新規」バッジ: 自動選択は「開いた」扱いにしない（design.md 修正2 / PO 決定「案ア」）。
     // auto: true を渡すと selectLead 内で autoSelectRef を立て、URL の lead_id も
     // 書かない（審査 D2/D3）。判定条件・自動選択そのものの挙動は変えない
     // （PR 4165 の退行対策・上記コメント参照）。
     selectLead(filteredConversations[0].lead_id, { auto: true });
-  }, [filteredConversations, selectedLeadId, convLoading, selectLead, isMobile]);
+  }, [filteredConversations, selectedLeadId, convShowLoading, selectLead, isMobile]);
 
   // ---------------------------------------------------------------------------
   // 送信
@@ -951,7 +1001,7 @@ export function useInboxState(): UseInboxStateReturn {
     } finally {
       setConvertSaving(false);
     }
-  }, [leadDetail, loadLeadDetail, t]);
+  }, [leadDetail, loadLeadDetail, setConversations, t]);
 
   const handleCreateInvoice = useCallback(() => {
     navigate("/invoices/new");
@@ -962,7 +1012,7 @@ export function useInboxState(): UseInboxStateReturn {
     setConversations((prev) => prev.filter((c) => c.lead_id !== loserId));
     selectLead(masterId);
     void loadConversations();
-  }, [selectLead, loadConversations]);
+  }, [selectLead, loadConversations, setConversations]);
 
   // ---------------------------------------------------------------------------
   // アクション
@@ -986,7 +1036,7 @@ export function useInboxState(): UseInboxStateReturn {
     setConversations((prev) =>
       prev.map((c) => c.lead_id === leadId ? { ...c, unread_count: 1 } : c)
     );
-  }, [selectedLeadId]);
+  }, [selectedLeadId, setConversations]);
 
   const handleExclude = useCallback(async (targetLeadId?: number) => {
     const leadId = targetLeadId ?? selectedLeadId;
@@ -997,7 +1047,7 @@ export function useInboxState(): UseInboxStateReturn {
       // 対象が今開いている会話のときだけ閉じる（一覧の他行を消しても開いている会話は残す）
       if (leadId === selectedLeadId) setSelectedLeadId(null);
     } catch { /* noop */ }
-  }, [selectedLeadId]);
+  }, [selectedLeadId, setConversations]);
 
   const handleDeleteLead = useCallback(async (targetLeadId?: number) => {
     const leadId = targetLeadId ?? selectedLeadId;
@@ -1008,7 +1058,7 @@ export function useInboxState(): UseInboxStateReturn {
       setConversations((prev) => prev.filter((c) => c.lead_id !== leadId));
       if (leadId === selectedLeadId) setSelectedLeadId(null);
     } catch { /* noop */ }
-  }, [selectedLeadId, t]);
+  }, [selectedLeadId, setConversations, t]);
 
   // ---------------------------------------------------------------------------
   // 一括選択ハンドラ
@@ -1044,7 +1094,7 @@ export function useInboxState(): UseInboxStateReturn {
       prev.map((c) => selectedLeadIds.has(c.lead_id) ? { ...c, unread_count: 1 } : c)
     );
     setSelectedLeadIds(new Set());
-  }, [selectedLeadIds]);
+  }, [selectedLeadIds, setConversations]);
 
   const handleBulkExclude = useCallback(async () => {
     const targets = [...selectedLeadIds];
@@ -1052,7 +1102,7 @@ export function useInboxState(): UseInboxStateReturn {
     setConversations((prev) => prev.filter((c) => !selectedLeadIds.has(c.lead_id)));
     if (selectedLeadId !== null && selectedLeadIds.has(selectedLeadId)) setSelectedLeadId(null);
     setSelectedLeadIds(new Set());
-  }, [selectedLeadIds, selectedLeadId]);
+  }, [selectedLeadIds, selectedLeadId, setConversations]);
 
   const handleBulkDelete = useCallback(async () => {
     if (!window.confirm(t("inbox.confirmBulkDelete"))) return;
@@ -1061,7 +1111,7 @@ export function useInboxState(): UseInboxStateReturn {
     setConversations((prev) => prev.filter((c) => !selectedLeadIds.has(c.lead_id)));
     if (selectedLeadId !== null && selectedLeadIds.has(selectedLeadId)) setSelectedLeadId(null);
     setSelectedLeadIds(new Set());
-  }, [selectedLeadIds, selectedLeadId, t]);
+  }, [selectedLeadIds, selectedLeadId, setConversations, t]);
 
   // ---------------------------------------------------------------------------
   // 返却
@@ -1072,7 +1122,7 @@ export function useInboxState(): UseInboxStateReturn {
 
     // 会話リスト
     conversations,
-    convLoading,
+    convLoading: convShowLoading,
     convError,
     filteredConversations,
     loadConversations,
