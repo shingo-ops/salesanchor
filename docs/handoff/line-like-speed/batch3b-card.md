@@ -4,8 +4,8 @@
 - 根拠の写し: S=origin/main 3bfc5d555661bf81701890c43cd0f57314f56875。行番号はすべてこの sha。2026-11-02 に設計担当が S の写しで行を読んだ。実装の前に最新の origin/main で行を合わせ直す（§3(a)）。
 - 読んだ節: docs/handoff/design-partner-card-ops/guards/00-common.md・guards/03-file.md・guards/04-worktree.md・guards/05-pr.md・guards/10-executor.md・scripts/agent-hooks/cloud/rules.md（段 3 の 1 回目のカードと同じ節。照合も同じ: 全命令は cd <W> で始める・出力は tail/head で上限・新しいファイルは丸ごとの全文・作業場所は new-worktree.sh で作り出力をパイプに通さない・PR は実行役が作らない・出力をファイルに残す命令と tail で読む命令は別の行）。
 - 実行役はクラウドの Sonnet。作業場所の作り方はクラウドの決まり（S scripts/agent-hooks/cloud/rules.md:15）を正とする。.pr-number・gh-pr-create-safe.sh は使わない。出力には上限を付ける。待つために sleep を使わない。
-- 状態: 第 1 版（2026-11-02 設計担当 Claude Opus。審査待ち）。
-- 受領確認: 実装役は着手の最初の報告に「段 3 の 2 回目のカード 第 1 版を受け取った・S=3bfc5d555」と書く。
+- 状態: 第 2 版（2026-11-02 設計担当 Claude Opus）。第 1 版のクラウド審査は REVISE で、①§4-L の担当者の見本に emails・discord・contact_channels が無く画面が落ちる ②§4-F4 の quotes が描画ごとに変わり lint の警告が 1 件増える ③手順3 の確かめで setLoadingAdvice の行も出る、の 3 つを直した。審査役は 3 つを写しで当て、tsc 0・lint の警告 0・Q1 10 件合格を確かめた。
+- 受領確認: 実装役は着手の最初の報告に「段 3 の 2 回目のカード 第 2 版を受け取った・S=3bfc5d555」と書く。
 
 ## 0. 設計からの直し・詳しくした点（V3b。設計の合格線は変えない）
 - V3b-1 対象は、段 3 の 1 回目の受入の回（prod-ui-check run 41389073263）で戻った時の秒（K1）が遅い順の 10 行（9 画面。/teams と /management-center/teams は同じ画面）。PO 選択「1」（遅い順に 10 画面ずつ、本番の測定まで進める）。
@@ -218,7 +218,7 @@ import { MOCK_CHANNELS } from "../../mocks/funnelFixtures";
 - F4 S :50 `  const [statusFilter, setStatusFilter] = useState("");` の次に足す:
 ```ts
   const quotesQ = useApiQuery<Quote[]>(`/quotes${statusFilter ? `?status=${statusFilter}` : ""}`, { keepPrevious: true });
-  const quotes = quotesQ.data ?? [];
+  const quotes = useMemo(() => quotesQ.data ?? [], [quotesQ.data]);
 ```
 - F5 S :53-54（error と loading の useState の 2 行）を次の 1 行に置き換える（setError は S :62 の load の中だけで使う）:
   `  const shownError = quotesQ.error ? (quotesQ.error instanceof Error ? quotesQ.error.message : t("common.fetchError")) : "";`
@@ -400,7 +400,7 @@ vi.mock("react-i18next", () => ({
 // チームは TeamFormButtonMigration.test.tsx:14 の写し
 const unit = { id: 1, code: "FX", canonical: "Fixture Unit", kubun: null, is_active: true, created_at: "", updated_at: "" };
 const status = { id: 1, status_id: "FX", canonical: "Fixture Status", search_pattern: "", exclude_pattern: "", priority: 1, enabled: true, note: "", match_type: "contains", effect: "OUTPUT", created_at: "", updated_at: "" };
-const contact = { id: 52, tenant_id: 1, company_id: 41, contact_code: "C52", lead_id: null, surname: "Fixture contact", given_name: null, display_name: null, job_title: null, department: null, is_primary_contact: false, primary_email: null, primary_phone: null, status: "active", notes: null, created_at: "", updated_at: "" };
+const contact = { id: 52, tenant_id: 1, company_id: 41, contact_code: "C52", lead_id: null, surname: "Fixture contact", given_name: null, display_name: null, job_title: null, department: null, is_primary_contact: false, primary_email: null, primary_phone: null, status: "active", notes: null, emails: [], discord: null, contact_channels: [], created_at: "", updated_at: "" };
 const quote = { id: 7, quote_code: "Q-7", company_id: 4, contact_id: null, currency: "USD", subtotal: 10, total_amount: 10, status: "approved", validity_date: null, created_at: "" };
 const quoteDetail = { ...quote, shipping_fee: 0, tax_amount: 0, notes: null, items: [] };
 const team = { id: 7, name: "Fixture Team", leader_id: null, description: null, is_active: true, member_count: 0, created_at: "", updated_at: "" };
@@ -518,7 +518,7 @@ describe("revisit shows the copy first (Q1)", () => {
   cd <W> && tail -5 /tmp/b3b-lint-before.txt
 手順3. §4-L の全文で #12 を作り、§4-A〜§4-K のとおり #1〜#11 を直す。各ファイルを直す前に、§4 の「変更前」の文を `grep -n` で確かめる（§3(c)）。終わったら残りが無いことを確かめる。
   cd <W> && grep -n "useEffect\|setLoading\|setUnits\|setItems\|setHasNext\|setContacts\|setCompanies\|setQuotes\|setQuote\b\|setTeams\|setCurrentUser\|getChannels\|setRows\|setSummary" frontend/src/pages/dashboard/FunnelLeadsPage.tsx frontend/src/pages/units/UnitsPage.tsx frontend/src/pages/status-master/StatusMasterPage.tsx frontend/src/pages/contacts/ContactsPage.tsx frontend/src/pages/quotes/QuotesPage.tsx frontend/src/pages/quote-detail/QuoteDetailPage.tsx frontend/src/pages/teams/TeamsPage.tsx frontend/src/pages/goal-setting/GoalSettingPage.tsx frontend/src/pages/schedule/ScheduleSettingsPage.tsx | head -20
-  （出てよいのは GoalSettingPage.tsx の useEffect の行だけ: import の 1 行・GoalAdvisorPanel の 2 つ（S :265・:272）・目標の値の 2 つ（S :563・:587）。ほかが出たら §4 の写し違いを直す。）
+  （出てよいのは GoalSettingPage.tsx の useEffect の行だけ: import の 1 行・GoalAdvisorPanel の 2 つ（S :265・:272）・目標の値の 2 つ（S :563・:587）と、相談の読み込み中の印 setLoadingAdvice の 3 行（S :260・:288・:312。触らない）。ほかが出たら §4 の写し違いを直す。）
 手順4. 型を作ってから試験を流す（新しい試験・直した今ある試験・9 画面を描く今ある試験・全部の試験・型・lint）。作る型（frontend/src/api/generated/）は .gitignore で除かれるので commit に入らない。
   cd <W>/frontend && npm run generate:api-types > /tmp/b3b-gen.txt 2>&1
   cd <W> && tail -3 /tmp/b3b-gen.txt
