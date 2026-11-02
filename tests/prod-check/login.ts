@@ -33,6 +33,21 @@ export function creds(): { email: string; password: string } | null {
 }
 
 export async function login(page: Page, email: string, password: string): Promise<void> {
+  // ADR-1055 段B: 点検の人のいつもの機械の印（enforce で許可待ちにしない）
+  const deviceToken = process.env.SMOKE_E2E_DEVICE_TOKEN;
+  if (deviceToken) {
+    await page.context().addCookies([
+      {
+        name: "sa_device",
+        value: deviceToken,
+        domain: new URL(BASE_URL).hostname,
+        path: "/api/v1/auth",
+        secure: true,
+        httpOnly: true,
+        sameSite: "Strict",
+      },
+    ]);
+  }
   // 点検のブラウザでは顔・指紋（パスキー）を使えない扱いにし、ログイン直後の登録案内を出さない（本番に記録を残さない・ADR-1013）
   await page.addInitScript(() => {
     Object.defineProperty(globalThis, "PublicKeyCredential", { value: undefined, configurable: true });
