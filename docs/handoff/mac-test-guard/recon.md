@@ -42,4 +42,4 @@
 
 ## 3. 未確認
 - AI が過去7日に Mac で重い試験を何回打ったか: Bash の命令の記録が残っていないため数えられない（agent-events.jsonl は見張りが止めた分だけ）。導入後は見張りの記録で数える。
-- Claude Code の PreToolUse で exit 2 が命令を止めて標準エラーを AI に返す仕様: 既存の見張り（mac-vm-guard 等）で動いている実績はある。公式の出典は実装時に Context7 で確かめ results.md に残す。
+- （解消 2026-11-02）Claude Code の PreToolUse で exit 2 が命令を止めて標準エラーを AI に返す仕様: Context7 `/websites/code_claude` で https://code.claude.com/docs/en/hooks「Exit code 2」を確認（design.md §8）。

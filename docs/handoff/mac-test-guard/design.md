@@ -3,7 +3,7 @@
 この文書は何か(専門用語なしの1行): Claude が Mac で重い試験を回そうとしたら、命令が動く前に止めて GitHub とクラウドへ案内する見張りの設計。
 
 下調べ: [recon.md](recon.md)。手本: [../mac-vm-hook/design.md](../mac-vm-hook/design.md)（同じ形の見張り）。
-状態: 設計案作成済み・Opus 自己審査済み（§10）。KGI は PO 承認待ち。実装は未着手。
+状態: 設計案作成済み・Opus 自己審査済み（§10）。KGI T1〜T6 は PO 承認済み（2026-11-02 チャット、6つの基準の説明に「1」）。実装は PO の「PRマージ、デプロイまで完走させてくれ」（2026-11-02）を受けクラウドの担当（Sonnet）に委任。カード: [card.md](card.md)。
 
 ## 0. PO の願い（2026-11-02 チャット）
 - 「Macで試験をする意図は？スペックが低いからクラウドとgithubで完結させたい、」
@@ -66,7 +66,7 @@ mac-vm-guard と同じ。許可券置き場の danger-permit-*.json のうち `o
 - D 不採用: 時間切れを延ばして Mac でも通るようにする。PO の願い（Mac を軽くする）に反する。
 
 ## 8. 外部・過去事例の参照と我々への応用
-Claude Code 公式の hooks 仕様（PreToolUse で exit 2 は命令を止め、標準エラーを AI に返す）に従う。出典は実装時に Context7 で確かめ results.md に残す。同じ型の実績は mac-vm-hook（docs/handoff/mac-vm-hook/）と py312-guard（docs/handoff/py312-guard/results.md）。社外の数値事例は本件の成否の根拠にならないため使わない。
+Claude Code 公式の hooks 仕様（PreToolUse で exit 2 は命令を止め、標準エラーを AI に返す）に従う。出典: Context7 `/websites/code_claude` → https://code.claude.com/docs/en/hooks の「Exit code 2」（2026-11-02 確認。「a `PreToolUse` hook blocks the tool call」「The message that comes with the block is your hook's stderr」。exit 0 は「No decision: the normal permission flow applies」）。同じ型の実績は mac-vm-hook（docs/handoff/mac-vm-hook/）と py312-guard（docs/handoff/py312-guard/results.md）。社外の数値事例は本件の成否の根拠にならないため使わない。
 
 ## 9. 実装の流れ（PO の実装承認の後）
 1. クラウドの担当（Sonnet）が release ブランチで §2 のリポジトリ内のファイルを作り、`python3 scripts/agent-hooks/mac-test-guard/test_guard.py` を通して push（クラウドで試験を回す）。
@@ -79,8 +79,8 @@ Claude Code 公式の hooks 仕様（PreToolUse で exit 2 は命令を止め、
 - 根拠: Mac で毎回落ちる事実（recon R1）、GitHub 経由で試験が Mac に来る道が無い事実（recon R2(e)）、手元の担当を起動できないので PO の `!` で入れる事実（recon R3）。
 - 検証可能性: T1〜T3・T5 は試験スクリプトで○×、T4 は記録の行数、T6 は7日の記録で件数。
 - リスク: ①`npm run test:*` の名前で試験でないものを止める → 両リポジトリの package.json の test で始まる名前は test:e2e・test:e2e:ui・test:e2e:install・test:e2e:vl・test:unit・test:coverage（frontend/package.json:11-14,44-45）と test:e2e（agent-console）。install だけ除外すれば残りはすべて試験。②評価する係の手元の手順が止まる → 想定どおり（案内文で GitHub へ）。
-- 未解決: PreToolUse の公式の出典（実装時に確かめる。動いている実績はある）。
-- 判定: APPROVE（KGI T1〜T6 の PO 承認の後に実装カードを作る）。
+- 未解決: なし（PreToolUse の公式の出典は §8 で確認済み）。
+- 判定: APPROVE（KGI T1〜T6 は PO 承認済み。実装カード card.md を発行）。
 
 ## 11. 維持の仕組み
 - 守り手: PreToolUse の見張り mac-test-guard（手元の全セッション・審査役・評価する係に自動で効く）。点検は Opus（T6）。

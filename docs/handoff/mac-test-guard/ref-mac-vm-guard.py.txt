@@ -1,0 +1,226 @@
+# 設計: docs/handoff/mac-vm-hook/design.md（salesanchor リポジトリ）§2〜§6
+"""PreToolUse(Bash) フック: Mac で試験用の仮想マシン（colima の default 以外の profile・limactl start/create/clone）
+を作る命令を exit 2 で止める。例外は許可券 op "mac vm"（1回限り）。
+内部エラーは止めずに exit 0（fail-open）。標準ライブラリのみ。"""
+import sys, os, re, json, shlex, glob, datetime
+
+MSG = ('🚫 BLOCKED [mac-vm-guard]: この Mac で試験用の仮想マシンは作れません（メモリ 8GB のため）。'
+       'GitHub の試験場を使ってください: gh workflow run sandbox-test.yml --ref <ブランチ> -f test=<名前>'
+       '（規則: docs/ops/runner-commands.md §10）。Mac 実機でしか試せない場合は PO に許可券 "mac vm" を依頼してください。')
+PREFIXES = {'sudo', 'env', 'time'}
+SHELLS = {'bash', 'sh', 'zsh'}
+PERMIT_OP = 'mac vm'
+
+# no-mac-vm-guard.sh colima_profile() と同じ「値を取る旗」一覧
+VALUE_FLAGS = {
+    '-c', '--cpu', '-m', '--memory', '-d', '--disk', '-r', '--runtime', '-a', '--arch', '-t', '--vm-type',
+    '--mount', '--mount-type', '--network-address', '--dns', '--dns-host', '--env', '--kubernetes-version',
+    '--ssh-agent', '--cpu-type', '--hostname', '--edit-editor', '--activate', '--vz-rosetta',
+    '--nested-virtualization',
+}
+
+HEREDOC = re.compile(r"<<-?\s*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\1[^\n]*\n(.*?)(?:\n[ \t]*\2[ \t]*(?=\n|$)|\Z)", re.S)
+
+
+def log_path():
+    return os.path.expanduser(os.environ.get('MAC_VM_GUARD_LOG') or '~/.claude/logs/agent-events.jsonl')
+
+
+def permits_dir():
+    return os.path.expanduser('~/.claude/permits')
+
+
+def strip_heredoc_bodies(cmd):
+    def rep(m):
+        return m.group(0)[: m.group(0).index('\n')] + '\n'
+    return HEREDOC.sub(rep, cmd)
+
+
+def split_parts(cmd):
+    """引用符の外の ; && || | 改行で分ける。"""
+    parts, cur, i, n, q = [], [], 0, len(cmd), None
+    while i < n:
+        c = cmd[i]
+        if q:
+            cur.append(c)
+            if c == '\\' and q == '"' and i + 1 < n:
+                cur.append(cmd[i + 1]); i += 2; continue
+            if c == q:
+                q = None
+            i += 1
+            continue
+        if c == '\\' and i + 1 < n:
+            cur.append(cmd[i:i + 2]); i += 2; continue
+        if c in '\'"':
+            q = c; cur.append(c); i += 1; continue
+        if c in ';\n|' or (c == '&' and cmd[i + 1:i + 2] == '&' and cmd[i - 1:i] != '>'):
+            parts.append(''.join(cur)); cur = []
+            i += 2 if cmd[i:i + 2] in ('&&', '||') else 1
+            continue
+        cur.append(c); i += 1
+    parts.append(''.join(cur))
+    return parts
+
+
+def tokens(part):
+    """(環境変数の dict, 先頭語以降の語のリスト)。sudo/env/time と VAR= は飛ばす。"""
+    part = part.strip().lstrip('({').strip()
+    try:
+        t = shlex.split(part)
+    except Exception:
+        t = part.split()
+    env = {}
+    while t and (t[0] in PREFIXES or re.match(r'^[A-Za-z_][A-Za-z0-9_]*=', t[0])):
+        m = re.match(r'^([A-Za-z_][A-Za-z0-9_]*)=(.*)$', t[0])
+        if m:
+            env[m.group(1)] = m.group(2)
+        t = t[1:]
+    return env, t
+
+
+REDIRECT = re.compile(r'^(\d+|&)?(>>?|>\||<<<|<>|<|>&|<&)(.*)$')
+
+
+def drop_redirections(args):
+    """リダイレクト（2>&1・>file・&> など。後ろが空なら次の1語＝リダイレクト先も）、単独の &、
+    語末の ) } を取り除く。設計: design.md §11-3-2"""
+    out, skip = [], False
+    for w in args:
+        if skip:
+            skip = False
+            continue
+        w = w.rstrip(')}')
+        if not w or w == '&':
+            continue
+        m = REDIRECT.match(w)
+        if m:
+            if m.group(3) == '':
+                skip = True
+            continue
+        out.append(w)
+    return out
+
+
+def colima_profile(rest):
+    prev, skip, profile = None, False, ''
+    for tok in rest:
+        if skip:
+            skip = False
+            continue
+        if prev == 'p':
+            profile = tok
+            break
+        if tok.startswith('--profile='):
+            profile = tok[len('--profile='):]
+            break
+        if tok in ('--profile', '-p'):
+            prev = 'p'
+            continue
+        if tok in VALUE_FLAGS:
+            skip = True
+            continue
+        if tok.startswith('-'):
+            continue
+        profile = tok
+        break
+    return profile or 'default'
+
+
+def bad_part(env, t, depth, part=''):
+    """止める部分の文字列を返す。止めないなら None。"""
+    if not t:
+        return None
+    base = os.path.basename(t[0])
+    args = t[1:]
+    if base == 'colima':
+        if not args or args[0].rstrip(')}') not in ('start', 'create', 'restart'):
+            return None
+        envp = env.get('COLIMA_PROFILE')
+        if envp and envp != 'default':
+            return part.strip()
+        if colima_profile(drop_redirections(args[1:])) != 'default':
+            return part.strip()
+        return None
+    if base == 'limactl':
+        return part.strip() if args and args[0].rstrip(')}') in ('start', 'create', 'clone') else None
+    if base in SHELLS and depth < 1 and '-c' in args:
+        i = args.index('-c')
+        if i + 1 < len(args):
+            return bad_command(args[i + 1], depth + 1)
+    return None
+
+
+def bad_command(command, depth=0):
+    """止める部分の文字列を返す。止めないなら None。"""
+    for part in split_parts(strip_heredoc_bodies(command)):
+        env, t = tokens(part)
+        r = bad_part(env, t, depth, part)
+        if r:
+            return r
+    return None
+
+
+def log_event(kind, command, reason, part=None):
+    try:
+        rec = {
+            'ts': datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
+            'type': kind,
+            'hook': 'mac-vm-guard',
+            'reason': reason,
+            'cmd_head': str(command)[:120],
+        }
+        if part is not None:
+            rec['matched_part'] = str(part)[:300]
+        with open(log_path(), 'a', encoding='utf-8') as f:
+            f.write(json.dumps(rec, ensure_ascii=False) + '\n')
+    except Exception:
+        pass
+
+
+def consume_permit():
+    """op "mac vm"・created_by manual・期限内の券を1つ削除して True。無ければ False。"""
+    now = datetime.datetime.now(datetime.timezone.utc)
+    for p in sorted(glob.glob(os.path.join(permits_dir(), 'danger-permit-*.json'))):
+        try:
+            with open(p, encoding='utf-8') as f:
+                d = json.load(f)
+            if d.get('op') != PERMIT_OP or d.get('created_by') != 'manual':
+                continue
+            exp = datetime.datetime.strptime(d.get('expires_at', ''), '%Y-%m-%dT%H:%M:%SZ').replace(
+                tzinfo=datetime.timezone.utc)
+            if exp <= now:
+                continue
+            os.remove(p)
+            return True
+        except Exception:
+            continue
+    return False
+
+
+def main():
+    command = ''
+    try:
+        d = json.loads(sys.stdin.read())
+        ti = d.get('tool_input', {}) if isinstance(d, dict) else {}
+        command = ti.get('command') or ''
+        matched = bad_command(command) if isinstance(command, str) else None
+        if not matched:
+            return 0
+        if consume_permit():
+            log_event('hook_permit_consumed', command, 'mac vm permit consumed', matched)
+            return 0
+    except Exception as e:
+        log_event('hook_internal_error', command, type(e).__name__)
+        return 0
+    log_event('hook_blocked', command, MSG.split('\n')[0][:80], matched)
+    sys.stderr.write(MSG + '\n')
+    return 2
+
+
+if __name__ == '__main__':
+    try:
+        rc = main()
+    except Exception as e:
+        log_event('hook_internal_error', '', type(e).__name__)
+        rc = 0
+    sys.exit(rc)
