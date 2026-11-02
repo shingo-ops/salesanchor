@@ -43,10 +43,10 @@
 
 ### 2-2 秘書の下書き
 - `frontend/src/features/secretary/SecretaryDraftInvoice.tsx:38-41` `isValidUnitPrice` は「空でない・数・0 以上」だけ。小数の桁を見ない。
-- `SecretaryDraftInvoice.tsx:155-162` 単価の欄は `type="number" min={0}`。`step` は無い。
-- `SecretaryDraftInvoice.tsx:49` AI の下書きの単価は `String(i.unit_price)` で欄に入る（例: 1000.255 → "1000.255"）。
-- `SecretaryDraftInvoice.tsx:94` 送るのは `Number(i.unitPrice)`。
-- `SecretaryDraftInvoice.tsx:172` 単価が空の行があると `secretary.priceRequired` の案内。
+- `frontend/src/features/secretary/SecretaryDraftInvoice.tsx:155-162` 単価の欄は `type="number" min={0}`。`step` は無い。
+- `frontend/src/features/secretary/SecretaryDraftInvoice.tsx:49` AI の下書きの単価は `String(i.unit_price)` で欄に入る（例: 1000.255 → "1000.255"）。
+- `frontend/src/features/secretary/SecretaryDraftInvoice.tsx:94` 送るのは `Number(i.unitPrice)`。
+- `frontend/src/features/secretary/SecretaryDraftInvoice.tsx:172` 単価が空の行があると `secretary.priceRequired` の案内。
 - `secretary-agent/schema.json:23` AI の答えの単価は `number|null`（桁の制限なし）。
 
 ### 2-3 ふだんの請求書作成画面（変えない・参考）

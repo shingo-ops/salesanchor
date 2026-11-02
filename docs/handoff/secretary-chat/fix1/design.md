@@ -16,7 +16,7 @@ PO が秘書に頼んで失敗したとき、画面の文言で本当の理由�
 | A5 単価の小数が 3 けた以上なら「単価は小数2けたまでです」と出て「作る」が押せない | vitest: 1000.255 を入れる → 案内あり・ボタン無効 |
 | A6 小数 2 けたまでなら作れる | vitest: 1000.5・1000.25 → ボタン有効・送る値が 1000.5・1000.25 |
 | A7 AI の下書きの単価が 3 けた以上でも同じ案内。勝手に丸めない | vitest: 下書き unit_price 1000.255 → 欄の値 "1000.255"・案内あり・ボタン無効 |
-| A8 ふだんの請求書作成画面と保存側の決まりは変えない | 差分に `InvoiceCreatePage.tsx`・`backend/app/schemas/invoice.py` が無い（`git diff --name-only`） |
+| A8 ふだんの請求書作成画面と保存側の決まりは変えない | 差分に `frontend/src/pages/invoice-create/InvoiceCreatePage.tsx`・`backend/app/schemas/invoice.py` が無い（`git diff --name-only`） |
 | A9 本番で鍵をわざと壊して試さない | 本番の確かめは次の 2 つだけ。(1) 配備後に PO が 1 回頼んで成功し、予定か請求書の行が 1 件増える（設計担当が本番DBを読むだけの道で確かめる。recon 1-1 と同じやり方）。(2) 設計担当が PO から許された鍵で、容器のログを読むだけのコマンド（`docker logs secretary-agent --since <配備時刻>`）を流し、その頼みの行の code が `ok`。エージェント用の制限付き鍵ではログを読めない（docs/handoff/rehearsal-env/design-b-ssh-isolation.md:58）ので、実装役はこの確かめをしない |
 
 ## 2. 変更前 → 変更後
@@ -41,16 +41,16 @@ PO が秘書に頼んで失敗したとき、画面の文言で本当の理由�
 - 理由: 鍵の問題は「頼み方」でなく「使えない状態」なので 503。AI 側の失敗は 502 のまま code だけ分ける。
 
 ### 2-3 画面
-- `secretaryApi.ts` の `SecretaryErrorKind` に `authFailed`・`agentFailed` を足し、`KNOWN_CODES` に `auth_failed: "authFailed"`・`agent_failed: "agentFailed"` を足す。
+- `frontend/src/features/secretary/secretaryApi.ts` の `SecretaryErrorKind` に `authFailed`・`agentFailed` を足し、`KNOWN_CODES` に `auth_failed: "authFailed"`・`agent_failed: "agentFailed"` を足す。
 - 言葉（ja/en 同じキー・ADR-027）:
   - `secretary.error.authFailed` = 「秘書の鍵が使えなくなっています。管理者に知らせてください」／ "The assistant's key no longer works. Please tell your administrator."
   - `secretary.error.agentFailed` = 「うまくいきませんでした。少し待ってからもう一度送ってください」／ "Something went wrong. Please wait a moment and send it again."
   - `secretary.priceDecimals` = 「単価は小数2けたまでです」／ "Unit price can have up to 2 decimal places."
-- `SecretaryDraftInvoice.tsx`:
+- `frontend/src/features/secretary/SecretaryDraftInvoice.tsx`:
   - 小数の桁の判定 `hasTooManyDecimals(value)`: 空白を除いた値が `/\.\d{3,}$/` に合う、または `/e-/i` を含む（`String(0.0000001)` が "1e-7" になるため）なら true。最後の 0 も 1 けたと数える（"1000.250" も止める。厳しめだが害はない）。
   - `isValidUnitPrice` は今の条件に `&& !hasTooManyDecimals(value)` を足す。
   - 案内: どれかの行で `hasTooManyDecimals` が true なら、`priceRequired` の案内の下に同じ金型の書き方（`secretary-draft__hint`）で `t("secretary.priceDecimals")`。
-  - 単価の欄に `step="0.01"`（ふだんの作成画面 `InvoiceCreatePage.tsx:389` と同じ）。
+  - 単価の欄に `step="0.01"`（ふだんの作成画面 `frontend/src/pages/invoice-create/InvoiceCreatePage.tsx:389` と同じ）。
   - 下書きの値は丸めない（:49 はそのまま）。
 - 新しい金型・色・CSS は足さない（既存の `secretary-draft__hint` を使う）。
 
@@ -58,7 +58,7 @@ PO が秘書に頼んで失敗したとき、画面の文言で本当の理由�
 - 親設計 `docs/handoff/secretary-chat/design.md` §5-7 の表（:90）と :93・:165 に「直し1で分けた（fix1/design.md）」と追記する。消さない。設計担当がこの設計 PR で済ませる。
 
 ## 3. 触らない範囲
-- `backend/app/schemas/invoice.py`・`InvoiceCreatePage.tsx`・`secretary-agent/schema.json`・`prompt.txt`・`Dockerfile`・deploy.yml・compose・migrations・`place-secretary-token.sh`。
+- `backend/app/schemas/invoice.py`・`frontend/src/pages/invoice-create/InvoiceCreatePage.tsx`・`secretary-agent/schema.json`・`prompt.txt`・`Dockerfile`・deploy.yml・compose・migrations・`scripts/ops/place-secretary-token.sh`。
 - `/health` の `ready`（鍵があるかだけ見る）は今回変えない。
 
 ## 4. 代替案
@@ -77,12 +77,13 @@ PO が秘書に頼んで失敗したとき、画面の文言で本当の理由�
 ## 6. 計画
 1 枚のカード（docs/handoff/secretary-chat/fix1/card.md）で Sonnet が実装 → 審査役 Opus → CI → マージ → 配備 → 配備後の確かめ（A9）。
 
-## 7. 維持の仕組み
+## 維持の仕組み
+- 守り手: .github/workflows/test.yml（backend の対応の試験 backend/tests/test_assistant_router.py）と .github/workflows/e2e.yml（画面の試験 frontend/src/features/secretary/SecretaryChat.test.tsx）。容器の試験 secretary-agent/server.test.mjs は CI で走らないため、手元で流した生の出力を PR に添える。
 - 3 か所（容器・backend・画面）の code の対応は、それぞれの試験（server.test.mjs・test_assistant_router.py・SecretaryChat.test.tsx）で固定する。
 - backend（test.yml）と画面（e2e.yml）の試験は CI で走る。容器の試験 server.test.mjs を流す CI は無い（.github/workflows/ で secretary-agent を指すのは deploy.yml だけ）。なので容器の試験は、実装役と審査役が手元で `node --test` を流し、生の出力を PR に添える。CI に入れるかは別の件として残す（この直しには足さない）。
 - 単価の桁は保存側の決まり（invoice.py:35）が正本。画面の判定はその写しなので、カードの試験に 2 けた・3 けたの両方を入れる。
 
-## 8. 外部事例
+## 8. 外部・過去事例の参照と我々への応用
 - 不要。理由: 自社の 3 か所の対応を揃える小さな直しで、判断の根拠は本番で観測した出力（recon 1-1）と保存側の決まり（invoice.py:35）で足りる。
 
 ## 9. 設計審査（同じ AI による自己審査）
