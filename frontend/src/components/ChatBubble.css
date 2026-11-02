@@ -60,6 +60,8 @@
   width: 100%;
   white-space: normal;
 }
+/* 時刻の場所取りの見えない写し。スマホの文字の吹き出しだけが使う（PC では出さない） */
+.comp-chat-bubble__time-spacer { display: none; }
 
 @media (max-width: 767px) {
   /* 4. 吹き出しを「地・面・強調色」の3役に割り当て直す。
@@ -73,4 +75,52 @@
   /* 秘書のチャット（panel）はこの上書きを受けない（まとめる前と同じ） */
   .comp-chat-bubble--outbound:not(.comp-chat-bubble--panel) { background: var(--accent); }
   .comp-chat-bubble--inbound:not(.comp-chat-bubble--panel)  { background: var(--neutral-bg); }
+
+  /* 文字も画像も: 角と尾の土台 */
+  .comp-chat-bubble--outbound:not(.comp-chat-bubble--panel),
+  .comp-chat-bubble--inbound:not(.comp-chat-bubble--panel) {
+    position: relative;
+    border-radius: var(--comp-chat-bubble-radius-mobile);
+  }
+  /* 文字の吹き出しだけ: 内側の余白と行の高さ（画像は次の段で決める） */
+  .comp-chat-bubble--inline-time:not(.comp-chat-bubble--panel) {
+    padding: var(--comp-chat-bubble-pad-y-mobile) var(--comp-chat-bubble-pad-x-mobile);
+    line-height: var(--comp-chat-line-height-mobile);
+  }
+  /* 尾: 尾の側の上の角を 0 にし、外へ三角を出す（受信=左上 / 送信=右上） */
+  .comp-chat-bubble--tail.comp-chat-bubble--inbound:not(.comp-chat-bubble--panel) { border-top-left-radius: 0; }
+  .comp-chat-bubble--tail.comp-chat-bubble--outbound:not(.comp-chat-bubble--panel) { border-top-right-radius: 0; }
+  .comp-chat-bubble--tail:not(.comp-chat-bubble--panel)::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    width: var(--comp-chat-bubble-tail-w-mobile);
+    height: var(--comp-chat-bubble-tail-h-mobile);
+    background: inherit;
+  }
+  .comp-chat-bubble--tail.comp-chat-bubble--inbound:not(.comp-chat-bubble--panel)::before {
+    right: 100%;
+    clip-path: polygon(0 0, 100% 0, 100% 100%);
+  }
+  .comp-chat-bubble--tail.comp-chat-bubble--outbound:not(.comp-chat-bubble--panel)::before {
+    left: 100%;
+    clip-path: polygon(0 0, 100% 0, 0 100%);
+  }
+  /* 時刻を本文の最後の行の右下へ */
+  .comp-chat-bubble--inline-time:not(.comp-chat-bubble--panel) .comp-chat-bubble__time {
+    position: absolute;
+    right: var(--comp-chat-time-inset-mobile);
+    bottom: var(--comp-chat-time-bottom-mobile);
+    margin-top: 0;
+    font-size: var(--font-xs);
+    line-height: var(--comp-chat-time-line-height-mobile);
+  }
+  .comp-chat-bubble--inline-time:not(.comp-chat-bubble--panel) .comp-chat-bubble__time-spacer {
+    display: inline-block;
+    visibility: hidden;
+    padding-left: var(--space-6px);
+    font-size: var(--font-xs);
+    line-height: var(--comp-chat-time-line-height-mobile);
+    vertical-align: bottom;
+  }
 }

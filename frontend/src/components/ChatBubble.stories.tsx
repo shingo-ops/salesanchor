@@ -49,6 +49,28 @@ export const TimeWithButton: Story = {
   },
 };
 
+/** スマホの見本（幅360）。尾あり・時刻が本文の最後の行の右下。card-a2 §7 の位置合わせに使う */
+export const MobileInboundTail: Story = {
+  parameters: { viewport: { defaultViewport: 'mobile1' }, layout: 'padded' },
+  args: { tail: true, inlineTime: true, time: '12:00', children: 'Hello' },
+};
+
+export const MobileInboundLong: Story = {
+  parameters: { viewport: { defaultViewport: 'mobile1' }, layout: 'padded' },
+  args: {
+    tail: true,
+    inlineTime: true,
+    time: '12:00',
+    children:
+      'This is a long message without any line break that should wrap onto several lines and keep the time at the bottom right of the last line.',
+  },
+};
+
+export const MobileOutboundTail: Story = {
+  parameters: { viewport: { defaultViewport: 'mobile1' }, layout: 'padded' },
+  args: { direction: 'outbound', tail: true, inlineTime: true, time: '12:00', children: 'Hello' },
+};
+
 export const PanelAssistant: Story = {
   args: { layout: 'panel', direction: 'inbound', time: undefined, children: 'ここに返事が入ります。' },
 };

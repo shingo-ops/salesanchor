@@ -281,4 +281,184 @@ props を2つ足す。どちらも thread 用で、既定は false（今の呼�
 - 第3回（2回目の審査の指摘を反映）: ピルの角を伸びても 24 のままに（手元の写真 u4-max で測った）・画像に内側の余白を付けない・送れなかった帯の置き場所を保つ規則と K10 の判定・ADR-067 の行番号・ink.txt の出典を measure-a2.md に・K の並び・送れなかった吹き出しと続き。
 - 第2回（審査の指摘を反映）: ChatComposer.test の許可と直し方・`inert` の削除・トークン 17 個・隙間の札の規則の置き場所・e2e の記述・K3 の会話の種類・K4 の測る物・送れなかった帯。
 
+## 13. 追補: スマホで会話を開いている間は下のメニューを隠す（PO 2026-11-02）
+
+### 13-1. 目的と出どころ
+- PO の言葉（2026-11-02、K9 の写真を見て）: 「受信箱とか在庫表とかの下のメニューはメッセージ画面では非表示にして」。
+- 本物の WhatsApp は会話の画面に下のメニューが無い（手元の並べ写真 /tmp/CC報告ファイル/inbox-deal-ui/a2card/eval/k9-side-2-composer.png。PO の会話を含むためコミットしない）。
+- 対象: 幅 767px 以下（MobileShell）で、受信箱の会話を開いている間だけ。会話一覧・ほかの画面・PC は今のまま。
+
+### 13-2. 今の作り（757ddd6b9 で確認）
+- 下のメニューは `frontend/src/components/MobileShell.tsx:277` の `<nav className="mobile-tabbar">`。条件なしで描かれる。画面ごとに隠す仕組みは無い（import は `NavLink, Outlet` だけ・:33）。
+- 外枠は `frontend/src/components/MobileShell.tsx:209` の `<div className="mobile-shell">`、中身は `:211-213` の `<main className="mobile-content"><Outlet /></main>`。
+- 見た目は `frontend/src/mobile-shell.css:96-108`（`position: fixed; bottom: 0; height: var(--tabbar-height, 56px)`）。
+- メニューの高さを前提にしている所は2つだけ（`git grep tabbar-height` の結果。FloatingActionButton.css:27 は受信箱で使っていない）:
+  - `frontend/src/mobile-shell.css:25` `.mobile-content { padding-bottom: calc(var(--tabbar-height, 56px) + env(safe-area-inset-bottom, 0px)); }`
+  - `frontend/src/components/PageLayout.css:78-80`（`@media (max-width: 767px)` の中）`.page-layout.page-layout--slim-header { height: calc(100dvh - var(--tabbar-height)); }`。slimHeaderOnMobile を使うのは受信箱だけ（`InboxPage.tsx:157`）。
+- 「会話を開いている」の正は `selectedLeadId`（`useInboxState`）。`InboxPage.tsx:158` の `inbox-wrapper${selectedLeadId != null ? " thread-open" : ""}` と、`InboxPage.css:1052` の `.inbox-wrapper.thread-open .inbox-left-panel { display: none; }` がこれを使う。URL の `lead_id` はスマホで開いたときだけ書かれ、自動選択（PC）では書かれない（`useInboxState.ts:618-624`）ので、正には使わない。
+
+### 13-3. 選んだ方法と理由
+- 方法: MobileShell に「下のメニューを隠す」状態を1つ持たせ、子の画面が小さなフックで頼む。受信箱は `selectedLeadId` と同じ条件（スマホで会話を開いている）で頼む。
+- 選ばなかった方法:
+  - URL（`/lead-chat?lead_id=`）を MobileShell が読む: 正の状態（selectedLeadId）と別の場所を見ることになり、データの置き場が2つになる。数字でない `lead_id` のときに一覧でメニューが消える恐れがある。
+  - CSS の `:has(.thread-open)` で MobileShell の外から隠す: 受信箱の CSS が殻の部品の中を直接触ることになり、どの画面が隠しているか読み取れない。単体試験で確かめられない。
+- メニューは DOM から消さず、外枠の class で `display: none` にする（未読の数の読み込み・試験の探し方を変えないため）。
+
+### 13-4. 変更（変更前 → 変更後）
+1. 新しいファイル `frontend/src/hooks/useMobileTabbarHidden.ts`
+   - `MobileTabbarContext`（`React.createContext<((hidden: boolean) => void) | null>(null)`）を export する。
+   - `useHideMobileTabbar(hidden: boolean): void` を export する。中身: `const set = useContext(MobileTabbarContext); useEffect(() => { if (!set) return; set(hidden); return () => set(false); }, [set, hidden]);`
+   - 冒頭のコメントに、目的（スマホで画面ごとに下のメニューを隠す）・出どころ（card-a2 §13・ADR-140 追記）・Provider が無い所（DesktopShell）では何もしないことを書く。
+2. `frontend/src/components/MobileShell.tsx`
+   - `const [tabbarHidden, setTabbarHidden] = useState(false);` を足す（:85-86 のシートの状態の並び）。
+   - :209 `<div className="mobile-shell">` → `<div className={tabbarHidden ? "mobile-shell mobile-shell--tabbar-hidden" : "mobile-shell"}>`
+   - :212 `<Outlet />` → `<MobileTabbarContext.Provider value={setTabbarHidden}><Outlet /></MobileTabbarContext.Provider>`
+   - 冒頭の DOM 構造のコメント（:9-21）に `.mobile-shell--tabbar-hidden` で下のメニューを隠せることを1行足す。:277 の nav 自体は変えない。
+3. `frontend/src/mobile-shell.css`（:108 の後ろ、`.mobile-tabbar` の規則の直後）に足す:
+   ```css
+   /* 画面が useHideMobileTabbar で頼んだ間だけ下のメニューを隠す（card-a2 §13・ADR-140 追記）。
+      DOM には残す。本文の下の余白はメニューの高さを引き、端末の下端（safe-area）だけ残す。 */
+   .mobile-shell--tabbar-hidden .mobile-tabbar {
+     display: none;
+   }
+   .mobile-shell--tabbar-hidden .mobile-content {
+     padding-bottom: env(safe-area-inset-bottom, 0px);
+   }
+   ```
+4. `frontend/src/components/PageLayout.css` の `@media (max-width: 767px)` の中、:78-80 の直後に足す:
+   ```css
+   /* 下のメニューを隠している間（mobile-shell.css の .mobile-shell--tabbar-hidden）は、
+      メニューの高さを引かず、端末の下端（safe-area）だけを引く。.mobile-content の
+      padding-bottom と同じ値なので、はみ出さない（card-a2 §13）。 */
+   .mobile-shell--tabbar-hidden .page-layout.page-layout--slim-header {
+     height: calc(100dvh - env(safe-area-inset-bottom, 0px));
+   }
+   ```
+5. `frontend/src/pages/inbox/InboxPage.tsx`
+   - import に `import { useHideMobileTabbar } from "../../hooks/useMobileTabbarHidden";` を足す。
+   - :69 `const isMobile = useIsMobile();` の直後に、コメント1行（スマホで会話を開いている間は下のメニューを隠す・PO 2026-11-02・card-a2 §13）と `useHideMobileTabbar(isMobile && selectedLeadId != null);` を足す。
+6. 新しい色・余白のトークンは足さない（使う値は既存の `env(safe-area-inset-bottom, 0px)` と `100dvh` だけ。どちらも上の2か所で既に使っている形）。言葉（i18n）も足さない。
+
+### 13-5. 試験
+1. 新しいファイル `frontend/src/hooks/useMobileTabbarHidden.test.tsx`:
+   - Provider の中で `useHideMobileTabbar(true)` → 渡した関数が true で呼ばれる。
+   - hidden を true → false に変える → false で呼ばれる。
+   - 外す（unmount）→ false で呼ばれる（ほかの画面へ移ったらメニューが戻る）。
+   - Provider が無い所で呼んでも例外が出ない。
+2. `frontend/src/components/MobileShell.test.tsx` に1件: Outlet の代わりに `useHideMobileTabbar(true)` を呼ぶ子を描くと、`.mobile-shell` に `mobile-shell--tabbar-hidden` が付き、`.mobile-tabbar` は DOM に残る。既存の `Outlet` のモック（:40-47）を使う形で足せない場合は、§13-7 の 1 で止める。
+3. `frontend/tests-e2e/visual-language/inbox-single-column.spec.ts` に1件（スマホの幅だけ・:128 の試験と同じ skip の書き方）:
+   - 一覧では `.mobile-tabbar` が見える → `openConversation` → `.mobile-tabbar` が `toBeHidden()`、`.inbox-send-area` の下端が画面の高さと ±1px で一致 → 戻るボタン（`backButton`）→ `.mobile-tabbar` がまた見える。
+4. 同じファイル :1417-1469 のカルテの試験は、会話を開いた後でメニューが隠れるため「覆う」の確かめ（:1450・:1461-1468）が意味を失う。:1450 と :1461-1468 を「`.mobile-tabbar` が `toBeHidden()`」の1行に置き換え、試験名を「スマホ: カルテが画面全体になる（下部タブバーは会話を開いた時点で隠れている）」に直す。:1449・:1455-1459 は変えない。
+
+### 13-6. 受入条件
+| # | 基準 | 検証方法 |
+|---|---|---|
+| N1 | 幅360の会話一覧で下のメニューが見える（今と同じ） | e2e :128 が通る。端末の写真 |
+| N2 | 会話を開くと下のメニューが見えず、入力欄の帯の下端が画面の下端（±1px） | §13-5-3 の e2e。端末の写真で帯の下にメニューが無い |
+| N3 | 戻るで一覧に戻るとメニューがまた見える | §13-5-3 の e2e |
+| N4 | ほかの画面へ移るとメニューが戻る | §13-5-1 の外す試験 |
+| N5 | PC 幅1280 は変わらない | e2e :772-792 が通る（MobileShell が描かれない） |
+| N6 | 秘書のチャット・在庫表など受信箱以外のスマホ画面は変わらない | `useHideMobileTabbar` の呼び出しが InboxPage.tsx の1か所だけ（`git grep -n useHideMobileTabbar`） |
+| N7 | check:all・stylelint・test:unit がすべて exit=0。CI が通る | 生出力 |
+| N8 | PO が端末の写真を本物と並べて見て合格（K9 と一緒） | PO の返事 |
+
+### 13-7. 想定される分かれ道（起きたら止めて報告）
+1. MobileShell.test.tsx の Outlet のモックのせいで §13-5-2 の子を描けない → 試験の生の出力を添えて止める。モックの書き換えは Opus が決める。
+   - **Opus の決定（2026-11-02、実装役の BLOCKED 報告を受けて）**: モックの書き換えを認める。形は次のとおり。ほかの形にしない。
+     - ファイル先頭の `vi.mock` より前に `const outletState = vi.hoisted(() => ({ child: null as React.ReactNode }));` を置く（`React` の型が無ければ `import type { ReactNode } from "react"` を使い `as ReactNode`）。
+     - :44 を `Outlet: () => <div data-testid="outlet">{outletState.child}</div>,` に変える。`data-testid="outlet"` は残す（既存の試験が使う）。
+     - 試験ごとに戻すため `afterEach(() => { outletState.child = null; })` を足す（同じファイルに afterEach が既にあればその中に1行足す）。
+     - 新しい1件は、`useHideMobileTabbar(true)` を呼んで `null` を返す小さな部品をファイル内に定義し、描画の前に `outletState.child = <その部品 />` を入れる。
+     - 既存の試験の中身・期待値は変えない。
+2. `.mobile-tabbar` が見えることを前提にしたほかの e2e（mobile-shell.spec.ts・inventory-raw-text-mobile.spec.ts）が落ちる → 試験名と生の出力を報告して止める（どちらも受信箱の会話を開かないので落ちない想定）。
+3. 会話を開いた後、入力欄の帯の下に隙間が残る、または帯が画面の外に出る → 計算した高さを報告して止める。
+4. lint の決まり（hooks の置き場・context の命名・`react-refresh/only-export-components` など）に止められる → 規則名と行を報告して止める。disable を足さない。
+
+### 13-8. 変更してよいファイル（§9 に足す）
+- frontend/src/hooks/useMobileTabbarHidden.ts（新規）・useMobileTabbarHidden.test.tsx（新規）
+- frontend/src/components/MobileShell.tsx・MobileShell.test.tsx・frontend/src/mobile-shell.css・frontend/src/components/PageLayout.css
+- frontend/src/pages/inbox/InboxPage.tsx
+- frontend/tests-e2e/visual-language/inbox-single-column.spec.ts
+- docs/adr/ADR-140-mobile-nav-bottom-tabs.md（追記は Opus が書く）
+
+### 13-9. 戻し方
+- この追補のコミットを戻す（revert）。下のメニューは今のとおり常に出る形に戻る。DB・API は触らない。
+
+### 13-10. Architect 整合検査（同じ AI による自己審査・1回）
+- 判定: **APPROVE（実装可能）**。
+- ADR-137（殻の分離）: 状態は MobileShell の中だけ。DesktopShell には Provider が無く、フックは何もしない。
+- ADR-140: 下のメニューの中身・順番・条件は変えない。会話を開いている間だけ隠す例外を ADR-140 に追記する（PO 2026-11-02 の言葉）。
+- データの置き場: 「会話を開いている」の正は selectedLeadId の1つ。InboxPage.tsx:158 の thread-open と同じ式を使い、URL や別の状態を増やさない。
+- ADR-067: 新しいトークンなし。値は既存の safe-area と 100dvh の形だけ。
+- ADR-144: 新しい部品の見た目なし。生の要素を足さない。
+- ADR-027: 新しい言葉なし。
+- 弊害: 会話を開いている間は「…」のメニューに直接行けない。戻る1回で一覧とメニューに戻る。WhatsApp と同じ動き。
+- 未確認: iPhone の safe-area の実測（手元に端末が無い）。Android の SC-51G で N2 を確かめる。
+
+## 14. 追補: スマホでは入力欄の案内文を出さず、Enter は改行にする（PO 2026-11-02）
+
+### 14-1. 目的と出どころ
+- PO（並べた写真 k9-side-v2-1 を見て）: 「メッセージ入力前の入力欄に()でEnterで送信、Shift+Enterで改行と表示されているがこれはPCでの画面のみ有効なのでスマホの入力欄には何も表示させなくて良い、空白」
+- PO（改行ボタンの扱いの3択に）: 「2」＝スマホでは改行ボタンで改行し、送信は送信ボタンだけにする。
+- PO: 「使い分け方はLINEとWhatsappと同じでいい」＝スマホは Enter で改行・送信はボタン、PC は Enter で送信・Shift+Enter で改行。
+
+### 14-2. 今の作り（bc37ef3bb で確認）
+- `frontend/src/pages/inbox/InboxMessageThread.tsx:108` `const isMobile = useIsMobile();`（767px 以下で true。768 のタブレットは false）
+- 同 :249-256 `handleKeyDownGuarded`: Enter（Shift なし・変換中でない）で `checkAndSend()`。それ以外は `handleKeyDown(e)`（`useInboxState.ts:867-872` も Enter で `submitSend()`）。スマホでも同じに動く。
+- 同 :795-801 案内文: `discordChannelMissing ? t("inbox.discordChannelMissing") : canSend ? t("inbox.messagePlaceholder") : t("inbox.sendDisabled7d")`
+- `ja.json:1288` / `en.json:1288` `inbox.messagePlaceholder` に Enter/Shift+Enter の説明が入っている。
+- 同 :845-852 送信ボタンの title にも `inbox.messagePlaceholder` を使う（ホバーの説明。スマホでは出ない）→ 今回は触らない。
+- Enter の動きを決めた ADR・仕様は無い（`git grep "Shift+Enter\|Enterで送信" docs/adr docs/specs` 0件）。
+
+### 14-3. 変更（変更前 → 変更後）
+1. :249-256
+   ```tsx
+   const handleKeyDownGuarded = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+     // スマホでは Enter は改行。送信は送信ボタンだけ（LINE・WhatsApp と同じ使い分け。PO 2026-11-02）
+     if (isMobile) return;
+     if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+       e.preventDefault();
+       checkAndSend();
+       return;
+     }
+     handleKeyDown(e);
+   }, [isMobile, checkAndSend, handleKeyDown]);
+   ```
+2. :795-801 の `canSend ? t("inbox.messagePlaceholder")` を `canSend ? (isMobile ? undefined : t("inbox.messagePlaceholder"))` に変える。送れない理由の2つ（discordChannelMissing・sendDisabled7d）はスマホでも出したまま。
+- 言葉（ja/en.json）・PC の動き・送信ボタン・`useInboxState.ts` は変えない。新しいトークン・部品なし。
+
+### 14-4. 試験（`frontend/tests-e2e/visual-language/inbox-single-column.spec.ts` に足す。既存の試験は変えない）
+- 「スマホ: 入力欄に案内文が出ず、Enter で改行され送信されない」（vl-mobile-390 のみ）: 会話を開く → textarea の placeholder 属性が無い（または空）→ `fill("a")`・`press("Enter")`・`type("b")` で値が `"a\nb"` → 送信の API がその間 0 回呼ばれる（呼ばれた回数は既存の送信モックに数えを足して確かめる。モックの場所は inbox-helpers を読んで決める）。
+- 「PC・タブレット: 案内文は今のまま出る」（vl-tablet-768・vl-desktop-1280）: placeholder が ja.json の `inbox.messagePlaceholder` と一致。
+- `send-guard-phase-a.spec.ts`（既定の幅）の Enter 送信の試験は変えずに通ること。
+
+### 14-5. 受入条件
+| # | 基準 | 検証方法 |
+|---|------|---------|
+| P1 | スマホ幅で入力欄の案内文が空 | 14-4 の e2e（CI の画面検査） |
+| P2 | スマホ幅で Enter は改行・送信 0 回 | 14-4 の e2e |
+| P3 | PC・タブレットの案内文と Enter 送信が今のまま | 14-4 の e2e ＋ send-guard-phase-a.spec.ts |
+| P4 | 実機 SC-51G で、何も打っていない入力欄が空白・改行ボタンで改行され送信されない | 評価係が実機で測る（送信の API はモック。本物の送信はしない） |
+| P5 | check:all・lint・tsc・unit が今のまま通る | 実装役の生の出力 |
+
+### 14-6. 想定される分かれ道（起きたら止めて報告）
+1. `TextareaControl` の型が placeholder に undefined を受けない → 型の生の出力を報告して止める（空文字や型の書き換えを勝手にしない）。
+2. 既存の e2e が「スマホで Enter 送信」を前提にして落ちる → 試験名と生の出力を報告して止める。
+3. 送信の API の呼ばれた回数を数える場所が inbox-helpers に無い → 今ある route を読んで数えを足す形を報告し、helpers の既存の動きを変えずに足せるならそのまま進める。変えずに足せないなら止める。
+
+### 14-7. 変更してよいファイル（§9・§13-8 に足す）
+- frontend/src/pages/inbox/InboxMessageThread.tsx
+- frontend/tests-e2e/visual-language/inbox-single-column.spec.ts（と、14-6-3 で必要なら同じフォルダの inbox-helpers）
+
+### 14-8. 戻し方
+- この追補のコミットを戻す（revert）。スマホも Enter で送信・案内文ありの今の形に戻る。DB・API は触らない。
+
+### 14-9. Architect 整合検査（同じ AI による自己審査・1回）
+- 判定: **APPROVE（実装可能）**。
+- 判定の正: スマホかどうかは既存の `useIsMobile()`（:108）の1つだけを使い、新しい判定を増やさない（ADR-137 の幅の境と同じ）。
+- ADR-027: 言葉の追加・変更なし。スマホで案内文を出さないだけ。
+- ADR-067 / ADR-144: 見た目・部品の追加なし。
+- 弊害: スマホで送るには送信ボタンを押す必要がある（PO の指示どおり）。外付けキーボードをつないだスマホでも Enter は改行になる。
+- 未確認: iPhone の改行ボタンの動き（手元に端末が無い）。
+
 END OF CARD
