@@ -165,7 +165,8 @@ async def test_unknown_fixture(allowed, monkeypatch):
         (503, {"code": "not_ready"}, 503, "not_ready"),
         (429, {"code": "busy"}, 429, "busy"),
         (504, {"code": "timeout"}, 504, "timeout"),
-        (502, {"code": "cli_failed"}, 502, "unreadable"),
+        (502, {"code": "cli_failed"}, 502, "agent_failed"),
+        (502, {"code": "auth_failed"}, 503, "auth_failed"),
         (502, {"code": "unreadable"}, 502, "unreadable"),
     ],
 )
@@ -241,10 +242,31 @@ async def test_cli_failed_is_logged_as_cli_failed(allowed, monkeypatch, caplog):
     with caplog.at_level(logging.INFO, logger=assistant.logger.name):
         resp = await allowed.post(URL, json={"text": "a"})
     assert resp.status_code == 502
-    assert resp.json()["detail"] == {"code": "unreadable"}
+    assert resp.json()["detail"] == {"code": "agent_failed"}
     lines = [r.getMessage() for r in caplog.records if "assistant_message" in r.getMessage()]
     assert len(lines) == 1
     assert "code=cli_failed" in lines[0]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "agent_code,expected_status,expected_detail,expected_log",
+    [
+        ("auth_failed", 503, "auth_failed", "code=auth_failed"),
+        ("unreadable", 502, "unreadable", "code=unreadable"),
+    ],
+)
+async def test_agent_502_codes_are_logged(
+    allowed, monkeypatch, caplog, agent_code, expected_status, expected_detail, expected_log
+):
+    _mock_agent(monkeypatch, _respond(502, {"code": agent_code}))
+    with caplog.at_level(logging.INFO, logger=assistant.logger.name):
+        resp = await allowed.post(URL, json={"text": "a"})
+    assert resp.status_code == expected_status
+    assert resp.json()["detail"] == {"code": expected_detail}
+    lines = [r.getMessage() for r in caplog.records if "assistant_message" in r.getMessage()]
+    assert len(lines) == 1
+    assert expected_log in lines[0]
 
 
 @pytest.mark.asyncio
