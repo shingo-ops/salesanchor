@@ -6,10 +6,11 @@
  *   2026-04-17: 初版作成（Phase 2）
  */
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
+import { useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
 import { usePermissions } from "../../hooks/usePermissions";
 import { getStatusPresentation } from "../../utils/statusPresentation";
 import { PageLayout } from "../../components/PageLayout";
@@ -17,7 +18,7 @@ import { ContentToolbar } from "../../components/ContentToolbar";
 import { Button } from "../../components/Button";
 import { ButtonLink } from "../../components/ButtonLink";
 import { TextFieldControl } from "../../components/TextField";
-import { LoadingBlock } from "../../components/loading";
+import { LoadingBlock, Spinner } from "../../components/loading";
 
 interface InvoiceItem {
   id: number;
@@ -115,31 +116,21 @@ export default function InvoiceDetailPage() {
   const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const { hasPermission } = usePermissions();
-  const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
-  const [disputes, setDisputes] = useState<PaypalDispute[]>([]);
+  const invoiceQ = useApiQuery<InvoiceDetail>(`/invoices/${id}`, { enabled: id !== undefined });
+  // ADR-101改訂(2) Inc4: 紐づく PayPal ケース（失敗しても本体表示は妨げない）
+  const disputesQ = useApiQuery<PaypalDispute[]>(`/invoices/${id}/paypal-disputes`, { enabled: id !== undefined });
+  const invoice = invoiceQ.data ?? null;
+  const disputes = disputesQ.data ?? [];
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
+  const shownError = error || (invoiceQ.error ? (invoiceQ.error instanceof Error ? invoiceQ.error.message : t("common.fetchError")) : "");
+  const invalidate = useInvalidateApi();
   const [voidReason, setVoidReason] = useState("");
   const [showVoidForm, setShowVoidForm] = useState(false);
   const [paymentDate, setPaymentDate] = useState<string>("");
 
-  const load = async () => {
-    try {
-      const data = await api.get<InvoiceDetail>(`/invoices/${id}`);
-      setInvoice(data);
-      // ADR-101改訂(2) Inc4: 紐づく PayPal ケース（失敗しても本体表示は妨げない）
-      try {
-        setDisputes(await api.get<PaypalDispute[]>(`/invoices/${id}/paypal-disputes`));
-      } catch { /* ケース取得失敗は無視 */ }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("common.fetchError"));
-    } finally {
-      setLoading(false);
-    }
+  const load = () => {
+    void invalidate(["invoices", id ?? ""]);
   };
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { load(); }, [id]);
 
   const doAction = async (action: string, body: unknown = {}) => {
     try {
@@ -189,8 +180,8 @@ export default function InvoiceDetailPage() {
     );
   };
 
-  if (loading) return <div className="page"><LoadingBlock /></div>;
-  if (!invoice) return <div className="page"><div className="error-message">{error || t("common.fetchError")}</div></div>;
+  if (invoiceQ.isPending) return <div className="page"><LoadingBlock /></div>;
+  if (!invoice) return <div className="page"><div className="error-message">{shownError || t("common.fetchError")}</div></div>;
 
   // 総重量 = Σ(数量 × 行重量)。
   const invoiceTotalWeight = invoice.items.reduce((s, it) => s + it.quantity * (it.weight ?? 0), 0);
@@ -199,6 +190,7 @@ export default function InvoiceDetailPage() {
     <PageLayout
       titleText={`${t("invoices.title")} — ${invoice.invoice_number || `#${invoice.id}`}`}
       subtitleKey="invoices.detailSubtitle"
+      headerLeft={invoiceQ.isFetching && !invoiceQ.isPending ? <Spinner size="sm" /> : undefined}
       >
         <ContentToolbar
           right={
@@ -232,7 +224,7 @@ export default function InvoiceDetailPage() {
           }
         />
 
-      {error && <div className="error-message">{error}</div>}
+      {shownError && <div className="error-message">{shownError}</div>}
 
       {invoice.paypal_approval_url && invoice.status !== "paid" && (
         <div style={{ border: "1px solid var(--border)", padding: "var(--space-3)", borderRadius: "var(--radius-lg)", marginBottom: "var(--space-4)" }}>

@@ -9,7 +9,11 @@ export interface CloseReasonResponse {
   created_at: string;
 }
 
+/** 失注・成約の理由の一覧の path（画面の写しの名前もここで決まる・ADR-1054） */
+export function closeReasonsPath(type: "won" | "lost" = "lost") {
+  return `/close-reasons?${new URLSearchParams({ type }).toString()}`;
+}
+
 export function getCloseReasons(type: "won" | "lost" = "lost") {
-  const params = new URLSearchParams({ type });
-  return api.get<CloseReasonResponse[]>(`/close-reasons?${params.toString()}`);
+  return api.get<CloseReasonResponse[]>(closeReasonsPath(type));
 }
