@@ -25,6 +25,7 @@ from app.auth.dependencies import require_super_admin
 from app.database import get_db
 from app.routers._utils import log_hidden_error
 from app.schemas.central_masters import (
+    NOTE_MATCH_TYPES,
     TcgNoteMasterCreate,
     TcgNoteMasterResponse,
     TcgNoteMasterUpdate,
@@ -81,6 +82,10 @@ def _parse_note_master(raw: bytes) -> tuple[list[dict], list[str]]:
         except ValueError:
             errors.append(f"L{line_num}: invalid priority '{priority_raw}' (must be integer)")
             continue
+        match_type = (raw_row.get("match_type") or "").strip() or "LITERAL"
+        if match_type not in NOTE_MATCH_TYPES:
+            errors.append(f"L{line_num}: invalid match_type '{match_type}' (must be one of {list(NOTE_MATCH_TYPES)})")
+            continue
         rows.append({
             "label_ja": label_ja,
             "label_en": (raw_row.get("label_en") or "").strip() or None,
@@ -89,7 +94,7 @@ def _parse_note_master(raw: bytes) -> tuple[list[dict], list[str]]:
             "exclude_keywords": (raw_row.get("exclude_keywords") or "").strip() or "",
             "category": (raw_row.get("category") or "").strip() or None,
             "priority": priority,
-            "match_type": (raw_row.get("match_type") or "").strip() or "",
+            "match_type": match_type,
             "search_pattern": (raw_row.get("search_pattern") or "").strip() or "",
             "label_template": (raw_row.get("label_template") or "").strip() or None,
             "label_template_en": (raw_row.get("label_template_en") or "").strip() or None,

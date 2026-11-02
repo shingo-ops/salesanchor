@@ -5425,7 +5425,8 @@
       "REGEX": "Regex",
       "LITERAL": "Literal",
       "DEFAULT": "Default",
-      "RELEASE": "Release date"
+      "RELEASE": "Release date",
+      "STATE_LITERAL": "Literal (memo and state)"
     },
     "enabled": {
       "true": "Enabled",
