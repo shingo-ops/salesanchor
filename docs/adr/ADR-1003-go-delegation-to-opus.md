@@ -129,4 +129,4 @@ PO が合意した設計の作業手順に書かれた操作は、Claude Opus �
 
 ### 機械での反映
 
-Claude Code の自動の安全判定に、許可の行を1つ足す（~/.claude/settings.json の autoMode.allow）。文面は docs/handoff/standing-prod-ops-delegation/design.md「足す許可の行の文面」を正とする。権限の記録帳（ADR-1034）には、この PR 番号を根拠として記録する。自分の権限を広げる設定の変更は自動判定が止めるため、反映は PO が `!` で1回だけ行う。
+Claude Code の自動の安全判定に、許可の行を1つ足す（~/.claude/settings.json の autoMode.allow）。文面は docs/handoff/standing-prod-ops-delegation/design.md「足す許可の行の文面」を正とする。本番の容器の再起動を止める今の行（autoMode.soft_deny）は残し、条件を満たす手順書の行を「PO の決定」に当たると書き足す（文面は同じ design.md「書き換える止める行の文面」）。権限の記録帳（ADR-1034）には、足した1件と書き換えた1件を、この PR 番号を根拠として記録する。自分の権限を広げる設定の変更は自動判定が止めるため、反映は PO が `!` で1回だけ行う。

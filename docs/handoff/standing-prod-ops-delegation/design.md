@@ -25,8 +25,18 @@ PO が設計で合意した作業を、本番サーバーの段で PO の手を�
 ~/.claude/settings.json の autoMode.allow に、次の1行をそのまま足す（PO の `!` で1回）。
 
 ```
-STANDING-PROD-1（常設・PO 2026-11-02 決定・ADR-1003 追記 2026-11-02・PR #5020）: PO と会話している手元のメインの会話の Claude Opus だけは（サブエージェント・クラウドの依頼・定期実行はモデルを問わず含めない）、~/.ssh/manual-only/id_ed25519 で ubuntu@49.212.137.46（prod1）と ubuntu@49.212.160.98（prod2）へ ssh し、PO の決定を記録した設計（design.md・ADR）に属する作業手順（RUNBOOK・カード）に書かれ、審査役（reviewer・model opus）が APPROVE した版と一字一句同じ行を実行してよい。その設計に危ない操作の表と PO 承認の原文があり、操作が表に載っていること。書き込み・停止・再起動を含む（ファイルの配置と片付け、docker compose の起動・再起動・一時コンテナ、プロセスの停止、DB の接続切り、手順書に書かれた台本と SQL、backup.sh）。書き込み・停止・再起動の前に控えを取り、実行ごとに ~/CC報告ファイル-keep/prod-ops/YYYYMMDD.md に記録する。含まない: 手順書に無い行と値を書き換えた行、表やスキーマの削除・条件の無い削除や大量の削除・TRUNCATE、ファイルの一括削除、Docker volume の削除、仕組みの秘密（サーバーの鍵・DB のパスワード・API キー・トークン）の表示や作成や変更、アプリ利用者のパスワードの値を画面に出すこと、SSH とファイアウォールの設定の変更、人間の鍵の変更、閲覧者のアカウントの操作、見張りと権限の設定の変更、結果が手順書の想定と違ったあとの次の操作。
+STANDING-PROD-1（常設・PO 2026-11-02 決定・ADR-1003 追記 2026-11-02・PR #5020）: PO と会話している手元のメインの会話の Claude Opus だけは（サブエージェント・クラウドの依頼・定期実行はモデルを問わず含めない）、~/.ssh/manual-only/id_ed25519 で ubuntu@49.212.137.46（prod1）と ubuntu@49.212.160.98（prod2）へ ssh し、PO の決定を記録した設計（design.md・ADR）に属する作業手順（RUNBOOK・カード）に書かれ、審査役（reviewer・model opus）が APPROVE した版と一字一句同じ行を実行してよい。その設計に危ない操作の表と PO 承認の原文があり、操作が表に載っていること。書き込み・停止・再起動を含む（ファイルの配置と片付け、docker compose の起動・再起動・一時コンテナ、プロセスの停止、DB の接続切り、手順書に書かれた台本と SQL、backup.sh）。書き込み・停止・再起動の前に控えを取り、実行ごとに ~/CC報告ファイル-keep/prod-ops/YYYYMMDD.md に記録する。含まない: 手順書に無い行と値を書き換えた行、ADR-1003 の例外の各項目（表・列・スキーマの削除を含む）、条件の無い削除や大量の削除・TRUNCATE、ファイルの一括削除、Docker volume の削除、仕組みの秘密（サーバーの鍵・DB のパスワード・API キー・トークン）の表示や作成や変更、アプリ利用者のパスワードの値を画面に出すこと、SSH とファイアウォールの設定の変更、人間の鍵の変更、閲覧者のアカウントの操作、見張りと権限の設定の変更、結果が手順書の想定と違ったあとの次の操作。
 ```
+
+## 書き換える止める行の文面
+今の設定には、本番の容器の再起動を止める行がある（recon.md「今の自動の安全判定の止める行」、記録用の番号 a2585405）。この行は「PO の決定なしには」止める、という意味なので残す。そのうえで、上の許可の行の条件を満たす手順書の行が「PO の決定」に当たることを書き足す。それ以外の再起動は、今までどおり止まる。PO の `!` の台本で、次の文面にそのまま置き換える（元の文面と一字一句同じ行が無ければ、台本は何も変えずに止まる）。
+
+```
+Bash(docker compose restart *) — container restarts on prod are forbidden without PO decision; the default Remote Shell Writes rule may not fully cover docker compose restart on prod hosts specifically. A restart line that is written in a PO-agreed design runbook and meets every condition of STANDING-PROD-1 (ADR-1003 addendum 2026-11-02), run by the main Opus session only, counts as a PO decision; every other restart stays blocked.
+```
+
+## PO への説明（条件3・受け入れたリスク）
+2026-11-02 の会話の返事で、普通の言葉で説明する。説明すること: ①担当（ほかの AI）が無制限鍵を使っても機械では止まらない ②気づくのは毎週の照合で、最大1週間遅れる ③本番の容器の再起動を止める行を、合意した手順書の行に限って通す形に書き換える。PO が台本を実行することを、この説明への承認とする。
 
 ## 受入条件
 | 基準 | 検証方法 |
@@ -34,7 +44,8 @@ STANDING-PROD-1（常設・PO 2026-11-02 決定・ADR-1003 追記 2026-11-02・P
 | AGENTS.md の無制限鍵の行に委任の一文があり、「条件・除外・記録の形は同 ADR」と書かれている | `git show origin/main:AGENTS.md` で該当行を読む（○×） |
 | ADR-1003 に条件6つ・除外・毎週の照合・受け入れたリスクが書かれている | `git show origin/main:docs/adr/ADR-1003-go-delegation-to-opus.md` で見出し4つを読む（○×） |
 | 設定に足した行が、上の「足す許可の行の文面」と一字一句同じ | PO の `!` の台本が sha256 の先頭8桁を出す。設定から読み直した行の8桁と一致（○×） |
-| 記録帳に、足した1件がこの PR 番号を根拠に記録される | permission-changes.jsonl の最後の行の po_ref が `PR#5020`（○×） |
+| 記録帳に、足した1件と書き換えた1件がこの PR 番号を根拠に記録される | permission-changes.jsonl の最後の2行の po_ref が `PR#5020`（add と modify。○×） |
+| 止める行が上の「書き換える止める行の文面」と一字一句同じ | 台本が出す8桁と、設定から読み直した行の8桁が一致（○×） |
 | 手順書に無い行の実行が0件 | 毎週の照合の1つ目。prod-ops の各行の文面と、記録した SHA の手順書の行を照らし、違いの件数（0件で○） |
 | 説明できない無制限鍵のログインが0件 | 毎週の照合の2つ目。本番2台の auth.log* の時刻と、prod-ops の記録・会話の記録を並べた件数（0件で○） |
 
