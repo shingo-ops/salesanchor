@@ -65,24 +65,34 @@ async function renderLoaded() {
   return inventoryCalls();
 }
 
-describe('InventoryPage auto refresh (ADR-1016 revision 2026-10-18)', () => {
-  it('tcg.inventory signal -> one more /inventory fetch after 5 seconds', async () => {
+describe('InventoryPage auto refresh (ADR-1016 revision 2026-11-02)', () => {
+  it('tcg.inventory signal -> one more /inventory fetch after 1.5 seconds', async () => {
     const before = await renderLoaded();
     act(() => handler({ topic: 'tcg.inventory', origin: null }));
-    await act(async () => { await vi.advanceTimersByTimeAsync(4_900); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_400); });
     expect(inventoryCalls()).toBe(before);
     await act(async () => { await vi.advanceTimersByTimeAsync(200); });
     expect(inventoryCalls()).toBe(before + 1);
   });
 
-  it('three signals within 5 seconds -> one reload', async () => {
+  it('three signals within 1.5 seconds -> one reload', async () => {
     const before = await renderLoaded();
     act(() => handler({ topic: 'tcg.inventory', origin: null }));
-    await act(async () => { await vi.advanceTimersByTimeAsync(2_000); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(500); });
+    act(() => handler({ topic: 'tcg.inventory', origin: null }));
+    await act(async () => { await vi.advanceTimersByTimeAsync(500); });
     act(() => handler({ topic: 'tcg.inventory', origin: null }));
     await act(async () => { await vi.advanceTimersByTimeAsync(2_000); });
+    expect(inventoryCalls()).toBe(before + 1);
+  });
+
+  it('largest page offset -> reload by 2.5 seconds, not before 2.4 seconds', async () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0.999);
+    const before = await renderLoaded();
     act(() => handler({ topic: 'tcg.inventory', origin: null }));
-    await act(async () => { await vi.advanceTimersByTimeAsync(6_000); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(2_400); });
+    expect(inventoryCalls()).toBe(before);
+    await act(async () => { await vi.advanceTimersByTimeAsync(100); });
     expect(inventoryCalls()).toBe(before + 1);
   });
 
