@@ -74,9 +74,9 @@ ADR-1003 追記「弊害と対処」を正とする。主なもの: 担当のセ
 - 守り手: 毎週の同意と権限の点検で行う照合2つ（ADR-1003 追記「毎週の照合」）。記録の置き場所は `~/CC報告ファイル-keep/prod-ops/`、点検の記録は `~/CC報告ファイル-keep/consent-weekly/`。許可の行の足し引きは `scripts/dev/consent-audit.py` が記録帳と照らす。
 - 解除: PO の「委譲停止」。
 
-## 追補（2026-11-03）: 照合2の道具（草案・PO 未承認）
+## 追補（2026-11-03）: 照合2の道具（PO 承認済み）
 
-根拠: recon.md「追補（2026-11-03）」。PO 2026-11-03「1」（入室と会話の記録を自動で照らす道具の設計を始める）。作るのは PO の承認の後。
+根拠: recon.md「追補（2026-11-03）」。PO 2026-11-03「1」（入室と会話の記録を自動で照らす道具の設計を始める）。PO 2026-11-03「1」（この設計で作る。作業の指示書を書いてクラウドの AI に作らせ、先週分で正しく分けられるかを確かめてから見せる）。実装カード: card-login-match.md。
 
 ### 目的と成功条件
 - 目的: 毎週の照合の2つ目（無制限鍵の入室を会話の記録で説明する）を、Opus の手作業から道具に替える。手作業では1週 1,000 回を超える入室を照らせない（recon.md: 委任前の1週 1,226 回）。
@@ -121,7 +121,7 @@ ADR-1003 追記「弊害と対処」を正とする。主なもの: 担当のセ
 | 要確認: 記録なし | 重なる呼び出しが1つも無い | 説明できない（行を出す） |
 
 ### 出力
-- 置き場所: ~/CC報告ファイル-keep/consent-weekly/ の「日付-prod-login-check.md」（今の手作業の記録と同じ所）。
+- 置き場所: 道具は画面に出すだけで、手順の行でファイルに残す。~/CC報告ファイル-keep/consent-weekly/ の「日付-prod-login-match.md」（今の手作業の記録「日付-prod-login-check.md」と同じ所で、上書きしない名前）。
 - 中身: 分類ごと・サーバーごとの件数、委任の後だけの件数、「説明できない」の各行（日本時間の時刻・サーバー・会話の id の先頭8桁・分類・呼び出しの時刻）。呼び出しの文面は書かない（秘密が入りうるため）。最後の行に `UNEXPLAINED_AFTER_DELEGATION=<件数>`。
 - 終わりの番号: 委任の後に説明できない入室が1件でもあれば 1、0件なら 0、入力が読めなければ 2。
 
@@ -129,8 +129,9 @@ ADR-1003 追記「弊害と対処」を正とする。主なもの: 担当のセ
 ```
 ssh prod1 "zgrep -h 'Accepted publickey' /var/log/auth.log /var/log/auth.log.[1-4]*" | grep 'eqhoH1iM3' > ~/CC報告ファイル-keep/consent-weekly/YYYYMMDD-auth-prod1.txt
 ssh prod2 "zgrep -h 'Accepted publickey' /var/log/auth.log /var/log/auth.log.[1-4]*" | grep 'eqhoH1iM3' > ~/CC報告ファイル-keep/consent-weekly/YYYYMMDD-auth-prod2.txt
-cd ~/.salesanchor-tools && python3 -I -B scripts/dev/consent-audit.py --prod-logins ~/CC報告ファイル-keep/consent-weekly/YYYYMMDD-auth-prod1.txt ~/CC報告ファイル-keep/consent-weekly/YYYYMMDD-auth-prod2.txt --since <前回の点検の時刻> --until <今> --mac-ip 49.128.148.145
+cd ~/.salesanchor-tools && python3 -I -B scripts/dev/consent-audit.py --prod-logins --auth prod1=$HOME/CC報告ファイル-keep/consent-weekly/YYYYMMDD-auth-prod1.txt --auth prod2=$HOME/CC報告ファイル-keep/consent-weekly/YYYYMMDD-auth-prod2.txt --since <前回の点検の時刻> --until <今> --mac-ip 49.128.148.145 > ~/CC報告ファイル-keep/consent-weekly/YYYYMMDD-prod-login-match.md
 ```
+- 入室のファイルに `prod1=` `prod2=` の名前を付けるのは、auth.log の行の機体名（`os3-322-50792` の形）からはどちらのサーバーか分からないため（2026-11-03 カード作成時に実物で確認）。
 - 1・2行目の ssh 自体も入室として数えられ、「説明済み: メインの会話」に入る。
 
 ### 代替案
@@ -174,7 +175,7 @@ cd ~/.salesanchor-tools && python3 -I -B scripts/dev/consent-audit.py --prod-log
 ### 設計審査（2026-11-03・同じ AI の自己審査で、独立した第二者の審査ではない）
 - 判定: APPROVE（実装カードの材料として足りる）。
 - 根拠: 受入条件は全部、道具の出力の件数か終わりの番号で○×が決まる。分類の境目は試作4・5の実データ（recon.md）で確かめた。読み方の正本は consent-audit.py の既存の関数で、2か所に分けない。
-- 審査で直した点: heredoc を一律に数えない形だと `bash <<EOF` で実行される ssh を見落とすため、書くだけの heredoc に限った。KPI の基準値の「約1時間」は測っていないので、試作の本数に替えた。
+- 審査で直した点: heredoc を一律に数えない形だと `bash <<EOF` で実行される ssh を見落とすため、書くだけの heredoc に限った。KPI の基準値の「約1時間」は測っていないので、試作の本数に替えた。カード作成時（2026-11-03）に、入室のファイルへ名前を付ける形（`--auth LABEL=PATH`）と、出力を画面に出して手順の行でファイルに残す形に直した（上の「出力」「手順の行」）。
 
 ### 未解決（PO の判断は要らないが、作る前に確かめること）
 - 会話の記録が消える時期（recon.md【未確認】）。
