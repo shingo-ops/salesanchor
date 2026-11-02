@@ -4,12 +4,13 @@
  * 売上目標対比 + 新規/リピート内訳 + 粗利
  */
 
-import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { PageLayout } from "../../components/PageLayout";
-import { getRevenueSummary, type RevenueSummaryResponse } from "../../api/funnel";
+import { FUNNEL_MOCK, revenueSummaryPath, type RevenueSummaryResponse } from "../../api/funnel";
 import "./FunnelRevenuePage.css";
-import { LoadingBlock } from "../../components/loading";
+import { LoadingBlock, Spinner } from "../../components/loading";
+import { useApiQuery } from "../../lib/query/apiQuery";
+import { MOCK_REVENUE_SUMMARY } from "../../mocks/funnelFixtures";
 
 function fmtMoney(n: number): string {
   return `¥${n.toLocaleString("ja-JP")}`;
@@ -23,20 +24,14 @@ function achievementRate(actual: number, target: number): number {
 export default function FunnelRevenuePage() {
   const { t } = useTranslation();
 
-  const [data, setData] = useState<RevenueSummaryResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-
   const currentMonth = (() => {
     const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   })();
 
-  useEffect(() => {
-    setLoading(true);
-    getRevenueSummary(currentMonth)
-      .then(setData)
-      .finally(() => setLoading(false));
-  }, [currentMonth]);
+  const revenueQ = useApiQuery<RevenueSummaryResponse>(revenueSummaryPath(currentMonth), { enabled: !FUNNEL_MOCK });
+  const data: RevenueSummaryResponse | null = FUNNEL_MOCK ? MOCK_REVENUE_SUMMARY : revenueQ.data ?? null;
+  const loading = !FUNNEL_MOCK && revenueQ.isPending;
 
   if (loading) {
     return (
@@ -62,6 +57,7 @@ export default function FunnelRevenuePage() {
     <PageLayout
       navKey="nav.dashboard"
       subtitleKey="funnel.revenuePageTitle"
+      headerLeft={revenueQ.isFetching && !revenueQ.isPending ? <Spinner size="sm" /> : undefined}
     >
       <div className="frp-grid">
 

@@ -182,6 +182,11 @@ export function channelsPath(month: string, scope?: "mine"): string {
   return `/analytics/channels?${params}`;
 }
 
+/** 成約・失注の理由の path（画面の写しの名前もここで決まる・ADR-1054） */
+export function reasonsPath(type: "won" | "lost", month: string): string {
+  return `/analytics/reasons?${new URLSearchParams({ type, month })}`;
+}
+
 export const WEEKLY_ADVISOR_DEFENSIVE_PATH = `/analytics/weekly-advisor-defensive?${new URLSearchParams({ scope: "mine", period: "3m" })}`;
 
 export const PRIORITY_PROSPECTS_PATH = `/analytics/priority-prospects?${new URLSearchParams({ scope: "mine" })}`;
@@ -214,7 +219,7 @@ export function getReasons(
 ): Promise<ReasonsResponse> {
   if (MOCK_MODE)
     return Promise.resolve(type === "won" ? MOCK_REASONS_WON : MOCK_REASONS_LOST);
-  return api.get<ReasonsResponse>(`/analytics/reasons?type=${type}&month=${month}`);
+  return api.get<ReasonsResponse>(reasonsPath(type, month));
 }
 
 export interface LeadConversionFactorItem {

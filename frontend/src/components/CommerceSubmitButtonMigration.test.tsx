@@ -7,6 +7,7 @@ import InvoiceCreatePage from '../pages/invoice-create/InvoiceCreatePage';
 import ProductEditPage from '../pages/products/ProductEditPage';
 import QuoteCreatePage from '../pages/quote-create/QuoteCreatePage';
 import en from '../locales/en.json';
+import { queryClient } from '../lib/query/apiQuery';
 
 const mock = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() }));
 vi.mock('../lib/api', async (importOriginal) => ({ ...(await importOriginal<typeof import('../lib/api')>()), api: mock }));
@@ -60,7 +61,7 @@ beforeEach(async () => {
   mock.patch.mockImplementation(() => { throw new Error('Unexpected PATCH'); });
   mock.delete.mockImplementation(() => { throw new Error('Unexpected DELETE'); });
 });
-afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+afterEach(() => { cleanup(); queryClient.clear(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 describe('commerce submit Button migration contracts', () => {
   it.each([
