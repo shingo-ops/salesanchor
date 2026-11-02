@@ -18,6 +18,7 @@ from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import set_tenant_context
+from app.discord_gateway import outside_ticket_notice
 from app.services.inbound_translation import enqueue_inbound_translation
 from app.services.message_translator import infer_original_language
 
@@ -183,11 +184,14 @@ async def process_ticket_channel_message(
             channel_id=channel_id,
         )
         if lead is None:
-            logger.warning(
-                "[discord-gateway] ticket channel lead not found tenant=%s ch=%s msg=%s",
+            logger.info(
+                "[discord-gateway] outside ticket channel tenant=%s ch=%s msg=%s",
                 tenant_id,
                 channel_id,
                 message_id,
+            )
+            await outside_ticket_notice.notify_outside_ticket_post(
+                db, tenant_id=tenant_id, message=message
             )
             return True
 
