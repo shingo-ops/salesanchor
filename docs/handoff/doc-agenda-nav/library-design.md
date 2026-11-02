@@ -178,7 +178,7 @@ open_when: commit・PR を作る前
 - L2 ＝ `L2_CHANNEL` ＋ `L2_DUP_LEDGER` ＋ `L2_DUP_ID` ＋ `L2_DUP_LINE`。合格は 0。`L2_UNTAGGED`＝0 も合格の条件（別の行）。
 - **今後の言い直しは機械では見つからない。** 見張りは2つ: (1) `L2_UNTAGGED`＝0 を毎週見る（新しい見出しが台帳の外に増えない）。(2) 90日ごとの K12 の測り直しの日に、Opus が目録・本・表示を読み比べて言い直しを台帳に足す（§7）。見つけたら `L2_DUP_LEDGER` が増え、次の週次点検で NG になるので、消す台本を PO に見せる。
 - 除外: 目録の行（`^- 本:` で始まる）・frontmatter・見出しだけの行・`@` の行は `L2_DUP_LINE` で数えない。除外は「ファイル:文言」の組で台帳に理由付きで書く（design §32 D1 の K3 と同じ流儀。語ごとの除外はしない）。
-- 台帳は本文を含まないのでリポジトリに置ける: `docs/handoff/doc-agenda-nav/library-ledger.md`（列: `R-nn`｜節の名前｜所在（`ファイル:見出し:行番号`。複数可）｜種別（目録/本/表示/paths）｜移した段）。節の名前と行番号だけ書き、本文は書かない（要件の冒頭の決まり）。行番号はその所在のファイルの今の行番号（見出しの行。言い直しの対は対の文がある行）。ファイルの行が動く段（段1 で chat-format.md が 11〜31 → 1〜21）では、その段の台帳更新で行番号も直す。所在の見出しは完全一致で照合する（`L2_UNTAGGED` の突き合わせに使う。行番号は照らさない）。対にした文そのもの（言い直しの (a)(b)）はリポジトリに書かず、写しのフォルダ `~/CC報告ファイル-keep/doc-library-20261102/pairs.txt`（列: `R-nn`｜消す側のファイル:行番号｜消す側の文｜残す側のファイル:行番号）に残す。段1b・1c で消えたことは、台帳の行番号（`diff` の左側の番号）と `pairs.txt` の文（`grep -F` で0件）の両方で実物と照らす。
+- 台帳は本文を含まないのでリポジトリに置ける: `docs/handoff/doc-agenda-nav/library-ledger.md`（列: `R-nn`｜節の名前｜所在（`ファイル:見出し:行番号`。複数可）｜種別（目録/本/表示/paths）｜移した段）。節の名前と行番号だけ書き、本文は書かない（要件の冒頭の決まり）。行番号はその所在のファイルの今の行番号（見出しの行。言い直しの対は対の文がある行）。ファイルの行が動く段（段1 で chat-format.md が 11〜31 → 1〜21）では、その段の台帳更新で行番号も直す。所在の見出しは完全一致で照合する（`L2_UNTAGGED` の突き合わせに使う。行番号は照らさない）。対にした文そのもの（言い直しの (a)(b)）はリポジトリに書かず、写しのフォルダ `~/CC報告ファイル-keep/doc-library-20261102/pairs.txt`（列: `R-nn`｜消す側のファイル:行番号｜消す側の文｜残す側のファイル:行番号。列の区切りはタブ。1行目は列の名前。消えたことの確かめは `tail -n +2 pairs.txt | cut -f3 | grep -cFf - <実物>` が 0。review-3 R2）に残す。段1b・1c で消えたことは、台帳の行番号（`diff` の左側の番号）と `pairs.txt` の文（`grep -F` で0件）の両方で実物と照らす。
 
 ### 4-2. 毎週の点検に入れる
 
@@ -213,7 +213,7 @@ open_when: commit・PR を作る前
 - `~/kb` の中の変更は要件 §7 により PO の明示承認と save.sh が要る。設計は台本（§9）までにする。
 - 確かめ方（L4）:
   1. 表示: その段の実行の直前に `printf '{"prompt":"x"}' | python3 ~/kb/scripts/hooks/plain-lang/hook.py prompt > before.txt`（段ごとに取り直す。前の段の after.txt を使い回さない）。変更後に同じ命令で after.txt。`diff` の前に before.txt・after.txt のそれぞれで、`wc -l` が 0 でなく、`grep -Fc '## 言葉の選び方'` が 1 であることを確かめる（両方が空・両方が誤りの出力なら差 0 でも何も確かめていないため）。段1 は `diff before.txt after.txt` が差 0。段1c は差が消した文だけ（`diff` の出力行が `pairs.txt` の消す側の文と一致し、その文を `grep -F` すると実物で0件。§4-1）。
-  2. 返事の後の点検（`hook.py stop`）: 読む先（`plainlang.py`・`words.txt`）が変わらないので壊れない。確かめは §16 1〜3・§17 1 の事実に合わせて行う。(a) `-p` の実行では点検しないので `PLAIN_LANG_CHECK=force` を付ける（§16 2）。(b) 印と記録（`stop.log`・`rewrite/`・`detail/`）は `PLAIN_LANG_HOME`（無ければ `~/.cache/plain-lang`）の下に書かれ、`~/kb` の中ではない（§17 1）。だから作業用の空フォルダ（例 `~/CC報告ファイル-keep/doc-library-20261102/plain-lang-home`）を作って `PLAIN_LANG_HOME` に指定し、本番の記録にも `~/kb` にも書かない。(c) 命令: `printf '{"session_id":"doclib-test","stop_hook_active":false,"last_assistant_message":"<長すぎる文を1つ含む偽の返事>"}' | PLAIN_LANG_HOME=<作業用の空フォルダ> PLAIN_LANG_CHECK=force python3 ~/kb/scripts/hooks/plain-lang/hook.py stop > stop-before.txt`。段の後に同じ命令で stop-after.txt。(d) 前・後のそれぞれで3つ確かめる: 流す前に `<作業用の空フォルダ>/detail/doclib-test` と `rewrite/doclib-test` が無い（あれば点検が飛ばされる。§16 1）／流した後に `rewrite/doclib-test` ができる（点検が本当に走った印。§16 3）／出力が空でない。(e) 前の回の後に作業用フォルダの中身を消してから後の回を流す（同じ `session_id` の印が残ると後の回が点検されず、同じ出力でも何も確かめていないことになる）。(f) `diff stop-before.txt stop-after.txt` が差 0。(g) 終わったら作業用フォルダを消す（`~/kb` の外なので PO の承認は要らない。§17 1）。
+  2. 返事の後の点検（`hook.py stop`）: 読む先（`plainlang.py`・`words.txt`）が変わらないので壊れない。確かめは §16 1〜3・§17 1 の事実に合わせて行う。(a) `-p` の実行では点検しないので `PLAIN_LANG_CHECK=force` を付ける（§16 2）。(b) 印と記録（`stop.log`・`rewrite/`・`detail/`）は `PLAIN_LANG_HOME`（無ければ `~/.cache/plain-lang`）の下に書かれ、`~/kb` の中ではない（§17 1）。だから作業用の空フォルダを前の回・後の回で別々に `mktemp -d` で2つ作って `PLAIN_LANG_HOME` に指定し、本番の記録にも `~/kb` にも書かない（review-3 R3）。判定に使う `words.txt` は `plainlang.py:11` の `WORDS_FILE = os.environ.get("PLAIN_LANG_WORDS") or os.path.join(HERE, "words.txt")` で、スクリプトの隣にあり `home()` の下ではない（段0 に Opus が確かめた。`PLAIN_LANG_HOME` に左右されない）。(c) 命令: `printf '{"session_id":"doclib-test","stop_hook_active":false,"last_assistant_message":"<長すぎる文を1つ含む偽の返事>"}' | PLAIN_LANG_HOME=<作業用の空フォルダ> PLAIN_LANG_CHECK=force python3 ~/kb/scripts/hooks/plain-lang/hook.py stop > ~/CC報告ファイル-keep/doc-library-20261102/<段>/stop-before.txt`（出力は作業用フォルダの外の写しのフォルダに書く）。段の後に、後の回用のもう1つの空フォルダで同じ命令を流して stop-after.txt。(d) 前・後のそれぞれで3つ確かめる: 流す前に `<作業用の空フォルダ>/detail/doclib-test` と `rewrite/doclib-test` が無い（あれば点検が飛ばされる。§16 1）／流した後に `rewrite/doclib-test` ができる（点検が本当に走った印。§16 3）／出力が空でない。(e) 後の回は前の回と別の空フォルダで流す（同じ `session_id` の印が残ると後の回が点検されず、同じ出力でも何も確かめていないことになるため。中身を消す手順は置かない）。(f) `diff stop-before.txt stop-after.txt` が差 0。(g) 作業用フォルダは `rm -rf` を使わずに残す（`mktemp -d` の一時フォルダなので OS が片付ける。消すなら中のファイルを1つずつ `rm` してから `rmdir`。review-3 R3）。
   3. 実物: 手元の `claude -p "いま表示されている『言葉の選び方』の最初の1行をそのまま引用して" --no-session-persistence` の答えに表示の1行目が出る（design §28 T6 と同じ形。フックが本当に走ったことの根拠は claude の答えだけなので、1 を主にする）。
   4. 段1 の実行の直前にもう一度: `grep -n '^## ' ~/kb/00-rules/chat-format.md` が 11 だけ、`hook.py prompt` の出力の表示部分が21行。ずれていれば止めて、要件 §3 の試しの値（6.7k）を使わずに測り直す（§15 の後にファイルが変わった場合の備え）。
 
@@ -259,7 +259,7 @@ open_when: commit・PR を作る前
 - 変更後: chat-layout.md（1〜10行）を `@` で読み込み、chat-format.md は 11〜31行だけ残してフックが表示（1回ずつ）。
 - 見込み（根拠）: **K9 6.7k**（要件 §3 の試し「区切り方の10行だけ読む」の実測値そのもの。§15 で別の `## ` が無いと分かったので使える）。K1 194（表示値。weekly-check は字下げ `@` をまだ数えない）／204（定義どおり。225 − 31 ＋ 10）。`L2_CHANNEL` 1 → 0。
 - 実行の直前の確かめ: §6 の 4（`grep -n '^## '` が 11 だけ、表示が21行）。
-- 台本（やる人は1人に決める: (1)〜(6) の全部を PO が同じ作業の中で続けて行う。(3) の1行も PO が直す。Opus は card に命令を1行ずつ書いて渡し、PO の実行後に diff を照合する。設計は手順だけ。(2)〜(4) は続けて終え、区切り方がどこからも読まれない時間を作らない）: (1) 写し `cp ~/kb/00-rules/chat-format.md ~/.claude/CLAUDE.md <写し>/`。(2) `sed -n 1,10p` の出力で chat-layout.md を作る。(3) `~/.claude/CLAUDE.md` 27行目の `@` の向き先を chat-layout.md に変える（この行だけ。この行は「報告の型」の節（12〜35行目）の中にある（§17 3）ので P1 の承認に含める。報告の型の箇条の文は変えない。design §29-4 の「触らない範囲」からの例外はこの1行の向き先だけ）。(4) chat-format.md を `sed -n 11,31p` の出力で置き換える。(5) `cat ~/kb/00-rules/chat-layout.md ~/kb/00-rules/chat-format.md | diff - <写し>/chat-format.md` が差 0（K11）。`diff <写し>/CLAUDE.md ~/.claude/CLAUDE.md` の差が27行目の1行だけ。(6) save.sh。(7) 台帳の更新（docs の PR）: 区切り方の所在を chat-layout.md に、chat-format.md の行番号を 11〜31 → 1〜21 に直す。
+- 台本（やる人は1人に決める: (1)〜(6) の全部を PO が同じ作業の中で続けて行う。(3) の1行も PO が直す。Opus は card に命令を1行ずつ書いて渡し、PO の実行後に diff を照合する。設計は手順だけ。(2)〜(4) は続けて終え、区切り方がどこからも読まれない時間を作らない）: (1) 写し `cp ~/kb/00-rules/chat-format.md ~/.claude/CLAUDE.md <写し>/`。(2) `sed -n 1,10p` の出力で chat-layout.md を作る。(3) `~/.claude/CLAUDE.md` 27行目の `@` の向き先を chat-layout.md に変える（この行だけ。この行は「報告の型」の節（12〜35行目）の中にある（§17 3）ので P1 の承認に含める。報告の型の箇条の文は変えない。design §29-4 の「触らない範囲」からの例外はこの1行の向き先だけ）。(4) chat-format.md を `sed -n 11,31p` の出力で置き換える。(5) `cat ~/kb/00-rules/chat-layout.md ~/kb/00-rules/chat-format.md | diff - <写し>/chat-format.md` が差 0（K11）。`diff <写し>/CLAUDE.md ~/.claude/CLAUDE.md` の差が27行目の1行だけ。(6) save.sh。(7) 台帳の更新（docs の PR）: 区切り方の所在を chat-layout.md に、chat-format.md の行番号を 11〜31 → 1〜21 に直す。写しのフォルダの `pairs.txt` の行番号とファイル名も同じように直す（Opus。review-3 R1）。
 - 戻し方: 写しから chat-format.md と `~/.claude/CLAUDE.md` を戻し、chat-layout.md を消す（全部 PO が行う。`~/kb` 側は save.sh）。
 - 測り方: K9（1回）。`L2_CHANNEL=0`。L4 は §6 の確かめ方 1・2・3。
 
@@ -338,7 +338,7 @@ open_when: commit・PR を作る前
 | 本は場面で開かれる | §7 の練習問題を段3 の後に1回（8実行）。値は記録だけ（合否に使わない） |
 | 点検が毎週走る | 次の月曜 16:00 の定期実行の保存先 `~/CC報告ファイル-keep/doc-entry-weekly/<YYYYMMDD>.txt` に `L2=`・`L2_UNTAGGED=`・`L3_MATCH=`・`BOOKS_IMPORTED=`・`BOOKS_IN_CONTEXT=` の行がある |
 | 試験 | `test_doc_entry_weekly_check.sh`（段2a の7つの場合を含む）・`test_doc_library_check.sh`（§4-2 の各場合。`L2_CHANNEL=unreadable`・`BOOKS_IN_CONTEXT=skipped`・`K1_DEF` の3つの場合を含む）が全件 PASS |
-| 文書が実物と合う | 台帳 `library-ledger.md` の所在と、`grep -rn '\[R-' ~/.claude/books ~/kb/00-rules` の結果（本の中の番号）と、対象ファイルの `grep -n '^##'` の見出しと行番号（台帳の所在）が一致（Opus が手元で照合） |
+| 文書が実物と合う | 台帳 `library-ledger.md` の所在と、`grep -rn '\[R-' ~/.claude/books ~/kb/00-rules` の結果（本の中の番号）と、対象ファイルの `grep -n '^##'` の見出しと行番号（台帳の所在）が一致。見出しでない言い直しの行は `grep -nF <pairs.txt の文> <ファイル>` の行番号が台帳と `pairs.txt` の両方と一致（Opus が手元で照合。review-3 R1・R2） |
 
 ## 10. リスクと対処
 
@@ -362,7 +362,8 @@ open_when: commit・PR を作る前
 | P6 | `~/kb` の変更（台本）・選択 | 選択肢1（おすすめ。L2＝0 を文字どおりに満たす）: chat-format.md 後半から報告の型と同じ趣旨の文を消す（対は段0 の台帳と `pairs.txt` で確定してから示す）。報告の型の箇条の文は変えない。選択肢2: 両方残し、台帳の除外に理由を書く（L2 は除外つきの 0 になる） | 段1c |
 | — | 変えないもの | settings・許可・フック本体（H1 は不要と分かった。§14 1）・agent-console の定期実行（既存の週次点検が新しい行を出すだけ）・本番・製品コード・リポジトリの入口（CLAUDE.md・AGENTS.md）・`~/.claude/CLAUDE.md` の報告の型の箇条の文（27行目の `@` の向き先だけは P1 で変える） | — |
 | — | 告知（承認不要。設計全体の承認に含む） | 段3 の後、担当の呼び方（agents.md の3つの決まり）は目録の行を読んで本を開いたときだけ読まれる。review-gate はフックが止める（§14 5）。呼び忘れは §7 の「開かれなかった」で数える | 段3 |
-| — | 告知（承認不要） | §6 の 2 の `hook.py stop` の確かめは `PLAIN_LANG_HOME` の作業用フォルダに印を書き、本番の記録にも `~/kb` にも書かない（§17 1）。終わったらそのフォルダを消す | 段1 |
+| — | 告知（承認不要） | §6 の 2 の `hook.py stop` の確かめは `PLAIN_LANG_HOME` の作業用フォルダに印を書き、本番の記録にも `~/kb` にも書かない（§17 1）。フォルダは `mktemp -d` で前後別々に作り、`rm -rf` は使わない | 段1 |
+| — | 告知（承認不要。review-3 R6） | 段0 から段1c まで、週次点検は L2 で `RESULT=NG`（`NEEDS_DECISION`）になる。真の状態で、P1・P5・P6 の save.sh 待ちを示す。段0 の台帳で言い直しの3件目（R-94。何のためかを2回問い直す決まりが `~/kb/AGENTS.md` と表示の両方にある）が見つかった。どちらを消すかは段1c の前に P6 と一緒に PO に示す | 段0〜段1c |
 
 消した項目: P3（L3 の読み替え）は §5 を文字どおりの形にしたので不要。H1（hook.py が行番号で切っている場合の直し）は §14 1 で見出しで切っていると分かったので不要。番号は飛ばしたまま（前の版との対応を残す）。
 
