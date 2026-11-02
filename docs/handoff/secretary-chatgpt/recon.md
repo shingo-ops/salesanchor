@@ -14,17 +14,25 @@
 ## 1. アプリの中で AI が働く仕事（5つ）【事実】
 | 仕事 | 使う AI | モデルの決まり方 | 根拠 |
 |---|---|---|---|
-| LINE解析 | Gemini（API キー） | コード固定 `_GEMINI_MODEL = "gemini-3.1-flash-lite"` | `backend/app/services/gemini_extraction_svc.py:283`。読む所: 同 417・424・507・512、`gemini_raw_copy_v8.py:219-222`、`line_analysis_v102_svc.py:31,453,480`、`tcg_work_comparison_svc.py:100`、`tools/prompt_ab.py:39,597`（recon2.txt・recon4.txt） |
+| LINE解析 | Gemini（API キー） | コード固定 `_GEMINI_MODEL = "gemini-3.1-flash-lite"` | `backend/app/services/gemini_extraction_svc.py:283`。読む所: 同 417・424・507・512、`gemini_raw_copy_v8.py:219-222`、`line_analysis_v102_svc.py:31,453,480`、`tcg_work_comparison_svc.py:100`、`backend/app/tools/prompt_ab.py:39,597`（recon2.txt・recon4.txt）。試験の読み手: `test_gemini_raw_copy_v8.py:268`・`test_tcg_work_comparison.py:227`（review2_verify.txt） |
 | 受信の和訳 | Gemini | 環境変数 `TRANSLATION_MODEL_RECEIVE`、既定 gemini-3.5-flash-lite | `backend/app/services/message_translator.py:49,485` |
 | 和訳の取り直し | Gemini | 環境変数 `TRANSLATION_MODEL_SEND` | `message_translator.py:50,505-523` |
 | 送信の英訳 | Gemini | 環境変数 `TRANSLATION_MODEL_SEND` | `message_translator.py:50,644` |
+- 翻訳のモデル名を読む所（全件・review2_verify.txt）: 本体 `message_translator.py:49-50,485,505,508,513-516,523,644`、`__all__` の `:739-740`。試験 `test_message_translator.py:33-34,563,567`、`test_message_translator_usage_ledger.py:21-22,69,79-81,149`。説明文 `:10-12` の既定値の記載は今のコードと合っていない。
+- 和訳の取り直しは `model != MODEL_SEND` のときだけ起きる（`:505`）。今の既定は両方 gemini-3.5-flash-lite なので、既定のままなら取り直しは起きない（`test_message_translator_usage_ledger.py:79-80` の注記）。【未確認】本番で環境変数が設定されているか・値。
+- 翻訳の失敗は `_call_gemini`（`:358-388`）が LLMParseError を上げる。解析の失敗の分け方は `_classify_error`（`gemini_extraction_svc.py:213-222`）。
+- `DEFAULT_MODEL = "gemini-3.5-flash-lite"`（`llm_budget.py:89`）は `calculate_cost`（`:134`）と `record_cost`（`:424`）の model の既定値、`__all__` の `:500`。
 | 秘書チャット | Claude Code（月額契約） | 容器の中に固定 `--model sonnet` | `secretary-agent/server.mjs:70` |
 - Gemini の鍵は `GEMINI_API_KEY` 1つを解析と翻訳で共用（`gemini_extraction_svc.py:262`、`message_translator.py:117`）。
 - 料金表は `backend/app/services/llm_budget.py:57-89`（Gemini 5モデル）。
 
 ## 2. 使用量の記録（llm_usage_events・ADR-1004）【事実】
 - 表を作る migration: `migrations/20260930_150000_create_llm_usage_events.sql:46-52`。purpose と sdk を CHECK で固定（sdk は google-genai・google-generativeai だけ）。
-- 書く関数は成功した呼び出しの使用量だけを書く（`llm_budget.py:230-330`。列は使用量と費用。成否・失敗の理由の列は無い）。
+- 書く関数は成功した呼び出しの使用量だけを書く（`llm_budget.py:230-330`。列は使用量と費用。成否・失敗の理由の列は無い）。書く関数は commit しない（呼び出し元の取引の中。review1_verify.txt）。
+- コード側の同じ一覧: `USAGE_PURPOSES`・`USAGE_SDKS`（`llm_budget.py:159-171`）。画面の一覧: `KNOWN_PURPOSES`（`frontend/src/pages/super-admin/components/LlmUsageSection.tsx:151-158`、使う所 `:331`）。
+- 予算は別の表: `record_cost` が `public.tenant_llm_budgets.current_month_usd` に足し（`llm_budget.py:420-447`）、`check_budget` はその表だけを読む。llm_usage_events は予算に使われていない。
+- llm_usage_events を読む集計: `backend/app/routers/tcg_analysis_dashboard.py:475,495,509`（抽出の試行との LEFT JOIN）、`:678`（`_LLM_USAGE_WHERE`）、`:705-706`（review2_verify_b.txt）。
+- 本番に出す流れ: deploy.yml はコードの切り替え・celery 再起動を migration より先に行う（`migrations/20260930_150000_create_llm_usage_events.sql:15-24` の記載と deploy.yml）。
 - 本番（読み取り専用の鍵で 2026-11-02 に集計・raw_usage_all.txt）: line_extraction 4,155 行（9/27〜11/2、直近7日 675）、line_extraction_shadow 7,085 行。翻訳の3つは0行。秘書は書いていない（ADR-1056 What 最後）。
 - 【未確認】翻訳が0行なのは「使われていない」か「書かれていない」か。
 
@@ -33,6 +41,9 @@
 - AI ごとのログインの状態・担当・切り替えを出す画面は無い。
 - システム全体の設定表の前例: `public.extraction_prompt_config`（`migrations/20260926_080000_create_extraction_prompt_config.sql:11-37`、編集口 `backend/app/routers/super_admin_suppliers.py:1030-1110`）。
 - 使える金型（`frontend/src/components/`）: Card・DataTable・Select・Badge・Tabs・Modal・ConfirmModal・Callout・EmptyState・Button ほか（recon6.txt）。
+- ConfirmModal は中で Modal を使う（`ConfirmModal.tsx:37`）。Modal は Esc を document で受けて閉じる（`Modal.tsx:73-79`）→ 重ねると1回の Esc で両方閉じる。
+- スーパー管理の守り: `require_super_admin`（`backend/app/auth/dependencies.py:539-564`、前例 `super_admin_llm_budget.py:89-91`）。即時反映の表 `backend/app/realtime/topics.py`（書く道は全部載せる。前例 `:368`）。
+- 利用者の表 `backend/app/models.py:23-37`（full_name・email・is_super_admin）。
 
 ## 4. 秘書の容器（今）【事実】
 - `secretary-agent/server.mjs:49-118`: 呼ぶたびに空の一時フォルダを作り、cwd・HOME・CLAUDE_CONFIG_DIR に使う。標準エラーは捨てる。401 なら auth_failed。同時1本（18,143）。80秒で打ち切り（13,86-89）。
