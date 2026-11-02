@@ -223,6 +223,21 @@ PO の言葉: 「LINEみたいな使い心地は出来る？」（意味は「�
 - 作業指示書: docs/handoff/line-like-speed/batch3c-card.md（第 1 版）。受入はカードの §5 B1〜B7。結果はこの節の後に書き足す。
 - 審査: クラウドの審査役（Opus・routine batch3c card review v1・2026-11-02 10:24Z）が e09e6a620 で APPROVE。S の写しで §4 の変更前の行がすべて一致（ALL OLD LINES MATCH）。当てた後の tsc・eslint は出力 0・exit 0。vitest は全部で 188 files / 2081 tests passed。新しい試験の 8 件は、画面を S に戻すと 8 件とも落ちた（空振りでない）。
 
+#### 3-4-15-a. 段 3 の 3 回目の本番の受入（2026-11-02 Claude Opus が確かめた）
+- B1・B2 は合格。PR #5028 の必須の確認 16 件すべて pass。process-artifacts gate の最新の実行が cancelled のままで合流が止まり、やり直して success になった。
+- B3 は合格。merge 5ac6f1c85 の変更は 14 ファイル（757 行足し・147 行消し）。migrations/・backend/・scripts/・.github/ は 0。
+- B4 は合格（本線 9fd25171a で確かめた）。`new QueryClient` は frontend/src/lib/query/apiQuery.ts:23 の 1 行だけ。`staleTime:` は 0 行。persist は 0 行。
+- B7 は合格。PR #5028 は 2026-11-02 19:59 JST に main へ入った（merge 5ac6f1c85）。deploy.yml run 41433211553 は 20:06 JST に success。本番の /invoices と /management-center/tenant-profile が開き、ブラウザの誤りの記録は 0 件（設計担当の Chrome）。
+- B5 は合格。prod-ui-check を 2 回動かした。
+  - 1 回目 run 41434498398（測った日時 20:13:10 JST）。8 行すべて K1 0.01 秒・K2 0.1〜0.2 秒・403 と 5xx は 0 件。ただし対象外の /inventory が K2 2.1 秒（いちばん遅い API /api/v1/inventory が 1.8 秒）で、ほかの行の条件（K2 の最大と 2 秒超えの数が悪化しない）に当たらなかった。/inventory は今回触っていない（B3）。
+  - 一度だけの揺れかを見るため、何も変えずに 2 回目 run 41436620985（測った日時 20:28:04 JST）を動かした。8 行すべて K1 0.01〜0.02 秒・K2 0.2 秒・403 と 5xx は 0 件。/inventory は K2 1.4 秒（API 1.0 秒）で、基準 run 41409815435 の最大 1.4 秒と同じ。2 秒を超えた画面は 0 件。135 画面すべて測れた。全行の 5xx 0。受入は 2 回目で判定した。
+  - 対象の 8 行の K1 は、基準 run 41409815435 で 0.16〜0.17 秒だった。
+  - 生の行の抜き書きは設計担当の手元の /tmp/CC報告ファイル/batch3c/measure-run41434498398-extract.txt と measure-run41436620985-extract.txt（リポジトリには入れない）。
+- B6 は DB の件数だけ確かめた。本番の読むだけの道（ADR-1024）で tenant 001 の仕入先（public.suppliers の tenant_id=1）1 件・チーム 1 件・自社在庫 0 件・請求書 1 件（入金済・取消なし）・承認済みの見積 0 件。
+  - 設計担当の Chrome の /invoices は「請求書が登録されていません」だった。この Chrome がどのテナントでログインしているかは、まだ確かめていない。そのため画面の件数はまだ確かめていない。一覧の API（backend/app/routers/invoices.py:185）は状態の指定が無い時に行を絞らない。backend は変えていない（B3）。
+- K5 は本番で 2 人のログインでは確かめていない（本番でパスワードを打たない決まり）。カードの試験と、写しの名前に利用者が入る作りで確かめた。
+- 残り: 2 回目で K1 を測れた画面（403 なし）のうち、0.1 秒を超えた画面は 0 画面（最大は /lead-chat 0.04 秒）。戻った時の秒を見分けられなかった画面は /inventory と /account/settings（10 秒で見分けられず）と /admin/products/:id/edit（2 回目は「行き先と同じ形」・1 回目は 0.19 秒）。
+
 ### 3-5. 測り方（|基準|検証方法|）
 | 基準 | 検証方法 |
 |---|---|
