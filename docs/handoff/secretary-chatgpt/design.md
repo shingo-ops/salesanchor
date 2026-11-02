@@ -40,7 +40,7 @@
     - outcome と error_code の「ok なら error_code は NULL、failed なら NOT NULL」は2つの列にまたがる。列の制約として PostgreSQL 16 が受け付けるかは【未確認】。§7 1a の2回流しの試験で確かめる。受け付けない時は表の制約として名前を付け、`pg_constraint` にその名前が無い時だけ足す DO の塊にする（審査8回目 N3）。
 - provider は3つに閉じる: CHECK (provider IN ('gemini','codex','claude'))。
 - job_key は5つに閉じる: CHECK (job_key IN ('line_extraction','translation_inbound','translation_inbound_escalation','translation_outbound','secretary_intent'))。llm_usage_events の purpose と同じ名前にし、記録と担当を名前でつなぐ。
-- 初めの行は今の本番の値。解析は gemini-3.1-flash-lite（`gemini_extraction_svc.py:283`）、秘書は claude/sonnet（`secretary-agent/server.mjs:70`）。翻訳3つは本番の環境変数 `TRANSLATION_MODEL_RECEIVE`・`TRANSLATION_MODEL_SEND` の実際の値（コードの既定は両方 gemini-3.5-flash-lite、`message_translator.py:49-50`）。【未確認】本番で環境変数が設定されているか・その値 → 実装カードの前に確かめる（§13-1）。
+- 初めの行は今の本番の値。解析は gemini-3.1-flash-lite（`gemini_extraction_svc.py:283`）、秘書は claude/sonnet（`secretary-agent/server.mjs:70`）。翻訳3つは本番の環境変数 `TRANSLATION_MODEL_RECEIVE`・`TRANSLATION_MODEL_SEND` の実際の値（コードの既定は両方 gemini-3.5-flash-lite、`message_translator.py:49-50`）。本番では2つとも設定されていない（2026-11-03 PO が読み取りだけの台本で backend の容器 astro-webapp-backend-1 を確かめた。生出力 `prod_translation_env.txt`）。よって翻訳3つの初めの行は gemini / gemini-3.5-flash-lite（料金表 `LLM_PRICING` にある。`llm_budget.py:81`）。
 - 選択肢の最初の行（PO 決定 2026-11-02「1」）:
   - line_extraction: gemini / gemini-3.1-flash-lite の1行だけ（解析は固定。増やす時は先に正答率を測ってから migration で足す）。
   - translation_inbound・translation_inbound_escalation・translation_outbound: gemini / 料金表にある5モデル（`llm_budget.py:57-88`）。
@@ -233,7 +233,7 @@ GitHub の一時 VM（sandbox-test）で、compose と同じ条件（read_only�
 - 使っていない。理由: 今回の判断はこのアプリの中の配線と、Codex CLI の実際の動き（手元の試験 recon §5-2・§5-2 の VM 試験）で決まり、他社の数値で決める点が無いため。
 
 ## 13. 実装カードの前に済ませること
-1. 本番の `TRANSLATION_MODEL_RECEIVE`・`TRANSLATION_MODEL_SEND` が設定されているか・値（モデル名だけ。ほかの行は読まない）を確かめ、§4-1 の初めの行に書く。
+1. （済・2026-11-03 両方とも未設定→既定の gemini-3.5-flash-lite。§4-1）本番の `TRANSLATION_MODEL_RECEIVE`・`TRANSLATION_MODEL_SEND` が設定されているか・値（モデル名だけ。ほかの行は読まない）を確かめ、§4-1 の初めの行に書く。
    - 途中の事実（2026-11-03 読み取りの道 ai_ro で確かめた。生出力 `prod_models_by_purpose.tsv`・`prod_translation_all.tsv`）: `llm_usage_events` に purpose が translation で始まる行は期間を問わず0行。直近30日は line_extraction 3615行・line_extraction_shadow 6081行で、どちらも gemini-3.1-flash-lite。翻訳の書き込み（`record_usage_event`）は 2026-09-30 の 3400ea80b から成功のたびに書く作りなので、本番の翻訳はそれ以降 Gemini の呼び出しが1回も成功していない（呼ばれていないのか失敗しているのかは【未確認】。翻訳の保存先 message_translations は ai_ro に無く読めない）。そのため翻訳の実際のモデルは記録からは分からず、backend の容器の環境変数を読む必要がある。`TRANSLATION_MODEL_*` は compose・deploy.yml に無い（`git grep` で `message_translator.py` だけ）。
 2. （草案済み・`docs/adr/ADR-1058-ai-job-assignments.md`・Proposed）ADR-1058 の本文を起案する（ADR-1056 の置き換え部分・解析の選択肢を増やす決まり・失敗の記録・error_code の一覧）。
 3. （済）同期セッションの工場: 共通の物は無い。新しく作らず呼び手の session に書く形にした（§4-2-3）。
