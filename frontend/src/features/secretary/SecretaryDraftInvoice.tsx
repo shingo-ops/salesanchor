@@ -35,9 +35,15 @@ function isValidQuantity(value: string): boolean {
   return /^\d+$/.test(value.trim()) && Number(value) >= 1;
 }
 
+/** 保存側は小数 2 けたまで（backend/app/schemas/invoice.py:35）。"1e-7" のような書き方も 3 けた以上とみなす */
+function hasTooManyDecimals(value: string): boolean {
+  const trimmed = value.trim();
+  return /\.\d{3,}$/.test(trimmed) || /e-/i.test(trimmed);
+}
+
 function isValidUnitPrice(value: string): boolean {
   const trimmed = value.trim();
-  return trimmed !== "" && Number.isFinite(Number(trimmed)) && Number(trimmed) >= 0;
+  return trimmed !== "" && Number.isFinite(Number(trimmed)) && Number(trimmed) >= 0 && !hasTooManyDecimals(trimmed);
 }
 
 export function SecretaryDraftInvoice({ draft, candidates, onCreated, onCancel }: Props) {
@@ -71,6 +77,7 @@ export function SecretaryDraftInvoice({ draft, candidates, onCreated, onCancel }
     items.length > 0 &&
     items.every((i) => i.name.trim() !== "" && isValidQuantity(i.quantity) && isValidUnitPrice(i.unitPrice));
   const priceMissing = items.some((i) => i.unitPrice.trim() === "");
+  const priceTooPrecise = items.some((i) => hasTooManyDecimals(i.unitPrice));
   const customerReady = customer.companyId !== null && customer.contactId !== null;
   const canCreate = itemsValid && customerReady && !saving;
 
@@ -157,6 +164,7 @@ export function SecretaryDraftInvoice({ draft, candidates, onCreated, onCancel }
               label={t("secretary.invoice.unitPrice")}
               type="number"
               min={0}
+              step={0.01}
               value={item.unitPrice}
               onChange={(e) => updateItem(index, { unitPrice: e.target.value })}
             />
@@ -170,6 +178,7 @@ export function SecretaryDraftInvoice({ draft, candidates, onCreated, onCancel }
           {t("secretary.invoice.addItem")}
         </Button>
         {priceMissing && <p className="secretary-draft__hint">{t("secretary.priceRequired")}</p>}
+        {priceTooPrecise && <p className="secretary-draft__hint">{t("secretary.priceDecimals")}</p>}
       </div>
 
       <div className="secretary-draft__section">

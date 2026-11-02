@@ -92,7 +92,16 @@ function runClaude(text, now) {
     child.on("error", () => finish(502, { code: "cli_failed" }));
     child.on("close", (exitCode) => {
       if (settled) return;
-      if (exitCode !== 0) return finish(502, { code: "cli_failed" });
+      if (exitCode !== 0) {
+        // 鍵が使えないとき claude は exit 1 で、標準出力の JSON に api_error_status 401 を出す（fix1/recon.md 1-1）
+        let code = "cli_failed";
+        try {
+          if (JSON.parse(out).api_error_status === 401) code = "auth_failed";
+        } catch {
+          // 読めなければ cli_failed のまま
+        }
+        return finish(502, { code });
+      }
       try {
         const parsed = JSON.parse(out);
         let intent = parsed.structured_output;
