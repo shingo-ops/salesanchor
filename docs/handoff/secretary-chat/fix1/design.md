@@ -77,7 +77,7 @@ PO が秘書に頼んで失敗したとき、画面の文言で本当の理由�
 ## 6. 計画
 1 枚のカード（docs/handoff/secretary-chat/fix1/card.md）で Sonnet が実装 → 審査役 Opus → CI → マージ → 配備 → 配備後の確かめ（A9）。
 
-## 維持の仕組み
+## 7. 維持の仕組み
 - 守り手: .github/workflows/test.yml（backend の対応の試験 backend/tests/test_assistant_router.py）と .github/workflows/e2e.yml（画面の試験 frontend/src/features/secretary/SecretaryChat.test.tsx）。容器の試験 secretary-agent/server.test.mjs は CI で走らないため、手元で流した生の出力を PR に添える。
 - 3 か所（容器・backend・画面）の code の対応は、それぞれの試験（server.test.mjs・test_assistant_router.py・SecretaryChat.test.tsx）で固定する。
 - backend（test.yml）と画面（e2e.yml）の試験は CI で走る。容器の試験 server.test.mjs を流す CI は無い（.github/workflows/ で secretary-agent を指すのは deploy.yml だけ）。なので容器の試験は、実装役と審査役が手元で `node --test` を流し、生の出力を PR に添える。CI に入れるかは別の件として残す（この直しには足さない）。

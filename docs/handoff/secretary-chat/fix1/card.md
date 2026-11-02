@@ -2,7 +2,7 @@
 
 親: docs/handoff/secretary-chat/fix1/design.md（第2版）／ recon: docs/handoff/secretary-chat/fix1/recon.md ／ ADR-1056・ADR-027・ADR-144・ADR-067
 状態: 設計担当（Opus）作成。実装は Sonnet。成功条件 PO 承認 2026-11-02「1」。
-作業場所: ブランチ `release/secretary-error-message`（origin/main d97928fa7 から作成済み）。設計文書 3 つと親設計の注記はこのブランチに入っている（実装役は親設計を触らない）。
+作業場所: 設計の書類 PR #5009（ブランチ `release/secretary-error-message`）がマージされた後の origin/main から、新しいブランチ `release/secretary-fix1-impl` を `bash scripts/new-worktree.sh release/secretary-fix1-impl --claude` で作る（クラウドで作業するときは origin/main から同じ名前のブランチを作る）。#5009 のブランチには push しない。設計の書類（fix1/ と親設計）は触らない。
 
 ## 0. 始める前に
 - `./scripts/dev/executor-preflight.sh || exit 1`。`frontend/CLAUDE.md`・`docs/CC_UI_GOVERNANCE.md` を読む。
@@ -101,7 +101,7 @@ function hasTooManyDecimals(value: string): boolean {
 | 金型外 | `BASE_SHA=$(git merge-base origin/main HEAD) HEAD_SHA=HEAD node scripts/check-ui-governance.js` |
 | 言葉 | ja/en の `secretary` のキー差 0 件。`frontend/CLAUDE.md` の grep セルフチェックで直書き 0 件 |
 | ダーク | `cd frontend && npm run check:dark-parity` |
-| 触らない範囲 | `git diff --name-only origin/main...HEAD` が 1 の表のファイルと fix1/ の 3 つと親設計 design.md だけ |
+| 触らない範囲 | `git diff --name-only origin/main...HEAD` が 1 の表のファイルだけ（fix1/ の書類と親設計 design.md は含まない） |
 
 ## 5. 想定分岐（迷ったら止まる）
 - :95 や :103-111 の中身が上の「前」と違う → `BLOCKED:`。
