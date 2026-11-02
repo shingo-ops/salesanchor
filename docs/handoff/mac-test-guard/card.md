@@ -27,7 +27,7 @@ AI が Mac の Bash で重い試験（npm test・vitest・playwright test・pyte
 
 ### guard.py（標準ライブラリのみ・python3）
 - 先頭コメント1行: `# 設計: docs/handoff/mac-test-guard/design.md §3〜§6`
-- ref-mac-vm-guard.py.txt の `strip_heredoc_bodies`・`split_parts`・`tokens`・`drop_redirections`・`log_event`・`consume_permit`・`main` と全体の流れをそのまま写す。変えるのは次だけ。
+- 手本 ~/.claude/scripts/mac-vm-guard.py（写し ref-mac-vm-guard.py.txt は使用後に削除）の `strip_heredoc_bodies`・`split_parts`・`tokens`・`drop_redirections`・`log_event`・`consume_permit`・`main` と全体の流れをそのまま写す。変えるのは次だけ。
   - `MSG` は design.md §4 の文を一字一句そのまま。
   - `PERMIT_OP = 'mac test'`。
   - 記録の `hook` は `'mac-test-guard'`。記録先の上書き用の環境変数名は `MAC_TEST_GUARD_LOG`。券の理由文は `'mac test permit consumed'`。

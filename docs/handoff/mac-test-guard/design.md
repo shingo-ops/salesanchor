@@ -35,7 +35,7 @@
   - ~/.claude/agents/evaluator.md:126・:131 の手元の qa-smoke の手順は本件では書き換えない（変更は一度に1つ）。入れた後に打たれると止まり、案内文で GitHub へ誘導される。
 
 ## 3. 止める形（判定の正本はこの表）
-命令を引用符の外の `; && || |` 改行で分け、各部分の先頭語で判定する（`sudo`・`env`・`time`・`VAR=` は飛ばす。絶対パスは末尾名で見る）。分け方・ヒアドキュメント本文の除き方・`bash -c` の1段の再判定は mac-vm-guard.py の split_parts・strip_heredoc_bodies・bad_part と同じにする。
+命令を引用符の外の `; && || |` 改行で分け、各部分の先頭語で判定する（`sudo`・`env`・`time`・`nohup`・`VAR=` は飛ばす。`timeout` は旗と時間の1語も、`nice` は `-n 数`・`-数` も一緒に飛ばす。これらは何度重なっても飛ばす。絶対パスは末尾名で見る）。分け方・ヒアドキュメント本文の除き方・`bash -c` の1段の再判定は mac-vm-guard.py の split_parts・strip_heredoc_bodies・bad_part と同じにする。
 
 | 先頭語 | 判定 | 止める例 | 止めない例 |
 |---|---|---|---|
@@ -47,7 +47,7 @@
 | `pytest`・`py.test` | 止める | `pytest backend/tests` | — |
 | `python`・`python3`（版付きも） | `-m pytest` なら止める | `python3 -m pytest` | `python3 scripts/tests/test_x.py`、`python3 -I scripts/ci/check_doc_index.py` |
 | `uv` | `run` の後に `pytest` か `python -m pytest` なら止める | `uv run pytest` | `uv run ruff check` |
-| `docker`（`compose ... exec/run ...`） | 残りの語に上の止める形が含まれれば止める | `docker compose exec -T backend pytest` | `docker compose ps` |
+| `docker`（`compose ... exec/run ...`） | `exec`・`run` の後の旗（`-e`・`--env`・`-u`・`--user`・`-w`・`--workdir`・`-v`・`--volume`・`--name`・`--entrypoint`・`-p`・`--publish`・`-l`・`--label`・`--index` は値の1語も）を飛ばし、次の1語（サービス名）を飛ばした残りを1つの命令として、この表で見直す（1段） | `docker compose exec -T backend pytest`、`docker compose run --rm -e X=1 backend python -m pytest` | `docker compose ps`、`docker compose exec backend pip show pytest` |
 | `bash`・`sh`・`zsh` | `-c` の文字列を同じ規則で再判定（1段） | `bash -c "npm test"` | `bash scripts/dev/check-before-submit.sh` |
 | その他（`echo`・`grep`・`git`・`cat`・`node`） | 止めない | — | `git push`、`node --test scripts/tests/x.js` |
 
@@ -84,7 +84,7 @@ Claude Code 公式の hooks 仕様（PreToolUse で exit 2 は命令を止め、
 - リスク: ①`npm run test:*` の名前で試験でないものを止める → 両リポジトリの package.json の test で始まる名前は test:e2e・test:e2e:ui・test:e2e:install・test:e2e:vl・test:unit・test:coverage（frontend/package.json:11-14,44-45）と test:e2e（agent-console）。install だけ除外すれば残りはすべて試験。②評価する係の手元の手順が止まる → 想定どおり（案内文で GitHub へ）。
 - 未解決: なし（PreToolUse の公式の出典は §8 で確認済み）。
 - 判定: APPROVE（KGI T1〜T6 は PO 承認済み。実装カード card.md を発行）。
-- 審査役（opus・新しく起動）2026-11-02: REQUEST_CHANGES 2点 → 直した。①§3 に pnpm・yarn の行が無く card と食い違い → §3 に行を足した。②§5「AI の券の作成は既存の見張りで止まる」が事実と違う → §5・T5 を事実に合わせた（見張りの外であることを明記）。任意の指摘: qa-smoke の行番号 :11→:12 を直した。install.sh の写す前の書き込み戻し、`timeout`・`nice` を前に付けた形の止めそこねは、実装の審査で確かめる。
+- 審査役（opus・新しく起動）2026-11-02: REQUEST_CHANGES 2点 → 直した。①§3 に pnpm・yarn の行が無く card と食い違い → §3 に行を足した。②§5「AI の券の作成は既存の見張りで止まる」が事実と違う → §5・T5 を事実に合わせた（見張りの外であることを明記）。任意の指摘: qa-smoke の行番号 :11→:12 を直した。install.sh の写す前の書き込み戻し、実装の審査（2026-11-02 Opus、手元で test_guard.py 52/52 を確認後に追加の命令を流した）で、`timeout 600 npx vitest run`・`nice npm test`・`nohup pytest` が通り、`docker compose exec backend echo vitest` が止まることを観測 → §3 の飛ばす語と docker の行を直し、直しをクラウドの担当に頼んだ（card-fix1.md）。
 
 ## 11. 維持の仕組み
 - 守り手: PreToolUse の見張り mac-test-guard（手元の全セッション・審査役・評価する係に自動で効く）。点検は Opus（T6）。

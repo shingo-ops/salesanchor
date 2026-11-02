@@ -11,7 +11,7 @@
 
 ## 1. 既存 ADR・設計の検索
 - `git grep -ilE "mac ?(の|で|上)|macos|colima|手元で試験|local test" docs/adr/` → 16 件。Mac の役割に触れるのは ADR-029（Mac を GitHub の作業を受ける機械にする）・ADR-111（その機械を Shingo-Mac-Temp に固定）・ADR-055（評価する係の画面確認の道具）・ADR-1052（Mac が重くなるので相談係を Mac で動かさない。:34・:54）。AI が手元で打つ試験の置き場を決めた ADR は無い。docs/adr/FEATURE-INDEX.md にも「試験の実行場所」の項目は無い（Mac を含む行は :22 の社外秘の見張りだけ）。
-- 近い既存設計: /Users/tanizawashingo/worktrees/salesanchor/release-mac-test-guard-design/docs/handoff/mac-vm-hook/design.md（Mac で試験用の仮想マシンを作る命令を止める見張り。§3 止める形・§5 許可券・§6 fail-open）。本件は同じ形にそろえる。
+- 近い既存設計: docs/handoff/mac-vm-hook/design.md（Mac で試験用の仮想マシンを作る命令を止める見張り。§3 止める形・§5 許可券・§6 fail-open）。本件は同じ形にそろえる。
 - 近い既存設計: docs/handoff/rule-enforcement/design.md「## R4b」（送る直前の確かめ。PO 2026-10-30「1,2」）。本件では変えない。
 
 ## 2. 事実（観測）
