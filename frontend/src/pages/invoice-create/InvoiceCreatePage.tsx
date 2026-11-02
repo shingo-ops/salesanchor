@@ -8,10 +8,11 @@
  * 明細エディタは QuoteCreatePage と同一仕様（行内検索/AND-OR を廃し、自由記入＋
  * 「検索して追加」「在庫表から(往復)」の追加方法）。共通ロジックは ../quote-create/quoteDraft。
  */
-import { useState, useEffect, FormEvent } from "react";
+import { useState, FormEvent } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
+import { useApiQuery } from "../../lib/query/apiQuery";
 import { PageLayout } from "../../components/PageLayout";
 import CompanyContactSelector from "../../components/CompanyContactSelector";
 import InventorySearchBar, { InventorySearchCandidate } from "../../components/InventorySearchBar";
@@ -88,22 +89,13 @@ export default function InvoiceCreatePage() {
   const [sourceQuoteCode, setSourceQuoteCode] = useState<string | null>(null);
 
   // --- 見積選択モード ---
-  const [quotes, setQuotes] = useState<QuoteSummary[]>([]);
-  const [quotesLoading, setQuotesLoading] = useState(false);
+  const quotesQ = useApiQuery<QuoteSummary[]>("/quotes?status=approved", { enabled: mode === "quote" });
+  const quotes = quotesQ.data ?? [];
+  const quotesLoading = quotesQ.isPending;
 
   const [error, setError] = useState("");
+  const shownError = error || (mode === "quote" && quotesQ.error ? (quotesQ.error instanceof Error ? quotesQ.error.message : t("common.fetchError")) : "");
   const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    if (mode !== "quote") return;
-    setQuotesLoading(true);
-    setError("");
-    api
-      .get<QuoteSummary[]>("/quotes?status=approved")
-      .then(setQuotes)
-      .catch((e) => setError(e instanceof Error ? e.message : t("common.fetchError")))
-      .finally(() => setQuotesLoading(false));
-  }, [mode, t]);
 
   const addItem = () => setItems((prev) => [...prev, { ...blankItem }]);
   const removeItem = (index: number) => {
@@ -231,7 +223,7 @@ export default function InvoiceCreatePage() {
       }
     >
 
-      {error && <div className="error-message">{error}</div>}
+      {shownError && <div className="error-message">{shownError}</div>}
 
       <div style={{ display: "flex", gap: "var(--space-2)", margin: "var(--space-3) 0" }}>
         <Button variant={mode === "inventory" ? "primary" : "secondary"} size="md"
@@ -243,7 +235,7 @@ export default function InvoiceCreatePage() {
         </Button>
         <Button variant={mode === "quote" ? "primary" : "secondary"} size="md"
 
-          onClick={() => { setSourceQuoteCode(null); setMode("quote"); }}
+          onClick={() => { setSourceQuoteCode(null); setError(""); setMode("quote"); }}
           data-testid="invoice-mode-quote"
         >
           {t("invoices.fromQuote")}

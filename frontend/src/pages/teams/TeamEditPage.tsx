@@ -7,40 +7,36 @@
  */
 
 import { LoadingBlock } from "../../components/loading";
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/Button";
 import { PageLayout } from "../../components/PageLayout";
 import { api } from "../../lib/api";
+import { useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
+import { useSeededForm } from "../../lib/query/useSeededForm";
 import { TeamFormFields, type TeamFormState } from "./TeamFormFields";
 
 const emptyForm: TeamFormState = { name: "", leader_id: "", description: "" };
+
+type TeamDetail = { id: number; name: string; leader_id: number | null; description: string | null };
+
+const formFromTeam = (team: TeamDetail): TeamFormState => ({
+  name: team.name,
+  leader_id: team.leader_id != null ? String(team.leader_id) : "",
+  description: team.description ?? "",
+});
 
 export default function TeamEditPage() {
   const { t }      = useTranslation();
   const { id }     = useParams<{ id: string }>();
   const navigate   = useNavigate();
-  const [form, setForm] = useState<TeamFormState>(emptyForm);
+  const teamQ = useApiQuery<TeamDetail>(`/teams/${id}`, { enabled: id !== undefined });
+  const { form, setForm, ready } = useSeededForm(`team/${id}`, teamQ.data, formFromTeam, emptyForm);
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (!id) return;
-    api
-      .get<{ id: number; name: string; leader_id: number | null; description: string | null }>(
-        `/teams/${id}`,
-      )
-      .then((team) =>
-        setForm({
-          name: team.name,
-          leader_id: team.leader_id != null ? String(team.leader_id) : "",
-          description: team.description ?? "",
-        }),
-      )
-      .catch((e) => setError(e instanceof Error ? e.message : t("common.fetchError")))
-      .finally(() => setLoading(false));
-  }, [id, t]);
+  const loading = teamQ.error === null && !ready;
+  const shownError = error || (teamQ.error ? (teamQ.error instanceof Error ? teamQ.error.message : t("common.fetchError")) : "");
+  const invalidate = useInvalidateApi();
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -51,6 +47,7 @@ export default function TeamEditPage() {
         leader_id: form.leader_id ? Number(form.leader_id) : null,
         description: form.description || null,
       });
+      void invalidate(["teams", id ?? ""]);
       navigate("/teams");
     } catch (e) {
       setError(e instanceof Error ? e.message : t("common.saveError"));
@@ -59,7 +56,7 @@ export default function TeamEditPage() {
 
   return (
     <PageLayout navKey="nav.teams" subtitleKey="teams.subtitle">
-      {error && <div className="error-message">{error}</div>}
+      {shownError && <div className="error-message">{shownError}</div>}
       {loading ? (
         <LoadingBlock />
       ) : (

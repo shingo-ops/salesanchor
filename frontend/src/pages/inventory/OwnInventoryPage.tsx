@@ -4,9 +4,10 @@
  * テナント専用スキーマ（own_inventory）のCRUD + 2段階引当（引当/解除/発送確定）。
  * B在庫（public.inventory の仕入元オファー）とは完全分離。
  */
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
+import { useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
 import type { components } from "../../api/generated/schema";
 import { PageLayout } from "../../components/PageLayout";
 import ConfirmModal from "../../components/ConfirmModal";
@@ -14,7 +15,7 @@ import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
 import { Button } from "../../components/Button";
 import { TextFieldControl } from "../../components/TextField";
-import { LoadingBlock } from "../../components/loading";
+import { LoadingBlock, Spinner } from "../../components/loading";
 
 type OwnInventoryRow = components["schemas"]["OwnInventoryResponse"];
 
@@ -31,32 +32,18 @@ const PER_PAGE = 20;
 export default function OwnInventoryPage() {
   const { t } = useTranslation();
 
-  const [items, setItems] = useState<OwnInventoryRow[]>([]);
   const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const itemsQ = useApiQuery<OwnInventoryRow[]>(`/own-inventory?page=${page}&per_page=${PER_PAGE}`, { keepPrevious: true });
+  const items = itemsQ.data ?? [];
+  const error = itemsQ.error ? t("ownInventory.loadError") : "";
+  const invalidate = useInvalidateApi();
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
   const [qtyInput, setQtyInput] = useState("1");
   const [actionError, setActionError] = useState("");
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const res = await api.get<OwnInventoryRow[]>(
-        `/own-inventory?page=${page}&per_page=${PER_PAGE}`,
-      );
-      setItems(res);
-    } catch {
-      setError(t("ownInventory.loadError"));
-    } finally {
-      setLoading(false);
-    }
-  }, [page, t]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const load = () => {
+    void invalidate(["own-inventory"]);
+  };
 
   const openAction = (row: OwnInventoryRow, kind: ActionKind) => {
     setQtyInput("1");
@@ -96,14 +83,18 @@ export default function OwnInventoryPage() {
   };
 
   return (
-    <PageLayout navKey="nav.ownInventory" subtitleKey="ownInventory.subtitle">
+    <PageLayout
+      navKey="nav.ownInventory"
+      subtitleKey="ownInventory.subtitle"
+      headerLeft={itemsQ.isFetching && !itemsQ.isPending ? <Spinner size="sm" /> : undefined}
+    >
       {error && (
         <div className="alert alert-error" role="alert">
           {error}
         </div>
       )}
 
-      {loading ? (
+      {itemsQ.isPending ? (
         <LoadingBlock />
       ) : (
         <>
@@ -206,7 +197,7 @@ export default function OwnInventoryPage() {
             <span>{t("common.page", { page })}</span>
             <button
               type="button"
-              disabled={items.length < PER_PAGE}
+              disabled={items.length < PER_PAGE || itemsQ.isPlaceholderData}
               onClick={() => setPage((p) => p + 1)}
               aria-label={t("common.nextPage")}
             >
