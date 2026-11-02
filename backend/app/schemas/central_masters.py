@@ -608,6 +608,9 @@ class TcgStatusMasterResponse(TcgStatusMasterBase):
 # tcg_note_master
 # ============================================================================
 
+# 注記マスタの照合の種類。STATE_LITERAL は備考に加えて状態の欄も読む（design-keyword.md:472）
+NOTE_MATCH_TYPES = ("LITERAL", "REGEX", "DEFAULT", "STATE_LITERAL")
+
 
 class TcgNoteMasterBase(BaseModel):
     label_ja: str
@@ -625,8 +628,8 @@ class TcgNoteMasterBase(BaseModel):
     @field_validator("match_type")
     @classmethod
     def validate_match_type(cls, v: str) -> str:
-        if v not in ("LITERAL", "REGEX", "DEFAULT"):
-            raise ValueError("match_type must be LITERAL, REGEX, or DEFAULT")
+        if v not in NOTE_MATCH_TYPES:
+            raise ValueError(f"match_type must be one of {list(NOTE_MATCH_TYPES)}")
         return v
 
 
@@ -650,8 +653,8 @@ class TcgNoteMasterUpdate(BaseModel):
     @field_validator("match_type")
     @classmethod
     def validate_match_type(cls, v: Optional[str]) -> Optional[str]:
-        if v is not None and v not in ("LITERAL", "REGEX", "DEFAULT"):
-            raise ValueError("match_type must be LITERAL, REGEX, or DEFAULT")
+        if v is not None and v not in NOTE_MATCH_TYPES:
+            raise ValueError(f"match_type must be one of {list(NOTE_MATCH_TYPES)}")
         return v
 
 

@@ -82,7 +82,7 @@ const toForm = (n: TcgNoteMaster): NoteFormState => ({
   label_template_en: n.label_template_en ?? "",
 });
 
-const MATCH_TYPE_VALUES = ["LITERAL", "REGEX", "DEFAULT"];
+const MATCH_TYPE_VALUES = ["LITERAL", "REGEX", "DEFAULT", "STATE_LITERAL"];
 
 const PER_PAGE = 100;
 

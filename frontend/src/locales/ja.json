@@ -5425,7 +5425,8 @@
       "REGEX": "正規表現",
       "LITERAL": "完全一致",
       "DEFAULT": "デフォルト",
-      "RELEASE": "発売日"
+      "RELEASE": "発売日",
+      "STATE_LITERAL": "完全一致（状態の欄も見る）"
     },
     "enabled": {
       "true": "有効",
