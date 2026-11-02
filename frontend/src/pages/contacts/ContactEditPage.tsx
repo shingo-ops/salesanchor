@@ -6,13 +6,15 @@
  * 保存後は /contacts 一覧へ戻る。
  */
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { PageLayout } from "../../components/PageLayout";
 import { Button } from "../../components/Button";
 import { Select } from "../../components/Select";
 import { api } from "../../lib/api";
+import { useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
+import { useSeededForm } from "../../lib/query/useSeededForm";
 import { TextareaControl } from "../../components/Textarea";
 import { TextFieldControl } from "../../components/TextField";
 import { Checkbox } from "../../components/Checkbox";
@@ -60,41 +62,34 @@ const emptyForm: FormState = {
   primary_email: "", primary_phone: "", status: "active", notes: "",
 };
 
+const formFromContact = (contact: Contact): FormState => ({
+  company_id: String(contact.company_id),
+  surname: contact.surname ?? "",
+  given_name: contact.given_name ?? "",
+  display_name: contact.display_name ?? "",
+  job_title: contact.job_title ?? "",
+  department: contact.department ?? "",
+  is_primary_contact: contact.is_primary_contact,
+  primary_email: contact.primary_email ?? "",
+  primary_phone: contact.primary_phone ?? "",
+  status: contact.status,
+  notes: contact.notes ?? "",
+});
+
 export default function ContactEditPage() {
   const { t }      = useTranslation();
   const { id }     = useParams<{ id: string }>();
   const navigate   = useNavigate();
-  const [form, setForm] = useState<FormState>(emptyForm);
-  const [companies, setCompanies] = useState<CompanyMini[]>([]);
+  const contactQ = useApiQuery<Contact>(`/contacts/${id}`, { enabled: id !== undefined });
+  const companiesQ = useApiQuery<CompanyMini[]>("/companies?per_page=100");
+  const { form, setForm, ready } = useSeededForm(`contact/${id}`, contactQ.data, formFromContact, emptyForm);
+  const companies = companiesQ.data ?? [];
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
+  const loadError = contactQ.error ?? companiesQ.error;
+  const loading = loadError === null && !(ready && companiesQ.data !== undefined);
+  const shownError = error || (loadError ? (loadError instanceof Error ? loadError.message : t("common.fetchError")) : "");
+  const invalidate = useInvalidateApi();
   const [dedupSubmitting, setDedupSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (!id) return;
-    Promise.all([
-      api.get<Contact>(`/contacts/${id}`),
-      api.get<CompanyMini[]>("/companies?per_page=100"),
-    ])
-      .then(([contact, cos]) => {
-        setForm({
-          company_id: String(contact.company_id),
-          surname: contact.surname ?? "",
-          given_name: contact.given_name ?? "",
-          display_name: contact.display_name ?? "",
-          job_title: contact.job_title ?? "",
-          department: contact.department ?? "",
-          is_primary_contact: contact.is_primary_contact,
-          primary_email: contact.primary_email ?? "",
-          primary_phone: contact.primary_phone ?? "",
-          status: contact.status,
-          notes: contact.notes ?? "",
-        });
-        setCompanies(cos);
-      })
-      .catch((e) => setError(e instanceof Error ? e.message : t("common.fetchError")))
-      .finally(() => setLoading(false));
-  }, [id, t]);
 
   const toNull = (v: string) => (v ? v : null);
 
@@ -116,6 +111,7 @@ export default function ContactEditPage() {
         status: form.status,
         notes: toNull(form.notes),
       });
+      void invalidate(["contacts", id ?? ""]);
       navigate("/contacts");
     } catch (e) {
       setError(e instanceof Error ? e.message : t("common.saveError"));
@@ -128,6 +124,7 @@ export default function ContactEditPage() {
     try {
       await api.patch(`/contacts/${id}`, { status: "active" });
       setForm((p) => ({ ...p, status: "active" }));
+      void invalidate(["contacts", id ?? ""]);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("common.operationError"));
     } finally {
@@ -137,7 +134,7 @@ export default function ContactEditPage() {
 
   return (
     <PageLayout navKey="nav.contacts" subtitleKey="contacts.subtitle">
-      {error && <div className="error-message">{error}</div>}
+      {shownError && <div className="error-message">{shownError}</div>}
       {loading ? (
         <LoadingBlock />
       ) : (

@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import LeadsPage from '../pages/leads/LeadsPage';
 import LeadEditPage from '../pages/leads/LeadEditPage';
 import en from '../locales/en.json';
+import { queryClient } from '../lib/query/apiQuery';
 
 const mock = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn(), user: { uid: 'fixture-user' } }));
 vi.mock('../lib/api', () => ({ api: mock }));
@@ -85,7 +86,7 @@ beforeEach(async () => {
   mock.delete.mockImplementation(() => { throw new Error('Unexpected DELETE'); });
 });
 afterEach(() => {
-  cleanup(); if (stream) stream.close(); stream = null; expect(vi.mocked(fetch).mock.calls.every(c => c[0] === '/api/v1/leads/stream')).toBe(true); expect(mock.delete).not.toHaveBeenCalled();
+  cleanup(); queryClient.clear(); if (stream) stream.close(); stream = null; expect(vi.mocked(fetch).mock.calls.every(c => c[0] === '/api/v1/leads/stream')).toBe(true); expect(mock.delete).not.toHaveBeenCalled();
   expect(mock.post.mock.calls.every(c => c[0] === '/leads')).toBe(true);
   expect(mock.patch.mock.calls.every(c => c[0] === '/leads/7')).toBe(true);
   expect([mock.get, mock.post, mock.patch, mock.delete].flatMap(fn => fn.mock.calls).every(c => !String(c[0]).includes('/members'))).toBe(true);

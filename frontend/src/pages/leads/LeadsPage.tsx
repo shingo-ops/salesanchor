@@ -9,7 +9,7 @@
  *   2026-06-11: ADR-122 バッチC3 — 新規作成は Modal のまま、編集を Drawer 化。
  */
 
-import { useCallback, useEffect, useState, FormEvent } from "react";
+import { useCallback, useState, FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../lib/api";
@@ -33,10 +33,11 @@ import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
 import { useRecordDrawer } from "../../hooks/useRecordDrawer";
 import { LeadFormFields, buildLostReasonUpdatePayload, type LeadFormState } from "./LeadFormFields";
-import { getCloseReasons, type CloseReasonResponse } from "../../api/closeReasons";
+import { closeReasonsPath, type CloseReasonResponse } from "../../api/closeReasons";
 import { TextareaControl } from "../../components/Textarea";
 import { TextFieldControl } from "../../components/TextField";
-import { LoadingBlock } from "../../components/loading";
+import { LoadingBlock, Spinner } from "../../components/loading";
+import { useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
 
 /* ------------------------------------------------------------------ */
 /* Lead types                                                           */
@@ -122,7 +123,6 @@ export default function LeadsPage() {
   const { hasPermission } = usePermissions();
   const navigate = useNavigate();
 
-  const [leads, setLeads] = useState<Lead[]>([]);
   const [statusFilter, setStatusFilter] = useState("");
   // 新規作成 Modal
   const [showCreate, setShowCreate] = useState(false);
@@ -131,7 +131,6 @@ export default function LeadsPage() {
   const { drawerOpen, editId, editForm, setEditForm, handleRowClick, closeDrawer } =
     useRecordDrawer<Lead, LeadFormState>({ toForm, emptyForm: emptyEditForm });
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
   const [deleteTarget, setDeleteTarget] = useState<Lead | null>(null);
   const [mergeSource, setMergeSource] = useState<Lead | null>(null);
   const [convertTarget, setConvertTarget] = useState<Lead | null>(null);
@@ -139,47 +138,21 @@ export default function LeadsPage() {
   const [convertCompanyId, setConvertCompanyId] = useState<number | null>(null);
   const [convertContactId, setConvertContactId] = useState<number | null>(null);
   const [convertSelectorError, setConvertSelectorError] = useState("");
-  const [closeReasonOptions, setCloseReasonOptions] = useState<CloseReasonResponse[]>([]);
 
   // ADR-109: status codes with i18n labels
   const LEAD_STATUSES: LeadStatusCode[] = [...LEAD_STATUS_CODES];
   const translateLeadStatus = (status: string) =>
     t(`leads.statusCode.${status}`, { defaultValue: status });
 
-  const loadLeads = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params = statusFilter ? `?status=${encodeURIComponent(statusFilter)}` : "";
-      const data = await api.get<Lead[]>(`/leads${params}`);
-      setLeads(data);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("common.fetchError"));
-    } finally {
-      setLoading(false);
-    }
-  }, [statusFilter, t]);
-
-  useEffect(() => {
-    loadLeads();
-  }, [loadLeads]);
-
-  useEffect(() => {
-    let cancelled = false;
-    const loadCloseReasons = async () => {
-      try {
-        const reasons = await getCloseReasons("lost");
-        if (!cancelled) setCloseReasonOptions(reasons);
-      } catch (e) {
-        if (!cancelled) {
-          setError(e instanceof Error ? e.message : t("common.fetchError"));
-        }
-      }
-    };
-    void loadCloseReasons();
-    return () => {
-      cancelled = true;
-    };
-  }, [t]);
+  const leadsPath = `/leads${statusFilter ? `?status=${encodeURIComponent(statusFilter)}` : ""}`;
+  const leadsQ = useApiQuery<Lead[]>(leadsPath, { keepPrevious: true });
+  const leads = leadsQ.data ?? [];
+  const reasonsQ = useApiQuery<CloseReasonResponse[]>(closeReasonsPath("lost"));
+  const closeReasonOptions = reasonsQ.data ?? [];
+  const invalidate = useInvalidateApi();
+  const loadLeads = useCallback(() => invalidate(["leads"]), [invalidate]);
+  const loadError = leadsQ.error ?? reasonsQ.error;
+  const shownError = error || (loadError ? (loadError instanceof Error ? loadError.message : t("common.fetchError")) : "");
 
   // Phase 3 SSE: 他スタッフのリード作成・更新・削除を即時反映
   useSSE({
@@ -299,6 +272,7 @@ export default function LeadsPage() {
     <PageLayout
       navKey="nav.leadsSection"
       subtitleKey="leads.subtitle"
+      headerLeft={leadsQ.isFetching && !leadsQ.isPending ? <Spinner size="sm" /> : undefined}
     >
       <ContentToolbar
         left={
@@ -318,7 +292,7 @@ export default function LeadsPage() {
         ) : undefined}
       />
 
-      {error && <div className="error-message">{error}</div>}
+      {shownError && <div className="error-message">{shownError}</div>}
 
       {/* 新規作成 Modal（全項目）*/}
       <Modal
@@ -476,7 +450,7 @@ export default function LeadsPage() {
         </form>
       </Modal>
 
-      {loading ? (
+      {leadsQ.isPending ? (
         <LoadingBlock />
       ) : (() => {
         const baseColumns: DataTableColumn<Lead>[] = [

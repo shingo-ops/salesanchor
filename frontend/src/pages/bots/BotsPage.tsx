@@ -7,8 +7,8 @@
  *   2026-06-10: 編集を Drawer 化（useRecordDrawer, ADR-122 バッチA）
  */
 
-import { LoadingBlock } from "../../components/loading";
-import { useEffect, useState, FormEvent } from "react";
+import { LoadingBlock, Spinner } from "../../components/loading";
+import { useState, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Modal } from "../../components/Modal";
@@ -16,6 +16,7 @@ import { Drawer } from "../../components/Drawer";
 import { Button } from "../../components/Button";
 import { SelectControl } from "../../components/Select";
 import { api } from "../../lib/api";
+import { useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
 import ConfirmModal from "../../components/ConfirmModal";
 import { usePermissions } from "../../hooks/usePermissions";
 import { useRecordDrawer } from "../../hooks/useRecordDrawer";
@@ -83,8 +84,11 @@ export default function BotsPage() {
   const { t } = useTranslation();
   const { hasPermission } = usePermissions();
   const navigate = useNavigate();
-  const [bots, setBots] = useState<Bot[]>([]);
-  const [staff, setStaff] = useState<BotStaff[]>([]);
+  const botsQ = useApiQuery<Bot[]>("/bots", { keepPrevious: true });
+  const staffQ = useApiQuery<BotStaff[]>("/staff");
+  const bots = botsQ.data ?? [];
+  const staff = staffQ.data ?? [];
+  const invalidate = useInvalidateApi();
   // 新規作成モーダル
   const [showCreate, setShowCreate] = useState(false);
   const [createForm, setCreateForm] = useState<CreateFormState>(emptyCreateForm);
@@ -93,7 +97,6 @@ export default function BotsPage() {
     useRecordDrawer<Bot, BotFormState>({ toForm, emptyForm: emptyEditForm });
 
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Bot | null>(null);
   const [rotateTarget, setRotateTarget] = useState<Bot | null>(null);
@@ -102,22 +105,12 @@ export default function BotsPage() {
   const purposeLabel = (p: string) => (({ invoice: t("bots.purposeInvoice"), shipment: t("bots.purposeShipment"), notification: t("bots.purposeNotification"), custom: t("bots.purposeCustom") } as Record<string, string>)[p] ?? p);
   const statusLabel  = (s: string) => (({ active: t("bots.statusActive"), inactive: t("bots.statusInactive"), maintenance: t("bots.statusMaintenance") } as Record<string, string>)[s] ?? s);
 
-  const loadAll = async () => {
-    try {
-      const [b, s] = await Promise.all([
-        api.get<Bot[]>("/bots"),
-        api.get<BotStaff[]>("/staff"),
-      ]);
-      setBots(b);
-      setStaff(s);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("common.fetchError"));
-    } finally {
-      setLoading(false);
-    }
+  const loadAll = () => {
+    void invalidate(["bots"]);
+    void staffQ.refetch();
   };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { loadAll(); }, []);
+  const loadError = botsQ.error ?? staffQ.error;
+  const shownError = error || (loadError ? (loadError instanceof Error ? loadError.message : t("common.fetchError")) : "");
 
   const toNull = (v: string) => (v ? v : null);
 
@@ -199,8 +192,9 @@ export default function BotsPage() {
     <PageLayout
       navKey="nav.bots"
       subtitleKey="bots.subtitle"
+      headerLeft={botsQ.isFetching && !botsQ.isPending ? <Spinner size="sm" /> : undefined}
     >
-      {error && <div className="error-message">{error}</div>}
+      {shownError && <div className="error-message">{shownError}</div>}
       <ContentToolbar
         right={hasPermission("bots.create") ? (
           <Button variant="primary" size="sm" layoutClassName="field-h-md" onClick={() => { setShowCreate(true); setCreateForm(emptyCreateForm); }}>
@@ -288,7 +282,7 @@ export default function BotsPage() {
         </form>
       </Drawer>
 
-      {loading ? (
+      {botsQ.isPending ? (
         <LoadingBlock />
       ) : (() => {
         const columns: DataTableColumn<Bot>[] = [

@@ -87,10 +87,10 @@ ADR: [../../adr/ADR-1056-secretary-chat.md](../../adr/ADR-1056-secretary-chat.md
 | 容器に届かない・ログイン情報が無い | 503 `{"code":"not_ready"}` | `secretary.error.notReady`（準備ができていません） |
 | 容器が動いている最中 | 429 `{"code":"busy"}` | `secretary.error.busy`（いま考え中です） |
 | 80 秒を超えた | 504 `{"code":"timeout"}` | `secretary.error.timeout` |
-| 形の検査に通らない・CLI が 0 以外で終わった | 502 `{"code":"unreadable"}` | `secretary.error.unreadable`（うまく読めませんでした） |
+| 形の検査に通らない・CLI が 0 以外で終わった | 502 `{"code":"unreadable"}` | `secretary.error.unreadable`（うまく読めませんでした）（直し1で鍵の失敗とAI側の失敗を分けた: fix1/design.md） |
 | 画面の 100 秒の打ち切り（`request` が AbortError を投げる。`frontend/src/lib/api.ts:152-153`） | （届かない） | `secretary.error.timeout` |
 
-- CLI が 0 以外で終わった（トークン切れなど）ときは、容器が 502 `{"code":"cli_failed"}` を返す。backend は利用者には `unreadable` を返し、ログの code は `cli_failed` と分けて書く（原因の取り違えを防ぐ。第3版審査 LOW-13）。
+- CLI が 0 以外で終わった（トークン切れなど）ときは、容器が 502 `{"code":"cli_failed"}` を返す。backend は利用者には `unreadable` を返し、ログの code は `cli_failed` と分けて書く（原因の取り違えを防ぐ。第3版審査 LOW-13）。（直し1で鍵の失敗とAI側の失敗を分けた: fix1/design.md）
 
 8. 記録: 1 回ごとに backend のログに 1 行（利用者 id・会社 id・かかった秒・成否の code・CLI が返す `total_cost_usd`）。頼みの文と返った文はログに書かない。
 
@@ -162,7 +162,7 @@ ADR: [../../adr/ADR-1056-secretary-chat.md](../../adr/ADR-1056-secretary-chat.md
 | 単価を AI が作ってしまう | 単価は利用者の文の数か、利用者の入力だけ。空欄なら「作る」を押せない |
 | 「自分だけ」の予定も Google に送られる（`backend/app/services/calendar_service.py:199-205`、会社の設定しだい） | 今の予定の画面と同じ動き。画面で Google について誤った説明をしない（§5-5）。第1段は PO だけ |
 | prod1 から AI 会社に届かない（未確認） | 段3 でトークン無しで HTTPS が届くかを測る。届かなければ止めて PO に報告（prod2 経由などは別の設計） |
-| トークンが切れると、利用者には「うまく読めませんでした」と出る | ログの code を `cli_failed` に分ける（§5-7）。第1段は PO だけなので許せる |
+| トークンが切れると、利用者には「うまく読めませんでした」と出る | ログの code を `cli_failed` に分ける（§5-7）。第1段は PO だけなので許せる（直し1で鍵の失敗とAI側の失敗を分けた: fix1/design.md） |
 
 ## 9. 未確認と扱い
 - U1（CLI の実機の動き・秒・メモリ）: 公式資料で旗の存在は確かめた（r2 §A）。実機は、PO がトークンを置いたあとの試し（K2・K3・K6）で確かめる。壊れても請求書・予定は今のまま。
