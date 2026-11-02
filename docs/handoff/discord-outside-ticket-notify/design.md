@@ -30,6 +30,8 @@ PO にとって変わること: お客さんが共有のチャンネルに書い
   - backend/tests/test_discord_outside_ticket_notice.py（新規）
 - 対象（frontend）
   - frontend/src/constants/notificationEventTypes.ts: 表示名キーを1行足す
+  - frontend/api-contract/openapi.json: 種類の一覧が変わるため、`cd backend && ENVIRONMENT=test python -m tools.export_openapi ../frontend/api-contract/openapi.json` で作り直す（2026-11-03 審査で入れ忘れを指摘され追記。CI「API contract is up to date」が守る）
+  - backend/tests/test_notification_event_routing.py: 種類の一覧の試験の期待値に4つ目を足す（2026-11-03 追記）
   - frontend/src/i18n の ja.json・en.json: `notifications.eventType.discordOutsideTicketPost` を足す
 - 対象（文書）: この設計、recon、作業の札
 - 対象外: お客さんへの返事、受信箱への取り込み、DB の表の変更（migrations なし）、通知先の設定画面の作り（既存 frontend/src/pages/notifications/NotificationsPage.tsx をそのまま使う）、DM、閲覧者の部屋（別のサーバー。本番で3社とも閲覧者のサーバーと別と確認）
