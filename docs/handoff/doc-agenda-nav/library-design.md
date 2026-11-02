@@ -1,6 +1,6 @@
 # 入口の文書の図書館化 設計（要件 library-requirements.md への答え）
 
-作成: 2026-11-02 設計担当（クラウドの Planner）。改訂: 2026-11-02 同（審査 [library-review.md](./library-review.md) の判定 REVISE・指摘14件への対応）。再改訂: 2026-11-02 同（再審査 [library-review-2.md](./library-review-2.md) の判定 REVISE・必須 N1〜N4・推奨 N5〜N10 への対応）。状態: **設計の再改訂版（PO 未承認・再々審査前）**。入力: [library-requirements.md](./library-requirements.md)（§2 の合格の基準は PO 承認済み・変えない）、§14〜§17（Opus が手元で照合した事実）。関連: [design.md](./design.md) §28〜§32、`scripts/dev/doc-entry-weekly-check.sh`。
+作成: 2026-11-02 設計担当（クラウドの Planner）。改訂: 2026-11-02 同（審査 [library-review.md](./library-review.md) の判定 REVISE・指摘14件への対応）。再改訂: 2026-11-02 同（再審査 [library-review-2.md](./library-review-2.md) の判定 REVISE・必須 N1〜N4・推奨 N5〜N10 への対応）。状態: **設計審査済み（3回目の審査 [library-review-3.md](./library-review-3.md) で APPROVE）・PO 承認済み（2026-11-02、PO 原文「1」。直前の選択肢「設計を承認して、まず（１）の測り直しから始める」への返事）。承認の範囲は設計全体と段0 の着手まで。段1 以降の P1・P2・P4・P5・P6 は各段の前に個別に承認を受ける。推奨 R1〜R6 は段0 の中で直す**。入力: [library-requirements.md](./library-requirements.md)（§2 の合格の基準は PO 承認済み・変えない）、§14〜§17（Opus が手元で照合した事実）。関連: [design.md](./design.md) §28〜§32、`scripts/dev/doc-entry-weekly-check.sh`。
 このリポジトリは公開されている。個人の決まり（`~/.claude`・`~/kb`）の本文は書き写さず、節の名前・行数・文字数だけを書く。
 この設計を書いた環境からは `~/.claude` と `~/kb` の本文が見えない。見えないものは §14〜§17 の事実だけを根拠にし、それ以外は推測で埋めず「**未確認（Opus が手元で照合）**」と書く。数値はすべて要件 §3・§4、design.md §28・§29、§14〜§17 の実測値か、そこからの算出（算出のときは式を書く）。
 
