@@ -39,16 +39,18 @@ function request(port, method, urlPath, body) {
 }
 
 let nextPort = 18090 + Math.floor(Math.random() * 500);
-async function startServer(env = {}) {
+async function startServer(env = {}, { captureStdout = false } = {}) {
   const port = nextPort++;
   const child = spawn("node", [path.join(HERE, "server.mjs")], {
     env: { PATH: `${work}:${process.env.PATH}`, PORT: String(port), TMPDIR: work, ...env },
-    stdio: "ignore",
+    stdio: captureStdout ? ["ignore", "pipe", "ignore"] : "ignore",
   });
+  const stdout = { text: "" };
+  if (captureStdout) child.stdout.on("data", (d) => (stdout.text += d));
   for (let i = 0; i < 50; i++) {
     try {
       await request(port, "GET", "/health");
-      return { port, child };
+      return { port, child, stdout };
     } catch {
       await new Promise((r) => setTimeout(r, 100));
     }
@@ -158,6 +160,41 @@ test("(6) claude が 0 以外で終わると 502 cli_failed（ディレクトリ
     assert.equal(r.status, 502);
     assert.deepEqual(r.json, { code: "cli_failed" });
     assert.deepEqual(sec(), []);
+  } finally {
+    child.kill();
+  }
+});
+
+test("鍵が使えない（api_error_status 401・exit 1）は 502 auth_failed。ログに code だけ残り本文は出ない", async () => {
+  writeFake(
+    `cat >/dev/null; echo '{"type":"result","is_error":true,"api_error_status":401,"result":"Failed to authenticate. API Error: 401 OAuth access token is invalid."}'; exit 1`,
+  );
+  const { port, child, stdout } = await startServer({ CLAUDE_CODE_OAUTH_TOKEN: "dummy" }, { captureStdout: true });
+  try {
+    const r = await request(port, "POST", "/intent", { text: "a", now: "n" });
+    assert.equal(r.status, 502);
+    assert.deepEqual(r.json, { code: "auth_failed" });
+    assert.deepEqual(sec(), []);
+    // ログは応答の直前に出るが、届く順は決まらないので 50ms ごと・上限 2 秒で待つ
+    for (let i = 0; i < 40 && !stdout.text.includes('"code":"auth_failed"'); i++) {
+      await new Promise((res) => setTimeout(res, 50));
+    }
+    assert.ok(stdout.text.includes('"code":"auth_failed"'), "ログに code=auth_failed が届く");
+    assert.ok(!stdout.text.includes("Failed to authenticate"), "ログに claude の本文が出ない");
+  } finally {
+    child.kill();
+  }
+});
+
+test("api_error_status 500・exit 1 は 502 cli_failed のまま", async () => {
+  writeFake(
+    `cat >/dev/null; echo '{"type":"result","is_error":true,"api_error_status":500,"result":"boom"}'; exit 1`,
+  );
+  const { port, child } = await startServer({ CLAUDE_CODE_OAUTH_TOKEN: "dummy" });
+  try {
+    const r = await request(port, "POST", "/intent", { text: "a", now: "n" });
+    assert.equal(r.status, 502);
+    assert.deepEqual(r.json, { code: "cli_failed" });
   } finally {
     child.kill();
   }
