@@ -27,4 +27,15 @@
 
 見張りの間隔は 30 分のまま（plist は変えていない）。知らせが届くのは見えなくなってから 60〜90 分後。
 
+再起動後のつなぎ直し（正本は [design-reconnect.md §1](../../handoff/mac-jobs-watch/design-reconnect.md)）:
+
+| # | 基準 | 結果 |
+|---|---|---|
+| R1 | adb に無く dns-sd に見えるとき、つなぎ直して名前を出す | ○ 2026-11-02 本物の Mac で、つながりを全部外した後、元の道具は `rc=1`、新しい道具は 5 秒で `192.168.10.106:33815`・`rc=0`（番号を聞いていない）。試験 R1-1〜R1-6 も PASS |
+| R2 | 別の Android にはつながない | ○ 試験 R2-1〜R2-3 PASS |
+| R3 | dns-sd でも見えなければ終了 1 | ○ 試験 R3-1〜R3-3 PASS |
+| R4 | 増えた命令は `adb connect` だけ | ○ 台本の追加行で kill-server・disconnect・tcpip・usb・reconnect は 0 件。connect の命令は 1 か所 |
+| R5 | 1 回の呼び出しは 15 秒以内 | ○ 試験 R5-1〜R5-3 PASS |
+| R6 | 既存の試験を壊さない | ○ 2026-11-02 macOS で `PASS=228 FAIL=0`・shellcheck 0 件 |
+
 KPI: 合格した KGI の数 5/6（K6 は PO の次の再起動後に観測）。
