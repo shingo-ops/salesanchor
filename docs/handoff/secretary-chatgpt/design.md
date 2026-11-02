@@ -1,7 +1,7 @@
-# 秘書チャットを ChatGPT に・アプリの AI を画面で管理 — 設計（草案 v9・審査8回目の指摘を反映）
+# 秘書チャットを ChatGPT に・アプリの AI を画面で管理 — 設計（草案 v10・審査9回目の軽い指摘を反映）
 
-- 状態: 設計案作成済み／設計審査 1回目〜8回目 REVISE（§14）→ v9 で反映・9回目 未／PO 承認 未／実装 未着手
-- 目標: `kgi.md`（K1〜K10）。現在地: `recon.md`（§番号で参照）。根拠の照合は origin/main d828bb269（引用したパスは 44098dc31・c60ea6eb3・90ee0c15f から差分なし。生出力 `review4_fix.txt`・`review5_fix.txt`・`review6_fix*.txt`・`review7_fix.txt`・`review8.md`）。
+- 状態: 設計案作成済み／設計審査 1回目〜8回目 REVISE・9回目 APPROVE（§14）→ v10 で9回目の軽い指摘 R1〜R3 を反映／PO 承認 未／実装 未着手
+- 目標: `kgi.md`（K1〜K10）。現在地: `recon.md`（§番号で参照）。根拠の照合は origin/main d828bb269（引用したパスは 44098dc31・c60ea6eb3・90ee0c15f から差分なし。生出力 `review4_fix.txt`・`review5_fix.txt`・`review6_fix*.txt`・`review7_fix.txt`・`review8.md`・`review9.md`）。
 - 関係 ADR: ADR-1056（秘書）・ADR-1004（使用量台帳）・ADR-027・ADR-067・ADR-144・ADR-1016（即時反映の表）・ADR-135/136（危険 PR の GO）。新しい ADR-1057「アプリの AI の担当は DB の1か所で決め、画面で見て切り替える」を実装カードより先に起案し、ADR-1056 の「Claude Code に固定」「ledger に書かない」を置き換える（§13）。
 
 ## 1. 目的（PO の言葉）
@@ -182,7 +182,7 @@ GitHub の一時 VM（sandbox-test）で、compose と同じ条件（read_only�
 | 1a-2 | コード: 集計の outcome='ok' 条件だけ（§4-2-2 のダッシュボード・§4-2-3 の prompt_ab・reextract）。1b より先に別の PR で出す | 今の画面の数が出す前と同じ（失敗の行がまだ無いので変わらない）。試験で failed の行を入れても数に入らない |
 | 1b | コード: 読む関数・解析と翻訳を担当表から読む・失敗も記録（§4-2-3 の表の書き手どおり）・固定値と環境変数の読み取りを消す・秘書の model を担当表から渡す・秘書の台帳の行（claude-code）・server.mjs の "sonnet" を消す（§4-3）・K5 の試験・一覧3つ（USAGE_PURPOSES・USAGE_SDKS・KNOWN_PURPOSES）・一覧の照合の試験（本物の migration を流した DB で `pg_get_constraintdef` から purpose・sdk・error_code・provider・job_key の値を取り出し、Python 側の一覧と同じ集合。今この試験は0本、審査7回目 Q5）・v102 の鍵切れの試験（§4-2-1）・失敗の行を数える試験の差し替えは印（`ledger_api_called = True`）を付けた例外を使う（今の差し替え `test_reextract_v6_with_v102_pg.py:215-216`・`:347-348`・`test_api_error_auto_retry.py:40` は印が無く、そのままでは0行のまま緑になる）・印の無い例外で行が0行になる試験を1本（審査8回目 N4） | 本番で解析の記録の model が今と同じ。失敗行が出る（出たら error_code が9つの中）。1つの呼び出しで2行出ていない: 旧エンジンは「同じ extraction_attempt_id に ok と failed の両方がある組が0件」（旧エンジンの行は source_ref が NULL、`tcg_extraction_record_svc.py:214-222`）。v102 は「同じ extraction_attempt_id の failed の数が3以下」（最初の1回＋その場の送り直し2回、`line_analysis_v102_svc.py:464` の `_IMMEDIATE_RETRY_DELAYS = (2, 8)`。source_ref で数えると、celery の送り直し〔`tcg_extraction.py` の `max_retries=2`〕や人が直した後の解析し直しで同じ投稿に何度も呼ばれ、正しい動きでも4行以上になるため。審査6回目 P3）。extraction_attempt_id が NULL の行（recorder の無い再抽出の道具）は数えない。秘書の行が sdk=claude-code・model=sonnet で出る。K5 の試験が緑。旧エンジンの試験「台帳の INSERT が失敗しても extraction_jobs が error になる」が緑 |
 | 2 | 画面「AI の担当」タブ＋API（表示と切り替え） | K3・K4・K7・K9・K10。i18n の試験「error_code の9つ・job_key の5つすべてに日本語と英語のキーがある」が緑 |
-| 3 | §5-2 の V1〜V5 合格 → secretary-codex 容器（並べて起動・担当は Claude のまま）＋ codex の選択肢3行の migration ＋ §5-3 の backend の直し（provider→容器の URL の対応表・`SECRETARY_CODEX_URL`・tool_used の読み替え・`AgentEnvelope` の `usage`・`error_events` の2欄。審査7回目 Q3）→PO がログイン→ 試験の担当切替で K1・K2・K6・K8 を測る→合格なら担当を ChatGPT に | K1・K2・K6・K8。codex の容器が返した `usage`・`error_events` を含む返事で ValidationError が0件 |
+| 3 | §5-2 の V1〜V5 合格 → secretary-codex 容器（並べて起動・担当は Claude のまま）＋ codex の選択肢3行の migration ＋ §5-3 の backend の直し（provider→容器の URL の対応表・`SECRETARY_CODEX_URL`・tool_used の読み替え・`AgentEnvelope` の `usage`・`error_events` の2欄。審査7回目 Q3）→PO がログイン→ VPS と手元のログインが打ち消し合わないかの確かめ（下の「どこで測るか」）→ 試験の担当切替で K1・K2・K6・K8 を測る→合格なら担当を ChatGPT に | K1・K2・K6・K8。codex の容器が返した `usage`・`error_events` を含む返事で ValidationError が0件 |
 | 4（合格後） | Claude の容器と専用ファイルを片付けるかを PO が決める | — |
 - 1a を先に本番へ出す理由: 本番に出す流れはコードを先に切り替え、migration を後に流す（`migrations/20260930_150000_create_llm_usage_events.sql:16-24` に記載の deploy.yml の順）。1b のコードは行が無ければ止まるので、表が先に無いと解析と翻訳が全部失敗する。
 - 1a-2 を 1b より先に出す理由: 1b のあと戻すと failed の行が表に残り、outcome の条件が無い前の版の集計が失敗の行も数えてしまう。条件を先に出しておけば、1b を戻しても集計は1a-2 の版のままでずれない（審査4回目⑦）。
@@ -190,7 +190,9 @@ GitHub の一時 VM（sandbox-test）で、compose と同じ条件（read_only�
 - どこで測るか（審査8回目 N1）:
   - K5・K9 の「試験の環境」は CI の試験（本物の PostgreSQL に migration を流した DB）。段2で、担当を PUT で変えると次の1回の台帳の model が新しい値になり、履歴が1行増えることを試験で確かめる。本番の解析と翻訳の担当は、試すために切り替えない（お客さんの翻訳と解析に効くため）。
   - 段3の K1・K2・K6・K8 は本番で測る。secretary-codex は本番の VPS にだけ起こすため（§5-4。§5-2 の一時 VM はログインなしの範囲だけ）。「試験の担当切替」は本番の画面の PUT で secretary_intent を codex にすること。秘書の API はスーパー管理者だけが呼べる（`backend/app/routers/assistant.py:118-127` の `Depends(require_super_admin)`）ので、切り替えの影響はスーパー管理者（PO と担当エンジニア）だけ。測り終えたら同じ画面で claude に戻し、履歴の2行（claude→codex・codex→claude）で確かめる。本番で K9 も同じ2行で確かめる。
-  - 月額契約（ChatGPT の個人の契約）を会社のサーバーで使ってよいかの PO の判断（§13-5）は、段3の PO のログインより前に取る。答えごとの進め方: 「使ってよい」→段3を全部進め、合格なら担当を ChatGPT にしたままにする。「スーパー管理者の試験だけ可」→ K1・K2・K6・K8 を測ったら claude に戻し、お客さんにも秘書を出す時にもう一度聞く。「不可」→段3に入らず、段2で止める（codex の容器も選択肢の3行も出さない）。
+  - 月額契約（ChatGPT の個人の契約）を会社のサーバーで使ってよいかの PO の判断（§13-5）は、段3に入る前（V1〜V5 の前）に取る（審査9回目 R1。「不可」なら codex の容器も選択肢の3行も本番に出さないため）。答えごとの進め方: 「使ってよい」→段3を全部進め、合格なら担当を ChatGPT にしたままにする。「スーパー管理者の試験だけ可」→ K1・K2・K6・K8 を測ったら claude に戻し、お客さんにも秘書を出す時にもう一度聞く。「不可」→段3に入らず、段2で止める（codex の容器も選択肢の3行も出さない）。
+  - 試験の担当切替の前に、本番の読み取りの道で `public.users` の `is_super_admin = true` の件数を数え（id と件数だけ。名前・メールは出さない）、ここに書き足す。PO と担当エンジニア以外がいれば、切り替えの前に PO に知らせる（審査9回目 R2）。
+  - PO のログインの後、試験の担当切替の前に「VPS でログイン済み→手元の Mac で `codex exec` を1回→秘書を1回呼ぶ→両方とも成功」を確かめる。打ち消し合う（片方がログアウトされる）と分かったら段3を止めて PO に戻す（recon §5-3 の【未確認】。審査9回目 R3）。
 
 ## 8. 受け入れの基準と確かめ方
 |基準|検証方法|
@@ -238,7 +240,7 @@ GitHub の一時 VM（sandbox-test）で、compose と同じ条件（read_only�
 5. PO に決めてもらうこと（1回に1件）:
    - 決定済み: 仕事ごとに選べる AI とモデルの最初の一覧（PO 2026-11-02「1」）。
    - 秘書を ChatGPT にした時の最初のモデル（試験では3つとも6〜8秒で正しい形）。
-   - 月額契約（ChatGPT の個人の契約）を会社のサーバーでお客さん向けの機能に使ってよいか（使い方の約束の判断。段3の PO のログインより前に。答えは「使ってよい」「スーパー管理者の試験だけ可」「不可」の3つ、進め方は §7）。
+   - 月額契約（ChatGPT の個人の契約）を会社のサーバーでお客さん向けの機能に使ってよいか（使い方の約束の判断。段3に入る前に。答えは「使ってよい」「スーパー管理者の試験だけ可」「不可」の3つ、進め方は §7）。
    - Claude の容器を片付ける時期（段4）。
 6. prod1 の MemAvailable・MemTotal を読み取りの道で測り、K8 の基準値を本書に書く（段3の前）。
 
@@ -282,3 +284,6 @@ GitHub の一時 VM（sandbox-test）で、compose と同じ条件（read_only�
   - 中の指摘: N1 段3の「試験の担当切替」がどこで行われるか決まっておらず、「PO が決めるまで切り替えない」と食い違う→ §7 に「どこで測るか」（K5・K9 は CI、段3は本番の画面でスーパー管理者だけに効く切り替え、PO の判断はログインより前・答えごとの進め方）、§9・§13-5 を合わせた。
   - 軽い指摘: N2 1時間の比べ方は件数が少ない→ §7 1a を24時間に N3 sdk の2つの値・2列にまたがる CHECK→ §4-1 N4 試験の差し替えの印・打ち切りは出さない→ §4-2-3・§7 1b N5 同じ値・同時の切り替え→ §6-1 N6 auth.json の読み方の言い回し→ §5-1。
   - 確かめた生出力: `review8.md`。N1 の `assistant.py:118-127`（require_super_admin）と N4 の `gemini_raw_copy_v8.py:226-229` は origin/main を `git show` で読んで確かめた。
+- 9回目（2026-11-02 16:11〜 UTC・head 6ce9947bd・クラウド。返事は別のブランチ review/secretary-chatgpt-r9 の commit 2d44988a9 に `review9.md`。根拠は origin/main c758ea8、d828bb269 からの差分は設計が引かないファイルだけ）: VERDICT: APPROVE。8回目の N1〜N6 はすべて直ったと認められた。
+  - 軽い指摘（v10 で反映）: R1 PO の判断を取る時点の言い回しが2通り→ §7・§13-5 を「段3に入る前（V1〜V5 の前）」にそろえた R2 スーパー管理者の人数が【未確認】→ §7 に切り替え前に件数を数える手順 R3 VPS と手元のログインの打ち消し合いを確かめる項目が無い→ §7 段3と「どこで測るか」に確かめを足した。
+  - 確かめた生出力: `review9.md`。
