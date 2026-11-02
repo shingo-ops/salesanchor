@@ -39,7 +39,7 @@
 ### 1-5 Google→アプリの取り込みの道（審査役の指摘で追加）
 - `backend/app/routers/calendar.py:464-498` `PATCH /calendar/sync-mode` は `require_tenant_admin`。受け付ける方式は `_VALID_SYNC_MODES = ("bidirectional","read_only","write_only","none")`（:42）。:493-494 で bidirectional・read_only のとき `register_webhook` を呼ぶ。
 - 取り込みの登録を始めるのはこの口だけ。ほかは `renew_expiring_webhooks`（`backend/app/services/google_webhook.py:267-286`）で、登録済み（`google_webhook_subscriptions` に行がある）ものを更新するだけ（git grep で確かめた）。
-- 通知が来ると `google_webhook.py:230-249` が primary の直近 30 分の変更を読み、`calendar_service.py:353-` `upsert_from_google` が `calendar_type='shared'` で入れる（INSERT は :403-408 付近）。会社の予定として全員に見える。
+- 通知が来ると `backend/app/services/google_webhook.py:230-249` が primary の直近 30 分の変更を読み、`backend/app/services/calendar_service.py:353-` `upsert_from_google` が `calendar_type='shared'` で入れる（INSERT は :403-408 付近）。会社の予定として全員に見える。
 - この口が管理者専用であることは `backend/tests/test_tenant_admin_ssot.py:184-185` が確かめている。
 - 本番 `public.google_webhook_subscriptions`: 0 件（2026-11-03 読み取り）。
 

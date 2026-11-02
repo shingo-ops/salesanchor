@@ -72,7 +72,7 @@ recon: docs/handoff/schedule-gcal-connect/recon.md ／ 決定の記録: ADR-1057
 ## 9. 測り方
 - K3: PO が予定を 1 件作った後、本番を読み取りで見る。`SELECT id, created_by_user_id, google_event_id IS NOT NULL, sync_status FROM tenant_004.calendar_events ORDER BY id DESC LIMIT 3`。
 
-## 10. 外部事例
+## 10. 外部・過去事例の参照と我々への応用
 今回は使わない。理由: 今あるつなぐ仕組みを画面に戻す作業である。新しいやり方は選ばない。
 
 ## 11. 維持の仕組み
@@ -80,6 +80,7 @@ recon: docs/handoff/schedule-gcal-connect/recon.md ／ 決定の記録: ADR-1057
 - 裏側の試験（K5）で、4 つの口から本人の確かめが外れたら CI が赤になる。
 - 裏側の試験（K7）で、取り込みを始める方式が通るようになったら CI が赤になる。
 - 決定の理由は ADR-1057 に残す。
+- 守り手: backend/tests/test_calendar_service.py・backend/tests/test_google_calendar.py・backend/tests/test_calendar_owner_api.py・scripts/check-ui-governance.js（画面の試験 SchedulePageImpl.test.tsx は実装で新しく作る）
 - 画面の試験（K1）で、ボタンを出す条件が崩れたら CI が赤になる。
 - UI の決まりの検査（`scripts/check-ui-governance.js`・CI の ui-governance-gate）で、金型の外の部品が入ると CI が赤になる。
 
