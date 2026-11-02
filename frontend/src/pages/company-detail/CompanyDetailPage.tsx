@@ -27,7 +27,7 @@ import { CompanyConvLogsTab } from "./CompanyConvLogsTab";
 import { CompanyAddressModal } from "./CompanyAddressModal";
 import { typeLabel } from "./company-detail.types";
 import { PageLayout } from "../../components/PageLayout";
-import { LoadingBlock } from "../../components/loading";
+import { LoadingBlock, Spinner } from "../../components/loading";
 
 export default function CompanyDetailPage() {
   const { t } = useTranslation();
@@ -39,7 +39,7 @@ export default function CompanyDetailPage() {
   const canMerge = hasPermission("customers.delete");
   const state = useCompanyDetail(id);
   const {
-    company, contacts, loading, error,
+    company, contacts, loading, refreshing, error,
     activeTab, setActiveTab,
     basicForm, setBasicForm, basicDirty, setBasicDirty, basicSubmitting,
     channelsText, setChannelsText, channelsDirty, setChannelsDirty, channelsSubmitting,
@@ -92,6 +92,7 @@ export default function CompanyDetailPage() {
       <PageLayout
         titleText={company.name}
         subtitleKey="companies.detailSubtitle"
+        headerLeft={refreshing ? <Spinner size="sm" /> : undefined}
         headerAction={
             <div className="page-header-actions">
               <span className={`status-badge status-${company.status}`}>{t(getStatusPresentation("company", company.status).labelKey ?? company.status)}</span>

@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import BotsPage from '../pages/bots/BotsPage';
 import BotEditPage from '../pages/bots/BotEditPage';
 import en from '../locales/en.json';
+import { queryClient } from '../lib/query/apiQuery';
 
 const mock = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn(), user: { uid: 'fixture-user' } }));
 vi.mock('../lib/api', () => ({ api: mock }));
@@ -73,7 +74,7 @@ beforeEach(async () => {
   mock.delete.mockImplementation(() => { throw new Error('Unexpected DELETE'); });
 });
 afterEach(() => {
-  cleanup(); expect(fetch).not.toHaveBeenCalled(); expect(mock.delete).not.toHaveBeenCalled();
+  cleanup(); queryClient.clear(); expect(fetch).not.toHaveBeenCalled(); expect(mock.delete).not.toHaveBeenCalled();
   expect(mock.post.mock.calls.every(c => c[0] === '/bots')).toBe(true);
   expect(reads('/staff/me')).toBe(0); vi.restoreAllMocks(); vi.unstubAllGlobals();
 });

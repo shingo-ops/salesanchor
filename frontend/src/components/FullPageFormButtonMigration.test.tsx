@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import ContactEditPage from '../pages/contacts/ContactEditPage';
 import SupplierEditPage from '../pages/suppliers/SupplierEditPage';
+import { queryClient } from '../lib/query/apiQuery';
 
 const mock = vi.hoisted(() => ({
   get: vi.fn(), patch: vi.fn(), post: vi.fn(), delete: vi.fn(), t: (key: string) => key,
@@ -86,6 +87,7 @@ beforeEach(() => {
 });
 afterEach(() => {
   cleanup();
+  queryClient.clear();
   expect(fetch).not.toHaveBeenCalled();
   expect(mock.post).not.toHaveBeenCalled();
   expect(mock.delete).not.toHaveBeenCalled();
