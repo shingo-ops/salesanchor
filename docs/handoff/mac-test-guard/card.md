@@ -43,7 +43,7 @@ AI が Mac の Bash で重い試験（npm test・vitest・playwright test・pyte
     - `pytest`・`py.test`: 止める。
     - `python`・`python3`・`python3.12` のような版付き（正規表現 `^python[0-9.]*$`）: 語の並びに `-m` があり、その次が `pytest` なら止める。
     - `uv`: `run` の後（旗を飛ばす）が `pytest` か、`python` 系で `-m pytest` なら止める。
-    - `docker`: 語に `compose` があり、`exec` か `run` があれば、その後ろの語のどこかから始まる並びを先頭語として上の規則で見直す（1回だけ）。どれかで止まれば止める。
+    - `docker`: 語に `compose` があり、`exec` か `run` があれば、その後ろの語のどこかから始まる並びを先頭語として上の規則で見直す（1回だけ）。どれかで止まれば止める。（この docker の規則は card-fix1.md で「旗とサービス名を飛ばした残りだけを見る」に置き換え済み。正本は design.md §3）
     - `bash`・`sh`・`zsh`: 手本と同じ。`-c` の文字列を1段だけ `bad_command` で見直す。
     - それ以外は止めない。
 
