@@ -1,12 +1,12 @@
-# 段B 実装カード（知らない機械からのログインに許可を求め始める・第2版）
+# 段B 実装カード（知らない機械からのログインに許可を求め始める・第4版）
 
 - 対象: docs/handoff/auth-new-device-approval/design.md 第6.1版 §3 D4・D11・D12、§4 段B（B-0・B-1・B-2）、§6「点検が止まらない」、§7 の戻し方と「切替の日にログイン中の機械が無い人」。ADR-1055。合格の基準は kgi.md（PO 承認済 2026-11-01）。
 - 中身の正本: 何をどう作るかは design.md §4 段B のとおり。このカードは「順番・形の細部・先に確かめること・止まる条件・受入」を足す。design.md とこのカードが食い違うときは止まって Opus へ返す（§0 の V で直したものはカードが正）。
 - 根拠の写し: S=origin/main 22c4c221d64932bbd17ba71f292c2e89e18a5b75（段W #5013 の本番反映の後）。生の出力は docs/handoff/auth-new-device-approval/stageB-recon-raw.md（login.ts と page-speed の取得はそこでは失敗しているので、行番号はこのカードの審査で S の実物を読んで確かめた）。
 - 前提: 段A・段W は本番反映済み（段W は W7〜W10 合格・PR #5013 のコメント）。本番の AUTH_DEVICE_APPROVAL は今 off。
 - 実行役: B-0 は PO の手元（`!`）。B-1・B-2 はクラウドの Sonnet。PR は Opus が手元で作る。作業場所の作り方はクラウドの決まり（S scripts/agent-hooks/cloud/rules.md）を正とする。出力には上限を付ける。待つために sleep を使わない。
-- 状態: 第3版（Opus 作成）。第1版の審査 REVISE（重大1・要修正3・軽微6）を第2版で直した。重大1は「書き出しの中に説明の行を入れる指示」で、本番の形の検査で反映が止まり、手順8 もそれを見落としていた。第2版の審査 REVISE（要修正2: B5 の段の結論では速さの記録の失敗を見つけられない［run 41212202516 で実測］・B-0 の pipefail では空の値の登録を止められない。軽微6）を第3版で直した。
-- 受領確認: 実装役は着手の最初の報告に「段B カード 第3版を受け取った・S=22c4c221d」と書く。
+- 状態: 第3版（Opus 作成）。第1版の審査 REVISE（重大1・要修正3・軽微6）を第2版で直した。重大1は「書き出しの中に説明の行を入れる指示」で、本番の形の検査で反映が止まり、手順8 もそれを見落としていた。第2版の審査 REVISE（要修正2: B5 の段の結論では速さの記録の失敗を見つけられない［run 41212202516 で実測］・B-0 の pipefail では空の値の登録を止められない。軽微6）を第3版で直した。第3版の審査 REVISE（要修正1: B5 は点検が見送られたときや時間切れのときも合格してしまう。軽微4）を第4版で直した。
+- 受領確認: 実装役は着手の最初の報告に「段B カード 第4版を受け取った・S=22c4c221d」と書く。
 
 ## 0. 設計からの直し（V）
 
@@ -80,7 +80,7 @@
   - 出力に値は出ない（長さだけ）。`secret-set-ok` が出なければ止まって PO に報告する。
   - off の間は印を見ないので、先に置いても今のログインは変わらない。
   - 確かめ1: `gh secret list --repo shingo-ops/salesanchor | grep -c SMOKE_E2E_DEVICE_TOKEN` が 1。
-  - 確かめ2（数だけ）: 1 が出れば合格。0 なら印が作られていないので、B-0 をやり直す。2以上なら（やり直しで古い行が残った）、古い行を取り消すかを PO に聞く。確かめ1 が 0 で確かめ2 が 1 以上なら、DB の行を取り消してから B-0 をやり直す。
+  - 確かめ2（数だけ）: 1 が出れば合格。0 なら印が作られていないので、B-0 をやり直す。2以上なら（やり直しで古い行が残った）、古い行を取り消すかを PO に聞く。確かめ1 が 0 で確かめ2 が 1 以上なら、その行（呼び名 prod-ui-check）を取り消してから B-0 をやり直す（取り消し方は §6 の最後と同じ）。
     `ssh -i ~/.ssh/manual-only/id_ed25519 ubuntu@49.212.137.46 "docker exec astro-webapp-postgres-1 psql -U jarvis -d jarvis_db -tAc \"SELECT count(*) FROM public.user_trusted_devices WHERE user_id = 87 AND created_via = 'cli' AND revoked_at IS NULL\""`
 - 切替の前の数え直し（数だけ）: 「有効で、前にログインしたことがあり、いつもの機械も、生きている更新の組も、パスキーも無い人」の数。パスキーの表は public.webauthn_credentials（S migrations/20261013_160000_add_self_hosted_auth_tables.sql:16。消すときは行ごと消す・S backend/app/routers/auth.py:1262）。
   `ssh -i ~/.ssh/manual-only/id_ed25519 ubuntu@49.212.137.46 "docker exec astro-webapp-postgres-1 psql -U jarvis -d jarvis_db -tAc \"SELECT count(*) FROM public.users u WHERE u.is_active AND u.last_login IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.user_trusted_devices d WHERE d.user_id = u.id AND d.revoked_at IS NULL) AND NOT EXISTS (SELECT 1 FROM public.auth_refresh_tokens t WHERE t.user_id = u.id AND t.revoked_at IS NULL AND t.expires_at > now()) AND NOT EXISTS (SELECT 1 FROM public.webauthn_credentials w WHERE w.user_id = u.id)\""`
@@ -105,18 +105,24 @@
 | B7 | 締切より前に反映が終わった | デプロイの run の終わった時刻 < 締切 | Opus |
 | 段C | K1〜K9・W11 | design.md §6 の表。このカードの範囲外（段C のカードで行う） | — |
 
-B5 の確かめ方: 反映後に prod-ui-check を手動で1回流す。速さの記録の段は continue-on-error（S .github/workflows/prod-ui-check.yml:147）なので、段が失敗しても段の結論は success になる（第2版の審査が run 41212202516 で実測。ログは exit code 1、段の結論は success）。そこで、段の結論ではなくログで確かめる。次の3つが全部そろえば合格。
+B5 の確かめ方: 反映後に prod-ui-check を手動で1回流す。速さの記録の段は continue-on-error（S .github/workflows/prod-ui-check.yml:147）なので、段が失敗しても段の結論は success になる（第2版の審査が run 41212202516 で実測。ログは exit code 1、段の結論は success）。そこで、段の結論ではなくログで確かめる。また、配備中の run と重なると点検の段が全部見送られ、失敗0のまま success になる（S .github/workflows/prod-ui-check.yml:30-53）。時間切れも exit code の行を出さない（:148）。そこで「両方の段が走って結果の一覧を出した」ことも確かめる。
+
+run の状態が completed になってからログを取る（`gh run view <run> --repo shingo-ops/salesanchor --json status --jq .status` が completed）。次の4つが全部そろえば合格。
 
 ```bash
 gh run view <run> --repo shingo-ops/salesanchor --json conclusion --jq .conclusion
 gh run view <run> --repo shingo-ops/salesanchor --log > <scratchpad>/b5-log.txt
 grep -cE 'Process completed with exit code [1-9]' <scratchpad>/b5-log.txt
 grep -cE '[0-9]+ failed' <scratchpad>/b5-log.txt
+grep -cE '[0-9]+ passed' <scratchpad>/b5-log.txt
+grep -cE '[0-9]+ flaky' <scratchpad>/b5-log.txt
 ```
 
 - 1行目が success。
 - 3行目が 0（どの段にも失敗の終わり方が無い）。
 - 4行目が 0（画面点検にも速さの記録にも、落ちた点検が無い）。
+- 5行目が 2（画面点検と速さの記録の両方が走って結果を出した。第3版の審査が、最近の success の run 5本で2を実測）。2でなければ、見送りか時間切れなので合格にしない。配備が終わってから流し直す。
+- 6行目は記録だけ（画面点検は1回やり直す設定・S tests/prod-check/playwright.config.ts:23。やり直しで通った点検は flaky と出る）。1以上なら、その点検の名前を PO への報告に書く。
 - 反映前に同じ確かめを1回流し、今のままで 0 になることを基準として取っておく。基準で 0 にならないときは、enforce と関係ない失敗なので、その中身を PO への報告に分けて書く。
 
 ## 6. 戻し方
@@ -127,7 +133,7 @@ grep -cE '[0-9]+ failed' <scratchpad>/b5-log.txt
   - 確かめ: B4 の命令で AUTH_DEVICE_APPROVAL が off。
   - 次のデプロイで deploy.yml の値（enforce と過去の締切）に戻る。そうなると、off の間にできたログインの組が 401 になる（design.md:218）。そこで、同じ日に上の off の PR を出し、ほかのどのマージよりも先に入れる。
 - 戻した後にもう一度 enforce にするときは、締切を新しい固定値にする PR を出す（design.md §7）。
-- 点検だけが落ちるとき（B-0 の値の間違い）: B-0 をやり直して秘密を上書きする。古い印は管理画面の機械の一覧から取り消す。
+- 点検だけが落ちるとき（B-0 の値の間違い）: B-0 をやり直して秘密を上書きする。古い印（呼び名 prod-ui-check）は、点検の人でログインした画面の「機械の一覧」から取り消す（取り消しの口は S backend/app/routers/auth.py:1668 `DELETE /devices/{device_id}`。本人の機械だけを取り消せる）。画面から取り消せないときは、DB を手で書き換えずに止まって PO に聞く。
 
 ## 停止と報告
 
