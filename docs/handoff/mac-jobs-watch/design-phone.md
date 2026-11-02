@@ -132,13 +132,22 @@ mjw_phone_check() {
 | C | 見えなければ自動で `adb connect` し直す | 番号が分からず、自動のつながりと重なる。P3 に反する。採らない |
 | D | ケーブルでつなぎっぱなし | PO が選択肢 2 として見送り（2026-11-02） |
 
-外部事例: 本件は adb 公式の仕組み（recon §3）で足りるため、他社事例は使わない。
+## 外部・過去事例の参照と我々への応用
+
+- 外部事例: 使わない。理由: 本件は adb 公式の自動接続（docs/dev/adb_wifi.md「Auto-connect」）と Android 公式の「always allow on this network」（developer.android.com/tools/adb、2026-11-02 取得）で足り、他社の数値事例を設計の成功の証明に使う必要がないため（recon §3）。
+- 過去事例（同じリポジトリ）: 空き容量点検 design-disk-low.md は、既存の見張り役に状態型の点検を 1 つ足し、送り方・状態ファイル・試験を共有した。応用: 本件も同じ形で `phone-missing` を足し、新しい常駐や送り方を作らない（§6 案 B を採らない理由）。
 
 ## 7. 危険と対処・戻し方・維持
 - 外出のたびに知らせが届く: 1 時間の猶予で短い外出は知らせない。長い外出では 1 通と、戻ったときの「直りました」1 通が届く。24 時間続けば「まだ続いています」が 1 通。多すぎると PO が言えば `MJW_PHONE_GRACE` を伸ばす。
 - adb devices が待ち受け役を起動する: adb の標準の動き。つながりは切らない（P3）。自動のつながりにはむしろ必要（recon §4）。
 - 戻し方: この PR を revert する。plist は変えていないので、翌朝 04:00 の更新で元に戻る。
-- 維持: 試験 `scripts/tests/test-mac-jobs-watch.sh`、ログ `~/Library/Logs/mac-jobs-watch.log`、AI が実機を使うときは `adb -s "$(bash ~/.salesanchor-tools/scripts/dev/phone-serial.sh)"` を使う（決め打ちの番号を書かない）。
+- 維持: 下の「維持の仕組み」。
+
+## 維持の仕組み
+
+- 担当: Mac の見張り役（launchd が 30 分ごとに動かす）。手で動かす人は要らない。
+- 仕組み: 試験 `scripts/tests/test-mac-jobs-watch.sh`（P㉞〜P㊸）が判定の形を守る。ログ `~/Library/Logs/mac-jobs-watch.log` に毎回 1 行残る。台本は毎日 04:00 に origin/main へ更新される写し ~/.salesanchor-tools から動く。
+- AI の決まり: AI が実機を使うときは `adb -s "$(bash ~/.salesanchor-tools/scripts/dev/phone-serial.sh)"` を使い、決め打ちの番号を書かない。
 
 ## 8. 設計審査（同じ AI による自己審査。独立した第二者審査ではない）
 
