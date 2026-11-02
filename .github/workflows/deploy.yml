@@ -318,6 +318,8 @@ jobs:
               -e '/^AUTH_PROVIDER=/d' \
               -e '/^AUTH_JWT_SECRET=/d' \
               -e '/^VITE_AUTH_PROVIDER=/d' \
+              -e '/^AUTH_DEVICE_APPROVAL=/d' \
+              -e '/^AUTH_DEVICE_BOOTSTRAP_CUTOFF=/d' \
               -e '/^OPS_API_TOKEN=/d' \
               -e '/^OPS_INGEST_TOKEN=/d' \
               -e '/^ERROR_REPORT_AGENT_TOKEN=/d' \
@@ -337,6 +339,7 @@ jobs:
             #   parsed_rule_only に graceful degrade、AC4.5）。
             # ADR-1013 便3: メール送信（mail_config.py が読む）と再設定の送信許可。未登録の Secret は空文字＝送らない
             # ADR-1019 段2: 閲覧者のトークンの鍵（viewer_tokens.py が読む）。アプリの鍵 AUTH_JWT_SECRET とは別の値
+            # ADR-1055 段B: 知らない機械は許可待ち。締切は PR-B の本番反映予定＋6時間の UTC 固定値（D4）。戻すときは off
             cat > .env.secrets.new <<'ENV_EOF'
             META_VERIFY_TOKEN='${{ secrets.META_VERIFY_TOKEN }}'
             META_APP_SECRET='${{ secrets.META_APP_SECRET }}'
@@ -375,6 +378,8 @@ jobs:
             AUTH_PROVIDER='self'
             AUTH_JWT_SECRET='${{ secrets.AUTH_JWT_SECRET }}'
             VITE_AUTH_PROVIDER='self'
+            AUTH_DEVICE_APPROVAL='enforce'
+            AUTH_DEVICE_BOOTSTRAP_CUTOFF='2026-11-02T22:00:00Z'
             OPS_API_TOKEN='${{ secrets.OPS_API_TOKEN }}'
             OPS_INGEST_TOKEN='${{ secrets.OPS_INGEST_TOKEN }}'
             ERROR_REPORT_AGENT_TOKEN='${{ secrets.ERROR_REPORT_AGENT_TOKEN }}'
