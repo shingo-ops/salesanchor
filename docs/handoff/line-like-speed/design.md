@@ -204,6 +204,20 @@ PO の言葉: 「LINEみたいな使い心地は出来る？」（意味は「�
 - 2026-11-02 PO 選択「1」の 2 回目。対象は §3-4-13-a の測定（run 41389073263）で K1 が遅い順の 10 行（9 画面。/teams と /management-center/teams は同じ画面）。
 - 作業指示書: docs/handoff/line-like-speed/batch3b-card.md（第 2 版。第 1 版のクラウド審査は REVISE で、試験の見本・lint の警告 1 件・手順3 の確かめの 3 つを直した。第 2 版のクラウド審査は APPROVE on 37abec0b4（2026-11-02 15:07 JST・カードどおりに当てて tsc 0・lint の警告 0→0・src/lib/query 48 件・今ある画面の試験 6 本 93 件すべて合格）。）。受入はカードの §5 B1〜B7。結果はこの節の後に書き足す。
 
+#### 3-4-14-a. 段 3 の 2 回目の本番の受入（2026-11-02 Claude Opus が確かめた）
+- B1・B2 は合格。PR #5019 の必須の確認 16 件すべて pass。画面検査（内部）は 1 回目が 15 分の時間切れ（816 件中 792 件 pass・失敗 0）で、やり直しで pass。
+- B3 は合格。merge e01286b2d の変更は 15 ファイル（855 行足し・221 行消し）。migrations/・backend/・scripts/・.github/ は 0。
+- B4 は合格（本線 dd6d131cd で確かめた）。`new QueryClient` は frontend/src/lib/query/apiQuery.ts:23 の 1 行だけ。`staleTime:` は 0 行。persist は 0 行。
+- B7 は合格。PR #5019 は 2026-11-02 16:39 JST に main へ入った（merge e01286b2d）。deploy.yml run 41407698440 は 16:46 JST に success。本番の /management-center/units・/crm/contacts・/management-center/teams・/quotes が開き、ブラウザの誤りの記録は 0 件（設計担当の Chrome）。
+- 合流のときの止まり: 承認が 1 件要ると読み違え、POの名義で承認を付けた（PO 選択「1」）。本当の止まりは、本文を直した時に動いた process-artifacts gate の最新の実行が cancelled のままだったこと（GitHub の画面の「1 failing check」で確かめた）。その実行をやり直して success になり、合流できた。
+- B5 は合格。prod-ui-check run 41409815435（測った日時 17:03:00 JST）。
+  - 10 行すべて K1 0.02 秒以下（基準 run 41389073263 では 0.17〜0.20 秒）。K2 は 0.2〜0.4 秒。403 と 5xx は 0 件。
+  - 135 画面すべて測れた（測れなかった 0）。全行の 5xx 0。2 秒を超えた画面は 0 件。K2 の最大は 1.4 秒（/inventory。前回まで 1.2〜1.3 秒の幅）。
+  - 生の行の抜き書きは設計担当の手元の /tmp/CC報告ファイル/batch3b/measure-run41409815435-extract.txt（リポジトリには入れない）。
+- B6 は DB の件数だけ確かめた。本番の読むだけの道（ADR-1024）で tenant 001 の単位 0 件・担当者 1 件・チーム 1 件・見積 1 件。状態マスタは読むだけの道に表が無く、まだ確かめていない。画面の件数はまだ確かめていない。根拠は backend を変えていないこと（B3）と B1。
+- K5 は本番で 2 人のログインでは確かめていない（本番でパスワードを打たない決まり）。カードの試験と、写しの名前に利用者が入る作りで確かめた。
+- 残り: K1 が 0.1 秒を超える画面（403 なし）は 8 画面。/suppliers/:id/edit 0.17 秒・/own-inventory・/dashboard/follow-ups・/invoices/new・/invoices・/teams/:id/edit・/dashboard/revenue・/dashboard/reasons が 0.16 秒。/inventory は 10 秒で見分けられなかった。
+
 ### 3-5. 測り方（|基準|検証方法|）
 | 基準 | 検証方法 |
 |---|---|
