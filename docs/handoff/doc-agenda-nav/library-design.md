@@ -395,3 +395,12 @@ open_when: commit・PR を作る前
 | 7 chat-format.md の中の別の `##` | **無い。** `## ` は 11行目だけ。表示は 11〜31行（21行）全部で、要件 §4-3 と §14 1 は同じ範囲を指す。段1 で決まりが消える穴は無い | `grep -n '^## '` → 11 のみ |
 | 12 本の取り込み | `~/kb/AGENTS.md`・chat-format.md の中に `@` は0件（入れ子の取り込みは無い） | `grep -n '@'` → 0件 |
 | 12 作業場所の外を読む設定 | `~/.claude/settings.json` に `blockReadsOutsideWorkingDirectories` は0件。`settings.local.json` は無い | `grep -c` → 0、`ls` |
+
+## 16. 改訂版の未確認2件を Opus が手元で確かめた結果（2026-11-02・再審査の前）
+
+生出力: `/tmp/CC報告ファイル/doclib/unknowns-check.txt`・`/tmp/CC報告ファイル/doclib/do-stop.txt`（手元のみ）。
+
+1. 【事実】`hook.py stop` の stdin は JSON 1つ。読む鍵は `session_id`・`stop_hook_active`・`last_assistant_message`（`hook.py:142-159`）。`stop_hook_active` が true なら点検しない。`detail/<session_id>` があれば点検しない。
+2. 【事実】`stop`・`display` は `-p` の実行では点検しない（`excluded_run()`・`hook.py:58-62`）。環境変数 `PLAIN_LANG_CHECK=force` のときだけ点検する。よって §6 の 2 の比較は `printf '{"session_id":"doclib-test","stop_hook_active":false,"last_assistant_message":"<文>"}' | PLAIN_LANG_CHECK=force python3 ~/kb/scripts/hooks/plain-lang/hook.py stop` の形で行う。
+3. 【事実】`stop` は点検の記録（`stop_log`）と書き直しの印（`rewrite/<session_id>`）を書く（`hook.py:154-158`）。比較には本番の会話と別の `session_id`（例 `doclib-test`）を使い、比較の後に `rewrite/doclib-test` を消す。
+4. 【事実】見出しの文字列「Commit Message Format」「Pull Request Workflow」「Parallel Task Execution」「Scope Termination」「## 担当」を `~/.claude/scripts`・`~/.claude/hooks`・`~/kb/scripts/hooks`・agent-console の `bin` で固定文字列 grep した結果は 0件（exit=0・出力なし）。段2b・段3 の直前にもう一度同じ grep を行う（実物が変わっていないことの確かめ）。
