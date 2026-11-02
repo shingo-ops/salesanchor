@@ -1,6 +1,6 @@
 # 秘書チャットを ChatGPT に・アプリの AI を画面で管理 — 設計（草案 v10・審査9回目の軽い指摘を反映）
 
-- 状態: 設計案作成済み／設計審査 1回目〜8回目 REVISE・9回目 APPROVE（§14）→ v10 で9回目の軽い指摘 R1〜R3 を反映／PO 承認 未／実装 未着手
+- 状態: 設計案作成済み／設計審査 1回目〜8回目 REVISE・9回目 APPROVE（§14）→ v10 で9回目の軽い指摘 R1〜R3 を反映／PO 承認済み（2026-11-03 PO が「この設計で決める」の選択肢に「1」。秘書は今の Claude のまま始める。月額契約の判断は段3の前に別に聞く）／実装 未着手（実装は段ごとのカードと PO の実装の許可が揃ってから）
 - 目標: `kgi.md`（K1〜K10）。現在地: `recon.md`（§番号で参照）。根拠の照合は origin/main d828bb269（引用したパスは 44098dc31・c60ea6eb3・90ee0c15f から差分なし。生出力 `review4_fix.txt`・`review5_fix.txt`・`review6_fix*.txt`・`review7_fix.txt`・`review8.md`・`review9.md`）。
 - 関係 ADR: ADR-1056（秘書）・ADR-1004（使用量台帳）・ADR-027・ADR-067・ADR-144・ADR-1016（即時反映の表）・ADR-135/136（危険 PR の GO）。新しい ADR-1058「アプリの AI の担当は DB の1か所で決め、画面で見て切り替える」を実装カードより先に起案し、ADR-1056 の「Claude Code に固定」「ledger に書かない」を置き換える（§13）。
 
@@ -235,7 +235,7 @@ GitHub の一時 VM（sandbox-test）で、compose と同じ条件（read_only�
 ## 13. 実装カードの前に済ませること
 1. （済・2026-11-03 両方とも未設定→既定の gemini-3.5-flash-lite。§4-1）本番の `TRANSLATION_MODEL_RECEIVE`・`TRANSLATION_MODEL_SEND` が設定されているか・値（モデル名だけ。ほかの行は読まない）を確かめ、§4-1 の初めの行に書く。
    - 途中の事実（2026-11-03 読み取りの道 ai_ro で確かめた。生出力 `prod_models_by_purpose.tsv`・`prod_translation_all.tsv`）: `llm_usage_events` に purpose が translation で始まる行は期間を問わず0行。直近30日は line_extraction 3615行・line_extraction_shadow 6081行で、どちらも gemini-3.1-flash-lite。翻訳の書き込み（`record_usage_event`）は 2026-09-30 の 3400ea80b から成功のたびに書く作りなので、本番の翻訳はそれ以降 Gemini の呼び出しが1回も成功していない（呼ばれていないのか失敗しているのかは【未確認】。翻訳の保存先 message_translations は ai_ro に無く読めない）。そのため翻訳の実際のモデルは記録からは分からず、backend の容器の環境変数を読む必要がある。`TRANSLATION_MODEL_*` は compose・deploy.yml に無い（`git grep` で `message_translator.py` だけ）。
-2. （草案済み・`docs/adr/ADR-1058-ai-job-assignments.md`・Proposed）ADR-1058 の本文を起案する（ADR-1056 の置き換え部分・解析の選択肢を増やす決まり・失敗の記録・error_code の一覧）。
+2. （済・`docs/adr/ADR-1058-ai-job-assignments.md`・2026-11-03 PO が設計とあわせて決定）ADR-1058 の本文を起案する（ADR-1056 の置き換え部分・解析の選択肢を増やす決まり・失敗の記録・error_code の一覧）。
 3. （済）同期セッションの工場: 共通の物は無い。新しく作らず呼び手の session に書く形にした（§4-2-3）。
 4. （済）9回目の審査（クラウド・head 6ce9947bd）で APPROVE。軽い指摘 R1〜R3 は v10 で反映（§14）。
 5. PO に決めてもらうこと（1回に1件）:
