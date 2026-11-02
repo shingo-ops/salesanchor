@@ -166,7 +166,12 @@ UNEXPLAINED_AFTER_DELEGATION=0
 
 ## 5. 手順（クラウドの作業場所で）
 
-1. `git fetch origin && git checkout -b release/prod-login-match origin/main`
+0. `./scripts/dev/executor-preflight.sh > /tmp/preflight.txt 2>&1; grep -n 'FAIL' /tmp/preflight.txt; grep -n 'origin/main は存在' /tmp/preflight.txt`
+   - FAIL の行が次の 3 つのどれかだけなら続ける: `GitHub API に到達不可` の 1 件・`gh auth switch --hostname github.com --user shingo-cc` の失敗の 1 件・その結果の `PREFLIGHT FAIL` の行。理由: クラウドには gh の名義が無く、api.github.com に届かないが、git の取り寄せと push は通る。PR は Opus が手元で shingo-cc 名義を確かめてから作る（docs/handoff/line-like-speed/stage1-card.md と同じ扱い）。
+   - 続けるときは、2 つ目の grep で `[OK]   origin/main は存在` の行があることを確かめる。無ければ止まり、`BLOCKED:` で grep の出力を報告する。
+   - ほかの FAIL が 1 件でもあれば止まり、`BLOCKED:` で grep の出力を報告する。
+   - `scripts/new-worktree.sh` は使わない（クラウドの作業場所でそのまま枝を作る）。それが作る `.claude-pipeline/active-work.d/` の登録ファイルは commit しない。
+1. `git fetch origin && git checkout -B release/prod-login-match origin/main`
 2. `git log -1 --format=%H origin/main` と `wc -l scripts/dev/consent-audit.py` を報告に貼る。
 3. §2・§3 のとおり `scripts/dev/consent-audit.py` を直す。§4 の `scripts/dev/prod-login-match-tests.py` を作る。
 4. `python3 -I -B scripts/dev/prod-login-match-tests.py`
@@ -191,7 +196,7 @@ UNEXPLAINED_AFTER_DELEGATION=0
 
 - 1行目: `本報告はカード card-login-match の実行結果である`
 - 2行目: `受領確認: card-login-match を読んだ`
-- 手順2・4・5・6・7・9 の生出力の全文（要約しない。試験の出力は1試験1行なので上限に収まる）
+- 手順0の2つの grep の出力と、手順2・4・5・6・7・9 の生出力の全文（要約しない。試験の出力は1試験1行なので上限に収まる）
 - 止まったとき: 停止した手順番号／最後に実行したコマンド／停止した理由
 - 最後の行: `DONE` / `BLOCKED:` ＋理由 / `NEEDS_DECISION:` ＋内容 のどれか
 
