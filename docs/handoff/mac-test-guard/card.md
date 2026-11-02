@@ -4,7 +4,7 @@
 
 - 設計: docs/handoff/mac-test-guard/design.md（判定の正本は §3 の表）
 - 下調べ: docs/handoff/mac-test-guard/recon.md
-- 手本（同じ作りの見張りの写し・読むだけ）: docs/handoff/mac-test-guard/ref-mac-vm-guard.py.txt
+- 手本（同じ作りの見張り・読むだけ）: ~/.claude/scripts/mac-vm-guard.py の写し ref-mac-vm-guard.py.txt。クラウドの担当が使った後（2026-11-02 commit 29091ae68）に消した。写しの中の仮想マシンの命令の説明文が、GitHub の確かめ「Mac で仮想マシンを作る命令を足さない」に掛かったため
 - 導入・戻しの手本: scripts/agent-hooks/confidential-quote-guard/install.sh・rollback.sh
 - 危険便: いいえ（migrations/・deploy.yml・本番 scripts/・.github/ を含まない）
 - 担当: 実装 Sonnet（クラウド）／審査 Opus
