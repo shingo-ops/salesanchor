@@ -8,6 +8,7 @@ import InvoiceCreatePage from '../pages/invoice-create/InvoiceCreatePage';
 import ProductsPage from '../pages/products/ProductsPage';
 import QuotesPage from '../pages/quotes/QuotesPage';
 import en from '../locales/en.json';
+import { queryClient } from '../lib/query/apiQuery';
 
 const api = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() }));
 vi.mock('../lib/api', () => ({ api }));
@@ -22,7 +23,7 @@ beforeEach(async () => {
   await instance.init({ lng: 'en', resources: { en: { translation: en } }, interpolation: { escapeValue: false } });
   vi.stubGlobal('fetch', vi.fn(() => { throw new Error('Unexpected network'); }));
 });
-afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+afterEach(() => { cleanup(); queryClient.clear(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 describe('five real-page dynamic Button migrations', () => {
   it.each([false, true])('Inventory uses enabled=%s independently from expanded state', async (enabled) => {

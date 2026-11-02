@@ -11,6 +11,7 @@ import ProductsPage from '../pages/products/ProductsPage';
 import QuoteCreatePage from '../pages/quote-create/QuoteCreatePage';
 import QuotesPage from '../pages/quotes/QuotesPage';
 import en from '../locales/en.json';
+import { queryClient } from '../lib/query/apiQuery';
 
 const mock = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() }));
 vi.mock('../lib/api', async (importOriginal) => ({ ...(await importOriginal<typeof import('../lib/api')>()), api: mock }));
@@ -39,7 +40,7 @@ beforeEach(async () => {
   mock.patch.mockResolvedValue({});
   mock.delete.mockImplementation(() => { throw new Error('Unexpected delete'); });
 });
-afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+afterEach(() => { cleanup(); queryClient.clear(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 describe('commerce navigation Button migration contracts', () => {
   it('paginates inventory with exact GETs and disabled pending boundaries', async () => {
@@ -87,7 +88,7 @@ describe('commerce navigation Button migration contracts', () => {
     fireEvent.click(load); fireEvent.click(load); expect(mock.get.mock.calls.filter(c => c[0] === '/quotes/7')).toHaveLength(1); expect(load.disabled).toBe(true);
     await act(async () => pending.resolve(detail));
     expect(await screen.findByText(/Q-7/)).toBeTruthy();
-    cleanup(); const beforeRetry = mock.get.mock.calls.filter(c => c[0] === '/quotes/7').length; let attempts = 0; mock.get.mockImplementation(async (url: string) => { if (url === '/quotes?status=approved') return [summary]; if (url === '/quotes/7') { attempts += 1; if (attempts === 1) throw new Error('Quote load failed'); return detail; } if (url === '/companies?per_page=100') return []; throw new Error(`Unexpected GET ${url}`); });
+    cleanup(); queryClient.clear(); const beforeRetry = mock.get.mock.calls.filter(c => c[0] === '/quotes/7').length; let attempts = 0; mock.get.mockImplementation(async (url: string) => { if (url === '/quotes?status=approved') return [summary]; if (url === '/quotes/7') { attempts += 1; if (attempts === 1) throw new Error('Quote load failed'); return detail; } if (url === '/companies?per_page=100') return []; throw new Error(`Unexpected GET ${url}`); });
     render(wrap(<InvoiceCreatePage />)); let retry = await screen.findByTestId('invoice-edit-from-quote-7'); fireEvent.click(retry); expect(await screen.findByText('Quote load failed')).toBeTruthy();
     retry = screen.getByTestId('invoice-edit-from-quote-7'); fireEvent.click(retry); expect(await screen.findByDisplayValue('Card')).toBeTruthy(); expect((await screen.findByTestId('invoice-source-quote')).textContent).toContain('Q-7'); expect(mock.get.mock.calls.filter(c => c[0] === '/quotes/7')).toHaveLength(beforeRetry + 2);
   });

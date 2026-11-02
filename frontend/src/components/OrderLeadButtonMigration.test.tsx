@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import OrdersPage from '../pages/orders/OrdersPage';
 import LeadsPage from '../pages/leads/LeadsPage';
 import en from '../locales/en.json';
+import { queryClient } from '../lib/query/apiQuery';
 
 const mock = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() }));
 vi.mock('../lib/api', () => ({ api: mock, ApiError: class extends Error { constructor(message: string, public status: number) { super(message); } } }));
@@ -41,7 +42,7 @@ beforeEach(async () => {
   mock.patch.mockImplementation(() => { throw new Error('Unexpected PATCH'); });
   mock.delete.mockImplementation(() => { throw new Error('Unexpected DELETE'); });
 });
-afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+afterEach(() => { cleanup(); queryClient.clear(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 describe('order and lead action Button migration', () => {
   it('creates an order with exact payload and required selector guard, then reloads', async () => {
