@@ -29,6 +29,7 @@
 ## 2. 使用量の記録（llm_usage_events・ADR-1004）【事実】
 - 表を作る migration: `migrations/20260930_150000_create_llm_usage_events.sql:46-52`。purpose と sdk を CHECK で固定（sdk は google-genai・google-generativeai だけ）。
 - 書く関数は成功した呼び出しの使用量だけを書く（`llm_budget.py:230-330`。列は使用量と費用。成否・失敗の理由の列は無い）。書く関数は commit しない（呼び出し元の取引の中。review1_verify.txt）。
+- 解析の記録の書き手は2つの道で別（review3_verify_b〜e.txt）: v102 は `line_analysis_v102_svc.py:449-459` が書いて自分で commit（`:456`）。旧エンジン（`tcg_extraction.py:499`）は `tcg_extraction_record_svc.py:203-222`（complete）・`:224-265`（fail・応答を受けた時だけ）が書く。どちらを通るかは `get_engine()`（`tcg_extraction.py:497`）。`prompt_ab.py:596-600` は shadow の行を書く。翻訳の失敗は呼び出し元の取引ごと巻き戻る（`database.py:46-55`）。llm_usage_events に行の守り（RLS）は無い。
 - コード側の同じ一覧: `USAGE_PURPOSES`・`USAGE_SDKS`（`llm_budget.py:159-171`）。画面の一覧: `KNOWN_PURPOSES`（`frontend/src/pages/super-admin/components/LlmUsageSection.tsx:151-158`、使う所 `:331`）。
 - 予算は別の表: `record_cost` が `public.tenant_llm_budgets.current_month_usd` に足し（`llm_budget.py:420-447`）、`check_budget` はその表だけを読む。llm_usage_events は予算に使われていない。
 - llm_usage_events を読む集計: `backend/app/routers/tcg_analysis_dashboard.py:475,495,509`（抽出の試行との LEFT JOIN）、`:678`（`_LLM_USAGE_WHERE`）、`:705-706`（review2_verify_b.txt）。
