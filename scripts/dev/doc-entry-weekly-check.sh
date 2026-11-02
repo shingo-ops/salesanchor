@@ -129,6 +129,45 @@ case "$K9" in
     fi ;;
 esac
 
+# ---- 図書館の点検（doc-library-check.sh。library-design §4-2） ----
+L2_PASS=0
+L2_UNTAGGED_PASS=0
+L3_MATCH_PASS=yes
+BOOKS_IMPORTED_PASS=0
+LIB_OUT="$(DOC_ENTRY_HOME="$HOME_DIR" DOC_ENTRY_REPO="$REPO" bash "$SELF_DIR/doc-library-check.sh")"
+printf '%s\n' "$LIB_OUT"
+lib_val() { printf '%s\n' "$LIB_OUT" | sed -n "s/^$1=//p" | head -n 1; }
+LV_L2="$(lib_val L2)"
+LV_UNT="$(lib_val L2_UNTAGGED)"
+LV_L3="$(lib_val L3_MATCH)"
+LV_BI="$(lib_val BOOKS_IMPORTED)"
+[ "$LV_L2" != "$L2_PASS" ] && add_ng "L2=${LV_L2:-unreadable}"
+[ "$LV_UNT" != "$L2_UNTAGGED_PASS" ] && add_ng "L2_UNTAGGED=${LV_UNT:-unreadable}"
+case "$LV_L3" in "$L3_MATCH_PASS") ;; *) add_ng "L3_MATCH=no" ;; esac
+[ "$LV_BI" != "$BOOKS_IMPORTED_PASS" ] && add_ng "BOOKS_IMPORTED=${LV_BI:-unreadable}"
+
+# BOOKS_IN_CONTEXT: /context の Memory files の表で /.claude/books/ を含む行の数
+case "$K9" in
+  skipped) BOOKS_CTX=skipped ;;
+  unreadable) BOOKS_CTX=unreadable ;;
+  *)
+    BOOKS_CTX="$(printf '%s\n' "${OUT:-}" | python3 -I -c 'import sys
+sect=False; n=0
+for l in sys.stdin:
+    if l.startswith("### Memory Files"): sect=True; continue
+    if sect and l.startswith("#"): sect=False
+    if sect and l.strip().startswith("|") and "/.claude/books/" in l: n+=1
+print(n)')"
+    [ -z "$BOOKS_CTX" ] && BOOKS_CTX=unreadable
+    ;;
+esac
+echo "BOOKS_IN_CONTEXT=$BOOKS_CTX"
+case "$BOOKS_CTX" in
+  skipped|0) ;;
+  unreadable) ;; # K9=unreadable で NG 済み
+  *) add_ng "BOOKS_IN_CONTEXT=$BOOKS_CTX" ;;
+esac
+
 # ---- DOC_INDEX_CI ----
 CI=unreadable
 J="$("$GH" run list --workflow doc-index-reachability.yml --branch main -L 1 --json status,conclusion 2>/dev/null)"
