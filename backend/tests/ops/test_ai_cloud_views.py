@@ -36,6 +36,7 @@ _DROP_SQL = "20261024_100200_drop_ai_cloud_views.sql"
 _DEVICE_APPROVAL_SQL = "20261101_130000_add_new_device_approval.sql"
 _AUTH_EVENTS_SQL = "001_create_auth_events.sql"
 _SELF_AUTH_SQL = "20261013_160000_add_self_hosted_auth_tables.sql"
+_WEB_PUSH_SQL = "20261102_090000_add_user_push_subscriptions.sql"
 _DENY_RE = re.compile(r"^password|_encrypted$|_secret|_token|hash|^secret|^api_key|private_key|credential")
 _NAME_RE = re.compile(
     r"(name|email|mail|phone|tel|fax|addr|zip|postal|message|text|body|note|comment|memo|sender|display|contact"
@@ -477,7 +478,7 @@ def test_role_migration_is_idempotent(pg):
     # meta の migration も冪等（分類表の中身は消えない）
     n0 = _rows(pg, "SELECT count(*) FROM ai_cloud_meta.column_class")[0][0]
     c.execute(_read(_META_SQL))
-    assert _rows(pg, "SELECT count(*) FROM ai_cloud_meta.column_class")[0][0] == n0 == 1054
+    assert _rows(pg, "SELECT count(*) FROM ai_cloud_meta.column_class")[0][0] == n0 == 1057
 
 
 # ---------------------------------------------------------------- T10（CI の見張り）
@@ -620,6 +621,54 @@ def test_t10_new_device_approval_columns_are_classified_on_bootstrapped_db(clust
             g for g in _classification_gaps(conn)
             if g[1] in new_tables or (g[1], g[2]) == ("auth_events", "reason")
         ]
+        assert gaps == []
+    finally:
+        conn.close()
+        cur = cluster.control.cursor()
+        cur.execute(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)')
+
+
+# ADR-1055 段W: 通知の購読の表の3列（endpoint・p256dh・auth）に column_class の行があることを名前で確かめる。
+_WEB_PUSH_CLASSIFIED = {("user_push_subscriptions", c) for c in ("auth", "endpoint", "p256dh")}
+
+
+def test_t10_web_push_columns_are_classified_on_bootstrapped_db(cluster):
+    """本番の migration 順に近い DB に段W の migration を流し、3列に column_class の行があり、分類の漏れが無い。
+
+    流す順: bootstrap → auth_events → 自社ログインの表 → ai_cloud の分類 → 段A → 段W（2回・冪等）。
+    専用の DB を作り、終わったら消す。"""
+    from sqlalchemy.ext.asyncio import create_async_engine
+
+    assert len(_WEB_PUSH_CLASSIFIED) == 3
+    name, conn = _new_db(cluster.control, "ai_cloud_t10_webpush")
+    try:
+        c = conn.cursor()
+        c.execute(_read(_AI_READER_SQL))
+        c.execute(_read(_ROLE_SQL))
+        c.execute(_read(_META_SQL))
+        url = _psycopg_url(ADMIN_PG_URL, name).replace("postgresql://", "postgresql+asyncpg://", 1)
+        from tests.rls_bootstrap import bootstrap_tenant_schema
+
+        async def build():
+            eng = create_async_engine(url)
+            try:
+                await bootstrap_tenant_schema(eng, 1)
+            finally:
+                await eng.dispose()
+
+        asyncio.run(build())
+        c.execute(_read(_AUTH_EVENTS_SQL))
+        c.execute(_read(_SELF_AUTH_SQL))
+        c.execute(_read(_CREATE_SQL))
+        rows = _rows(conn, "SELECT table_name, column_name FROM ai_cloud_meta.column_class WHERE schema_pattern = 'public'")
+        have = {(r[0], r[1]) for r in rows}
+        missing = _WEB_PUSH_CLASSIFIED - have
+        assert missing == set(), f"column_class に行が無い: {sorted(missing)}"
+
+        c.execute(_read(_DEVICE_APPROVAL_SQL))
+        c.execute(_read(_WEB_PUSH_SQL))
+        c.execute(_read(_WEB_PUSH_SQL))  # 冪等
+        gaps = [g for g in _classification_gaps(conn) if g[1] == "user_push_subscriptions"]
         assert gaps == []
     finally:
         conn.close()

@@ -465,6 +465,9 @@ public	type_master	code	allow	共用マスタ（運営が入れる一覧）。�
 public	type_master	name_en	allow	【名前を含む】共用マスタ（運営が入れる一覧）。作品のタイプ名	character varying
 public	type_master	name_ja	allow	【名前を含む】共用マスタ（運営が入れる一覧）。同上	character varying
 public	user_inventory_filters	filters	mask		jsonb
+public	user_push_subscriptions	auth	mask		text
+public	user_push_subscriptions	endpoint	mask		text
+public	user_push_subscriptions	p256dh	mask		text
 public	user_recovery_codes	code_id	mask		character
 public	user_trusted_devices	created_ip	mask		character varying
 public	user_trusted_devices	created_location	mask		character varying

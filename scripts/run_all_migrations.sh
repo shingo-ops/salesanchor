@@ -1207,3 +1207,5 @@ run_sql migrations/20261031_210000_create_ops_case.sql
 run_sql migrations/20261101_120000_enable_secretary_chat_tenant4.sql
 # ADR-1055 段A: 知らない機械からのログインの許可の置き場（表3つ＋列4つ・追加のみ・値は入らない・冪等）
 run_sql migrations/20261101_130000_add_new_device_approval.sql
+# ADR-1055 段W: 許可依頼の通知（web push）の購読の置き場（表1つ・追加のみ・冪等）
+run_sql migrations/20261102_090000_add_user_push_subscriptions.sql

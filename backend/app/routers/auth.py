@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
 import secrets
 import uuid
@@ -48,12 +49,15 @@ from app.models import Tenant, User
 from app.realtime.publisher import publish_user_change
 from app.realtime.topics import TOPIC_AUTH_LOGIN_REQUEST
 from app.schemas.auth import PasswordChange
+from app.services import web_push
 from app.services.audit import record_audit_log
 from app.services.auth_mail import send_invite_email, send_new_device_mail, send_password_reset_email
 from app.services.invite import create_invite_token, invite_enabled, invite_url
+from app.services.web_push import send_login_request_push
 
 router = APIRouter()
 security = HTTPBearer()
+logger = logging.getLogger(__name__)
 
 
 @router.post("/register", response_model=UserResponse, status_code=201)
@@ -334,9 +338,9 @@ class LoginApprovalRequired(BaseModel):
 
 
 async def _notify_new_request(
-    background_tasks: BackgroundTasks, email: str, new: devices.NewRequest, user_id: int
+    background_tasks: BackgroundTasks, email: str, new: devices.NewRequest, user_id: int, db: AsyncSession
 ) -> None:
-    """許可依頼を、いつもの機械の画面（SSE）とメールで知らせる。失敗しても依頼は作ってある。"""
+    """許可依頼を、いつもの機械の画面（SSE）・メール・ホーム画面のアプリの通知（段W）で知らせる。失敗しても依頼は作ってある。"""
     await publish_user_change(user_id, TOPIC_AUTH_LOGIN_REQUEST)
     background_tasks.add_task(
         send_new_device_mail,
@@ -345,6 +349,20 @@ async def _notify_new_request(
         device=new.label,
         location=new.location,
     )
+    # 通知の部分は commit の後に呼ばれる。ここで落ちても依頼の 202 を 500 にしない。
+    try:
+        if web_push.is_configured():
+            targets = await web_push.list_targets(db, user_id)
+            if targets:
+                background_tasks.add_task(
+                    send_login_request_push,
+                    targets,
+                    when=devices.jst_text(),
+                    device=new.label,
+                    location=new.location,
+                )
+    except Exception:
+        logger.exception("web push: 通知の宛先を読めなかった")
 
 
 @router.post(
@@ -429,7 +447,7 @@ async def self_login(
             has_trusted = await devices.has_any_trusted_device(db, user_row.id)
             has_codes = (await recovery_codes.remaining(db, user_row.id)) > 0
             await db.commit()
-            await _notify_new_request(background_tasks, user_row.email, new, user_row.id)
+            await _notify_new_request(background_tasks, user_row.email, new, user_row.id, db)
             pending = JSONResponse(
                 status_code=status.HTTP_202_ACCEPTED,
                 content=LoginApprovalRequired(
@@ -1660,6 +1678,111 @@ async def device_revoke(
         raise HTTPException(status_code=404, detail="not_found")
     await db.commit()
     return Response(status_code=204)
+
+
+class PushKeys(BaseModel):
+    p256dh: str = Field(..., description="通知を暗号にする公開鍵（base64url）")
+    auth: str = Field(..., description="通知を暗号にする合言葉（base64url）")
+
+
+class PushSubscriptionIn(BaseModel):
+    endpoint: str = Field(..., description="ブラウザの通知の送り先 URL（https）")
+    keys: PushKeys
+
+
+class PushSubscriptionOut(BaseModel):
+    id: int = Field(..., description="購読の番号")
+
+
+class PushPublicKey(BaseModel):
+    public_key: str | None = Field(None, description="通知の購読に使う公開の鍵。未設定なら null")
+
+
+@router.post("/push-subscriptions", response_model=PushSubscriptionOut)
+async def push_subscribe(
+    body: PushSubscriptionIn,
+    request: Request,
+    session: CurrentSession = Depends(get_current_session),
+    db: AsyncSession = Depends(get_db),
+):
+    """いつもの機械の通知の購読を登録する（1台に1つ。同じ endpoint は上書き）。"""
+    _require_app_origin(request)
+    if session.trusted_device_id is None:
+        raise HTTPException(status_code=403, detail="not_trusted_device")
+    if not web_push.is_configured():
+        raise HTTPException(status_code=409, detail="push_not_configured")
+    web_push.validate_subscription(body.endpoint, body.keys.p256dh, body.keys.auth)
+    now = datetime.now(timezone.utc)
+    # 1台の機械に購読は1つ（1つの依頼で同じ機械に何度も鳴らさない）
+    await db.execute(
+        text(
+            "UPDATE public.user_push_subscriptions SET revoked_at = :now "
+            "WHERE trusted_device_id = :did AND revoked_at IS NULL AND endpoint <> :ep"
+        ),
+        {"now": now, "did": session.trusted_device_id, "ep": body.endpoint},
+    )
+    row = (
+        await db.execute(
+            text(
+                "INSERT INTO public.user_push_subscriptions "
+                "(user_id, trusted_device_id, endpoint, p256dh, auth, created_at) "
+                "VALUES (:uid, :did, :ep, :p256dh, :auth, :now) "
+                "ON CONFLICT (endpoint) DO UPDATE SET user_id = EXCLUDED.user_id, "
+                "trusted_device_id = EXCLUDED.trusted_device_id, p256dh = EXCLUDED.p256dh, "
+                "auth = EXCLUDED.auth, revoked_at = NULL, failed_count = 0 "
+                "WHERE user_push_subscriptions.user_id = EXCLUDED.user_id "
+                "RETURNING id"
+            ),
+            {
+                "uid": session.user.id,
+                "did": session.trusted_device_id,
+                "ep": body.endpoint,
+                "p256dh": body.keys.p256dh,
+                "auth": body.keys.auth,
+                "now": now,
+            },
+        )
+    ).first()
+    if row is None:
+        # 他人がすでに持つ endpoint。先に取り消した同じ機械の購読も元に戻す。
+        await db.rollback()
+        raise HTTPException(status_code=409, detail="push_subscription_conflict")
+    await db.commit()
+    return PushSubscriptionOut(id=row.id)
+
+
+@router.delete("/push-subscriptions/{subscription_id}", status_code=204)
+async def push_unsubscribe(
+    subscription_id: int,
+    request: Request,
+    session: CurrentSession = Depends(get_current_session),
+    db: AsyncSession = Depends(get_db),
+):
+    """本人の通知の購読を取り消す。取り消し済みの本人の行は 204 のまま。他人の id・無い id は 404。"""
+    _require_app_origin(request)
+    found = (
+        await db.execute(
+            text("SELECT id FROM public.user_push_subscriptions WHERE id = :id AND user_id = :uid"),
+            {"id": subscription_id, "uid": session.user.id},
+        )
+    ).first()
+    if found is None:
+        raise HTTPException(status_code=404, detail="not_found")
+    await db.execute(
+        text(
+            "UPDATE public.user_push_subscriptions SET revoked_at = :now "
+            "WHERE id = :id AND user_id = :uid AND revoked_at IS NULL"
+        ),
+        {"now": datetime.now(timezone.utc), "id": subscription_id, "uid": session.user.id},
+    )
+    await db.commit()
+    return Response(status_code=204)
+
+
+@router.get("/push-public-key", response_model=PushPublicKey)
+async def push_public_key(current_user: User = Depends(get_current_user)):
+    """通知の購読に使う公開の鍵。鍵が未設定なら null（画面は切り替えを出さない）。"""
+    return PushPublicKey(public_key=web_push.public_key())
 
 
 @router.get("/recovery-codes/status", response_model=RecoveryCodesStatus)

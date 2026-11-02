@@ -1296,6 +1296,16 @@ jobs:
             echo "✅ $sqlfile 成功"
           done
 
+      - name: 変更 SQL の前提の移行を先に実行（機械の許可の表）
+        if: steps.detect.outputs.has_sql_changes == 'true' && contains(steps.detect.outputs.changed_sql, 'migrations/20261102_090000_add_user_push_subscriptions.sql')
+        run: |
+          # 20261102_090000 は user_trusted_devices（20261101_130000）を外部キーで指すので、その前提を本番と同じ順で先に入れる
+          for sqlfile in migrations/001_create_auth_events.sql migrations/20261013_160000_add_self_hosted_auth_tables.sql migrations/20261101_130000_add_new_device_approval.sql; do
+            echo "▶ $sqlfile を前提として実行中..."
+            psql -h localhost -U jarvis -d jarvis_db -v ON_ERROR_STOP=1 -f "$sqlfile"
+            echo "✅ $sqlfile 成功"
+          done
+
       - name: 変更 SQL を 1回目実行（実行可否・構文チェック）
         if: steps.detect.outputs.has_sql_changes == 'true'
         run: |
