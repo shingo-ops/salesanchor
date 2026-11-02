@@ -87,7 +87,7 @@ ADR-1003 追記「弊害と対処」を正とする。主なもの: 担当のセ
 - 後: `scripts/dev/consent-audit.py` に入口 `--prod-logins` を足す。会話の記録の読み方は同じファイルの `paths`・`parse_ts`・`read_jsonl` を使い、読み方を2か所に分けない。手元の写し（~/.salesanchor-tools）は ADR-1034 の仕組みで GitHub の main に揃うので、マージの後は `cd ~/.salesanchor-tools && python3 -I -B scripts/dev/consent-audit.py --prod-logins …` で動く。
 
 ### 対象と対象外
-- 対象: `scripts/dev/consent-audit.py`（入口と関数の追加だけ。今の入口の動きは変えない）、新しい試験 `scripts/dev/prod-login-match-tests.py`、この design.md の手順の行。
+- 対象: `scripts/dev/consent-audit.py`（入口と関数の追加だけ。今の入口の動きは変えない）、新しい試験 scripts/dev/prod-login-match-tests.py（新規）、この design.md の手順の行。
 - 対象外: 見張り（フック）・settings・許可の行・agent-console・本番サーバー・ssh の設定。道具は ssh をしない（本番には入らない）。会話の記録を書き換えない。
 
 ### 入力
@@ -107,7 +107,7 @@ ADR-1003 追記「弊害と対処」を正とする。主なもの: 担当のセ
 1. 文面の中の ssh・scp・rsync・sftp の呼び出しを取り出す。ファイルに書くだけの heredoc（`cat >`・`tee` に渡すもの）の中の文章は数えない（10-27 の README の誤判定を防ぐ）。`bash`・`sh`・`ssh` に渡す heredoc と `bash -c "…"` の中身は数える（実行されるため）。
 2. その呼び出しで `-i` か `IdentityFile` に `manual-only` があれば「使う」。
 3. 無ければ行き先の名前（`prod1` など）を `ssh -G <名前>` で解く（通信はしない。手元の ssh の設定を読むだけ）。出てきた identityfile に `manual-only` があれば「使う」。
-4. 文面から呼ばれる台本（`.sh`・`.py`）が今もあれば、その中身に 1〜3 を当てる。台本が消えていれば「台本が読めない」の印を付ける。
+4. 文面から呼ばれる台本（拡張子 .sh・.py）が今もあれば、その中身に 1〜3 を当てる。台本が消えていれば「台本が読めない」の印を付ける。
 
 ### 入室ごとの分類（上から順に、最初に当たったもの）
 | 分類 | 条件 | 扱い |
@@ -121,7 +121,7 @@ ADR-1003 追記「弊害と対処」を正とする。主なもの: 担当のセ
 | 要確認: 記録なし | 重なる呼び出しが1つも無い | 説明できない（行を出す） |
 
 ### 出力
-- 置き場所: `~/CC報告ファイル-keep/consent-weekly/YYYYMMDD-prod-login-check.md`（今の手作業の記録と同じ所）。
+- 置き場所: ~/CC報告ファイル-keep/consent-weekly/ の「日付-prod-login-check.md」（今の手作業の記録と同じ所）。
 - 中身: 分類ごと・サーバーごとの件数、委任の後だけの件数、「説明できない」の各行（日本時間の時刻・サーバー・会話の id の先頭8桁・分類・呼び出しの時刻）。呼び出しの文面は書かない（秘密が入りうるため）。最後の行に `UNEXPLAINED_AFTER_DELEGATION=<件数>`。
 - 終わりの番号: 委任の後に説明できない入室が1件でもあれば 1、0件なら 0、入力が読めなければ 2。
 
@@ -158,7 +158,7 @@ cd ~/.salesanchor-tools && python3 -I -B scripts/dev/consent-audit.py --prod-log
 | 同じ週で、`ssh prod1` の呼び出しと重なる入室が「要確認: 関係の無い実行だけ」に出ない | 同上。試作5の 84 件の時刻と照らす（○×） |
 | 1週分を 300 秒以内で照らす | 出力に書く秒数（○×） |
 | 出力に呼び出しの文面が1行も無い | 出力を `grep -c -E 'ssh |docker |psql'` して 0（○×） |
-| 試験がすべて通る: 分類7種・3秒のゆとりの境目・`!`・裏の実行の終わり・終わり不明・担当の記録の置き場所・日本時間と UTC・別名の解決・書くだけの heredoc（数えない）と `bash` に渡す heredoc（数える）・消えた台本 | クラウドで `python3 scripts/dev/prod-login-match-tests.py` が終わりの番号 0（○×） |
+| 試験がすべて通る: 分類7種・3秒のゆとりの境目・`!`・裏の実行の終わり・終わり不明・担当の記録の置き場所・日本時間と UTC・別名の解決・書くだけの heredoc（数えない）と `bash` に渡す heredoc（数える）・消えた台本 | クラウドで python3 scripts/dev/prod-login-match-tests.py（新規） が終わりの番号 0（○×） |
 | 今の入口（`--probe` `--audit` `--permissions` `--commit-snapshot`）の結果が変わらない | 今の試験 `scripts/dev/permission-delegation-tests.py` が通る（○×） |
 
 ### KPI
@@ -169,7 +169,7 @@ cd ~/.salesanchor-tools && python3 -I -B scripts/dev/consent-audit.py --prod-log
 
 ### 維持の仕組み
 - 守り手: 毎週の同意と権限の点検で、上の手順の行3つを流す。終わりの番号が 1 なら、その週のうちに PO へ1件ずつ報告する。
-- 試験は `scripts/dev/prod-login-match-tests.py`。consent-audit.py を変えるときは、この試験と今の試験の両方を流す。
+- 試験は scripts/dev/prod-login-match-tests.py（新規）。consent-audit.py を変えるときは、この試験と今の試験の両方を流す。
 
 ### 設計審査（2026-11-03・同じ AI の自己審査で、独立した第二者の審査ではない）
 - 判定: APPROVE（実装カードの材料として足りる）。
