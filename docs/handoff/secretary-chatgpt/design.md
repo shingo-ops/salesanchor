@@ -1,7 +1,7 @@
-# 秘書チャットを ChatGPT に・アプリの AI を画面で管理 — 設計（草案 v8・審査7回目の指摘を反映）
+# 秘書チャットを ChatGPT に・アプリの AI を画面で管理 — 設計（草案 v9・審査8回目の指摘を反映）
 
-- 状態: 設計案作成済み／設計審査 1回目〜7回目 REVISE（§14）→ v8 で反映・8回目 未／PO 承認 未／実装 未着手
-- 目標: `kgi.md`（K1〜K10）。現在地: `recon.md`（§番号で参照）。根拠の照合は origin/main d828bb269（引用したパスは 44098dc31・c60ea6eb3・90ee0c15f から差分なし。生出力 `review4_fix.txt`・`review5_fix.txt`・`review6_fix*.txt`・`review7_fix.txt`）。
+- 状態: 設計案作成済み／設計審査 1回目〜8回目 REVISE（§14）→ v9 で反映・9回目 未／PO 承認 未／実装 未着手
+- 目標: `kgi.md`（K1〜K10）。現在地: `recon.md`（§番号で参照）。根拠の照合は origin/main d828bb269（引用したパスは 44098dc31・c60ea6eb3・90ee0c15f から差分なし。生出力 `review4_fix.txt`・`review5_fix.txt`・`review6_fix*.txt`・`review7_fix.txt`・`review8.md`）。
 - 関係 ADR: ADR-1056（秘書）・ADR-1004（使用量台帳）・ADR-027・ADR-067・ADR-144・ADR-1016（即時反映の表）・ADR-135/136（危険 PR の GO）。新しい ADR-1057「アプリの AI の担当は DB の1か所で決め、画面で見て切り替える」を実装カードより先に起案し、ADR-1056 の「Claude Code に固定」「ledger に書かない」を置き換える（§13）。
 
 ## 1. 目的（PO の言葉）
@@ -36,6 +36,8 @@
     - 新しく作る CHECK（新しい3表の provider・job_key、llm_usage_events の outcome・error_code）は、表や列を作る文の中で一緒に作る（`CREATE TABLE IF NOT EXISTS` の中、または `ADD COLUMN IF NOT EXISTS ... CONSTRAINT <名前> CHECK (...)`）。流れ直しても作り直さない。
     - 今ある CHECK を広げる時（llm_usage_events の purpose に `secretary_intent`、sdk に `codex-cli`・`claude-code`）は、前例 `migrations/20261020_110000_line_conditions_value_group_add_supply.sql:15-36` と同じ形にする。DO の塊の中で `pg_get_constraintdef` を見て、本便で足す値がすでに入っていれば何もしない。入っていない時だけ DROP → ADD する。条件なしで毎回 DROP → ADD すると、①後の migration がさらに広げた値の行がある時に狭い CHECK を付け直して deploy が落ちる（前例の `:5-6`・`:12-15` にある deploy 失敗と同じ壊れ方） ②流れ直すたびに解析で毎分書かれる llm_usage_events に一番強いロックを取る。ロックの待ちは1秒・最大40回（`scripts/run_all_migrations.sh:57-60`）で、psql は文ごとに commit するので、DROP の後の ADD が取れないと CHECK が外れたまま残る。
     - 段3の codex の3行の migration も同じ（provider の CHECK は段1a で codex を含めて作るので、段3で CHECK は変えない）。
+    - sdk の CHECK は値を2つ足す。「何もしない」のは `codex-cli` と `claude-code` の両方が定義に入っている時だけ（片方だけ見ると、もう片方が入らないまま止まる。審査8回目 N3）。
+    - outcome と error_code の「ok なら error_code は NULL、failed なら NOT NULL」は2つの列にまたがる。列の制約として PostgreSQL 16 が受け付けるかは【未確認】。§7 1a の2回流しの試験で確かめる。受け付けない時は表の制約として名前を付け、`pg_constraint` にその名前が無い時だけ足す DO の塊にする（審査8回目 N3）。
 - provider は3つに閉じる: CHECK (provider IN ('gemini','codex','claude'))。
 - job_key は5つに閉じる: CHECK (job_key IN ('line_extraction','translation_inbound','translation_inbound_escalation','translation_outbound','secretary_intent'))。llm_usage_events の purpose と同じ名前にし、記録と担当を名前でつなぐ。
 - 初めの行は今の本番の値。解析は gemini-3.1-flash-lite（`gemini_extraction_svc.py:283`）、秘書は claude/sonnet（`secretary-agent/server.mjs:70`）。翻訳3つは本番の環境変数 `TRANSLATION_MODEL_RECEIVE`・`TRANSLATION_MODEL_SEND` の実際の値（コードの既定は両方 gemini-3.5-flash-lite、`message_translator.py:49-50`）。【未確認】本番で環境変数が設定されているか・その値 → 実装カードの前に確かめる（§13-1）。
@@ -71,7 +73,7 @@
 - 経路ごとの書き手（生出力 `review3_verify_b.txt`〜`_f.txt`）:
   | 経路 | 今の成功の行の書き手 | 失敗の行の書き手（後） | 取引 |
   |---|---|---|---|
-  | 解析 v102（`tcg_extraction.py:497-498`、`get_engine()==ENGINE_V102`） | `line_analysis_v102_svc.py:449-459` `_record_usage`（自分で commit、`:456`）。`recorder.on_response` には使用量を渡さない（`:547-548`）＝ `tcg_extraction_record_svc` の complete/fail はこの経路では書かない（`:214`・`:253` の条件 `_usage_counts is not None`） | 同じ層。`_call_gemini` の送り直しの輪（`:493-519`）の except で、失敗した呼び出しごとに `_record_usage_failure(session, ...)` を1回。送り直す前・最後に投げる前の両方。ただし書くのは API を呼んだ失敗だけ（審査7回目 Q2）: `call_gemini_raw_copy_v8` の API 呼び出しの except（今 `RuntimeError(...) from exc` に包む所）で、包んだ例外に印（属性 `ledger_api_called = True`）を付けて上げる。輪の except は印がある時だけ行を書く。印の無い例外（try の外の `_gem._get_genai_client()` が上げる鍵なし・SDK なしの RuntimeError、`build_prompt_v8` の失敗）は API を呼んでいないので書かない（翻訳の道の③と同じ考え方。鍵が無いことは画面の②で見る）。送り直しの判定（`_is_transient_http`）と `recorder.record_error_detail` は今のまま | 同じ session。輪の中は DB を書いていない（`:490` で commit 済み）ので、書いてすぐ commit。失敗は rollback してログだけ（`_record_usage` と同じ形） |
+  | 解析 v102（`tcg_extraction.py:497-498`、`get_engine()==ENGINE_V102`） | `line_analysis_v102_svc.py:449-459` `_record_usage`（自分で commit、`:456`）。`recorder.on_response` には使用量を渡さない（`:547-548`）＝ `tcg_extraction_record_svc` の complete/fail はこの経路では書かない（`:214`・`:253` の条件 `_usage_counts is not None`） | 同じ層。`_call_gemini` の送り直しの輪（`:493-519`）の except で、失敗した呼び出しごとに `_record_usage_failure(session, ...)` を1回。送り直す前・最後に投げる前の両方。ただし書くのは API を呼んだ失敗だけ（審査7回目 Q2）: `call_gemini_raw_copy_v8` の API 呼び出しの except（今 `RuntimeError(...) from exc` に包む所）で、包んだ例外に印（属性 `ledger_api_called = True`）を付けて上げる。輪の except は印がある時だけ行を書く。印の無い例外（try の外の `_gem._get_genai_client()` が上げる鍵なし・SDK なしの RuntimeError、`build_prompt_v8` の失敗）は API を呼んでいないので書かない（翻訳の道の③と同じ考え方。鍵が無いことは画面の②で見る）。送り直しの判定（`_is_transient_http`）と `recorder.record_error_detail` は今のまま。打ち切り（`SoftTimeLimitExceeded`）は API の途中でも印の前に上げ直される（`gemini_raw_copy_v8.py:226-227`・`line_analysis_v102_svc.py:500-501`）ので行は出さない。打ち切りは台帳に出さないのが意図（審査8回目 N4） | 同じ session。輪の中は DB を書いていない（`:490` で commit 済み）ので、書いてすぐ commit。失敗は rollback してログだけ（`_record_usage` と同じ形） |
   | 解析 旧エンジン（`tcg_extraction.py:499`、`extract_message`→`call_gemini_extraction`） | `tcg_extraction_record_svc.py` の complete（`:203-222`）と fail（`:224-265`、応答を受けた時だけ）。使用量は `gemini_extraction_svc.py:451` の `on_response` で渡す | 同じ層。API の例外を受ける所（`gemini_extraction_svc.py:436-440`）で recorder に印を付ける（新しい関数 `recorder.mark_api_failed(error_code)`。error_code は `gemini_ledger_error_code` の値）。fail は「印がある かつ 応答を受けていない」時だけ failed の行を1行。`fail` は2つのエンジンの共通の出口（`tcg_extraction.py:432`）だが、v102 は自分の層（`line_analysis_v102_svc.py`）で API を呼び、この印を付けないので2行にならない。API を呼んでいない失敗（SOFT_TIME_LIMIT・RECORD_WRITE_FAILED・REFERENCE_CHANGED 等、`tcg_extraction.py:419-431`）も印が無いので書かない | fail の今の取引の中だが、台帳の INSERT（今ある ok の行 `:253-261` と新しい failed の行の両方）だけを `s.begin_nested()`（SAVEPOINT）で囲む。台帳の INSERT が失敗したら SAVEPOINT まで戻してログに種類だけ出し、続く extraction_jobs の error の UPDATE（`:262-264`）と commit（`:265`）はそのまま進める。囲まないと PostgreSQL は失敗した文のあと取引全体を受け付けず、job が error にならない（`:268-270` の except に落ちる。審査4回目①） |
   | `gemini_raw_copy_v8.py:182-238` | 書かない | 書かない（呼び手の層が書く） | — |
   | 翻訳3つ（`message_translator.py:492`・`:513`・`:646` の `_call_gemini` 呼び出し） | 呼び出しの後の `record_usage_event`（`:494`・`:515`・`:648`）。同じ関数の中で commit される（`:531`・`:669`） | 同じ3か所で except。except が囲むのは `_call_gemini(...)` の1行だけ（後の処理の例外は拾わない）。`_call_gemini`（`:358-394`）は例外に印（outcome・error_code・使用量）を付けて上げるだけ（引数は増やさない）: ①API の例外（try `:371-381` の except `:382-384`）は outcome=failed・error_code=`gemini_ledger_error_code`・使用量なし ②空の応答は、使用量の読み取り（今の `:390-391`）を空の判定（`:387-388`）より前に移し、outcome=ok・使用量ありの印を付けて上げる。③印の無い例外（try の外の `_ensure_api_key`・`_get_genai_module`、`:367-369` の鍵が無い等）は API を呼んでいないので行を書かない（鍵が無いことは画面の②で鍵の有無を見て×にする）。except は印どおりに1行書いて、元の例外をそのまま上げ直す。tenant_id・source_ref・sdk は同じ場所の成功の行と同じ値（`:495-496`・`:517-518`・`:649-651`） | 呼び出し元の取引は例外で巻き戻る（`database.py:46-55`）ため、失敗の行だけ自分専用の `AsyncSessionLocal()`（`database.py:36`）で書いてすぐ commit。llm_usage_events は public・行の守り（RLS）なし（migrations に policy 0件）なのでテナント文脈は要らない |
@@ -113,7 +115,7 @@
   - 成功の条件は3つ全部: ①`turn.completed` がある ②最後の `agent_message` が答えの形（schema）で読める ③許す一覧の外が0件。error の種類が増えても、道具が動いたかは item の種類で見るので守りは変わらない（error の文面の種類は【未確認】のまま残し、段3で `error_events` の数が1回あたり1を超えた呼び出しの件数を数える）。
   - 容器の失敗の code は4つに閉じる: `auth_failed`・`cli_failed`・`tool_used`・`unreadable`（答えが読めない）。
 - ログイン: CODEX_HOME を `/home/node/.codex` にし、専用の名前付きボリューム `secretary-codex-home` をそこに付ける。Dockerfile で `RUN mkdir -p /home/node/.codex && chown node:node /home/node/.codex && chmod 700 /home/node/.codex` を `USER node` の前に置く（空の名前付きボリュームは初回にイメージ側の持ち主と権限を写すため）。容器のほかの場所は read_only・/tmp だけ tmpfs のまま。cap_drop ALL・no-new-privileges・mem_limit 512m・frontnet だけ（`docker-compose.secretary-agent.yml:10-39` と同じ）。
-- auth.json の中身は読まない・出さない。読むのは `last_refresh` の日時と、ファイルがあるかどうかだけ。
+- auth.json は JSON として読み、`last_refresh` の1つだけを取り出す。ほかの欄は変数に残さず、ログ・応答・記録に出さない。ファイルがあるかどうかも見る（審査8回目 N6）。
 - ログインのし方: PO が手元で台本 `scripts/ops/secretary-codex-login.sh` を流す（manual-only 鍵）。中で `docker exec -it secretary-codex codex login --device-auth` を動かし、出てきたアドレスとコードを PO が手元のブラウザで入れる。AI は流さない。手元の Mac のログインとは別に持つ。
 - `/health` は {ready: auth.json がある, last_refresh: 日時} だけを返す。
 - 失敗の読み替え: exit≠0 で標準エラーに refresh_token_invalidated・token_revoked・401 があれば auth_failed（標準エラーは記録しない。種類の名前だけ）。そのほかは今の作り（`server.mjs:86-115`）と同じ。
@@ -169,22 +171,26 @@ GitHub の一時 VM（sandbox-test）で、compose と同じ条件（read_only�
   ```
 - 数え方: `count_24h` は直近24時間の outcome='ok' の行だけ、`failed_24h` は outcome='failed' の行だけ（どちらも purpose＝job_key・今の provider の sdk の集合、§6 の①と同じ対応表）。
 - /health は2秒で打ち切る。返らない・届かない時は login_ok=false・login_reason="not_ready"。GET 全体が容器を待って遅くならないようにする。
-- `PUT /api/v1/super-admin/ai-jobs/{job_key}` 体 `{ "choice_id": int }`。job_key が5つ以外は 404。choice が別の job_key のものなら 422。担当の更新と履歴の1行を同じ取引で書く（K9）。返事は GET の1行と同じ形。
+- `PUT /api/v1/super-admin/ai-jobs/{job_key}` 体 `{ "choice_id": int }`。job_key が5つ以外は 404。choice が別の job_key のものなら 422。担当の更新と履歴の1行を同じ取引で書く（K9）。今の行は `SELECT ... FOR UPDATE` で押さえてから読み、old_choice_id にする（2人が同時に変えても履歴の old がずれない）。今と同じ choice_id が来たら書き換えず履歴も書かず、200 で今の行を返す（審査8回目 N5）。返事は GET の1行と同じ形。
 - `GET /api/v1/super-admin/ai-jobs/history?limit=50`（1〜200）の返事: `{ "items": [ {"job_key", "old": {"provider","model"}|null, "new": {"provider","model"}, "changed_by_name": str|null, "changed_by_id": int|null, "changed_at": str} ] }`。名前も ID も null なら画面は「ID 不明」。
 - 即時反映の表（ADR-1016）: PUT を `backend/app/realtime/topics.py` に載せる（前例 `:368` の llm-budget の PUT と同じく `_PENDING`）。載せないと `test_realtime_topics.py` が赤になる（`topics.py:5`）。
 
 ## 7. 進め方（1回に1つ・変更→反映→測る）
 | 段 | 中身 | 合格の見方 |
 |---|---|---|
-| 1a | migration だけ: 担当表3つ＋初めの行（codex の3行は除く）・履歴の表のトリガー・ledger の outcome/error_code 列・CHECK の作り直し（コードは変えない）。同じ便で、相談係の分類表に新しい文字の列7つを足す（`migrations/20261024_100300_create_ai_cloud_views.sql`。このファイルが分類表の正本で毎回流し直される、`:3`）: llm_usage_events の outcome・error_code、ai_job_choices の job_key・provider、ai_job_assignments の job_key、ai_job_assignment_history の job_key は CHECK で値が限られるので allow（理由に CHECK の名前を書く、`:143-144` と同じ形）、ai_job_choices の model は mask（`:142` と同じ理由）。試験の行数 `backend/tests/ops/test_ai_cloud_views.py:481` の 1057 を足した数に直す。新しい migration を `run_all_migrations.sh` に `run_sql migrations/...` の形で足す（`:1059` 等と同じ）。分類の試験を1本足す: 前例 `backend/tests/ops/test_ai_cloud_views.py:570-620`（ADR-1055 段A）と同じ形で、bootstrap の DB に本物の migration を次の順で流し（`20260921_110000_pipeline_tables_public.sql` → `20260930_150000` → 本便の migration → `_CREATE_SQL`。`20260930_150000:40` が `public.extraction_attempts` を参照し、bootstrap の一覧 `tests/rls_bootstrap.py:14-34` はこの表を作らないため。`20260921_110000` が参照する suppliers は `056_...:45`、products は `062_...:30` で bootstrap にある。units・conditions は表として無いので `:183-` の FK なしの側を通る。表の形を試験に写さない。この順で流れなければ実装を止めて設計に戻す。審査6回目 P2）、column_class に7列の行が名前で7件あること・新しい3表と llm_usage_events について `_classification_gaps` が0件であることを確かめる（今の T10 は bootstrap の表だけを作り、この4表を作らないので、行を足し忘れても緑のまま。`:523-545`・`tests/rls_bootstrap.py:14-34`）。履歴の表のトリガーの試験も足す（UPDATE・DELETE・TRUNCATE は例外・changed_by だけを NULL にする UPDATE は通る）。流れ直しの試験も足す（本便の migration を2回流しても通る。1回目の後に担当の行を画面と同じ形で UPDATE し、2回目の後もその値のまま。前例 `test_ai_cloud_views.py:618` の2回流し）。もう1本: 後の migration を真似て purpose の CHECK に本便に無い値を足し、その値の行を1行入れた後で本便の migration を流し直しても通り、CHECK にその値が残る（審査7回目 Q1） | 本番で3表の行数（選択肢・担当5・履歴0）と CHECK の中身・トリガーがあることを読み取り鍵で確認。今の解析の記録が途切れない（反映後の1時間の line_extraction の行数が、前日の同じ時刻の1時間の行数の半分以上で○。前日が0行なら確かめない）。足した分類の試験とトリガーの試験が緑 |
+| 1a | migration だけ: 担当表3つ＋初めの行（codex の3行は除く）・履歴の表のトリガー・ledger の outcome/error_code 列・CHECK の作り直し（コードは変えない）。同じ便で、相談係の分類表に新しい文字の列7つを足す（`migrations/20261024_100300_create_ai_cloud_views.sql`。このファイルが分類表の正本で毎回流し直される、`:3`）: llm_usage_events の outcome・error_code、ai_job_choices の job_key・provider、ai_job_assignments の job_key、ai_job_assignment_history の job_key は CHECK で値が限られるので allow（理由に CHECK の名前を書く、`:143-144` と同じ形）、ai_job_choices の model は mask（`:142` と同じ理由）。試験の行数 `backend/tests/ops/test_ai_cloud_views.py:481` の 1057 を足した数に直す。新しい migration を `run_all_migrations.sh` に `run_sql migrations/...` の形で足す（`:1059` 等と同じ）。分類の試験を1本足す: 前例 `backend/tests/ops/test_ai_cloud_views.py:570-620`（ADR-1055 段A）と同じ形で、bootstrap の DB に本物の migration を次の順で流し（`20260921_110000_pipeline_tables_public.sql` → `20260930_150000` → 本便の migration → `_CREATE_SQL`。`20260930_150000:40` が `public.extraction_attempts` を参照し、bootstrap の一覧 `tests/rls_bootstrap.py:14-34` はこの表を作らないため。`20260921_110000` が参照する suppliers は `056_...:45`、products は `062_...:30` で bootstrap にある。units・conditions は表として無いので `:183-` の FK なしの側を通る。表の形を試験に写さない。この順で流れなければ実装を止めて設計に戻す。審査6回目 P2）、column_class に7列の行が名前で7件あること・新しい3表と llm_usage_events について `_classification_gaps` が0件であることを確かめる（今の T10 は bootstrap の表だけを作り、この4表を作らないので、行を足し忘れても緑のまま。`:523-545`・`tests/rls_bootstrap.py:14-34`）。履歴の表のトリガーの試験も足す（UPDATE・DELETE・TRUNCATE は例外・changed_by だけを NULL にする UPDATE は通る）。流れ直しの試験も足す（本便の migration を2回流しても通る。1回目の後に担当の行を画面と同じ形で UPDATE し、2回目の後もその値のまま。前例 `test_ai_cloud_views.py:618` の2回流し）。もう1本: 後の migration を真似て purpose の CHECK に本便に無い値を足し、その値の行を1行入れた後で本便の migration を流し直しても通り、CHECK にその値が残る（審査7回目 Q1） | 本番で3表の行数（選択肢・担当5・履歴0）と CHECK の中身・トリガーがあることを読み取り鍵で確認。今の解析の記録が途切れない（反映後24時間の line_extraction の行数が、その前の24時間の行数の半分以上で○。前の24時間が0行なら確かめない。1時間で比べないのは、直近7日で 675 行＝1時間あたり平均4行ほどで普段の揺れで半分を切りうるため。recon §2・審査8回目 N2）。足した分類の試験とトリガーの試験が緑 |
 | 1a-2 | コード: 集計の outcome='ok' 条件だけ（§4-2-2 のダッシュボード・§4-2-3 の prompt_ab・reextract）。1b より先に別の PR で出す | 今の画面の数が出す前と同じ（失敗の行がまだ無いので変わらない）。試験で failed の行を入れても数に入らない |
-| 1b | コード: 読む関数・解析と翻訳を担当表から読む・失敗も記録（§4-2-3 の表の書き手どおり）・固定値と環境変数の読み取りを消す・秘書の model を担当表から渡す・秘書の台帳の行（claude-code）・server.mjs の "sonnet" を消す（§4-3）・K5 の試験・一覧3つ（USAGE_PURPOSES・USAGE_SDKS・KNOWN_PURPOSES）・一覧の照合の試験（本物の migration を流した DB で `pg_get_constraintdef` から purpose・sdk・error_code・provider・job_key の値を取り出し、Python 側の一覧と同じ集合。今この試験は0本、審査7回目 Q5）・v102 の鍵切れの試験（§4-2-1） | 本番で解析の記録の model が今と同じ。失敗行が出る（出たら error_code が9つの中）。1つの呼び出しで2行出ていない: 旧エンジンは「同じ extraction_attempt_id に ok と failed の両方がある組が0件」（旧エンジンの行は source_ref が NULL、`tcg_extraction_record_svc.py:214-222`）。v102 は「同じ extraction_attempt_id の failed の数が3以下」（最初の1回＋その場の送り直し2回、`line_analysis_v102_svc.py:464` の `_IMMEDIATE_RETRY_DELAYS = (2, 8)`。source_ref で数えると、celery の送り直し〔`tcg_extraction.py` の `max_retries=2`〕や人が直した後の解析し直しで同じ投稿に何度も呼ばれ、正しい動きでも4行以上になるため。審査6回目 P3）。extraction_attempt_id が NULL の行（recorder の無い再抽出の道具）は数えない。秘書の行が sdk=claude-code・model=sonnet で出る。K5 の試験が緑。旧エンジンの試験「台帳の INSERT が失敗しても extraction_jobs が error になる」が緑 |
+| 1b | コード: 読む関数・解析と翻訳を担当表から読む・失敗も記録（§4-2-3 の表の書き手どおり）・固定値と環境変数の読み取りを消す・秘書の model を担当表から渡す・秘書の台帳の行（claude-code）・server.mjs の "sonnet" を消す（§4-3）・K5 の試験・一覧3つ（USAGE_PURPOSES・USAGE_SDKS・KNOWN_PURPOSES）・一覧の照合の試験（本物の migration を流した DB で `pg_get_constraintdef` から purpose・sdk・error_code・provider・job_key の値を取り出し、Python 側の一覧と同じ集合。今この試験は0本、審査7回目 Q5）・v102 の鍵切れの試験（§4-2-1）・失敗の行を数える試験の差し替えは印（`ledger_api_called = True`）を付けた例外を使う（今の差し替え `test_reextract_v6_with_v102_pg.py:215-216`・`:347-348`・`test_api_error_auto_retry.py:40` は印が無く、そのままでは0行のまま緑になる）・印の無い例外で行が0行になる試験を1本（審査8回目 N4） | 本番で解析の記録の model が今と同じ。失敗行が出る（出たら error_code が9つの中）。1つの呼び出しで2行出ていない: 旧エンジンは「同じ extraction_attempt_id に ok と failed の両方がある組が0件」（旧エンジンの行は source_ref が NULL、`tcg_extraction_record_svc.py:214-222`）。v102 は「同じ extraction_attempt_id の failed の数が3以下」（最初の1回＋その場の送り直し2回、`line_analysis_v102_svc.py:464` の `_IMMEDIATE_RETRY_DELAYS = (2, 8)`。source_ref で数えると、celery の送り直し〔`tcg_extraction.py` の `max_retries=2`〕や人が直した後の解析し直しで同じ投稿に何度も呼ばれ、正しい動きでも4行以上になるため。審査6回目 P3）。extraction_attempt_id が NULL の行（recorder の無い再抽出の道具）は数えない。秘書の行が sdk=claude-code・model=sonnet で出る。K5 の試験が緑。旧エンジンの試験「台帳の INSERT が失敗しても extraction_jobs が error になる」が緑 |
 | 2 | 画面「AI の担当」タブ＋API（表示と切り替え） | K3・K4・K7・K9・K10。i18n の試験「error_code の9つ・job_key の5つすべてに日本語と英語のキーがある」が緑 |
 | 3 | §5-2 の V1〜V5 合格 → secretary-codex 容器（並べて起動・担当は Claude のまま）＋ codex の選択肢3行の migration ＋ §5-3 の backend の直し（provider→容器の URL の対応表・`SECRETARY_CODEX_URL`・tool_used の読み替え・`AgentEnvelope` の `usage`・`error_events` の2欄。審査7回目 Q3）→PO がログイン→ 試験の担当切替で K1・K2・K6・K8 を測る→合格なら担当を ChatGPT に | K1・K2・K6・K8。codex の容器が返した `usage`・`error_events` を含む返事で ValidationError が0件 |
 | 4（合格後） | Claude の容器と専用ファイルを片付けるかを PO が決める | — |
 - 1a を先に本番へ出す理由: 本番に出す流れはコードを先に切り替え、migration を後に流す（`migrations/20260930_150000_create_llm_usage_events.sql:16-24` に記載の deploy.yml の順）。1b のコードは行が無ければ止まるので、表が先に無いと解析と翻訳が全部失敗する。
 - 1a-2 を 1b より先に出す理由: 1b のあと戻すと failed の行が表に残り、outcome の条件が無い前の版の集計が失敗の行も数えてしまう。条件を先に出しておけば、1b を戻しても集計は1a-2 の版のままでずれない（審査4回目⑦）。
 - 1a・1b・3 は migrations/・compose・本番 scripts/ を含むので、危険 PR の GO 手順（ADR-135/136）に従う。
+- どこで測るか（審査8回目 N1）:
+  - K5・K9 の「試験の環境」は CI の試験（本物の PostgreSQL に migration を流した DB）。段2で、担当を PUT で変えると次の1回の台帳の model が新しい値になり、履歴が1行増えることを試験で確かめる。本番の解析と翻訳の担当は、試すために切り替えない（お客さんの翻訳と解析に効くため）。
+  - 段3の K1・K2・K6・K8 は本番で測る。secretary-codex は本番の VPS にだけ起こすため（§5-4。§5-2 の一時 VM はログインなしの範囲だけ）。「試験の担当切替」は本番の画面の PUT で secretary_intent を codex にすること。秘書の API はスーパー管理者だけが呼べる（`backend/app/routers/assistant.py:118-127` の `Depends(require_super_admin)`）ので、切り替えの影響はスーパー管理者（PO と担当エンジニア）だけ。測り終えたら同じ画面で claude に戻し、履歴の2行（claude→codex・codex→claude）で確かめる。本番で K9 も同じ2行で確かめる。
+  - 月額契約（ChatGPT の個人の契約）を会社のサーバーで使ってよいかの PO の判断（§13-5）は、段3の PO のログインより前に取る。答えごとの進め方: 「使ってよい」→段3を全部進め、合格なら担当を ChatGPT にしたままにする。「スーパー管理者の試験だけ可」→ K1・K2・K6・K8 を測ったら claude に戻し、お客さんにも秘書を出す時にもう一度聞く。「不可」→段3に入らず、段2で止める（codex の容器も選択肢の3行も出さない）。
 
 ## 8. 受け入れの基準と確かめ方
 |基準|検証方法|
@@ -208,7 +214,7 @@ GitHub の一時 VM（sandbox-test）で、compose と同じ条件（read_only�
 - auth.json は書けるボリュームに残る（ログインの鍵）→ この容器だけに付け、700・バックアップ対象から外す。中身は誰も表示しない。
 - 失敗も記録すると行が増える → 段1b のあと1週間の失敗の行数を測る。
 - 失敗の行を書く別の取引が失敗する → 種類だけログに出し、元の処理は止めない。旧エンジンは SAVEPOINT で台帳だけ戻す（§4-2-3）。
-- 月額契約（ChatGPT の個人の契約）を会社のサーバーで、お客さんが使う機能に使ってよいか → 使い方の約束の判断なので PO が決める（§13-5）。決まるまで段3で担当を ChatGPT に切り替えない。
+- 月額契約（ChatGPT の個人の契約）を会社のサーバーで、お客さんが使う機能に使ってよいか → 使い方の約束の判断なので PO が決める（§13-5）。決まるまで段3に入らない（PO のログインも、試験の担当切替もしない）。答えごとの進め方は §7 の「どこで測るか」。
 
 ## 10. 戻し方
 - 段1a: 新しい表と列は残しても害なし（コードが読まない）。
@@ -228,11 +234,11 @@ GitHub の一時 VM（sandbox-test）で、compose と同じ条件（read_only�
 1. 本番の `TRANSLATION_MODEL_RECEIVE`・`TRANSLATION_MODEL_SEND` が設定されているか・値（モデル名だけ。ほかの行は読まない）を確かめ、§4-1 の初めの行に書く。
 2. ADR-1057 の本文を起案する（ADR-1056 の置き換え部分・解析の選択肢を増やす決まり・失敗の記録・error_code の一覧）。
 3. （済）同期セッションの工場: 共通の物は無い。新しく作らず呼び手の session に書く形にした（§4-2-3）。
-4. v8 の再審査（クラウド）で APPROVE。
+4. v9 の再審査（クラウド）で APPROVE。
 5. PO に決めてもらうこと（1回に1件）:
    - 決定済み: 仕事ごとに選べる AI とモデルの最初の一覧（PO 2026-11-02「1」）。
    - 秘書を ChatGPT にした時の最初のモデル（試験では3つとも6〜8秒で正しい形）。
-   - 月額契約（ChatGPT の個人の契約）を会社のサーバーでお客さん向けの機能に使ってよいか（使い方の約束の判断。段3で切り替える前に）。
+   - 月額契約（ChatGPT の個人の契約）を会社のサーバーでお客さん向けの機能に使ってよいか（使い方の約束の判断。段3の PO のログインより前に。答えは「使ってよい」「スーパー管理者の試験だけ可」「不可」の3つ、進め方は §7）。
    - Claude の容器を片付ける時期（段4）。
 6. prod1 の MemAvailable・MemTotal を読み取りの道で測り、K8 の基準値を本書に書く（段3の前）。
 
@@ -272,3 +278,7 @@ GitHub の一時 VM（sandbox-test）で、compose と同じ条件（read_only�
   - 中の指摘: Q1 CHECK を毎回条件なしで DROP → ADD する形は前に deploy を落とした形→ §4-1 を新しく作る CHECK と広げる CHECK に分け、広げる時は前例と同じく `pg_get_constraintdef` で確かめてから。§7 1a に後の migration が広げた後の流し直しの試験 Q2 v102 の道では例外が包み直されて鍵切れの状態名が消える・鍵なしでも failed の行が出る→ §4-2-1 で `__cause__` の鎖をたどる・§4-2-3 で API を呼んだ失敗にだけ印を付けて書く。
   - 軽い指摘: Q3 §5-3 の backend の直しの段→ §7 段3 Q4 担当を読む回数→ §4-3 で仕事の初めに1回 Q5 一覧と CHECK を照らす試験→ §4-3・§7 1b・段2 Q6 数で決める合格・K6 の手の主→ §7 1a・§8 K6。
   - 確かめた生出力: `review7.md`・`review7_fix.txt`（origin/main d828bb269 を `git show` で読んだもの）。
+- 8回目（2026-11-02 15:56〜 UTC・head 155bbc078・クラウド。返事は別のブランチ review/secretary-chatgpt-r8 の commit 9c12c7b5a に `review8.md`。根拠は origin/main d828bb269）: VERDICT: REVISE。7回目の Q1〜Q6 はすべて直ったと認められた。
+  - 中の指摘: N1 段3の「試験の担当切替」がどこで行われるか決まっておらず、「PO が決めるまで切り替えない」と食い違う→ §7 に「どこで測るか」（K5・K9 は CI、段3は本番の画面でスーパー管理者だけに効く切り替え、PO の判断はログインより前・答えごとの進め方）、§9・§13-5 を合わせた。
+  - 軽い指摘: N2 1時間の比べ方は件数が少ない→ §7 1a を24時間に N3 sdk の2つの値・2列にまたがる CHECK→ §4-1 N4 試験の差し替えの印・打ち切りは出さない→ §4-2-3・§7 1b N5 同じ値・同時の切り替え→ §6-1 N6 auth.json の読み方の言い回し→ §5-1。
+  - 確かめた生出力: `review8.md`。N1 の `assistant.py:118-127`（require_super_admin）と N4 の `gemini_raw_copy_v8.py:226-229` は origin/main を `git show` で読んで確かめた。
