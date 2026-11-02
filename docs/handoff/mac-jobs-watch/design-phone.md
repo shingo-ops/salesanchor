@@ -4,6 +4,8 @@
 
 親: [README](../../specs/mac-jobs-watch/README.md)／調べた事実: [recon-phone.md](./recon-phone.md)／元の設計: [design.md](./design.md)
 
+対象 ADR: ADR-1009（通知先 webhook を見張り役と共有・読むだけ）、ADR-1015（区分 A。元の設計 design.md と同じ）。スマホとのつなぎ方を決めた ADR は無い（recon-phone.md §1）。
+
 状態: 設計案作成済み・設計審査済み（§8）。PO 承認 2026-11-02 チャット「1」（AI の選択肢「1. この3つで進める」に対して）。
 
 ## 1. 目的と合格条件
