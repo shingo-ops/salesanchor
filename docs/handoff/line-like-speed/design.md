@@ -198,7 +198,7 @@ PO の言葉: 「LINEみたいな使い心地は出来る？」（意味は「�
   - 生の行は設計担当の手元の /tmp/CC報告ファイル/batch3a/b8/measure-run41389073263.txt（リポジトリには入れない）。
 - B6 は DB の件数だけ確かめた。本番の読むだけの道（ADR-1024）で tenant 001 の Bot 3 件・リード 472 件・注記マスタ 99 件。画面の件数はまだ確かめていない。根拠は backend を変えていないこと（B3）と B1。
 - K5 は本番で 2 人のログインでは確かめていない（本番でパスワードを打たない決まり）。カードの Q2 の試験と、写しの名前に利用者が入り利用者が変わると消える作りで確かめた。
-- 残り: K1 が 0.1 秒を超える画面（403 なし）は /dashboard/leads 0.20 秒・/management-center/units 0.19 秒・/crm/contacts 0.19 秒・/schedule/settings 0.19 秒・/quotes 0.19 秒・/management-center/status-master 0.19 秒ほか 19 画面。/inventory は 10 秒で見分けられなかった。次はこの遅い順の 10 画面。
+- 残り: K1 が 0.1 秒を超える画面（403 なし）は /dashboard/leads 0.20 秒・/management-center/units 0.19 秒・/crm/contacts 0.19 秒・/schedule/settings 0.19 秒・/quotes 0.19 秒・/management-center/status-master 0.19 秒など。設計担当の抜き書きでは全部で 18 画面。/inventory は 10 秒で見分けられなかった。次はこの遅い順の 10 画面。
 
 ### 3-5. 測り方（|基準|検証方法|）
 | 基準 | 検証方法 |
