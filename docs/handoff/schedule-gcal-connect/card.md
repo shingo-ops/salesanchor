@@ -26,7 +26,7 @@
 
 ## 2. 中身
 ### 2-1 calendar_service.py
-- `_get_sync_mode`（:45-54）は変えない（update・delete・通知の登録でも使う）。その直後に足す:
+- `_get_sync_mode`（:44-53）は変えない（update・delete・通知の登録でも使う）。その直後に足す:
 ```python
 async def _get_sync_target(db: AsyncSession, tenant_id: int) -> tuple[str, Optional[int]]:
     """同期モードと、Google をつないだ人の user_id を返す。未接続は ('none', None)。"""
@@ -164,6 +164,8 @@ _ACCEPTED_SYNC_MODES = ("write_only", "none")
   - `vi.mock("../../contexts/AuthContext", ...)` で `uid` を持つ人を返す。`useApiQuery` は今の人がいないと取りに行かない（`frontend/src/lib/query/apiQuery.ts:67`）。
   - `afterEach` で `queryClient.clear()`（`../../lib/query/apiQuery` から）。前の試験の status の写しを残さない。
   - `api.get` を `vi.mock("../../lib/api", ...)` で差し替え、path ごとに答えを返す。
+  - 文言は `import i18n from "../../i18n"` で本物を使う（手本 `frontend/src/pages/admin/AdminHubPage.test.tsx:5`）。「Googleカレンダー連携」「✔︎連携済」で探すため。
+  - 画面は `MemoryRouter` で包む（`useNavigate`・`useSearchParams` を使うため。手本 `frontend/src/pages/admin/AdminHubPage.test.tsx`）。
 - 押す試験では、`frontend/src/components/AppUpdateNotice.test.tsx:9-22` と同じやり方で `window.location` を差し替え、`href` への代入を受け止める（jsdom で別のサイトへ移らないように）。終わったら元に戻す。
 - 管理者（`is_tenant_admin: true`・status `{connected:false}`）→ 「Googleカレンダー連携」のボタンがあり押せる。押すと `/google-calendar/connect/start` を呼ぶ。
 - 管理者・status `{connected:true}` → 「✔︎連携済」で押せない。
