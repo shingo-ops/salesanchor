@@ -1,12 +1,12 @@
-# 段W 実装カード（いつもの機械のホーム画面のアプリへ、許可依頼の通知を出す・第3版）
+# 段W 実装カード（いつもの機械のホーム画面のアプリへ、許可依頼の通知を出す・第4版）
 
 - 対象: docs/handoff/auth-new-device-approval/design.md 第6.1版 §3 D13・§4 段W・§6（K2 の web push の部分・「相談係 AI の見え方」の PR-W 後 1057 行）・§7 の戻し方。ADR-1055。合格の基準は kgi.md の K2（PO 承認済 2026-11-01）。
 - 中身の正本: 何をどう作るかは design.md §4 段W の文のとおり。このカードは「順番・形の細部・先に確かめること・止まる条件・受入」を足す。design.md とこのカードが食い違うときは止まって Opus へ返す（自分で選ばない。§0 の V で直したものはカードが正）。
 - 根拠の写し: S=origin/main d97928fa7bd91639b3880f882c46babff22ee548（段A 前半・後半が入った後）。事実の生の出力は docs/handoff/auth-new-device-approval/stageW-recon-raw.md・stageW-recon2-raw.md（同じ S で読んだ）。
 - 前提: このカードは設計書だけの PR で本線に入れてから流す。手順1 の後に origin/main に docs/handoff/auth-new-device-approval/stageW-card.md が無ければ、停止して BLOCKED: で返す。
 - 読んだ節: 段A カード（docs/handoff/auth-new-device-approval/stageA-card.md）と同じ。実行役はクラウドの Sonnet。作業場所の作り方はクラウドの決まり（S scripts/agent-hooks/cloud/rules.md:15）を正とする。PR は設計担当（Opus）が手元で作る。出力には上限を付ける。待つために sleep を使わない。
-- 状態: 第3版（Opus 作成）。第1版の審査 REVISE（重大1・要修正4・軽微9）と第2版の審査 REVISE（重大1・要修正1・軽微7）を全部直した。
-- 受領確認: 実装役は着手の最初の報告に「段W カード 第3版 前半（または後半）を受け取った・S=d97928fa7」と書く。
+- 状態: 第4版（Opus 作成）。第3版の審査 REVISE（要修正2・軽微6）も直した。第1版の審査 REVISE（重大1・要修正4・軽微9）と第2版の審査 REVISE（重大1・要修正1・軽微7）を全部直した。
+- 受領確認: 実装役は着手の最初の報告に「段W カード 第4版 前半（または後半）を受け取った・S=d97928fa7」と書く。
 
 ## 0. 設計からの直し（V）
 - V-1 2回に分けて流す。同じ枝 release/new-device-approval-stage-w-impl に積む（release/new-device-approval-stage-w は設計書の PR の枝なので使わない）。PR は後半の push の後に1つだけ作る。
@@ -15,11 +15,12 @@
 - V-2 依存: backend/requirements.txt は直接使う部品だけを固定する書き方（S :1-54。最後は :54 maxminddb==3.2.0）。pywebpush==2.5.0 を説明の1行と一緒に足すだけにし、pywebpush が引き込む部品（py-vapid・http-ece・aiohttp・requests・cryptography）は固定しない。入れた後に pip check が壊れを出さないことと、入った版を報告に書く（§3(j)）。
 - V-3 本番は AUTH_DEVICE_APPROVAL=off のまま（段B で enforce）。off では知らない機械の依頼が作られないので、段W の本番反映の後も送信は起きない。POST の購読は「いつもの機械のログイン中だけ」なので、本番で購読できるのはいつもの機械が登録された後になる。本番の送信の確かめ（last_success_at）は段B の後の段C に回す。段W の本番の受入は §5 W7〜W10 にする。
 - V-4 試験の表定義: design.md の「試験の表定義4か所」は、段W では次の3か所。backend/tests/conftest.py の2か所（:328-333 の public の名前を外す置き換え・:1363〜 の SQLite 版）と、.github/workflows/migration-test.yml の「変更 SQL の前提の移行を先に実行」の段（S :1289-1297 の段A の段と同じ形で1つ足す・#8b。新しい migration は user_trusted_devices を外部キーで指すので、前提の表が無いと CI で落ちる）。backend/tests/rls_bootstrap.py は段A と同じ理由（design.md A-1）で直さない。
-- V-5 送り先の守り（設計の補い・Opus 判断）: サーバーが利用者の渡した URL へ送るので、endpoint は次だけを受ける。https であること・ホスト名が IP の数字でないこと・ホスト名が次のどれかと同じか、その下の名前であること: fcm.googleapis.com・android.googleapis.com・push.services.mozilla.com・push.apple.com・notify.windows.com。長さは endpoint 2048 文字以下・p256dh 200 文字以下・auth 100 文字以下（base64url の文字だけ）。ホスト名の照合は、小文字にした host について host == d or host.endswith("." + d)。さらに次も全部満たすこと（URL の読み方の違いで送り先をすり替えられないため）: endpoint に \・@・空白・制御文字（0x00-0x20 と 0x7f）が無い。urllib.parse.urlsplit(endpoint) の username と password が None。port が None か 443。urllib3.util.parse_url(endpoint).host を小文字にした値が urlsplit の hostname と同じ。外れたら 422 invalid_push_subscription。ホスト名の一覧の出どころは公開の実装例1件（hackutd/harp PR #153）で各社の公式文書では未確認なので、外れた要求は logger.warning にホスト名だけを書く（URL 全体と鍵は書かない）。
+- V-5 送り先の守り（設計の補い・Opus 判断）: サーバーが利用者の渡した URL へ送るので、endpoint は次だけを受ける。https であること・ホスト名が IP の数字でないこと・ホスト名が次のどれかと同じか、その下の名前であること: fcm.googleapis.com・android.googleapis.com・push.services.mozilla.com・push.apple.com・notify.windows.com。urlsplit・.port・urllib3.util.parse_url が例外を出したときも 422 invalid_push_subscription にする（500 にしない）。長さは endpoint 2048 文字以下・p256dh 200 文字以下・auth 100 文字以下（base64url の文字だけ）。ホスト名の照合は、小文字にした host について host == d or host.endswith("." + d)。さらに次も全部満たすこと（URL の読み方の違いで送り先をすり替えられないため）: endpoint に \・@・空白・制御文字（0x00-0x20 と 0x7f）が無い。urllib.parse.urlsplit(endpoint) の username と password が None。port が None か 443。urllib3.util.parse_url(endpoint).host を小文字にした値が urlsplit の hostname と同じ。外れたら 422 invalid_push_subscription。ホスト名の一覧の出どころは公開の実装例1件（hackutd/harp PR #153）で各社の公式文書では未確認なので、外れた要求は logger.warning にホスト名だけを書く（URL 全体と鍵は書かない）。
 - V-6 1台の機械に購読は1つ: POST で同じ trusted_device_id の他の購読（revoked_at が NULL）の revoked_at に :now を入れてから upsert する。1つの依頼で同じ機械に何度も鳴らさないため。
 - V-6b 他人の購読の付け替えを防ぐ: upsert は ON CONFLICT (endpoint) DO UPDATE ... WHERE user_push_subscriptions.user_id = EXCLUDED.user_id とし、RETURNING id が返らない（他人がすでに持つ endpoint）ときは、先に取り消した同じ機械の購読を戻すため await db.rollback() をしてから 409 push_subscription_conflict にする。
 - V-6c 日時: SQL の中で now() を使わず、段A の devices.py と同じく Python の現在時刻を :now で渡す。
 - V-6d sw.js のキャッシュ: frontend/nginx.conf:39-43 は .js に1年の不変キャッシュを付ける。sw.js だけは毎回確かめさせるため、:17-20 の location = /index.html と同じ形で location = /sw.js { add_header Cache-Control "no-cache, must-revalidate"; try_files $uri =404; } を足す（#21b。完全一致の location は正規表現の location より先に選ばれる）。W10 で本番の Cache-Control と中身を確かめる。
+- V-2b urllib3 は V-5 の検査で直接 import するが、pywebpush → requests 経由で入る部品なので requirements.txt では固定しない（版は §3(j) の pip show で記録する）。
 - V-7 送信の名乗り: VAPID の subject は https://app.salesanchor.jp/（mailto にしない。メールの宛先を外へ出さないため）。
 - V-8 部品の使い方（公式の元コードで確かめた・2026-11-02）:
   - pywebpush 2.5.0 の webpush(subscription_info, data=None, vapid_private_key=None, vapid_claims=None, content_encoding="aes128gcm", curl=False, timeout=None, ttl=0, verbose=False, headers=None, requests_session=None)。返事の番号が 202 より大きいと WebPushException を出し、.response に requests の返事が入る。vapid_claims の dict に aud と exp を書き足す（呼び出し側の dict が変わる）ので、送るたびに新しい dict {"sub": subject} を渡す。
@@ -36,7 +37,7 @@
 | 5 | docs/handoff/cloud-case-ai/stage1-column-class.tsv | 1055 行（見出しは schema_pattern・table・column・class・reason・data_type の6列） | public<TAB>user_push_subscriptions<TAB><列><TAB>mask<TAB><TAB>text の形で auth・endpoint・p256dh の3行を、名前の並び順の位置に足して 1058 行 | 前半 |
 | 6 | scripts/migration-guard/reference-allowlist.tsv | :7 の sha256 | #4 を直した後の sha256。4列目の末尾に「 / ADR-1055 design §4 段W（3行追加）」を足す | 前半 |
 | 7 | backend/tests/ops/test_ai_cloud_views.py | :30-38 の定数・:480 の == n0 == 1054・:569-627 段A の分類の試験 | :480 を == n0 == 1057。:37 の後に _WEB_PUSH_SQL = "20261102_090000_add_user_push_subscriptions.sql" を足す。:569-627 と同じ形の試験を1つ足す。流す順は bootstrap → _AUTH_EVENTS_SQL → _SELF_AUTH_SQL → _CREATE_SQL →（3列に column_class の行があることを確かめる）→ _DEVICE_APPROVAL_SQL → _WEB_PUSH_SQL を2回（冪等）→ user_push_subscriptions の分類の漏れが0 | 前半 |
-| 8 | backend/tests/conftest.py | :328-333・:1363〜 | :333 の後に public.user_push_subscriptions の置き換えを同じ形で足す。SQLite 版の段A の3表の後に、段A の SQLite の表と同じく REFERENCES を付けずに CREATE TABLE IF NOT EXISTS user_push_subscriptions (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, trusted_device_id INTEGER NOT NULL, endpoint TEXT NOT NULL UNIQUE, p256dh TEXT NOT NULL, auth TEXT NOT NULL, created_at TIMESTAMP NOT NULL, last_success_at TIMESTAMP, failed_count INTEGER NOT NULL DEFAULT 0, revoked_at TIMESTAMP) を足す（列は #1 の migration と同じ10列。型は段A の SQLite の表の書き方に合わせる） | 前半 |
+| 8 | backend/tests/conftest.py | :328-333・:1363〜 | :333 の後に public.user_push_subscriptions の置き換えを同じ形で足す。SQLite 版の段A の3表の後に、段A の SQLite の表と同じく REFERENCES を付けずに CREATE TABLE IF NOT EXISTS user_push_subscriptions (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, trusted_device_id INTEGER NOT NULL, endpoint TEXT NOT NULL UNIQUE, p256dh TEXT NOT NULL, auth TEXT NOT NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, last_success_at TIMESTAMP, failed_count INTEGER NOT NULL DEFAULT 0, revoked_at TIMESTAMP) を足す（列は #1 の migration と同じ10列。型は段A の SQLite の表の書き方に合わせる） | 前半 |
 | 8b | .github/workflows/migration-test.yml | :1289-1297 段A の前提の段 | :1297 の後に同じ形の段を1つ足す。条件 contains(steps.detect.outputs.changed_sql, 'migrations/20261102_090000_add_user_push_subscriptions.sql')。流すのは migrations/001_create_auth_events.sql → migrations/20261013_160000_add_self_hosted_auth_tables.sql → migrations/20261101_130000_add_new_device_approval.sql の順（psql の書き方は :1289-1297 と同じ）。段A の段は 20261101_130000 が変わったときだけなので、段W の PR では両方は動かない | 前半 |
 | 9 | 新 backend/app/services/web_push.py | 無い | 下の「#9 の中身」 | 前半 |
 | 10 | backend/app/routers/auth.py | :336-347 _notify_new_request・:432 その呼び出し | 下の「#10 の中身」 | 前半 |
@@ -47,7 +48,7 @@
 | 15 | backend/tests/test_viewer_isolation.py | — | 閲覧者のトークンで GET /api/v1/auth/push-public-key が 401 になることが、既存の「認証ありの口」の試験で拾われるか確かめる。拾われなければ同じ形で1件足す（§3(e)） | 前半 |
 | 16 | .github/workflows/deploy.yml | :326 -e '/^CASE_ADMIN_TOKEN=/d'・:380 CASE_ADMIN_TOKEN='${{ secrets.CASE_ADMIN_TOKEN }}' | :326 の後に -e '/^WEBPUSH_VAPID_PRIVATE_KEY=/d'・PUBLIC_KEY・SUBJECT の3行。:380 の後に WEBPUSH_VAPID_PRIVATE_KEY='${{ secrets.WEBPUSH_VAPID_PRIVATE_KEY }}' の形で3行 | 前半 |
 | 17 | 新 frontend/src/lib/webPush.ts（試験は作らない。ブラウザの仕組みだけを呼ぶ薄い部品のため。動きは W11 で見る） | 無い | 下の「#17 の中身」 | 後半 |
-| 18 | 新 frontend/src/pages/account-settings/PushNotifySection.tsx と PushNotifySection.test.tsx（試験は2つ: public_key が null なら何も描かない・文字列なら切り替えが1つ出る） | 無い | 下の「#18 の中身」 | 後半 |
+| 18 | 新 frontend/src/pages/account-settings/PushNotifySection.tsx と PushNotifySection.test.tsx（試験は下の「#18 の中身」の Vitest の5つ） | 無い | 下の「#18 の中身」 | 後半 |
 | 19 | frontend/src/pages/account-settings/SecuritySection.tsx | :365 {isSelfAuth() && <DevicesSection />} | :365 の前に {isSelfAuth() && <PushNotifySection />} | 後半 |
 | 19b | frontend/src/pages/account-settings/SecuritySection.test.tsx | :46 GET は全部 {items: []}・:97 節が4つ・:107 Firebase で1つ | 直さない。PushNotifySection は public_key が文字列でないとき（null・undefined・読み込み中・失敗）に null を返し、.account-settings-section を出さないので :97 と :107 はそのまま通る。通らなければ停止する（数を書き換えない） | 後半 |
 | 20 | 新 frontend/public/sw.js | 無い | 下の「#20 の中身」 | 後半 |
@@ -63,7 +64,7 @@
 - public_key() -> str | None: 設定済みなら公開鍵、未設定なら None。
 - validate_subscription(endpoint, p256dh, auth) -> None: V-5 の検査。外れたら HTTPException(422, "invalid_push_subscription")。
 - class PushTarget(NamedTuple): id, endpoint, p256dh, auth。
-- async list_targets(db, user_id) -> list[PushTarget]: user_push_subscriptions の revoked_at IS NULL の行で、結び付いた user_trusted_devices の revoked_at IS NULL の行だけ（JOIN）。生 SQL。
+- async list_targets(db, user_id) -> list[PushTarget]: user_push_subscriptions の revoked_at IS NULL の行で、結び付いた user_trusted_devices の revoked_at IS NULL の行だけ（JOIN）。WHERE s.user_id = :uid で本人の行だけに絞る（他人の購読へ送らない要の条件）。生 SQL。
 - async deliver(targets, payload: dict) -> list[tuple[int, str]]: 1件ずつ asyncio.to_thread で pywebpush.webpush(subscription_info={"endpoint":..., "keys":{"p256dh":..., "auth":...}}, data=json.dumps(payload, ensure_ascii=False), vapid_private_key=秘密の鍵, vapid_claims={"sub": subject}（送るたびに新しい dict）, ttl=1800, headers={"Urgency": "high"}, timeout=10) を呼ぶ。結果は (id, "ok"|"gone"|"failed")。WebPushException で .response の status_code が 404 か 410 なら "gone"、それ以外の例外は "failed"（logger.warning に id と番号だけ）。1件の失敗で残りを止めない。
 - async record_results(db, results) -> None: ok は last_success_at=:now・failed_count=0、gone は revoked_at=:now、failed は failed_count=failed_count+1（SMALLINT を超えないよう LEAST(failed_count+1, 32767)）。commit する。
 - async send_login_request_push(targets, *, when, device, location) -> None: payload は {"title": "新しい機械からのログインの許可依頼 / New sign-in request", "body": f"{when} / {device} / {location}"（location が空なら最後の「 / 」と location を付けない）, "url": "/"}。番号（match_number）は入れない。deliver の後に async with AsyncSessionLocal() as db: で record_results を呼ぶ（backend/app/routers/meta.py:184 と同じ開き方）。どこで例外が起きても外へ出さない（logger.exception）。
@@ -72,7 +73,7 @@
 - auth.py は S の時点で logging を使っていないので、import の並びに import logging を、import の後に logger = logging.getLogger(__name__) を足す。
 - _notify_new_request に db: AsyncSession を足す。publish_user_change とメールは今のまま。その後の通知の部分（list_targets から add_task まで）は try/except Exception で囲み、例外は logger.exception に残して外へ出さない（:431 の commit の後なので、ここで落ちると依頼の 202 が 500 になるため）。囲みの中で、web_push.is_configured() が True なら targets = await web_push.list_targets(db, user_id) を読み、targets が空でなければ background_tasks.add_task(send_login_request_push, targets, when=devices.jst_text(), device=new.label, location=new.location) を足す。:432 の呼び出しに db を渡す。send_login_request_push は from app.services.web_push import send_login_request_push の形で読む（試験で app.routers.auth.send_login_request_push を差し替えるため）。
 - 新しい口3つ（S auth.py:1618 の device_list・:1650 の device_revoke の後に置く）:
-  - POST /auth/push-subscriptions: _require_app_origin(request)・session: CurrentSession = Depends(get_current_session)。体は {endpoint: str, keys: {p256dh: str, auth: str}}（pydantic のモデル。Field の説明付き）。session.trusted_device_id が None なら 403 not_trusted_device。web_push.is_configured() が False なら 409 push_not_configured。validate_subscription。V-6 のとおり同じ機械の他の購読を取り消し、INSERT ... ON CONFLICT (endpoint) DO UPDATE SET user_id, trusted_device_id, p256dh, auth, revoked_at=NULL, failed_count=0 RETURNING id。commit。返事は 200 {id}。
+  - POST /auth/push-subscriptions: _require_app_origin(request)・session: CurrentSession = Depends(get_current_session)。体は {endpoint: str, keys: {p256dh: str, auth: str}}（pydantic のモデル。Field の説明付き）。session.trusted_device_id が None なら 403 not_trusted_device。web_push.is_configured() が False なら 409 push_not_configured。validate_subscription。V-6 のとおり同じ機械の他の購読を取り消し、INSERT（列に created_at を入れ :now を渡す。V-6c）... ON CONFLICT (endpoint) DO UPDATE SET user_id, trusted_device_id, p256dh, auth, revoked_at=NULL, failed_count=0 RETURNING id。commit。返事は 200 {id}。
   - DELETE /auth/push-subscriptions/{subscription_id}（status_code=204）: _require_app_origin(request)・get_current_session。本人（session.user.id）の行だけ revoked_at に :now を入れる。すでに取り消し済みの本人の行は、revoked_at を変えずに 204。行が無い・他人の行なら 404。device_revoke（S auth.py:1650-1651）と同じ形。
   - GET /auth/push-public-key: get_current_user。返事は {public_key: str | null}。
 - 段A の機械の取り消し（device_revoke）は今のまま。取り消された機械の購読は list_targets の JOIN で送らない（行は残る）。
@@ -141,7 +142,7 @@ fetch の処理は書かない（キャッシュをしない＝今の配信の�
 - (g) migration の登録検査: bash scripts/check-migration-registration-exists.sh と scripts/check-migration-value-writes.py と scripts/lint_tenant_schema.py の strict が通ること（commit の後に check-before-submit がまとめて流す）。通らなければ出力を付けて停止する。
 - (h) 画像の大きさ: python3.12 -c で frontend/public/apple-touch-icon.png の幅と高さを読む（PNG の先頭 24 バイトの IHDR）。#21 の sizes をその値にする。
 - (i) PostgreSQL: 段A カード §3(i) と同じ（立てられなければ SQLite の試験だけ流し「PG の試験は CI で確かめる」と書く）。
-- (j) 依存: pip install -r backend/requirements.txt が通り、pip check が「No broken requirements found.」を出すこと。pywebpush・py-vapid・http-ece・aiohttp・requests・cryptography の入った版を pip show で報告に書く。入らない・壊れが出るなら停止する。
+- (j) 依存: pip install -r backend/requirements.txt が通り、pip check が「No broken requirements found.」を出すこと。pywebpush・py-vapid・http-ece・aiohttp・requests・urllib3・cryptography の入った版を pip show で報告に書く。入らない・壊れが出るなら停止する。
 - (k) 部品の形: python3.12 -c "import inspect, pywebpush; print(inspect.signature(pywebpush.webpush))" と "import py_vapid, inspect; print(inspect.signature(py_vapid.Vapid.from_string))" の出力が V-8 と同じこと。違えば停止する。
 - (l) Toggle の形: frontend/src/components/Toggle.tsx の props が checked・onCheckedChange・disabled・id・aria-label・aria-labelledby であること。違えば停止する。
 - (m) deploy.yml の行: :326 と :380 の行が §1 #16 のとおりで、:385 の検査の正規表現 ^[A-Z0-9_]+='[^']*'$ に新しい3行が合うこと。違えば停止する。
