@@ -101,14 +101,18 @@ async def _call_agent(text: str) -> dict:
     if resp.status_code == 504:
         raise _fail(504, "timeout")
     if resp.status_code == 502:
-        log_code = "unreadable"
+        agent_code = None
         try:
             body = resp.json()
-            if isinstance(body, dict) and body.get("code") == "cli_failed":
-                log_code = "cli_failed"
+            if isinstance(body, dict):
+                agent_code = body.get("code")
         except ValueError:
             pass
-        raise _fail(502, "unreadable", log_code)
+        if agent_code == "auth_failed":
+            raise _fail(503, "auth_failed")
+        if agent_code == "cli_failed":
+            raise _fail(502, "agent_failed", "cli_failed")
+        raise _fail(502, "unreadable")
     raise _fail(502, "unreadable")
 
 
