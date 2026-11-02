@@ -221,7 +221,7 @@ class TestCreateEvent:
         insert_result = MagicMock()
         insert_result.scalar_one = MagicMock(return_value=1)
         sync_result = MagicMock()
-        sync_result.first = MagicMock(return_value=("none",))
+        sync_result.first = MagicMock(return_value=("none", None))
 
         db.execute = AsyncMock(side_effect=[insert_result, sync_result])
 
@@ -246,7 +246,7 @@ class TestCreateEvent:
         insert_result = MagicMock()
         insert_result.scalar_one = MagicMock(return_value=5)
         sync_result = MagicMock()
-        sync_result.first = MagicMock(return_value=("none",))
+        sync_result.first = MagicMock(return_value=("none", None))
         db.execute = AsyncMock(side_effect=[insert_result, sync_result])
 
         payload = {
@@ -270,7 +270,7 @@ class TestCreateEvent:
         insert_result = MagicMock()
         insert_result.scalar_one = MagicMock(return_value=10)
         sync_result = MagicMock()
-        sync_result.first = MagicMock(return_value=("bidirectional",))
+        sync_result.first = MagicMock(return_value=("bidirectional", 1))
         update_result = MagicMock()
 
         db.execute = AsyncMock(side_effect=[insert_result, sync_result, update_result])
@@ -284,6 +284,59 @@ class TestCreateEvent:
             }
             result = await create_event(db, tenant_id=1, user_id=1, payload=payload)
             assert result["id"] == 10
+
+    @pytest.mark.asyncio
+    async def test_create_by_non_connector_skips_google(self):
+        """つないだ人と別の人が作った予定は Google に送らない。"""
+        from app.services.calendar_service import create_event
+
+        db = AsyncMock()
+        db.commit = AsyncMock()
+        insert_result = MagicMock()
+        insert_result.scalar_one = MagicMock(return_value=11)
+        sync_result = MagicMock()
+        sync_result.first = MagicMock(return_value=("bidirectional", 1))
+        db.execute = AsyncMock(side_effect=[insert_result, sync_result])
+
+        gcreate = AsyncMock()
+        with patch("app.services.google_calendar.create_event", gcreate):
+            payload = {
+                "title": "別の人の予定",
+                "start_datetime": "2026-06-01T10:00:00+09:00",
+                "end_datetime": "2026-06-01T11:00:00+09:00",
+                "calendar_type": "shared",
+            }
+            result = await create_event(db, tenant_id=1, user_id=2, payload=payload)
+        assert result["id"] == 11
+        gcreate.assert_not_called()
+        assert db.execute.call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_create_by_connector_sends_to_google(self):
+        """つないだ本人が作った予定は Google に送り、id を保存する。"""
+        from app.services.calendar_service import create_event
+
+        db = AsyncMock()
+        db.commit = AsyncMock()
+        insert_result = MagicMock()
+        insert_result.scalar_one = MagicMock(return_value=1)
+        sync_result = MagicMock()
+        sync_result.first = MagicMock(return_value=("bidirectional", 3))
+        db.execute = AsyncMock(side_effect=[insert_result, sync_result, MagicMock()])
+
+        gcreate = AsyncMock(return_value={"id": "g1"})
+        with patch("app.services.google_calendar.create_event", gcreate):
+            payload = {
+                "title": "本人の予定",
+                "start_datetime": "2026-06-01T10:00:00+09:00",
+                "end_datetime": "2026-06-01T11:00:00+09:00",
+                "calendar_type": "shared",
+            }
+            await create_event(db, tenant_id=1, user_id=3, payload=payload)
+        gcreate.assert_called_once()
+        params = db.execute.call_args_list[2].args[1]
+        assert params["gid"] == "g1"
+        assert params["oid"] == "app:1:1"
 
 
 class TestUpdateEvent:
@@ -307,7 +360,7 @@ class TestUpdateEvent:
         geid_result = MagicMock()
         geid_result.first = MagicMock(return_value=(None,))  # google_event_id = None
         sync_result = MagicMock()
-        sync_result.first = MagicMock(return_value=("none",))
+        sync_result.first = MagicMock(return_value=("none", None))
 
         db.execute = AsyncMock(side_effect=[update_result, geid_result, sync_result])
 
@@ -328,7 +381,7 @@ class TestDeleteEvent:
         geid_result.first = MagicMock(return_value=(None,))
         delete_result = MagicMock()
         sync_result = MagicMock()
-        sync_result.first = MagicMock(return_value=("none",))
+        sync_result.first = MagicMock(return_value=("none", None))
 
         db.execute = AsyncMock(side_effect=[geid_result, delete_result, sync_result])
         await delete_event(db, tenant_id=1, event_id=5)
