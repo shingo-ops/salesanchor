@@ -14,6 +14,7 @@ import { api } from "../../lib/api";
 import { PageLayout } from "../../components/PageLayout";
 import { HoverCardHost } from "../../components/HoverCard";
 import InventoryFilterPanel from "./InventoryFilterPanel";
+import InventoryFilterDrawer from "./InventoryFilterDrawer";
 import InventoryToolbar, { SORT_MENU_VALUES, buildSortOptions, buildTypeOptions, inventoryChoiceRow } from "./InventoryToolbar";
 import { Button } from "../../components/Button";
 import { SelectControl } from "../../components/Select";
@@ -484,14 +485,6 @@ export default function InventoryPage() {
     setPage(1);
   };
   const onFreshToggle = () => { setFreshOnly((v) => !v); setPage(1); };
-  // 「詳細フィルタ」の文字に出す、効いている絞り込みの数（design.md 4-5。閲覧ページ
-  // InventoryView.tsx の filterActiveCount と同じ数え方をそのまま写す）。
-  const filterActiveCount =
-    (freshOnly ? 1 : 0) +
-    (selectedSupplierIds.length > 0 ? 1 : 0) +
-    (showConditions.size > 0 ? 1 : 0) +
-    (priceMin || priceMax ? 1 : 0) +
-    (qtyMin || qtyMax ? 1 : 0);
   const supplierOptions = supplierFacet.map((s) => ({ value: String(s.id), label: s.name ?? `#${s.id}` }));
   const toggleHiddenCategory = (c: string) => {
     setHiddenCategories((prev) => {
@@ -509,6 +502,85 @@ export default function InventoryPage() {
       else next.add(c);
       return next;
     });
+  };
+  // スマホの詳細フィルタ ドロワー専用（design.md 4-5・4-5a）。
+  // 「(いまの集合 − 候補) ∪ next」で、候補に出ていない保存済みの隠し設定を消さない（審査 H2）。
+  // 値が空でなくなる向きの変更のときだけ「フィルタを有効化」を自動で入れる（PO 決定6・審査 H3）。
+  // PC の toggleHiddenCategory / toggleHiddenColumn / setShowUnits / setShowOfferTypes は変えない。
+  const autoEnableIfNonEmpty = (next: string[]) => {
+    if (next.length > 0) setFilterEnabled(true);
+  };
+  const onHiddenCategoriesChange = (next: string[]) => {
+    setHiddenCategories((prev) => {
+      const kept = new Set([...prev].filter((c) => !sortedCategories.includes(c)));
+      next.forEach((c) => kept.add(c));
+      return kept;
+    });
+    autoEnableIfNonEmpty(next);
+    setPage(1);
+  };
+  const onHiddenColumnsChange = (next: string[]) => {
+    setHiddenColumns((prev) => {
+      const kept = new Set([...prev].filter((c) => !HIDEABLE_COLUMNS.includes(c)));
+      next.forEach((c) => kept.add(c));
+      return kept;
+    });
+    autoEnableIfNonEmpty(next);
+    // 列は見せ方の変更で件数が変わらないため setPage(1) はしない（既存の挙動どおり）
+  };
+  const onShowUnitsChange = (next: string[]) => {
+    setShowUnits(new Set(next));
+    autoEnableIfNonEmpty(next);
+    setPage(1);
+  };
+  const onShowOfferTypesChange = (next: string[]) => {
+    setShowOfferTypes(new Set(next));
+    autoEnableIfNonEmpty(next);
+    setPage(1);
+  };
+  // 詳細フィルタの props を1つにまとめる（design.md 4-2）。InventoryFilterPanel（PC）は
+  // 使う分だけ（toggleHiddenCategory 等）を、InventoryFilterDrawer（スマホ）も使う分だけ
+  // （onHiddenCategoriesChange 等）をそれぞれ受け取る。両方を同時にマウントしない。
+  const filterPanelProps = {
+    filterEnabled,
+    setFilterEnabled,
+    setPage,
+    freshOnly,
+    onFreshToggle,
+    freshWindowHours,
+    notice: mobileNotice,
+    sortedCategories,
+    hiddenCategories,
+    toggleHiddenCategory,
+    onHiddenCategoriesChange,
+    hideableColumns: HIDEABLE_COLUMNS,
+    hiddenColumns,
+    toggleHiddenColumn,
+    onHiddenColumnsChange,
+    supplierOptions,
+    selectedSupplierIds,
+    onSupplierChange,
+    conditionFacet,
+    showConditions,
+    onConditionChange,
+    unitFacet,
+    showUnits,
+    setShowUnits,
+    onShowUnitsChange,
+    offerTypes: OFFER_TYPES,
+    showOfferTypes,
+    setShowOfferTypes,
+    onShowOfferTypesChange,
+    priceMin,
+    setPriceMin,
+    priceMax,
+    setPriceMax,
+    qtyMin,
+    setQtyMin,
+    qtyMax,
+    setQtyMax,
+    onReset: resetAll,
+    onClose: () => setShowFilterPanel(false),
   };
 
   return (
@@ -583,50 +655,13 @@ export default function InventoryPage() {
         filterEnabled={filterEnabled}
         showFilterPanel={showFilterPanel}
         onFilterPanelToggle={() => setShowFilterPanel((v) => !v)}
-        filterActiveCount={filterActiveCount}
       />
 
-      {/* フィルタ ポップアップ（ON/OFF・仕入元・カテゴリー・列の取捨。ユーザー別に永続化） */}
-      {showFilterPanel && (
-        <InventoryFilterPanel
-          filterEnabled={filterEnabled}
-          setFilterEnabled={setFilterEnabled}
-          setPage={setPage}
-          sortedCategories={sortedCategories}
-          hiddenCategories={hiddenCategories}
-          toggleHiddenCategory={toggleHiddenCategory}
-          showSupplierSelect={isMobile}
-          supplierOptions={supplierOptions}
-          selectedSupplierIds={selectedSupplierIds}
-          onSupplierChange={onSupplierChange}
-          hideableColumns={HIDEABLE_COLUMNS}
-          hiddenColumns={hiddenColumns}
-          toggleHiddenColumn={toggleHiddenColumn}
-          conditionFacet={conditionFacet}
-          showConditions={showConditions}
-          unitFacet={unitFacet}
-          showUnits={showUnits}
-          setShowUnits={setShowUnits}
-          offerTypes={OFFER_TYPES}
-          showOfferTypes={showOfferTypes}
-          setShowOfferTypes={setShowOfferTypes}
-          onConditionChange={onConditionChange}
-          qtyMin={qtyMin}
-          setQtyMin={setQtyMin}
-          qtyMax={qtyMax}
-          setQtyMax={setQtyMax}
-          priceMin={priceMin}
-          setPriceMin={setPriceMin}
-          priceMax={priceMax}
-          setPriceMax={setPriceMax}
-          freshOnly={freshOnly}
-          onFreshToggle={onFreshToggle}
-          freshWindowHours={freshWindowHours}
-          onReset={resetAll}
-          onClose={() => setShowFilterPanel(false)}
-          notice={mobileNotice}
-        />
-      )}
+      {/* 詳細フィルタ: スマホは右から出るドロワー（InventoryFilterDrawer）・PC は今までの埋め込み枠
+          （InventoryFilterPanel）。props は1つにまとめて渡す（design.md 4-2・ページの行数対策） */}
+      {isMobile
+        ? <InventoryFilterDrawer open={showFilterPanel} {...filterPanelProps} />
+        : showFilterPanel && <InventoryFilterPanel {...filterPanelProps} />}
 
       <div
         className="loading-indicator"
