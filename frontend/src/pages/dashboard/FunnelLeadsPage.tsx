@@ -4,13 +4,14 @@
  * チャネル別: きっかけ × チャネル × リード数 × 転換率 × 成約率 × 平均単価 × 粗利
  */
 
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { PageLayout } from "../../components/PageLayout";
 import { DataTable, type DataTableColumn } from "../../components/DataTable";
-import { api } from "../../lib/api";
-import { getChannels, type ChannelRow } from "../../api/funnel";
-import { LoadingBlock } from "../../components/loading";
+import { channelsPath, FUNNEL_MOCK, type ChannelRow, type ChannelsResponse } from "../../api/funnel";
+import { LoadingBlock, Spinner } from "../../components/loading";
+import { useApiQuery } from "../../lib/query/apiQuery";
+import { MOCK_CHANNELS } from "../../mocks/funnelFixtures";
 
 interface ChannelRowWithId extends ChannelRow {
   id: number;
@@ -30,32 +31,21 @@ function fmtMoney(n: number, man: string): string {
 export default function FunnelLeadsPage() {
   const { t } = useTranslation();
 
-  const [rows, setRows] = useState<ChannelRowWithId[]>([]);
-  const [summary, setSummary] = useState<LeadSummaryResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-
   const currentMonth = (() => {
     const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   })();
 
-  useEffect(() => {
-    setLoading(true);
-    Promise.allSettled([
-      getChannels(currentMonth),
-      // このページは管理視点固定なので、対象外も team スコープで揃える。
-      api.get<LeadSummaryResponse>("/analytics/summary?period=1m&tab=team"),
-    ])
-      .then(([channelsResult, summaryResult]) => {
-        if (channelsResult.status === "fulfilled") {
-          setRows(channelsResult.value.rows.map((r, i) => ({ ...r, id: i + 1 })));
-        }
-        if (summaryResult.status === "fulfilled") {
-          setSummary(summaryResult.value);
-        }
-      })
-      .finally(() => setLoading(false));
-  }, [currentMonth]);
+  const channelsQ = useApiQuery<ChannelsResponse>(channelsPath(currentMonth), { enabled: !FUNNEL_MOCK });
+  // このページは管理視点固定なので、対象外も team スコープで揃える。
+  const summaryQ = useApiQuery<LeadSummaryResponse>("/analytics/summary?period=1m&tab=team");
+  const rows = useMemo<ChannelRowWithId[]>(
+    () => ((FUNNEL_MOCK ? MOCK_CHANNELS : channelsQ.data)?.rows ?? []).map((r, i) => ({ ...r, id: i + 1 })),
+    [channelsQ.data],
+  );
+  const summary = summaryQ.data ?? null;
+  const loading = (!FUNNEL_MOCK && channelsQ.isPending) || summaryQ.isPending;
+  const refreshing = (channelsQ.isFetching || summaryQ.isFetching) && !loading;
 
   const columns: DataTableColumn<ChannelRowWithId>[] = [
     {
@@ -103,6 +93,7 @@ export default function FunnelLeadsPage() {
     <PageLayout
       navKey="nav.dashboard"
       subtitleKey="funnel.leadsPageTitle"
+      headerLeft={refreshing ? <Spinner size="sm" /> : undefined}
     >
       {loading ? (
         <LoadingBlock />
