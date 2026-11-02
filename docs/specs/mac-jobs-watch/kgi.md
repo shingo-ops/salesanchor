@@ -21,7 +21,7 @@
 |---|---|---|---|---|
 | P1 | AI の道具が番号を決め打ちせずスマホを見つける | `bash scripts/dev/phone-serial.sh` | 終了 0・1 行・`._adb-tls-connect._tcp` で終わる | ○ 2026-11-02 本物の Mac で終了 0・`adb-RFGL61DLQCW-IwMTz9._adb-tls-connect._tcp` の 1 行 |
 | P2 | 1 時間以上見えなければ 1 通、見えたら「直りました」1 通 | 試験 P㉞〜P㊸ と本物の通知先での手動試験 | FAIL 0・`result=alert send=ok problems=phone-missing`・`result=recover send=ok` | ○ 2026-11-02 試験 FAIL 0。合流後の手動試験（一時フォルダ・本物の通知先）で 0 分・30 分は送らず、60 分で `result=alert send=ok problems=phone-missing`、戻って `result=recover send=ok` |
-| P3 | つながりを切る・入れ直す命令を使わない（2026-11-02 PO「1」で `adb connect` だけ許す。design-reconnect.md R4） | 差分の中の kill-server・disconnect・connect・tcpip・usb・reconnect | 0 件 | ○ 2026-11-02 審査役の検索で 0 件 |
+| P3 | つながりを切る・入れ直す命令を使わない（2026-11-02 PO「1」で `adb connect` だけ許す。docs/handoff/mac-jobs-watch/design-reconnect.md R4） | 差分の中の kill-server・disconnect・connect・tcpip・usb・reconnect | 0 件 | ○ 2026-11-02 審査役の検索で 0 件 |
 | P4 | スマホ再起動後、PO が何もしなくても戻る | 再起動 10 分後に P1 | 終了 0・1 行 | × 2026-11-02 「常に許可」は付いていたが、再起動でワイヤレスデバッグのスイッチが切れた（PO 目視）。スイッチを入れた後も adb 自身の探し方では見えず、番号を聞いてつないだ（[recon-reconnect.md](../../handoff/mac-jobs-watch/recon-reconnect.md)）。PO の操作をスイッチ 1 回にする直し: [design-reconnect.md](../../handoff/mac-jobs-watch/design-reconnect.md) R1〜R6 |
 | P5 | 既存の試験が今まで通り通る | `bash scripts/tests/test-mac-jobs-watch.sh` | FAIL 0 | ○ 2026-11-02 macOS で `PASS=210 FAIL=0` |
 
