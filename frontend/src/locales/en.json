@@ -3337,6 +3337,16 @@
       "empty": "No devices.",
       "geoipCredit": "Locations are estimated by IP Geolocation by DB-IP."
     },
+    "push": {
+      "title": "Notify this device",
+      "description": "Get a notification on this device when an unknown device asks for sign-in approval.",
+      "toggleLabel": "Notify this device",
+      "iosHint": "On iPhone and iPad, add this app to your Home Screen and open it from there. After adding it, you may need to allow notifications once.",
+      "unsupported": "This device's browser does not support notifications.",
+      "notTrusted": "Notifications can only be turned on for an approved, regular device.",
+      "denied": "Notifications are blocked. Allow them in your browser settings.",
+      "error": "Could not change the notification setting. Please try again."
+    },
     "recoveryCodes": {
       "title": "Recovery codes",
       "description": "Codes for signing in on a new device when your usual device is not at hand.",
