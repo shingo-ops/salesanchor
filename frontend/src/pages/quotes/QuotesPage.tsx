@@ -6,10 +6,10 @@
  *   2026-04-17: 初版作成（Phase 2）
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { api } from "../../lib/api";
+import { useApiQuery } from "../../lib/query/apiQuery";
 import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
 import { ContentToolbar } from "../../components/ContentToolbar";
@@ -18,7 +18,7 @@ import { getStatusPresentation } from "../../utils/statusPresentation";
 import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn, SortDir } from "../../components/DataTable";
 import { Button } from "../../components/Button";
-import { LoadingBlock } from "../../components/loading";
+import { LoadingBlock, Spinner } from "../../components/loading";
 
 interface Quote {
   id: number;
@@ -46,27 +46,12 @@ export default function QuotesPage() {
   const { t } = useTranslation();
   const { hasPermission } = usePermissions();
   const navigate = useNavigate();
-  const [quotes, setQuotes] = useState<Quote[]>([]);
   const [statusFilter, setStatusFilter] = useState("");
+  const quotesQ = useApiQuery<Quote[]>(`/quotes${statusFilter ? `?status=${statusFilter}` : ""}`, { keepPrevious: true });
+  const quotes = useMemo(() => quotesQ.data ?? [], [quotesQ.data]);
   const [sortField, setSortField] = useState("created_at");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
-
-  const load = async () => {
-    try {
-      const params = statusFilter ? `?status=${statusFilter}` : "";
-      const data = await api.get<Quote[]>(`/quotes${params}`);
-      setQuotes(data);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("common.fetchError"));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { load(); }, [statusFilter]);
+  const shownError = quotesQ.error ? (quotesQ.error instanceof Error ? quotesQ.error.message : t("common.fetchError")) : "";
 
   const fmt = (n: number | null, ccy: string) => {
     if (n == null) return "-";
@@ -88,6 +73,7 @@ export default function QuotesPage() {
     <PageLayout
       navKey="nav.quotesInvoices"
       subtitleKey="quotes.subtitle"
+      headerLeft={quotesQ.isFetching && !quotesQ.isPending ? <Spinner size="sm" /> : undefined}
     >
       <nav className="tab-nav">
         <button className="tab-active">{t("nav.quoteHistory")}</button>
@@ -140,9 +126,9 @@ export default function QuotesPage() {
         ) : undefined}
       />
 
-      {error && <div className="error-message">{error}</div>}
+      {shownError && <div className="error-message">{shownError}</div>}
 
-      {loading ? (
+      {quotesQ.isPending ? (
         <LoadingBlock />
       ) : (() => {
         const columns: DataTableColumn<Quote>[] = [

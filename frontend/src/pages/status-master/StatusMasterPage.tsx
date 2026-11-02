@@ -4,11 +4,12 @@
  * ADR-027: 全UI文字列は t("key") 経由。
  * ADR-144: 金型クラスのみ使用。
  */
-import { LoadingBlock } from "../../components/loading";
-import { useEffect, useRef, useState, FormEvent } from "react";
+import { LoadingBlock, Spinner } from "../../components/loading";
+import { useRef, useState, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
+import { useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
 import { Modal } from "../../components/Modal";
 import ConfirmModal from "../../components/ConfirmModal";
 import { usePermissions } from "../../hooks/usePermissions";
@@ -80,12 +81,9 @@ export default function StatusMasterPage() {
   const { hasPermission } = usePermissions();
   const exportLock = useRef(false);
   const [exporting, setExporting] = useState(false);
-  const [items, setItems] = useState<StatusEntry[]>([]);
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const PER_PAGE = 100;
-  const [hasNext, setHasNext] = useState(false);
   const [searchInput, setSearchInput] = useState("");
 
   async function downloadExport() {
@@ -105,6 +103,13 @@ export default function StatusMasterPage() {
     }
   }
   const [search, setSearch] = useState("");
+  const itemsParams = new URLSearchParams({ page: String(page), per_page: String(PER_PAGE) });
+  if (search.trim()) itemsParams.set("search", search.trim());
+  const itemsQ = useApiQuery<StatusEntry[]>(`/status-master?${itemsParams.toString()}`, { keepPrevious: true });
+  const items = itemsQ.data ?? [];
+  const hasNext = items.length === PER_PAGE && !itemsQ.isPlaceholderData;
+  const invalidate = useInvalidateApi();
+  const shownError = error || (itemsQ.error ? (itemsQ.error instanceof Error ? itemsQ.error.message : t("common.fetchError")) : "");
 
   const [showCreate, setShowCreate] = useState(false);
   const [createForm, setCreateForm] = useState<StatusFormState>(emptyForm);
@@ -131,21 +136,9 @@ export default function StatusMasterPage() {
     { value: "EXCLUDE", label: t(`${f}.effectExclude`) },
   ];
 
-  const load = async () => {
-    try {
-      const params = new URLSearchParams({ page: String(page), per_page: String(PER_PAGE) });
-      if (search.trim()) params.set("search", search.trim());
-      const data = await api.get<StatusEntry[]>(`/status-master?${params.toString()}`);
-      setItems(data);
-      setHasNext(data.length === PER_PAGE);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("common.fetchError"));
-    } finally {
-      setLoading(false);
-    }
+  const load = () => {
+    void invalidate(["status-master"]);
   };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { load(); }, [page, search]);
 
   const handleCreateSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -317,6 +310,7 @@ export default function StatusMasterPage() {
     <PageLayout
       navKey="nav.statusMaster"
       subtitleKey="statusMaster.title"
+      headerLeft={itemsQ.isFetching && !itemsQ.isPending ? <Spinner size="sm" /> : undefined}
       headerAction={
         hasPermission("suppliers.view") ? (
           <>
@@ -337,7 +331,7 @@ export default function StatusMasterPage() {
         ) : undefined
       }
     >
-      {error && <div className="error-message">{error}</div>}
+      {shownError && <div className="error-message">{shownError}</div>}
 
       <ContentToolbar
         left={
@@ -417,7 +411,7 @@ export default function StatusMasterPage() {
         </form>
       </Modal>
 
-      {loading ? (
+      {itemsQ.isPending ? (
         <LoadingBlock />
       ) : (
         <DataTable<StatusEntry>
@@ -429,7 +423,7 @@ export default function StatusMasterPage() {
         />
       )}
 
-      {!loading && items.length > 0 && (
+      {!itemsQ.isPending && items.length > 0 && (
         <div
           className="pagination"
           style={{
