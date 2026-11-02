@@ -12,9 +12,10 @@
  */
 
 import { LoadingBlock } from "../../components/loading";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
+import { useApiQuery } from "../../lib/query/apiQuery";
 import { PageLayout } from "../../components/PageLayout";
 import { SelectControl } from "../../components/Select";
 import { TextFieldControl } from "../../components/TextField";
@@ -511,9 +512,15 @@ function GoalAdvisorPanel({ defaultMonthlyKgi, t }: GoalAdvisorPanelProps) {
 export default function GoalSettingPage() {
   const { t } = useTranslation();
 
-  const [teams, setTeams] = useState<Team[]>([]);
-  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+  const meQ = useApiQuery<MyPermissionsResponse>("/me/permissions");
+  const teamsQ = useApiQuery<Team[]>("/teams");
+  const teams = useMemo(() => teamsQ.data ?? [], [teamsQ.data]);
+  const currentUser = useMemo<CurrentUser | null>(
+    () => (meQ.data ? { id: meQ.data.user_id, isTenantAdmin: meQ.data.is_tenant_admin } : null),
+    [meQ.data],
+  );
   const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
+  if (teams.length > 0 && !teams.some((tm) => tm.id === selectedTeamId)) setSelectedTeamId(teams[0].id);
 
   // 個人目標 value マップ
   const [indivMonthValues, setIndivMonthValues] = useState<Record<KpiType, string>>({} as Record<KpiType, string>);
@@ -533,7 +540,6 @@ export default function GoalSettingPage() {
   const [savingTeamWeek, setSavingTeamWeek] = useState(false);
 
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
   const [monthlyAdvisorSeed, setMonthlyAdvisorSeed] = useState("");
   const advisorSeededRef = useRef(false);
 
@@ -544,20 +550,9 @@ export default function GoalSettingPage() {
     user?.isTenantAdmin === true ||
     (team !== null && team.leader_id === user?.id);
 
-  useEffect(() => {
-    setLoading(true);
-    Promise.all([
-      api.get<MyPermissionsResponse>("/me/permissions"),
-      api.get<Team[]>("/teams"),
-    ])
-      .then(([me, teamList]) => {
-        setCurrentUser({ id: me.user_id, isTenantAdmin: me.is_tenant_admin });
-        setTeams(teamList);
-        if (teamList.length > 0) setSelectedTeamId(teamList[0].id);
-      })
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
-  }, []);
+  const loading = meQ.isPending || teamsQ.isPending;
+  const loadError = meQ.error ?? teamsQ.error;
+  const shownError = error || (loadError ? (loadError instanceof Error ? loadError.message : t("common.fetchError")) : "");
 
   // 既存目標をロード
   useEffect(() => {
@@ -652,7 +647,7 @@ export default function GoalSettingPage() {
 
   return (
     <PageLayout navKey="nav.goalSettings" subtitleKey="goals.subtitle">
-      {error && <div className="error-message">{error}</div>}
+      {shownError && <div className="error-message">{shownError}</div>}
 
       <GoalAdvisorPanel defaultMonthlyKgi={monthlyAdvisorSeed} t={t} />
 

@@ -7,11 +7,12 @@
  *   2026-06-10: 編集を Drawer 化（useRecordDrawer, ADR-122 バッチA）
  */
 
-import { LoadingBlock } from "../../components/loading";
-import { useEffect, useState, FormEvent } from "react";
+import { LoadingBlock, Spinner } from "../../components/loading";
+import { useState, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
+import { useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
 import ConfirmModal from "../../components/ConfirmModal";
 import { Modal } from "../../components/Modal";
 import { Drawer } from "../../components/Drawer";
@@ -56,7 +57,9 @@ export default function TeamsPage() {
   const { t } = useTranslation();
   const { hasPermission } = usePermissions();
   const navigate = useNavigate();
-  const [teams, setTeams] = useState<Team[]>([]);
+  const teamsQ = useApiQuery<Team[]>("/teams");
+  const teams = teamsQ.data ?? [];
+  const invalidate = useInvalidateApi();
   // 新規作成モーダル
   const [showCreate, setShowCreate] = useState(false);
   const [createForm, setCreateForm] = useState<TeamFormState>(emptyForm);
@@ -65,23 +68,15 @@ export default function TeamsPage() {
     useRecordDrawer<Team, TeamFormState>({ toForm, emptyForm });
 
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
+  const shownError = error || (teamsQ.error ? (teamsQ.error instanceof Error ? teamsQ.error.message : t("common.fetchError")) : "");
   const [deleteTarget, setDeleteTarget] = useState<Team | null>(null);
   const [membersPanel, setMembersPanel] = useState<Team | null>(null);
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [newMemberId, setNewMemberId] = useState("");
 
-  const loadTeams = async () => {
-    try {
-      const data = await api.get<Team[]>("/teams");
-      setTeams(data);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("common.fetchError"));
-    } finally {
-      setLoading(false);
-    }
+  const loadTeams = () => {
+    void invalidate(["teams"]);
   };
-
   const loadMembers = async (teamId: number) => {
     try {
       const data = await api.get<TeamMember[]>(`/teams/${teamId}/members`);
@@ -90,9 +85,6 @@ export default function TeamsPage() {
       setError(e instanceof Error ? e.message : t("common.fetchError"));
     }
   };
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { loadTeams(); }, []);
 
   /* ── 新規作成（Modal） ── */
   const handleCreateSubmit = async (e: FormEvent) => {
@@ -175,8 +167,9 @@ export default function TeamsPage() {
     <PageLayout
       navKey="nav.teams"
       subtitleKey="teams.subtitle"
+      headerLeft={teamsQ.isFetching && !teamsQ.isPending ? <Spinner size="sm" /> : undefined}
     >
-      {error && <div className="error-message">{error}</div>}
+      {shownError && <div className="error-message">{shownError}</div>}
       {hasPermission("teams.create") ? (
         <ContentToolbar
           right={
@@ -270,7 +263,7 @@ export default function TeamsPage() {
         )}
       </Modal>
 
-      {loading ? (
+      {teamsQ.isPending ? (
         <LoadingBlock />
       ) : (() => {
         const teamColumns: DataTableColumn<Team>[] = [

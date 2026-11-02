@@ -4,11 +4,12 @@
  * ADR-027: 全UI文字列は t("key") 経由。
  * ADR-144: 金型クラスのみ使用。
  */
-import { LoadingBlock } from "../../components/loading";
-import { useEffect, useRef, useState, FormEvent } from "react";
+import { LoadingBlock, Spinner } from "../../components/loading";
+import { useRef, useState, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
+import { useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
 import { Modal } from "../../components/Modal";
 import ConfirmModal from "../../components/ConfirmModal";
 import { usePermissions } from "../../hooks/usePermissions";
@@ -59,14 +60,18 @@ export default function UnitsPage() {
   const { hasPermission } = usePermissions();
   const exportLock = useRef(false);
   const [exporting, setExporting] = useState(false);
-  const [units, setUnits] = useState<Unit[]>([]);
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const PER_PAGE = 100;
-  const [hasNext, setHasNext] = useState(false);
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
+  const unitsParams = new URLSearchParams({ page: String(page), per_page: String(PER_PAGE) });
+  if (search.trim()) unitsParams.set("search", search.trim());
+  const unitsQ = useApiQuery<Unit[]>(`/units?${unitsParams.toString()}`, { keepPrevious: true });
+  const units = unitsQ.data ?? [];
+  const hasNext = units.length === PER_PAGE && !unitsQ.isPlaceholderData;
+  const invalidate = useInvalidateApi();
+  const shownError = error || (unitsQ.error ? (unitsQ.error instanceof Error ? unitsQ.error.message : t("common.fetchError")) : "");
 
   const [showCreate, setShowCreate] = useState(false);
   const [createForm, setCreateForm] = useState<UnitFormState>(emptyForm);
@@ -99,21 +104,9 @@ export default function UnitsPage() {
 
   const f = "unitMaster";
 
-  const load = async () => {
-    try {
-      const params = new URLSearchParams({ page: String(page), per_page: String(PER_PAGE) });
-      if (search.trim()) params.set("search", search.trim());
-      const data = await api.get<Unit[]>(`/units?${params.toString()}`);
-      setUnits(data);
-      setHasNext(data.length === PER_PAGE);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("common.fetchError"));
-    } finally {
-      setLoading(false);
-    }
+  const load = () => {
+    void invalidate(["units"]);
   };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { load(); }, [page, search]);
 
   const handleCreateSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -206,6 +199,7 @@ export default function UnitsPage() {
     <PageLayout
       navKey="nav.units"
       subtitleKey="unitMaster.title"
+      headerLeft={unitsQ.isFetching && !unitsQ.isPending ? <Spinner size="sm" /> : undefined}
       headerAction={
         hasPermission("suppliers.view") ? (
           <>
@@ -226,7 +220,7 @@ export default function UnitsPage() {
         ) : undefined
       }
     >
-      {error && <div className="error-message">{error}</div>}
+      {shownError && <div className="error-message">{shownError}</div>}
 
       <ContentToolbar
         left={
@@ -364,7 +358,7 @@ export default function UnitsPage() {
         </form>
       </Modal>
 
-      {loading ? (
+      {unitsQ.isPending ? (
         <LoadingBlock />
       ) : (
         <DataTable<Unit>
@@ -376,7 +370,7 @@ export default function UnitsPage() {
         />
       )}
 
-      {!loading && units.length > 0 && (
+      {!unitsQ.isPending && units.length > 0 && (
         <div
           className="pagination"
           style={{
