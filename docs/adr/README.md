@@ -3,7 +3,7 @@
 > このファイルは `scripts/generate-adr-index.js` により自動生成されます。
 > **手動編集禁止。** ADR ファイルを追加・変更後に `node scripts/generate-adr-index.js` を実行してください。
 
-最終更新: 2026-11-02 / ADR 総数: 215 件
+最終更新: 2026-11-02 / ADR 総数: 216 件
 
 ## 維持ルール（整合性を保つ・必須）
 
@@ -234,6 +234,7 @@
 | [ADR-1054](./ADR-1054-screen-data-cache.md) | ADR-1054: 画面が取ったデータの写しを 1 か所（TanStack Query）に置き、前に見た画面をすぐ出してから裏で取り直す | Accepted | — | — |
 | [ADR-1055](./ADR-1055-new-device-login-approval.md) | ADR-1055: 知らない機械からのログインは、いつもの機械で番号を選んで許可するまで入れない（全員） | Proposed | — | — |
 | [ADR-1056](./ADR-1056-secretary-chat.md) | ADR-1056: アプリ内のチャット秘書は、AI に会社のデータも道具も渡さず「頼みの文を決まった形に直す」だけをさせ、作成は利用者が「作る」を押したときに今の口で行う | Accepted | — | — |
+| [ADR-1058](./ADR-1058-ai-job-assignments.md) | ADR-1058: アプリの中で働く AI の担当（AI とモデル）は DB の1か所で決め、スーパー管理の画面で見て切り替える・成功も失敗も使用の記録に1行ずつ残す・秘書は ChatGPT（Codex CLI・月額契約）も選べる | Proposed | — | — |
 
 ## ステータス凡例
 

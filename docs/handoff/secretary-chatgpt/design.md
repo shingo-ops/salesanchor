@@ -2,7 +2,7 @@
 
 - 状態: 設計案作成済み／設計審査 1回目〜8回目 REVISE・9回目 APPROVE（§14）→ v10 で9回目の軽い指摘 R1〜R3 を反映／PO 承認 未／実装 未着手
 - 目標: `kgi.md`（K1〜K10）。現在地: `recon.md`（§番号で参照）。根拠の照合は origin/main d828bb269（引用したパスは 44098dc31・c60ea6eb3・90ee0c15f から差分なし。生出力 `review4_fix.txt`・`review5_fix.txt`・`review6_fix*.txt`・`review7_fix.txt`・`review8.md`・`review9.md`）。
-- 関係 ADR: ADR-1056（秘書）・ADR-1004（使用量台帳）・ADR-027・ADR-067・ADR-144・ADR-1016（即時反映の表）・ADR-135/136（危険 PR の GO）。新しい ADR-1057「アプリの AI の担当は DB の1か所で決め、画面で見て切り替える」を実装カードより先に起案し、ADR-1056 の「Claude Code に固定」「ledger に書かない」を置き換える（§13）。
+- 関係 ADR: ADR-1056（秘書）・ADR-1004（使用量台帳）・ADR-027・ADR-067・ADR-144・ADR-1016（即時反映の表）・ADR-135/136（危険 PR の GO）。新しい ADR-1058「アプリの AI の担当は DB の1か所で決め、画面で見て切り替える」を実装カードより先に起案し、ADR-1056 の「Claude Code に固定」「ledger に書かない」を置き換える（§13）。
 
 ## 1. 目的（PO の言葉）
 - 「chatbotはchatgptに任せたい」。
@@ -142,7 +142,7 @@ GitHub の一時 VM（sandbox-test）で、compose と同じ条件（read_only�
 
 ### 5-4 本番に出す手順（deploy.yml）
 - 今は「Start secretary-agent (ADR-1056)」の1段だけ（`.github/workflows/deploy.yml:670-699`、説明のコメント `:666-669`）。中身: `if: success()`・`continue-on-error: true`・`command_timeout: 10m`・ディスクの残り（`df`）→ `docker build`（失敗は警告で exit 0）→ probe（`docker run ... node /app/probe.mjs`。終了コード1なら「DB か redis に届いた」の警告）→ 専用ファイルの有無 → `docker compose ... up -d --force-recreate --no-build`（失敗は警告）→ exit 0。どの失敗でもアプリの反映は止めない。
-- 同じ形で「Start secretary-codex (ADR-1057)」を直後に足す: 同じ `if`・`continue-on-error: true`・`command_timeout: 10m`・df → `DOCKER_BUILDKIT=1 docker build -t astro-webapp-secretary-codex -f secretary-codex/Dockerfile .`（根を context に・Dockerfile ごとの除外が効く。§5-1。失敗は警告で exit 0）→ `docker run --rm` で `codex --version` が 0.162.1 か（違えば警告で exit 0、起こさない）→ 同じ probe（frontnet・read-only・cap-drop ALL で DB と redis に届かないこと。終了コード1なら警告。容器に probe.mjs を入れる）→ `docker compose -p astro-webapp-secretary-codex -f docker-compose.secretary-codex.yml up -d --force-recreate --no-build`（失敗は警告）→ exit 0。秘密の値は持たないので専用ファイルの確かめは無い（ログインは名前付きボリュームの中）。
+- 同じ形で「Start secretary-codex (ADR-1058)」を直後に足す: 同じ `if`・`continue-on-error: true`・`command_timeout: 10m`・df → `DOCKER_BUILDKIT=1 docker build -t astro-webapp-secretary-codex -f secretary-codex/Dockerfile .`（根を context に・Dockerfile ごとの除外が効く。§5-1。失敗は警告で exit 0）→ `docker run --rm` で `codex --version` が 0.162.1 か（違えば警告で exit 0、起こさない）→ 同じ probe（frontnet・read-only・cap-drop ALL で DB と redis に届かないこと。終了コード1なら警告。容器に probe.mjs を入れる）→ `docker compose -p astro-webapp-secretary-codex -f docker-compose.secretary-codex.yml up -d --force-recreate --no-build`（失敗は警告）→ exit 0。秘密の値は持たないので専用ファイルの確かめは無い（ログインは名前付きボリュームの中）。
 - deploy.yml は危険なパスなので、段3は GO の手順（ADR-136）に従う。
 
 ## 6. 画面（スーパー管理・解析ダッシュボードに「AI の担当」タブ）
@@ -209,7 +209,7 @@ GitHub の一時 VM（sandbox-test）で、compose と同じ条件（read_only�
 | K10 スーパー管理だけ | PUT を、テナント管理者→403・一般の利用者→403・ログインなし→401。3つとも期待どおりで○ |
 
 ## 9. リスクと対処
-- 解析のモデルを画面で変えると正答率が落ちうる → 選択肢は migration で PO が決めたものだけ。解析の選択肢を増やす時は正答率の測り方で先に測る決まりを ADR-1057 に書く。
+- 解析のモデルを画面で変えると正答率が落ちうる → 選択肢は migration で PO が決めたものだけ。解析の選択肢を増やす時は正答率の測り方で先に測る決まりを ADR-1058 に書く。
 - ChatGPT の答えが揺れる（recon §5-2 期限の null）→ K1 の10本で測る。揺れが出たら指示文の調整は別の作業。
 - 月額契約の使い方の約束・回数の上限 → 止められても秘書が「準備ができていません」になるだけ（ADR-1056 と同じ）。担当を Claude に戻せる。
 - Docker で Codex が動かない・囲いが動かない・頼みの文が残る → §5-2 で先に確かめ、だめなら止める。
@@ -234,9 +234,9 @@ GitHub の一時 VM（sandbox-test）で、compose と同じ条件（read_only�
 
 ## 13. 実装カードの前に済ませること
 1. 本番の `TRANSLATION_MODEL_RECEIVE`・`TRANSLATION_MODEL_SEND` が設定されているか・値（モデル名だけ。ほかの行は読まない）を確かめ、§4-1 の初めの行に書く。
-2. ADR-1057 の本文を起案する（ADR-1056 の置き換え部分・解析の選択肢を増やす決まり・失敗の記録・error_code の一覧）。
+2. （草案済み・`docs/adr/ADR-1058-ai-job-assignments.md`・Proposed）ADR-1058 の本文を起案する（ADR-1056 の置き換え部分・解析の選択肢を増やす決まり・失敗の記録・error_code の一覧）。
 3. （済）同期セッションの工場: 共通の物は無い。新しく作らず呼び手の session に書く形にした（§4-2-3）。
-4. v9 の再審査（クラウド）で APPROVE。
+4. （済）9回目の審査（クラウド・head 6ce9947bd）で APPROVE。軽い指摘 R1〜R3 は v10 で反映（§14）。
 5. PO に決めてもらうこと（1回に1件）:
    - 決定済み: 仕事ごとに選べる AI とモデルの最初の一覧（PO 2026-11-02「1」）。
    - 秘書を ChatGPT にした時の最初のモデル（試験では3つとも6〜8秒で正しい形）。
@@ -249,7 +249,7 @@ GitHub の一時 VM（sandbox-test）で、compose と同じ条件（read_only�
   - 重い指摘: ①migration とコードを同じ便に出すと表が無い間に解析・翻訳が止まる→§7 で 1a/1b に分けた ②失敗の行が巻き戻りで消える→§4-2-3 ③予算は llm_usage_events を見ていない→§4-2-2 ④K5 の検査が料金表と DEFAULT_MODEL に当たる→§4-3 ⑤Codex 容器のボリュームの持ち主・囲い・残る物・合図の許す一覧・文面での見分け→§5-1・§5-2。
   - 画面: Modal と ConfirmModal を重ねると Esc で両方閉じる→§6 を1つの Modal の2段に。Select の値→choice_id。topics.py への登録→§6-1。履歴の「誰が」→full_name。Badge の文字も t()。
   - 目標の測り方: K1・K2・K4・K5・K8 を○×で決められる形に→§8。K7 の検査名、K10 の試す相手→§8。
-  - カードの前に足りない物: ADR-1057・error_code の閉じた一覧（§4-2-1）・API の返事の形（§6-1）→§13。
+  - カードの前に足りない物: ADR-1058・error_code の閉じた一覧（§4-2-1）・API の返事の形（§6-1）→§13。
   - recon の食い違い: `tools/prompt_ab.py` は `backend/app/tools/prompt_ab.py`。試験の読み手2か所と MODEL_RECEIVE/MODEL_SEND の読み手が漏れ。説明文の古い既定値。取り直しの条件。USAGE_PURPOSES・KNOWN_PURPOSES→recon を直した。
   - 確かめた生出力: `~/CC報告ファイル-keep/secretary-chatgpt/review1_verify.txt`・`review2_verify.txt`・`review2_verify_b.txt`。1回目の審査の返事は記録の上限で途中（【3/7】の後半〜【7/7】）が切れて読めなかったため、②③⑤⑥⑦は2回目で取り直した。
 - 2回目（2026-11-02・head 9064dc6a4・クラウド）: VERDICT: REVISE。直ったと認められた所: 1a/1b の分け方・予算・K5・画面。
