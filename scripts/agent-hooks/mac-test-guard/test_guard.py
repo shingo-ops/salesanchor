@@ -12,6 +12,9 @@ BLOCK = [
     'pytest backend/tests', 'py.test', 'python3 -m pytest -q', 'python3.12 -m pytest',
     'uv run pytest', 'docker compose exec -T backend pytest', 'cd frontend && npm test',
     'bash -c "npm test"', '/usr/local/bin/npm test', 'FOO=1 npm test 2>&1 | tail -5',
+    'timeout 600 npx vitest run', 'timeout -s KILL 10m npm test', 'nice npm test',
+    'nice -n 10 pytest', 'nohup pytest', 'sudo nohup npm test', 'pnpm test',
+    'yarn run test:e2e', 'docker compose run --rm -e X=1 backend python -m pytest',
 ]
 PASS = [
     'npm ci', 'npm run build', 'npm run lint', 'npm run test:e2e:install', 'npm install',
@@ -19,6 +22,8 @@ PASS = [
     'python3 scripts/tests/test_x.py', 'python3 -I scripts/ci/check_doc_index.py',
     'uv run ruff check', 'docker compose ps', 'bash scripts/dev/check-before-submit.sh',
     'node --test scripts/tests/x.js', 'git push', 'git status', 'ls',
+    'docker compose exec backend echo vitest', 'docker compose exec backend pip show pytest',
+    'timeout 5 git status', 'nice ls', 'yarn install', 'pnpm run build',
     'echo "npm test"', 'grep -n "npm test" README.md', 'git commit -m "npm test を止める"',
     "cat <<'EOF' > /tmp/x.txt\nnpm test\nEOF",
 ]

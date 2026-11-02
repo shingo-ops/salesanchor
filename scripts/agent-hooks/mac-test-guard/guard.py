@@ -7,7 +7,10 @@ import sys, os, re, json, shlex, glob, datetime
 MSG = ('🚫 BLOCKED [mac-test-guard]: この Mac では重い試験を回しません（8コア・8GB で時間切れが毎回出るため。PO 決定 2026-11-02）。'
        '試験は GitHub の確かめ（PR を push すると自動で回る）か、クラウドの担当に頼んでください'
        '（決まり: docs/handoff/mac-test-guard/design.md）。Mac でしか試せない場合は PO に許可券 "mac test" を依頼してください。')
-PREFIXES = {'sudo', 'env', 'time'}
+PREFIXES = {'sudo', 'env', 'time', 'nohup'}
+TIMEOUT_VALUE_FLAGS = {'-s', '--signal', '-k', '--kill-after'}
+DOCKER_VALUE_FLAGS = {'-e', '--env', '-u', '--user', '-w', '--workdir', '-v', '--volume', '--name',
+                      '--entrypoint', '-p', '--publish', '-l', '--label', '--index'}
 SHELLS = {'bash', 'sh', 'zsh'}
 PERMIT_OP = 'mac test'
 NPM_VALUE_FLAGS = {'--prefix', '-C', '-w', '--workspace'}
@@ -55,6 +58,27 @@ def split_parts(cmd):
     return parts
 
 
+def skip_timeout(t):
+    """timeout の旗（-s/--signal/-k/--kill-after は値も）と時間の1語を飛ばす。"""
+    i = 0
+    while i < len(t) and t[i].startswith('-'):
+        i += 2 if t[i] in TIMEOUT_VALUE_FLAGS else 1
+    return t[i + 1:]
+
+
+def skip_nice(t):
+    """nice の -n 値・-数・--adjustment=x を飛ばす。"""
+    i = 0
+    while i < len(t):
+        if t[i] == '-n':
+            i += 2
+        elif t[i].startswith('-') and (t[i][1:].isdigit() or t[i].startswith('--adjustment=')):
+            i += 1
+        else:
+            break
+    return t[i:]
+
+
 def tokens(part):
     """(環境変数の dict, 先頭語以降の語のリスト)。sudo/env/time と VAR= は飛ばす。"""
     part = part.strip().lstrip('({').strip()
@@ -63,11 +87,20 @@ def tokens(part):
     except Exception:
         t = part.split()
     env = {}
-    while t and (t[0] in PREFIXES or re.match(r'^[A-Za-z_][A-Za-z0-9_]*=', t[0])):
-        m = re.match(r'^([A-Za-z_][A-Za-z0-9_]*)=(.*)$', t[0])
+    while t:
+        w = t[0]
+        m = re.match(r'^([A-Za-z_][A-Za-z0-9_]*)=(.*)$', w)
         if m:
             env[m.group(1)] = m.group(2)
-        t = t[1:]
+            t = t[1:]
+        elif w in PREFIXES:
+            t = t[1:]
+        elif w == 'timeout':
+            t = skip_timeout(t[1:])
+        elif w == 'nice':
+            t = skip_nice(t[1:])
+        else:
+            break
     return env, t
 
 
@@ -168,8 +201,11 @@ def heavy(base, args, allow_docker=True):
         idx = [i for i, a in enumerate(args) if a in ('exec', 'run')]
         if not idx:
             return False
-        sub = args[idx[0] + 1:]
-        return any(heavy(os.path.basename(sub[i]), sub[i + 1:], False) for i in range(len(sub)))
+        sub, i = args[idx[0] + 1:], 0
+        while i < len(sub) and sub[i].startswith('-'):
+            i += 2 if sub[i] in DOCKER_VALUE_FLAGS else 1
+        sub = sub[i + 1:]
+        return bool(sub) and heavy(os.path.basename(sub[0]), sub[1:], False)
     return False
 
 
