@@ -183,6 +183,23 @@ PO の言葉: 「LINEみたいな使い心地は出来る？」（意味は「�
 - 2026-11-02 PO 選択「1」（残りの遅い画面を遅い順に 10 画面ずつ、本番の測定まで直す）の 1 回目。対象は §3-4-12-a の測定で K1 が遅い順の 10 画面（11 行）。
 - 作業指示書: docs/handoff/line-like-speed/batch3a-card.md（第 1 版）。一覧と詳しい画面は段 2 と同じ形、編集の画面はフォームの初めの値を写しから作る小さな部品を 1 つ足す（batch3a-card.md §0 V3a-4）。受入はカードの §5 B1〜B7。結果はこの節の後に書き足す。
 
+#### 3-4-13-a. 段 3 の 1 回目の本番の受入（2026-11-02 Claude Opus が確かめた）
+- B1・B2 は合格。PR #5008 の必須の確認 50 件 pass・9 件 skipping（落ち 0）。Frontend unit tests は pass。
+- B3 は合格。PR #5008 の変更は 26 ファイル。migrations/・backend/・scripts/・.github/ は 0。
+- B4 は合格（本線 71030e87b で確かめた）。`new QueryClient` は frontend/src/lib/query/apiQuery.ts:23 の 1 行だけ。`staleTime:` は 0 行。persist は 0 行。
+- B7 は合格。PR #5008 は 2026-11-02 11:15 JST に main へ入った（merge 17e60b589）。本番への反映は 11:21 JST に success。
+- B5 は 1 回目の測定で止めた。prod-ui-check run 41377463601（11:37:02 JST）で /management-center/note-master の 5xx が 1 件・K1 0.20 秒だった。
+  - 原因は画面ではなかった。注記マスタの 1 行の照合の種類 STATE_LITERAL を、一覧の返事の形が受け付けず 500 になっていた（本番 DB で 99 行中 1 行）。
+  - 直しは PR #5014（note-master-fix-card.md）。照合の種類の 4 つを 1 か所に置き、入力・取り込み・画面の選び肢をそこにそろえた。2026-11-02 13:22 JST に main へ入った（merge 08be73708）。本番への反映は 13:32 JST に success。
+- B5 は直しの後に合格。prod-ui-check run 41389073263（測った日時 13:46:26 JST）。
+  - 11 行すべて K1 0.04 秒以下・403 と 5xx は 0 件。/management-center/note-master は 5xx 1→0・K1 0.20→0.04 秒。
+  - ほかの行は悪化していない。135 画面すべて測れた（測れなかった 0）。全行の 5xx 0。2 秒を超えた画面は 0 件。
+  - K2 の最大は 1.3 秒（/inventory）。基準の run 41346462841 は 1.2 秒。run 41332039643 と run 41377463601 も 1.3 秒で、/inventory はこの幅で動いている。
+  - 生の行は設計担当の手元の /tmp/CC報告ファイル/batch3a/b8/measure-run41389073263.txt（リポジトリには入れない）。
+- B6 は DB の件数だけ確かめた。本番の読むだけの道（ADR-1024）で tenant 001 の Bot 3 件・リード 472 件・注記マスタ 99 件。画面の件数はまだ確かめていない。根拠は backend を変えていないこと（B3）と B1。
+- K5 は本番で 2 人のログインでは確かめていない（本番でパスワードを打たない決まり）。カードの Q2 の試験と、写しの名前に利用者が入り利用者が変わると消える作りで確かめた。
+- 残り: K1 が 0.1 秒を超える画面（403 なし）は /dashboard/leads 0.20 秒・/management-center/units 0.19 秒・/crm/contacts 0.19 秒・/schedule/settings 0.19 秒・/quotes 0.19 秒・/management-center/status-master 0.19 秒ほか 19 画面。/inventory は 10 秒で見分けられなかった。次はこの遅い順の 10 画面。
+
 ### 3-5. 測り方（|基準|検証方法|）
 | 基準 | 検証方法 |
 |---|---|
