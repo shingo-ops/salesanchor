@@ -1,7 +1,7 @@
-# 秘書チャットを ChatGPT に・アプリの AI を画面で管理 — 設計（草案 v6・審査5回目の指摘を反映）
+# 秘書チャットを ChatGPT に・アプリの AI を画面で管理 — 設計（草案 v7・審査6回目の指摘を反映）
 
-- 状態: 設計案作成済み／設計審査 1回目〜5回目 REVISE（§14）→ v6 で反映・6回目 未／PO 承認 未／実装 未着手
-- 目標: `kgi.md`（K1〜K10）。現在地: `recon.md`（§番号で参照）。根拠の照合は origin/main c60ea6eb3（5回目の審査と同じ。90ee0c15f から引用したパスに差分なし。生出力 `review4_fix.txt`・`review5_fix.txt`）。
+- 状態: 設計案作成済み／設計審査 1回目〜6回目 REVISE（§14）→ v7 で反映・7回目 未／PO 承認 未／実装 未着手
+- 目標: `kgi.md`（K1〜K10）。現在地: `recon.md`（§番号で参照）。根拠の照合は origin/main 44098dc31（引用したパスは c60ea6eb3・90ee0c15f から差分なし。生出力 `review4_fix.txt`・`review5_fix.txt`・`review6_fix*.txt`）。
 - 関係 ADR: ADR-1056（秘書）・ADR-1004（使用量台帳）・ADR-027・ADR-067・ADR-144・ADR-1016（即時反映の表）・ADR-135/136（危険 PR の GO）。新しい ADR-1057「アプリの AI の担当は DB の1か所で決め、画面で見て切り替える」を実装カードより先に起案し、ADR-1056 の「Claude Code に固定」「ledger に書かない」を置き換える（§13）。
 
 ## 1. 目的（PO の言葉）
@@ -26,7 +26,13 @@
 ### 4-1 新しい表（public・tenant_id なし・前例 extraction_prompt_config）
 - `public.ai_job_choices`（選べる組み合わせ）: id SERIAL・job_key・provider・model・created_at。UNIQUE(job_key, provider, model)。行は migration でだけ足す。画面と API には選択肢を足す道を作らない（足すのは migration だけ）。DB の権限では止めない（下の履歴の表の理由と同じ）。
 - `public.ai_job_assignments`（今の担当）: job_key PRIMARY KEY・choice_id（ai_job_choices.id への外部キー）・updated_by（users.id、ON DELETE SET NULL・NULL 可）・updated_at。行は5つのまま（API は UPDATE だけ）。CHECK は「choice の job_key と同じ」を DB 関数でなく、外部キーを (choice_id, job_key) → ai_job_choices(id, job_key) の複合で張って強制する（ai_job_choices に UNIQUE(id, job_key) を足す）。
-- `public.ai_job_assignment_history`（変えた記録）: id・job_key・old_choice_id・new_choice_id・changed_by（users.id、ON DELETE SET NULL・NULL 可）・changed_at。書き換え・消しは DB のトリガーで止める: `BEFORE UPDATE OR DELETE` で例外を上げる。ただし「changed_by だけが NULL になる UPDATE」（users を消した時の ON DELETE SET NULL）は通す。REVOKE にしない理由: REVOKE は salesanchor_app にしか効かず、本番のアプリが表の持ち主の役で繋いでいる場合は止まらない（`.github/workflows/deploy.yml:418-430`。どちらの役で繋いでいるかは確かめていない）。さらに `20260605_030000` の GRANT が毎回流れ直す（`scripts/run_all_migrations.sh:530`）。トリガーは持ち主にも効くので、繋ぐ役を問わず止まる。users は会社を消すと一緒に消える（`models.py:26` の ON DELETE CASCADE）ため、SET NULL にしないと履歴を書いた人の会社を消せなくなる。NULL の時、画面は「ID 不明」と出す。
+- `public.ai_job_assignment_history`（変えた記録）: id・job_key・old_choice_id・new_choice_id・changed_by（users.id、ON DELETE SET NULL・NULL 可）・changed_at。書き換え・消しは DB のトリガーで止める: `BEFORE UPDATE OR DELETE` で例外を上げる。ただし「changed_by だけが NULL になる UPDATE」（users を消した時の ON DELETE SET NULL）は通す。REVOKE にしない理由: REVOKE は salesanchor_app にしか効かず、本番のアプリが表の持ち主の役で繋いでいる場合は止まらない（`.github/workflows/deploy.yml:418-430`。どちらの役で繋いでいるかは確かめていない）。さらに `20260605_030000` の GRANT が毎回流れ直す（`scripts/run_all_migrations.sh:530`）。トリガーは持ち主にも効くので、繋ぐ役を問わず止まる。users は会社を消すと一緒に消える（`models.py:26` の ON DELETE CASCADE）ため、SET NULL にしないと履歴を書いた人の会社を消せなくなる。NULL の時、画面は「ID 不明」と出す。同じ関数で `BEFORE TRUNCATE ... FOR EACH STATEMENT` のトリガーも付ける（行のトリガーは TRUNCATE では動かないため。審査6回目 P5）。
+- 権限（審査6回目 P5）: 前例 `migrations/20261101_130000_add_new_device_approval.sql:126-132` と同じく、`IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'salesanchor_app')` の中で3表に SELECT・INSERT・UPDATE・DELETE、SERIAL の順番の数（ai_job_choices・ai_job_assignment_history）に USAGE・SELECT を GRANT する。
+- 流れ直しても壊れない書き方（審査6回目 P1）: migration は済んだ記録を持たず、deploy のたびに頭から全部流れる（`scripts/run_all_migrations.sh` の `run_sql`。適用済みを記録する表は無い）。そのため本便の migration はすべて次の形で書く。
+  - 表・列・索引は `IF NOT EXISTS`。
+  - 初めの行（ai_job_choices・ai_job_assignments）は `ON CONFLICT DO NOTHING`。担当の行は流れ直しで上書きしない（上書きすると deploy のたびに画面で変えた担当が初めの値に戻り、履歴にも残らない）。段3の codex の3行も同じ。
+  - トリガーは `CREATE OR REPLACE FUNCTION` と `CREATE OR REPLACE TRIGGER`（PostgreSQL 14 以上。本番は 16）。
+  - CHECK は名前を付け、`DROP CONSTRAINT IF EXISTS` → `ADD` の順にする。
 - provider は3つに閉じる: CHECK (provider IN ('gemini','codex','claude'))。
 - job_key は5つに閉じる: CHECK (job_key IN ('line_extraction','translation_inbound','translation_inbound_escalation','translation_outbound','secretary_intent'))。llm_usage_events の purpose と同じ名前にし、記録と担当を名前でつなぐ。
 - 初めの行は今の本番の値。解析は gemini-3.1-flash-lite（`gemini_extraction_svc.py:283`）、秘書は claude/sonnet（`secretary-agent/server.mjs:70`）。翻訳3つは本番の環境変数 `TRANSLATION_MODEL_RECEIVE`・`TRANSLATION_MODEL_SEND` の実際の値（コードの既定は両方 gemini-3.5-flash-lite、`message_translator.py:49-50`）。【未確認】本番で環境変数が設定されているか・その値 → 実装カードの前に確かめる（§13-1）。
@@ -120,7 +126,7 @@ GitHub の一時 VM（sandbox-test）で、compose と同じ条件（read_only�
 - 本番 VPS との違いは、便3で Claude のまま並べて起動したとき、ログイン前の1回（auth で失敗するはず）で囲いの失敗の出方が V2 と同じかを見る。
 
 ### 5-3 backend
-- `assistant.py` は `:139` の commit より前に `get_ai_assignment("secretary_intent")` を読む（後に読むと新しい取引が始まり、AI を待つ最大85秒〔`:51`〕の間 DB の取引を開いたままにする。`:138` の決まりに反する）。読んだ担当で、provider が codex なら secretary-codex、claude なら secretary-agent に送る。送る body に model を足す。容器は model を受け取って -m（claude は --model）に渡す。容器の側で選択肢の一覧は持たない（正本は ai_job_choices）。
+- `assistant.py` は `:139` の commit より前に `get_ai_assignment("secretary_intent")` を読む（後に読むと新しい取引が始まり、AI を待つ最大85秒〔`:51`〕の間 DB の取引を開いたままにする。`:138` の決まりに反する）。読み取りが例外になった時（行が無い・DB の失敗）は、`_log(user_id, tenant_id, started, "not_ready", None)` を出して `_fail(503, "not_ready")` を返す。台帳の行は書かない（provider と model が分からず、sdk と model を埋められないため。審査6回目 P4）。読んだ担当で、provider が codex なら secretary-codex、claude なら secretary-agent に送る。送る body に model を足す。容器は model を受け取って -m（claude は --model）に渡す。容器の側で選択肢の一覧は持たない（正本は ai_job_choices）。
 - 宛先の対応（provider→容器の URL）は配線なので backend の1か所の対応表に置く。URL は今の `SECRETARY_AGENT_URL`（`assistant.py:50`）と同じ形で `SECRETARY_CODEX_URL` を足す（宛先の住所は配線で、モデルの値ではない）。
 - 失敗の読み替えに1つ足す: 今は 502 の code が auth_failed・cli_failed 以外なら全部 unreadable になる（`assistant.py:103-115`）。`tool_used` を独立させ、`_fail(502, "agent_failed", "tool_used")` にし、ledger の error_code も tool_used にする（足さないと K2② が常に0件で意味を失う）。ほかは今のまま。
 - 返事の受け取り形を広げる: `AgentEnvelope` は `extra="forbid"` で intent と total_cost_usd しか受けない（`backend/app/schemas/assistant.py:72-76`）。`usage: AgentUsage | None = None`（4つの数、どれも 0 以上の整数か None・extra="forbid"）と `error_events: int | None = None`（0 以上）を足す。足さないと codex の返事が毎回 ValidationError→unreadable になる（`assistant.py:147-148`）。
@@ -164,9 +170,9 @@ GitHub の一時 VM（sandbox-test）で、compose と同じ条件（read_only�
 ## 7. 進め方（1回に1つ・変更→反映→測る）
 | 段 | 中身 | 合格の見方 |
 |---|---|---|
-| 1a | migration だけ: 担当表3つ＋初めの行（codex の3行は除く）・履歴の表のトリガー・ledger の outcome/error_code 列・CHECK の作り直し（コードは変えない）。同じ便で、相談係の分類表に新しい文字の列7つを足す（`migrations/20261024_100300_create_ai_cloud_views.sql`。このファイルが分類表の正本で毎回流し直される、`:3`）: llm_usage_events の outcome・error_code、ai_job_choices の job_key・provider、ai_job_assignments の job_key、ai_job_assignment_history の job_key は CHECK で値が限られるので allow（理由に CHECK の名前を書く、`:143-144` と同じ形）、ai_job_choices の model は mask（`:142` と同じ理由）。試験の行数 `backend/tests/ops/test_ai_cloud_views.py:481` の 1057 を足した数に直す。新しい migration を `run_all_migrations.sh` に `run_sql migrations/...` の形で足す（`:1059` 等と同じ）。分類の試験を1本足す: 前例 `backend/tests/ops/test_ai_cloud_views.py:570-620`（ADR-1055 段A）と同じ形で、bootstrap の DB に `20260930_150000` と本便の migration を本物のまま流し、column_class に7列の行が名前で7件あること・新しい3表と llm_usage_events について `_classification_gaps` が0件であることを確かめる（今の T10 は bootstrap の表だけを作り、この4表を作らないので、行を足し忘れても緑のまま。`:523-545`・`tests/rls_bootstrap.py:14-34`）。履歴の表のトリガーの試験も足す（UPDATE と DELETE は例外・changed_by だけを NULL にする UPDATE は通る） | 本番で3表の行数（選択肢・担当5・履歴0）と CHECK の中身・トリガーがあることを読み取り鍵で確認。今の解析の記録が途切れない（直近1時間の line_extraction 行数が前日同時刻と同程度）。足した分類の試験とトリガーの試験が緑 |
+| 1a | migration だけ: 担当表3つ＋初めの行（codex の3行は除く）・履歴の表のトリガー・ledger の outcome/error_code 列・CHECK の作り直し（コードは変えない）。同じ便で、相談係の分類表に新しい文字の列7つを足す（`migrations/20261024_100300_create_ai_cloud_views.sql`。このファイルが分類表の正本で毎回流し直される、`:3`）: llm_usage_events の outcome・error_code、ai_job_choices の job_key・provider、ai_job_assignments の job_key、ai_job_assignment_history の job_key は CHECK で値が限られるので allow（理由に CHECK の名前を書く、`:143-144` と同じ形）、ai_job_choices の model は mask（`:142` と同じ理由）。試験の行数 `backend/tests/ops/test_ai_cloud_views.py:481` の 1057 を足した数に直す。新しい migration を `run_all_migrations.sh` に `run_sql migrations/...` の形で足す（`:1059` 等と同じ）。分類の試験を1本足す: 前例 `backend/tests/ops/test_ai_cloud_views.py:570-620`（ADR-1055 段A）と同じ形で、bootstrap の DB に本物の migration を次の順で流し（`20260921_110000_pipeline_tables_public.sql` → `20260930_150000` → 本便の migration → `_CREATE_SQL`。`20260930_150000:40` が `public.extraction_attempts` を参照し、bootstrap の一覧 `tests/rls_bootstrap.py:14-34` はこの表を作らないため。`20260921_110000` が参照する suppliers は `056_...:45`、products は `062_...:30` で bootstrap にある。units・conditions は表として無いので `:183-` の FK なしの側を通る。表の形を試験に写さない。この順で流れなければ実装を止めて設計に戻す。審査6回目 P2）、column_class に7列の行が名前で7件あること・新しい3表と llm_usage_events について `_classification_gaps` が0件であることを確かめる（今の T10 は bootstrap の表だけを作り、この4表を作らないので、行を足し忘れても緑のまま。`:523-545`・`tests/rls_bootstrap.py:14-34`）。履歴の表のトリガーの試験も足す（UPDATE・DELETE・TRUNCATE は例外・changed_by だけを NULL にする UPDATE は通る）。流れ直しの試験も足す（本便の migration を2回流しても通る。1回目の後に担当の行を画面と同じ形で UPDATE し、2回目の後もその値のまま。前例 `test_ai_cloud_views.py:618` の2回流し） | 本番で3表の行数（選択肢・担当5・履歴0）と CHECK の中身・トリガーがあることを読み取り鍵で確認。今の解析の記録が途切れない（直近1時間の line_extraction 行数が前日同時刻と同程度）。足した分類の試験とトリガーの試験が緑 |
 | 1a-2 | コード: 集計の outcome='ok' 条件だけ（§4-2-2 のダッシュボード・§4-2-3 の prompt_ab・reextract）。1b より先に別の PR で出す | 今の画面の数が出す前と同じ（失敗の行がまだ無いので変わらない）。試験で failed の行を入れても数に入らない |
-| 1b | コード: 読む関数・解析と翻訳を担当表から読む・失敗も記録（§4-2-3 の表の書き手どおり）・固定値と環境変数の読み取りを消す・秘書の model を担当表から渡す・秘書の台帳の行（claude-code）・server.mjs の "sonnet" を消す（§4-3）・K5 の試験・一覧3つ（USAGE_PURPOSES・USAGE_SDKS・KNOWN_PURPOSES） | 本番で解析の記録の model が今と同じ。失敗行が出る（出たら error_code が9つの中）。1つの呼び出しで2行出ていない: 旧エンジンは「同じ extraction_attempt_id に ok と failed の両方がある組が0件」（旧エンジンの行は source_ref が NULL、`tcg_extraction_record_svc.py:214-222`）。v102 は「同じ source_ref（`extraction_job:<id>`）の failed の数が3以下」（最初の1回＋その場の送り直し2回、`line_analysis_v102_svc.py:464` の `_IMMEDIATE_RETRY_DELAYS = (2, 8)`）。秘書の行が sdk=claude-code・model=sonnet で出る。K5 の試験が緑。旧エンジンの試験「台帳の INSERT が失敗しても extraction_jobs が error になる」が緑 |
+| 1b | コード: 読む関数・解析と翻訳を担当表から読む・失敗も記録（§4-2-3 の表の書き手どおり）・固定値と環境変数の読み取りを消す・秘書の model を担当表から渡す・秘書の台帳の行（claude-code）・server.mjs の "sonnet" を消す（§4-3）・K5 の試験・一覧3つ（USAGE_PURPOSES・USAGE_SDKS・KNOWN_PURPOSES） | 本番で解析の記録の model が今と同じ。失敗行が出る（出たら error_code が9つの中）。1つの呼び出しで2行出ていない: 旧エンジンは「同じ extraction_attempt_id に ok と failed の両方がある組が0件」（旧エンジンの行は source_ref が NULL、`tcg_extraction_record_svc.py:214-222`）。v102 は「同じ extraction_attempt_id の failed の数が3以下」（最初の1回＋その場の送り直し2回、`line_analysis_v102_svc.py:464` の `_IMMEDIATE_RETRY_DELAYS = (2, 8)`。source_ref で数えると、celery の送り直し〔`tcg_extraction.py` の `max_retries=2`〕や人が直した後の解析し直しで同じ投稿に何度も呼ばれ、正しい動きでも4行以上になるため。審査6回目 P3）。extraction_attempt_id が NULL の行（recorder の無い再抽出の道具）は数えない。秘書の行が sdk=claude-code・model=sonnet で出る。K5 の試験が緑。旧エンジンの試験「台帳の INSERT が失敗しても extraction_jobs が error になる」が緑 |
 | 2 | 画面「AI の担当」タブ＋API（表示と切り替え） | K3・K4・K7・K9・K10 |
 | 3 | §5-2 の V1〜V5 合格 → secretary-codex 容器（並べて起動・担当は Claude のまま）＋ codex の選択肢3行の migration →PO がログイン→ 試験の担当切替で K1・K2・K6・K8 を測る→合格なら担当を ChatGPT に | K1・K2・K6・K8 |
 | 4（合格後） | Claude の容器と専用ファイルを片付けるかを PO が決める | — |
@@ -216,7 +222,7 @@ GitHub の一時 VM（sandbox-test）で、compose と同じ条件（read_only�
 1. 本番の `TRANSLATION_MODEL_RECEIVE`・`TRANSLATION_MODEL_SEND` が設定されているか・値（モデル名だけ。ほかの行は読まない）を確かめ、§4-1 の初めの行に書く。
 2. ADR-1057 の本文を起案する（ADR-1056 の置き換え部分・解析の選択肢を増やす決まり・失敗の記録・error_code の一覧）。
 3. （済）同期セッションの工場: 共通の物は無い。新しく作らず呼び手の session に書く形にした（§4-2-3）。
-4. v6 の再審査（クラウド）で APPROVE。
+4. v7 の再審査（クラウド）で APPROVE。
 5. PO に決めてもらうこと（1回に1件）:
    - 決定済み: 仕事ごとに選べる AI とモデルの最初の一覧（PO 2026-11-02「1」）。
    - 秘書を ChatGPT にした時の最初のモデル（試験では3つとも6〜8秒で正しい形）。
@@ -252,3 +258,7 @@ GitHub の一時 VM（sandbox-test）で、compose と同じ条件（read_only�
   - 中の指摘: N2 今の T10 は新しい4表を作らないので分類の足し忘れを捕まえない→ §7 1a に前例と同じ形の試験 N3 SAVEPOINT の中で例外を飲み込むと RELEASE が失敗して全部戻る→ §4-2-3 に順番を固定・本物の DB の失敗で試す N4 REVOKE は繋ぐ役しだいで効かず、毎回の GRANT で戻る→ §4-1 を履歴の表のトリガーに替えた（繋ぐ役を問わず効く）。
   - 軽い指摘: N5 2行の見方→ §7 1b を経路ごとに N6 `_classify_error` の呼び方と循環 import→ §4-2-1 N7 担当の読み取りを commit の前に→ §5-3 N8 prompt.txt・根の .dockerignore は無い→ §5-1・§5-4 に Dockerfile ごとの除外と BuildKit N9 翻訳の行の tenant_id・source_ref・空の応答の行が新しく数に入る→ §4-2-2・§4-2-3 N10 backend だけ戻った時→ §10。
   - 確かめた生出力: `review5.md`・`review5_fix.txt`（origin/main c60ea6eb3 を `git show` で読んだもの）。
+- 6回目（2026-11-02 15:33〜 UTC・head d2495986f・クラウド。返事は別のブランチ review/secretary-chatgpt-r6 の commit c1ea2bb77 に `review6.md`。根拠は origin/main c60ea6e）: VERDICT: REVISE。5回目の N1〜N10 はすべて直ったと認められた（N2・N4・N5・N7 は新しい指摘の元）。
+  - 中の指摘: P1 migration は deploy のたびに流れ直す。初めの行を上書きすると画面で変えた担当が戻る→ §4-1 に流れ直しても壊れない書き方、§7 1a に2回流しの試験 P2 分類の試験の DB に extraction_attempts が無く `20260930_150000` が流れない→ §7 1a に流す順番。
+  - 軽い指摘: P3 v102 の2行の見方を extraction_attempt_id で→ §7 1b P4 秘書の担当が読めない時→ §5-3 P5 TRUNCATE のトリガーと GRANT→ §4-1。
+  - 確かめた生出力: `review6.md`・`review6_fix.txt`・`review6_fix2.txt`・`review6_fix3.txt`（origin/main 44098dc31 を `git show` で読んだもの。引用したパスは c60ea6eb3 から差分なし）。
