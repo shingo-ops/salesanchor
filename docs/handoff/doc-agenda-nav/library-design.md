@@ -404,3 +404,12 @@ open_when: commit・PR を作る前
 2. 【事実】`stop`・`display` は `-p` の実行では点検しない（`excluded_run()`・`hook.py:58-62`）。環境変数 `PLAIN_LANG_CHECK=force` のときだけ点検する。よって §6 の 2 の比較は `printf '{"session_id":"doclib-test","stop_hook_active":false,"last_assistant_message":"<文>"}' | PLAIN_LANG_CHECK=force python3 ~/kb/scripts/hooks/plain-lang/hook.py stop` の形で行う。
 3. 【事実】`stop` は点検の記録（`stop_log`）と書き直しの印（`rewrite/<session_id>`）を書く（`hook.py:154-158`）。比較には本番の会話と別の `session_id`（例 `doclib-test`）を使い、比較の後に `rewrite/doclib-test` を消す。
 4. 【事実】見出しの文字列「Commit Message Format」「Pull Request Workflow」「Parallel Task Execution」「Scope Termination」「## 担当」を `~/.claude/scripts`・`~/.claude/hooks`・`~/kb/scripts/hooks`・agent-console の `bin` で固定文字列 grep した結果は 0件（exit=0・出力なし）。段2b・段3 の直前にもう一度同じ grep を行う（実物が変わっていないことの確かめ）。
+
+## 17. 再審査（library-review-2.md）の未確認を Opus が手元で確かめた結果（2026-11-02）
+
+生出力: `/tmp/CC報告ファイル/doclib/review2-check.txt`（手元のみ）。
+
+1. 【事実】`hook.py` の印と記録の置き場所は `home()` ＝ 環境変数 `PLAIN_LANG_HOME`、無ければ `~/.cache/plain-lang`（`hook.py:28-29`）。`stop.log`・`rewrite/`・`detail/` はこの下（`hook.py:65-70`・`:127-130`）。`~/kb` の中ではない。よって `stop` の比べ方は `PLAIN_LANG_HOME=<作業用の空フォルダ>` を付けて流せば、本番の記録にも `~/kb` にも書かない。比べた後はその作業用フォルダを消すだけでよい（PO の承認は要らない）。
+2. 【事実】`~/.claude/CLAUDE.md` の中の `@` は2つだけ: 27行目（字下げ・chat-format.md）と60行目（`~/kb/AGENTS.md`）。ファイルではない `@` は無い。
+3. 【事実】`~/.claude/CLAUDE.md` の `##` 見出しは 3・9・12・36・40・45・48・51・54・57行目。27行目は「報告の型」（12〜35行目）の節の中にある。
+4. 【事実】リポジトリの CLAUDE.md（origin/main）の3行目は `@AGENTS.md`。
