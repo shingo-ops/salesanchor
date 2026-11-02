@@ -317,6 +317,53 @@ class TestRouterConnectStart:
             default = inspect.signature(fn).parameters["user"].default
             assert default.dependency is require_tenant_admin
 
+    def test_event_routes_depend_on_require_calendar_owner(self):
+        import inspect
+
+        from app.routers import google_calendar as gc
+
+        for fn in (gc.list_events, gc.create_event, gc.update_event, gc.delete_event):
+            default = inspect.signature(fn).parameters["user"].default
+            assert default.dependency is gc.require_calendar_owner
+
+    @staticmethod
+    def _owner_db(row):
+        db = AsyncMock()
+        result = MagicMock()
+        result.first = MagicMock(return_value=row)
+        db.execute = AsyncMock(return_value=result)
+        return db
+
+    @pytest.mark.asyncio
+    async def test_require_calendar_owner_not_connected_403(self):
+        from fastapi import HTTPException
+
+        from app.routers.google_calendar import require_calendar_owner
+
+        user = MagicMock(id=5)
+        with pytest.raises(HTTPException) as ei:
+            await require_calendar_owner(tenant_id=1, user=user, db=self._owner_db(None))
+        assert ei.value.status_code == 403
+
+    @pytest.mark.asyncio
+    async def test_require_calendar_owner_other_user_403(self):
+        from fastapi import HTTPException
+
+        from app.routers.google_calendar import require_calendar_owner
+
+        user = MagicMock(id=5)
+        with pytest.raises(HTTPException) as ei:
+            await require_calendar_owner(tenant_id=1, user=user, db=self._owner_db((1,)))
+        assert ei.value.status_code == 403
+
+    @pytest.mark.asyncio
+    async def test_require_calendar_owner_connector_passes(self):
+        from app.routers.google_calendar import require_calendar_owner
+
+        user = MagicMock(id=5)
+        passed = await require_calendar_owner(tenant_id=1, user=user, db=self._owner_db((5,)))
+        assert passed is user
+
 
 class TestRouterEvents:
     """イベント取得エンドポイントのテスト。"""
