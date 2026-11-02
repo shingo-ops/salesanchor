@@ -1,5 +1,6 @@
 #!/bin/bash
 # test-mac-jobs-watch.sh — scripts/mac-jobs-watch.sh の試験（design §4 K1 の ①〜㉙ ＋ disk-low D㉕〜D㉝）
+# （phone-missing の P㉞〜P㊸ は末尾。design-phone.md §4）
 #
 # すべて mktemp -d で作った一時ディレクトリの中だけで動く。偽の launchctl / curl を使い、
 # MJW_ 環境変数（状態・ログ・ロック・通知先・時刻）も一時領域へ向ける。HOME も一時領域に向ける。
@@ -62,7 +63,15 @@ cat > "${BIN}/df" <<'EOS'
 echo "Filesystem 1024-blocks Used Available Capacity Mounted on"
 echo "/dev/fake 1000000000 1000 ${DF_KB:-} 1% /System/Volumes/Data"
 EOS
-chmod +x "${BIN}/launchctl" "${BIN}/curl" "${BIN}/df"
+cat > "${BIN}/adb" <<'EOS'
+#!/bin/bash
+# 偽 adb: 呼ばれた引数を adb.calls に書き、adb.out の中身を出す
+echo "$*" >> "${FAKE}/adb.calls"
+cat "${FAKE}/adb.out" 2>/dev/null
+exit 0
+EOS
+chmod +x "${BIN}/launchctl" "${BIN}/curl" "${BIN}/df" "${BIN}/adb"
+PHONE_SH="${SCRIPT_DIR}/../dev/phone-serial.sh"
 
 FAKE_URL='https://discord.com/api/webhooks/TESTID/TESTTOKEN-not-real'
 
@@ -110,6 +119,9 @@ setup() { # setup [now]
   export MJW_LAUNCHCTL="${BIN}/launchctl"
   export MJW_CURL="${BIN}/curl"
   export MJW_DF="${BIN}/df"
+  export MJW_PHONE_CMD=""
+  export PHONE_ADB="${BIN}/adb"
+  unset PHONE_MODEL
   export DF_KB=52428800
   export MJW_NOW="${NOW}"
   export MJW_BOOT_SEC="${BOOT}"
@@ -647,6 +659,94 @@ G 19; at $(( T0 + 7200 )); run_mjw
 eq "D㉝-1 kickstart 増えない" "$(nkick)" "1"
 eq "D㉝-2 すぐ送信 1" "$(ncalls)" "1"
 export DF_KB=52428800
+
+# ── phone-missing。design-phone.md §4 の P㉞〜P㊸ ──
+PH_AUTO='adb-X-Y._adb-tls-connect._tcp'
+PH_NUM='192.168.0.2:40000'
+adb_out() { printf '%s\n' "$@" > "${D}/fake/adb.out"; }
+adb_line() { printf '%s device product:SC-51G model:%s device:SC-51G transport_id:1' "$1" "${2:-SC_51G}"; }
+adb_hdr() { echo "List of devices attached"; }
+nadbcalls() { grep -c . "${D}/fake/adb.calls" 2>/dev/null || true; }
+# P㉞ 2 行 → 自動のつながりを選ぶ
+setup
+adb_out "$(adb_hdr)" "$(adb_line "${PH_NUM}")" "$(adb_line "${PH_AUTO}")"
+out="$(bash "${PHONE_SH}")"; rc=$?
+eq "P㉞-1 終了 0" "${rc}" "0"
+eq "P㉞-2 自動のつながりだけ" "${out}" "${PH_AUTO}"
+# P㉟ 番号の行 1 行
+adb_out "$(adb_hdr)" "$(adb_line "${PH_NUM}")"
+out="$(bash "${PHONE_SH}")"; rc=$?
+eq "P㉟-1 終了 0" "${rc}" "0"
+eq "P㉟-2 その行の名前" "${out}" "${PH_NUM}"
+# P㊱ offline / unauthorized / 別機種
+adb_out "$(adb_hdr)" "${PH_NUM} offline model:SC_51G" "${PH_AUTO} unauthorized model:SC_51G"
+out="$(bash "${PHONE_SH}")"; rc=$?
+eq "P㊱-1 offline/unauthorized: 終了 1" "${rc}" "1"
+eq "P㊱-2 出力なし" "${out}" ""
+adb_out "$(adb_hdr)" "$(adb_line "${PH_NUM}" SM_X999)"
+out="$(bash "${PHONE_SH}")"; rc=$?
+eq "P㊱-3 別機種: 終了 1" "${rc}" "1"
+eq "P㊱-4 出力なし" "${out}" ""
+# P㊲ adb が無い
+out="$(PHONE_ADB="${D}/no-such-adb" bash "${PHONE_SH}")"; rc=$?
+eq "P㊲-1 adb が無い: 終了 2" "${rc}" "2"
+eq "P㊲-2 出力なし" "${out}" ""
+# P㊳ 偽 adb の引数は devices -l だけ
+setup
+adb_out "$(adb_hdr)" "$(adb_line "${PH_AUTO}")"
+bash "${PHONE_SH}" >/dev/null
+eq "P㊳-1 呼び出しは 1 回" "$(nadbcalls)" "1"
+eq "P㊳-2 引数は devices -l だけ" "$(cat "${D}/fake/adb.calls")" "devices -l"
+
+# 見張り側。道具は本物の phone-serial.sh、adb は偽
+ph_setup() { setup; export MJW_PHONE_CMD="${PHONE_SH}"; }
+ph_gone() { adb_out "$(adb_hdr)"; }
+ph_here() { adb_out "$(adb_hdr)" "$(adb_line "${PH_AUTO}")"; }
+# P㊴ 見えない 1 回目
+ph_setup; ph_gone; T0="${NOW}"
+run_mjw
+eq "P㊴-1 送らない" "$(ncalls)" "0"
+eq "P㊴-2 state に phone_gone=NOW" "$(stv phone_gone)" "${T0}"
+# P㊵ 3600 秒後も見えない（30 分ごとに起きて見ている）
+at $(( T0 + 1800 )); run_mjw
+eq "P㊵-0 1800 秒後: まだ送らない" "$(ncalls)" "0"
+at $(( T0 + 3600 )); run_mjw
+eq "P㊵-1 alert 1 通" "$(ncalls)" "1"
+eq "P㊵-2 ログ alert problems=phone-missing" "$(logc 'result=alert send=ok problems=phone-missing')" "1"
+sentmsg 1 | grep -q 'ワイヤレスデバッグ' && ok "P㊵-3 文にワイヤレスデバッグ" || ng "P㊵-3 文にワイヤレスデバッグ"
+has_prob "phone-missing" && ok "P㊵-4 problems=phone-missing" || ng "P㊵-4 problems=phone-missing"
+eq "P㊵-5 phone_gone は最初の時刻のまま" "$(stv phone_gone)" "${T0}"
+# P㊶ 見える → 復旧
+ph_here; at $(( T0 + 5400 )); run_mjw
+eq "P㊶-1 recover 1 通（合計 2）" "$(ncalls)" "2"
+sentmsg 2 | grep -q '直りました' && ok "P㊶-2 復旧文" || ng "P㊶-2 復旧文"
+eq "P㊶-3 phone_gone=0" "$(stv phone_gone)" "0"
+eq "P㊶-4 ログ recover" "$(logc 'result=recover send=ok')" "1"
+# P㊷ 眠っていた回（前回から 1920 秒超）。知らせ済み・phone_gone あり
+ph_asleep() {
+  mk_state $(( NOW - 100000 )) "${BOOT}" $(( NOW - 60 )) 0 0
+  printf 'phone_gone=%s\n' "$(( NOW - 7200 ))" >> "${D}/state/state"
+  printf 'phone-missing\t%s\n' "$(( NOW - 3600 ))" > "${D}/state/problems"
+}
+ph_setup; ph_gone; T0="${NOW}"; ph_asleep; run_mjw
+eq "P㊷-1 眠っていた回（見えない）: 送らない" "$(ncalls)" "0"
+eq "P㊷-2 phone_gone は前回のまま" "$(stv phone_gone)" "$(( T0 - 7200 ))"
+has_prob "phone-missing" && ok "P㊷-3 problems は前回のまま" || ng "P㊷-3 problems は前回のまま"
+ph_here; ph_asleep; run_mjw
+eq "P㊷-4 眠っていた回（見える）: 復旧も出ない" "$(ncalls)" "0"
+eq "P㊷-5 phone_gone は前回のまま" "$(stv phone_gone)" "$(( T0 - 7200 ))"
+has_prob "phone-missing" && ok "P㊷-6 problems は前回のまま" || ng "P㊷-6 problems は前回のまま"
+# P㊸ adb が無い（phone-serial が 2）
+ph_setup; T0="${NOW}"; export PHONE_ADB="${D}/no-such-adb"
+mk_state $(( NOW - 1800 )) "${BOOT}" $(( NOW - 60 )) 0 0
+printf 'phone_gone=%s\n' "$(( T0 - 7200 ))" >> "${D}/state/state"
+printf 'phone-missing\t%s\n' "$(( T0 - 3600 ))" > "${D}/state/problems"
+run_mjw
+eq "P㊸-1 判定しない・送らない" "$(ncalls)" "0"
+eq "P㊸-2 phone_gone は前回のまま" "$(stv phone_gone)" "$(( T0 - 7200 ))"
+has_prob "phone-missing" && ok "P㊸-3 problems は前回のまま" || ng "P㊸-3 problems は前回のまま"
+export PHONE_ADB="${BIN}/adb"
+export MJW_PHONE_CMD=""
 
 echo "----"
 echo "PASS=${PASS} FAIL=${FAIL}"

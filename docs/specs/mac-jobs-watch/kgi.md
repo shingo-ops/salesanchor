@@ -15,4 +15,14 @@
 | K5 | 通知先の URL がログ・画面に出ない | 見張りのログ3つ（.log/.out/.err）と K4 の試験ログを、`discord.com/api/webhooks` と通知先ファイルの中身（件数だけ出す `grep -c -F -f`）で検索 | すべて 0 行 | ○ 4ファイルとも 0・0（/tmp/CC報告ファイル/ac-heavy/mac-jobs-watch/deploy/k5-counts.txt） |
 | K6 | Mac を再起動した後も、3 つの見張り・お手入れが自動で再開する | 次に PO が Mac を再起動した後、Discord の「起動後の点検」通知とログ | 起動時刻が 2026-10-09 18:02 より新しい `result=boot-notice send=ok` の行があり、3 つとも「読み込み済み」 | 観測待ち（再起動は PO の操作。AI からは行わない） |
 
+実機スマホの点検（正本は [design-phone.md §1](../../handoff/mac-jobs-watch/design-phone.md)）:
+
+| # | 合格条件 | 測り方 | 合格ライン | 結果 |
+|---|---|---|---|---|
+| P1 | AI の道具が番号を決め打ちせずスマホを見つける | `bash scripts/dev/phone-serial.sh` | 終了 0・1 行・`._adb-tls-connect._tcp` で終わる | 未測定 |
+| P2 | 1 時間以上見えなければ 1 通、見えたら「直りました」1 通 | 試験 P㉞〜P㊸ と本物の通知先での手動試験 | FAIL 0・`result=alert send=ok problems=phone-missing`・`result=recover send=ok` | 未測定 |
+| P3 | つながりを切る・入れ直す命令を使わない | 差分の中の kill-server・disconnect・connect・tcpip・usb・reconnect | 0 件 | 未測定 |
+| P4 | スマホ再起動後、PO が何もしなくても戻る | 再起動 10 分後に P1 | 終了 0・1 行 | 未測定（「常に許可」の印を PO が確かめた後） |
+| P5 | 既存の試験が今まで通り通る | `bash scripts/tests/test-mac-jobs-watch.sh` | FAIL 0 | 未測定 |
+
 KPI: 合格した KGI の数 5/6（K6 は PO の次の再起動後に観測）。
