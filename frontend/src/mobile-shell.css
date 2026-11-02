@@ -107,6 +107,15 @@
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
+/* 画面が useHideMobileTabbar で頼んだ間だけ下のメニューを隠す（card-a2 §13・ADR-140 追記）。
+   DOM には残す。本文の下の余白はメニューの高さを引き、端末の下端（safe-area）だけ残す。 */
+.mobile-shell--tabbar-hidden .mobile-tabbar {
+  display: none;
+}
+.mobile-shell--tabbar-hidden .mobile-content {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
 /* ---- タブ項目（NavLink / button 共通） ---- */
 /* WCAG 2.5.5: タップターゲット最小 44px を保証 */
 .mobile-tab {

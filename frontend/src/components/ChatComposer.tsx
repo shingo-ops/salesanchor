@@ -44,7 +44,7 @@ export function ChatComposer({ leading, input, attach, trailing, send }: ChatCom
   const SendIcon = send.icon;
   return (
     <div className="send-top-row">
-      {leading}
+      {leading && <span className="comp-chat-composer__leading">{leading}</span>}
       <div className="send-input-wrap">
         {input}
         {/* クリップボタン（Meta と同配置: ピル内右端） */}

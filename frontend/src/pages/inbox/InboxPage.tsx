@@ -18,6 +18,7 @@ import { useNavigate } from "react-router-dom";
 import { PAGE_ICONS, NAV_ICONS } from "../../constants/icons";
 import { PageLayout } from "../../components/PageLayout";
 import { useIsMobile } from "../../hooks/useIsMobile";
+import { useHideMobileTabbar } from "../../hooks/useMobileTabbarHidden";
 import { SelectControl } from "../../components/Select";
 import { Sheet } from "../../components/Sheet";
 import { ICON } from "../../constants/iconSizes";
@@ -67,6 +68,8 @@ export default function InboxPage() {
     state.statusTab !== "all" || state.unreadOnly || state.followUpOnly;
 
   const isMobile = useIsMobile();
+  // スマホで会話を開いている間は下のメニューを隠す（PO 2026-11-02・card-a2 §13）
+  useHideMobileTabbar(isMobile && selectedLeadId != null);
 
   /**
    * ヘッダーの操作行（テンプレート / FAQ / 受信箱の設定）。

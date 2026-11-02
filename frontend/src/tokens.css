@@ -174,7 +174,25 @@
   --comp-search-row-h:  69px;   /* 「最近使った語」の行の高さ（お手本68.7dpの最近傍。docs/handoff/viewer-search-mercari/design.md 4-5） */
   --comp-multiselect-check-row-h: 61px; /* 選択画面のチェック行の高さ（お手本60.7dpの最近傍。docs/handoff/viewer-filter-choices-mercari/design.md 4-4） */
   --comp-multiselect-check-col-w: 48px; /* 選択画面のチェック行・印の列幅（お手本48dp。docs/handoff/viewer-filter-choices-mercari/design.md 4-4） */
-  --comp-chat-bubble-line-height: 1.45; /* 会話の吹き出しの行の間隔（CSS:508 の直書きを移した値。A-2 でスマホは実測 19px にする） */
+  --comp-chat-bubble-line-height: 1.45; /* 会話の吹き出しの行の間隔（CSS:508 の直書きを移した値。スマホは --comp-chat-line-height-mobile） */
+  --comp-chat-bubble-radius-mobile: 10px;             /* スマホの吹き出しの角（card-a2 §3） */
+  --comp-chat-bubble-tail-w-mobile: 7px;              /* スマホの尾の横の張り出し（card-a2 §3） */
+  --comp-chat-bubble-tail-h-mobile: 10px;             /* スマホの尾の縦の長さ（card-a2 §3） */
+  --comp-chat-row-inset-mobile: 17px;                 /* スマホの画面の端から吹き出しまで（card-a2 §3） */
+  --comp-chat-row-gap-inner-mobile: 1.333px;          /* スマホの続きの中の行の上下（吹き出しの間は2倍）（card-a2 §3） */
+  --comp-chat-row-gap-group-mobile: 5px;              /* スマホの続きの境目（最初の上・最後の下）（card-a2 §3） */
+  --comp-chat-bubble-max-gap-mobile: 40px;            /* スマホの吹き出しの幅の上限（行の幅から引く値）（card-a2 §3） */
+  --comp-chat-line-height-mobile: 19px;               /* スマホの本文の行の高さ（card-a2 §3） */
+  --comp-chat-bubble-pad-y-mobile: 7px;               /* スマホの吹き出しの上下の内側（card-a2 §3） */
+  --comp-chat-bubble-pad-x-mobile: 9px;               /* スマホの吹き出しの左右の内側（初期値・§7で1px刻みに決める）（card-a2 §3） */
+  --comp-chat-time-line-height-mobile: 16px;          /* スマホの時刻の行の高さ（card-a2 §3） */
+  --comp-chat-time-inset-mobile: 8px;                 /* スマホの時刻の右端から吹き出しの右端まで（card-a2 §3） */
+  --comp-chat-time-bottom-mobile: 3px;                /* スマホの時刻の下端（端末の実物の画面で位置合わせ済み）（card-a2 §3） */
+  --comp-chat-input-radius-mobile: 24px;              /* スマホの入力欄のピルの角（伸びても変わらない）（card-a2 §3） */
+  --comp-chat-input-font-mobile: 18px;                /* スマホの入力欄の文字（card-a2 §3） */
+  --comp-chat-input-line-height-mobile: 21px;         /* スマホの入力欄の行の高さ（card-a2 §3） */
+  --comp-chat-input-inset-y-mobile: 7.5px;            /* スマホの入力欄とピルの上下の間（card-a2 §3） */
+  --comp-chat-input-max-h-mobile: 221px;              /* スマホの入力欄の高さの上限（card-a2 §3） */
   --field-w-sm:        160px;   /* 入力部品 幅金型 sm */
   --field-w-md:        280px;   /* 入力部品 幅金型 md */
   --field-w-lg-max:    480px;   /* 入力部品 幅金型 lg 上限 */

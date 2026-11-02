@@ -74,3 +74,13 @@ PC/タブレット（≥768px）は DesktopShell が担当し、本ADRの変更�
 |----|------|
 | PR-A (`feature/morimoto/mobile-bp-token`) | Drawer/Modal 640→767 是正 ＋ 本design.md/recon.md保存 |
 | PR-B (`feature/morimoto/mobile-nav-tabs`) | MobileShell ハンバーガー→下部タブ刷新 ＋ Playwright G1〜G5 |
+
+---
+
+## 追記（2026-11-02）: 受信箱で会話を開いている間は下部タブバーを隠す
+
+- 決定: スマホ（MobileShell）で受信箱の会話を開いている間だけ、下部タブバーを隠す。会話一覧・ほかの画面・PC は変えない。タブの中身・順番・表示条件も変えない。
+- Why: PO が実機の写真で本物の WhatsApp と並べて見た結果の指示（2026-11-02「受信箱とか在庫表とかの下のメニューはメッセージ画面では非表示にして」）。WhatsApp の会話画面には下部ナビが無い。会話中は入力欄が画面の下端に来るほうが、打つ場所が広く、押し間違いも減る。
+- 仕組み: MobileShell が「隠す」状態を1つ持ち、画面は `useHideMobileTabbar(hidden)`（`frontend/src/hooks/useMobileTabbarHidden.ts`）で頼む。画面を離れると自動で戻る。DesktopShell では何もしない（ADR-137 の分離を保つ）。
+- 弊害: 会話中は「もっと」シートへ直接行けない。戻る1回で一覧とタブバーに戻る。
+- 詳細・受入条件: `docs/handoff/inbox-deal-ui/thread-a/card-a2.md` §13。
