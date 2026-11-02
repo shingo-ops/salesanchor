@@ -5,11 +5,12 @@
  * ADR-027: 全UI文字列は t("key") 経由。
  * ADR-144: 金型クラスのみ使用。
  */
-import { LoadingBlock } from "../../components/loading";
-import { useEffect, useMemo, useRef, useState, FormEvent } from "react";
+import { LoadingBlock, Spinner } from "../../components/loading";
+import { useMemo, useRef, useState, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
+import { useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
 import { Modal } from "../../components/Modal";
 import ConfirmModal from "../../components/ConfirmModal";
 import { usePermissions } from "../../hooks/usePermissions";
@@ -95,7 +96,6 @@ export default function NoteMasterPage() {
   const { hasPermission } = usePermissions();
   const exportLock = useRef(false);
   const [exporting, setExporting] = useState(false);
-  const [notes, setNotes] = useState<TcgNoteMaster[]>([]);
   const [error, setError] = useState("");
 
   async function downloadExport() {
@@ -114,9 +114,14 @@ export default function NoteMasterPage() {
       anchor.remove(); if (url) URL.revokeObjectURL(url); exportLock.current = false; setExporting(false);
     }
   }
-  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [hasNext, setHasNext] = useState(false);
+  const notesQ = useApiQuery<TcgNoteMaster[]>(
+    `/note-master?${new URLSearchParams({ page: String(page), per_page: String(PER_PAGE) }).toString()}`,
+    { keepPrevious: true },
+  );
+  const notes = notesQ.data ?? [];
+  const invalidate = useInvalidateApi();
+  const shownError = error || (notesQ.error ? (notesQ.error instanceof Error ? notesQ.error.message : t("common.fetchError")) : "");
 
   const [showCreate, setShowCreate] = useState(false);
   const [createForm, setCreateForm] = useState<NoteFormState>(emptyForm);
@@ -132,20 +137,9 @@ export default function NoteMasterPage() {
 
   const f = "analysisRules.noteMaster";
 
-  const load = async () => {
-    try {
-      const params = new URLSearchParams({ page: String(page), per_page: String(PER_PAGE) });
-      const data = await api.get<TcgNoteMaster[]>(`/note-master?${params.toString()}`);
-      setNotes(data);
-      setHasNext(data.length === PER_PAGE);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("common.fetchError"));
-    } finally {
-      setLoading(false);
-    }
+  const load = () => {
+    void invalidate(["note-master"]);
   };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { load(); }, [page]);
 
   const handleCreateSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -360,6 +354,7 @@ export default function NoteMasterPage() {
     <PageLayout
       navKey="nav.noteMaster"
       subtitleKey={`${f}.description`}
+      headerLeft={notesQ.isFetching && !notesQ.isPending ? <Spinner size="sm" /> : undefined}
       headerAction={
         hasPermission("suppliers.view") ? (
           <>
@@ -380,11 +375,11 @@ export default function NoteMasterPage() {
         ) : undefined
       }
     >
-      {error && <div className="error-message">{error}</div>}
+      {shownError && <div className="error-message">{shownError}</div>}
 
       <ContentToolbar right={undefined} />
 
-      {loading ? (
+      {notesQ.isPending ? (
         <LoadingBlock />
       ) : (
         <DataTable<TcgNoteMaster>
@@ -394,7 +389,7 @@ export default function NoteMasterPage() {
           onRowClick={hasPermission("suppliers.view") ? n => openEdit(n) : undefined}
           emptyState={t(`${f}.noNotes`)}
           page={page}
-          hasNextPage={hasNext}
+          hasNextPage={notes.length === PER_PAGE && !notesQ.isPlaceholderData}
           onPageChange={setPage}
           prevPageLabel={t("common.prevPage")}
           nextPageLabel={t("common.nextPage")}

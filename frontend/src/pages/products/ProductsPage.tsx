@@ -22,13 +22,13 @@ import { TextFieldControl } from "../../components/TextField";
 import type { Product } from "./products.types";
 import { Button } from "../../components/Button";
 import { CheckboxControl } from "../../components/CheckboxControl";
-import { LoadingBlock } from "../../components/loading";
+import { LoadingBlock, Spinner } from "../../components/loading";
+import { useApiCache, useApiQuery } from "../../lib/query/apiQuery";
 
 // embedded: マスタ管理タブ内に埋め込む場合 true（PageLayout を被せず中身のみ描画）。
 export default function ProductsPage({ embedded = false }: { embedded?: boolean } = {}) {
   const { t } = useTranslation();
   const { hasPermission } = usePermissions();
-  const [products, setProducts] = useState<Product[]>([]);
   const [search, setSearch] = useState("");
   // QA r7: 190 件全件閲覧のため pagination 追加。backend per_page max=100
   const [page, setPage] = useState(1);
@@ -36,9 +36,7 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
   // 100 件以上ある場合、次ページが存在することを判定するために 101 件取りに行く
   // (backend は max 100 なので、別 fetch で簡易判定する代わりに、
   //  返ってきた件数が PER_PAGE ちょうどなら「次がある可能性あり」とする)
-  const [hasNext, setHasNext] = useState(false);
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
   // QA 2026-05-31: 在庫表からチェックして見積/請求を作成するための複数選択
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   // 名前列の昇順/降順ソート（"" = 従来順 / name_asc / name_desc）
@@ -50,16 +48,28 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
   // ADR-090 PR5a: TCG種別マスタによる絞り込み
   const [tcgType, setTcgType] = useState("");
-  const [tcgTypes, setTcgTypes] = useState<{ code: string; name_ja: string }[]>([]);
   const navigate = useNavigate();
 
-  // TCG種別マスタ一覧を取得（絞り込みフィルタ + 「タイプ」列の表示名解決用）
-  useEffect(() => {
-    api
-      .get<{ code: string; name_ja: string }[]>("/products/tcg-types")
-      .then(setTcgTypes)
-      .catch(() => setTcgTypes([]));
-  }, []);
+  // TCG種別マスタ一覧を取得（絞り込みフィルタ + 「タイプ」列の表示名解決用。取れない時は空のまま）
+  const tcgTypesQ = useApiQuery<{ code: string; name_ja: string }[]>("/products/tcg-types");
+  const tcgTypes = tcgTypesQ.data ?? [];
+  const productsParams = new URLSearchParams();
+  if (search) productsParams.set("search", search);
+  if (sort) productsParams.set("sort", sort);
+  if (tcgType) productsParams.set("work_code", tcgType);
+  productsParams.set("page", String(page));
+  productsParams.set("per_page", String(PER_PAGE));
+  const productsPath = `/products?${productsParams.toString()}`;
+  const productsQ = useApiQuery<Product[]>(productsPath, { keepPrevious: true });
+  const products = productsQ.data ?? [];
+  // 返ってきた件数が PER_PAGE と同じなら、次ページ存在の可能性あり
+  const hasNext = products.length === PER_PAGE;
+  const loading = productsQ.isPending;
+  const cache = useApiCache();
+  const load = () => {
+    void productsQ.refetch();
+  };
+  const shownError = error || (productsQ.error ? (productsQ.error instanceof Error ? productsQ.error.message : t("common.fetchError")) : "");
 
   // code → name_ja マップ（「タイプ」列の表示に使用）
   const tcgTypeName = new Map(tcgTypes.map((t) => [t.code, t.name_ja]));
@@ -97,7 +107,7 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
     const values = products.map((p) => p.display_order ?? p.id).sort((a, b) => a - b);
     const prevById = new Map(products.map((p) => [p.id, p.display_order ?? p.id]));
     const next = cur.map((p, i) => ({ ...p, display_order: values[i] }));
-    setProducts(next); // 楽観的更新
+    cache.write(productsPath, next); // 楽観的更新
     try {
       await Promise.all(
         next
@@ -132,33 +142,12 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
     navigate(path, { state: { selectedProducts } });
   };
 
-  const load = async () => {
-    try {
-      const params = new URLSearchParams();
-      if (search) params.set("search", search);
-      if (sort) params.set("sort", sort);
-      if (tcgType) params.set("work_code", tcgType);
-      params.set("page", String(page));
-      params.set("per_page", String(PER_PAGE));
-      const qs = `?${params.toString()}`;
-      const data = await api.get<Product[]>(`/products${qs}`);
-      setProducts(data);
-      // 返ってきた件数が PER_PAGE と同じなら、次ページ存在の可能性あり
-      setHasNext(data.length === PER_PAGE);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("common.fetchError"));
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // search 変更時は page を 1 に戻す
   useEffect(() => {
     setPage(1);
   }, [search]);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { load(); }, [search, page, sort, tcgType]);
 
   // チェックした商品を一括削除。FK 参照ありで 409 になった商品は
   // ハード削除できないため、アーカイブ（廃番）にフォールバックする。
@@ -282,7 +271,7 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
         </div>
       )}
 
-      {error && <div className="error-message">{error}</div>}
+      {shownError && <div className="error-message">{shownError}</div>}
 
       {loading ? (
         <LoadingBlock />
@@ -439,7 +428,7 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
             <Button variant="secondary" size="sm"
 
               onClick={() => setPage((p) => p + 1)}
-              disabled={!hasNext}
+              disabled={!hasNext || productsQ.isPlaceholderData}
               data-testid="products-page-next"
             >
               {t("common.nextPage")}
@@ -466,7 +455,7 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
     return <div className="page page--full" data-testid="products-master-embedded">{body}</div>;
   }
   return (
-    <PageLayout navKey="nav.products" subtitleKey="products.subtitle">
+    <PageLayout navKey="nav.products" subtitleKey="products.subtitle" headerLeft={productsQ.isFetching && !productsQ.isPending ? <Spinner size="sm" /> : undefined}>
       {body}
     </PageLayout>
   );

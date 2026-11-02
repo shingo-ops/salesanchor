@@ -3,9 +3,11 @@
  * CompanyDetailPage の全 useState / useEffect / handler を集約する。
  */
 
-import { useEffect, useState, FormEvent } from "react";
+import { useState, FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
+import { useAuth } from "../../contexts/AuthContext";
+import { useApiQuery } from "../../lib/query/apiQuery";
 import type {
   Company, Contact, Tab, AddressFormState, BasicFormState, CompanyAddress,
   ContactFormState, DiscordFormState,
@@ -18,10 +20,19 @@ import {
 export function useCompanyDetail(id: string | undefined) {
   const { t } = useTranslation();
 
-  const [company, setCompany] = useState<Company | null>(null);
-  const [contacts, setContacts] = useState<Contact[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+  const companyQ = useApiQuery<Company>(`/companies/${id}`, { enabled: id !== undefined });
+  const contactsQ = useApiQuery<Contact[]>(`/companies/${id}/contacts`, { enabled: id !== undefined });
+  const company = companyQ.data ?? null;
+  const contacts = contactsQ.data ?? [];
+  const loading = companyQ.isPending || contactsQ.isPending;
+  const refreshing = (companyQ.isFetching || contactsQ.isFetching) && !loading;
   const [error, setError] = useState("");
+  const loadError = companyQ.error ?? contactsQ.error;
+  const shownError = error || (loadError ? (loadError instanceof Error ? loadError.message : t("common.fetchError")) : "");
+  // 3 つのフォームの初めの値は、写しの人と id が変わった時に作る（K5: 名前に uid を入れる）
+  const seedKey = `${user?.uid ?? ""}\u0000${id ?? ""}`;
+  const [seeded, setSeeded] = useState<{ key: string; data: Company } | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>("basic");
 
   // 基本情報タブ
@@ -55,28 +66,31 @@ export function useCompanyDetail(id: string | undefined) {
   const [dedupSubmitting, setDedupSubmitting] = useState(false);
   const [mergeModalOpen, setMergeModalOpen] = useState(false);
 
+  // 写しが届いた時・人か id が変わった時にフォームを作る。取り直しで中身が変わった時は、直していないフォームだけ作り直す。
+  if (companyQ.data !== undefined && (seeded === null || seeded.key !== seedKey || seeded.data !== companyQ.data)) {
+    const c = companyQ.data;
+    const fresh = seeded === null || seeded.key !== seedKey;
+    if (fresh || !basicDirty) { setBasicForm(basicFromApi(c)); setBasicDirty(false); }
+    if (fresh || !channelsDirty) { setChannelsText(c.sales_channels.join(", ")); setChannelsDirty(false); }
+    if (fresh || !discordDirty) { setDiscordForm(c.discord ? discordFromApi(c.discord) : emptyDiscordForm()); setDiscordDirty(false); }
+    setSeeded({ key: seedKey, data: c });
+  }
+
+  // 書いた後の読み直し。2 つの写しを取り直し、取れたら 3 つのフォームを作り直す（中身が前と同じでも作り直す・V3a-5）。
   const load = async () => {
     if (!id) return;
-    try {
-      const c = await api.get<Company>(`/companies/${id}`);
-      setCompany(c);
-      setBasicForm(basicFromApi(c));
-      setChannelsText(c.sales_channels.join(", "));
+    const [c] = await Promise.all([companyQ.refetch(), contactsQ.refetch()]);
+    if (c.status === "success") {
+      const d = c.data;
+      setBasicForm(basicFromApi(d));
+      setChannelsText(d.sales_channels.join(", "));
       setBasicDirty(false);
       setChannelsDirty(false);
-      setDiscordForm(c.discord ? discordFromApi(c.discord) : emptyDiscordForm());
+      setDiscordForm(d.discord ? discordFromApi(d.discord) : emptyDiscordForm());
       setDiscordDirty(false);
-      const list = await api.get<Contact[]>(`/companies/${id}/contacts`);
-      setContacts(list);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("common.fetchError"));
-    } finally {
-      setLoading(false);
+      setSeeded({ key: seedKey, data: d });
     }
   };
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { load(); }, [id]);
 
   const handleBasicSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -265,8 +279,7 @@ export function useCompanyDetail(id: string | undefined) {
         await api.patch(`/contacts/${contactForm.id}`, payload);
       }
       setContactModalOpen(false);
-      const list = await api.get<Contact[]>(`/companies/${company.id}/contacts`);
-      setContacts(list);
+      await contactsQ.refetch();
     } catch (err) {
       setError(err instanceof Error ? err.message : t("common.saveError"));
     } finally {
@@ -279,8 +292,7 @@ export function useCompanyDetail(id: string | undefined) {
     try {
       await api.delete(`/contacts/${contactDeleteTarget.id}`);
       setContactDeleteTarget(null);
-      const list = await api.get<Contact[]>(`/companies/${company.id}/contacts`);
-      setContacts(list);
+      await contactsQ.refetch();
     } catch (err) {
       setError(err instanceof Error ? err.message : t("common.deleteError"));
       setContactDeleteTarget(null);
@@ -302,7 +314,7 @@ export function useCompanyDetail(id: string | undefined) {
   };
 
   return {
-    company, contacts, loading, error, setError,
+    company, contacts, loading, refreshing, error: shownError, setError,
     activeTab, setActiveTab,
     basicForm, setBasicForm, basicDirty, setBasicDirty, basicSubmitting,
     channelsText, setChannelsText, channelsDirty, setChannelsDirty, channelsSubmitting,

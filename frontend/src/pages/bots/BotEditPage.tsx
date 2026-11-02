@@ -7,12 +7,14 @@
  */
 
 import { LoadingBlock } from "../../components/loading";
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { PageLayout } from "../../components/PageLayout";
 import { Button } from "../../components/Button";
 import { api } from "../../lib/api";
+import { useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
+import { useSeededForm } from "../../lib/query/useSeededForm";
 import { BotFormFields, type BotFormState, type BotStaff } from "./BotFormFields";
 
 interface Bot {
@@ -30,35 +32,28 @@ const emptyForm: BotFormState = {
   owner_staff_id: "", discord_user_id: "", sender_email: "",
 };
 
+const formFromBot = (bot: Bot): BotFormState => ({
+  display_name: bot.display_name,
+  purpose: bot.purpose,
+  status: bot.status,
+  owner_staff_id: String(bot.owner_staff_id),
+  discord_user_id: bot.discord_user_id ?? "",
+  sender_email: bot.sender_email ?? "",
+});
+
 export default function BotEditPage() {
   const { t }    = useTranslation();
   const { id }   = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [form, setForm] = useState<BotFormState>(emptyForm);
-  const [staff, setStaff] = useState<BotStaff[]>([]);
+  const botQ = useApiQuery<Bot>(`/bots/${id}`, { enabled: id !== undefined });
+  const staffQ = useApiQuery<BotStaff[]>("/staff");
+  const { form, setForm, ready } = useSeededForm(`bot/${id}`, botQ.data, formFromBot, emptyForm);
+  const staff = staffQ.data ?? [];
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (!id) return;
-    Promise.all([
-      api.get<Bot>(`/bots/${id}`),
-      api.get<BotStaff[]>("/staff"),
-    ])
-      .then(([bot, staffList]) => {
-        setForm({
-          display_name: bot.display_name,
-          purpose: bot.purpose,
-          status: bot.status,
-          owner_staff_id: String(bot.owner_staff_id),
-          discord_user_id: bot.discord_user_id ?? "",
-          sender_email: bot.sender_email ?? "",
-        });
-        setStaff(staffList);
-      })
-      .catch((e) => setError(e instanceof Error ? e.message : t("common.fetchError")))
-      .finally(() => setLoading(false));
-  }, [id, t]);
+  const loadError = botQ.error ?? staffQ.error;
+  const loading = loadError === null && !(ready && staffQ.data !== undefined);
+  const shownError = error || (loadError ? (loadError instanceof Error ? loadError.message : t("common.fetchError")) : "");
+  const invalidate = useInvalidateApi();
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -72,6 +67,7 @@ export default function BotEditPage() {
         discord_user_id: form.discord_user_id || null,
         sender_email: form.sender_email || null,
       });
+      void invalidate(["bots", id ?? ""]);
       navigate("/bots");
     } catch (e) {
       setError(e instanceof Error ? e.message : t("common.saveError"));
@@ -80,7 +76,7 @@ export default function BotEditPage() {
 
   return (
     <PageLayout navKey="nav.bots" subtitleKey="bots.subtitle">
-      {error && <div className="error-message">{error}</div>}
+      {shownError && <div className="error-message">{shownError}</div>}
       {loading ? (
         <LoadingBlock />
       ) : (

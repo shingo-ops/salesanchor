@@ -5,7 +5,7 @@
  * 全項目を編集可能。保存後は /crm/leads 一覧へ戻る。
  */
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/Button";
@@ -14,8 +14,10 @@ import { CountryCombobox } from "../../components/CountryCombobox";
 import { ChannelTypeCombobox } from "../../components/ChannelTypeCombobox";
 import { Select } from "../../components/Select";
 import { api } from "../../lib/api";
+import { useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
+import { useSeededForm } from "../../lib/query/useSeededForm";
 import { LEAD_STATUS_CODES, type LeadStatusCode } from "../../constants/leadStatus";
-import { getCloseReasons, type CloseReasonResponse } from "../../api/closeReasons";
+import { closeReasonsPath, type CloseReasonResponse } from "../../api/closeReasons";
 import { LostReasonFields, buildLostReasonUpdatePayload } from "./LeadFormFields";
 import { TextareaControl } from "../../components/Textarea";
 import { TextFieldControl } from "../../components/TextField";
@@ -70,63 +72,39 @@ const emptyForm: FormState = {
 
 const LEAD_STATUSES: LeadStatusCode[] = [...LEAD_STATUS_CODES];
 
+const formFromLead = (lead: Lead): FormState => ({
+  customer_name: lead.customer_name,
+  company_name: lead.company_name || "",
+  email: lead.email || "",
+  phone: lead.phone || "",
+  channel_type: lead.channel_type || "",
+  initiative: lead.initiative || "",
+  type: lead.type || "",
+  status: lead.status,
+  temperature: lead.temperature || "",
+  estimated_scale: lead.estimated_scale || "",
+  customer_type: lead.customer_type || "",
+  response_speed: lead.response_speed || "",
+  monthly_forecast: lead.monthly_forecast != null ? String(lead.monthly_forecast) : "",
+  notes: lead.notes || "",
+  country: lead.country || "",
+  close_reason_id: "",
+  close_reason_memo: "",
+});
+
 export default function LeadEditPage() {
   const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [form, setForm] = useState<FormState>(emptyForm);
+  const leadQ = useApiQuery<Lead>(`/leads/${id}`, { enabled: id !== undefined });
+  const reasonsQ = useApiQuery<CloseReasonResponse[]>(closeReasonsPath("lost"));
+  const { form, setForm, ready } = useSeededForm(`lead/${id}`, leadQ.data, formFromLead, emptyForm);
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [closeReasonOptions, setCloseReasonOptions] = useState<CloseReasonResponse[]>([]);
-
-  useEffect(() => {
-    if (!id) return;
-    let cancelled = false;
-
-    const load = async () => {
-      try {
-        const lead = await api.get<Lead>(`/leads/${id}`);
-        if (cancelled) return;
-        setForm({
-          customer_name: lead.customer_name,
-          company_name: lead.company_name || "",
-          email: lead.email || "",
-          phone: lead.phone || "",
-          channel_type: lead.channel_type || "",
-          initiative: lead.initiative || "",
-          type: lead.type || "",
-          status: lead.status,
-          temperature: lead.temperature || "",
-          estimated_scale: lead.estimated_scale || "",
-          customer_type: lead.customer_type || "",
-          response_speed: lead.response_speed || "",
-          monthly_forecast: lead.monthly_forecast != null ? String(lead.monthly_forecast) : "",
-          notes: lead.notes || "",
-          country: lead.country || "",
-          close_reason_id: "",
-          close_reason_memo: "",
-        });
-      } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : t("common.fetchError"));
-        if (!cancelled) setLoading(false);
-        return;
-      }
-
-      try {
-        const reasons = await getCloseReasons("lost");
-        if (!cancelled) setCloseReasonOptions(reasons);
-      } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : t("common.fetchError"));
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-
-    void load();
-    return () => {
-      cancelled = true;
-    };
-  }, [id, t]);
+  const loading = leadQ.isError ? false : (!ready || reasonsQ.isPending);
+  const closeReasonOptions = reasonsQ.data ?? [];
+  const loadError = leadQ.error ?? reasonsQ.error;
+  const shownError = error || (loadError ? (loadError instanceof Error ? loadError.message : t("common.fetchError")) : "");
+  const invalidate = useInvalidateApi();
 
   const toNull = (v: string) => (v ? v : null);
 
@@ -157,6 +135,7 @@ export default function LeadEditPage() {
         country: toNull(form.country),
         ...lostReasonPayload,
       });
+      void invalidate(["leads", id ?? ""]);
       navigate("/crm/leads");
     } catch (e) {
       setError(e instanceof Error ? e.message : t("common.saveError"));
@@ -165,7 +144,7 @@ export default function LeadEditPage() {
 
   return (
     <PageLayout navKey="nav.leadsSection" subtitleKey="leads.subtitle">
-      {error && <div className="error-message">{error}</div>}
+      {shownError && <div className="error-message">{shownError}</div>}
       {loading ? (
         <LoadingBlock />
       ) : (

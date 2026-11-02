@@ -7,12 +7,13 @@ import LoginPage from '../pages/login/LoginPage';
 import CarrierIntegrationPage from '../pages/integrations/CarrierIntegrationPage';
 import InvoiceDetailPage from '../pages/invoice-detail/InvoiceDetailPage';
 import en from '../locales/en.json';
+import { queryClient } from '../lib/query/apiQuery';
 import ja from '../locales/ja.json';
 
-const auth = vi.hoisted(() => ({ signIn: vi.fn(), signInWithPasskey: vi.fn(), sendPasswordReset: vi.fn() }));
+const auth = vi.hoisted(() => ({ signIn: vi.fn(), signInWithPasskey: vi.fn(), sendPasswordReset: vi.fn(), user: null as { uid: string } | null }));
 const api = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), delete: vi.fn() }));
 vi.mock('../contexts/AuthContext', () => ({
-  useAuth: () => ({ ...auth, user: null, loading: false }),
+  useAuth: () => ({ ...auth, loading: false }),
 }));
 vi.mock('../lib/api', () => ({ api }));
 
@@ -26,11 +27,11 @@ function wrapped(node: React.ReactNode) { return <I18nextProvider i18n={instance
 function invoicePage() { return <I18nextProvider i18n={instance}><MemoryRouter initialEntries={['/invoices/3']}><Routes><Route path="/invoices/:id" element={<InvoiceDetailPage />} /></Routes></MemoryRouter></I18nextProvider>; }
 
 beforeEach(async () => {
-  vi.resetAllMocks(); instance = createInstance();
+  vi.resetAllMocks(); instance = createInstance(); auth.user = null;
   await instance.init({ lng: 'en', resources: { en: { translation: en } }, interpolation: { escapeValue: false } });
   vi.stubGlobal('fetch', vi.fn(() => { throw new Error('Unexpected network'); }));
 });
-afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+afterEach(() => { cleanup(); queryClient.clear(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 describe('all legacy Button operation migration', () => {
   it('keeps the advisor recommendation key in both locales with numeric interpolation', async () => {
@@ -77,6 +78,7 @@ describe('all legacy Button operation migration', () => {
   });
 
   it('opens invoice PDF boundaries exactly and performs no API write', async () => {
+    auth.user = { uid: 'fixture-user' };
     const invoice = { id: 3, invoice_number: 'INV-3', quote_id: null, company_id: 1, currency: 'USD', subtotal: 1, shipping_fee: 0, tax_amount: 0, total_amount: 1, exchange_rate_jpy: null, exchange_rate_usd: null, amount_jpy: null, amount_usd: null, payment_method: null, status: 'draft', branch_number: null, erp_key: null, issued_at: null, due_date: null, paid_at: null, voided_at: null, void_reason: null, notes: null, created_at: '', items: [], ship_to_snapshot: null, bill_to_snapshot: null, duty_amount: null, fx_rate_snapshot: null, paypal_order_id: null, paypal_approval_url: null, payment_fee: null, paypal_invoicer_view_url: null, paypal_copy_pdf_at: '2026-01-01' };
     api.get.mockImplementation(async (url: string) => { if (url === '/me/permissions') return { permissions: [] }; if (url === '/invoices/3') return invoice; if (url === '/invoices/3/paypal-disputes') return []; throw new Error(`Unexpected GET ${url}`); });
     const open = vi.spyOn(window, 'open').mockImplementation(() => null); render(invoicePage());

@@ -5,11 +5,12 @@ import i18n from "../../i18n";
 import ja from "../../locales/ja.json";
 import LeadsPage from "./LeadsPage";
 import { api } from "../../lib/api";
+import { queryClient } from "../../lib/query/apiQuery";
 
 vi.mock("../../lib/api", () => ({
   api: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() },
 }));
-vi.mock("../../api/closeReasons", () => ({ getCloseReasons: vi.fn(async () => []) }));
+vi.mock("../../api/closeReasons", () => ({ getCloseReasons: vi.fn(async () => []), closeReasonsPath: () => "/close-reasons?type=lost" }));
 vi.mock("../../hooks/useSSE", () => ({ useSSE: vi.fn() }));
 vi.mock("../../hooks/usePermissions", () => ({
   usePermissions: () => ({ hasPermission: () => true }),
@@ -21,6 +22,7 @@ beforeAll(async () => {
 
 afterEach(() => {
   cleanup();
+  queryClient.clear();
 });
 
 const row = (id: number, temperature: string | null) => ({
@@ -34,7 +36,7 @@ const row = (id: number, temperature: string | null) => ({
 
 describe("LeadsPage temperature column", () => {
   it("shows the translated temperature for a stored Hot value and a dash for null", async () => {
-    vi.mocked(api.get).mockResolvedValue([row(1, "Hot"), row(2, null)]);
+    vi.mocked(api.get).mockImplementation(async (url: string) => url.startsWith("/close-reasons") ? [] : [row(1, "Hot"), row(2, null)]);
     render(
       <MemoryRouter>
         <LeadsPage />
