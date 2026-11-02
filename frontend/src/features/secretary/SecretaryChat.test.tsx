@@ -162,6 +162,31 @@ describe("SecretaryChat sending", () => {
     expect(await screen.findByText("The assistant is not ready yet")).toBeTruthy();
   });
 
+  it("shows the authFailed text on 503 auth_failed, not the rephrase text", async () => {
+    mock.postWithTimeout.mockRejectedValue(new ApiError("x", 503, { code: "auth_failed" }));
+    renderChat();
+    await sendMessage();
+    expect(await screen.findByText("The assistant's key no longer works. Please tell your administrator.")).toBeTruthy();
+    expect(screen.queryByText(/rephrase/)).toBeNull();
+  });
+
+  it("shows the agentFailed text in full on 502 agent_failed, not the generic text", async () => {
+    mock.postWithTimeout.mockRejectedValue(new ApiError("x", 502, { code: "agent_failed" }));
+    renderChat();
+    await sendMessage();
+    expect(
+      await screen.findByText("Something went wrong. Please wait a moment and send it again."),
+    ).toBeTruthy();
+    expect(screen.queryByText(/Please try again/)).toBeNull();
+  });
+
+  it("shows the unreadable text on 502 unreadable", async () => {
+    mock.postWithTimeout.mockRejectedValue(new ApiError("x", 502, { code: "unreadable" }));
+    renderChat();
+    await sendMessage();
+    expect(await screen.findByText("I could not understand that. Please rephrase")).toBeTruthy();
+  });
+
   it("shows the generic text for other failures, and error status only on the assistant bubble", async () => {
     mock.postWithTimeout.mockRejectedValue(new Error("network"));
     renderChat();
@@ -197,6 +222,45 @@ describe("SecretaryChat invoice draft", () => {
     });
     expect(await screen.findByText(/Invoice created/)).toBeTruthy();
     expect(screen.getByRole("link", { name: "Open invoice" }).getAttribute("href")).toBe("/invoices/77");
+  });
+
+  it("blocks Create and shows the decimals text when the unit price has 3 decimal places", async () => {
+    mock.postWithTimeout.mockResolvedValue(invoiceReply());
+    renderChat();
+    await sendMessage();
+    const create = (await screen.findByRole("button", { name: "Create" })) as HTMLButtonElement;
+    fireEvent.change(screen.getByLabelText("Unit price"), { target: { value: "1000.255" } });
+    expect(screen.getByText("Unit price can have up to 2 decimal places.")).toBeTruthy();
+    expect(create.disabled).toBe(true);
+  });
+
+  it.each([1000.5, 1000.25])("sends the unit price %s as is", async (price) => {
+    mock.postWithTimeout.mockResolvedValue(invoiceReply());
+    mock.post.mockResolvedValue({ id: 78 });
+    renderChat();
+    await sendMessage();
+    const create = (await screen.findByRole("button", { name: "Create" })) as HTMLButtonElement;
+    fireEvent.change(screen.getByLabelText("Unit price"), { target: { value: String(price) } });
+    expect(screen.queryByText("Unit price can have up to 2 decimal places.")).toBeNull();
+    expect(create.disabled).toBe(false);
+    fireEvent.click(create);
+    await waitFor(() => expect(mock.post).toHaveBeenCalledTimes(1));
+    expect(mock.post).toHaveBeenCalledWith(
+      "/invoices",
+      expect.objectContaining({ items: [{ product_name: "Widget", quantity: 2, unit_price: price }] }),
+    );
+  });
+
+  it("keeps a drafted unit price of 1000.255 as is, shows the decimals text and blocks Create", async () => {
+    mock.postWithTimeout.mockResolvedValue(
+      invoiceReply({ items: [{ product_name: "Widget", quantity: 2, unit_price: 1000.255 }] }),
+    );
+    renderChat();
+    await sendMessage();
+    const create = (await screen.findByRole("button", { name: "Create" })) as HTMLButtonElement;
+    expect((screen.getByLabelText("Unit price") as HTMLInputElement).value).toBe("1000.255");
+    expect(screen.getByText("Unit price can have up to 2 decimal places.")).toBeTruthy();
+    expect(create.disabled).toBe(true);
   });
 
   it("blocks Create until company and contact are decided", async () => {

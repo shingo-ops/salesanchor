@@ -5702,12 +5702,15 @@
     "thinking": "Thinking…",
     "cancelled": "Cancelled.",
     "priceRequired": "Some rows have no unit price. Please enter one",
+    "priceDecimals": "Unit price can have up to 2 decimal places.",
     "error": {
       "notReady": "The assistant is not ready yet",
       "busy": "The assistant is busy. Please wait a moment and send again",
       "timeout": "This took too long. Please send it again",
       "unreadable": "I could not understand that. Please rephrase",
-      "generic": "Something went wrong. Please try again"
+      "generic": "Something went wrong. Please try again",
+      "authFailed": "The assistant's key no longer works. Please tell your administrator.",
+      "agentFailed": "Something went wrong. Please wait a moment and send it again."
     },
     "invoice": {
       "title": "Invoice draft",
