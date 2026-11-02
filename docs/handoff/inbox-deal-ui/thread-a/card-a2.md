@@ -395,4 +395,70 @@ props を2つ足す。どちらも thread 用で、既定は false（今の呼�
 - 弊害: 会話を開いている間は「…」のメニューに直接行けない。戻る1回で一覧とメニューに戻る。WhatsApp と同じ動き。
 - 未確認: iPhone の safe-area の実測（手元に端末が無い）。Android の SC-51G で N2 を確かめる。
 
+## 14. 追補: スマホでは入力欄の案内文を出さず、Enter は改行にする（PO 2026-11-02）
+
+### 14-1. 目的と出どころ
+- PO（並べた写真 k9-side-v2-1 を見て）: 「メッセージ入力前の入力欄に()でEnterで送信、Shift+Enterで改行と表示されているがこれはPCでの画面のみ有効なのでスマホの入力欄には何も表示させなくて良い、空白」
+- PO（改行ボタンの扱いの3択に）: 「2」＝スマホでは改行ボタンで改行し、送信は送信ボタンだけにする。
+- PO: 「使い分け方はLINEとWhatsappと同じでいい」＝スマホは Enter で改行・送信はボタン、PC は Enter で送信・Shift+Enter で改行。
+
+### 14-2. 今の作り（bc37ef3bb で確認）
+- `frontend/src/pages/inbox/InboxMessageThread.tsx:108` `const isMobile = useIsMobile();`（767px 以下で true。768 のタブレットは false）
+- 同 :249-256 `handleKeyDownGuarded`: Enter（Shift なし・変換中でない）で `checkAndSend()`。それ以外は `handleKeyDown(e)`（`useInboxState.ts:867-872` も Enter で `submitSend()`）。スマホでも同じに動く。
+- 同 :795-801 案内文: `discordChannelMissing ? t("inbox.discordChannelMissing") : canSend ? t("inbox.messagePlaceholder") : t("inbox.sendDisabled7d")`
+- `ja.json:1288` / `en.json:1288` `inbox.messagePlaceholder` に Enter/Shift+Enter の説明が入っている。
+- 同 :845-852 送信ボタンの title にも `inbox.messagePlaceholder` を使う（ホバーの説明。スマホでは出ない）→ 今回は触らない。
+- Enter の動きを決めた ADR・仕様は無い（`git grep "Shift+Enter\|Enterで送信" docs/adr docs/specs` 0件）。
+
+### 14-3. 変更（変更前 → 変更後）
+1. :249-256
+   ```tsx
+   const handleKeyDownGuarded = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+     // スマホでは Enter は改行。送信は送信ボタンだけ（LINE・WhatsApp と同じ使い分け。PO 2026-11-02）
+     if (isMobile) return;
+     if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+       e.preventDefault();
+       checkAndSend();
+       return;
+     }
+     handleKeyDown(e);
+   }, [isMobile, checkAndSend, handleKeyDown]);
+   ```
+2. :795-801 の `canSend ? t("inbox.messagePlaceholder")` を `canSend ? (isMobile ? undefined : t("inbox.messagePlaceholder"))` に変える。送れない理由の2つ（discordChannelMissing・sendDisabled7d）はスマホでも出したまま。
+- 言葉（ja/en.json）・PC の動き・送信ボタン・`useInboxState.ts` は変えない。新しいトークン・部品なし。
+
+### 14-4. 試験（`frontend/tests-e2e/visual-language/inbox-single-column.spec.ts` に足す。既存の試験は変えない）
+- 「スマホ: 入力欄に案内文が出ず、Enter で改行され送信されない」（vl-mobile-390 のみ）: 会話を開く → textarea の placeholder 属性が無い（または空）→ `fill("a")`・`press("Enter")`・`type("b")` で値が `"a\nb"` → 送信の API がその間 0 回呼ばれる（呼ばれた回数は既存の送信モックに数えを足して確かめる。モックの場所は inbox-helpers を読んで決める）。
+- 「PC・タブレット: 案内文は今のまま出る」（vl-tablet-768・vl-desktop-1280）: placeholder が ja.json の `inbox.messagePlaceholder` と一致。
+- `send-guard-phase-a.spec.ts`（既定の幅）の Enter 送信の試験は変えずに通ること。
+
+### 14-5. 受入条件
+| # | 基準 | 検証方法 |
+|---|------|---------|
+| P1 | スマホ幅で入力欄の案内文が空 | 14-4 の e2e（CI の画面検査） |
+| P2 | スマホ幅で Enter は改行・送信 0 回 | 14-4 の e2e |
+| P3 | PC・タブレットの案内文と Enter 送信が今のまま | 14-4 の e2e ＋ send-guard-phase-a.spec.ts |
+| P4 | 実機 SC-51G で、何も打っていない入力欄が空白・改行ボタンで改行され送信されない | 評価係が実機で測る（送信の API はモック。本物の送信はしない） |
+| P5 | check:all・lint・tsc・unit が今のまま通る | 実装役の生の出力 |
+
+### 14-6. 想定される分かれ道（起きたら止めて報告）
+1. `TextareaControl` の型が placeholder に undefined を受けない → 型の生の出力を報告して止める（空文字や型の書き換えを勝手にしない）。
+2. 既存の e2e が「スマホで Enter 送信」を前提にして落ちる → 試験名と生の出力を報告して止める。
+3. 送信の API の呼ばれた回数を数える場所が inbox-helpers に無い → 今ある route を読んで数えを足す形を報告し、helpers の既存の動きを変えずに足せるならそのまま進める。変えずに足せないなら止める。
+
+### 14-7. 変更してよいファイル（§9・§13-8 に足す）
+- frontend/src/pages/inbox/InboxMessageThread.tsx
+- frontend/tests-e2e/visual-language/inbox-single-column.spec.ts（と、14-6-3 で必要なら同じフォルダの inbox-helpers）
+
+### 14-8. 戻し方
+- この追補のコミットを戻す（revert）。スマホも Enter で送信・案内文ありの今の形に戻る。DB・API は触らない。
+
+### 14-9. Architect 整合検査（同じ AI による自己審査・1回）
+- 判定: **APPROVE（実装可能）**。
+- 判定の正: スマホかどうかは既存の `useIsMobile()`（:108）の1つだけを使い、新しい判定を増やさない（ADR-137 の幅の境と同じ）。
+- ADR-027: 言葉の追加・変更なし。スマホで案内文を出さないだけ。
+- ADR-067 / ADR-144: 見た目・部品の追加なし。
+- 弊害: スマホで送るには送信ボタンを押す必要がある（PO の指示どおり）。外付けキーボードをつないだスマホでも Enter は改行になる。
+- 未確認: iPhone の改行ボタンの動き（手元に端末が無い）。
+
 END OF CARD
