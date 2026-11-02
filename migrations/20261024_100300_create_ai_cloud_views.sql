@@ -1,6 +1,6 @@
 -- ADR-1052 段1: 相談係用の伏せたビュー ai_cloud を作る（冪等・1 トランザクション）。
 -- 一覧には載せない。run_all_migrations.sh の EXIT trap が、毎回の実行の最後に流す（ai_ro と同じ形）。
--- 1) 分類表 ai_cloud_meta.column_class を空にして下の 1054 行を入れ直す（このファイルが正本。行の足し引きはこの SQL の変更で行う）。
+-- 1) 分類表 ai_cloud_meta.column_class を空にして下の 1057 行を入れ直す（このファイルが正本。行の足し引きはこの SQL の変更で行う）。
 -- 2) ai_cloud を作り直す。3) ai_cloud_meta.build_views() で全ビューを作り、build_log に 1 行書く。
 -- 4) ai_reader_cloud に ai_cloud の USAGE と SELECT だけを付ける。
 -- 分類表の元: docs/handoff/cloud-case-ai/stage1-column-class.tsv（表ごと・class ごとにまとめて unnest で入れる）。
@@ -282,6 +282,7 @@ FROM (VALUES
   ('public','type_master',ARRAY['name_en'],'allow','【名前を含む】共用マスタ（運営が入れる一覧）。作品のタイプ名'),
   ('public','type_master',ARRAY['name_ja'],'allow','【名前を含む】共用マスタ（運営が入れる一覧）。同上'),
   ('public','user_inventory_filters',ARRAY['filters'],'mask',''),
+  ('public','user_push_subscriptions',ARRAY['auth','endpoint','p256dh'],'mask',''),
   ('public','user_recovery_codes',ARRAY['code_id'],'mask',''),
   ('public','user_trusted_devices',ARRAY['created_ip','created_location','created_via','label','last_ip','last_location','user_agent'],'mask',''),
   ('public','users',ARRAY['email','full_name'],'mask',''),

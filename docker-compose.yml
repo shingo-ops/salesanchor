@@ -151,6 +151,10 @@ services:
       - AUTH_DEVICE_BOOTSTRAP_CUTOFF=${AUTH_DEVICE_BOOTSTRAP_CUTOFF:-}
       # 場所の目安の元データ（DB-IP City Lite）。.env で空にすると場所の表示が止まる（空以外の値は入れない）
       - GEOIP_DB_PATH=${GEOIP_DB_PATH-/geoip/dbip-city-lite.mmdb}
+      # ADR-1055 段W: 許可依頼の通知（web push）の送信の鍵。3つとも空なら送らない（画面の切り替えも出ない）
+      - WEBPUSH_VAPID_PRIVATE_KEY=${WEBPUSH_VAPID_PRIVATE_KEY:-}
+      - WEBPUSH_VAPID_PUBLIC_KEY=${WEBPUSH_VAPID_PUBLIC_KEY:-}
+      - WEBPUSH_VAPID_SUBJECT=${WEBPUSH_VAPID_SUBJECT:-}
     volumes:
       # 場所の元データは celery-worker が書き、backend は読むだけ（ADR-1055 D9）
       - geoip:/geoip:ro
