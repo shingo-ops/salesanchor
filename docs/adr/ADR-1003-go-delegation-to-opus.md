@@ -129,4 +129,4 @@ PO が合意した設計の作業手順に書かれた操作は、Claude Opus �
 
 ### 機械での反映
 
-Claude Code の自動の安全判定に、許可の行を1つ足す（~/.claude/settings.json の autoMode.allow）。文面は docs/handoff/standing-prod-ops-delegation/design.md「足す許可の行の文面」を正とする。本番の容器の再起動を止める今の行（autoMode.soft_deny）は残し、条件を満たす手順書の行を「PO の決定」に当たると書き足す（文面は同じ design.md「書き換える止める行の文面」）。権限の記録帳（ADR-1034）には、足した1件と書き換えた1件を、この PR 番号を根拠として記録する。自分の権限を広げる設定の変更は自動判定が止めるため、反映は PO が `!` で1回だけ行う。
+Claude Code の自動の安全判定に、許可の行を1つ足す（~/.claude/settings.json の autoMode.allow）。文面は docs/handoff/standing-prod-ops-delegation/design.md「足す許可の行の文面」を正とする。本番の容器の再起動を止める今の行（autoMode.soft_deny）は残し、条件を満たす手順書の行を「PO の決定」に当たると書き足す（文面は同じ design.md「書き換える止める行の文面」）。権限の記録帳（ADR-1034）には、足した許可の行・外した元の止める行・入れた新しい止める行の3件を、PO が「1」で答えた会話の同意票（ADR-1033）を根拠として、1件ずつ別の操作番号で記録する（止める行は PO の記録が要る種類で、PR 番号は根拠として数えられないため）。3件の記録用の番号は design.md「記録用の番号」を正とする。自分の権限を広げる設定の変更は自動判定が止めるため、反映は PO が `!` で1回だけ行う。

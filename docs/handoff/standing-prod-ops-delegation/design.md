@@ -35,6 +35,17 @@ STANDING-PROD-1（常設・PO 2026-11-02 決定・ADR-1003 追記 2026-11-02・P
 Bash(docker compose restart *) — container restarts on prod are forbidden without PO decision; the default Remote Shell Writes rule may not fully cover docker compose restart on prod hosts specifically. A restart line that is written in a PO-agreed design runbook and meets every condition of STANDING-PROD-1 (ADR-1003 addendum 2026-11-02), run by the main Opus session only, counts as a PO decision; every other restart stays blocked.
 ```
 
+## 記録用の番号
+権限の記録帳と毎週の点検（consent-audit.py）は、設定の1行を sha256 の先頭8桁で見分ける。PO の台本は、取り出した文面の8桁が下と一致しなければ、何も変えずに止まる（審査を通った文面と同じであることの確かめ）。
+
+| 何か | 記録帳の操作 | 8桁 |
+|---|---|---|
+| 足す許可の行（autoMode.allow） | add | ef426399 |
+| 元の止める行（autoMode.soft_deny） | remove | a2585405 |
+| 新しい止める行（autoMode.soft_deny） | add | aaad6762 |
+
+根拠の形: 止める行は PO の記録が要る種類で、PR 番号は根拠として数えられない（consent-audit.py の PR_ONLY_TARGETS は repo-allow と repo-hooks だけ）。そこで3件とも、会話の同意票（ADR-1033）を根拠にする。同意票には操作を3つ並べ、それぞれに上の8桁を書く。PO が「1」で答えたあと、Opus が鍵（`consent:<票の sha256>:<「1」の時刻>`）を伝え、PO が台本に付けて `!` で1回実行する。台本は操作番号 1・2・3 を付けて3件を記録する（同じ鍵を2件に使うと点検が通らないため）。
+
 ## PO への説明（条件3・受け入れたリスク）
 2026-11-02 の会話の返事で、普通の言葉で説明する。説明すること: ①担当（ほかの AI）が無制限鍵を使っても機械では止まらない ②気づくのは毎週の照合で、最大1週間遅れる ③本番の容器の再起動を止める行を、合意した手順書の行に限って通す形に書き換える。PO が台本を実行することを、この説明への承認とする。
 
@@ -44,7 +55,8 @@ Bash(docker compose restart *) — container restarts on prod are forbidden with
 | AGENTS.md の無制限鍵の行に委任の一文があり、「条件・除外・記録の形は同 ADR」と書かれている | `git show origin/main:AGENTS.md` で該当行を読む（○×） |
 | ADR-1003 に条件6つ・除外・毎週の照合・受け入れたリスクが書かれている | `git show origin/main:docs/adr/ADR-1003-go-delegation-to-opus.md` で見出し4つを読む（○×） |
 | 設定に足した行が、上の「足す許可の行の文面」と一字一句同じ | PO の `!` の台本が sha256 の先頭8桁を出す。設定から読み直した行の8桁と一致（○×） |
-| 記録帳に、足した1件と書き換えた1件がこの PR 番号を根拠に記録される | permission-changes.jsonl の最後の2行の po_ref が `PR#5020`（add と modify。○×） |
+| 記録帳に3件が同意票を根拠に記録される | permission-changes.jsonl の最後の3行が「記録用の番号」の表と同じ操作・8桁で、po_ref が同じ票の鍵の `:1`・`:2`・`:3`（○×） |
+| 次の毎週の点検で、この3件が異常に出ない | consent-audit.py の権限の増減で、ef426399・a2585405・aaad6762 が A・B に出ない（○×） |
 | 止める行が上の「書き換える止める行の文面」と一字一句同じ | 台本が出す8桁と、設定から読み直した行の8桁が一致（○×） |
 | 手順書に無い行の実行が0件 | 毎週の照合の1つ目。prod-ops の各行の文面と、記録した SHA の手順書の行を照らし、違いの件数（0件で○） |
 | 説明できない無制限鍵のログインが0件 | 毎週の照合の2つ目。本番2台の auth.log* の時刻と、prod-ops の記録・会話の記録を並べた件数（0件で○） |
