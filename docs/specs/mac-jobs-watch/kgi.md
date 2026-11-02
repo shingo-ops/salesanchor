@@ -23,8 +23,8 @@
 | P2 | 1 時間以上見えなければ 1 通、見えたら「直りました」1 通 | 試験 P㉞〜P㊸ と本物の通知先での手動試験 | FAIL 0・`result=alert send=ok problems=phone-missing`・`result=recover send=ok` | ○ 2026-11-02 試験 FAIL 0。合流後の手動試験（一時フォルダ・本物の通知先）で 0 分・30 分は送らず、60 分で `result=alert send=ok problems=phone-missing`、戻って `result=recover send=ok` |
 | P3 | つながりを切る・入れ直す命令を使わない | 差分の中の kill-server・disconnect・connect・tcpip・usb・reconnect | 0 件 | ○ 2026-11-02 審査役の検索で 0 件 |
 | P4 | スマホ再起動後、PO が何もしなくても戻る | 再起動 10 分後に P1 | 終了 0・1 行 | 未測定（「常に許可」の印を PO が確かめた後） |
+| P5 | 既存の試験が今まで通り通る | `bash scripts/tests/test-mac-jobs-watch.sh` | FAIL 0 | ○ 2026-11-02 macOS で `PASS=210 FAIL=0` |
 
 見張りの間隔は 30 分のまま（plist は変えていない）。知らせが届くのは見えなくなってから 60〜90 分後。
-| P5 | 既存の試験が今まで通り通る | `bash scripts/tests/test-mac-jobs-watch.sh` | FAIL 0 | ○ 2026-11-02 macOS で `PASS=210 FAIL=0` |
 
 KPI: 合格した KGI の数 5/6（K6 は PO の次の再起動後に観測）。
