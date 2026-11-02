@@ -21,6 +21,7 @@ import { Modal } from "../../components/Modal";
 import { Stack } from "../../components/Stack";
 import { TextFieldControl } from "../../components/TextField";
 import PasskeySection from "./PasskeySection";
+import PushNotifySection from "./PushNotifySection";
 
 interface DeviceItem {
   id: number;
@@ -362,6 +363,7 @@ export default function SecuritySection() {
         </div>
       </form>
     </section>
+    {isSelfAuth() && <PushNotifySection />}
     {isSelfAuth() && <DevicesSection />}
     {isSelfAuth() && <RecoveryCodesSection />}
     {isSelfAuth() && <PasskeySection />}

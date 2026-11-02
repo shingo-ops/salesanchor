@@ -27975,6 +27975,76 @@
         "title": "PurchaseBySupplierResponse",
         "type": "object"
       },
+      "PushKeys": {
+        "properties": {
+          "auth": {
+            "description": "通知を暗号にする合言葉（base64url）",
+            "title": "Auth",
+            "type": "string"
+          },
+          "p256dh": {
+            "description": "通知を暗号にする公開鍵（base64url）",
+            "title": "P256Dh",
+            "type": "string"
+          }
+        },
+        "required": [
+          "p256dh",
+          "auth"
+        ],
+        "title": "PushKeys",
+        "type": "object"
+      },
+      "PushPublicKey": {
+        "properties": {
+          "public_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "通知の購読に使う公開の鍵。未設定なら null",
+            "title": "Public Key"
+          }
+        },
+        "title": "PushPublicKey",
+        "type": "object"
+      },
+      "PushSubscriptionIn": {
+        "properties": {
+          "endpoint": {
+            "description": "ブラウザの通知の送り先 URL（https）",
+            "title": "Endpoint",
+            "type": "string"
+          },
+          "keys": {
+            "$ref": "#/components/schemas/PushKeys"
+          }
+        },
+        "required": [
+          "endpoint",
+          "keys"
+        ],
+        "title": "PushSubscriptionIn",
+        "type": "object"
+      },
+      "PushSubscriptionOut": {
+        "properties": {
+          "id": {
+            "description": "購読の番号",
+            "title": "Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "PushSubscriptionOut",
+        "type": "object"
+      },
       "QtyRequest": {
         "properties": {
           "qty": {
@@ -41206,6 +41276,121 @@
           }
         ],
         "summary": "Password Change",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/push-public-key": {
+      "get": {
+        "description": "通知の購読に使う公開の鍵。鍵が未設定なら null（画面は切り替えを出さない）。",
+        "operationId": "push_public_key_api_v1_auth_push_public_key_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PushPublicKey"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Push Public Key",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/push-subscriptions": {
+      "post": {
+        "description": "いつもの機械の通知の購読を登録する（1台に1つ。同じ endpoint は上書き）。",
+        "operationId": "push_subscribe_api_v1_auth_push_subscriptions_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PushSubscriptionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PushSubscriptionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Push Subscribe",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/push-subscriptions/{subscription_id}": {
+      "delete": {
+        "description": "本人の通知の購読を取り消す。取り消し済みの本人の行は 204 のまま。他人の id・無い id は 404。",
+        "operationId": "push_unsubscribe_api_v1_auth_push_subscriptions__subscription_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "subscription_id",
+            "required": true,
+            "schema": {
+              "title": "Subscription Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Push Unsubscribe",
         "tags": [
           "auth"
         ]

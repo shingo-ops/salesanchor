@@ -331,6 +331,8 @@ async def test_engine():
             statement = statement.replace("public.auth_login_requests", "auth_login_requests")
         if "public.user_recovery_codes" in statement:
             statement = statement.replace("public.user_recovery_codes", "user_recovery_codes")
+        if "public.user_push_subscriptions" in statement:
+            statement = statement.replace("public.user_push_subscriptions", "user_push_subscriptions")
         # SQLite は FOR UPDATE をサポートしない（ファイルレベルロックで代替）。
         if " FOR UPDATE" in statement:
             statement = statement.replace(" FOR UPDATE", "")
@@ -1413,6 +1415,21 @@ async def setup_test_db(test_engine):
                 used_at TIMESTAMP,
                 revoked_at TIMESTAMP,
                 used_request_id TEXT
+            )
+        """))
+        # ADR-1055 段W: 通知（web push）の購読の SQLite 版（列は migration と同じ10列）
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS user_push_subscriptions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                trusted_device_id INTEGER NOT NULL,
+                endpoint TEXT NOT NULL UNIQUE,
+                p256dh TEXT NOT NULL,
+                auth TEXT NOT NULL,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                last_success_at TIMESTAMP,
+                failed_count INTEGER NOT NULL DEFAULT 0,
+                revoked_at TIMESTAMP
             )
         """))
         # ADR-1013 便3: public.password_reset_tokens の SQLite 版（BYTEA→BLOB, BIGSERIAL→INTEGER）

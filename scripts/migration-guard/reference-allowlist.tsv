@@ -4,4 +4,4 @@
 # 規則: (1) 確認 7（値の書き込み）は一覧に関係なく全ファイルに効く。(2) 一覧にあっても sha256 が違えば、そのファイルは失敗（中身が変わったので例外は効かない）。
 #       (3) repo モードは、各行のファイルが在り・scripts/run_all_migrations.sh にパスが書かれ・sha256 が一致することを確かめる。違えば失敗（古い行を残さない）。
 #       (4) 1 ファイル 1 行。理由は読んで確かめたことだけを書く。
-migrations/20261024_100300_create_ai_cloud_views.sql	e757c7f99bafaa80a23f2f05a1a5f794bbf9cd5760f3938587169aaba02b50c8	ai_cloud.column_class の初期値として表の名前を文字の値で並べる。共用マスタの中身は読まない	PO「1」2026-10-31 / docs/handoff/cloud-case-ai/stage1-h-decision.md §3 / ADR-1055 design §4 A-1（19行追加）
+migrations/20261024_100300_create_ai_cloud_views.sql	389707076d3f48d4f7dda3fc14412a531a1136b24002bd172f69b42d6bb1e24f	ai_cloud.column_class の初期値として表の名前を文字の値で並べる。共用マスタの中身は読まない	PO「1」2026-10-31 / docs/handoff/cloud-case-ai/stage1-h-decision.md §3 / ADR-1055 design §4 A-1（19行追加） / ADR-1055 design §4 段W（3行追加）

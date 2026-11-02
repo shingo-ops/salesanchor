@@ -52,3 +52,6 @@ beautifulsoup4>=4.12.0
 lxml>=5.0.0
 argon2-cffi==25.1.0
 maxminddb==3.2.0
+
+# ADR-1055 段W: 許可依頼の通知（web push）の送信。依存の部品は pywebpush が引き込む
+pywebpush==2.5.0
