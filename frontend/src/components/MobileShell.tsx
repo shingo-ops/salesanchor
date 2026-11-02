@@ -7,7 +7,7 @@
  * ADR-027: 全 UI 文字列は t("key") 経由。ハードコード禁止。
  *
  * DOM 構造:
- *   MobileShell (.mobile-shell)
+ *   MobileShell (.mobile-shell — useHideMobileTabbar の間は .mobile-shell--tabbar-hidden で下のメニューを隠す)
  *   ├── .mobile-content → <Outlet />
  *   ├── .mobile-more-backdrop（moreSheetOpen 時のみ）
  *   ├── .mobile-more-sheet（slide-up, z-index: var(--z-sidebar-overlay)=210）
@@ -36,6 +36,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { useLocale } from "../contexts/LocaleContext";
 import { useTheme } from "../contexts/ThemeContext";
 import { useUiPrefs } from "../contexts/UiPrefsContext";
+import { MobileTabbarContext } from "../hooks/useMobileTabbarHidden";
 import { usePermissions } from "../hooks/usePermissions";
 import { useSuperAdmin } from "../hooks/useSuperAdmin";
 import { useSSE } from "../hooks/useSSE";
@@ -84,6 +85,8 @@ export default function MobileShell() {
   // ── シート/ドロワー状態 ──
   const [moreSheetOpen, setMoreSheetOpen] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  // 画面が useHideMobileTabbar で頼んだ間だけ下のメニューを隠す（card-a2 §13）
+  const [tabbarHidden, setTabbarHidden] = useState(false);
 
   // Escape key でメニューシートを閉じる
   useEffect(() => {
@@ -206,10 +209,12 @@ export default function MobileShell() {
     <RealtimeProvider>
     <LoginApprovalWatcher />
     <RecoveryCodePrompt />
-    <div className="mobile-shell">
+    <div className={tabbarHidden ? "mobile-shell mobile-shell--tabbar-hidden" : "mobile-shell"}>
       {/* ============ Outlet ============ */}
       <main className="mobile-content">
-        <Outlet />
+        <MobileTabbarContext.Provider value={setTabbarHidden}>
+          <Outlet />
+        </MobileTabbarContext.Provider>
       </main>
 
       {/* ============ MoreSheet backdrop（Drawer より背面: z-index 200） ============ */}

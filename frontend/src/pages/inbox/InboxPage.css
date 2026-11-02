@@ -1072,7 +1072,30 @@
     color: var(--text-primary);
     cursor: pointer;
   }
-  .msg-stack     { max-width: 85%; }
+  .msg-stack     { max-width: calc(100% - var(--comp-chat-bubble-max-gap-mobile)); }
+  /* 会話の行の間を WhatsApp の実測へ（card-a2 §3） */
+  .inbox-messages {
+    gap: 0;
+    padding-left: var(--comp-chat-row-inset-mobile);
+    padding-right: var(--comp-chat-row-inset-mobile);
+  }
+  .inbox-msg-row {
+    padding-top: var(--comp-chat-row-gap-inner-mobile);
+    padding-bottom: var(--comp-chat-row-gap-inner-mobile);
+  }
+  .inbox-msg-row.group-start { padding-top: var(--comp-chat-row-gap-group-mobile); }
+  .inbox-msg-row.group-end { padding-bottom: var(--comp-chat-row-gap-group-mobile); }
+  /* 時刻を本文の最後の行に入れるため、本文を行の流れに乗せる */
+  .comp-chat-bubble--inline-time .msg-text { display: inline; }
+  /* 帯の外枠をなくし、ピルを画面の左 8 に置く */
+  .inbox-send-area { padding: 0; }
+  .send-card { border: none; border-radius: 0; }
+  /* 送れなかったときの帯は、外の余白 0 の前と同じ場所に置く（今の .inbox-send-area :561 の上 4・左右 12） */
+  .inbox-send-error {
+    margin-top: var(--space-1);
+    margin-left: var(--space-3);
+    margin-right: var(--space-3);
+  }
   /* 押す場所を 44px 以上にする（2026-10-13・WCAG 2.5.5）。
      実測で 44px 未満だったのは次の5つ（CSS の実値）:
        .send-attach-btn / .send-preview-remove  28px（--size-icon-btn-sm）

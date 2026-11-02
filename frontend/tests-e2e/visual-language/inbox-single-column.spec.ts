@@ -16,6 +16,8 @@
  *   cd frontend && npm run test:e2e:vl
  */
 
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { expect, test } from "@playwright/test";
 import type { Locator, Page, TestInfo } from "@playwright/test";
 import { installAuthBypass } from "../utils/auth";
@@ -146,6 +148,26 @@ test.describe("visual-language: 受信箱 1画面1ページ", () => {
 
     // ページ名は読み上げ用に残っていること（見出しとして取得できる＝現在地が分かる）
     await expect(page.getByRole("heading", { name: "受信箱" })).toHaveCount(1);
+  });
+
+  test("スマホ: 会話を開いている間は下部タブバーが隠れ、戻ると見える", async ({ page }, testInfo) => {
+    test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
+
+    // card-a2 §13（PO 2026-11-02）: 会話を開いている間だけ下のメニューを隠す
+    await openInboxList(page);
+    await expect(page.locator(".mobile-tabbar")).toBeVisible();
+
+    await openConversation(page);
+    await expect(page.locator(".mobile-tabbar")).toBeHidden();
+    const viewport = page.viewportSize();
+    expect(viewport, "viewport が取れない").not.toBeNull();
+    const sendBox = await page.locator(".inbox-send-area").boundingBox();
+    expect(sendBox, "入力欄の帯の寸法が取得できない").not.toBeNull();
+    expect(Math.abs(sendBox!.y + sendBox!.height - viewport!.height), "入力欄の帯の下端が画面の下端と一致しない")
+      .toBeLessThanOrEqual(1);
+
+    await backButton(page).click();
+    await expect(page.locator(".mobile-tabbar")).toBeVisible();
   });
 
   test("スマホ: 一覧ではヘッダーの操作行を出さず、絞り込みはヘッダーの右端に出る", async ({ page }, testInfo) => {
@@ -1414,7 +1436,7 @@ test.describe("visual-language: 受信箱 第8便（顧客ページ（カルテ�
   const panel = (page: Page): Locator => page.locator(".inbox-right-panel");
   const backBtn = (page: Page): Locator => page.locator(".karte-close-back-btn");
 
-  test("スマホ: カルテが画面全体になり、下部タブバーを覆う", async ({ page }, testInfo) => {
+  test("スマホ: カルテが画面全体になる（下部タブバーは会話を開いた時点で隠れている）", async ({ page }, testInfo) => {
     test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
 
     await openInboxList(page);
@@ -1447,7 +1469,7 @@ test.describe("visual-language: 受信箱 第8便（顧客ページ（カルテ�
     });
 
     expect(measured.panelRect, "カルテの矩形が取れない").not.toBeNull();
-    expect(measured.tabbarRect, "下部タブバーの矩形が取れない").not.toBeNull();
+    await expect(page.locator(".mobile-tabbar")).toBeHidden();
     const panelRect = measured.panelRect!;
     const tabbarRect = measured.tabbarRect!;
     const v = viewport!;
@@ -1457,15 +1479,6 @@ test.describe("visual-language: 受信箱 第8便（顧客ページ（カルテ�
     expect(Math.abs(panelRect.y), "カルテの上端が0でない").toBeLessThanOrEqual(1);
     expect(Math.abs(panelRect.width - v.width), "カルテの幅がビューポート幅と一致しない").toBeLessThanOrEqual(1);
     expect(Math.abs(panelRect.height - v.height), "カルテの高さがビューポート高さと一致しない").toBeLessThanOrEqual(1);
-
-    // 2. 下部タブバーがカルテに覆われていること（矩形がカルテの内側、かつ重なり順でも上）
-    expect(tabbarRect.y, "タブバーの上端がカルテの上端より手前").toBeGreaterThanOrEqual(panelRect.y - 1);
-    expect(tabbarRect.y + tabbarRect.height, "タブバーの下端がカルテの下端を超えている")
-      .toBeLessThanOrEqual(panelRect.y + panelRect.height + 1);
-    expect(measured.panelZIndex, "カルテの z-index が取れない").not.toBeNull();
-    expect(measured.tabbarZIndex, "タブバーの z-index が取れない").not.toBeNull();
-    expect(measured.panelZIndex!, "カルテの重なり順がタブバーより前面でない")
-      .toBeGreaterThan(measured.tabbarZIndex!);
   });
 
   test("スマホ: 左上の戻る矢印が44px以上で、押すとカルテが閉じて会話に戻る", async ({ page }, testInfo) => {
@@ -1852,5 +1865,50 @@ test.describe("visual-language: 受信箱 第9便（カルテのヘッダー統�
     // 顔写真・顧客名は .right-panel-header 側にそのまま残っている（第9便で消していない）
     await expect(page.locator(".right-panel-header .right-panel-avatar")).toBeVisible();
     await expect(page.locator(".right-panel-header .right-panel-display-name")).toBeVisible();
+  });
+});
+
+test.describe("visual-language: 受信箱 入力欄（card-a2 §14）", () => {
+  test("スマホ: 入力欄に案内文が出ず、Enter で改行され送信されない", async ({ page }, testInfo) => {
+    test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
+
+    let sendCount = 0;
+    await installAuthBypass(page);
+    await mockApi(page, {
+      ...baseMocks(),
+      "POST /leads/5001/messages": async (route) => {
+        sendCount += 1;
+        await route.fulfill({ body: JSON.stringify({ id: 1, text: "a\nb" }) });
+      },
+    });
+    await page.goto("/lead-chat");
+    await expect(page.getByRole("heading", { name: "受信箱" })).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator("button.conversation-item").first()).toBeVisible({ timeout: 10_000 });
+    await openConversation(page);
+
+    const textarea = page.locator(".inbox-textarea");
+    // 案内文（placeholder）が無い、または空
+    const placeholder = await textarea.getAttribute("placeholder");
+    expect(placeholder ?? "", "スマホでは案内文を出さない").toBe("");
+
+    // Enter は改行。送信は呼ばれない
+    await textarea.fill("a");
+    await textarea.press("Enter");
+    await textarea.pressSequentially("b");
+    await expect(textarea).toHaveValue("a\nb");
+    await page.waitForTimeout(300);
+    expect(sendCount, "Enter で送信 API が呼ばれた").toBe(0);
+  });
+
+  test("PC・タブレット: 案内文は今のまま出る", async ({ page }, testInfo) => {
+    test.skip(projectWidth(testInfo) <= MOBILE_MAX_PX, "スマホ用レイアウトの幅は対象外");
+
+    const ja = JSON.parse(readFileSync(resolve(process.cwd(), "src/locales/ja.json"), "utf-8")) as {
+      inbox: { messagePlaceholder: string };
+    };
+
+    await openInboxList(page);
+    await openConversation(page);
+    await expect(page.locator(".inbox-textarea")).toHaveAttribute("placeholder", ja.inbox.messagePlaceholder);
   });
 });

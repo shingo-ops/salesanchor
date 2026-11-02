@@ -13,9 +13,13 @@
  */
 
 import { render, screen, fireEvent, act, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { MemoryRouter } from "react-router-dom";
+import type { ReactNode } from "react";
 import MobileShell from "./MobileShell";
+import { useHideMobileTabbar } from "../hooks/useMobileTabbarHidden";
+
+const outletState = vi.hoisted(() => ({ child: null as ReactNode }));
 
 // ─── モック群（vi.hoisted で hoisting 安全化） ──────────────────────────────
 
@@ -41,7 +45,7 @@ vi.mock("react-router-dom", async () => {
   const actual = await vi.importActual("react-router-dom");
   return {
     ...actual,
-    Outlet: () => <div data-testid="outlet" />,
+    Outlet: () => <div data-testid="outlet">{outletState.child}</div>,
     useNavigate: () => vi.fn(),
   };
 });
@@ -139,11 +143,29 @@ function renderMobileShell() {
 
 // ─── テスト ──────────────────────────────────────────────────────────────────
 
+function HideTabbarChild() {
+  useHideMobileTabbar(true);
+  return null;
+}
+
 describe("MobileShell", () => {
   beforeEach(() => {
     mockLoadUnread.mockResolvedValue({ conversations: [] });
     mockHasPermission.mockReturnValue(false);
     mockHasAny.mockReturnValue(false);
+  });
+
+  afterEach(() => {
+    outletState.child = null;
+  });
+
+  describe("tabbar hidden (card-a2 §13)", () => {
+    it("adds .mobile-shell--tabbar-hidden when a child calls useHideMobileTabbar(true) and keeps .mobile-tabbar in the DOM", () => {
+      outletState.child = <HideTabbarChild />;
+      const { container } = renderMobileShell();
+      expect(container.querySelector(".mobile-shell")?.classList.contains("mobile-shell--tabbar-hidden")).toBe(true);
+      expect(container.querySelector(".mobile-tabbar")).toBeTruthy();
+    });
   });
 
   describe("rendering", () => {

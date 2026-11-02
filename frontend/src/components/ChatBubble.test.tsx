@@ -79,4 +79,38 @@ describe('ChatBubble', () => {
     const { container } = render(<ChatBubble layout="panel" direction="inbound" wide>x</ChatBubble>);
     expect(container.firstElementChild?.className).toContain('comp-chat-bubble--wide');
   });
+
+  it('tail adds the tail class on thread bubbles only (not panel, not failed)', () => {
+    const on = render(<ChatBubble direction="inbound" tail>x</ChatBubble>).container;
+    expect(on.firstElementChild?.className).toContain('comp-chat-bubble--tail');
+    const off = render(<ChatBubble direction="inbound">x</ChatBubble>).container;
+    expect(off.firstElementChild?.className).not.toContain('comp-chat-bubble--tail');
+    const panel = render(<ChatBubble layout="panel" direction="inbound" tail>x</ChatBubble>).container;
+    expect(panel.firstElementChild?.className).not.toContain('comp-chat-bubble--tail');
+    const failed = render(<ChatBubble direction="outbound" failed tail>x</ChatBubble>).container;
+    expect(failed.firstElementChild?.className).not.toContain('comp-chat-bubble--tail');
+  });
+
+  it('inlineTime adds the class and an aria-hidden spacer copy of the time', () => {
+    const { container } = render(<ChatBubble direction="inbound" inlineTime time="12:00">x</ChatBubble>);
+    expect(container.firstElementChild?.className).toContain('comp-chat-bubble--inline-time');
+    const spacer = container.querySelector('.comp-chat-bubble__time-spacer');
+    expect(spacer?.getAttribute('aria-hidden')).toBe('true');
+    expect(spacer?.textContent).toBe('12:00');
+  });
+
+  it('inlineTime is ignored without time, on panel and on failed', () => {
+    const noTime = render(<ChatBubble direction="inbound" inlineTime>x</ChatBubble>).container;
+    expect(noTime.querySelector('.comp-chat-bubble__time-spacer')).toBeNull();
+    expect(noTime.firstElementChild?.className).not.toContain('comp-chat-bubble--inline-time');
+    const panel = render(<ChatBubble layout="panel" direction="inbound" inlineTime time="t">x</ChatBubble>).container;
+    expect(panel.querySelector('.comp-chat-bubble__time-spacer')).toBeNull();
+    const failed = render(<ChatBubble direction="outbound" failed inlineTime time="t">x</ChatBubble>).container;
+    expect(failed.querySelector('.comp-chat-bubble__time-spacer')).toBeNull();
+  });
+
+  it('without the new props nothing changes (no spacer, no new classes)', () => {
+    const { container } = render(<ChatBubble direction="inbound" time="t">x</ChatBubble>);
+    expect(container.querySelector('.comp-chat-bubble__time-spacer')).toBeNull();
+  });
 });

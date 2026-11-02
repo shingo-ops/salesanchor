@@ -50,7 +50,8 @@ describe('ChatComposer', () => {
       trailing: <span data-testid="trail" />,
     });
     const kids = Array.from(container.querySelector('.send-top-row')!.children);
-    expect(kids[0].getAttribute('data-testid')).toBe('lead');
+    expect(kids[0].className).toBe('comp-chat-composer__leading');
+    expect(kids[0].firstElementChild?.getAttribute('data-testid')).toBe('lead');
     expect(kids[1].className).toBe('send-input-wrap');
     expect(kids[2].getAttribute('data-testid')).toBe('trail');
     expect(kids[3].className).toBe('inbox-send-btn');
