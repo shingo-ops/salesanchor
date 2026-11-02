@@ -158,14 +158,18 @@ status: draft（PO 方針承認 2026-10-13・Reviewer 指摘反映版・実装�
 
 測り方（第2版）:
 1. 再生: R = 基準の写しに台帳の「結果=適用／適用（PO）」の行を当てた結果（§5-6 のとおり。変えない）。C = 現在の autoMode。
-2. 同意の記録を読む。読み方と鎖の確かめは `scripts/dev/consent-audit.py` の `read_ledger`（:513-540）をそのまま使う（同じ checkout から importlib で読む。式を写さない）。`chain_ok` が偽、または読めない行が1行でもあれば K1=エラー。ファイルが無いときは0行として扱う。
+2. 同意の記録を読む（場所は `perm_paths(home)["perm_ledger"]`、consent-audit.py:493）。読み方と鎖の確かめは `scripts/dev/consent-audit.py` の `read_ledger`（:513-540）をそのまま使う（同じ checkout から importlib で読む。式を写さない）。`chain_ok` が偽、または読めない行が1行でもあれば K1=エラー。ファイルが無いときは0行として扱う。
 3. キーごとに比べる。
    - 配列のキー（allow・environment・soft_deny ほか全部）: 要素を `item_sha8` で数え、多重集合の差を取る。増えた要素 = C−R、減った要素 = R−C。
    - 配列でないキー: 値が同じでなければ「説明のつかない差」1件。
 4. 増減した要素ごとに、同意の記録で説明がつくかを判定する。すべてを満たすときだけ「説明がつく」。
    - 要素が `SM-` で始まらず、§5-2 の文でもない（この2つは台帳だけが説明できる）。
    - キーと target が対応する: allow = `user-automode-allow`、environment = `user-automode-env`、soft_deny = `user-automode-soft-deny`。それ以外のキーは同意の記録では説明しない。
-   - その target・`item_hash` で `result` が `applied` か `recorded` の行のうち、ファイルの中で最後の行の `op` が、増えた要素なら `add`、減った要素なら `remove`。`held` の行は数えない。
+   - その target・`item_hash` で、下の「受ける組」に当たる行のうち、ファイルの中で最後の行の `op` が、増えた要素なら `add`、減った要素なら `remove`。受ける組に当たらない行（`held` を含む）は数えない。
+   - 受ける組（道具 perm-change.py が書ける組だけ。docs/handoff/permission-delegation/design.md:113・123-124 の表と、consent-audit.py:950-953 の judge_change が record の行しか受けない決まりに合わせる）:
+     - allow の add: `sub=record`・`result=recorded`（apply では足せない）
+     - allow の remove: `sub=apply`・`result=applied`、または `sub=record`・`result=recorded`
+     - environment・soft_deny の add と remove: `sub=record`・`result=recorded`
    - その要素の増減の数が1（同じ文が2件以上増えた・減った場合は説明がつかない）。
 5. 説明のつかない差が 0件なら K1=一致、1件以上なら K1=不一致。
 6. 順番: 説明がついた要素を除いたあと、R と C の並びが違うだけのときは「並びの違いあり」と出すが、不一致にはしない。理由: 台帳の再生も同意の記録の反映も末尾に足すため、2つが混ざると並びは必ず変わる。allow の並びで判定は変わらない（公式仕様は allow を soft_deny の例外として扱うだけで、順番の決まりを持たない。§4 recon）。
@@ -187,6 +191,11 @@ status: draft（PO 方針承認 2026-10-13・Reviewer 指摘反映版・実装�
 - 同意の記録に保留の行だけがあり、反映の記録が無い文が1件。
 - 同意の記録に1行も無い文が1件。
 - PO が自分の変更と認めた場合は、§5-6 の source=PO の行として台帳に足す（2026-10-15 と同じ手順）。認めない場合は外す案を出す。
+
+未解決（2026-11-02 の設計審査 REVISE の HIGH。PO の方向の決定待ち）:
+- K1 だけを直しても、手順9は K3 で止まる。K3（routine/sm_k1_k3.py:185-188 と :190-201）は、`SM-` 以外の allow・environment・soft_deny・permissions・hooks・~/.claude/scripts/ の下のファイル・test-agent-hooks.sh を、前回保存した値と比べる。ROUTINE.md:96 は「変化あり」でも止める。
+- 2026-11-02 の報告書では、K3 は `allow(non-SM)`・`hooks`・~/.claude/scripts/ の下のファイル・test-agent-hooks.sh で「変化あり」だった。前回の保存は 2026-10-15（permission-protected-hashes.json）で、それ以降は K1 が不一致のため保存していない。
+- これらの多くは、別の正式な道（同意の記録 ADR-1034・PR のマージ）で変わる。この版では K3 の扱いを決めていない。決まるまで、この設計は実装可にしない。
 
 ## 6. 弊害・トレードオフ
 
@@ -255,6 +264,7 @@ status: draft（PO 方針承認 2026-10-13・Reviewer 指摘反映版・実装�
   - 変更箇所: §4 の定期実行の行、§10 の ①人・③機械、段と承認の S4、§9 の守り手、routine/ROUTINE.md、s4-card.md。詳細は [../permission-routine-on-agent-console/design.md](../permission-routine-on-agent-console/design.md)。
 - 2026-10-15 §5-6 に例外の2を追加（add と environment を sha256 で記録。PO 決定 2026-10-15）。
 - 2026-11-02 K1 を第2版にした（§2 の K1・§5-5 手順9・§5-6 の例外・§5-8・§6・§7・§8 の S5〜S7）。同意の記録（ADR-1034）に載った変更も説明がつくものとして数える。
+- 2026-11-02 設計審査 REVISE を受けて直した: §5-8 手順4に「受ける組」（道具が書ける sub・result・op の組だけ）を足した。記録の場所の行番号を直した。ADR-1011 の備考に1行足した。K3 で止まる件を「未解決」として書いた（PO の方向の決定待ち）。
   - きっかけ: 2026-11-02 の週次保守で K1 が3回続けて不一致になった（permission-reports/2026-11-02.md）。
   - PO の返事:「1」。選んだ選択肢は「照らし合わせる先に、しんごさんの同意を取って足した許可の記録も加える」。
   - 実装カード: [k1-consent-log-card.md](k1-consent-log-card.md)。

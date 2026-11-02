@@ -3,7 +3,7 @@
 | 項目 | 内容 |
 |------|------|
 | ステータス | Accepted |
-| 備考 | 2026-10-13 に PO が方針を了承。同日、受入試験 S2 に合格（permission-reports/2026-10-13-s2-trial.md）。2026-10-15 PO 決定で、審査担当を Fable から Opus へ変更（標準の審査は Opus）。2026-10-19 ADR-1034 で「範囲外」のうち `SM-` で始まらない allow の文を、道具 `perm-change.py` を通す場合に限って改めた |
+| 備考 | 2026-10-13 に PO が方針を了承。同日、受入試験 S2 に合格（permission-reports/2026-10-13-s2-trial.md）。2026-10-15 PO 決定で、審査担当を Fable から Opus へ変更（標準の審査は Opus）。2026-10-19 ADR-1034 で「範囲外」のうち `SM-` で始まらない allow の文を、道具 `perm-change.py` を通す場合に限って改めた。2026-11-02 PO 決定（「1」）で、手順9の K1 は、同意の記録（ADR-1034 の permission-changes.jsonl）に載った変更も説明がつくものとして数える（第2版。docs/handoff/design-approval-ticket/self-maintenance-design.md §5-8）。そのため `SM-` で始まらない allow・environment・soft_deny の変更は同意の記録だけに残り、下の「記録は分散させない」は `SM-` の文と §5-2 の文に限る |
 | 起案日 | 2026-10-13 |
 | 方針の決定者 | Shingo（PO） |
 | 関連 | ADR-1003（GO 委譲。本 ADR は GO の範囲を変えない） |

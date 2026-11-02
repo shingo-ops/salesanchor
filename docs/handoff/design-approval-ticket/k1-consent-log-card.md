@@ -21,7 +21,7 @@ status: draft（設計案・審査前・PO 実装承認前・実装未着手）
 - `docs/handoff/design-approval-ticket/routine/sm_k1_k3.py:145-155` `run_k1`。ここを第2版の比べ方に替える。
 - `docs/handoff/design-approval-ticket/routine/sm_k1_k3.py:238-263` `main`。引数を1つ足す。
 - `scripts/dev/consent-audit.py:457-459` `item_sha8`。要素の印の式の正本。
-- `scripts/dev/consent-audit.py:513-540` `read_ledger(home)`。同意の記録を読み、鎖（prev_sha）を確かめる。読む場所は `perm_paths(home)["perm_ledger"]`（:489）。
+- `scripts/dev/consent-audit.py:513-540` `read_ledger(home)`。同意の記録を読み、鎖（prev_sha）を確かめる。読む場所は `perm_paths(home)["perm_ledger"]`（関数は :489、記録のパスは :493）。
 - `scripts/dev/consent-audit.py:1160` に `if __name__ == "__main__":` がある。モジュールとして読んでも点検は走らない（実装者は読み込み時に他の副作用が無いことも確かめる。あれば止めて Opus に報告）。
 - `docs/handoff/design-approval-ticket/routine/test_sm_tools.py:179-207` に K1 の既存の試験（一致・remove(sha256)・不一致）がある。
 
@@ -35,7 +35,7 @@ status: draft（設計案・審査前・PO 実装承認前・実装未着手）
   1. `replayed, applied = replay(...)`（今と同じ）。
   2. `led = read_ledger(consent_home)`。`led["chain_ok"]` が偽、または `rows` に空の dict（読めなかった行）があれば `{"k1": "エラー", "error": "同意の記録の鎖が切れている"}`。
   3. R（replayed）と C（current）のキーの和集合を回す。両方が list のキーは `collections.Counter(item_sha8(x))` の差で増減を出す。片方だけ list、または list でない値は、`R.get(k) != C.get(k)` なら `unexplained` に `"<k>:value:-"` を1件足す。
-  4. 増減した印ごとに §5-8 手順4の条件で判定する。対応表は sm_k1_k3.py の中に辞書1つで置く: `{"allow": "user-automode-allow", "environment": "user-automode-env", "soft_deny": "user-automode-soft-deny"}`。`SM-` で始まる文と §5-2 の文（`design_statement(args.design)`）は説明をつけない。文を取り出すには、増えた要素は C、減った要素は R から同じ印の文を探す。
+  4. 増減した印ごとに §5-8 手順4の条件で判定する。行は `sub`・`result`・`op` が §5-8 手順4の「受ける組」に当たるものだけを数える（当たらない行は無いものとして扱う）。対応表は sm_k1_k3.py の中に辞書1つで置く: `{"allow": "user-automode-allow", "environment": "user-automode-env", "soft_deny": "user-automode-soft-deny"}`。`SM-` で始まる文と §5-2 の文（`design_statement(args.design)`）は説明をつけない。文を取り出すには、増えた要素は C、減った要素は R から同じ印の文を探す。
   5. 並びの判定: 説明がついた要素を C と R から除き、残りの印の列が違えば `order_differs: true`。
   6. 出力のキー: `k1`・`rows_applied`・`replayed_sha256`・`current_sha256`・`baseline_sha256`（今と同じ）、`consent_log_rows`・`consent_chain`・`explained_by_consent_log`（`"allow:add:33b870c3"` の形の一覧・昇順）・`unexplained`（同じ形・昇順）・`order_differs`。
 - 冒頭の説明文（docstring）の K1 の段落を §5-8 に合わせて書き直す。終了コードの意味は変えない。
@@ -48,7 +48,7 @@ status: draft（設計案・審査前・PO 実装承認前・実装未着手）
 
 | # | 入力 | 期待 |
 |---|---|---|
-| T1 | C に R に無い文 X が1件。記録に `user-automode-allow`・`add`・`recorded` の X の行 | 一致・`explained_by_consent_log` に X・exit 0 |
+| T1 | C に R に無い文 X が1件。記録に `user-automode-allow`・`add`・`sub=record`・`recorded` の X の行 | 一致・`explained_by_consent_log` に X・exit 0 |
 | T2 | T1 の記録が `held` の行だけ | 不一致・`unexplained` に `allow:add:<X の印>`・exit 1 |
 | T3 | T1 の記録の後ろに同じ X の `remove`・`applied` の行 | 不一致 |
 | T4 | 増えた文が `SM-` で始まり、記録に add の行がある | 不一致 |
@@ -57,6 +57,12 @@ status: draft（設計案・審査前・PO 実装承認前・実装未着手）
 | T7 | T1 の記録の2行目の `prev_sha` を書き換える | エラー・exit 1 |
 | T8 | T1 に加えて、C の allow の並びを R と入れ替える | 一致・`order_differs: true` |
 | T9 | `hard_deny` に1件増え、記録に何かの target の add の行がある | 不一致（対応表に無いキー） |
+| T10 | allow に X が増え、記録の行が `sub=apply`・`result=applied`・`add` だけ | 不一致（allow の add は record だけ受ける） |
+| T11 | environment に E が増え、記録の行が `user-automode-env`・`sub=apply`・`result=applied`・`add` だけ | 不一致 |
+| T12 | environment に E が増え、記録の行が `user-automode-env`・`sub=record`・`result=recorded`・`add` | 一致 |
+| T13 | allow に §5-2 の文が増え、記録に `sub=record`・`recorded`・`add` の行がある | 不一致 |
+| T14 | `--consent-home` の下に記録のファイルが無い・差も無い | 一致・`consent_log_rows` が 0 |
+| T15 | 記録に JSON として読めない行が1行混じる | エラー・exit 1 |
 
 ### 3. `docs/handoff/design-approval-ticket/routine/ROUTINE.md`
 
