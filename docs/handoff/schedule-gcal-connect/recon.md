@@ -6,7 +6,7 @@
 ## 0. 既存 ADR の検索
 - `git grep -i -l "google.calendar" docs/adr/` → ADR-1018 のみ。`docs/adr/FEATURE-INDEX.md` にカレンダーの行は無い。
 - ADR-1018:15,24 — `tenant_google_calendar_config` は RLS 段階②（会社別の型）。OAuth callback は文脈を張ってから書く（下の 1-1）。今回この表の書き方は変えない。
-- Google カレンダー同期の方針を決めた ADR は無い。
+- Google カレンダー同期の方針を決めた ADR は無い（今回 ADR-1057 を起こす）。
 
 ## 1. 裏側（事実）
 ### 1-1 接続の口
@@ -35,6 +35,13 @@
 - つまり、PO がつないだ後は、同じ会社でログインできる人（営業の 6・83 など）が、画面を通さず口を直接呼べば、PO の Google の予定を読めて書けて消せる。
 - 画面からこの 4 つの口を呼ぶところは無い（`git grep "google-calendar/events" -- frontend/src secretary-agent` で 0 件）。
 - 試験の手本: `backend/tests/test_google_calendar.py:310-317` は、口の `user` 引数の既定値が `require_tenant_admin` かを `inspect` で確かめている。
+
+### 1-5 Google→アプリの取り込みの道（審査役の指摘で追加）
+- `backend/app/routers/calendar.py:464-498` `PATCH /calendar/sync-mode` は `require_tenant_admin`。受け付ける方式は `_VALID_SYNC_MODES = ("bidirectional","read_only","write_only","none")`（:42）。:493-494 で bidirectional・read_only のとき `register_webhook` を呼ぶ。
+- 取り込みの登録を始めるのはこの口だけ。ほかは `renew_expiring_webhooks`（`backend/app/services/google_webhook.py:267-286`）で、登録済み（`google_webhook_subscriptions` に行がある）ものを更新するだけ（git grep で確かめた）。
+- 通知が来ると `google_webhook.py:230-249` が primary の直近 30 分の変更を読み、`calendar_service.py:400-433` `upsert_from_google` が `calendar_type='shared'` で入れる。会社の予定として全員に見える。
+- この口が管理者専用であることは `backend/tests/test_tenant_admin_ssot.py:184-185` が確かめている。
+- 本番 `public.google_webhook_subscriptions`: 0 件（2026-11-03 読み取り）。
 
 ## 2. 画面（事実）
 - つなぐボタンは 2026-06-21 の 1e4c4e7fb「fix schedule parity」で消えた。旧コードは `hasPermission("channels.manage")` で表示し、生の `<button className="gcal-connect-btn">` を使っていた（今の決まりでは使えない）。

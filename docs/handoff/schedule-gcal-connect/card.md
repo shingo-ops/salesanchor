@@ -1,6 +1,6 @@
 # 実装カード — 予定の画面に Google カレンダーのつなぐボタンを戻す
 
-親: docs/handoff/schedule-gcal-connect/design.md ／ recon: docs/handoff/schedule-gcal-connect/recon.md ／ ADR-027・ADR-144・ADR-067・ADR-1018
+親: docs/handoff/schedule-gcal-connect/design.md ／ recon: docs/handoff/schedule-gcal-connect/recon.md ／ ADR-1057・ADR-027・ADR-144・ADR-067・ADR-1018
 状態: 設計担当（Opus）作成。実装は Sonnet。PO 決定 2026-11-02「1」（ボタンを戻す・本番まで）・「1」（PO が入れた予定だけ送る）。
 作業場所: origin/main から新しいブランチ `release/schedule-gcal-connect-impl` を作る（クラウドでも同じ名前）。設計の書類（docs/handoff/schedule-gcal-connect/）は触らない。
 
@@ -15,6 +15,8 @@
 | `backend/tests/test_calendar_service.py` | 3-1 |
 | `backend/app/routers/google_calendar.py` | 2-2 |
 | `backend/tests/test_google_calendar.py` | 3-2 |
+| `backend/app/routers/calendar.py` | 2-5 |
+| `backend/tests/test_calendar_owner_api.py` | 3-5 |
 | `frontend/src/hooks/usePermissions.ts` | 2-3 |
 | `frontend/src/hooks/usePermissions.test.ts` | 3-3 |
 | `frontend/src/pages/schedule/SchedulePageImpl.tsx` | 2-4 |
@@ -122,6 +124,22 @@ async def require_calendar_owner(
 ```
 - 生の `<button>`・`style={{}}`・className の追加・色の直書きは入れない。
 
+### 2-5 calendar.py（取り込みを止める）
+- :42 `_VALID_SYNC_MODES` は変えない（GET の答えにも使う）。その次の行に足す:
+```python
+# Google→アプリの取り込みを始める方式は受け付けない。取り込むと、つないだ人の Google の予定が会社の予定として全員に見える（ADR-1057）
+_ACCEPTED_SYNC_MODES = ("write_only", "none")
+```
+- `update_sync_mode`（:464-498）の :473 の検査の直後（UPDATE の前）に足す:
+```python
+    if body.sync_mode not in _ACCEPTED_SYNC_MODES:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Google の予定をアプリへ取り込む設定は使えません（ADR-1057）",
+        )
+```
+- `user: User = Depends(require_tenant_admin)` は変えない（`backend/tests/test_tenant_admin_ssot.py:184-185` が確かめている）。:490-496 の register/stop の分かれ道も変えない（上の検査で bidirectional・read_only は来なくなる）。
+
 ## 3. 試験
 ### 3-1 test_calendar_service.py
 - 今の 3 つの試験（:213・:239・:263）の `sync_result.first` の戻り値を 2 つ組にする: `("none",)` → `("none", None)`、`("bidirectional",)` → `("bidirectional", 1)`（:263 の試験は user_id=1 なので Google を呼び、失敗の道を通るまま）。
@@ -142,15 +160,27 @@ async def require_calendar_owner(
 - `{ permissions: [] }`（欄なし）→ `isTenantAdmin === false`。
 
 ### 3-4 SchedulePageImpl.test.tsx（新規）
-- 既存の画面の試験の書き方（`frontend/src/pages/` 配下の `*.test.tsx`）に合わせ、`api.get` を差し替えて描く。
+- 手本は `frontend/src/hooks/usePermissions.test.ts:1-27`。次の 3 点を必ず入れる:
+  - `vi.mock("../../contexts/AuthContext", ...)` で `uid` を持つ人を返す。`useApiQuery` は今の人がいないと取りに行かない（`frontend/src/lib/query/apiQuery.ts:67`）。
+  - `afterEach` で `queryClient.clear()`（`../../lib/query/apiQuery` から）。前の試験の status の写しを残さない。
+  - `api.get` を `vi.mock("../../lib/api", ...)` で差し替え、path ごとに答えを返す。
+- 押す試験では、`frontend/src/components/AppUpdateNotice.test.tsx:9-22` と同じやり方で `window.location` を差し替え、`href` への代入を受け止める（jsdom で別のサイトへ移らないように）。終わったら元に戻す。
 - 管理者（`is_tenant_admin: true`・status `{connected:false}`）→ 「Googleカレンダー連携」のボタンがあり押せる。押すと `/google-calendar/connect/start` を呼ぶ。
 - 管理者・status `{connected:true}` → 「✔︎連携済」で押せない。
 - 管理者でない（`is_tenant_admin: false`）→ ボタンが無く、`/google-calendar/status` を呼ばない。
 - 描くのに要る周りの呼び出し（予定一覧・持ち主一覧など）は空の答えで差し替える。描けないときは `BLOCKED:` で止めて、何が足りないかを書く。
 
+### 3-5 test_calendar_owner_api.py
+- 同じファイルの `_QueryResult`・`_mock_user` を使い、`update_sync_mode` を直接呼ぶ試験を足す（`from app.routers.calendar import update_sync_mode, SyncModeBody`）。`app.services.google_webhook.register_webhook` と `stop_webhook` は AsyncMock で差し替える。
+  - `bidirectional` → HTTPException 422。`db.execute` も `register_webhook` も呼ばれない。
+  - `read_only` → 同じく 422。
+  - `write_only` → `{"sync_mode": "write_only"}` が返り、`stop_webhook` が 1 回呼ばれる。
+  - `none` → `{"sync_mode": "none"}`。
+- ここで足すのは上の 4 つだけ。
+
 ## 4. 終わる前に
-- backend: `pytest backend/tests/test_calendar_service.py backend/tests/test_google_calendar.py -q`
-- frontend: `npm run lint`・`npx tsc --noEmit`・`npx vitest run src/hooks/usePermissions.test.ts src/pages/schedule`
+- backend: `pytest backend/tests/test_calendar_service.py backend/tests/test_google_calendar.py backend/tests/test_calendar_owner_api.py backend/tests/test_tenant_admin_ssot.py -q`
+- frontend（`frontend/` で動かす）: `npm run lint`・`npx tsc --noEmit`・`npm run test:unit -- src/hooks/usePermissions.test.ts src/pages/schedule`（`npx vitest run` は既定の設定でブラウザの試験も拾うので使わない）
 - UI の決まりの検査: リポジトリ直下で、CI の ui-governance-gate と同じ `node scripts/check-ui-governance.js` を、BASE_SHA に origin/main との分かれ目、HEAD_SHA に HEAD を入れて動かす
 - 生出力は省かずに報告へ貼る。
 - PR は `--base main`・Draft にしない。本文に `### 標準ワークフロー確認` を入れ、design.md と recon.md の場所を書く。危険なパス（migrations/・deploy.yml・本番 scripts/）は触らない。
@@ -159,3 +189,4 @@ async def require_calendar_owner(
 - 行番号がずれている → 引用の文字列で場所を探し、合えば進める。文字列も無ければ `BLOCKED:`。
 - `Button` に `loading` が無い → `BLOCKED:`（`GoogleCalendarStatusBar.tsx` では使っているので、あるはず）。
 - UI の決まりの検査（scripts/check-ui-governance.js）が赤になる → 直さずに `BLOCKED:` で止め、出力を貼る。
+- 同期方式の口を呼ぶ既存の試験が bidirectional・read_only を期待していて落ちる → 直さずに `BLOCKED:` で止め、試験の名前を書く（2026-11-03 の git grep では見つかっていない）。

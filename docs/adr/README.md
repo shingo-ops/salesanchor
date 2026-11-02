@@ -3,7 +3,7 @@
 > このファイルは `scripts/generate-adr-index.js` により自動生成されます。
 > **手動編集禁止。** ADR ファイルを追加・変更後に `node scripts/generate-adr-index.js` を実行してください。
 
-最終更新: 2026-11-02 / ADR 総数: 215 件
+最終更新: 2026-11-02 / ADR 総数: 216 件
 
 ## 維持ルール（整合性を保つ・必須）
 
@@ -234,6 +234,7 @@
 | [ADR-1054](./ADR-1054-screen-data-cache.md) | ADR-1054: 画面が取ったデータの写しを 1 か所（TanStack Query）に置き、前に見た画面をすぐ出してから裏で取り直す | Accepted | — | — |
 | [ADR-1055](./ADR-1055-new-device-login-approval.md) | ADR-1055: 知らない機械からのログインは、いつもの機械で番号を選んで許可するまで入れない（全員） | Proposed | — | — |
 | [ADR-1056](./ADR-1056-secretary-chat.md) | ADR-1056: アプリ内のチャット秘書は、AI に会社のデータも道具も渡さず「頼みの文を決まった形に直す」だけをさせ、作成は利用者が「作る」を押したときに今の口で行う | Accepted | — | — |
+| [ADR-1057](./ADR-1057-google-calendar-owner-only-sync.md) | ADR-1057: Google カレンダーの接続は会社で1つとし、送るのはつないだ本人の予定だけ・Google の予定を直接扱う口は本人だけ・Google→アプリの取り込みは止める | Accepted | — | — |
 
 ## ステータス凡例
 
