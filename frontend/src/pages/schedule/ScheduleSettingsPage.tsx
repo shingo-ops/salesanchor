@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { PageLayout } from "../../components/PageLayout";
 import { Button } from "../../components/Button";
@@ -8,12 +8,16 @@ import { STATUS_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 import { usePermissions } from "../../hooks/usePermissions";
 import { api } from "../../lib/api";
+import { useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
+import { useSeededForm } from "../../lib/query/useSeededForm";
 import {
   normalizeOwner,
   type ApiCalendarOwnersResponse,
   type CalendarOwner,
 } from "./schedule-owner";
 import { LoadingBlock } from "../../components/loading";
+
+const EMPTY_OWNERS: CalendarOwner[] = [];
 
 function OwnerBadge({ owner }: { owner: CalendarOwner }) {
   return (
@@ -35,11 +39,21 @@ function OwnerBadge({ owner }: { owner: CalendarOwner }) {
 export default function ScheduleSettingsPage() {
   const { t } = useTranslation();
   const { hasPermission, loading: permsLoading } = usePermissions();
-  const [owners, setOwners] = useState<CalendarOwner[]>([]);
-  const [loading, setLoading] = useState(true);
+  const ownersQ = useApiQuery<ApiCalendarOwnersResponse>("/calendar/owners", {
+    enabled: !permsLoading && hasPermission("staff.view"),
+  });
+  const { form: owners, setForm: setOwners, ready } = useSeededForm(
+    "calendar/owners",
+    ownersQ.data,
+    (d) => d.owners.map(normalizeOwner),
+    EMPTY_OWNERS,
+  );
+  const loading = !ready && !ownersQ.isError;
+  const invalidate = useInvalidateApi();
   const [savingStaffId, setSavingStaffId] = useState<number | null>(null);
   const [savedStaffId, setSavedStaffId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const shownError = error ?? (ownersQ.error ? (ownersQ.error instanceof Error ? ownersQ.error.message : t("common.fetchError")) : null);
 
   const selfOwner = useMemo(() => owners.find((owner) => owner.isSelf) ?? null, [owners]);
   const otherOwners = useMemo(() => owners.filter((owner) => !owner.isSelf), [owners]);
@@ -47,38 +61,6 @@ export default function ScheduleSettingsPage() {
   const jumpToSection = (id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
-
-  useEffect(() => {
-    if (permsLoading) return;
-    if (!hasPermission("staff.view")) {
-      setLoading(false);
-      return;
-    }
-
-    let cancelled = false;
-    const load = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const data = await api.get<ApiCalendarOwnersResponse>("/calendar/owners");
-        if (cancelled) return;
-        setOwners(data.owners.map(normalizeOwner));
-      } catch (e) {
-        if (!cancelled) {
-          setError(e instanceof Error ? e.message : t("common.fetchError"));
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    };
-
-    void load();
-    return () => {
-      cancelled = true;
-    };
-  }, [hasPermission, permsLoading, t]);
 
   const updateOwner = (staffId: number, patch: Partial<CalendarOwner>) => {
     setOwners((current) => current.map((owner) => (
@@ -99,6 +81,7 @@ export default function ScheduleSettingsPage() {
         share_mode: owner.shareMode,
       });
       setSavedStaffId(owner.staffId);
+      void invalidate(["calendar", "owners"]);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("common.saveError"));
     } finally {
@@ -123,7 +106,7 @@ export default function ScheduleSettingsPage() {
   return (
     <PageLayout navKey="nav.scheduleSettings" subtitleKey="schedule.settingsSubtitle" noScroll>
       <div className="schedule-settings">
-        {error && <div className="error-message">{error}</div>}
+        {shownError && <div className="error-message">{shownError}</div>}
         {loading ? (
           <LoadingBlock />
         ) : (

@@ -175,6 +175,13 @@ export function followUpsPath(scope?: "mine"): string {
   return `/analytics/follow-ups?${params}`;
 }
 
+/** チャネル別のリード流入の path（画面の写しの名前もここで決まる・ADR-1054） */
+export function channelsPath(month: string, scope?: "mine"): string {
+  const params = new URLSearchParams({ month });
+  if (scope) params.set("scope", scope);
+  return `/analytics/channels?${params}`;
+}
+
 export const WEEKLY_ADVISOR_DEFENSIVE_PATH = `/analytics/weekly-advisor-defensive?${new URLSearchParams({ scope: "mine", period: "3m" })}`;
 
 export const PRIORITY_PROSPECTS_PATH = `/analytics/priority-prospects?${new URLSearchParams({ scope: "mine" })}`;
@@ -198,9 +205,7 @@ export function getFollowUps(scope?: "mine"): Promise<FollowUpsResponse> {
 
 export function getChannels(month: string, scope?: "mine"): Promise<ChannelsResponse> {
   if (MOCK_MODE) return Promise.resolve(MOCK_CHANNELS);
-  const params = new URLSearchParams({ month });
-  if (scope) params.set("scope", scope);
-  return api.get<ChannelsResponse>(`/analytics/channels?${params}`);
+  return api.get<ChannelsResponse>(channelsPath(month, scope));
 }
 
 export function getReasons(
