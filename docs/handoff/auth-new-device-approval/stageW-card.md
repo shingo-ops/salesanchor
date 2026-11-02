@@ -5,7 +5,7 @@
 - 根拠の写し: S=origin/main d97928fa7bd91639b3880f882c46babff22ee548（段A 前半・後半が入った後）。事実の生の出力は docs/handoff/auth-new-device-approval/stageW-recon-raw.md・stageW-recon2-raw.md（同じ S で読んだ）。
 - 前提: このカードは設計書だけの PR で本線に入れてから流す。手順1 の後に origin/main に docs/handoff/auth-new-device-approval/stageW-card.md が無ければ、停止して BLOCKED: で返す。
 - 読んだ節: 段A カード（docs/handoff/auth-new-device-approval/stageA-card.md）と同じ。実行役はクラウドの Sonnet。作業場所の作り方はクラウドの決まり（S scripts/agent-hooks/cloud/rules.md:15）を正とする。PR は設計担当（Opus）が手元で作る。出力には上限を付ける。待つために sleep を使わない。
-- 状態: 第4版（Opus 作成）。第3版の審査 REVISE（要修正2・軽微6）も直した。第1版の審査 REVISE（重大1・要修正4・軽微9）と第2版の審査 REVISE（重大1・要修正1・軽微7）を全部直した。
+- 状態: 第4.1版（Opus 作成）。第4版は審査 APPROVE（重大・要修正0・軽微4）。第4.1版はその軽微4件を足しただけ（手順3の pip show に urllib3・Notification の有無の確かめ・名前を挙げた import・ホスト名を英小文字と数字と . - に限る）。第3版の審査 REVISE（要修正2・軽微6）も直した。第1版の審査 REVISE（重大1・要修正4・軽微9）と第2版の審査 REVISE（重大1・要修正1・軽微7）を全部直した。
 - 受領確認: 実装役は着手の最初の報告に「段W カード 第4版 前半（または後半）を受け取った・S=d97928fa7」と書く。
 
 ## 0. 設計からの直し（V）
@@ -15,7 +15,7 @@
 - V-2 依存: backend/requirements.txt は直接使う部品だけを固定する書き方（S :1-54。最後は :54 maxminddb==3.2.0）。pywebpush==2.5.0 を説明の1行と一緒に足すだけにし、pywebpush が引き込む部品（py-vapid・http-ece・aiohttp・requests・cryptography）は固定しない。入れた後に pip check が壊れを出さないことと、入った版を報告に書く（§3(j)）。
 - V-3 本番は AUTH_DEVICE_APPROVAL=off のまま（段B で enforce）。off では知らない機械の依頼が作られないので、段W の本番反映の後も送信は起きない。POST の購読は「いつもの機械のログイン中だけ」なので、本番で購読できるのはいつもの機械が登録された後になる。本番の送信の確かめ（last_success_at）は段B の後の段C に回す。段W の本番の受入は §5 W7〜W10 にする。
 - V-4 試験の表定義: design.md の「試験の表定義4か所」は、段W では次の3か所。backend/tests/conftest.py の2か所（:328-333 の public の名前を外す置き換え・:1363〜 の SQLite 版）と、.github/workflows/migration-test.yml の「変更 SQL の前提の移行を先に実行」の段（S :1289-1297 の段A の段と同じ形で1つ足す・#8b。新しい migration は user_trusted_devices を外部キーで指すので、前提の表が無いと CI で落ちる）。backend/tests/rls_bootstrap.py は段A と同じ理由（design.md A-1）で直さない。
-- V-5 送り先の守り（設計の補い・Opus 判断）: サーバーが利用者の渡した URL へ送るので、endpoint は次だけを受ける。https であること・ホスト名が IP の数字でないこと・ホスト名が次のどれかと同じか、その下の名前であること: fcm.googleapis.com・android.googleapis.com・push.services.mozilla.com・push.apple.com・notify.windows.com。urlsplit・.port・urllib3.util.parse_url が例外を出したときも 422 invalid_push_subscription にする（500 にしない）。長さは endpoint 2048 文字以下・p256dh 200 文字以下・auth 100 文字以下（base64url の文字だけ）。ホスト名の照合は、小文字にした host について host == d or host.endswith("." + d)。さらに次も全部満たすこと（URL の読み方の違いで送り先をすり替えられないため）: endpoint に \・@・空白・制御文字（0x00-0x20 と 0x7f）が無い。urllib.parse.urlsplit(endpoint) の username と password が None。port が None か 443。urllib3.util.parse_url(endpoint).host を小文字にした値が urlsplit の hostname と同じ。外れたら 422 invalid_push_subscription。ホスト名の一覧の出どころは公開の実装例1件（hackutd/harp PR #153）で各社の公式文書では未確認なので、外れた要求は logger.warning にホスト名だけを書く（URL 全体と鍵は書かない）。
+- V-5 送り先の守り（設計の補い・Opus 判断）: サーバーが利用者の渡した URL へ送るので、endpoint は次だけを受ける。https であること・ホスト名が IP の数字でないこと・ホスト名が次のどれかと同じか、その下の名前であること: fcm.googleapis.com・android.googleapis.com・push.services.mozilla.com・push.apple.com・notify.windows.com。urlsplit の hostname が ^[a-z0-9.-]+$ に合わないものも 422。urlsplit・.port・urllib3.util.parse_url が例外を出したときも 422 invalid_push_subscription にする（500 にしない）。長さは endpoint 2048 文字以下・p256dh 200 文字以下・auth 100 文字以下（base64url の文字だけ）。ホスト名の照合は、小文字にした host について host == d or host.endswith("." + d)。さらに次も全部満たすこと（URL の読み方の違いで送り先をすり替えられないため）: endpoint に \・@・空白・制御文字（0x00-0x20 と 0x7f）が無い。urllib.parse.urlsplit(endpoint) の username と password が None。port が None か 443。urllib3.util.parse_url(endpoint).host を小文字にした値が urlsplit の hostname と同じ。外れたら 422 invalid_push_subscription。ホスト名の一覧の出どころは公開の実装例1件（hackutd/harp PR #153）で各社の公式文書では未確認なので、外れた要求は logger.warning にホスト名だけを書く（URL 全体と鍵は書かない）。
 - V-6 1台の機械に購読は1つ: POST で同じ trusted_device_id の他の購読（revoked_at が NULL）の revoked_at に :now を入れてから upsert する。1つの依頼で同じ機械に何度も鳴らさないため。
 - V-6b 他人の購読の付け替えを防ぐ: upsert は ON CONFLICT (endpoint) DO UPDATE ... WHERE user_push_subscriptions.user_id = EXCLUDED.user_id とし、RETURNING id が返らない（他人がすでに持つ endpoint）ときは、先に取り消した同じ機械の購読を戻すため await db.rollback() をしてから 409 push_subscription_conflict にする。
 - V-6c 日時: SQL の中で now() を使わず、段A の devices.py と同じく Python の現在時刻を :now で渡す。
@@ -79,7 +79,7 @@
 - 段A の機械の取り消し（device_revoke）は今のまま。取り消された機械の購読は list_targets の JOIN で送らない（行は残る）。
 
 ### #14 の中身（backend/tests/test_web_push.py）
-段A の試験の部品（backend/tests/test_new_device_approval.py の base_env・enforce・no_redis_and_spies などの fixture と、ログインや機械を作る手助けの関数）を import して使う。import できない形なら、同じ働きの fixture をこのファイルに書く（test_new_device_approval.py の中身は変えない）。test_web_push.py に autouse の fixture を1つ置き、各試験の前と後に DELETE FROM user_push_subscriptions を流す（段A の cleanup（test_new_device_approval.py:151-158）はこの表を消さないため。段A の cleanup を使うときは、それより先にこの表を消す順にする）。VAPID の3つは monkeypatch.setenv で試験用の値を入れる（実際の鍵は使わない。pywebpush.webpush は差し替える）。 VAPID を設定してログインの口を通す試験は、全部 app.routers.auth.send_login_request_push を差し替える（本物は AsyncSessionLocal を開き、試験の client fixture（conftest.py:1863）は get_db しか差し替えないため）。W-t3 は口を通さず、db_session を渡して deliver・record_results を直接呼ぶ。
+段A の試験の部品（backend/tests/test_new_device_approval.py の base_env・enforce・no_redis_and_spies などの fixture と、ログインや機械を作る手助けの関数）を名前を挙げて import して使う（import * は段A の試験まで二重に流れるので使わない）。import できない形なら、同じ働きの fixture をこのファイルに書く（test_new_device_approval.py の中身は変えない）。test_web_push.py に autouse の fixture を1つ置き、各試験の前と後に DELETE FROM user_push_subscriptions を流す（段A の cleanup（test_new_device_approval.py:151-158）はこの表を消さないため。段A の cleanup を使うときは、それより先にこの表を消す順にする）。VAPID の3つは monkeypatch.setenv で試験用の値を入れる（実際の鍵は使わない。pywebpush.webpush は差し替える）。 VAPID を設定してログインの口を通す試験は、全部 app.routers.auth.send_login_request_push を差し替える（本物は AsyncSessionLocal を開き、試験の client fixture（conftest.py:1863）は get_db しか差し替えないため）。W-t3 は口を通さず、db_session を渡して deliver・record_results を直接呼ぶ。
 - W-t1 依頼1件で send_login_request_push が1回呼ばれ、targets が購読の数と同じ（購読2つの機械2台）。app.routers.auth.send_login_request_push を差し替えて確かめる。
 - W-t2 VAPID が未設定なら send_login_request_push は呼ばれず、依頼（202）とメールはいつもどおり。
 - W-t2b VAPID を設定し web_push.list_targets を例外にしても、依頼は 202 で返り、メールは1回呼ばれる。
@@ -101,7 +101,7 @@
 - 出し分け: pushSupport が ios_needs_home_screen なら iosHint、unsupported なら unsupported の文を出し、切り替えは出さない。今の機械が is_current のいつもの機械でなければ notTrusted の文、Notification.permission が denied なら denied の文を出し、切り替えは disabled。
 - 入れる: 切り替えを押した処理の最初の await を Notification.requestPermission() にする（iPhone は本人の操作の直後でないと許可の確認を出さないため。その前に別の await を挟まない）。Notification.requestPermission() が granted のときだけ subscribeThisDevice → POST /auth/push-subscriptions（subscription.toJSON() の endpoint と keys）→ 返った id を持つ。断られたら denied を出す。失敗したら error を出して切り替えを戻す。
 - 切る: DELETE /auth/push-subscriptions/{id} → unsubscribeThisDevice。DELETE が 404 でも unsubscribeThisDevice は行う。
-- 開いたとき: GET /auth/devices でこの機械の is_current が真、かつ Notification.permission が granted、かつ currentSubscription() があるときだけ、POST をもう一度送り（同じ endpoint は upsert）、返った id を持って切り替えを入にする。
+- 開いたとき: pushSupport が supported で、GET /auth/devices でこの機械の is_current が真、かつ typeof Notification !== "undefined" で Notification.permission が granted、かつ currentSubscription() があるときだけ、POST をもう一度送り（同じ endpoint は upsert）、返った id を持って切り替えを入にする。
 - Vitest: public_key が null で何も出ない・ios_needs_home_screen で iosHint と切り替え無し・いつもの機械でないと notTrusted と disabled・denied で denied・supported でいつもの機械なら切り替えが押せる、の5つ。
 
 ### #20 の中身（frontend/public/sw.js）
@@ -165,7 +165,7 @@ fetch の処理は書かない（キャッシュをしない＝今の配信の�
   cd <W>/backend && /tmp/stW-venv/bin/pip install -r requirements.txt > /tmp/stageW-pip.txt 2>&1
   cd <W>/backend && tail -5 /tmp/stageW-pip.txt
   cd <W>/backend && /tmp/stW-venv/bin/pip check
-  cd <W>/backend && /tmp/stW-venv/bin/pip show pywebpush py-vapid http-ece aiohttp requests cryptography | grep -E "^(Name|Version)"
+  cd <W>/backend && /tmp/stW-venv/bin/pip show pywebpush py-vapid http-ece aiohttp requests urllib3 cryptography | grep -E "^(Name|Version)"
 手順4. §1 の #1〜#8 を作る。#6 の sha256 は #4 を直した後に計算する。
   cd <W> && sha256sum migrations/20261024_100300_create_ai_cloud_views.sql
   （sha256sum が無ければ shasum -a 256。）
