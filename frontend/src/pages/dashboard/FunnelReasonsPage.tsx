@@ -4,12 +4,14 @@
  * 成約/失注タブ切替 + 理由ランキング + メモ一覧（実際の言葉が読める）
  */
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { PageLayout } from "../../components/PageLayout";
-import { getReasons, type ReasonsResponse } from "../../api/funnel";
+import { FUNNEL_MOCK, reasonsPath, type ReasonsResponse } from "../../api/funnel";
 import "./FunnelReasonsPage.css";
-import { LoadingBlock } from "../../components/loading";
+import { LoadingBlock, Spinner } from "../../components/loading";
+import { useApiQuery } from "../../lib/query/apiQuery";
+import { MOCK_REASONS_LOST, MOCK_REASONS_WON } from "../../mocks/funnelFixtures";
 
 type ReasonType = "won" | "lost";
 
@@ -17,25 +19,22 @@ export default function FunnelReasonsPage() {
   const { t } = useTranslation();
 
   const [reasonType, setReasonType] = useState<ReasonType>("won");
-  const [data, setData] = useState<ReasonsResponse | null>(null);
-  const [loading, setLoading] = useState(true);
 
   const currentMonth = (() => {
     const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Tokyo" }));
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   })();
 
-  useEffect(() => {
-    setLoading(true);
-    getReasons(reasonType, currentMonth)
-      .then(setData)
-      .finally(() => setLoading(false));
-  }, [reasonType, currentMonth]);
+  const reasonsQ = useApiQuery<ReasonsResponse>(reasonsPath(reasonType, currentMonth), { enabled: !FUNNEL_MOCK });
+  const mockReasons = reasonType === "won" ? MOCK_REASONS_WON : MOCK_REASONS_LOST;
+  const data: ReasonsResponse | null = FUNNEL_MOCK ? mockReasons : reasonsQ.data ?? null;
+  const loading = !FUNNEL_MOCK && reasonsQ.isPending;
 
   return (
     <PageLayout
       navKey="nav.dashboard"
       subtitleKey="funnel.reasonsPageTitle"
+      headerLeft={reasonsQ.isFetching && !reasonsQ.isPending ? <Spinner size="sm" /> : undefined}
     >
       {/* タブ切替 */}
       <div className="frr-tabs">

@@ -7,43 +7,44 @@
  */
 
 import { LoadingBlock } from "../../components/loading";
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { PageLayout } from "../../components/PageLayout";
 import { Button } from "../../components/Button";
 import { api } from "../../lib/api";
+import { useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
+import { useSeededForm } from "../../lib/query/useSeededForm";
 import { SupplierFormFields, type SupplierFormState } from "./SupplierFormFields";
 
 const emptyForm: SupplierFormState = {
   name: "", contact_name: "", email: "", phone: "", address: "", notes: "",
 };
 
+type SupplierDetail = {
+  id: number; name: string; contact_name: string | null; email: string | null;
+  phone: string | null; address: string | null; notes: string | null;
+};
+
+const formFromSupplier = (s: SupplierDetail): SupplierFormState => ({
+  name: s.name,
+  contact_name: s.contact_name ?? "",
+  email: s.email ?? "",
+  phone: s.phone ?? "",
+  address: s.address ?? "",
+  notes: s.notes ?? "",
+});
+
 export default function SupplierEditPage() {
   const { t }        = useTranslation();
   const { id }       = useParams<{ id: string }>();
   const navigate     = useNavigate();
-  const [form, setForm] = useState<SupplierFormState>(emptyForm);
+  const supplierQ = useApiQuery<SupplierDetail>(`/suppliers/${id}`, { enabled: id !== undefined });
+  const { form, setForm, ready } = useSeededForm(`supplier/${id}`, supplierQ.data, formFromSupplier, emptyForm);
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
-
-  /* 既存データ取得 */
-  useEffect(() => {
-    if (!id) return;
-    api.get<{ id: number; name: string; contact_name: string | null; email: string | null; phone: string | null; address: string | null; notes: string | null }>(`/suppliers/${id}`)
-      .then(s => {
-        setForm({
-          name: s.name,
-          contact_name: s.contact_name ?? "",
-          email: s.email ?? "",
-          phone: s.phone ?? "",
-          address: s.address ?? "",
-          notes: s.notes ?? "",
-        });
-      })
-      .catch(e => setError(e instanceof Error ? e.message : t("common.fetchError")))
-      .finally(() => setLoading(false));
-  }, [id, t]);
+  const loading = supplierQ.error === null && !ready;
+  const shownError = error || (supplierQ.error ? (supplierQ.error instanceof Error ? supplierQ.error.message : t("common.fetchError")) : "");
+  const invalidate = useInvalidateApi();
 
   const handleChange = (field: keyof SupplierFormState, value: string) => {
     setForm(prev => ({ ...prev, [field]: value }));
@@ -63,6 +64,7 @@ export default function SupplierEditPage() {
     };
     try {
       await api.patch(`/suppliers/${id}`, payload);
+      void invalidate(["suppliers", id ?? ""]);
       navigate("/suppliers");
     } catch (e) {
       setError(e instanceof Error ? e.message : t("common.saveError"));
@@ -71,7 +73,7 @@ export default function SupplierEditPage() {
 
   return (
     <PageLayout navKey="nav.suppliers" subtitleKey="suppliers.subtitle">
-      {error && <div className="error-message">{error}</div>}
+      {shownError && <div className="error-message">{shownError}</div>}
       {loading ? (
         <LoadingBlock />
       ) : (

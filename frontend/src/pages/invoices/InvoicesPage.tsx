@@ -6,17 +6,17 @@
  *   2026-06-09: 独自テーブルを標準 DataTable へ置換（ADR-122 Phase E パイロット）
  */
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { api } from "../../lib/api";
+import { useApiQuery } from "../../lib/query/apiQuery";
 import { DataTable, DataTableColumn } from "../../components/DataTable";
 import { PageLayout } from "../../components/PageLayout";
 import { ContentToolbar } from "../../components/ContentToolbar";
 import { SelectControl } from "../../components/Select";
 import { getStatusPresentation } from "../../utils/statusPresentation";
 import { Button } from "../../components/Button";
-import { LoadingBlock } from "../../components/loading";
+import { LoadingBlock, Spinner } from "../../components/loading";
 
 interface Invoice {
   id: number;
@@ -44,25 +44,10 @@ const fmt = (n: number | null, ccy: string) => {
 export default function InvoicesPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [statusFilter, setStatusFilter] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
-
-  const load = async () => {
-    try {
-      const params = statusFilter ? `?status=${statusFilter}` : "";
-      const data = await api.get<Invoice[]>(`/invoices${params}`);
-      setInvoices(data);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("common.fetchError"));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { load(); }, [statusFilter]);
+  const invoicesQ = useApiQuery<Invoice[]>(`/invoices${statusFilter ? `?status=${statusFilter}` : ""}`, { keepPrevious: true });
+  const invoices = invoicesQ.data ?? [];
+  const shownError = invoicesQ.error ? (invoicesQ.error instanceof Error ? invoicesQ.error.message : t("common.fetchError")) : "";
 
   const columns: DataTableColumn<Invoice>[] = [
     {
@@ -123,6 +108,7 @@ export default function InvoicesPage() {
     <PageLayout
       navKey="nav.quotesInvoices"
       subtitleKey="invoices.subtitle"
+      headerLeft={invoicesQ.isFetching && !invoicesQ.isPending ? <Spinner size="sm" /> : undefined}
     >
       <nav className="tab-nav">
         <button onClick={() => navigate("/quotes")}>{t("nav.quoteHistory")}</button>
@@ -145,9 +131,9 @@ export default function InvoicesPage() {
         }
       />
 
-      {error && <div className="error-message">{error}</div>}
+      {shownError && <div className="error-message">{shownError}</div>}
 
-      {loading ? (
+      {invoicesQ.isPending ? (
         <LoadingBlock />
       ) : (
         <DataTable<Invoice>

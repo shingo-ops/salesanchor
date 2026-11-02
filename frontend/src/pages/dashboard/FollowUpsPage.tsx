@@ -4,7 +4,7 @@
  * モックデータ駆動。区分チップ3つ + DataTable + useRecordDrawer
  */
 
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { PageLayout } from "../../components/PageLayout";
@@ -12,9 +12,11 @@ import { ContentToolbar } from "../../components/ContentToolbar";
 import { DataTable, type DataTableColumn } from "../../components/DataTable";
 import { Drawer } from "../../components/Drawer";
 import { useRecordDrawer } from "../../hooks/useRecordDrawer";
-import { getFollowUps, type FollowUpItem } from "../../api/funnel";
+import { FUNNEL_MOCK, followUpsPath, type FollowUpItem, type FollowUpsResponse } from "../../api/funnel";
 import "./FollowUpsPage.css";
-import { LoadingBlock } from "../../components/loading";
+import { LoadingBlock, Spinner } from "../../components/loading";
+import { useApiQuery } from "../../lib/query/apiQuery";
+import { MOCK_FOLLOW_UPS } from "../../mocks/funnelFixtures";
 
 type SegmentFilter = "all" | "order_stopped" | "no_repeat_after_first" | "won_no_order";
 
@@ -60,8 +62,12 @@ export default function FollowUpsPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
-  const [items, setItems] = useState<FollowUpRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  const followUpsQ = useApiQuery<FollowUpsResponse>(followUpsPath(), { enabled: !FUNNEL_MOCK });
+  const items = useMemo<FollowUpRow[]>(
+    () => ((FUNNEL_MOCK ? MOCK_FOLLOW_UPS : followUpsQ.data)?.items ?? []).map((i) => ({ ...i, id: i.customer_id })),
+    [followUpsQ.data],
+  );
+  const loading = !FUNNEL_MOCK && followUpsQ.isPending;
   const [filter, setFilter] = useState<SegmentFilter>("all");
   const [page, setPage] = useState(1);
 
@@ -69,15 +75,6 @@ export default function FollowUpsPage() {
 
   const { drawerOpen, editForm, handleRowClick, closeDrawer } =
     useRecordDrawer<FollowUpRow, FollowUpViewForm>({ toForm, emptyForm });
-
-  useEffect(() => {
-    setLoading(true);
-    getFollowUps()
-      .then((res) => {
-        setItems(res.items.map((i) => ({ ...i, id: i.customer_id })));
-      })
-      .finally(() => setLoading(false));
-  }, []);
 
   const filtered = items.filter(
     (i) => filter === "all" || i.segment === filter,
@@ -140,6 +137,7 @@ export default function FollowUpsPage() {
     <PageLayout
       navKey="nav.dashboard"
       subtitleKey="funnel.followUpTitle"
+      headerLeft={followUpsQ.isFetching && !followUpsQ.isPending ? <Spinner size="sm" /> : undefined}
     >
       <ContentToolbar
         left={

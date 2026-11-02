@@ -218,6 +218,11 @@ PO の言葉: 「LINEみたいな使い心地は出来る？」（意味は「�
 - K5 は本番で 2 人のログインでは確かめていない（本番でパスワードを打たない決まり）。カードの試験と、写しの名前に利用者が入る作りで確かめた。
 - 残り: K1 が 0.1 秒を超える画面（403 なし）は 8 画面。/suppliers/:id/edit 0.17 秒・/own-inventory・/dashboard/follow-ups・/invoices/new・/invoices・/teams/:id/edit・/dashboard/revenue・/dashboard/reasons が 0.16 秒。/inventory は 10 秒で見分けられなかった。
 
+#### 3-4-15. 段 3 の 3 回目: 残りの 8 画面（2026-11-02 設計担当 Claude Opus）
+- 2026-11-02 PO 選択「1」（残りの 8 画面も同じ形で、本番の測定まで直す）。対象は §3-4-14-a の測定（run 41409815435）で K1 が 0.1 秒を超えた残りの 8 画面。
+- 作業指示書: docs/handoff/line-like-speed/batch3c-card.md（第 1 版）。受入はカードの §5 B1〜B7。結果はこの節の後に書き足す。
+- 審査: クラウドの審査役（Opus・routine batch3c card review v1・2026-11-02 10:24Z）が e09e6a620 で APPROVE。S の写しで §4 の変更前の行がすべて一致（ALL OLD LINES MATCH）。当てた後の tsc・eslint は出力 0・exit 0。vitest は全部で 188 files / 2081 tests passed。新しい試験の 8 件は、画面を S に戻すと 8 件とも落ちた（空振りでない）。
+
 ### 3-5. 測り方（|基準|検証方法|）
 | 基準 | 検証方法 |
 |---|---|
