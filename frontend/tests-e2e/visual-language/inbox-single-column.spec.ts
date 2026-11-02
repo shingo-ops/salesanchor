@@ -16,6 +16,8 @@
  *   cd frontend && npm run test:e2e:vl
  */
 
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { expect, test } from "@playwright/test";
 import type { Locator, Page, TestInfo } from "@playwright/test";
 import { installAuthBypass } from "../utils/auth";
@@ -1863,5 +1865,50 @@ test.describe("visual-language: 受信箱 第9便（カルテのヘッダー統�
     // 顔写真・顧客名は .right-panel-header 側にそのまま残っている（第9便で消していない）
     await expect(page.locator(".right-panel-header .right-panel-avatar")).toBeVisible();
     await expect(page.locator(".right-panel-header .right-panel-display-name")).toBeVisible();
+  });
+});
+
+test.describe("visual-language: 受信箱 入力欄（card-a2 §14）", () => {
+  test("スマホ: 入力欄に案内文が出ず、Enter で改行され送信されない", async ({ page }, testInfo) => {
+    test.skip(projectWidth(testInfo) > MOBILE_MAX_PX, "スマホ用レイアウトの幅のみ対象");
+
+    let sendCount = 0;
+    await installAuthBypass(page);
+    await mockApi(page, {
+      ...baseMocks(),
+      "POST /leads/5001/messages": async (route) => {
+        sendCount += 1;
+        await route.fulfill({ body: JSON.stringify({ id: 1, text: "a\nb" }) });
+      },
+    });
+    await page.goto("/lead-chat");
+    await expect(page.getByRole("heading", { name: "受信箱" })).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator("button.conversation-item").first()).toBeVisible({ timeout: 10_000 });
+    await openConversation(page);
+
+    const textarea = page.locator(".inbox-textarea");
+    // 案内文（placeholder）が無い、または空
+    const placeholder = await textarea.getAttribute("placeholder");
+    expect(placeholder ?? "", "スマホでは案内文を出さない").toBe("");
+
+    // Enter は改行。送信は呼ばれない
+    await textarea.fill("a");
+    await textarea.press("Enter");
+    await textarea.pressSequentially("b");
+    await expect(textarea).toHaveValue("a\nb");
+    await page.waitForTimeout(300);
+    expect(sendCount, "Enter で送信 API が呼ばれた").toBe(0);
+  });
+
+  test("PC・タブレット: 案内文は今のまま出る", async ({ page }, testInfo) => {
+    test.skip(projectWidth(testInfo) <= MOBILE_MAX_PX, "スマホ用レイアウトの幅は対象外");
+
+    const ja = JSON.parse(readFileSync(resolve(process.cwd(), "src/locales/ja.json"), "utf-8")) as {
+      inbox: { messagePlaceholder: string };
+    };
+
+    await openInboxList(page);
+    await openConversation(page);
+    await expect(page.locator(".inbox-textarea")).toHaveAttribute("placeholder", ja.inbox.messagePlaceholder);
   });
 });

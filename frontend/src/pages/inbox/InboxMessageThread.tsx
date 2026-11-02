@@ -247,13 +247,15 @@ export function InboxMessageThread({
   }, [canSend, sendDisabled, shouldFireGuard, submitSend]);
 
   const handleKeyDownGuarded = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // スマホでは Enter は改行。送信は送信ボタンだけ（LINE・WhatsApp と同じ使い分け。PO 2026-11-02）
+    if (isMobile) return;
     if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault();
       checkAndSend();
       return;
     }
     handleKeyDown(e);
-  }, [checkAndSend, handleKeyDown]);
+  }, [isMobile, checkAndSend, handleKeyDown]);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -796,7 +798,7 @@ export function InboxMessageThread({
                     discordChannelMissing
                       ? t("inbox.discordChannelMissing")
                       : canSend
-                        ? t("inbox.messagePlaceholder")
+                        ? (isMobile ? undefined : t("inbox.messagePlaceholder"))
                         : t("inbox.sendDisabled7d")
                   }
                   rows={2}
