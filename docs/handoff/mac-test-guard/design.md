@@ -2,7 +2,7 @@
 
 この文書は何か(専門用語なしの1行): Claude が Mac で重い試験を回そうとしたら、命令が動く前に止めて GitHub とクラウドへ案内する見張りの設計。
 
-下調べ: [recon.md](recon.md)。手本: [../mac-vm-hook/design.md](../mac-vm-hook/design.md)（同じ形の見張り）。
+下調べ: [recon.md](recon.md)。関係する ADR: ADR-1052（Mac が重くなるので Mac で動かさない判断の前例。:34・:54）、ADR-029・ADR-111（この Mac は GitHub の作業を受ける機械。recon R2(e)）。試験の実行場所そのものを決めた ADR は無い（recon §1）。手本: [../mac-vm-hook/design.md](../mac-vm-hook/design.md)（同じ形の見張り）。
 状態: 設計案作成済み・Opus 自己審査済み（§10）。KGI T1〜T6 は PO 承認済み（2026-11-02 チャット、6つの基準の説明に「1」）。実装は PO の「PRマージ、デプロイまで完走させてくれ」（2026-11-02）を受けクラウドの担当（Sonnet）に委任。カード: [card.md](card.md)。
 
 ## 0. PO の願い（2026-11-02 チャット）
