@@ -6,11 +6,12 @@
 2026-10-15 11:48 の実測で、Mac の自動お手入れ2つ（Docker 使い終わり自動停止・毎日の自動片付け）は動いていたが、止まったり失敗したりしても人に知らせる仕組みが無かった（/tmp/CC報告ファイル/ac-heavy/governance/SUMMARY.md、G6.txt）。また、同じ Mac の別の見張り役（受付の番人 jp.salesanchor.ops-intake-watchdog）は、置き場に設定があるのに launchd に読み込まれておらず、止まっていることに誰も気づいていなかった（/tmp/CC報告ファイル/ac-heavy/notify-recon/R2.txt）。
 
 ## 境界
-- 対象: PO の Mac の launchd 常駐 `jp.salesanchor.colima-idle-stop`（[colima-idle-stop](../colima-idle-stop/README.md)）と `jp.salesanchor.disk-janitor`（毎日の自動片付け）の死活と失敗の通知。Mac 起動後の点検結果の通知。
+- 対象: PO の Mac の launchd 常駐 `jp.salesanchor.colima-idle-stop`（[colima-idle-stop](../colima-idle-stop/README.md)）と `jp.salesanchor.disk-janitor`（毎日の自動片付け）の死活と失敗の通知。Mac 起動後の点検結果の通知。実機スマホ（SC-51G）が Mac から 1 時間以上見えないときの通知（[design-phone.md](../../handoff/mac-jobs-watch/design-phone.md)）。
 - 対象外: 受付の番人 ops-intake-watchdog の再開（ADR-1009 の領域。事実だけ PO に報告）／ 本番サーバーの監視（ADR-080）／ 見張り役自身が止まったことの検知（Mac の外に見張りを置く必要があり、本テーマでは扱わない。残る弱点として [design.md](../../handoff/mac-jobs-watch/design.md) §7 に記録）
 
 ## ステータス
 - 設置済み・K1〜K5 合格（2026-10-15、PR #4315）。K6（再起動後の自動再開）は PO の次の再起動後に観測
+- 実機スマホの点検（phone-missing）: 設計審査済み・PO 承認 2026-11-02「1」・実装待ち（P1〜P5 は [kgi.md](./kgi.md)）
 
 ## 子文書
 - [あるべき姿](./ideal-state.md)

@@ -47,6 +47,8 @@ mjw_config() {
   : "${MJW_DISK_KICK_WAIT:=1500}"
   : "${MJW_DISK_KICK_COOLDOWN:=86400}"
   : "${MJW_DF:=df}"
+  : "${MJW_PHONE_CMD=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/dev/phone-serial.sh}"
+  : "${MJW_PHONE_GRACE:=3600}"
 }
 
 DRY_RUN=0
@@ -67,11 +69,14 @@ ST_SEEN=0
 ST_DRUN=0
 ST_ERR=0
 ST_DKICK=0
+ST_PHONE=0
 DISK_KICK=0
+PHONE_JUDGED=0
 C_SEEN=0   # 確定した既読位置
 C_DRUN=0
 C_ERR=0
 C_DKICK=0
+C_PHONE=0
 N_SEEN=0   # 今回の判定で得た候補
 N_DRUN=0
 N_ERR=0
@@ -182,6 +187,7 @@ mjw_judged() {
     # dj-stale は、起きていた回・起動が直近 04:00 より前・04:00+猶予以降、の 3 つが揃う回だけ判定する
     dj-stale) [ "${AWAKE}" -eq 1 ] && [ "${BOOT_SEC}" -lt "${LAST04}" ] && [ "${NOW}" -ge $(( LAST04 + MJW_DJ_GRACE )) ] ;;
     disk-low) [ -n "${DISK_GIB}" ] ;;
+    phone-missing) [ "${PHONE_JUDGED}" -eq 1 ] ;;
     *) return 0 ;;
   esac
 }
@@ -198,6 +204,7 @@ mjw_text() { # 名前 → 固定文
     colima-judge-fail) printf 'Docker の自動停止が、2 回続けて判定に失敗しました' ;;
     disk-low) printf '空き容量が少ないままです（いま %s GiB。自動片付けを走らせた後も %s GiB 未満）' "${DISK_GIB:-?}" "${MJW_DISK_LOW_GIB}" ;;
     dj-err) printf '毎日の自動片付けが、道具の更新に失敗して実行しませんでした' ;;
+    phone-missing) printf 'スマホ（実機）が 1 時間以上 Mac から見えません。スマホが家の Wi-Fi に入っているか、設定 → 開発者向けオプション → ワイヤレスデバッグ が入っているかを見てください' ;;
     *) printf '%s' "$1" ;;
   esac
 }
@@ -236,6 +243,7 @@ mjw_read_state() {
     ST_DRUN="$(mjw_num "$(mjw_st_get colima_d_run)")"
     ST_ERR="$(mjw_num "$(mjw_st_get dj_err_seen)")"
     ST_DKICK="$(mjw_num "$(mjw_st_get disk_kick)")"
+    ST_PHONE="$(mjw_num "$(mjw_st_get phone_gone)")"
     PROB="$(grep -v '^$' "${PROB_F}" 2>/dev/null || true)"
   else
     FIRST=1
@@ -245,6 +253,7 @@ mjw_read_state() {
     ST_DRUN=0
     ST_ERR=0
     ST_DKICK=0
+    ST_PHONE=0
     PROB=""
   fi
 }
@@ -258,6 +267,7 @@ mjw_write_state() {
     printf 'colima_d_run=%s\n' "${C_DRUN}"
     printf 'dj_err_seen=%s\n' "${C_ERR}"
     printf 'disk_kick=%s\n' "${C_DKICK}"
+    printf 'phone_gone=%s\n' "${C_PHONE}"
   } > "${STATE_F}.tmp" 2>/dev/null && mv -f -- "${STATE_F}.tmp" "${STATE_F}"
   printf '%s\n' "${PROB}" | grep -v '^$' > "${PROB_F}.tmp" 2>/dev/null
   mv -f -- "${PROB_F}.tmp" "${PROB_F}" 2>/dev/null || true
@@ -367,6 +377,24 @@ mjw_detect_states() {
       fi
     fi
   fi
+  mjw_phone_check
+}
+
+# phone-missing（実機スマホが MJW_PHONE_GRACE 秒以上見えない。design-phone §3-2）
+mjw_phone_check() {
+  PHONE_JUDGED=0
+  C_PHONE="${ST_PHONE}"
+  [ -n "${MJW_PHONE_CMD}" ] || return 0
+  [ "${AWAKE}" -eq 1 ] || return 0          # 眠っていた回は判定しない（前回を持ち越す）
+  local rc=0
+  bash "${MJW_PHONE_CMD}" >/dev/null 2>&1 || rc=$?
+  case "${rc}" in
+    0) PHONE_JUDGED=1; C_PHONE=0 ;;
+    1) PHONE_JUDGED=1
+       if [ "${ST_PHONE}" -eq 0 ]; then C_PHONE="${NOW}"; fi
+       if [ $(( NOW - C_PHONE )) -ge "${MJW_PHONE_GRACE}" ]; then list_add DETECTED phone-missing; fi ;;
+    *) return 0 ;;                          # adb が無い等。判定しない
+  esac
 }
 
 mjw_detect_events() {
