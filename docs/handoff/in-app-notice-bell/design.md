@@ -114,6 +114,15 @@ CREATE INDEX IF NOT EXISTS idx_user_notices_user_unread ON {各テナント}.use
 - AI 用の閲覧ビュー（`migrations/20261024_100300_create_ai_cloud_views.sql`）には足さない（人の名前を含むため）。分類表に「足さない」を書く形があれば従う
 - 保存期間: 今回は消さない（一覧は 50 件まで）。件数の見回りは §9
 
+### 5-改訂3（2026-11-03、PR の CI で分類の漏れが出たため。Opus の設計判断）
+
+- 観測: CI の `backend/tests/ops/test_ai_cloud_views.py` の T10 が、`tenant_001.user_notices` の文字の列 4 つ（`kind`・`actor_name`・`channel_name`・`link_url`）を「分類なし」として落とした。分類表の決まりでは、各社スキーマの表の文字の列はすべて分類の行が要る（「足さない」の形は無い）
+- 決め: 4 列とも `mask`（伏せる）で分類の行を足す。行は `('tenant_*','user_notices',ARRAY['actor_name','channel_name','kind','link_url'],'mask','値の決まりが無く自由に入る列のため伏せる（初期は最小）')`
+  - `actor_name`・`channel_name`: 人の名前・会話の場所の名前を含むため伏せる（上の「人の名前を含むため」の方針どおり）
+  - `link_url`: 書き込みの場所の番号を含むため伏せる
+  - `kind`: 値の決まり（CHECK）が無いため、前例（`llm_usage_events.model` 等）に合わせて伏せる
+- 一緒に直すもの（前例 ADR-1058 段1a と同じ形）: `migrations/20261024_100300_create_ai_cloud_views.sql` 冒頭の行数、`backend/tests/ops/test_ai_cloud_views.py` の行数の確かめ、`scripts/migration-guard/reference-allowlist.tsv` の sha256 と理由の欄。`notice_fallback_recipients` は文字の列が無いため行は要らない。どちらも各社スキーマの表のため、`.github/workflows/migration-guard.yml` の PUBLIC_TABLES は触らない
+
 ## 6. 動きの順番（`backend/app/discord_gateway/outside_ticket_notice.py`）
 
 今の流れ（R1 1-3、R2 (5)）: 除外判定 `:81-94` → 30 分の重複抑え `:95-102` → 本文を組む `:106-108` → `send_discord_notification` `:110`（中で commit と `reset_tenant_context`、`backend/app/routers/notifications.py:188-189`）。
