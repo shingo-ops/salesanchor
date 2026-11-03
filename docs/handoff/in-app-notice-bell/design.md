@@ -110,7 +110,7 @@ CREATE INDEX IF NOT EXISTS idx_user_notices_user_unread ON {各テナント}.use
 
 - 本文・Discord の id の列は作らない（K8）。`link_url` は書き込みの場所（サーバー・チャンネル・書き込みの番号）で、書いた人の id は含まない
 - 新しいテナントでも同じ表ができるよう、テナント作成時の表の作り方（`backend/app/services/tenant.py` のテナント表作成）にも足す。実装者は作成経路を確かめ、足す場所が見つからなければ止める
-- `.github/workflows/deploy.yml` に実行行を足す。`migration-test.yml` の最小定義が要るかを確かめる
+- `.github/workflows/deploy.yml` に実行行を足す。`.github/workflows/migration-test.yml` の最小定義が要るかを確かめる
 - AI 用の閲覧ビュー（`migrations/20261024_100300_create_ai_cloud_views.sql`）には足さない（人の名前を含むため）。分類表に「足さない」を書く形があれば従う
 - 保存期間: 今回は消さない（一覧は 50 件まで）。件数の見回りは §9
 
@@ -143,10 +143,10 @@ CREATE INDEX IF NOT EXISTS idx_user_notices_user_unread ON {各テナント}.use
 ### 7-3 鈴の置き場所
 - PC（DesktopShell）: 右上の `.avatar-btn`（`frontend/src/components/DesktopShell.tsx:402-413`、`position: fixed`）の **左隣**。重なり検査（`check:css-fixed-position`）に止められないよう、鈴とアバターを 1 つの固定の入れ物に並べる。アバターの見た目・動きは変えない
 - スマホ（MobileShell）: 画面の右上に同じ鈴を置く。実装者は MobileShell の右上に既に固定の部品があるかを先に確かめ、あれば止めて報告する（NEEDS_DECISION）
-- 全画面に常駐させる差し込み場所は既存の前例に倣う（`DesktopShell.tsx:206-209`、`frontend/src/components/MobileShell.tsx:43-45` の `RealtimeProvider` 直下）
+- 全画面に常駐させる差し込み場所は既存の前例に倣う（`frontend/src/components/DesktopShell.tsx:206-209`、`frontend/src/components/MobileShell.tsx:43-45` の `RealtimeProvider` 直下）
 
 ### 7-4 部品（金型を使う。ADR-144・ADR-067・ADR-027）
-- 新しい部品 `NoticeBell`（鈴のボタン＋数字＋一覧）。中身は既存の金型: `Popover`（`frontend/src/components/Popover.tsx`）、`Badge`（`frontend/src/components/Badge.tsx`、variant danger、sm）、印は `constants/icons.tsx` の `BellOutline`（:157）
+- 新しい部品 `NoticeBell`（鈴のボタン＋数字＋一覧）。中身は既存の金型: `Popover`（`frontend/src/components/Popover.tsx`）、`Badge`（`frontend/src/components/Badge.tsx`、variant danger、sm）、印は `frontend/src/constants/icons.tsx` の `BellOutline`（:157）
 - 一覧の 1 行は新しい部品 `NoticeRow`（押せる行。未読は太字＋左に丸）。色・余白・角・z-index はトークンだけ（直値禁止）。足りないトークンがあれば `:root` と `:root.force-dark` の両方に足す
 - 文字はすべて `t()`。ja.json / en.json に同じキー:
   - `notices.bellLabel`（「お知らせ」、未読数つき aria-label は `notices.bellLabelUnread` 「お知らせ（未読 {{count}} 件）」）
@@ -194,9 +194,9 @@ CREATE INDEX IF NOT EXISTS idx_user_notices_user_unread ON {各テナント}.use
 
 - 判定: **APPROVE**
 - 確かめた点:
-  - 既存の仕組みとの整合: 宛先の列（`assigned_to`）は受信箱と同じ。管理者の定義は `system_roles.py:17-19` の正本どおり。Discord の名前呼びは既存の引数を使い、新しい送り口を作らない。即時反映は ADR-1016 の人宛て合図の型どおり
+  - 既存の仕組みとの整合: 宛先の列（`assigned_to`）は受信箱と同じ。管理者の定義は `backend/app/auth/system_roles.py:17-19` の正本どおり。Discord の名前呼びは既存の引数を使い、新しい送り口を作らない。即時反映は ADR-1016 の人宛て合図の型どおり
   - 根拠: すべての前提に R1・R2 の行番号か Context7 の出典がある
   - 受入条件: K1〜K8 はすべて試験か画面で○×が付く。K4・K7 の本番確認は PO の目視（K7 は本人の通知設定に左右される限界を明記）
   - 実装範囲: 触るものは §3・§5〜§7 に列挙。決めていない枝（テナント作成経路が見つからない、スマホ右上に既存の固定部品）は止める条件として書いた
 - 未解決: 無し（事業判断が要る点は PO の決定で埋まっている。super admin の扱いは既存の約束に従った）
-- 危険な道: `migrations/` と `deploy.yml` を含むため、ADR-135/136 の GO（委任 GO）を経てから合流する
+- 危険な道: `migrations/` と `.github/workflows/deploy.yml` を含むため、ADR-135/136 の GO（委任 GO）を経てから合流する
