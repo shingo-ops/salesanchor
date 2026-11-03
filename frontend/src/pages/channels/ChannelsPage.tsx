@@ -18,11 +18,12 @@
  *   2026-04-30: Phase 1-D Sprint 3 初版
  */
 
-import { LoadingBlock } from "../../components/loading";
+import { LoadingBlock, Spinner } from "../../components/loading";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ApiError, api } from "../../lib/api";
+import { useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
 import ConfirmModal from "../../components/ConfirmModal";
 import { usePermissions } from "../../hooks/usePermissions";
 import { STATUS_ICONS } from "../../constants/icons";
@@ -90,9 +91,9 @@ export default function ChannelsPage() {
   const { t } = useTranslation();
   const { hasPermission } = usePermissions();
   const navigate = useNavigate();
-  const [channels, setChannels] = useState<Channel[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState("");
+  const channelsQ = useApiQuery<ChannelsResponse>("/meta/channels");
+  const channels = channelsQ.data?.channels || [];
+  const loadError = channelsQ.error ? (channelsQ.error instanceof ApiError ? channelsQ.error.message : (channelsQ.error instanceof Error ? channelsQ.error.message : t("channels.loadErrorFallback"))) : "";
   const [connecting, setConnecting] = useState(false);
   const [connectError, setConnectError] = useState("");
   const [disconnectTarget, setDisconnectTarget] = useState<Channel | null>(null);
@@ -168,22 +169,8 @@ export default function ChannelsPage() {
   }, []);
 
   // ----- 一覧取得 -----
-  const loadChannels = async () => {
-    setLoading(true);
-    setLoadError("");
-    try {
-      const data = await api.get<ChannelsResponse>("/meta/channels");
-      setChannels(data.channels || []);
-    } catch (e) {
-      const msg = e instanceof ApiError ? e.message : (e instanceof Error ? e.message : t("channels.loadErrorFallback"));
-      setLoadError(msg);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { loadChannels(); }, []);
+  const invalidate = useInvalidateApi();
+  const loadChannels = () => invalidate(["meta", "channels"]);
 
   // ----- Discord 設定取得 -----
   useEffect(() => {
@@ -335,6 +322,7 @@ export default function ChannelsPage() {
     <PageLayout
       navKey="nav.channels"
       subtitleKey="channels.subtitle"
+      headerLeft={channelsQ.isFetching && !channelsQ.isPending ? <Spinner size="sm" /> : undefined}
     >
       {banner && (
         <div style={bannerStyle} role={banner.type === "error" ? "alert" : "status"}>
@@ -418,7 +406,7 @@ export default function ChannelsPage() {
         {t("channels.facebookSection")}
       </h3>
 
-      {loading ? (
+      {channelsQ.isPending ? (
         <LoadingBlock />
       ) : channels.length === 0 ? (
         // ----- 空 state（onboarding CTA） -----

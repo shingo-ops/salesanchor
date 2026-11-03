@@ -8,13 +8,14 @@
  *   2026-06-11: 編集を Drawer 化（useRecordDrawer, ADR-122 バッチB）
  */
 
-import { LoadingBlock } from "../../components/loading";
-import { useEffect, useState, FormEvent } from "react";
+import { LoadingBlock, Spinner } from "../../components/loading";
+import { useState, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Modal } from "../../components/Modal";
 import { Drawer } from "../../components/Drawer";
 import { api } from "../../lib/api";
+import { useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
 import { hasEnglishNames } from "../../lib/staffProfile";
 import ConfirmModal from "../../components/ConfirmModal";
 import { Select } from "../../components/Select";
@@ -111,8 +112,10 @@ export default function StaffPage() {
   const { hasPermission } = usePermissions();
   const navigate = useNavigate();
   const { selfStaffId } = useUiPrefs();
-  const [staff, setStaff] = useState<Staff[]>([]);
-  const [roles, setRoles] = useState<StaffRole[]>([]);
+  const staffQ = useApiQuery<Staff[]>("/staff");
+  const rolesQ = useApiQuery<StaffRole[]>("/roles");
+  const staff = staffQ.data ?? [];
+  const roles = rolesQ.data ?? [];
   // 新規作成モーダル
   const [showCreate, setShowCreate] = useState(false);
   const [createForm, setCreateForm] = useState<CreateFormState>(emptyCreateForm);
@@ -121,26 +124,17 @@ export default function StaffPage() {
     useRecordDrawer<Staff, StaffFormState>({ toForm, emptyForm: emptyEditForm });
 
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
+  const readError = staffQ.error ?? rolesQ.error;
+  const shownError = error || (readError ? (readError instanceof Error ? readError.message : t("common.fetchError")) : "");
+  const refetching = (staffQ.isFetching && !staffQ.isPending) || (rolesQ.isFetching && !rolesQ.isPending);
+  const invalidate = useInvalidateApi();
   const [submitting, setSubmitting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Staff | null>(null);
 
-  const loadAll = async () => {
-    try {
-      const [s, r] = await Promise.all([
-        api.get<Staff[]>("/staff"),
-        api.get<StaffRole[]>("/roles"),
-      ]);
-      setStaff(s);
-      setRoles(r);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("common.fetchError"));
-    } finally {
-      setLoading(false);
-    }
+  const loadAll = () => {
+    void invalidate(["staff"]);
+    void invalidate(["roles"]);
   };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { loadAll(); }, []);
 
   const toNull = (v: string) => (v ? v : null);
 
@@ -215,8 +209,9 @@ export default function StaffPage() {
     <PageLayout
       navKey="nav.staff"
       subtitleKey="staff.subtitle"
+      headerLeft={refetching ? <Spinner size="sm" /> : undefined}
     >
-      {error && <div className="error-message">{error}</div>}
+      {shownError && <div className="error-message">{shownError}</div>}
       <ContentToolbar
         right={hasPermission("staff.create") ? (
           <Button variant="primary" size="sm" layoutClassName="field-h-md" onClick={() => { setShowCreate(true); setCreateForm(emptyCreateForm); }}>
@@ -324,7 +319,7 @@ export default function StaffPage() {
         </form>
       </Drawer>
 
-      {loading ? (
+      {staffQ.isPending || rolesQ.isPending ? (
         <LoadingBlock />
       ) : (() => {
         const columns: DataTableColumn<Staff>[] = [
