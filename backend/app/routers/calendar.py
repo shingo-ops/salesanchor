@@ -40,8 +40,8 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 _VALID_SYNC_MODES = ("bidirectional", "read_only", "write_only", "none")
-# Google→アプリの取り込みを始める方式は受け付けない。取り込むと、つないだ人の Google の予定が会社の予定として全員に見える（ADR-1057）
-_ACCEPTED_SYNC_MODES = ("write_only", "none")
+# ADR-1059 で ADR-1057 の取り込み停止を置き換え。write_only・none は取り込みの非常停止
+_ACCEPTED_SYNC_MODES = ("bidirectional", "read_only", "write_only", "none")
 _VALID_OWNER_SHARE_MODES = ("self", "view", "edit")
 _DEFAULT_OWNER_COLOR = "#1a73e8"
 
@@ -522,7 +522,12 @@ async def update_sync_mode(
     from app.services import google_webhook as webhook_svc
 
     if body.sync_mode in ("bidirectional", "read_only"):
-        await webhook_svc.register_webhook(db, tenant_id)
+        registered = await webhook_svc.register_webhook(db, tenant_id)
+        if registered:
+            # 最初の全部読みをすぐ始める
+            from app.tasks.google_calendar_sync import sync_google_calendar_tenant
+
+            sync_google_calendar_tenant.delay(tenant_id)
     else:
         await webhook_svc.stop_webhook(db, tenant_id)
 

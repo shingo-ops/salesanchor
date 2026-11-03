@@ -17,8 +17,9 @@ from __future__ import annotations
 """
 
 import logging
-from datetime import datetime
+from datetime import date, datetime, time, timedelta
 from typing import Optional
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -373,66 +374,106 @@ async def delete_event(
 # ---------------------------------------------------------------------------
 
 
+_JST = ZoneInfo("Asia/Tokyo")
+
+
+def _google_times(start: dict, end: dict) -> tuple[datetime, datetime, bool]:
+    """Google の start/end を (開始, 終了, 終日か) の datetime に直す（ADR-1059 便2）。
+
+    終日: Google の終わりの日は「次の日」なので、アプリの形
+    （開始日 00:00〜終了日 23:59・日本時間）に直す。
+    時刻あり: dateTime を datetime にする。時差が無いときは timeZone、無ければ日本時間を付ける。
+    """
+    if "date" in start:
+        start_date = date.fromisoformat(start["date"])
+        start_dt = datetime.combine(start_date, time(0, 0), tzinfo=_JST)
+        end_date = date.fromisoformat(end["date"]) - timedelta(days=1)
+        if end_date < start_date:
+            end_date = start_date
+        end_dt = datetime.combine(end_date, time(23, 59), tzinfo=_JST)
+        return start_dt, end_dt, True
+
+    def _one(part: dict) -> datetime:
+        dt = datetime.fromisoformat(part["dateTime"])
+        if dt.tzinfo is None:
+            tz_name = part.get("timeZone")
+            try:
+                tz = ZoneInfo(tz_name) if tz_name else _JST
+            except Exception:
+                tz = _JST
+            dt = dt.replace(tzinfo=tz)
+        return dt
+
+    return _one(start), _one(end), False
+
+
 async def upsert_from_google(
     db: AsyncSession,
     tenant_id: int,
     google_event: dict,
-) -> None:
-    """Google Calendar Webhook 受信時にイベントを DB に upsert する。
+    owner_user_id: int,
+) -> str:
+    """Google のイベントを DB に upsert する。戻り値は "upserted" | "deleted" | "skipped"。
+
+    commit は呼び元が 1 回だけ行う。
 
     無限ループ防止:
       - sync_origin_id が "app:tenant_id:*" で始まるイベントはアプリ起源なのでスキップ。
       - これにより「アプリ → Google → Webhook → アプリ → ...」の無限ループを防ぐ。
+
+    新規は calendar_type='personal'・持ち主 = owner_user_id。既にある行の
+    calendar_type・user_id は上書きしない（ADR-1059 K4）。
     """
     google_event_id = google_event.get("id")
     if not google_event_id:
-        return
+        return "skipped"
 
     # アプリ起源のイベントか確認（ループ防止）
     if await _is_app_origin(db, google_event_id, tenant_id):
         logger.debug("スキップ（アプリ起源）: google_event_id=%s", google_event_id)
-        return
+        return "skipped"
 
     # 削除済みイベントの処理
     if google_event.get("status") == "cancelled":
         await db.execute(
             text(
                 "DELETE FROM calendar_events WHERE google_event_id = :gid"
+                " AND source = 'google'"
             ),
             {"gid": google_event_id},
         )
-        await db.commit()
-        return
+        return "deleted"
 
     title = google_event.get("summary", "")
     description = google_event.get("description")
     location = google_event.get("location")
-    is_all_day = "date" in (google_event.get("start") or {})
 
     start_raw = (google_event.get("start") or {})
     end_raw = (google_event.get("end") or {})
-    start_dt = start_raw.get("dateTime") or start_raw.get("date")
-    end_dt = end_raw.get("dateTime") or end_raw.get("date")
 
-    if not start_dt or not end_dt:
+    if not (start_raw.get("dateTime") or start_raw.get("date")) or not (
+        end_raw.get("dateTime") or end_raw.get("date")
+    ):
         logger.warning("start/end が不正: google_event_id=%s", google_event_id)
-        return
+        return "skipped"
+
+    start_dt, end_dt, is_all_day = _google_times(start_raw, end_raw)
 
     origin_id = f"google:{tenant_id}:{google_event_id}"
 
     await db.execute(
         text(
             "INSERT INTO calendar_events"
-            " (calendar_type, title, description, location,"
+            " (user_id, created_by_user_id, calendar_type, title, description, location,"
             "  start_datetime, end_datetime, is_all_day,"
             "  google_event_id, google_calendar_id, source, sync_status,"
             "  sync_origin_id, last_synced_at)"
             " VALUES"
-            " ('shared', :title, :desc, :loc,"
+            " (:owner, :owner, 'personal', :title, :desc, :loc,"
             "  :start, :end, :all_day,"
             "  :gid, :gcal_id, 'google', 'synced',"
             "  :origin, NOW())"
-            " ON CONFLICT (google_event_id) DO UPDATE SET"
+            " ON CONFLICT (google_event_id) WHERE google_event_id IS NOT NULL DO UPDATE SET"
             "   title            = EXCLUDED.title,"
             "   description      = EXCLUDED.description,"
             "   location         = EXCLUDED.location,"
@@ -440,10 +481,12 @@ async def upsert_from_google(
             "   end_datetime     = EXCLUDED.end_datetime,"
             "   is_all_day       = EXCLUDED.is_all_day,"
             "   sync_status      = 'synced',"
-            "   last_synced_at   = NOW()"
-            " WHERE calendar_events.google_event_id = :gid"
+            "   last_synced_at   = NOW(),"
+            "   updated_at       = NOW()"
+            " WHERE calendar_events.source = 'google'"
         ),
         {
+            "owner": owner_user_id,
             "title": title,
             "desc": description,
             "loc": location,
@@ -455,7 +498,7 @@ async def upsert_from_google(
             "origin": origin_id,
         },
     )
-    await db.commit()
+    return "upserted"
 
 
 # ---------------------------------------------------------------------------

@@ -109,23 +109,37 @@ async def test_upload_pdf_does_not_block_loop():
     assert ticks >= MIN_TICKS
 
 
-async def test_handle_webhook_notification_does_not_block_loop():
-    from app.services.google_webhook import handle_webhook_notification
+async def test_sync_tenant_from_google_does_not_block_loop():
+    from app.services.google_webhook import sync_tenant_from_google
 
     service = MagicMock()
     service.events.return_value.list.return_value.execute = _slow({"items": []})
 
+    async def _execute(stmt, params=None):
+        sql = str(getattr(stmt, "text", stmt))
+        result = MagicMock()
+        result.rowcount = 0
+        if "pg_try_advisory_lock" in sql:
+            result.scalar.return_value = True
+        elif "FROM tenant_google_calendar_config" in sql:
+            result.first.return_value = (9, "read_only")
+        else:
+            result.first.return_value = None
+        return result
+
+    db = MagicMock()
+    db.execute = _execute
+    db.commit = AsyncMock()
+    db.rollback = AsyncMock()
+
     with patch(
-        "app.services.google_webhook.get_tenant_by_channel",
-        AsyncMock(return_value=(1, "tenant_001")),
-    ), patch(
         "app.services.google_webhook.set_tenant_context", AsyncMock()
+    ), patch(
+        "app.services.google_webhook.reset_tenant_context", AsyncMock()
     ), patch(
         "app.services.google_calendar._get_service", AsyncMock(return_value=service)
     ):
-        ticks = await _count_ticks_during(
-            handle_webhook_notification(MagicMock(), "ch1", "exists")
-        )
+        ticks = await _count_ticks_during(sync_tenant_from_google(db, 1))
 
     assert ticks >= MIN_TICKS
 
