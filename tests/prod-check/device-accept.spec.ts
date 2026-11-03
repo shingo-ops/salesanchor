@@ -11,7 +11,7 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { expect, test, type APIRequestContext, type BrowserContext, type Page } from "@playwright/test";
+import { expect, test, type APIRequestContext, type APIResponse, type BrowserContext, type Page } from "@playwright/test";
 import { authPace, BASE_URL, creds, login } from "./login";
 
 const API = `${BASE_URL}/api/v1`;
@@ -38,12 +38,17 @@ async function call(
   if (route.startsWith("/auth/")) await authPace();
   const headers: Record<string, string> = { Origin: BASE_URL };
   if (opts.token) headers.Authorization = `Bearer ${opts.token}`;
-  const res = await request.fetch(`${API}${route}`, {
-    method,
-    headers,
-    data: opts.data,
-    failOnStatusCode: false,
-  });
+  let res: APIResponse;
+  try {
+    res = await request.fetch(`${API}${route}`, {
+      method,
+      headers,
+      data: opts.data,
+      failOnStatusCode: false,
+    });
+  } catch {
+    throw new Error(FIXED_FAIL);
+  }
   let body: Record<string, unknown> = {};
   try {
     const parsed: unknown = await res.json();

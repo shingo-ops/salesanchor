@@ -7,12 +7,14 @@
  */
 
 import * as fs from "node:fs";
-import { expect, test, type APIRequestContext } from "@playwright/test";
+import { expect, test, type APIRequestContext, type APIResponse } from "@playwright/test";
 import { authPace, BASE_URL, creds } from "./login";
 
 const API = `${BASE_URL}/api/v1`;
 const POLL_EVERY_MS = 30_000;
 const WAIT_MAX_MS = 25 * 60_000;
+
+const FIXED_FAIL = "操作に失敗しました（値は出しません）";
 
 type Res = { status: number; body: Record<string, unknown> };
 
@@ -25,7 +27,12 @@ async function call(
   if (route.startsWith("/auth/")) await authPace();
   const headers: Record<string, string> = { Origin: BASE_URL };
   if (opts.token) headers.Authorization = `Bearer ${opts.token}`;
-  const res = await request.fetch(`${API}${route}`, { method, headers, data: opts.data, failOnStatusCode: false });
+  let res: APIResponse;
+  try {
+    res = await request.fetch(`${API}${route}`, { method, headers, data: opts.data, failOnStatusCode: false });
+  } catch {
+    throw new Error(FIXED_FAIL);
+  }
   let body: Record<string, unknown> = {};
   try {
     const parsed: unknown = await res.json();
