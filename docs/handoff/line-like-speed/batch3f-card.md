@@ -4,8 +4,8 @@
 - 根拠の写し: S=origin/main 43070f593baf30a9c85b7f441057f22ebf9c6554。行番号はすべてこの sha。2026-11-03 に設計担当が S の写しで行を読んだ。S と、行を読み始めた時の origin/main a0d58d3a7 の差は docs と台帳の 2 ファイルだけで、frontend/src の差は 0（設計担当が `git diff --name-only` で確かめた）。実装の前に最新の origin/main で行を合わせ直す（§3(a)）。
 - 読んだ節: docs/handoff/design-partner-card-ops/guards/00-common.md・guards/03-file.md・guards/04-worktree.md・guards/05-pr.md・guards/10-executor.md・scripts/agent-hooks/cloud/rules.md（段 3 の 1〜5 回目のカードと同じ節。照合も同じ: 全命令は cd <W> で始める・出力は tail/head で上限・新しいファイルは丸ごとの全文・作業場所は new-worktree.sh で作り出力をパイプに通さない・PR は実行役が作らない・出力をファイルに残す命令と tail で読む命令は別の行）。
 - 実行役はクラウドの Sonnet。作業場所の作り方はクラウドの決まり（S scripts/agent-hooks/cloud/rules.md:15）を正とする。.pr-number・gh-pr-create-safe.sh は使わない。出力には上限を付ける。待つために sleep を使わない。
-- 状態: 第 1 版（2026-11-03 設計担当 Claude Opus）。
-- 受領確認: 実装役は着手の最初の報告に「段 3 の 6 回目のカード 第 1 版を受け取った・S=43070f593」と書く。
+- 状態: 第 2 版（2026-11-03 設計担当 Claude Opus）。第 1 版（d7c82910）の審査 REVISE の 3 点（§5 B4 の grep の期待に InboxKartePanel.tsx:115 が抜けていた・§4-D7 の 1 行目が S で 2 か所ある断りが無かった・§4-A3・B3・C3・C6・C11 の行数の書き方が塊と合わなかった）を直した。コードの塊・試験・手順は第 1 版と同じ。
+- 受領確認: 実装役は着手の最初の報告に「段 3 の 6 回目のカード 第 2 版を受け取った・S=43070f593」と書く。
 
 ## 0. 設計からの直し・詳しくした点（V3f。設計の合格線は変えない）
 - V3f-1 対象は、5 回目の受入（design §3-4-18-a。prod-ui-check run 41614984342）で K1（戻った時の秒）が合格線 0.1 秒を超えた画面のうち、測る利用者に見る権限がある次の画面（毎朝の記録の 8 行）。
@@ -85,7 +85,7 @@
 import { useApiCache, useApiQuery } from "../../lib/query/apiQuery";
 import { useSeededForm } from "../../lib/query/useSeededForm";
 ```
-- A3 S :61 `};`（emptyForm の終わり）の次に、空行に続けて次の 13 行を足す（:62 の空行と :63 の `export default function` はそのまま）:
+- A3 S :61 `};`（emptyForm の終わり）の次に、次の 12 行を足す（塊の 1 行目は空行）（:62 の空行と :63 の `export default function` はそのまま）:
 ```ts
 
 const PROFILE_PATH = "/admin/tenant-profile";
@@ -129,7 +129,7 @@ const toForm = (data: TenantProfile): FormState => ({
 ## 4-B. #2 frontend/src/pages/admin/TenantPolicyPage.tsx
 - B1 S :15 `import { useEffect, useState } from "react";` → `import { useState } from "react";`
 - B2 S :17 `import { api } from "../../lib/api";` の次に 2 行足す（§4-A2 と同じ 2 行）。
-- B3 S :56 `};`（emptyForm の終わり）の次に、空行に続けて次の 13 行を足す（:57 の空行と :58 の `export default function` はそのまま）:
+- B3 S :56 `};`（emptyForm の終わり）の次に、次の 12 行を足す（塊の 1 行目は空行）（:57 の空行と :58 の `export default function` はそのまま）:
 ```ts
 
 const POLICY_PATH = "/admin/tenant-policy";
@@ -172,7 +172,7 @@ const toForm = (data: TenantPolicy): FormState => ({
 import { useApiCache, useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
 import { useSeededForm } from "../../lib/query/useSeededForm";
 ```
-- C3 S :89 `type TicketMessage = { source: SaveSource; kind: "saved" | "error"; text: string } | null;` の次に、空行に続けて次の 27 行を足す（:90 の空行と :91 の `export default function` はそのまま）:
+- C3 S :89 `type TicketMessage = { source: SaveSource; kind: "saved" | "error"; text: string } | null;` の次に、空行 1 行と、続けて次の 27 行を足す（塊に空行は入っていない。:90 の空行と :91 の `export default function` はそのまま）:
 ```ts
 
 const CONFIG_PATH = "/admin/discord-config";
@@ -219,7 +219,7 @@ const toTicketForm = (data: DiscordTicketConfig): TicketForm => ({
     CONFIG_PATH, configQ.data, toGuildId, "",
   );
 ```
-- C6 S :109-118（ticketCategoryId から largeRoleName までの useState。welcomeTemplate は :112-114 の 3 行）の 10 行を次の 24 行に置き換える（:108 の説明の行と :119 の ticketSavingSource は残す）:
+- C6 S :109-118（ticketCategoryId から largeRoleName までの useState。welcomeTemplate は :112-114 の 3 行）の 10 行を次の 22 行に置き換える（:108 の説明の行と :119 の ticketSavingSource は残す）:
 ```ts
   const emptyTicketForm: TicketForm = {
     ticketCategoryId: "", ticketButtonChannelId: "", staffRoleId: "",
@@ -275,7 +275,7 @@ const toTicketForm = (data: DiscordTicketConfig): TicketForm => ({
       setTicketForm(toTicketForm(updated));
 ```
 - C10 S :338 `  if (permsLoading || loading) {` → `  if (permsLoading || configQ.isPending || ticketQ.isPending) {`
-- C11 S :344 `  }`（読み込み中の return の終わり）の次に、空行に続けて次の 10 行を足す（:345 の空行と :346 の `return (` はそのまま）:
+- C11 S :344 `  }`（読み込み中の return の終わり）の次に、次の 11 行を足す（塊の 1 行目は空行）（:345 の空行と :346 の `return (` はそのまま）:
 ```tsx
 
   // 読めなかった時は、空の値で上書きしないようにフォームを出さず、誤りの文だけを出す
@@ -316,7 +316,7 @@ type DiscordGuildConfig = {
         // 接続の結果は、開いた時の useApiQuery の読みで出る
 ```
 - D6 S :175-182（Discord 設定取得の説明の行・useEffect の 6 行・その後の空行）を消す（:174 の空行と :183 のクリーンアップの説明の行から残す）。
-- D7 S :216-218 の 3 行
+- D7 S :216-218 の 3 行（1 行目と同じ文は S :129 にもあり 2 か所。:129 は §4-D5 で消えるので、D5 を先に当てた後は :216 の 1 か所だけになる。§3(c) の「2 か所以上あるとカードに書いた所」に当たる。D5 より先に当てない）
 ```ts
         api.get<{ guild_id: string | null; connected_at: string | null; connected_by_staff_name: string | null }>("/admin/discord-config")
           .then((d) => {
@@ -592,7 +592,7 @@ describe("one copy of the discord settings (Q3)", () => {
 | B1 | Q1（4 つとも戻った時に前の中身が出る・フォームの画面は LoadingBlock 0 個・裏で取り直す）と Q2（3 画面とも読めなかった時はフォームを出さない）と Q3（Discord の設定の画面で読んだサーバー ID がチャネルの画面にすぐ出る）が合格。段 3 の 1 回目の Q2・Q3（K5）と 2〜5 回目の Q1・Q2 も合格のまま | /tmp/b3f-unit.txt の最後（batch3fPages.test.tsx の 8 件が passed・batch3ePages.test.tsx・batch3dPages.test.tsx・batch3cPages.test.tsx・batch3bPages.test.tsx・batch3aPages.test.tsx・useSeededForm.test.tsx・apiQuery.test.tsx・stage2Pages.test.tsx も passed）と、PR の CI の unit-run が success |
 | B2 | 今ある画面の試験（DiscordConfigPage.test.tsx の 9 件）・全部の試験・型・lint・組み立てが通る | /tmp/b3f-pages.txt・b3f-unit-all.txt・b3f-tsc.txt・b3f-lint.txt・b3f-build.txt の最後と、PR の確認がすべて pass |
 | B3 | 変わったのは §1 の 9 ファイルだけ。画面の書く path と中身・フォームの欄は変わっていない | gh pr diff --name-only と git diff -w（§4-M 手順6） |
-| B4 | QueryClient を作るのは apiQuery.ts の 1 か所だけ・staleTime を設定していない・写しをブラウザの保存に書かない・`/admin/discord-config` を api.get で直に読む所が画面に残っていない | `git grep -n "new QueryClient" -- frontend/src` が 1 行、`git grep -n "staleTime:" -- frontend/src` が 0 行、`git grep -n -i "persist" -- frontend/src/lib/query frontend/package.json` が 0 行、`git grep -n 'api.get<[^>]*>("/admin/discord-config")' -- frontend/src/pages` が cache.fetch の中の 2 行（DiscordConfigPage.tsx は CONFIG_PATH で書くので 0 行、ChannelsPage.tsx の §4-D7 の 1 行）だけ |
+| B4 | QueryClient を作るのは apiQuery.ts の 1 か所だけ・staleTime を設定していない・写しをブラウザの保存に書かない・`/admin/discord-config` を api.get で直に読む所が画面に残っていない | `git grep -n "new QueryClient" -- frontend/src` が 1 行、`git grep -n "staleTime:" -- frontend/src` が 0 行、`git grep -n -i "persist" -- frontend/src/lib/query frontend/package.json` が 0 行、`git grep -n 'api.get<[^>]*>("/admin/discord-config")' -- frontend/src/pages` が 2 行だけ: ChannelsPage.tsx の §4-D7 の cache.fetch の中の 1 行と、§2 で触らない frontend/src/pages/inbox/InboxKartePanel.tsx の S :115 の 1 行（DiscordConfigPage.tsx は CONFIG_PATH で書くので 0 行） |
 | B5 | マージの後、毎朝の画面の記録を手で 1 回動かし、§0 V3f-1 の 8 行で K1（戻った時の秒）≤0.1 秒、K2（初めて開く秒）≤2 秒、403・5xx が 0 件。/management-center/channels は 0.1 秒以下のまま。ほかの行は K2 の最大と 2 秒を超えた画面の数が、基準の回（prod-ui-check run 41614984342）から悪化していない | prod-ui-check の実行の要約（設計担当。`gh workflow run prod-ui-check.yml --ref main` の後に要約の表を読む）。基準の値は下の表と design §3-4-19 |
 | B6 | 取り直した後の中身が DB と一致（tenant 001）: 会社の情報の会社名・会社の方針の価格のしきい値・Discord のサーバー ID が、本番 DB の tenant 001 の値と同じ | 設計担当が本番の読むだけの道（ADR-1024）で tenant 001 の行を読む。画面の値は PO のログイン済みの Chrome（設計担当が操作）で読む。読めない時は「画面の値はまだ確かめていない」と記録し、backend を変えていないこと（B3）と Q1 を根拠にする |
 | B7 | マージの後、deploy が成功し、本番の画面が開く | deploy.yml の実行の結論 success と時刻。本番 https://app.salesanchor.jp/ の 3 画面とチャネルの画面が開き、ブラウザの誤りの記録に TanStack 由来の誤りが無い（設計担当） |
