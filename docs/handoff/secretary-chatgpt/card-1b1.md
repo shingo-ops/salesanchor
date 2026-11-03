@@ -117,7 +117,7 @@ _LEDGER_CLASSIFY_TO_ERROR_CODE = {
 _LEDGER_CAUSE_MAX_DEPTH = 5
 
 
-def gemini_ledger_error_code(exc: BaseException) -> str:
+def gemini_ledger_error_code(exc: Exception) -> str:
     """Gemini の呼び出しの例外を、使用の記録の error_code にする（台帳だけに使う。design.md §4-2-1）。
 
     ① 例外とその __cause__ の鎖（最大5段・輪は止める）に HTTP 401・403、または状態名 API_KEY_INVALID・
@@ -240,7 +240,7 @@ API の呼び出しの except を、次の前後で変える。
 - 3-1 import の `from app.services.llm_budget import record_usage_event_sync` を `from app.services.llm_budget import gemini_ledger_error_code, record_usage_event_sync, record_usage_failure_sync` にする（今の行の形が違えば、名前だけ足す）。
 - 3-2 `def _record_usage(` の関数の後ろ（空行2つ）に足す:
 ```python
-def _record_usage_failure(session: Session, exc: BaseException, extraction_job_id: str, attempt_id: str | None) -> None:
+def _record_usage_failure(session: Session, exc: Exception, extraction_job_id: str, attempt_id: str | None) -> None:
     """API を呼んで例外で終わった1回を、llm_usage_events に failed の1行で書く（ADR-1058 段1b-1）。台帳の失敗で抽出を止めない。"""
     try:
         record_usage_failure_sync(
@@ -354,7 +354,7 @@ def _mark_ledger(exc: Exception, *, outcome: str, error_code: str | None, counts
 
 
 async def _record_call_error(
-    exc: BaseException,
+    exc: Exception,
     *,
     purpose: str,
     model: str,
