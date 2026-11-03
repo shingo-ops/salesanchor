@@ -111,6 +111,7 @@ test.describe.serial("本番の受入: 新しい機械の許可（ADR-1055 段C�
   let matchNumber = "";
   let nToken = "";
   let nDeviceId = -1;
+  let n202At = 0;
   let dDeviceId = -1;
   let dToken = "";
   let recoveryCode = "";
@@ -149,8 +150,19 @@ test.describe.serial("本番の受入: 新しい機械の許可（ADR-1055 段C�
   test("段1 K5: いつもの機械は聞かれない", async () => {
     tPage = await tCtx.newPage();
     let loginStatus = 0;
+    let tokenRead: Promise<void> = Promise.resolve();
     tPage.on("response", (r) => {
-      if (r.url().endsWith("/api/v1/auth/login") && r.request().method() === "POST") loginStatus = r.status();
+      if (r.url().endsWith("/api/v1/auth/login") && r.request().method() === "POST") {
+        loginStatus = r.status();
+        tokenRead = (async () => {
+          try {
+            const j = (await r.json()) as Record<string, unknown>;
+            tToken = typeof j.access_token === "string" ? j.access_token : "";
+          } catch {
+            tToken = "";
+          }
+        })();
+      }
     });
     try {
       await authPace();
@@ -159,10 +171,8 @@ test.describe.serial("本番の受入: 新しい機械の許可（ADR-1055 段C�
       throw new Error(FIXED_FAIL);
     }
     expect(loginStatus).toBe(200);
-    // 画面のメモリのトークンは取れないので、T の API 用に refresh で取り直す
-    const refreshed = await call(tCtx.request, "POST", "/auth/refresh");
-    expect(refreshed.status).toBe(200);
-    tToken = tokenOf(refreshed);
+    // T の API 用のトークンは login の応答から受ける（カード D-C6）
+    await tokenRead;
     expect(tToken.length > 0).toBe(true);
     const list = await call(tCtx.request, "GET", "/auth/devices", { token: tToken });
     expect(list.status).toBe(200);
@@ -179,6 +189,7 @@ test.describe.serial("本番の受入: 新しい機械の許可（ADR-1055 段C�
     page.on("response", async (r) => {
       if (r.url().endsWith("/api/v1/auth/login") && r.request().method() === "POST") {
         status = r.status();
+        if (status === 202) n202At = Date.now();
         try {
           const j = (await r.json()) as Record<string, unknown>;
           match = typeof j.match_number === "string" ? j.match_number : String(j.match_number ?? "");
@@ -214,7 +225,7 @@ test.describe.serial("本番の受入: 新しい機械の許可（ADR-1055 段C�
   test("段3 K2（画面）: 許可の小窓が60秒以内に出る", async () => {
     const page = tPage;
     expect(page).not.toBeNull();
-    const t0 = Date.now();
+    const t0 = n202At > 0 ? n202At : Date.now();
     try {
       await page!.getByText(watcherTitle(), { exact: true }).waitFor({ timeout: 60_000 });
     } catch {
@@ -356,6 +367,10 @@ test.describe.serial("本番の受入: 新しい機械の許可（ADR-1055 段C�
       }
       if (dDeviceId >= 0) {
         await call(tCtx.request, "DELETE", `/auth/devices/${dDeviceId}`, { token: tToken });
+      }
+      // 段7 で取り消せなかった N の機械が残っていれば取り消す（取り消し済みなら -1）
+      if (nDeviceId >= 0) {
+        await call(tCtx.request, "DELETE", `/auth/devices/${nDeviceId}`, { token: tToken });
       }
       // 残った pending（E など）は T から reject で閉じる
       const pending = await call(tCtx.request, "GET", "/login-approvals/pending", { token: tToken });

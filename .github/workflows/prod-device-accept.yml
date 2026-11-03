@@ -28,7 +28,7 @@ jobs:
   accept:
     runs-on: ubuntu-24.04
     # k7 は PO の許可を最大 25 分待つ
-    timeout-minutes: 45
+    timeout-minutes: 55
     steps:
       - name: 配備中の確認
         id: gate
