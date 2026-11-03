@@ -36,3 +36,16 @@
   - スキル名 `agents` は組み込みの `/agents` とぶつかる（公式 code.claude.com/docs/en/skills。Fable が Context7 で確認）。
   - 直すファイルは8以上（点検台本の L2・L3・台帳・試験）。
 - 次の測り直し: 2027-02-01（90日後）。同じ題・同じ台本（library-tasks.md）で8回流し、この表に行を足す。
+
+## 4. 題 B5 の結果（ムラ無くしの分。2026-11-03 PO 実行）
+
+- 題・数えるもの・合格線は library-tasks.md の「題 B5」（測る前に固定）。合格線は 2回のうち2回（PO 2026-11-03「1」）。
+- 流した写し: origin/main ae08b0357（写しの HEAD）。sonnet・plan モード・2回。どの回も終了コード 0、エラー出力 0 バイト、写しの書き換え無し。
+- 生出力: 「~/CC報告ファイル-keep/doc-library-20261102/practice-b5/」（B5-1.jsonl・B5-2.jsonl・result.tsv・exits.txt・copy-head.txt）。
+- 結果: 2回のうち2回、答えに security-review が入った。**合格**。費用は 0.34 ドル（2実行の total_cost_usd の合計）。
+- 道具の使い方（記録だけ）: 2回とも Read を3回。読んだ順は passwords.py → backend/AGENTS.md → docs/ai-agents/executor-checklist.md。答えは executor-checklist.md §2 の security-review の行を根拠に挙げた。
+
+| 日付 | 題 | 分類 | 直し | PR |
+|---|---|---|---|---|
+| 2026-11-03 | B5-1 | 入った（題のファイルを読んだ・手順書を開いた。tool_use 3・0.2118 ドル） | — | この PR |
+| 2026-11-03 | B5-2 | 入った（同上。tool_use 3・0.1312 ドル） | — | この PR |
