@@ -106,6 +106,7 @@ async def list_events(
 
     calendar_type が 'shared' の場合は全ユーザーのイベント。
     calendar_type が 'personal' の場合は user_id のイベントのみ。
+    どの指定でも、他人の 'personal' は返さない（'shared' か user_id 本人の予定だけ）。
     """
     filters = [
         "start_datetime < :end",
@@ -121,6 +122,12 @@ async def list_events(
         params["uid"] = user_id
 
     where = " AND ".join(f"ce.{f}" for f in filters)
+    # 見せ方の絞り: 他人の「自分だけ」予定は常に返さない
+    if user_id is None:
+        where += " AND ce.calendar_type = 'shared'"
+    else:
+        where += " AND (ce.calendar_type = 'shared' OR ce.user_id = :me)"
+        params["me"] = user_id
     result = await db.execute(
         text(
             f"SELECT ce.id, ce.user_id, ce.calendar_type, ce.category, ce.title, ce.description, ce.location,"
@@ -267,6 +274,8 @@ async def update_event(
         "start_datetime": "start_datetime",
         "end_datetime": "end_datetime",
         "is_all_day": "is_all_day",
+        "calendar_type": "calendar_type",
+        "user_id": "user_id",
     }
     for k, col in field_map.items():
         if k in payload:
