@@ -45,6 +45,7 @@ celery_app = Celery(
         "app.tasks.bundle_bulk_monitor",  # ADR-1027 便3: バルク系のまとめ売りの週次件数
         "app.tasks.api_error_retry_weekly",  # ADR-1050: 解析の送り直しの週次件数
         "app.tasks.viewer_share_flag_monitor",  # ADR-1019 段6: 閲覧者の使い回しの疑いを運用 Discord へ
+        "app.tasks.google_calendar_sync",  # ADR-1059 便2: Google の予定の取り込み
     ],
 )
 
@@ -202,6 +203,17 @@ celery_app.conf.beat_schedule = {
     "recover-stale-extraction-jobs": {
         "task": "tcg.recover_stale_extraction_jobs",
         "schedule": 600.0,  # 10分
+    },
+
+    # ADR-1059 便2: Google の予定の取り込み（15 分おき・知らせが落ちても追いつく）
+    "google-calendar-sync-all": {
+        "task": "app.tasks.google_calendar_sync.sync_google_calendar_all",
+        "schedule": 900.0,  # 15分
+    },
+    # ADR-1059 便2: 知らせの登録の更新（毎日 04:30 JST）
+    "google-calendar-renew-webhooks": {
+        "task": "app.tasks.google_calendar_sync.renew_google_calendar_webhooks",
+        "schedule": crontab(hour=4, minute=30),
     },
 
     # ADR-1012 段階1 便5: 1 分ごとの heartbeat（見張り CeleryHeartbeatStale が読む）

@@ -204,3 +204,174 @@ Google へ送る処理、取り込み（`upsert_from_google`・`backend/app/serv
 ### 13-8 完了の報告
 
 PR を `--draft` なしで起票（`gh pr create --base main`。本文はテンプレの `### 標準ワークフロー確認` に recon・design・ADR-1059・触るファイル全部）。backend の該当試験と frontend の該当試験の生出力をファイルに残し、パスと PR 番号を報告する。
+
+## 14. 実装カード 便2 — Google の予定を取り込む本体（migration を含む・危険 PR）
+
+ブランチ: `release/schedule-gcal-import-bin2`（この文書と `docs/handoff/schedule-gcal-import/recon-bin2.md` が入っている。同じ PR に実装を足す）。根拠の行番号は `docs/handoff/schedule-gcal-import/recon-bin2.md`（origin/main 0ab7262d6 時点）。着手時に `git fetch origin` し、行番号がずれていたら中身で場所を探す。中身が違えば止めて報告。
+
+Google 公式の決まり（Context7 `/websites/developers_google_workspace_calendar_api`・2026-11-03 確認）:
+- `syncToken` と一緒に `timeMin`・`timeMax`・`updatedMin`・`orderBy`・`q` は送れない。ほかの引数（`singleEvents`）は最初の全部読みと同じにする。`syncToken` 付きでは `showDeleted=False` は不可（送らない）。
+- `nextSyncToken` は最後のページにだけ付く。期限切れは 410 が返り、全部読み直す。
+- 知らせの登録 `events.watch` の `token` は 256 字まで。届く知らせの `X-Goog-Channel-Token` に入る。
+- `channels.stop` は `id` と `resourceId` が要る。止められるのは登録した人と同じ OAuth の持ち主だけ。
+- 受け口が 500/502/503/504 を返すと Google は送り直す。それ以外の失敗は数えられる。今どおり常に 200 を返す。
+
+### 14-1 migration（新しいファイル・足すだけ・冪等）
+
+`migrations/20261103_200000_add_google_calendar_import_sync.sql` を作る。`scripts/run_all_migrations.sh` の最後の `run_sql migrations/20261103_120000_create_ai_job_assignments.sql`（1213 行付近）の次に、同じ形（1 行のコメント＋`run_sql`）で足す。コメントは「ADR-1059 便2: Google の予定の取り込み（列2つ・一意の部分索引・追加のみ・冪等）」。
+
+```sql
+-- ADR-1059 便2: Google の予定の取り込み（足すだけ・冪等）
+ALTER TABLE public.google_webhook_subscriptions ADD COLUMN IF NOT EXISTS sync_token TEXT;
+ALTER TABLE public.google_webhook_subscriptions ADD COLUMN IF NOT EXISTS channel_token_hash VARCHAR(64);
+
+DO $gcal_import_uniq$
+DECLARE
+  schema_rec RECORD;
+  dup_count INTEGER;
+BEGIN
+  FOR schema_rec IN SELECT nspname FROM pg_namespace WHERE nspname ~ '^tenant_\d+$' LOOP
+    IF to_regclass(format('%I.calendar_events', schema_rec.nspname)) IS NULL THEN
+      CONTINUE;
+    END IF;
+    EXECUTE format(
+      'SELECT COUNT(*) FROM (SELECT google_event_id FROM %I.calendar_events'
+      ' WHERE google_event_id IS NOT NULL GROUP BY google_event_id HAVING COUNT(*) > 1) d',
+      schema_rec.nspname) INTO dup_count;
+    IF dup_count > 0 THEN
+      RAISE EXCEPTION '%.calendar_events に google_event_id の重複が % 件あります（ADR-1059 便2）',
+        schema_rec.nspname, dup_count;
+    END IF;
+    EXECUTE format(
+      'CREATE UNIQUE INDEX IF NOT EXISTS uq_calendar_events_google_event_id'
+      ' ON %I.calendar_events (google_event_id) WHERE google_event_id IS NOT NULL',
+      schema_rec.nspname);
+  END LOOP;
+END
+$gcal_import_uniq$;
+```
+
+- 古い普通の索引 `idx_calendar_events_google_id` は消さない。`CONCURRENTLY` は使わない（DO の中では使えない・表は小さい）。ロック待ちは `scripts/run_all_migrations.sh` の 1 秒＋送り直し（ADR-1037）に任せ、ファイルに `lock_timeout` は書かない。
+- 新しいテナントの `calendar_events` は 078 が毎デプロイで作る（`backend/app/services/tenant.py` には無い・recon Q7）。この索引も毎デプロイ同じ DO で付く。`backend/app/services/tenant.py` は触らない。
+
+### 14-2 `backend/app/services/calendar_service.py` の `upsert_from_google`（376-460 付近）
+
+- 引数に `owner_user_id: int` を足す。戻り値は `"upserted" | "deleted" | "skipped"`。最後の `await db.commit()` を消す（呼び元が 1 回だけ commit する。呼び元は `backend/app/services/google_webhook.py` だけ・grep 済み）。
+- 取り消し（`status == "cancelled"`）の削除文に `AND source = 'google'` を足す。
+- 日時は文字列で渡さず datetime にする（接続は asyncpg・`backend/app/database.py:8`）。同じファイルに `_google_times(start: dict, end: dict) -> tuple[datetime, datetime, bool]` を足す:
+  - 終日（`"date" in start`）: 開始 = その日 00:00 日本時間、終了 = `end["date"]` の前の日 23:59 日本時間（Google の終わりの日は次の日のため）。終了が開始より前になったら開始と同じ日の 23:59。
+  - 時刻あり: `datetime.fromisoformat(start["dateTime"])`。時差が無いときは `start.get("timeZone")`、無ければ `Asia/Tokyo` の `ZoneInfo` を付ける。end も同じ。
+  - 日本時間は `zoneinfo.ZoneInfo("Asia/Tokyo")`。
+- INSERT を次の形にする（列と値だけ変える。題名・説明・場所の取り方は今のまま）:
+  - 値: `calendar_type='personal'`、`user_id = :owner`、`created_by_user_id = :owner`、`source='google'`、`sync_status='synced'`。
+  - 衝突: `ON CONFLICT (google_event_id) WHERE google_event_id IS NOT NULL DO UPDATE SET` 題名・説明・場所・開始・終了・終日・`sync_status='synced'`・`last_synced_at=NOW()`・`updated_at=NOW()`。`calendar_type`・`user_id`・`created_by_user_id` は SET しない（K4）。
+  - 最後の条件は `WHERE calendar_events.source = 'google'`（アプリで作った行は上書きしない・K6）。今の `WHERE calendar_events.google_event_id = :gid` はこれに置き換える。
+- `_is_app_origin` で飛ばす処理は今のまま。
+
+### 14-3 `backend/app/services/google_webhook.py`
+
+1. `register_webhook`（54-119）:
+   - 登録の前に、今の行の `channel_id, resource_id` を読む。
+   - `token = secrets.token_urlsafe(32)` を作り、`events().watch` の body に `"token": token` を足す。
+   - UPSERT の列と `DO UPDATE SET` に `channel_token_hash = hashlib.sha256(token.encode()).hexdigest()` を足す。`sync_token` は SET しない（差分の目印を残す）。
+   - commit と `reset_tenant_context` の後、古い行があり channel_id が変わったら `service.channels().stop(body={"id": 古い channel_id, "resourceId": 古い resource_id})` を `asyncio.to_thread` で呼ぶ。失敗は warning だけ（古い方は 7 日で切れる・`_MAX_TTL_MS`）。docstring の「stop → 新規登録」を「新規登録 → 古いものを stop」に直す。
+2. `get_tenant_by_channel`（166-186）を `verify_channel(db, channel_id: str, token: str) -> Optional[int]` に置き換える: `SELECT tenant_id, channel_token_hash FROM public.google_webhook_subscriptions WHERE channel_id = :cid`。行が無い・hash が NULL・`hmac.compare_digest(sha256(token), hash)` が偽なら None。合えば tenant_id。
+3. `handle_webhook_notification`（194-259）を消し、`sync_tenant_from_google(db, tenant_id: int) -> dict` を足す。順番:
+   1. `SELECT pg_try_advisory_lock(1059, :tid)`。偽なら `{"skipped": "locked"}` を返す（同じ会社の同期が2つ同時に走らない）。以降を try にし、finally で `SELECT pg_advisory_unlock(1059, :tid)`。
+   2. `set_tenant_context(db, tenant_id)`。
+   3. `SELECT connected_by_user_id, sync_mode FROM tenant_google_calendar_config`。行が無い・`sync_mode` が bidirectional/read_only 以外 → `{"skipped": "off"}`。`connected_by_user_id` が NULL → warning と `{"skipped": "no_owner"}`。
+   4. `service = await cal_svc._get_service(db, tenant_id)`。RuntimeError → `{"skipped": "not_connected"}`。`_get_service` は中で commit することがあるので、この後もう一度 `set_tenant_context` する。
+   5. `SELECT sync_token FROM google_webhook_subscriptions WHERE tenant_id = :tid`。
+   6. 引数: `calendarId="primary"`・`singleEvents=True`・`maxResults=250`。目印があれば `syncToken=目印`、無ければ `timeMin = (今 − 30 日) の UTC の RFC3339`（全部読み）。
+   7. `pageToken` を回して最後まで読む。`googleapiclient.errors.HttpError` で `e.resp.status == 410` かつ目印を使っていたら、目印を捨てて 6. の全部読みからやり直す（1 回だけ）。それ以外の失敗はそのまま投げる（Celery の失敗の見張りに数えさせる）。
+   8. 各 item を `upsert_from_google(db, tenant_id, item, owner_user_id)`。全部読みのときは cancelled 以外の id を集める。
+   9. 全部読みのときだけ、`source = 'google' AND google_event_id IS NOT NULL AND end_datetime >= :time_min AND NOT (google_event_id::text = ANY(CAST(:seen AS text[])))` の行を消す（30 日より前の行は消さない）。
+   10. 最後のページの `nextSyncToken` を `UPDATE google_webhook_subscriptions SET sync_token = :t WHERE tenant_id = :tid` で保存する（行が無ければ何もしない）。
+   11. `await db.commit()`、`await reset_tenant_context(db, tenant_id)`。戻り値 `{"upserted": n, "deleted": n, "full": bool}`。
+4. `renew_expiring_webhooks`（267-292）: 会社ごとに `set_tenant_context(db, tenant_id)` してから `register_webhook` を呼び、finally で `clear_tenant_context(db)`（接続の表は RLS が強制のため。型は `backend/app/tasks/sa02_recon_monitor.py:70,90`）。
+
+### 14-4 受け口 `backend/app/routers/google_calendar.py:386-418`
+
+- `X-Goog-Channel-Token` も読む。`resource_state == "sync"` は何もせず 200。
+- `tenant_id = await webhook_svc.verify_channel(db, channel_id, token)`。None なら warning（channel_id だけ記録・token は記録しない）で 200。
+- 合えば `sync_google_calendar_tenant.delay(tenant_id)`（14-5）を積んで 200。中で同期を待たない。積む型は `backend/app/routers/meta.py:138` と同じ。
+- 例外は今どおり握って 200。docstring を直す。
+
+### 14-5 定期作業 `backend/app/tasks/google_calendar_sync.py`（新しいファイル）
+
+型は `backend/app/tasks/viewer_share_flag_monitor.py:89-95`（同期関数から `asyncio.run`、finally で `engine.dispose()`）。DB は `AsyncSessionLocal`。
+
+- `sync_google_calendar_tenant(tenant_id)`: `sync_tenant_from_google` を 1 回。
+- `sync_google_calendar_all()`: `SELECT id FROM public.tenants WHERE is_active = true ORDER BY id` を回す。会社ごとに `set_tenant_context` して `tenant_google_calendar_config` の `sync_mode` を読む。bidirectional/read_only のときだけ、知らせの行が無いか `channel_token_hash` が NULL なら `register_webhook`、その後 `sync_tenant_from_google`。1 社の失敗は記録して次の会社へ進み、最後に失敗が 1 社でもあれば例外を投げる（失敗の見張りに数えさせる）。finally で `clear_tenant_context`。
+- `renew_google_calendar_webhooks()`: `renew_expiring_webhooks` を 1 回。
+- 名前は `@shared_task(name="app.tasks.google_calendar_sync.<関数名>")`。
+
+`backend/app/celery_app.py`:
+- `include=[...]`（21-48）に `"app.tasks.google_calendar_sync"` を足す。
+- `beat_schedule`（67-）に 2 つ足す: `"google-calendar-sync-all"` は `"schedule": 900.0`（15 分）、`"google-calendar-renew-webhooks"` は `crontab(hour=4, minute=30)`（毎日 04:30 日本時間）。
+
+### 14-6 方式の口 `backend/app/routers/calendar.py`
+
+- 44 行: `_ACCEPTED_SYNC_MODES = ("bidirectional", "read_only", "write_only", "none")`。43 行のコメントを「ADR-1059 で ADR-1057 の取り込み停止を置き換え」に直す。504 行の 422 は残す（判定は `_VALID_SYNC_MODES` と同じになる）。
+- `update_sync_mode`（523-527 付近）: bidirectional/read_only で `register_webhook` が成功したら `sync_google_calendar_tenant.delay(tenant_id)` も積む（最初の全部読みをすぐ始める）。
+
+### 14-7 試験
+
+- `backend/tests/test_calendar_service.py`:
+  - `TestUpsertFromGoogle`: 新規の SQL が `'personal'`・`:owner` を入れ、`ON CONFLICT (google_event_id) WHERE google_event_id IS NOT NULL` と `WHERE calendar_events.source = 'google'` を含み、DO UPDATE に `calendar_type`・`user_id` が無い。cancelled の削除文に `source = 'google'`。commit を呼ばない。
+  - `_google_times`: 終日 `2026-11-05`〜`2026-11-06` → 11/5 00:00〜11/5 23:59 日本時間。時刻あり `2026-11-05T10:00:00+09:00` → その時刻。時差無し＋`timeZone` → その地域で付く。
+  - `sync_tenant_from_google`: 目印ありでは `syncToken` だけ送り `timeMin` を送らない。目印なしでは `timeMin` を送り、現れなかった google の行を消す文を流す。410 で 1 回だけ全部読みに切り替わる。2 ページ目まで読み、最後の `nextSyncToken` を保存する。ロックが取れないと何もしない。`sync_mode` が write_only なら Google を呼ばない。
+  - `verify_channel`: 合言葉一致→tenant_id、不一致・hash NULL・行無し→None。
+  - `register_webhook`: body に token、保存に hash、古いチャンネルを stop。
+  - 今の `TestHandleWebhookNotification`・`TestHandleWebhookNotificationExists`・`TestGetTenantByChannel` は新しい関数の試験に置き換える。
+- `backend/tests/test_calendar_owner_api.py:126`: bidirectional/read_only が 200 になり `register_webhook` を呼ぶ試験に書き換える。
+- `backend/tests/test_event_loop_nonblocking.py:112`: 対象を `sync_tenant_from_google` に替え、同じことを確かめる。
+- 受け口の試験（新規か既存の置き場）: 合言葉が合うと `.delay` が呼ばれ 200、合わないと呼ばれず 200、`sync` は呼ばれず 200。
+- `backend/tests/test_celery_beat_registered.py` は書き換えずに通ること（新しい 2 つが登録済み）。
+
+### 14-8 触らない範囲
+
+Google へ送る側（`backend/app/services/google_calendar.py` の create/update/delete_event・`calendar_service` の送る処理）、接続・切断の口、OAuth、秘書、AI 用ビュー、シフト、画面（frontend）、`backend/app/services/tenant.py`、`.github/workflows/deploy.yml`、`monitoring/`。
+
+### 14-9 想定される分岐（止まる条件）
+
+- `upsert_from_google` か `handle_webhook_notification` の呼び元が上に書いた以外にある → 止めて報告。
+- `scripts/run_all_migrations.sh` の最後が `migrations/20261103_120000_create_ai_job_assignments.sql` でない（ほかの PR が足した）→ その最後の次に足し、PR 本文に書く。
+- `HttpError` の 410 の取り方が今の googleapiclient で `e.resp.status` と違う → 止めて報告。
+- 試験の DB が実 PostgreSQL で、`CAST(:seen AS text[])` が通らない → 止めて報告（書き方を変えない）。
+- 既存の試験が「取り込みは shared で入る」「受け口が同期を待つ」前提で落ちる → その試験は 14-7 のとおり書き換える。それ以外の理由で落ちる試験は直さず止めて報告。
+
+### 14-1a 追記（合流前の審査 REQUEST_CHANGES B1 への直し・2026-11-03）
+
+- 観測: 必須チェック「マイグレーションSQL 実行テスト（実DB）」が、変更した SQL だけを流す試験の DB で `relation "public.google_webhook_subscriptions" does not exist` で止まった。本番と同じ順の全件ドライランでは1周目・2周目とも通っている（表は 077 で作られる）。
+- 決定（Opus）: 14-1 の先頭の `ALTER TABLE` 2 行を、表があるときだけ流す DO ブロックに置き換える。CI の設定は触らない。理由: 直しが migration の中で閉じ、カードの範囲が広がらない。本番には表があるので動きは同じ。
+- 置き換え後の先頭（下の 1 つの DO ブロックで 2 行の ALTER を置き換える。後ろの一意の索引の DO ブロックはそのまま）:
+
+```sql
+DO $gcal_import_cols$
+BEGIN
+  IF to_regclass('public.google_webhook_subscriptions') IS NOT NULL THEN
+    ALTER TABLE public.google_webhook_subscriptions ADD COLUMN IF NOT EXISTS sync_token TEXT;
+    ALTER TABLE public.google_webhook_subscriptions ADD COLUMN IF NOT EXISTS channel_token_hash VARCHAR(64);
+  END IF;
+END
+$gcal_import_cols$;
+```
+
+- 触らない: ほかのファイル全部（CI の設定・`scripts/run_all_migrations.sh` を含む）。
+- 本番反映の後に確かめる: `public.google_webhook_subscriptions` に `sync_token`・`channel_token_hash` の 2 列があること（表が無くて飛ばされていないこと）。
+- 審査の細かい注意 1（`verify_channel` の表名に `public.` が無い）は直さない。同じファイルのほかの SQL もすべて `public.` を付けていないので、それに揃っている。
+
+### 14-10 完了の報告
+
+PR を `--draft` で起票（`gh pr create --base main --draft`。migrations を含むため GO の手順を通す）。本文はテンプレの `### 標準ワークフロー確認` に recon・recon-bin2・design・ADR-1059・触るファイル全部・削除するファイル（中身の行を消したファイル全部）。backend の該当試験の生出力をファイルに残し、パスと PR 番号を報告する。
+
+### 14-11 設計審査（Architect・同一 AI による自己審査・2026-11-03）
+
+判定: APPROVE（実装カードとして）。
+
+- 調べで見つかった今のコードの穴を、カードで全部ふさいだ: ①一意の索引が無いのに `ON CONFLICT (google_event_id)` を使っている（14-1・14-2）②日時を文字列のまま asyncpg に渡している（14-2）③取り込みが shared で入る（14-2）④古いチャンネルを止めていない（14-3-1）⑤期限の更新を呼ぶ定期作業が無い（14-5）⑥合言葉の照合が無い（14-3-2・14-4）⑦更新時に接続の表の会社の文脈を張っていない（14-3-4）。
+- 設計 §4 からの細かい足し: 全部読みで消すのは 30 日以内の行だけ（30 日より前を消さない）。同じ会社の同期は DB のロックで 1 本に絞る。持ち主が空の接続では取り込まない。いずれも §4 の目的の中で、PO の判断は要らない。
+- Google の決まりは Context7 で確かめた（冒頭）。
+- KPI との対応: K1・K4・K5 は 14-3-3＋14-4、K6 は 14-2 の `source = 'google'`、K7 は 14-5 の毎日の更新、K8 は 14-5 の 15 分おき。K2・K3・K9 は便1。
+- 未解決: なし。GO は migration を含むため PR ごとに通す（§12）。

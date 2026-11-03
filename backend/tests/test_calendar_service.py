@@ -434,11 +434,12 @@ class TestUpsertFromGoogle:
     async def test_skips_when_no_event_id(self):
         from app.services.calendar_service import upsert_from_google
         db = _make_db()
-        await upsert_from_google(db, tenant_id=1, google_event={})
+        out = await upsert_from_google(db, tenant_id=1, google_event={}, owner_user_id=9)
+        assert out == "skipped"
         db.execute.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_deletes_cancelled_event(self):
+    async def test_deletes_cancelled_event_only_google_rows(self):
         from app.services.calendar_service import upsert_from_google
 
         db = AsyncMock()
@@ -448,8 +449,13 @@ class TestUpsertFromGoogle:
         delete_result = MagicMock()
         db.execute = AsyncMock(side_effect=[origin_result, delete_result])
 
-        await upsert_from_google(db, tenant_id=1, google_event={"id": "ev1", "status": "cancelled"})
-        db.commit.assert_called()
+        out = await upsert_from_google(
+            db, tenant_id=1, google_event={"id": "ev1", "status": "cancelled"}, owner_user_id=9
+        )
+        assert out == "deleted"
+        sql = db.execute.call_args_list[1].args[0].text
+        assert "source = 'google'" in sql
+        db.commit.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_skips_app_origin(self):
@@ -461,14 +467,17 @@ class TestUpsertFromGoogle:
         origin_result.first = MagicMock(return_value=(1,))  # app origin found
         db.execute = AsyncMock(return_value=origin_result)
 
-        await upsert_from_google(db, tenant_id=1,
-                                 google_event={"id": "ev_app", "status": "confirmed"})
+        out = await upsert_from_google(
+            db, tenant_id=1,
+            google_event={"id": "ev_app", "status": "confirmed"}, owner_user_id=9,
+        )
+        assert out == "skipped"
         # execute は _is_app_origin の1回のみ（upsert は呼ばれない）
         assert db.execute.call_count == 1
         db.commit.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_upserts_valid_event(self):
+    async def test_upserts_valid_event_as_personal_with_owner(self):
         from app.services.calendar_service import upsert_from_google
 
         db = AsyncMock()
@@ -484,8 +493,23 @@ class TestUpsertFromGoogle:
             "start": {"dateTime": "2026-06-01T10:00:00+09:00"},
             "end": {"dateTime": "2026-06-01T11:00:00+09:00"},
         }
-        await upsert_from_google(db, tenant_id=1, google_event=google_event)
-        db.commit.assert_called()
+        out = await upsert_from_google(
+            db, tenant_id=1, google_event=google_event, owner_user_id=9
+        )
+        assert out == "upserted"
+        stmt, params = db.execute.call_args_list[1].args
+        sql = stmt.text
+        assert "'personal'" in sql
+        assert ":owner" in sql
+        assert "ON CONFLICT (google_event_id) WHERE google_event_id IS NOT NULL" in sql
+        assert "WHERE calendar_events.source = 'google'" in sql
+        do_update = sql.split("DO UPDATE SET", 1)[1]
+        assert "calendar_type" not in do_update
+        assert "user_id" not in do_update
+        assert params["owner"] == 9
+        assert isinstance(params["start"], datetime)
+        assert params["start"].utcoffset().total_seconds() == 9 * 3600
+        db.commit.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_skips_invalid_start_end(self):
@@ -503,7 +527,10 @@ class TestUpsertFromGoogle:
             "start": {},
             "end": {},
         }
-        await upsert_from_google(db, tenant_id=1, google_event=google_event)
+        out = await upsert_from_google(
+            db, tenant_id=1, google_event=google_event, owner_user_id=9
+        )
+        assert out == "skipped"
         # start/end なしなので upsert 実行されない
         assert db.execute.call_count == 1
         db.commit.assert_not_called()
@@ -525,8 +552,54 @@ class TestUpsertFromGoogle:
             "start": {"date": "2026-06-01"},
             "end": {"date": "2026-06-02"},
         }
-        await upsert_from_google(db, tenant_id=1, google_event=google_event)
-        db.commit.assert_called()
+        out = await upsert_from_google(
+            db, tenant_id=1, google_event=google_event, owner_user_id=9
+        )
+        assert out == "upserted"
+        params = db.execute.call_args_list[1].args[1]
+        assert params["all_day"] is True
+        db.commit.assert_not_called()
+
+
+class TestGoogleTimes:
+    def test_all_day_maps_to_app_shape_in_jst(self):
+        from zoneinfo import ZoneInfo
+        from app.services.calendar_service import _google_times
+
+        s, e, all_day = _google_times({"date": "2026-11-05"}, {"date": "2026-11-06"})
+        jst = ZoneInfo("Asia/Tokyo")
+        assert all_day is True
+        assert s == datetime(2026, 11, 5, 0, 0, tzinfo=jst)
+        assert e == datetime(2026, 11, 5, 23, 59, tzinfo=jst)
+
+    def test_all_day_end_before_start_falls_back_to_start_day(self):
+        from zoneinfo import ZoneInfo
+        from app.services.calendar_service import _google_times
+
+        s, e, _ = _google_times({"date": "2026-11-05"}, {"date": "2026-11-05"})
+        assert e == datetime(2026, 11, 5, 23, 59, tzinfo=ZoneInfo("Asia/Tokyo"))
+
+    def test_timed_event_keeps_offset(self):
+        from app.services.calendar_service import _google_times
+
+        s, e, all_day = _google_times(
+            {"dateTime": "2026-11-05T10:00:00+09:00"},
+            {"dateTime": "2026-11-05T11:00:00+09:00"},
+        )
+        assert all_day is False
+        assert s == datetime.fromisoformat("2026-11-05T10:00:00+09:00")
+        assert e == datetime.fromisoformat("2026-11-05T11:00:00+09:00")
+
+    def test_naive_datetime_uses_time_zone_field(self):
+        from zoneinfo import ZoneInfo
+        from app.services.calendar_service import _google_times
+
+        s, e, _ = _google_times(
+            {"dateTime": "2026-11-05T10:00:00", "timeZone": "America/New_York"},
+            {"dateTime": "2026-11-05T11:00:00", "timeZone": "America/New_York"},
+        )
+        assert s.tzinfo == ZoneInfo("America/New_York")
+        assert e.tzinfo == ZoneInfo("America/New_York")
 
 
 # ===========================================================================
@@ -555,42 +628,186 @@ class TestGetWebhookAddress:
             assert not addr.startswith("https://test.example.com//")
 
 
-class TestGetTenantByChannel:
+class TestVerifyChannel:
     @pytest.mark.asyncio
     async def test_returns_none_when_not_found(self):
-        from app.services.google_webhook import get_tenant_by_channel
+        from app.services.google_webhook import verify_channel
         db = _make_db(first_return=None)
-        result = await get_tenant_by_channel(db, channel_id="nonexistent")
-        assert result is None
+        assert await verify_channel(db, "nonexistent", "tok") is None
 
     @pytest.mark.asyncio
-    async def test_returns_tenant_info(self):
-        from app.services.google_webhook import get_tenant_by_channel
-        db = _make_db(first_return=(7,))
-        result = await get_tenant_by_channel(db, channel_id="ch_123")
-        assert result is not None
-        tenant_id, schema_name = result
-        assert tenant_id == 7
-        assert schema_name == "tenant_007"
-
-
-class TestHandleWebhookNotification:
-    @pytest.mark.asyncio
-    async def test_ignores_sync_state(self):
-        """resource_state='sync' は何もしない。"""
-        from app.services.google_webhook import handle_webhook_notification
-        db = _make_db()
-        await handle_webhook_notification(db, channel_id="ch_1", resource_state="sync")
-        db.execute.assert_not_called()
+    async def test_returns_none_when_hash_null(self):
+        from app.services.google_webhook import verify_channel
+        db = _make_db(first_return=(7, None))
+        assert await verify_channel(db, "ch_123", "tok") is None
 
     @pytest.mark.asyncio
-    async def test_returns_early_when_channel_not_found(self):
-        """不明な channel_id は早期 return。"""
-        from app.services.google_webhook import handle_webhook_notification
-        db = _make_db(first_return=None)
-        await handle_webhook_notification(db, channel_id="unknown_ch", resource_state="exists")
-        # get_tenant_by_channel の execute 1回のみ
-        assert db.execute.call_count == 1
+    async def test_returns_none_when_token_mismatch(self):
+        import hashlib
+        from app.services.google_webhook import verify_channel
+        db = _make_db(first_return=(7, hashlib.sha256(b"right").hexdigest()))
+        assert await verify_channel(db, "ch_123", "wrong") is None
+        assert await verify_channel(db, "ch_123", "") is None
+
+    @pytest.mark.asyncio
+    async def test_returns_tenant_id_when_token_matches(self):
+        import hashlib
+        from app.services.google_webhook import verify_channel
+        db = _make_db(first_return=(7, hashlib.sha256(b"right").hexdigest()))
+        assert await verify_channel(db, "ch_123", "right") == 7
+
+
+def _make_sync_db(lock=True, cfg=(9, "read_only"), sync_token=None, sub_exists=True):
+    """sync_tenant_from_google 用の db モック。実行された (sql, params) を db.calls に積む。"""
+    db = AsyncMock()
+    db.commit = AsyncMock()
+    db.rollback = AsyncMock()
+    calls = []
+
+    async def _exec(stmt, params=None):
+        sql = str(getattr(stmt, "text", stmt))
+        calls.append((sql, params))
+        r = MagicMock()
+        r.rowcount = 0
+        if "pg_try_advisory_lock" in sql:
+            r.scalar = MagicMock(return_value=lock)
+        elif "FROM tenant_google_calendar_config" in sql:
+            r.first = MagicMock(return_value=cfg)
+        elif "SELECT sync_token" in sql:
+            r.first = MagicMock(return_value=(sync_token,) if sub_exists else None)
+        else:
+            r.first = MagicMock(return_value=None)
+        return r
+
+    db.execute = _exec
+    db.calls = calls
+    return db
+
+
+def _make_list_service(responses):
+    """events().list(**kw).execute が responses を順に返す Google サービスのモック。"""
+    service = MagicMock()
+    kw_log = []
+    it = iter(responses)
+
+    def _list(**kw):
+        kw_log.append(kw)
+        r = next(it)
+        m = MagicMock()
+        if isinstance(r, Exception):
+            m.execute.side_effect = r
+        else:
+            m.execute.return_value = r
+        return m
+
+    service.events.return_value.list.side_effect = _list
+    return service, kw_log
+
+
+def _sync_patches(service, upsert=None):
+    upsert = upsert or AsyncMock(return_value="upserted")
+    return upsert, [
+        patch("app.services.google_webhook.set_tenant_context", AsyncMock()),
+        patch("app.services.google_webhook.reset_tenant_context", AsyncMock()),
+        patch("app.services.google_calendar._get_service", AsyncMock(return_value=service)),
+        patch("app.services.calendar_service.upsert_from_google", upsert),
+    ]
+
+
+class TestSyncTenantFromGoogle:
+    async def _run(self, db, service, upsert=None):
+        from contextlib import ExitStack
+        from app.services.google_webhook import sync_tenant_from_google
+
+        up, patches = _sync_patches(service, upsert)
+        with ExitStack() as stack:
+            for p in patches:
+                stack.enter_context(p)
+            result = await sync_tenant_from_google(db, 1)
+        return result, up
+
+    @pytest.mark.asyncio
+    async def test_sync_token_sends_only_sync_token(self):
+        db = _make_sync_db(sync_token="TOK1")
+        service, kw = _make_list_service([{"items": [{"id": "a"}], "nextSyncToken": "TOK2"}])
+        result, up = await self._run(db, service)
+        assert result["full"] is False
+        assert kw[0]["syncToken"] == "TOK1"
+        assert "timeMin" not in kw[0]
+        assert kw[0]["singleEvents"] is True
+        assert "showDeleted" not in kw[0]
+        assert not any("DELETE FROM calendar_events" in s for s, _ in db.calls)
+        up.assert_awaited_once()
+        assert up.await_args.args[3] == 9
+
+    @pytest.mark.asyncio
+    async def test_no_token_full_read_deletes_unseen_google_rows(self):
+        db = _make_sync_db(sync_token=None)
+        service, kw = _make_list_service([
+            {"items": [{"id": "a"}, {"id": "b", "status": "cancelled"}], "nextSyncToken": "N"}
+        ])
+        result, _ = await self._run(db, service)
+        assert result["full"] is True
+        assert "timeMin" in kw[0] and "syncToken" not in kw[0]
+        deletes = [(s, p) for s, p in db.calls if "DELETE FROM calendar_events" in s]
+        assert len(deletes) == 1
+        sql, params = deletes[0]
+        assert "source = 'google'" in sql
+        assert "CAST(:seen AS text[])" in sql
+        assert params["seen"] == ["a"]
+
+    @pytest.mark.asyncio
+    async def test_410_falls_back_to_full_read_once(self):
+        import httplib2
+        from googleapiclient.errors import HttpError
+
+        err = HttpError(httplib2.Response({"status": 410}), b"gone")
+        db = _make_sync_db(sync_token="OLD")
+        service, kw = _make_list_service([err, {"items": [], "nextSyncToken": "NEW"}])
+        result, _ = await self._run(db, service)
+        assert result["full"] is True
+        assert len(kw) == 2
+        assert kw[0]["syncToken"] == "OLD"
+        assert "timeMin" in kw[1] and "syncToken" not in kw[1]
+
+    @pytest.mark.asyncio
+    async def test_reads_all_pages_and_saves_last_next_sync_token(self):
+        db = _make_sync_db(sync_token="T")
+        service, kw = _make_list_service([
+            {"items": [{"id": "a"}], "nextPageToken": "P2"},
+            {"items": [{"id": "b"}], "nextSyncToken": "LAST"},
+        ])
+        result, up = await self._run(db, service)
+        assert result["upserted"] == 2
+        assert kw[1]["pageToken"] == "P2"
+        saves = [(s, p) for s, p in db.calls if "SET sync_token" in s]
+        assert len(saves) == 1 and saves[0][1]["t"] == "LAST"
+        db.commit.assert_awaited()
+
+    @pytest.mark.asyncio
+    async def test_lock_not_acquired_does_nothing(self):
+        db = _make_sync_db(lock=False)
+        service, kw = _make_list_service([])
+        result, up = await self._run(db, service)
+        assert result == {"skipped": "locked"}
+        assert kw == []
+        up.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_write_only_does_not_call_google(self):
+        db = _make_sync_db(cfg=(9, "write_only"))
+        service, kw = _make_list_service([])
+        result, _ = await self._run(db, service)
+        assert result == {"skipped": "off"}
+        assert kw == []
+
+    @pytest.mark.asyncio
+    async def test_no_owner_skips(self):
+        db = _make_sync_db(cfg=(None, "bidirectional"))
+        service, kw = _make_list_service([])
+        result, _ = await self._run(db, service)
+        assert result == {"skipped": "no_owner"}
+        assert kw == []
 
 
 class TestRegisterWebhook:
@@ -617,6 +834,42 @@ class TestRegisterWebhook:
                    AsyncMock(return_value=mock_service)):
             result = await register_webhook(db, tenant_id=1)
             assert result is None
+
+    @pytest.mark.asyncio
+    async def test_sends_token_saves_hash_and_stops_old_channel(self):
+        import hashlib
+        from app.services.google_webhook import register_webhook
+
+        mock_service = MagicMock()
+        mock_service.events.return_value.watch.return_value.execute.return_value = {
+            "expiration": "1893456000000",
+            "resourceId": "res_new",
+        }
+        stop_exec = mock_service.channels.return_value.stop.return_value.execute
+
+        db = AsyncMock()
+        db.commit = AsyncMock()
+        old_result = MagicMock()
+        old_result.first = MagicMock(return_value=("old_ch", "old_res"))
+        db.execute = AsyncMock(side_effect=[old_result, MagicMock()])
+
+        with patch("app.services.google_calendar._get_service",
+                   AsyncMock(return_value=mock_service)), patch(
+            "app.services.google_webhook.reset_tenant_context", AsyncMock()
+        ):
+            result = await register_webhook(db, tenant_id=1)
+
+        assert result is not None
+        body = mock_service.events.return_value.watch.call_args.kwargs["body"]
+        token = body["token"]
+        assert token
+        upsert_params = db.execute.call_args_list[1].args[1]
+        assert upsert_params["thash"] == hashlib.sha256(token.encode()).hexdigest()
+        assert "channel_token_hash" in db.execute.call_args_list[1].args[0].text
+        mock_service.channels.return_value.stop.assert_called_once_with(
+            body={"id": "old_ch", "resourceId": "old_res"}
+        )
+        stop_exec.assert_called_once()
 
 
 class TestStopWebhook:
@@ -677,26 +930,14 @@ class TestRenewExpiringWebhooks:
         db.execute = AsyncMock(side_effect=[expiring_result, sub_result])
 
         with patch("app.services.google_calendar._get_service",
-                   AsyncMock(side_effect=RuntimeError("not connected"))):
+                   AsyncMock(side_effect=RuntimeError("not connected"))), patch(
+            "app.services.google_webhook.set_tenant_context", AsyncMock()
+        ) as set_ctx, patch(
+            "app.services.google_webhook.clear_tenant_context", AsyncMock()
+        ) as clear_ctx:
             result = await renew_expiring_webhooks(db)
         # Google 未接続 → None が返る → renewed は 0
         assert result == 0
-
-
-class TestHandleWebhookNotificationExists:
-    @pytest.mark.asyncio
-    async def test_handles_exists_state_google_not_connected(self):
-        """exists 状態でテナントが見つかっても Google 未接続なら早期 return。"""
-        from app.services.google_webhook import handle_webhook_notification
-
-        db = AsyncMock()
-        db.commit = AsyncMock()
-
-        channel_result = MagicMock()
-        channel_result.first = MagicMock(return_value=(1,))  # tenant found
-        schema_result = MagicMock()
-        db.execute = AsyncMock(side_effect=[channel_result, schema_result])
-
-        with patch("app.services.google_calendar._get_service",
-                   AsyncMock(side_effect=RuntimeError("not connected"))):
-            await handle_webhook_notification(db, channel_id="ch_123", resource_state="exists")
+        # 会社ごとに文脈を張り、最後に必ず外す
+        set_ctx.assert_awaited_once()
+        clear_ctx.assert_awaited_once()

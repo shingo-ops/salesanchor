@@ -123,19 +123,23 @@ async def test_update_calendar_owner_updates_only_provided_fields():
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("mode", ["bidirectional", "read_only"])
-async def test_update_sync_mode_rejects_inbound_modes(mode):
+async def test_update_sync_mode_accepts_inbound_modes_and_registers_webhook(mode):
     db = AsyncMock()
     db.execute = AsyncMock()
-    with patch("app.services.google_webhook.register_webhook", AsyncMock()) as reg, patch(
-        "app.services.google_webhook.stop_webhook", AsyncMock()
-    ):
-        with pytest.raises(HTTPException) as ei:
-            await update_sync_mode(
-                body=SyncModeBody(sync_mode=mode), tenant_id=1, user=_mock_user(), db=db
-            )
-    assert ei.value.status_code == 422
-    db.execute.assert_not_called()
-    reg.assert_not_called()
+    db.commit = AsyncMock()
+    with patch("app.routers.calendar.reset_tenant_context", AsyncMock()), patch(
+        "app.services.google_webhook.register_webhook",
+        AsyncMock(return_value={"channel_id": "c"}),
+    ) as reg, patch("app.services.google_webhook.stop_webhook", AsyncMock()) as stop, patch(
+        "app.tasks.google_calendar_sync.sync_google_calendar_tenant.delay"
+    ) as delay:
+        result = await update_sync_mode(
+            body=SyncModeBody(sync_mode=mode), tenant_id=1, user=_mock_user(), db=db
+        )
+    assert result == {"sync_mode": mode}
+    reg.assert_called_once()
+    stop.assert_not_called()
+    delay.assert_called_once_with(1)
 
 
 @pytest.mark.asyncio
