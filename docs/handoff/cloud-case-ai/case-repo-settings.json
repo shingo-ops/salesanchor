@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "deny": [
+      "WebSearch",
+      "WebFetch",
+      "Artifact",
+      "mcp__*"
+    ]
+  },
+  "enableArtifact": false
+}
