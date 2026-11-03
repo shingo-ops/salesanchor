@@ -128,8 +128,9 @@
 ## 5. 確かめ方
 - ruff は変えた試験ファイル2つだけ（`uvx ruff check` と `uvx ruff format --check`）。期待する出力は `All checks passed!` と `2 files already formatted`。
 - 作業場所に PostgreSQL があれば `pytest backend/tests/ops/test_ai_job_assignments_db.py backend/tests/ops/test_ai_cloud_views.py -k "ai_job"` を流してよい。無ければ流さず「SKIPPED のため CI に任せた」と書く。SKIPPED を合格と書かない。
+- `python3 scripts/check-migration-value-writes.py repo` をもう一度流し、3-2 の直しの後も通ること（終了コード 0。出力は全文を報告に写す。落ちたら止まり BLOCKED: で返す）。
 - `git diff origin/main...HEAD --name-only` が次の7つだけであること（ほかがあれば止まる）: `migrations/20261103_120000_create_ai_job_assignments.sql`・`scripts/run_all_migrations.sh`・`migrations/20261024_100300_create_ai_cloud_views.sql`・`backend/tests/ops/test_ai_cloud_views.py`・`backend/tests/ops/test_ai_job_assignments_db.py`・`scripts/migration-guard/reference-allowlist.tsv`・`.github/workflows/migration-guard.yml`（このカードと同じ commit に入っている docs/ の文書は除いて数える）。
-- `git diff origin/main...HEAD --numstat` の削除の数（2列目）が、`migrations/20261024_100300_create_ai_cloud_views.sql` と `backend/tests/ops/test_ai_cloud_views.py` は各1（N の行だけ）、`scripts/migration-guard/reference-allowlist.tsv` と `.github/workflows/migration-guard.yml` は各1（直した1行だけ）、ほかは0であること。違えば、そのファイルの削除行を `git diff origin/main...HEAD -- migrations/20261024_100300_create_ai_cloud_views.sql backend/tests/ops/test_ai_cloud_views.py | grep '^-' | head -20` で出して止まる。
+- `git diff origin/main...HEAD --numstat` の削除の数（2列目）が、`migrations/20261024_100300_create_ai_cloud_views.sql` と `backend/tests/ops/test_ai_cloud_views.py` は各1（N の行だけ）、`scripts/migration-guard/reference-allowlist.tsv` と `.github/workflows/migration-guard.yml` は各1（直した1行だけ）、ほかは0であること。違えば、そのファイルの削除行を `git diff origin/main...HEAD -- migrations/20261024_100300_create_ai_cloud_views.sql backend/tests/ops/test_ai_cloud_views.py scripts/migration-guard/reference-allowlist.tsv .github/workflows/migration-guard.yml | grep '^-' | head -20` で出して止まる。
 - 生出力は作業場所の外の一時フォルダに保存し、パスと全文を報告に書く。
 
 ## 6. 想定される分岐と止まる条件
@@ -143,7 +144,7 @@
 
 ## 報告の型
 - 1行目: 受領確認（上の「受領確認」の内容）。2行目: 「本報告はカード 1a の実行結果である」。
-- 本文: 0-1〜0-4 の生出力、「5. 確かめ方」の生出力、commit と push の後の git log の出力（すべて全文）。
+- 本文: 0-1〜0-5 の生出力、「5. 確かめ方」の生出力、commit と push の後の git log の出力（すべて全文）。
 - 止まった時: 止まった所（節の番号）・最後に実行したコマンド・止まった理由。
 - 最終行: DONE / BLOCKED: / NEEDS_DECISION: のどれか1つで始める。
 

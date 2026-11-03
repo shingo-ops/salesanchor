@@ -21,7 +21,7 @@
   - 秘書: claude / sonnet。codex / gpt-6-luna・gpt-5.6-terra・gpt-5.6-luna は ChatGPT の容器を入れる段で足す。
 - 解析の選択肢を増やす時は、先に正答率の測り方で測ってから migration で足す。料金表に無い Gemini モデルは選択肢に入れない（CI で確かめる）。
 - 値の一覧の正本は DB の CHECK。Python・画面・i18n の一覧は写しで、CI で CHECK と同じ集合であることを確かめる。
-- 使用の記録 `llm_usage_events` に `outcome`（ok・failed）と `error_code` を足す。error_code は9つに閉じる: `auth_failed`・`timeout`・`rate_limited`・`http_error`・`unreadable`・`tool_used`・`not_ready`・`busy`・`other`。API を呼んだ1回ごとに1行（その場の送り直しも1回ずつ）。API を呼んでいない失敗と打ち切りは書かない（これは Gemini の経路の決まり）。秘書は backend から容器への1回の頼みを1回と数え、失敗は `not_ready`・`busy` も含めて全部書く（design §4-2-3）。今の集計は `outcome = 'ok'` だけを数え、数字を変えない。
+- 使用の記録 `llm_usage_events` に `outcome`（ok・failed）と `error_code` を足す。error_code は9つに閉じる: `auth_failed`・`timeout`・`rate_limited`・`http_error`・`unreadable`・`tool_used`・`not_ready`・`busy`・`other`。API を呼んだ1回ごとに1行（その場の送り直しも1回ずつ）。API を呼んでいない失敗と打ち切りは書かない（これは Gemini の経路の決まり）。秘書は backend から容器への1回の頼みを1回と数え、その頼みの失敗は `not_ready`・`busy` も含めて書く。担当表を読む前の失敗は、AI とモデルが分からないので書かない（design §4-2-3・§5-3）。今の集計は `outcome = 'ok'` だけを数え、数字を変えない。
 - スーパー管理の解析ダッシュボードに「AI の担当」タブを置き、5つの仕事の AI・モデル・ログインの○×・最後に動いた日時・直近24時間の回数・最後の失敗の理由・変えた記録を見せ、切り替えられるようにする。API はスーパー管理者だけ。鍵の値・メールは返さない。
 - 秘書は ChatGPT（Codex CLI・`@openai/codex@0.162.1` 固定・月額契約のログイン）を担当に選べる。専用の容器 `secretary-codex` を Claude の容器と並べて置き、道具・ウェブ検索・書き込みを止めた設定で、頼みの文は標準入力で渡す。許す一覧の外の合図が1つでもあれば答えを捨てる。
 - ADR-1056 のうち次の2点を置き換える: 「秘書の AI は Claude Code に固定」→担当表で選ぶ。「秘書は `llm_usage_events` に書かない」→成功も失敗も1行ずつ書く（cost_usd は月額のため NULL）。ADR-1056 のほかの決まり（AI に会社のデータも道具も渡さない・作成は利用者が「作る」を押した時に今の口で行う・使える人の条件）はそのまま。
