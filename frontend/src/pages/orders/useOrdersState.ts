@@ -5,7 +5,8 @@
 
 import { useEffect, useMemo, useRef, useState, FormEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { api, ApiError } from "../../lib/api";
+import { api } from "../../lib/api";
+import { useApiCache, useApiQueries, useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
 import type {
   OrderListItem, CompanyMini, GroupCountsResponse,
 } from "./orders.types";
@@ -98,9 +99,6 @@ export function useOrdersState() {
     { value: "status", label: t("common.status") },
   ];
 
-  const [orders, setOrders] = useState<OrderListItem[]>([]);
-  const [groupCounts, setGroupCounts] = useState<GroupCountsResponse | null>(null);
-  const [companies, setCompanies] = useState<CompanyMini[]>([]);
   const [statusFilter, setStatusFilter] = useState("");
 
   // ADR-021 Sprint 1: 検索 / ソート UI 状態
@@ -116,16 +114,13 @@ export function useOrdersState() {
   const [contactId, setContactId] = useState<number | null>(null);
   const [selectorError, setSelectorError] = useState("");
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
   const [deleteTarget, setDeleteTarget] = useState<OrderListItem | null>(null);
 
   // ADR-021 Sprint 3: 発送情報（フェーズ判定 + 発送パネル）
   const [shippingTarget, setShippingTarget] = useState<OrderListItem | null>(null);
-  const [shippings, setShippings] = useState<Record<number, ShippingDetailDto | null>>({});
 
   // ADR-021 Sprint 4: 仕入情報（フェーズ判定 + 仕入パネル）
   const [purchaseTarget, setPurchaseTarget] = useState<OrderListItem | null>(null);
-  const [purchases, setPurchases] = useState<Record<number, PurchaseDetailDto | null>>({});
 
   // 検索入力の debounce（300ms）
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -154,97 +149,42 @@ export function useOrdersState() {
     return p.toString();
   }, [searchKeyword]);
 
-  const loadOrders = async () => {
-    try {
-      setLoading(true);
-      const data = await api.get<OrderListItem[]>(
-        `/orders${queryString ? `?${queryString}` : ""}`,
-      );
-      setOrders(data);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("common.fetchError"));
-    } finally {
-      setLoading(false);
-    }
+  const ordersQ = useApiQuery<OrderListItem[]>(`/orders${queryString ? `?${queryString}` : ""}`);
+  const orders = ordersQ.data ?? [];
+  const groupCountsQ = useApiQuery<GroupCountsResponse>(
+    `/orders/group-counts${groupCountsQueryString ? `?${groupCountsQueryString}` : ""}`,
+    { keepPrevious: true },
+  );
+  const groupCounts = groupCountsQ.data ?? null;
+  const companiesQ = useApiQuery<CompanyMini[]>("/companies?per_page=100");
+  const companies = useMemo<CompanyMini[]>(
+    () => (companiesQ.data ?? []).map((c) => ({ id: c.id, company_code: c.company_code, name: c.name })),
+    [companiesQ.data],
+  );
+  const loading = ordersQ.isPending;
+  const refetching =
+    (ordersQ.isFetching && !ordersQ.isPending) ||
+    (groupCountsQ.isFetching && !groupCountsQ.isPending) ||
+    (companiesQ.isFetching && !companiesQ.isPending);
+  const shownError = error || (ordersQ.error ? (ordersQ.error instanceof Error ? ordersQ.error.message : t("common.fetchError")) : "");
+  const invalidate = useInvalidateApi();
+  const cache = useApiCache();
+
+  const loadOrders = () => {
+    void invalidate(["orders"]);
   };
 
-  const loadGroupCounts = async () => {
-    try {
-      const data = await api.get<GroupCountsResponse>(
-        `/orders/group-counts${groupCountsQueryString ? `?${groupCountsQueryString}` : ""}`,
-      );
-      setGroupCounts(data);
-    } catch {
-      setGroupCounts(null);
-    }
-  };
-
-  const loadCompanies = async () => {
-    try {
-      const data = await api.get<CompanyMini[]>("/companies?per_page=100");
-      setCompanies(
-        data.map((c) => ({ id: c.id, company_code: c.company_code, name: c.name })),
-      );
-    } catch {
-      /* ignore */
-    }
-  };
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { loadOrders(); }, [queryString]);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { loadGroupCounts(); }, [groupCountsQueryString]);
-  useEffect(() => { loadCompanies(); }, []);
-
-  // ADR-021 Sprint 3: 発送情報を並列取得（ステータスフロー判定 + 発送先列）
-  useEffect(() => {
-    if (orders.length === 0) { setShippings({}); return; }
-    let cancelled = false;
-    const fetchAll = async () => {
-      const results = await Promise.all(
-        orders.map(async (o) => {
-          try {
-            const data = await api.get<ShippingDetailDto>(`/orders/${o.id}/shipping`);
-            return [o.id, data] as const;
-          } catch (e) {
-            if (e instanceof ApiError && e.status === 404) return [o.id, null] as const;
-            return [o.id, null] as const;
-          }
-        }),
-      );
-      if (cancelled) return;
-      const map: Record<number, ShippingDetailDto | null> = {};
-      for (const [id, data] of results) map[id] = data;
-      setShippings(map);
-    };
-    fetchAll();
-    return () => { cancelled = true; };
-  }, [orders]);
-
-  // ADR-021 Sprint 4: 仕入情報を並列取得（ステータスフロー判定 + 仕入パネル）
-  useEffect(() => {
-    if (orders.length === 0) { setPurchases({}); return; }
-    let cancelled = false;
-    const fetchAll = async () => {
-      const results = await Promise.all(
-        orders.map(async (o) => {
-          try {
-            const data = await api.get<PurchaseDetailDto>(`/orders/${o.id}/purchase`);
-            return [o.id, data] as const;
-          } catch (e) {
-            if (e instanceof ApiError && e.status === 404) return [o.id, null] as const;
-            return [o.id, null] as const;
-          }
-        }),
-      );
-      if (cancelled) return;
-      const map: Record<number, PurchaseDetailDto | null> = {};
-      for (const [id, data] of results) map[id] = data;
-      setPurchases(map);
-    };
-    fetchAll();
-    return () => { cancelled = true; };
-  }, [orders]);
+  // ADR-021 Sprint 3・4: 発送と仕入を 1 件ずつ写しで取る（取れない・404 は null）
+  const shippingQs = useApiQueries<ShippingDetailDto>(orders.map((o) => `/orders/${o.id}/shipping`));
+  const purchaseQs = useApiQueries<PurchaseDetailDto>(orders.map((o) => `/orders/${o.id}/purchase`));
+  const shippings: Record<number, ShippingDetailDto | null> = Object.fromEntries(
+    orders.map((o, i) => [o.id, shippingQs[i]?.data ?? null]),
+  );
+  const purchases: Record<number, PurchaseDetailDto | null> = Object.fromEntries(
+    orders.map((o, i) => [o.id, purchaseQs[i]?.data ?? null]),
+  );
+  const writeShipping = (saved: ShippingDetailDto) => cache.write(`/orders/${saved.order_id}/shipping`, saved);
+  const writePurchase = (saved: PurchaseDetailDto) => cache.write(`/orders/${saved.order_id}/purchase`, saved);
 
   const resetSelector = () => {
     setCompanyId(null);
@@ -280,7 +220,6 @@ export function useOrdersState() {
       setForm(emptyForm);
       resetSelector();
       loadOrders();
-      loadGroupCounts();
     } catch (e) {
       setError(e instanceof Error ? e.message : t("common.saveError"));
     }
@@ -307,7 +246,6 @@ export function useOrdersState() {
     try {
       await api.delete(`/orders/${id}`);
       loadOrders();
-      loadGroupCounts();
     } catch (e) {
       setError(e instanceof Error ? e.message : t("common.deleteError"));
     }
@@ -344,14 +282,14 @@ export function useOrdersState() {
     companyId, setCompanyId,
     contactId, setContactId,
     selectorError,
-    error, loading,
+    error: shownError, loading, refetching,
     deleteTarget, setDeleteTarget,
     shippingTarget, setShippingTarget,
-    shippings, setShippings,
+    shippings, writeShipping,
     purchaseTarget, setPurchaseTarget,
-    purchases, setPurchases,
+    purchases, writePurchase,
     STATUS_LABELS, SORT_OPTIONS,
-    loadOrders, loadGroupCounts,
+    loadOrders,
     handleSubmit, handleEdit, performDelete,
     companyDisplay, resetSelector, setPaidOrder,
   };

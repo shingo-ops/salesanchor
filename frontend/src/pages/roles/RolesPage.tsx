@@ -13,10 +13,12 @@
  */
 
 import { LoadingBlock } from "../../components/loading";
-import { useEffect, useMemo, useState, FormEvent } from "react";
+import { useMemo, useState, FormEvent } from "react";
 import type { LucideIcon } from "../../constants/icons";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
+import { useApiCache, useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
+import { useSeededForm } from "../../lib/query/useSeededForm";
 import { Modal } from "../../components/Modal";
 import ConfirmModal from "../../components/ConfirmModal";
 import { Select } from "../../components/Select";
@@ -98,22 +100,36 @@ const PRIORITY_VALUES = [1000, 900, 500, 300];
 
 const emptyRoleForm = { name: "", color: COLOR_PALETTE[0], priority: 500, description: "" };
 
+const NO_ROLES: Role[] = [];
+const NO_PERMISSIONS: Permission[] = [];
+const EMPTY_IDS: Set<number> = new Set();
+const toIds = (perms: Permission[]): Set<number> => new Set(perms.map((p) => p.id));
+
 export default function RolesPage() {
   const { t } = useTranslation();
   const { hasPermission } = usePermissions();
 
   // データ
-  const [roles, setRoles] = useState<Role[]>([]);
-  const [permissions, setPermissions] = useState<Permission[]>([]);
-  const [loading, setLoading] = useState(true);
+  const rolesQ = useApiQuery<Role[]>("/roles");
+  const permsQ = useApiQuery<Permission[]>("/permissions");
+  const roles = rolesQ.data ?? NO_ROLES;
+  const permissions = permsQ.data ?? NO_PERMISSIONS;
   const [error, setError] = useState("");
 
   // 選択中ロール
-  const [selectedRoleId, setSelectedRoleId] = useState<number | null>(null);
-  // 元の権限状態（保存の差分検出用）
-  const [originalPermIds, setOriginalPermIds] = useState<Set<number>>(new Set());
-  // 編集中の権限状態
-  const [editedPermIds, setEditedPermIds] = useState<Set<number>>(new Set());
+  const [pickedRoleId, setPickedRoleId] = useState<number | null>(null);
+  // 選んだロールが一覧に無い（まだ選んでいない・消した）時は先頭のロール
+  const selectedRoleId = roles.some((r) => r.id === pickedRoleId) ? pickedRoleId : (roles[0]?.id ?? null);
+  // そのロールの権限（元の状態は写し・編集中はフォーム。写しが無い間は全部外して押せない）
+  const rolePermsQ = useApiQuery<Permission[]>(`/roles/${selectedRoleId}/permissions`, { enabled: selectedRoleId !== null });
+  const originalPermIds = useMemo(() => (rolePermsQ.data ? toIds(rolePermsQ.data) : EMPTY_IDS), [rolePermsQ.data]);
+  const { form: editedPermIds, setForm: setEditedPermIds, ready: permsReady } = useSeededForm(
+    `roles/${selectedRoleId}/permissions`, rolePermsQ.data, toIds, EMPTY_IDS,
+  );
+  const readError = rolesQ.error ?? permsQ.error ?? rolePermsQ.error;
+  const shownError = error || (readError ? (readError instanceof Error ? readError.message : t("common.fetchError")) : "");
+  const invalidate = useInvalidateApi();
+  const cache = useApiCache();
   const [savingPerms, setSavingPerms] = useState(false);
 
   // ロールCRUD用モーダル
@@ -121,33 +137,6 @@ export default function RolesPage() {
   const [editingRoleId, setEditingRoleId] = useState<number | null>(null);
   const [roleForm, setRoleForm] = useState(emptyRoleForm);
   const [deleteTarget, setDeleteTarget] = useState<Role | null>(null);
-
-  // 初回ロード
-  useEffect(() => {
-    Promise.all([
-      api.get<Role[]>("/roles"),
-      api.get<Permission[]>("/permissions"),
-    ])
-      .then(([r, p]) => {
-        setRoles(r);
-        setPermissions(p);
-        if (r.length > 0) setSelectedRoleId(r[0].id);
-      })
-      .catch((e) => setError(e instanceof Error ? e.message : t("common.fetchError")))
-      .finally(() => setLoading(false));
-  }, [t]);
-
-  // 選択ロール変更時、権限を読み込む
-  useEffect(() => {
-    if (selectedRoleId == null) return;
-    api.get<Permission[]>(`/roles/${selectedRoleId}/permissions`)
-      .then((perms) => {
-        const ids = new Set(perms.map((p) => p.id));
-        setOriginalPermIds(ids);
-        setEditedPermIds(new Set(ids));
-      })
-      .catch((e) => setError(e instanceof Error ? e.message : t("common.fetchError")));
-  }, [selectedRoleId, t]);
 
   // カテゴリ別に権限をグループ化
   const grouped = useMemo(() => {
@@ -181,10 +170,11 @@ export default function RolesPage() {
   }
 
   const canEditPerms = hasPermission("roles.update") && !isSystemRole;
+  const canTogglePerms = canEditPerms && permsReady;
 
   // 個別権限のトグル
   const togglePerm = (id: number) => {
-    if (!canEditPerms) return;
+    if (!canTogglePerms) return;
     const next = new Set(editedPermIds);
     if (next.has(id)) next.delete(id);
     else next.add(id);
@@ -193,7 +183,7 @@ export default function RolesPage() {
 
   // カテゴリ一括トグル（そのカテゴリの全権限を一斉ON/OFF）
   const toggleCategory = (category: string, on: boolean) => {
-    if (!canEditPerms) return;
+    if (!canTogglePerms) return;
     const catPerms = permissions.filter((p) => p.category === category);
     const next = new Set(editedPermIds);
     for (const p of catPerms) {
@@ -205,7 +195,7 @@ export default function RolesPage() {
 
   // 「メニュー表示」専用トグル（.view 系のみON/OFF）
   const toggleMenuVisibility = (category: string, on: boolean) => {
-    if (!canEditPerms) return;
+    if (!canTogglePerms) return;
     const keys = MENU_VIEW_KEY[category];
     if (!keys) return;
     const targetPerms = permissions.filter((p) => keys.includes(p.key));
@@ -233,7 +223,7 @@ export default function RolesPage() {
       await api.put(`/roles/${selectedRoleId}/permissions`, {
         permission_ids: Array.from(editedPermIds),
       });
-      setOriginalPermIds(new Set(editedPermIds));
+      await invalidate(["roles", String(selectedRoleId), "permissions"]);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("common.saveError"));
     } finally {
@@ -247,7 +237,7 @@ export default function RolesPage() {
   // ロール選択切替（未保存なら確認）
   const selectRole = (id: number) => {
     if (dirty && !window.confirm(t("roles.unsavedChanges") + t("roles.discardAndSwitch"))) return;
-    setSelectedRoleId(id);
+    setPickedRoleId(id);
   };
 
   // ロール作成/編集
@@ -280,8 +270,7 @@ export default function RolesPage() {
       } else {
         await api.post("/roles", payload);
       }
-      const latest = await api.get<Role[]>("/roles");
-      setRoles(latest);
+      await cache.fetch("/roles", () => api.get<Role[]>("/roles"));
       setShowRoleForm(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : t("common.saveError"));
@@ -293,19 +282,17 @@ export default function RolesPage() {
     setDeleteTarget(null);
     try {
       await api.delete(`/roles/${id}`);
-      const latest = await api.get<Role[]>("/roles");
-      setRoles(latest);
-      if (selectedRoleId === id && latest.length > 0) setSelectedRoleId(latest[0].id);
+      await cache.fetch("/roles", () => api.get<Role[]>("/roles"));
     } catch (e) {
       setError(e instanceof Error ? e.message : t("common.deleteError"));
     }
   };
 
-  if (loading) return <div className="page"><LoadingBlock /></div>;
+  if (rolesQ.isPending || permsQ.isPending) return <div className="page"><LoadingBlock /></div>;
 
   return (
     <div className="page roles-page">
-      {error && <div className="error-message">{error}</div>}
+      {shownError && <div className="error-message">{shownError}</div>}
 
       <div className="roles-layout">
         {/* === 左サイドバー: 役割一覧 === */}
@@ -401,7 +388,7 @@ export default function RolesPage() {
                             <Checkbox
                               label={t("roles.selectAll")}
                               checked={allChecked}
-                              disabled={!canEditPerms}
+                              disabled={!canTogglePerms}
                               onChange={(e) => toggleCategory(category, e.target.checked)}
                             />
                           </span>
@@ -410,7 +397,7 @@ export default function RolesPage() {
                               <Checkbox
                                 label={t("roles.showMenu")}
                                 checked={menuVisible}
-                                disabled={!canEditPerms}
+                                disabled={!canTogglePerms}
                                 onChange={(e) => toggleMenuVisibility(category, e.target.checked)}
                               />
                             </span>
@@ -422,7 +409,7 @@ export default function RolesPage() {
                           <label key={p.id} className="permission-item">
                             <CheckboxControl
                               checked={editedPermIds.has(p.id)}
-                              disabled={!canEditPerms}
+                              disabled={!canTogglePerms}
                               onChange={() => togglePerm(p.id)}
                             />
                             <div className="permission-item-text">
