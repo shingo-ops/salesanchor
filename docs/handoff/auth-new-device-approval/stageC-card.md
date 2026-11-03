@@ -1,4 +1,4 @@
-# 段C 実装カード（本番での受入の試験を作る・第4版・草案）
+# 段C 実装カード（本番での受入の試験を作る・第5版・草案）
 
 - 対象: design.md 第6.1版 §4「段C 本番での受入」・§6 の表（K1〜K9・点検が止まらない・相談係 AI の見え方・場所データの大きさ）。ADR-1055。合格の基準は kgi.md（PO 承認済 2026-11-01）。
 - 前提（済み）: 段A・段W・段B は本番に入っている。段B は #5036（merge 8b43e30c2・deploy run 41464085330 が 2026-11-02T14:47:31Z に success）。本番は `AUTH_DEVICE_APPROVAL=enforce`・`AUTH_DEVICE_BOOTSTRAP_CUTOFF=2026-11-02T22:00:00Z`（B4・PO の `!` で確認）。
@@ -90,7 +90,7 @@ design.md §6 との違い（第3版で明記）:
   5. 後片付け: いつもの機械の「ログインしている機械」の一覧で、日時・場所の目安・機械の種類が出ていることを見てから（K8 の画面の部分）、今入れたブラウザを取り消す。
   - 自動の確かめ: 試した時刻以降の PO の購読の `last_success_at` が 60 秒以内に更新されたか（design.md §6 K2）を、§6 の読み取りで見る。
   - 知らせもメールも出ないときは K2 を「判定待ち」とし、受入を完了とは書かない。
-- K7: C4 の `accept` とも K2 とも別の時間（`accept` から1時間以上あける）に、Opus が C4 を `target: k7` で流す（点検の人のパスワードは GitHub の secrets にしか無いため、手元では流さない）。C5 の流れ: 印の無い文脈で API の login → 202 → 30 秒ごとに poll（authPace を通す・1分2回で nginx の枠の内）。PO が管理画面「ログインの許可待ち」から理由を書いて許可する。poll で入れたら（`access_token` を受けたら）、そのトークンで自分の機械（一覧の `is_current`）を `DELETE /api/v1/auth/devices/{id}` で取り消して終わる。待つのは最大 25 分（依頼の期限 30 分の内。S backend/app/auth/devices.py:36）。C5 の test の上限は 28 分。管理者の許可で入ると `admin_approval` の機械が登録されるため（S backend/app/routers/auth.py:1446-1452）。記録（`decided_by_user_id`・`auth_events.reason='approved_admin'`）と、取り消した後に点検の人の有効な機械が B-0 の印だけになったことを §6 の読み取りで確かめる。PO のブラウザが使えないときは K7 の本番は「判定待ち」とし、受入を完了とは書かない。
+- K7: C4 の `accept` とも K2 とも別の時間（`accept` から1時間以上あける）に、Opus が C4 を `target: k7` で流す（点検の人のパスワードは GitHub の secrets にしか無いため、手元では流さない）。C5 の流れ: 印の無い文脈で API の login → 202 → 30 秒ごとに poll（authPace を通す・1分2回で nginx の枠の内）。PO が管理画面「ログインの許可待ち」から理由を書いて許可する。poll で入れたら（`access_token` を受けたら）、まずそのトークンで `GET /api/v1/super-admin/login-requests`（S backend/app/routers/super_admin_login_requests.py:70・`/api/v1/auth/` の外）を送り、403 を確かめる（super admin でない点検の人は管理者の口に入れない。design.md §6 K7 の「本番の 403 の ○」）。次に自分の機械（一覧の `is_current`）を `DELETE /api/v1/auth/devices/{id}` で取り消して終わる。待つのは最大 25 分（依頼の期限 30 分の内。S backend/app/auth/devices.py:36）。C5 の test の上限は 28 分。管理者の許可で入ると `admin_approval` の機械が登録されるため（S backend/app/routers/auth.py:1446-1452）。記録（`decided_by_user_id`・`auth_events.reason='approved_admin'`）と、取り消した後に点検の人の有効な機械が B-0 の印だけになったことを §6 の読み取りで確かめる。PO のブラウザが使えないときは K7 の本番は「判定待ち」とし、受入を完了とは書かない。
 
 ## 6. 読み取りだけの確かめ（PO の `!`・数だけ）
 
@@ -98,7 +98,7 @@ Opus がファイルにして渡す。どれも書き換えない。
 
 - K9: 受入の開始時刻以降の点検の人の `auth_events` を `event_type`・`reason`・`is_new_device` の組で数える（S backend/app/middleware/audit.py:248-257）。出ていること: `event_type='auth_pending'` かつ `reason='device_approval_required'` かつ `is_new_device=true`（S backend/app/routers/auth.py:461-467）・`approved_device`（is_new_device=true）・`rejected`・`approved_recovery`・`recovery_code_wrong`・許可済みの機械のログインの `reason='ok'`（S backend/app/routers/auth.py:420・:497）。パスワード・合言葉の文字列がどの列にも無いことは pytest（段A）で見ている。
 - K2 の自動の確かめ: §5 の K2 を試した時刻以降に、PO の購読の `last_success_at` が更新された件数。
-- K7 の記録: K7 を流した時刻以降の点検の人の依頼で `decided_via='admin'` かつ `decided_by_user_id` が入っている件数（1）と、`auth_events.reason='approved_admin'` の件数（1）。
+- K7 の記録: K7 を流した時刻以降の点検の人の依頼で `decided_via='admin'` かつ `decided_by_user_id` と `decided_at` が入っている件数（1）と、`auth_events.reason='approved_admin'` の件数（1）。
 - 機械の件数（C-f と K7 の後）: 点検の人の `user_trusted_devices` で `revoked_at IS NULL` の件数。受入の前に1回、C1 の後と C5 の後に1回ずつ数え、同じであること。
 - C-g の 429: 受入の後の最初の prod-ui-check の実行記録で、429 の出た回数（`gh run view --log` を数える。0 が合格）。
 - 相談係 AI の見え方: `ai_cloud_meta.build_log` の最新行が ok・`column_class` の行数。
@@ -134,3 +134,4 @@ Opus がファイルにして渡す。どれも書き換えない。
 - 第1版（863c99c）: クラウドの設計審査（Opus・run cse_01W47tdhM1a3acEb92UP7wme・2026-11-03T00:28Z）→ REVISE（要修正6・軽微2）。指摘1 nginx の枠は auth 全体にかかる → D-C3・§3 右端の列。指摘2 印の無い文脈の準備 → N だけ画面を使い init script を掛ける。指摘3 トークンの持ち方 → D-C6。指摘4 値がログに出る道 → D-C5・C-d。指摘5〜8 は実行記録が途中で切れて読めなかったため、第2版の審査で改めて挙げてもらう。合っていた点: 12段の順・reject で B-0 の印が残る・依頼4件・concurrency。
 - 第2版（d701d7e）: クラウドの設計審査（Opus・run cse_01W47tdeXn9MBEDgNYDcvCdx・2026-11-03T00:36Z）→ REVISE（要修正6・軽微3）。指摘1 知らせは依頼した本人にだけ届く → §5 の K2 を PO 自身のアカウントで試す形にした。指摘2 知らせの中身 → 段3 で3つの欄を見る。指摘3 メール → §5 の K2 の 3。指摘4 K8 の場所 → 段6 に `location`・§0 に画面でなく API と明記。指摘5 K9 の組 → §6。指摘6 K7 の後に残る機械 → §5 の K7 の台本で自分の機械を取り消す。指摘7 「1件だけ」の決め打ち → 段1 の集まりと段12 で比べる（呼び出し +1）。指摘8 D-C3 の書き方 → 画面が自分で呼ぶ分の扱いを足した。指摘9 §0 の数・写しを作らない違い・429 の数え → §0・§6・C-g。合っていた点: §3 の呼び出しの数（約25回）は実物どおり。
 - 第3版（e47fc0f）: クラウドの設計審査（Opus・run cse_01W47tdgm78j916RTot1FdxC・2026-11-03T00:51Z）→ REVISE（要修正4・軽微1）。指摘1 K2 で顔・指紋で入ると知らせが出ない → §5 の手順2 をパスワードで入ると明記。指摘2 K7 の台本の置き場と流す場所 → C5 を足し C4 の `target` で選ぶ。指摘3 §6 に K7 と機械の件数の読み取りが無い → §6 に足した。指摘4 時間の上限とトークンの期限 900 秒が同じ → 上限 10 分・段12 で画面を閉じてから取り直す。指摘5 配備中の見送り → C4 の `if`・C-e。
+- 第4版（cd97dd5）: クラウドの設計審査（Opus・run cse_01W47tdijMm8ZvK4841uRj98・2026-11-03T00:58Z）→ REVISE（要修正1）。段12 の refresh は使い回しの判定に当たらない・C5 の poll は nginx と1時間5件の枠の内、と確認された。指摘1 本番の 403 の確かめと許可の時刻が無い → C5 で入れた直後に管理者の口へ送り 403 を確かめる・§6 に `decided_at`。
