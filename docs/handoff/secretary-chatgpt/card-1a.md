@@ -22,7 +22,8 @@
 - 11 期待値: 行番号ではなく前後の文字で場所を決める。数は実物から数える ○
 
 ## 禁止（名指し）
-- `backend/app/`・`frontend/`・`secretary-agent/`・`deploy.yml`・compose のファイルを変えない（この便はコードを変えない）。
+- `backend/app/`・`frontend/`・`secretary-agent/`・`deploy.yml`・compose のファイルを変えない（この便はコードを変えない）。`.github/workflows/` は `migration-guard.yml` の `PUBLIC_TABLES` の1行（3-2）だけ変えてよい。ほかのワークフローは変えない。
+- `docs/handoff/cloud-case-ai/stage1-column-class.tsv` は変えない（分類の正本は migration の SQL。この表を読む試験や台本は無い）。
 - 本番に繋がない。本番の鍵を使わない。VPS に入らない。
 - PR を作らない・マージしない。GO 記録を書かない。`docs/ai-agents/evidence-registry.md` に書かない。
 - `/review` を実行しない。rebase・force push をしない。
@@ -34,6 +35,7 @@
 - 0-2 `git ls-tree --name-only origin/main migrations/ | tail -3` で一番新しい migration の名前を出す。`20261103_120000` より新しい名前があれば、この便のファイル名の時刻をそれより後に直して続ける（名前は報告に書く。以下のカードの中の `20261103_120000_create_ai_job_assignments.sql` もすべてその名前に読み替える）。
 - 0-3 `git show origin/main:migrations/20260930_150000_create_llm_usage_events.sql` の `llm_usage_events_purpose_check` と `llm_usage_events_sdk_check` の中身を報告に写す。今の値は purpose が `line_extraction`・`line_extraction_shadow`・`inventory_parse_fallback`・`translation_inbound`・`translation_inbound_escalation`・`translation_outbound`、sdk が `google-genai`・`google-generativeai`。ほかの migration がこの2つを作り直していないことを `git grep -n 'llm_usage_events_purpose_check\|llm_usage_events_sdk_check' origin/main -- migrations` で確かめる（出てくるのは `20260930_150000` と `20261024_100300` の2つだけのはず）。違えば止まる。
 - 0-4 `git show origin/main:migrations/20261024_100300_create_ai_cloud_views.sql | sed -n '1,5p'` と `git show origin/main:backend/tests/ops/test_ai_cloud_views.py | grep -n '== n0 =='` で、分類表の今の行数（今は 1057）を出す。以下ではこの数を N と書く。
+- 0-5 `python3 scripts/check-migration-value-writes.py repo` を流し、今の main で通ることを報告に写す（通らなければ止まる）。
 
 ## 1. 新しい migration `migrations/20261103_120000_create_ai_job_assignments.sql`（1つのファイル）
 頭に、何をするか・流し直しても壊れない理由・戻し方（PO が流す。下の「戻し方」）をコメントで書く。前例の書き方は `migrations/20261020_110000_line_conditions_value_group_add_supply.sql` の頭のコメント。
@@ -105,6 +107,10 @@
   - `('public','llm_usage_events',ARRAY['error_code'],'allow','値の決まり llm_usage_events_error_code_check で値が限られる')`
 - 頭のコメントの「N 行」と、`backend/tests/ops/test_ai_cloud_views.py` の `== n0 == N` を、N+7 に直す。
 
+## 3-2. migration の守りの登録（2つ。前例は ADR-1055 段W の commit 77e5df4fc）
+- `scripts/migration-guard/reference-allowlist.tsv`: `migrations/20261024_100300_create_ai_cloud_views.sql` の行の sha256 を、3 を直した後の `sha256sum migrations/20261024_100300_create_ai_cloud_views.sql` の値に直す。同じ行の decision_ref の最後に ` / ADR-1058 段1a（分類7行追加）` を足す。ほかの行は変えない。直した後に `python3 scripts/check-migration-value-writes.py repo` が通ること。
+- `.github/workflows/migration-guard.yml`: `PUBLIC_TABLES="..."` の1行の最後（閉じる `"` の前）に、半角空白で区切って `ai_job_choices ai_job_assignments ai_job_assignment_history` を足す。ほかの行は変えない。
+
 ## 4. 試験
 4-1 `backend/tests/ops/test_ai_cloud_views.py` に1本足す。前例は同じファイルの `test_t10_new_device_approval_columns_are_classified_on_bootstrapped_db`（ADR-1055 段A）と `test_t10_web_push_columns_are_classified_on_bootstrapped_db`。
 - 名前: `test_t10_ai_job_assignment_columns_are_classified_on_bootstrapped_db`
@@ -122,14 +128,15 @@
 ## 5. 確かめ方
 - ruff は変えた試験ファイル2つだけ（`uvx ruff check` と `uvx ruff format --check`）。期待する出力は `All checks passed!` と `2 files already formatted`。
 - 作業場所に PostgreSQL があれば `pytest backend/tests/ops/test_ai_job_assignments_db.py backend/tests/ops/test_ai_cloud_views.py -k "ai_job"` を流してよい。無ければ流さず「SKIPPED のため CI に任せた」と書く。SKIPPED を合格と書かない。
-- `git diff origin/main...HEAD --name-only` が次の5つだけであること（ほかがあれば止まる）: `migrations/20261103_120000_create_ai_job_assignments.sql`・`scripts/run_all_migrations.sh`・`migrations/20261024_100300_create_ai_cloud_views.sql`・`backend/tests/ops/test_ai_cloud_views.py`・`backend/tests/ops/test_ai_job_assignments_db.py`（このカードと同じ commit に入っている docs/ の文書は除いて数える）。
-- `git diff origin/main...HEAD --numstat` の削除の数（2列目）が、`migrations/20261024_100300_create_ai_cloud_views.sql` と `backend/tests/ops/test_ai_cloud_views.py` は各1（N の行だけ）、ほかは0であること。違えば、そのファイルの削除行を `git diff origin/main...HEAD -- migrations/20261024_100300_create_ai_cloud_views.sql backend/tests/ops/test_ai_cloud_views.py | grep '^-' | head -20` で出して止まる。
+- `git diff origin/main...HEAD --name-only` が次の7つだけであること（ほかがあれば止まる）: `migrations/20261103_120000_create_ai_job_assignments.sql`・`scripts/run_all_migrations.sh`・`migrations/20261024_100300_create_ai_cloud_views.sql`・`backend/tests/ops/test_ai_cloud_views.py`・`backend/tests/ops/test_ai_job_assignments_db.py`・`scripts/migration-guard/reference-allowlist.tsv`・`.github/workflows/migration-guard.yml`（このカードと同じ commit に入っている docs/ の文書は除いて数える）。
+- `git diff origin/main...HEAD --numstat` の削除の数（2列目）が、`migrations/20261024_100300_create_ai_cloud_views.sql` と `backend/tests/ops/test_ai_cloud_views.py` は各1（N の行だけ）、`scripts/migration-guard/reference-allowlist.tsv` と `.github/workflows/migration-guard.yml` は各1（直した1行だけ）、ほかは0であること。違えば、そのファイルの削除行を `git diff origin/main...HEAD -- migrations/20261024_100300_create_ai_cloud_views.sql backend/tests/ops/test_ai_cloud_views.py | grep '^-' | head -20` で出して止まる。
 - 生出力は作業場所の外の一時フォルダに保存し、パスと全文を報告に書く。
 
 ## 6. 想定される分岐と止まる条件
 - 0 の前提が違う → 止まり、NEEDS_DECISION: で返す（違った所の生出力を付ける）。
 - 1-7 を前例と同じ形にできない → 止まり、NEEDS_DECISION: で返す。
 - 4-1 の順で migration が流れない（表が無い等） → 止まり、BLOCKED: で生出力を返す。表の形を試験に写して回避しない。
+- 2回流しで 1-6 の列に付けた名前付きの CHECK が `already exists` で落ちた → 1-6 の outcome・error_code の CHECK も、3つ目と同じ DO の塊（`pg_constraint` に名前が無い時だけ足す）に切り替えてよい。切り替えたことは報告に書く。
 - カードに無いファイルを触る必要が出た → 止まり、NEEDS_DECISION: で返す。
 - 迷ったら停止して NEEDS_DECISION: で Opus に戻す。
 - 終わったら commit（最後の行は Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>）→ git log -1 で確かめる → git push origin release/ai-roster-1a-migration → git log origin/release/ai-roster-1a-migration -1 で確かめる。PR は作らない。

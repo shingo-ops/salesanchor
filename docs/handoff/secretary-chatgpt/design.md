@@ -1,4 +1,4 @@
-# 秘書チャットを ChatGPT に・アプリの AI を画面で管理 — 設計（草案 v10・審査9回目の軽い指摘を反映）
+# 秘書チャットを ChatGPT に・アプリの AI を画面で管理 — 設計（v10・PO 承認済み）
 
 - 状態: 設計案作成済み／設計審査 1回目〜8回目 REVISE・9回目 APPROVE（§14）→ v10 で9回目の軽い指摘 R1〜R3 を反映／PO 承認済み（2026-11-03 PO が「この設計で決める」の選択肢に「1」。秘書は今の Claude のまま始める。月額契約の判断は段3の前に別に聞く）／実装 未着手（実装は段ごとのカードと PO の実装の許可が揃ってから）
 - 目標: `docs/handoff/secretary-chatgpt/kgi.md`（K1〜K10）。現在地: `docs/handoff/secretary-chatgpt/recon.md`（§番号で参照）。根拠の照合は origin/main d828bb269（引用したパスは 44098dc31・c60ea6eb3・90ee0c15f から差分なし。生出力 `review4_fix.txt`・`review5_fix.txt`・`review6_fix*.txt`・`review7_fix.txt`・review8.md・review9.md）。
@@ -244,8 +244,8 @@ GitHub の一時 VM（sandbox-test）で、compose と同じ条件（read_only�
    - 秘書を ChatGPT にした時の最初のモデル（試験では3つとも6〜8秒で正しい形）。
    - 月額契約（ChatGPT の個人の契約）を会社のサーバーでお客さん向けの機能に使ってよいか（使い方の約束の判断。段3に入る前に。答えは「使ってよい」「スーパー管理者の試験だけ可」「不可」の3つ、進め方は §7）。
    - Claude の容器を片付ける時期（段4）。
-7. （2026-11-03）段1a のカード `docs/handoff/secretary-chatgpt/card-1a.md` を作り、card-lint で違反0（長い行の警告だけ）。実装は PO の実装の許可の後。
 6. prod1 の MemAvailable・MemTotal を読み取りの道で測り、K8 の基準値を本書に書く（段3の前）。
+7. （2026-11-03）段1a のカード `docs/handoff/secretary-chatgpt/card-1a.md` を作り、card-lint で違反0（長い行の警告だけ）。マージ前の審査で、migration の守りの登録2つ（`scripts/migration-guard/reference-allowlist.tsv` の sha256・`.github/workflows/migration-guard.yml` の `PUBLIC_TABLES`）の漏れを指摘され、カードの 3-2 に足した。実装は PO の実装の許可の後。
 
 ## 14. 審査（Architect・クラウドの Opus。同じ種類の AI による審査で、独立した第二者の審査ではない）
 - 1回目（2026-11-02 14:05〜14:10 UTC・head 2fd362023・2回に分けて実行）: VERDICT: REVISE。
