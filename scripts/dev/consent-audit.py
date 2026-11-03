@@ -1100,6 +1100,423 @@ def run_permissions(home, out, now=None, commit=False, gh_view=None, git_run=Non
     return changed, n_reasons
 
 
+# ── --prod-logins ─────────────────────────────────────────────────────────
+# 無制限鍵の入室（auth.log の Accepted publickey）を、手元の会話の記録の呼び出しの窓で説明できるかを分ける。
+# 読み取りだけ。呼び出しの文面と台本のパスは出力しない。
+import bisect
+import time
+
+PL_JST = datetime.timezone(datetime.timedelta(hours=9))
+PL_CLASSES = [
+    "異常: 接続元が違う", "異常: 担当が使った", "説明済み: メインの会話", "説明済み: PO の !",
+    "要確認: 台本が読めない", "要確認: 関係の無い実行だけ", "要確認: 記録なし",
+]
+PL_VALUE_OPTS = {"-b", "-c", "-D", "-E", "-e", "-F", "-I", "-i", "-J", "-L", "-l", "-m", "-O",
+                 "-o", "-p", "-Q", "-R", "-S", "-W", "-w"}
+PL_CALL_RE = re.compile(r"(?:^|[\s;|&(\"'])(ssh|scp|rsync|sftp)(?=[\s\"')]|$)", re.M)
+PL_SEP_RE = re.compile(r";|&&|\|\||\||\n")
+PL_SCRIPT_RE = re.compile(r"(?:^|[\s;|&(\"'])((?:~|/)[^\s;|&)\"'<>]+\.(?:sh|py))")
+PL_TS_RE = re.compile(rb'"timestamp":\s*"([^"]+)"')
+
+
+def pl_parse_auth(path, label):
+    res = []
+    with open(path, "r", encoding="utf-8", errors="replace") as f:
+        for line in f:
+            if "Accepted publickey" not in line:
+                continue
+            parts = line.split(None, 1)
+            if not parts:
+                continue
+            t = parse_ts(parts[0])
+            if t is None:
+                continue
+            m = re.search(r" from (\S+)", line)
+            if not m:
+                continue
+            res.append({"t": t, "host": label, "src": m.group(1)})
+    return res
+
+
+def _pl_strip_heredocs(cmd):
+    lines = cmd.split("\n")
+    res = []
+    i = 0
+    while i < len(lines):
+        ln = lines[i]
+        res.append(ln)
+        i += 1
+        k = ln.find("<<")
+        if k < 0 or ln[k:k + 3] == "<<<":
+            continue
+        if not re.search(r"cat\s*>|tee\s", ln[:k]):
+            continue
+        m = re.match(r"-?\s*['\"]?([A-Za-z0-9_]+)['\"]?", ln[k + 2:])
+        if not m:
+            continue
+        marker = m.group(1)
+        while i < len(lines) and lines[i].strip() != marker:
+            i += 1
+        i += 1
+    return "\n".join(res)
+
+
+def _pl_dest(tokens):
+    cmd = tokens[0]
+    rest = tokens[1:]
+    dest = None
+    if cmd in ("ssh", "sftp"):
+        i = 0
+        while i < len(rest):
+            tok = rest[i]
+            if tok in PL_VALUE_OPTS:
+                i += 2
+                continue
+            if tok.startswith("-"):
+                i += 1
+                continue
+            dest = tok
+            break
+    else:
+        for tok in rest:
+            if ":" in tok:
+                dest = tok.split(":", 1)[0]
+                break
+    if dest is None:
+        return None
+    dest = dest.strip("\"'()")
+    if "@" in dest:
+        dest = dest.split("@", 1)[1]
+    if not dest or "$" in dest:
+        return None
+    return dest
+
+
+def _pl_steps_1_5(text, resolve):
+    text = _pl_strip_heredocs(text)
+    for m in PL_CALL_RE.finditer(text):
+        start = m.start(1)
+        sep = PL_SEP_RE.search(text, start)
+        call = text[start:sep.start() if sep else len(text)]
+        if re.search(r"(?:^|\s)-i\s+[\"']?\S*manual-only", call) or \
+                re.search(r"IdentityFile[= ]\s*[\"']?\S*manual-only", call):
+            return True
+        tokens = call.split()
+        if not tokens:
+            continue
+        tokens[0] = m.group(1)
+        dest = _pl_dest(tokens)
+        if dest and any("manual-only" in v for v in (resolve(dest) or [])):
+            return True
+    return False
+
+
+def pl_uses_key(cmd, resolve, read_file):
+    if _pl_steps_1_5(cmd, resolve):
+        return "yes"
+    stripped = _pl_strip_heredocs(cmd)
+    unreadable = False
+    for m in PL_SCRIPT_RE.finditer(stripped):
+        content = read_file(os.path.expanduser(m.group(1)))
+        if content is None:
+            unreadable = True
+            continue
+        if "manual-only" in content or _pl_steps_1_5(content, resolve):
+            return "yes"
+    return "unreadable" if unreadable else "no"
+
+
+def pl_default_resolve():
+    cache = {}
+
+    def resolve(host):
+        if host in cache:
+            return cache[host]
+        vals = []
+        try:
+            r = subprocess.run(["ssh", "-G", host], capture_output=True, timeout=10)
+            if r.returncode == 0:
+                for ln in r.stdout.decode("utf-8", "replace").splitlines():
+                    if ln.startswith("identityfile "):
+                        vals.append(ln[len("identityfile "):].strip())
+        except (OSError, subprocess.SubprocessError):
+            vals = []
+        cache[host] = vals
+        return vals
+    return resolve
+
+
+def pl_default_read_file():
+    cache = {}
+
+    def read_file(path):
+        if path in cache:
+            return cache[path]
+        try:
+            with open(path, "rb") as f:
+                val = f.read(2000000).decode("utf-8", "replace")
+        except OSError:
+            val = None
+        cache[path] = val
+        return val
+    return read_file
+
+
+def _pl_text(content):
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts = []
+        for it in content:
+            if isinstance(it, dict):
+                parts.append(str(it.get("text", "")))
+            elif isinstance(it, str):
+                parts.append(it)
+        return "\n".join(parts)
+    return ""
+
+
+def _pl_file_windows(path, is_sub, sid8, resolve, read_file, memo):
+    uses, results, notes, bangs = {}, {}, [], []
+    pending = None
+    last = None
+    with open(path, "rb") as f:
+        for line in f:
+            mt = PL_TS_RE.search(line)
+            if mt:
+                last = mt.group(1)
+            if b"toolu_" not in line and b"<bash-input>" not in line and b"<bash-stdout>" not in line:
+                continue
+            try:
+                rec = json.loads(line)
+            except ValueError:
+                continue
+            if not isinstance(rec, dict):
+                continue
+            ts = parse_ts(rec.get("timestamp"))
+            if ts is None:
+                continue
+            msg = rec.get("message") if isinstance(rec.get("message"), dict) else {}
+            content = msg.get("content")
+            side = is_sub or rec.get("isSidechain") is True
+            if b"<task-notification>" in line:
+                notes.append((ts, line.decode("utf-8", "replace")))
+            if rec.get("type") == "assistant" and isinstance(content, list):
+                for it in content:
+                    if isinstance(it, dict) and it.get("type") == "tool_use" and it.get("name") in ("Bash", "Monitor"):
+                        uses[it.get("id")] = (ts, it.get("name"), it.get("input") or {}, side)
+            elif rec.get("type") == "user":
+                if isinstance(content, list):
+                    for it in content:
+                        if isinstance(it, dict) and it.get("type") == "tool_result":
+                            results.setdefault(it.get("tool_use_id"), (ts, _pl_text(it.get("content"))))
+                elif isinstance(content, str) and not is_sub:
+                    if content.startswith("<bash-input>"):
+                        pending = ts
+                    elif content.startswith("<bash-stdout>") and pending is not None:
+                        bangs.append((pending, ts))
+                        pending = None
+    last_t = parse_ts(last.decode("utf-8", "replace")) if last else None
+    wins = []
+    for tid, (st, name, inp, side) in uses.items():
+        cmd = inp.get("command") if isinstance(inp, dict) else ""
+        cmd = cmd if isinstance(cmd, str) else ""
+        res = results.get(tid)
+        bg = name == "Monitor" or (isinstance(inp, dict) and inp.get("run_in_background") is True)
+        if res and ("moved to the background" in res[1] or "running in background" in res[1]):
+            bg = True
+        end, noend = None, False
+        if bg:
+            tag = "<tool-use-id>%s</tool-use-id>" % tid
+            for nt, raw in notes:
+                if nt >= st and tag in raw:
+                    end = nt
+                    break
+        elif res:
+            end = res[0]
+        if end is None:
+            end, noend = (last_t or st), True
+        if end < st:
+            end = st
+        if cmd not in memo:
+            memo[cmd] = pl_uses_key(cmd, resolve, read_file)
+        wins.append({"start": st, "end": end, "sid8": sid8, "who": "sub" if side else "main",
+                     "key": memo[cmd], "noend": noend})
+    for st, en in bangs:
+        wins.append({"start": st, "end": en, "sid8": sid8, "who": "bang", "key": "bang", "noend": False})
+    if pending is not None:
+        wins.append({"start": pending, "end": last_t or pending, "sid8": sid8, "who": "bang",
+                     "key": "bang", "noend": True})
+    return wins
+
+
+def pl_load_windows(projects_dir, since, until, resolve, read_file):
+    files = []
+    for p in sorted(glob.glob(os.path.join(projects_dir, "*", "*.jsonl"))):
+        files.append((p, False))
+    for p in sorted(glob.glob(os.path.join(projects_dir, "*", "*", "subagents", "*.jsonl"))):
+        files.append((p, True))
+    windows, nfiles, memo = [], 0, {}
+    lo = since - datetime.timedelta(days=1)
+    for p, is_sub in files:
+        try:
+            if os.path.getmtime(p) < since.timestamp():
+                continue
+        except OSError:
+            continue
+        parts = os.path.relpath(p, projects_dir).split(os.sep)
+        sid8 = parts[1][:8] if len(parts) > 1 else "?"
+        try:
+            ws = _pl_file_windows(p, is_sub, sid8, resolve, read_file, memo)
+        except OSError:
+            continue
+        nfiles += 1
+        windows.extend(w for w in ws if w["start"] <= until and w["end"] >= lo)
+    windows.sort(key=lambda w: w["start"])
+    stats = {
+        "files": nfiles,
+        "calls": len(windows),
+        "noend": sum(1 for w in windows if w["noend"]),
+        "long": sum(1 for w in windows if (w["end"] - w["start"]) > datetime.timedelta(hours=1)),
+    }
+    return windows, stats
+
+
+def pl_classify(logins, windows, mac_ip, slack_s=3):
+    windows = sorted(windows, key=lambda w: w["start"])
+    starts = [w["start"] for w in windows]
+    pmax, cur = [], None
+    for w in windows:
+        cur = w["end"] if cur is None or w["end"] > cur else cur
+        pmax.append(cur)
+    slack = datetime.timedelta(seconds=slack_s)
+    res = []
+    for lg in logins:
+        t = lg["t"]
+        idx = bisect.bisect_right(starts, t + slack) - 1
+        over = []
+        i = idx
+        while i >= 0 and pmax[i] >= t - slack:
+            w = windows[i]
+            if w["start"] - slack <= t <= w["end"] + slack:
+                over.append(w)
+            i -= 1
+        over.reverse()
+        cls, win = None, None
+        if lg["src"] != mac_ip:
+            cls, win = PL_CLASSES[0], (over[0] if over else None)
+        else:
+            for ci, pred in ((1, lambda w: w["who"] == "sub" and w["key"] == "yes"),
+                             (2, lambda w: w["who"] == "main" and w["key"] == "yes"),
+                             (3, lambda w: w["who"] == "bang"),
+                             (4, lambda w: w["key"] == "unreadable")):
+                hit = [w for w in over if pred(w)]
+                if hit:
+                    cls, win = PL_CLASSES[ci], hit[0]
+                    break
+            if cls is None:
+                if over:
+                    cls, win = PL_CLASSES[5], over[0]
+                else:
+                    cls = PL_CLASSES[6]
+        res.append({"t": t, "host": lg["host"], "class": cls,
+                    "explained": cls.startswith("説明済み"), "win": win})
+    return res
+
+
+def _pl_fmt(t, fmt="%Y-%m-%d %H:%M:%S"):
+    return t.astimezone(PL_JST).strftime(fmt)
+
+
+def _pl_win_text(w):
+    if not w:
+        return "なし"
+    return "%s-%s" % (_pl_fmt(w["start"], "%H:%M:%S"), _pl_fmt(w["end"], "%H:%M:%S"))
+
+
+def run_prod_logins(home, auth_specs, since, until, delegation_start, mac_ip, out,
+                    resolve=None, read_file=None):
+    t0 = time.time()
+    resolve = resolve or pl_default_resolve()
+    read_file = read_file or pl_default_read_file()
+    labels = [lb for lb, _ in auth_specs]
+    logins = []
+    for lb, p in auth_specs:
+        logins.extend(l for l in pl_parse_auth(p, lb) if since <= l["t"] <= until)
+    logins.sort(key=lambda l: l["t"])
+    windows, stats = pl_load_windows(paths(home)["projects"], since, until, resolve, read_file)
+    cls = pl_classify(logins, windows, mac_ip)
+    out("== 無制限鍵の入室と会話の記録の照合 ==")
+    out("期間: %s 〜 %s（委任の開始 %s）" % (_pl_fmt(since), _pl_fmt(until), _pl_fmt(delegation_start)))
+    out("入室: " + " ".join("%s=%d" % (lb, sum(1 for l in logins if l["host"] == lb)) for lb in labels))
+    out("会話の記録: ファイル=%d 呼び出し=%d 終わり不明=%d 1時間を超える窓=%d"
+        % (stats["files"], stats["calls"], stats["noend"], stats["long"]))
+    for name in PL_CLASSES:
+        allp = " ".join("%s=%d" % (lb, sum(1 for c in cls if c["class"] == name and c["host"] == lb))
+                        for lb in labels)
+        aft = " ".join("%s=%d" % (lb, sum(1 for c in cls if c["class"] == name and c["host"] == lb
+                                           and c["t"] >= delegation_start)) for lb in labels)
+        out("分類: %s 全体 %s 委任の後 %s" % (name, allp, aft))
+    bad_after = 0
+    for c in cls:
+        after = c["t"] >= delegation_start
+        w = c["win"]
+        sid = w["sid8"] if w else "-"
+        if not c["explained"]:
+            if after:
+                bad_after += 1
+            out("UNEXPLAINED=%s %s %s %s %s 窓=%s" % (_pl_fmt(c["t"]), c["host"], sid, c["class"],
+                                                    "委任の後" if after else "委任の前", _pl_win_text(w)))
+    for c in cls:
+        if c["class"] == PL_CLASSES[2] and c["t"] >= delegation_start:
+            w = c["win"]
+            pf = os.path.join(home, "CC報告ファイル-keep", "prod-ops", _pl_fmt(c["t"], "%Y%m%d") + ".md")
+            try:
+                with open(pf, "rb") as f:
+                    po = "%d行" % len(f.read().splitlines())
+            except OSError:
+                po = "なし"
+            out("AFTER_MAIN=%s %s %s 窓=%s prod-ops=%s" % (_pl_fmt(c["t"]), c["host"],
+                                                        w["sid8"] if w else "-", _pl_win_text(w), po))
+    out("秒=%d" % int(time.time() - t0))
+    out("UNEXPLAINED_AFTER_DELEGATION=%d" % bad_after)
+    return 1 if bad_after > 0 else 0
+
+
+def run_prod_logins_cli(args, home, now):
+    def stop(why):
+        print("STOP: %s" % why)
+        return 2
+
+    tz_re = re.compile(r"(?:Z|[+-]\d{2}:?\d{2})$")
+    specs = []
+    for a in (args.auth or []):
+        if "=" not in a or not a.split("=", 1)[0] or not a.split("=", 1)[1]:
+            return stop("--auth は LABEL=PATH の形で指定する")
+        lb, p = a.split("=", 1)
+        specs.append((lb, p))
+    if not specs:
+        return stop("--auth が1つも無い")
+    vals = {}
+    for name, raw in (("--since", args.since), ("--until", args.until),
+                      ("--delegation-start", args.delegation_start)):
+        if not raw:
+            return stop("%s が無い" % name)
+        if not tz_re.search(raw) or "T" not in raw:
+            return stop("%s に時差が無い（例 2026-10-26T14:00+09:00）" % name)
+        dt = parse_ts(raw)
+        if dt is None:
+            return stop("%s が読めない" % name)
+        vals[name] = dt
+    for lb, p in specs:
+        try:
+            pl_parse_auth(p, lb)
+        except OSError:
+            return stop("入室の記録 %s を読めない" % lb)
+    return run_prod_logins(home, specs, vals["--since"], vals["--until"], vals["--delegation-start"],
+                           args.mac_ip, print)
+
+
 def run_audit(home, now, with_permissions, out, commit=False, gh_view=None, git_run=None):
     since = now - datetime.timedelta(days=DAYS)
     events = load_events(home)
@@ -1141,9 +1558,20 @@ def main(argv=None):
     ap.add_argument("--permissions", action="store_true")
     ap.add_argument("--commit-snapshot", action="store_true",
                     help="権限の写しを更新する（定期実行だけが付ける。付けないときは比べて表示するだけ）")
+    ap.add_argument("--prod-logins", action="store_true",
+                    help="無制限鍵の入室を会話の記録で照らす（--auth と --since と --until が要る）")
+    ap.add_argument("--auth", action="append", metavar="LABEL=PATH",
+                    help="入室の記録のファイル。何回でも（例 --auth prod1=/x/a.txt）")
+    ap.add_argument("--since", metavar="ISO8601", help="期間の始まり（時差付き）")
+    ap.add_argument("--until", metavar="ISO8601", help="期間の終わり（時差付き）")
+    ap.add_argument("--delegation-start", metavar="ISO8601", default="2026-11-02T18:06+09:00",
+                    help="委任の開始（既定 2026-11-02T18:06+09:00）")
+    ap.add_argument("--mac-ip", metavar="IP", default="49.128.148.145", help="手元の接続元 IP")
     args = ap.parse_args(argv)
     home = real_home()
     now = datetime.datetime.now(datetime.timezone.utc)
+    if args.prod_logins:
+        return run_prod_logins_cli(args, home, now)
     if args.probe:
         print(json.dumps(probe(home, args.probe, now), ensure_ascii=False))
         return 0
