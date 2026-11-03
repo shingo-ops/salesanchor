@@ -4,8 +4,8 @@
 - 根拠の写し: S=origin/main 57fbceb0494b2b8b22f647986fb2a81c6084ba5f。行番号はすべてこの sha。2026-11-04 に設計担当が S の写し（作業場所 release/line-like-speed-batch3g-schedule の HEAD と同じ。`git rev-parse HEAD origin/main` で確かめた）で行を読んだ。実装の前に最新の origin/main で行を合わせ直す（§3(a)）。
 - 読んだ節: docs/handoff/design-partner-card-ops/guards/00-common.md・guards/03-file.md・guards/04-worktree.md・guards/05-pr.md・guards/10-executor.md・scripts/agent-hooks/cloud/rules.md（段 3 の 1〜6 回目のカードと同じ節。照合も同じ: 全命令は cd <W> で始める・出力は tail/head で上限・新しいファイルは丸ごとの全文・作業場所は new-worktree.sh で作り出力をパイプに通さない・PR は実行役が作らない・出力をファイルに残す命令と tail で読む命令は別の行）。
 - 実行役はクラウドの Sonnet。作業場所の作り方はクラウドの決まり（S scripts/agent-hooks/cloud/rules.md:15）を正とする。.pr-number・gh-pr-create-safe.sh は使わない。出力には上限を付ける。待つために sleep を使わない。
-- 状態: 第 1 版（2026-11-04 設計担当 Claude Opus）。審査の前。
-- 受領確認: 実装役は着手の最初の報告に「段 3 の 7 回目のカード 第 1 版を受け取った・S=57fbceb04」と書く。
+- 状態: 第 2 版（2026-11-04 設計担当 Claude Opus）。第 1 版（652d969e9）はカード審査（クラウド Claude Opus）で REVISE: §4-A を当てると S :1237 の行で型の検査が落ちる（TS2367）。第 2 版で A9 を足して直し、A2 の行数と V3g-6 の今の文の書き方を直した。
+- 受領確認: 実装役は着手の最初の報告に「段 3 の 7 回目のカード 第 2 版を受け取った・S=57fbceb04」と書く。
 
 ## 0. 設計からの直し・詳しくした点（V3g。設計の合格線は変えない）
 - V3g-1 対象は予定表（/schedule・S frontend/src/pages/schedule/SchedulePageImpl.tsx）の 1 画面。基準の回（prod-ui-check run 41675927498・測った日時 2026-11-04 01:41:02 JST・main 57fbceb）で K1（戻った時の秒）0.30 秒・K2 0.3 秒・API 4 本・403 0・5xx 0。K1 が合格線 0.1 秒を超えている、測る利用者に見る権限がある最後の画面（design §3-4-19-a の 5 行のうち、/schedule 以外の 4 行は 403 の 3 画面と §3-4-21 で扱いを決める /admin/products/:id/edit）。
@@ -20,7 +20,7 @@
 - V3g-6 読めなかった時（今と同じにする所・変える所）:
   - 写しが無い時に 1 本が読めない: 今と同じく、その 1 本の分を空にして文を出さない（S :946-980 の allSettled）。
   - 写しを出したまま裏の取り直しが失敗した: 前の予定を出したまま、今ある言葉 schedule.errorFetch（S ja.json の schedule.errorFetch「予定の取得に失敗しました」）を今の誤りの場所（S :1239-1243 の .schedule-error）に出す（段 3 の 1〜6 回目の「前の中身を出したまま誤りの文を出す」と同じ）。今は取り直しが失敗すると予定が消えて文も出ないので、意図した変化。
-  - 答えの形が違って予定を作れない: 今と同じく予定を空にし、schedule.errorFetch を出す（S :984-988 の catch）。今は持ち主の一覧を前のまま残すが、直した後は持ち主の一覧も空にする（1 つの関数で作るため。形が違う答えは今は来ない）。
+  - 答えの形が違って予定を作れない: 今と同じく予定を空にし、誤りの文を出す（S :984-988 の catch）。今は誤りが Error ならその英語の文（err.message）をそのまま出し、そうでなければ schedule.errorFetch を出す。直した後はいつも schedule.errorFetch（日本語の決まった文）を出す（ADR-027 のとおり画面の文を t() にそろえる）。今は持ち主の一覧を前のまま残すが、直した後は持ち主の一覧も空にする（1 つの関数で作るため。形が違う答えは今は来ない）。
 - V3g-7 保存・削除の後（書く path と中身は変えない）: 今は 3 本を取り直し、そのあいだ予定表全体が LoadingState に替わる（S :1075・:1086 → S :943 の setLoading(true)）。直した後は予定の写し（頭の言葉 ["calendar","events"]）だけを古い印にして取り直し、LoadingState は出さない（前の予定を出したまま、新しい予定が来たら描き直す）。持ち主（/calendar/owners）とシフト（/shifts）は予定の保存・削除で変わらない（別の表・別の API）ので取り直さない。GET が 2 本減る。保存・削除の失敗の文（common.saveError・common.deleteError）は今と同じ。
 - V3g-8 表示する持ち主の初めの値（S :961 の「何も選んでいなければ自分を選ぶ」）: 直した後は、写しがあれば最初の描画から自分を選んだ状態で出す（useState の初めの値を写しから作る。全員の予定が一瞬出てから絞られる形にしない）。写しが無い時は今と同じく、持ち主の答えが来た後に自分を選ぶ。期間を変えた時も、何も選んでいなければ自分を選ぶ（今と同じ）。保存・削除の後に自分を選び直すことはしない（今は読み直しの後に選び直す。全部外して保存した時だけ違う）。
 - V3g-9 保存・削除の失敗の文は、今は次の読み込みの始め（S :926・:935・:944 の setError(null)）で消える。直した後は、表示の期間か見本の状態を変えた時と、保存・削除が成功した時に消す（今と同じ時に消える。読み直しが無くなるため消す場所を移す）。
@@ -60,7 +60,7 @@
 
 ## 4-A. #1 frontend/src/pages/schedule/SchedulePageImpl.tsx
 - A1 S :24 `import { useApiQuery } from "../../lib/query/apiQuery";` → `import { useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";`
-- A2 S :847 `}`（LoadingState の終わり。§3(c) では :839-847 の LoadingState の塊の直後の `}` を見る）の次に、次の 37 行を足す（塊の 1 行目は空行）（:848 の空行と :849 の `export default function SchedulePage()` はそのまま）:
+- A2 S :847 `}`（LoadingState の終わり。§3(c) では :839-847 の LoadingState の塊の直後の `}` を見る）の次に、次の 36 行を足す（塊の 1 行目は空行）（:848 の空行と :849 の `export default function SchedulePage()` はそのまま）:
 ```ts
 
 /** 持ち主の一覧から自分の印（user_id、無ければ staff_id）を返す。自分がいなければ null */
@@ -146,8 +146,8 @@ function buildSchedule(
       void invalidate(["calendar", "events"]);
 ```
 - A8 S :1239 `                {error && (` → `                {shownError && (`。S :1241 `                    {error}` → `                    {shownError}`。（§3(c) の 2 か所の例外ではない。どちらもファイルに 1 か所だけ。）
-- S :1237 の `{(loading || demoState === "loading") && demoState !== "empty" ? <LoadingState /> : (` はそのまま（loading は §4-A5 の値になる）。S :1046-1090 の保存・削除の残り・:1119 の visibleEvents・:1126-1132 の toggleOwner・:1134-1140 の canChangeVisibility・canEditSelected は変えない。
-- A1〜A8 を当てた後、S の行番号はずれる。上から順に当てず、§3(c) の「変更前」の文で場所を探して当てる。
+- A9 S :1237 `            {(loading || demoState === "loading") && demoState !== "empty" ? <LoadingState /> : (` → `            {loading || demoState === "loading" ? <LoadingState /> : (`（行頭の空白 12 個はそのまま）。訳: §4-A5 の loading は live（見本の empty でない）を含むので、TypeScript が後ろの `demoState !== "empty"` を「いつも true」と見て型の検査が落ちる（カード審査で TS2367 を確認）。empty の時は loading が false で demoState も "loading" でないので、動きは今と同じ。S :1046-1090 の保存・削除の残り・:1119 の visibleEvents・:1126-1132 の toggleOwner・:1134-1140 の canChangeVisibility・canEditSelected は変えない。
+- A1〜A9 を当てた後、S の行番号はずれる。上から順に当てず、§3(c) の「変更前」の文で場所を探して当てる。
 
 ## 4-L. #2 frontend/src/pages/schedule/SchedulePageCache.test.tsx（新しく作る・全文）
 ```tsx
