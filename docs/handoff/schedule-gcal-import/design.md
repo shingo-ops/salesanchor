@@ -31,7 +31,7 @@
 | 人ごとの「共有のしかた」（self/view/edit）は設定画面で保存できるが、表示に効いていない | `backend/app/routers/calendar.py:179,238-244`（読み書きだけ）。`calendar_service.list_events` に share_mode の参照なし |
 | 知らせの期限更新の呼び出し元が無い／定期作業が無い | `renew_expiring_webhooks` の呼び出しは試験だけ（git grep）。`backend/app/celery_app.py:67` の beat に calendar 系なし（recon §4） |
 | 本番の知らせの登録は 0 件、接続は 1 行（PO・bidirectional） | 本番読み取り（`google_webhook_subscriptions` 0 件。接続 1 行は前回 K2） |
-| 予定表を読み書きするのは `calendar_service.py` と `routers/calendar.py` だけ | git grep `calendar_events` origin/main -- backend/app。ほかに AI 用ビュー migrations/20261024_100300_create_ai_cloud_views.sql:338 |
+| 予定表を読み書きするのは `backend/app/services/calendar_service.py` と `backend/app/routers/calendar.py` だけ | git grep `calendar_events` origin/main -- backend/app。ほかに AI 用ビュー migrations/20261024_100300_create_ai_cloud_views.sql:338 |
 
 ## 3. KGI と KPI（PO が画面で○×を付けられる形）
 
@@ -95,7 +95,7 @@ Google へ送る側（`create_event`・`update_event`・`delete_event`）、接�
 | 知らせだけに頼る（定期作業なし） | 不採用 | Google は知らせの到着を保証しない（`backend/app/services/google_webhook.py:12-13` のコメントと公式の同期ガイド）。期限も 7 日 |
 | 定期作業だけ（知らせなし） | 不採用 | K1 の 5 分を 15 分おきでは満たせない |
 
-## 6. 外部事例
+## 6. 外部・過去事例の参照と我々への応用
 
 - 出典: Google 公式「Synchronize resources efficiently」と events.list の説明（Context7 `/websites/developers_google_workspace_calendar_api`、2026-11-03 取得）。最初に全部読み `nextSyncToken` を保存、以後は `syncToken` で差分だけ、410 なら全部読み直し、ページは最後まで、`syncToken` と `timeMin`・`updatedMin` 等は併用不可、削除は差分に必ず含まれる。
 - 出典: 同「Push notifications」（同日取得）。`token` は任意の文字列で、知らせのなりすましを見分けるのに使える（最大 256 文字）。受け口は HTTPS・正規の証明書が要る。
@@ -134,6 +134,7 @@ Google へ送る側（`create_event`・`update_event`・`delete_event`）、接�
 - 見せ方の絞りは試験で固定する（他人の personal が一覧に返らない・他人の personal を直すと 404）。
 - 取り込みの定期作業は beat に登録し、Celery の未登録点検（project_celery_unregistered_tasks の仕組み）に乗る。
 - 知らせの期限は 1 日 1 回の更新で切らさない。K7 を導入 8 日後に確かめる。
+- 守り手: backend/tests/test_calendar_service.py, backend/tests/test_calendar_owner_api.py, frontend/src/pages/schedule/SchedulePageImpl.test.tsx
 
 ## 11. 設計審査（Architect・同一 AI による自己審査）
 
@@ -182,7 +183,7 @@ Google へ送る側（`create_event`・`update_event`・`delete_event`）、接�
 
 ### 13-4 文言（ADR-027）
 
-- `frontend/src/locales/ja.json` と `en.json` の `schedule` に同じキーを1つ足す: `shareWithStaff` = 「社員にも見せる」／「Show to staff」。キー名が既にあれば止めて報告。
+- `frontend/src/locales/ja.json` と `frontend/src/locales/en.json` の `schedule` に同じキーを1つ足す: `shareWithStaff` = 「社員にも見せる」／「Show to staff」。キー名が既にあれば止めて報告。
 
 ### 13-5 試験
 
@@ -192,7 +193,7 @@ Google へ送る側（`create_event`・`update_event`・`delete_event`）、接�
 
 ### 13-6 触らない範囲
 
-Google へ送る処理、取り込み（`upsert_from_google`・`google_webhook.py`）、同期方式の口、分類が保存されない件、設定画面の「共有のしかた」、秘書、migrations。
+Google へ送る処理、取り込み（`upsert_from_google`・`backend/app/services/google_webhook.py`）、同期方式の口、分類が保存されない件、設定画面の「共有のしかた」、秘書、migrations。
 
 ### 13-7 想定される分岐（止まる条件）
 

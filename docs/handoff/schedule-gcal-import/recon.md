@@ -12,7 +12,7 @@
 ## 1. webhook 受口
 - `backend/app/routers/google_calendar.py:386-416` `POST /google-calendar/webhook`（public_router・Bearer なし）。ヘッダー `X-Goog-Channel-ID`（:401）・`X-Goog-Resource-State`（:402）だけを読む。channel_id が空なら 200 で無視（:404-406）。`handle_webhook_notification` を呼び、例外は握りつぶして常に 200（:410-416）。
 - 登録: `backend/app/main.py:672`（public_router を /api/v1 に認証なしで登録）。
-- 受口の認証・検証: Google からの通知の真正性を確かめる処理（X-Goog-Channel-Token の照合など）は `google_webhook.py` / `google_calendar.py` に**見当たらない**（`register_webhook` の body に token を入れていない: `backend/app/services/google_webhook.py:77-86`）。channel_id を知っていれば誰でも POST できる構造。
+- 受口の認証・検証: Google からの通知の真正性を確かめる処理（X-Goog-Channel-Token の照合など）は `backend/app/services/google_webhook.py` / `backend/app/routers/google_calendar.py` に**見当たらない**（`register_webhook` の body に token を入れていない: `backend/app/services/google_webhook.py:77-86`）。channel_id を知っていれば誰でも POST できる構造。
 - 閲覧者トークン拒否の許可リストに入っている: `backend/tests/test_viewer_isolation.py:53`。リアルタイム配信の対象外（_PENDING）: `backend/app/realtime/topics.py:205`。
 - 受信処理 `backend/app/services/google_webhook.py:194-259` `handle_webhook_notification`:
   - `sync` は無視（:206-208）。`exists` / `not_exists` を区別せず同じ処理（コメント :202-204）。
@@ -30,7 +30,7 @@
 - 保存後、`bidirectional`/`read_only` なら `register_webhook`、それ以外は `stop_webhook`（:500-503）。②で先に弾くので、現状 `register_webhook` はこの口から呼ばれない。
 - `register_webhook` を呼ぶのはこの口だけ（`git grep` 相当で backend/app 内を確認: calendar.py:501 のみ。ほかは `renew_expiring_webhooks` 内 google_webhook.py:286）。
 - `GET /calendar/sync-mode`（:450-463）は認証だけで誰でも読める（`require_tenant_admin` 無し）。行が無ければ `"none"`。
-- 列 `sync_mode`: `migrations/077_...sql:19-22`（既定 `'bidirectional'`）。つないだ直後の既定値は bidirectional のまま（callback は sync_mode を書かない: `backend/app/routers/google_calendar.py:126-144`）。
+- 列 `sync_mode`: `migrations/077_calendar_sync_mode_and_webhook_subscriptions.sql:19-22`（既定 `'bidirectional'`）。つないだ直後の既定値は bidirectional のまま（callback は sync_mode を書かない: `backend/app/routers/google_calendar.py:126-144`）。
 - 試験: `backend/tests/test_calendar_owner_api.py:123-133`（bidirectional・read_only が 422 で register を呼ばない）、`:139-165`（write_only・none は通る）。管理者専用の確認: `backend/tests/test_tenant_admin_ssot.py:185`。
 
 ## 3. 取り込み処理（Google → calendar_events）
@@ -47,7 +47,7 @@
 
 ## 4. Celery の定期作業
 - `backend/app/celery_app.py` に calendar / google / gcal / webhook を含む記述は**見つからない**（`grep -n calendar backend/app/celery_app.py` が 0 件）。
-- Google カレンダー関連の `backend/app/tasks/*.py` は**見つからない**（tasks 配下で google_webhook・calendar_service を呼ぶ箇所が無い）。
+- Google カレンダー関連の backend/app/tasks/ 配下の .py は**見つからない**（tasks 配下で google_webhook・calendar_service を呼ぶ箇所が無い）。
 - よって Google の通知に頼らない定期 polling（コメントが推奨 google_webhook.py:13）も、期限更新の定期実行（§5）も、**現状は存在しない**。ほかの beat 登録の書き方の手本: `backend/app/tasks/tcg_mirror.py:7`、`backend/app/tasks/avatar.py:82-84`、`backend/app/tasks/tcg_extraction_recovery.py:562-576`（実際の beat 定義位置の詳細は未確認）。
 
 ## 5. Google push 通知の期限更新
