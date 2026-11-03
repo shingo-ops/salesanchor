@@ -22,22 +22,10 @@ from app.database import get_db
 from app.discord_gateway import outside_ticket_notice as ot
 from app.routers import notices as notices_router
 from app.services import user_notices as un
+from tests.conftest import create_user_notice_tables
 
 BODY = "secret-customer-body-xyz"
 DISCORD_AUTHOR = "900000000000000001"
-
-DDL = [
-    "CREATE TABLE users (id INTEGER PRIMARY KEY, tenant_id INTEGER, is_active BOOLEAN, is_super_admin BOOLEAN,"
-    " full_name TEXT, username TEXT, email TEXT)",
-    "CREATE TABLE notice_fallback_recipients (user_id INTEGER PRIMARY KEY, updated_by INTEGER, updated_at TIMESTAMP)",
-    "CREATE TABLE leads (id INTEGER PRIMARY KEY, tenant_id INTEGER, discord_user_id TEXT, assigned_to INTEGER, discord_guild_channel_id TEXT)",
-    "CREATE TABLE lead_channels (id INTEGER PRIMARY KEY, lead_id INTEGER, platform TEXT, external_id TEXT)",
-    "CREATE TABLE roles (id INTEGER PRIMARY KEY, system_key TEXT)",
-    "CREATE TABLE user_roles (user_id INTEGER, role_id INTEGER)",
-    "CREATE TABLE staff (id INTEGER PRIMARY KEY, tenant_id INTEGER, user_id INTEGER, discord_user_id TEXT)",
-    "CREATE TABLE user_notices (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, kind TEXT NOT NULL,"
-    " actor_name TEXT, channel_name TEXT, link_url TEXT, created_at TIMESTAMP NOT NULL, read_at TIMESTAMP)",
-]
 
 
 @pytest_asyncio.fixture
@@ -46,8 +34,7 @@ async def maker():
         "sqlite+aiosqlite:///:memory:", poolclass=StaticPool, connect_args={"check_same_thread": False}
     )
     async with engine.begin() as conn:
-        for ddl in DDL:
-            await conn.execute(text(ddl))
+        await create_user_notice_tables(conn)
         await conn.execute(text("INSERT INTO roles (id, system_key) VALUES (1,'owner'),(2,'admin'),(3,NULL)"))
     yield async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
     await engine.dispose()
