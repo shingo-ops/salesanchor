@@ -392,23 +392,32 @@ async def receive_webhook(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    """Google Calendar Push Notification を受信してイベント差分を DB に反映する。
+    """Google Calendar Push Notification を受け取り、取り込み作業を Celery に積む。
 
     Google はこのエンドポイントに Bearer トークンなしで POST するため
     public_router（認証なし）に属する。
-    テナントの特定は X-Goog-Channel-ID → google_webhook_subscriptions で行う。
+    X-Goog-Channel-ID と X-Goog-Channel-Token（合言葉）を照合し、合うときだけ
+    取り込み作業を積む。同期はここでは待たない（積んですぐ 200 を返す）。
     """
     channel_id = request.headers.get("X-Goog-Channel-ID", "")
     resource_state = request.headers.get("X-Goog-Resource-State", "")
+    token = request.headers.get("X-Goog-Channel-Token", "")
 
-    if not channel_id:
-        # 不明なチャンネルは 200 を返して無視（Google がリトライしないようにするため）
+    if not channel_id or resource_state == "sync":
+        # 不明なチャンネル・初期確認通知は 200 を返して無視（Google がリトライしないようにするため）
         return JSONResponse(status_code=200, content={"ok": True})
 
     from app.services import google_webhook as webhook_svc
 
     try:
-        await webhook_svc.handle_webhook_notification(db, channel_id, resource_state)
+        tenant_id = await webhook_svc.verify_channel(db, channel_id, token)
+        if tenant_id is None:
+            logger.warning("Webhook の合言葉が合わない/不明な channel (channel=%s)", channel_id)
+        else:
+            # 関数内 import: 循環 import 回避
+            from app.tasks.google_calendar_sync import sync_google_calendar_tenant
+
+            sync_google_calendar_tenant.delay(tenant_id)
     except Exception as e:
         logger.error("Webhook 処理エラー (channel=%s): %s", channel_id, e)
         # Google には常に 200 を返す（5xx を返すと通知チャンネルが無効化される）

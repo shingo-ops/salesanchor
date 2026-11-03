@@ -67,6 +67,7 @@ interface ScheduleDraft {
   endDate: string;
   endTime: string;
   allDay: boolean;
+  visibleToStaff: boolean;
   description: string;
   location: string;
 }
@@ -99,6 +100,7 @@ function createDraft(item?: ScheduleItem | null): ScheduleDraft {
     endDate: formatDateInput(baseEnd),
     endTime: formatTimeInput(baseEnd),
     allDay: item?.allDay ?? false,
+    visibleToStaff: item ? item.calendarType === "shared" : true,
     description: item?.description ?? "",
     location: item?.location ?? "",
   };
@@ -182,6 +184,7 @@ function SchedulePopover({
   onSave,
   onDelete,
   canEdit,
+  canChangeVisibility,
 }: {
   mode: PopoverMode;
   anchor: AnchorRect | null;
@@ -192,6 +195,7 @@ function SchedulePopover({
   onSave: () => void;
   onDelete: () => void;
   canEdit: boolean;
+  canChangeVisibility: boolean;
 }) {
   const { t } = useTranslation();
   const EditIcon = SCHEDULE_POPOVER_ICONS.edit;
@@ -295,7 +299,14 @@ function SchedulePopover({
                 size="sm"
                 fullWidth
                 value={draft.category}
-                onChange={(event) => onDraftChange({ ...draft, category: event.target.value as CalendarId })}
+                onChange={(event) => {
+                  const category = event.target.value as CalendarId;
+                  onDraftChange(
+                    mode === "create"
+                      ? { ...draft, category, visibleToStaff: category !== "personal" }
+                      : { ...draft, category },
+                  );
+                }}
               >
                 {CALENDARS.map((calendar) => (
                   <option key={calendar.id} value={calendar.id}>
@@ -318,6 +329,17 @@ function SchedulePopover({
                 })}
               />
             </div>
+
+            {canChangeVisibility && (
+              <div className="schedule-field schedule-field--inline">
+                <span className="schedule-field__label">{t("schedule.shareWithStaff")}</span>
+                <Toggle
+                  checked={draft.visibleToStaff}
+                  aria-label={t("schedule.shareWithStaff")}
+                  onCheckedChange={(next) => onDraftChange({ ...draft, visibleToStaff: next })}
+                />
+              </div>
+            )}
 
             <div className="schedule-field-group">
               <label className="schedule-field">
@@ -996,6 +1018,7 @@ export default function SchedulePage() {
       endDate: formatDateInput(end),
       endTime: formatTimeInput(end),
       allDay: false,
+      visibleToStaff: true,
       description: "",
       location: "",
     });
@@ -1030,16 +1053,18 @@ export default function SchedulePage() {
 
   const saveEvent = async () => {
     try {
-      const body = {
+      const body: Record<string, unknown> = {
         title: draft.title,
         start_datetime: combineDateTime(draft.startDate, draft.allDay ? "00:00" : draft.startTime).toISOString(),
         end_datetime: combineDateTime(draft.endDate, draft.allDay ? "23:59" : draft.endTime).toISOString(),
         is_all_day: draft.allDay,
-        calendar_type: draft.category === "personal" ? "personal" : "shared",
         category: draft.category,
         description: draft.description || undefined,
         location: draft.location || undefined,
       };
+      if (canChangeVisibility) {
+        body.calendar_type = draft.visibleToStaff ? "shared" : "personal";
+      }
 
       if (popover?.mode === "edit" && popover.item) {
         await api.patch(`/calendar/events/${popover.item.id}`, body);
@@ -1105,6 +1130,10 @@ export default function SchedulePage() {
         : [...current, ownerId]
     ));
   };
+
+  const canChangeVisibility = popover?.mode === "create" || Boolean(
+    popover?.item && currentOwnerUserId != null && popover.item.ownerUserId === currentOwnerUserId,
+  );
 
   const canEditSelected = Boolean(
     popover?.item && (popover.item.ownerUserId === currentOwnerUserId || canManageOwners),
@@ -1254,6 +1283,7 @@ export default function SchedulePage() {
           onSave={popover.mode === "detail" ? openEdit : saveEvent}
           onDelete={deleteEvent}
           canEdit={canEditSelected}
+          canChangeVisibility={canChangeVisibility}
         />
       )}
     </div>

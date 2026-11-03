@@ -3235,6 +3235,7 @@
     "prevMonth": "前の月",
     "nextMonth": "次の月",
     "allDay": "終日",
+    "shareWithStaff": "社員にも見せる",
     "create": "作成",
     "myCalendars": "マイカレンダー",
     "otherCalendars": "他のカレンダー",
@@ -4925,7 +4926,8 @@
           "inventory_parse_fallback": "在庫解析の補完",
           "translation_inbound": "受信翻訳",
           "translation_inbound_escalation": "受信翻訳（再判定）",
-          "translation_outbound": "送信翻訳"
+          "translation_outbound": "送信翻訳",
+          "secretary_intent": "チャット秘書"
         },
         "health": {
           "title": "概要（LINE抽出）",

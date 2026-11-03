@@ -18,7 +18,7 @@ import { OrdersFormModal } from "./OrdersFormModal";
 import { OrdersTable } from "./OrdersTable";
 import { emptyForm, STATUSES } from "./orders.types";
 import { Button } from "../../components/Button";
-import { LoadingBlock } from "../../components/loading";
+import { LoadingBlock, Spinner } from "../../components/loading";
 
 export default function OrdersPage() {
   const { t } = useTranslation();
@@ -35,12 +35,12 @@ export default function OrdersPage() {
     form, setForm,
     companyId, setCompanyId,
     contactId, setContactId,
-    selectorError, error, loading,
+    selectorError, error, loading, refetching,
     deleteTarget, setDeleteTarget,
     shippingTarget, setShippingTarget,
-    shippings, setShippings,
+    shippings, writeShipping,
     purchaseTarget, setPurchaseTarget,
-    purchases, setPurchases,
+    purchases, writePurchase,
     STATUS_LABELS, SORT_OPTIONS,
     handleSubmit, handleEdit, performDelete,
     resetSelector, setPaidOrder,
@@ -61,7 +61,7 @@ export default function OrdersPage() {
   ) : null;
 
   return (
-    <PageLayout navKey="nav.orders" subtitleKey="orders.subtitle" noScroll>
+    <PageLayout navKey="nav.orders" subtitleKey="orders.subtitle" headerLeft={refetching ? <Spinner size="sm" /> : undefined} noScroll>
       <div className="hub-shell">
         {/* 左サブナビ: ステータスフィルタ */}
         <nav className="hub-subnav" aria-label={t("orders.title")}>
@@ -147,7 +147,7 @@ export default function OrdersPage() {
           orderNumber={shippingTarget.order_number}
           onClose={() => setShippingTarget(null)}
           onSaved={(saved) => {
-            setShippings((prev) => ({ ...prev, [saved.order_id]: saved }));
+            writeShipping(saved);
           }}
         />
       )}
@@ -158,7 +158,7 @@ export default function OrdersPage() {
           orderNumber={purchaseTarget.order_number}
           onClose={() => setPurchaseTarget(null)}
           onSaved={(saved) => {
-            setPurchases((prev) => ({ ...prev, [saved.order_id]: saved }));
+            writePurchase(saved);
           }}
         />
       )}

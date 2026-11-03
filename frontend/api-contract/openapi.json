@@ -37364,6 +37364,17 @@
       },
       "UpdateEventBody": {
         "properties": {
+          "calendar_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calendar Type"
+          },
           "description": {
             "anyOf": [
               {

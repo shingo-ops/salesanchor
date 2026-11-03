@@ -3235,6 +3235,7 @@
     "prevMonth": "Previous month",
     "nextMonth": "Next month",
     "allDay": "All day",
+    "shareWithStaff": "Show to staff",
     "create": "Create",
     "myCalendars": "My calendars",
     "otherCalendars": "Other calendars",
@@ -4925,7 +4926,8 @@
           "inventory_parse_fallback": "Inventory Parse Fallback",
           "translation_inbound": "Inbound Translation",
           "translation_inbound_escalation": "Inbound Translation (Escalation)",
-          "translation_outbound": "Outbound Translation"
+          "translation_outbound": "Outbound Translation",
+          "secretary_intent": "Chat Secretary"
         },
         "health": {
           "title": "Overview (LINE Extraction)",

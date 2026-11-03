@@ -40,8 +40,8 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 _VALID_SYNC_MODES = ("bidirectional", "read_only", "write_only", "none")
-# Google→アプリの取り込みを始める方式は受け付けない。取り込むと、つないだ人の Google の予定が会社の予定として全員に見える（ADR-1057）
-_ACCEPTED_SYNC_MODES = ("write_only", "none")
+# ADR-1059 で ADR-1057 の取り込み停止を置き換え。write_only・none は取り込みの非常停止
+_ACCEPTED_SYNC_MODES = ("bidirectional", "read_only", "write_only", "none")
 _VALID_OWNER_SHARE_MODES = ("self", "view", "edit")
 _DEFAULT_OWNER_COLOR = "#1a73e8"
 
@@ -118,6 +118,7 @@ class UpdateEventBody(BaseModel):
     description: Optional[str] = None
     location: Optional[str] = None
     is_all_day: Optional[bool] = None
+    calendar_type: Optional[str] = None
 
 
 class SyncModeBody(BaseModel):
@@ -387,16 +388,35 @@ async def update_event(
 
     # 権限確認: 自分のイベントか tenant admin（owner / admin のシステムロール）のみ
     row = await db.execute(
-        text("SELECT created_by_user_id, calendar_type FROM calendar_events WHERE id = :id"),
+        text("SELECT created_by_user_id, calendar_type, user_id FROM calendar_events WHERE id = :id"),
         {"id": event_id},
     )
     record = row.first()
     if not record:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="イベントが見つかりません")
 
-    created_by, _ = record[0], record[1]
+    created_by, event_calendar_type, event_user_id = record[0], record[1], record[2]
+    event_owner = event_user_id if event_user_id is not None else created_by
+    # 他人の「自分だけ」予定は存在しないものとして扱う（管理者でも）
+    if event_calendar_type == "personal" and event_owner != user.id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="イベントが見つかりません")
+
     if created_by != user.id and not is_tenant_admin(await get_user_system_keys(db, user.id)):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="編集権限がありません")
+
+    if "calendar_type" in payload:
+        if payload["calendar_type"] not in ("shared", "personal"):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="calendar_type は 'shared' または 'personal' を指定してください",
+            )
+        if event_owner != user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="見せ方を変えられるのは予定の持ち主だけです",
+            )
+        if payload["calendar_type"] == "personal":
+            payload["user_id"] = user.id
 
     try:
         result = await cal_svc.update_event(
@@ -429,11 +449,15 @@ async def delete_event(
 ):
     """アプリ内のイベントを削除し、Google Calendar からも削除する。"""
     row = await db.execute(
-        text("SELECT created_by_user_id FROM calendar_events WHERE id = :id"),
+        text("SELECT created_by_user_id, calendar_type, user_id FROM calendar_events WHERE id = :id"),
         {"id": event_id},
     )
     record = row.first()
     if not record:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="イベントが見つかりません")
+
+    event_owner = record[2] if record[2] is not None else record[0]
+    if record[1] == "personal" and event_owner != user.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="イベントが見つかりません")
 
     if record[0] != user.id and not is_tenant_admin(await get_user_system_keys(db, user.id)):
@@ -498,7 +522,12 @@ async def update_sync_mode(
     from app.services import google_webhook as webhook_svc
 
     if body.sync_mode in ("bidirectional", "read_only"):
-        await webhook_svc.register_webhook(db, tenant_id)
+        registered = await webhook_svc.register_webhook(db, tenant_id)
+        if registered:
+            # 最初の全部読みをすぐ始める
+            from app.tasks.google_calendar_sync import sync_google_calendar_tenant
+
+            sync_google_calendar_tenant.delay(tenant_id)
     else:
         await webhook_svc.stop_webhook(db, tenant_id)
 

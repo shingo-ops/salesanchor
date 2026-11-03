@@ -9,6 +9,9 @@ from fastapi import HTTPException
 
 from app.routers.calendar import (
     SyncModeBody,
+    UpdateEventBody,
+    delete_event,
+    update_event,
     list_calendar_owners,
     update_calendar_owner,
     update_sync_mode,
@@ -120,19 +123,23 @@ async def test_update_calendar_owner_updates_only_provided_fields():
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("mode", ["bidirectional", "read_only"])
-async def test_update_sync_mode_rejects_inbound_modes(mode):
+async def test_update_sync_mode_accepts_inbound_modes_and_registers_webhook(mode):
     db = AsyncMock()
     db.execute = AsyncMock()
-    with patch("app.services.google_webhook.register_webhook", AsyncMock()) as reg, patch(
-        "app.services.google_webhook.stop_webhook", AsyncMock()
-    ):
-        with pytest.raises(HTTPException) as ei:
-            await update_sync_mode(
-                body=SyncModeBody(sync_mode=mode), tenant_id=1, user=_mock_user(), db=db
-            )
-    assert ei.value.status_code == 422
-    db.execute.assert_not_called()
-    reg.assert_not_called()
+    db.commit = AsyncMock()
+    with patch("app.routers.calendar.reset_tenant_context", AsyncMock()), patch(
+        "app.services.google_webhook.register_webhook",
+        AsyncMock(return_value={"channel_id": "c"}),
+    ) as reg, patch("app.services.google_webhook.stop_webhook", AsyncMock()) as stop, patch(
+        "app.tasks.google_calendar_sync.sync_google_calendar_tenant.delay"
+    ) as delay:
+        result = await update_sync_mode(
+            body=SyncModeBody(sync_mode=mode), tenant_id=1, user=_mock_user(), db=db
+        )
+    assert result == {"sync_mode": mode}
+    reg.assert_called_once()
+    stop.assert_not_called()
+    delay.assert_called_once_with(1)
 
 
 @pytest.mark.asyncio
@@ -163,3 +170,78 @@ async def test_update_sync_mode_none():
             body=SyncModeBody(sync_mode="none"), tenant_id=1, user=_mock_user(), db=db
         )
     assert result == {"sync_mode": "none"}
+
+
+# ---- 便1: 「自分だけ」予定の守り（design.md §13-5） ----
+
+
+def _event_db(created_by, calendar_type, owner):
+    db = AsyncMock()
+    db.commit = AsyncMock()
+    db.execute = AsyncMock(return_value=_QueryResult(first=(created_by, calendar_type, owner)))
+    return db
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("is_admin", [False, True])
+async def test_patch_other_users_personal_event_is_404(is_admin):
+    db = _event_db(created_by=202, calendar_type="personal", owner=202)
+    with patch("app.routers.calendar.get_user_system_keys", new=AsyncMock(return_value=[])), patch(
+        "app.routers.calendar.is_tenant_admin", return_value=is_admin
+    ), patch("app.routers.calendar.cal_svc.update_event", new=AsyncMock()) as upd:
+        with pytest.raises(HTTPException) as exc:
+            await update_event(9, UpdateEventBody(title="x"), tenant_id=1, user=_mock_user(101), db=db)
+    assert exc.value.status_code == 404
+    upd.assert_not_called()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("is_admin", [False, True])
+async def test_delete_other_users_personal_event_is_404(is_admin):
+    db = _event_db(created_by=202, calendar_type="personal", owner=202)
+    with patch("app.routers.calendar.get_user_system_keys", new=AsyncMock(return_value=[])), patch(
+        "app.routers.calendar.is_tenant_admin", return_value=is_admin
+    ), patch("app.routers.calendar.cal_svc.delete_event", new=AsyncMock()) as dele:
+        with pytest.raises(HTTPException) as exc:
+            await delete_event(9, tenant_id=1, user=_mock_user(101), db=db)
+    assert exc.value.status_code == 404
+    dele.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_non_owner_cannot_change_calendar_type():
+    # 共有の予定を作った人（created_by=101）だが、持ち主（user_id）は 202
+    db = _event_db(created_by=101, calendar_type="shared", owner=202)
+    with patch("app.routers.calendar.get_user_system_keys", new=AsyncMock(return_value=[])), patch(
+        "app.routers.calendar.is_tenant_admin", return_value=False
+    ), patch("app.routers.calendar.cal_svc.update_event", new=AsyncMock()) as upd:
+        with pytest.raises(HTTPException) as exc:
+            await update_event(9, UpdateEventBody(calendar_type="personal"), tenant_id=1, user=_mock_user(101), db=db)
+    assert exc.value.status_code == 403
+    upd.assert_not_called()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("new_type,expect_user_id", [("personal", 101), ("shared", None)])
+async def test_owner_can_switch_calendar_type(new_type, expect_user_id):
+    old = "shared" if new_type == "personal" else "personal"
+    db = _event_db(created_by=101, calendar_type=old, owner=101)
+    with patch("app.routers.calendar.get_user_system_keys", new=AsyncMock(return_value=[])), patch(
+        "app.routers.calendar.is_tenant_admin", return_value=False
+    ), patch("app.routers.calendar.cal_svc.update_event", new=AsyncMock(return_value={"id": 9})) as upd:
+        result = await update_event(9, UpdateEventBody(calendar_type=new_type), tenant_id=1, user=_mock_user(101), db=db)
+    assert result == {"id": 9}
+    payload = upd.call_args.kwargs["payload"]
+    assert payload["calendar_type"] == new_type
+    assert payload.get("user_id") == expect_user_id
+
+
+@pytest.mark.asyncio
+async def test_invalid_calendar_type_is_422():
+    db = _event_db(created_by=101, calendar_type="shared", owner=101)
+    with patch("app.routers.calendar.get_user_system_keys", new=AsyncMock(return_value=[])), patch(
+        "app.routers.calendar.is_tenant_admin", return_value=False
+    ):
+        with pytest.raises(HTTPException) as exc:
+            await update_event(9, UpdateEventBody(calendar_type="secret"), tenant_id=1, user=_mock_user(101), db=db)
+    assert exc.value.status_code == 422

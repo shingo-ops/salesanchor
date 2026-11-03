@@ -1213,3 +1213,5 @@ run_sql migrations/20261102_090000_add_user_push_subscriptions.sql
 run_sql migrations/20261103_120000_create_ai_job_assignments.sql
 # アプリ内の鈴: 各社スキーマに知らせの表 user_notices を足す（表1つ・追加のみ・本文と Discord の id の列なし・冪等）
 run_sql migrations/20261103_150000_create_user_notices.sql
+# ADR-1059 便2: Google の予定の取り込み（列2つ・一意の部分索引・追加のみ・冪等）
+run_sql migrations/20261103_200000_add_google_calendar_import_sync.sql

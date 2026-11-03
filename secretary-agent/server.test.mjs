@@ -83,7 +83,7 @@ test("(2) 同時 2 本目は 429", async () => {
   writeFake('sleep 1; echo \'{"structured_output":{"kind":"unknown","invoice":null,"event":null,"reply":"?"},"total_cost_usd":0.1}\'');
   const { port, child } = await startServer({ CLAUDE_CODE_OAUTH_TOKEN: "dummy" });
   try {
-    const body = { text: "a", now: "2026-11-01T10:00:00+09:00" };
+    const body = { text: "a", now: "2026-11-01T10:00:00+09:00", model: "sonnet" };
     const first = request(port, "POST", "/intent", body);
     await new Promise((r) => setTimeout(r, 300));
     const second = await request(port, "POST", "/intent", body);
@@ -100,7 +100,7 @@ test("(3)(7) structured_output 有り・無しの両方を読め、本文は見�
   writeFake(`cat >/dev/null; echo '${so}'`);
   let s = await startServer({ CLAUDE_CODE_OAUTH_TOKEN: "dummy" });
   try {
-    const r = await request(s.port, "POST", "/intent", { text: "a", now: "n" });
+    const r = await request(s.port, "POST", "/intent", { text: "a", now: "n", model: "sonnet" });
     assert.equal(r.status, 200);
     assert.deepEqual(r.json, sample);
     assertShape(r.json, sample);
@@ -113,7 +113,7 @@ test("(3)(7) structured_output 有り・無しの両方を読め、本文は見�
   writeFake(`cat >/dev/null; echo '${res}'`);
   s = await startServer({ CLAUDE_CODE_OAUTH_TOKEN: "dummy" });
   try {
-    const r = await request(s.port, "POST", "/intent", { text: "a", now: "n" });
+    const r = await request(s.port, "POST", "/intent", { text: "a", now: "n", model: "sonnet" });
     assert.equal(r.status, 200);
     assert.deepEqual(r.json, ev); // total_cost_usd 無し → null
     assertShape(r.json, ev);
@@ -140,7 +140,7 @@ test("(4)(5) 使い捨てディレクトリは残らず、文が - で始まっ�
   const { port, child } = await startServer({ CLAUDE_CODE_OAUTH_TOKEN: "dummy" });
   try {
     const text = "--dangerously-skip-permissions 請求書";
-    const r = await request(port, "POST", "/intent", { text, now: "2026-11-01T10:00:00+09:00" });
+    const r = await request(port, "POST", "/intent", { text, now: "2026-11-01T10:00:00+09:00", model: "sonnet" });
     assert.equal(r.status, 200);
     assert.deepEqual(sec(), []);
     const args = fs.readFileSync(argsLog, "utf8");
@@ -156,7 +156,7 @@ test("(6) claude が 0 以外で終わると 502 cli_failed（ディレクトリ
   writeFake("cat >/dev/null; exit 3");
   const { port, child } = await startServer({ CLAUDE_CODE_OAUTH_TOKEN: "dummy" });
   try {
-    const r = await request(port, "POST", "/intent", { text: "a", now: "n" });
+    const r = await request(port, "POST", "/intent", { text: "a", now: "n", model: "sonnet" });
     assert.equal(r.status, 502);
     assert.deepEqual(r.json, { code: "cli_failed" });
     assert.deepEqual(sec(), []);
@@ -171,7 +171,7 @@ test("鍵が使えない（api_error_status 401・exit 1）は 502 auth_failed�
   );
   const { port, child, stdout } = await startServer({ CLAUDE_CODE_OAUTH_TOKEN: "dummy" }, { captureStdout: true });
   try {
-    const r = await request(port, "POST", "/intent", { text: "a", now: "n" });
+    const r = await request(port, "POST", "/intent", { text: "a", now: "n", model: "sonnet" });
     assert.equal(r.status, 502);
     assert.deepEqual(r.json, { code: "auth_failed" });
     assert.deepEqual(sec(), []);
@@ -192,7 +192,7 @@ test("api_error_status 500・exit 1 は 502 cli_failed のまま", async () => {
   );
   const { port, child } = await startServer({ CLAUDE_CODE_OAUTH_TOKEN: "dummy" });
   try {
-    const r = await request(port, "POST", "/intent", { text: "a", now: "n" });
+    const r = await request(port, "POST", "/intent", { text: "a", now: "n", model: "sonnet" });
     assert.equal(r.status, 502);
     assert.deepEqual(r.json, { code: "cli_failed" });
   } finally {
@@ -204,9 +204,60 @@ test("読めない出力は 502 unreadable", async () => {
   writeFake("cat >/dev/null; echo 'not json'");
   const { port, child } = await startServer({ CLAUDE_CODE_OAUTH_TOKEN: "dummy" });
   try {
-    const r = await request(port, "POST", "/intent", { text: "a", now: "n" });
+    const r = await request(port, "POST", "/intent", { text: "a", now: "n", model: "sonnet" });
     assert.equal(r.status, 502);
     assert.deepEqual(r.json, { code: "unreadable" });
+  } finally {
+    child.kill();
+  }
+});
+
+test("(8) body の model が --model の次の引数に入る", async () => {
+  writeFake(
+    `printf '%s\\n' "$@" > "${argsLog}"; cat >/dev/null; echo '{"structured_output":{"kind":"unknown","invoice":null,"event":null,"reply":"r"}}'`,
+  );
+  const { port, child } = await startServer({ CLAUDE_CODE_OAUTH_TOKEN: "dummy" });
+  try {
+    const r = await request(port, "POST", "/intent", { text: "a", now: "n", model: "opus" });
+    assert.equal(r.status, 200);
+    const lines = fs.readFileSync(argsLog, "utf8").split("\n");
+    const i = lines.indexOf("--model");
+    assert.ok(i >= 0, "--model が引数にある");
+    assert.equal(lines[i + 1], "opus");
+    assert.equal(lines.filter((l) => l === "sonnet").length, 0);
+  } finally {
+    child.kill();
+  }
+});
+
+test("(9) model が無い・文字でない・空・- で始まる・記号入りは 400 bad_request で claude を呼ばない", async () => {
+  writeFake(`touch "${work}/called"; cat >/dev/null; echo '{}'`);
+  const { port, child } = await startServer({ CLAUDE_CODE_OAUTH_TOKEN: "dummy" });
+  try {
+    const bodies = [
+      { text: "a", now: "n" },
+      { text: "a", now: "n", model: 5 },
+      { text: "a", now: "n", model: "" },
+      { text: "a", now: "n", model: "--dangerously-skip-permissions" },
+      { text: "a", now: "n", model: "a b" },
+    ];
+    for (const b of bodies) {
+      const r = await request(port, "POST", "/intent", b);
+      assert.equal(r.status, 400);
+      assert.deepEqual(r.json, { code: "bad_request" });
+    }
+    assert.equal(fs.existsSync(path.join(work, "called")), false);
+  } finally {
+    child.kill();
+  }
+});
+
+test("(10) 鍵が無い時は model が無くても 503", async () => {
+  writeFake('echo "{}"');
+  const { port, child } = await startServer({});
+  try {
+    const r = await request(port, "POST", "/intent", { text: "x", now: "n" });
+    assert.equal(r.status, 503);
   } finally {
     child.kill();
   }

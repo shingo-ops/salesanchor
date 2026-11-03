@@ -155,6 +155,7 @@ const KNOWN_PURPOSES = [
   "translation_inbound",
   "translation_inbound_escalation",
   "translation_outbound",
+  "secretary_intent",
 ];
 
 // 積み上げ棒グラフの使いみち別カラー。
