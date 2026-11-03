@@ -35,20 +35,20 @@
   - ~/.claude/agents/evaluator.md:126・:131 の手元の qa-smoke の手順は本件では書き換えない（変更は一度に1つ）。入れた後に打たれると止まり、案内文で GitHub へ誘導される。
 
 ## 3. 止める形（判定の正本はこの表）
-命令を引用符の外の `; && || |` 改行で分け、各部分の先頭語で判定する（`sudo`・`env`・`time`・`nohup`・`VAR=` は飛ばす。`timeout` は旗（`-s`・`--signal`・`-k`・`--kill-after` は値の1語も。`--signal=x` の形は1語）と時間の1語も、`nice` は `-n 数`・`-数`・`--adjustment=x` も一緒に飛ばす。これらは何度重なっても飛ばす。絶対パスは末尾名で見る）。分け方・ヒアドキュメント本文の除き方・`bash -c` の1段の再判定は mac-vm-guard.py の split_parts・strip_heredoc_bodies・bad_part と同じにする。
+命令を引用符の外の `; && || |` 改行で分け、各部分の先頭語で判定する（`sudo`・`env`・`time`・`nohup`・`VAR=` は飛ばす。直後の旗も飛ばす（`sudo` の `-u`・`-g`・`-h`・`-p`・`-C`・`-D`・`-U`・`-r`・`-t`、`env` の `-u`・`-C`、`time` の `-f`・`-o` は値の1語も。それ以外の `-` で始まる語は1語だけ）。`timeout` は旗（`-s`・`--signal`・`-k`・`--kill-after` は値の1語も。`--signal=x` の形は1語）と時間の1語も、`nice` は `-n 数`・`-数`・`--adjustment=x` も一緒に飛ばす。これらは何度重なっても飛ばす。絶対パスは末尾名で見る）。分け方・ヒアドキュメント本文の除き方・`bash -c` の1段の再判定は mac-vm-guard.py の split_parts・strip_heredoc_bodies・bad_part と同じにする。
 
 | 先頭語 | 判定 | 止める例 | 止めない例 |
 |---|---|---|---|
-| `npm` | 旗（`--prefix x`・`-C x`・`-w x`・`--workspace x` は値も）を飛ばした最初の語が `test`・`t`・`tst` なら止める。`run`・`run-script` の次の語が `test` で始まり `:install` で終わらないなら止める | `npm test`、`npm --prefix frontend test`、`npm run test:e2e`、`npm run test:unit` | `npm ci`、`npm run build`、`npm run test:e2e:install`、`npm run lint` |
-| `npx`・`pnpm exec`・`yarn` | 次の語（旗を飛ばす）が `vitest` か、`playwright` の次が `test` なら止める | `npx vitest run`、`npx playwright test` | `npx playwright install chromium`、`npx tsc` |
-| `pnpm`・`yarn` | npm の行と同じ（`test`・`run test*` を止め、`:install` で終わるものは通す） | `pnpm test`、`yarn test`、`yarn run test:e2e` | `yarn install`、`pnpm run build` |
+| `npm` | 旗（`--prefix x`・`-C x`・`-w x`・`--workspace x`・`--filter x`・`-F x`・`--dir x`・`--cwd x` は値も）を飛ばした最初の語が `test`・`t`・`tst` なら止める。`run`・`run-script` の次の語が `test` で始まり `:install` で終わらないなら止める。`exec`・`x` なら残りを npx の行で見る | `npm test`、`npm --prefix frontend test`、`npm run test:e2e`、`npm run test:unit`、`npm exec vitest` | `npm ci`、`npm run build`、`npm run test:e2e:install`、`npm run lint`、`npm exec tsc` |
+| `npx`・`pnpm exec`・`pnpm dlx`・`pnpm`・`yarn` | 次の語（旗を飛ばす）が `vitest` か、`playwright` の次が `test` なら止める | `npx vitest run`、`npx playwright test`、`pnpm vitest`、`pnpm dlx vitest` | `npx playwright install chromium`、`npx tsc`、`pnpm tsc` |
+| `pnpm`・`yarn` | npm の行と同じ（`test`・`run test*` を止め、`:install` で終わるものは通す） | `pnpm test`、`yarn test`、`yarn run test:e2e`、`pnpm --filter web test`、`yarn --cwd frontend test` | `yarn install`、`pnpm run build`、`pnpm --filter web build` |
 | `vitest` | 止める | `vitest run` | — |
 | `playwright` | 次が `test` なら止める | `playwright test` | `playwright install` |
 | `pytest`・`py.test` | 止める | `pytest backend/tests` | — |
 | `python`・`python3`（版付きも） | `-m pytest` なら止める | `python3 -m pytest` | `python3 scripts/tests/test_x.py`、`python3 -I scripts/ci/check_doc_index.py` |
-| `uv` | `run` の後に `pytest` か `python -m pytest` なら止める | `uv run pytest` | `uv run ruff check` |
-| `docker`（`compose ... exec/run ...`） | 最初に出た `exec` か `run` の後の旗（`-e`・`--env`・`-u`・`--user`・`-w`・`--workdir`・`-v`・`--volume`・`--name`・`--entrypoint`・`-p`・`--publish`・`-l`・`--label`・`--index` は値の1語も）を飛ばし、次の1語（サービス名）を飛ばした残りを1つの命令として、この表で見直す（1段） | `docker compose exec -T backend pytest`、`docker compose run --rm -e X=1 backend python -m pytest` | `docker compose ps`、`docker compose exec backend pip show pytest` |
-| `bash`・`sh`・`zsh` | `-c` の文字列を同じ規則で再判定（1段） | `bash -c "npm test"` | `bash scripts/dev/check-before-submit.sh` |
+| `uv` | `run` の後の旗（`--with`・`--project`・`--directory`・`--python`・`-p`・`--package`・`--extra`・`--group`・`--env-file`・`--with-requirements`・`--with-editable`・`--index` は値の1語も）を飛ばし、`pytest` か `python -m pytest` なら止める | `uv run pytest`、`uv run --with pytest-cov pytest` | `uv run ruff check`、`uv run --with rich python scripts/x.py` |
+| `docker`（`compose ... exec/run ...`）・`docker-compose`（`compose` の語は要らない） | 最初に出た `exec` か `run` の後の旗（`-e`・`--env`・`-u`・`--user`・`-w`・`--workdir`・`-v`・`--volume`・`--name`・`--entrypoint`・`-p`・`--publish`・`-l`・`--label`・`--index` は値の1語も）を飛ばし、次の1語（サービス名）を飛ばした残りを1つの命令として、この表で見直す（1段） | `docker compose exec -T backend pytest`、`docker compose run --rm -e X=1 backend python -m pytest` | `docker compose ps`、`docker compose exec backend pip show pytest`、`docker-compose ps` |
+| `bash`・`sh`・`zsh` | `-c`（`-lc`・`-ec` のように1つの `-` の後に短い旗が並び `c` を含む語も）の次の文字列を同じ規則で再判定（1段） | `bash -c "npm test"`、`bash -lc "npm test"` | `bash scripts/dev/check-before-submit.sh`、`bash -lc "echo hi"` |
 | その他（`echo`・`grep`・`git`・`cat`・`node`） | 止めない | — | `git push`、`node --test scripts/tests/x.js` |
 
 ## 4. 止めたときの案内文（標準エラー、exit 2）
