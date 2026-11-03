@@ -18,3 +18,4 @@ class NotificationEventType(str, Enum):
     lead_assigned = "lead_assigned"                      # 商談の担当アサイン（本 PR 新設）
     meta_message_received = "meta_message_received"      # 既存: webhook.py:938-947
     tcg_distribution_error = "tcg_distribution_error"    # 既存: tcg_distribution_svc.py:857-866
+    discord_outside_ticket_post = "discord_outside_ticket_post"  # Discord: 部屋の外の書き込み
