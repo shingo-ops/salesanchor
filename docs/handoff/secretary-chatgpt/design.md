@@ -246,6 +246,7 @@ GitHub の一時 VM（sandbox-test）で、compose と同じ条件（read_only�
    - Claude の容器を片付ける時期（段4）。
 6. prod1 の MemAvailable・MemTotal を読み取りの道で測り、K8 の基準値を本書に書く（段3の前）。
 7. （2026-11-03）段1a のカード `docs/handoff/secretary-chatgpt/card-1a.md` を作り、card-lint で違反0（長い行の警告だけ）。マージ前の審査で、migration の守りの登録2つ（`scripts/migration-guard/reference-allowlist.tsv` の sha256・`.github/workflows/migration-guard.yml` の `PUBLIC_TABLES`）の漏れを指摘され、カードの 3-2 に足した。実装は PO の実装の許可の後。
+8. （2026-11-03）段1a は本番反映済み（PR #5056）。段1a-2 のカード `docs/handoff/secretary-chatgpt/card-1a2.md` を作った。作る時に実物で見つけたこと: 共有の試験 DB（`backend/tests/test_tcg_work_matching_integration.py` の `pg`）は段1a の migration を流さず `outcome` の列が無いため、集計に条件を足すと今の本物の DB の試験が落ちる。段1a の migration は `public.users` を指すが、この DB には無い。表の形を写さず、閲覧ページの試験 7 ファイルが同じ DB で使う道具 `tests.rls_bootstrap._ensure_public_users` で作ってから流す形をカードの 4 に書いた。§4-2-2 の一覧のほか、`scripts/accuracy/llm_compare/vps_run_gemini.sh` も使用の記録を集計するが、`prompt_ab:llmcmp-` の行だけ（試験の道具は失敗の行を書かない）なので変えない。PO は 2026-11-03「1」で、画面ができるまで審査と本番反映まで進めることを任せた。
 
 ## 14. 審査（Architect・クラウドの Opus。同じ種類の AI による審査で、独立した第二者の審査ではない）
 - 1回目（2026-11-02 14:05〜14:10 UTC・head 2fd362023・2回に分けて実行）: VERDICT: REVISE。
