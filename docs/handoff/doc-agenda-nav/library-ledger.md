@@ -4,7 +4,7 @@
 このリポジトリは公開されている。ここには節の名前と行番号だけを書き、決まりの本文は書かない。言い直しの対の文は、リポジトリの外の写しのフォルダ（`~/CC報告ファイル-keep/doc-library-20261102/pairs.txt`）にだけ置く。
 
 - 所在は `ファイル:見出し:行番号`。複数あるときは `; ` で区切る。見出しに `:` を含むもの（R-129）があるので、読むときは最後の `:` で行番号を、最初の `:` でファイルを切り離す。
-- 行番号は 2026-11-02 の実物（`grep -n`）。段1（2026-11-02）で区切り方を chat-layout.md（1〜10行）に分け、chat-format.md は言葉の選び方だけ（旧11〜31行 → 1〜21行）にした。この表はその後の行番号。段1b（2026-11-03）で ~/kb/AGENTS.md 15行目の括弧書き（R-91 の言い直し側）を消し、R-91 の所在を1つにした（行は残るので行番号は変わらない）。段1c（2026-11-03）で chat-format.md の3行目と7行目（R-92・R-93・R-94 の表示側）を消した。番号は付け直さないので、言葉の選び方の節の始まり（1行目）は変わらない。同じ日に「~/.claude/rules/common/coding-style.md」 の Code Quality Checklist の中の2行（code-review.md の Review Checklist と同じ文）も消した。これは最後の節の中なので、この表の行番号は変わらない。段2b（2026-11-03）で「~/.claude/rules/common/git-workflow.md」（22行）を本「~/.claude/books/git-workflow.md」へ移した（前に frontmatter 5行を足したので、見出しの行番号は元の行番号＋5。見出し行の末尾に `[R-nn]`）。「~/.claude/CLAUDE.md」 の 60行目（`@~/kb/AGENTS.md` の前）に目録の節（見出し1＋目録の行2＋空行1）を足し、その見出しを R-17 にした（目録の見出しも台帳に載せないと `L2_UNTAGGED` が 1 になるため）。段3（2026-11-03）で「~/.claude/rules/common/agents.md」（23行）を本「~/.claude/books/agents.md」へ移した（見出しの行番号は元の行番号＋5）。目録の行3つは CLAUDE.md の62行目の後に足したので、目録の見出し（R-17）の行番号は変わらない。
+- 行番号は 2026-11-02 の実物（`grep -n`）。段1（2026-11-02）で区切り方を chat-layout.md（1〜10行）に分け、chat-format.md は言葉の選び方だけ（旧11〜31行 → 1〜21行）にした。この表はその後の行番号。段1b（2026-11-03）で ~/kb/AGENTS.md 15行目の括弧書き（R-91 の言い直し側）を消し、R-91 の所在を1つにした（行は残るので行番号は変わらない）。段1c（2026-11-03）で chat-format.md の3行目と7行目（R-92・R-93・R-94 の表示側）を消した。番号は付け直さないので、言葉の選び方の節の始まり（1行目）は変わらない。同じ日に「~/.claude/rules/common/coding-style.md」 の Code Quality Checklist の中の2行（code-review.md の Review Checklist と同じ文）も消した。これは最後の節の中なので、この表の行番号は変わらない。段2b（2026-11-03）で「~/.claude/rules/common/git-workflow.md」（22行）を本「~/.claude/books/git-workflow.md」へ移した（前に frontmatter 5行を足したので、見出しの行番号は元の行番号＋5。見出し行の末尾に `[R-nn]`）。「~/.claude/CLAUDE.md」 の 60行目（`@~/kb/AGENTS.md` の前）に目録の節（見出し1＋目録の行2＋空行1）を足し、その見出しを R-17 にした（目録の見出しも台帳に載せないと `L2_UNTAGGED` が 1 になるため）。段3（2026-11-03）で「~/.claude/rules/common/agents.md」（23行）を本「~/.claude/books/agents.md」へ移した（見出しの行番号は元の行番号＋5）。目録の行3つは CLAUDE.md の62行目の後に足したので、目録の見出し（R-17）の行番号は変わらない。ムラ無くし（2026-11-03、[library-mura-design.md](./library-mura-design.md) の M1〜M5）で、本 agents の14行目（/security-review の行）を消し、「~/.claude/rules/common/code-review.md」 の Security Review Triggers の中に1行を足した。そのため R-32・R-33 は1つ上がり、R-105〜R-109 は1つ下がった。ほかの見出しの行番号は変わらない（Opus が実物の見出しと全行を突き合わせた）。R-15・R-91 の所在の5行目は chat-layout.md の見出し（1行目）ではない。段1で作ったときからこの番号で、意図はまだ確かめていない。
 - 種別: 目録（毎回読む）／本（場面で開く）／表示（入力のたびにフックが表示）／paths（場所つきの決まり）。
 - R-91〜R-94 は同じ趣旨を2か所に書いた「言い直し」の対。所在が2つある番号の数が `L2_DUP_LEDGER`。R-94 は設計の時点では見つけていなかった3件目。段1c で R-92〜R-94 の表示側を消し、所在はすべて1つになった（PO 2026-11-03「1」）。
 
@@ -30,8 +30,8 @@
 | R-21 | Commit Message Format | ~/.claude/books/git-workflow.md:Commit Message Format:8 | 本 | 段2b |
 | R-22 | Pull Request Workflow | ~/.claude/books/git-workflow.md:Pull Request Workflow:17 | 本 | 段2b |
 | R-31 | 担当（サブエージェント） | ~/.claude/books/agents.md:担当（サブエージェント）:8 | 本 | 段3 |
-| R-32 | Parallel Task Execution | ~/.claude/books/agents.md:Parallel Task Execution:16 | 本 | 段3 |
-| R-33 | Scope Termination（スコープ終了ルール） | ~/.claude/books/agents.md:Scope Termination（スコープ終了ルール）:20 | 本 | 段3 |
+| R-32 | Parallel Task Execution | ~/.claude/books/agents.md:Parallel Task Execution:15 | 本 | 段3 |
+| R-33 | Scope Termination（スコープ終了ルール） | ~/.claude/books/agents.md:Scope Termination（スコープ終了ルール）:19 | 本 | 段3 |
 | R-41 | Claude Code だけの決まり | CLAUDE.md:Claude Code だけの決まり:5 | 目録 | 未 |
 | R-42 | プロジェクト前提 | AGENTS.md:プロジェクト前提:5 | 目録 | 未 |
 | R-43 | 不可逆操作は必ず PO 確認 | AGENTS.md:不可逆操作は必ず PO 確認:15 | 目録 | 未 |
@@ -42,11 +42,11 @@
 | R-102 | When to Review | ~/.claude/rules/common/code-review.md:When to Review:18 | paths | 未 |
 | R-103 | Review Checklist | ~/.claude/rules/common/code-review.md:Review Checklist:36 | paths | 未 |
 | R-104 | Security Review Triggers | ~/.claude/rules/common/code-review.md:Security Review Triggers:50 | paths | 未 |
-| R-105 | Review Severity Levels | ~/.claude/rules/common/code-review.md:Review Severity Levels:62 | paths | 未 |
-| R-106 | Agent Usage | ~/.claude/rules/common/code-review.md:Agent Usage:71 | paths | 未 |
-| R-107 | Review Workflow | ~/.claude/rules/common/code-review.md:Review Workflow:80 | paths | 未 |
-| R-108 | Approval Criteria | ~/.claude/rules/common/code-review.md:Approval Criteria:91 | paths | 未 |
-| R-109 | Integration with Other Rules | ~/.claude/rules/common/code-review.md:Integration with Other Rules:97 | paths | 未 |
+| R-105 | Review Severity Levels | ~/.claude/rules/common/code-review.md:Review Severity Levels:63 | paths | 未 |
+| R-106 | Agent Usage | ~/.claude/rules/common/code-review.md:Agent Usage:72 | paths | 未 |
+| R-107 | Review Workflow | ~/.claude/rules/common/code-review.md:Review Workflow:81 | paths | 未 |
+| R-108 | Approval Criteria | ~/.claude/rules/common/code-review.md:Approval Criteria:92 | paths | 未 |
+| R-109 | Integration with Other Rules | ~/.claude/rules/common/code-review.md:Integration with Other Rules:98 | paths | 未 |
 | R-110 | Immutability (CRITICAL) | ~/.claude/rules/common/coding-style.md:Immutability (CRITICAL):14 | paths | 未 |
 | R-111 | Core Principles | ~/.claude/rules/common/coding-style.md:Core Principles:26 | paths | 未 |
 | R-112 | KISS (Keep It Simple) | ~/.claude/rules/common/coding-style.md:KISS (Keep It Simple):28 | paths | 未 |
