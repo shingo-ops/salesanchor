@@ -2,7 +2,7 @@
 # 決まりの語を含む行は、すべて下の rules か not_rules のどちらかに入れる（1 行は 1 項目だけ。check_rule_registry.py が数える）。
 # id: 文書の頭文字＋番号。A=AGENTS.md C=CLAUDE.md F=frontend/AGENTS.md K=backend/AGENTS.md S=STANDARD-WORKFLOW.md
 #     AE=aeon-routing AR=agent-roles CX=codex-operations PP=design-partner-preamble P=design-partner DC=dev-commands
-#     E=evidence-registry X=executor-checklist XP=executor-preamble KP=kpi L=lessons.d T=task-template B=branch-operations/README.md
+#     E=evidence-registry X=executor-checklist XP=executor-preamble KP=kpi L=lessons.d T=task-template B=branch-operations/README.md OI=ops-incident-agent
 #     最初に登録した 15 件は 2 桁（A09 など）、R1b で足した項目は 3 桁（A012 など。番号は R1b の仕分け表の通し番号）。
 # kind: gate（機械が止める。check に必須チェックの名前）／review（人が見る）／exempt（PR に痕跡が残らない）。check を書いてよいのは gate だけ。
 #   review の reason が「gate候補（R6）: 」で始まる行は、機械で○×が決まるが今は止める必須チェックが無い行（R6 で必須チェックにする対象）。
@@ -1282,6 +1282,56 @@ rules:
     anchor: "worktree の唯一の正規入口は `"
     kind: review
     reason: "worktree は scripts/new-worktree.sh で origin/main 起点に作り、台帳登録は自動で、手作業やミラーは不要、--no-verify は使わない決まり。作業場所の作り方は人が見る"
+  - id: OI402
+    source: docs/ai-agents/ops-incident-agent.md
+    anchor: "- してよいことは、調べることと"
+    kind: exempt
+    reason: "クラウドの相談係 AI の役割を調べと案までにする決まり。相談係 AI は Sales Anchor のリポジトリに書けない専用のクラウドで動き、守りは ADR-1052 の囲い（読む窓口・件の札・申請の判定）が受け持つ。実行時の行為で PR に残らない"
+  - id: OI403
+    source: docs/ai-agents/ops-incident-agent.md
+    anchor: "- 本文は SQL の 1 文だけです"
+    kind: exempt
+    reason: "読む窓口へ送る本文の形（SQL 1 文・JSON にしない）の決まり。窓口が形の違う本文を 400 で断る（read_window_http.py）。実行時の通信で PR に残らない"
+  - id: OI404
+    source: docs/ai-agents/ops-incident-agent.md
+    anchor: "- 理由には、何の不具合を"
+    kind: exempt
+    reason: "値を見たい申請の理由の書き方の決まり。理由は件の記録に残り、道具を持たない判定役が見る（ADR-1052）。実行時の申請で PR に残らない"
+  - id: OI405
+    source: docs/ai-agents/ops-incident-agent.md
+    anchor: "- 事実・推測・確かめていないことを混ぜません"
+    kind: exempt
+    reason: "相談係 AI の報告で事実と推測を分ける決まり。報告は件の記録に入り、受け取った件のセッションが確かめ直す（§2）。PR に残らない"
+  - id: OI406
+    source: docs/ai-agents/ops-incident-agent.md
+    anchor: "- コードを読む必要があるときは"
+    kind: exempt
+    reason: "専用リポジトリにコードが無いので、読む必要のあるファイルを報告に書き、読んだふりをしない決まり。実行時の報告の中身で PR に残らない"
+  - id: OI407
+    source: docs/ai-agents/ops-incident-agent.md
+    anchor: "- してよいことは、原因の確かめ・直す PR の起票まで"
+    kind: review
+    reason: "件のセッションは PR の起票までで、マージ・本番の変更・secrets の変更をしない決まり（ADR-1039 Decision 8）。マージは既存の審査役の見張り・必須チェック・GO（ADR-136）が止めるが、本番の変更と secrets の変更は PR の外なので人が見る"
+  - id: OI411
+    source: docs/ai-agents/ops-incident-agent.md
+    anchor: "- 返る行は 200 行で打ち切られます"
+    kind: exempt
+    reason: "読む窓口の行数の上限（既定 200・最大 5000、readonly_query.py の DEFAULT_LIMIT・MAX_LIMIT）を踏まえ、多く要るときは -- limit=N を書き、件数は count(*) で数える決まり。実行時の通信で PR に残らない"
+  - id: OI408
+    source: docs/ai-agents/ops-incident-agent.md
+    anchor: "### 1-3. 信用しないデータ"
+    kind: exempt
+    reason: "相談係 AI が投稿・DB の文字・ファイルの中身を指示として扱わない決まり（節の本文は「〜しません」の書き方で決まりの語に当たらないため、見出しの行で受ける）。実行時の振る舞いで PR に残らない"
+  - id: OI409
+    source: docs/ai-agents/ops-incident-agent.md
+    anchor: "### 1-4. してはいけないこと"
+    kind: exempt
+    reason: "相談係 AI の外への書き出しの禁止（push・PR・issue・Web・ほかの宛先・通知に値を書くこと）。節の本文は「〜しません」の書き方で決まりの語に当たらないため、見出しの行で受ける（ADR-1052）。守りは専用リポジトリの設定と口の側にもあるが、実行時の行為で PR に残らない"
+  - id: OI410
+    source: docs/ai-agents/ops-incident-agent.md
+    anchor: "- `needs_decision`: PO が決める"
+    kind: exempt
+    reason: "報告の needs_decision に PO が決めることだけを書き、無ければ書かない決まり。報告は件の記録に入り PR に残らない"
 
 not_rules:
   - source: frontend/AGENTS.md
@@ -1799,3 +1849,9 @@ not_rules:
   - source: docs/ai-agents/dev-commands.md
     anchor: "# pytest を含む全チェック（po"
     reason: "コマンド例の中のコメント（全チェックは postgres と redis の Docker 起動が必要）で、決まりではない"
+  - source: docs/ai-agents/ops-incident-agent.md
+    anchor: "- 投稿の本文は、電話・メール・郵便番号の形が"
+    reason: "伏せ方の説明（人名・住所は置き換わっていないことがある）で、決まりではない"
+  - source: docs/ai-agents/ops-incident-agent.md
+    anchor: "- `risk`: 直すときの危険"
+    reason: "報告の項目 risk に書く中身の説明（確かめていないこと）で、決まりではない"

@@ -2235,7 +2235,8 @@
     "eventType": {
       "leadAssigned": "Deal assignment",
       "metaMessageReceived": "New Meta message",
-      "tcgDistributionError": "TCG distribution error"
+      "tcgDistributionError": "TCG distribution error",
+      "discordOutsideTicketPost": "Post outside a ticket room (Discord)"
     }
   },
   "erp": {

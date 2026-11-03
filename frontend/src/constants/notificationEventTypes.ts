@@ -8,4 +8,5 @@ export const NOTIFICATION_EVENT_LABEL_KEYS: Record<string, string> = {
   lead_assigned: "notifications.eventType.leadAssigned",
   meta_message_received: "notifications.eventType.metaMessageReceived",
   tcg_distribution_error: "notifications.eventType.tcgDistributionError",
+  discord_outside_ticket_post: "notifications.eventType.discordOutsideTicketPost",
 };

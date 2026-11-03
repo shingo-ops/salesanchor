@@ -1209,3 +1209,5 @@ run_sql migrations/20261101_120000_enable_secretary_chat_tenant4.sql
 run_sql migrations/20261101_130000_add_new_device_approval.sql
 # ADR-1055 段W: 許可依頼の通知（web push）の購読の置き場（表1つ・追加のみ・冪等）
 run_sql migrations/20261102_090000_add_user_push_subscriptions.sql
+# ADR-1058 段1a: AI の担当の表3つ（選択肢・今の担当・変えた記録）と使用の記録の outcome・error_code（追加と CHECK を広げるだけ・冪等）
+run_sql migrations/20261103_120000_create_ai_job_assignments.sql

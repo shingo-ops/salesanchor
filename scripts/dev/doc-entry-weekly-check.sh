@@ -25,60 +25,20 @@ f=lambda s:d.date.fromisoformat(s)
 print((f(sys.argv[1])-f(sys.argv[2])).days)' "$1" "$2"
 }
 
-# ---- K1 ----
-K1_TOTAL=0
-K1_LIST=()
-K1_MISS=()
-disp() { local t='~'; printf '%s' "${1/#$HOME_DIR/$t}"; }
-count_file() {
-  local f="$1"
-  K1_TOTAL=$((K1_TOTAL + $(wc -l < "$f")))
-  K1_LIST+=("$(disp "$f")")
-}
-has_paths() {
-  # 1行目が --- で、次の --- までに paths: で始まる行があれば 0
-  python3 -I -c 'import sys
-L=open(sys.argv[1],encoding="utf-8",errors="replace").read().split("\n")
-if not L or L[0].strip()!="---": sys.exit(1)
-for l in L[1:]:
-    if l.strip()=="---": sys.exit(1)
-    if l.startswith("paths:"): sys.exit(0)
-sys.exit(1)' "$1"
-}
-
-CLAUDE_MD="$HOME_DIR/.claude/CLAUDE.md"
-if [ -f "$CLAUDE_MD" ]; then
-  count_file "$CLAUDE_MD"
-  while IFS= read -r line; do
-    case "$line" in
-      @*)
-        p="${line#@}"
-        case "$p" in "~/"*) p="$HOME_DIR/${p#\~/}" ;; esac
-        if [ -f "$p" ]; then count_file "$p"; else K1_MISS+=("$(disp "$p")"); fi
-        ;;
-    esac
-  done < "$CLAUDE_MD"
-else
-  K1_MISS+=("$(disp "$CLAUDE_MD")")
-fi
-if [ -d "$HOME_DIR/.claude/rules" ]; then
-  while IFS= read -r f; do
-    if ! has_paths "$f"; then count_file "$f"; fi
-  done < <(find "$HOME_DIR/.claude/rules" -type f -name '*.md' | LC_ALL=C sort)
-fi
-for f in "$REPO/CLAUDE.md" "$REPO/AGENTS.md"; do
-  if [ -f "$f" ]; then count_file "$f"; else K1_MISS+=("$f"); fi
-done
-join_by() { local IFS=,; printf '%s' "$*"; }
+# ---- K1（数え方は doc-library-check.sh の K1_DEF の走査1か所だけ。library-design §4-2・段2a） ----
+LIB_OUT="$(DOC_ENTRY_HOME="$HOME_DIR" DOC_ENTRY_REPO="$REPO" bash "$SELF_DIR/doc-library-check.sh")"
+lib_val() { printf '%s\n' "$LIB_OUT" | sed -n "s/^$1=//p" | head -n 1; }
+K1_TOTAL="$(lib_val K1_DEF)"
+case "$K1_TOTAL" in ''|*[!0-9]*) K1_TOTAL=unreadable ;; esac
+K1_FILES_V="$(lib_val K1_DEF_FILES)"
+K1_MISS_V="$(lib_val K1_DEF_MISSING)"
+[ -z "$K1_MISS_V" ] && K1_MISS_V=unreadable
 echo "K1=$K1_TOTAL"
-echo "K1_FILES=$(join_by "${K1_LIST[@]+"${K1_LIST[@]}"}")"
-if [ "${#K1_MISS[@]}" -eq 0 ]; then
-  echo "K1_MISSING=none"
-else
-  echo "K1_MISSING=$(join_by "${K1_MISS[@]}")"
-  add_ng "K1_MISSING=$(join_by "${K1_MISS[@]}")"
-fi
-[ "$K1_TOTAL" -gt "$K1_LIMIT" ] && add_ng "K1>$K1_LIMIT"
+echo "K1_FILES=$K1_FILES_V"
+echo "K1_MISSING=$K1_MISS_V"
+[ "$K1_MISS_V" != none ] && add_ng "K1_MISSING=$K1_MISS_V"
+if [ "$K1_TOTAL" = unreadable ]; then add_ng "K1=unreadable"
+elif [ "$K1_TOTAL" -gt "$K1_LIMIT" ]; then add_ng "K1>$K1_LIMIT"; fi
 
 # ---- K2 ----
 A="$HOME_DIR/.claude/scripts/master-register-rules-guard.py"
@@ -134,9 +94,7 @@ L2_PASS=0
 L2_UNTAGGED_PASS=0
 L3_MATCH_PASS=yes
 BOOKS_IMPORTED_PASS=0
-LIB_OUT="$(DOC_ENTRY_HOME="$HOME_DIR" DOC_ENTRY_REPO="$REPO" bash "$SELF_DIR/doc-library-check.sh")"
 printf '%s\n' "$LIB_OUT"
-lib_val() { printf '%s\n' "$LIB_OUT" | sed -n "s/^$1=//p" | head -n 1; }
 LV_L2="$(lib_val L2)"
 LV_UNT="$(lib_val L2_UNTAGGED)"
 LV_L3="$(lib_val L3_MATCH)"

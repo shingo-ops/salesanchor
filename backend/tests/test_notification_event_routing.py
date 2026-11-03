@@ -137,11 +137,16 @@ def test_event_type_values_are_pairwise_non_substrings():
 # ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
-async def test_list_event_types_returns_three_codes(client):
+async def test_list_event_types_returns_all_codes(client):
     resp = await client.get("/api/v1/notification-event-types")
     assert resp.status_code == 200
     codes = [e["code"] for e in resp.json()]
-    assert codes == ["lead_assigned", "meta_message_received", "tcg_distribution_error"]
+    assert codes == [
+        "lead_assigned",
+        "meta_message_received",
+        "tcg_distribution_error",
+        "discord_outside_ticket_post",
+    ]
 
 
 # ---------------------------------------------------------------------------
