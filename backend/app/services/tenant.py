@@ -1073,6 +1073,13 @@ CREATE INDEX IF NOT EXISTS idx_user_notices_user_created
 CREATE INDEX IF NOT EXISTS idx_user_notices_user_unread
     ON {schema}.user_notices (user_id) WHERE read_at IS NULL;
 
+-- アプリ内の鈴: 担当者がいないときに知らせを受け取る人（0 行 = 未設定 = オーナー全員）
+CREATE TABLE IF NOT EXISTS {schema}.notice_fallback_recipients (
+    user_id    INTEGER PRIMARY KEY,         -- 受け取る人の public.users.id
+    updated_by INTEGER,                     -- 設定した人の public.users.id
+    updated_at TIMESTAMPTZ DEFAULT now()
+);
+
 -- SA-02 / F3: チャネル統制マスタ（新規テナント初期シード対象）
 CREATE TABLE IF NOT EXISTS {schema}.channel_masters (
     id SERIAL PRIMARY KEY,

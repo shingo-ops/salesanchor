@@ -27,7 +27,9 @@ BODY = "secret-customer-body-xyz"
 DISCORD_AUTHOR = "900000000000000001"
 
 DDL = [
-    "CREATE TABLE users (id INTEGER PRIMARY KEY, tenant_id INTEGER, is_active BOOLEAN, is_super_admin BOOLEAN)",
+    "CREATE TABLE users (id INTEGER PRIMARY KEY, tenant_id INTEGER, is_active BOOLEAN, is_super_admin BOOLEAN,"
+    " full_name TEXT, username TEXT, email TEXT)",
+    "CREATE TABLE notice_fallback_recipients (user_id INTEGER PRIMARY KEY, updated_by INTEGER, updated_at TIMESTAMP)",
     "CREATE TABLE leads (id INTEGER PRIMARY KEY, tenant_id INTEGER, discord_user_id TEXT, assigned_to INTEGER, discord_guild_channel_id TEXT)",
     "CREATE TABLE lead_channels (id INTEGER PRIMARY KEY, lead_id INTEGER, platform TEXT, external_id TEXT)",
     "CREATE TABLE roles (id INTEGER PRIMARY KEY, system_key TEXT)",
@@ -58,8 +60,10 @@ async def _run(maker, sql, **params):
 
 
 async def add_user(maker, uid, tenant=1, active=True, role_id=None, discord=None):
-    await _run(maker, "INSERT INTO users (id, tenant_id, is_active, is_super_admin) VALUES (:i,:t,:a,0)",
-               i=uid, t=tenant, a=active)
+    await _run(maker, "INSERT INTO users (id, tenant_id, is_active, is_super_admin, full_name, username, email)"
+               " VALUES (:i,:t,:a,0,:fn,:un,:em)",
+               i=uid, t=tenant, a=active, fn=(f"氏名{uid}" if uid % 2 == 0 else ""), un=f"user{uid}",
+               em=f"user{uid}@example.com")
     if role_id:
         await _run(maker, "INSERT INTO user_roles (user_id, role_id) VALUES (:u,:r)", u=uid, r=role_id)
     if discord:
@@ -80,41 +84,58 @@ async def recipients(maker):
         return await un.resolve_notice_recipients(s, 1, DISCORD_AUTHOR)
 
 
-# ---- §4 宛先の 6 通り（K6） ----
+# ---- §4-改訂1・2 宛先（K6） ----
+
+async def set_fallback(maker, *user_ids):
+    for uid in user_ids:
+        await _run(maker, "INSERT INTO notice_fallback_recipients (user_id) VALUES (:u)", u=uid)
+
 
 @pytest.mark.asyncio
-async def test_case1_single_assignee_plus_admins(maker):
+async def test_assignee_only_no_owner_or_admin(maker):
     await add_user(maker, 10)
     await add_user(maker, 20, role_id=1)
     await add_user(maker, 21, role_id=2)
     await add_lead(maker, 1, 10)
-    assert await recipients(maker) == [10, 20, 21]
+    assert await recipients(maker) == [10]
 
 
 @pytest.mark.asyncio
-async def test_case2_same_person_on_many_leads(maker):
+async def test_same_person_on_many_leads_once(maker):
     await add_user(maker, 10)
     await add_user(maker, 20, role_id=1)
     await add_lead(maker, 1, 10)
     await add_lead(maker, 2, 10, via_channel=True)
-    assert await recipients(maker) == [10, 20]
+    assert await recipients(maker) == [10]
 
 
 @pytest.mark.asyncio
-async def test_case3_no_lead_admins_only(maker):
+async def test_multiple_assignees_all_of_them(maker):
+    await add_user(maker, 10)
+    await add_user(maker, 11)
     await add_user(maker, 20, role_id=1)
-    assert await recipients(maker) == [20]
+    await add_lead(maker, 1, 10)
+    await add_lead(maker, 2, 11)
+    assert await recipients(maker) == [10, 11]
 
 
 @pytest.mark.asyncio
-async def test_case4_lead_without_assignee(maker):
+async def test_no_lead_no_setting_owners_only(maker):
+    await add_user(maker, 20, role_id=1)
+    await add_user(maker, 21, role_id=1)
+    await add_user(maker, 22, role_id=2)  # admin は入らない
+    assert await recipients(maker) == [20, 21]
+
+
+@pytest.mark.asyncio
+async def test_lead_without_assignee_goes_to_owner(maker):
     await add_user(maker, 20, role_id=1)
     await add_lead(maker, 1, None)
     assert await recipients(maker) == [20]
 
 
 @pytest.mark.asyncio
-async def test_case5_assignee_inactive_other_tenant_or_missing(maker):
+async def test_assignee_inactive_other_tenant_or_missing_goes_to_owner(maker):
     await add_user(maker, 20, role_id=1)
     await add_user(maker, 11, active=False)
     await add_user(maker, 12, tenant=2)
@@ -125,20 +146,47 @@ async def test_case5_assignee_inactive_other_tenant_or_missing(maker):
 
 
 @pytest.mark.asyncio
-async def test_case6_multiple_assignees_admins_only(maker):
+async def test_setting_used_when_no_assignee(maker):
+    await add_user(maker, 20, role_id=1)
+    await add_user(maker, 30)
+    await add_user(maker, 31)
+    await set_fallback(maker, 30, 31)
+    assert await recipients(maker) == [30, 31]
+
+
+@pytest.mark.asyncio
+async def test_setting_ignored_when_assignee_exists(maker):
     await add_user(maker, 10)
-    await add_user(maker, 11)
-    await add_user(maker, 20, role_id=2)
+    await add_user(maker, 30)
+    await set_fallback(maker, 30)
     await add_lead(maker, 1, 10)
-    await add_lead(maker, 2, 11)
+    assert await recipients(maker) == [10]
+
+
+@pytest.mark.asyncio
+async def test_setting_all_inactive_or_other_tenant_goes_back_to_owner(maker):
+    await add_user(maker, 20, role_id=1)
+    await add_user(maker, 30, active=False)
+    await add_user(maker, 31, tenant=2)
+    await set_fallback(maker, 30, 31, 999)
     assert await recipients(maker) == [20]
 
 
 @pytest.mark.asyncio
-async def test_admin_inactive_or_other_tenant_excluded_and_normal_role_not_admin(maker):
+async def test_setting_partly_inactive_keeps_valid_only(maker):
+    await add_user(maker, 20, role_id=1)
+    await add_user(maker, 30, active=False)
+    await add_user(maker, 31)
+    await set_fallback(maker, 30, 31)
+    assert await recipients(maker) == [31]
+
+
+@pytest.mark.asyncio
+async def test_owner_inactive_or_other_tenant_excluded_and_normal_role_not_owner(maker):
     await add_user(maker, 20, role_id=1, active=False)
     await add_user(maker, 21, role_id=1, tenant=2)
     await add_user(maker, 22, role_id=3)  # system_key NULL の通常ロール
+    await add_user(maker, 23, role_id=2)  # admin
     assert await recipients(maker) == []
 
 
@@ -210,12 +258,12 @@ async def test_notify_creates_bell_mentions_and_signals(maker, env):
     async with maker() as s:
         assert await ot.notify_outside_ticket_post(s, tenant_id=1, message=make_msg()) is True
     assert send.await_count == 1
-    assert send.await_args.kwargs["mention_user_ids"] == ["111", "222"]
+    assert send.await_args.kwargs["mention_user_ids"] == ["111"]
     assert BODY not in send.await_args.args[4]
     rows = await notice_rows(maker)
-    assert [r[0] for r in rows] == [10, 20]
+    assert [r[0] for r in rows] == [10]
     assert rows[0][1:] == ("discord_outside_ticket_post", "Taro", "general", "https://discord.com/channels/1/2/3")
-    assert sorted(c.args[0] for c in publish.await_args_list) == [10, 20]
+    assert sorted(c.args[0] for c in publish.await_args_list) == [10]
     assert all(c.args[1] == "notices" for c in publish.await_args_list)
 
 
@@ -370,3 +418,95 @@ async def test_k5_user_without_tenant_gets_empty_and_404(maker):
     async with client_for(app) as c:
         assert (await c.get("/api/v1/notices")).json() == {"items": [], "unread_count": 0}
         assert (await c.post("/api/v1/notices/1/read")).status_code == 404
+
+
+# ---- 担当者がいないときの受け取り人の設定 API（K9） ----
+
+def make_fb_app(maker, user):
+    from app.auth.dependencies import get_current_tenant
+    from app.routers import notice_fallback_recipients as fb_router
+
+    app = FastAPI()
+    app.include_router(fb_router.router, prefix="/api/v1")
+
+    async def _db():
+        async with maker() as s:
+            yield s
+
+    app.dependency_overrides[get_db] = _db
+    app.dependency_overrides[get_current_user] = lambda: user
+    app.dependency_overrides[get_current_tenant] = lambda: user.tenant_id
+    return app
+
+
+def allow_perms(perms):
+    return patch("app.auth.dependencies.load_user_permissions", AsyncMock(return_value=set(perms)))
+
+
+@pytest.mark.asyncio
+async def test_fallback_api_forbidden_without_permission(maker):
+    await add_user(maker, 10)
+    app = make_fb_app(maker, SimpleNamespace(id=10, tenant_id=1))
+    with allow_perms({"notifications.view"}):
+        async with client_for(app) as c:
+            assert (await c.get("/api/v1/notice-fallback-recipients")).status_code == 403
+            assert (await c.put("/api/v1/notice-fallback-recipients", json={"user_ids": [10]})).status_code == 403
+    async with maker() as s:
+        assert (await s.execute(text("SELECT COUNT(*) FROM notice_fallback_recipients"))).scalar() == 0
+
+
+@pytest.mark.asyncio
+async def test_fallback_api_get_defaults_and_candidates_have_no_discord_or_email(maker):
+    await add_user(maker, 10, discord="123456")   # 氏名10
+    await add_user(maker, 11)                      # full_name 空 → username
+    await add_user(maker, 12, active=False)
+    await add_user(maker, 13, tenant=2)
+    app = make_fb_app(maker, SimpleNamespace(id=10, tenant_id=1))
+    with allow_perms({"notifications.manage"}):
+        async with client_for(app) as c:
+            r = await c.get("/api/v1/notice-fallback-recipients")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["selected"] == [] and data["defaulted_to_owner"] is True
+    assert data["candidates"] == [
+        {"user_id": 10, "name": "氏名10"},
+        {"user_id": 11, "name": "user11"},
+    ]
+    raw = r.text
+    assert "123456" not in raw and "@example.com" not in raw
+    for cand in data["candidates"]:
+        assert set(cand) == {"user_id", "name"}
+
+
+@pytest.mark.asyncio
+async def test_fallback_api_put_replaces_and_get_reflects(maker):
+    await add_user(maker, 10)
+    await add_user(maker, 11)
+    await add_user(maker, 20, role_id=1)
+    app = make_fb_app(maker, SimpleNamespace(id=10, tenant_id=1))
+    with allow_perms({"notifications.manage"}):
+        async with client_for(app) as c:
+            r = await c.put("/api/v1/notice-fallback-recipients", json={"user_ids": [10, 11, 10]})
+            assert r.status_code == 200
+            assert r.json()["selected"] == [10, 11] and r.json()["defaulted_to_owner"] is False
+            r = await c.put("/api/v1/notice-fallback-recipients", json={"user_ids": [11]})
+            assert r.json()["selected"] == [11]
+            r = await c.put("/api/v1/notice-fallback-recipients", json={"user_ids": []})
+            assert r.json()["selected"] == [] and r.json()["defaulted_to_owner"] is True
+    await set_fallback(maker, 11)
+    assert await recipients(maker) == [11]  # 保存後の次の知らせはその人へ
+
+
+@pytest.mark.asyncio
+async def test_fallback_api_put_rejects_other_tenant_inactive_unknown(maker):
+    await add_user(maker, 10)
+    await add_user(maker, 11, active=False)
+    await add_user(maker, 12, tenant=2)
+    await set_fallback(maker, 10)
+    app = make_fb_app(maker, SimpleNamespace(id=10, tenant_id=1))
+    with allow_perms({"notifications.manage"}):
+        async with client_for(app) as c:
+            for bad in ([11], [12], [999], [10, 12]):
+                r = await c.put("/api/v1/notice-fallback-recipients", json={"user_ids": bad})
+                assert r.status_code == 422, bad
+            assert (await c.get("/api/v1/notice-fallback-recipients")).json()["selected"] == [10]

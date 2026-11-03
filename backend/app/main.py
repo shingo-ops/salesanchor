@@ -72,6 +72,7 @@ from app.routers import (
     meta,
     meta_inbox,  # Phase 1-D Sprint 2: OAuth 接続バックエンド
     note_master,  # 備考マスタ テナント用
+    notice_fallback_recipients,  # アプリ内の鈴: 担当者がいないときに受け取る人の設定
     notices,  # アプリ内の鈴: 自分宛ての知らせ一覧と既読
     notifications,
     ops,  # ADR-1012 段階2 便B: 保守 API
@@ -276,6 +277,11 @@ app.include_router(
 # アプリ内の鈴: 自分宛ての知らせの一覧・既読（本人の行だけ）
 app.include_router(
     notices.router, prefix="/api/v1", tags=["notices"],
+    dependencies=[Depends(get_current_tenant)],
+)
+# アプリ内の鈴: 担当者がいないときに受け取る人の設定（notifications.manage）
+app.include_router(
+    notice_fallback_recipients.router, prefix="/api/v1", tags=["notices"],
     dependencies=[Depends(get_current_tenant)],
 )
 # ADR-091 KPI4: Discord アナウンス投稿 API

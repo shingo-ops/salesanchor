@@ -10470,6 +10470,81 @@
         "title": "ExtractionSummary",
         "type": "object"
       },
+      "FallbackCandidate": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "表示名（full_name が空ならユーザー名）",
+            "title": "Name"
+          },
+          "user_id": {
+            "description": "public.users.id",
+            "title": "User Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "user_id"
+        ],
+        "title": "FallbackCandidate",
+        "type": "object"
+      },
+      "FallbackRecipients": {
+        "properties": {
+          "candidates": {
+            "description": "選べる人（同じ会社・有効）",
+            "items": {
+              "$ref": "#/components/schemas/FallbackCandidate"
+            },
+            "title": "Candidates",
+            "type": "array"
+          },
+          "defaulted_to_owner": {
+            "description": "未設定、または設定の人が全員無効でオーナーに戻っているとき true",
+            "title": "Defaulted To Owner",
+            "type": "boolean"
+          },
+          "selected": {
+            "description": "担当者がいないときに受け取る人の user_id（未設定は空）",
+            "items": {
+              "type": "integer"
+            },
+            "title": "Selected",
+            "type": "array"
+          }
+        },
+        "required": [
+          "selected",
+          "defaulted_to_owner",
+          "candidates"
+        ],
+        "title": "FallbackRecipients",
+        "type": "object"
+      },
+      "FallbackRecipientsUpdate": {
+        "properties": {
+          "user_ids": {
+            "description": "受け取る人の user_id の一覧（丸ごと置き換え。空で未設定に戻す）",
+            "items": {
+              "type": "integer"
+            },
+            "title": "User Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "user_ids"
+        ],
+        "title": "FallbackRecipientsUpdate",
+        "type": "object"
+      },
       "FlaggedTermOut": {
         "properties": {
           "reason": {
@@ -50818,6 +50893,78 @@
         "summary": "Update Note Master",
         "tags": [
           "note-master"
+        ]
+      }
+    },
+    "/api/v1/notice-fallback-recipients": {
+      "get": {
+        "description": "今の設定と、選べる人の一覧。未設定ならオーナー全員に届く（defaulted_to_owner）。",
+        "operationId": "get_notice_fallback_recipients_api_v1_notice_fallback_recipients_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FallbackRecipients"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Notice Fallback Recipients",
+        "tags": [
+          "notices"
+        ]
+      },
+      "put": {
+        "description": "受け取る人を丸ごと置き換える。別会社・無効・存在しない id が 1 つでもあれば 422。",
+        "operationId": "put_notice_fallback_recipients_api_v1_notice_fallback_recipients_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FallbackRecipientsUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FallbackRecipients"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Put Notice Fallback Recipients",
+        "tags": [
+          "notices"
         ]
       }
     },

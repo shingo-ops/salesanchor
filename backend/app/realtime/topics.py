@@ -493,6 +493,7 @@ NO_SIGNAL_ROUTES: dict[tuple[str, str], str] = {
     ("POST", "/api/v1/units/import/preview"): _PENDING,
     ("DELETE", "/api/v1/units/{unit_id}"): _PENDING,
     ("PATCH", "/api/v1/units/{unit_id}"): _PENDING,
+    ("PUT", "/api/v1/notice-fallback-recipients"): "設定の保存だけ。画面は保存の返り値で更新し、他の画面へ合図を出す相手はいない（宛先の決定時に読むだけ）",
     ("POST", "/api/v1/notices/{notice_id}/read"): "本人の既読の記録だけ。数は返り値の unread_count で更新し、合図は出さない（鈴の作成側が人宛ての notices を出す）",
     ("PUT", "/api/v1/users/{user_id}/roles"): _PENDING,
     ("POST", "/api/v1/webhook/messenger"): _PENDING,

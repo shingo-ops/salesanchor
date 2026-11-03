@@ -1,4 +1,4 @@
--- アプリ内の鈴: 各社スキーマに user_notices（人ごとの知らせ・未読つき）を作る（追加のみ・冪等）
+-- アプリ内の鈴: 各社スキーマに user_notices（人ごとの知らせ・未読つき）と notice_fallback_recipients（担当者がいないときの受け取り人）を作る（追加のみ・冪等）
 -- 本文・Discord の id の列は作らない。link_url は書き込みの場所で、書いた人の id は含まない。
 -- GRANT は ALTER DEFAULT PRIVILEGES（20260605_040000）で自動付与済み。
 DO $$
@@ -32,6 +32,16 @@ BEGIN
           ON %I.user_notices (user_id) WHERE read_at IS NULL',
       r.nspname
     );
+    EXECUTE format(
+      'CREATE TABLE IF NOT EXISTS %I.notice_fallback_recipients (
+          user_id    INTEGER PRIMARY KEY,
+          updated_by INTEGER,
+          updated_at TIMESTAMPTZ DEFAULT now()
+      )',
+      r.nspname
+    );
+    EXECUTE format('COMMENT ON TABLE %I.notice_fallback_recipients IS %L', r.nspname,
+      '担当者がいないときに知らせを受け取る人（0 行 = 未設定 = オーナー全員）');
     EXECUTE format('COMMENT ON TABLE %I.user_notices IS %L', r.nspname,
       '人ごとのアプリ内の知らせ（鈴）。宛先の人数分の行を持つ');
     EXECUTE format('COMMENT ON COLUMN %I.user_notices.user_id IS %L', r.nspname,

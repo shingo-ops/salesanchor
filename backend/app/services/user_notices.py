@@ -1,7 +1,7 @@
 """アプリ内の鈴（各社スキーマ user_notices）: 宛先の決定・知らせの作成・合図。
 
 設計: docs/handoff/in-app-notice-bell/design.md §4〜§6。
-- 宛先 = 担当者 ∪ 管理者。担当者は leads.assigned_to（受信箱と同じ列）。
+- 宛先 = 担当者だけ。いなければ設定の人、無ければオーナー（設計 §4-改訂1・2）。担当者は leads.assigned_to（受信箱と同じ列）。
 - 本文・Discord の id は表にもログにも入れない。ログは人数だけ。
 - テナント表はすべてスキーマ名つき（ADR-072）。
 """
@@ -14,7 +14,7 @@ from typing import Any
 from sqlalchemy import bindparam, text
 
 from app.auth.dependencies import is_postgresql, tenant_table_ref
-from app.auth.system_roles import ROLE_KEY_ADMIN, ROLE_KEY_OWNER
+from app.auth.system_roles import ROLE_KEY_OWNER
 from app.realtime.publisher import publish_user_change
 from app.realtime.topics import TOPIC_NOTICES
 
@@ -70,7 +70,8 @@ async def _assignee_candidates(db: Any, tenant_id: int, discord_user_id: str) ->
     return await _valid_user_ids(db, tenant_id, found)
 
 
-async def _admin_user_ids(db: Any, tenant_id: int) -> list[int]:
+async def _owner_user_ids(db: Any, tenant_id: int) -> list[int]:
+    """オーナー（system_key='owner'）の有効な人全員。admin は入れない。"""
     roles_t = tenant_table_ref(db, tenant_id, "roles")
     user_roles_t = tenant_table_ref(db, tenant_id, "user_roles")
     rows = (
@@ -78,29 +79,40 @@ async def _admin_user_ids(db: Any, tenant_id: int) -> list[int]:
             text(
                 f"SELECT DISTINCT ur.user_id FROM {user_roles_t} ur "
                 f"JOIN {roles_t} r ON r.id = ur.role_id "
-                "WHERE r.system_key IN (:owner, :admin)"
+                "WHERE r.system_key = :owner"
             ),
-            {"owner": ROLE_KEY_OWNER, "admin": ROLE_KEY_ADMIN},
+            {"owner": ROLE_KEY_OWNER},
         )
     ).all()
     return await _valid_user_ids(db, tenant_id, {int(r[0]) for r in rows})
 
 
+async def _fallback_selected_ids(db: Any, tenant_id: int) -> list[int]:
+    """担当者がいないときに受け取る人として保存された user_id（有効かは見ない）。"""
+    fb_t = tenant_table_ref(db, tenant_id, "notice_fallback_recipients")
+    rows = (await db.execute(text(f"SELECT user_id FROM {fb_t} ORDER BY user_id"))).all()
+    return [int(r[0]) for r in rows]
+
+
+async def resolve_fallback_recipients(db: Any, tenant_id: int) -> list[int]:
+    """担当者がいないときの宛先: 設定の人のうち有効な人。0 件か有効 0 人ならオーナー全員。"""
+    selected = await _fallback_selected_ids(db, tenant_id)
+    valid = await _valid_user_ids(db, tenant_id, set(selected))
+    if valid:
+        return valid
+    return await _owner_user_ids(db, tenant_id)
+
+
 async def resolve_notice_recipients(db: Any, tenant_id: int, discord_user_id: str) -> list[int]:
     """書いた人の Discord の id から宛先（public.users.id）を決める（読むだけ）。
 
-    担当者の候補（有効な人・重複除去後）が 1 人ならその人＋管理者、0 人または 2 人以上なら管理者だけ。
-    super admin は自動では足さない（その会社で owner / admin を持っていれば管理者として入る）。
+    担当者の候補（有効な人・重複除去後）が 1 人以上 → 担当者だけ（別々なら全員）。
+    0 人 → 設定の人（有効な人だけ）。設定が無い・全員無効 → オーナー全員。admin は足さない。
     """
     candidates = await _assignee_candidates(db, tenant_id, str(discord_user_id))
-    admins = await _admin_user_ids(db, tenant_id)
-    recipients: list[int] = []
-    if len(candidates) == 1:
-        recipients.append(candidates[0])
-    for uid in admins:
-        if uid not in recipients:
-            recipients.append(uid)
-    return recipients
+    if candidates:
+        return candidates
+    return await resolve_fallback_recipients(db, tenant_id)
 
 
 async def discord_ids_for_users(db: Any, tenant_id: int, user_ids: list[int]) -> list[str]:
