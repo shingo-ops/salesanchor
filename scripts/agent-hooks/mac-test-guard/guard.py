@@ -8,12 +8,16 @@ MSG = ('🚫 BLOCKED [mac-test-guard]: この Mac では重い試験を回しま
        '試験は GitHub の確かめ（PR を push すると自動で回る）か、クラウドの担当に頼んでください'
        '（決まり: docs/handoff/mac-test-guard/design.md）。Mac でしか試せない場合は PO に許可券 "mac test" を依頼してください。')
 PREFIXES = {'sudo', 'env', 'time', 'nohup'}
+PREFIX_VALUE_FLAGS = {'sudo': {'-u', '-g', '-h', '-p', '-C', '-D', '-U', '-r', '-t'}, 'env': {'-u', '-C'},
+                      'time': {'-f', '-o'}}
+UV_VALUE_FLAGS = {'--with', '--project', '--directory', '--python', '-p', '--package', '--extra', '--group',
+                  '--env-file', '--with-requirements', '--with-editable', '--index'}
 TIMEOUT_VALUE_FLAGS = {'-s', '--signal', '-k', '--kill-after'}
 DOCKER_VALUE_FLAGS = {'-e', '--env', '-u', '--user', '-w', '--workdir', '-v', '--volume', '--name',
                       '--entrypoint', '-p', '--publish', '-l', '--label', '--index'}
 SHELLS = {'bash', 'sh', 'zsh'}
 PERMIT_OP = 'mac test'
-NPM_VALUE_FLAGS = {'--prefix', '-C', '-w', '--workspace'}
+NPM_VALUE_FLAGS = {'--prefix', '-C', '-w', '--workspace', '--filter', '-F', '--dir', '--cwd'}
 
 HEREDOC = re.compile(r"<<-?\s*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\1[^\n]*\n(.*?)(?:\n[ \t]*\2[ \t]*(?=\n|$)|\Z)", re.S)
 
@@ -95,6 +99,9 @@ def tokens(part):
             t = t[1:]
         elif w in PREFIXES:
             t = t[1:]
+            if w != 'nohup':
+                while t and t[0].startswith('-'):
+                    t = t[2:] if t[0] in PREFIX_VALUE_FLAGS.get(w, ()) else t[1:]
         elif w == 'timeout':
             t = skip_timeout(t[1:])
         elif w == 'nice':
@@ -135,6 +142,14 @@ def skip_flags(args):
     return args[i:]
 
 
+def skip_uv_flags(args):
+    """uv の旗（UV_VALUE_FLAGS は次の1語も）を飛ばした残りを返す。"""
+    i, n = 0, len(args)
+    while i < n and args[i].startswith('-'):
+        i += 2 if args[i] in UV_VALUE_FLAGS else 1
+    return args[i:]
+
+
 def is_npx_test(args):
     """npx 形: 旗を飛ばした次の語が vitest、または playwright の次が test。"""
     rest = skip_flags(args)
@@ -150,6 +165,8 @@ def is_npm_test(args):
     rest = skip_flags(args)
     if not rest:
         return False
+    if rest[0] in ('exec', 'x'):
+        return is_npx_test(rest[1:])
     if rest[0] in ('test', 't', 'tst'):
         return True
     if rest[0] in ('run', 'run-script'):
@@ -173,9 +190,9 @@ def heavy(base, args, allow_docker=True):
         return is_npx_test(args)
     if base == 'pnpm':
         rest = skip_flags(args)
-        if rest and rest[0] == 'exec':
+        if rest and rest[0] in ('exec', 'dlx'):
             return is_npx_test(rest[1:])
-        return is_npm_test(args)
+        return is_npm_test(args) or is_npx_test(args)
     if base == 'yarn':
         return is_npx_test(args) or is_npm_test(args)
     if base == 'vitest':
@@ -190,13 +207,13 @@ def heavy(base, args, allow_docker=True):
         rest = skip_flags(args)
         if not rest or rest[0] != 'run':
             return False
-        rest = skip_flags(rest[1:])
+        rest = skip_uv_flags(rest[1:])
         if not rest:
             return False
         b = os.path.basename(rest[0])
         return b in ('pytest', 'py.test') or (bool(PYTHON.match(b)) and is_pytest_module(rest[1:]))
-    if base == 'docker' and allow_docker:
-        if 'compose' not in args:
+    if base in ('docker', 'docker-compose') and allow_docker:
+        if base == 'docker' and 'compose' not in args:
             return False
         idx = [i for i, a in enumerate(args) if a in ('exec', 'run')]
         if not idx:
@@ -215,8 +232,10 @@ def bad_part(env, t, depth, part=''):
         return None
     base = os.path.basename(t[0])
     args = drop_redirections(t[1:])
-    if base in SHELLS and depth < 1 and '-c' in args:
-        i = args.index('-c')
+    ci = next((k for k, a in enumerate(args) if a == '-c' or re.fullmatch(r'-[A-Za-z]*c[A-Za-z]*', a)), None) \
+        if base in SHELLS and depth < 1 else None
+    if ci is not None:
+        i = ci
         if i + 1 < len(args):
             return bad_command(args[i + 1], depth + 1)
         return None
