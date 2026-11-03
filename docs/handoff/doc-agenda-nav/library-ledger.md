@@ -4,7 +4,7 @@
 このリポジトリは公開されている。ここには節の名前と行番号だけを書き、決まりの本文は書かない。言い直しの対の文は、リポジトリの外の写しのフォルダ（`~/CC報告ファイル-keep/doc-library-20261102/pairs.txt`）にだけ置く。
 
 - 所在は `ファイル:見出し:行番号`。複数あるときは `; ` で区切る。見出しに `:` を含むもの（R-129）があるので、読むときは最後の `:` で行番号を、最初の `:` でファイルを切り離す。
-- 行番号は 2026-11-02 の実物（`grep -n`）。段1（2026-11-02）で区切り方を chat-layout.md（1〜10行）に分け、chat-format.md は言葉の選び方だけ（旧11〜31行 → 1〜21行）にした。この表はその後の行番号。段1b（2026-11-03）で ~/kb/AGENTS.md 15行目の括弧書き（R-91 の言い直し側）を消し、R-91 の所在を1つにした（行は残るので行番号は変わらない）。段1c（2026-11-03）で chat-format.md の3行目と7行目（R-92・R-93・R-94 の表示側）を消した。番号は付け直さないので、言葉の選び方の節の始まり（1行目）は変わらない。同じ日に「~/.claude/rules/common/coding-style.md」 の Code Quality Checklist の中の2行（code-review.md の Review Checklist と同じ文）も消した。これは最後の節の中なので、この表の行番号は変わらない。
+- 行番号は 2026-11-02 の実物（`grep -n`）。段1（2026-11-02）で区切り方を chat-layout.md（1〜10行）に分け、chat-format.md は言葉の選び方だけ（旧11〜31行 → 1〜21行）にした。この表はその後の行番号。段1b（2026-11-03）で ~/kb/AGENTS.md 15行目の括弧書き（R-91 の言い直し側）を消し、R-91 の所在を1つにした（行は残るので行番号は変わらない）。段1c（2026-11-03）で chat-format.md の3行目と7行目（R-92・R-93・R-94 の表示側）を消した。番号は付け直さないので、言葉の選び方の節の始まり（1行目）は変わらない。同じ日に「~/.claude/rules/common/coding-style.md」 の Code Quality Checklist の中の2行（code-review.md の Review Checklist と同じ文）も消した。これは最後の節の中なので、この表の行番号は変わらない。段2b（2026-11-03）で「~/.claude/rules/common/git-workflow.md」（22行）を本「~/.claude/books/git-workflow.md」へ移した（前に frontmatter 5行を足したので、見出しの行番号は元の行番号＋5。見出し行の末尾に `[R-nn]`）。「~/.claude/CLAUDE.md」 の 60行目（`@~/kb/AGENTS.md` の前）に目録の節（見出し1＋目録の行2＋空行1）を足し、その見出しを R-17 にした（目録の見出しも台帳に載せないと `L2_UNTAGGED` が 1 になるため）。
 - 種別: 目録（毎回読む）／本（場面で開く）／表示（入力のたびにフックが表示）／paths（場所つきの決まり）。
 - R-91〜R-94 は同じ趣旨を2か所に書いた「言い直し」の対。所在が2つある番号の数が `L2_DUP_LEDGER`。R-94 は設計の時点では見つけていなかった3件目。段1c で R-92〜R-94 の表示側を消し、所在はすべて1つになった（PO 2026-11-03「1」）。
 
@@ -26,8 +26,9 @@
 | R-14 | 検査 | ~/kb/AGENTS.md:検査:29 | 目録 | 未 |
 | R-15 | PO への返事の区切り方（1〜10行・見出しは # の1つだけ） | ~/kb/00-rules/chat-layout.md:PO への返事の区切り方:5 | 目録 | 段1 |
 | R-16 | 言葉の選び方 | ~/kb/00-rules/chat-format.md:言葉の選び方:1 | 表示 | 段1 |
-| R-21 | Commit Message Format | ~/.claude/rules/common/git-workflow.md:Commit Message Format:3 | 目録 | 未 |
-| R-22 | Pull Request Workflow | ~/.claude/rules/common/git-workflow.md:Pull Request Workflow:12 | 目録 | 未 |
+| R-17 | 本の目録（場面で開く。開く前に目録の行を読む） | ~/.claude/CLAUDE.md:本の目録（場面で開く。開く前に目録の行を読む）:60 | 目録 | 段2b |
+| R-21 | Commit Message Format | ~/.claude/books/git-workflow.md:Commit Message Format:8 | 本 | 段2b |
+| R-22 | Pull Request Workflow | ~/.claude/books/git-workflow.md:Pull Request Workflow:17 | 本 | 段2b |
 | R-31 | 担当（サブエージェント） | ~/.claude/rules/common/agents.md:担当（サブエージェント）:3 | 目録 | 未 |
 | R-32 | Parallel Task Execution | ~/.claude/rules/common/agents.md:Parallel Task Execution:11 | 目録 | 未 |
 | R-33 | Scope Termination（スコープ終了ルール） | ~/.claude/rules/common/agents.md:Scope Termination（スコープ終了ルール）:15 | 目録 | 未 |
