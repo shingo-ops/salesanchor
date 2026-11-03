@@ -1602,7 +1602,7 @@ export function formatFetchedAtJst(isoString: string, language: string): string 
 - DB の試験（7）はクラウドでは流さない。報告に「DB の試験はクラウドでは流さず CI に任せた」と書く。流していない試験を合格と書かない。
 - `bash scripts/dev/check-before-submit.sh` があれば流し、出力の最後の20行と終了コードを写す（無ければ「無い」と書く）。
 - `git diff origin/main...HEAD --name-only` が「触るファイル」の13個と `docs/handoff/secretary-chatgpt/card-2.md` だけ（ほかがあれば止まる）。
-- `git diff origin/main...HEAD --numstat` の削除の数（2列目）が、1 は 0、2 は 1（`__all__` の1行）、3 は 0、4 は 0、5 は 0、6 は 0、7 は 0、8 は 0、9 は 0、10 は 2（10-1 と 10-3 は足すだけなので 0。10-2 の1行と、10-4 は足すだけなので、合計は 1。説明文の行が変わっていれば 2 以下）、11 は 1、12 は 0、13 は 0。10 が 2 を超える時と、ほかが違う時は、そのファイルを指定した `git diff origin/main...HEAD --` の `^-` の行（`grep` と `head -30`）を出して止まる。
+- `git diff origin/main...HEAD --numstat` の削除の数（2列目）が、1 は 0、2 は 1（`__all__` の1行）、3 は 0、4 は 0、5 は 0、6 は 0、7 は 0、8 は 0、9 は 0、10 は 1（10-2 の1行だけ。10-1・10-3・10-4 は足すだけ）、11 は 1、12 は 0、13 は 0。どれかが違う時は、そのファイルを指定した `git diff origin/main...HEAD --` の `^-` の行（`grep` と `head -30`）を出して止まる。
 - 生出力は作業場所の外の一時フォルダに保存し、パスと全文を報告に書く。
 
 ## 15. 想定される分岐と止まる条件
