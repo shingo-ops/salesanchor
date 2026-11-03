@@ -40,7 +40,12 @@ export function formatUnreadCount(n: number): string {
   return n > 99 ? "99+" : String(n);
 }
 
-export default function NoticeBell() {
+export interface NoticeBellProps {
+  /** "floating" = 右上の丸い鈴（PC）。"tab" = スマホの下のタブの 1 つ */
+  variant?: "floating" | "tab";
+}
+
+export default function NoticeBell({ variant = "floating" }: NoticeBellProps = {}) {
   const { t, i18n } = useTranslation();
   const [items, setItems] = useState<NoticeItem[]>([]);
   const [unread, setUnread] = useState(0);
@@ -109,6 +114,28 @@ export default function NoticeBell() {
       )}
     </div>
   );
+
+  if (variant === "tab") {
+    return (
+      <Popover
+        placement="top"
+        className="notice-bell-tab-slot"
+        open={open}
+        onOpenChange={handleOpenChange}
+        content={content}
+      >
+        <button type="button" className="mobile-tab" aria-label={label} data-testid="notice-bell">
+          <BellOutline size={ICON.base} aria-hidden="true" />
+          <span className="mobile-tab-label">{t("notices.bellLabel")}</span>
+          {unread > 0 && (
+            <span className="mobile-tab-badge" aria-hidden="true">
+              {formatUnreadCount(unread)}
+            </span>
+          )}
+        </button>
+      </Popover>
+    );
+  }
 
   return (
     <Popover placement="bottom" open={open} onOpenChange={handleOpenChange} content={content}>

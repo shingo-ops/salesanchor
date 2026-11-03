@@ -198,14 +198,14 @@ describe("MobileShell", () => {
       ).toBeTruthy();
     });
 
-    it("renders 4 bottom tabs when permissions exist", () => {
+    it("renders 5 bottom tabs when permissions exist (incl. notice bell)", () => {
       mockHasPermission.mockReturnValue(true);
 
       renderMobileShell();
 
       expect(
         document.querySelectorAll(".mobile-tabbar .mobile-tab").length,
-      ).toBe(4);
+      ).toBe(5);
     });
 
     it("more sheet is not open on initial render", () => {

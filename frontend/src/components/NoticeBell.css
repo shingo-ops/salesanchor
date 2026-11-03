@@ -18,9 +18,14 @@
   position: static;
 }
 
-/* スマホ: 画面の右上に鈴だけ（切り欠きを避ける） */
-.top-right-cluster--mobile {
-  top: calc(var(--avatar-zone-top) + env(safe-area-inset-top, 0px));
+/* スマホ: 下のタブの 1 つとして置く（タブの幅を他のタブと揃える） */
+.notice-bell-tab-slot {
+  flex: 1;
+  display: flex;
+}
+
+.notice-bell-tab-slot > .mobile-tab {
+  flex: 1;
 }
 
 /* ── 鈴ボタン ── */

@@ -80,7 +80,7 @@ async function setup(page: Page, count: number): Promise<FakeNotice[]> {
 }
 
 const bell = (page: Page) => page.getByTestId("notice-bell");
-const badge = (page: Page) => bell(page).locator(".comp-badge");
+const badge = (page: Page) => bell(page).locator(".comp-badge, .mobile-tab-badge");
 
 test.describe("鈴（NoticeBell）", () => {
   test("K1: 未読 3 件 → 鈴に数字 3。開くと 3 行が新しい順に出る", async ({ page }) => {
@@ -118,5 +118,21 @@ test.describe("鈴（NoticeBell）", () => {
   test("K1: 100 件以上は「99+」", async ({ page }) => {
     await setup(page, 100);
     await expect(badge(page)).toHaveText("99+");
+  });
+
+  test("スマホ: 鈴は下のタブの中にあり、右上には無い。開くと一覧が鈴の上に出る", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "vl-mobile-390", "390 のみ");
+    await setup(page, 3);
+    await expect(bell(page)).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator(".mobile-tabbar").getByTestId("notice-bell")).toHaveCount(1);
+    await expect(page.locator(".top-right-cluster--mobile")).toHaveCount(0);
+    await bell(page).click();
+    const panel = page.locator(".notice-panel");
+    await expect(panel).toBeVisible();
+    const bellBox = await bell(page).boundingBox();
+    const panelBox = await panel.boundingBox();
+    expect(bellBox).not.toBeNull();
+    expect(panelBox).not.toBeNull();
+    expect(panelBox!.y + panelBox!.height).toBeLessThanOrEqual(bellBox!.y);
   });
 });
