@@ -29,7 +29,7 @@
 3. `grep -n "/security-review" docs/ai-agents/executor-checklist.md` が1行。
 4. `grep -c "全部の commit" docs/ai-agents/executor-checklist.md` が 1。`grep -c "試験の計画" docs/ai-agents/executor-checklist.md` が 1。
 5. `git grep -n -i -E "security-review|security review" -- AGENTS.md CLAUDE.md docs/ai-agents docs/STANDARD-WORKFLOW.md docs/INDEX.md .claude/agents` が executor-checklist.md の1行だけ。
-6. `bash scripts/dev/check-before-submit.sh` が終了コード 0。
+6. `bash scripts/dev/check-before-submit.sh` が終了コード 0。commit の前に流すと終了コード 2 で止まるので、§2 の変更を commit してから流す。
 
 ## §4 止まる条件
 
