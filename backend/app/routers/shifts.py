@@ -2,8 +2,10 @@ from __future__ import annotations
 
 """シフト管理API。変更履歴: 2026-04-17 初版（Phase 5）"""
 
+from datetime import date, datetime, time
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_serializer
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,9 +25,9 @@ router = APIRouter()
 
 class ShiftCreate(BaseModel):
     user_id: int = Field(ge=1)
-    shift_date: str = Field(min_length=10, max_length=10)
-    start_time: str = Field(min_length=5, max_length=8)
-    end_time: str = Field(min_length=5, max_length=8)
+    shift_date: date
+    start_time: time
+    end_time: time
     shift_type: str = Field(default="normal", max_length=20)
     notes: str | None = Field(default=None, max_length=5000)
 
@@ -33,13 +35,17 @@ class ShiftCreate(BaseModel):
 class ShiftResponse(BaseModel):
     id: int
     user_id: int
-    shift_date: str
-    start_time: str
-    end_time: str
+    shift_date: date
+    start_time: time
+    end_time: time
     shift_type: str
     notes: str | None
-    created_at: str
+    created_at: datetime | None
     model_config = {"from_attributes": True}
+
+    @field_serializer("start_time", "end_time", when_used="json")
+    def _time_hh_mm(self, value: time) -> str:
+        return value.strftime("%H:%M")
 
 
 _COLS = "id, user_id, shift_date, start_time, end_time, shift_type, notes, created_at, updated_at"
@@ -49,8 +55,8 @@ _COLS = "id, user_id, shift_date, start_time, end_time, shift_type, notes, creat
             dependencies=[Depends(require_permission("shifts.view"))])
 async def list_shifts(
     user_id: int | None = Query(default=None),
-    date_from: str | None = Query(default=None),
-    date_to: str | None = Query(default=None),
+    date_from: date | None = Query(default=None),
+    date_to: date | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
     tenant_id: int = Depends(get_current_tenant),
     current_user: User = Depends(get_current_user),

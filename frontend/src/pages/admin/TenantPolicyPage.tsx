@@ -12,9 +12,11 @@
  *   backend/app/routers/tenant_policy.py
  *   migrations/20260604_050000_add_tenant_policy_columns.sql
  */
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
+import { useApiCache, useApiQuery } from "../../lib/query/apiQuery";
+import { useSeededForm } from "../../lib/query/useSeededForm";
 import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
 import { Button } from "../../components/Button";
@@ -55,48 +57,33 @@ const emptyForm: FormState = {
   issue_mode: "pdf",
 };
 
+const POLICY_PATH = "/admin/tenant-policy";
+const toForm = (data: TenantPolicy): FormState => ({
+  inventory_agg_filter: data.inventory_agg_filter,
+  agg_price_threshold_jpy: String(data.agg_price_threshold_jpy),
+  agg_qty_threshold: String(data.agg_qty_threshold),
+  quote_validity_days: String(data.quote_validity_days),
+  default_currency: data.default_currency,
+  document_language: data.document_language,
+  duty_incoterms: data.duty_incoterms,
+  issue_mode: data.issue_mode,
+});
+
 export default function TenantPolicyPage() {
   const { t } = useTranslation();
   const { hasPermission } = usePermissions();
 
-  const [form, setForm] = useState<FormState>(emptyForm);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
 
   const canView = hasPermission("tenant.profile.view");
   const canEdit = hasPermission("tenant.profile.edit");
-
-  useEffect(() => {
-    let alive = true;
-    const fetchPolicy = async () => {
-      try {
-        const data = await api.get<TenantPolicy>("/admin/tenant-policy");
-        if (!alive) return;
-        setForm({
-          inventory_agg_filter: data.inventory_agg_filter,
-          agg_price_threshold_jpy: String(data.agg_price_threshold_jpy),
-          agg_qty_threshold: String(data.agg_qty_threshold),
-          quote_validity_days: String(data.quote_validity_days),
-          default_currency: data.default_currency,
-          document_language: data.document_language,
-          duty_incoterms: data.duty_incoterms,
-          issue_mode: data.issue_mode,
-        });
-      } catch (e) {
-        if (alive)
-          setError(e instanceof Error ? e.message : t("common.fetchError"));
-      } finally {
-        if (alive) setLoading(false);
-      }
-    };
-    if (canView) fetchPolicy();
-    else setLoading(false);
-    return () => {
-      alive = false;
-    };
-  }, [canView, t]);
+  const policyQ = useApiQuery<TenantPolicy>(POLICY_PATH, { enabled: canView });
+  const { form, setForm, ready } = useSeededForm(POLICY_PATH, policyQ.data, toForm, emptyForm);
+  const cache = useApiCache();
+  const readError = policyQ.error ? (policyQ.error instanceof Error ? policyQ.error.message : t("common.fetchError")) : "";
+  const shownError = error || readError;
 
   const handleChange =
     (key: keyof FormState) =>
@@ -122,7 +109,8 @@ export default function TenantPolicyPage() {
         duty_incoterms: form.duty_incoterms,
         issue_mode: form.issue_mode,
       };
-      await api.put("/admin/tenant-policy", payload);
+      const saved = await api.put<TenantPolicy>("/admin/tenant-policy", payload);
+      cache.write(POLICY_PATH, saved);
       setInfo(t("tenantPolicy.saved"));
     } catch (err) {
       setError(
@@ -148,15 +136,17 @@ export default function TenantPolicyPage() {
       navKey="nav.tenantPolicy"
       subtitleKey="tenantPolicy.subtitle"
     >
-      {loading ? (
+      {policyQ.isPending ? (
         <LoadingBlock />
+      ) : !ready ? (
+        <div className="error-message">{shownError}</div>
       ) : (
         <form
           className="form"
           onSubmit={handleSave}
           data-testid="tenant-policy-form"
         >
-          {error && <div className="error-message">{error}</div>}
+          {shownError && <div className="error-message">{shownError}</div>}
           {info && (
             <div className="info-message" data-testid="tenant-policy-info">
               {info}

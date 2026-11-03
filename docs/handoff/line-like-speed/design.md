@@ -283,6 +283,87 @@ PO の言葉: 「LINEみたいな使い心地は出来る？」（意味は「�
 - 基準: prod-ui-check run 41591179240（測った時刻 2026-11-03 15:42:42 JST・main b492b3f）。9 行とも 403 0 件・5xx 0 件。K1（戻った時の秒）は /channels 0.24・/management-center/channels 0.20・/roles 0.33・/management-center/roles 0.36・/staff 0.23・/management-center/staff 0.24・management-center→staff 0.22・/staff/:id/edit 0.19・/orders 0.19 秒（9 行とも K1 の合格線 0.1 秒を超える）。この回の K2 の最大は /inventory の 1.3 秒、2 秒を超えた画面は 0 件。
 - 生の数: /tmp/CC報告ファイル/batch3d-accept/run41591179240-batch3d-rows.txt（設計担当の手元。リポジトリには入れない）。
 
+#### 3-4-18-a. 段 3 の 5 回目の本番の受入（2026-11-03 Claude Opus が確かめた）
+- B1・B2 は合格。PR #5077 の必須の確認はすべて pass または skipping（失敗 0・待ち 0）。審査役（Claude Opus）が実装 67b846855 と、main を取り込んだ HEAD 3add24309 に APPROVE。
+- B3 は合格。merge 069190790 の変更は 13 ファイル（909 行足し・238 行消し）で、カード §1 の 13 ファイルと同じ。migrations/・backend/・scripts/・.github/ は 0。
+- B4 は合格（本線 a0d58d3a7 で確かめた）。`new QueryClient` は frontend/src/lib/query/apiQuery.ts:23 の 1 行だけ（試験のファイルも含めて数えた）。`staleTime:` は 0 行。persist は 0 行。
+- B7 は合格。PR #5077 は 2026-11-03 18:22 JST に main へ入った（merge 069190790）。deploy.yml run 41610451127 は 18:29 JST に success。設計担当の Chrome（21:50 JST ごろ・ログイン済み）で本番のチャネル・ロール・スタッフ・受注を開き、4 画面とも中身が出た。ブラウザの誤りの記録は 0 件。
+- B5 は 9 行のうち 8 行が合格。/channels の 1 行だけ K1 が合格線を超えた。
+  - 1 回目 run 41611528904（18:44:01 JST・main e29f9e1）。測っている間に別のマージの deploy が 2 回終わった（09:34:44Z・09:37:10Z）。/channels の K1 が 0.22 秒、ほかの 8 行は 0.01〜0.02 秒。
+  - 2 回目 run 41614984342（18:59:48 JST・main 1eefb57・測定中に deploy なし）。K1 は /channels 0.24・/management-center/channels 0.02・/roles 0.03・/management-center/roles 0.03・/staff 0.01・/management-center/staff 0.02・management-center→staff 0.02・/staff/:id/edit 0.01・/orders 0.01 秒。K2 は 9 行とも 0.2〜0.5 秒。9 行とも 403 と 5xx は 0 件。
+  - 全体: いちばん遅い画面は対象外の /inventory の 1.4 秒（基準 1.3 秒・2 秒以内）。2 秒を超えた画面は 0 件。403 は基準の回と同じ見る権限の無い 6 画面だけで、403 7 件と止めた送信 3 件の内訳は基準の回と同じ。/schedule の 5xx 1 件も基準の回と同じ（対象外）。
+  - /channels が落ちた訳（設計の入れ忘れ）: チャネルの画面は Discord の設定（GET /admin/discord-config）を、写しの置き場を通さずに開くたびに読んでいる（frontend/src/pages/channels/ChannelsPage.tsx の useEffect で api.get）。カードはこの読みを対象に入れていなかった。戻った時はこの返事を待つ間、Discord の欄が「未接続」の形で出て、返事が来ると「接続済み」に描き直す。だから K1 の「A の画面の部品が描かれた」に届くのが返事の後になる。
+  - 直し方: 段 3 の 6 回目に、この読みを写しの置き場（useApiQuery）へ移すことを足す。6 回目はもともと Discord の設定の画面を含む。
+  - まだ分からないこと: /management-center/channels は同じ部品を使うのに 0.02 秒だった。理由はまだ確かめていない。6 回目の受入で /channels と並べて確かめる。
+  - 生の行の抜き書きは設計担当の手元の /tmp/CC報告ファイル/batch3e-accept/ の run41611528904-batch3e-rows.txt・run41614984342-batch3e-rows.txt（リポジトリには入れない）。
+- B6 は合格。本番の読むだけの道（ADR-1024）で tenant 001 を数えると、接続中の Facebook ページ（ai_ro.tenant_001__tenant_meta_config で is_active）0 件・ロール（tenant_001__roles）8 件・スタッフ（tenant_001__staff）2 件・受注（tenant_001__orders）0 件（21:45 JST）。設計担当の Chrome で見た画面は、ロール 8 個・スタッフ 2 人・受注 0 件・「接続済みチャンネルがありません」で、DB と同じ。
+- K5 は本番で 2 人のログインでは確かめていない（本番でパスワードを打たない決まり）。段 3 の 1 回目の Q2・Q3 の試験と、写しの名前に利用者が入る作りで確かめた。
+
+#### 3-4-19. 段 3 の 6 回目（会社の情報・会社の方針・Discord の設定とチャネルの画面の Discord の欄）の場所と基準（2026-11-03 設計担当 Claude Opus）
+- カード: docs/handoff/line-like-speed/batch3f-card.md。対象は会社の情報・会社の方針・Discord の設定の 3 画面と、§3-4-18-a で残ったチャネルの画面の Discord の欄（毎朝の記録の 8 行）。Discord の設定（/admin/discord-config）は、Discord の設定の画面とチャネルの画面で 1 つの写しにする（同じ答えを分けて持たない）。
+- 予定表（/schedule・K1 0.29 秒）は、読む path が 3 本で表示の期間で path が変わり、基準の回で /shifts の 5xx が 1 件あるので、1 度に 1 つを変える決まりにより段 3 の 7 回目に分けた。買取価格・状態・商品区分の 3 画面は、測る利用者に見る権限が足りず 403 なので対象外（PO に別に聞く）。
+- 基準: prod-ui-check run 41614984342（測った時刻 2026-11-03 18:59:48 JST・main 1eefb57）。8 行とも 403 0 件・5xx 0 件。K1 は /admin/discord-config 0.25・/management-center/discord-config 0.24・/admin/tenant-policy 0.21・/management-center/tenant-policy 0.21・/admin/tenant-profile 0.21・/management-center/tenant-profile 0.22・/admin→/admin/tenant-profile 0.21・/channels 0.24 秒。
+- §3-4-18-a の「まだ分からないこと」（/management-center/channels が 0.02 秒）は、6 回目の受入で /channels と並べて確かめる。
+- 生の数: /tmp/CC報告ファイル/batch3f/run41614984342-k1-over.txt（設計担当の手元。リポジトリには入れない）。
+
+#### 3-4-19-a. 段 3 の 6 回目の本番の受入（2026-11-03 Claude Opus が確かめた）
+- B1・B2 は合格。PR #5087 の確認は 47 件 pass・8 件 skipping・失敗 0（必須の確認はすべて pass）。審査役（Claude Opus）が実装 d39d856dd と、main を取り込んだ HEAD b295a09e9 の両方に APPROVE。main の取り込みは、必須の確認 guard-authoring/evaluation が「枝の元が main の最新でない」で error になったため（scripts/run-guard-evaluation.js:25 の merge-base --is-ancestor）。
+- B3 は合格。PR の変更は 9 ファイルで、カード §1 と同じ。書く道の path とフォームの欄は S と同じ（審査役が git diff -w で確かめた）。migrations/・backend/・scripts/・.github/ は 0。
+- B4 は合格。`new QueryClient` は apiQuery.ts:23 の 1 行・`staleTime:` 0 行・persist 0 行・`/admin/discord-config` を api.get で直に読む所は ChannelsPage.tsx:211（cache.fetch の中）と触らない範囲の InboxKartePanel.tsx:115 の 2 行。
+- B7 は合格。PR #5087 は 2026-11-03 23:18 JST に main へ入った（merge 85cc2e528）。deploy.yml run 41652377760 は 23:25 JST に success。設計担当の Chrome（23:56 JST ごろ・ログイン済み）で本番の会社の情報・会社の方針・Discord の設定・チャネルを開き、4 画面とも中身が出た（Discord の設定とチャネルの画面はともに接続済み・サーバー ID 末尾 7393）。誤りの記録を取り始めてから 4 画面を開き直し、ブラウザの誤りの記録は 4 画面とも 0 件。TanStack・Query を含む記録も 0 件。
+- B5 は 8 行すべて合格。run 41653642044（測った日時 23:39:43 JST・main 9159ad5。#5087 の後に入ったのは台帳の自動 DONE #5089 だけ・測定前に deploy 済み）。
+  - K1（基準 run 41614984342 → 今回）: /admin/discord-config 0.25→0.01・/management-center/discord-config 0.24→0.01・/admin/tenant-policy 0.21→0.01・/management-center/tenant-policy 0.21→0.01・/admin/tenant-profile 0.21→0.01・/management-center/tenant-profile 0.22→0.01・/admin→/admin/tenant-profile 0.21→0.01・/channels 0.24→0.01 秒。/management-center/channels は 0.02→0.01 秒で 0.1 秒以下のまま。
+  - K2 は 9 行とも 0.2〜0.3 秒。9 行とも 403 と 5xx は 0 件。
+  - 全体: 135 行。いちばん遅い画面は対象外の /inventory の 1.3 秒（基準 1.4 秒）。2 秒を超えた画面は 0 件。403 は基準の回と同じ見る権限の無い 6 画面だけ。/schedule の 5xx 1 件も基準の回と同じ（対象外・7 回目で扱う）。
+  - K1 が 0.1 秒を超えた行は基準の 12 行から 5 行に減った: /schedule 0.28（7 回目）・/buyback-prices 0.17・/management-center/conditions 0.21・/management-center/product-categories 0.22（3 つとも 403 で対象外）・/admin/products/:id/edit 0.22。
+  - /admin/products/:id/edit は、基準の回では「戻: 見分けられず（行き先と同じ形）」で K1 が測れていなかった。今回初めて測れた値で、悪化ではない。今回触っていない画面で、段 3 の残りに足すかは 7 回目の設計で決める。
+  - §3-4-18-a の「まだ分からないこと」: 今回は /channels と /management-center/channels がどちらも 0.01 秒で揃った。前回だけ /management-center/channels が速かった理由は、まだ確かめていない（Discord の欄を写しに載せた後は差が無くなったので、追わない）。
+  - 生の行の抜き書きは設計担当の手元の /tmp/CC報告ファイル/batch3f-accept/run41653642044-rows.txt（リポジトリには入れない）。
+- B6 は合格。本番の読むだけの道（ADR-1024）で tenant 001 を読むと、会社の情報（ai_ro.tenant_001__tenant_profile）1 行で会社名は空（null）・会社の方針（ai_ro.public__tenant_settings の tenant_id 1）の集計価格閾値 0・Discord の設定（ai_ro.public__tenant_discord_config の tenant_id 1）のサーバー ID あり（末尾 7393）。設計担当の Chrome（23:3x JST・ログイン済み）で見た画面は、会社名が空・集計価格閾値 0・「接続済み」でサーバー ID の末尾 7393 で、DB と同じ。生の出力は /tmp/CC報告ファイル/batch3f-accept/（b6.tsv・b6-profile.tsv・b6-screen.txt）。
+- K5 は本番で 2 人のログインでは確かめていない（本番でパスワードを打たない決まり）。カード §4-L の試験（人が変わった時に前の人の写しを出さない）と、写しの名前に利用者が入る作りで確かめた。
+
+#### 3-4-20. 段 3 の 7 回目（予定表）の前提: シフトの読み込みの 500 の直し（2026-11-04 設計担当 Claude Opus）
+- カード: docs/handoff/line-like-speed/batch3g-shifts-card.md。予定表が読む GET /api/v1/shifts?date_from&date_to の 500（§3-4 の予定表の基準の回）を、予定表の写し先出しより先に、1 度に 1 つの決まりで別の PR として直す。
+- 原因（観測）: backend/app/routers/shifts.py が日付・時刻を str のまま DATE・TIME 列へ渡し、asyncpg が `DataError ... 'str' object has no attribute 'toordinal'` を出す。クラウドの調べ担当が本番と同じ版の使い捨て PostgreSQL で再現した（2026-11-04 00:05 JST・origin/main ea5c0faf8）。応答の型（str）に DB の date を入れても誤りになる（本番の tenant_001 のシフトは 0 行なので今は出ていない）。今ある試験は SQLite で日付が TEXT なので見えない。
+- §3-3 との関係: §3-3 は backend をこのテーマで触らないと決めている。この直しは速さの変更ではなく、範囲の外の不具合直し（docs/STANDARD-WORKFLOW.md §5 の低リスクのコード・バグ修正）として、この節に記録して別の PR で行う。速さの合格線（K1・K2）と §3-3 の範囲は変えない。
+- 見え方: 応答の JSON の時刻は今までどおり "HH:MM"（カード F9・A3b）。シフトの画面に秒が付かない。frontend は触らない。
+- 受入: カード §5 の C1〜C5（本物の PostgreSQL の試験 2 件 passed・マージ後の毎朝の画面の記録で /schedule の 5xx 0 件）。
+
+#### 3-4-20-a. シフトの 500 の直しの受入（2026-11-04 設計担当 Claude Opus）
+- PR #5092 を 2026-11-04 01:27 JST に main へ合流（merge 57fbceb）。deploy.yml run 41674341860 が 01:35 JST に success。
+- C1〜C3 合格: CI の使い捨て PostgreSQL の試験（P1 期間で読める・P2 登録できる）が passed、必須の確認がすべて pass、マージ前の審査役（Claude Opus）の APPROVE。
+- C4 合格: prod-ui-check を手で 1 回動かした（run 41675927498・測った日時 2026-11-04 01:41 JST）。/schedule は 5xx 0 件・403 0 件、GET /api/v1/shifts?date_from&date_to は 0.3 秒。全 135 画面で 5xx 0 件・403 の行は 6 行（基準と同じ）。
+- C5 合格: 本番の読むだけの道（ADR-1024）で tenant_001 のシフトは 0 行。応答は 200 の空の一覧。
+- 記録の扱い: PR 本文の GO 記録の「結果」は本文の書き換えが見張りに止められたため、PR のコメントに残した（PR #5092 のコメント）。
+
+#### 3-4-21. 段 3 の 7 回目: 予定表の写し先出し（2026-11-04 設計担当 Claude Opus）
+- カード: docs/handoff/line-like-speed/batch3g-schedule-card.md。予定表（/schedule）の 3 本の読み込み（持ち主・予定・シフト）を useApiQuery に移し、写しを先に出して裏で取り直す。保存・削除の後は予定の写しだけを取り直し、読み込み中の印を出さない。
+- 基準（prod-ui-check run 41675927498・main 57fbceb）: /schedule K2 0.3 秒・API 4 本・K1 0.30 秒。/schedule/settings・/shifts・/management-center/shifts は K1 0.01 秒。
+- 段 3 の残りの K1 0.1 秒超え 5 行のうち、/buyback-prices・/management-center/conditions・/management-center/product-categories の 3 行は測る利用者が 403 で対象外（見る権限の扱いは PO に聞く）。/admin/products/:id/edit（0.22 秒）は §3-4-19-a のとおり初めて測れた値で、このカードには入れない（予定表の受入の後に次のカードで扱いを決める）。
+- 受入: カード §5 の G1〜G7（/schedule の K1 ≤0.1 秒・K2 ≤2 秒・403 と 5xx 0 件、DB との一致は tenant 001）。
+
+#### 3-4-21-a. 段 3 の 7 回目の受入の結果（2026-11-04 設計担当 Claude Opus）
+- 合流: PR #5093 を 2026-11-04 03:16 JST に main へ合流（merge bbf873a5d）。deploy.yml run 41692304941 が 03:24 JST に success（G7）。
+- G4 合格: origin/main で `new QueryClient` は apiQuery.ts:23 の 1 行、`staleTime:` 0 行、`persist` 0 行、SchedulePageImpl.tsx の `api.get` は :964 の /google-calendar/connect/start の 1 行だけ。
+- G5 合格（2 回測った）:
+  - 1 回目 run 41693589947（03:28 JST）: /schedule は K1 0.01 秒で合格。ただし /orders の K2 が 4.9 秒（基準 0.4 秒）と 1 行だけ 2 秒を超えた。
+  - 2 回目 run 41696136645（03:45 JST・main bbf873a）: /orders は 0.4 秒に戻り、1 回目の 4.9 秒は 1 回だけの揺れと判断した（このカードは /orders の読み込みを変えていない）。K2 の最大は /inventory 1.3 秒（基準 1.4 秒）、2 秒を超えた行は 0。
+  - /schedule: K2 0.3 秒・API 4 本・403 0 件・5xx 0 件・K1 0.02 秒・K3 0.03 秒（基準 K1 0.30 秒）。
+  - /schedule/settings K1 0.01・/shifts K1 0.01・/management-center/shifts K1 0.01（いずれも 0.1 秒以下のまま）。
+  - 403 は 6 行・7 件で基準の回と同じ。
+- G6: 本番の読むだけの道（ADR-1024）で tenant 001 の 2026-11-01〜11-07 の予定は 1 件、シフトは 0 件（全期間でも予定 1 件・シフト 0 件。2026-11-04 03:58 JST に読み直し）。backend は変えていない（G3）。
+- 範囲外の観測: /admin/products/:id/edit の K1 は 2 回目の回で「見分けられず（行き先と同じ形）」（前の回は 0.26 秒）。/quotes/new の K2 は 0.6 秒（前は 0.2 秒）で 2 秒以内。どちらもこのカードの外で、次のカードの扱いを決めるときに見る。
+- 記録の扱い: GO 記録の結果は PR #5093 のコメントに残した。
+
+#### 3-4-22. 段 4: 見張りの検査（2026-11-04 設計担当 Claude Opus）
+- カード: docs/handoff/line-like-speed/stage4-guard-card.md。frontend/scripts/check-loading-clear.js を check:all に足し、Frontend Check で流す。
+- 数えるもの: frontend/src の .ts・.tsx（試験を除く）で `set〇〇Loading(true)`・`set〇〇Loading〇〇(true)` を書いた行の数（ファイルごと）。段 0b の u1-count.py の「中身を消す」は、描く所の `{loading ?` を見るので、直した後の「初回だけ印を出す」画面と見分けられない。直す前にだけある「印を立てる行」を数える（カード V4-1）。
+- 基準（origin/main bbf873a5d・2026-11-04）: 51 ファイル・69 行。git grep と、検査と同じ数え方の両方で数え、51 行の表が一致した。カード第 1 版は 47 ファイル・63 行だったが、審査（クラウドの審査役 Opus・REVISE）で `setLoadingList(true)` のように Loading の後ろに名前が続く書き方（4 ファイル・6 行）の取りこぼしが見つかり、数える形を広げた。第 2 版のクラウド審査は APPROVE on c60504ae6（2026-11-04 04:03 JST・カードどおりに当てて基準どおり 51 ファイル・69 行で緑・探り用ファイル 1 本で赤・消すと緑・selfTest 合格・基準表と git grep がファイルごとに一致）。軽い指摘 2 点（2 行に割れた形は S で 0 か所・注記のすぐ下の 1 行も外れる）をカード V4-3 に書き足した。
+- 赤にする時: ファイルごとに基準より多い時と、基準より少ない時（同じ PR で基準を下げる）。段 3 の残りのカードは、画面を直す PR の中で基準の表を下げる手順を持つ。
+- 「段 3 の最後で 0 にして固定」へ向けて残ること（このカードでは直さない）: 中身を消さない印（送る・ログインのボタンの印。例: ログインの画面の 3 行）も今は数に入る。段 3 の最後に 1 行ずつ見て、消さない印には例外の注記（loading-clear-exempt: <理由>）を付け、基準の表を空にする。`setLoading(` と `true)` が 2 行に分かれた書き方は数えない。`setUploading(true)` など loading（小文字）で終わる送る・取り出すの印は数えない。注記・文字列の中の行は数える。
+- わざと 1 本足すと赤: 検査が動くたびに、一時フォルダの作り物で確かめる（カード V4-6）。実装の時は本物の src に 1 行足して赤、消して緑も確かめる（カード §4-M 手順4）。
+- 受入: カード §5 の H1〜H5。
+
 ### 3-5. 測り方（|基準|検証方法|）
 | 基準 | 検証方法 |
 |---|---|

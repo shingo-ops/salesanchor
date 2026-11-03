@@ -315,3 +315,116 @@ def test_f_get_ai_assignment_reads_choice_and_raises_when_missing(db):
     c.execute("DELETE FROM public.ai_job_assignments WHERE job_key = 'secretary_intent'")
     with pytest.raises(AiAssignmentMissing):
         asyncio.run(read("secretary_intent"))
+
+
+def _run_async(db, fn):
+    """db の準備で作った DB に asyncpg で繋ぎ、fn(session) を流す（test_f と同じ作り方）。"""
+    from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+
+    url = _psycopg_url(ADMIN_PG_URL, db.info.dbname).replace("postgresql://", "postgresql+asyncpg://", 1)
+
+    async def go():
+        eng = create_async_engine(url)
+        try:
+            async with AsyncSession(eng) as s:
+                return await fn(s)
+        finally:
+            await eng.dispose()
+
+    return asyncio.run(go())
+
+
+def test_g_change_assignment_k9_and_order(db):
+    """段2（K9・判定の順）: 秘書の担当を変えると次の読み取りが新しい model・履歴が1行。
+    同じ choice は何も書かない。読まない仕事は 409 相当・別の仕事の choice は 422 相当で、どちらも書かない。
+    """
+    from app.services.ai_assignment import (
+        AiAssignment,
+        AiChoiceMismatch,
+        AiJobNotFound,
+        AiJobNotWired,
+        change_ai_assignment,
+        get_ai_assignment,
+        list_ai_jobs,
+    )
+
+    c = db.cursor()
+    c.execute(_read(_AI_JOB_SQL))
+    c.execute("INSERT INTO public.users (id, email, full_name) VALUES (1002, 'ai-job-g@example.test', '担当G')")
+    c.execute(
+        "INSERT INTO public.ai_job_choices (job_key, provider, model) VALUES ('secretary_intent', 'claude', 'test-model-g')"
+    )
+    sonnet_id = _choice_id(db, "secretary_intent", "claude", "sonnet")
+    new_id = _choice_id(db, "secretary_intent", "claude", "test-model-g")
+    line_id = _choice_id(db, "line_extraction", "gemini", "gemini-3.1-flash-lite")
+
+    async def change(s, job_key, choice_id):
+        changed = await change_ai_assignment(s, job_key, choice_id, 1002)
+        await s.commit()
+        return changed
+
+    assert _run_async(db, lambda s: change(s, "secretary_intent", new_id)) is True
+    assert _run_async(db, lambda s: get_ai_assignment(s, "secretary_intent")) == AiAssignment("claude", "test-model-g")
+    assert _rows(
+        db,
+        "SELECT job_key, old_choice_id, new_choice_id, changed_by FROM public.ai_job_assignment_history",
+    ) == [("secretary_intent", sonnet_id, new_id, 1002)]
+    assert _rows(db, "SELECT updated_by FROM public.ai_job_assignments WHERE job_key = 'secretary_intent'") == [(1002,)]
+
+    # 同じ choice は何も書かない
+    assert _run_async(db, lambda s: change(s, "secretary_intent", new_id)) is False
+    assert _count(db, "ai_job_assignment_history") == 1
+
+    # 判定の順: 5つの外は 404 → 読まない仕事は（choice が合っていても違っても）409 → 別の仕事の choice は 422
+    with pytest.raises(AiJobNotFound):
+        _run_async(db, lambda s: change(s, "no_such_job", 999999))
+    with pytest.raises(AiJobNotWired):
+        _run_async(db, lambda s: change(s, "line_extraction", line_id))
+    with pytest.raises(AiJobNotWired):
+        _run_async(db, lambda s: change(s, "line_extraction", sonnet_id))
+    with pytest.raises(AiChoiceMismatch):
+        _run_async(db, lambda s: change(s, "secretary_intent", line_id))
+    assert _count(db, "ai_job_assignment_history") == 1
+    assert _assignment(db, "line_extraction") == ("gemini", "gemini-3.1-flash-lite")
+    assert _assignment(db, "secretary_intent") == ("claude", "test-model-g")
+
+    # 一覧は担当表の5行から作られ、秘書の選択肢は2つ
+    jobs = _run_async(db, list_ai_jobs)
+    assert [j.job_key for j in jobs] == sorted(_JOB_KEYS)
+    secretary = next(j for j in jobs if j.job_key == "secretary_intent")
+    assert (secretary.provider, secretary.model, secretary.choice_id) == ("claude", "test-model-g", new_id)
+    assert sorted(ch.model for ch in secretary.choices) == ["sonnet", "test-model-g"]
+
+
+def test_h_history_names_fall_back(db):
+    """段2: 変えた記録の名前は full_name。空なら id だけ、その人が消えたら名前も id も None。"""
+    from app.services.ai_assignment import change_ai_assignment, list_ai_job_history
+
+    c = db.cursor()
+    c.execute(_read(_AI_JOB_SQL))
+    c.execute("INSERT INTO public.users (id, email, full_name) VALUES (1003, 'ai-job-h1@example.test', '担当H')")
+    c.execute("INSERT INTO public.users (id, email) VALUES (1004, 'ai-job-h2@example.test')")
+    c.execute("INSERT INTO public.users (id, email, full_name) VALUES (1005, 'ai-job-h3@example.test', '担当消える')")
+    c.execute(
+        "INSERT INTO public.ai_job_choices (job_key, provider, model) VALUES ('secretary_intent', 'claude', 'test-model-h')"
+    )
+    sonnet_id = _choice_id(db, "secretary_intent", "claude", "sonnet")
+    new_id = _choice_id(db, "secretary_intent", "claude", "test-model-h")
+
+    async def change(s, choice_id, user_id):
+        await change_ai_assignment(s, "secretary_intent", choice_id, user_id)
+        await s.commit()
+
+    _run_async(db, lambda s: change(s, new_id, 1003))
+    _run_async(db, lambda s: change(s, sonnet_id, 1004))
+    _run_async(db, lambda s: change(s, new_id, 1005))
+    c.execute("DELETE FROM public.users WHERE id = 1005")
+
+    items = _run_async(db, lambda s: list_ai_job_history(s, 50))
+    assert [(i.changed_by_name, i.changed_by_id) for i in items] == [(None, None), (None, 1004), ("担当H", 1003)]
+    assert [(i.old_model, i.new_model) for i in items] == [
+        ("sonnet", "test-model-h"),
+        ("test-model-h", "sonnet"),
+        ("sonnet", "test-model-h"),
+    ]
+    assert len(_run_async(db, lambda s: list_ai_job_history(s, 2))) == 2

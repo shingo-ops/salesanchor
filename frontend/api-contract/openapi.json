@@ -386,6 +386,269 @@
         "title": "AggregatedRow",
         "type": "object"
       },
+      "AiChoiceOut": {
+        "properties": {
+          "choice_id": {
+            "title": "Choice Id",
+            "type": "integer"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          }
+        },
+        "required": [
+          "choice_id",
+          "provider",
+          "model"
+        ],
+        "title": "AiChoiceOut",
+        "type": "object"
+      },
+      "AiJobChangeIn": {
+        "properties": {
+          "choice_id": {
+            "title": "Choice Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "choice_id"
+        ],
+        "title": "AiJobChangeIn",
+        "type": "object"
+      },
+      "AiJobHistoryItem": {
+        "properties": {
+          "changed_at": {
+            "format": "date-time",
+            "title": "Changed At",
+            "type": "string"
+          },
+          "changed_by_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Changed By Id"
+          },
+          "changed_by_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Changed By Name"
+          },
+          "job_key": {
+            "title": "Job Key",
+            "type": "string"
+          },
+          "new": {
+            "$ref": "#/components/schemas/AiProviderModel"
+          },
+          "old": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AiProviderModel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "job_key",
+          "old",
+          "new",
+          "changed_by_name",
+          "changed_by_id",
+          "changed_at"
+        ],
+        "title": "AiJobHistoryItem",
+        "type": "object"
+      },
+      "AiJobHistoryOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AiJobHistoryItem"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "AiJobHistoryOut",
+        "type": "object"
+      },
+      "AiJobOut": {
+        "properties": {
+          "choice_id": {
+            "title": "Choice Id",
+            "type": "integer"
+          },
+          "choices": {
+            "items": {
+              "$ref": "#/components/schemas/AiChoiceOut"
+            },
+            "title": "Choices",
+            "type": "array"
+          },
+          "count_24h": {
+            "title": "Count 24H",
+            "type": "integer"
+          },
+          "failed_24h": {
+            "title": "Failed 24H",
+            "type": "integer"
+          },
+          "job_key": {
+            "title": "Job Key",
+            "type": "string"
+          },
+          "last_error_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error At"
+          },
+          "last_error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error Code"
+          },
+          "last_ok_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Ok At"
+          },
+          "login_ok": {
+            "title": "Login Ok",
+            "type": "boolean"
+          },
+          "login_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Login Reason"
+          },
+          "login_refreshed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Login Refreshed At"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "switchable": {
+            "title": "Switchable",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "job_key",
+          "provider",
+          "model",
+          "choice_id",
+          "choices",
+          "login_ok",
+          "login_reason",
+          "last_ok_at",
+          "count_24h",
+          "failed_24h",
+          "last_error_code",
+          "last_error_at",
+          "login_refreshed_at",
+          "switchable"
+        ],
+        "title": "AiJobOut",
+        "type": "object"
+      },
+      "AiJobsOut": {
+        "properties": {
+          "jobs": {
+            "items": {
+              "$ref": "#/components/schemas/AiJobOut"
+            },
+            "title": "Jobs",
+            "type": "array"
+          }
+        },
+        "required": [
+          "jobs"
+        ],
+        "title": "AiJobsOut",
+        "type": "object"
+      },
+      "AiProviderModel": {
+        "properties": {
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider",
+          "model"
+        ],
+        "title": "AiProviderModel",
+        "type": "object"
+      },
       "AlertRuleCreate": {
         "properties": {
           "card_game": {
@@ -31107,8 +31370,7 @@
       "ShiftCreate": {
         "properties": {
           "end_time": {
-            "maxLength": 8,
-            "minLength": 5,
+            "format": "time",
             "title": "End Time",
             "type": "string"
           },
@@ -31125,8 +31387,7 @@
             "title": "Notes"
           },
           "shift_date": {
-            "maxLength": 10,
-            "minLength": 10,
+            "format": "date",
             "title": "Shift Date",
             "type": "string"
           },
@@ -31137,8 +31398,7 @@
             "type": "string"
           },
           "start_time": {
-            "maxLength": 8,
-            "minLength": 5,
+            "format": "time",
             "title": "Start Time",
             "type": "string"
           },
@@ -31160,8 +31420,16 @@
       "ShiftResponse": {
         "properties": {
           "created_at": {
-            "title": "Created At",
-            "type": "string"
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
           },
           "end_time": {
             "title": "End Time",
@@ -31183,6 +31451,7 @@
             "title": "Notes"
           },
           "shift_date": {
+            "format": "date",
             "title": "Shift Date",
             "type": "string"
           },
@@ -56712,6 +56981,7 @@
             "schema": {
               "anyOf": [
                 {
+                  "format": "date",
                   "type": "string"
                 },
                 {
@@ -56728,6 +56998,7 @@
             "schema": {
               "anyOf": [
                 {
+                  "format": "date",
                   "type": "string"
                 },
                 {
@@ -58639,6 +58910,139 @@
         "summary": "Update Status Master",
         "tags": [
           "status-master"
+        ]
+      }
+    },
+    "/api/v1/super-admin/ai-jobs": {
+      "get": {
+        "operationId": "get_ai_jobs_api_v1_super_admin_ai_jobs_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiJobsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Ai Jobs",
+        "tags": [
+          "super-admin"
+        ]
+      }
+    },
+    "/api/v1/super-admin/ai-jobs/history": {
+      "get": {
+        "operationId": "get_ai_job_history_api_v1_super_admin_ai_jobs_history_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiJobHistoryOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Ai Job History",
+        "tags": [
+          "super-admin"
+        ]
+      }
+    },
+    "/api/v1/super-admin/ai-jobs/{job_key}": {
+      "put": {
+        "operationId": "put_ai_job_api_v1_super_admin_ai_jobs__job_key__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_key",
+            "required": true,
+            "schema": {
+              "title": "Job Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AiJobChangeIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiJobOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Put Ai Job",
+        "tags": [
+          "super-admin"
         ]
       }
     },
