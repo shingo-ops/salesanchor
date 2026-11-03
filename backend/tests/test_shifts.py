@@ -69,3 +69,13 @@ class TestShiftsCRUD:
         """存在しないシフトの削除は 404"""
         res = await client.delete("/api/v1/shifts/99999")
         assert res.status_code == 404
+
+    async def test_list_shifts_invalid_date_is_422(self, client):
+        """日付の形が誤っている時は DB に渡さず 422 を返す"""
+        res = await client.get("/api/v1/shifts", params={"date_from": "2026-13-01"})
+        assert res.status_code == 422
+
+    async def test_create_shift_invalid_time_is_422(self, client):
+        """時刻の形が誤っている時は DB に渡さず 422 を返す"""
+        res = await client.post("/api/v1/shifts", json={**_SHIFT_BASE, "start_time": "25:00"})
+        assert res.status_code == 422

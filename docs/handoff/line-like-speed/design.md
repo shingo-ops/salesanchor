@@ -322,6 +322,13 @@ PO の言葉: 「LINEみたいな使い心地は出来る？」（意味は「�
 - B6 は合格。本番の読むだけの道（ADR-1024）で tenant 001 を読むと、会社の情報（ai_ro.tenant_001__tenant_profile）1 行で会社名は空（null）・会社の方針（ai_ro.public__tenant_settings の tenant_id 1）の集計価格閾値 0・Discord の設定（ai_ro.public__tenant_discord_config の tenant_id 1）のサーバー ID あり（末尾 7393）。設計担当の Chrome（23:3x JST・ログイン済み）で見た画面は、会社名が空・集計価格閾値 0・「接続済み」でサーバー ID の末尾 7393 で、DB と同じ。生の出力は /tmp/CC報告ファイル/batch3f-accept/（b6.tsv・b6-profile.tsv・b6-screen.txt）。
 - K5 は本番で 2 人のログインでは確かめていない（本番でパスワードを打たない決まり）。カード §4-L の試験（人が変わった時に前の人の写しを出さない）と、写しの名前に利用者が入る作りで確かめた。
 
+#### 3-4-20. 段 3 の 7 回目（予定表）の前提: シフトの読み込みの 500 の直し（2026-11-04 設計担当 Claude Opus）
+- カード: docs/handoff/line-like-speed/batch3g-shifts-card.md。予定表が読む GET /api/v1/shifts?date_from&date_to の 500（§3-4 の予定表の基準の回）を、予定表の写し先出しより先に、1 度に 1 つの決まりで別の PR として直す。
+- 原因（観測）: backend/app/routers/shifts.py が日付・時刻を str のまま DATE・TIME 列へ渡し、asyncpg が `DataError ... 'str' object has no attribute 'toordinal'` を出す。クラウドの調べ担当が本番と同じ版の使い捨て PostgreSQL で再現した（2026-11-04 00:05 JST・origin/main ea5c0faf8）。応答の型（str）に DB の date を入れても誤りになる（本番の tenant_001 のシフトは 0 行なので今は出ていない）。今ある試験は SQLite で日付が TEXT なので見えない。
+- §3-3 との関係: §3-3 は backend をこのテーマで触らないと決めている。この直しは速さの変更ではなく、範囲の外の不具合直し（docs/STANDARD-WORKFLOW.md §5 の低リスクのコード・バグ修正）として、この節に記録して別の PR で行う。速さの合格線（K1・K2）と §3-3 の範囲は変えない。
+- 見え方: 応答の JSON の時刻は今までどおり "HH:MM"（カード F9・A3b）。シフトの画面に秒が付かない。frontend は触らない。
+- 受入: カード §5 の C1〜C5（本物の PostgreSQL の試験 2 件 passed・マージ後の毎朝の画面の記録で /schedule の 5xx 0 件）。
+
 ### 3-5. 測り方（|基準|検証方法|）
 | 基準 | 検証方法 |
 |---|---|

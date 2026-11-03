@@ -269,6 +269,7 @@ async def test_engine():
     # SQLiteでNOW()を使えるようにし、Decimal型をサポートする + FK制約を有効化
     @event.listens_for(engine.sync_engine, "connect")
     def set_sqlite_compat(dbapi_conn, connection_record):
+        import datetime
         import sqlite3
         from decimal import Decimal
         dbapi_conn.create_function("NOW", 0, lambda: "2026-04-07 00:00:00+00:00")
@@ -281,6 +282,8 @@ async def test_engine():
         sqlite3.register_adapter(Decimal, lambda d: float(d))
         # webauthn_credentials.transports（TEXT[]）に list[str] を渡すための互換
         sqlite3.register_adapter(list, json.dumps)
+        # shifts の start_time・end_time（PostgreSQL では TIME）に datetime.time を渡すための互換
+        sqlite3.register_adapter(datetime.time, lambda t: t.isoformat())
         # SQLite は FK 制約がデフォルト OFF。ON DELETE CASCADE と 409 テストのために ON にする
         dbapi_conn.execute("PRAGMA foreign_keys = ON")
         # SQLite の LIKE をデフォルトで case-insensitive 化
