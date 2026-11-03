@@ -262,6 +262,22 @@ PO の言葉: 「LINEみたいな使い心地は出来る？」（意味は「�
 - 測りの決まりとの関係: 毎朝の記録は GET /api/v1/tenant-commission-settings を「読むだけで書き込みの起きる通信」として止めている（tests/prod-check/page-speed.spec.ts:421-422 の writesOnRead。この回 2 件。報酬の設定の 2 行）。だから本番の記録では、報酬の設定の画面は設定を読めない状態で測られる。直した後は V3d-9 のとおり保存のボタンが押せないまま、月の集計の写しで K1 を測る形になる。
 - 生の数: /tmp/CC報告ファイル/inventory-k4/run41474609602-403rows.txt（権限を足す前）・run41579361752-batch3d-rows.txt（権限を足した後）。
 
+#### 3-4-17-a. 段 3 の 4 回目の本番の受入（2026-11-03 Claude Opus が確かめた）
+- B1・B2 は合格。PR #5066 の必須の確認はすべて pass または skipping（失敗 0・待ち 0）。審査役（Claude Opus）が HEAD 37c7058e8 に APPROVE。
+- B3 は合格。merge fa6775815 の変更は 14 ファイル（840 行足し・198 行消し）で、カード §1 の 14 ファイルと同じ。migrations/・backend/・scripts/・.github/ は 0。
+- B4 は合格（本線 b492b3f1c で確かめた）。`new QueryClient` は frontend/src/lib/query/apiQuery.ts:23 の 1 行だけ。`staleTime:` は 0 行。persist は 0 行。
+- B7 は合格。PR #5066 は 2026-11-03 14:49 JST に main へ入った（merge fa6775815）。deploy.yml run 41586165249 は 14:57 JST に success。本番 https://app.salesanchor.jp/ は HTTP 200 を返して開き、ブラウザの誤りの記録は 0 件（設計担当の Chrome・15:40 JST ごろ）。この Chrome はログインしていない状態で、見たのは入口の画面だけ（段 1 の A7 と同じ見方）。
+- B5 は合格。prod-ui-check を 3 回動かし、3 回目で判定した。
+  - 1 回目 run 41586941178（15:11:51 JST）。13 行すべて K1 0.01〜0.04 秒・K2 0.2〜0.3 秒・403 と 5xx は 0 件。ただし対象外の /management-center/status-master/import が 11.2 秒・5xx 1 件だった。Loki で見ると 06:17:24Z の GET /api/v1/me/permissions が 504（nginx の upstream timed out）。同じ時刻に別のマージの deploy（run 41588810768・06:16:05Z〜06:19:18Z）で backend を入れ替えていた。
+  - 2 回目 run 41589579501（15:27:27 JST・測定中に deploy なし）。13 行すべて K1 0.01〜0.04 秒・K2 0.1〜0.2 秒・403 と 5xx は 0 件。2 秒を超えた画面は 0 件。ただし対象外の /inventory が K2 2.0 秒で、基準の最大 1.4 秒を超えた。/inventory は今回触っていない（B3）。
+  - 一度だけの揺れかを見るため、何も変えずに 3 回目 run 41591179240（15:42:42 JST・main b492b3f・測定中に deploy なし）を動かした。13 行すべて K1 0.01〜0.02 秒・K2 0.2 秒・403 と 5xx は 0 件。いちばん遅い画面は /inventory の 1.3 秒で、基準の最大 1.4 秒以下。2 秒を超えた画面は 0 件。135 画面すべて測れた。
+  - 対象外の行で基準の回にもあるもの: /schedule の 5xx 1 件（GET /api/v1/shifts?date_from&date_to の 500）。止めた送信 3 件と 403 7 件の内訳は、基準の回と同じ。
+  - 対象の 13 行の K1 は、基準 run 41579361752 で 0.20〜0.26 秒だった（/management-center/commission だけ 0.03 秒）。
+  - 生の行の抜き書きは設計担当の手元の /tmp/CC報告ファイル/batch3d-accept/ の run41586941178-batch3d-rows.txt・run41589579501-batch3d-rows.txt・run41591179240-batch3d-rows.txt（リポジトリには入れない）。
+- B6 は DB の件数だけ確かめた。本番の読むだけの道（ADR-1024）で tenant 001 を数えると、保管（ai_ro.tenant_001__archives）0 件・シフト（tenant_001__shifts）0 件・スタッフの報告（tenant_001__staff_reports）0 件・通知の宛先（tenant_001__notification_channels）0 件（15:44 JST）。
+  - 設計担当の Chrome はログインしていない。そのため、画面の件数はまだ確かめていない。backend は変えていない（B3）。根拠は Q1 の試験。
+- K5 は本番で 2 人のログインでは確かめていない（本番でパスワードを打たない決まり）。段 3 の 1 回目の Q2・Q3 の試験と、写しの名前に利用者が入る作りで確かめた。
+
 ### 3-5. 測り方（|基準|検証方法|）
 | 基準 | 検証方法 |
 |---|---|
