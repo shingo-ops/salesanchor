@@ -1,6 +1,7 @@
 # 図書館化: 本とリポジトリの手順書の重なりによるムラを無くす（設計の草案 第2版）
 
 作成: 2026-11-03 Opus（設計担当）。状態: **設計案作成済み・Fable 評価 REVISE を反映済み・再審査前**。置き場は PO 承認済み（2026-11-03 PO 原文「1」＝§4-1 の P1）。
+対象ADR: ADR-1040。現在地: [recon.md](./recon.md)（docs/handoff/doc-agenda-nav/recon.md）。
 根拠: [library-errors.md](./library-errors.md)（練習の組の記録）、[library-design.md](./library-design.md) §4-1・§7、[library-ledger.md](./library-ledger.md)、[library-tasks.md](./library-tasks.md)。
 このリポジトリは公開されている。~/.claude の決まりの本文は書かない。ファイル名・行番号・数・要点だけを書く。生出力と Fable の評価全文は「~/CC報告ファイル-keep/doc-library-20261102/」に置く（mura-eval-fable.md）。
 リポジトリ側の根拠は origin/main bfcaaa29b を `git show origin/main:<path>` で読んだもの。
@@ -142,6 +143,8 @@ PR の手順（本 R-22 の5項目）を、M5 と executor-checklist のあと�
 過去事例は1つ借りる。クラウドの担当には手元用の作業前点検を流させない形（card-maintain-m3.md §3-1）。本設計のカード §3-0 に入れた（第1回の実行は入れ忘れで止まった。2026-11-03）。
 
 ## 9-2. 維持の仕組み
+
+守り手: 定期実行「入口の文書 週次点検」（ADR-1040）が毎週 `scripts/dev/doc-entry-weekly-check.sh` を流し、その中の `scripts/dev/doc-library-check.sh` が本の重なり（L2）を数えて 0 でなければ `RESULT=NG`。リポジトリ側の重なり（executor-checklist.md 以外の security-review の当たり）は機械では数えず人手で守る。理由: 当たりの対象が手順書の数か所に限られ、§6 の git grep 1本で確かめられるため。
 
 - リポジトリ側: 決まりは docs/ai-agents/executor-checklist.md の1か所だけ（F11「ここ以外に複製しない」）。重なりは §6 の git grep で数える。
 - ~/.claude 側: 本の重なりは doc-library-check（L2）と毎週の点検（doc-entry-weekly-check）が数える。0 でなければ週次の知らせで分かる。
