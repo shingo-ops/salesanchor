@@ -294,3 +294,6 @@ GitHub の一時 VM（sandbox-test）で、compose と同じ条件（read_only�
 - 9回目（2026-11-02 16:11〜 UTC・head 6ce9947bd・クラウド。返事は別のブランチ review/secretary-chatgpt-r9 の commit 2d44988a9 に review9.md。根拠は origin/main c758ea8、d828bb269 からの差分は設計が引かないファイルだけ）: VERDICT: APPROVE。8回目の N1〜N6 はすべて直ったと認められた。
   - 軽い指摘（v10 で反映）: R1 PO の判断を取る時点の言い回しが2通り→ §7・§13-5 を「段3に入る前（V1〜V5 の前）」にそろえた R2 スーパー管理者の人数が【未確認】→ §7 に切り替え前に件数を数える手順 R3 VPS と手元のログインの打ち消し合いを確かめる項目が無い→ §7 段3と「どこで測るか」に確かめを足した。
   - 確かめた生出力: review9.md。
+- カード 1b-1 の審査（クラウドの Opus。カード `card-1b1.md` が対象）:
+  - 1回目（2026-11-03・head fa73df3a6）: VERDICT: REVISE。削除行の上限（5 を 12 に）・ruff format の形・旧エンジンの印を `record_error_detail` の後ろへ・型に無い属性は setattr/getattr で、を直した（884c15d96）。
+  - 2回目（2026-11-03 05:48〜05:53 UTC・head 884c15d96・run cse_01W47tdhNrx8dowYXMAAF411）: VERDICT: APPROVE。カードの「後」を origin/main の写しに当て、ruff check は前後とも通過・format の塊の数は前後で同じ・削除行は上限内（5 は 12 ちょうど）と実測。軽い指摘2件: ① mypy のエラーが1件増える（`gemini_ledger_error_code` が `BaseException` を `_classify_error(exc: Exception)` に渡す。CI は警告だけ）→ 引数の型を `Exception` にした（a725286ca。呼び出し元はすべて `except Exception as exc`）② 判定の関数が万一例外を上げると、旧エンジンの `RecordError("API_ERROR")` がその例外に代わる → 判定は文字列と属性を読むだけでほぼ起きないので、カードは変えない。
