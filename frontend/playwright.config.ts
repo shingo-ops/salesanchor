@@ -15,7 +15,65 @@
  *   npm run test:e2e:ui        # interactive UI mode
  */
 
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { defineConfig, devices } from "@playwright/test";
+
+/**
+ * 幅を自分で決める visual-language spec（最初の goto の前に viewport を上書きする 16 本）。
+ *
+ * vl-tablet-768 と vl-desktop-1280 はどちらも Desktop Chrome（isMobile・hasTouch なし）で、
+ * 幅は spec が上書きするため同じ確かめになる。そこで vl-tablet-768 では流さない。
+ * vl-mobile-390 は isMobile・hasTouch が効く（hover:none・meta viewport）ので別の確かめとして残す。
+ * 根拠: docs/handoff/visual-check-dedup/design.md（2節・3節）、recon.md 7節。
+ */
+const SELF_WIDTH_SPECS = [
+  "drawer-inert-closed.spec.ts",
+  "inventory-mobile-baseline.spec.ts",
+  "inventory-raw-text-mobile.spec.ts",
+  "inventory-series-sort-panel.spec.ts",
+  "inventory-toolbar-mercari.spec.ts",
+  "popover-mold.spec.ts",
+  "viewer-choice-sheet.spec.ts",
+  "viewer-control-tap-size.spec.ts",
+  "viewer-filter-panel-mercari.spec.ts",
+  "viewer-filter-row-mercari.spec.ts",
+  "viewer-focus-trap.spec.ts",
+  "viewer-header-remove.spec.ts",
+  "viewer-inventory-mobile-filter.spec.ts",
+  "viewer-search-mercari.spec.ts",
+  "viewer-search-suggestions.spec.ts",
+  "viewer-top-compact.spec.ts",
+];
+
+// 見張り（design.md 3節・K5）: 一覧の spec が project の幅・触る扱いを読み始めたら、
+// タブレット幅の確かめが黙って抜けるので config 読み込み時に止める。
+// 単語 isMobile（コメント内のアプリ側の説明）と page.viewportSize() は止めない。
+const PROJECT_DEPENDENT = [
+  /\.project\b/,
+  /projectWidth/,
+  /hasTouch/,
+  /touchscreen/,
+  /\.tap\(/,
+  /async \(\{[^)]*\bisMobile\b/,
+];
+for (const name of SELF_WIDTH_SPECS) {
+  const file = fileURLToPath(new URL(`./tests-e2e/visual-language/${name}`, import.meta.url));
+  let text: string;
+  try {
+    text = readFileSync(file, "utf8");
+  } catch {
+    throw new Error(`SELF_WIDTH_SPECS の spec が見つからない: ${name}（${file}）`);
+  }
+  const hit = PROJECT_DEPENDENT.find((re) => re.test(text));
+  if (hit) {
+    throw new Error(
+      `SELF_WIDTH_SPECS の ${name} が project の幅・触る扱いを読んでいる（${hit}）。` +
+        "一覧から外すこと（docs/handoff/visual-check-dedup/design.md）",
+    );
+  }
+}
+const SELF_WIDTH_IGNORE = SELF_WIDTH_SPECS.map((n) => new RegExp(`visual-language/${n.replace(/\./g, "\\.")}$`));
 
 const PORT = Number(process.env.PORT || 5173);
 const BASE_URL = process.env.E2E_BASE_URL || `http://localhost:${PORT}`;
@@ -67,6 +125,8 @@ export default defineConfig({
     {
       name: "vl-tablet-768",
       testMatch: /visual-language\/.*\.spec\.ts/,
+      // 幅を自分で決める spec は vl-desktop-1280 と同じ確かめなのでここでは流さない（上部 SELF_WIDTH_SPECS）
+      testIgnore: SELF_WIDTH_IGNORE,
       use: { ...devices["Desktop Chrome"], viewport: { width: 768, height: 1024 } },
     },
     {

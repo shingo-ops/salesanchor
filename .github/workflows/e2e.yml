@@ -147,7 +147,7 @@ jobs:
   # arm64 端末では Playwright の chromium が動かず、開く→戻るをマージ前に確認できない。
   # 全 E2E の再開は 2026-06-01 に止めた CI ボトルネックが戻るため、
   # visual-language の 3 幅（vl-mobile-390 / vl-tablet-768 / vl-desktop-1280）だけを走らせる。
-  # 対象 spec: frontend/tests-e2e/visual-language/*.spec.ts（現状 2 本・テスト 8 件）
+  # 対象 spec: frontend/tests-e2e/visual-language/*.spec.ts（20 本。幅を自分で決める spec は vl-tablet-768 で流さない: frontend/playwright.config.ts）
   visual-language-run:
     name: 画面検査（内部）
     needs: detect-changes
