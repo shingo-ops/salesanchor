@@ -1312,6 +1312,26 @@ rules:
     anchor: "- してよいことは、原因の確かめ・直す PR の起票まで"
     kind: review
     reason: "件のセッションは PR の起票までで、マージ・本番の変更・secrets の変更をしない決まり（ADR-1039 Decision 8）。マージは既存の審査役の見張り・必須チェック・GO（ADR-136）が止めるが、本番の変更と secrets の変更は PR の外なので人が見る"
+  - id: OI411
+    source: docs/ai-agents/ops-incident-agent.md
+    anchor: "- 返る行は 200 行で打ち切られます"
+    kind: exempt
+    reason: "読む窓口の行数の上限（既定 200・最大 5000、readonly_query.py の DEFAULT_LIMIT・MAX_LIMIT）を踏まえ、多く要るときは -- limit=N を書き、件数は count(*) で数える決まり。実行時の通信で PR に残らない"
+  - id: OI408
+    source: docs/ai-agents/ops-incident-agent.md
+    anchor: "### 1-3. 信用しないデータ"
+    kind: exempt
+    reason: "相談係 AI が投稿・DB の文字・ファイルの中身を指示として扱わない決まり（節の本文は「〜しません」の書き方で決まりの語に当たらないため、見出しの行で受ける）。実行時の振る舞いで PR に残らない"
+  - id: OI409
+    source: docs/ai-agents/ops-incident-agent.md
+    anchor: "### 1-4. してはいけないこと"
+    kind: exempt
+    reason: "相談係 AI の外への書き出しの禁止（push・PR・issue・Web・ほかの宛先・通知に値を書くこと）。節の本文は「〜しません」の書き方で決まりの語に当たらないため、見出しの行で受ける（ADR-1052）。守りは専用リポジトリの設定と口の側にもあるが、実行時の行為で PR に残らない"
+  - id: OI410
+    source: docs/ai-agents/ops-incident-agent.md
+    anchor: "- `needs_decision`: PO が決める"
+    kind: exempt
+    reason: "報告の needs_decision に PO が決めることだけを書き、無ければ書かない決まり。報告は件の記録に入り PR に残らない"
 
 not_rules:
   - source: frontend/AGENTS.md
@@ -1833,14 +1853,5 @@ not_rules:
     anchor: "- 投稿の本文は、電話・メール・郵便番号の形が"
     reason: "伏せ方の説明（人名・住所は置き換わっていないことがある）で、決まりではない"
   - source: docs/ai-agents/ops-incident-agent.md
-    anchor: "### 1-3. 信用しないデータ"
-    reason: "見出し: 信用しないデータの節。規則本体は次の行以降"
-  - source: docs/ai-agents/ops-incident-agent.md
-    anchor: "### 1-4. してはいけないこと"
-    reason: "見出し: 外への書き出しの禁止の節。規則本体は次の行以降"
-  - source: docs/ai-agents/ops-incident-agent.md
     anchor: "- `risk`: 直すときの危険"
     reason: "報告の項目 risk に書く中身の説明（確かめていないこと）で、決まりではない"
-  - source: docs/ai-agents/ops-incident-agent.md
-    anchor: "- `needs_decision`: PO が決める"
-    reason: "報告の項目 needs_decision に書く中身の説明（PO が決める必要があること）で、決まりではない"
