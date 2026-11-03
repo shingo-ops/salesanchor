@@ -9,6 +9,9 @@ from fastapi import HTTPException
 
 from app.routers.calendar import (
     SyncModeBody,
+    UpdateEventBody,
+    delete_event,
+    update_event,
     list_calendar_owners,
     update_calendar_owner,
     update_sync_mode,
@@ -163,3 +166,78 @@ async def test_update_sync_mode_none():
             body=SyncModeBody(sync_mode="none"), tenant_id=1, user=_mock_user(), db=db
         )
     assert result == {"sync_mode": "none"}
+
+
+# ---- 便1: 「自分だけ」予定の守り（design.md §13-5） ----
+
+
+def _event_db(created_by, calendar_type, owner):
+    db = AsyncMock()
+    db.commit = AsyncMock()
+    db.execute = AsyncMock(return_value=_QueryResult(first=(created_by, calendar_type, owner)))
+    return db
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("is_admin", [False, True])
+async def test_patch_other_users_personal_event_is_404(is_admin):
+    db = _event_db(created_by=202, calendar_type="personal", owner=202)
+    with patch("app.routers.calendar.get_user_system_keys", new=AsyncMock(return_value=[])), patch(
+        "app.routers.calendar.is_tenant_admin", return_value=is_admin
+    ), patch("app.routers.calendar.cal_svc.update_event", new=AsyncMock()) as upd:
+        with pytest.raises(HTTPException) as exc:
+            await update_event(9, UpdateEventBody(title="x"), tenant_id=1, user=_mock_user(101), db=db)
+    assert exc.value.status_code == 404
+    upd.assert_not_called()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("is_admin", [False, True])
+async def test_delete_other_users_personal_event_is_404(is_admin):
+    db = _event_db(created_by=202, calendar_type="personal", owner=202)
+    with patch("app.routers.calendar.get_user_system_keys", new=AsyncMock(return_value=[])), patch(
+        "app.routers.calendar.is_tenant_admin", return_value=is_admin
+    ), patch("app.routers.calendar.cal_svc.delete_event", new=AsyncMock()) as dele:
+        with pytest.raises(HTTPException) as exc:
+            await delete_event(9, tenant_id=1, user=_mock_user(101), db=db)
+    assert exc.value.status_code == 404
+    dele.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_non_owner_cannot_change_calendar_type():
+    # 共有の予定を作った人（created_by=101）だが、持ち主（user_id）は 202
+    db = _event_db(created_by=101, calendar_type="shared", owner=202)
+    with patch("app.routers.calendar.get_user_system_keys", new=AsyncMock(return_value=[])), patch(
+        "app.routers.calendar.is_tenant_admin", return_value=False
+    ), patch("app.routers.calendar.cal_svc.update_event", new=AsyncMock()) as upd:
+        with pytest.raises(HTTPException) as exc:
+            await update_event(9, UpdateEventBody(calendar_type="personal"), tenant_id=1, user=_mock_user(101), db=db)
+    assert exc.value.status_code == 403
+    upd.assert_not_called()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("new_type,expect_user_id", [("personal", 101), ("shared", None)])
+async def test_owner_can_switch_calendar_type(new_type, expect_user_id):
+    old = "shared" if new_type == "personal" else "personal"
+    db = _event_db(created_by=101, calendar_type=old, owner=101)
+    with patch("app.routers.calendar.get_user_system_keys", new=AsyncMock(return_value=[])), patch(
+        "app.routers.calendar.is_tenant_admin", return_value=False
+    ), patch("app.routers.calendar.cal_svc.update_event", new=AsyncMock(return_value={"id": 9})) as upd:
+        result = await update_event(9, UpdateEventBody(calendar_type=new_type), tenant_id=1, user=_mock_user(101), db=db)
+    assert result == {"id": 9}
+    payload = upd.call_args.kwargs["payload"]
+    assert payload["calendar_type"] == new_type
+    assert payload.get("user_id") == expect_user_id
+
+
+@pytest.mark.asyncio
+async def test_invalid_calendar_type_is_422():
+    db = _event_db(created_by=101, calendar_type="shared", owner=101)
+    with patch("app.routers.calendar.get_user_system_keys", new=AsyncMock(return_value=[])), patch(
+        "app.routers.calendar.is_tenant_admin", return_value=False
+    ):
+        with pytest.raises(HTTPException) as exc:
+            await update_event(9, UpdateEventBody(calendar_type="secret"), tenant_id=1, user=_mock_user(101), db=db)
+    assert exc.value.status_code == 422
