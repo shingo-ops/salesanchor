@@ -4,8 +4,8 @@
 - 根拠の写し: S=origin/main 340fff885920db3d18bbb1001afd7f6e2d327fb1。行番号はすべてこの sha。2026-11-03 に設計担当が S の写しで行を読んだ。2026-11-03 時点の origin/main 1f7bcdef9 と S の間で frontend/src の差は 0（設計担当が `git diff --stat` で確かめた）。実装の前に最新の origin/main で行を合わせ直す（§3(a)）。
 - 読んだ節: docs/handoff/design-partner-card-ops/guards/00-common.md・guards/03-file.md・guards/04-worktree.md・guards/05-pr.md・guards/10-executor.md・scripts/agent-hooks/cloud/rules.md（段 3 の 1〜3 回目のカードと同じ節。照合も同じ: 全命令は cd <W> で始める・出力は tail/head で上限・新しいファイルは丸ごとの全文・作業場所は new-worktree.sh で作り出力をパイプに通さない・PR は実行役が作らない・出力をファイルに残す命令と tail で読む命令は別の行）。
 - 実行役はクラウドの Sonnet。作業場所の作り方はクラウドの決まり（S scripts/agent-hooks/cloud/rules.md:15）を正とする。.pr-number・gh-pr-create-safe.sh は使わない。出力には上限を付ける。待つために sleep を使わない。
-- 状態: 第 2 版（2026-11-03 設計担当 Claude Opus）。第 1 版（e3d16a834）のクラウド審査 REVISE の 4 点（Q2 の押せるかの見方・手順3 の grep 2 本・ORD-FIX の行）を直した。
-- 受領確認: 実装役は着手の最初の報告に「段 3 の 4 回目のカード 第 2 版を受け取った・S=340fff885」と書く。
+- 状態: 第 3 版（2026-11-03 設計担当 Claude Opus）。第 2 版（bd4017b9e）の審査 REVISE の行番号 2 か所（§4-F の data の行・§4-G の canEdit の行）を直した。第 1 版（e3d16a834）のクラウド審査 REVISE の 4 点（Q2 の押せるかの見方・手順3 の grep 2 本・ORD-FIX の行）を直した。
+- 受領確認: 実装役は着手の最初の報告に「段 3 の 4 回目のカード 第 3 版を受け取った・S=340fff885」と書く。
 
 ## 0. 設計からの直し・詳しくした点（V3d。設計の合格線は変えない）
 - V3d-1 対象は、測る利用者（tenant 001 の測定用の利用者）に見る権限が無く、これまでの毎朝の記録で「断りの画面が戻る秒」しか測れていなかった画面のうち、開くたびに中身を消して取り直している 8 画面（design §3-4-17）。PO 選択「1」（権限を足して本番の測定まで直す）。測る利用者への見る権限は 2026-11-03 に足し済み。残りの 8 画面（チャネル・ロール・スタッフ・スタッフの編集・受注・在庫の見え方・状態・商品区分）は段 3 の 5 回目のカードで扱い、このカードの対象ではない。
@@ -230,7 +230,7 @@
 ```
 - F6 S :85 `      {error && <div className="error-message">{error}</div>}` → `      {shownError && <div className="error-message">{shownError}</div>}`
 - F7 S :87 `      {loading ? (` → `      {salesQ.isPending ? (`
-- :92 `{data && (`・:259 `data={data?.items ?? []}`・:197-200 の onSaved（`void load();`）は変えない。setError は S :68・:73 の load の中だけで使うので、error の useState ごと消してよい（V3d-7）。
+- :92 `{data && (`・:183 `data={data?.items ?? []}`・:197-200 の onSaved（`void load();`）は変えない。setError は S :68・:73 の load の中だけで使うので、error の useState ごと消してよい（V3d-7）。
 
 ## 4-G. #7 frontend/src/pages/commissions/CommissionsPage.tsx
 - G1 S :13 `import { useCallback, useEffect, useState } from "react";` → `import { useState } from "react";`。S :15 `import { api } from "../../lib/api";` を `import { useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";` に置き換える（§3(g)）。
@@ -264,7 +264,7 @@
 - G9 S :167 `        {loading ? (` → `        {monthlyQ.isPending ? (`
 - :140-165 の年と月の欄・:169-216 の集計・:218-249 の受注の一覧・:256-258 の onSaved（`void reloadMonthly();`）は変えない。
 - `invalidate(["commissions"])` は `/commissions/...` の写し（どの年と月も）を古い印にし、開いている年と月だけ裏で取り直す。今の reloadMonthly は開いている年と月だけ取り直すので、画面の動きは同じ。受注の一覧は今も担当の割り当ての後に取り直していない（S :116-132 は canEdit が変わった時だけ）ので古い印にしない。
-- 受注の一覧は編集の権限がある時だけ取る（enabled: canEdit。今と同じ）。権限が無い間 ordersQ は isPending のままだが、:218 の `canEdit &&` の側が描かれないので画面に出ない。
+- 受注の一覧は編集の権限がある時だけ取る（enabled: canEdit。今と同じ）。権限が無い間 ordersQ は isPending のままだが、:219 の `canEdit &&` の側が描かれないので画面に出ない。
 
 ## 4-H. #8 frontend/src/pages/commission-settings/CommissionSettingsPage.tsx
 - H1 S :12 `import { FormEvent, useEffect, useState } from "react";` → `import { FormEvent, useState } from "react";`
