@@ -15,6 +15,9 @@ BLOCK = [
     'timeout 600 npx vitest run', 'timeout -s KILL 10m npm test', 'nice npm test',
     'nice -n 10 pytest', 'nohup pytest', 'sudo nohup npm test', 'pnpm test',
     'yarn run test:e2e', 'docker compose run --rm -e X=1 backend python -m pytest',
+    'time -p npm test', 'env -i npm test', 'sudo -u nobody npm test', 'pnpm --filter web test',
+    'yarn --cwd frontend test', 'uv run --with pytest-cov pytest', 'docker-compose exec backend pytest',
+    'bash -lc "npm test"', 'pnpm vitest', 'pnpm dlx vitest', 'npm exec vitest',
 ]
 PASS = [
     'npm ci', 'npm run build', 'npm run lint', 'npm run test:e2e:install', 'npm install',
@@ -26,6 +29,8 @@ PASS = [
     'timeout 5 git status', 'nice ls', 'yarn install', 'pnpm run build',
     'echo "npm test"', 'grep -n "npm test" README.md', 'git commit -m "npm test を止める"',
     "cat <<'EOF' > /tmp/x.txt\nnpm test\nEOF",
+    'time -p ls', 'env -i PATH=/usr/bin ls', 'sudo -u nobody ls', 'pnpm --filter web build', 'pnpm tsc',
+    'npm exec tsc', 'uv run --with rich python scripts/x.py', 'docker-compose ps', 'bash -lc "echo hi"',
 ]
 
 tmp = tempfile.mkdtemp(prefix='mtg-')
