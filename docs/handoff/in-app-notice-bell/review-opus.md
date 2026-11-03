@@ -20,4 +20,13 @@
 
 ## 3. コード審査（reviewer、model opus、新規起動）
 
-- PR 起票後に記入する
+- 対象: PR #5086 の head 5528bae98（このあと main を取り込んだ 75d7bd83f は、別の仕事の文書 2 件が増えただけ）
+- 判定: **APPROVE**（K1〜K9 を満たす。止める不具合なし）
+- 指摘（すべて Low。Opus の扱い）:
+  - F1 commit 成功後に `reset_tenant_context` だけ失敗すると、もう一度入れて知らせが 2 件になる → 接続断のときだけ。後の便で直す
+  - F2 設定の保存の 422 の文が backend の日本語直書きで、英語の画面でも日本語が出る → アプリ全体の既存の形（`frontend/src/lib/api.ts:145-151`）。後の便で直す
+  - F3 `backend/app/discord_gateway/outside_ticket_notice.py` の説明と、`scripts/run_all_migrations.sh` の注記が改訂前の言い方 → 動きは変わらない。後の便で直す
+  - F4 別の会社の知らせが出ないこと（K5）の直接の試験が無い（試験は SQLite で会社ごとのスキーマが無い） → 後の便で PostgreSQL の試験を足す
+  - F5 discord.com 以外のリンクを開かない試験が無い → 後の便で足す
+- 未確認として残るもの: スマホで PageLayout を使わない画面の右上と鈴の重なり（K1 の PO 目視）、本番での K4・K7（PO 目視）、担当者が別々に 2 人以上のとき全員へ送る読み方の PO の明示の確認
+- 全文: reviewer の出力（手元の記録。PR には載せない）
