@@ -329,6 +329,19 @@ PO の言葉: 「LINEみたいな使い心地は出来る？」（意味は「�
 - 見え方: 応答の JSON の時刻は今までどおり "HH:MM"（カード F9・A3b）。シフトの画面に秒が付かない。frontend は触らない。
 - 受入: カード §5 の C1〜C5（本物の PostgreSQL の試験 2 件 passed・マージ後の毎朝の画面の記録で /schedule の 5xx 0 件）。
 
+#### 3-4-20-a. シフトの 500 の直しの受入（2026-11-04 設計担当 Claude Opus）
+- PR #5092 を 2026-11-04 01:27 JST に main へ合流（merge 57fbceb）。deploy.yml run 41674341860 が 01:35 JST に success。
+- C1〜C3 合格: CI の使い捨て PostgreSQL の試験（P1 期間で読める・P2 登録できる）が passed、必須の確認がすべて pass、マージ前の審査役（Claude Opus）の APPROVE。
+- C4 合格: prod-ui-check を手で 1 回動かした（run 41675927498・測った日時 2026-11-04 01:41 JST）。/schedule は 5xx 0 件・403 0 件、GET /api/v1/shifts?date_from&date_to は 0.3 秒。全 135 画面で 5xx 0 件・403 の行は 6 行（基準と同じ）。
+- C5 合格: 本番の読むだけの道（ADR-1024）で tenant_001 のシフトは 0 行。応答は 200 の空の一覧。
+- 記録の扱い: PR 本文の GO 記録の「結果」は本文の書き換えが見張りに止められたため、PR のコメントに残した（PR #5092 のコメント）。
+
+#### 3-4-21. 段 3 の 7 回目: 予定表の写し先出し（2026-11-04 設計担当 Claude Opus）
+- カード: docs/handoff/line-like-speed/batch3g-schedule-card.md。予定表（/schedule）の 3 本の読み込み（持ち主・予定・シフト）を useApiQuery に移し、写しを先に出して裏で取り直す。保存・削除の後は予定の写しだけを取り直し、読み込み中の印を出さない。
+- 基準（prod-ui-check run 41675927498・main 57fbceb）: /schedule K2 0.3 秒・API 4 本・K1 0.30 秒。/schedule/settings・/shifts・/management-center/shifts は K1 0.01 秒。
+- 段 3 の残りの K1 0.1 秒超え 5 行のうち、/buyback-prices・/management-center/conditions・/management-center/product-categories の 3 行は測る利用者が 403 で対象外（見る権限の扱いは PO に聞く）。/admin/products/:id/edit（0.22 秒）は §3-4-19-a のとおり初めて測れた値で、このカードには入れない（予定表の受入の後に次のカードで扱いを決める）。
+- 受入: カード §5 の G1〜G7（/schedule の K1 ≤0.1 秒・K2 ≤2 秒・403 と 5xx 0 件、DB との一致は tenant 001）。
+
 ### 3-5. 測り方（|基準|検証方法|）
 | 基準 | 検証方法 |
 |---|---|

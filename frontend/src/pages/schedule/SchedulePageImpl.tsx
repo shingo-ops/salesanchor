@@ -21,7 +21,7 @@ import { SCHEDULE_POPOVER_ICONS, NAV_ICONS } from "../../constants/icons";
 import { CALENDARS, CALENDAR_MAP, type CalendarId, cssVar } from "../../features/schedule/calendars.config";
 import { api } from "../../lib/api";
 import { usePermissions } from "../../hooks/usePermissions";
-import { useApiQuery } from "../../lib/query/apiQuery";
+import { useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
 import "../schedule.css";
 import {
   type AnchorRect,
@@ -846,6 +846,42 @@ function LoadingState() {
   );
 }
 
+/** 持ち主の一覧から自分の印（user_id、無ければ staff_id）を返す。自分がいなければ null */
+function selfOwnerKey(owners: CalendarOwner[]): number | null {
+  const self = owners.find((owner) => owner.isSelf);
+  return self ? self.userId ?? self.staffId : null;
+}
+
+/**
+ * ADR-1054 段 3 の 7 回目: 3 本の写しから、持ち主と予定（カレンダーの予定とシフト）を作る。
+ * 1 本が読めない時はその分を空にする（今の Promise.allSettled と同じ）。
+ * 答えの形が違って作れない時は failed を立てる（今の catch と同じ）。
+ */
+function buildSchedule(
+  ownersData: ApiCalendarOwnersResponse | undefined,
+  eventsData: { events: ApiCalendarEvent[] } | undefined,
+  shiftsData: ApiShift[] | undefined,
+  t: (key: string) => string,
+): { owners: CalendarOwner[]; events: ScheduleItem[]; failed: boolean } {
+  try {
+    const owners = ownersData ? ownersData.owners.map(normalizeOwner) : [];
+    const selfUserId = owners.find((owner) => owner.isSelf)?.userId ?? null;
+    const events: ScheduleItem[] = eventsData
+      ? eventsData.events.map(normalizeEvent).map((item) => {
+          const ownerUserId = item.ownerUserId ?? selfUserId;
+          const owner = ownerUserId != null ? owners.find((entry) => entry.userId === ownerUserId) ?? null : null;
+          return { ...item, ownerUserId, ownerName: item.ownerName ?? owner?.name ?? null };
+        })
+      : [];
+    if (shiftsData) {
+      events.push(...shiftsData.map((shift) => normalizeShift(shift, t)));
+    }
+    return { owners, events, failed: false };
+  } catch {
+    return { owners: [], events: [], failed: true };
+  }
+}
+
 export default function SchedulePage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -858,22 +894,44 @@ export default function SchedulePage() {
   const demoState = (searchParams.get("demoState") as DemoState | null) ?? "normal";
   const [view, setView] = useState<ScheduleView>("week");
   const [anchorDate, setAnchorDate] = useState(() => new Date());
-  const [events, setEvents] = useState<ScheduleItem[]>([]);
-  const [owners, setOwners] = useState<CalendarOwner[]>([]);
-  const [visibleOwnerIds, setVisibleOwnerIds] = useState<number[]>([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [banner, setBanner] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [popover, setPopover] = useState<SchedulePopoverState | null>(null);
   const [draft, setDraft] = useState<ScheduleDraft>(createDraft());
   const gridScrollRef = useRef<HTMLDivElement | null>(null);
-  const [reloadTick, setReloadTick] = useState(0);
   const [, setNowTick] = useState(0);
 
   // useMemo で参照を安定させる: 毎レンダーで new Date() が生成されると
   // Object.is 比較が false になり useEffect が際限なく再発火する（shifts 500 無限ループの根本原因）
   const rangeStart = useMemo(() => toRangeStart(view, anchorDate), [view, anchorDate]);
   const rangeEnd = useMemo(() => toRangeEnd(view, anchorDate), [view, anchorDate]);
+  // ADR-1054 段 3 の 7 回目: 3 本を写しの置き場で読む（path の文字は今と同じ）。見本の状態では取りに行かない。
+  const live = demoState !== "loading" && demoState !== "empty";
+  const ownersQ = useApiQuery<ApiCalendarOwnersResponse>("/calendar/owners", { enabled: live });
+  const eventsQ = useApiQuery<{ events: ApiCalendarEvent[] }>(
+    `/calendar/events?start=${rangeStart.toISOString()}&end=${rangeEnd.toISOString()}`,
+    { enabled: live },
+  );
+  const shiftsQ = useApiQuery<ApiShift[]>(
+    `/shifts?date_from=${formatDayKey(rangeStart)}&date_to=${formatDayKey(rangeEnd)}`,
+    { enabled: live },
+  );
+  const invalidate = useInvalidateApi();
+  const built = useMemo(
+    () => (live ? buildSchedule(ownersQ.data, eventsQ.data, shiftsQ.data, t) : { owners: [], events: [], failed: false }),
+    [live, ownersQ.data, eventsQ.data, shiftsQ.data, t],
+  );
+  const { owners, events } = built;
+  // 写しが無い初回だけ読み込み中の印を出す（今と同じく 3 本がそろうまで）
+  const loading = live && (ownersQ.isPending || eventsQ.isPending || shiftsQ.isPending);
+  // 写しを出したまま裏の取り直しが失敗した時だけ、取れなかった文を出す（写しが無い時の失敗は今と同じく出さない）
+  const staleFailed = [ownersQ, eventsQ, shiftsQ].some((q) => q.isError && q.data !== undefined);
+  const shownError = error ?? (built.failed || staleFailed ? t("schedule.errorFetch") : null);
+  const selfKey = selfOwnerKey(owners);
+  // 写しがあれば最初の描画から自分を選ぶ（全員の予定が一瞬出てから絞られる形にしない）
+  const [visibleOwnerIds, setVisibleOwnerIds] = useState<number[]>(() => (selfKey != null ? [selfKey] : []));
+  // 期間・見本の状態を変えた時に前の保存・削除の失敗の文を消す（今は読み込みの始めに消していた）
+  useEffect(() => { setError(null); }, [demoState, rangeStart, rangeEnd]);
   const currentMonth = view === "month" ? anchorDate : startOfMonth(anchorDate);
   const ownerByUserId = useMemo(() => {
     return new Map<number, CalendarOwner>(
@@ -918,86 +976,11 @@ export default function SchedulePage() {
     next.scrollTop = WORKDAY_START * DEFAULT_ROW_HEIGHT;
   }, [view, anchorDate]);
 
+  // 自分の印が分かった時と期間を変えた時に、何も選んでいなければ自分を選ぶ（今の読み込みの後と同じ）
   useEffect(() => {
-    let cancelled = false;
-
-    if (demoState === "loading") {
-      setLoading(true);
-      setError(null);
-      setEvents([]);
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    if (demoState === "empty") {
-      setLoading(false);
-      setError(null);
-      setEvents([]);
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    const load = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const startIso = rangeStart.toISOString();
-        const endIso = rangeEnd.toISOString();
-        const [ownersResult, eventsResult, shiftsResult] = await Promise.allSettled([
-          api.get<ApiCalendarOwnersResponse>("/calendar/owners"),
-          api.get<{ events: ApiCalendarEvent[] }>(`/calendar/events?start=${startIso}&end=${endIso}`),
-          api.get<ApiShift[]>(`/shifts?date_from=${formatDayKey(rangeStart)}&date_to=${formatDayKey(rangeEnd)}`),
-        ]);
-
-        const nextOwners = ownersResult.status === "fulfilled"
-          ? ownersResult.value.owners.map(normalizeOwner)
-          : [];
-        if (!cancelled) {
-          setOwners(nextOwners);
-          const selfOwner = nextOwners.find((owner) => owner.isSelf);
-          if (selfOwner) {
-            setVisibleOwnerIds((current) => (current.length > 0 ? current : [selfOwner.userId ?? selfOwner.staffId]));
-          }
-        }
-
-        const nextEvents: ScheduleItem[] = [];
-        if (eventsResult.status === "fulfilled") {
-          const normalizedEvents = eventsResult.value.events.map(normalizeEvent).map((item) => {
-            const ownerUserId = item.ownerUserId ?? (nextOwners.find((owner) => owner.isSelf)?.userId ?? null);
-            const owner = ownerUserId != null ? nextOwners.find((entry) => entry.userId === ownerUserId) ?? null : null;
-            return {
-              ...item,
-              ownerUserId,
-              ownerName: item.ownerName ?? owner?.name ?? null,
-            };
-          });
-          nextEvents.push(...normalizedEvents);
-        }
-        if (shiftsResult.status === "fulfilled") {
-          nextEvents.push(...shiftsResult.value.map((shift) => normalizeShift(shift, t)));
-        }
-        if (!cancelled) {
-          setEvents(nextEvents);
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setEvents([]);  // タイムアウト・例外時も空配列で空状態へ遷移させスピナーを解除
-          setError(err instanceof Error ? err.message : t("schedule.errorFetch"));
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    };
-
-    void load();
-    return () => {
-      cancelled = true;
-    };
-  }, [demoState, rangeEnd, rangeStart, reloadTick, t]);
+    if (selfKey == null) return;
+    setVisibleOwnerIds((current) => (current.length > 0 ? current : [selfKey]));
+  }, [selfKey, rangeStart, rangeEnd]);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -1072,7 +1055,8 @@ export default function SchedulePage() {
         await api.post("/calendar/events", body);
       }
       setPopover(null);
-      setReloadTick((value) => value + 1);
+      setError(null);
+      void invalidate(["calendar", "events"]);
     } catch (err) {
       setError(err instanceof Error ? err.message : t("common.saveError"));
     }
@@ -1083,7 +1067,8 @@ export default function SchedulePage() {
     try {
       await api.delete(`/calendar/events/${popover.item.id}`);
       setPopover(null);
-      setReloadTick((value) => value + 1);
+      setError(null);
+      void invalidate(["calendar", "events"]);
     } catch (err) {
       setError(err instanceof Error ? err.message : t("common.deleteError"));
     }
@@ -1234,11 +1219,11 @@ export default function SchedulePage() {
               </div>
             )}
 
-            {(loading || demoState === "loading") && demoState !== "empty" ? <LoadingState /> : (
+            {loading || demoState === "loading" ? <LoadingState /> : (
               <div className="schedule-main__surface">
-                {error && (
+                {shownError && (
                   <div className="schedule-error">
-                    {error}
+                    {shownError}
                   </div>
                 )}
                 {view === "month" ? (
