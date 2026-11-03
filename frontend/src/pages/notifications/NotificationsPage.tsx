@@ -1,6 +1,7 @@
-import { useEffect, useState, FormEvent } from "react";
+import { useState, FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
+import { useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
 import { PageLayout } from "../../components/PageLayout";
 import { ContentToolbar } from "../../components/ContentToolbar";
 import { usePermissions } from "../../hooks/usePermissions";
@@ -13,7 +14,7 @@ import { Checkbox } from "../../components/Checkbox";
 import { SCHEDULE_POPOVER_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 import { NOTIFICATION_EVENT_LABEL_KEYS } from "../../constants/notificationEventTypes";
-import { LoadingBlock } from "../../components/loading";
+import { LoadingBlock, Spinner } from "../../components/loading";
 
 interface Channel { id: number; channel_name: string; webhook_url: string; event_types: string; is_active: boolean; created_at: string; }
 interface EventTypeOption { code: string; }
@@ -37,34 +38,29 @@ function toggleEventType(current: string[], code: string): string[] {
 export default function NotificationsPage() {
   const { t } = useTranslation();
   const { hasPermission } = usePermissions();
-  const [channels, setChannels] = useState<Channel[]>([]);
-  const [eventTypes, setEventTypes] = useState<EventTypeOption[]>([]);
+  const channelsQ = useApiQuery<Channel[]>("/notification-channels");
+  const eventTypesQ = useApiQuery<EventTypeOption[]>("/notification-event-types");
+  const channels = channelsQ.data ?? [];
+  const eventTypes = eventTypesQ.data ?? [];
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<ChannelFormState>(EMPTY_FORM);
   const [editingChannel, setEditingChannel] = useState<Channel | null>(null);
   const [editForm, setEditForm] = useState<ChannelFormState>(EMPTY_FORM);
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
+  const readError = channelsQ.error ?? eventTypesQ.error;
+  const shownError = error || (readError ? (readError instanceof Error ? readError.message : t("common.fetchError")) : "");
+  const refetching = (channelsQ.isFetching && !channelsQ.isPending) || (eventTypesQ.isFetching && !eventTypesQ.isPending);
+  const invalidate = useInvalidateApi();
 
   const eventTypeLabel = (code: string) => {
     const key = NOTIFICATION_EVENT_LABEL_KEYS[code];
     return key ? t(key) : code;
   };
 
-  const load = async () => {
-    try {
-      const [channelsResult, eventTypesResult] = await Promise.all([
-        api.get<Channel[]>("/notification-channels"),
-        api.get<EventTypeOption[]>("/notification-event-types"),
-      ]);
-      setChannels(channelsResult);
-      setEventTypes(eventTypesResult);
-    }
-    catch (e) { setError(e instanceof Error ? e.message : t("common.fetchError")); }
-    finally { setLoading(false); }
+  const load = () => {
+    void invalidate(["notification-channels"]);
+    void invalidate(["notification-event-types"]);
   };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { load(); }, []);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault(); setError("");
@@ -109,8 +105,9 @@ export default function NotificationsPage() {
     <PageLayout
       navKey="nav.notifications"
       subtitleKey="settings.subtitle"
+      headerLeft={refetching ? <Spinner size="sm" /> : undefined}
     >
-      {error && <div className="error-message">{error}</div>}
+      {shownError && <div className="error-message">{shownError}</div>}
       {hasPermission("notifications.manage") ? (
         <ContentToolbar
           right={<Button variant="primary" size="md" onClick={() => setShowForm(true)}>{t("settings.addChannel")}</Button>}
@@ -171,7 +168,7 @@ export default function NotificationsPage() {
           </div>
         </form>
       </Modal>
-      {loading ? <LoadingBlock /> : (() => {
+      {channelsQ.isPending || eventTypesQ.isPending ? <LoadingBlock /> : (() => {
         const columns: DataTableColumn<Channel>[] = [
           {
             key: "channel_name",

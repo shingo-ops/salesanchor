@@ -9,9 +9,11 @@
  *   - 月次レポート「現在月の報酬集計」をテキストで表示（GET /commissions/monthly）
  */
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
+import { useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
+import { useSeededForm } from "../../lib/query/useSeededForm";
 import { PageLayout } from "../../components/PageLayout";
 import { Button } from "../../components/Button";
 import { SelectControl } from "../../components/Select";
@@ -73,10 +75,6 @@ const DEFAULT_FORM: FormState = {
 
 export default function CommissionSettingsPage() {
   const { t } = useTranslation();
-  const [settings, setSettings] = useState<CommissionSettingsDto | null>(null);
-  const [form, setForm] = useState<FormState>(DEFAULT_FORM);
-  const [monthly, setMonthly] = useState<MonthlySummaryDto | null>(null);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
@@ -89,6 +87,8 @@ export default function CommissionSettingsPage() {
   );
   const [year, setYear] = useState(nowJst.getFullYear());
   const [month, setMonth] = useState(nowJst.getMonth() + 1);
+  const monthlyQ = useApiQuery<MonthlySummaryDto>(`/commissions/monthly?year=${year}&month=${month}`, { keepPrevious: true });
+  const monthly = monthlyQ.data ?? null;
 
   const ROLE_LABELS: Record<RoleKey, string> = {
     sales: t("commissions.role_sales"),
@@ -110,41 +110,11 @@ export default function CommissionSettingsPage() {
     return out;
   };
 
-  const loadSettings = async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const dto = await api.get<CommissionSettingsDto>(
-        "/tenant-commission-settings",
-      );
-      setSettings(dto);
-      setForm(dtoToForm(dto));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("common.fetchError"));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadMonthly = async (y: number, m: number) => {
-    try {
-      const dto = await api.get<MonthlySummaryDto>(
-        `/commissions/monthly?year=${y}&month=${m}`,
-      );
-      setMonthly(dto);
-    } catch {
-      // 取得失敗は致命的でないので静かに無視
-      setMonthly(null);
-    }
-  };
-
-  useEffect(() => {
-    loadSettings();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-  useEffect(() => {
-    loadMonthly(year, month);
-  }, [year, month]);
+  const settingsQ = useApiQuery<CommissionSettingsDto>("/tenant-commission-settings");
+  const settings = settingsQ.data ?? null;
+  const { form, setForm, ready } = useSeededForm("commission-settings", settingsQ.data, dtoToForm, DEFAULT_FORM);
+  const shownError = error || (settingsQ.error ? (settingsQ.error instanceof Error ? settingsQ.error.message : t("common.fetchError")) : "");
+  const invalidate = useInvalidateApi();
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -157,8 +127,8 @@ export default function CommissionSettingsPage() {
         "/tenant-commission-settings",
         payload,
       );
-      setSettings(updated);
       setForm(dtoToForm(updated));
+      void invalidate(["tenant-commission-settings"]);
       setInfo(t("common.saving"));
     } catch (err) {
       setError(err instanceof Error ? err.message : t("common.saveError"));
@@ -176,11 +146,11 @@ export default function CommissionSettingsPage() {
 
   return (
     <PageLayout navKey="nav.commissionSettings" subtitleKey="commissions.subtitle">
-      {loading ? (
+      {settingsQ.isPending ? (
         <LoadingBlock />
       ) : (
         <>
-          {error && <div className="error-message">{error}</div>}
+          {shownError && <div className="error-message">{shownError}</div>}
           {info && (
             <div className="info-message" style={{ color: "var(--success)" }}>
               {info}
@@ -256,7 +226,7 @@ export default function CommissionSettingsPage() {
               <Button loading={saving} variant="primary" size="md"
                 type="submit"
 
-                disabled={saving}
+                disabled={saving || !ready}
                 data-testid="settings-save"
               >
                 {t("common.save")}

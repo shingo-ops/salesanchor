@@ -1,7 +1,8 @@
-import { LoadingBlock } from "../../components/loading";
-import { useEffect, useState } from "react";
+import { LoadingBlock, Spinner } from "../../components/loading";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
+import { useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
 import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
 import { DataTable } from "../../components/DataTable";
@@ -13,17 +14,15 @@ interface Archive { id: number; source_table: string; source_id: number; archive
 export default function ArchivesPage() {
   const { t } = useTranslation();
   const { hasPermission } = usePermissions();
-  const [archives, setArchives] = useState<Archive[]>([]);
+  const archivesQ = useApiQuery<Archive[]>("/archives");
+  const archives = archivesQ.data ?? [];
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
+  const shownError = error || (archivesQ.error ? (archivesQ.error instanceof Error ? archivesQ.error.message : t("common.fetchError")) : "");
+  const invalidate = useInvalidateApi();
 
-  const load = async () => {
-    try { setArchives(await api.get<Archive[]>("/archives")); }
-    catch (e) { setError(e instanceof Error ? e.message : t("common.fetchError")); }
-    finally { setLoading(false); }
+  const load = () => {
+    void invalidate(["archives"]);
   };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { load(); }, []);
 
   const restore = async (id: number) => {
     try { await api.post(`/archives/${id}/restore`, {}); load(); }
@@ -31,9 +30,13 @@ export default function ArchivesPage() {
   };
 
   return (
-    <PageLayout navKey="nav.archive" subtitleKey="archives.subtitle">
-      {error && <div className="error-message">{error}</div>}
-      {loading ? <LoadingBlock /> : (() => {
+    <PageLayout
+      navKey="nav.archive"
+      subtitleKey="archives.subtitle"
+      headerLeft={archivesQ.isFetching && !archivesQ.isPending ? <Spinner size="sm" /> : undefined}
+    >
+      {shownError && <div className="error-message">{shownError}</div>}
+      {archivesQ.isPending ? <LoadingBlock /> : (() => {
         const columns: DataTableColumn<Archive>[] = [
           {
             key: "source_table",
