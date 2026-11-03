@@ -9,9 +9,9 @@
  *     （items[] + 全体集計）。権限は orders.view 流用（sales.view 未定義のため）。
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { api } from "../../lib/api";
+import { useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
 import { PageLayout } from "../../components/PageLayout";
 import { usePermissions } from "../../hooks/usePermissions";
 import OrderFinancialPanel from "../../components/OrderFinancialPanel";
@@ -19,7 +19,7 @@ import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
 import { Card } from "../../components/Card";
 import { Button } from "../../components/Button";
-import { LoadingBlock } from "../../components/loading";
+import { LoadingBlock, Spinner } from "../../components/loading";
 
 interface SalesOrderItem {
   order_id: number;
@@ -57,34 +57,24 @@ export default function SalesPage() {
   const { t } = useTranslation();
   const { hasPermission } = usePermissions();
   const canEdit = hasPermission("orders.update");
-  const [data, setData] = useState<SalesListDto | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const salesQ = useApiQuery<SalesListDto>("/financials/orders");
+  const data = salesQ.data ?? null;
+  const shownError = salesQ.error ? (salesQ.error instanceof Error ? salesQ.error.message : t("common.fetchError")) : "";
+  const invalidate = useInvalidateApi();
   // 売上編集モーダルの対象受注（null のとき非表示）。
   const [editing, setEditing] = useState<SalesOrderItem | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const dto = await api.get<SalesListDto>("/financials/orders");
-      setData(dto);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("common.fetchError"));
-    } finally {
-      setLoading(false);
-    }
-  }, [t]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const load = () => invalidate(["financials", "orders"]);
 
   return (
-    <PageLayout navKey="nav.sales" subtitleKey="sales.subtitle">
-      {error && <div className="error-message">{error}</div>}
+    <PageLayout
+      navKey="nav.sales"
+      subtitleKey="sales.subtitle"
+      headerLeft={salesQ.isFetching && !salesQ.isPending ? <Spinner size="sm" /> : undefined}
+    >
+      {shownError && <div className="error-message">{shownError}</div>}
 
-      {loading ? (
+      {salesQ.isPending ? (
         <LoadingBlock />
       ) : (
         <>

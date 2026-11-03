@@ -1,7 +1,7 @@
-import { LoadingBlock } from "../../components/loading";
-import { useEffect, useState } from "react";
+import { LoadingBlock, Spinner } from "../../components/loading";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { api } from "../../lib/api";
+import { useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
 import { getAccessToken } from "../../lib/auth/selfAuth";
 import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
@@ -16,18 +16,16 @@ interface SyncLog { id: number; sync_type: string; direction: string; record_cou
 export default function ERPPage() {
   const { t } = useTranslation();
   const { hasPermission } = usePermissions();
-  const [logs, setLogs] = useState<SyncLog[]>([]);
+  const logsQ = useApiQuery<SyncLog[]>("/erp/sync-logs");
+  const logs = logsQ.data ?? [];
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
+  const shownError = error || (logsQ.error ? (logsQ.error instanceof Error ? logsQ.error.message : t("common.fetchError")) : "");
+  const invalidate = useInvalidateApi();
   const [exporting, setExporting] = useState(false);
 
-  const load = async () => {
-    try { setLogs(await api.get<SyncLog[]>("/erp/sync-logs")); }
-    catch (e) { setError(e instanceof Error ? e.message : t("common.fetchError")); }
-    finally { setLoading(false); }
+  const load = () => {
+    void invalidate(["erp", "sync-logs"]);
   };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { load(); }, []);
 
   const exportInvoices = async () => {
     setExporting(true); setError("");
@@ -53,8 +51,9 @@ export default function ERPPage() {
     <PageLayout
       navKey="nav.dataManagement"
       subtitleKey="erp.subtitle"
+      headerLeft={logsQ.isFetching && !logsQ.isPending ? <Spinner size="sm" /> : undefined}
     >
-      {error && <div className="error-message">{error}</div>}
+      {shownError && <div className="error-message">{shownError}</div>}
       {hasPermission("erp.sync") ? (
         <ContentToolbar
           right={
@@ -65,7 +64,7 @@ export default function ERPPage() {
         />
       ) : undefined}
       <h3 style={{ marginBottom: "var(--space-3)" }}>{t("erp.syncLogs")}</h3>
-      {loading ? <LoadingBlock /> : (() => {
+      {logsQ.isPending ? <LoadingBlock /> : (() => {
         const columns: DataTableColumn<SyncLog>[] = [
           {
             key: "sync_type",
