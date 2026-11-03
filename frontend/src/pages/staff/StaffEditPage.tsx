@@ -8,13 +8,15 @@
  */
 
 import { LoadingBlock } from "../../components/loading";
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { PageLayout } from "../../components/PageLayout";
 import { Button } from "../../components/Button";
 import { Select } from "../../components/Select";
 import { api } from "../../lib/api";
+import { useApiQuery } from "../../lib/query/apiQuery";
+import { useSeededForm } from "../../lib/query/useSeededForm";
 import { hasEnglishNames } from "../../lib/staffProfile";
 import { useUiPrefs } from "../../contexts/UiPrefsContext";
 import { TextFieldControl } from "../../components/TextField";
@@ -82,41 +84,32 @@ const emptyForm: FormState = {
   ui_preferences: { ...emptyPrefs },
 };
 
+const toForm = (staff: Staff): FormState => ({
+  surname_jp: staff.surname_jp,
+  given_name_jp: staff.given_name_jp,
+  surname_kana: staff.surname_kana ?? "",
+  given_name_kana: staff.given_name_kana ?? "",
+  surname_en: staff.surname_en ?? "",
+  given_name_en: staff.given_name_en ?? "",
+  primary_email: staff.primary_email,
+  discord_user_id: staff.discord_user_id ?? "",
+  role_id: String(staff.role_id),
+  status: staff.status,
+  ui_preferences: staff.ui_preferences || { ...emptyPrefs },
+});
+
 export default function StaffEditPage() {
   const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { refresh: refreshUiPrefs, selfStaffId } = useUiPrefs();
-  const [form, setForm] = useState<FormState>(emptyForm);
-  const [roles, setRoles] = useState<Role[]>([]);
+  const staffQ = useApiQuery<Staff>(`/staff/${id}`, { enabled: !!id });
+  const rolesQ = useApiQuery<Role[]>("/roles");
+  const roles = rolesQ.data ?? [];
+  const { form, setForm, ready } = useSeededForm(`staff/${id}`, staffQ.data, toForm, emptyForm);
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (!id) return;
-    Promise.all([
-      api.get<Staff>(`/staff/${id}`),
-      api.get<Role[]>("/roles"),
-    ])
-      .then(([staff, rs]) => {
-        setForm({
-          surname_jp: staff.surname_jp,
-          given_name_jp: staff.given_name_jp,
-          surname_kana: staff.surname_kana ?? "",
-          given_name_kana: staff.given_name_kana ?? "",
-          surname_en: staff.surname_en ?? "",
-          given_name_en: staff.given_name_en ?? "",
-          primary_email: staff.primary_email,
-          discord_user_id: staff.discord_user_id ?? "",
-          role_id: String(staff.role_id),
-          status: staff.status,
-          ui_preferences: staff.ui_preferences || { ...emptyPrefs },
-        });
-        setRoles(rs);
-      })
-      .catch((e) => setError(e instanceof Error ? e.message : t("common.fetchError")))
-      .finally(() => setLoading(false));
-  }, [id, t]);
+  const readError = staffQ.error ?? rolesQ.error;
+  const shownError = error || (readError ? (readError instanceof Error ? readError.message : t("common.fetchError")) : "");
 
   const toNull = (v: string) => (v ? v : null);
 
@@ -150,10 +143,10 @@ export default function StaffEditPage() {
 
   return (
     <PageLayout navKey="nav.staff" subtitleKey="staff.subtitle">
-      {error && <div className="error-message">{error}</div>}
-      {loading ? (
+      {shownError && <div className="error-message">{shownError}</div>}
+      {staffQ.isPending || rolesQ.isPending ? (
         <LoadingBlock />
-      ) : (
+      ) : !ready ? null : (
         <form onSubmit={handleSubmit} style={{ maxWidth: "var(--modal-max-w-md)" }}>
           <div className="form-group"><label>{t("staff.surnameJp")} *</label>
             <TextFieldControl required value={form.surname_jp} onChange={(e) => setForm({ ...form, surname_jp: e.target.value })} />

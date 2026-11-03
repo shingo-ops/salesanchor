@@ -8,6 +8,7 @@ import StaffPage from '../pages/staff/StaffPage';
 import StaffEditPage from '../pages/staff/StaffEditPage';
 import { DEFAULT_UI_PREFS, UiPrefsProvider, useUiPrefs } from '../contexts/UiPrefsContext';
 import en from '../locales/en.json';
+import { queryClient } from '../lib/query/apiQuery';
 
 const mock = vi.hoisted(() => ({
   get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn(), user: { uid: 'fixture-user' },
@@ -132,6 +133,7 @@ beforeEach(async () => {
 });
 afterEach(() => {
   cleanup();
+  queryClient.clear();
   expect(fetch).not.toHaveBeenCalled();
   expect(mock.delete).not.toHaveBeenCalled();
   vi.restoreAllMocks();

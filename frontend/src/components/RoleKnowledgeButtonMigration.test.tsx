@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import RolesPage from '../pages/roles/RolesPage';
 import KnowledgeAliasesTab from '../pages/super-admin/KnowledgeAliasesTab';
 import en from '../locales/en.json';
+import { queryClient } from '../lib/query/apiQuery';
 
 const mock = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), patch: vi.fn(), put: vi.fn(), delete: vi.fn() }));
 vi.mock('../lib/api', () => ({ api: mock }));
@@ -32,7 +33,7 @@ beforeEach(async () => {
   });
   for (const method of ['post', 'patch', 'put', 'delete'] as const) mock[method].mockImplementation(() => { throw new Error(`Unexpected ${method}`); });
 });
-afterEach(() => { cleanup(); expect(fetch).not.toHaveBeenCalled(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+afterEach(() => { cleanup(); queryClient.clear(); expect(fetch).not.toHaveBeenCalled(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 async function renderRoles() { render(provider(<RolesPage />)); await screen.findAllByText(role.name); }
 function openRole(edit = false) {
@@ -91,7 +92,7 @@ describe('role Button migration contracts', () => {
     expect(palette.length).toBeGreaterThan(1);
     const existingColor = palette[0].value; const changedColor = palette[1].value;
     fireEvent.click(within(dialog).getByRole('button', { name: tr('common.cancel') }));
-    cleanup(); roleColor = existingColor; await renderRoles();
+    cleanup(); queryClient.clear(); roleColor = existingColor; await renderRoles();
 
     ({ dialog } = openRole(true));
     let checked = [...dialog.querySelectorAll<HTMLInputElement>('input[name="role-color"]')].filter(input => input.checked);
