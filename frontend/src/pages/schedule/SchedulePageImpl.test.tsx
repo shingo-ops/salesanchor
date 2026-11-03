@@ -27,8 +27,8 @@ vi.mock("../../lib/api", () => ({
           current_staff_id: 7,
           current_user_id: 101,
           owners: [
-            { staff_id: 7, user_id: 101, staff_code: "A01", name: "Owner Self", primary_email: null, color: "#111111", is_visible: true, share_mode: "self", is_self: true },
-            { staff_id: 8, user_id: 202, staff_code: "B02", name: "Owner Other", primary_email: null, color: "#222222", is_visible: false, share_mode: "view", is_self: false },
+            { staff_id: 7, user_id: 101, staff_code: "A01", name: "Owner Self", primary_email: null, color: null, is_visible: true, share_mode: "self", is_self: true },
+            { staff_id: 8, user_id: 202, staff_code: "B02", name: "Owner Other", primary_email: null, color: null, is_visible: false, share_mode: "view", is_self: false },
           ],
         };
       }
