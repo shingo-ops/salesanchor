@@ -139,5 +139,39 @@ check "T17 L2=unreadable" has L2=unreadable
 check "T17 RESULT=NG に L2= が入る" has_re '^RESULT=NG.*L2=unreadable'
 check "T17 rc=1" rc_is 1
 
+# 段2a: K1 の数え方（doc-library-check.sh の走査）
+once() { printf '%s\n' "$OUT" | grep '^K1_FILES=' | grep -o -- "$1" | wc -l | tr -d ' '; }
+HB="$T/home"; RP="$T/repo"
+
+setup; printf '  @~/kb/x.md\n' >> "$HB/.claude/CLAUDE.md"; lines 3 > "$HB/kb/x.md"; run
+check "T18 K1=28" has K1=28
+check "T18 K1_FILES に ~/kb/x.md" has_re '^K1_FILES=.*~/kb/x\.md'
+
+setup; printf '見る @~/kb/y.md を読む\n' >> "$HB/.claude/CLAUDE.md"; lines 2 > "$HB/kb/y.md"; run
+check "T19 K1=27" has K1=27
+
+setup; printf '%s\n' '```' '@~/kb/z.md' '```' '`@~/kb/w.md`' >> "$HB/.claude/CLAUDE.md"; lines 5 > "$HB/kb/z.md"; lines 5 > "$HB/kb/w.md"; run
+check "T20 K1=28" has K1=28
+check "T20 z.md が無い" lacks z.md
+check "T20 w.md が無い" lacks w.md
+check "T20 K1_MISSING=none" has K1_MISSING=none
+
+setup; printf '@./n1.md\n' >> "$HB/kb/AGENTS.md"; lines 2 > "$HB/kb/n1.md"; run
+check "T21 K1=27" has K1=27
+check "T21 K1_FILES に ~/kb/n1.md" has_re '^K1_FILES=.*~/kb/n1\.md'
+
+setup; printf '@AGENTS.md\n' >> "$RP/CLAUDE.md"; run
+check "T22 K1=25" has K1=25
+check "T22 repo/AGENTS.md が1回" [ "$(once 'repo/AGENTS.md')" = 1 ]
+
+setup; printf '@~/kb/AGENTS.md\n' >> "$HB/.claude/CLAUDE.md"; run
+check "T23 K1=25" has K1=25
+check "T23 ~/kb/AGENTS.md が1回" [ "$(once '~/kb/AGENTS.md')" = 1 ]
+
+setup; printf '%s\n' '連絡 x@example と `hitoshi@host`' >> "$HB/.claude/CLAUDE.md"; run
+check "T24 K1=25" has K1=25
+check "T24 K1_MISSING=none" has K1_MISSING=none
+check "T24 RESULT=OK" has RESULT=OK
+
 echo "PASS $PASS / FAIL $FAIL"
 [ "$FAIL" -eq 0 ]
