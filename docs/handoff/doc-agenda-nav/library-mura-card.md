@@ -23,6 +23,7 @@
 
 ## §3 確かめ（全部流して生の出力を報告する）
 
+0. 枝と HEAD を確かめる。`git fetch origin main` も流す（6 が origin/main を使うため）。クラウドでは executor-preflight.sh を使わない（preflight は手元の実行役用で、クラウドからは api.github.com に届かないため。前例: card-maintain-m3.md §3-1）。
 1. `grep -c -F -- "- 編集後、commit前に重複検査" docs/ai-agents/executor-checklist.md` が足す前に 1。1 でなければ止まる。
 2. 足したあと `git diff --stat` が「1 file changed, 2 insertions(+)」。
 3. `grep -n "/security-review" docs/ai-agents/executor-checklist.md` が1行。
