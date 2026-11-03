@@ -16,6 +16,8 @@ PO 2026-11-03 チャット「2」: 画面検査（内部）が長くかかる理
 
 ## 2. 現在地（recon.md より）
 
+- 調査: docs/handoff/visual-check-dedup/recon.md。関係する ADR: ADR-044（CI の E2E の健全性）。3 幅の扱いそのものを決めた ADR は無い（recon.md 6節）。
+
 - 3 project は frontend/playwright.config.ts:62-76。vl-mobile-390 だけ isMobile・hasTouch（:65）。
 - 16 spec（recon.md 7節の表で C の spec）は最初の goto の前に幅を自分で決める（gotoViewer: frontend/tests-e2e/visual-language/viewer-helpers.ts:137-140、gotoInventory: frontend/tests-e2e/visual-language/inventory-helpers.ts:110-112、または spec 内の setViewportSize）。project・触る扱いを読む test は 0 件（recon.md 5節）。
 - 222 test × 3 = 666 回がこの 16 spec。
