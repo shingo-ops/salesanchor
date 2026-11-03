@@ -127,10 +127,11 @@ _JOB_IDS_SQL = f"""
 """
 
 # 費用は source_ref で絞って合計する（時刻や purpose では絞らない）
+# ADR-1058 段1a-2: 成功の行（outcome='ok'）だけ。失敗の行は費用が NULL なので数えると止まる。
 _LEDGER_TOTALS_SQL = """
     SELECT COUNT(*), COUNT(*) FILTER (WHERE cost_usd IS NULL), COALESCE(SUM(cost_usd), 0)
     FROM public.llm_usage_events
-    WHERE source_ref = :source_ref
+    WHERE source_ref = :source_ref AND outcome = 'ok'
 """
 
 
