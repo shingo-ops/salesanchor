@@ -386,9 +386,6 @@ jobs:
             READ_WINDOW_TOKEN='${{ secrets.READ_WINDOW_TOKEN }}'
             CASE_AGENT_TOKEN='${{ secrets.CASE_AGENT_TOKEN }}'
             CASE_ADMIN_TOKEN='${{ secrets.CASE_ADMIN_TOKEN }}'
-            WEBPUSH_VAPID_PRIVATE_KEY='${{ secrets.WEBPUSH_VAPID_PRIVATE_KEY }}'
-            WEBPUSH_VAPID_PUBLIC_KEY='${{ secrets.WEBPUSH_VAPID_PUBLIC_KEY }}'
-            WEBPUSH_VAPID_SUBJECT='${{ secrets.WEBPUSH_VAPID_SUBJECT }}'
             COMPOSE_FILE=docker-compose.yml:docker-compose.exporters.yml
             ENV_EOF
             # 件1（docs/handoff/deploy-secrets-dollar-quote/design.md）: 値に ' か改行があると単一引用符が壊れる。
