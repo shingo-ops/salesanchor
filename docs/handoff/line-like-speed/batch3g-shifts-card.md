@@ -5,6 +5,7 @@
 - 実行役はクラウドの Sonnet。作業場所の作り方はクラウドの決まり（S scripts/agent-hooks/cloud/rules.md:15）を正とする。PR は作らない。出力には上限を付ける。待つために sleep を使わない。
 - 状態: 第 2 版（2026-11-04 設計担当 Claude Opus）。第 1 版の審査（クラウドの審査役・APPROVE）の注意と、設計担当が見つけた見え方の変化を直した: ①応答の時刻を "HH:MM" のまま返す（§4-A A3b・F9）ので test_shifts.py の今の確かめ（"09:00"）は変えない ②§3(b) の探し方を行全体の一致（grep -nxF）にした。 第 2.1 版（2026-11-04）: 第 2 版の実装の試行で ruff が test_shifts.py の今からある 2 件を指摘して止まったので、手順4 の ruff の合格の基準を、CI と同じ範囲に合わせて書き直した（手順4 の注記）。
 - 受領確認: 実装役は着手の最初の報告に「シフトの直しのカード 第 2 版を受け取った・S=17c791b71」と書く。
+- 第 3 版（2026-11-04 設計担当 Claude Opus）: 第 2.1 版の実装（1fb3916e2・PR #5092）の確認で 2 つ赤になった。①「API contract is up to date」: API の形の控え frontend/api-contract/openapi.json の作り直しを入れ忘れたのが原因（S .github/workflows/api-contract-check.yml:35・:52。CI の差分は 7 塊・+16 行・-8 行で、すべてシフトの 3 か所＝ShiftCreate・ShiftResponse・GET /api/v1/shifts の date_from・date_to）。②「dangling-route gate」: 枝が古い main の上にあり、main に後から入った /api/v1/super-admin/ai-jobs の 3 本が「消えた」と見えた（BASE 24a79aded・HEAD 1fb3916e2 のログ）。§1 #7・§2 の例外・§4-N を足した。第 3 版の作業は §4-N だけ（§4-A〜§4-D は済み）。受領の報告は「シフトの直しのカード 第 3 版を受け取った・枝の先頭=<sha>」。
 
 ## 0. 観測した事実（設計担当とクラウドの調べ担当が確かめた）
 - F1 本番の GET /api/v1/shifts?date_from&date_to が 500（design §3-4 の予定表の基準の回・design.md:274）。
@@ -26,9 +27,10 @@
 | 4 | backend/tests/test_shifts_pg.py | 無い | 新しく作る。本物の PostgreSQL で読み込み・登録を確かめる（§4-D 全文） |
 | 5 | docs/handoff/line-like-speed/batch3g-shifts-card.md | 無い | このカード（設計担当。実装役は触らない） |
 | 6 | docs/handoff/line-like-speed/design.md | §3-4-19-a まで | §3-4-20 を書き足し済み（設計担当。実装役は触らない） |
+| 7 | frontend/api-contract/openapi.json | シフトの日付・時刻が長さ付きの文字 | export_openapi の出力そのまま（§4-N。手で書かない） |
 
 ## 2. 触らない範囲
-- frontend/・migrations/・.github/workflows/・scripts/・deploy.yml は触らない。表の定義は変えない。
+- frontend/・migrations/・.github/workflows/・scripts/・deploy.yml は触らない。表の定義は変えない。例外は §1 #7 の frontend/api-contract/openapi.json だけで、§4-N の命令の出力をそのまま入れる（frontend/src は触らない。frontend/src の中でシフトの生成された型を使う所は 0 件: origin/main で `git grep -n -E "ShiftResponse|ShiftCreate|\"/api/v1/shifts" -- frontend/src` が空）。
 - shifts.py の SQL の文・権限（require_permission）・監査の記録・reset_tenant_context・削除（delete_shift）は変えない。
 - conftest.py は §4-C の 2 か所だけ。ほかの試験は変えない。
 
@@ -291,6 +293,29 @@ def test_p2_create_writes_date_and_time_columns(pg, monkeypatch):
   cd <W> && git push -u origin release/line-like-speed-batch3g-shifts
 手順8. 報告を返す。PR は作らない。1 つの発言は 600 文字以内で番号付きに分ける。手順ごとの tail の出力（生のまま）と §3(a)〜(e) の結果を書く。最後の行は DONE・BLOCKED: <理由>・NEEDS_DECISION: <理由> のどれか。
 
+## 4-N. 第 3 版の追加手順（1 手順 1 命令。<W> は作業場所の絶対パス）
+N1. 作業場所を作り、push 済みの枝の先頭に合わせる（§4-M 手順1 の最初の 4 命令と同じ）。2 行が同じでなければ BLOCKED:。
+N2. main を取り込む（rebase・reset・force は使わない。衝突したら直さずに `git merge --abort` して BLOCKED:）。
+  cd <W> && git fetch origin main
+  cd <W> && git merge --no-edit origin/main
+  cd <W> && git diff --stat HEAD~1 HEAD -- backend/app/routers/shifts.py backend/tests/test_shifts.py backend/tests/conftest.py backend/tests/test_shifts_pg.py | tail -5
+  （取り込みでこの 4 ファイルが変わっていたら BLOCKED:。openapi.json は main 側の変更が入ってよい。）
+N3. §4-M 手順2 の venv（/tmp/b3g-venv）を作り依存を入れる（無ければ）。そのあと控えを作り直す（CI と同じ命令）。
+  cd <W>/backend && ENVIRONMENT=test /tmp/b3g-venv/bin/python -m tools.export_openapi ../frontend/api-contract/openapi.json > /tmp/b3g-openapi.txt 2>&1
+  cd <W> && tail -3 /tmp/b3g-openapi.txt
+  cd <W> && git diff --numstat -- frontend/api-contract/openapi.json
+  cd <W> && git diff -- frontend/api-contract/openapi.json > /tmp/b3g-openapi.diff
+  cd <W> && grep -c "^@@" /tmp/b3g-openapi.diff
+  （期待: numstat が「16 8」、塊が 7。CI の差分と同じ。違えば commit せず BLOCKED: で /tmp/b3g-openapi.diff の全文を報告に書く。）
+  cd <W> && git status --short | head -10
+  （変わったファイルが frontend/api-contract/openapi.json だけであること。）
+N4. commit して push する（--no-verify は使わない）。
+  cd <W> && git add frontend/api-contract/openapi.json
+  cd <W> && git commit -m "chore: シフトの日付・時刻の型に合わせて API の形の控えを作り直す"
+  cd <W> && git log -4 --oneline
+  cd <W> && git push -u origin release/line-like-speed-batch3g-shifts
+N5. 報告を返す。PR は作らない。1 つの発言は 600 文字以内で番号付きに分ける。N1〜N4 の各出力（生のまま）を書く。最後の行は DONE・BLOCKED: <理由>・NEEDS_DECISION: <理由> のどれか。
+
 ## 4. GO と承認・PO の操作
 - PO の実装承認: 2026-11-03 PO「つぎを進める」（残りの遅い画面の予定表を直す流れ）。この不具合はその前提で、docs/STANDARD-WORKFLOW.md §5 の低リスクのコード（バグ修正）として設計担当が記録して進める。
 - 触るのは backend の画面の受け口 1 個と試験だけで、migrations・deploy.yml・本番 scripts を含まない（番号付き GO の要る危ない PR ではない）。マージは PO の委任に基づき設計担当（Claude Opus）が、審査役の APPROVE と確認がすべて pass の後に行う。
@@ -301,6 +326,6 @@ def test_p2_create_writes_date_and_time_columns(pg, monkeypatch):
 |---|---|---|
 | C1 | 本物の PostgreSQL で、期間で読める（P1）・登録できる（P2） | PR の CI の pytest-run が success で、そのログに test_shifts_pg.py の 2 件 passed（skipped でない） |
 | C2 | SQLite の試験 8 件・全部の試験・lint が通る | /tmp/b3g-after.txt・b3g-ruff.txt と PR の確認がすべて pass |
-| C3 | 変わったのは §1 の 6 ファイルだけ。SQL の文・権限・削除は変わっていない | gh pr diff --name-only と diff |
+| C3 | 変わったのは §1 の 7 ファイルだけ（main の取り込みを除く）。SQL の文・権限・削除は変わっていない | gh pr diff --name-only と diff |
 | C4 | マージの後、deploy が成功し、毎朝の画面の記録を手で 1 回動かすと /schedule の 5xx が 0 件 | deploy.yml の結論 success と、prod-ui-check の要約の /schedule の行（設計担当） |
 | C5 | 本番で GET /api/v1/shifts?date_from&date_to が 200 で、tenant_001 の 0 行と同じく空の一覧 | C4 の記録の 5xx 0 件と、本番の読むだけの道で tenant_001 のシフトが 0 行のまま（設計担当） |
