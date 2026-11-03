@@ -28,6 +28,7 @@
 - PR を作らない・マージしない。GO 記録を書かない。`docs/ai-agents/evidence-registry.md` に書かない。
 - `/review` を実行しない。rebase・force push をしない。
 - 全部の試験を流さない（流すのは「5. 確かめ方」に書いたものだけ。DB の試験は GitHub の CI で回る）。
+- 使い捨ての PostgreSQL・venv を作らない。`rm -rf` を使わない。`git stash` を使わない。
 - 見張り（フック）に止められたら、言い換えて同じことをしない。そこで止まる。
 
 ## 0. 着手前の確かめ（読むだけ。前提が違えば NEEDS_DECISION で止まる）
@@ -126,8 +127,11 @@
 - (e) outcome と error_code: `outcome='ok'` かつ `error_code='timeout'`、`outcome='failed'` かつ `error_code` NULL、`error_code='bad_code'` の3つが例外になる。`outcome` を書かない INSERT は `ok` になる。
 
 ## 5. 確かめ方
-- ruff は変えた試験ファイル2つだけ（`uvx ruff check` と `uvx ruff format --check`）。期待する出力は `All checks passed!` と `2 files already formatted`。
-- 作業場所に PostgreSQL があれば `pytest backend/tests/ops/test_ai_job_assignments_db.py backend/tests/ops/test_ai_cloud_views.py -k "ai_job"` を流してよい。無ければ流さず「SKIPPED のため CI に任せた」と書く。SKIPPED を合格と書かない。
+- ruff は変えた試験ファイル2つだけ。
+  - `uvx ruff check backend/tests/ops/test_ai_cloud_views.py backend/tests/ops/test_ai_job_assignments_db.py` の出力が `All checks passed!`。
+  - 新しいファイルは `uvx ruff format --check backend/tests/ops/test_ai_job_assignments_db.py` の出力が `1 file already formatted`。
+  - `backend/tests/ops/test_ai_cloud_views.py` は main の時点で整形の違いが6か所ある（2026-11-03 Opus が手元の ruff 0.17.1 で `ruff format --diff ... | grep -c '^@@'` = 6 と確かめた。CI は `ruff check app/` だけで、このファイルの整形は確かめていない）。このファイルは整形し直さない（削除行が増えるため）。`uvx ruff format --diff backend/tests/ops/test_ai_cloud_views.py | grep -c '^@@'` が 6 のまま（足した行で違いを増やしていない）ことを確かめる。6 でなければ止まる。
+- DB の試験はクラウドでは流さない。使い捨ての PostgreSQL も venv も作らない（2026-11-03 の1回目で、venv の作成が py312-guard に、後始末の `rm -rf` が見張りに止められた）。報告には「DB の試験はクラウドでは流さず CI に任せた」と書く。流していない試験を合格と書かない。
 - `python3 scripts/check-migration-value-writes.py repo` をもう一度流し、3-2 の直しの後も通ること（終了コード 0。出力は全文を報告に写す。落ちたら止まり BLOCKED: で返す）。
 - `git diff origin/main...HEAD --name-only` が次の7つだけであること（ほかがあれば止まる）: `migrations/20261103_120000_create_ai_job_assignments.sql`・`scripts/run_all_migrations.sh`・`migrations/20261024_100300_create_ai_cloud_views.sql`・`backend/tests/ops/test_ai_cloud_views.py`・`backend/tests/ops/test_ai_job_assignments_db.py`・`scripts/migration-guard/reference-allowlist.tsv`・`.github/workflows/migration-guard.yml`（このカードと同じ commit に入っている docs/ の文書は除いて数える）。
 - `git diff origin/main...HEAD --numstat` の削除の数（2列目）が、`migrations/20261024_100300_create_ai_cloud_views.sql` と `backend/tests/ops/test_ai_cloud_views.py` は各1（N の行だけ）、`scripts/migration-guard/reference-allowlist.tsv` と `.github/workflows/migration-guard.yml` は各1（直した1行だけ）、ほかは0であること。違えば、そのファイルの削除行を `git diff origin/main...HEAD -- migrations/20261024_100300_create_ai_cloud_views.sql backend/tests/ops/test_ai_cloud_views.py scripts/migration-guard/reference-allowlist.tsv .github/workflows/migration-guard.yml | grep '^-' | head -20` で出して止まる。
