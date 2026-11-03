@@ -96,3 +96,19 @@ recon: docs/handoff/schedule-gcal-connect/recon.md ／ 決定の記録: ADR-1057
 - 金型は Button のみ。手書きの style と色の直書きは無い。
 - 成功条件はすべて試験か読み取りで○×が付く。
 - 未解決: Google 側の戻り先 URL の登録（recon 3）。押せば分かる。失敗しても壊れるものは無い。
+
+## 13. 追補（2026-11-03）: つなぐときの失敗を直す
+目的: K2（PO がつないで接続の行が 1 行できる）を通す。根拠は recon §4 にある。
+
+- 変更: `backend/app/services/google_calendar.py:141` の直前に `flow.autogenerate_code_verifier = False` を足す。今のコメントは PKCE 不使用の理由に合わせて直す。直し方とコメントは先例 `backend/app/services/google_drive_oauth.py:183-188` と同じにする。
+- 選んだ理由: 社内に同じ部品の同じ失敗を直した先例があり、本番で Google が受け付けた実績がある（recon §4）。もう一つの案は、verifier を作って Redis の state の中身に入れておき、交換のときに渡すやり方である。こちらは state の形と試験を変える必要があるうえ、ドライブ側とやり方が分かれてしまう。この接続は client_secret を使うので、今回は先例にそろえる。
+- 触らない: exchange_code・state の保存・同期方式の既定値・画面。
+- 試験: `backend/tests/test_google_calendar.py` の `TestGetAuthUrl` に 1 件足す。`authorization_url` を呼ぶ時点で `autogenerate_code_verifier` が False、`code_verifier` が None であることを確かめる。
+
+| 基準 | 検証方法 |
+|---|---|
+| K8: 認可 URL を作るときに PKCE を自分で作らない | 上の試験が通る（CI backend） |
+| K2: PO がつなぐと接続の行が 1 行でき、つないだ人が PO になる | PO が押した後、本番を読み取りで `SELECT tenant_id, connected_by_user_id, sync_mode FROM public.tenant_google_calendar_config` |
+
+- 戻し方: PR を revert する。DB の形は変わらない。
+- 審査: Opus の自己審査で APPROVE。先例と同じ 1 行の変更なので、別審査はマージ前の reviewer（opus）で取る。
