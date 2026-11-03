@@ -45,6 +45,7 @@ import type { AnalysisRulesSidebarKey } from "./AnalysisRulesSidebar";
 import type { SupplierQualitySummary } from "../../../features/tcg-analysis-review/supplierQuality";
 import { reviewReasonLabel } from "../../../features/tcg-analysis-review/reviewReasonLabel";
 import { LlmUsageSection } from "./LlmUsageSection";
+import { AiJobsSection } from "./AiJobsSection";
 import "./AnalysisDashboardPanel.css";
 import { LoadingBlock } from "../../../components/loading";
 
@@ -52,7 +53,7 @@ import { LoadingBlock } from "../../../components/loading";
 // 型定義
 // ──────────────────────────────────────────────────────────────────────────────
 
-type DashboardTab = "import" | "extraction" | "analysis" | "distribution" | "usage";
+type DashboardTab = "import" | "extraction" | "analysis" | "distribution" | "usage" | "ai";
 
 interface ImportResultResponse {
   status: "imported" | "already_imported";
@@ -473,6 +474,7 @@ export function AnalysisDashboardPanel({ onNavigate }: AnalysisDashboardPanelPro
     { key: "analysis", label: t("analysisRules.dashboard.tabAnalysis") },
     { key: "distribution", label: t("analysisRules.dashboard.tabDistribution") },
     { key: "usage", label: t("analysisRules.dashboard.tabUsage") },
+    { key: "ai", label: t("analysisRules.dashboard.tabAi") },
   ];
 
   const periodOptions: SelectOption[] = [
@@ -588,6 +590,7 @@ export function AnalysisDashboardPanel({ onNavigate }: AnalysisDashboardPanelPro
 
       {/* ── Usage Tab ────────────────────────────────────────────────────── */}
       {activeTab === "usage" && <LlmUsageSection days={trendDays} t={t} />}
+      {activeTab === "ai" && <AiJobsSection t={t} />}
     </div>
   );
 }
