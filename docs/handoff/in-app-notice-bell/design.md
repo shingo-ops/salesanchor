@@ -63,7 +63,27 @@
 - 新しい宛先: 担当者の候補（有効な人）が 1 人以上 → **担当者だけ**（管理者は足さない）。0 人 → **オーナー**（`roles.system_key = 'owner'` のみ。`admin` は入れない）
 - ⑥（担当者が別々に 2 人以上）: **その担当者の全員**。Opus がこう読み、PO に「違えば教えてください」と伝えた（2026-11-03）。PO の明示の確認はまだ
 - 編集ページ: オーナーが編集できる。PO 回答「1」（2026-11-03）: **担当者がいないときに受け取る人をオーナーが選べる。最初（未設定）はオーナー**。担当者がいるときに一緒に受け取る人・種類ごとの切り替えは対象外。設定の置き場所・API・画面・K は recon-3 のあと §4-改訂2 で決める
-- K6 はこの改訂に合わせて書き換える。実装済みの宛先関数（`backend/app/services/user_notices.py`）と試験は改訂に合わせて直す（Sonnet に依頼）
+### 4-改訂2（PO 回答「1」2026-11-03 で編集の権限が決まり確定）
+
+調べ（Opus が手元で読み取りのみ。クラウドの調べ担当は2回とも結果を出さずに終了したため。生出力 /tmp/CC報告ファイル/in-app-notice-bell/recon3-local-{1,2,3}.txt）:
+- 通知の設定ページは既にある: `frontend/src/pages/notifications/NotificationsPage.tsx`（管理センターの「通知」、`frontend/src/pages/management-center/ManagementCenterPage.tsx:85` で `notifications.manage` を持つ人だけに出す）。API は `backend/app/routers/notifications.py:67-143`、編集は `require_permission("notifications.manage")`
+- owner は権限キーを全部自動で持つ（`backend/app/auth/system_roles.py` `compute_permission_keys`）。admin は運営用で会社の人には見せない（同 `TENANT_HIDDEN_SYSTEM_KEYS`）。他の役割にも owner が `notifications.manage` を付けられる
+- 複数を選ぶ金型 `frontend/src/components/MultiSelect.tsx`（stories・test あり）
+- 利用者の一覧 API `GET /staff`（`backend/app/routers/staff.py:532`）
+
+案:
+- 置き場所: 新しいページは作らず、既存の通知の設定ページに1区画「担当者がいないときに受け取る人」を足す（設定を1か所に集める）
+- 保存: 各社スキーマに新しい表 `{tenant}.notice_fallback_recipients (user_id INTEGER PRIMARY KEY, updated_by INTEGER, updated_at TIMESTAMPTZ DEFAULT now())`。行が0件 = 未設定 = オーナー全員。public.tenant_settings に列を足さない（宛先の元データ・知らせの表と同じ各社スキーマに揃える）
+- API: `GET /api/v1/notice-fallback-recipients`（今の設定と「未設定ならオーナー」の印）、`PUT`（user_id の一覧で丸ごと置き換え。同じ会社・有効な人以外は 422）
+- 宛先を決めるとき: 設定の人のうち有効な人が0人になっていたら、オーナーへ戻す（知らせが消えないように）
+- 編集の権限: 既存の `notifications.manage` に揃える（PO「1」。GET も PUT も `require_permission("notifications.manage")`。画面の区画も `hasPermission("notifications.manage")` のときだけ出す）
+- 候補の一覧: `GET /staff` は使わない（`staff.view` が要り、`discord_user_id` も返すため。`backend/app/routers/staff.py:532-533`、`backend/app/schemas/staff.py:157`）。`GET /api/v1/notice-fallback-recipients` が `{ selected: [user_id], defaulted_to_owner: bool, candidates: [{ user_id, name }] }` を返す。candidates は同じ会社・有効な `public.users` で、名前は既存の書き方 `COALESCE(NULLIF(u.full_name, ''), u.username)`（`backend/app/services/viewer_message_templates.py:212`）をそのまま使う。`public.users.full_name` は担当者登録で書かれる（`backend/app/routers/staff.py:100-107`）。有効の判定は `public.users.is_active`。Discord の id・メールは返さない
+- 画面: `MultiSelect`（layout="popover"）。文言は全部 t()（`notices.fallback.title` / `.help` / `.defaultOwner` / `.clear` / `.count` / `.saved`、ja/en 同じキー）。保存ボタンは既存の `Button`。色・余白はトークンのみ
+- 宛先の関数（実装済み `backend/app/services/user_notices.py`）を直す: 担当者が1人以上 → 担当者だけ（⑥の別々の担当者は全員）。0人 → 設定の人（有効な人だけ）。設定が0件か、有効な人が0人 → `system_key='owner'` の有効な人全員。admin は足さない。Discord の名前呼びも同じ宛先
+- 表: 各社スキーマ `{tenant}.notice_fallback_recipients`。まだどこにも適用されていない `migrations/20261103_150000_create_user_notices.sql` に足す（同じ DO $$ 走査）。新しい会社の作成経路（`backend/app/services/tenant.py` `_TENANT_TABLES_SQL`）にも足す。AI 閲覧用の view には足さない
+- 試験に足す: 宛先（担当者あり→担当者だけ／担当者なし・設定なし→オーナー／設定あり→設定の人／設定の人が全員無効→オーナー／admin は入らない）、API（`notifications.manage` が無い人は 403、別会社・無効な人の id は 422、candidates に Discord の id とメールが無い）、e2e（区画が出る・選んで保存）
+
+- K6 はこの改訂で次に置き換える: 「担当者がいれば担当者だけ。いなければ通知の設定ページで選んだ人。選んでいない・選んだ人が全員無効ならオーナー」。K9 を足す: 「`notifications.manage` を持つ人だけが、通知の設定ページで受け取る人を選んで保存でき、保存後の次の知らせからその人に届く」（検証: backend 試験＋e2e＋本番で PO 目視）実装済みの宛先関数（`backend/app/services/user_notices.py`）と試験は改訂に合わせて直す（Sonnet に依頼）
 
 ## 5. 表
 
