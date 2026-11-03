@@ -1,0 +1,116 @@
+name: prod-device-accept
+
+# 本番の受入（ADR-1055 段C）。手動だけで動く。書き込みを伴う（依頼を作る・合言葉を作り直す・機械を取り消す）。
+# target=accept は device-accept.spec.ts（C1）、target=k7 は device-k7.spec.ts（C5・PO の許可を待つ）。
+# 毎朝の点検（prod-ui-check）と同じ concurrency で重ならない。実行は日本時間 12:00〜翌 5:00 の間に限る。
+# 失敗の知らせは送らない（人が手で流して結果を見る）。artifact は上げない。
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "流す試験: accept＝新しい機械の受入 / k7＝管理者の許可（PO が管理画面で許可する）"
+        type: choice
+        options:
+          - accept
+          - k7
+        default: accept
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: prod-ui-check
+  cancel-in-progress: false
+
+jobs:
+  accept:
+    runs-on: ubuntu-24.04
+    # k7 は PO の許可を最大 25 分待つ
+    timeout-minutes: 55
+    steps:
+      - name: 配備中の確認
+        id: gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          count_active() {
+            total=0
+            for st in in_progress queued waiting; do
+              c=$(gh run list --repo "${{ github.repository }}" --workflow deploy.yml --status "$st" --json databaseId --jq length)
+              total=$((total + ${c:-0}))
+            done
+            echo "$total"
+          }
+          n=$(count_active)
+          if [ "${n:-0}" -ge 1 ]; then
+            sleep 600
+            n=$(count_active)
+          fi
+          if [ "${n:-0}" -ge 1 ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "配備中のため見送り" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout
+        if: steps.gate.outputs.skip != 'true'
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        if: steps.gate.outputs.skip != 'true'
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        if: steps.gate.outputs.skip != 'true'
+        working-directory: frontend
+        run: npm ci
+
+      - name: Get Playwright version
+        if: steps.gate.outputs.skip != 'true'
+        id: pw
+        working-directory: frontend
+        run: |
+          PW_VERSION=$(node -p "require('@playwright/test/package.json').version")
+          echo "version=$PW_VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        if: steps.gate.outputs.skip != 'true'
+        uses: actions/cache@v4
+        id: pw-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
+
+      - name: Install Playwright browsers
+        if: steps.gate.outputs.skip != 'true' && steps.pw-cache.outputs.cache-hit != 'true'
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Install system deps (chromium)
+        if: steps.gate.outputs.skip != 'true' && steps.pw-cache.outputs.cache-hit == 'true'
+        working-directory: frontend
+        run: npx playwright install-deps chromium
+
+      - name: 本番の受入を実行
+        if: steps.gate.outputs.skip != 'true'
+        env:
+          CI: "true"
+          NODE_PATH: ${{ github.workspace }}/frontend/node_modules
+          SMOKE_E2E_EMAIL: ${{ secrets.SMOKE_E2E_EMAIL }}
+          SMOKE_E2E_PASSWORD: ${{ secrets.SMOKE_E2E_PASSWORD }}
+          SMOKE_E2E_DEVICE_TOKEN: ${{ secrets.SMOKE_E2E_DEVICE_TOKEN }}
+          TARGET: ${{ inputs.target }}
+        run: |
+          if [ "$TARGET" = "k7" ]; then
+            spec=device-k7.spec.ts
+          else
+            spec=device-accept.spec.ts
+          fi
+          ./frontend/node_modules/.bin/playwright test --config tests/prod-check/device-accept.config.ts "$spec"
