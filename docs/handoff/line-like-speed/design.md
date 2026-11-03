@@ -283,6 +283,22 @@ PO の言葉: 「LINEみたいな使い心地は出来る？」（意味は「�
 - 基準: prod-ui-check run 41591179240（測った時刻 2026-11-03 15:42:42 JST・main b492b3f）。9 行とも 403 0 件・5xx 0 件。K1（戻った時の秒）は /channels 0.24・/management-center/channels 0.20・/roles 0.33・/management-center/roles 0.36・/staff 0.23・/management-center/staff 0.24・management-center→staff 0.22・/staff/:id/edit 0.19・/orders 0.19 秒（9 行とも K1 の合格線 0.1 秒を超える）。この回の K2 の最大は /inventory の 1.3 秒、2 秒を超えた画面は 0 件。
 - 生の数: /tmp/CC報告ファイル/batch3d-accept/run41591179240-batch3d-rows.txt（設計担当の手元。リポジトリには入れない）。
 
+#### 3-4-18-a. 段 3 の 5 回目の本番の受入（2026-11-03 Claude Opus が確かめた）
+- B1・B2 は合格。PR #5077 の必須の確認はすべて pass または skipping（失敗 0・待ち 0）。審査役（Claude Opus）が実装 67b846855 と、main を取り込んだ HEAD 3add24309 に APPROVE。
+- B3 は合格。merge 069190790 の変更は 13 ファイル（909 行足し・238 行消し）で、カード §1 の 13 ファイルと同じ。migrations/・backend/・scripts/・.github/ は 0。
+- B4 は合格（本線 a0d58d3a7 で確かめた）。`new QueryClient` は frontend/src/lib/query/apiQuery.ts:23 の 1 行だけ（試験のファイルも含めて数えた）。`staleTime:` は 0 行。persist は 0 行。
+- B7 は合格。PR #5077 は 2026-11-03 18:22 JST に main へ入った（merge 069190790）。deploy.yml run 41610451127 は 18:29 JST に success。設計担当の Chrome（21:50 JST ごろ・ログイン済み）で本番のチャネル・ロール・スタッフ・受注を開き、4 画面とも中身が出た。ブラウザの誤りの記録は 0 件。
+- B5 は 9 行のうち 8 行が合格。/channels の 1 行だけ K1 が合格線を超えた。
+  - 1 回目 run 41611528904（18:44:01 JST・main e29f9e1）。測っている間に別のマージの deploy が 2 回終わった（09:34:44Z・09:37:10Z）。/channels の K1 が 0.22 秒、ほかの 8 行は 0.01〜0.02 秒。
+  - 2 回目 run 41614984342（18:59:48 JST・main 1eefb57・測定中に deploy なし）。K1 は /channels 0.24・/management-center/channels 0.02・/roles 0.03・/management-center/roles 0.03・/staff 0.01・/management-center/staff 0.02・management-center→staff 0.02・/staff/:id/edit 0.01・/orders 0.01 秒。K2 は 9 行とも 0.2〜0.5 秒。9 行とも 403 と 5xx は 0 件。
+  - 全体: いちばん遅い画面は対象外の /inventory の 1.4 秒（基準 1.3 秒・2 秒以内）。2 秒を超えた画面は 0 件。403 は基準の回と同じ見る権限の無い 6 画面だけで、403 7 件と止めた送信 3 件の内訳は基準の回と同じ。/schedule の 5xx 1 件も基準の回と同じ（対象外）。
+  - /channels が落ちた訳（設計の入れ忘れ）: チャネルの画面は Discord の設定（GET /admin/discord-config）を、写しの置き場を通さずに開くたびに読んでいる（frontend/src/pages/channels/ChannelsPage.tsx の useEffect で api.get）。カードはこの読みを対象に入れていなかった。戻った時はこの返事を待つ間、Discord の欄が「未接続」の形で出て、返事が来ると「接続済み」に描き直す。だから K1 の「A の画面の部品が描かれた」に届くのが返事の後になる。
+  - 直し方: 段 3 の 6 回目に、この読みを写しの置き場（useApiQuery）へ移すことを足す。6 回目はもともと Discord の設定の画面を含む。
+  - まだ分からないこと: /management-center/channels は同じ部品を使うのに 0.02 秒だった。理由はまだ確かめていない。6 回目の受入で /channels と並べて確かめる。
+  - 生の行の抜き書きは設計担当の手元の /tmp/CC報告ファイル/batch3e-accept/ の run41611528904-batch3e-rows.txt・run41614984342-batch3e-rows.txt（リポジトリには入れない）。
+- B6 は合格。本番の読むだけの道（ADR-1024）で tenant 001 を数えると、接続中の Facebook ページ（ai_ro.tenant_001__tenant_meta_config で is_active）0 件・ロール（tenant_001__roles）8 件・スタッフ（tenant_001__staff）2 件・受注（tenant_001__orders）0 件（21:45 JST）。設計担当の Chrome で見た画面は、ロール 8 個・スタッフ 2 人・受注 0 件・「接続済みチャンネルがありません」で、DB と同じ。
+- K5 は本番で 2 人のログインでは確かめていない（本番でパスワードを打たない決まり）。段 3 の 1 回目の Q2・Q3 の試験と、写しの名前に利用者が入る作りで確かめた。
+
 ### 3-5. 測り方（|基準|検証方法|）
 | 基準 | 検証方法 |
 |---|---|
