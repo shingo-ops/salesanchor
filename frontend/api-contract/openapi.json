@@ -31370,8 +31370,7 @@
       "ShiftCreate": {
         "properties": {
           "end_time": {
-            "maxLength": 8,
-            "minLength": 5,
+            "format": "time",
             "title": "End Time",
             "type": "string"
           },
@@ -31388,8 +31387,7 @@
             "title": "Notes"
           },
           "shift_date": {
-            "maxLength": 10,
-            "minLength": 10,
+            "format": "date",
             "title": "Shift Date",
             "type": "string"
           },
@@ -31400,8 +31398,7 @@
             "type": "string"
           },
           "start_time": {
-            "maxLength": 8,
-            "minLength": 5,
+            "format": "time",
             "title": "Start Time",
             "type": "string"
           },
@@ -31423,8 +31420,16 @@
       "ShiftResponse": {
         "properties": {
           "created_at": {
-            "title": "Created At",
-            "type": "string"
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
           },
           "end_time": {
             "title": "End Time",
@@ -31446,6 +31451,7 @@
             "title": "Notes"
           },
           "shift_date": {
+            "format": "date",
             "title": "Shift Date",
             "type": "string"
           },
@@ -56975,6 +56981,7 @@
             "schema": {
               "anyOf": [
                 {
+                  "format": "date",
                   "type": "string"
                 },
                 {
@@ -56991,6 +56998,7 @@
             "schema": {
               "anyOf": [
                 {
+                  "format": "date",
                   "type": "string"
                 },
                 {
