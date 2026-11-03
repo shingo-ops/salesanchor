@@ -176,7 +176,8 @@ Google へ送る側（`create_event`・`update_event`・`delete_event`）、接�
 - `ScheduleDraft` に `visibleToStaff: boolean` を足す。`createDraft`: item があれば `item.calendarType === "shared"`、無ければ `true`。
 - 分類の SelectControl の onChange: 新規作成（item 無し）のときだけ、`personal` を選んだら `visibleToStaff: false`、ほかを選んだら `true` にする（今の「分類が個人なら個人」の振る舞いを新規作成で保つ）。
 - 「終日」の Toggle と同じ形（`schedule-field schedule-field--inline` の div・`Toggle`・`aria-label`）で、「社員にも見せる」の Toggle を終日の直後に1つ足す。金型は既に import 済みの `frontend/src/components/Toggle.tsx`。新しい CSS・色の直書きは足さない。
-- 出す条件: 新規作成のときは常に。編集のときは `popover.item.ownerUserId === 今のログインの user id` のときだけ。今のログインの user id は既存の `ScheduleRosterState.currentUserId` を `SchedulePopover` に新しい prop で渡す。
+- 出す条件: 新規作成のときは常に。編集のときは `currentOwnerUserId != null && popover.item.ownerUserId === currentOwnerUserId` のときだけ（両方 null で一致してしまうのを防ぐ）。今のログインの user id は既存の `currentOwnerUserId`（`frontend/src/pages/schedule/SchedulePageImpl.tsx:863-866`。`/calendar/owners` の `isSelf` から取る。編集してよいかの判定 `canEditSelected`（同 :1109-1111）も同じ値を使っている）を `SchedulePopover` に新しい prop で渡す。
+  - 訂正（2026-11-03・実装担当の停止報告を受けて Opus が実物で確認）: 初版は `ScheduleRosterState.currentUserId` を渡すと書いた。`ScheduleRosterState` は型の宣言（:80）だけで、値を持つ変数がどこにも無い。新しい取得の口は作らず、上の既存の値を使う。
 - `saveEvent`: `calendar_type: draft.visibleToStaff ? "shared" : "personal"` にする（`draft.category === "personal"` からの決め方をやめる）。編集で Toggle を出さない（持ち主でない）ときは `calendar_type` を送らない。
 
 ### 13-4 文言（ADR-027）
@@ -195,7 +196,7 @@ Google へ送る処理、取り込み（`upsert_from_google`・`google_webhook.p
 
 ### 13-7 想定される分岐（止まる条件）
 
-- `SchedulePopover` に今のログインの user id を渡す道が `ScheduleRosterState` 以外にしか無い → 止めて報告（新しい取得の口は作らない）。
+- `SchedulePopover` に今のログインの user id を渡す道が `currentOwnerUserId` 以外にしか無い → 止めて報告（新しい取得の口は作らない）。
 - 既存の試験が「他人の personal を返す」前提で書かれていて落ちる → 試験を直さず止めて報告。
 - `Toggle` の props が `checked`・`onCheckedChange`・`aria-label` で足りない → 止めて報告。
 
