@@ -310,7 +310,7 @@ PO の言葉: 「LINEみたいな使い心地は出来る？」（意味は「�
 - B1・B2 は合格。PR #5087 の確認は 47 件 pass・8 件 skipping・失敗 0（必須の確認はすべて pass）。審査役（Claude Opus）が実装 d39d856dd と、main を取り込んだ HEAD b295a09e9 の両方に APPROVE。main の取り込みは、必須の確認 guard-authoring/evaluation が「枝の元が main の最新でない」で error になったため（scripts/run-guard-evaluation.js:25 の merge-base --is-ancestor）。
 - B3 は合格。PR の変更は 9 ファイルで、カード §1 と同じ。書く道の path とフォームの欄は S と同じ（審査役が git diff -w で確かめた）。migrations/・backend/・scripts/・.github/ は 0。
 - B4 は合格。`new QueryClient` は apiQuery.ts:23 の 1 行・`staleTime:` 0 行・persist 0 行・`/admin/discord-config` を api.get で直に読む所は ChannelsPage.tsx:211（cache.fetch の中）と触らない範囲の InboxKartePanel.tsx:115 の 2 行。
-- B7 は合格。PR #5087 は 2026-11-03 23:18 JST に main へ入った（merge 85cc2e528）。deploy.yml run 41652377760 は 23:25 JST に success。
+- B7 は合格。PR #5087 は 2026-11-03 23:18 JST に main へ入った（merge 85cc2e528）。deploy.yml run 41652377760 は 23:25 JST に success。設計担当の Chrome（23:56 JST ごろ・ログイン済み）で本番の会社の情報・会社の方針・Discord の設定・チャネルを開き、4 画面とも中身が出た（Discord の設定とチャネルの画面はともに接続済み・サーバー ID 末尾 7393）。誤りの記録を取り始めてから 4 画面を開き直し、ブラウザの誤りの記録は 4 画面とも 0 件。TanStack・Query を含む記録も 0 件。
 - B5 は 8 行すべて合格。run 41653642044（測った日時 23:39:43 JST・main 9159ad5。#5087 の後に入ったのは台帳の自動 DONE #5089 だけ・測定前に deploy 済み）。
   - K1（基準 run 41614984342 → 今回）: /admin/discord-config 0.25→0.01・/management-center/discord-config 0.24→0.01・/admin/tenant-policy 0.21→0.01・/management-center/tenant-policy 0.21→0.01・/admin/tenant-profile 0.21→0.01・/management-center/tenant-profile 0.22→0.01・/admin→/admin/tenant-profile 0.21→0.01・/channels 0.24→0.01 秒。/management-center/channels は 0.02→0.01 秒で 0.1 秒以下のまま。
   - K2 は 9 行とも 0.2〜0.3 秒。9 行とも 403 と 5xx は 0 件。
