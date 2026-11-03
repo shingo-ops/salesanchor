@@ -1,6 +1,6 @@
 -- ADR-1052 段1: 相談係用の伏せたビュー ai_cloud を作る（冪等・1 トランザクション）。
 -- 一覧には載せない。run_all_migrations.sh の EXIT trap が、毎回の実行の最後に流す（ai_ro と同じ形）。
--- 1) 分類表 ai_cloud_meta.column_class を空にして下の 1057 行を入れ直す（このファイルが正本。行の足し引きはこの SQL の変更で行う）。
+-- 1) 分類表 ai_cloud_meta.column_class を空にして下の 1064 行を入れ直す（このファイルが正本。行の足し引きはこの SQL の変更で行う）。
 -- 2) ai_cloud を作り直す。3) ai_cloud_meta.build_views() で全ビューを作り、build_log に 1 行書く。
 -- 4) ai_reader_cloud に ai_cloud の USAGE と SELECT だけを付ける。
 -- 分類表の元: docs/handoff/cloud-case-ai/stage1-column-class.tsv（表ごと・class ごとにまとめて unnest で入れる）。
@@ -19,6 +19,11 @@ FROM (VALUES
   ('public','accuracy_gold_versions',ARRAY['file_sha256'],'mask',''),
   ('public','accuracy_gold_versions',ARRAY['gold_version'],'mask','値の決まりが値の一覧でなく文字の形だけのため伏せる（初期は最小）'),
   ('public','accuracy_gold_versions',ARRAY['note'],'mask',''),
+  ('public','ai_job_assignment_history',ARRAY['job_key'],'allow','値の決まり ai_job_assignment_history_job_key_check で値が限られる'),
+  ('public','ai_job_assignments',ARRAY['job_key'],'allow','値の決まり ai_job_assignments_job_key_check で値が限られる'),
+  ('public','ai_job_choices',ARRAY['job_key'],'allow','値の決まり ai_job_choices_job_key_check で値が限られる'),
+  ('public','ai_job_choices',ARRAY['model'],'mask','値の決まりが無く自由に入る列のため伏せる（初期は最小）'),
+  ('public','ai_job_choices',ARRAY['provider'],'allow','値の決まり ai_job_choices_provider_check で値が限られる'),
   ('public','analysis_error_report_events',ARRAY['actor'],'mask',''),
   ('public','analysis_error_report_events',ARRAY['kind'],'allow','値の決まり analysis_error_report_events_kind_check で値が限られる'),
   ('public','analysis_error_report_events',ARRAY['payload'],'mask',''),
@@ -139,6 +144,8 @@ FROM (VALUES
   ('public','line_units',ARRAY['name_en'],'allow','【名前を含む】共用マスタ（運営が入れる一覧）。単位の一覧の英語名'),
   ('public','line_units',ARRAY['name_ja'],'allow','【名前を含む】共用マスタ（運営が入れる一覧）。単位の一覧の日本語名'),
   ('public','link_templates',ARRAY['channel','notes','required_ids','url_pattern'],'mask',''),
+  ('public','llm_usage_events',ARRAY['error_code'],'allow','値の決まり llm_usage_events_error_code_check で値が限られる'),
+  ('public','llm_usage_events',ARRAY['outcome'],'allow','値の決まり llm_usage_events_outcome_check で値が限られる'),
   ('public','llm_usage_events',ARRAY['model'],'mask','値の決まりが無く自由に入る列のため伏せる（初期は最小）'),
   ('public','llm_usage_events',ARRAY['purpose'],'allow','値の決まり llm_usage_events_purpose_check で値が限られる'),
   ('public','llm_usage_events',ARRAY['sdk'],'allow','値の決まり llm_usage_events_sdk_check で値が限られる'),
