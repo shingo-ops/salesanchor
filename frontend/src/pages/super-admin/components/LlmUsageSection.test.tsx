@@ -164,6 +164,16 @@ it("falls back to the raw purpose code for an unknown purpose", async () => {
   await screen.findByText("some_new_purpose");
 });
 
+it("shows the localized label for secretary_intent", async () => {
+  vi.mocked(api.get).mockResolvedValue({
+    ...response,
+    by_purpose: [{ ...response.by_purpose[0], purpose: "secretary_intent" }],
+  });
+  view();
+  expect((await screen.findAllByText("Chat Secretary")).length).toBeGreaterThan(0);
+  expect(screen.queryByText("secretary_intent")).toBeNull();
+});
+
 it("shows computed_total_tokens (not the raw total_tokens) in the colTotal column", async () => {
   view();
   await screen.findByText("LINE Extraction");

@@ -8,7 +8,7 @@
 | 方針の決定者 | Shingo（PO）。設計: Claude Opus（PO の委任に基づく。ADR-1003） |
 | 改める | Amends ADR-1024（クラウドの相談係の道は ai_cloud。ai_unmask_owner の BYPASSRLS）、Amends ADR-1042（相談係専用の窓口・case-api・値を返す専用容器）、Amends ADR-1039（Decision 6・7・12）。どれも本 ADR が Accepted になったときに効く（2026-10-30 に Accepted） |
 | 関連 | ADR-1024（AI の本番 DB 読み取りの道）、ADR-1042（クラウドの読む窓口）、ADR-1039（Discord の不具合受付）、ADR-1012（24時間保守）、ADR-1015（開発フロー）、ADR-136（危険 PR の GO）、ADR-1003（GO の委任） |
-| 設計 | docs/handoff/cloud-case-ai/design.md（公開版 第4.3版）、docs/handoff/cloud-case-ai/recon.md。試しの記録と、まだ塞いでいない道の中身は公開リポジトリに入れず、PO の非公開の記録に置く |
+| 設計 | docs/handoff/cloud-case-ai/design.md（公開版 第4.8版）、docs/handoff/cloud-case-ai/recon.md。試しの記録と、まだ塞いでいない道の中身は公開リポジトリに入れず、PO の非公開の記録に置く |
 
 ---
 
@@ -16,14 +16,14 @@
 
 1. Discord の投稿は、保守を自動で始める合図としてだけ使う。相談係 AI から外へ情報を出すことは禁止する（PO 決定）。
 2. 受付は agent-console。許可リストの人の投稿だけを受ける。本文の電話・メール・郵便番号の形を置き換え、添付は渡さない。backend に件を作り、件の札を受け取ってから、routine の /fire を呼ぶ。呼ぶ前に記録に「呼ぶ」と書き、同じ投稿では二度呼ばない。
-3. 相談係 AI は Anthropic のクラウドで、専用の環境に 1 件 1 台で動く。ネットワークは None。届く先は network secret のホスト case-api.salesanchor.jp だけ。鍵は `Authorization: Bearer <CASE_AGENT_TOKEN>` の 1 つで、環境変数には置かない。
+3. 相談係 AI は Anthropic のクラウドで、専用の環境に 1 件 1 台で動く。ネットワークは None。鍵を付けて届く先は network secret のホスト case-api.salesanchor.jp だけ。ただし公式資料では、None でも GitHub の中継（付けた専用リポジトリだけ）・有効にしたコネクタ（0 個）・Anthropic API には届く（design.md U11。2026-11-03 に確かめて ×。受け入れるリスクに残す）。鍵は `Authorization: Bearer <CASE_AGENT_TOKEN>` の 1 つで、環境変数には置かない。
 4. 相談係 AI が読むのは新しいスキーマ ai_cloud のビューだけ。型で判定し、決め打ちの型（数・真偽・日時・uuid・enum）だけをそのまま出す。それ以外の型は長さと文字の種類だけの形で出す。json は長さとキー数、配列は要素数だけ。秘密列はビューから外す。列ごとの例外は分類表 ai_cloud_meta.column_class に理由付きで書く。
 5. 読む道は相談係専用の容器 ai-reader-cloud-http とロール ai_reader_cloud。ai_reader_cloud は ai_reader と同じ属性で、ai_cloud の USAGE と SELECT だけを持つ。今の窓口 ai-reader-http・ai_reader・ai_ro・Mac の AI は変えない。
 6. 中身が要るときだけ、相談係 AI が列（最大 5）・行（最大 20）・理由（20〜1000 字）を申請する。backend の機械の上限（件ごと 2 回・拒否表と秘密列・15 分・読み 1 回）を通った申請だけを、道具も MCP も設定も持たない判断役 Opus が JSON で判断する。agent-console のコードが上限を確かめてから記録する。
 7. 値を返す口は backend に置かず、専用容器 ai-unmask-http に置く。容器は DB 関数 ops_case.unmask_fetch を呼ぶ。関数は SECURITY DEFINER で、件の札・許可・期限・読みの回数・拒否の列と表を確かめ、読みの記録を同じ取引で書く。関数の持ち主 ai_unmask_owner は NOLOGIN。
 8. 申請・許可・読み・報告・点検の記録は新しいスキーマ ops_case に置く。値そのものは記録しない。
 9. 相談係 AI が届く道は case-api.salesanchor.jp の 3 つだけ（読む窓口・件の報告と申請・値を返す口）。ほかの道と管理の口は 404。今の 443 の server ブロック全部で、TLS の名前が case-api なら 421 を返す。
-10. 専用の環境につなぐのは専用の非公開リポジトリ 1 つ。コネクタは 0 個にし、`.claude/settings.json` で WebSearch・WebFetch・Artifact・`mcp__*` を拒否する。リポジトリはアーカイブ（読み取り専用）にする。
+10. 専用の環境につなぐのは専用の非公開リポジトリ 1 つ。コネクタは 0 個にする。使える道具は routine の builtin_tools で Bash・Read・Glob・Grep の 4 つだけにする（守りの 1 枚目。段3の T0b で確かめた）。`.claude/settings.json` で WebSearch・WebFetch・Artifact・`mcp__*`・PushNotification・Skill を拒否する（2 枚目）。リポジトリはアーカイブ（読み取り専用）にする。
 11. 相談係 AI は型付きの報告を 1 回送って終わる。報告を受けた agent-console は、件のセッションを囲い（ADR-1039 Decision 6）の中で開く。修理は今までどおり PR と審査と GO を通す。
 12. 毎週月曜 09:30 に、判断役とは別に起動する点検役 Opus が記録を点検する。おかしな所だけを PO に Discord で知らせ、知らせに値は書かない。
 13. 始めは PO だけが投稿できる。合格の基準 K1〜K6 が全部 ○ になったら、Opus の判断で誰でも投稿できるように開く（PO 決定の範囲）。
@@ -80,9 +80,11 @@
 ## 受け入れるリスク
 
 - 投稿本文に書かれた人名・住所は、形で見分けられないため、置き換わらずに相談係 AI へ渡る（K3 の注記）。
-- 箱の中の GitHub への道に、まだ塞いでいない道がある（中身は PO の非公開の記録）。今の守りは 1 枚と数える。段3に進む条件 U9 で確かめ、1 つでも外れたらこの方式を止めて再設計する。
-- Claude GitHub App の導入先が今は全部のリポジトリで、届く範囲が広い。段3の前に、指定したリポジトリだけに絞る（U10。絞ること自体と一覧は PO の判断待ち。PO が絞らないと決めたら段3に進まず再設計する）。
-- 持ち主のスマホへの通知（PushNotification）と claude.ai の skill を拒否できるかは、段3の試験 T0b で確かめる。拒否できなければ指示書で禁じ、ここに残るリスクとして書き足す。
+- 箱の中の GitHub への道は、段3に進む条件 U9 で確かめた（2026-11-03 ○。中身は PO の非公開の記録）。外れたらこの方式を止めて再設計する。
+- Claude GitHub App の導入先は、段3の前に組織と個人とも「指定したリポジトリだけ」に絞った（U10 ○・2026-11-03。一覧は PO が決めた）。ただし絞っても、公開リポジトリは読めるまま残る（GitHub の画面の注記）。API で読めたのは組織の範囲と権限だけで、組織の選ばれたリポジトリの一覧と個人の範囲は画面で読んだ（個人は API が 403）。
+- 持ち主のスマホへの通知（PushNotification）と skill の呼び出しの道具は、段3の試験 T0b で deny によって消えた（2026-11-03）。skill を一覧・検索する道具は "Skill" の deny だけでは残った。名前を足した deny の試しでは消えた。本番と同じ 6 個の deny と builtin_tools の 4 つの組み合わせで消えるかは、有効にする前の T0c で確かめる。
+- 命令（Bash）からの通信は、道具の絞りでは止まらない。中継の 403・アーカイブ・U9 の守りで止める。宛先によっては Claude Code の自動判定だけで止まった項目がある（守り 1 枚。中身は PO の非公開の記録）。None のときに届く先は design.md U11 で確かめた（2026-11-03 ×）。公式資料では、None でも GitHub の中継・有効にしたコネクタ・network secret のホスト・Anthropic API には届く。相談係では、GitHub の中継は付けた専用リポジトリ 1 つ（アーカイブ）、コネクタは 0 個、secret のホストは case-api.salesanchor.jp だけにする。Anthropic API は Claude Code が動くための道で塞げない（資料は、VM の外へデータを出しうると書く）。命令（Bash）から GitHub の中継と Anthropic API へ直接届くかは、まだ確かめていない。
+- builtin_tools は CI で見られない。routine を作り直すと消えるおそれがある。作り直しの手順と週次点検で保つ（design.md §4-4・§4-6）。本番の組み合わせは有効にする前に T0c で確かめる。
 - クラウドのセッションの保存は 30 日（PO が学習への利用をオフにする設定。実施はまだ確かめていない。U5）。
 
 ## 守り方

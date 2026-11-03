@@ -1,6 +1,6 @@
 # 図書館化: 本とリポジトリの手順書の重なりによるムラを無くす（設計の草案 第2版）
 
-作成: 2026-11-03 Opus（設計担当）。状態: **設計案作成済み・Fable 評価 REVISE を反映済み・再審査前**。置き場は PO 承認済み（2026-11-03 PO 原文「1」＝§4-1 の P1）。
+作成: 2026-11-03 Opus（設計担当）。状態: **設計審査済み（§10 で APPROVE。Fable の評価は2回とも REVISE で、APPROVE は Opus の自己審査。独立した第二者の審査ではない）・PO 承認済み・合流済み**。アプリ側の2行は PR #5078（2026-11-03 日本時間 18:09）。個人の決まりの側（M1〜M5）は同じ日に PO が台本を流し、doc-library-check L2=0・週次点検 RESULT=OK を Opus が確かめた。置き場は PO 承認済み（2026-11-03 PO 原文「1」＝§4-1 の P1）。
 対象ADR: ADR-1040。現在地: [recon.md](./recon.md)（docs/handoff/doc-agenda-nav/recon.md）。
 根拠: [library-errors.md](./library-errors.md)（練習の組の記録）、[library-design.md](./library-design.md) §4-1・§7、[library-ledger.md](./library-ledger.md)、[library-tasks.md](./library-tasks.md)。
 このリポジトリは公開されている。~/.claude の決まりの本文は書かない。ファイル名・行番号・数・要点だけを書く。生出力と Fable の評価全文は「~/CC報告ファイル-keep/doc-library-20261102/」に置く（mura-eval-fable.md）。

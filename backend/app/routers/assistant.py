@@ -3,7 +3,7 @@
 利用者の文を容器 secretary-agent（DB を持たない）に渡し、頼みの形（請求書／予定／聞き返し）に
 書き換えた下書きを返す。ここでは何も作らない（請求書・予定を作るのは画面が今の口を本人のログインで呼ぶとき）。
 
-順番（厳守）: ①守りを通す ②db.commit() ③容器を呼ぶ ④会社の文脈を張り直す ⑤名前探し ⑥返す。
+順番（厳守）: ①守りを通す・担当表を読む ②db.commit() ③容器を呼ぶ・使用の記録に1行 ④会社の文脈を張り直す ⑤名前探し ⑥返す。
 DB の取引を開いたまま AI を待たない。ログは 1 回 1 行（text と答えの中身は書かない）。
 """
 
@@ -41,6 +41,8 @@ from app.schemas.assistant import (
     UnknownDraft,
     parse_iso,
 )
+from app.services.ai_assignment import get_ai_assignment
+from app.services.llm_budget import UsageCounts, record_usage_isolated
 from app.services.secretary_resolve import resolve_names
 
 logger = logging.getLogger(__name__)
@@ -55,6 +57,11 @@ _JST = ZoneInfo("Asia/Tokyo")
 _feature_secretary_chat = require_feature("secretary_chat")
 _perm_customers_view = require_permission("customers.view")
 _perm_invoices_create = require_permission("invoices.create")
+
+# ADR-1058 秘1: 担当表の provider → 使用の記録の sdk。ここに無い provider は容器が無いので not_ready（codex は段3で足す）。
+_SDK_BY_PROVIDER = {"claude": "claude-code"}
+# 使用の記録の error_code にそのまま使うログの code（design.md §4-2-1 の秘書の読み替え）。ほかは "other"。
+_LEDGER_ERROR_CODES = frozenset({"auth_failed", "timeout", "unreadable", "tool_used", "not_ready", "busy"})
 
 
 def _fail(status_code: int, code: str, log_code: str | None = None) -> HTTPException:
@@ -74,14 +81,31 @@ def _log(user_id: int, tenant_id: int, started: float, code: str, cost: float | 
     )
 
 
-async def _call_agent(text: str) -> dict:
-    """容器を呼ぶ。失敗は (HTTPException, ログの code) に直す。"""
+def _ledger_error_code(log_code: str) -> str:
+    return log_code if log_code in _LEDGER_ERROR_CODES else "other"
+
+
+async def _record_ledger(tenant_id: int, model: str, sdk: str, outcome: str, error_code: str | None) -> None:
+    """秘書の1回の頼みを使用の記録に1行（別の取引ですぐ commit。失敗は record_usage_isolated がログに出して飲み込む）。"""
+    await record_usage_isolated(
+        purpose="secretary_intent",
+        model=model,
+        sdk=sdk,
+        counts=UsageCounts(),
+        outcome=outcome,
+        error_code=error_code,
+        tenant_id=tenant_id,
+    )
+
+
+async def _call_agent(text: str, model: str) -> dict:
+    """容器を呼ぶ（model は担当表から読んだ値）。失敗は (HTTPException, ログの code) に直す。"""
     now = datetime.now(_JST).isoformat(timespec="seconds")
     try:
         async with httpx.AsyncClient(timeout=AGENT_TIMEOUT_SECONDS) as client:
             resp = await client.post(
                 f"{SECRETARY_AGENT_URL}/intent",
-                json={"text": text, "now": now},
+                json={"text": text, "now": now, "model": model},
             )
     except httpx.TimeoutException:
         raise _fail(504, "timeout")
@@ -135,13 +159,25 @@ async def post_assistant_message(
     started = time.monotonic()
     user_id = current_user.id
 
+    # ① 担当を読む（commit の前。後に読むと AI を待つ間 DB の取引が開いたままになる。design.md §5-3）
+    # 読めない時は容器を呼ばず、台帳にも書かない（sdk と model が分からないため）。
+    try:
+        assignment = await get_ai_assignment(db, "secretary_intent")
+    except Exception:  # noqa: BLE001
+        _log(user_id, tenant_id, started, "not_ready", None)
+        raise _fail(503, "not_ready") from None
+    sdk = _SDK_BY_PROVIDER.get(assignment.provider)
+    if sdk is None:
+        _log(user_id, tenant_id, started, "not_ready", None)
+        raise _fail(503, "not_ready")
+
     # ② 取引を閉じる（AI を待つ間 DB を開いたままにしない）
     await db.commit()
 
     # ③ 容器を呼ぶ
     cost: float | None = None
     try:
-        raw = await _call_agent(body.text)
+        raw = await _call_agent(body.text, assignment.model)
         try:
             envelope = AgentEnvelope.model_validate(raw)
         except ValidationError:
@@ -162,8 +198,13 @@ async def post_assistant_message(
             except (ValueError, TypeError):
                 raise _fail(502, "unreadable")
     except HTTPException as exc:
-        _log(user_id, tenant_id, started, getattr(exc, "_log_code", "unreadable"), cost)
+        log_code = getattr(exc, "_log_code", "unreadable")
+        _log(user_id, tenant_id, started, log_code, cost)
+        await _record_ledger(tenant_id, assignment.model, sdk, "failed", _ledger_error_code(log_code))
         raise
+
+    # AI の呼び出しが成功した（容器が 200・形と日時の検査を通った）。この後の失敗でも ok のまま（design.md §4-2-3）
+    await _record_ledger(tenant_id, assignment.model, sdk, "ok", None)
 
     # ④ 会社の文脈を張り直す
     await reset_tenant_context(db, tenant_id)
