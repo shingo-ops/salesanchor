@@ -4,6 +4,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { api } from "../../lib/api";
 import { usePermissions } from "../../hooks/usePermissions";
 import i18n from "../../i18n";
+import { queryClient } from "../../lib/query/apiQuery";
 import DiscordConfigPage from "./DiscordConfigPage";
 
 vi.mock("../../lib/api", () => ({
@@ -41,7 +42,7 @@ beforeEach(async () => {
   } as unknown as ReturnType<typeof usePermissions>);
   mockGets(connectedConfig, filledTicket);
 });
-afterEach(() => cleanup());
+afterEach(() => { cleanup(); queryClient.clear(); });
 
 it("shows connected state with read-only server ID and a Change button", async () => {
   view();

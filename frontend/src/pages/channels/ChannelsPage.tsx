@@ -23,7 +23,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ApiError, api } from "../../lib/api";
-import { useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
+import { useApiCache, useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
 import ConfirmModal from "../../components/ConfirmModal";
 import { usePermissions } from "../../hooks/usePermissions";
 import { STATUS_ICONS } from "../../constants/icons";
@@ -87,6 +87,13 @@ function daysUntil(iso: string | null): number | null {
   return Math.floor(diffMs / (1000 * 60 * 60 * 24));
 }
 
+/** Discord の設定（/admin/discord-config）のうち、この画面が使う欄。写しは Discord の設定の画面と 1 つ */
+type DiscordGuildConfig = {
+  guild_id: string | null;
+  connected_at: string | null;
+  connected_by_staff_name: string | null;
+};
+
 export default function ChannelsPage() {
   const { t } = useTranslation();
   const { hasPermission } = usePermissions();
@@ -99,11 +106,6 @@ export default function ChannelsPage() {
   const [disconnectTarget, setDisconnectTarget] = useState<Channel | null>(null);
   const [disconnecting, setDisconnecting] = useState(false);
   const [banner, setBanner] = useState<Banner>(null);
-  const [discordConfig, setDiscordConfig] = useState<{
-    guild_id: string | null;
-    connected_at: string | null;
-    connected_by_staff_name: string | null;
-  } | null>(null);
   const [discordConnecting, setDiscordConnecting] = useState(false);
   const [discordDisconnecting, setDiscordDisconnecting] = useState(false);
   const [discordDisconnectOpen, setDiscordDisconnectOpen] = useState(false);
@@ -112,6 +114,9 @@ export default function ChannelsPage() {
 
   const canManage = hasPermission("channels.manage");
   const canViewDiscord = hasPermission("tenant.profile.view");
+  const discordQ = useApiQuery<DiscordGuildConfig>("/admin/discord-config", { enabled: canViewDiscord });
+  const discordConfig = discordQ.data ?? null;
+  const cache = useApiCache();
 
   // ADR-041: 旧スコープ（business_management 未付与）の接続が 1 つでもあれば再認証を促す
   const reauthRequired = channels.some((c) => c.is_active && c.requires_reauth);
@@ -126,9 +131,7 @@ export default function ChannelsPage() {
     if (discordStatus) {
       if (discordStatus === "connected") {
         setBanner({ type: "success", text: t("channels.discordConnectedSuccess") });
-        api.get<{ guild_id: string | null; connected_at: string | null; connected_by_staff_name: string | null }>("/admin/discord-config")
-          .then((d) => setDiscordConfig(d))
-          .catch(() => {});
+        // 接続の結果は、開いた時の useApiQuery の読みで出る
       } else {
         setBanner({ type: "error", text: t("channels.discordConnectError") });
       }
@@ -172,14 +175,6 @@ export default function ChannelsPage() {
   const invalidate = useInvalidateApi();
   const loadChannels = () => invalidate(["meta", "channels"]);
 
-  // ----- Discord 設定取得 -----
-  useEffect(() => {
-    if (!canViewDiscord) return;
-    api.get<{ guild_id: string | null; connected_at: string | null; connected_by_staff_name: string | null }>("/admin/discord-config")
-      .then((d) => setDiscordConfig(d))
-      .catch(() => { /* サイレント: Discord未設定テナントは表示しない */ });
-  }, [canViewDiscord]);
-
   // ----- Discord focus リスナー / タイマーのアンマウントクリーンアップ -----
   useEffect(() => {
     return () => {
@@ -213,10 +208,9 @@ export default function ChannelsPage() {
       // window.open 直後の誤発火を避けるため 1s 遅らせて登録
       // guild_id が取得できるまでリスナーを保持する
       const handleFocus = () => {
-        api.get<{ guild_id: string | null; connected_at: string | null; connected_by_staff_name: string | null }>("/admin/discord-config")
+        cache.fetch("/admin/discord-config", () => api.get<DiscordGuildConfig>("/admin/discord-config"))
           .then((d) => {
-            setDiscordConfig(d);
-            if (d.guild_id) {
+            if (d?.guild_id) {
               setBanner({ type: "success", text: t("channels.discordConnectedSuccess") });
               if (focusListenerRef.current) {
                 window.removeEventListener("focus", focusListenerRef.current);
@@ -240,7 +234,10 @@ export default function ChannelsPage() {
     setDiscordDisconnecting(true);
     try {
       await api.delete("/admin/discord-config");
-      setDiscordConfig(null);
+      cache.update<DiscordGuildConfig>(["admin", "discord-config"], (old) => ({
+        ...old, guild_id: null, connected_at: null, connected_by_staff_name: null,
+      }));
+      void invalidate(["admin", "discord-config"]);
       setDiscordDisconnectOpen(false);
       setBanner({ type: "success", text: t("channels.discordDisconnectedSuccess") });
     } catch (e) {

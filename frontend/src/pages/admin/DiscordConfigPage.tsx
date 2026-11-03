@@ -8,9 +8,11 @@
  *   tenant.profile.view → 閲覧
  *   tenant.profile.edit → 保存・実行
  */
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
+import { useApiCache, useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
+import { useSeededForm } from "../../lib/query/useSeededForm";
 import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
 import { Button } from "../../components/Button";
@@ -88,34 +90,78 @@ const KNOWN_STEPS = new Set(STEP_GROUPS.flatMap((g) => g.steps));
 type SaveSource = "welcome" | "details";
 type TicketMessage = { source: SaveSource; kind: "saved" | "error"; text: string } | null;
 
+const CONFIG_PATH = "/admin/discord-config";
+const TICKET_PATH = "/admin/discord-ticket-config";
+
+/** チケット設定のフォーム（欄の名前は今の画面の値の名前のまま） */
+interface TicketForm {
+  ticketCategoryId: string;
+  ticketButtonChannelId: string;
+  staffRoleId: string;
+  welcomeTemplate: string;
+  smallChannelId: string;
+  largeChannelId: string;
+  smallRoleName: string;
+  largeRoleName: string;
+}
+
+const toGuildId = (data: DiscordConfig): string => data.guild_id ?? "";
+const toTicketForm = (data: DiscordTicketConfig): TicketForm => ({
+  ticketCategoryId: data.ticket_category_id ?? "",
+  ticketButtonChannelId: data.ticket_button_channel_id ?? "",
+  staffRoleId: data.staff_role_id ?? "",
+  welcomeTemplate: data.welcome_template,
+  smallChannelId: data.small_channel_id ?? "",
+  largeChannelId: data.large_channel_id ?? "",
+  smallRoleName: data.small_role_name ?? "Member",
+  largeRoleName: data.large_role_name ?? "Partner",
+});
+
 export default function DiscordConfigPage() {
   const { t } = useTranslation();
   const { hasPermission, loading: permsLoading } = usePermissions();
   const canEdit = hasPermission("tenant.profile.edit");
 
-  const [config, setConfig] = useState<DiscordConfig | null>(null);
-  const [ticketConfig, setTicketConfig] = useState<DiscordTicketConfig | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState("");
+  const configQ = useApiQuery<DiscordConfig>(CONFIG_PATH);
+  const ticketQ = useApiQuery<DiscordTicketConfig>(TICKET_PATH);
+  const config = configQ.data ?? null;
+  const ticketConfig = ticketQ.data ?? null;
+  const loadError = configQ.error || ticketQ.error ? t("discordConfig.loadError") : "";
+  const cache = useApiCache();
+  const invalidate = useInvalidateApi();
 
   // サーバー接続
-  const [guildId, setGuildId] = useState("");
+  const { form: guildId, setForm: setGuildId, ready: guildReady } = useSeededForm(
+    CONFIG_PATH, configQ.data, toGuildId, "",
+  );
   const [editingGuild, setEditingGuild] = useState(false);
   const [guildSaving, setGuildSaving] = useState(false);
   const [guildError, setGuildError] = useState("");
   const [guildSaved, setGuildSaved] = useState(false);
 
   // チケット設定
-  const [ticketCategoryId, setTicketCategoryId] = useState("");
-  const [ticketButtonChannelId, setTicketButtonChannelId] = useState("");
-  const [staffRoleId, setStaffRoleId] = useState("");
-  const [welcomeTemplate, setWelcomeTemplate] = useState(() =>
-    t("discordTicketConfig.welcomeTemplateDefault"),
+  const emptyTicketForm: TicketForm = {
+    ticketCategoryId: "", ticketButtonChannelId: "", staffRoleId: "",
+    welcomeTemplate: t("discordTicketConfig.welcomeTemplateDefault"),
+    smallChannelId: "", largeChannelId: "", smallRoleName: "Member", largeRoleName: "Partner",
+  };
+  const { form: ticketForm, setForm: setTicketForm, ready: ticketReady } = useSeededForm(
+    TICKET_PATH, ticketQ.data, toTicketForm, emptyTicketForm,
   );
-  const [smallChannelId, setSmallChannelId] = useState("");
-  const [largeChannelId, setLargeChannelId] = useState("");
-  const [smallRoleName, setSmallRoleName] = useState("Member");
-  const [largeRoleName, setLargeRoleName] = useState("Partner");
+  const {
+    ticketCategoryId, ticketButtonChannelId, staffRoleId, welcomeTemplate,
+    smallChannelId, largeChannelId, smallRoleName, largeRoleName,
+  } = ticketForm;
+  const setTicketField = (field: keyof TicketForm) => (value: string) =>
+    setTicketForm((prev) => ({ ...prev, [field]: value }));
+  const setTicketCategoryId = setTicketField("ticketCategoryId");
+  const setTicketButtonChannelId = setTicketField("ticketButtonChannelId");
+  const setStaffRoleId = setTicketField("staffRoleId");
+  const setWelcomeTemplate = setTicketField("welcomeTemplate");
+  const setSmallChannelId = setTicketField("smallChannelId");
+  const setLargeChannelId = setTicketField("largeChannelId");
+  const setSmallRoleName = setTicketField("smallRoleName");
+  const setLargeRoleName = setTicketField("largeRoleName");
   const [ticketSavingSource, setTicketSavingSource] = useState<SaveSource | null>(null);
   const [ticketMessage, setTicketMessage] = useState<TicketMessage>(null);
   const [showDetails, setShowDetails] = useState(false);
@@ -128,43 +174,15 @@ export default function DiscordConfigPage() {
   const [autoSetupError, setAutoSetupError] = useState("");
   const [autoSetupResult, setAutoSetupResult] = useState<DiscordAutoSetupResponse | null>(null);
 
-  const applyTicketConfig = useCallback((data: DiscordTicketConfig) => {
-    setTicketConfig(data);
-    setTicketCategoryId(data.ticket_category_id ?? "");
-    setTicketButtonChannelId(data.ticket_button_channel_id ?? "");
-    setStaffRoleId(data.staff_role_id ?? "");
-    setWelcomeTemplate(data.welcome_template);
-    setSmallChannelId(data.small_channel_id ?? "");
-    setLargeChannelId(data.large_channel_id ?? "");
-    setSmallRoleName(data.small_role_name ?? "Member");
-    setLargeRoleName(data.large_role_name ?? "Partner");
-  }, []);
-
-  /** サーバーの最新値を取り直して画面に反映する（初期表示・自動セットアップ後で共用） */
-  const fetchAll = useCallback(async () => {
+  /** サーバーの最新値を取り直して画面に反映する（自動セットアップの後。開いた時は useApiQuery が読む） */
+  const fetchAll = async () => {
     const [data, ticketData] = await Promise.all([
-      api.get<DiscordConfig>("/admin/discord-config"),
-      api.get<DiscordTicketConfig>("/admin/discord-ticket-config"),
+      cache.fetch(CONFIG_PATH, () => api.get<DiscordConfig>(CONFIG_PATH)),
+      cache.fetch(TICKET_PATH, () => api.get<DiscordTicketConfig>(TICKET_PATH)),
     ]);
-    setConfig(data);
-    setGuildId(data.guild_id ?? "");
-    applyTicketConfig(ticketData);
-  }, [applyTicketConfig]);
-
-  useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      setLoadError("");
-      try {
-        await fetchAll();
-      } catch {
-        setLoadError(t("discordConfig.loadError"));
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
-  }, [fetchAll, t]);
+    if (data) setGuildId(toGuildId(data));
+    if (ticketData) setTicketForm(toTicketForm(ticketData));
+  };
 
   const savedGuildId = config?.guild_id ?? "";
   const isConnected = savedGuildId !== "";
@@ -180,8 +198,10 @@ export default function DiscordConfigPage() {
     setGuildSaved(false);
     try {
       const updated = await api.put<DiscordConfig>("/admin/discord-config", { guild_id: guildId.trim() });
-      setConfig(updated);
-      setGuildId(updated.guild_id ?? "");
+      // 保存の返事は guild_id だけが本物（ほかの欄は既定値）なので、写しは guild_id だけ書き換えて取り直す
+      cache.update<DiscordConfig>(["admin", "discord-config"], (old) => ({ ...old, guild_id: updated.guild_id }));
+      void invalidate(["admin", "discord-config"]);
+      setGuildId(toGuildId(updated));
       setEditingGuild(false);
       setGuildSaved(true);
       setTimeout(() => setGuildSaved(false), FEEDBACK_MS);
@@ -235,7 +255,8 @@ export default function DiscordConfigPage() {
         small_role_name: smallRoleName.trim(),
         large_role_name: largeRoleName.trim(),
       });
-      applyTicketConfig(updated);
+      cache.write(TICKET_PATH, updated);
+      setTicketForm(toTicketForm(updated));
       setTicketMessage({ source, kind: "saved", text: t("discordTicketConfig.saved") });
       setTimeout(() => setTicketMessage(null), FEEDBACK_MS);
     } catch {
@@ -335,10 +356,21 @@ export default function DiscordConfigPage() {
     );
   };
 
-  if (permsLoading || loading) {
+  if (permsLoading || configQ.isPending || ticketQ.isPending) {
     return (
       <PageLayout navKey="nav.discordConfig">
         <LoadingBlock />
+      </PageLayout>
+    );
+  }
+
+  // 読めなかった時は、空の値で上書きしないようにフォームを出さず、誤りの文だけを出す
+  if (!guildReady || !ticketReady) {
+    return (
+      <PageLayout navKey="nav.discordConfig">
+        <div className="dc-page">
+          {loadError && <Badge variant="danger">{loadError}</Badge>}
+        </div>
       </PageLayout>
     );
   }

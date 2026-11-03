@@ -317,7 +317,7 @@ function makeCompactCurrencyFormatter(language: string, currency: "JPY" | "USD")
 }
 
 /** fetched_at（UTC ISO文字列）を JST 表示に整形する（他ページと同じ Asia/Tokyo 固定の既存パターンを踏襲）。 */
-function formatFetchedAtJst(isoString: string, language: string): string {
+export function formatFetchedAtJst(isoString: string, language: string): string {
   return new Date(isoString).toLocaleString(language, {
     timeZone: "Asia/Tokyo",
     year: "numeric",

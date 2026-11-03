@@ -101,6 +101,7 @@ from app.routers import (
     staff,
     staff_reports,
     status_master,  # ステータスマスタ テナント用
+    super_admin_ai_jobs,  # ADR-1058 段2: AI の担当の画面
     super_admin_aliases,
     super_admin_condition_defs,  # コンディション定義マスタ中央 admin
     super_admin_conditions,  # 状態マスタ CRUD（中央 admin）
@@ -624,6 +625,10 @@ app.include_router(
 # Sprint 4 (F4): LLM 予算管理 (public.tenant_llm_budgets) 中央 admin
 app.include_router(
     super_admin_llm_budget.router, prefix="/api/v1", tags=["super-admin"],
+)
+# ADR-1058 段2: AI の担当（public.ai_job_assignments）の画面の API
+app.include_router(
+    super_admin_ai_jobs.router, prefix="/api/v1", tags=["super-admin"],
 )
 # テナント admin 用 inventory visibility は get_current_tenant 必須
 app.include_router(
