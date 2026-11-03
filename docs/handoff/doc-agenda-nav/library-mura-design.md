@@ -74,7 +74,7 @@ PO 2026-11-03:「無理なく無駄とムラを無くしてくれ」。ムラ＝
   - `- PR 本文の「概要」は、ブランチの全部の commit（最後の1つだけでなく）を読んで書く。試験の計画（流した試験とその結果、まだ流していない試験は TODO）も書く。`
 - 危険ファイル（§2 の「正本・統治ファイル」）として扱う。GO は ADR-1003 の委任で Opus が出す。
 
-~/.claude（PO が `!` で流す台本。場所は「~/CC報告ファイル-keep/doc-library-20261102/mura-run.sh」。文は目印の文字列で1か所だけ置き換え、目印が1か所でなければ何も書かずに止まる。目印は行全体（字下げから行末まで）とする。development-workflow.md の `./git-workflow.md` は :14 と :48 の2か所にあるため、語だけを目印にしない。書く前に写しを同じフォルダの mura/ に取る）:
+~/.claude（PO が `!` で流す台本。場所は「~/CC報告ファイル-keep/doc-library-20261102/mura-run.sh」。文は目印の文字列で1か所だけ置き換え、目印が1か所でなければ何も書かずに止まる。目印は行全体（字下げから行末まで）とする。~/.claude/rules/common/development-workflow.md の「./git-workflow.md」へのリンクは :14 と :48 の2か所にあるため、語だけを目印にしない。書く前に写しを同じフォルダの mura/ に取る）:
 
 | # | ファイル | 変更 |
 |---|---|---|
@@ -118,7 +118,7 @@ PR の手順（本 R-22 の5項目）を、M5 と executor-checklist のあと�
 | 安全の点検の決まりが ~/.claude で1か所 | `grep -rn "security-review" ~/.claude/CLAUDE.md ~/.claude/books ~/.claude/rules`（.bak 除く）の当たりが CLAUDE.md:7（別の決まり）と code-review.md の2行（:52 台・:78 の表）だけ。本は0 |
 | リポジトリの手順書で1か所 | F10 と同じ範囲 `git grep -n -i -E "security-review|security review" origin/main -- AGENTS.md CLAUDE.md docs/ai-agents docs/STANDARD-WORKFLOW.md docs/INDEX.md .claude/agents` の当たりが executor-checklist.md の1行だけ（docs/handoff・docs/adr・docs/runbooks の記録は数えない） |
 | PR の抜け2項目がリポジトリにある | executor-checklist.md に「全部の commit」「試験の計画」の語が各1回 |
-| 切れたリンクが0 | development-workflow.md に `./git-workflow.md` が0件。books/git-workflow.md に `./development-workflow.md` が0件 |
+| 切れたリンクが0 | ~/.claude/rules/common/development-workflow.md に「](./git-workflow.md)」が0件。~/.claude/books/git-workflow.md に「](./development-workflow.md)」が0件（固定文字列で数える） |
 | 目録の読み方が崩れない | doc-library-check.sh で L3_MATCH=yes（M5 のあと） |
 | 毎回読む量が増えない | `bash scripts/dev/doc-entry-weekly-check.sh` で K1≤200・K9≤6.5k・RESULT=OK |
 | L2・L3 が崩れない | `bash scripts/dev/doc-library-check.sh` で L2=0・L2_UNTAGGED=0・L3_MATCH=yes |
@@ -136,9 +136,16 @@ PR の手順（本 R-22 の5項目）を、M5 と executor-checklist のあと�
 - リポジトリ: revert の PR。
 - ~/.claude: 写しのフォルダの元のファイルを戻す（PO の `!` 台本に戻す手順を入れる）。
 
-## 9. 外部事例
+## 9. 外部・過去事例の参照と我々への応用
 
-不要。公式の読み込みの規則（F4・F8）と、このリポジトリでの実測（F1・F2・F10）で足りるため。
+外部事例は使わない。公式の読み込みの規則（F4・F8）と、このリポジトリでの実測（F1・F2・F10）で足りるため。
+過去事例は1つ借りる。クラウドの担当には手元用の作業前点検を流させない形（card-maintain-m3.md §3-1）。本設計のカード §3-0 に入れた（第1回の実行は入れ忘れで止まった。2026-11-03）。
+
+## 9-2. 維持の仕組み
+
+- リポジトリ側: 決まりは docs/ai-agents/executor-checklist.md の1か所だけ（F11「ここ以外に複製しない」）。重なりは §6 の git grep で数える。
+- ~/.claude 側: 本の重なりは doc-library-check（L2）と毎週の点検（doc-entry-weekly-check）が数える。0 でなければ週次の知らせで分かる。
+- 練習の題 B5（§4-2 C4）で、手順書を読んだ答えにも security-review が入るかを測る。次の測り直しは 2027-02-01。
 
 ## 10. 審査の記録
 
