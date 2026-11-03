@@ -1,6 +1,6 @@
 # design — Google カレンダー → アプリの取り込み（見せ方はアプリで1件ずつ選ぶ）
 
-状態: 設計案（KGI は PO 承認待ち）。現在地: docs/handoff/schedule-gcal-import/recon.md（以下 recon）。決定記録の案: docs/adr/ADR-1059-google-calendar-import-owner-private.md。
+状態: KGI PO 承認済み（§12）・便1 実装カード発行済み（§13）。現在地: docs/handoff/schedule-gcal-import/recon.md（以下 recon）。決定記録の案: docs/adr/ADR-1059-google-calendar-import-owner-private.md。
 基準: origin/main（2026-11-03 fetch 後）。本番は読み取りだけで確かめた（§2）。
 
 ## 0. PO の決定（チャット・2026-11-03）
@@ -143,3 +143,62 @@ Google へ送る側（`create_event`・`update_event`・`delete_event`）、接�
 - 便2: 審査中に出た未確認 2 点は本番の読み取りで解消した。①終日の保存の形（§4 便2-2。本番に終日 0 件）②RLS（接続の表は強制あり・知らせの表は無し。§4 便2-5 に会社ごとの文脈の張り方を書いた）。記録: scratchpad/gi/prod-allday-rls.txt。
 - `singleEvents=True` と `syncToken` の併用は公式の差分の例に載っている（§6）。
 - 未解決: なし。
+
+## 12. PO 承認（チャット・2026-11-03）
+
+- §3 の KGI（K1〜K9）と §7 の弊害（今の「個人」予定 2 件が本人以外から消える）を示し、PO は「1」= この判定で作り始める、を選んだ。便1 から実装に入る承認を含む。
+- 便2 は migration を含むため、PR ごとに GO の手順（ADR-136・委任 ADR-1003）を通す。
+
+## 13. 実装カード 便1 — 「自分だけ」を本当に守る
+
+ブランチ: `release/schedule-gcal-import-bin1`（`origin/release/schedule-gcal-import-design` から作る。設計文書も同じ PR に入る）。DB・migrations・deploy.yml・本番 scripts は触らない。
+
+用語: 予定の持ち主 = `COALESCE(user_id, created_by_user_id)`（画面の `ownerUserId` と同じ: `frontend/src/pages/schedule/schedule-utils.ts` の normalizeEvent）。
+
+### 13-1 backend/app/services/calendar_service.py
+
+- `list_events`: 既存の `filters` は後で `ce.` を前に付けて連結している（`where = " AND ".join(f"ce.{f}" for f in filters)`）。かっこ付きの条件をこの配列に入れると `ce.(` になり壊れる。連結の後に、別に `AND (ce.calendar_type = 'shared' OR ce.user_id = :me)` を必ず足す。`user_id` が None なら `AND ce.calendar_type = 'shared'`。`type` の分岐は今どおり残す。docstring も直す。
+- `update_event`: `field_map` に `calendar_type` を足す（値は呼び元で検査済み）。payload に `user_id` があれば `user_id = :user_id` も入れる（13-2 で使う）。
+
+### 13-2 backend/app/routers/calendar.py
+
+- `UpdateEventBody` に `calendar_type: Optional[str] = None` を足す。
+- `update_event` と `delete_event` の権限確認: SELECT を `created_by_user_id, calendar_type, user_id` にする。
+  - `calendar_type == 'personal'` で、持ち主が自分でないなら 404（管理者でも。メッセージは今の「イベントが見つかりません」）。
+  - それ以外は今の確認（作った人か tenant admin）のまま。
+- `update_event` で payload に `calendar_type` があるとき:
+  - 値が shared/personal 以外なら 422。
+  - 持ち主が自分でないなら 403「見せ方を変えられるのは予定の持ち主だけです」。
+  - personal にするときは payload に `user_id = 自分` を足す（持ち主が空の行は作った人＝自分のときだけここに来る）。
+
+### 13-3 frontend/src/pages/schedule/SchedulePageImpl.tsx
+
+- `ScheduleDraft` に `visibleToStaff: boolean` を足す。`createDraft`: item があれば `item.calendarType === "shared"`、無ければ `true`。
+- 分類の SelectControl の onChange: 新規作成（item 無し）のときだけ、`personal` を選んだら `visibleToStaff: false`、ほかを選んだら `true` にする（今の「分類が個人なら個人」の振る舞いを新規作成で保つ）。
+- 「終日」の Toggle と同じ形（`schedule-field schedule-field--inline` の div・`Toggle`・`aria-label`）で、「社員にも見せる」の Toggle を終日の直後に1つ足す。金型は既に import 済みの `frontend/src/components/Toggle.tsx`。新しい CSS・色の直書きは足さない。
+- 出す条件: 新規作成のときは常に。編集のときは `popover.item.ownerUserId === 今のログインの user id` のときだけ。今のログインの user id は既存の `ScheduleRosterState.currentUserId` を `SchedulePopover` に新しい prop で渡す。
+- `saveEvent`: `calendar_type: draft.visibleToStaff ? "shared" : "personal"` にする（`draft.category === "personal"` からの決め方をやめる）。編集で Toggle を出さない（持ち主でない）ときは `calendar_type` を送らない。
+
+### 13-4 文言（ADR-027）
+
+- `frontend/src/locales/ja.json` と `en.json` の `schedule` に同じキーを1つ足す: `shareWithStaff` = 「社員にも見せる」／「Show to staff」。キー名が既にあれば止めて報告。
+
+### 13-5 試験
+
+- `backend/tests/test_calendar_service.py`: list_events の SQL に `ce.calendar_type = 'shared' OR ce.user_id = :me` が入り、params に me が入る。user_id None なら shared だけ。update_event が calendar_type と user_id を SET する。
+- `backend/tests/test_calendar_owner_api.py`（または同じ口の既存試験の置き場）: 他人の personal を PATCH・DELETE → 404（管理者でも）。持ち主以外が calendar_type を送る → 403。持ち主が personal↔shared を切り替え → 200。不正な値 → 422。
+- `frontend/src/pages/schedule/SchedulePageImpl.test.tsx`: 新規作成で「社員にも見せる」が出て既定は入。切って保存すると `calendar_type: "personal"`。持ち主でない予定の編集では出ず、`calendar_type` を送らない。
+
+### 13-6 触らない範囲
+
+Google へ送る処理、取り込み（`upsert_from_google`・`google_webhook.py`）、同期方式の口、分類が保存されない件、設定画面の「共有のしかた」、秘書、migrations。
+
+### 13-7 想定される分岐（止まる条件）
+
+- `SchedulePopover` に今のログインの user id を渡す道が `ScheduleRosterState` 以外にしか無い → 止めて報告（新しい取得の口は作らない）。
+- 既存の試験が「他人の personal を返す」前提で書かれていて落ちる → 試験を直さず止めて報告。
+- `Toggle` の props が `checked`・`onCheckedChange`・`aria-label` で足りない → 止めて報告。
+
+### 13-8 完了の報告
+
+PR を `--draft` なしで起票（`gh pr create --base main`。本文はテンプレの `### 標準ワークフロー確認` に recon・design・ADR-1059・触るファイル全部）。backend の該当試験と frontend の該当試験の生出力をファイルに残し、パスと PR 番号を報告する。
