@@ -306,6 +306,22 @@ PO の言葉: 「LINEみたいな使い心地は出来る？」（意味は「�
 - §3-4-18-a の「まだ分からないこと」（/management-center/channels が 0.02 秒）は、6 回目の受入で /channels と並べて確かめる。
 - 生の数: /tmp/CC報告ファイル/batch3f/run41614984342-k1-over.txt（設計担当の手元。リポジトリには入れない）。
 
+#### 3-4-19-a. 段 3 の 6 回目の本番の受入（2026-11-03 Claude Opus が確かめた）
+- B1・B2 は合格。PR #5087 の確認は 47 件 pass・8 件 skipping・失敗 0（必須の確認はすべて pass）。審査役（Claude Opus）が実装 d39d856dd と、main を取り込んだ HEAD b295a09e9 の両方に APPROVE。main の取り込みは、必須の確認 guard-authoring/evaluation が「枝の元が main の最新でない」で error になったため（scripts/run-guard-evaluation.js:25 の merge-base --is-ancestor）。
+- B3 は合格。PR の変更は 9 ファイルで、カード §1 と同じ。書く道の path とフォームの欄は S と同じ（審査役が git diff -w で確かめた）。migrations/・backend/・scripts/・.github/ は 0。
+- B4 は合格。`new QueryClient` は apiQuery.ts:23 の 1 行・`staleTime:` 0 行・persist 0 行・`/admin/discord-config` を api.get で直に読む所は ChannelsPage.tsx:211（cache.fetch の中）と触らない範囲の InboxKartePanel.tsx:115 の 2 行。
+- B7 は合格。PR #5087 は 2026-11-03 23:18 JST に main へ入った（merge 85cc2e528）。deploy.yml run 41652377760 は 23:25 JST に success。設計担当の Chrome（23:56 JST ごろ・ログイン済み）で本番の会社の情報・会社の方針・Discord の設定・チャネルを開き、4 画面とも中身が出た（Discord の設定とチャネルの画面はともに接続済み・サーバー ID 末尾 7393）。誤りの記録を取り始めてから 4 画面を開き直し、ブラウザの誤りの記録は 4 画面とも 0 件。TanStack・Query を含む記録も 0 件。
+- B5 は 8 行すべて合格。run 41653642044（測った日時 23:39:43 JST・main 9159ad5。#5087 の後に入ったのは台帳の自動 DONE #5089 だけ・測定前に deploy 済み）。
+  - K1（基準 run 41614984342 → 今回）: /admin/discord-config 0.25→0.01・/management-center/discord-config 0.24→0.01・/admin/tenant-policy 0.21→0.01・/management-center/tenant-policy 0.21→0.01・/admin/tenant-profile 0.21→0.01・/management-center/tenant-profile 0.22→0.01・/admin→/admin/tenant-profile 0.21→0.01・/channels 0.24→0.01 秒。/management-center/channels は 0.02→0.01 秒で 0.1 秒以下のまま。
+  - K2 は 9 行とも 0.2〜0.3 秒。9 行とも 403 と 5xx は 0 件。
+  - 全体: 135 行。いちばん遅い画面は対象外の /inventory の 1.3 秒（基準 1.4 秒）。2 秒を超えた画面は 0 件。403 は基準の回と同じ見る権限の無い 6 画面だけ。/schedule の 5xx 1 件も基準の回と同じ（対象外・7 回目で扱う）。
+  - K1 が 0.1 秒を超えた行は基準の 12 行から 5 行に減った: /schedule 0.28（7 回目）・/buyback-prices 0.17・/management-center/conditions 0.21・/management-center/product-categories 0.22（3 つとも 403 で対象外）・/admin/products/:id/edit 0.22。
+  - /admin/products/:id/edit は、基準の回では「戻: 見分けられず（行き先と同じ形）」で K1 が測れていなかった。今回初めて測れた値で、悪化ではない。今回触っていない画面で、段 3 の残りに足すかは 7 回目の設計で決める。
+  - §3-4-18-a の「まだ分からないこと」: 今回は /channels と /management-center/channels がどちらも 0.01 秒で揃った。前回だけ /management-center/channels が速かった理由は、まだ確かめていない（Discord の欄を写しに載せた後は差が無くなったので、追わない）。
+  - 生の行の抜き書きは設計担当の手元の /tmp/CC報告ファイル/batch3f-accept/run41653642044-rows.txt（リポジトリには入れない）。
+- B6 は合格。本番の読むだけの道（ADR-1024）で tenant 001 を読むと、会社の情報（ai_ro.tenant_001__tenant_profile）1 行で会社名は空（null）・会社の方針（ai_ro.public__tenant_settings の tenant_id 1）の集計価格閾値 0・Discord の設定（ai_ro.public__tenant_discord_config の tenant_id 1）のサーバー ID あり（末尾 7393）。設計担当の Chrome（23:3x JST・ログイン済み）で見た画面は、会社名が空・集計価格閾値 0・「接続済み」でサーバー ID の末尾 7393 で、DB と同じ。生の出力は /tmp/CC報告ファイル/batch3f-accept/（b6.tsv・b6-profile.tsv・b6-screen.txt）。
+- K5 は本番で 2 人のログインでは確かめていない（本番でパスワードを打たない決まり）。カード §4-L の試験（人が変わった時に前の人の写しを出さない）と、写しの名前に利用者が入る作りで確かめた。
+
 ### 3-5. 測り方（|基準|検証方法|）
 | 基準 | 検証方法 |
 |---|---|
