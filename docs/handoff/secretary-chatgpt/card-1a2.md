@@ -123,4 +123,23 @@
 - 止まった時: 止まった所（節の番号）・最後に実行したコマンド・止まった理由。
 - 最終行: DONE / BLOCKED: / NEEDS_DECISION: のどれか1つで始める。
 
+## 8. 追補（2回目の実行。1回目の commit 2daa196e8 の上に足す）
+なぜ: マージ前の審査で、5-3 (a) は CI で必ず落ちると分かった。`_EVENT_FX_CTE` は `public.app_fx_rate_history` を3か所で読む（`backend/app/routers/tcg_analysis_dashboard.py` の `_EVENT_FX_CTE` の h・h2・h3）。共有の `pg` fixture はこの表を作らない。作る migration `migrations/20261003_100000_create_app_fx_rate_history.sql` は最後に `public.app_fx_rates` から写すので、`migrations/20260628_170000_add_app_fx_rates.sql` も先に要る。カードに入れ忘れたのが原因（Opus の設計漏れ）。
+
+触ってよいのは `backend/tests/test_llm_usage_outcome_filter_pg.py` の1ファイルだけ。共有の fixture（`test_tcg_work_matching_integration.py`）には足さない（ほかの試験に影響させないため）。
+
+- 8-1 import を1行足す: `from tests.test_tcg_work_matching_integration import MIGRATIONS`（今の `pg as pg` の行は消さない）。ruff check が並びの直しを求めたら、`uvx ruff check --fix --config backend/pyproject.toml` の結果に従う。
+- 8-2 関数を1つ足す（`_add_failed` の後ろ）:
+```python
+def _apply_fx_history_tables(conn) -> None:
+    """_EVENT_FX_CTE が読む為替の2表を作る（共有の pg fixture は作らないため。本番と同じ migration を流す）。"""
+    with conn.cursor() as cur:
+        for name in ("20260628_170000_add_app_fx_rates.sql", "20261003_100000_create_app_fx_rate_history.sql"):
+            cur.execute((MIGRATIONS / name).read_text())
+```
+- 8-3 `test_event_fx_cte_counts_only_ok_rows` の `conn, engine, _url = pg` の次の行に `_apply_fx_history_tables(conn)` を1行足す。ほかの3本は触らない。期待値 `(1, 2)` は変えない（為替の行は0件なので fx は NULL になるが、数えるのは件数と cost_usd だけ）。
+- 8-4 確かめ: `uvx ruff check --config backend/pyproject.toml backend/tests/test_llm_usage_outcome_filter_pg.py` と `uvx ruff format --config backend/pyproject.toml --check` の同じファイルが通る。`git diff 2daa196e8..HEAD --numstat` が `backend/tests/test_llm_usage_outcome_filter_pg.py` の削除 0 行だけ（ほかのファイルは出ない）。`bash scripts/dev/check-before-submit.sh` が落ちた検査 0 件。DB の試験はクラウドでは流さず CI に任せる。
+- 8-5 止まる条件: 2つの migration のファイル名が無い／`MIGRATIONS` が import できない／ほかのファイルを触る必要が出た → NEEDS_DECISION: で止まる。
+- 8-6 commit（最後の行は `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`）→ push → `git log origin/release/ai-roster-1a2-outcome-filter -1` で確かめる。報告は 8-4 の生出力と git log の出力（全文）。
+
 END OF CARD
