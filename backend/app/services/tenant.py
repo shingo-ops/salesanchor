@@ -1057,6 +1057,22 @@ CREATE INDEX IF NOT EXISTS idx_lead_channels_lead_id
 -- NOTE: UNIQUE (platform, external_id) が B-tree インデックスを暗黙作成するため
 --       (platform, external_id) への追加インデックスは不要。
 
+-- アプリ内の鈴: 人ごとの知らせ（未読つき）。本文・Discord の id の列は持たない
+CREATE TABLE IF NOT EXISTS {schema}.user_notices (
+    id           BIGSERIAL PRIMARY KEY,
+    user_id      INTEGER NOT NULL,          -- 宛先の public.users.id
+    kind         TEXT NOT NULL,             -- 'discord_outside_ticket_post'
+    actor_name   TEXT,                      -- 書いた人の Discord の表示名
+    channel_name TEXT,                      -- 書き込まれたチャンネル名
+    link_url     TEXT,                      -- 書き込みへのリンク
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    read_at      TIMESTAMPTZ                -- NULL は未読
+);
+CREATE INDEX IF NOT EXISTS idx_user_notices_user_created
+    ON {schema}.user_notices (user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_user_notices_user_unread
+    ON {schema}.user_notices (user_id) WHERE read_at IS NULL;
+
 -- SA-02 / F3: チャネル統制マスタ（新規テナント初期シード対象）
 CREATE TABLE IF NOT EXISTS {schema}.channel_masters (
     id SERIAL PRIMARY KEY,

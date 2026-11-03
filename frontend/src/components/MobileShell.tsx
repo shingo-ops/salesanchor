@@ -55,6 +55,7 @@ import { ICON } from "../constants/iconSizes";
 import { NavItemList } from "./NavItemList";
 import type { ResolvedNavItem } from "./NavItemList";
 import ConfirmModal from "./ConfirmModal";
+import NoticeBell from "./NoticeBell";
 import "../mobile-shell.css";
 
 // ─── ユーティリティ: NavItem → ResolvedNavItem 変換 ──────────────────────────
@@ -210,6 +211,11 @@ export default function MobileShell() {
     <LoginApprovalWatcher />
     <RecoveryCodePrompt />
     <div className={tabbarHidden ? "mobile-shell mobile-shell--tabbar-hidden" : "mobile-shell"}>
+      {/* ============ 画面の右上の鈴 ============ */}
+      <div className="top-right-cluster top-right-cluster--mobile">
+        <NoticeBell />
+      </div>
+
       {/* ============ Outlet ============ */}
       <main className="mobile-content">
         <MobileTabbarContext.Provider value={setTabbarHidden}>

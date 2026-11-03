@@ -35,6 +35,7 @@ import { usePermissions } from "../hooks/usePermissions";
 import { useSuperAdmin } from "../hooks/useSuperAdmin";
 import { useSSE } from "../hooks/useSSE";
 import { RealtimeProvider } from "../lib/realtime/RealtimeProvider";
+import NoticeBell from "./NoticeBell";
 import LoginApprovalWatcher from "../features/auth/LoginApprovalWatcher";
 import RecoveryCodePrompt from "../features/auth/RecoveryCodePrompt";
 import { listConversations } from "../lib/messages";
@@ -407,15 +408,18 @@ export default function DesktopShell() {
         </main>
       </div>
 
-      {/* ============ Fixed avatar button (Chrome / Meta style) ============ */}
-      <button
-        className="avatar-btn"
-        onClick={() => setDrawerOpen(true)}
-        aria-label={t("nav.openUserMenu")}
-        data-tooltip={t("nav.openUserMenu")}
-      >
-        {user?.email ? user.email[0].toUpperCase() : <NAV_ICONS.logout size={18} />}
-      </button>
+      {/* ============ 右上の固定の入れ物: 鈴 + アバター（Chrome / Meta style） ============ */}
+      <div className="top-right-cluster">
+        <NoticeBell />
+        <button
+          className="avatar-btn"
+          onClick={() => setDrawerOpen(true)}
+          aria-label={t("nav.openUserMenu")}
+          data-tooltip={t("nav.openUserMenu")}
+        >
+          {user?.email ? user.email[0].toUpperCase() : <NAV_ICONS.logout size={18} />}
+        </button>
+      </div>
 
       {/* ============ User drawer backdrop ============ */}
       {drawerOpen && (

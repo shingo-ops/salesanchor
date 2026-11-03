@@ -5760,5 +5760,14 @@
       "invoice": "請求書を開く",
       "event": "予定を開く"
     }
+  },
+  "notices": {
+    "bellLabel": "お知らせ",
+    "bellLabelUnread": "お知らせ（未読 {{count}} 件）",
+    "title": "お知らせ",
+    "empty": "知らせはありません",
+    "kind": {
+      "discord_outside_ticket_post": "{{actor}} さんが #{{channel}} に書き込みました"
+    }
   }
 }

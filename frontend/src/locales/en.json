@@ -5760,5 +5760,14 @@
       "invoice": "Open invoice",
       "event": "Open event"
     }
+  },
+  "notices": {
+    "bellLabel": "Notifications",
+    "bellLabelUnread": "Notifications ({{count}} unread)",
+    "title": "Notifications",
+    "empty": "No notifications",
+    "kind": {
+      "discord_outside_ticket_post": "{{actor}} posted in #{{channel}}"
+    }
   }
 }

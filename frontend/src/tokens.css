@@ -232,7 +232,14 @@
   --avatar-zone-z:     var(--z-avatar);       /* 300  — .avatar-btn z-index */
   /* ページヘッダー右端のアバターボタン被り防止クリアランス（--avatar-zone-* 由来）
      計算: 40px (avatar) + 16px (right) + 12px (breathing room) = 68px */
-  --page-header-avatar-clearance: calc(var(--avatar-zone-width) + var(--avatar-zone-right) + var(--space-3));
+  --page-header-avatar-clearance: calc(var(--avatar-zone-width) + var(--avatar-zone-right) + var(--space-3) + var(--avatar-zone-width) + var(--space-2));
+  /* ↑ 末尾の 2 項は鈴（--notice-bell-size + --notice-bell-gap）の分 */
+  /* ---- 鈴（NoticeBell）: アバターの左隣に並べる固定の入れ物（.top-right-cluster）の寸法 ---- */
+  --notice-bell-size:         var(--avatar-zone-width);  /* 40px — 鈴ボタンの幅・高さ */
+  --notice-bell-gap:          var(--space-2);            /* 8px  — 鈴とアバターの間 */
+  --notice-panel-width:       360px;                     /* 知らせ一覧の幅 */
+  --notice-panel-max-height:  60vh;                      /* 知らせ一覧の高さの上限 */
+  --notice-unread-dot-size:   8px;                       /* 未読の丸 */
 
   /* ---- レイアウト高さ制約ルール（全ページ遵守必須） ----
      .page-subtitle は margin-bottom: var(--space-3) = 12px（pages-layout.css）。

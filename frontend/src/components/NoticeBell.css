@@ -1,0 +1,128 @@
+/**
+ * NoticeBell / NoticeRow — 全画面の右上の鈴。ADR-067: 色・余白・角・z-index はトークンのみ。
+ */
+
+/* ── 右上の固定の入れ物（鈴 + PC ではアバターを 1 つにまとめる） ── */
+.top-right-cluster {
+  position: fixed; /* fixed-ok: avatar-zone cluster（鈴とアバターを 1 つの入れ物に並べる） */
+  top: var(--avatar-zone-top);
+  right: var(--avatar-zone-right);
+  z-index: var(--avatar-zone-z);
+  display: flex;
+  align-items: center;
+  gap: var(--notice-bell-gap);
+}
+
+/* 入れ物の中ではアバターは入れ物が位置を持つ（見た目・動きは変えない） */
+.top-right-cluster > .avatar-btn {
+  position: static;
+}
+
+/* スマホ: 画面の右上に鈴だけ（切り欠きを避ける） */
+.top-right-cluster--mobile {
+  top: calc(var(--avatar-zone-top) + env(safe-area-inset-top, 0px));
+}
+
+/* ── 鈴ボタン ── */
+.notice-bell-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--notice-bell-size);
+  height: var(--notice-bell-size);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  box-shadow: var(--shadow-md);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.notice-bell-btn:hover {
+  background: var(--bg-hover);
+}
+
+.notice-bell-badge {
+  position: absolute;
+  top: calc(var(--space-1) * -1);
+  right: calc(var(--space-1) * -1);
+}
+
+/* ── 一覧 ── */
+.notice-panel {
+  width: var(--notice-panel-width);
+  max-width: 100%;
+  max-height: var(--notice-panel-max-height);
+  overflow-y: auto;
+}
+
+.notice-panel-title {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+}
+
+.notice-panel-empty {
+  padding: var(--space-4) var(--space-3);
+  font-size: var(--font-sm);
+  color: var(--text-muted);
+}
+
+.notice-panel-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* ── 1 行 ── */
+.notice-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.notice-row:hover {
+  background: var(--bg-hover);
+}
+
+.notice-row-dot {
+  flex: none;
+  width: var(--notice-unread-dot-size);
+  height: var(--notice-unread-dot-size);
+  margin-top: var(--space-1);
+  border-radius: var(--radius-full);
+  background: transparent;
+}
+
+.notice-row--unread .notice-row-dot {
+  background: var(--color-error);
+}
+
+.notice-row--unread .notice-row-title {
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+}
+
+.notice-row-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.notice-row-meta {
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+}

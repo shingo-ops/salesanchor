@@ -168,6 +168,7 @@ export const STATUS_ICONS = {
 
 // 個別エクスポート（StatusBar 等で直接参照）
 export { Check, Warning, X };
+export { BellOutline };
 
 // カテゴリ（RolesPage の CATEGORY_META 用）
 // "_default" はフォールバック用
