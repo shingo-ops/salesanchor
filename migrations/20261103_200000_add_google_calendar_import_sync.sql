@@ -1,6 +1,12 @@
 -- ADR-1059 便2: Google の予定の取り込み（足すだけ・冪等）
-ALTER TABLE public.google_webhook_subscriptions ADD COLUMN IF NOT EXISTS sync_token TEXT;
-ALTER TABLE public.google_webhook_subscriptions ADD COLUMN IF NOT EXISTS channel_token_hash VARCHAR(64);
+DO $gcal_import_cols$
+BEGIN
+  IF to_regclass('public.google_webhook_subscriptions') IS NOT NULL THEN
+    ALTER TABLE public.google_webhook_subscriptions ADD COLUMN IF NOT EXISTS sync_token TEXT;
+    ALTER TABLE public.google_webhook_subscriptions ADD COLUMN IF NOT EXISTS channel_token_hash VARCHAR(64);
+  END IF;
+END
+$gcal_import_cols$;
 
 DO $gcal_import_uniq$
 DECLARE
