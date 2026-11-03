@@ -13,9 +13,11 @@
  *   backend/app/routers/tenant_profile.py
  *   migrations/069_create_tenant_profile.sql
  */
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
+import { useApiCache, useApiQuery } from "../../lib/query/apiQuery";
+import { useSeededForm } from "../../lib/query/useSeededForm";
 import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
 import { Button } from "../../components/Button";
@@ -60,43 +62,32 @@ const emptyForm: FormState = {
   default_language: "ja",
 };
 
+const PROFILE_PATH = "/admin/tenant-profile";
+const toForm = (data: TenantProfile): FormState => ({
+  company_name: data.company_name ?? "",
+  company_name_en: data.company_name_en ?? "",
+  address: data.address ?? "",
+  phone: data.phone ?? "",
+  email: data.email ?? "",
+  website: data.website ?? "",
+  seal_image_url: data.seal_image_url ?? "",
+  default_language: data.default_language ?? "ja",
+});
+
 export default function TenantProfilePage() {
   const { t } = useTranslation();
   const { hasPermission } = usePermissions();
-  const [form, setForm] = useState<FormState>(emptyForm);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
 
   const canView = hasPermission("tenant.profile.view");
   const canEdit = hasPermission("tenant.profile.edit");
-
-  useEffect(() => {
-    let alive = true;
-    const fetchProfile = async () => {
-      try {
-        const data = await api.get<TenantProfile>("/admin/tenant-profile");
-        if (!alive) return;
-        setForm({
-          company_name: data.company_name ?? "",
-          company_name_en: data.company_name_en ?? "",
-          address: data.address ?? "",
-          phone: data.phone ?? "",
-          email: data.email ?? "",
-          website: data.website ?? "",
-          seal_image_url: data.seal_image_url ?? "",
-          default_language: data.default_language ?? "ja",
-        });
-      } catch (e) {
-        if (alive) setError(e instanceof Error ? e.message : t("common.fetchError"));
-      } finally {
-        if (alive) setLoading(false);
-      }
-    };
-    if (canView) fetchProfile(); else setLoading(false);
-    return () => { alive = false; };
-  }, [canView, t]);
+  const profileQ = useApiQuery<TenantProfile>(PROFILE_PATH, { enabled: canView });
+  const { form, setForm, ready } = useSeededForm(PROFILE_PATH, profileQ.data, toForm, emptyForm);
+  const cache = useApiCache();
+  const readError = profileQ.error ? (profileQ.error instanceof Error ? profileQ.error.message : t("common.fetchError")) : "";
+  const shownError = error || readError;
 
   const handleChange = (key: keyof FormState) => (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
@@ -116,7 +107,8 @@ export default function TenantProfilePage() {
         const v = form[k];
         payload[k] = v === "" ? null : v;
       });
-      await api.put("/admin/tenant-profile", payload);
+      const saved = await api.put<TenantProfile>("/admin/tenant-profile", payload);
+      cache.write(PROFILE_PATH, saved);
       setInfo(t("tenantProfile.saved"));
     } catch (err) {
       setError(err instanceof Error ? err.message : t("common.operationError"));
@@ -135,11 +127,13 @@ export default function TenantProfilePage() {
 
   return (
     <PageLayout navKey="nav.tenantProfile" subtitleKey="tenantProfile.subtitle">
-      {loading ? (
+      {profileQ.isPending ? (
         <LoadingBlock />
+      ) : !ready ? (
+        <div className="error-message">{shownError}</div>
       ) : (
         <form className="form" onSubmit={handleSave} data-testid="tenant-profile-form">
-          {error && <div className="error-message">{error}</div>}
+          {shownError && <div className="error-message">{shownError}</div>}
           {info && <div className="info-message" data-testid="tenant-profile-info">{info}</div>}
 
           <div className="form-group">
