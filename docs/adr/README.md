@@ -3,7 +3,7 @@
 > このファイルは `scripts/generate-adr-index.js` により自動生成されます。
 > **手動編集禁止。** ADR ファイルを追加・変更後に `node scripts/generate-adr-index.js` を実行してください。
 
-最終更新: 2026-11-03 / ADR 総数: 217 件
+最終更新: 2026-11-03 / ADR 総数: 218 件
 
 ## 維持ルール（整合性を保つ・必須）
 
@@ -236,6 +236,7 @@
 | [ADR-1056](./ADR-1056-secretary-chat.md) | ADR-1056: アプリ内のチャット秘書は、AI に会社のデータも道具も渡さず「頼みの文を決まった形に直す」だけをさせ、作成は利用者が「作る」を押したときに今の口で行う | Accepted | — | — |
 | [ADR-1057](./ADR-1057-google-calendar-owner-only-sync.md) | ADR-1057: Google カレンダーの接続は会社で1つとし、送るのはつないだ本人の予定だけ・Google の予定を直接扱う口は本人だけ・Google→アプリの取り込みは止める | Accepted | — | — |
 | [ADR-1058](./ADR-1058-ai-job-assignments.md) | ADR-1058: アプリの中で働く AI の担当（AI とモデル）は DB の1か所で決め、スーパー管理の画面で見て切り替える・成功も失敗も使用の記録に1行ずつ残す・秘書は ChatGPT（Codex CLI・月額契約）も選べる | Accepted | — | — |
+| [ADR-1059](./ADR-1059-google-calendar-import-owner-private.md) | ADR-1059: Google カレンダーの予定をアプリに取り込む。取り込んだ予定は最初「自分だけ」で、アプリで1件ずつ「社員にも見せる」に切り替える | Accepted | — | — |
 
 ## ステータス凡例
 
