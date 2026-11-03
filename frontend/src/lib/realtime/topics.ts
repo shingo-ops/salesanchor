@@ -3,4 +3,5 @@ export const TOPICS = {
   tcgReview: "tcg.review",
   tcgInventory: "tcg.inventory",
   authLoginRequest: "auth.login_request",
+  notices: "notices",
 } as const;

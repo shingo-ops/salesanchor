@@ -17912,6 +17912,123 @@
         "title": "NewCustomersBlock",
         "type": "object"
       },
+      "NoticeItem": {
+        "properties": {
+          "actor_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "書いた人の Discord の表示名",
+            "title": "Actor Name"
+          },
+          "channel_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "書き込まれたチャンネル名",
+            "title": "Channel Name"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "知らせの日時（ISO 8601）",
+            "title": "Created At"
+          },
+          "id": {
+            "description": "知らせの ID",
+            "title": "Id",
+            "type": "integer"
+          },
+          "kind": {
+            "description": "知らせの種類（例 discord_outside_ticket_post）",
+            "title": "Kind",
+            "type": "string"
+          },
+          "link_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "書き込みへのリンク",
+            "title": "Link Url"
+          },
+          "read_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "既読にした日時（未読は null）",
+            "title": "Read At"
+          }
+        },
+        "required": [
+          "id",
+          "kind"
+        ],
+        "title": "NoticeItem",
+        "type": "object"
+      },
+      "NoticeList": {
+        "properties": {
+          "items": {
+            "description": "新しい順・最大 50 件",
+            "items": {
+              "$ref": "#/components/schemas/NoticeItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "unread_count": {
+            "description": "未読の件数（一覧の 50 件に限らない）",
+            "title": "Unread Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "unread_count"
+        ],
+        "title": "NoticeList",
+        "type": "object"
+      },
+      "NoticeReadResult": {
+        "properties": {
+          "unread_count": {
+            "description": "既読にした後の未読の件数",
+            "title": "Unread Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "unread_count"
+        ],
+        "title": "NoticeReadResult",
+        "type": "object"
+      },
       "NotificationEventType": {
         "description": "通知の種類の SSOT。\n\nここに無い値は API が拒否する。送信元が存在しない種類を増やしてはいけない\n（recon §6: customer_created / deal_won / invoice_issued は送信元ゼロのため除外）。\n値は notification_channels.event_types に JSON 配列として保存され、\n送信時は LIKE '%値%' の部分一致で照合される（notifications.py:112）ため、\n**ある値が他の値の部分文字列になってはいけない**。",
         "enum": [
@@ -50690,6 +50807,81 @@
         "summary": "Update Note Master",
         "tags": [
           "note-master"
+        ]
+      }
+    },
+    "/api/v1/notices": {
+      "get": {
+        "description": "自分宛ての知らせを新しい順に最大 50 件と、未読の件数。テナントの無い人は空。",
+        "operationId": "list_notices_api_v1_notices_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoticeList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Notices",
+        "tags": [
+          "notices"
+        ]
+      }
+    },
+    "/api/v1/notices/{notice_id}/read": {
+      "post": {
+        "description": "本人の行だけ既読にする（既読なら変えない）。他人・他社の id は 404。",
+        "operationId": "mark_notice_read_api_v1_notices__notice_id__read_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "notice_id",
+            "required": true,
+            "schema": {
+              "title": "Notice Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoticeReadResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Mark Notice Read",
+        "tags": [
+          "notices"
         ]
       }
     },
