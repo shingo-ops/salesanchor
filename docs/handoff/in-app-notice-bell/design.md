@@ -1,6 +1,6 @@
 # 設計: アプリ全画面の鈴（未読数＋知らせ一覧）と Discord の名前呼び
 
-- 状態: 設計案作成済み → 設計審査済み（§10、同一 AI による自己審査。独立した第二者レビューではない）→ **改訂中**（§4-改訂1。PO 2026-11-03 で宛先が変わり、編集ページが加わった。編集ページで何を変えられるかは PO の回答待ち。回答まで実装の合流・PR は止める）
+- 状態: 設計案作成済み → 設計審査済み（§10、同一 AI による自己審査。独立した第二者レビューではない）→ 改訂（§4-改訂1・§4-改訂2。PO 2026-11-03 で宛先と編集ページが決まり確定）→ 実装済み（impl-report・impl-report-2・impl-report-3）→ PR 審査中（審査記録: `docs/handoff/in-app-notice-bell/review-opus.md`）
 - 調べ: `docs/handoff/in-app-notice-bell/recon.md`（以下 R1）、`docs/handoff/in-app-notice-bell/recon-2.md`（以下 R2）
 - 外部仕様: Discord の `allowed_mentions`（Context7 `/discord/discord-api-docs` `developers/resources/message.mdx`、2026-11-03 照会）
 - 前の設計: `docs/handoff/discord-outside-ticket-notify/design.md`（部屋の外の書き込みを Discord に1件知らせる。本番反映済み）
