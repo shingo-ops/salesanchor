@@ -6,6 +6,7 @@
 (c) 後の migration が CHECK を広げていても、流し直しで値が消えず、例外も出ない。
 (d) 履歴は足すだけ（書き換え・消し・TRUNCATE は例外。users を消した時の changed_by の NULL 化だけ通る）。
 (e) outcome と error_code の組み合わせの決まり。
+(f) 読む関数 get_ai_assignment（秘1）。
 ai_reader / ai_reader_cloud はクラスタ共通のロールなので、このテストが作った場合だけ最後に消す。
 """
 
@@ -289,3 +290,28 @@ def test_e_outcome_and_error_code(db):
     assert _rows(db, "SELECT outcome, error_code FROM public.llm_usage_events") == [("ok", None)]
     _insert_usage(db, outcome="failed", error_code="timeout")
     assert _count(db, "llm_usage_events") == 2
+
+
+def test_f_get_ai_assignment_reads_choice_and_raises_when_missing(db):
+    """秘1: 読む関数が担当表から provider・model を返し、行が無ければ例外（既定値に逃げない）。"""
+    from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+
+    from app.services.ai_assignment import AiAssignment, AiAssignmentMissing, get_ai_assignment
+
+    c = db.cursor()
+    c.execute(_read(_AI_JOB_SQL))
+    url = _psycopg_url(ADMIN_PG_URL, db.info.dbname).replace("postgresql://", "postgresql+asyncpg://", 1)
+
+    async def read(job_key):
+        eng = create_async_engine(url)
+        try:
+            async with AsyncSession(eng) as s:
+                return await get_ai_assignment(s, job_key)
+        finally:
+            await eng.dispose()
+
+    assert asyncio.run(read("secretary_intent")) == AiAssignment("claude", "sonnet")
+    assert asyncio.run(read("line_extraction")) == AiAssignment("gemini", "gemini-3.1-flash-lite")
+    c.execute("DELETE FROM public.ai_job_assignments WHERE job_key = 'secretary_intent'")
+    with pytest.raises(AiAssignmentMissing):
+        asyncio.run(read("secretary_intent"))

@@ -4926,7 +4926,8 @@
           "inventory_parse_fallback": "Inventory Parse Fallback",
           "translation_inbound": "Inbound Translation",
           "translation_inbound_escalation": "Inbound Translation (Escalation)",
-          "translation_outbound": "Outbound Translation"
+          "translation_outbound": "Outbound Translation",
+          "secretary_intent": "Chat Secretary"
         },
         "health": {
           "title": "Overview (LINE Extraction)",

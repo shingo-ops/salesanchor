@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
+from unittest.mock import AsyncMock
 
 import httpx
 import pytest
@@ -16,6 +17,8 @@ from sqlalchemy import text
 
 from app.auth.dependencies import get_current_user, require_super_admin
 from app.routers import assistant
+from app.services.ai_assignment import AiAssignment
+from app.services.llm_budget import UsageCounts
 
 FIXTURES = Path(__file__).resolve().parents[2] / "secretary-agent" / "fixtures"
 _RealAsyncClient = httpx.AsyncClient
@@ -28,8 +31,19 @@ def _fixture(name: str) -> dict:
 
 
 @pytest.fixture
-def allowed(client):
-    """会社の入口・super admin の守りを通す（権限は conftest が全付与）。"""
+def allowed(client, monkeypatch):
+    """会社の入口・super admin の守りを通す（権限は conftest が全付与）。
+
+    試験の DB（SQLite）に担当表は無いので、担当の読み取りは claude・sonnet を返す偽物に、
+    使用の記録は AsyncMock に差し替える（試験からは assistant.record_usage_isolated で見る）。
+    """
+
+    async def _assignment(db, job_key):
+        assert job_key == "secretary_intent"
+        return AiAssignment("claude", "sonnet")
+
+    monkeypatch.setattr(assistant, "get_ai_assignment", _assignment)
+    monkeypatch.setattr(assistant, "record_usage_isolated", AsyncMock())
 
     from app.main import app
 
@@ -307,3 +321,129 @@ async def test_nothing_is_created(allowed, db_session, monkeypatch):
     after = {t: await _count(db_session, t) for t in ("invoices", "invoice_items", "calendar_events")}
     assert before == after
     assert before["invoices"] is not None
+
+
+# ---- ADR-1058 秘1: 担当表のモデルと使用の記録 ---------------------------------
+
+
+@pytest.mark.asyncio
+async def test_agent_receives_model_from_assignment(allowed, monkeypatch):
+    sent = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        sent.update(json.loads(request.content))
+        return httpx.Response(200, json=_fixture("envelope-invoice.json"))
+
+    _mock_agent(monkeypatch, handler)
+    resp = await allowed.post(URL, json={"text": "請求書"})
+    assert resp.status_code == 200, resp.text
+    assert sent["model"] == "sonnet"
+    assert sent["text"] == "請求書"
+
+
+async def _raise_db_down(db, job_key):
+    raise RuntimeError("db down")
+
+
+async def _codex_assignment(db, job_key):
+    return AiAssignment("codex", "gpt-x")
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("reader", [_raise_db_down, _codex_assignment])
+async def test_assignment_read_failure_is_503_without_agent_or_ledger(allowed, monkeypatch, caplog, reader):
+    calls = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append(request)
+        return httpx.Response(200, json=_fixture("envelope-invoice.json"))
+
+    _mock_agent(monkeypatch, handler)
+    monkeypatch.setattr(assistant, "get_ai_assignment", reader)
+    with caplog.at_level(logging.INFO, logger=assistant.logger.name):
+        resp = await allowed.post(URL, json={"text": "a"})
+    assert len(calls) == 0
+    assert resp.status_code == 503
+    assert resp.json()["detail"] == {"code": "not_ready"}
+    assert assistant.record_usage_isolated.await_count == 0
+    lines = [r.getMessage() for r in caplog.records if "assistant_message" in r.getMessage()]
+    assert len(lines) == 1
+    assert "code=not_ready" in lines[0]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("name", ["envelope-invoice.json", "envelope-event.json", "envelope-unknown.json"])
+async def test_ledger_ok_row_for_each_fixture(allowed, monkeypatch, name):
+    _mock_agent(monkeypatch, _respond(200, _fixture(name)))
+    resp = await allowed.post(URL, json={"text": "a"})
+    assert resp.status_code == 200, resp.text
+    assert assistant.record_usage_isolated.await_count == 1
+    kwargs = assistant.record_usage_isolated.await_args.kwargs
+    assert kwargs["purpose"] == "secretary_intent"
+    assert kwargs["model"] == "sonnet"
+    assert kwargs["sdk"] == "claude-code"
+    assert kwargs["outcome"] == "ok"
+    assert kwargs["error_code"] is None
+    assert kwargs["tenant_id"] == 999
+    assert kwargs["counts"] == UsageCounts()
+
+
+def _assert_failed_row(expected_error_code: str) -> None:
+    assert assistant.record_usage_isolated.await_count == 1
+    kwargs = assistant.record_usage_isolated.await_args.kwargs
+    assert kwargs["outcome"] == "failed"
+    assert kwargs["error_code"] == expected_error_code
+    assert kwargs["purpose"] == "secretary_intent"
+    assert kwargs["sdk"] == "claude-code"
+    assert kwargs["model"] == "sonnet"
+    assert kwargs["tenant_id"] == 999
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "agent_status,agent_body,expected_error_code",
+    [
+        (503, {"code": "not_ready"}, "not_ready"),
+        (429, {"code": "busy"}, "busy"),
+        (504, {"code": "timeout"}, "timeout"),
+        (502, {"code": "cli_failed"}, "other"),
+        (502, {"code": "auth_failed"}, "auth_failed"),
+        (502, {"code": "unreadable"}, "unreadable"),
+        (200, {"kind": "invoice"}, "unreadable"),
+    ],
+)
+async def test_ledger_failed_row_for_agent_failures(
+    allowed, monkeypatch, agent_status, agent_body, expected_error_code
+):
+    _mock_agent(monkeypatch, _respond(agent_status, agent_body))
+    resp = await allowed.post(URL, json={"text": "a"})
+    assert resp.status_code >= 400
+    _assert_failed_row(expected_error_code)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "exc,expected_error_code",
+    [
+        (httpx.ConnectError("refused"), "not_ready"),
+        (httpx.ReadTimeout("slow"), "timeout"),
+    ],
+)
+async def test_ledger_failed_row_for_transport_errors(allowed, monkeypatch, exc, expected_error_code):
+    def handler(request):
+        raise exc
+
+    _mock_agent(monkeypatch, handler)
+    resp = await allowed.post(URL, json={"text": "a"})
+    assert resp.status_code >= 400
+    _assert_failed_row(expected_error_code)
+
+
+def test_ledger_unit_mapping():
+    from app.services.llm_budget import USAGE_ERROR_CODES
+
+    assert assistant._ledger_error_code("cli_failed") == "other"
+    assert assistant._ledger_error_code("agent_failed") == "other"
+    assert assistant._ledger_error_code("tool_used") == "tool_used"
+    assert assistant._ledger_error_code("auth_failed") == "auth_failed"
+    assert assistant._LEDGER_ERROR_CODES <= USAGE_ERROR_CODES

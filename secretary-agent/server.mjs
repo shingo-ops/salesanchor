@@ -45,8 +45,12 @@ function readBody(req) {
   });
 }
 
+// model は backend が担当表から読んで送る（ADR-1058）。容器は既定のモデルを持たない。
+// 引数に渡すので、- で始まる値や記号は通さない。
+const MODEL_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
+
 // claude を 1 回動かす。返り値: { status, body }
-function runClaude(text, now) {
+function runClaude(text, now, model) {
   return new Promise((resolve) => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "sec-"));
     let settled = false;
@@ -67,7 +71,7 @@ function runClaude(text, now) {
         "--disallowedTools", "mcp__*",
         "--strict-mcp-config",
         "--no-session-persistence",
-        "--model", "sonnet",
+        "--model", model,
       ],
       {
         cwd: dir,
@@ -131,20 +135,23 @@ const server = http.createServer(async (req, res) => {
         return send(res, e.status || 400, { code: "bad_request" });
       }
       if (!process.env.CLAUDE_CODE_OAUTH_TOKEN) return send(res, 503, { code: "not_ready" });
-      let text, now;
+      let text, now, model;
       try {
-        ({ text, now } = JSON.parse(raw));
+        ({ text, now, model } = JSON.parse(raw));
       } catch {
         return send(res, 400, { code: "bad_request" });
       }
       if (typeof text !== "string" || typeof now !== "string" || !text) {
         return send(res, 400, { code: "bad_request" });
       }
+      if (typeof model !== "string" || !MODEL_RE.test(model)) {
+        return send(res, 400, { code: "bad_request" });
+      }
       if (busy) return send(res, 429, { code: "busy" });
       busy = true;
       const started = process.hrtime.bigint();
       try {
-        const { status, body } = await runClaude(text, now);
+        const { status, body } = await runClaude(text, now, model);
         log(Number(process.hrtime.bigint() - started) / 1e9, status === 200 ? "ok" : body.code);
         return send(res, status, body);
       } finally {

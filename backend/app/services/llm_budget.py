@@ -164,11 +164,12 @@ USAGE_PURPOSES: frozenset[str] = frozenset(
         "translation_inbound",
         "translation_inbound_escalation",
         "translation_outbound",
+        "secretary_intent",
     }
 )
 
 # sdk: どの SDK の usage_metadata から読んだか（design.md §3-1 CHECK 制約と同一の集合）
-USAGE_SDKS: frozenset[str] = frozenset({"google-genai", "google-generativeai"})
+USAGE_SDKS: frozenset[str] = frozenset({"google-genai", "google-generativeai", "codex-cli", "claude-code"})
 
 
 @dataclass(frozen=True)
@@ -277,6 +278,49 @@ _INSERT_USAGE_EVENT_SQL = """
          :extraction_attempt_id, :extraction_shadow_run_id, :discord_inbound_message_id, :source_ref)
 """
 
+# ADR-1058: outcome（ok/failed）と error_code を含む行の INSERT と、その値の一覧。
+# 値の一覧の正本は DB の CHECK（migrations/20261103_120000_create_ai_job_assignments.sql）。ここは写し。
+USAGE_ERROR_CODES: frozenset[str] = frozenset(
+    {
+        "auth_failed",
+        "timeout",
+        "rate_limited",
+        "http_error",
+        "unreadable",
+        "tool_used",
+        "not_ready",
+        "busy",
+        "other",
+    }
+)
+USAGE_OUTCOMES: frozenset[str] = frozenset({"ok", "failed"})
+
+_INSERT_USAGE_EVENT_OUTCOME_SQL = """
+    INSERT INTO public.llm_usage_events
+        (id, purpose, tenant_id, model, sdk,
+         prompt_tokens, cached_content_tokens, candidates_tokens, thoughts_tokens,
+         tool_use_prompt_tokens, total_tokens, cost_usd,
+         extraction_attempt_id, extraction_shadow_run_id, discord_inbound_message_id, source_ref,
+         outcome, error_code)
+    VALUES
+        (:id, :purpose, :tenant_id, :model, :sdk,
+         :prompt_tokens, :cached_content_tokens, :candidates_tokens, :thoughts_tokens,
+         :tool_use_prompt_tokens, :total_tokens, :cost_usd,
+         :extraction_attempt_id, :extraction_shadow_run_id, :discord_inbound_message_id, :source_ref,
+         :outcome, :error_code)
+"""
+
+
+def _outcome_columns(outcome: str, error_code: str | None) -> dict[str, Any]:
+    """outcome と error_code の組を DB の CHECK と同じ決まりで確かめる（ok なら NULL、failed なら9つのどれか）。"""
+    if outcome not in USAGE_OUTCOMES:
+        raise ValueError(f"unknown llm_usage_events outcome: {outcome!r}")
+    if outcome == "ok" and error_code is not None:
+        raise ValueError("outcome='ok' の行に error_code は入れない")
+    if outcome == "failed" and error_code not in USAGE_ERROR_CODES:
+        raise ValueError(f"unknown llm_usage_events error_code: {error_code!r}")
+    return {"outcome": outcome, "error_code": error_code}
+
 
 def record_usage_event_sync(
     session: Session,
@@ -328,6 +372,44 @@ async def record_usage_event(
     )
     await db.execute(text(_INSERT_USAGE_EVENT_SQL), cols)
     return cols["id"]
+
+
+async def record_usage_isolated(
+    *,
+    purpose: str,
+    model: str,
+    sdk: str,
+    counts: UsageCounts,
+    outcome: str,
+    error_code: str | None,
+    tenant_id: int | None = None,
+    source_ref: str | None = None,
+) -> None:
+    """自分専用の取引で1行書いてすぐ commit する（呼び出し元の取引が巻き戻っても行が残る。design.md §4-2-3）。
+
+    自分の失敗はログに種類だけ出して飲み込む（呼び出し元の元の例外を隠さない）。
+    """
+    try:
+        cols = _usage_event_columns(
+            purpose=purpose,
+            model=model,
+            sdk=sdk,
+            counts=counts,
+            tenant_id=tenant_id,
+            extraction_attempt_id=None,
+            extraction_shadow_run_id=None,
+            discord_inbound_message_id=None,
+            source_ref=source_ref,
+        )
+        cols.update(_outcome_columns(outcome, error_code))
+        # app.database は読み込むとエンジンを作るので、使う時だけ読む。
+        from app.database import AsyncSessionLocal
+
+        async with AsyncSessionLocal() as db:
+            await db.execute(text(_INSERT_USAGE_EVENT_OUTCOME_SQL), cols)
+            await db.commit()
+    except Exception as exc:  # noqa: BLE001
+        logger.error("[llm_budget] 使用の記録に書けませんでした: purpose=%s kind=%s", purpose, type(exc).__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -501,6 +583,8 @@ __all__ = [
     "LLM_PRICING",
     "USAGE_PURPOSES",
     "USAGE_SDKS",
+    "USAGE_ERROR_CODES",
+    "USAGE_OUTCOMES",
     "UsageCounts",
     "calculate_cost",
     "calculate_usage_cost",
@@ -510,6 +594,7 @@ __all__ = [
     "record_cost",
     "record_usage_event",
     "record_usage_event_sync",
+    "record_usage_isolated",
     "reset_monthly_if_needed",
     "usage_counts_from",
 ]
