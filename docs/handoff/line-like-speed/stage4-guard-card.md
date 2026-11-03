@@ -4,19 +4,21 @@
 - 根拠の写し: S=origin/main bbf873a5dfd578f0f9fd56a9f7bcf7dbd92399f4（PR #5093 の合流の後）。行番号と数はすべてこの sha。2026-11-04 に設計担当が `git -C <本店> grep` で origin/main を直接読んだ。実装の前に最新の origin/main で数を合わせ直す（§3(a)）。
 - 読んだ節: docs/handoff/design-partner-card-ops/guards/00-common.md・guards/03-file.md・guards/04-worktree.md・guards/05-pr.md・guards/10-executor.md・scripts/agent-hooks/cloud/rules.md（段 3 のカードと同じ節。照合も同じ: 全命令は cd <W> で始める・出力は tail/head で上限・新しいファイルは丸ごとの全文・作業場所は new-worktree.sh で作り出力をパイプに通さない・PR は実行役が作らない・出力をファイルに残す命令と tail で読む命令は別の行）。
 - 実行役はクラウドの Sonnet。作業場所の作り方はクラウドの決まり（S scripts/agent-hooks/cloud/rules.md:15）を正とする。.pr-number・gh-pr-create-safe.sh は使わない。出力には上限を付ける。待つために sleep を使わない。
-- 状態: 第 1 版（2026-11-04 設計担当 Claude Opus）。カード審査の前。
-- 受領確認: 実装役は着手の最初の報告に「段 4 のカード 第 1 版を受け取った・S=bbf873a5d」と書く。
+- 状態: 第 2 版（2026-11-04 設計担当 Claude Opus）。第 1 版のカード審査（クラウドの審査役 Opus・REVISE）の指摘を入れた: `setLoadingList(true)` のように Loading の後ろに名前が続く書き方（S で 4 ファイル・6 行。例: pages/super-admin/SupplierExtractionRulesPage.tsx:173 は描く所 :934 の `{loadingList ? (` で中身を消す）を数えていなかった。数える形を広げ、基準を 51 ファイル・69 行に数え直した。
+- 受領確認: 実装役は着手の最初の報告に「段 4 のカード 第 2 版を受け取った・S=bbf873a5d」と書く。
 
 ## 0. 設計からの直し・詳しくした点（V4。設計の合格線は変えない）
-- V4-1 何を数えるか: frontend/src の .ts・.tsx（名前が .test.ts・.test.tsx で終わるファイルを除く）で、`set〇〇Loading(true)`（正規表現 `set[A-Za-z0-9]*Loading\(\s*true\s*\)`）を書いた行の数を、ファイルごとに数える。理由:
+- V4-1 何を数えるか: frontend/src の .ts・.tsx（名前が .test.ts・.test.tsx で終わるファイルを除く）で、`set〇〇Loading(true)`・`set〇〇Loading〇〇(true)`（正規表現 `set[A-Za-z0-9]*Loading[A-Za-z0-9]*\(\s*true\s*\)`）を書いた行の数を、ファイルごとに数える。理由:
   - 段 3 で直してきた「中身を消す形」は、読み込みを始める時に `setLoading(true)` などで読み込み中の印を立て、描く所で `{loading ? <LoadingState/> : 中身}` と中身を消すもの（段 3 の 1〜7 回目のカードの「変更前」の行）。直した後の画面は、読み込み中の印を初回（写しが無い時）だけ useApiQuery の isPending から作るので、この行が無くなる（例: 予定表は #5093 で S frontend/src/pages/schedule/SchedulePageImpl.tsx から 0 行になった）。
   - 段 0b の u1-count.py の分け方（中身を消す 62 など）は、描く所の `{loading ?` を見るため、直した後の「初回だけ印を出す」画面と直す前の画面を見分けられない（2026-11-04 に S で流すと「中身を消す」34 本のうち、直し済みの画面が多く残る。生の出力は設計担当の手元の /tmp/CC報告ファイル/u1-lines.txt）。数を増やさない見張りには、直す前にだけある「印を立てる行」を数える方が、直した画面を数えない。
   - 行の数（同じ行に 2 つあっても 1）にするのは、`git grep -c` と同じ数え方にして、人が手で同じ数を出せるようにするため。
-- V4-2 S での数: 47 ファイル・63 行。設計担当が次の命令で数えた（2026-11-04・S）。
-  `git grep -c -E 'set[A-Za-z0-9]*Loading\( *true *\)' origin/main -- 'frontend/src/*.ts' 'frontend/src/*.tsx' ':!*.test.ts' ':!*.test.tsx'`
-  この 47 行をそのまま基準の表（§4-B の全文）にする。
+- V4-2 S での数: 51 ファイル・69 行。設計担当が次の命令で数えた（2026-11-04・S）。
+  `git grep -c -E 'set[A-Za-z0-9]*Loading[A-Za-z0-9]*\( *true *\)' origin/main -- 'frontend/src/*.ts' 'frontend/src/*.tsx' ':!*.test.ts' ':!*.test.tsx'`
+  この 51 行をそのまま基準の表（§4-B の全文）にする。
 - V4-3 数えるものの限り（このカードでは直さない・design §3-4-22 に記録する）:
   - 中身を消さない印（送る・ログインのボタンの印など。例: S pages/login/LoginPage.tsx の 3 行）も数に入る。段 3 の最後で 0 にする時に、1 行ずつ「中身を消す形か」を見て、消さない印には例外の注記（V4-5）を付ける。今は基準に入れたまま数えるだけなので、今の画面は何も変わらない。
+  - `setUploading(true)`・`setDownloading(true)` など、Loading が小文字の loading で終わる名前（S で 4 ファイル・5 行）は数えない。送る・取り出すの印で、画面の中身を読み込む印ではないため。
+  - 行の中の注記・文字列の中に書かれた `setLoading(true)` も数える（S でそれに当たる行は 0）。数を増やさない見張りなので、多めに数える側に倒す。
   - `setLoading(` と `true)` が 2 行に分かれた書き方は数えない（S で 0 か所かは確かめていない。数を増やさない見張りなので、分かれた書き方で新しく足すと見逃す。段 3 の最後に数え方を見直す）。
   - 読み込み中の印を `useState(true)` の初めの値だけで立て、`setLoading(true)` を書かない画面は数えない（初めの 1 回だけ出す形で、戻った時に中身を消さない）。
 - V4-4 赤にする時（基準の表とファイルごとに比べる。基準に無いファイルは基準 0）:
@@ -35,7 +37,7 @@
 | # | ファイル | 変更前 | 変更後 |
 |---|---|---|---|
 | 1 | frontend/scripts/check-loading-clear.js | 無い | 新しく作る（§4-A 全文） |
-| 2 | frontend/scripts/loading-clear-baseline.json | 無い | 新しく作る（§4-B 全文。47 ファイル・63 行） |
+| 2 | frontend/scripts/loading-clear-baseline.json | 無い | 新しく作る（§4-B 全文。51 ファイル・69 行） |
 | 3 | frontend/package.json | `check:status-direct-writes` が check の最後（S :43）、`check:all` の並びの最後が `\"npm run check:status-direct-writes\"`（S :46） | `check:loading-clear` を 1 行足し、`check:all` の並びの最後に足す（§4-C） |
 | 4 | docs/handoff/line-like-speed/stage4-guard-card.md | 無い | このカード（設計担当が書いた。実装役は触らない） |
 | 5 | docs/handoff/line-like-speed/design.md | §3-4-21 まで | §3-4-21-a（予定表の受入）と §3-4-22（このカードの場所と基準）を書き足し済み（設計担当。実装役は触らない） |
@@ -47,9 +49,9 @@
 - frontend/scripts の §1 #1・#2 以外のファイル、frontend/package.json の §4-C 以外の行（依存・ほかの script）は触らない。package-lock.json は変わらない（依存を足さない）。
 
 ## 3. 実装役が先に確かめること（想定分岐つき）
-- (a) 最新の origin/main で V4-2 の命令（`git grep -c -E 'set[A-Za-z0-9]*Loading\( *true *\)' origin/main -- 'frontend/src/*.ts' 'frontend/src/*.tsx' ':!*.test.ts' ':!*.test.tsx'`）を流し、47 行・合計 63 で §4-B と同じか。違えば停止し、BLOCKED: で生の出力と S からの `git diff --stat bbf873a5dfd578f0f9fd56a9f7bcf7dbd92399f4 origin/main -- frontend/src | tail -20` を報告する（基準の表を自分で直さない）。
+- (a) 最新の origin/main で V4-2 の命令（`git grep -c -E 'set[A-Za-z0-9]*Loading[A-Za-z0-9]*\( *true *\)' origin/main -- 'frontend/src/*.ts' 'frontend/src/*.tsx' ':!*.test.ts' ':!*.test.tsx'`）を流し、51 行・合計 69 で §4-B と同じか。違えば停止し、BLOCKED: で生の出力と S からの `git diff --stat bbf873a5dfd578f0f9fd56a9f7bcf7dbd92399f4 origin/main -- frontend/src | tail -20` を報告する（基準の表を自分で直さない）。
 - (b) frontend/package.json の `"check:status-direct-writes": "node scripts/check-status-direct-writes.js",` が 1 か所、`check:all` の値の最後が `\"npm run check:status-direct-writes\""` で終わること。違えば停止して `grep -n "check:status-direct-writes\|check:all" frontend/package.json` の出力を報告する。
-- (c) 手順 3 で検査を流した結果が「✅ loading-clear: 基準どおり（47 ファイル・63 行）」でない時は、基準の表を直さずに停止し、出力を NEEDS_DECISION: で返す（JS の `\s*` と git grep の ` *` の違いで数が変わった時など）。
+- (c) 手順 3 で検査を流した結果が「✅ loading-clear: 基準どおり（51 ファイル・69 行）」でない時は、基準の表を直さずに停止し、出力を NEEDS_DECISION: で返す（JS の `\s*` と git grep の ` *` の違いで数が変わった時など）。
 - (d) 手順 4 で 1 行足した時に赤（終わりの番号 1）にならない時、足した行を消した後に緑に戻らない時は、停止して生の出力を返す。試しに足した行は commit しない（手順 4 の最後で `git status --short` が §1 の #1〜#3 だけ）。
 
 ## 4-A. #1 frontend/scripts/check-loading-clear.js（新しく作る・全文）
@@ -82,7 +84,7 @@ import { fileURLToPath } from 'url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SRC_DIR = join(__dirname, '../src');
 const BASELINE_FILE = join(__dirname, 'loading-clear-baseline.json');
-const PATTERN = /set[A-Za-z0-9]*Loading\(\s*true\s*\)/;
+const PATTERN = /set[A-Za-z0-9]*Loading[A-Za-z0-9]*\(\s*true\s*\)/;
 const EXEMPT = /loading-clear-exempt:\s*\S/;
 const SKIP_DIRS = new Set(['node_modules', 'coverage', 'dist']);
 
@@ -177,6 +179,7 @@ process.exit(1);
 {
   "components/ChannelTypeCombobox.tsx": 1,
   "components/CommissionPanel.tsx": 1,
+  "components/CompanyContactSelector.tsx": 1,
   "components/ContactChannelLinks.tsx": 1,
   "components/CountryCombobox.tsx": 1,
   "components/FedExRateModal.tsx": 1,
@@ -204,6 +207,7 @@ process.exit(1);
   "pages/buyback-prices/BuybackProductHistoryDrawer.tsx": 2,
   "pages/company-detail/CompanyConvLogsTab.tsx": 1,
   "pages/conditions/ConditionsPage.tsx": 1,
+  "pages/goal-setting/GoalSettingPage.tsx": 1,
   "pages/inbox/InboxKartePanel.tsx": 2,
   "pages/inbox/OutboundTranslationPreview.tsx": 1,
   "pages/inbox/useInboxState.ts": 3,
@@ -214,9 +218,11 @@ process.exit(1);
   "pages/products/ProductEditPage.tsx": 1,
   "pages/quote-detail/QuoteDetailPage.tsx": 1,
   "pages/super-admin/ExtractionPromptConfigTab.tsx": 1,
+  "pages/super-admin/SupplierExtractionRulesPage.tsx": 2,
   "pages/super-admin/TcgLineImportPage.tsx": 2,
   "pages/super-admin/components/AiJobsSection.tsx": 1,
   "pages/super-admin/components/AnalysisDashboardPanel.tsx": 6,
+  "pages/super-admin/components/DbViewerPanel.tsx": 2,
   "pages/super-admin/components/ExtractionErrorLogPanel.tsx": 1,
   "pages/super-admin/components/LlmUsageSection.tsx": 1,
   "pages/super-admin/components/NeedsReviewTabsPanel.tsx": 1,
@@ -248,10 +254,10 @@ process.exit(1);
   cd <W> && grep -n "origin/main は存在" /tmp/s4-preflight.txt | head -3
   （FAIL の行が次の 3 つのうちのどれかだけなら続ける: `GitHub API に到達不可` の 1 件・`gh auth switch --hostname github.com --user shingo-cc` の失敗の 1 件・その結果の `PREFLIGHT FAIL` の行。理由は段 3 の 1 回目のカード §4-M 手順1 と同じ。続ける時は `[OK]   origin/main は存在` の行があることを 2 つ目の grep で確かめ、無ければ停止する。ほかの FAIL が 1 件でもあれば停止し、BLOCKED: で grep の出力を報告する。）
   cd <W> && git fetch origin main
-  cd <W> && git grep -c -E 'set[A-Za-z0-9]*Loading\( *true *\)' origin/main -- 'frontend/src/*.ts' 'frontend/src/*.tsx' ':!*.test.ts' ':!*.test.tsx' > /tmp/s4-grep.txt
+  cd <W> && git grep -c -E 'set[A-Za-z0-9]*Loading[A-Za-z0-9]*\( *true *\)' origin/main -- 'frontend/src/*.ts' 'frontend/src/*.tsx' ':!*.test.ts' ':!*.test.tsx' > /tmp/s4-grep.txt
   cd <W> && wc -l < /tmp/s4-grep.txt
   cd <W> && awk -F: '{s+=$NF} END {print s}' /tmp/s4-grep.txt
-  （47 と 63 であること。§3(a)。）
+  （51 と 69 であること。§3(a)。）
 手順2. 依存を入れ、§3(b) を確かめる。
   cd <W>/frontend && npm ci > /tmp/s4-ci.txt 2>&1
   cd <W> && tail -5 /tmp/s4-ci.txt
@@ -259,7 +265,7 @@ process.exit(1);
 手順3. §4-A の全文で #1 を、§4-B の全文で #2 を作り、§4-C のとおり #3 を直す。検査を流す。
   cd <W>/frontend && node scripts/check-loading-clear.js > /tmp/s4-run.txt 2>&1; echo "exit=$?" >> /tmp/s4-run.txt
   cd <W> && tail -5 /tmp/s4-run.txt
-  （`✅ loading-clear: 基準どおり（47 ファイル・63 行）` と `exit=0`。違えば §3(c)。）
+  （`✅ loading-clear: 基準どおり（51 ファイル・69 行）` と `exit=0`。違えば §3(c)。）
   cd <W>/frontend && npm run check:concurrently > /tmp/s4-conc.txt 2>&1
   cd <W> && tail -5 /tmp/s4-conc.txt
 手順4. わざと 1 本足して赤になること、消すと緑に戻ることを確かめる（試しの行は commit しない）。
@@ -270,7 +276,7 @@ process.exit(1);
   cd <W>/frontend && node -e "require('fs').unlinkSync('src/__loading_clear_probe.ts')"
   cd <W>/frontend && node scripts/check-loading-clear.js > /tmp/s4-green.txt 2>&1; echo "exit=$?" >> /tmp/s4-green.txt
   cd <W> && tail -3 /tmp/s4-green.txt
-  （`✅ ... （47 ファイル・63 行）` と `exit=0`。）
+  （`✅ ... （51 ファイル・69 行）` と `exit=0`。）
   cd <W> && git status --short | head -10
   （§1 の #1〜#3 だけ。§3(d)。）
 手順5. 全部の点検を流す（CI の Frontend Check と同じ入口）。
@@ -299,7 +305,7 @@ process.exit(1);
 ## 5. 受入（○×）
 | # | 基準 | 検証方法 |
 |---|---|---|
-| H1 | 検査が基準どおりで緑（47 ファイル・63 行）。自己点検が通る | /tmp/s4-run.txt の最後と、PR の Frontend Check（check:all）が success で、その記録に `✅ loading-clear: 基準どおり（47 ファイル・63 行）` がある |
+| H1 | 検査が基準どおりで緑（51 ファイル・69 行）。自己点検が通る | /tmp/s4-run.txt の最後と、PR の Frontend Check（check:all）が success で、その記録に `✅ loading-clear: 基準どおり（51 ファイル・69 行）` がある |
 | H2 | わざと 1 本足すと赤、消すと緑 | /tmp/s4-red.txt（exit=1・増えたの行）と /tmp/s4-green.txt（exit=0）。CI が動くたびに自己点検（V4-6）でも確かめる |
 | H3 | 変わったのは §1 の #1〜#5 だけ（#6 は commit しない）。frontend/src は変わっていない | gh pr diff --name-only |
 | H4 | 必須の確認がすべて pass | gh pr checks |
