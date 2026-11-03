@@ -207,7 +207,7 @@ PR を `--draft` なしで起票（`gh pr create --base main`。本文はテン�
 
 ## 14. 実装カード 便2 — Google の予定を取り込む本体（migration を含む・危険 PR）
 
-ブランチ: `release/schedule-gcal-import-bin2`（この文書と `recon-bin2.md` が入っている。同じ PR に実装を足す）。根拠の行番号は `docs/handoff/schedule-gcal-import/recon-bin2.md`（origin/main 0ab7262d6 時点）。着手時に `git fetch origin` し、行番号がずれていたら中身で場所を探す。中身が違えば止めて報告。
+ブランチ: `release/schedule-gcal-import-bin2`（この文書と `docs/handoff/schedule-gcal-import/recon-bin2.md` が入っている。同じ PR に実装を足す）。根拠の行番号は `docs/handoff/schedule-gcal-import/recon-bin2.md`（origin/main 0ab7262d6 時点）。着手時に `git fetch origin` し、行番号がずれていたら中身で場所を探す。中身が違えば止めて報告。
 
 Google 公式の決まり（Context7 `/websites/developers_google_workspace_calendar_api`・2026-11-03 確認）:
 - `syncToken` と一緒に `timeMin`・`timeMax`・`updatedMin`・`orderBy`・`q` は送れない。ほかの引数（`singleEvents`）は最初の全部読みと同じにする。`syncToken` 付きでは `showDeleted=False` は不可（送らない）。
@@ -251,12 +251,12 @@ END
 $gcal_import_uniq$;
 ```
 
-- 古い普通の索引 `idx_calendar_events_google_id` は消さない。`CONCURRENTLY` は使わない（DO の中では使えない・表は小さい）。ロック待ちは `run_all_migrations.sh` の 1 秒＋送り直し（ADR-1037）に任せ、ファイルに `lock_timeout` は書かない。
-- 新しいテナントの `calendar_events` は 078 が毎デプロイで作る（`tenant.py` には無い・recon Q7）。この索引も毎デプロイ同じ DO で付く。`tenant.py` は触らない。
+- 古い普通の索引 `idx_calendar_events_google_id` は消さない。`CONCURRENTLY` は使わない（DO の中では使えない・表は小さい）。ロック待ちは `scripts/run_all_migrations.sh` の 1 秒＋送り直し（ADR-1037）に任せ、ファイルに `lock_timeout` は書かない。
+- 新しいテナントの `calendar_events` は 078 が毎デプロイで作る（`backend/app/services/tenant.py` には無い・recon Q7）。この索引も毎デプロイ同じ DO で付く。`backend/app/services/tenant.py` は触らない。
 
 ### 14-2 `backend/app/services/calendar_service.py` の `upsert_from_google`（376-460 付近）
 
-- 引数に `owner_user_id: int` を足す。戻り値は `"upserted" | "deleted" | "skipped"`。最後の `await db.commit()` を消す（呼び元が 1 回だけ commit する。呼び元は `google_webhook.py` だけ・grep 済み）。
+- 引数に `owner_user_id: int` を足す。戻り値は `"upserted" | "deleted" | "skipped"`。最後の `await db.commit()` を消す（呼び元が 1 回だけ commit する。呼び元は `backend/app/services/google_webhook.py` だけ・grep 済み）。
 - 取り消し（`status == "cancelled"`）の削除文に `AND source = 'google'` を足す。
 - 日時は文字列で渡さず datetime にする（接続は asyncpg・`backend/app/database.py:8`）。同じファイルに `_google_times(start: dict, end: dict) -> tuple[datetime, datetime, bool]` を足す:
   - 終日（`"date" in start`）: 開始 = その日 00:00 日本時間、終了 = `end["date"]` の前の日 23:59 日本時間（Google の終わりの日は次の日のため）。終了が開始より前になったら開始と同じ日の 23:59。
@@ -331,12 +331,12 @@ $gcal_import_uniq$;
 
 ### 14-8 触らない範囲
 
-Google へ送る側（`google_calendar.py` の create/update/delete_event・`calendar_service` の送る処理）、接続・切断の口、OAuth、秘書、AI 用ビュー、シフト、画面（frontend）、`tenant.py`、`deploy.yml`、`monitoring/`。
+Google へ送る側（`backend/app/services/google_calendar.py` の create/update/delete_event・`calendar_service` の送る処理）、接続・切断の口、OAuth、秘書、AI 用ビュー、シフト、画面（frontend）、`backend/app/services/tenant.py`、`.github/workflows/deploy.yml`、`monitoring/`。
 
 ### 14-9 想定される分岐（止まる条件）
 
 - `upsert_from_google` か `handle_webhook_notification` の呼び元が上に書いた以外にある → 止めて報告。
-- `run_all_migrations.sh` の最後が `20261103_120000_create_ai_job_assignments.sql` でない（ほかの PR が足した）→ その最後の次に足し、PR 本文に書く。
+- `scripts/run_all_migrations.sh` の最後が `migrations/20261103_120000_create_ai_job_assignments.sql` でない（ほかの PR が足した）→ その最後の次に足し、PR 本文に書く。
 - `HttpError` の 410 の取り方が今の googleapiclient で `e.resp.status` と違う → 止めて報告。
 - 試験の DB が実 PostgreSQL で、`CAST(:seen AS text[])` が通らない → 止めて報告（書き方を変えない）。
 - 既存の試験が「取り込みは shared で入る」「受け口が同期を待つ」前提で落ちる → その試験は 14-7 のとおり書き換える。それ以外の理由で落ちる試験は直さず止めて報告。
