@@ -163,14 +163,14 @@ CREATE INDEX IF NOT EXISTS idx_user_notices_user_unread ON {各テナント}.use
   3. `frontend/src/components/NoticeBell.tsx` に `variant?: "floating" | "tab"`（省略時 `"floating"` = 今の PC の形）を足す。`"tab"` のとき:
      - `Popover` は `placement="top"`、`className="notice-bell-tab-slot"`（金型の押す部分を包む span に付く。`frontend/src/components/Popover.tsx` の `className`）
      - 押すボタンは `className="mobile-tab"`、`data-testid="notice-bell"`、aria-label は今と同じ（`notices.bellLabel` / `notices.bellLabelUnread`）
-     - 中身は他のタブと同じ並び: `BellOutline`（`size={ICON.base}`）＋ `<span className="mobile-tab-label">{t("notices.bellLabel")}</span>`＋ 未読があるとき `<span className="mobile-tab-badge" aria-hidden="true">{formatUnreadCount(unread)}</span>`（受信箱タブの数字 `MobileShell.tsx:300-304` と同じ部品の形。新しい色・寸法は足さない）
+     - 中身は他のタブと同じ並び: `BellOutline`（`size={ICON.base}`）＋ `<span className="mobile-tab-label">{t("notices.bellLabel")}</span>`＋ 未読があるとき `<span className="mobile-tab-badge" aria-hidden="true">{formatUnreadCount(unread)}</span>`（受信箱タブの数字 `frontend/src/components/MobileShell.tsx:300-304` と同じ部品の形。新しい色・寸法は足さない）
      - 一覧の中身（`notice-panel`）と、押したときの動き・読み直しは今と同じ（同じ関数を両方で使う）
   4. `frontend/src/components/NoticeBell.css`: `.top-right-cluster--mobile` を消す。`.notice-bell-tab-slot { flex: 1; display: flex; }` と `.notice-bell-tab-slot > .mobile-tab { flex: 1; }` を足す（タブの幅を他のタブと揃えるため。直値なし）
 - 触らない: DesktopShell・`.top-right-cluster`（PC 用）・`frontend/src/mobile-shell.css`・tokens.css・API・backend・i18n のキー（既存の `notices.bellLabel` を使い、新しいキーは足さない）
 - 試験:
   - `frontend/src/components/MobileShell.test.tsx:202-209`: 権限ありの下のタブの数を 4 → 5 に直す（鈴が 1 つ増える）。試験名も 5 に直す
   - `frontend/tests-e2e/visual-language/notice-bell.spec.ts`: 数字の見つけ方を `.comp-badge, .mobile-tab-badge` の両方にする。スマホ幅（project 名が `vl-mobile-390`）だけで流す試験を 1 つ足す: 鈴が `.mobile-tabbar` の中にあり、`.top-right-cluster--mobile` が 0 件、鈴を開くと一覧の下端が鈴の上端より上にある
-  - 既存の `inbox-single-column.spec.ts` の 6 件（第4便の選択モード・第6便のもっと/言語・第7便）がスマホ幅で通ることで、重なりが消えたことを確かめる（試験は直さない）
+  - 既存の `frontend/tests-e2e/visual-language/inbox-single-column.spec.ts` の 6 件（第4便の選択モード・第6便のもっと/言語・第7便）がスマホ幅で通ることで、重なりが消えたことを確かめる（試験は直さない）
 - 受入（○×）:
 
 | 基準 | 検証方法 |
