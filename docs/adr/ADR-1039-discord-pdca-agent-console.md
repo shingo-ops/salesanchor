@@ -75,5 +75,6 @@
 - 経緯: Mac の囲いで件の作業を動かすと Mac が重くなる（PO）。囲いの受入も 4 つ中 2 つの合格で止まった。PO は Discord の投稿を「自律的に保守が始まるトリガー」とし、外への情報の持ち出しを禁止した（ADR-1052）。設計: salesanchor リポジトリ [design.md](../handoff/cloud-case-ai/design.md)。
 - Decision 6 を改める: 投稿を受けて最初に調べる役は、Mac の `discord-case` 役ではなく、クラウドの相談係 AI（ADR-1052）にする。相談係 AI の報告を受けた後の件のセッションは、今までどおり `discord-case` 役（囲い・行き先の許可・`filesystem.denyRead`）で開く。全権の管理者としては開かない。
 - Decision 7 を改める（行き先）: 相談係 AI が届くのは `case-api.salesanchor.jp` だけ。鍵はクラウドの network secret の `CASE_AGENT_TOKEN` 1 つで、環境変数には置かない。agent-console が使う `CASE_ADMIN_TOKEN`・`OPS_API_TOKEN` は手元の Keychain だけに置き、件の囲いと判断役には渡さない。
+  - 注記（2026-11-03・design.md U11）: 公式資料では、ネットワーク None でも GitHub の中継（付けたリポジトリだけ）・有効にしたコネクタ・Anthropic API には届く。上の「届くのは case-api.salesanchor.jp だけ」は、鍵を付けて届く先のことと読む。ほかの届く先の守りと残るリスクは ADR-1052 の受け入れるリスクに書く。
 - Decision 12 を改める: 指示書の正本は `docs/ai-agents/ops-incident-agent.md` の 1 か所のまま。相談係 AI の専用リポジトリの CLAUDE.md は写しにし、CI で正本とのハッシュ一致を確かめる。
 - 本改訂は ADR-1052 が Accepted になったときに効く。
