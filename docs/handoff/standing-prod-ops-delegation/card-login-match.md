@@ -166,37 +166,54 @@ UNEXPLAINED_AFTER_DELEGATION=0
 
 ## 5. 手順（クラウドの作業場所で）
 
-0. `./scripts/dev/executor-preflight.sh > /tmp/preflight.txt 2>&1; grep -n 'FAIL' /tmp/preflight.txt; grep -n 'origin/main は存在' /tmp/preflight.txt`
+1 手順 1 命令で流す。<W> は手順0 で作られた作業場所の絶対パス。クラウドの決まり（scripts/agent-hooks/cloud/rules.md の「ファイルを変える前に…」の項）に従い、作業場所は new-worktree.sh で作り、変更・commit・push はその中で行う。2回目の実行は、作業場所を作らずに commit したため、見張り（worktree 外の commit の禁止）に止められた（カードの書き漏れ）。
+
+0. 作業場所を作る。
+   - `cd "$(git rev-parse --show-toplevel)" && bash scripts/new-worktree.sh release/prod-login-match`
+   - 出力に出た作業場所の絶対パスを <W> として報告に書く。出力はパイプに通さない。
+   - 見張りの知らせが `feature/morimoto/<トピック名>` の枝名を示しても、それには従わない（rules.md のとおり）。
+   - `.claude-pipeline/active-work.d/` の登録ファイルは commit しない。
+   - reset・rebase・force・pull は使わない。main は取り込まない。
+1. 点検を流す。
+   - `cd <W> && ./scripts/dev/executor-preflight.sh > /tmp/preflight.txt 2>&1`
+   - `cd <W> && grep -n 'FAIL' /tmp/preflight.txt | head -20`
+   - `cd <W> && grep -n 'origin/main は存在' /tmp/preflight.txt | head -3`
    - FAIL の行が次の 3 つのどれかだけなら続ける: `GitHub API に到達不可` の 1 件・`gh auth switch --hostname github.com --user shingo-cc` の失敗の 1 件・その結果の `PREFLIGHT FAIL` の行。理由: クラウドには gh の名義が無く、api.github.com に届かないが、git の取り寄せと push は通る。PR は Opus が手元で shingo-cc 名義を確かめてから作る（docs/handoff/line-like-speed/stage1-card.md と同じ扱い）。
    - 続けるときは、2 つ目の grep で `[OK]   origin/main は存在` の行があることを確かめる。無ければ止まり、`BLOCKED:` で grep の出力を報告する。
    - ほかの FAIL が 1 件でもあれば止まり、`BLOCKED:` で grep の出力を報告する。
-   - `scripts/new-worktree.sh` は使わない（クラウドの作業場所でそのまま枝を作る）。それが作る `.claude-pipeline/active-work.d/` の登録ファイルは commit しない。
-1. `git fetch origin && git checkout -B release/prod-login-match origin/main`
-2. `git log -1 --format=%H origin/main` と `wc -l scripts/dev/consent-audit.py` を報告に貼る。
-3. §2・§3 のとおり `scripts/dev/consent-audit.py` を直す。§4 の `scripts/dev/prod-login-match-tests.py` を作る。
-4. `python3 -I -B scripts/dev/prod-login-match-tests.py`
-5. `python3 -I -B scripts/dev/permission-delegation-tests.py`
-6. `python3 -I -B scripts/dev/consent-audit.py --help`（新しい引数が出ること）
-7. `git diff --stat origin/main...HEAD` と `git diff --name-only origin/main...HEAD`（コミットの後）
-8. `git add scripts/dev/consent-audit.py scripts/dev/prod-login-match-tests.py && git commit -m "feat: add --prod-logins to consent-audit to match prod logins with conversation records"`（本文の最後に `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`）
-9. `git push -u origin release/prod-login-match`
+2. 土台を確かめる。
+   - `cd <W> && git branch --show-current && git rev-parse HEAD origin/main && wc -l scripts/dev/consent-audit.py`
+   - 枝が `release/prod-login-match` で、2 つの SHA が同じで、行数が `1161` であること。
+3. §2・§3 のとおり `<W>/scripts/dev/consent-audit.py` を直す。§4 の `<W>/scripts/dev/prod-login-match-tests.py` を作る（どちらも <W> の中。作業場所の外のファイルは変えない）。
+4. `cd <W> && python3 -I -B scripts/dev/prod-login-match-tests.py`
+5. `cd <W> && python3 -I -B scripts/dev/permission-delegation-tests.py`
+6. `cd <W> && python3 -I -B scripts/dev/consent-audit.py --help`（新しい引数が出ること）
+7. commit する。
+   - `cd <W> && git add scripts/dev/consent-audit.py scripts/dev/prod-login-match-tests.py`
+   - `cd <W> && git commit -m "feat: add --prod-logins to consent-audit to match prod logins with conversation records" -m "Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"`
+8. 変わったファイルを確かめる。
+   - `cd <W> && git diff --stat origin/main...HEAD`
+   - `cd <W> && git diff --name-only origin/main...HEAD`
+   - `cd <W> && git status --short | head -20`
+9. push する（--no-verify は使わない。push の前の検査が × なら §1 の2ファイルの中で直してから push。fast-forward でないと断られたら直さず BLOCKED:）。
+   - `cd <W> && git push -u origin release/prod-login-match`
 
 ## 6. 停止する条件と終わりの条件
 
-- 進めてよい条件: 手順2で `wc -l` が `1161`。違えば、そこで止めて `BLOCKED: consent-audit.py の行数が 1161 でない（<値>）` と報告する。
+- 進めてよい条件: 手順2で、枝名・2つの SHA の一致・`wc -l` が `1161` の3つが揃う。違えば、そこで止めて `BLOCKED:` に続けて手順2の出力を書く。
 - 進めてよい条件: 手順4・5の最後の行が `FAIL=0` を含み、終わりの番号が 0。違えば直してよいのは §1 の2ファイルだけ。3回直しても FAIL が残るなら、止めて `BLOCKED:` に続けて FAIL の試験名を全部書く。
 - 進めてよい条件: 手順5（今の試験）で、§1 の2ファイル以外を直さないと通らないと分かったとき → 直さずに止めて `NEEDS_DECISION:` に続けて FAIL の試験名と1行の理由。
 - 終わりの条件:
   - 手順4の最後の行が `PASS=<n> FAIL=0 TOTAL=<n>`（n は 14 以上）で、終わりの番号 0。
   - 手順5の最後の行が `FAIL=0` を含み、終わりの番号 0。
-  - 手順7の `--name-only` が `scripts/dev/consent-audit.py` と `scripts/dev/prod-login-match-tests.py` の2行だけで、`--stat` の consent-audit.py の削除行が 0（足すだけ。`main()` の中の1行の差し替えで削除が出る場合は、その削除行を報告に全部貼る）。
+  - 手順8の `--name-only` が `scripts/dev/consent-audit.py` と `scripts/dev/prod-login-match-tests.py` の2行だけで、`--stat` の consent-audit.py の削除行が 0（足すだけ。`main()` の中の1行の差し替えで削除が出る場合は、その削除行を報告に全部貼る）。
   - push が成功している。
 
 ## 7. 報告（完了報告の本文に、次を全部そのまま含める）
 
 - 1行目: `本報告はカード card-login-match の実行結果である`
 - 2行目: `受領確認: card-login-match を読んだ`
-- 手順0の2つの grep の出力と、手順2・4・5・6・7・9 の生出力の全文（要約しない。試験の出力は1試験1行なので上限に収まる）
+- <W> の絶対パス、手順1の2つの grep の出力と、手順2・4・5・6・8・9 の生出力の全文（要約しない。試験の出力は1試験1行なので上限に収まる）
 - 止まったとき: 停止した手順番号／最後に実行したコマンド／停止した理由
 - 最後の行: `DONE` / `BLOCKED:` ＋理由 / `NEEDS_DECISION:` ＋内容 のどれか
 
