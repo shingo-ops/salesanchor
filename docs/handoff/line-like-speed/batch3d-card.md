@@ -4,8 +4,8 @@
 - 根拠の写し: S=origin/main 340fff885920db3d18bbb1001afd7f6e2d327fb1。行番号はすべてこの sha。2026-11-03 に設計担当が S の写しで行を読んだ。2026-11-03 時点の origin/main 1f7bcdef9 と S の間で frontend/src の差は 0（設計担当が `git diff --stat` で確かめた）。実装の前に最新の origin/main で行を合わせ直す（§3(a)）。
 - 読んだ節: docs/handoff/design-partner-card-ops/guards/00-common.md・guards/03-file.md・guards/04-worktree.md・guards/05-pr.md・guards/10-executor.md・scripts/agent-hooks/cloud/rules.md（段 3 の 1〜3 回目のカードと同じ節。照合も同じ: 全命令は cd <W> で始める・出力は tail/head で上限・新しいファイルは丸ごとの全文・作業場所は new-worktree.sh で作り出力をパイプに通さない・PR は実行役が作らない・出力をファイルに残す命令と tail で読む命令は別の行）。
 - 実行役はクラウドの Sonnet。作業場所の作り方はクラウドの決まり（S scripts/agent-hooks/cloud/rules.md:15）を正とする。.pr-number・gh-pr-create-safe.sh は使わない。出力には上限を付ける。待つために sleep を使わない。
-- 状態: 第 1 版（2026-11-03 設計担当 Claude Opus）。クラウド審査の前。
-- 受領確認: 実装役は着手の最初の報告に「段 3 の 4 回目のカード 第 1 版を受け取った・S=340fff885」と書く。
+- 状態: 第 2 版（2026-11-03 設計担当 Claude Opus）。第 1 版（e3d16a834）のクラウド審査 REVISE の 4 点（Q2 の押せるかの見方・手順3 の grep 2 本・ORD-FIX の行）を直した。
+- 受領確認: 実装役は着手の最初の報告に「段 3 の 4 回目のカード 第 2 版を受け取った・S=340fff885」と書く。
 
 ## 0. 設計からの直し・詳しくした点（V3d。設計の合格線は変えない）
 - V3d-1 対象は、測る利用者（tenant 001 の測定用の利用者）に見る権限が無く、これまでの毎朝の記録で「断りの画面が戻る秒」しか測れていなかった画面のうち、開くたびに中身を消して取り直している 8 画面（design §3-4-17）。PO 選択「1」（権限を足して本番の測定まで直す）。測る利用者への見る権限は 2026-11-03 に足し済み。残りの 8 画面（チャネル・ロール・スタッフ・スタッフの編集・受注・在庫の見え方・状態・商品区分）は段 3 の 5 回目のカードで扱い、このカードの対象ではない。
@@ -461,20 +461,20 @@ describe("commission settings save is blocked until the settings are read (Q2)",
     });
     render(<Tree c={{ Page: CommissionSettingsPage, route: "/commission-settings", at: "/commission-settings" }} />);
     await screen.findByText("Fixture read failure");
-    expect(screen.getByTestId("settings-save")).toBeDisabled();
+    expect((screen.getByTestId("settings-save") as HTMLButtonElement).disabled).toBe(true);
   });
 
   it("enables save once the settings are read", async () => {
     vi.spyOn(api, "get").mockImplementation(async (path: string) => answer(path));
     render(<Tree c={{ Page: CommissionSettingsPage, route: "/commission-settings", at: "/commission-settings" }} />);
     await screen.findAllByDisplayValue("0.37");
-    expect(screen.getByTestId("settings-save")).not.toBeDisabled();
+    expect((screen.getByTestId("settings-save") as HTMLButtonElement).disabled).toBe(false);
   });
 });
 ```
 - LoadingBlock の見分けは `.sa-loading-block`、回る印の見分けは `.page-layout-title-row .sa-spinner`（段 3 の 1〜3 回目のカード §4-L と同じ）。報酬の設定は回る印を出さない（V3d-3）。
-- 「Fixture Table」は保管の表の種類の列（S ArchivesPage.tsx:39-41）、「Fixture Sync」は ERP の表の種類の列（S ERPPage.tsx:71-74）、「Fixture Shift」はシフトの表の種類の列（S ShiftsPage.tsx:107-109）、「SR-FIX」はスタッフの報告の表のコードの列（S StaffReportsPage.tsx:108）、「Fixture Channel」は通知の宛先の表の名前の列（S NotificationsPage.tsx:177-179）、「ORD-FIX」は売上の表の受注番号の列（S SalesPage.tsx:192-196 の列の定義）、「Fixture Staff」は報酬の担当ごとの表（S CommissionsPage.tsx:178）に出る。報酬の画面は受注の一覧にも「ORD-FIX」が出るが、この試験は見ない。
-- 「0.37」は報酬の設定の営業の値の欄（testid `settings-value-sales`・S CommissionSettingsPage.tsx:231）の値。`toBeDisabled` は S の試験の setup（@testing-library/jest-dom）で使える。使えない時は停止して報告する（試験の書き方を変えない）。
+- 「Fixture Table」は保管の表の種類の列（S ArchivesPage.tsx:39-41）、「Fixture Sync」は ERP の表の種類の列（S ERPPage.tsx:71-74）、「Fixture Shift」はシフトの表の種類の列（S ShiftsPage.tsx:107-109）、「SR-FIX」はスタッフの報告の表のコードの列（S StaffReportsPage.tsx:108）、「Fixture Channel」は通知の宛先の表の名前の列（S NotificationsPage.tsx:177-179）、「ORD-FIX」は売上の表の受注番号の列（S SalesPage.tsx:116-120 の列の定義）、「Fixture Staff」は報酬の担当ごとの表（S CommissionsPage.tsx:178）に出る。報酬の画面は受注の一覧にも「ORD-FIX」が出るが、この試験は見ない。
+- 「0.37」は報酬の設定の営業の値の欄（testid `settings-value-sales`・S CommissionSettingsPage.tsx:231）の値。S の試験には jest-dom が入っていないため、押せるかどうかは `button.disabled` を直に見る（S の既存の書き方: frontend/src/components/TeamFormButtonMigration.test.tsx:114）。
 - 通知の宛先の event_types を空の文字にしたのは、S :24-31 の parseEventTypes が空の一覧を返し、種類の言葉の表を引かないため。webhook_url の `example.invalid` は送られない（試験は fetch を止めている）。
 
 ## 4-M. 実装役の手順（1 手順 1 命令。<W> は手順1 で作られた作業場所の絶対パス）
@@ -501,10 +501,10 @@ describe("commission settings save is blocked until the settings are read (Q2)",
   cd <W>/frontend && npx eslint src/pages/archives/ArchivesPage.tsx src/pages/erp/ERPPage.tsx src/pages/shifts/ShiftsPage.tsx src/pages/staff-reports/StaffReportsPage.tsx src/pages/notifications/NotificationsPage.tsx src/pages/sales/SalesPage.tsx src/pages/commissions/CommissionsPage.tsx src/pages/commission-settings/CommissionSettingsPage.tsx > /tmp/b3d-lint-before.txt 2>&1
   cd <W> && tail -5 /tmp/b3d-lint-before.txt
 手順3. §4-L の全文で #11 を作り、§4-A〜§4-K のとおり #1〜#10 を直す。各ファイルを直す前に、§4 の「変更前」の文を `grep -n` で確かめる（§3(c)）。終わったら残りが無いことを確かめる。
-  cd <W> && grep -n "useEffect\|useCallback\|setLoading\|setArchives\|setLogs\|setShifts\|setReports\|setChannels\|setEventTypes\|setData\|setMonthly\|setOrders\|setSettings\|loadSettings\|loadMonthly" frontend/src/pages/archives/ArchivesPage.tsx frontend/src/pages/erp/ERPPage.tsx frontend/src/pages/shifts/ShiftsPage.tsx frontend/src/pages/staff-reports/StaffReportsPage.tsx frontend/src/pages/notifications/NotificationsPage.tsx frontend/src/pages/sales/SalesPage.tsx frontend/src/pages/commissions/CommissionsPage.tsx frontend/src/pages/commission-settings/CommissionSettingsPage.tsx | head -20
-  （0 行であること。出たら §4 の写し違いを直す。）
+  cd <W> && grep -nw "useEffect\|useCallback\|setLoading\|setArchives\|setLogs\|setShifts\|setReports\|setChannels\|setEventTypes\|setData\|setMonthly\|setOrders\|setSettings\|loadSettings\|loadMonthly" frontend/src/pages/archives/ArchivesPage.tsx frontend/src/pages/erp/ERPPage.tsx frontend/src/pages/shifts/ShiftsPage.tsx frontend/src/pages/staff-reports/StaffReportsPage.tsx frontend/src/pages/notifications/NotificationsPage.tsx frontend/src/pages/sales/SalesPage.tsx frontend/src/pages/commissions/CommissionsPage.tsx frontend/src/pages/commission-settings/CommissionSettingsPage.tsx | head -20
+  （0 行であること。`-w` は語として当たる行だけ出すため、G5 で残す `reloadMonthly` は出ない。出たら §4 の写し違いを直す。）
   cd <W> && grep -n "loading" frontend/src/pages/archives/ArchivesPage.tsx frontend/src/pages/erp/ERPPage.tsx frontend/src/pages/shifts/ShiftsPage.tsx frontend/src/pages/staff-reports/StaffReportsPage.tsx frontend/src/pages/notifications/NotificationsPage.tsx frontend/src/pages/sales/SalesPage.tsx frontend/src/pages/commissions/CommissionsPage.tsx frontend/src/pages/commission-settings/CommissionSettingsPage.tsx | head -20
-  （出るのは `components/loading` の import の行だけであること。）
+  （出るのは `components/loading` の import の行 8 行と、今からあるボタンの `<Button loading=` の行 2 行（ERPPage.tsx の書き出しのボタン・CommissionSettingsPage.tsx の保存のボタン。どちらも変えない）の、合わせて 10 行だけであること。）
 手順4. 型を作ってから試験を流す（新しい試験・直した今ある試験・全部の試験・型・lint）。作る型（frontend/src/api/generated/）は .gitignore で除かれるので commit に入らない。
   cd <W>/frontend && npm run generate:api-types > /tmp/b3d-gen.txt 2>&1
   cd <W> && tail -3 /tmp/b3d-gen.txt
