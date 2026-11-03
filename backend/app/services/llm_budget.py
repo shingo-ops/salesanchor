@@ -171,6 +171,14 @@ USAGE_PURPOSES: frozenset[str] = frozenset(
 # sdk: どの SDK の usage_metadata から読んだか（design.md §3-1 CHECK 制約と同一の集合）
 USAGE_SDKS: frozenset[str] = frozenset({"google-genai", "google-generativeai", "codex-cli", "claude-code"})
 
+# ADR-1058 段2: 担当表の provider → 使用の記録の sdk の集合（design.md §6 の①）。
+# 画面のログインの○×と回数はこの対応で `sdk = ANY(:sdks)` を引く。対応はここ1か所だけ。
+USAGE_SDKS_BY_PROVIDER: dict[str, frozenset[str]] = {
+    "gemini": frozenset({"google-genai", "google-generativeai"}),
+    "codex": frozenset({"codex-cli"}),
+    "claude": frozenset({"claude-code"}),
+}
+
 
 @dataclass(frozen=True)
 class UsageCounts:
@@ -583,6 +591,7 @@ __all__ = [
     "LLM_PRICING",
     "USAGE_PURPOSES",
     "USAGE_SDKS",
+    "USAGE_SDKS_BY_PROVIDER",
     "USAGE_ERROR_CODES",
     "USAGE_OUTCOMES",
     "UsageCounts",
