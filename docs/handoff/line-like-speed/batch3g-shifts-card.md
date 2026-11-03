@@ -3,7 +3,7 @@
 - 対象: docs/handoff/line-like-speed/design.md §3-4-20。ADR-1054 段 3 の 7 回目（予定表 /schedule）の前提。速さの直しではなく、範囲の外の不具合直し（docs/STANDARD-WORKFLOW.md §5「低リスクのコード」の自律クラフト。記録は design §3-4-20）。
 - 根拠の写し: S=origin/main 17c791b711064a5c772a3ca3535f2965d8a4d206。行番号はすべてこの sha。
 - 実行役はクラウドの Sonnet。作業場所の作り方はクラウドの決まり（S scripts/agent-hooks/cloud/rules.md:15）を正とする。PR は作らない。出力には上限を付ける。待つために sleep を使わない。
-- 状態: 第 2 版（2026-11-04 設計担当 Claude Opus）。第 1 版の審査（クラウドの審査役・APPROVE）の注意と、設計担当が見つけた見え方の変化を直した: ①応答の時刻を "HH:MM" のまま返す（§4-A A3b・F9）ので test_shifts.py の今の確かめ（"09:00"）は変えない ②§3(b) の探し方を行全体の一致（grep -nxF）にした。
+- 状態: 第 2 版（2026-11-04 設計担当 Claude Opus）。第 1 版の審査（クラウドの審査役・APPROVE）の注意と、設計担当が見つけた見え方の変化を直した: ①応答の時刻を "HH:MM" のまま返す（§4-A A3b・F9）ので test_shifts.py の今の確かめ（"09:00"）は変えない ②§3(b) の探し方を行全体の一致（grep -nxF）にした。 第 2.1 版（2026-11-04）: 第 2 版の実装の試行で ruff が test_shifts.py の今からある 2 件を指摘して止まったので、手順4 の ruff の合格の基準を、CI と同じ範囲に合わせて書き直した（手順4 の注記）。
 - 受領確認: 実装役は着手の最初の報告に「シフトの直しのカード 第 2 版を受け取った・S=17c791b71」と書く。
 
 ## 0. 観測した事実（設計担当とクラウドの調べ担当が確かめた）
@@ -279,7 +279,7 @@ def test_p2_create_writes_date_and_time_columns(pg, monkeypatch):
   cd <W> && tail -5 /tmp/b3g-ruff.txt
   cd <W> && python3.12 scripts/check_test_schema_dup.py > /tmp/b3g-dup.txt 2>&1
   cd <W> && tail -5 /tmp/b3g-dup.txt
-  （0 件の指摘であること。引数が要ると言われたら、出力をそのまま報告に書き、その検査は CI に任せる。）
+  （ruff は app/routers/shifts.py・tests/test_shifts_pg.py・tests/conftest.py の指摘が 0 件であること。tests/test_shifts.py の今からある 2 件（:7 I001・:9 F401）は変更前の枝でも同じに出る。CI の ruff は app/ だけを見て tests を除く（S .github/workflows/test.yml:86 `ruff check app/`、backend/pyproject.toml:5-6 exclude "tests"）ので、この 2 件は直さず範囲の外とする。それ以外の指摘が出たら BLOCKED:。check_test_schema_dup.py は引数が要ると言われたら、出力をそのまま報告に書き、その検査は CI に任せる。）
 手順5. 変わったファイルが §1 の #1〜#4 だけか確かめる。
   cd <W> && git status --short | head -10
   cd <W> && git diff origin/release/line-like-speed-batch3g-shifts | head -200
