@@ -17917,7 +17917,8 @@
         "enum": [
           "lead_assigned",
           "meta_message_received",
-          "tcg_distribution_error"
+          "tcg_distribution_error",
+          "discord_outside_ticket_post"
         ],
         "title": "NotificationEventType",
         "type": "string"
