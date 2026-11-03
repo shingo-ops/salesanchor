@@ -192,10 +192,12 @@ Discord 投稿（許可リストの人だけ）
   - 段0の作成画面ではヘッダ名を入れる欄があった（段0の記録）。簡易フォームと同じ画面かは未確認（U2b）。
 - routine: 起動は API の /fire だけ。
   - コネクタは 0 個（既定で全部入るので外す。G3）。段0で、作成時に 7 個が自動で付くと分かった。手順を固定する: （１）enabled=false で作る（段0では作った直後の更新で無効にした。作るときに無効にできるかは段3で確かめる）（２）clear_mcp_connections=true で更新（３）get で mcp_connections が [] と確かめる（４）それから有効にする。
+  - 使える道具は routine の session_context.builtin_tools で ["Bash","Read","Glob","Grep"] の 4 つだけにする（守りの 1 枚目）。【段3の T0b 5 回目（2026-11-03）で確かめた】見えた道具はこの 4 つだけで、MCP の道具は 0 個だった。allowed_tools は道具を絞らない（4 回目に、ほかの道具が見えた）。
+  - deny の一覧だけで塞ぐ形は採らない。段3の T0b 3・4 回目で、一覧に無い道具が回ごとに見つかった（名前は手元の非公開の記録）。
   - つなぐリポジトリは専用の非公開リポジトリ 1 つ。中身は指示書と .claude/settings.json だけ。
-  - .claude/settings.json は次の形にする（段0の 2 回目・3 回目で使った形。段0の記録）。アーカイブの前に入れる。
-    - permissions.deny: "WebSearch"・"WebFetch"・"Artifact"・"mcp__*"（段0で効いた形）
-    - 段3の T0 で足せるか試す: "PushNotification"・"Skill"（V4.1 M4・L3）。効けば正本に入れる。効かなければ残るリスクとして ADR に書く。
+  - .claude/settings.json は守りの 2 枚目。正本は S docs/handoff/cloud-case-ai/case-repo-settings.json で、専用リポジトリの写しと同じ中身にする。アーカイブの前に入れる。
+    - permissions.deny: "WebSearch"・"WebFetch"・"Artifact"・"mcp__*"（段0で効いた形）・"PushNotification"・"Skill"（V4.1 M4・L3。段3で専用リポジトリに入れた）
+    - 公開のリポジトリには、新しく見つけた道具の名前を載せない（PO 2026-11-03「1」）。1 枚目が 4 つに絞るので、一覧に足さない。
     - enableArtifact: false
     - "mcp__*" は必須。これが無いと、コネクタを 0 個にしても組み込みの github 道具 51 個（書き込み系を含む）と add_repo などが残る（段0の 1 回目）。入れると読み込み自体が消える（2 回目）。
   - そのリポジトリは GitHub でアーカイブ（読み取り専用）にする。アーカイブで読み取り専用になり、push・issue・コメントを受け付けなくなるのは GitHub の資料による（引用はまだ載せていない。段3の前に原文を引く）。段0では GitHub 自体の拒否は観測していない。
@@ -204,8 +206,9 @@ Discord 投稿（許可リストの人だけ）
   - 箱の中の GitHub への道（段0。U9・U10）: 段0で、まだ塞いでいない道が見つかった。中身は手元の非公開の記録にある。今の守りは 1 枚と数える。段3に進む条件は U9・U10（§8）。1 つでも確かめられなければ段3に進まない。
   - Web 検索・WebFetch: 段0の 1 回目で、道具そのものが無効だった。
   - 外部の URL: example.com は接続 403 だった。ほかの宛先は段3の T0 で読むだけの接続を試す（U9）。
-  - 成果物（artifact）の公開と claude.ai の skill（V3 L2）: 段0では公開の道具が無く、実行されなかった。上の deny の "Artifact" と enableArtifact=false を残す。skill は共通 14 個と anthropic-skills 13 個が入った（docs・google-workspace など）。skill の書き出しがコネクタを通るものだけかは確かめていない（推測）。"Skill" を拒否できるかを段3の T0 で試す。指示書に「成果物を作らない」と書く。
-  - 持ち主のスマホへの通知（PushNotification）は試し役が使えた（3 回目）。宛先は PO 本人だけなので外への書き出しには数えない。ただし成果物と同じく、値が 30 日の保存の外に残る道になる。拒否の一覧に入れられるかを段3の T0 で試す。入れられなければ指示書に「値を通知に書かない」と書き、残るリスクとして ADR に書く。
+  - 成果物（artifact）の公開と claude.ai の skill（V3 L2）: 段0では公開の道具が無く、実行されなかった。上の deny の "Artifact" と enableArtifact=false を残す。skill は共通 14 個と anthropic-skills 13 個が入った（docs・google-workspace など）。skill の書き出しがコネクタを通るものだけかは確かめていない（推測）。【段3】"Skill" は deny に入れ、1 枚目の 4 つにも入らない。指示書に「成果物を作らない」と書く。
+  - 持ち主のスマホへの通知（PushNotification）は段0の試し役が使えた（3 回目）。【段3】deny に入れ、1 枚目の 4 つにも入らない（T0b 5 回目で見えなかった）。
+  - 残るリスク（ADR に書く）: 命令（Bash）からの通信は道具の絞りでは止まらない。中継の 403・アーカイブ・U9 の守りで止める。宛先によっては AI の見張りだけで止まった項目がある（守り 1 枚。中身は手元の非公開の記録）。
 - 指示書の正本 S docs/ai-agents/ops-incident-agent.md は origin/main にまだ無い（V3 L9。ADR-1039 Decision 12 も「まだ無い」）。段3の前の文書だけの PR で作る（§9）。
 - case-api.salesanchor.jp の DNS と証明書（さくらの DNS の画面操作と certbot → PO。2026-10-31 済み）。
   - ADR-1042:36 は「新しいサブドメインはパス分けと変わらない」を理由に不採用にした。今回は、api.salesanchor.jp にある公開の書き込み口（S backend/app/routers/viewer.py:416-476、contact.py:72、auth.py:45）を相談係AI から隠す必要がある。パス分けでは隠せないので、ADR-1042 の改訂で理由を書く。
@@ -269,7 +272,7 @@ Discord 投稿（許可リストの人だけ）
 | 番号 | 試験 | 合格 |
 |---|---|---|
 | T0 | 段0（試しの環境）: push・新しいブランチ・issue・コミットへのコメント・gist・ほかのリポジトリの API・コネクタ・case-api 以外の URL・WebSearch・WebFetch・成果物の公開・`PATCH archived=false`・同じホストへの secret 2 つ | 【段0の結果。2026-10-30 に 3 回】外への書き込み 0 件（gist・issue・コミットへのコメント 0、ブランチ main のまま、試し役のコミット 0）。ただし結果ファイルの判定どおり、段0では最終合格としない（止まり方の中身は非公開の記録）。 |
-| T0b | 段3（本番の専用環境）: T0 と同じ書き込みの試し。加えて読むだけの試し（項目は非公開の記録）。"PushNotification"・"Skill" の拒否 | push・ほかのリポジトリ・外部の URL は中継の 403 か接続失敗。WebSearch・WebFetch・Artifact・mcp__・（入れた場合）PushNotification・Skill は道具の拒否。前後の数に変化 0。読むだけの試しの結果で U9・U10 の条件を判定する。AI の見張りだけで止まった項目は「守り 1 枚」と記録する |
+| T0b | 段3（本番の専用環境）: T0 と同じ書き込みの試し。加えて読むだけの試し（項目は非公開の記録）。"PushNotification"・"Skill" の拒否 | push・ほかのリポジトリ・外部の URL は中継の 403 か接続失敗。WebSearch・WebFetch・Artifact・mcp__・（入れた場合）PushNotification・Skill は道具の拒否。前後の数に変化 0。読むだけの試しの結果で U9・U10 の条件を判定する。AI の見張りだけで止まった項目は「守り 1 枚」と記録する。【2026-11-03 に 5 回】U9・U10 ○。5 回とも前後の数（gist・issue・コメント・ブランチ・コミット）に変化 0。5 回目で見える道具が Bash・Read・Glob・Grep の 4 つだけになった（§4-4）。項目ごとの結果は手元の非公開の記録 |
 | T1 | ai_cloud を別名・式・連結・substring・md5・length・to_json・UNION・型変換のエラーで読む。V1 H1 の列も対象 | 元の値が出ない |
 | T1b | pg_stats・pg_stats_ext・pg_stats_ext_exprs と EXPLAIN (VERBOSE) | 元の表の行が 0、値が出ない |
 | T2 | 許可なしで /read | 値なし。unmask_reads 増えず |
