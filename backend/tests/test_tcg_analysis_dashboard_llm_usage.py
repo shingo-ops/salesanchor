@@ -247,6 +247,34 @@ async def test_llm_usage_reads_only_ledger_and_propagates_null():
 
 
 @pytest.mark.asyncio
+async def test_llm_usage_ledger_queries_count_only_ok_rows():
+    # ADR-1058 段1a-2: 使用の記録を読む SQL はすべて成功の行（outcome = 'ok'）だけを数える。
+    empty_total = {
+        "calls": 0,
+        "prompt_tokens": None,
+        "cached_content_tokens": None,
+        "candidates_tokens": None,
+        "thoughts_tokens": None,
+        "tool_use_prompt_tokens": None,
+        "total_tokens": None,
+        "cost_usd": None,
+        "cost_jpy": None,
+        "fallback_calls": 0,
+        "computed_total_tokens": None,
+        "total_mismatch_calls": 0,
+    }
+    db = _mock_db_with_sequenced_results([_FX_META_ROW_NO_HISTORY, empty_total, [], [], [], [], [], [], [], []])
+
+    await get_llm_usage(days=7, db=db, _admin=None)
+
+    ledger_sql = [sql for sql in db._executed_sql if "llm_usage_events" in sql]
+    # 実物: total・by_purpose・by_model・daily・daily_by_purpose・monthly_by_purpose・daily_by_model の7つ
+    assert len(ledger_sql) == 7
+    for sql in ledger_sql:
+        assert "outcome = 'ok'" in sql
+
+
+@pytest.mark.asyncio
 async def test_llm_usage_all_null_when_no_rows():
     empty_total = {
         "calls": 0,
