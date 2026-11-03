@@ -299,6 +299,13 @@ PO の言葉: 「LINEみたいな使い心地は出来る？」（意味は「�
 - B6 は合格。本番の読むだけの道（ADR-1024）で tenant 001 を数えると、接続中の Facebook ページ（ai_ro.tenant_001__tenant_meta_config で is_active）0 件・ロール（tenant_001__roles）8 件・スタッフ（tenant_001__staff）2 件・受注（tenant_001__orders）0 件（21:45 JST）。設計担当の Chrome で見た画面は、ロール 8 個・スタッフ 2 人・受注 0 件・「接続済みチャンネルがありません」で、DB と同じ。
 - K5 は本番で 2 人のログインでは確かめていない（本番でパスワードを打たない決まり）。段 3 の 1 回目の Q2・Q3 の試験と、写しの名前に利用者が入る作りで確かめた。
 
+#### 3-4-19. 段 3 の 6 回目（会社の情報・会社の方針・Discord の設定とチャネルの画面の Discord の欄）の場所と基準（2026-11-03 設計担当 Claude Opus）
+- カード: docs/handoff/line-like-speed/batch3f-card.md。対象は会社の情報・会社の方針・Discord の設定の 3 画面と、§3-4-18-a で残ったチャネルの画面の Discord の欄（毎朝の記録の 8 行）。Discord の設定（/admin/discord-config）は、Discord の設定の画面とチャネルの画面で 1 つの写しにする（同じ答えを分けて持たない）。
+- 予定表（/schedule・K1 0.29 秒）は、読む path が 3 本で表示の期間で path が変わり、基準の回で /shifts の 5xx が 1 件あるので、1 度に 1 つを変える決まりにより段 3 の 7 回目に分けた。買取価格・状態・商品区分の 3 画面は、測る利用者に見る権限が足りず 403 なので対象外（PO に別に聞く）。
+- 基準: prod-ui-check run 41614984342（測った時刻 2026-11-03 18:59:48 JST・main 1eefb57）。8 行とも 403 0 件・5xx 0 件。K1 は /admin/discord-config 0.25・/management-center/discord-config 0.24・/admin/tenant-policy 0.21・/management-center/tenant-policy 0.21・/admin/tenant-profile 0.21・/management-center/tenant-profile 0.22・/admin→/admin/tenant-profile 0.21・/channels 0.24 秒。
+- §3-4-18-a の「まだ分からないこと」（/management-center/channels が 0.02 秒）は、6 回目の受入で /channels と並べて確かめる。
+- 生の数: /tmp/CC報告ファイル/batch3f/run41614984342-k1-over.txt（設計担当の手元。リポジトリには入れない）。
+
 ### 3-5. 測り方（|基準|検証方法|）
 | 基準 | 検証方法 |
 |---|---|
