@@ -7,6 +7,7 @@ import BadgesPage from '../pages/badges/BadgesPage';
 import ShiftsPage from '../pages/shifts/ShiftsPage';
 import BuddyPage from '../pages/buddy/BuddyPage';
 import en from '../locales/en.json';
+import { queryClient } from '../lib/query/apiQuery';
 
 const mock = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), delete: vi.fn() }));
 vi.mock('../lib/api', () => ({ api: mock }));
@@ -82,7 +83,7 @@ beforeEach(async () => {
   mock.post.mockImplementation(() => { throw new Error('Unexpected POST'); });
   mock.delete.mockImplementation(() => { throw new Error('Unexpected DELETE'); });
 });
-afterEach(() => { cleanup(); expect(fetch).not.toHaveBeenCalled(); expect(mock.delete).not.toHaveBeenCalled(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+afterEach(() => { cleanup(); queryClient.clear(); expect(fetch).not.toHaveBeenCalled(); expect(mock.delete).not.toHaveBeenCalled(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 describe('native form action Button migration', () => {
   it.each(kinds)('%s submits its exact payload, closes, resets as specified and reloads', async kind => {

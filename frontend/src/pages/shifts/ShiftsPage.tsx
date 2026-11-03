@@ -1,7 +1,8 @@
-import { LoadingBlock } from "../../components/loading";
-import { useEffect, useState, FormEvent } from "react";
+import { LoadingBlock, Spinner } from "../../components/loading";
+import { useState, FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
+import { useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
 import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
 import { ContentToolbar } from "../../components/ContentToolbar";
@@ -17,19 +18,17 @@ interface Shift { id: number; user_id: number; shift_date: string; start_time: s
 export default function ShiftsPage() {
   const { t } = useTranslation();
   const { hasPermission } = usePermissions();
-  const [shifts, setShifts] = useState<Shift[]>([]);
+  const shiftsQ = useApiQuery<Shift[]>("/shifts");
+  const shifts = shiftsQ.data ?? [];
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ user_id: "", shift_date: "", start_time: "09:00", end_time: "18:00", shift_type: "normal", notes: "" });
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
+  const shownError = error || (shiftsQ.error ? (shiftsQ.error instanceof Error ? shiftsQ.error.message : t("common.fetchError")) : "");
+  const invalidate = useInvalidateApi();
 
-  const load = async () => {
-    try { setShifts(await api.get<Shift[]>("/shifts")); }
-    catch (e) { setError(e instanceof Error ? e.message : t("common.fetchError")); }
-    finally { setLoading(false); }
+  const load = () => {
+    void invalidate(["shifts"]);
   };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { load(); }, []);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault(); setError("");
@@ -48,8 +47,9 @@ export default function ShiftsPage() {
     <PageLayout
       navKey="nav.shifts"
       subtitleKey="shifts.subtitle"
+      headerLeft={shiftsQ.isFetching && !shiftsQ.isPending ? <Spinner size="sm" /> : undefined}
     >
-      {error && <div className="error-message">{error}</div>}
+      {shownError && <div className="error-message">{shownError}</div>}
       <ContentToolbar
         right={hasPermission("shifts.manage") ? (
           <Button variant="primary" size="md" onClick={() => setShowForm(true)}>{t("shifts.newShift")}</Button>
@@ -84,7 +84,7 @@ export default function ShiftsPage() {
           </div>
         </form>
       </Modal>
-      {loading ? <LoadingBlock /> : (() => {
+      {shiftsQ.isPending ? <LoadingBlock /> : (() => {
         const columns: DataTableColumn<Shift>[] = [
           {
             key: "shift_date",

@@ -1,7 +1,8 @@
-import { LoadingBlock } from "../../components/loading";
-import { useEffect, useState, FormEvent } from "react";
+import { LoadingBlock, Spinner } from "../../components/loading";
+import { useState, FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
+import { useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
 import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
 import { ContentToolbar } from "../../components/ContentToolbar";
@@ -24,20 +25,18 @@ export default function StaffReportsPage() {
     weekly: "Weekly",
     monthly: "Monthly",
   };
-  const [reports, setReports] = useState<StaffReport[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ report_type: "daily", period: "", review: "", goals: "", challenges: "" });
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
   const [typeFilter, setTypeFilter] = useState("");
+  const reportsQ = useApiQuery<StaffReport[]>(`/staff-reports${typeFilter ? `?report_type=${typeFilter}` : ""}`, { keepPrevious: true });
+  const reports = reportsQ.data ?? [];
+  const shownError = error || (reportsQ.error ? (reportsQ.error instanceof Error ? reportsQ.error.message : t("common.fetchError")) : "");
+  const invalidate = useInvalidateApi();
 
-  const load = async () => {
-    try { setReports(await api.get<StaffReport[]>(`/staff-reports${typeFilter ? `?report_type=${typeFilter}` : ""}`)); }
-    catch (e) { setError(e instanceof Error ? e.message : t("common.fetchError")); }
-    finally { setLoading(false); }
+  const load = () => {
+    void invalidate(["staff-reports"]);
   };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { load(); }, [typeFilter]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault(); setError("");
@@ -54,6 +53,7 @@ export default function StaffReportsPage() {
     <PageLayout
       navKey="nav.reports"
       subtitleKey="reports.subtitle"
+      headerLeft={reportsQ.isFetching && !reportsQ.isPending ? <Spinner size="sm" /> : undefined}
     >
       <ContentToolbar
         left={
@@ -72,7 +72,7 @@ export default function StaffReportsPage() {
           <Button variant="primary" size="md" onClick={() => setShowForm(true)}>{t("common.add")}</Button>
         ) : undefined}
       />
-      {error && <div className="error-message">{error}</div>}
+      {shownError && <div className="error-message">{shownError}</div>}
       <Modal
         open={showForm}
         onClose={() => setShowForm(false)}
@@ -99,7 +99,7 @@ export default function StaffReportsPage() {
           </div>
         </form>
       </Modal>
-      {loading ? <LoadingBlock /> : (
+      {reportsQ.isPending ? <LoadingBlock /> : (
         <table className="data-table">
           <thead><tr><th>{t("common.code")}</th><th>{t("common.type")}</th><th>{t("common.date")}</th><th>{t("common.createdAt")}</th><th>{t("common.status")}</th></tr></thead>
           <tbody>

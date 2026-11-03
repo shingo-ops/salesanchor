@@ -5,6 +5,7 @@ import { I18nextProvider } from 'react-i18next';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import StaffReportsPage from '../pages/staff-reports/StaffReportsPage';
 import en from '../locales/en.json';
+import { queryClient } from '../lib/query/apiQuery';
 
 const mock = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn() }));
 vi.mock('../lib/api', () => ({ api: mock }));
@@ -81,6 +82,7 @@ beforeEach(async () => {
 
 afterEach(() => {
   cleanup();
+  queryClient.clear();
   expect(fetch).not.toHaveBeenCalled();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
