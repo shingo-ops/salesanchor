@@ -11,12 +11,13 @@ from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from uuid import uuid4
 
-from sqlalchemy import text
-from sqlalchemy.orm import Session
-
 import app.tools.prompt_ab as pab
 from app.routers.tcg_analysis_dashboard import _EVENT_FX_CTE, _LEDGER_OK_JOIN
 from app.tools import reextract_v6_with_v102 as reextract
+from sqlalchemy import text
+from sqlalchemy.orm import Session
+
+from tests.test_tcg_work_matching_integration import MIGRATIONS
 from tests.test_tcg_work_matching_integration import pg as pg  # noqa: F401  fixture
 
 _INSERT = (
@@ -38,8 +39,16 @@ def _add_failed(conn, *, source_ref=None, attempt_id=None) -> None:
         cur.execute(_INSERT, (None, source_ref, attempt_id, "failed", "timeout"))
 
 
+def _apply_fx_history_tables(conn) -> None:
+    """_EVENT_FX_CTE が読む為替の2表を作る（共有の pg fixture は作らないため。本番と同じ migration を流す）。"""
+    with conn.cursor() as cur:
+        for name in ("20260628_170000_add_app_fx_rates.sql", "20261003_100000_create_app_fx_rate_history.sql"):
+            cur.execute((MIGRATIONS / name).read_text())
+
+
 def test_event_fx_cte_counts_only_ok_rows(pg):  # noqa: F811
     conn, engine, _url = pg
+    _apply_fx_history_tables(conn)
     _add_ok(conn)
     _add_failed(conn)
     with Session(engine) as s:  # 入れた後の別の取引で集計する（NOW() は取引の始まりの時刻）
