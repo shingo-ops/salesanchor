@@ -4,7 +4,7 @@
 このリポジトリは公開されている。ここには節の名前と行番号だけを書き、決まりの本文は書かない。言い直しの対の文は、リポジトリの外の写しのフォルダ（`~/CC報告ファイル-keep/doc-library-20261102/pairs.txt`）にだけ置く。
 
 - 所在は `ファイル:見出し:行番号`。複数あるときは `; ` で区切る。見出しに `:` を含むもの（R-129）があるので、読むときは最後の `:` で行番号を、最初の `:` でファイルを切り離す。
-- 行番号は 2026-11-02 の実物（`grep -n`）。段1（2026-11-02）で区切り方を chat-layout.md（1〜10行）に分け、chat-format.md は言葉の選び方だけ（旧11〜31行 → 1〜21行）にした。この表はその後の行番号。
+- 行番号は 2026-11-02 の実物（`grep -n`）。段1（2026-11-02）で区切り方を chat-layout.md（1〜10行）に分け、chat-format.md は言葉の選び方だけ（旧11〜31行 → 1〜21行）にした。この表はその後の行番号。段1b（2026-11-03）で ~/kb/AGENTS.md 15行目の括弧書き（R-91 の言い直し側）を消し、R-91 の所在を1つにした（行は残るので行番号は変わらない）。
 - 種別: 目録（毎回読む）／本（場面で開く）／表示（入力のたびにフックが表示）／paths（場所つきの決まり）。
 - R-91〜R-94 は同じ趣旨を2か所に書いた「言い直し」の対。所在が2つある番号の数が `L2_DUP_LEDGER`。R-94 は設計の時点では見つけていなかった3件目（どちらを消すかは未定）。
 
@@ -88,7 +88,7 @@
 | R-149 | Coverage | ~/.claude/rules/python/testing.md:Coverage:14 | paths | 未 |
 | R-150 | Test Organization | ~/.claude/rules/python/testing.md:Test Organization:20 | paths | 未 |
 | R-151 | Reference | ~/.claude/rules/python/testing.md:Reference:36 | paths | 未 |
-| R-91 | 言い直し(a) 区切り方の要点 | ~/kb/AGENTS.md:絶対ルール:15; ~/kb/00-rules/chat-layout.md:PO への返事の区切り方:5 | 目録 | 未 |
+| R-91 | 言い直し(a) 区切り方の要点 | ~/kb/00-rules/chat-layout.md:PO への返事の区切り方:5 | 目録 | 段1b |
 | R-92 | 言い直し(b1) 専門用語と普通の言葉 | ~/.claude/CLAUDE.md:報告の型:20; ~/kb/00-rules/chat-format.md:言葉の選び方:3 | 目録 | 未 |
 | R-93 | 言い直し(b2) 具体の名前・作業の呼び名 | ~/.claude/CLAUDE.md:報告の型:25; ~/kb/00-rules/chat-format.md:言葉の選び方:3 | 目録 | 未 |
 | R-94 | 言い直し(c) 何のためかを2回問い直す | ~/kb/AGENTS.md:絶対ルール:16; ~/kb/00-rules/chat-format.md:言葉の選び方:7 | 目録 | 未 |
