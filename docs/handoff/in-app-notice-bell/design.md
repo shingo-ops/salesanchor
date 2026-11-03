@@ -154,6 +154,33 @@ CREATE INDEX IF NOT EXISTS idx_user_notices_user_unread ON {各テナント}.use
 - スマホ（MobileShell）: 画面の右上に同じ鈴を置く。実装者は MobileShell の右上に既に固定の部品があるかを先に確かめ、あれば止めて報告する（NEEDS_DECISION）
 - 全画面に常駐させる差し込み場所は既存の前例に倣う（`frontend/src/components/DesktopShell.tsx:206-209`、`frontend/src/components/MobileShell.tsx:43-45` の `RealtimeProvider` 直下）
 
+### 7-3-改訂4（PO 回答「1」2026-11-04。スマホは下のタブに鈴を足す。上のスマホの行を置き換える）
+- 経緯: スマホの右上に固定した鈴が、受信箱の「管理」（`.inbox-manage-btn`）と会話の「もっと」（`.inbox-thread-header-mobile-btn`）の上に乗り、PR の CI「画面検査（内部）」で 6 件が `locator.click` の 15 秒切れになった（記録 `/tmp/CC報告ファイル/in-app-notice-bell/fail4-internal.txt:1046-1126`。押す前に `notice-bell-btn` が上に乗っていると出ている）。上の行は MobileShell 自身の固定部品しか確かめず、画面の中の右上のボタンを見ていなかった。設計の入れ忘れ
+- PO に出した選択肢: 1. 下のタブに鈴を足す【おすすめ】／2. 右上のまま画面ごとにボタンをずらす／3. メニューの中に入れる。PO の返事は「1」
+- 変更（スマホだけ。PC は変えない）:
+  1. `frontend/src/components/MobileShell.tsx:214-217` の右上の入れ物（`top-right-cluster top-right-cluster--mobile`）を消す
+  2. 同じファイルの下のタブ（`<nav className="mobile-tabbar">`、:288-345）の、メニューのボタン（:337-344）の **直前** に `<NoticeBell variant="tab" />` を置く。権限の条件は付けない（鈴は自分宛てだけを返す口なので、誰にでも出す）
+  3. `frontend/src/components/NoticeBell.tsx` に `variant?: "floating" | "tab"`（省略時 `"floating"` = 今の PC の形）を足す。`"tab"` のとき:
+     - `Popover` は `placement="top"`、`className="notice-bell-tab-slot"`（金型の押す部分を包む span に付く。`frontend/src/components/Popover.tsx` の `className`）
+     - 押すボタンは `className="mobile-tab"`、`data-testid="notice-bell"`、aria-label は今と同じ（`notices.bellLabel` / `notices.bellLabelUnread`）
+     - 中身は他のタブと同じ並び: `BellOutline`（`size={ICON.base}`）＋ `<span className="mobile-tab-label">{t("notices.bellLabel")}</span>`＋ 未読があるとき `<span className="mobile-tab-badge" aria-hidden="true">{formatUnreadCount(unread)}</span>`（受信箱タブの数字 `MobileShell.tsx:300-304` と同じ部品の形。新しい色・寸法は足さない）
+     - 一覧の中身（`notice-panel`）と、押したときの動き・読み直しは今と同じ（同じ関数を両方で使う）
+  4. `frontend/src/components/NoticeBell.css`: `.top-right-cluster--mobile` を消す。`.notice-bell-tab-slot { flex: 1; display: flex; }` と `.notice-bell-tab-slot > .mobile-tab { flex: 1; }` を足す（タブの幅を他のタブと揃えるため。直値なし）
+- 触らない: DesktopShell・`.top-right-cluster`（PC 用）・`frontend/src/mobile-shell.css`・tokens.css・API・backend・i18n のキー（既存の `notices.bellLabel` を使い、新しいキーは足さない）
+- 試験:
+  - `frontend/src/components/MobileShell.test.tsx:202-209`: 権限ありの下のタブの数を 4 → 5 に直す（鈴が 1 つ増える）。試験名も 5 に直す
+  - `frontend/tests-e2e/visual-language/notice-bell.spec.ts`: 数字の見つけ方を `.comp-badge, .mobile-tab-badge` の両方にする。スマホ幅（project 名が `vl-mobile-390`）だけで流す試験を 1 つ足す: 鈴が `.mobile-tabbar` の中にあり、`.top-right-cluster--mobile` が 0 件、鈴を開くと一覧の下端が鈴の上端より上にある
+  - 既存の `inbox-single-column.spec.ts` の 6 件（第4便の選択モード・第6便のもっと/言語・第7便）がスマホ幅で通ることで、重なりが消えたことを確かめる（試験は直さない）
+- 受入（○×）:
+
+| 基準 | 検証方法 |
+|---|---|
+| スマホで鈴が下のタブの中に出て、メニューの左隣にある | e2e 追加分（vl-mobile-390）が緑 |
+| スマホで右上に鈴が無い | 同上（`.top-right-cluster--mobile` 0 件） |
+| 受信箱の管理・もっとが押せる | CI「画面検査（内部）」「画面検査（受信箱 3幅）」が緑 |
+| PC の鈴は今のまま右上 | notice-bell.spec.ts の vl-desktop-1280 が緑 |
+| 色・寸法の直値なし | CI の Frontend lint（tokens・stylelint）が緑 |
+
 ### 7-4 部品（金型を使う。ADR-144・ADR-067・ADR-027）
 - 新しい部品 `NoticeBell`（鈴のボタン＋数字＋一覧）。中身は既存の金型: `Popover`（`frontend/src/components/Popover.tsx`）、`Badge`（`frontend/src/components/Badge.tsx`、variant danger、sm）、印は `frontend/src/constants/icons.tsx` の `BellOutline`（:157）
 - 一覧の 1 行は新しい部品 `NoticeRow`（押せる行。未読は太字＋左に丸）。色・余白・角・z-index はトークンだけ（直値禁止）。足りないトークンがあれば `:root` と `:root.force-dark` の両方に足す
