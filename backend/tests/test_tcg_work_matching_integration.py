@@ -28,6 +28,7 @@ from app.services import tcg_product_master_svc as product_master
 from app.tasks import tcg_extraction as extraction
 from tests.conftest import _PUBLIC_SUPPLIERS_DDL, _supplier_ssot_premigration
 from tests.condition_value_columns import apply_condition_value_columns
+from tests.rls_bootstrap import _ensure_public_users
 from tests.seed_data import tcg_product_categories_seed_sql, type_master_seed_sql
 
 MIGRATIONS = Path(__file__).resolve().parents[2] / "migrations"
@@ -405,6 +406,19 @@ def pg(monkeypatch):
             provision(cursor, SCHEMA)
             cursor.execute("CREATE SCHEMA tenant_006; CREATE SCHEMA tenant_902")
             migrate(cursor)
+
+            # ADR-1058 段1a: 使用の記録の outcome・error_code の列（段1a-2 の集計が読む）。段1a の migration は
+            # public.users を指すので、閲覧ページの試験と同じ道具で先に作る。
+            async def _prepare_users():
+                aengine = create_async_engine(url.set(database=name, drivername="postgresql+asyncpg"))
+                try:
+                    async with aengine.begin() as aconn:
+                        await _ensure_public_users(aconn)
+                finally:
+                    await aengine.dispose()
+
+            asyncio.run(_prepare_users())
+            cursor.execute((MIGRATIONS / "20261103_120000_create_ai_job_assignments.sql").read_text())
         for module in (analyzer, extraction, distribution, extraction_records):
             monkeypatch.setattr(module, "TCG_SCHEMA", SCHEMA)
         monkeypatch.setenv("TCG_AUTO_ANALYZE", "1")

@@ -311,12 +311,13 @@ def dry_run(out_dir: Path, only_job: str | None) -> int:
 
 
 def total_cost(session: Session, job_ids: list[str], since: datetime) -> tuple[Decimal, int]:
-    """(cost_usd の合計, cost_usd が NULL の件数)。台帳の source_ref と、最初の開始時刻以降の occurred_at で数える。"""
+    """(cost_usd の合計, cost_usd が NULL の件数)。台帳の source_ref と、最初の開始時刻以降の occurred_at で数える。
+    成功の行（outcome='ok'）だけを数える（ADR-1058 段1a-2）。"""
     refs = [f"extraction_job:{j}" for j in job_ids]
     row = session.execute(
         text(
             "SELECT COALESCE(sum(cost_usd), 0), count(*) FILTER (WHERE cost_usd IS NULL) "
-            "FROM public.llm_usage_events WHERE source_ref = ANY(:refs) AND occurred_at >= :since"
+            "FROM public.llm_usage_events WHERE source_ref = ANY(:refs) AND occurred_at >= :since AND outcome = 'ok'"
         ),
         {"refs": refs, "since": since},
     ).one()

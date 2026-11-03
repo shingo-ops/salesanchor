@@ -64,3 +64,37 @@ async def test_cost_summary_reads_llm_usage_events_not_input_bytes_estimate():
         assert "input_bytes / 3" not in sql
     # daily/by_supplier/total すべてが llm_usage_events を参照していること
     assert sum("llm_usage_events" in sql for sql in db._executed_sql) == 3
+
+
+@pytest.mark.asyncio
+async def test_cost_summary_joins_only_ok_ledger_rows():
+    # ADR-1058 段1a-2: 3つの SQL（daily・by_supplier・total）とも成功の行（outcome='ok'）だけを結ぶ。
+    from app.routers.tcg_analysis_dashboard import _LEDGER_OK_JOIN
+
+    daily_row = {
+        "date": "2026-09-30",
+        "total_calls": 5,
+        "success_calls": 4,
+        "input_tokens": 1000,
+        "output_tokens": 300,
+        "cost_usd": 0.001,
+    }
+    supplier_row = {
+        "supplier_name": "テスト仕入元",
+        "total_calls": 5,
+        "input_tokens": 1000,
+        "output_tokens": 300,
+        "cost_usd": 0.001,
+        "avg_items": 2.0,
+    }
+    total_row = {"calls": 5, "input_tokens": 1000, "output_tokens": 300, "cost_usd": 0.001}
+    budget_row = {"monthly_budget_usd": 10.0, "current_month_usd": 1.5}
+
+    db = _mock_db_with_sequenced_results([[daily_row], [supplier_row], total_row, budget_row])
+
+    await get_cost_summary(days=7, db=db, _admin=None)
+
+    ledger_sql = [sql for sql in db._executed_sql if "llm_usage_events" in sql]
+    assert len(ledger_sql) == 3
+    for sql in ledger_sql:
+        assert _LEDGER_OK_JOIN in sql

@@ -447,6 +447,11 @@ class CostSummaryResponse(BaseModel):
     budget: CostBudget
 
 
+# ADR-1058 段1a-2: 使用の記録は成功の行（outcome='ok'）だけを結ぶ。失敗の行（段1b から書かれる）は
+# 回数・費用に入れない。条件は WHERE ではなく ON に置く（LEFT JOIN の左の試行の行を落とさないため）。
+_LEDGER_OK_JOIN = "ue.extraction_attempt_id = ea.id AND ue.outcome = 'ok'"
+
+
 @router.get(
     "/tcg/analysis-dashboard/cost-summary",
     response_model=CostSummaryResponse,
@@ -472,7 +477,7 @@ async def get_cost_summary(
             COALESCE(SUM(COALESCE(ue.candidates_tokens, 0) + COALESCE(ue.thoughts_tokens, 0)), 0)::bigint AS output_tokens,
             COALESCE(SUM(ue.cost_usd), 0.0)::double precision AS cost_usd
         FROM {_TCG_SCHEMA}.extraction_attempts ea
-        LEFT JOIN public.llm_usage_events ue ON ue.extraction_attempt_id = ea.id
+        LEFT JOIN public.llm_usage_events ue ON {_LEDGER_OK_JOIN}
         WHERE ea.started_at >= NOW() - INTERVAL '1 day' * :days
         GROUP BY DATE(ea.started_at)
         ORDER BY date DESC
@@ -492,7 +497,7 @@ async def get_cost_summary(
         JOIN {_TCG_SCHEMA}.source_messages sm ON sm.id = ea.source_message_id
         LEFT JOIN public.supplier_channels sc ON sc.id = sm.supplier_channel_id
         LEFT JOIN public.suppliers s ON s.id = sc.supplier_id
-        LEFT JOIN public.llm_usage_events ue ON ue.extraction_attempt_id = ea.id
+        LEFT JOIN public.llm_usage_events ue ON {_LEDGER_OK_JOIN}
         WHERE ea.started_at >= NOW() - INTERVAL '1 day' * :days
         GROUP BY s.name
         ORDER BY cost_usd DESC
@@ -506,7 +511,7 @@ async def get_cost_summary(
             COALESCE(SUM(COALESCE(ue.candidates_tokens, 0) + COALESCE(ue.thoughts_tokens, 0)), 0)::bigint AS output_tokens,
             COALESCE(SUM(ue.cost_usd), 0.0)::double precision AS cost_usd
         FROM {_TCG_SCHEMA}.extraction_attempts ea
-        LEFT JOIN public.llm_usage_events ue ON ue.extraction_attempt_id = ea.id
+        LEFT JOIN public.llm_usage_events ue ON {_LEDGER_OK_JOIN}
         WHERE ea.started_at >= NOW() - INTERVAL '1 day' * :days
     """), {"days": days})).mappings().first()
 
@@ -675,7 +680,8 @@ class LlmUsageResponse(BaseModel):
     fx: LlmUsageFx | None
 
 
-_LLM_USAGE_WHERE = "occurred_at BETWEEN NOW() - INTERVAL '1 day' * :days AND NOW()"
+# ADR-1058 段1a-2: 成功の行（outcome='ok'）だけを数える。失敗の行は新しい「AI の担当」画面だけが読む。
+_LLM_USAGE_WHERE = "occurred_at BETWEEN NOW() - INTERVAL '1 day' * :days AND NOW() AND outcome = 'ok'"
 
 # ADR-148 2026-10-03 追記（PR-B）: 各イベントに「発生時点で有効なレート」を付与する CTE。
 # - fx_rate_jpy: occurred_at 以前の最新の app_fx_rate_history 行。無ければ（occurred_at が
