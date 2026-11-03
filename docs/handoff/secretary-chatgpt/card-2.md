@@ -894,7 +894,9 @@ def test_g_change_assignment_k9_and_order(db):
     c = db.cursor()
     c.execute(_read(_AI_JOB_SQL))
     c.execute("INSERT INTO public.users (id, email, full_name) VALUES (1002, 'ai-job-g@example.test', '担当G')")
-    c.execute("INSERT INTO public.ai_job_choices (job_key, provider, model) VALUES ('secretary_intent', 'claude', 'test-model-g')")
+    c.execute(
+        "INSERT INTO public.ai_job_choices (job_key, provider, model) VALUES ('secretary_intent', 'claude', 'test-model-g')"
+    )
     sonnet_id = _choice_id(db, "secretary_intent", "claude", "sonnet")
     new_id = _choice_id(db, "secretary_intent", "claude", "test-model-g")
     line_id = _choice_id(db, "line_extraction", "gemini", "gemini-3.1-flash-lite")
@@ -946,7 +948,9 @@ def test_h_history_names_fall_back(db):
     c.execute("INSERT INTO public.users (id, email, full_name) VALUES (1003, 'ai-job-h1@example.test', '担当H')")
     c.execute("INSERT INTO public.users (id, email) VALUES (1004, 'ai-job-h2@example.test')")
     c.execute("INSERT INTO public.users (id, email, full_name) VALUES (1005, 'ai-job-h3@example.test', '担当消える')")
-    c.execute("INSERT INTO public.ai_job_choices (job_key, provider, model) VALUES ('secretary_intent', 'claude', 'test-model-h')")
+    c.execute(
+        "INSERT INTO public.ai_job_choices (job_key, provider, model) VALUES ('secretary_intent', 'claude', 'test-model-h')"
+    )
     sonnet_id = _choice_id(db, "secretary_intent", "claude", "sonnet")
     new_id = _choice_id(db, "secretary_intent", "claude", "test-model-h")
 
@@ -1342,7 +1346,8 @@ describe("AiJobsSection", () => {
   it("shows 5 rows and the change button only on switchable rows (K3・K11)", async () => {
     mockGets();
     view();
-    await screen.findByText(i18n.t("analysisRules.dashboard.aiJobs.job.secretary_intent"));
+    // 秘書の名前は履歴の表にも出るので、1つ以上あることを待つ（findByText だと複数で止まる）
+    await screen.findAllByText(i18n.t("analysisRules.dashboard.aiJobs.job.secretary_intent"));
     for (const key of JOB_KEYS) {
       expect(screen.getAllByText(i18n.t(`analysisRules.dashboard.aiJobs.job.${key}`)).length).toBeGreaterThan(0);
     }
@@ -1594,11 +1599,11 @@ export function formatFetchedAtJst(isoString: string, language: string): string 
 - 12・13 の後、`node -e 'for (const f of ["frontend/src/locales/ja.json","frontend/src/locales/en.json"]) JSON.parse(require("fs").readFileSync(f,"utf8")); console.log("json ok")'` が `json ok`。
 
 ## 14. 確かめ方
-- `uvx ruff check --config backend/pyproject.toml backend/app/services/llm_budget.py backend/app/services/ai_assignment.py backend/app/routers/super_admin_ai_jobs.py backend/app/main.py backend/app/realtime/topics.py backend/tests/test_super_admin_ai_jobs.py backend/tests/ops/test_ai_job_assignments_db.py` の出力が `All checks passed!`。並びの直しだけを求められたら `--fix` の結果に従う。
+- `cd backend && uvx ruff check app/services/llm_budget.py app/services/ai_assignment.py app/routers/super_admin_ai_jobs.py app/main.py app/realtime/topics.py tests/test_super_admin_ai_jobs.py tests/ops/test_ai_job_assignments_db.py` の出力が `All checks passed!`（必ず backend の中で流す。根から `--config` で流すと import の並びの判定が変わり、main にもとからある行で I001 が出る。CI も backend の中で流す）。`--fix` は使わない（今ある行が書き換わるため）。出たら足した行だけを手で直し、今ある行に出たら止まって NEEDS_DECISION: で返す。
 - 新しい2ファイル（router と試験）と `ai_assignment.py` は `uvx ruff format --config backend/pyproject.toml --check` が通る（通らなければ `uvx ruff format` で整えてよい）。`llm_budget.py`・`main.py`・`topics.py`・`test_ai_job_assignments_db.py` は整形し直さない。この4つについて `uvx ruff format --config backend/pyproject.toml --diff` の結果の `^@@` の行の数（`grep -c`）を、変える前（origin/main の写し）と変えた後で比べ、増えていないこと（増えたら足した行を直す）。前と後の数を報告に書く。
-- mock の試験（DB 不要）だけ流す: `cd backend && uv run --no-project --with-requirements requirements.txt --with pytest --with pytest-asyncio python -m pytest tests/test_super_admin_ai_jobs.py tests/test_realtime_topics.py -q`。この形で依存が入らない時は流さずに「mock の試験はクラウドで流せなかった」と書き、CI に任せる（venv は作らない）。流した時は出力を全文写す。`test_k10_no_login_gets_401` が 403 で落ちた時は止まり、NEEDS_DECISION: で返す（期待を書き換えない）。
+- mock の試験（DB 不要）だけ流す: `cd backend && uv run --no-project -p 3.12 --with-requirements requirements.txt --with-requirements requirements-dev.txt python -m pytest tests/test_super_admin_ai_jobs.py tests/test_realtime_topics.py -q -p no:cacheprovider --no-cov -n0`（requirements-dev.txt に aiosqlite・pytest-xdist・pytest-cov があり、pyproject の既定の `-n`・`--cov` を打ち消すため `--no-cov -n0` を付ける。2026-11-03 の審査でこの形で 34 passed を確認済み）。この形で依存が入らない時は流さずに「mock の試験はクラウドで流せなかった」と書き、CI に任せる（venv は作らない）。流した時は出力を全文写す。`test_k10_no_login_gets_401` が 403 で落ちた時は止まり、NEEDS_DECISION: で返す（期待を書き換えない）。
 - 画面: `cd frontend && npx vitest run src/pages/super-admin/components/AiJobsSection.test.tsx src/pages/super-admin/components/LlmUsageSection.test.tsx` を試す。依存が無くて流せない時は `npm ci` をしてよい（1回だけ）。それでも流せない時は「画面の試験はクラウドで流せなかった」と書き、CI に任せる。
-- 画面の点検（依存が入った時だけ）: `cd frontend && npx tsc --noEmit -p .`・`node scripts/check-i18n-missing-keys.js`・`node scripts/check-css-hardcoded-colors.js`・`node scripts/check-css-hardcoded-values.js`・`npx eslint src/pages/super-admin/components/AiJobsSection.tsx src/pages/super-admin/components/AiJobsSection.test.tsx src/pages/super-admin/components/AnalysisDashboardPanel.tsx`、リポジトリの根で `node scripts/check-ui-governance.js`。それぞれの終了コードと出力の最後の20行を写す（K7）。
+- 画面の点検（依存が入った時だけ）: `cd frontend && npx tsc --noEmit -p .`・`node scripts/check-i18n-missing-keys.js`・`node scripts/check-css-hardcoded-colors.js`・`node scripts/check-css-hardcoded-values.js`・`npx eslint src/pages/super-admin/components/AiJobsSection.tsx src/pages/super-admin/components/AiJobsSection.test.tsx src/pages/super-admin/components/AnalysisDashboardPanel.tsx`、commit の後にリポジトリの根で `BASE_SHA=$(git merge-base origin/main HEAD) HEAD_SHA=$(git rev-parse HEAD) node scripts/check-ui-governance.js`（この2つが無いと rc=1 で何も見ない。`git show <sha>:path` で読むので commit 前の変更は見えない）。それぞれの終了コードと出力の最後の20行を写す（K7）。tsc は main にもとからある `api/generated/schema` が無いエラーが出る。この便で触る13ファイルにエラーが0件であることを `grep` で確かめて写す。
 - DB の試験（7）はクラウドでは流さない。報告に「DB の試験はクラウドでは流さず CI に任せた」と書く。流していない試験を合格と書かない。
 - `bash scripts/dev/check-before-submit.sh` があれば流し、出力の最後の20行と終了コードを写す（無ければ「無い」と書く）。
 - `git diff origin/main...HEAD --name-only` が「触るファイル」の13個と `docs/handoff/secretary-chatgpt/card-2.md` だけ（ほかがあれば止まる）。
