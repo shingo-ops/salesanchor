@@ -207,6 +207,26 @@ class TestListEvents:
                           calendar_type="personal", user_id=5)
         db.execute.assert_called_once()
 
+    @pytest.mark.asyncio
+    async def test_list_hides_other_users_personal(self):
+        """他人の personal は常に除く: SQL に絞りが入り、params に me が入る。"""
+        from app.services.calendar_service import list_events
+        db = _make_db(fetchall_return=[])
+        await list_events(db, tenant_id=1, start="2026-06-01", end="2026-06-30", user_id=5)
+        stmt, params = db.execute.call_args.args
+        assert "ce.calendar_type = 'shared' OR ce.user_id = :me" in stmt.text
+        assert params["me"] == 5
+
+    @pytest.mark.asyncio
+    async def test_list_without_user_returns_shared_only(self):
+        from app.services.calendar_service import list_events
+        db = _make_db(fetchall_return=[])
+        await list_events(db, tenant_id=1, start="2026-06-01", end="2026-06-30")
+        stmt, params = db.execute.call_args.args
+        assert "AND ce.calendar_type = 'shared'" in stmt.text
+        assert ":me" not in stmt.text
+        assert "me" not in params
+
 
 class TestCreateEvent:
     @pytest.mark.asyncio
@@ -367,6 +387,26 @@ class TestUpdateEvent:
         result = await update_event(db, tenant_id=1, event_id=3, user_id=1,
                                     payload={"title": "更新タイトル"})
         assert result["id"] == 3
+
+    @pytest.mark.asyncio
+    async def test_update_sets_calendar_type_and_user_id(self):
+        from app.services.calendar_service import update_event
+
+        db = AsyncMock()
+        db.commit = AsyncMock()
+        geid_result = MagicMock()
+        geid_result.first = MagicMock(return_value=(None,))
+        sync_result = MagicMock()
+        sync_result.first = MagicMock(return_value=("none", None))
+        db.execute = AsyncMock(side_effect=[MagicMock(), geid_result, sync_result])
+
+        await update_event(db, tenant_id=1, event_id=3, user_id=1,
+                           payload={"calendar_type": "personal", "user_id": 1})
+        stmt, params = db.execute.call_args_list[0].args
+        assert "calendar_type = :calendar_type" in stmt.text
+        assert "user_id = :user_id" in stmt.text
+        assert params["calendar_type"] == "personal"
+        assert params["user_id"] == 1
 
 
 class TestDeleteEvent:
