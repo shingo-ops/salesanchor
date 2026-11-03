@@ -138,7 +138,12 @@ async def get_auth_url(tenant_id: int, user_id: int) -> str:
         scopes=_SCOPES,
         redirect_uri=_get_redirect_uri(),
     )
-    flow.code_verifier = None  # PKCE 不使用（server-side flow）
+    # PKCE 無効化（confidential client は client_secret で認証）。
+    # autogenerate_code_verifier を False にしないと、authorization_url が
+    # code_verifier を自動生成して code_challenge を送ってしまい、別インスタンスの
+    # exchange_code 側で verifier を渡せず "Missing code verifier" で失敗する。
+    flow.autogenerate_code_verifier = False
+    flow.code_verifier = None
     auth_url, _ = flow.authorization_url(
         state=state,
         access_type="offline",

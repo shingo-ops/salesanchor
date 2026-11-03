@@ -160,6 +160,32 @@ class TestGetAuthUrl:
         assert url.startswith("https://accounts.google.com")
 
     @pytest.mark.asyncio
+    async def test_disables_pkce_before_authorization_url(self):
+        """authorization_url 呼び出し時点で PKCE を自動生成しない設定になっている。"""
+        from app.services.google_calendar import get_auth_url
+
+        mock_flow = MagicMock()
+        seen = {}
+
+        def _auth_url(**kwargs):
+            seen["autogenerate"] = mock_flow.autogenerate_code_verifier
+            seen["verifier"] = mock_flow.code_verifier
+            return ("https://accounts.google.com/o/oauth2/auth?state=x", "x")
+
+        mock_flow.authorization_url = MagicMock(side_effect=_auth_url)
+
+        r = AsyncMock()
+        r.setex = AsyncMock(return_value=True)
+
+        with patch("app.services.google_calendar.get_redis", return_value=r):
+            with patch("google_auth_oauthlib.flow.Flow") as MockFlow:
+                MockFlow.from_client_config.return_value = mock_flow
+                await get_auth_url(tenant_id=1, user_id=2)
+
+        assert seen["autogenerate"] is False
+        assert seen["verifier"] is None
+
+    @pytest.mark.asyncio
     async def test_raises_when_env_missing(self):
         """環境変数未設定時は RuntimeError を出す（startup で検知）。"""
         from app.services import google_calendar as svc

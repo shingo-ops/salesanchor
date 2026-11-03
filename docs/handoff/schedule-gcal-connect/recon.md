@@ -57,3 +57,12 @@
 
 ## 3. 未確認
 - Google の画面で、本番のつなぎ先の戻り先 URL が登録済みか。鍵 3 つは本番に設定済み（値は見ていない）。これは PO がボタンを押したときに分かる。
+
+## 4. 追補（2026-11-03）: つなぐボタンを押すと失敗する件（事実）
+- PO がボタンを押すと「接続に失敗しました」が出た。本番 backend の記録: `Google Calendar callback: token 交換失敗 Google token 交換に失敗: (invalid_grant) Missing code verifier.`
+- 本番に入っている部品は google-auth-oauthlib 1.5.0 である（本番コンテナ内の site-packages にある google_auth_oauthlib の flow.py）。その `Flow.authorization_url` は、`code_verifier is None and autogenerate_code_verifier`（既定は True）のとき verifier を自分で作り、`code_challenge` を Google へ送る。Context7 にこの部品の資料が無かったので、本番の実物のソースを読んだ。
+- `backend/app/services/google_calendar.py:141` は `flow.code_verifier = None` だけを置いている。自動で作る設定は True のままなので、上の条件が成り立って challenge が送られる。
+- `backend/app/services/google_calendar.py:174-193` の `exchange_code` は Flow を新しく作り、verifier を持たないまま `fetch_token` を呼ぶ。そのため Google が「Missing code verifier」で断る。
+- 先例: `backend/app/services/google_drive_oauth.py:183-188` は同じ失敗を #1757（7874a00b2）で直している。直し方は `flow.autogenerate_code_verifier = False` を足すことである。本番の `public.tenant_google_drive_config` には 2026-06-08 に user 3 がつないだ 1 行がある（2026-11-03 読み取り）。このやり方で Google が受け付けた実績になる。
+- 新しくつないだときの同期方式は表の既定値 `'bidirectional'` になる（`information_schema` の 2026-11-03 読み取り）。callback（`backend/app/routers/google_calendar.py:117-150`）は通知の登録を呼ばない。`bidirectional` が送る方向でする動きは `write_only` と同じで（`backend/app/services/calendar_service.py:214,300,353`）、Google から取り込む道は通知の登録だけである。通知の登録は同期方式の口が 422 で止めている。だから今回は既定値を変えない。
+- 本番のカレンダー接続の行は 0 件（2026-11-03 読み取り）。
