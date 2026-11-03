@@ -64,9 +64,19 @@
 ```python
 # ADR-1058 段1b-1: 失敗の行（outcome='failed'）と、別の取引で書く行の INSERT。outcome・error_code の列を含む。
 # 値の一覧の正本は DB の CHECK（migrations/20261103_120000_create_ai_job_assignments.sql）。ここは写し。
-USAGE_ERROR_CODES: frozenset[str] = frozenset({
-    "auth_failed", "timeout", "rate_limited", "http_error", "unreadable", "tool_used", "not_ready", "busy", "other",
-})
+USAGE_ERROR_CODES: frozenset[str] = frozenset(
+    {
+        "auth_failed",
+        "timeout",
+        "rate_limited",
+        "http_error",
+        "unreadable",
+        "tool_used",
+        "not_ready",
+        "busy",
+        "other",
+    }
+)
 USAGE_OUTCOMES: frozenset[str] = frozenset({"ok", "failed"})
 
 _INSERT_USAGE_EVENT_OUTCOME_SQL = """
@@ -153,9 +163,15 @@ def record_usage_failure_sync(
     自分では例外を飲み込まない（record_usage_event_sync と同じ）。戻り値は生成した id。
     """
     cols = _usage_event_columns(
-        purpose=purpose, model=model, sdk=sdk, counts=UsageCounts(), tenant_id=tenant_id,
-        extraction_attempt_id=extraction_attempt_id, extraction_shadow_run_id=None,
-        discord_inbound_message_id=None, source_ref=source_ref,
+        purpose=purpose,
+        model=model,
+        sdk=sdk,
+        counts=UsageCounts(),
+        tenant_id=tenant_id,
+        extraction_attempt_id=extraction_attempt_id,
+        extraction_shadow_run_id=None,
+        discord_inbound_message_id=None,
+        source_ref=source_ref,
     )
     cols.update(_outcome_columns("failed", error_code))
     session.execute(text(_INSERT_USAGE_EVENT_OUTCOME_SQL), cols)
@@ -179,9 +195,15 @@ async def record_usage_isolated(
     """
     try:
         cols = _usage_event_columns(
-            purpose=purpose, model=model, sdk=sdk, counts=counts, tenant_id=tenant_id,
-            extraction_attempt_id=None, extraction_shadow_run_id=None,
-            discord_inbound_message_id=None, source_ref=source_ref,
+            purpose=purpose,
+            model=model,
+            sdk=sdk,
+            counts=counts,
+            tenant_id=tenant_id,
+            extraction_attempt_id=None,
+            extraction_shadow_run_id=None,
+            discord_inbound_message_id=None,
+            source_ref=source_ref,
         )
         cols.update(_outcome_columns(outcome, error_code))
         # app.database は読み込むとエンジンを作るので、使う時だけ読む。
@@ -208,7 +230,8 @@ API の呼び出しの except を、次の前後で変える。
     except Exception as exc:
         wrapped = RuntimeError(f"Gemini v8 API 呼び出し失敗: {_gem._safe_error_message(exc)}")
         # ADR-1058 段1b-1: API を呼んで失敗した印。v102 の層がこの印のある例外だけ使用の記録に failed の行を書く。
-        wrapped.ledger_api_called = True
+        # 例外の型に無い属性なので setattr で付ける（mypy の attr-defined を出さない）。
+        setattr(wrapped, "ledger_api_called", True)
         raise wrapped from exc
 ```
 - `except SoftTimeLimitExceeded: raise` と try の外の `client = _gem._get_genai_client()` は変えない（印を付けない）。
@@ -221,9 +244,13 @@ def _record_usage_failure(session: Session, exc: BaseException, extraction_job_i
     """API を呼んで例外で終わった1回を、llm_usage_events に failed の1行で書く（ADR-1058 段1b-1）。台帳の失敗で抽出を止めない。"""
     try:
         record_usage_failure_sync(
-            session, purpose=_LEDGER_PURPOSE, model=_GEMINI_MODEL, sdk=_LEDGER_SDK,
+            session,
+            purpose=_LEDGER_PURPOSE,
+            model=_GEMINI_MODEL,
+            sdk=_LEDGER_SDK,
             error_code=gemini_ledger_error_code(exc),
-            source_ref=f"{_SOURCE_REF_PREFIX}{extraction_job_id}", extraction_attempt_id=attempt_id,
+            source_ref=f"{_SOURCE_REF_PREFIX}{extraction_job_id}",
+            extraction_attempt_id=attempt_id,
         )
         session.commit()
     except Exception:  # noqa: BLE001
@@ -240,20 +267,20 @@ def _record_usage_failure(session: Session, exc: BaseException, extraction_job_i
 - `except SoftTimeLimitExceeded:` の順番・送り直しの判定・`if recorder is None: raise`・`recorder.record_error_detail(...)` は変えない。
 
 ## 4. `backend/app/services/gemini_extraction_svc.py`
-`call_gemini_extraction` の API の呼び出しの except を、次の前後で変える（足すのは1行だけ）。
+`call_gemini_extraction` の API の呼び出しの except を、次の前後で変える（足すのは注記1行と呼び出し1行だけ。`record_error_detail` の後ろに置き、判定が万一上げても今の記録を先に済ませる）。
 - 前:
 ```python
-    except Exception as exc:
-        if recorder is not None:
             detail = _safe_error_message(exc)
+            recorder.record_error_detail({"raw": detail, "category": _classify_error(exc)})
+            raise RecordError("API_ERROR") from None
 ```
 - 後:
 ```python
-    except Exception as exc:
-        if recorder is not None:
+            detail = _safe_error_message(exc)
+            recorder.record_error_detail({"raw": detail, "category": _classify_error(exc)})
             # ADR-1058 段1b-1: API を呼んで失敗した印。recorder.fail が使用の記録に failed の行を1行書く。
             recorder.mark_api_failed(llm_budget.gemini_ledger_error_code(exc))
-            detail = _safe_error_message(exc)
+            raise RecordError("API_ERROR") from None
 ```
 
 ## 5. `backend/app/services/tcg_extraction_record_svc.py`
@@ -320,21 +347,33 @@ def _record_usage_failure(session: Session, exc: BaseException, extraction_job_i
 ```python
 def _mark_ledger(exc: Exception, *, outcome: str, error_code: str | None, counts: UsageCounts) -> None:
     """呼び出しの結果を例外に印として付ける（ADR-1058 段1b-1）。台帳の行は呼び出し元の except が書く。"""
-    exc.ledger_outcome = outcome
-    exc.ledger_error_code = error_code
-    exc.ledger_counts = counts
+    # 例外の型に無い属性なので setattr / getattr で扱う（mypy の attr-defined を出さない）。
+    setattr(exc, "ledger_outcome", outcome)
+    setattr(exc, "ledger_error_code", error_code)
+    setattr(exc, "ledger_counts", counts)
 
 
 async def _record_call_error(
-    exc: BaseException, *, purpose: str, model: str, tenant_id: int, source_ref: str | None,
+    exc: BaseException,
+    *,
+    purpose: str,
+    model: str,
+    tenant_id: int,
+    source_ref: str | None,
 ) -> None:
     """印のある例外だけ、別の取引で使用の記録に1行書く（呼び出し元の取引は例外で巻き戻るため。design.md §4-2-3）。"""
     outcome = getattr(exc, "ledger_outcome", None)
     if outcome is None:
         return
     await record_usage_isolated(
-        purpose=purpose, model=model, sdk="google-generativeai", counts=exc.ledger_counts,
-        outcome=outcome, error_code=exc.ledger_error_code, tenant_id=tenant_id, source_ref=source_ref,
+        purpose=purpose,
+        model=model,
+        sdk="google-generativeai",
+        counts=getattr(exc, "ledger_counts"),
+        outcome=outcome,
+        error_code=getattr(exc, "ledger_error_code"),
+        tenant_id=tenant_id,
+        source_ref=source_ref,
     )
 ```
 - 6-3 `_call_gemini` の except と後ろを、次の前後で変える。
@@ -377,7 +416,9 @@ async def _record_call_error(
     try:
         response_text, in_tokens, out_tokens, counts = await _call_gemini(prompt, model)
     except Exception as exc:
-        await _record_call_error(exc, purpose="translation_inbound", model=model, tenant_id=tenant_id, source_ref=message_id)
+        await _record_call_error(
+            exc, purpose="translation_inbound", model=model, tenant_id=tenant_id, source_ref=message_id
+        )
         raise
 ```
   - 取り直し: `            resp2, in2, out2, counts2 = await _call_gemini(prompt2, MODEL_SEND)`:
@@ -386,8 +427,11 @@ async def _record_call_error(
                 resp2, in2, out2, counts2 = await _call_gemini(prompt2, MODEL_SEND)
             except Exception as exc:
                 await _record_call_error(
-                    exc, purpose="translation_inbound_escalation", model=MODEL_SEND,
-                    tenant_id=tenant_id, source_ref=message_id,
+                    exc,
+                    purpose="translation_inbound_escalation",
+                    model=MODEL_SEND,
+                    tenant_id=tenant_id,
+                    source_ref=message_id,
                 )
                 raise
 ```
@@ -397,7 +441,10 @@ async def _record_call_error(
         response_text, in_tokens, out_tokens, counts = await _call_gemini(prompt, model)
     except Exception as exc:
         await _record_call_error(
-            exc, purpose="translation_outbound", model=model, tenant_id=tenant_id,
+            exc,
+            purpose="translation_outbound",
+            model=model,
+            tenant_id=tenant_id,
             source_ref=str(lead_id) if lead_id is not None else None,
         )
         raise
@@ -440,7 +487,7 @@ async def _record_call_error(
 - DB の試験（8-1〜8-3 と今の `pg` を使う試験）はクラウドでは流さない。報告に「DB の試験はクラウドでは流さず CI に任せた」と書く。流していない試験を合格と書かない。
 - `bash scripts/dev/check-before-submit.sh` があれば流し、出力の最後の20行と終了コードを写す（無ければ「無い」と書く）。
 - `git diff origin/main...HEAD --name-only` が「触るファイル」の11個と `docs/handoff/secretary-chatgpt/card-1b1.md`・`docs/handoff/secretary-chatgpt/design.md` だけ（ほかがあれば止まる）。
-- `git diff origin/main...HEAD --numstat` の削除の数（2列目）が、1 は 0、2 は 1、3 は 1 以下（import の1行）、4 は 0、5 は 10 以下（5-1 の import の1行と 5-4 の前の塊）、6 は 12 以下（6-1 の import・6-3 の前の塊・6-4 の3行）、7〜11 は 0。違えば そのファイルを指定した `git diff origin/main...HEAD --` の `^-` の行（`grep` と `head -30`）を出して止まる。
+- `git diff origin/main...HEAD --numstat` の削除の数（2列目）が、1 は 0、2 は 1、3 は 1 以下（import の1行）、4 は 0、5 は 12 以下（5-1 の import の1行と 5-4 の前の塊11行。字下げが変わるので全部が削除に数えられる）、6 は 12 以下（6-1 の import・6-3 の前の塊・6-4 の3行）、7〜11 は 0。違えば そのファイルを指定した `git diff origin/main...HEAD --` の `^-` の行（`grep` と `head -30`）を出して止まる。
 - 生出力は作業場所の外の一時フォルダに保存し、パスと全文を報告に書く。
 
 ## 11. 想定される分岐と止まる条件
