@@ -341,6 +341,27 @@ Google へ送る側（`backend/app/services/google_calendar.py` の create/updat
 - 試験の DB が実 PostgreSQL で、`CAST(:seen AS text[])` が通らない → 止めて報告（書き方を変えない）。
 - 既存の試験が「取り込みは shared で入る」「受け口が同期を待つ」前提で落ちる → その試験は 14-7 のとおり書き換える。それ以外の理由で落ちる試験は直さず止めて報告。
 
+### 14-1a 追記（合流前の審査 REQUEST_CHANGES B1 への直し・2026-11-03）
+
+- 観測: 必須チェック「マイグレーションSQL 実行テスト（実DB）」が、変更した SQL だけを流す試験の DB で `relation "public.google_webhook_subscriptions" does not exist` で止まった。本番と同じ順の全件ドライランでは1周目・2周目とも通っている（表は 077 で作られる）。
+- 決定（Opus）: 14-1 の先頭の `ALTER TABLE` 2 行を、表があるときだけ流す DO ブロックに置き換える。CI の設定は触らない。理由: 直しが migration の中で閉じ、カードの範囲が広がらない。本番には表があるので動きは同じ。
+- 置き換え後の先頭（下の 1 つの DO ブロックで 2 行の ALTER を置き換える。後ろの一意の索引の DO ブロックはそのまま）:
+
+```sql
+DO $gcal_import_cols$
+BEGIN
+  IF to_regclass('public.google_webhook_subscriptions') IS NOT NULL THEN
+    ALTER TABLE public.google_webhook_subscriptions ADD COLUMN IF NOT EXISTS sync_token TEXT;
+    ALTER TABLE public.google_webhook_subscriptions ADD COLUMN IF NOT EXISTS channel_token_hash VARCHAR(64);
+  END IF;
+END
+$gcal_import_cols$;
+```
+
+- 触らない: ほかのファイル全部（CI の設定・`scripts/run_all_migrations.sh` を含む）。
+- 本番反映の後に確かめる: `public.google_webhook_subscriptions` に `sync_token`・`channel_token_hash` の 2 列があること（表が無くて飛ばされていないこと）。
+- 審査の細かい注意 1（`verify_channel` の表名に `public.` が無い）は直さない。同じファイルのほかの SQL もすべて `public.` を付けていないので、それに揃っている。
+
 ### 14-10 完了の報告
 
 PR を `--draft` で起票（`gh pr create --base main --draft`。migrations を含むため GO の手順を通す）。本文はテンプレの `### 標準ワークフロー確認` に recon・recon-bin2・design・ADR-1059・触るファイル全部・削除するファイル（中身の行を消したファイル全部）。backend の該当試験の生出力をファイルに残し、パスと PR 番号を報告する。
