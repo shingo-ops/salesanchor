@@ -21,6 +21,7 @@ import { SCHEDULE_POPOVER_ICONS, NAV_ICONS } from "../../constants/icons";
 import { CALENDARS, CALENDAR_MAP, type CalendarId, cssVar } from "../../features/schedule/calendars.config";
 import { api } from "../../lib/api";
 import { usePermissions } from "../../hooks/usePermissions";
+import { useApiQuery } from "../../lib/query/apiQuery";
 import "../schedule.css";
 import {
   type AnchorRect,
@@ -826,9 +827,12 @@ function LoadingState() {
 export default function SchedulePage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { hasPermission } = usePermissions();
+  const { hasPermission, isTenantAdmin } = usePermissions();
   const [searchParams, setSearchParams] = useSearchParams();
   const canManageOwners = hasPermission("staff.view");
+  const gcalStatusQ = useApiQuery<{ connected: boolean }>("/google-calendar/status", { enabled: isTenantAdmin });
+  const gcalConnected = gcalStatusQ.data?.connected === true;
+  const [gcalConnecting, setGcalConnecting] = useState(false);
   const demoState = (searchParams.get("demoState") as DemoState | null) ?? "normal";
   const [view, setView] = useState<ScheduleView>("week");
   const [anchorDate, setAnchorDate] = useState(() => new Date());
@@ -873,6 +877,17 @@ export default function SchedulePage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const handleGoogleConnect = async () => {
+    setGcalConnecting(true);
+    try {
+      const { auth_url } = await api.get<{ auth_url: string }>("/google-calendar/connect/start");
+      window.location.href = auth_url;
+    } catch {
+      setBanner({ type: "error", message: t("schedule.connectError") });
+      setGcalConnecting(false);
+    }
+  };
 
   useEffect(() => {
     if (view === "month") return;
@@ -1117,6 +1132,17 @@ export default function SchedulePage() {
         }
         headerAction={
           <div className="schedule-shell__toolbar">
+            {isTenantAdmin && (
+              <Button
+                variant="ghost"
+                size="md"
+                loading={gcalConnecting}
+                disabled={gcalConnected || gcalConnecting}
+                onClick={handleGoogleConnect}
+              >
+                {gcalConnected ? t("schedule.connectBtnConnected") : t("schedule.connectBtn")}
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="md"

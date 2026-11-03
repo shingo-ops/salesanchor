@@ -53,6 +53,19 @@ async def _get_sync_mode(db: AsyncSession, tenant_id: int) -> str:
     return record[0] if record else "none"
 
 
+async def _get_sync_target(db: AsyncSession, tenant_id: int) -> tuple[str, Optional[int]]:
+    """同期モードと、Google をつないだ人の user_id を返す。未接続は ('none', None)。"""
+    row = await db.execute(
+        text(
+            "SELECT sync_mode, connected_by_user_id FROM tenant_google_calendar_config"
+            " WHERE tenant_id = :tid"
+        ),
+        {"tid": tenant_id},
+    )
+    record = row.first()
+    return (record[0], record[1]) if record else ("none", None)
+
+
 def _build_sync_origin_id(tenant_id: int, calendar_event_id: int) -> str:
     """アプリ起源のイベントを識別する sync_origin_id を生成する。
     Webhook 受信時にこの値が存在するイベントはスキップして無限ループを防止する。
@@ -164,7 +177,7 @@ async def create_event(
 ) -> dict:
     """アプリ内にイベントを作成し、Google Calendar に同期する。
 
-    同期モードが 'bidirectional' または 'write_only' の場合のみ Google に送信する。
+    同期モードが 'bidirectional' または 'write_only' で、Google をつないだ本人が作った予定だけ Google に送信する。
     """
     # DB に保存（sync_status='pending' で開始）
     result = await db.execute(
@@ -196,8 +209,9 @@ async def create_event(
     await db.commit()
 
     # Google Calendar に同期
-    sync_mode = await _get_sync_mode(db, tenant_id)
-    if sync_mode in ("bidirectional", "write_only"):
+    sync_mode, connected_by = await _get_sync_target(db, tenant_id)
+    # 接続は会社で1つ。つないだ人が作った予定だけ送り、ほかの人の予定はその人の Google に入れない（PO 2026-11-02）
+    if sync_mode in ("bidirectional", "write_only") and connected_by == user_id:
         try:
             from app.services import google_calendar as cal_svc
 

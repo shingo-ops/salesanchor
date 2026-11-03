@@ -175,4 +175,22 @@ describe("usePermissions", () => {
 
     await waitFor(() => expect(mockGet).toHaveBeenCalledTimes(2));
   });
+
+  it("isTenantAdmin is true when the API returns is_tenant_admin: true", async () => {
+    mockGet.mockResolvedValueOnce({ permissions: [], is_tenant_admin: true });
+
+    const { result } = renderHook(() => usePermissions());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.isTenantAdmin).toBe(true);
+  });
+
+  it("isTenantAdmin is false when the field is missing", async () => {
+    mockGet.mockResolvedValueOnce({ permissions: [] });
+
+    const { result } = renderHook(() => usePermissions());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.isTenantAdmin).toBe(false);
+  });
 });

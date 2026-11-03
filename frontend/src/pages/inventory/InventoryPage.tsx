@@ -30,7 +30,7 @@ import type { InventoryRow } from "../../features/inventory/inventoryColumns";
 import { InventoryRowDrawer } from "../../features/inventory/InventoryRowDrawer";
 import { useSuperAdmin } from "../../hooks/useSuperAdmin";
 import { useExpiryRefresh } from "../../hooks/useExpiryRefresh";
-import { useRealtimeRefresh } from "../../hooks/useRealtimeRefresh";
+import { REALTIME_DEBOUNCE_MS, useRealtimeRefresh } from "../../hooks/useRealtimeRefresh";
 import { TOPICS } from "../../lib/realtime/topics";
 
 interface SupplierFacet {
@@ -107,20 +107,21 @@ const HIDEABLE_COLUMNS = [
   "mark", "condition", "quantity", "unitPrice", "supplier", "note", "ship",
 ];
 
-// ADR-1016 改訂 2026-10-18: 在庫が変わった合図で読み直す。抽出が続く時間帯でも 5 秒に 1 回まで。
-// 同じ合図が全員に同時に届くので、ページごとに 0〜3 秒ずらして読み直しが一度に集まらないようにする
+// ADR-1016 改訂 2026-11-02: 在庫が変わった合図で、ほかの画面と同じ 1.5 秒待って読み直す。
+// 同じ合図が全員に同時に届くので、ページごとに 0〜1 秒ずらして読み直しが一度に集まらないようにする
 const INVENTORY_TOPICS = [TOPICS.tcgInventory] as const;
-const INVENTORY_REFRESH_DEBOUNCE_MS = 5_000;
-const INVENTORY_REFRESH_JITTER_MS = 3_000;
+const INVENTORY_REFRESH_JITTER_MS = 1_000;
+// 行が外れる時刻の読み直しのずれは改訂 2026-10-19 のまま 0〜3 秒
+const INVENTORY_EXPIRY_JITTER_MS = 3_000;
 
 export default function InventoryPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
   const [refreshDebounceMs] = useState(
-    () => INVENTORY_REFRESH_DEBOUNCE_MS + Math.floor(Math.random() * INVENTORY_REFRESH_JITTER_MS),
+    () => REALTIME_DEBOUNCE_MS + Math.floor(Math.random() * INVENTORY_REFRESH_JITTER_MS),
   );
-  const [expiryJitterMs] = useState(() => Math.floor(Math.random() * INVENTORY_REFRESH_JITTER_MS));
+  const [expiryJitterMs] = useState(() => Math.floor(Math.random() * INVENTORY_EXPIRY_JITTER_MS));
   const [nextExpirySeconds, setNextExpirySeconds] = useState<number | null>(null);
   const [loadCount, setLoadCount] = useState(0);
   const [items, setItems] = useState<InventoryRow[]>([]);

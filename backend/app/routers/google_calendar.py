@@ -29,6 +29,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import (
     get_current_tenant,
+    get_current_user,
     require_tenant_admin,
     reset_tenant_context,
     set_tenant_context,
@@ -151,6 +152,32 @@ async def connect_callback(
     return RedirectResponse(f"{frontend_schedule}?connected=true")
 
 
+async def require_calendar_owner(
+    tenant_id: int = Depends(get_current_tenant),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> User:
+    """Google カレンダーをつないだ本人だけ通す。
+
+    接続は会社で1つで、中身はつないだ人の Google カレンダー。
+    ほかの人（管理者を含む）がその予定を読み書きできないようにする。未接続も通さない。
+    """
+    row = await db.execute(
+        text(
+            "SELECT connected_by_user_id FROM tenant_google_calendar_config"
+            " WHERE tenant_id = :tid"
+        ),
+        {"tid": tenant_id},
+    )
+    record = row.first()
+    if record is None or record[0] != user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Google カレンダーをつないだ本人だけが使えます",
+        )
+    return user
+
+
 # ---------------------------------------------------------------------------
 # Authenticated: 接続開始
 # ---------------------------------------------------------------------------
@@ -250,6 +277,7 @@ async def list_events(
     start: str = Query(..., description="RFC 3339 形式 例: 2025-05-01T00:00:00Z"),
     end: str = Query(..., description="RFC 3339 形式 例: 2025-05-31T23:59:59Z"),
     tenant_id: int = Depends(get_current_tenant),
+    user: User = Depends(require_calendar_owner),
     db: AsyncSession = Depends(get_db),
 ):
     """指定期間のカレンダーイベント一覧を返す。"""
@@ -276,6 +304,7 @@ async def list_events(
 async def create_event(
     body: EventBody,
     tenant_id: int = Depends(get_current_tenant),
+    user: User = Depends(require_calendar_owner),
     db: AsyncSession = Depends(get_db),
 ):
     """カレンダーにイベントを作成する。"""
@@ -303,6 +332,7 @@ async def update_event(
     event_id: str,
     body: EventPatchBody,
     tenant_id: int = Depends(get_current_tenant),
+    user: User = Depends(require_calendar_owner),
     db: AsyncSession = Depends(get_db),
 ):
     """カレンダーのイベントを部分更新する。"""
@@ -335,6 +365,7 @@ async def update_event(
 async def delete_event(
     event_id: str,
     tenant_id: int = Depends(get_current_tenant),
+    user: User = Depends(require_calendar_owner),
     db: AsyncSession = Depends(get_db),
 ):
     """カレンダーのイベントを削除する。"""
