@@ -3,8 +3,8 @@
 - 対象: docs/handoff/line-like-speed/design.md §3-4-20。ADR-1054 段 3 の 7 回目（予定表 /schedule）の前提。速さの直しではなく、範囲の外の不具合直し（docs/STANDARD-WORKFLOW.md §5「低リスクのコード」の自律クラフト。記録は design §3-4-20）。
 - 根拠の写し: S=origin/main 17c791b711064a5c772a3ca3535f2965d8a4d206。行番号はすべてこの sha。
 - 実行役はクラウドの Sonnet。作業場所の作り方はクラウドの決まり（S scripts/agent-hooks/cloud/rules.md:15）を正とする。PR は作らない。出力には上限を付ける。待つために sleep を使わない。
-- 状態: 第 1 版（2026-11-04 設計担当 Claude Opus）。
-- 受領確認: 実装役は着手の最初の報告に「シフトの直しのカード 第 1 版を受け取った・S=17c791b71」と書く。
+- 状態: 第 2 版（2026-11-04 設計担当 Claude Opus）。第 1 版の審査（クラウドの審査役・APPROVE）の注意と、設計担当が見つけた見え方の変化を直した: ①応答の時刻を "HH:MM" のまま返す（§4-A A3b・F9）ので test_shifts.py の今の確かめ（"09:00"）は変えない ②§3(b) の探し方を行全体の一致（grep -nxF）にした。
+- 受領確認: 実装役は着手の最初の報告に「シフトの直しのカード 第 2 版を受け取った・S=17c791b71」と書く。
 
 ## 0. 観測した事実（設計担当とクラウドの調べ担当が確かめた）
 - F1 本番の GET /api/v1/shifts?date_from&date_to が 500（design §3-4 の予定表の基準の回・design.md:274）。
@@ -15,12 +15,13 @@
 - F6 今ある試験 S backend/tests/test_shifts.py は SQLite で走る（S backend/tests/conftest.py:18）。試験用の shifts 表は日付・時刻が TEXT（S conftest.py:1313-1326）なので、F3〜F5 は CI で見えない。
 - F7 監査の記録（S backend/app/services/audit.py:304-305）は `json.dumps(..., default=str)` で、date・time を入れても通る。
 - F8 画面は応答の文字を使う: 予定表は `parseDateTime(shift_date, start_time)`（S frontend/src/pages/schedule/schedule-utils.ts:75-77。"HH:MM" と "HH:MM:SS" の両方を読む）、シフトの画面は値をそのまま表に出す（S frontend/src/pages/shifts/ShiftsPage.tsx:89-105）。送る値は "YYYY-MM-DD" と "HH:MM"（S ShiftsPage.tsx:36）。
+- F9 応答の時刻を time の型のまま JSON にすると "09:00:00" になる（第 1 版の審査役が pydantic 2.10.6 で流した生の出力）。シフトの画面は値をそのまま表に出す（F8）ので、秒が付いて見え方が変わる。frontend は触らない（§2）ため、応答の JSON だけ "HH:MM" に揃える（§4-A A3b。pydantic の field_serializer は when_used="json" の時だけ JSON の形を変え、Python の値は time のまま。出典: Context7 /pydantic/pydantic docs/api/functional_serializers.md の field_serializer）。登録の画面は "HH:MM" しか送らない（F8）ので秒は落ちない。FastAPI は応答の型があれば Pydantic で JSON にする（Context7 /websites/fastapi_tiangolo「Return a Response Directly > How a Response Model Works」）。その確かめは test_shifts.py の今の "09:00" の確かめ（S :36-37）が API を通して行う。
 
 ## 1. 触るファイル（変更前→変更後）
 | # | ファイル | 変更前 | 変更後 |
 |---|---|---|---|
-| 1 | backend/app/routers/shifts.py | 日付・時刻を str で受け、そのまま DB に渡し、str の型で返す | date・time・datetime の型で受けて返す（§4-A） |
-| 2 | backend/tests/test_shifts.py | 時刻の応答 "09:00" を確かめる | "09:00:00" を確かめる・誤った日付は 422 を足す（§4-B） |
+| 1 | backend/app/routers/shifts.py | 日付・時刻を str で受け、そのまま DB に渡し、str の型で返す | date・time・datetime の型で受けて返す。応答の JSON の時刻は "HH:MM"（§4-A） |
+| 2 | backend/tests/test_shifts.py | 時刻の応答 "09:00" を確かめる | 今の確かめはそのまま。誤った日付・時刻は 422 の試験を 2 件足す（§4-B） |
 | 3 | backend/tests/conftest.py | SQLite に time を渡せない | time を "HH:MM:SS" の文字で渡す変換を足す（§4-C の 2 か所） |
 | 4 | backend/tests/test_shifts_pg.py | 無い | 新しく作る。本物の PostgreSQL で読み込み・登録を確かめる（§4-D 全文） |
 | 5 | docs/handoff/line-like-speed/batch3g-shifts-card.md | 無い | このカード（設計担当。実装役は触らない） |
@@ -33,8 +34,8 @@
 
 ## 3. 実装役が先に確かめること（想定分岐つき）
 - (a) `git diff --stat 17c791b711064a5c772a3ca3535f2965d8a4d206 origin/main -- backend/app/routers/shifts.py backend/tests/test_shifts.py backend/tests/conftest.py | tail -5` が空か。空でなければ停止して BLOCKED: で出力を報告する。
-- (b) §4 の「変更前」の文が、書かれた行にそのままあること。無い・2 か所以上の時は直さずに停止して BLOCKED: で `grep -n` の出力を報告する。
-- (c) SQLite の試験（test_shifts.py）が §4-B の後に落ちたら、試験をさらに書き換えて通さない。停止して NEEDS_DECISION: で生の出力を返す。特に、SQLite が返す created_at の文字（"YYYY-MM-DD HH:MM:SS" の形）を datetime として読めずに落ちた時はこの分岐。
+- (b) §4 の「変更前」の文が、書かれた行にそのままあること。1 行ずつ `grep -nxF '<行全体>' <ファイル>`（行全体が一致するものだけ）で探す。無い・2 か所以上の時は直さずに停止して BLOCKED: で出力を報告する（例: `    shift_date: str` は :36 の 1 か所。:26 の `= Field(...)` 付きの行は別の行）。
+- (c) SQLite の試験（test_shifts.py）が §4-B の後に落ちたら、試験をさらに書き換えて通さない。停止して NEEDS_DECISION: で生の出力を返す。特に、SQLite が返す created_at の文字（"YYYY-MM-DD HH:MM:SS" の形）を datetime として読めずに落ちた時と、時刻の応答が "09:00" でなく "09:00:00" になって落ちた時（A3b が効いていない）はこの分岐。
 - (d) test_shifts_pg.py は GITHUB_ACTIONS=true でしか走らない（今ある *_pg.py と同じ）。クラウドでは skip されることを確かめるだけでよい（skipped と出る）。本物の PostgreSQL での結果は PR の CI の pytest-run で見る（設計担当）。
 - (e) 試験の中で生の `SET search_path` を書かない（S backend/app/auth/dependencies.py:360-361 の決まり）。search_path は set_tenant_context で設定する。
 
@@ -48,6 +49,14 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from datetime import date, datetime, time
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+```
+A1b. S :6。変更前:
+```python
+from pydantic import BaseModel, Field
+```
+変更後:
+```python
+from pydantic import BaseModel, Field, field_serializer
 ```
 A2. S :26-28。変更前:
 ```python
@@ -81,6 +90,18 @@ A3. S :36-38 と :41。変更前:
 ```python
     created_at: datetime | None
 ```
+A3b. S :42 の後（ShiftResponse の中・4 字下げ）に足す。変更前（:42）:
+```python
+    model_config = {"from_attributes": True}
+```
+変更後（応答の JSON の時刻を今までどおり "HH:MM" にする。F9）:
+```python
+    model_config = {"from_attributes": True}
+
+    @field_serializer("start_time", "end_time", when_used="json")
+    def _time_hh_mm(self, value: time) -> str:
+        return value.strftime("%H:%M")
+```
 A4. S :52-53。変更前:
 ```python
     date_from: str | None = Query(default=None),
@@ -94,16 +115,7 @@ A4. S :52-53。変更前:
 A5. ほかの行（SQL の文・:61-68 の組み立て・:83-85 の渡し方・:93 の model_dump）は変えない。型が変わったので、そのまま date・time が DB に渡る。
 
 ## 4-B. #2 backend/tests/test_shifts.py
-B1. S :36-37。変更前:
-```python
-        assert data["start_time"] == "09:00"
-        assert data["end_time"] == "18:00"
-```
-変更後（応答は時刻の型で "HH:MM:SS" になる。本番の PostgreSQL の TIME と同じ形）:
-```python
-        assert data["start_time"] == "09:00:00"
-        assert data["end_time"] == "18:00:00"
-```
+B1. S :36-37 の `assert data["start_time"] == "09:00"`・`assert data["end_time"] == "18:00"` は変えない（A3b で応答の JSON は "HH:MM" のまま。この 2 行が API を通した確かめになる）。
 B2. ファイルの最後（S :71 の後）に、空行 1 行を挟んで次を足す（クラスの中・4 字下げ）:
 ```python
 
@@ -219,8 +231,8 @@ def test_p1_list_by_period_uses_date_parameters(pg):
     assert [r.shift_date for r in result] == [date(2026, 11, 2)]
     dumped = result[0].model_dump(mode="json")
     assert dumped["shift_date"] == "2026-11-02"
-    assert dumped["start_time"] == "09:00:00"
-    assert dumped["end_time"] == "18:00:00"
+    assert dumped["start_time"] == "09:00"
+    assert dumped["end_time"] == "18:00"
     assert dumped["created_at"] is not None
 
 
