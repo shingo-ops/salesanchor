@@ -10,9 +10,9 @@
  *     権限は orders.view 流用（commissions.view 未定義のため）。
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { api } from "../../lib/api";
+import { useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
 import { PageLayout } from "../../components/PageLayout";
 import { usePermissions } from "../../hooks/usePermissions";
 import CommissionPanel from "../../components/CommissionPanel";
@@ -21,7 +21,7 @@ import type { DataTableColumn } from "../../components/DataTable";
 import { Card } from "../../components/Card";
 import { Button } from "../../components/Button";
 import { TextFieldControl } from "../../components/TextField";
-import { LoadingBlock } from "../../components/loading";
+import { LoadingBlock, Spinner } from "../../components/loading";
 
 type RoleKey = "sales" | "order" | "ship" | "purchase" | "trouble";
 
@@ -66,20 +66,17 @@ export default function CommissionsPage() {
   );
   const [year, setYear] = useState(nowJst.getFullYear());
   const [month, setMonth] = useState(nowJst.getMonth() + 1);
-  const [monthly, setMonthly] = useState<MonthlySummaryDto | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const monthlyQ = useApiQuery<MonthlySummaryDto>(`/commissions/monthly?year=${year}&month=${month}`);
+  const monthly = monthlyQ.data ?? null;
+  const shownError = monthlyQ.error ? (monthlyQ.error instanceof Error ? monthlyQ.error.message : t("common.fetchError")) : "";
+  const invalidate = useInvalidateApi();
 
   // 担当者割当セクション（orders.update 保持時のみ）の状態。
-  const [orders, setOrders] = useState<CommissionOrderItem[]>([]);
+  const ordersQ = useApiQuery<{ items: CommissionOrderItem[] }>("/financials/orders", { enabled: canEdit });
+  const orders = ordersQ.data?.items ?? [];
   const [assigning, setAssigning] = useState<CommissionOrderItem | null>(null);
 
-  const reloadMonthly = useCallback(async () => {
-    const dto = await api.get<MonthlySummaryDto>(
-      `/commissions/monthly?year=${year}&month=${month}`,
-    );
-    setMonthly(dto);
-  }, [year, month]);
+  const reloadMonthly = () => invalidate(["commissions"]);
 
   const ROLE_LABELS: Record<RoleKey, string> = {
     sales: t("commissions.role_sales"),
@@ -89,51 +86,13 @@ export default function CommissionsPage() {
     trouble: t("commissions.role_trouble"),
   };
 
-  useEffect(() => {
-    let cancelled = false;
-    const load = async () => {
-      setLoading(true);
-      setError("");
-      try {
-        const dto = await api.get<MonthlySummaryDto>(
-          `/commissions/monthly?year=${year}&month=${month}`,
-        );
-        if (!cancelled) setMonthly(dto);
-      } catch (e) {
-        if (!cancelled) {
-          setError(e instanceof Error ? e.message : t("common.fetchError"));
-          setMonthly(null);
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-    load();
-    return () => { cancelled = true; };
-  }, [year, month, t]);
-
-  // 担当者割当の対象受注一覧（編集権限がある時のみ取得）。
-  useEffect(() => {
-    if (!canEdit) return;
-    let cancelled = false;
-    const load = async () => {
-      try {
-        const dto = await api.get<{ items: CommissionOrderItem[] }>(
-          "/financials/orders",
-        );
-        if (!cancelled) setOrders(dto.items);
-      } catch {
-        // 受注一覧の取得失敗は月次集計表示を妨げないため握り潰す。
-        if (!cancelled) setOrders([]);
-      }
-    };
-    load();
-    return () => { cancelled = true; };
-  }, [canEdit]);
-
   return (
-    <PageLayout navKey="nav.commissions" subtitleKey="commissions.listSubtitle">
-      {error && <div className="error-message">{error}</div>}
+    <PageLayout
+      navKey="nav.commissions"
+      subtitleKey="commissions.listSubtitle"
+      headerLeft={(monthlyQ.isFetching && !monthlyQ.isPending) || (ordersQ.isFetching && !ordersQ.isPending) ? <Spinner size="sm" /> : undefined}
+    >
+      {shownError && <div className="error-message">{shownError}</div>}
 
       <Card variant="container" style={{ marginBottom: "var(--space-4)" }}>
         <h3 style={{ fontSize: "var(--font-sm)", fontWeight: "var(--font-weight-semi)", color: "var(--text-muted)", margin: "0 0 var(--space-3)" }}>{t("commissions.monthlyLegend")}</h3>
@@ -164,7 +123,7 @@ export default function CommissionsPage() {
           </label>
         </div>
 
-        {loading ? (
+        {monthlyQ.isPending ? (
           <LoadingBlock />
         ) : monthly ? (
           <div style={{ marginTop: "var(--space-4)" }}>
