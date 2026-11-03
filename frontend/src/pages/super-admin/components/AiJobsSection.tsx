@@ -158,12 +158,17 @@ export function AiJobsSection({ t }: AiJobsSectionProps) {
   if (error) return <p className="analysis-dashboard-error">{error}</p>;
 
   const jobColumns: DataTableColumn<AiJob>[] = [
-    { key: "job_key", header: t("analysisRules.dashboard.aiJobs.colJob"), renderCell: (row) => jobLabel(row.job_key, t) },
-    { key: "provider", header: t("analysisRules.dashboard.aiJobs.colProvider"), renderCell: (row) => providerLabel(row.provider, t) },
-    { key: "model", header: t("analysisRules.dashboard.aiJobs.colModel"), renderCell: (row) => row.model },
+    { key: "job_key", header: t("analysisRules.dashboard.aiJobs.colJob"), ellipsis: true, renderCell: (row) => jobLabel(row.job_key, t) },
+    {
+      key: "model",
+      header: t("analysisRules.dashboard.aiJobs.colAiModel"),
+      ellipsis: true,
+      renderCell: (row) => choiceLabel({ provider: row.provider, model: row.model }, t),
+    },
     {
       key: "login_ok",
       header: t("analysisRules.dashboard.aiJobs.colLogin"),
+      ellipsis: true,
       renderCell: (row) =>
         row.login_ok ? (
           <Badge variant="success" size="sm">{t("analysisRules.dashboard.aiJobs.loginOk")}</Badge>
@@ -173,12 +178,31 @@ export function AiJobsSection({ t }: AiJobsSectionProps) {
           </Badge>
         ),
     },
-    { key: "last_ok_at", header: t("analysisRules.dashboard.aiJobs.colLastOk"), renderCell: (row) => formatAt(row.last_ok_at, t) },
-    { key: "count_24h", header: t("analysisRules.dashboard.aiJobs.colCount24h"), align: "right", renderCell: (row) => String(row.count_24h) },
-    { key: "failed_24h", header: t("analysisRules.dashboard.aiJobs.colFailed24h"), align: "right", renderCell: (row) => String(row.failed_24h) },
+    {
+      key: "switchable",
+      header: t("analysisRules.dashboard.aiJobs.colAction"),
+      ellipsis: true,
+      renderCell: (row) =>
+        row.switchable ? (
+          <Button variant="secondary" size="sm" onClick={() => openChange(row)}>
+            {t("analysisRules.dashboard.aiJobs.change")}
+          </Button>
+        ) : (
+          t("analysisRules.dashboard.aiJobs.notSwitchable")
+        ),
+    },
+    { key: "last_ok_at", header: t("analysisRules.dashboard.aiJobs.colLastOk"), ellipsis: true, renderCell: (row) => formatAt(row.last_ok_at, t) },
+    {
+      key: "count_24h",
+      header: t("analysisRules.dashboard.aiJobs.col24h"),
+      align: "right",
+      ellipsis: true,
+      renderCell: (row) => t("analysisRules.dashboard.aiJobs.count24h", { count: row.count_24h, failed: row.failed_24h }),
+    },
     {
       key: "last_error_code",
       header: t("analysisRules.dashboard.aiJobs.colLastError"),
+      ellipsis: true,
       renderCell: (row) =>
         row.last_error_code
           ? t("analysisRules.dashboard.aiJobs.lastErrorWithAt", {
@@ -190,19 +214,8 @@ export function AiJobsSection({ t }: AiJobsSectionProps) {
     {
       key: "login_refreshed_at",
       header: t("analysisRules.dashboard.aiJobs.colLoginRefreshed"),
+      ellipsis: true,
       renderCell: (row) => formatAt(row.login_refreshed_at, t),
-    },
-    {
-      key: "switchable",
-      header: t("analysisRules.dashboard.aiJobs.colAction"),
-      renderCell: (row) =>
-        row.switchable ? (
-          <Button variant="secondary" size="sm" onClick={() => openChange(row)}>
-            {t("analysisRules.dashboard.aiJobs.change")}
-          </Button>
-        ) : (
-          t("analysisRules.dashboard.aiJobs.notSwitchable")
-        ),
     },
   ];
 

@@ -120,4 +120,39 @@ describe("AiJobsSection", () => {
       expect(missing).toEqual([]);
     }
   });
+
+  it("uses 8 columns with role wording and puts the change button in the 4th cell (ja)", async () => {
+    await i18n.changeLanguage("ja");
+    mockGets(JOB_KEYS.map((k) => (k === "secretary_intent" ? job(k, { count_24h: 70, failed_24h: 0 }) : job(k))));
+    view();
+    await screen.findAllByText(i18n.t("analysisRules.dashboard.aiJobs.job.secretary_intent"));
+    const table = screen.getAllByRole("table")[0];
+    const headers = within(table).getAllByRole("columnheader");
+    expect(headers).toHaveLength(8);
+    const headerTexts = headers.map((h) => h.textContent);
+    expect(headerTexts[0]).toBe(i18n.t("analysisRules.dashboard.aiJobs.colJob"));
+    expect(headerTexts).toContain(i18n.t("analysisRules.dashboard.aiJobs.colAiModel"));
+    expect(headerTexts).toContain(i18n.t("analysisRules.dashboard.aiJobs.col24h"));
+    expect(table.textContent).not.toContain(String.fromCharCode(0x4ed5, 0x4e8b));
+    const row = within(table).getAllByRole("row").find((r) => within(r).queryByRole("button", { name: i18n.t("analysisRules.dashboard.aiJobs.change") }));
+    expect(row).toBeTruthy();
+    const cells = within(row as HTMLElement).getAllByRole("cell");
+    expect(within(cells[3]).getByRole("button", { name: i18n.t("analysisRules.dashboard.aiJobs.change") })).toBeTruthy();
+    expect(cells[5].textContent).toBe(i18n.t("analysisRules.dashboard.aiJobs.count24h", { count: 70, failed: 0 }))
+    expect(cells[5].textContent).toMatch(/^70 .+0.$/);
+    expect(cells[1].textContent).toBe(i18n.t("analysisRules.dashboard.aiJobs.choiceLabel", { provider: "Claude", model: "sonnet" }));
+  });
+
+  it("shows calls in en as '70 calls (0 failed)'", async () => {
+    mockGets(JOB_KEYS.map((k) => (k === "secretary_intent" ? job(k, { count_24h: 70, failed_24h: 0 }) : job(k))));
+    view();
+    expect(await screen.findByText("70 calls (0 failed)")).toBeTruthy();
+  });
+
+  it("has ja and en keys for the merged column labels", () => {
+    const keys = ["colAiModel", "col24h", "count24h"].map((k) => `analysisRules.dashboard.aiJobs.${k}`);
+    for (const lng of ["ja", "en"]) {
+      expect(keys.filter((k) => !i18n.exists(k, { lng }))).toEqual([]);
+    }
+  });
 });
