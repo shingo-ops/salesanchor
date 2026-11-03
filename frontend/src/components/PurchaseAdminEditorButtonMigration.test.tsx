@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import RolesPage from '../pages/roles/RolesPage';
 import en from '../locales/en.json';
+import { queryClient } from '../lib/query/apiQuery';
 
 const mock = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), put: vi.fn(), patch: vi.fn(), delete: vi.fn() }));
 vi.mock('../lib/api', () => ({ api: mock }));
@@ -26,7 +27,7 @@ beforeEach(async () => {
   });
   for (const method of ['post', 'put', 'patch', 'delete'] as const) mock[method].mockImplementation(() => { throw new Error('Unexpected ' + method); });
 });
-afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+afterEach(() => { cleanup(); queryClient.clear(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 describe('purchase and admin editor Button migration', () => {
   it('role permission cancel restores the server baseline and writes zero', async () => {
