@@ -161,3 +161,215 @@ describe("SchedulePage share-with-staff toggle", () => {
     expect("calendar_type" in body).toBe(false);
   });
 });
+
+describe("SchedulePage popover placement (K1)", () => {
+  const callbacks: Array<() => void> = [];
+  let popoverHeight = 500;
+
+  beforeEach(() => {
+    callbacks.length = 0;
+    popoverHeight = 500;
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        constructor(cb: () => void) { callbacks.push(cb); }
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      },
+    );
+    vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function (this: Element) {
+      if (this.classList.contains("schedule-popover")) {
+        return { top: 0, left: 0, right: 320, bottom: popoverHeight, width: 320, height: popoverHeight, x: 0, y: 0, toJSON: () => ({}) };
+      }
+      // 画面（高さ 768）の一番下にある枠を押した、という測り値
+      return { top: 700, left: 100, right: 180, bottom: 748, width: 80, height: 48, x: 100, y: 700, toJSON: () => ({}) };
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  const popoverTop = () => (document.querySelector(".schedule-popover") as HTMLElement).style.top;
+
+  it("places the popover from its measured height so the bottom stays inside the viewport", async () => {
+    answers.events = [apiEvent({})];
+    view();
+    fireEvent.click(await screen.findByText("Own Event"));
+    await waitFor(() => expect(document.querySelector(".schedule-popover")).not.toBeNull());
+    // 768 - 500 - 12
+    expect(popoverTop()).toBe("256px");
+  });
+
+  it("measures again when the content grows", async () => {
+    answers.events = [apiEvent({})];
+    view();
+    fireEvent.click(await screen.findByText("Own Event"));
+    await waitFor(() => expect(popoverTop()).toBe("256px"));
+    popoverHeight = 600;
+    expect(callbacks.length).toBeGreaterThan(0);
+    callbacks.forEach((cb) => cb());
+    // 768 - 600 - 12
+    await waitFor(() => expect(popoverTop()).toBe("156px"));
+  });
+});
+
+describe("SchedulePage keyboard shortcuts (K7)", () => {
+  const rangeText = () => document.querySelector(".schedule-shell__range")?.textContent ?? "";
+  const pressed = (name: string) =>
+    screen.getByRole("button", { name }).getAttribute("aria-pressed") === "true";
+  const press = (key: string, init: Record<string, unknown> = {}, target: Element = document.body) =>
+    fireEvent.keyDown(target, { key, ...init });
+  const ready = async () => {
+    view();
+    await screen.findByRole("button", { name: i18n.t("schedule.create") });
+  };
+  const titleInput = () => screen.queryByPlaceholderText(i18n.t("schedule.eventTitle"));
+
+  describe("keys that act", () => {
+    it("T goes back to today", async () => {
+      await ready();
+      const initial = rangeText();
+      press("j");
+      expect(rangeText()).not.toBe(initial);
+      press("t");
+      expect(rangeText()).toBe(initial);
+    });
+
+    it("J moves to the next period", async () => {
+      await ready();
+      const initial = rangeText();
+      press("j");
+      expect(rangeText()).not.toBe(initial);
+    });
+
+    it("ArrowRight moves to the next period", async () => {
+      await ready();
+      const initial = rangeText();
+      press("ArrowRight");
+      expect(rangeText()).not.toBe(initial);
+    });
+
+    it("K moves to the previous period", async () => {
+      await ready();
+      const initial = rangeText();
+      press("k");
+      expect(rangeText()).not.toBe(initial);
+    });
+
+    it("ArrowLeft moves to the previous period", async () => {
+      await ready();
+      const initial = rangeText();
+      press("ArrowLeft");
+      expect(rangeText()).not.toBe(initial);
+    });
+
+    it("D switches to the day view", async () => {
+      await ready();
+      press("d");
+      expect(pressed(i18n.t("schedule.dayView"))).toBe(true);
+    });
+
+    it("W switches to the week view", async () => {
+      await ready();
+      press("d");
+      press("w");
+      expect(pressed(i18n.t("schedule.weekView"))).toBe(true);
+    });
+
+    it("M switches to the month view", async () => {
+      await ready();
+      press("m");
+      expect(pressed(i18n.t("schedule.monthView"))).toBe(true);
+    });
+
+    it("A switches to the list view and CapsLock does not matter", async () => {
+      await ready();
+      press("A");
+      expect(pressed(i18n.t("schedule.listView"))).toBe(true);
+    });
+
+    it("C opens the create popover", async () => {
+      await ready();
+      press("c");
+      expect(await screen.findByPlaceholderText(i18n.t("schedule.eventTitle"))).toBeTruthy();
+    });
+
+    it("Escape closes the popover", async () => {
+      await ready();
+      press("c");
+      await screen.findByPlaceholderText(i18n.t("schedule.eventTitle"));
+      press("Escape");
+      expect(titleInput()).toBeNull();
+    });
+
+    it("? opens the shortcut list", async () => {
+      await ready();
+      press("?", { shiftKey: true });
+      expect(await screen.findByRole("dialog", { name: i18n.t("schedule.shortcuts.title") })).toBeTruthy();
+    });
+  });
+
+  describe("keys that must not act", () => {
+    it("ignores letter keys typed in an input", async () => {
+      await ready();
+      const input = document.createElement("input");
+      document.body.appendChild(input);
+      press("m", {}, input);
+      expect(pressed(i18n.t("schedule.monthView"))).toBe(false);
+      input.remove();
+    });
+
+    it("Escape inside an input still closes the popover", async () => {
+      await ready();
+      press("c");
+      const input = await screen.findByPlaceholderText(i18n.t("schedule.eventTitle"));
+      press("Escape", {}, input);
+      expect(titleInput()).toBeNull();
+    });
+
+    it("Escape during IME composition does not close the popover", async () => {
+      await ready();
+      press("c");
+      const input = await screen.findByPlaceholderText(i18n.t("schedule.eventTitle"));
+      press("Escape", { isComposing: true }, input);
+      expect(titleInput()).not.toBeNull();
+    });
+
+    it("ignores Ctrl + letter", async () => {
+      await ready();
+      press("m", { ctrlKey: true });
+      expect(pressed(i18n.t("schedule.monthView"))).toBe(false);
+    });
+
+    it("ignores Meta (Command) + letter", async () => {
+      await ready();
+      press("m", { metaKey: true });
+      expect(pressed(i18n.t("schedule.monthView"))).toBe(false);
+    });
+
+    it("ignores Alt + letter", async () => {
+      await ready();
+      press("m", { altKey: true });
+      expect(pressed(i18n.t("schedule.monthView"))).toBe(false);
+    });
+
+    it("ignores letter keys while a popover is open", async () => {
+      await ready();
+      press("c");
+      await screen.findByPlaceholderText(i18n.t("schedule.eventTitle"));
+      press("m");
+      expect(pressed(i18n.t("schedule.monthView"))).toBe(false);
+    });
+
+    it("ignores letter keys while the shortcut list is open", async () => {
+      await ready();
+      press("?", { shiftKey: true });
+      await screen.findByRole("dialog", { name: i18n.t("schedule.shortcuts.title") });
+      press("m");
+      expect(pressed(i18n.t("schedule.monthView"))).toBe(false);
+    });
+  });
+});

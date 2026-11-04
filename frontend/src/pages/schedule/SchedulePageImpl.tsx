@@ -6,11 +6,12 @@
  * ADR-067: 色・寸法は CSS 変数参照のみ。
  */
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import type { ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/Button";
+import { Modal } from "../../components/Modal";
 import { PageLayout } from "../../components/PageLayout";
 import { SelectControl } from "../../components/Select";
 import { TextareaControl } from "../../components/Textarea";
@@ -28,12 +29,14 @@ import {
   type ApiCalendarEvent,
   type ApiShift,
   type DemoState,
+  LIST_VIEW_DAYS,
   type ScheduleItem,
   type ScheduleView,
   addDays,
   addMonths,
   clamp,
   combineDateTime,
+  fitPopover,
   formatDateInput,
   formatDayKey,
   formatDayLabel,
@@ -86,6 +89,14 @@ interface ScheduleRosterState {
 }
 
 const DEFAULT_ROW_HEIGHT = 48;
+/**
+ * 小窓と画面の端の余白(px)。--space-3 (12px) と同じ値。小窓の CSS 上限
+ * (calc(100vh - var(--space-6)) = 上下 12px ずつ) と対になっている。
+ * 前例: components/Popover.tsx の margin。
+ */
+const POPOVER_MARGIN = 12;
+/** C キーで作る予定の開始時刻（時） */
+const SHORTCUT_CREATE_HOUR = 9;
 const WORKDAY_START = 7;
 
 function createDraft(item?: ScheduleItem | null): ScheduleDraft {
@@ -115,32 +126,49 @@ function addHours(date: Date, amount: number): Date {
 function formatRangeTitle(view: ScheduleView, anchorDate: Date): string {
   if (view === "month") return formatMonthLabel(anchorDate);
   if (view === "day") return formatDayLabel(anchorDate);
+  if (view === "list") return `${formatDayLabel(anchorDate)} - ${formatDayLabel(addDays(anchorDate, LIST_VIEW_DAYS - 1))}`;
   const days = getWeekDays(anchorDate);
   return `${formatDayLabel(days[0])} - ${formatDayLabel(days[6])}`;
 }
 
-function buildPopoverPosition(anchor: AnchorRect | null) {
-  const width = 320;
-  const height = 420;
-  const margin = 12;
-  if (!anchor) {
-    return {
-      left: `calc(50vw - ${width / 2}px)`,
-      top: `calc(50vh - ${height / 2}px)`,
-    };
-  }
+/**
+ * 小窓を出したあとに実寸を測って置く（測る前は見えなくする）。
+ * 画面の大きさが変わったとき・中身の高さが変わったとき（「詳しく入れる」など）は測り直す。
+ */
+function usePopoverPlacement(anchor: AnchorRect | null) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
+  const place = useCallback(() => {
+    const el = ref.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const next = fitPopover(
+      anchor,
+      { width: rect.width, height: rect.height },
+      { width: window.innerWidth, height: window.innerHeight },
+      POPOVER_MARGIN,
+    );
+    setPos((current) => (current && current.left === next.left && current.top === next.top ? current : next));
+  }, [anchor]);
 
-  const viewportW = window.innerWidth;
-  const viewportH = window.innerHeight;
-  const leftBase = anchor.right + margin;
-  const rightBase = anchor.left - width - margin;
-  const left = clamp(
-    leftBase + width > viewportW - margin ? rightBase : leftBase,
-    margin,
-    Math.max(margin, viewportW - width - margin),
-  );
-  const top = clamp(anchor.top, margin, Math.max(margin, viewportH - height - margin));
-  return { left, top };
+  useLayoutEffect(() => {
+    place();
+    window.addEventListener("resize", place);
+    let observer: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== "undefined" && ref.current) {
+      observer = new ResizeObserver(() => place());
+      observer.observe(ref.current);
+    }
+    return () => {
+      window.removeEventListener("resize", place);
+      observer?.disconnect();
+    };
+  }, [place]);
+
+  const style: CSSProperties = pos
+    ? { left: pos.left, top: pos.top }
+    : { left: 0, top: 0, visibility: "hidden" };
+  return { ref, style };
 }
 
 function getCalendarMeta(category: CalendarId | null) {
@@ -202,7 +230,8 @@ function SchedulePopover({
   const DeleteIcon = SCHEDULE_POPOVER_ICONS.delete;
   const CloseIcon = SCHEDULE_POPOVER_ICONS.close;
   const editable = canEdit || mode === "create";
-  const position = buildPopoverPosition(anchor);
+  const { ref: popoverRef, style: position } = usePopoverPlacement(anchor);
+  const [expanded, setExpanded] = useState(mode !== "create");
   const meta = getCalendarMeta(draft.category);
   const dateLabel = item ? formatDayLabel(item.start) : "";
   const timeLabel = item ? formatTimeRange(item.start, item.end, item.allDay, "ja-JP", t("schedule.allDay")) : "";
@@ -210,7 +239,7 @@ function SchedulePopover({
   return (
     <>
       <div className="schedule-popover-backdrop" onClick={onClose} />
-      <div className="schedule-popover" style={position} onClick={(event) => event.stopPropagation()}>
+      <div ref={popoverRef} className="schedule-popover" style={position} onClick={(event) => event.stopPropagation()}>
         <div className="schedule-popover__header">
           <div className="schedule-popover__header-meta">
             <span className="schedule-popover__kicker">
@@ -387,30 +416,41 @@ function SchedulePopover({
               )}
             </div>
 
-            <label className="schedule-field">
-              <span className="schedule-field__label">{t("schedule.eventLocation")}</span>
-              <TextFieldControl
-                variant="schedule"
-                value={draft.location}
-                onChange={(event) => onDraftChange({ ...draft, location: event.target.value })}
-                placeholder={t("schedule.locationPlaceholder")}
-              />
-            </label>
+            {expanded && (
+              <>
+              <label className="schedule-field">
+                <span className="schedule-field__label">{t("schedule.eventLocation")}</span>
+                <TextFieldControl
+                  variant="schedule"
+                  value={draft.location}
+                  onChange={(event) => onDraftChange({ ...draft, location: event.target.value })}
+                  placeholder={t("schedule.locationPlaceholder")}
+                />
+              </label>
 
-            <label className="schedule-field">
-              <span className="schedule-field__label">{t("schedule.eventDescription")}</span>
-              <TextareaControl
-                variant="schedule"
-                rows={4}
-                value={draft.description}
-                onChange={(event) => onDraftChange({ ...draft, description: event.target.value })}
-                placeholder={t("schedule.descriptionPlaceholder")}
-              />
-            </label>
+              <label className="schedule-field">
+                <span className="schedule-field__label">{t("schedule.eventDescription")}</span>
+                <TextareaControl
+                  variant="schedule"
+                  rows={4}
+                  value={draft.description}
+                  onChange={(event) => onDraftChange({ ...draft, description: event.target.value })}
+                  placeholder={t("schedule.descriptionPlaceholder")}
+                />
+              </label>
+              </>
+            )}
           </div>
         )}
 
         <div className="schedule-popover__footer">
+          {mode === "create" && !expanded && (
+            <span className="schedule-popover__more">
+              <Button variant="ghost" onClick={() => setExpanded(true)}>
+                {t("schedule.moreOptions")}
+              </Button>
+            </span>
+          )}
           {mode !== "detail" ? (
             <>
               <Button variant="primary" onClick={onSave} disabled={!draft.title.trim()}>
@@ -761,6 +801,7 @@ function ScheduleMonthGrid({
   currentOwnerUserId,
   onSelectDay,
   onSelectEvent,
+  onShowMore,
 }: {
   cells: Date[];
   monthDate: Date;
@@ -770,6 +811,7 @@ function ScheduleMonthGrid({
   currentOwnerUserId: number | null;
   onSelectDay: (date: Date, rect: AnchorRect) => void;
   onSelectEvent: (item: ScheduleItem, rect: AnchorRect) => void;
+  onShowMore: (date: Date, rect: AnchorRect) => void;
 }) {
   const { t } = useTranslation();
   const weekDays = Array.from(
@@ -799,32 +841,37 @@ function ScheduleMonthGrid({
               <div className="schedule-month__date">{date.getDate()}</div>
               <div className="schedule-month__events">
                 {dayEvents.slice(0, 3).map((item) => {
-                  const meta = getCalendarMeta(item.category);
                   const ownerMeta = getOwnerMeta(ownerByUserId, item.ownerUserId, currentOwnerUserId);
                   return (
                     <button
                       key={item.id}
-                      className="schedule-month__event"
-                      style={{ background: ownerMeta.color, color: "var(--on-solid)" }}
+                      type="button"
+                      className={`schedule-month__event${item.allDay ? " schedule-month__event--allday" : ""}`}
+                      style={item.allDay ? { background: ownerMeta.color } : undefined}
                       onClick={(event) => {
                         event.stopPropagation();
                         onSelectEvent(item, event.currentTarget.getBoundingClientRect());
                       }}
                     >
-                      <span>{item.title}</span>
-                      {meta && (
-                        <span
-                          className="schedule-category-chip"
-                          style={{ background: cssVar(meta.tintVar), color: cssVar(meta.textVar), marginLeft: "var(--space-1)" }}
-                        >
-                          {t(meta.labelKey)}
-                        </span>
+                      {!item.allDay && (
+                        <span className="schedule-month__dot" style={{ background: ownerMeta.color }} aria-hidden="true" />
                       )}
+                      {!item.allDay && <span className="schedule-month__time">{formatTimeInput(item.start)}</span>}
+                      <span className="schedule-month__title">{item.title}</span>
                     </button>
                   );
                 })}
                 {dayEvents.length > 3 && (
-                  <span className="schedule-month__more">{t("schedule.moreCount", { count: dayEvents.length - 3 })}</span>
+                  <button
+                    type="button"
+                    className="schedule-month__more"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onShowMore(date, event.currentTarget.getBoundingClientRect());
+                    }}
+                  >
+                    {t("schedule.moreCount", { count: dayEvents.length - 3 })}
+                  </button>
                 )}
               </div>
             </div>
@@ -835,6 +882,164 @@ function ScheduleMonthGrid({
   );
 }
 
+/** 月の「他 N 件」を押したときに出す、その日の予定の一覧の小窓 */
+function ScheduleDayListPopover({
+  date,
+  anchor,
+  events,
+  ownerByUserId,
+  currentOwnerUserId,
+  onClose,
+  onSelectEvent,
+}: {
+  date: Date;
+  anchor: AnchorRect | null;
+  events: ScheduleItem[];
+  ownerByUserId: Map<number, CalendarOwner>;
+  currentOwnerUserId: number | null;
+  onClose: () => void;
+  onSelectEvent: (item: ScheduleItem, rect: AnchorRect) => void;
+}) {
+  const { t } = useTranslation();
+  const CloseIcon = SCHEDULE_POPOVER_ICONS.close;
+  const { ref, style } = usePopoverPlacement(anchor);
+  return (
+    <>
+      <div className="schedule-popover-backdrop" onClick={onClose} />
+      <div ref={ref} className="schedule-popover" style={style} onClick={(event) => event.stopPropagation()}>
+        <div className="schedule-popover__header">
+          <span className="schedule-popover__kicker">{formatDayLabel(date)}</span>
+          <div className="schedule-popover__actions">
+            <button className="modal-icon-btn" onClick={onClose} aria-label={t("common.close")}>
+              <CloseIcon size={18} />
+            </button>
+          </div>
+        </div>
+        <div className="schedule-popover__body">
+          {events.map((item) => {
+            const ownerMeta = getOwnerMeta(ownerByUserId, item.ownerUserId, currentOwnerUserId);
+            return (
+              <button
+                key={item.id}
+                type="button"
+                className="schedule-day-list__row"
+                onClick={(event) => onSelectEvent(item, event.currentTarget.getBoundingClientRect())}
+              >
+                <span className="schedule-month__dot" style={{ background: ownerMeta.color }} aria-hidden="true" />
+                <span className="schedule-month__time">
+                  {item.allDay ? t("schedule.allDay") : formatTimeInput(item.start)}
+                </span>
+                <span className="schedule-month__title">{item.title || t("schedule.noTitle")}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </>
+  );
+}
+
+/** 一覧の表示: 選んだ日から 30 日分を日付ごとに並べる（予定の無い日は出さない） */
+function ScheduleListView({
+  startDate,
+  events,
+  ownerByUserId,
+  currentOwnerUserId,
+  onSelectEvent,
+}: {
+  startDate: Date;
+  events: ScheduleItem[];
+  ownerByUserId: Map<number, CalendarOwner>;
+  currentOwnerUserId: number | null;
+  onSelectEvent: (item: ScheduleItem, rect: AnchorRect) => void;
+}) {
+  const { t } = useTranslation();
+  const days = Array.from({ length: LIST_VIEW_DAYS }, (_, index) => addDays(startDate, index))
+    .map((date) => ({
+      date,
+      items: monthItems(events, date).sort((left, right) => left.start.getTime() - right.start.getTime()),
+    }))
+    .filter((day) => day.items.length > 0);
+
+  if (days.length === 0) {
+    return (
+      <div className="schedule-empty">
+        <div className="schedule-empty__card">
+          <h3>{t("schedule.emptyTitle")}</h3>
+          <p>{t("schedule.emptyDescription")}</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="schedule-list">
+      {days.map((day) => {
+        const today = isSameDay(day.date, new Date());
+        return (
+          <section key={formatDayKey(day.date)} className="schedule-list__day">
+            <div className="schedule-list__date">
+              <span className={`schedule-list__num${today ? " schedule-list__num--today" : ""}`}>{day.date.getDate()}</span>
+              <span className="schedule-list__label">{formatDayLabel(day.date)}</span>
+            </div>
+            <div className="schedule-list__items">
+              {day.items.map((item) => {
+                const ownerMeta = getOwnerMeta(ownerByUserId, item.ownerUserId, currentOwnerUserId);
+                const meta = getCalendarMeta(item.category);
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className="schedule-list__row"
+                    onClick={(event) => onSelectEvent(item, event.currentTarget.getBoundingClientRect())}
+                  >
+                    <span className="schedule-month__dot" style={{ background: ownerMeta.color }} aria-hidden="true" />
+                    <span className="schedule-list__time">
+                      {item.allDay ? t("schedule.allDay") : formatTimeRange(item.start, item.end, false)}
+                    </span>
+                    <span className="schedule-list__title">{item.title || t("schedule.noTitle")}</span>
+                    {meta && <span className="schedule-list__category">{t(meta.labelKey)}</span>}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+
+/** キーボードの近道の一覧（? キー）。キーの並びは handleShortcut と対 */
+function ScheduleShortcutsModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { t } = useTranslation();
+  const rows: Array<{ keys: string[]; labelKey: string }> = [
+    { keys: ["T"], labelKey: "today" },
+    { keys: ["J", "→"], labelKey: "next" },
+    { keys: ["K", "←"], labelKey: "prev" },
+    { keys: ["D"], labelKey: "day" },
+    { keys: ["W"], labelKey: "week" },
+    { keys: ["M"], labelKey: "month" },
+    { keys: ["A"], labelKey: "list" },
+    { keys: ["C"], labelKey: "create" },
+    { keys: ["Esc"], labelKey: "close" },
+    { keys: ["?"], labelKey: "help" },
+  ];
+  return (
+    <Modal open={open} onClose={onClose} title={t("schedule.shortcuts.title")} size="sm">
+      <dl className="schedule-shortcuts">
+        {rows.map((row) => (
+          <div key={row.labelKey} className="schedule-shortcuts__row">
+            <dt>
+              {row.keys.map((key) => <kbd key={key} className="schedule-kbd">{key}</kbd>)}
+            </dt>
+            <dd>{t(`schedule.shortcuts.${row.labelKey}`)}</dd>
+          </div>
+        ))}
+      </dl>
+    </Modal>
+  );
+}
 
 function LoadingState() {
   const { t } = useTranslation();
@@ -898,6 +1103,9 @@ export default function SchedulePage() {
   const [banner, setBanner] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [popover, setPopover] = useState<SchedulePopoverState | null>(null);
   const [draft, setDraft] = useState<ScheduleDraft>(createDraft());
+  // 月の「他 N 件」の日の一覧の小窓（予定の小窓 popover とは別の状態。同時には開かない）
+  const [dayList, setDayList] = useState<{ date: Date; anchor: AnchorRect } | null>(null);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const gridScrollRef = useRef<HTMLDivElement | null>(null);
   const [, setNowTick] = useState(0);
 
@@ -970,7 +1178,7 @@ export default function SchedulePage() {
   };
 
   useEffect(() => {
-    if (view === "month") return;
+    if (view === "month" || view === "list") return;
     const next = gridScrollRef.current;
     if (!next) return;
     next.scrollTop = WORKDAY_START * DEFAULT_ROW_HEIGHT;
@@ -989,9 +1197,10 @@ export default function SchedulePage() {
     return () => window.clearInterval(timer);
   }, []);
 
-  const openCreate = (date?: Date, anchor?: AnchorRect | null) => {
+  const openCreate = (date?: Date, anchor?: AnchorRect | null, hour: number = WORKDAY_START) => {
     const selected = date ?? anchorDate;
-    const start = new Date(selected.getFullYear(), selected.getMonth(), selected.getDate(), WORKDAY_START, 0, 0);
+    setDayList(null);
+    const start = new Date(selected.getFullYear(), selected.getMonth(), selected.getDate(), hour, 0, 0);
     const end = addHours(start, 1);
     setDraft({
       title: "",
@@ -1013,6 +1222,7 @@ export default function SchedulePage() {
   };
 
   const openDetail = (item: ScheduleItem, anchor: AnchorRect | null) => {
+    setDayList(null);
     setDraft(createDraft(item));
     setPopover({
       mode: "detail",
@@ -1091,15 +1301,18 @@ export default function SchedulePage() {
       setAnchorDate((current) => addMonths(current, direction === "next" ? 1 : -1));
       return;
     }
-    const step = view === "day" ? 1 : 7;
+    const step = view === "day" ? 1 : view === "list" ? LIST_VIEW_DAYS : 7;
     setAnchorDate((current) => addDays(current, direction === "next" ? step : -step));
   };
 
+  // 一覧は ScheduleListView が範囲の予定から日を作るので、ここでは使わない
   const viewDays = view === "month"
     ? getMonthCells(anchorDate)
     : view === "day"
       ? [new Date(anchorDate.getFullYear(), anchorDate.getMonth(), anchorDate.getDate())]
-      : getWeekDays(anchorDate);
+      : view === "list"
+        ? []
+        : getWeekDays(anchorDate);
   const currentTime = new Date();
   const visibleEvents = events.filter((item) => eventMatchesFilters(item, visibleOwnerIds));
   const allDayEvents = visibleEvents.filter((item) => item.allDay);
@@ -1123,6 +1336,57 @@ export default function SchedulePage() {
   const canEditSelected = Boolean(
     popover?.item && (popover.item.ownerUserId === currentOwnerUserId || canManageOwners),
   );
+
+  // キーボードの近道（5-5 の判定の順番）。最新の状態を ref 経由で読み、window には 1 つだけ付ける
+  const shortcutRef = useRef<(event: KeyboardEvent) => void>(() => {});
+  shortcutRef.current = (event: KeyboardEvent) => {
+    // 1. 変換中は何もしない（Safari は変換を決めた Enter で isComposing が偽になるため 229 も見る）
+    if (event.isComposing || event.keyCode === 229) return;
+    // 2. 近道の一覧が開いている間はページ側は何もしない（Esc は金型 Modal が閉じる）
+    if (shortcutsOpen) return;
+    const windowOpen = popover !== null || dayList !== null;
+    // 3. Esc は入力欄の中でも小窓を閉じる
+    if (event.key === "Escape") {
+      if (windowOpen) {
+        setPopover(null);
+        setDayList(null);
+      }
+      return;
+    }
+    // 4. 小窓が開いている間は文字キーは効かない
+    if (windowOpen) return;
+    // 5. Ctrl・⌘・Alt 付きは何もしない（Shift は ? のために除外しない）
+    if (event.ctrlKey || event.metaKey || event.altKey) return;
+    // 6. 入力欄の中では効かない
+    const target = event.target;
+    if (target instanceof Element && target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])')) return;
+    // 7. 1 文字のキーだけ小文字にそろえる（CapsLock 対策）
+    const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
+    switch (key) {
+      case "t": navigatePeriod("today"); break;
+      case "j":
+      case "ArrowRight": navigatePeriod("next"); break;
+      case "k":
+      case "ArrowLeft": navigatePeriod("prev"); break;
+      case "d": setView("day"); break;
+      case "w": setView("week"); break;
+      case "m": setView("month"); break;
+      case "a": setView("list"); break;
+      case "c": openCreate(new Date(), null, SHORTCUT_CREATE_HOUR); break;
+      case "?": setShortcutsOpen(true); break;
+      default: return;
+    }
+    event.preventDefault();
+  };
+  useEffect(() => {
+    const listener = (event: KeyboardEvent) => shortcutRef.current(event);
+    window.addEventListener("keydown", listener);
+    return () => window.removeEventListener("keydown", listener);
+  }, []);
+
+  const dayListEvents = dayList
+    ? monthItems(timedEvents.concat(allDayEvents), dayList.date)
+    : [];
 
   return (
     <div className="schedule-page">
@@ -1177,7 +1441,7 @@ export default function SchedulePage() {
               </Button>
             )}
             <div className="schedule-view-switch" role="group" aria-label={t("schedule.viewSelect")}>
-              {(["day", "week", "month"] as const).map((nextView) => (
+              {(["day", "week", "month", "list"] as const).map((nextView) => (
                 <button
                   key={nextView}
                   type="button"
@@ -1236,6 +1500,18 @@ export default function SchedulePage() {
                     currentOwnerUserId={currentOwnerUserId}
                     onSelectDay={(date, rect) => openCreate(date, rect)}
                     onSelectEvent={(item, rect) => openDetail(item, rect)}
+                    onShowMore={(date, rect) => {
+                      setPopover(null);
+                      setDayList({ date, anchor: rect });
+                    }}
+                  />
+                ) : view === "list" ? (
+                  <ScheduleListView
+                    startDate={rangeStart}
+                    events={timedEvents.concat(allDayEvents)}
+                    ownerByUserId={ownerByUserId}
+                    currentOwnerUserId={currentOwnerUserId}
+                    onSelectEvent={(item, rect) => openDetail(item, rect)}
                   />
                 ) : (
                   <div ref={gridScrollRef} className="schedule-grid__viewport">
@@ -1256,6 +1532,20 @@ export default function SchedulePage() {
           </main>
         </div>
       </PageLayout>
+
+      {dayList && (
+        <ScheduleDayListPopover
+          date={dayList.date}
+          anchor={dayList.anchor}
+          events={dayListEvents}
+          ownerByUserId={ownerByUserId}
+          currentOwnerUserId={currentOwnerUserId}
+          onClose={() => setDayList(null)}
+          onSelectEvent={(item, rect) => openDetail(item, rect)}
+        />
+      )}
+
+      <ScheduleShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
 
       {popover && (
         <SchedulePopover
