@@ -51,7 +51,6 @@ mode: handoff
 | `backend/app/services/tcg_analysis_dashboard_svc.py` | 配信の数を list_targets の呼び出しに替える |
 | `backend/app/routers/tcg_analysis_dashboard.py` | DistributionTargetItem に3つの値を足す |
 | `frontend/api-contract/openapi.json` と生成される型 | 下の §5 手順7 の命令で作り直す（手で書かない） |
-| `frontend/src/pages/super-admin/TcgDistributionPage.tsx` | 配信していない理由を Badge で出す・お客さんを選べるようにする |
 | `frontend/src/pages/super-admin/ViewerAccountsPage.tsx` | 詳細スライドに「配信するシート」の区切り |
 | `frontend/src/locales/ja.json`・`frontend/src/locales/en.json` | 新しいキー（両方に同じキー） |
 | 試験（`backend/tests/` の配信先の試験・`backend/tests/test_viewer_purge.py`・画面の試験） | §3 の受入条件を確かめる試験 |
@@ -92,7 +91,7 @@ mode: handoff
 - 金型だけを使う（ADR-144）。色・余白はデザイントークンだけ（ADR-067）。文字はすべて `t()`（ADR-027）。新しい部品は作らない。金型にない部品が要ると分かったら、そこで止まって報告する。
 - 閲覧者管理ページの詳細スライド（Drawer）に「配信するシート」の区切り: Stack で、シートの名前・最後の配信時刻・結果を文字で、配信していない理由を Badge で出す。登録・変更は Modal＋TextField（ブックの番号・タブ名）＋Button。シートが無いときは EmptyState。書き込みは今の配信先 API（POST・PUT `/tcg/distribution/targets`）を呼ぶ。新しい書き込み API は作らない。
 - 409 は「この人にはもうシートがあります」、422 は「お客さんが見つかりません」に当たる文言を `t()` で出す（キー名は既存の並びに合わせる）。
-- 配信先の画面: 各行に配信していない理由（手で止めた／停止中／本契約でない）を Badge で出す。行にお客さんを選ぶ欄を付けるかは、既存の金型（Select）で作れる範囲にする。
+- 配信先の画面: 変えない。理由もお客さんを選ぶ欄も出さない（2026-11-04 PO 決定。原文「配信先のページでは確認できなくて良い」）。
 
 ### 3-5. 試験に足すもの
 
@@ -169,7 +168,7 @@ mode: handoff
 | 同じ人に2つ目のシートを登録すると 409 で、DB にも入らない。特定の人用でないシートは何件でも登録できる | PG テスト＋API テスト |
 | 名簿の行が自動削除されると、その人の配信先の行も消える | PG テスト（maintenance の削除を流す。test_viewer_purge） |
 | 配信先を削除すると viewer_account_id が NULL になり、同じ人に新しいシートを登録できる。手で止めただけのシートが残っている人には2枚目を登録できない（409） | API テスト＋PG テスト |
-| 配信しないシートは、配信先の画面・閲覧者管理ページ・解析ダッシュボードの配信の数・配信前の点検の4か所で同じ理由になる | API テスト（同じ行を4つの入口から読んで値を比べる） |
+| 配信しないシートは、配信先の API（一覧・1件）・閲覧者管理ページが読む API・解析ダッシュボードの配信の数・配信前の点検の4か所で同じ理由になる（配信先の画面には出さない（2026-11-04 PO 決定。原文「配信先のページでは確認できなくて良い」）） | API テスト（同じ行を4つの入口から読んで値を比べる） |
 | null を送るとつなぎが外れる。名簿に無い番号は 422 | API テスト |
 | 画面に直書きの文字・色が無い | 既存の CI（i18n・デザイントークン・UI governance） |
 

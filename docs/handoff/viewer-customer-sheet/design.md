@@ -88,11 +88,11 @@ mode: handoff
   - 判定の置き場所は1つ: list_targets・get_target（同ファイル :701〜:724）の SELECT で名簿を LEFT JOIN し、各行に「配信するか（deliverable）」と「しない理由（manual_off／not_contracted／suspended）」を SQL で出す。理由が重なるときは1つだけ出し、順番は manual_off → suspended → not_contracted（手で止めたことを最優先で見せる。停止中の人は not_contracted より先に suspended と出す）。SQL は CASE WHEN NOT is_active THEN 'manual_off' WHEN status='suspended' THEN 'suspended' WHEN viewer_account_id IS NOT NULL AND status<>'active' THEN 'not_contracted' END の1か所。:990〜:994 は is_active ではなく deliverable を見る。is_active を別に見ている所も、この2つの値を読むように直す（判定を書き写さない）:
     - backend/app/line_import_admin.py:139（配信前の点検で返す active。:134 の targets も同じ）
     - backend/app/services/tcg_analysis_dashboard_svc.py:665〜:687（解析ダッシュボードの配信の数。自前の SELECT を list_targets の呼び出しに替える）
-    - 配信先の画面（frontend/src/pages/super-admin/TcgDistributionPage.tsx）と閲覧者管理ページの表示（下の §3-5）
+    - 閲覧者管理ページの表示（下の §3-5）。配信先の画面（/super-admin/tcg-distribution）には理由を出さない（2026-11-04 PO 決定。原文「配信先のページでは確認できなくて良い」）。配信先の画面は今の API を読むだけで、判定は書き写さない
   - is_active は書き換えない。理由: 停止で is_active を false にすると、「手で止めた」と「停止で止まった」が同じ値になり、停止を外したときにどちらへ戻すか分からなくなる。状態は名簿の status の1か所から読む。
   - 停止を外すと、名簿は停止の前の状態に戻る（backend/app/services/viewer_admin.py:239〜:253 が状態の記録 viewer_status_changes の直前の from_status を読んで戻す）。戻った状態が active なら次の配信から自動で書き込みが戻る。trial に戻った人は配信しないまま。is_active を手で false にしたシートは、停止を外しても止まったまま。
   - お試しの人を本契約にすると（trial → active。backend/app/services/viewer_admin.py:231〜:233）、シートが登録済みなら次の配信から自動で書き込みが始まる。
-  - 配信先の画面と閲覧者管理ページには、配信していない理由（停止中／本契約でない）が分かる表示を出す（文言は t() の新しいキー）。
+  - 閲覧者管理ページには、配信していない理由（停止中／本契約でない）が分かる表示を出す（文言は t() の新しいキー）。配信先の画面には出さない（2026-11-04 PO 決定。原文「配信先のページでは確認できなくて良い」）。
 - 名簿の行が消えたとき（停止の90日後の自動削除。recon §3）: 配信先の行も一緒に消す（ON DELETE CASCADE）。
   - SET NULL にしない理由: 目印が空になると「特定の人用でないシート」と同じ扱いになり、停止の判定から外れて配信が再開してしまう。
   - RESTRICT にしない理由: 毎日の自動削除（backend/app/tasks/maintenance.py:220）が失敗し、ポリシーに書いた90日を守れなくなる。
@@ -242,7 +242,7 @@ mode: handoff
 | ボタンを押すと、部屋がある人は部屋に1通（結果 sent）、部屋が無い人は no_room と画面に出る。メールは名簿のメールあてに送る手配がされる | API テスト（送信部を差し替えて回数と宛先を数える）＋PO 目視 |
 | 部屋とメールの文は、文面テンプレートの台帳の billing_form_request 1件から作られ、閲覧者管理ページで直すと次の送信から変わる | API テスト＋PO 目視 |
 | フォームを送信して保存できたときだけ鍵が使い切られる。保存に失敗したら同じリンクで送り直せる。期限切れ・使用済み・本契約でなくなった人のリンクは無効の画面になる | PG テスト＋API テスト |
-| 配信しないシートは、配信先の画面・閲覧者管理ページ・解析ダッシュボードの配信の数・配信前の点検の4か所で同じ理由（手で止めた／本契約でない／停止中）になる | API テスト（同じ行を4つの入口から読んで値を比べる） |
+| 配信しないシートは、配信先の API（一覧・1件）・閲覧者管理ページが読む API・解析ダッシュボードの配信の数・配信前の点検の4か所で同じ理由（手で止めた／本契約でない／停止中）になる。配信先の画面には理由を出さない（2026-11-04 PO 決定。原文「配信先のページでは確認できなくて良い」） | API テスト（同じ行を4つの入口から読んで値を比べる） |
 | つなぎを外す（null を送る）と viewer_account_id が NULL に戻る。名簿に無い番号は 422 | API テスト |
 | 請求先の表の決まり: 会社なのに担当者が空・郵便番号が7桁でない・電話が10〜11桁でない・宛名が空の行は DB が入れない | PG テスト（CHECK ごとに1件ずつ） |
 | テンプレートが無い状態でボタンを押すと 503 で、鍵は0件・メールも部屋も送られない | API テスト＋PG テスト |
