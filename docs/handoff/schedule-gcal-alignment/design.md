@@ -145,8 +145,10 @@ recon: `docs/handoff/schedule-gcal-alignment/recon.md`（以下 R§0〜R§7）
 - 表: 会社ごとの `calendar_events` に `meet_url TEXT NULL` を 1 つ足す（`migrations/` に新しいファイル。`migrations/20261103_200000_add_google_calendar_import_sync.sql:11-34` と同じ「会社ごとに回す・何度流しても同じ」書き方）。`scripts/run_all_migrations.sh` の末尾に 1 行登録する（前例 `:1217`。表を作るのは `:377` の `078`）。Meet の URL の置き場所はこの列 1 か所だけ。
 - 裏側:
   - `backend/app/routers/calendar.py:104-112` `CreateEventBody` に `add_meet: bool = False`、`:114-121` `UpdateEventBody` に `add_meet: Optional[bool] = None` を足す。
-  - 作る（`backend/app/services/calendar_service.py:180` `create_event`）: `add_meet` が真なら、**表に入れる前（`:193` の INSERT より前）に** `_get_sync_target`（`:57`）で送る条件（`:222` と同じ）を確かめる。満たさなければ 422「Google Meet は Google カレンダーをつないだ本人の予定にだけ付けられます」を返し、表には何も入れない（今は `:193-217` で入れて commit してから送る条件を見るため、後で断ると予定だけ残る）。満たせば Google に送る中身へ `conferenceData.createRequest = {requestId: <毎回新しい uuid4>, conferenceSolutionKey: {type: "hangoutsMeet"}}` を足す。
-  - 直す（`update_event` `:259`）: `add_meet` が真なら、最初に (1) `_get_sync_target` で送る方式かつ `connected_by == 見ている人`、(2) その予定に `google_event_id` がある、の 2 つを確かめ、どちらかが無ければ 422 で何も変えない（今の直す道は持ち主を見ずに送る `:309-310`・ADR-1057:30 の受け入れ点。Meet だけは本人に絞る）。`meet_url` が空のときだけ `patch` に `createRequest`（新しい `requestId`）を付ける。今は送る欄が 1 つも無いと `:289-290`（`if not set_clauses: return {"id": event_id}`）で何もせず戻るので、`add_meet` だけ送られた場合もこの早戻りの前に Meet を処理する。画面は直す小窓から送るとき今の保存（`:1038-1047`）と同じ全部の欄を送るので、通常はこの場合に当たらない。
+  - Meet を付けてよいかの判定は 1 か所: `backend/app/services/calendar_service.py` に `async def can_add_meet(db, tenant_id, user_id) -> bool` を足す。中身は `_get_sync_target`（`:57`）を呼び、`sync_mode in ("bidirectional", "write_only") and connected_by == user_id` を返す（`:220-222` の送る条件と同じ式。`:222` も この関数を使う形に置き換え、式を 2 か所に置かない）。接続状態の口の `meet_available` もこの関数で出す。
+  - 作る（口 `backend/app/routers/calendar.py:340` `create_event`）【改訂 4・N-1】: 判定は**口の中、サービスを呼ぶ `try`（`:352`）の前**で行う。`body.add_meet` が真で `await cal_svc.can_add_meet(db, tenant_id, user.id)` が偽なら、422「Google Meet は Google カレンダーをつないだ本人の予定にだけ付けられます」を返す。サービスは呼ばないので表にも Google にも何も入らない（今の口は `:359` の `except Exception` が `HTTPException` も拾って 500 に変えるため、サービスの中で 422 を出してはいけない）。サービスの `create_event`（`backend/app/services/calendar_service.py:180`）は、`add_meet` が真なら Google に送る中身へ `conferenceData.createRequest = {requestId: <毎回新しい uuid4>, conferenceSolutionKey: {type: "hangoutsMeet"}}` を足すだけ。`add_meet` は表の列ではないので INSERT（`:193`）の値には入れない。
+  - 直す（口 `backend/app/routers/calendar.py:374` `update_event`）【改訂 4・N-1・N-3・N-13】: 口が今読んでいる行（`:391` `SELECT created_by_user_id, calendar_type, user_id FROM calendar_events WHERE id = :id`）に `google_event_id, meet_url` を足して読む（UPDATE の前に読む・N-3）。`payload.get("add_meet")` が真なら、サービスを呼ぶ `try`（`:421`）の前に次の 3 つを確かめ、1 つでも欠ければ 422 で何も変えない: (1) `can_add_meet(db, tenant_id, user.id)` が真 (2) `google_event_id` がある (3) `event_owner`（`:399`）== `user.id`（N-13。ADR の「本人の予定だけ」とそろえる。今の直す道は持ち主を見ずに送る `backend/app/services/calendar_service.py:309-310`・ADR-1057:30 の受け入れ点だが、Meet だけは本人に絞る）。`meet_url` がすでに入っていれば `add_meet` を外してからサービスへ渡す（頼み直さない）。サービスの `update_event`（`:259`）は、`add_meet` が真なら `patch` に `createRequest`（新しい `requestId`）を付ける。今は送る欄が 1 つも無いと `:289-290`（`if not set_clauses: return {"id": event_id}`）で何もせず戻るので、`add_meet` だけ送られた場合はこの早戻りの前に Meet を処理する。画面は直す小窓から送るとき今の保存（`frontend/src/pages/schedule/SchedulePageImpl.tsx:1247-1273` `saveEvent`）と同じ全部の欄を送るので、通常はこの場合に当たらない。
+  - 返事【改訂 4・N-2】: 作る（`backend/app/services/calendar_service.py:251`）・直す（`:290`・`:335`）の返事を `{"id": event_id, "meet_url": <表の meet_url。無ければ null>}` にする。口はそのまま返す（`backend/app/routers/calendar.py:365`・`:435` 付近の `return result`）。
   - `backend/app/services/google_calendar.py:377` `create_event`・`:392` `update_event` に `conference: bool = False` を足し、真のときだけ `conferenceDataVersion=1` を付けて呼ぶ。1 件を読む関数 `get_event(db, tenant_id, event_id)` を新しく足す（今は `get_events` `:348`・`create_event` `:377`・`update_event` `:392`・`delete_event` `:407` だけで、1 件を読む関数が無い）。
   - 返事の `hangoutLink` を `meet_url` に入れる。`conferenceData.createRequest.status.statusCode` が `pending` で `hangoutLink` が無いときは、`await asyncio.sleep(1)` をはさんで 2 回まで `get_event` で読み直す（同期の `time.sleep` は使わない）。それでも無ければ `meet_url` は空のままにし、警告を記録に残す（予定そのものは保存済み）。PO がもう一度「Google Meet を付ける」を押すと直す道を通り、新しい `requestId` で頼み直す。
   - 取り込み（`backend/app/services/calendar_service.py:410` `upsert_from_google`）: `google_event.get("hangoutLink")` を `meet_url` に入れる。INSERT の列と値に `meet_url` を足し、`:476-486` の `ON CONFLICT ... DO UPDATE SET` に `meet_url = EXCLUDED.meet_url` を足す（`source='google'` の行だけ・今の条件 `:486` のまま）。
@@ -156,9 +158,10 @@ recon: `docs/handoff/schedule-gcal-alignment/recon.md`（以下 R§0〜R§7）
 - 画面:
   - `meet_available` が真のときだけ、作る（短い小窓にも）・直す小窓に `Toggle`「Google Meet を付ける」。
   - 詳しくに `meet_url` があれば「Google Meet で参加」（金型 `ButtonLink`、新しい窓で開く・`rel="noopener noreferrer"`）。`https://meet.google.com/` で始まる URL のときだけ出す。
-  - 文字: `schedule.addMeet`・`schedule.joinMeet`（ja・en）。
+  - 保存のあと【改訂 4・N-2】: `saveEvent`（`frontend/src/pages/schedule/SchedulePageImpl.tsx:1247`）で `api.post<{id:number; meet_url:string|null}>`・`api.patch<…>`（`frontend/src/lib/api.ts:246`・`:253` は返事の型を受け取れる）の返事を受け取る。「Google Meet を付ける」を入れて保存したのに返事の `meet_url` が null なら、今ある知らせの帯 `setBanner({ type: "error", message: t("schedule.meetFailed") })`（`:1103` の状態・`:1473-1478` で `error-banner` として出る）を出す。新しい知らせの部品は作らない。予定そのものは保存済みなので小窓は閉じる。
+  - 文字: `schedule.addMeet`・`schedule.joinMeet`・`schedule.meetFailed`（ja・en）。
 - ADR: 新しい ADR を 1 つ起こす。中身: (1) Meet の URL は `calendar_events.meet_url` 1 か所 (2) 付けられるのはつないだ本人の予定だけ。作るも直すも 422 で止め、表にも Google にも何も残さない (3) ADR-1057 の線の内側。直す道の「持ち主を見ずに送る」受け入れ点（ADR-1057:30）は Meet には広げない (4) 取り込みは ADR-1059 の双方向のときだけ動く。`node scripts/generate-adr-index.js` を回す。`docs/adr/FEATURE-INDEX.md:34` に新しい ADR と ADR-1059 を足し、「取り込みは止めている」の古い書き方を今の形（双方向のとき 15 分おきに取り込む）に直す。
-- 試験（裏側）: K13 の 4 件（作る 422・作る 422 で表に行が増えない・直す 422 で表が変わらない・どちらも Google に送らない）。Meet を付けたときの `conferenceDataVersion=1` と `createRequest` の形、`pending` から読み直す道、取り込みで `meet_url` が入ること。
+- 試験（裏側）: K13 の 4 件（作る 422・作る 422 で表に行が増えない・直す 422 で表が変わらない・どちらも Google に送らない）は**口の関数を直接呼ぶ試験**で書く。置き場所は口の試験が今ある `backend/tests/test_calendar_owner_api.py`（`from app.routers.calendar import (… update_event …)` `:10-14`、サービスを `patch("app.routers.calendar.cal_svc.update_event", new=AsyncMock())` で差し替える形 `:191`、`HTTPException` の 422 を待つ前例 `:240`）。作る 422 では `cal_svc.create_event` の差し替えが呼ばれないこと、直す 422 では `cal_svc.update_event` の差し替えが呼ばれないことで「表にも Google にも何も入らない」を確かめる（サービスだけの試験では 500 に変わる穴を見つけられない・N-1）。直す 422 は (1)〜(3) の欠け方ごとに 1 件ずつ。返事に `meet_url` が入ること／付かなかったとき null になること（N-2）。`can_add_meet` の真偽 4 通り（方式 3 種 × 本人かどうかの代表）。Meet を付けたときの `conferenceDataVersion=1` と `createRequest` の形、`pending` から読み直す道、取り込みで `meet_url` が入ること。
 
 ## 6. 代替案と選んだ理由
 
@@ -203,6 +206,7 @@ recon: `docs/handoff/schedule-gcal-alignment/recon.md`（以下 R§0〜R§7）
 ## 9. 設計審査（同一 AI による自己審査・独立した第二者レビューではない）
 
 - 判定: 便1 = APPROVE（設計合格）／便2 = APPROVE／便3 = REVISE（§7-3 の前提確認 3 件が済むまで）
+- 改訂 4 のあとの自己審査（2026-11-05）: 便3 = REVISE のまま。§7-3 の 4 件は済み、N-1・N-2・N-3・N-13 は 5-7 に直した（§16）。クラウドの再審査で APPROVE が出るまで実装可能としない。便3 は表の列を足すので、実装のあとも PO の「GO #番号」が要る
 - 根拠: 触る場所はすべて R の行番号で確かめた。色・余白は既存トークン＋新しいトークン 2 個。文字はすべて新しい `t()` のキー。金型は Toggle・Button・ButtonLink・Modal を使う。データの置き場所は Meet の URL 1 列だけで、ほかに写しを作らない。
 - 未解決: §7-3 の 4 件。PO の画面での切れ方の実測（K1 で代える）。
 - クラウドの設計審査 1 回目（2026-11-04・審査の記録 architect-review.md・枝 `release/schedule-gcal-alignment-review`）: 便1 = REVISE（軽い）／便2 = REVISE／便3 = REVISE。REJECT は無し。指摘の要点は実物で確かめ直し、すべて事実と一致した。改訂 1 で反映した（§12）。
@@ -369,3 +373,15 @@ recon: `docs/handoff/schedule-gcal-alignment/recon.md`（以下 R§0〜R§7）
 | N-18 | 端末は日本時間が前提 | §11-2 前提 |
 | N-19 | 作る・直すの両方の道の試験 | §11-2 試験 7 |
 | 軽微なずれ | §5-6 の `:517-522` は終日の分岐 518-523。直す場所（518-520）は正しい | 直さない（判断に影響なし） |
+
+## 16. 改訂 4 の記録（便3。クラウドの再審査 2 回目の N-1・N-2・N-3・N-13 → 直した場所）
+
+根拠は origin/main 1f017118d の実物（2026-11-05 に読んだ）。
+
+| 指摘 | 実物 | 直した場所 |
+|---|---|---|
+| N-1 422 が 500 になる | 作る口 `backend/app/routers/calendar.py:352` `try`・`:359` `except Exception`／直す口 `:421` `try`・`:429` `except Exception` | 5-7 の「作る」「直す」: 判定を口の `try` の前に移した（案 a）。判定の式は `can_add_meet` 1 か所 |
+| N-2 失敗を画面が知る道が無い | 返事は `{"id": event_id}` だけ（`backend/app/services/calendar_service.py:251`・`:290`・`:335`） | 5-7 の「返事」「保存のあと」: 返事に `meet_url`。画面は今ある知らせの帯（`frontend/src/pages/schedule/SchedulePageImpl.tsx:1103`・`:1473-1478`）で `schedule.meetFailed` を出す |
+| N-3 判定に要る値を先に読む | 口の `:391` は `created_by_user_id, calendar_type, user_id` だけ。サービスの `google_event_id` の読み取りは UPDATE の後（`:302-307`） | 5-7 の「直す」: 口の `:391` に `google_event_id, meet_url` を足す |
+| N-13 持ち主も見る（任意） | `event_owner` は口の `:399` | 5-7 の「直す」の (3) に入れた |
+
