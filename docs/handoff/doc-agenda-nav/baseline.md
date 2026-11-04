@@ -253,3 +253,12 @@ doc-library-one-tree 便5。origin/main 0cf24fdc5（便4 #5111 のマージ後�
 - 題ごと: T1 0/2・T2 2/2・T3 2/2・T4 0/2・T5 0/2・T6 2/2・T7 0/2・T8 2/2・T9 1/2・T10 2/2。
 - K9（同日 origin/main 648e2fcdc、Opus が `/context` で測定）: Memory files 18k・MEMORY.md 11.7k・K9 **6.3k**（合格のまま。10-26 の 6.1k から増加）。
 - 外した理由と直し方: [../doc-library-one-tree/k12-fix-design.md](../doc-library-one-tree/k12-fix-design.md)。
+
+## 便5 の直しの後の測り直し（2026-11-04）
+
+doc-library-one-tree 便5 の直し（案 C3、PR #5126）のマージ後。origin/main 89d3320ed（#5126 のマージ）。条件は k12-tasks.md「2026-10-25 の改定」のまま。claude 2.1.318。PO が `!` で20回を2回続けて流した。
+- K12 1回目 **18/20**（費用 $3.5594）・2回目 **18/20**（費用 $3.4938）。合格（どちらも 18/20 以上）。40 回とも正常終了・権限の拒否 0。
+- 題ごと（2回とも同じ）: T1 0/2、T2〜T10 は各 2/2。
+- K10 は 0/20・0/20（参考）。目次を会話の始めに読み込むようにしたので、目次を開く道具の呼び出しは起きない。
+- K9（同日 origin/main 89d3320ed、Opus が `/context` で測定）: Memory files 19.1k・MEMORY.md 11.7k・K9 **7.4k**（合格。線は 7.5k 以下）。
+- 生出力はリポジトリ外（Opus の作業用の場所）。
