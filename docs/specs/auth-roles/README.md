@@ -18,6 +18,9 @@
 ## ぶら下がる文書（子）
 - [../../handoff/hide-system-admin-role/recon.md](../../handoff/hide-system-admin-role/recon.md)
 - [../../handoff/hide-system-admin-role/design.md](../../handoff/hide-system-admin-role/design.md)
+- [../../handoff/permission-keys-conditions-categories/recon.md](../../handoff/permission-keys-conditions-categories/recon.md)
+- [../../handoff/permission-keys-conditions-categories/design.md](../../handoff/permission-keys-conditions-categories/design.md)
+- [../../handoff/permission-keys-conditions-categories/data-change-1/README.md](../../handoff/permission-keys-conditions-categories/data-change-1/README.md)
 
 ## ステータス
 - 2026-10-10 新規作成。あるべき姿は PO の発言（2026-10-07・2026-10-10）から転記。KGI は PO 承認済み（2026-10-10）。
