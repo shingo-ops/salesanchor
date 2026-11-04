@@ -47,6 +47,7 @@ class DistributionTargetCreate(BaseModel):
     sheet_name: str
     is_active: bool = True
     sa_key_secret_name: str = "TCG_SHEETS_SA_KEY_FILE"
+    viewer_account_id: int | None = None
 
 
 class DistributionTargetUpdate(BaseModel):
@@ -55,6 +56,8 @@ class DistributionTargetUpdate(BaseModel):
     sheet_name: str | None = None
     is_active: bool | None = None
     sa_key_secret_name: str | None = None
+    # null を送るとつなぎが外れる（送られたかは model_fields_set で判断する）
+    viewer_account_id: int | None = None
 
 
 class SettingUpdate(BaseModel):
@@ -100,7 +103,12 @@ async def create_distribution_target(
     data: DistributionTargetCreate,
     db: AsyncSession = Depends(get_db),
 ):
-    return await svc.create_target(db, data.model_dump())
+    try:
+        return await svc.create_target(db, data.model_dump())
+    except svc.ViewerSheetConflictError as exc:
+        raise HTTPException(status_code=409, detail="この人にはもうシートがあります") from exc
+    except svc.ViewerAccountNotFoundError as exc:
+        raise HTTPException(status_code=422, detail="お客さんが見つかりません") from exc
 
 
 @router.get(
@@ -126,7 +134,15 @@ async def update_distribution_target(
     data: DistributionTargetUpdate,
     db: AsyncSession = Depends(get_db),
 ):
-    row = await svc.update_target(db, str(target_id), data.model_dump(exclude_none=True))
+    payload = data.model_dump(exclude_none=True)
+    if "viewer_account_id" in data.model_fields_set:
+        payload["viewer_account_id"] = data.viewer_account_id  # null でも渡す（つなぎを外す）
+    try:
+        row = await svc.update_target(db, str(target_id), payload)
+    except svc.ViewerSheetConflictError as exc:
+        raise HTTPException(status_code=409, detail="この人にはもうシートがあります") from exc
+    except svc.ViewerAccountNotFoundError as exc:
+        raise HTTPException(status_code=422, detail="お客さんが見つかりません") from exc
     if row is None:
         raise HTTPException(status_code=404, detail="配信先が見つかりません")
     return row

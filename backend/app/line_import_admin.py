@@ -131,12 +131,12 @@ async def operate(db, data):
                                    'source_fingerprints': fingerprints, 'source_limit': SOURCE_REPORT_LIMIT,
                                    'source_aliases': await line_source_names.load_aliases(db),
                                    'sources_truncated': len(sources) > SOURCE_REPORT_LIMIT,
-                                   'targets': [{k: t[k] for k in ('id', 'name', 'spreadsheet_id', 'sheet_name', 'is_active')} for t in targets]}, data['report_public_key'])
+                                   'targets': [{k: t[k] for k in ('id', 'name', 'spreadsheet_id', 'sheet_name', 'is_active', 'deliverable', 'reason')} for t in targets]}, data['report_public_key'])
         return {'status': 'inspected', 'private_report': private, 'job_id': job_id, 'progress': progress,
                 'unresolved_name_hashes': [name_hash(n) for n in names],
                 'message_count': job['message_count'], 'distribution_scope': 'global_inventory',
                 'output_count': len(rows), 'ready_for_delivery': ready_for_delivery(progress),
-                'targets': [{'id': str(t['id']), 'active': t['is_active'],
+                'targets': [{'id': str(t['id']), 'active': t['deliverable'], 'reason': t['reason'],
                              'last_distributed_at': str(t['last_distributed_at']),
                              'last_distributed_count': t['last_distributed_count'],
                              'last_result_ok': t['last_result'] == 'ok'} for t in targets]}
