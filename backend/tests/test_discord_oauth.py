@@ -77,11 +77,14 @@ async def engine():
         await conn.execute(
             text("""
             CREATE TABLE IF NOT EXISTS tenant_discord_config (
-                tenant_id INTEGER PRIMARY KEY,
+                tenant_id INTEGER NOT NULL,
+                purpose   VARCHAR(16) NOT NULL DEFAULT 'customer',
                 guild_id  VARCHAR(32) NOT NULL,
                 connected_by_staff_id INTEGER,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (tenant_id, purpose),
+                UNIQUE (guild_id)
             )
         """)
         )
