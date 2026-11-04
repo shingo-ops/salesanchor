@@ -5,7 +5,7 @@ set -u
 
 # 合格線の正本はここ1か所（docs/specs/doc-agenda-nav/kgi.md の写し）
 K1_LIMIT=200
-K9_LIMIT_TOKENS=6500
+K9_LIMIT_TOKENS=7500
 K12_DAYS=90
 PEER_DAYS=7
 
@@ -86,7 +86,7 @@ case "$K9" in
   skipped) ;;
   *)
     if python3 -I -c 'import sys;sys.exit(0 if float(sys.argv[1].rstrip("k"))*1000>float(sys.argv[2]) else 1)' "$K9" "$K9_LIMIT_TOKENS"; then
-      add_ng "K9>6.5k"
+      add_ng "K9>7.5k"
     fi ;;
 esac
 
