@@ -1,7 +1,7 @@
-# K12 を 18/20 に上げる直し方（草案・PO 未承認）
+# K12 を 18/20 に上げる直し方
 
-> 状態: 設計案作成済み・自己審査済み（§9）・PO 未承認・実装未着手。2026-11-04。
-> 目的と合格ラインは変えない: G7（K12 ≥ 18/20。[kgi.md](../../specs/doc-agenda-nav/kgi.md) K12 行）と K9（MEMORY.md を除く Memory files ≤ 6.5k。同 K9 行）。
+> 状態: 設計合格・PO 承認済み（2026-11-04 PO 原文「1」。§13）・案 C3 を実装済み（PR #5126、マージ前）。マージ後に K9・K12 を origin/main で測り直す。
+> 合格ライン: G7（K12 ≥ 18/20。[kgi.md](../../specs/doc-agenda-nav/kgi.md) K12 行）と K9（MEMORY.md を除く Memory files ≤ 7.5k。2026-11-04 に 6.5k から PO 決定で変更。同 K9 行・§13）。
 > 親の設計: [design.md](./design.md) §10 G7・§14 便5。測り方: [k12-tasks.md](../doc-agenda-nav/k12-tasks.md)「2026-10-25 の改定」。
 
 ## 1. 起きたこと（便5 の結果）
