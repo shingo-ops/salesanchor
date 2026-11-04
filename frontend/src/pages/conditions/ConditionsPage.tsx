@@ -371,9 +371,11 @@ export default function ConditionsPage() {
             <HeaderButton loading={exporting} variant="secondary" disabled={exporting} data-testid="conditions-export" onClick={() => void downloadExport()}>
               {t("conditionCsv.exportButton")}
             </HeaderButton>
-            <HeaderButton variant="primary" data-testid="conditions-import" onClick={() => navigate("/management-center/conditions/import")}>
-              {t("conditionCsv.importButton")}
-            </HeaderButton>
+            {hasPermission("conditions.create") && hasPermission("conditions.update") && hasPermission("conditions.delete") && (
+              <HeaderButton variant="primary" data-testid="conditions-import" onClick={() => navigate("/management-center/conditions/import")}>
+                {t("conditionCsv.importButton")}
+              </HeaderButton>
+            )}
             {hasPermission("conditions.create") && (
               <HeaderButton
                 variant="primary"

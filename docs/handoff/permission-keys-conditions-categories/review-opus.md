@@ -10,3 +10,14 @@
 
 - 3 回目の照合範囲: conditions.py :43・:50-63・:66-75・:324-361・:412-470、conftest.py の client と bypass_permissions、dependencies.py の require_permission、main.py の router の組み込み、cache.py:19。
 - 設計審査の合格は、PO の承認・実装の開始・マージ・本番反映の承認を兼ねない。
+
+## 便1-コードの差分の確認（Opus・手元）
+
+- 対象: ブランチ `release/permission-keys-conditions-code` の実装 commit 3e1fa12d8（クラウドの Sonnet が [card-impl-1.md](card-impl-1.md) に沿って作成）。報告は [impl-report-1.md](impl-report-1.md)（最後の行 DONE）。
+- 照合: `git diff origin/main...3e1fa12d8` の 7 ファイルを、design.md §4-1・§6 と card-impl-1.md §1・§2 に 1 行ずつ当てた。
+  - dependencies.py は `return checker` の直前に 1 行足しただけで、判定の中身は変わっていない。
+  - conditions.py は catalog の鍵の付け替えと、import の preview・commit への 3 つの Depends だけ。ほかの経路は変わっていない。
+  - 画面 2 ファイルは表示条件だけを変え、部品・文言・`data-testid`・`onClick` は変わっていない。画面の試験が使う `conditionCsv.selectFile` の文言キーは部品に実在する。
+  - 試験 T1〜T7 は数をちょうどの値で確かめている（403・200 と total 0・409）。
+- 担当の確かめ（報告の生出力）: pytest 9 passed（全体カバレッジ 60% 未満の表示は 2 ファイルだけ流したため）・vitest 2 passed・tsc 0・eslint 0・check-before-submit 落ち 0。最後の判定は CI。
+- 判定: 設計どおり。マージ前の審査役（Opus）の審査は PR で別に受ける。

@@ -3,7 +3,7 @@
 この文書は、所有者も開けなかった「状態マスタ」と「商品カテゴリ」の画面を、権限どおりに開けるようにする設計です。
 
 - 親（仕様書）: [../../specs/auth-roles/README.md](../../specs/auth-roles/README.md)
-- 調査: [recon.md](recon.md)
+- 調査: [docs/handoff/permission-keys-conditions-categories/recon.md](recon.md)
 - データ変更の手順: [data-change-1/README.md](data-change-1/README.md)
 - 設計審査の記録: [review-opus.md](review-opus.md)
 - 状態: 設計案作成済み・設計審査済み（2026-11-04、クラウドの審査 3 回目で APPROVE）・PO 実装承認済み（2026-11-04 チャット「1」）。便1-コードは実装カード [card-impl-1.md](card-impl-1.md) でクラウドの Sonnet に渡す。データ変更の本実行は、その都度 PO の使い捨て許可が要る。
@@ -24,7 +24,7 @@
   - 点検用（見るだけ）の役割は 2 画面を見るだけで、書き込みはできない。
 
 ### 1-3. KGI（○× で判定）
-| # | 条件 | 検証方法 |
+| # | 基準 | 検証方法 |
 |---|---|---|
 | K1 | 本番の権限の一覧が 130 件になり、§4-2 の 7 キーが category「状態マスタ」「商品カテゴリ」で入っている | data-change-1/02_verify_read.sql を読み取りの道で流す（K1_TOTAL=130・K1_NEW_COUNT=7） |
 | K2 | テナント 001 の所有者で管理センターを開くと「状態マスタ」と「商品カテゴリ」がメニューに出る。両方の一覧が開け、通信が 200 になる（`/api/v1/conditions`・`/api/v1/conditions/catalog`・`/api/v1/product-categories`） | Chrome で画面を開き、画面の写しと通信の記録を取る（Opus） |

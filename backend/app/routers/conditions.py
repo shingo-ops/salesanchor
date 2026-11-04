@@ -160,7 +160,7 @@ async def list_conditions(
 @router.get(
     "/conditions/catalog",
     response_model=list[ConditionResponse],
-    dependencies=[Depends(require_permission("work_items.view"))],
+    dependencies=[Depends(require_permission("conditions.view"))],
 )
 async def list_condition_catalog(
     db: AsyncSession = Depends(get_db),
@@ -411,7 +411,11 @@ async def export_conditions_csv(
 
 @router.post(
     "/conditions/import/preview",
-    dependencies=[Depends(require_permission("conditions.view"))],
+    dependencies=[
+        Depends(require_permission("conditions.create")),
+        Depends(require_permission("conditions.update")),
+        Depends(require_permission("conditions.delete")),
+    ],
     summary="テナント用 状態マスタ CSVインポート プレビュー",
 )
 async def import_conditions_preview(
@@ -449,7 +453,11 @@ async def import_conditions_preview(
 
 @router.post(
     "/conditions/import/commit",
-    dependencies=[Depends(require_permission("conditions.view"))],
+    dependencies=[
+        Depends(require_permission("conditions.create")),
+        Depends(require_permission("conditions.update")),
+        Depends(require_permission("conditions.delete")),
+    ],
     summary="テナント用 状態マスタ CSVインポート 確定",
 )
 async def import_conditions_commit(
