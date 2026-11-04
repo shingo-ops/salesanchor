@@ -494,3 +494,24 @@ async def test_notify_lead_assigned_message_for_null_name(notifier_env):
     message = mock_send.await_args.kwargs["message"]
     assert "名前の無いリード" in message
     assert "LD-" not in message
+
+
+# ---------------------------------------------------------------------------
+# design.md §9: PostgreSQL は created_at を日時の型で返す（SQLite は文字で返すので上の試験では見えない）
+# ---------------------------------------------------------------------------
+
+def _row(created_at):
+    return {"id": 1, "channel_name": "c1", "webhook_url": "https://discord.example/webhooks/1",
+            "event_types": "[]", "is_active": True, "created_at": created_at, "updated_at": None}
+
+
+def test_channel_response_converts_datetime_to_iso():
+    from datetime import datetime, timezone
+    from app.routers.notifications import _channel_response
+    dt = datetime(2026, 11, 4, 3, 0, 0, tzinfo=timezone.utc)
+    assert _channel_response(_row(dt)).created_at == dt.isoformat()
+
+
+def test_channel_response_keeps_string():
+    from app.routers.notifications import _channel_response
+    assert _channel_response(_row("2026-11-04 03:00:00")).created_at == "2026-11-04 03:00:00"
