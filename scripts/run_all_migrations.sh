@@ -1217,3 +1217,5 @@ run_sql migrations/20261103_150000_create_user_notices.sql
 run_sql migrations/20261103_200000_add_google_calendar_import_sync.sql
 # discord-server-management 便1a: 登録の表に用途 purpose（既定 customer）・決まり・(tenant_id, purpose) の一意を足す（足すだけ・冪等）
 run_sql migrations/20261105_100000_tenant_discord_config_purpose.sql
+# Google Meet: 各社スキーマの calendar_events に meet_url 列を足す（列1つ・追加のみ・冪等）
+run_sql migrations/20261104_161223_add_calendar_events_meet_url.sql

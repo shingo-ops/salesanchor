@@ -29,6 +29,7 @@ export interface ApiCalendarEvent {
   owner_name?: string | null;
   created_by_name: string | null;
   category?: string | null;
+  meet_url?: string | null;
 }
 
 export interface ApiShift {
@@ -58,6 +59,7 @@ export interface ScheduleItem {
   location?: string | null;
   description?: string | null;
   createdByName?: string | null;
+  meetUrl?: string | null;
 }
 
 export interface DayLayoutItem {
@@ -219,6 +221,7 @@ export function normalizeEvent(event: ApiCalendarEvent): ScheduleItem {
     location: event.location ?? null,
     description: event.description ?? null,
     createdByName: event.created_by_name ?? null,
+    meetUrl: event.meet_url ?? null,
   };
 }
 

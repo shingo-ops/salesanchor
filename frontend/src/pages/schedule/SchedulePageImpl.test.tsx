@@ -12,6 +12,7 @@ vi.mock("../../contexts/AuthContext", () => ({
 const answers = vi.hoisted(() => ({
   isTenantAdmin: false,
   connected: false,
+  meetAvailable: false,
   events: [] as Array<Record<string, unknown>>,
   canManageOthers: false,
 }));
@@ -20,7 +21,7 @@ vi.mock("../../lib/api", () => ({
   api: {
     get: vi.fn(async (path: string) => {
       if (path === "/me/permissions") return { permissions: answers.canManageOthers ? ["staff.view"] : [], is_tenant_admin: answers.isTenantAdmin };
-      if (path === "/google-calendar/status") return { connected: answers.connected };
+      if (path === "/google-calendar/status") return { connected: answers.connected, meet_available: answers.meetAvailable };
       if (path === "/calendar/owners") {
         return {
           can_manage_others: answers.canManageOthers,
@@ -53,6 +54,7 @@ beforeEach(async () => {
   await i18n.changeLanguage("ja");
   answers.isTenantAdmin = false;
   answers.connected = false;
+  answers.meetAvailable = false;
   answers.events = [];
   answers.canManageOthers = false;
   hrefSetter.mockReset();
@@ -371,5 +373,117 @@ describe("SchedulePage keyboard shortcuts (K7)", () => {
       press("m");
       expect(pressed(i18n.t("schedule.monthView"))).toBe(false);
     });
+  });
+});
+
+describe("SchedulePage Google Meet (K12)", () => {
+  const addMeetLabel = () => i18n.t("schedule.addMeet");
+  const joinLabel = () => i18n.t("schedule.joinMeet");
+  const MEET = "https://meet.google.com/abc-defg-hij";
+  const openCreate = async () => {
+    fireEvent.click(await screen.findByRole("button", { name: i18n.t("schedule.create") }));
+    await screen.findByPlaceholderText(i18n.t("schedule.eventTitle"));
+  };
+  const save = () => {
+    fireEvent.change(screen.getByPlaceholderText(i18n.t("schedule.eventTitle")), { target: { value: "Meet Meeting" } });
+    fireEvent.click(screen.getByRole("button", { name: i18n.t("common.save") }));
+  };
+  const enableMeet = () => {
+    answers.isTenantAdmin = true;
+    answers.connected = true;
+    answers.meetAvailable = true;
+  };
+
+  it("hides the Meet toggle when meet_available is false", async () => {
+    answers.isTenantAdmin = true;
+    answers.connected = true;
+    answers.meetAvailable = false;
+    view();
+    await openCreate();
+    await waitFor(() => expect(mockGet).toHaveBeenCalledWith("/google-calendar/status"));
+    expect(screen.queryByRole("switch", { name: addMeetLabel() })).toBeNull();
+    save();
+    await waitFor(() => expect(api.post).toHaveBeenCalled());
+    const body = vi.mocked(api.post).mock.calls[0][1] as Record<string, unknown>;
+    expect("add_meet" in body).toBe(false);
+  });
+
+  it("sends add_meet only when the toggle is on", async () => {
+    enableMeet();
+    view();
+    await openCreate();
+    const toggle = (await screen.findByRole("switch", { name: addMeetLabel() })) as HTMLInputElement;
+    expect(toggle.checked).toBe(false);
+    fireEvent.click(toggle);
+    vi.mocked(api.post).mockResolvedValueOnce({ id: 1, meet_url: MEET });
+    save();
+    await waitFor(() => expect(api.post).toHaveBeenCalled());
+    const body = vi.mocked(api.post).mock.calls[0][1] as Record<string, unknown>;
+    expect(body.add_meet).toBe(true);
+    expect(screen.queryByText(i18n.t("schedule.meetFailed"))).toBeNull();
+  });
+
+  it("does not send add_meet when the toggle is left off", async () => {
+    enableMeet();
+    view();
+    await openCreate();
+    await screen.findByRole("switch", { name: addMeetLabel() });
+    save();
+    await waitFor(() => expect(api.post).toHaveBeenCalled());
+    const body = vi.mocked(api.post).mock.calls[0][1] as Record<string, unknown>;
+    expect("add_meet" in body).toBe(false);
+  });
+
+  it("shows the failure banner when the reply has no meet_url", async () => {
+    enableMeet();
+    view();
+    await openCreate();
+    fireEvent.click(await screen.findByRole("switch", { name: addMeetLabel() }));
+    vi.mocked(api.post).mockResolvedValueOnce({ id: 1, meet_url: null });
+    save();
+    expect(await screen.findByText(i18n.t("schedule.meetFailed"))).toBeTruthy();
+    // 予定は保存済みなので小窓は閉じる
+    await waitFor(() => expect(screen.queryByPlaceholderText(i18n.t("schedule.eventTitle"))).toBeNull());
+  });
+
+  it("shows the join link for an event with meet_url and no toggle on edit", async () => {
+    enableMeet();
+    answers.events = [apiEvent({ meet_url: MEET })];
+    view();
+    fireEvent.click(await screen.findByText("Own Event"));
+    const link = (await screen.findByRole("link", { name: joinLabel() })) as HTMLAnchorElement;
+    expect(link.getAttribute("href")).toBe(MEET);
+    expect(link.getAttribute("target")).toBe("_blank");
+    expect(link.getAttribute("rel")).toBe("noopener noreferrer");
+    fireEvent.click((await screen.findAllByRole("button", { name: i18n.t("schedule.editEvent") }))[0]);
+    await screen.findByPlaceholderText(i18n.t("schedule.eventTitle"));
+    expect(screen.queryByRole("switch", { name: addMeetLabel() })).toBeNull();
+    expect(screen.getByRole("link", { name: joinLabel() })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: i18n.t("common.save") }));
+    await waitFor(() => expect(api.patch).toHaveBeenCalled());
+    const body = vi.mocked(api.patch).mock.calls[0][1] as Record<string, unknown>;
+    expect("add_meet" in body).toBe(false);
+  });
+
+  it("shows the toggle when editing an own event that has no Meet yet", async () => {
+    enableMeet();
+    answers.events = [apiEvent({ google_event_id: "g1" })];
+    view();
+    fireEvent.click(await screen.findByText("Own Event"));
+    fireEvent.click((await screen.findAllByRole("button", { name: i18n.t("schedule.editEvent") }))[0]);
+    fireEvent.click(await screen.findByRole("switch", { name: addMeetLabel() }));
+    vi.mocked(api.patch).mockResolvedValueOnce({ id: 1, meet_url: MEET });
+    fireEvent.click(screen.getByRole("button", { name: i18n.t("common.save") }));
+    await waitFor(() => expect(api.patch).toHaveBeenCalled());
+    expect((vi.mocked(api.patch).mock.calls[0][1] as Record<string, unknown>).add_meet).toBe(true);
+  });
+
+  it("does not show a join link for a URL outside meet.google.com", async () => {
+    enableMeet();
+    answers.events = [apiEvent({ meet_url: "https://evil.example.com/abc" })];
+    view();
+    fireEvent.click(await screen.findByText("Own Event"));
+    await screen.findAllByRole("button", { name: i18n.t("schedule.editEvent") });
+    expect(screen.queryByRole("link", { name: joinLabel() })).toBeNull();
   });
 });

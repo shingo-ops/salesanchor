@@ -11,6 +11,7 @@ import type { CSSProperties, ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/Button";
+import { ButtonLink } from "../../components/ButtonLink";
 import { Modal } from "../../components/Modal";
 import { PageLayout } from "../../components/PageLayout";
 import { SelectControl } from "../../components/Select";
@@ -73,7 +74,12 @@ interface ScheduleDraft {
   visibleToStaff: boolean;
   description: string;
   location: string;
+  /** 「Google Meet を付ける」(保存時に add_meet として送る) */
+  addMeet: boolean;
 }
+
+/** Google Meet の参加リンクとして出してよい URL の頭 */
+const MEET_URL_PREFIX = "https://meet.google.com/";
 
 interface SchedulePopoverState {
   mode: PopoverMode;
@@ -114,6 +120,7 @@ function createDraft(item?: ScheduleItem | null): ScheduleDraft {
     visibleToStaff: item ? item.calendarType === "shared" : true,
     description: item?.description ?? "",
     location: item?.location ?? "",
+    addMeet: false,
   };
 }
 
@@ -213,6 +220,7 @@ function SchedulePopover({
   onDelete,
   canEdit,
   canChangeVisibility,
+  meetAvailable,
 }: {
   mode: PopoverMode;
   anchor: AnchorRect | null;
@@ -224,6 +232,8 @@ function SchedulePopover({
   onDelete: () => void;
   canEdit: boolean;
   canChangeVisibility: boolean;
+  /** Google Meet を付けてよいか（つないだ本人の予定だけ。サーバーも同じ条件で断る） */
+  meetAvailable: boolean;
 }) {
   const { t } = useTranslation();
   const EditIcon = SCHEDULE_POPOVER_ICONS.edit;
@@ -235,6 +245,18 @@ function SchedulePopover({
   const meta = getCalendarMeta(draft.category);
   const dateLabel = item ? formatDayLabel(item.start) : "";
   const timeLabel = item ? formatTimeRange(item.start, item.end, item.allDay, "ja-JP", t("schedule.allDay")) : "";
+  const meetUrl = item?.meetUrl && item.meetUrl.startsWith(MEET_URL_PREFIX) ? item.meetUrl : null;
+  const joinMeetLink = meetUrl ? (
+    <ButtonLink
+      variant="secondary"
+      size="sm"
+      href={meetUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      {t("schedule.joinMeet")}
+    </ButtonLink>
+  ) : null;
 
   return (
     <>
@@ -289,6 +311,7 @@ function SchedulePopover({
             {item.ownerName && <p className="schedule-popover__meta">{item.ownerName}</p>}
             {item.location && <p className="schedule-popover__meta">{item.location}</p>}
             {item.description && <p className="schedule-popover__description">{item.description}</p>}
+            {joinMeetLink}
             <dl className="schedule-popover__details">
               <div>
                 <dt>{t("schedule.owner")}</dt>
@@ -358,6 +381,18 @@ function SchedulePopover({
                 })}
               />
             </div>
+
+            {joinMeetLink}
+            {meetAvailable && !item?.meetUrl && (
+              <div className="schedule-field schedule-field--inline">
+                <span className="schedule-field__label">{t("schedule.addMeet")}</span>
+                <Toggle
+                  checked={draft.addMeet}
+                  aria-label={t("schedule.addMeet")}
+                  onCheckedChange={(next) => onDraftChange({ ...draft, addMeet: next })}
+                />
+              </div>
+            )}
 
             {canChangeVisibility && (
               <div className="schedule-field schedule-field--inline">
@@ -1093,8 +1128,10 @@ export default function SchedulePage() {
   const { hasPermission, isTenantAdmin } = usePermissions();
   const [searchParams, setSearchParams] = useSearchParams();
   const canManageOwners = hasPermission("staff.view");
-  const gcalStatusQ = useApiQuery<{ connected: boolean }>("/google-calendar/status", { enabled: isTenantAdmin });
+  const gcalStatusQ = useApiQuery<{ connected: boolean; meet_available?: boolean }>("/google-calendar/status", { enabled: isTenantAdmin });
   const gcalConnected = gcalStatusQ.data?.connected === true;
+  // Google Meet を付けてよいのは、Google をつないだ本人だけ（サーバーの can_add_meet の答え）
+  const meetAvailable = gcalStatusQ.data?.meet_available === true;
   const [gcalConnecting, setGcalConnecting] = useState(false);
   const demoState = (searchParams.get("demoState") as DemoState | null) ?? "normal";
   const [view, setView] = useState<ScheduleView>("week");
@@ -1213,6 +1250,7 @@ export default function SchedulePage() {
       visibleToStaff: true,
       description: "",
       location: "",
+      addMeet: false,
     });
     setPopover({
       mode: "create",
@@ -1258,14 +1296,25 @@ export default function SchedulePage() {
       if (canChangeVisibility) {
         body.calendar_type = draft.visibleToStaff ? "shared" : "personal";
       }
+      // Meet を付けるのは、つないだ本人で、Toggle が入っていて、まだ Meet が無い予定だけ
+      const wantsMeet = meetAvailable && draft.addMeet && !popover?.item?.meetUrl;
+      if (wantsMeet) {
+        body.add_meet = true;
+      }
 
+      type SaveResult = { id: number; meet_url: string | null };
+      let saved: SaveResult | undefined;
       if (popover?.mode === "edit" && popover.item) {
-        await api.patch(`/calendar/events/${popover.item.id}`, body);
+        saved = await api.patch<SaveResult>(`/calendar/events/${popover.item.id}`, body);
       } else {
-        await api.post("/calendar/events", body);
+        saved = await api.post<SaveResult>("/calendar/events", body);
       }
       setPopover(null);
       setError(null);
+      if (wantsMeet && !saved?.meet_url) {
+        // 予定そのものは保存済み。Meet だけ付かなかったことを知らせる
+        setBanner({ type: "error", message: t("schedule.meetFailed") });
+      }
       void invalidate(["calendar", "events"]);
     } catch (err) {
       setError(err instanceof Error ? err.message : t("common.saveError"));
@@ -1559,6 +1608,11 @@ export default function SchedulePage() {
           onDelete={deleteEvent}
           canEdit={canEditSelected}
           canChangeVisibility={canChangeVisibility}
+          meetAvailable={
+            meetAvailable
+            && (popover.mode === "create"
+              || Boolean(popover.item && popover.item.ownerUserId === currentOwnerUserId))
+          }
         />
       )}
     </div>
