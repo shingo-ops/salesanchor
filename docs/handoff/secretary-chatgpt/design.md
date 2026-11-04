@@ -1,6 +1,6 @@
 # 秘書チャットを ChatGPT に・アプリの AI を画面で管理 — 設計（v13・PO 承認済み）
 
-- 状態: 設計案作成済み／設計審査 1回目〜8回目 REVISE・9回目 APPROVE（§14）→ v10 で9回目の軽い指摘 R1〜R3 を反映／PO 承認済み（2026-11-03 PO が「この設計で決める」の選択肢に「1」。秘書は今の Claude のまま始める。月額契約の判断は段3の前に別に聞く）／実装 未着手（実装は段ごとのカードと PO の実装の許可が揃ってから）
+- 状態: 設計案作成済み／設計審査 1回目〜8回目 REVISE・9回目 APPROVE（§14）→ v10 で9回目の軽い指摘 R1〜R3 を反映／PO 承認済み（2026-11-03 PO が「この設計で決める」の選択肢に「1」。秘書は今の Claude のまま始める。月額契約の判断は 2026-11-04 PO「1,まず私と担当エンジニアだけで使用する」で決定・§13-5）／実装 未着手（実装は段ごとのカードと PO の実装の許可が揃ってから）
 - 目標: `docs/handoff/secretary-chatgpt/kgi.md`（K1〜K10）。現在地: `docs/handoff/secretary-chatgpt/recon.md`（§番号で参照）。根拠の照合は origin/main d828bb269（引用したパスは 44098dc31・c60ea6eb3・90ee0c15f から差分なし。生出力 `review4_fix.txt`・`review5_fix.txt`・`review6_fix*.txt`・`review7_fix.txt`・review8.md・review9.md）。
 - 関係 ADR: ADR-1056（秘書）・ADR-1004（使用量台帳）・ADR-027・ADR-067・ADR-144・ADR-1016（即時反映の表）・ADR-135/136（危険 PR の GO）。新しい ADR-1058「アプリの AI の担当は DB の1か所で決め、画面で見て切り替える」を実装カードより先に起案し、ADR-1056 の「Claude Code に固定」「ledger に書かない」を置き換える（§13）。
 
@@ -197,8 +197,8 @@ GitHub の一時 VM（sandbox-test）で、compose と同じ条件（read_only�
 - 1a・1b・3 は migrations/・compose・本番 scripts/ を含むので、危険 PR の GO 手順（ADR-135/136）に従う。
 - どこで測るか（審査8回目 N1）:
   - K5・K9 の「試験の環境」は CI の試験（本物の PostgreSQL に migration を流した DB）。段2で、担当を PUT で変えると次の1回の台帳の model が新しい値になり、履歴が1行増えることを試験で確かめる。本番の解析と翻訳の担当は、試すために切り替えない（お客さんの翻訳と解析に効くため）。
-  - 段3の K1・K2・K6・K8 は本番で測る。secretary-codex は本番の VPS にだけ起こすため（§5-4。§5-2 の一時 VM はログインなしの範囲だけ）。「試験の担当切替」は本番の画面の PUT で secretary_intent を codex にすること。秘書の API はスーパー管理者だけが呼べる（`backend/app/routers/assistant.py:118-127` の `Depends(require_super_admin)`）ので、切り替えの影響はスーパー管理者（PO と担当エンジニア）だけ。測り終えたら同じ画面で claude に戻し、履歴の2行（claude→codex・codex→claude）で確かめる。本番で K9 も同じ2行で確かめる。
-  - 月額契約（ChatGPT の個人の契約）を会社のサーバーで使ってよいかの PO の判断（§13-5）は、段3に入る前（V1〜V5 の前）に取る（審査9回目 R1。「不可」なら codex の容器も選択肢の3行も本番に出さないため）。答えごとの進め方: 「使ってよい」→段3を全部進め、合格なら担当を ChatGPT にしたままにする。「スーパー管理者の試験だけ可」→ K1・K2・K6・K8 を測ったら claude に戻し、お客さんにも秘書を出す時にもう一度聞く。「不可」→段3に入らず、段2で止める（codex の容器も選択肢の3行も出さない）。
+  - 段3の K1・K2・K6・K8 は本番で測る。secretary-codex は本番の VPS にだけ起こすため（§5-4。§5-2 の一時 VM はログインなしの範囲だけ）。「試験の担当切替」は本番の画面の PUT で secretary_intent を codex にすること。秘書の API はスーパー管理者だけが呼べる（`backend/app/routers/assistant.py:143-148` の `Depends(require_super_admin)`）ので、切り替えの影響はスーパー管理者（PO と担当エンジニア）だけ。測り終えたら同じ画面で claude に戻し、履歴の2行（claude→codex・codex→claude）で確かめる。本番で K9 も同じ2行で確かめる。
+  - 月額契約（ChatGPT の個人の契約）を会社のサーバーで使ってよいかの PO の判断（§13-5）は、段3に入る前（V1〜V5 の前）に取る（審査9回目 R1。「不可」なら codex の容器も選択肢の3行も本番に出さないため）。答えごとの進め方: 「使ってよい」→段3を全部進め、合格なら担当を ChatGPT にしたままにする。「スーパー管理者の試験だけ可」→ K1・K2・K6・K8 を測ったら claude に戻し、お客さんにも秘書を出す時にもう一度聞く。「不可」→段3に入らず、段2で止める（codex の容器も選択肢の3行も出さない）。決定（2026-11-04 PO「1,まず私と担当エンジニアだけで使用する」）: 「使ってよい」の進め方で進め、使う人は PO と担当エンジニアだけ（§13 の12）。
   - 試験の担当切替の前に、本番の読み取りの道で `public.users` の `is_super_admin = true` の件数を数え（id と件数だけ。名前・メールは出さない）、ここに書き足す。PO と担当エンジニア以外がいれば、切り替えの前に PO に知らせる（審査9回目 R2）。
   - PO のログインの後、試験の担当切替の前に「VPS でログイン済み→手元の Mac で `codex exec` を1回→秘書を1回呼ぶ→両方とも成功」を確かめる。打ち消し合う（片方がログアウトされる）と分かったら段3を止めて PO に戻す（recon §5-3 の【未確認】。審査9回目 R3）。
 
@@ -212,7 +212,7 @@ GitHub の一時 VM（sandbox-test）で、compose と同じ条件（read_only�
 | K5 担当は DB の1か所 | §4-3 の CI 試験が緑＝○。加えて試験の環境で担当を変えると、画面と次の1回の ledger の model が変わる |
 | K6 ログインが切れたら × | 試験の担当で秘書を ChatGPT にする。PO が manual-only 鍵で `!` を使い、ボリュームの auth.json を別名に移す→1回呼ぶ→画面の秘書の行が×。PO が元の名前に戻す→1回呼ぶ→○。手順の行は §5-4 の後に書き、本番の VPS での変更なので GO の原文を記録する（審査7回目 Q6） |
 | K7 金型・トークン・i18n | `scripts/check-ui-governance.js`・eslint・`frontend/scripts/check-css-hardcoded-colors.js`・`check-css-hardcoded-values.js`・`check-i18n-missing-keys.js` が違反0 |
-| K8 空きメモリ | 段3の前に prod1 の MemAvailable と MemTotal を読み取りの道で5分おきに3回測り、平均を基準値として本書に書く（【未確認】まだ測っていない。§13-6）。○の条件は両方: ①K1 の10本を流している間の secretary-codex の docker stats の最大が 400MB 以下（上限 512m の8割弱。上限に当たって止まる手前で気づくため） ②段3のあと同じ測り方の MemAvailable 平均が MemTotal の20%以上 |
+| K8 空きメモリ | 段3の前に prod1 の MemAvailable と MemTotal を読み取りの道で5分おきに3回測り、平均を基準値として本書に書く（測定済み 2026-11-04: 平均 777MiB・MemTotal の 19.85%。測る前から ② の20%を下回る。§13-6）。○の条件は両方: ①K1 の10本を流している間の secretary-codex の docker stats の最大が 400MB 以下（上限 512m の8割弱。上限に当たって止まる手前で気づくため） ②段3のあと同じ測り方の MemAvailable 平均が MemTotal の20%以上 |
 | K9 切り替えが次の呼び出しから効く・履歴 | 切り替え→次の1回の ledger の model が新しい値・履歴が1行増える |
 | K10 スーパー管理だけ | PUT を、テナント管理者→403・一般の利用者→403・ログインなし→401。3つとも期待どおりで○ |
 | K11 読まない担当は変えられない（段2〜1b-2 の間だけ） | CI の試験: GET で `secretary_intent` の行だけ `switchable=true`、ほか4行は false。false の仕事への PUT は 409 `not_wired` で、担当も履歴も変わらない。画面の試験: false の行に「変える」が無く「まだ切り替えられません」の文が出る（ja・en のキーあり）。PO が画面で、秘書の行にだけ「変える」があることを見る。1b-2 の後はこの基準ごと消す |
@@ -225,7 +225,7 @@ GitHub の一時 VM（sandbox-test）で、compose と同じ条件（read_only�
 - auth.json は書けるボリュームに残る（ログインの鍵）→ この容器だけに付け、700・バックアップ対象から外す。中身は誰も表示しない。
 - 失敗も記録すると行が増える → 秘1 のあと（秘書の行）と 1b-1 のあと（解析・翻訳の行）、それぞれ1週間の失敗の行数を測る（審査11回目①）。
 - 失敗の行を書く別の取引が失敗する → 種類だけログに出し、元の処理は止めない。旧エンジンは SAVEPOINT で台帳だけ戻す（§4-2-3）。
-- 月額契約（ChatGPT の個人の契約）を会社のサーバーで、お客さんが使う機能に使ってよいか → 使い方の約束の判断なので PO が決める（§13-5）。決まるまで段3に入らない（PO のログインも、試験の担当切替もしない）。答えごとの進め方は §7 の「どこで測るか」。
+- 月額契約（ChatGPT の個人の契約）を会社のサーバーで、お客さんが使う機能に使ってよいか → 使い方の約束の判断なので PO が決める（§13-5）。2026-11-04 PO「1,まず私と担当エンジニアだけで使用する」で決定: 段3を進め、使うのは PO と担当エンジニア（スーパー管理者）だけ。秘書の API はスーパー管理者だけが使える（`backend/app/routers/assistant.py:143-148`）。お客さんにも秘書を出す時は、その前にもう一度 PO に聞く。
 
 ## 10. 戻し方
 - 段1a: 新しい表と列は残しても害なし（コードが読まない）。
@@ -252,14 +252,23 @@ GitHub の一時 VM（sandbox-test）で、compose と同じ条件（read_only�
 5. PO に決めてもらうこと（1回に1件）:
    - 決定済み: 仕事ごとに選べる AI とモデルの最初の一覧（PO 2026-11-02「1」）。
    - 秘書を ChatGPT にした時の最初のモデル（試験では3つとも6〜8秒で正しい形）。
-   - 月額契約（ChatGPT の個人の契約）を会社のサーバーでお客さん向けの機能に使ってよいか（使い方の約束の判断。段3に入る前に。答えは「使ってよい」「スーパー管理者の試験だけ可」「不可」の3つ、進め方は §7）。
+   - 決定済み: 月額契約（ChatGPT の個人の契約）を会社のサーバーで使ってよいか（PO 2026-11-04「1,まず私と担当エンジニアだけで使用する」。段3を進め、合格なら秘書の担当を ChatGPT にしたままにする。使うのは PO と担当エンジニアだけ。お客さんにも出す時はもう一度聞く。§9）。
    - Claude の容器を片付ける時期（段4）。
 6. prod1 の MemAvailable・MemTotal を読み取りの道で測り、K8 の基準値を本書に書く（段3の前）。
+   - （済・2026-11-04 00:22 UTC 測定。読み取りの道 = Grafana の閲覧用の鍵で Prometheus の node-exporter（instance app-vps）、と制限付き鍵の claude-monitor。生出力 `docs/handoff/secretary-chatgpt/evidence-k8-20261104/k8_base.json`・`docs/handoff/secretary-chatgpt/evidence-k8-20261104/k8_24h.json`・`docs/handoff/secretary-chatgpt/evidence-k8-20261104/k8_30d.json`（1日平均・MiB）・`docs/handoff/secretary-chatgpt/evidence-k8-20261104/k8_monitor.txt`）【事実】:
+     - 5分おき3回の MemAvailable: 940,613,632 / 745,840,640 / 757,968,896 バイト。平均 814,807,723 バイト（777MiB）。MemTotal 4,105,506,816 バイト。平均は MemTotal の 19.85%。
+     - 直近24時間（5分おき289点）: 平均 19.8%・最小 8.7%（341MiB）・20%を下回った点は159点。
+     - 1日平均の MemAvailable（問い合わせ `avg_over_time(node_memory_MemAvailable_bytes{instance="app-vps"}[1d])/1048576`・1日おき）は 10/5 の 1502MiB から 10/27 の 820MiB まで減り、その後 11/4 までは 745〜815MiB でほぼ横ばい（10/19 937・10/30 777・11/4 775）。
+     - 同じ時刻の `free -h`: used 3.1Gi・available 737Mi・swap 使用 859Mi。`docker stats` の17容器の使用量の合計は 987MiB。
+   - 【未確認】容器の合計（987MiB）と used（3.1Gi）の差がどのプロセスか。制限付き鍵は4つの命令しか使えず、プロセスごとの量は読めない。
+   - 判断: K8 の ② は段3の前から満たせない。secretary-codex（上限 512m）を足すとさらに減るので、このまま段3に入らない。どう進めるかは PO に聞く（§13 の13）。
 7. （2026-11-03）段1a のカード `docs/handoff/secretary-chatgpt/card-1a.md` を作り、card-lint で違反0（長い行の警告だけ）。マージ前の審査で、migration の守りの登録2つ（`scripts/migration-guard/reference-allowlist.tsv` の sha256・`.github/workflows/migration-guard.yml` の `PUBLIC_TABLES`）の漏れを指摘され、カードの 3-2 に足した。実装は PO の実装の許可の後。
 8. （2026-11-03）段1a は本番反映済み（PR #5056）。段1a-2 のカード `docs/handoff/secretary-chatgpt/card-1a2.md` を作った。作る時に実物で見つけたこと: 共有の試験 DB（`backend/tests/test_tcg_work_matching_integration.py` の `pg`）は段1a の migration を流さず `outcome` の列が無いため、集計に条件を足すと今の本物の DB の試験が落ちる。段1a の migration は `public.users` を指すが、この DB には無い。表の形を写さず、閲覧ページの試験 7 ファイルが同じ DB で使う道具 `tests.rls_bootstrap._ensure_public_users` で作ってから流す形をカードの 4 に書いた。§4-2-2 の一覧のほか、`scripts/accuracy/llm_compare/vps_run_gemini.sh` も使用の記録を集計するが、`prompt_ab:llmcmp-` の行だけ（試験の道具は失敗の行を書かない）なので変えない。PO は 2026-11-03「1」で、画面ができるまで審査と本番反映まで進めることを任せた。
 9. （2026-11-03）段1a-2 は本番反映済み（PR #5061）。段1b を 1b-1（Gemini の3経路の失敗の行）と 1b-2（担当表を読む・秘書）に分けた（§7）。段1b-1 のカード `docs/handoff/secretary-chatgpt/card-1b1.md` を作った。作る時に実物で見つけたこと: v102 は API の例外を v8 で `RuntimeError` に包み直し、HTTP の番号や状態名を消すので、包み直す前に印（`ledger_api_called`）を付け、`__cause__` の鎖をたどって鍵切れを見分ける（`backend/app/services/gemini_raw_copy_v8.py` の except）。翻訳の空の応答は今は使用量を読む前に例外になるので、読む順を入れ替えて ok の行にする。本番に出すのは、段1a の24時間の確かめ（2026-11-04 11:59 JST 以降）に合格してから（PO 2026-11-03「1」）。
 10. （2026-11-03）PO は「画面を作って秘書を ChatGPT にすぐ使いたい」と聞き、秘書の道を先にして今日から始める選択肢に「1」（失敗の行の段 1b-1 は明日の確かめの後）。§7 に段 秘1 を足し、段2の切り替えを秘書だけに絞った。作る時に実物で見つけたこと: 秘書の台帳の行は DB の CHECK には段1a で入っている（`migrations/20261103_120000_create_ai_job_assignments.sql:159-175`）が、コードの一覧 `USAGE_PURPOSES`・`USAGE_SDKS` には無く、書くと ValueError になる（`backend/app/services/llm_budget.py:242-245`）。使用量画面は purpose で絞らないので、秘書の ok の行が画面に出る（`backend/app/routers/tcg_analysis_dashboard.py:684` の `_LLM_USAGE_WHERE`）。秘1 がカード 1b-1 の 1-1・1-2 の一部（`USAGE_ERROR_CODES`・`USAGE_OUTCOMES`・`_INSERT_USAGE_EVENT_OUTCOME_SQL`・`_outcome_columns`・`record_usage_isolated`）を先に入れるので、1b-1 に着手する前に `docs/handoff/secretary-chatgpt/card-1b1.md` の 0-4・1-1・1-2・1-3・7-6 を「秘1 で入った物は足さない」形に直す（0-4 の grep は `record_usage_isolated` に当たって止まる。7-6 の試験は秘1 へ移したので消す。「触るファイル（11個）」の数と、試験のファイル backend/tests/test_llm_usage_failure_rows.py（新規） が秘1 で作られていればその扱いも直す。審査10回目）。
 11. （2026-11-03）段 秘1 は本番反映済み。PO は「秘書の動作の確かめは後にして、画面の段の準備を進める」に「3」。段2のカード `docs/handoff/secretary-chatgpt/card-2.md` を作り、card-lint で違反0（長い行の警告だけ）。作る時に実物で見つけたこと: 段2の時点で秘書の選択肢は `('secretary_intent', 'claude', 'sonnet')` の1つだけ（`migrations/20261103_120000_create_ai_job_assignments.sql`）なので、画面の「変える」は選べる先が今と同じ1つになる。ChatGPT の選択肢は段3の migration で足し、それまで本物の DB の試験は試験用の選択肢を足して切り替えを確かめる。provider から使用の記録の sdk への対応は `backend/app/services/llm_budget.py` に `USAGE_SDKS_BY_PROVIDER` として1か所に置く。秘書の口 `backend/app/routers/assistant.py` の `_SDK_BY_PROVIDER` は段2では触らず、段3でこの対応にまとめる。`public.users` に役割の列は無く、スーパー管理の判定は `is_super_admin` だけ（`backend/app/models.py`）。
+12. （2026-11-04）PO は月額契約の判断に「1,まず私と担当エンジニアだけで使用する」と答えた（選択肢1「使ってよい」に、使う人の範囲を添えた答え）。段3は「使ってよい」の進め方で進め、合格なら秘書を ChatGPT にしたままにする。使う人は PO と担当エンジニアだけ。秘書の API は今もスーパー管理者だけ（`backend/app/routers/assistant.py:143-148`）なので新しい制限は足さず、段3の切り替えの前にスーパー管理者を数えて（§7）PO と担当エンジニアのアカウントだけであることを確かめる（行番号はこの日の origin/main 7be89bbfa）。ほかの人がいれば切り替えずに PO に聞く。お客さんにも秘書を出す時は、その前にもう一度 PO に聞く。
+13. （2026-11-04）§13-6 の K8 の基準値を測ると、prod1 の空きメモリは平均 19.85% で、K8 の ② の20%を段3の前から下回った。1日平均は 10/5 の 1502MiB から 10/27 ごろまで減り、その後は 745〜815MiB で横ばい。段3（secretary-codex を足す）は止め、空きメモリが減った原因を先に調べるかを PO に聞く。
 
 ## 14. 審査（Architect・クラウドの Opus。同じ種類の AI による審査で、独立した第二者の審査ではない）
 - 1回目（2026-11-02 14:05〜14:10 UTC・head 2fd362023・2回に分けて実行）: VERDICT: REVISE。
