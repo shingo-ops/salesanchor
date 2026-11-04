@@ -5,7 +5,7 @@
 
 - 親（設計仕様書）: [docs/specs/inventory-management/inventory-viewer/README.md](../../specs/inventory-management/inventory-viewer/README.md)
 - 設計: [design.md](./design.md)
-- 状態: 草案（2026-11-04 作成）。PO 未承認。
+- 状態: 2026-11-04 作成。設計とあわせて PO 承認済み（2026-11-04 PO「1」・チャット）。審査の記録: [review-opus.md](./review-opus.md)
 - 基準: origin/main d948cf9c7（worktree `release/viewer-customer-sheet-design` を origin/main から作成）
 
 ## 1. PO の発言（原文・2026-11-04）

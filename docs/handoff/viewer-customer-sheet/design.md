@@ -1,4 +1,8 @@
-# design（草案）: 閲覧者管理ページを在庫解析ツールの顧客管理にする — 要件定義と DB 設計
+---
+mode: handoff
+---
+
+# design: 閲覧者管理ページを在庫解析ツールの顧客管理にする — 要件定義と DB 設計
 
 > この文書は何か（専門用語なしの1行）:
 > 本契約のお客さんごとにシートへ配信し、請求先をフォームで集め、あとでツール用の請求書を作れるようにするための、決めごとと DB の置き方の下書き。
@@ -6,7 +10,7 @@
 - 親（設計仕様書）: [docs/specs/inventory-management/inventory-viewer/README.md](../../specs/inventory-management/inventory-viewer/README.md)
 - 現状の記録: [recon.md](./recon.md)
 - 関係 ADR: [ADR-1019](../../adr/ADR-1019-inventory-viewer-separate-accounts.md)（改訂が要る。recon §2）、ADR-1014（在庫の行の定義は1か所）、ADR-144・ADR-067（金型とデザイントークン）、ADR-027（i18n）
-- 状態: **草案・PO 未承認・設計審査1回目 REVISE（2026-11-04）の指摘9件・2回目 REVISE の指摘7件・3回目 REVISE の指摘6件を反映済み・4回目 APPROVE（LOW 1件＝分類表の件数 1068→1075 を反映済み）**。下の「§6 PO に決めてもらうこと」が全部決まるまで、設計合格にも実装にも進まない。
+- 状態: **PO 承認済み（2026-11-04 PO「1」・チャット。§6 の Q1〜Q5 も決定済み）・設計審査4回目 APPROVE（記録: [review-opus.md](./review-opus.md)）・実装未着手**。審査は1回目 REVISE の指摘9件・2回目 REVISE の指摘7件・3回目 REVISE の指摘6件・4回目 APPROVE の LOW 1件（分類表の件数 1068→1075）をすべて反映済み。設計の承認は実装の承認を兼ねない。実装は便ごとの実装カードと PO の実装承認がそろってから始める。
 
 ## 1. 目的（PO の言葉から）
 
