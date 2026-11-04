@@ -67,7 +67,7 @@ Firebase は使わない設定に切り替えた（PO 2026-11-04「firebaseは�
 
 - 消すファイル: `frontend/src/lib/firebase.ts`、`frontend/src/lib/firebase-auth.ts`、`frontend/src/lib/firebaseErrorMessage.ts` とその試験、`frontend/src/lib/__storybook-mocks__/firebase-app.ts`・`frontend/src/lib/__storybook-mocks__/firebase-auth.ts`。
 - `frontend/package.json:84` の `firebase` と、lock の中身を消す。
-- `frontend/src/locales/ja.json`・`frontend/src/locales/en.json` の `firebaseError` の塊（:3274）を消す。両方から同じキーを消す（ADR-027）。
+- `frontend/src/locales/ja.json`・`frontend/src/locales/en.json` の `firebaseError` の塊（便1 の基準 0f297666c で :3289）を消す。両方から同じキーを消す（ADR-027）。
 - `frontend/.storybook/main.ts:34-35` の差し替えを消す。
 - `frontend/src/test-setup.ts` の firebase の差し替えを消す。`frontend/vite.config.ts` の注記を直す。
 - スイッチ: `frontend/src/lib/auth/provider.ts` とその試験を消す。`isSelfAuth()` を使う 10 か所（R12）は、下の「開発での動き方」の表に合わせて書き換える。

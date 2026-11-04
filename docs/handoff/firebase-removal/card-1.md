@@ -2,7 +2,7 @@
 
 状態: カード発行（Opus、2026-11-04）。PO の承認は 2026-11-04「1」（design.md の状態の行）。設計: [design.md](./design.md) §5-1。根拠: [recon.md](./recon.md)。
 担当: クラウドの Sonnet。触ってよいのは下の「1. 触るファイル」だけ。本番・サーバー・GitHub の secret と Variables には触らない。PR は作らない（Opus が作る）。
-基準: origin/main `63a69bfb6`。下の行番号はすべてこの時点のもの。行がずれていたら、行番号ではなく「変更前」の文で場所を探す（同じ文が 2 か所あれば BLOCKED: で止まる）。
+基準: origin/main `0f297666c`。下の行番号はすべてこの時点のもの。行がずれていたら、行番号ではなく「変更前」の文で場所を探す（同じ文が 2 か所あれば BLOCKED: で止まる）。
 新しい画面の部品は作らない（見た目は変えない。中身の処理だけ）。デザイントークン・金型には触らない。
 
 ## 読んだ節（docs/handoff/design-partner-card-ops/guards/）
@@ -15,9 +15,9 @@ RECEIVED firebase-removal-bin1 HEAD=（git rev-parse HEAD の 40 桁）
 
 ## 0. 実装前点検（外れたら実装せず BLOCKED: で止まる）
 - P1 枝 `release/firebase-removal-bin1` を origin から取り直し、`docs/handoff/firebase-removal/card-1.md` が在ること。
-- P2 `git diff --quiet 63a69bfb6 HEAD -- frontend .github/workflows/e2e.yml .github/workflows/karte-gate.yml .github/workflows/frontend-check.yml` が終了 0（基準から変わっていない）。
-- P3 `sed -n '3274p;3304p' frontend/src/locales/ja.json` が `  "firebaseError": {` と `    "passwordTooShort": "パスワードは8文字以上で入力してください",` の 2 行。
-- P4 `sed -n '3274p;3304p' frontend/src/locales/en.json` が `  "firebaseError": {` と `    "passwordTooShort": "Password must be at least 8 characters",` の 2 行。
+- P2 `git diff --quiet 0f297666c HEAD -- frontend .github/workflows/e2e.yml .github/workflows/karte-gate.yml .github/workflows/frontend-check.yml` が終了 0（基準から変わっていない）。
+- P3 `sed -n '3289p;3319p' frontend/src/locales/ja.json` が `  "firebaseError": {` と `    "passwordTooShort": "パスワードは8文字以上で入力してください",` の 2 行。
+- P4 `sed -n '3289p;3319p' frontend/src/locales/en.json` が `  "firebaseError": {` と `    "passwordTooShort": "Password must be at least 8 characters",` の 2 行。
 - P5 `frontend/src/test-utils` と `frontend/src/lib/auth/devSessionSlot.ts` と `frontend/src/lib/auth/devSession.ts` が無いこと。
 
 ## 1. 触るファイル
@@ -773,7 +773,7 @@ export default preview;
 
 ### 2-16. 辞書（行の削除だけ。JSON を読み直して書き出さない＝他の行の形が変わるため）
 
-`ja.json`・`en.json` とも、`:3274-3285`（`"firebaseError"` の塊 12 行）と `:3304`（`accountSettings.passwordTooShort` の 1 行）を消す。
+`ja.json`・`en.json` とも、`:3289-3300`（`"firebaseError"` の塊 12 行）と `:3319`（`accountSettings.passwordTooShort` の 1 行）を消す。
 `authError.passwordTooShort`（`:728` 付近）は消さない。手順6 のコマンドで消し、手順6 の確かめで 13 行減・JSON として正しいことを見る。
 
 ### 2-17. 試験 22 ファイル
@@ -1148,8 +1148,8 @@ describe("LoginPage (dev session)", () => {
     cd ~ && git clone https://github.com/shingo-ops/salesanchor.git sa && cd sa && git checkout release/firebase-removal-bin1
 
 手順2 0. の点検 P1〜P5 を行い、結果をそのまま報告に書く
-    cd ~/sa && git diff --quiet 63a69bfb6 HEAD -- frontend .github/workflows/e2e.yml .github/workflows/karte-gate.yml .github/workflows/frontend-check.yml; echo "P2 exit=$?"
-    cd ~/sa/frontend && sed -n '3274p;3304p' src/locales/ja.json && sed -n '3274p;3304p' src/locales/en.json
+    cd ~/sa && git diff --quiet 0f297666c HEAD -- frontend .github/workflows/e2e.yml .github/workflows/karte-gate.yml .github/workflows/frontend-check.yml; echo "P2 exit=$?"
+    cd ~/sa/frontend && sed -n '3289p;3319p' src/locales/ja.json && sed -n '3289p;3319p' src/locales/en.json
     cd ~/sa/frontend && ls src/test-utils src/lib/auth/devSessionSlot.ts src/lib/auth/devSession.ts 2>&1 | tail -5
 
 手順3 依存を入れる
@@ -1164,8 +1164,8 @@ describe("LoginPage (dev session)", () => {
     cd ~/sa/frontend && find src/lib/__storybook-mocks__ -type d -empty -delete
 
 手順6 辞書の 13 行を消し、13 行減ったこと・JSON として正しいことを確かめる
-    cd ~/sa/frontend && sed -i '3274,3285d;3304d' src/locales/ja.json
-    cd ~/sa/frontend && sed -i '3274,3285d;3304d' src/locales/en.json
+    cd ~/sa/frontend && sed -i '3289,3300d;3319d' src/locales/ja.json
+    cd ~/sa/frontend && sed -i '3289,3300d;3319d' src/locales/en.json
     cd ~/sa && git diff --numstat -- frontend/src/locales
     cd ~/sa/frontend && node -e 'for (const f of process.argv.slice(1)) JSON.parse(require("fs").readFileSync(f, "utf8")); console.log("json ok")' src/locales/ja.json src/locales/en.json
 
