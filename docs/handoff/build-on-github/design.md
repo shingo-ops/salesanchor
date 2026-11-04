@@ -445,3 +445,39 @@ docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml p
 | D12 | K5 が 7 日で満たせないとき: 原因の切り分け（json-file ログ・箱の数・postgres）を別作業にするか | 別作業にする | 本設計の完了判定は K1〜K4・K6〜K8 で行い、K5 は原因作業へ引き継ぐ |
 | D13 | `workflow-lint.yml` に「deploy.yml に build の文字列が無い」規則を足すか（PO 本人の確認事項） | 足す（便3） | 足さない場合は GO の審査（人手）で守る |
 | D14 | 便0 の `scripts/ops/dockerd-rss-textfile.sh` と cron（prod1 の変更）を行うか | 行う | 行わない場合は PO の `!` の手動読み取りを入れ替えごとに頼む |
+
+---
+
+## 20. 設計審査（Opus・1回目・2026-11-04）
+
+- 判定: **REVISE（直してから実装可）**。同じ系統の AI による審査で、独立した第二者の審査ではない。
+- 照合した版: 作業場所の 712d9082c（origin/main 8d661d747 ＋ docs）。
+- 照合して合っていた行: `deploy.yml` の 18-20・249-254・400・433-455・483・486・624・642・660・679・684・694・911・926-934・942・1003-1004・1006-1010、`scripts/blue-green-cutover.sh:9,38,70,73,110`（`.env` の source は :38 で :70 より前＝`${BACKEND_IMAGE:?}` は効く）、`scripts/deploy/app-services-plan.sh:63`、`scripts/ops/place-secretary-token.sh:25`、`.github/workflows/monthly-secret-expiry.yml:21`、`.github/workflows/workflow-lint.yml:66-70`、`docker-compose.ai-reader.yml:13-14`、`frontend/Dockerfile:7-16,27`、`docker-compose.yml:198-205`。`docker-compose.override.yml` は置き場に無い（`ls` で確認）。
+
+### 直すこと（必須）
+- **A1 呼び出し元の走査が足りない**。`git grep -E 'docker (compose )?build'`（docs と md 以外）で、§12 便2 の一覧に無い次の呼び出しが見つかった。
+  - `scripts/rehearsal_phase2.sh:309,332`（`.github/workflows/test-phase2-rehearsal.yml:40` が CI で流す）
+  - `scripts/test_rollback_simulation.sh:282,346,399`（`.github/workflows/test-rollback.yml:39` が CI で流す。:399 は deploy の自動戻しの写し）
+  - `scripts/dry-run-blue-green.sh:51`
+  - `tests/sandbox/ai-reader-audit.sh:60`（`-f docker-compose.ai-reader.yml build ai-reader`。`-f` を付けると override は自動では読まれない＝D3 の公式説明）
+  - `deploy.yml:610` の注記
+  - それぞれの直し方（変える／変えない理由）を便2 に書くこと。
+- **A2 `${X:?}` は本番以外を全部止める**。`docker-compose.yml` に `${BACKEND_IMAGE:?}` を書くと、変数を持たない場所（A1 の CI 2 本・手元の開発・砂場試験）で `docker compose` の命令がすべて失敗する（D2「未設定・空なら止まる」）。
+  - 本番の守りは「deploy が 5 行の有無を確かめて欠ければ exit 1」（§12 便2 1.）で既に足りている。
+  - そこで compose の側は既定値付き（例 `${BACKEND_IMAGE:-astro-webapp-backend}`）にする。§5-2・§12 便2・§14・D9 をこの形に直す。
+  - D9 は技術判断なので、PO への質問から外す。
+- **A3 K8 の関所が無い**。組み立てが deploy の前に直列で入るので、1 回の時間が延びる恐れがある（§16 R8）。
+  - 便1 の実測（`build-*` の所要・キャッシュあり）と、今の本番での組み立ての所要（deploy の記録の Step 3 の時刻差）を、同じ 20 回で並べる。
+  - 「便2 後の見込みの中央値 ≤ 3.1 分」のときだけ便2 に進む、と便1 の完了条件に書く。満たさなければ便4 を先にする。
+
+### 直すこと（軽微）
+- **A4** frontend の `cache-to: type=gha` は、組み立ての第 1 段の `ENV VITE_*`（`frontend/Dockerfile:12-16`）を層の情報として書き込む。フォークの PR はこのキャッシュを読める（G15）。
+  - `VITE_FUNNEL_DASHBOARD` を secret として扱うなら、frontend には `cache-to` を付けないか、その理由を §7-3 に書く。
+
+### PO への質問の絞り込み（Opus 判断）
+- D5・D9・D10（作る）・D12（別作業にする）は、設計の範囲で Opus が推奨どおりに決める。
+- PO に聞くのは次の 4 つ。
+  - 鍵（D1〜D4・D6）
+  - 組織の画面の設定（D7）
+  - dockerd の入れ直しの時間帯（D8・D11）
+  - `workflow-lint.yml` を変えるか（D13）
