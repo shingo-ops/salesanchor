@@ -3,6 +3,7 @@
  *
  * 3 枚のカード（サーバー接続 / 自動セットアップ / チケットの案内文）と、
  * 折りたたみの「詳細設定」で構成する。
+ * 顧客用・自社用のタブで切り替える（自社用は DiscordOwnServerPanel）。
  *
  * 権限:
  *   tenant.profile.view → 閲覧
@@ -22,6 +23,8 @@ import { Badge } from "../../components/Badge";
 import type { BadgeVariant } from "../../components/Badge";
 import { TextField } from "../../components/TextField";
 import { Textarea } from "../../components/Textarea";
+import { Tabs } from "../../components/Tabs";
+import { DiscordOwnServerPanel } from "./DiscordOwnServerPanel";
 import { NAV_ICONS } from "../../constants/icons";
 import "./discord-config.css";
 import { LoadingBlock } from "../../components/loading";
@@ -129,6 +132,9 @@ export default function DiscordConfigPage() {
   const loadError = configQ.error || ticketQ.error ? t("discordConfig.loadError") : "";
   const cache = useApiCache();
   const invalidate = useInvalidateApi();
+  const [tab, setTab] = useState<"customer" | "own">(() =>
+    new URLSearchParams(window.location.search).get("tab") === "own" ? "own" : "customer",
+  );
 
   // サーバー接続
   const { form: guildId, setForm: setGuildId, ready: guildReady } = useSeededForm(
@@ -378,8 +384,22 @@ export default function DiscordConfigPage() {
   return (
     <PageLayout navKey="nav.discordConfig">
       <div className="dc-page">
+        <Tabs
+          items={[
+            { key: "customer", label: t("discordConfig.tabCustomer") },
+            { key: "own", label: t("discordConfig.tabOwn") },
+          ]}
+          activeKey={tab}
+          onChange={setTab}
+          variant="underline"
+          size="md"
+        />
         {loadError && <Badge variant="danger">{loadError}</Badge>}
 
+        {tab === "own" ? (
+          <DiscordOwnServerPanel />
+        ) : (
+          <>
         {/* ① サーバー接続 */}
         <Card>
           <div className="dc-card-head">
@@ -569,6 +589,8 @@ export default function DiscordConfigPage() {
             </Card>
           )}
         </div>
+          </>
+        )}
       </div>
     </PageLayout>
   );
