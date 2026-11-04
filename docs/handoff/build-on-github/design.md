@@ -705,3 +705,15 @@ docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml p
 - frontend: `KEY_IN_ASSETS 1`・`CONTROL_GCP_HITS 1`。対照の当たりは `CONTROL_LEAK_HIT gcp-api-key usr/share/nginx/html/assets/main-DZhzfcpk.js L33:C86070-86109` の 1 件だけ。
 - U28 は閉じる。E3 (a) は「場所が画面の JS かつ値が `AIza` ＋ 35 文字」のときだけ外す。1 回目の `generic-api-key` の当たりが別の形の値なら、2 回目にも残る。2 回目に 0 件なので、1 回目の当たりは `AIza` の形の値だった。その JS にある `AIza` の形の値は、対照の走査で当たった 1 か所だけ。
 - §24-6 の合格の条件はすべて満たした。§24-3 の 3 は終わり。次は 4（PO の鍵と組織の設定→PR→審査役→合流）。
+
+### 24-8 PO の設定の前に確かめた事実（2026-11-04 Opus）
+
+| 事実 | 根拠 |
+|---|---|
+| 置き場の secret に `VITE_FIREBASE_API_KEY` は無い。`VITE_FUNNEL_DASHBOARD` はある。§23 の「VITE は secret に置く」は「新しく登録する」が正しい | `gh secret list`（名前だけ・2026-11-04 15:5x JST）。FIREBASE を含む名前は QA の 3 つだけ |
+| 置き場の Variables は 0 件。環境（Environment）は github-pages だけで、VITE・GHCR の名前は無い | `gh variable list`・`gh api repos/shingo-ops/salesanchor/environments` |
+| 本番の画面の値: authDomain は `auth.salesanchor.jp`、projectId は `sales-ops-with-claude`、Firebase web API key は 1 種（指紋 sha256 頭 16 字 `ef457eddf9b65693`・値は記録しない） | `https://app.salesanchor.jp/` の公開ファイル `assets/main-CQpfABgR.js` |
+| `VITE_AUTH_PROVIDER` の本番の値は `self` | `.github/workflows/deploy.yml:380` |
+| 組織の画面の手順（Packages → Package Creation・Personal access tokens → Tokens (classic)） | GitHub 公式 2 頁（po-setup-bin1.md 4：の出典） |
+
+- 手順は po-setup-bin1.md に分けた。初回の組み立ての後、完成品の画面の JS の Firebase の鍵の指紋が `ef457eddf9b65693` と一致するかを Opus が確かめる（一致しなければ便2 に進まない）。
