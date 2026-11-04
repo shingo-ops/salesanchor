@@ -388,7 +388,7 @@ PO への返事の本文（ツール呼び出しの中ではない）の、**最
 
 ## 14. 改訂2: 件の窓へ、決まった一文だけを送る口（case-say）（2026-11-05）
 
-状態: 設計案（Opus 作成）。PO 承認前。実装・反映は PO の実装承認の後。
+状態: 設計案 第2版（Opus 作成・1回目の審査 REVISE を反映）。PO 承認前。実装・反映は PO の実装承認の後。
 きっかけ: PO 2026-11-05、選択肢「2. 私が打てるように見張りを見直す設計から始める（しんごさんの手間は減ります。ただ見張りを弱めることになるので、別の設計と審査が要り、試験は先になります）」に「2」と回答。
 
 ### 14-1 目的と、見える変化
@@ -409,7 +409,12 @@ PO への返事の本文（ツール呼び出しの中ではない）の、**最
 - 件の置き場 R は `/private/tmp/CC報告ファイル/discord-case/<id>`（server/case-sandbox.ts:62、tmp は realpath）。
 - 部屋の中から `tmux -L agent-console` への接続は失敗する（room-design.md:25 の G7。11/04 の受入で部屋は有効）。
 - Opus の Bash から `claude agents --json` は動く（2026-11-05 実測: exit 0・12行・全行に sessionId・status は busy 8／idle 4。キーは cwd・kind・name・pid・sessionId・startedAt・status。件は開いていない時点）。
-- 未確認: Opus の Bash から打つ `claude agents --json` に、部屋の中で動く件の Claude（設定の置き場が case-home）の行が出るか。§14-7 の K20 で最初に測る。
+- （第2版で追加）件の Claude は `claude agents --json` の行で見分ける作りになっていない。サーバーは件の会話の番号を、件の設定の置き場 CH = `<dataDir>/case-home/<id>`（server/case-sandbox.ts:66）の `sessions/<pid>.json` から、件の端末の子孫の pid だけで読む（server/case-agents.ts:38-42、server/hub.ts:659-676）。ふつうの agents の行に同じ番号があれば、件の番号を外す（server/hub.ts:674）。
+- （第2版で追加）サーバーは端末とプロセスを、tmux の窓の pid の子孫で結ぶ（server/process-tree.ts:40、server/hub.ts:323）。台帳の番号では結ばない。
+- （第2版で追加）件の作業場所 W は `<H>/worktrees/discord-cases/<id>`（server/case-clone.ts:46-48、server/case-sandbox.ts:61）。
+- （第2版で追加）`~/.claude/sessions/<pid>.json` のキー（2026-11-05 実測・24個のうち1つ）: status・pid・sessionId・cwd ほか。status の値は idle 5・busy 1・shell 6。同じ時に `claude agents --json` は idle 5・busy 7。待ちの印（wait を含むキー）は、どちらにも無かった（その時に待ちのセッションが無い）。
+- （第2版で追加）`CLAUDE_CONFIG_DIR` を空の置き場にして `claude agents --json` を手元で試そうとしたが、local-agent-guard に止められた。言い換えて試していない。
+- 未確認: 件の `CH/sessions/<pid>.json` が、件の入力待ちで status=idle になり、作業中と許可の確認の待ちで idle 以外になるか。件の Claude の OS 上の作業場所（cwd）が W か。§14-7 の K20 で最初に測る。
 
 ### 14-3 変更後の仕組み
 
@@ -417,18 +422,21 @@ PO への返事の本文（ツール呼び出しの中ではない）の、**最
 
 - 呼び方: `python3 ~/.claude/scripts/case-say.py <件の id> <手順ファイル名>`。送る文を引数で渡す手段は作らない。
 - 送る文は部品が組み立てる1種類だけ: `<R>/<手順ファイル名> を読み、書いてある手順を順に行ってください。`（R は 14-2 の置き場）。「1」や任意の文は送れない。
+- 置き場の決め方: dataDir は agent-console の既定の場所 `~/Library/Application Support/agent-console`（agent-console README.md:318）、H は自分のホームを部品の中で組み立てる。dataDir の realpath が無いときは断る。設定で dataDir を変えた Mac には対応しない（断る）。
+- 宛先は、書き換えられる台帳ではなく、OS が返す事実で結ぶ（第2版。審査 HIGH の直し）。台帳（open-sessions.json）は補助の確認にだけ使う。
 - 判定（この順。外れたら何も送らず exit 2、理由を標準エラーと agent-events.jsonl の `case_say_refused` に書く）:
   1. 件の id が UUID の形（小文字の16進と `-`）。手順ファイル名が `^[A-Za-z0-9._-]{1,64}\.md$` で、`..` を含まない。
-  2. dataDir/open-sessions.json に、その id の項目があり、roleId が `discord-case` と完全一致し、claudeSessionId がある。dataDir は agent-console の決まった場所を部品の中で組み立てる（コマンドに出さない）。
-  3. 呼び出し元がその件ではない: 環境変数 `CLAUDE_CODE_SESSION_ID` が件の claudeSessionId と違う。環境変数 `TMUX` があれば、そのソケットとセッション名が `agent-console` の `ac-<id>` でない。
-  4. `<R>/<手順ファイル名>` が、所有者が自分の通常のファイルで、リンクでない（lstat）。realpath が R の下。
-  5. `claude agents --json` を1回取り、sessionId が件の claudeSessionId と一致する行がちょうど1つあり、status が `idle` で waitingFor が無い（server/agents.ts:76-88 と同じ基準。busy・waiting・unknown・行が無い・取得失敗は不可）。
-- 送り方: `tmux -L agent-console send-keys -t =ac-<id> -l <文>` で文字だけを入れ、1秒待って `send-keys -t =ac-<id> Enter`。部品は引数の配列で呼び（shell を通さない）、`=` で名前の完全一致にする。
-- 記録: 送ったら agent-events.jsonl に `case_say`（ts・件の id・手順ファイル名・文の sha256 先頭16桁・送った時の手順ファイルの sha256 先頭16桁）を1行書く。本文は書かない。
+  2. 窓の pid: `tmux -L agent-console display -p -t =ac-<id> '#{pane_pid}'` が正の整数を1つ返す。子孫の pid の集合 F を `ps -axo pid=,ppid=` から作る（server/process-tree.ts:40 と同じ作り）。
+  3. 件の本体 P: F の中で、`CH/sessions/<pid>.json` がある pid がちょうど1つ（CH = `<dataDir>/case-home/<id>`）。その pid の OS 上の作業場所（`lsof -a -p <P> -d cwd -Fn` の n 行）の realpath が W（`<H>/worktrees/discord-cases/<id>`）と一致する。Opus など件でない窓では、本体の作業場所が W にならないので断られる。
+  4. 状態: `CH/sessions/<P>.json` を O_NOFOLLOW で開き、通常のファイルで、JSON の pid が P と一致し、status がちょうど `idle` で、名前に `wait` を含むキー（大小文字を区別しない）が無い。それ以外（busy・shell・waiting・読めない・形が違う）は断る。server/agents.ts:76-88 の考え方（idle で待ちが無いときだけ入れる）に合わせるが、読む元は agents の行ではなくこのファイル（件の行は agents で結ばないため。14-2）。
+  5. 補助の確認: dataDir/open-sessions.json にその id の項目があり、roleId が `discord-case` と完全一致する。呼び出し元の環境変数 `TMUX` があれば、そのセッション名が `ac-<id>` でない。環境変数は呼ぶ側が消せるので、補助にとどめる（本線は判定2〜4）。
+  6. 手順ファイル: R 自体と `<R>/<手順ファイル名>` がリンクでない（lstat）。手順ファイルを O_NOFOLLOW で開き、fstat で所有者が自分の通常のファイルであることを確かめ、その開いたファイルから sha256 を取る。realpath が R の下。
+- 送り方: `tmux -L agent-console send-keys -t =ac-<id> -l <文>` で文字だけを入れる。1秒待ち、Enter の直前に判定2〜4をもう一度行う。外れたら Enter を送らず、`case_say_refused`（理由 `state_changed_before_enter`）を書いて exit 2（入った文字は件の入力欄に残る。PO に知らせる）。通れば `send-keys -t =ac-<id> Enter`。部品は引数の配列で呼び（shell を通さない）、`=` で名前の完全一致にする。
+- 記録: 送ったら agent-events.jsonl に `case_say`（ts・件の id・手順ファイル名・文の sha256 先頭16桁・判定6で取った手順ファイルの sha256 先頭16桁・P）を1行書く。本文は書かない。
 
 (b) §4-5 の見張りは変えない。止める条件・止める文・kind・T7 の期待はそのまま。case-say.py を呼ぶコマンドの文字には見張りの語が入らないので、見張りに例外を足す必要がない。
 
-(c) 文書: ADR-1033 の What に5つ目として「件のセッションへの決まった一文の送信は case-say.py だけで行う（design §14）。§4-5 の見張りの外で端末へ送る、ほかの道を作らない」を足す。§4-5 の末尾に同じ1行を足す。agent-console 側の手順書（便2b-3b のやり直し）は、件の窓への一文を「Opus が case-say.py で送る」に書き換える（agent-console の別 PR）。
+(c) 文書: ADR-1033 の What（いま5項目）に6つ目として「件のセッションへの決まった一文の送信は case-say.py だけで行う（design §14）。§4-5 の見張りの外で端末へ送る、ほかの道を作らない」を足す。§4-5 の末尾に同じ1行を足す。agent-console 側の手順書（便2b-3b のやり直し）は、件の窓への一文を「Opus が case-say.py で送る」に書き換える（agent-console の別 PR）。
 
 (d) 使ってよい場面: PO が承認した手順書に書かれた、件のセッションへの段階の指示だけ。手順ファイルは Opus が R に書き、同じ内容を記録の置き場（~/kb/04-records の該当の回）にも残す。
 
@@ -452,7 +460,9 @@ PO への返事の本文（ツール呼び出しの中ではない）の、**最
 
 | # | リスク | 対処 |
 |---|---|---|
-| R11 | 許可の確認が出ている件の窓に Enter を送り、既定の選択肢を押す | 判定5（idle かつ waitingFor 無し）。判定から送信まで約1秒の間に件が自分で確認を出すことは、件が入力待ち（idle）なので起きない前提。前提が崩れても、押されるのは件の部屋の中の操作（部屋の G1〜G7 の範囲） |
+| R11 | 許可の確認が出ている件の窓に Enter を送り、既定の選択肢を押す | 判定4（status が idle で待ちのキーが無い）。Enter の直前に判定2〜4をやり直し、外れたら Enter を送らない（第2版）。それでも押されるのは件の部屋の中の操作（部屋の G1〜G7 の範囲） |
+| R16 | Opus が台帳（open-sessions.json）を書き換え、宛先を件でない窓（許可の確認が出ている Opus の窓など）へ向ける | 宛先を台帳で決めない（第2版）。窓の pid の子孫に、CH に状態ファイルを持ち、OS 上の作業場所が W の本体がちょうど1つあることを要る（判定2・3）。Opus の窓の本体の作業場所は W にならない |
+| R17 | 件が自分の CH の状態ファイルを書き換え、作業中なのに idle と見せる | 影響は件自身の窓だけ（R13 と同じ水準）。Opus の窓には届かない |
 | R12 | AI が case-say.py を真似た別の部品を作り、Opus の窓へ「1」を送る | R1 と同じ水準（受け入れ済み）。この改訂で新しく開く道ではない。case-say.py は文も宛先も固定 |
 | R13 | 件自身が R の手順ファイルを書き換え、自分への指示を変える | 件が自分でできることの範囲を超えない（件は R に書ける・自分の窓で動く）。送った時の手順ファイルの sha256 を case_say に残すので、kb に残した中身と比べられる |
 | R14 | PO が段階ごとの一文を見なくなる | 手順ファイルは PO が承認した手順書から作り、kb の記録に残す。case_say の件数を週次点検に出す |
@@ -464,9 +474,9 @@ PO への返事の本文（ツール呼び出しの中ではない）の、**最
 
 | # | 基準 | 検証方法 |
 |---|---|---|
-| K20 | Opus の Bash の `claude agents --json` に、開いている件の Claude の行が sessionId つきで出る（最初に測る。×なら案 E に戻し、PO に報告） | PO が件を1つ開いた状態で Opus が1回実行し、件の claudeSessionId と一致する行が1つあれば○ |
+| K20 | 判定2〜4 が本物の件で成り立つ（最初に測る。×なら案 E に戻し、PO に報告） | PO が件を1つ開き、件が入力待ちの時に、Opus が読むだけの確かめ（pane_pid・子孫・`CH/sessions/<pid>.json` の status・本体の cwd）を1回行う。本体がちょうど1つ・cwd が W・status が idle なら○。件に作業を頼んで作業中の間にもう1回読み、status が idle 以外なら○。どちらかが違えば× |
 | K21 | 件の窓に、決まった一文が1回だけ入り、件が手順ファイルを読み始める | 本物の件で1回。件の会話の画面にその一文が1回出て、件が手順ファイルを読んだことが件の返事で分かれば○ |
-| K22 | 件でない宛先（roleId が discord-case 以外・台帳に無い id・自分の窓）、形の違う引数、R の外・リンク・無いファイル、件が busy・waiting・unknown・行なし・取得失敗では、何も送らず exit 2 | case-say-tests.py（偽の open-sessions.json・偽の `claude agents` の出力・偽の tmux を差し替えて、送信の呼び出しが0回）。本物では Opus の窓の id を指定して1回、exit 2 で何も入らないこと |
+| K22 | 件でない宛先（台帳を書き換えて件の roleId にした件でない窓を含む・本体の cwd が W でない・CH に状態ファイルが無い・本体が0か2つ以上）、形の違う引数、R の外・リンク・R 自体がリンク・無いファイル、状態が idle 以外・待ちのキーあり・読めない、では何も送らず exit 2。Enter の直前に状態が変わったら Enter を送らず exit 2 | case-say-tests.py（偽の tmux・ps・lsof・置き場を差し替え、send-keys の呼び出しが0回。Enter 前の変化の場合は文字の send-keys 1回・Enter 0回）。本物では Opus の窓の id を指定して1回、exit 2 で何も入らないこと |
 | K23 | §4-5 の見張りが変わっていない | agent-danger-hook.sh・worktree-only-guard.sh の試作と本物の差分0行、test-agent-hooks.sh の T7 が合格 |
 | K24 | 送るたびに case_say が1行、断るたびに case_say_refused が1行書かれ、consent-audit.py --audit がその件数を出す | 単体試験と、K21・K22 の本物の回の後の --audit の出力 |
 
@@ -478,5 +488,11 @@ PO への返事の本文（ツール呼び出しの中ではない）の、**最
 
 ### 14-9 設計審査
 
-- クラウドで設計の審査を行う（この節を書いた後）。結果はこの節に追記する。
-- 未解決の前提: K20（`claude agents --json` に件の行が出るか）。×なら案 E に戻る。
+- 1回目（2026-11-05・クラウドの Opus・第1版 19855565d）: REVISE。HIGH 1・MEDIUM 2・LOW 4。
+  - HIGH: 宛先と状態を、Opus が書き換えられる台帳の番号で決めていた → 判定2〜4 で、窓の pid の子孫・CH の状態ファイル・OS 上の作業場所で結ぶ形に直した（第2版）。
+  - MEDIUM: 「agents.ts と同じ基準」は事実と違う（サーバーは pid で結ぶ）→ 判定4 の書き方を直した。agents の行では件を結ばないことも 14-2 に足した。
+  - MEDIUM: 文を入れてから Enter までに状態を確かめ直していない → Enter の直前に判定2〜4をやり直す。K22 に足した。
+  - LOW: 環境変数は補助（判定5）・R 自体のリンクと開いた後の sha（判定6）・ADR の What は6つ目・dataDir は既定の場所だけで、無ければ断る。すべて直した。
+  - 審査の未確認のうち、環境変数 CLAUDE_CODE_SESSION_ID は判定から外した。
+- 2回目: 第2版をクラウドで審査する。結果をここに足す。
+- 未解決の前提: K20（件の状態ファイルの status が入力待ちで idle になるか・本体の cwd が W か）。×なら案 E に戻る。
