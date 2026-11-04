@@ -27,12 +27,12 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from pydantic import BaseModel, Field, model_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth import self_tokens
 from app.auth.dependencies import require_super_admin
 from app.auth.viewer_signup_code import format_signup_code
 from app.database import get_db
 from app.discord_gateway import viewer_bot_texts
 from app.models import User
-from app.auth import self_tokens
 from app.services import viewer_admin, viewer_billing_form, viewer_message_templates, viewer_room_notice
 from app.services.auth_mail import VIEWER_BILLING_FORM_SUBJECT, send_viewer_billing_form_email
 from app.services.viewer_admin import ViewerAdminError
