@@ -652,3 +652,5 @@ docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml p
 
 直した後の手元の検査: 3 つの台本の bash -n・shellcheck が rc=0、yaml の actionlint が rc=0。
 未確認のまま残すもの: OS の証明書の束（例 `etc/ssl/certs/*.pem`）が名前の走査に当たる見込み（C6・U24）。合流の前の試しの実行で当たりを全部出してから、Opus が除く道を決める。
+
+2 回目（先頭 6a8733f1d）: **APPROVE**。R1〜R4 はすべて写しの実物で直りを確かめた（R1 は型の文字列が §7-2 と一致、R2 は消せないファイルを置いた試しで直す前 rc=1・直した後 rc=0、R3 は `CONTROL_FAILED rc=1`・`SURVEY_FAILURES 1`・set -e が戻ることを確認、R4 は `tags:` が `${{ env.IMAGE }}`）。shellcheck と actionlint はクラウドに無く、審査役は回していない。手元の Opus が 6a8733f1d の中身で回した結果は rc=0（上の「直した後の手元の検査」）。

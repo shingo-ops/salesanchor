@@ -1,6 +1,6 @@
 # card-bin1: GitHub で 5 つの完成品を組み立て、走査して、組織の非公開の倉庫へしまう（便1 実装）
 
-状態: カード発行（Opus、2026-11-04）。実装は PO の明示の実装承認の後にだけ始める。
+状態: カード発行（Opus、2026-11-04）・設計審査 APPROVE（2 回目・design.md §24-5）。実装は PO の明示の実装承認の後にだけ始める。
 親: [design.md](./design.md) §12 便1・§24（§24 が §12 便1 に優先する）。目標: [kgi.md](../../specs/build-on-github/kgi.md)。
 担当: クラウドの Sonnet。触ってよいのは下の「1. 触るファイル」だけ。本番（prod1・prod2）・GitHub の secret と Variables・組織の設定には触らない。PR は作らない（Opus が作る）。
 読んだ決まり: `docs/ai-agents/executor-checklist.md`（作業前・commit 前の点検）。この便で当てはまる点は次のとおり。新しいファイルは全文を書く。commit と push の後に `git log` で確かめる。クラウドでは PR を作らない。出力は長ければファイルに残す。パスは正確に書く。
