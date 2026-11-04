@@ -64,6 +64,15 @@ _COLS = "id, channel_name, webhook_url, event_types, is_active, created_at, upda
 _UPDATABLE = {"channel_name", "webhook_url", "event_types", "is_active"}
 
 
+def _channel_response(row) -> ChannelResponse:
+    """行から返す形を作る。PostgreSQL は created_at を日時の型で返すので ISO の文字に直す（design.md §9）"""
+    data = dict(row)
+    value = data.get("created_at")
+    if value is not None and not isinstance(value, str):
+        data["created_at"] = value.isoformat()
+    return ChannelResponse(**data)
+
+
 @router.get("/notification-event-types", response_model=list[EventTypeResponse],
             dependencies=[Depends(require_permission("notifications.view"))])
 async def list_event_types() -> list[EventTypeResponse]:
@@ -77,7 +86,7 @@ async def list_channels(db: AsyncSession = Depends(get_db),
                         tenant_id: int = Depends(get_current_tenant),
                         current_user: User = Depends(get_current_user)):
     result = await db.execute(text(f"SELECT {_COLS} FROM notification_channels ORDER BY channel_name"))
-    return [ChannelResponse(**row) for row in result.mappings().all()]
+    return [_channel_response(row) for row in result.mappings().all()]
 
 
 @router.post("/notification-channels", response_model=ChannelResponse, status_code=201,
@@ -100,7 +109,7 @@ async def create_channel(data: ChannelCreate, db: AsyncSession = Depends(get_db)
                            new_data={"channel_name": data.channel_name})
     await db.commit()
     await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
-    return ChannelResponse(**dict(row))
+    return _channel_response(row)
 
 
 @router.patch("/notification-channels/{channel_id}", response_model=ChannelResponse,
@@ -133,7 +142,7 @@ async def update_channel(channel_id: int, data: ChannelUpdate, db: AsyncSession 
                            record_id=channel_id, new_data=update_data)
     await db.commit()
     await reset_tenant_context(db, tenant_id)   # ADR-072 Phase 2.5
-    return ChannelResponse(**dict(row))
+    return _channel_response(row)
 
 
 @router.delete("/notification-channels/{channel_id}", status_code=204,
