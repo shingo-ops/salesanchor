@@ -123,6 +123,7 @@ mode: handoff
 - 部品の当てはめ（観測事実: 閲覧者管理ページ frontend/src/pages/super-admin/ViewerAccountsPage.tsx:15〜:28 が既に金型の PageLayout・Button・Badge・DataTable・EmptyState・Drawer・Stack・Modal・TextField・Radio・Select を読み込んでいる）:
   - 「配信するシート」: Drawer の中に Stack で、シートの名前・最後の配信時刻・結果を文字で、配信していない理由を Badge で出す。登録・変更は Modal＋TextField（ブックの番号・タブ名）＋Button。
   - 「請求先」: 7項目を文字で出すだけ（直すのはお客さんのフォーム）。まだ無いときは EmptyState。
+  - 請求先を読む口（2026-11-04 便2 カードで補った。画面に出すには読む API が要るため）: GET /api/v1/super-admin/viewers/{viewer_id}/billing-profile（require_super_admin）。行が無ければ 200 で null。名簿の一覧・詳細の応答には請求先を足さない（正本は表1つ・読む口も1つ）。
   - 「請求先フォームを送る」: Button。結果（部屋へ送れた／送れなかった／部屋なし、メールの手配）は今の発行の操作と同じ出し方にする。
   - 新しい部品は要らない。
 
@@ -190,7 +191,7 @@ mode: handoff
 | 鍵の用途 billing_form | migrations/20261016_150000_add_viewer_accounts.sql:48 の CHECK を変える新しい migration と、:54 の COMMENT の書き直し |
 | 文面テンプレートの鍵 billing_form_request | viewer_message_templates.py の LEDGER（:43〜:53）。migrations/20261020_120000_create_viewer_message_templates.sql:11 の「台帳の9件」の COMMENT を10件に。backend/tests/test_viewer_message_templates.py:22〜:25 の KEYS。frontend/src/pages/super-admin/ViewerTemplatesPage.test.tsx の KEYS（:15〜:18）と PLACEHOLDERS（:19〜:29）。backend/tests/viewer_template_fixtures.py の DEFAULT_BODIES。i18n の名前と使う場面（frontend/src/locales/ja.json:2805・:2816。:2797〜:2805 が名前、:2808〜:2816 が使う場面 と en.json の同じ位置の並び）。差し込み項目の説明 placeholders（ja.json:2818〜:2828 と en.json の同じ並び）に form_url（請求先フォームのURL・自動で入ります）と form_expires（請求先フォームのリンクの期限の日付）の2行 |
 | 配信先の判定の値（deliverable と理由） | §3-3 に挙げた3か所（配信前の点検・解析ダッシュボード・閲覧者管理ページ）。配信先の画面は変えない（2026-11-04 PO 決定。原文「配信先のページでは確認できなくて良い」） |
-| 公開の決めごと | ADR-1019:9、docs/specs/inventory-management/inventory-viewer/README.md:22、gas-viewer-fresh-fast/design.md:70 の改訂（recon §2）。プライバシーポリシー |
+| 公開の決めごと | ADR-1019:9、docs/specs/inventory-management/inventory-viewer/README.md:22、gas-viewer-fresh-fast/design.md:70 の改訂（recon §2）は便2 カードの文書 PR で直した。プライバシーポリシーは便2 の実装で直す（card-bin2.md §3-5） |
 
 ## 4. 代替案と選んだ理由
 
@@ -206,7 +207,7 @@ mode: handoff
 - 名簿の自動削除で請求書の宛先が消える → 3-4 のとおり、請求書は発行時点の写しを持ち、名簿が消えても残す。
 - 停止したお客さんのシートに書き続ける → Q1 で決定済み（停止したら自動で止め、停止を外したら自動で再開する）。§3-3 の判定1か所で守り、§7 の試験で確かめる。
 - 個人情報が増える → ポリシーの書き足し、ai_ro での隠し設定、PR に個人名を載せない。
-- 既存の決定との食い違い（ADR-1019:9・README:22・gas-viewer-fresh-fast/design.md:70）→ 同じ PR で改訂する。
+- 既存の決定との食い違い（ADR-1019:9・README:22・gas-viewer-fresh-fast/design.md:70）→ 便2 カードの文書 PR で改訂した（製品コードを含まない文書だけの PR）。
 
 ## 6. PO に決めてもらうこと（全部決まるまで先へ進まない）
 

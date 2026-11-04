@@ -46,3 +46,11 @@
 | 個人情報の扱い | 合格 | 請求先を AI 読み取りから隠す2つの一覧と、試験の件数（10→11・1068→1075）まで書いてある |
 
 審査役の生の応答: 手元の控え /tmp/CC報告ファイル/viewer-design-review/（run2.txt・run3.txt・run4.txt・run4-check.txt）。個人名を含みうるため PR には載せない。
+
+## 5. 設計の PR（#5121）の審査の LOW と、便2 カードで補ったこと（2026-11-04）
+
+- LOW-1: card-bin1.md の「§5 手順7」は「手順6」（API の形を作り直す手順）の誤り。直した。
+- LOW-2: ADR-1019:9・docs/specs/inventory-management/inventory-viewer/README.md:22・docs/handoff/gas-viewer-fresh-fast/design.md:70 の改訂を、どの PR で行うかが書かれていなかった。便2 カードの文書 PR（文書だけ）で改訂し、design.md §3-7・§5 にそう書いた。
+- LOW-3: PR 本文に「PO の実装承認はマージ・本番反映の GO を兼ねない」の一文が無かった。便1 の実装 PR の本文から入れる。
+- 補ったこと: 管理画面に請求先を出すには読む口が要るが、design.md §3-5 に書いていなかった。GET /api/v1/super-admin/viewers/{viewer_id}/billing-profile（super admin だけ・行が無ければ null）を design.md §3-5 と card-bin2.md §3-3 に足した。新しい表・新しい正本は増えない（読むのは viewer_billing_profiles の1か所）。
+- 便2 カードの手順3（対象ファイルが基準 d948cf9c7 から変わっていないか）を 2026-11-04 に origin/main で流し、差分は空だった。
