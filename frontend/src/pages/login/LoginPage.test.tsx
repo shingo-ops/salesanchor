@@ -6,7 +6,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import en from "../../locales/en.json";
 
 const mock = vi.hoisted(() => ({
-  self: false,
   passkey: false,
   selfPasskeyLogin: vi.fn(),
   getPasskeyPrompt: vi.fn(),
@@ -14,21 +13,8 @@ const mock = vi.hoisted(() => ({
   autoRegisterPasskey: vi.fn(),
   skipPasskeyPrompt: vi.fn(),
   registerPasskey: vi.fn(),
-  signInWithEmailAndPassword: vi.fn(),
-  sendPasswordResetEmail: vi.fn(),
 }));
 
-vi.mock("../../lib/firebase", () => ({ auth: { currentUser: null } }));
-vi.mock("../../lib/firebase-auth", () => ({
-  onAuthStateChanged: (_auth: unknown, cb: (u: null) => void) => {
-    queueMicrotask(() => cb(null));
-    return () => {};
-  },
-  signInWithEmailAndPassword: mock.signInWithEmailAndPassword,
-  sendPasswordResetEmail: mock.sendPasswordResetEmail,
-  signOut: vi.fn(),
-}));
-vi.mock("../../lib/auth/provider", () => ({ isSelfAuth: () => mock.self }));
 vi.mock("../../lib/auth/passkey", async (orig) => ({
   ...(await orig<typeof import("../../lib/auth/passkey")>()),
   passkeySupported: () => mock.passkey,
@@ -42,6 +28,8 @@ vi.mock("../../lib/auth/passkey", async (orig) => ({
 
 import { AuthProvider } from "../../contexts/AuthContext";
 import { SelfAuthError, expireSession } from "../../lib/auth/selfAuth";
+import { registerDevSession } from "../../lib/auth/devSessionSlot";
+import { registerTestDevSession } from "../../test-utils/devSession";
 import LoginPage from "./LoginPage";
 
 let instance = createInstance();
@@ -86,7 +74,6 @@ async function fillAndSubmit() {
 
 beforeEach(async () => {
   window.history.pushState({}, "", "/login");
-  mock.self = false;
   mock.passkey = false;
   mock.selfPasskeyLogin.mockReset();
   mock.getPasskeyPrompt.mockReset().mockResolvedValue({ can_auto: false, show_prompt: false });
@@ -94,8 +81,6 @@ beforeEach(async () => {
   mock.autoRegisterPasskey.mockReset().mockResolvedValue("created");
   mock.skipPasskeyPrompt.mockReset().mockResolvedValue(undefined);
   mock.registerPasskey.mockReset().mockResolvedValue(undefined);
-  mock.signInWithEmailAndPassword.mockReset().mockResolvedValue({});
-  mock.sendPasswordResetEmail.mockReset().mockResolvedValue(undefined);
   fetchMock = vi.fn();
   vi.stubGlobal("fetch", fetchMock);
   expireSession();
@@ -108,15 +93,15 @@ afterEach(() => {
   expireSession();
 });
 
-describe("LoginPage (Firebase default)", () => {
-  it("sign-in calls the Firebase function and not /api/v1/auth/login", async () => {
+describe("LoginPage (dev session)", () => {
+  it("sign-in goes to the dev session and not /api/v1/auth/login", async () => {
+    const dev = registerTestDevSession();
     renderLogin();
 
     await fillAndSubmit();
 
-    await waitFor(() => expect(mock.signInWithEmailAndPassword).toHaveBeenCalledTimes(1));
-    expect(mock.signInWithEmailAndPassword.mock.calls[0].slice(1)).toEqual(["a@example.com", "secret-password-1"]);
-    expect(fetchMock).not.toHaveBeenCalled();
+    await waitFor(() => expect(dev.signIn).toHaveBeenCalledWith("a@example.com", "secret-password-1"));
+    expect(fetchMock.mock.calls.some(([u]) => u === "/api/v1/auth/login")).toBe(false);
   });
 
   it("forgot-password and back-to-login are TextLink components", () => {
@@ -130,20 +115,27 @@ describe("LoginPage (Firebase default)", () => {
     expect(back.className).toContain("comp-text-link");
   });
 
-  it("reset email is sent through the Firebase function", async () => {
+  it("reset email goes to the self reset request endpoint", async () => {
+    fetchMock.mockImplementation((url: string) =>
+      Promise.resolve(
+        url === "/api/v1/auth/password-reset/request"
+          ? new Response(JSON.stringify({ status: "accepted" }), { status: 200 })
+          : new Response(JSON.stringify({ detail: "invalid_credentials" }), { status: 401 }),
+      ),
+    );
     renderLogin();
     fireEvent.click(screen.getByRole("button", { name: tr("login.forgotPassword") }));
     fireEvent.change(screen.getByLabelText(tr("login.email")), { target: { value: "a@example.com" } });
     fireEvent.click(screen.getByRole("button", { name: tr("login.sendResetEmail") }));
 
-    await waitFor(() => expect(mock.sendPasswordResetEmail).toHaveBeenCalledTimes(1));
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(await screen.findByText(tr("login.resetEmailSent"))).toBeTruthy();
+    expect(fetchMock.mock.calls.some(([u]) => u === "/api/v1/auth/password-reset/request")).toBe(true);
   });
 });
 
 describe("LoginPage (self login)", () => {
   beforeEach(() => {
-    mock.self = true;
+    registerDevSession(null);
   });
 
   it("202 shows the waiting screen with the number and no navigation", async () => {
@@ -172,7 +164,7 @@ describe("LoginPage (self login)", () => {
     expect(screen.getByRole("button", { name: tr("login.deviceApproval.useRecoveryCode") })).toBeTruthy();
   });
 
-  it("sign-in calls /api/v1/auth/login and not the Firebase function", async () => {
+  it("sign-in calls /api/v1/auth/login", async () => {
     // 起動時の refresh は 401、ログインは成功
     fetchMock.mockImplementation((url: string) =>
       Promise.resolve(
@@ -186,7 +178,6 @@ describe("LoginPage (self login)", () => {
     await fillAndSubmit();
 
     await waitFor(() => expect(fetchMock.mock.calls.some(([u]) => u === "/api/v1/auth/login")).toBe(true));
-    expect(mock.signInWithEmailAndPassword).not.toHaveBeenCalled();
   });
 
   it("login 401 shows one message without distinguishing the reason", async () => {
@@ -214,13 +205,12 @@ describe("LoginPage (self login)", () => {
     fireEvent.click(screen.getByRole("button", { name: tr("login.sendResetEmail") }));
 
     expect(await screen.findByText(tr("login.resetEmailSent"))).toBeTruthy();
-    expect(mock.sendPasswordResetEmail).not.toHaveBeenCalled();
   });
 });
 
 describe("LoginPage (passkey button)", () => {
   beforeEach(() => {
-    mock.self = true;
+    registerDevSession(null);
     fetchMock.mockImplementation(() =>
       Promise.resolve(new Response(JSON.stringify({ detail: "invalid_credentials" }), { status: 401 })),
     );
@@ -277,7 +267,7 @@ describe("LoginPage (passkey button)", () => {
 
 describe("LoginPage (enroll after password sign-in)", () => {
   beforeEach(() => {
-    mock.self = true;
+    registerDevSession(null);
     mock.passkey = true;
     // user を立てるため、sub と email を持つ読める JWT を返す（"a.b.c" だと user が null のままで守りを試せない）
     const jwt = `h.${btoa(JSON.stringify({ sub: "u1", email: "a@example.com" }))}.s`;

@@ -2,10 +2,7 @@ import { useState, FormEvent, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../../contexts/AuthContext";
-import { firebaseErrorMessage } from "../../lib/firebaseErrorMessage";
 import { authErrorMessage } from "../../lib/auth/authErrorMessage";
-import type { AuthErrorContext } from "../../lib/auth/authErrorMessage";
-import { isSelfAuth } from "../../lib/auth/provider";
 import { SelfAuthError, pollLoginRequest, recoverLoginRequest } from "../../lib/auth/selfAuth";
 import type { LoginApprovalRequired } from "../../lib/auth/selfAuth";
 import {
@@ -37,11 +34,6 @@ function formatRemaining(seconds: number): string {
   const minutes = Math.floor(safe / 60);
   const rest = String(safe % 60).padStart(2, "0");
   return `${minutes}:${rest}`;
-}
-
-// 自社ログインのときは自社 API の応答から、Firebase のときは Firebase のエラーコードから文言を作る
-function loginErrorMessage(err: unknown, t: (key: string) => string, context: AuthErrorContext): string {
-  return isSelfAuth() ? authErrorMessage(err, t, context) : firebaseErrorMessage(err, t);
 }
 
 export default function LoginPage() {
@@ -194,8 +186,8 @@ export default function LoginPage() {
         return;
       }
     } catch (err) {
-      // KGI-4: Firebase の生エラー文字列を i18n キー経由に変換
-      setError(loginErrorMessage(err, t, "login"));
+      // KGI-4: 自社 API の誤りを i18n キー経由の文言に変換
+      setError(authErrorMessage(err, t, "login"));
       setEnrolling(false);
       setLoading(false);
       return;
@@ -234,7 +226,7 @@ export default function LoginPage() {
       await sendPasswordReset(email);
       setResetSent(true);
     } catch (err) {
-      setError(loginErrorMessage(err, t, "resetRequest"));
+      setError(authErrorMessage(err, t, "resetRequest"));
     } finally {
       setLoading(false);
     }

@@ -367,7 +367,7 @@ function dashboardMocks() {
 
 test.describe("Scene 1: Dashboard Overview", () => {
   test("LoginPage は Email / Password / ログインボタンが見える", async ({ page }) => {
-    // 0:02–0:10 のフレーム: 認証前のログイン画面（Firebase auth bypass 不要）
+    // 0:02–0:10 のフレーム: 認証前のログイン画面（偽ログインの利用者の注入は不要）
     await page.goto("/login");
 
     await expect(page.getByLabel("メールアドレス")).toBeVisible();
