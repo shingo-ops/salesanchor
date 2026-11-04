@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
-from app.main import app
+
+def _app():
+    from app.main import app
+
+    return app
 
 ALLOWED_KEYS = {
     "conditions.view",
@@ -25,7 +29,7 @@ def _key_sets(route) -> list[set[str]]:
 
 
 def _find(method: str, path: str):
-    for route in app.routes:
+    for route in _app().routes:
         if getattr(route, "path", None) == path and method in getattr(route, "methods", set()):
             return route
     raise AssertionError(f"route not found: {method} {path}")
@@ -55,7 +59,7 @@ def test_catalog_requires_conditions_view():
 
 def test_all_keys_on_conditions_and_categories_routes_are_known():
     checked = 0
-    for route in app.routes:
+    for route in _app().routes:
         path = getattr(route, "path", "")
         if not (path.startswith("/api/v1/conditions") or path.startswith("/api/v1/product-categories")):
             continue
