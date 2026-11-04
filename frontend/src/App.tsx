@@ -107,6 +107,7 @@ import NoteMasterImportPage from "./pages/super-admin/NoteMasterImportPage";
 import ProductCategoriesImportPage from "./pages/super-admin/ProductCategoriesImportPage";
 import ProductCategoriesImportTenantPage from "./pages/product-categories/ProductCategoriesImportPage";
 import AccountSettingsPage from "./pages/account-settings/AccountSettingsPage";
+import LoginRequestDetailPage from "./features/auth/LoginRequestDetailPage";
 import BuybackPricesPage from "./pages/buyback-prices/BuybackPricesPage";
 import CustomerHubPage from "./pages/crm/CustomerHubPage";
 // ADR-069: デザインシステム パーツ保管庫（開発環境専用）
@@ -295,6 +296,7 @@ function App() {
                     <Route path="/settings" element={<NotificationsPage />} />
                     {/* 個人アカウント設定 */}
                     <Route path="/account/settings" element={<AccountSettingsPage />} />
+                    <Route path="/account/login-requests/:id" element={<LoginRequestDetailPage />} />
 
                     {/* その他 */}
                     <Route

@@ -33,7 +33,6 @@ const {
   mockLoadUnread: vi.fn(),
 }));
 
-vi.mock("../features/auth/LoginApprovalWatcher", () => ({ default: () => null }));
 vi.mock("../features/auth/RecoveryCodePrompt", () => ({ default: () => null }));
 vi.mock("react-i18next", () => ({
   initReactI18next: { type: "3rdParty", init: vi.fn() },

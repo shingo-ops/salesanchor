@@ -688,7 +688,7 @@
     "passkeyPromptSkip": "今はスキップ",
     "deviceApproval": {
       "title": "いつもの機械で許可してください",
-      "body": "この機械は初めてのログインです。いつもの機械に出る小窓で、下の番号を選んでください。",
+      "body": "この機械は初めてのログインです。いつもの機械のお知らせから依頼を開き、下の番号を選んでください。",
       "numberLabel": "確認の番号",
       "remaining": "残り {{time}}",
       "rateLimited": "少し待ってから続けます。",
@@ -711,10 +711,18 @@
         "time": "時刻",
         "unknown": "不明",
         "pickNumber": "ログインしようとしている機械に出ている番号を選んでください。",
-        "notMe": "私ではない",
+        "notMe": "私ではありません",
         "rejectedTitle": "ログインを拒否しました",
         "rejectedBody": "心当たりがない場合は、念のためパスワードを変えてください。",
         "changePassword": "パスワードを変える"
+      },
+      "detail": {
+        "title": "新しい機械からのログイン",
+        "itsMe": "私です",
+        "approvedTitle": "ログインを許可しました",
+        "approvedBody": "新しい機械はこのまま使えます。",
+        "wrongNumberBody": "番号が違ったため、この依頼を取り消しました。もう一度ログインしてください。",
+        "closed": "この依頼は終わっています。"
       }
     }
   },
@@ -5872,7 +5880,8 @@
     "title": "お知らせ",
     "empty": "知らせはありません",
     "kind": {
-      "discord_outside_ticket_post": "{{actor}} さんが #{{channel}} に書き込みました"
+      "discord_outside_ticket_post": "{{actor}} さんが #{{channel}} に書き込みました",
+      "login_request": "新しい機械（{{device}}）からログインの依頼があります"
     },
     "fallback": {
       "title": "担当者がいないときに受け取る人",

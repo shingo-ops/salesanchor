@@ -36,7 +36,6 @@ import { useSuperAdmin } from "../hooks/useSuperAdmin";
 import { useSSE } from "../hooks/useSSE";
 import { RealtimeProvider } from "../lib/realtime/RealtimeProvider";
 import NoticeBell from "./NoticeBell";
-import LoginApprovalWatcher from "../features/auth/LoginApprovalWatcher";
 import RecoveryCodePrompt from "../features/auth/RecoveryCodePrompt";
 import { listConversations } from "../lib/messages";
 import ConfirmModal from "./ConfirmModal";
@@ -206,7 +205,6 @@ export default function DesktopShell() {
 
   return (
     <RealtimeProvider>
-    <LoginApprovalWatcher />
     <RecoveryCodePrompt />
     <div className="app-shell">
       {/* ============ Sidebar ============ */}
