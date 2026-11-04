@@ -661,30 +661,27 @@ async def get_extraction_product_ranking(db: AsyncSession, days: int = 30) -> li
 
 async def get_distribution_summary(db: AsyncSession) -> dict:
     """配信工程のサマリーを返す。SELECT のみ。"""
-    # 1. distribution_targets
-    target_rows = (
-        await db.execute(
-            text(
-                "SELECT id, name, is_active, last_distributed_at, last_distributed_count, last_result"
-                f" FROM {TCG_SCHEMA}.tcg_distribution_targets"
-                " ORDER BY name"
-            )
-        )
-    ).fetchall()
+    # 1. distribution_targets（配信するかの判定は list_targets の値を読む。ここでは書き写さない）
+    from app.services.tcg_distribution_svc import list_targets
+
+    target_rows = await list_targets(db)
 
     targets = [
         {
-            "id": str(row.id),
-            "name": row.name,
-            "is_active": row.is_active,
-            "last_distributed_at": row.last_distributed_at.isoformat() if row.last_distributed_at else None,
-            "last_distributed_count": int(row.last_distributed_count) if row.last_distributed_count else 0,
-            "last_result": row.last_result,
+            "id": str(row["id"]),
+            "name": row["name"],
+            "is_active": row["is_active"],
+            "viewer_account_id": row["viewer_account_id"],
+            "deliverable": row["deliverable"],
+            "reason": row["reason"],
+            "last_distributed_at": row["last_distributed_at"].isoformat() if row["last_distributed_at"] else None,
+            "last_distributed_count": int(row["last_distributed_count"]) if row["last_distributed_count"] else 0,
+            "last_result": row["last_result"],
         }
         for row in target_rows
     ]
 
-    active_count = sum(1 for t in targets if t["is_active"])
+    active_count = sum(1 for t in targets if t["deliverable"])
     total_distributed = sum(t["last_distributed_count"] for t in targets)
 
     # 2. distribution_settings

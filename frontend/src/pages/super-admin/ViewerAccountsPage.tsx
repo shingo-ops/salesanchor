@@ -26,6 +26,7 @@ import { Radio } from "../../components/Radio";
 import { Select } from "../../components/Select";
 import { SubMenu, type SubMenuGroup } from "../../components/SubMenu";
 import { LoadingBlock } from "../../components/loading";
+import { useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
 
 interface ViewerItem {
   id: number;
@@ -41,6 +42,33 @@ interface ViewerItem {
   flag_many_ips: boolean;
   flag_shared_ip: boolean;
 }
+
+/** 配信先（シート）。配信先の画面と同じ表（/tcg/distribution/targets）を読み書きする。 */
+interface SheetItem {
+  id: string;
+  name: string;
+  spreadsheet_id: string;
+  sheet_name: string;
+  is_active: boolean;
+  viewer_account_id: number | null;
+  last_distributed_at: string | null;
+  last_distributed_count: number | null;
+  last_result: string | null;
+  deliverable: boolean;
+  reason: "manual_off" | "suspended" | "not_contracted" | null;
+}
+
+const SHEET_REASON_VARIANT: Record<string, BadgeVariant> = {
+  manual_off: "warning",
+  suspended: "danger",
+  not_contracted: "neutral",
+};
+
+const SHEET_REASON_KEY: Record<string, string> = {
+  manual_off: "sheetReasonManualOff",
+  suspended: "sheetReasonSuspended",
+  not_contracted: "sheetReasonNotContracted",
+};
 
 type Action = "activate" | "extend";
 type ExtendMode = "days" | "date";
@@ -125,6 +153,11 @@ export default function ViewerAccountsPage() {
   const [saveError, setSaveError] = useState("");
   const [templateKey, setTemplateKey] = useState("");
   const [templateError, setTemplateError] = useState<string | null>(null);
+  const [sheetModalOpen, setSheetModalOpen] = useState(false);
+  const [sheetBookDraft, setSheetBookDraft] = useState("");
+  const [sheetTabDraft, setSheetTabDraft] = useState("");
+  const [sheetSaving, setSheetSaving] = useState(false);
+  const [sheetFormError, setSheetFormError] = useState("");
 
   const statusParam = searchParams.get("status");
   const activeKey: MenuKey = (MENU_STATUSES as readonly string[]).includes(statusParam ?? "")
@@ -163,6 +196,56 @@ export default function ViewerAccountsPage() {
     setTemplateKey("");
     setTemplateError(null);
   }, [detailId]);
+
+  // 開いた人のシートを読む（配信先の表から viewer_account_id が一致する1件。1人1シートまで）
+  const sheetQuery = useApiQuery<SheetItem[]>("/tcg/distribution/targets", { enabled: detailId !== null });
+  const invalidateApi = useInvalidateApi();
+  const sheet = detailId === null ? null : (sheetQuery.data?.find(r => r.viewer_account_id === detailId) ?? null);
+  const sheetLoading = detailId !== null && sheetQuery.isPending;
+  const sheetLoadError = sheetQuery.isError;
+
+  useEffect(() => {
+    setSheetModalOpen(false);
+    setSheetFormError("");
+  }, [detailId]);
+
+  const openSheetModal = () => {
+    setSheetBookDraft(sheet?.spreadsheet_id ?? "");
+    setSheetTabDraft(sheet?.sheet_name ?? "");
+    setSheetFormError("");
+    setSheetModalOpen(true);
+  };
+
+  const sheetFormValid = sheetBookDraft.trim() !== "" && sheetTabDraft.trim() !== "";
+
+  const saveSheet = async () => {
+    if (!detail || !sheetFormValid) return;
+    setSheetSaving(true);
+    setSheetFormError("");
+    try {
+      if (sheet) {
+        await api.put(`/tcg/distribution/targets/${sheet.id}`, {
+          spreadsheet_id: sheetBookDraft.trim(),
+          sheet_name: sheetTabDraft.trim(),
+        });
+      } else {
+        await api.post("/tcg/distribution/targets", {
+          name: detail.line_name,
+          spreadsheet_id: sheetBookDraft.trim(),
+          sheet_name: sheetTabDraft.trim(),
+          viewer_account_id: detail.id,
+        });
+      }
+      setSheetModalOpen(false);
+      await invalidateApi(["tcg", "distribution", "targets"]);
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 409) setSheetFormError(t(`${f}.sheetConflictError`));
+      else if (e instanceof ApiError && e.status === 422) setSheetFormError(t(`${f}.sheetViewerNotFoundError`));
+      else setSheetFormError(t(`${f}.sheetSaveError`));
+    } finally {
+      setSheetSaving(false);
+    }
+  };
 
   const draftTrimmed = lineNameDraft.trim();
   const draftLength = Array.from(draftTrimmed).length;
@@ -587,9 +670,103 @@ export default function ViewerAccountsPage() {
                 {!detail.flag_many_ips && !detail.flag_shared_ip && t(`${f}.flagsNone`)}
               </Stack>
             </div>
+            <div className="form-row" data-testid="viewers-detail-sheet">
+              <label>{t(`${f}.sheetTitle`)}</label>
+              {sheetLoading ? (
+                <LoadingBlock />
+              ) : sheetLoadError ? (
+                <div className="error-message" role="alert" data-testid="viewers-detail-sheet-error">
+                  {t(`${f}.sheetLoadError`)}
+                </div>
+              ) : sheet ? (
+                <Stack direction="column" gap="2">
+                  <div data-testid="viewers-detail-sheet-name">{sheet.name}</div>
+                  <div data-testid="viewers-detail-sheet-last">
+                    {t(`${f}.sheetLastDistributed`)}: {formatDate(sheet.last_distributed_at) ?? t(`${f}.empty`)}
+                  </div>
+                  <div data-testid="viewers-detail-sheet-result">
+                    {t(`${f}.sheetLastResult`)}: {sheet.last_result ?? t(`${f}.empty`)}
+                  </div>
+                  <div>
+                    {sheet.reason ? (
+                      <Badge variant={SHEET_REASON_VARIANT[sheet.reason] ?? "neutral"}>
+                        {t(`${f}.${SHEET_REASON_KEY[sheet.reason] ?? "sheetReasonManualOff"}`)}
+                      </Badge>
+                    ) : (
+                      <Badge variant="success">{t(`${f}.sheetDelivering`)}</Badge>
+                    )}
+                  </div>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={openSheetModal}
+                    data-testid="viewers-detail-sheet-edit"
+                  >
+                    {t(`${f}.sheetEdit`)}
+                  </Button>
+                </Stack>
+              ) : (
+                <EmptyState
+                  title={t(`${f}.sheetEmpty`)}
+                  size="compact"
+                  action={
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={openSheetModal}
+                      data-testid="viewers-detail-sheet-add"
+                    >
+                      {t(`${f}.sheetAdd`)}
+                    </Button>
+                  }
+                />
+              )}
+            </div>
           </div>
         )}
       </Drawer>
+
+      <Modal
+        open={sheetModalOpen}
+        onClose={() => setSheetModalOpen(false)}
+        title={sheet ? t(`${f}.sheetEdit`) : t(`${f}.sheetAdd`)}
+        size="sm"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setSheetModalOpen(false)}>
+              {t("common.cancel")}
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => { void saveSheet(); }}
+              disabled={sheetSaving || !sheetFormValid}
+              data-testid="viewers-sheet-save"
+            >
+              {t("common.save")}
+            </Button>
+          </>
+        }
+      >
+        <Stack direction="column" gap="2">
+          <TextField
+            label={t(`${f}.sheetBookId`)}
+            value={sheetBookDraft}
+            onChange={e => setSheetBookDraft(e.target.value)}
+            data-testid="viewers-sheet-book"
+          />
+          <TextField
+            label={t(`${f}.sheetTabName`)}
+            value={sheetTabDraft}
+            onChange={e => setSheetTabDraft(e.target.value)}
+            data-testid="viewers-sheet-tab"
+          />
+          {sheetFormError && (
+            <div className="error-message" role="alert" data-testid="viewers-sheet-form-error">
+              {sheetFormError}
+            </div>
+          )}
+        </Stack>
+      </Modal>
 
       <Modal
         open={reissueTarget !== null}
