@@ -115,7 +115,7 @@ recon: `docs/handoff/schedule-labels-week-layout/recon.md`（以下 R§1〜R§4�
 
 ### 4-4. `frontend/src/features/schedule/calendars.config.test.ts`（新規）
 
-`CALENDARS` の全部の `labelKey` について、`ja.json` と `en.json` の両方に空でない文字があることを確かめる。書き方は `frontend/src/pages/schedule/schedule-utils.test.ts:1-3` にならい JSON を import する。キーは `.` で区切ってたどる。種類ごとに 1 件ずつ（7 種類 × 2 言語）落ちたものが分かる形にする（`it.each` など）。
+`CALENDARS` の全部の `labelKey` について、`frontend/src/locales/ja.json` と `frontend/src/locales/en.json` の両方に空でない文字があることを確かめる。書き方は `frontend/src/pages/schedule/schedule-utils.test.ts:1-3` にならい JSON を import する。キーは `.` で区切ってたどる。種類ごとに 1 件ずつ（7 種類 × 2 言語）落ちたものが分かる形にする（`it.each` など）。
 
 ## 5. 代替案と選んだ理由
 
@@ -130,21 +130,22 @@ recon: `docs/handoff/schedule-labels-week-layout/recon.md`（以下 R§1〜R§4�
 - 1 時間の箱で時刻が見えなくなる → §4-3(a) の通り、吹き出しで見える。PO が時刻も必要と言えば次の便で箱の並びを直す
 - 戻し方: この PR の revert（DB・裏側の変更なし）
 
-## 7. 外部事例
+## 7. 外部・過去事例の参照と我々への応用
 
 不要。理由: 既に動いていた言葉の復元と、CSS の並びの不具合の直しで、新しい仕組みを入れないため。
 
 ## 8. 設計審査（同一 AI による自己審査・独立した第二者レビューではない）
 
-- 既存仕様・ADR との整合: ADR-027（キーを ja/en 同時に足す）、ADR-067・ADR-144（色の直値・生の部品を足さない。CSS は既存トークンのみ、新しい色なし）に沿う
+- 既存仕様・ADR との整合: ADR-027（キーを ja/en 同時に足す）、ADR-067・ADR-144（色の直値・生の部品を足さない。CSS は既存トークンのみ、新しい色なし）に沿う。ADR-135（migrations・deploy.yml・本番 scripts を含まない画面だけの直しなので、main への合流＝本番へ出す宣言として扱える）
 - 根拠: 3 件とも file:line・git の記録・実測（題名 0px → 15px）で裏付け済み
 - 受入条件の検証可能性: K1〜K3・K5 は PO の画面、K4 は試験の生出力で ○× が付く
 - 実装範囲: 4 ファイル、変更前後を全部書いた
 - 判定: **APPROVE**。未解決事項なし
 
-## 9. 維持する仕組み
+## 9. 維持の仕組み
 
 - K4 の試験が CI（frontend の unit）で毎回走る。種類の言葉が再び消えると PR が赤くなる
+- 守り手: frontend/src/features/schedule/calendars.config.test.ts
 
 ## 10. 実装カード（クラウドの Sonnet 向け）
 
