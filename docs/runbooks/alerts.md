@@ -352,3 +352,21 @@
 - 最初に見るもの：同じ時間に CeleryHeartbeatStale が鳴っているか（鳴っていればその節）。prod1 の celery-worker のログの `[ops_mail]` の行（接続の失敗・ログインの失敗）。
 - 直し方：パスワードを変えた・受け箱を消したなら、PO が受け箱と GitHub の secret を直し、Opus が通常のデプロイで本番の設定に入れる。直れば自動で解決する。
 - 止め方：`amtool silence add alertname=OpsMailPollStale --duration=PERIOD --comment=REASON`
+
+## PermissionKeyMissing
+
+- 札：ticket
+- 何が起きているか：コードが require_permission で求めるキーが、権限の一覧（public.permissions）に無い。その経路は所有者でも 403 になる。
+- 影響：その権限が要る画面・操作が、誰にも開けない。
+- 最初に見るもの：backend のログの「権限の一覧に無いキー:」の行（抜けているキーの名前が並ぶ）。
+- 直し方：キーが正しければ、`docs/handoff/permission-keys-conditions-categories/data-change-1/README.md` と同じ形の 1 回だけのデータ変更で一覧に足す（PO の使い捨て許可が要る）。キーの書き間違いなら、コードを直す。直れば、次の 300 秒の数え直しで 0 に戻り自動で解決する。
+- 止め方：`amtool silence add alertname=PermissionKeyMissing --duration=PERIOD --comment=REASON`
+
+## PermissionKeyCheckFailed
+
+- 札：ticket
+- 何が起きているか：権限の抜けの見張りが DB を読めない状態（2 秒の時間切れか例外）が 30 分続いた。
+- 影響：権限の抜けがあっても PermissionKeyMissing が鳴らない。
+- 最初に見るもの：backend のログの「権限キーの見張り: 数えられなかった」の行と、DB の具合（BackendHighErrorRate など）。
+- 直し方：DB が戻れば、次の 300 秒の数え直しで 0 以上に戻り自動で解決する。
+- 止め方：`amtool silence add alertname=PermissionKeyCheckFailed --duration=PERIOD --comment=REASON`

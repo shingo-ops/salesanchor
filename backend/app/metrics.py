@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import time
 
 from fastapi import FastAPI, Request, Response
@@ -6,6 +7,8 @@ from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, Histogram, ge
 
 from app.cache import get_redis
 from app.celery_health import read_celery_health
+
+logger = logging.getLogger(__name__)
 
 REQUEST_COUNT = Counter(
     "http_requests_total",
@@ -69,6 +72,17 @@ OPS_MAIL_LAST_POLL_OK_TS = Gauge(
 _VIEWER_TS_READ_TIMEOUT_SEC = 1.0
 
 
+PERMISSION_KEYS_MISSING = Gauge(
+    "salesanchor_permission_keys_missing",
+    "コードが求めるのに権限の一覧に無いキーの数（-1 はまだ数えていない・数えられなかった）",
+)
+PERMISSION_KEYS_MISSING.set(-1)
+
+_PERMISSION_CHECK_INTERVAL_SEC = 300.0
+_PERMISSION_CHECK_TIMEOUT_SEC = 2.0
+_permission_check_last_at: float | None = None
+
+
 async def _read_ts(redis_client, key: str) -> float:
     """Redis の時刻キーを数として読む。無い・数でない・例外は 0（「ずっと前」と同じ扱い）。"""
     try:
@@ -100,6 +114,30 @@ async def _update_ops_mail_gauges() -> None:
         return
     OPS_MAIL_LAST_SAKURA_MAIL_TS.set(await _read_ts(redis_client, LAST_SAKURA_MAIL_TS_KEY))
     OPS_MAIL_LAST_POLL_OK_TS.set(await _read_ts(redis_client, LAST_POLL_OK_TS_KEY))
+
+
+async def _update_permission_keys_gauge() -> None:
+    global _permission_check_last_at
+    now = time.monotonic()
+    if _permission_check_last_at is not None and now - _permission_check_last_at < _PERMISSION_CHECK_INTERVAL_SEC:
+        return
+    _permission_check_last_at = now
+    from app.auth.permission_catalog import count_missing_permission_keys  # noqa: PLC0415
+    from app.database import AsyncSessionLocal  # noqa: PLC0415
+
+    async def _count() -> list[str]:
+        async with AsyncSessionLocal() as session:
+            return await count_missing_permission_keys(session)
+
+    try:
+        missing = await asyncio.wait_for(_count(), _PERMISSION_CHECK_TIMEOUT_SEC)
+    except Exception:
+        logger.warning("権限キーの見張り: 数えられなかった", exc_info=True)
+        PERMISSION_KEYS_MISSING.set(-1)
+        return
+    PERMISSION_KEYS_MISSING.set(len(missing))
+    if missing:
+        logger.warning("権限の一覧に無いキー: %s", ", ".join(missing))
 
 
 def _handler_name(request: Request) -> str:
@@ -149,4 +187,5 @@ def register_metrics(app: FastAPI) -> None:
         except Exception:
             OPS_MAIL_LAST_SAKURA_MAIL_TS.set(0)
             OPS_MAIL_LAST_POLL_OK_TS.set(0)
+        await _update_permission_keys_gauge()
         return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
