@@ -385,3 +385,98 @@ PO への返事の本文（ツール呼び出しの中ではない）の、**最
 - 対象外: 引数なしの初回の流れ、po-rollback-consent.sh、settings.json。
 - 成功条件: K18 偽の HOME で (a) 差あり→入れ替えて合格 (b) 差なし→何も変えない (c) consent_check.py 無し→exit 1 (d) 本物の試験が不合格→入れ替えた分だけ戻る (e) 引数なし→従来どおり、が全件 PASS。K19 PO の実行後、~/.claude/scripts の2ファイルが試作と cmp で一致し、本物の試験が合格。
 - 戻し方: スクリプトはこの PR の revert。反映後のフックは、実行時に出るバックアップのフォルダから2ファイルを戻す。
+
+## 14. 改訂2: 件の窓へ、決まった一文だけを送る口（case-say）（2026-11-05）
+
+状態: 設計案（Opus 作成）。PO 承認前。実装・反映は PO の実装承認の後。
+きっかけ: PO 2026-11-05、選択肢「2. 私が打てるように見張りを見直す設計から始める（しんごさんの手間は減ります。ただ見張りを弱めることになるので、別の設計と審査が要り、試験は先になります）」に「2」と回答。
+
+### 14-1 目的と、見える変化
+
+- 目的: Discord の件のセッション（agent-console の役割 discord-case）の試験で、段階ごとの指示の一文を Opus が送れるようにし、PO の打ち込みを無くす。§4-5 の偽造を防ぐ見張りの水準は下げない。
+- 前: 試験の段階ごとに、PO が件の窓へ「<置き場>/<ファイル> を読み、書いてある手順を順に行ってください。」を打つ（前の手順書で7回）。
+- 後: Opus が `python3 ~/.claude/scripts/case-say.py <件の id> <手順ファイル名>` を1行打つと、その件の窓にだけ、決まった形の一文が入る。PO は件をアプリで開くだけ。
+
+### 14-2 現状（観測事実）
+
+- §4-5 の Bash の見張りは、コマンドの文字に `tmux` と `send-keys` 等があれば止める（docs/handoff/conversation-consent/hooks/agent-danger-hook.sh:256-257）。目的は AI が端末へ「1」を送り込んで同意を作ること（§7 R1、ADR-1033:21・:34）を防ぐこと。
+- 2026-11-04 の件の受入で、Opus から件の窓への tmux の送信がこの見張りで止まった。言い換えず PO が打った（~/kb/04-records/cloud-case-ai-20261030/164-room-retest/10-v0501-acceptance.md:29）。
+- 件のセッションは同意票を使わない・作らない（agent-console docs/handoff/discord-pdca/design.md:12）。件の窓で「1」が打たれても、同意の判定（§4-2）は Opus の会話記録だけを見るので、Opus の同意にはならない（§4-2 の 2・4〜6）。
+- 予約（ac-reserve）で件を開いて指示を渡す道は、作りで閉じている: 件の役割は `reservable:false` が必須（agent-console server/config.ts:160-161）、reserveRoles に入れられない（同 :317-319）、起動の入口でも拒む（server/launch.ts:48）。
+- 画面のチャットの送信口（/chat/queue）は認証の内側（server/chat-routes.ts:31）。サーバー秘密かセッショントークンが要る（server/auth.ts:63）。Opus はどちらも持たず、秘密を読むことは禁止なので使わない。
+- サーバーは、端末へ人の指示を入れてよいかを `claude agents --json` の行で判定する: status が idle で waitingFor が無いときだけ（server/agents.ts:76-88）。waiting のとき Enter を送ると、許可の確認の既定の選択肢を押す恐れがある（同 :76-77 の注釈）。行には pid・status・sessionId・waitingFor がある（同 :36-47）。
+- 開いているセッションの台帳 dataDir/open-sessions.json の件の項目には branch・claudeSessionId・cwd・id・name・roleId がある（10-v0501-acceptance.md:22）。端末は tmux のソケット `-L agent-console` のセッション `ac-<id>`（agent-console docs/handoff/discord-pdca/room-design.md:25）。
+- 件の置き場 R は `/private/tmp/CC報告ファイル/discord-case/<id>`（server/case-sandbox.ts:62、tmp は realpath）。
+- 部屋の中から `tmux -L agent-console` への接続は失敗する（room-design.md:25 の G7。11/04 の受入で部屋は有効）。
+- Opus の Bash から `claude agents --json` は動く（2026-11-05 実測: exit 0・12行・全行に sessionId・status は busy 8／idle 4。キーは cwd・kind・name・pid・sessionId・startedAt・status。件は開いていない時点）。
+- 未確認: Opus の Bash から打つ `claude agents --json` に、部屋の中で動く件の Claude（設定の置き場が case-home）の行が出るか。§14-7 の K20 で最初に測る。
+
+### 14-3 変更後の仕組み
+
+(a) 新しい部品 `case-say.py`（試作 docs/handoff/conversation-consent/hooks/case-say.py、本物 ~/.claude/scripts/case-say.py。PO の `!` の po-apply-consent.sh `--update` で写す）。
+
+- 呼び方: `python3 ~/.claude/scripts/case-say.py <件の id> <手順ファイル名>`。送る文を引数で渡す手段は作らない。
+- 送る文は部品が組み立てる1種類だけ: `<R>/<手順ファイル名> を読み、書いてある手順を順に行ってください。`（R は 14-2 の置き場）。「1」や任意の文は送れない。
+- 判定（この順。外れたら何も送らず exit 2、理由を標準エラーと agent-events.jsonl の `case_say_refused` に書く）:
+  1. 件の id が UUID の形（小文字の16進と `-`）。手順ファイル名が `^[A-Za-z0-9._-]{1,64}\.md$` で、`..` を含まない。
+  2. dataDir/open-sessions.json に、その id の項目があり、roleId が `discord-case` と完全一致し、claudeSessionId がある。dataDir は agent-console の決まった場所を部品の中で組み立てる（コマンドに出さない）。
+  3. 呼び出し元がその件ではない: 環境変数 `CLAUDE_CODE_SESSION_ID` が件の claudeSessionId と違う。環境変数 `TMUX` があれば、そのソケットとセッション名が `agent-console` の `ac-<id>` でない。
+  4. `<R>/<手順ファイル名>` が、所有者が自分の通常のファイルで、リンクでない（lstat）。realpath が R の下。
+  5. `claude agents --json` を1回取り、sessionId が件の claudeSessionId と一致する行がちょうど1つあり、status が `idle` で waitingFor が無い（server/agents.ts:76-88 と同じ基準。busy・waiting・unknown・行が無い・取得失敗は不可）。
+- 送り方: `tmux -L agent-console send-keys -t =ac-<id> -l <文>` で文字だけを入れ、1秒待って `send-keys -t =ac-<id> Enter`。部品は引数の配列で呼び（shell を通さない）、`=` で名前の完全一致にする。
+- 記録: 送ったら agent-events.jsonl に `case_say`（ts・件の id・手順ファイル名・文の sha256 先頭16桁・送った時の手順ファイルの sha256 先頭16桁）を1行書く。本文は書かない。
+
+(b) §4-5 の見張りは変えない。止める条件・止める文・kind・T7 の期待はそのまま。case-say.py を呼ぶコマンドの文字には見張りの語が入らないので、見張りに例外を足す必要がない。
+
+(c) 文書: ADR-1033 の What に5つ目として「件のセッションへの決まった一文の送信は case-say.py だけで行う（design §14）。§4-5 の見張りの外で端末へ送る、ほかの道を作らない」を足す。§4-5 の末尾に同じ1行を足す。agent-console 側の手順書（便2b-3b のやり直し）は、件の窓への一文を「Opus が case-say.py で送る」に書き換える（agent-console の別 PR）。
+
+(d) 使ってよい場面: PO が承認した手順書に書かれた、件のセッションへの段階の指示だけ。手順ファイルは Opus が R に書き、同じ内容を記録の置き場（~/kb/04-records の該当の回）にも残す。
+
+### 14-4 対象と対象外
+
+- 対象（リポジトリ内）: hooks/case-say.py（新規・試作）、scripts/dev/case-say-tests.py（新規・単体試験）、po-apply-consent.sh（`--update` の写す一覧に case-say.py を足す）、po-rollback-consent.sh（case-say.py を消す1行）、scripts/dev/consent-audit.py（`--audit` に case_say・case_say_refused の件数を1行出す）、本書、ADR-1033、docs/adr/README.md（再生成）。
+- 対象（リポジトリ外・PO の `!`）: ~/.claude/scripts/case-say.py。
+- 対象外: agent-danger-hook.sh・worktree-only-guard.sh・consent_check.py・settings.json（見張りと許可は変えない）、agent-console のサーバーのコード、件の部屋の設定。
+
+### 14-5 代替案
+
+| 案 | 採否 | 理由 |
+|---|---|---|
+| A 決まった一文だけを、件の窓だけへ送る部品（本案） | 採用 | 見張りを変えない。送れる文が1種類で「1」を送れない。宛先が同意を判定しない件の窓だけ |
+| B §4-5 の tmux の条件に「宛先が ac-<件>」の例外を足す | 不採用 | 任意の文を送れる。文字照合で宛先を見分けるので、見張りが弱くなる |
+| C 予約（ac-reserve）で件を開き、指示を渡す | 不採用 | 件の役割は作りで予約できない（server/config.ts:160-161）。変えるのは部屋の設計の変更になる |
+| D 画面のチャットの送信口を使う | 不採用 | 認証の秘密が要り、秘密を読むことは禁止 |
+| E 今のまま PO が打つ | 予備 | 案 A が K20 で×のときの戻り先 |
+
+### 14-6 リスクと対処
+
+| # | リスク | 対処 |
+|---|---|---|
+| R11 | 許可の確認が出ている件の窓に Enter を送り、既定の選択肢を押す | 判定5（idle かつ waitingFor 無し）。判定から送信まで約1秒の間に件が自分で確認を出すことは、件が入力待ち（idle）なので起きない前提。前提が崩れても、押されるのは件の部屋の中の操作（部屋の G1〜G7 の範囲） |
+| R12 | AI が case-say.py を真似た別の部品を作り、Opus の窓へ「1」を送る | R1 と同じ水準（受け入れ済み）。この改訂で新しく開く道ではない。case-say.py は文も宛先も固定 |
+| R13 | 件自身が R の手順ファイルを書き換え、自分への指示を変える | 件が自分でできることの範囲を超えない（件は R に書ける・自分の窓で動く）。送った時の手順ファイルの sha256 を case_say に残すので、kb に残した中身と比べられる |
+| R14 | PO が段階ごとの一文を見なくなる | 手順ファイルは PO が承認した手順書から作り、kb の記録に残す。case_say の件数を週次点検に出す |
+| R15 | 部屋の中の件が case-say.py を呼ぶ | 部屋の中から tmux のソケットへの接続は失敗する（G7）。判定3 でも自分の窓は不可 |
+
+戻し方: `! bash docs/handoff/conversation-consent/po-rollback-consent.sh`（case-say.py を消す）、または case-say.py だけを消す。見張りは変わっていないので、消せば元と同じ。
+
+### 14-7 成功条件
+
+| # | 基準 | 検証方法 |
+|---|---|---|
+| K20 | Opus の Bash の `claude agents --json` に、開いている件の Claude の行が sessionId つきで出る（最初に測る。×なら案 E に戻し、PO に報告） | PO が件を1つ開いた状態で Opus が1回実行し、件の claudeSessionId と一致する行が1つあれば○ |
+| K21 | 件の窓に、決まった一文が1回だけ入り、件が手順ファイルを読み始める | 本物の件で1回。件の会話の画面にその一文が1回出て、件が手順ファイルを読んだことが件の返事で分かれば○ |
+| K22 | 件でない宛先（roleId が discord-case 以外・台帳に無い id・自分の窓）、形の違う引数、R の外・リンク・無いファイル、件が busy・waiting・unknown・行なし・取得失敗では、何も送らず exit 2 | case-say-tests.py（偽の open-sessions.json・偽の `claude agents` の出力・偽の tmux を差し替えて、送信の呼び出しが0回）。本物では Opus の窓の id を指定して1回、exit 2 で何も入らないこと |
+| K23 | §4-5 の見張りが変わっていない | agent-danger-hook.sh・worktree-only-guard.sh の試作と本物の差分0行、test-agent-hooks.sh の T7 が合格 |
+| K24 | 送るたびに case_say が1行、断るたびに case_say_refused が1行書かれ、consent-audit.py --audit がその件数を出す | 単体試験と、K21・K22 の本物の回の後の --audit の出力 |
+
+### 14-8 実装の分け方
+
+- 便CS1（クラウドの Sonnet・PR 1本）: §14-3(a)(c) のリポジトリ側、§14-4 の対象、試験 K22（単体）・K23・K24（単体）。
+- PO: マージ後に `! bash docs/handoff/conversation-consent/po-apply-consent.sh --update` を1回。
+- Opus: K20（件を PO が開いた後）→ K21・K22 の本物の回 → agent-console の手順書を書き換える。
+
+### 14-9 設計審査
+
+- クラウドで設計の審査を行う（この節を書いた後）。結果はこの節に追記する。
+- 未解決の前提: K20（`claude agents --json` に件の行が出るか）。×なら案 E に戻る。
