@@ -2,7 +2,7 @@
 
 recon: `docs/handoff/schedule-gcal-alignment/recon.md`（以下 R§0〜R§7）
 見本: canvas「予定の画面 完成予定」（週・月・一覧・操作と近道の 4 枚。PO「1」で承認）
-状態: 設計案作成済み（同一 AI の自己審査 §9 済み）。成功条件（§2）は PO 承認済み（2026-11-04「1」）。クラウドの設計審査 1 回目は 3 便とも REVISE（審査の記録 architect-review.md・枝 `release/schedule-gcal-alignment-review`）→ 改訂 1 で指摘を反映（§12）。再審査（審査の記録 architect-review-2.md・枝 `release/schedule-gcal-alignment-review2`）は 便1 = APPROVE／便2 = REVISE（軽い）／便3 = REVISE。改訂 2 で便1 の追記を反映し、便1 の実装カード（§11-1）を出した。便2・便3 は改訂待ち。
+状態: 設計案作成済み（同一 AI の自己審査 §9 済み）。成功条件（§2）は PO 承認済み（2026-11-04「1」）。クラウドの設計審査 1 回目は 3 便とも REVISE（審査の記録 architect-review.md・枝 `release/schedule-gcal-alignment-review`）→ 改訂 1 で指摘を反映（§12）。再審査（審査の記録 architect-review-2.md・枝 `release/schedule-gcal-alignment-review2`）は 便1 = APPROVE／便2 = REVISE（軽い）／便3 = REVISE。改訂 2 で便1 の追記を反映し、便1 の実装カード（§11-1）を出した。便2・便3 は改訂待ち。改訂 3（§14）で便2 の REVISE（N-5・N-11・N-12）を反映した。N-5 は PO が「便2 の中で裏側も含めて直す」を選んだ（2026-11-04「1」）。便2 はクラウドの再審査待ち。便3 は改訂待ち。
 
 ## 1. 目的（PO の言葉で）
 
@@ -30,7 +30,7 @@ recon: `docs/handoff/schedule-gcal-alignment/recon.md`（以下 R§0〜R§7）
 
 ## 3. 対象と対象外
 
-- 対象: 上の K1〜K14。便 1・2 は画面だけ。便 3 は画面＋裏側＋表に列を 1 つ足す。
+- 対象: 上の K1〜K14。便1 は画面だけ。便2 は画面＋裏側の関数 1 つ（終日の予定を Google へ送る形の直し・表と移行は触らない・PO 2026-11-04「1」）。便3 は画面＋裏側＋表に列を 1 つ足す。
 - 対象外:
   - 段2（全員が自分の Google をつなぐ・Google の公開審査）。別の設計で行う
   - 予定を探す（「/」の近道を含む）。今の虫めがねボタンは押しても何も起きない（R§4）。探す機能は別テーマとして PO に出す
@@ -44,7 +44,7 @@ recon: `docs/handoff/schedule-gcal-alignment/recon.md`（以下 R§0〜R§7）
 | 便 | 中身 | 危険な道（`migrations/` 等） | 合流 |
 |---|---|---|---|
 | 便1 | 小窓の置き場所・短い作る小窓・月の 1 行・他◯件・一覧・近道 | 無し | CI 緑＋審査で委任 GO |
-| 便2 | 引っぱって作る・動かす・長さを変える・月の帯 | 無し | 同上 |
+| 便2 | 引っぱって作る・動かす・長さを変える・月の帯・終日が Google で 1 日前にずれる不具合の直し（裏側の関数 1 つ） | 無し（`migrations/`・`.github/workflows/deploy.yml`・本番 `scripts/` に触れない） | 同上 |
 | 便3 | Meet（裏側・列 1 つ・ADR） | 有り | PO の「GO #番号」が要る（ADR-135・136） |
 
 便1 が本番に出て PO が K1〜K7 を見たあと、便2 に進む。便3 は便2 と並べてよいが、カードを出す前に §7-3 の前提確認を済ませる。
@@ -115,13 +115,30 @@ recon: `docs/handoff/schedule-gcal-alignment/recon.md`（以下 R§0〜R§7）
 ### 5-6. 便2 引っぱる・動かす・長さを変える・月の帯（K8〜K11）
 
 - 外部の部品は入れない（今は無い・R§4。前に FullCalendar を外した経緯 `frontend/src/pages/schedule/SchedulePageImpl.tsx:4`）。Pointer Events（`onPointerDown`・`setPointerCapture`）で書く。
-- 時刻への換算は純粋な関数にして `frontend/src/pages/schedule/schedule-utils.ts` に置く: 位置(px) → 分 = `px / 行の高さ × 60` を 15 分に丸める。行の高さは CSS の `--schedule-row-height` を `getComputedStyle` で読む（数字を書き写さない）。位置(px) は「押した日の列の `getBoundingClientRect().top` からの差」で測る（列の四角は表が縦に動いた分を含むので、動いた量を別に足さない）。
+- 時刻への換算は純粋な関数にして `frontend/src/pages/schedule/schedule-utils.ts` に置く: 位置(px) → 分 = `px / 行の高さ × 60` を 15 分に丸める。行の高さは関数の引数で受け取り、画面からは今ある `rowHeight`（`frontend/src/pages/schedule/SchedulePageImpl.tsx:651`。中身は `DEFAULT_ROW_HEIGHT` `:91`）を渡す。今の朝の位置の計算（`:1184`）と同じ値を使い、3 つ目の置き場所を作らない（N-11）。`getComputedStyle` は使わない（試験の環境では空の文字を返す）。`DEFAULT_ROW_HEIGHT` とトークン `--schedule-row-height`（`frontend/src/tokens.css:400`・48px）が 2 か所にある状態は今からあるもので、便2 では増やさない（§7 の 6）。位置(px) は「押した日の列の `getBoundingClientRect().top` からの差」で測る（列の四角は表が縦に動いた分を含むので、動いた量を別に足さない）。
 - 引っぱって作る: 空き枠で押して 4px 以上動いたら引っぱりとみなし、薄い枠を出す。離すと 5-2 の短い小窓。4px 未満なら今の「押して 1 時間」。
-- 動かす・長さを変える: 今の `canEditSelected`（`frontend/src/pages/schedule/SchedulePageImpl.tsx:1123-1125`。選んだ 1 件用）の中身を、予定を 1 件受け取る関数 `canEditItem(item)` に切り出して両方で使う（判定の中身は変えない）。かつ `source !== "shift"` の予定だけ。
-- 離したときの送り方（Google の予定を壊さないため）: `PATCH /calendar/events/{id}` に、今の保存（`frontend/src/pages/schedule/SchedulePageImpl.tsx:1038-1047`）と同じ形で、題名・開始・終了・終日・種類・説明・場所を送る（題名などは動かす予定の今の値）。開始と終了だけを送ると、裏側が Google へ送る中身を送られた欄だけで作る（`backend/app/services/calendar_service.py:314` → `:512` `"summary": payload.get("title", "")`）ため、Google 側の題名が空で上書きされ、終日も崩れる（`:517-522`）。この形にすれば便2 は画面だけで済む（裏側は触らない）。`calendar_type` は送らない（見せ方は変えない）。失敗したら元の位置に戻し、今の失敗の帯を出す。
+- 動かす・長さを変える: 今の `canEditSelected`（`frontend/src/pages/schedule/SchedulePageImpl.tsx:1336-1338`。選んだ 1 件用）の中身を、予定を 1 件受け取る関数 `canEditItem(item)` に切り出して両方で使う（判定の中身は変えない）。かつ `source !== "shift"` の予定だけ。
+- 離したときの送り方（Google の予定を壊さないため）: `PATCH /calendar/events/{id}` に、今の保存（`frontend/src/pages/schedule/SchedulePageImpl.tsx:1247-1257`）と同じ形で、題名・開始・終了・終日・説明・場所を送る（題名などは動かす予定の今の値）。種類（`category`）は送らない: 直す口の受け取り `UpdateEventBody`（`backend/app/routers/calendar.py:114-121`）に `category` が無く、送っても捨てられる（N-12）。開始と終了だけを送ると、裏側が Google へ送る中身を送られた欄だけで作る（`backend/app/services/calendar_service.py:314` → `:512` `"summary": payload.get("title", "")`）ため、Google 側の題名が空で上書きされ、終日も崩れる（`:517-522`）。動かす操作のための裏側の変更は無い（裏側で触るのは次の終日の直しだけ）。`calendar_type` は送らない（見せ方は変えない）。失敗したら元の位置に戻し、今の失敗の帯を出す。
 - 月の帯: 終日・複数日の予定を週の行ごとに `grid-column: 開始 / 終了+1` の帯で出す。月で日をまたいで動かすのも同じ PATCH。帯は帯の段に出し、1 日 3 件（`:801`）と「他 ◯ 件」の数には入れない（3 件と数えるのは時刻つきの予定だけ）。
 - 新しいトークン: `--schedule-drag-ghost-bg`（`var(--calendar-google-blue-light)` を指す。参照先はライト `frontend/src/index.css:184`・ダーク `:384` の両方にある）。ADR-067「新規トークン追加手順」に従い、ADR の表も直す。
 - 試験: 換算の関数（境目・15 分丸め・日をまたぐ）と、直せない予定が動かないこと（K10）と、動かしたときの送る中身に題名・終日・説明・場所が入っていること（K9）。
+- 終日が Google で 1 日前にずれる不具合の直し（N-5・PO 2026-11-04「1」で便2 に入れる）:
+  - 今の形（事実・origin/main 0f297666c）: 画面は終日を `combineDateTime(日付, "00:00").toISOString()` と `combineDateTime(日付, "23:59").toISOString()` で送る（`frontend/src/pages/schedule/SchedulePageImpl.tsx:1251-1252`）。日本時間 7/1 00:00 は `2026-06-30T15:00:00.000Z` になる。裏側は Google へ送るとき、この文字の先頭 10 文字を日付にする（`backend/app/services/calendar_service.py:518-520` `str(start_dt)[:10]`）。開始は 6/30、終わりは 7/1 になる。Google の終日の終わりの日は「次の日」の意味なので、Google では 6/30 の 1 日だけの予定になる。
+  - 取り込みの側（`_google_times` `backend/app/services/calendar_service.py:380-394`）は日本時間に直し、終わりの日から 1 日引いている。逆向きの送る側だけが崩れている。
+  - アプリの表の値は正しい: 取り込みの上書きは `WHERE calendar_events.source = 'google'`（`:486` の ON CONFLICT の条件）で、アプリで作った予定は上書きしない。ずれるのは Google 側だけ。
+  - 直し方: `_to_google_event_body` の終日の枝（`:518-520`）だけを変える。作る（`:226`）と直す（`:314`）の両方がこの関数を通るので、1 か所で両方直る。画面の送り方は変えない（画面と裏側の約束を変えない）。
+    1. 値が日付だけ（`T` を含まない）のときは今のまま、そのまま Google へ渡す（今の試験 `backend/tests/test_calendar_service.py:93-105` がこの形）。
+    2. 時刻つきのときは `_parse_dt`（`:32-37`）で読む。時差が無ければ日本時間とみなす（`replace(tzinfo=_JST)`）。`astimezone(_JST).date()` で日本時間の日付にする。
+    3. 開始 = 開始の日付。終わり = 終わりの日付 + 1 日（`_google_times` の逆）。終わりが開始以前になるときは開始 + 1 日。
+    4. 新しい定数・新しい表・新しい列は作らない。日本時間は今ある `_JST`（`:377`）を使う。
+  - 試験（`backend/tests/test_calendar_service.py` の `TestToGoogleEventBody` に足す）:
+    1. 画面が 7/1 の終日で送る形（`2026-06-30T15:00:00.000Z`／`2026-07-01T14:59:00.000Z`）→ 開始 `2026-07-01`・終わり `2026-07-02`
+    2. 7/1〜7/3 の複数日（`2026-06-30T15:00:00.000Z`／`2026-07-03T14:59:00.000Z`）→ `2026-07-01`／`2026-07-04`
+    3. `+09:00` の形（`2026-07-01T00:00:00+09:00`／`2026-07-01T23:59:00+09:00`）→ `2026-07-01`／`2026-07-02`
+    4. 時差の無い形（`2026-07-01T00:00:00`／`2026-07-01T23:59:00`）→ `2026-07-01`／`2026-07-02`
+    5. 行って戻る: 1 の結果を `_google_times` に通すと、日本時間 7/1 00:00〜7/1 23:59・終日になる
+    6. 今の日付だけの試験（`:93-105`）がそのまま通る
+  - すでに Google へ送ってずれている終日の予定は、この直しでは戻らない（アプリで直して保存すると正しく送り直される）。件数はまだ確かめていない（§7 の 7）。
 
 ### 5-7. 便3 Google Meet（K12〜K14）
 
@@ -165,6 +182,9 @@ recon: `docs/handoff/schedule-gcal-alignment/recon.md`（以下 R§0〜R§7）
      4. 同期方式が `bidirectional` であること（K14 の前提。`write_only` では取り込みが止まる・ADR-1059「戻し方」）。1 と同じ読み取りで確かめる
 4. 小窓を測ってから置くので、一瞬ちらつく → 測る前は見えなくする（5-1）。
 5. 月の札から種類の札を外すと種類が月で分からない → 詳しくと一覧では出す。PO が月で種類も見たいと言えば札を戻す（見本では外した形で承認済み）。
+6. 行の高さが `DEFAULT_ROW_HEIGHT`（`frontend/src/pages/schedule/SchedulePageImpl.tsx:91`）とトークン `--schedule-row-height`（`frontend/src/tokens.css:400`）の 2 か所にある（今からある）。片方だけ変えると引っぱりの時刻がずれる → 便2 では置き場所を増やさず、換算の試験で 48px を前提にした値を確かめる。1 か所にまとめるのは残件として台帳に残す。
+7. すでに Google へ送ってずれた終日の予定が Google 側に残る → 直しでは自動で戻さない（送り直しは Google の予定を書き換える外向きの操作のため、勝手にしない）。便2 の本番反映のあと、件数を本番の読み取りで数えて PO に見せ、送り直すか聞く。
+8. 直す口で種類（`category`）が保存されない（`backend/app/routers/calendar.py:114-121` に無い）。今の詳しく小窓で種類を変えて保存しても変わらない、今からある不具合 → 便2 の範囲外。台帳に残件として残し、PO に別に出す。
 
 ## 8. 外部・過去事例の参照と我々への応用
 
@@ -185,6 +205,7 @@ recon: `docs/handoff/schedule-gcal-alignment/recon.md`（以下 R§0〜R§7）
   - 便2 = REVISE（軽い）。N-5: 終日の予定が Google で 1 日前にずれる今からある不具合（画面は `combineDateTime(date,"00:00").toISOString()` で UTC を送る `frontend/src/pages/schedule/SchedulePageImpl.tsx:1041`、裏側は `str(start_dt)[:10]` `backend/app/services/calendar_service.py:519-520`）。N-11: 行の高さは `DEFAULT_ROW_HEIGHT`（`frontend/src/pages/schedule/SchedulePageImpl.tsx:88`・使う所 `:611`）と同じ値を使う。N-12: `category` は直す口で受け取らない（`UpdateEventBody`・`field_map`）ので試験で見ない。→ N-5 の扱いを決めてから改訂する。
   - 便3 = REVISE。N-1: 道の入口の `try/except Exception` が 422 を 500 に変える（`backend/app/routers/calendar.py:352-364`・`:421-434`）。N-2: 返事が `{"id"}` だけで Meet の失敗が画面に分からない。N-3: 直す前に `google_event_id`・`meet_url` を読む。N-13（任意）。§7-3 の 4 件も残る。
 - 判定（再審査のあと）: 便1 = APPROVE（実装可能）／便2 = REVISE／便3 = REVISE。
+- 改訂 3 のあとの自己審査（2026-11-04）: 便2 = APPROVE（自己審査。クラウドの再審査はまだ）。根拠: N-5 の原因は origin/main 0f297666c の実物で確かめた（画面 `frontend/src/pages/schedule/SchedulePageImpl.tsx:1251-1252`・裏側 `backend/app/services/calendar_service.py:518-520`・取り込み `:380-394`・上書きの条件 `WHERE calendar_events.source = 'google'`）。直す場所は関数 1 つで、表・移行・危険な道に触れない。N-11・N-12 は §5-6 に反映。未解決: すでにずれた Google 側の予定の件数（§7 の 7・本番反映のあと）。便1 の本番での K1〜K7 の PO 確認（§4 の順番）。
 
 ## 10. 維持の仕組み（守り手）
 
@@ -195,6 +216,7 @@ recon: `docs/handoff/schedule-gcal-alignment/recon.md`（以下 R§0〜R§7）
 | 小窓が画面に収まる | `frontend/src/pages/schedule/schedule-utils.test.ts` の `fitPopover` 試験（CI の frontend 試験） |
 | 近道が入力中に効かない | `frontend/src/pages/schedule/SchedulePageImpl.test.tsx` の近道試験 |
 | 引っぱりの時刻換算 | `frontend/src/pages/schedule/schedule-utils.test.ts` の換算試験 |
+| 終日が Google で同じ日になる | `backend/tests/test_calendar_service.py` の `TestToGoogleEventBody`（CI の backend 試験） |
 | 直書きの色・文字が入らない | 今ある見張り（ADR-067 のトークン検査・ADR-027 の i18n 検査・ADR-144 の金型検査） |
 | Meet は本人だけ | 便3 の裏側の試験（本人以外は 422・Google に送らない）と新しい ADR |
 
@@ -280,3 +302,12 @@ recon: `docs/handoff/schedule-gcal-alignment/recon.md`（以下 R§0〜R§7）
 | N-9 | 229 も変換中とみなす・1 文字だけ小文字・K7 の数え方の名前 | 5-5・K7 |
 | N-10 | 日の一覧の小窓も Esc と「開いている間」に入れる | 5-5 |
 | 行のずれ | `formatRangeTitle` 115-120・トークンの段 392-416・表示の切り替え 1179-1190 | 5-3・5-4 |
+
+## 14. 改訂 3 の記録（クラウドの再審査の便2 への指摘 → 直した場所）
+
+| 指摘 | 中身 | 直した場所 |
+|---|---|---|
+| N-5 | 終日の予定が Google で 1 日前にずれる。PO が便2 で裏側も含めて直すと決めた（2026-11-04「1」） | §3・§4・5-6（直し方と試験 6 件）・§7 の 7・§10 |
+| N-11 | 行の高さは今ある `rowHeight`（`DEFAULT_ROW_HEIGHT`）を引数で渡す。`getComputedStyle` は使わない | 5-6・§7 の 6 |
+| N-12 | 直す口は `category` を受け取らない。動かすときに送らず、試験でも見ない | 5-6・§7 の 8 |
+| 行のずれ | 便1 の合流で行が動いた: 保存 `:1247-1257`・`canEditSelected` `:1336-1338`・`rowHeight` `:651`・`DEFAULT_ROW_HEIGHT` `:91` | 5-6 |
