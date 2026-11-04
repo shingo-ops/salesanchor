@@ -1,8 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../firebase", () => ({ auth: { currentUser: null } }));
-vi.mock("./provider", () => ({ isSelfAuth: () => true }));
-
 import {
   adoptAccessToken,
   currentAccessToken,
@@ -15,6 +12,7 @@ import {
   SelfAuthError,
   subscribeSession,
 } from "./selfAuth";
+import { registerDevSession } from "./devSessionSlot";
 
 function jwt(claims: Record<string, unknown>): string {
   const enc = (o: unknown) => btoa(JSON.stringify(o)).replace(/=+$/, "").replace(/\+/g, "-").replace(/\//g, "_");
@@ -27,6 +25,7 @@ const okJson = (body: unknown) => Promise.resolve(new Response(JSON.stringify(bo
 let fetchMock: ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
+  registerDevSession(null);
   expireSession();
   fetchMock = vi.fn();
   vi.stubGlobal("fetch", fetchMock);

@@ -7,10 +7,10 @@ import OrderFinancialPanel from './OrderFinancialPanel';
 import PurchaseDetailPanel from './PurchaseDetailPanel';
 import ShippingDetailPanel from './ShippingDetailPanel';
 import type { CustomerScoreData } from './PriorityScoreBadge';
+import { registerTestDevSession } from '../test-utils/devSession';
 
 const mock = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn(), permission: vi.fn(), token: vi.fn() }));
 vi.mock('../lib/api', () => ({ api: mock, ApiError: class extends Error { constructor(message: string, public status: number, public responseDetail: unknown) { super(message); } } }));
-vi.mock('../lib/firebase', () => ({ auth: { currentUser: { getIdToken: mock.token } } }));
 vi.mock('../hooks/usePermissions', () => ({ usePermissions: () => ({ hasPermission: mock.permission }) }));
 vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 
@@ -36,6 +36,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mock.permission.mockReturnValue(true);
   mock.token.mockResolvedValue('fixture-token');
+  registerTestDevSession({ getAccessToken: () => mock.token(), hasSession: () => true });
   vi.stubGlobal('fetch', vi.fn(() => { throw new Error('Unexpected network request'); }));
   mock.get.mockImplementation(async (url: string) => {
     if (url === '/orders/7/commissions') return bundle;

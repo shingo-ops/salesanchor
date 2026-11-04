@@ -199,9 +199,6 @@ jobs:
       - name: Run visual-language screen check (3 widths)
         env:
           CI: 'true'
-          VITE_FIREBASE_API_KEY: AIzaSyE2E-dummy-api-key
-          VITE_FIREBASE_AUTH_DOMAIN: e2e-fixture.firebaseapp.com
-          VITE_GCP_PROJECT_ID: e2e-fixture
         run: npm run test:e2e:vl
 
       - name: Upload screen check report
@@ -305,10 +302,6 @@ jobs:
         env:
           # CI 上で webServer の reuseExistingServer=false が走る
           CI: 'true'
-          # Vite dev server に渡す Firebase 用ダミー値（mock 経由で bypass）
-          VITE_FIREBASE_API_KEY: AIzaSyE2E-dummy-api-key
-          VITE_FIREBASE_AUTH_DOMAIN: e2e-fixture.firebaseapp.com
-          VITE_GCP_PROJECT_ID: e2e-fixture
         run: npm run test:e2e
 
       # 失敗時 / 常時 artifact upload

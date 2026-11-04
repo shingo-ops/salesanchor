@@ -6,11 +6,10 @@ import en from "../../locales/en.json";
 
 const api = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn() }));
 vi.mock("../../lib/api", () => ({ api }));
-vi.mock("../../lib/auth/provider", () => ({ isSelfAuth: () => true }));
-vi.mock("../../lib/firebase", () => ({ auth: { currentUser: null } }));
 
 import { adoptAccessToken, expireSession } from "../../lib/auth/selfAuth";
 import RecoveryCodePrompt, { clearRecoveryPromptMarks, recoveryPromptKey } from "./RecoveryCodePrompt";
+import { registerDevSession } from "../../lib/auth/devSessionSlot";
 
 let instance = createInstance();
 const tr = (key: string) => String(instance.t(key));
@@ -30,6 +29,7 @@ function renderPrompt() {
 
 beforeEach(async () => {
   localStorage.clear();
+  registerDevSession(null);
   api.get.mockReset();
   api.post.mockReset();
   adoptAccessToken(jwt({ sub: "7", email: "a@example.com", sid: "fam-1" }), 900);

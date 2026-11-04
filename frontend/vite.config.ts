@@ -63,7 +63,7 @@ export default defineConfig({
           environment: 'jsdom',
           include: ['src/**/*.test.{ts,tsx}'],
           globals: true,
-          // Firebase 初期化バイパス（環境変数なしでも動くように）
+          // 毎回の試験の前に開発用の偽ログインを登録する（src/test-setup.ts）
           setupFiles: ['src/test-setup.ts'],
         },
       },

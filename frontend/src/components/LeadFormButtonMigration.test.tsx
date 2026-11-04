@@ -8,10 +8,10 @@ import LeadsPage from '../pages/leads/LeadsPage';
 import LeadEditPage from '../pages/leads/LeadEditPage';
 import en from '../locales/en.json';
 import { queryClient } from '../lib/query/apiQuery';
+import { registerTestDevSession } from '../test-utils/devSession';
 
 const mock = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn(), user: { uid: 'fixture-user' } }));
 vi.mock('../lib/api', () => ({ api: mock }));
-vi.mock('../lib/firebase', () => ({ auth: { currentUser: { getIdToken: async () => 'synthetic-token' } } }));
 vi.mock('../contexts/AuthContext', () => ({ useAuth: () => ({ user: mock.user, loading: false }) }));
 const blank = { customer_name: 'Fixture Lead', email: null, phone: null, status: 'lead', type: null, notes: null, country: null, company_name: null, channel_type: null, initiative: null, temperature: null, estimated_scale: null, customer_type: null, response_speed: null, monthly_forecast: null };
 let lead = { ...blank, id: 7, lead_code: 'FIXTURE', created_at: '', updated_at: '', close_reason_memo: 'Existing memo', close_reasons: [{ reason_id: 42, is_primary: true }] };
@@ -64,6 +64,7 @@ async function mountForm(mode: Mode) {
   return scope;
 }
 beforeEach(async () => {
+  registerTestDevSession({ getAccessToken: async () => 'synthetic-token', hasSession: () => true });
   stream = null;
   lead = { ...lead, ...blank };
   vi.resetAllMocks(); permissions = ['leads.create', 'leads.update', 'leads.delete'];

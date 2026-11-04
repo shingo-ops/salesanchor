@@ -9,7 +9,7 @@ import { Button } from "../../components/Button";
 import { Modal } from "../../components/Modal";
 import { Stack } from "../../components/Stack";
 import { api } from "../../lib/api";
-import { isSelfAuth } from "../../lib/auth/provider";
+import { isDevSession } from "../../lib/auth/devSessionSlot";
 import { currentAccessToken, readClaims } from "../../lib/auth/selfAuth";
 
 const KEY_PREFIX = "recoveryPrompt:";
@@ -58,7 +58,7 @@ function markShown(key: string): void {
 }
 
 export default function RecoveryCodePrompt() {
-  const selfMode = isSelfAuth();
+  const selfMode = !isDevSession();
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [codes, setCodes] = useState<string[] | null>(null);

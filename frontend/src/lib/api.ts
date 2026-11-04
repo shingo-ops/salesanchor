@@ -1,6 +1,6 @@
 /**
  * APIクライアント。
- * アクセストークン（Firebase の ID トークン、または自社ログインのトークン）をAuthorizationヘッダーに自動付与する。
+ * アクセストークン（自社ログインのトークン）をAuthorizationヘッダーに自動付与する。
  *
  * 変更履歴:
  *   2026-04-17: デプロイ直後の一時的な 502/503/504 エラーで画面が崩れる問題対策として
@@ -25,7 +25,7 @@ export class ApiError extends Error {
 
 import i18n from "../i18n";
 import { getClientId } from "./realtime/clientId";
-import { isSelfAuth } from "./auth/provider";
+import { isDevSession } from "./auth/devSessionSlot";
 import { expireSession, getAccessToken, selfRefresh } from "./auth/selfAuth";
 
 const API_BASE = "/api/v1";
@@ -38,7 +38,7 @@ const MAX_RETRIES = 3;
 const BASE_DELAY_MS = 500;
 // fetchタイムアウト（ミリ秒）。重いSQLが最適化されたら 10_000 に短縮予定
 const FETCH_TIMEOUT_MS = 25_000;
-// getAccessToken()（Firebase の getIdToken() や自社の refresh）のタイムアウト（ミリ秒）。
+// getAccessToken()（自社の refresh）のタイムアウト（ミリ秒）。
 // トークン取得は fetch() の前に呼ばれるため FETCH_TIMEOUT の AbortController に
 // 守られない。Promise.race でここでタイムアウトを設けることで永久ペンディングを防ぐ。
 const AUTH_TIMEOUT_MS = 10_000;
@@ -70,7 +70,7 @@ const SESSION_END_PATHS = new Set(["/auth/password/change", "/auth/logout"]);
 const REAUTH_AUTH_PREFIXES = ["/auth/passkey/register/", "/auth/passkeys"];
 
 /**
- * fetch の 401 を自社ログインの規則で扱う（自社ログインのときだけ。Firebase のときは素通し）。
+ * fetch の 401 を自社ログインの規則で扱う（開発用の偽ログインのときは素通し）。
  * - /auth/ で始まる口の 401 では refresh しない（login・refresh 自身の 401 で往復しないため）。
  *   そのうち password/change・logout の 401 はログインが切れた印なので、セッションを捨てる
  *   パスキーの登録・一覧・削除はログイン後の口なので、ほかの口と同じく更新する
@@ -80,7 +80,7 @@ const REAUTH_AUTH_PREFIXES = ["/auth/passkey/register/", "/auth/passkeys"];
  */
 async function fetchWithReauth(url: string, init: RequestInit, path: string): Promise<Response> {
   const res = await fetch(url, init);
-  if (res.status !== 401 || !isSelfAuth()) return res;
+  if (res.status !== 401 || isDevSession()) return res;
 
   if (path.startsWith("/auth/") && !REAUTH_AUTH_PREFIXES.some((p) => path.startsWith(p))) {
     if (SESSION_END_PATHS.has(path)) expireSession();
