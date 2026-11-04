@@ -567,6 +567,8 @@ docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml p
 |---|---|---|---|
 | 2026-11-04 | §19-1 件1 鍵（D1〜D4・D6） | 推奨どおり。案A（公開の置き場の classic PAT・`write:packages` だけ）。持ち主は PO 本人（shingo-ops）。期限は 180 日。受け取りの鍵（`read:packages`）は GitHub secret にだけ置き、prod1 には置かない。VITE は `VITE_FIREBASE_API_KEY`・`VITE_FUNNEL_DASHBOARD` を secret に、他 3 つを Variables に置く | 「1」 |
 | 2026-11-04 | §19-1 件2 組織の画面の設定（D7） | 推奨どおり 3 つとも行う。Package Creation を Private、classic PAT を許可のまま、最長期限を課す。設定は PO が組織の画面で行う。手順は便1 の直前に渡す | 「1」 |
+| 2026-11-04 | §19-1 件3 dockerd 入れ直し（D8・D11・D14） | live-restore を先に入れてから入れ直す（D8）。dockerd のメモリを自動で記録する（D14）。時間帯は「夜中」をやめ、PO が起きて見守れる昼の 14:00〜16:00（日本時間）にする（D8・D11）。作業は台本で機械が行い、PO は見守るだけ。作業中は本番への入れ替え（deploy）を止める。根拠は external-cases-dockerd.md §4・§5 | 「1、昼間が適切、海外とのやり取りのため夜間に使う頻度が多い、14〜16時、4時〜6時のどちらか」 |
 
 - 鍵を作る手順は、便1 の実装を始める直前に PO へ渡す。早く作ると、使わないまま 180 日の期限が進むため。
-- 残りの件: 件3 dockerd 入れ直しの時間帯（D8・D11・D14）、件4 workflow-lint（D13）。
+- 残りの件: 件4 workflow-lint（D13）。
+- 件3 の 2 つの候補（14〜16 時・4〜6 時）から 14〜16 時を選んだのは Opus（PO が「どちらか」と委ねたため）。理由は external-cases-dockerd.md §5。
