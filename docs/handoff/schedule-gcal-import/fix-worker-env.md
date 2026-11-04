@@ -26,7 +26,7 @@ PO が予定の画面を開くと、PO 本人の Google カレンダーの予定
 - F3 本番の backend（`astro-webapp-backend-1`）の中では 4 つとも set（同 §6b）。`API_BASE_URL` は backend も worker も EMPTY で、コードの既定 `https://api.salesanchor.jp` が使われる（`backend/app/services/google_webhook.py:54`）。
 - F4 本番の `.env` には 4 つの名前がある（同 §5。名前だけ確認・値は見ていない）。値は `.github/workflows/deploy.yml:348,352-354` が GitHub Secrets から書く。
 - F5 backend だけ渡っている理由: backend は `scripts/blue-green-cutover.sh:84-85` が `.env` の全部の名前を `--env` で渡して `docker run` する。celery-worker は `docker-compose.yml:234-` の `environment:` に並べた名前だけを受け取り、そこに 4 つが無い（`docker-compose.yml` を `GOOGLE|CALENDAR` で検索して該当 0・`git log -S GOOGLE_CALENDAR_CLIENT_ID -- docker-compose.yml` も 0 件）。
-- F6 取り込みの経路で 4 つが要る場所: 復号は `backend/app/services/encryption.py:57`（`METADATA_FERNET_KEY`）。Google の資格情報は `backend/app/services/google_calendar.py:234-235`（`_build_credentials` が毎回 `_get_client_id()`・`_get_client_secret()` を呼ぶ）。`GOOGLE_CALENDAR_REDIRECT_URI` は接続の手順（`google_calendar.py:135,139,190,194`）だけで使うが、同じモジュールの設定として揃えて渡す。
+- F6 取り込みの経路で 4 つが要る場所: 復号は `backend/app/services/encryption.py:57`（`METADATA_FERNET_KEY`）。Google の資格情報は `backend/app/services/google_calendar.py:234-235`（`_build_credentials` が毎回 `_get_client_id()`・`_get_client_secret()` を呼ぶ）。`GOOGLE_CALENDAR_REDIRECT_URI` は接続の手順（`backend/app/services/google_calendar.py:135,139,190,194`）だけで使うが、同じモジュールの設定として揃えて渡す。
 - F7 本番の DB（reader 鍵の道・AUDIT 記録あり・2026-11-03 12:43Z〜13:00Z）: `tenant_google_calendar_config` は 1 行（tenant 4・bidirectional・持ち主あり）。`google_webhook_subscriptions` は 0 行。tenant_004 の `calendar_events` は `source='app'` 9 行だけで `google` は 0 行。
 - F8 失敗が「成功」と記録された理由: `backend/app/tasks/google_calendar_sync.py:62-64` は `register_webhook` が None、`sync_tenant_from_google` が `{"skipped": "not_connected"}` を返しても `synced += 1` する。ログは INFO。
 
@@ -85,8 +85,9 @@ PO が予定の画面を開くと、PO 本人の Google カレンダーの予定
 
 ## 維持の仕組み
 
-- `backend/tests/test_compose_worker_env.py` が CI の pytest で毎回動く。4 行のどれかを消す、または `google_calendar.py` に新しい `os.getenv` を足して worker に渡し忘れると、PR の CI が落ちる（担当が 1 行消しで 2 failed を確認・`impl-report-1.md`）。
+- `backend/tests/test_compose_worker_env.py` が CI の pytest で毎回動く。4 行のどれかを消す、または `backend/app/services/google_calendar.py` に新しい `os.getenv` を足して worker に渡し忘れると、PR の CI が落ちる（担当が 1 行消しで 2 failed を確認・`docs/handoff/schedule-gcal-import/impl-report-1.md`）。
 - 本番で取り込みが黙って飛ばされる件は、§6 の次の便（スキップを数えて WARNING を出す）で見える形にする。
+- 守り手: CI の pytest（必須チェック「pytest (SQLite + PostgreSQL RLS)」）。持ち主は Opus（設計担当）。次の便で取り込みの WARNING を足すのも同じ持ち主。
 
 ## 8. Architect 自己審査（同一 AI による。独立した第二者の審査ではない）
 
