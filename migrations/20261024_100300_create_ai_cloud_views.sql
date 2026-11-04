@@ -1,6 +1,6 @@
 -- ADR-1052 段1: 相談係用の伏せたビュー ai_cloud を作る（冪等・1 トランザクション）。
 -- 一覧には載せない。run_all_migrations.sh の EXIT trap が、毎回の実行の最後に流す（ai_ro と同じ形）。
--- 1) 分類表 ai_cloud_meta.column_class を空にして下の 1068 行を入れ直す（このファイルが正本。行の足し引きはこの SQL の変更で行う）。
+-- 1) 分類表 ai_cloud_meta.column_class を空にして下の 1075 行を入れ直す（このファイルが正本。行の足し引きはこの SQL の変更で行う）。
 -- 2) ai_cloud を作り直す。3) ai_cloud_meta.build_views() で全ビューを作り、build_log に 1 行書く。
 -- 4) ai_reader_cloud に ai_cloud の USAGE と SELECT だけを付ける。
 -- 分類表の元: docs/handoff/cloud-case-ai/stage1-column-class.tsv（表ごと・class ごとにまとめて unnest で入れる）。
@@ -297,6 +297,8 @@ FROM (VALUES
   ('public','users',ARRAY['role','theme','username'],'mask',''),
   ('public','viewer_accounts',ARRAY['discord_channel_id','discord_user_id','email','inventory_issue','line_name'],'mask',''),
   ('public','viewer_accounts',ARRAY['status'],'allow','値の決まり ck_viewer_accounts_status で値が限られる'),
+  ('public','viewer_billing_profiles',ARRAY['address','bill_to_name','contact_name','invoice_email','phone','postal_code'],'mask',''),
+  ('public','viewer_billing_profiles',ARRAY['party_type'],'allow','値の決まり ck_viewer_billing_profiles_party_type で値が限られる'),
   ('public','viewer_discord_config',ARRAY['guild_id','reception_channel_id','staff_role_id','ticket_category_id'],'mask',''),
   ('public','viewer_login_events',ARRAY['client_ip'],'mask',''),
   ('public','viewer_login_events',ARRAY['event_type'],'allow','値の決まり ck_viewer_login_events_event_type で値が限られる'),

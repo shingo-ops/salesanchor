@@ -2,7 +2,12 @@
  * 閲覧 API の呼び出し（fetch）。アプリ本体の api（axios 等）は読み込まない。
  * トークンは localStorage `viewer_access_token`（読み書きは try/catch。使えなくても画面は動く）。
  */
-import type { ViewerInventoryResponse, ViewerLoginResponse, ViewerSignupResponse } from "./types";
+import type {
+  ViewerBillingFormValues,
+  ViewerInventoryResponse,
+  ViewerLoginResponse,
+  ViewerSignupResponse,
+} from "./types";
 
 export const TOKEN_KEY = "viewer_access_token";
 const API_BASE = "/api/v1/viewer";
@@ -118,5 +123,26 @@ export function signup(body: {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
+  });
+}
+
+/** 請求先フォームを開く。鍵は使い切らず、今の請求先（無ければ空）が返る。無効の鍵は 400。 */
+export function openBillingForm(token: string): Promise<ViewerBillingFormValues> {
+  return request<ViewerBillingFormValues>("/billing-form/open", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token }),
+  });
+}
+
+/** 請求先を送る。保存できたときだけ鍵が使い切られる。 */
+export function submitBillingForm(
+  token: string,
+  values: Omit<ViewerBillingFormValues, "party_type"> & { party_type: "company" | "individual" },
+): Promise<{ status: string }> {
+  return request<{ status: string }>("/billing-form/submit", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token, ...values }),
   });
 }

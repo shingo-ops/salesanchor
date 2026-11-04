@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS public.viewer_message_templates (
 );
 
 COMMENT ON TABLE public.viewer_message_templates IS '閲覧者向け文面のテンプレート（鍵は backend/app/services/viewer_message_templates.py の台帳）';
-COMMENT ON COLUMN public.viewer_message_templates.key IS '文面の鍵（台帳の9件）';
+COMMENT ON COLUMN public.viewer_message_templates.key IS '文面の鍵（台帳の10件）';
 COMMENT ON COLUMN public.viewer_message_templates.body IS '本文（差し込み項目は {name} 形式・1〜1800文字）';
 COMMENT ON COLUMN public.viewer_message_templates.updated_at IS '最後に直した時刻';
 COMMENT ON COLUMN public.viewer_message_templates.updated_by_user_id IS '最後に直した社員 public.users.id（seed は NULL）';

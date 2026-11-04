@@ -130,6 +130,27 @@
       "again": "もう一度メールを送る",
       "backToLogin": "ログインに戻る"
     },
+    "billing": {
+      "title": "請求先のご入力",
+      "company": "会社",
+      "individual": "個人",
+      "partyRequired": "会社か個人かを選んでください。",
+      "billToName": "請求書の宛名",
+      "contactName": "ご担当者名",
+      "postalCode": "郵便番号",
+      "postalCodeHelp": "ハイフンはあってもなくても構いません（数字7桁）",
+      "address": "住所",
+      "phone": "電話番号",
+      "phoneHelp": "ハイフンはあってもなくても構いません（数字10〜11桁）",
+      "invoiceEmail": "請求書の送り先メール（任意）",
+      "invoiceEmailHelp": "ご登録のメールと別の宛先に送りたいときだけ入力してください。",
+      "submit": "送信する",
+      "invalidInput": "入力内容を確認してください。会社の場合は担当者名が必要です。",
+      "doneTitle": "ご入力ありがとうございました",
+      "doneDescription": "請求先を受け付けました。このページは閉じて構いません。",
+      "invalidTitle": "リンクが使えません",
+      "invalidDescription": "リンクの期限が切れているか、すでに使われています。お手数ですが、担当者にお知らせください。"
+    },
     "signup": {
       "title": "利用の申込",
       "lineName": "LINE の表示名",

@@ -56,6 +56,7 @@ beforeEach(async () => {
   vi.mocked(api.get).mockImplementation(async (path: string) => {
     if (path === "/super-admin/viewers") return { items: ITEMS };
     if (path === "/tcg/distribution/targets") return [];
+    if (path.endsWith("/billing-profile")) return null;
     return { items: [] };
   });
 });
@@ -632,6 +633,97 @@ it("shows the already-has-a-sheet message on 409 and not-found message on 422", 
   await waitFor(() =>
     expect(screen.getByTestId("viewers-sheet-form-error").textContent).toBe(
       i18n.t("superAdmin.viewers.sheetViewerNotFoundError"),
+    ),
+  );
+});
+
+
+// ── 請求先（便2） ─────────────────────────────────────────────
+
+const ACTIVE = v({ id: 3, email: "a3@example.com", line_name: "Kato", status: "active", trial_expires_at: null });
+const BILLING = {
+  party_type: "company",
+  bill_to_name: "Test Corp",
+  contact_name: "Contact Test",
+  postal_code: "1000001",
+  address: "Test Address 1-1",
+  phone: "0300000000",
+  invoice_email: null,
+  updated_at: "2026-11-01T00:00:00Z",
+};
+
+function mockWithActive(billing: unknown) {
+  vi.mocked(api.get).mockImplementation(async (path: string) => {
+    if (path === "/super-admin/viewers") return { items: [...ITEMS, ACTIVE] };
+    if (path === "/tcg/distribution/targets") return [];
+    if (path === "/super-admin/viewers/3/billing-profile") return billing;
+    if (path.endsWith("/billing-profile")) return null;
+    return { items: [] };
+  });
+}
+
+it("shows the billing section with an empty state when no billing information exists, for any status", async () => {
+  renderPage();
+  await screen.findByText("Taro");
+  fireEvent.click(within(row("Taro")).getByText("Taro"));
+  const billing = within(await screen.findByTestId("viewers-detail-billing"));
+  expect(await billing.findByText(i18n.t("superAdmin.viewers.billingEmpty"))).toBeTruthy();
+});
+
+it("shows the send billing form button only for active viewers", async () => {
+  mockWithActive(null);
+  renderPage();
+  await screen.findByText("Taro");
+  fireEvent.click(within(row("Taro")).getByText("Taro"));
+  await screen.findByTestId("viewers-detail-billing");
+  expect(screen.queryByTestId("viewers-detail-billing-send")).toBeNull();
+  fireEvent.click(within(row("Kato")).getByText("Kato"));
+  expect(await screen.findByTestId("viewers-detail-billing-send")).toBeTruthy();
+});
+
+it("shows the billing information in text with a hyphenated postal code", async () => {
+  mockWithActive(BILLING);
+  renderPage();
+  await screen.findByText("Kato");
+  fireEvent.click(within(row("Kato")).getByText("Kato"));
+  expect((await screen.findByTestId("viewers-detail-billing-name")).textContent).toContain("Test Corp");
+  expect(screen.getByTestId("viewers-detail-billing-postal").textContent).toContain("100-0001");
+  expect(screen.getByTestId("viewers-detail-billing-contact").textContent).toContain("Contact Test");
+});
+
+it("posts send-billing-form and shows the room result; failed/no_room shows the copyable text", async () => {
+  mockWithActive(null);
+  vi.mocked(api.post).mockResolvedValue({
+    room_notice: "no_room",
+    room_notice_text: "form text with link",
+    mail_queued: true,
+    expires_at: "2026-11-11T00:00:00Z",
+  });
+  renderPage();
+  await screen.findByText("Kato");
+  fireEvent.click(within(row("Kato")).getByText("Kato"));
+  fireEvent.click(await screen.findByTestId("viewers-detail-billing-send"));
+  await screen.findByTestId("viewers-detail-billing-send-result");
+  expect(api.post).toHaveBeenCalledWith("/super-admin/viewers/3/send-billing-form", {});
+  expect(screen.getByTestId("viewers-detail-billing-text").textContent).toBe("form text with link");
+  expect(screen.getByText(i18n.t("superAdmin.viewers.billingMailQueued"))).toBeTruthy();
+});
+
+it("shows a message for 409 and 503 when sending the billing form", async () => {
+  mockWithActive(null);
+  vi.mocked(api.post).mockRejectedValueOnce(new ApiError("viewer_status_conflict", 409, "viewer_status_conflict"));
+  renderPage();
+  await screen.findByText("Kato");
+  fireEvent.click(within(row("Kato")).getByText("Kato"));
+  fireEvent.click(await screen.findByTestId("viewers-detail-billing-send"));
+  expect((await screen.findByTestId("viewers-detail-billing-send-error")).textContent).toBe(
+    i18n.t("superAdmin.viewers.billingConflictError"),
+  );
+  vi.mocked(api.post).mockRejectedValueOnce(new ApiError("template_not_found", 503, "template_not_found"));
+  fireEvent.click(screen.getByTestId("viewers-detail-billing-send"));
+  await waitFor(() =>
+    expect(screen.getByTestId("viewers-detail-billing-send-error").textContent).toBe(
+      i18n.t("superAdmin.viewers.templateNotFound"),
     ),
   );
 });

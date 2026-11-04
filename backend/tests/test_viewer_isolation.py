@@ -56,6 +56,10 @@ _PUBLIC_NO_AUTH_ROUTES: frozenset[tuple[str, str]] = frozenset(
         ("POST", "/api/v1/public/register"),
         ("POST", "/api/v1/public/register/address"),
         ("POST", "/api/v1/public/register/change-billing"),
+        # viewer-customer-sheet 便2: 請求先フォームの2本は閲覧者のトークンを見ない。
+        # 鍵は本文の1回きりの鍵だけで確かめる公開の入口（B2B の change-billing と同じ形。試験では Origin が無く 403 になる）
+        ("POST", "/api/v1/viewer/billing-form/open"),
+        ("POST", "/api/v1/viewer/billing-form/submit"),
         ("POST", "/api/v1/tcg/line-devices/start"),
         ("POST", "/api/v1/webhook/messenger"),
     }

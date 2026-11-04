@@ -2810,7 +2810,8 @@
         "notice_extended": "延長のお知らせ",
         "notice_activated": "本登録のお知らせ",
         "notice_suspended": "停止のお知らせ",
-        "interview_request": "面談のお願い"
+        "interview_request": "面談のお願い",
+        "billing_form_request": "請求先フォームの送付"
       },
       "when": {
         "signup_request": "申込の前",
@@ -2821,7 +2822,8 @@
         "notice_extended": "延長したとき",
         "notice_activated": "本登録にしたとき",
         "notice_suspended": "停止したとき",
-        "interview_request": "期限の前日10時以降"
+        "interview_request": "期限の前日10時以降",
+        "billing_form_request": "請求先フォームを送ったとき"
       },
       "placeholders": {
         "signup_url": "申込ページのURL（自動で入ります）",
@@ -2832,7 +2834,9 @@
         "email": "メールアドレス",
         "password": "初期パスワード",
         "until_date": "延長後の期限の日付",
-        "expires_date": "お試し期限の日付"
+        "expires_date": "お試し期限の日付",
+        "form_url": "請求先フォームのURL（自動で入ります）",
+        "form_expires": "請求先フォームのリンクの期限の日付"
       },
       "placeholdersLabel": "差し込み項目",
       "placeholdersNone": "なし",
@@ -2917,6 +2921,25 @@
       "reissueInvite": "招待リンク",
       "reissueInviteFailed": "招待リンクを作れませんでした。もう一度作り直してください。",
       "reissueOnlyOnce": "この画面を閉じると、コードと招待リンクは二度と表示されません。",
+      "billingTitle": "請求先",
+      "billingEmpty": "まだ請求先が届いていません",
+      "billingLoadError": "請求先を読み込めませんでした",
+      "billingPartyType": "種別",
+      "billingCompany": "会社",
+      "billingIndividual": "個人",
+      "billingName": "宛名",
+      "billingContact": "担当者",
+      "billingPostal": "郵便番号",
+      "billingAddress": "住所",
+      "billingPhone": "電話番号",
+      "billingEmail": "請求書の送り先メール",
+      "billingSend": "請求先フォームを送る",
+      "billingConflictError": "本契約のお客さんにだけ送れます",
+      "billingRoom_sent": "Discord の部屋にリンクを送りました",
+      "billingRoom_failed": "部屋に送れませんでした。下の文をコピーして送ってください",
+      "billingRoom_no_room": "部屋がありません。下の文をコピーして送ってください",
+      "billingMailQueued": "メールの送信を手配しました",
+      "billingExpires": "リンクの期限",
       "sheetTitle": "配信するシート",
       "sheetEmpty": "シートはまだ登録されていません",
       "sheetAdd": "シートを登録",
