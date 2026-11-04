@@ -23,7 +23,7 @@ DROP TABLE / 大量DELETE / `rm -rf` / `git reset --hard` / `git push --force`�
 ## VPS 直作業禁止（技術的にも制限付き鍵のみ）
 
 - **エージェントは原則として制限付き鍵を使用**（`salesanchor-claude`、ForceCommand 制限）
-- **無制限鍵（`~/.ssh/manual-only/id_ed25519`）**: 本番 DB の読み取りは reader 鍵の道（`docs/handoff/ai-readonly-db-path/usage.md`）を使い、manual-only は使わない。DB 以外の読み取りだけの調査（ログ/設定表示・`ss`/`ps`/`systemctl status`・接続確認）は恒常許可。変更を伴う作業（ファイル作成・コンテナ起動停止・設定変更・再起動・DB 書き込み）は作業ごとに PO の GO が必要（設計担当が GO 原文を依頼文と PR に転記）。ただし、PO が合意した設計の作業手順に書かれ審査役が APPROVE した行は、Opus 本人が実行前に控えを取って実行してよい（ADR-1003 追記 2026-11-02。条件・除外・記録の形は同 ADR。担当（サブエージェント・クラウド）は含まない）
+- **無制限鍵（`~/.ssh/manual-only/id_ed25519`）**: 本番 DB の読み取りは reader 鍵の道（`docs/handoff/ai-readonly-db-path/usage.md`）。DB 以外の読み取りだけの調査は恒常許可。変更を伴う作業は作業ごとに PO の GO が必要（例外・条件・記録の形は ADR-1003 と下の詳細）
 - 鍵・パスワード・トークンの値は表示しない。人間の無制限鍵（`hitoshi@` 等）は VPS 側で変更しない
 - 詳細・ロールバック手順: `docs/handoff/rehearsal-env/design-b-ssh-isolation.md`
 
@@ -40,7 +40,7 @@ DROP TABLE / 大量DELETE / `rm -rf` / `git reset --hard` / `git push --force`�
 
 - 実行役は作業開始前に必ず `./scripts/dev/executor-preflight.sh || exit 1` を実行する
 - 全タスクは `docs/STANDARD-WORKFLOW.md` の3フェーズ（KGI→現在地→設計）に従う
-- push・PR/issue の本文・コメントに仕入元の投稿の原文を「」『』で書き写さない。送る前の見張り（`scripts/agent-hooks/confidential-quote-guard/`、ADR-1045）が原文と照らして止める。止められたら語句を消し、形の説明に書き換える。push は `git -C <worktree の絶対パス> push -u origin <ブランチ>` を単独で、本文は Write で作ったファイルを `--body-file <絶対パス>` で渡す（これ以外の形は止まる。commit は heredoc か `-F <絶対パス>` で書ける。見張りの登録は PO が `!` で実行）
+- push・PR/issue の本文・コメントに仕入元の投稿の原文を「」『』で書き写さない（見張り ADR-1045 が止める。止められたときの直し方と push・本文の渡し方は `docs/ai-agents/executor-checklist.md`）
 - 作業前/commit前/PR前のチェックは `docs/ai-agents/executor-checklist.md`（正本・必読）
-- 手順や作業方法を答える・計画する前に、必ず目次 `docs/INDEX.md` を開き、章→末端の順にたどって該当する手順書を読む（記憶や推測だけで答えない）
+- 手順や作業方法を答える・計画する前に、必ず目次 `docs/INDEX.md` を開き、合う行の手順書を読む（記憶や推測だけで答えない）
 - 画面（`frontend/`）は `frontend/AGENTS.md`、サーバー側（`backend/`）は `backend/AGENTS.md` の決まりにも従う。触る前に開いて読む（Codex は作業場所より下の AGENTS.md を自動では読まない）
