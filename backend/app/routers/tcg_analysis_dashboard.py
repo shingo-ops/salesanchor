@@ -185,6 +185,9 @@ class DistributionTargetItem(BaseModel):
     id: str
     name: str | None
     is_active: bool
+    viewer_account_id: int | None = None
+    deliverable: bool = True
+    reason: str | None = None
     last_distributed_at: str | None
     last_distributed_count: int
     last_result: str | None
