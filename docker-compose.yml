@@ -286,6 +286,14 @@ services:
       - SMTP_USER=${SMTP_USER:-}
       - SMTP_PASSWORD=${SMTP_PASSWORD:-}
       - MAIL_FROM=${MAIL_FROM:-}
+      # ADR-1059 便2 の直し: Google の予定の取り込み（app.tasks.google_calendar_sync）が
+      # 接続の鍵の復号と Google の資格情報に使う。backend は blue-green-cutover.sh が
+      # .env の全部の名前を渡すが、worker はここに並べた名前しか受け取らない。
+      # この 4 行が無いと「未接続のため取り込みスキップ」で毎回何もしない（2026-11-04 本番で確認）。
+      - METADATA_FERNET_KEY=${METADATA_FERNET_KEY:-}
+      - GOOGLE_CALENDAR_CLIENT_ID=${GOOGLE_CALENDAR_CLIENT_ID:-}
+      - GOOGLE_CALENDAR_CLIENT_SECRET=${GOOGLE_CALENDAR_CLIENT_SECRET:-}
+      - GOOGLE_CALENDAR_REDIRECT_URI=${GOOGLE_CALENDAR_REDIRECT_URI:-}
     volumes:
       - ./firebase-credentials.json:/app/firebase-credentials.json:ro
       - ${TCG_SHEETS_SA_KEY_FILE:-/dev/null}:${TCG_SHEETS_SA_KEY_FILE:-/dev/null}:ro
