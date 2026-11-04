@@ -56,10 +56,10 @@
 
 改訂1（2026-11-04、カード作成時の実物確認による。Opus の技術判断）：移行を 2 つに分ける
 - 事実：本番への出し方は「①新しいプログラムを入れて起動（`.github/workflows/deploy.yml` の `Deploy to VPS (code + env + docker compose)`）→ ②DB の移行（`Run database migrations`、`scripts/run_all_migrations.sh`）」の順（deploy.yml:224-235 のコメントと手順名）
-- 1 つの PR で列とプログラムを一緒に出すと、①と②の間は新しいプログラムが無い列 `purpose` を読む。受け取り係の逆引き（`client.py:101-128`）は失敗すると None を返すので、その間の顧客用サーバーの書き込みを取りこぼす
+- 1 つの PR で列とプログラムを一緒に出すと、①と②の間は新しいプログラムが無い列 `purpose` を読む。受け取り係の逆引き（`backend/app/discord_gateway/client.py:101-128`）は失敗すると None を返すので、その間の顧客用サーバーの書き込みを取りこぼす
 - 対処：
   - 便1a（移行だけ・`migrations/20261105_100000_tenant_discord_config_purpose.sql`）：列 `purpose`（既定 `customer`）・決まり `ck_tenant_discord_config_purpose`・一意 `uq_tenant_discord_config_tenant_purpose (tenant_id, purpose)` を足すだけ。主キーは `(tenant_id)` のまま。今のプログラムはこの列を知らなくても動く（足すだけ）
-  - 便1b（プログラム＋移行 `migrations/20261106_100000_tenant_discord_config_purpose_pk.sql`）：主キーを `(tenant_id, purpose)` に替え、便1a の一意を消す。新しいプログラムの `ON CONFLICT (tenant_id, purpose)` は便1a の一意で、移行の前でも後でも動く。移行の前に自社用を登録しようとすると主キー `(tenant_id)` に当たって失敗するが、自社用の登録はこの便で初めて画面に出るので影響は無い
+  - 便1b（プログラム＋移行 migrations/20261106_100000_tenant_discord_config_purpose_pk.sql（新規））：主キーを `(tenant_id, purpose)` に替え、便1a の一意を消す。新しいプログラムの `ON CONFLICT (tenant_id, purpose)` は便1a の一意で、移行の前でも後でも動く。移行の前に自社用を登録しようとすると主キー `(tenant_id)` に当たって失敗するが、自社用の登録はこの便で初めて画面に出るので影響は無い
 - この表を別の表から参照する外部キー・見張り・行の制限は 0 件（§11 U1）なので、主キーの付け替えは 3 行の表で 1 回の短い書き換え
 
 新しい表（同じ移行ファイル）：
@@ -86,7 +86,7 @@
 | `backend/app/routers/discord_ticket_config.py:237-245` | `LEFT JOIN … ON d.tenant_id = c.tenant_id` | `… AND d.purpose = 'customer'` |
 | `backend/app/services/discord_role_sync.py:61-72` | `WHERE dc.tenant_id = :tid` | `AND dc.purpose = 'customer'` |
 
-漏れを機械で止める：試験 `backend/tests/test_discord_config_purpose_guard.py`（新規）が `backend/app` の中で `tenant_discord_config` を含む SQL 文字列を全部探し、同じ文に `purpose` が無ければ落ちる。新しい読み方が増えても漏れない。
+漏れを機械で止める：試験 backend/tests/test_discord_config_purpose_guard.py（新規）が `backend/app` の中で `tenant_discord_config` を含む SQL 文字列を全部探し、同じ文に `purpose` が無ければ落ちる。新しい読み方が増えても漏れない。
 
 ### 4-3. 受け取り係：自社用サーバーではお客さん向けの処理を全部止める（R§4）
 
@@ -95,7 +95,7 @@
 - 顧客用（`customer`）の動きは今と同じ（KGI-2）
 
 改訂1（2026-11-04、カード作成時の実物確認による）：関数の名前と形は変えない
-- 事実：既存の試験 8 か所が `_resolve_tenant_id` を差し替えている（`backend/tests/test_discord_bot_texts.py:107,123,134,146`・`test_discord_reaction_wiring.py:172`・`test_discord_ticket_channel_delete_restore.py:257,275,296`）
+- 事実：既存の試験 8 か所が `_resolve_tenant_id` を差し替えている（`backend/tests/test_discord_bot_texts.py:107,123,134,146`・`backend/tests/test_discord_reaction_wiring.py:172`・`backend/tests/test_discord_ticket_channel_delete_restore.py:257,275,296`）
 - 対処：`_resolve_tenant_id` の名前と戻り値（`int | None`）はそのままにし、SQL に `AND purpose = 'customer'` を足すだけにする。自社用サーバーは「顧客用として登録されていないサーバー」になり、5 か所すべてが今ある「未登録なら止める」道を通る（起動時の復旧・部屋の削除・リアクション・書き込みは何もしない。受付ボタンは「登録されていない」の一言だけ返す。自社用サーバーに受付ボタンは置かない）
 - 上の `_resolve_guild` と専用の記録の一文は作らない。効き目（自社用でお客さん向けの処理が動かない）は同じで、変える行が 1 か所で済む
 - 試験：自社用サーバーの書き込みで `ticket_channel_writer.process_ticket_channel_message` が呼ばれないこと。顧客用では今までどおり呼ばれること
@@ -107,16 +107,16 @@
   - 登録できたあとの戻り先：顧客用は今のまま `/channels?discord_status=connected`。自社用は `/admin/discord-config?tab=own&discord_status=connected`（自社用の登録の Card がある画面へ戻す）
   - 中身の purpose が `customer`・`own` 以外なら `customer` とせず `invalid_payload` で戻す（決まりにない値を黙って顧客用に入れない）
 - 画面側の呼び出し：今の顧客用（`frontend/src/pages/channels/ChannelsPage.tsx:194`、本文 `{}`）は変えない。自社用の Card だけが本文 `{"purpose":"own"}` で呼ぶ
-- 招待の開始は権限 `channels.manage`（`discord_oauth.py:107`）。自社用の招待ボタンは `tenant.profile.edit` と `channels.manage` の両方を持つ人にだけ出す
+- 招待の開始は権限 `channels.manage`（`backend/app/routers/discord_oauth.py:107`）。自社用の招待ボタンは `tenant.profile.edit` と `channels.manage` の両方を持つ人にだけ出す
 - 自社用の削除：`DELETE /admin/discord-config/own`（新規）。`purpose='own'` の行だけ消す
 - 自社用の取得：`GET /admin/discord-config/own`（新規）。`{guild_id, connected_at}` を返す
 
 ### 4-5. 設計図（PO 決定「1」）
 
-- 置き場所：`backend/app/discord_blueprints/tenant_<tenant_id>.json`
+- 置き場所：backend/app/discord_blueprints/tenant_<tenant_id>.json（新規）
   - バックエンドの入れ物は `COPY . .` でこのフォルダごと入る（`backend/Dockerfile:24`）
   - YAML の道具は入っていない（`backend/requirements*.txt` に無い）。新しい部品を足さず JSON にする
-- 形（pydantic で検査。`backend/app/services/discord_blueprint.py` 新規）：
+- 形（pydantic で検査。backend/app/services/discord_blueprint.py（新規））：
 
 ```json
 {
@@ -138,15 +138,15 @@
 ```
 
 - 物の見分け方：`discord_id` があればそれで見分ける（名前を変えても同じ物と分かる）。無ければ「新しく作る物」
-- 権限は名前で書く（数字で書かない）。名前と数字の対応は Discord の公式の表に合わせ、`discord_blueprint.py` に 1 か所だけ置く
-- 試験 `backend/tests/test_discord_blueprints.py`：フォルダの全ファイルが形の検査を通ること、key が重ならないこと、参照先（category・role）があること
-- 新しい物を作ったあとの `discord_id`：反映の結果に新しい番号が出る。Opus が `discord_server_apply_runs.result` を読み、次の PR で設計図に書き足す。書き足すまでの間は、名前と種類と親が同じ物を「同じ物」とみなす（今の自動作成と同じ見分け方、`discord_auto_setup.py:478-502`）。二重には作らない
+- 権限は名前で書く（数字で書かない）。名前と数字の対応は Discord の公式の表に合わせ、discord_blueprint.py（新規） に 1 か所だけ置く
+- 試験 backend/tests/test_discord_blueprints.py（新規）：フォルダの全ファイルが形の検査を通ること、key が重ならないこと、参照先（category・role）があること
+- 新しい物を作ったあとの `discord_id`：反映の結果に新しい番号が出る。Opus が `discord_server_apply_runs.result` を読み、次の PR で設計図に書き足す。書き足すまでの間は、名前と種類と親が同じ物を「同じ物」とみなす（今の自動作成と同じ見分け方、`backend/app/routers/discord_auto_setup.py:478-502`）。二重には作らない
 
 ### 4-6. 今の姿の読み取り（最初の 1 回）
 
 - `POST /admin/discord/own-server/snapshot`（新規・`backend/app/routers/discord_own_server.py`）
 - 自社用サーバーのロール一覧とチャンネル一覧を `discord_api_request` の GET で読み、設計図と同じ形に直して `discord_server_snapshots` に 1 行入れる
-- Opus は読み取り専用の鍵で `ai_ro.public__discord_server_snapshots` を読み、`tenant_<id>.json` を作って PR にする
+- Opus は読み取り専用の鍵で `ai_ro.public__discord_server_snapshots` を読み、tenant_<id>.json（新規） を作って PR にする
 
 ### 4-7. 確認（差分を出す）
 
@@ -172,15 +172,15 @@
 
 - 上に Tabs（金型 `frontend/src/components/Tabs.tsx`）。「顧客用」「自社用」
   - 顧客用タブ：今の画面の中身をそのまま入れる（動きは変えない）
-  - 自社用タブ（新規の部品ファイル `frontend/src/pages/admin/DiscordOwnServerPanel.tsx`）
+  - 自社用タブ（新規の部品ファイル frontend/src/pages/admin/DiscordOwnServerPanel.tsx（新規））
 - 自社用タブの中身。すべて既存の部品（R§6）
   - 登録の Card：未登録なら「自社用サーバーに Bot を招待」Button、登録済みなら Badge「接続済み」と解除の Button（ConfirmModal で確かめる）
   - 「今のサーバーを読み取る」Button（最初の 1 回用。結果は「読み取りました（ロール n・チャンネル n）」）
   - 「確認する」Button → 3 つの DataTable（変わる・できない・消す候補）。件数を見出しに出す。0 件は EmptyState
   - 「反映する」Button（変わる行が 1 件以上のときだけ押せる）→ ConfirmModal（「n 件を反映します」）→ 結果の DataTable（Badge で 成功/できない/失敗）
-- 文字はすべて `t("discordOwnServer.…")`。`ja.json`・`en.json` に同じキー（ADR-027）
+- 文字はすべて `t("discordOwnServer.…")`。`frontend/src/locales/ja.json`・`frontend/src/locales/en.json` に同じキー（ADR-027）
 - 色は Badge の variant とデザイントークンだけ。直書きしない（ADR-144）
-- 権限：見る `tenant.profile.view`、押す `tenant.profile.edit`（今の自動作成と同じ、`discord_auto_setup.py:84-88`）
+- 権限：見る `tenant.profile.view`、押す `tenant.profile.edit`（今の自動作成と同じ、`backend/app/routers/discord_auto_setup.py:84-88`）
 
 ## 5. 便の分け方
 
@@ -231,7 +231,7 @@
 | KGI-6 Bot より上のロールを変える行が実行されず理由が出る・他は反映 | 結果の表示・`result` の「できない」1 |
 | KGI-7 手作業は Bot ロールの移動 1 回だけ | 試験の手順書で数える |
 | 画面の文字が t() 経由・ja/en 同じキー | 既存の i18n 検査（CI） |
-| 消す処理が無い | 試験で `discord_own_server.py` に `"DELETE"` の Discord 呼び出しが無いこと |
+| 消す処理が無い | 試験で discord_own_server.py（新規） に `"DELETE"` の Discord 呼び出しが無いこと |
 
 ## 9. 外部・過去事例の参照と我々への応用
 
@@ -240,7 +240,7 @@
   - plan の後に状態が変わると、その plan は古くなり捨てられる（HCP Terraform の saved plan）
   - 応用：確認（§4-7）と反映（§4-8）を分け、digest で古い確認を断る
   - 適用の限界：Terraform は状態を保存するが、本設計は Discord の今の姿を毎回その場で読む。数値の効果の根拠には使わない
-- 社内の過去事例：顧客用の自動作成（`discord_auto_setup.py:536-589`）の「名前・種類・親で既存を探して二重に作らない」をそのまま使う
+- 社内の過去事例：顧客用の自動作成（`backend/app/routers/discord_auto_setup.py:536-589`）の「名前・種類・親で既存を探して二重に作らない」をそのまま使う
 - Discord の決まり（Context7 `/discord/discord-api-docs`）：Bot は自分より上のロールを変えられない → §4-7 の「できない一覧」
 
 ## 維持の仕組み
