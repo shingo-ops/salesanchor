@@ -5,7 +5,8 @@
 - 親（仕様書）: [../../specs/auth-roles/README.md](../../specs/auth-roles/README.md)
 - 調査: [recon.md](recon.md)
 - データ変更の手順: [data-change-1/README.md](data-change-1/README.md)
-- 状態: 設計案作成済み（2026-11-04）。設計審査・PO 承認・実装はまだ。
+- 設計審査の記録: [review-opus.md](review-opus.md)
+- 状態: 設計案作成済み・設計審査済み（2026-11-04、クラウドの審査 3 回目で APPROVE）。PO 承認・実装はまだ。
 
 ## 1. 目的と KGI
 
@@ -199,6 +200,7 @@ DB を正とし、コードに一覧の写しを作らない。
 - T2: /conditions/import/preview も同じであること。
 - T3: GET /api/v1/conditions/catalog の求めるキーが {conditions.view} であること。
 - T4: conditions・product-categories のすべての経路で、求めるキーが §4-2 の 7 キーのどれかであること。
+  - 対象は、dependencies の checker が required_permission_keys を持つものだけ。持たない依存（get_current_tenant・require_super_admin など）は飛ばす（クラウドの設計審査 3 回目の注記）。
   - 将来、一覧に無いキーを書いたら試験で止める。便2 の前の簡易版。
 
 実動の試験（T5〜T7。クラウドの設計審査の指摘⑦）:
@@ -212,7 +214,7 @@ DB を正とし、コードに一覧の写しを作らない。
   - import/commit に同じ CSV と、食い違う digest（例: 文字列 `mismatch`）を送ると、409（CONDITION_IMPORT_DIGEST_MISMATCH）。
   - 「403 でない」ではなく、ちょうどの番号を確かめる。500 で合格しないようにするため（クラウドの設計審査 2 回目の指摘）。
 - T5・T6 の commit も、同じ CSV と食い違う digest で呼ぶ。権限の確かめ（dependencies）が先に走るので 403 になる。権限が足りていれば 409 になる。
-- 表を読まずに済む理由（2026-11-04 origin/main で確認）:
+- 表を読まずに済む理由（2026-11-04 origin/main 48eab3eaf で確認。conditions.py・conftest.py・dependencies.py は cb9525b9d と差分 0 件）:
   - client の試験は SQLite で動き、public.conditions の表が無い（conftest.py:1883 以降）。行のある CSV だと表を読んで 500 になる。
   - preview の表の読みは、行ごとの繰り返しの中だけ（backend/app/routers/conditions.py:429-437）。見出しだけなら行が 0 件で、表を読まない。必須の列 code・canonical（:43）がそろっていれば誤りも出ない（:73-75）。
   - commit の digest の照合（:463-465）は、表を読む前に 409 を返す。
@@ -288,3 +290,9 @@ DB を正とし、コードに一覧の写しを作らない。
   - いずれも実装の PR で作る。この設計の PR の時点では、まだ無い。
 - 対象: 状態マスタの CSV 取り込みが閲覧だけで通らないこと。コードが求める権限キーが、権限の一覧にそろっていること。
 - 関所ができるまで: 人手で守る。理由は、守り手のファイルが便1・便2 の実装で初めてできるため。
+
+### 10-3. クラウドの設計審査 3 回目（2026-11-04・先頭 e9318f7d8・判定 APPROVE）
+| 注記（直さなくても止まらない） | 直したこと |
+|---|---|
+| T4 で、鍵を持たない依存（require_super_admin など）をどう扱うか書かれていない | required_permission_keys を持たない依存は飛ばす、と §6 に書いた |
+| 確認元の版が §10 は cb9525b9d、§6 は origin/main と揺れている | §6 に origin/main 48eab3eaf と書き、3 ファイルが cb9525b9d と差分 0 件であることを添えた |
