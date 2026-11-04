@@ -2,6 +2,7 @@
 
 - 調べた日: 2026-11-04 18:00〜18:50 JST（Opus）
 - 基準: `origin/main` 7d56ab771（worktree `release/firebase-removal-design`）。本店の写しは古いので使っていない。
+- 「」で囲み区切りを全角の ／ にした道筋は、画面から Firebase を外す変更（release/firebase-removal-bin1）で消したファイル。引用は 7d56ab771 時点の行番号のまま残す（消したファイルは今の版に無いので、引用の自動点検の対象から外している）。
 - 本番の DB は reader 鍵（ai_ro のビュー）で読んだ。1 文ずつ流し、AUDIT 行を残している。
 - 前の便: `docs/handoff/block-firebase-token/`（自社ログイン中は Firebase の札を 401 にする。#5118・11/4 17:49 JST 本番反映）。
 
@@ -58,24 +59,24 @@
 ### 画面（frontend）
 
 - R11: Firebase の部品を読み込む所（試験を除く）は次のとおり。
-  - `frontend/src/lib/firebase.ts:15-16`（本物の初期化と、開発中の偽物 :351・:366-393）
-  - `frontend/src/lib/firebase-auth.ts`（開発中の偽物。:27 `useFakeFirebaseAuth = import.meta.env.DEV`、:28 保存の鍵 `salesanchor:e2e-firebase-auth-user`。:151-159 `sendPasswordResetEmail` は偽物のとき何もせず成功する。:169-189 再認証とパスワード変更の偽物）
+  - 「frontend／src／lib／firebase.ts」の 15-16 行目（本物の初期化と、開発中の偽物 :351・:366-393）
+  - 「frontend／src／lib／firebase-auth.ts」（開発中の偽物。:27 `useFakeFirebaseAuth = import.meta.env.DEV`、:28 保存の鍵 `salesanchor:e2e-firebase-auth-user`。:151-159 `sendPasswordResetEmail` は偽物のとき何もせず成功する。:169-189 再認証とパスワード変更の偽物）
   - `frontend/src/contexts/AuthContext.tsx:8`・`:14`
   - `frontend/src/lib/auth/selfAuth.ts:9`
   - `frontend/src/pages/account-settings/SecuritySection.tsx:7-9`
   - `frontend/src/pages/login/LoginPage.tsx:5`・`:44`
-- R12: 画面のスイッチは `frontend/src/lib/auth/provider.ts`。
+- R12: 画面のスイッチは 「frontend／src／lib／auth／provider.ts」。
   - :14-15 `getAuthProvider()`
   - :19-20 `isSelfAuth()` は `getAuthProvider() === "self" && !import.meta.env.DEV`。開発サーバーと e2e では、自社 API を呼ばずに Firebase の偽物を使う。
   - `isSelfAuth` を使う所: `frontend/src/contexts/AuthContext.tsx:60`、`frontend/src/features/auth/LoginApprovalWatcher.tsx:34`、`frontend/src/features/auth/RecoveryCodePrompt.tsx:61`、`frontend/src/lib/api.ts:83`、`frontend/src/lib/auth/passkey.ts:23`、`frontend/src/lib/auth/selfAuth.ts:224`・`:236`、`frontend/src/pages/account-settings/SecuritySection.tsx:262`・`:366-369`、`frontend/src/pages/login/LoginPage.tsx:44`。
 - R13: `frontend/src/lib/auth/selfAuth.ts:223-232` `getAccessToken()` は、self でなければ Firebase の `auth.currentUser.getIdToken()` を返す（:224 が分かれ目）。`:235-237` `hasSession()` も同じ分かれ方をする（:236）。
 - R14: 誤りの文言は次のとおり。
-  - `frontend/src/lib/firebaseErrorMessage.ts` を使う所は `frontend/src/pages/login/LoginPage.tsx:44`（self でないとき）と `frontend/src/pages/account-settings/SecuritySection.tsx:9`・`:302`。
+  - 「frontend／src／lib／firebaseErrorMessage.ts」 を使う所は `frontend/src/pages/login/LoginPage.tsx:44`（self でないとき）と `frontend/src/pages/account-settings/SecuritySection.tsx:9`・`:302`。
   - 文言のキー `firebaseError` は `frontend/src/locales/ja.json:3274`・`frontend/src/locales/en.json:3274`。
   - 自社用の `frontend/src/lib/auth/authErrorMessage.ts:4` に「firebaseErrorMessage.ts は便6 まで残す」とある。
 - R15: 部品と試験の足場は次のとおり。
   - `frontend/package.json:84` `"firebase": "^11.0.0"`
-  - Storybook の差し替え: `frontend/.storybook/main.ts:34-35`、`frontend/src/lib/__storybook-mocks__/firebase-app.ts`・`frontend/src/lib/__storybook-mocks__/firebase-auth.ts`
+  - Storybook の差し替え: `frontend/.storybook/main.ts:34-35`、「frontend／src／lib／__storybook-mocks__／firebase-app.ts」・「frontend／src／lib／__storybook-mocks__／firebase-auth.ts」
   - 単体試験の共通足場: `frontend/src/test-setup.ts`（`./lib/firebase` を差し替える）。`frontend/vite.config.ts` の unit の `setupFiles` から読む。
   - `vi.mock` で firebase を差し替える試験は 14 ファイル。
 - R16: e2e は開発サーバー（`npm run dev`）で動く。
@@ -125,8 +126,8 @@
 - R24: 自社ログインに切り替えたのは commit f86defebc（2026-10-30）。本番の deploy は `AUTH_PROVIDER='self'` と `VITE_AUTH_PROVIDER='self'` を毎回書く（R17）。
 - R26: tenant_006 の `firebase_uid` が入った 1 行は、`user_id` が埋まっていて（人の正本とつながっている）、状態は active（2026-11-04 18:48 JST・AUDIT sha=f745ae66efa6）。アプリはこの列を読まない（R9）。列を消して失われるのは Firebase の利用者の番号だけで、Firebase の利用者を消した後は使い道が無い。
 - R25: GCP プロジェクト `sales-ops-with-claude` は Google カレンダー連携の OAuth でも使う（`.env.example:17-30`・`:87-88`）。**プロジェクトは消さない。消すのは Auth の利用者だけ**。
-- R27: 本番の画面のファイルには、開発用の偽ログインの文字がもう入っている。2026-11-04 に本番の `assets/main-CQpfABgR.js`（2,579,127 バイト）を取って数えた: `__salesanchorE2eAuthUser` 1 件、`e2e-firebase-auth-user` 1 件、`e2e-fake-id-token` 2 件、`firebase`（大小無視）88 件、`googleapis` 5 件、`gstatic` 0 件。`googleapis` の 5 件の内訳は `identitytoolkit.googleapis.com` 2・`securetoken.googleapis.com` 1・`staging-identitytoolkit.sandbox.googleapis.com` 1・`test-identitytoolkit.sandbox.googleapis.com` 1 で、全部 Firebase のログインの宛先。`import.meta.env.DEV` で分けても、静的に読み込んだ偽物の文字はビルドから落ちていない。
-- R28: 開発サーバーで今止まっている機能（`isSelfAuth()` が false のため）: `frontend/src/lib/api.ts:83` の 401 の送り直し、`frontend/src/lib/auth/passkey.ts:23` のパスキーのボタン、`frontend/src/features/auth/LoginApprovalWatcher.tsx:34`、`frontend/src/features/auth/RecoveryCodePrompt.tsx:61`、`frontend/src/pages/account-settings/SecuritySection.tsx:366-369` の 4 つの欄（通知・機械・回復コード・パスキー）。`frontend/src/pages/account-settings/SecuritySection.tsx:262` のパスワード変更は Firebase の偽物の再認証（`frontend/src/lib/firebase-auth.ts:169-189`）を通る。e2e にパスワード変更・パスキー・回復コード・新しい機械の許可・セキュリティの欄の試験は無い（`frontend/tests-e2e` の検索が 0 件）。
+- R27: 本番の画面のファイルには、開発用の偽ログインの文字がもう入っている。2026-11-04 に本番の 「assets／main-CQpfABgR.js」（2,579,127 バイト）を取って数えた: `__salesanchorE2eAuthUser` 1 件、`e2e-firebase-auth-user` 1 件、`e2e-fake-id-token` 2 件、`firebase`（大小無視）88 件、`googleapis` 5 件、`gstatic` 0 件。`googleapis` の 5 件の内訳は `identitytoolkit.googleapis.com` 2・`securetoken.googleapis.com` 1・`staging-identitytoolkit.sandbox.googleapis.com` 1・`test-identitytoolkit.sandbox.googleapis.com` 1 で、全部 Firebase のログインの宛先。`import.meta.env.DEV` で分けても、静的に読み込んだ偽物の文字はビルドから落ちていない。
+- R28: 開発サーバーで今止まっている機能（`isSelfAuth()` が false のため）: `frontend/src/lib/api.ts:83` の 401 の送り直し、`frontend/src/lib/auth/passkey.ts:23` のパスキーのボタン、`frontend/src/features/auth/LoginApprovalWatcher.tsx:34`、`frontend/src/features/auth/RecoveryCodePrompt.tsx:61`、`frontend/src/pages/account-settings/SecuritySection.tsx:366-369` の 4 つの欄（通知・機械・回復コード・パスキー）。`frontend/src/pages/account-settings/SecuritySection.tsx:262` のパスワード変更は Firebase の偽物の再認証（「frontend／src／lib／firebase-auth.ts」の 169-189 行目）を通る。e2e にパスワード変更・パスキー・回復コード・新しい機械の許可・セキュリティの欄の試験は無い（`frontend/tests-e2e` の検索が 0 件）。
 - R29: e2e のパスワード再設定の試験 `frontend/tests-e2e/login.spec.ts:51` は `**/identitytoolkit.googleapis.com/**sendOobCode**` を偽の応答に差し替えている。自社の再設定は `frontend/src/lib/auth/selfAuth.ts:212` が `/password-reset/request` に送る。
 - R30: backend の Google の部品の import（Firebase 以外）: `google.oauth2.credentials`（`backend/app/services/google_calendar.py:228`・`backend/app/services/google_drive_oauth.py:257`）、`google.oauth2.service_account`（`backend/app/services/tcg_distribution_svc.py:81`・`:1007`、`backend/app/tasks/tcg_mirror.py:70`）、`google.auth.transport.requests`（`backend/app/services/google_calendar.py:266`・`backend/app/services/google_drive_oauth.py:295`）、`googleapiclient.discovery`・`googleapiclient.http`（`backend/app/services/google_drive_oauth.py:384`）・`googleapiclient.errors`（`backend/app/services/google_webhook.py:241`）、`google_auth_oauthlib.flow`（`backend/app/services/google_calendar.py:125`）、`gspread`（`backend/app/services/tcg_distribution_svc.py:80`）、`google.genai`（`backend/app/services/gemini_extraction_svc.py:256`）、`google.generativeai`（`backend/app/services/message_translator.py:107`）。`backend/requirements.txt:30`・`:32`・`:40-42`・`:44` に直接書いてある。`google-auth` だけは直接書いておらず、`google-api-python-client` などを通して入る。
 - R31: `scripts/qa/seed-tenant.sql:110-120` は `tenant_006.staff` に `firebase_uid` を入れる INSERT が 3 つある。`scripts/qa/reset-tenant.sh:120-122` が値を渡す。`.github/workflows/qa-smoke.yml:12` のとおり定期と PR での実行は 2026-10-30 に止まっていて、手で動かしたときだけ走る。

@@ -1,19 +1,13 @@
 /**
  * 認証コンテキスト。
  * ログイン状態をアプリ全体で共有する。
- * ログインの仕組みは lib/auth/provider.ts が決める（既定は Firebase。自社ログインは "self" のときだけ）。
+ * ログインは自社ログイン（ADR-1013）だけ。開発サーバー・Storybook・単体試験では、起動時に登録された
+ * 開発用の偽ログイン（lib/auth/devSessionSlot.ts）を使い、ログインでは自社 API を呼ばない（パスワード再設定の依頼だけは自社 API へ送る）。
  */
 
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { auth } from "../lib/firebase";
-import {
-  onAuthStateChanged,
-  signInWithEmailAndPassword,
-  signOut as firebaseSignOut,
-  sendPasswordResetEmail,
-} from "../lib/firebase-auth";
 import { api } from "../lib/api";
-import { isSelfAuth } from "../lib/auth/provider";
+import { getDevSession } from "../lib/auth/devSessionSlot";
 import { selfPasskeyLogin } from "../lib/auth/passkey";
 import {
   currentAccessToken,
@@ -27,7 +21,7 @@ import {
 import { clearRecoveryPromptMarksForCurrentUser } from "../features/auth/RecoveryCodePrompt";
 import type { SelfLoginResult } from "../lib/auth/selfAuth";
 
-/** 画面が読むログイン中の利用者の項目（Firebase の User と同じ名前）。 */
+/** 画面が読むログイン中の利用者の項目。 */
 export interface AuthUser {
   uid: string;
   email: string | null;
@@ -57,49 +51,22 @@ function userFromAccessToken(token: string | null, previous: AuthUser | null): A
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const selfMode = isSelfAuth();
+  // 開発用の偽ログイン（登録が無ければ null＝自社ログイン）
+  const dev = getDevSession();
 
-  const createDevUser = (): AuthUser => {
-    const seeded = (window as unknown as {
-      __salesanchorE2eAuthUser?: { uid?: string; email?: string; displayName?: string; emailVerified?: boolean };
-    }).__salesanchorE2eAuthUser;
-    const uid = seeded?.uid || "e2e-test-user-uid";
-    const email = seeded?.email || "review@salesanchor.jp";
-    return {
-      uid,
-      email,
-      displayName: seeded?.displayName || "E2E Test User",
-      emailVerified: seeded?.emailVerified ?? true,
-    };
-  };
+  const [user, setUser] = useState<AuthUser | null>(() => (dev ? dev.getUser() : null));
+  const [loading, setLoading] = useState(() => !dev);
 
-  const isLoginRoute = typeof window !== "undefined" && window.location.pathname === "/login";
-  const [user, setUser] = useState<AuthUser | null>(() => {
-    if (import.meta.env.DEV && !isLoginRoute) {
-      return createDevUser();
-    }
-    return null;
-  });
-  const [loading, setLoading] = useState(() => !(import.meta.env.DEV && !isLoginRoute));
-
-  // Firebase（開発サーバーでは e2e の偽ログイン）
+  // 開発用の偽ログイン: 利用者の変化を受け取る
   useEffect(() => {
-    if (selfMode) return;
-    if (import.meta.env.DEV && !isLoginRoute) {
-      return;
-    }
-
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      setUser(firebaseUser as AuthUser | null);
-      setLoading(false);
-    });
-    return unsubscribe;
-  }, [isLoginRoute, selfMode]);
+    if (!dev) return;
+    return dev.subscribe(setUser);
+  }, [dev]);
 
   // 自社ログイン: 起動時にメモリにトークンが無ければ refresh を 1 回。401 なら「ログインしていない」状態にする。
   // ログイン画面へ移すのは ProtectedRoute の中のページだけ（/login・/reset-password を開いた人はそのページに留まる）
   useEffect(() => {
-    if (!selfMode) return;
+    if (dev) return;
     let cancelled = false;
     const sync = () => {
       setUser((previous) => userFromAccessToken(currentAccessToken(), previous));
@@ -123,44 +90,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       cancelled = true;
       unsubscribe();
     };
-  }, [selfMode]);
+  }, [dev]);
 
   const signIn = async (email: string, password: string): Promise<SelfLoginResult> => {
-    if (selfMode) {
-      const result = await selfLogin(email, password);
-      // 新しいログインでは案内を出し直せるように、前のログインの印を消す
-      if (result.kind === "ok") clearRecoveryPromptMarksForCurrentUser();
-      return result;
+    if (dev) {
+      await dev.signIn(email, password);
+      return { kind: "ok" };
     }
-    await signInWithEmailAndPassword(auth, email, password);
-    return { kind: "ok" };
+    const result = await selfLogin(email, password);
+    // 新しいログインでは案内を出し直せるように、前のログインの印を消す
+    if (result.kind === "ok") clearRecoveryPromptMarksForCurrentUser();
+    return result;
   };
 
   const signInWithPasskey = async () => {
-    if (!selfMode) return;
+    if (dev) return;
     await selfPasskeyLogin();
   };
 
   const signOut = async () => {
-    if (selfMode) {
-      try {
-        await api.post("/auth/logout", {});
-      } catch {
-        // 通信できなくても、この端末のセッションは捨てる
-      }
-      clearRecoveryPromptMarksForCurrentUser();
-      expireSession();
+    if (dev) {
+      await dev.signOut();
       return;
     }
-    await firebaseSignOut(auth);
+    try {
+      await api.post("/auth/logout", {});
+    } catch {
+      // 通信できなくても、この端末のセッションは捨てる
+    }
+    clearRecoveryPromptMarksForCurrentUser();
+    expireSession();
   };
 
   const sendPasswordReset = async (email: string) => {
-    if (selfMode) {
-      await selfRequestPasswordReset(email);
-      return;
-    }
-    await sendPasswordResetEmail(auth, email);
+    await selfRequestPasswordReset(email);
   };
 
   return (
@@ -173,18 +136,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context) return context;
-  if (import.meta.env.DEV) {
-    const isLoginRoute = typeof window !== "undefined" && window.location.pathname === "/login";
-    const fakeUser: AuthUser | null = isLoginRoute
-      ? null
-      : {
-          uid: "e2e-test-user-uid",
-          email: "review@salesanchor.jp",
-          displayName: "E2E Test User",
-          emailVerified: true,
-        };
+  // AuthProvider の外（Storybook・単体試験の部品だけの描画）は、開発用の偽ログインの利用者を返す
+  const dev = getDevSession();
+  if (dev) {
     return {
-      user: fakeUser,
+      user: dev.getUser(),
       loading: false,
       signIn: async (): Promise<SelfLoginResult> => ({ kind: "ok" }),
       signInWithPasskey: async () => {},
@@ -192,6 +148,5 @@ export function useAuth() {
       sendPasswordReset: async () => {},
     };
   }
-  if (!context) throw new Error("useAuth must be used within AuthProvider");
-  return context;
+  throw new Error("useAuth must be used within AuthProvider");
 }
