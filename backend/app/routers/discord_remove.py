@@ -77,7 +77,7 @@ class RemoveResponse(BaseModel):
 @router.post(
     "/discord/remove-from-channel/{lead_id}",
     response_model=RemoveResponse,
-    dependencies=[Depends(require_permission("leads.delete"))],
+    dependencies=[Depends(require_permission("leads.discord_remove_channel"))],
 )
 async def remove_from_channel(
     lead_id: int,
@@ -140,7 +140,7 @@ async def remove_from_channel(
 @router.post(
     "/discord/kick/{lead_id}",
     response_model=RemoveResponse,
-    dependencies=[Depends(require_permission("leads.delete"))],
+    dependencies=[Depends(require_permission("leads.discord_kick"))],
 )
 async def kick_member(
     lead_id: int,
@@ -190,7 +190,7 @@ async def kick_member(
 @router.post(
     "/discord/ban/{lead_id}",
     response_model=RemoveResponse,
-    dependencies=[Depends(require_permission("leads.delete"))],
+    dependencies=[Depends(require_permission("leads.discord_ban"))],
 )
 async def ban_member(
     lead_id: int,

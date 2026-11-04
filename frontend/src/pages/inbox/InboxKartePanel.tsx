@@ -530,13 +530,13 @@ export function KarteTabContent({
           </div>
         )}
         {/* ADR-091 KPI5: Channel invite button */}
-        {hasPermission("leads.update") && leadDetail.discord_guild_channel_id &&
+        {hasPermission("leads.discord_invite") && leadDetail.discord_guild_channel_id &&
           (leadDetail.estimated_scale === "Small" || leadDetail.estimated_scale === "Large") && (
           <ChannelInviteButton leadId={leadDetail.id} />
         )}
         {/* ADR-091 KPI6: Discord remove buttons */}
-        {hasPermission("leads.delete") && leadDetail.discord_user_id && (
-          <DiscordRemoveButtons leadId={leadDetail.id} hasChannel={!!leadDetail.discord_guild_channel_id} />
+        {leadDetail.discord_user_id && (hasPermission("leads.discord_remove_channel") || hasPermission("leads.discord_kick") || hasPermission("leads.discord_ban")) && (
+          <DiscordRemoveButtons leadId={leadDetail.id} hasChannel={!!leadDetail.discord_guild_channel_id} canRemove={hasPermission("leads.discord_remove_channel")} canKick={hasPermission("leads.discord_kick")} canBan={hasPermission("leads.discord_ban")} />
         )}
         {/* ADR-091 KPI7: Role sync status */}
         {leadDetail.discord_user_id && (
@@ -544,7 +544,7 @@ export function KarteTabContent({
             leadId={leadDetail.id}
             status={leadDetail.discord_role_sync_status}
             syncAt={leadDetail.discord_role_sync_at}
-            canResync={hasPermission("leads.update")}
+            canResync={hasPermission("leads.discord_resync")}
           />
         )}
       </div>
@@ -934,7 +934,7 @@ function RoleSyncStatusRow({
 }
 
 /** ADR-091 KPI6: Discord channel remove / Kick / BAN buttons */
-function DiscordRemoveButtons({ leadId, hasChannel }: { leadId: number; hasChannel: boolean }) {
+function DiscordRemoveButtons({ leadId, hasChannel, canRemove, canKick, canBan }: { leadId: number; hasChannel: boolean; canRemove: boolean; canKick: boolean; canBan: boolean }) {
   const { t } = useTranslation();
   const [loading, setLoading] = useState<string | null>(null);
   const [done, setDone] = useState("");
@@ -961,7 +961,7 @@ function DiscordRemoveButtons({ leadId, hasChannel }: { leadId: number; hasChann
       <span className="right-panel-label">{t("leads.discordRemove")}</span>
       <div className="flex flex-col gap-1">
         <div className="flex gap-1 flex-wrap">
-          {hasChannel && (
+          {hasChannel && canRemove && (
             <Button loading={loading === "remove-from-channel"} variant="secondary" size="md"
               onClick={() => handleAction("remove-from-channel")}
               disabled={loading !== null}
@@ -970,20 +970,24 @@ function DiscordRemoveButtons({ leadId, hasChannel }: { leadId: number; hasChann
               {t("leads.discordRemoveFromChannel")}
             </Button>
           )}
-          <Button loading={loading === "kick"} variant="secondary" size="md"
-            onClick={() => handleAction("kick")}
-            disabled={loading !== null}
+          {canKick && (
+            <Button loading={loading === "kick"} variant="secondary" size="md"
+              onClick={() => handleAction("kick")}
+              disabled={loading !== null}
 
-          >
-            {t("leads.discordKick")}
-          </Button>
-          <Button loading={loading === "ban"} variant="danger" size="md"
-            onClick={() => handleAction("ban")}
-            disabled={loading !== null}
+            >
+              {t("leads.discordKick")}
+            </Button>
+          )}
+          {canBan && (
+            <Button loading={loading === "ban"} variant="danger" size="md"
+              onClick={() => handleAction("ban")}
+              disabled={loading !== null}
 
-          >
-            {t("leads.discordBan")}
-          </Button>
+            >
+              {t("leads.discordBan")}
+            </Button>
+          )}
         </div>
         {done && <span className="text-xs text-green-600">{done}</span>}
         {error && <span className="text-xs text-red-500">{error}</span>}

@@ -69,21 +69,40 @@ describe("Karte Discord buttons by permission", () => {
     expect(screen.getByText(STATUS)).toBeTruthy();
   });
 
-  it("T2 leads.update only: invite and resync shown, remove/kick/ban hidden", () => {
-    permissions = ["leads.update"];
+  it("T2 leads.update and leads.delete only: none of the five shown", () => {
+    permissions = ["leads.update", "leads.delete"];
     renderContact();
-    expect(screen.getByText(INVITE)).toBeTruthy();
-    expect(screen.getByText(RESYNC)).toBeTruthy();
-    for (const label of [REMOVE, KICK, BAN]) {
+    for (const label of [INVITE, RESYNC, REMOVE, KICK, BAN]) {
       expect(screen.queryByText(label)).toBeNull();
     }
   });
 
-  it("T3 update and delete: all five shown", () => {
-    permissions = ["leads.update", "leads.delete"];
+  it("T3 all five new keys: all five shown", () => {
+    permissions = [
+      "leads.discord_invite", "leads.discord_resync", "leads.discord_remove_channel",
+      "leads.discord_kick", "leads.discord_ban",
+    ];
     renderContact();
     for (const label of [INVITE, RESYNC, REMOVE, KICK, BAN]) {
       expect(screen.getByText(label)).toBeTruthy();
+    }
+  });
+
+  it.each([
+    ["leads.discord_invite", INVITE],
+    ["leads.discord_resync", RESYNC],
+    ["leads.discord_remove_channel", REMOVE],
+    ["leads.discord_kick", KICK],
+    ["leads.discord_ban", BAN],
+  ])("T4 only %s: only its own button shown", (key, label) => {
+    permissions = [key];
+    renderContact();
+    for (const l of [INVITE, RESYNC, REMOVE, KICK, BAN]) {
+      if (l === label) expect(screen.getByText(l)).toBeTruthy();
+      else expect(screen.queryByText(l)).toBeNull();
+    }
+    if (key === "leads.discord_remove_channel") {
+      expect(screen.getByText(lookup("leads.discordRemove"))).toBeTruthy();
     }
   });
 });

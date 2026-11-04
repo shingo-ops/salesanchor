@@ -114,8 +114,6 @@ async def test_gauge_counts_missing_and_throttles(monkeypatch):
 
 _REASSIGNED_ROUTES = [
     ("POST", "/api/v1/contacts/{contact_id}/channel-acknowledge-duplicate", "customers.update"),
-    ("POST", "/api/v1/discord/channel-invite/{lead_id}", "leads.update"),
-    ("POST", "/api/v1/discord/sync-role/{lead_id}", "leads.update"),
     ("GET", "/api/v1/companies/duplicates", "customers.view"),
 ]
 
@@ -125,6 +123,33 @@ def test_reassigned_routes_require_catalog_keys():
     from app.main import app
 
     for method, path, key in _REASSIGNED_ROUTES:
+        found = [
+            r for r in app.routes
+            if getattr(r, "path", None) == path and method in getattr(r, "methods", set())
+        ]
+        assert len(found) == 1, f"route not found: {method} {path}"
+        keys = [
+            set(dep.call.required_permission_keys)
+            for dep in found[0].dependant.dependencies
+            if getattr(dep.call, "required_permission_keys", None) is not None
+        ]
+        assert keys == [{key}], f"{method} {path}: {keys}"
+
+
+_DISCORD_ROUTES = [
+    ("POST", "/api/v1/discord/channel-invite/{lead_id}", "leads.discord_invite"),
+    ("POST", "/api/v1/discord/sync-role/{lead_id}", "leads.discord_resync"),
+    ("POST", "/api/v1/discord/remove-from-channel/{lead_id}", "leads.discord_remove_channel"),
+    ("POST", "/api/v1/discord/kick/{lead_id}", "leads.discord_kick"),
+    ("POST", "/api/v1/discord/ban/{lead_id}", "leads.discord_ban"),
+]
+
+
+def test_discord_routes_require_own_keys():
+    """C6: Discord の 5 つの操作はそれぞれ別の鍵を要求する。"""
+    from app.main import app
+
+    for method, path, key in _DISCORD_ROUTES:
         found = [
             r for r in app.routes
             if getattr(r, "path", None) == path and method in getattr(r, "methods", set())
