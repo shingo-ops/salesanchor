@@ -4,7 +4,9 @@
 このリポジトリは公開されている。ここには節の名前と行番号だけを書き、決まりの本文は書かない。言い直しの対の文は、リポジトリの外の写しのフォルダ（`~/CC報告ファイル-keep/doc-library-20261102/pairs.txt`）にだけ置く。
 
 - 所在は `ファイル:見出し:行番号`。複数あるときは `; ` で区切る。見出しに `:` を含むもの（R-129）があるので、読むときは最後の `:` で行番号を、最初の `:` でファイルを切り離す。
-- 行番号は 2026-11-02 の実物（`grep -n`）。段1（2026-11-02）で区切り方を chat-layout.md（1〜10行）に分け、chat-format.md は言葉の選び方だけ（旧11〜31行 → 1〜21行）にした。この表はその後の行番号。段1b（2026-11-03）で ~/kb/AGENTS.md 15行目の括弧書き（R-91 の言い直し側）を消し、R-91 の所在を1つにした（行は残るので行番号は変わらない）。段1c（2026-11-03）で chat-format.md の3行目と7行目（R-92・R-93・R-94 の表示側）を消した。番号は付け直さないので、言葉の選び方の節の始まり（1行目）は変わらない。同じ日に「~/.claude/rules/common/coding-style.md」 の Code Quality Checklist の中の2行（code-review.md の Review Checklist と同じ文）も消した。これは最後の節の中なので、この表の行番号は変わらない。段2b（2026-11-03）で「~/.claude/rules/common/git-workflow.md」（22行）を本「~/.claude/books/git-workflow.md」へ移した（前に frontmatter 5行を足したので、見出しの行番号は元の行番号＋5。見出し行の末尾に `[R-nn]`）。「~/.claude/CLAUDE.md」 の 60行目（`@~/kb/AGENTS.md` の前）に目録の節（見出し1＋目録の行2＋空行1）を足し、その見出しを R-17 にした（目録の見出しも台帳に載せないと `L2_UNTAGGED` が 1 になるため）。段3（2026-11-03）で「~/.claude/rules/common/agents.md」（23行）を本「~/.claude/books/agents.md」へ移した（見出しの行番号は元の行番号＋5）。目録の行3つは CLAUDE.md の62行目の後に足したので、目録の見出し（R-17）の行番号は変わらない。ムラ無くし（2026-11-03、[library-mura-design.md](./library-mura-design.md) の M1〜M5）で、本 agents の14行目（/security-review の行）を消し、「~/.claude/rules/common/code-review.md」 の Security Review Triggers の中に1行を足した。そのため R-32・R-33 は1つ上がり、R-105〜R-109 は1つ下がった。ほかの見出しの行番号は変わらない（Opus が実物の見出しと全行を突き合わせた）。R-15・R-91 の所在の5行目は chat-layout.md の見出し（1行目）ではない。段1で作ったときからこの番号で、意図はまだ確かめていない。
+- 行番号は 2026-11-02 の実物（`grep -n`）。段1（2026-11-02）で区切り方を chat-layout.md（1〜10行）に分け、chat-format.md は言葉の選び方だけ（旧11〜31行 → 1〜21行）にした。この表はその後の行番号。段1b（2026-11-03）で ~/kb/AGENTS.md 15行目の括弧書き（R-91 の言い直し側）を消し、R-91 の所在を1つにした（行は残るので行番号は変わらない）。段1c（2026-11-03）で chat-format.md の3行目と7行目（R-92・R-93・R-94 の表示側）を消した。番号は付け直さないので、言葉の選び方の節の始まり（1行目）は変わらない。同じ日に「~/.claude/rules/common/coding-style.md」 の Code Quality Checklist の中の2行（code-review.md の Review Checklist と同じ文）も消した。これは最後の節の中なので、この表の行番号は変わらない。段2b（2026-11-03）で「~/.claude/rules/common/git-workflow.md」（22行）を本「~/.claude/books/git-workflow.md」へ移した（前に frontmatter 5行を足したので、見出しの行番号は元の行番号＋5。見出し行の末尾に `[R-nn]`）。「~/.claude/CLAUDE.md」 の 60行目（`@~/kb/AGENTS.md` の前）に目録の節（見出し1＋目録の行2＋空行1）を足し、その見出しを R-17 にした（目録の見出しも台帳に載せないと `L2_UNTAGGED` が 1 になるため）。段3（2026-11-03）で「~/.claude/rules/common/agents.md」（23行）を本「~/.claude/books/agents.md」へ移した（見出しの行番号は元の行番号＋5）。目録の行3つは CLAUDE.md の62行目の後に足したので、目録の見出し（R-17）の行番号は変わらない。ムラ無くし（2026-11-03、[library-mura-design.md](./library-mura-design.md) の M1〜M5）で、本 agents の14行目（/security-review の行）を消し、「~/.claude/rules/common/code-review.md」 の Security Review Triggers の中に1行を足した。そのため R-32・R-33 は1つ上がり、R-105〜R-109 は1つ下がった。ほかの見出しの行番号は変わらない（Opus が実物の見出しと全行を突き合わせた）。R-15・R-91 の所在の5行目は chat-layout.md の見出し（1行目）ではない。段1で作ったときからこの番号で、意図はまだ確かめていない（一本化 2026-11-04 で R-15=1・R-91=24 に付け直して解消）。
+- 行番号の意味（2026-11-04 一本化で決めた。[doc-library-one-tree/design.md](../doc-library-one-tree/design.md) §5-1）: 所在の行番号は、その見出しが書いてある行（`#`・`##`・`###` と空白で始まる行）だけを指す。比べるときは、行の頭の `#` と空白と、末尾の札 `[R-nn]` を外す。例外は言い直しの対（R-91〜R-94、名前が「言い直し」で始まる行）で、わざと本文の行を指す。この4行だけは、その見出しの節の中の行（見出しの行から、同じかより上の段の次の見出しの前まで）なら正しいとする。
+- 一本化（2026-11-04）で PO への返事の決まりを ~/kb/00-rules/chat-layout.md に集め、全行を今の実物の見出しの行で付け直した（Opus が `grep -n` で照合）。R-15 は見出しの名前が変わり 1 行目。R-51〜R-55 は chat-layout.md の新しい見出し。R-91〜R-94 は移った先の本文の行を指す。上の段1〜ムラ無くしの行番号の説明はその時点の記録で、今の行番号はこの表のとおり。
 - 種別: 目録（毎回読む）／本（場面で開く）／表示（入力のたびにフックが表示）／paths（場所つきの決まり）。
 - R-91〜R-94 は同じ趣旨を2か所に書いた「言い直し」の対。所在が2つある番号の数が `L2_DUP_LEDGER`。R-94 は設計の時点では見つけていなかった3件目。段1c で R-92〜R-94 の表示側を消し、所在はすべて1つになった（PO 2026-11-03「1」）。
 
@@ -13,25 +15,30 @@
 | R-01 | 認証情報 | ~/.claude/CLAUDE.md:認証情報:3 | 目録 | 未 |
 | R-02 | Context7 | ~/.claude/CLAUDE.md:Context7:9 | 目録 | 未 |
 | R-03 | 報告の型 | ~/.claude/CLAUDE.md:報告の型:12 | 目録 | 未 |
-| R-04 | 記憶で答えない | ~/.claude/CLAUDE.md:記憶で答えない:36 | 目録 | 未 |
-| R-05 | 出力を省略しない（生出力はファイルへ） | ~/.claude/CLAUDE.md:出力を省略しない（生出力はファイルへ）:40 | 目録 | 未 |
-| R-06 | 「実行した」と「反映された」は別物 | ~/.claude/CLAUDE.md:「実行した」と「反映された」は別物:45 | 目録 | 未 |
-| R-07 | 変更は一度に1つ | ~/.claude/CLAUDE.md:変更は一度に1つ:48 | 目録 | 未 |
-| R-08 | 提案の型 | ~/.claude/CLAUDE.md:提案の型:51 | 目録 | 未 |
-| R-09 | 迷ったら止まる | ~/.claude/CLAUDE.md:迷ったら止まる:54 | 目録 | 未 |
-| R-10 | GAS / clasp | ~/.claude/CLAUDE.md:GAS / clasp:57 | 目録 | 未 |
+| R-04 | 記憶で答えない | ~/.claude/CLAUDE.md:記憶で答えない:20 | 目録 | 未 |
+| R-05 | 出力を省略しない（生出力はファイルへ） | ~/.claude/CLAUDE.md:出力を省略しない（生出力はファイルへ）:24 | 目録 | 未 |
+| R-06 | 「実行した」と「反映された」は別物 | ~/.claude/CLAUDE.md:「実行した」と「反映された」は別物:29 | 目録 | 未 |
+| R-07 | 変更は一度に1つ | ~/.claude/CLAUDE.md:変更は一度に1つ:32 | 目録 | 未 |
+| R-08 | 提案の型 | ~/.claude/CLAUDE.md:提案の型:35 | 目録 | 未 |
+| R-09 | 迷ったら止まる | ~/.claude/CLAUDE.md:迷ったら止まる:38 | 目録 | 未 |
+| R-10 | GAS / clasp | ~/.claude/CLAUDE.md:GAS / clasp:41 | 目録 | 未 |
 | R-11 | 優先順位 | ~/kb/AGENTS.md:優先順位:3 | 目録 | 未 |
 | R-12 | 絶対ルール | ~/kb/AGENTS.md:絶対ルール:9 | 目録 | 未 |
-| R-13 | フォルダ索引 | ~/kb/AGENTS.md:フォルダ索引:19 | 目録 | 未 |
-| R-14 | 検査 | ~/kb/AGENTS.md:検査:29 | 目録 | 未 |
-| R-15 | PO への返事の区切り方（1〜10行・見出しは # の1つだけ） | ~/kb/00-rules/chat-layout.md:PO への返事の区切り方:5 | 目録 | 段1 |
+| R-13 | フォルダ索引 | ~/kb/AGENTS.md:フォルダ索引:18 | 目録 | 未 |
+| R-14 | 検査 | ~/kb/AGENTS.md:検査:28 | 目録 | 未 |
+| R-15 | PO への返事の決まり（見出しは # の1つ） | ~/kb/00-rules/chat-layout.md:PO への返事の決まり:1 | 目録 | 段1 |
 | R-16 | 言葉の選び方 | ~/kb/00-rules/chat-format.md:言葉の選び方:1 | 表示 | 段1 |
-| R-17 | 本の目録（場面で開く。開く前に目録の行を読む） | ~/.claude/CLAUDE.md:本の目録（場面で開く。開く前に目録の行を読む）:60 | 目録 | 段2b |
+| R-17 | 本の目録（場面で開く。開く前に目録の行を読む） | ~/.claude/CLAUDE.md:本の目録（場面で開く。開く前に目録の行を読む）:44 | 目録 | 段2b |
+| R-51 | 答える前に | ~/kb/00-rules/chat-layout.md:答える前に:5 | 目録 | 一本化 |
+| R-52 | 返事の型 | ~/kb/00-rules/chat-layout.md:返事の型:11 | 目録 | 一本化 |
+| R-53 | 区切り方 | ~/kb/00-rules/chat-layout.md:区切り方:22 | 目録 | 一本化 |
+| R-54 | 図と表 | ~/kb/00-rules/chat-layout.md:図と表:30 | 目録 | 一本化 |
+| R-55 | 詳しい説明の型 | ~/kb/00-rules/chat-layout.md:詳しい説明の型:34 | 目録 | 一本化 |
 | R-21 | Commit Message Format | ~/.claude/books/git-workflow.md:Commit Message Format:8 | 本 | 段2b |
-| R-22 | Pull Request Workflow | ~/.claude/books/git-workflow.md:Pull Request Workflow:17 | 本 | 段2b |
+| R-22 | Pull Request Workflow | ~/.claude/books/git-workflow.md:Pull Request Workflow:19 | 本 | 段2b |
 | R-31 | 担当（サブエージェント） | ~/.claude/books/agents.md:担当（サブエージェント）:8 | 本 | 段3 |
-| R-32 | Parallel Task Execution | ~/.claude/books/agents.md:Parallel Task Execution:15 | 本 | 段3 |
-| R-33 | Scope Termination（スコープ終了ルール） | ~/.claude/books/agents.md:Scope Termination（スコープ終了ルール）:19 | 本 | 段3 |
+| R-32 | Parallel Task Execution | ~/.claude/books/agents.md:Parallel Task Execution:16 | 本 | 段3 |
+| R-33 | Scope Termination（スコープ終了ルール） | ~/.claude/books/agents.md:Scope Termination（スコープ終了ルール）:22 | 本 | 段3 |
 | R-41 | Claude Code だけの決まり | CLAUDE.md:Claude Code だけの決まり:5 | 目録 | 未 |
 | R-42 | プロジェクト前提 | AGENTS.md:プロジェクト前提:5 | 目録 | 未 |
 | R-43 | 不可逆操作は必ず PO 確認 | AGENTS.md:不可逆操作は必ず PO 確認:15 | 目録 | 未 |
@@ -89,7 +96,19 @@
 | R-149 | Coverage | ~/.claude/rules/python/testing.md:Coverage:14 | paths | 未 |
 | R-150 | Test Organization | ~/.claude/rules/python/testing.md:Test Organization:20 | paths | 未 |
 | R-151 | Reference | ~/.claude/rules/python/testing.md:Reference:36 | paths | 未 |
-| R-91 | 言い直し(a) 区切り方の要点 | ~/kb/00-rules/chat-layout.md:PO への返事の区切り方:5 | 目録 | 段1b |
-| R-92 | 言い直し(b1) 専門用語と普通の言葉 | ~/.claude/CLAUDE.md:報告の型:20 | 目録 | 段1c |
-| R-93 | 言い直し(b2) 具体の名前・作業の呼び名 | ~/.claude/CLAUDE.md:報告の型:25 | 目録 | 段1c |
-| R-94 | 言い直し(c) 何のためかを2回問い直す | ~/kb/AGENTS.md:絶対ルール:16 | 目録 | 段1c |
+| R-91 | 言い直し(a) 区切り方の要点 | ~/kb/00-rules/chat-layout.md:区切り方:24 | 目録 | 段1b |
+| R-92 | 言い直し(b1) 専門用語と普通の言葉 | ~/kb/00-rules/chat-layout.md:返事の型:15 | 目録 | 段1c |
+| R-93 | 言い直し(b2) 具体の名前・作業の呼び名 | ~/kb/00-rules/chat-layout.md:返事の型:20 | 目録 | 段1c |
+| R-94 | 言い直し(c) 何のためかを2回問い直す | ~/kb/00-rules/chat-layout.md:答える前に:7 | 目録 | 段1c |
+
+## 話題の重なり表
+
+個人の本（~/.claude/books）とリポジトリの手引きに同じ話題があるときに、どちらが正かを決める（[doc-library-one-tree/design.md](../doc-library-one-tree/design.md) §5-3）。個人の本の側には、リポジトリの手引きを正とする1行を足した（一本化、2026-11-04。所在は ~/.claude/books/git-workflow.md:17、~/.claude/books/agents.md:14・20）。
+
+| 話題 | 個人の本の所在 | リポジトリの所在 | 正 |
+|---|---|---|---|
+| commit の文 | R-21 | [docs/INDEX.md](../../INDEX.md) 9 行（実行役のチェックリスト） | リポジトリ |
+| PR を作る | R-22 | [docs/INDEX.md](../../INDEX.md) 9・10 行（実行役のチェックリスト・ブランチ運用） | リポジトリ |
+| 担当を呼ぶ | R-31 | [docs/INDEX.md](../../INDEX.md) 12・13 行（設計パートナーの手順・実装役への指示の定型文） | リポジトリ |
+| 並行に分ける | R-32 | [docs/INDEX.md](../../INDEX.md) 11 行（並行ターミナルの使い方） | リポジトリ |
+| PO への話し方 | R-15・R-51〜R-55 | [design-partner.md](../../ai-agents/design-partner.md) §3（指すだけ） | ~/kb/00-rules |
