@@ -64,3 +64,10 @@
 - LOW-4: 管理画面で請求先を読む口（GET billing-profile）は、PO 承認済みの「管理画面で請求先を見る」（§3-5）を実現する読み取りだけで、新しい正本を増やさない。PO の再承認は要らないと判断した。
 - LOW-5: ADR-1019:9 の関連欄の句読点を直した。
 - LOW-6: カードの PO の選択肢の原文引用を、選んだ内容の要約に替えた。
+
+## 7. #5129 の再審査（2026-11-05・HEAD 61e8944 で REQUEST_CHANGES）と直したこと
+
+- 前回の指摘（HIGH-1・MEDIUM-1・LOW-1〜6）は全部解けていると確かめられた。
+- NEW-HIGH-1: 書き込みの口3本が、即時反映の対応表（backend/app/realtime/topics.py の NO_SIGNAL_ROUTES）に入っていなかった。足さないと backend/tests/test_realtime_topics.py が赤になる。HIGH-1 と同じ種類の漏れ（全部の口を数える見張りへの登録漏れ）。card-bin2.md §2・§3-3・§3-6・手順8 と design.md §3-7 に足した。
+- 同じ種類の漏れを残さないため、app.routes を使う見張りを origin/main で全部洗い出し、design.md §3-7 に7本それぞれの扱いを書いた。
+- LOW-A: PR 本文の説明を、直しの後の中身に合わせた。

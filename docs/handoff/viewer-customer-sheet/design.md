@@ -193,6 +193,8 @@ mode: handoff
 | 文面テンプレートの鍵 billing_form_request | viewer_message_templates.py の LEDGER（:43〜:53）。migrations/20261020_120000_create_viewer_message_templates.sql:11 の「台帳の9件」の COMMENT を10件に。backend/tests/test_viewer_message_templates.py:22〜:25 の KEYS。frontend/src/pages/super-admin/ViewerTemplatesPage.test.tsx の KEYS（:15〜:18）と PLACEHOLDERS（:19〜:29）。backend/tests/viewer_template_fixtures.py の DEFAULT_BODIES。i18n の名前と使う場面（frontend/src/locales/ja.json:2805・:2816。:2797〜:2805 が名前、:2808〜:2816 が使う場面 と en.json の同じ位置の並び）。差し込み項目の説明 placeholders（ja.json:2818〜:2828 と en.json の同じ並び）に form_url（請求先フォームのURL・自動で入ります）と form_expires（請求先フォームのリンクの期限の日付）の2行 |
 | 配信先の判定の値（deliverable と理由） | §3-3 に挙げた3か所（配信前の点検・解析ダッシュボード・閲覧者管理ページ）。配信先の画面は変えない（2026-11-04 PO 決定。原文「配信先のページでは確認できなくて良い」） |
 | ログインなしの入口（フォームの2本） | backend/tests/test_viewer_isolation.py の _PUBLIC_NO_AUTH_ROUTES に2本（§3-6「入口の見張りでの扱い」）。足さないと、Origin なしで 403 を返して試験が落ちる |
+| 書き込みの口3本（送る API・フォームの2本） | backend/app/realtime/topics.py の NO_SIGNAL_ROUTES に3本（閲覧者の既にある行 :123〜:135 と同じ扱い。社外の閲覧者のことで、画面更新の通知対象外）。足さないと backend/tests/test_realtime_topics.py が赤になる（topics.py:5） |
+| 全部の口を数える見張り（2026-11-05 に洗い出し） | app.routes を使う試験は origin/main で7本: test_viewer_isolation・test_realtime_topics（上の2行で対応）、test_origin_check_not_on_get（GET は Origin を確かめない設計なので対応不要）、test_conditions_permission_keys・test_fx_rate_admin_router（対象のパスが conditions・product-categories・fx-rate だけ）、test_permission_catalog・test_tenant_admin_ssot（口の一覧を見張らない）。scripts/check-dangling-routes.js は口を消したときだけ見るので対象外 |
 | 公開の決めごと | ADR-1019:9、docs/specs/inventory-management/inventory-viewer/README.md:22、gas-viewer-fresh-fast/design.md:70 の改訂（recon §2）は便2 カードの文書 PR で直した。プライバシーポリシーは便2 の実装で直す（card-bin2.md §3-5） |
 
 ## 4. 代替案と選んだ理由

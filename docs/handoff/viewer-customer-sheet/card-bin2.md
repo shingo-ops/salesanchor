@@ -55,6 +55,7 @@ mode: handoff
 | `backend/app/services/auth_mail.py` | 新しい送信部 `send_viewer_billing_form_email` を足す（今の関数は変えない） |
 | `backend/app/routers/super_admin_viewers.py` | 送る API・請求先を読む API・応答の型 |
 | `backend/app/routers/viewer.py` | フォームの2本の API |
+| `backend/app/realtime/topics.py` | `NO_SIGNAL_ROUTES` に書き込みの口3本を足す（§3-3 の最後の項目） |
 | `backend/tests/test_viewer_isolation.py` | `_PUBLIC_NO_AUTH_ROUTES` にフォームの2本を足す（§3-3 の最後の項目） |
 | `frontend/api-contract/openapi.json` と生成される型 | §5 手順7 の命令で作り直す（手で書かない） |
 | `frontend/src/pages/super-admin/ViewerAccountsPage.tsx` | 詳細に「請求先」の区切りと送るボタン |
@@ -115,6 +116,7 @@ mode: handoff
   - `POST /api/v1/viewer/billing-form/submit {token, 7項目}`: 項目の検査 → `DELETE … RETURNING` で鍵を使い切る → 名簿が active でなければ鍵を消したまま commit して 400 → active なら `INSERT … ON CONFLICT (viewer_account_id) DO UPDATE`（`updated_at = now()`）→ commit。保存に失敗したら rollback（鍵は残る）。
   - 2本とも最初に `_require_app_origin`、次に `check_auth_rate_limit`（超えたら 429）。鍵が無効のときは `record_auth_failure`。
   - 2本は閲覧者のトークンを見ない公開の入口（鍵は本文の1回きりの鍵だけで確かめる。get_current_viewer を使わない）。このため `backend/tests/test_viewer_isolation.py` の `_PUBLIC_NO_AUTH_ROUTES`（:27〜:62）に2本を足し、足した理由をコメントで1行書く（同じ形の B2B の請求先フォーム `POST /api/v1/public/register/change-billing` が既にここにある）。`backend/app/auth/viewer_allowlist.py` の `VIEWER_ROUTE_ALLOWLIST` には足さない（ADR-1019 決定5 の「閲覧者のトークンで呼べる7本」は変えない）。
+- 即時反映の対応表（ADR-1016）: `backend/app/realtime/topics.py` の `NO_SIGNAL_ROUTES`（:123〜:135 付近の閲覧者の行の並び）に、書き込みの口3本（`POST /api/v1/super-admin/viewers/{viewer_id}/send-billing-form`・`POST /api/v1/viewer/billing-form/open`・`POST /api/v1/viewer/billing-form/submit`）を足す。理由の文は既にある閲覧者の行と同じ形（例「閲覧ページ ADR-1019: 閲覧者の請求先フォームは画面更新の通知対象外」）。足さないと `backend/tests/test_realtime_topics.py` が赤になる（topics.py:5）。`WRITE_ROUTE_TOPICS` には足さない。
   - 入力の検査は DB の CHECK と同じ決まりを pydantic にも書く（郵便番号・電話はハイフンと空白を外してから数字だけにする。外した後の値で検査する）。
 - ログ・応答に鍵・宛名・住所・電話を出さない（ログは名簿の番号と結果だけ）。送る API の応答の `room_notice_text` は例外（design §3-6。super admin だけが見る）。
 
@@ -149,6 +151,7 @@ mode: handoff
 - 新しい PG 試験 `backend/tests/test_viewer_billing_form_pg.py`: CHECK ごとに1件ずつ拒否（会社で担当者が空・郵便番号が7桁でない・電話が10〜11桁でない・宛名が空）／名簿を消すと請求先も消える／2回送ると鍵は1本・前の鍵で開くと 400／送信成功で鍵0件・失敗で鍵が残る／本契約でない人の送る API は 409 で鍵0件／テンプレートが無いと 503 で鍵0件・送信部の呼び出し0回／期限は押した時刻から7日／「1か所だけ」の検査（design §3-2 の information_schema の数え方）。
 - API 試験（同じファイルか、`backend/tests/test_super_admin_viewers.py` の並び）: 送信部（部屋とメール）を差し替えて回数と宛先を数える／部屋なしで `no_room` と `room_notice_text`／出どころ違いで止まる・回数超えで 429／open で鍵が残り今の値が返る。
 - `backend/tests/test_viewer_isolation.py`: フォームの2本を `_PUBLIC_NO_AUTH_ROUTES` に足した後、この試験が passed（足さないと、2本が Origin なしで 403 を返して失敗する）。
+- `backend/tests/test_realtime_topics.py`: 3本を `NO_SIGNAL_ROUTES` に足した後、この試験が passed。`backend/tests/test_origin_check_not_on_get.py`: GET billing-profile は Origin を確かめないので passed のまま。
 - 画面試験: 閲覧者管理ページ（ボタンは active だけ・請求先の表示・空の案内）、閲覧ページ（`#billing=` で開く・会社のときだけ担当者欄・無効の鍵の案内）。
 
 ## 4. 守ること
@@ -194,7 +197,7 @@ mode: handoff
     cd 作業場所/frontend && npm run generate:api-types
 
 手順8 試験とビルドを流す
-    cd 作業場所/backend && python -m pytest tests/test_viewer_billing_form_pg.py tests/test_viewer_purge.py tests/test_viewer_message_templates.py tests/test_super_admin_viewers.py tests/test_viewer_isolation.py tests/ops/test_ops_case_db.py tests/ops/test_ai_cloud_views.py -q
+    cd 作業場所/backend && python -m pytest tests/test_viewer_billing_form_pg.py tests/test_viewer_purge.py tests/test_viewer_message_templates.py tests/test_super_admin_viewers.py tests/test_viewer_isolation.py tests/test_realtime_topics.py tests/test_origin_check_not_on_get.py tests/ops/test_ops_case_db.py tests/ops/test_ai_cloud_views.py -q
     期待する出力: 全部 passed。PostgreSQL が無くて skipped になったら、その数と理由を報告に書いて続行する（CI で確かめる）。
     cd 作業場所/frontend && npx vitest run src/pages/super-admin src/pages/viewer
     期待する出力: 全部 passed。
