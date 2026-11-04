@@ -2,7 +2,7 @@
 
 recon: `docs/handoff/schedule-gcal-alignment/recon.md`（以下 R§0〜R§7）
 見本: canvas「予定の画面 完成予定」（週・月・一覧・操作と近道の 4 枚。PO「1」で承認）
-状態: 設計案作成済み（同一 AI の自己審査 §9 済み）。成功条件（§2）は PO 承認済み（2026-11-04「1」）。クラウドの設計審査 1 回目は 3 便とも REVISE（審査の記録 architect-review.md・枝 `release/schedule-gcal-alignment-review`）→ 改訂 1 で指摘を反映（§12）。再審査（審査の記録 architect-review-2.md・枝 `release/schedule-gcal-alignment-review2`）は 便1 = APPROVE／便2 = REVISE（軽い）／便3 = REVISE。改訂 2 で便1 の追記を反映し、便1 の実装カード（§11-1）を出した。便2・便3 は改訂待ち。改訂 3（§14）で便2 の REVISE（N-5・N-11・N-12）を反映した。N-5 は PO が「便2 の中で裏側も含めて直す」を選んだ（2026-11-04「1」）。便2 はクラウドの再審査待ち。便3 は改訂待ち。
+状態: 設計案作成済み（同一 AI の自己審査 §9 済み）。成功条件（§2）は PO 承認済み（2026-11-04「1」）。クラウドの設計審査 1 回目は 3 便とも REVISE（審査の記録 architect-review.md・枝 `release/schedule-gcal-alignment-review`）→ 改訂 1 で指摘を反映（§12）。再審査（審査の記録 architect-review-2.md・枝 `release/schedule-gcal-alignment-review2`）は 便1 = APPROVE／便2 = REVISE（軽い）／便3 = REVISE。改訂 2 で便1 の追記を反映し、便1 の実装カード（§11-1）を出した。便2・便3 は改訂待ち。改訂 3（§14）で便2 の REVISE（N-5・N-11・N-12）を反映した。N-5 は PO が「便2 の中で裏側も含めて直す」を選んだ（2026-11-04「1」）。クラウドの再審査 3 回目（審査の記録 architect-review-3.md・枝 `release/schedule-gcal-bin2-review3`・HEAD 6f5deecff）で便2 = APPROVE。書き足し N-14〜N-19 を便2 の実装カード（§11-2）に入れた（§15）。便2 の実装は、PO が本番で K1〜K7 を見たあと（§4）。便3 は改訂待ち。
 
 ## 1. 目的（PO の言葉で）
 
@@ -184,7 +184,7 @@ recon: `docs/handoff/schedule-gcal-alignment/recon.md`（以下 R§0〜R§7）
 5. 月の札から種類の札を外すと種類が月で分からない → 詳しくと一覧では出す。PO が月で種類も見たいと言えば札を戻す（見本では外した形で承認済み）。
 6. 行の高さが `DEFAULT_ROW_HEIGHT`（`frontend/src/pages/schedule/SchedulePageImpl.tsx:91`）とトークン `--schedule-row-height`（`frontend/src/tokens.css:400`）の 2 か所にある（今からある）。片方だけ変えると引っぱりの時刻がずれる → 便2 では置き場所を増やさず、換算の試験で 48px を前提にした値を確かめる。1 か所にまとめるのは残件として台帳に残す。
 7. すでに Google へ送ってずれた終日の予定が Google 側に残る → 直しでは自動で戻さない（送り直しは Google の予定を書き換える外向きの操作のため、勝手にしない）。便2 の本番反映のあと、件数を本番の読み取りで数えて PO に見せ、送り直すか聞く。
-8. 直す口で種類（`category`）が保存されない（`backend/app/routers/calendar.py:114-121` に無い）。今の詳しく小窓で種類を変えて保存しても変わらない、今からある不具合 → 便2 の範囲外。台帳に残件として残し、PO に別に出す。
+8. 直す口で種類（`category`）が保存されない（`backend/app/routers/calendar.py:114-121` に無い）。作る口も同じ（`CreateEventBody` `backend/app/routers/calendar.py:104-111` に無く、`backend/app/services/calendar_service.py:206` の既定 `"meeting"` が入る・N-17）。今の小窓で種類を選んで保存しても残らない、今からある不具合 → 便2 の範囲外。台帳に残件として残し、PO に別に出す。
 
 ## 8. 外部・過去事例の参照と我々への応用
 
@@ -205,6 +205,7 @@ recon: `docs/handoff/schedule-gcal-alignment/recon.md`（以下 R§0〜R§7）
   - 便2 = REVISE（軽い）。N-5: 終日の予定が Google で 1 日前にずれる今からある不具合（画面は `combineDateTime(date,"00:00").toISOString()` で UTC を送る `frontend/src/pages/schedule/SchedulePageImpl.tsx:1041`、裏側は `str(start_dt)[:10]` `backend/app/services/calendar_service.py:519-520`）。N-11: 行の高さは `DEFAULT_ROW_HEIGHT`（`frontend/src/pages/schedule/SchedulePageImpl.tsx:88`・使う所 `:611`）と同じ値を使う。N-12: `category` は直す口で受け取らない（`UpdateEventBody`・`field_map`）ので試験で見ない。→ N-5 の扱いを決めてから改訂する。
   - 便3 = REVISE。N-1: 道の入口の `try/except Exception` が 422 を 500 に変える（`backend/app/routers/calendar.py:352-364`・`:421-434`）。N-2: 返事が `{"id"}` だけで Meet の失敗が画面に分からない。N-3: 直す前に `google_event_id`・`meet_url` を読む。N-13（任意）。§7-3 の 4 件も残る。
 - 判定（再審査のあと）: 便1 = APPROVE（実装可能）／便2 = REVISE／便3 = REVISE。
+- クラウドの再審査 3 回目（2026-11-04・審査の記録 architect-review-3.md・枝 `release/schedule-gcal-bin2-review3`・HEAD 6f5deecff）: 便2 = APPROVE。終日の直しを Python 3.12.3 で写して動かし、試験 1〜6 の期待どおりになることを確かめた。書き足し N-14〜N-19 はカードへ。N-16（秘書の下書き `frontend/src/features/secretary/SecretaryDraftEvent.tsx:50-58` も同じ形で送る）と N-17（作る口も `category` を受けない）は Opus が実物で確かめ、一致した。
 - 改訂 3 のあとの自己審査（2026-11-04）: 便2 = APPROVE（自己審査。クラウドの再審査はまだ）。根拠: N-5 の原因は origin/main 0f297666c の実物で確かめた（画面 `frontend/src/pages/schedule/SchedulePageImpl.tsx:1251-1252`・裏側 `backend/app/services/calendar_service.py:518-520`・取り込み `:380-394`・上書きの条件 `WHERE calendar_events.source = 'google'`）。直す場所は関数 1 つで、表・移行・危険な道に触れない。N-11・N-12 は §5-6 に反映。未解決: すでにずれた Google 側の予定の件数（§7 の 7・本番反映のあと）。便1 の本番での K1〜K7 の PO 確認（§4 の順番）。
 
 ## 10. 維持の仕組み（守り手）
@@ -265,7 +266,45 @@ recon: `docs/handoff/schedule-gcal-alignment/recon.md`（以下 R§0〜R§7）
 
 終わり方: `DONE`（push 済み・HEAD の番号・上の 1〜6 の結果）／`BLOCKED: <理由>`／`NEEDS_DECISION: <決めること>` の 1 行で終える。
 
-### 11-2. 便2・11-3. 便3
+### 11-2. 便2（K8〜K11・終日の直し）
+
+- 状態: カード作成済み。実装に出すのは、PO が本番で K1〜K7 を見て合格と言ったあと（§4）。
+- 担当: クラウドの Sonnet（実装役）。この §11-2 と §5-6 だけを実行する。§5-7（便3）には触らない。
+- 土台: その時点の origin/main。枝 `release/schedule-gcal-bin2`。
+- 触ってよいファイル（これ以外が要ると分かったら作らず NEEDS_DECISION: で止まる）:
+  1. `frontend/src/pages/schedule/SchedulePageImpl.tsx`
+  2. `frontend/src/pages/schedule/schedule-utils.ts`
+  3. `frontend/src/pages/schedule/schedule-utils.test.ts`
+  4. `frontend/src/pages/schedule/SchedulePageImpl.test.tsx`
+  5. `frontend/src/pages/schedule.css`
+  6. `frontend/src/tokens.css`（`--schedule-drag-ghost-bg: var(--calendar-google-blue-light);` を予定の画面の段に 1 行足すだけ）
+  7. `frontend/src/locales/ja.json`・`frontend/src/locales/en.json`（長さを変えるつまみの読み上げ名など、新しい文字が要るときだけ。同じキーを両方に）
+  8. `docs/adr/ADR-067-design-token-enforcement.md`（「コンポーネントトークン（tokens.css）」の表に `--schedule-drag-ghost-bg` と、便1 で足して表に無い `--schedule-month-dot-size` の 2 行を足す）
+  9. `backend/app/services/calendar_service.py`（`_to_google_event_body` の終日の枝 `:518-520` だけ）
+  10. `backend/tests/test_calendar_service.py`
+- 触らない: `frontend/src/components/`・`backend/app/routers/`・`migrations/`・`.github/`・`scripts/`・秘書の部品 `frontend/src/features/secretary/`（直しは裏側で効く・N-16）。
+- 作るもの（§5-6 のとおり）:
+  1. 換算の純粋な関数（位置 px・行の高さ → 15 分に丸めた分）を `schedule-utils.ts` に。行の高さは引数。画面からは `rowHeight`（`SchedulePageImpl.tsx:651`）を渡す。
+  2. `canEditItem(item)` を `canEditSelected`（`:1336-1338`）から切り出し、両方で使う。判定の中身は変えない。動かせるのは `canEditItem(item) && item.source !== "shift"` だけ（K10）。
+  3. 引っぱって作る（4px 以上で引っぱり・未満は今の 1 時間）・動かす・下の端で長さを変える。Pointer Events（`onPointerDown`・`setPointerCapture`）。外部の部品は入れない。
+  4. 離したら `PATCH /calendar/events/{id}` に題名・開始・終了・終日・説明・場所を送る。`category` と `calendar_type` は送らない。失敗したら元の位置に戻し、今の失敗の帯（`setError` `:1271` の形）を出す。
+  5. 終日の予定を動かすとき、終わりは「新しい最後の日の 23:59（日本時間）」で作る。`combineDateTime(新しい最後の日, "23:59")` を使う。次の日の 0:00 にしない（Google で 1 日長くなる・N-14）。
+  6. 月の帯: 終日・複数日を週の行ごとに `grid-column: 開始 / 終了+1` の帯で出す。帯は 1 日 3 件（`dayEvents.slice(0, 3)` `:843`・N-15）と「他 ◯ 件」の数に入れない。
+  7. 色・余白・大きさはトークンだけ。直書きの色・px は書かない。文字は `t()` だけ。
+  8. 裏側の終日の直し（§5-6 の手順 1〜4）。日付だけの文字はそのまま（今の `[:10]` を残してもよい）。
+- 試験（全部足す。消す・skip にするのは禁止）:
+  1. 換算の関数: 0px・境目・15 分丸め・日をまたぐ
+  2. 直せない予定（他人・シフト）は押して引いても時刻が変わらない（K10）
+  3. 動かしたときの送る中身に題名・終日・説明・場所があり、`category` が無い（K9・N-12）
+  4. 終日を 1 日右へ動かすと、送る `end_datetime` が新しい最後の日の 23:59（日本時間）になる（N-14）
+  5. 4px 未満は今の 1 時間の作成のまま
+  6. 裏側 `TestToGoogleEventBody` に §5-6 の 1〜6
+  7. 裏側 `TestCreateEvent`（`backend/tests/test_calendar_service.py:231`）と `TestUpdateEvent`（`:362`）に、終日で作る・直すと Google に渡す中身の `date` が日本時間の日付と次の日になる試験を 1 件ずつ（N-19）
+- 前提: 端末は日本時間（画面は端末の時刻で 00:00／23:59 を作る。日本以外の端末のずれは今からあり、便2 で増えない・N-18）。
+- 確かめ（生出力は実行記録に残す）: `npm run test:unit -- src/pages/schedule`・`npx tsc --noEmit`・`npm run check:all`・`npm run check:new-tokens`・`npm run check:dark-parity`・`npm run build`・`cd backend && pytest tests/test_calendar_service.py -q`・変更ファイルが上の 10 項目だけ。
+- 報告: `docs/handoff/schedule-gcal-alignment/impl-report-2.md`。コードを先に commit → 確かめ → 報告を commit・push。PR は作らない。
+
+### 11-3. 便3
 
 再審査の REVISE（§9）を直して、もう一度審査に通ってから書く。
 
@@ -311,3 +350,15 @@ recon: `docs/handoff/schedule-gcal-alignment/recon.md`（以下 R§0〜R§7）
 | N-11 | 行の高さは今ある `rowHeight`（`DEFAULT_ROW_HEIGHT`）を引数で渡す。`getComputedStyle` は使わない | 5-6・§7 の 6 |
 | N-12 | 直す口は `category` を受け取らない。動かすときに送らず、試験でも見ない | 5-6・§7 の 8 |
 | 行のずれ | 便1 の合流で行が動いた: 保存 `:1247-1257`・`canEditSelected` `:1336-1338`・`rowHeight` `:651`・`DEFAULT_ROW_HEIGHT` `:91` | 5-6 |
+
+## 15. 再審査 3 回目の書き足しの記録（→ 便2 のカード）
+
+| 指摘 | 中身 | 入れた場所 |
+|---|---|---|
+| N-14 | 終日を動かすときの終わりは最後の日の 23:59。次の日の 0:00 だと Google で 1 日長くなる | §11-2 作るもの 5・試験 4 |
+| N-15 | 1 日 3 件は今 `frontend/src/pages/schedule/SchedulePageImpl.tsx:843` | §11-2 作るもの 6 |
+| N-16 | 秘書の下書きも同じ口に同じ形で送る。直しは裏側で効く | §11-2 触らない・§9 |
+| N-17 | 作る口も `category` を受けない | §7 の 8 |
+| N-18 | 端末は日本時間が前提 | §11-2 前提 |
+| N-19 | 作る・直すの両方の道の試験 | §11-2 試験 7 |
+| 軽微なずれ | §5-6 の `:517-522` は終日の分岐 518-523。直す場所（518-520）は正しい | 直さない（判断に影響なし） |
