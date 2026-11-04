@@ -163,4 +163,20 @@ test.describe("鈴（NoticeBell）", () => {
     await expect.poll(async () => (await style()).color).not.toBe(before.color);
     expect((await style()).bg).toBe("rgba(0, 0, 0, 0)");
   });
+
+  test("PC: 押さずに乗せるだけで一覧が開き、一覧へ動かしても開いたまま、外へ出すと閉じる", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "vl-desktop-1280", "1280 のみ");
+    await setup(page, 3);
+    const btn = page.locator(".notice-bell-btn");
+    await expect(btn).toBeVisible({ timeout: 10_000 });
+    const panel = page.locator(".notice-panel");
+    await expect(panel).toHaveCount(0);
+    await btn.hover();
+    await expect(panel).toBeVisible();
+    await page.locator(".notice-row").first().hover();
+    await page.waitForTimeout(500);
+    await expect(panel).toBeVisible();
+    await page.mouse.move(10, 700);
+    await expect(panel).toHaveCount(0);
+  });
 });
