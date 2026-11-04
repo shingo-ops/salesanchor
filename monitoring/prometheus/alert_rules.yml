@@ -115,6 +115,30 @@ groups:
           description: "SSE 接続数が 8 を超えています。SSE は worker を占有しない一方で、接続とメモリを消費します。"
           runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#backendsseconnectionshigh"
 
+      # コードが require_permission で求めるキーが権限の一覧に無い（所有者でも 403 になる経路ができている）
+      - alert: PermissionKeyMissing
+        expr: salesanchor_permission_keys_missing{job="backend"} > 0
+        for: 10m
+        labels:
+          severity: warning
+          tier: ticket
+        annotations:
+          summary: "コードが求める権限が、権限の一覧にありません"
+          description: "一覧に無いキーが {{ $value }} 個あります。その権限が要る画面は、所有者でも開けません。"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#permissionkeymissing"
+
+      # 見張りが DB を読めない状態（-1）が続いている
+      - alert: PermissionKeyCheckFailed
+        expr: salesanchor_permission_keys_missing{job="backend"} == -1
+        for: 30m
+        labels:
+          severity: warning
+          tier: ticket
+        annotations:
+          summary: "権限の一覧との突き合わせが 30 分できていません"
+          description: "権限の抜けの見張りが止まっています。抜けがあっても知らせが出ません。"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#permissionkeycheckfailed"
+
   - name: f2_cleanup
     rules:
       - alert: F2CleanupStale

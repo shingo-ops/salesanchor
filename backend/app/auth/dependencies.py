@@ -643,6 +643,11 @@ async def require_tenant_admin(
     return user
 
 
+# コードが require_permission で求めたキーの集合。経路の読み込み（アプリの起動）でそろう。
+# 権限の一覧（public.permissions）との差を見張るために使う（design.md §5）。
+REGISTERED_PERMISSION_KEYS: set[str] = set()
+
+
 def require_permission(*permission_keys: str):
     """
     指定された権限のいずれか1つを持つことを要求するDependencyファクトリ。
@@ -655,6 +660,7 @@ def require_permission(*permission_keys: str):
     required: set[str] = set(permission_keys)
     if not required:
         raise ValueError("require_permission には1つ以上のキーが必要です")
+    REGISTERED_PERMISSION_KEYS.update(required)
 
     async def checker(
         current_user: User = Depends(get_current_user),
