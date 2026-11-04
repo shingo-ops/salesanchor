@@ -2,6 +2,8 @@
 
 状態: 設計案（Opus 作成・自己審査 APPROVE・2026-11-04）。実装は Sonnet に委任する。
 親設計: `docs/handoff/schedule-gcal-import/design.md`（ADR-1059 便2・PR #5083 で本番反映済み）
+調べ: `docs/handoff/schedule-gcal-import/recon.md`（便2 の調べ。今回の本番の観測は §2）
+対象ADR: `docs/adr/ADR-1059-google-calendar-import-owner-private.md`（ADR-1059-google-calendar-import-owner-private）
 
 ## 1. 目的と成功条件（KGI）
 
@@ -87,7 +89,7 @@ PO が予定の画面を開くと、PO 本人の Google カレンダーの予定
 
 - `backend/tests/test_compose_worker_env.py` が CI の pytest で毎回動く。4 行のどれかを消す、または `backend/app/services/google_calendar.py` に新しい `os.getenv` を足して worker に渡し忘れると、PR の CI が落ちる（担当が 1 行消しで 2 failed を確認・`docs/handoff/schedule-gcal-import/impl-report-1.md`）。
 - 本番で取り込みが黙って飛ばされる件は、§6 の次の便（スキップを数えて WARNING を出す）で見える形にする。
-- 守り手: CI の pytest（必須チェック「pytest (SQLite + PostgreSQL RLS)」）。持ち主は Opus（設計担当）。次の便で取り込みの WARNING を足すのも同じ持ち主。
+- 守り手: `backend/tests/test_compose_worker_env.py`（CI の pytest（必須チェック「pytest (SQLite + PostgreSQL RLS)」で動く）。持ち主は Opus（設計担当）。次の便で取り込みの WARNING を足すのも同じ持ち主。
 
 ## 8. Architect 自己審査（同一 AI による。独立した第二者の審査ではない）
 
