@@ -6,11 +6,9 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../firebase", () => ({ auth: { currentUser: null } }));
-vi.mock("./provider", () => ({ isSelfAuth: () => true }));
-
 import { api } from "../api";
 import { adoptAccessToken, currentAccessToken, expireSession } from "./selfAuth";
+import { registerDevSession } from "./devSessionSlot";
 
 type Handler = (url: string, init: RequestInit) => Response | Promise<Response>;
 let fetchMock: ReturnType<typeof vi.fn>;
@@ -21,6 +19,7 @@ const calls = (prefix: string) => fetchMock.mock.calls.filter(([url]) => String(
 const bearerOf = (call: unknown[]) => (call[1] as { headers: Record<string, string> }).headers.Authorization;
 
 beforeEach(() => {
+  registerDevSession(null);
   expireSession();
   adoptAccessToken("tok-old", 900);
   fetchMock = vi.fn((url: string, init: RequestInit) => Promise.resolve(handler(url, init)));

@@ -1,8 +1,11 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "../i18n";
 import { api, ApiError } from "./api";
+import { registerTestDevSession } from "../test-utils/devSession";
 
-vi.mock("./firebase", () => ({ auth: { currentUser: { getIdToken: async () => "t" } } }));
+beforeEach(() => {
+  registerTestDevSession({ getAccessToken: async () => "t", hasSession: () => true });
+});
 
 afterEach(() => {
   vi.unstubAllGlobals();

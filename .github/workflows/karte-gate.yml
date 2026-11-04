@@ -70,9 +70,6 @@ jobs:
         if: github.event_name != 'workflow_dispatch'
         env:
           CI: 'true'
-          VITE_FIREBASE_API_KEY: AIzaSyE2E-dummy-api-key
-          VITE_FIREBASE_AUTH_DOMAIN: e2e-fixture.firebaseapp.com
-          VITE_GCP_PROJECT_ID: e2e-fixture
         run: npx playwright test karte-visual-gate.spec.ts --project=chromium
 
       # ── workflow_dispatch: ベースライン更新（--update-snapshots） ──────────────
@@ -80,9 +77,6 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         env:
           CI: 'true'
-          VITE_FIREBASE_API_KEY: AIzaSyE2E-dummy-api-key
-          VITE_FIREBASE_AUTH_DOMAIN: e2e-fixture.firebaseapp.com
-          VITE_GCP_PROJECT_ID: e2e-fixture
         run: npx playwright test karte-visual-gate.spec.ts --project=chromium --update-snapshots
 
       - name: Commit baseline snapshots
@@ -105,9 +99,6 @@ jobs:
         continue-on-error: true
         env:
           CI: 'true'
-          VITE_FIREBASE_API_KEY: AIzaSyE2E-dummy-api-key
-          VITE_FIREBASE_AUTH_DOMAIN: e2e-fixture.firebaseapp.com
-          VITE_GCP_PROJECT_ID: e2e-fixture
         run: npx playwright test karte-screenshot-compare.spec.ts --project=chromium
 
       - name: Upload comparison screenshots

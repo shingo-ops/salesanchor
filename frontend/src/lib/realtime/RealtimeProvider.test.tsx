@@ -2,15 +2,13 @@ import { render } from "@testing-library/react";
 import { StrictMode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../firebase", () => ({
-  auth: { currentUser: { getIdToken: () => Promise.resolve("tok") } },
-}));
-
 import { RealtimeProvider } from "./RealtimeProvider";
+import { registerTestDevSession } from "../../test-utils/devSession";
 
 describe("RealtimeProvider", () => {
   const signals: AbortSignal[] = [];
   beforeEach(() => {
+    registerTestDevSession({ getAccessToken: async () => "tok", hasSession: () => true });
     signals.length = 0;
     vi.stubGlobal(
       "fetch",

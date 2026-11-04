@@ -27,7 +27,6 @@ const auth = vi.hoisted(() => ({ user: { uid: "uid-A" } as { uid: string } | nul
 vi.mock("../../contexts/AuthContext", () => ({
   useAuth: () => ({ user: auth.user, loading: false }),
 }));
-vi.mock("../auth/provider", () => ({ isSelfAuth: () => false }));
 vi.mock("../auth/selfAuth", () => ({
   getAccessToken: async () => "test-token",
   expireSession: vi.fn(),

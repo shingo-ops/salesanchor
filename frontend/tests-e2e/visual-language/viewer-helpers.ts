@@ -5,7 +5,7 @@
  * （frontend/tests-e2e/visual-language/inventory-helpers.ts の書き方に倣う）。
  * このファイルは `.spec.ts` ではないので Playwright のテスト収集対象にはならない。
  *
- * 認証: 閲覧ページはアプリ本体の Firebase Auth（installAuthBypass）を使わない
+ * 認証: 閲覧ページはアプリ本体のログイン（installAuthBypass）を使わない
  * （frontend/src/pages/viewer/main.tsx がアプリ本体の CSS・辞書を読まないのと同じ理由）。
  * localStorage の `viewer_access_token`（キー名は frontend/src/pages/viewer/api.ts:7）を
  * addInitScript で入れるだけで、frontend/src/pages/viewer/ViewerApp.tsx:60 が
