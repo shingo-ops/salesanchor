@@ -63,3 +63,16 @@ regex = '''META_APP_SECRET\s*=\s*[a-f0-9]{32,}'''
 tags = ["secret", "meta"]
 [rules.allowlist]
 paths = [".env.example"]
+
+# =============================================================
+# build-on-github 便1（docs/handoff/build-on-github/design.md §7-2・§24 C1）
+# frontend の完成品の画面の JS には Firebase の web API key が載る（設計どおり・画面を開く人に届く値）。
+# 既定の規則 gcp-api-key を名前で広げ、その場所だけを例外にする。他の規則・他の場所は今のまま当てる。
+# この場所は置き場に無いので、置き場の走査（secret-scan.yml）の結果は変わらない。
+# =============================================================
+[[rules]]
+id = "gcp-api-key"
+
+[[rules.allowlists]]
+description = "frontend 完成品の画面の JS（Firebase web API key は設計どおり載る）"
+paths = ['''(^|/)usr/share/nginx/html/assets/[^/]+\.js$''']
