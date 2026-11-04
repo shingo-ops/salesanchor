@@ -99,6 +99,8 @@
 
 ## 最終 HEAD
 
-commit 前の HEAD: `705cdcf63ee8cbb4cf2e38b69bb2378c51fa7908`（実装 commit・push 後の HEAD は push 後に確認）
+実装 commit（push 済み）: `8759a43f0`（先頭 705cdcf63 の次）。この追記 commit の後の HEAD は `git log -1` を参照。
+
+補足: 最初の commit は pre-commit の lint（警告 0 件が条件）が、試験ファイルの日本語 describe 題名で止めた。題名を英語に直して再実行し、14 件通ることを確認してから commit した。pre-push の検査は 18 件流して落ち 0 件。
 
 DONE
