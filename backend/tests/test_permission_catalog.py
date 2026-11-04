@@ -21,7 +21,7 @@ def test_known_missing_does_not_grow():
     """C2: 既知の欠けは増やさない。"""
     from app.auth.permission_catalog import KNOWN_MISSING
 
-    assert len(KNOWN_MISSING) <= 3
+    assert len(KNOWN_MISSING) == 0
 
 
 def test_registered_keys_are_collected():
@@ -54,6 +54,7 @@ async def test_count_missing_permission_keys(monkeypatch):
     import app.auth.permission_catalog as catalog
 
     monkeypatch.setattr(catalog, "REGISTERED_PERMISSION_KEYS", {"a.view", "b.view", "companies.view"})
+    monkeypatch.setattr(catalog, "KNOWN_MISSING", {"companies.view": "試験"})
     result = await catalog.count_missing_permission_keys(_FakeSession(["a.view"]))
     assert result == ["b.view"]
 
@@ -109,3 +110,29 @@ async def test_gauge_counts_missing_and_throttles(monkeypatch):
     # 300 秒たっていないので数え直さない
     await metrics._update_permission_keys_gauge()
     assert len(calls) == 1
+
+
+_REASSIGNED_ROUTES = [
+    ("POST", "/api/v1/contacts/{contact_id}/channel-acknowledge-duplicate", "customers.update"),
+    ("POST", "/api/v1/discord/channel-invite/{lead_id}", "leads.update"),
+    ("POST", "/api/v1/discord/sync-role/{lead_id}", "leads.update"),
+    ("GET", "/api/v1/companies/duplicates", "customers.view"),
+]
+
+
+def test_reassigned_routes_require_catalog_keys():
+    """C5: 一覧に無かった 3 キーを、一覧にある鍵へ付け替えた（design.md §11-3）。"""
+    from app.main import app
+
+    for method, path, key in _REASSIGNED_ROUTES:
+        found = [
+            r for r in app.routes
+            if getattr(r, "path", None) == path and method in getattr(r, "methods", set())
+        ]
+        assert len(found) == 1, f"route not found: {method} {path}"
+        keys = [
+            set(dep.call.required_permission_keys)
+            for dep in found[0].dependant.dependencies
+            if getattr(dep.call, "required_permission_keys", None) is not None
+        ]
+        assert keys == [{key}], f"{method} {path}: {keys}"
