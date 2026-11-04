@@ -1,4 +1,4 @@
-export type ScheduleView = "day" | "week" | "month";
+export type ScheduleView = "day" | "week" | "month" | "list";
 export type DemoState = "normal" | "loading" | "empty";
 
 export interface AnchorRect {
@@ -144,16 +144,58 @@ export function startOfMonth(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), 1);
 }
 
+/** 一覧の表示で見せる日数（選んだ日から） */
+export const LIST_VIEW_DAYS = 30;
+
 export function toRangeStart(view: ScheduleView, anchor: Date): Date {
+  if (view === "list") return new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate());
   if (view === "month") return new Date(anchor.getFullYear(), anchor.getMonth(), 1);
   if (view === "day") return new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate());
   return getWeekDays(anchor)[0];
 }
 
 export function toRangeEnd(view: ScheduleView, anchor: Date): Date {
+  if (view === "list") return addDays(new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate()), LIST_VIEW_DAYS);
   if (view === "month") return addMonths(new Date(anchor.getFullYear(), anchor.getMonth(), 1), 1);
   if (view === "day") return addDays(new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate()), 1);
   return addDays(getWeekDays(anchor)[6], 1);
+}
+
+export interface PopoverSize {
+  width: number;
+  height: number;
+}
+
+export interface PopoverViewport {
+  width: number;
+  height: number;
+}
+
+/**
+ * 小窓の置き場所を、出したあとに測った大きさから決める（純粋な関数）。
+ * 高さの上限は CSS（.schedule-popover の max-height）が画面の高さ−2×margin に保つので、
+ * ここは高さを返さず、左上の位置だけ返す。
+ * 枠が無いとき（C キー・サイドバーの作成ボタン）は画面の真ん中。
+ */
+export function fitPopover(
+  anchor: AnchorRect | null,
+  size: PopoverSize,
+  viewport: PopoverViewport,
+  margin: number,
+): { left: number; top: number } {
+  const maxLeft = Math.max(margin, viewport.width - size.width - margin);
+  const maxTop = Math.max(margin, viewport.height - size.height - margin);
+  if (!anchor) {
+    return {
+      left: clamp((viewport.width - size.width) / 2, margin, maxLeft),
+      top: clamp((viewport.height - size.height) / 2, margin, maxTop),
+    };
+  }
+  const rightSide = anchor.right + margin;
+  const leftSide = anchor.left - size.width - margin;
+  const left = clamp(rightSide + size.width > viewport.width - margin ? leftSide : rightSide, margin, maxLeft);
+  const top = clamp(anchor.top, margin, maxTop);
+  return { left, top };
 }
 
 export function normalizeEvent(event: ApiCalendarEvent): ScheduleItem {
