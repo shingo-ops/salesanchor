@@ -298,4 +298,27 @@ setup が `$H/.claude/CLAUDE.md` の末尾に 2 行（`## 報告の型`・`  @~/
 ## 最後の HEAD の sha
 実装の commit: 220971d99（この報告を足す commit が続く。最終の sha は push 後の `git rev-parse HEAD`）
 
+## 直し1
+
+§0 点検（変更前）`grep -n "sed -i" scripts/dev/test_doc_entry_weekly_check.sh`:
+
+```
+239:setup; sed -i 's/| a | b | c | d |/| a | b | c |  |/' "$LG"; run
+```
+
+§1 239 行目を `sed ... "$LG" > "$LG.tmp" && mv "$LG.tmp" "$LG"` に変更（この 1 行のみ）。
+
+§2 確かめ:
+
+```
+rc=0
+PASS T-G10 K4_WIDE_UNREACHED=2
+PASS T-G10 RESULT=NG
+PASS T-G11 L2_LINE_NG=1
+PASS T-G11 RESULT=NG
+PASS 89 / FAIL 0
+```
+
+`grep -n "sed -i" scripts/dev/test_doc_entry_weekly_check.sh` → 0 件（grep の終了コード 1）
+
 DONE

@@ -236,7 +236,7 @@ check "T-G8 RESULT=NG" has_re '^RESULT=NG'
 setup; printf '%s\n' 'x' > "$T/home/.claude/CLAUDE.md"; run
 check "T-G8 取り込みなし → G3_INTENT=no" has G3_INTENT=no
 
-setup; sed -i 's/| a | b | c | d |/| a | b | c |  |/' "$LG"; run
+setup; sed 's/| a | b | c | d |/| a | b | c |  |/' "$LG" > "$LG.tmp" && mv "$LG.tmp" "$LG"; run
 check "T-G9 G6_NO_OWNER=1" has G6_NO_OWNER=1
 check "T-G9 RESULT=NG" has_re '^RESULT=NG'
 setup; printf '%s\n' '| R-nn | 節の名前 | 所在 | 種別 | 移した段 |' '|---|---|---|---|---|' > "$LG"; run
