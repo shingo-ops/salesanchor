@@ -558,3 +558,14 @@ docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml p
 - §19 の分け方: §19-1 の 4 件と §19-2（D5・D9・D10・D12）は §20 のとおり。D14 は prod1 の cron（PO の `!` が要る変更）なので、D8 と同じ件に置いたままでよい。
 - 残る【未確認】U1〜U22 は、どれも確かめ方と代替が書かれていて、それに頼る選択は無い。実装カードを出す前に要るのは §19-1 の PO の 4 件だけ。
 - 判定: **APPROVE**（設計合格）。PO の承認・実装開始・マージの承認は兼ねない。
+
+---
+
+## 23. PO の決定の記録
+
+| 日付 | 件 | 決定 | PO の返事（原文） |
+|---|---|---|---|
+| 2026-11-04 | §19-1 件1 鍵（D1〜D4・D6） | 推奨どおり。案A（公開の置き場の classic PAT・`write:packages` だけ）。持ち主は PO 本人（shingo-ops）。期限は 180 日。受け取りの鍵（`read:packages`）は GitHub secret にだけ置き、prod1 には置かない。VITE は `VITE_FIREBASE_API_KEY`・`VITE_FUNNEL_DASHBOARD` を secret に、他 3 つを Variables に置く | 「1」 |
+
+- 鍵を作る手順は、便1 の実装を始める直前に PO へ渡す。早く作ると、使わないまま 180 日の期限が進むため。
+- 残りの件: 件2 組織の画面の設定（D7）、件3 dockerd 入れ直しの時間帯（D8・D11・D14）、件4 workflow-lint（D13）。
