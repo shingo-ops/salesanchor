@@ -164,3 +164,22 @@
 - **K12 19/20**（合格ライン 18/20）。K10 2/20。20 回とも終了コード 0。費用 $3.7054。
 - 外したのは T1 の1回。仕入元の欄がもうあると見つけ、作る前に PO に聞く答えで、CC_UI_GOVERNANCE.md を開く前に止まった（呼び出しは Explore 1・Bash 5・計画ファイルの Write 1）。T1 のもう1回は開いた。
 - §13 の条件を満たしたので、kgi.md の K9 の合格ラインを 7.5k に書き換えた。実装カード: [card-impl-k12.md](card-impl-k12.md)。
+
+## 15. 週次点検の K9 の線を 7.5k にそろえる（2026-11-05）
+
+- 起きたこと（事実）: kgi.md の K9 の線は §13 の PO 決定で 7.5k になった。週次点検 `scripts/dev/doc-entry-weekly-check.sh` は「合格線の正本はここ1か所（kgi.md の写し）」（同 7 行目）としながら、`K9_LIMIT_TOKENS=6500`（同 8 行目）と `add_ng "K9>6.5k"`（同 89 行目）のまま。今の K9 は 7.4k（baseline.md「便5 の直しの後の測り直し（2026-11-04）」）なので、次の週次点検は誤って NG を出す。線を変えたときに台本を直し忘れた。測り直しの記録の PR のマージ前審査で見つかった。
+- PO の承認: 2026-11-05 チャット「1」（点検の線を 7.5k にそろえる）。
+- 直し方（変更前 → 変更後）:
+  - 8 行目 `K9_LIMIT_TOKENS=6500` → `K9_LIMIT_TOKENS=7500`
+  - 89 行目 `add_ng "K9>6.5k"` → `add_ng "K9>7.5k"`
+- 触らない: 判定の式（88 行目）・K9 の測り方・ほかの線。`docs/handoff/doc-agenda-nav/library-requirements.md` の L1（K9 ≤ 6.5k、「PO 承認済み・変えない」）は別の題の合格条件なので変えず、食い違いを PO に報告する。
+- 選ばなかった案: 試験 `scripts/dev/test_doc_entry_weekly_check.sh` に K9 の線の試験を足す案。K9 は本物の `/context` でしか値が出ず、試験は `DOC_ENTRY_SKIP_K9=1` で飛ばしている。値を差し替える口を足すのは台本の作りの変更で、この直しの範囲を超える。
+- 戻し方: この PR を revert する（2 行が 6500・6.5k に戻る）。
+- 実装カード: [card-weekly-k9-line.md](card-weekly-k9-line.md)。
+
+| 基準 | 検証方法 |
+|---|---|
+| 線が 7.5k になっている | `grep -n -E "K9_LIMIT_TOKENS=|K9>" scripts/dev/doc-entry-weekly-check.sh` が 8 行目 `K9_LIMIT_TOKENS=7500`・89 行目 `add_ng "K9>7.5k"` の2件だけ |
+| 古い線が残っていない | `grep -c -E "6500|6\.5k" scripts/dev/doc-entry-weekly-check.sh` が 0 |
+| 既存の試験が通る | `bash scripts/dev/test_doc_entry_weekly_check.sh` が FAIL 0・終了コード 0 |
+| 次の月曜に誤った NG が出ない | 次の週次点検の結果に `K9>` が入らない（K9 が 7.5k 以下のとき） |
