@@ -17,6 +17,7 @@
 - ブロッカーは回避せず停止して報告。環境系FAIL（認証・ネットワーク等）のみ、1回だけ再試行してから報告。
 - `gh pr create/edit` の PR 本文は、先に Write で本文ファイルを作り、別のコマンドで `--body-file` を付けて gh を実行する（同じコマンドの heredoc で本文を作らない。ADR-1033）。
 - push の前に提出前の入口 `bash scripts/dev/check-before-submit.sh` を流す（Claude は Bash の timeout を 600000 にする）。流していないと pre-push が流すので、Bash の既定の 2 分で push が切れることがある。
+- push・PR/issue の本文・コメントに仕入元の投稿の原文を「」『』で書き写さない。送る前の見張り（`scripts/agent-hooks/confidential-quote-guard/`、ADR-1045）が原文と照らして止める。止められたら語句を消し、形の説明に書き換える。push は `git -C <worktree の絶対パス> push -u origin <ブランチ>` を単独で、本文は Write で作ったファイルを `--body-file <絶対パス>` で渡す（これ以外の形は止まる。commit は heredoc か `-F <絶対パス>` で書ける。見張りの登録は PO が `!` で実行）
 
 ## §1 調査便（recon）のとき
 - 読み取り専用。編集は成果物（recon.md等）と台帳類のみ。
