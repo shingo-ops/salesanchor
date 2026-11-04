@@ -6,7 +6,7 @@
 - 親（設計仕様書）: [docs/specs/inventory-management/inventory-viewer/README.md](../../specs/inventory-management/inventory-viewer/README.md)
 - 現状の記録: [recon.md](./recon.md)
 - 関係 ADR: [ADR-1019](../../adr/ADR-1019-inventory-viewer-separate-accounts.md)（改訂が要る。recon §2）、ADR-1014（在庫の行の定義は1か所）、ADR-144・ADR-067（金型とデザイントークン）、ADR-027（i18n）
-- 状態: **草案・PO 未承認・設計審査1回目 REVISE（2026-11-04）の指摘9件・2回目 REVISE の指摘7件・3回目 REVISE の指摘6件を反映済み・4回目の審査前**。下の「§6 PO に決めてもらうこと」が全部決まるまで、設計合格にも実装にも進まない。
+- 状態: **草案・PO 未承認・設計審査1回目 REVISE（2026-11-04）の指摘9件・2回目 REVISE の指摘7件・3回目 REVISE の指摘6件を反映済み・4回目 APPROVE（LOW 1件＝分類表の件数 1068→1075 を反映済み）**。下の「§6 PO に決めてもらうこと」が全部決まるまで、設計合格にも実装にも進まない。
 
 ## 1. 目的（PO の言葉から）
 
@@ -71,7 +71,7 @@
   - 各列に COMMENT を付ける。§7 の「1か所だけ」の検査: information_schema.columns で、table_schema='public' のうち bill_to_name・contact_name・invoice_email・party_type の4列を持つ表が viewer_billing_profiles の1つだけであること、かつ viewer_accounts と tcg_distribution_targets に請求先の7列のどれも無いことを数える（postal_code・address・phone は B2B の tenant_* の表にもあるので、public と名簿・配信先に絞って見る）。
   - 請求先は個人情報なので、本番の AI 読み取りからは隠す。足す場所は2つとも「今ある migration の中の一覧」で、新しい migration には書かない（観測事実: どちらのファイルも配備のたびに流し直され、先頭で表を空にしてから一覧を入れ直す。新しい migration で足した行は次の配備で消える）。
     1. 拒否表 ops_case.deny_tables: migrations/20261031_210000_create_ops_case.sql:91〜:101 の一覧に ('viewer_billing_profiles', '請求先（宛名・住所・電話）') を足す（:90 で表を空にする。scripts/run_all_migrations.sh:1205 で毎回流す）。試験 backend/tests/ops/test_ops_case_db.py:656〜:664 の10件を11件にする。
-    2. 列の分類 ai_cloud_meta.column_class: migrations/20261024_100300_create_ai_cloud_views.sql の、viewer_accounts の行（:298〜:299）の後ろに足す（:11 で表を空にする。run_all_migrations.sh:234・:253 で毎回流す）。足す行は ('public','viewer_billing_profiles',ARRAY['address','bill_to_name','contact_name','invoice_email','phone','postal_code'],'mask','') と ('public','viewer_billing_profiles',ARRAY['party_type'],'allow','値の決まり ck_viewer_billing_profiles_party_type で値が限られる')（:299 の status と同じ書き方）。試験 backend/tests/ops/test_ai_cloud_views.py:484 の件数を足した分だけ増やす。
+    2. 列の分類 ai_cloud_meta.column_class: migrations/20261024_100300_create_ai_cloud_views.sql の、viewer_accounts の行（:298〜:299）の後ろに足す（:11 で表を空にする。run_all_migrations.sh:234・:253 で毎回流す）。足す行は ('public','viewer_billing_profiles',ARRAY['address','bill_to_name','contact_name','invoice_email','phone','postal_code'],'mask','') と ('public','viewer_billing_profiles',ARRAY['party_type'],'allow','値の決まり ck_viewer_billing_profiles_party_type で値が限られる')（:299 の status と同じ書き方）。分類表は配列を列ごとにほどいて1列1行で入る（同ファイル :13〜:16 と末尾の CROSS JOIN LATERAL unnest）ので、足す2行は7件になる（mask 6列＋allow 1列）。試験 backend/tests/ops/test_ai_cloud_views.py:484 の 1068 を 1075 にし、同じ migration の :3 のコメント「1068 行」も「1075 行」に直す。
     3. 配信先の新しい列 tcg_distribution_targets.viewer_account_id には分類の行を足さない。理由: 型が BIGINT（int8）で、そのまま出してよい型の一覧（test_ai_cloud_views.py:50〜:53 の _PASS_TYPES）に入り、列名も名前の見張り（同 :44〜:47 の _NAME_RE）に当たらないため、T10 の分類漏れ検査（同 :490〜:530）の対象外。viewer_billing_profiles の viewer_account_id・created_at・updated_at も同じ理由で行は要らない。
 
 
@@ -181,7 +181,7 @@
 | 何を足すと | 直す所 |
 |---|---|
 | 新しい migration（請求先の表・配信先の列・鍵の用途） | scripts/run_all_migrations.sh の並び（名簿は :1153、テンプレートは :1191） |
-| 新しい表 viewer_billing_profiles | .github/workflows/migration-guard.yml:224 の PUBLIC_TABLES（viewer_accounts 等と並べる）。ops_case.deny_tables と backend/tests/ops/test_ops_case_db.py:656〜:664（10件→11件）。ai_cloud_meta.column_class と backend/tests/ops/test_ai_cloud_views.py:484（1068 件が増える）と T10 の分類漏れ検査 |
+| 新しい表 viewer_billing_profiles | .github/workflows/migration-guard.yml:224 の PUBLIC_TABLES（viewer_accounts 等と並べる）。ops_case.deny_tables と backend/tests/ops/test_ops_case_db.py:656〜:664（10件→11件）。ai_cloud_meta.column_class と backend/tests/ops/test_ai_cloud_views.py:484（1068→1075。:3 のコメントも）と T10 の分類漏れ検査 |
 | 名簿を消すと消える表（請求先・配信先） | backend/tests/test_viewer_purge.py:143〜:149 の「消えた表」の並びに viewer_billing_profiles と tcg_distribution_targets を足す |
 | 鍵の用途 billing_form | migrations/20261016_150000_add_viewer_accounts.sql:48 の CHECK を変える新しい migration と、:54 の COMMENT の書き直し |
 | 文面テンプレートの鍵 billing_form_request | viewer_message_templates.py の LEDGER（:43〜:53）。migrations/20261020_120000_create_viewer_message_templates.sql:11 の「台帳の9件」の COMMENT を10件に。backend/tests/test_viewer_message_templates.py:22〜:25 の KEYS。frontend/src/pages/super-admin/ViewerTemplatesPage.test.tsx の KEYS（:15〜:18）と PLACEHOLDERS（:19〜:29）。backend/tests/viewer_template_fixtures.py の DEFAULT_BODIES。i18n の名前と使う場面（frontend/src/locales/ja.json:2805・:2816。:2797〜:2805 が名前、:2808〜:2816 が使う場面 と en.json の同じ位置の並び）。差し込み項目の説明 placeholders（ja.json:2818〜:2828 と en.json の同じ並び）に form_url（請求先フォームのURL・自動で入ります）と form_expires（請求先フォームのリンクの期限の日付）の2行 |
