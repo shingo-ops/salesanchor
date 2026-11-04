@@ -1,7 +1,7 @@
 # design: Firebase を画面とサーバーから全部外す（ADR-1013 便6）
 
 - 書いた日: 2026-11-04（Opus）
-- 状態: 設計案作成済み → 自己審査（§10）済み → クラウドの設計審査 1 回目 REVISE・2 回目 REVISE（重い指摘 0・中 2・軽い 5。2026-11-04）→ 3 回目 APPROVE（重い・中 0、軽い 2 は直した。2026-11-04）→ PO の設計承認待ち。実装は未着手。
+- 状態: 設計案作成済み → 自己審査（§10）済み → クラウドの設計審査 1 回目 REVISE・2 回目 REVISE（重い指摘 0・中 2・軽い 5。2026-11-04）→ 3 回目 APPROVE（重い・中 0、軽い 2 は直した。2026-11-04）→ PO 承認済み（2026-11-04「1」。PO の原文は「1、推測は禁止して事実確認を怠らずに確実性を重視して最も効果があり、現状把握の粒度が細く、精度が高いエビデンスを確立して安全に進めてくれ。また配線とDBのSSOTは遵守してデータを分散させることは禁止。フロントエンドのパーツもデザイントークンとデザインシステム を遵守して、金型登録のないハードコードを禁止する。推測で自身で判断したり不透明無まま進めることは禁止、分からないことは聞いてくれ。確立したなら進める。」）→ 便1 のカード発行済み（`card-1.md`、card-lint 合格）。実装は未着手。便5 は戻せないので、実行の直前に改めて PO の GO をもらう。
 - PO の進める判断: 2026-11-04「1」。Opus が出した選択肢は「Firebase を画面とサーバーから全部外す設計に進む【おすすめ】　裏口のもとになる部品がなくなります。Firebase に残っている利用者の削除は元に戻せないので、その前に改めて確認をお願いします。」。
 - 根拠: [recon.md](./recon.md)（`docs/handoff/firebase-removal/recon.md`。以下 R 番号はこの recon を指す）。
 - 親 ADR: ADR-1013（Decision 6・Consequences）。前の便: `docs/handoff/block-firebase-token/design.md`。元の便6 の行: `docs/handoff/auth-self-hosted-passkey/design.md:160`。
@@ -77,8 +77,11 @@ Firebase は使わない設定に切り替えた（PO 2026-11-04「firebaseは�
   - `SecuritySection.tsx:262` 付近: Firebase の再認証とパスワード変更の分岐を消し、常に自社の `/auth/password/change` を使う。
 - 開発サーバーと e2e の偽ログイン（`devSession`）:
   - 置き場: `frontend/src/lib/auth/devSession.ts`（新設）。今の偽物（R11）と同じく `window.__salesanchorE2eAuthUser` と保存の鍵を読む。保存の鍵の名前は `salesanchor:e2e-auth-user` に変える。
-  - 読み込み方: `frontend/src/main.tsx` で `if (import.meta.env.DEV)` の中だけ `import("./lib/auth/devSession")` で読み込み、`selfAuth.ts` に「開発用の受け口」を登録してから画面を描く。本番では受け口は空のまま。静的な import は使わない。R27 のとおり、静的に読み込むと `import.meta.env.DEV` で分けても文字がビルドに残るため。
-  - 開発かどうかの判定は 1 つにする: `selfAuth.ts` に `isDevSession()`（受け口が登録されているか）を置き、他の所はこれだけを見る。`import.meta.env.DEV` を直接見る所は `main.tsx` の 1 か所だけにする。
+  - 受け口の置き場（カード作成時に改めた。2026-11-04）: 受け口は `selfAuth.ts` ではなく、新設の `frontend/src/lib/auth/devSessionSlot.ts` に置く。中身は型（`DevSessionUser`・`DevSessionAdapter`）と `registerDevSession()`・`isDevSession()`・`getDevSession()` だけで、偽ログインの文字は持たない。理由: 試験の土台（`frontend/src/test-setup.ts`）が受け口に登録する一方、9 つの試験が `selfAuth` を `vi.mock` で差し替えている。Vitest の資料（Context7 `/vitest-dev/vitest`）に「setup file の中で import したモジュールはキャッシュされるので差し替えられない」とあり、受け口を `selfAuth.ts` に置くと、土台の登録と試験の差し替えがぶつかる。受け口を別のファイルにすれば、`selfAuth` を差し替える試験も、受け口の登録をそのまま使える。
+  - 読み込み方: `frontend/src/main.tsx` で `if (import.meta.env.DEV)` の中だけ `import("./lib/auth/devSession")` で読み込み、受け口に登録してから画面を描く（`tsconfig.json` の target が ES2020 なので、ファイルの一番外の `await` は使わず、`async function bootstrap()` の中で行う）。本番では受け口は空のまま。静的な import は使わない。R27 のとおり、静的に読み込むと `import.meta.env.DEV` で分けても文字がビルドに残るため。
+  - 開発かどうかの判定は 1 つにする: 受け口の `isDevSession()`（登録されているか）を、他の所はこれだけを見る。`import.meta.env.DEV` を直接見る所は `main.tsx` の 1 か所だけにする。
+  - 試験の土台: `test-setup.ts` は firebase の差し替えを消し、`devSession` の偽ログインを「札は出さない（`getAccessToken` は未ログインの誤り、`hasSession` は false）」形で登録する。今の試験の状態（画面は開発用の利用者で開くが、札は無い）と同じにするため。自社ログインの動きを試す試験は `beforeEach` で `registerDevSession(null)` を呼ぶ。札が要る試験（`SharedButtonMigration`・`RealtimeProvider`・`api.httpError`）は、札を返す偽ログインを `beforeEach` で登録し直す。
+  - Storybook: `frontend/.storybook/preview.tsx` で `devSession` を登録する。Storybook の出力は `frontend/dist` に入らない（K1・K6 の対象外）。
   - 入っていないことは K6 の grep で確かめ、推測に頼らない。K6 が 0 件にならないときは、実装役は止まって Opus に戻す（代わりの方法は Opus が決める）。
 - 開発での動き方（今と外した後。本番は自社ログインで、今と同じ）:
 
@@ -230,7 +233,7 @@ Firebase は使わない設定に切り替えた（PO 2026-11-04「firebaseは�
 
 ## 維持の仕組み
 
-- 守り手: .github/workflows/test.yml（backend の試験）と .github/workflows/e2e.yml（画面の試験）。便1 で K1・K6 の数え方を、便2 で K2・K4 の確かめを CI の段に足す。どの workflow のどの段に足すかは、カードで実物を見て決める。
+- 守り手: .github/workflows/test.yml（backend の試験）と .github/workflows/e2e.yml（画面の試験）。便1 で K1・K6 の数え方を、便2 で K2・K4 の確かめを CI の段に足す。K1・K6 は `.github/workflows/frontend-check.yml` の job `check` の段「Viewer bundle check」（`npx vite build --manifest` で `frontend/dist` を作る段）の直後に足す（カード作成時に実物を見て決めた。2026-11-04）。便2 の段はカード2 で決める。
 - K1 の数え方（`frontend/` で `npm run build` の後）: `cat $(find dist -name '*.js') | grep -oiE 'firebase|identitytoolkit|securetoken|googleapis|gstatic' | wc -l` が 0。
 - K6 の数え方（同じ dist）: `cat $(find dist -name '*.js') | grep -oE '__salesanchorE2eAuthUser|e2e-auth-user|e2e-firebase-auth-user|e2e-fake' | wc -l` が 0。
 - 便1 の後に `frontend/package.json` へ firebase をもう一度足すと、K1 の grep が赤になる。
