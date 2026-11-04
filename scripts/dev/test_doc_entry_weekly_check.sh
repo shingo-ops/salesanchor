@@ -47,6 +47,24 @@ setup() {
   # 図書館の点検が通る偽の hook.py と台帳（L2=0・L3_MATCH=yes になる）
   printf '%s\n' 'CHAT_FORMAT = "~/.claude/chat-format.md"' 'SECTION = "## Sec Title"' > "$H/kb/scripts/hooks/plain-lang/hook.py"
   printf '%s\n' '| R-nn | 節の名前 | 所在 | 種別 | 移した段 |' '|---|---|---|---|---|' > "$R/docs/handoff/doc-agenda-nav/library-ledger.md"
+  # 一本化の点検（G1・G3・G6・K4）が通る偽の文書。中身のない文だけ
+  mkdir -p "$H/kb/00-rules" "$H/.claude/prompts" "$R/docs/ai-agents" "$R/scripts/ci" \
+    "$H/.claude/projects/-Users-tanizawashingo-salesanchor/memory"
+  printf '%s\n' '## 報告の型' '  @~/kb/00-rules/chat-layout.md' >> "$H/.claude/CLAUDE.md"
+  printf '%s\n' '## 答える前に' > "$H/kb/00-rules/chat-layout.md"
+  printf '%s\n' '【POへの説明】' '- x' '【次】' > "$H/.claude/prompts/salesanchor-designer.md"
+  printf '%s\n' 'x' > "$H/.claude/prompts/salesanchor-claude-go.md"
+  printf '%s\n' '## 3. x' '- x' '## 4. y' > "$R/docs/ai-agents/design-partner.md"
+  local m
+  for m in report_style communication_style always_japanese agent_description_japanese po_chat_three_lines \
+    plain_language_session session_rules_comprehensive plain_explain_template cost_in_yen numeric_goal_rule; do
+    printf '%s\n' '---' 'name: x' '---' 'x' > "$H/.claude/projects/-Users-tanizawashingo-salesanchor/memory/feedback_$m.md"
+  done
+  printf '%s\n' '## 話題の重なり表' '' '| 話題 | 個人の本の所在 | リポジトリの所在 | 正 |' '|---|---|---|---|' '| a | b | c | d |' \
+    >> "$R/docs/handoff/doc-agenda-nav/library-ledger.md"
+  printf '%s\n' '| R-01 | 報告 | ~/.claude/CLAUDE.md:報告の型:11 | 目録 | 0 |' '| R-02 | 前 | ~/kb/00-rules/chat-layout.md:答える前に:1 | 目録 | 0 |' \
+    >> "$R/docs/handoff/doc-agenda-nav/library-ledger.md"
+  printf '%s\n' 'print("SUMMARY unreached=0 deep=0")' > "$R/scripts/ci/check_doc_index.py"
   export FAKE_RUN_JSON='[{"status":"completed","conclusion":"success"}]'
   export FAKE_PR_JSON='[]'
   unset FAKE_GH_RC
@@ -60,7 +78,7 @@ BL() { echo "$1" > "$T/repo/docs/handoff/doc-agenda-nav/baseline.md"; }
 PEERS() { rm -f "${T:?}/home/CC報告ファイル-keep/consent-weekly/"*; local f; for f in "$@"; do : > "$T/home/CC報告ファイル-keep/consent-weekly/$f"; done; }
 
 setup; run
-check "T1 K1=24" has K1=24
+check "T1 K1=27" has K1=27
 check "T1 b.md を数えない" lacks b.md
 check "T1 K2_COPY=SAME" has K2_COPY=SAME
 check "T1 K9=skipped" has K9=skipped
@@ -144,34 +162,93 @@ once() { printf '%s\n' "$OUT" | grep '^K1_FILES=' | grep -o -- "$1" | wc -l | tr
 HB="$T/home"; RP="$T/repo"
 
 setup; printf '  @~/kb/x.md\n' >> "$HB/.claude/CLAUDE.md"; lines 3 > "$HB/kb/x.md"; run
-check "T18 K1=28" has K1=28
+check "T18 K1=31" has K1=31
 check "T18 K1_FILES に ~/kb/x.md" has_re '^K1_FILES=.*~/kb/x\.md'
 
 setup; printf '見る @~/kb/y.md を読む\n' >> "$HB/.claude/CLAUDE.md"; lines 2 > "$HB/kb/y.md"; run
-check "T19 K1=27" has K1=27
+check "T19 K1=30" has K1=30
 
 setup; printf '%s\n' '```' '@~/kb/z.md' '```' '`@~/kb/w.md`' >> "$HB/.claude/CLAUDE.md"; lines 5 > "$HB/kb/z.md"; lines 5 > "$HB/kb/w.md"; run
-check "T20 K1=28" has K1=28
+check "T20 K1=31" has K1=31
 check "T20 z.md が無い" lacks z.md
 check "T20 w.md が無い" lacks w.md
 check "T20 K1_MISSING=none" has K1_MISSING=none
 
 setup; printf '@./n1.md\n' >> "$HB/kb/AGENTS.md"; lines 2 > "$HB/kb/n1.md"; run
-check "T21 K1=27" has K1=27
+check "T21 K1=30" has K1=30
 check "T21 K1_FILES に ~/kb/n1.md" has_re '^K1_FILES=.*~/kb/n1\.md'
 
 setup; printf '@AGENTS.md\n' >> "$RP/CLAUDE.md"; run
-check "T22 K1=25" has K1=25
+check "T22 K1=28" has K1=28
 check "T22 repo/AGENTS.md が1回" [ "$(once 'repo/AGENTS.md')" = 1 ]
 
 setup; printf '@~/kb/AGENTS.md\n' >> "$HB/.claude/CLAUDE.md"; run
-check "T23 K1=25" has K1=25
+check "T23 K1=28" has K1=28
 check "T23 ~/kb/AGENTS.md が1回" [ "$(once '~/kb/AGENTS.md')" = 1 ]
 
 setup; printf '%s\n' '連絡 x@example と `hitoshi@host`' >> "$HB/.claude/CLAUDE.md"; run
-check "T24 K1=25" has K1=25
+check "T24 K1=28" has K1=28
 check "T24 K1_MISSING=none" has K1_MISSING=none
 check "T24 RESULT=OK" has RESULT=OK
+
+# 一本化の点検（G1・G3・G6・K4・L2_LINE_NG）
+MD="$T/home/.claude/projects/-Users-tanizawashingo-salesanchor/memory"
+DP="$T/repo/docs/ai-agents/design-partner.md"
+CL="$T/home/kb/00-rules/chat-layout.md"
+LG="$T/repo/docs/handoff/doc-agenda-nav/library-ledger.md"
+
+setup; run
+check "T-G1 G1_OUTSIDE=0" has G1_OUTSIDE=0
+check "T-G1 G3_INTENT=yes" has G3_INTENT=yes
+check "T-G1 G6_NO_OWNER=0" has G6_NO_OWNER=0
+check "T-G1 K4_WIDE_UNREACHED=0" has K4_WIDE_UNREACHED=0
+check "T-G1 L2_LINE_NG=0" has L2_LINE_NG=0
+check "T-G1 RESULT=OK" has RESULT=OK
+
+setup; printf '%s\n' '## 3. x' '- 結論から' '## 4. y' > "$DP"; run
+check "T-G2 G1_OUTSIDE=1" has G1_OUTSIDE=1
+check "T-G2 G1_TABLE に E7:1" has_re '^G1_TABLE=.*E7:1'
+check "T-G2 RESULT=NG" has_re '^RESULT=NG'
+
+setup; printf '%s\n' '## 3. x' '- 結論から chat-layout.md' '## 4. y' > "$DP"; run
+check "T-G3 G1_OUTSIDE=0" has G1_OUTSIDE=0
+
+setup; printf '%s\n' '---' 'name: x' '---' '**Why:** 結論から' '**How to apply:** x' > "$MD/feedback_report_style.md"; run
+check "T-G4 Why の行は数えない" has G1_OUTSIDE=0
+setup; printf '%s\n' '---' 'name: x' '---' '**Why:** x' '**How to apply:** 結論から' > "$MD/feedback_report_style.md"; run
+check "T-G4 How to apply の行は数える" has G1_OUTSIDE=1
+
+setup; printf '%s\n' '---' 'name: x' '---' '**Why:** x' > "$MD/feedback_report_style.md"; run
+check "T-G5 G1_OUTSIDE=0" has G1_OUTSIDE=0
+check "T-G5 report_style は 0" has_re '^G1_TABLE=.*M:report_style:0'
+
+setup; rm "$MD/feedback_report_style.md"; run
+check "T-G6 G1_TABLE に missing" has_re '^G1_TABLE=.*M:report_style:missing'
+check "T-G6 G1_OUTSIDE=0" has G1_OUTSIDE=0
+
+setup; printf '%s\n' '## 4. y' > "$DP"; run
+check "T-G7 G1_OUTSIDE=unreadable" has G1_OUTSIDE=unreadable
+check "T-G7 RESULT=NG" has_re '^RESULT=NG'
+
+setup; printf '%s\n' 'x' > "$CL"; run
+check "T-G8 見出しなし → G3_INTENT=no" has G3_INTENT=no
+check "T-G8 RESULT=NG" has_re '^RESULT=NG'
+setup; printf '%s\n' 'x' > "$T/home/.claude/CLAUDE.md"; run
+check "T-G8 取り込みなし → G3_INTENT=no" has G3_INTENT=no
+
+setup; sed 's/| a | b | c | d |/| a | b | c |  |/' "$LG" > "$LG.tmp" && mv "$LG.tmp" "$LG"; run
+check "T-G9 G6_NO_OWNER=1" has G6_NO_OWNER=1
+check "T-G9 RESULT=NG" has_re '^RESULT=NG'
+setup; printf '%s\n' '| R-nn | 節の名前 | 所在 | 種別 | 移した段 |' '|---|---|---|---|---|' > "$LG"; run
+check "T-G9 節なし → unreadable" has G6_NO_OWNER=unreadable
+
+setup; printf '%s\n' 'print("SUMMARY unreached=2 deep=0")' > "$T/repo/scripts/ci/check_doc_index.py"; run
+check "T-G10 K4_WIDE_UNREACHED=2" has K4_WIDE_UNREACHED=2
+check "T-G10 RESULT=NG" has_re '^RESULT=NG'
+
+setup; printf '%s\n' '| R-01 | 一 | AGENTS.md:H1:3 | 目録 | 0 |' >> "$LG"; printf '%s\n' 'x' 'x' 'x' '## H1' > "$T/repo/AGENTS.md"; run
+check "T-G11 L2_LINE_NG=1" has L2_LINE_NG=1
+check "T-G11 RESULT=NG" has_re '^RESULT=NG'
 
 echo "PASS $PASS / FAIL $FAIL"
 [ "$FAIL" -eq 0 ]
