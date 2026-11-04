@@ -66,7 +66,7 @@ class DuplicatesResponse(BaseModel):
 @router.get(
     "/companies/duplicates",
     response_model=DuplicatesResponse,
-    dependencies=[Depends(require_permission("companies.view"))],
+    dependencies=[Depends(require_permission("customers.view"))],
 )
 async def find_company_duplicates(
     confidence: float = Query(default=0.7, ge=0.5, le=1.0),

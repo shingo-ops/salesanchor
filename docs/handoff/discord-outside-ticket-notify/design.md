@@ -142,3 +142,30 @@ send_discord_notification は最後に commit と reset_tenant_context をする
 - 判定: APPROVE
 - 根拠: 捨てている場所（ticket_channel_writer.py:185-192）、送る仕組み（notifications.py:153）、重複の抑えの前例（viewer_interview_notice.py）、担当者の見分けに使う値（staff 表・staff_role_id・管理者の権限）の4つが、コードと本番の有無で確認できている。DB の変更が無く、変える場所は1か所の枝と新しい部品1つ
 - 未解決: 通知の件数の見込み（まだ確かめていない。合流後1週間で測る）。本番で届くかは通知先の登録が先に要る
+
+## 9. 改訂1: 通知先の登録で内部サーバーエラーになる不具合（2026-11-04）
+
+- PO の報告（2026-11-04）: 通知設定の画面で「追加」を押すと「内部サーバーエラーが発生しました」と出る。PO 承認「1」（2026-11-04、直す）
+- 観測事実:
+  - backend/app/routers/notifications.py:53-60 の `ChannelResponse.created_at` は `str`
+  - migrations/009_add_phase4_tenant_tables.sql:16 の `created_at` は `TIMESTAMPTZ`。asyncpg は日時の型で返す
+  - pydantic 2.x は日時の型を `str` の欄に入れると ValidationError を出す（手元の pydantic 2.13.0 で `Input should be a valid string [type=string_type]` を確認。本番は backend/requirements.txt の pydantic 2.10.6。日時から文字への自動の変換は 2.x の系統で入らない）
+  - notifications.py:83-103 の create は `await db.commit()`（:101）のあとで `ChannelResponse(**dict(row))`（:103）を作る。止まるのは保存のあと。そのため行は保存されている見込み
+  - 同じ作りは list（:80）と update（:136）にもある。行が1件でもあると、一覧の表示も同じ理由で止まる
+  - 試験が見逃した理由: backend/tests/conftest.py:18 の試験の保存先は SQLite。SQLite は日時を文字で返すので、test_notification_event_routing.py:167 などは通る
+  - 未確認: 本番の記録で、実際にこの場所で止まったかは見ていない（手元から本番の記録を開く道が自動の見張りで止められた）。直したあとに一覧が出れば、この仮説が正しかったことになる
+- 直し方: notifications.py に、行から `ChannelResponse` を作る小さな関数を1つ足す。`created_at` が文字でなければ `isoformat()` で文字に直す。list・create・update の3か所でその関数を使う。手本は backend/app/routers/notices.py:42-47 の `_iso`
+- 選ばなかった案: `created_at: datetime` に型を変える。返す形は同じ ISO の文字になる。ただし openapi.json と画面の型の見直しまで広がる。今回は返す形を変えない案を選ぶ
+- 触らない: DB・移行・画面・i18n・delete と send_discord_notification・openapi.json
+- 受入条件:
+
+| 基準 | 検証方法 |
+|---|---|
+| 日時の型の行から作っても止まらず ISO の文字になる | 新しい単体試験（datetime を渡して `created_at` が `isoformat()` と一致） |
+| 文字の行はそのまま | 新しい単体試験（文字を渡して同じ文字） |
+| 既存の通知の試験が全部通る | CI の backend の試験 |
+| 本番で一覧が出て、追加・編集が成功する | 本番反映後に PO が通知設定の画面を開き直す（一覧に1行出る／エラーが出ない） |
+
+- 危険と対処: PO が「追加」を2回以上押していたら、行が重なっている。反映後に一覧で数を見て、多い分は画面の「削除」で消す（PO の操作）
+- 戻し方: この PR を戻す。DB の変更は無い
+- 審査（同じ AI による自己審査。独立した第二者審査ではない）: APPROVE。根拠は上の行番号と pydantic の実測。未解決は「本番の記録の未確認」で、反映後の一覧の表示で判定する

@@ -1075,6 +1075,38 @@ def test_geo_lookup_returns_none_without_database(monkeypatch):
     assert geo.lookup(None) is None
 
 
+def test_geo_lookup_opens_database_and_formats_place(monkeypatch, tmp_path):
+    import maxminddb
+
+    db_file = tmp_path / "dummy.mmdb"
+    db_file.write_bytes(b"dummy")
+    monkeypatch.setenv("GEOIP_DB_PATH", str(db_file))
+    monkeypatch.setattr(geo, "_reader", None)
+    monkeypatch.setattr(geo, "_reader_path", None)
+    monkeypatch.setattr(geo, "_reader_mtime", None)
+
+    recorded: dict = {}
+
+    class FakeReader:
+        def get(self, ip):
+            return {
+                "city": {"names": {"en": "Phoenix"}},
+                "country": {"names": {"en": "United States", "ja": "アメリカ合衆国"}},
+            }
+
+        def close(self):
+            pass
+
+    def fake_open_database(path, mode=None):
+        recorded["mode"] = mode
+        return FakeReader()
+
+    monkeypatch.setattr(maxminddb, "open_database", fake_open_database)
+
+    assert geo.lookup("4.249.21.1") == "Phoenix, アメリカ合衆国"
+    assert recorded["mode"] == maxminddb.MODE_MMAP
+
+
 def test_bootstrap_cutoff_parsing(monkeypatch):
     assert devices.bootstrap_cutoff() is None
     monkeypatch.setenv("AUTH_DEVICE_BOOTSTRAP_CUTOFF", "2026-11-01T12:00:00Z")

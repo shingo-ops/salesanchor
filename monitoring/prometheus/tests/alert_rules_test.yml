@@ -1,7 +1,7 @@
 # Prometheus ルールの単体試験（promtool test rules）
 # 書式: https://prometheus.io/docs/prometheus/latest/configuration/unit_testing_rules/
 # 実行: promtool test rules monitoring/prometheus/tests/alert_rules_test.yml
-# 全 34 本が擬似の系列で鳴ること、tier と runbook_url が付くことを確かめる。
+# 全 36 本が擬似の系列で鳴ること、tier と runbook_url が付くことを確かめる。
 
 rule_files:
   - ../alert_rules.yml
@@ -1040,4 +1040,58 @@ tests:
         exp_alerts: []
       - eval_time: 4h
         alertname: OpsMailPollStale
+        exp_alerts: []
+
+  - name: PermissionKeyMissingFiring
+    interval: 1m
+    input_series:
+      - series: 'salesanchor_permission_keys_missing{job="backend", instance="b1"}'
+        values: '1+0x30'
+    alert_rule_test:
+      - eval_time: 11m
+        alertname: PermissionKeyMissing
+        exp_alerts:
+          - exp_labels:
+              job: backend
+              instance: b1
+              severity: warning
+              tier: ticket
+            exp_annotations:
+              summary: "コードが求める権限が、権限の一覧にありません"
+              description: "一覧に無いキーが 1 個あります。その権限が要る画面は、所有者でも開けません。"
+              runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#permissionkeymissing"
+      - eval_time: 5m
+        alertname: PermissionKeyMissing
+        exp_alerts: []
+
+  - name: PermissionKeyMissingQuiet
+    interval: 1m
+    input_series:
+      - series: 'salesanchor_permission_keys_missing{job="backend", instance="b1"}'
+        values: '0+0x30'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: PermissionKeyMissing
+        exp_alerts: []
+
+  - name: PermissionKeyCheckFailedFiring
+    interval: 1m
+    input_series:
+      - series: 'salesanchor_permission_keys_missing{job="backend", instance="b1"}'
+        values: '-1+0x40'
+    alert_rule_test:
+      - eval_time: 31m
+        alertname: PermissionKeyCheckFailed
+        exp_alerts:
+          - exp_labels:
+              job: backend
+              instance: b1
+              severity: warning
+              tier: ticket
+            exp_annotations:
+              summary: "権限の一覧との突き合わせが 30 分できていません"
+              description: "権限の抜けの見張りが止まっています。抜けがあっても知らせが出ません。"
+              runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#permissionkeycheckfailed"
+      - eval_time: 20m
+        alertname: PermissionKeyCheckFailed
         exp_alerts: []
