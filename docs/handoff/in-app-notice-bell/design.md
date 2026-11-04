@@ -210,6 +210,46 @@ CREATE INDEX IF NOT EXISTS idx_user_notices_user_unread ON {各テナント}.use
 - リスク: 鈴は `frontend/src/components/NoticeBell.css:6-14` の `position: fixed` の入れ物に浮いている。ページ見出しは `frontend/src/tokens.css:235` の `--page-header-avatar-clearance` で右上を空けているが、下へ送った中身が鈴の下を通るかは未確認。透明にすると重なりが見える恐れがある。対処: 実装後の評価で PC 幅の長いページ（在庫表）を下へ送った画面を撮って確かめる。重なるなら PO に戻す（推測で背景を足さない）
 - 審査（Architect・同一 AI の自己審査、2026-11-04）: APPROVE。根拠: 変更は CSS 3 か所＋アイコン寸法 1 か所で、既存のトークン（`--text-primary`・`--space-1`・`ICON.base`）だけを使う。赤い数字の金型（Badge）・スマホの形・API に触れない。受入の 5 項目はすべて e2e か CI で ○× を判定できる。未解決: 上のリスク（評価で確かめる）
 
+### 7-3-改訂6（PO 2026-11-04 チャット。PC の鈴はマウスを乗せると一覧が開く。上の PC の開き方だけを置き換える）
+- PO 原文: 「鈴をクリックしたら開く→カーソルを合わせたら開くに変更できる？」
+- 離れたとき: PO に出した選択肢 1. 離して少し経つと自動で閉じる／2. 開いたまま残す／3. やめて今のまま。PO の返事は「1」
+- 実物（origin/main 8d661d747 時点）:
+  - PC の鈴は `frontend/src/components/NoticeBell.tsx:141` の `Popover`（`placement="bottom"`・`open`/`onOpenChange` の制御式）。開くと `handleOpenChange` が一覧を読み直す（:70-73）
+  - `Popover` の金型（`frontend/src/components/Popover.tsx`）は、押したときだけ開閉し（:151 `handleTriggerClick`、:167 `onClick`）、外側を押すと閉じる（:136-149）。乗せて開く使い方は無い
+  - 乗せて出す金型は `Tooltip`（`frontend/src/components/Tooltip.tsx:61` 既定 150ms で表示）と `HoverCard`（`frontend/src/components/HoverCard.tsx:84` 既定 150ms・:45 閉じて 300ms 以内は即表示）。どちらも文字だけを出す金型で、押せる行の一覧は入れられない
+  - `Popover` を使うのは `NoticeBell` と `MultiSelect`（`frontend/src/components/MultiSelect.tsx:26`）だけ
+- 方針: `Popover` の金型に「乗せて開く」使い方 `openOnHover` を足し、PC の鈴だけがそれを使う。新しい部品は作らない（金型を増やさない。ADR-144）。既定は今のまま（押したときだけ）なので、`MultiSelect` とスマホの鈴は動きが変わらない
+- 動き（`openOnHover` が true のとき）:
+  1. 鈴か一覧にマウスが入ると、閉じる待ちを取り消す。閉じていれば `hoverOpenDelay`（既定 150ms、`Tooltip`・`HoverCard` と同じ）後に開く。通りすがりに開かないため
+  2. 鈴からも一覧からも出ると、`hoverCloseDelay`（既定 300ms、`HoverCard` の再表示の間と同じ）後に閉じる。鈴と一覧の間の 6px のすき間を通る間に閉じないため（PO「1」の「少し経つと」）
+  3. 押しても開ける（キーボードで選んで Enter を押す人・触って操作する画面のため）。ただし乗せて開いた直後の 1 回目の押しでは閉じない（乗せて開いたのに押すと閉じてしまう食い違いを防ぐ）。それ以外の押しは今までどおり開閉する
+  4. 外側を押すと閉じるのは今までどおり
+  5. 部品が消えるとき、待ちの時計を必ず止める
+- 待ち時間は金型の引数の既定値として持つ（`Tooltip` の `delay = 150` と同じ置き方）。CSS のトークンではない（JS の時間で、既存の金型も引数の既定値で持っている）
+- 変更するファイル:
+  - `frontend/src/components/Popover.tsx`: 上の動き。冒頭の説明書きに 1 行足す
+  - `frontend/src/components/NoticeBell.tsx`: PC の形（:141）に `openOnHover` を付ける。:44 の説明書き「右上の丸い鈴（PC）」を今の形に直す（前回の審査の軽い指摘）
+  - `frontend/src/components/Popover.test.tsx`: 動き 1〜5 の単体試験
+  - `frontend/src/components/Popover.stories.tsx`: 見本 `OpenOnHover` を 1 つ足す（ADR-067 のカタログ）
+  - `frontend/tests-e2e/visual-language/notice-bell.spec.ts`: PC 幅で、押さずに乗せるだけで開き、一覧へ動かしても開いたまま、離すと閉じる試験を 1 つ足す
+- 触らない: スマホの形（`variant="tab"`、`frontend/src/components/NoticeBell.tsx:118-138`）・`MultiSelect`・`Popover` の位置の計算（:38-83・:110-133）・NoticeBell.css・tokens.css・i18n・API・backend
+- 受入（○×）:
+
+| 基準 | 検証方法 |
+|---|---|
+| PC で鈴にマウスを乗せると、押さなくても一覧が開く | e2e 追加分（vl-desktop-1280）が緑＋本番で PO の目視 |
+| 鈴から一覧へマウスを動かす間は閉じず、一覧の知らせを押せる | e2e 追加分（一覧の行に乗せても開いたまま）が緑 |
+| マウスを鈴と一覧の外へ出すと、少し経って閉じる | e2e 追加分が緑＋単体試験（300ms 後に閉じる）が緑 |
+| 押して開く今の試験がそのまま通る | e2e 既存の K1・K3・0 件が 3 幅で緑 |
+| スマホの鈴と MultiSelect の動きは変わらない | e2e の vl-mobile-390 既存分と単体試験（`openOnHover` 無しは乗せても開かない）が緑 |
+| 色・寸法の直値なし | CI の Lint & Dark Mode Check・UI governance gate が緑 |
+
+- 戻し方: この PR の revert（動きだけ。データに触れない）
+- リスク:
+  - 試験の `click()` はマウスを鈴へ動かしてから押すため、乗せて開く待ちと押しが重なる。動き 3（乗せて開いた直後の押しでは閉じない・押しが先なら待ちを取り消して開く）で、どちらの順でも「開いた」状態になる。既存の K1・K3・0 件の試験で確かめる
+  - 下へ送った画面を通りすがりにマウスが横切ると、150ms 留まれば開く。PO が使ってみて開きすぎると感じたら、待ち時間を PO に戻して決める（推測で変えない）
+- 審査（Architect・同一 AI の自己審査、2026-11-04）: APPROVE。根拠: 既存の金型 `Popover` に既定オフの使い方を足すだけで、使う所は PC の鈴 1 か所。待ち時間は既存の金型（Tooltip 150ms・HoverCard 300ms）と同じ値。受入の 6 項目はすべて e2e・単体試験・CI で ○× を判定できる。未解決: なし（待ち時間の体感は PO の目視で確かめる）
+
 ### 7-4 部品（金型を使う。ADR-144・ADR-067・ADR-027）
 - 新しい部品 `NoticeBell`（鈴のボタン＋数字＋一覧）。中身は既存の金型: `Popover`（`frontend/src/components/Popover.tsx`）、`Badge`（`frontend/src/components/Badge.tsx`、variant danger、sm）、印は `frontend/src/constants/icons.tsx` の `BellOutline`（:157）
 - 一覧の 1 行は新しい部品 `NoticeRow`（押せる行。未読は太字＋左に丸）。色・余白・角・z-index はトークンだけ（直値禁止）。足りないトークンがあれば `:root` と `:root.force-dark` の両方に足す
