@@ -8,7 +8,7 @@ ADR-1007:36 の「1回だけのデータの変更」で行う。migration には
 
 ## PO 承認
 - 設計の作成: PO 2026-11-04 チャット「1」（2 つの鍵を権限の一覧に足す設計を作る）。
-- 本実行の合意: 未（設計の審査のあと、PO に聞く）。
+- 本実行の合意: PO 2026-11-04 チャットで、DRY-RUN と本実行のそれぞれについて `bash scripts/permit-danger.sh "psql write"` を本人が実行（12:03・12:16 JST 発行）。
 
 ## 実行の前提（順番を守る）
 1. 便1-コード（design.md §4-1）が main にマージされ、本番に反映されていること。取り込みの確定が閲覧キーで通る穴（recon.md §4）を先に塞ぐため。
@@ -75,6 +75,6 @@ AUDIT ts=2026-11-04T00:18:05Z sha=0594b6bae4cd rows=4 ms=127 result=ok
 ## 実行結果（実施後に記入）
 | 項目 | 内容 |
 |---|---|
-| DRY-RUN | |
-| 本実行 | |
-| 事後確認 | |
+| DRY-RUN | 2026-11-04 12:04 JST。PO の使い捨て許可（12:03 発行）のもと Opus が流した。事前確認の再実測 TOTAL 123・NEW_EXISTING 0・CAT_EXISTING 0・MAX_ID 17859（想定どおり）。`01_dryrun.sql` の sha256 `0ef35c18086fbadffee8536494062f649d9641fb8c889443ecd151fc15d968dd`（origin/main f75ab3cb9 の版）。出力 `INSERT 0 7`・ガード通過・7 行表示・`ROLLBACK`・`DRYRUN_OK`、終了コード 0。流した後の再実測も 123・0・0・17859（巻き戻しを確認） |
+| 本実行 | 2026-11-04 12:17 JST（03:17:14Z）。PO の使い捨て許可（12:16 発行）のもと Opus が流した。`01_apply.sql` の sha256 `b17df53b034a8b5d12b2623d27c9845fb669e55221f2d74de2d12b90d7e4d27a`。出力 `INSERT 0 7`・ガード通過・`COMMIT_NEXT`・`COMMIT`・`COMMIT_DONE`、終了コード 0 |
+| 事後確認 | K1: `02_verify_read.sql` を読み取りの道で流し、K1_TOTAL 130・K1_NEW_COUNT 7・7 キーの名前と説明が §4-2 どおり。K2: 300 秒待ったあと、テナント 001 の「オーナー」（public.users id 1・tenant_id 1）で Chrome から 2 画面を開き、`/api/v1/conditions` 200・`/api/v1/conditions/catalog` 200・`/api/v1/product-categories` 200。require_permission に super admin の抜け道が無いこと（backend/app/auth/dependencies.py の checker は load_user_permissions の和集合だけで判定）を確かめ、オーナーの計算の道で通ったと判断した。K3 の前段（便1-画面操作）: ロールの画面で「点検用（見るだけ）」（role id 2611）に 2 つの閲覧を付けて保存。role_permissions は 45 → 47、足されたのは `conditions.view`・`product_categories.view` の 2 つだけ。K3 の本確認は翌朝の画面点検 |

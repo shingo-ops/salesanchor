@@ -147,10 +147,42 @@ check "T16 囲みの外 → 1" has BOOKS_IMPORTED=1
 setup; printf '%s\n' '```' '@~/.claude/books/x.md' '```' > "$H/.claude/CLAUDE.md"; run
 check "T16 囲みの中 → 0" has BOOKS_IMPORTED=0
 
+# T-L 台帳の行番号の照合（L2_LINE_NG）
+LROW() { printf '%s\n' "$LEDGER_HEAD" "$1" > "$LEDGER"; }
+setup; printf '%s\n' 'x' 'x' '## H1' 'x' > "$R/AGENTS.md"
+LROW '| R-01 | 一 | AGENTS.md:H1:3 | 目録 | 0 |'; run
+check "T-L1 行が合う → 0" has L2_LINE_NG=0
+setup; printf '%s\n' 'x' 'x' 'x' '## H1' > "$R/AGENTS.md"
+LROW '| R-01 | 一 | AGENTS.md:H1:3 | 目録 | 0 |'; run
+check "T-L2 行がずれる → 1" has L2_LINE_NG=1
+setup; printf '%s\n' 'x' 'x' '## H9' 'x' > "$R/AGENTS.md"
+LROW '| R-01 | 一 | AGENTS.md:H1:3 | 目録 | 0 |'; run
+check "T-L3 見出しの文字が違う → 1" has L2_LINE_NG=1
+setup; printf '%s\n' '---' 'book: gw' '---' '## H1 [R-01]' > "$H/.claude/books/gw.md"
+LROW '| R-01 | 一 | ~/.claude/books/gw.md:H1:4 | 本 | 2b |'; run
+check "T-L4 本の札つき見出し → 0" has L2_LINE_NG=0
+setup; printf '%s\n' '# H0' 'x' > "$R/AGENTS.md"
+LROW '| R-01 | 一 | AGENTS.md:H0:1 | 目録 | 0 |'; run
+check "T-L5 1段目の見出し → 0" has L2_LINE_NG=0
+setup; printf '%s\n' '## H1' 'x' '### H1a' 'x' '## H2' 'x' > "$R/AGENTS.md"
+LROW '| R-01 | 言い直し 一 | AGENTS.md:H1:4 | 目録 | 0 |'; run
+check "T-L6 言い直しは節の中なら合格 → 0" has L2_LINE_NG=0
+setup; printf '%s\n' '## H1' 'x' '### H1a' 'x' '## H2' 'x' > "$R/AGENTS.md"
+LROW '| R-01 | 言い直し 一 | AGENTS.md:H1:6 | 目録 | 0 |'; run
+check "T-L7 言い直しでも節の外 → 1" has L2_LINE_NG=1
+setup; printf '%s\n' '## H1' 'x' > "$R/AGENTS.md"
+LROW '| R-01 | 一 | AGENTS.md:H1 | 目録 | 0 |'; run
+check "T-L8 行番号なし → 1" has L2_LINE_NG=1
+setup; rm -f "$LEDGER"; run
+check "T-L9 台帳なし → unreadable" has L2_LINE_NG=unreadable
+setup; printf '%s\n' '```' '## H1' '```' > "$R/AGENTS.md"
+LROW '| R-01 | 一 | AGENTS.md:H1:2 | 目録 | 0 |'; run
+check "T-L10 囲みの中 → 1" has L2_LINE_NG=1
+
 # 出力の行の順
 setup; run
 ORDER="$(printf '%s\n' "$OUT" | cut -d= -f1 | tr '\n' ' ')"
-check "出力の順" test "$ORDER" = "K1_DEF K1_DEF_FILES K1_DEF_MISSING L2_CHANNEL L2_DUP_LEDGER L2_DUP_ID L2_DUP_LINE L2 L2_UNTAGGED L3_INDEX L3_BOOKS L3_LEDGER L3_MATCH BOOKS_IMPORTED "
+check "出力の順" test "$ORDER" = "K1_DEF K1_DEF_FILES K1_DEF_MISSING L2_CHANNEL L2_DUP_LEDGER L2_DUP_ID L2_DUP_LINE L2 L2_UNTAGGED L2_LINE_NG L3_INDEX L3_BOOKS L3_LEDGER L3_MATCH BOOKS_IMPORTED "
 
 echo "PASS $PASS/$N"
 [ "$FAIL" -eq 0 ]

@@ -81,3 +81,17 @@ export const Controlled: Story = {
     );
   },
 };
+
+// ── 乗せて開く（openOnHover）────────────────────────────────────────────
+export const OpenOnHover: Story = {
+  args: {
+    content: <SampleContent />,
+    placement: "bottom",
+    openOnHover: true,
+  },
+  render: (args) => (
+    <Popover {...args}>
+      <button type="button">乗せると開く</button>
+    </Popover>
+  ),
+};

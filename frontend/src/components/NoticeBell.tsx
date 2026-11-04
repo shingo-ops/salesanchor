@@ -41,7 +41,7 @@ export function formatUnreadCount(n: number): string {
 }
 
 export interface NoticeBellProps {
-  /** "floating" = 右上の丸い鈴（PC）。"tab" = スマホの下のタブの 1 つ */
+  /** "floating" = 右上の鈴（PC。マウスを乗せると開く）。"tab" = スマホの下のタブの 1 つ */
   variant?: "floating" | "tab";
 }
 
@@ -138,7 +138,7 @@ export default function NoticeBell({ variant = "floating" }: NoticeBellProps = {
   }
 
   return (
-    <Popover placement="bottom" open={open} onOpenChange={handleOpenChange} content={content}>
+    <Popover placement="bottom" openOnHover open={open} onOpenChange={handleOpenChange} content={content}>
       <button type="button" className="notice-bell-btn" aria-label={label} data-testid="notice-bell">
         <BellOutline size={ICON.base} aria-hidden="true" />
         {unread > 0 && (
