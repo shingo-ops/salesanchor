@@ -1,7 +1,7 @@
 # design: リードのカルテの Discord ボタンの出し分けと、Discord 操作の別権限
 
 - 状態: 段階A 設計合格（自己審査）／段階B 草案（PO の決定待ち）
-- 根拠: recon.md（同じフォルダ）、ADR-091、ADR-1007、docs/handoff/permission-keys-conditions-categories/design.md §11-6
+- 根拠: docs/handoff/discord-buttons-permission/recon.md、ADR-091、ADR-1007、docs/handoff/permission-keys-conditions-categories/design.md §11-6
 - 作成: 2026-11-04 Claude Opus（設計担当）。同一 AI の自己審査であり、独立した第二者レビューではない。
 
 ## 1. 目的（PO の言葉）
@@ -106,7 +106,7 @@ PR を revert する。DB は変えない。
 
 ## 5. 維持の仕組み
 
-- 守り手: CI の vitest（段階A の試験 T1〜T3）と、権限キーの見張り（permission_catalog と Grafana の値）。人の担当は設計担当の Claude Opus。
+- 守り手: frontend/src/pages/inbox/InboxKartePanel.discordButtons.test.tsx（CI の vitest・試験 T1〜T3）と backend/app/auth/permission_catalog.py（権限キーの見張り・Grafana の値）。人の担当は設計担当の Claude Opus。
 - 段階Aの出し分けは試験 T1〜T3 が CI で毎回確かめる。
 - 段階Bの鍵は、既存の見張り（backend/app/auth/permission_catalog.py と CI の試験 C2、本番の Grafana の値）が、コードの鍵と DB の行のずれを見つける。
 
