@@ -1,7 +1,7 @@
 # design: Firebase を画面とサーバーから全部外す（ADR-1013 便6）
 
 - 書いた日: 2026-11-04（Opus）
-- 状態: 設計案作成済み → 自己審査（§10）済み → クラウドの設計審査 1 回目 REVISE（2026-11-04）→ 指摘を直した 2 回目の審査待ち → PO の設計承認待ち。実装は未着手。
+- 状態: 設計案作成済み → 自己審査（§10）済み → クラウドの設計審査 1 回目 REVISE・2 回目 REVISE（重い指摘 0・中 2・軽い 5。2026-11-04）→ 指摘を直した 3 回目の審査待ち → PO の設計承認待ち。実装は未着手。
 - PO の進める判断: 2026-11-04「1」。Opus が出した選択肢は「Firebase を画面とサーバーから全部外す設計に進む【おすすめ】　裏口のもとになる部品がなくなります。Firebase に残っている利用者の削除は元に戻せないので、その前に改めて確認をお願いします。」。
 - 根拠: [recon.md](./recon.md)（`docs/handoff/firebase-removal/recon.md`。以下 R 番号はこの recon を指す）。
 - 親 ADR: ADR-1013（Decision 6・Consequences）。前の便: `docs/handoff/block-firebase-token/design.md`。元の便6 の行: `docs/handoff/auth-self-hosted-passkey/design.md:160`。
@@ -21,7 +21,7 @@ Firebase は使わない設定に切り替えた（PO 2026-11-04「firebaseは�
 | K1 | 本番の画面のファイルに Firebase の部品が入っていない | CI: `npm run build` で作った `frontend/dist` のすべての `.js`（本体と閲覧ページ）で、`firebase`・`identitytoolkit`・`securetoken`・`googleapis`・`gstatic` の 5 語（大小無視）を数え、合計 0 件（コマンドは「維持の仕組み」）。本番: 便1 の deploy 後、本番の `index.html` と `viewer/index.html` が読む JS を全部取って同じ数え方で 0 件（今は main だけで `firebase` 88 件・`googleapis` 5 件。R27）。Storybook の出力は `frontend/dist` に入らないので対象外 |
 | K2 | サーバーに Firebase の部品が入っていない | 便2 の後、`backend/requirements.txt` に `firebase-admin` が無い。本番の backend で `python -c "import firebase_admin"` が失敗する（ModuleNotFoundError） |
 | K3 | 自社ログイン・パスキー・パスワード再設定・新しい機械の許可が今までどおり動く | 各便の deploy 後に deploy 内の smoke が緑。PO がいつもどおりログインして画面を開ける。backend の試験 `test_self_auth.py`・`test_passkeys.py`・`test_password_reset.py`・`test_new_device_approval.py` が全件緑 |
-| K4 | Google カレンダー・Drive・表の書き出し・Gemini が今までどおり動く | 便2 の CI で、firebase-admin を抜いて入れ直した環境で `python -c "import google.oauth2.credentials, google.oauth2.service_account, google.auth.transport.requests, googleapiclient.discovery, googleapiclient.http, googleapiclient.errors, google_auth_oauthlib.flow, gspread, google.genai, google.generativeai"` が通る（R30 の全部。recon U1 を機械で確かめる）。deploy 後、カレンダーの取り込みの定期作業の記録が成功 |
+| K4 | Google カレンダー・Drive・表の書き出し・Gemini が今までどおり動く | 便2 の CI で、firebase-admin を抜いて入れ直した環境で `python -c "import google.oauth2.credentials, google.oauth2.service_account, google.auth.transport.requests, googleapiclient.discovery, googleapiclient.http, googleapiclient.errors, google_auth_oauthlib.flow, gspread, google.genai, google.generativeai"` が通る（R30 の全部。recon U1 を機械で確かめる）。deploy 後 30 分以内に、celery の worker のログで 15 分おきの `app.tasks.google_calendar_sync.sync_google_calendar_all`（`backend/app/celery_app.py:210`）が `succeeded` を 2 回以上出し、同じ時間に `ImportError`・`ModuleNotFoundError` が 0 件 |
 | K5 | 開発サーバーと e2e が、Firebase なしで今までどおりログインした状態で動く | e2e・karte-gate の workflow が緑。どちらも偽の `VITE_FIREBASE_*`・`VITE_GCP_PROJECT_ID` を渡さない。開発での動き方は §5-1 の表のとおり |
 | K6 | 本番のビルドに開発用の偽ログインが入っていない | CI: `frontend/dist` のすべての `.js` で、`__salesanchorE2eAuthUser`・`e2e-auth-user`・`e2e-firebase-auth-user`・`e2e-fake` の 4 語を数え、合計 0 件（今の本番は 4 件入っている。R27） |
 | K7 | `staff.firebase_uid` の列がどの会社の表にも無い | 便4 の後、reader 鍵で `information_schema.columns` を数え 0 件。ai_cloud の `build_log` の最新行が ok |
@@ -53,7 +53,7 @@ Firebase は使わない設定に切り替えた（PO 2026-11-04「firebaseは�
 
 順序の理由:
 - 便1 が先。画面が Firebase を読まなくなってから、配線（便3）の値を外す。逆だと、画面の Firebase の初期化が値なしで失敗し、画面全体が開かなくなる。
-- 便2 は便4 より先。運用スクリプトが `firebase_uid` を書かなくなってから列を消す（R9・recon8 の `scripts/setup_review_tenant.py:256`・`:273`）。
+- 便2 は便4 より先。運用スクリプトが `firebase_uid` を書かなくなってから列を消す（R9・R19 の `scripts/setup_review_tenant.py:256`・`:273`）。
 - 便3 は便1・便2 の後。部品を読む所が無くなってから値と鍵のマウントを外す。
 - 便5 は最後。便1〜便4 の本番反映から 7 日、ログインの不具合が 0 件であることを確かめてから、PO に改めて削除の確認をもらう。
 - 戻すときは逆の順（便4→便3→便2→便1）。便3 を残したまま便1 だけを revert すると、画面が値なしで Firebase を初期化して開かなくなるため。
@@ -115,12 +115,12 @@ Firebase は使わない設定に切り替えた（PO 2026-11-04「firebaseは�
   - `validate_settings()` は、本番（`ENVIRONMENT=production`）で `AUTH_JWT_SECRET` が無ければ起動を止める。
 - スイッチを読む所（R3）は、自社ログインの側だけを残す。`backend/app/services/invite.py:20-21` は常に初回設定のメールを作る。
 - `backend/app/auth/utils.py:13-15` の `set_tenant_claim` を消す。`generate_password` は残す（R4）。
-- `backend/app/schemas/auth.py` の `firebase_uid` を消す。
+- `backend/app/schemas/auth.py:19` の説明文（「上流のFirebase Auth側で担保される」）を直す。この型に `firebase_uid` は無く、API の形は変わらない。
 - 注記だけの所（R10・R32）の文を、事実に合わせて直す。`backend/app/main.py:183` の注記を直し、`:184` の `self_tokens.validate_settings()` の呼び出しは残す。ほかに `cache.py`・`line_device_admin.py`・`middleware/session_guard.py`・`routers/leads.py`・`routers/line_import_devices.py`・`routers/staff.py`・`routers/auth.py`・`services/review_mail_notifier.py` の Firebase の文字を、カードで 1 行ずつ「コード」か「注記」かを分けて直す。
-- API の形が変わる（`schemas/auth.py`）ので、`cd backend && ENVIRONMENT=test python -m tools.export_openapi ../frontend/api-contract/openapi.json` で `frontend/api-contract/openapi.json` を作り直して同じ PR に入れる（`.github/workflows/api-contract-check.yml:35`・`:53`）。
-- 運用スクリプト（recon8）:
-  - `scripts/setup_review_tenant.py`: Firebase の利用者を作る所を、`backend/app/auth/passwords.py:20` の `hash_password` で `users.password_argon2_hash` を書く形に変える。`firebase_uid` を書く所（:231・:256・:273・:351・:369）を消す。`backend/tests/test_setup_review_tenant.py` を合わせる。
-  - `scripts/setup_single_test_user.py`・`scripts/setup_test_users.py`: 消す。呼ぶ所はリポジトリに無く、中身は Firebase の利用者を作ることだけ（recon8 の検索）。
+- API の説明文が変わる（`schemas/auth.py:19`・`routers/auth.py:80`・`:186`・`routers/staff.py:265-271` の文が `frontend/api-contract/openapi.json:37858`・`:41323`・`:41950`・`:58540` の description になっている）ので、`cd backend && ENVIRONMENT=test python -m tools.export_openapi ../frontend/api-contract/openapi.json` で `frontend/api-contract/openapi.json` を作り直して同じ PR に入れる（`.github/workflows/api-contract-check.yml:35`・`:53`）。
+- 運用スクリプト（R4・R8・R19）:
+  - `scripts/setup_review_tenant.py`: Firebase の利用者を作る所を、`backend/app/auth/passwords.py:20` の `hash_password` で `users.password_argon2_hash` を書く形に変える。Firebase を使う関数（`_init_firebase`・`_firebase_get_uid`・`_firebase_create_user`・`_firebase_update_password`）は関数ごと消し、`firebase_uid` を受け渡す所（:231・:256・:273・:289・:351・:369・:483・:487・:491）と注記（:18・:24・:37・:296・:455・:459・:469・:490）も消す。`backend/tests/test_setup_review_tenant.py` を合わせる。
+  - `scripts/setup_single_test_user.py`・`scripts/setup_test_users.py`: 消す。呼ぶ所はリポジトリに無く、中身は Firebase の利用者を作ることだけ（R19 の検索）。
   - `scripts/setup_tenant.py:29`・`:471`: 「Firebase ユーザーを作る」の案内を、初回設定メールの案内に直す。
   - `backend/scripts/CLAUDE.md`・`backend/AGENTS.md:8` の手順を合わせる。
 - 試験: Firebase の既定に頼る試験（R21 の 15 ファイル）と、Firebase の文字がある次の試験を直す: `test_client_ip.py`・`test_event_loop_nonblocking.py`・`test_export_inventory_for_sheet.py`・`test_line_import_devices.py`・`test_review_mail_notifier.py`・`test_security_hardening.py`・`test_smoke_auth_least_privilege.py`・`test_viewer_isolation.py`・`test_register_invite.py`・`conftest.py`（列の足場 :512 は便4）。#5118 で足した T1・T2・T6 は、Firebase の分岐が無くなるので「自社以外の札は 401」の試験に置き換える。
@@ -159,7 +159,7 @@ Firebase は使わない設定に切り替えた（PO 2026-11-04「firebaseは�
 - `backend/tests/conftest.py:512` と `backend/tests/rls_bootstrap.py:238`・`:253` の足場から列を消す。
 - `backend/tests/test_staff_create_users.py:163`・`:232` は列を SELECT している。列が無い前提の試験（「保存しない」ことを、列が無いことと応答に無いことで確かめる）に直す。
 - `migrations/20261024_100300_create_ai_cloud_views.sql:535` の分類の行から `firebase_uid` を外し、:3 の行数と `backend/tests/ops/test_ai_cloud_views.py:484` の数（今 1068）を合わせる。`:556` の足場だけの列の一覧から `("public","users","firebase_uid")` を外す（rls_bootstrap の列を消すため）。`scripts/migration-guard/reference-allowlist.tsv:7` のハッシュも更新する。正しい数は、カードで実物を流して数える。
-- `scripts/qa/seed-tenant.sql:110-120` の 3 つの INSERT から `firebase_uid` の列と値を外す（R31）。手で動かしたときに失敗しないため。`scripts/qa/reset-tenant.sh:120-122` が渡す値は使われなくなるだけで、psql は失敗しない。ファイルごと消すのは ADR-1051 D5 に任せる。
+- `scripts/qa/seed-tenant.sql:110-120` の 3 つの INSERT から `firebase_uid` の列と値を外す（R31）。同じファイルの注記 :21-23（psql 変数 `qa_*_firebase_uid` の説明）も消す。手で動かしたときに失敗しないため。`scripts/qa/reset-tenant.sh:120-122` が渡す値は使われなくなるだけで、psql は失敗しない。ファイルごと消すのは ADR-1051 D5 に任せる。
 - `scripts/data_migration/*` は過去の移行の記録なので触らない（§8-2 の例外）。ほかに列が無いと失敗する SQL が見つかれば、カードの段階で止まる。
 - 本番で消える値は tenant_006 の 1 件だけ。人の正本とはつながっていて（R26）、アプリはこの列を読まない。
 
@@ -204,7 +204,7 @@ Firebase は使わない設定に切り替えた（PO 2026-11-04「firebaseは�
 
 ## 8. K9 で認める例外と、ファイルの割り当て
 
-### 8-1. 割り当て表（2026-11-04 の `git grep -il firebase -- . ':!docs'` の 120 ファイル。R32）
+### 8-1. 割り当て表（2026-11-04 の `git grep -il firebase -- . ':!docs'` の 120 ファイル。R32）。数えたのはこの設計の枝で、うち 1 個はこの枝だけにある台帳 `.claude-pipeline/active-work.d/release-firebase-removal-design.md`（§8-2 の例外）。origin/main 7d56ab771 では 119 個
 
 | 行き先 | ファイル |
 |---|---|
@@ -218,7 +218,7 @@ Firebase は使わない設定に切り替えた（PO 2026-11-04「firebaseは�
 
 ### 8-2. 例外の一覧（K9 の正本）
 
-- `docs/` の下（過去の設計・ADR・記録。書き換えない）
+- `docs/` の下（過去の設計・ADR・記録。書き換えない）。ただし `docs/external-state-contract.yml:29-37` は §5-3 で消す（設定の正本なので、記録ではない）
 - `.claude-pipeline/` の下（作業の台帳）
 - `AGENTS.md`（:17 は「外部の画面の操作は PO に確かめる」の例に Firebase を挙げているだけ。便5 の後に例から外すかは、その時に決める）
 - `migrations/019_create_staff_tables.sql`・`migrations/20260612_150000_drop_password_hash.sql`（過去の migration）と、便4 で足す列を消す migration
@@ -255,6 +255,10 @@ Firebase は使わない設定に切り替えた（PO 2026-11-04「firebaseは�
   - 中: 便4 に `test_staff_create_users.py`・`rls_bootstrap.py`・`test_ai_cloud_views.py:556` を足した。便2 に `openapi.json` の作り直しを足した。K4 の import を R30 の 10 個にした。K6 の数える語を偽ログインの印 4 語にした。`seed-tenant.sql` は便4 で列だけ外すと決めた。便5 に API キーとログインの方法の止め方を足した。
   - 軽い: 行番号を実物に合わせた（recon R11・R13・R32）。
   - 審査で新しく見つかった事実: 本番の画面のファイルに開発用の偽ログインの文字が今も入っている（R27）。静的な import では落ちないので、§5-1 で読み込み方を決めた。
+- 2 回目のクラウドの設計審査（2026-11-04）は REVISE（重い指摘 0）。1 回目の指摘は全部直っていて、§5-1 の読み込み方は dev・e2e・karte-gate を壊さず本番に入らない筋、§8-1 は漏れ・重なり 0 と確かめられた。指摘と直した所:
+  - 中 1: `schemas/auth.py` に `firebase_uid` は無かった → :19 の説明文を直すと書き、openapi.json を作り直す理由を description の 4 か所に直した（§5-2）。
+  - 中 2: `seed-tenant.sql:21-23` の注記が K9 に残る → 消すと書き足した（§5-4）。
+  - 軽い: §8-2 に `docs/external-state-contract.yml` の例外を書いた。`setup_review_tenant.py` は関数ごと消すと書き、行を全部載せた。「recon8」を R4・R8・R19 に直した。K4 の deploy 後の見方を celery のログの語で書いた。120 個と 119 個の差を §8-1 に書いた。
 - 既存の仕様との整合:
   - ADR-1013 Decision 6（削除は最後・PO の GO）は便5 の順序と同意票で守る。
   - ADR-1051 D5 の資産には、`seed-tenant.sql` の列の 1 か所の他は触らない。
