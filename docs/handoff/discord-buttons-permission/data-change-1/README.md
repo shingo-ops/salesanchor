@@ -74,6 +74,6 @@ AUDIT ts=2026-11-04T13:19:09Z sha=0da6dd665f2d rows=14 ms=77 result=ok
 ## 実行結果（実施後に記入）
 | 項目 | 内容 |
 |---|---|
-| DRY-RUN | 未実施 |
-| 本実行 | 未実施 |
-| 事後確認 | 未実施 |
+| DRY-RUN | 2026-11-04 23:04 JST 合格。PO の使い捨て許可（psql write・14:04:43Z 発行）の後に Opus が実行。01_dryrun.sql shasum 201cd2bc00b13a7baa1ec849bd0699d04c593ed6。出力: `INSERT 0 5`、001 `INSERT 0 10`・`INSERT 0 12`（=22）、003〜006 各 `INSERT 0 8`・`INSERT 0 9`（=17）、`DO`（件数・写しのずれ 0 のガード通過）、5 行表示、`ROLLBACK`、`DRYRUN_OK`。直後の 00 読み取り（AUDIT ts=2026-11-04T14:05:03Z）で TOTAL 130・NEW_EXISTING 0 のまま＝何も残っていない |
+| 本実行 | 2026-11-04 23:06 JST 合格。PO の 2 回目の使い捨て許可（psql write・14:05:54Z 発行）の後に Opus が実行。01_apply.sql shasum 9e31fe13ba6aa18e0b610749991cd9e45e8f1be2。出力は DRY-RUN と同じ件数（`INSERT 0 5`・001 10/12・他 8/9）、`DO`、5 行表示、`COMMIT_NEXT`、`COMMIT`、`COMMIT_DONE` |
+| 事後確認 | 2026-11-04 23:06 JST 合格（02_verify_read.sql・AUDIT ts=2026-11-04T14:06:19Z sha=c80c0e888af8）。K1_TOTAL 135・K1_NEW_COUNT 5・付与 001:22／003:17／004:17／005:17／006:17・写しのずれ（INV_NE_UPD・BAN_NE_DEL）すべて 0。想定と全項目一致 |
