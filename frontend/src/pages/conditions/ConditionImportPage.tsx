@@ -127,7 +127,8 @@ export default function ConditionImportTenantPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { hasPermission, loading } = usePermissions();
-  const canImport = hasPermission("conditions.view");
+  const canImport =
+    hasPermission("conditions.create") && hasPermission("conditions.update") && hasPermission("conditions.delete");
   return (
     <PageLayout titleText={t("conditionCsv.importTitle")} subtitleKey="conditionCsv.importSubtitle">
       {loading ? <LoadingBlock />
