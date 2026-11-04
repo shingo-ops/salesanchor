@@ -207,10 +207,15 @@ async def get_current_user(
             detail=_INVALID_TOKEN_DETAIL,
         )
 
+    # 自社ログイン中（AUTH_PROVIDER=self）は Firebase の札を受け付けない（docs/handoff/block-firebase-token/design.md）。
+    # 自社の札でなければ、②の一時記憶を使わず、③の回数確認の後で 401 にする。
+    firebase_closed = self_tokens.auth_provider() == "self"
+    is_self_issuer = self_tokens.peek_issuer(token) == self_tokens.ISSUER
+
     # ② Redisキャッシュからユーザー情報を取得
     # キャッシュヒット: ブラックリスト未登録 & 既存セッション確認済み → IPロックをスキップ
     # 同一IPの他ユーザーによる攻撃でロックされても、正規ユーザーの操作を巻き添え遮断しない。
-    cached = await get_cached_jwt(token)
+    cached = await get_cached_jwt(token) if (is_self_issuer or not firebase_closed) else None
     if cached:
         email = cached["email"]
         result = await db.execute(
@@ -228,8 +233,13 @@ async def get_current_user(
         )
 
     # 自社トークン（iss=salesanchor）は Firebase 検証に回さず、自社検証へ振り分ける
-    if self_tokens.peek_issuer(token) == self_tokens.ISSUER:
+    if is_self_issuer:
         return await _authenticate_self_token(token, client_ip, db)
+
+    # 自社ログイン中は Firebase 検証に進まない（失敗として数え、同じ文言の 401）
+    if firebase_closed:
+        logger.warning("自社ログイン中に自社以外の札を拒否: ip=%s", client_ip)
+        raise await _reject_self_token(client_ip)
 
     # ④ キャッシュミス: Firebase検証
     try:

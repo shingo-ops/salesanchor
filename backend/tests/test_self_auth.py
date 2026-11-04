@@ -4,7 +4,7 @@ import base64
 import json
 import sqlite3
 from datetime import datetime, timedelta, timezone
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 import sqlalchemy as sa
@@ -623,3 +623,95 @@ async def test_password_change_firebase_revokes_refresh_but_issues_nothing(
     )
     assert live.n == 0
     assert cookie
+
+
+# ── 9b. 自社ログイン中は Firebase の札を受け付けない（docs/handoff/block-firebase-token/design.md） ──
+
+FIREBASE_LIKE_TOKEN = "firebase-like-token-not-salesanchor"
+
+
+async def _current_user_with(db, token, *, cached=None, rate_limited=False):
+    """get_current_user を呼び、(利用者, 例外, 一時記憶の偽物, 失敗記録の偽物, Firebase 確認の偽物) を返す。
+    Firebase の確認の偽物は、いつも「正しい札」と答える（K1: それでも断ることを確かめる）。"""
+    from app.auth.dependencies import get_current_user
+
+    cred = HTTPAuthorizationCredentials(scheme="Bearer", credentials=token)
+    get_cached = AsyncMock(return_value=cached)
+    record = AsyncMock()
+    verify = MagicMock(return_value={"email": EMAIL})
+    with patch("app.auth.dependencies._init_firebase"), \
+         patch("app.auth.dependencies.MFA_REQUIRED", False), \
+         patch("app.auth.dependencies.is_token_blacklisted", new=AsyncMock(return_value=False)), \
+         patch("app.auth.dependencies.get_cached_jwt", new=get_cached), \
+         patch("app.auth.dependencies.check_auth_rate_limit", new=AsyncMock(return_value=rate_limited)), \
+         patch("app.auth.dependencies.record_auth_failure", new=record), \
+         patch("app.auth.dependencies.cache_jwt_result", new=AsyncMock()), \
+         patch("app.auth.dependencies.firebase_auth.verify_id_token", new=verify):
+        try:
+            user = await get_current_user(_request(), cred, db)
+        except HTTPException as exc:
+            return None, exc, get_cached, record, verify
+    return user, None, get_cached, record, verify
+
+
+async def test_self_mode_rejects_firebase_token_even_if_firebase_accepts(db_session, password_hash):
+    """T1・K1"""
+    await _insert_user(db_session, hash_value=password_hash)
+
+    user, exc, _, record, verify = await _current_user_with(db_session, FIREBASE_LIKE_TOKEN)
+
+    assert user is None and exc.status_code == 401
+    verify.assert_not_called()
+    record.assert_awaited_once()
+
+
+async def test_self_mode_ignores_cached_firebase_token(db_session, password_hash):
+    """T2・K2"""
+    await _insert_user(db_session, hash_value=password_hash)
+
+    user, exc, get_cached, _, verify = await _current_user_with(
+        db_session, FIREBASE_LIKE_TOKEN, cached={"email": EMAIL}
+    )
+
+    assert user is None and exc.status_code == 401
+    get_cached.assert_not_awaited()
+    verify.assert_not_called()
+
+
+async def test_self_mode_rate_limit_still_429_for_firebase_token(db_session):
+    """T3・K5"""
+    user, exc, _, _, verify = await _current_user_with(db_session, FIREBASE_LIKE_TOKEN, rate_limited=True)
+
+    assert user is None and exc.status_code == 429
+    verify.assert_not_called()
+
+
+async def test_self_mode_still_accepts_self_token_from_cache(db_session, password_hash):
+    """T4・K3"""
+    await _insert_user(db_session, hash_value=password_hash)
+
+    user, exc, get_cached, _, _ = await _current_user_with(db_session, _token(), cached={"email": EMAIL})
+
+    assert exc is None and user.id == USER_ID
+    get_cached.assert_awaited_once()
+
+
+async def test_self_mode_still_accepts_self_token_without_cache(db_session, password_hash):
+    """T5・K3"""
+    await _insert_user(db_session, hash_value=password_hash)
+
+    user, exc, _, _, verify = await _current_user_with(db_session, _token())
+
+    assert exc is None and user.id == USER_ID
+    verify.assert_not_called()
+
+
+async def test_firebase_mode_still_accepts_firebase_token(db_session, password_hash, monkeypatch):
+    """T6・K4（戻し方: AUTH_PROVIDER=firebase なら今までどおり）"""
+    monkeypatch.setenv("AUTH_PROVIDER", "firebase")
+    await _insert_user(db_session, hash_value=password_hash)
+
+    user, exc, _, _, verify = await _current_user_with(db_session, FIREBASE_LIKE_TOKEN)
+
+    assert exc is None and user.email == EMAIL
+    verify.assert_called_once()

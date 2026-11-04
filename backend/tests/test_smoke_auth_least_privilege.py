@@ -84,3 +84,13 @@ async def test_smoke_mismatched_token_falls_through_to_firebase():
         await _run("wrong-token", _user(False))
     assert exc.value.status_code == 401
     assert exc.value.detail == "無効な認証トークンです"
+
+
+async def test_smoke_token_passes_when_auth_provider_self(monkeypatch):
+    """T7・K6: 自社ログイン中でも smoke の札は通る（docs/handoff/block-firebase-token/design.md）"""
+    monkeypatch.setenv("AUTH_PROVIDER", "self")
+    user = _user(False)
+
+    result = await _run(SMOKE_TOKEN, user)
+
+    assert result is user
