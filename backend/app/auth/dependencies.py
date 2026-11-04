@@ -669,6 +669,7 @@ def require_permission(*permission_keys: str):
             detail=f"権限が不足しています: {', '.join(sorted(required))}",
         )
 
+    checker.required_permission_keys = frozenset(required)  # type: ignore[attr-defined]
     return checker
 
 
