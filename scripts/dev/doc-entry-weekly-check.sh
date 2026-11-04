@@ -14,6 +14,7 @@ HOME_DIR="${DOC_ENTRY_HOME:-$HOME}"
 REPO="${DOC_ENTRY_REPO:-$(cd "$SELF_DIR/../.." && pwd)}"
 GH="${DOC_ENTRY_GH:-gh}"
 TODAY="${DOC_ENTRY_TODAY:-$(date +%Y-%m-%d)}"
+MEMDIR="${DOC_ENTRY_MEMDIR:-$HOME_DIR/.claude/projects/-Users-tanizawashingo-salesanchor/memory}"
 
 NG=""
 add_ng() { NG="$NG $1"; }
@@ -99,10 +100,12 @@ LV_L2="$(lib_val L2)"
 LV_UNT="$(lib_val L2_UNTAGGED)"
 LV_L3="$(lib_val L3_MATCH)"
 LV_BI="$(lib_val BOOKS_IMPORTED)"
+LV_LN="$(lib_val L2_LINE_NG)"
 [ "$LV_L2" != "$L2_PASS" ] && add_ng "L2=${LV_L2:-unreadable}"
 [ "$LV_UNT" != "$L2_UNTAGGED_PASS" ] && add_ng "L2_UNTAGGED=${LV_UNT:-unreadable}"
 case "$LV_L3" in "$L3_MATCH_PASS") ;; *) add_ng "L3_MATCH=no" ;; esac
 [ "$LV_BI" != "$BOOKS_IMPORTED_PASS" ] && add_ng "BOOKS_IMPORTED=${LV_BI:-unreadable}"
+[ "$LV_LN" != 0 ] && add_ng "L2_LINE_NG=${LV_LN:-unreadable}"
 
 # BOOKS_IN_CONTEXT: /context の Memory files の表で /.claude/books/ を含む行の数
 case "$K9" in
@@ -125,6 +128,149 @@ case "$BOOKS_CTX" in
   unreadable) ;; # K9=unreadable で NG 済み
   *) add_ng "BOOKS_IN_CONTEXT=$BOOKS_CTX" ;;
 esac
+
+# ---- G1・G3・G6・K4（一本化の点検。数と置き場の名前だけ出す。中身は出さない） ----
+read -r -d '' PYG <<'PYEOF'
+import os, re, subprocess, sys
+
+HOME, REPO, MEMDIR = sys.argv[1], sys.argv[2], sys.argv[3]
+WORDS = ["【おすすめ】", "選択肢には", "選択肢を3", "番号付きの選択肢", "結論を最初", "結論から",
+         "結論ファースト", "要点→結論", "専門用語", "日常語", "決めることはありません", "1行目", "2行目"]
+CANON = ["chat-layout.md", "chat-layout「", "chat-format.md", "chat-format「"]
+MEMS = ["report_style", "communication_style", "always_japanese", "agent_description_japanese",
+        "po_chat_three_lines", "plain_language_session", "session_rules_comprehensive",
+        "plain_explain_template", "cost_in_yen", "numeric_goal_rule"]
+
+
+def rd(path):
+    try:
+        with open(path, encoding="utf-8") as f:
+            return f.read().split("\n")
+    except OSError:
+        return None
+
+
+def section(lines, start_pred, end_pred):
+    """始まりの行の次から、終わりの行の前まで。始まりが無ければ None。"""
+    if lines is None:
+        return None
+    for i, l in enumerate(lines):
+        if start_pred(l):
+            out = []
+            for m in lines[i + 1:]:
+                if end_pred(m):
+                    break
+                out.append(m)
+            return out
+    return None
+
+
+def count(body):
+    if body is None:
+        return "unreadable"
+    n = 0
+    for l in body:
+        if any(w in l for w in WORDS) and not any(c in l for c in CANON):
+            n += 1
+    return n
+
+
+places = []
+places.append(("E1", count(section(rd(os.path.join(HOME, ".claude/CLAUDE.md")),
+                                   lambda l: l.rstrip() == "## 報告の型", lambda l: l.startswith("## ")))))
+places.append(("E5", count(section(rd(os.path.join(HOME, ".claude/prompts/salesanchor-designer.md")),
+                                   lambda l: l.startswith("【POへの説明】"), lambda l: l.startswith("【")))))
+e6 = rd(os.path.join(HOME, ".claude/prompts/salesanchor-claude-go.md"))
+places.append(("E6", count(None if e6 is None else [l for l in e6 if "POへの説明" in l])))
+places.append(("E7", count(section(rd(os.path.join(REPO, "docs/ai-agents/design-partner.md")),
+                                   lambda l: l.startswith("## 3. "), lambda l: l.startswith("## ")))))
+for name in MEMS:
+    lines = rd(os.path.join(MEMDIR, "feedback_" + name + ".md"))
+    if lines is None:
+        places.append(("M:" + name, "missing"))
+        continue
+    start = 0
+    if lines and lines[0].strip() == "---":
+        for i in range(1, len(lines)):
+            if lines[i].strip() == "---":
+                start = i + 1
+                break
+    body = []
+    skip = False
+    for l in lines[start:]:
+        if l.startswith("**Why:**"):
+            skip = True
+        if l.startswith("**How to apply:**"):
+            skip = False
+        if not skip:
+            body.append(l)
+    places.append(("M:" + name, count(body)))
+
+print("G1_TABLE=" + ",".join("%s:%s" % (k, v) for k, v in places))
+core = [v for k, v in places if k in ("E1", "E5", "E6", "E7")]
+if any(v == "unreadable" for v in core):
+    print("G1_OUTSIDE=unreadable")
+else:
+    print("G1_OUTSIDE=%d" % sum(1 for k, v in places if isinstance(v, int) and v >= 1))
+
+# G3
+cl = rd(os.path.join(HOME, "kb/00-rules/chat-layout.md"))
+hm = rd(os.path.join(HOME, ".claude/CLAUDE.md"))
+g3 = (cl is not None and hm is not None
+      and any(l.strip() == "## 答える前に" for l in cl)
+      and any(l.strip() == "@~/kb/00-rules/chat-layout.md" for l in hm))
+print("G3_INTENT=" + ("yes" if g3 else "no"))
+
+# G6
+led = rd(os.path.join(REPO, "docs/handoff/doc-agenda-nav/library-ledger.md"))
+sec = section(led, lambda l: l.rstrip() == "## 話題の重なり表", lambda l: l.startswith("## "))
+g6 = "unreadable"
+if sec is not None:
+    hi = None
+    for i, l in enumerate(sec):
+        if l.strip().startswith("| 話題 |"):
+            hi = i
+            break
+    if hi is not None:
+        n = 0
+        for l in sec[hi + 1:]:
+            t = l.strip()
+            if not t.startswith("|"):
+                break
+            cells = [x.strip() for x in t.strip("|").split("|")]
+            if all(re.match(r"^:?-+:?$", x) for x in cells if x) and any(cells):
+                continue
+            if len(cells) < 4 or cells[3] == "":
+                n += 1
+        g6 = str(n)
+print("G6_NO_OWNER=" + g6)
+
+# K4
+k4 = "unreadable"
+try:
+    r = subprocess.run(["python3", "-I", os.path.join(REPO, "scripts/ci/check_doc_index.py"), "--root", REPO],
+                       capture_output=True, text=True, timeout=300)
+    for l in r.stdout.split("\n"):
+        if l.startswith("SUMMARY"):
+            m = re.search(r"\bunreached=(\d+)", l)
+            if m:
+                k4 = m.group(1)
+            break
+except Exception:
+    pass
+print("K4_WIDE_UNREACHED=" + k4)
+PYEOF
+G_OUT="$(python3 -I -c "$PYG" "$HOME_DIR" "$REPO" "$MEMDIR" 2>/dev/null)"
+printf '%s\n' "$G_OUT"
+g_val() { printf '%s\n' "$G_OUT" | sed -n "s/^$1=//p" | head -n 1; }
+GV_OUT="$(g_val G1_OUTSIDE)"
+[ "$GV_OUT" != 0 ] && add_ng "G1_OUTSIDE=${GV_OUT:-unreadable}"
+GV_G3="$(g_val G3_INTENT)"
+[ "$GV_G3" != yes ] && add_ng "G3_INTENT=${GV_G3:-unreadable}"
+GV_G6="$(g_val G6_NO_OWNER)"
+[ "$GV_G6" != 0 ] && add_ng "G6_NO_OWNER=${GV_G6:-unreadable}"
+GV_K4="$(g_val K4_WIDE_UNREACHED)"
+[ "$GV_K4" != 0 ] && add_ng "K4_WIDE_UNREACHED=${GV_K4:-unreadable}"
 
 # ---- DOC_INDEX_CI ----
 CI=unreadable

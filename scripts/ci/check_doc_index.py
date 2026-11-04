@@ -141,7 +141,9 @@ def main():
     md = [f for f in files if f.endswith(".md")]
     scope = [f for f in md if f.startswith("docs/specs/") or f.startswith("docs/ai-agents/")]
 
-    unreached = sorted(f for f in scope if f not in depth)
+    WIDE_PREFIXES = ("docs/specs/", "docs/ai-agents/", "docs/agents/", "docs/runbooks/")
+    wide = [f for f in md if f.startswith(WIDE_PREFIXES)]
+    unreached = sorted(f for f in wide if f not in depth)
     for f in unreached:
         lines.append((f, "UNREACHED " + f))
 
