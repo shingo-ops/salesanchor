@@ -1,5 +1,6 @@
 # ADR-1055 段D: ログインの依頼をお知らせの一覧に出し、押すと詳しい画面で許可する（実装カード v1）
 
+- 改訂: v1.1（2026-11-05）§2・§4 の行番号を実物に合わせて直した（v1 は別の出力の行番号を写していた）。§4-3 に自社ログインのときだけ取ること・5秒に1回までを足した
 - 状態: 設計案作成済み・Opus 自己審査（§11。同一AIの審査で、独立した第二者の審査ではない）・PO 実装承認済み（2026-11-05 PO「1」＝小窓をやめて、お知らせだけにして作り始める）
 - 担当: 実装はクラウドの Sonnet。マージ前に手元の審査役（reviewer・opus）の審査を受ける。GO・マージは PO の委任に基づき Claude Opus（frontend と本番の受入試験と文書だけ・DB・secrets・deploy.yml・migrations は触らない）
 - 前の段: 段C（場所の目安の直し・本番反映済み）。`stageC-geoip-open-mode-card.md`
@@ -22,11 +23,11 @@ PO の言葉（2026-11-04〜05）:
 - スマホのインスタアプリに届く通知の文面は見られていない（未確認）。本カードの文言は手本に頼らず決める
 
 今の仕組み:
-- 小窓 `frontend/src/features/auth/LoginApprovalWatcher.tsx:219-357`。`GET /login-approvals/pending` を読み、依頼があると `Modal` を開く（`:316-356`）。中身は機械・場所・時刻の `dl`（`:332-339`）、番号の3つのボタン（`:340-352`）、足元に「私ではない」（`:323-327`）。拒否の後は別の小窓（`:297-314`）。取得は SSE `TOPICS.authLoginRequest`（`:268`）・画面を開いたとき・タブに戻ったとき・5秒に1回まで（`:217`・`:239-250`）
+- 小窓 `frontend/src/features/auth/LoginApprovalWatcher.tsx:1-171`（全171行）。自社ログインのときだけ動く（`:34` `isSelfAuth()`・`:67`・`:84`）。`GET /login-approvals/pending` を読み（`:45`）、依頼があると `Modal` を開く（`:130-170`）。中身は機械・場所・時刻の `dl`（`:146-153`）、番号の3つのボタン（`:155-166`）、足元に「私ではない」（`:137-141`）。拒否の後は別の小窓（`:111-128`）。取得は SSE `TOPICS.authLoginRequest`（`:82`）・画面を開いたとき（`:68`）・タブに戻ったとき（`:69-72`）・5秒に1回まで（`:31`・`:53-64`）
 - 小窓の置き場所: `frontend/src/components/DesktopShell.tsx:209`（import `:39`）、`frontend/src/components/MobileShell.tsx:211`（import `:44`）
-- 待ち一覧の口: `backend/app/routers/login_approvals.py:46-75`。本人の `pending` で期限内の行だけ。返す項目は `id・label・location・created_at・expires_at・candidates`（`:25-31`）。正本は `public.auth_login_requests`
+- 待ち一覧の口: `backend/app/routers/login_approvals.py:45-75`。本人の `pending` で期限内の行だけ。返す項目は `id・label・location・created_at・expires_at・candidates`（`:24-30`）。正本は `public.auth_login_requests`
 - 許可の口: `backend/app/routers/auth.py` の `POST /login-requests/{id}/approve`（本文 `{number}`。正しい番号で approved、違えば rejected・wrong_number）、拒否 `POST /login-requests/{id}/reject`（押した機械以外を全部ログアウト）。どちらも本人の依頼だけ・いつもの機械の組だけ（`device_not_trusted` は 403）
-- 鈴: `frontend/src/components/NoticeBell.tsx:49-153`。`GET /notices`（各社の `user_notices`・`backend/app/routers/notices.py:228-255`）を読み、行は `NoticeRow`（`frontend/src/components/NoticeRow.tsx:171-185`・文字を持たない部品）。行を押すと Discord のリンクだけ新しいタブで開き既読にする（`:76-90`）。SSE `TOPICS.notices` で読み直す（`:69`）。会社の無い人は `/notices` が空（`notices.py:234-235`）
+- 鈴: `frontend/src/components/NoticeBell.tsx:48-152`。`GET /notices`（各社の `user_notices`・`backend/app/routers/notices.py:60-85`）を読み、行は `NoticeRow`（`frontend/src/components/NoticeRow.tsx:8-31`・文字を持たない部品）。行を押すと Discord のリンクだけ新しいタブで開き既読にする（`:75-89`）。SSE `TOPICS.notices` で読み直す（`:68`）。会社の無い人は `/notices` が空（`notices.py:64-65`）
 - 鈴の置き場所: `DesktopShell.tsx:413`（PC）、`MobileShell.tsx:332`（`variant="tab"`）
 - 文言: `frontend/src/locales/ja.json:706-718` `login.deviceApproval.watcher.*`、`:5869-5876` `notices.*`（en.json に同じキー）
 - 画面の金型: `frontend/src/components/PageLayout.tsx`（詳細系は `titleText`）、`Button`・`Stack`・`EmptyState` が既にある
@@ -47,12 +48,12 @@ PO の言葉（2026-11-04〜05）:
 
 ### 4-1. 新しい画面 `frontend/src/features/auth/LoginRequestDetailPage.tsx`
 - `PageLayout`（`titleText={t("login.deviceApproval.detail.title")}`）の中に作る
-- 読み込み: `api.get<{ items: PendingLoginRequest[] }>("/login-approvals/pending")` から `useParams().id` の行を探す。型 `PendingLoginRequest` は今の `LoginApprovalWatcher.tsx:203-210` のものを新しい画面のファイルへ移して export する
+- 読み込み: `api.get<{ items: PendingLoginRequest[] }>("/login-approvals/pending")` から `useParams().id` の行を探す。型 `PendingLoginRequest` は今の `LoginApprovalWatcher.tsx:17-24` のものを新しい画面のファイルへ移して export する
 - SSE `TOPICS.authLoginRequest` で読み直す（`useRealtimeRefresh`・今の小窓と同じ書き方）
 - 状態と表示:
   - 読み込み中: 何も押せない（`Button` の `loading` か本文なし）
-  - 見つかった（step=`ask`）: 説明 `watcher.body`、`dl` に機械 `watcher.device`・場所の目安 `watcher.location`・時刻 `watcher.time`（値が無ければ `watcher.unknown`。時刻の書き方は今の `formatTime` `:294-295` と同じ）。下に `Button variant="danger"`「私ではありません」(`watcher.notMe`) と `Button variant="primary"`「私です」(`detail.itsMe`)
-  - 「私です」を押した（step=`pick`）: `watcher.pickNumber` と番号の3つの `Button variant="secondary"`（今の `:340-352` と同じ）。「戻る」(`common.back`・ja「戻る」が既にある) で step=`ask` に戻る
+  - 見つかった（step=`ask`）: 説明 `watcher.body`、`dl` に機械 `watcher.device`・場所の目安 `watcher.location`・時刻 `watcher.time`（値が無ければ `watcher.unknown`。時刻の書き方は今の `formatTime` `:108-109` と同じ）。下に `Button variant="danger"`「私ではありません」(`watcher.notMe`) と `Button variant="primary"`「私です」(`detail.itsMe`)
+  - 「私です」を押した（step=`pick`）: `watcher.pickNumber` と番号の3つの `Button variant="secondary"`（今の `:155-166` と同じ）。「戻る」(`common.back`・ja「戻る」が既にある) で step=`ask` に戻る
   - 番号を押す: `POST /auth/login-requests/{id}/approve` `{number}`。返事 `approved` → `detail.approvedTitle`/`detail.approvedBody`。`rejected`（違う番号）→ `detail.wrongNumberBody`
   - 「私ではありません」: `POST /auth/login-requests/{id}/reject` `{}` → `watcher.rejectedTitle`・`watcher.rejectedBody` と `/account/settings` へのリンク（`watcher.changePassword`）
   - 見つからない（許可済み・拒否済み・期限切れ・他人）: `EmptyState` か本文で `detail.closed`、鈴に戻る説明は不要
@@ -70,7 +71,9 @@ PO の言葉（2026-11-04〜05）:
 - 数字 `unread` = `/notices` の `unread_count` + 依頼の件数。`label` と `formatUnreadCount` はその合計を使う
 - 読み直しの合図に `TOPICS.authLoginRequest` を足す（`useRealtimeRefresh([TOPICS.notices, TOPICS.authLoginRequest], ...)`）
 - 一覧が空の判定は、知らせと依頼の両方が0件のとき
-- 今の Discord の行の動き（`:76-90`）は変えない
+- 今の Discord の行の動き（`:75-89`）は変えない
+- 依頼の取得は自社ログインのときだけ（今の小窓 `:34`・`:67` と同じ `isSelfAuth()`）。そうでなければ依頼は0件として扱い、`/login-approvals/pending` を呼ばない
+- 依頼の取得は今の小窓と同じく5秒に1回までにまとめ（`PENDING_FETCH_MIN_INTERVAL_MS = 5_000` と `:53-64` の書き方を鈴へ移す）、タブに戻ったとき（`visibilitychange`）にも読む。`/notices` の読み方は今のまま
 
 ### 4-4. 小窓をやめる
 - `DesktopShell.tsx:209` と `MobileShell.tsx:211` の `<LoginApprovalWatcher />`、import（`:39`・`:44`）を消す
