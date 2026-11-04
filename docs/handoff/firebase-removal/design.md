@@ -3,6 +3,7 @@
 - 書いた日: 2026-11-04（Opus）
 - 状態: 設計案作成済み → 自己審査（§10）済み → クラウドの設計審査 1 回目 REVISE・2 回目 REVISE（重い指摘 0・中 2・軽い 5。2026-11-04）→ 3 回目 APPROVE（重い・中 0、軽い 2 は直した。2026-11-04）→ PO 承認済み（2026-11-04「1」。PO の原文は「1、推測は禁止して事実確認を怠らずに確実性を重視して最も効果があり、現状把握の粒度が細く、精度が高いエビデンスを確立して安全に進めてくれ。また配線とDBのSSOTは遵守してデータを分散させることは禁止。フロントエンドのパーツもデザイントークンとデザインシステム を遵守して、金型登録のないハードコードを禁止する。推測で自身で判断したり不透明無まま進めることは禁止、分からないことは聞いてくれ。確立したなら進める。」）→ 便1 のカード発行済み（`docs/handoff/firebase-removal/card-1.md`、card-lint 合格）。実装は未着手。便5 は戻せないので、実行の直前に改めて PO の GO をもらう。
 - PO の進める判断: 2026-11-04「1」。Opus が出した選択肢は「Firebase を画面とサーバーから全部外す設計に進む【おすすめ】　裏口のもとになる部品がなくなります。Firebase に残っている利用者の削除は元に戻せないので、その前に改めて確認をお願いします。」。
+- 「」で囲み区切りを全角の ／ にした道筋は、画面から Firebase を外す変更（release/firebase-removal-bin1）で消したファイル（消したので今の版には無く、引用の自動点検の対象から外している）。
 - 根拠: [recon.md](./recon.md)（`docs/handoff/firebase-removal/recon.md`。以下 R 番号はこの recon を指す）。
 - 親 ADR: ADR-1013（Decision 6・Consequences）。前の便: `docs/handoff/block-firebase-token/design.md`。元の便6 の行: `docs/handoff/auth-self-hosted-passkey/design.md:160`。
 
@@ -65,12 +66,12 @@ Firebase は使わない設定に切り替えた（PO 2026-11-04「firebaseは�
 
 ### 5-1. 便1 画面
 
-- 消すファイル: `frontend/src/lib/firebase.ts`、`frontend/src/lib/firebase-auth.ts`、`frontend/src/lib/firebaseErrorMessage.ts` とその試験、`frontend/src/lib/__storybook-mocks__/firebase-app.ts`・`frontend/src/lib/__storybook-mocks__/firebase-auth.ts`。
+- 消すファイル: 「frontend／src／lib／firebase.ts」、「frontend／src／lib／firebase-auth.ts」、「frontend／src／lib／firebaseErrorMessage.ts」 とその試験、「frontend／src／lib／__storybook-mocks__／firebase-app.ts」・「frontend／src／lib／__storybook-mocks__／firebase-auth.ts」。
 - `frontend/package.json:84` の `firebase` と、lock の中身を消す。
 - `frontend/src/locales/ja.json`・`frontend/src/locales/en.json` の `firebaseError` の塊（便1 の基準 0f297666c で :3289）を消す。両方から同じキーを消す（ADR-027）。
 - `frontend/.storybook/main.ts:34-35` の差し替えを消す。
 - `frontend/src/test-setup.ts` の firebase の差し替えを消す。`frontend/vite.config.ts` の注記を直す。
-- スイッチ: `frontend/src/lib/auth/provider.ts` とその試験を消す。`isSelfAuth()` を使う 10 か所（R12）は、下の「開発での動き方」の表に合わせて書き換える。
+- スイッチ: 「frontend／src／lib／auth／provider.ts」 とその試験を消す。`isSelfAuth()` を使う 10 か所（R12）は、下の「開発での動き方」の表に合わせて書き換える。
   - `frontend/src/contexts/AuthContext.tsx`: Firebase の分岐（`onAuthStateChanged`・`sendPasswordResetEmail` ほか）を消す。
   - `frontend/src/lib/auth/selfAuth.ts:224`・`:236`: Firebase に戻る道を消す。
   - `frontend/src/pages/login/LoginPage.tsx:44`: `authErrorMessage` だけを使う。
@@ -87,7 +88,7 @@ Firebase は使わない設定に切り替えた（PO 2026-11-04「firebaseは�
 
 | 機能 | 今の開発（`isSelfAuth()` が false） | 外した後の開発（`isDevSession()` が true） |
 |---|---|---|
-| ログインの状態・ログイン・ログアウト | Firebase の偽物（`frontend/src/lib/firebase-auth.ts`） | `devSession` が同じ動きをする（seed と保存の鍵を読む。ログインは `e2e-<メールの@より前>` の利用者を作る） |
+| ログインの状態・ログイン・ログアウト | Firebase の偽物（「frontend／src／lib／firebase-auth.ts」） | `devSession` が同じ動きをする（seed と保存の鍵を読む。ログインは `e2e-<メールの@より前>` の利用者を作る） |
 | API に付ける札（`getAccessToken`）・ログイン中か（`hasSession`） | 偽物が `e2e-fake-id-token` を返す | `devSession` が `e2e-fake-id-token` を返す |
 | 401 の送り直し（`frontend/src/lib/api.ts:83`） | しない | しない（`isDevSession()` なら今と同じくそのまま返す） |
 | パスキーのボタン（`frontend/src/lib/auth/passkey.ts:23`） | 出さない | 出さない |
@@ -100,7 +101,7 @@ Firebase は使わない設定に切り替えた（PO 2026-11-04「firebaseは�
 - e2e の付け替え: `frontend/tests-e2e/utils/auth.ts:23`・`:31` を新しい保存の鍵に合わせる。注記だけの `frontend/tests-e2e/scene1-dashboard.spec.ts:370`・`frontend/tests-e2e/visual-language/viewer-focus-trap.spec.ts:83`・`frontend/tests-e2e/visual-language/viewer-helpers.ts:8` の文を直す（R32）。
 - 試験: `vi.mock` で firebase を差し替える 14 ファイル（R15）と、`provider` を差し替える試験を、`selfAuth` か `devSession` の差し替えに直す。
 - 注記だけの所（R32）: `frontend/src/contexts/UiPrefsContext.tsx:46`・`frontend/src/lib/query/QueryAuthSync.tsx:3`・`frontend/src/lib/api.ts:3`・`:41`・`:73`・`frontend/src/lib/auth/authErrorMessage.ts:4` の文を事実に合わせて直す。
-- 設定: `frontend/playwright.config.ts:149-152`、`.github/workflows/e2e.yml:202-204`・`:308-311`、`.github/workflows/karte-gate.yml:73-75`・`:83-85`・`:108-110` から偽の `VITE_FIREBASE_*` と `VITE_GCP_PROJECT_ID` を消す。`VITE_GCP_PROJECT_ID` を画面で読むのは `frontend/src/lib/firebase.ts:21` だけ。
+- 設定: `frontend/playwright.config.ts:149-152`、`.github/workflows/e2e.yml:202-204`・`:308-311`、`.github/workflows/karte-gate.yml:73-75`・`:83-85`・`:108-110` から偽の `VITE_FIREBASE_*` と `VITE_GCP_PROJECT_ID` を消す。`VITE_GCP_PROJECT_ID` を画面で読むのは 「frontend／src／lib／firebase.ts」の 21 行目 だけ。
 - CI に K1・K6 の数え方の段を足す（「維持の仕組み」）。
 - CSP はこの便では触らない（便3）。
 - 金型・i18n: 新しい画面の部品は作らない。文言は既存の `authError` 系のキーを使い、新しいキーは足さない。足す場合は ja・en 両方に足す。
