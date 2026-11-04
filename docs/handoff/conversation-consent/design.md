@@ -388,7 +388,7 @@ PO への返事の本文（ツール呼び出しの中ではない）の、**最
 
 ## 14. 改訂2: 件の窓へ、決まった一文だけを送る口（case-say）（2026-11-05）
 
-状態: 設計案 第2版（Opus 作成・1回目の審査 REVISE を反映）。PO 承認前。実装・反映は PO の実装承認の後。
+状態: 設計案 第3版（Opus 作成・1回目と2回目の審査 REVISE を反映）。PO 承認前。実装・反映は PO の実装承認の後。
 きっかけ: PO 2026-11-05、選択肢「2. 私が打てるように見張りを見直す設計から始める（しんごさんの手間は減ります。ただ見張りを弱めることになるので、別の設計と審査が要り、試験は先になります）」に「2」と回答。
 
 ### 14-1 目的と、見える変化
@@ -414,24 +414,26 @@ PO への返事の本文（ツール呼び出しの中ではない）の、**最
 - （第2版で追加）件の作業場所 W は `<H>/worktrees/discord-cases/<id>`（server/case-clone.ts:46-48、server/case-sandbox.ts:61）。
 - （第2版で追加）`~/.claude/sessions/<pid>.json` のキー（2026-11-05 実測・24個のうち1つ）: status・pid・sessionId・cwd ほか。status の値は idle 5・busy 1・shell 6。同じ時に `claude agents --json` は idle 5・busy 7。待ちの印（wait を含むキー）は、どちらにも無かった（その時に待ちのセッションが無い）。
 - （第2版で追加）`CLAUDE_CONFIG_DIR` を空の置き場にして `claude agents --json` を手元で試そうとしたが、local-agent-guard に止められた。言い換えて試していない。
-- 未確認: 件の `CH/sessions/<pid>.json` が、件の入力待ちで status=idle になり、作業中と許可の確認の待ちで idle 以外になるか。件の Claude の OS 上の作業場所（cwd）が W か。§14-7 の K20 で最初に測る。
+- （第3版で追加）`ps -o pid=,comm=` で、手元の `~/.claude/sessions/<pid>.json` の pid のうち生きている8つは、どれも comm が `claude`（2026-11-05 実測）。実行ファイルの場所を `lsof -d txt` で確かめようとしたコマンドは、`claude` の語を含むため local-agent-guard に止められた。言い換えて試していない。
+- 未確認: 件の `CH/sessions/<pid>.json` が、件の入力待ちで status=idle になり、作業中と許可の確認の待ちで idle 以外になるか。件の Claude の OS 上の作業場所（cwd）が W か。部屋（sandbox-exec から exec）で動く件の本体の comm が `claude` か。§14-7 の K20 で最初に測る。
 
 ### 14-3 変更後の仕組み
 
 (a) 新しい部品 `case-say.py`（試作 docs/handoff/conversation-consent/hooks/case-say.py、本物 ~/.claude/scripts/case-say.py。PO の `!` の po-apply-consent.sh `--update` で写す）。
 
 - 呼び方: `python3 ~/.claude/scripts/case-say.py <件の id> <手順ファイル名>`。送る文を引数で渡す手段は作らない。
-- 送る文は部品が組み立てる1種類だけ: `<R>/<手順ファイル名> を読み、書いてある手順を順に行ってください。`（R は 14-2 の置き場）。「1」や任意の文は送れない。
-- 置き場の決め方: dataDir は agent-console の既定の場所 `~/Library/Application Support/agent-console`（agent-console README.md:318）、H は自分のホームを部品の中で組み立てる。dataDir の realpath が無いときは断る。設定で dataDir を変えた Mac には対応しない（断る）。
+- 送る文は部品が組み立てる1種類だけ: `<R>/<手順ファイル名> を読み、書いてある手順を順に行ってください。`（R は 14-2 の置き場）。任意の文は送れない。文には数字が入る（R の中の件の id・手順ファイル名）が、文が「1」だけになることはなく、必ず決まった前後の文字がつく（第3版で言い方を直した。2回目の審査 MEDIUM）。
+- 置き場の決め方: dataDir は agent-console の既定の場所 `~/Library/Application Support/agent-console`（agent-console README.md:314）、H は自分のホームを部品の中で組み立てる。dataDir の realpath が無いときは断る。設定で dataDir を変えた Mac には対応しない（断る）。
 - 宛先は、書き換えられる台帳ではなく、OS が返す事実で結ぶ（第2版。審査 HIGH の直し）。台帳（open-sessions.json）は補助の確認にだけ使う。
-- 判定（この順。外れたら何も送らず exit 2、理由を標準エラーと agent-events.jsonl の `case_say_refused` に書く）:
-  1. 件の id が UUID の形（小文字の16進と `-`）。手順ファイル名が `^[A-Za-z0-9._-]{1,64}\.md$` で、`..` を含まない。
-  2. 窓の pid: `tmux -L agent-console display -p -t =ac-<id> '#{pane_pid}'` が正の整数を1つ返す。子孫の pid の集合 F を `ps -axo pid=,ppid=` から作る（server/process-tree.ts:40 と同じ作り）。
-  3. 件の本体 P: F の中で、`CH/sessions/<pid>.json` がある pid がちょうど1つ（CH = `<dataDir>/case-home/<id>`）。その pid の OS 上の作業場所（`lsof -a -p <P> -d cwd -Fn` の n 行）の realpath が W（`<H>/worktrees/discord-cases/<id>`）と一致する。Opus など件でない窓では、本体の作業場所が W にならないので断られる。
+- 判定（この順。外れたら何も送らず exit 2、理由を標準エラーと agent-events.jsonl の `case_say_refused` に書く。第3版で、状態を見る判定2〜4を最後に回し、その直後に文字を入れる形にした）:
+  1. 件の id が UUID の形（小文字の16進と `-`）。手順ファイル名が `^[A-Za-z0-9._-]{1,64}\.md$` で、`..` を含まない。止めの印 `<dataDir>/case-say-blocked/<id>` が無い（判定後の送り方を参照）。
+  ※ 下の判定6・5を先に行い、判定2〜4は最後に行う（番号は第2版のまま）。
+  2. 窓の pid: `tmux -L agent-console display -p -t =ac-<id> '#{pane_pid}'` が正の整数を1つ返す。子孫の pid の集合 F を `ps -axo pid=,ppid=` から作る（server/process-tree.ts:40 と同じ作り）。（第3版・2回目の審査 HIGH の直し）同じ `ps` の結果から、部品自身の pid とその祖先（ppid をたどって pid 1 まで）を集め、1つでも F に入っていたら断る（理由 `caller_in_case_pane`）。Opus が自分の窓の id を渡し、CH・W・状態ファイル・台帳を偽って `cd W` から部品を呼んでも、部品は自分の窓の子孫なのでここで断られる。
+  3. 件の本体 P: F の中で、`CH/sessions/<pid>.json` がある pid がちょうど1つ（CH = `<dataDir>/case-home/<id>`）。その pid の OS 上の作業場所（`lsof -a -p <P> -d cwd -Fn` の n 行）の realpath が W（`<H>/worktrees/discord-cases/<id>`）と一致する。（第3版）P の `ps -o comm= -p <P>` が `claude` と完全一致する（補助。名前は実行ファイルを写せば真似られるので、本線は判定2の祖先の確かめ）。
   4. 状態: `CH/sessions/<P>.json` を O_NOFOLLOW で開き、通常のファイルで、JSON の pid が P と一致し、status がちょうど `idle` で、名前に `wait` を含むキー（大小文字を区別しない）が無い。それ以外（busy・shell・waiting・読めない・形が違う）は断る。server/agents.ts:76-88 の考え方（idle で待ちが無いときだけ入れる）に合わせるが、読む元は agents の行ではなくこのファイル（件の行は agents で結ばないため。14-2）。
-  5. 補助の確認: dataDir/open-sessions.json にその id の項目があり、roleId が `discord-case` と完全一致する。呼び出し元の環境変数 `TMUX` があれば、そのセッション名が `ac-<id>` でない。環境変数は呼ぶ側が消せるので、補助にとどめる（本線は判定2〜4）。
+  5. 補助の確認: dataDir/open-sessions.json にその id の項目があり、roleId が `discord-case` と完全一致する（台帳は書き換えられるので補助。本線は判定2〜4）。第2版の環境変数 `TMUX` の確かめは、判定2の祖先の確かめで置き換えたので外した（第3版）。
   6. 手順ファイル: R 自体と `<R>/<手順ファイル名>` がリンクでない（lstat）。手順ファイルを O_NOFOLLOW で開き、fstat で所有者が自分の通常のファイルであることを確かめ、その開いたファイルから sha256 を取る。realpath が R の下。
-- 送り方: `tmux -L agent-console send-keys -t =ac-<id> -l <文>` で文字だけを入れる。1秒待ち、Enter の直前に判定2〜4をもう一度行う。外れたら Enter を送らず、`case_say_refused`（理由 `state_changed_before_enter`）を書いて exit 2（入った文字は件の入力欄に残る。PO に知らせる）。通れば `send-keys -t =ac-<id> Enter`。部品は引数の配列で呼び（shell を通さない）、`=` で名前の完全一致にする。
+- 送り方: `tmux -L agent-console send-keys -t =ac-<id> -l <文>` で文字だけを入れる。1秒待ち、Enter の直前に判定2〜4をもう一度行う。外れたら Enter を送らず、`case_say_refused`（理由 `state_changed_before_enter`）を書いて exit 2。このとき入った文字は件の入力欄に残るので、止めの印 `<dataDir>/case-say-blocked/<id>` を作り、以後その件への送信は判定1で断る。Opus は PO に「件の入力欄に残った文を消してください」と知らせ、PO が消したことを確かめてから、PO の `!` で `python3 ~/.claude/scripts/case-say.py --clear <件の id>` を流して印を消す（第3版・2回目の審査 LOW）。通れば `send-keys -t =ac-<id> Enter`。部品は引数の配列で呼び（shell を通さない）、`=` で名前の完全一致にする。
 - 記録: 送ったら agent-events.jsonl に `case_say`（ts・件の id・手順ファイル名・文の sha256 先頭16桁・判定6で取った手順ファイルの sha256 先頭16桁・P）を1行書く。本文は書かない。
 
 (b) §4-5 の見張りは変えない。止める条件・止める文・kind・T7 の期待はそのまま。case-say.py を呼ぶコマンドの文字には見張りの語が入らないので、見張りに例外を足す必要がない。
@@ -460,8 +462,9 @@ PO への返事の本文（ツール呼び出しの中ではない）の、**最
 
 | # | リスク | 対処 |
 |---|---|---|
-| R11 | 許可の確認が出ている件の窓に Enter を送り、既定の選択肢を押す | 判定4（status が idle で待ちのキーが無い）。Enter の直前に判定2〜4をやり直し、外れたら Enter を送らない（第2版）。それでも押されるのは件の部屋の中の操作（部屋の G1〜G7 の範囲） |
-| R16 | Opus が台帳（open-sessions.json）を書き換え、宛先を件でない窓（許可の確認が出ている Opus の窓など）へ向ける | 宛先を台帳で決めない（第2版）。窓の pid の子孫に、CH に状態ファイルを持ち、OS 上の作業場所が W の本体がちょうど1つあることを要る（判定2・3）。Opus の窓の本体の作業場所は W にならない |
+| R11 | 許可の確認が出ている件の窓に、文字か Enter が入る。文には数字（件の id・ファイル名）が入るので、数字で選ぶ確認なら文字の時点で選択肢が押される恐れがある | 判定2〜4を最後に行い、その直後に文字を入れる（第3版）。Enter の直前にも判定2〜4をやり直し、外れたら Enter を送らない（第2版）。残る隙間: 判定から文字の送信まで、確かめ直しから Enter までの、それぞれ数十ミリ秒の間に確認が出る場合は防げない。その場合も押されるのは件の部屋の中の操作（部屋の G1〜G7 の範囲）で、Opus の同意にはならない |
+| R18 | Enter の前に断ったとき、件の入力欄に文が残り、次の送信や件の操作に混ざる | 止めの印で、その件への送信を断る。印は PO が入力欄を消したと確かめた後に、PO の `!` で消す（第3版）。Opus が印を自分で消すことは手順で禁じる（作りでは止められないので、case_say_refused と --clear の記録を週次点検で突き合わせる） |
+| R16 | Opus が台帳・CH の状態ファイル・W を偽り、自分の窓の id を渡して、宛先を自分の窓（許可の確認が出ている窓など）へ向ける | 宛先を台帳で決めない（第2版）。部品自身とその祖先が宛先の窓の子孫に入っていたら断る（判定2・第3版）。部品は呼んだ窓の子孫なので、自分の窓へは送れない。ほかの Opus の窓へ向けるには、その窓の本体の作業場所を W にする必要があり、本体の cwd は Opus が外から変えられない |
 | R17 | 件が自分の CH の状態ファイルを書き換え、作業中なのに idle と見せる | 影響は件自身の窓だけ（R13 と同じ水準）。Opus の窓には届かない |
 | R12 | AI が case-say.py を真似た別の部品を作り、Opus の窓へ「1」を送る | R1 と同じ水準（受け入れ済み）。この改訂で新しく開く道ではない。case-say.py は文も宛先も固定 |
 | R13 | 件自身が R の手順ファイルを書き換え、自分への指示を変える | 件が自分でできることの範囲を超えない（件は R に書ける・自分の窓で動く）。送った時の手順ファイルの sha256 を case_say に残すので、kb に残した中身と比べられる |
@@ -474,9 +477,9 @@ PO への返事の本文（ツール呼び出しの中ではない）の、**最
 
 | # | 基準 | 検証方法 |
 |---|---|---|
-| K20 | 判定2〜4 が本物の件で成り立つ（最初に測る。×なら案 E に戻し、PO に報告） | PO が件を1つ開き、件が入力待ちの時に、Opus が読むだけの確かめ（pane_pid・子孫・`CH/sessions/<pid>.json` の status・本体の cwd）を1回行う。本体がちょうど1つ・cwd が W・status が idle なら○。件に作業を頼んで作業中の間にもう1回読み、status が idle 以外なら○。どちらかが違えば× |
+| K20 | 判定2〜4 が本物の件で成り立つ（最初に測る。×なら案 E に戻し、PO に報告） | PO が件を1つ開き、Opus が読むだけの確かめ（pane_pid・子孫・`CH/sessions/<pid>.json` の status とキー・本体の cwd・本体の comm・Opus の Bash の祖先が F に入らないこと）を3回行う。①入力待ち: 本体がちょうど1つ・cwd が W・comm が `claude`・status が idle・待ちのキーなし・祖先が F の外、なら○。②件に作業を頼んで作業中: status が idle 以外なら○。③件に許可の確認が出る操作を頼み、確認が出ている間: status が idle 以外か、待ちのキーがあれば○（第3版）。1つでも違えば× |
 | K21 | 件の窓に、決まった一文が1回だけ入り、件が手順ファイルを読み始める | 本物の件で1回。件の会話の画面にその一文が1回出て、件が手順ファイルを読んだことが件の返事で分かれば○ |
-| K22 | 件でない宛先（台帳を書き換えて件の roleId にした件でない窓を含む・本体の cwd が W でない・CH に状態ファイルが無い・本体が0か2つ以上）、形の違う引数、R の外・リンク・R 自体がリンク・無いファイル、状態が idle 以外・待ちのキーあり・読めない、では何も送らず exit 2。Enter の直前に状態が変わったら Enter を送らず exit 2 | case-say-tests.py（偽の tmux・ps・lsof・置き場を差し替え、send-keys の呼び出しが0回。Enter 前の変化の場合は文字の send-keys 1回・Enter 0回）。本物では Opus の窓の id を指定して1回、exit 2 で何も入らないこと |
+| K22 | 件でない宛先（台帳を書き換えて件の roleId にした件でない窓を含む・自分の窓の id を渡し CH・W・状態ファイル・台帳を偽り `cd W` から呼んだ場合（第3版）・本体の cwd が W でない・本体の comm が claude でない・CH に状態ファイルが無い・本体が0か2つ以上）、止めの印がある件、形の違う引数、R の外・リンク・R 自体がリンク・無いファイル、状態が idle 以外・待ちのキーあり・読めない、では何も送らず exit 2。Enter の直前に状態が変わったら Enter を送らず exit 2 | case-say-tests.py（偽の tmux・ps・lsof・置き場を差し替え、send-keys の呼び出しが0回。Enter 前の変化の場合は文字の send-keys 1回・Enter 0回・止めの印ができる。自分の窓の偽装は、偽の ps で部品の祖先を F に入れる）。本物では Opus の窓の id を指定して1回、exit 2 で何も入らないこと |
 | K23 | §4-5 の見張りが変わっていない | agent-danger-hook.sh・worktree-only-guard.sh の試作と本物の差分0行、test-agent-hooks.sh の T7 が合格 |
 | K24 | 送るたびに case_say が1行、断るたびに case_say_refused が1行書かれ、consent-audit.py --audit がその件数を出す | 単体試験と、K21・K22 の本物の回の後の --audit の出力 |
 
@@ -494,5 +497,11 @@ PO への返事の本文（ツール呼び出しの中ではない）の、**最
   - MEDIUM: 文を入れてから Enter までに状態を確かめ直していない → Enter の直前に判定2〜4をやり直す。K22 に足した。
   - LOW: 環境変数は補助（判定5）・R 自体のリンクと開いた後の sha（判定6）・ADR の What は6つ目・dataDir は既定の場所だけで、無ければ断る。すべて直した。
   - 審査の未確認のうち、環境変数 CLAUDE_CODE_SESSION_ID は判定から外した。
-- 2回目: 第2版をクラウドで審査する。結果をここに足す。
-- 未解決の前提: K20（件の状態ファイルの status が入力待ちで idle になるか・本体の cwd が W か）。×なら案 E に戻る。
+- 2回目（2026-11-05・クラウドの Opus・第2版 a1e062f02）: REVISE。HIGH 1・MEDIUM 2・LOW 2。新しく引いた file:行 はすべて正しいと確認された。
+  - HIGH: Opus が自分の窓の id を渡し、CH の状態ファイル・W・R・台帳を偽って `cd W` から部品を呼ぶと、判定2〜5が通り、Enter が自分の窓に入る → 判定2で部品自身と祖先が F に入っていたら断る。判定3で P の comm が claude であることを補助で確かめる。K22 にこの偽装を足した。TMUX の確かめは外した（第3版）。
+  - MEDIUM: 文には数字が入るので「「1」は送れない」は不正確 → 14-3 の言い方を直し、R11 に数字と時間の隙間を書いた。判定2〜4を最後に回し、その直後に文字を入れる。
+  - MEDIUM: K20 に許可の確認が出ている間の読みが無い → K20 の③を足した。
+  - LOW: Enter 前に断ったとき入力欄に文が残る → 止めの印と、PO の `!` の --clear（R18）。
+  - LOW: dataDir の既定の行は README.md:314 → 直した。
+- 3回目: 第3版をクラウドで審査する。結果をここに足す。
+- 未解決の前提: K20（件の状態ファイルの status が入力待ちで idle・作業中と確認の待ちで idle 以外になるか・本体の cwd が W か・本体の comm が claude か）。×なら案 E に戻る。
