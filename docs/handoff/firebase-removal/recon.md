@@ -39,7 +39,7 @@
 - R6: `bcrypt` は**消せない**。`backend/requirements.txt:10` `bcrypt==4.2.1` は `backend/app/routers/bots.py:18`・`:59` が使っている（ボットの API キーの保管）。`docs/handoff/auth-self-hosted-passkey/design.md:160` の「`bcrypt` の除去」はこの事実と食い違う。
 - R7: Google の部品で Firebase 以外が使うものは次のとおり。
   - `google-api-python-client`・`google-auth-oauthlib`・`google-auth-httplib2`（`backend/requirements.txt:40-42`）
-  - 使っている所: `backend/app/services/google_calendar.py:125-305`、`google_drive_oauth.py:161-384`、`google_webhook.py:241`、`tcg_distribution_svc.py:81`、`backend/app/tasks/tcg_mirror.py:70`
+  - 使っている所: `backend/app/services/google_calendar.py:125-305`、`backend/app/services/google_drive_oauth.py:161-384`、`backend/app/services/google_webhook.py:241`、`backend/app/services/tcg_distribution_svc.py:81`、`backend/app/tasks/tcg_mirror.py:70`
   - `google.cloud` と `google.api_core` を直接 import している所は backend・scripts・tools に 0 件（`git grep` の結果は 0 行）。
   - firebase-admin を外したときに `google.oauth2` などが入るかどうかは、まだ確かめていない（未確認 U1）。
 - R8: `GOOGLE_APPLICATION_CREDENTIALS` を backend/app で読むのは `backend/app/auth/dependencies.py:64` だけ。
@@ -53,7 +53,7 @@
   - 伏せる列の一覧: `migrations/20261024_100300_create_ai_cloud_views.sql:535`
   - アプリのモデルにこの列は無い（`backend/app/routers/staff.py:265-271` の注記）。
   - アプリのコードで値を読み書きする所は見つかっていない（検索の結果は注記とスクリプトだけ）。
-- R10: 注記だけで Firebase に触れている所: `line_import_devices.py:1`・`staff.py:265-271`・`leads.py:1241`・`cache.py:306`・`session_guard.py:37`・`routers/auth.py:186`・`schemas/auth.py:19`・`review_mail_notifier.py:14`・`line_device_admin.py:4`・`tools/termux-line-import/device_session.py:1`。
+- R10: 注記だけで Firebase に触れている所: `backend/app/routers/line_import_devices.py:1`・`backend/app/routers/staff.py:265-271`・`backend/app/routers/leads.py:1241`・`backend/app/cache.py:306`・`backend/app/middleware/session_guard.py:37`・`backend/app/routers/auth.py:186`・`backend/app/schemas/auth.py:19`・`backend/app/services/review_mail_notifier.py:14`・`backend/app/line_device_admin.py:4`・`tools/termux-line-import/device_session.py:1`。
 
 ### 画面（frontend）
 
@@ -67,21 +67,21 @@
 - R12: 画面のスイッチは `frontend/src/lib/auth/provider.ts`。
   - :14-15 `getAuthProvider()`
   - :19-20 `isSelfAuth()` は `getAuthProvider() === "self" && !import.meta.env.DEV`。開発サーバーと e2e では、自社 API を呼ばずに Firebase の偽物を使う。
-  - `isSelfAuth` を使う所: `AuthContext.tsx:60`、`LoginApprovalWatcher.tsx:34`、`RecoveryCodePrompt.tsx:61`、`api.ts:83`、`passkey.ts:23`、`selfAuth.ts:224`・`:236`、`SecuritySection.tsx:262`・`:366-369`、`LoginPage.tsx:44`。
-- R13: `selfAuth.ts:223-232` `getAccessToken()` は、self でなければ Firebase の `auth.currentUser.getIdToken()` を返す（:224 が分かれ目）。`:235-237` `hasSession()` も同じ分かれ方をする（:236）。
+  - `isSelfAuth` を使う所: `frontend/src/contexts/AuthContext.tsx:60`、`frontend/src/features/auth/LoginApprovalWatcher.tsx:34`、`frontend/src/features/auth/RecoveryCodePrompt.tsx:61`、`frontend/src/lib/api.ts:83`、`frontend/src/lib/auth/passkey.ts:23`、`frontend/src/lib/auth/selfAuth.ts:224`・`:236`、`frontend/src/pages/account-settings/SecuritySection.tsx:262`・`:366-369`、`frontend/src/pages/login/LoginPage.tsx:44`。
+- R13: `frontend/src/lib/auth/selfAuth.ts:223-232` `getAccessToken()` は、self でなければ Firebase の `auth.currentUser.getIdToken()` を返す（:224 が分かれ目）。`:235-237` `hasSession()` も同じ分かれ方をする（:236）。
 - R14: 誤りの文言は次のとおり。
-  - `frontend/src/lib/firebaseErrorMessage.ts` を使う所は `LoginPage.tsx:44`（self でないとき）と `SecuritySection.tsx:9`・`:302`。
-  - 文言のキー `firebaseError` は `frontend/src/locales/ja.json:3274`・`en.json:3274`。
+  - `frontend/src/lib/firebaseErrorMessage.ts` を使う所は `frontend/src/pages/login/LoginPage.tsx:44`（self でないとき）と `frontend/src/pages/account-settings/SecuritySection.tsx:9`・`:302`。
+  - 文言のキー `firebaseError` は `frontend/src/locales/ja.json:3274`・`frontend/src/locales/en.json:3274`。
   - 自社用の `frontend/src/lib/auth/authErrorMessage.ts:4` に「firebaseErrorMessage.ts は便6 まで残す」とある。
 - R15: 部品と試験の足場は次のとおり。
   - `frontend/package.json:84` `"firebase": "^11.0.0"`
-  - Storybook の差し替え: `frontend/.storybook/main.ts:34-35`、`frontend/src/lib/__storybook-mocks__/firebase-app.ts`・`firebase-auth.ts`
+  - Storybook の差し替え: `frontend/.storybook/main.ts:34-35`、`frontend/src/lib/__storybook-mocks__/firebase-app.ts`・`frontend/src/lib/__storybook-mocks__/firebase-auth.ts`
   - 単体試験の共通足場: `frontend/src/test-setup.ts`（`./lib/firebase` を差し替える）。`frontend/vite.config.ts` の unit の `setupFiles` から読む。
   - `vi.mock` で firebase を差し替える試験は 14 ファイル。
 - R16: e2e は開発サーバー（`npm run dev`）で動く。
   - 設定: `frontend/playwright.config.ts:150-151`・`:140-160`。偽の VITE_FIREBASE_* の値を渡している。
   - ログインは `frontend/tests-e2e/utils/auth.ts:23`・`:31` が `window.__salesanchorE2eAuthUser` と保存の鍵 `salesanchor:e2e-firebase-auth-user` を入れて、R11 の偽物に通している。
-  - 偽の値を渡す workflow: `.github/workflows/e2e.yml:204`・`:311`、`karte-gate.yml:75`・`:85`・`:110`。
+  - 偽の値を渡す workflow: `.github/workflows/e2e.yml:204`・`:311`、`.github/workflows/karte-gate.yml:75`・`:85`・`:110`。
 - R17: ビルドで Firebase の値を受け取る所は次のとおり。
   - `frontend/Dockerfile:7-13`（ARG・ENV 3 組）
   - `docker-compose.yml:201-203`（build args）。`:205` `VITE_AUTH_PROVIDER: ${VITE_AUTH_PROVIDER:-firebase}`
@@ -126,9 +126,9 @@
 - R26: tenant_006 の `firebase_uid` が入った 1 行は、`user_id` が埋まっていて（人の正本とつながっている）、状態は active（2026-11-04 18:48 JST・AUDIT sha=f745ae66efa6）。アプリはこの列を読まない（R9）。列を消して失われるのは Firebase の利用者の番号だけで、Firebase の利用者を消した後は使い道が無い。
 - R25: GCP プロジェクト `sales-ops-with-claude` は Google カレンダー連携の OAuth でも使う（`.env.example:17-30`・`:87-88`）。**プロジェクトは消さない。消すのは Auth の利用者だけ**。
 - R27: 本番の画面のファイルには、開発用の偽ログインの文字がもう入っている。2026-11-04 に本番の `assets/main-CQpfABgR.js`（2,579,127 バイト）を取って数えた: `__salesanchorE2eAuthUser` 1 件、`e2e-firebase-auth-user` 1 件、`e2e-fake-id-token` 2 件、`firebase`（大小無視）88 件、`googleapis` 5 件、`gstatic` 0 件。`googleapis` の 5 件の内訳は `identitytoolkit.googleapis.com` 2・`securetoken.googleapis.com` 1・`staging-identitytoolkit.sandbox.googleapis.com` 1・`test-identitytoolkit.sandbox.googleapis.com` 1 で、全部 Firebase のログインの宛先。`import.meta.env.DEV` で分けても、静的に読み込んだ偽物の文字はビルドから落ちていない。
-- R28: 開発サーバーで今止まっている機能（`isSelfAuth()` が false のため）: `api.ts:83` の 401 の送り直し、`passkey.ts:23` のパスキーのボタン、`LoginApprovalWatcher.tsx:34`、`RecoveryCodePrompt.tsx:61`、`SecuritySection.tsx:366-369` の 4 つの欄（通知・機械・回復コード・パスキー）。`SecuritySection.tsx:262` のパスワード変更は Firebase の偽物の再認証（`firebase-auth.ts:169-189`）を通る。e2e にパスワード変更・パスキー・回復コード・新しい機械の許可・セキュリティの欄の試験は無い（`frontend/tests-e2e` の検索が 0 件）。
-- R29: e2e のパスワード再設定の試験 `frontend/tests-e2e/login.spec.ts:51` は `**/identitytoolkit.googleapis.com/**sendOobCode**` を偽の応答に差し替えている。自社の再設定は `selfAuth.ts:212` が `/password-reset/request` に送る。
-- R30: backend の Google の部品の import（Firebase 以外）: `google.oauth2.credentials`（`google_calendar.py:228`・`google_drive_oauth.py:257`）、`google.oauth2.service_account`（`tcg_distribution_svc.py:81`・`:1007`、`tasks/tcg_mirror.py:70`）、`google.auth.transport.requests`（`google_calendar.py:266`・`google_drive_oauth.py:295`）、`googleapiclient.discovery`・`googleapiclient.http`（`google_drive_oauth.py:384`）・`googleapiclient.errors`（`google_webhook.py:241`）、`google_auth_oauthlib.flow`（`google_calendar.py:125`）、`gspread`（`tcg_distribution_svc.py:80`）、`google.genai`（`gemini_extraction_svc.py:256`）、`google.generativeai`（`message_translator.py:107`）。`backend/requirements.txt:30`・`:32`・`:40-42`・`:44` に直接書いてある。`google-auth` だけは直接書いておらず、`google-api-python-client` などを通して入る。
+- R28: 開発サーバーで今止まっている機能（`isSelfAuth()` が false のため）: `frontend/src/lib/api.ts:83` の 401 の送り直し、`frontend/src/lib/auth/passkey.ts:23` のパスキーのボタン、`frontend/src/features/auth/LoginApprovalWatcher.tsx:34`、`frontend/src/features/auth/RecoveryCodePrompt.tsx:61`、`frontend/src/pages/account-settings/SecuritySection.tsx:366-369` の 4 つの欄（通知・機械・回復コード・パスキー）。`frontend/src/pages/account-settings/SecuritySection.tsx:262` のパスワード変更は Firebase の偽物の再認証（`frontend/src/lib/firebase-auth.ts:169-189`）を通る。e2e にパスワード変更・パスキー・回復コード・新しい機械の許可・セキュリティの欄の試験は無い（`frontend/tests-e2e` の検索が 0 件）。
+- R29: e2e のパスワード再設定の試験 `frontend/tests-e2e/login.spec.ts:51` は `**/identitytoolkit.googleapis.com/**sendOobCode**` を偽の応答に差し替えている。自社の再設定は `frontend/src/lib/auth/selfAuth.ts:212` が `/password-reset/request` に送る。
+- R30: backend の Google の部品の import（Firebase 以外）: `google.oauth2.credentials`（`backend/app/services/google_calendar.py:228`・`backend/app/services/google_drive_oauth.py:257`）、`google.oauth2.service_account`（`backend/app/services/tcg_distribution_svc.py:81`・`:1007`、`backend/app/tasks/tcg_mirror.py:70`）、`google.auth.transport.requests`（`backend/app/services/google_calendar.py:266`・`backend/app/services/google_drive_oauth.py:295`）、`googleapiclient.discovery`・`googleapiclient.http`（`backend/app/services/google_drive_oauth.py:384`）・`googleapiclient.errors`（`backend/app/services/google_webhook.py:241`）、`google_auth_oauthlib.flow`（`backend/app/services/google_calendar.py:125`）、`gspread`（`backend/app/services/tcg_distribution_svc.py:80`）、`google.genai`（`backend/app/services/gemini_extraction_svc.py:256`）、`google.generativeai`（`backend/app/services/message_translator.py:107`）。`backend/requirements.txt:30`・`:32`・`:40-42`・`:44` に直接書いてある。`google-auth` だけは直接書いておらず、`google-api-python-client` などを通して入る。
 - R31: `scripts/qa/seed-tenant.sql:110-120` は `tenant_006.staff` に `firebase_uid` を入れる INSERT が 3 つある。`scripts/qa/reset-tenant.sh:120-122` が値を渡す。`.github/workflows/qa-smoke.yml:12` のとおり定期と PR での実行は 2026-10-30 に止まっていて、手で動かしたときだけ走る。
 - R32: 他に Firebase の文字がある所: `backend/tests/test_staff_create_users.py:163`・`:232`（`staff.firebase_uid` を SELECT）、`backend/tests/rls_bootstrap.py:238`・`:253`（試験の足場の `public.users` の列）、`backend/tests/ops/test_ai_cloud_views.py:556`（足場だけの列の一覧）・`:484`（列の分類の数 1068）、`.github/workflows/api-contract-check.yml:35`・`:53`（`frontend/api-contract/openapi.json` を作り直してコミットする決まり）。注記だけの所: `AGENTS.md:17`、`scripts/run_all_migrations.sh:612`、`tools/termux-line-import/README.md:17`・`:19`・`:92`、`tools/termux-line-import/device_session.py:1`、`frontend/src/contexts/UiPrefsContext.tsx:46`、`frontend/src/lib/query/QueryAuthSync.tsx:3`、`frontend/src/lib/api.ts:3`・`:41`・`:73`、`frontend/src/lib/auth/authErrorMessage.ts:4`、`frontend/tests-e2e/scene1-dashboard.spec.ts:370`、`frontend/tests-e2e/visual-language/viewer-focus-trap.spec.ts:83`、`frontend/tests-e2e/visual-language/viewer-helpers.ts:8`。設定の行: `frontend/playwright.config.ts:149-152`、`.github/workflows/e2e.yml:202-204`・`:309-311`、`.github/workflows/karte-gate.yml:73-75`・`:83-85`・`:108-110`、`frontend/Dockerfile:7-9`・`:12-14`（Firebase と GCP）と `:11`・`:16`（`VITE_AUTH_PROVIDER`）。`:10`・`:15` の `VITE_FUNNEL_DASHBOARD` は Firebase と関係ない。`backend/app/main.py:183` は注記（「既定 firebase」）で、`:184` の `self_tokens.validate_settings()` の呼び出しは残す。Firebase の文字があるファイルは、`docs/` を除いて 120 個（2026-11-04 の `git grep -il firebase`）。
 
