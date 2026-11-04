@@ -18,11 +18,11 @@
 - 本番サーバー prod1 の上では箱（Docker イメージ）を組み立てない。`docker compose build`・`docker build` は本番への入れ替え（deploy.yml）の手順から無くす。自動の戻し（ロールバック）でも組み立てない。
 - 組み立ては公開の置き場 `shingo-ops/salesanchor` の自動作業（GitHub Actions・deploy.yml の中の build job）で行う。動く条件は main への push だけ。`pull_request`・`pull_request_target`・`workflow_dispatch`・`repository_dispatch` は付けない。
 - 完成品は組織 GEN-RYU-System の倉庫（ghcr.io）に、非公開で、5 つの名前（`salesanchor-backend`・`salesanchor-frontend`・`salesanchor-gemini-egress`・`salesanchor-gha-exporter`・`salesanchor-secretary-agent`）でしまう。倉庫側のタグは commit の sha だけ（`latest` は作らない）。
-- 本番は指紋（`@sha256:`）で受け取る。compose は `image: ${<名前>_IMAGE:?}` の形で変数だけを書き、名前も指紋も書かない。指紋の正本は prod1 の `.env` の 5 行（deploy が build job の出力から書く）。1 つ前は `.deploy_prev_images.env`（git に入れない）。
+- 本番は指紋（`@sha256:`）で受け取る。compose は `image: ${<名前>_IMAGE:-<今の名前>}` の形（変数と、今 prod1 で付いている名前の既定値。例 `${BACKEND_IMAGE:-astro-webapp-backend}`）だけを書き、倉庫の名前も指紋も書かない。既定値を置くのは、変数を持たない場所（CI の試験・砂場・手元の開発）で `docker compose` が止まらないようにするため（design §5-2）。本番の守りは compose ではなく deploy に一本化する: deploy が build job の出力を `.env` に書いた後、5 行が揃っていなければ箱に触る前に止まる（exit 1）。指紋の正本は prod1 の `.env` の 5 行。1 つ前は `.deploy_prev_images.env`（git に入れない）。
 - 倉庫に書く鍵は classic PAT の `write:packages` だけ（`repo` は付けない・期限付き・`monthly-secret-expiry.yml` の見張りに入れる）。本番が読む鍵は別の classic PAT の `read:packages` だけで、GitHub の secret にだけ置き、入れ替えの段で `docker login` → 取得 → 同じ段で `docker logout` する（prod1 に鍵を残さない）。
 - 倉庫へ push する前に、完成品の中身を走査する（名前の走査・gitleaks・履歴）。見つかれば push しない。許す例外は画面の JS に載る Firebase の web API key（`VITE_FIREBASE_API_KEY`）1 つだけで、経路と規則を 1 つに限って allowlist にする。
 - 完成品を公開にする操作（GitHub の Danger Zone）は戻せないので、不可逆操作として PO 本人の確認が無ければ行わない。組織の「Package Creation」は Private にする。週 1 の見張りが非公開と 5 つの名前を確かめ、違えば Discord と fail で知らせる。
-- 1 つ前の完成品へ戻すときは、控えの 5 行を `.env` に戻して `docker compose up --no-build` する。prod1 に残した完成品を使い、取り直しも組み立てもしない。片付けは現行と 1 つ前の指紋だけ残す自前の手順で行い、`docker image prune` は呼ばない。
+- 1 つ前の完成品へ戻すときは、控え `.deploy_prev_images.env` にある行（本番は 5 行）を `.env` に戻して `docker compose up --no-build` する。prod1 に残した完成品を使い、取り直しも組み立てもしない。片付けは現行と 1 つ前の指紋だけ残す自前の手順で行い、`docker image prune` は呼ばない。
 - 最初の段として、dockerd を入れ直して（live-restore を先に有効化）メモリの基準を取り、入れ替え 1 回ごとの増え方を黒板（node-exporter の textfile）で測る。これは本番の危険操作なので PO の `!` 実行に限る。
 
 ## Why（なぜ）
@@ -43,7 +43,7 @@
 
 ## Scope
 
-- Included: deploy.yml の build job と受け取りの段、compose 6 ファイルの `image:` 化と手元用の override、blue-green と app-services-plan の直し、pull/rollback/prune の 3 スクリプト、倉庫の見張り、鍵 2 本と Variables、dockerd の入れ直しと黒板。
+- Included: deploy.yml の build job と受け取りの段、compose 6 ファイルの `image:` 化（既定値付き）と手元用の override、blue-green と app-services-plan の直し、組み立てを呼ぶ既存の試験・素振り 4 本（リハーサル・手書きミラー・blue-green の素振り・砂場の ai-reader 試験）の追随（design §12 便2 12.〜15.）、pull/rollback/prune の 3 スクリプト、倉庫の見張り、鍵 2 本と Variables、dockerd の入れ直しと黒板。frontend の層キャッシュは付けない（design §7-3）。便2 に進む前に K8 の関所（design §12 便1 の完了条件）を通す。
 - Excluded: 置き場の公開をやめる件、秘書の ChatGPT 化、prod2（github-collector・recovery-check・tinyproxy の組み立て先）、nginx・certbot・redis・postgres（元々取ってくる箱）。
 
 ## 戻し方
