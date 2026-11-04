@@ -61,7 +61,7 @@
 
 事実（Opus が 2026-11-04 22:09 JST に本番を読むだけで確かめた）: この表の決まりは 5 つ。主キー `tenant_discord_config_pkey PRIMARY KEY (tenant_id)`、外部キー `tenant_discord_config_tenant_id_fkey`、`uq_tenant_discord_config_guild_id UNIQUE (guild_id)`、`uq_tenant_discord_config_tenant_purpose UNIQUE (tenant_id, purpose)`、`ck_tenant_discord_config_purpose`。ほかの表からこの表を参照する外部キーは 0 件。
 
-注: CI の migration-test は、この表を `id SERIAL PRIMARY KEY` で作る（`.github/workflows/migration-test.yml:480-486`・`:1794-1800`）。その主キーの名前も `tenant_discord_config_pkey` になるので、下の文はどちらでも通る。
+注（改訂3・2026-11-04 23:10 JST）: CI の migration-test（内部）は、変わった移行だけを仮の表に流す。仮の表は `id SERIAL PRIMARY KEY` で `purpose` 列が無い（`.github/workflows/migration-test.yml:480-486`）。改訂2までの「どちらでも通る」は誤りで、実際に `column "purpose" of relation "tenant_discord_config" does not exist`（PR #5127 の CI job 126622281150）で落ちた。そこで DO の中を「`purpose` 列があるときだけ」に絞る。本番には列がある（Opus が 2026-11-04 23:09 JST に読むだけで確かめた: `ck_tenant_discord_config_purpose` と `uq_tenant_discord_config_tenant_purpose` が在る）。全件ドライラン（実DB・全移行を順に流す）は改訂2の文で success だった。
 
 中身はこのとおり（1 文字も変えない）:
 
@@ -83,6 +83,14 @@
 DO $tdc_pk$
 BEGIN
     IF NOT EXISTS (
+        SELECT 1
+        FROM   information_schema.columns
+        WHERE  table_schema = 'public'
+          AND  table_name   = 'tenant_discord_config'
+          AND  column_name  = 'purpose'
+    ) THEN
+        RAISE NOTICE 'tenant_discord_config に purpose 列が無いため主キーを替えない（便1a の移行が先に要る）';
+    ELSIF NOT EXISTS (
         SELECT 1
         FROM   pg_constraint
         WHERE  conrelid = 'public.tenant_discord_config'::regclass
@@ -343,11 +351,20 @@ CREATE TABLE IF NOT EXISTS tenant_discord_config (
     UNIQUE (guild_id)
 )
 ```
-（conftest.py の定義には `connected_by_staff_id` が無い。無い所に足さない。`UNIQUE (guild_id)` は 3 か所とも足す）
+（`UNIQUE (guild_id)` は 3 か所とも足す）
+
+改訂3（2026-11-04 23:10 JST）: `backend/tests/conftest.py` の定義にも `connected_by_staff_id INTEGER,` を `guild_id` の行の次に足す（本番には `migrations/20260602_200000_add_discord_config_connected_by_staff.sql:14` で在る）。§6 の新しい試験が conftest の表を使うため。
 
 ## §6 試験 backend/tests/test_discord_own_server.py（新規）
 
-既存の `backend/tests/test_discord_oauth.py`・`backend/tests/test_discord_d2.py` の作り方（SQLite・state の差し替え）に合わせる。少なくとも次の 12 本:
+既存の `backend/tests/test_discord_oauth.py`・`backend/tests/test_discord_d2.py` の作り方（SQLite・state の差し替え）に合わせる。
+
+改訂3（2026-11-04 23:10 JST）: この新しいファイルに `CREATE TABLE` の文を書かない。CI「test-schema-dup gate」（`scripts/check_test_schema_dup.py`）が、試験の中の新しい表の定義の写しを赤にする（PR #5127 で `test_discord_own_server.py (0 -> 1)` で落ちた）。表は conftest の共通の定義（`backend/tests/conftest.py` の `test_engine`・`setup_test_db`。この 2 つは検査の対象外）を使う:
+- `_DDL` と、自前で `create_async_engine` する `engine` の fixture と、その中の文の書き換え（`_rewrite`）を消す。conftest の `test_engine` が `public.tenant_discord_config` の書き換え（`conftest.py:311-312`）と `NOW()`（`conftest.py:275` 付近の `create_function`）を既に受け持つ
+- 代わりに `engine` の fixture を conftest の `db_session`（`conftest.py:1695-1700` 付近）と同じ作りで `test_engine` と `setup_test_db` を受け取り、前と後で `DELETE FROM tenant_discord_config` を流して `test_engine` を渡す形にする（ほかの fixture・12 本の中身は変えない）
+- 非同期の loop の食い違いなどで conftest の表が使えない場合は、ほかの道（別の試験ファイルから定義を import する等）に替えず停止し、NEEDS_DECISION: と生出力
+
+少なくとも次の 12 本:
 
 1. 開始に本文 `{}` → `issue_state` に `extra={"purpose": "customer"}`
 2. 開始に `{"purpose": "own"}`（`channels.manage` と `tenant.profile.edit` あり）→ `extra={"purpose": "own"}`・200
@@ -475,5 +492,24 @@ CREATE TABLE IF NOT EXISTS tenant_discord_config (
 - push が拒否された → 言い換えて再試行しない。停止して BLOCKED: と生出力
 
 報告の最後の行は DONE / BLOCKED: 理由 / NEEDS_DECISION: 理由 のどれか 1 つ。
+
+## §10 改訂3 の直し（2026-11-04 23:10 JST・PR #5127 の CI 赤 2 つへの対応）
+
+審査（新しく起動した審査役 opus）が REQUEST_CHANGES。直す所はカードの決め方で、実装はカードどおりだった。直すのは次の 3 ファイルと報告書だけ:
+
+1. `migrations/20261106_100000_tenant_discord_config_purpose_pk.sql` — §1 の改訂3 の文と 1 文字も違わない中身に置き換える（頭の説明コメントもそのまま写す）
+2. `backend/tests/conftest.py` — §5 の改訂3（`connected_by_staff_id INTEGER,` を 1 行足すだけ）
+3. `backend/tests/test_discord_own_server.py` — §6 の改訂3（表の定義の写しを消し、conftest の表を使う）
+4. 報告書 `docs/handoff/discord-server-management/impl-report-bin1b.md` の末尾に「## 改訂3 の直し」を足す（前の内容は消さない）
+
+確かめ（生出力を報告書の改訂3 の節に貼る）:
+- `git merge-base origin/main HEAD` で得た sha を BASE_SHA に、HEAD を HEAD_SHA に入れて `python3 scripts/check_test_schema_dup.py` を流した生出力と rc（0 であること）
+- §8 と同じ pytest 9 本（`--no-cov`）の最後の 12 行。102 passed 以上・失敗 0
+- 移行ファイルとカード §1 の SQL の diff（差分なし）
+- `git diff --stat origin/release/discord-own-server-bin1b`（この直しの分だけ。3 ファイル＋報告書）
+
+保存: commit の文 `fix(discord): 便1b の移行と試験を CI に合わせる（discord-server-management 便1b 改訂3）`。`git push origin release/discord-own-server-bin1b`（単独で流す）。最後に push 後の `git rev-parse HEAD`。
+
+停止: 上の 4 ファイル以外を変えたくなった・check_test_schema_dup が 0 にならない・既存の試験が落ちる → 変えずに停止し NEEDS_DECISION: か BLOCKED: と生出力。
 
 END OF CARD
