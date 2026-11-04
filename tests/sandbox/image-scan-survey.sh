@@ -56,6 +56,7 @@ if docker image inspect survey/frontend:local > /dev/null 2>&1; then
     echo "CONTROL_FAILED rc=$CONTROL_RC"; printf '%s\n' "$CONTROL_OUT"; FAIL=$((FAIL + 1))
   fi
   echo "CONTROL_GCP_HITS $(printf '%s\n' "$CONTROL_OUT" | grep -c '^LEAK_HIT gcp-api-key ' || true)"
+  printf '%s\n' "$CONTROL_OUT" | grep '^LEAK_HIT ' | sed 's/^/CONTROL_/' || true
 fi
 survey_one gemini-egress ./monitoring/prod1/gemini-egress
 survey_one gha-exporter ./monitoring/gha-exporter

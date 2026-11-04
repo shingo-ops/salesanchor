@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# build-on-github 便1: 完成品の秘密検査（docs/handoff/build-on-github/design.md §7-2・§24 C1/C5/C6/C16）
+# build-on-github 便1: 完成品の秘密検査（docs/handoff/build-on-github/design.md §7-2・§24 C1/C5/C6/C16・§24-6 E1〜E4）
 # 使い方: image-scan.sh <image ref>
 #   SCAN_REPORT_ONLY=1 … 当たりがあっても 0 で終わる（試験場の調べ用・tests/sandbox/image-scan-survey.sh）
 #   GITLEAKS_CONFIG=<path> … gitleaks の設定を差し替える（既定は置き場の .gitleaks.toml）
@@ -27,15 +27,10 @@ mkdir "$WORK/bin"
 tar -xzf "$WORK/$GL_TGZ" -C "$WORK/bin" gitleaks
 GL="$WORK/bin/gitleaks"
 
-# 1. 名前の走査（パスだけ出す）
+# 1. 完成品の中身を取り出す
 CID="$(docker create "$REF" /scan-noop)"
 docker export "$CID" -o "$WORK/fs.tar"
 tar -tf "$WORK/fs.tar" > "$WORK/list.txt"
-NAME_RE='(^|/)(\.env(\..*)?|.*\.pem|.*\.key|id_(rsa|ed25519).*|.*credentials.*\.json|auth\.json|\.npmrc|\.netrc|\.git/.*)$'  # design.md §7-2 の型のまま（C6）
-NAME_HITS="$(grep -cE "$NAME_RE" "$WORK/list.txt" || true)"
-grep -E "$NAME_RE" "$WORK/list.txt" | sed 's/^/NAME_HIT /' || true
-
-# 2. 中身の走査（gitleaks dir・値は伏せる）
 mkdir "$WORK/fs"
 if ! tar -xf "$WORK/fs.tar" -C "$WORK/fs" --no-same-owner --no-same-permissions \
      --exclude='dev/*' --exclude='proc/*' --exclude='sys/*' 2>"$WORK/tar.err"; then
@@ -43,14 +38,36 @@ if ! tar -xf "$WORK/fs.tar" -C "$WORK/fs" --no-same-owner --no-same-permissions 
 fi
 rm -f "$WORK/fs.tar"
 chmod -R u+rwX "$WORK/fs"
+
+# 2. 名前の走査（パスだけ出す）
+NAME_RE='(^|/)(\.env(\..*)?|.*\.pem|.*\.key|id_(rsa|ed25519).*|.*credentials.*\.json|auth\.json|\.npmrc|\.netrc|\.git/.*)$'  # design.md §7-2 の型のまま（C6）
+# 公開の配布物だけを除く（§24-6 E1）。除いたファイルも、中に PRIVATE KEY があれば当たりに戻す（E2）
+NAME_EXCLUDE_RE='^(etc/ssl/certs/[^/]+\.pem|etc/ssl/cert\.pem|etc/ssl1\.1/cert\.pem|usr/lib/ssl/cert\.pem|.+/certifi/cacert\.pem|.+/grpc/_cython/_credentials/roots\.pem|.+/googleapiclient/discovery_cache/documents/[^/]+\.json|usr/local/lib/node_modules/npm/\.npmrc)$'
+grep -E "$NAME_RE" "$WORK/list.txt" > "$WORK/name_all.txt" || true
+grep -vE "$NAME_EXCLUDE_RE" "$WORK/name_all.txt" > "$WORK/name_hit.txt" || true
+grep -E "$NAME_EXCLUDE_RE" "$WORK/name_all.txt" > "$WORK/name_skip.txt" || true
+NAME_HITS="$(wc -l < "$WORK/name_hit.txt" | tr -d ' ')"
+sed 's/^/NAME_HIT /' "$WORK/name_hit.txt"
+NAME_SKIPPED="$(wc -l < "$WORK/name_skip.txt" | tr -d ' ')"
+SKIP_PK=0
+while IFS= read -r f; do
+  # 繋ぎ（symlink）は辿らない。行き先が完成品の外（実行機）になることがあるため。行き先の中身は 3. の走査が見る
+  if [ -f "$WORK/fs/$f" ] && [ ! -L "$WORK/fs/$f" ] && grep -q 'PRIVATE KEY' "$WORK/fs/$f"; then
+    echo "NAME_HIT_PRIVATE_KEY $f"; SKIP_PK=$((SKIP_PK + 1))
+  fi
+done < "$WORK/name_skip.txt"
+echo "NAME_SKIPPED $NAME_SKIPPED"
+NAME_HITS=$((NAME_HITS + SKIP_PK))
+
+# 3. 中身の走査（gitleaks dir・値は伏せる。場所は行と桁だけ出す・E4）
 if ! "$GL" dir "$WORK/fs" --config "$CONFIG" --no-banner --redact --exit-code 0 \
      --report-format json --report-path "$WORK/gl.json" > "$WORK/gl.log" 2>&1; then
   echo "SCAN error: gitleaks failed"; tail -20 "$WORK/gl.log"; exit 1
 fi
 LEAK_HITS="$(jq 'length' "$WORK/gl.json")"
-jq -r --arg p "$WORK/fs/" '.[] | "LEAK_HIT \(.RuleID) \(.File | ltrimstr($p))"' "$WORK/gl.json"
+jq -r --arg p "$WORK/fs/" '.[] | "LEAK_HIT \(.RuleID) \(.File | ltrimstr($p)) L\(.StartLine):C\(.StartColumn)-\(.EndColumn)"' "$WORK/gl.json"
 
-# 3. 履歴の走査（変数名だけ出す）
+# 4. 履歴の走査（変数名だけ出す）
 HIST_RE='[A-Za-z0-9_]*(_TOKEN|_SECRET|PASSWORD|API_KEY)[A-Za-z0-9_]*='
 docker history --no-trunc --format '{{.CreatedBy}}' "$REF" > "$WORK/hist.txt"
 HISTORY_HITS="$(grep -cE "$HIST_RE" "$WORK/hist.txt" || true)"
