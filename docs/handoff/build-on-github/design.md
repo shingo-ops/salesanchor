@@ -654,3 +654,36 @@ docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml p
 未確認のまま残すもの: OS の証明書の束（例 `etc/ssl/certs/*.pem`）が名前の走査に当たる見込み（C6・U24）。合流の前の試しの実行で当たりを全部出してから、Opus が除く道を決める。
 
 2 回目（先頭 6a8733f1d）: **APPROVE**。R1〜R4 はすべて写しの実物で直りを確かめた（R1 は型の文字列が §7-2 と一致、R2 は消せないファイルを置いた試しで直す前 rc=1・直した後 rc=0、R3 は `CONTROL_FAILED rc=1`・`SURVEY_FAILURES 1`・set -e が戻ることを確認、R4 は `tags:` が `${{ env.IMAGE }}`）。shellcheck と actionlint はクラウドに無く、審査役は回していない。手元の Opus が 6a8733f1d の中身で回した結果は rc=0（上の「直した後の手元の検査」）。
+
+### 24-6 試しの実行の結果と、除く道の決定（2026-11-04 Opus）
+
+試しの実行: `.github/workflows/sandbox-test.yml`（test=image-scan-survey）の run 41785498391。枝 release/build-on-github-bin1・先頭 0b29532e4（card-bin1 の実装）。結果は success（`SURVEY_FAILURES 0`）。
+
+| 完成品 | 組み立て秒 | 走査秒 | 大きさ（byte） | 名前の当たり | 中身の当たり | 履歴の当たり |
+|---|---|---|---|---|---|---|
+| backend | 71 | 17 | 274297267 | 156 | 3 | 0 |
+| frontend | 110 | 2 | 31118010 | 120 | 1 | 0 |
+| gemini-egress | 2 | 1 | 5424370 | 2 | 0 | 0 |
+| gha-exporter | 8 | 4 | 38820158 | 149 | 0 | 0 |
+| secretary-agent | 23 | 8 | 356411104 | 1 | 1 | 0 |
+
+- frontend の試しの鍵は画面の JS に載った（`KEY_IN_ASSETS 1`）。既定の規則だけの対照の走査では `gcp-api-key` が 1 件（`CONTROL_GCP_HITS 1`）。C1 の例外は効いた。
+- 名前の当たり 428 件の中身（パスだけ）: OS の証明書の束 `etc/ssl/certs/*.pem`（backend・gha-exporter 各 148、frontend 118）、OS と言語の証明書の束 1 つずつ（`usr/lib/ssl/cert.pem`・`etc/ssl/cert.pem`・`etc/ssl1.1/cert.pem`・Python の `certifi/cacert.pem` 2 つ・`grpc/_cython/_credentials/roots.pem`）、Google の部品の API の説明書 4 つ（`googleapiclient/discovery_cache/documents/*credentials*.json`）、npm に付いてくる `usr/local/lib/node_modules/npm/.npmrc`。gemini-egress の 2 件は証明書の束。
+- 中身の当たり 5 件は、どれも規則 `generic-api-key`。場所は次の 5 つ:
+  - backend の `usr/include/linux/netfilter/nf_tables.h`・`usr/include/linux/nl80211.h`・`usr/lib/x86_64-linux-gnu/perl/5.40.1/CORE/cop.h`
+  - secretary-agent の `usr/local/include/node/v8-internal.h`
+  - frontend の `usr/share/nginx/html/assets/main-hNR9bPDU.js`
+- 5 つの組み立て書がアプリのファイルを写す先は `/app`・`/usr/share/nginx/html`・`/etc/nginx/conf.d/default.conf`・`/docker-entrypoint.sh` だけ（各 `Dockerfile` の `COPY`）。上の C の見出しファイルの場所には、アプリのファイルは入らない。
+- frontend の 1 件を手元の gitleaks 8.24.3 で再現した。置き場の `.gitleaks.toml`（C1 の足し入り）で試しの鍵 `AIza…` を画面の JS の形で置くと、`generic-api-key` が 1 件出る。既定だけの設定では `gcp-api-key` の 1 件だけ。gitleaks は同じ値に 2 つの規則が当たると 1 件にまとめる。`gcp-api-key` を例外にしたため、`generic-api-key` の 1 件が残る。【未確認 U28】実物の完成品で、この 1 件が試しの鍵そのものか。確かめ方は下の E4 の場所の出力と、2 回目の試しの対照の当たりの一覧。
+
+| 番号 | 決定 | 理由 | 確かめ（手元） |
+|---|---|---|---|
+| E1 | 名前の走査から除く道を 8 つに限る。`etc/ssl/certs/<1 段>.pem`、`etc/ssl/cert.pem`、`etc/ssl1.1/cert.pem`、`usr/lib/ssl/cert.pem`、`…/certifi/cacert.pem`、`…/grpc/_cython/_credentials/roots.pem`、`…/googleapiclient/discovery_cache/documents/<1 段>.json`、`usr/local/lib/node_modules/npm/.npmrc`。除いた件数は `NAME_SKIPPED <数>` で毎回出す。型（§7-2）は変えない | どれも OS・言語・部品の配布物で、公開の値だけを持つ。中身は gitleaks の走査（既定の規則に秘密鍵の型がある）がそのまま見る | 試しの 428 件に当てて 0 件残り。危ない名前 14 個の見本（`app/.env`・`root/.ssh/id_rsa`・`etc/ssl/certs/sub/x.pem`・`root/.npmrc` ほか）のうち型に当たる 13 個は、どれも除かれない |
+| E2 | E1 で除いたファイルのうち、繋ぎ（symlink）でない普通のファイルに `PRIVATE KEY` の文字があれば、`NAME_HIT_PRIVATE_KEY <パス>` を出して当たりに数える | 除く道に秘密鍵が置かれても見逃さない。繋ぎは辿らない。行き先が完成品の外（実行機の `/usr/share/ca-certificates`）になることがあるため。行き先の中身は gitleaks が見る | 偽の木（絶対パスの繋ぎの証明書・certifi・`etc/ssl/certs/Planted.pem` に秘密鍵・`app/.env`）で `NAME_HIT app/.env`・`NAME_HIT_PRIVATE_KEY etc/ssl/certs/Planted.pem`・`NAME_SKIPPED 3`・当たり 2 |
+| E3 | `.gitleaks.toml` の末尾に、既定の規則 `generic-api-key` を名前で広げる例外を 2 つ足す。(a) frontend の画面の JS の場所かつ値が `^AIza[0-9A-Za-z_\-]{35}$` のとき（両方そろったときだけ・`condition = "AND"`）。(b) OS と言語の配布物の C の見出しファイル（`usr/include/…/*.h`・`usr/local/include/…/*.h`・`usr/lib/<1 段>/perl/<1 段>/CORE/…/*.h`）。規則は外さない。全体の `[allowlist]` は触らない | (a) は C1 と同じ値に別の規則が当たるため。値の形も条件にするので、同じ JS に別の秘密があれば当たる。(b) はアプリのファイルが入らない場所（上の `COPY` の一覧） | 手元の gitleaks 8.24.3 で、画面の JS の試しの鍵は消え、同じ JS の別の形の秘密は当たり、`usr/include/x.h` は消え、`app/y.py` の同じ鍵は `gcp-api-key` と `generic-api-key` の両方で当たる。置き場に (a)(b) の場所に当たるファイルは 0（`git ls-files` で確かめた）。置き場の走査の結果は変わらない |
+| E4 | 中身の当たりの出力に、行と桁を足す（`LEAK_HIT <規則> <パス> L<行>:C<始め>-<終わり>`）。値は出さない（`--redact` のまま） | 当たりを 1 件ずつ確かめるとき、ファイルのどこかが分かる | gitleaks 8.24.3 の JSON に `StartLine`・`StartColumn`・`EndColumn` がある（手元の出力） |
+
+- 試しの台本は、対照の走査の当たりを `CONTROL_LEAK_HIT <規則> <パス> L…` として全部出す（U28 を確かめるため）。
+- 2 回目の試しの合格の条件: 5 つとも `name_hits=0`・`leak_hits=0`・`history_hits=0`。`KEY_IN_ASSETS 1`。`CONTROL_GCP_HITS` が 1 以上。`CONTROL_LEAK_HIT` の場所が `usr/share/nginx/html/assets/` の JS だけ。`SURVEY_FAILURES 0`。外れたら当たりを見てから決め直す（推測で例外を広げない）。
+- 直しは card-bin1-r2.md で実行役に渡す。触るのは `.github/scripts/image-scan.sh`・`.gitleaks.toml`・`tests/sandbox/image-scan-survey.sh` の 3 つだけ。
+- U24・U25 はこの節で閉じる（当たりの一覧と所要秒は上の表）。
