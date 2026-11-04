@@ -100,7 +100,7 @@ Firebase は使わない設定に切り替えた（PO 2026-11-04「firebaseは�
 - e2e の付け替え: `frontend/tests-e2e/utils/auth.ts:23`・`:31` を新しい保存の鍵に合わせる。注記だけの `frontend/tests-e2e/scene1-dashboard.spec.ts:370`・`frontend/tests-e2e/visual-language/viewer-focus-trap.spec.ts:83`・`frontend/tests-e2e/visual-language/viewer-helpers.ts:8` の文を直す（R32）。
 - 試験: `vi.mock` で firebase を差し替える 14 ファイル（R15）と、`provider` を差し替える試験を、`selfAuth` か `devSession` の差し替えに直す。
 - 注記だけの所（R32）: `frontend/src/contexts/UiPrefsContext.tsx:46`・`frontend/src/lib/query/QueryAuthSync.tsx:3`・`frontend/src/lib/api.ts:3`・`:41`・`:73`・`frontend/src/lib/auth/authErrorMessage.ts:4` の文を事実に合わせて直す。
-- 設定: `frontend/playwright.config.ts:149-152`、`.github/workflows/e2e.yml:202-204`・`:309-311`、`.github/workflows/karte-gate.yml:73-75`・`:83-85`・`:108-110` から偽の `VITE_FIREBASE_*` と `VITE_GCP_PROJECT_ID` を消す。`VITE_GCP_PROJECT_ID` を画面で読むのは `frontend/src/lib/firebase.ts:21` だけ。
+- 設定: `frontend/playwright.config.ts:149-152`、`.github/workflows/e2e.yml:202-204`・`:308-311`、`.github/workflows/karte-gate.yml:73-75`・`:83-85`・`:108-110` から偽の `VITE_FIREBASE_*` と `VITE_GCP_PROJECT_ID` を消す。`VITE_GCP_PROJECT_ID` を画面で読むのは `frontend/src/lib/firebase.ts:21` だけ。
 - CI に K1・K6 の数え方の段を足す（「維持の仕組み」）。
 - CSP はこの便では触らない（便3）。
 - 金型・i18n: 新しい画面の部品は作らない。文言は既存の `authError` 系のキーを使い、新しいキーは足さない。足す場合は ja・en 両方に足す。

@@ -104,7 +104,7 @@ export function getDevSession(): DevSessionAdapter | null {
  * 開発用の偽ログイン（開発サーバーと Storybook）。本番の組み立てには入らない
  * （main.tsx が import.meta.env.DEV のときだけ読み込む。CI の「Firebase removal check」で確かめる）。
  * e2e は window.__salesanchorE2eAuthUser か、保存領域の "salesanchor:e2e-auth-user" で利用者を先に入れておける
- * （tests-e2e/utils/auth.ts）。自社 API は呼ばない。
+ * （tests-e2e/utils/auth.ts）。ログイン・ログアウト・トークンでは自社 API を呼ばない（パスワード再設定の依頼は自社 API へ送る）。
  */
 import type { DevSessionAdapter, DevSessionUser } from "./devSessionSlot";
 
@@ -266,7 +266,7 @@ beforeEach(() => {
  * 認証コンテキスト。
  * ログイン状態をアプリ全体で共有する。
  * ログインは自社ログイン（ADR-1013）だけ。開発サーバー・Storybook・単体試験では、起動時に登録された
- * 開発用の偽ログイン（lib/auth/devSessionSlot.ts）を使い、自社 API を呼ばない。
+ * 開発用の偽ログイン（lib/auth/devSessionSlot.ts）を使い、ログインでは自社 API を呼ばない（パスワード再設定の依頼だけは自社 API へ送る）。
  */
 
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
