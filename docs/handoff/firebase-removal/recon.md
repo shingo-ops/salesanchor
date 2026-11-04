@@ -59,7 +59,7 @@
 
 - R11: Firebase の部品を読み込む所（試験を除く）は次のとおり。
   - `frontend/src/lib/firebase.ts:15-16`（本物の初期化と、開発中の偽物 :351・:366-393）
-  - `frontend/src/lib/firebase-auth.ts`（開発中の偽物。:163 `useFakeFirebaseAuth = import.meta.env.DEV`、:164 保存の鍵 `salesanchor:e2e-firebase-auth-user`）
+  - `frontend/src/lib/firebase-auth.ts`（開発中の偽物。:27 `useFakeFirebaseAuth = import.meta.env.DEV`、:28 保存の鍵 `salesanchor:e2e-firebase-auth-user`。:151-159 `sendPasswordResetEmail` は偽物のとき何もせず成功する。:169-189 再認証とパスワード変更の偽物）
   - `frontend/src/contexts/AuthContext.tsx:8`・`:14`
   - `frontend/src/lib/auth/selfAuth.ts:9`
   - `frontend/src/pages/account-settings/SecuritySection.tsx:7-9`
@@ -68,7 +68,7 @@
   - :14-15 `getAuthProvider()`
   - :19-20 `isSelfAuth()` は `getAuthProvider() === "self" && !import.meta.env.DEV`。開発サーバーと e2e では、自社 API を呼ばずに Firebase の偽物を使う。
   - `isSelfAuth` を使う所: `AuthContext.tsx:60`、`LoginApprovalWatcher.tsx:34`、`RecoveryCodePrompt.tsx:61`、`api.ts:83`、`passkey.ts:23`、`selfAuth.ts:224`・`:236`、`SecuritySection.tsx:262`・`:366-369`、`LoginPage.tsx:44`。
-- R13: `selfAuth.ts:49-58` `getAccessToken()` は、self でなければ Firebase の `auth.currentUser.getIdToken()` を返す。`:61-63` `hasSession()` も同じ分かれ方をする。
+- R13: `selfAuth.ts:223-232` `getAccessToken()` は、self でなければ Firebase の `auth.currentUser.getIdToken()` を返す（:224 が分かれ目）。`:235-237` `hasSession()` も同じ分かれ方をする（:236）。
 - R14: 誤りの文言は次のとおり。
   - `frontend/src/lib/firebaseErrorMessage.ts` を使う所は `LoginPage.tsx:44`（self でないとき）と `SecuritySection.tsx:9`・`:302`。
   - 文言のキー `firebaseError` は `frontend/src/locales/ja.json:3274`・`en.json:3274`。
@@ -109,7 +109,7 @@
   - 分類の漏れの検査 `backend/tests/ops/test_ai_cloud_views.py:490-521` も、今ある列から数える。
   - このため、列を消した後に分類表の行が残っても、ビューの作り直しと検査は止まらない。分類表の行数の試験（`backend/tests/ops/test_ai_cloud_views.py:484` の `== 1068`）は、行を消すと直す必要がある。
 - R21: 試験の総数は次のとおり。
-  - `firebase` を含むファイルは 115 個（docs を除く。内訳は scratchpad の counts.txt）。
+  - `firebase` を含むファイルは、docs を除いて、大小を無視すると 120 個、大小を区別すると 90 個（2026-11-04 に数え直した。前に書いた 115 個は数え方を記録していなかったので使わない。一覧は R32）。
   - 一番多いのは `frontend/package-lock.json` の 260 行（部品の中身）。
   - backend の試験で Firebase に触れるのは 15 ファイル。
 
@@ -125,6 +125,12 @@
 - R24: 自社ログインに切り替えたのは commit f86defebc（2026-10-30）。本番の deploy は `AUTH_PROVIDER='self'` と `VITE_AUTH_PROVIDER='self'` を毎回書く（R17）。
 - R26: tenant_006 の `firebase_uid` が入った 1 行は、`user_id` が埋まっていて（人の正本とつながっている）、状態は active（2026-11-04 18:48 JST・AUDIT sha=f745ae66efa6）。アプリはこの列を読まない（R9）。列を消して失われるのは Firebase の利用者の番号だけで、Firebase の利用者を消した後は使い道が無い。
 - R25: GCP プロジェクト `sales-ops-with-claude` は Google カレンダー連携の OAuth でも使う（`.env.example:17-30`・`:87-88`）。**プロジェクトは消さない。消すのは Auth の利用者だけ**。
+- R27: 本番の画面のファイルには、開発用の偽ログインの文字がもう入っている。2026-11-04 に本番の `assets/main-CQpfABgR.js`（2,579,127 バイト）を取って数えた: `__salesanchorE2eAuthUser` 1 件、`e2e-firebase-auth-user` 1 件、`e2e-fake-id-token` 2 件、`firebase`（大小無視）88 件、`googleapis` 5 件、`gstatic` 0 件。`googleapis` の 5 件の内訳は `identitytoolkit.googleapis.com` 2・`securetoken.googleapis.com` 1・`staging-identitytoolkit.sandbox.googleapis.com` 1・`test-identitytoolkit.sandbox.googleapis.com` 1 で、全部 Firebase のログインの宛先。`import.meta.env.DEV` で分けても、静的に読み込んだ偽物の文字はビルドから落ちていない。
+- R28: 開発サーバーで今止まっている機能（`isSelfAuth()` が false のため）: `api.ts:83` の 401 の送り直し、`passkey.ts:23` のパスキーのボタン、`LoginApprovalWatcher.tsx:34`、`RecoveryCodePrompt.tsx:61`、`SecuritySection.tsx:366-369` の 4 つの欄（通知・機械・回復コード・パスキー）。`SecuritySection.tsx:262` のパスワード変更は Firebase の偽物の再認証（`firebase-auth.ts:169-189`）を通る。e2e にパスワード変更・パスキー・回復コード・新しい機械の許可・セキュリティの欄の試験は無い（`frontend/tests-e2e` の検索が 0 件）。
+- R29: e2e のパスワード再設定の試験 `frontend/tests-e2e/login.spec.ts:51` は `**/identitytoolkit.googleapis.com/**sendOobCode**` を偽の応答に差し替えている。自社の再設定は `selfAuth.ts:212` が `/password-reset/request` に送る。
+- R30: backend の Google の部品の import（Firebase 以外）: `google.oauth2.credentials`（`google_calendar.py:228`・`google_drive_oauth.py:257`）、`google.oauth2.service_account`（`tcg_distribution_svc.py:81`・`:1007`、`tasks/tcg_mirror.py:70`）、`google.auth.transport.requests`（`google_calendar.py:266`・`google_drive_oauth.py:295`）、`googleapiclient.discovery`・`googleapiclient.http`（`google_drive_oauth.py:384`）・`googleapiclient.errors`（`google_webhook.py:241`）、`google_auth_oauthlib.flow`（`google_calendar.py:125`）、`gspread`（`tcg_distribution_svc.py:80`）、`google.genai`（`gemini_extraction_svc.py:256`）、`google.generativeai`（`message_translator.py:107`）。`backend/requirements.txt:30`・`:32`・`:40-42`・`:44` に直接書いてある。`google-auth` だけは直接書いておらず、`google-api-python-client` などを通して入る。
+- R31: `scripts/qa/seed-tenant.sql:110-120` は `tenant_006.staff` に `firebase_uid` を入れる INSERT が 3 つある。`scripts/qa/reset-tenant.sh:120-122` が値を渡す。`.github/workflows/qa-smoke.yml:12` のとおり定期と PR での実行は 2026-10-30 に止まっていて、手で動かしたときだけ走る。
+- R32: 他に Firebase の文字がある所: `backend/tests/test_staff_create_users.py:163`・`:232`（`staff.firebase_uid` を SELECT）、`backend/tests/rls_bootstrap.py:238`・`:253`（試験の足場の `public.users` の列）、`backend/tests/ops/test_ai_cloud_views.py:556`（足場だけの列の一覧）・`:484`（列の分類の数 1068）、`.github/workflows/api-contract-check.yml:35`・`:53`（`frontend/api-contract/openapi.json` を作り直してコミットする決まり）。注記だけの所: `AGENTS.md:17`、`scripts/run_all_migrations.sh:612`、`tools/termux-line-import/README.md:17`・`:19`・`:92`、`tools/termux-line-import/device_session.py:1`、`frontend/src/contexts/UiPrefsContext.tsx:46`、`frontend/src/lib/query/QueryAuthSync.tsx:3`、`frontend/src/lib/api.ts:3`・`:41`・`:73`、`frontend/src/lib/auth/authErrorMessage.ts:4`、`frontend/tests-e2e/scene1-dashboard.spec.ts:370`、`frontend/tests-e2e/visual-language/viewer-focus-trap.spec.ts:83`、`frontend/tests-e2e/visual-language/viewer-helpers.ts:8`。設定の行: `frontend/playwright.config.ts:149-152`、`.github/workflows/e2e.yml:202-204`・`:309-311`、`.github/workflows/karte-gate.yml:73-75`・`:83-85`・`:108-110`、`frontend/Dockerfile:7-9`・`:12-14`（Firebase と GCP）と `:11`・`:16`（`VITE_AUTH_PROVIDER`）。`:10`・`:15` の `VITE_FUNNEL_DASHBOARD` は Firebase と関係ない。`backend/app/main.py:183` は注記（「既定 firebase」）で、`:184` の `self_tokens.validate_settings()` の呼び出しは残す。Firebase の文字があるファイルは、`docs/` を除いて 120 個（2026-11-04 の `git grep -il firebase`）。
 
 ## 2. 推測
 
@@ -132,8 +138,9 @@
 
 ## 3. 未確認
 
-- U1: firebase-admin を外した後も、`google.oauth2`・`google.auth.transport.requests`・`googleapiclient`・`google_auth_oauthlib` が入るか。設計では、便A の受け入れ基準 A4 で「入れ直した環境で import が通る」ことを機械で確かめる。
-- U2: Firebase の利用者は今何人か。最後に数えたのは 10/13 の 12 人（ADR-1013 Context）。削除の便（便D）の直前に、PO の画面か書き出しで数える。
+- U1: firebase-admin を外した後も、`google.oauth2`・`google.auth.transport.requests`・`googleapiclient`・`google_auth_oauthlib` が入るか。設計では、便2 の受け入れ基準 K4 で「入れ直した環境で import が通る」ことを機械で確かめる（対象の一覧は R30）。
+- U2: Firebase の利用者は今何人か。最後に数えたのは 10/13 の 12 人（ADR-1013 Context）。削除の便（便5）の直前に、PO の画面か書き出しで数える。
 - （U3 は確かめ済み → R26）
 - U4: サーバーの `.env` にある `VITE_FIREBASE_*`・`GCP_PROJECT_ID` を他に読む所があるか。リポジトリの中では R8・R17 以外に見つかっていない。サーバーの上の他の仕組みはまだ確かめていない。
 - U5: Uptime Kuma の「Firebase Auth」の監視の設定（リポジトリの外）。
+- U6: Firebase で有効になっているログインの方法（メールとパスワードのほか、Google などがあるか）と、画面用の API キーがほかの用途に使われているか（GCP の画面。リポジトリの外）。便5 のカードで確かめる。
