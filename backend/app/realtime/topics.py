@@ -17,10 +17,12 @@ SCOPE_USER = "user"  # 人単位の宛先 rt:u:{id}（ADR-1055。ADR-1016 の改
 TOPIC_TCG_REVIEW = "tcg.review"
 TOPIC_TCG_INVENTORY = "tcg.inventory"
 TOPIC_AUTH_LOGIN_REQUEST = "auth.login_request"
+TOPIC_NOTICES = "notices"
 
 # 人宛ての話題 → 範囲。人宛ての合図は口の中で publish_user_change により直接送る（書き込みの口の自動合図にはしない）
 USER_TOPICS: dict[str, str] = {
     TOPIC_AUTH_LOGIN_REQUEST: SCOPE_USER,
+    TOPIC_NOTICES: SCOPE_USER,  # アプリ内の鈴（ADR-1016 改訂 2026-11-03）。送り口は services/user_notices.py の 1 か所
 }
 
 # {(method, route_path): (topic, scope)}
@@ -492,6 +494,8 @@ NO_SIGNAL_ROUTES: dict[tuple[str, str], str] = {
     ("POST", "/api/v1/units/import/preview"): _PENDING,
     ("DELETE", "/api/v1/units/{unit_id}"): _PENDING,
     ("PATCH", "/api/v1/units/{unit_id}"): _PENDING,
+    ("PUT", "/api/v1/notice-fallback-recipients"): "設定の保存だけ。画面は保存の返り値で更新し、他の画面へ合図を出す相手はいない（宛先の決定時に読むだけ）",
+    ("POST", "/api/v1/notices/{notice_id}/read"): "本人の既読の記録だけ。数は返り値の unread_count で更新し、合図は出さない（鈴の作成側が人宛ての notices を出す）",
     ("PUT", "/api/v1/users/{user_id}/roles"): _PENDING,
     ("POST", "/api/v1/webhook/messenger"): _PENDING,
 }

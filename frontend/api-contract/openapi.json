@@ -10733,6 +10733,81 @@
         "title": "ExtractionSummary",
         "type": "object"
       },
+      "FallbackCandidate": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "表示名（full_name が空ならユーザー名）",
+            "title": "Name"
+          },
+          "user_id": {
+            "description": "public.users.id",
+            "title": "User Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "user_id"
+        ],
+        "title": "FallbackCandidate",
+        "type": "object"
+      },
+      "FallbackRecipients": {
+        "properties": {
+          "candidates": {
+            "description": "選べる人（同じ会社・有効）",
+            "items": {
+              "$ref": "#/components/schemas/FallbackCandidate"
+            },
+            "title": "Candidates",
+            "type": "array"
+          },
+          "defaulted_to_owner": {
+            "description": "未設定、または設定の人が全員無効でオーナーに戻っているとき true",
+            "title": "Defaulted To Owner",
+            "type": "boolean"
+          },
+          "selected": {
+            "description": "担当者がいないときに受け取る人の user_id（未設定は空）",
+            "items": {
+              "type": "integer"
+            },
+            "title": "Selected",
+            "type": "array"
+          }
+        },
+        "required": [
+          "selected",
+          "defaulted_to_owner",
+          "candidates"
+        ],
+        "title": "FallbackRecipients",
+        "type": "object"
+      },
+      "FallbackRecipientsUpdate": {
+        "properties": {
+          "user_ids": {
+            "description": "受け取る人の user_id の一覧（丸ごと置き換え。空で未設定に戻す）",
+            "items": {
+              "type": "integer"
+            },
+            "title": "User Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "user_ids"
+        ],
+        "title": "FallbackRecipientsUpdate",
+        "type": "object"
+      },
       "FlaggedTermOut": {
         "properties": {
           "reason": {
@@ -18173,6 +18248,123 @@
           "actual"
         ],
         "title": "NewCustomersBlock",
+        "type": "object"
+      },
+      "NoticeItem": {
+        "properties": {
+          "actor_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "書いた人の Discord の表示名",
+            "title": "Actor Name"
+          },
+          "channel_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "書き込まれたチャンネル名",
+            "title": "Channel Name"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "知らせの日時（ISO 8601）",
+            "title": "Created At"
+          },
+          "id": {
+            "description": "知らせの ID",
+            "title": "Id",
+            "type": "integer"
+          },
+          "kind": {
+            "description": "知らせの種類（例 discord_outside_ticket_post）",
+            "title": "Kind",
+            "type": "string"
+          },
+          "link_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "書き込みへのリンク",
+            "title": "Link Url"
+          },
+          "read_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "既読にした日時（未読は null）",
+            "title": "Read At"
+          }
+        },
+        "required": [
+          "id",
+          "kind"
+        ],
+        "title": "NoticeItem",
+        "type": "object"
+      },
+      "NoticeList": {
+        "properties": {
+          "items": {
+            "description": "新しい順・最大 50 件",
+            "items": {
+              "$ref": "#/components/schemas/NoticeItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "unread_count": {
+            "description": "未読の件数（一覧の 50 件に限らない）",
+            "title": "Unread Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "unread_count"
+        ],
+        "title": "NoticeList",
+        "type": "object"
+      },
+      "NoticeReadResult": {
+        "properties": {
+          "unread_count": {
+            "description": "既読にした後の未読の件数",
+            "title": "Unread Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "unread_count"
+        ],
+        "title": "NoticeReadResult",
         "type": "object"
       },
       "NotificationEventType": {
@@ -50970,6 +51162,153 @@
         "summary": "Update Note Master",
         "tags": [
           "note-master"
+        ]
+      }
+    },
+    "/api/v1/notice-fallback-recipients": {
+      "get": {
+        "description": "今の設定と、選べる人の一覧。未設定ならオーナー全員に届く（defaulted_to_owner）。",
+        "operationId": "get_notice_fallback_recipients_api_v1_notice_fallback_recipients_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FallbackRecipients"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Notice Fallback Recipients",
+        "tags": [
+          "notices"
+        ]
+      },
+      "put": {
+        "description": "受け取る人を丸ごと置き換える。別会社・無効・存在しない id が 1 つでもあれば 422。",
+        "operationId": "put_notice_fallback_recipients_api_v1_notice_fallback_recipients_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FallbackRecipientsUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FallbackRecipients"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Put Notice Fallback Recipients",
+        "tags": [
+          "notices"
+        ]
+      }
+    },
+    "/api/v1/notices": {
+      "get": {
+        "description": "自分宛ての知らせを新しい順に最大 50 件と、未読の件数。テナントの無い人は空。",
+        "operationId": "list_notices_api_v1_notices_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoticeList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Notices",
+        "tags": [
+          "notices"
+        ]
+      }
+    },
+    "/api/v1/notices/{notice_id}/read": {
+      "post": {
+        "description": "本人の行だけ既読にする（既読なら変えない）。他人・他社の id は 404。",
+        "operationId": "mark_notice_read_api_v1_notices__notice_id__read_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "notice_id",
+            "required": true,
+            "schema": {
+              "title": "Notice Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoticeReadResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Mark Notice Read",
+        "tags": [
+          "notices"
         ]
       }
     },

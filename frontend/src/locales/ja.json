@@ -5825,5 +5825,22 @@
       "invoice": "請求書を開く",
       "event": "予定を開く"
     }
+  },
+  "notices": {
+    "bellLabel": "お知らせ",
+    "bellLabelUnread": "お知らせ（未読 {{count}} 件）",
+    "title": "お知らせ",
+    "empty": "知らせはありません",
+    "kind": {
+      "discord_outside_ticket_post": "{{actor}} さんが #{{channel}} に書き込みました"
+    },
+    "fallback": {
+      "title": "担当者がいないときに受け取る人",
+      "help": "お客さんの書き込みに担当者がいないとき、アプリ内のお知らせと Discord の名前呼びを受け取る人を選びます。担当者がいるときは担当者だけに届きます。",
+      "defaultOwner": "未設定（オーナー全員）",
+      "clear": "選択をクリア",
+      "count": "{{count}} 人",
+      "saved": "保存しました"
+    }
   }
 }

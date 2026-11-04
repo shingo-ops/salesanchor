@@ -2066,3 +2066,24 @@ LEAD_FACTORS_MSG_DDL = {
             deleted_at TIMESTAMP)
     """,
 }
+
+
+# アプリ内の鈴（user_notices）の試験用の表（SQLite 用の最小定義）
+USER_NOTICE_DDL = [
+    "CREATE TABLE users (id INTEGER PRIMARY KEY, tenant_id INTEGER, is_active BOOLEAN, is_super_admin BOOLEAN,"
+    " full_name TEXT, username TEXT, email TEXT)",
+    "CREATE TABLE notice_fallback_recipients (user_id INTEGER PRIMARY KEY, updated_by INTEGER, updated_at TIMESTAMP)",
+    "CREATE TABLE leads (id INTEGER PRIMARY KEY, tenant_id INTEGER, discord_user_id TEXT, assigned_to INTEGER, discord_guild_channel_id TEXT)",
+    "CREATE TABLE lead_channels (id INTEGER PRIMARY KEY, lead_id INTEGER, platform TEXT, external_id TEXT)",
+    "CREATE TABLE roles (id INTEGER PRIMARY KEY, system_key TEXT)",
+    "CREATE TABLE user_roles (user_id INTEGER, role_id INTEGER)",
+    "CREATE TABLE staff (id INTEGER PRIMARY KEY, tenant_id INTEGER, user_id INTEGER, discord_user_id TEXT)",
+    "CREATE TABLE user_notices (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, kind TEXT NOT NULL,"
+    " actor_name TEXT, channel_name TEXT, link_url TEXT, created_at TIMESTAMP NOT NULL, read_at TIMESTAMP)",
+]
+
+
+async def create_user_notice_tables(conn):
+    """user_notices と、宛先の解決に使う表を作る（conn は engine.begin() の接続）。"""
+    for ddl in USER_NOTICE_DDL:
+        await conn.execute(text(ddl))

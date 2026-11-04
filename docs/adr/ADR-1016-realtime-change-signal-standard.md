@@ -60,6 +60,15 @@
 - 根拠: 2026-10-27〜11-02 の記録で、在庫表の読み込みは 180 回・1 時間の最大 21 回・10 秒以内に同時に読んだ接続元は最大 2。合図のもとの解析の完了は 7 日で 682 回・1 時間の最大 20 回。数え方と生の数は docs/handoff/line-like-speed/design.md §3-4-16。
 - 見張り: 縮めた後に同じ数え方で測り、1 時間の読み込みが 63 回（基準の最大の 3 倍）を超えたら PO に報告して秒を決め直す。
 
+## 改訂 2026-11-03（アプリ内の鈴）
+
+画面の右上の鈴の未読数を、ほかの人の知らせの作成から 1 分以内に増やすため、人宛ての話題に `notices`（範囲 `user`、宛先 `rt:u:{user_id}`）を足す。本文の決定と既存の改訂は書き換えない。中身はこれまでどおり話題の名前と origin だけで、知らせの中身・書き込みの本文・Discord の id は入れない。画面は合図を受けたら `GET /api/v1/notices` を読み直す。
+
+- 人宛ての話題は topics.py の `USER_TOPICS` と frontend/src/lib/realtime/topics.ts の両方に置く（試験で照合）。
+- 送り口は backend/app/services/user_notices.py の `signal_notices_changed` の 1 か所だけ。知らせの行を commit した後に、宛先 1 人ずつへ `publish_user_change` で出す。失敗は握る（知らせの作成は止めない）。
+- 既読の口 `POST /api/v1/notices/{notice_id}/read` は合図を出さない（画面が返り値の未読数で更新する）。NO_SIGNAL_ROUTES に理由付きで並べる。
+- 設計: docs/handoff/in-app-notice-bell/design.md §7-2。
+
 ## Why（なぜ）
 
 - PO の願いは「読み込み速度を落とさず、変更があったら即時反映」を全ページの標準にすることである。

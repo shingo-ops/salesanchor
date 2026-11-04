@@ -1,6 +1,7 @@
 """お客さんが自分の部屋の外に書いたとき、担当者へ通知先（Discord Webhook）で知らせる。
 
-お客さんへは何も送らない。本文・添付・Discord の id は通知にもログにも載せない。
+お客さんへは何も送らない。同じ関門を通った回に、宛先（担当者＋管理者）の名前を呼び、アプリ内の鈴（user_notices）も作る。
+本文・添付・Discord の id は通知にもログにも載せない。
 重複の抑え: Redis キー discord_outside_ticket_notice:{tenant}:{channel}:{author} を SET NX EX 1800。
 Redis が使えないときは送らない（二重に送るより送らない方を選ぶ）。
 """
@@ -12,7 +13,9 @@ from typing import Any
 import discord
 from sqlalchemy import text
 
+from app.auth.dependencies import reset_tenant_context
 from app.cache import get_redis
+from app.services import user_notices
 
 logger = logging.getLogger(__name__)
 
@@ -75,6 +78,48 @@ async def _parent_is_ticket_room(db: Any, tenant_id: int, channel: Any) -> bool:
     return row is not None
 
 
+async def _recover_session(db: Any, tenant_id: int) -> None:
+    """失敗した処理の後でセッションを使える状態に戻す（戻せなければ何もしない）。"""
+    try:
+        await db.rollback()
+        await reset_tenant_context(db, tenant_id)
+    except Exception:  # noqa: BLE001
+        pass
+
+
+async def _create_bell(
+    db: Any, tenant_id: int, recipients: list[int], name: str, ch_name: str, link: str
+) -> None:
+    """知らせの行を宛先の人数分作り、commit の後に合図を出す。1 度だけ立て直して再試行する。"""
+    if not recipients:
+        return
+    for attempt in (1, 2):
+        try:
+            await user_notices.insert_notices(
+                db, tenant_id, recipients,
+                kind=user_notices.KIND_OUTSIDE_TICKET_POST,
+                actor_name=name, channel_name=ch_name, link_url=link,
+            )
+            await db.commit()
+            await reset_tenant_context(db, tenant_id)  # ADR-072
+            break
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "[discord-gateway] outside-ticket bell insert failed tenant=%s attempt=%s err=%s",
+                tenant_id, attempt, type(exc).__name__,
+            )
+            await _recover_session(db, tenant_id)
+    else:
+        return
+    try:
+        await user_notices.signal_notices_changed(recipients)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "[discord-gateway] outside-ticket bell signal failed tenant=%s err=%s",
+            tenant_id, type(exc).__name__,
+        )
+
+
 async def notify_outside_ticket_post(db: Any, *, tenant_id: int, message: Any) -> bool:
     """送ったら True。例外は外に出さない。"""
     try:
@@ -105,10 +150,43 @@ async def notify_outside_ticket_post(db: Any, *, tenant_id: int, message: Any) -
 
         name = getattr(author, "display_name", None) or getattr(author, "name", None) or "-"
         ch_name = getattr(channel, "name", None) or "-"
-        body = f"書いた人: {name}\nチャンネル: #{ch_name}\n{message.jump_url}"
-        # 呼んだあとはこのセッションで続きの処理をしない（commit と reset_tenant_context が走る）
-        await send_discord_notification(db, tenant_id, EVENT_TYPE, NOTICE_TITLE, body)
-        _log(tenant_id, "sent")
+        link = str(message.jump_url)
+        body = f"書いた人: {name}\nチャンネル: #{ch_name}\n{link}"
+
+        # 宛先（担当者＋管理者）と名前を呼ぶ Discord の id。決められなくても通知は今までどおり送る
+        recipients: list[int] = []
+        mention_ids: list[str] = []
+        try:
+            recipients = await user_notices.resolve_notice_recipients(
+                db, tenant_id, str(getattr(author, "id", ""))
+            )
+            mention_ids = await user_notices.discord_ids_for_users(db, tenant_id, recipients)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "[discord-gateway] outside-ticket recipients failed tenant=%s err=%s",
+                tenant_id,
+                type(exc).__name__,
+            )
+            recipients, mention_ids = [], []
+            await _recover_session(db, tenant_id)
+
+        # Discord の送信（失敗は中で握る）。中で commit と reset_tenant_context が走る
+        try:
+            await send_discord_notification(
+                db, tenant_id, EVENT_TYPE, NOTICE_TITLE, body,
+                mention_user_ids=mention_ids or None,
+            )
+        except Exception as exc:  # noqa: BLE001  本物は中で握るが、握れなかった場合も鈴は作る
+            logger.warning(
+                "[discord-gateway] outside-ticket discord send failed tenant=%s err=%s",
+                tenant_id,
+                type(exc).__name__,
+            )
+            await _recover_session(db, tenant_id)
+        _log(tenant_id, f"sent recipients={len(recipients)} mentions={len(mention_ids)}")
+
+        # 鈴は Discord の成否と独立に作る。失敗しても外へ出さない
+        await _create_bell(db, tenant_id, recipients, name, ch_name, link)
         return True
     except Exception as exc:  # noqa: BLE001
         logger.warning(

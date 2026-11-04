@@ -36,6 +36,7 @@ const {
 vi.mock("../features/auth/LoginApprovalWatcher", () => ({ default: () => null }));
 vi.mock("../features/auth/RecoveryCodePrompt", () => ({ default: () => null }));
 vi.mock("react-i18next", () => ({
+  initReactI18next: { type: "3rdParty", init: vi.fn() },
   useTranslation: () => ({
     t: (key: string) => key,
   }),
@@ -99,6 +100,7 @@ vi.mock("../constants/icons", () => {
     <span data-testid="icon" data-size={size} />
   );
   return {
+    BellOutline: Icon,
     NAV_ICONS: {
       menu: Icon,
       close: Icon,
@@ -196,14 +198,14 @@ describe("MobileShell", () => {
       ).toBeTruthy();
     });
 
-    it("renders 4 bottom tabs when permissions exist", () => {
+    it("renders 5 bottom tabs when permissions exist (incl. notice bell)", () => {
       mockHasPermission.mockReturnValue(true);
 
       renderMobileShell();
 
       expect(
         document.querySelectorAll(".mobile-tabbar .mobile-tab").length,
-      ).toBe(4);
+      ).toBe(5);
     });
 
     it("more sheet is not open on initial render", () => {

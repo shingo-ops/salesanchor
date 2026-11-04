@@ -77,7 +77,7 @@ async def test_t1_non_staff_sends_once_without_body(env):
     assert args[3] == "部屋の外の書き込み（Discord）"
     assert len(args[4].split("\n")) == 3
     assert BODY not in args[4]
-    assert "mention_user_ids" not in send.await_args.kwargs
+    assert send.await_args.kwargs.get("mention_user_ids") is None  # 宛先が決まらなければ名前は呼ばない
 
 
 @pytest.mark.asyncio

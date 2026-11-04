@@ -1,6 +1,6 @@
 -- ADR-1052 段1: 相談係用の伏せたビュー ai_cloud を作る（冪等・1 トランザクション）。
 -- 一覧には載せない。run_all_migrations.sh の EXIT trap が、毎回の実行の最後に流す（ai_ro と同じ形）。
--- 1) 分類表 ai_cloud_meta.column_class を空にして下の 1064 行を入れ直す（このファイルが正本。行の足し引きはこの SQL の変更で行う）。
+-- 1) 分類表 ai_cloud_meta.column_class を空にして下の 1068 行を入れ直す（このファイルが正本。行の足し引きはこの SQL の変更で行う）。
 -- 2) ai_cloud を作り直す。3) ai_cloud_meta.build_views() で全ビューを作り、build_log に 1 行書く。
 -- 4) ai_reader_cloud に ai_cloud の USAGE と SELECT だけを付ける。
 -- 分類表の元: docs/handoff/cloud-case-ai/stage1-column-class.tsv（表ごと・class ごとにまとめて unnest で入れる）。
@@ -577,6 +577,7 @@ FROM (VALUES
   ('tenant_*','unit_aliases',ARRAY['lang'],'mask','値の決まりが無く自由に入る列のため伏せる（初期は最小）'),
   ('tenant_*','units',ARRAY['canonical','code','kubun'],'mask','値の決まりが無く自由に入る列のため伏せる（初期は最小）'),
   ('tenant_*','unparsed_lines',ARRAY['line_text','reason'],'mask',''),
+  ('tenant_*','user_notices',ARRAY['actor_name','channel_name','kind','link_url'],'mask','値の決まりが無く自由に入る列のため伏せる（初期は最小）'),
   ('public','analysis_run_snapshots',ARRAY['snapshotted_at'],'allow','数・日付・uuid・真偽の型で文字を持たない（型で通る。名前の見張りに当たるため行を置く）'),
   ('public','analysis_soldout_extra_targets',ARRAY['ref_message_id'],'allow','数・日付・uuid・真偽の型で文字を持たない（型で通る。名前の見張りに当たるため行を置く）'),
   ('public','condition_definitions',ARRAY['display_order','line_id'],'allow','数・日付・uuid・真偽の型で文字を持たない（型で通る。名前の見張りに当たるため行を置く）'),

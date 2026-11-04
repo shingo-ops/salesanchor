@@ -15,6 +15,7 @@ import { SCHEDULE_POPOVER_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 import { NOTIFICATION_EVENT_LABEL_KEYS } from "../../constants/notificationEventTypes";
 import { LoadingBlock, Spinner } from "../../components/loading";
+import { NoticeFallbackSection } from "./NoticeFallbackSection";
 
 interface Channel { id: number; channel_name: string; webhook_url: string; event_types: string; is_active: boolean; created_at: string; }
 interface EventTypeOption { code: string; }
@@ -168,6 +169,8 @@ export default function NotificationsPage() {
           </div>
         </form>
       </Modal>
+      {/* 選択の一覧が画面の下端（スマホのタブバー）に隠れないよう、表より上に置く */}
+      {hasPermission("notifications.manage") && <NoticeFallbackSection />}
       {channelsQ.isPending || eventTypesQ.isPending ? <LoadingBlock /> : (() => {
         const columns: DataTableColumn<Channel>[] = [
           {

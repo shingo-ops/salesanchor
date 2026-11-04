@@ -11,6 +11,7 @@ const { mockHasPermission, mockHasAny } = vi.hoisted(() => ({
 vi.mock("../features/auth/LoginApprovalWatcher", () => ({ default: () => null }));
 vi.mock("../features/auth/RecoveryCodePrompt", () => ({ default: () => null }));
 vi.mock("react-i18next", () => ({
+  initReactI18next: { type: "3rdParty", init: vi.fn() },
   useTranslation: () => ({
     t: (key: string) => key,
   }),
@@ -71,6 +72,7 @@ vi.mock("../lib/messages", () => ({
 vi.mock("../constants/icons", () => {
   const Icon = ({ size }: { size?: number }) => <span data-testid="icon" data-size={size} />;
   return {
+    BellOutline: Icon,
     NAV_ICONS: {
       close: Icon,
       dashboard: Icon,

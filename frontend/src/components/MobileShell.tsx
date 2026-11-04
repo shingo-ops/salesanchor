@@ -55,6 +55,7 @@ import { ICON } from "../constants/iconSizes";
 import { NavItemList } from "./NavItemList";
 import type { ResolvedNavItem } from "./NavItemList";
 import ConfirmModal from "./ConfirmModal";
+import NoticeBell from "./NoticeBell";
 import "../mobile-shell.css";
 
 // ─── ユーティリティ: NavItem → ResolvedNavItem 変換 ──────────────────────────
@@ -326,6 +327,9 @@ export default function MobileShell() {
             <span className="mobile-tab-label">{t("nav.orders")}</span>
           </NavLink>
         )}
+
+        {/* お知らせの鈴（自分宛てだけを返す口なので権限の条件なし） */}
+        <NoticeBell variant="tab" />
 
         {/* メニュー */}
         <button

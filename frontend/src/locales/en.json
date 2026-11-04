@@ -5825,5 +5825,22 @@
       "invoice": "Open invoice",
       "event": "Open event"
     }
+  },
+  "notices": {
+    "bellLabel": "Notifications",
+    "bellLabelUnread": "Notifications ({{count}} unread)",
+    "title": "Notifications",
+    "empty": "No notifications",
+    "kind": {
+      "discord_outside_ticket_post": "{{actor}} posted in #{{channel}}"
+    },
+    "fallback": {
+      "title": "Who receives notices when there is no assignee",
+      "help": "Choose who gets the in-app notice and the Discord mention when a post has no assignee. When an assignee exists, only the assignee is notified.",
+      "defaultOwner": "Not set (all owners)",
+      "clear": "Clear selection",
+      "count": "{{count}} people",
+      "saved": "Saved"
+    }
   }
 }
