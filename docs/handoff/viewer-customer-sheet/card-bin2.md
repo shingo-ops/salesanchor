@@ -35,7 +35,7 @@ mode: handoff
 
 ## 1. 目的（便2で利用者に見える変化）
 
-- 閲覧者管理ページで、本契約のお客さんの詳細に「請求先」の区切りが出る（まだ無ければ空の案内）。
+- 閲覧者管理ページで、お客さんの詳細に「請求先」の区切りが出る（状態を問わず全員。まだ無ければ空の案内。design §3-5 は区切りに条件を付けていない）。
 - 本契約のお客さんの詳細に「請求先フォームを送る」ボタンが出る。押すと、7日間使えるリンクが Discord の部屋とメールの両方に送られる。
 - お客さんはリンクを開くと、ログインせずに請求先の7項目を書いて送れる。前に書いた値があれば、それが入った状態で開く。
 - 請求先は AI の読み取りから見えない。プライバシーポリシーに書き足す。
@@ -48,6 +48,7 @@ mode: handoff
 | `scripts/run_all_migrations.sh` | 末尾の `run_sql` の並びの最後に1行足す |
 | `migrations/20261031_210000_create_ops_case.sql` | 拒否表の一覧に1行足す |
 | `migrations/20261024_100300_create_ai_cloud_views.sql` | 列の分類に2行足す・:3 のコメントの数 |
+| `scripts/migration-guard/reference-allowlist.tsv` | `create_ai_cloud_views.sql` の行の sha256 と decision_ref を直す（§3-2 の最後の項目） |
 | `migrations/20261020_120000_create_viewer_message_templates.sql` | :11 の COMMENT「台帳の9件」→「台帳の10件」 |
 | `.github/workflows/migration-guard.yml` | :224 の `PUBLIC_TABLES` に `viewer_billing_profiles` を足す（`viewer_status_changes` の後ろ） |
 | `.github/workflows/migration-test.yml` | 最小の土台（PUBLIC_SQL）に `public.viewer_login_tokens` の最小定義を足す（§3-1 の最後の項目） |
@@ -98,6 +99,10 @@ mode: handoff
   - `('public','viewer_billing_profiles',ARRAY['party_type'],'allow','値の決まり ck_viewer_billing_profiles_party_type で値が限られる')`
   - :3 のコメントの「1068 行」→「1075 行」。
 - `migrations/20261020_120000_create_viewer_message_templates.sql` :11 の「台帳の9件」→「台帳の10件」。
+- 見張りの例外の一覧: `create_ai_cloud_views.sql` は `scripts/migration-guard/reference-allowlist.tsv` に中身の sha256 付きで載っている（origin/main の7行目）。中身を変えると `scripts/check-migration-value-writes.py` が「中身が変わったので例外は効かない」で止める（`.github/workflows/migration-guard.yml` のチェック8 と全件走査）。直し方は前例 b5e818dec と同じ:
+  - その行の2列目（sha256）を、commit する中身の `sha256sum migrations/20261024_100300_create_ai_cloud_views.sql` の値に替える。
+  - 4列目（decision_ref）の末尾に ` / viewer-customer-sheet design §3-2（分類2行追加）` を足す。1列目・3列目は変えない。
+  - 直した後に sql を変えたら、sha256 を取り直す。
 
 ### 3-3. backend
 
@@ -129,7 +134,8 @@ mode: handoff
 - 閲覧者管理ページの詳細スライド（Drawer）:
   - 「請求先」の区切り: 7項目を文字で出すだけ（郵便番号は表示のときに `123-4567` の形）。まだ無いときは EmptyState。直す欄は作らない（直すのはお客さんのフォーム）。
   - 請求先の読み込みは `useApiQuery`（`frontend/src/lib/query/apiQuery.ts`。ADR-1054）で行う。形は便1の直しでシートを読む所（同じファイルの `useApiQuery<SheetItem[]>("/tcg/distribution/targets", …)`）にそろえ、`enabled: detailId !== null`。読み込み中は `isPending`、失敗は `isError` から出す。`set〇〇Loading(true)` の形の状態を新しく作らない（`frontend/scripts/check-loading-clear.js` が数を数えて止める）。`frontend/scripts/loading-clear-baseline.json` を変えない。`loading-clear-exempt` の注記を使わない。
-  - フォームを送った後に請求先の表示を取り直すときは `useInvalidateApi()` に頭の言葉（`["super-admin","viewers", String(id), "billing-profile"]`）を渡す。送るボタンの「送信中」の状態の名前に `Loading` を含めない（例 `sendingBillingForm`。今の申込コードの再発行の書き方にそろえる）。
+  - 管理者がフォームを送っても請求先は変わらない（変わるのはお客さんが送信したとき）。このため送った後に請求先の表示を取り直さない（`useInvalidateApi` は使わない）。
+  - 送るボタンの「送信中」の状態は、今の申込コードの再発行と同じ共用の `running`／`setRunning`（`ViewerAccountsPage.tsx` :113・:251 付近）を使う。新しい状態を作る場合も、名前に `Loading` を含めない。
   - 理由: 便1 #5131 は `setSheetLoading(true)` を足してこの見張りで止まった（review-opus.md §8）。
   - 「請求先フォームを送る」ボタン（Button）: 本契約（active）の人のときだけ出す。押した結果（部屋へ送れた／送れなかった／部屋なし、メールの手配をした、期限）は、今の申込コードの再発行と同じ出し方。送れなかった・部屋なしのときは `room_notice_text` をコピーできるようにする（再発行と同じ部品）。409・503 は文言を `t()` で出す。
 - 閲覧ページ（`frontend/src/pages/viewer/`）:
@@ -214,6 +220,8 @@ mode: handoff
     期待する出力: exit 0（§3-4。数が増えたと出たら、`useApiQuery` に直す。baseline は変えない）。
     cd 作業場所 && grep -n "public.viewer_login_tokens" .github/workflows/migration-test.yml
     期待する出力: 1件以上（§3-1 の最後の項目）。
+    cd 作業場所 && sha256sum migrations/20261024_100300_create_ai_cloud_views.sql && grep -n "create_ai_cloud_views" scripts/migration-guard/reference-allowlist.tsv
+    期待する出力: 2つの sha256 が同じ（§3-2 の最後の項目）。
     cd 作業場所/frontend && npm run build
     cd 作業場所/frontend && node scripts/check-viewer-bundle.js
     期待する出力: 閲覧ページの JS の合計（KB）と合格。数を報告に書く。300KB を超えたら止まる。
@@ -223,6 +231,10 @@ mode: handoff
     commit 文は Write でファイルに書き（1行目 `feat: billing form for contracted viewer customers (bin2)`、末尾に `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`）、`git commit -F` で流す。active-work.d と `frontend/dist` は commit しない。
     cd 作業場所 && git log -1 --stat
     期待する出力: commit の番号と、§2 の表のファイルだけ。
+    cd 作業場所 && python3 scripts/check-migration-value-writes.py diff origin/main HEAD --check 7
+    cd 作業場所 && python3 scripts/check-migration-value-writes.py diff origin/main HEAD --check 8
+    cd 作業場所 && python3 scripts/check-migration-value-writes.py repo
+    期待する出力: 3つとも exit 0。落ちたら出力を報告に書いて止まる（停止）。sha256 の食い違いなら §3-2 の最後の項目をやり直してから commit を足す。
 
 手順10 差分の点検
     cd 作業場所 && git diff origin/main --numstat

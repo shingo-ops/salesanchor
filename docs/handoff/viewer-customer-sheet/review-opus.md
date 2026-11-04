@@ -81,3 +81,11 @@
 - 3件目（試験の部品に deliverable が無い）は便1だけの話で、便2 には当たらない。
 - 手順の漏れ（Opus）: card-bin1-fix1.md は、card-lint を流す前にクラウドの担当へ渡した。中身は足りていたが、形式の4件（L03 END OF CARD・L04 受領確認・L15 停止の語・L29 読んだ節の行）が欠けていた。クラウドの指示文には停止と報告の決まりを入れていたので、作業の安全には響いていない。形式は便1の枝で後から直す。再発を止めるため、クラウドへ渡す直前に card-lint を通す見張りを PO に提案する。
 - card-bin2.md は、上の2件を足した後に card-lint を流し直し、exit 0（長い行の警告だけ）を確かめた。
+
+## 9. #5129 の3回目の審査（2026-11-05・HEAD ba45a9d24 で REQUEST_CHANGES）と直したこと
+
+- HIGH-1: create_ai_cloud_views.sql は scripts/migration-guard/reference-allowlist.tsv に sha256 付きで載っている。中身を変えると見張りが止めるのに、カードの「触るファイル」に一覧が無かった。Opus が origin/main で確かめた（一覧の7行目・check-migration-value-writes.py の sha256 の照合・前例 b5e818dec）。card-bin2.md §2・§3-2・手順8・手順9 と design.md §3-7 に足した。
+- 同じ種類（見張りへの登録漏れ）の3回目。migration-guard.yml の全17検査と scripts/migration-guard の一覧のファイル4つを洗い出し、ほかに当たるものが無いことを確かめた（design.md §3-7 の行）。
+- LOW-1: 「請求先」の区切りは状態を問わず全員の詳細に出す（design §3-5 に条件が無い）。ボタンだけ本契約に限る。§1 を直した。
+- LOW-2: 管理者が送っても請求先は変わらないので、送った後の取り直しをやめた（§3-4）。
+- LOW-3: 送信中の状態は今の共用 running／setRunning を使う、と書き直した（§3-4）。
