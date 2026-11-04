@@ -181,6 +181,35 @@ CREATE INDEX IF NOT EXISTS idx_user_notices_user_unread ON {各テナント}.use
 | PC の鈴は今のまま右上 | notice-bell.spec.ts の vl-desktop-1280 が緑 |
 | 色・寸法の直値なし | CI の Frontend lint（tokens・stylelint）が緑 |
 
+### 7-3-改訂5（PO 2026-11-04 チャット。PC の鈴の丸い囲みを外す。上の PC の形の見た目だけを置き換える）
+- PO 原文: 「PCの鈴マークは丸いアイコンで囲わなくて良い、また未読のお知らせがあるときに赤い数字のマーク出せる？」
+- 赤い数字: 既にある（`frontend/src/components/NoticeBell.tsx:144-148` の `Badge variant="danger" appearance="solid"`、`frontend/src/components/Badge.css:70` の塗り。100 件以上は `formatUnreadCount` で「99+」、`frontend/src/components/NoticeBell.tsx:39-41`）。今回は変えない。位置だけ鈴の絵の右上に寄せる
+- マウスを乗せたとき: PO に出した選択肢 1. 後ろに薄い色／2. 何も変わらない／3. 鈴の色だけ濃くなる。PO の返事は「3」
+- 変更前（`frontend/src/components/NoticeBell.css:32-56`、origin/main 996af2f0e 時点）: `.notice-bell-btn` は `border: 1px solid var(--border)`・`border-radius: var(--radius-full)`・`background: var(--bg-surface)`・`box-shadow: var(--shadow-md)`・`color: var(--text-secondary)`、`:hover` は `background: var(--bg-hover)`。`.notice-bell-badge` は `top/right: calc(var(--space-1) * -1)`
+- 変更後（`frontend/src/components/NoticeBell.css` だけ）:
+  1. `.notice-bell-btn`: `border: none`、`background: transparent`、`box-shadow` の行を消す。`border-radius: var(--radius-full)` は残す（キーボードで選んだときの枠の形のため）。幅・高さ `var(--notice-bell-size)`（40px、押せる広さ）と `color: var(--text-secondary)`・`cursor`・`transition` は残す。`transition` は `background` → `color` に替える
+  2. `.notice-bell-btn:hover`: `background` の行を消し、`color: var(--text-primary)` にする（鈴の色だけ濃くなる。PO「3」）
+  3. `.notice-bell-badge`: `top: var(--space-1)`、`right: var(--space-1)`（40px の箱の角ではなく、真ん中の鈴の絵の右上に重なる位置。直値なし）
+- 変更（`frontend/src/components/NoticeBell.tsx:143` の PC の形だけ）: 鈴の絵を `size={ICON.md}`（16px）→ `size={ICON.base}`（20px）。囲みが無くなると 40px のアバターの隣で小さく見えるため。スマホの形（`frontend/src/components/NoticeBell.tsx:128`、既に `ICON.base`）と揃う。Opus の設計判断で、PO に結果を伝える
+- 触らない: スマホの形（`variant="tab"`）・`.top-right-cluster`・DesktopShell・tokens.css・Badge の金型・i18n・API・backend
+- 試験（`frontend/tests-e2e/visual-language/notice-bell.spec.ts` に 1 つ足す。PC 幅 `vl-desktop-1280` だけで流す）:
+  - 未読 3 件のモックで、`.notice-bell-btn` の計算後の `border-top-width` が `0px`、`box-shadow` が `none`、`background-color` が `rgba(0, 0, 0, 0)`
+  - 数字の箱が鈴のボタンの箱の内側に入っている（数字の左右上下がボタンの範囲内）
+  - マウスを乗せると `color` が乗せる前と違い、`background-color` は `rgba(0, 0, 0, 0)` のまま
+- 受入（○×）:
+
+| 基準 | 検証方法 |
+|---|---|
+| PC の鈴に丸い囲み・枠・影が無い | e2e 追加分（vl-desktop-1280）が緑＋本番で PO の目視 |
+| 未読があると鈴の絵の右上に赤い数字が出る | e2e 既存（3・2・99+）と追加分（数字がボタンの内側）が緑 |
+| マウスを乗せると鈴の色だけ濃くなり、後ろに色が付かない | e2e 追加分が緑＋本番で PO の目視 |
+| スマホの鈴は変わらない | e2e の vl-mobile-390 既存分が緑 |
+| 色・寸法の直値なし | CI の Lint & Dark Mode Check・UI governance gate が緑 |
+
+- 戻し方: この PR の revert（見た目だけ。データに触れない）
+- リスク: 鈴は `frontend/src/components/NoticeBell.css:6-14` の `position: fixed` の入れ物に浮いている。ページ見出しは `frontend/src/tokens.css:235` の `--page-header-avatar-clearance` で右上を空けているが、下へ送った中身が鈴の下を通るかは未確認。透明にすると重なりが見える恐れがある。対処: 実装後の評価で PC 幅の長いページ（在庫表）を下へ送った画面を撮って確かめる。重なるなら PO に戻す（推測で背景を足さない）
+- 審査（Architect・同一 AI の自己審査、2026-11-04）: APPROVE。根拠: 変更は CSS 3 か所＋アイコン寸法 1 か所で、既存のトークン（`--text-primary`・`--space-1`・`ICON.base`）だけを使う。赤い数字の金型（Badge）・スマホの形・API に触れない。受入の 5 項目はすべて e2e か CI で ○× を判定できる。未解決: 上のリスク（評価で確かめる）
+
 ### 7-4 部品（金型を使う。ADR-144・ADR-067・ADR-027）
 - 新しい部品 `NoticeBell`（鈴のボタン＋数字＋一覧）。中身は既存の金型: `Popover`（`frontend/src/components/Popover.tsx`）、`Badge`（`frontend/src/components/Badge.tsx`、variant danger、sm）、印は `frontend/src/constants/icons.tsx` の `BellOutline`（:157）
 - 一覧の 1 行は新しい部品 `NoticeRow`（押せる行。未読は太字＋左に丸）。色・余白・角・z-index はトークンだけ（直値禁止）。足りないトークンがあれば `:root` と `:root.force-dark` の両方に足す
