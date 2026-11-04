@@ -17,6 +17,7 @@ PO が「こうしたい」と話す → 設計パートナーが設計図と仕
 | 日付 | 状態 |
 |---|---|
 | 2026-11-04 | あるべき姿（PO の言葉）記録・KGI 1〜7 PO 承認（「1」） |
+| 2026-11-04 | recon（[../../handoff/discord-server-management/recon.md](../../handoff/discord-server-management/recon.md)）・設計図の置き場所 PO 決定「1」（リポジトリに履歴付き）・設計案（[../../handoff/discord-server-management/design.md](../../handoff/discord-server-management/design.md)、自己審査 APPROVE・PO 承認待ち） |
 
 ## 文書
 
