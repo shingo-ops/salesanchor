@@ -2908,7 +2908,23 @@
       "reissueExpires": "Expires",
       "reissueInvite": "Invite link",
       "reissueInviteFailed": "Could not create the invite link. Please reissue again.",
-      "reissueOnlyOnce": "Once you close this, the code and invite link cannot be shown again."
+      "reissueOnlyOnce": "Once you close this, the code and invite link cannot be shown again.",
+      "sheetTitle": "Delivery sheet",
+      "sheetEmpty": "No sheet registered yet",
+      "sheetAdd": "Register sheet",
+      "sheetEdit": "Edit sheet",
+      "sheetLastDistributed": "Last delivery",
+      "sheetLastResult": "Result",
+      "sheetDelivering": "Delivering",
+      "sheetReasonManualOff": "Turned off manually",
+      "sheetReasonSuspended": "Not delivered: suspended",
+      "sheetReasonNotContracted": "Not delivered: not on a paid contract",
+      "sheetBookId": "Workbook ID",
+      "sheetTabName": "Tab name",
+      "sheetConflictError": "This customer already has a sheet",
+      "sheetViewerNotFoundError": "Customer not found",
+      "sheetSaveError": "Could not save the sheet",
+      "sheetLoadError": "Could not load the sheet"
     },
     "fxRate": {
       "title": "FX Rate Management (SSOT)",
@@ -3286,18 +3302,6 @@
     "noRoles": "No roles found",
     "permissionRequired": "You need tenant.inventory_visibility.edit permission to edit this screen"
   },
-  "firebaseError": {
-    "invalidCredential": "Incorrect email address or password.",
-    "invalidEmail": "Email address format is invalid.",
-    "userDisabled": "This account has been disabled. Please contact your administrator.",
-    "tooManyRequests": "Too many sign-in attempts. Please wait a moment and try again.",
-    "networkRequestFailed": "Network error. Please check your connection and try again.",
-    "operationNotAllowed": "This sign-in method is not currently available. Please contact support.",
-    "expiredActionCode": "This link has expired. Please start over.",
-    "invalidActionCode": "This link is invalid. Please use the latest email.",
-    "requiresRecentLogin": "For security, please sign out and sign in again before changing your password.",
-    "default": "Sign-in failed. Please try again later. Contact support if the problem persists."
-  },
   "accountSettings": {
     "subtitle": "Manage your profile and security",
     "sectionProfile": "Profile",
@@ -3316,7 +3320,6 @@
     "newPassword": "New password",
     "confirmPassword": "Confirm new password",
     "passwordMismatch": "New passwords do not match",
-    "passwordTooShort": "Password must be at least 8 characters",
     "passwordChanged": "Password changed successfully",
     "passkeyTitle": "Sign in with face or fingerprint (passkeys)",
     "passkeyDescription": "Lets you sign in with this device's face or fingerprint check. Your face or fingerprint data never leaves the device.",

@@ -47,12 +47,12 @@ test.describe("LoginPage KGI検証", () => {
   test("KGI-1: 再設定メール送信成功で成功メッセージが表示され、フォームが非表示になる", async ({
     page,
   }) => {
-    // Firebase sendOobCode エンドポイントをモック
-    await page.route("**/identitytoolkit.googleapis.com/**sendOobCode**", async (route) => {
+    // 自社ログインのパスワード再設定の受付をモック
+    await page.route("**/api/v1/auth/password-reset/request", async (route) => {
       await route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({ email: "test@example.com" }),
+        body: JSON.stringify({ status: "accepted" }),
       });
     });
 

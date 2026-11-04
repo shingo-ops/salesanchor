@@ -10,7 +10,7 @@ import {
   type PublicKeyCredentialRequestOptionsJSON,
 } from "@simplewebauthn/browser";
 import { api } from "../api";
-import { isSelfAuth } from "./provider";
+import { isDevSession } from "./devSessionSlot";
 import { adoptAccessToken, postAuth, type TokenResponse } from "./selfAuth";
 
 interface Challenge<O> {
@@ -20,7 +20,7 @@ interface Challenge<O> {
 
 /** ログイン画面のボタンを出してよいか（自社ログインかつ端末が対応しているとき）。 */
 export function passkeySupported(): boolean {
-  return isSelfAuth() && browserSupportsWebAuthn();
+  return !isDevSession() && browserSupportsWebAuthn();
 }
 
 /** パスキーでログインする。成功するとメモリにアクセストークンが入る。 */

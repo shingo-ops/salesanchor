@@ -1,19 +1,13 @@
 /**
  * Vitest グローバルセットアップ（unit テスト専用）
  *
- * Firebase は VITE_FIREBASE_API_KEY 等の環境変数がない状態では
- * 初期化エラーを投げる。unit テストでは Firebase 本体は不要なため、
- * firebase.ts モジュールをスタブに差し替えて初期化をバイパスする。
+ * 毎回の試験の前に、単体試験用の開発ログインを登録する（src/test-utils/devSession.ts）。
+ * 自社ログインの動きを試す試験は、自分の beforeEach で registerDevSession(null) を呼ぶ。
  */
 
-import { vi } from "vitest";
+import { beforeEach } from "vitest";
+import { registerTestDevSession } from "./test-utils/devSession";
 
-vi.mock("./lib/firebase", () => ({
-  auth: {
-    currentUser: null,
-    onAuthStateChanged: vi.fn(),
-    signInWithEmailAndPassword: vi.fn(),
-    signOut: vi.fn(),
-  },
-  default: {},
-}));
+beforeEach(() => {
+  registerTestDevSession();
+});

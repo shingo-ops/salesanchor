@@ -9644,6 +9644,17 @@
           "spreadsheet_id": {
             "title": "Spreadsheet Id",
             "type": "string"
+          },
+          "viewer_account_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Viewer Account Id"
           }
         },
         "required": [
@@ -9656,6 +9667,11 @@
       },
       "DistributionTargetItem": {
         "properties": {
+          "deliverable": {
+            "default": true,
+            "title": "Deliverable",
+            "type": "boolean"
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -9700,6 +9716,28 @@
               }
             ],
             "title": "Name"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "viewer_account_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Viewer Account Id"
           }
         },
         "required": [
@@ -9769,6 +9807,17 @@
               }
             ],
             "title": "Spreadsheet Id"
+          },
+          "viewer_account_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Viewer Account Id"
           }
         },
         "title": "DistributionTargetUpdate",

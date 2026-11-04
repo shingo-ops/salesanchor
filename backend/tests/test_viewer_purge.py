@@ -34,6 +34,8 @@ def _prepare(conn, async_url):
     asyncio.run(_run())
     cur = conn.cursor()
     cur.execute((MIGRATIONS / "20261016_150000_add_viewer_accounts.sql").read_text())
+    # 配信先（pg fixture の migrate が public.tcg_distribution_targets を作る）に名簿の番号の列を足す
+    cur.execute((MIGRATIONS / "20261104_220000_add_tcg_distribution_targets_viewer_account_id.sql").read_text())
     return cur
 
 
@@ -136,6 +138,12 @@ def test_deleting_account_cascades_and_old_login_events_are_purged(pg):  # noqa:
         "VALUES (%s, decode(repeat('ab', 32), 'hex'), 'password_reset', NOW() + interval '30 minutes')",
         (gone,),
     )
+    for vid, name in ((gone, "gone-sheet"), (keep, "keep-sheet")):
+        cur.execute(
+            "INSERT INTO public.tcg_distribution_targets (name, spreadsheet_id, sheet_name, viewer_account_id) "
+            "VALUES (%s, %s, 'tab', %s)",
+            (name, name, vid),
+        )
     _event(cur, keep, 91)
     _event(cur, keep, 89)
     result = _run_purge(engine)
@@ -144,8 +152,11 @@ def test_deleting_account_cascades_and_old_login_events_are_purged(pg):  # noqa:
         ("viewer_login_events", "viewer_id"),
         ("viewer_status_changes", "viewer_id"),
         ("viewer_login_tokens", "viewer_account_id"),
+        ("tcg_distribution_targets", "viewer_account_id"),
     ):
         cur.execute(f"SELECT count(*) FROM public.{table} WHERE {col} = %s", (gone,))
         assert cur.fetchone()[0] == 0, table
     cur.execute("SELECT count(*) FROM public.viewer_login_events WHERE viewer_id = %s", (keep,))
     assert cur.fetchone()[0] == 1  # 89日前は残り、91日前は消える
+    cur.execute("SELECT count(*) FROM public.tcg_distribution_targets WHERE viewer_account_id = %s", (keep,))
+    assert cur.fetchone()[0] == 1  # 残る人の配信先は残る

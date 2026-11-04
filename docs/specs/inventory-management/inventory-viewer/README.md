@@ -19,7 +19,7 @@
 
 - 在庫の行の定義は ADR-1014 の1か所（配信の正本）を読むだけ。本テーマで行の定義を新しく作らない。
 - 閲覧者は社外のお客さんで、人の正本 public.users（ADR-1008）には入れない。閲覧者の正本は public.viewer_accounts の1か所。
-- 本契約のときの取引先（顧客管理 customer-management）とのつなぎ方は、本契約フォームの便で設計する。email・LINE 名を取引先側に二重に持たない。
+- 閲覧者は取引先（顧客管理 customer-management）につながない。本契約のお客さんの管理（配信するシート・請求先）は閲覧者管理ページで行う（2026-11-04 PO 承認。設計: docs/handoff/viewer-customer-sheet/design.md）。email・LINE 名を取引先側に二重に持たない。
 - Discord の ID を自動で取る仕組みは別のテーマ（本テーマの対象外）。
 
 ## 維持の仕組み

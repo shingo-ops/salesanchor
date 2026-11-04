@@ -69,7 +69,7 @@ mode: handoff
 | postal_code | TEXT | 不可 | 数字7桁だけ（'^[0-9]{7}$'。ハイフンは画面で外してから保存し、表示のときに付ける） |
 | address | TEXT | 不可 | 1〜200 字 |
 | phone | TEXT | 不可 | 数字10〜11桁だけ（'^[0-9]{10,11}$'。ハイフンは保存しない） |
-| invoice_email | TEXT | 可 | 3〜254 字で '@' を含む（名簿の email の CHECK と同じ形） |
+| invoice_email | TEXT | 可 | 3〜254 字で '@' を含む（名簿の email には CHECK が無いので、見本にしない。CHECK の式は card-bin2.md §3-1） |
 | created_at / updated_at | TIMESTAMPTZ | 不可 | DEFAULT now()。updated_at は保存のたびに now() |
 
   - 各列に COMMENT を付ける。§7 の「1か所だけ」の検査: information_schema.columns で、table_schema='public' のうち bill_to_name・contact_name・invoice_email・party_type の4列を持つ表が viewer_billing_profiles の1つだけであること、かつ viewer_accounts と tcg_distribution_targets に請求先の7列のどれも無いことを数える（postal_code・address・phone は B2B の tenant_* の表にもあるので、public と名簿・配信先に絞って見る）。
@@ -123,6 +123,7 @@ mode: handoff
 - 部品の当てはめ（観測事実: 閲覧者管理ページ frontend/src/pages/super-admin/ViewerAccountsPage.tsx:15〜:28 が既に金型の PageLayout・Button・Badge・DataTable・EmptyState・Drawer・Stack・Modal・TextField・Radio・Select を読み込んでいる）:
   - 「配信するシート」: Drawer の中に Stack で、シートの名前・最後の配信時刻・結果を文字で、配信していない理由を Badge で出す。登録・変更は Modal＋TextField（ブックの番号・タブ名）＋Button。
   - 「請求先」: 7項目を文字で出すだけ（直すのはお客さんのフォーム）。まだ無いときは EmptyState。
+  - 請求先を読む口（2026-11-04 便2 カードで補った。画面に出すには読む API が要るため）: GET /api/v1/super-admin/viewers/{viewer_id}/billing-profile（require_super_admin）。行が無ければ 200 で null。名簿の一覧・詳細の応答には請求先を足さない（正本は表1つ・読む口も1つ）。
   - 「請求先フォームを送る」: Button。結果（部屋へ送れた／送れなかった／部屋なし、メールの手配）は今の発行の操作と同じ出し方にする。
   - 新しい部品は要らない。
 
@@ -145,11 +146,11 @@ mode: handoff
   - メールの送信部は新しく1つ作る（例 send_viewer_billing_form_email(to_addr, subject, body)）。今の _send_reset_mail（auth_mail.py:97〜:117）は :108 で本文に format(reset_url=…) をかけ直すので、テンプレートから作った文（{ や } を含み得る）を渡すと壊れるか例外になる。新しい関数は format をかけず、受け取った文をそのまま送る。SMTP の設定の読み方・宛先の伏せ方・失敗をログにだけ残す形（:99〜:102・:114〜:117）は同じにする。_send_reset_mail は変えない。
   - テンプレートが無いとき（load_body が None。viewer_message_templates.py:111）: 鍵を作らず、メールも部屋も送らず、API は 503（今の管理 API と同じ _TEMPLATE_NOT_FOUND。backend/app/routers/super_admin_viewers.py:189・:220・:367〜:368）を返して画面で知らせる。差し込み後に 2000 字を超えて render が None を返したとき（:135・:154）も同じ。どちらも鍵を作る前か、作った同じトランザクションを rollback して、鍵は残さない。
   - テンプレートの初期値の入れ方（観測事実: migrations/20261020_120000_create_viewer_message_templates.sql:2 は「専用 CLI（viewer_template_cli）で入れる」と書くが、その CLI は origin/main に無い）: 管理画面の文面テンプレートのページから入れる。行が無い鍵は保存で INSERT される（viewer_message_templates.py:185〜:192、backend/app/routers/super_admin_viewers.py:237〜:259）。本番へ出したあと、ボタンを使う前に PO か管理者が文を1回保存する。これを本番の確かめの手順に入れる。
-  - 部屋へは今ある送り方を使う（backend/app/services/viewer_room_notice.py:25 send_room_notice）。部屋が無い人は送らず、結果を no_room として画面に出す（同ファイル :80〜:83 と同じ扱い）。
+  - 部屋へは今ある送り方を使う（backend/app/services/viewer_room_notice.py:69 notify_prepared に (True, 文) と名簿の行を渡す。中で :25 send_room_notice が送る）。部屋が無い人は送らず、結果を no_room として画面に出す（同ファイル :80〜:83 と同じ扱い）。
   - 管理 API（置き場所は backend/app/routers/super_admin_viewers.py。今の reissue-signup-code（:358〜:399）と同じ並び）:
     - POST /api/v1/super-admin/viewers/{viewer_id}/send-billing-form（require_super_admin）。本文なし。
     - 順番: ①テンプレートの本文を読む（無ければ 503・何も変えない。:363〜:367 と同じ）②services の1つの関数で古い鍵を消して新しい鍵を作る（active 以外は 409 viewer_status_conflict、無い人は 404。:51〜:57 の _ERROR_STATUS をそのまま使う）③差し込み後の文が作れなければ rollback して 503 ④commit ⑤commit の後で部屋へ送る（viewer_room_notice の notify_prepared の形。DB を開けたまま Discord を待たない）⑥メールを裏で送る手配をする。
-    - 応答（新しい型 ViewerBillingFormSendResponse）: room_notice（"sent"／"failed"／"no_room"。viewer_room_notice.py:80 と同じ値。テンプレートは①で確かめ済みなので no_template は出ない）、room_notice_text（部屋へ送ろうとした文。リンクを含む）、mail_queued（メールを送る手配をしたか）、expires_at（リンクの期限）。
+    - 応答（新しい型 ViewerBillingFormSendResponse）: room_notice（"sent"／"failed"／"no_room"。viewer_room_notice.py:80 と同じ値。テンプレートは①で確かめ済みなので no_template は出ない）、room_notice_text（部屋へ送ろうとした文。notify_prepared（:69〜:83）の戻り値どおり、sent のときも返る。リンクを含む）、mail_queued（メールを送る手配をしたか）、expires_at（リンクの期限）。
     - 部屋が無い・送れなかったときは room_notice_text を返し、画面でコピーできるようにする（今の状態変更の応答 :84〜:86 と同じ扱い）。文にはリンク（鍵）が入る。今の reissue-signup-code も申込コードと文を画面へ返している（:394〜:399）ので、同じ扱いにする。見られるのは super admin だけ。ログには文も鍵も出さない。
   - 画面には、部屋へ送れたか（送れた／送れなかった／部屋なし）と、メールを送る手配をしたことを出す。メールは裏で送るので、届いたかは画面に出せない（auth_mail.py:97〜:117 は失敗をログにだけ残す）。
   - 送り直すと前のリンクは使えなくなる。同じ用途の古い鍵を消してから作るため（viewer.py:331〜:334 と同じ形）。
@@ -166,6 +167,7 @@ mode: handoff
     2. POST /api/v1/viewer/billing-form/submit {token, 7項目}: 先に項目を検査する（鍵はまだ使わない。viewer.py:364〜:366 と同じ順）。次に DELETE…RETURNING で鍵を使い切る（:369〜:378 と同じ）。名簿の状態が active でなければ、鍵を消したまま commit して 400（:383〜:391 と同じ。使えない鍵を残さない）。active なら viewer_billing_profiles に INSERT … ON CONFLICT (viewer_account_id) DO UPDATE で書き、同じトランザクションで commit する。保存に失敗したら rollback し、鍵は残る（同じリンクで送り直せる）。
   - 2本とも、最初に出どころの検査（_require_app_origin。backend/app/auth/origin.py の require_app_origin、viewer.py:359 と同じ）をし、回数制限（check_auth_rate_limit。backend/app/cache.py:311、viewer.py:361〜:362 と同じ。超えたら 429）をかける。鍵が無効のときは record_auth_failure（cache.py:328。viewer.py:380 と同じ）を数える。
   - 返す値と記録に、鍵・宛名・住所・電話を出さない（ログは名簿の番号と結果だけ）。
+  - 入口の見張りでの扱い（2026-11-05 審査 HIGH-1 で補った）: 2本は閲覧者のトークンを見ない公開の入口として、backend/tests/test_viewer_isolation.py:27〜:62 の _PUBLIC_NO_AUTH_ROUTES に足す。理由: その一覧の定義（:23「トークンを見ない公開ルート。閲覧者のトークンで得られるものは、トークン無しと同じ」）に当てはまる。同じ形の B2B の請求先フォーム POST /api/v1/public/register/change-billing が既にそこにある。backend/app/auth/viewer_allowlist.py:9〜:19 の VIEWER_ROUTE_ALLOWLIST には足さない。ADR-1019 決定5（閲覧者のトークンで呼べる7本）は変えない。
 - B2B の登録フォーム（public.registration_tokens）を共用するかの比較（recon §9。PO 2026-11-04「顧客別のフォームを発行する機能はすでに使ってるので共用で使い回せる？」）:
 
 | 案 | 中身 | B2B への影響 | 正本 |
@@ -190,7 +192,13 @@ mode: handoff
 | 鍵の用途 billing_form | migrations/20261016_150000_add_viewer_accounts.sql:48 の CHECK を変える新しい migration と、:54 の COMMENT の書き直し |
 | 文面テンプレートの鍵 billing_form_request | viewer_message_templates.py の LEDGER（:43〜:53）。migrations/20261020_120000_create_viewer_message_templates.sql:11 の「台帳の9件」の COMMENT を10件に。backend/tests/test_viewer_message_templates.py:22〜:25 の KEYS。frontend/src/pages/super-admin/ViewerTemplatesPage.test.tsx の KEYS（:15〜:18）と PLACEHOLDERS（:19〜:29）。backend/tests/viewer_template_fixtures.py の DEFAULT_BODIES。i18n の名前と使う場面（frontend/src/locales/ja.json:2805・:2816。:2797〜:2805 が名前、:2808〜:2816 が使う場面 と en.json の同じ位置の並び）。差し込み項目の説明 placeholders（ja.json:2818〜:2828 と en.json の同じ並び）に form_url（請求先フォームのURL・自動で入ります）と form_expires（請求先フォームのリンクの期限の日付）の2行 |
 | 配信先の判定の値（deliverable と理由） | §3-3 に挙げた3か所（配信前の点検・解析ダッシュボード・閲覧者管理ページ）。配信先の画面は変えない（2026-11-04 PO 決定。原文「配信先のページでは確認できなくて良い」） |
-| 公開の決めごと | ADR-1019:9、docs/specs/inventory-management/inventory-viewer/README.md:22、gas-viewer-fresh-fast/design.md:70 の改訂（recon §2）。プライバシーポリシー |
+| ログインなしの入口（フォームの2本） | backend/tests/test_viewer_isolation.py の _PUBLIC_NO_AUTH_ROUTES に2本（§3-6「入口の見張りでの扱い」）。足さないと、Origin なしで 403 を返して試験が落ちる |
+| 書き込みの口3本（送る API・フォームの2本） | backend/app/realtime/topics.py の NO_SIGNAL_ROUTES に3本（閲覧者の既にある行 :123〜:135 と同じ扱い。社外の閲覧者のことで、画面更新の通知対象外）。足さないと backend/tests/test_realtime_topics.py が赤になる（topics.py:5） |
+| 全部の口を数える見張り（2026-11-05 に洗い出し） | app.routes を使う試験は origin/main で7本: test_viewer_isolation・test_realtime_topics（上の2行で対応）、test_origin_check_not_on_get（GET は Origin を確かめない設計なので対応不要）、test_conditions_permission_keys・test_fx_rate_admin_router（対象のパスが conditions・product-categories・fx-rate だけ）、test_permission_catalog・test_tenant_admin_ssot（口の一覧を見張らない）。scripts/check-dangling-routes.js は口を消したときだけ見るので対象外 |
+| 変えた SQL を最小の土台で流す確かめ（.github/workflows/migration-test.yml の PUBLIC_SQL） | 土台に public.viewer_login_tokens の最小定義を足す（新しい migration が CHECK を付け替え COMMENT を書くため）。public.viewer_accounts は便1の直しで入る。便1 #5131 は土台に viewer_accounts が無くこの確かめで止まった |
+| 読み込み中に中身を消す形の見張り（frontend/scripts/check-loading-clear.js・ADR-1054） | 管理画面で請求先を読むのは useApiQuery。set〇〇Loading(true) を新しく作らない。baseline を変えない。便1 #5131 は setSheetLoading(true) を足してこの見張りで止まった |
+| 既にある migration の中身を変える（create_ai_cloud_views.sql に分類2行） | scripts/migration-guard/reference-allowlist.tsv の同じファイルの行の sha256 と decision_ref（前例 b5e818dec）。直さないと scripts/check-migration-value-writes.py が「中身が変わったので例外は効かない」で止める（migration-guard.yml のチェック8・全件走査）。2026-11-05 に migration-guard.yml の全17検査と scripts/migration-guard の一覧のファイル4つを洗い出し、便2 で中身を変える既存の3本のうち一覧に載るのはこの1本だけ。新しい2表は保護対象の表（protected-tables.txt）に無い |
+| 公開の決めごと | ADR-1019:9、docs/specs/inventory-management/inventory-viewer/README.md:22、gas-viewer-fresh-fast/design.md:70 の改訂（recon §2）は便2 カードの文書 PR で直した。プライバシーポリシーは便2 の実装で直す（card-bin2.md §3-5） |
 
 ## 4. 代替案と選んだ理由
 
@@ -206,7 +214,7 @@ mode: handoff
 - 名簿の自動削除で請求書の宛先が消える → 3-4 のとおり、請求書は発行時点の写しを持ち、名簿が消えても残す。
 - 停止したお客さんのシートに書き続ける → Q1 で決定済み（停止したら自動で止め、停止を外したら自動で再開する）。§3-3 の判定1か所で守り、§7 の試験で確かめる。
 - 個人情報が増える → ポリシーの書き足し、ai_ro での隠し設定、PR に個人名を載せない。
-- 既存の決定との食い違い（ADR-1019:9・README:22・gas-viewer-fresh-fast/design.md:70）→ 同じ PR で改訂する。
+- 既存の決定との食い違い（ADR-1019:9・README:22・gas-viewer-fresh-fast/design.md:70）→ 便2 カードの文書 PR で改訂した（製品コードを含まない文書だけの PR）。
 
 ## 6. PO に決めてもらうこと（全部決まるまで先へ進まない）
 
