@@ -9340,6 +9340,49 @@
         "title": "DiscordConfigUpdate",
         "type": "object"
       },
+      "DiscordOAuthStartRequest": {
+        "properties": {
+          "purpose": {
+            "default": "customer",
+            "enum": [
+              "customer",
+              "own"
+            ],
+            "title": "Purpose",
+            "type": "string"
+          }
+        },
+        "title": "DiscordOAuthStartRequest",
+        "type": "object"
+      },
+      "DiscordOwnConfigResponse": {
+        "properties": {
+          "connected_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Connected At"
+          },
+          "guild_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Guild Id"
+          }
+        },
+        "title": "DiscordOwnConfigResponse",
+        "type": "object"
+      },
       "DiscordTicketConfigResponse": {
         "properties": {
           "large_channel_id": {
@@ -39875,6 +39918,51 @@
         ]
       }
     },
+    "/api/v1/admin/discord-config/own": {
+      "delete": {
+        "description": "自社用サーバーの登録を外す（own の行だけ消す。顧客用の行と Discord のサーバーそのものは消えない）。",
+        "operationId": "delete_discord_own_config_api_v1_admin_discord_config_own_delete",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Discord Own Config",
+        "tags": [
+          "discord"
+        ]
+      },
+      "get": {
+        "description": "自社用サーバーの登録を取得する。未登録なら guild_id=None。",
+        "operationId": "get_discord_own_config_api_v1_admin_discord_config_own_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiscordOwnConfigResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Discord Own Config",
+        "tags": [
+          "discord"
+        ]
+      }
+    },
     "/api/v1/admin/discord-ticket-config": {
       "get": {
         "description": "チケット機能設定を取得する。未設定の場合はデフォルト値を返す。",
@@ -46168,6 +46256,23 @@
       "post": {
         "description": "Discord Bot Invite URL を発行し、state を Redis に保存する。",
         "operationId": "discord_oauth_start_api_v1_discord_oauth_start_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/DiscordOAuthStartRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "content": {
@@ -46179,6 +46284,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "security": [

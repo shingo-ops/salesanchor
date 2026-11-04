@@ -238,7 +238,7 @@ async def deploy_ticket_button(
         text("""
             SELECT c.ticket_button_channel_id, d.guild_id
             FROM public.tenant_discord_ticket_config c
-            LEFT JOIN public.tenant_discord_config d ON d.tenant_id = c.tenant_id
+            LEFT JOIN public.tenant_discord_config d ON d.tenant_id = c.tenant_id AND d.purpose = 'customer'
             WHERE c.tenant_id = :tid
         """),
         {"tid": tenant_id},

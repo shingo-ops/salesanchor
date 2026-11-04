@@ -66,7 +66,7 @@ async def _get_guild_and_role_names(
                 FROM public.tenant_discord_config dc
                 LEFT JOIN public.tenant_discord_ticket_config tc
                        ON tc.tenant_id = dc.tenant_id
-                WHERE dc.tenant_id = :tid
+                WHERE dc.tenant_id = :tid AND dc.purpose = 'customer'
             """),
             {"tid": tenant_id},
         )

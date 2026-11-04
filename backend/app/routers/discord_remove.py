@@ -60,7 +60,7 @@ async def _get_lead_discord_info(
 
 async def _get_guild_id(db: AsyncSession, tenant_id: int) -> str:
     result = await db.execute(
-        text("SELECT guild_id FROM public.tenant_discord_config WHERE tenant_id = :tid"),
+        text("SELECT guild_id FROM public.tenant_discord_config WHERE tenant_id = :tid AND purpose = 'customer'"),
         {"tid": tenant_id},
     )
     row = result.first()
