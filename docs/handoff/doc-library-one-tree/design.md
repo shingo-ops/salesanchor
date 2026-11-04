@@ -76,7 +76,7 @@
 ### 5-2. たどれる範囲を広げる（G5）
 
 - 正式な数え方は既存の CI `scripts/ci/check_doc_index.py`（recon §4）。範囲（142 行）に docs/agents と docs/runbooks を足す。数えるのは unreached だけ。broken_link は範囲を広げた分を数えない（runbooks の PR 本文の例 3 件を誤って × にしないため。今の範囲の broken_link の扱いは変えない）。
-- docs/agents/generator.md は aeon-script-check.yml が使っている（20・35・74 行）。「使わない」印ではなく、`docs/ai-agents/codex-operations.md:51` の `docs/agents/*` を、7 つをリポジトリの根からのパス（`docs/agents/generator.md` の形）で書いた一覧に書き換えてたどれるようにする。ファイル名だけ（`generator.md`）で書くと、点検（`scripts/ci/check_doc_index.py` 83〜102 行）は書いた文書のフォルダ（docs/ai-agents/）から探すので、たどれないまま残る。今たどれている 6 件も根からのパスで書かれている（例: `docs/ai-agents/design-partner.md:9`）。
+- docs/agents/generator.md は aeon-script-check.yml が使っている（20・35・74 行）。「使わない」印ではなく、`docs/ai-agents/codex-operations.md:51` の `docs/agents/*` を、7 つをリポジトリの根からのパス（`docs/agents/generator.md` の形）で書いた一覧に書き換えてたどれるようにする。ファイル名だけ（generator.md）で書くと、点検（`scripts/ci/check_doc_index.py` 83〜102 行）は書いた文書のフォルダ（docs/ai-agents/）から探すので、たどれないまま残る。今たどれている 6 件も根からのパスで書かれている（例: `docs/ai-agents/design-partner.md:9`）。
 
 ### 5-3. 2つの根の正を決める（G6）
 
