@@ -37,7 +37,7 @@ ADR-1054（全画面を押した瞬間に開く速さにする）の点検用の
 - 権限の画面 `frontend/src/pages/roles/RolesPage.tsx`
   - :145-146 category ごとにまとめる。
   - :384 見出しに category の文字列をそのまま出す。
-  - :415 各権限は description を出す。
+  - :416 各権限は description を出す。
   - CATEGORY_META（:57-66）に無い category は既定アイコンで順番 100。
 
 ## 3. コードが求めるのに一覧に無いキー（全 11 件）
@@ -69,7 +69,7 @@ ADR-1054（全画面を押した瞬間に開く速さにする）の点検用の
 
 ## 4. 見つけた別の穴（書き込みが閲覧キーで通る）
 - `backend/app/routers/conditions.py:450-515` 取り込みの確定 `/conditions/import/commit`
-  - public.conditions に INSERT と UPDATE をする（:487-511 付近）。
+  - public.conditions に INSERT と UPDATE をする（:476-503。UPDATE は :481-490 付近、INSERT は :492-502 付近）。
   - それなのに求めるキーは conditions.view（:452）。下見（:414）も同じ。
   - 画面側も取り込みボタンを conditions.view で出す（ConditionImportPage.tsx:130）。
 - 今は conditions.view が誰にも付かないため、実害は出ていない。
@@ -77,7 +77,7 @@ ADR-1054（全画面を押した瞬間に開く速さにする）の点検用の
 - 商品カテゴリの取り込みは product_categories.edit で守られている（:191、:231）。同じ穴は無い。
 
 ## 5. データの持ち主（どの表を書くか）
-- 状態マスタ: public.conditions。`tenant_id = :tenant_id` の行だけを読み書きする（conditions.py:1-10、:487-511）。
+- 状態マスタ: public.conditions。`tenant_id = :tenant_id` の行だけを読み書きする（conditions.py:1-10、:476-503）。
 - 商品カテゴリ: public.tcg_product_categories。テナントの行だけを扱い、共用の行（tenant_id IS NULL）は読まない（product_categories.py:1-5、:107、:166）。
 - `/conditions/catalog` は共用の行（tenant_id IS NULL）を読むだけ（conditions.py:160-180）。
 

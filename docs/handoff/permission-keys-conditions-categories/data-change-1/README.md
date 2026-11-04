@@ -63,15 +63,14 @@ AUDIT ts=2026-11-04T00:18:05Z sha=0594b6bae4cd rows=4 ms=127 result=ok
 
 ## 戻し方
 7 行を消す。各社の role_permissions の行は外部キーの ON DELETE CASCADE（backend/app/services/tenant.py:514）で一緒に消える。点検用の役割に付けた 2 キーも消える。
-```sql
-BEGIN;
-SET LOCAL app.is_operator = 'true';
-DELETE FROM public.permissions WHERE category IN ('状態マスタ','商品カテゴリ') AND resource IN ('conditions','product_categories');
--- 消えた件数が 7 でなければ ROLLBACK する
-COMMIT;
-```
-- 削除にあたるため、PO の確認と使い捨ての許可が要る。
-- 消したあと最大 300 秒は、キャッシュに残った権限で画面が開ける（backend/app/cache.py:18）。
+| 段 | ファイル | 中身 |
+|---|---|---|
+| 戻し DRY-RUN | `09_rollback_dryrun.sql` | 7 行を消し、件数ガード（消した数 7・残り 0・全体 123）を通してから必ず ROLLBACK |
+| 戻し本実行 | `09_rollback_apply.sql` | 同じ件数ガードが通ったときだけ COMMIT |
+- 流し方は上の 01_dryrun・01_apply と同じ形で、ファイル名だけが違う。DRY-RUN の結果が ROLLBACK_DONE で終わってから本実行へ進む。
+- 削除にあたるため、PO の確認と使い捨ての許可が要る（DRY-RUN と本実行でそれぞれ 1 回）。
+- 全体 123 は便1-データの前の実測値。戻すまでに別の権限が足されていたら、ガードで止まる。そのときは数え直してからファイルを直す。
+- 消したあと最大 300 秒は、キャッシュに残った権限で画面が開ける（backend/app/cache.py:19）。
 
 ## 実行結果（実施後に記入）
 | 項目 | 内容 |

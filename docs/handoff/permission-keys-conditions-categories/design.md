@@ -26,8 +26,8 @@
 |---|---|---|
 | K1 | 本番の権限の一覧が 130 件になり、§4-2 の 7 キーが category「状態マスタ」「商品カテゴリ」で入っている | data-change-1/02_verify_read.sql を読み取りの道で流す（K1_TOTAL=130・K1_NEW_COUNT=7） |
 | K2 | テナント 001 の所有者で管理センターを開くと「状態マスタ」と「商品カテゴリ」がメニューに出る。両方の一覧が開け、通信が 200 になる（`/api/v1/conditions`・`/api/v1/conditions/catalog`・`/api/v1/product-categories`） | Chrome で画面を開き、画面の写しと通信の記録を取る（Opus） |
-| K3 | 点検用（見るだけ）の役割は、状態マスタ・商品カテゴリの一覧を開ける。CSV 取り込みのボタンは出ず、取り込みの確定 API は 403 になる | 試験（§6 の T1〜T4）と、本線の画面点検（prod-ui-check）の速さの表で 2 画面が 403 なしで測れること |
-| K4 | 状態マスタの CSV 取り込み（下見・確定）は、登録と編集の両方の権限を持つ人だけが使える | 試験 T1・T2 |
+| K3 | 点検用（見るだけ）の役割は、状態マスタ・商品カテゴリの一覧を開ける。CSV 取り込みのボタンは出ず、取り込みの確定 API は 403 になる | 試験（§6 の T1〜T7）と、本線の画面点検（prod-ui-check）の速さの表で 2 画面が 403 なしで測れること |
+| K4 | 状態マスタの CSV 取り込み（下見・確定）は、登録・編集・削除の 3 つ全部の権限を持つ人だけが使える | 試験 T1・T2・T5・T6・T7 |
 | K5 | 権限の一覧に無いキーをコードが求めたら、30 分以内に Discord の運用の通知に出る（便2） | 警報の試験（promtool）と、本番の /metrics の値が 0 であること |
 
 KGI の数値と ○× は、PO の承認前の草案です。
@@ -49,6 +49,10 @@ KGI の数値と ○× は、PO の承認前の草案です。
 - 権限の一覧の正本を DB とコードのどちらに置くか（ADR-1007:73 の別の ADR）。本設計は今どおり DB を正とし、コードの写しを作らない。
 - 権限の画面の category 見出しの翻訳。今の 26 の category はすべて DB の日本語をそのまま出している（RolesPage.tsx:384）。今回の 2 つも同じ扱いにする。
 - 画面の見た目・部品は変えない（ボタンを出す条件だけを変える）。
+- 1 件の編集（PATCH /conditions/{id}・conditions.update）で is_active を FALSE にできること。
+  - 実物: 編集できる項目の集合 `_UPDATABLE`（conditions.py:120-124）に is_active が入っている。受け取りの型も is_active を持つ（backend/app/schemas/condition.py:35）。
+  - つまり今も、編集の権限だけで 1 件ずつなら論理削除と同じことができる。取り込みだけの穴ではない。
+  - 編集から is_active を外すと、今その操作をしている人の使い方が変わる。PO の判断が要るので、本設計では変えず、PO に別件として聞く。
 
 ## 3. 代替案と選択理由
 | 案 | 中身 | 採否 | 理由 |
@@ -72,19 +76,23 @@ KGI の数値と ○× は、PO の承認前の草案です。
 | 行 | 経路 | 変更前 | 変更後 |
 |---|---|---|---|
 | :163 | GET /conditions/catalog | `require_permission("work_items.view")` | `require_permission("conditions.view")` |
-| :414 | POST /conditions/import/preview | `dependencies=[Depends(require_permission("conditions.view"))]` | `dependencies=[Depends(require_permission("conditions.create")), Depends(require_permission("conditions.update"))]` |
+| :414 | POST /conditions/import/preview | `dependencies=[Depends(require_permission("conditions.view"))]` | `dependencies=[Depends(require_permission("conditions.create")), Depends(require_permission("conditions.update")), Depends(require_permission("conditions.delete"))]` |
 | :452 | POST /conditions/import/commit | 同上 | 同上 |
-- 取り込みは新しい行の登録と既存の行の上書きをする（:487-511 付近）。そのため、登録と編集の両方を求める。dependencies に 2 つ並べると、両方を満たさないと通らない。
+- 取り込みは次の 3 つをする。そのため、登録・編集・削除の 3 つ全部を求める。dependencies に並べると、全部を満たさないと通らない。
+  - 新しい行の登録（INSERT。conditions.py:492-502 付近）。
+  - 既存の行の上書き（UPDATE。:481-490 付近）。
+  - is_active を CSV の値で上書きする（取り込みの読み取り :85-101 が is_active を読み、UPDATE で書く）。is_active を FALSE にすることは、削除の経路 delete_condition（:325-360・conditions.delete）がしている論理削除と同じ結果になる。だから削除の権限も求める（クラウドの設計審査の指摘④）。
+  - 出典: FastAPI 公式「Dependencies in path operation decorators」。`dependencies=[Depends(verify_token), Depends(verify_key)]` の例で、どちらの依存も失敗すると HTTPException で止まる（Context7 /websites/fastapi_tiangolo、2026-11-04 確認）。require_permission の checker も、キーが無ければ 403 の HTTPException を出す（dependencies.py:646-672）。
 - 一覧（:130）・1 件（:186）・CSV 出力（:371）・別名の一覧（:522）は conditions.view のまま。
 - catalog は、共用の状態の行（tenant_id IS NULL）を読むだけ（:160-180）。呼ぶのは状態マスタの画面だけ（ConditionsPage.tsx:150）。
 
 (3) `frontend/src/pages/conditions/ConditionImportPage.tsx:130`
 - 変更前: `const canImport = hasPermission("conditions.view");`
-- 変更後: `const canImport = hasPermission("conditions.create") && hasPermission("conditions.update");`
+- 変更後: `const canImport = hasPermission("conditions.create") && hasPermission("conditions.update") && hasPermission("conditions.delete");`
 
 (4) `frontend/src/pages/conditions/ConditionsPage.tsx:374-376`（取り込みボタン）
 - 変更前: conditions.view の枝の中で、条件なしに出している。
-- 変更後: `{hasPermission("conditions.create") && hasPermission("conditions.update") && ( ... )}` で包む。ボタンの部品・文言・data-testid は変えない。
+- 変更後: `{hasPermission("conditions.create") && hasPermission("conditions.update") && hasPermission("conditions.delete") && ( ... )}` で包む。ボタンの部品・文言・data-testid は変えない。
 - CSV 出力ボタン（:371-373）は conditions.view のまま出す。
 
 触らない範囲:
@@ -120,7 +128,7 @@ KGI の数値と ○× は、PO の承認前の草案です。
 1. 便1-コードをマージし、本番に反映する。
    - 反映の確認: 本番で `/api/v1/conditions/import/commit` の求めるキーが変わったこと。キーがまだ無いので、所有者でも今と同じく 403 になる。今の見え方は変わらない。
 2. 便1-データの DRY-RUN → 本実行 → 事後確認（K1）。
-3. 300 秒待つ（権限のキャッシュ。backend/app/cache.py:18）。そのあと K2 を見る。
+3. 300 秒待つ（権限のキャッシュ。backend/app/cache.py:19）。そのあと K2 を見る。
 4. 便1-画面操作 → K3 の確認。翌朝の本線の画面点検で、2 画面が 403 なしで測れたかを見る。
 5. 便2。
 
@@ -149,9 +157,14 @@ DB を正とし、コードに一覧の写しを作らない。
 (3) `backend/app/metrics.py`
 - Gauge を足す: `salesanchor_permission_keys_missing`。説明は「コードが求めるのに権限の一覧に無いキーの数」。
 - /metrics を読んだときに更新する。DB を読むのは最大 300 秒に 1 回。結果はプロセスの中に置く。
-- DB が読めないときは -1 を入れる。0 にはしない（「欠け無し」と取り違えないため）。
+- 値の意味を 3 つに分ける。
+  - -1: まだ数えていない、または数えられなかった。Gauge を作った直後に `.set(-1)` を入れる（作りたての値に頼らず、「欠け無し」の 0 と見分けるため。クラウドの設計審査の指摘⑥。作りたての値そのものは公式の説明に書かれておらず未確認だが、直後に -1 を入れるのでこの設計は作りたての値に依存しない。Context7 /prometheus/client_python 2026-11-04）。DB が読めないときも -1。
+  - 0: 数えて、欠けが無かった。
+  - 1 以上: 欠けの数。
 - DB の接続は `backend/app/database.py:36` の AsyncSessionLocal を使う。
-- 既存の _update_viewer_inventory_gauges と同じ形にする。
+- 既存の _update_viewer_inventory_gauges（metrics.py:81-90）は Redis の値を読むだけで DB は読まない。この見張りは DB を読む点が違う。
+  - そのため、DB の読みに時間の上限（2 秒）を付け、超えたら -1 にする。/metrics の応答を遅らせないため。
+  - 呼び出しの形（/metrics の中で await する）だけを既存に合わせる。
 
 (4) `monitoring/prometheus/alert_rules.yml`
 - 規則を足す: `PermissionKeyMissing`。式は `salesanchor_permission_keys_missing{job="backend"} > 0`、for 10m、severity warning、tier ticket。
@@ -179,12 +192,22 @@ DB を正とし、コードに一覧の写しを作らない。
 ## 6. 試験（便1）
 新しいファイル backend/tests/test_conditions_permission_keys.py（新規）。DB は使わない。
 
+名前の試験（T1〜T4）:
 - T1: アプリの経路から POST /api/v1/conditions/import/commit を探す。
-  - その dependencies の checker の required_permission_keys が {conditions.create} と {conditions.update} の 2 つであること。
+  - その dependencies の checker の required_permission_keys が {conditions.create}・{conditions.update}・{conditions.delete} の 3 つであること。
 - T2: /conditions/import/preview も同じであること。
 - T3: GET /api/v1/conditions/catalog の求めるキーが {conditions.view} であること。
 - T4: conditions・product-categories のすべての経路で、求めるキーが §4-2 の 7 キーのどれかであること。
   - 将来、一覧に無いキーを書いたら試験で止める。便2 の前の簡易版。
+
+実動の試験（T5〜T7。クラウドの設計審査の指摘⑦）:
+- 置き場所は backend/tests/test_conditions_import_permission.py（新規）。client の試験の形にする。
+- 前例: backend/tests/test_order_purchase_details.py:414-457。`patch("app.auth.dependencies.load_user_permissions", 差し替え)` で、持っている権限を絞って呼び、403 を確かめている。
+  - 全試験で全権限を返す差し替え（backend/tests/conftest.py:1862-1879 の bypass_permissions）の上から、試験の中だけ差し替える。
+- T5: {conditions.view} だけで import/preview と import/commit を呼ぶと、どちらも 403。
+- T6: 3 つのうち 1 つだけ欠けた組（view＋create＋update、view＋create＋delete、view＋update＋delete）で、どちらも 403。
+- T7: view＋create＋update＋delete で import/preview を呼ぶと 403 にならない（中身の正しさは既存の試験に任せ、ここでは 403 でないことだけを見る）。
+- import/commit の T7 は、書き込みが起きるので試験 DB の行を作ってから呼ぶ。作り方は実装のときに既存の conditions の試験に合わせる。無ければ preview だけとし、その旨を PR に書く。
 - 画面側: 既存の vitest の書き方に合わせる。ConditionImportPage で、conditions.view だけを持つ利用者に取り込みパネルが出ないことを確かめる。
   - 試験ファイルの置き場所は、実装のときに既存の画面試験ファイル（拡張子 .test.tsx）の並びに合わせる。
 
@@ -227,10 +250,21 @@ DB を正とし、コードに一覧の写しを作らない。
 - 未解決（PO に戻すもの）:
   - 5 社の所有者・管理者に 2 つのメニューが出ること。
   - 3 キー（companies.view・customers.edit・leads.edit）の扱い。
+  - 1 件の編集で is_active を FALSE にできる今の形（§2 対象外）。
+
+### 10-1. クラウドの設計審査 1 回目（2026-11-04・判定 REVISE）と直したこと
+| 指摘 | 直したこと |
+|---|---|
+| ① 行番号のずれ（取り込みの書き込み・cache.py・RolesPage） | :476-503／:481-490／:492-502、cache.py:19、RolesPage.tsx:416 に直した |
+| ② dependencies を 2 つ並べると両方必要 | 合っている。出典を §4-1 に足した |
+| ④ 取り込みが is_active を書くので、削除の権限なしで消せる | 取り込みに conditions.delete も求める（§4-1）。編集の is_active は §2 対象外として PO に聞く |
+| ⑤ 戻しの件数確認がコメントだけ | 09_rollback_dryrun.sql・09_rollback_apply.sql を足し、件数ガードを付けた |
+| ⑥ 見張りの作りたての値と「欠け無し」の区別・DB を読む点 | -1 の初期化と時間の上限 2 秒を §5-2 に書いた |
+| ⑦ 名前だけの試験 | 実動の試験 T5〜T7 を §6 に足した |
 
 ## 維持の仕組み
 - 守り手:
-  - 便1 は backend/tests/test_conditions_permission_keys.py（新規）（CI の pytest）。
+  - 便1 は backend/tests/test_conditions_permission_keys.py（新規）と backend/tests/test_conditions_import_permission.py（新規）（CI の pytest）。
   - 便2 は `monitoring/prometheus/alert_rules.yml` の PermissionKeyMissing と backend/tests/test_permission_catalog.py（新規）。
   - いずれも実装の PR で作る。この設計の PR の時点では、まだ無い。
 - 対象: 状態マスタの CSV 取り込みが閲覧だけで通らないこと。コードが求める権限キーが、権限の一覧にそろっていること。
