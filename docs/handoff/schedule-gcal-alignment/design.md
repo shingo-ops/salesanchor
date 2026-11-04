@@ -318,9 +318,58 @@ recon: `docs/handoff/schedule-gcal-alignment/recon.md`（以下 R§0〜R§7）
 - 確かめ（生出力は実行記録に残す）: `npm run test:unit -- src/pages/schedule`・`npx tsc --noEmit`・`npm run check:all`・`npm run check:new-tokens`・`npm run check:dark-parity`・`npm run build`・`cd backend && pytest tests/test_calendar_service.py -q`・変更ファイルが上の 10 項目だけ。
 - 報告: `docs/handoff/schedule-gcal-alignment/impl-report-2.md`。コードを先に commit → 確かめ → 報告を commit・push。PR は作らない。
 
-### 11-3. 便3
+### 11-3. 便3（K12〜K14・Google Meet）
 
-再審査の REVISE（§9）を直して、もう一度審査に通ってから書く。
+- 状態: カード作成済み（2026-11-05・クラウドの再審査 4 回目の条件「R4-1・R4-2 を直せばカードを書いてよい」を改訂 5 で満たした・§9・§17）。実装に出すのは PO の明示の実装承認のあと。表の列を足すので危険な PR になり、本番へ入れる前に PO の「GO #番号」が要る（ADR-136）。
+- 担当: クラウドの Sonnet（実装役）。この §11-3 と §5-7 だけを実行する。§5-1〜§5-6（便1・便2）には触らない。
+- 土台: その時点の origin/main。枝 `release/schedule-gcal-bin3`。行番号は origin/main 1f017118d で確かめた。行がずれていたら名前（関数名・クラス名・キー名）で探し、見つからなければ止まる。
+- 触ってよいファイル（これ以外が要ると分かったら作らず NEEDS_DECISION: で止まる）:
+  1. `migrations/<その日の日時>_add_calendar_events_meet_url.sql`（新しく作る。`migrations/20261103_200000_add_google_calendar_import_sync.sql` と同じ「今ある会社を回す・`ADD COLUMN IF NOT EXISTS`・何度流しても同じ」書き方。中身は `meet_url TEXT NULL` の 1 列だけ）
+  2. `scripts/run_all_migrations.sh`（末尾 `:1219` の後に `run_sql` の 1 行と空行だけ）
+  3. `backend/app/routers/calendar.py`（`CreateEventBody`・`UpdateEventBody`・`create_event`・`update_event` だけ）
+  4. `backend/app/routers/google_calendar.py`（`connection_status` だけ）
+  5. `backend/app/services/calendar_service.py`（`can_add_meet` を足す・`:222`・`create_event`・`update_event`・`upsert_from_google`・一覧の SELECT `:134`）
+  6. `backend/app/services/google_calendar.py`（`create_event`・`update_event` の `conference`・`get_event` を足す）
+  7. `backend/tests/test_calendar_owner_api.py`
+  8. `backend/tests/test_calendar_service.py`
+  9. `backend/tests/test_google_calendar.py`
+  10. `frontend/src/pages/schedule/schedule-utils.ts`
+  11. `frontend/src/pages/schedule/schedule-utils.test.ts`
+  12. `frontend/src/pages/schedule/SchedulePageImpl.tsx`
+  13. `frontend/src/pages/schedule/SchedulePageImpl.test.tsx`
+  14. `frontend/src/locales/ja.json`・`frontend/src/locales/en.json`（`schedule.addMeet`・`schedule.joinMeet`・`schedule.meetFailed` を同じキーで両方に）
+  15. `docs/adr/ADR-<その時の次の番号>-calendar-google-meet.md`（新しく作る。中身は §5-7 の ADR の (1)〜(5)。番号は origin/main の最大＋1。今は ADR-1059 が最大。開いている PR が同じ番号を使っていれば止まる）
+  16. `docs/adr/README.md`（`node scripts/generate-adr-index.js` で作り直すだけ。手で書かない）
+  17. `docs/adr/FEATURE-INDEX.md`（`:34` の行だけ）
+- 触らない: `frontend/src/components/`（金型）・`frontend/src/lib/api.ts`・`frontend/src/tokens.css`・`frontend/src/features/secretary/`・`backend/app/services/tenant.py`（これから作る会社に表が無い件は残件・§7-3 の 2）・`.github/`・ほかの `migrations/`・ほかの `scripts/`・`deploy.yml`。
+- 作るもの（§5-7 のとおり。順番どおりに作る）:
+  1. 移行ファイルと登録の 1 行。
+  2. `can_add_meet`。`:222` の式もこの関数を使う形に置き換え、式を 2 か所に置かない。
+  3. `google_calendar.py` の `conference` と `get_event`。
+  4. サービスの作る・直す・取り込み・一覧（`meet_url` は一覧の SELECT の最後。`r[0]`〜`r[17]` の番号は変えない）。返事は `{"id", "meet_url"}`。`add_meet` だけの直しでは `_to_google_event_body` を使わず `{"conferenceData": {"createRequest": …}}` だけを `patch` で送る（R4-1）。`pending` の読み直しは `await asyncio.sleep(1)` で 2 回まで。
+  5. 口の 422（作るは `:352` の `try` の前・直すは `:421` の `try` の前。直すの SELECT `:391` に `google_event_id, meet_url` を足す）。`meet_url` がすでにあれば `add_meet` を外して渡す。
+  6. `connection_status` に `user` を足し `meet_available` を返す。
+  7. 画面の型・Toggle（`meet_available` が真で、予定にまだ `meetUrl` が無いときだけ）・「Google Meet で参加」（金型 `ButtonLink`・`https://meet.google.com/` で始まるときだけ・新しい窓・`rel="noopener noreferrer"`）・保存の返事で `meet_url` が null なら今ある帯 `setBanner({ type: "error", message: t("schedule.meetFailed") })`。
+  8. ADR・索引の作り直し・FEATURE-INDEX の 1 行。
+- 守ること: 画面の文字は全部 `t()`（ADR-027）。色・余白はトークンだけ（ADR-067）。新しいトークンは足さない。部品は金型（`Toggle`・`ButtonLink`）（ADR-144）。Meet の URL の置き場所は `calendar_events.meet_url` 1 か所だけで、ほかに写しを作らない。
+- 試験（全部足す。今ある試験を消す・skip にする・期待を変えるのは禁止）:
+  1. 口・作る 422: 本人でない（`can_add_meet` 偽）と 422、`cal_svc.create_event` の差し替えが呼ばれない（K13・N-1）
+  2. 口・直す 422 を 3 件: (1) `can_add_meet` 偽 (2) `google_event_id` が無い (3) 持ち主が本人でない。どれも `cal_svc.update_event` の差し替えが呼ばれない（K13・N-13）
+  3. 口・直す: `meet_url` がすでにあると、サービスに渡す中身に `add_meet` が無い（N-3）
+  4. `_event_db` は `google_event_id=None, meet_url=None` の既定つき引数で 5 つを返す。今の 4 件（`:187`・`:212`・`:226`・`:240`）の呼び方は変えず、全部合格のまま（R4-2）
+  5. `can_add_meet` の 4 通り（`bidirectional` で本人＝真・`write_only` で本人＝真・`read_only` で本人＝偽・`bidirectional` で他人＝偽）
+  6. 作る: Google へ `conferenceDataVersion=1` と `createRequest`（`hangoutsMeet`・`requestId` あり）が渡り、返事の `hangoutLink` が `meet_url` に入る（K12）
+  7. `pending` で `hangoutLink` が無い → `get_event` で読み直して入る／2 回でも無い → `meet_url` は null で予定は残る（N-2）
+  8. `add_meet` だけの直しで `patch` に `summary`・`start`・`end` を送らない（R4-1）
+  9. 取り込みで `hangoutLink` が `meet_url` に入る（K14）
+  10. 画面: `meet_available` が偽なら Toggle が出ない・真で Toggle を入れたときだけ送る中身に `add_meet: true`・`meetUrl` があれば「Google Meet で参加」が出て Toggle は出ない・返事の `meet_url` が null なら帯が出る
+- 想定される分かれ道（当たったら止まって報告する。推測で進めない）:
+  - `create_event`・`update_event`・`connection_status` の呼び元が口と試験以外にもある → 全部書き出して止まる。
+  - 移行の前例と同じ書き方で今ある会社を回せない（会社の一覧の取り方が違う等）→ 止まる。
+  - `ButtonLink` に新しい窓・`rel` を渡す口が無い → 金型を直さず止まる。
+  - 秘書の下書き（`frontend/src/features/secretary/`）が作る口の返事の形（`{"id"}` だけ）に頼っている → 止まる。
+- 確かめ（生出力は実行記録に残す）: `cd backend && pytest tests/test_calendar_owner_api.py tests/test_calendar_service.py tests/test_google_calendar.py -q`・`cd frontend && npm run test:unit -- src/pages/schedule`・`npx tsc --noEmit`・`npm run check:all`・`npm run build`・`node scripts/generate-adr-index.js` のあと `git diff --exit-code docs/adr/README.md` が差分なし・`git diff --name-only origin/main...HEAD` が上の 17 項目だけ。
+- 報告: `docs/handoff/schedule-gcal-alignment/impl-report-3.md`。コードを先に commit → 確かめ → 報告を commit・push。PR は作らない（Opus が Draft で起票し、本番へ入れる前に PO の「GO #番号」を受ける）。
 
 ## 12. 改訂 1 の記録（クラウドの設計審査 1 回目の指摘 → 直した場所）
 
