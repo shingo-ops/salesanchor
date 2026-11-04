@@ -1,7 +1,6 @@
 /**
  * 自社 API（/api/v1/auth/*）の誤りをエンドユーザー向けの文言に変換する（ADR-027: 文言は t()）。
  * 口（context）と状態コードから文言キーを 1 つ選ぶ。detail は決まった識別子のときだけ読み、本文の文章は読まない。
- * Firebase 用の firebaseErrorMessage.ts は便6 まで残す。
  */
 
 export type AuthErrorContext = "login" | "resetRequest" | "resetConfirm" | "passwordChange" | "passkey";

@@ -1,8 +1,8 @@
 /**
- * Firebase Auth bypass helper for Playwright E2E.
+ * 開発用の偽ログインに利用者を先に入れる Playwright E2E の補助。
  *
- * Playwright では dev server 側で `firebase/auth` を E2E mock に差し替える。
- * その mock は localStorage の永続化キーを読み込むため、ページ読み込み前に
+ * 開発サーバーでは main.tsx が開発用の偽ログイン（src/lib/auth/devSession.ts）を登録する。
+ * その偽ログインは window.__salesanchorE2eAuthUser と localStorage のキーを読むため、ページ読み込み前に
  * dummy user を埋めておけば LoginPage を経由せずに保護ページを描画できる。
  */
 
@@ -15,7 +15,7 @@ export const E2E_USER = {
 };
 
 /**
- * Playwright `page` に Firebase Auth bypass を注入する。
+ * Playwright の page に、開発用の偽ログインの利用者を注入する。
  */
 export async function installAuthBypass(page: Page): Promise<void> {
   await page.addInitScript(
@@ -28,7 +28,7 @@ export async function installAuthBypass(page: Page): Promise<void> {
       };
       try {
         localStorage.setItem(
-          "salesanchor:e2e-firebase-auth-user",
+          "salesanchor:e2e-auth-user",
           JSON.stringify({
             uid: user.uid,
             email: user.email,

@@ -5,28 +5,20 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import en from "../../locales/en.json";
 
 const mock = vi.hoisted(() => ({
-  self: true,
   post: vi.fn(),
   get: vi.fn(),
   delete: vi.fn(),
-  updatePassword: vi.fn(),
-  reauthenticate: vi.fn(),
 }));
 
-vi.mock("../../lib/auth/provider", () => ({ isSelfAuth: () => mock.self }));
-vi.mock("../../lib/firebase", () => ({ auth: { currentUser: { email: "me@example.com" } } }));
-vi.mock("../../lib/firebase-auth", () => ({
-  EmailAuthProvider: { credential: (email: string, password: string) => ({ email, password }) },
-  reauthenticateWithCredential: mock.reauthenticate,
-  updatePassword: mock.updatePassword,
-}));
 vi.mock("../../lib/api", async () => {
   const actual = await vi.importActual<typeof import("../../lib/api")>("../../lib/api");
   return { ...actual, api: { get: mock.get, post: mock.post, delete: mock.delete } };
 });
 
 import { ApiError } from "../../lib/api";
+import { registerDevSession } from "../../lib/auth/devSessionSlot";
 import { currentAccessToken, expireSession } from "../../lib/auth/selfAuth";
+import { registerTestDevSession } from "../../test-utils/devSession";
 import SecuritySection from "./SecuritySection";
 
 let instance = createInstance();
@@ -41,13 +33,11 @@ function submit(current: string, next: string, confirm: string) {
 }
 
 beforeEach(async () => {
-  mock.self = true;
   mock.post.mockReset();
   mock.get.mockReset().mockResolvedValue({ items: [] });
   mock.delete.mockReset();
-  mock.updatePassword.mockReset().mockResolvedValue(undefined);
-  mock.reauthenticate.mockReset().mockResolvedValue({});
   expireSession();
+  registerDevSession(null);
   instance = createInstance();
   await instance.init({ lng: "en", resources: { en: { translation: en } }, interpolation: { escapeValue: false } });
   view = render(<I18nextProvider i18n={instance}><SecuritySection /></I18nextProvider>);
@@ -69,7 +59,6 @@ describe("SecuritySection (self login)", () => {
       new_password: "a-long-enough-password-1",
     });
     expect(currentAccessToken()).toBe("new.token.value");
-    expect(mock.updatePassword).not.toHaveBeenCalled();
   });
 
   it("400 is the wrong-current-password message; 422 identifiers map to rule messages", async () => {
@@ -99,22 +88,11 @@ describe("SecuritySection passkey section", () => {
     expect(sections[3].textContent).toContain(tr("accountSettings.passkeyTitle"));
   });
 
-  it("is not shown with Firebase", () => {
+  it("is not shown in dev session", () => {
     cleanup();
-    mock.self = false;
+    registerTestDevSession();
     const rendered = render(<I18nextProvider i18n={instance}><SecuritySection /></I18nextProvider>);
 
     expect(rendered.container.querySelectorAll(".account-settings-section")).toHaveLength(1);
-  });
-});
-
-describe("SecuritySection (Firebase)", () => {
-  it("re-authenticates and updates through Firebase and does not call the self API", async () => {
-    mock.self = false;
-
-    submit("old-password", "long-enough-pw", "long-enough-pw");
-
-    await waitFor(() => expect(mock.updatePassword).toHaveBeenCalledTimes(1));
-    expect(mock.post).not.toHaveBeenCalled();
   });
 });
