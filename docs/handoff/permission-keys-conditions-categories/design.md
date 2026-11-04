@@ -6,7 +6,7 @@
 - 調査: [docs/handoff/permission-keys-conditions-categories/recon.md](recon.md)
 - データ変更の手順: [data-change-1/README.md](data-change-1/README.md)
 - 設計審査の記録: [review-opus.md](review-opus.md)
-- 状態: 設計案作成済み・設計審査済み（2026-11-04、クラウドの審査 3 回目で APPROVE）・PO 実装承認済み（2026-11-04 チャット「1」）。便1-コードは実装カード [card-impl-1.md](card-impl-1.md) でクラウドの Sonnet に渡す。データ変更の本実行は、その都度 PO の使い捨て許可が要る。
+- 状態: 設計案作成済み・設計審査済み（2026-11-04、クラウドの審査 3 回目で APPROVE）・PO 実装承認済み（2026-11-04 チャット「1」）。便1-コードは実装カード [card-impl-1.md](card-impl-1.md) でクラウドの Sonnet に渡す。便3（§11）は 2026-11-04 PO「1」で承認、実装カード [card-impl-3.md](card-impl-3.md)。データ変更の本実行は、その都度 PO の使い捨て許可が要る。
 
 ## 1. 目的と KGI
 
@@ -297,3 +297,74 @@ DB を正とし、コードに一覧の写しを作らない。
 |---|---|
 | T4 で、鍵を持たない依存（require_super_admin など）をどう扱うか書かれていない | required_permission_keys を持たない依存は飛ばす、と §6 に書いた |
 | 確認元の版が §10 は cb9525b9d、§6 は origin/main と揺れている | §6 に origin/main 48eab3eaf と書き、3 ファイルが cb9525b9d と差分 0 件であることを添えた |
+
+## 11. 便3（既知の欠け 3 キーを、一覧にある鍵へ付け替える）
+
+### 11-1. PO の判断
+- 2026-11-04 チャットで PO「1」（3 つとも案のとおり付け替える）。条件は §1-1 と同じ（推測禁止・事実確認・SSOT 遵守・分からないことは聞く）。
+- 一覧に新しい鍵を足す案（DB 変更）は採らない。同じ役目の鍵が一覧に既にあるため。
+
+### 11-2. 今の困りごと（実測。2026-11-04 origin/main d948cf9c7）
+3 つの鍵は一覧（public.permissions）に無い。どの役割にも付けられない。所有者・管理者も持たない（`backend/app/auth/dependencies.py:618-623` の計算は一覧から作るため）。よって次の 4 つの道は、誰が呼んでも 403 になる。
+
+| 道 | 鍵 | 場所 | 画面の呼び出し | 失敗の見え方 |
+|---|---|---|---|---|
+| POST /api/v1/contacts/{id}/channel-acknowledge-duplicate | customers.edit | `backend/app/routers/contacts.py:659` | `frontend/src/components/ContactChannelForm.tsx:161`（`PATCH /contacts/{id}` の成功の後） | 黙って失敗（:166-169 で握りつぶす）。監査の記録が残らない |
+| POST /api/v1/discord/channel-invite/{lead_id} | leads.edit | `backend/app/routers/discord_channel_invite.py:63` | `frontend/src/pages/inbox/InboxKartePanel.tsx:846`（:534 で無条件に出す） | 赤字のエラー表示 |
+| POST /api/v1/discord/sync-role/{lead_id} | leads.edit | `backend/app/routers/discord_role_resync.py:43` | `frontend/src/pages/inbox/InboxKartePanel.tsx:888`（:542 で無条件に出す） | 赤字のエラー表示 |
+| GET /api/v1/companies/duplicates | companies.view | `backend/app/routers/duplicates.py:69` | 無し（docs/handoff/s6-get-access-audit/recon.md §3） | — |
+
+- 本番の記録（Loki、job=containerlogs、2026-10-28〜11-04 の 7 日）で 4 つの道の呼び出しは 0 回（Opus が自分で流した検索 1 行のみ）。30 日の検索は Grafana が 502 を返し、読めていない（未確認）。
+
+### 11-3. 付け替え先と選んだ理由
+| 今 | 後 | 理由（実物） |
+|---|---|---|
+| customers.edit | customers.update（一覧 id 10） | 同じファイルの更新の道 `PATCH /contacts/{id}`（contacts.py:518-521）が customers.update。画面はこの PATCH の成功の後にだけ記録の道を呼ぶ。よって押せる人は増えない |
+| leads.edit | leads.update（一覧 id 14） | リードを直す既存の鍵。コード中の leads.update は 3 か所、leads.edit は この 2 か所だけ |
+| companies.view | customers.view（一覧 id 8） | 会社の道（`backend/app/routers/companies.py:294`・`:339`）の閲覧が customers.view |
+
+### 11-4. 誰が使えるようになるか（本番の読み取り。2026-11-04 16:22 JST・読み取り専用の鍵・ai_ro）
+- 5 社とも、所有者・システム管理者・営業・マネージャーの役割が customers.update・customers.view・leads.update を持つ。CS は customers.update・customers.view だけ（leads.update は無い）。仕入れ・発送は 3 つとも無い。
+- よって付け替えの後、Discord の 2 つのボタンは CS・仕入れ・発送の人には今までどおり 403 になる。画面はボタンを無条件に出す（:534・:542）。この出し分けは対象外とする（§11-6）。
+- 001（開発用）の「点検用（見るだけ）」の役割は customers.update と leads.update を持つ。見るだけの役割が書ける鍵を持つ件は、別に PO へ聞く（本便では変えない）。
+- 生の出力: Opus の手元の作業ファイル（km-q3a.out・km-q3c.out）。PR には役割の人数だけを書き、人の名前は書かない。
+
+### 11-5. 変更（4 本の道の鍵の文字列と、見張りの例外を空にする）
+1. `backend/app/routers/contacts.py:659` の `"customers.edit"` → `"customers.update"`
+2. `backend/app/routers/discord_channel_invite.py:63` の `"leads.edit"` → `"leads.update"`
+3. `backend/app/routers/discord_role_resync.py:43` の `"leads.edit"` → `"leads.update"`
+4. `backend/app/routers/duplicates.py:69` の `"companies.view"` → `"customers.view"`
+5. `backend/app/auth/permission_catalog.py:13-17` の KNOWN_MISSING を空の dict にする。注記は「今は空。足すには PO の判断と試験の上限の変更が要る」。
+6. `backend/tests/test_permission_catalog.py`
+   - C2（:24）の上限を `<= 3` から `== 0` にする。
+   - C4（:56）は KNOWN_MISSING を試験の中で `{"companies.view": "試験"}` に差し替える。今の形のままだと、空にした後 `["b.view", "companies.view"]` が返り落ちるため。
+7. 新しい試験 C5（同じファイル）: 4 本の道の checker の `required_permission_keys` が、それぞれ §11-3 の後の鍵 1 つだけであること。経路は `app.main.app` の routes から path と method で探す（§6 T1 と同じ探し方）。
+- DB・画面・migration は変えない。
+
+### 11-6. 対象外
+- 画面のボタンの出し分け（CS などに Discord の 2 ボタンを隠す）。見た目が変わるため、別に PO に聞く。
+- 001 の点検用の役割の書ける鍵（§11-4）。
+- §5-4 の見張れない範囲。
+
+### 11-7. 受入（○×）
+| 基準 | 検証方法 |
+|---|---|
+| K6 4 本の道が §11-3 の後の鍵を求める | 試験 C5（CI の pytest） |
+| K7 見張りの例外が 0 件 | 試験 C2（CI）・`backend/app/auth/permission_catalog.py` の KNOWN_MISSING が空 |
+| K8 本番の見張りの値が反映後も 0 | Grafana 経由で `salesanchor_permission_keys_missing{job="backend"}` を、反映から 300 秒あと以降に読む。値 0 |
+| K9 所有者で Discord の案内ボタンが 403 にならない | 001 で、反映後に Opus が Chrome で押すか、API を読む形で確かめる。ただし 001 のリードに Discord の設定が無いと 409 や 404 になる。403 でないことだけを見る（送信の成否は見ない） |
+
+### 11-8. リスクと対処
+| リスク | 対処 |
+|---|---|
+| 営業・マネージャーが Discord のボタンを押せるようになり、顧客のチケットに案内が届く | 元々そのために作られたボタン（ADR-091 KPI5・KPI7）。PO が 2026-11-04 に承認 |
+| 会社の重複探しが顧客を見られる人に開く | 中身は会社の名前・メール・電話で、会社の一覧（customers.view）と同じ範囲 |
+| 試験が付け替え前の鍵を参照していて赤になる | 実物で探した: 4 本の道の鍵を名前で参照する試験は無い（`git grep` で test_permission_catalog.py:56 のみ） |
+
+### 11-9. 戻し方
+PR を revert する。DB は変えないので、DB の戻しは要らない。
+
+### 11-10. 設計審査（自己審査・2026-11-04・同一 AI）
+- 判定: APPROVE（設計合格）。
+- 確かめたこと: 4 か所の行と前後の道を d948cf9c7 の実物で読んだ。付け替え先の 3 鍵が一覧にあることを本番の読み取りで確かめた（id 8・10・14）。役割ごとの保有を 5 社分読んだ。KNOWN_MISSING を空にしたとき C4 が落ちることを、試験の中身から確かめた。DB の写しを作らない（鍵の文字列は一覧の既存の鍵を指すだけ）。
+- 未解決（PO に戻すもの）: §11-6 の 2 件。
