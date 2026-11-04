@@ -81,6 +81,19 @@ class TestDefaultRoles:
         for name in ("営業", "CS", "仕入れ", "発送"):
             assert "goals.edit" not in _role(name)["permissions"], name
 
+    def test_discord_keys_in_default_roles(self):
+        keys = ["leads.discord_invite", "leads.discord_resync", "leads.discord_remove_channel",
+                "leads.discord_kick", "leads.discord_ban"]
+        for k in keys:
+            assert k in _role("マネージャー")["permissions"], k
+        sales = _role("営業")["permissions"]
+        assert "leads.discord_invite" in sales and "leads.discord_resync" in sales
+        for k in keys[2:]:
+            assert k not in sales, k
+        for name in ("CS", "仕入れ", "発送"):
+            for k in keys:
+                assert k not in _role(name)["permissions"], (name, k)
+
 
 def _captured_sql(mock: AsyncMock) -> list[tuple[str, dict]]:
     calls = []
