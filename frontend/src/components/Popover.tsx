@@ -6,6 +6,7 @@
  * - document.body への Portal 描画
  * - placement: 'top' | 'bottom' | 'left' | 'right'（デフォルト 'bottom'）
  * - open / onOpenChange による制御式 API
+ * - openOnHover: マウスを乗せると開き、離れて少し経つと閉じる（押しても開ける。既定は false）
  */
 
 import {
@@ -33,6 +34,12 @@ export interface PopoverProps {
   onOpenChange?: (open: boolean) => void;
   /** ラッパー要素への追加クラス */
   className?: string;
+  /** true のとき、マウスを乗せると開き、離れて hoverCloseDelay ms 経つと閉じる（押しても開ける） */
+  openOnHover?: boolean;
+  /** 乗せてから開くまでの ms（デフォルト: 150。Tooltip・HoverCard と同じ） */
+  hoverOpenDelay?: number;
+  /** 離れてから閉じるまでの ms（デフォルト: 300。鈴と一覧の間を動く間に閉じないため） */
+  hoverCloseDelay?: number;
 }
 
 function calcPosition(
@@ -89,6 +96,9 @@ export function Popover({
   open: controlledOpen,
   onOpenChange,
   className = "",
+  openOnHover = false,
+  hoverOpenDelay = 150,
+  hoverCloseDelay = 300,
 }: PopoverProps) {
   const isControlled = controlledOpen !== undefined;
   const [internalOpen, setInternalOpen] = useState(false);
@@ -106,6 +116,44 @@ export function Popover({
     },
     [isControlled, onOpenChange],
   );
+
+  // 乗せて開く（openOnHover）。待ちの時計は 1 つだけ持つ
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const openedByHoverRef = useRef(false);
+
+  const clearHoverTimer = useCallback(() => {
+    if (hoverTimerRef.current !== null) {
+      clearTimeout(hoverTimerRef.current);
+      hoverTimerRef.current = null;
+    }
+  }, []);
+
+  const handleHoverEnter = useCallback(() => {
+    if (!openOnHover) return;
+    clearHoverTimer();
+    if (isOpen) return;
+    hoverTimerRef.current = setTimeout(() => {
+      hoverTimerRef.current = null;
+      openedByHoverRef.current = true;
+      setOpen(true);
+    }, hoverOpenDelay);
+  }, [openOnHover, clearHoverTimer, isOpen, hoverOpenDelay, setOpen]);
+
+  const handleHoverLeave = useCallback(() => {
+    if (!openOnHover) return;
+    clearHoverTimer();
+    if (!isOpen) return;
+    hoverTimerRef.current = setTimeout(() => {
+      hoverTimerRef.current = null;
+      setOpen(false);
+    }, hoverCloseDelay);
+  }, [openOnHover, clearHoverTimer, isOpen, hoverCloseDelay, setOpen]);
+
+  // 閉じたら「乗せて開いた」印を消す。部品が消えるときは待ちの時計を止める
+  useEffect(() => {
+    if (!isOpen) openedByHoverRef.current = false;
+  }, [isOpen]);
+  useEffect(() => () => clearHoverTimer(), [clearHoverTimer]);
 
   // 位置計算 — パネルが DOM に入ってから測る。開いている間は resize/scroll でも測り直す（design.md 4-4）
   useEffect(() => {
@@ -148,7 +196,16 @@ export function Popover({
     return () => document.removeEventListener("mousedown", handler);
   }, [isOpen, setOpen]);
 
-  const handleTriggerClick = () => setOpen(!isOpen);
+  const handleTriggerClick = () => {
+    clearHoverTimer();
+    // 乗せて開いた直後の 1 回目の押しでは閉じない（乗せて開いたのに押すと閉じる食い違いを防ぐ）
+    if (openOnHover && isOpen && openedByHoverRef.current) {
+      openedByHoverRef.current = false;
+      return;
+    }
+    openedByHoverRef.current = false;
+    setOpen(!isOpen);
+  };
 
   const panelCls = [
     "comp-popover",
@@ -165,6 +222,8 @@ export function Popover({
         className={className || undefined}
         style={{ display: "inline-flex" }}
         onClick={handleTriggerClick}
+        onMouseEnter={handleHoverEnter}
+        onMouseLeave={handleHoverLeave}
       >
         {children}
       </span>
@@ -176,6 +235,8 @@ export function Popover({
             className={panelCls}
             role="dialog"
             style={{ top: pos.top, left: pos.left }}
+            onMouseEnter={handleHoverEnter}
+            onMouseLeave={handleHoverLeave}
           >
             {content}
           </div>,

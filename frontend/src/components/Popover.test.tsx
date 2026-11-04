@@ -11,7 +11,8 @@
  * 足し、画面内に収めず、resize/scroll で測り直さない）に対して書き、
  * 赤いことを確認した記録を docs/handoff/popover-mold-fix/design.md ⑤ C16 の下に残す。
  */
-import { cleanup, fireEvent, render } from "@testing-library/react";
+import { act, cleanup, fireEvent, render } from "@testing-library/react";
+import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Popover, type PopoverPlacement } from "./Popover";
 
@@ -212,5 +213,91 @@ describe("Popover - remeasures while open", () => {
 
     expect(removeSpy.mock.calls.some(([type]) => type === "scroll")).toBe(true);
     expect(removeSpy.mock.calls.some(([type]) => type === "resize")).toBe(true);
+  });
+});
+
+describe("Popover openOnHover", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  function HoverHarness({ openOnHover = true }: { openOnHover?: boolean }) {
+    const [open, setOpen] = useState(false);
+    return (
+      <Popover open={open} onOpenChange={setOpen} openOnHover={openOnHover} content={<div>content</div>}>
+        <button type="button" data-testid="hover-trigger">
+          trigger
+        </button>
+      </Popover>
+    );
+  }
+
+  const advance = (ms: number) => act(() => void vi.advanceTimersByTime(ms));
+  const panelEl = () => document.querySelector(".comp-popover");
+  const setupHover = (openOnHover = true) => {
+    const { getByTestId } = render(<HoverHarness openOnHover={openOnHover} />);
+    const button = getByTestId("hover-trigger");
+    return { button, span: button.parentElement as HTMLElement };
+  };
+
+  it("opens after 150ms of hover, not at 149ms", () => {
+    const { span } = setupHover();
+    fireEvent.mouseEnter(span);
+    advance(149);
+    expect(panelEl()).toBeNull();
+    advance(1);
+    expect(panelEl()).not.toBeNull();
+  });
+
+  it("closes 300ms after leaving the trigger, not at 299ms", () => {
+    const { span } = setupHover();
+    fireEvent.mouseEnter(span);
+    advance(150);
+    fireEvent.mouseLeave(span);
+    advance(299);
+    expect(panelEl()).not.toBeNull();
+    advance(1);
+    expect(panelEl()).toBeNull();
+  });
+
+  it("stays open when moving from the trigger into the panel within 300ms", () => {
+    const { span } = setupHover();
+    fireEvent.mouseEnter(span);
+    advance(150);
+    fireEvent.mouseLeave(span);
+    advance(100);
+    fireEvent.mouseEnter(panelEl() as Element);
+    advance(1000);
+    expect(panelEl()).not.toBeNull();
+  });
+
+  it("does not close on the first click right after opening by hover; the next click closes", () => {
+    const { button, span } = setupHover();
+    fireEvent.mouseEnter(span);
+    advance(150);
+    fireEvent.click(button);
+    expect(panelEl()).not.toBeNull();
+    fireEvent.click(button);
+    expect(panelEl()).toBeNull();
+  });
+
+  it("click before 150ms opens and later timers do not toggle it again", () => {
+    const { button, span } = setupHover();
+    fireEvent.mouseEnter(span);
+    advance(100);
+    fireEvent.click(button);
+    expect(panelEl()).not.toBeNull();
+    advance(1000);
+    expect(panelEl()).not.toBeNull();
+  });
+
+  it("without openOnHover, hover never opens", () => {
+    const { span } = setupHover(false);
+    fireEvent.mouseEnter(span);
+    advance(1000);
+    expect(panelEl()).toBeNull();
   });
 });
