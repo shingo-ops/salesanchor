@@ -1,8 +1,8 @@
 # K12 を 18/20 に上げる直し方
 
-> 状態: 設計合格・PO 承認済み（2026-11-04 PO 原文「1」。§13）・案 C3 を実装済み（PR #5126、マージ前）。マージ後に K9・K12 を origin/main で測り直す。
+> 状態: 設計合格・PO 承認済み（2026-11-04 PO 原文「1」。§13）・案 C3 を実装済み（PR #5126、2026-11-04 マージ）。マージ後の origin/main 89d3320ed で K12 18/20・18/20、K9 7.4k（どちらも合格。[baseline.md](../doc-agenda-nav/baseline.md)「便5 の直しの後の測り直し（2026-11-04）」）。
 > 合格ライン: G7（K12 ≥ 18/20。[kgi.md](../../specs/doc-agenda-nav/kgi.md) K12 行）と K9（MEMORY.md を除く Memory files ≤ 7.5k。2026-11-04 に 6.5k から PO 決定で変更。同 K9 行・§13）。
-> 親の設計: [design.md](./design.md) §10 G7・§14 便5。測り方: [k12-tasks.md](../doc-agenda-nav/k12-tasks.md)「2026-10-25 の改定」。
+> 親の設計: [design.md](./design.md) §10 G7・§14 便5。現在地の調査: docs/handoff/doc-library-one-tree/recon.md。測り方: [k12-tasks.md](../doc-agenda-nav/k12-tasks.md)「2026-10-25 の改定」。
 
 ## 1. 起きたこと（便5 の結果）
 
