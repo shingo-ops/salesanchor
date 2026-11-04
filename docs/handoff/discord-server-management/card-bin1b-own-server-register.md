@@ -512,4 +512,37 @@ CREATE TABLE IF NOT EXISTS tenant_discord_config (
 
 停止: 上の 4 ファイル以外を変えたくなった・check_test_schema_dup が 0 にならない・既存の試験が落ちる → 変えずに停止し NEEDS_DECISION: か BLOCKED: と生出力。
 
+## §11 改訂4 の直し（2026-11-04 23:50 JST・PR #5127 の pytest 赤 1 件への対応）
+
+観測（CI run 41847736768 の pytest-run-internal・head 03d65ad78）:
+`1 failed, 8025 passed`。落ちたのは `tests/test_realtime_topics.py::test_every_write_route_is_in_exactly_one_table` で、
+`AssertionError: どちらの表にも無い書き込みルート: [('DELETE', '/api/v1/admin/discord-config/own')]`。
+
+原因: 便1b で足した自社用の解除ルートを、即時反映の対応表（ADR-1016）のどちらにも載せていなかった。カードの入れ忘れ。
+
+直し（`backend/app/realtime/topics.py` の 1 行だけ）。顧客用の解除 `("DELETE", "/api/v1/admin/discord-config")` と同じ扱いにする。
+
+変更前（98〜99 行）:
+```python
+    ("DELETE", "/api/v1/admin/discord-config"): _PENDING,
+    ("PUT", "/api/v1/admin/discord-config"): _PENDING,
+```
+変更後:
+```python
+    ("DELETE", "/api/v1/admin/discord-config"): _PENDING,
+    ("DELETE", "/api/v1/admin/discord-config/own"): _PENDING,
+    ("PUT", "/api/v1/admin/discord-config"): _PENDING,
+```
+
+触るのは `backend/app/realtime/topics.py` と報告書だけ。報告書の末尾に「## 改訂4 の直し」を足す（前の内容は消さない）。
+
+確かめ（生出力を報告書の改訂4 の節に貼る）:
+- `pytest tests/test_realtime_topics.py --no-cov -q` の最後の 5 行（失敗 0）
+- §8 と同じ pytest 9 本（`--no-cov`）の最後の 12 行（102 passed 以上・失敗 0）
+- `git diff --stat origin/release/discord-own-server-bin1b`（topics.py＋報告書の 2 ファイルだけ）
+
+保存: commit の文 `fix(discord): 自社用の解除ルートを即時反映の対応表に載せる（discord-server-management 便1b 改訂4）`。`git push origin release/discord-own-server-bin1b`（単独で流す）。最後に push 後の `git rev-parse HEAD`。
+
+停止: topics.py の 98 行目が上の変更前と違う・上の 2 ファイル以外を変えたくなった・ほかの試験が落ちる → 変えずに停止し NEEDS_DECISION: か BLOCKED: と生出力。
+
 END OF CARD
