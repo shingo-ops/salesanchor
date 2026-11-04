@@ -2,7 +2,7 @@
 
 - 書いた日: 2026-11-04（Opus）
 - 状態: 設計案作成済み → 設計審査（§9）済み。PO の進める判断: 2026-11-04「2」（Opus が出した選択肢「サーバーの直しを先に急いで作る　プログラムの直し・審査・本番への反映で、数時間かかります。」）。
-- 根拠: [recon.md](./recon.md)。親 ADR: ADR-1013（Decision 6）。関係する設計: `docs/handoff/auth-self-hosted-passkey/design.md` §4・`:120`。
+- 根拠: [recon.md](./recon.md)（`docs/handoff/block-firebase-token/recon.md`）。親 ADR: ADR-1013（Decision 6）。関係する設計: `docs/handoff/auth-self-hosted-passkey/design.md` §4・`:120`。
 
 ## 1. 目的（PO の言葉で）
 
@@ -79,6 +79,7 @@ smoke → ① → ①b → **自社ログイン中かと、札の発行元を先
 
 ## 維持の仕組み
 
+- 守り手: .github/workflows/test.yml（必須の確かめ「pytest (SQLite + PostgreSQL RLS)」で T1〜T7 を毎回走らせる）
 - 単体試験 T1〜T7 が CI の必須の確かめで毎回走る。誰かが分かれ道を消すと赤になる。
 - 便6 で Firebase 分岐ごと消すときは、T1・T2・T6 を一緒に見直す（便6 のカードに書く）。
 
