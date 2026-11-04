@@ -26,6 +26,7 @@ import { Radio } from "../../components/Radio";
 import { Select } from "../../components/Select";
 import { SubMenu, type SubMenuGroup } from "../../components/SubMenu";
 import { LoadingBlock } from "../../components/loading";
+import { useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
 
 interface ViewerItem {
   id: number;
@@ -152,9 +153,6 @@ export default function ViewerAccountsPage() {
   const [saveError, setSaveError] = useState("");
   const [templateKey, setTemplateKey] = useState("");
   const [templateError, setTemplateError] = useState<string | null>(null);
-  const [sheet, setSheet] = useState<SheetItem | null>(null);
-  const [sheetLoading, setSheetLoading] = useState(false);
-  const [sheetLoadError, setSheetLoadError] = useState(false);
   const [sheetModalOpen, setSheetModalOpen] = useState(false);
   const [sheetBookDraft, setSheetBookDraft] = useState("");
   const [sheetTabDraft, setSheetTabDraft] = useState("");
@@ -200,26 +198,16 @@ export default function ViewerAccountsPage() {
   }, [detailId]);
 
   // 開いた人のシートを読む（配信先の表から viewer_account_id が一致する1件。1人1シートまで）
-  const loadSheet = useCallback(async (viewerId: number) => {
-    setSheetLoading(true);
-    setSheetLoadError(false);
-    try {
-      const rows = await api.get<SheetItem[]>("/tcg/distribution/targets");
-      setSheet(rows.find(r => r.viewer_account_id === viewerId) ?? null);
-    } catch {
-      setSheet(null);
-      setSheetLoadError(true);
-    } finally {
-      setSheetLoading(false);
-    }
-  }, []);
+  const sheetQuery = useApiQuery<SheetItem[]>("/tcg/distribution/targets", { enabled: detailId !== null });
+  const invalidateApi = useInvalidateApi();
+  const sheet = detailId === null ? null : (sheetQuery.data?.find(r => r.viewer_account_id === detailId) ?? null);
+  const sheetLoading = detailId !== null && sheetQuery.isPending;
+  const sheetLoadError = sheetQuery.isError;
 
   useEffect(() => {
-    setSheet(null);
     setSheetModalOpen(false);
     setSheetFormError("");
-    if (detailId !== null) void loadSheet(detailId);
-  }, [detailId, loadSheet]);
+  }, [detailId]);
 
   const openSheetModal = () => {
     setSheetBookDraft(sheet?.spreadsheet_id ?? "");
@@ -249,7 +237,7 @@ export default function ViewerAccountsPage() {
         });
       }
       setSheetModalOpen(false);
-      await loadSheet(detail.id);
+      await invalidateApi(["tcg", "distribution", "targets"]);
     } catch (e) {
       if (e instanceof ApiError && e.status === 409) setSheetFormError(t(`${f}.sheetConflictError`));
       else if (e instanceof ApiError && e.status === 422) setSheetFormError(t(`${f}.sheetViewerNotFoundError`));

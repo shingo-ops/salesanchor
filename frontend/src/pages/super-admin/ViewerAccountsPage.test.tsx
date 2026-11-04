@@ -4,6 +4,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { api, ApiError } from "../../lib/api";
 import { useSuperAdmin } from "../../hooks/useSuperAdmin";
 import i18n from "../../i18n";
+import { queryClient } from "../../lib/query/apiQuery";
 import ViewerAccountsPage from "./ViewerAccountsPage";
 
 vi.mock("../../lib/api", async () => {
@@ -11,6 +12,7 @@ vi.mock("../../lib/api", async () => {
   return { ...actual, api: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), put: vi.fn() } };
 });
 vi.mock("../../hooks/useSuperAdmin", () => ({ useSuperAdmin: vi.fn() }));
+vi.mock("../../contexts/AuthContext", () => ({ useAuth: () => ({ user: { uid: "user-a" } }) }));
 
 const v = (over: Record<string, unknown>) => ({
   id: 1,
@@ -47,6 +49,7 @@ function renderPage(entry = "/") {
 }
 
 beforeEach(async () => {
+  queryClient.clear();
   vi.resetAllMocks();
   await i18n.changeLanguage("en");
   vi.mocked(useSuperAdmin).mockReturnValue({ loading: false, isSuperAdmin: true });
@@ -105,6 +108,7 @@ it("shows the open room link only in the detail of rows that have a discord_chan
         ],
       };
     }
+    if (path === "/tcg/distribution/targets") return [];
     return { items: [] };
   });
   renderPage();
@@ -193,6 +197,7 @@ const MIXED = [
 function mockMixed() {
   vi.mocked(api.get).mockImplementation(async (path: string) => {
     if (path === "/super-admin/viewers") return { items: MIXED };
+    if (path === "/tcg/distribution/targets") return [];
     return { items: [] };
   });
 }
@@ -317,6 +322,7 @@ it("hides Reissue on rows that already have a Discord room", async () => {
         ],
       };
     }
+    if (path === "/tcg/distribution/targets") return [];
     return { items: [] };
   });
   renderPage();
@@ -490,6 +496,7 @@ it("K6: detail footer has a template select and copy button; copy is disabled un
   vi.mocked(api.get).mockImplementation(async (path: string) => {
     if (path === "/super-admin/viewers") return { items: ITEMS };
     if (path === TEMPLATE_PATH(1, "room_recreated")) return { text: "ROOM TEXT t1" };
+    if (path === "/tcg/distribution/targets") return [];
     return { items: [] };
   });
   renderPage();
@@ -531,6 +538,7 @@ it.each([
   vi.mocked(api.get).mockImplementation(async (path: string) => {
     if (path === "/super-admin/viewers") return { items: ITEMS };
     if (path.includes("/template-text")) throw new ApiError("x", status, null);
+    if (path === "/tcg/distribution/targets") return [];
     return { items: [] };
   });
   renderPage();
@@ -544,6 +552,7 @@ it("K9: choosing another row resets the selected template and its error", async 
   vi.mocked(api.get).mockImplementation(async (path: string) => {
     if (path === "/super-admin/viewers") return { items: ITEMS };
     if (path.includes("/template-text")) throw new ApiError("x", 503, null);
+    if (path === "/tcg/distribution/targets") return [];
     return { items: [] };
   });
   renderPage();
