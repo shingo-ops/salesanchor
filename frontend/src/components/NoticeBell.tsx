@@ -140,7 +140,7 @@ export default function NoticeBell({ variant = "floating" }: NoticeBellProps = {
   return (
     <Popover placement="bottom" open={open} onOpenChange={handleOpenChange} content={content}>
       <button type="button" className="notice-bell-btn" aria-label={label} data-testid="notice-bell">
-        <BellOutline size={ICON.md} aria-hidden="true" />
+        <BellOutline size={ICON.base} aria-hidden="true" />
         {unread > 0 && (
           <Badge variant="danger" appearance="solid" size="sm" className="notice-bell-badge">
             {formatUnreadCount(unread)}
