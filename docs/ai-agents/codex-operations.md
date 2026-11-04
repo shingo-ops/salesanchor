@@ -48,7 +48,7 @@ ChatGPT (Research / Planner / Architect)
 ```
 
 - `.claude/agents/*` が runtime の正本
-- `docs/agents/*` は同じ役割の詳細参照
+- 同じ役割の詳細参照（7つ）: `docs/agents/architect.md`・`docs/agents/evaluator.md`・`docs/agents/generator.md`・`docs/agents/governance.md`・`docs/agents/planner.md`・`docs/agents/research.md`・`docs/agents/reviewer.md`
 - Governance は runtime pipeline の外側で、標準化・継続改善・証跡確認を担う
 
 ### AEON 呼び出し（単一エントリポイント）
