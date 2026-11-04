@@ -16,6 +16,14 @@ DO $tdc_pk$
 BEGIN
     IF NOT EXISTS (
         SELECT 1
+        FROM   information_schema.columns
+        WHERE  table_schema = 'public'
+          AND  table_name   = 'tenant_discord_config'
+          AND  column_name  = 'purpose'
+    ) THEN
+        RAISE NOTICE 'tenant_discord_config に purpose 列が無いため主キーを替えない（便1a の移行が先に要る）';
+    ELSIF NOT EXISTS (
+        SELECT 1
         FROM   pg_constraint
         WHERE  conrelid = 'public.tenant_discord_config'::regclass
           AND  contype = 'p'

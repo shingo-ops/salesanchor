@@ -17,8 +17,8 @@ import pytest
 import pytest_asyncio
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import event, text
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import sessionmaker
 
 from app.auth.dependencies import get_current_tenant, get_current_user
@@ -32,19 +32,6 @@ _OTHER_TENANT = 8
 _GUILD_CUSTOMER = "111111111111111111"
 _GUILD_OWN = "222222222222222222"
 _GUILD_OTHER = "333333333333333333"
-
-_DDL = """
-CREATE TABLE IF NOT EXISTS tenant_discord_config (
-    tenant_id INTEGER NOT NULL,
-    purpose   VARCHAR(16) NOT NULL DEFAULT 'customer',
-    guild_id  VARCHAR(32) NOT NULL,
-    connected_by_staff_id INTEGER,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (tenant_id, purpose),
-    UNIQUE (guild_id)
-)
-"""
 
 _PERMS_FULL = {"channels.manage", "tenant.profile.view", "tenant.profile.edit"}
 _PERMS_NO_EDIT = {"channels.manage", "tenant.profile.view"}
@@ -62,19 +49,13 @@ def _mock_user() -> User:
 
 
 @pytest_asyncio.fixture
-async def engine():
-    eng = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
-
-    @event.listens_for(eng.sync_engine, "before_cursor_execute", retval=True)
-    def _rewrite(conn, cursor, statement, parameters, context, executemany):
-        statement = statement.replace("public.tenant_discord_config", "tenant_discord_config")
-        statement = statement.replace("NOW()", "CURRENT_TIMESTAMP")
-        return statement, parameters
-
-    async with eng.begin() as conn:
-        await conn.execute(text(_DDL))
-    yield eng
-    await eng.dispose()
+async def engine(test_engine, setup_test_db):
+    """conftest の共通の表（test_engine・setup_test_db）を使う。前と後で登録の表を空にする。"""
+    async with test_engine.begin() as conn:
+        await conn.execute(text("DELETE FROM tenant_discord_config"))
+    yield test_engine
+    async with test_engine.begin() as conn:
+        await conn.execute(text("DELETE FROM tenant_discord_config"))
 
 
 @pytest.fixture
