@@ -195,6 +195,8 @@ mode: handoff
 | ログインなしの入口（フォームの2本） | backend/tests/test_viewer_isolation.py の _PUBLIC_NO_AUTH_ROUTES に2本（§3-6「入口の見張りでの扱い」）。足さないと、Origin なしで 403 を返して試験が落ちる |
 | 書き込みの口3本（送る API・フォームの2本） | backend/app/realtime/topics.py の NO_SIGNAL_ROUTES に3本（閲覧者の既にある行 :123〜:135 と同じ扱い。社外の閲覧者のことで、画面更新の通知対象外）。足さないと backend/tests/test_realtime_topics.py が赤になる（topics.py:5） |
 | 全部の口を数える見張り（2026-11-05 に洗い出し） | app.routes を使う試験は origin/main で7本: test_viewer_isolation・test_realtime_topics（上の2行で対応）、test_origin_check_not_on_get（GET は Origin を確かめない設計なので対応不要）、test_conditions_permission_keys・test_fx_rate_admin_router（対象のパスが conditions・product-categories・fx-rate だけ）、test_permission_catalog・test_tenant_admin_ssot（口の一覧を見張らない）。scripts/check-dangling-routes.js は口を消したときだけ見るので対象外 |
+| 変えた SQL を最小の土台で流す確かめ（.github/workflows/migration-test.yml の PUBLIC_SQL） | 土台に public.viewer_login_tokens の最小定義を足す（新しい migration が CHECK を付け替え COMMENT を書くため）。public.viewer_accounts は便1の直しで入る。便1 #5131 は土台に viewer_accounts が無くこの確かめで止まった |
+| 読み込み中に中身を消す形の見張り（frontend/scripts/check-loading-clear.js・ADR-1054） | 管理画面で請求先を読むのは useApiQuery。set〇〇Loading(true) を新しく作らない。baseline を変えない。便1 #5131 は setSheetLoading(true) を足してこの見張りで止まった |
 | 公開の決めごと | ADR-1019:9、docs/specs/inventory-management/inventory-viewer/README.md:22、gas-viewer-fresh-fast/design.md:70 の改訂（recon §2）は便2 カードの文書 PR で直した。プライバシーポリシーは便2 の実装で直す（card-bin2.md §3-5） |
 
 ## 4. 代替案と選んだ理由

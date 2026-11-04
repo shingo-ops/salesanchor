@@ -71,3 +71,13 @@
 - NEW-HIGH-1: 書き込みの口3本が、即時反映の対応表（backend/app/realtime/topics.py の NO_SIGNAL_ROUTES）に入っていなかった。足さないと backend/tests/test_realtime_topics.py が赤になる。HIGH-1 と同じ種類の漏れ（全部の口を数える見張りへの登録漏れ）。card-bin2.md §2・§3-3・§3-6・手順8 と design.md §3-7 に足した。
 - 同じ種類の漏れを残さないため、app.routes を使う見張りを origin/main で全部洗い出し、design.md §3-7 に7本それぞれの扱いを書いた。
 - LOW-A: PR 本文の説明を、直しの後の中身に合わせた。
+
+## 8. 便1 #5131 の CI で止まった2件を、便2 カードに先回りして入れたこと（2026-11-05）
+
+- 便1 #5131 は CI の3つの確かめで止まった。直しは docs/handoff/viewer-customer-sheet/card-bin1-fix1.md（便1の枝）。
+- そのうち2件は便2でも同じ形で起きる。#5129 の3回目の審査を止め、カードに先に入れた。
+  - 変えた SQL を最小の土台で流す確かめ: 土台に public.viewer_login_tokens が無い。card-bin2.md §2・§3-1 の最後の項目・手順8 と design.md §3-7 に足した。
+  - 読み込み中に中身を消す形の見張り（ADR-1054）: 請求先の読み込みを useApiQuery にする。card-bin2.md §3-4・§3-6・手順8 と design.md §3-7 に足した。
+- 3件目（試験の部品に deliverable が無い）は便1だけの話で、便2 には当たらない。
+- 手順の漏れ（Opus）: card-bin1-fix1.md は、card-lint を流す前にクラウドの担当へ渡した。中身は足りていたが、形式の4件（L03 END OF CARD・L04 受領確認・L15 停止の語・L29 読んだ節の行）が欠けていた。クラウドの指示文には停止と報告の決まりを入れていたので、作業の安全には響いていない。形式は便1の枝で後から直す。再発を止めるため、クラウドへ渡す直前に card-lint を通す見張りを PO に提案する。
+- card-bin2.md は、上の2件を足した後に card-lint を流し直し、exit 0（長い行の警告だけ）を確かめた。

@@ -50,6 +50,7 @@ mode: handoff
 | `migrations/20261024_100300_create_ai_cloud_views.sql` | 列の分類に2行足す・:3 のコメントの数 |
 | `migrations/20261020_120000_create_viewer_message_templates.sql` | :11 の COMMENT「台帳の9件」→「台帳の10件」 |
 | `.github/workflows/migration-guard.yml` | :224 の `PUBLIC_TABLES` に `viewer_billing_profiles` を足す（`viewer_status_changes` の後ろ） |
+| `.github/workflows/migration-test.yml` | 最小の土台（PUBLIC_SQL）に `public.viewer_login_tokens` の最小定義を足す（§3-1 の最後の項目） |
 | `backend/app/services/viewer_message_templates.py` | LEDGER に `billing_form_request` |
 | `backend/app/services/viewer_billing_form.py`（新規） | 鍵を作る唯一の入口・開く・送信の処理 |
 | `backend/app/services/auth_mail.py` | 新しい送信部 `send_viewer_billing_form_email` を足す（今の関数は変えない） |
@@ -85,6 +86,8 @@ mode: handoff
 - 表と各列に COMMENT。
 - 鍵の用途: `public.viewer_login_tokens` の `ck_viewer_login_tokens_purpose` を `('signup_code','password_reset','billing_form')` に付け替える（`DROP CONSTRAINT IF EXISTS` → `ADD CONSTRAINT`。1 トランザクション）。`purpose` の COMMENT に `billing_form＝請求先フォーム` を足す。
 - 書き方は `migrations/20261016_150000_add_viewer_accounts.sql` にそろえる。
+- 試験の土台: CI の「マイグレーションSQL 実行テスト（実DB）」は、変えた SQL だけを最小の土台（`.github/workflows/migration-test.yml` の PUBLIC_SQL）の上で流す。土台に `public.viewer_accounts` は便1の直しで入る（便1が main に入った後に作業を始めるので、手順1 の後に `grep -n "public.viewer_accounts" .github/workflows/migration-test.yml` が1件以上であることを確かめる。0件なら NEEDS_DECISION:）。`public.viewer_login_tokens` は土台に無いので、`public.viewer_accounts` の最小定義の直後に足す。列は本物（`migrations/20261016_150000_add_viewer_accounts.sql` の viewer_login_tokens）と同じ型で `id BIGSERIAL PRIMARY KEY`・`viewer_account_id BIGINT NOT NULL REFERENCES public.viewer_accounts(id) ON DELETE CASCADE`・`purpose TEXT NOT NULL`・`CONSTRAINT ck_viewer_login_tokens_purpose CHECK (purpose IN ('signup_code', 'password_reset'))`。上に「20261016_150000_add_viewer_accounts.sql で本番作成済み。（手順5 で作った新しい migration のファイル名）が CHECK を付け替え COMMENT を書くため、前提として最小定義を登録する」の形のコメントを付ける（周りのコメントと同じ形・字下げ）。新しい migration がこれ以外の表や列を参照するなら、その分も同じ形で足し、足した理由を報告に書く。
+  - 理由: 便1 #5131 は土台に viewer_accounts が無く、この確かめで止まった（review-opus.md §8）。
 - 着手前に確かめること: `git grep -n "password_reset'" origin/main -- backend migrations` で、用途の値を並べている所（CHECK 以外）を全部探し、報告に書く。並べている所が CHECK だけでなければ、そこも `billing_form` を足すかを design どおりに判断し、判断の理由を報告に書く。
 
 ### 3-2. 今ある migration の一覧に足す（新しい migration には書かない。design §3-2 の「足す場所は2つ」）
@@ -125,6 +128,9 @@ mode: handoff
 - 金型だけを使う（ADR-144）。色・余白はデザイントークンだけ（ADR-067）。文字はすべて `t()`（ADR-027）。新しい部品は作らない。金型にない部品が要ると分かったら、そこで止まって報告する。
 - 閲覧者管理ページの詳細スライド（Drawer）:
   - 「請求先」の区切り: 7項目を文字で出すだけ（郵便番号は表示のときに `123-4567` の形）。まだ無いときは EmptyState。直す欄は作らない（直すのはお客さんのフォーム）。
+  - 請求先の読み込みは `useApiQuery`（`frontend/src/lib/query/apiQuery.ts`。ADR-1054）で行う。形は便1の直しでシートを読む所（同じファイルの `useApiQuery<SheetItem[]>("/tcg/distribution/targets", …)`）にそろえ、`enabled: detailId !== null`。読み込み中は `isPending`、失敗は `isError` から出す。`set〇〇Loading(true)` の形の状態を新しく作らない（`frontend/scripts/check-loading-clear.js` が数を数えて止める）。`frontend/scripts/loading-clear-baseline.json` を変えない。`loading-clear-exempt` の注記を使わない。
+  - フォームを送った後に請求先の表示を取り直すときは `useInvalidateApi()` に頭の言葉（`["super-admin","viewers", String(id), "billing-profile"]`）を渡す。送るボタンの「送信中」の状態の名前に `Loading` を含めない（例 `sendingBillingForm`。今の申込コードの再発行の書き方にそろえる）。
+  - 理由: 便1 #5131 は `setSheetLoading(true)` を足してこの見張りで止まった（review-opus.md §8）。
   - 「請求先フォームを送る」ボタン（Button）: 本契約（active）の人のときだけ出す。押した結果（部屋へ送れた／送れなかった／部屋なし、メールの手配をした、期限）は、今の申込コードの再発行と同じ出し方。送れなかった・部屋なしのときは `room_notice_text` をコピーできるようにする（再発行と同じ部品）。409・503 は文言を `t()` で出す。
 - 閲覧ページ（`frontend/src/pages/viewer/`）:
   - `ViewerApp.tsx`: `RESET_HASH_PREFIX` と並べて `"#billing="` を足す。鍵の読み方・URL から消す処理・画面の種類・画面の出し分けは、再設定と同じ形（design §3-6）。
@@ -152,7 +158,8 @@ mode: handoff
 - API 試験（同じファイルか、`backend/tests/test_super_admin_viewers.py` の並び）: 送信部（部屋とメール）を差し替えて回数と宛先を数える／部屋なしで `no_room` と `room_notice_text`／出どころ違いで止まる・回数超えで 429／open で鍵が残り今の値が返る。
 - `backend/tests/test_viewer_isolation.py`: フォームの2本を `_PUBLIC_NO_AUTH_ROUTES` に足した後、この試験が passed（足さないと、2本が Origin なしで 403 を返して失敗する）。
 - `backend/tests/test_realtime_topics.py`: 3本を `NO_SIGNAL_ROUTES` に足した後、この試験が passed。`backend/tests/test_origin_check_not_on_get.py`: GET billing-profile は Origin を確かめないので passed のまま。
-- 画面試験: 閲覧者管理ページ（ボタンは active だけ・請求先の表示・空の案内）、閲覧ページ（`#billing=` で開く・会社のときだけ担当者欄・無効の鍵の案内）。
+- 画面試験: 閲覧者管理ページ（ボタンは active だけ・請求先の表示・空の案内）、閲覧ページ（`#billing=` で開く・会社のときだけ担当者欄・無効の鍵の案内）。管理ページの試験は `api.get` の差し替えに `/super-admin/viewers/{id}/billing-profile` の答えを足す（`useAuth` の差し替えと `queryClient.clear()` は便1の直しで入っている）。
+- 見張り: `cd frontend && node scripts/check-loading-clear.js` が exit 0。
 
 ## 4. 守ること
 
@@ -203,6 +210,10 @@ mode: handoff
     期待する出力: 全部 passed。
     cd 作業場所/frontend && npx tsc --noEmit
     期待する出力: exit 0。
+    cd 作業場所/frontend && node scripts/check-loading-clear.js
+    期待する出力: exit 0（§3-4。数が増えたと出たら、`useApiQuery` に直す。baseline は変えない）。
+    cd 作業場所 && grep -n "public.viewer_login_tokens" .github/workflows/migration-test.yml
+    期待する出力: 1件以上（§3-1 の最後の項目）。
     cd 作業場所/frontend && npm run build
     cd 作業場所/frontend && node scripts/check-viewer-bundle.js
     期待する出力: 閲覧ページの JS の合計（KB）と合格。数を報告に書く。300KB を超えたら止まる。
