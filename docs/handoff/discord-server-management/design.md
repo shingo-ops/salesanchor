@@ -6,7 +6,7 @@
 - あるべき姿: [ideal-state.md](../../specs/discord-server-management/ideal-state.md)　／　KGI: [kgi.md](../../specs/discord-server-management/kgi.md)
 - 下調べ: [recon.md](recon.md)（以下「R§n」は recon.md の節）
 - 対象 ADR: ADR-091（Bot 権限の正本・変えない）、ADR-072（commit 後の reset_tenant_context）、ADR-027（画面の文字は t()）、ADR-144（画面部品の金型）、ADR-135・ADR-136（migrations を含む PR の GO 手順）、ADR-1037（移行のロック待ち 1 秒）、ADR-1024（ai_ro ビュー）。新規 ADR 案は §10
-- 状態: 2026-11-04 設計案。PO 決定「1」（設計図はプログラムと同じ場所に履歴付きで置く）を反映
+- 状態: 2026-11-04 PO 承認済み（PO「1」＝この設計で承認し、自社用サーバーの登録から作り始める）。PO 決定「1」（設計図はプログラムと同じ場所に履歴付きで置く）を反映。便1a の実装カード: [card-bin1a-purpose-column.md](card-bin1a-purpose-column.md)（便1b は便1a の本番反映後に出す）
 
 ## 1. 目的と合格条件
 
@@ -54,6 +54,14 @@
 - ロック待ちは ADR-1037 のとおり `SET lock_timeout = '1s'`。表は 3 行だけ
 - 戻し方：`DELETE … WHERE purpose='own'` → 主キーを `(tenant_id)` に戻す → 列を消す（ファイル末尾にコメントで書く）
 
+改訂1（2026-11-04、カード作成時の実物確認による。Opus の技術判断）：移行を 2 つに分ける
+- 事実：本番への出し方は「①新しいプログラムを入れて起動（`.github/workflows/deploy.yml` の `Deploy to VPS (code + env + docker compose)`）→ ②DB の移行（`Run database migrations`、`scripts/run_all_migrations.sh`）」の順（deploy.yml:224-235 のコメントと手順名）
+- 1 つの PR で列とプログラムを一緒に出すと、①と②の間は新しいプログラムが無い列 `purpose` を読む。受け取り係の逆引き（`client.py:101-128`）は失敗すると None を返すので、その間の顧客用サーバーの書き込みを取りこぼす
+- 対処：
+  - 便1a（移行だけ・`migrations/20261105_100000_tenant_discord_config_purpose.sql`）：列 `purpose`（既定 `customer`）・決まり `ck_tenant_discord_config_purpose`・一意 `uq_tenant_discord_config_tenant_purpose (tenant_id, purpose)` を足すだけ。主キーは `(tenant_id)` のまま。今のプログラムはこの列を知らなくても動く（足すだけ）
+  - 便1b（プログラム＋移行 `migrations/20261106_100000_tenant_discord_config_purpose_pk.sql`）：主キーを `(tenant_id, purpose)` に替え、便1a の一意を消す。新しいプログラムの `ON CONFLICT (tenant_id, purpose)` は便1a の一意で、移行の前でも後でも動く。移行の前に自社用を登録しようとすると主キー `(tenant_id)` に当たって失敗するが、自社用の登録はこの便で初めて画面に出るので影響は無い
+- この表を別の表から参照する外部キー・見張り・行の制限は 0 件（§11 U1）なので、主キーの付け替えは 3 行の表で 1 回の短い書き換え
+
 新しい表（同じ移行ファイル）：
 - `public.discord_server_snapshots`（今の姿の記録。Opus が最初の設計図を作るためだけに使う）
   - 列：`id BIGSERIAL PK`、`tenant_id INTEGER NOT NULL`、`purpose VARCHAR(16) NOT NULL CHECK (purpose='own')`、`body JSONB NOT NULL`、`taken_by INTEGER`、`taken_at TIMESTAMPTZ NOT NULL DEFAULT now()`
@@ -85,12 +93,21 @@
 - `backend/app/discord_gateway/client.py:101-126` `_resolve_tenant_id(guild_id)` を `_resolve_guild(guild_id) -> tuple[int, str] | None`（会社と用途）に替える。SQL は `SELECT tenant_id, purpose …`
 - 呼び出し 5 か所（`:198-216` 起動時の部屋の復旧、`:217-247` 部屋が消されたとき、`:256-343` 受付ボタン、`:345-392` リアクション、`:408-434` 書き込み）で、用途が `own` なら何もせず `logger.info("[discord-gateway] own server — customer handlers skipped …")` だけ残して戻る
 - 顧客用（`customer`）の動きは今と同じ（KGI-2）
+
+改訂1（2026-11-04、カード作成時の実物確認による）：関数の名前と形は変えない
+- 事実：既存の試験 8 か所が `_resolve_tenant_id` を差し替えている（`backend/tests/test_discord_bot_texts.py:107,123,134,146`・`test_discord_reaction_wiring.py:172`・`test_discord_ticket_channel_delete_restore.py:257,275,296`）
+- 対処：`_resolve_tenant_id` の名前と戻り値（`int | None`）はそのままにし、SQL に `AND purpose = 'customer'` を足すだけにする。自社用サーバーは「顧客用として登録されていないサーバー」になり、5 か所すべてが今ある「未登録なら止める」道を通る（起動時の復旧・部屋の削除・リアクション・書き込みは何もしない。受付ボタンは「登録されていない」の一言だけ返す。自社用サーバーに受付ボタンは置かない）
+- 上の `_resolve_guild` と専用の記録の一文は作らない。効き目（自社用でお客さん向けの処理が動かない）は同じで、変える行が 1 か所で済む
 - 試験：自社用サーバーの書き込みで `ticket_channel_writer.process_ticket_channel_message` が呼ばれないこと。顧客用では今までどおり呼ばれること
 
 ### 4-4. 自社用の登録（Bot の招待）
 
 - `backend/app/routers/discord_oauth.py:105-130` 招待の開始で、受け取る本文に `purpose`（`customer` か `own`。既定は `customer`）を足す。`oauth_state.issue_state` に入れる中身へ purpose を足す
 - 戻り（`:140-219`）で purpose を取り出して §4-2 の書き方で登録する
+  - 登録できたあとの戻り先：顧客用は今のまま `/channels?discord_status=connected`。自社用は `/admin/discord-config?tab=own&discord_status=connected`（自社用の登録の Card がある画面へ戻す）
+  - 中身の purpose が `customer`・`own` 以外なら `customer` とせず `invalid_payload` で戻す（決まりにない値を黙って顧客用に入れない）
+- 画面側の呼び出し：今の顧客用（`frontend/src/pages/channels/ChannelsPage.tsx:194`、本文 `{}`）は変えない。自社用の Card だけが本文 `{"purpose":"own"}` で呼ぶ
+- 招待の開始は権限 `channels.manage`（`discord_oauth.py:107`）。自社用の招待ボタンは `tenant.profile.edit` と `channels.manage` の両方を持つ人にだけ出す
 - 自社用の削除：`DELETE /admin/discord-config/own`（新規）。`purpose='own'` の行だけ消す
 - 自社用の取得：`GET /admin/discord-config/own`（新規）。`{guild_id, connected_at}` を返す
 
@@ -169,7 +186,8 @@
 
 | 便 | 中身 | 確かめる KGI | migrations |
 |---|---|---|---|
-| 便1 | §4-1 の列追加と主キー、§4-2 の 8 か所と漏れ止め試験、§4-3 受け取り係、§4-4 招待、自社用の登録の画面（タブと登録の Card だけ） | KGI-1・KGI-2 | あり（GO 手順・直前のバックアップ確認） |
+| 便1a | §4-1 改訂1 の列・決まり・一意を足すだけ（プログラムは変えない） | KGI-1（今の 3 行が `customer` になり、画面と Bot が今のまま） | あり（GO 手順・直前のバックアップ確認） |
+| 便1b | §4-1 改訂1 の主キー付け替え、§4-2 の 8 か所と漏れ止め試験、§4-3 改訂1 受け取り係、§4-4 招待、自社用の登録の画面（タブと登録の Card だけ） | KGI-1・KGI-2 | あり（GO 手順・直前のバックアップ確認） |
 | 便2 | §4-1 の 2 表、§4-6 読み取り、画面の「読み取る」 | KGI-3 の前半 | あり |
 | 便3 | §4-5 設計図の形と検査、§4-7 確認、§4-8 反映、画面の確認と反映 | KGI-3〜6 | なし |
 | 試験 | テナント001の自社用テストサーバーで KGI 1〜7 を順に。合格後に HIGH LIFE JPN | KGI-7 | — |
@@ -252,7 +270,7 @@
 - 実装範囲：便ごとに触るファイルと変更前後を記した
 
 未解決（実装カードを出す前に片付ける）：
-- U1 主キーの名前（今の制約名）を本番で読んで移行に書く（便1 のカードで実物を確かめる手順にする）
-- U2 ai_cloud ビューの作り方が、新しい表を足さないと失敗する作りか（fail-closed か）を便2 のカードで確かめる
+- U1 【解決 2026-11-04】主キーの名前は `tenant_discord_config_pkey`（本番の読み取り。ほかに `tenant_discord_config_tenant_id_fkey`・`uq_tenant_discord_config_guild_id`）。この表を参照するほかの表の外部キー・行の見張り（trigger）・行の制限（policy）は 0 件、行の制限は無効（`relrowsecurity=false`）。列は tenant_id・guild_id・created_at・updated_at・connected_by_staff_id の 5 つ
+- U2 【解決 2026-11-04】ai_cloud は分類表に無い文字の列を伏せる（`migrations/20261024_100000_create_ai_cloud_meta.sql` の build_views、分類なしで文字の型は mask に落ちる）。新しい列・表を足しても失敗せず伏せる側に倒れる。便1 では ai_cloud の分類表を変えない（purpose は伏せたままでよい。Opus は ai_ro で読む）
 - U3 テナント001の自社用テストサーバーの用意（PO 側。便1 のマージ後でよい）
 - U4 HIGH LIFE JPN の今の登録が、PO の画像の自社サーバーと同じか（R§8）。同じなら、HIGH LIFE JPN は今の行を自社用に移し、顧客用を別に登録し直す話になるため、HIGH LIFE JPN に使う前に PO に確かめる
