@@ -98,7 +98,7 @@ async def run_auto_setup(
     """
     # 1. guild_id 取得
     result = await db.execute(
-        text("SELECT guild_id FROM public.tenant_discord_config WHERE tenant_id = :tid"),
+        text("SELECT guild_id FROM public.tenant_discord_config WHERE tenant_id = :tid AND purpose = 'customer'"),
         {"tid": tenant_id},
     )
     row = result.first()

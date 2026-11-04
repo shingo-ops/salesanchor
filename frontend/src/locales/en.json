@@ -3430,12 +3430,29 @@
     "saveError": "Could not save",
     "invalidGuildId": "Enter a 17–20 digit number",
     "saved": "Saved",
+    "tabCustomer": "Customer server",
+    "tabOwn": "Own server",
     "syncStatus": {
       "success": "Synced",
       "failed": "Sync failed",
       "pending": "Syncing",
       "not_linked": "Discord not linked"
     }
+  },
+  "discordOwnServer": {
+    "title": "Own server",
+    "description": "The Discord server your team uses internally. Inviting the bot registers it.",
+    "connected": "Connected",
+    "notConnected": "Not connected",
+    "invite": "Invite the bot to your own server",
+    "disconnect": "Remove registration",
+    "confirmTitle": "Remove the own server registration?",
+    "confirmMessage": "The Discord server itself is not deleted. Only its link to the app is removed.",
+    "connectedSuccess": "Your own server was registered",
+    "connectError": "Could not register the server",
+    "guildAlreadyRegistered": "This server is already registered",
+    "requestFailed": "Could not complete the request",
+    "loadError": "Could not load"
   },
   "discordAutoSetup": {
     "title": "Auto setup",

@@ -3430,12 +3430,29 @@
     "saveError": "保存できませんでした",
     "invalidGuildId": "17〜20桁の数字で入力してください",
     "saved": "保存しました",
+    "tabCustomer": "顧客用",
+    "tabOwn": "自社用",
     "syncStatus": {
       "success": "同期済み",
       "failed": "同期失敗",
       "pending": "同期中",
       "not_linked": "Discord未連携"
     }
+  },
+  "discordOwnServer": {
+    "title": "自社用サーバー",
+    "description": "社内の連絡に使う Discord サーバーです。Bot を招待すると登録されます。",
+    "connected": "接続済み",
+    "notConnected": "未接続",
+    "invite": "自社用サーバーに Bot を招待",
+    "disconnect": "登録を解除",
+    "confirmTitle": "自社用サーバーの登録を解除しますか？",
+    "confirmMessage": "Discord のサーバーそのものは消えません。アプリとのつながりだけを外します。",
+    "connectedSuccess": "自社用サーバーを登録しました",
+    "connectError": "登録できませんでした",
+    "guildAlreadyRegistered": "このサーバーは既に登録されています",
+    "requestFailed": "実行できませんでした",
+    "loadError": "読み込めませんでした"
   },
   "discordAutoSetup": {
     "title": "自動セットアップ",

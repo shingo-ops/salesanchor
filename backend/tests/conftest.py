@@ -1228,10 +1228,13 @@ async def setup_test_db(test_engine):
         # Sprint 8 / F8: テナント発行者情報 (PO PDF / メール差出人)
         await conn.execute(text("""
             CREATE TABLE IF NOT EXISTS tenant_discord_config (
-                tenant_id INTEGER PRIMARY KEY,
+                tenant_id INTEGER NOT NULL,
+                purpose   VARCHAR(16) NOT NULL DEFAULT 'customer',
                 guild_id  VARCHAR(32) NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (tenant_id, purpose),
+                UNIQUE (guild_id)
             )
         """))
         await conn.execute(text("""
