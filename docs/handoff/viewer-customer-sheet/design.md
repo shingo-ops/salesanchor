@@ -6,7 +6,7 @@
 - 親（設計仕様書）: [docs/specs/inventory-management/inventory-viewer/README.md](../../specs/inventory-management/inventory-viewer/README.md)
 - 現状の記録: [recon.md](./recon.md)
 - 関係 ADR: [ADR-1019](../../adr/ADR-1019-inventory-viewer-separate-accounts.md)（改訂が要る。recon §2）、ADR-1014（在庫の行の定義は1か所）、ADR-144・ADR-067（金型とデザイントークン）、ADR-027（i18n）
-- 状態: **草案・PO 未承認・設計審査1回目 REVISE（2026-11-04）の指摘9件・2回目 REVISE の指摘7件を反映済み・3回目の審査前**。下の「§6 PO に決めてもらうこと」が全部決まるまで、設計合格にも実装にも進まない。
+- 状態: **草案・PO 未承認・設計審査1回目 REVISE（2026-11-04）の指摘9件・2回目 REVISE の指摘7件・3回目 REVISE の指摘6件を反映済み・4回目の審査前**。下の「§6 PO に決めてもらうこと」が全部決まるまで、設計合格にも実装にも進まない。
 
 ## 1. 目的（PO の言葉から）
 
@@ -94,6 +94,8 @@
   - RESTRICT にしない理由: 毎日の自動削除（backend/app/tasks/maintenance.py:220）が失敗し、ポリシーに書いた90日を守れなくなる。
 - 1人が持てるシートは1つまで（Q2 決定 2026-11-04 PO「1」）。DB で強制する: viewer_account_id に「NULL でない値は1回だけ」の一意の索引（部分一意索引 WHERE viewer_account_id IS NOT NULL）。NULL（特定の人用でないシート）は何件でもよい。2件目の登録は API が 409 を返し、画面は t() の文言で知らせる。
 - viewer_account_id を書く入口は1つ: 今の create_target・update_target（tcg_distribution_svc.py:727〜:775）に viewer_account_id を足す（:731 の INSERT 列、:753 の allowed）。2つの画面はどちらも今の API（backend/app/routers/tcg_distribution.py:99〜:132 の POST・PUT /tcg/distribution/targets）を呼ぶ。閲覧者管理ページ用の別の書き込み API は作らない。
+  - 入出力の型にも足す: 入力の型 DistributionTargetCreate・DistributionTargetUpdate（routers/tcg_distribution.py:44・:52）に viewer_account_id（int | None）。解析ダッシュボードの応答の型 DistributionTargetItem（backend/app/routers/tcg_analysis_dashboard.py:184）に viewer_account_id・deliverable・理由（reason）。型に無い値は応答から落ちるため。
+  - 配信先の削除（soft_delete_target。tcg_distribution_svc.py:778〜:789）は、今は行を消さず is_active を false にするだけ。このままだと消したシートに viewer_account_id が残り、上の一意の索引で同じ人の新しいシートが 409 になる。削除のときに viewer_account_id も NULL にする（同じ UPDATE の1文で）。索引の条件に is_active を入れる案は採らない。理由: 手で止めた（is_active=false の）シートが残っている人に2枚目を登録できてしまい、「1人1つ」（Q2）が崩れる。手で止めることと削除は、今は同じ is_active=false で区別できない。区別は「つなぎが残っているか」で付く（止めた＝残る、削除＝外れる）。
   - 一意の索引の名前は uq_tcg_distribution_targets_viewer_account_id。IntegrityError は SQLSTATE で分ける: 23505（一意違反）かつ索引名が上の名前なら 409、23503（外部キー違反＝名簿に無い番号）なら 422。どちらも svc が専用の例外に直し、router が返す（同ファイル :163 の 409 と同じ形）。それ以外の IntegrityError はそのまま上げる。
   - 今の create_target・update_target は RETURNING で行を返す（svc :734・:767）が、この形では名簿を JOIN できず deliverable と理由が入らない。書いたあとは get_target で読み直して返す（判定を書き写さないため）。
   - つなぎを外す（NULL に戻す）ことができるようにする: 今の PUT は model_dump(exclude_none=True)（:129）なので、null を送っても捨てられる。viewer_account_id だけは「送られたか」（model_fields_set）で判断し、null が送られたら NULL にする。
@@ -135,7 +137,7 @@
 - 送り方（Q4b 決定 2026-11-04 PO 原文「2、フォームを送るボタンを作ってボタンを押したらフォームを送る作りにしたい」＝ボタンで、メールと Discord の部屋の両方に送る。期限は7日）:
   - 閲覧者管理ページの、本契約の人の行に「請求先フォームを送る」ボタンを置く（文言は t() の新しいキー。部品は金型の Button）。本契約でない人には出さない。API も active 以外は 409 で断る。
   - 押すと、鍵を1本作り（古い鍵は消える）、同じリンクをメールと部屋の両方に送る。期限は7日。
-  - 文の正本は1か所: Discord の文面テンプレートの台帳（backend/app/services/viewer_message_templates.py:43〜:53 の LEDGER。本文は public.viewer_message_templates、migrations/20261020_120000_create_viewer_message_templates.sql:3）に、鍵 billing_form_request（送り方は auto＝仕組みが部屋へ送る。差し込み項目は form_url と expires_date）を1件足す。auto の文は差し込み後 2000 字を超えると送らない（viewer_message_templates.py:22・:154）。手で写して送る manual（例 signup_request、backend/app/routers/super_admin_viewers.py:184〜:186）とは違う。メールの本文も同じテンプレートから作る。メールの件名だけは、ほかの閲覧者メールと同じくコードの定数に置く（backend/app/services/auth_mail.py:130 の並び）。
+  - 文の正本は1か所: Discord の文面テンプレートの台帳（backend/app/services/viewer_message_templates.py:43〜:53 の LEDGER。本文は public.viewer_message_templates、migrations/20261020_120000_create_viewer_message_templates.sql:3）に、鍵 billing_form_request（送り方は auto＝仕組みが部屋へ送る。差し込み項目は form_url と form_expires）を1件足す。expires_date は使わない（今は「お試し期限の日付」の意味で interview_request が使い、管理画面の差し込み項目の説明 frontend/src/locales/ja.json:2827 もその意味。frontend/src/pages/super-admin/ViewerTemplatesPage.tsx:275 が placeholders の名前ごとに説明を出すので、同じ名前を別の意味で使うと説明が食い違う）。auto の文は差し込み後 2000 字を超えると送らない（viewer_message_templates.py:22・:154）。手で写して送る manual（例 signup_request、backend/app/routers/super_admin_viewers.py:184〜:186）とは違う。メールの本文も同じテンプレートから作る。メールの件名だけは、ほかの閲覧者メールと同じくコードの定数に置く（backend/app/services/auth_mail.py:130 の並び）。
   - メールの送信部は新しく1つ作る（例 send_viewer_billing_form_email(to_addr, subject, body)）。今の _send_reset_mail（auth_mail.py:97〜:117）は :108 で本文に format(reset_url=…) をかけ直すので、テンプレートから作った文（{ や } を含み得る）を渡すと壊れるか例外になる。新しい関数は format をかけず、受け取った文をそのまま送る。SMTP の設定の読み方・宛先の伏せ方・失敗をログにだけ残す形（:99〜:102・:114〜:117）は同じにする。_send_reset_mail は変えない。
   - テンプレートが無いとき（load_body が None。viewer_message_templates.py:111）: 鍵を作らず、メールも部屋も送らず、API は 503（今の管理 API と同じ _TEMPLATE_NOT_FOUND。backend/app/routers/super_admin_viewers.py:189・:220・:367〜:368）を返して画面で知らせる。差し込み後に 2000 字を超えて render が None を返したとき（:135・:154）も同じ。どちらも鍵を作る前か、作った同じトランザクションを rollback して、鍵は残さない。
   - テンプレートの初期値の入れ方（観測事実: migrations/20261020_120000_create_viewer_message_templates.sql:2 は「専用 CLI（viewer_template_cli）で入れる」と書くが、その CLI は origin/main に無い）: 管理画面の文面テンプレートのページから入れる。行が無い鍵は保存で INSERT される（viewer_message_templates.py:185〜:192、backend/app/routers/super_admin_viewers.py:237〜:259）。本番へ出したあと、ボタンを使う前に PO か管理者が文を1回保存する。これを本番の確かめの手順に入れる。
@@ -164,7 +166,7 @@
 
 | 案 | 中身 | B2B への影響 | 正本 |
 |---|---|---|---|
-| 甲 閲覧者の鍵の表を使う（採用） | viewer_login_tokens に用途 billing_form を足す。画面は B2B と同じ金型の部品で作る | なし | 鍵は名簿を指す（:40）。請求先は viewer_billing_profiles |
+| 甲 閲覧者の鍵の表を使う（採用） | viewer_login_tokens に用途 billing_form を足す。画面は B2B と同じ金型の部品で作る | なし | 鍵は名簿を指す（:41）。請求先は viewer_billing_profiles |
 | 乙 B2B の鍵の表を共用 | registration_tokens の tenant_id・lead_id を空でもよくし、名簿を指す列と種類を足す。書き込みの制限（RLS）も変える | B2B の鍵の決まり（NOT NULL・RLS）と、鍵を作る関数の引数が変わる。B2B の登録フォームの試験のやり直しが要る | 鍵の表に B2B 用と閲覧者用が混ざる |
 
   - 甲でも、鍵の考え方（期限・1回だけ・ハッシュだけ保存）は B2B と同じにする。
@@ -182,7 +184,7 @@
 | 新しい表 viewer_billing_profiles | .github/workflows/migration-guard.yml:224 の PUBLIC_TABLES（viewer_accounts 等と並べる）。ops_case.deny_tables と backend/tests/ops/test_ops_case_db.py:656〜:664（10件→11件）。ai_cloud_meta.column_class と backend/tests/ops/test_ai_cloud_views.py:484（1068 件が増える）と T10 の分類漏れ検査 |
 | 名簿を消すと消える表（請求先・配信先） | backend/tests/test_viewer_purge.py:143〜:149 の「消えた表」の並びに viewer_billing_profiles と tcg_distribution_targets を足す |
 | 鍵の用途 billing_form | migrations/20261016_150000_add_viewer_accounts.sql:48 の CHECK を変える新しい migration と、:54 の COMMENT の書き直し |
-| 文面テンプレートの鍵 billing_form_request | viewer_message_templates.py の LEDGER（:43〜:53）。migrations/20261020_120000_create_viewer_message_templates.sql:11 の「台帳の9件」の COMMENT を10件に。backend/tests/test_viewer_message_templates.py:22〜:25 の KEYS。frontend/src/pages/super-admin/ViewerTemplatesPage.test.tsx:17〜:30 の KEYS と PLACEHOLDERS。backend/tests/viewer_template_fixtures.py の DEFAULT_BODIES。i18n の名前と使う場面（frontend/src/locales/ja.json:2805・:2816。:2797〜:2805 が名前、:2808〜:2816 が使う場面 と en.json の同じ位置の並び） |
+| 文面テンプレートの鍵 billing_form_request | viewer_message_templates.py の LEDGER（:43〜:53）。migrations/20261020_120000_create_viewer_message_templates.sql:11 の「台帳の9件」の COMMENT を10件に。backend/tests/test_viewer_message_templates.py:22〜:25 の KEYS。frontend/src/pages/super-admin/ViewerTemplatesPage.test.tsx の KEYS（:15〜:18）と PLACEHOLDERS（:19〜:29）。backend/tests/viewer_template_fixtures.py の DEFAULT_BODIES。i18n の名前と使う場面（frontend/src/locales/ja.json:2805・:2816。:2797〜:2805 が名前、:2808〜:2816 が使う場面 と en.json の同じ位置の並び）。差し込み項目の説明 placeholders（ja.json:2818〜:2828 と en.json の同じ並び）に form_url（請求先フォームのURL・自動で入ります）と form_expires（請求先フォームのリンクの期限の日付）の2行 |
 | 配信先の判定の値（deliverable と理由） | §3-3 に挙げた3か所と2画面 |
 | 公開の決めごと | ADR-1019:9、docs/specs/inventory-management/inventory-viewer/README.md:22、gas-viewer-fresh-fast/design.md:70 の改訂（recon §2）。プライバシーポリシー |
 
@@ -198,7 +200,7 @@
 ## 5. リスクと対処
 
 - 名簿の自動削除で請求書の宛先が消える → 3-4 のとおり、請求書は発行時点の写しを持ち、名簿が消えても残す。
-- 停止したお客さんのシートに書き続ける → Q1 で決める。決まるまで実装しない。
+- 停止したお客さんのシートに書き続ける → Q1 で決定済み（停止したら自動で止め、停止を外したら自動で再開する）。§3-3 の判定1か所で守り、§7 の試験で確かめる。
 - 個人情報が増える → ポリシーの書き足し、ai_ro での隠し設定、PR に個人名を載せない。
 - 既存の決定との食い違い（ADR-1019:9・README:22・gas-viewer-fresh-fast/design.md:70）→ 同じ PR で改訂する。
 
@@ -227,6 +229,8 @@
 | お試し（trial・期限切れを含む）・pending・verified の人のシートは、登録してあっても書き込まれない。その人を本契約にすると、次の配信で書き込まれる | PG テスト（状態を変える前後で配信の結果を比べる） |
 | 同じ人に2つ目のシートを登録すると止まり（API 409）、DB にも入らない。特定の人用でないシートは何件でも登録できる | PG テスト（一意の索引）＋API テスト |
 | 名簿の行が自動削除されると、その人の配信先の行も消える | PG テスト（maintenance の削除を流す） |
+| 配信先を削除すると、そのシートのつなぎが外れ（viewer_account_id が NULL）、同じ人に新しいシートを登録できる。手で止めただけのシートが残っている人には2枚目を登録できない（409） | API テスト＋PG テスト |
+| 管理画面の文面テンプレートのページで、billing_form_request の差し込み項目 form_url・form_expires に日本語と英語の説明が出る | 画面テスト（ViewerTemplatesPage.test.tsx） |
 | 請求先の項目は viewer_billing_profiles の1か所だけにある | DB の列の検査（information_schema）＋レビュー |
 | 名簿の行が消えても、発行済みの請求書の行は残る | PG テスト（別テーマの便で） |
 | 「請求先フォームを送る」ボタンは本契約の人の行にだけ出る。本契約でない人に API で送ろうとすると 409 で、鍵は作られない | 画面テスト＋API テスト＋PG テスト（鍵の件数 0） |
