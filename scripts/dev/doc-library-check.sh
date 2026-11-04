@@ -208,7 +208,7 @@ if os.path.isfile(LEDGER):
             if len(c) < 4 or not re.match(r"^R-\d+$", c[0]):
                 continue
             locs = [x.strip() for x in re.split(r"<br\s*/?>|; ", c[2]) if x.strip()]
-            e = rows.setdefault(c[0], {"locs": [], "kinds": set()})
+            e = rows.setdefault(c[0], {"locs": [], "kinds": set(), "name": c[1]})
             e["locs"].extend(locs)
             e["kinds"].add(c[3])
         ledger = rows
@@ -231,6 +231,19 @@ def parse_loc(loc):
     elif not os.path.isabs(f):
         f = os.path.join(REPO, f)
     return (rp(f), rest)
+
+
+def parse_loc_line(loc):
+    """ファイル:見出し:行番号 → (実パス, 見出し, 行番号 or None)。"""
+    if ":" not in loc:
+        return None
+    f, rest = loc.split(":", 1)
+    ln = None
+    m = re.match(r"^(.*):(\d+)$", rest)
+    if m:
+        rest, ln = m.group(1), int(m.group(2))
+    p = parse_loc(loc)
+    return (p[0], p[1], ln) if p else None
 
 
 # 対象ファイル
@@ -318,7 +331,7 @@ dup_line = sum(1 for v in line_files.values() if len(v) >= 2)
 
 # 台帳を使う3項目
 if ledger is None:
-    L2_DUP_LEDGER = L2_UNTAGGED = L3_LEDGER = "unreadable"
+    L2_DUP_LEDGER = L2_UNTAGGED = L3_LEDGER = L2_LINE_NG = "unreadable"
 else:
     L2_DUP_LEDGER = str(sum(1 for e in ledger.values() if len(e["locs"]) >= 2))
     known = set()
@@ -337,6 +350,58 @@ else:
     L2_UNTAGGED = str(untagged)
     L3_LEDGER = str(sum(1 for e in ledger.values() if "本" in e["kinds"]))
 
+    # L2_LINE_NG: 台帳の行番号が、その行の見出しと合っているか
+    HEAD_RE = re.compile(r"^(#{1,3})\s+(.*)$")
+    head_cache = {}
+
+    def heads_of_file(path):
+        if path in head_cache:
+            return head_cache[path]
+        res = None
+        if os.path.isfile(path):
+            lines = read_text(path).split("\n")
+            hs = {}
+            fence = False
+            for i, line in enumerate(lines):
+                if line.lstrip().startswith("```"):
+                    fence = not fence
+                    continue
+                if fence:
+                    continue
+                mm = HEAD_RE.match(line)
+                if mm:
+                    hs[i + 1] = (len(mm.group(1)), TAG_RE.sub("", mm.group(2)).strip())
+            res = (len(lines), hs)
+        head_cache[path] = res
+        return res
+
+    line_ng = 0
+    for e in ledger.values():
+        for loc in e["locs"]:
+            pl = parse_loc_line(loc)
+            if pl is None or pl[2] is None:
+                line_ng += 1
+                continue
+            path, text, ln = pl
+            info = heads_of_file(path)
+            if info is None or ln < 1 or ln > info[0]:
+                line_ng += 1
+                continue
+            hs = info[1]
+            if ln in hs and hs[ln][1] == text:
+                continue
+            ok = False
+            if e["name"].startswith("言い直し"):
+                for hl, (k, ht) in hs.items():
+                    if ht != text or hl >= ln:
+                        continue
+                    if not any(hl < x <= ln and hs[x][0] <= k for x in hs):
+                        ok = True
+                        break
+            if not ok:
+                line_ng += 1
+    L2_LINE_NG = str(line_ng)
+
 print("L2_DUP_LEDGER=" + L2_DUP_LEDGER)
 print("L2_DUP_ID=%d" % dup_id)
 print("L2_DUP_LINE=%d" % dup_line)
@@ -347,6 +412,7 @@ else:
     L2 = str(sum(int(x) for x in parts))
 print("L2=" + L2)
 print("L2_UNTAGGED=" + L2_UNTAGGED)
+print("L2_LINE_NG=" + L2_LINE_NG)
 
 # ---------- L3 ----------
 A = []
