@@ -125,3 +125,257 @@ lint exit=0
 ## 残り・注意
 - 本番の受入試験（K2〜K4 の新しい形）は未実行。鈴は PC では hover で開く前提で `openRequestFromBell` を書いた（hover → 行が4秒出なければ開き直す、を60秒まで）。スマホ幅で流す場合は「tab」変種（クリックで開く）になるため、そのとき hover で開かない可能性がある（未確認）
 - 依頼の行を押した直後の詳しい画面は、鈴の一覧の読み込みとは別に `/login-approvals/pending` を読む。5秒の間隔制限は鈴側だけに入れた（カードどおり）
+
+## main 取り込み（2回目）
+
+- 作業前 HEAD: f26d3b695（origin と一致）。origin/main (df6725761) を git merge --no-edit で1回取り込み
+- 衝突は LoginApprovalWatcher.tsx と同 .test.tsx の「こちら削除・main 変更」の2件のみ。両方 git rm で削除を維持
+- merge commit: 33ad8fc36 / 直し: f16b3686e（NoticeBell.tsx を isDevSession() に、NoticeBell.test.tsx を registerDevSession(null)・registerTestDevSession() に）
+- ja.json / en.json のキー数: ja 5231 / en 5231（一致）
+
+### (d) git grep -n "lib/auth/provider\|isSelfAuth" -- frontend
+```
+（出力なし・0件・終了コード1）
+```
+
+### (e)(1) npx tsc --noEmit
+```
+tsc exit=0
+```
+
+### (e)(2) npm run lint
+```
+
+> salesanchor-frontend@1.0.0 lint
+> eslint src
+
+
+/root/worktrees/salesanchor/release-auth-login-notice-detail/frontend/src/components/FedExRateModal.test.tsx
+  151:19  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+
+/root/worktrees/salesanchor/release-auth-login-notice-detail/frontend/src/components/PriorityScoreBadge.test.tsx
+  15:28   warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）     local/no-japanese-literal
+  16:33   warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）     local/no-japanese-literal
+  17:9    warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）     local/no-japanese-literal
+  17:30   warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）     local/no-japanese-literal
+  18:9    warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）     local/no-japanese-literal
+  18:29   warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）     local/no-japanese-literal
+  19:9    warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）     local/no-japanese-literal
+  19:30   warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）     local/no-japanese-literal
+  20:38   warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）     local/no-japanese-literal
+  21:35   warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）     local/no-japanese-literal
+  22:35   warning  i18n: テンプレートリテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  22:54   warning  i18n: テンプレートリテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  22:82   warning  i18n: テンプレートリテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  22:105  warning  i18n: テンプレートリテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  30:9    warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）     local/no-japanese-literal
+  45:6    warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）     local/no-japanese-literal
+  47:29   warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）     local/no-japanese-literal
+  50:6    warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）     local/no-japanese-literal
+  52:29   warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）     local/no-japanese-literal
+  55:6    warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）     local/no-japanese-literal
+  56:61   warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）     local/no-japanese-literal
+  57:36   warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）     local/no-japanese-literal
+  61:6    warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）     local/no-japanese-literal
+  63:36   warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）     local/no-japanese-literal
+  67:6    warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）     local/no-japanese-literal
+  68:61   warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）     local/no-japanese-literal
+  69:36   warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）     local/no-japanese-literal
+  73:6    warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）     local/no-japanese-literal
+
+/root/worktrees/salesanchor/release-auth-login-notice-detail/frontend/src/i18n.ts
+  43:7  warning  Unused eslint-disable directive (no problems were reported from 'no-console')
+
+/root/worktrees/salesanchor/release-auth-login-notice-detail/frontend/src/lib/api.no-double-prefix.test.ts
+  29:10  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  30:6   warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+
+/root/worktrees/salesanchor/release-auth-login-notice-detail/frontend/src/mocks/funnelFixtures.ts
+   33:17  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+   42:17  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+   51:17  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+   60:17  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+   69:17  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+   78:17  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+   87:17  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  135:14  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  136:14  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  137:14  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  138:14  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  143:22  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  144:13  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  149:22  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  150:13  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  158:14  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  159:14  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  160:14  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  165:22  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  166:13  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  183:25  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  223:18  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  241:25  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  281:18  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  299:25  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  339:18  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+
+/root/worktrees/salesanchor/release-auth-login-notice-detail/frontend/src/pages/oauth-callback/OAuthCallbackPage.tsx
+  130:6  warning  React Hook useEffect has a missing dependency: 't'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+✖ 59 problems (0 errors, 59 warnings)
+  0 errors and 1 warning potentially fixable with the `--fix` option.
+
+lint exit=0
+```
+
+### (e)(3) 指定4ファイルの vitest
+```
+|
+!  No story files found for the specified pattern: src/**/*.mdx
+
+ RUN  v4.1.7 /root/worktrees/salesanchor/release-auth-login-notice-detail/frontend
+
+|
+•  Storybook collects completely anonymous usage telemetry. We use it to
+|  shape Storybook's roadmap and prioritize features. You can learn more,
+|  including how to opt out, at ]8;;https://storybook.js.org/telemetryhttps://storybook.js.org/telemetry]8;;
+
+ Test Files  4 passed (4)
+      Tests  30 passed (30)
+   Start at  18:09:18
+   Duration  3.91s (transform 1.66s, setup 276ms, import 2.93s, tests 1.86s, environment 3.23s)
+
+exit=0
+```
+
+### (e)(4) npx vitest run（全部）末尾
+```
+⎯⎯⎯⎯⎯⎯ Unhandled Errors ⎯⎯⎯⎯⎯⎯
+
+Vitest caught 1 unhandled error during the test run.
+This might cause false positive tests. Resolve unhandled errors to make sure your tests are not affected.
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: browserType.launch: Executable doesn't exist at /opt/pw-browsers/chromium_headless_shell-1223/chrome-headless-shell-linux64/chrome-headless-shell
+╔════════════════════════════════════════════════════════════╗
+║ Looks like Playwright was just installed or updated.       ║
+║ Please run the following command to download new browsers: ║
+║                                                            ║
+║     npx playwright install                                 ║
+║                                                            ║
+║ <3 Playwright Team                                         ║
+╚════════════════════════════════════════════════════════════╝
+ ❯ node_modules/@vitest/browser-playwright/dist/index.js:929:55
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+
+
+ Test Files  196 passed (271)
+      Tests  2191 passed (2191)
+     Errors  1 error
+   Start at  18:09:35
+   Duration  150.64s (transform 14.00s, setup 6.85s, import 78.55s, tests 136.08s, environment 183.38s)
+
+error during close browserType.launch: Executable doesn't exist at /opt/pw-browsers/chromium_headless_shell-1223/chrome-headless-shell-linux64/chrome-headless-shell
+╔════════════════════════════════════════════════════════════╗
+║ Looks like Playwright was just installed or updated.       ║
+║ Please run the following command to download new browsers: ║
+║                                                            ║
+║     npx playwright install                                 ║
+║                                                            ║
+║ <3 Playwright Team                                         ║
+╚════════════════════════════════════════════════════════════╝
+    at /root/worktrees/salesanchor/release-auth-login-notice-detail/frontend/node_modules/@vitest/browser-playwright/dist/index.js:929:55 {
+  name: 'Error',
+  type: 'Unhandled Error',
+  stacks: [
+```
+- 落ちた試験: 0 件（2191 件通過）。ただし 271 ファイル中 75 ファイルは Storybook のブラウザ試験で、この実行機に Playwright の Chromium (chromium_headless_shell-1223) が無く起動できず未実行（環境の問題・コードの失敗ではない。CI で確認）
+
+### (e)(5) bash scripts/dev/check-before-submit.sh 末尾
+```
+  - test-guard-evaluations (node --test)             流していない: CI で確かめる（約 120 秒。--full で流せます）
+  - run_rule_fixtures（全件）                    流していない: CI で確かめる（約 375 秒。--full で流せます）
+
+== 版の違い（手元と CI）==
+  手元: Python 3.11.18 / node v22.23.4
+  CI  : Python 3.12 / node 22（guard-authoring だけ 24）
+  版が違うので、最後の判定は CI です（この入口は提出前の補助）
+
+合計 11.5 秒 / 必須 16 件を表示 / 流した検査 18 件 / 落ちた検査 0 件 / ログ /tmp/check-before-submit.gCKfgr（消さずに残します）
+結果: ○ 流した検査は全部通りました（終了コード 0）
+流した印を書きました: /home/user/salesanchor/.git/worktrees/release-auth-login-notice-detail/check-before-submit.ok
+exit=0
+```
+
+### git diff --stat f26d3b695
+```
+ .github/workflows/e2e.yml                          |   7 -
+ .github/workflows/frontend-check.yml               |  10 +
+ .github/workflows/karte-gate.yml                   |   9 -
+ .../doc-library-one-tree/card-weekly-k9-line.md    |  56 ++
+ .../impl-report-weekly-k9-line.md                  |  78 ++
+ .../handoff/doc-library-one-tree/k12-fix-design.md |  19 +
+ docs/handoff/firebase-removal/design.md            |   9 +-
+ docs/handoff/firebase-removal/recon.md             |  15 +-
+ frontend/.storybook/main.ts                        |  25 -
+ frontend/.storybook/preview.tsx                    |   7 +-
+ frontend/package-lock.json                         | 890 +--------------------
+ frontend/package.json                              |   1 -
+ frontend/playwright.config.ts                      |   6 +-
+ .../components/LeadFormButtonMigration.test.tsx    |   3 +-
+ frontend/src/components/NoticeBell.test.tsx        |   8 +-
+ frontend/src/components/NoticeBell.tsx             |   4 +-
+ .../PurchaseAdminEditorButtonMigration.test.tsx    |   3 +-
+ .../src/components/SharedButtonMigration.test.tsx  |   3 +-
+ frontend/src/contexts/AuthContext.tsx              | 119 +--
+ frontend/src/contexts/UiPrefsContext.tsx           |   2 +-
+ .../src/features/auth/RecoveryCodePrompt.test.tsx  |   4 +-
+ frontend/src/features/auth/RecoveryCodePrompt.tsx  |   4 +-
+ .../src/lib/__storybook-mocks__/firebase-app.ts    |   6 -
+ .../src/lib/__storybook-mocks__/firebase-auth.ts   |  34 -
+ frontend/src/lib/api.httpError.test.ts             |   7 +-
+ frontend/src/lib/api.ts                            |  10 +-
+ frontend/src/lib/auth/apiReauth.test.ts            |   5 +-
+ frontend/src/lib/auth/authErrorMessage.ts          |   1 -
+ frontend/src/lib/auth/devSession.ts                | 104 +++
+ frontend/src/lib/auth/devSessionSlot.ts            |  35 +
+ frontend/src/lib/auth/passkey.test.ts              |   9 +-
+ frontend/src/lib/auth/passkey.ts                   |   4 +-
+ frontend/src/lib/auth/provider.test.ts             |  15 -
+ frontend/src/lib/auth/provider.ts                  |  21 -
+ frontend/src/lib/auth/selfAuth.test.ts             |   5 +-
+ frontend/src/lib/auth/selfAuth.ts                  |  19 +-
+ frontend/src/lib/firebase-auth.ts                  | 189 -----
+ frontend/src/lib/firebase.ts                       |  68 --
+ frontend/src/lib/firebaseErrorMessage.test.ts      |  87 --
+ frontend/src/lib/firebaseErrorMessage.ts           |  60 --
+ frontend/src/lib/query/QueryAuthSync.tsx           |   2 +-
+ frontend/src/lib/query/apiQuery.test.tsx           |   1 -
+ frontend/src/lib/query/batch3aPages.test.tsx       |   1 -
+ frontend/src/lib/query/batch3bPages.test.tsx       |   1 -
+ frontend/src/lib/query/batch3cPages.test.tsx       |   1 -
+ frontend/src/lib/query/batch3dPages.test.tsx       |   1 -
+ frontend/src/lib/query/batch3ePages.test.tsx       |   1 -
+ frontend/src/lib/query/batch3fPages.test.tsx       |   1 -
+ frontend/src/lib/query/dashboardPage.test.tsx      |   1 -
+ frontend/src/lib/query/stage2Pages.test.tsx        |   1 -
+ .../src/lib/realtime/RealtimeProvider.test.tsx     |   6 +-
+ frontend/src/locales/en.json                       |  13 -
+ frontend/src/locales/ja.json                       |  13 -
+ frontend/src/main.tsx                              |  20 +-
+ .../account-settings/SecuritySection.test.tsx      |  32 +-
+ .../src/pages/account-settings/SecuritySection.tsx |  61 +-
+ frontend/src/pages/login/LoginPage.test.tsx        |  52 +-
+ frontend/src/pages/login/LoginPage.tsx             |  14 +-
+ .../reset-password/ResetPasswordPage.test.tsx      |   1 -
+ frontend/src/test-setup.ts                         |  20 +-
+ frontend/src/test-utils/devSession.ts              |  30 +
+ frontend/tests-e2e/login.spec.ts                   |   6 +-
+ frontend/tests-e2e/scene1-dashboard.spec.ts        |   2 +-
+ frontend/tests-e2e/utils/auth.ts                   |  10 +-
+ .../visual-language/viewer-focus-trap.spec.ts      |   2 +-
+ .../tests-e2e/visual-language/viewer-helpers.ts    |   2 +-
+ frontend/vite.config.ts                            |   2 +-
+ scripts/dev/doc-entry-weekly-check.sh              |   4 +-
+ 68 files changed, 538 insertions(+), 1724 deletions(-)
+```
