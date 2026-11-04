@@ -687,3 +687,21 @@ docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml p
 - 2 回目の試しの合格の条件: 5 つとも `name_hits=0`・`leak_hits=0`・`history_hits=0`。`KEY_IN_ASSETS 1`。`CONTROL_GCP_HITS` が 1 以上。`CONTROL_LEAK_HIT` の場所が `usr/share/nginx/html/assets/` の JS だけ。`SURVEY_FAILURES 0`。外れたら当たりを見てから決め直す（推測で例外を広げない）。
 - 直しは card-bin1-r2.md で実行役に渡す。触るのは `.github/scripts/image-scan.sh`・`.gitleaks.toml`・`tests/sandbox/image-scan-survey.sh` の 3 つだけ。
 - U24・U25 はこの節で閉じる（当たりの一覧と所要秒は上の表）。
+
+### 24-7 2 回目の試しの結果（2026-11-04 Opus）
+
+- 直し: card-bin1-r2 の実装 f0d4e842f（クラウドの Sonnet）。3 つのファイルの sha256 がカードの値と一致することを、手元の Opus が取り込んだ写しで確かめた。2 本の .sh は 100755 のまま。commit の名義は前回と同じく `Claude`（shingo-cc ではない）。push は前に進めるだけで、書き換えはしていない。
+- 試しの実行: run 41787529283（先頭 f0d4e842f・success・`SURVEY_FAILURES 0`）。
+
+| 完成品 | 組み立て秒 | 走査秒 | 名前の当たり | 除いた数 | 中身の当たり | 履歴の当たり |
+|---|---|---|---|---|---|---|
+| backend | 74 | 20 | 0 | 156 | 0 | 0 |
+| frontend | 97 | 2 | 0 | 120 | 0 | 0 |
+| gemini-egress | 2 | 1 | 0 | 2 | 0 | 0 |
+| gha-exporter | 8 | 3 | 0 | 149 | 0 | 0 |
+| secretary-agent | 22 | 11 | 0 | 1 | 0 | 0 |
+
+- `NAME_HIT_PRIVATE_KEY` は 0 件（除いたファイルに秘密鍵の文字は無かった）。
+- frontend: `KEY_IN_ASSETS 1`・`CONTROL_GCP_HITS 1`。対照の当たりは `CONTROL_LEAK_HIT gcp-api-key usr/share/nginx/html/assets/main-DZhzfcpk.js L33:C86070-86109` の 1 件だけ。
+- U28 は閉じる。E3 (a) は「場所が画面の JS かつ値が `AIza` ＋ 35 文字」のときだけ外す。1 回目の `generic-api-key` の当たりが別の形の値なら、2 回目にも残る。2 回目に 0 件なので、1 回目の当たりは `AIza` の形の値だった。その JS にある `AIza` の形の値は、対照の走査で当たった 1 か所だけ。
+- §24-6 の合格の条件はすべて満たした。§24-3 の 3 は終わり。次は 4（PO の鍵と組織の設定→PR→審査役→合流）。
