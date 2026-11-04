@@ -39,6 +39,6 @@ FAIL Required test coverage of 60% not reached. Total coverage: 1.90%
  .../stageC-geoip-open-mode-card.md                 | 85 ++++++++++++++++++++++
  3 files changed, 118 insertions(+), 1 deletion(-)
 ```
-（本報告の追加分は commit 後に増える。最終 HEAD は commit・push 後の `git rev-parse HEAD`）
+（本報告の追加分は commit 後に増える。実装 commit は `a1f145f9d`（push 済み・fast-forward）。この行を足す報告 commit が最終 HEAD になる）
 
 DONE
