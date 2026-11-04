@@ -135,4 +135,32 @@ test.describe("鈴（NoticeBell）", () => {
     expect(panelBox).not.toBeNull();
     expect(panelBox!.y + panelBox!.height).toBeLessThanOrEqual(bellBox!.y);
   });
+
+  test("PC: 鈴に丸い囲み・枠・影が無く、赤い数字は鈴の箱の内側。乗せると色だけ変わる", async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== "vl-desktop-1280", "1280 のみ");
+    await setup(page, 3);
+    const btn = page.locator(".notice-bell-btn");
+    await expect(btn).toBeVisible({ timeout: 10_000 });
+    const style = () =>
+      btn.evaluate((el) => {
+        const s = getComputedStyle(el);
+        return { border: s.borderTopWidth, shadow: s.boxShadow, bg: s.backgroundColor, color: s.color };
+      });
+    const before = await style();
+    expect(before.border).toBe("0px");
+    expect(before.shadow).toBe("none");
+    expect(before.bg).toBe("rgba(0, 0, 0, 0)");
+    await expect(badge(page)).toHaveText("3");
+    const b = await btn.boundingBox();
+    const g = await badge(page).boundingBox();
+    expect(b).not.toBeNull();
+    expect(g).not.toBeNull();
+    expect(g!.x).toBeGreaterThanOrEqual(b!.x);
+    expect(g!.y).toBeGreaterThanOrEqual(b!.y);
+    expect(g!.x + g!.width).toBeLessThanOrEqual(b!.x + b!.width);
+    expect(g!.y + g!.height).toBeLessThanOrEqual(b!.y + b!.height);
+    await btn.hover();
+    await expect.poll(async () => (await style()).color).not.toBe(before.color);
+    expect((await style()).bg).toBe("rgba(0, 0, 0, 0)");
+  });
 });
