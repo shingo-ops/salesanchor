@@ -638,3 +638,17 @@ docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml p
 
 - 便2 の 17.（workflow-lint の「deploy.yml に docker build が無い」）を作るとき、`tests/sandbox/image-scan-survey.sh` にも `docker build` がある。規則の対象は deploy.yml だけにする。
 - U27（便2 の設計で決める）: 取り消された run の変更の扱い。候補は (a) deploy.yml へ移すときに filter の比べ先を「本番で今動いている完成品の commit」にする、(b) `concurrency` の `queue: max`（同じ説明の「queue」: 最大 100 件まで取り消さずに順に待たせる）。ただし手元の actionlint 1.7.12 は `unexpected key "queue" for "concurrency" section` で止める（2026-11-04 実測）ので、(b) を選ぶなら検査道具の扱いも決める。便2 のカードの前に Opus が決める。
+
+### 24-5 便1 カードの設計審査（2026-11-04・クラウドの Opus・同じ AI の別の起動）
+
+1 回目（先頭 d4c02d6a5）: **REVISE**。前提の点検 P1〜P6・yaml の並び・toml の足し方は合格。直す点 3 件と軽い指摘 1 件。すべてカードに反映した。
+
+| 番号 | 指摘 | 直した後 |
+|---|---|---|
+| R1 | 名前の走査の型が §7-2 より狭い（`[^/]*credentials[^/]*\.json` では `app/credentials/sa.json` が当たらない） | §7-2 の型のまま（`.*credentials.*\.json` ほか）。手元の grep で `app/credentials/sa.json` に当たることを確かめた |
+| R2 | 後片付けで消せないと、通った走査が終了コード 1 になる | 片付けの前に書き込み権を戻し、消す命令の失敗は無視する。展開した木も `u+rwX` にする |
+| R3 | 試しの台本で、対照の走査が落ちると全体が無言で止まる | 対照の走査の終了コードを受け取り、落ちたら `CONTROL_FAILED` と出力を出して数に入れる |
+| R4（軽い） | `tags:` に名前を直接書いていて、`env.IMAGE` と二重 | `tags:` を `${{ env.IMAGE }}` にした |
+
+直した後の手元の検査: 3 つの台本の bash -n・shellcheck が rc=0、yaml の actionlint が rc=0。
+未確認のまま残すもの: OS の証明書の束（例 `etc/ssl/certs/*.pem`）が名前の走査に当たる見込み（C6・U24）。合流の前の試しの実行で当たりを全部出してから、Opus が除く道を決める。

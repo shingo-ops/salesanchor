@@ -130,7 +130,7 @@ jobs:
           load: true
           provenance: false
           sbom: false
-          tags: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/salesanchor-backend:${{ github.sha }}
+          tags: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ env.IMAGE }}:${{ github.sha }}
           cache-from: type=gha,scope=backend
           cache-to: type=gha,scope=backend
       - name: Scan image (design.md §7-2)
@@ -160,7 +160,7 @@ jobs:
 | `build-gha-exporter` | `gha_exporter` | `salesanchor-gha-exporter` | `./monitoring/gha-exporter` | `type=gha,scope=gha-exporter` |
 | `build-secretary-agent` | `secretary_agent` | `salesanchor-secretary-agent` | `./secretary-agent` | `type=gha,scope=secretary-agent` |
 
-`tags:` の最後の名前も表の `IMAGE` と同じにする。
+`tags:` は `${{ env.IMAGE }}` を使うので、4 つの job でも書き換えない（名前の正本は job の `env.IMAGE` の 1 か所）。
 
 `build-frontend` だけは、さらに次の 2 つを足す。
 - `docker/login-action` の前に、次の段を置く:
@@ -199,9 +199,10 @@ GL_VERSION="8.24.3"
 GL_SHA256="9991e0b2903da4c8f6122b5c3186448b927a5da4deef1fe45271c3793f4ee29c"
 WORK="$(mktemp -d)"
 CID=""
-cleanup() {
+cleanup() {  # 片付けの失敗で、通った走査を落とさない（設計審査 REVISE 2）
   if [ -n "$CID" ]; then docker rm -f "$CID" >/dev/null 2>&1 || true; fi
-  rm -rf "$WORK"
+  chmod -R u+rwX "$WORK" 2>/dev/null || true
+  rm -rf "$WORK" 2>/dev/null || true
 }
 trap cleanup EXIT
 
@@ -217,7 +218,7 @@ GL="$WORK/bin/gitleaks"
 CID="$(docker create "$REF" /scan-noop)"
 docker export "$CID" -o "$WORK/fs.tar"
 tar -tf "$WORK/fs.tar" > "$WORK/list.txt"
-NAME_RE='(^|/)(\.env(\..*)?|[^/]*\.pem|[^/]*\.key|id_(rsa|ed25519)[^/]*|[^/]*credentials[^/]*\.json|auth\.json|\.npmrc|\.netrc|\.git/.*)$'
+NAME_RE='(^|/)(\.env(\..*)?|.*\.pem|.*\.key|id_(rsa|ed25519).*|.*credentials.*\.json|auth\.json|\.npmrc|\.netrc|\.git/.*)$'  # design.md §7-2 の型のまま（C6）
 NAME_HITS="$(grep -cE "$NAME_RE" "$WORK/list.txt" || true)"
 grep -E "$NAME_RE" "$WORK/list.txt" | sed 's/^/NAME_HIT /' || true
 
@@ -228,7 +229,7 @@ if ! tar -xf "$WORK/fs.tar" -C "$WORK/fs" --no-same-owner --no-same-permissions 
   echo "SCAN error: extract failed"; tail -20 "$WORK/tar.err"; exit 1
 fi
 rm -f "$WORK/fs.tar"
-chmod -R u+rX "$WORK/fs"
+chmod -R u+rwX "$WORK/fs"
 if ! "$GL" dir "$WORK/fs" --config "$CONFIG" --no-banner --redact --exit-code 0 \
      --report-format json --report-path "$WORK/gl.json" > "$WORK/gl.log" 2>&1; then
   echo "SCAN error: gitleaks failed"; tail -20 "$WORK/gl.log"; exit 1
@@ -260,7 +261,7 @@ REF="${1:?usage: ghcr-private-check.sh <ref@sha256:...>}"
 if ! [[ "$REF" =~ @sha256:[0-9a-f]{64}$ ]]; then echo "PRIVATE_CHECK error: ref must end with @sha256:<64 hex>"; exit 1; fi
 if ! docker manifest inspect "$REF" > /dev/null; then echo "PRIVATE_CHECK error: logged-in read failed"; exit 1; fi
 ANON_DIR="$(mktemp -d)"
-trap 'rm -rf "$ANON_DIR"' EXIT
+trap 'rm -rf "$ANON_DIR" 2>/dev/null || true' EXIT
 set +e
 ANON_OUT="$(DOCKER_CONFIG="$ANON_DIR" docker manifest inspect "$REF" 2>&1)"
 ANON_RC=$?
@@ -288,7 +289,7 @@ CTRL="$(mktemp)"
 BUILT=()
 cleanup() {
   for t in ${BUILT[@]+"${BUILT[@]}"}; do docker image rm -f "$t" >/dev/null 2>&1 || true; done
-  rm -rf "$LOGDIR" "$CTRL"
+  rm -rf "$LOGDIR" "$CTRL" 2>/dev/null || true
 }
 trap cleanup EXIT
 printf '[extend]\nuseDefault = true\n' > "$CTRL"
@@ -326,7 +327,14 @@ if docker image inspect survey/frontend:local > /dev/null 2>&1; then
   # 試しの鍵が画面の JS に載ったか（載るのが設計どおり）と、既定の規則だけなら当たるか（例外が効いた証拠・C16）
   # shellcheck disable=SC2016
   echo "KEY_IN_ASSETS $(docker run --rm --entrypoint sh survey/frontend:local -c 'grep -rlF "$1" /usr/share/nginx/html/assets | wc -l' sh "$DUMMY_KEY")"
-  CONTROL_OUT="$(GITLEAKS_CONFIG="$CTRL" SCAN_REPORT_ONLY=1 bash .github/scripts/image-scan.sh survey/frontend:local)"
+  # 対照の走査が落ちても試し全体を止めず、落ちた理由を記録に出す（設計審査 REVISE 3）
+  set +e
+  CONTROL_OUT="$(GITLEAKS_CONFIG="$CTRL" SCAN_REPORT_ONLY=1 bash .github/scripts/image-scan.sh survey/frontend:local 2>&1)"
+  CONTROL_RC=$?
+  set -e
+  if [ "$CONTROL_RC" -ne 0 ]; then
+    echo "CONTROL_FAILED rc=$CONTROL_RC"; printf '%s\n' "$CONTROL_OUT"; FAIL=$((FAIL + 1))
+  fi
   echo "CONTROL_GCP_HITS $(printf '%s\n' "$CONTROL_OUT" | grep -c '^LEAK_HIT gcp-api-key ' || true)"
 fi
 survey_one gemini-egress ./monitoring/prod1/gemini-egress
