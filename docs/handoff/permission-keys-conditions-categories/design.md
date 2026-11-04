@@ -81,7 +81,7 @@ KGI の数値と ○× は、PO の承認前の草案です。
 - 取り込みは次の 3 つをする。そのため、登録・編集・削除の 3 つ全部を求める。dependencies に並べると、全部を満たさないと通らない。
   - 新しい行の登録（INSERT。conditions.py:492-502 付近）。
   - 既存の行の上書き（UPDATE。:481-490 付近）。
-  - is_active を CSV の値で上書きする（取り込みの読み取り :85-101 が is_active を読み、UPDATE で書く）。is_active を FALSE にすることは、削除の経路 delete_condition（:325-360・conditions.delete）がしている論理削除と同じ結果になる。だから削除の権限も求める（クラウドの設計審査の指摘④）。
+  - is_active を CSV の値で上書きする（取り込みの読み取り :85-101 が is_active を読み、UPDATE で書く）。is_active を FALSE にすることは、削除の経路 delete_condition（:324-361・conditions.delete）がしている論理削除と同じ結果になる。だから削除の権限も求める（クラウドの設計審査の指摘④）。
   - 出典: FastAPI 公式「Dependencies in path operation decorators」。`dependencies=[Depends(verify_token), Depends(verify_key)]` の例で、どちらの依存も失敗すると HTTPException で止まる（Context7 /websites/fastapi_tiangolo、2026-11-04 確認）。require_permission の checker も、キーが無ければ 403 の HTTPException を出す（dependencies.py:646-672）。
 - 一覧（:130）・1 件（:186）・CSV 出力（:371）・別名の一覧（:522）は conditions.view のまま。
 - catalog は、共用の状態の行（tenant_id IS NULL）を読むだけ（:160-180）。呼ぶのは状態マスタの画面だけ（ConditionsPage.tsx:150）。
@@ -164,6 +164,7 @@ DB を正とし、コードに一覧の写しを作らない。
 - DB の接続は `backend/app/database.py:36` の AsyncSessionLocal を使う。
 - 既存の _update_viewer_inventory_gauges（metrics.py:81-90）は Redis の値を読むだけで DB は読まない。この見張りは DB を読む点が違う。
   - そのため、DB の読みに時間の上限（2 秒）を付け、超えたら -1 にする。/metrics の応答を遅らせないため。
+  - 読めなかったときも、次に数えるのは 300 秒後とする（すぐには数え直さない）。DB の具合が悪いときに負担を重ねないため。-1 が 30 分続けば警報になる。
   - 呼び出しの形（/metrics の中で await する）だけを既存に合わせる。
 
 (4) `monitoring/prometheus/alert_rules.yml`
@@ -206,8 +207,16 @@ DB を正とし、コードに一覧の写しを作らない。
   - 全試験で全権限を返す差し替え（backend/tests/conftest.py:1862-1879 の bypass_permissions）の上から、試験の中だけ差し替える。
 - T5: {conditions.view} だけで import/preview と import/commit を呼ぶと、どちらも 403。
 - T6: 3 つのうち 1 つだけ欠けた組（view＋create＋update、view＋create＋delete、view＋update＋delete）で、どちらも 403。
-- T7: view＋create＋update＋delete で import/preview を呼ぶと 403 にならない（中身の正しさは既存の試験に任せ、ここでは 403 でないことだけを見る）。
-- import/commit の T7 は、書き込みが起きるので試験 DB の行を作ってから呼ぶ。作り方は実装のときに既存の conditions の試験に合わせる。無ければ preview だけとし、その旨を PR に書く。
+- T7: view＋create＋update＋delete の 4 つで呼ぶ。
+  - import/preview に見出しだけの CSV（中身 `code,canonical\n`、名前は .csv で終わる）を送ると、200 で total が 0。
+  - import/commit に同じ CSV と、食い違う digest（例: 文字列 `mismatch`）を送ると、409（CONDITION_IMPORT_DIGEST_MISMATCH）。
+  - 「403 でない」ではなく、ちょうどの番号を確かめる。500 で合格しないようにするため（クラウドの設計審査 2 回目の指摘）。
+- T5・T6 の commit も、同じ CSV と食い違う digest で呼ぶ。権限の確かめ（dependencies）が先に走るので 403 になる。権限が足りていれば 409 になる。
+- 表を読まずに済む理由（2026-11-04 origin/main で確認）:
+  - client の試験は SQLite で動き、public.conditions の表が無い（conftest.py:1883 以降）。行のある CSV だと表を読んで 500 になる。
+  - preview の表の読みは、行ごとの繰り返しの中だけ（backend/app/routers/conditions.py:429-437）。見出しだけなら行が 0 件で、表を読まない。必須の列 code・canonical（:43）がそろっていれば誤りも出ない（:73-75）。
+  - commit の digest の照合（:463-465）は、表を読む前に 409 を返す。
+  - 中身の正しさ（書き込み）は、この試験では見ない。
 - 画面側: 既存の vitest の書き方に合わせる。ConditionImportPage で、conditions.view だけを持つ利用者に取り込みパネルが出ないことを確かめる。
   - 試験ファイルの置き場所は、実装のときに既存の画面試験ファイル（拡張子 .test.tsx）の並びに合わせる。
 
@@ -255,12 +264,22 @@ DB を正とし、コードに一覧の写しを作らない。
 ### 10-1. クラウドの設計審査 1 回目（2026-11-04・判定 REVISE）と直したこと
 | 指摘 | 直したこと |
 |---|---|
-| ① 行番号のずれ（取り込みの書き込み・cache.py・RolesPage） | :476-503／:481-490／:492-502、cache.py:19、RolesPage.tsx:416 に直した |
-| ② dependencies を 2 つ並べると両方必要 | 合っている。出典を §4-1 に足した |
+| ① 照合（行番号付きの主張・鍵の数 97 種類） | 合っていた。直すこと無し |
+| ② 行番号のずれ（取り込みの書き込み・cache.py・RolesPage） | :476-503／:481-490／:492-502、cache.py:19、RolesPage.tsx:416 に直した |
+| ③ dependencies を 2 つ並べると両方必要 | 合っている。出典を §4-1 に足した |
 | ④ 取り込みが is_active を書くので、削除の権限なしで消せる | 取り込みに conditions.delete も求める（§4-1）。編集の is_active は §2 対象外として PO に聞く |
 | ⑤ 戻しの件数確認がコメントだけ | 09_rollback_dryrun.sql・09_rollback_apply.sql を足し、件数ガードを付けた |
 | ⑥ 見張りの作りたての値と「欠け無し」の区別・DB を読む点 | -1 の初期化と時間の上限 2 秒を §5-2 に書いた |
 | ⑦ 名前だけの試験 | 実動の試験 T5〜T7 を §6 に足した |
+
+### 10-2. クラウドの設計審査 2 回目（2026-11-04・先頭 f3b89a8c7・判定 REVISE）と直したこと
+| 指摘 | 直したこと |
+|---|---|
+| T7 が書けない。client の試験は SQLite で動き、public.conditions の表が無い。行のある CSV では 500 になり、「403 でない」だけを見ると 500 でも合格してしまう | T7 を「見出しだけの CSV で preview が 200」「digest を食い違わせた commit が 409」に変えた（§6）。どちらも表を読まない（conditions.py:429 の行ごとの読みは行が 0 件なら回らない。:464-465 の 409 は表を読む前） |
+| delete_condition の行番号（実物は :324-361） | §4-1 を :324-361 に直した |
+| §10-1 に③が無い | 1 回目の報告の原文の番号（①〜⑦）に合わせて表を直した |
+| DB が読めなかったとき、300 秒待たずに数え直すか | 待つ。次に数えるのは 300 秒後とする（§5-2）。DB に負担をかけ続けないため。-1 が 30 分続けば警報になる |
+| 件数の数え方が 01_apply（category）と 00・09（resource）で違う | 害は無い（事前の値はどちらも 0）。01_apply・09 はどちらも、件数ガードで category と resource の両方の条件を使っている |
 
 ## 維持の仕組み
 - 守り手:
