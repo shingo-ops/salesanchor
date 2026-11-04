@@ -36,7 +36,7 @@ E8 の 10 ファイル: report_style・communication_style・always_japanese・a
 
 | # | 何が | 片方 | もう片方 |
 |---|---|---|---|
-| C1 | 返事の順番 | E1 19行（3段の型） | E5 36行（4段の型）、覚え書き plain_language_session 10行（E5 と同じ段の並び） |
+| C1 | 返事の順番 | E1 19行（3段の型） | E5 36行（4段の型）、覚え書き plain_language_session 10行（3段で、E5 の4段のうち前の3段と同じ） |
 | C2 | 選択肢の数と形 | E1 21行（番号つきの選択肢・数の上限・おすすめ印） | 覚え書き communication_style 20行（案を1つに絞って二択で聞く）、E7 94行（2案の形で推奨を添える） |
 | C3 | 図 | E1 24行（返事に書かないものの一覧） | E7 91行（全体像の説明に図を付ける） |
 | C4 | 表 | E1 24行（同上） | 覚え書き numeric_goal_rule 16行（表で示す） |
@@ -63,7 +63,7 @@ NG の 5 件（R-15・R-91 → chat-layout.md 5行、R-92 → CLAUDE.md 20行、
 | (1) リンクと docs/…md の書き方だけ | 11（docs/agents/ の 6、docs/ai-agents/ の aeon-delivery・aeon-release・agent-roles・design-partner-preamble・task-template） | onetree/reach.txt |
 | (2) (1) ＋ 同じフォルダのファイル名だけの書き方 | **1**（docs/agents/generator.md） | onetree/reach2.txt |
 
-- (1) の 11 のうち 10 は、ほかの手引きが同じフォルダのファイル名だけで書いていた（例: design-partner.md が design-partner-preamble.md を名前で書く）。PO に最初に伝えた「11」は (1) の数で、(2) では 1 になる。設計では (2) を正式な数え方にする（design.md §5）。
+- (1) の 11 のうち 10 は、ほかの手引きが同じフォルダのファイル名だけで書いていた（例: `docs/ai-agents/design-partner.md:367` が design-partner-preamble.md を根からのパスで書く。数え方 (1) はこの書き方を拾えていなかった）。PO に最初に伝えた「11」は (1) の数で、(2) では 1 になる。設計では (2) を正式な数え方にする（design.md §5）。
 - (2) でもフォルダの中を見ないとたどれないもの: lessons.d 19。
 - (2) での深さ: 手引きは入口から 1〜5 段。4 段以上は runbooks 9・lessons.d 1。ただし runbooks は `docs/INDEX.md:28` がフォルダを指すので、フォルダ経由なら 2 段。K5（≤3）は表紙までしか数えていない。
 - **正式な数え方（既存の CI）で数え直した結果（これを正とする）**: 既存の点検 `scripts/ci/check_doc_index.py`（K4 の CI、`.github/workflows/doc-index-reachability.yml:30`）は、範囲が docs/specs・docs/ai-agents だけ（同ファイル 142 行）で、今は unreached=0。範囲だけを docs/agents・docs/runbooks まで広げた写し（onetree/cdi_wide.py、142 行の範囲だけを変更）で数えると、**unreached=1（docs/agents/generator.md）**、broken_link=8（onetree/docindex-wide.txt）。
