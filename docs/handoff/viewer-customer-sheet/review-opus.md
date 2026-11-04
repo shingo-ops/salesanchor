@@ -46,3 +46,46 @@
 | 個人情報の扱い | 合格 | 請求先を AI 読み取りから隠す2つの一覧と、試験の件数（10→11・1068→1075）まで書いてある |
 
 審査役の生の応答: 手元の控え /tmp/CC報告ファイル/viewer-design-review/（run2.txt・run3.txt・run4.txt・run4-check.txt）。個人名を含みうるため PR には載せない。
+
+## 5. 設計の PR（#5121）の審査の LOW と、便2 カードで補ったこと（2026-11-04）
+
+- LOW-1: card-bin1.md の「§5 手順7」は「手順6」（API の形を作り直す手順）の誤り。直した。
+- LOW-2: ADR-1019:9・docs/specs/inventory-management/inventory-viewer/README.md:22・docs/handoff/gas-viewer-fresh-fast/design.md:70 の改訂を、どの PR で行うかが書かれていなかった。便2 カードの文書 PR（文書だけ）で改訂し、design.md §3-7・§5 にそう書いた。
+- LOW-3: PR 本文に「PO の実装承認はマージ・本番反映の GO を兼ねない」の一文が無かった。便1 の実装 PR の本文から入れる。
+- 補ったこと: 管理画面に請求先を出すには読む口が要るが、design.md §3-5 に書いていなかった。GET /api/v1/super-admin/viewers/{viewer_id}/billing-profile（super admin だけ・行が無ければ null）を design.md §3-5 と card-bin2.md §3-3 に足した。新しい表・新しい正本は増えない（読むのは viewer_billing_profiles の1か所）。
+- 便2 カードの手順3（対象ファイルが基準 d948cf9c7 から変わっていないか）を 2026-11-04 に origin/main で流し、差分は空だった。
+
+## 6. 便2 カードの文書 PR（#5129）の審査（2026-11-05・HEAD fb62006 で REQUEST_CHANGES）と直したこと
+
+- HIGH-1: フォームの2本が、入口の見張りの試験（backend/tests/test_viewer_isolation.py）に入っていなかった。このまま作ると、2本が Origin なしで 403 を返して試験が落ちる。直し方は「トークンを見ない公開の入口」として _PUBLIC_NO_AUTH_ROUTES（:27〜:62）に足す案を採った。理由: その一覧の定義（:23）に当てはまり、同じ形の B2B の請求先フォーム（:58 change-billing）が既にそこにある。VIEWER_ROUTE_ALLOWLIST に足す案は、Accepted の ADR-1019 決定5（7本）を変えるので採らない。design.md §3-6・§3-7、card-bin2.md §2・§3-3・§3-6・手順8 に足した。
+- MEDIUM-1: 「名簿の email の CHECK と同じ形」は実在しない（名簿の email は TEXT NOT NULL だけ）。参照の文を消し、CHECK の式をカードに書いた。
+- LOW-1・LOW-2: 部屋への送り方を notify_prepared（viewer_room_notice.py:69）に揃えた。room_notice_text は sent のときも返る（今の状態変更の応答と同じ）。
+- LOW-3: カード手順2 の期待を、git grep -c の実際の出方（一致0件なら何も出ず exit 1）に合わせた。
+- LOW-4: 管理画面で請求先を読む口（GET billing-profile）は、PO 承認済みの「管理画面で請求先を見る」（§3-5）を実現する読み取りだけで、新しい正本を増やさない。PO の再承認は要らないと判断した。
+- LOW-5: ADR-1019:9 の関連欄の句読点を直した。
+- LOW-6: カードの PO の選択肢の原文引用を、選んだ内容の要約に替えた。
+
+## 7. #5129 の再審査（2026-11-05・HEAD 61e8944 で REQUEST_CHANGES）と直したこと
+
+- 前回の指摘（HIGH-1・MEDIUM-1・LOW-1〜6）は全部解けていると確かめられた。
+- NEW-HIGH-1: 書き込みの口3本が、即時反映の対応表（backend/app/realtime/topics.py の NO_SIGNAL_ROUTES）に入っていなかった。足さないと backend/tests/test_realtime_topics.py が赤になる。HIGH-1 と同じ種類の漏れ（全部の口を数える見張りへの登録漏れ）。card-bin2.md §2・§3-3・§3-6・手順8 と design.md §3-7 に足した。
+- 同じ種類の漏れを残さないため、app.routes を使う見張りを origin/main で全部洗い出し、design.md §3-7 に7本それぞれの扱いを書いた。
+- LOW-A: PR 本文の説明を、直しの後の中身に合わせた。
+
+## 8. 便1 #5131 の CI で止まった2件を、便2 カードに先回りして入れたこと（2026-11-05）
+
+- 便1 #5131 は CI の3つの確かめで止まった。直しは docs/handoff/viewer-customer-sheet/card-bin1-fix1.md（便1の枝）。
+- そのうち2件は便2でも同じ形で起きる。#5129 の3回目の審査を止め、カードに先に入れた。
+  - 変えた SQL を最小の土台で流す確かめ: 土台に public.viewer_login_tokens が無い。card-bin2.md §2・§3-1 の最後の項目・手順8 と design.md §3-7 に足した。
+  - 読み込み中に中身を消す形の見張り（ADR-1054）: 請求先の読み込みを useApiQuery にする。card-bin2.md §3-4・§3-6・手順8 と design.md §3-7 に足した。
+- 3件目（試験の部品に deliverable が無い）は便1だけの話で、便2 には当たらない。
+- 手順の漏れ（Opus）: card-bin1-fix1.md は、card-lint を流す前にクラウドの担当へ渡した。中身は足りていたが、形式の4件（L03 END OF CARD・L04 受領確認・L15 停止の語・L29 読んだ節の行）が欠けていた。クラウドの指示文には停止と報告の決まりを入れていたので、作業の安全には響いていない。形式は便1の枝で後から直す。再発を止めるため、クラウドへ渡す直前に card-lint を通す見張りを PO に提案する。
+- card-bin2.md は、上の2件を足した後に card-lint を流し直し、exit 0（長い行の警告だけ）を確かめた。
+
+## 9. #5129 の3回目の審査（2026-11-05・HEAD ba45a9d24 で REQUEST_CHANGES）と直したこと
+
+- HIGH-1: create_ai_cloud_views.sql は scripts/migration-guard/reference-allowlist.tsv に sha256 付きで載っている。中身を変えると見張りが止めるのに、カードの「触るファイル」に一覧が無かった。Opus が origin/main で確かめた（一覧の7行目・check-migration-value-writes.py の sha256 の照合・前例 b5e818dec）。card-bin2.md §2・§3-2・手順8・手順9 と design.md §3-7 に足した。
+- 同じ種類（見張りへの登録漏れ）の3回目。migration-guard.yml の全17検査と scripts/migration-guard の一覧のファイル4つを洗い出し、ほかに当たるものが無いことを確かめた（design.md §3-7 の行）。
+- LOW-1: 「請求先」の区切りは状態を問わず全員の詳細に出す（design §3-5 に条件が無い）。ボタンだけ本契約に限る。§1 を直した。
+- LOW-2: 管理者が送っても請求先は変わらないので、送った後の取り直しをやめた（§3-4）。
+- LOW-3: 送信中の状態は今の共用 running／setRunning を使う、と書き直した（§3-4）。
