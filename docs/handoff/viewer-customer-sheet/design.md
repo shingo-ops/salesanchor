@@ -6,7 +6,7 @@
 - 親（設計仕様書）: [docs/specs/inventory-management/inventory-viewer/README.md](../../specs/inventory-management/inventory-viewer/README.md)
 - 現状の記録: [recon.md](./recon.md)
 - 関係 ADR: [ADR-1019](../../adr/ADR-1019-inventory-viewer-separate-accounts.md)（改訂が要る。recon §2）、ADR-1014（在庫の行の定義は1か所）、ADR-144・ADR-067（金型とデザイントークン）、ADR-027（i18n）
-- 状態: **草案・PO 未承認・設計審査1回目 REVISE（2026-11-04）の指摘9件を反映済み・再審査前**。下の「§6 PO に決めてもらうこと」が全部決まるまで、設計合格にも実装にも進まない。
+- 状態: **草案・PO 未承認・設計審査1回目 REVISE（2026-11-04）の指摘9件・2回目 REVISE の指摘7件を反映済み・3回目の審査前**。下の「§6 PO に決めてもらうこと」が全部決まるまで、設計合格にも実装にも進まない。
 
 ## 1. 目的（PO の言葉から）
 
@@ -69,7 +69,10 @@
 | created_at / updated_at | TIMESTAMPTZ | 不可 | DEFAULT now()。updated_at は保存のたびに now() |
 
   - 各列に COMMENT を付ける。§7 の「1か所だけ」の検査: information_schema.columns で、table_schema='public' のうち bill_to_name・contact_name・invoice_email・party_type の4列を持つ表が viewer_billing_profiles の1つだけであること、かつ viewer_accounts と tcg_distribution_targets に請求先の7列のどれも無いことを数える（postal_code・address・phone は B2B の tenant_* の表にもあるので、public と名簿・配信先に絞って見る）。
-  - 請求先は個人情報なので、本番の AI 読み取りからは隠す: ops_case.deny_tables に足す（backend/tests/ops/test_ops_case_db.py:656〜:664 の10件が11件になる）。ai_cloud の列の分類（ai_cloud_meta.column_class。backend/tests/ops/test_ai_cloud_views.py:484 の 1068 件と T10 の分類漏れ検査）にも、新しい列を個人情報として足す。
+  - 請求先は個人情報なので、本番の AI 読み取りからは隠す。足す場所は2つとも「今ある migration の中の一覧」で、新しい migration には書かない（観測事実: どちらのファイルも配備のたびに流し直され、先頭で表を空にしてから一覧を入れ直す。新しい migration で足した行は次の配備で消える）。
+    1. 拒否表 ops_case.deny_tables: migrations/20261031_210000_create_ops_case.sql:91〜:101 の一覧に ('viewer_billing_profiles', '請求先（宛名・住所・電話）') を足す（:90 で表を空にする。scripts/run_all_migrations.sh:1205 で毎回流す）。試験 backend/tests/ops/test_ops_case_db.py:656〜:664 の10件を11件にする。
+    2. 列の分類 ai_cloud_meta.column_class: migrations/20261024_100300_create_ai_cloud_views.sql の、viewer_accounts の行（:298〜:299）の後ろに足す（:11 で表を空にする。run_all_migrations.sh:234・:253 で毎回流す）。足す行は ('public','viewer_billing_profiles',ARRAY['address','bill_to_name','contact_name','invoice_email','phone','postal_code'],'mask','') と ('public','viewer_billing_profiles',ARRAY['party_type'],'allow','値の決まり ck_viewer_billing_profiles_party_type で値が限られる')（:299 の status と同じ書き方）。試験 backend/tests/ops/test_ai_cloud_views.py:484 の件数を足した分だけ増やす。
+    3. 配信先の新しい列 tcg_distribution_targets.viewer_account_id には分類の行を足さない。理由: 型が BIGINT（int8）で、そのまま出してよい型の一覧（test_ai_cloud_views.py:50〜:53 の _PASS_TYPES）に入り、列名も名前の見張り（同 :44〜:47 の _NAME_RE）に当たらないため、T10 の分類漏れ検査（同 :490〜:530）の対象外。viewer_billing_profiles の viewer_account_id・created_at・updated_at も同じ理由で行は要らない。
 
 
 ### 3-3. 配信先とお客さんのつなぎ（案）
@@ -78,7 +81,7 @@
 - NULL は「特定の人用ではないシート」（無料トライアルシート・配信テスト）。
 - 配信するかの決まり（Q1 決定 2026-11-04 PO 原文「停止したら自動で止める。停止を外したら自動で再開する【おすすめ】」・Q1b 決定 2026-11-04 PO 原文「本契約の人にだけ配信する。お試しの人は、登録してあっても配信しない【おすすめ】」）:
   - 配信するかどうかの判定は、今 is_active だけを見ている（backend/app/services/tcg_distribution_svc.py:990〜:994）。ここに「viewer_account_id がある行は、その人の状態が active（本契約）のときだけ配信する」を足す。pending・verified・trial（期限切れを含む）・suspended はどれも配信しない。viewer_account_id が NULL の行は今までどおり is_active だけで決める。
-  - 判定の置き場所は1つ: list_targets・get_target（同ファイル :701〜:724）の SELECT で名簿を LEFT JOIN し、各行に「配信するか（deliverable）」と「しない理由（manual_off／not_contracted／suspended）」を SQL で出す。:990〜:994 は is_active ではなく deliverable を見る。is_active を別に見ている所も、この2つの値を読むように直す（判定を書き写さない）:
+  - 判定の置き場所は1つ: list_targets・get_target（同ファイル :701〜:724）の SELECT で名簿を LEFT JOIN し、各行に「配信するか（deliverable）」と「しない理由（manual_off／not_contracted／suspended）」を SQL で出す。理由が重なるときは1つだけ出し、順番は manual_off → suspended → not_contracted（手で止めたことを最優先で見せる。停止中の人は not_contracted より先に suspended と出す）。SQL は CASE WHEN NOT is_active THEN 'manual_off' WHEN status='suspended' THEN 'suspended' WHEN viewer_account_id IS NOT NULL AND status<>'active' THEN 'not_contracted' END の1か所。:990〜:994 は is_active ではなく deliverable を見る。is_active を別に見ている所も、この2つの値を読むように直す（判定を書き写さない）:
     - backend/app/line_import_admin.py:139（配信前の点検で返す active。:134 の targets も同じ）
     - backend/app/services/tcg_analysis_dashboard_svc.py:665〜:687（解析ダッシュボードの配信の数。自前の SELECT を list_targets の呼び出しに替える）
     - 配信先の画面（frontend/src/pages/super-admin/TcgDistributionPage.tsx）と閲覧者管理ページの表示（下の §3-5）
@@ -91,9 +94,10 @@
   - RESTRICT にしない理由: 毎日の自動削除（backend/app/tasks/maintenance.py:220）が失敗し、ポリシーに書いた90日を守れなくなる。
 - 1人が持てるシートは1つまで（Q2 決定 2026-11-04 PO「1」）。DB で強制する: viewer_account_id に「NULL でない値は1回だけ」の一意の索引（部分一意索引 WHERE viewer_account_id IS NOT NULL）。NULL（特定の人用でないシート）は何件でもよい。2件目の登録は API が 409 を返し、画面は t() の文言で知らせる。
 - viewer_account_id を書く入口は1つ: 今の create_target・update_target（tcg_distribution_svc.py:727〜:775）に viewer_account_id を足す（:731 の INSERT 列、:753 の allowed）。2つの画面はどちらも今の API（backend/app/routers/tcg_distribution.py:99〜:132 の POST・PUT /tcg/distribution/targets）を呼ぶ。閲覧者管理ページ用の別の書き込み API は作らない。
-  - 一意の索引に当たったとき（IntegrityError）は、svc が専用の例外に直し、router が 409 にする（同ファイル :163 の 409 と同じ形）。
+  - 一意の索引の名前は uq_tcg_distribution_targets_viewer_account_id。IntegrityError は SQLSTATE で分ける: 23505（一意違反）かつ索引名が上の名前なら 409、23503（外部キー違反＝名簿に無い番号）なら 422。どちらも svc が専用の例外に直し、router が返す（同ファイル :163 の 409 と同じ形）。それ以外の IntegrityError はそのまま上げる。
+  - 今の create_target・update_target は RETURNING で行を返す（svc :734・:767）が、この形では名簿を JOIN できず deliverable と理由が入らない。書いたあとは get_target で読み直して返す（判定を書き写さないため）。
   - つなぎを外す（NULL に戻す）ことができるようにする: 今の PUT は model_dump(exclude_none=True)（:129）なので、null を送っても捨てられる。viewer_account_id だけは「送られたか」（model_fields_set）で判断し、null が送られたら NULL にする。
-  - 名簿に無い番号は外部キーで止まる。これも 409 ではなく 422 にする（理由の文言を t() で出す）。
+  - 名簿に無い番号は外部キーで止まる。上のとおり 422 にする（理由の文言を t() で出す）。
 - シートを自動で作らない決まり（tcg_distribution_svc.py:15 の #2）は変えない。お客さんが共有したブックの番号を登録する。
 
 ### 3-4. ツール用請求書の表（要件だけ・作るのは別テーマ）
@@ -133,9 +137,14 @@
   - 押すと、鍵を1本作り（古い鍵は消える）、同じリンクをメールと部屋の両方に送る。期限は7日。
   - 文の正本は1か所: Discord の文面テンプレートの台帳（backend/app/services/viewer_message_templates.py:43〜:53 の LEDGER。本文は public.viewer_message_templates、migrations/20261020_120000_create_viewer_message_templates.sql:3）に、鍵 billing_form_request（送り方は auto＝仕組みが部屋へ送る。差し込み項目は form_url と expires_date）を1件足す。auto の文は差し込み後 2000 字を超えると送らない（viewer_message_templates.py:22・:154）。手で写して送る manual（例 signup_request、backend/app/routers/super_admin_viewers.py:184〜:186）とは違う。メールの本文も同じテンプレートから作る。メールの件名だけは、ほかの閲覧者メールと同じくコードの定数に置く（backend/app/services/auth_mail.py:130 の並び）。
   - メールの送信部は新しく1つ作る（例 send_viewer_billing_form_email(to_addr, subject, body)）。今の _send_reset_mail（auth_mail.py:97〜:117）は :108 で本文に format(reset_url=…) をかけ直すので、テンプレートから作った文（{ や } を含み得る）を渡すと壊れるか例外になる。新しい関数は format をかけず、受け取った文をそのまま送る。SMTP の設定の読み方・宛先の伏せ方・失敗をログにだけ残す形（:99〜:102・:114〜:117）は同じにする。_send_reset_mail は変えない。
-  - テンプレートが無いとき（load_body が None。viewer_message_templates.py:111）: 鍵を作らず、メールも部屋も送らず、API は 409（template_missing）を返して画面で知らせる。差し込み後に 2000 字を超えて render が None を返したとき（:135・:154）も同じ。どちらも鍵を作る前か、作った同じトランザクションを rollback して、鍵は残さない。
+  - テンプレートが無いとき（load_body が None。viewer_message_templates.py:111）: 鍵を作らず、メールも部屋も送らず、API は 503（今の管理 API と同じ _TEMPLATE_NOT_FOUND。backend/app/routers/super_admin_viewers.py:189・:220・:367〜:368）を返して画面で知らせる。差し込み後に 2000 字を超えて render が None を返したとき（:135・:154）も同じ。どちらも鍵を作る前か、作った同じトランザクションを rollback して、鍵は残さない。
   - テンプレートの初期値の入れ方（観測事実: migrations/20261020_120000_create_viewer_message_templates.sql:2 は「専用 CLI（viewer_template_cli）で入れる」と書くが、その CLI は origin/main に無い）: 管理画面の文面テンプレートのページから入れる。行が無い鍵は保存で INSERT される（viewer_message_templates.py:185〜:192、backend/app/routers/super_admin_viewers.py:237〜:259）。本番へ出したあと、ボタンを使う前に PO か管理者が文を1回保存する。これを本番の確かめの手順に入れる。
   - 部屋へは今ある送り方を使う（backend/app/services/viewer_room_notice.py:25 send_room_notice）。部屋が無い人は送らず、結果を no_room として画面に出す（同ファイル :80〜:83 と同じ扱い）。
+  - 管理 API（置き場所は backend/app/routers/super_admin_viewers.py。今の reissue-signup-code（:358〜:399）と同じ並び）:
+    - POST /api/v1/super-admin/viewers/{viewer_id}/send-billing-form（require_super_admin）。本文なし。
+    - 順番: ①テンプレートの本文を読む（無ければ 503・何も変えない。:363〜:367 と同じ）②services の1つの関数で古い鍵を消して新しい鍵を作る（active 以外は 409 viewer_status_conflict、無い人は 404。:51〜:57 の _ERROR_STATUS をそのまま使う）③差し込み後の文が作れなければ rollback して 503 ④commit ⑤commit の後で部屋へ送る（viewer_room_notice の notify_prepared の形。DB を開けたまま Discord を待たない）⑥メールを裏で送る手配をする。
+    - 応答（新しい型 ViewerBillingFormSendResponse）: room_notice（"sent"／"failed"／"no_room"。viewer_room_notice.py:80 と同じ値。テンプレートは①で確かめ済みなので no_template は出ない）、room_notice_text（部屋へ送ろうとした文。リンクを含む）、mail_queued（メールを送る手配をしたか）、expires_at（リンクの期限）。
+    - 部屋が無い・送れなかったときは room_notice_text を返し、画面でコピーできるようにする（今の状態変更の応答 :84〜:86 と同じ扱い）。文にはリンク（鍵）が入る。今の reissue-signup-code も申込コードと文を画面へ返している（:394〜:399）ので、同じ扱いにする。見られるのは super admin だけ。ログには文も鍵も出さない。
   - 画面には、部屋へ送れたか（送れた／送れなかった／部屋なし）と、メールを送る手配をしたことを出す。メールは裏で送るので、届いたかは画面に出せない（auth_mail.py:97〜:117 は失敗をログにだけ残す）。
   - 送り直すと前のリンクは使えなくなる。同じ用途の古い鍵を消してから作るため（viewer.py:331〜:334 と同じ形）。
   - 鍵は、フォームを開いただけでは使い切らない。送信が viewer_billing_profiles への書き込みと同じトランザクションで成功したときだけ使い切る（viewer.py:364〜:378 と同じ順番）。
@@ -173,7 +182,7 @@
 | 新しい表 viewer_billing_profiles | .github/workflows/migration-guard.yml:224 の PUBLIC_TABLES（viewer_accounts 等と並べる）。ops_case.deny_tables と backend/tests/ops/test_ops_case_db.py:656〜:664（10件→11件）。ai_cloud_meta.column_class と backend/tests/ops/test_ai_cloud_views.py:484（1068 件が増える）と T10 の分類漏れ検査 |
 | 名簿を消すと消える表（請求先・配信先） | backend/tests/test_viewer_purge.py:143〜:149 の「消えた表」の並びに viewer_billing_profiles と tcg_distribution_targets を足す |
 | 鍵の用途 billing_form | migrations/20261016_150000_add_viewer_accounts.sql:48 の CHECK を変える新しい migration と、:54 の COMMENT の書き直し |
-| 文面テンプレートの鍵 billing_form_request | viewer_message_templates.py の LEDGER（:43〜:53）。migrations/20261020_120000_create_viewer_message_templates.sql:11 の「台帳の9件」の COMMENT を10件に。backend/tests/test_viewer_message_templates.py:22〜:25 の KEYS。frontend/src/pages/super-admin/ViewerTemplatesPage.test.tsx:17〜:30 の KEYS と PLACEHOLDERS。backend/tests/viewer_template_fixtures.py の DEFAULT_BODIES。i18n の名前と使う場面（frontend/src/locales/ja.json:2803・:2814 と en.json の同じ位置の並び） |
+| 文面テンプレートの鍵 billing_form_request | viewer_message_templates.py の LEDGER（:43〜:53）。migrations/20261020_120000_create_viewer_message_templates.sql:11 の「台帳の9件」の COMMENT を10件に。backend/tests/test_viewer_message_templates.py:22〜:25 の KEYS。frontend/src/pages/super-admin/ViewerTemplatesPage.test.tsx:17〜:30 の KEYS と PLACEHOLDERS。backend/tests/viewer_template_fixtures.py の DEFAULT_BODIES。i18n の名前と使う場面（frontend/src/locales/ja.json:2805・:2816。:2797〜:2805 が名前、:2808〜:2816 が使う場面 と en.json の同じ位置の並び） |
 | 配信先の判定の値（deliverable と理由） | §3-3 に挙げた3か所と2画面 |
 | 公開の決めごと | ADR-1019:9、docs/specs/inventory-management/inventory-viewer/README.md:22、gas-viewer-fresh-fast/design.md:70 の改訂（recon §2）。プライバシーポリシー |
 
@@ -228,7 +237,7 @@
 | 配信しないシートは、配信先の画面・閲覧者管理ページ・解析ダッシュボードの配信の数・配信前の点検の4か所で同じ理由（手で止めた／本契約でない／停止中）になる | API テスト（同じ行を4つの入口から読んで値を比べる） |
 | つなぎを外す（null を送る）と viewer_account_id が NULL に戻る。名簿に無い番号は 422 | API テスト |
 | 請求先の表の決まり: 会社なのに担当者が空・郵便番号が7桁でない・電話が10〜11桁でない・宛名が空の行は DB が入れない | PG テスト（CHECK ごとに1件ずつ） |
-| テンプレートが無い状態でボタンを押すと 409 で、鍵は0件・メールも部屋も送られない | API テスト＋PG テスト |
+| テンプレートが無い状態でボタンを押すと 503 で、鍵は0件・メールも部屋も送られない | API テスト＋PG テスト |
 | フォームの2本の API は、出どころが違うと止まり、回数を超えると 429 | API テスト |
 | 開くだけでは鍵が残り、今の請求先が返る。送信が成功すると鍵が0件になる | PG テスト＋API テスト |
 | 請求先は本番の AI 読み取りから見えない（deny_tables に入り、列の分類が個人情報） | PG テスト（test_ops_case_db・test_ai_cloud_views） |
