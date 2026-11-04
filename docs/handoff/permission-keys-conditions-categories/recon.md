@@ -68,7 +68,7 @@ ADR-1054（全画面を押した瞬間に開く速さにする）の点検用の
 - 一覧の action の数（本番）: view 25・access 19・create 14・update 13・delete 11・edit 9 ほか。edit は既に使われている形。
 
 ## 4. 見つけた別の穴（書き込みが閲覧キーで通る）
-- `conditions.py:450-515` 取り込みの確定 `/conditions/import/commit`
+- `backend/app/routers/conditions.py:450-515` 取り込みの確定 `/conditions/import/commit`
   - public.conditions に INSERT と UPDATE をする（:487-511 付近）。
   - それなのに求めるキーは conditions.view（:452）。下見（:414）も同じ。
   - 画面側も取り込みボタンを conditions.view で出す（ConditionImportPage.tsx:130）。

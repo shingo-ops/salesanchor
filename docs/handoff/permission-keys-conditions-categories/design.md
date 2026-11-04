@@ -139,7 +139,7 @@ DB を正とし、コードに一覧の写しを作らない。
 - require_permission が呼ばれるたびに `REGISTERED_PERMISSION_KEYS.update(required)` を足す。
 - 経路はアプリの起動で全部読み込まれる。そのため、起動のあとは全部の経路のキーがそろう。
 
-(2) 新しいファイル `backend/app/auth/permission_catalog.py`
+(2) 新しいファイル backend/app/auth/permission_catalog.py（新規）
 - `KNOWN_MISSING: dict[str, str]` を置く。キーと、残す理由・PO 判断待ちの印を並べる。
   - 最初の 3 件: companies.view・customers.edit・leads.edit。
 - `async def count_missing_permission_keys(db) -> list[str]` を置く。
@@ -166,7 +166,7 @@ DB を正とし、コードに一覧の写しを作らない。
 - 欠けがあるとき、更新のたびに 1 回 warning を出す。中身は欠けたキーの名前の一覧（秘密は含まない）。
 
 ### 5-3. 既知の欠けの扱い（ラチェット）
-- 試験 `backend/tests/test_permission_catalog.py` で次を確かめる。
+- 試験 backend/tests/test_permission_catalog.py（新規） で次を確かめる。
   - KNOWN_MISSING の各キーが REGISTERED_PERMISSION_KEYS に入っていること。使われなくなったら名前を消させるため。
   - KNOWN_MISSING の件数が 3 以下であること。増やすには、この試験の数字を変える PR が要る。
 - PO が 3 キーの扱いを決めたら、付け替えまたは一覧への追加をする。その PR で KNOWN_MISSING から消し、上限の数字を下げる。
@@ -177,7 +177,7 @@ DB を正とし、コードに一覧の写しを作らない。
 - この 2 つを見張るかどうかは、便2 のあとに件数を数えてから決める。
 
 ## 6. 試験（便1）
-新しいファイル `backend/tests/test_conditions_permission_keys.py`。DB は使わない。
+新しいファイル backend/tests/test_conditions_permission_keys.py（新規）。DB は使わない。
 
 - T1: アプリの経路から POST /api/v1/conditions/import/commit を探す。
   - その dependencies の checker の required_permission_keys が {conditions.create} と {conditions.update} の 2 つであること。
@@ -186,7 +186,7 @@ DB を正とし、コードに一覧の写しを作らない。
 - T4: conditions・product-categories のすべての経路で、求めるキーが §4-2 の 7 キーのどれかであること。
   - 将来、一覧に無いキーを書いたら試験で止める。便2 の前の簡易版。
 - 画面側: 既存の vitest の書き方に合わせる。ConditionImportPage で、conditions.view だけを持つ利用者に取り込みパネルが出ないことを確かめる。
-  - 試験ファイルの置き場所は、実装のときに既存の `*.test.tsx` の並びに合わせる。
+  - 試験ファイルの置き場所は、実装のときに既存の画面試験ファイル（拡張子 .test.tsx）の並びに合わせる。
 
 試験は GitHub の CI で回す。Mac では重い試験を回さない（PO 2026-11-02）。
 
@@ -200,7 +200,7 @@ DB を正とし、コードに一覧の写しを作らない。
 | 便2 の見張りが DB を読みすぎる | 最大 300 秒に 1 回、130 行だけ読む |
 | 便2 の見張りで、すぐ 3 件が警報になる | KNOWN_MISSING で除く（§5-3） |
 
-## 8. 外部事例
+## 8. 外部・過去事例の参照と我々への応用
 - 一般的な RBAC の実装（例: Django の権限、Spring Security の authority）は、コードが参照する権限名と、保存された権限の定義がずれると、黙って拒否になる。
 - 起動時またはテストで突き合わせるのが通例である。ただし本件に当てはまる数値の事例は、まだ確かめていない。
 - 本設計の見張りは、この「突き合わせ」を本番の DB に向けて行う形にした。
@@ -230,8 +230,8 @@ DB を正とし、コードに一覧の写しを作らない。
 
 ## 維持の仕組み
 - 守り手:
-  - 便1 は `backend/tests/test_conditions_permission_keys.py`（CI の pytest）。
-  - 便2 は `monitoring/prometheus/alert_rules.yml` の PermissionKeyMissing と `backend/tests/test_permission_catalog.py`。
+  - 便1 は backend/tests/test_conditions_permission_keys.py（新規）（CI の pytest）。
+  - 便2 は `monitoring/prometheus/alert_rules.yml` の PermissionKeyMissing と backend/tests/test_permission_catalog.py（新規）。
   - いずれも実装の PR で作る。この設計の PR の時点では、まだ無い。
 - 対象: 状態マスタの CSV 取り込みが閲覧だけで通らないこと。コードが求める権限キーが、権限の一覧にそろっていること。
 - 関所ができるまで: 人手で守る。理由は、守り手のファイルが便1・便2 の実装で初めてできるため。
