@@ -2,7 +2,7 @@
 
 recon: `docs/handoff/schedule-gcal-alignment/recon.md`（以下 R§0〜R§7）
 見本: canvas「予定の画面 完成予定」（週・月・一覧・操作と近道の 4 枚。PO「1」で承認）
-状態: 設計案作成済み（同一 AI の自己審査 §9 済み）。成功条件（§2）は PO 承認済み（2026-11-04「1」）。クラウドの設計審査 1 回目は 3 便とも REVISE（`architect-review.md`・枝 `release/schedule-gcal-alignment-review`）→ 改訂 1 で指摘を反映（§12）。再審査（`architect-review-2.md`・枝 `release/schedule-gcal-alignment-review2`）は 便1 = APPROVE／便2 = REVISE（軽い）／便3 = REVISE。改訂 2 で便1 の追記を反映し、便1 の実装カード（§11-1）を出した。便2・便3 は改訂待ち。
+状態: 設計案作成済み（同一 AI の自己審査 §9 済み）。成功条件（§2）は PO 承認済み（2026-11-04「1」）。クラウドの設計審査 1 回目は 3 便とも REVISE（審査の記録 architect-review.md・枝 `release/schedule-gcal-alignment-review`）→ 改訂 1 で指摘を反映（§12）。再審査（審査の記録 architect-review-2.md・枝 `release/schedule-gcal-alignment-review2`）は 便1 = APPROVE／便2 = REVISE（軽い）／便3 = REVISE。改訂 2 で便1 の追記を反映し、便1 の実装カード（§11-1）を出した。便2・便3 は改訂待ち。
 
 ## 1. 目的（PO の言葉で）
 
@@ -59,24 +59,24 @@ recon: `docs/handoff/schedule-gcal-alignment/recon.md`（以下 R§0〜R§7）
 - `frontend/src/pages/schedule/schedule-utils.ts` に純粋な関数 `fitPopover(anchor, size, viewport, margin)` を足す。`size` は出したあとに測った幅と高さ。
   1. 横: 押した枠の右に置けなければ左に置く。どちらも入らなければ画面の中に押し戻す（日の表示の横に広い空き枠では枠に重なる位置に出る。今の `buildPopoverPosition` と同じで、許容する）。
   2. 縦: 押した枠の上端にそろえ、下が出るなら上へずらす: `top = clamp(anchor.top, margin, viewportH − h − margin)`。
-  3. 高さの上限は今の CSS（`schedule.css:683` `max-height: min(var(--schedule-popover-max-h), calc(100vh - var(--space-6)))`。`--space-6` = 24px = 上下の余白 12px×2）に任せ、`fitPopover` は高さを返さない。CSS が h ≤ 画面の高さ−24px を保つので、2 の式は常に画面の内側に収まる。inline の `maxHeight` は使わない（ESLint `frontend/eslint.config.js:111` が数値の `maxHeight` を禁止・ADR-067）。
+  3. 高さの上限は今の CSS（`frontend/src/pages/schedule.css:683` `max-height: min(var(--schedule-popover-max-h), calc(100vh - var(--space-6)))`。`--space-6` = 24px = 上下の余白 12px×2）に任せ、`fitPopover` は高さを返さない。CSS が h ≤ 画面の高さ−24px を保つので、2 の式は常に画面の内側に収まる。inline の `maxHeight` は使わない（ESLint `frontend/eslint.config.js:111` が数値の `maxHeight` を禁止・ADR-067）。
   - `margin` は 12（`frontend/src/tokens.css:76` `--space-3: 12px` と同じ値。数字の理由をコメントに書く。前例 `frontend/src/components/Popover.tsx:53` `const margin = 8;`）。
-- 小窓の部品で `useLayoutEffect` を使い、出したあとの `getBoundingClientRect()` で測って `fitPopover` を呼ぶ。測る前は `visibility: hidden` にして、ずれた位置が一瞬見えないようにする（前例 `Popover.tsx:110` の `visible`）。
+- 小窓の部品で `useLayoutEffect` を使い、出したあとの `getBoundingClientRect()` で測って `fitPopover` を呼ぶ。測る前は `visibility: hidden` にして、ずれた位置が一瞬見えないようにする（前例 `frontend/src/components/Popover.tsx:110` の `visible`）。
 - 測り直すきっかけは 2 つ: 画面の大きさが変わったとき（`resize`）と、小窓の中身の高さが変わったとき（小窓自身を `ResizeObserver` で見る。「詳しく入れる」で伸びたときなど）。jsdom には `ResizeObserver` が無いので、無ければ付けない（`typeof ResizeObserver !== "undefined"` で確かめる）。部品の試験では差し替えて呼ぶ。
 - `frontend/src/pages/schedule.css:679-693` `.schedule-popover`: 外側の `overflow: auto` をやめて `overflow: hidden`。見出し（`.schedule-popover__header`）と下の帯（`.schedule-popover__footer`）は縮まない（`flex: none`）。間の `.schedule-popover__body` だけ `flex: 1 1 auto; min-height: 0; overflow: auto`。
-- 金型 `Popover.tsx` は使わない。理由: 押す相手を子に持つ作りで、押した場所の四角だけを渡せない（R§1）。金型を直すと他の画面に響く。置き場所の計算の考え方は金型と同じ（測ってから画面の中へ押し戻す）にそろえる。
-- 試験: `schedule-utils.test.ts` に `fitPopover` の 27 件（K1 (a) の 9 通り×高さ 3 種）と、右にも左にも入らない場合の 1 件と、枠が無いとき真ん中に出る 1 件（5-5 の `c`）。`SchedulePageImpl.test.tsx` に K1 (b) の部品の試験 2 件。
+- 金型 `frontend/src/components/Popover.tsx` は使わない。理由: 押す相手を子に持つ作りで、押した場所の四角だけを渡せない（R§1）。金型を直すと他の画面に響く。置き場所の計算の考え方は金型と同じ（測ってから画面の中へ押し戻す）にそろえる。
+- 試験: `frontend/src/pages/schedule/schedule-utils.test.ts` に `fitPopover` の 27 件（K1 (a) の 9 通り×高さ 3 種）と、右にも左にも入らない場合の 1 件と、枠が無いとき真ん中に出る 1 件（5-5 の `c`）。`frontend/src/pages/schedule/SchedulePageImpl.test.tsx` に K1 (b) の部品の試験 2 件。
 
 ### 5-2. 便1 短い作る小窓（K3）
 
 - 作る小窓（`mode === "create"`）で、最初は 題名・開始と終了（日付と時刻）・種類・社員にも見せる・終日 だけを出す。
-- 下の帯の左に「詳しく入れる」（`Button variant="ghost"`）。押すと今の全部の欄（`SchedulePageImpl.tsx:285-410`）を出す。伸びたら 5-1 の `ResizeObserver` で置き直す。入れた中身は消えない（同じ `draft`）。
+- 下の帯の左に「詳しく入れる」（`Button variant="ghost"`）。押すと今の全部の欄（`frontend/src/pages/schedule/SchedulePageImpl.tsx:285-410`）を出す。伸びたら 5-1 の `ResizeObserver` で置き直す。入れた中身は消えない（同じ `draft`）。
 - 直す小窓（`mode === "edit"`）は今どおり全部の欄。
 - 新しい文字: `schedule.moreOptions`（ja「詳しく入れる」・en「More options」）。
 
 ### 5-3. 便1 月の 1 行と他◯件（K4・K5）
 
-- `SchedulePageImpl.tsx:805-823` の札を、背景なしの 1 行に変える: 担当者の色の丸（今の `ownerMeta.color`。色の意味は今と同じ「担当者」）・開始時刻（終日は時刻なし）・題名。`white-space: nowrap; overflow: hidden; text-overflow: ellipsis` を札全体にかける。月の札から種類の札（`:815-821`）は外し、種類は詳しくで見る。
+- `frontend/src/pages/schedule/SchedulePageImpl.tsx:805-823` の札を、背景なしの 1 行に変える: 担当者の色の丸（今の `ownerMeta.color`。色の意味は今と同じ「担当者」）・開始時刻（終日は時刻なし）・題名。`white-space: nowrap; overflow: hidden; text-overflow: ellipsis` を札全体にかける。月の札から種類の札（`:815-821`）は外し、種類は詳しくで見る。
 - 終日の予定は今の札（背景が担当者の色）のまま 1 行にする（便2 で帯にする）。
 - `:826-828` の `<span>` を `<button type="button">` にし、押すとその日の一覧の小窓を出す。押したときは `event.stopPropagation()` する（日の枠 `:797` の `onClick` が作る小窓を開くため。予定の札 `:810` と同じ止め方）。小窓は 5-1 の置き場所の計算を使う。中の予定を押すと今の詳しくを出す。
 - 文字: `frontend/src/locales/ja.json:3195` `"moreCount": "+{{count}}件"` → `"他 {{count}} 件"`。en は `"{{count}} more"`。
@@ -84,41 +84,41 @@ recon: `docs/handoff/schedule-gcal-alignment/recon.md`（以下 R§0〜R§7）
 
 ### 5-4. 便1 一覧の表示（K6）
 
-- `frontend/src/pages/schedule/schedule-utils.ts:1` `ScheduleView` に `"list"` を足す。`toRangeStart` は選んだ日の 0 時、`toRangeEnd` は 30 日後。前後の移動（`SchedulePageImpl.tsx:1090-1096`）は 30 日ずつ。
-- 表示の切り替え（`:1179-1190`）に「一覧」を足す。ラベルは `` t(`schedule.${nextView}View`) ``（`:1188`）で引くので、文字のキーは `schedule.listView`（ja「一覧」・en「Schedule」。今の `schedule.dayView`・`weekView`・`monthView` は `ja.json:3215-3217`）。
-- 一覧の部品は新しく `ScheduleListView`（`SchedulePageImpl.tsx` の中）。日付ごとに 1 段、左に日付の丸（今日は `--schedule-today`）、右に予定の行（色の丸・時刻・題名・種類）。行は `<button>` で、押すと詳しく。予定の無い日は出さない。全部無いときは今の空の表示を使う。
+- `frontend/src/pages/schedule/schedule-utils.ts:1` `ScheduleView` に `"list"` を足す。`toRangeStart` は選んだ日の 0 時、`toRangeEnd` は 30 日後。前後の移動（`frontend/src/pages/schedule/SchedulePageImpl.tsx:1090-1096`）は 30 日ずつ。
+- 表示の切り替え（`:1179-1190`）に「一覧」を足す。ラベルは `` t(`schedule.${nextView}View`) ``（`:1188`）で引くので、文字のキーは `schedule.listView`（ja「一覧」・en「Schedule」。今の `schedule.dayView`・`weekView`・`monthView` は `frontend/src/locales/ja.json:3215-3217`）。
+- 一覧の部品は新しく `ScheduleListView`（`frontend/src/pages/schedule/SchedulePageImpl.tsx` の中）。日付ごとに 1 段、左に日付の丸（今日は `--schedule-today`）、右に予定の行（色の丸・時刻・題名・種類）。行は `<button>` で、押すと詳しく。予定の無い日は出さない。全部無いときは今の空の表示を使う。
 - 見出しの日付は `Intl.DateTimeFormat`（今の `formatDayLabel` と同じ道具）で出す。
 - 「月か日か、それ以外は週」と分けている箇所に一覧を入れる（触る場所の全部）:
-  - `SchedulePageImpl.tsx:115-120` `formatRangeTitle`: 一覧は「開始日 - 30 日後の前日」。
+  - `frontend/src/pages/schedule/SchedulePageImpl.tsx:115-120` `formatRangeTitle`: 一覧は「開始日 - 30 日後の前日」。
   - `:935` 左の小さい月の基準: 一覧は `startOfMonth(anchorDate)`（週と同じ）でよい。
   - `:973` 今の時刻へ動かす処理: 一覧でも動かさない（`view === "month" || view === "list"` で戻る）。
   - `:1098-1102` `viewDays`: 一覧は使わない（一覧は `ScheduleListView` が範囲の予定から日を作る）。
-  - `schedule-utils.ts:147-157` `toRangeStart`・`toRangeEnd`。
+  - `frontend/src/pages/schedule/schedule-utils.ts:147-157` `toRangeStart`・`toRangeEnd`。
 - 試験: `toRangeStart`・`toRangeEnd` の一覧 3 件（30 日分・月をまたぐ・年をまたぐ）。
 
 ### 5-5. 便1 キーボードの近道（K7）
 
-- `SchedulePageImpl.tsx` の本体に `useEffect` で `window` の `keydown` を 1 つだけ付ける（外すときに必ず外す）。
+- `frontend/src/pages/schedule/SchedulePageImpl.tsx` の本体に `useEffect` で `window` の `keydown` を 1 つだけ付ける（外すときに必ず外す）。
 - 判定の順番（上から見て最初に当たったもので決める）:
   1. `event.isComposing || event.keyCode === 229` → 何もしない（変換の取消を優先。Safari は変換を決めた Enter で `isComposing` が偽になるため 229 も見る）。
-  2. 近道の一覧（Modal）が開いている → 何もしない（Esc は金型 `Modal.tsx:73-80` が閉じる。ページ側は何もしない）。
+  2. 近道の一覧（Modal）が開いている → 何もしない（Esc は金型 `frontend/src/components/Modal.tsx:73-80` が閉じる。ページ側は何もしない）。
   3. `Escape` → 予定の小窓（作る・詳しく・直す、と 5-3 の「他 ◯ 件」の日の一覧の小窓）が開いていれば閉じる。入力欄の中でも効く。
   4. 予定の小窓（5-3 の日の一覧の小窓を含む）が開いている → ここで終わり（文字キーは効かない）。
   5. `Ctrl`・`⌘`（`metaKey`）・`Alt` が押されている → 何もしない。`Shift` は除外しない（`?` は Shift で出すため）。
   6. `event.target` が `input`・`textarea`・`select`・`[contenteditable]` → 何もしない。切替スイッチ `Toggle` は `<input type="checkbox">`（`frontend/src/components/Toggle.tsx:27-31`）なのでここで止まる（安全側）。`<button>` にフォーカスがあるときは効く（Google カレンダーと同じ）。
   7. `event.key` が 1 文字のときだけ小文字にそろえて（CapsLock 対策）キーの表で引く。`ArrowRight` などの名前のキーはそのまま比べる。押しっぱなし（`event.repeat`）でも効く（`j` を押し続けると進み続ける。Google と同じ）。
-- キー: `t` 今日／`j`・`ArrowRight` 次／`k`・`ArrowLeft` 前／`d` 日／`w` 週／`m` 月／`a` 一覧／`c` 作る（今日の 9 時の短い小窓。押した枠が無いので、週・日の表示でも月・一覧の表示でも画面の真ん中に出す。今の `buildPopoverPosition` の枠なしの道 `SchedulePageImpl.tsx:126-131` と同じ考え方で、`fitPopover` に枠が無いときは真ん中を返す 1 件を足す）／`Escape` 小窓を閉じる／`?` 近道の一覧。12 キー。
+- キー: `t` 今日／`j`・`ArrowRight` 次／`k`・`ArrowLeft` 前／`d` 日／`w` 週／`m` 月／`a` 一覧／`c` 作る（今日の 9 時の短い小窓。押した枠が無いので、週・日の表示でも月・一覧の表示でも画面の真ん中に出す。今の `buildPopoverPosition` の枠なしの道 `frontend/src/pages/schedule/SchedulePageImpl.tsx:126-131` と同じ考え方で、`fitPopover` に枠が無いときは真ん中を返す 1 件を足す）／`Escape` 小窓を閉じる／`?` 近道の一覧。12 キー。
 - 近道の一覧は金型 `frontend/src/components/Modal.tsx` で出す。キーの見た目は新しいクラス `.schedule-kbd`（トークンだけで書く）。
 - 文字: `schedule.shortcuts.title` と各キーの説明 10 個（ja・en 同じキー。J と → ・K と ← は 1 行にまとめる）。
-- 試験: K7 の 20 件を `SchedulePageImpl.test.tsx` に置く。
+- 試験: K7 の 20 件を `frontend/src/pages/schedule/SchedulePageImpl.test.tsx` に置く。
 
 ### 5-6. 便2 引っぱる・動かす・長さを変える・月の帯（K8〜K11）
 
-- 外部の部品は入れない（今は無い・R§4。前に FullCalendar を外した経緯 `SchedulePageImpl.tsx:4`）。Pointer Events（`onPointerDown`・`setPointerCapture`）で書く。
-- 時刻への換算は純粋な関数にして `schedule-utils.ts` に置く: 位置(px) → 分 = `px / 行の高さ × 60` を 15 分に丸める。行の高さは CSS の `--schedule-row-height` を `getComputedStyle` で読む（数字を書き写さない）。位置(px) は「押した日の列の `getBoundingClientRect().top` からの差」で測る（列の四角は表が縦に動いた分を含むので、動いた量を別に足さない）。
+- 外部の部品は入れない（今は無い・R§4。前に FullCalendar を外した経緯 `frontend/src/pages/schedule/SchedulePageImpl.tsx:4`）。Pointer Events（`onPointerDown`・`setPointerCapture`）で書く。
+- 時刻への換算は純粋な関数にして `frontend/src/pages/schedule/schedule-utils.ts` に置く: 位置(px) → 分 = `px / 行の高さ × 60` を 15 分に丸める。行の高さは CSS の `--schedule-row-height` を `getComputedStyle` で読む（数字を書き写さない）。位置(px) は「押した日の列の `getBoundingClientRect().top` からの差」で測る（列の四角は表が縦に動いた分を含むので、動いた量を別に足さない）。
 - 引っぱって作る: 空き枠で押して 4px 以上動いたら引っぱりとみなし、薄い枠を出す。離すと 5-2 の短い小窓。4px 未満なら今の「押して 1 時間」。
-- 動かす・長さを変える: 今の `canEditSelected`（`SchedulePageImpl.tsx:1123-1125`。選んだ 1 件用）の中身を、予定を 1 件受け取る関数 `canEditItem(item)` に切り出して両方で使う（判定の中身は変えない）。かつ `source !== "shift"` の予定だけ。
-- 離したときの送り方（Google の予定を壊さないため）: `PATCH /calendar/events/{id}` に、今の保存（`SchedulePageImpl.tsx:1038-1047`）と同じ形で、題名・開始・終了・終日・種類・説明・場所を送る（題名などは動かす予定の今の値）。開始と終了だけを送ると、裏側が Google へ送る中身を送られた欄だけで作る（`backend/app/services/calendar_service.py:314` → `:512` `"summary": payload.get("title", "")`）ため、Google 側の題名が空で上書きされ、終日も崩れる（`:517-522`）。この形にすれば便2 は画面だけで済む（裏側は触らない）。`calendar_type` は送らない（見せ方は変えない）。失敗したら元の位置に戻し、今の失敗の帯を出す。
+- 動かす・長さを変える: 今の `canEditSelected`（`frontend/src/pages/schedule/SchedulePageImpl.tsx:1123-1125`。選んだ 1 件用）の中身を、予定を 1 件受け取る関数 `canEditItem(item)` に切り出して両方で使う（判定の中身は変えない）。かつ `source !== "shift"` の予定だけ。
+- 離したときの送り方（Google の予定を壊さないため）: `PATCH /calendar/events/{id}` に、今の保存（`frontend/src/pages/schedule/SchedulePageImpl.tsx:1038-1047`）と同じ形で、題名・開始・終了・終日・種類・説明・場所を送る（題名などは動かす予定の今の値）。開始と終了だけを送ると、裏側が Google へ送る中身を送られた欄だけで作る（`backend/app/services/calendar_service.py:314` → `:512` `"summary": payload.get("title", "")`）ため、Google 側の題名が空で上書きされ、終日も崩れる（`:517-522`）。この形にすれば便2 は画面だけで済む（裏側は触らない）。`calendar_type` は送らない（見せ方は変えない）。失敗したら元の位置に戻し、今の失敗の帯を出す。
 - 月の帯: 終日・複数日の予定を週の行ごとに `grid-column: 開始 / 終了+1` の帯で出す。月で日をまたいで動かすのも同じ PATCH。帯は帯の段に出し、1 日 3 件（`:801`）と「他 ◯ 件」の数には入れない（3 件と数えるのは時刻つきの予定だけ）。
 - 新しいトークン: `--schedule-drag-ghost-bg`（`var(--calendar-google-blue-light)` を指す。参照先はライト `frontend/src/index.css:184`・ダーク `:384` の両方にある）。ADR-067「新規トークン追加手順」に従い、ADR の表も直す。
 - 試験: 換算の関数（境目・15 分丸め・日をまたぐ）と、直せない予定が動かないこと（K10）と、動かしたときの送る中身に題名・終日・説明・場所が入っていること（K9）。
@@ -132,8 +132,8 @@ recon: `docs/handoff/schedule-gcal-alignment/recon.md`（以下 R§0〜R§7）
   - 直す（`update_event` `:259`）: `add_meet` が真なら、最初に (1) `_get_sync_target` で送る方式かつ `connected_by == 見ている人`、(2) その予定に `google_event_id` がある、の 2 つを確かめ、どちらかが無ければ 422 で何も変えない（今の直す道は持ち主を見ずに送る `:309-310`・ADR-1057:30 の受け入れ点。Meet だけは本人に絞る）。`meet_url` が空のときだけ `patch` に `createRequest`（新しい `requestId`）を付ける。今は送る欄が 1 つも無いと `:289-290`（`if not set_clauses: return {"id": event_id}`）で何もせず戻るので、`add_meet` だけ送られた場合もこの早戻りの前に Meet を処理する。画面は直す小窓から送るとき今の保存（`:1038-1047`）と同じ全部の欄を送るので、通常はこの場合に当たらない。
   - `backend/app/services/google_calendar.py:377` `create_event`・`:392` `update_event` に `conference: bool = False` を足し、真のときだけ `conferenceDataVersion=1` を付けて呼ぶ。1 件を読む関数 `get_event(db, tenant_id, event_id)` を新しく足す（今は `get_events` `:348`・`create_event` `:377`・`update_event` `:392`・`delete_event` `:407` だけで、1 件を読む関数が無い）。
   - 返事の `hangoutLink` を `meet_url` に入れる。`conferenceData.createRequest.status.statusCode` が `pending` で `hangoutLink` が無いときは、`await asyncio.sleep(1)` をはさんで 2 回まで `get_event` で読み直す（同期の `time.sleep` は使わない）。それでも無ければ `meet_url` は空のままにし、警告を記録に残す（予定そのものは保存済み）。PO がもう一度「Google Meet を付ける」を押すと直す道を通り、新しい `requestId` で頼み直す。
-  - 取り込み（`calendar_service.py:410` `upsert_from_google`）: `google_event.get("hangoutLink")` を `meet_url` に入れる。INSERT の列と値に `meet_url` を足し、`:476-486` の `ON CONFLICT ... DO UPDATE SET` に `meet_url = EXCLUDED.meet_url` を足す（`source='google'` の行だけ・今の条件 `:486` のまま）。
-  - 予定の一覧（`calendar_service.py:134` の SELECT）: `ce.meet_url` を SELECT の**最後**（`created_by_name` の後）に足し、返す辞書に `"meet_url"` を足す（`r[0]`〜`r[17]` の番号をずらさないため）。
+  - 取り込み（`backend/app/services/calendar_service.py:410` `upsert_from_google`）: `google_event.get("hangoutLink")` を `meet_url` に入れる。INSERT の列と値に `meet_url` を足し、`:476-486` の `ON CONFLICT ... DO UPDATE SET` に `meet_url = EXCLUDED.meet_url` を足す（`source='google'` の行だけ・今の条件 `:486` のまま）。
+  - 予定の一覧（`backend/app/services/calendar_service.py:134` の SELECT）: `ce.meet_url` を SELECT の**最後**（`created_by_name` の後）に足し、返す辞書に `"meet_url"` を足す（`r[0]`〜`r[17]` の番号をずらさないため）。
   - 接続状態の口（`backend/app/routers/google_calendar.py:242` `connection_status`）: 今は会社と DB しか受け取らず（`:243-244`）、同期方式も読まない。`user: User = Depends(get_current_user)` を足し、SELECT に `sync_mode`・`connected_by_user_id` を足して `meet_available: bool` を返す。真 = 接続あり かつ `connected_by_user_id == user.id` かつ 同期方式が `bidirectional` か `write_only`。保存はしない（今ある値から毎回出す）。
 - 画面の型: `frontend/src/pages/schedule/schedule-utils.ts:13` `ApiCalendarEvent` に `meet_url?: string | null`、`:46` `ScheduleItem` に `meetUrl?: string | null`、`:159` `normalizeEvent` で写す。
 - 画面:
@@ -147,8 +147,8 @@ recon: `docs/handoff/schedule-gcal-alignment/recon.md`（以下 R§0〜R§7）
 
 | 案 | 選ばなかった理由 |
 |---|---|
-| FullCalendar などの外部部品を入れて引っぱり操作を任せる | 前に外して内製の表にした（`SchedulePageImpl.tsx:4`）。見た目をトークンで縛れない。今の表の作りを捨てることになる |
-| 金型 `Popover.tsx` を直して予定の小窓に使う | 押す相手を子に持つ作りで合わない。直すと他の画面の小窓の動きが変わる。今回は同じ考え方の純粋な関数を予定の画面に置く |
+| FullCalendar などの外部部品を入れて引っぱり操作を任せる | 前に外して内製の表にした（`frontend/src/pages/schedule/SchedulePageImpl.tsx:4`）。見た目をトークンで縛れない。今の表の作りを捨てることになる |
+| 金型 `frontend/src/components/Popover.tsx` を直して予定の小窓に使う | 押す相手を子に持つ作りで合わない。直すと他の画面の小窓の動きが変わる。今回は同じ考え方の純粋な関数を予定の画面に置く |
 | Meet の URL を `description` に書き込む | 説明の文と混ざる。Google から取り込んだ説明で上書きされる。置き場所が 1 か所にならない |
 | Meet を全員に開く（段2 を先に） | 接続は会社で 1 つ（ADR-1057）。他人の予定がつないだ人の Google に入る。PO はまず自分だけで確かめると決めた |
 | 便を 1 つにまとめる | Meet は表の列を足すので PO の GO が要る。画面だけの直しまで待たせない。1 回に 1 つ変えて測る |
@@ -170,7 +170,7 @@ recon: `docs/handoff/schedule-gcal-alignment/recon.md`（以下 R§0〜R§7）
 
 - Google カレンダーの近道（出典: Google カレンダー ヘルプ「Use keyboard shortcuts in Google Calendar」https://support.google.com/calendar/answer/37034 、2026-11-04 に読んだ）: 次 `j`・`n`／今日 `t`／日 `1`・`d`／週 `2`・`w`／月 `3`・`m`／予定リスト `5`・`a`／作る `c`／一覧 `?`／戻る `Esc`。同じキーを使う。前へ（`k`）はこのページの読み取り結果に出てこなかった【未確認】。`j` と対になるキーとして `k` を使う。数字キー・`/`（探す）・`g`・`r`・`s` は今回入れない（探す機能が無い・設定画面は別）。
 - Google Calendar API の Meet の付け方（Context7 で読んだ公式資料・R§5）: 5-7 の通りに従う。
-- 過去事例（社内）: 予定の表は前に FullCalendar を外して内製にした（`SchedulePageImpl.tsx:4`）。外部部品を戻さない根拠。小窓の位置ずれは金型 `Popover.tsx` で「測ってから押し戻す」に直した前例があり（`Popover.tsx:79` のコメント・押し戻しは `:80-87`）、同じ考え方を使う。
+- 過去事例（社内）: 予定の表は前に FullCalendar を外して内製にした（`frontend/src/pages/schedule/SchedulePageImpl.tsx:4`）。外部部品を戻さない根拠。小窓の位置ずれは金型 `frontend/src/components/Popover.tsx` で「測ってから押し戻す」に直した前例があり（`frontend/src/components/Popover.tsx:79` のコメント・押し戻しは `:80-87`）、同じ考え方を使う。
 - 数字による効果の事例は持っていない。成功の判定は §2 の K で行う。
 
 ## 9. 設計審査（同一 AI による自己審査・独立した第二者レビューではない）
@@ -178,21 +178,23 @@ recon: `docs/handoff/schedule-gcal-alignment/recon.md`（以下 R§0〜R§7）
 - 判定: 便1 = APPROVE（設計合格）／便2 = APPROVE／便3 = REVISE（§7-3 の前提確認 3 件が済むまで）
 - 根拠: 触る場所はすべて R の行番号で確かめた。色・余白は既存トークン＋新しいトークン 2 個。文字はすべて新しい `t()` のキー。金型は Toggle・Button・ButtonLink・Modal を使う。データの置き場所は Meet の URL 1 列だけで、ほかに写しを作らない。
 - 未解決: §7-3 の 4 件。PO の画面での切れ方の実測（K1 で代える）。
-- クラウドの設計審査 1 回目（2026-11-04・`docs/handoff/schedule-gcal-alignment/architect-review.md`・枝 `release/schedule-gcal-alignment-review`）: 便1 = REVISE（軽い）／便2 = REVISE／便3 = REVISE。REJECT は無し。指摘の要点は実物で確かめ直し、すべて事実と一致した。改訂 1 で反映した（§12）。
+- クラウドの設計審査 1 回目（2026-11-04・審査の記録 architect-review.md・枝 `release/schedule-gcal-alignment-review`）: 便1 = REVISE（軽い）／便2 = REVISE／便3 = REVISE。REJECT は無し。指摘の要点は実物で確かめ直し、すべて事実と一致した。改訂 1 で反映した（§12）。
 - 自己審査の判定は改訂 1 のあと: 便1 = APPROVE／便2 = APPROVE／便3 = REVISE（§7-3 の前提確認 4 件が済むまで）。
-- クラウドの再審査（2026-11-04・`docs/handoff/schedule-gcal-alignment/architect-review-2.md`・枝 `release/schedule-gcal-alignment-review2`）:
-  - 便1 = APPROVE。カードへの追記 N-6〜N-10（`c` の真ん中・`Popover.tsx:53`・`schedule.listView`・229 と 1 文字だけ小文字・日の一覧の小窓も Esc）を改訂 2 で反映（§13）。主な指摘は実物で確かめ、一致した。
-  - 便2 = REVISE（軽い）。N-5: 終日の予定が Google で 1 日前にずれる今からある不具合（画面は `combineDateTime(date,"00:00").toISOString()` で UTC を送る `SchedulePageImpl.tsx:1041`、裏側は `str(start_dt)[:10]` `calendar_service.py:519-520`）。N-11: 行の高さは `DEFAULT_ROW_HEIGHT`（`SchedulePageImpl.tsx:88`・使う所 `:611`）と同じ値を使う。N-12: `category` は直す口で受け取らない（`UpdateEventBody`・`field_map`）ので試験で見ない。→ N-5 の扱いを決めてから改訂する。
-  - 便3 = REVISE。N-1: 道の入口の `try/except Exception` が 422 を 500 に変える（`routers/calendar.py:352-364`・`:421-434`）。N-2: 返事が `{"id"}` だけで Meet の失敗が画面に分からない。N-3: 直す前に `google_event_id`・`meet_url` を読む。N-13（任意）。§7-3 の 4 件も残る。
+- クラウドの再審査（2026-11-04・審査の記録 architect-review-2.md・枝 `release/schedule-gcal-alignment-review2`）:
+  - 便1 = APPROVE。カードへの追記 N-6〜N-10（`c` の真ん中・`frontend/src/components/Popover.tsx:53`・`schedule.listView`・229 と 1 文字だけ小文字・日の一覧の小窓も Esc）を改訂 2 で反映（§13）。主な指摘は実物で確かめ、一致した。
+  - 便2 = REVISE（軽い）。N-5: 終日の予定が Google で 1 日前にずれる今からある不具合（画面は `combineDateTime(date,"00:00").toISOString()` で UTC を送る `frontend/src/pages/schedule/SchedulePageImpl.tsx:1041`、裏側は `str(start_dt)[:10]` `backend/app/services/calendar_service.py:519-520`）。N-11: 行の高さは `DEFAULT_ROW_HEIGHT`（`frontend/src/pages/schedule/SchedulePageImpl.tsx:88`・使う所 `:611`）と同じ値を使う。N-12: `category` は直す口で受け取らない（`UpdateEventBody`・`field_map`）ので試験で見ない。→ N-5 の扱いを決めてから改訂する。
+  - 便3 = REVISE。N-1: 道の入口の `try/except Exception` が 422 を 500 に変える（`backend/app/routers/calendar.py:352-364`・`:421-434`）。N-2: 返事が `{"id"}` だけで Meet の失敗が画面に分からない。N-3: 直す前に `google_event_id`・`meet_url` を読む。N-13（任意）。§7-3 の 4 件も残る。
 - 判定（再審査のあと）: 便1 = APPROVE（実装可能）／便2 = REVISE／便3 = REVISE。
 
 ## 10. 維持の仕組み（守り手）
 
+守り手: frontend/src/pages/schedule/schedule-utils.test.ts（`fitPopover` の試験。CI の frontend 試験で毎回回る）
+
 | 守るもの | 守り手 |
 |---|---|
-| 小窓が画面に収まる | `schedule-utils.test.ts` の `fitPopover` 試験（CI の frontend 試験） |
-| 近道が入力中に効かない | `SchedulePageImpl.test.tsx` の近道試験 |
-| 引っぱりの時刻換算 | `schedule-utils.test.ts` の換算試験 |
+| 小窓が画面に収まる | `frontend/src/pages/schedule/schedule-utils.test.ts` の `fitPopover` 試験（CI の frontend 試験） |
+| 近道が入力中に効かない | `frontend/src/pages/schedule/SchedulePageImpl.test.tsx` の近道試験 |
+| 引っぱりの時刻換算 | `frontend/src/pages/schedule/schedule-utils.test.ts` の換算試験 |
 | 直書きの色・文字が入らない | 今ある見張り（ADR-067 のトークン検査・ADR-027 の i18n 検査・ADR-144 の金型検査） |
 | Meet は本人だけ | 便3 の裏側の試験（本人以外は 422・Google に送らない）と新しい ADR |
 
@@ -203,7 +205,7 @@ recon: `docs/handoff/schedule-gcal-alignment/recon.md`（以下 R§0〜R§7）
 - 承認: §2 の成功条件と 3 便の計画は PO 承認済み（2026-11-04「1」。審査に通ったら便1 を実装に出す、を含む）。設計はクラウドの再審査で便1 = APPROVE。
 - 担当: クラウドの Sonnet（実装役）。この §11-1 と §5-1〜§5-5 だけを実行する。§5-6・§5-7（便2・便3）には触らない。
 - 枝: `origin/release/schedule-gcal-alignment` を土台に `release/schedule-gcal-bin1` を作り、そこへ push する（設計文書が同じ PR に乗る）。PR は起票しない（Opus が起票する）。main・develop・ほかの枝へ push しない。
-- 行番号の基準: 設計は `origin/main` 7d56ab771。2026-11-04 時点で、それ以降の main に予定の画面・`tokens.css`・`ja.json`・`en.json` の変更は無い（`git log 7d56ab771..origin/main -- <それらの道>` 0 件）。行がずれていたら、名前（関数名・クラス名・キー名）で探す。見つからなければ止まる。
+- 行番号の基準: 設計は `origin/main` 7d56ab771。2026-11-04 時点で、それ以降の main に予定の画面・`frontend/src/tokens.css`・`frontend/src/locales/ja.json`・`frontend/src/locales/en.json` の変更は無い（`git log 7d56ab771..origin/main -- <それらの道>` 0 件）。行がずれていたら、名前（関数名・クラス名・キー名）で探す。見つからなければ止まる。
 
 触るファイル（これ以外は触らない）:
 
@@ -215,20 +217,20 @@ recon: `docs/handoff/schedule-gcal-alignment/recon.md`（以下 R§0〜R§7）
 | `frontend/src/pages/schedule/SchedulePageImpl.test.tsx` | 小窓の部品の試験 2 件（K1 (b)）・近道 20 件（K7） | 5-1・5-5 |
 | `frontend/src/pages/schedule.css` | `.schedule-popover` の見出し・中・下の帯の分け方・月の 1 行・`.schedule-kbd`・一覧の並び（トークンだけ） | 5-1・5-3・5-4・5-5 |
 | `frontend/src/tokens.css` | 予定の段に `--schedule-month-dot-size: 8px;` | 5-3 |
-| `frontend/src/locales/ja.json`・`en.json` | `schedule.moreOptions`・`schedule.listView`・`schedule.moreCount` の書き換え・`schedule.shortcuts.*`（同じキーを両方に） | 5-2〜5-5 |
+| `frontend/src/locales/ja.json`・`frontend/src/locales/en.json` | `schedule.moreOptions`・`schedule.listView`・`schedule.moreCount` の書き換え・`schedule.shortcuts.*`（同じキーを両方に） | 5-2〜5-5 |
 
-触らない: 裏側（`backend/`）・`migrations/`・金型（`frontend/src/components/`）・`calendars.config.ts` の色・虫めがねボタン・`buildPopoverPosition` 以外の置き場所の計算・狭い画面の並び。
+触らない: 裏側（`backend/`）・`migrations/`・金型（`frontend/src/components/`）・`frontend/src/features/schedule/calendars.config.ts` の色・虫めがねボタン・`buildPopoverPosition` 以外の置き場所の計算・狭い画面の並び。
 
 守ること:
 - 画面の文字は全部 `t()`（ADR-027）。色・大きさ・余白はトークン（ADR-067）。数値の inline `maxHeight` は使わない。部品は金型（`Button`・`Modal`・`Toggle`）を先に使う（ADR-144）。
-- `fitPopover` の `margin` 12 にはコメントで理由を書く（`--space-3` と同じ値・前例 `Popover.tsx:53`）。
+- `fitPopover` の `margin` 12 にはコメントで理由を書く（`--space-3` と同じ値・前例 `frontend/src/components/Popover.tsx:53`）。
 - 近道の判定の順番は 5-5 の 1〜7 のとおり（229・1 文字だけ小文字・日の一覧の小窓も Esc で閉じる）。
 - 測る前は `visibility: hidden`。`ResizeObserver` は `typeof ResizeObserver !== "undefined"` のときだけ付け、外すときに必ず外す。
 
 想定される分かれ道（当たったら止まって報告する。推測で進めない）:
 - `buildPopoverPosition` を呼ぶ所が予定の小窓以外にもある → 全部の呼び元を書き出して止まる。
 - 月の「他 ◯ 件」の日の一覧の小窓を出す仕組みが今の作り（`selected`・`draft` の状態）に入らない → 新しい状態を 1 つ足す形で書き、他の状態の意味は変えない。変えないと書けないなら止まる。
-- `Modal` の Esc（`Modal.tsx:73-80`）とページの Esc が二重に効く → 5-5 の 2 で先に抜ける。試験で確かめる。
+- `Modal` の Esc（`frontend/src/components/Modal.tsx:73-80`）とページの Esc が二重に効く → 5-5 の 2 で先に抜ける。試験で確かめる。
 - 試験の中で `getBoundingClientRect` を差し替えられない → 差し替え方を書いて止まる。
 
 確かめ（push の前に全部回し、生の出力をファイルに残す）:
@@ -249,8 +251,8 @@ recon: `docs/handoff/schedule-gcal-alignment/recon.md`（以下 R§0〜R§7）
 
 | 指摘 | 中身 | 直した場所 |
 |---|---|---|
-| 行番号のずれ | `Toggle.tsx` は 41 行（部品 `:21`・入力 `:27-31`）。`Popover.tsx` は反転なしのコメント `:79`・押し戻し `:80-87`・`visible` `:110`。作る小窓の欄は `:285` から | 5-1・5-2・5-5・§8・recon §1 |
-| 行番号のずれ（裏側） | Google の id を取るのは `calendar_service.py:228`。取り込みの関数は `:410` から。`require_calendar_owner` は `routers/google_calendar.py:155` | recon §5 |
+| 行番号のずれ | `frontend/src/components/Toggle.tsx` は 41 行（部品 `:21`・入力 `:27-31`）。`frontend/src/components/Popover.tsx` は反転なしのコメント `:79`・押し戻し `:80-87`・`visible` `:110`。作る小窓の欄は `:285` から | 5-1・5-2・5-5・§8・recon §1 |
+| 行番号のずれ（裏側） | Google の id を取るのは `backend/app/services/calendar_service.py:228`。取り込みの関数は `:410` から。`require_calendar_owner` は `backend/app/routers/google_calendar.py:155` | recon §5 |
 | A-1 | 中身が伸びたら測り直す | 5-1（`ResizeObserver`）・K1 (b) |
 | A-2 | inline の `maxHeight` は ESLint で禁止 | 5-1 の 3（CSS の上限に任せる） |
 | A-3 | 日の表示で空き枠に重なることがある | 5-1 の 1（許容） |
@@ -264,7 +266,7 @@ recon: `docs/handoff/schedule-gcal-alignment/recon.md`（以下 R§0〜R§7）
 | C-4・C-5 | 1 件を読む関数が無い・`asyncio.sleep`・頼み直しは新しい `requestId` | 5-7 |
 | C-6・C-7 | SELECT の最後に足す・画面の型 3 か所・取り込みの ON CONFLICT | 5-7 |
 | C-8 | 接続状態の口は見ている人も同期方式も読まない | 5-7 |
-| C-9 | `run_all_migrations.sh` への登録 | 5-7・§7-3 の 2 |
+| C-9 | `scripts/run_all_migrations.sh` への登録 | 5-7・§7-3 の 2 |
 | C-10 | K14 は双方向が前提 | §7-3 の 4・K14 |
 | FEATURE-INDEX | 「取り込みは止めている」が古い | 5-7 の ADR |
 
@@ -273,7 +275,7 @@ recon: `docs/handoff/schedule-gcal-alignment/recon.md`（以下 R§0〜R§7）
 | 指摘 | 中身 | 直した場所 |
 |---|---|---|
 | N-6 | `c` は押した枠が無い。月・一覧では置く基準が無い | 5-5（真ん中に出す）・5-1 の試験 |
-| N-7 | 金型の余白の前例は `Popover.tsx:53` | 5-1 |
+| N-7 | 金型の余白の前例は `frontend/src/components/Popover.tsx:53` | 5-1 |
 | N-8 | 表示の名前は `schedule.${nextView}View` で引く。キーは `schedule.listView` | 5-4 |
 | N-9 | 229 も変換中とみなす・1 文字だけ小文字・K7 の数え方の名前 | 5-5・K7 |
 | N-10 | 日の一覧の小窓も Esc と「開いている間」に入れる | 5-5 |
