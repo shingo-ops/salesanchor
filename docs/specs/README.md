@@ -71,6 +71,7 @@
 | 帳票・フォーム送付（見積・請求書・フォームの送付導線。中身の作りは quote-invoice、入金確認は受注管理を参照） | [inbox/invoice-form-send/README.md](inbox/invoice-form-send/README.md) | 仕様書あり（KGI承認済み・To-Be design済・recon未） | 見積・請求書・フォームを送る導線を変える前 |
 | 定型文(message-templates。人が書く文章ひな型の設定画面と受信箱からの呼び出し。AI翻訳は translation-glossary が正本・独立) | [inbox/message-templates/README.md](inbox/message-templates/README.md) | 仕様書あり(KGI承認済み・To-Be design済・recon未) | 定型文の設定・呼び出しを変える前 |
 | Discord連携 | （仕様書未作成・関連: ADR-009, 014, 100, 091） | 未 | Discord との連携を変える前（関連 ADR を読む） |
+| ├ Discord サーバーをシステムと Bot で管理（discord-server-management。自社用・顧客用サーバーの登録と、チャンネル・ロール・見せ方を設計図とボタンで直す） | [discord-server-management/README.md](discord-server-management/README.md)（関連: ADR-091） | あるべき姿=PO発言転記・KGI PO承認済み 2026-11-04・recon 済・設計 PO承認済み 2026-11-04・便1 実装カード作成 | Discord サーバーの登録・チャンネル・ロールの自動作成を変える前 |
 | Meta（FB/IG）連携 | （仕様書未作成・関連: ADR-024, 025, 041, 026） | 未 | Facebook・Instagram との連携を変える前（関連 ADR を読む） |
 | 認証・権限・ロール（auth-roles。各社のロールと運営者 super admin の境界） | [auth-roles/README.md](auth-roles/README.md)（関連: ADR-023, 032, 138, 147, 1007） | 仕様書あり（あるべき姿=PO発言転記・KGI PO承認済み 2026-10-10） | ロール・権限を変える前 |
 | ログイン方式（auth-login。自社サーバーでのパスワード・パスキー・再設定メール） | [auth-login/README.md](auth-login/README.md)（関連: ADR-1013, 138, 1008） | 仕様書あり（あるべき姿=PO発言転記・KGI PO承認済み 2026-10-13） | ログイン・パスキー・再設定メールを変える前 |

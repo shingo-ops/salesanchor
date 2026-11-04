@@ -656,7 +656,7 @@ async def delete_contact(
 @router.post(
     "/contacts/{contact_id}/channel-acknowledge-duplicate",
     status_code=204,
-    dependencies=[Depends(require_permission("customers.edit"))],
+    dependencies=[Depends(require_permission("customers.update"))],
     summary="重複IDを認識した上で別人として保存した旨を監査ログに記録",
     tags=["contacts"],
 )

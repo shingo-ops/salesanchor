@@ -2,7 +2,7 @@
 # 決まりの語を含む行は、すべて下の rules か not_rules のどちらかに入れる（1 行は 1 項目だけ。check_rule_registry.py が数える）。
 # id: 文書の頭文字＋番号。A=AGENTS.md C=CLAUDE.md F=frontend/AGENTS.md K=backend/AGENTS.md S=STANDARD-WORKFLOW.md
 #     AE=aeon-routing AR=agent-roles CX=codex-operations PP=design-partner-preamble P=design-partner DC=dev-commands
-#     E=evidence-registry X=executor-checklist XP=executor-preamble KP=kpi L=lessons.d T=task-template B=branch-operations/README.md OI=ops-incident-agent
+#     E=evidence-registry X=executor-checklist XP=executor-preamble KP=kpi L=lessons.d T=task-template B=branch-operations/README.md OI=ops-incident-agent ER=entry-rule-add
 #     最初に登録した 15 件は 2 桁（A09 など）、R1b で足した項目は 3 桁（A012 など。番号は R1b の仕分け表の通し番号）。
 # kind: gate（機械が止める。check に必須チェックの名前）／review（人が見る）／exempt（PR に痕跡が残らない）。check を書いてよいのは gate だけ。
 #   review の reason が「gate候補（R6）: 」で始まる行は、機械で○×が決まるが今は止める必須チェックが無い行（R6 で必須チェックにする対象）。
@@ -982,6 +982,16 @@ rules:
     anchor: "次のどれかに当たったら、その作業は全部止"
     kind: exempt
     reason: "実装者が安全チェック・範囲外・食い違い等に当たったら、作業を全部止めて事実だけ報告し、設計者の判断を待つ決まり。作業の途中の動きで、PR に痕跡が残らない"
+  - id: X412
+    source: docs/ai-agents/executor-checklist.md
+    anchor: "- push・PR/issue の本文・コメントに仕入元の投稿の原文を"
+    kind: review
+    reason: "gate候補（R6）: 仕入元の投稿の原文を書き写さない決まりと、止められたときの直し方・push と本文の渡し方。confidential-quote-guard（ADR-1045）が push・PR 本文の送信前に原文と照らして止める。ただし PO 端末に登録する見張りで、必須チェックではない（AGENTS.md の A015 から移した本文）"
+  - id: ER413
+    source: docs/ai-agents/entry-rule-add.md
+    anchor: "7. 全セッションで Claude が知る必要があるか"
+    kind: review
+    reason: "入口に決まりを足す前の判定の7問目（全セッションで要らない決まりは入口に書かない）。入口を変える PR で人が見る"
   - id: XP336
     source: docs/ai-agents/executor-preamble.md
     anchor: "- カード冒頭の「本カードの許可・禁止は、過去便の禁止条項をすべて上書きする」を"

@@ -461,7 +461,7 @@ function ActionBar({
 // Tab content — ADR-110 restructured sections
 // ---------------------------------------------------------------------------
 
-function KarteTabContent({
+export function KarteTabContent({
   tab, leadDetail, cardForm, handleCardFieldChange, handleCardFieldBlur, guildId,
 }: {
   tab: KarteTabKey;
@@ -472,6 +472,7 @@ function KarteTabContent({
   guildId: string | null;
 }) {
   const { t } = useTranslation();
+  const { hasPermission } = usePermissions();
 
   // === CONTACT TAB ===
   if (tab === "contact") {
@@ -529,12 +530,12 @@ function KarteTabContent({
           </div>
         )}
         {/* ADR-091 KPI5: Channel invite button */}
-        {leadDetail.discord_guild_channel_id &&
+        {hasPermission("leads.update") && leadDetail.discord_guild_channel_id &&
           (leadDetail.estimated_scale === "Small" || leadDetail.estimated_scale === "Large") && (
           <ChannelInviteButton leadId={leadDetail.id} />
         )}
         {/* ADR-091 KPI6: Discord remove buttons */}
-        {leadDetail.discord_user_id && (
+        {hasPermission("leads.delete") && leadDetail.discord_user_id && (
           <DiscordRemoveButtons leadId={leadDetail.id} hasChannel={!!leadDetail.discord_guild_channel_id} />
         )}
         {/* ADR-091 KPI7: Role sync status */}
@@ -543,6 +544,7 @@ function KarteTabContent({
             leadId={leadDetail.id}
             status={leadDetail.discord_role_sync_status}
             syncAt={leadDetail.discord_role_sync_at}
+            canResync={hasPermission("leads.update")}
           />
         )}
       </div>
@@ -873,8 +875,8 @@ function ChannelInviteButton({ leadId }: { leadId: number }) {
 
 /** ADR-091 KPI7: Role sync status + manual resync button */
 function RoleSyncStatusRow({
-  leadId, status, syncAt,
-}: { leadId: number; status: string | null; syncAt: string | null }) {
+  leadId, status, syncAt, canResync,
+}: { leadId: number; status: string | null; syncAt: string | null; canResync: boolean }) {
   const { t } = useTranslation();
   const [syncing, setSyncing] = useState(false);
   const [triggered, setTriggered] = useState(false);
@@ -915,13 +917,15 @@ function RoleSyncStatusRow({
             </span>
           )}
         </span>
-        <Button loading={syncing} variant="secondary" size="md"
-          onClick={handleResync}
-          disabled={syncing}
+        {canResync && (
+          <Button loading={syncing} variant="secondary" size="md"
+            onClick={handleResync}
+            disabled={syncing}
 
-        >
-          {t("leads.discordRoleResync")}
-        </Button>
+          >
+            {t("leads.discordRoleResync")}
+          </Button>
+        )}
         {triggered && <span className="text-xs text-green-600">{t("leads.discordRoleSyncTriggered")}</span>}
         {error && <span className="text-xs text-red-500">{error}</span>}
       </div>
