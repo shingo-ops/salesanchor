@@ -545,3 +545,16 @@ docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml p
 | 質問の絞り込み | §19 を §19-1（PO に聞く 4 件: 鍵 D1〜D4・D6／組織の画面 D7／dockerd 入れ直しの時間帯 D8・D11／workflow-lint D13）と §19-2（Opus が決めた D5・D9・D10・D12）に分けた。冒頭「親」・§1 の D10 の記述も「作る」に直した | D14（便0 の cron）は §20 の絞り込みに無い。便0 の prod1 の変更なので D8 と同じ件に置き、その旨を表に書いた（Opus の次の審査で外してよい） |
 
 - 新しい【未確認】: U19（`gh run view --log` の行の時刻）、U20（`mode=min` の層の範囲）、U21（secret `SALESANCHOR_APP_PASSWORD` の有無）、U22（`build:` の無いサービスへの `docker compose build` の挙動）。いずれも頼る選択は無く、確かめ方と代替を §18 に書いた。
+
+---
+
+## 22. 再審査（v2・2026-11-04 Opus）— APPROVE（設計合格）
+
+- 照合した版: 34bf2f921（差分 1fbc7df51..34bf2f921 を全文読んだ）。
+- A1: 呼び出し元 5 か所（`scripts/rehearsal_phase2.sh`・`scripts/test_rollback_simulation.sh`・`scripts/dry-run-blue-green.sh`・`tests/sandbox/ai-reader-audit.sh`・`deploy.yml:610`）が §12 便2 12.〜16. に入り、変える／変えない理由と、便2 の枝で `gh workflow run … --ref` を流して緑を確かめる方法が書かれた。§20 の `ai-reader-audit.sh:60` は誤りで、実物は `:34`（Fable の指摘どおり。§20 の grep が `-f` 付きの形を拾わなかった）。確かめ方は 17. の形に改めた — 合格。
+- A2: compose は `${X:-<今の名前>}`、本番の守りは deploy の Step 2 の 5 行確認（exit 1）に一本化。§2・§5-2・§12・§14・§16 R13・§18・adr-draft の What と Scope が揃った — 合格。
+- A3: 便1 の完了条件 1.〜5.（20 回・sha で結ぶ・T' = T − S + B・中央値 ≤ 3.1 分のときだけ便2、超えたら便4 が先）。U19 の代替（S の上限で厳しめに測る）もある — 合格。
+- A4: frontend は `cache-from`/`cache-to` を付けない。代償は K8 の関所に入れる — 合格。
+- §19 の分け方: §19-1 の 4 件と §19-2（D5・D9・D10・D12）は §20 のとおり。D14 は prod1 の cron（PO の `!` が要る変更）なので、D8 と同じ件に置いたままでよい。
+- 残る【未確認】U1〜U22 は、どれも確かめ方と代替が書かれていて、それに頼る選択は無い。実装カードを出す前に要るのは §19-1 の PO の 4 件だけ。
+- 判定: **APPROVE**（設計合格）。PO の承認・実装開始・マージの承認は兼ねない。
