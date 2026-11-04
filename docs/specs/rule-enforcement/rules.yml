@@ -487,21 +487,6 @@ rules:
     anchor: "※ 停止の扱い（同上）: 実装役の停止は既定で設計側のエビデンス不足の信号として"
     kind: review
     reason: "実装役の停止を分類してから再発行／停止条件を緩めることは禁止: カードの差分を見て人が判断する"
-  - id: P077
-    source: docs/ai-agents/design-partner.md
-    anchor: "- 素人向け説明が既定。専門用語は必ず普通の言葉と例え話に直してから話す。用語の"
-    kind: exempt
-    reason: "素人向け説明・専門用語を言い換える、は会話での説明でPRに残らない"
-  - id: P078
-    source: docs/ai-agents/design-partner.md
-    anchor: "- 構造・関係・流れ・全体像を説明するときは、SVG図解を必ず添える（多層構造/"
-    kind: exempt
-    reason: "構造を説明するときはSVG図解を添える、は会話での説明でPRに残らない"
-  - id: P079
-    source: docs/ai-agents/design-partner.md
-    anchor: "- 選択肢には必ず推奨を添える（「A/B、私の推奨はA、理由は〜」）。"
-    kind: exempt
-    reason: "選択肢には推奨を添える、は会話での返答でPRに残らない"
   - id: P080
     source: docs/ai-agents/design-partner.md
     anchor: "- 推測で進めない。認識が一致しない点は確認する。"
