@@ -50,7 +50,7 @@ mode: handoff
 | `backend/app/line_import_admin.py` | 配信前の点検が deliverable と理由を読む |
 | `backend/app/services/tcg_analysis_dashboard_svc.py` | 配信の数を list_targets の呼び出しに替える |
 | `backend/app/routers/tcg_analysis_dashboard.py` | DistributionTargetItem に3つの値を足す |
-| `frontend/api-contract/openapi.json` と生成される型 | 下の §5 手順7 の命令で作り直す（手で書かない） |
+| `frontend/api-contract/openapi.json` と生成される型 | 下の §5 手順6 の命令で作り直す（手で書かない） |
 | `frontend/src/pages/super-admin/ViewerAccountsPage.tsx` | 詳細スライドに「配信するシート」の区切り |
 | `frontend/src/locales/ja.json`・`frontend/src/locales/en.json` | 新しいキー（両方に同じキー） |
 | 試験（`backend/tests/` の配信先の試験・`backend/tests/test_viewer_purge.py`・画面の試験） | §3 の受入条件を確かめる試験 |
