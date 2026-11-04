@@ -8,7 +8,7 @@
 | 方針の決定者 | Shingo（PO）。設計: Claude Opus（PO の委任に基づく。ADR-1003） |
 | 改める | Amends ADR-1024（クラウドの相談係の道は ai_cloud。ai_unmask_owner の BYPASSRLS）、Amends ADR-1042（相談係専用の窓口・case-api・値を返す専用容器）、Amends ADR-1039（Decision 6・7・12）。どれも本 ADR が Accepted になったときに効く（2026-10-30 に Accepted） |
 | 関連 | ADR-1024（AI の本番 DB 読み取りの道）、ADR-1042（クラウドの読む窓口）、ADR-1039（Discord の不具合受付）、ADR-1012（24時間保守）、ADR-1015（開発フロー）、ADR-136（危険 PR の GO）、ADR-1003（GO の委任） |
-| 設計 | docs/handoff/cloud-case-ai/design.md（公開版 第4.8版）、docs/handoff/cloud-case-ai/recon.md。試しの記録と、まだ塞いでいない道の中身は公開リポジトリに入れず、PO の非公開の記録に置く |
+| 設計 | docs/handoff/cloud-case-ai/design.md（公開版 第4.9版）、docs/handoff/cloud-case-ai/recon.md。試しの記録と、まだ塞いでいない道の中身は公開リポジトリに入れず、PO の非公開の記録に置く |
 
 ---
 
