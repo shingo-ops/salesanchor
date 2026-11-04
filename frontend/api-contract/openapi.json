@@ -8120,6 +8120,11 @@
       },
       "CreateEventBody": {
         "properties": {
+          "add_meet": {
+            "default": false,
+            "title": "Add Meet",
+            "type": "boolean"
+          },
           "calendar_type": {
             "default": "shared",
             "title": "Calendar Type",
@@ -37708,6 +37713,17 @@
       },
       "UpdateEventBody": {
         "properties": {
+          "add_meet": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Add Meet"
+          },
           "calendar_type": {
             "anyOf": [
               {
