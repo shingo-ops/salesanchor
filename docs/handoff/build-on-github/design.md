@@ -34,8 +34,8 @@
 | G16 | https://docs.github.com/en/billing/how-tos/products/view-productlicense-use と https://docs.github.com/en/organizations/collaborating-with-groups-in-organizations/viewing-github-actions-metrics-for-your-organization | 使用量の画面（Billing の Usage。workflow 単位の分数・CSV）。組織の Insights → Actions Usage Metrics |
 | D1 | https://docs.docker.com/reference/compose-file/services/#image | `image` は `[<registry>/][<project>/]<image>[:<tag>|@<digest>]`。例 `image: redis@sha256:...`。`pull_policy`（always/never/missing/build/…）。「If you are also using the Compose Build Specification … pulling the image is the default behavior」 |
 | D2 | https://docs.docker.com/compose/how-tos/environment-variables/variable-interpolation/ | `.env` は project directory（compose ファイルの隣）から読む。`${VAR:?err}` は未設定・空なら止まる |
-| D3 | https://docs.docker.com/compose/how-tos/multiple-compose-files/merge/ | `-f` が無いとき `compose.override.yaml` を自動で読む。複数ファイルは `COMPOSE_FILE` か `-f` で指定 |
-| D4 | https://docs.docker.com/engine/daemon/live-restore/ | `/etc/docker/daemon.json` に `{"live-restore": true}`。`systemctl reload docker` なら箱を止めずに有効化できる。有効なら daemon の再起動・パッチ更新でも箱は動き続ける（major 更新は不可） |
+| D3 | https://docs.docker.com/compose/how-tos/multiple-compose-files/merge/ | `-f` が無いとき compose.override.yaml を自動で読む。複数ファイルは `COMPOSE_FILE` か `-f` で指定 |
+| D4 | https://docs.docker.com/engine/daemon/live-restore/ | /etc/docker/daemon.json に `{"live-restore": true}`。`systemctl reload docker` なら箱を止めずに有効化できる。有効なら daemon の再起動・パッチ更新でも箱は動き続ける（major 更新は不可） |
 | D5 | https://docs.docker.com/reference/cli/docker/image/prune/ | `docker image prune` は dangling（タグ無し・箱から参照されない）だけを消す。`-a` で未使用を全部消す |
 | D6 | https://docs.docker.com/reference/cli/docker/compose/up/ と https://docs.docker.com/reference/cli/docker/compose/pull/ | `up --no-build`「Don't build an image, even if it's policy」、`up --pull`（always/missing/never）、`pull --ignore-buildable` |
 | D7 | https://github.com/docker/build-push-action（README） | 出力 `digest`・`imageid`・`metadata`。入力 `provenance`・`sbom`・`cache-from`・`cache-to`・`build-args` |
@@ -55,12 +55,12 @@
 
 | 項目 | 今（recon） | 後 |
 |---|---|---|
-| 組み立てる場所 | prod1 の上（`deploy.yml:445` `docker compose build`、`:679` `docker build`） | GitHub の実行機（公開の置き場 shingo-ops/salesanchor の自動作業。無料） |
+| 組み立てる場所 | prod1 の上（`.github/workflows/deploy.yml:445` `docker compose build`、`:679` `docker build`） | GitHub の実行機（公開の置き場 shingo-ops/salesanchor の自動作業。無料） |
 | 完成品の置き場 | prod1 のローカル（タグ `astro-webapp-backend` 等） | `ghcr.io/gen-ryu-system/salesanchor-<名前>`（組織・非公開）。名前は §5-1 |
 | 本番が受け取る形 | 無し（その場で作る） | `image: ${BACKEND_IMAGE:-astro-webapp-backend}` ＝ prod1 では `.env` の `ghcr.io/…/salesanchor-backend@sha256:…`（指紋固定）。変数の無い場所（CI・手元・砂場）では今の名前のまま（§5-2） |
 | 指紋の正本 | 無し | prod1 の `/home/ubuntu/salesanchor/.env` の 5 行（`*_IMAGE=`）。deploy が build job の出力から書く。1 つ前は `.deploy_prev_images.env`（`.deploy_prev_sha` と同じ扱い・git に入れない） |
 | 戻し方 | `git reset --hard PREV_SHA` → prod1 で組み立て直し（`deploy.yml:911,928`） | `.deploy_prev_images.env` の 5 行を `.env` に戻す → `docker compose up -d --no-build`（組み立て 0 回・取り直し 0 回） |
-| 動く条件 | main への push（`deploy.yml:3-6`） | 変えない（build job も同じ workflow の中） |
+| 動く条件 | main への push（`.github/workflows/deploy.yml:3-6`） | 変えない（build job も同じ workflow の中） |
 
 流れ（後）:
 
@@ -104,7 +104,7 @@ main に push
 | 観点 | 案A（公開の置き場・classic PAT） | 案B（組織の非公開の置き場・GITHUB_TOKEN） |
 |---|---|---|
 | 漏れたときの被害 | PAT: PAT の持ち主が書ける全ての完成品（個人＋所属組織）の上書き・取得ができる。`repo` を付けなければコードの読み書きは不可（G1 注記）。置き場は公開なので「秘密は PAT 1 本だけ」にできる | 公開側に置く呼び出し用 token（fine-grained・1 置き場に限定）が漏れると、その置き場で組み立てを起こせる。GITHUB_TOKEN は GitHub の外に出ない（G4）。被害の範囲は案A より狭い |
-| 期限 | classic は期限任意（G10・G11）。組織が最長期限を課せる（G11）。本設計は期限付き＋`monthly-secret-expiry.yml:21` の WATCH_LIST に足す | fine-grained は組織の既定で 366 日以内（G11）。GITHUB_TOKEN は job ごとに失効 |
+| 期限 | classic は期限任意（G10・G11）。組織が最長期限を課せる（G11）。本設計は期限付き＋`.github/workflows/monthly-secret-expiry.yml:21` の WATCH_LIST に足す | fine-grained は組織の既定で 366 日以内（G11）。GITHUB_TOKEN は job ごとに失効 |
 | 無料枠（K7） | 組み立ては公開の置き場 → 0 分消費（G8）。K7 は自動的に○ | 入れ替え 1,000 回/25.1 日（recon §2）＝30 日で約 1,195 回。1 回の組み立てが 3 分でも約 3,600 分 > 2,000 分。材料が変わった回だけに絞っても（deploy.yml:48-49 の注記では 25 件中 16 件が backend 等を含む）約 2,300 分 > 2,000 分。K7 を外す可能性が高い【組み立て分数は未確認 U6】 |
 | 作る物の数 | workflow 1 つ（既存 deploy.yml に job を足す）。secret 1 本・変数 2 つ | 置き場 1 つ・workflow 2 つ（組織側＋公開側の呼び出しと待ち）・token 1 本・待ち合わせの仕組み |
 | 失敗の分岐 | build job が落ちれば deploy job は動かない（同じ run の `needs`） | 組織側の失敗を公開側が読み取る仕組みが別に要る。2 つの run にまたがる |
@@ -118,8 +118,8 @@ main に push
 ## 4. ② 本番が受け取る鍵（read:packages）の置き場と最小の権限
 
 - 鍵: classic PAT・scope `read:packages` だけ（G1「Select the read:packages scope to download container images」）。書き込み用（§3）とは別の 1 本。名前 `GHCR_PULL_TOKEN`。
-- 置き場（推奨）: GitHub の Actions secret だけ。deploy.yml の SSH の段で `appleboy/ssh-action` の `envs:` に名前だけ載せ（`deploy.yml:711,832` と同じ流儀）、prod1 では `printf '%s' "$GHCR_PULL_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin` → `docker compose pull …` → 同じ段の最後に必ず `docker logout ghcr.io`（失敗しても `trap` で logout）。`docker login` は `~/.docker/config.json` に base64 で残すので、logout まで同じ段で終えて prod1 に鍵を置かない。
-- 置き場（別案）: `/home/ubuntu/.config/salesanchor/ghcr-pull.env`（ai-reader.env `deploy.yml:620` と同じ場所）。手で戻すときに GitHub 無しで取り直せる利点があるが、鍵が prod1 のディスクに常駐する。本設計は「戻すときは取り直さない（§9）」ので要らない。§19-1 D4。
+- 置き場（推奨）: GitHub の Actions secret だけ。deploy.yml の SSH の段で `appleboy/ssh-action` の `envs:` に名前だけ載せ（`deploy.yml:711,832` と同じ流儀）、prod1 では `printf '%s' "$GHCR_PULL_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin` → `docker compose pull …` → 同じ段の最後に必ず `docker logout ghcr.io`（失敗しても `trap` で logout）。`docker login` は ~/.docker/config.json に base64 で残すので、logout まで同じ段で終えて prod1 に鍵を置かない。
+- 置き場（別案）: `/home/ubuntu/.config/salesanchor/ghcr-pull.env`（ai-reader.env `.github/workflows/deploy.yml:620` と同じ場所）。手で戻すときに GitHub 無しで取り直せる利点があるが、鍵が prod1 のディスクに常駐する。本設計は「戻すときは取り直さない（§9）」ので要らない。§19-1 D4。
 - 最小の権限: `read:packages`。組織の非公開の完成品を読むには PAT の持ち主が組織のメンバーでその完成品に read 以上を持つこと（G3「private … scoped to an organization, then you can only give access to other organization members or teams」）。PO 本人（組織の owner なら完成品の admin・G3 の visibility-and-access）。
 - 費用: 倉庫の転送は「currently free」（G9）。有料化後は PAT での取得は転送枠（組織 Free: 1GB/月）に数えられ得る（G9 の表で PAT は Self-Hosted=Paid）。有料化の知らせ（1 か月前）が来たら §16 R6 の対処。
 
@@ -134,7 +134,7 @@ main に push
 | `FRONTEND_IMAGE` | `ghcr.io/gen-ryu-system/salesanchor-frontend@sha256:…` | `docker-compose.yml` |
 | `GEMINI_EGRESS_IMAGE` | `ghcr.io/gen-ryu-system/salesanchor-gemini-egress@sha256:…` | `docker-compose.yml` |
 | `GHA_EXPORTER_IMAGE` | `ghcr.io/gen-ryu-system/salesanchor-gha-exporter@sha256:…` | `docker-compose.yml` |
-| `SECRETARY_AGENT_IMAGE` | `ghcr.io/gen-ryu-system/salesanchor-secretary-agent@sha256:…` | `docker-compose.secretary-agent.yml`、`deploy.yml` の probe の `docker run` |
+| `SECRETARY_AGENT_IMAGE` | `ghcr.io/gen-ryu-system/salesanchor-secretary-agent@sha256:…` | `docker-compose.secretary-agent.yml`、`.github/workflows/deploy.yml` の probe の `docker run` |
 
 - namespace は小文字（`gen-ryu-system`）。組織名の大文字小文字が倉庫で許されるかは【未確認 U17】→ 便1 で初回 push の結果で確かめる。
 - 倉庫側のタグは `:<commit sha>` だけ（`latest` は作らない。間違って `latest` で取る道を残さないため）。compose が使うのは常に `@sha256`（K3）。
@@ -143,23 +143,23 @@ main に push
 - `image: ${BACKEND_IMAGE:-astro-webapp-backend}` の形（既定値付き。v2・§20 A2）。既定値は「今 prod1 で組み立てて付いている名前」（compose の `{project}-{service}`。`scripts/blue-green-cutover.sh:69-70` が backend で同じ名前を組み立てている）: backend 系 4 つと ai-reader 系 4 つは `astro-webapp-backend`（`docker-compose.ai-reader-http.yml:15` 等が今も直書きしている名前）、frontend は `astro-webapp-frontend`、gemini-egress は `astro-webapp-gemini-egress`、gha-exporter は `astro-webapp-gha-exporter`、secretary-agent は `astro-webapp-secretary-agent`（`docker-compose.secretary-agent.yml:15` の今の値）。
   - なぜ `:?` にしないか: `${X:?}` は未設定・空で `docker compose` の命令を全部止める（D2）。変数を持たない場所が 3 種ある — CI の 2 本（`scripts/rehearsal_phase2.sh`・`scripts/test_rollback_simulation.sh`。ただし両方とも自前の compose を一時ディレクトリに書くので置き場の compose は読まない・§12 便2 12.-13.）、砂場試験（`tests/sandbox/ai-reader-audit.sh:11,34` は置き場の `docker-compose.ai-reader.yml` を読む）、手元の開発（Colima）。既定値付きなら、これらは今の名前のまま動く。
   - 本番の守りは compose ではなく deploy に一本化する: Step 2 で build job の出力を `.env` に書いた後、5 行が揃っているかを確かめ、欠けていれば `exit 1`（箱に触る前・§12 便2 1.）。prod1 の `.env` に 5 行がある限り、既定値は使われない。初回（便2 の最初の run）も Step 2 が 5 行を書いてから Step 3 に進むので、「古い名前のまま動く」のは Step 2 が落ちた場合だけで、そのときは箱に触らない。
-  - 副次の利点: `image:` を明示すると `build:` のある場所（手元の override・CI）でも組み立てた完成品に `astro-webapp-<名前>` が付く（project 名が `astro-webapp` でなくても）。`blue-green-cutover.sh:70-71` が探す名前と一致する。
+  - 副次の利点: `image:` を明示すると `build:` のある場所（手元の override・CI）でも組み立てた完成品に `astro-webapp-<名前>` が付く（project 名が `astro-webapp` でなくても）。`scripts/blue-green-cutover.sh:70-71` が探す名前と一致する。
 - `.env` は compose ファイルの隣（project directory）から読まれる（D2）。別プロジェクト名で起こす 4 つの compose（`-p astro-webapp-readwindow` 等、`deploy.yml:624,642,660,694`）も `cd /home/ubuntu/salesanchor` の上で `-f` を使うので同じ `.env` を読む（`docker-compose.secretary-agent.yml:8` の注記「.env の COMPOSE_PROJECT_NAME が … 優先される」が読んでいる証拠）。
-- `build:` は prod1 で効く compose から無くす。手元の開発（Colima・`docs/specs/colima-idle-stop`）で組み立てられるよう、`build:` は新しい `docker-compose.override.yml` に移す（D3: `-f`/`COMPOSE_FILE` が無いと override を自動で読む。prod1 は `.env` に `COMPOSE_FILE=docker-compose.yml:docker-compose.exporters.yml` を書いている `deploy.yml:389`）。ただし「COMPOSE_FILE が指定されているとき override を読まない」ことの明文は見つからなかった【未確認 U4】。便2 の実行役が手元で `COMPOSE_FILE=docker-compose.yml docker compose config --services`・`docker compose config | grep -c 'build:'` で確かめる。読んでしまう場合の代替は §12 便2 の分岐 (b)。override 方式か併記方式かは Opus が override 方式に決めた（§19-2 D9。U4 が通らないときだけ分岐 (b) の併記方式に落とす。どちらでも `image:` の既定値は同じ）。
-- prod1 に未追跡の `docker-compose.override.yml` が無いこと【未確認 U5】（`scripts/accuracy/llm_compare/vps_convert.sh:61` は「あれば読む」書き方なので、有無を PO の読み取りで確かめる）。
+- `build:` は prod1 で効く compose から無くす。手元の開発（Colima・`docs/specs/colima-idle-stop`）で組み立てられるよう、`build:` は新しい docker-compose.override.yml に移す（D3: `-f`/`COMPOSE_FILE` が無いと override を自動で読む。prod1 は `.env` に COMPOSE_FILE=docker-compose.yml:docker-compose.exporters.yml を書いている `.github/workflows/deploy.yml:389`）。ただし「COMPOSE_FILE が指定されているとき override を読まない」ことの明文は見つからなかった【未確認 U4】。便2 の実行役が手元で `COMPOSE_FILE=docker-compose.yml docker compose config --services`・`docker compose config | grep -c 'build:'` で確かめる。読んでしまう場合の代替は §12 便2 の分岐 (b)。override 方式か併記方式かは Opus が override 方式に決めた（§19-2 D9。U4 が通らないときだけ分岐 (b) の併記方式に落とす。どちらでも `image:` の既定値は同じ）。
+- prod1 に未追跡の docker-compose.override.yml が無いこと【未確認 U5】（`scripts/accuracy/llm_compare/vps_convert.sh:61` は「あれば読む」書き方なので、有無を PO の読み取りで確かめる）。
 
 ### 5-3 受け取りの命令（deploy.yml Step 3 の置き換え。詳しくは §12 便2）
 ```
 docker compose pull --ignore-buildable backend frontend gemini-egress gha-exporter   # 指紋で取る（D6）
 docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml pull  # 秘書
 ```
-`docker compose up` は全て `--no-build`（D6「Don't build an image, even if it's policy」）を付ける。`blue-green-cutover.sh:85` の `docker run` は `.env` を source 済み（`:80-81` の注記）なので `${BACKEND_IMAGE}` をそのまま使える。
+`docker compose up` は全て `--no-build`（D6「Don't build an image, even if it's policy」）を付ける。`scripts/blue-green-cutover.sh:85` の `docker run` は `.env` を source 済み（`:80-81` の注記）なので `${BACKEND_IMAGE}` をそのまま使える。
 
 ---
 
 ## 6. ④ 動く条件は main への push だけ・外部の提案で動かない
 
-- 今: `deploy.yml:3-6` `on: push: branches: [main]`。`workflow-lint.yml:66-70` が「deploy.yml に pull_request トリガーを足したら落とす」規則を持つ（Required Status Check）。
+- 今: `.github/workflows/deploy.yml:3-6` `on: push: branches: [main]`。`workflow-lint.yml:66-70` が「deploy.yml に pull_request トリガーを足したら落とす」規則を持つ（Required Status Check）。
 - 後: build job を deploy.yml の中に置くので `on:` は変えない。`workflow_dispatch`・`repository_dispatch`・`pull_request_target` は足さない。
 - 根拠: フォークからの PR には GITHUB_TOKEN 以外の secret が渡らない（G7）＝ `GHCR_PUSH_TOKEN` も `SSH_PRIVATE_KEY` も提案側には見えない。`push` は「この置き場への push」でしか動かない（G6）。
 - K4 の試し方: フォークから PR を 1 件作り、`gh run list --workflow deploy.yml --event pull_request` が 0 件、`gh run list --workflow deploy.yml --branch main` に PR 由来の run が無いこと。
@@ -174,14 +174,14 @@ docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml p
 | 組み立て場所 | COPY/ADD | 入る物 | 判定 |
 |---|---|---|---|
 | `monitoring/gha-exporter`（Dockerfile:14） | `COPY docker-entrypoint.sh` | 名指しの 1 ファイル | 秘密は入らない |
-| `monitoring/github-collector`（:5,8） | `requirements.txt`・`collector.py` | 名指し | 同上（prod2 用・今回は対象外） |
+| `monitoring/github-collector`（:5,8） | `requirements.txt`・`monitoring/github-collector/collector.py` | 名指し | 同上（prod2 用・今回は対象外） |
 | `monitoring/prod1/gemini-egress` | COPY 無し（apk だけ） | 無し | 入らない |
 | `monitoring/prod2/gemini-egress/tinyproxy` | COPY 無し | 無し | 入らない（prod2） |
-| `monitoring/recovery-check`（:5,8） | `requirements.txt`・`recovery_check.py`・`main.py` | 名指し | 入らない（prod2） |
+| `monitoring/recovery-check`（:5,8） | `requirements.txt`・`monitoring/recovery-check/recovery_check.py`・`monitoring/recovery-check/main.py` | 名指し | 入らない（prod2） |
 | `secretary-agent`（:6） | `server.mjs probe.mjs prompt.txt schema.json` | 名指し。`CLAUDE_CODE_OAUTH_TOKEN` は env_file で実行時に渡す（Dockerfile:2 の注記） | 入らない |
 
 結論: 6 か所とも `COPY . .` ではなく名指しなので、組み立て場所に秘密のファイルが置かれても完成品には入らない。案（任意・便3）: それでも `*` を無視して名指しだけ許す `.dockerignore`（`*` ＋ `!<ファイル>`）を 6 か所に置き、送る材料そのものを絞る。
-`backend/Dockerfile:24` は `COPY . .` だが `backend/.dockerignore:5-6,14` が `.env`・`.env.*`・`firebase-credentials.json` を外す。GitHub の実行機の checkout は常に clean（prod1 の作業コピーに置かれた未追跡のファイルが混ざらない）。これは本番で組み立てるより安全になる点。
+`backend/Dockerfile:24` は `COPY . .` だが `backend/.dockerignore:5-6,14` が `.env`・`.env.*`・firebase-credentials.json を外す。GitHub の実行機の checkout は常に clean（prod1 の作業コピーに置かれた未追跡のファイルが混ざらない）。これは本番で組み立てるより安全になる点。
 
 ### 7-2 走査（build job の中・push の前。全 5 完成品）
 1. **名前の走査**: `docker create <imageid>` → `docker export` → tar の一覧から `(^|/)(\.env(\..*)?|.*\.pem|.*\.key|id_(rsa|ed25519).*|.*credentials.*\.json|auth\.json|\.npmrc|\.netrc|\.git/.*)$` に当たる経路が 1 件でもあれば fail。
@@ -210,7 +210,7 @@ docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml p
 
 1. **作らせない**（組織の設定・PO の GUI 操作）: GEN-RYU-System → Settings → Packages → 「Package Creation」を **Private** にする（G3）。これで members が作る完成品の既定が非公開になる。今の設定は【未確認 U1】。
 2. **変えさせない**: 完成品を公開にするのは Danger Zone の GUI 操作で、戻せない（G3「cannot make it private again」）。AGENTS.md の「外部 GUI 操作＝PO 確認」に当たる。ADR 案（adr-draft.md）に「完成品の公開は不可逆操作。PO 本人の確認が無ければ行わない」と書く。
-3. **見張る**（便3）: `.github/workflows/packages-visibility-guard.yml`（`schedule` 週 1 ＋ `workflow_dispatch`。公開の置き場なので無料）。`GHCR_PULL_TOKEN`（read:packages・G12）で `gh api --paginate "orgs/GEN-RYU-System/packages?package_type=container"` を読み、(a) `visibility` が `private` でない物が 1 つでもあれば、(b) 名前の集合が 5 つ（§5-1）と違えば、`scripts/notify/discord-owner-ping.sh` で PO に知らせ、job を fail にする。`monthly-secret-expiry.yml:15-18` と同じ型（PAT を `GH_TOKEN` に・Discord の webhook を env に）。
+3. **見張る**（便3）: .github/workflows/packages-visibility-guard.yml（`schedule` 週 1 ＋ `workflow_dispatch`。公開の置き場なので無料）。`GHCR_PULL_TOKEN`（read:packages・G12）で `gh api --paginate "orgs/GEN-RYU-System/packages?package_type=container"` を読み、(a) `visibility` が `private` でない物が 1 つでもあれば、(b) 名前の集合が 5 つ（§5-1）と違えば、`scripts/notify/discord-owner-ping.sh` で PO に知らせ、job を fail にする。`.github/workflows/monthly-secret-expiry.yml:15-18` と同じ型（PAT を `GH_TOKEN` に・Discord の webhook を env に）。
 4. **K2 の数え方**: 同じ API で `visibility == "public"` の件数 0。
 
 ---
@@ -218,13 +218,13 @@ docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml p
 ## 9. ⑦ 組み立て 0 回で 1 つ前の完成品に戻す方法（前の指紋の残し方）
 
 ### 9-1 残し方
-- deploy の Step 0（`deploy.yml:249-254` の `PREV_SHA` の隣）で、書き換える前の `.env` から `^(BACKEND|FRONTEND|GEMINI_EGRESS|GHA_EXPORTER|SECRETARY_AGENT)_IMAGE=` の 5 行を `.deploy_prev_images.env` に写す（無ければ空ファイル）。
-- 完成品そのものは prod1 に残す: Step 8 の `docker image prune -f`（`:1004`）を `scripts/deploy/prune-images.sh` に替える。中身: `docker images --digests --format '{{.ID}} {{.Repository}}@{{.Digest}}'` のうち `ghcr.io/<namespace>/salesanchor-` で始まる物を集め、`.env` と `.deploy_prev_images.env` に書かれた `ref@sha256` に当たる ID を「残す集合」にし、それ以外の同じ倉庫の完成品を `docker image rm` する。`docker image prune -f` は呼ばない（指紋だけで取った完成品はタグが無く dangling と見なされて消える恐れがある【未確認 U3】。prune を呼ばなければこの不確かさに頼らない）。
-- 控えの形は `.deploy_prev_sha`・`.deploy_nginx_good.conf`（`deploy.yml:512-513` の注記）と同じ: `/home/ubuntu/salesanchor` 直下・git に入れない。
+- deploy の Step 0（`.github/workflows/deploy.yml:249-254` の `PREV_SHA` の隣）で、書き換える前の `.env` から `^(BACKEND|FRONTEND|GEMINI_EGRESS|GHA_EXPORTER|SECRETARY_AGENT)_IMAGE=` の 5 行を `.deploy_prev_images.env` に写す（無ければ空ファイル）。
+- 完成品そのものは prod1 に残す: Step 8 の `docker image prune -f`（`:1004`）を scripts/deploy/prune-images.sh に替える。中身: `docker images --digests --format '{{.ID}} {{.Repository}}@{{.Digest}}'` のうち `ghcr.io/<namespace>/salesanchor-` で始まる物を集め、`.env` と `.deploy_prev_images.env` に書かれた `ref@sha256` に当たる ID を「残す集合」にし、それ以外の同じ倉庫の完成品を `docker image rm` する。`docker image prune -f` は呼ばない（指紋だけで取った完成品はタグが無く dangling と見なされて消える恐れがある【未確認 U3】。prune を呼ばなければこの不確かさに頼らない）。
+- 控えの形は `.deploy_prev_sha`・`.deploy_nginx_good.conf`（`.github/workflows/deploy.yml:512-513` の注記）と同じ: `/home/ubuntu/salesanchor` 直下・git に入れない。
 
 ### 9-2 戻し方（2 通り）
-- **自動**（Finalize の健康確認が落ちたとき `deploy.yml:904-979`）: 今の `git reset --hard PREV_SHA`（`:911`）はそのまま（compose・nginx・scripts を戻すため）。`docker compose build` の 3 回試行（`:925-935`）を削り、代わりに `.deploy_prev_images.env` にある `*_IMAGE=` の行（本番は 5 行。行数は数えない — 控えにある行を全部戻す。リハーサル §12 便2 12. は 1 行で動かす）で `.env` の同名行を置き換え → 今と同じ `docker rm -f …`（`:939-941`）→ `docker compose up -d --no-build --remove-orphans`（`:942` に `--no-build` を足す）。完成品はローカルに残っているので取り直し無し。`.deploy_prev_images.env` が無いか空（初回）なら戻せないので「自動ロールバック失敗」の分岐（`:968-973`）に流す。
-- **手動**（K6 の練習・緊急）: 新しい `scripts/deploy/rollback-images.sh`。(1) `.deploy_prev_images.env` の 5 行があることを確かめる（無ければ止まる）、(2) 今の 5 行を `.deploy_rollback_from.env` に写す（さらに戻せるように）、(3) `.env` の 5 行を置き換える、(4) `docker compose pull --ignore-buildable`（ローカルにあるので 0 秒。無ければここで初めて取る＝鍵が要る → `GHCR_PULL_TOKEN` を env で渡したときだけ login する）、(5) backend は `bash scripts/blue-green-cutover.sh`（無停止）、他は `docker compose up -d --no-deps --no-build frontend celery-worker celery-beat discord-gateway gemini-egress`、secretary は `-p astro-webapp-secretary -f docker-compose.secretary-agent.yml up -d --no-build --force-recreate`、(6) `date +%s` を始めと終わりに出し、`/api/health` の 200 を確かめ、所要秒を出す。組み立ての命令は 1 つも含めない（K6）。
+- **自動**（Finalize の健康確認が落ちたとき `.github/workflows/deploy.yml:904-979`）: 今の `git reset --hard PREV_SHA`（`:911`）はそのまま（compose・nginx・scripts を戻すため）。`docker compose build` の 3 回試行（`:925-935`）を削り、代わりに `.deploy_prev_images.env` にある `*_IMAGE=` の行（本番は 5 行。行数は数えない — 控えにある行を全部戻す。リハーサル §12 便2 12. は 1 行で動かす）で `.env` の同名行を置き換え → 今と同じ `docker rm -f …`（`:939-941`）→ `docker compose up -d --no-build --remove-orphans`（`:942` に `--no-build` を足す）。完成品はローカルに残っているので取り直し無し。`.deploy_prev_images.env` が無いか空（初回）なら戻せないので「自動ロールバック失敗」の分岐（`:968-973`）に流す。
+- **手動**（K6 の練習・緊急）: 新しい scripts/deploy/rollback-images.sh。(1) `.deploy_prev_images.env` の 5 行があることを確かめる（無ければ止まる）、(2) 今の 5 行を `.deploy_rollback_from.env` に写す（さらに戻せるように）、(3) `.env` の 5 行を置き換える、(4) `docker compose pull --ignore-buildable`（ローカルにあるので 0 秒。無ければここで初めて取る＝鍵が要る → `GHCR_PULL_TOKEN` を env で渡したときだけ login する）、(5) backend は `bash scripts/blue-green-cutover.sh`（無停止）、他は `docker compose up -d --no-deps --no-build frontend celery-worker celery-beat discord-gateway gemini-egress`、secretary は `-p astro-webapp-secretary -f docker-compose.secretary-agent.yml up -d --no-build --force-recreate`、(6) `date +%s` を始めと終わりに出し、`/api/health` の 200 を確かめ、所要秒を出す。組み立ての命令は 1 つも含めない（K6）。
 - 戻した後の「次の deploy」: main に次の push が来ると新しい指紋で上書きされる（戻しは一時的）。恒久に戻すなら revert の PR。
 
 ---
@@ -235,10 +235,10 @@ docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml p
 - なぜ先に: recon §2 の dockerd（RSS 1.7GiB・2026-09-20 から入れ直し無し）が「組み立てで膨らんだ」のか「動かしているだけで膨らむ」のかが、今の記録では分からない（Prometheus に dockerd の値は無い・recon §2）。入れ直して基準を取り、その後の入れ替えごとの増え方を測ると、本設計（組み立てをやめる）がどれだけ効くかを K5 の前に数字で見られる。
 - 手順（全て PO の `!`。実行役・クラウドは行わない）:
   1. 読み取り: `cat /proc/$(pidof dockerd)/status | grep -E 'VmRSS|VmSwap|Threads'`・`docker info --format '{{.LiveRestoreEnabled}}'`・`free -m`。値を本書 §10-4 の記録欄に写す。
-  2. （推奨・§19-1 D8）`/etc/docker/daemon.json` を `{"live-restore": true}` で作り `sudo systemctl reload docker`（D4: reload なら箱は止まらない）。`docker info --format '{{.LiveRestoreEnabled}}'` が true になるのを確かめる。
+  2. （推奨・§19-1 D8）/etc/docker/daemon.json を `{"live-restore": true}` で作り `sudo systemctl reload docker`（D4: reload なら箱は止まらない）。`docker info --format '{{.LiveRestoreEnabled}}'` が true になるのを確かめる。
   3. `sudo systemctl restart docker`。live-restore が有効なら箱は動き続ける（D4）。無効なら全 17 箱が止まって上がり直す（postgres・backend を含む・数分の停止）→ お客さんの少ない時間帯に。直後に `/api/health`・`docker compose ps` を確かめる。
   4. 読み取り: 手順 1 と同じ値（入れ直し直後の基準）。
-  5. 黒板（node-exporter の textfile）に dockerd の値を書く係を置く: 新しい `scripts/ops/dockerd-rss-textfile.sh`（`scripts/backup.sh:104-119` と同じ「一時ファイルに書いて mv」の型。`/home/ubuntu/node_exporter_textfile/dockerd.prom` に `salesanchor_dockerd_rss_bytes`・`salesanchor_dockerd_vmswap_bytes`・`salesanchor_dockerd_threads` を書く。`/proc/<pid>/status` は root 不要）。cron（`* * * * *`）は PO の `!` で入れる。textfile の置き場は `docker-compose.exporters.yml:11,17` で node-exporter に渡っている。書き込める持ち主かは【未確認 U10】。
+  5. 黒板（node-exporter の textfile）に dockerd の値を書く係を置く: 新しい scripts/ops/dockerd-rss-textfile.sh（`scripts/backup.sh:104-119` と同じ「一時ファイルに書いて mv」の型。`/home/ubuntu/node_exporter_textfile/dockerd.prom` に `salesanchor_dockerd_rss_bytes`・`salesanchor_dockerd_vmswap_bytes`・`salesanchor_dockerd_threads` を書く。`/proc/<pid>/status` は root 不要）。cron（`* * * * *`）は PO の `!` で入れる。textfile の置き場は `docker-compose.exporters.yml:11,17` で node-exporter に渡っている。書き込める持ち主かは【未確認 U10】。
 - 増え方の測り方: Grafana の Prometheus で `salesanchor_dockerd_rss_bytes`。入れ替え 1 回ごと＝ deploy の run の終わった時刻 t（`gh run list --workflow deploy.yml --json updatedAt`）について `(t+5分の値) − (t−5分の値)` を表にし、「本番で組み立てる今」と「便2 の後」で 1 回あたりの平均を比べる。1 日の増え方は `increase(salesanchor_dockerd_rss_bytes[1d])`。
 - 期待: 便2 の後は「入れ替え 1 回あたりの増え方」が今より小さくなる。小さくならなければ、原因は組み立てではなく（例: json-file ログ・箱の数）、K5 は本設計だけでは満たせない → §19-2 D12。
 
@@ -248,7 +248,7 @@ docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml p
 | K1 | 切替後の main の deploy run 10 回: `gh run list --workflow deploy.yml --branch main --status success --limit 10 --json databaseId` → 各 `gh run view <id> --log \| grep -cE 'docker (compose )?build'` | 全 10 回で 0 |
 | K2 | `GHCR_PULL_TOKEN` で `gh api --paginate "orgs/GEN-RYU-System/packages?package_type=container" --jq '.[] \| [.name,.visibility] \| @tsv'`（便3 の見張りと同じ） | public が 0・名前が §5-1 の 5 つ |
 | K3 | prod1 で読み取り: `docker ps --format '{{.Names}} {{.Image}}'` の自前の箱（backend・celery-worker・celery-beat・discord-gateway・frontend・gemini-egress・gha-exporter・ai-reader-http・ai-reader-cloud-http・ai-unmask-http・secretary-agent）の Image に `@sha256:` があること。`docker compose config \| grep -c '^ *build:'`＝0。deploy.yml の `docker compose up` に `--no-build` が付いていること（grep） | 全箱に `@sha256:`・build 0 |
-| K4 | `deploy.yml` の `on:` を読む（push/main だけ）。`workflow-lint.yml:66-70` が緑。フォークからの試しの PR で `gh run list --workflow deploy.yml --event pull_request` | 0 件 |
+| K4 | `.github/workflows/deploy.yml` の `on:` を読む（push/main だけ）。`.github/workflows/workflow-lint.yml:66-70` が緑。フォークからの試しの PR で `gh run list --workflow deploy.yml --event pull_request` | 0 件 |
 | K5 | Grafana の Prometheus: `avg_over_time(node_memory_MemAvailable_bytes{instance="app-vps"}[1d])/1048576` を 1 日おきに 7 日。MemTotal 4,105,506,816 B（`docs/handoff/secretary-chatgpt/design.md:259`）→ 30%＝1,174.6MiB | 7 日続けて ≥ 1,170MiB |
 | K6 | PO の `!`（または GO 付きの実行役）で `bash scripts/deploy/rollback-images.sh` を 1 回。出力の所要秒と、ログに build が無いこと | ≤ 120 秒・build 0 |
 | K7 | §11 | 非公開の置き場の分数が 30 日で ≤ 2,000 |
@@ -276,17 +276,17 @@ docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml p
 
 ## 12. ⑩ 便の分け方
 
-共通の決まり: 便ごとに PR 1 本。`migrations/`・`deploy.yml`・本番 `scripts/` を含む便は GO（ADR-135・ADR-136・ADR-1003）。GitHub の secret/Variables の登録と組織の GUI 設定は PO 本人（AGENTS.md「secrets 変更」「外部 GUI 操作」）。prod1 の変更を伴う操作（段0・K6 の練習）は PO の `!`。
+共通の決まり: 便ごとに PR 1 本。`migrations/`・`.github/workflows/deploy.yml`・本番 `scripts/` を含む便は GO（ADR-135・ADR-136・ADR-1003）。GitHub の secret/Variables の登録と組織の GUI 設定は PO 本人（AGENTS.md「secrets 変更」「外部 GUI 操作」）。prod1 の変更を伴う操作（段0・K6 の練習）は PO の `!`。
 
 ### 便0: 測る土台（段0・§10-1）
-- 触るファイル: 新規 `scripts/ops/dockerd-rss-textfile.sh`（本番 scripts → GO）、本書 §10-4（記録）。
+- 触るファイル: 新規 scripts/ops/dockerd-rss-textfile.sh（本番 scripts → GO）、本書 §10-4（記録）。
 - 触らない: deploy.yml・compose・製品コード。
-- 戻し方: cron の行を消す・`dockerd.prom` を消す。live-restore は `daemon.json` を消して reload。
+- 戻し方: cron の行を消す・`dockerd.prom` を消す。live-restore は daemon.json を消して reload。
 - 分岐: (a) live-restore を入れずに restart → 全箱が止まる数分の停止を PO が受け入れた時間帯に。(b) textfile の置き場に書けない → PO の `!` で持ち主を直すか、`sudo` の cron にする。
 
 ### 便1: 公開の置き場で組み立て、倉庫へしまう（prod1 に触らない）
 - 触るファイル:
-  - 新規 `.github/workflows/build-images.yml`（便2 で deploy.yml に移して消す。便1 は「組み立てと走査が通るか・分数・非公開か」を確かめる段）:
+  - 新規 .github/workflows/build-images.yml（便2 で deploy.yml に移して消す。便1 は「組み立てと走査が通るか・分数・非公開か」を確かめる段）:
     ```yaml
     on: { push: { branches: [main] } }
     permissions: { contents: read }          # packages は PAT で書くので GITHUB_TOKEN には与えない
@@ -312,9 +312,9 @@ docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml p
 - 触らない: deploy.yml・compose・scripts・prod1。
 - 確かめ: run が緑・5 つの完成品が倉庫に非公開で出来る（K2 の命令）・走査が 5 つとも通る・`gh run view --json jobs` で組み立て分数（§11）。
 - 完了条件（v2・§20 A3。これを満たすまで便2 に進まない）:
-  1. **同じ 20 回を並べる**: 便1 のマージ後、main への push 20 回分について、`build-images.yml` の run と `deploy.yml` の run は同じ push で起きる（両方 `on: push: branches: [main]`）ので、commit sha で 1 対 1 に結ぶ（`gh run list --workflow build-images.yml --branch main --limit 20 --json databaseId,headSha,createdAt,updatedAt` と `gh run list --workflow deploy.yml --branch main --limit 20 --json databaseId,headSha,createdAt,updatedAt`）。
+  1. **同じ 20 回を並べる**: 便1 のマージ後、main への push 20 回分について、build-images.yml の run と `.github/workflows/deploy.yml` の run は同じ push で起きる（両方 `on: push: branches: [main]`）ので、commit sha で 1 対 1 に結ぶ（`gh run list --workflow build-images.yml --branch main --limit 20 --json databaseId,headSha,createdAt,updatedAt` と `gh run list --workflow deploy.yml --branch main --limit 20 --json databaseId,headSha,createdAt,updatedAt`）。
   2. **GitHub の組み立て所要 B（回ごと）**: `gh run view <build run id> --json jobs --jq '.jobs[] | [.name,.startedAt,.completedAt] | @tsv'` から、`changes` の所要 ＋ `build-*` の所要の最大値（5 つは並列なので最大値）。skip された build は 0。
-  3. **本番の Step 3 の所要 S（回ごと）**: `gh run view <deploy run id> --log` の「Deploy to VPS (code + env + docker compose)」の段（`deploy.yml:235`）で、`Step 3: Rebuilding and restarting containers...`（`:433`）の行の時刻から `Step 3b: Blue-green backend cutover...`（`:460`）の行の時刻までの差（＝`docker compose build` の 3 回試行 `:443-455` の所要）。`--log` の各行に時刻が付くことは便1 の最初の run で確かめる【未確認 U19】。付かなければ `--json jobs` の「Deploy to VPS」の段の所要（build を含む全体）を S の上限として使う。
+  3. **本番の Step 3 の所要 S（回ごと）**: `gh run view <deploy run id> --log` の「Deploy to VPS (code + env + docker compose)」の段（`.github/workflows/deploy.yml:235`）で、`Step 3: Rebuilding and restarting containers...`（`:433`）の行の時刻から `Step 3b: Blue-green backend cutover...`（`:460`）の行の時刻までの差（＝`docker compose build` の 3 回試行 `:443-455` の所要）。`--log` の各行に時刻が付くことは便1 の最初の run で確かめる【未確認 U19】。付かなければ `--json jobs` の「Deploy to VPS」の段の所要（build を含む全体）を S の上限として使う。
   4. **便2 後の見込み T'（回ごと）**: 今の run 全体の所要 T（`createdAt`→`updatedAt`）から S を引き、B を足す（build job は deploy job の前に直列で入る・§2 の流れ）。`docker compose pull` の所要は便1 では測れないので T' に含めず、便2 の最初の 5 回で実測して §10-4 に足す。
   5. **関所**: T' の 20 回の中央値 ≤ 3.1 分（recon §2 の今の中央値・K8）のときだけ便2 に進む。超えたら便4（§12 便4）を先に行い、便4 のマージ後に同じ 20 回の測り直しで通ってから便2。表（sha・T・S・B・T'）は §10-4 の隣に書く。
 - 戻し方: workflow と `.gitleaks.toml` を消す PR。PAT を失効（PO）。倉庫の完成品は消さなくても害は無い（保管は currently free・G9）。
@@ -323,10 +323,10 @@ docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml p
 ### 便2: 本番の受け取りを指紋に切り替える（deploy.yml・compose・scripts。GO 必須）
 - 触るファイル（フルパス:行番号・変更前後）:
   1. `.github/workflows/deploy.yml`
-     - `:18-20` jobs に 便1 の `changes`・`build-*` を移す（`permissions: contents: read` は job 単位）。`deploy:` に `needs: [changes, build-backend, build-frontend, build-gemini-egress, build-gha-exporter, build-secretary-agent]` と `if: ${{ !cancelled() && needs.changes.result == 'success' && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') }}`（skip された build は空の出力＝その完成品は今の行を残す）。`.github/workflows/build-images.yml` は削除。
+     - `:18-20` jobs に 便1 の `changes`・`build-*` を移す（`permissions: contents: read` は job 単位）。`deploy:` に `needs: [changes, build-backend, build-frontend, build-gemini-egress, build-gha-exporter, build-secretary-agent]` と `if: ${{ !cancelled() && needs.changes.result == 'success' && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') }}`（skip された build は空の出力＝その完成品は今の行を残す）。.github/workflows/build-images.yml は削除。
      - `:249-254`（Step 0）の後に追加: `grep -E '^(BACKEND|FRONTEND|GEMINI_EGRESS|GHA_EXPORTER|SECRETARY_AGENT)_IMAGE=' .env > .deploy_prev_images.env 2>/dev/null || : > .deploy_prev_images.env`。
      - `:400-401`（`cat .env.secrets.new >> .env` の後）に追加: build の出力が空でない完成品だけ行を置き換える（`for _pair in "BACKEND_IMAGE=${{ needs.build-backend.outputs.ref }}" …; do _k=${_pair%%=*}; _v=${_pair#*=}; [ -n "$_v" ] && { sed -i "/^${_k}=/d" .env; echo "${_k}=${_v}" >> .env; }; done`）。その後 5 行が揃っているかを確かめ、欠けていれば `exit 1`（箱に触る前に止まる）。値は `[A-Za-z0-9./@:-]` だけなので `:393` の引用符の検査は要らない。
-     - `:433-455`（Step 3 の build 3 回試行）→ 変更後: `echo "Step 3: Pulling images by digest..."` → `scripts/deploy/pull-images.sh`（login → `docker compose pull --ignore-buildable backend frontend gemini-egress gha-exporter` → `docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml pull` → logout。鍵は `envs: GHCR_PULL_TOKEN,GHCR_USER` でこの段にだけ渡す）。再試行は今と同じ 3 回。
+     - `:433-455`（Step 3 の build 3 回試行）→ 変更後: `echo "Step 3: Pulling images by digest..."` → scripts/deploy/pull-images.sh（login → `docker compose pull --ignore-buildable backend frontend gemini-egress gha-exporter` → `docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml pull` → logout。鍵は `envs: GHCR_PULL_TOKEN,GHCR_USER` でこの段にだけ渡す）。再試行は今と同じ 3 回。
      - `:483` `docker compose up -d --no-deps --remove-orphans frontend …` → `--no-build` を足す。`:486`・`:624`（`--build=false` は既にある）・`:642`・`:660`・`:694`（`--no-build` 既にある）はそのまま。
      - `:679` `docker build -t astro-webapp-secretary-agent ./secretary-agent` → 削除（pull は Step 3 で済む）。`:684` の `docker run … astro-webapp-secretary-agent node /app/probe.mjs` → `"$(grep '^SECRETARY_AGENT_IMAGE=' .env | cut -d= -f2-)"` を使う。
      - `:925-935`（rollback の build 3 回）→ `.deploy_prev_images.env` が無いか空なら `_rb_build=false` のまま、あれば控えにある `*_IMAGE=` の行を全部 `.env` に戻して（行数は数えない・§9-2）`_rb_build=true`。`:942` `docker compose up -d --remove-orphans` → `--no-build` を足す。この段（`Finalize (health check + cleanup)`・`:869`）は `scripts/rehearsal_phase2.sh` が verbatim で抜き出して流す（12.）。
@@ -336,13 +336,13 @@ docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml p
      - `:64` `build: ./backend` → `image: ${BACKEND_IMAGE:-astro-webapp-backend}`。`:235`・`:340`・`:384` も同じ（§5-2・既定値付き）。
      - `:198-205` `build: { context: ./frontend, args: {VITE_*…} }` → `image: ${FRONTEND_IMAGE:-astro-webapp-frontend}`（args は GitHub 側へ・§7-3）。
      - `:439` → `image: ${GEMINI_EGRESS_IMAGE:-astro-webapp-gemini-egress}`。`:552-553` → `image: ${GHA_EXPORTER_IMAGE:-astro-webapp-gha-exporter}`。
-  3. 新規 `docker-compose.override.yml`（手元の開発だけ・§5-2）: 上の 6 サービスの `build:` をそのまま移す（frontend の args も）。先頭に「本番は COMPOSE_FILE を指定しているので読まない。手元の組み立て用」と注記。
+  3. 新規 docker-compose.override.yml（手元の開発だけ・§5-2）: 上の 6 サービスの `build:` をそのまま移す（frontend の args も）。先頭に「本番は COMPOSE_FILE を指定しているので読まない。手元の組み立て用」と注記。
   4. `docker-compose.secretary-agent.yml:14-15` `build: ./secretary-agent` / `image: astro-webapp-secretary-agent` → `image: ${SECRETARY_AGENT_IMAGE:-astro-webapp-secretary-agent}`（build 行は削除）。`:3` の注記を「pull は deploy が行う」に直す。
   5. `docker-compose.ai-reader.yml:13-14` → `image: ${BACKEND_IMAGE:-astro-webapp-backend}`（build 行は削除。砂場試験 15. が `docker build -t astro-webapp-backend ./backend` で既定値の名前を作る）。`docker-compose.ai-reader-http.yml:15`・`docker-compose.ai-reader-cloud-http.yml:16`・`docker-compose.ai-unmask-http.yml:16` `image: astro-webapp-backend` → `image: ${BACKEND_IMAGE:-astro-webapp-backend}`。各ファイルの「deploy の docker compose build で作られる」の注記（`:14`・`:15`・`:15`）を「deploy が `.env` の `BACKEND_IMAGE` を pull する」に直す。
   6. `scripts/blue-green-cutover.sh:9`（前提の注記「docker compose build が完了済み」→「`.env` の `BACKEND_IMAGE`（既定 astro-webapp-backend）がローカルにある」）、`:69` の注記（「docker compose build が作成するイメージ名は {project}-{service}」→「compose の `image:` と同じ名前。prod1 では `.env` の指紋」）、`:70` `BACKEND_IMAGE="${COMPOSE_PROJECT}-backend"` → `BACKEND_IMAGE="${BACKEND_IMAGE:-astro-webapp-backend}"`（`.env` は `:38` で source 済みなので prod1 では指紋が入る。無い場所では既定値）、`:73` の案内文「docker compose build を先に実行」→「deploy の Step 3（pull）を先に」。`:85-110` の `docker run` はそのまま（最後の引数が `${BACKEND_IMAGE}`）。
   7. `scripts/deploy/app-services-plan.sh:63` `expected_image="$(docker image inspect -f '{{.Id}}' "${PROJECT}-${svc}")"` → compose の設定から読む: `expected_ref="$(docker compose config --format json | python3 -c 'import json,sys;print(json.load(sys.stdin)["services"][sys.argv[1]]["image"])' "${svc}")"; expected_image="$(docker image inspect -f '{{.Id}}' "${expected_ref}")"`。`scripts/tests/test_app_services_plan.py` の偽の docker に `compose config` の応答を足す。
   8. `scripts/ops/place-secretary-token.sh:25` の `docker build -t astro-webapp-secretary-agent ./secretary-agent &&` を削除（compose up `--no-build` が既にある）。
-  9. 新規 `scripts/deploy/pull-images.sh`・`scripts/deploy/rollback-images.sh`（§9-2）・`scripts/deploy/prune-images.sh`（§9-1）。試験は `scripts/tests/test-deploy-nginx-recreate-guard.sh` と同じ「偽の docker を PATH に置いて呼ばれ方を記録する」型で 3 本。
+  9. 新規 scripts/deploy/pull-images.sh・scripts/deploy/rollback-images.sh（§9-2）・scripts/deploy/prune-images.sh（§9-1）。試験は `scripts/tests/test-deploy-nginx-recreate-guard.sh` と同じ「偽の docker を PATH に置いて呼ばれ方を記録する」型で 3 本。
   10. `.github/workflows/monthly-secret-expiry.yml:21` WATCH_LIST に `GHCR_PULL_TOKEN`。
   11. PO の登録: secret `GHCR_PULL_TOKEN`（read:packages）。
   12. `scripts/rehearsal_phase2.sh`（v2・§20 A1。`.github/workflows/test-phase2-rehearsal.yml:40` が流す。起きる条件は `:13-17` の `workflow_dispatch` と `feature/morimoto/sa-18-phase2-auto-url` への push だけで、PR や main では動かない）:
@@ -363,15 +363,15 @@ docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml p
 - 触らない範囲: `on:`（`:3-6`）、`concurrency`（`:14-16`）、LP・design-site・backup・nginx・読み取り窓口・Bootstrap・migrations・smoke の段（`:23-233`・`:516-608`・`:611-666`・`:700-867`）、Verify（`:1025-1116`）、`scripts/run_all_migrations.sh`、nginx・certbot・redis・postgres の定義、prod2 の compose（`docker-compose.monitoring.yml`）。
 - 初回の流れ: この PR は deploy.yml を変えるので `changes` の全 filter に当たり、5 つ全部を組み立てる → deploy が `.env` に 5 行を書く → pull → 切替。`.deploy_prev_images.env` は空（初回は自動ロールバックで戻せない＝今の `PREV_SHA` の仕組みでコードだけ戻り、箱は旧タグのまま動き続ける。初回だけ PO が時間帯を選ぶ）。
 - 戻し方: 前進の PR で compose の `build:` と Step 3 の build を戻す（revert）。`.env` の 5 行は残しても害は無い。倉庫の完成品も残してよい。
-- 分岐: (a) `.env` に `*_IMAGE=` の行が欠けている → deploy の Step 2 の 5 行確認が `exit 1` で箱に触る前に止まる（本番の守りはここ 1 か所・§5-2）。compose は既定値で動くので、deploy 以外の場所（CI・手元・砂場）は今の名前のまま動く。PO が prod1 の `.env` を確かめる。(b) 【U4】override が COMPOSE_FILE 指定でも読まれる → `docker-compose.override.yml` は作らず、`docker-compose.yml` に `build:` を残す（`image:` の既定値付きは 2. と同じ）。prod1 では全ての `up` に `--no-build`・`pull --ignore-buildable` を使う（D1「pulling the image is the default behavior」。K3 の「build 0」は「deploy の命令に build が無い」で測る）。(c) 倉庫に届かない（ghcr 障害）→ pull の 3 回試行の後 exit 1。箱は旧のまま。緊急の出荷が要るときだけ PO の `!` で prod1 の手組み（K1 の例外として記録）。(d) `blue-green-cutover.sh` が旧タグを探して落ちる → 6. の直しが漏れている。(e) prod1 の docker compose の版が `${X:-…}` や `@sha256` に対応しない【U15】→ 便2 の前に PO の読み取り `docker compose version`。
+- 分岐: (a) `.env` に `*_IMAGE=` の行が欠けている → deploy の Step 2 の 5 行確認が `exit 1` で箱に触る前に止まる（本番の守りはここ 1 か所・§5-2）。compose は既定値で動くので、deploy 以外の場所（CI・手元・砂場）は今の名前のまま動く。PO が prod1 の `.env` を確かめる。(b) 【U4】override が COMPOSE_FILE 指定でも読まれる → docker-compose.override.yml は作らず、`docker-compose.yml` に `build:` を残す（`image:` の既定値付きは 2. と同じ）。prod1 では全ての `up` に `--no-build`・`pull --ignore-buildable` を使う（D1「pulling the image is the default behavior」。K3 の「build 0」は「deploy の命令に build が無い」で測る）。(c) 倉庫に届かない（ghcr 障害）→ pull の 3 回試行の後 exit 1。箱は旧のまま。緊急の出荷が要るときだけ PO の `!` で prod1 の手組み（K1 の例外として記録）。(d) `scripts/blue-green-cutover.sh` が旧タグを探して落ちる → 6. の直しが漏れている。(e) prod1 の docker compose の版が `${X:-…}` や `@sha256` に対応しない【U15】→ 便2 の前に PO の読み取り `docker compose version`。
 
 ### 便3: 片付けと見張り（便2 の 7 日観測の後）
-- 触るファイル: `deploy.yml:1006-1010`（builder prune を削除）、新規 `.github/workflows/packages-visibility-guard.yml`（§8）、6 か所の `.dockerignore`（任意・§7-1）、`docs/runbooks/`（戻し方の手順書・新規）と `docs/INDEX.md` の 1 行（F 運用・本番）、adr-draft → `docs/adr/ADR-<番号>` に起案、本書 §10-4 に K1〜K8 の結果。
+- 触るファイル: `.github/workflows/deploy.yml:1006-1010`（builder prune を削除）、新規 .github/workflows/packages-visibility-guard.yml（§8）、6 か所の `.dockerignore`（任意・§7-1）、`docs/runbooks/`（戻し方の手順書・新規）と `docs/INDEX.md` の 1 行（F 運用・本番）、adr-draft → `docs/adr/ADR-<番号>` に起案、本書 §10-4 に K1〜K8 の結果。
 - 戻し方: それぞれ単独で revert できる。
 - 分岐: K5 が 7 日で満たせない → §19-2 D12（原因の切り分けを別作業に）。
 
 ### 便4（条件付き）: 便1 の完了条件（K8 の関所）で見込み T' の中央値が 3.1 分を超えたら、便2 より先に
-- 案: deploy job の LP の組み立て（`deploy.yml:81-111`）を build-* と並ぶ別 job に分けて並列にする。または `build-backend` の `pip install` 層のキャッシュを `cache-from: type=registry`（倉庫のキャッシュ）に替える。frontend が長いなら §7-3 の (a)（`mode=min`・U20 の確認が先）か (b)（D6 の PO の判断）。便1 の表（sha・T・S・B・T'）で一番長い job を見てから決める。
+- 案: deploy job の LP の組み立て（`.github/workflows/deploy.yml:81-111`）を build-* と並ぶ別 job に分けて並列にする。または `build-backend` の `pip install` 層のキャッシュを `cache-from: type=registry`（倉庫のキャッシュ）に替える。frontend が長いなら §7-3 の (a)（`mode=min`・U20 の確認が先）か (b)（D6 の PO の判断）。便1 の表（sha・T・S・B・T'）で一番長い job を見てから決める。
 - 便4 のマージ後、同じ 20 回で測り直し、関所を通ってから便2。
 
 ---
@@ -388,14 +388,14 @@ docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml p
 | K1 本番での組み立て 0 回（10 回） | §10-2 の `gh run view --log \| grep -cE 'docker( compose)?( -[fp] \S+)* build\|docker build'` が 10 回とも 0（`-f`/`-p` 付きの形も拾う・§12 便2 17.）。Evaluator が記録を貼る |
 | K2 完成品は GEN-RYU-System に 5 つ・公開 0 | §8-4 の API の出力（名前と visibility）。便3 の見張りが週 1 で同じ検査 |
 | K3 自前の箱は全部 `@sha256:` | §10-2 K3 の `docker ps` の出力と `docker compose config` の build 数 0 |
-| K4 外部の提案で動かない | `deploy.yml` の `on:` の読み合わせ・`workflow-lint.yml` 緑・フォークの試し PR で run 0 |
+| K4 外部の提案で動かない | `.github/workflows/deploy.yml` の `on:` の読み合わせ・`.github/workflows/workflow-lint.yml` 緑・フォークの試し PR で run 0 |
 | K5 空きメモリ 1 日平均 ≥ 30%（7 日） | Grafana の PromQL（§10-2）の 7 点 |
-| K6 戻しは 2 分以内・組み立て 0 | `rollback-images.sh` の出力（秒）と記録 |
+| K6 戻しは 2 分以内・組み立て 0 | rollback-images.sh の出力（秒）と記録 |
 | K7 非公開の置き場の分数 ≤ 2,000/30 日 | 組織の Usage 画面の CSV（§11）。案A では 0 |
 | K8 入れ替え中央値 ≤ 3.1 分（30 回） | §10-2 K8 の `gh run list` の差の中央値 |
 | 秘密検査が 5 完成品で動く | 便1 の run の各 build job に走査の 3 段が緑で出る。わざと `.env` を入れた試しの完成品で fail することを 1 回示す（試しの PR・main には入れない） |
 | 配線の正本が 1 か所 | `git grep -n 'ghcr.io'` が deploy.yml の build job（と見張りの workflow）以外に当たらない。`git grep -nE '@sha256' docker-compose*.yml scripts` が 0。compose の `image:` のうち `${…}` で始まらない物が、取ってくる箱（nginx・certbot・redis・postgres・exporters）だけ（`grep -nE '^\s*image: *[^$]' docker-compose*.yml`）。`astro-webapp-<名前>` は `${X:-…}` の既定値としてだけ現れる（§5-2） |
-| 鍵が prod1 に残らない | pull の段の最後に `docker logout ghcr.io` が必ず走る（試験で偽 docker の呼ばれ方に logout があること）。prod1 の `~/.docker/config.json` に `ghcr.io` の auth が無いこと（PO 読み取り） |
+| 鍵が prod1 に残らない | pull の段の最後に `docker logout ghcr.io` が必ず走る（試験で偽 docker の呼ばれ方に logout があること）。prod1 の ~/.docker/config.json に `ghcr.io` の auth が無いこと（PO 読み取り） |
 | 手元の開発が壊れない | `docker compose config --services` と `docker compose build backend` が手元で通る（Evaluator・Colima）。`BACKEND_IMAGE` 未設定で `docker compose config \| grep 'image:'` が `astro-webapp-backend` を出す（既定値が効く） |
 | 試験の 2 本と砂場が緑のまま | 便2 の枝で `gh workflow run test-phase2-rehearsal.yml --ref <枝>`・`test-rollback.yml`・`sandbox-test.yml -f test=ai-reader-audit` の 3 つが緑（§12 便2 12.・13.・15.）。リハーサルの Phase B が「控えの行を戻して `up --no-build`」で B-1・B-2 を通ること |
 | K8 の関所 | 便1 の完了条件の表（sha・T・S・B・T'・20 回）が §10-4 の隣にあり、T' の中央値 ≤ 3.1 分。超えていれば便4 が先に済んでいること |
@@ -406,7 +406,7 @@ docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml p
 
 - **GitHub 公式の見本（G13・2026-11-04）**: `login-action` → `metadata-action` → `build-push-action` → `steps.push.outputs.digest`。応用: 同じ 3 つの action を使う。違いは password を GITHUB_TOKEN でなく組織向けの PAT にすること（§3）、push の前に走査を挟むこと（§7-2）、タグを sha だけにすること。
 - **Docker 公式（D1・D4・D5）**: `image: name@sha256` と `pull_policy`、live-restore、prune の挙動。応用: compose は `@sha256` 固定、dockerd の入れ直しは live-restore を先に入れる、prune は呼ばず自前の片付けにする。
-- **社内の過去事例**: ADR-115 の自動ロールバック（`deploy.yml:889-979`。「PREV_SHA を控えて戻す」型を指紋にも適用）、ADR-1052 段2 の `.deploy_nginx_good.conf`（控えの置き方と「点検に通らなければ作り直さない」型）、`docs/handoff/deploy-selective-recreate/design.md`（観測→検証の `app-services-plan.sh`。指紋化で `expected_image` の取り方を直す）、ADR-1024/1042/1052（backend の完成品を複数の箱で使い回す＝変数 1 つで全部が揃う利点）、ADR-1056 段2（`deploy.yml:667-696` の secretary は `--no-build` 済み。残る `docker build` を pull に替える）、`docs/handoff/secretary-chatgpt/design.md` §13-6（K8 の測り方・MemAvailable の読み取り。本設計の K5 はこれと同じ問い合わせ）。
+- **社内の過去事例**: ADR-115 の自動ロールバック（`.github/workflows/deploy.yml:889-979`。「PREV_SHA を控えて戻す」型を指紋にも適用）、ADR-1052 段2 の `.deploy_nginx_good.conf`（控えの置き方と「点検に通らなければ作り直さない」型）、`docs/handoff/deploy-selective-recreate/design.md`（観測→検証の `scripts/deploy/app-services-plan.sh`。指紋化で `expected_image` の取り方を直す）、ADR-1024/1042/1052（backend の完成品を複数の箱で使い回す＝変数 1 つで全部が揃う利点）、ADR-1056 段2（`.github/workflows/deploy.yml:667-696` の secretary は `--no-build` 済み。残る `docker build` を pull に替える）、`docs/handoff/secretary-chatgpt/design.md` §13-6（K8 の測り方・MemAvailable の読み取り。本設計の K5 はこれと同じ問い合わせ）。
 - **数字**: 入れ替え 1,000 回/25.1 日・中央値 3.1 分（recon §2）、dockerd RSS 1,778,000 KiB（recon §2）、組織 Free の枠 12 USD/月≒2,000 分（G8）、倉庫の保管・転送は currently free（G9）。
 - 使わなかった事例と理由: 自前の実行機（self-hosted runner・ADR-029）で組み立てる案＝PO の Mac に依存し、`docs/ops/self-hosted-runner-credential-trap.md` の落とし穴がある。prod2 で組み立てる案＝prod2 は対象外（kgi）で、prod2 のメモリに同じ問題を移すだけ。
 
@@ -424,8 +424,8 @@ docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml p
 | R6 | 倉庫の保管・転送が有料になる | 1 か月前に知らせが来る（G9）。来たら: 保管は 2 世代だけ残す片付けを倉庫側にも（`delete:packages` の別 PAT は作らない。GUI で PO が消す）、転送は 1GB/月の枠と実測を比べ、超えるなら「読み取り窓口 3 つは backend と同じ完成品なので取り直しは 1 回」で済んでいるかを確かめる |
 | R7 | VITE の値が組み立て時に固定され、`.env` の変更で変わらなくなる | §7-3 の手順書。`frontend/.env.example` の注記を更新 |
 | R8 | K8（3.1 分）を超える | 便1 の完了条件（§12 便1）で同じ 20 回の T・S・B から見込み T' を出し、中央値 ≤ 3.1 分のときだけ便2。超えたら便4 を先に（§12 便4） |
-| R9 | ディスク: 完成品が溜まる | `prune-images.sh` が 2 世代だけ残す。`Check free disk space`（`deploy.yml:161-186`）は今どおり |
-| R10 | 手元の開発（Colima）で `build:` が無くなり組み立てられない | `docker-compose.override.yml`（U4 の確認付き・§19-2 D9）。だめなら分岐 (b)。どちらでも `image:` の既定値で変数の無い場所は今の名前のまま動く（§5-2） |
+| R9 | ディスク: 完成品が溜まる | prune-images.sh が 2 世代だけ残す。`Check free disk space`（`deploy.yml:161-186`）は今どおり |
+| R10 | 手元の開発（Colima）で `build:` が無くなり組み立てられない | docker-compose.override.yml（U4 の確認付き・§19-2 D9）。だめなら分岐 (b)。どちらでも `image:` の既定値で変数の無い場所は今の名前のまま動く（§5-2） |
 | R13 | `${X:?}` の代わりに既定値にしたことで、prod1 の `.env` の行が欠けたまま古い名前の完成品で動く | 本番の守りは deploy の Step 2 の 5 行確認（`exit 1`）に一本化（§12 便2 1.）。Step 2 が落ちれば箱に触らない。手で `.env` を壊す操作は本番の変更＝PO の `!` の範囲 |
 | R14 | リハーサル・手書きミラー・砂場の 3 試験が便2 の後に赤のまま放置される | §12 便2 12.・13.・15. の直しと、便2 の枝での `gh workflow run` による緑の確認を §14 の受け入れ基準に入れた |
 | R11 | 走査の allowlist が広すぎて秘密を見逃す | allowlist は経路 1 つ・規則 1 つに限る（§7-2）。わざと秘密を入れた試しで fail を 1 回示す（§14） |
@@ -435,9 +435,9 @@ docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml p
 
 ## 17. 維持の仕組み
 
-- 守り手: .github/workflows/workflow-lint.yml（deploy.yml に pull_request トリガーが足されたら落とす。K4 を守る・既存）、.github/workflows/monthly-secret-expiry.yml（`GHCR_PUSH_TOKEN`・`GHCR_PULL_TOKEN` を WATCH_LIST に足し、180 日で知らせる）、便3 で足す .github/workflows/packages-visibility-guard.yml（週 1 で非公開と 5 つの名前を確かめ、違えば Discord と fail。K2 を守る）、scripts/tests の 3 本（pull/rollback/prune の呼ばれ方。`deploy-script-test.yml` と同じ流儀で CI）。
+- 守り手: .github/workflows/workflow-lint.yml（deploy.yml に pull_request トリガーが足されたら落とす。K4 を守る・既存）、.github/workflows/monthly-secret-expiry.yml（`GHCR_PUSH_TOKEN`・`GHCR_PULL_TOKEN` を WATCH_LIST に足し、180 日で知らせる）、便3 で足す .github/workflows/packages-visibility-guard.yml（週 1 で非公開と 5 つの名前を確かめ、違えば Discord と fail。K2 を守る）、scripts/tests の 3 本（pull/rollback/prune の呼ばれ方。`.github/workflows/deploy-script-test.yml` と同じ流儀で CI）。
 - 対象: (1) 本番で組み立てが復活すること（deploy.yml に `docker compose build`/`docker build` が戻る）、(2) 倉庫が公開になること、(3) 鍵が期限切れ・漏洩のまま放置されること、(4) compose に名前や指紋が直書きされ正本が散ること。
-- 関所なしで人手で守るもの: (1) と (4) は `check-process-artifacts.js` の危険パス（`deploy.yml`・`scripts/`・compose の一部 `:1024-1035`）に当たるので GO の審査で人が読む。便3 で `workflow-lint.yml` に「deploy.yml に `docker compose build`/`docker build` の文字列が無い」規則を足す案は、`workflow-lint.yml` の変更が PO 本人の確認事項（AGENTS.md）なので §19-1 D13 で聞く。
+- 関所なしで人手で守るもの: (1) と (4) は `check-process-artifacts.js` の危険パス（`.github/workflows/deploy.yml`・`scripts/`・compose の一部 `:1024-1035`）に当たるので GO の審査で人が読む。便3 で `.github/workflows/workflow-lint.yml` に「deploy.yml に `docker compose build`/`docker build` の文字列が無い」規則を足す案は、`.github/workflows/workflow-lint.yml` の変更が PO 本人の確認事項（AGENTS.md）なので §19-1 D13 で聞く。
 - 記録: K1〜K8 の結果と dockerd の増え方は本書 §10-4。GO は PR のコメント（STANDARD-WORKFLOW 「GO 記録の軽量ルール」）。
 
 ---
@@ -449,10 +449,10 @@ docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml p
 | U1 | GEN-RYU-System の組織設定: classic PAT のアクセス許可、Package Creation の既定、PO の役割（owner か）、2FA | PO が Settings を読む（GUI・読むだけ） | D7 |
 | U2 | shingo-ops/salesanchor のフォーク PR の自動作業の承認設定（recon §4・API 403） | PO が Settings → Actions → General を読む | K4 の補助（設計は secret が渡らない前提で既に成立） |
 | U3 | 指紋だけで取った完成品が `docker image prune -f` で消えるか | 便2 の前に手元（Colima）で `docker pull <x>@sha256` → `docker image prune -f` を試す | 設計は prune を呼ばないので頼らない |
-| U4 | `COMPOSE_FILE` 指定時に `docker-compose.override.yml` が読まれないか | 便2 で手元の `docker compose config` | 決定済み（§19-2 D9 override 方式）。通らなければ §12 便2 分岐 (b) に落とす技術判断で、PO には聞かない |
-| U5 | prod1 に未追跡の `docker-compose.override.yml` が無いか | PO の読み取り `ls /home/ubuntu/salesanchor/docker-compose.override.yml` | 同上（あれば中身を PO が読み、便2 の前に消すか分岐 (b)） |
+| U4 | `COMPOSE_FILE` 指定時に docker-compose.override.yml が読まれないか | 便2 で手元の `docker compose config` | 決定済み（§19-2 D9 override 方式）。通らなければ §12 便2 分岐 (b) に落とす技術判断で、PO には聞かない |
+| U5 | prod1 に未追跡の docker-compose.override.yml が無いか | PO の読み取り `ls /home/ubuntu/salesanchor/docker-compose.override.yml` | 同上（あれば中身を PO が読み、便2 の前に消すか分岐 (b)） |
 | U6 | 完成品ごとの GitHub での組み立て分数 | 便1 の実測（§11） | K8・案B の見積もり |
-| U7 | prod1 の `.env` にある VITE_FIREBASE_* の値の出所と、AUTH_PROVIDER=self でも要るか | PO が `.env` の名前だけ確かめる（値は見せない）。`firebase.ts:19-21` は今も読むので要る前提 | D6 |
+| U7 | prod1 の `.env` にある VITE_FIREBASE_* の値の出所と、AUTH_PROVIDER=self でも要るか | PO が `.env` の名前だけ確かめる（値は見せない）。`frontend/src/lib/firebase.ts:19-21` は今も読むので要る前提 | D6 |
 | U8 | build-push-action の provenance（既定）に build-args が含まれるか | 便1 で `provenance: false` にするので頼らない | — |
 | U9 | 案B の repository_dispatch / workflow_dispatch に要る fine-grained PAT の権限名 | docs.github.com の REST の該当ページ（本セッションから到達不可） | 案B を選ぶ場合のみ（D1） |
 | U10 | `/home/ubuntu/node_exporter_textfile` に ubuntu の cron から書けるか | PO の読み取り `ls -ld` | 便0 の分岐 (b) |
@@ -462,7 +462,7 @@ docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml p
 | U18 | 組織の Actions 分数を API で読む口（`orgs/{org}/settings/billing/actions`）が今もあるか | docs.github.com の REST（到達不可） | K7 は GUI の Usage で測る（§11） |
 | U19 | `gh run view <id> --log` の各行に時刻が付くか（K8 の関所で Step 3 の所要 S を出すのに使う・§12 便1 完了条件 3.） | 便1 の最初の run で実行役が見る | 付かなければ `--json jobs` の「Deploy to VPS」の段の所要を S の上限として使う（関所は厳しめになる） |
 | U20 | `cache-to: type=gha,mode=min` が第 1 段（builder）の層と `ENV` をキャッシュから除くか | docker/build-push-action と buildx の本文（到達不可）。便4 で試す前に確かめる | 便1 では frontend にキャッシュを付けないので頼らない（§7-3） |
-| U21 | 置き場の secret `SALESANCHOR_APP_PASSWORD`（`test-phase2-rehearsal.yml:38`）が今もあるか | PO が Settings → Secrets を読む（名前だけ） | 無ければ便2 の確かめから test-phase2-rehearsal.yml を外し、理由を PR に書く（§12 便2 12.） |
+| U21 | 置き場の secret `SALESANCHOR_APP_PASSWORD`（`.github/workflows/test-phase2-rehearsal.yml:38`）が今もあるか | PO が Settings → Secrets を読む（名前だけ） | 無ければ便2 の確かめから test-phase2-rehearsal.yml を外し、理由を PR に書く（§12 便2 12.） |
 | U22 | `docker compose build <svc>` を `build:` の無いサービスに向けたときの挙動（止まるか・何もしないか） | 本文で確かめていない | 頼らない。砂場試験は `docker build` に替える（§12 便2 15.） |
 
 ---
@@ -475,21 +475,21 @@ docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml p
 |---|---|---|---|---|
 | 1. 鍵 | D1 | 書き込みの鍵は案A（公開の置き場の classic PAT・write:packages だけ）か案B（組織の非公開の置き場・GITHUB_TOKEN） | 案A | 案B は K7（2,000 分）を外す見込み（§3-4）。案A は PAT 1 本の管理が要る |
 | 1. 鍵 | D2 | PAT の持ち主: PO 本人（shingo-ops）か、組織の専用アカウント（新規） | まず PO 本人で始め、専用アカウントは別作業 | 漏れたときの範囲（本人の全完成品 vs 専用アカウントの範囲）。専用アカウントは組織メンバー追加（GUI）が要る |
-| 1. 鍵 | D3 | PAT の期限: 90 日か 180 日 | 180 日（`monthly-secret-expiry.yml` の 180 日と揃える）＋組織の最長期限ポリシー（G11）も 180 日 | 90 日なら見張りの閾値を別に持つ |
+| 1. 鍵 | D3 | PAT の期限: 90 日か 180 日 | 180 日（`.github/workflows/monthly-secret-expiry.yml` の 180 日と揃える）＋組織の最長期限ポリシー（G11）も 180 日 | 90 日なら見張りの閾値を別に持つ |
 | 1. 鍵 | D4 | 受け取りの鍵の置き場: GitHub secret だけ（pull の段で login→logout）か、prod1 のファイルにも置くか | GitHub secret だけ | 手で戻すときは残してある完成品を使う（取り直し無し）。prod1 に鍵を置かない |
 | 1. 鍵 | D6 | VITE の 5 つの値の置き場: `VITE_FIREBASE_API_KEY` と `VITE_FUNNEL_DASHBOARD` は secret、他 3 つは Variables | 左のとおり | PO が prod1 の `.env` から写す（値はチャットに書かない）。`VITE_FUNNEL_DASHBOARD` を secret にする限り frontend は層キャッシュ無し（§7-3・A4） |
 | 2. 組織の画面の設定 | D7 | 組織の GUI 設定: Package Creation を Private、classic PAT を許可のまま、最長期限を課す | 3 つとも行う | PO の GUI 操作（AGENTS.md の確認事項） |
 | 3. dockerd 入れ直しの時間帯 | D8 | 段0 の dockerd 入れ直し: live-restore を先に入れてから restart するか、入れずに restart するか。時間帯 | 入れてから。深夜帯 | 入れない場合は全箱の停止（数分） |
 | 3. dockerd 入れ直しの時間帯 | D11 | 便2 の初回の時間帯（初回は指紋での自動戻しが効かない・R4） | 深夜帯・PO 待機 | — |
-| 3. dockerd 入れ直しの時間帯 | D14 | 便0 の `scripts/ops/dockerd-rss-textfile.sh` と cron（prod1 の変更）を行うか（§20 の絞り込みには無い項目。便0 の prod1 の変更なので D8 と同じ件に置いた。Opus の次の審査で外してよい） | 行う | 行わない場合は PO の `!` の手動読み取りを入れ替えごとに頼む |
-| 4. workflow-lint | D13 | `workflow-lint.yml` に「deploy.yml に build の文字列が無い」規則を足すか（PO 本人の確認事項・AGENTS.md） | 足す（便3） | 足さない場合は GO の審査（人手）で守る |
+| 3. dockerd 入れ直しの時間帯 | D14 | 便0 の scripts/ops/dockerd-rss-textfile.sh と cron（prod1 の変更）を行うか（§20 の絞り込みには無い項目。便0 の prod1 の変更なので D8 と同じ件に置いた。Opus の次の審査で外してよい） | 行う | 行わない場合は PO の `!` の手動読み取りを入れ替えごとに頼む |
+| 4. workflow-lint | D13 | `.github/workflows/workflow-lint.yml` に「deploy.yml に build の文字列が無い」規則を足すか（PO 本人の確認事項・AGENTS.md） | 足す（便3） | 足さない場合は GO の審査（人手）で守る |
 
 ### 19-2 Opus が決めた件（§20 の判断。設計の範囲で推奨どおり。PO には聞かない）
 
 | 番号 | 決めたこと | 決め | 本文の反映先 |
 |---|---|---|---|
 | D5 | 完成品の名前 | `ghcr.io/gen-ryu-system/salesanchor-{backend,frontend,gemini-egress,gha-exporter,secretary-agent}` の 5 つ。変えるなら deploy.yml の build job の 1 か所 | §5-1 |
-| D9 | compose の書き方 | override 方式（prod1 で効く compose から `build:` を無くし、手元用の `docker-compose.override.yml` に移す）。`image:` は既定値付き `${X:-astro-webapp-<名前>}`（§20 A2）。U4・U5 が通らなければ §12 便2 分岐 (b)（併記方式）に落とす — これも技術判断で PO には聞かない | §5-2・§12 便2 2.-5.・分岐 (b)・§14・§18 U4/U5 |
+| D9 | compose の書き方 | override 方式（prod1 で効く compose から `build:` を無くし、手元用の docker-compose.override.yml に移す）。`image:` は既定値付き `${X:-astro-webapp-<名前>}`（§20 A2）。U4・U5 が通らなければ §12 便2 分岐 (b)（併記方式）に落とす — これも技術判断で PO には聞かない | §5-2・§12 便2 2.-5.・分岐 (b)・§14・§18 U4/U5 |
 | D10 | 設計仕様書 `docs/specs/build-on-github/` | 作る（README・ideal-state・kgi。ideal-state は kgi.md の PO の言葉を写す）。便1 の PR に入れる | 冒頭「親」・§12 便1 |
 | D12 | K5 が 7 日で満たせないとき | 原因の切り分け（json-file ログ・箱の数・postgres）は別作業。本設計の完了判定は K1〜K4・K6〜K8 で行い、K5 は原因作業へ引き継ぐ | §10-1・§12 便3 |
 
@@ -499,7 +499,7 @@ docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml p
 
 - 判定: **REVISE（直してから実装可）**。同じ系統の AI による審査で、独立した第二者の審査ではない。
 - 照合した版: 作業場所の 712d9082c（origin/main 8d661d747 ＋ docs）。
-- 照合して合っていた行: `deploy.yml` の 18-20・249-254・400・433-455・483・486・624・642・660・679・684・694・911・926-934・942・1003-1004・1006-1010、`scripts/blue-green-cutover.sh:9,38,70,73,110`（`.env` の source は :38 で :70 より前＝`${BACKEND_IMAGE:?}` は効く）、`scripts/deploy/app-services-plan.sh:63`、`scripts/ops/place-secretary-token.sh:25`、`.github/workflows/monthly-secret-expiry.yml:21`、`.github/workflows/workflow-lint.yml:66-70`、`docker-compose.ai-reader.yml:13-14`、`frontend/Dockerfile:7-16,27`、`docker-compose.yml:198-205`。`docker-compose.override.yml` は置き場に無い（`ls` で確認）。
+- 照合して合っていた行: `.github/workflows/deploy.yml` の 18-20・249-254・400・433-455・483・486・624・642・660・679・684・694・911・926-934・942・1003-1004・1006-1010、`scripts/blue-green-cutover.sh:9,38,70,73,110`（`.env` の source は :38 で :70 より前＝`${BACKEND_IMAGE:?}` は効く）、`scripts/deploy/app-services-plan.sh:63`、`scripts/ops/place-secretary-token.sh:25`、`.github/workflows/monthly-secret-expiry.yml:21`、`.github/workflows/workflow-lint.yml:66-70`、`docker-compose.ai-reader.yml:13-14`、`frontend/Dockerfile:7-16,27`、`docker-compose.yml:198-205`。docker-compose.override.yml は置き場に無い（`ls` で確認）。
 
 ### 直すこと（必須）
 - **A1 呼び出し元の走査が足りない**。`git grep -E 'docker (compose )?build'`（docs と md 以外）で、§12 便2 の一覧に無い次の呼び出しが見つかった。
@@ -507,7 +507,7 @@ docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml p
   - `scripts/test_rollback_simulation.sh:282,346,399`（`.github/workflows/test-rollback.yml:39` が CI で流す。:399 は deploy の自動戻しの写し）
   - `scripts/dry-run-blue-green.sh:51`
   - `tests/sandbox/ai-reader-audit.sh:60`（`-f docker-compose.ai-reader.yml build ai-reader`。`-f` を付けると override は自動では読まれない＝D3 の公式説明）
-  - `deploy.yml:610` の注記
+  - `.github/workflows/deploy.yml:610` の注記
   - それぞれの直し方（変える／変えない理由）を便2 に書くこと。
 - **A2 `${X:?}` は本番以外を全部止める**。`docker-compose.yml` に `${BACKEND_IMAGE:?}` を書くと、変数を持たない場所（A1 の CI 2 本・手元の開発・砂場試験）で `docker compose` の命令がすべて失敗する（D2「未設定・空なら止まる」）。
   - 本番の守りは「deploy が 5 行の有無を確かめて欠ければ exit 1」（§12 便2 1.）で既に足りている。
@@ -527,7 +527,7 @@ docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml p
   - 鍵（D1〜D4・D6）
   - 組織の画面の設定（D7）
   - dockerd の入れ直しの時間帯（D8・D11）
-  - `workflow-lint.yml` を変えるか（D13）
+  - `.github/workflows/workflow-lint.yml` を変えるか（D13）
 
 ---
 
@@ -538,9 +538,9 @@ docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml p
 
 | 指摘 | 直した節 | 要点 |
 |---|---|---|
-| A1 呼び出し元の走査 | §5-2（変数の無い場所の 3 種）、§9-2 自動（控えの行数を数えない）、§12 便2 1.（`:925-935` の戻しと `:610` の注記）・12.〜17.（新設）、§14「試験の 2 本と砂場が緑のまま」「K1」の行、§16 R14、§18 U21・U22 | `rehearsal_phase2.sh:309,332`・`test_rollback_simulation.sh:282,346` は自前の compose（一時ディレクトリ）なので変えない。`rehearsal_phase2.sh` は Finalize を verbatim で流す（`:69-95,355`）ので、控えを 1 行置く前処理と `image:` の併記を足して本番と同じ戻しを試す。`test_rollback_simulation.sh:397-402,408` は手書きの写しなので同じ形に直す。`dry-run-blue-green.sh:47-58` は prod1 で動くので組み立てを無くす。`ai-reader-audit.sh:34` は `docker build -t astro-webapp-backend ./backend` に替える。`deploy.yml:610` の注記を直す。CI の 2 本は PR では動かない（`test-phase2-rehearsal.yml:13-17`・`test-rollback.yml:17-21`）ので、便2 の枝で `gh workflow run … --ref` を流して緑を確かめる |
+| A1 呼び出し元の走査 | §5-2（変数の無い場所の 3 種）、§9-2 自動（控えの行数を数えない）、§12 便2 1.（`:925-935` の戻しと `:610` の注記）・12.〜17.（新設）、§14「試験の 2 本と砂場が緑のまま」「K1」の行、§16 R14、§18 U21・U22 | `rehearsal_phase2.sh:309,332`・`test_rollback_simulation.sh:282,346` は自前の compose（一時ディレクトリ）なので変えない。`scripts/rehearsal_phase2.sh` は Finalize を verbatim で流す（`:69-95,355`）ので、控えを 1 行置く前処理と `image:` の併記を足して本番と同じ戻しを試す。`test_rollback_simulation.sh:397-402,408` は手書きの写しなので同じ形に直す。`scripts/dry-run-blue-green.sh:47-58` は prod1 で動くので組み立てを無くす。`tests/sandbox/ai-reader-audit.sh:34` は `docker build -t astro-webapp-backend ./backend` に替える。`.github/workflows/deploy.yml:610` の注記を直す。CI の 2 本は PR では動かない（`.github/workflows/test-phase2-rehearsal.yml:13-17`・`.github/workflows/test-rollback.yml:17-21`）ので、便2 の枝で `gh workflow run … --ref` を流して緑を確かめる |
 | A2 `${X:?}` をやめる | 冒頭（状態）、§2 の表と「配線の正本」、§5-2（1 つ目の項を全面）、§12 便2 2.・4.・5.・6.・分岐 (a)(b)、§14「配線の正本」「手元の開発」、§16 R10・R13、§18 U4・U5、§19（D9 を §19-2 へ） | compose は `${X:-<今の名前>}`（既定値は backend 系 `astro-webapp-backend`・frontend `astro-webapp-frontend`・gemini-egress `astro-webapp-gemini-egress`・gha-exporter `astro-webapp-gha-exporter`・secretary `astro-webapp-secretary-agent`）。本番の守りは deploy の Step 2 の 5 行確認（`exit 1`）に一本化。`blue-green-cutover.sh:70` も既定値付き。adr-draft.md の What と Scope も同じ形に直した |
-| A3 K8 の関所 | §11（末尾）、§12 便1「完了条件」（新設・1.〜5.）、§12 便4（見出しと本文）、§14「K8 の関所」の行、§16 R8、§18 U19 | 便1 のマージ後の main への push 20 回で、`build-images.yml` と `deploy.yml` の run を sha で結び、GitHub の組み立て所要 B（changes ＋ build-* の最大）と本番の Step 3 の所要 S（`:433` の行から `:460` の行までの時刻差）を並べ、見込み T' ＝ T − S ＋ B の中央値 ≤ 3.1 分のときだけ便2。超えたら便4 を先に |
+| A3 K8 の関所 | §11（末尾）、§12 便1「完了条件」（新設・1.〜5.）、§12 便4（見出しと本文）、§14「K8 の関所」の行、§16 R8、§18 U19 | 便1 のマージ後の main への push 20 回で、build-images.yml と `.github/workflows/deploy.yml` の run を sha で結び、GitHub の組み立て所要 B（changes ＋ build-* の最大）と本番の Step 3 の所要 S（`:433` の行から `:460` の行までの時刻差）を並べ、見込み T' ＝ T − S ＋ B の中央値 ≤ 3.1 分のときだけ便2。超えたら便4 を先に |
 | A4 frontend の cache-to | §6（末尾）、§7-3「層キャッシュの扱い」（新設）、§12 便1 の yaml の build-frontend、§18 U20、§19-1 D6 の影響欄 | `frontend/Dockerfile:12-16` の第 1 段 `ENV VITE_*` が層に残るので、frontend は `cache-from`/`cache-to` を付けない。代償（毎回 `npm install`・`npm run build`）は便1 で測り K8 の関所に含める。短くする道は便4 の候補（`mode=min` は U20 の確認が先、または D6 で PO が Variables と決めたとき） |
 | 質問の絞り込み | §19 を §19-1（PO に聞く 4 件: 鍵 D1〜D4・D6／組織の画面 D7／dockerd 入れ直しの時間帯 D8・D11／workflow-lint D13）と §19-2（Opus が決めた D5・D9・D10・D12）に分けた。冒頭「親」・§1 の D10 の記述も「作る」に直した | D14（便0 の cron）は §20 の絞り込みに無い。便0 の prod1 の変更なので D8 と同じ件に置き、その旨を表に書いた（Opus の次の審査で外してよい） |
 
@@ -551,7 +551,7 @@ docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml p
 ## 22. 再審査（v2・2026-11-04 Opus）— APPROVE（設計合格）
 
 - 照合した版: 34bf2f921（差分 1fbc7df51..34bf2f921 を全文読んだ）。
-- A1: 呼び出し元 5 か所（`scripts/rehearsal_phase2.sh`・`scripts/test_rollback_simulation.sh`・`scripts/dry-run-blue-green.sh`・`tests/sandbox/ai-reader-audit.sh`・`deploy.yml:610`）が §12 便2 12.〜16. に入り、変える／変えない理由と、便2 の枝で `gh workflow run … --ref` を流して緑を確かめる方法が書かれた。§20 の `ai-reader-audit.sh:60` は誤りで、実物は `:34`（Fable の指摘どおり。§20 の grep が `-f` 付きの形を拾わなかった）。確かめ方は 17. の形に改めた — 合格。
+- A1: 呼び出し元 5 か所（`scripts/rehearsal_phase2.sh`・`scripts/test_rollback_simulation.sh`・`scripts/dry-run-blue-green.sh`・`tests/sandbox/ai-reader-audit.sh`・`.github/workflows/deploy.yml:610`）が §12 便2 12.〜16. に入り、変える／変えない理由と、便2 の枝で `gh workflow run … --ref` を流して緑を確かめる方法が書かれた。§20 の `tests/sandbox/ai-reader-audit.sh:60` は誤りで、実物は `:34`（Fable の指摘どおり。§20 の grep が `-f` 付きの形を拾わなかった）。確かめ方は 17. の形に改めた — 合格。
 - A2: compose は `${X:-<今の名前>}`、本番の守りは deploy の Step 2 の 5 行確認（exit 1）に一本化。§2・§5-2・§12・§14・§16 R13・§18・adr-draft の What と Scope が揃った — 合格。
 - A3: 便1 の完了条件 1.〜5.（20 回・sha で結ぶ・T' = T − S + B・中央値 ≤ 3.1 分のときだけ便2、超えたら便4 が先）。U19 の代替（S の上限で厳しめに測る）もある — 合格。
 - A4: frontend は `cache-from`/`cache-to` を付けない。代償は K8 の関所に入れる — 合格。
@@ -568,7 +568,7 @@ docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml p
 | 2026-11-04 | §19-1 件1 鍵（D1〜D4・D6） | 推奨どおり。案A（公開の置き場の classic PAT・`write:packages` だけ）。持ち主は PO 本人（shingo-ops）。期限は 180 日。受け取りの鍵（`read:packages`）は GitHub secret にだけ置き、prod1 には置かない。VITE は `VITE_FIREBASE_API_KEY`・`VITE_FUNNEL_DASHBOARD` を secret に、他 3 つを Variables に置く | 「1」 |
 | 2026-11-04 | §19-1 件2 組織の画面の設定（D7） | 推奨どおり 3 つとも行う。Package Creation を Private、classic PAT を許可のまま、最長期限を課す。設定は PO が組織の画面で行う。手順は便1 の直前に渡す | 「1」 |
 | 2026-11-04 | §19-1 件3 dockerd 入れ直し（D8・D11・D14） | live-restore を先に入れてから入れ直す（D8）。dockerd のメモリを自動で記録する（D14）。時間帯は「夜中」をやめ、PO が起きて見守れる昼の 14:00〜16:00（日本時間）にする（D8・D11）。作業は台本で機械が行い、PO は見守るだけ。作業中は本番への入れ替え（deploy）を止める。根拠は external-cases-dockerd.md §4・§5 | 「1、昼間が適切、海外とのやり取りのため夜間に使う頻度が多い、14〜16時、4時〜6時のどちらか」 |
-| 2026-11-04 | §19-1 件4 workflow-lint（D13） | 推奨どおり足す。便3 で `workflow-lint.yml` に「deploy.yml に `docker compose build`・`docker build` の文字列が無い」規則を足す | 「1」 |
+| 2026-11-04 | §19-1 件4 workflow-lint（D13） | 推奨どおり足す。便3 で `.github/workflows/workflow-lint.yml` に「deploy.yml に `docker compose build`・`docker build` の文字列が無い」規則を足す | 「1」 |
 
 - 鍵を作る手順は、便1 の実装を始める直前に PO へ渡す。早く作ると、使わないまま 180 日の期限が進むため。
 - §19-1 の 4 件はすべて決まった（2026-11-04）。

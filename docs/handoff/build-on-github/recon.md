@@ -34,7 +34,7 @@
 - `dockerd` の詳細（PO の `!` で読み取り）:
   - 起動 2026-09-20 13:54:26（以後入れ直しなし）
   - VmRSS 1,913,336 kB・VmSwap 386,620 kB・Threads 22
-  - `/etc/docker/daemon.json` は無い（すべて既定の設定）
+  - /etc/docker/daemon.json は無い（すべて既定の設定）
   - Docker 29.4.0・Storage Driver overlayfs（containerd snapshotter）・Logging Driver json-file・箱 17・完成品 15
   - 2026-11-04 11:18〜11:20 の記録に、入れ替えと「exporting to image」（組み立て）がある
 - 入れ替えの回数（`gh run list --workflow deploy.yml`）: 2026-10-09〜11-04 の 25.1 日で 1,000 回（success 996）。1日最多 87 回（10/17）。実行時間の合計 3,910 分（30 日換算 4,664 分）・中央値 3.1 分。
@@ -55,7 +55,7 @@
 - 【未確認】外部の人の変更の提案で自動作業を動かすときの承認設定（API が 403）。
 
 ## 5. 外部の申し出で動く自動作業【事実】
-- `pull_request_target` を使うのは 2 つ: `.github/workflows/auto-merge-guard.yml:15`・`.github/workflows/guard-authoring-gate.yml:16`。どちらも提案側のコードを動かさない（`auto-merge-guard.yml:7`・`guard-authoring-gate.yml:53` の注記）。
+- `pull_request_target` を使うのは 2 つ: `.github/workflows/auto-merge-guard.yml:15`・`.github/workflows/guard-authoring-gate.yml:16`。どちらも提案側のコードを動かさない（`.github/workflows/auto-merge-guard.yml:7`・`.github/workflows/guard-authoring-gate.yml:53` の注記）。
 
 ## 6. 完成品に入る値【事実】
 - Dockerfile は 8 個・.dockerignore は 2 個（backend・frontend）。
