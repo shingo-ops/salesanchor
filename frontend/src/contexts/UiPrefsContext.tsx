@@ -43,7 +43,7 @@ export const DEFAULT_UI_PREFS: UiPrefs = {
   show_sales_menu: true,
   show_settings_menu: true,
   // show_admin_menu のデフォルトは false だが、未紐づけ・取得失敗時は安全側で
-  // staff レコードが存在しないユーザ＝Firebase Auth 経由 admin の可能性が高いので
+  // staff レコードが存在しないユーザ＝staff に紐づかない admin の可能性が高いので
   // 取得失敗時はあえて true にして詰みを防ぐ。明示的に false に設定したい場合は
   // /staff/me で正しく取得すれば override される。
   show_admin_menu: true,

@@ -6,10 +6,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import en from "../../locales/en.json";
 
 const api = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn() }));
-const provider = vi.hoisted(() => ({ self: true }));
 vi.mock("../../lib/api", () => ({ api }));
-vi.mock("../../lib/auth/provider", () => ({ isSelfAuth: () => provider.self }));
 
+import { registerDevSession } from "../../lib/auth/devSessionSlot";
+import { registerTestDevSession } from "../../test-utils/devSession";
 import LoginApprovalWatcher from "./LoginApprovalWatcher";
 
 let instance = createInstance();
@@ -35,7 +35,7 @@ function renderWatcher() {
 }
 
 beforeEach(async () => {
-  provider.self = true;
+  registerDevSession(null);
   api.get.mockReset();
   api.post.mockReset().mockResolvedValue({});
   instance = createInstance();
@@ -51,8 +51,8 @@ describe("LoginApprovalWatcher", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
-  it("does nothing outside self login", () => {
-    provider.self = false;
+  it("does nothing in dev session", () => {
+    registerTestDevSession();
     renderWatcher();
     expect(api.get).not.toHaveBeenCalled();
   });

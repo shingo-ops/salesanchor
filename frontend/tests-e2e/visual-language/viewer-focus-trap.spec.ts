@@ -80,7 +80,7 @@ async function openProviderScreenWithFocusedCandidate(
 
   await page.setViewportSize(MOBILE);
 
-  // viewer はアプリ本体の Firebase Auth を使わず localStorage のトークンだけで判定する。
+  // viewer はアプリ本体のログインを使わず localStorage のトークンだけで判定する。
   // 値の重複を作らないため viewer-helpers の共通処理をそのまま使う（審査 N-4）
   await installViewerToken(page);
 

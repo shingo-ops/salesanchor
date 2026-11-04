@@ -6,8 +6,7 @@
  * - refresh は同時に 1 本だけ。同じタブは 1 つの Promise を共有し、タブの間は navigator.locks で順番にする
  *   （2 本同時に送ると 2 本目が失効済みになり、組ごと失効してログアウトになるため）。
  */
-import { auth } from "../firebase";
-import { isSelfAuth } from "./provider";
+import { getDevSession } from "./devSessionSlot";
 
 const AUTH_BASE = "/api/v1/auth";
 const REFRESH_LOCK_NAME = "sa-auth-refresh";
@@ -218,20 +217,16 @@ export async function selfConfirmPasswordReset(token: string, newPassword: strin
 
 /**
  * API に付けるトークンの取得口（唯一）。
- * 自社ログインのときはメモリのトークン（切れていたら refresh を 1 回）、それ以外は今の Firebase の ID トークン。
+ * 自社ログインのメモリのトークン（切れていたら refresh を 1 回）。開発用の偽ログインのときは、その偽のトークン。
  */
 export async function getAccessToken(): Promise<string> {
-  if (isSelfAuth()) return ensureSelfToken();
-  const user = auth.currentUser;
-  if (!user) {
-    // 文言の初期化（i18n）はここで初めて必要になるので、読み込みを遅らせる
-    const { default: i18n } = await import("../../i18n");
-    throw new Error(i18n.t("common.notAuthenticated"));
-  }
-  return user.getIdToken();
+  const dev = getDevSession();
+  if (dev) return dev.getAccessToken();
+  return ensureSelfToken();
 }
 
 /** ログイン中か（トークンを取る前の確認用）。 */
 export function hasSession(): boolean {
-  return isSelfAuth() ? session !== null : auth.currentUser != null;
+  const dev = getDevSession();
+  return dev ? dev.hasSession() : session !== null;
 }

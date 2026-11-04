@@ -11,7 +11,7 @@ import { Modal } from "../../components/Modal";
 import { Stack } from "../../components/Stack";
 import { useRealtimeRefresh } from "../../hooks/useRealtimeRefresh";
 import { api } from "../../lib/api";
-import { isSelfAuth } from "../../lib/auth/provider";
+import { isDevSession } from "../../lib/auth/devSessionSlot";
 import { TOPICS } from "../../lib/realtime/topics";
 
 export interface PendingLoginRequest {
@@ -31,7 +31,7 @@ interface PendingList {
 export const PENDING_FETCH_MIN_INTERVAL_MS = 5_000;
 
 export default function LoginApprovalWatcher() {
-  const selfMode = isSelfAuth();
+  const selfMode = !isDevSession();
   const { t, i18n } = useTranslation();
   const [items, setItems] = useState<PendingLoginRequest[]>([]);
   const [busy, setBusy] = useState(false);
