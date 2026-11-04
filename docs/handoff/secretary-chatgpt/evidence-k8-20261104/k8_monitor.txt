@@ -1,0 +1,30 @@
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+CONTAINER ID   NAME                             CPU %     MEM USAGE / LIMIT   MEM %     NET I/O           BLOCK I/O         PIDS
+07a12d575067   secretary-agent                  0.00%     48.65MiB / 512MiB   9.50%     796B / 126B       38.6MB / 0B       7
+6fea7790f217   ai-unmask-http                   0.16%     22.98MiB / 128MiB   17.96%    2.14kB / 252B     24.6kB / 0B       5
+465fecb37d8b   ai-reader-cloud-http             0.18%     22.96MiB / 128MiB   17.94%    2.5kB / 252B      639kB / 0B        5
+6d02cbcfe64e   ai-reader-http                   0.12%     25.59MiB / 128MiB   20.00%    2.89kB / 252B     10.4MB / 0B       5
+e8353fef4ca4   astro-webapp-gemini-egress-1     0.00%     3.195MiB / 128MiB   2.50%     10.2kB / 8.12kB   4.13MB / 750kB    1
+15d6584ca5e9   astro-webapp-celery-beat-1       0.00%     96.25MiB / 128MiB   75.20%    4.27kB / 7.22kB   270kB / 1.61MB    1
+0b7ed5258452   astro-webapp-frontend-1          0.00%     2.613MiB / 128MiB   2.04%     4.16kB / 6.36kB   3.75MB / 2.76MB   5
+cfba9832ee15   astro-webapp-celery-worker-1     0.17%     181.9MiB / 768MiB   23.69%    1.29MB / 1.4MB    12MB / 13.8MB     3
+b30df5e92636   astro-webapp-discord-gateway-1   0.00%     93.46MiB / 256MiB   36.51%    54.5kB / 32.7kB   9.13MB / 2.72MB   4
+b9043ed1ac75   astro-webapp-backend-1           0.13%     262.1MiB / 512MiB   51.20%    434kB / 891kB     74.7MB / 8.9MB    6
+1e377bef76d9   astro-webapp-nginx-1             0.00%     23.45MiB / 256MiB   9.16%     554MB / 670MB     955MB / 238MB     6
+03dd346ef51e   astro-webapp-postgres-1          65.21%    120.3MiB / 1GiB     11.74%    3.72GB / 24.2GB   150GB / 64GB      11
+61c3b13a296d   astro-webapp-gha-exporter-1      0.00%     40.72MiB / 128MiB   31.81%    112MB / 17.2MB    1.79GB / 1.15GB   6
+5b0e2c81b4d4   astro-webapp-redis-1             0.61%     5.301MiB / 320MiB   1.66%     18.1GB / 3.56GB   5.42GB / 21.5GB   7
+b7460a8e6234   astro-webapp-certbot-1           0.00%     404KiB / 128MiB     0.31%     2.33MB / 506kB    3.46GB / 23.3MB   2
+6c773397a5e2   astro-webapp-node-exporter-1     0.00%     14.78MiB / 64MiB    23.10%    296MB / 9.3GB     1.84GB / 108MB    7
+d3c82d8fc5ac   astro-webapp-promtail-1          0.47%     22.05MiB / 128MiB   17.22%    141MB / 954MB     9.48GB / 5.03GB   10
+               total        used        free      shared  buff/cache   available
+Mem:           3.8Gi       3.1Gi       122Mi        68Mi       973Mi       737Mi
+Swap:          2.0Gi       859Mi       1.2Gi
+Filesystem      Size  Used Avail Use% Mounted on
+tmpfs           392M  2.8M  389M   1% /run
+/dev/vda2        50G   26G   21G  56% /
+tmpfs           2.0G     0  2.0G   0% /dev/shm
+tmpfs           5.0M     0  5.0M   0% /run/lock
+tmpfs           392M  8.0K  392M   1% /run/user/1000
+tmpfs           392M  8.0K  392M   1% /run/user/999
+ 09:22:43 up 44 days, 19:28,  3 users,  load average: 1.86, 2.42, 1.69
