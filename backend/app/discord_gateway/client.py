@@ -111,7 +111,7 @@ class JarvisDiscordClient(discord.Client):
                 result = await session.execute(
                     text(
                         "SELECT tenant_id FROM public.tenant_discord_config"
-                        " WHERE guild_id = :gid LIMIT 1"
+                        " WHERE guild_id = :gid AND purpose = 'customer' LIMIT 1"
                     ),
                     {"gid": guild_id},
                 )

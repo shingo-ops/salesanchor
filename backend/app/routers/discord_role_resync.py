@@ -40,7 +40,7 @@ class RoleSyncResponse(BaseModel):
 @router.post(
     "/discord/sync-role/{lead_id}",
     response_model=RoleSyncResponse,
-    dependencies=[Depends(require_permission("leads.update"))],
+    dependencies=[Depends(require_permission("leads.discord_resync"))],
 )
 async def resync_discord_role(
     lead_id: int,

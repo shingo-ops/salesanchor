@@ -1,6 +1,6 @@
 # design: リードのカルテの Discord ボタンの出し分けと、Discord 操作の別権限
 
-- 状態: 段階A 設計合格（自己審査）／段階B 草案（PO の決定待ち）
+- 状態: 段階A 設計合格・本番反映済み／段階B 設計合格（自己審査）・データの変更とコードは未着手
 - 根拠: docs/handoff/discord-buttons-permission/recon.md、ADR-091、ADR-1007、docs/handoff/permission-keys-conditions-categories/design.md §11-6
 - 作成: 2026-11-04 Claude Opus（設計担当）。同一 AI の自己審査であり、独立した第二者レビューではない。
 
@@ -69,36 +69,73 @@
 
 PR を revert する。DB は変えない。
 
-## 3. 段階B（別の権限）草案
+## 3. 段階B（別の権限）
 
-### 3-1. 形
+PO の決定: 2026-11-04 チャット「3」（5 つに分ける）。調べた事実は recon.md §7。
 
-- public.permissions に新しい行を足す（category「リード」、description は日本語の文）。役割の編集画面は DB の description をそのまま出すので、画面のコードは変えない（recon §5-3）。
-- サーバーの 5 本の道の鍵を、新しい鍵に付け替える。画面の出し分け（§2）も同じ PR で新しい鍵に変える。
-- 所有者・システム管理者には、行を足すだけで届く（ADR-1007:48-51。最大 300 秒）。
+### 3-1. 新しい鍵（public.permissions に 5 行。category はすべて「リード」）
 
-### 3-2. PO に決めてもらうこと（1 件ずつ聞く）
+| 鍵 | ボタン | 今の鍵（付け替え前） | 役割の画面に出る文（description） |
+|---|---|---|---|
+| leads.discord_invite | チャンネル招待 | leads.update | Discord 専用チャンネルへの招待 |
+| leads.discord_resync | ロール再同期 | leads.update | Discord ロールの再同期 |
+| leads.discord_remove_channel | チャンネルから外す | leads.delete | Discord 専用チャンネルから外す |
+| leads.discord_kick | Kick | leads.delete | Discord サーバーからの退出（Kick） |
+| leads.discord_ban | BAN | leads.delete | Discord からの永久追放（BAN） |
 
-1. 権限の分け方
-   - 案1: 2 つ。「Discord に招待・再同期」と「Discord から外す・キック・BAN」。【推奨】止める操作は取り返しがつかないため、案内とは分ける。今の更新・削除の分け方と同じなので、移行で誰の権限も変わらない。
-   - 案2: 1 つ。「Discord の操作」で 5 つ全部。わかりやすいが、営業に招待だけ許す形が作れない。
-   - 案3: 5 つ。細かいが、役割の画面が長くなる。
-2. 最初に誰に付けるか（分け方が決まった後に聞く）
-   - 推奨: 今と同じ。招待・再同期は leads.update を持つ役割、外す系は leads.delete を持つ役割に付ける。誰のできることも変わらない。
+- 役割の画面（frontend/src/pages/roles/RolesPage.tsx）は DB の category で束ね、description をそのまま出す（recon §7-4）。「リード」は既にあるので、画面のコード・アイコン・辞書は変えない。
+- 所有者・システム管理者は、行を足すだけで 5 つとも届く（ADR-1007。最大 300 秒）。
 
-### 3-3. データの変更（ADR-1007 に従う）
+### 3-2. 最初に誰に付けるか（今と同じに写す）
 
-- 新しい行の追加と、§3-2 の 2 の役割への付与は、migration ではなく 1 回だけのデータの変更。docs/handoff/discord-buttons-permission/data-change-1/ に DRY-RUN と COMMIT の SQL と記録を残し、PO が `!` で流す。
-- 順番: データの変更（行と付与）→ 反映を確かめる → コードの PR（鍵の付け替え）。逆にすると、行の無い鍵をコードが求め、見張り（permission_keys_missing）が 0 でなくなり、営業などが一時的に押せなくなる。
+- 招待・再同期は、今 leads.update を持つ役割に付ける。外す・Kick・BAN は、今 leads.delete を持つ役割に付ける。
+- 誰のできることも変わらない。だから PO に別の判断を求めない（§3-2 草案の推奨どおり）。分け直しは、反映後に PO が役割の画面で自由にできる。
+- 001 の「点検用（見るだけ）」の役割（id 2611）も今 update・delete を持つので、そのまま写す（recon §7-6）。
 
-### 3-4. 受入（草案）
+### 3-3. データの変更（ADR-1007 に従う。migration にしない）
+
+- 置き場: docs/handoff/discord-buttons-permission/data-change-1/（README・00〜02・09）。
+- 1 つのトランザクションで、5 行を足し、5 社の役割へ写し、件数と写しのずれ 0 を DO ブロックで確かめる。違えば止まる。
+- 想定: 一覧 130→135。付与 001 は 22、003・004・005・006 は 17 ずつ（合計 90）。写しのずれはすべて 0。
+- 新しく作られる会社の役割は DEFAULT_ROLES（backend/app/services/tenant.py:50-185）で決まる。既存の会社には届かない（seed_system_roles は非システムの既存役割を上書きしない。tenant.py:1600-1655）ため、コードの PR で DEFAULT_ROLES にも足す。
+
+### 3-4. コードの変更（card-impl-2.md）
+
+- サーバー: 5 本の道の鍵を新しい鍵に付け替える（discord_channel_invite.py・discord_role_resync.py・discord_remove.py の 3 本）。
+- 画面: カルテの出し分けを新しい鍵に変える。外す系の 3 つは 1 つの部品にまとまっているので、部品にボタンごとの可否を渡す。
+- DEFAULT_ROLES: マネージャーに 5 つ、営業に招待・再同期の 2 つ（今の update・delete の持ち方と同じ）。
+- 試験: 道の鍵（pytest C5 の書き換えと C6 の追加）、既定の役割（pytest）、ボタン（vitest T1〜T4）。
+
+### 3-5. 順番（逆にしない）
+
+1. データの変更（DRY-RUN → 本実行 → 事後確認）。
+2. コードの PR を main へ合流し、本番に反映する。
+3. 001 で Chrome の目視（B1・B6）。
+
+逆にすると、行の無い鍵をコードが求め、営業などが一時的に押せなくなり、見張り（salesanchor_permission_keys_missing）が 0 でなくなる。
+
+### 3-6. 受入（○×）
 
 | 基準 | 検証方法 |
 |---|---|
-| B1 役割の編集画面の「リード」に新しい権限が出る | 001 で役割の画面を開いて目で見る |
-| B2 新しい権限を外した役割では、ボタンが出ず、道が 403 | 試験（pytest・vitest）と 001 の点検用の役割での確認 |
-| B3 移行の前後で、各役割のできることが同じ | データの変更の DRY-RUN の件数を recon §5-2 と照らす |
-| B4 見張りの値が反映後も 0 | Grafana の salesanchor_permission_keys_missing |
+| B1 役割の画面の「リード」に 5 つの文が出る | 001 で役割の画面を開いて目で見る |
+| B2 各鍵が自分のボタンだけを出し、鍵の無い道は 403 | vitest T4（5 通り）と pytest C6（道ごとの鍵） |
+| B3 移行の前後で各役割のできることが同じ | 02_verify_read.sql の写しのずれがすべて 0、付与 22/17/17/17/17 |
+| B4 見張りが反映後も 0 | Grafana の salesanchor_permission_keys_missing |
+| B5 CI が全部緑 | PR の checks |
+| B6 001 の所有者には 5 つとも出る | 反映後に Chrome で 001 のリードのカルテを開く（Discord のあるリードが無ければ試験 T3 で判定し、その旨を記録） |
+
+### 3-7. リスクと対処
+
+| リスク | 対処 |
+|---|---|
+| データとコードの順番を逆にする | §3-5。カードに「データの事後確認が合格するまで合流しない」と書く |
+| 写し漏れで誰かが押せなくなる | DO ブロックが会社ごとに件数とずれ 0 を確かめ、違えば巻き戻る |
+| 役割の画面が長くなる | 5 行増えるだけ。PO の選んだ分け方 |
+
+### 3-8. 戻し方
+
+コードの PR を revert して反映 → その後で data-change-1/09_rollback_*.sql で 5 行を消す（付与は ON DELETE CASCADE で一緒に消える。tenant.py:514）。逆にしない。
 
 ## 4. 外部・過去事例の参照と我々への応用
 
@@ -115,4 +152,7 @@ PR を revert する。DB は変えない。
 - 段階A 判定: APPROVE（設計合格）。
   - 確かめたこと: 5 つのボタンの行と、サーバーの 5 本の道の鍵を 7d56ab771 の実物で読んだ。5 社の役割の保有を本番の読み取りで確かめた。usePermissions が写しの置き場を共有し、通信が増えないことを実物で読んだ。i18n・部品・色の新設が無い（隠すだけ）。データの写しを作らない。
   - 未解決: なし。
-- 段階B 判定: REVISE（PO の決定 §3-2 が要る）。
+- 段階B 判定: APPROVE（設計合格）。
+  - 確かめたこと: PO の決定「3」。5 本の道の鍵と画面の 3 か所を 89d3320ed の実物で読んだ。本番の読み取りで、一覧 130 行・新しい鍵 0 行・5 社の update/delete の保有を数えた（recon §7-2、事前確認 AUDIT 0da6dd665f2d）。02_verify_read.sql を変更前に流し、想定どおり付与 0・ずれ＝役割の数となることを確かめた（AUDIT c80c0e888af8）。役割の画面が category と description をそのまま出すこと、CI の見張り（C2）が DB と照らさず本番の Grafana だけが照らすこと（よって順番はデータが先）を実物で読んだ。
+  - 未確認: DRY-RUN はまだ流していない（PO の使い捨て許可が要る）。DRY-RUN の結果が想定と違えば、本実行もコードも止める。
+  - 未解決: なし。

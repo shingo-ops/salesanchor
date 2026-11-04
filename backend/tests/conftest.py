@@ -1228,10 +1228,14 @@ async def setup_test_db(test_engine):
         # Sprint 8 / F8: テナント発行者情報 (PO PDF / メール差出人)
         await conn.execute(text("""
             CREATE TABLE IF NOT EXISTS tenant_discord_config (
-                tenant_id INTEGER PRIMARY KEY,
+                tenant_id INTEGER NOT NULL,
+                purpose   VARCHAR(16) NOT NULL DEFAULT 'customer',
                 guild_id  VARCHAR(32) NOT NULL,
+                connected_by_staff_id INTEGER,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (tenant_id, purpose),
+                UNIQUE (guild_id)
             )
         """))
         await conn.execute(text("""
@@ -1824,6 +1828,7 @@ ALL_TEST_PERMISSIONS = {
     "roles.view", "roles.create", "roles.update", "roles.delete", "roles.assign",
     "customers.view", "customers.create", "customers.update", "customers.delete",
     "leads.view", "leads.create", "leads.update", "leads.delete", "leads.convert",
+    "leads.discord_invite", "leads.discord_resync", "leads.discord_remove_channel", "leads.discord_kick", "leads.discord_ban",
     "deals.view", "deals.create", "deals.update", "deals.delete",
     "orders.view", "orders.create", "orders.update", "orders.delete",
     "teams.view", "teams.create", "teams.update", "teams.delete", "teams.manage_members",

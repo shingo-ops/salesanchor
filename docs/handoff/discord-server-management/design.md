@@ -233,6 +233,12 @@
 | 画面の文字が t() 経由・ja/en 同じキー | 既存の i18n 検査（CI） |
 | 消す処理が無い | 試験で discord_own_server.py（新規） に `"DELETE"` の Discord 呼び出しが無いこと |
 
+改訂2（2026-11-04、便1b のカード作成時の実物確認による。Opus の技術判断）
+- 3 行目の検証方法を「自社用に 1 回書いて 部屋の外の通知 0 件・受け取り係の記録に `unknown guild_id=<自社用サーバーの番号> — 未登録 guild のため無視` 1 行」に読み替える。§4-3 改訂1 で専用の記録の一文を作らないことにしたため（事実：`backend/app/discord_gateway/client.py:411-416` に今ある一文）
+- 同じサーバーを二重に登録しようとしたとき（`uq_tenant_discord_config_guild_id` に当たる）、今は 500 になる。便1b で招待の戻りがこれを受け、`reason=guild_already_registered` で画面に返す（顧客用・自社用の両方。成功の道は変えない）
+- 自社用の招待の開始は、`channels.manage` に加えて `tenant.profile.edit` も要る（§4-9 の「変えるのは tenant.profile.edit」と揃える）。既存の `require_permission` はどれか 1 つで通る形なので、`load_user_permissions`（`backend/app/auth/dependencies.py:598`）で 2 つ目を確かめる
+- 実装カード：docs/handoff/discord-server-management/card-bin1b-own-server-register.md
+
 ## 9. 外部・過去事例の参照と我々への応用
 
 - HashiCorp Terraform の公式文書（Context7 `/websites/developer_hashicorp_terraform` で 2026-11-04 に確認）
