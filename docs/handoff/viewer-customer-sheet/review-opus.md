@@ -54,3 +54,13 @@
 - LOW-3: PR 本文に「PO の実装承認はマージ・本番反映の GO を兼ねない」の一文が無かった。便1 の実装 PR の本文から入れる。
 - 補ったこと: 管理画面に請求先を出すには読む口が要るが、design.md §3-5 に書いていなかった。GET /api/v1/super-admin/viewers/{viewer_id}/billing-profile（super admin だけ・行が無ければ null）を design.md §3-5 と card-bin2.md §3-3 に足した。新しい表・新しい正本は増えない（読むのは viewer_billing_profiles の1か所）。
 - 便2 カードの手順3（対象ファイルが基準 d948cf9c7 から変わっていないか）を 2026-11-04 に origin/main で流し、差分は空だった。
+
+## 6. 便2 カードの文書 PR（#5129）の審査（2026-11-05・HEAD fb62006 で REQUEST_CHANGES）と直したこと
+
+- HIGH-1: フォームの2本が、入口の見張りの試験（backend/tests/test_viewer_isolation.py）に入っていなかった。このまま作ると、2本が Origin なしで 403 を返して試験が落ちる。直し方は「トークンを見ない公開の入口」として _PUBLIC_NO_AUTH_ROUTES（:27〜:62）に足す案を採った。理由: その一覧の定義（:23）に当てはまり、同じ形の B2B の請求先フォーム（:58 change-billing）が既にそこにある。VIEWER_ROUTE_ALLOWLIST に足す案は、Accepted の ADR-1019 決定5（7本）を変えるので採らない。design.md §3-6・§3-7、card-bin2.md §2・§3-3・§3-6・手順8 に足した。
+- MEDIUM-1: 「名簿の email の CHECK と同じ形」は実在しない（名簿の email は TEXT NOT NULL だけ）。参照の文を消し、CHECK の式をカードに書いた。
+- LOW-1・LOW-2: 部屋への送り方を notify_prepared（viewer_room_notice.py:69）に揃えた。room_notice_text は sent のときも返る（今の状態変更の応答と同じ）。
+- LOW-3: カード手順2 の期待を、git grep -c の実際の出方（一致0件なら何も出ず exit 1）に合わせた。
+- LOW-4: 管理画面で請求先を読む口（GET billing-profile）は、PO 承認済みの「管理画面で請求先を見る」（§3-5）を実現する読み取りだけで、新しい正本を増やさない。PO の再承認は要らないと判断した。
+- LOW-5: ADR-1019:9 の関連欄の句読点を直した。
+- LOW-6: カードの PO の選択肢の原文引用を、選んだ内容の要約に替えた。
