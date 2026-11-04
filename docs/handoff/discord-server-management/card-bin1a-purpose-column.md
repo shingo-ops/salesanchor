@@ -25,7 +25,9 @@
 
 ## §0 準備
 
-- リポジトリの根で `./scripts/dev/executor-preflight.sh` を流し、生出力を報告書に貼る。失敗したら停止して BLOCKED で報告
+- リポジトリの根で `./scripts/dev/executor-preflight.sh` を流し、生出力を報告書に貼る
+  - 手元の Mac で動かすとき: 失敗したら停止して BLOCKED で報告
+  - クラウドで動かすとき（改訂1・2026-11-04）: クラウドには gh が無く、GitHub API にも届かない。このため [1/3] network と [2/3] gh auth の FAIL は起こるものとして、生出力を貼るだけで先へ進む。[3/3] git config user.name と [4/4] origin/main が OK でなければ停止して BLOCKED。GitHub へ届くかは §4 の git push が通るかで確かめる（実際に 2026-11-04 のクラウド実行で [1/3][2/3] が FAIL、[3/3][4/4] が OK だった）
 - `git fetch origin` のあと `release/discord-own-server-bin1a` を取り出す（新しく作らない）
 
 ## §1 migrations/20261105_100000_tenant_discord_config_purpose.sql（新規）
@@ -107,7 +109,7 @@ run_sql migrations/20261105_100000_tenant_discord_config_purpose.sql
 
 ## 想定分岐（停止の条件）
 
-- preflight が失敗した → 停止。BLOCKED: と生出力
+- preflight が失敗した → 停止。BLOCKED: と生出力（クラウドでは [1/3][2/3] の FAIL を除く。§0 のとおり）
 - migrations/ に 20261105_100000 で始まるファイルが既にある → 停止。BLOCKED: とファイル名
 - run_all_migrations.sh の末尾の形が「run_sql migrations/…」の並びでない → 停止。BLOCKED: と末尾 20 行
 - 触ってよいファイル以外を変えたくなった → 変えずに停止。NEEDS_DECISION: と理由
