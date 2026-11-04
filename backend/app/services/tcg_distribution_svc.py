@@ -30,6 +30,7 @@ from datetime import datetime, timezone
 from typing import Any, Literal
 
 from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
@@ -698,26 +699,58 @@ def _write_to_target_sync(
 # 配信先 CRUD
 # ---------------------------------------------------------------------------
 
+class ViewerSheetConflictError(Exception):
+    """その人にはもうシートがある（部分一意索引 uq_tcg_distribution_targets_viewer_account_id）。"""
+
+
+class ViewerAccountNotFoundError(Exception):
+    """viewer_account_id が閲覧者の名簿に無い（外部キー違反）。"""
+
+
+_VIEWER_UNIQUE_INDEX = "uq_tcg_distribution_targets_viewer_account_id"
+
+# 配信するかの判定はこの SELECT の CASE 1か所だけ（ほかに判定を書き写さない）。
+# 理由は1つだけ: manual_off → suspended → not_contracted の順。
+def _target_select() -> str:
+    """配信先の SELECT。TCG_SCHEMA は呼び出し時に読む（試験が差し替えるため）。"""
+    return f"""
+        SELECT x.*, (x.reason IS NULL) AS deliverable
+        FROM (
+            SELECT t.id, t.name, t.spreadsheet_id, t.sheet_name, t.review_sheet_name, t.is_active,
+                   t.sa_key_secret_name, t.last_distributed_at, t.last_distributed_count,
+                   t.last_result, t.created_at, t.updated_at, t.viewer_account_id,
+                   CASE
+                        WHEN NOT t.is_active THEN 'manual_off'
+                        WHEN va.status = 'suspended' THEN 'suspended'
+                        WHEN t.viewer_account_id IS NOT NULL AND va.status <> 'active' THEN 'not_contracted'
+                   END AS reason
+            FROM {TCG_SCHEMA}.tcg_distribution_targets t
+            LEFT JOIN public.viewer_accounts va ON va.id = t.viewer_account_id
+        ) x
+"""
+
+
+def _raise_viewer_link_error(exc: IntegrityError) -> None:
+    """IntegrityError を SQLSTATE で分ける。23505（索引名一致）→409用、23503→422用、他はそのまま上げる。"""
+    orig = getattr(exc, "orig", None)
+    sqlstate = getattr(orig, "sqlstate", None) or getattr(orig, "pgcode", None)
+    if sqlstate is None:
+        sqlstate = getattr(getattr(orig, "__cause__", None), "sqlstate", None)
+    if sqlstate == "23505" and _VIEWER_UNIQUE_INDEX in str(orig):
+        raise ViewerSheetConflictError() from exc
+    if sqlstate == "23503":
+        raise ViewerAccountNotFoundError() from exc
+    raise exc
+
+
 async def list_targets(db: AsyncSession) -> list[dict]:
-    result = await db.execute(text(f"""
-        SELECT id, name, spreadsheet_id, sheet_name, review_sheet_name, is_active,
-               sa_key_secret_name, last_distributed_at, last_distributed_count,
-               last_result, created_at, updated_at
-        FROM {TCG_SCHEMA}.tcg_distribution_targets
-        ORDER BY name
-    """))
+    result = await db.execute(text(f"{_target_select()} ORDER BY x.name"))
     return [dict(row) for row in result.mappings()]
 
 
 async def get_target(db: AsyncSession, target_id: str) -> dict | None:
     result = await db.execute(
-        text(f"""
-            SELECT id, name, spreadsheet_id, sheet_name, review_sheet_name, is_active,
-                   sa_key_secret_name, last_distributed_at, last_distributed_count,
-                   last_result, created_at, updated_at
-            FROM {TCG_SCHEMA}.tcg_distribution_targets
-            WHERE id = :id
-        """),
+        text(f"{_target_select()} WHERE x.id = :id"),
         {"id": target_id},
     )
     row = result.mappings().first()
@@ -725,32 +758,37 @@ async def get_target(db: AsyncSession, target_id: str) -> dict | None:
 
 
 async def create_target(db: AsyncSession, data: dict) -> dict:
-    result = await db.execute(
-        text(f"""
-            INSERT INTO {TCG_SCHEMA}.tcg_distribution_targets
-                (name, spreadsheet_id, sheet_name, is_active, sa_key_secret_name)
-            VALUES
-                (:name, :spreadsheet_id, :sheet_name, :is_active, :sa_key_secret_name)
-            RETURNING id, name, spreadsheet_id, sheet_name, is_active,
-                      sa_key_secret_name, last_distributed_at, last_distributed_count,
-                      last_result, created_at, updated_at
-        """),
-        {
-            "name": data["name"],
-            "spreadsheet_id": data["spreadsheet_id"],
-            "sheet_name": data["sheet_name"],
-            "is_active": data.get("is_active", True),
-            "sa_key_secret_name": data.get("sa_key_secret_name", "TCG_SHEETS_SA_KEY_FILE"),
-        },
-    )
-    await db.commit()
-    row = result.mappings().first()
-    return dict(row)
+    try:
+        result = await db.execute(
+            text(f"""
+                INSERT INTO {TCG_SCHEMA}.tcg_distribution_targets
+                    (name, spreadsheet_id, sheet_name, is_active, sa_key_secret_name, viewer_account_id)
+                VALUES
+                    (:name, :spreadsheet_id, :sheet_name, :is_active, :sa_key_secret_name, :viewer_account_id)
+                RETURNING id
+            """),
+            {
+                "name": data["name"],
+                "spreadsheet_id": data["spreadsheet_id"],
+                "sheet_name": data["sheet_name"],
+                "is_active": data.get("is_active", True),
+                "sa_key_secret_name": data.get("sa_key_secret_name", "TCG_SHEETS_SA_KEY_FILE"),
+                "viewer_account_id": data.get("viewer_account_id"),
+            },
+        )
+        new_id = result.scalar_one()
+        await db.commit()
+    except IntegrityError as exc:
+        await db.rollback()
+        _raise_viewer_link_error(exc)
+        raise
+    # 判定を書き写さないため、書いた後は get_target で読み直して返す
+    return await get_target(db, str(new_id))  # type: ignore[return-value]
 
 
 async def update_target(db: AsyncSession, target_id: str, data: dict) -> dict | None:
     # 更新可能フィールドのみ
-    allowed = {"name", "spreadsheet_id", "sheet_name", "is_active", "sa_key_secret_name"}
+    allowed = {"name", "spreadsheet_id", "sheet_name", "is_active", "sa_key_secret_name", "viewer_account_id"}
     updates = {k: v for k, v in data.items() if k in allowed}
     if not updates:
         return await get_target(db, target_id)
@@ -759,27 +797,33 @@ async def update_target(db: AsyncSession, target_id: str, data: dict) -> dict | 
     updates["id"] = target_id
     updates["updated_at"] = datetime.now(timezone.utc)
 
-    result = await db.execute(
-        text(f"""
-            UPDATE {TCG_SCHEMA}.tcg_distribution_targets
-            SET {set_clause}, updated_at = :updated_at
-            WHERE id = :id
-            RETURNING id, name, spreadsheet_id, sheet_name, is_active,
-                      sa_key_secret_name, last_distributed_at, last_distributed_count,
-                      last_result, created_at, updated_at
-        """),
-        updates,
-    )
-    await db.commit()
-    row = result.mappings().first()
-    return dict(row) if row else None
+    try:
+        result = await db.execute(
+            text(f"""
+                UPDATE {TCG_SCHEMA}.tcg_distribution_targets
+                SET {set_clause}, updated_at = :updated_at
+                WHERE id = :id
+                RETURNING id
+            """),
+            updates,
+        )
+        row = result.first()
+        await db.commit()
+    except IntegrityError as exc:
+        await db.rollback()
+        _raise_viewer_link_error(exc)
+        raise
+    if row is None:
+        return None
+    return await get_target(db, target_id)
 
 
 async def soft_delete_target(db: AsyncSession, target_id: str) -> bool:
+    # is_active=false と viewer_account_id=NULL を同じ UPDATE の1文で（同じ人の新しいシートを登録できるように）
     result = await db.execute(
         text(f"""
             UPDATE {TCG_SCHEMA}.tcg_distribution_targets
-            SET is_active = FALSE, updated_at = NOW()
+            SET is_active = FALSE, viewer_account_id = NULL, updated_at = NOW()
             WHERE id = :id
             RETURNING id
         """),
@@ -988,10 +1032,10 @@ async def run_distribution(
     # 3. 配信先取得
     if target_id:
         target = await get_target(db, target_id)
-        targets = [target] if target and target["is_active"] else []
+        targets = [target] if target and target["deliverable"] else []
     else:
         all_targets = await list_targets(db)
-        targets = [t for t in all_targets if t["is_active"]]
+        targets = [t for t in all_targets if t["deliverable"]]
 
     if not targets:
         return {

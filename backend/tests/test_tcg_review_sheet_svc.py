@@ -196,7 +196,8 @@ async def _run(targets, *, review_result=None, review_collect=None, dist_write=N
 
 def _target(name: str, review_sheet_name):
     return {"id": f"id-{name}", "name": name, "spreadsheet_id": "sid", "sheet_name": "在庫集計",
-            "review_sheet_name": review_sheet_name, "is_active": True}
+            "review_sheet_name": review_sheet_name, "is_active": True,
+            "deliverable": True, "reason": None}
 
 
 @pytest.mark.asyncio

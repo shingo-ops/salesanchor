@@ -122,7 +122,7 @@ async def test_commit_delegates_existing_review_gate():
 
 async def test_inspection_never_returns_names_or_sheet_addresses():
     job = {'unresolved_names': ['PRIVATE SENDER'], 'message_count': 2}
-    target = {'id': uuid4(), 'is_active': True, 'last_distributed_at': None,
+    target = {'id': uuid4(), 'is_active': True, 'deliverable': True, 'reason': None, 'last_distributed_at': None,
               'last_distributed_count': None, 'last_result': None,
               'name': 'PRIVATE TARGET', 'spreadsheet_id': 'PRIVATE SHEET ID'}
     with patch.object(admin, 'authorize', new=AsyncMock(return_value=job)), \
