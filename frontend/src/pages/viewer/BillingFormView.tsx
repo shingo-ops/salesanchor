@@ -4,6 +4,7 @@ import type { FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/Button";
 import { EmptyState } from "../../components/EmptyState";
+import { LoadingBlock } from "../../components/loading";
 import { Radio } from "../../components/Radio";
 import { TextField } from "../../components/TextField";
 import { ViewerApiError, openBillingForm, submitBillingForm } from "./api";
@@ -89,7 +90,7 @@ export function BillingFormView({ token }: BillingFormViewProps) {
   if (step === "opening") {
     return (
       <div className="viewer-center" aria-live="polite" data-testid="viewer-billing-opening">
-        {t("viewer.loading")}
+        <LoadingBlock />
       </div>
     );
   }
