@@ -1,7 +1,7 @@
 # design: Firebase を画面とサーバーから全部外す（ADR-1013 便6）
 
 - 書いた日: 2026-11-04（Opus）
-- 状態: 設計案作成済み → 自己審査（§10）済み → クラウドの設計審査 1 回目 REVISE・2 回目 REVISE（重い指摘 0・中 2・軽い 5。2026-11-04）→ 指摘を直した 3 回目の審査待ち → PO の設計承認待ち。実装は未着手。
+- 状態: 設計案作成済み → 自己審査（§10）済み → クラウドの設計審査 1 回目 REVISE・2 回目 REVISE（重い指摘 0・中 2・軽い 5。2026-11-04）→ 3 回目 APPROVE（重い・中 0、軽い 2 は直した。2026-11-04）→ PO の設計承認待ち。実装は未着手。
 - PO の進める判断: 2026-11-04「1」。Opus が出した選択肢は「Firebase を画面とサーバーから全部外す設計に進む【おすすめ】　裏口のもとになる部品がなくなります。Firebase に残っている利用者の削除は元に戻せないので、その前に改めて確認をお願いします。」。
 - 根拠: [recon.md](./recon.md)（`docs/handoff/firebase-removal/recon.md`。以下 R 番号はこの recon を指す）。
 - 親 ADR: ADR-1013（Decision 6・Consequences）。前の便: `docs/handoff/block-firebase-token/design.md`。元の便6 の行: `docs/handoff/auth-self-hosted-passkey/design.md:160`。
@@ -119,7 +119,7 @@ Firebase は使わない設定に切り替えた（PO 2026-11-04「firebaseは�
 - 注記だけの所（R10・R32）の文を、事実に合わせて直す。`backend/app/main.py:183` の注記を直し、`:184` の `self_tokens.validate_settings()` の呼び出しは残す。ほかに `cache.py`・`line_device_admin.py`・`middleware/session_guard.py`・`routers/leads.py`・`routers/line_import_devices.py`・`routers/staff.py`・`routers/auth.py`・`services/review_mail_notifier.py` の Firebase の文字を、カードで 1 行ずつ「コード」か「注記」かを分けて直す。
 - API の説明文が変わる（`schemas/auth.py:19`・`routers/auth.py:80`・`:186`・`routers/staff.py:265-271` の文が `frontend/api-contract/openapi.json:37858`・`:41323`・`:41950`・`:58540` の description になっている）ので、`cd backend && ENVIRONMENT=test python -m tools.export_openapi ../frontend/api-contract/openapi.json` で `frontend/api-contract/openapi.json` を作り直して同じ PR に入れる（`.github/workflows/api-contract-check.yml:35`・`:53`）。
 - 運用スクリプト（R4・R8・R19）:
-  - `scripts/setup_review_tenant.py`: Firebase の利用者を作る所を、`backend/app/auth/passwords.py:20` の `hash_password` で `users.password_argon2_hash` を書く形に変える。Firebase を使う関数（`_init_firebase`・`_firebase_get_uid`・`_firebase_create_user`・`_firebase_update_password`）は関数ごと消し、`firebase_uid` を受け渡す所（:231・:256・:273・:289・:351・:369・:483・:487・:491）と注記（:18・:24・:37・:296・:455・:459・:469・:490）も消す。`backend/tests/test_setup_review_tenant.py` を合わせる。
+  - `scripts/setup_review_tenant.py`: Firebase の利用者を作る所を、`backend/app/auth/passwords.py:20` の `hash_password` で `users.password_argon2_hash` を書く形に変える。Firebase を使う関数（`_init_firebase`・`_firebase_get_uid`・`_firebase_create_user`・`_firebase_update_password`）は関数ごと消し、`firebase_uid` を受け渡す所（:231・:256・:273・:289・:351・:369・:483・:487・:491）と注記（:18・:24・:37・:296・:455・:459・:469・:490）も消す。終わりの条件は「このファイルの `firebase`（大小無視）が 0 件」（import :55-56・見出し :93・:350・:352・呼ぶ所 :472-480 も含む）。すでにいる利用者かどうかは `users` で判定し、`password_argon2_hash` は新しく作るときか、`ALLOW_REVIEW_TENANT_PASSWORD_RESET` を指定したときだけ書く（今の動き `:452-487` を引き継ぐ）。`backend/tests/test_setup_review_tenant.py` を合わせる。
   - `scripts/setup_single_test_user.py`・`scripts/setup_test_users.py`: 消す。呼ぶ所はリポジトリに無く、中身は Firebase の利用者を作ることだけ（R19 の検索）。
   - `scripts/setup_tenant.py:29`・`:471`: 「Firebase ユーザーを作る」の案内を、初回設定メールの案内に直す。
   - `backend/scripts/CLAUDE.md`・`backend/AGENTS.md:8` の手順を合わせる。
@@ -247,7 +247,7 @@ Firebase は使わない設定に切り替えた（PO 2026-11-04「firebaseは�
 
 ## 10. 設計審査（同じ Opus が自分で審査した。独立した審査ではない）
 
-判定: APPROVE（クラウドの設計審査の 2 回目の結果で改める）。
+判定: APPROVE（クラウドの設計審査の 3 回目 APPROVE。2026-11-04）。
 
 - 1 回目のクラウドの設計審査（2026-11-04）は REVISE。指摘と直した所:
   - 重い 1: 開発での動き方が決まっていなかった → §5-1 の表で、今止まっている機能（R28）を外した後も止めたままにすると決めた。判定は `isDevSession()` の 1 つにした。
@@ -259,6 +259,7 @@ Firebase は使わない設定に切り替えた（PO 2026-11-04「firebaseは�
   - 中 1: `schemas/auth.py` に `firebase_uid` は無かった → :19 の説明文を直すと書き、openapi.json を作り直す理由を description の 4 か所に直した（§5-2）。
   - 中 2: `seed-tenant.sql:21-23` の注記が K9 に残る → 消すと書き足した（§5-4）。
   - 軽い: §8-2 に `docs/external-state-contract.yml` の例外を書いた。`setup_review_tenant.py` は関数ごと消すと書き、行を全部載せた。「recon8」を R4・R8・R19 に直した。K4 の deploy 後の見方を celery のログの語で書いた。120 個と 119 個の差を §8-1 に書いた。
+- 3 回目のクラウドの設計審査（2026-11-04）は APPROVE。2 回目の指摘 7 件が直り、1・2 回目に確かめた所も崩れていないと確かめられた。軽い 2 件（`setup_review_tenant.py` の行の漏れ、パスワードを書き直す条件）は §5-2 に書き足した。
 - 既存の仕様との整合:
   - ADR-1013 Decision 6（削除は最後・PO の GO）は便5 の順序と同意票で守る。
   - ADR-1051 D5 の資産には、`seed-tenant.sql` の列の 1 か所の他は触らない。
