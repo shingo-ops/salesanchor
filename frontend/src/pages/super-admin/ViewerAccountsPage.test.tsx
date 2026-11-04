@@ -4,13 +4,15 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { api, ApiError } from "../../lib/api";
 import { useSuperAdmin } from "../../hooks/useSuperAdmin";
 import i18n from "../../i18n";
+import { queryClient } from "../../lib/query/apiQuery";
 import ViewerAccountsPage from "./ViewerAccountsPage";
 
 vi.mock("../../lib/api", async () => {
   const actual = await vi.importActual<typeof import("../../lib/api")>("../../lib/api");
-  return { ...actual, api: { get: vi.fn(), post: vi.fn(), patch: vi.fn() } };
+  return { ...actual, api: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), put: vi.fn() } };
 });
 vi.mock("../../hooks/useSuperAdmin", () => ({ useSuperAdmin: vi.fn() }));
+vi.mock("../../contexts/AuthContext", () => ({ useAuth: () => ({ user: { uid: "user-a" } }) }));
 
 const v = (over: Record<string, unknown>) => ({
   id: 1,
@@ -47,11 +49,13 @@ function renderPage(entry = "/") {
 }
 
 beforeEach(async () => {
+  queryClient.clear();
   vi.resetAllMocks();
   await i18n.changeLanguage("en");
   vi.mocked(useSuperAdmin).mockReturnValue({ loading: false, isSuperAdmin: true });
   vi.mocked(api.get).mockImplementation(async (path: string) => {
     if (path === "/super-admin/viewers") return { items: ITEMS };
+    if (path === "/tcg/distribution/targets") return [];
     return { items: [] };
   });
 });
@@ -104,6 +108,7 @@ it("shows the open room link only in the detail of rows that have a discord_chan
         ],
       };
     }
+    if (path === "/tcg/distribution/targets") return [];
     return { items: [] };
   });
   renderPage();
@@ -192,6 +197,7 @@ const MIXED = [
 function mockMixed() {
   vi.mocked(api.get).mockImplementation(async (path: string) => {
     if (path === "/super-admin/viewers") return { items: MIXED };
+    if (path === "/tcg/distribution/targets") return [];
     return { items: [] };
   });
 }
@@ -316,6 +322,7 @@ it("hides Reissue on rows that already have a Discord room", async () => {
         ],
       };
     }
+    if (path === "/tcg/distribution/targets") return [];
     return { items: [] };
   });
   renderPage();
@@ -489,6 +496,7 @@ it("K6: detail footer has a template select and copy button; copy is disabled un
   vi.mocked(api.get).mockImplementation(async (path: string) => {
     if (path === "/super-admin/viewers") return { items: ITEMS };
     if (path === TEMPLATE_PATH(1, "room_recreated")) return { text: "ROOM TEXT t1" };
+    if (path === "/tcg/distribution/targets") return [];
     return { items: [] };
   });
   renderPage();
@@ -530,6 +538,7 @@ it.each([
   vi.mocked(api.get).mockImplementation(async (path: string) => {
     if (path === "/super-admin/viewers") return { items: ITEMS };
     if (path.includes("/template-text")) throw new ApiError("x", status, null);
+    if (path === "/tcg/distribution/targets") return [];
     return { items: [] };
   });
   renderPage();
@@ -543,6 +552,7 @@ it("K9: choosing another row resets the selected template and its error", async 
   vi.mocked(api.get).mockImplementation(async (path: string) => {
     if (path === "/super-admin/viewers") return { items: ITEMS };
     if (path.includes("/template-text")) throw new ApiError("x", 503, null);
+    if (path === "/tcg/distribution/targets") return [];
     return { items: [] };
   });
   renderPage();
@@ -553,4 +563,75 @@ it("K9: choosing another row resets the selected template and its error", async 
   fireEvent.click(within(row("Sato")).getByText("Sato"));
   await waitFor(() => expect((screen.getByTestId("viewers-detail-template") as HTMLSelectElement).value).toBe(""));
   expect(screen.queryByText(i18n.t("superAdmin.viewers.templateNotFound"))).toBeNull();
+});
+
+const SHEET = {
+  id: "sheet-1",
+  name: "Taro",
+  spreadsheet_id: "book-1",
+  sheet_name: "tab-1",
+  is_active: true,
+  viewer_account_id: 1,
+  last_distributed_at: "2026-11-04T01:00:00Z",
+  last_distributed_count: 10,
+  last_result: "ok",
+  deliverable: false,
+  reason: "not_contracted",
+};
+
+it("shows the sheet name, last delivery, result and the reason badge in the detail", async () => {
+  vi.mocked(api.get).mockImplementation(async (path: string) => {
+    if (path === "/super-admin/viewers") return { items: ITEMS };
+    if (path === "/tcg/distribution/targets") return [SHEET, { ...SHEET, id: "other", name: "Other", viewer_account_id: 2 }];
+    return { items: [] };
+  });
+  renderPage();
+  await screen.findByText("Taro");
+  fireEvent.click(within(row("Taro")).getByText("Taro"));
+  const sheet = within(await screen.findByTestId("viewers-detail-sheet"));
+  expect((await sheet.findByTestId("viewers-detail-sheet-name")).textContent).toBe("Taro");
+  expect(sheet.getByTestId("viewers-detail-sheet-result").textContent).toContain("ok");
+  expect(sheet.getByTestId("viewers-detail-sheet-last").textContent).not.toContain("—");
+  expect(sheet.getByText(i18n.t("superAdmin.viewers.sheetReasonNotContracted"))).toBeTruthy();
+  expect(sheet.queryByTestId("viewers-detail-sheet-add")).toBeNull();
+});
+
+it("registers a sheet for the opened customer through the existing distribution API", async () => {
+  vi.mocked(api.post).mockResolvedValue({});
+  renderPage();
+  await screen.findByText("Taro");
+  fireEvent.click(within(row("Taro")).getByText("Taro"));
+  fireEvent.click(await screen.findByTestId("viewers-detail-sheet-add"));
+  fireEvent.change(screen.getByTestId("viewers-sheet-book"), { target: { value: " book-9 " } });
+  fireEvent.change(screen.getByTestId("viewers-sheet-tab"), { target: { value: "tab-9" } });
+  fireEvent.click(screen.getByTestId("viewers-sheet-save"));
+  await waitFor(() =>
+    expect(api.post).toHaveBeenCalledWith("/tcg/distribution/targets", {
+      name: "Taro",
+      spreadsheet_id: "book-9",
+      sheet_name: "tab-9",
+      viewer_account_id: 1,
+    }),
+  );
+});
+
+it("shows the already-has-a-sheet message on 409 and not-found message on 422", async () => {
+  vi.mocked(api.post).mockRejectedValueOnce(new ApiError("conflict", 409, null));
+  renderPage();
+  await screen.findByText("Taro");
+  fireEvent.click(within(row("Taro")).getByText("Taro"));
+  fireEvent.click(await screen.findByTestId("viewers-detail-sheet-add"));
+  fireEvent.change(screen.getByTestId("viewers-sheet-book"), { target: { value: "b" } });
+  fireEvent.change(screen.getByTestId("viewers-sheet-tab"), { target: { value: "t" } });
+  fireEvent.click(screen.getByTestId("viewers-sheet-save"));
+  expect((await screen.findByTestId("viewers-sheet-form-error")).textContent).toBe(
+    i18n.t("superAdmin.viewers.sheetConflictError"),
+  );
+  vi.mocked(api.post).mockRejectedValueOnce(new ApiError("missing", 422, null));
+  fireEvent.click(screen.getByTestId("viewers-sheet-save"));
+  await waitFor(() =>
+    expect(screen.getByTestId("viewers-sheet-form-error").textContent).toBe(
+      i18n.t("superAdmin.viewers.sheetViewerNotFoundError"),
+    ),
+  );
 });

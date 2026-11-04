@@ -136,7 +136,7 @@ export default defineConfig({
     },
   ],
 
-  // Vite dev server を自動起動する。E2E 用の env で Firebase config を空にし、
+  // Vite dev server を自動起動する。開発サーバーでは開発用の偽ログインが登録され、
   // tests-e2e/utils/auth.ts の addInitScript と組み合わせて認証を bypass する。
   webServer: process.env.E2E_NO_WEBSERVER
     ? undefined
@@ -146,10 +146,6 @@ export default defineConfig({
         reuseExistingServer: !process.env.CI,
         timeout: 60_000,
         env: {
-          // Firebase 実機 IDP に飛ばないようダミー値を設定（mock により無視される）
-          VITE_FIREBASE_API_KEY: "AIzaSyE2E-dummy-api-key",
-          VITE_FIREBASE_AUTH_DOMAIN: "e2e-fixture.firebaseapp.com",
-          VITE_GCP_PROJECT_ID: "e2e-fixture",
           // ファネルダッシュボード: E2E はモックデータで実行
           VITE_FUNNEL_DASHBOARD: "mock",
         },

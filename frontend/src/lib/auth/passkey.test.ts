@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mock = vi.hoisted(() => ({
-  self: true,
   supported: true,
   startAuthentication: vi.fn(),
   startRegistration: vi.fn(),
@@ -9,8 +8,6 @@ const mock = vi.hoisted(() => ({
   get: vi.fn(),
 }));
 
-vi.mock("../firebase", () => ({ auth: { currentUser: null } }));
-vi.mock("./provider", () => ({ isSelfAuth: () => mock.self }));
 vi.mock("@simplewebauthn/browser", () => ({
   browserSupportsWebAuthn: () => mock.supported,
   startAuthentication: mock.startAuthentication,
@@ -27,12 +24,14 @@ import {
   selfPasskeyLogin,
 } from "./passkey";
 import { currentAccessToken, expireSession } from "./selfAuth";
+import { registerDevSession } from "./devSessionSlot";
+import { registerTestDevSession } from "../../test-utils/devSession";
 
 let fetchMock: ReturnType<typeof vi.fn>;
 const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status });
 
 beforeEach(() => {
-  mock.self = true;
+  registerDevSession(null);
   mock.supported = true;
   mock.startAuthentication.mockReset();
   mock.startRegistration.mockReset();
@@ -53,7 +52,7 @@ describe("passkeySupported", () => {
     mock.supported = false;
     expect(passkeySupported()).toBe(false);
     mock.supported = true;
-    mock.self = false;
+    registerTestDevSession();
     expect(passkeySupported()).toBe(false);
   });
 });
