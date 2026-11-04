@@ -36,7 +36,7 @@ PO の画面写し: 週表示（11/1〜11/7）。予定の箱に `schedule.calen
 
 - 題名のデータは届いている: 本番 DB（読み取り専用の道）`tenant_004.calendar_events` は app 9 行・google 7 行、題名が空の行 0（前回の確かめ）。裏側は `backend/app/services/calendar_service.py:134,156` で `title` をそのまま返し、画面は `frontend/src/pages/schedule/schedule-utils.ts:167` で `title: event.title` に写す
 - 箱の作り: `frontend/src/pages/schedule/SchedulePageImpl.tsx:731` 題名 → `:732-739` 種類の札 → `:740-742` 時刻 の順に縦に並ぶ
-- 箱の高さ: 1 時間 = `DEFAULT_ROW_HEIGHT = 48`（`SchedulePageImpl.tsx:88`）
+- 箱の高さ: 1 時間 = `DEFAULT_ROW_HEIGHT = 48`（`frontend/src/pages/schedule/SchedulePageImpl.tsx:88`）
 - `frontend/src/pages/schedule.css:530-542` `.schedule-event` は縦並び・`overflow: hidden`
 - `frontend/src/pages/schedule.css:553-561` `.schedule-event__title` は `overflow: hidden`。縦並びの中で `overflow: hidden` の子は「中身の高さより小さく縮んでよい」扱いになる
 - `frontend/src/pages/schedule.css:715-723` 種類の札は `min-height: 1.5rem`（24px）で縮まない
@@ -47,14 +47,14 @@ PO の画面写し: 週表示（11/1〜11/7）。予定の箱に `schedule.calen
 
 - `frontend/src/pages/schedule.css:15` `--schedule-day-min-w: 10rem`（160px）
 - `frontend/src/pages/schedule.css:476-480` `.schedule-grid__days { grid-template-columns: repeat(auto-fit, minmax(var(--schedule-day-min-w), 1fr)); }` 1 列 160px 未満になると次の段へ折り返す
-- 同じ組み方を見出し（`SchedulePageImpl.tsx:627`）・終日の行（`:647`）・本体（`:688`）の 3 か所が使う
+- 同じ組み方を見出し（`frontend/src/pages/schedule/SchedulePageImpl.tsx:627`）・終日の行（`:647`）・本体（`:688`）の 3 か所が使う
 - PO の画面では日〜金の 6 列で横幅が尽き、土曜が 2 段目へ落ちる（画面写し）
-- 日表示も同じ部品（`SchedulePageImpl.tsx:1242` `ScheduleWeekGrid days={viewDays}`）で、1 日だけ渡す
-- 狭い画面用: `schedule.css:1270-1272`（1023px 以下）は 2 列、`:1288-1290`（767px 以下）は 1 列。これは今回の依頼の外
+- 日表示も同じ部品（`frontend/src/pages/schedule/SchedulePageImpl.tsx:1242` `ScheduleWeekGrid days={viewDays}`）で、1 日だけ渡す
+- 狭い画面用: `frontend/src/pages/schedule.css:1270-1272`（1023px 以下）は 2 列、`:1288-1290`（767px 以下）は 1 列。これは今回の依頼の外
 
 ## 【事実】4. 色の直書き（今回は直さない）
 
-- `calendars.config.ts:27-29` ほか 7 種類 × 3 色が `#1a73e8` などの直書き。これは既に `docs/specs/design-system/design.md:66-68` と `docs/handoff/color-tokens-ssot/recon.md:575-576,636-638` で「トークンへ移す対象」として数えられている既知の残件
+- `frontend/src/features/schedule/calendars.config.ts:27-29` ほか 7 種類 × 3 色が `#1a73e8` などの直書き。これは既に `docs/specs/design-system/design.md:66-68` と `docs/handoff/color-tokens-ssot/recon.md:575-576,636-638` で「トークンへ移す対象」として数えられている既知の残件
 - 今回の 3 件とは別の作業として扱う（変更は一度に 1 テーマ）
 
 ## 【未確認】

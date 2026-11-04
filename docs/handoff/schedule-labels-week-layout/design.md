@@ -22,7 +22,7 @@ recon: `docs/handoff/schedule-labels-week-layout/recon.md`（以下 R§1〜R§4�
 - 対象: R§1 種類の言葉 7 個、R§2 題名が縮んで消える、R§3 週の 7 列が折れる、K4 の機械の見張り
 - 対象外:
   - 色の直書きのトークン化（R§4・既知の残件。別テーマ）
-  - 1023px 以下・767px 以下の狭い画面の並び（`schedule.css:1270-1272`・`:1288-1290`）の見直し。今の並びをそのまま保つ
+  - 1023px 以下・767px 以下の狭い画面の並び（`frontend/src/pages/schedule.css:1270-1272`・`:1288-1290`）の見直し。今の並びをそのまま保つ
   - 予定の箱の中の並び順・札の大きさ・時刻の出し方の変更
   - 裏側・DB・Google の取り込み
 
@@ -155,6 +155,6 @@ recon: `docs/handoff/schedule-labels-week-layout/recon.md`（以下 R§1〜R§4�
 5. `cd frontend && npm run check:all` と `npx vitest run --config vitest.unit.config.ts --project unit src/pages/schedule src/features/schedule` を流し、生出力を残す
 6. ja.json の `meeting` を 1 つ消すと試験が落ち、戻すと通ることを確かめて生出力を残す（戻し忘れ禁止）
 7. 実装報告 `docs/handoff/schedule-labels-week-layout/impl-report-1.md` に 2〜6 の生出力を書く
-8. 触らない: 上記 4 ファイルと実装報告以外。特に `calendars.config.ts`・`SchedulePageImpl.tsx`・色の値
+8. 触らない: 上記 4 ファイルと実装報告以外。特に `frontend/src/features/schedule/calendars.config.ts`・`frontend/src/pages/schedule/SchedulePageImpl.tsx`・色の値
 9. 想定分岐: 2 で落ちる件数が 14 でない／4-3 で stylelint などの点検が落ちる／ja.json の行番号が設計とずれる → 直さずに `BLOCKED:` で止まり、生出力を添えて報告する
 10. commit して push。PR は作らない（Opus が作る）
