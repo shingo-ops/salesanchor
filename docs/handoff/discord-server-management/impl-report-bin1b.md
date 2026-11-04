@@ -209,3 +209,48 @@ git diff --stat（`git diff --stat origin/release/discord-own-server-bin1b`、co
 - push 後の `git rev-parse HEAD` は、報告書の commit 自身の sha になるためこの文書には書けない。実行役の最終報告に書く
 
 DONE
+
+## 改訂4 の直し
+
+- 作業場所の `git rev-parse HEAD` は d128ac4b6 で始まることを確認（d128ac4b650cfbb1e97d619b74461a25a09e2175）
+- `backend/app/realtime/topics.py` の 98 行目は変更前どおり。`("DELETE", "/api/v1/admin/discord-config/own"): _PENDING,` を 1 行足した
+
+### 確かめ（生出力）
+
+`pytest tests/test_realtime_topics.py --no-cov -q` の最後の 5 行:
+
+```
+  /root/worktrees/salesanchor/release-discord-own-server-bin1b/backend/app/main.py:27: StarletteDeprecationWarning: 'HTTP_422_UNPROCESSABLE_ENTITY' is deprecated. Use 'HTTP_422_UNPROCESSABLE_CONTENT' instead.
+    from app.routers import (
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+10 passed, 1 warning in 11.79s
+```
+
+§8 と同じ pytest 9 本（`--no-cov`）の最後の 12 行:
+
+```
+........................................................................ [ 69%]
+..............................ss                                         [100%]
+=============================== warnings summary ===============================
+../../../../../tmp/v312/lib/python3.12/site-packages/discord/player.py:29
+../../../../../tmp/v312/lib/python3.12/site-packages/discord/player.py:29
+../../../../../tmp/v312/lib/python3.12/site-packages/discord/player.py:29
+../../../../../tmp/v312/lib/python3.12/site-packages/discord/player.py:29
+  /tmp/v312/lib/python3.12/site-packages/discord/player.py:29: DeprecationWarning: 'audioop' is deprecated and slated for removal in Python 3.13
+    import audioop
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+102 passed, 2 skipped, 4 warnings in 7.42s
+```
+
+（2 skipped は試験側の既存の skip。今回は増やしていない）
+
+`git diff --stat origin/release/discord-own-server-bin1b`（報告書を足す前の出力）:
+
+```
+ backend/app/realtime/topics.py | 1 +
+ 1 file changed, 1 insertion(+)
+```
+
+報告書を足したあとは topics.py とこの報告書の 2 ファイル。push 後の `git rev-parse HEAD` は実行役の最終報告に書く。
