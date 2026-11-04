@@ -566,6 +566,7 @@ docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml p
 | 日付 | 件 | 決定 | PO の返事（原文） |
 |---|---|---|---|
 | 2026-11-04 | §19-1 件1 鍵（D1〜D4・D6） | 推奨どおり。案A（公開の置き場の classic PAT・`write:packages` だけ）。持ち主は PO 本人（shingo-ops）。期限は 180 日。受け取りの鍵（`read:packages`）は GitHub secret にだけ置き、prod1 には置かない。VITE は `VITE_FIREBASE_API_KEY`・`VITE_FUNNEL_DASHBOARD` を secret に、他 3 つを Variables に置く | 「1」 |
+| 2026-11-04 | §19-1 件2 組織の画面の設定（D7） | 推奨どおり 3 つとも行う。Package Creation を Private、classic PAT を許可のまま、最長期限を課す。設定は PO が組織の画面で行う。手順は便1 の直前に渡す | 「1」 |
 
 - 鍵を作る手順は、便1 の実装を始める直前に PO へ渡す。早く作ると、使わないまま 180 日の期限が進むため。
-- 残りの件: 件2 組織の画面の設定（D7）、件3 dockerd 入れ直しの時間帯（D8・D11・D14）、件4 workflow-lint（D13）。
+- 残りの件: 件3 dockerd 入れ直しの時間帯（D8・D11・D14）、件4 workflow-lint（D13）。
