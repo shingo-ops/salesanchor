@@ -145,3 +145,67 @@ c4aba6cdd docs: 便1b 自社用サーバー登録の実装カードと設計の�
 ```
 
 DONE
+
+## 改訂3 の直し
+
+カード §10 に従い、PR #5127 の CI 赤 2 つ（migration-test・test-schema-dup gate）を直した。
+
+- 作業前: `git rev-parse HEAD` = `68bffb1c841e64bb72f51a77f3d2c9e7683cb8b1`（`68bffb1c8` で始まる。`origin/release/discord-own-server-bin1b` と一致）
+- 触ったのは §10 の 3 ファイルと、この報告書だけ
+  1. `migrations/20261106_100000_tenant_discord_config_purpose_pk.sql` — カード §1 の改訂3 の中身に置き換え（`purpose` 列があるときだけ主キーを替える）
+  2. `backend/tests/conftest.py` — `connected_by_staff_id INTEGER,` を 1 行足した
+  3. `backend/tests/test_discord_own_server.py` — `_DDL`・自前の `engine`・`_rewrite` を消し、`engine` を conftest の `test_engine` と `setup_test_db` を受け取る形にした（前後で `DELETE FROM tenant_discord_config`）。12 本の中身は変えていない。使わなくなった `event`・`create_async_engine` の import を消した
+- 道具: ファイルの書き換えはすべて Edit / Write。Bash は git・pytest・確かめだけ
+
+### 確かめ（生出力）
+
+移行ファイルとカード §1 の SQL の diff（カードの SQL を Write で `/tmp/card_sql.sql` に書いて比べた）:
+```
+diff rc=0
+```
+（差分なし）
+
+check_test_schema_dup（`git merge-base origin/main HEAD` = `89d3320ed3d3b5bbe201b2c6ec199d9c5ef72240`）。
+直しを commit する前に流したところ、HEAD は commit 済みの内容を読むため `test_discord_own_server.py (0 -> 1)` で rc=1 だった。直しを commit（`6d6514a1c`）してから流し直した結果:
+```
+BASE_SHA=89d3320ed3d3b5bbe201b2c6ec199d9c5ef72240 HEAD_SHA=HEAD python3 scripts/check_test_schema_dup.py
+rc=0
+[INFO] backend/tests/test_discord_config_purpose_guard.py: BASE=0 HEAD=0
+[INFO] backend/tests/test_discord_d2.py: BASE=1 HEAD=1
+[INFO] backend/tests/test_discord_oauth.py: BASE=1 HEAD=1
+[INFO] backend/tests/test_discord_own_server.py: BASE=0 HEAD=0
+テストへの新規スキーマ複製なし(pass)
+```
+
+pytest 9 本（`/tmp/v312/bin/python -m pytest ... -q --no-cov`、最後の 12 行。rc=0）:
+```
+........................................................................ [ 69%]
+.........ss.....................                                         [100%]
+=============================== warnings summary ===============================
+../../../../../tmp/v312/lib/python3.12/site-packages/discord/player.py:29
+../../../../../tmp/v312/lib/python3.12/site-packages/discord/player.py:29
+../../../../../tmp/v312/lib/python3.12/site-packages/discord/player.py:29
+../../../../../tmp/v312/lib/python3.12/site-packages/discord/player.py:29
+  /tmp/v312/lib/python3.12/site-packages/discord/player.py:29: DeprecationWarning: 'audioop' is deprecated and slated for removal in Python 3.13
+    import audioop
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+102 passed, 2 skipped, 4 warnings in 6.72s
+```
+（失敗 0。skipped 2 件は私が足したものではない。この直しで試験を飛ばす指定は付けていない。どの試験が飛んだかは未確認）
+
+git diff --stat（`git diff --stat origin/release/discord-own-server-bin1b`、commit `6d6514a1c` 時点。この報告書を足す前）:
+```
+ backend/tests/conftest.py                          |  1 +
+ backend/tests/test_discord_own_server.py           | 37 ++++++----------------
+ ...106_100000_tenant_discord_config_purpose_pk.sql |  8 +++++
+ 3 files changed, 18 insertions(+), 28 deletions(-)
+```
+
+### 保存
+
+- 直しの commit: `6d6514a1c fix(discord): 便1b の移行と試験を CI に合わせる（discord-server-management 便1b 改訂3）`
+- この報告書を足す commit が、その次に 1 つ入る
+- push 後の `git rev-parse HEAD` は、報告書の commit 自身の sha になるためこの文書には書けない。実行役の最終報告に書く
+
+DONE
