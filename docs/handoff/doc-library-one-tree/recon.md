@@ -58,13 +58,13 @@ NG の 5 件（R-15・R-91 → chat-layout.md 5行、R-92 → CLAUDE.md 20行、
 
 数え方で数が変わる。2通りで数えた（どちらも生出力あり）。
 
-| 数え方 | たどれない手引き（docs/ai-agents・docs/agents・docs/runbooks） | 生出力 |
+| 数え方 | たどれない手引き（docs/ai-agents・docs/agents。フォルダを指す行の中身＝docs/runbooks・lessons.d は除く） | 生出力 |
 |---|---|---|
 | (1) リンクと、逆引用符で囲んだ docs/…md の書き方だけ | 11（docs/agents/ の 6、docs/ai-agents/ の aeon-delivery・aeon-release・agent-roles・design-partner-preamble・task-template） | onetree/reach.txt |
 | (2) (1) ＋ 囲まない docs/…md の書き方 ＋ 同じフォルダのファイル名だけの書き方 | **1**（docs/agents/generator.md） | onetree/reach2.txt |
 
 - (1) の 11 のうち 10 は、ほかの手引きが (1) の拾わない書き方（逆引用符で囲まない根からのパス、またはファイル名だけ）で書いていた（例: `docs/ai-agents/design-partner.md:367` が design-partner-preamble.md を囲まない根からのパスで書く）。PO に最初に伝えた「11」は (1) の数で、(2) では 1 になる。設計では (2) を正式な数え方にする（design.md §5）。
-- (2) でもフォルダの中を見ないとたどれないもの: lessons.d 19。
+- 除いた範囲の数: (1) では runbooks 7・lessons.d 21 がたどれない（onetree/reach.txt）。(2) では lessons.d 19 がたどれない（フォルダの中を見ないとたどれない）。
 - (2) での深さ: 手引きは入口から 1〜5 段。4 段以上は runbooks 9・lessons.d 1。ただし runbooks は `docs/INDEX.md:28` がフォルダを指すので、フォルダ経由なら 2 段。K5（≤3）は表紙までしか数えていない。
 - **正式な数え方（既存の CI）で数え直した結果（これを正とする）**: 既存の点検 `scripts/ci/check_doc_index.py`（K4 の CI、`.github/workflows/doc-index-reachability.yml:30`）は、範囲が docs/specs・docs/ai-agents だけ（同ファイル 142 行）で、今は unreached=0。範囲だけを docs/agents・docs/runbooks まで広げた写し（onetree/cdi_wide.py、142 行の範囲だけを変更）で数えると、**unreached=1（docs/agents/generator.md）**、broken_link=8（onetree/docindex-wide.txt）。
   - 切れたリンク 8 件の内訳: `docs/runbooks/adr-019-english-ui-temporary-deploy.md` 84・94・195 行（PR 本文の例の中のリンクで、リポジトリの根から書いている）、`docs/runbooks/discord-role-order-guide.md` 43・54・63・84・93 行（画像ファイル。`git ls-files | grep -c discord-role-order-0` = 0 で、画像そのものが無い）。
