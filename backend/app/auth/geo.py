@@ -50,7 +50,7 @@ def _open(path: str) -> Any:
         try:
             import maxminddb
 
-            new_reader = maxminddb.open_database(path, maxminddb.Mode.MMAP)
+            new_reader = maxminddb.open_database(path, maxminddb.MODE_MMAP)
         except Exception:  # noqa: BLE001
             logger.warning("geoip: ファイルを開けない（場所は不明として扱う）")
             return None
