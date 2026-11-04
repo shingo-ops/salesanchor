@@ -93,3 +93,53 @@ Discord 専用のリードの権限は無い（`key LIKE '%discord%'` は id 499
 - 【事実】今、権限が無いのにボタンが見えている実在の人: CS 2 人（003・005）、スモーク専用 1 人（004）。営業 4 人（004・006）は外す・キック・BAN が見えるが押すと断られる。
 - 【事実】新しい権限は public.permissions への 1 行のデータの変更で足し、所有者・管理者には行なしで届く（ADR-1007）。
 - 【未確認】営業が外す・キック・BAN を押して断られた回数（記録を読んでいない。設計の判断には使わない）。
+
+## 7. 段階B の追加調査（2026-11-04 22:10 JST・origin/main 89d3320ed）
+
+### 7-1. PO の決定
+
+> 3
+
+（2026-11-04 チャット。設計の選択肢「5つに分ける：操作ごとに付け外しできる」への回答。）
+
+### 7-2. 本番の DB の再実測（読み取り専用・2026-11-04 22:17 JST・AUDIT sha=d3e32792d066 rows=14 result=ok）
+
+| 項目 | 値 |
+|---|---|
+| 権限の一覧の件数 | 130（§5-1 の後に状態マスタ・商品カテゴリの 7 行が足された） |
+| `leads.discord%` の行 | 0 |
+| id の最大 | 53613 |
+| 会社（public.tenants） | 1 test-corp・3 perm-check-zzz・4 highlife-jpn・5 test-tenant-2・6 tenant-review（すべて有効） |
+| leads.update（id 14）を持つ役割の数 | 001: 5・003: 4・004: 4・005: 4・006: 4（計 21） |
+| leads.delete（id 15）を持つ役割の数 | 001: 4・003: 3・004: 3・005: 3・006: 3（計 16） |
+
+役割ごとの内訳は §5-2 と同じ（数が一致）。
+
+読み取りの道の注意: 文字列 `'leads.update'`・`'leads.delete'` は書き込みの語を含むため断られる（`rejected: write keyword is not allowed`、AUDIT sha=5d458450a4b4）。読み取りでは id 14・15 で絞る。
+
+### 7-3. 役割と権限の結び付けの実物
+
+- `backend/app/services/tenant.py:511-516`（`{schema}.role_permissions`）: 列は id・role_id・permission_id。`UNIQUE(role_id, permission_id)`。permission_id は `public.permissions(id) ON DELETE CASCADE`。
+- `migrations/003_add_phase1_tenant_tables.sql:199-205`: role_permissions の RLS は roles.tenant_id と `app.tenant_id` で絞る。FORCE は付いていない。
+- `migrations/20260607_000000_fix_rls_policy_variable_name.sql:12`: jarvis は BYPASSRLS。
+- `backend/app/services/tenant.py:50-185`（DEFAULT_ROLES。終わりは :186 の `]`）: 新しい会社を作るときの役割の初期の権限。マネージャーは leads.update・leads.delete、営業は leads.update を持つ。CS・仕入れ・発送は持たない。オーナーは "ALL"、システム管理者は "ALL_EXCEPT_SYSTEM_MANAGE"。
+- `backend/app/services/tenant.py:1600-1655`（seed_system_roles）: 既にある役割（システム以外）の権限は上書きしない。今ある 5 社の役割には DEFAULT_ROLES の変更は届かない。
+- `backend/app/services/tenant.py:1540-1580`（_assign_permissions_to_role）: 一覧に無いキーは `SELECT ... WHERE key = :key` が 0 行になり、黙って付かない。
+
+### 7-4. 役割の画面
+
+- `frontend/src/pages/roles/RolesPage.tsx:57-66`（CATEGORY_META）: 「リード」の並び順は 3。新しい区分を作るとアイコンと並び順の登録が要る。
+- `frontend/src/pages/roles/RolesPage.tsx:70-78`（MENU_VIEW_KEY）: 「リード」のメニュー表示は leads.view だけを動かす。新しい行はメニュー表示に影響しない。
+- `frontend/src/pages/roles/RolesPage.tsx:185-194`（toggleCategory）: 区分の「全選択」は、その区分の全行を付け外しする。
+
+### 7-5. 鍵を見る場所の全数
+
+- サーバー: §4 の 5 本だけ（`git grep -n -E "discord/(kick|ban|remove-from-channel|channel-invite|sync-role)" origin/main -- backend/app`）。
+- 画面: `frontend/src/pages/inbox/InboxKartePanel.tsx:533`（招待）・`:538`（外す/Kick/BAN の部品）・`:547`（再同期）。DiscordRemoveButtons（`:936-1000`）は 3 つのボタンを 1 つの条件で出している。
+- 試験: `backend/tests/test_permission_catalog.py:115-138`（C5 が招待・再同期の鍵を leads.update と決めている）、`backend/tests/conftest.py:1826`（ALL_TEST_PERMISSIONS）、`frontend/src/pages/inbox/InboxKartePanel.discordButtons.test.tsx`（T1〜T3）。
+
+### 7-6. 観測事実のまとめ（段階B）
+
+- 【事実】新しい 5 行を足し、今 leads.update を持つ 21 役割に 2 つ、leads.delete を持つ 16 役割に 3 つを付けると、付く行は 42 + 48 = 90 行。
+- 【事実】今ある会社の役割には、DEFAULT_ROLES を変えても新しい鍵は付かない（§7-3）。データの変更で付ける必要がある。
+- 【事実】「点検用（見るだけ）」（001・role 2611）は名前に反して leads.update・leads.delete を持っている（§5-2）。今回はそのまま写す（できることを変えない）。

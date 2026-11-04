@@ -60,7 +60,7 @@ class ChannelInviteResponse(BaseModel):
 @router.post(
     "/discord/channel-invite/{lead_id}",
     response_model=ChannelInviteResponse,
-    dependencies=[Depends(require_permission("leads.update"))],
+    dependencies=[Depends(require_permission("leads.discord_invite"))],
 )
 async def send_channel_invite(
     lead_id: int,

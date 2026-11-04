@@ -75,6 +75,7 @@ DEFAULT_ROLES = [
             "dashboard.view", "reports.view", "reports.export",
             "customers.view", "customers.update",
             "leads.view", "leads.create", "leads.update", "leads.delete", "leads.convert",
+            "leads.discord_invite", "leads.discord_resync", "leads.discord_remove_channel", "leads.discord_kick", "leads.discord_ban",
             "deals.view", "deals.update",
             "orders.view",
             "teams.view", "teams.manage_members",
@@ -105,6 +106,7 @@ DEFAULT_ROLES = [
             "dashboard.view", "reports.view",
             "customers.view", "customers.create", "customers.update",
             "leads.view", "leads.create", "leads.update", "leads.convert",
+            "leads.discord_invite", "leads.discord_resync",
             "deals.view", "deals.create", "deals.update",
             "orders.view", "orders.create", "orders.update",
             # Phase 2

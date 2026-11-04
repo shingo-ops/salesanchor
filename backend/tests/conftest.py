@@ -1828,6 +1828,7 @@ ALL_TEST_PERMISSIONS = {
     "roles.view", "roles.create", "roles.update", "roles.delete", "roles.assign",
     "customers.view", "customers.create", "customers.update", "customers.delete",
     "leads.view", "leads.create", "leads.update", "leads.delete", "leads.convert",
+    "leads.discord_invite", "leads.discord_resync", "leads.discord_remove_channel", "leads.discord_kick", "leads.discord_ban",
     "deals.view", "deals.create", "deals.update", "deals.delete",
     "orders.view", "orders.create", "orders.update", "orders.delete",
     "teams.view", "teams.create", "teams.update", "teams.delete", "teams.manage_members",
