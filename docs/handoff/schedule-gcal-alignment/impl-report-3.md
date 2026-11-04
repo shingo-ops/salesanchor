@@ -54,3 +54,5 @@
 サーバーは Google に送っていない予定（`google_event_id` 無し）に Meet を頼むと 422 で保存ごと断る。画面もそろえ、`ScheduleItem` に `googleEventId` を足して `normalizeEvent` で写し、直す小窓（create 以外）は `googleEventId` があるときだけ Meet の切り替えを出すようにした。試験を1件足した（自分の予定でも `google_event_id` が null なら切り替えが出ない）。ADR-1060 の状態欄から「Accepted」の語を外し（索引が Accepted と出すため）、索引を作り直して Proposed になることを確かめた。
 
 CI の Frontend unit tests で ToggleMigration.test.tsx の Toggle 数の表（SchedulePageImpl.tsx）が 2 のままで落ちたため、Meet の Toggle を足した分に合わせて 3 に直した（Meet の Toggle は aria-label を持つ）。
+
+test_tenant_admin_ssot.py の手本の行を5要素にそろえた（期待値は変えていない）。
