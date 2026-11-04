@@ -33,14 +33,14 @@ PO の依頼（原文）:
   - `:683` `max-height: min(var(--schedule-popover-max-h), calc(100vh - var(--space-6)));`
   - `:692` `overflow: auto;`（小窓全体が 1 つの箱として中で動く。見出しと保存ボタンも一緒に動く）
 - `frontend/src/tokens.css:407` `--schedule-popover-max-h: 34rem;`（16px 換算で 544px）
-- 作る小窓の欄（`SchedulePageImpl.tsx:284-410`）: 題名・種類・終日・社員にも見せる・開始日・開始時刻・終了日・終了時刻・場所・説明（4 行）。保存と取消は `:413-435` の下の帯。
+- 作る小窓の欄（`SchedulePageImpl.tsx:285-410`）: 題名・種類・終日・社員にも見せる・開始日・開始時刻・終了日・終了時刻・場所・説明（4 行）。保存と取消は `:413-435` の下の帯。
 - 事実から言えること: 決め打ち 420px より実物が高いと、置き場所の計算は 420px 分しか下を空けないため、下（保存ボタン側）が画面の外に出る。
 - 【未確認】PO の画面で実際に何 px 切れているか。PO の画面の大きさは測っていない。
 
 ### 既にある金型
 
-- `frontend/src/components/Popover.tsx:47-92` `calcPosition`: 出したあとの `offsetWidth`・`offsetHeight` で測り、画面の中に押し戻す（`:82-89`）。向きの反転はしない（`:81` のコメント）。押す相手（trigger）を子に持つ作りで、予定の小窓のように「押した場所の四角」だけを渡す使い方はできない（`:26-45` の props）。
-- `frontend/src/components/Toggle.tsx:145-165` 切替スイッチ（終日・社員にも見せるで使用済み `SchedulePageImpl.tsx:321`・`:336`）。
+- `frontend/src/components/Popover.tsx:47-92` `calcPosition`: 出したあとの `offsetWidth`・`offsetHeight` で測り、画面の中に押し戻す（`:80-87`）。向きの反転はしない（`:79` のコメント）。測る前は見えなくする（`:110` `visible`）。押す相手（trigger）を子に持つ作りで、予定の小窓のように「押した場所の四角」だけを渡す使い方はできない（`:26-45` の props）。
+- `frontend/src/components/Toggle.tsx:21`（全 41 行。中身は `<input type="checkbox">` `:27-31`）切替スイッチ（終日・社員にも見せるで使用済み `SchedulePageImpl.tsx:321`・`:336`）。
 - `frontend/src/components/Modal.tsx`・`Drawer.tsx`・`ListRow.tsx`・`ContextMenu.tsx` がある。
 
 ## 2. 月の表示
@@ -72,11 +72,11 @@ PO の依頼（原文）:
 - `backend/app/services/google_calendar.py:41` `_SCOPES = ["https://www.googleapis.com/auth/calendar"]`（今の許可の範囲で Meet 付きの予定を作れる。新しい許可は要らない）。
 - `google_calendar.py:377-389` `create_event` は `.insert(calendarId=calendar_id, body=event_body)`（`:385`）。`conferenceDataVersion` を渡していない。
 - `google_calendar.py:392-404` `update_event` は `.patch(...)`（`:400`）。同じく渡していない。
-- `backend/app/services/calendar_service.py:180-253` `create_event`: 先にアプリの表へ入れ（`:192-218`）、`sync_mode in ("bidirectional","write_only") and connected_by == user_id`（`:222`）のときだけ Google へ送る（`:224-240`）。返事から使うのは `id` だけ（`:229`）。
+- `backend/app/services/calendar_service.py:180-253` `create_event`: 先にアプリの表へ入れ（`:192-218`）、`sync_mode in ("bidirectional","write_only") and connected_by == user_id`（`:222`）のときだけ Google へ送る（`:224-240`）。返事から使うのは `id` だけ（`:228`）。
 - `calendar_service.py:509-530` `_to_google_event_body`: 題名・開始・終了（Asia/Tokyo）・説明・場所だけ。
-- `calendar_service.py:432-501` 取り込み: 題名・説明・場所・時刻を入れる（`:449` `location = google_event.get("location")`）。`hangoutLink` は読まない。アプリで作った予定は取り込みで飛ばす（`:432` `_is_app_origin`）。
+- `calendar_service.py:410-501` 取り込み（`upsert_from_google` は `:410` から）: 題名・説明・場所・時刻を入れる（`:449` `location = google_event.get("location")`）。`hangoutLink` は読まない。アプリで作った予定は取り込みで飛ばす（`:432` `_is_app_origin`）。
 - 予定の表（会社ごと）`migrations/078_create_calendar_events_tenant.sql` に Meet の URL を入れる列は無い。`git grep -n -E "meet|hangout|conferenceData" backend/app frontend/src/pages/schedule` で Meet 関係は 0 件（`meeting_memo` などの別物だけ）。
-- 接続状態の口 `backend/app/routers/google_calendar.py:238-264` `GET /google-calendar/status` は `connected`・`configured`・`calendar_id`・`connected_at` だけ。見ている人がつないだ本人かは返さない。本人判定は `google_calendar.py:155-178` `require_calendar_owner`（`connected_by_user_id` と `user.id` の比較）。
+- 接続状態の口 `backend/app/routers/google_calendar.py:238-264` `GET /google-calendar/status` は `connected`・`configured`・`calendar_id`・`connected_at` だけ。見ている人がつないだ本人かは返さない。本人判定は `backend/app/routers/google_calendar.py:155-178` `require_calendar_owner`（`connected_by_user_id` と `user.id` の比較）。
 - 画面は管理者だけ接続状態を読む（`SchedulePageImpl.tsx:891` `useApiQuery<{ connected: boolean }>("/google-calendar/status", { enabled: isTenantAdmin })`）。
 - 【未確認】本番の同期方式（`sync_mode`）の今の値。`write_only` 以外なら今でも Google へ送られない。
 - 【未確認】つないだ Google アカウントで Meet を作れるか（無料アカウント・Workspace のどちらか、管理者が Meet を止めていないか）。
