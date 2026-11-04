@@ -688,7 +688,7 @@
     "passkeyPromptSkip": "Skip for now",
     "deviceApproval": {
       "title": "Approve from your usual device",
-      "body": "This is a new device. On your usual device, pick the number shown below in the pop-up.",
+      "body": "This is a new device. On your usual device, open the request from Notifications and pick the number shown below.",
       "numberLabel": "Confirmation number",
       "remaining": "{{time}} left",
       "rateLimited": "Waiting a little before continuing.",
@@ -711,10 +711,18 @@
         "time": "Time",
         "unknown": "Unknown",
         "pickNumber": "Pick the number shown on the device that is trying to sign in.",
-        "notMe": "This is not me",
+        "notMe": "This wasn't me",
         "rejectedTitle": "Sign-in rejected",
         "rejectedBody": "If you do not recognize it, change your password to be safe.",
         "changePassword": "Change password"
+      },
+      "detail": {
+        "title": "Login from a new device",
+        "itsMe": "This was me",
+        "approvedTitle": "Login approved",
+        "approvedBody": "The new device can now be used.",
+        "wrongNumberBody": "The number did not match, so this request was cancelled. Please sign in again.",
+        "closed": "This request has already ended."
       }
     }
   },
@@ -5899,7 +5907,8 @@
     "title": "Notifications",
     "empty": "No notifications",
     "kind": {
-      "discord_outside_ticket_post": "{{actor}} posted in #{{channel}}"
+      "discord_outside_ticket_post": "{{actor}} posted in #{{channel}}",
+      "login_request": "Login request from a new device ({{device}})"
     },
     "fallback": {
       "title": "Who receives notices when there is no assignee",
