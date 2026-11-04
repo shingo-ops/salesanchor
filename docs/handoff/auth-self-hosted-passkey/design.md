@@ -117,7 +117,7 @@ migration は構造のみ・1回実行（ADR-1007）。値の投入は migration
 5. MFA 判定（:153-160）— 自社トークンでは使わない（本番は `MFA_REQUIRED=false`・recon P1）。二段階認証は次のテーマ（PO 2026-10-13「二段階認証は次の便で…任意で設定する項目」）
 6. テナント決定（:194）— 変えない（DB の user.tenant_id）
 
-切替スイッチ: 環境変数 `AUTH_PROVIDER`（`firebase`／`self`。既定 `firebase`）。画面側は同名のビルド変数 `VITE_AUTH_PROVIDER`。API の受け付けは便2〜便5 の間、両方のトークンを受ける。
+切替スイッチ: 環境変数 `AUTH_PROVIDER`（`firebase`／`self`。既定 `firebase`）。画面側は同名のビルド変数 `VITE_AUTH_PROVIDER`。API の受け付けは便2〜便5 の間、両方のトークンを受ける。（2026-11-04 改め: `AUTH_PROVIDER=self` の間は Firebase のトークンを断る。`firebase` に戻したときは両方を受ける。理由と中身は [block-firebase-token/design.md](../block-firebase-token/design.md)）
 
 ## 5. 画面（金型・デザイントークン・i18n。生の部品と色の直書きは禁止）
 
