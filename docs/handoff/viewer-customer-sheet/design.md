@@ -189,7 +189,7 @@ mode: handoff
 | 名簿を消すと消える表（請求先・配信先） | backend/tests/test_viewer_purge.py:143〜:149 の「消えた表」の並びに viewer_billing_profiles と tcg_distribution_targets を足す |
 | 鍵の用途 billing_form | migrations/20261016_150000_add_viewer_accounts.sql:48 の CHECK を変える新しい migration と、:54 の COMMENT の書き直し |
 | 文面テンプレートの鍵 billing_form_request | viewer_message_templates.py の LEDGER（:43〜:53）。migrations/20261020_120000_create_viewer_message_templates.sql:11 の「台帳の9件」の COMMENT を10件に。backend/tests/test_viewer_message_templates.py:22〜:25 の KEYS。frontend/src/pages/super-admin/ViewerTemplatesPage.test.tsx の KEYS（:15〜:18）と PLACEHOLDERS（:19〜:29）。backend/tests/viewer_template_fixtures.py の DEFAULT_BODIES。i18n の名前と使う場面（frontend/src/locales/ja.json:2805・:2816。:2797〜:2805 が名前、:2808〜:2816 が使う場面 と en.json の同じ位置の並び）。差し込み項目の説明 placeholders（ja.json:2818〜:2828 と en.json の同じ並び）に form_url（請求先フォームのURL・自動で入ります）と form_expires（請求先フォームのリンクの期限の日付）の2行 |
-| 配信先の判定の値（deliverable と理由） | §3-3 に挙げた3か所と2画面 |
+| 配信先の判定の値（deliverable と理由） | §3-3 に挙げた3か所（配信前の点検・解析ダッシュボード・閲覧者管理ページ）。配信先の画面は変えない（2026-11-04 PO 決定。原文「配信先のページでは確認できなくて良い」） |
 | 公開の決めごと | ADR-1019:9、docs/specs/inventory-management/inventory-viewer/README.md:22、gas-viewer-fresh-fast/design.md:70 の改訂（recon §2）。プライバシーポリシー |
 
 ## 4. 代替案と選んだ理由
@@ -242,7 +242,7 @@ mode: handoff
 | ボタンを押すと、部屋がある人は部屋に1通（結果 sent）、部屋が無い人は no_room と画面に出る。メールは名簿のメールあてに送る手配がされる | API テスト（送信部を差し替えて回数と宛先を数える）＋PO 目視 |
 | 部屋とメールの文は、文面テンプレートの台帳の billing_form_request 1件から作られ、閲覧者管理ページで直すと次の送信から変わる | API テスト＋PO 目視 |
 | フォームを送信して保存できたときだけ鍵が使い切られる。保存に失敗したら同じリンクで送り直せる。期限切れ・使用済み・本契約でなくなった人のリンクは無効の画面になる | PG テスト＋API テスト |
-| 配信しないシートは、配信先の API（一覧・1件）・閲覧者管理ページが読む API・解析ダッシュボードの配信の数・配信前の点検の4か所で同じ理由（手で止めた／本契約でない／停止中）になる。配信先の画面には理由を出さない（2026-11-04 PO 決定。原文「配信先のページでは確認できなくて良い」） | API テスト（同じ行を4つの入口から読んで値を比べる） |
+| 配信しないシートは、配信先の API（一覧・1件。閲覧者管理ページもこの API を読む）・解析ダッシュボードの配信の数・配信前の点検の3つの入口で同じ理由（手で止めた／本契約でない／停止中）になる。配信先の画面には理由を出さない（2026-11-04 PO 決定。原文「配信先のページでは確認できなくて良い」） | API テスト（同じ行を3つの入口から読んで値を比べる） |
 | つなぎを外す（null を送る）と viewer_account_id が NULL に戻る。名簿に無い番号は 422 | API テスト |
 | 請求先の表の決まり: 会社なのに担当者が空・郵便番号が7桁でない・電話が10〜11桁でない・宛名が空の行は DB が入れない | PG テスト（CHECK ごとに1件ずつ） |
 | テンプレートが無い状態でボタンを押すと 503 で、鍵は0件・メールも部屋も送られない | API テスト＋PG テスト |
