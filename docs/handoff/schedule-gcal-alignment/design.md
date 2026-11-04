@@ -180,6 +180,13 @@ recon: `docs/handoff/schedule-gcal-alignment/recon.md`（以下 R§0〜R§7）
      2. 新しい会社の `calendar_events` がどの道で作られるか。`backend/app/services/tenant.py` に `calendar` の語は無かった（`grep -n -i "calendar" backend/app/services/tenant.py` 0 件）。新しい会社にも列が入る道を担当に調べさせる
      3. 予定の作成と Google 送信を試す今の試験の場所（R§7 未確認）
      4. 同期方式が `bidirectional` であること（K14 の前提。`write_only` では取り込みが止まる・ADR-1059「戻し方」）。1 と同じ読み取りで確かめる
+   - 前提確認の結果（2026-11-05 00:37〜00:40 JST・本番の読み取り口 ADR-1024 と origin/main c310076ac の実物で確かめた）:
+     1. 済み。`ai_ro.public__tenant_google_calendar_config` は 1 行だけ。会社 4・`sync_mode = bidirectional`・つないだ人あり。送る方式なので PO への切り替えの質問は要らない
+     2. 済み。`calendar_events` を作るのは `migrations/078_create_calendar_events_tenant.sql:44`（今ある会社を回す）だけ。`backend/app/services/tenant.py` の `create_tenant_schema`（`:1658`）に `calendar` の語は 0 件。本番の会社は 1・3・4・5・6 の 5 社で、5 社とも `ai_ro.tenant_NNN__calendar_events` がある。便3 の移行は 078 と同じく今ある会社を回せば全社に列が入る。これから作る会社に表そのものが無い点は今からある抜けで、便3 の範囲外（残件）
+     3. 済み。`backend/tests/test_calendar_service.py` の `TestCreateEvent`（`:231`。Google 送信の失敗 `:283`・つないだ人以外は送らない `:309`）と `TestToGoogleEventBody`（`:77`）。ほかに `backend/tests/test_google_calendar.py`・`backend/tests/test_google_calendar_webhook_receiver.py`
+     4. 済み。1 と同じ読み取りで `bidirectional`。K14 の前提を満たす
+   - §7 の 7 の基準の数（同じ読み取り）: 会社 4 の予定は 16 件。うち終日は 0 件、終日で Google に送ったものも 0 件。今の時点で Google 側にずれた終日の予定は無い。便2 の本番反映のあとにもう一度数える
+   - 便3 に残るのは N-1・N-2・N-3（と任意の N-13）の設計の直しとクラウドの再審査
 4. 小窓を測ってから置くので、一瞬ちらつく → 測る前は見えなくする（5-1）。
 5. 月の札から種類の札を外すと種類が月で分からない → 詳しくと一覧では出す。PO が月で種類も見たいと言えば札を戻す（見本では外した形で承認済み）。
 6. 行の高さが `DEFAULT_ROW_HEIGHT`（`frontend/src/pages/schedule/SchedulePageImpl.tsx:91`）とトークン `--schedule-row-height`（`frontend/src/tokens.css:400`）の 2 か所にある（今からある）。片方だけ変えると引っぱりの時刻がずれる → 便2 では置き場所を増やさず、換算の試験で 48px を前提にした値を確かめる。1 か所にまとめるのは残件として台帳に残す。
