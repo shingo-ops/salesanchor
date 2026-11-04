@@ -11,7 +11,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useRealtimeRefresh } from "../hooks/useRealtimeRefresh";
 import { api } from "../lib/api";
-import { isSelfAuth } from "../lib/auth/provider";
+import { isDevSession } from "../lib/auth/devSessionSlot";
 import { TOPICS } from "../lib/realtime/topics";
 import { relativeTime } from "../pages/inbox/inbox.types";
 import { BellOutline } from "../constants/icons";
@@ -60,7 +60,7 @@ export default function NoticeBell({ variant = "floating" }: NoticeBellProps = {
   const [open, setOpen] = useState(false);
   const [requests, setRequests] = useState<PendingLoginRequest[]>([]);
   const navigate = useNavigate();
-  const selfMode = isSelfAuth();
+  const selfMode = !isDevSession();
   const lastPendingFetchRef = useRef(0);
   const pendingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 

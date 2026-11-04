@@ -3,12 +3,12 @@ import { createInstance } from "i18next";
 import { I18nextProvider } from "react-i18next";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { registerDevSession } from "../lib/auth/devSessionSlot";
 import en from "../locales/en.json";
+import { registerTestDevSession } from "../test-utils/devSession";
 
 const api = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn() }));
-const provider = vi.hoisted(() => ({ self: true }));
 vi.mock("../lib/api", () => ({ api }));
-vi.mock("../lib/auth/provider", () => ({ isSelfAuth: () => provider.self }));
 
 import NoticeBell from "./NoticeBell";
 
@@ -65,7 +65,7 @@ function mockApi(pending: () => Promise<unknown>) {
 }
 
 beforeEach(async () => {
-  provider.self = true;
+  registerDevSession(null);
   api.get.mockReset();
   api.post.mockReset().mockResolvedValue({ unread_count: 0 });
   instance = createInstance();
@@ -107,7 +107,7 @@ describe("NoticeBell login requests", () => {
   });
 
   it("does not call the pending endpoint outside self login", async () => {
-    provider.self = false;
+    registerTestDevSession();
     mockApi(() => Promise.resolve({ items: [REQUEST] }));
     renderBell();
     await waitFor(() => expect(api.get).toHaveBeenCalledWith("/notices"));
