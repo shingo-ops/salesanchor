@@ -162,15 +162,27 @@ def test_migration_is_idempotent_and_purpose_allows_billing_form(pg):  # noqa: F
 def test_billing_fields_live_in_one_table_only(pg):  # noqa: F811
     conn, _, async_url = pg
     cur = _prepare_billing(conn, async_url)
+    # この試験の DB に名簿と配信先の表があること（無ければ表を作らず止める）
+    for name in ("public.viewer_accounts", "public.tcg_distribution_targets"):
+        cur.execute("SELECT to_regclass(%s)", (name,))
+        assert cur.fetchone()[0] is not None, f"{name} が無い"
+    # 請求先の4列をすべて持つ public の表は viewer_billing_profiles だけ
     cur.execute(
-        "SELECT table_schema, table_name FROM information_schema.columns "
-        "WHERE column_name IN ('bill_to_name', 'postal_code', 'invoice_email') "
-        "AND table_schema NOT IN ('pg_catalog', 'information_schema') "
-        "GROUP BY table_schema, table_name"
+        "SELECT table_name FROM information_schema.columns "
+        "WHERE table_schema = 'public' "
+        "AND column_name IN ('bill_to_name', 'contact_name', 'invoice_email', 'party_type') "
+        "GROUP BY table_name HAVING count(DISTINCT column_name) = 4"
     )
-    got = {(r[0], r[1]) for r in cur.fetchall()}
-    assert ("public", "viewer_billing_profiles") in got
-    assert not [r for r in got if r[1] != "viewer_billing_profiles" and r[0] == "public" and "viewer" in r[1]]
+    assert {r[0] for r in cur.fetchall()} == {"viewer_billing_profiles"}
+    # 名簿と配信先には請求先の7列のどれも無い
+    cur.execute(
+        "SELECT table_name, column_name FROM information_schema.columns "
+        "WHERE table_schema = 'public' "
+        "AND table_name IN ('viewer_accounts', 'tcg_distribution_targets') "
+        "AND column_name IN ('party_type', 'bill_to_name', 'contact_name', 'postal_code', "
+        "'address', 'phone', 'invoice_email')"
+    )
+    assert cur.fetchall() == []
 
 
 # ── 送る API ──────────────────────────────────────────────────
