@@ -255,7 +255,7 @@ GitHub の一時 VM（sandbox-test）で、compose と同じ条件（read_only�
    - 決定済み: 月額契約（ChatGPT の個人の契約）を会社のサーバーで使ってよいか（PO 2026-11-04「1,まず私と担当エンジニアだけで使用する」。段3を進め、合格なら秘書の担当を ChatGPT にしたままにする。使うのは PO と担当エンジニアだけ。お客さんにも出す時はもう一度聞く。§9）。
    - Claude の容器を片付ける時期（段4）。
 6. prod1 の MemAvailable・MemTotal を読み取りの道で測り、K8 の基準値を本書に書く（段3の前）。
-   - （済・2026-11-04 00:22 UTC 測定。読み取りの道 = Grafana の閲覧用の鍵で Prometheus の node-exporter（instance app-vps）、と制限付き鍵の claude-monitor。生出力 `k8_base.json`・`k8_24h.json`・`k8_30d.json`・`k8_monitor.txt`）【事実】:
+   - （済・2026-11-04 00:22 UTC 測定。読み取りの道 = Grafana の閲覧用の鍵で Prometheus の node-exporter（instance app-vps）、と制限付き鍵の claude-monitor。生出力 `docs/handoff/secretary-chatgpt/evidence-k8-20261104/k8_base.json`・`docs/handoff/secretary-chatgpt/evidence-k8-20261104/k8_24h.json`・`docs/handoff/secretary-chatgpt/evidence-k8-20261104/k8_30d.json`（1日平均・MiB）・`docs/handoff/secretary-chatgpt/evidence-k8-20261104/k8_monitor.txt`）【事実】:
      - 5分おき3回の MemAvailable: 940,613,632 / 745,840,640 / 757,968,896 バイト。平均 814,807,723 バイト（777MiB）。MemTotal 4,105,506,816 バイト。平均は MemTotal の 19.85%。
      - 直近24時間（5分おき289点）: 平均 19.8%・最小 8.7%（341MiB）・20%を下回った点は159点。
      - 1日平均の MemAvailable は 10/5 の 1502MiB から 11/4 の 775MiB へ、30日でほぼ半分に減り続けている（10/19 に 937MiB、10/30 に 777MiB）。
