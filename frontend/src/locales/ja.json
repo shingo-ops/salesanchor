@@ -3245,7 +3245,16 @@
     "connectBtnError": "×接続エラー",
     "viewSelect": "ビューを選択",
     "owner": "担当者",
-    "settingsPermissionRequired": "この画面はマネージャーのみ利用できます"
+    "settingsPermissionRequired": "この画面はマネージャーのみ利用できます",
+    "calendarLabels": {
+      "personal": "個人（担当者）",
+      "meeting": "商談・打合せ",
+      "procurement": "仕入・入荷",
+      "shipping": "発送予定 / 集荷",
+      "billing": "請求・入金期限",
+      "release": "新商品の発売日",
+      "holiday": "日本の祝日"
+    }
   },
   "inventoryVisibility": {
     "title": "在庫表示権限の設定",

@@ -3245,7 +3245,16 @@
     "connectBtnError": "× Connection Error",
     "viewSelect": "Select view",
     "settingsPermissionRequired": "This page is available to managers only.",
-    "owner": "Owner"
+    "owner": "Owner",
+    "calendarLabels": {
+      "personal": "Personal",
+      "meeting": "Meetings",
+      "procurement": "Purchasing / Inbound",
+      "shipping": "Shipping / Pickup",
+      "billing": "Billing / Payments",
+      "release": "New Releases",
+      "holiday": "Japan Holidays"
+    }
   },
   "inventoryVisibility": {
     "title": "Inventory Visibility Settings",
