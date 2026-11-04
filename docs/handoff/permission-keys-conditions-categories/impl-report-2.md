@@ -116,3 +116,8 @@ FAIL Required test coverage of 60% not reached. Total coverage: 29.82%
 ```
 
 注: 両回とも 27 passed。末尾の coverage 60% 未達は一部ファイルだけ流したための pyproject 既定の閾値で、試験の失敗ではない。行は幅200で切って記録。
+
+## 最終 HEAD
+9276f5541（コード変更 commit。この追記 commit が上に1つ載る）
+
+DONE
