@@ -100,12 +100,13 @@ PR を revert する。DB は変えない。
 | B3 移行の前後で、各役割のできることが同じ | データの変更の DRY-RUN の件数を recon §5-2 と照らす |
 | B4 見張りの値が反映後も 0 | Grafana の salesanchor_permission_keys_missing |
 
-## 4. 外部事例
+## 4. 外部・過去事例の参照と我々への応用
 
 不要。理由: 権限が無い操作のボタンを隠すのは、この製品の既存の型（InboxKartePanel.tsx:257 の canMerge）と同じで、外の事例で決める点が無い。段階Bの分け方は PO の事業判断。
 
-## 5. 維持する仕組み
+## 5. 維持の仕組み
 
+- 守り手: CI の vitest（段階A の試験 T1〜T3）と、権限キーの見張り（permission_catalog と Grafana の値）。人の担当は設計担当の Claude Opus。
 - 段階Aの出し分けは試験 T1〜T3 が CI で毎回確かめる。
 - 段階Bの鍵は、既存の見張り（backend/app/auth/permission_catalog.py と CI の試験 C2、本番の Grafana の値）が、コードの鍵と DB の行のずれを見つける。
 
