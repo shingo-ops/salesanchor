@@ -478,6 +478,16 @@ describe("SchedulePage Google Meet (K12)", () => {
     expect((vi.mocked(api.patch).mock.calls[0][1] as Record<string, unknown>).add_meet).toBe(true);
   });
 
+  it("hides the toggle when editing an own event that was never sent to Google", async () => {
+    enableMeet();
+    answers.events = [apiEvent({ google_event_id: null })];
+    view();
+    fireEvent.click(await screen.findByText("Own Event"));
+    fireEvent.click((await screen.findAllByRole("button", { name: i18n.t("schedule.editEvent") }))[0]);
+    await screen.findByPlaceholderText(i18n.t("schedule.eventTitle"));
+    expect(screen.queryByRole("switch", { name: addMeetLabel() })).toBeNull();
+  });
+
   it("does not show a join link for a URL outside meet.google.com", async () => {
     enableMeet();
     answers.events = [apiEvent({ meet_url: "https://evil.example.com/abc" })];

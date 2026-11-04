@@ -60,6 +60,7 @@ export interface ScheduleItem {
   description?: string | null;
   createdByName?: string | null;
   meetUrl?: string | null;
+  googleEventId?: string | null;
 }
 
 export interface DayLayoutItem {
@@ -222,6 +223,7 @@ export function normalizeEvent(event: ApiCalendarEvent): ScheduleItem {
     description: event.description ?? null,
     createdByName: event.created_by_name ?? null,
     meetUrl: event.meet_url ?? null,
+    googleEventId: event.google_event_id ?? null,
   };
 }
 

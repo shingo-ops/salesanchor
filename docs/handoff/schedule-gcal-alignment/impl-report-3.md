@@ -45,6 +45,10 @@
 
 - ADR 番号 1060 は origin/main の最大＋1。開いている PR（約 50 本）の全部の中身までは確かめていない。同じ番号の PR があれば番号の付け替えが要る。
 - 状態の口 `/google-calendar/status` を画面が読むのは今も「会社の管理者」だけ（`enabled: isTenantAdmin`・変えていない）。管理者でない人がつないだ本人でも Meet の Toggle は出ない。
-- `api-contract/openapi.json`（触ってよい項目に無い）は更新していない。`add_meet`・`meet_available` の反映が要るかは CI の判定待ち。
+- `api-contract/openapi.json` は 871ecf1a0 で `tools.export_openapi` により再生成（Opus の追加許可）。
 - Workspace 管理者が Meet を止めているときの挙動、本番での K12・K14 は未確認（PO が本番で見る）。
 - 本番へ入れる前に PO の「GO #PR番号」が要る（migrations を含む）。PR は作っていない。
+
+## 追加の直し（便3 の差し戻し）
+
+サーバーは Google に送っていない予定（`google_event_id` 無し）に Meet を頼むと 422 で保存ごと断る。画面もそろえ、`ScheduleItem` に `googleEventId` を足して `normalizeEvent` で写し、直す小窓（create 以外）は `googleEventId` があるときだけ Meet の切り替えを出すようにした。試験を1件足した（自分の予定でも `google_event_id` が null なら切り替えが出ない）。ADR-1060 の状態欄から「Accepted」の語を外し（索引が Accepted と出すため）、索引を作り直して Proposed になることを確かめた。

@@ -1611,7 +1611,11 @@ export default function SchedulePage() {
           meetAvailable={
             meetAvailable
             && (popover.mode === "create"
-              || Boolean(popover.item && popover.item.ownerUserId === currentOwnerUserId))
+              || Boolean(
+                popover.item
+                && popover.item.ownerUserId === currentOwnerUserId
+                && popover.item.googleEventId,
+              ))
           }
         />
       )}
