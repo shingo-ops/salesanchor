@@ -20,7 +20,7 @@
 
 ## 2. サーバー登録の表（DB）
 
-- 表 `public.tenant_discord_config`：`tenant_id` が主キー、`guild_id VARCHAR(32) NOT NULL`、`connected_by_staff_id`、`created_at`、`updated_at`。`guild_id` は一意（制約 `uq_tenant_discord_config_guild_id`、`migrations/20260626_120000_*.sql`）
+- 表 `public.tenant_discord_config`：`tenant_id` が主キー、`guild_id VARCHAR(32) NOT NULL`、`connected_by_staff_id`、`created_at`、`updated_at`。`guild_id` は一意（制約 `uq_tenant_discord_config_guild_id`、`migrations/20260626_120000_add_unique_guild_id_to_tenant_discord_config.sql`）
 - 主キーが `tenant_id` だけなので、1 社 1 サーバーしか持てない。これが KGI-1 の壁
 - 本番の行（2026-11-04 16:57 読み取り）:
 
@@ -51,17 +51,17 @@
 | `backend/app/discord_gateway/client.py:101-126` | 受け取った書き込みのサーバーから会社を引く（1 対 1） | 下の §4 |
 | `scripts/run_all_migrations.sh:676` | 移行の一覧 | — |
 
-テスト：`backend/tests/test_discord_auto_setup.py`、`conftest.py`、`test_discord_d2.py`、`test_discord_oauth.py`、`test_discord_oauth_rls.py`。
+テスト：`backend/tests/test_discord_auto_setup.py`、`backend/tests/conftest.py`、`backend/tests/test_discord_d2.py`、`backend/tests/test_discord_oauth.py`、`backend/tests/test_discord_oauth_rls.py`。
 
 → 自社用の行を同じ表に足すなら、上の **8 か所すべてに「顧客用だけ」の条件が要る**。1 か所でも漏れると顧客用の働きが壊れる（KGI-2）。
 
 ## 4. Bot が受け取ったときの流れ（自社サーバーで何が起きるか）
 
-- `client.py:394-406` `on_message`：サーバー内の書き込みは `_process_guild_message` へ
-- `client.py:408-434`：サーバーから会社を引き、`ticket_channel_writer.process_ticket_channel_message` に渡す
-- `ticket_channel_writer.py:181-196`：その部屋がお客さんの部屋でなければ `outside_ticket_notice.notify_outside_ticket_post` を呼ぶ
-- `outside_ticket_notice.py:33-62`：書いた人が スタッフ表・担当者ロール・管理者 のどれでもなければ「部屋の外の書き込み」通知を送る
-- ほかに会社を引いて動くもの：`client.py:198-216`（起動時にお客さんの部屋の復旧）、`client.py:217-247`（部屋が消されたとき受付ボタンを出し直す）、`client.py:256-343`（受付ボタンを押したときお客さんの部屋を作る）、`client.py:345-392`（リアクションの記録）
+- `backend/app/discord_gateway/client.py:394-406` `on_message`：サーバー内の書き込みは `_process_guild_message` へ
+- `backend/app/discord_gateway/client.py:408-434`：サーバーから会社を引き、`ticket_channel_writer.process_ticket_channel_message` に渡す
+- `backend/app/discord_gateway/ticket_channel_writer.py:181-196`：その部屋がお客さんの部屋でなければ `outside_ticket_notice.notify_outside_ticket_post` を呼ぶ
+- `backend/app/discord_gateway/outside_ticket_notice.py:33-62`：書いた人が スタッフ表・担当者ロール・管理者 のどれでもなければ「部屋の外の書き込み」通知を送る
+- ほかに会社を引いて動くもの：`backend/app/discord_gateway/client.py:198-216`（起動時にお客さんの部屋の復旧）、`backend/app/discord_gateway/client.py:217-247`（部屋が消されたとき受付ボタンを出し直す）、`backend/app/discord_gateway/client.py:256-343`（受付ボタンを押したときお客さんの部屋を作る）、`backend/app/discord_gateway/client.py:345-392`（リアクションの記録）
 
 → 自社サーバーを今の引き方でつなぐと、自社サーバーの書き込みにも「部屋の外の書き込み」通知などお客さん向けの処理が走る。**会社を引くときに「顧客用か自社用か」も返し、自社用ではお客さん向けの処理を全部止める**必要がある。
 
@@ -87,7 +87,7 @@
 
 ## 7. 書き込みの規則
 
-- 移行ファイルの名前は `migrations/YYYYMMDD_HHMMSS_*.sql`（最新は `migrations/20261103_200000_add_google_calendar_import_sync.sql`）
+- 移行ファイルの名前は migrations/ の下に「年月日_時分秒_内容.sql」（最新は `migrations/20261103_200000_add_google_calendar_import_sync.sql`）
 - 主キーを変える移行は表の作り変えになるため、`migrations/` を含む PR は ADR-135・ADR-136 の GO 手順（直前のバックアップ確認）に乗る
 
 ## 8. まだ確かめていないこと
