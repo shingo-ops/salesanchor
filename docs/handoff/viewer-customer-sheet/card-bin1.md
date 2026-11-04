@@ -5,7 +5,7 @@ mode: handoff
 
 親: [design.md](./design.md) §3-3・§3-5「配信するシート」・§3-7・§7（便1の行）・§6 Q1・Q1b・Q2・Q5
 
-- 状態: カード作成済み（2026-11-04 Opus）・PO の実装承認待ち。承認が出るまで実装役に渡さない。
+- 状態: カード作成済み（2026-11-04 Opus）・PO 実装承認済み（2026-11-04 21:20 JST ごろ・チャットで「１」。選択肢「作り始める：クラウドの担当に作業指示を渡して作らせます」）。マージと本番への反映の GO は兼ねない。
 - 担当: クラウドの Sonnet（実装）。Opus は審査・GO・マージ判断。
 - 本カードの許可・禁止は、過去便の禁止条項をすべて上書きする。
 - 区分: A（`migrations/` と `scripts/` と `frontend/api-contract/` を触るため。ADR-1015）。
@@ -28,7 +28,7 @@ mode: handoff
 | 12 | 停止は不可逆・本番影響のものだけ。数の食い違いは記録して続行 | ○（§4） |
 | 13 | 委任文の定型4点（sleep 禁止・Write/Edit で書く・validate-pr-body.sh・フックに止められたら言い換えない） | ○（§4） |
 
-読んだ節（docs/handoff/design-partner-card-ops/guards/）: 00-common.md（全命令を cd で始める・1手順1命令・待たない・commit と push の後に実在を確かめる）、04-worktree.md（起点は origin/main・push は `-u origin HEAD`）、05-pr.md（`gh pr create` を直に使わない → PR は Opus が `gh-pr-create-safe.sh` で作る・触るファイル欄は1行カンマ区切り）、07-migration.md（`run_all_migrations.sh` に登録・採番は直近を見てから）。クラウドの作業場所では `new-worktree.sh` を使わず、`git switch -c` で origin/main から枝を作る。
+読んだ節（docs/handoff/design-partner-card-ops/guards/）: 00-common.md（全命令を cd で始める・1手順1命令・待たない・commit と push の後に実在を確かめる）、04-worktree.md（起点は origin/main・push は `-u origin HEAD`）、05-pr.md（`gh pr create` を直に使わない → PR は Opus が `gh-pr-create-safe.sh` で作る・触るファイル欄は1行カンマ区切り）、07-migration.md（`run_all_migrations.sh` に登録・採番は直近を見てから）。クラウドでも `new-worktree.sh` で作業場所を作る（`git switch -c` だけだと commit の検査で止まった前例がある）。
 
 基準: 設計の基準 origin/main d948cf9c7。2026-11-04 に origin/main 63a69bfb6 と比べ、下の §2 の対象ファイルに差分 0 を確認済み。行番号は d948cf9c7 時点の目印で、ずれていたら前後の文で探す。
 
@@ -111,16 +111,17 @@ mode: handoff
 
 ## 5. 手順
 
-クラウドの作業場所（このリポジトリを取り出した場所）で行う。各命令はリポジトリの最上位へ移ってから流す。1手順1命令。
+クラウドで行う。手順1 で `new-worktree.sh` が作った作業場所のパス（以下「作業場所」）を報告に書き、手順1 の `cd 取り出した場所` はクラウドがこのリポジトリを取り出した最上位の場所に読み替え、手順2 以降の命令は毎回その作業場所へ cd してから流す（下の `cd 作業場所` はそのパスに読み替える）。1手順1命令。
 
 手順1 枝を作る（起点は origin/main）
-    cd "$(git rev-parse --show-toplevel)" && git fetch origin main
-    cd "$(git rev-parse --show-toplevel)" && git switch -c release/viewer-sheet-link-bin1 origin/main
-    cd "$(git rev-parse --show-toplevel)" && git log -1 --format=%H
-    期待する出力: origin/main の先頭と同じ番号。報告に書く。
+    cd 取り出した場所 && git fetch origin
+    cd 取り出した場所 && bash scripts/new-worktree.sh release/viewer-sheet-link-bin1
+    cd 作業場所 && git log -1 --format=%H
+    cd 作業場所 && git rev-parse origin/main
+    期待する出力: 作業場所のパスと、2つの番号が同じこと。報告に書く。違えば NEEDS_DECISION: で止まる。
 
 手順2 対象ファイルが設計の基準から変わっていないか確かめる
-    cd "$(git rev-parse --show-toplevel)" && git diff --stat d948cf9c7 origin/main -- backend/app/services/tcg_distribution_svc.py backend/app/routers/tcg_distribution.py backend/app/line_import_admin.py backend/app/services/tcg_analysis_dashboard_svc.py backend/app/routers/tcg_analysis_dashboard.py frontend/src/pages/super-admin/TcgDistributionPage.tsx frontend/src/pages/super-admin/ViewerAccountsPage.tsx backend/tests/test_viewer_purge.py
+    cd 作業場所 && git diff --stat d948cf9c7 origin/main -- backend/app/services/tcg_distribution_svc.py backend/app/routers/tcg_distribution.py backend/app/line_import_admin.py backend/app/services/tcg_analysis_dashboard_svc.py backend/app/routers/tcg_analysis_dashboard.py frontend/src/pages/super-admin/TcgDistributionPage.tsx frontend/src/pages/super-admin/ViewerAccountsPage.tsx backend/tests/test_viewer_purge.py
     期待する出力: 空。差分があれば記録して続行し、報告に書く。
 
 手順3 §3-1 の migration を作り、`scripts/run_all_migrations.sh` の並びの最後の `run_sql` の次の行に登録する。ファイル名の時刻は、`migrations/` の直近のファイル名を見てから、それより後の時刻で付ける。
@@ -130,29 +131,29 @@ mode: handoff
 手順5 §3-4 の画面と ja.json・en.json を直す。
 
 手順6 API の形を作り直す（手で書かない）
-    cd "$(git rev-parse --show-toplevel)/backend" && ENVIRONMENT=test python -m tools.export_openapi ../frontend/api-contract/openapi.json
-    cd "$(git rev-parse --show-toplevel)/frontend" && npm ci
-    cd "$(git rev-parse --show-toplevel)/frontend" && npm run generate:api-types
+    cd 作業場所/backend && ENVIRONMENT=test python -m tools.export_openapi ../frontend/api-contract/openapi.json
+    cd 作業場所/frontend && npm ci
+    cd 作業場所/frontend && npm run generate:api-types
 
 手順7 試験を流す
-    cd "$(git rev-parse --show-toplevel)/backend" && python -m pytest tests/test_viewer_purge.py -q
+    cd 作業場所/backend && python -m pytest tests/test_viewer_purge.py -q
     期待する出力: 全部 passed。PostgreSQL が無くて skipped になったら、その数と理由を報告に書いて続行する（CI で確かめる）。足した配信先の試験も同じく流し、結果を全文報告に書く。
-    cd "$(git rev-parse --show-toplevel)/frontend" && npx vitest run src/pages/super-admin
+    cd 作業場所/frontend && npx vitest run src/pages/super-admin
     期待する出力: 全部 passed。
 
 手順8 commit
-    cd "$(git rev-parse --show-toplevel)" && git add -A
-    cd "$(git rev-parse --show-toplevel)" && git commit -m "feat: link distribution sheets to viewer customers (bin1)"
-    cd "$(git rev-parse --show-toplevel)" && git log -1 --stat
+    cd 作業場所 && git add -A
+    commit 文は Write でファイルに書き（1行目 `feat: link distribution sheets to viewer customers (bin1)`、末尾に `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`）、`git commit -F` で流す。active-work.d は commit しない。
+    cd 作業場所 && git log -1 --stat
     期待する出力: commit の番号と、§2 の表のファイルだけ。
 
 手順9 差分の点検
-    cd "$(git rev-parse --show-toplevel)" && git diff origin/main --numstat
+    cd 作業場所 && git diff origin/main --numstat
     期待する出力: §2 の表のファイルだけ。削除の数（2列目）が 0 でないファイルは、名前と消えた行の中身を報告に書く（既存の行の書き換えはあってよい）。表に無いファイルがあれば、その名前を報告に書いて止まる。
 
 手順10 push（PR は作らない。PR は Opus が手元で `scripts/gh-pr-create-safe.sh` を使って作る）
-    cd "$(git rev-parse --show-toplevel)" && git push -u origin HEAD
-    cd "$(git rev-parse --show-toplevel)" && git ls-remote origin release/viewer-sheet-link-bin1
+    cd 作業場所 && git push -u origin HEAD
+    cd 作業場所 && git ls-remote origin release/viewer-sheet-link-bin1
     期待する出力: 手順8 の commit と同じ番号。
 
 ## 6. 受入条件（design.md §7 の便1の行）
