@@ -107,6 +107,26 @@ interface StatusChangeResult {
   room_notice_text?: string | null;
 }
 
+/** お客さんが書いた請求先（GET /super-admin/viewers/{id}/billing-profile。無ければ null）。 */
+interface BillingProfile {
+  party_type: "company" | "individual";
+  bill_to_name: string;
+  contact_name: string | null;
+  postal_code: string;
+  address: string;
+  phone: string;
+  invoice_email: string | null;
+  updated_at: string;
+}
+
+/** 「請求先フォームを送る」の結果（POST /super-admin/viewers/{id}/send-billing-form）。 */
+interface BillingFormSendResult {
+  room_notice: "sent" | "failed" | "no_room";
+  room_notice_text: string;
+  mail_queued: boolean;
+  expires_at: string;
+}
+
 const LINE_NAME_MAX = 100;
 
 /** 詳細欄からコピーできる文（API の COPYABLE_KEYS と同じ順） */
@@ -158,6 +178,8 @@ export default function ViewerAccountsPage() {
   const [sheetTabDraft, setSheetTabDraft] = useState("");
   const [sheetSaving, setSheetSaving] = useState(false);
   const [sheetFormError, setSheetFormError] = useState("");
+  const [billingSendResult, setBillingSendResult] = useState<BillingFormSendResult | null>(null);
+  const [billingSendError, setBillingSendError] = useState("");
 
   const statusParam = searchParams.get("status");
   const activeKey: MenuKey = (MENU_STATUSES as readonly string[]).includes(statusParam ?? "")
@@ -195,6 +217,8 @@ export default function ViewerAccountsPage() {
     setSaveError("");
     setTemplateKey("");
     setTemplateError(null);
+    setBillingSendResult(null);
+    setBillingSendError("");
   }, [detailId]);
 
   // 開いた人のシートを読む（配信先の表から viewer_account_id が一致する1件。1人1シートまで）
@@ -203,6 +227,16 @@ export default function ViewerAccountsPage() {
   const sheet = detailId === null ? null : (sheetQuery.data?.find(r => r.viewer_account_id === detailId) ?? null);
   const sheetLoading = detailId !== null && sheetQuery.isPending;
   const sheetLoadError = sheetQuery.isError;
+
+  // 開いた人の請求先を読む（行が無ければ null。お客さんが送信したときに変わるので、管理者が送っても取り直さない）
+  const billingQuery = useApiQuery<BillingProfile | null>(
+    `/super-admin/viewers/${detailId ?? 0}/billing-profile`,
+    { enabled: detailId !== null },
+  );
+  // 行が無いときの null と、想定外の形の応答は「まだ無い」として扱う
+  const billing = typeof billingQuery.data?.bill_to_name === "string" ? billingQuery.data : null;
+  const billingLoading = detailId !== null && billingQuery.isPending;
+  const billingLoadError = billingQuery.isError;
 
   useEffect(() => {
     setSheetModalOpen(false);
@@ -326,6 +360,27 @@ export default function ViewerAccountsPage() {
       copyText("template", res.text);
     } catch (e) {
       setTemplateError(templateErrorMessage(e));
+    }
+  };
+
+  const sendBillingForm = async () => {
+    if (!detail || detail.status !== "active") return;
+    setRunning(true);
+    setBillingSendResult(null);
+    setBillingSendError("");
+    try {
+      const res = await api.post<BillingFormSendResult>(
+        `/super-admin/viewers/${detail.id}/send-billing-form`,
+        {},
+      );
+      setBillingSendResult(res);
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 409) setBillingSendError(t(`${f}.billingConflictError`));
+      else if (e instanceof ApiError && e.status === 503) setBillingSendError(t(`${f}.templateNotFound`));
+      else if (e instanceof ApiError && e.status === 404) setBillingSendError(t(`${f}.notFoundError`));
+      else setBillingSendError(t(`${f}.genericError`));
+    } finally {
+      setRunning(false);
     }
   };
 
@@ -720,6 +775,81 @@ export default function ViewerAccountsPage() {
                     </Button>
                   }
                 />
+              )}
+            </div>
+            <div className="form-row" data-testid="viewers-detail-billing">
+              <label>{t(`${f}.billingTitle`)}</label>
+              {billingLoading ? (
+                <LoadingBlock />
+              ) : billingLoadError ? (
+                <div className="error-message" role="alert" data-testid="viewers-detail-billing-error">
+                  {t(`${f}.billingLoadError`)}
+                </div>
+              ) : billing ? (
+                <Stack direction="column" gap="2">
+                  <div data-testid="viewers-detail-billing-party">
+                    {t(`${f}.billingPartyType`)}: {t(`${f}.${billing.party_type === "company" ? "billingCompany" : "billingIndividual"}`)}
+                  </div>
+                  <div data-testid="viewers-detail-billing-name">
+                    {t(`${f}.billingName`)}: {billing.bill_to_name}
+                  </div>
+                  {billing.contact_name && (
+                    <div data-testid="viewers-detail-billing-contact">
+                      {t(`${f}.billingContact`)}: {billing.contact_name}
+                    </div>
+                  )}
+                  <div data-testid="viewers-detail-billing-postal">
+                    {t(`${f}.billingPostal`)}: {billing.postal_code.slice(0, 3)}-{billing.postal_code.slice(3)}
+                  </div>
+                  <div data-testid="viewers-detail-billing-address">
+                    {t(`${f}.billingAddress`)}: {billing.address}
+                  </div>
+                  <div data-testid="viewers-detail-billing-phone">
+                    {t(`${f}.billingPhone`)}: {billing.phone}
+                  </div>
+                  <div data-testid="viewers-detail-billing-email">
+                    {t(`${f}.billingEmail`)}: {billing.invoice_email ?? t(`${f}.empty`)}
+                  </div>
+                </Stack>
+              ) : (
+                <EmptyState title={t(`${f}.billingEmpty`)} size="compact" />
+              )}
+              {detail.status === "active" && (
+                <Stack direction="column" gap="2">
+                  <div>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      disabled={running}
+                      onClick={() => { void sendBillingForm(); }}
+                      data-testid="viewers-detail-billing-send"
+                    >
+                      {t(`${f}.billingSend`)}
+                    </Button>
+                  </div>
+                  {billingSendError && (
+                    <div className="error-message" role="alert" data-testid="viewers-detail-billing-send-error">
+                      {billingSendError}
+                    </div>
+                  )}
+                  {billingSendResult && (
+                    <div data-testid="viewers-detail-billing-send-result">
+                      <p data-testid="viewers-detail-billing-room">
+                        {t(`${f}.billingRoom_${billingSendResult.room_notice}`)}
+                      </p>
+                      {billingSendResult.mail_queued && <p>{t(`${f}.billingMailQueued`)}</p>}
+                      <p>
+                        {t(`${f}.billingExpires`)}: {formatDate(billingSendResult.expires_at)}
+                      </p>
+                      {billingSendResult.room_notice !== "sent" && (
+                        <>
+                          <p data-testid="viewers-detail-billing-text">{billingSendResult.room_notice_text}</p>
+                          {copyButton("billingForm", billingSendResult.room_notice_text)}
+                        </>
+                      )}
+                    </div>
+                  )}
+                </Stack>
               )}
             </div>
           </div>

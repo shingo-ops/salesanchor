@@ -1,10 +1,11 @@
 /**
- * 閲覧ページの親。状態は ① ログイン / ② パスワード変更 / ③ 在庫表 / ④ 案内 / ⑤ 再発行 / ⑥ 申込。
+ * 閲覧ページの親。状態は ① ログイン / ② パスワード変更 / ③ 在庫表 / ④ 案内 / ⑤ 再発行 / ⑥ 申込 / ⑦ 請求先フォーム。
  * トークンは localStorage。401（invalid viewer token）ならトークンを消して ① に戻る。
  * 在庫表を出している間は1分ごとに裏で読み直し、表の中身だけ差し替える（useViewerAutoRefresh）。
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { BillingFormView } from "./BillingFormView";
 import { InventoryView } from "./InventoryView";
 import { LoginView } from "./LoginView";
 import { NoticeView } from "./NoticeView";
@@ -22,9 +23,12 @@ type Screen =
   | { name: "notice"; kind: ViewerNoticeKind }
   | { name: "passwordChange"; forced: boolean }
   | { name: "reset"; token: string | null }
-  | { name: "signup" };
+  | { name: "signup" }
+  | { name: "billing"; token: string };
 
 const RESET_HASH_PREFIX = "#reset=";
+/** 請求先フォームのリンク（管理画面の「請求先フォームを送る」が作る） */
+const BILLING_HASH_PREFIX = "#billing=";
 /** 申込画面を直接開く URL（管理画面の「申込フォームのURLをコピー」が作る） */
 const SIGNUP_HASH = "#signup";
 
@@ -33,6 +37,14 @@ function readResetTokenFromHash(): string | null {
   const hash = window.location.hash;
   if (!hash.startsWith(RESET_HASH_PREFIX)) return null;
   const token = decodeURIComponent(hash.slice(RESET_HASH_PREFIX.length));
+  return token || null;
+}
+
+/** 請求先フォームのリンク（#billing=鍵）から来たときの鍵。無ければ null */
+function readBillingTokenFromHash(): string | null {
+  const hash = window.location.hash;
+  if (!hash.startsWith(BILLING_HASH_PREFIX)) return null;
+  const token = decodeURIComponent(hash.slice(BILLING_HASH_PREFIX.length));
   return token || null;
 }
 
@@ -56,13 +68,16 @@ export default function ViewerApp() {
   const [screen, setScreen] = useState<Screen>(() => {
     const resetToken = readResetTokenFromHash();
     if (resetToken) return { name: "reset", token: resetToken };
+    const billingToken = readBillingTokenFromHash();
+    if (billingToken) return { name: "billing", token: billingToken };
     if (window.location.hash === SIGNUP_HASH) return { name: "signup" };
     return readToken() ? { name: "loading" } : { name: "login" };
   });
 
   // トークンは URL に残さない（履歴・共有・Referer に出さない）。#signup も読んだら消す
   useEffect(() => {
-    if (window.location.hash.startsWith(RESET_HASH_PREFIX) || window.location.hash === SIGNUP_HASH) {
+    const hash = window.location.hash;
+    if (hash.startsWith(RESET_HASH_PREFIX) || hash.startsWith(BILLING_HASH_PREFIX) || hash === SIGNUP_HASH) {
       window.history.replaceState(null, "", window.location.pathname + window.location.search);
     }
   }, []);
@@ -146,6 +161,7 @@ export default function ViewerApp() {
         />
       )}
       {screen.name === "signup" && <SignupView onToLogin={() => setScreen({ name: "login" })} />}
+      {screen.name === "billing" && <BillingFormView token={screen.token} />}
       {screen.name === "reset" && (
         <PasswordResetView token={screen.token} onToLogin={() => setScreen({ name: "login" })} />
       )}

@@ -11,6 +11,8 @@ API:
   POST /api/v1/super-admin/viewers/{viewer_id}/unsuspend
   POST /api/v1/super-admin/viewers/{viewer_id}/extend
   POST /api/v1/super-admin/viewers/{viewer_id}/reissue-signup-code
+  POST /api/v1/super-admin/viewers/{viewer_id}/send-billing-form   （便2: 請求先フォームのリンクを部屋とメールへ）
+  GET  /api/v1/super-admin/viewers/{viewer_id}/billing-profile    （便2: 請求先を読む。無ければ null）
   GET  /api/v1/super-admin/viewers/signup-request   （①申込のお願いの文を返す）
   GET  /api/v1/super-admin/viewer-templates         （段11: 文面テンプレート9件の一覧）
   PUT  /api/v1/super-admin/viewer-templates/{key}   （段11 便2: 本文を直す。検査 422・競合 409）
@@ -21,7 +23,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from pydantic import BaseModel, Field, model_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -30,7 +32,9 @@ from app.auth.viewer_signup_code import format_signup_code
 from app.database import get_db
 from app.discord_gateway import viewer_bot_texts
 from app.models import User
-from app.services import viewer_admin, viewer_message_templates, viewer_room_notice
+from app.auth import self_tokens
+from app.services import viewer_admin, viewer_billing_form, viewer_message_templates, viewer_room_notice
+from app.services.auth_mail import VIEWER_BILLING_FORM_SUBJECT, send_viewer_billing_form_email
 from app.services.viewer_admin import ViewerAdminError
 from app.services.viewer_invite import create_viewer_invite
 
@@ -129,6 +133,28 @@ class ViewerReissueResponse(BaseModel):
     expires_at: datetime | str = Field(..., description="申込コードの有効期限")
     invite_url: str | None = Field(None, description="Discord 招待リンク（作れなければ null）")
     message: str = Field(..., description="そのまま送れる案内文（招待には外部ブラウザの目印付き）")
+
+
+class ViewerBillingFormSendResponse(BaseModel):
+    """請求先フォームを送った結果。"""
+
+    room_notice: Literal["sent", "failed", "no_room"] = Field(..., description="部屋への送信結果")
+    room_notice_text: str = Field(..., description="部屋へ送ろうとした文（リンクを含む。super admin だけが見る）")
+    mail_queued: bool = Field(..., description="メールの送信を手配したか")
+    expires_at: datetime = Field(..., description="リンクの期限")
+
+
+class ViewerBillingProfileResponse(BaseModel):
+    """お客さんが書いた請求先（管理画面の表示用）。"""
+
+    party_type: Literal["company", "individual"] = Field(..., description="company＝会社／individual＝個人")
+    bill_to_name: str = Field(..., description="請求書の宛名")
+    contact_name: str | None = Field(None, description="担当者名")
+    postal_code: str = Field(..., description="郵便番号（数字7桁）")
+    address: str = Field(..., description="住所")
+    phone: str = Field(..., description="電話番号（数字10〜11桁）")
+    invoice_email: str | None = Field(None, description="請求書の送り先メール")
+    updated_at: datetime = Field(..., description="最後に保存した時刻")
 
 
 class SignupRequestResponse(BaseModel):
@@ -391,3 +417,55 @@ async def reissue_signup_code_endpoint(viewer_id: int, db: AsyncSession = Depend
         "invite_url": invite_url,
         "message": message,
     }
+
+
+@router.post(
+    "/super-admin/viewers/{viewer_id}/send-billing-form",
+    response_model=ViewerBillingFormSendResponse,
+    dependencies=[Depends(require_super_admin)],
+)
+async def send_billing_form_endpoint(
+    viewer_id: int, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)
+):
+    # ① 文面を先に読む。無ければ 503・何も変えない
+    body = await viewer_message_templates.load_body(db, "billing_form_request")
+    if body is None:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=_TEMPLATE_NOT_FOUND)
+    # ② 古い鍵を消して新しい鍵を1本作る（本契約の人だけ）
+    try:
+        raw, expires_at = await viewer_billing_form.issue_billing_form_token(db, viewer_id)
+        item = await viewer_admin._get_item(db, viewer_id)
+    except ViewerAdminError as exc:
+        await db.rollback()
+        raise _http_error(exc) from None
+    message = viewer_message_templates.render(
+        "billing_form_request",
+        body,
+        form_url=f"{self_tokens.rp_origin()}/viewer/#billing={raw}",
+        form_expires=viewer_bot_texts.format_jst_date(expires_at),
+    )
+    # ③ 文が作れなければ（2000字超え）巻き戻す
+    if message is None:
+        await db.rollback()
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=_TEMPLATE_NOT_FOUND)
+    # ④ commit
+    await db.commit()
+    # ⑤ commit の後で部屋へ送る
+    room_notice, room_text = await viewer_room_notice.notify_prepared((True, message), item)
+    # ⑥ メールを裏で送る手配（宛先は名簿のメール）
+    background_tasks.add_task(send_viewer_billing_form_email, item["email"], VIEWER_BILLING_FORM_SUBJECT, message)
+    return {
+        "room_notice": room_notice,
+        "room_notice_text": room_text if room_text is not None else message,
+        "mail_queued": True,
+        "expires_at": expires_at,
+    }
+
+
+@router.get(
+    "/super-admin/viewers/{viewer_id}/billing-profile",
+    response_model=ViewerBillingProfileResponse | None,
+    dependencies=[Depends(require_super_admin)],
+)
+async def get_billing_profile_endpoint(viewer_id: int, db: AsyncSession = Depends(get_db)):
+    return await viewer_billing_form.get_profile(db, viewer_id)
