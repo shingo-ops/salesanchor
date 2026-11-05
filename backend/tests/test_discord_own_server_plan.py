@@ -238,6 +238,115 @@ def test_null_and_empty_topic_are_the_same():
     assert _counts(_plan(data)) == (0, 0, 0)
 
 
+# ---------------------------------------------------------------- 便3b: M1 と actions
+
+def test_channel_under_blocked_category_is_not_a_delete_candidate():
+    # M1: 親のカテゴリが missing_on_discord でも、Discord にあるチャンネルは「消す候補」に出さない
+    for channel_id in (_GENERAL, None):
+        data = _bp_data()
+        data["categories"][0]["discord_id"] = "999"
+        data["channels"][0]["discord_id"] = channel_id
+        plan = _plan(data)
+        assert [(r["kind"], r["reason"]) for r in plan["blocked"]] == [
+            ("update_category", "missing_on_discord"), ("update_channel", "missing_on_discord")
+        ], plan
+        assert plan["changes"] == []
+        assert [c for c in plan["delete_candidates"] if c["kind"] == "channel"] == [], plan["delete_candidates"]
+
+
+def test_actions_for_the_four_kinds():
+    plan = _plan(_four_kinds())
+    assert len(plan["actions"]) == len(plan["changes"]) == 4
+    by_kind = {c["kind"]: a for c, a in zip(plan["changes"], plan["actions"])}
+    role = by_kind["create_role"]
+    assert (role["method"], role["path"], role["creates"]) == ("POST", "/guilds/{guild}/roles", "role:newrole")
+    assert role["json"]["colors"] == {"primary_color": 0}
+    assert "color" not in role["json"]
+    assert role["json"]["name"] == "新しいロール"
+    assert role["json"]["permissions"] == "0"
+    rename = by_kind["update_channel"]
+    assert (rename["method"], rename["path"], rename["json"], rename["creates"]) == (
+        "PATCH", f"/channels/{_GENERAL}", {"name": "ippan"}, None
+    )
+    create = by_kind["create_channel"]
+    assert (create["method"], create["path"], create["creates"]) == ("POST", "/guilds/{guild}/channels", "channel:news")
+    assert create["json"] == {"name": "news", "type": 0, "permission_overwrites": [],
+                              "topic": "お知らせ", "parent_id": _TEXT_CAT}
+    overwrite = by_kind["update_overwrite"]
+    assert (overwrite["method"], overwrite["path"]) == ("PUT", f"/channels/{_TEXT_CAT}/permissions/{{guild}}")
+    assert overwrite["json"] == {"type": 0, "allow": "0", "deny": str(1 << 11)}
+
+
+def test_moved_channel_under_a_new_category_uses_a_ref_for_the_parent():
+    data = _bp_data()
+    data["categories"].append({"key": "newcat", "name": "新カテゴリ", "overwrites": []})
+    data["channels"][0]["category"] = "newcat"
+    plan = _plan(data)
+    pairs = list(zip(plan["changes"], plan["actions"]))
+    assert [c["kind"] for c, _ in pairs] == ["create_category", "update_channel"]
+    row, action = pairs[1]
+    assert (row["field"], row["after"]) == ("parent", "新カテゴリ")
+    assert (action["method"], action["path"]) == ("PATCH", f"/channels/{_GENERAL}")
+    assert action["json"] == {"parent_id": "{ref:category:newcat}"}
+    assert pairs[0][1]["creates"] == "category:newcat"
+
+
+def test_new_role_as_overwrite_target_uses_a_ref():
+    data = _bp_data()
+    data["roles"].append({"key": "newrole", "name": "新しいロール"})
+    data["categories"][0]["overwrites"] = [{"target": "role:newrole", "allow": ["VIEW_CHANNEL"]}]
+    plan = _plan(data)
+    assert [c["kind"] for c in plan["changes"]] == ["create_role", "update_overwrite"]
+    action = plan["actions"][1]
+    assert action["method"] == "PUT"
+    assert action["path"] == f"/channels/{_TEXT_CAT}/permissions/{{ref:role:newrole}}"
+    assert action["json"]["allow"] == str(1 << 10)
+
+
+def test_bits_outside_the_table_are_kept_in_the_actions():
+    unknown = 1 << 47
+    roles = _production_roles()
+    roles[0]["permissions"] = str(int(_EVERYONE_PERMS) | unknown)
+    channels = _production_channels()
+    channels[0]["permission_overwrites"] = [{"id": _G, "type": 0, "allow": str(unknown), "deny": str(unknown)}]
+    data = _bp_data()
+    data["roles"][0]["permissions"] = [p for p in data["roles"][0]["permissions"] if p != "CREATE_INSTANT_INVITE"]
+    data["categories"][0]["overwrites"] = [{"target": "@everyone", "allow": ["VIEW_CHANNEL"]}]
+    plan = _plan(data, roles=roles, channels=channels)
+    assert [c["kind"] for c in plan["changes"]] == ["update_role", "update_overwrite"]
+    role_action, ow_action = plan["actions"]
+    assert role_action["path"] == "/guilds/{guild}/roles/{guild}"
+    assert int(role_action["json"]["permissions"]) & unknown
+    assert not int(role_action["json"]["permissions"]) & 1
+    assert int(ow_action["json"]["allow"]) == unknown | (1 << 10)
+    assert int(ow_action["json"]["deny"]) == unknown
+
+
+def test_plan_with_actions_has_no_guild_id():
+    data = _four_kinds()
+    data["roles"][0]["permissions"] = [p for p in data["roles"][0]["permissions"] if p != "CREATE_INSTANT_INVITE"]
+    channels = _production_channels()
+    channels[2]["permission_overwrites"] = [{"id": _G, "type": 0, "allow": "0", "deny": "1024"}]
+    plan = _plan(data, channels=channels)
+    dumped = json.dumps(plan, ensure_ascii=False)
+    assert _G not in dumped
+    assert "{guild}" in dumped
+
+
+def test_plan_digest_does_not_include_actions():
+    import hashlib
+
+    plan = _plan(_four_kinds())
+    assert "actions" in plan
+    expected = hashlib.sha256(
+        json.dumps(
+            {"changes": plan["changes"], "blocked": plan["blocked"], "delete_candidates": plan["delete_candidates"]},
+            sort_keys=True, ensure_ascii=False, separators=(",", ":"),
+        ).encode()
+    ).hexdigest()
+    assert plan["plan_digest"] == expected
+
+
 # ---------------------------------------------------------------- API
 
 _TENANT = 7

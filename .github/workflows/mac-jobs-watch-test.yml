@@ -1,0 +1,32 @@
+name: Mac Jobs Watch Test
+# scripts/mac-jobs-watch.sh の試験を GitHub の macOS の機械で流す（PO の Mac では流さない）。設計: docs/handoff/mac-jobs-watch/design-weekly-ng.md §5
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/mac-jobs-watch.sh'
+      - 'scripts/tests/test-mac-jobs-watch.sh'
+      - 'scripts/dev/phone-serial.sh'
+      - '.github/workflows/mac-jobs-watch-test.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/mac-jobs-watch.sh'
+      - 'scripts/tests/test-mac-jobs-watch.sh'
+      - 'scripts/dev/phone-serial.sh'
+      - '.github/workflows/mac-jobs-watch-test.yml'
+permissions:
+  contents: read
+jobs:
+  test:
+    name: mac jobs watch test
+    runs-on: macos-latest
+    timeout-minutes: 10
+    env:
+      TZ: Asia/Tokyo
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Run test
+        run: /bin/bash scripts/tests/test-mac-jobs-watch.sh

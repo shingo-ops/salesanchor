@@ -3,6 +3,7 @@
 # 設計: docs/handoff/mac-jobs-watch/design.md
 #
 # 30 分ごとに 2 つの常駐の「読み込み」と「ログ」を見て、止まった・失敗したら Discord で知らせる。
+# 入口の文書の週次点検の NG と未実行も知らせる（設計: design-weekly-ng.md）。
 # 通知先は ADR-1009 の番人と同じファイル（読むだけ）。URL は画面・ログ・引数に出さない。
 #
 # 使い方:
@@ -49,6 +50,9 @@ mjw_config() {
   : "${MJW_DF:=df}"
   : "${MJW_PHONE_CMD=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/dev/phone-serial.sh}"
   : "${MJW_PHONE_GRACE:=3600}"
+  : "${MJW_WEEKLY_DIR:=${home_dir}/CC報告ファイル-keep/doc-entry-weekly}"
+  : "${MJW_WEEKLY_HOUR:=16}"
+  : "${MJW_WEEKLY_GRACE:=7200}"
 }
 
 DRY_RUN=0
@@ -70,6 +74,15 @@ ST_DRUN=0
 ST_ERR=0
 ST_DKICK=0
 ST_PHONE=0
+ST_WSEEN=0     # 知らせ済みの最新の結果ファイルの日付（YYYYMMDD）
+WK_INIT=0      # 状態ファイルに weekly_seen が無い（設置直後）
+C_WSEEN=0
+N_WSEEN=0
+WK_NEWEST=0    # RESULT= 行がある日付ファイルの最新（YYYYMMDD。無ければ 0）
+WK_ISNG=0
+WK_NG=""
+WK_EXPECT=0    # 締め切りを過ぎた直近の月曜（YYYYMMDD）
+WEEKLY_JUDGED=0
 DISK_KICK=0
 PHONE_JUDGED=0
 C_SEEN=0   # 確定した既読位置
@@ -104,6 +117,7 @@ PROB_F=""
 
 # ── 共通 ────────────────────────────────────────────────────────────────────
 mjw_num() { case "${1:-}" in ''|*[!0-9]*) echo 0 ;; *) echo "$1" ;; esac; }
+mjw_ymd() { local v="${1:-}"; case "${v}" in [0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]) printf '%s-%s-%s' "${v:0:4}" "${v:4:2}" "${v:6:2}" ;; *) printf '%s' "${v}" ;; esac; }
 
 mjw_csv() { # 改行区切りの一覧 → カンマ区切り（空なら -）
   local out
@@ -188,6 +202,7 @@ mjw_judged() {
     dj-stale) [ "${AWAKE}" -eq 1 ] && [ "${BOOT_SEC}" -lt "${LAST04}" ] && [ "${NOW}" -ge $(( LAST04 + MJW_DJ_GRACE )) ] ;;
     disk-low) [ -n "${DISK_GIB}" ] ;;
     phone-missing) [ "${PHONE_JUDGED}" -eq 1 ] ;;
+    weekly-missing) [ "${WEEKLY_JUDGED}" -eq 1 ] ;;
     *) return 0 ;;
   esac
 }
@@ -204,6 +219,8 @@ mjw_text() { # 名前 → 固定文
     colima-judge-fail) printf 'Docker の自動停止が、2 回続けて判定に失敗しました' ;;
     disk-low) printf '空き容量が少ないままです（いま %s GiB。自動片付けを走らせた後も %s GiB 未満）' "${DISK_GIB:-?}" "${MJW_DISK_LOW_GIB}" ;;
     dj-err) printf '毎日の自動片付けが、道具の更新に失敗して実行しませんでした' ;;
+    weekly-ng) printf '入口の文書の週次点検（%s）が NG でした（%s）。結果: %s.txt' "$(mjw_ymd "${WK_NEWEST}")" "${WK_NG}" "${WK_NEWEST}" ;;
+    weekly-missing) printf '入口の文書の週次点検（毎週月曜 %s:00）の結果が、%s 時間たっても出ていません（%s の分）' "${MJW_WEEKLY_HOUR}" "$(( MJW_WEEKLY_GRACE / 3600 ))" "$(mjw_ymd "${WK_EXPECT}")" ;;
     phone-missing) printf 'スマホ（実機）が 1 時間以上 Mac から見えません。スマホが家の Wi-Fi に入っているか、設定 → 開発者向けオプション → ワイヤレスデバッグ が入っているかを見てください' ;;
     *) printf '%s' "$1" ;;
   esac
@@ -244,6 +261,9 @@ mjw_read_state() {
     ST_ERR="$(mjw_num "$(mjw_st_get dj_err_seen)")"
     ST_DKICK="$(mjw_num "$(mjw_st_get disk_kick)")"
     ST_PHONE="$(mjw_num "$(mjw_st_get phone_gone)")"
+    WK_RAW="$(mjw_st_get weekly_seen)"
+    if [ -z "${WK_RAW}" ]; then WK_INIT=1; else WK_INIT=0; fi
+    ST_WSEEN="$(mjw_num "${WK_RAW}")"
     PROB="$(grep -v '^$' "${PROB_F}" 2>/dev/null || true)"
   else
     FIRST=1
@@ -254,6 +274,7 @@ mjw_read_state() {
     ST_ERR=0
     ST_DKICK=0
     ST_PHONE=0
+    ST_WSEEN=0
     PROB=""
   fi
 }
@@ -268,6 +289,7 @@ mjw_write_state() {
     printf 'dj_err_seen=%s\n' "${C_ERR}"
     printf 'disk_kick=%s\n' "${C_DKICK}"
     printf 'phone_gone=%s\n' "${C_PHONE}"
+    printf 'weekly_seen=%s\n' "${C_WSEEN}"
   } > "${STATE_F}.tmp" 2>/dev/null && mv -f -- "${STATE_F}.tmp" "${STATE_F}"
   printf '%s\n' "${PROB}" | grep -v '^$' > "${PROB_F}.tmp" 2>/dev/null
   mv -f -- "${PROB_F}.tmp" "${PROB_F}" 2>/dev/null || true
@@ -324,6 +346,40 @@ mjw_disk_parse() { # DISK_GIB に空き GiB（整数・切り捨て）。読め�
   DISK_GIB=$(( kb / 1048576 ))
 }
 
+mjw_weekly_parse() { # WK_NEWEST / WK_ISNG / WK_NG。置き場が無ければ WEEKLY_JUDGED=0
+  local f b line
+  WK_NEWEST=0; WK_ISNG=0; WK_NG=""; WEEKLY_JUDGED=0
+  [ -d "${MJW_WEEKLY_DIR}" ] || return 0
+  WEEKLY_JUDGED=1
+  while IFS= read -r b; do
+    [ -n "${b}" ] || continue
+    f="${MJW_WEEKLY_DIR}/${b}"
+    line="$(grep '^RESULT=' "${f}" 2>/dev/null | tail -1)"
+    [ -n "${line}" ] || continue
+    WK_NEWEST="${b%.txt}"
+    case "${line}" in
+      RESULT=NG*)
+        WK_ISNG=1
+        WK_NG="$(printf '%s' "${line#RESULT=NG}" | LC_ALL=C tr -cd 'A-Za-z0-9_.:>=/ -' | cut -c1-200)"
+        WK_NG="${WK_NG# }"
+        [ -n "${WK_NG}" ] || WK_NG="-" ;;
+    esac
+    break
+  done < <(ls -1 "${MJW_WEEKLY_DIR}" 2>/dev/null | grep -E '^[0-9]{8}\.txt$' | sort -r)
+}
+
+mjw_weekly_expect() { # WK_EXPECT: 「16:00＋猶予」を過ぎた直近の月曜。計算できなければ WEEKLY_JUDGED=0
+  local u mid day
+  WK_EXPECT=0
+  u="$(mjw_num "$(date -j -r "${NOW}" +%u 2>/dev/null)")"
+  mid="$(mjw_num "$(date -j -r "${NOW}" -v0H -v0M -v0S +%s 2>/dev/null)")"
+  if [ "${u}" -lt 1 ] || [ "${mid}" -eq 0 ]; then WEEKLY_JUDGED=0; return 0; fi
+  day=$(( mid - (u - 1) * 86400 ))
+  if [ $(( day + MJW_WEEKLY_HOUR * 3600 + MJW_WEEKLY_GRACE )) -gt "${NOW}" ]; then day=$(( day - 7 * 86400 )); fi
+  WK_EXPECT="$(mjw_num "$(date -j -r "${day}" +%Y%m%d 2>/dev/null)")"
+  if [ "${WK_EXPECT}" -eq 0 ]; then WEEKLY_JUDGED=0; fi
+}
+
 # ── 判定 ─────────────────────────────────────────────────────────────────────
 mjw_detect_states() {
   DETECTED=""
@@ -378,6 +434,10 @@ mjw_detect_states() {
     fi
   fi
   mjw_phone_check
+  # weekly-missing（月曜 16:00＋猶予を過ぎても、その日の結果が無い。design-weekly-ng §3-5）
+  mjw_weekly_parse
+  mjw_weekly_expect
+  if [ "${WEEKLY_JUDGED}" -eq 1 ] && [ "${WK_NEWEST}" -lt "${WK_EXPECT}" ]; then list_add DETECTED weekly-missing; fi
 }
 
 # phone-missing（実機スマホが MJW_PHONE_GRACE 秒以上見えない。design-phone §3-2）
@@ -403,6 +463,8 @@ mjw_detect_events() {
   N_SEEN="${ST_SEEN}"
   N_DRUN="${ST_DRUN}"
   N_ERR="${ST_ERR}"
+  N_WSEEN="${ST_WSEEN}"
+  if [ "${FIRST}" -eq 1 ] || [ "${WK_INIT}" -eq 1 ]; then ST_WSEEN="${WK_NEWEST}"; N_WSEEN="${WK_NEWEST}"; fi
   if [ "${FIRST}" -eq 1 ]; then
     N_SEEN="${CL_LAST}"
     N_DRUN=0
@@ -433,6 +495,10 @@ mjw_detect_events() {
       if [ -s "${MJW_DJ_ERR}" ]; then list_add EV_LIST dj-err; fi
     fi
   fi
+  if [ "${WK_NEWEST}" -gt "${ST_WSEEN}" ]; then
+    N_WSEEN="${WK_NEWEST}"
+    if [ "${WK_ISNG}" -eq 1 ]; then list_add EV_LIST weekly-ng; fi
+  fi
 }
 
 # 前回の問題との突き合わせ → NEW_LIST / REP_LIST / REC_LIST
@@ -454,7 +520,7 @@ mjw_classify() {
   done <<< "$(prob_names)"
 }
 
-mjw_commit_events() { C_SEEN="${N_SEEN}"; C_DRUN="${N_DRUN}"; C_ERR="${N_ERR}"; }
+mjw_commit_events() { C_SEEN="${N_SEEN}"; C_DRUN="${N_DRUN}"; C_ERR="${N_ERR}"; C_WSEEN="${N_WSEEN}"; }
 
 # ── 本体 ─────────────────────────────────────────────────────────────────────
 mjw_log_now() { # mjw_log_now <result> <send>
@@ -512,7 +578,7 @@ mjw_main() {
 
   mjw_detect_states
   mjw_detect_events
-  C_SEEN="${ST_SEEN}"; C_DRUN="${ST_DRUN}"; C_ERR="${ST_ERR}"; C_DKICK="${ST_DKICK}"
+  C_SEEN="${ST_SEEN}"; C_DRUN="${ST_DRUN}"; C_ERR="${ST_ERR}"; C_DKICK="${ST_DKICK}"; C_WSEEN="${ST_WSEEN}"
   if [ "${FIRST}" -eq 1 ]; then mjw_commit_events; fi
   NEW_BOOT="${ST_BOOT}"
   mjw_classify
