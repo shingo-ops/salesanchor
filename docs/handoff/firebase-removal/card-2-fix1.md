@@ -4,6 +4,11 @@
 担当: クラウドの Sonnet。触ってよいのは `backend/tests/test_real_redis_lockout.py` の 1 ファイルだけ。PR は作らない（Opus が PR #5145 に載せる）。
 基準: 枝 `release/firebase-removal-bin2` の `87d75572a6ae7367e5c52d2ddd99e143f5e02508`。
 
+## 読んだ節（docs/handoff/design-partner-card-ops/guards/）
+- guards/00-common.md: 全コマンドを作業場所の cd から始める・出力に上限（tail）・sleep しない・プレースホルダを残さない。○
+- guards/03-file.md・guards/05-pr.md: 触るファイルは 1 つだけと書いた。PR は Opus が作る（Sonnet は push まで）。○
+- guards/10-executor.md: 散文で組み立てを頼まない（§1 に変更前と変更後の文を書いた）。○
+
 ## なぜ
 PR #5145 の CI（run 41961019067・job pytest-run-internal）で 1 件だけ赤になった。
 `FAILED tests/test_real_redis_lockout.py::TestRealRedisLockout::test_s1_cached_user_bypasses_ip_lock - AssertionError: 巻き添え発生 (S1): IP ロック中にキャッシュ済みトークンが 429 で遮断された。`
@@ -64,7 +69,7 @@ CACHED_TOKEN = _unsigned_jwt({"iss": "salesanchor", "email": "shingo@example.com
     cd ~/sa && sed -n '24,26p' backend/tests/test_real_redis_lockout.py | tail -3
 
 手順3 部品を入れる（Python 3.12 の venv `/tmp/v312`。py312-guard の決まり）
-    python3.12 -m venv /tmp/v312 && /tmp/v312/bin/python --version | tail -1
+    cd ~/sa && python3.12 -m venv /tmp/v312 && /tmp/v312/bin/python --version | tail -1
     cd ~/sa/backend && /tmp/v312/bin/python -m pip install -q -r requirements.txt -r requirements-dev.txt 2>&1 | tail -3
 
 手順4 §1 の変更をする
@@ -74,8 +79,8 @@ CACHED_TOKEN = _unsigned_jwt({"iss": "salesanchor", "email": "shingo@example.com
 期待: `salesanchor`
 
 手順6 本物の Redis で 3 つの試験を流す（Redis が入れられる場合だけ）
-    (command -v redis-server || (sudo apt-get install -y -q redis-server >/dev/null 2>&1 && command -v redis-server)) | tail -1
-    redis-server --port 6399 --requirepass testpass123 --daemonize yes | tail -1
+    cd ~/sa && (command -v redis-server || (sudo apt-get install -y -q redis-server >/dev/null 2>&1 && command -v redis-server)) | tail -1
+    cd ~/sa && redis-server --port 6399 --requirepass testpass123 --daemonize yes | tail -1
     cd ~/sa/backend && REDIS_URL=redis://:testpass123@localhost:6399/0 ENVIRONMENT=test /tmp/v312/bin/python -m pytest -q -p no:cacheprovider --no-cov tests/test_real_redis_lockout.py 2>&1 | tail -15
 期待: `3 passed`。redis-server が入れられないときは、手順6 を飛ばしたと報告に書いて先へ進む（CI で確かめる）。
 
@@ -95,8 +100,12 @@ CACHED_TOKEN = _unsigned_jwt({"iss": "salesanchor", "email": "shingo@example.com
 - 手順6 で 3 passed にならない → 最後の 30 行を報告して `BLOCKED: 締め出しの試験`。
 - 手順8 で他のファイルが変わっている → 戻してから進む。戻せなければ `BLOCKED: 余計な変更`。
 
+## 受領確認（最初の報告の 1 行目に書く）
+RECEIVED firebase-removal-bin2-fix1 HEAD=（git rev-parse HEAD の 40 桁）
+
 ## 4. 報告の形
-- 1 行目: `RECEIVED firebase-removal-bin2-fix1 HEAD=（40 桁）`。
+- 1 行目: 受領確認。
+- 分かれ道に当たって停止したときは、どの分かれ道かと見えたものを書き、最後の行を `BLOCKED: 理由` にする。
 - 手順2・5・6・7・8・9 の出力をそのまま貼る。
 - 秘密の値は貼らない。
 - 最後の行: `DONE` か `BLOCKED: 理由`。
