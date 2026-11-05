@@ -26,17 +26,6 @@ systems:
     review_state: in_review            # in_review | live
     last_verified: 2026-05-16
 
-  firebase:
-    project_id: sales-ops-with-claude
-    auth_domain: auth.salesanchor.jp
-    auth_providers: [google.com, password]
-    authorized_domains:
-      - salesanchor.jp
-      - app.salesanchor.jp
-      - auth.salesanchor.jp
-    credentials_path_env: GOOGLE_APPLICATION_CREDENTIALS  # 実体: /app/firebase-credentials.json
-    last_verified: 2026-05-16
-
   github:
     org_or_owner: shingo-ops
     repo: salesanchor
@@ -92,7 +81,7 @@ systems:
     last_verified: 2026-05-16
 
   gcp:
-    project_id: sales-ops-with-claude  # 実体: .env.example:17
+    project_id: sales-ops-with-claude  # 実体: .env.example:18
     service_accounts: []               # 初回 snapshot 実行後に更新（email 列挙）
     enabled_apis: []                   # 初回 snapshot 実行後に更新
     iam_role_count: 0                  # 初回 snapshot 実行後に更新

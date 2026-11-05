@@ -95,9 +95,9 @@
 ### 運用・CI・監視
 
 - R19: Firebase に依存する運用の部品は次のとおり。
-  - `.github/workflows/external-state-snapshot.yml:82-88`（週 1 回 `'0 18 * * 6'`。`scripts/snapshot/firebase.sh` を `secrets.FIREBASE_API_KEY` で流す）。同じ workflow の GCP の段（:120 付近）は Firebase と別なので残す。
-  - `.github/workflows/rotate-qa-firebase.yml`（手動だけ。ADR-1051 D5 の削除一覧に入っていない）
-  - `scripts/smoke/external-firebase.sh`（呼ぶ所はコメントの相互参照だけ）
+  - `.github/workflows/external-state-snapshot.yml:82-88`（週 1 回 `'0 18 * * 6'`。scripts/snapshot/firebase.sh を `secrets.FIREBASE_API_KEY` で流す）。同じ workflow の GCP の段（:120 付近）は Firebase と別なので残す。
+  - .github/workflows/rotate-qa-firebase.yml（手動だけ。ADR-1051 D5 の削除一覧に入っていない）
+  - scripts/smoke/external-firebase.sh（呼ぶ所はコメントの相互参照だけ）
   - `docs/external-state-contract.yml:29-37`
   - `scripts/detect-external-api-change.js:84-89` とその試験 `scripts/tests/test-detect-external-api-change.js:128`・`:199`
   - `monitoring/grafana/provisioning/dashboards/json/uptime-kuma.json:124-132` の「Firebase Auth」の板。Uptime Kuma の監視そのものはリポジトリの外にある。
