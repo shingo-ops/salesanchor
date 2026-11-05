@@ -92,7 +92,7 @@ Firebase は使わない設定に切り替えた（PO 2026-11-04「firebaseは�
 | API に付ける札（`getAccessToken`）・ログイン中か（`hasSession`） | 偽物が `e2e-fake-id-token` を返す | `devSession` が `e2e-fake-id-token` を返す |
 | 401 の送り直し（`frontend/src/lib/api.ts:83`） | しない | しない（`isDevSession()` なら今と同じくそのまま返す） |
 | パスキーのボタン（`frontend/src/lib/auth/passkey.ts:23`） | 出さない | 出さない |
-| 新しい機械の許可の見張り（`frontend/src/features/auth/LoginApprovalWatcher.tsx:34`）・回復コードの案内（`frontend/src/features/auth/RecoveryCodePrompt.tsx:61`） | 動かない | 動かない |
+| 新しい機械の許可の見張り（「frontend／src／features／auth／LoginApprovalWatcher.tsx」の 34 行目（便1で削除））・回復コードの案内（`frontend/src/features/auth/RecoveryCodePrompt.tsx:61`） | 動かない | 動かない |
 | セキュリティの 4 つの欄（`frontend/src/pages/account-settings/SecuritySection.tsx:366-369`） | 出さない | 出さない |
 | パスワード変更（`frontend/src/pages/account-settings/SecuritySection.tsx:262`） | 偽物の再認証を通る | 自社の API を呼ぶ。e2e にこの試験は無い（R28） |
 | パスワード再設定の申し込み | 偽物が何もせず成功 | 自社の API（`/password-reset/request`）を呼ぶ。`frontend/tests-e2e/login.spec.ts:51` の差し替え先をこの宛先に変える（R29） |
