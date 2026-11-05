@@ -53,4 +53,28 @@ a7c5713c4 Merge pull request #5148 from shingo-ops/release/weekly-check-k1-line
 ```
 `git status --short` は、この報告の追加前は空（active-work.d は commit していない）。push の後の結果はこの下の追記を見る。
 
+## 追補 W6
+設計 design-weekly-ng.md §4 の W6 の行に従い、`scripts/tests/test-mac-jobs-watch.sh` の 858 行目だけを直した（`wk_setup` の後ろに `wk_file 20261102.txt "OK";` を足しただけ）。
+
+- 試験の commit: `dfbb3b54c`
+
+`bash -n scripts/tests/test-mac-jobs-watch.sh; echo rc=$?` の生出力:
+```
+rc=0
+```
+
+`git diff` の生出力:
+```
+-wk_setup "2026-11-09 16:30:00" 20261102; printf 'x\n' > "${MJW_WEEKLY_DIR}/20261109.txt"
++wk_setup "2026-11-09 16:30:00" 20261102; wk_file 20261102.txt "OK"; printf 'x\n' > "${MJW_WEEKLY_DIR}/20261109.txt"
+```
+（1 file changed, 1 insertion(+), 1 deletion(-)。試験そのものの実行はこの回では行っていない）
+
+push 時点の `git log --oneline -3`（この報告の commit の 1 つ前までの並び。報告 commit の SHA は push 後に確認）:
+```
+dfbb3b54c test(mac-jobs-watch): W6 に前週の OK ファイルを足す
+b00ad2c7b Merge remote-tracking branch 'origin/main' into release/weekly-check-ng-notify
+2540d1d8c docs(mac-jobs-watch): W6 needs the previous week result file in setup
+```
+
 DONE
