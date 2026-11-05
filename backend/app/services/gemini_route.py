@@ -194,7 +194,9 @@ def generate_content_routed(client, *, model, contents, config):
         logger.warning(
             "[gemini_route] 道を切り替えます: %s -> %s 理由=%s", route, to, failure_reason(exc)
         )
-        response = build_client(to).models.generate_content(
+        # Client は消えると __del__ で接続を閉じる（google-genai）。呼び出しが終わるまで変数に持つ
+        other = build_client(to)
+        response = other.models.generate_content(
             model=model, contents=contents, config=config
         )
         remember(to)
@@ -217,7 +219,9 @@ async def agenerate_content_routed(*, model, contents, config):
         logger.warning(
             "[gemini_route] 道を切り替えます: %s -> %s 理由=%s", route, to, failure_reason(exc)
         )
-        response = await build_client(to).aio.models.generate_content(
+        # Client は消えると __del__ で接続を閉じる（google-genai）。呼び出しが終わるまで変数に持つ
+        other = build_client(to)
+        response = await other.aio.models.generate_content(
             model=model, contents=contents, config=config
         )
         remember(to)
