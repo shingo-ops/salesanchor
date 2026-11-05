@@ -25,6 +25,7 @@ from celery.exceptions import SoftTimeLimitExceeded
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.services import gemini_route
 from app.services import tcg_analyzer_svc as analyzer
 from app.services.extraction_judgement_svc import build_cond_terms, order_from_pattern
 from app.services.gemini_extraction_svc import (
@@ -515,7 +516,11 @@ def _call_gemini(session: Session, ctx, prompt_text: str, extraction_job_id: str
                 continue
             if recorder is None:
                 raise
-            recorder.record_error_detail({"raw": _safe_error_message(exc), "category": _classify_error(exc)})
+            recorder.record_error_detail({
+                "raw": _safe_error_message(exc),
+                "category": _classify_error(exc),
+                "reason": gemini_route.failure_reason(exc),
+            })
             raise RecordError("API_ERROR") from None
         if retries_used:
             logger.info("[line_analysis] 送り直しで成功: job=%s 回目=%d", extraction_job_id, retries_used)

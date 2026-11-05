@@ -15,7 +15,7 @@ from typing import Any
 from celery.exceptions import SoftTimeLimitExceeded
 
 from app.services import gemini_extraction_svc as _gem
-from app.services import llm_budget
+from app.services import gemini_route, llm_budget
 
 logger = logging.getLogger(__name__)
 
@@ -218,7 +218,8 @@ def call_gemini_raw_copy_v8(
     client = _gem._get_genai_client()
     logger.info("[gemini_v8] calling Gemini, model=%s text_len=%d", _gem._GEMINI_MODEL, len(raw_text))
     try:
-        response = client.models.generate_content(
+        response = gemini_route.generate_content_routed(
+            client,
             model=_gem._GEMINI_MODEL,
             contents=full_prompt,
             config=genai_types.GenerateContentConfig(**config_kwargs),

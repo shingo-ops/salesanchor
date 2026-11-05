@@ -13,7 +13,7 @@ ADR-088 基盤 + ADR-110 拡張のカバー:
   - テナント分離（table_ref がテナント固有）
 
 Mock 戦略:
-  - google.generativeai モジュールを _GENAI_CACHE に MagicMock で事前注入
+  - gemini_route.agenerate_content_routed を AsyncMock に差し替え（ADR-1062）
   - llm_budget.check_budget / record_cost を patch
   - translation_glossary.load_glossary を patch
   - DB 操作は AsyncMock で模擬
@@ -47,11 +47,19 @@ from app.services.llm_budget import BudgetStatus
 # ---------------------------------------------------------------------------
 
 
+_FAKE_PATCHES: list = []
+
+
+def stop_fake_genai() -> None:
+    while _FAKE_PATCHES:
+        _FAKE_PATCHES.pop().stop()
+
+
 @pytest.fixture(autouse=True)
 def reset_genai_cache():
-    message_translator._GENAI_CACHE.clear()
+    stop_fake_genai()
     yield
-    message_translator._GENAI_CACHE.clear()
+    stop_fake_genai()
 
 
 def _make_gemini_json_response(
@@ -80,14 +88,13 @@ def _make_gemini_json_response(
     return response
 
 
-def _install_fake_genai(response: MagicMock) -> MagicMock:
-    genai = MagicMock()
-    genai.configure = MagicMock()
-    model = MagicMock()
-    model.generate_content_async = AsyncMock(return_value=response)
-    genai.GenerativeModel = MagicMock(return_value=model)
-    message_translator._GENAI_CACHE["module"] = genai
-    return genai
+def _install_fake_genai(response: MagicMock) -> AsyncMock:
+    """gemini_route.agenerate_content_routed を AsyncMock に差し替えて返す（fixture が後で戻す）。"""
+    routed = AsyncMock(return_value=response)
+    patcher = patch("app.services.gemini_route.agenerate_content_routed", routed)
+    patcher.start()
+    _FAKE_PATCHES.append(patcher)
+    return routed
 
 
 # ---------------------------------------------------------------------------
@@ -562,11 +569,9 @@ async def test_outbound_uses_send_model():
     assert result.translated_text == "Draft EN text"
     assert result.engine == MODEL_SEND
 
-    # GenerativeModel が MODEL_SEND で呼ばれたことを確認
-    genai_mock.GenerativeModel.assert_called_once_with(
-        model_name=MODEL_SEND,
-        generation_config={"temperature": 0.1},
-    )
+    # agenerate_content_routed が MODEL_SEND で呼ばれたことを確認
+    genai_mock.assert_awaited_once()
+    assert genai_mock.await_args.kwargs["model"] == MODEL_SEND
     mock_save_draft.assert_awaited_once()
 
     # reset_monthly_if_needed は check_budget より前に呼ばれる（月初リセット→予算チェックの順）
