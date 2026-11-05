@@ -723,7 +723,7 @@ PO への返事の本文（ツール呼び出しの中ではない）の、**最
   - 外す4種（PostToolUse・PostToolUseFailure・UserPromptSubmit・Stop）: 結果にかかわらず必ず 0 で終わり、何も出力しない。`onFailure` は付けない。届かなければ印が残るだけで、安全側。
 - 部屋の中から hook の本体を読めるよう、`CASE_ROOM_READ_NAMED`（server/case-sandbox.ts:212-221）に `path.join(p.D, "hooks", "case-wait-hook.mjs")` を足す。足さないと起動できず、付ける側が block になって質問がいつも出なくなる。送り先 127.0.0.1 へつなぐ許しは、記録用 hook と同じ道を使う（記録用 hook が今つないでいる）。
 
-(b) 新しい受け口 `POST /api/agent/case-wait`（server/http.ts。`handleCaseActivity` と同じ順で確かめる）: POST 以外 405 → Origin があれば 403 → `caseOfRequest` で件を決める（決まらなければ 401）→ 本文（4KiB まで。`hook_event_name` が上の表の6種、`tool_name` は文字列か無し、`tool_use_id` は (c) のとおり）→ `pinCaseSessionId` と同じ固定の確かめ（違えば 409）→ 印を更新して 204。表に無い出来事・形の違う本文は 400 で、印は変えない。
+(b) 新しい受け口 `POST /api/agent/case-wait`（server/http.ts。`handleCaseActivity` と同じ順で確かめる）: POST 以外 405 → Origin があれば 403 → `caseOfRequest` で件を決める（決まらなければ 401）→ 本文（4KiB まで。`hook_event_name` が 7つの出来事（PreToolUse・PermissionRequest・Elicitation・PostToolUse・PostToolUseFailure・UserPromptSubmit・Stop） のどれか、`tool_name` は文字列か無し、`tool_use_id` は (c) のとおり）→ `pinCaseSessionId` と同じ固定の確かめ（違えば 409）→ 印を更新して 204。表に無い出来事・形の違う本文は 400 で、印は変えない。
 
 (c) 印の置き場: サーバーのメモリの `Map<caseId, { pending: Set<string>; since: number; lastEvent: string }>`。`pending` が空でなければ答え待ち（`awaiting`）。
    - PreToolUse は本文の `tool_use_id` を `pending` に足し、PostToolUse・PostToolUseFailure は同じ `tool_use_id` だけを外す（担当の道具の終わりが本体の質問の印を外さないため）。`tool_use_id` が無い・文字列でない本文は 400（付ける側の hook は 1 で終わり、質問を出させない。安全側）。
@@ -761,7 +761,7 @@ PO への返事の本文（ツール呼び出しの中ではない）の、**最
 | R32 | 件が自分の settings を書き換えて hook を外す | 件の設定の置き場 D/cases は部屋の書き込み拒否に入っている（server/case-sandbox.ts:78 の `CASE_DENY_WRITE`）。外せても影響は R31 と同じ |
 | R33 | 担当（サブエージェント）の道具の終わりが、本体の質問の印を外す | 印を `tool_use_id` ごとに持ち、Post は同じ id だけを外す（14-11-3 (c)）。担当の hook も件の本体の子から送られ、`caseOfRequest` は同じ件に決まる。K36 ⑦で担当からの質問が出るかを1回記録する（出なければ「場面なし」） |
 | R35 | hook の終わり方の取り違え（2 で終わると PermissionRequest では無視・UserPromptSubmit では入力が消える・Stop では止まらない） | 2 は使わない。付ける側は 1、外す側は常に 0（14-11-3 (a)）。K37 の試験で終わり方を確かめる |
-| R34 | 同期の hook で件の動きが遅くなる | 当たるのは表の6種だけ。K36 ⑧で1回あたりの時間を記録する（目安 1 秒未満） |
+| R34 | 同期の hook で件の動きが遅くなる | 当たるのは 7つの出来事（PreToolUse・PermissionRequest・Elicitation・PostToolUse・PostToolUseFailure・UserPromptSubmit・Stop） だけ。K36 ⑧で1回あたりの時間を記録する（目安 1 秒未満） |
 
 戻し方: agent-console を一つ前の版に戻す（hook と受け口が消える）。件を開き直せば設定は元に戻る。
 
@@ -769,7 +769,7 @@ PO への返事の本文（ツール呼び出しの中ではない）の、**最
 
 | # | 基準 | 検証方法 |
 |---|---|---|
-| K36 | 本物の件の窓で、答え待ちの間だけ印が付き、答えると外れる | 便CS0 を反映した後、PO が件を1つ開き、Opus がサーバーの印を読むだけで記録（読む口は便CS0 で足す。件の id を渡すと `awaiting`（pending が空でないか）・`pendingCount`・`lastEvent`・`since` だけを返す、合言葉付きの読み取り）: ① 開いた直後 false ② 質問の選択肢が出ている間 true ③ 選んで答えた後 false ④ 質問の選択肢で Esc → 値と lastEvent をそのまま記録（true のままなら安全側で○。false なら外れた知らせの名前を記録） ⑤ PO が何か打った後 false ⑥ サーバーを止めた状態で質問を頼む → 選択肢が出ないこと（出たら×） ⑦ 担当からの質問（出なければ場面なし） ⑧ 6種の hook の1回あたりの時間。①②③④⑤⑥が○なら○。×なら便CS1 に進まず案 E |
+| K36 | 本物の件の窓で、答え待ちの間だけ印が付き、答えると外れる | 便CS0 を反映した後、PO が件を1つ開き、Opus がサーバーの印を読むだけで記録（読む口は便CS0 で足す。件の id を渡すと `awaiting`（pending が空でないか）・`pendingCount`・`lastEvent`・`since` だけを返す、合言葉付きの読み取り）: ① 開いた直後 false ② 質問の選択肢が出ている間 true ③ 選んで答えた後 false ④ 質問の選択肢で Esc → 値と lastEvent をそのまま記録（true のままなら安全側で○。false なら外れた知らせの名前を記録） ⑤ PO が何か打った後 false ⑥ サーバーを止めた状態で質問を頼む → 選択肢が出ないこと（出たら×） ⑦ 担当からの質問（出なければ場面なし） ⑧ 7つの出来事（PreToolUse・PermissionRequest・Elicitation・PostToolUse・PostToolUseFailure・UserPromptSubmit・Stop） の hook の1回あたりの時間。①②③④⑤⑥が○なら○。×なら便CS1 に進まず案 E |
 | K37 | ふつうの窓の hooks が変わっていない。件の hook が正しく入り、正しく終わる | vitest で: 件でない役割の設定に case-wait-hook が入らないこと。`buildCaseSettings` が返す設定の JSON に、表の7つの出来事それぞれへ case-wait-hook の handler が `async` の鍵無し・`timeout: 5` で入り、PreToolUse・PermissionRequest・Elicitation の handler にだけ `onFailure: "block"` の鍵が実際にあり、外す4種には無いこと。`HOOK_SPECS` の中身が変わっていないこと。`CASE_ROOM_READ_NAMED` に case-wait-hook.mjs があること。case-wait-hook.mjs を偽のサーバーで動かし、付ける3種は 204 で 0・接続できない／500／5 秒超で 1、外す4種はどれでも 0 で終わり、どの場合も何も出力しないこと（2 で終わる場合が無いこと） |
 | K38 | 受け口の断りと印の数え方 | vitest: 件に決まらない 401・Origin 403・表に無い出来事 400・PreToolUse で tool_use_id 無し 400・session_id 違い 409 で、どれも印が変わらないこと。Pre(A)→Pre(B)→Post(B) で印が残り、Post(A) で空になること。PermissionRequest の印が Post では外れず UserPromptSubmit で外れること。本文に会話の中身が入っていても印にも監査にも残らないこと |
 
@@ -796,3 +796,6 @@ PO への返事の本文（ツール呼び出しの中ではない）の、**最
   - MEDIUM: 「spec に async:false」で `buildHandler` の道を使うと、`HookSpec`・`Handler` に `onFailure` の欄が無く block を付けられない → 件の見張り（case-sandbox.ts:453）と同じ生の形で `buildCaseSettings` に直接書く、に決めた（(a)）。共通の部品を変えないので、ふつうの窓に触れない。K37 に「設定の JSON に onFailure の鍵が実際にあること」を書いた。Opus が実物で確かめた。
   - LOW: buildHandler の行番号 → :96-102・:98 に直した。
   - 未確認（審査役）: 担当（サブエージェント）の hook の session_id が本体と同じか（違えば 409 で質問が止まる。安全側。K36 ⑦で記録する）。Esc・割り込みの知らせ（K36）。
+- 12回目（af91d27c2・クラウドの Opus・2026-11-05）: APPROVE（LOW 1）。11回目の MEDIUM は直っていて、件の見張り（case-sandbox.ts:453）の形と同じ。公式の説明書と食い違い無し。行番号は全部合う。新しい穴は無し。
+  - LOW: 受け口の本文・R34・K36 ⑧の「6種」は表の行の数で、出来事の名前は7つ（PostToolUse と PostToolUseFailure は別）→ 3か所とも7つの名前を並べて書いた。
+  - 未確認（審査役）: Elicitation に onFailure block が効くか（説明書の該当節を読み切れず）・担当の hook の session_id・Esc と割り込みの知らせ → どれも K36 で実測する。
