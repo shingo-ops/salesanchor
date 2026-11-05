@@ -53,13 +53,15 @@
 - google-genai 2.8.0、httpx 0.28.1。
 - `google.genai.errors.APIError` は `.code`・`.status`・`.message` を持ち、文字は `f'{code} {status}. {details}'`。
 - `httpx.ProxyError` と `httpx.ConnectError`・`httpx.ConnectTimeout` は `httpx.TransportError` の子。
+- 非同期の呼び出し（client.aio）は、aiohttp が入っていると aiohttp を使う（google/genai/_api_client.py:1138-1146 の _use_aiohttp。async_client_args に transport が無い場合）。aiohttp は discord.py（backend/requirements.txt:20）経由で入る。このとき道に届かない失敗は httpx ではなく aiohttp の例外になる（設計点検 R1 の指摘。card-1 T6b で実物を確かめる）。
+- 動いたまま止まった試み: 15分動きが無い running のジョブは recover-stale-extraction-jobs（`backend/app/tasks/tcg_extraction_recovery.py:37`・`:54`、10分ごと）が pending に戻し、やり直しの結果が completed か failed で記録される。
 - Context7 は月の上限で使えなかった（"Monthly quota exceeded"）。上の型は本番に入っている部品の中身を読んで確かめた。中継に届かないときに google-genai が httpx の例外をそのまま投げるか包むかは未確認 → 実装の試験で、実物の Client に届かない中継（127.0.0.1:9）を渡して確かめる（card-1 T6）。
 
 ## 7. 使える部品
 
 - Discord 送信: `backend/app/services/discord_notifier.py:40` `_get_webhook_url`（ADMIN_NOTIFICATION_DISCORD_WEBHOOK）、`:45` `async _post_discord_webhook`。
 - Redis で1回だけ送る型: `backend/app/tasks/tcg_extraction_recovery.py:457-467` `_get_redis` と `:470-504` `notify_given_up_api_error_jobs`。
-- 定期作業の登録: `backend/app/celery_app.py:21`（include）・`:302-305`（recover-stale-extraction-jobs、600秒）。登録漏れの検査: `backend/tests/test_celery_beat_registered.py`。
+- 定期作業の登録: `backend/app/celery_app.py:38`（include）・`:203-206`（recover-stale-extraction-jobs、600秒）。登録漏れの検査: `backend/tests/test_celery_beat_registered.py`。
 - 試行の記録: `backend/app/services/tcg_extraction_record_svc.py:19`（TCG_SCHEMA="public"）・`:107` record_error_detail（最初の1回だけ残す）・`:231-238`（fail で validation_result に detail を全部入れる）。phase は started → received → completed、失敗は failed。
 
 ## 8. 見張りの条件を過去の記録で試した結果（読むだけ）

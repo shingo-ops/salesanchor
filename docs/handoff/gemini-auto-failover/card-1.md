@@ -16,7 +16,7 @@
 - P3 `backend/app/services/gemini_raw_copy_v8.py` の :218〜:229 付近で _gem._get_genai_client() → client.models.generate_content → 失敗は RuntimeError（from exc）であること。
 - P4 `backend/app/services/line_analysis_v102_svc.py` の :518 付近に recorder.record_error_detail({"raw": ..., "category": ...}) があること。
 - P5 `backend/app/services/message_translator.py` の :358 付近の _call_gemini が google.generativeai（genai.configure・GenerativeModel・generate_content_async）を使っていること。
-- P6 `backend/app/tasks/tcg_extraction_recovery.py` に _get_sync_engine（:52 付近）と _get_redis（:457 付近）があり、`backend/app/celery_app.py` の beat_schedule に recover-stale-extraction-jobs（:302 付近）があること。
+- P6 `backend/app/tasks/tcg_extraction_recovery.py` に _get_sync_engine（:50）と _get_redis（:457）があり、`backend/app/celery_app.py` の include に "app.tasks.tcg_extraction_recovery"（:38）、beat_schedule に recover-stale-extraction-jobs（:203）があること。
 - P7 作業場所の Python で google.genai.errors.APIError と httpx.ConnectError・httpx.ConnectTimeout・httpx.ProxyError が import できること（python -c で確かめ、版を報告に書く）。
 
 ## 触るファイル
@@ -31,6 +31,7 @@
 8. backend/tests/test_gemini_route.py（新規）
 9. backend/tests/test_gemini_route_watch.py（新規）
 10. `backend/tests/test_message_translator.py` と `backend/tests/test_message_translator_usage_ledger.py`（偽物の差し込み方だけを新しい部品に合わせる）
+11. `backend/tests/test_tcg_gemini_extraction.py` と `backend/tests/test_api_error_auto_retry.py`（理由の記録の試験 T11・T12 を1つずつ足すだけ）
 
 ## 触らない範囲
 
@@ -68,7 +69,7 @@
 - build_client(route): 今の `backend/app/services/gemini_extraction_svc.py:248-276` の中身をここへ移す。import の失敗と GEMINI_API_KEY 空の RuntimeError の文は一字一句そのまま。route が ROUTE_RELAY なら HttpOptions(client_args={"proxy": relay_url()}, async_client_args={"proxy": relay_url()}) を付け、ROUTE_DIRECT なら genai.Client(api_key=api_key) だけで作る（今の試験 `backend/tests/test_tcg_gemini_extraction.py:797-835` が assert_called_once_with(api_key=...) で見ている）。
 - _exception_chain(exc) -> list: exc から始めて、`__cause__` があればそれ、無ければ `__context__` をたどる。_CHAIN_MAX_DEPTH 個まで。同じものが2回出たら止める。
 - is_location_refusal(exc) -> bool: 連なりのどれかが google.genai.errors.APIError で、getattr(e, "code", None) == 400 で、str(getattr(e, "message", "") or e).lower() に _LOCATION_REFUSAL_TEXT を含む。
-- is_route_unreachable(exc) -> bool: 連なりのどれかが httpx.ConnectError・httpx.ConnectTimeout・httpx.ProxyError のどれか。httpx.ReadTimeout など他は False。
+- is_route_unreachable(exc) -> bool: 連なりのどれかが httpx.ConnectError・httpx.ConnectTimeout・httpx.ProxyError、または aiohttp.ClientConnectorError（子の ClientProxyConnectionError を含む）のどれか。aiohttp はファイルの先頭で `try: import aiohttp` とし、読み込めなければ httpx の3つだけで判定する（google-genai は aiohttp が入っていると非同期の呼び出しに aiohttp を使う: google/genai/_api_client.py の _use_aiohttp。本番には discord.py 経由で入っている）。httpx.ReadTimeout・aiohttp.ServerTimeoutError など他は False。
 - should_switch(exc) -> bool: 上の2つのどちらか。
 - failure_reason(exc) -> str: 連なりの中で最初の APIError なら f"{e.code} {e.status}: {e.message}"。無ければ最初の httpx.TransportError で f"{type(e).__name__}: {e}"。それも無ければ f"{type(exc).__name__}: {exc}"。最後に、`key=` の後ろの空白・&・引用符・山括弧までを「key=(省略)」に、AIza で始まる英数字と - と _ の並び（10字以上）を「(APIキー省略)」に置き換え、REASON_MAX_CHARS 字で切る。
 - _get_redis(): `backend/app/tasks/tcg_extraction_recovery.py:457-467` と同じ形を、このファイルに作る（import で使い回さない）。redis.from_url に socket_connect_timeout=1 と socket_timeout=1 を足す。
@@ -150,6 +151,7 @@ backend/tests/test_gemini_route.py（新規）。各試験の前後で gemini_ro
 - T4: 切り替えない場合: APIError 400 で文が別（"API key not valid"）、APIError 429、APIError 503、httpx.ReadTimeout、ValueError → build_client が呼ばれず、同じ例外がそのまま出る。
 - T5: failure_reason: 場所の断りを RuntimeError で包んだ（from exc）もので「400 FAILED_PRECONDITION: User location is not supported for the API use.」を返す。文に key=abc と AIza で始まる20字を入れた例外で、どちらも伏せられる。400字の文は300字に切れる。
 - T6: 実物の google.genai.Client を、proxy に http://127.0.0.1:9 を渡して作り、generate_content を1回呼ぶ（鍵は "dummy"）。出た例外で is_route_unreachable が True になる。出た例外の型の連なりを報告に書く。もし False なら、実装を推測で直さずに停止して NEEDS_DECISION: で型の連なりを返す。
+- T6b: T6 と同じ Client で、非同期の client.aio.models.generate_content を1回呼ぶ（pytest の非同期試験）。出た例外で is_route_unreachable が True になる。型の連なりと、aiohttp が読み込めたかを報告に書く。もし False、または 127.0.0.1:9 に行かずに外へ出ようとした跡（例外の文に generativelanguage.googleapis.com への接続の失敗だけが出る等）があれば、推測で直さずに停止して NEEDS_DECISION: で返す。
 - T7: 切り替え先も失敗したら2回目の例外が出て、`__context__` が1回目の例外。build_client は1回だけ。first_route() は変わらない。
 - T8: 道の記憶: remember 後、time.monotonic を STICKY_SECONDS 先に進めると preferred_route() に戻る。
 - T10: 対象のファイル（gemini_extraction_svc.py・gemini_raw_copy_v8.py・message_translator.py）の本文に「client.models.generate_content(」と「generate_content_async」が無いことを、ファイルを読んで確かめる（道の選び方を1か所に保つ見張り）。
@@ -162,6 +164,10 @@ backend/tests/test_gemini_route_watch.py（新規）。session と redis は偽�
 - T9e: _run が webhook 空・Redis None で送らずに skipped を返す。find_stall が例外でも例外を外に出さない。
 - T9f: celery_app.conf.beat_schedule["watch-gemini-route"] の task 名と 300.0。
 - T9g: build_stall_message が last_reason None で「不明」を出し、時刻が日本時間になる。
+
+理由の記録の試験（既存の試験ファイルに1つずつ足す。既存の検査は変えない）:
+- T11: `backend/tests/test_tcg_gemini_extraction.py` に、:695 と同じ形（_get_genai_client を差し替え・recorder は MagicMock）で、client.models.generate_content が場所の断りの APIError を投げ、切り替え先の client も同じ APIError を投げる試験を足す（gemini_route.build_client も差し替える）。RecordError が出て、record_error_detail に渡った dict の reason が「400 FAILED_PRECONDITION: User location is not supported for the API use.」、raw と category が今と同じ値であること。
+- T12: `backend/tests/test_api_error_auto_retry.py` に、_Env で call_gemini_raw_copy_v8 が場所の断りの APIError を RuntimeError で包んだもの（from exc）を投げる試験を足す。record_error_detail の dict の reason が T11 と同じ文、raw が「(HTTP 400)」で終わること。
 
 `backend/tests/test_message_translator.py` と `backend/tests/test_message_translator_usage_ledger.py`:
 - 古い部品の偽物（_install_fake_genai・_GENAI_CACHE）を、`app.services.gemini_route.agenerate_content_routed` を AsyncMock にする形に置き換える。応答の偽物（response.text と usage_metadata）は今のまま使う。
@@ -179,7 +185,7 @@ backend/tests/test_gemini_route_watch.py（新規）。session と redis は偽�
 
 ## 想定される分岐と止まる条件
 
-- T6 で is_route_unreachable が False → 停止。NEEDS_DECISION: で型の連なりを返す。
+- T6 または T6b で is_route_unreachable が False → 停止。NEEDS_DECISION: で型の連なりを返す。
 - APIError の作り方が部品の版で違う → 部品の中身（errors.py）を読んで合わせる。合わせ方を報告に書く。
 - 既存の試験（上の10番以外）が落ちる → 直さずに停止し、BLOCKED: で生出力のパスを返す。
 - カードに無いファイルを触る必要が出た → 停止し、NEEDS_DECISION: で返す。
