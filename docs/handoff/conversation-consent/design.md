@@ -390,6 +390,7 @@ PO への返事の本文（ツール呼び出しの中ではない）の、**最
 
 状態: 設計案 第6版の改訂（§14-10。サーバー側で宛先を決める形）。6〜8回目の審査は REVISE で、指摘を反映済み。9回目の審査で APPROVE（LOW 2件を反映済み）。PO 承認前。実装・反映は PO の実装承認の後。§14-3〜14-8 の第5版（手元の部品 case-say.py）は採用しない（§14-9 の判断）。§14-1・14-2 の目的と観測事実は第6版でも使う。
 向きの決定: PO 2026-11-05、選択肢「2. 作業画面アプリの裏側で件の窓を確かめる形に作り直す」に「2」と回答（作業画面アプリ = PO の Mac の agent-console。Sales Anchor 本番のサーバーではない）。
+名前の書き方（2026-11-06・PO「1」）: agent-console のファイルは、その行を書いた時点の版に固定した agent-console へのリンクで示す（§14-12 は f503e9b、§14-13 は b467656）。Mac の上で動くときにできるファイル（CH/… など）と、作らなかった案の名前は、どのリポジトリにも無いので「」で囲む。
 きっかけ: PO 2026-11-05、選択肢「2. 私が打てるように見張りを見直す設計から始める（しんごさんの手間は減ります。ただ見張りを弱めることになるので、別の設計と審査が要り、試験は先になります）」に「2」と回答。
 
 ### 14-1 目的と、見える変化
@@ -410,18 +411,18 @@ PO への返事の本文（ツール呼び出しの中ではない）の、**最
 - 件の置き場 R は `/private/tmp/CC報告ファイル/discord-case/<id>`（server/case-sandbox.ts:62、tmp は realpath）。
 - 部屋の中から `tmux -L agent-console` への接続は失敗する（room-design.md:25 の G7。11/04 の受入で部屋は有効）。
 - Opus の Bash から `claude agents --json` は動く（2026-11-05 実測: exit 0・12行・全行に sessionId・status は busy 8／idle 4。キーは cwd・kind・name・pid・sessionId・startedAt・status。件は開いていない時点）。
-- （第2版で追加）件の Claude は `claude agents --json` の行で見分ける作りになっていない。サーバーは件の会話の番号を、件の設定の置き場 CH = `<dataDir>/case-home/<id>`（server/case-sandbox.ts:66）の `sessions/<pid>.json` から、件の端末の子孫の pid だけで読む（server/case-agents.ts:38-42、server/hub.ts:659-676）。ふつうの agents の行に同じ番号があれば、件の番号を外す（server/hub.ts:674）。
+- （第2版で追加）件の Claude は `claude agents --json` の行で見分ける作りになっていない。サーバーは件の会話の番号を、件の設定の置き場 CH = `<dataDir>/case-home/<id>`（server/case-sandbox.ts:66）の 「sessions/&lt;pid&gt;.json」 から、件の端末の子孫の pid だけで読む（server/case-agents.ts:38-42、server/hub.ts:659-676）。ふつうの agents の行に同じ番号があれば、件の番号を外す（server/hub.ts:674）。
 - （第2版で追加）サーバーは端末とプロセスを、tmux の窓の pid の子孫で結ぶ（server/process-tree.ts:40、server/hub.ts:323）。台帳の番号では結ばない。
 - （第2版で追加）件の作業場所 W は `<H>/worktrees/discord-cases/<id>`（server/case-clone.ts:46-48、server/case-sandbox.ts:61）。
-- （第2版で追加）`~/.claude/sessions/<pid>.json` のキー（2026-11-05 実測・24個のうち1つ）: status・pid・sessionId・cwd ほか。status の値は idle 5・busy 1・shell 6。同じ時に `claude agents --json` は idle 5・busy 7。待ちの印（wait を含むキー）は、どちらにも無かった（その時に待ちのセッションが無い）。
+- （第2版で追加）「~/.claude/sessions/&lt;pid&gt;.json」 のキー（2026-11-05 実測・24個のうち1つ）: status・pid・sessionId・cwd ほか。status の値は idle 5・busy 1・shell 6。同じ時に `claude agents --json` は idle 5・busy 7。待ちの印（wait を含むキー）は、どちらにも無かった（その時に待ちのセッションが無い）。
 - （第2版で追加）`CLAUDE_CONFIG_DIR` を空の置き場にして `claude agents --json` を手元で試そうとしたが、local-agent-guard に止められた。言い換えて試していない。
-- （第3版で追加）`ps -o pid=,comm=` で、手元の `~/.claude/sessions/<pid>.json` の pid のうち生きている8つは、どれも comm が `claude`（2026-11-05 実測）。実行ファイルの場所を `lsof -d txt` で確かめようとしたコマンドは、`claude` の語を含むため local-agent-guard に止められた。言い換えて試していない。
+- （第3版で追加）`ps -o pid=,comm=` で、手元の 「~/.claude/sessions/&lt;pid&gt;.json」 の pid のうち生きている8つは、どれも comm が `claude`（2026-11-05 実測）。実行ファイルの場所を `lsof -d txt` で確かめようとしたコマンドは、`claude` の語を含むため local-agent-guard に止められた。言い換えて試していない。
 - （第5版で追加）件の端末の起動の命令は、agent-console の設定で `["/bin/zsh", "-c", "source \"$AC_CASE_SHELL\" && ccdiscordcase"]` と決まっている（agent-console agent-console.config.json:47、つなぎ直しは :48）。サーバーはこの命令で tmux の窓を作る（server/sessions.ts:379 で役割の command を渡し、:704 の newSession で作る）。tmux の窓の起動の命令（`#{pane_start_command}`）は、窓を作った時に決まる。後から変えるには tmux の命令で窓の中身を入れ替える必要があり、そのときは中で動いている本体が止まる。
-- 未確認: 件の `CH/sessions/<pid>.json` が、件の入力待ちで status=idle になり、作業中と許可の確認の待ちで idle 以外になるか。件の Claude の OS 上の作業場所（cwd）が W か。部屋（sandbox-exec から exec）で動く件の本体の comm が `claude` か。件の pane_pid が本体そのものか、その間にあるプロセスの作業場所がすべて W か（第4版）。`tmux display -p '#{pane_start_command}'` が件の窓で返す文字の正確な形（第5版）。§14-7 の K20 で最初に測る。
+- 未確認: 件の 「CH/sessions/&lt;pid&gt;.json」 が、件の入力待ちで status=idle になり、作業中と許可の確認の待ちで idle 以外になるか。件の Claude の OS 上の作業場所（cwd）が W か。部屋（sandbox-exec から exec）で動く件の本体の comm が `claude` か。件の pane_pid が本体そのものか、その間にあるプロセスの作業場所がすべて W か（第4版）。`tmux display -p '#{pane_start_command}'` が件の窓で返す文字の正確な形（第5版）。§14-7 の K20 で最初に測る。
 
 ### 14-3 変更後の仕組み
 
-(a) 新しい部品 `case-say.py`（試作 docs/handoff/conversation-consent/hooks/case-say.py、本物 ~/.claude/scripts/case-say.py。PO の `!` の po-apply-consent.sh `--update` で写す）。
+(a) 新しい部品 「case-say.py」（試作 docs/handoff/conversation-consent/hooks/case-say.py、本物 ~/.claude/scripts/case-say.py。PO の `!` の po-apply-consent.sh `--update` で写す）。
 
 - 呼び方: `python3 ~/.claude/scripts/case-say.py <件の id> <手順ファイル名>`。送る文を引数で渡す手段は作らない。
 - 送る文は部品が組み立てる1種類だけ: `<R>/<手順ファイル名> を読み、書いてある手順を順に行ってください。`（R は 14-2 の置き場）。任意の文は送れない。文には数字が入る（R の中の件の id・手順ファイル名）が、文が「1」だけになることはなく、必ず決まった前後の文字がつく（第3版で言い方を直した。2回目の審査 MEDIUM）。
@@ -432,8 +433,8 @@ PO への返事の本文（ツール呼び出しの中ではない）の、**最
   ※ 下の判定6・5を先に行い、判定2〜4は最後に行う（番号は第2版のまま）。
   2. 窓の起動の形と pid: （第5版・4回目の審査 HIGH の直し。本線）`tmux -L agent-console display -p -t =ac-<id> '#{pane_start_command}'` が、件の起動の命令（14-2 の agent-console.config.json:47 の形。K20 で測った正確な文字を部品に固定で持つ）と完全一致する。合わなければ断る（理由 `pane_not_case_start`）。Opus の窓や、ほかのふつうの窓は、この命令で起動していないので断られる。続けて `tmux -L agent-console display -p -t =ac-<id> '#{pane_pid}'` が正の整数を1つ返す。子孫の pid の集合 F を `ps -axo pid=,ppid=` から作る（server/process-tree.ts:40 と同じ作り）。（第3版・2回目の審査 HIGH の直し）同じ `ps` の結果から、部品自身の pid とその祖先（ppid をたどって pid 1 まで）を集め、1つでも F に入っていたら断る（理由 `caller_in_case_pane`）。Opus が自分の窓の id を渡し、CH・W・状態ファイル・台帳を偽って `cd W` から部品を呼んでも、部品は自分の窓の子孫なのでここで断られる。ただし、部品を親から切り離して呼ぶ（二重の後ろ起動・nohup・setsid）と祖先が pid 1 に変わり、この確かめは外せる（3回目の審査 HIGH）。そのため祖先の確かめは補助とし、本線は次の「根の作業場所」とする。
      （第4版・3回目の審査 HIGH の直し）根の作業場所: 窓の pane_pid の OS 上の作業場所（`lsof -a -p <pane_pid> -d cwd -Fn`）の realpath が W と一致し、かつ pane_pid から P までの親子の道（P から ppid をたどって pane_pid に着くまで）にあるすべての pid の作業場所も W と一致する。合わなければ断る（理由 `pane_root_not_case`）。Opus の窓の pane_pid は Opus の作業場所で起動した本体（か、それを起動したシェル）なので、ふつうは W にならない。ただし Opus が自分の作業場所のフォルダを W の名前へ移す（mv）と、OS の上では W に見える（4回目の審査 HIGH）。そのため根の作業場所は補助とし、本線は上の起動の形とする（第5版）。
-  3. 件の本体 P: F の中で、`CH/sessions/<pid>.json` がある pid がちょうど1つ（CH = `<dataDir>/case-home/<id>`）。その pid の OS 上の作業場所（`lsof -a -p <P> -d cwd -Fn` の n 行）の realpath が W（`<H>/worktrees/discord-cases/<id>`）と一致する。（第3版）P の `ps -o comm= -p <P>` が `claude` と完全一致する（補助。名前は実行ファイルを写せば真似られるので、本線は判定2の根の作業場所）。
-  4. 状態: `CH/sessions/<P>.json` を O_NOFOLLOW で開き、通常のファイルで、JSON の pid が P と一致し、status がちょうど `idle` で、名前に `wait` を含むキー（大小文字を区別しない）が無い。それ以外（busy・shell・waiting・読めない・形が違う）は断る。server/agents.ts:76-88 の考え方（idle で待ちが無いときだけ入れる）に合わせるが、読む元は agents の行ではなくこのファイル（件の行は agents で結ばないため。14-2）。
+  3. 件の本体 P: F の中で、「CH/sessions/&lt;pid&gt;.json」 がある pid がちょうど1つ（CH = `<dataDir>/case-home/<id>`）。その pid の OS 上の作業場所（`lsof -a -p <P> -d cwd -Fn` の n 行）の realpath が W（`<H>/worktrees/discord-cases/<id>`）と一致する。（第3版）P の `ps -o comm= -p <P>` が `claude` と完全一致する（補助。名前は実行ファイルを写せば真似られるので、本線は判定2の根の作業場所）。
+  4. 状態: 「CH/sessions/&lt;P&gt;.json」 を O_NOFOLLOW で開き、通常のファイルで、JSON の pid が P と一致し、status がちょうど `idle` で、名前に `wait` を含むキー（大小文字を区別しない）が無い。それ以外（busy・shell・waiting・読めない・形が違う）は断る。server/agents.ts:76-88 の考え方（idle で待ちが無いときだけ入れる）に合わせるが、読む元は agents の行ではなくこのファイル（件の行は agents で結ばないため。14-2）。
   5. 補助の確認: dataDir/open-sessions.json にその id の項目があり、roleId が `discord-case` と完全一致する（台帳は書き換えられるので補助。本線は判定2〜4）。第2版の環境変数 `TMUX` の確かめは、判定2の祖先の確かめで置き換えたので外した（第3版）。
   6. 手順ファイル: R 自体と `<R>/<手順ファイル名>` がリンクでない（lstat）。手順ファイルを O_NOFOLLOW で開き、fstat で所有者が自分の通常のファイルであることを確かめ、その開いたファイルから sha256 を取る。realpath が R の下。
 - 送り方: `tmux -L agent-console send-keys -t =ac-<id> -l <文>` で文字だけを入れる。1秒待ち、Enter の直前に判定2〜4をもう一度行う。外れたら Enter を送らず、`case_say_refused`（理由 `state_changed_before_enter`）を書いて exit 2。このとき入った文字は件の入力欄に残るので、止めの印 `<dataDir>/case-say-blocked/<id>` を作り、以後その件への送信は判定1で断る。Opus は PO に「件の入力欄に残った文を消してください」と知らせ、PO が消したことを確かめてから、PO が `!` で印のファイルを消す（第4版。部品に印を消す口は作らない。3回目の審査 MEDIUM）。Opus も同じファイルを消せるので、作りでは止められない。Opus が手順を破って消した場合に起きるのは、件の入力欄に決まった一文がもう一度足されることだけで、件の窓の中に閉じる（Opus の同意にはならない）。この残る危険を R18 に書く。consent-audit.py `--audit` は、今ある印の数と、`state_changed_before_enter` の件数を出す。通れば `send-keys -t =ac-<id> Enter`。部品は引数の配列で呼び（shell を通さない）、`=` で名前の完全一致にする。
@@ -480,7 +481,7 @@ PO への返事の本文（ツール呼び出しの中ではない）の、**最
 
 | # | 基準 | 検証方法 |
 |---|---|---|
-| K20 | 判定2〜4 が本物の件で成り立つ（最初に測る。×なら案 E に戻し、PO に報告） | PO が件を1つ開き、Opus が読むだけの確かめ（pane_pid・子孫・`CH/sessions/<pid>.json` の status とキー・本体の cwd・本体の comm・Opus の Bash の祖先が F に入らないこと・pane_pid の cwd と、pane_pid から P までの道の各 pid の cwd（第4版））を3回行う。あわせて Opus 自身の窓の pane_pid の cwd が W でないことと、件の窓と Opus の窓の `#{pane_start_command}` を1回ずつ読み、件の窓だけが件の起動の命令と一致することを確かめる（第5版）。①入力待ち: 本体がちょうど1つ・pane_pid から P までの cwd がすべて W・comm が `claude`・status が idle・待ちのキーなし・祖先が F の外、なら○。②件に作業を頼んで作業中: status が idle 以外なら○。③件に許可の確認が出る操作を頼み、確認が出ている間: status が idle 以外か、待ちのキーがあれば○（第3版）。1つでも違えば× |
+| K20 | 判定2〜4 が本物の件で成り立つ（最初に測る。×なら案 E に戻し、PO に報告） | PO が件を1つ開き、Opus が読むだけの確かめ（pane_pid・子孫・「CH/sessions/&lt;pid&gt;.json」 の status とキー・本体の cwd・本体の comm・Opus の Bash の祖先が F に入らないこと・pane_pid の cwd と、pane_pid から P までの道の各 pid の cwd（第4版））を3回行う。あわせて Opus 自身の窓の pane_pid の cwd が W でないことと、件の窓と Opus の窓の `#{pane_start_command}` を1回ずつ読み、件の窓だけが件の起動の命令と一致することを確かめる（第5版）。①入力待ち: 本体がちょうど1つ・pane_pid から P までの cwd がすべて W・comm が `claude`・status が idle・待ちのキーなし・祖先が F の外、なら○。②件に作業を頼んで作業中: status が idle 以外なら○。③件に許可の確認が出る操作を頼み、確認が出ている間: status が idle 以外か、待ちのキーがあれば○（第3版）。1つでも違えば× |
 | K21 | 件の窓に、決まった一文が1回だけ入り、件が手順ファイルを読み始める | 本物の件で1回。件の会話の画面にその一文が1回出て、件が手順ファイルを読んだことが件の返事で分かれば○ |
 | K22 | 件でない宛先（台帳を書き換えて件の roleId にした件でない窓を含む・自分の窓の id を渡し CH・W・状態ファイル・台帳を偽り `cd W` から呼んだ場合（第3版）・さらに部品を親から切り離し、偽の本体を W で動かした場合（第4版）・さらに自分の作業場所のフォルダを W の名前へ移した場合（第5版。起動の命令が件の形でないので断る）・W がリンクの場合・本体の cwd が W でない・本体の comm が claude でない・CH に状態ファイルが無い・本体が0か2つ以上）、止めの印がある件、形の違う引数、R の外・リンク・R 自体がリンク・無いファイル、状態が idle 以外・待ちのキーあり・読めない、では何も送らず exit 2。Enter の直前に状態が変わったら Enter を送らず exit 2 | case-say-tests.py（偽の tmux・ps・lsof・置き場を差し替え、send-keys の呼び出しが0回。Enter 前の変化の場合は文字の send-keys 1回・Enter 0回・止めの印ができる。自分の窓の偽装は、偽の ps で部品の祖先を F に入れる。切り離しの偽装は、偽の ps で祖先を F の外にし、偽の lsof で P の cwd を W・pane_pid の cwd を W 以外にする。フォルダを移す偽装は、偽の lsof ですべての cwd を W にし、偽の tmux の起動の命令をふつうの窓の形にする）。本物では Opus の窓の id を指定して1回、exit 2 で何も入らないこと |
 | K23 | §4-5 の見張りが変わっていない | agent-danger-hook.sh・worktree-only-guard.sh の試作と本物の差分0行、test-agent-hooks.sh の T7 が合格 |
@@ -534,7 +535,7 @@ PO への返事の本文（ツール呼び出しの中ではない）の、**最
 - 件のセッションは `create` → `createCase`（server/sessions.ts:350・:366-388）で開く。窓は `spawnSession`（:613-675）の中の `openTerminal` で、tmux の `newSession` で新しく作る（:704）。件のとき、その窓の pid（tmux の pane の pid）と開始時刻を `recordCaseMain` で記録する（:631・:292-296。開始時刻が引けなければ記録しない）。
 - 記録の写しは `caseMainProcesses()`（:287-289）で取れる。窓が終わると記録を消す（:666-668）。一覧から外したときも消す（:737）。
 - 件かどうかは役割の `caseSandbox === true` で決まる（:625）。`caseHomeOf(id)` は、生きている件のセッションのときだけ CH を返す（:270-275）。
-- サーバー起動時の復元（server/restore.ts）は、件の項目について `D/cases/<id>/case.json` の worktree が cwd と同じで、写しが作ったままの形のときだけ開く（restore.ts:22-37・:154-158）。開くとき tmux に同じ名前の窓が生きていれば、新しく作らずにつなぎ直す。そのときの pid は tmux が返す今の pane の pid（sessions.ts:691-693、server/terminal-host/tmux-runner.ts:60-69）。つなぎ直したセッションには `reattached: true` が付く（sessions.ts:644）。
+- サーバー起動時の復元（server/restore.ts）は、件の項目について 「D/cases/&lt;id&gt;/case.json」 の worktree が cwd と同じで、写しが作ったままの形のときだけ開く（restore.ts:22-37・:154-158）。開くとき tmux に同じ名前の窓が生きていれば、新しく作らずにつなぎ直す。そのときの pid は tmux が返す今の pane の pid（sessions.ts:691-693、server/terminal-host/tmux-runner.ts:60-69）。つなぎ直したセッションには `reattached: true` が付く（sessions.ts:644）。
 - 端末へ書くとき、サーバーは tmux の制御の接続から `send-keys -t =ac-<id>: -H …` を出す（server/terminal-host/tmux-protocol.ts:17・:46）。宛先は「そのセッションの今の窓の今の区画」で、pid では選ばない。
 - `write` は、制御の接続がまだ用意できていない・取り直し中・接続が無いとき、書く分をため込み、接続できた後でまとめて流す（server/terminal-host/tmux-terminal.ts:198-206・:221-233）。流す時刻は呼んだ時刻より後になる。
 - tmux の区画には `%` で始まる番号があり、その区画が生きている間は変わらず、tmux の中で重ならない（tmux.1 COMMANDS。Context7 /tmux/tmux で確認）。`if-shell -F` は、条件を書式として展開し、空でも0でもなければ1つ目の命令を実行する。シェルは動かさない（tmux.1 MISCELLANEOUS）。書式の `#{==:a,b}` は文字の一致で1か0になる（tmux.1 FORMATS）。`respawn-pane -k` は区画の番号を保ったまま中のプロセスを入れ替える（tmux.1 WINDOWS AND PANES）。
@@ -543,7 +544,7 @@ PO への返事の本文（ツール呼び出しの中ではない）の、**最
 - 予約・定期実行を使える役割の一覧は config の `reserveRoles`・`routineManagerRoles`（server/config.ts:82-84）。件の役割はどちらにも入れられない（:317-319）。
 - 画面のチャットの送り方（server/hub.ts:560-607）: 予約を1件ずつ、`chatVerdict`（server/agents.ts:95-103）が ok のときだけ送る。Claude が動いていると判定したときは括弧付きで貼り、`pasteSubmitDelayMs` 待って Enter。Claude の行が見つからないときは「Claude が動いていないシェル」とみなし、括弧なしで書いて Enter を送る（agents.ts:99、hub.ts:594・:598）。
 - 件の本体は `claude agents --json` に出ない（agent-console docs/handoff/discord-pdca/bin2b3d-card.md:51 の記載。設計書の記載で、この版では実測していない → K30 で測る）。出ないなら、画面のチャットから件の窓へ送ると、件に許可の確認が出ていても括弧なしで書いて Enter を送る。このため第6版は画面のチャットの送り方を使わない。
-- 件の本体の状態は、部屋の外から `CH/sessions/<pid>.json` を読める。サーバーはこのファイルを、窓の子孫の pid だけについて、リンク・名前付きパイプ・固いリンク・64KiB 超を断って読む部品を持つ（server/case-agents.ts:15-40・:42-71。今は会話の番号だけを取る）。
+- 件の本体の状態は、部屋の外から 「CH/sessions/&lt;pid&gt;.json」 を読める。サーバーはこのファイルを、窓の子孫の pid だけについて、リンク・名前付きパイプ・固いリンク・64KiB 超を断って読む部品を持つ（server/case-agents.ts:15-40・:42-71。今は会話の番号だけを取る）。
 - 合言葉ファイルの書き手はサーバーだけ（server/reserve-token.ts:6・:28-38）。
 
 #### 14-10-3 変更後の仕組み
@@ -562,7 +563,7 @@ PO への返事の本文（ツール呼び出しの中ではない）の、**最
    違えば 409（理由を本文と監査に書く）。
 5. 止めの印: 同じ件に、前に貼り付けを書いた後、Enter を送り切らずに終えた記録（メモリ）があれば 409。印を付けるのは、貼り付けを書いた後のすべての終わり方（Enter の前の確かめで断った・例外が出た・件の窓が終わった・閉じ始めた・Enter の条件付き送信が実行されなかった）。印はその件の窓が終わったとき・一覧から外したときに消える。消す受け口は作らない。
 6. 手順ファイル: `R = casePaths(...).R`。R がリンクでないフォルダ。`<R>/<stepFile>` を O_NOFOLLOW で開き、通常のファイル・固いリンクでない・64KiB まで。sha256 を取る。違えば 409。
-7. 件の状態（新しい判定 `caseSayVerdict`。画面のチャットの `chatVerdict` は使わない）: 窓の子孫の pid の中で、`CH/sessions/<pid>.json` を 14-10-2 の安全な読み方で読めるものがちょうど1つ。その JSON の pid が同じ・`status` がちょうど `idle`・名前に `wait` を含むキー（大小文字を区別しない）が無い。あわせて、取り直した `claude agents --json` に子孫の pid の行があれば、その行も idle で `waitingFor` が無い。一覧そのものが取れなければ 409（理由 `agents_unavailable`。安全側。PR #100 で追加）。違えば 409。件の行がこの一覧に出るかは K32 で記録する。
+7. 件の状態（新しい判定 `caseSayVerdict`。画面のチャットの `chatVerdict` は使わない）: 窓の子孫の pid の中で、「CH/sessions/&lt;pid&gt;.json」 を 14-10-2 の安全な読み方で読めるものがちょうど1つ。その JSON の pid が同じ・`status` がちょうど `idle`・名前に `wait` を含むキー（大小文字を区別しない）が無い。あわせて、取り直した `claude agents --json` に子孫の pid の行があれば、その行も idle で `waitingFor` が無い。一覧そのものが取れなければ 409（理由 `agents_unavailable`。安全側。PR #100 で追加）。違えば 409。件の行がこの一覧に出るかは K32 で記録する。
 8. 書き込みの印 `tryBeginWrite(caseId)`（server/hub.ts:301）が取れなければ 409。
 9. 送る文はサーバーが組み立てる1種類だけ: `<R>/<stepFile> を読み、書いてある手順を順に行ってください。`。書き方は今の `write`（`=ac-<id>:` 宛て・ため込みあり）を使わず、tmux-terminal.ts に足す「区画の番号を宛先にし、ため込まずに今の制御の接続へ出す」部品で送る（接続が書けない状態なら書かずに失敗を返す）。手順:
    条件付きの送り方（貼り付けと Enter の両方で使う）: `if-shell -F -t %N '#{==:#{pane_pid},<記録の pid>}' 'send-keys -t %N -H <16進>' 'display -p NO'`。tmux が命令を実行する時点で、区画 `%N` の中のプロセスが記録の pid のときだけ書く。外れたら書かずに `NO` を返す。制御の接続の応答は、条件が合うときも外れるときも2つ（if-shell の分と、差し込まれる2つ目の命令の分）になる。agent-console の CommandQueue（tmux-protocol.ts:133-152）は1命令に応答1つで待つので、この命令には待ちを2つ積む。2つの応答がどちらも成功（%end）で、2つ目の中身が空のときだけ「書いた」と読む。それ以外（2つ目が `NO`・どちらかが失敗（%error）・2つ目が空でも `NO` でもない）は「書いていない」とみなし、止めの印を付けて 409 にする。1つ目の応答が失敗（%error）のときは、tmux が2つ目の命令を差し込まず応答が1つで終わりうる。そのときは余った待ちが次の命令の応答を取らないよう、その接続の待ち行列を捨てて接続を取り直す（7回目の審査役が tmux 3.4 の制御の接続で、応答が2つにそろうことを実測した。§14-10-10）。貼り付けが 1000 バイトを超えて複数の send-keys に分かれるときは、分かれた1本ずつをこの形で送る。
@@ -619,7 +620,7 @@ PO への返事の本文（ツール呼び出しの中ではない）の、**最
 
 | # | 基準 | 検証方法 |
 |---|---|---|
-| K30 | 件の状態ファイルで、入力待ち・作業中・各種の待ちを見分けられる。件の本体が `claude agents --json` に出るかを確かめる（実装の前に測る。×なら案 E に戻し、PO に報告） | PO が件を1つ開き、Opus が読むだけで5回。毎回 `CH/sessions/<pid>.json` のキーの一覧と、`pid`・`status` と名前に `wait` を含むキーの値をそのまま記録する（会話の中身は記録しない）: ①入力待ちで status が idle・待ちのキーなし ②作業中に idle 以外 ③許可の確認が出ている間に idle 以外か待ちのキーあり ④質問への答え待ちの間に同じ ⑤計画の承認待ちの間に同じ。あわせて `claude agents --json` に件の子孫の pid の行があるかを1回記録する。①〜⑤が全部○で、判定7が使うキーの名前（`pid`・`status`・待ちのキー）が記録と合えば○。合わなければ判定7を記録に合わせて直し、審査をやり直す |
+| K30 | 件の状態ファイルで、入力待ち・作業中・各種の待ちを見分けられる。件の本体が `claude agents --json` に出るかを確かめる（実装の前に測る。×なら案 E に戻し、PO に報告） | PO が件を1つ開き、Opus が読むだけで5回。毎回 「CH/sessions/&lt;pid&gt;.json」 のキーの一覧と、`pid`・`status` と名前に `wait` を含むキーの値をそのまま記録する（会話の中身は記録しない）: ①入力待ちで status が idle・待ちのキーなし ②作業中に idle 以外 ③許可の確認が出ている間に idle 以外か待ちのキーあり ④質問への答え待ちの間に同じ ⑤計画の承認待ちの間に同じ。あわせて `claude agents --json` に件の子孫の pid の行があるかを1回記録する。①〜⑤が全部○で、判定7が使うキーの名前（`pid`・`status`・待ちのキー）が記録と合えば○。合わなければ判定7を記録に合わせて直し、審査をやり直す |
 | K31 | 14-10-3(a) の1〜9の断りがすべて効き、断ったときは端末へ何も書かない。貼り付けを書いた後に終わったら必ず止めの印が付く | agent-console の vitest（偽の tmux・ps・状態ファイル）。断りの各場合で書き込み0回。接続が書けない状態・ため込みありで書き込み0回。通る場合は貼り付け1回・条件付き Enter 1回で、どちらも宛先が `-t %N`。貼り付けの後の各終わり方（Enter 前の確かめで断る・例外・窓が終わる・閉じ始める・条件付きの送信が `NO`・どちらかの応答が %error・2つ目が空でも `NO` でもない・送った後の pid が違う）で、Enter 0回か印あり、次の呼び出しが 409。1つ目が %error のときは、その接続の待ち行列が空になり接続を取り直すこと。あわせて本物の tmux を使う試験を1本: 専用のソケットで窓を作り、制御の接続から条件付きの送り方を、条件が合う場合と外れる場合で1回ずつ出し、応答がどちらも2つで、2つ目が空と `NO` になり、続けて出した display の応答が正しい命令に渡ることを確かめる（クラウドか GitHub の試験で回す。Mac では回さない。その場の tmux の版を記録する） |
 | K32 | 本物の件に一文が1回だけ入り、件が手順ファイルを読み始める。断るべき宛先には何も入らない | 反映後、本物で: 件の id で1回（件の画面に一文が1回出て、件の返事で手順ファイルを読んだと分かれば○）。件でない id で1回（409・何も入らない）。許可の確認が出ている件で1回（409・何も入らない）。サーバーの起動し直しでつなぎ直した件があれば1回（409 `reattached`。無ければ「場面なし」と記録） |
 | K33 | Sales Anchor の見張りが変わっていない。命令が見張りに止められない。件の中から合言葉を読めない | agent-danger-hook.sh・worktree-only-guard.sh の試作と本物の差分0行・test-agent-hooks.sh の T7 合格。K32 の呼び出しが見張りに止められない。K30 で開いた件に、`D/reserve-token` を読む操作を頼み、読めずに断られることを件の返事で確かめる（値は出させない。読めたら×で PO に報告）。あわせて、件が R（手順書の置き場）に書けるかを1回記録する（書けても影響は件自身の手順だけ。R24 と同じ水準） |
@@ -807,7 +808,7 @@ PO への返事の本文（ツール呼び出しの中ではない）の、**最
 観測事実:
 - 件の窓の起動台本 `ops/shell/ccdiscord.zsh:72`（agent-console v0.50.1 入り版）は `--tools "Bash,Read,Edit,Write,Glob,Grep,Agent,TodoWrite"` で道具を絞る。AskUserQuestion・EnterPlanMode・ExitPlanMode は入っていない。同じ行に `--strict-mcp-config --disallowedTools "mcp__*"`・`--permission-mode dontAsk` がある。
 - 件の窓の記録（activity/events-20261105.jsonl・session 79484388-…）で、件の AI は 4 回「AskUserQuestion は使えない」と答え、質問を文で書いた（11:34:54・11:54:42・12:17:50 ほか。10:58:25 の回は Stop の記録が無い）。EnterPlanMode も使えないと答えた（10:59:19）。
-- 11:36:04 の回で、計画の段階（Shift+Tab で入る）に入った窓が、計画の保存先 `case-home/427a63ce-…/plans/1-fizzy-planet.md` への Write を case-guard に止められた。ExitPlanMode も無いので、AI は計画の段階から自分で出られない。
+- 11:36:04 の回で、計画の段階（Shift+Tab で入る）に入った窓が、計画の保存先 「case-home/427a63ce-…/plans/1-fizzy-planet.md」 への Write を case-guard に止められた。ExitPlanMode も無いので、AI は計画の段階から自分で出られない。
 - 件の窓（main pid 97478）は 16:18 時点で無い。open-sessions.json・tmux にも無い。case-home の sessions/ は 12:55 に空になった。終わった理由の記録は見つからない（server.err.log の最終更新は 10:58）。
 
 ここから言えること（事実の組み合わせ）:
@@ -834,24 +835,24 @@ PO の言葉: 「件の窓の今の作りに合わせて設計を小さく作り
 | K1 件の窓で Shift+Tab を押しても形が変わらない（画面下の帯に plan / accept edits / manual の表示が出ない） | 本物の件の窓へ tmux send-keys で BTab を3回送り、①画面の写し（tmux capture-pane）に `plan mode on`・`accept edits on`・`manual mode on` が0件（ほかの dontAsk 以外の形の表示も0件） ②続けて K3 の「ls して」が通る。○×は①②だけで決める（会話記録の形の項目は参考として写すだけ） |
 | K2 本体の会話で形が dontAsk でないときは道具を1つも通さない（許可の問い合わせ画面が出ない＝case-say の貼り付けが問い合わせ画面に入らない） | case-guard の試験: `agent_id` が無く `permission_mode` が `plan`・`default`・`acceptEdits`・`auto`・`bypassPermissions` のとき終了コード2。`dontAsk`・項目なし・`agent_id` ありのときは今と同じ判定（同じ入力で今の版と同じ終了コード） |
 | K3 ふだんの件の作業が今までどおり通る（下請けの AI を含む） | 本物の件の窓で ①「ls して」と頼み Bash が通る ②「Agent で下請けを1つ動かして README を読ませて」と頼み、下請けの中の Read が通る（どちらも会話記録に tool_result があり `case-guard:` の拒否の文が無い）。任意の確かめ: 下請けを動かしている途中で `/plan` を送り、画面の写しに許可の問い合わせ画面が出ないこと（出たら PO へ戻す） |
-| K4 件の AI が keybindings.json を書き換えられない | case-sandbox の試験: 部屋の書き込み拒否の正規表現に `CH/keybindings.json` が一致する。case-guard でも CH は作業場の外なので Edit/Write は止まる（既存） |
+| K4 件の AI が keybindings.json を書き換えられない | case-sandbox の試験: 部屋の書き込み拒否の正規表現に 「CH/keybindings.json」 が一致する。case-guard でも CH は作業場の外なので Edit/Write は止まる（既存） |
 | K5 既存の試験がすべて通る | agent-console の CI（vitest・型検査）緑 |
-| K6 計画の形に入っても、件を開き直せば dontAsk に戻る | 本物の件の窓で「/plan README を読んで」と送る→道具が `case-guard: permission mode is not dontAsk` で止まる。続けて次の2つを別々に行う。(a) 始める前に、復元の一覧（open-sessions.json）に件の claudeSessionId があることを確かめる。そのうえでこの順で行う: ①agent-console を止める（`launchctl kill SIGTERM gui/<uid>/local.agent-console.server`。AI はサーバー停止の見張り〈agent-console README.md:64〉で止められるので、PO が `!` で打つ。サーバーの pid が消えたことを確かめてから②へ。launchd が自分で起こし直したら、その回は判定せずやり直す） ②件の tmux セッションを kill-session ③agent-console を起動する（`launchctl kickstart gui/<uid>/local.agent-console.server`）（先に tmux を落とすと、動いている agent-console が `server/restore.ts:65`・`:94` で件を復元の一覧から外し、誤って×になる）。③の後、復元の一覧（open-sessions.json）に件の claudeSessionId が残っていることを確かめる。件の役割には `restoreCommand` がある（`agent-console.config.json:48`。`config.ts:160-161` が禁じるのは `resumeCommand` だけ）ので、復元の道 `server/restore.ts:179`→`sessions.ts:564` で AC_RESUME_ID が渡り、`ccdiscord.zsh:73-75` が同じ会話を `--resume` で開く。`:72` の `--permission-mode dontAsk` が一緒に渡る）→同じ会話で「ls して」が通る。(b) 画面で件を閉じ、新しい件として開く（件の役割は `resumeCommand` を持てない `server/config.ts:160-161`。会話の続きは失われる）→「ls して」が通る。どちらかが×なら PO へ戻す |
+| K6 計画の形に入っても、件を開き直せば dontAsk に戻る | 本物の件の窓で「/plan README を読んで」と送る→道具が `case-guard: permission mode is not dontAsk` で止まる。続けて次の2つを別々に行う。(a) 始める前に、復元の一覧（open-sessions.json）に件の claudeSessionId があることを確かめる。そのうえでこの順で行う: ①agent-console を止める（`launchctl kill SIGTERM gui/<uid>/local.agent-console.server`。AI はサーバー停止の見張り〈agent-console README.md:64〉で止められるので、PO が `!` で打つ。サーバーの pid が消えたことを確かめてから②へ。launchd が自分で起こし直したら、その回は判定せずやり直す） ②件の tmux セッションを kill-session ③agent-console を起動する（`launchctl kickstart gui/<uid>/local.agent-console.server`）（先に tmux を落とすと、動いている agent-console が [server/restore.ts:65](https://github.com/GEN-RYU-System/agent-console/blob/f503e9bc7c92ec7d9787f7c1d24018564d115d77/server/restore.ts#L65)・`:94` で件を復元の一覧から外し、誤って×になる）。③の後、復元の一覧（open-sessions.json）に件の claudeSessionId が残っていることを確かめる。件の役割には `restoreCommand` がある（[agent-console.config.json:48](https://github.com/GEN-RYU-System/agent-console/blob/f503e9bc7c92ec7d9787f7c1d24018564d115d77/agent-console.config.json#L48)。[server/config.ts:160-161](https://github.com/GEN-RYU-System/agent-console/blob/f503e9bc7c92ec7d9787f7c1d24018564d115d77/server/config.ts#L160-L161) が禁じるのは `resumeCommand` だけ）ので、復元の道 [server/restore.ts:179](https://github.com/GEN-RYU-System/agent-console/blob/f503e9bc7c92ec7d9787f7c1d24018564d115d77/server/restore.ts#L179)→[server/sessions.ts:564](https://github.com/GEN-RYU-System/agent-console/blob/f503e9bc7c92ec7d9787f7c1d24018564d115d77/server/sessions.ts#L564) で AC_RESUME_ID が渡り、`ccdiscord.zsh:73-75` が同じ会話を `--resume` で開く。`:72` の `--permission-mode dontAsk` が一緒に渡る）→同じ会話で「ls して」が通る。(b) 画面で件を閉じ、新しい件として開く（件の役割は `resumeCommand` を持てない [server/config.ts:160-161](https://github.com/GEN-RYU-System/agent-console/blob/f503e9bc7c92ec7d9787f7c1d24018564d115d77/server/config.ts#L160-L161)。会話の続きは失われる）→「ls して」が通る。どちらかが×なら PO へ戻す |
 | K7 入れた時点で開いている件の窓にも（１）が効く | v0.50.2 を入れる前から開いていた件の窓で、入れた後に K1 と同じ手順を行い同じ結果 |
 
 #### 14-12-2 変更前→変更後（agent-console・origin/main f503e9b = v0.50.1）
 
 （１）キーの割り当てを外すファイルを件ごとに書く
-- 変更前: `server/case-sandbox.ts:398-421` `rewriteCaseClaudeJson` は case-home の `.claude.json` だけを書き直す。case-home は `ops/shell/ccdiscord.zsh:61` で件の窓の設定置き場（CLAUDE_CONFIG_DIR）。
-- 変更後: 同じファイルに `writeCaseKeybindings(CH)` を足し、`CH/keybindings.json` に次を `writeAtomicSync` で書く。`server/sessions.ts:627` の `checkCaseSandbox` の行の直後、`openTerminal` の前（`room` が null でないとき）に呼ぶ（実装時の訂正: 当初は `:626` の `prepareCaseRoom(id)` の直後としたが、そこでは case-home が無いとき `checkCaseSandbox` の⑩「case-home is missing」より先に書き込みが失敗し、既存の試験 `tests/unit/sessions.case.test.ts:374` が落ちた。`checkCaseSandbox` も `openTerminal` も新規・つなぎ直しの両方で通るので、意図は変わらない）。こうすると新しく開くときだけでなく、つなぎ直し（`sessions.ts:691-698` の probe で既存の窓に戻る道。`beforeNew` は `:703` でしか呼ばれない）でも書かれる。書けなければ `CaseSandboxUnavailableError`。これは `prepareCaseRoom` が room.sb などを書けないときと同じ扱いで、つなぎ直しでも今すでに同じ理由で開けなくなりうる。CH は agent-console が作って持つ置き場なので、書けないのは置き場そのものが壊れたときだけ。その場合に窓を開かないのは今と同じ考え方なので、つなぎ直しだけ警告で続ける分け方はしない（開けない件が増える道は、CH が壊れたときに限られることを受け入れる）。
+- 変更前: [server/case-sandbox.ts:398-421](https://github.com/GEN-RYU-System/agent-console/blob/f503e9bc7c92ec7d9787f7c1d24018564d115d77/server/case-sandbox.ts#L398-L421) `rewriteCaseClaudeJson` は case-home の 「.claude.json」 だけを書き直す。case-home は `ops/shell/ccdiscord.zsh:61` で件の窓の設定置き場（CLAUDE_CONFIG_DIR）。
+- 変更後: 同じファイルに `writeCaseKeybindings(CH)` を足し、「CH/keybindings.json」 に次を `writeAtomicSync` で書く。[server/sessions.ts:627](https://github.com/GEN-RYU-System/agent-console/blob/f503e9bc7c92ec7d9787f7c1d24018564d115d77/server/sessions.ts#L627) の `checkCaseSandbox` の行の直後、`openTerminal` の前（`room` が null でないとき）に呼ぶ（実装時の訂正: 当初は `:626` の `prepareCaseRoom(id)` の直後としたが、そこでは case-home が無いとき `checkCaseSandbox` の⑩「case-home is missing」より先に書き込みが失敗し、既存の試験 [tests/unit/sessions.case.test.ts:374](https://github.com/GEN-RYU-System/agent-console/blob/f503e9bc7c92ec7d9787f7c1d24018564d115d77/tests/unit/sessions.case.test.ts#L374) が落ちた。`checkCaseSandbox` も `openTerminal` も新規・つなぎ直しの両方で通るので、意図は変わらない）。こうすると新しく開くときだけでなく、つなぎ直し（[server/sessions.ts:691-698](https://github.com/GEN-RYU-System/agent-console/blob/f503e9bc7c92ec7d9787f7c1d24018564d115d77/server/sessions.ts#L691-L698) の probe で既存の窓に戻る道。`beforeNew` は `:703` でしか呼ばれない）でも書かれる。書けなければ `CaseSandboxUnavailableError`。これは `prepareCaseRoom` が room.sb などを書けないときと同じ扱いで、つなぎ直しでも今すでに同じ理由で開けなくなりうる。CH は agent-console が作って持つ置き場なので、書けないのは置き場そのものが壊れたときだけ。その場合に窓を開かないのは今と同じ考え方なので、つなぎ直しだけ警告で続ける分け方はしない（開けない件が増える道は、CH が壊れたときに限られることを受け入れる）。
   ```json
   {"bindings":[{"context":"Chat","bindings":{"shift+tab":null}}]}
   ```
-- 根拠: 公式 keybindings.md「Unbind default shortcuts」（action を null で外す）、`chat:cycleMode` の既定は Shift+Tab（Windows の古い端末以外）。claude 2.1.318 本体に `keybindings.json` と `"bindings" array` の形の検査がある（/tmp/CC報告ファイル/plancheck/kb-strings.txt）。CLAUDE_CONFIG_DIR 側を読むかは未確認→K1 で判定。公式 keybindings.md:17「ファイルの変更は自動で検出され、再起動なしで効く」により、開いている窓もつなぎ直しで書かれた時点で効く（K7 で判定）。
+- 根拠: 公式 keybindings.md「Unbind default shortcuts」（action を null で外す）、`chat:cycleMode` の既定は Shift+Tab（Windows の古い端末以外）。claude 2.1.318 本体に 「keybindings.json」 と `"bindings" array` の形の検査がある（/tmp/CC報告ファイル/plancheck/kb-strings.txt）。CLAUDE_CONFIG_DIR 側を読むかは未確認→K1 で判定。公式 keybindings.md:17「ファイルの変更は自動で検出され、再起動なしで効く」により、開いている窓もつなぎ直しで書かれた時点で効く（K7 で判定）。
 
 （２）件の AI がそのファイルを書けないようにする
-- 変更前: `server/case-sandbox.ts:249-252` `chSettingNames` の書き込み拒否は `remote-settings.json … settings.json|agents|hooks|commands|skills|CLAUDE.md`。
-- 変更後: 同じ並びに `keybindings\\.json` を足す。
+- 変更前: [server/case-sandbox.ts:249-252](https://github.com/GEN-RYU-System/agent-console/blob/f503e9bc7c92ec7d9787f7c1d24018564d115d77/server/case-sandbox.ts#L249-L252) `chSettingNames` の書き込み拒否は `remote-settings.json … settings.json|agents|hooks|commands|skills|CLAUDE.md`。
+- 変更後: 同じ並びに 「keybindings\\.json」 を足す。
 
 （３）形が dontAsk でなければ道具を止める（安全網）
 - 変更前: `ops/case/case-guard.mjs:75-111` `decide` は道具の名前と道だけを見る。
@@ -860,13 +861,13 @@ PO の言葉: 「件の窓の今の作りに合わせて設計を小さく作り
 
 （４）取りやめ（2回目の審査で根拠の読み違いと分かったため）
 - 前の案: `buildCaseSettings` の deny に `"ExitPlanMode"` を足して、開き直しで計画の形に戻らないようにする。
-- 取りやめの理由: 公式 sessions.md「permission mode on resume」では、端末で `--resume` するとき `--permission-mode` を渡すと戻るはずの形はそれで上書きされる。件の起動台本 `ops/shell/ccdiscord.zsh:72` は前から `--permission-mode dontAsk` を `--resume`（:73-75）と一緒に渡している。`--resume` が付くのは agent-console の再起動時の復元（件の役割に `restoreCommand` がある `agent-console.config.json:48`。`server/restore.ts:179`→`sessions.ts:564`）だけで、画面で閉じて開くと新しい会話になる（`server/config.ts:160-161`）。どちらの道でも足さなくても dontAsk で始まる（K6 の (a)(b) で判定）。足すと K6 で効き目を見分けられないので、変更を増やさない。
+- 取りやめの理由: 公式 sessions.md「permission mode on resume」では、端末で `--resume` するとき `--permission-mode` を渡すと戻るはずの形はそれで上書きされる。件の起動台本 `ops/shell/ccdiscord.zsh:72` は前から `--permission-mode dontAsk` を `--resume`（:73-75）と一緒に渡している。`--resume` が付くのは agent-console の再起動時の復元（件の役割に `restoreCommand` がある [agent-console.config.json:48](https://github.com/GEN-RYU-System/agent-console/blob/f503e9bc7c92ec7d9787f7c1d24018564d115d77/agent-console.config.json#L48)。[server/restore.ts:179](https://github.com/GEN-RYU-System/agent-console/blob/f503e9bc7c92ec7d9787f7c1d24018564d115d77/server/restore.ts#L179)→[server/sessions.ts:564](https://github.com/GEN-RYU-System/agent-console/blob/f503e9bc7c92ec7d9787f7c1d24018564d115d77/server/sessions.ts#L564)）だけで、画面で閉じて開くと新しい会話になる（[server/config.ts:160-161](https://github.com/GEN-RYU-System/agent-console/blob/f503e9bc7c92ec7d9787f7c1d24018564d115d77/server/config.ts#L160-L161)）。どちらの道でも足さなくても dontAsk で始まる（K6 の (a)(b) で判定）。足すと K6 で効き目を見分けられないので、変更を増やさない。
 
 （５）版を v0.50.2 にする（package.json・package-lock.json・extension/manifest.json・docs/CHANGELOG.md。#98 と同じ書き方。CHANGELOG に戻し方 `bash scripts/ac-update.sh v0.50.1` の1行）。
 
 #### 14-12-3 触らない範囲
 
-case-say 本体・Discord 側・room.sb の作り（CH は読み取り subpath で許可済み `server/case-sandbox.ts:209-221`）・起動台本 `ops/shell/ccdiscord.zsh`・見張り類・salesanchor 側のコード。第7版の答え待ちの印は作らない。
+case-say 本体・Discord 側・room.sb の作り（CH は読み取り subpath で許可済み [server/case-sandbox.ts:209-221](https://github.com/GEN-RYU-System/agent-console/blob/f503e9bc7c92ec7d9787f7c1d24018564d115d77/server/case-sandbox.ts#L209-L221)）・起動台本 `ops/shell/ccdiscord.zsh`・見張り類・salesanchor 側のコード。第7版の答え待ちの印は作らない。
 
 #### 14-12-4 代わりの案と選ばない理由
 
@@ -878,7 +879,7 @@ case-say 本体・Discord 側・room.sb の作り（CH は読み取り subpath �
 - `/plan` を頭に付けた依頼で計画の形に入ると、Shift+Tab を外したので戻れない。対処: （３）で道具が止まり、拒否の文で AI が「件を閉じて開き直してください」と伝える。開き直すと `ccdiscord.zsh:72` の `--permission-mode dontAsk` で始まる。ただし画面で閉じて開くと新しい件の会話になり、それまでの会話の続きは失われる（K6 (b)）。続きを残したいときは agent-console の再起動で同じ会話を `--resume` で開く道がある（K6 (a)）。K6 が×なら PO へ戻す。
 - claude が CLAUDE_CONFIG_DIR 側の keybindings.json を読まない場合 K1 が×。対処: ×なら（１）（２）を戻すか（３）だけ残すかを PO に聞く。
 - 下請けを動かしている途中で本体が計画の形に入った場合: 公式 sub-agents.md は「本体が plan のとき下請けも plan」とするが、すでに動いている下請けの形が途中で変わるかは書かれていない（未確認）。変わると、下請けの道具は `agent_id` があるので（３）を素通りし、問い合わせ画面が出うる。Shift+Tab を（１）で外したので、途中で入る道は `/plan` を頭に付けた依頼だけになる。実物の確かめは K3 の後の任意の確かめ「下請けを動かしている途中で `/plan` を送る」で行い、問い合わせ画面が出たら PO へ戻す。
-- 入れた時点で開いている件の窓: 版を入れると agent-console が再起動し、開いている件はつなぎ直し（`sessions.ts:691-698`）になる。つなぎ直しでは claude は起動し直さないので、その時点で計画の形に入っている窓はそのまま残る（閉じて開き直すよう PO に伝える）。（１）はその時に書かれる。一方、開いている窓の hook が新しい版の case-guard を指すか（起動時の settings の道が realpath で旧版の置き場を指したままか）は未確認。K7 で（１）を判定し、（３）は新しく開いた窓（K6）で判定する。K7 が×なら、開いている件の窓を閉じて開き直すよう PO に1行で伝える。
+- 入れた時点で開いている件の窓: 版を入れると agent-console が再起動し、開いている件はつなぎ直し（[server/sessions.ts:691-698](https://github.com/GEN-RYU-System/agent-console/blob/f503e9bc7c92ec7d9787f7c1d24018564d115d77/server/sessions.ts#L691-L698)）になる。つなぎ直しでは claude は起動し直さないので、その時点で計画の形に入っている窓はそのまま残る（閉じて開き直すよう PO に伝える）。（１）はその時に書かれる。一方、開いている窓の hook が新しい版の case-guard を指すか（起動時の settings の道が realpath で旧版の置き場を指したままか）は未確認。K7 で（１）を判定し、（３）は新しく開いた窓（K6）で判定する。K7 が×なら、開いている件の窓を閉じて開き直すよう PO に1行で伝える。
 - 項目なしの扱い: `permission_mode` が来ない版の claude では今と同じ判定になる（強めない）。今の本体（2.1.318）が送るかは K6 の拒否の文で確かめる。
 - 戻し方: `bash scripts/ac-update.sh v0.50.1`（docs/CHANGELOG.md の既存の書き方）。
 
@@ -895,7 +896,7 @@ case-guard の試験（K2）と case-sandbox の試験（K4・ファイルの中
 - K30 の ④（質問への答え待ち）の×は、件の窓に「選択肢の画面」が出たという前提で付けた（§14-10-10）。§14-11-11 で、その前提が誤りと分かった: 件の窓の起動 `ops/shell/ccdiscord.zsh:72`（agent-console v0.50.2 入り版でも同じ行）の `--tools "Bash,Read,Edit,Write,Glob,Grep,Agent,TodoWrite"` に AskUserQuestion・EnterPlanMode・ExitPlanMode は無い。件の AI は 11:54:42 に「AskUserQuestion は使えない」と答え、質問を文で書いて Stop した。PO が 11:54:57 に見た「選択肢」はこの文で、そのとき status が `idle` だったのは正しい読み（入力を待つ状態）。
 - ③（許可の確認）: 同じ行の `--permission-mode dontAsk` で、許可の確認は画面に出ない（§14-10-10 の ③ の観測: ファイルを作る依頼でも確認なし）。v0.50.2（§14-12）で、本体の形が dontAsk でないとき道具を1つも通さない（K2・agent-console `ops/case/case-guard.mjs` の `decide` の先頭）。Shift+Tab は外した（K1 合格・2026-11-05 22:28）。開き直しと再起動の復元でも dontAsk で始まる（K6 (a)(b) 合格・2026-11-05 22:47・23:23）。
 - ⑤（計画の承認待ち）: ExitPlanMode が道具に無いので、承認の画面は出ない（§14-11-11）。`/plan` を頭に付けた依頼で計画の形に入った場合も、道具は止まり、承認の画面は出ない（§14-12-5）。
-- 起動の時の画面: 件の `CH/.claude.json` は agent-console が毎回書き直し、`hasCompletedOnboarding: true` と、作業場所の `hasTrustDialogAccepted: true` を入れる（agent-console `server/case-sandbox.ts` `rewriteCaseClaudeJson`）。最初の案内と「このフォルダを信頼しますか」の画面は出ない。
+- 起動の時の画面: 件の 「CH/.claude.json」 は agent-console が毎回書き直し、`hasCompletedOnboarding: true` と、作業場所の `hasTrustDialogAccepted: true` を入れる（agent-console [server/case-sandbox.ts](https://github.com/GEN-RYU-System/agent-console/blob/b467656c721440c46307fe9f82d0f5f707bbd824/server/case-sandbox.ts) `rewriteCaseClaudeJson`）。最初の案内と「このフォルダを信頼しますか」の画面は出ない。
 - 調子を聞く画面（"How is Claude doing?"）: 起動は `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1` を入れる（`ccdiscord.zsh:62`）。公式 env-vars の `CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY` の行に「`CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` が入っているときも調子を聞く画面は出ない（`CLAUDE_CODE_ENABLE_FEEDBACK_SURVEY_FOR_OTEL` で戻さない限り）」とある（code.claude.com/docs/en/env-vars・2026-11-05 Opus が直接読んだ。Context7 は今月の上限で使えなかった）。起動の台本に `CLAUDE_CODE_ENABLE_FEEDBACK_SURVEY_FOR_OTEL` は無い。
 - MCP の問い合わせ（Elicitation）: `--strict-mcp-config --disallowedTools "mcp__*"` で MCP が無いので起きない（§14-11-11）。
 
@@ -903,7 +904,7 @@ case-guard の試験（K2）と case-sandbox の試験（K4・ファイルの中
 
 - K30: 条件付きの○。①入力待ち `idle`・②作業中 `busy` は実測で見分けられた（§14-10-10）。③④⑤の画面は、件の窓の今の起動の形では出ない（14-13-1）。このため判定7（状態ファイルで `idle`・待ちのキーなしのときだけ貼る）で、文が入るのは「入力を待つ欄」だけになる。
 - 条件（どれかが崩れたら案 E に戻す）: (1) 件の起動の道具の並びに AskUserQuestion・EnterPlanMode・ExitPlanMode・MCP が入っていない (2) `--permission-mode dontAsk` で起動する (3) case-guard が dontAsk でない形の道具を止める (4) `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` が入っていて、調子を聞く画面を戻す変数が無い。
-- 条件を守る仕組み: 既存の `tests/unit/ccdiscord-zsh.test.ts` の2つの試験（引数の確かめと環境変数の並びの確かめ）が (1)(2)(4) を守る（K40。第10版で新しい試験は作らないと決めた。§14-13-7 M3）。(3) は K2 の試験が既に守る。起動の台本を変える PR はこの試験で赤になり、§14-13 を読み直す合図になる。
+- 条件を守る仕組み: 既存の [tests/unit/ccdiscord-zsh.test.ts](https://github.com/GEN-RYU-System/agent-console/blob/b467656c721440c46307fe9f82d0f5f707bbd824/tests/unit/ccdiscord-zsh.test.ts) の2つの試験（引数の確かめと環境変数の並びの確かめ）が (1)(2)(4) を守る（K40。第10版で新しい試験は作らないと決めた。§14-13-7 M3）。(3) は K2 の試験が既に守る。起動の台本を変える PR はこの試験で赤になり、§14-13 を読み直す合図になる。
 - `claude agents --json` の確かめ（判定7 の後半）: 件の本体は、ふつうの置き場の一覧に出ない（§14-10-10 別の方法1）。判定7 の「行があれば、その行も idle で waitingFor が無い」は、行が無いときは状態ファイルだけで決める。この扱いは第6版のままで変えない。
 - 判定3 の補助の確かめ（本体の comm が `claude`）: 第6版の 14-10-3 の判定には無い（第5版の §14-3 の判定）。第6版で作るので、合わないことは影響しない。
 
@@ -919,7 +920,7 @@ case-guard の試験（K2）と case-sandbox の試験（K4・ファイルの中
 
 | 基準 | 検証方法 |
 |---|---|
-| K40 起動の台本が 14-13-2 の条件 (1)(2)(4) を満たす | 第10版で既存の試験を正本にした（§14-13-7 M3）: agent-console `tests/unit/ccdiscord-zsh.test.ts` の引数の試験（`--tools` の完全一致・`--permission-mode dontAsk`・`--strict-mcp-config`・`mcp__*`）と環境変数の並びの完全一致の試験。新しい試験は作らない。どれかが外れたら赤 |
+| K40 起動の台本が 14-13-2 の条件 (1)(2)(4) を満たす | 第10版で既存の試験を正本にした（§14-13-7 M3）: agent-console [tests/unit/ccdiscord-zsh.test.ts](https://github.com/GEN-RYU-System/agent-console/blob/b467656c721440c46307fe9f82d0f5f707bbd824/tests/unit/ccdiscord-zsh.test.ts) の引数の試験（`--tools` の完全一致・`--permission-mode dontAsk`・`--strict-mcp-config`・`mcp__*`）と環境変数の並びの完全一致の試験。新しい試験は作らない。どれかが外れたら赤 |
 | K32 の足し（測り） | 本物で一文を送る前と後に、件の窓の画面の写し（tmux capture-pane）を取り、選ぶ画面（番号の選択肢・Yes/No）が0件であることを確かめる |
 
 K31・K33・K34・K35 は第6版のまま。K35 は○（§14-10-10）。
@@ -938,16 +939,16 @@ K31・K33・K34・K35 は第6版のまま。K35 は○（§14-10-10）。
 
 **審査**（2026-11-05 23:54〜23:58 JST・クラウドの Opus・読むだけ・salesanchor e1b603aa1 / agent-console b467656）: REVISE。A1・A2・A3・A5・A7 は○。A4・A6 は×。必須1件・推奨3件。
 
-- M1（必須）: R36 の「版は agent-console の版の更新のときだけ変わる」は実物と合わない。設定は `"claudeBin": "claude"`（agent-console `agent-console.config.json:8`）。件を開くたびに PATH から実体の道を引き直す（`server/sessions.ts` の `prepareCaseRoom` → `resolveClaudeReal`）。`DISABLE_AUTOUPDATER=1` が止めるのは件の中の更新だけ。PO のふつうの claude が更新されると、件の版も変わる。
+- M1（必須）: R36 の「版は agent-console の版の更新のときだけ変わる」は実物と合わない。設定は `"claudeBin": "claude"`（agent-console [agent-console.config.json:8](https://github.com/GEN-RYU-System/agent-console/blob/b467656c721440c46307fe9f82d0f5f707bbd824/agent-console.config.json#L8)）。件を開くたびに PATH から実体の道を引き直す（[server/sessions.ts](https://github.com/GEN-RYU-System/agent-console/blob/b467656c721440c46307fe9f82d0f5f707bbd824/server/sessions.ts) の `prepareCaseRoom` → `resolveClaudeReal`）。`DISABLE_AUTOUPDATER=1` が止めるのは件の中の更新だけ。PO のふつうの claude が更新されると、件の版も変わる。
 - M2（推奨）: 下請け（Agent）が動いている途中に `/plan` で計画の形に入ったときの確認画面は、4条件の外にある。case-guard は `agent_id` があるとき形を見ない（`ops/case/case-guard.mjs:76`）。K3 の下請けの確かめも未実施。
-- M3（推奨）: K40 は既存の試験とほぼ同じ。`tests/unit/ccdiscord-zsh.test.ts:94-111` が台本を実際に動かして `--tools`・`--permission-mode dontAsk`・`--strict-mcp-config`・`mcp__*` を確かめ、同 `:207` 付近が `CLAUDE*`・`ANTHROPIC*` の環境変数の並びを完全一致で確かめる（`CLAUDE_CODE_ENABLE_FEEDBACK_SURVEY_FOR_OTEL` が入れば赤になる）。
+- M3（推奨）: K40 は既存の試験とほぼ同じ。[tests/unit/ccdiscord-zsh.test.ts:94-111](https://github.com/GEN-RYU-System/agent-console/blob/b467656c721440c46307fe9f82d0f5f707bbd824/tests/unit/ccdiscord-zsh.test.ts#L94-L111) が台本を実際に動かして `--tools`・`--permission-mode dontAsk`・`--strict-mcp-config`・`mcp__*` を確かめ、同 `:207` 付近が `CLAUDE*`・`ANTHROPIC*` の環境変数の並びを完全一致で確かめる（`CLAUDE_CODE_ENABLE_FEEDBACK_SURVEY_FOR_OTEL` が入れば赤になる）。
 - M4（推奨）: §14-10-2 の行番号は f503e9b のまま。b467656 ではずれる（例: `recordCaseMain` の呼び出しは sessions.ts:632）。
 
 **直し**:
 
-- M1 → 判定4 に足す（4b）: 件を開くとき、サーバーは `prepareCaseRoom` が解いた claude の実体の道を、その件の記録（メモリ）に一緒に残す。実体の道の最後の名前が `^\d+\.\d+\.\d+$` の形なら、それを件の claude の版とする（観測: PO の Mac で `~/.local/bin/claude` の実体は `~/.local/share/claude/versions/2.1.318`、`claude --version` は `2.1.318 (Claude Code)`。2026-11-06 Opus が実行）。case-say は、件の版が config の新しい項目 `caseSayClaudeVersions`（文字列の並び。コードの既定は空＝どの件にも送らない）に入っているときだけ進む。形に合わない・並びに無いときは 409（理由 `claude_version_unverified`）。版は監査の caseSay・caseSayRefused の行にも書く。同梱の `agent-console.config.json` には `["2.1.318"]` を入れる。版を足す手順（第11版で置き換え。§14-13-8 M2）: 版が変わったら、PO が件を1つ開く → PO が K41 (a)(b) の頼み事と K32 の一文を打つ → Opus が画面の写しと状態ファイルを読むだけで、選ぶ画面0件と K41 の○を確かめる → 版を足す PR を出し、審査を通してから入れる。R36 の対処はこれに置き換える。
+- M1 → 判定4 に足す（4b）: 件を開くとき、サーバーは `prepareCaseRoom` が解いた claude の実体の道を、その件の記録（メモリ）に一緒に残す。実体の道の最後の名前が `^\d+\.\d+\.\d+$` の形なら、それを件の claude の版とする（観測: PO の Mac で `~/.local/bin/claude` の実体は `~/.local/share/claude/versions/2.1.318`、`claude --version` は `2.1.318 (Claude Code)`。2026-11-06 Opus が実行）。case-say は、件の版が config の新しい項目 `caseSayClaudeVersions`（文字列の並び。コードの既定は空＝どの件にも送らない）に入っているときだけ進む。形に合わない・並びに無いときは 409（理由 `claude_version_unverified`）。版は監査の caseSay・caseSayRefused の行にも書く。同梱の [agent-console.config.json](https://github.com/GEN-RYU-System/agent-console/blob/b467656c721440c46307fe9f82d0f5f707bbd824/agent-console.config.json) には `["2.1.318"]` を入れる。版を足す手順（第11版で置き換え。§14-13-8 M2）: 版が変わったら、PO が件を1つ開く → PO が K41 (a)(b) の頼み事と K32 の一文を打つ → Opus が画面の写しと状態ファイルを読むだけで、選ぶ画面0件と K41 の○を確かめる → 版を足す PR を出し、審査を通してから入れる。R36 の対処はこれに置き換える。
 - M2 → 成功条件 K41 を足す（実装は止めない。K32 の前に測る）: 本物の件の窓で、(a) 下請けにフォルダの一覧を頼み、通ることを確かめる（K3 の下請けの確かめ）。(b) `/plan` を頭に付けて下請けを使う依頼をし、下請けが動いている間と終わった後の画面の写し・状態ファイル（`pid`・`status`・名前に `wait` を含むキー）を記録する。確認画面が出ている間に、状態ファイルが `idle` で待ちのキーなしと読めたら×（判定7 をすり抜ける）。×なら case-say を使わず案 E に戻し、PO に報告する。確認画面が出ない、または出ている間 `idle` 以外か待ちのキーありなら○。
-- M3 → K40 は新しく作らない。既存の `tests/unit/ccdiscord-zsh.test.ts` の2つの試験（引数の確かめと環境変数の並びの確かめ）を K40 の正本とする。便CS1 では、この2つの試験に「§14-13-2 の条件 (1)(2)(4) を守る試験。変えるときは design §14-13 を読み直す」の注を足すだけにする。
+- M3 → K40 は新しく作らない。既存の [tests/unit/ccdiscord-zsh.test.ts](https://github.com/GEN-RYU-System/agent-console/blob/b467656c721440c46307fe9f82d0f5f707bbd824/tests/unit/ccdiscord-zsh.test.ts) の2つの試験（引数の確かめと環境変数の並びの確かめ）を K40 の正本とする。便CS1 では、この2つの試験に「§14-13-2 の条件 (1)(2)(4) を守る試験。変えるときは design §14-13 を読み直す」の注を足すだけにする。
 - M4 → 便CS1 は agent-console b467656 を基準にする。§14-10-2 の行番号は f503e9b のときの物なので、実装役は関数名・文字で今の行を探し直す。名前が見つからない・振る舞いが §14-10-2 と違うときは作らずに止める。
 
 **成功条件の足し**:
@@ -961,9 +962,9 @@ K31・K33・K34・K35 は第6版のまま。K35 は○（§14-10-10）。
 
 #### 14-13-8 設計審査（第10版）と直し（第11版）
 
-**審査**（2026-11-06 00:03〜00:06 JST・クラウドの Opus・読むだけ・salesanchor 992539219 / agent-console b467656）: REVISE。B1〜B6 は○、B7 は×。必須1件・推奨2件。B1 の根拠: 実体の道は `resolveClaudeReal` が realpath で解き（agent-console `server/case-sandbox.ts:433-449`）、その値が `AC_CLAUDE_BIN` になり（`server/sessions.ts:476`）、台本はその道を exec する（`ops/shell/ccdiscord.zsh:31`・`:78`）。
+**審査**（2026-11-06 00:03〜00:06 JST・クラウドの Opus・読むだけ・salesanchor 992539219 / agent-console b467656）: REVISE。B1〜B6 は○、B7 は×。必須1件・推奨2件。B1 の根拠: 実体の道は `resolveClaudeReal` が realpath で解き（agent-console [server/case-sandbox.ts:433-449](https://github.com/GEN-RYU-System/agent-console/blob/b467656c721440c46307fe9f82d0f5f707bbd824/server/case-sandbox.ts#L433-L449)）、その値が `AC_CLAUDE_BIN` になり（[server/sessions.ts:476](https://github.com/GEN-RYU-System/agent-console/blob/b467656c721440c46307fe9f82d0f5f707bbd824/server/sessions.ts#L476)）、台本はその道を exec する（`ops/shell/ccdiscord.zsh:31`・`:78`）。
 
-- M1（必須）: §14-13-4 の K40 の行・§14-13-5 の便CS1・§14-10-4 の対象が第10版に合っていない。→ 直した（K40 は既存の2つの試験、便CS1 に 4b・K42、対象に `server/sessions.ts` と `agent-console.config.json`）。
+- M1（必須）: §14-13-4 の K40 の行・§14-13-5 の便CS1・§14-10-4 の対象が第10版に合っていない。→ 直した（K40 は既存の2つの試験、便CS1 に 4b・K42、対象に [server/sessions.ts](https://github.com/GEN-RYU-System/agent-console/blob/b467656c721440c46307fe9f82d0f5f707bbd824/server/sessions.ts) と [agent-console.config.json](https://github.com/GEN-RYU-System/agent-console/blob/b467656c721440c46307fe9f82d0f5f707bbd824/agent-console.config.json)）。
 - M2（推奨）: 版を足す手順に K41 の測り直しが無い。K41 の頼み事を誰が打つかが無い。→ 版を足す手順を「PO が件を1つ開く → PO が K41 (a)(b) の頼み事と K32 の一文を打つ → Opus が画面の写しと状態ファイルを読むだけで、選ぶ画面0件と K41 の○を確かめる → 版を足す PR を出し、審査を通してから入れる」に置き換える。K41 の頼み事も PO が打つ（Opus は件の窓に打たない）。
 - M3（推奨）: 決まりが3つ足りない。→ 次のとおり決める。
   - `caseSayClaudeVersions` の各要素が `^\d+\.\d+\.\d+$` の形でないときは、`caseSayRoles` と同じく起動時エラーにする。
