@@ -35,9 +35,9 @@
 - `:237-242` finally: tenant の札も public の札も出た後で `_remove_test_tenant_rows` と public.permissions の DELETE
 
 ## テナント 998 の重なり
-- `backend/tests/test_rls_tenant_meta_config.py:88` と `test_countries_master.py:148` が tenant_998 / tenant_999 を札なしで作る。`test_rls_tenant_meta_config.py:156` は札なしで `DROP SCHEMA tenant_998 CASCADE`
+- `backend/tests/test_rls_tenant_meta_config.py:88` と `backend/tests/test_countries_master.py:148` が tenant_998 / tenant_999 を札なしで作る。`backend/tests/test_rls_tenant_meta_config.py:156` は札なしで `DROP SCHEMA tenant_998 CASCADE`
 - 3 本目が 998 を使う限り、別のファイル（別のワーカー）が同じスキーマを消しうる
-- 空いている番号: `grep -rnE "994" backend/tests` → 番号としての使用は 0 件（`test_tcg_analysis_review_sql_snapshot.py:53` の hash の中の文字だけ）
+- 空いている番号: `grep -rnE "994" backend/tests` → 番号としての使用は 0 件（`backend/tests/test_tcg_analysis_review_sql_snapshot.py:53` の hash の中の文字だけ）
 - 3 本目の利用者番号 9801〜9805 は、他のファイルで 0 件
 
 ## 観測していないこと

@@ -2,6 +2,7 @@
 
 - recon: `docs/handoff/test-drop-public-lock/recon.md`
 - 前の便: `docs/handoff/test-roles-ddl-scope/design.md` §11（同じ形の直し）
+- 関係 ADR: ADR-034（全テナントへ移行を回す決まり。試験の片付けの札だけを直し、ADR は変えない）。新しい ADR は作らない（recon「既存 ADR・仕様の検索」）
 - PO の承認: 「1」（2026-11-06・次は残りの3つの試験を直す）、「PRマージ、デプロイまで完走させてくれ」
 
 ## 1. 目的
@@ -9,11 +10,11 @@ CI の試験は 1 つの DB を並んで使う。片付けの DROP や public �
 
 ## 2. 対象と対象外
 - 対象: `backend/tests/test_rls_auth_audit.py`・`backend/tests/test_discord_oauth_rls.py`・`backend/tests/test_permission_resolution_pg.py` の 3 本だけ
-- 対象外: `backend/app/`・`migrations/`・`.github/`・`backend/tests/rls_bootstrap.py`・他の試験。確かめ（assert）の中身。`test_rls_tenant_meta_config.py` と `test_countries_master.py` の 998/999 の重なり（次の便）。見張りが scoped 試験の schema_name を見ていない点（次の便）
+- 対象外: `backend/app/`・`migrations/`・`.github/`・`backend/tests/rls_bootstrap.py`・他の試験。確かめ（assert）の中身。`backend/tests/test_rls_tenant_meta_config.py` と `backend/tests/test_countries_master.py` の 998/999 の重なり（次の便）。見張りが scoped 試験の schema_name を見ていない点（次の便）
 
 ## 3. 変更前と変更後
 
-### 3-1. `test_rls_auth_audit.py`
+### 3-1. `backend/tests/test_rls_auth_audit.py`
 - 前: `:68` tenant の札の中で、`:70`・`:81` の `_remove_test_tenant_rows(conn)` を public の札の外で流す
 - 後: `:22` の import に `public_bootstrap_lock` を足す。`:69-70` と `:80-81` を次の形にする（2 か所とも同じ）
 ```python
@@ -23,7 +24,7 @@ CI の試験は 1 つの DB を並んで使う。片付けの DROP や public �
 ```
 - 札の順: tenant（`:68`）→ public。逆にならない
 
-### 3-2. `test_discord_oauth_rls.py`
+### 3-2. `backend/tests/test_discord_oauth_rls.py`
 - 前: 準備も片付けも札が無い
 - 後:
   - import に `from tests.rls_bootstrap import public_bootstrap_lock` を足す
@@ -42,7 +43,7 @@ async def _drop_minimal_schema(admin_engine) -> None:
 ```
 - tenant の札は足さない。理由: テナント 99 を使うのはこのファイルだけで、`--dist=loadfile` で同じワーカーが順に流す（recon 対象 2）。public の札だけを取る形は、tenant → public の順に反しない
 
-### 3-3. `test_permission_resolution_pg.py`
+### 3-3. `backend/tests/test_permission_resolution_pg.py`
 - 前: `:37` テナント 998。`:98-99` の片付けは public の札の外。`:237-242` の finally は両方の札の外
 - 後:
   - `:37` を `_TENANT_ID = 994` にする。`:57` の説明文の「id 998」を「id 994」にする（他の 998 を使う試験と重ならない番号。recon「テナント 998 の重なり」）
@@ -71,7 +72,7 @@ async def _drop_minimal_schema(admin_engine) -> None:
 
 ## 5. 代替案
 - A（採用）: 前の便と同じく、片付けを public の札の中へ入れる。形が揃い、見る所が少ない
-- B: `rls_bootstrap.py` に片付け用の共通関数を作る。3 本の消す行が違う（tenant_settings・permissions の有無）ので、今は共通化しない
+- B: `backend/tests/rls_bootstrap.py` に片付け用の共通関数を作る。3 本の消す行が違う（tenant_settings・permissions の有無）ので、今は共通化しない
 - C: 試験を直列で流す。CI が遅くなる
 
 ## 6. リスクと対処
@@ -86,15 +87,16 @@ async def _drop_minimal_schema(admin_engine) -> None:
 | 札の順に public → tenant が無い | 差分を目で読む（審査役） |
 | CI の pytest-run-internal で failed 0 | `gh run view` のログの最後の行 |
 | DB ログの `deadlock detected` 0 件 | CI の DB ログを grep |
-| DB の ERROR の種類が main の通った回と同じ（FATAL 3 種の件数の揺れは除く） | `errkinds.sh` で比べる |
+| DB の ERROR の種類が main の通った回と同じ（FATAL 3 種の件数の揺れは除く） | DB の ERROR の種類を数える台本（Opus の作業場所）で比べる |
 | passed＋skipped の数が main と同じ | ログの最後の行 |
 | `grep -rn "tenant_998\|_TENANT_ID = 998" backend/tests/test_permission_resolution_pg.py` が 0 件 | grep |
 
-## 8. 外部事例
+## 8. 外部・過去事例の参照と我々への応用
 - PostgreSQL の公式文書（Explicit Locking・Advisory Locks）: デッドロックを避けるには、すべての処理が同じ順で鍵を取る。ここでの「tenant → public」がこれに当たる。数値の事例は使わない。この直しの効果は、この CI の DB ログ（deadlock 件数）で直接測るため
 
 ## 9. 維持の仕組み
-- 前の便の分類表の見張り（`test_tenant_loop_migration_guard.py`）は移行の範囲を見る。札の外の DROP は見ていない。見張りを足すかは、次の便で数え直しの結果（2026-11-19）を見て決める
+- 守り手: CI の pytest（必須チェック・毎回走る）と、2026-11-19 の数え直しをする Opus
+- 前の便の分類表の見張り（`backend/tests/test_tenant_loop_migration_guard.py`）は移行の範囲を見る。札の外の DROP は見ていない。見張りを足すかは、次の便で数え直しの結果（2026-11-19）を見て決める
 
 ## 10. 設計審査（同じ AI による自己審査）
 - 判定: APPROVE
