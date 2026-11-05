@@ -104,7 +104,7 @@
 
 ### 便4: 画面（K1・K3・K5）
 
-- 待ち画面 `frontend/src/pages/login/LoginPage.tsx:300` 付近: 「会社の管理者に頼む」ボタンを、いつもの機械や控えの番号の有無にかかわらず出す（社員が自分の機械を持っていないときもあるため）。既存の `Button`（variant="outline" size="auth" shape="pill" fullWidth）を使う。押した後は結果の文を `Callout` で出す（requested / already_requested / no_owner の3つ）。いつもの機械も控えも無いときの文 `login.deviceApproval.noTrustedDevice` は「会社の管理者に頼むか、運営に連絡してください。」に改める。
+- 待ち画面 `frontend/src/pages/login/LoginPage.tsx:300` 付近: 「会社の管理者に頼む」ボタンを、いつもの機械や控えの番号の有無にかかわらず出す（社員が自分の機械を持っていないときもあるため）。既存の `Button`（variant="outline" size="auth" shape="pill" fullWidth）を使う。押した後は結果の文を `Callout` で出す（requested / already_requested / no_owner の3つ）。受け口が `{"status":"expired"}` を返したときは、poll の expired と同じ既存の表示に移る（新しい文を作らない）。409 `not_pending` のときは、その場で poll を1回呼び、poll の結果（入れた・断られた・期限切れ）の既存の表示に従う（依頼の状態の判断を poll の1か所に保つ）。いつもの機械も控えも無いときの文 `login.deviceApproval.noTrustedDevice` は「会社の管理者に頼むか、運営に連絡してください。」に改める。
 - 管理センター: `frontend/src/pages/management-center/ManagementCenterPage.tsx:28` のメニューに「ログインの許可待ち」を `isTenantOwner` のときだけ足す。`frontend/src/App.tsx:393` の入れ子に `login-requests` を足す。画面は新ファイル frontend/src/pages/management-center/LoginRequestsPage.tsx。運営の画面 `frontend/src/pages/super-admin/LoginRequestsPage.tsx:1` と同じ部品（一覧・ConfirmModal・メモ欄）を使い、表の行の部品は2画面で共有する（同じ見た目の部品を2つ書かない）。
 - `frontend/src/hooks/usePermissions.ts:1` に `isTenantOwner` を足す。
 - 鈴 `frontend/src/components/NoticeBell.tsx:1`: isTenantOwner のときだけ社員の依頼の件数を足し、押すと管理センターの画面へ移る。
@@ -136,7 +136,7 @@
 - なぜ今の仕組みでは足りないか: `.github/workflows/process-artifacts-gate.yml:8` は pull_request で動くため、設定もスクリプト（`scripts/check-process-artifacts.js:51`）も PR 側のものが動く。PR がスクリプトと一覧を同時に書き換えれば自分で見張りを外せる。workflow-lint（`.github/workflows/workflow-lint.yml:1`）も同じで、しかも必須チェックではない。
 - 後: 新ファイル .github/workflows/guard-files-gate.yml。
   - 起動は `pull_request_target`（types: opened, synchronize, reopened, edited, labeled）。基のブランチ（main）の定義だけが動く。
-  - PR のコードを checkout しない・実行しない。`gh api repos/{repo}/pulls/{n}/files --paginate` で変わったファイル名だけを読む。権限は `contents: read`・`pull-requests: read`。
+  - PR のコードを checkout しない・実行しない。`gh api repos/{repo}/pulls/{n}/files --paginate` で変わったファイル名だけを読む。名前を変えたファイルは新しい名前が `filename`、元の名前が `previous_filename` に入るため、守る一覧との照合は両方で行う（名前を変えて一覧から外す抜け道を止める）。権限は `contents: read`・`pull-requests: read`。
   - 守るファイルの一覧はこの workflow の中に直接書く（PR 側から変えられない場所に置くため）: `.github/workflows/test.yml`・`.github/workflows/lint-tenant-schema.yml`・`.github/workflows/migration-test.yml`・`.github/workflows/workflow-lint.yml`・`.github/workflows/process-artifacts-gate.yml`・.github/workflows/guard-files-gate.yml 自身・`scripts/lint_tenant_schema.py`・`scripts/check-process-artifacts.js`・`scripts/migration-dryrun-report.py`・`scripts/migration-guard/dryrun-exclusions.tsv`・scripts/check_public_tenant_rls.py・backend/app/ops/tenant_rls_allowlist.py・backend/app/tasks/tenant_isolation_daily_check.py・K2 の試験 backend/tests/test_tenant_login_requests.py・K8 の試験 backend/tests/test_check_public_tenant_rls.py。
   - 一覧のファイルが変わっていたら、PR に shingo-ops が書いた「GO #番号 <SHA>」のコメントがあるときだけ通す。番号はその PR と一致し、SHA（7文字以上）は今の PR の head の SHA（`github.event.pull_request.head.sha`）の先頭と一致すること。GO の後に push すると head が変わるので、新しい GO が要る（古い GO で後から足した変更を通さない）。無ければ落ちる。コメントの書き手は API の `user.login` で確かめる（本文の文字だけで信じない）。
   - コメントを書いても pull_request_target は動き直さない。GO のコメントの後は、落ちた実行を `gh run rerun` でやり直す（やり直しは同じ PR の検査として結果が付く）。issue_comment で起動する形は、結果が PR の最新の写しに付かないため使わない。この点は設計審査で GitHub の文書と照らして確かめる。
@@ -164,7 +164,7 @@
 | K7 他社在籍が分からない | `pytest backend/tests/test_staff_create_users.py`: 他社・自社の重複とも同じ文言で「他の会社」を含まない |
 | K8 鍵の無い新しい表を止める | `pytest backend/tests/test_check_public_tenant_rls.py`（落ちる見本・通る見本）と、migration-test の新しい手が緑 |
 | K9 本番を毎日点検 | 管理者用 Discord に毎日1通。7日続けて緑。数え方: PO が管理者用 Discord の7日分の投稿を画面で見て ○×（Opus が Discord を読めるかは未確認のため、PO の目視を正とする） |
-| K10 見張りを外す PR を止める | 見本の PR（守るファイルを1行変える下書き PR）で guard-files gate が赤、PO の「GO #番号」コメント後に緑。ruleset の必須一覧に名前がある（gh api の生出力） |
+| K10 見張りを外す PR を止める | 見本の PR（守るファイルを1行変える下書き PR）で guard-files gate が赤、PO の「GO #番号 <SHA>」コメント後のやり直しで緑。その後に1行足して push すると、古い GO では赤に戻る。守るファイルの名前を変えるだけの見本でも赤。ruleset の必須一覧に名前がある（gh api の生出力） |
 | K11 文書から見張りに辿れる | tenant-rls README の表の見張りの名前が、ruleset・workflow の名前と一致（Opus が突き合わせ） |
 | 運営の許可が壊れていない | 既存の運営の許可の試験がそのまま緑 |
 | i18n・UI の決まり | 必須チェック UI governance gate・Lint & Dark Mode が緑。ja/en の鍵が同じ |
@@ -235,5 +235,7 @@
 | N8 paths-filter に新しいファイル | 推奨 | 便5「起動の条件」 |
 | N9 ask-admin の発行停止と Cookie 無し | 推奨 | 便3(3) |
 | N10 K9 の数え方 | 推奨 | 受け入れ基準 K9 を PO の目視に |
+
+設計審査3回目（262a33216）は APPROVE。推奨3件を反映した: M1 名前を変えたファイルを `previous_filename` でも照合（便7）／M2 K10 の確かめ方を「GO #番号 <SHA>」と後からの push・名前の変更に揃えた／M3 頼むボタンの expired と 409 `not_pending` の画面の動き（便4）。
 
 審査で未確認として残った点: クラウドから docs.github.com に届かず、pull_request_target と rerun の動きの公式文書の照合は審査役ができなかった。手元では公式文書を 2026-11-05 に直接確かめた（事例1）。`gh run rerun` で GO 後に緑にできるかは、便7 の見本 PR（K10 の検証）で実測して確かめる。
