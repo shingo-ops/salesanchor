@@ -108,14 +108,14 @@ recon §2〜§5 の食い違い D1〜D8 を、この型に揃える。
 
 ### 3-5. 流入元の表（新設）
 
-- 前: 流入元の表も、リードの列も無い（recon §6）。商談に自由入力の列を足す変更がある（`migrations/096_add_deal_lead_source.sql`）が、どこからも読まれていない。本番に列があるかは未確認。
+- 前: 流入元の表も、リードの列も無い（recon §6）。商談に自由入力の列を足す変更（`migrations/096_add_deal_lead_source.sql`）はあるが、本番に deals の表が無いので列も無い（§8）。
 - 後:
   - 表 `public.lead_sources`（列: id・tenant_id・code・label_ja・label_en・sort_order・is_active・created_at・updated_at）。code は tenant_id ごとに重ならない（共用と会社で 2 つの一意の索引）。表の守りは §1 の型。
   - 共用の初期値 7 つ: Messenger・Instagram・WhatsApp・Discord・自社サイト・メール・紹介。コードは messenger・instagram・whatsapp・discord・website・email・referral。
   - リードの表に 2 列を足す: `lead_source_code`（流入元のコード）、`referrer_lead_id`（紹介者のリードの番号）。
   - 紹介者は、`lead_source_code='referral'` のときだけ入れられる。同じ会社のリードだけ選べる（リードは会社の区画の表なので、区画の中の外部キーにする）。自分自身は選べない。
   - 保存時の点検は、今の連絡ツールの点検（`backend/app/routers/leads.py:190-220`）と同じ形。「共用＋自社」の有効な値にだけ通す。
-  - 商談の `lead_source`（自由入力）は使わない。本番に列があるかを確かめてから、消すか残すかを残件で決める（§9）。
+  - 商談の `lead_source`（自由入力）は本番に無い（§8）。この設計では扱わない。
 - 運営側の追加画面: 運営の管理画面に、流入元と連絡ツールの共用の値を足す枠を作る（既存の運営画面の金型に合わせる）。
 - 管理センターの画面: 流入元と連絡ツールの会社の値を足す枠。共用は印つき・編集不可。
 
@@ -211,9 +211,9 @@ S1 で確かめ終えたもの（recon「追記: S1」）:
 - 表の守りの読み取りの決まりが、印の無い接続に共用の行を見せるか: 確かめ済み。suppliers の読み取りの決まりは「tenant_id が空、または自社の番号」（`migrations/20261016_020000_add_suppliers_rls.sql:8-12`）。印の無い解析の接続には共用の行だけが見える。
 - 運営画面 6 本の一覧が会社の行を読んでいて、守りで見えなくならないか: 確かめ済み。6 本とも読む文・書く文に `tenant_id IS NULL` を付けている（例: `backend/app/routers/super_admin_units.py:120`、`backend/app/routers/super_admin_conditions.py:142`）。守りを付けても運営画面の見え方は変わらない。
 
-まだ確かめていないもの:
+- 本番の deals に lead_source の列があるか: 確かめ済み。本番に deals という表は 0 個（2026-11-06、本番の読み取りの道で `SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE c.relname='deals'` → 0。AUDIT sha=165aa6e8bb88）。`migrations/096_add_deal_lead_source.sql` は deals の無い区画を飛ばす作り（同ファイル :22-30）なので、本番では何も足していない。
 
-- 本番の deals に lead_source の列があるか。本番の読み取りの道で Opus が確かめる。
+まだ確かめていないもの: なし（§13-6 の役割の未確認は別に残る）。
 
 ---
 
@@ -222,7 +222,6 @@ S1 で確かめ終えたもの（recon「追記: S1」）:
 - 失注・成約理由（D6）を同じ型にするか。
 - 会社の画面からの商品追加（D7）を会社の行にするか。画面を出すかから PO が決める。
 - 発送地域・送料を選択肢の表に入れるか。
-- 商談の自由入力の流入元の列の扱い。
 
 ---
 
