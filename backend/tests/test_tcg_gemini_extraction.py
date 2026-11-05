@@ -719,6 +719,44 @@ class TestUsageMetadataTokenReading:
         assert result["output_tokens"] == 77
 
 
+class TestErrorReasonRecorded:
+    """T11（ADR-1062）: 失敗の記録に reason が入り、raw と category は今のまま。"""
+
+    def test_location_refusal_records_reason(self, monkeypatch):
+        from google.genai import errors as genai_errors
+
+        from app.services import gemini_extraction_svc as svc
+        from app.services import gemini_route
+        from app.services.tcg_extraction_record_svc import RecordError
+
+        def _refusal():
+            return genai_errors.APIError(
+                400,
+                {"error": {"code": 400, "status": "FAILED_PRECONDITION",
+                           "message": "User location is not supported for the API use."}},
+            )
+
+        client = MagicMock()
+        client.models.generate_content.side_effect = _refusal()
+        second = MagicMock()
+        second.models.generate_content.side_effect = _refusal()
+        monkeypatch.delenv("GEMINI_PROXY_URL", raising=False)
+        gemini_route.reset_state()
+        monkeypatch.setattr(svc, "_get_genai_client", lambda: client)
+        monkeypatch.setattr(gemini_route, "build_client", lambda route: second)
+        recorder = MagicMock()
+        try:
+            with pytest.raises(RecordError):
+                svc.call_gemini_extraction("行A", recorder=recorder)
+        finally:
+            gemini_route.reset_state()
+        recorder.record_error_detail.assert_called_once()
+        detail = recorder.record_error_detail.call_args.args[0]
+        assert detail["reason"] == "400 FAILED_PRECONDITION: User location is not supported for the API use."
+        assert detail["raw"] == svc._safe_error_message(second.models.generate_content.side_effect)
+        assert detail["category"] == svc._classify_error(second.models.generate_content.side_effect)
+
+
 class TestBuildSupplierContextNoteV6Unaffected:
     """label_map から extraction_ship_format を外した変更が v6（本番）出力を変えないことを守る。"""
 

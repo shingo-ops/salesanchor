@@ -23,7 +23,7 @@ from typing import Any
 
 from celery.exceptions import SoftTimeLimitExceeded
 
-from app.services import llm_budget
+from app.services import gemini_route, llm_budget
 from app.services.tcg_extraction_record_svc import RecordError
 from app.services.tcg_work_reference import (
     WORK_ID_PROMPT_VERSION,
@@ -246,34 +246,8 @@ def format_prompt_input(raw_text: str) -> str:
 
 
 def _get_genai_client():
-    """google.genai.Client を生成して返す。
-
-    GEMINI_PROXY_URL が設定されていれば、その URL を HTTP CONNECT プロキシとして
-    同期/非同期クライアントの両方に渡す（prod2 経由の egress 対応。design:
-    docs/handoff/gemini-egress-via-prod2/design.md §5-2）。未設定なら従来どおり直接接続する。
-    """
-    try:
-        from google import genai  # type: ignore[import-untyped]
-        from google.genai import types as _types
-    except ImportError as exc:
-        raise RuntimeError(
-            "google-genai がインストールされていません: pip install google-genai"
-        ) from exc
-    api_key = os.getenv("GEMINI_API_KEY", "").strip()
-    if not api_key:
-        raise RuntimeError(
-            "GEMINI_API_KEY が未設定です。Gemini 抽出は実行できません。"
-        )
-    proxy_url = os.getenv("GEMINI_PROXY_URL", "").strip()
-    if proxy_url:
-        return genai.Client(
-            api_key=api_key,
-            http_options=_types.HttpOptions(
-                client_args={"proxy": proxy_url},
-                async_client_args={"proxy": proxy_url},
-            ),
-        )
-    return genai.Client(api_key=api_key)
+    """google.genai.Client を生成して返す。道は gemini_route が決める（ADR-1062）。"""
+    return gemini_route.build_client(gemini_route.first_route())
 
 
 # ---------------------------------------------------------------------------
@@ -426,7 +400,8 @@ def call_gemini_extraction(
     )
 
     try:
-        response = client.models.generate_content(
+        response = gemini_route.generate_content_routed(
+            client,
             model=payload["model"],
             contents=payload["contents"],
             config=genai_types.GenerateContentConfig(**payload["config"]),
@@ -436,7 +411,9 @@ def call_gemini_extraction(
     except Exception as exc:
         if recorder is not None:
             detail = _safe_error_message(exc)
-            recorder.record_error_detail({"raw": detail, "category": _classify_error(exc)})
+            recorder.record_error_detail(
+                {"raw": detail, "category": _classify_error(exc), "reason": gemini_route.failure_reason(exc)}
+            )
             raise RecordError("API_ERROR") from None
         logger.exception("[gemini_extraction] API call failed: %s", _safe_error_message(exc))
         raise RuntimeError(f"Gemini API 呼び出し失敗: {_safe_error_message(exc)}") from exc
@@ -514,7 +491,8 @@ def call_gemini_raw_copy(
     )
 
     try:
-        response = client.models.generate_content(
+        response = gemini_route.generate_content_routed(
+            client,
             model=payload["model"],
             contents=payload["contents"],
             config=genai_types.GenerateContentConfig(**payload["config"]),
