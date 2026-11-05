@@ -5,7 +5,7 @@
 
 親: [仕様書の表紙](../../specs/inbox/conversation-import/README.md) ／ KGI: [kgi.md](../../specs/inbox/conversation-import/kgi.md) ／ 調査: [docs/handoff/conversation-import/recon.md](recon.md) ／ 決定記録案: [ADR-1064](../../adr/ADR-1064-conversation-file-import.md)
 
-状態: 設計案作成済み（Opus）／クラウド審査1〜3回目 REVISE を反映済み（[review-opus.md](review-opus.md)）／4回目の再審査前／R7 は PO 判断待ち／PO 実装承認前／実装未着手
+状態: 設計案作成済み（Opus）／クラウド審査4回目 APPROVE（設計合格・[review-opus.md](review-opus.md)）／R7 は PO 判断待ち／PO 実装承認前／実装未着手
 
 ## 1. 目的
 
@@ -143,7 +143,7 @@
 
 | 案 | 中身 | 判断 |
 |---|---|---|
-| A（採用） | meta_messages だけに入れる | 会話の正本を meta_messages に寄せる承認済みの方針（recon §0）。一覧・会話画面・成約分析（analytics.py:2489）がそのまま読む |
+| A（採用） | meta_messages だけに入れる | 会話の正本を meta_messages に寄せる既存の設計の方針（conversation-unification/design.md:14-20・recon §0。PO 承認の記録はその文書内に無い）。一覧・会話画面・成約分析（analytics.py:2489）がそのまま読む |
 | B | conversation_logs だけに入れる | 受信箱の一覧（meta_inbox.py）と会話画面が読まない。K1 が × |
 | C | 両方に入れる | 同じ会話が2か所になる。PO の「データを分散させることは禁止」に反する |
 | platform を新しい値（例 `facebook_import`） | 印が灰色の点になり（icons.tsx:287 以降）、一覧の絞り込みにも出ない | 不採用。取り込みかどうかは is_manual で分かる |
