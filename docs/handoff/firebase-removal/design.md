@@ -1,7 +1,7 @@
 # design: Firebase を画面とサーバーから全部外す（ADR-1013 便6）
 
 - 書いた日: 2026-11-04（Opus）
-- 状態: 設計案作成済み → 自己審査（§10）済み → クラウドの設計審査 1 回目 REVISE・2 回目 REVISE（重い指摘 0・中 2・軽い 5。2026-11-04）→ 3 回目 APPROVE（重い・中 0、軽い 2 は直した。2026-11-04）→ PO 承認済み（2026-11-04「1」。PO の原文は「1、推測は禁止して事実確認を怠らずに確実性を重視して最も効果があり、現状把握の粒度が細く、精度が高いエビデンスを確立して安全に進めてくれ。また配線とDBのSSOTは遵守してデータを分散させることは禁止。フロントエンドのパーツもデザイントークンとデザインシステム を遵守して、金型登録のないハードコードを禁止する。推測で自身で判断したり不透明無まま進めることは禁止、分からないことは聞いてくれ。確立したなら進める。」）→ 便1 のカード発行済み（`docs/handoff/firebase-removal/card-1.md`、card-lint 合格）。実装は未着手。便5 は戻せないので、実行の直前に改めて PO の GO をもらう。
+- 状態: 設計案作成済み → 自己審査（§10）済み → クラウドの設計審査 1 回目 REVISE・2 回目 REVISE（重い指摘 0・中 2・軽い 5。2026-11-04）→ 3 回目 APPROVE（重い・中 0、軽い 2 は直した。2026-11-04）→ PO 承認済み（2026-11-04「1」。PO の原文は「1、推測は禁止して事実確認を怠らずに確実性を重視して最も効果があり、現状把握の粒度が細く、精度が高いエビデンスを確立して安全に進めてくれ。また配線とDBのSSOTは遵守してデータを分散させることは禁止。フロントエンドのパーツもデザイントークンとデザインシステム を遵守して、金型登録のないハードコードを禁止する。推測で自身で判断したり不透明無まま進めることは禁止、分からないことは聞いてくれ。確立したなら進める。」）→ 便1 のカード発行済み（`docs/handoff/firebase-removal/card-1.md`、card-lint 合格）→ 便1 本番反映済み → 便2 は PO 承認（2026-11-05「1」）を受けてカード発行済み（`docs/handoff/firebase-removal/card-2.md`、card-lint 合格）。便2 の実装は未着手。便5 は戻せないので、実行の直前に改めて PO の GO をもらう。
 - PO の進める判断: 2026-11-04「1」。Opus が出した選択肢は「Firebase を画面とサーバーから全部外す設計に進む【おすすめ】　裏口のもとになる部品がなくなります。Firebase に残っている利用者の削除は元に戻せないので、その前に改めて確認をお願いします。」。
 - 「」で囲み区切りを全角の ／ にした道筋は、画面から Firebase を外す変更（release/firebase-removal-bin1）で消したファイル（消したので今の版には無く、引用の自動点検の対象から外している）。
 - 根拠: [recon.md](./recon.md)（`docs/handoff/firebase-removal/recon.md`。以下 R 番号はこの recon を指す）。
@@ -124,7 +124,7 @@ Firebase は使わない設定に切り替えた（PO 2026-11-04「firebaseは�
 - API の説明文が変わる（`backend/app/schemas/auth.py:19`・`backend/app/routers/auth.py:80`・`:186`・`backend/app/routers/staff.py:265-271` の文が `frontend/api-contract/openapi.json:37858`・`:41323`・`:41950`・`:58540` の description になっている）ので、`cd backend && ENVIRONMENT=test python -m tools.export_openapi ../frontend/api-contract/openapi.json` で `frontend/api-contract/openapi.json` を作り直して同じ PR に入れる（`.github/workflows/api-contract-check.yml:35`・`:53`）。
 - 運用スクリプト（R4・R8・R19）:
   - `scripts/setup_review_tenant.py`: Firebase の利用者を作る所を、`backend/app/auth/passwords.py:20` の `hash_password` で `users.password_argon2_hash` を書く形に変える。Firebase を使う関数（`_init_firebase`・`_firebase_get_uid`・`_firebase_create_user`・`_firebase_update_password`）は関数ごと消し、`firebase_uid` を受け渡す所（:231・:256・:273・:289・:351・:369・:483・:487・:491）と注記（:18・:24・:37・:296・:455・:459・:469・:490）も消す。終わりの条件は「このファイルの `firebase`（大小無視）が 0 件」（import :55-56・見出し :93・:350・:352・呼ぶ所 :472-480 も含む）。すでにいる利用者かどうかは `users` で判定し、`password_argon2_hash` は新しく作るときか、`ALLOW_REVIEW_TENANT_PASSWORD_RESET` を指定したときだけ書く（今の動き `:452-487` を引き継ぐ）。`backend/tests/test_setup_review_tenant.py` を合わせる。
-  - `scripts/setup_single_test_user.py`・`scripts/setup_test_users.py`: 消す。呼ぶ所はリポジトリに無く、中身は Firebase の利用者を作ることだけ（R19 の検索）。
+  - 「scripts／setup_single_test_user.py」・「scripts／setup_test_users.py」: 消す。呼ぶ所はリポジトリに無く、中身は Firebase の利用者を作ることだけ（R19 の検索）。
   - `scripts/setup_tenant.py:29`・`:471`: 「Firebase ユーザーを作る」の案内を、初回設定メールの案内に直す。
   - `backend/scripts/CLAUDE.md`・`backend/AGENTS.md:8` の手順を合わせる。
 - 試験: Firebase の既定に頼る試験（R21 の 15 ファイル）と、Firebase の文字がある次の試験を直す: `backend/tests/test_client_ip.py`・`backend/tests/test_event_loop_nonblocking.py`・`backend/tests/test_export_inventory_for_sheet.py`・`backend/tests/test_line_import_devices.py`・`backend/tests/test_review_mail_notifier.py`・`backend/tests/test_security_hardening.py`・`backend/tests/test_smoke_auth_least_privilege.py`・`backend/tests/test_viewer_isolation.py`・`backend/tests/test_register_invite.py`・`backend/tests/conftest.py`（列の足場 :512 は便4）。#5118 で足した T1・T2・T6 は、Firebase の分岐が無くなるので「自社以外の札は 401」の試験に置き換える。
@@ -213,7 +213,7 @@ Firebase は使わない設定に切り替えた（PO 2026-11-04「firebaseは�
 | 行き先 | ファイル |
 |---|---|
 | 便1 画面 | `frontend/` の下すべて（`frontend/.storybook/main.ts`・`frontend/package.json`・`frontend/package-lock.json`・`frontend/playwright.config.ts`・`frontend/vite.config.ts`・`src/` の下・`tests-e2e/` の下の 5 ファイル。ただし `frontend/Dockerfile`・`frontend/.env.example`・`frontend/api-contract/openapi.json` を除く）、`.github/workflows/e2e.yml`、`.github/workflows/karte-gate.yml` |
-| 便2 サーバー | `backend/app/` の下すべて（`backend/app/services/tenant.py` を除く）、`backend/requirements.txt`、`backend/scripts/CLAUDE.md`、`backend/tests/` の下（`backend/tests/conftest.py` の Firebase の既定の部分を含む。下の便4 の行に挙げた列の部分を除く）、`frontend/api-contract/openapi.json`（作り直し）、`scripts/setup_review_tenant.py`、`scripts/setup_single_test_user.py`、`scripts/setup_test_users.py`、`scripts/setup_tenant.py` |
+| 便2 サーバー | `backend/app/` の下すべて（`backend/app/services/tenant.py` を除く）、`backend/requirements.txt`、`backend/scripts/CLAUDE.md`、`backend/tests/` の下（`backend/tests/conftest.py` の Firebase の既定の部分を含む。下の便4 の行に挙げた列の部分を除く）、`frontend/api-contract/openapi.json`（作り直し）、`scripts/setup_review_tenant.py`、「scripts／setup_single_test_user.py」、「scripts／setup_test_users.py」、`scripts/setup_tenant.py` |
 | 便3 配線 | `docker-compose.yml`、`frontend/Dockerfile`、`.env.example`、`frontend/.env.example`、`nginx/nginx.conf`、`scripts/blue-green-cutover.sh`、`.github/workflows/external-state-snapshot.yml`、`.github/workflows/rotate-qa-firebase.yml`、`.gitleaks.toml`、`monitoring/grafana/provisioning/dashboards/json/uptime-kuma.json`、`scripts/detect-external-api-change.js`、`scripts/tests/test-detect-external-api-change.js`、`scripts/smoke/external-firebase.sh`、`scripts/snapshot/firebase.sh` |
 | 便4 DB の列 | `backend/app/services/tenant.py`、`backend/tests/conftest.py`（:512）、`backend/tests/rls_bootstrap.py`、`backend/tests/test_staff_create_users.py`、`backend/tests/ops/test_ai_cloud_views.py`、`migrations/20261024_100300_create_ai_cloud_views.sql`、`scripts/qa/seed-tenant.sql` |
 | 例外（§8-2） | 残りすべて |
@@ -234,7 +234,7 @@ Firebase は使わない設定に切り替えた（PO 2026-11-04「firebaseは�
 
 ## 維持の仕組み
 
-- 守り手: .github/workflows/test.yml（backend の試験）と .github/workflows/e2e.yml（画面の試験）。便1 で K1・K6 の数え方を、便2 で K2・K4 の確かめを CI の段に足す。K1・K6 は `.github/workflows/frontend-check.yml` の job `check` の段「Viewer bundle check」（`npx vite build --manifest` で `frontend/dist` を作る段）の直後に足す（カード作成時に実物を見て決めた。2026-11-04）。便2 の段はカード2 で決める。
+- 守り手: .github/workflows/test.yml（backend の試験）と .github/workflows/e2e.yml（画面の試験）。便1 で K1・K6 の数え方を、便2 で K2・K4 の確かめを CI の段に足す。K1・K6 は `.github/workflows/frontend-check.yml` の job `check` の段「Viewer bundle check」（`npx vite build --manifest` で `frontend/dist` を作る段）の直後に足す（カード作成時に実物を見て決めた。2026-11-04）。便2 の K2・K4 は `.github/workflows/test.yml` の job `pytest-run` の段「Install dependencies」の直後に段「Firebase removal check (K2 K4)」として足す（カード2 の作成時に実物を見て決めた。2026-11-05）。
 - K1 の数え方（`frontend/` で `npm run build` の後）: `cat $(find dist -name '*.js') | grep -oiE 'firebase|identitytoolkit|securetoken|googleapis|gstatic' | wc -l` が 0。
 - K6 の数え方（同じ dist）: `cat $(find dist -name '*.js') | grep -oE '__salesanchorE2eAuthUser|e2e-auth-user|e2e-firebase-auth-user|e2e-fake' | wc -l` が 0。
 - 便1 の後に `frontend/package.json` へ firebase をもう一度足すと、K1 の grep が赤になる。

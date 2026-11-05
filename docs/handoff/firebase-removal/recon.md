@@ -35,7 +35,7 @@
   - `backend/app/routers/staff.py:642`
   - `backend/app/services/invite.py:20-21`（firebase の間は初回設定のメールを作らない）
   - `backend/app/auth/dependencies.py:86`・`:129`・`:212`
-- R4: `backend/app/auth/utils.py:13-15` `set_tenant_claim` は Firebase のカスタムクレームを書く。同じファイルの `generate_password` は `scripts/setup_review_tenant.py:438`・`scripts/setup_test_users.py:278`・`backend/tests/test_password_gen.py:13` が使う。
+- R4: `backend/app/auth/utils.py:13-15` `set_tenant_claim` は Firebase のカスタムクレームを書く。同じファイルの `generate_password` は `scripts/setup_review_tenant.py:438`・「scripts／setup_test_users.py」の 278 行目・`backend/tests/test_password_gen.py:13` が使う。
 - R5: `backend/requirements.txt:13` `firebase-admin==6.6.0`。
 - R6: `bcrypt` は**消せない**。`backend/requirements.txt:10` `bcrypt==4.2.1` は `backend/app/routers/bots.py:18`・`:59` が使っている（ボットの API キーの保管）。`docs/handoff/auth-self-hosted-passkey/design.md:160` の「`bcrypt` の除去」はこの事実と食い違う。
 - R7: Google の部品で Firebase 以外が使うものは次のとおり。
@@ -44,7 +44,7 @@
   - `google.cloud` と `google.api_core` を直接 import している所は backend・scripts・tools に 0 件（`git grep` の結果は 0 行）。
   - firebase-admin を外したときに `google.oauth2` などが入るかどうかは、まだ確かめていない（未確認 U1）。
 - R8: `GOOGLE_APPLICATION_CREDENTIALS` を backend/app で読むのは `backend/app/auth/dependencies.py:64` だけ。
-  - 他に読む所: 運用スクリプト `scripts/setup_review_tenant.py:99`・`scripts/setup_single_test_user.py:103`・`scripts/setup_test_users.py:60`
+  - 他に読む所: 運用スクリプト `scripts/setup_review_tenant.py:99`・「scripts／setup_single_test_user.py」の 103 行目・「scripts／setup_test_users.py」の 60 行目
   - 設定する所: `docker-compose.yml:69`・`:241`・`scripts/blue-green-cutover.sh:99`
   - 鍵ファイルのマウント: `docker-compose.yml:161`・`:298`・`scripts/blue-green-cutover.sh:94`
   - 表サービス用の鍵は別のファイル（`TCG_SHEETS_SA_KEY_FILE`）を使う。
@@ -101,7 +101,7 @@
   - `docs/external-state-contract.yml:29-37`
   - `scripts/detect-external-api-change.js:84-89` とその試験 `scripts/tests/test-detect-external-api-change.js:128`・`:199`
   - `monitoring/grafana/provisioning/dashboards/json/uptime-kuma.json:124-132` の「Firebase Auth」の板。Uptime Kuma の監視そのものはリポジトリの外にある。
-  - 運用スクリプト `scripts/setup_review_tenant.py`・`scripts/setup_single_test_user.py`・`scripts/setup_test_users.py`（firebase_admin を使う）、`backend/tests/test_setup_review_tenant.py`
+  - 運用スクリプト `scripts/setup_review_tenant.py`・「scripts／setup_single_test_user.py」・「scripts／setup_test_users.py」（firebase_admin を使う）、`backend/tests/test_setup_review_tenant.py`
   - `scripts/setup_tenant.py:29`・`:471`（「Firebase ユーザーを作る」という案内の文）
   - `.env.example:17-30`・`:87-88`、`frontend/.env.example`、`.gitignore:29-30`、`.gitleaks.toml:38-40`、`backend/.dockerignore:14`
 - R20: 列を消すときのビューの扱いは次のとおり。
