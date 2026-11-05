@@ -13,8 +13,8 @@
 - [ ] commit が複数ある場合は、**各 commit の直後**にそれぞれ呼ぶ（1対1対応）
 - [ ] `tenant_id` は `Depends(get_current_tenant)` 経由で受け取っているか
 
-違反は **pre-commit フック**と **CI（lint-tenant-schema.yml）** が自動検出して FAIL させる。
-ローカルでも確認: `python3 scripts/lint_tenant_schema.py --mode strict backend/app/routers/`
+違反は **CI（lint-tenant-schema.yml）** と push 前の確認（`scripts/dev/check-before-submit.sh`）が `backend/app/` 全体で自動検出して FAIL させる（pre-commit フックは `backend/app/routers/` の変更のときだけ走る）。
+ローカルでも確認: `python3 scripts/lint_tenant_schema.py --mode strict backend/app/`
 
 ---
 
