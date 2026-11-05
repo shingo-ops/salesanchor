@@ -164,6 +164,35 @@ async def test_t6b_real_async_client_unreachable_relay_is_route_unreachable():
     assert gemini_route.is_route_unreachable(ei.value), _type_chain(ei.value)
 
 
+# T13 / T13b: 切り替え先の Client が呼び出しの途中で消えて接続が閉じない（ADR-1062）
+def _assert_switched_client_not_closed(exc):
+    print("chain:", _type_chain(exc), "| msg:", str(exc)[:200])
+    assert gemini_route.is_route_unreachable(exc), _type_chain(exc)
+    assert "client has been closed" not in str(exc)
+    assert "AssertionError" not in _type_chain(exc)
+
+
+def test_t13_sync_keeps_switched_client_alive():
+    first = _failing_client(_location_error())
+    with patch.object(gemini_route, "build_client", lambda route: _real_client_unreachable()):
+        with pytest.raises(Exception) as ei:
+            gemini_route.generate_content_routed(first, model="m", contents="c", config=None)
+    _assert_switched_client_not_closed(ei.value)
+
+
+@pytest.mark.asyncio
+async def test_t13b_async_keeps_switched_client_alive():
+    def _build(route):
+        if route == gemini_route.ROUTE_DIRECT:
+            return _failing_client(_location_error())
+        return _real_client_unreachable()
+
+    with patch.object(gemini_route, "build_client", side_effect=_build):
+        with pytest.raises(Exception) as ei:
+            await gemini_route.agenerate_content_routed(model="m", contents="c", config=None)
+    _assert_switched_client_not_closed(ei.value)
+
+
 # T7
 def test_t7_second_failure_propagates_with_context():
     first_exc = _location_error()
