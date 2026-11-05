@@ -7,7 +7,7 @@
 **recon**: `docs/handoff/master-shared-tenant-rule/recon.md`  
 **日付**: 2026-11-05  
 **担当**: Planner（Claude Opus）  
-**状態**: 設計案作成済み。設計審査はまだ。PO の実装承認はまだ。実装は始めていない。
+**状態**: 設計案作成済み。設計審査1回目 REVISE（§12）。直しの途中。PO の実装承認はまだ。実装は始めていない。
 
 ---
 
@@ -253,7 +253,23 @@ S1 で確かめ終えたもの（recon「追記: S1」）:
 
 ## 12. 設計審査（Architect）
 
-- 状態: まだ。クラウドで審査を動かし、APPROVE／REVISE／REJECT と根拠をこの節に書く。
+- 状態: 1回目 REVISE（2026-11-05・HEAD 125daf389・クラウドの Opus・同一AIによる自己審査で独立した第二者審査ではない）。必須 11 件・推奨 12 件。直してから審査をやり直す。
+- 必須（実装可にしない理由）:
+  1. view public.units・public.conditions（`migrations/20260922_080000_rename_line_analysis_tables.sql:32`・`:83`）の持ち主が jarvis で、守りが素通りになる。→ 便2で security_invoker=true で作り直し、view 経由で他社行が見えない試験を K1 に足す。
+     - 本番で確認（2026-11-05T17:41:48Z・読み取りの道・AUDIT sha=2e5757de3714）: 2つとも持ち主 jarvis・rolsuper True・rolbypassrls True・reloptions 空（security_invoker なし）。指摘どおり。
+  2. 共用の値（流入元7・連絡ツール5・役割のひな形・権限の初期値）を migration で入れる前提（:95）は ADR-1007 決定1と食い違う。→ ADR-1007 の1回のデータ変更の道に書き直す。
+  3. docs/specs/ の仕様書と数値の KGI・PO 承認の記録が無い（`docs/STANDARD-WORKFLOW.md:36`）。→ 仕様書を作り、§0 に KGI を書く。
+  4. §13-2 3 のシステム管理者の削除は ADR-147 追補（`docs/adr/ADR-147-common-6roles-standardization.md:60`）と食い違う。→ ADR-1061 で上書きを明記し、戻す手順を §13 に書く。
+  5. §7 に §13（役割）を運ぶ便が無い。→ 役割の便を足し、migration・本番データ変更・GO の要否・K11〜K14 を書く。
+  6. K8（:239）: 006 の referral 2・sns 3 を空にすると unknown が5増える（`backend/app/routers/analytics.py:992`）。→ K8 の期待を書き直す。
+  7. K14（:331）: DEFAULT_ROLES は試験と scripts に残る。→ 点検の範囲と残すファイルの扱いを書く。
+  8. 解析が本番でどの DB の役で繋ぐか（`backend/app/tasks/tcg_extraction.py:82`）の根拠が無い。→ 読み取りの道で確かめる。
+     - 本番で確認（2026-11-05T17:41:54Z・AUDIT sha=8915063abb30）: その時点の接続は salesanchor_app 6本（うち名前つき salesanchor_backend 5本・名前なし1本）と ai_reader 1本。jarvis の接続は0本。役の一覧（AUDIT sha=b7029d3a4352）では salesanchor_app は rolsuper False・rolbypassrls False。
+     - まだ確かめていないこと: 名前なしの1本が解析の作業役かどうか。解析の作業役の接続先の設定の中身は、鍵を含むため読んでいない。解析が走った直後に、接続名つきで再確認する。
+  9. §3-7 は ADR-138（`docs/adr/ADR-138-funnel-dashboard-stage1.md:65`）の channel_type の値の決めを外す。→ ADR-1061 で上書きと referral の移し先を書く。
+  10. K10（:241）は解析3ファイルだけ。他にも条件なしで読む所がある（`v102_buyback_unit_svc.py:84`・`tcg_unit_recovery_svc.py:1113` 等）。→ §3-1 の対象と K10 の範囲を広げる。
+  11. 「OK次へ進める」を選択肢1と読んだのは推測。付ける相手も未特定。→ PO に聞き直して原文を記録するまで役割の便を実装可にしない。
+- 推奨 12 件（解析は書かない旨の文言・同名の表の public. 付け・便5の触る所の追加・scripts の呼び出し元・K2 の投稿数と ADR 番号・K9 の件数・空は NULL・守りの試験は PostgreSQL・基準の足りない所・便2の分割・role_templates の守り・recon の行番号）: 直すときに1件ずつこの節へ対応を書く。
 
 ---
 
