@@ -1,7 +1,7 @@
 # ADR-072: tenant schema 修飾の戦略統一（schema prefix と reset_tenant_context のハイブリッド）
 
 ## ステータス
-Proposed (v3 — commit 後の付け直し漏れ Rule C 追加 2026-11-05)
+Proposed (v3 — Rule C 追加 2026-11-05)
 
 ## 日付
 2026-05-25
