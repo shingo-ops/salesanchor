@@ -32,3 +32,10 @@ py_compile exit=0
 - (b) create_event の偽物以外の Google 呼び出し: 当たらなかった（`_resolve_meet_url` は hangoutLink があれば追加呼び出しなし）
 - (c) 試験3が赤になる作り: 当たらなかった
 - (d) users の列不一致: 当たらなかった（`_ensure_public_users` の列に合わせた）
+
+### push 後の git log --oneline -2
+```
+443535720 test: 予定の作成・削除の会社付け直し漏れを再現する実DB試験（段A）
+3ebeefa41 docs: calendar-sync-tenant-reset の設計再審査（3回目・APPROVE）
+```
+push 先: `origin/release/calendar-sync-tenant-reset`（3ebeefa41..443535720）。pre-push の入口は全部通過（落ちた検査 0 件）。
