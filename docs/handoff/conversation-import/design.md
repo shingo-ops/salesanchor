@@ -5,7 +5,7 @@
 
 親: [仕様書の表紙](../../specs/inbox/conversation-import/README.md) ／ KGI: [kgi.md](../../specs/inbox/conversation-import/kgi.md) ／ 調査: [docs/handoff/conversation-import/recon.md](recon.md) ／ 決定記録案: [ADR-1064](../../adr/ADR-1064-conversation-file-import.md)
 
-状態: 設計案作成済み（Opus）／クラウド審査1回目 REVISE を反映済み（[review-opus.md](review-opus.md)）／再審査前／PO 実装承認前／実装未着手
+状態: 設計案作成済み（Opus）／クラウド審査1〜3回目 REVISE を反映済み（[review-opus.md](review-opus.md)）／4回目の再審査前／R7 は PO 判断待ち／PO 実装承認前／実装未着手
 
 ## 1. 目的
 
@@ -112,7 +112,7 @@
 ### 4-7 lead_channels は作らない
 
 - 取り込みは lead_channels（Facebook の相手番号とリードの結びつき）を作らない。本当の相手番号を持たないため。
-- 後で本物の Facebook 接続から同じお客さんが来ると、Webhook が別のリードを作る（webhook.py:584）。そのときは既存のリードの統合（ADR-1049）で1つにする（§7 R2）。
+- 後で本物の Facebook 接続から同じお客さんが来ると、Webhook が別のリードを作る（webhook.py:583）。そのときは既存のリードの統合（ADR-1049）で1つにする（§7 R2）。
 
 ### 4-8 会話画面で新しい方の50件を出す（K2 の前提・便1）
 
@@ -157,7 +157,7 @@
 | K2 件数と並び順がファイルと同じ | 自動試験: 60件の架空ファイルを取り込み、会話画面の API（before なし＋before で1回）で 60 件・ファイル順。同じ分に3件ある並びも含める。Evaluator: 画面で先頭と末尾の吹き出しの文がファイルと一致 |
 | K3 お客さんが左・こちらが右 | 自動試験: who→direction の対応。Evaluator: 画面写しで左右 |
 | K4 2回取り込んでも増えない | 自動試験: 同じファイルを2回 commit し、2回目 added=0・skipped=全件、行数が変わらない。Evaluator: 画面の件数が同じ |
-| K5 翻訳0回・Discord 0件 | 自動試験: `enqueue_inbound_translation` と `send_discord_notification` を差し替え、呼ばれた回数 0 |
+| K5 翻訳0回・Discord 0件 | 自動試験: `enqueue_inbound_translation` と `send_discord_notification` を差し替え、呼ばれた回数 0。あわせて Evaluator が tenant_001 の取り込み後に Discord の通知先へ新しい知らせが無いことを見る（kgi.md:16） |
 | K6 その画面でリードを作れる | Evaluator: 取り込み画面で新規作成→そのリードに取り込み→受信箱に出る |
 | 返信を止める（文字） | 自動試験: 取り込みの行が最新 inbound のリードに文字を送ると 400。Webhook の行が後に来ると送信の判定へ進む |
 | 返信を止める（画像） | 自動試験: 同じ条件で `POST /leads/{lead_id}/messages/image` が 400 |
@@ -182,7 +182,7 @@
 
 ## 8. 外部・過去事例の参照と我々への応用
 
-- 社内の過去事例: LINE の書き出し取り込み（系統B・public.source_messages）は仕入元専用で、お客さんの会話には流用できない（docs/handoff/whatsapp-intake/README.md:98）。→ 今回は別の入口を作り、変換の登録表で窓口を足せる形にした。
+- 社内の過去事例: LINE の書き出し取り込み（系統B・public.source_messages）は仕入元専用で、お客さんの会話には流用できない（docs/handoff/whatsapp-intake/README.md:49）。→ 今回は別の入口を作り、変換の登録表で窓口を足せる形にした。
 - 社内の過去事例: Webhook の重複防止（webhook.py:723 の ON CONFLICT）を同じ形で使う。
 - 外部の数値つき事例: 該当なし。保存ファイルの取り込みは各社固有の作りで、比べられる数値の公表が見つからないため、成功の根拠には使わない。
 
@@ -191,7 +191,7 @@
 | 便 | 中身 | 触るファイル |
 |---|---|---|
 | 便1 | 会話画面で新しい方を出す（§4-8） | backend/app/routers/leads.py、backend/tests/test_messages.py（:335-354 の期待値を書き換え・§7 R4）、frontend/src/pages/inbox/InboxMessageThread.tsx、frontend/src/pages/inbox/useInboxState.ts、frontend/src/lib/messages.ts、locales、試験 |
-| 便2 | 変換と API・返信の見張り（文字と画像の2本・§4-1〜4-7） | backend/app/services/conversation_import/、backend/app/routers/conversation_import.py、backend/app/main.py（router 登録・conv_logs の登録 main.py:716 の近く）、backend/app/routers/leads.py、試験。試験用の表の形に is_manual・recorded_by_user_id・occurred_at を足す8ファイル（審査 M2・2回目 N1）: backend/tests/conftest.py（:156 と :2038）、backend/tests/test_conversations.py（:114）、backend/tests/test_discord_inbox.py（:99）、backend/tests/test_message_image_send.py（:98）、backend/tests/test_message_send.py（:116）、backend/tests/test_messages.py（:115）、backend/tests/test_outbound_draft_send.py（:94）、backend/tests/test_webhook_instagram.py（:94）。conftest.py:2089 の分析用の表（LEAD_FACTORS_MSG_DDL）は足さない（分析の SELECT は is_manual を読まず、本設計は analytics.py を触らないため） |
+| 便2 | 変換と API・返信の見張り（文字と画像の2本・§4-1〜4-7） | backend/app/services/conversation_import/、backend/app/routers/conversation_import.py、backend/app/main.py（router 登録・conv_logs の登録 main.py:716 の近く）、backend/app/routers/leads.py、試験。試験用の表の形に is_manual・recorded_by_user_id・occurred_at のうち無い列だけを足す8ファイル（例: conftest.py:2044 は occurred_at を既に持つ）（審査 M2・2回目 N1）: backend/tests/conftest.py（:156 と :2038）、backend/tests/test_conversations.py（:114）、backend/tests/test_discord_inbox.py（:99）、backend/tests/test_message_image_send.py（:98）、backend/tests/test_message_send.py（:116）、backend/tests/test_messages.py（:115）、backend/tests/test_outbound_draft_send.py（:94）、backend/tests/test_webhook_instagram.py（:94）。conftest.py:2089 の分析用の表（LEAD_FACTORS_MSG_DDL）は足さない（分析の SELECT は is_manual を読まず、本設計は analytics.py を触らないため） |
 | 便3 | 取り込み画面（§4-9） | frontend/src/pages/inbox/ConversationImportPage.tsx、frontend/src/App.tsx、frontend/src/pages/inbox/InboxPage.tsx、locales、試験 |
 
 - DB の形は変えない（migrations なし）。

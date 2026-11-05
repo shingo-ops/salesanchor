@@ -14,7 +14,7 @@
 
 | 文書 | 関係 |
 |---|---|
-| docs/specs/db-ssot/conversation-unification/design.md:14-20 | 【事実】会話は1つのテーブルに統合し、中身は meta_messages を土台に引き継ぐ。全会話はリードにひもづく（PO承認 2026-07-09）。→ 取り込み先を meta_messages にする根拠 |
+| docs/specs/db-ssot/conversation-unification/design.md:14-20 | 【事実】会話は1つのテーブルに統合し、中身は meta_messages を土台に引き継ぐ。全会話はリードにひもづく（同文書:8 の 2026-07-09 は実測日。承認日の記載は同文書に無い）。→ 取り込み先を meta_messages にする根拠 |
 | docs/specs/db-ssot/conversation-unification/design.md:30-33 | 【事実】未決: is_manual 欄を残すか。→ 本設計で使い道を与える（design §4-2） |
 | docs/adr/ADR-095-sa-ssot-two-backbone-architecture.md:101 | 【事実】多チャネルの取り込み本体は「別途設計」のまま |
 | docs/adr/ADR-096-sa-customer-master-crm-data-model.md | 顧客・リードのデータの形。新しい列は足さない |
@@ -24,7 +24,7 @@
 | docs/adr/ADR-1016-realtime-change-signal-standard.md | 変更の知らせの標準。受信箱は既存の sse_pubsub を使う（§6） |
 | docs/adr/ADR-144-ui-component-governance.md | 画面部品は金型を使う |
 | docs/adr/ADR-027-ui-internationalization.md | 画面の文字はすべて t() |
-| docs/handoff/whatsapp-intake/README.md:67-73 | WhatsApp は書き出しの取り込みを推奨（PO未決）。段階2で使う |
+| docs/handoff/whatsapp-intake/README.md:20-22 | WhatsApp は書き出しの取り込みを推奨（PO未決）。段階2で使う |
 
 ## 1. 保存ファイル（fbcap-1）の形
 
@@ -44,7 +44,7 @@
 - 【事実】migrations/20260622_010000_add_meta_messages_master_history_columns.sql:40 `occurred_at TIMESTAMPTZ`、:42 `recorded_by_user_id INTEGER`、:43 `is_manual BOOLEAN`。統合の受け皿の列は meta_messages に既にある。
 - 【事実】migrations/20260622_020000_migrate_conv_only_into_meta_messages.sql:2-15 で conversation_logs だけにあった行を meta_messages へ移した。meta_messages を正本にする向きで既に動いている。
 - 【事実】is_manual は backend/app で読み書きが0件（`git grep -c is_manual origin/main -- backend/app` が0）。
-- 【事実】受信（Webhook）: backend/app/routers/webhook.py:584 `_persist_meta_message` が lead_channels からリードを探すか作り、:723 `ON CONFLICT (message_id) WHERE message_id IS NOT NULL` で meta_messages に入れる。
+- 【事実】受信（Webhook）: backend/app/routers/webhook.py:583 `_persist_meta_message` が lead_channels からリードを探すか作り、:723 `ON CONFLICT (message_id) WHERE message_id IS NOT NULL` で meta_messages に入れる。
 - 【事実】手動記録は backend/app/routers/conv_logs.py:4 `POST /api/v1/leads/{lead_id}/conv-logs` で conversation_logs に入れる。
 
 ## 3. 受信箱の一覧と会話画面の読み方

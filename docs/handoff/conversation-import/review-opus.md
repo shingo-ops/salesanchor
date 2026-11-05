@@ -24,10 +24,24 @@
 | N1 | 試験用の表の形は8ファイル（backend/tests/test_outbound_draft_send.py:94 が漏れ）。conftest.py は :156 | 必須 | design.md §9・§7 R8、recon §11 |
 | N2 | reset_tenant_context は dependencies.py:339（:166 は誤り） | 必須 | design.md §4-5、recon §11 |
 | N3 | 既存の試験 test_messages.py:335-354 が古い順を前提にしている | 推奨 | design.md §7 R4・§9 便1 |
-| 軽微 | webhook.py:583 は :584 | 軽微 | design.md §4-7 |
+| 軽微 | webhook.py の `_persist_meta_message` の行番号（2回目の反映で :584 としたが誤り。正は :583・3回目 P1 で修正） | 軽微 | design.md §4-7 |
 
 誤りの原因: 手元の古い写しで行番号を読んだ。以後の行番号は origin/main で読む。
 
 ## 3回目
+
+対象 HEAD: 26b92f1a7。判定: REVISE。N1・N2・N3 と再確認 C2〜C5 は ○。
+
+| # | 指摘 | 区分 | 反映 |
+|---|---|---|---|
+| P1 | `_persist_meta_message` は backend/app/routers/webhook.py:583（:584 は誤り） | 必須 | recon.md・design.md §4-7・本表2回目の軽微欄 |
+| P2 | 系統B は仕入元専用の記載は docs/handoff/whatsapp-intake/README.md:49（:98 は誤り） | 必須 | design.md §8 |
+| P3 | WhatsApp の推奨案は docs/handoff/whatsapp-intake/README.md:20-22（:67-73 は誤り） | 必須 | recon.md §1 |
+| P4 | conversation-unification/design.md:8 の 2026-07-09 は実測日で承認日ではない | 推奨 | recon.md §1 |
+| P5 | K5 に Evaluator の Discord 確認（kgi.md:16）を足す | 推奨 | design.md §6 |
+| P6 | conftest.py:2044 は occurred_at を既に持つ。「無い列だけ足す」にする | 推奨 | design.md §9 便2 |
+| P7 | 状態の行を更新する | 推奨 | design.md 冒頭 |
+
+## 4回目
 
 （再審査の後に書く）
