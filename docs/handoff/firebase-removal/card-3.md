@@ -24,7 +24,7 @@ RECEIVED firebase-removal-bin3 HEAD=（git rev-parse HEAD の 40 桁）
 - P4 `sed -n '96p' nginx/nginx.conf` が §2-5 の「変更前」と同じ 1 行。
 - P5 `sed -n '378p;380p' .github/workflows/deploy.yml` が `            AUTH_PROVIDER='self'` と `            VITE_AUTH_PROVIDER='self'` の 2 行。
 - P6 `sed -n '124p' monitoring/grafana/provisioning/dashboards/json/uptime-kuma.json` が `      "title": "Firebase Auth",`。
-- P7 `git grep -n "rotate-qa-firebase\|snapshot/firebase.sh\|external-firebase.sh" -- . ':!docs' ':!.claude-pipeline'` が `.github/workflows/external-state-snapshot.yml:88` の 1 件だけ（消す 3 ファイルを呼ぶ所が、このカードで消す段のほかに無い）。
+- P7 `git grep -n "rotate-qa-firebase\|snapshot/firebase.sh\|external-firebase.sh" -- . ':!docs' ':!.claude-pipeline' ':!scripts/snapshot/firebase.sh' ':!scripts/smoke/external-firebase.sh' ':!.github/workflows/rotate-qa-firebase.yml'` が `.github/workflows/external-state-snapshot.yml:88` の 1 件だけ（消す 3 ファイルを、そのファイル自身の外から呼ぶ所が、このカードで消す段のほかに無い。消す 3 ファイルの中の自分の名前は数えない。2026-11-05 の 1 回目の実行で、除き忘れの 4 件が出て止まったため直した）。
 - P8 `cd scripts/tests && node test-detect-external-api-change.js` の最後が「10 passed / 2 failed」に当たる数（今の main でもともと 2 件赤。§2-10 で直す）。
 
 ## 1. 触るファイル
@@ -272,7 +272,7 @@ VITE_FIREBASE_AUTH_DOMAIN=auth.salesanchor.jp
     cd ~/sa && sed -n '96p' nginx/nginx.conf | tail -1
     cd ~/sa && sed -n '378p;380p' .github/workflows/deploy.yml | tail -2
     cd ~/sa && sed -n '124p' monitoring/grafana/provisioning/dashboards/json/uptime-kuma.json | tail -1
-    cd ~/sa && git grep -n "rotate-qa-firebase\|snapshot/firebase.sh\|external-firebase.sh" -- . ':!docs' ':!.claude-pipeline' | tail -5
+    cd ~/sa && git grep -n "rotate-qa-firebase\|snapshot/firebase.sh\|external-firebase.sh" -- . ':!docs' ':!.claude-pipeline' ':!scripts/snapshot/firebase.sh' ':!scripts/smoke/external-firebase.sh' ':!.github/workflows/rotate-qa-firebase.yml' | tail -5
     cd ~/sa/scripts/tests && node test-detect-external-api-change.js 2>&1 | tail -4
 
 手順3 §2 の変更をする（2-1 から 2-13 の順。ファイルごとに変更前の文で場所を探す。1 つのファイルの中は下の行から消すと行番号がずれない）
