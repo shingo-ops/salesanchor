@@ -330,3 +330,117 @@
 - 便1b の CI 赤 3 件（試験の中の表の定義・即時反映の対応表・試しの移行の仮の表）をカードの中で先に塞いだ
 - 約束（読むだけ・サーバーの番号を記録しない・人を記録しない・消す処理なし）を試験 9 本で機械に確かめさせる
 - U3 は解決（テナント001の自社用テストサーバーは PO が用意・登録済み、2026-11-05）。U4 は HIGH LIFE JPN に使う前に確かめる（便2 はテナント001だけで確かめるので止めない）
+
+---
+
+# 第2段 設計案（2026-11-05・PO 承認待ち）
+
+根拠: recon の「第2段 recon」（R2-1〜R2-7）。要件: `docs/specs/discord-server-management/ideal-state.md` 2026-11-05 節。KGI: `docs/specs/discord-server-management/kgi.md` 第2段 8〜15。
+
+## S2-1 目的（PO の言葉から）
+自社サーバーのロールと知らせを、人が Discord で直さずアプリの登録どおりに保つ。アプリの役割を変えれば Discord のロールが付け外しされ、担当決定・お客さんの返信・部屋の外の書き込みが決まった部屋に担当者のメンションつきで届く。
+
+## S2-2 対象と対象外
+- 対象: 自社用サーバー（purpose='own'）だけ。顧客用サーバーの今の動き（`backend/app/services/discord_role_sync.py` の規模ロール・auto-setup・部屋の外の通知の中身）は変えない
+- 対象外: アプリに登録していない人。Bot はスタッフとして登録された discord_user_id の人だけを見る。それ以外の人のロールには触らない
+- 対象外: 配信の失敗の知らせを管理側へ移す直し（別テーマ。R2-5）
+
+## S2-3 決めた作り（代替案と選んだ理由）
+
+### D2-1 アプリの役割と Discord のロールを番号でつなぐ
+- 変更: 各テナントの `{schema}.roles` に `discord_role_id TEXT NULL` を足す（部分一意索引 WHERE discord_role_id IS NOT NULL）。つなぎの正本はここ 1 か所。設計図ファイルにアプリの役割を書かない（DB の SSOT）
+- 確認画面（build_plan）の入力に「アプリの役割の一覧（隠す役割を除く＝`backend/app/routers/roles.py:53` と同じ条件）」を足す。1 件ずつ:
+  - discord_role_id あり → その番号のロールを探す。名前・色が違えば「変える」（PATCH）。見つからなければ「できない（Discord で消された）」と理由を出す
+  - なし → 同じ名前を探す。1 件なら「つなぐ」（Discord は変えず番号を保存）。2 件以上なら「できない（名前が重なっている）」＝KGI-11。0 件なら「作る」（POST。返ってきた番号を保存）
+  - 色はアプリの '#rrggbb' を数に直して送る
+- 反映（`backend/app/services/discord_blueprint_apply.py`）は作った・つないだ番号を `roles.discord_role_id` に書き戻す。書き戻しは反映と同じテナントの文脈で行う
+- 消された役割: user_roles は CASCADE で消える（R2-2）。Discord のロールは残り、つなぎ先の無い Bot 管理のロールとして「消す候補」に出る＝KGI-10b
+- 代替案: 名前だけでつなぐ（先例 `discord_role_sync.py:93-95` の型）→ 名前を変えると別のロールを作ってしまうので不採用（KGI-10a を満たせない）
+
+### D2-2 「スタッフ」ロール 1 つで 3 つの知らせの部屋を見せる
+- 設計図ファイルに Bot が管理するロール「スタッフ」を 1 つ書く（番号は第1段の取り込みの仕組みで設計図に入る）。アプリの役割ではないので DB には持たない
+- 知らせの 3 部屋は @everyone に VIEW_CHANNEL 拒否、「スタッフ」に許可
+- 代替案: 部屋の見せ方に「アプリの役割の全部」を並べる → 役割が増えるたびに見せ方が変わり、ボタンを押すまで新しい役割の人が部屋を見られない。顧客用の auto-setup にも「Sales Anchor Staff」1 つで見せる先例がある（`docs/adr/ADR-091-discord-bot-scope-definition.md:60`）ため、1 つのロールに寄せる
+
+### D2-3 スタッフのロールの付け外し（点検して合わせる型）
+- 新しい処理 `sync_own_server_staff_roles(tenant_id)` を 1 つ作る。やること:
+  1. 欲しい姿 = 状態が active で discord_user_id のあるスタッフごとに、user_roles（staff.user_id = user_roles.user_id）の役割の discord_role_id ＋「スタッフ」
+  2. Bot が管理するロール = そのテナントの roles.discord_role_id の全部 ＋「スタッフ」の番号
+  3. サーバーの全員を読み（List Guild Members、1000 人ずつ）、管理するロールだけを比べる。足りなければ PUT、余れば DELETE。管理していないロールは見ない＝KGI-10
+  4. スタッフとして登録されていない人が管理するロールを持っていれば外す（消されたスタッフ・止めたスタッフも同じく外れる）。手作りのロールには触らない
+- 送り方: 先例と同じ `backend/app/services/discord_rest.py` の `discord_api_request` を使う（R2-3。429 の待ち・再試行を持つ）
+- いつ動くか: (a) 役割を書く所（`backend/app/routers/roles.py` PUT/DELETE、`backend/app/services/role_assignment.py`、`backend/app/routers/staff.py` の POST/PATCH/DELETE）の commit のあとに `asyncio.create_task` で（先例 `backend/app/routers/leads.py:728` と同じ）。(b) Celery の定期作業で 5 分ごとに全テナントの自社サーバー分（取りこぼし・あとからサーバーに入った人の分）＝KGI-9 の「5 分以内」
+- 同時に 2 本走らないよう、テナントごとに Redis の短い鍵で 1 本にする
+- DELETE の範囲: この処理の `/guilds/{g}/members/{u}/roles/{r}` だけ。設計図の反映（`_ALLOWED_METHODS`）には DELETE を足さない。チャンネル・ロールそのものは今までどおり消さない
+- 代替案: 書いたときだけ送る → スタッフの削除やサーバーへの後からの参加を取りこぼす。点検型は先例よりも 1 段強い
+
+### D2-4 知らせの部屋と送り先のつなぎを自動で作る
+- 設計図ファイルに「アサイン連絡」「返信連絡」「部屋の外の書き込み」の 3 チャンネルを書く（D2-2 の見せ方つき）
+- 反映で部屋を作ったあと（またはつなぎが無い部屋に）、Bot が webhook を 1 本作り（`POST /channels/{id}/webhooks`、Manage Webhooks は付与済み＝ADR-091:76）、`{schema}.notification_channels` に行を作る
+- `notification_channels` に `discord_channel_id TEXT NULL` を足し、部分一意索引で 1 部屋 1 行にする（二重作成の防止）。event_types は部屋ごとに固定: アサイン連絡=lead_assigned、返信連絡=customer_reply_received、部屋の外=discord_outside_ticket_post
+- 今ある手で作った行は触らない（discord_channel_id が NULL の行）。同じ種類が手作りの行にもあれば 2 か所に届くので、確認画面に「同じ種類の知らせの送り先がほかにもある」と出す
+- webhook_url は今の列のまま平文（R2-5。今の画面から入れる行も平文）。暗号化は今の仕組み全体の直しとして別に扱う（残るリスクに書く）
+
+### D2-5 お客さんの返信の知らせ
+- 種類を 1 つ足す: `customer_reply_received`（`backend/app/schemas/notification.py` に追加。今の 4 つのどれとも部分文字列が重ならない）
+- 送る所（保存が新しい行のときだけ＝二重に送らない）:
+  - Discord のお客さんの部屋: `backend/app/discord_gateway/ticket_channel_writer.py:257` のあと
+  - Discord の DM: `backend/app/discord_gateway/dm_writer.py:231` の `msg_row is not None` の所
+  - Messenger・Instagram: `backend/app/routers/webhook.py:938-947` の今の送信のとなり（今の meta_message_received は変えない）
+- メンション: leads の担当（users.id）→ staff.user_id → discord_user_id（`backend/app/services/lead_assign_notifier.py:32-34` と同じ引き方。共通の小さな関数に寄せる）。担当がいない・discord_user_id が無いときはメンションなしで送る
+- 中身: お客さんの名前・どこから（Discord / Messenger / Instagram）・アプリの商談の場所。本文は載せない（今の Meta の知らせが個人情報を載せない作法＝`webhook.py` の注記に揃える）
+
+### D2-6 会社ごとに混ざらない
+- サーバーの番号はいつも `public.tenant_discord_config` の tenant_id と purpose='own' から引く（1 社 1 行＝R2-4）。役割・スタッフ・知らせは各社のスキーマから読む
+- 自動の試験で 2 社分のデータを置き、1 社の役割を変えても、もう 1 社のサーバー宛ての送信が 0 件であることを確かめる＝KGI-10c
+
+## S2-4 変更前と変更後（利用者に見えること）
+| | 今 | 変えたあと |
+|---|---|---|
+| 自社サーバーのロール | 人が手で作る | アプリの役割と同じロールを Bot が作り、名前と色も合わせる |
+| スタッフへのロール | 人が手で付ける | アプリの役割どおりに 5 分以内に付け外し |
+| 知らせの部屋 | 人が作り、webhook を画面に貼る | 設計図から作られ、つなぎも自動 |
+| お客さんの返信 | Meta だけ・メンションなし | Discord・Messenger・Instagram の 3 つ・担当者にメンション |
+
+## S2-5 便の分け方（1 便 1 つの変更・ADR-135/136 の GO の手順に乗せる）
+| 便 | 中身 | 移行（migrations） | KGI |
+|---|---|---|---|
+| 2a | roles.discord_role_id・確認画面と反映でアプリの役割を作る/つなぐ/変える | あり（全テナントの roles に列） | 8・10a・11 |
+| 2b | 「スタッフ」ロール・付け外しの処理と定期作業 | なし | 9・10・10b・10c |
+| 2c | 3 部屋・webhook の自動作成・notification_channels.discord_channel_id | あり | 12・14・15 |
+| 2d | 返信の知らせ | なし | 13 |
+
+## S2-6 受入条件と検証方法
+|基準|検証方法|
+|---|---|
+| KGI-8 確認画面のロールの数 = アプリの役割の数（隠す役割を除く） | テナント001 で画面の件数と役割の画面の件数を数える・自動の試験 |
+| KGI-9 役割を足す/外すと 5 分以内に付く/外れる | テスト用スタッフで時刻を控えて Discord のメンバー画面を見る |
+| KGI-10 手作りのロールが残る | 同じ人に手作りのロールを付けてから KGI-9 を行い、残っていることを見る・自動の試験（管理しないロールに DELETE を送らない） |
+| KGI-10a 名前を変えても新しいロールができない | 変える前後の Discord のロールの数・確認画面「変える」1 件 |
+| KGI-10b 役割を消すと人から外れ、ロールは残る | Discord の目視・確認画面の消す候補 1 件 |
+| KGI-10c 他社に届かない | 自動の試験（2 社分） |
+| KGI-11 同じ名前が 2 つで止まる | 確認画面の理由の表示・自動の試験 |
+| KGI-12〜14 決まった部屋に 1 件ずつ届く | Discord の目視・notification_logs の行の数・自動の試験（Messenger・Instagram は自動の試験だけ） |
+| KGI-15 人の Discord 設定の作業 0 件 | 試験の手順書で数える |
+| 顧客用サーバーの今の動きが変わらない | 今の試験（discord_role_sync・auto-setup・部屋の外）が全部通る |
+
+## S2-7 リスクと対処・戻し方・測り方
+- 手で付けた「営業」などアプリの役割のロールは、スタッフでない人からは次の点検で外れる（Bot の管理するロールのため）→ PO に先に伝え、要件として明記する。その他関係者には各社が別の名前のロールを作る
+- サーバーの全員の一覧が読めない（特権インテントが無効）→ 付け外しは止まり、記録に理由を残す。試験の最初に確かめる（R2-6 未確認）
+- Discord の回数制限 → discord_rest の待ちに任せ、5 分ごとの点検で取り返す。1 回の点検で送る数を記録する
+- webhook_url の平文 → 今の作法のまま。Bot が作るのは自社サーバーの部屋だけ。漏れたときは部屋の webhook を消して作り直せば無効になる
+- 戻し方: 便ごとに revert。移行で足す列は NULL 許容で、使わなければ今の動きに戻る。定期作業は設定から外せば止まる。Discord に付けたロールは残る（消さない作法）ので、外したいときは点検を止めてから人が外す
+- 測り方: 点検ごとに「付けた数・外した数・失敗の数」を記録に出す。5 分の点検の失敗が続けば記録から分かる
+
+## S2-8 外部事例
+使わない。理由: 根拠は Discord 公式の API 仕様（R2-6）と、同じ付け外しを本番で動かしている社内の先例（R2-3）で足りるため。
+
+## S2-9 ADR
+- `docs/adr/ADR-091-discord-bot-scope-definition.md` の業務の表に「自社サーバーのスタッフのロールをアプリの役割どおりに付け外しする（Bot が管理するロールだけ）」「知らせの部屋の webhook を作る」を足す（便2a の PR で）
+
+## S2-10 維持の仕組み
+- 自動の試験: 名前を変えても同じ番号を使う・管理しないロールに触らない・他社に送らない・二重に送らない
+- 定期の点検（5 分ごと）が、取りこぼしと人の手での付け外しを毎回アプリの登録に戻す
+
+## S2-11 未決（PO に戻すもの）
+- KGI 8〜15 と S2-7 の 1 つめ（アプリの役割と同じ名前のロールは Bot のもの。スタッフでない人に手で付けても外れる）の承認
