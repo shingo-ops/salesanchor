@@ -51,8 +51,9 @@
 - 997: test_roles_system_key_ddl（札あり）と test_meta_channels（`:719-755` 札なしで CREATE/DROP SCHEMA tenant_997）。
 - 998: test_permission_resolution_pg（札あり）と test_rls_tenant_meta_config（`:79-157` 札なしで tenant_998/999 を作って消す）。
 - まだ CI で落ちた記録は無い（42本のログで tenant_997/998 の「does not exist」は0件）。
-- 試験・移行のどこにも出てこない番号: 989・992・994・995（`995` は `test_tcg_keyword_matching.py` の行番号 9995 と `test_rls_bootstrap_ordering.py:28` の `tenant_9951` だけで、テナント 995 としては0件）。
+- 試験・移行のどこにも出てこない番号: 989・992・994・995（`995` は `backend/tests/test_tcg_keyword_matching.py` の行番号 9995 と `backend/tests/test_rls_bootstrap_ordering.py:28` の `tenant_9951` だけで、テナント 995 としては0件）。
 
 ## 5. ADR の検索
 - `git grep -il "tenant_schema_lock\|xdist\|loadfile\|_TENANT_LOOP_MIGRATIONS" -- docs/adr` → 0件。`docs/adr/FEATURE-INDEX.md` に「xdist / 並列 / テナント番号」0件。
+- 追加の検索（2026-11-06）: `git grep -l "system_key" -- docs/adr` → ADR-147（roles.system_key の決まり）。全テナントへ移行を回す決まりは ADR-034（`docs/adr/ADR-034-tenant-migration-automation.md`）。どちらも今回は変えない（試験の流し方だけを直す）。
 - 試験の土台だけの直しで製品の判断を含まないため、新しい ADR は作らない。

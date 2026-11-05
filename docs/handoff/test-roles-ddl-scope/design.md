@@ -1,7 +1,7 @@
 # design: roles の移行試験を1つのテナントに絞り、同じ種類のぶつかりを見張りで止める
 
 - recon: `docs/handoff/test-roles-ddl-scope/recon.md`
-- 関係 ADR: なし（recon §5。試験の土台だけの直し）。新しい ADR は作らない
+- 関係 ADR: ADR-034（全テナントへ移行を回す決まり。試験の流し方だけを絞り、ADR は変えない）・ADR-147（roles.system_key。試験する移行の元。変えない）。新しい ADR は作らない（recon §5）
 - PO の言葉: 「1」（試験がぶつからないように直す設計をして、クラウドの担当に直させる）・「不具合とエラー部分を省略せずに確認をして…安全に進めてくれ」
 
 ## 1. 目的
@@ -18,10 +18,10 @@ docs だけの変更でも CI がたまたま落ちて、マージが止まっ�
 
 ## 3. 対象と対象外
 - 対象（3ファイル、すべて `backend/tests/`）
-  1. `rls_bootstrap.py`: `_TENANT_LOOP_MIGRATIONS` に `"20261005_150000_add_roles_system_key.sql": 1,` を1行足す。上のコメント（`:154`）を「全テナントを回す正本 migration のうち、試験が1つのテナントに絞って流すもの（lead_merge・calendar・roles の試験）」に直す
-  2. `test_roles_system_key_ddl.py`: 番号を 995 に、流し方を絞る形に、後片付けを札の中に
-  3. 新規 `test_tenant_loop_migration_guard.py`: 見張り（DB を使わない静的な試験）
-- 対象外: migrations・製品コード・CI 設定・`test_meta_channels.py`・`test_rls_tenant_meta_config.py`・`test_permission_resolution_pg.py`・TEST_PG_URL だけで動く2本
+  1. `backend/tests/rls_bootstrap.py`: `_TENANT_LOOP_MIGRATIONS` に `"20261005_150000_add_roles_system_key.sql": 1,` を1行足す。上のコメント（`:154`）を「全テナントを回す正本 migration のうち、試験が1つのテナントに絞って流すもの（lead_merge・calendar・roles の試験）」に直す
+  2. `backend/tests/test_roles_system_key_ddl.py`: 番号を 995 に、流し方を絞る形に、後片付けを札の中に
+  3. 新規 `backend/tests/test_tenant_loop_migration_guard.py`: 見張り（DB を使わない静的な試験）
+- 対象外: migrations・製品コード・CI 設定・`backend/tests/test_meta_channels.py`・`backend/tests/test_rls_tenant_meta_config.py`・`backend/tests/test_permission_resolution_pg.py`・TEST_PG_URL だけで動く2本
 - 対象外（別の作業として記録・今回は直さない）:
   - 998 の重なり（test_rls_tenant_meta_config が札なしで tenant_998/999 を作って消す。test_permission_resolution_pg も 998）
   - テナント番号が試験ファイルどうしで重ならないことの見張り
@@ -77,7 +77,7 @@ _TENANT_ID = 995
 ### 4-2. `backend/tests/rls_bootstrap.py`
 - §3 の1のとおり。`_scope_tenant_migration` 本体は変えない（回数1は recon §2 で確認済み。ずれたら既存の検査が止める）。
 
-### 4-3. `test_roles_system_key_ddl.py` に足す試験（K1・DB を使わない）
+### 4-3. `backend/tests/test_roles_system_key_ddl.py` に足す試験（K1・DB を使わない）
 ```python
 def test_roles_migration_is_scoped_to_own_tenant():
     from tests.rls_bootstrap import _scope_tenant_migration
@@ -89,8 +89,8 @@ def test_roles_migration_is_scoped_to_own_tenant():
 
 ### 4-4. 新規 `backend/tests/test_tenant_loop_migration_guard.py`（K3）
 - やること:
-  1. `migrations/*.sql` のうち、正規表現 `(?:nspname|schema_name|schemaname|table_schema)\s*(?:~\*?|I?LIKE|~~)\s*'\^?tenant_`（大文字小文字を区別しない）に当たるものを「全テナントを回す移行」とする
-  2. `backend/tests/**/*.py`（このファイル自身を除く）から、`[0-9]{3}[0-9_]*_[a-z0-9_]+\.sql` に当たる名前のうち 1 に入るものを集め、`{試験ファイルの backend/tests からの相対パス: {移行名, ...}}` を作る
+  1. migrations フォルダの全 SQL ファイルのうち、正規表現 `(?:nspname|schema_name|schemaname|table_schema)\s*(?:~\*?|I?LIKE|~~)\s*'\^?tenant_`（大文字小文字を区別しない）に当たるものを「全テナントを回す移行」とする
+  2. backend/tests 以下の全 Python ファイル（このファイル自身を除く）から、正規表現「[0-9]{3}[0-9_]*_[a-z0-9_]+\.sql」に当たる名前のうち 1 に入るものを集め、`{試験ファイルの backend/tests からの相対パス: {移行名, ...}}` を作る
   3. 下の分類表 `_REVIEWED` と**完全に一致**することを確かめる。足りない・余る組があれば、どのファイルのどの移行かを出して落ちる（「分類を書いてから足す」）
   4. 分類ごとの確かめ:
      - `scoped`: その移行が `rls_bootstrap._TENANT_LOOP_MIGRATIONS` か `rls_bootstrap._TENANT_BOOTSTRAP_MIGRATIONS` に入っていること
@@ -134,7 +134,7 @@ def test_roles_migration_is_scoped_to_own_tenant():
 | D 失敗したら自動でやり直す（rerun） | 落ちる原因が残る。同じ種類のミスを隠す | 選ばない |
 
 ## 6. リスクと対処
-- `_apply_migration_on_conn` は asyncpg の生接続で流す（`rls_bootstrap.py:205-208`）。`admin_engine.begin()` の中の同じ接続なので、2回流しても1つの transaction のまま（lead_merge と同じ使い方）。
+- `_apply_migration_on_conn` は asyncpg の生接続で流す（`backend/tests/rls_bootstrap.py:205-208`）。`admin_engine.begin()` の中の同じ接続なので、2回流しても1つの transaction のまま（lead_merge と同じ使い方）。
 - 回数1がずれる（移行が書き換わる）と `_scope_tenant_migration` が止める → 試験が赤で知らせる（黙って全テナントを回ることは無い）。
 - 見張りが既存の試験ファイルの言い回しで誤って当たる → 分類表に `text_only` と理由を書いて通す。表は人（Opus）が審査する。
 
@@ -143,12 +143,13 @@ def test_roles_migration_is_scoped_to_own_tenant():
 2. 段B: 4-4（見張り）
 - 試験は Mac で回さない。CI（GitHub）とクラウドで回す。
 
-## 8. 維持する仕組み
-- 見張り `test_tenant_loop_migration_guard.py` は CI の pytest（必須チェック）で毎回走る。新しい試験が全テナントを回す移行を参照すると、分類を書くまでマージできない。
-- 正本は `rls_bootstrap.py` の `_TENANT_LOOP_MIGRATIONS` 1か所。見張りはそこを読み、別の一覧を持たない（分類表は「どの試験がどう扱うか」だけ）。
+## 8. 維持の仕組み
+- 守り手: CI の pytest（必須チェック）で毎回走る見張り試験と、2026-11-19 の数え直しをする Opus
+- 見張り `backend/tests/test_tenant_loop_migration_guard.py` は CI の pytest（必須チェック）で毎回走る。新しい試験が全テナントを回す移行を参照すると、分類を書くまでマージできない。
+- 正本は `backend/tests/rls_bootstrap.py` の `_TENANT_LOOP_MIGRATIONS` 1か所。見張りはそこを読み、別の一覧を持たない（分類表は「どの試験がどう扱うか」だけ）。
 - K5 の数え直しは 2026-11-19 に Opus が行う（記憶 rule_c_reset_after_commit に書く）。
 
-## 9. 外部事例
+## 9. 外部・過去事例の参照と我々への応用
 - Context7 は「Monthly quota exceeded」で使えなかった（2026-11-05）。起動指示の代わりの手段として公式資料を直接読んだ: https://pytest-xdist.readthedocs.io/en/stable/distribution.html（2026-11-05 取得）
   - `--dist loadfile`: "Tests are grouped by their containing file. ... This guarantees that all tests in a file run in the same worker."
   - `-n auto`: "pytest-xdist will use as many processes as your computer has physical CPU cores."
@@ -161,10 +162,10 @@ def test_roles_migration_is_scoped_to_own_tenant():
 | 観点 | 確かめたこと | 結果 |
 |---|---|---|
 | 原因と直しの対応 | 失敗した文は roles 移行の `ALTER TABLE tenant_991.roles`（recon §1）。絞った後は `AND nspname = 'tenant_995'` が付き tenant_991 を選ばない（4-3 で機械的に確かめる） | ○ |
-| 既存の正本を使うか | 新しい絞り方を作らず `_scope_tenant_migration`・`_apply_migration_on_conn`（`rls_bootstrap.py:175-208`）を使う。一覧は `_TENANT_LOOP_MIGRATIONS` 1か所 | ○ |
+| 既存の正本を使うか | 新しい絞り方を作らず `_scope_tenant_migration`・`_apply_migration_on_conn`（`backend/tests/rls_bootstrap.py:175-208`）を使う。一覧は `_TENANT_LOOP_MIGRATIONS` 1か所 | ○ |
 | 回数1の正しさ | 実物の `_TENANT_LOOP_SELECTOR_RE` で roles 移行に1回（`81-regex-check.txt`） | ○ |
 | 番号 995 が空いているか | 試験・移行の全文でテナント 995 は0件（recon §4） | ○ |
-| 札の中で DROP | `tenant_schema_lock` は別の接続で advisory lock を持つ（`rls_bootstrap.py:308-322`）。DROP は別の接続で流すので自分を待たない。今の `admin_engine.connect()` と `begin()` の2本使いと同じ | ○ |
+| 札の中で DROP | `tenant_schema_lock` は別の接続で advisory lock を持つ（`backend/tests/rls_bootstrap.py:308-322`）。DROP は別の接続で流すので自分を待たない。今の `admin_engine.connect()` と `begin()` の2本使いと同じ | ○ |
 | 冪等の確かめが残るか | 2回流す形はそのまま。確かめの assert は変えない（K2） | ○ |
 | 見張りの組の数 | 修正後の実物で 64 組（今の 63 組＋ rls_bootstrap.py に roles を足す1組）。担当は数え直し、64 でなければ止める | ○（自分で数え直して 61→64 に直した） |
 | 見張りの過検出 | 文字だけ・コメントは `text_only` と理由で通す。新しい組は必ず落ちる＝審査を通る | ○ |
