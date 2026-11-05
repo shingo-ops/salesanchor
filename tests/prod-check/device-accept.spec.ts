@@ -99,7 +99,7 @@ function jaStrings(): JaStrings {
   const file = path.join(process.cwd(), "frontend/src/locales/ja.json");
   return JSON.parse(fs.readFileSync(file, "utf-8")) as JaStrings;
 }
-/** 詳しい画面の題名（ja.json から読む） */
+/** 小窓の題名（ja.json から読む） */
 function detailTitle(): string {
   return jaStrings().login.deviceApproval.detail.title;
 }
@@ -109,7 +109,7 @@ function bellRowPattern(): RegExp {
   const esc = (v: string) => v.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   return new RegExp(`${esc(head)}.*${esc(tail)}`);
 }
-/** 鈴を開いて依頼の行を押し、詳しい画面を開く。timeoutMs の間、開き直しながら待つ */
+/** 鈴を開いて依頼の行を押し、真ん中の小窓を開く。timeoutMs の間、開き直しながら待つ */
 async function openRequestFromBell(page: Page, timeoutMs: number): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   const bell = page.getByTestId("notice-bell");
@@ -118,8 +118,10 @@ async function openRequestFromBell(page: Page, timeoutMs: number): Promise<void>
     const row = page.getByRole("button", { name: bellRowPattern() }).first();
     try {
       await row.waitFor({ state: "visible", timeout: 4_000 });
+      const urlBefore = page.url();
       await row.click();
-      await page.getByText(detailTitle(), { exact: true }).first().waitFor({ timeout: 10_000 });
+      await page.getByRole("dialog").getByText(detailTitle(), { exact: true }).first().waitFor({ timeout: 10_000 });
+      if (page.url() !== urlBefore) throw new Error("URL changed when opening the request dialog");
       return;
     } catch {
       await page.mouse.move(0, 0);
@@ -280,9 +282,13 @@ test.describe.serial("本番の受入: 新しい機械の許可（ADR-1055 段C�
     const page = tPage!;
     try {
       await authPace();
-      await page.getByRole("button", { name: jaStrings().login.deviceApproval.detail.itsMe, exact: true }).click();
-      await page.getByRole("button", { name: matchNumber, exact: true }).click();
       await page
+        .getByRole("dialog")
+        .getByRole("button", { name: jaStrings().login.deviceApproval.detail.itsMe, exact: true })
+        .click();
+      await page.getByRole("dialog").getByRole("button", { name: matchNumber, exact: true }).click();
+      await page
+        .getByRole("dialog")
         .getByText(jaStrings().login.deviceApproval.detail.approvedTitle, { exact: true })
         .waitFor({ timeout: 30_000 });
     } catch {

@@ -9040,6 +9040,57 @@
         "title": "DecisionBody",
         "type": "object"
       },
+      "DeleteCandidate": {
+        "properties": {
+          "discord_id": {
+            "title": "Discord Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "parent_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Name"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target"
+          }
+        },
+        "required": [
+          "kind",
+          "discord_id"
+        ],
+        "title": "DeleteCandidate",
+        "type": "object"
+      },
       "DeployButtonResponse": {
         "properties": {
           "channel_id": {
@@ -23232,6 +23283,43 @@
         "title": "OwnInventoryUpdate",
         "type": "object"
       },
+      "OwnServerPlanResponse": {
+        "properties": {
+          "blocked": {
+            "items": {
+              "$ref": "#/components/schemas/PlanRow"
+            },
+            "title": "Blocked",
+            "type": "array"
+          },
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/PlanRow"
+            },
+            "title": "Changes",
+            "type": "array"
+          },
+          "delete_candidates": {
+            "items": {
+              "$ref": "#/components/schemas/DeleteCandidate"
+            },
+            "title": "Delete Candidates",
+            "type": "array"
+          },
+          "plan_digest": {
+            "title": "Plan Digest",
+            "type": "string"
+          }
+        },
+        "required": [
+          "plan_digest",
+          "changes",
+          "blocked",
+          "delete_candidates"
+        ],
+        "title": "OwnServerPlanResponse",
+        "type": "object"
+      },
       "OwnServerSnapshotResponse": {
         "properties": {
           "channel_count": {
@@ -25160,6 +25248,73 @@
           "recent_extraction_jobs"
         ],
         "title": "PipelineSummaryResponse",
+        "type": "object"
+      },
+      "PlanRow": {
+        "properties": {
+          "after": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "After"
+          },
+          "before": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Before"
+          },
+          "field": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "kind",
+          "key",
+          "name"
+        ],
+        "title": "PlanRow",
         "type": "object"
       },
       "PostDetailResponse": {
@@ -40123,6 +40278,33 @@
           }
         ],
         "summary": "Run Auto Setup",
+        "tags": [
+          "discord"
+        ]
+      }
+    },
+    "/api/v1/admin/discord/own-server/plan": {
+      "get": {
+        "description": "設計図と今の自社用サーバーを比べて、差を返す。読むだけ（DB にも Discord にも書かない）。",
+        "operationId": "check_own_server_plan_api_v1_admin_discord_own_server_plan_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnServerPlanResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Check Own Server Plan",
         "tags": [
           "discord"
         ]

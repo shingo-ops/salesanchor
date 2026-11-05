@@ -54,6 +54,19 @@
   min-height: var(--comp-badge-height-md);
 }
 
+/* 数の丸（鈴などの未読数）。Instagram 実測: 中身 18・枠 2・外寸 22 */
+.comp-badge.comp-badge--count {
+  box-sizing: content-box;
+  justify-content: center;
+  min-width: var(--comp-badge-count-size);
+  height: var(--comp-badge-count-size);
+  padding: 0;
+  border: var(--comp-badge-count-ring) solid var(--comp-badge-count-ring-color);
+  font-size: var(--comp-badge-count-font);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--comp-badge-count-size);
+}
+
 /* ── 3. soft バリアント (0,2,0) ── */
 .comp-badge--soft.comp-badge--neutral { background: var(--neutral-bg); color: var(--neutral-text); }
 .comp-badge--soft.comp-badge--info    { background: var(--info-bg);    color: var(--info-text); }

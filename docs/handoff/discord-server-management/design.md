@@ -4,8 +4,9 @@
 
 - 親: [docs/specs/discord-server-management/README.md](../../specs/discord-server-management/README.md)
 - あるべき姿: [ideal-state.md](../../specs/discord-server-management/ideal-state.md)　／　KGI: [kgi.md](../../specs/discord-server-management/kgi.md)
-- 下調べ: [recon.md](recon.md)（以下「R§n」は recon.md の節）
+- 下調べ: [recon.md](recon.md)（`docs/handoff/discord-server-management/recon.md`。以下「R§n」は recon.md の節）
 - 対象 ADR: ADR-091（Bot 権限の正本・変えない）、ADR-072（commit 後の reset_tenant_context）、ADR-027（画面の文字は t()）、ADR-144（画面部品の金型）、ADR-135・ADR-136（migrations を含む PR の GO 手順）、ADR-1037（移行のロック待ち 1 秒）、ADR-1024（ai_ro ビュー）。新規 ADR 案は §10
+- ADR の文書: `docs/adr/ADR-027-ui-internationalization.md`・`docs/adr/ADR-135-release-stowaway-prevention.md`・`docs/adr/ADR-144-ui-component-governance.md`
 - 状態: 2026-11-04 PO 承認済み（PO「1」＝この設計で承認し、自社用サーバーの登録から作り始める）。PO 決定「1」（設計図はプログラムと同じ場所に履歴付きで置く）を反映。便1a の実装カード: [card-bin1a-purpose-column.md](card-bin1a-purpose-column.md)（便1b は便1a の本番反映後に出す）
 
 ## 1. 目的と合格条件
@@ -251,6 +252,23 @@
 - 便2 の確かめ方（KGI-3 の前半）：テナント001の自社用テストサーバーで「今のサーバーを読み取る」を押す → 「読み取りました（ロール n・チャンネル n）」が出る → `ai_ro.public__discord_server_snapshots` に 1 行増え、n が Discord の画面のロールとチャンネルの数と同じ
 - 実装カード：docs/handoff/discord-server-management/card-bin2-own-server-snapshot.md
 
+改訂4（2026-11-05、便3 のカード作成時の実物確認による。Opus の技術判断。origin/main 63cadad20 で確かめた）
+- 便3 を 2 つに分ける（変更は一度に 1 つ）。便3a＝§4-5 設計図の形と検査・最初の設計図 tenant_1.json・§4-7 確認・画面の「確認する」（KGI-3）。便3b＝§4-8 反映・画面の「反映する」（KGI-4〜6）。便3a は Discord に書かない（呼ぶのは GET だけ）。どちらも migrations なし
+- 事実（本番の読み取り、`ai_ro.public__discord_server_snapshots` id=1、2026-11-05 02:50 UTC）：テナント001の自社用サーバーは ロール 2（@everyone・Bot の「Sales Anchor」managed=true）、チャンネル 4（カテゴリ「テキストチャンネル」「ボイスチャンネル」・文字の「一般」・声の「一般」）。上書きは 0 件
+- 扱う種類は ロール・カテゴリ（type 4）・文字のチャンネル（type 0）だけ。ほかの種類（声 type 2 など）は §2 の対象外なので、確認の 3 つの一覧のどれにも出さない（消す候補にも出さない）
+- managed=true のロール（Bot 自身・連携が作るロール）は設計図に書かず、一覧のどれにも出さない。Bot 自身のロールは上書きの相手として `"@bot"` と書ける（Bot の利用者番号を `GET /users/@me`、その人のロールを `GET /guilds/{guild}/members/{bot}` で読む。後者は特別な許可が要らない：Discord 公式 developers/topics の Get Guild Member、List Guild Members だけが GUILD_MEMBERS を要る）
+- 権限の名前と数字の対応は Discord 公式の表（github.com/discord/discord-api-docs `developers/topics/permissions.mdx`、2026-10-29 更新 e3ea58903 を 2026-11-05 に取得。Context7 は月の上限で使えなかったため公式を直接読んだ）の 52 個（1<<0〜1<<52、47 番は表に無い）。表に無い数字（今の @everyone には 1<<47 が立っている）は比べず、反映のときも今の値をそのまま残す。名前に直せないために「変わる」が出続けることを防ぐ
+- 設計図の `sync_with_category` は使わない。Discord にその項目は無い。チャンネルの見せ方は各チャンネルの `overwrites` に書いた分だけを比べる
+- 上書きは書いた相手だけを比べる。Discord にあって設計図に無い相手（managed のロールのうち Bot 以外を除く）は「消す候補」に出す（自動で外さない）
+- 「できない」の判定（Discord 公式 permissions.mdx「Permission Hierarchy」と channel.mdx「Edit Channel Permissions」）：Bot の一番上のロールの順番と同じか上のロールを変える行／Bot が持たない権限（@everyone と Bot のロールの権限を合わせたもの。ADMINISTRATOR があれば全部持つ）をロールに付ける行・上書きで許す/拒む行／ADMINISTRATOR の無い Bot が上書きで MANAGE_ROLES を書く行／@everyone の名前を変える行
+- 設計図の検査に 1 つ足す：@everyone の VIEW_CHANNEL を拒む上書きがあるカテゴリ・チャンネルには、`"@bot"` に VIEW_CHANNEL を許す上書きも書く。無いと Bot がその中を見られなくなり、続きの反映が 403 になる（事実：`backend/app/routers/discord_auto_setup.py` の「Cause F」の注記と同じ理由）
+- 色は `color`（数字）で比べる。反映で送るときは公式の勧めどおり `colors.primary_color` で送る（`color` は非推奨。guild.mdx Modify Guild Role）
+- 確認の一覧の 1 行の単位：作る物は 1 物 1 行（作るときの上書きも含む）。直す物は 1 物 1 項目 1 行。上書きは 1 物 1 相手 1 行。KGI-4 の「4 種類で 4 件」はこの単位で数える
+- 確認の API は `tenant.profile.edit` を要る（ボタンを押すと Discord に読みに行くため。読み取りのボタンと同じ）
+- 設計図の検査にもう 1 つ足す：文字のチャンネルの名前に空白・英大文字を入れない（Discord が文字のチャンネル名を小文字・ハイフンに直すため、直された名前と比べて「変わる」が出続けるのを防ぐ）
+- 実装カード：docs/handoff/discord-server-management/card-bin3a-blueprint-plan.md
+- 便3a カードの審査（2026-11-05、Opus の自己審査。独立した第二者の審査ではない）：APPROVE。根拠：カードに書いた行の目印（`backend/app/routers/discord_own_server.py` の guild_id の SQL・`backend/tests/test_realtime_topics.py:29`・`frontend/src/lib/api.ts:13-21` の `ApiError.status`・`backend/tools/export_openapi.py`・`scripts/check_test_schema_dup.py`・guards の 4 ファイル・画面の試験 2 ファイル）を実物で確かめた。審査で直した点：`discord_server_apply_runs` は試験の共通表（conftest）に無いので、行が増えない試験は `discord_server_snapshots` だけにし、書き込みが無いことは差分の検索で確かめる形にした。未解決：無し（tenant_1.json で 0 件になることは試験 §4-2 の 1 と本番の「確認する」で確かめる）
+
 ## 9. 外部・過去事例の参照と我々への応用
 
 - HashiCorp Terraform の公式文書（Context7 `/websites/developer_hashicorp_terraform` で 2026-11-04 に確認）
@@ -266,6 +284,7 @@
 - 設計図の形の検査と、「顧客用だけ」の漏れ止めは CI の試験で毎回動く
 - 設計図の持ち主は Opus。変更は PR と審査を通す
 - 反映の記録（`discord_server_apply_runs`）で、いつ誰が何を変えたかを後から読める
+- 守り手: `backend/tests/test_discord_blueprints.py`（CI の pytest で毎回、設計図の形と権限の名前の表を検査する）
 
 ## 10. ADR 案（正式な番号は PO 承認のあとに採る）
 

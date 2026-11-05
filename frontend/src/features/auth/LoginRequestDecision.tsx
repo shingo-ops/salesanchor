@@ -1,15 +1,14 @@
 /**
- * ログインの依頼の詳しい画面（ADR-1055 段D）。
- * 鈴の一覧の「新しい機械からのログインの依頼」を押すと開く。
+ * 鈴の小窓の中身（ADR-1055 段E）。
+ * 鈴の一覧の「新しい機械からのログインの依頼」を押すと、真ん中の小窓の中に出る。
  * 機械・場所の目安・時刻を見せ、「私です」→ 3つの番号から選んで許可、「私ではありません」で拒否する。
  * 依頼は GET /login-approvals/pending から id で探す（新しい口は作らない）。
  */
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, useParams } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Button } from "../../components/Button";
 import { EmptyState } from "../../components/EmptyState";
-import { PageLayout } from "../../components/PageLayout";
 import { Stack } from "../../components/Stack";
 import { useRealtimeRefresh } from "../../hooks/useRealtimeRefresh";
 import { api } from "../../lib/api";
@@ -31,8 +30,13 @@ interface PendingList {
 type Step = "ask" | "pick";
 type Outcome = "none" | "approved" | "wrongNumber" | "rejected";
 
-export default function LoginRequestDetailPage() {
-  const { id } = useParams<{ id: string }>();
+export default function LoginRequestDecision({
+  requestId,
+  onLeave,
+}: {
+  requestId: string;
+  onLeave: () => void;
+}) {
   const { t, i18n } = useTranslation();
   const [loaded, setLoaded] = useState(false);
   const [request, setRequest] = useState<PendingLoginRequest | null>(null);
@@ -43,12 +47,12 @@ export default function LoginRequestDetailPage() {
   const load = useCallback(async () => {
     try {
       const res = await api.get<PendingList>("/login-approvals/pending");
-      setRequest((res.items ?? []).find((r) => r.id === id) ?? null);
+      setRequest((res.items ?? []).find((r) => r.id === requestId) ?? null);
       setLoaded(true);
     } catch {
       // 取れなかったときは今の表示のまま（次の合図でやり直す）
     }
-  }, [id]);
+  }, [requestId]);
 
   useEffect(() => {
     void load();
@@ -94,7 +98,7 @@ export default function LoginRequestDetailPage() {
       <Stack gap="3">
         <h3>{t("login.deviceApproval.watcher.rejectedTitle")}</h3>
         <p>{t("login.deviceApproval.watcher.rejectedBody")}</p>
-        <Link to="/account/settings">{t("login.deviceApproval.watcher.changePassword")}</Link>
+        <Link to="/account/settings" onClick={onLeave}>{t("login.deviceApproval.watcher.changePassword")}</Link>
       </Stack>
     );
   } else if (!loaded) {
@@ -148,5 +152,5 @@ export default function LoginRequestDetailPage() {
     );
   }
 
-  return <PageLayout titleText={t("login.deviceApproval.detail.title")}>{body}</PageLayout>;
+  return <>{body}</>;
 }
