@@ -95,7 +95,8 @@ export interface CalendarViewProps {
 | nowIndicator | `true` | `true` | いまの線 |
 | dayMaxEvents | — | `monthMaxEvents` | |
 | moreLinkContent | — | `t('calendarView.more', { count: arg.num })` | 文言は t() |
-| moreLinkClick | — | 呼ぶ側の `onDayClick(arg.date)` を呼び、FullCalendar の小窓は開かない | 小窓の影（直書きの rgba）を出さない |
+| moreLinkClick | — | 関数。呼ぶ側の `onDayClick(arg.date)` を呼び、`arg.view.type` を返す（§4-3-1） | 小窓の影（直書きの rgba）を出さない |
+| showNonCurrentDates | — | `false` | 前後の月の日に予定と「ほか N 件」を出さない（§4-3-1） |
 | navLinks・navLinkDayClick | — | `true`・`onDayClick(date)` | 日付を押すと呼ぶ側へ |
 | eventClick | `onEventClick(id)` | 同じ | |
 | eventClassNames | §4-6 | 同じ | |
@@ -104,7 +105,13 @@ export interface CalendarViewProps {
 | height | `'auto'` | `'auto'` | 高さは中身で決まる（1時間＝トークン） |
 | locale | `i18n.language` が `ja` で始まれば `@fullcalendar/core/locales/ja`、それ以外は既定（英語） | 同じ | |
 - `date`・`mode`・`dayCount` が変わったら、`ref.getApi()` の `changeView`・`gotoDate` で合わせる（作り直さない）。
-- `moreLinkClick` に関数を渡したとき、何を返せば小窓が開かないかは v6 の公式頁（legacy.fullcalendar.io/v6/moreLinkClick）で確かめ、確かめた文を PR 本文に書く。確かめられなければ止めて報告する。
+#### 4-3-1 「ほか N 件」を押したとき（2026-11-06 Opus が確かめた）
+- 公式頁（https://legacy.fullcalendar.io/v6/moreLinkClick）の文: 「A callback function can return a string value, like "day", that will be processed as the new value of the setting.」「view name: A literal string name of any of the available views.」。小窓を開かない方法は頁に書かれていない。
+- 6.1.22 の実物（@fullcalendar/core internal-common.js:7452-7467）: 関数の戻り値が空か `'popover'` なら小窓を開く。文字列なら `calendarApi.zoomTo(date, 戻り値)` を呼ぶ。zoomTo（同 :4984-5003）は、その名前の表示があれば同じ日付でその表示に切り替える。
+- なので、関数は `onDayClick(arg.date)` を呼んだあと、いまの表示の名前 `arg.view.type`（`'dayGridMonth'`）を返す。同じ月の日付で同じ月の表示に切り替わるだけなので、見た目は変わらない。
+- 前後の月の日で押されると、その月へ動いてしまう。`showNonCurrentDates: false`（公式の設定）で前後の月の日に予定を出さず、そこに「ほか N 件」が出ないようにする。
+- 日付を押したとき（navLinkDayClick）は、関数を渡せば FullCalendar は表示を変えない（同 :5518-5529）。
+- T5（§7）で、6.1.22 の internal-common.js にこの2か所の処理がそのまま有ることを文字で確かめる。版を上げて形が変われば落ちる。
 - 包む要素: `<div className="comp-calendar comp-calendar--{mode} {className}" role="region" aria-label={ariaLabel}>`。
 
 ### 4-4 トークン（tokens.css の「Schedule page」の段に足す）
@@ -161,6 +168,7 @@ TwoDays（今日・明日、予定3件）／Week（7列）／Month（1日に4件
 - T1 `computeHourRange`: 予定なし→08〜20／7:30 開始→07〜20／21:15 終了→08〜22／終日だけ→08〜20／end 無しの 19:30 開始→08〜21／23:30〜翌 1:00→08〜24。
 - T2 `eventClassNames`: 既定（personal・solid・conflict なし）／tone meeting・line dashed・conflict true の class の並び。
 - T3 `@fullcalendar/react` を vi.mock で差し替え、渡された props を見る: days・dayCount 2 で views の duration が 2 日・slotEventOverlap false・nowIndicator true・headerToolbar false・editable false／month で dayMaxEvents 2・fixedWeekCount false・firstDay 1／moreLinkContent が t('calendarView.more') の結果を返す／moreLinkClick と navLinkDayClick が onDayClick を呼ぶ／eventClick が onEventClick(id) を呼ぶ。
+- T5 node_modules/@fullcalendar/core/internal-common.js に `if (!moreLinkClick || moreLinkClick === 'popover')` と `context.calendarApi.zoomTo(date, moreLinkClick)` の2つの文字があることを確かめる（§4-3-1）。T3 で month のとき moreLinkClick が `onDayClick` を呼び `view.type` を返すこと、showNonCurrentDates が false であることも見る。
 - T4 node_modules の @fullcalendar/core・daygrid・timegrid の index.js と internal の .js から `--fc-[a-z-]+` を全部拾い、CalendarView.css の `.comp-calendar` の中に同じ名前の定義があるかを見る。無い名前があれば名前を出して落ちる。
 
 ## 8 その後（この PR の外）
@@ -175,7 +183,7 @@ TwoDays（今日・明日、予定3件）／Week（7列）／Month（1日に4件
 - 根拠: 版・CSP・変数・トークンはすべて recon の実物（行番号・コマンド・公式頁）で確かめた。○
 - 確かめられる受入: K1〜K9 はすべて CI か評価役の測定で○×が決まる。○
 - 範囲: 触るファイルを §3 で列挙。予定ページ・agent-console は対象外。○
-- 残る未確認: `moreLinkClick` の返し方（§4-3。実装役が公式頁で確かめ、確かめられなければ止める）。6.1.22 の変数の数（T4 が実物で数える）。どちらも実装の中で機械か公式頁で決まり、設計の判断は要らない。
+- 残る未確認: 無し。`moreLinkClick` の返し方は §4-3-1 で公式頁と 6.1.22 の実物で確かめた（クラウドからは公式頁に届かず、1回目の実装が止まったため Opus が手元で確かめた）。6.1.22 の変数はクラウドで数えて 6.1.20 と同じ（core 27・daygrid 6・timegrid 11、重なりを除き28）。
 - 判定: APPROVE。
 
 ## 11 維持の仕組み

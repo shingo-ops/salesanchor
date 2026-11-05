@@ -10,11 +10,11 @@
 2. 6.1.22 の変数を数える: `grep -rhoE -- '--fc-[a-z0-9-]+' node_modules/@fullcalendar/{core,daygrid,timegrid}/*.js node_modules/@fullcalendar/{core,daygrid,timegrid}/internal*.js | sort -u` の生の結果を PR 本文に貼る。変数を通らない直書きの色を `grep -noE 'rgba?\([^)]*\)|#[0-9a-fA-F]{3,8}\b' 同じファイル` で拾い、出どころの class と一緒に PR 本文の表にする。
 3. frontend/src/tokens.css の「Schedule page」の段に design §4-4 の3行を足す（値・コメントもそのまま）。
 4. frontend/src/components/calendarView.utils.ts を作る: `computeHourRange`（design §4-5）・`eventClassNames`（§4-6）・型（§4-2）。FullCalendar を import しない。
-5. frontend/src/components/CalendarView.tsx を作る: design §4-2 の props、§4-3 の表どおりの値。`moreLinkClick` の返し方は legacy.fullcalendar.io/v6/moreLinkClick で確かめ、確かめた文と URL を PR 本文に書く。確かめられなければ止めて `BLOCKED:` で報告する。
+5. frontend/src/components/CalendarView.tsx を作る: design §4-2 の props、§4-3 の表どおりの値。`moreLinkClick` と `showNonCurrentDates` は design §4-3-1 のとおりにする（公式頁と 6.1.22 の実物は Opus が確かめ済み。クラウドから公式頁は読めないので読みに行かない）。
 6. frontend/src/components/CalendarView.css を作る: design §4-7。`--fc-*` は手順2で数えた全部を `.comp-calendar` に置く。値は var() だけ。px・#・rgb の直書きをしない。
 7. frontend/src/locales/ja.json・en.json に design §4-8 の2キーを足す。
 8. frontend/src/components/CalendarView.stories.tsx を作る: design §4-9 の7つ。形は components/Badge.stories.tsx に合わせる（`title: 'Components/CalendarView'`・`tags: ['autodocs']`・`@storybook/react-vite`）。
-9. frontend/src/components/CalendarView.test.tsx を作る: design §7 の T1〜T4。
+9. frontend/src/components/CalendarView.test.tsx を作る: design §7 の T1〜T5。
 10. 提出前: `bash scripts/dev/check-before-submit.sh` を流し、生の結果をファイルに残してパスを報告する。frontend の `npm run lint`・`npm run check:css-colors`・`npm run check:css-values`・`npm run check:stories`・`npm run check:dark-parity`・`npx tsc --noEmit` が package.json にあれば流す（無い名前は無いと書く）。vitest は流さず CI に任せる。
 11. commit（1つでよい）→ push。PR は作らない（Opus が作る）。
 
