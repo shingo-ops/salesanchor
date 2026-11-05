@@ -680,3 +680,9 @@ PO への返事の本文（ツール呼び出しの中ではない）の、**最
   - `claude agents --json` に件が出るかは測っていない（手元の見張り local-agent-guard が `claude` の呼び出しを止めた。言い換えずに止めた）。
   - 生の記録は社外秘の置き場（個人の記録の cloud-case-ai-20261030）に残した。会話の中身は記録していない。
   - 結論: 判定7（状態ファイルで idle・待ちなしのときだけ貼る）は、質問の選択肢が出ている窓を見分けられない。設計の決まりどおり案 E（今のまま PO が打つ）に戻し、PO に報告した。
+- PO の判断（2026-11-05・チャット）: 「2」（質問の選択肢が出ていることを見分ける別の方法を探す。見つからなければ案 E）。
+- 別の方法1 `claude agents --json` の測り（2026-11-05 12:17:56〜12:17:59・PO が `!` で台本を動かした。件の窓に質問の選択肢が出ている間）:
+  - ふつうの置き場で動かした一覧: 12行。件の本体（pid 97478）の行は無い。行のキーは cwd・kind・name・pid・sessionId・startedAt・status の7つ。
+  - `CLAUDE_CONFIG_DIR=CH` で動かした一覧: 1行。pid 97478・status `idle`・waitingFor なし。
+  - 結論: ×。件の質問の待ちは、この一覧でも見分けられない。
+- 別の方法2（まだ設計していない・測っていない）: 件の Claude の仕掛け（hooks）で、PreToolUse（AskUserQuestion・ExitPlanMode）と PermissionRequest の時に印を書き、答えた後に消す。公式の説明書（code.claude.com/docs/en/hooks・2026-11-05 読んだ）に、PreToolUse が AskUserQuestion と ExitPlanMode にも当たると書かれている。答えを断った時に印が消える出来事が来るかは書かれておらず、未確認。Context7 は今月の上限で使えなかった。
