@@ -799,3 +799,24 @@ PO への返事の本文（ツール呼び出しの中ではない）の、**最
 - 12回目（af91d27c2・クラウドの Opus・2026-11-05）: APPROVE（LOW 1）。11回目の MEDIUM は直っていて、件の見張り（case-sandbox.ts:453）の形と同じ。公式の説明書と食い違い無し。行番号は全部合う。新しい穴は無し。
   - LOW: 受け口の本文・R34・K36 ⑧の「6種」は表の行の数で、出来事の名前は7つ（PostToolUse と PostToolUseFailure は別）→ 3か所とも7つの名前を並べて書いた。
   - 未確認（審査役）: Elicitation に onFailure block が効くか（説明書の該当節を読み切れず）・担当の hook の session_id・Esc と割り込みの知らせ → どれも K36 で実測する。
+
+#### 14-11-11 前提の誤り（2026-11-05 16時台・Opus の読み直し）
+
+判定: 第7版は REVISE（12回目の APPROVE を取り消す）。設計が守ろうとした「選択肢の画面」が、件の窓では出ない作りだった。審査役も Opus も、件の窓の起動台本を読んでいなかった。
+
+観測事実:
+- 件の窓の起動台本 `ops/shell/ccdiscord.zsh:72`（agent-console v0.50.1 入り版）は `--tools "Bash,Read,Edit,Write,Glob,Grep,Agent,TodoWrite"` で道具を絞る。AskUserQuestion・EnterPlanMode・ExitPlanMode は入っていない。同じ行に `--strict-mcp-config --disallowedTools "mcp__*"`・`--permission-mode dontAsk` がある。
+- 件の窓の記録（activity/events-20261105.jsonl・session 79484388-…）で、件の AI は 4 回「AskUserQuestion は使えない」と答え、質問を文で書いた（11:34:54・11:54:42・12:17:50 ほか。10:58:25 の回は Stop の記録が無い）。EnterPlanMode も使えないと答えた（10:59:19）。
+- 11:36:04 の回で、計画の段階（Shift+Tab で入る）に入った窓が、計画の保存先 `case-home/427a63ce-…/plans/1-fizzy-planet.md` への Write を case-guard に止められた。ExitPlanMode も無いので、AI は計画の段階から自分で出られない。
+- 件の窓（main pid 97478）は 16:18 時点で無い。open-sessions.json・tmux にも無い。case-home の sessions/ は 12:55 に空になった。終わった理由の記録は見つからない（server.err.log の最終更新は 10:58）。
+
+ここから言えること（事実の組み合わせ）:
+- PreToolUse/PostToolUse の `AskUserQuestion|ExitPlanMode` は、件の窓では起きない。PermissionRequest は dontAsk のため画面に出ない。Elicitation は MCP が切られているので起きない。第7版の旗は、件の窓では立つ場面がほぼ無い。
+- 件の窓の「待ち」は、AI が文で質問して Stop した状態だけ。このとき case-say が貼る文は、そのまま「答え」として届く。K30 の「選択肢の画面に文が入る」危険は、この起動の形では起きない。
+- 残る穴は計画の段階: 人が Shift+Tab で入れる。保存が止められ、AI が自分で出られない。
+
+未確認:
+- 件の窓が 12:55 ごろに終わった理由（人が閉じたか・異常終了か）。
+- 計画の段階の中で case-say が貼った文がどう扱われるか。
+
+次の一手（PO の決めごと）: 第7版を進めるか・件の窓の形に合わせて設計を小さくし直すか。
