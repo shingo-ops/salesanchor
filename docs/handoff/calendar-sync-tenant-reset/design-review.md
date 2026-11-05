@@ -116,3 +116,45 @@ recon.md への補足（直しは design 側の判断に影響しない）: C3 �
 f3b981967 docs: calendar-sync-tenant-reset の設計審査（REVISE）
 31988c9e6 docs: calendar sync tenant-context reset fix design (create/delete)
 ```
+
+---
+
+## 2回目
+
+- 審査対象: 直した `design.md`・`recon.md`（枝 `release/calendar-sync-tenant-reset`・HEAD 109304a38）
+- 審査役: architect（製品コード・design.md は変えていない）
+- 審査日: 2026-11-05
+
+### 判定: REVISE
+
+R1〜R6 はすべて design.md に入り、入れた中身も実物と合う。ただし新しく見つけた N1（試験の準備で `20261016_010000_add_google_config_rls.sql` が前提にする表を作る migration が抜けている）は、CI の共有 DB で試験の準備が落ちる・落ちないが実行順で変わる必須の穴。N1 の1行（と N2・N3 の文言）を直せば、ほかに直す所は無い。N1〜N3 だけの直しなら、3回目の審査はその3点の照合だけでよい。
+
+### R1〜R6 の結果
+
+| # | 結果 | design.md の場所 | 実物との照合 |
+|---|------|------|------|
+| R1 | 反映・合う（引用の行だけ誤り → N2） | §3 対象・§5「土台の登録」「準備の順番」・§8・§11 | 登録の数: `_TENANT_LOOP_SELECTOR_RE`（`backend/tests/rls_bootstrap.py:156`）で数え直した生出力は `078…2`・`20260621_020000…1`・`20261103_200000…1`・`20261104_161223…1` で §5 と一致。数が合わないと :176-177 で ValueError、登録していれば :178 で `AND nspname = 'tenant_978'` を足す。schema_name: `"tenant_978"` は :174 の `tenant_[0-9]+` に合う。lock: `public_bootstrap_lock`（:44-63）は別接続で advisory lock を取り、中で `admin_engine.begin()` の接続に `_apply_migration_on_conn` で流す形は `test_lead_merge_pg.py:303-309` と同じ。076・077・20261016 は schema_name なしで、`_TENANT_BOOTSTRAP_MIGRATIONS`（:35-38）に入っていないので :198-199 で止まらない。前提: 078 :35-40・20260621_020000 :11-18 は `role_permissions` があるスキーマだけ、20260621_020000 は `staff` を参照し、どちらも `bootstrap_tenant_schema`（:340-379）で作られた後に流す順になっている。§11 に `rls_bootstrap.py`（4行だけ）が入った |
+| R2 | 反映・合う | §5「テナント」 | `grep -rnE "\b978\b\|97801\|97802\|tenant_978" backend/tests` → 0件。978・97801・97802 はどれも未使用 |
+| R3 | 反映・合う（注意1点 → N3） | §5 準備3・後始末 | `_ensure_public_users` の INSERT 列は `rls_bootstrap.py:252-258`（id, tenant_id, firebase_uid, username, email, full_name, role, is_active, is_super_admin, locale, theme）。外部キーは 076 :21（`connected_by_user_id REFERENCES users(id)`）・078 :46,:63（`public.users(id)`）で、どれも ON DELETE SET NULL なので後始末で消してよい |
+| R4 | 反映・合う | §2 K1・§6 段A・§11 | 段A は CI（Opus が手元で shingo-cc 名義の Draft PR を作る）で K1 を判定、と §2 の検証方法にも書かれた。クラウドの実装役は PR を作らない、も §11 にある。案(i)（クラウドの使い捨て DB で先に赤を取る）は採らなかったが、R4 は「どちらで判定するかを書く」ことを求めたもので、満たす |
+| R5 | 反映・合う | §8・§7 A | `dependencies.py:264` `def _dialect_supports_search_path`〜:274 `return name.startswith("postgresql")`、:293-294 `if not _dialect_supports_search_path(db): return`。`test_calendar_service.py:385` は `side_effect=[update_result, geid_result, sync_result]`。calendar_service.py の commit は :271,302,311,364,403,411,423,486 で、直後に reset があるのは :365,:404,:412,:424 の4か所＝§7 の「うち calendar_service.py 内4か所」と合う |
+| R6 | 反映・合う | §5 試験1・試験1b | 試験1は add_meet を入れない（`calendar_service.py:281` の分岐に入らず :288 の create_event だけ）。試験1b: `_resolve_meet_url`（:92）は :97 `url = google_event.get("hangoutLink")` → :98-99 で返るので、:110 `asyncio.sleep`・:112 `gcal.get_event` には届かない。UPDATE（:292-300）は `meet_url` 列を使い、その列は 20261104 で入る（準備の順番に入っている） |
+
+### 新しい指摘
+
+| # | 重さ | 節 | 中身（根拠） | 直し方 |
+|---|------|----|------|--------|
+| N1 | 必須 | §5 準備2 | `migrations/20261016_010000_add_google_config_rls.sql:11-12` は `ALTER TABLE public.tenant_google_drive_config ENABLE/FORCE ROW LEVEL SECURITY`（IF EXISTS なし）。この表を作るのは `20260606_010000_add_google_drive_config.sql:16` で、§5 の順番に無い。CI は全 migration を先に当てない（`test.yml:192-216` は salesanchor_app を作るだけ）。試験の中でこの表を作るのは `test_google_config_rls.py:45-49` だけで、`pyproject.toml:65` `--dist=loadfile` ではその試験が先に同じ DB で走るかは決まらない。先に走らなければ準備が「relation does not exist」で落ちる | 準備2の順番を 076 → 077 → **`20260606_010000_add_google_drive_config.sql`（schema_name なし）** → 20261016 → 078 → … にする（既存 `test_google_config_rls.py:45-49` と同じ並び） |
+| N2 | 軽 | §5「土台」 | 引用 `test_lead_merge_pg.py:58-73,88-93` は誤り。:66-73 は `_PUBLIC_TABLES`・見張りの見出し、:88-93 は `_ALTER_ADD_RE`。全テナント migration をスキーマに限って流す形は :52-65（`_TABLE_MIGRATIONS`）と :303-309（`_apply_table_migrations`） | 行番号を :52-65,303-309 に直す |
+| N3 | 軽 | §5 準備3 | `public.users.firebase_uid` は UNIQUE（`rls_bootstrap.py:238`）。`_ensure_public_users` の値 `'test-user'`（:256）をそのまま写すと id=999 の行と重なり、`ON CONFLICT (id)` では受けられず一意違反で落ちる | 「列は同じ、値は firebase_uid・username・email を人ごとに別の値（例 `cal-reset-97801`）にする」と書く |
+
+確かめて問題が無かったこと（記録）:
+- 赤・緑の理屈: `set_tenant_context`（`dependencies.py:277-299`）は session レベルの SET を3つ流すだけで、NullPool の app engine では commit 後の新しい接続に入っていない。直す前は `_get_sync_target`（`calendar_service.py:59-69`）・`_get_sync_mode`（:47-56）が RLS で0行 → 試験1・1b・2 は偽物0回で赤、試験3 は前後とも緑、で1回目の (3) と変わらない
+- 偽物の差し替え先: `google_calendar.py:377 get_event`・`:390 create_event`・`:430 delete_event`。calendar_service.py は :278・:491 で関数の中で import してから属性を呼ぶので patch が効く。試験2の期待 `(db, 978, 'g-2')` は :493 `cal_svc.delete_event(db, tenant_id, google_event_id)` と合う
+- 共有 DB で全テナントを回る migration を流す既存試験は無い: `grep -rn "078_create_calendar\|20261104_161223\|20261103_200000\|20260621_020000" backend/tests` は migration の当てでは0件（別名の backfill スクリプトだけ）
+
+### 確かめたコマンド（抜粋）
+- `git rev-parse HEAD` → `109304a38d9ac88d6100da27c787472910f20029`
+- rls_bootstrap.py から `_TENANT_LOOP_SELECTOR_RE` を取り出して4本を数えた生出力: `078_create_calendar_events_tenant.sql 2`／`20260621_020000_add_schedule_calendar_category_and_owner_settings.sql 1`／`20261103_200000_add_google_calendar_import_sync.sql 1`／`20261104_161223_add_calendar_events_meet_url.sql 1`
+- `grep -n "await db.commit()" backend/app/services/calendar_service.py` → `271 302 311 364 403 411 423 486`
+- `grep -rln tenant_google_drive_config migrations` → 20260606_010000（作る）・20261016_010000（ALTER）ほか2本
