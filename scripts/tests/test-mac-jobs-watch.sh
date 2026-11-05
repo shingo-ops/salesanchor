@@ -855,7 +855,7 @@ w5n=0; for i in $(seq 1 "$(ncalls)"); do sentmsg "${i}" | grep -q '週次点検'
 eq "W5-1 どの本文にも週次点検が無い" "${w5n}" "0"
 eq "W5-2 weekly_seen=20261102" "$(stv weekly_seen)" "20261102"
 # W6 RESULT= 行が無い間は知らせず、足したら知らせる
-wk_setup "2026-11-09 16:30:00" 20261102; printf 'x\n' > "${MJW_WEEKLY_DIR}/20261109.txt"
+wk_setup "2026-11-09 16:30:00" 20261102; wk_file 20261102.txt "OK"; printf 'x\n' > "${MJW_WEEKLY_DIR}/20261109.txt"
 run_mjw
 eq "W6-1 送信 0" "$(ncalls)" "0"
 eq "W6-2 weekly_seen=20261102" "$(stv weekly_seen)" "20261102"
