@@ -136,7 +136,7 @@ test.describe("鈴（NoticeBell）", () => {
     expect(panelBox!.y + panelBox!.height).toBeLessThanOrEqual(bellBox!.y);
   });
 
-  test("PC: 鈴に丸い囲み・枠・影が無く、赤い数字は鈴の箱の内側。乗せると色だけ変わる", async ({ page }, testInfo) => {
+  test("PC: 鈴に丸い囲み・枠・影が無く、赤い数字は鈴の絵の右下に重なる（インスタの実測位置）。乗せると色だけ変わる", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "vl-desktop-1280", "1280 のみ");
     await setup(page, 3);
     const btn = page.locator(".notice-bell-btn");
@@ -155,10 +155,17 @@ test.describe("鈴（NoticeBell）", () => {
     const g = await badge(page).boundingBox();
     expect(b).not.toBeNull();
     expect(g).not.toBeNull();
-    expect(g!.x).toBeGreaterThanOrEqual(b!.x);
-    expect(g!.y).toBeGreaterThanOrEqual(b!.y);
-    expect(g!.x + g!.width).toBeLessThanOrEqual(b!.x + b!.width);
-    expect(g!.y + g!.height).toBeLessThanOrEqual(b!.y + b!.height);
+    const i = await btn.locator("svg").first().boundingBox();
+    expect(i).not.toBeNull();
+    expect(i!.width).toBeCloseTo(24, 0);
+    expect(i!.height).toBeCloseTo(24, 0);
+    expect(g!.x - i!.x).toBeCloseTo(11, 0);
+    expect(g!.y - i!.y).toBeCloseTo(9, 0);
+    expect(g!.width).toBeCloseTo(22, 0);
+    expect(g!.height).toBeCloseTo(22, 0);
+    const a = await page.locator(".top-right-cluster .avatar-btn").boundingBox();
+    expect(a).not.toBeNull();
+    expect(g!.x + g!.width).toBeLessThanOrEqual(a!.x);
     await btn.hover();
     await expect.poll(async () => (await style()).color).not.toBe(before.color);
     expect((await style()).bg).toBe("rgba(0, 0, 0, 0)");
