@@ -29,6 +29,8 @@
  22 files changed, 618 insertions(+), 26 deletions(-)
 ```
 
+> 追記（Opus・2026-11-05 マージ後）: 上は実装時点（8cc2ac66b）の生出力のまま残す。その後 c61a90c3d で ADR-072 のステータス行を短くし `docs/adr/README.md` の変更は消えた。マージされた差分（PR #5162）は README.md を含まず、代わりに `docs/handoff/services-tenant-reset-after-commit/impl-report.md` を含む22ファイル。
+
 ## K1 直す前の予定のコード（d344d12ea^1 の calendar_service.py）
 ```
 /tmp/k1/calendar_service.py:271 [Rule C] create_event: await db.commit() の後、db を使う前に reset_tenant_context(db, tenant_id) がない (:276で db を使用)
