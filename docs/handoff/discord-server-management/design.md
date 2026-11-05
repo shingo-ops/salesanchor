@@ -4,8 +4,9 @@
 
 - 親: [docs/specs/discord-server-management/README.md](../../specs/discord-server-management/README.md)
 - あるべき姿: [ideal-state.md](../../specs/discord-server-management/ideal-state.md)　／　KGI: [kgi.md](../../specs/discord-server-management/kgi.md)
-- 下調べ: [recon.md](recon.md)（以下「R§n」は recon.md の節）
+- 下調べ: [recon.md](recon.md)（`docs/handoff/discord-server-management/recon.md`。以下「R§n」は recon.md の節）
 - 対象 ADR: ADR-091（Bot 権限の正本・変えない）、ADR-072（commit 後の reset_tenant_context）、ADR-027（画面の文字は t()）、ADR-144（画面部品の金型）、ADR-135・ADR-136（migrations を含む PR の GO 手順）、ADR-1037（移行のロック待ち 1 秒）、ADR-1024（ai_ro ビュー）。新規 ADR 案は §10
+- ADR の文書: `docs/adr/ADR-027-ui-internationalization.md`・`docs/adr/ADR-135-release-stowaway-prevention.md`・`docs/adr/ADR-144-ui-component-governance.md`
 - 状態: 2026-11-04 PO 承認済み（PO「1」＝この設計で承認し、自社用サーバーの登録から作り始める）。PO 決定「1」（設計図はプログラムと同じ場所に履歴付きで置く）を反映。便1a の実装カード: [card-bin1a-purpose-column.md](card-bin1a-purpose-column.md)（便1b は便1a の本番反映後に出す）
 
 ## 1. 目的と合格条件
@@ -283,6 +284,7 @@
 - 設計図の形の検査と、「顧客用だけ」の漏れ止めは CI の試験で毎回動く
 - 設計図の持ち主は Opus。変更は PR と審査を通す
 - 反映の記録（`discord_server_apply_runs`）で、いつ誰が何を変えたかを後から読める
+- 守り手: `backend/tests/test_discord_blueprints.py`（CI の pytest で毎回、設計図の形と権限の名前の表を検査する）
 
 ## 10. ADR 案（正式な番号は PO 承認のあとに採る）
 
