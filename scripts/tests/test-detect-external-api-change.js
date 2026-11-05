@@ -122,17 +122,6 @@ test('既知の Meta 呼び出しファイルを検出', () => {
   }
 });
 
-test('既知の Firebase 呼び出しファイルを検出', () => {
-  const cases = [
-    ['backend/app/auth/dependencies.py', ['firebase']],
-    ['backend/app/auth/utils.py', ['firebase']],
-  ];
-  assert.strictEqual(cases.length, 2);
-  for (const [filePath, expectedApis] of cases) {
-    expectClassified(filePath, expectedApis);
-  }
-});
-
 test('既知の Discord 呼び出しファイルを検出', () => {
   const cases = [
     ['backend/app/services/discord_rest.py', ['discord']],
@@ -178,7 +167,7 @@ test('repository diff helper は現在ブランチ差分が空なら空レポー
   assert.deepStrictEqual(report.detectedApis, []);
 });
 
-test('recon 既知ファイル 31 件をすべて個別検出する', () => {
+test('recon 既知ファイル 29 件をすべて個別検出する', () => {
   const cases = [
     ['backend/app/services/paypal_payments.py', ['paypal']],
     ['backend/app/routers/integrations.py', ['dhl', 'fedex', 'google_drive', 'paypal', 'ups']],
@@ -195,8 +184,6 @@ test('recon 既知ファイル 31 件をすべて個別検出する', () => {
     ['backend/app/tasks/verify_meta_subscriptions.py', ['meta']],
     ['backend/app/tasks/avatar.py', ['meta']],
     ['backend/app/tasks/sa02_recon_monitor.py', ['discord']],
-    ['backend/app/auth/dependencies.py', ['firebase']],
-    ['backend/app/auth/utils.py', ['firebase']],
     ['backend/app/services/discord_rest.py', ['discord']],
     ['backend/app/services/discord_sender.py', ['discord']],
     ['backend/app/services/discord_notifier.py', ['discord']],
@@ -213,7 +200,7 @@ test('recon 既知ファイル 31 件をすべて個別検出する', () => {
     ['backend/app/services/fx_rate.py', ['fx_rate']],
   ];
 
-  assert.strictEqual(cases.length, 31);
+  assert.strictEqual(cases.length, 29);
   for (const [filePath, expectedApis] of cases) {
     expectClassified(filePath, expectedApis);
   }

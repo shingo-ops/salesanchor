@@ -66,7 +66,6 @@ services:
       - DATABASE_URL=${DATABASE_URL}
       - ADMIN_DATABASE_URL=${ADMIN_DATABASE_URL:-}
       - GCP_PROJECT_ID=${GCP_PROJECT_ID}
-      - GOOGLE_APPLICATION_CREDENTIALS=/app/firebase-credentials.json
       - ENVIRONMENT=${ENVIRONMENT:-development}
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-https://app.salesanchor.jp}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
@@ -131,9 +130,6 @@ services:
       - SMTP_PASSWORD=${SMTP_PASSWORD:-}
       - MAIL_FROM=${MAIL_FROM:-}
       - CONTACT_NOTIFY_EMAIL=${CONTACT_NOTIFY_EMAIL:-}
-      # ADR-1013 便4b: 自社ログインへの切り替え。.env に AUTH_PROVIDER=self が入る。
-      # 戻すときは deploy.yml の heredoc を firebase に変える前進 PR（revert はしない）
-      - AUTH_PROVIDER=${AUTH_PROVIDER:-firebase}
       - AUTH_JWT_SECRET=${AUTH_JWT_SECRET:-}
       # ADR-1019 段2: 閲覧者のトークンの鍵。この行が無いと .env に値があっても os.getenv が空になる。
       - AUTH_VIEWER_JWT_SECRET=${AUTH_VIEWER_JWT_SECRET:-}
@@ -158,7 +154,6 @@ services:
     volumes:
       # 場所の元データは celery-worker が書き、backend は読むだけ（ADR-1055 D9）
       - geoip:/geoip:ro
-      - ./firebase-credentials.json:/app/firebase-credentials.json:ro
       - ${TCG_SHEETS_SA_KEY_FILE:-/dev/null}:${TCG_SHEETS_SA_KEY_FILE:-/dev/null}:ro
       - attachments_data:/data/attachments
     depends_on:
@@ -198,11 +193,7 @@ services:
     build:
       context: ./frontend
       args:
-        VITE_FIREBASE_API_KEY: ${VITE_FIREBASE_API_KEY}
-        VITE_FIREBASE_AUTH_DOMAIN: ${VITE_FIREBASE_AUTH_DOMAIN}
-        VITE_GCP_PROJECT_ID: ${VITE_GCP_PROJECT_ID}
         VITE_FUNNEL_DASHBOARD: ${VITE_FUNNEL_DASHBOARD}
-        VITE_AUTH_PROVIDER: ${VITE_AUTH_PROVIDER:-firebase}
     restart: unless-stopped
     healthcheck:
       # localhost が IPv6 (::1) に解決され nginx の IPv4-only listen と
@@ -238,7 +229,6 @@ services:
       - DATABASE_URL=${DATABASE_URL}
       - ADMIN_DATABASE_URL=${ADMIN_DATABASE_URL:-}
       - GCP_PROJECT_ID=${GCP_PROJECT_ID}
-      - GOOGLE_APPLICATION_CREDENTIALS=/app/firebase-credentials.json
       - ENVIRONMENT=${ENVIRONMENT:-development}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
       - CELERY_BROKER_URL=${CELERY_BROKER_URL:-redis://redis:6379/1}
@@ -295,7 +285,6 @@ services:
       - GOOGLE_CALENDAR_CLIENT_SECRET=${GOOGLE_CALENDAR_CLIENT_SECRET:-}
       - GOOGLE_CALENDAR_REDIRECT_URI=${GOOGLE_CALENDAR_REDIRECT_URI:-}
     volumes:
-      - ./firebase-credentials.json:/app/firebase-credentials.json:ro
       - ${TCG_SHEETS_SA_KEY_FILE:-/dev/null}:${TCG_SHEETS_SA_KEY_FILE:-/dev/null}:ro
       # 場所の元データ（DB-IP）を月次で書く。worker は GEOIP_DB_PATH を受け取らず、コードの既定 /geoip/... に書く（ADR-1055 D9）
       - geoip:/geoip

@@ -1,7 +1,7 @@
 # design: Firebase を画面とサーバーから全部外す（ADR-1013 便6）
 
 - 書いた日: 2026-11-04（Opus）
-- 状態: 設計案作成済み → 自己審査（§10）済み → クラウドの設計審査 1 回目 REVISE・2 回目 REVISE（重い指摘 0・中 2・軽い 5。2026-11-04）→ 3 回目 APPROVE（重い・中 0、軽い 2 は直した。2026-11-04）→ PO 承認済み（2026-11-04「1」。PO の原文は「1、推測は禁止して事実確認を怠らずに確実性を重視して最も効果があり、現状把握の粒度が細く、精度が高いエビデンスを確立して安全に進めてくれ。また配線とDBのSSOTは遵守してデータを分散させることは禁止。フロントエンドのパーツもデザイントークンとデザインシステム を遵守して、金型登録のないハードコードを禁止する。推測で自身で判断したり不透明無まま進めることは禁止、分からないことは聞いてくれ。確立したなら進める。」）→ 便1 のカード発行済み（`docs/handoff/firebase-removal/card-1.md`、card-lint 合格）→ 便1 本番反映済み → 便2 は PO 承認（2026-11-05「1」）を受けてカード発行済み（`docs/handoff/firebase-removal/card-2.md`、card-lint 合格）。便2 は #5145 でマージ・本番反映済み（2026-11-05 14:31 JST に deploy 完了）。本番の確かめ: K2 は本番の backend で `import firebase_admin` が ModuleNotFoundError（○）。K4 は △（基準どおりではない）。Google の部品の読み込みは通った。celery の worker で `sync_google_calendar_all` の `succeeded` は 14:50 と 15:05 JST の 2 回。基準の「deploy 完了（14:31 JST）から 30 分以内」に入るのは 14:50 の 1 回だけ。別の deploy で worker が 14:35 JST に入れ替わり、15 分おきの数え始めがずれたため。14:31〜15:08 JST の worker と backend のログで ImportError・ModuleNotFoundError は 0 件。K3 は deploy 内の smoke 14 件が全部 PASS、本番で札の更新 `POST /api/v1/auth/refresh` が 200（2 件）、対象の試験 4 本は #5145 の CI で緑。PO が画面でいつもどおりログインできるかの確かめはまだ。次は便3（PO の開始の判断を待つ）。便5 は戻せないので、実行の直前に改めて PO の GO をもらう。
+- 状態: 設計案作成済み → 自己審査（§10）済み → クラウドの設計審査 1 回目 REVISE・2 回目 REVISE（重い指摘 0・中 2・軽い 5。2026-11-04）→ 3 回目 APPROVE（重い・中 0、軽い 2 は直した。2026-11-04）→ PO 承認済み（2026-11-04「1」。PO の原文は「1、推測は禁止して事実確認を怠らずに確実性を重視して最も効果があり、現状把握の粒度が細く、精度が高いエビデンスを確立して安全に進めてくれ。また配線とDBのSSOTは遵守してデータを分散させることは禁止。フロントエンドのパーツもデザイントークンとデザインシステム を遵守して、金型登録のないハードコードを禁止する。推測で自身で判断したり不透明無まま進めることは禁止、分からないことは聞いてくれ。確立したなら進める。」）→ 便1 のカード発行済み（`docs/handoff/firebase-removal/card-1.md`、card-lint 合格）→ 便1 本番反映済み → 便2 は PO 承認（2026-11-05「1」）を受けてカード発行済み（`docs/handoff/firebase-removal/card-2.md`、card-lint 合格）。便2 は #5145 でマージ・本番反映済み（2026-11-05 14:31 JST に deploy 完了）。本番の確かめ: K2 は本番の backend で `import firebase_admin` が ModuleNotFoundError（○）。K4 は △（基準どおりではない）。Google の部品の読み込みは通った。celery の worker で `sync_google_calendar_all` の `succeeded` は 14:50 と 15:05 JST の 2 回。基準の「deploy 完了（14:31 JST）から 30 分以内」に入るのは 14:50 の 1 回だけ。別の deploy で worker が 14:35 JST に入れ替わり、15 分おきの数え始めがずれたため。14:31〜15:08 JST の worker と backend のログで ImportError・ModuleNotFoundError は 0 件。K3 は deploy 内の smoke 14 件が全部 PASS、本番で札の更新 `POST /api/v1/auth/refresh` が 200（2 件）、対象の試験 4 本は #5145 の CI で緑。PO が画面でいつもどおりログインできるかの確かめはまだ。便3 は PO の開始の判断（2026-11-05「1」）を受けてカード発行済み（`docs/handoff/firebase-removal/card-3.md`）。カードを作るときの実物点検（origin/main a7a66a2cc）で §5-3 を 4 か所直した（§5-3 の末尾の「カード作成時の直し」）。便5 は戻せないので、実行の直前に改めて PO の GO をもらう。
 - PO の進める判断: 2026-11-04「1」。Opus が出した選択肢は「Firebase を画面とサーバーから全部外す設計に進む【おすすめ】　裏口のもとになる部品がなくなります。Firebase に残っている利用者の削除は元に戻せないので、その前に改めて確認をお願いします。」。
 - 「」で囲み区切りを全角の ／ にした道筋は、画面から Firebase を外す変更（release/firebase-removal-bin1）で消したファイル（消したので今の版には無く、引用の自動点検の対象から外している）。
 - 根拠: [recon.md](./recon.md)（`docs/handoff/firebase-removal/recon.md`。以下 R 番号はこの recon を指す）。
@@ -145,7 +145,7 @@ Firebase は使わない設定に切り替えた（PO 2026-11-04「firebaseは�
 - `nginx/nginx.conf:96`（app.salesanchor.jp の塊）の CSP から `https://www.gstatic.com`、`https://*.googleapis.com`、`https://*.firebaseio.com` を外す。便1 の本番反映後、本番の画面の JS にこれらへの通信が 0 件であることを K1 で確かめてから外す。
 - 運用と監視:
   - `.github/workflows/external-state-snapshot.yml:82-88`（Firebase の段）を消す。GCP の段は残す。
-  - `.github/workflows/rotate-qa-firebase.yml`、`scripts/snapshot/firebase.sh`、`scripts/smoke/external-firebase.sh` を消す。
+  - .github/workflows/rotate-qa-firebase.yml、scripts/snapshot/firebase.sh、scripts/smoke/external-firebase.sh を消す。
   - `docs/external-state-contract.yml:29-37` を消す。
   - `scripts/detect-external-api-change.js:84-89` とその試験から Firebase の見張りを消す。
   - `monitoring/grafana/provisioning/dashboards/json/uptime-kuma.json:124-132` の板を消す。
@@ -153,6 +153,12 @@ Firebase は使わない設定に切り替えた（PO 2026-11-04「firebaseは�
   - `.gitleaks.toml:38-40` の偽の値の例外を消す。
   - `backend/.dockerignore:14`・`.gitignore:29-30` は残す。鍵のファイルを誤って上げないための守りなので、§8-2 の例外にする。
 - 危険 PR の GO（ADR-136）は、PO の委任に基づき Opus が発行する。
+- カード作成時の直し（2026-11-05、origin/main a7a66a2cc の実物点検）:
+  - `.gitleaks.toml:38-41` は消さずに残す（§8-2 の例外）。偽の値の文字が `docs/handoff/firebase-removal/card-1.md:769-771` と `docs/handoff/app-visual-language/recon.md:1092-1094` に残っていて、docs は書き換えないため。
+  - `scripts/tests/test-detect-external-api-change.js` は今の main で 10 件合格・2 件不合格（便2 で `backend/app/auth/dependencies.py`・`backend/app/auth/utils.py` から Firebase の語が消えたため）。CI では流れていない。便3 で Firebase の試験 1 個（:125-135）と 31 件の表の 2 行（:198-199）を消し、件数を 29 にして 11 件全部の合格に戻す（12 件から Firebase の試験 1 個が減る。カード作成時に 12 と書き違えたのを 2026-11-05 に直した）。
+  - `docs/external-state-contract.yml` で消すのは :29-39（firebase の塊とその後の空行）。:95 の注記の `.env.example:17` は、`.env.example` の行が動くので `:18` に直す。
+  - 注記だけ直す: `.github/workflows/e2e.yml:9-11`（Firebase Auth で通す、という古い説明）と `.env.example:87`（Firebase プロジェクト→Google Cloud プロジェクト。同じプロジェクト）。
+  - 鍵のファイルを外しても困らないことを確かめた。backend と worker で `GOOGLE_APPLICATION_CREDENTIALS` を読むコードは 0 件。表の書き出しは別の鍵 `TCG_SHEETS_SA_KEY_FILE`（`backend/app/tasks/tcg_mirror.py:62`）、Gemini は `GEMINI_API_KEY`（`backend/app/services/gemini_extraction_svc.py:262`）、カレンダーは OAuth の client の値を使う。本番の画面の JS に `googleapis.com`・`gstatic.com`・`firebaseio.com` は 0 件（2026-11-05 に本番の frontend の入れ物で数えた）。`AUTH_PROVIDER`・`VITE_AUTH_PROVIDER` を読むコードは `backend` と `frontend/src` に 0 件。
 
 ### 5-4. 便4 DB の列
 
@@ -214,8 +220,8 @@ Firebase は使わない設定に切り替えた（PO 2026-11-04「firebaseは�
 |---|---|
 | 便1 画面 | `frontend/` の下すべて（`frontend/.storybook/main.ts`・`frontend/package.json`・`frontend/package-lock.json`・`frontend/playwright.config.ts`・`frontend/vite.config.ts`・`src/` の下・`tests-e2e/` の下の 5 ファイル。ただし `frontend/Dockerfile`・`frontend/.env.example`・`frontend/api-contract/openapi.json` を除く）、`.github/workflows/e2e.yml`、`.github/workflows/karte-gate.yml` |
 | 便2 サーバー | `backend/app/` の下すべて（`backend/app/services/tenant.py` を除く）、`backend/requirements.txt`、`backend/scripts/CLAUDE.md`、`backend/tests/` の下（`backend/tests/conftest.py` の Firebase の既定の部分を含む。下の便4 の行に挙げた列の部分を除く）、`frontend/api-contract/openapi.json`（作り直し）、`scripts/setup_review_tenant.py`、「scripts／setup_single_test_user.py」、「scripts／setup_test_users.py」、`scripts/setup_tenant.py` |
-| 便3 配線 | `docker-compose.yml`、`frontend/Dockerfile`、`.env.example`、`frontend/.env.example`、`nginx/nginx.conf`、`scripts/blue-green-cutover.sh`、`.github/workflows/external-state-snapshot.yml`、`.github/workflows/rotate-qa-firebase.yml`、`.gitleaks.toml`、`monitoring/grafana/provisioning/dashboards/json/uptime-kuma.json`、`scripts/detect-external-api-change.js`、`scripts/tests/test-detect-external-api-change.js`、`scripts/smoke/external-firebase.sh`、`scripts/snapshot/firebase.sh` |
-| 便4 DB の列 | `backend/app/services/tenant.py`、`backend/tests/conftest.py`（:512）、`backend/tests/rls_bootstrap.py`、`backend/tests/test_staff_create_users.py`、`backend/tests/ops/test_ai_cloud_views.py`、`migrations/20261024_100300_create_ai_cloud_views.sql`、`scripts/qa/seed-tenant.sql` |
+| 便3 配線 | `docker-compose.yml`、`frontend/Dockerfile`、`.env.example`、`frontend/.env.example`、`nginx/nginx.conf`、`scripts/blue-green-cutover.sh`、`.github/workflows/external-state-snapshot.yml`、.github/workflows/rotate-qa-firebase.yml、`docs/external-state-contract.yml`、`.github/workflows/e2e.yml`（注記の残り）、`monitoring/grafana/provisioning/dashboards/json/uptime-kuma.json`、`scripts/detect-external-api-change.js`、`scripts/tests/test-detect-external-api-change.js`、scripts/smoke/external-firebase.sh、scripts/snapshot/firebase.sh |
+| 便4 DB の列 | `backend/app/services/tenant.py`、`backend/tests/conftest.py`（:512）、`backend/tests/rls_bootstrap.py`、`backend/tests/test_staff_create_users.py`、`backend/tests/ops/test_ai_cloud_views.py`、`migrations/20261024_100300_create_ai_cloud_views.sql`、`scripts/qa/seed-tenant.sql`、`backend/tests/test_export_inventory_for_sheet.py`（:75 は `public.users.firebase_uid`。staff の列とは別の表なので、便4 の recon で扱いを確かめる） |
 | 例外（§8-2） | 残りすべて |
 
 カードを作るときに同じ grep をもう一度流す。増えたファイルがあれば、この表に足してから渡す。
@@ -228,6 +234,9 @@ Firebase は使わない設定に切り替えた（PO 2026-11-04「firebaseは�
 - `migrations/019_create_staff_tables.sql`・`migrations/20260612_150000_drop_password_hash.sql`（過去の migration）と、便4 で足す列を消す migration
 - `scripts/run_all_migrations.sh`（:612 は過去の注記。便4 で足す行も migration の名前に firebase を含む）
 - `.gitignore`・`backend/.dockerignore`（鍵のファイルを上げないための守り）
+- `.gitleaks.toml:38-41`（docs に残る偽の値を秘密と見なさないための除外。§5-3 のカード作成時の直し）
+- Firebase が無いことを確かめる仕組みと、その名前を書いた所: `.github/workflows/frontend-check.yml:39-44`（K1・K6）、`.github/workflows/test.yml:168-175`（K2）、`frontend/src/lib/auth/devSession.ts:3`（その CI の段の名前）、`backend/tests/test_setup_review_tenant.py:6`・`:58-60`（文字が無いことの試験）
+- この設計書の道筋 `docs/handoff/firebase-removal/` を指す注記: `backend/app/auth/dependencies.py:178`、`backend/tests/test_real_redis_lockout.py:85`、`backend/tests/test_self_auth.py:620`
 - `tools/termux-line-import/README.md`・`tools/termux-line-import/device_session.py`（「Firebase を使わない」と書いてあるだけ）
 - ADR-1051 D5 が消すまでの古い qa-smoke の資産: `.github/workflows/qa-smoke.yml`、`scripts/qa/reset-tenant.sh`、`tests/qa-smoke/` の下（6 ファイル）
 - `scripts/data_migration/migrate_staff_from_sheet.py`・`scripts/data_migration/verify_staff_migration.py`（過去の移行の記録）

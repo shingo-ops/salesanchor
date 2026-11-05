@@ -3,7 +3,7 @@ name: External State Snapshot (ADR-035)
 # ADR-035: External State Verification — 週次 cron + 手動 workflow_dispatch
 #
 # 目的:
-#   6 外部システム（Meta / Firebase / GitHub / Cloudflare / Discord / GCP）の
+#   5 外部システム（Meta / GitHub / Cloudflare / Discord / GCP）の
 #   状態を毎週スナップショット保存し、drift を検出して Discord #owner-ping に通知する。
 #
 # Trigger:
@@ -15,7 +15,7 @@ name: External State Snapshot (ADR-035)
 #     理由: 本番環境と同一ネットワーク経路 + GOOGLE_APPLICATION_CREDENTIALS ファイルアクセス
 #
 # Business constraints (ADR-035):
-#   - VPS 2GB 配慮: 6 system を直列実行 (concurrency: 1)
+#   - VPS 2GB 配慮: 5 system を直列実行 (concurrency: 1)
 #   - 各 snapshot 完了後に 5s sleep を挿入
 #   - secret scrub: snapshot json に raw secret を絶対に書かない
 #
@@ -25,7 +25,6 @@ name: External State Snapshot (ADR-035)
 #   META_PAGE_ID
 #   META_PAGE_TOKEN
 #   META_GRAPH_API_VERSION         (optional, default v19.0)
-#   FIREBASE_API_KEY
 #   GCP_PROJECT_ID                 (optional, default: sales-ops-with-claude)
 #   GOOGLE_APPLICATION_CREDENTIALS_JSON  (JSON の中身を secret に格納)
 #   PIPELINE_PAT
@@ -46,7 +45,7 @@ concurrency:
 
 jobs:
   snapshot:
-    name: Snapshot 6 external systems
+    name: Snapshot 5 external systems
     runs-on: [self-hosted, salesanchor-vps]
     timeout-minutes: 30
 
@@ -79,16 +78,7 @@ jobs:
           bash scripts/snapshot/meta.sh
           sleep 5
 
-      # --- 2. Firebase snapshot ---
-      - name: Snapshot Firebase
-        env:
-          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
-          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-        run: |
-          bash scripts/snapshot/firebase.sh
-          sleep 5
-
-      # --- 3. GitHub snapshot ---
+      # --- 2. GitHub snapshot ---
       - name: Snapshot GitHub
         env:
           PIPELINE_PAT: ${{ secrets.PIPELINE_PAT }}
@@ -96,7 +86,7 @@ jobs:
           bash scripts/snapshot/github.sh
           sleep 5
 
-      # --- 4. Cloudflare snapshot ---
+      # --- 3. Cloudflare snapshot ---
       - name: Snapshot Cloudflare
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -104,7 +94,7 @@ jobs:
           bash scripts/snapshot/cloudflare.sh
           sleep 5
 
-      # --- 5. Discord snapshot ---
+      # --- 4. Discord snapshot ---
       - name: Snapshot Discord
         env:
           DISCORD_WEBHOOK_PR: ${{ secrets.DISCORD_WEBHOOK_PR }}
@@ -114,7 +104,7 @@ jobs:
           bash scripts/snapshot/discord.sh
           sleep 5
 
-      # --- 6. GCP snapshot ---
+      # --- 5. GCP snapshot ---
       - name: Snapshot GCP
         env:
           GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
