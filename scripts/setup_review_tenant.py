@@ -15,13 +15,12 @@ ADR-028: Meta App Review 撮影用テナント分離の実装。
       backend python /app/scripts/setup_review_tenant.py
 
 前提:
-  - firebase-credentials.json がコンテナ内 /app に存在すること
   - DATABASE_URL 環境変数が設定されていること
   - ALLOW_REVIEW_TENANT_SETUP=1 を環境変数で渡すこと（誤実行防止のガード）
 
 冪等性:
   - 複数回実行しても安全。既存テナント・ユーザーを重複作成しない。
-  - 既存 Firebase ユーザーがいる場合、パスワードは変更しない（デフォルト）。
+  - 既存ユーザーにパスワードがある場合、パスワードは変更しない（デフォルト）。
 
 注意:
   - review@salesanchor.jp が既存テナントに紐付いている場合、新テナントに付け替えます。
@@ -34,9 +33,10 @@ ADR-028: Meta App Review 撮影用テナント分離の実装。
 変更履歴:
   2026-05-14: ADR-028 初版作成
   2026-06-14: ADR-089 対応（customers 廃止 → _seed_demo_customers 削除）
-              ADR-138 対応（password_hash 廃止 → Firebase 専一認証）
+              ADR-138 対応（password_hash 廃止）
               パスワード保護: 既存ユーザーへの無条件 password reset を禁止、
               ALLOW_REVIEW_TENANT_PASSWORD_RESET=1 で明示許可した場合のみ変更可
+  2026-11-05: ADR-1013 便6 対応（自社ログインのパスワード password_argon2_hash を書く）
 """
 from __future__ import annotations
 
@@ -52,8 +52,6 @@ _APP_ROOT = Path(__file__).resolve().parent.parent
 if str(_APP_ROOT) not in sys.path:
     sys.path.insert(0, str(_APP_ROOT))
 
-import firebase_admin
-from firebase_admin import auth as firebase_auth, credentials, exceptions as fb_exceptions
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 
@@ -90,44 +88,24 @@ def _password_reset_requested() -> bool:
 
 
 # ---------------------------------------------------------------------------
-# Firebase
+# パスワード
 # ---------------------------------------------------------------------------
 
-def _init_firebase() -> None:
-    if firebase_admin._apps:
-        return
-    cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "/app/firebase-credentials.json")
-    if os.path.exists(cred_path):
-        cred = credentials.Certificate(cred_path)
-        firebase_admin.initialize_app(cred)
-    else:
-        firebase_admin.initialize_app()
+def _should_write_password(has_password: bool, reset: bool) -> bool:
+    """パスワードを書くか。リセット指定のときと、まだパスワードが無いときだけ書く。"""
+    return reset or not has_password
 
 
-def _firebase_get_uid(email: str) -> str | None:
-    try:
-        return firebase_auth.get_user_by_email(email).uid
-    except fb_exceptions.NotFoundError:
-        return None
-
-
-def _firebase_create_user(email: str, password: str, display_name: str) -> str:
-    user = firebase_auth.create_user(
-        email=email,
-        password=password,
-        display_name=display_name,
-        email_verified=False,
-    )
-    logger.info("Firebase: 新規作成 %s (uid=%s)", email, user.uid)
-    return user.uid
-
-
-def _firebase_update_password(uid: str, password: str) -> None:
-    firebase_auth.update_user(uid, password=password)
-    logger.warning(
-        "Firebase: uid=%s のパスワードを更新しました"
-        " (ALLOW_REVIEW_TENANT_PASSWORD_RESET=1 により実行)", uid
-    )
+async def _has_password(engine) -> bool:
+    """review 用の利用者がいて、自社ログインのパスワードを持っているか。"""
+    async with engine.begin() as conn:
+        # ADR-1018 段階③便C: public.users の読み書きは運営文脈で行う
+        await conn.execute(text("SET app.is_operator = 'true'"))
+        row = (await conn.execute(
+            text("SELECT password_argon2_hash FROM public.users WHERE email = :email"),
+            {"email": REVIEW_EMAIL},
+        )).first()
+    return row is not None and row[0] is not None
 
 
 # ---------------------------------------------------------------------------
@@ -228,7 +206,6 @@ async def _create_staff_record(
     email: str,
     display_name: str,
     role_id: int,
-    firebase_uid: str,
 ) -> int:
     """per-tenant staff レコードを作成する（冪等: 既存なら skip）。"""
     existing = (await conn.execute(
@@ -253,12 +230,12 @@ async def _create_staff_record(
             INSERT INTO staff (
                 tenant_id, user_id, staff_code,
                 surname_jp, given_name_jp,
-                primary_email, role_id, status, firebase_uid
+                primary_email, role_id, status
             )
             VALUES (
                 :tid, :uid, :code,
                 :sjp, :gjp,
-                :email, :rid, 'active', :fbuid
+                :email, :rid, 'active'
             )
             RETURNING id
         """),
@@ -270,7 +247,6 @@ async def _create_staff_record(
             "gjp": given_name_jp,
             "email": email,
             "rid": role_id,
-            "fbuid": firebase_uid,
         },
     )).first()
     staff_id = int(row[0])
@@ -286,14 +262,14 @@ async def _create_staff_record(
     return staff_id
 
 
-async def _setup_user(engine, tenant_id: int, firebase_uid: str) -> int:
+async def _setup_user(engine, tenant_id: int, password_hash: str | None) -> int:
     """public.users にユーザーを登録・付け替え、staff レコードを作成する。
 
     AC-3 適合: public.users.tenant_id の UPDATE は公開スキーマへの変更であり、
     既存業務テナント（tenant_004 等）のスキーマデータには一切手を加えない。
     既存テナントの staff レコードはそのまま保持する。
 
-    ADR-138: 認証は Firebase 専一。password_hash は保存しない。
+    password_hash を渡したときだけ、自社ログインのパスワード（password_argon2_hash）を書き、古いセッションを切る。
     """
     schema_name = f"tenant_{tenant_id:03d}"
 
@@ -347,9 +323,20 @@ async def _setup_user(engine, tenant_id: int, firebase_uid: str) -> int:
             user_id = int(row[0])
             logger.info("  public.users: 新規作成 %s (id=%d)", REVIEW_EMAIL, user_id)
 
-        # Firebase カスタムクレームを新テナントに更新
-        firebase_auth.set_custom_user_claims(firebase_uid, {"tenant_id": tenant_id})
-        logger.info("  Firebase: tenant_id=%d クレーム設定完了", tenant_id)
+        if password_hash is not None:
+            # 自社ログインのパスワード（ADR-1013）。password_changed_at を進めると更新用トークンが切れる
+            await conn.execute(
+                text("""
+                    UPDATE public.users
+                    SET password_argon2_hash = :h,
+                        password_changed_at = :at,
+                        failed_login_count = 0,
+                        locked_until = NULL
+                    WHERE id = :uid
+                """),
+                {"h": password_hash, "at": datetime.now(timezone.utc).replace(microsecond=0), "uid": user_id},
+            )
+            logger.info("  public.users: パスワードを設定 (id=%d)", user_id)
 
         # 新テナントのロール取得 + staff 作成
         role_id = await _resolve_role_id(conn, tenant_id, schema_name, "オーナー")
@@ -366,7 +353,6 @@ async def _setup_user(engine, tenant_id: int, firebase_uid: str) -> int:
             email=REVIEW_EMAIL,
             display_name=REVIEW_DISPLAY_NAME,
             role_id=role_id,
-            firebase_uid=firebase_uid,
         )
 
     return user_id
@@ -436,6 +422,7 @@ def _write_result_file(tenant_id: int, new_password: str | None) -> Path:
 
 async def main() -> None:
     from app.auth.utils import generate_password
+    from app.auth.passwords import hash_password
 
     db_url = os.getenv("DATABASE_URL")
     if not db_url:
@@ -452,11 +439,11 @@ async def main() -> None:
         if reset_password:
             logger.warning(
                 "ALLOW_REVIEW_TENANT_PASSWORD_RESET=1 検出:"
-                " Firebase パスワードをリセットします (email=%s)", REVIEW_EMAIL
+                " パスワードをリセットします (email=%s)", REVIEW_EMAIL
             )
         else:
             logger.info(
-                "通常モード: 既存 Firebase ユーザーのパスワードは変更しません。"
+                "通常モード: 既存ユーザーのパスワードは変更しません。"
                 " パスワードリセットが必要な場合は ALLOW_REVIEW_TENANT_PASSWORD_RESET=1 を付けて再実行してください。"
             )
 
@@ -466,29 +453,18 @@ async def main() -> None:
         # 2. スキーマ適用（冪等）
         await _apply_tenant_schema(engine, tenant_id)
 
-        # 3. Firebase ユーザー準備
+        # 3. パスワード準備（新しく作るとき・パスワードが無いとき・リセット指定のときだけ）
         new_password: str | None = None
-
-        _init_firebase()
-        existing_uid = _firebase_get_uid(REVIEW_EMAIL)
-        if existing_uid:
-            if reset_password:
-                new_password = generate_password()
-                _firebase_update_password(existing_uid, new_password)
-            else:
-                logger.info(
-                    "Firebase: 既存ユーザーのため password update skipped (uid=%s)",
-                    existing_uid,
-                )
-            firebase_uid = existing_uid
-        else:
-            # 新規ユーザーの場合はパスワード生成が必須
+        password_hash: str | None = None
+        has_password = await _has_password(engine)
+        if _should_write_password(has_password, reset_password):
             new_password = generate_password()
-            firebase_uid = _firebase_create_user(REVIEW_EMAIL, new_password, REVIEW_DISPLAY_NAME)
+            password_hash = hash_password(new_password)
+        else:
+            logger.info("既存ユーザーのため password update skipped (email=%s)", REVIEW_EMAIL)
 
-        # 4. DB ユーザー登録・テナント付け替え（冪等）
-        # ADR-138: 認証は Firebase 専一。password_hash は保存しない。
-        await _setup_user(engine, tenant_id, firebase_uid)
+        # 4. DB ユーザー登録・テナント付け替え・パスワード設定（冪等）
+        await _setup_user(engine, tenant_id, password_hash)
 
         # 5. Demo データシード
         # ADR-089: customers テーブルは廃止済み（2026-06-01 DROP）。

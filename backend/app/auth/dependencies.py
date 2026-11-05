@@ -1,15 +1,11 @@
-import asyncio
 import logging
 import os
 import secrets
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
-import firebase_admin
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from firebase_admin import auth as firebase_auth
-from firebase_admin import credentials
 from jose import JWTError
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -37,37 +33,12 @@ logger = logging.getLogger(__name__)
 
 security = HTTPBearer()
 
-# MFA強制フラグ（本番では必ずTrue）
-MFA_REQUIRED = os.getenv("MFA_REQUIRED", "true").lower() == "true"
-
 # CI/CD スモークテスト用サービスアカウント設定
 # SMOKE_SERVICE_TOKEN: 256-bit ランダムトークン（secrets.token_urlsafe(32)）。
-# 一致した場合は Firebase 検証・MFA チェックをスキップし SMOKE_SERVICE_EMAIL のユーザーを返す。
+# 一致した場合は札の検証をスキップし SMOKE_SERVICE_EMAIL のユーザーを返す。
 # どちらも未設定（空文字）の場合はこのパスは完全に不活性。
 _SMOKE_SERVICE_TOKEN: str = os.getenv("SMOKE_SERVICE_TOKEN", "")
 _SMOKE_SERVICE_EMAIL: str = os.getenv("SMOKE_SERVICE_EMAIL", "")
-
-# Firebase Admin SDK の初期化（スレッドセーフ）
-import threading
-
-_firebase_init_lock = threading.Lock()
-_firebase_initialized = False
-
-
-def _init_firebase():
-    global _firebase_initialized
-    if _firebase_initialized:
-        return
-    with _firebase_init_lock:
-        if _firebase_initialized:
-            return
-        cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-        if cred_path and os.path.exists(cred_path):
-            cred = credentials.Certificate(cred_path)
-            firebase_admin.initialize_app(cred)
-        else:
-            firebase_admin.initialize_app()
-        _firebase_initialized = True
 
 
 _INVALID_TOKEN_DETAIL = "無効な認証トークンです"
@@ -140,26 +111,23 @@ async def get_current_user(
     db: AsyncSession = Depends(get_db),
 ) -> User:
     """
-    Firebase IDトークンを検証し、対応するDBユーザーを返す。
+    自社アクセストークン（ADR-1013）を検証し、対応するDBユーザーを返す。
     全認証付きエンドポイントの共通Dependency。
 
     フロー:
       ① ブラックリスト確認（ログアウト済みトークンを拒否・免除ルートより必ず前）
-      ② Redisキャッシュからユーザー情報を取得
+      ② Redisキャッシュからユーザー情報を取得（自社トークンのときだけ）
          ヒット → IPロック判定をスキップして通過（巻き添え防止）
          ミス   → ③へ
       ③ IPブルートフォース確認（キャッシュミス時のみ）
-      ④ Firebase検証 → MFAチェック → DB検索 → 結果をキャッシュ
-         Firebase検証失敗時: IPに失敗記録を追加
+      ④ 自社トークンは自社検証へ。自社以外の札は、失敗として数えて 401
     """
-    _init_firebase()
-
     token = cred.credentials
     client_ip = _get_client_ip(request)
 
     # サービスアカウントバイパス（CI/CD スモークテスト専用・ADR-1017）
     # SMOKE_SERVICE_TOKEN が設定されており Bearer トークンと一致する場合、
-    # Firebase 検証・MFA チェックをスキップして SMOKE_SERVICE_EMAIL のユーザーを返す。
+    # 札の検証をスキップして SMOKE_SERVICE_EMAIL のユーザーを返す。
     # secrets.compare_digest でタイミング攻撃を防ぐ。
     if _SMOKE_SERVICE_TOKEN and _SMOKE_SERVICE_EMAIL and _is_smoke_token(token):
         _sa_result = await db.execute(
@@ -171,7 +139,7 @@ async def get_current_user(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="smoke service user not found",
             )
-        # 構造ガード（fail-closed）: この経路は Firebase・MFA を通らないため、
+        # 構造ガード（fail-closed）: この経路は札の検証を通らないため、
         # トークンが漏れた場合の被害は解決先ユーザーの権限で決まる。
         # super admin（全テナント横断の権限）を指していたら、ユーザーを返さず認証失敗にする。
         # 設定ミスや env の差し替えがあっても、smoke 経路が super admin を返すことは無い。
@@ -207,15 +175,13 @@ async def get_current_user(
             detail=_INVALID_TOKEN_DETAIL,
         )
 
-    # 自社ログイン中（AUTH_PROVIDER=self）は Firebase の札を受け付けない（docs/handoff/block-firebase-token/design.md）。
-    # 自社の札でなければ、②の一時記憶を使わず、③の回数確認の後で 401 にする。
-    firebase_closed = self_tokens.auth_provider() == "self"
+    # 自社の札でなければ、②の一時記憶を使わず、③の回数確認の後で 401 にする（docs/handoff/firebase-removal/design.md §5-2）。
     is_self_issuer = self_tokens.peek_issuer(token) == self_tokens.ISSUER
 
     # ② Redisキャッシュからユーザー情報を取得
     # キャッシュヒット: ブラックリスト未登録 & 既存セッション確認済み → IPロックをスキップ
     # 同一IPの他ユーザーによる攻撃でロックされても、正規ユーザーの操作を巻き添え遮断しない。
-    cached = await get_cached_jwt(token) if (is_self_issuer or not firebase_closed) else None
+    cached = await get_cached_jwt(token) if is_self_issuer else None
     if cached:
         email = cached["email"]
         result = await db.execute(
@@ -225,72 +191,20 @@ async def get_current_user(
         if user:
             return user
 
-    # ③ キャッシュミス時のみIPブルートフォース確認（Firebase検証前のゲート）
+    # ③ キャッシュミス時のみIPブルートフォース確認（札の検証前のゲート）
     if await check_auth_rate_limit(client_ip):
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="認証試行が上限に達しました。しばらく時間をおいてから再試行してください",
         )
 
-    # 自社トークン（iss=salesanchor）は Firebase 検証に回さず、自社検証へ振り分ける
+    # ④ 自社トークン（iss=salesanchor）は自社検証へ振り分ける
     if is_self_issuer:
         return await _authenticate_self_token(token, client_ip, db)
 
-    # 自社ログイン中は Firebase 検証に進まない（失敗として数え、同じ文言の 401）
-    if firebase_closed:
-        logger.warning("自社ログイン中に自社以外の札を拒否: ip=%s", client_ip)
-        raise await _reject_self_token(client_ip)
-
-    # ④ キャッシュミス: Firebase検証
-    try:
-        decoded = await asyncio.to_thread(firebase_auth.verify_id_token, token)
-    except Exception:
-        await record_auth_failure(client_ip)
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="無効な認証トークンです",
-        )
-
-    # MFA完了チェック: sign_in_second_factorクレームがないとMFA未完了
-    if MFA_REQUIRED:
-        firebase_claims = decoded.get("firebase", {})
-        second_factor = firebase_claims.get("sign_in_second_factor")
-        if not second_factor:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="MFA認証が必要です。認証アプリを設定してください",
-            )
-
-    email = decoded.get("email")
-    if not email:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="トークンにメール情報がありません",
-        )
-
-    result = await db.execute(
-        select(User).where(User.email == email, User.is_active == True)
-    )
-    user = result.scalar_one_or_none()
-
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="ユーザーが見つかりません",
-        )
-
-    # JWTカスタムクレームのtenant_idとDB上のtenant_idの一致を検証
-    jwt_tenant_id = decoded.get("tenant_id")
-    if jwt_tenant_id is not None and jwt_tenant_id != user.tenant_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="テナント情報が不正です",
-        )
-
-    # 検証結果をキャッシュ
-    await cache_jwt_result(token, {"email": email})
-
-    return user
+    # 自社以外の札は受け付けない（失敗として数え、同じ文言の 401）
+    logger.warning("自社以外の札を拒否: ip=%s", client_ip)
+    raise await _reject_self_token(client_ip)
 
 
 async def get_current_tenant(
@@ -738,7 +652,7 @@ class CurrentSession:
 async def resolve_current_session(request: Request, db: AsyncSession, user: User) -> CurrentSession:
     """アクセストークンの sid を唯一の出どころに、今の組と機械を引く。
 
-    sid の無いトークン（本便より前の発行・Firebase・smoke）は 403 session_upgrade_required
+    sid の無いトークン（本便より前の発行・smoke）は 403 session_upgrade_required
     （画面は更新を1回して再試行する）。組が全部失効していれば 401。
     """
     header = request.headers.get("authorization") or ""

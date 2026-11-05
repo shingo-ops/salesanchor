@@ -22,6 +22,7 @@ PR #1891 挙動確認: 実 Redis + 実 HTTP で巻き添え遮断修正を検証
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import json
 import os
@@ -69,7 +70,20 @@ def _ip_lock_key(ip: str) -> str:
 
 # テストで固定するIPとトークン
 TEST_IP = "10.0.0.1"
-CACHED_TOKEN = "cached-valid-token-abc123"
+_JWT_HEADER = b'{"alg":"HS256","typ":"JWT"}'
+
+
+def _b64(raw: bytes) -> str:
+    return base64.urlsafe_b64encode(raw).rstrip(b"=").decode()
+
+
+def _unsigned_jwt(claims: dict) -> str:
+    """署名なしの JWT の形の札（振り分けは iss だけを見るため、署名は要らない）。"""
+    return f"{_b64(_JWT_HEADER)}.{_b64(json.dumps(claims).encode())}.sig"
+
+
+# 一時記憶を使うのは自社の札（iss=salesanchor）だけ（docs/handoff/firebase-removal/design.md §5-2）
+CACHED_TOKEN = _unsigned_jwt({"iss": "salesanchor", "email": "shingo@example.com", "sub": "1"})
 UNCACHED_TOKEN = "no-cache-token-xyz789"
 IP_LOCK_COUNT = "15"  # AUTH_FAIL_MAX=10 を超える値
 

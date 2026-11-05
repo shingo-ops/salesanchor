@@ -18,7 +18,6 @@ from jose import JWTError, jwt
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-DEFAULT_AUTH_PROVIDER = "firebase"  # firebase | self
 DEFAULT_RP_ORIGIN = "https://app.salesanchor.jp"
 DEFAULT_RP_ID = "app.salesanchor.jp"
 ISSUER = "salesanchor"
@@ -30,15 +29,10 @@ MIN_SECRET_LENGTH = 32
 LOGIN_FAIL_LIMIT = 10
 LOGIN_LOCK_DURATION = timedelta(minutes=15)
 
-_VALID_PROVIDERS = ("firebase", "self")
 _ALGORITHM = "HS256"
 
 
 # ── 設定の読み取り（毎回 os.getenv） ─────────────────────────────
-
-def auth_provider() -> str:
-    return os.getenv("AUTH_PROVIDER", DEFAULT_AUTH_PROVIDER).strip().lower()
-
 
 def _secret() -> str:
     return os.getenv("AUTH_JWT_SECRET", "")
@@ -67,8 +61,8 @@ def _kid(secret: str) -> str:
 
 
 def is_issuance_enabled() -> bool:
-    """login・refresh・passkey/login を有効にするか。"""
-    return auth_provider() == "self" and bool(_secret())
+    """login・refresh・passkey/login を有効にするか（秘密があれば有効）。"""
+    return bool(_secret())
 
 
 def is_verification_enabled() -> bool:
@@ -78,11 +72,8 @@ def is_verification_enabled() -> bool:
 
 def validate_settings() -> None:
     """起動時検査。メッセージに秘密の値は入れない。"""
-    provider = auth_provider()
-    if provider not in _VALID_PROVIDERS:
-        raise RuntimeError("AUTH_PROVIDER must be one of: firebase, self")
-    if provider == "self" and not _secret():
-        raise RuntimeError("AUTH_JWT_SECRET is required when AUTH_PROVIDER=self")
+    if os.getenv("ENVIRONMENT", "development") == "production" and not _secret():
+        raise RuntimeError("AUTH_JWT_SECRET is required in production")
     for name, value in (("AUTH_JWT_SECRET", _secret()), ("AUTH_JWT_SECRET_PREVIOUS", _secret_previous())):
         if value and len(value) < MIN_SECRET_LENGTH:
             raise RuntimeError(f"{name} must be at least {MIN_SECRET_LENGTH} characters")

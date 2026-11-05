@@ -1,7 +1,6 @@
 """register と担当者の追加の初回設定メール（ADR-1013 便4a）のテスト。SQLite で動かす。
 
-self のとき: purpose=invite の鍵が 1 行・送信関数の呼び出し 1 回。
-firebase のとき: 鍵 0 行・送信 0 回。
+purpose=invite の鍵が 1 行・送信関数の呼び出し 1 回。
 """
 
 from datetime import timedelta
@@ -29,15 +28,8 @@ _TENANTS = sa.table("tenants", sa.column("id"))
 
 @pytest.fixture(autouse=True)
 def provider_self(monkeypatch):
-    monkeypatch.setenv("AUTH_PROVIDER", "self")
     monkeypatch.setenv("AUTH_JWT_SECRET", SECRET)
     monkeypatch.delenv("AUTH_RP_ORIGIN", raising=False)
-
-
-@pytest.fixture
-def provider_firebase(monkeypatch):
-    monkeypatch.setenv("AUTH_PROVIDER", "firebase")
-    monkeypatch.delenv("AUTH_JWT_SECRET", raising=False)
 
 
 @pytest.fixture(autouse=True)
@@ -131,16 +123,6 @@ async def test_register_self_creates_invite_key_and_sends_one_mail(http, db_sess
     to_addr, url = sender.call_args.args
     assert to_addr == EMAIL.lower()
     assert url.startswith(f"{ORIGIN}/reset-password?token=")
-
-
-async def test_register_firebase_creates_user_only(http, db_session, sender, provider_firebase):
-    resp = await _register(http)
-
-    assert resp.status_code == 201, resp.text
-    assert await _invite_rows(db_session) == []
-    user = (await db_session.execute(text("SELECT id FROM users WHERE lower(email) = :e"), {"e": EMAIL.lower()})).first()
-    assert user is not None
-    assert sender.call_count == 0
 
 
 async def test_register_wrong_origin_is_403(http, db_session, sender):

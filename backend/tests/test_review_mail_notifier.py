@@ -84,8 +84,8 @@ class TestBuildDiscordContent:
         content = notifier._build_discord_content("f@e.com", "sub", "date")
         assert mail_body not in content
 
-    def test_no_firebase_reset_link(self) -> None:
-        """Firebase パスワード再設定リンクは含まれてはならない。"""
+    def test_no_reset_link(self) -> None:
+        """パスワード再設定リンクは含まれてはならない。"""
         reset_link = "https://accounts.google.com/signin/action?oobCode=abc123xyz"
         content = notifier._build_discord_content("f@e.com", "sub", "date")
         assert reset_link not in content
@@ -98,7 +98,7 @@ class TestBuildDiscordContent:
         # 本文にのみ存在するはずの実際のコード値（件名には入らない長い乱数）
         actual_oob_code_value = "xK9mP2rT5uW8nQ1vB4cD7eF0gH3iJ6kL"
         content = notifier._build_discord_content(
-            "noreply@firebase.com",
+            "noreply@auth.example.com",
             "パスワードのリセット",  # 件名にoobCodeは含まない
             "date",
         )
@@ -321,12 +321,12 @@ class TestCheckAndNotify:
     def test_discord_payload_has_no_body_or_sensitive_data(self) -> None:
         """Discord への POST payload にメール本文・oobCode・再設定リンクが含まれない。
 
-        Firebase パスワード再設定メールを受信した場合でも、IMAP から取得するのは
+        パスワード再設定メールを受信した場合でも、IMAP から取得するのは
         BODY.PEEK[HEADER.FIELDS] のみ（件名・差出人・日時）。
         メール本文に含まれる oobCode 値や再設定リンクは Discord に出ない。
         """
         raw_header = _make_raw_header(
-            from_="noreply@firebase.com",
+            from_="noreply@auth.example.com",
             subject="Password Reset for your account",
         )
         mock_imap = MagicMock()
@@ -363,10 +363,10 @@ class TestCheckAndNotify:
         assert "email body" not in content.lower()
         # oobCode パラメータは含まない（本文から取得しないため）
         assert "oobCode=" not in content
-        # Firebase 再設定リンク全体は含まない
+        # 再設定リンク全体は含まない
         assert "https://accounts.google.com/signin" not in content
         # 通知の必要情報（差出人・件名）は含む
-        assert "noreply@firebase.com" in content
+        assert "noreply@auth.example.com" in content
         assert "Password Reset for your account" in content
 
 
