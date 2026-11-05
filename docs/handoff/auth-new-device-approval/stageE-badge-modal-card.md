@@ -76,13 +76,17 @@
   --notice-bell-badge-offset-y:   9px;              /* 鈴の絵の上から数の丸の上まで（Instagram 実測） */
 ```
 
-### 4-2. 色のトークン `frontend/src/index.css`（:120-122 の `--comp-badge-*-solid` の近く。ライトの `:root` の中だけ）
+### 4-2. 色のトークン `frontend/src/index.css`（ライトの `:root` の `--comp-badge-*-solid` の近く（:120-122）と、ダークの `:root.force-dark`（:217〜）の同じ並びの、2か所に同じ行を足す）
 
 ```css
   --comp-badge-count-ring-color: var(--bg-surface);  /* 数の丸の外枠＝後ろの地の色（Instagram は真後ろの色） */
 ```
 
-ダークの塊には足さない（`--bg-surface` がダークで #1e293b に変わるので、そのまま追う）。足したあとダーク表示で枠の色が `--bg-surface` のダークの値になることを §7 の K2 で確かめる。
+改訂（2026-11-05・実装の途中で判明）: 旧版は「ダークの塊には足さない」としていたが、commit 前の検査 `frontend/scripts/check-dark-parity.js`（:5「:root と :root.force-dark の CSS変数が完全に一致するか検査」、:56-58）が両方への定義を求めて止まる。検査を外すのは迂回になるので採らず、`:root.force-dark` にも同じ `var(--bg-surface)` を足す。値は同じ参照なので、見た目は旧版の意図（ダークでは `--bg-surface` のダークの値 #1e293b を追う）と変わらない。ダーク表示で枠の色が `--bg-surface` のダークの値になることを §7 の K2 で確かめる。
+
+付記（同じ実装の途中で判明・カードの範囲内の小さな直し）:
+- Badge の stories に新しく足す見本の並びの間隔は `gap: 'var(--space-2)'` と書く（`'8px'` の直書きは不可）。
+- NoticeBell.test.tsx の描画の補助関数は `renderBell(variant)` と引数を取り、数の丸の試験は `renderBell("floating")` で描く（スマホのタブは数の丸の見た目を変えないため）。
 
 ### 4-3. 金型 `frontend/src/components/Badge.tsx` と `Badge.css`
 
