@@ -266,7 +266,7 @@
 - 確認の API は `tenant.profile.edit` を要る（ボタンを押すと Discord に読みに行くため。読み取りのボタンと同じ）
 - 設計図の検査にもう 1 つ足す：文字のチャンネルの名前に空白・英大文字を入れない（Discord が文字のチャンネル名を小文字・ハイフンに直すため、直された名前と比べて「変わる」が出続けるのを防ぐ）
 - 実装カード：docs/handoff/discord-server-management/card-bin3a-blueprint-plan.md
-- 便3a カードの審査（2026-11-05、Opus の自己審査。独立した第二者の審査ではない）：APPROVE。根拠：カードに書いた行の目印（`discord_own_server.py` の guild_id の SQL・`test_realtime_topics.py:29`・`frontend/src/lib/api.ts:13-21` の `ApiError.status`・`backend/tools/export_openapi.py`・`scripts/check_test_schema_dup.py`・guards の 4 ファイル・画面の試験 2 ファイル）を実物で確かめた。審査で直した点：`discord_server_apply_runs` は試験の共通表（conftest）に無いので、行が増えない試験は `discord_server_snapshots` だけにし、書き込みが無いことは差分の検索で確かめる形にした。未解決：無し（tenant_1.json で 0 件になることは試験 §4-2 の 1 と本番の「確認する」で確かめる）
+- 便3a カードの審査（2026-11-05、Opus の自己審査。独立した第二者の審査ではない）：APPROVE。根拠：カードに書いた行の目印（`backend/app/routers/discord_own_server.py` の guild_id の SQL・`backend/tests/test_realtime_topics.py:29`・`frontend/src/lib/api.ts:13-21` の `ApiError.status`・`backend/tools/export_openapi.py`・`scripts/check_test_schema_dup.py`・guards の 4 ファイル・画面の試験 2 ファイル）を実物で確かめた。審査で直した点：`discord_server_apply_runs` は試験の共通表（conftest）に無いので、行が増えない試験は `discord_server_snapshots` だけにし、書き込みが無いことは差分の検索で確かめる形にした。未解決：無し（tenant_1.json で 0 件になることは試験 §4-2 の 1 と本番の「確認する」で確かめる）
 
 ## 9. 外部・過去事例の参照と我々への応用
 
