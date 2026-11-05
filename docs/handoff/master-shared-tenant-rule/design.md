@@ -247,3 +247,83 @@ recon §2〜§5 の食い違い D1〜D8 を、この型に揃える。
 ## 12. 設計審査（Architect）
 
 - 状態: まだ。クラウドで審査を動かし、APPROVE／REVISE／REJECT と根拠をこの節に書く。
+
+---
+
+## 13. 役割（ロール）の表の作り（追加・2026-11-05）
+
+### 13-0. PO の言葉
+
+- 「システム管理者は不要なので非表示テナント001と004だけで使うSAアプリのシステム管理をする人間専用のロール、2,ロールもロール権限もカスタマイズできるようにしたい」
+- 「DB構造はどう構成すると最適？必要であれば作り変えても良い」
+
+### 13-1. 今の作り（事実）
+
+| 物 | 置き場所 | 根拠 |
+|---|---|---|
+| 権限の一覧（128） | public.permissions（共用・1 か所） | `migrations/002_add_permissions_master.sql:9` |
+| 役割 | 各社の区画の roles（tenant_id・name・system_key・is_system ほか） | `backend/app/services/tenant.py:497` |
+| 役割の権限 | 各社の区画の role_permissions（role_id → roles、permission_id → public.permissions） | `backend/app/services/tenant.py:513` |
+| 人と役割 | 各社の区画の user_roles | `backend/app/services/tenant.py:521` |
+| 初期の 7 役割と権限 | コードの定数 DEFAULT_ROLES。会社を作るときに写す | `backend/app/services/tenant.py:50` `backend/app/services/tenant.py:1617` |
+| システム管理者を隠す決まり | TENANT_HIDDEN_SYSTEM_KEYS = {admin}。運営（super admin）以外の一覧に出さず、付けさせない | `backend/app/auth/system_roles.py:14` `backend/app/routers/roles.py:53` |
+| 名前でなく印で見分ける決まり | 役割の見分けは system_key（ADR-147 追補） | `backend/app/auth/system_roles.py:13` |
+| 権限を直せない役割 | is_system の役割は権限の変更を 403 | `backend/app/routers/roles.py:418` |
+
+- 本番: 7 つの名前は 5 社同じ。営業・CS の権限は会社ごとに違う。システム管理者を持つ人は 5 社とも 0 人（recon 追記）。
+- 役割の表の名前が出てくるコードは 24 ファイル（origin/main の git grep -c。recon 追記の根拠と同じ方法）。
+- Discord の役割同期: 本線と、10/20 以降に push された全部の枝で、Discord のコードがアプリの役割の表を読む変更は 0 件（`git log --remotes --since=2026-10-20 -G "role_permissions|user_roles"`）。作業中のものは未確認（§13-6）。
+
+### 13-2. 変更後（案 A を選ぶ）
+
+1. **ひな形は共用の表に置く（新設）**
+   - public.role_templates（code・name・color・priority・description・is_system・system_key・sort_order・is_active）。code は変わらない英字（owner・admin・manager・sales・cs・purchasing・shipping）。
+   - public.role_template_permissions（template_code → role_templates.code、permission_id → public.permissions.id）。
+   - 書けるのは運営だけ（会社の列が無い運営専用の表。§2-2 と同じ扱い）。会社の画面では見るだけ。
+   - コードの定数 DEFAULT_ROLES はやめる。初期値の正本を DB の 1 か所にする（コードと DB の二重を無くす）。
+2. **会社の役割は今の置き場所に残す**
+   - 各社の区画の roles・role_permissions・user_roles は、そのまま使う。
+   - roles に列を 1 つ足す: template_code（どのひな形から写したか。自社で一から作ったものは空）。
+   - 会社は、自社の役割の名前・色・説明・権限を直せる。足せる。消せる（人が付いている役割は消せない。今の決まりのまま）。
+   - オーナー（system_key=owner）だけは、今どおり権限を直せない・消せない。会社の持ち主が締め出されないため。
+3. **システム管理者**
+   - ひな形 admin に「写す会社を限る」印を付ける（role_templates に operator_only の列）。会社を作るときの写しから外す。
+   - 001・004 には残す。003・005・006 からは消す（持つ人 0 人。消す前に本番で 0 人をもう一度数える）。
+   - 隠す決まり（`backend/app/auth/system_roles.py:14`）は今のまま。001・004 でも運営以外には見えない。
+4. **会社を作るとき**: public.role_templates から operator_only でない行を写し、template_code を入れる。
+5. **Discord の役割とつなぐとき（将来・別の作業）**: 各社の区画に 1 つの対応の表を置く（role_id → roles.id、discord_role_id）。名前ではつながない。会社が名前を直しても切れない。対応はこの表 1 か所だけに書く。
+
+### 13-3. 案 A を選んだ理由（案 B と比べて）
+
+| 比べる点 | 案 A: 会社の役割は区画に残し、ひな形だけ共用 | 案 B: 役割を全部 public の 1 つの表に集める（tenant_id＋表の守り） |
+|---|---|---|
+| 直すコード | 会社を作る所と役割の画面（数ファイル） | 役割の表を読む 24 ファイルすべて＋人と役割・役割の権限の表も移す |
+| 会社の区画（ADR-072）との合い方 | 人と役割は会社の業務の一部で、区画の中のまま | 人と役割を public に出すことになる |
+| 共用は見られるが直せない（PO 要件） | ひな形は運営だけが書く。会社は写して直す | 表の守りで同じことができる |
+| 本番データの移し替え | 列 1 つ足して埋めるだけ | 5 社分の役割・権限・人の付け替えを全部移す |
+| 壊れたときの戻し方 | 新しい表と列を使うのをやめるだけ | 移し替えを逆に戻す必要がある |
+
+- 案 B の利点は「全部の選択肢を 1 つの型」に揃うこと。ただ役割は、人（user_roles）に結び付く会社の業務データの面が強い。共用にすべきなのは「初期値」だけで、案 A で足りる。
+- ADR-1061 の What 9（新しい選択肢の表は型に合わせる）の例外として、役割は「ひな形を共用・実物は会社の区画」と ADR に書き足す。
+
+### 13-4. リスクと対処
+
+| リスク | 対処 | 測り方 |
+|---|---|---|
+| 会社がオーナー以外の役割の権限を全部外し、誰も設定できなくなる | オーナーは直せない・消せないまま。オーナーは全権限 | pytest（オーナーの権限変更が 403） |
+| ひな形を運営が直しても、既存の会社の役割は変わらない（写しのため） | 仕様として画面に書く。直したひな形を既存の会社へ流すかは、運営画面の別の操作にする（残件） | — |
+| 003・005・006 のシステム管理者を消す時に、持つ人が増えていた | 消す前に本番で数える。0 でなければ止めて PO に聞く | 本番の読み取りの道（AUDIT 行） |
+
+### 13-5. 受け入れ基準（追加）
+
+| 基準 | 検証方法 |
+|---|---|
+| K11: 会社 001 で営業の役割の名前と権限を直せる。オーナーの権限は直せず 403 | pytest ＋ Evaluator（Playwright、テナント 001） |
+| K12: 新しい会社を作ると、役割は public.role_templates の operator_only でない 6 つの写しになり、template_code が入る | pytest |
+| K13: 003・005・006 にシステム管理者が 0 件、001・004 に 1 件 | 本番の読み取りの道で数える（AUDIT 行） |
+| K14: コードに初期の役割の定数が残っていない | CI の点検（git grep で DEFAULT_ROLES 0 件） |
+
+### 13-6. 未確認
+
+- アプリの役割と権限を Discord 自社サーバーへ同期する作業の場所。push 済みの枝には無い（§13-1）。担当セッションを PO に確かめる。分かるまで §13-2 の 5 は「約束」として書くだけにし、同期の作りとの突き合わせは済んでいない。
+- 001・004 でシステム管理者を誰に付けるか（今は 0 人）。
