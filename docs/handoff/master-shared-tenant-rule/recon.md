@@ -54,27 +54,27 @@ AUDIT ts=2026-11-05T05:23:52Z sha=39ee7fe6bba1 rows=9
 
 | 表 | 会社側の一覧に共用行が出るか | 会社側の書き込み先 | 書き込みに要る権限 |
 |---|---|---|---|
-| 状態ルール | 自社行の一覧（`backend/app/routers/conditions.py:142`）＋共用は別枠で読み取り専用（`conditions.py:160-181`、`frontend/src/pages/conditions/ConditionsPage.tsx:618-633`） | 自社行（`conditions.py:232`） | conditions.create/update/delete |
-| 単位 | 出ない（`backend/app/routers/units.py:4`・`:107`） | 自社行（`units.py:137`） | **suppliers.view だけ**（`units.py:127`・`:152`・`:186`） |
-| ステータス | 出ない（`backend/app/routers/status_master.py:4`・`:134`） | 自社行（`status_master.py:164`） | **suppliers.view だけ**（`status_master.py:154`・`:182`・`:216`） |
-| 備考 | 出る（`backend/app/routers/note_master.py:151-152`） | 自社行（`note_master.py:218`・`:247`） | **suppliers.view だけ**（`note_master.py:164`・`:199`・`:237`） |
-| 商品区分 | 出ない（`backend/app/routers/product_categories.py:4`・`:107`） | 自社行（`product_categories.py:140`） | product_categories.edit/delete |
-| 仕入元 | 一覧は自社行だけ（`backend/app/routers/suppliers.py:153`）、発注用の別一覧で共用を読む（`suppliers.py:166-186`） | 自社行（`suppliers.py:308`） | suppliers.create/update/delete |
-| 決済手数料 | 出る（`backend/app/routers/payment_fee_settings.py:70`） | 自社行（`payment_fee_settings.py:146`） | **suppliers.view だけ**（`payment_fee_settings.py:90`・`:126`・`:165`）。会社側の画面は無い（frontend に呼び出し 0 件） |
+| 状態ルール | 自社行の一覧（`backend/app/routers/conditions.py:142`）＋共用は別枠で読み取り専用（`conditions.py:160-181`、`frontend/src/pages/conditions/ConditionsPage.tsx:618-633`） | 自社行（`backend/app/routers/conditions.py:232`） | conditions.create/update/delete |
+| 単位 | 出ない（`backend/app/routers/units.py:4`・`:107`） | 自社行（`backend/app/routers/units.py:137`） | **suppliers.view だけ**（`backend/app/routers/units.py:127`・`:152`・`:186`） |
+| ステータス | 出ない（`backend/app/routers/status_master.py:4`・`:134`） | 自社行（`backend/app/routers/status_master.py:164`） | **suppliers.view だけ**（`backend/app/routers/status_master.py:154`・`:182`・`:216`） |
+| 備考 | 出る（`backend/app/routers/note_master.py:151-152`） | 自社行（`backend/app/routers/note_master.py:218`・`:247`） | **suppliers.view だけ**（`backend/app/routers/note_master.py:164`・`:199`・`:237`） |
+| 商品区分 | 出ない（`backend/app/routers/product_categories.py:4`・`:107`） | 自社行（`backend/app/routers/product_categories.py:140`） | product_categories.edit/delete |
+| 仕入元 | 一覧は自社行だけ（`backend/app/routers/suppliers.py:153`）、発注用の別一覧で共用を読む（`suppliers.py:166-186`） | 自社行（`backend/app/routers/suppliers.py:308`） | suppliers.create/update/delete |
+| 決済手数料 | 出る（`backend/app/routers/payment_fee_settings.py:70`） | 自社行（`backend/app/routers/payment_fee_settings.py:146`） | **suppliers.view だけ**（`backend/app/routers/payment_fee_settings.py:90`・`:126`・`:165`）。会社側の画面は無い（frontend に呼び出し 0 件） |
 | 商品 | 共用＋自社（表の守り） | 追加は共用行として作る（`backend/app/routers/products.py:364`）。運営の印を立てないので表の守りで止まる（コード読み。画面での実動は未確認） | products.create/update/delete。画面 `/admin/products` はメニューに無い（`frontend/src/App.tsx:230-232`） |
 | 連絡ツール（チャネル種別） | 共用行が無い。会社ごとの区画に表（`backend/app/services/tenant.py:1086`）を作り、新しい会社を作るときにコードの初期値6件を写す（`tenant.py:1584`、`backend/app/services/channel_masters.py:10`） | 自社区画（`backend/app/routers/conv_logs.py:493-553`） | 管理センター |
-| 失注・成約理由 | 共用行が無い。会社ごとの区画だけ（`tenant.py:825`）。初期値を入れるコードは見つからず | 自社区画（`backend/app/routers/close_reasons.py:85`） | leads.update。管理用の画面は無い（frontend に呼び出しはテストだけ） |
+| 失注・成約理由 | 共用行が無い。会社ごとの区画だけ（`backend/app/services/tenant.py:825`）。初期値を入れるコードは見つからず | 自社区画（`backend/app/routers/close_reasons.py:85`） | leads.update。管理用の画面は無い（frontend に呼び出しはテストだけ） |
 
 ## 5. LINE 解析が選択肢の表を読む場所（会社行を除いていない）
 
-`tcg_analyzer_svc.py`・`gemini_raw_copy_v102_product_first.py`・`line_analysis_v102_svc.py` の3ファイルに `tenant_id` の文字は 0 件（`git show origin/main:<file> | grep -n tenant_id` の結果が空）。
+`backend/app/services/tcg_analyzer_svc.py`・`backend/app/services/gemini_raw_copy_v102_product_first.py`・`backend/app/services/line_analysis_v102_svc.py` の3ファイルに `tenant_id` の文字は 0 件（`git show origin/main:<file> | grep -n tenant_id` の結果が空）。
 
 - 単位: `backend/app/services/tcg_analyzer_svc.py:66-78`、`backend/app/services/gemini_raw_copy_v102_product_first.py:158-164`
-- 状態ルールと別名: `tcg_analyzer_svc.py:136-137`・`:697`・`:716`・`:734`、`gemini_raw_copy_v102_product_first.py:157`、`line_analysis_v102_svc.py:874`・`:884`
-- 商品区分: `tcg_analyzer_svc.py:174`、`gemini_raw_copy_v102_product_first.py:165`
-- 備考: `tcg_analyzer_svc.py:1116`・`:1224`
-- ステータス: `tcg_analyzer_svc.py:1323`
-- 商品: `tcg_analyzer_svc.py:98`・`:1446-1461`（商品は表の守りで共用＋接続中の会社の行に絞られる）
+- 状態ルールと別名: `backend/app/services/tcg_analyzer_svc.py:136-137`・`:697`・`:716`・`:734`、`backend/app/services/gemini_raw_copy_v102_product_first.py:157`、`backend/app/services/line_analysis_v102_svc.py:874`・`:884`
+- 商品区分: `backend/app/services/tcg_analyzer_svc.py:174`、`backend/app/services/gemini_raw_copy_v102_product_first.py:165`
+- 備考: `backend/app/services/tcg_analyzer_svc.py:1116`・`:1224`
+- ステータス: `backend/app/services/tcg_analyzer_svc.py:1323`
+- 商品: `backend/app/services/tcg_analyzer_svc.py:98`・`:1446-1461`（商品は表の守りで共用＋接続中の会社の行に絞られる）
 - このほかに選択肢の表を読む場所が services/tasks に合計 128 行ある（scratch inv_analysis_readers.txt）。1 行ずつの点検はまだ。
 
 今の影響: 2. の表のとおり、解析が読む表の会社行は 0 行（仕入元の 1 行を除く）。だから今日の解析結果は変わっていない。会社が管理センターで1行足すと、その行が全社の解析に入る作りになっている。
@@ -117,4 +117,4 @@ AUDIT ts=2026-11-05T05:23:52Z sha=39ee7fe6bba1 rows=9
 - 128 行の読み取り箇所のうち 5. に挙げた以外。
 - 備考・決済手数料の会社側の画面で、共用行に編集ボタンが出るか（窓口は自社行しか更新しないので、押しても 404 になる作り）。
 - 失注・成約理由の本番の件数。
-- 発送地域・送料（`tenant.py:770`・`:782`）を「選択肢の表」に入れるか。
+- 発送地域・送料（`backend/app/services/tenant.py:770`・`:782`）を「選択肢の表」に入れるか。

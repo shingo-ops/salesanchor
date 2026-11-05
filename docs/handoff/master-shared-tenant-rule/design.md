@@ -121,12 +121,12 @@ recon §2〜§5 の食い違い D1〜D8 を、この型に揃える。
 
 ### 3-6. 連絡ツールの共用化（D5）
 
-- 前: 会社の区画ごとに表（`backend/app/services/tenant.py:1086`）があり、会社を作るときに初期値 6 つを写す（`tenant.py:1584`、`backend/app/services/channel_masters.py:10-17`）。本番は 5 社×6 行＝30 行（recon §6）。
+- 前: 会社の区画ごとに表（`backend/app/services/tenant.py:1086`）があり、会社を作るときに初期値 6 つを写す（`backend/app/services/tenant.py:1584`、`backend/app/services/channel_masters.py:10-17`）。本番は 5 社×6 行＝30 行（recon §6）。
 - 後:
   - 表 `public.channel_masters`（§1 の型）を新設する。共用の初期値 5 つ: messenger・instagram・whatsapp・discord・email（表示は Messenger・Instagram・WhatsApp・Discord・メール）。
   - 本番の 30 行の写しは、すべて今の初期値と同じ 6 行（recon §6）。会社が足した行は無い。だから会社の行として移す行は 0 行。phone・in_person を使うリードは 0 件。
   - 読む所・書く所（`backend/app/routers/conv_logs.py:190`・`:493-553`、`backend/app/routers/leads.py:190-220`、`frontend/src/components/ChannelTypeCombobox.tsx:44`）を新しい表に向ける。
-  - 会社を作るときの写し（`tenant.py:1584`）をやめる。
+  - 会社を作るときの写し（`backend/app/services/tenant.py:1584`）をやめる。
   - 会社の区画の古い表は、新しい表に切り替えて動きを確かめた後の便で消す（消すのは PO の GO が要る）。
   - `ACTIVE_CHANNEL_PLATFORMS`（`backend/app/services/channel_masters.py:19`）は、コードの初期値から作られている。これを使う所を実装の前に全部数え、新しい表を読む形に替える（§7 の S1）。
   - メールの `connection_type`（自動か手動か）の扱いは、今の表の列の意味を実装カードで確かめて決める（未確認）。
