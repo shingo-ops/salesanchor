@@ -1,7 +1,7 @@
 # design: 予定を Google に送る処理の会社付け直し漏れ（作成・削除）
 
 - recon: `docs/handoff/calendar-sync-tenant-reset/recon.md`
-- 設計審査: `docs/handoff/calendar-sync-tenant-reset/design-review.md`（1回目 REVISE・R1〜R6 を本版で反映）
+- 設計審査: `docs/handoff/calendar-sync-tenant-reset/design-review.md`（1回目 REVISE・R1〜R6、2回目 REVISE・N1〜N3 を本版で反映）
 - 関係 ADR: ADR-072（commit 直後に reset）／ADR-131（返却時に空へ戻す）／ADR-1018（設定表の RLS）／ADR-1057（つないだ本人の予定だけ送る）／ADR-1060（Meet）
 - 新しい ADR は作らない（ADR-072 の決まりに実装を寄せる直しで、新しい判断を含まない）
 
@@ -50,7 +50,7 @@
 `reset_tenant_context` は既に `calendar_service.py:29` で import 済み。
 
 ## 5. 試験の設計（実 PostgreSQL・RLS）
-- 土台: `backend/tests/test_google_config_rls.py:14-64`（環境変数が無ければ skip・admin engine と app engine・app は `poolclass=NullPool`）と、`backend/tests/test_lead_merge_pg.py:58-73,88-93`（全テナントを回す migration を試験のスキーマだけに限って流す形）
+- 土台: `backend/tests/test_google_config_rls.py:14-64`（環境変数が無ければ skip・admin engine と app engine・app は `poolclass=NullPool`）と、`backend/tests/test_lead_merge_pg.py:52-65,303-309`（全テナントを回す migration を試験のスキーマだけに限って流す形）
 - テナント: **978**（スキーマ `tenant_978`）。`backend/tests` に 978 の使用が無いことを grep で確認済み（982 は `test_suppliers_rls.py:39` と重なるため使わない）
 - 土台の登録（R1）: `backend/tests/rls_bootstrap.py` の `_TENANT_LOOP_MIGRATIONS` に次の4行を足す（値はテナントを選ぶ条件の出現回数。design-review の生出力どおり）
   - `"078_create_calendar_events_tenant.sql": 2`
@@ -59,8 +59,8 @@
   - `"20261104_161223_add_calendar_events_meet_url.sql": 1`
 - 準備の順番:
   1. `bootstrap_tenant_schema(admin_engine, 978)`
-  2. `public_bootstrap_lock(admin_engine)` の中で `admin_engine.begin()` の接続を使い、`_apply_migration_on_conn` で次の順に流す: `076_add_google_calendar_config.sql`（schema_name なし）→ `077_calendar_sync_mode_and_webhook_subscriptions.sql`（なし）→ `20261016_010000_add_google_config_rls.sql`（なし）→ `078_create_calendar_events_tenant.sql`（`schema_name="tenant_978"`）→ `20260621_020000_…`（同）→ `20261103_200000_…`（同。前半の public 部分も一緒に入る）→ `20261104_161223_…`（同）
-  3. admin で `public.users` に試験の user 2人（つないだ本人 97801・ほかの人 97802、tenant_id=978）を入れる。列は `rls_bootstrap.py` の `_ensure_public_users` の INSERT と同じ列で、`ON CONFLICT (id) DO NOTHING`（R3。076 の `connected_by_user_id` と 078 の `user_id`・`created_by_user_id` の外部キーのため）
+  2. `public_bootstrap_lock(admin_engine)` の中で `admin_engine.begin()` の接続を使い、`_apply_migration_on_conn` で次の順に流す: `076_add_google_calendar_config.sql`（schema_name なし）→ `077_calendar_sync_mode_and_webhook_subscriptions.sql`（なし）→ `20260606_010000_add_google_drive_config.sql`（なし。次の 20261016 が IF EXISTS なしで drive 設定表を ALTER するため。既存 `test_google_config_rls.py:45-49` と同じ並び。2回目審査 N1）→ `20261016_010000_add_google_config_rls.sql`（なし）→ `078_create_calendar_events_tenant.sql`（`schema_name="tenant_978"`）→ `20260621_020000_…`（同）→ `20261103_200000_…`（同。前半の public 部分も一緒に入る）→ `20261104_161223_…`（同）
+  3. admin で `public.users` に試験の user 2人（つないだ本人 97801・ほかの人 97802、tenant_id=978）を入れる。列は `rls_bootstrap.py` の `_ensure_public_users` の INSERT と同じ列で、`ON CONFLICT (id) DO NOTHING`。値の firebase_uid・username・email は人ごとに別の値（例 `cal-reset-97801`・`cal-reset-97801@example.com`）にする（firebase_uid は UNIQUE `rls_bootstrap.py:238` のため、id=999 の値 `'test-user'` を写さない。2回目審査 N3）（R3。076 の `connected_by_user_id` と 078 の `user_id`・`created_by_user_id` の外部キーのため）
   4. admin で設定表 `public.tenant_google_calendar_config` に tenant_id=978・sync_mode='bidirectional'・connected_by_user_id=97801・`access_token_encrypted='x'`・`refresh_token_encrypted='y'`・calendar_id='primary' を入れる（先に tenant_id=978 の行を消す）
 - app session: `async_sessionmaker(app_engine, class_=AsyncSession, expire_on_commit=False)`（`backend/app/database.py` と同じ設定）で作り、最初に `set_tenant_context(db, 978)`
 - 偽物: `unittest.mock.patch("app.services.google_calendar.create_event", new=AsyncMock(...))`／`delete_event` も同じ。`calendar_service.py` は関数の中で `from app.services import google_calendar as cal_svc` してから属性を呼ぶので、この差し替えが効く（design-review (3)）
