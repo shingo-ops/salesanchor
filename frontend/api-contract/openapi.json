@@ -8120,6 +8120,11 @@
       },
       "CreateEventBody": {
         "properties": {
+          "add_meet": {
+            "default": false,
+            "title": "Add Meet",
+            "type": "boolean"
+          },
           "calendar_type": {
             "default": "shared",
             "title": "Calendar Type",
@@ -23227,6 +23232,29 @@
         "title": "OwnInventoryUpdate",
         "type": "object"
       },
+      "OwnServerSnapshotResponse": {
+        "properties": {
+          "channel_count": {
+            "title": "Channel Count",
+            "type": "integer"
+          },
+          "role_count": {
+            "title": "Role Count",
+            "type": "integer"
+          },
+          "snapshot_id": {
+            "title": "Snapshot Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "snapshot_id",
+          "role_count",
+          "channel_count"
+        ],
+        "title": "OwnServerSnapshotResponse",
+        "type": "object"
+      },
       "OwnerRosterItem": {
         "properties": {
           "color": {
@@ -37800,6 +37828,17 @@
       },
       "UpdateEventBody": {
         "properties": {
+          "add_meet": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Add Meet"
+          },
           "calendar_type": {
             "anyOf": [
               {
@@ -40084,6 +40123,33 @@
           }
         ],
         "summary": "Run Auto Setup",
+        "tags": [
+          "discord"
+        ]
+      }
+    },
+    "/api/v1/admin/discord/own-server/snapshot": {
+      "post": {
+        "description": "自社用サーバーのロールとチャンネルを読み、記録に 1 行入れる。",
+        "operationId": "take_own_server_snapshot_api_v1_admin_discord_own_server_snapshot_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnServerSnapshotResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Take Own Server Snapshot",
         "tags": [
           "discord"
         ]

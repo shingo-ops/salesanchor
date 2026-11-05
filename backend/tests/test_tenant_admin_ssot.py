@@ -98,7 +98,7 @@ class TestCalendarEventOwnership:
     @staticmethod
     def _db_with_event(created_by: int) -> AsyncMock:
         result = MagicMock()
-        result.first.return_value = (created_by, "shared", None)
+        result.first.return_value = (created_by, "shared", None, None, None)
         db = AsyncMock()
         db.execute = AsyncMock(return_value=result)
         return db

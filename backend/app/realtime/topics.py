@@ -101,6 +101,7 @@ NO_SIGNAL_ROUTES: dict[tuple[str, str], str] = {
     ("PUT", "/api/v1/admin/discord-ticket-config"): _PENDING,
     ("POST", "/api/v1/admin/discord-ticket-config/deploy-button"): _PENDING,
     ("POST", "/api/v1/admin/discord/auto-setup"): _PENDING,
+    ("POST", "/api/v1/admin/discord/own-server/snapshot"): _PENDING,
     ("PUT", "/api/v1/admin/inventory-visibility/roles/{role_id}"): _PENDING,
     ("PUT", "/api/v1/admin/tenant-policy"): _PENDING,
     ("PUT", "/api/v1/admin/tenant-profile"): _PENDING,

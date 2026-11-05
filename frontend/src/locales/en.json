@@ -3263,6 +3263,9 @@
     "weekView": "Week",
     "listView": "Schedule",
     "moreOptions": "More options",
+    "addMeet": "Add Google Meet",
+    "joinMeet": "Join with Google Meet",
+    "meetFailed": "Couldn't add Google Meet",
     "shortcuts": {
       "title": "Keyboard shortcuts",
       "today": "Go to today",
@@ -3501,7 +3504,10 @@
     "connectError": "Could not register the server",
     "guildAlreadyRegistered": "This server is already registered",
     "requestFailed": "Could not complete the request",
-    "loadError": "Could not load"
+    "loadError": "Could not load",
+    "snapshot": "Read the current server",
+    "snapshotDone": "Read the server ({{roles}} roles, {{channels}} channels)",
+    "snapshotFailed": "Could not read the server"
   },
   "discordAutoSetup": {
     "title": "Auto setup",

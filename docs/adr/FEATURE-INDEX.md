@@ -31,7 +31,7 @@
 | 権限 / role / 認証 / Firebase | ADR-023 ／ ADR-032 | 認証3層同期・カスタム認証ドメイン |
 | password_hash / bcrypt / 認証情報 DB 保存 | **ADR-138** | password_hash 列廃止（Firebase 専一）。列削除 recon では ORM モデル定義確認必須 |
 | ログイン / パスキー / WebAuthn / 生体認証 / パスワード再設定 / 自社認証 | **ADR-1013** | Firebase から自社サーバーへ移行・Argon2id・パスキー・再設定メール。ADR-138 を覆す |
-| カレンダー / 予定 / Google カレンダー / sync-mode / 取り込み | **ADR-1057** ／ ADR-1018 | 接続は会社で1つ・送るのはつないだ本人の予定だけ・Google の予定を直接扱う口は本人だけ・Google→アプリの取り込みは止める |
+| カレンダー / 予定 / Google カレンダー / sync-mode / 取り込み / Google Meet / meet_url | **ADR-1057** ／ ADR-1059 ／ **ADR-1060** ／ ADR-1018 | 接続は会社で1つ・送るのはつないだ本人の予定だけ・Google の予定を直接扱う口は本人だけ・取り込みは双方向のとき15分おき（ADR-1059）・Meet は本人の予定だけ、URL は calendar_events.meet_url の1か所（ADR-1060） |
 | 管理者の2段階の確認 / 二段階認証 / MFA / TOTP / 認証アプリ / 新しい機器の承認 | **ADR-1048** | 管理者はパスキーかパスワード＋6桁が必須・初めての機器はいつもの機器で番号を選んで承認 |
 
 ## 横断・運用・プロセス

@@ -101,6 +101,9 @@ class OwnerRosterResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+MEET_NOT_ALLOWED_DETAIL = "Google Meet は Google カレンダーをつないだ本人の予定にだけ付けられます"
+
+
 class CreateEventBody(BaseModel):
     title: str
     start_datetime: str
@@ -109,6 +112,7 @@ class CreateEventBody(BaseModel):
     description: Optional[str] = None
     location: Optional[str] = None
     is_all_day: bool = False
+    add_meet: bool = False
 
 
 class UpdateEventBody(BaseModel):
@@ -119,6 +123,7 @@ class UpdateEventBody(BaseModel):
     location: Optional[str] = None
     is_all_day: Optional[bool] = None
     calendar_type: Optional[str] = None
+    add_meet: Optional[bool] = None
 
 
 class SyncModeBody(BaseModel):
@@ -349,6 +354,13 @@ async def create_event(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="calendar_type は 'shared' または 'personal' を指定してください",
         )
+    # Meet は Google をつないだ本人の予定にだけ付ける。判定はサービスを呼ぶ try の前で行う
+    # （下の except Exception が HTTPException を 500 に変えてしまうため）
+    if body.add_meet and not await cal_svc.can_add_meet(db, tenant_id, user.id):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=MEET_NOT_ALLOWED_DETAIL,
+        )
     try:
         result = await cal_svc.create_event(
             db,
@@ -388,7 +400,10 @@ async def update_event(
 
     # 権限確認: 自分のイベントか tenant admin（owner / admin のシステムロール）のみ
     row = await db.execute(
-        text("SELECT created_by_user_id, calendar_type, user_id FROM calendar_events WHERE id = :id"),
+        text(
+            "SELECT created_by_user_id, calendar_type, user_id, google_event_id, meet_url"
+            " FROM calendar_events WHERE id = :id"
+        ),
         {"id": event_id},
     )
     record = row.first()
@@ -396,6 +411,7 @@ async def update_event(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="イベントが見つかりません")
 
     created_by, event_calendar_type, event_user_id = record[0], record[1], record[2]
+    event_google_id, event_meet_url = record[3], record[4]
     event_owner = event_user_id if event_user_id is not None else created_by
     # 他人の「自分だけ」予定は存在しないものとして扱う（管理者でも）
     if event_calendar_type == "personal" and event_owner != user.id:
@@ -417,6 +433,24 @@ async def update_event(
             )
         if payload["calendar_type"] == "personal":
             payload["user_id"] = user.id
+
+    if payload.get("add_meet"):
+        # Meet を付けてよいのは、つないだ本人が持ち主の、Google に送ってある予定だけ。
+        # 欠けていれば 422 で何も変えない（判定は try の前。上の create_event と同じ理由）
+        if (
+            not await cal_svc.can_add_meet(db, tenant_id, user.id)
+            or not event_google_id
+            or event_owner != user.id
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=MEET_NOT_ALLOWED_DETAIL,
+            )
+        if event_meet_url:
+            # すでに Meet がある。頼み直さない
+            payload.pop("add_meet")
+            if not payload:
+                return {"id": event_id, "meet_url": event_meet_url}
 
     try:
         result = await cal_svc.update_event(

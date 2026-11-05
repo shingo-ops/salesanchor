@@ -310,6 +310,8 @@ async def test_engine():
             statement = statement.replace("public.data_access_events", "data_access_events")
         if "public.tenant_discord_config" in statement:
             statement = statement.replace("public.tenant_discord_config", "tenant_discord_config")
+        if "public.discord_server_snapshots" in statement:
+            statement = statement.replace("public.discord_server_snapshots", "discord_server_snapshots")
         if "public.registration_tokens" in statement:
             statement = statement.replace("public.registration_tokens", "registration_tokens")
         if "public.tenants" in statement:
@@ -1238,6 +1240,17 @@ async def setup_test_db(test_engine):
                 UNIQUE (guild_id)
             )
         """))
+        # discord-server-management 便2: 自社用サーバーの今の姿（本番は JSONB。SQLite は文字で持つ）
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS discord_server_snapshots (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tenant_id INTEGER NOT NULL,
+                purpose VARCHAR(16) NOT NULL CHECK (purpose = 'own'),
+                body TEXT NOT NULL,
+                taken_by INTEGER,
+                taken_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
         await conn.execute(text("""
             CREATE TABLE IF NOT EXISTS tenant_profile (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1728,6 +1741,7 @@ async def db_session(test_engine, setup_test_db):
         # Sprint 8: tenant_profile
         await conn.execute(text("DELETE FROM tenant_profile"))
         # Sprint D2: tenant_discord_config
+        await conn.execute(text("DELETE FROM discord_server_snapshots"))
         await conn.execute(text("DELETE FROM tenant_discord_config"))
         await conn.execute(text("DELETE FROM order_commissions"))
         await conn.execute(text("DELETE FROM tenant_commission_settings"))
