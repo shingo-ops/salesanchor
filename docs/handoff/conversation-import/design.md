@@ -97,7 +97,7 @@
 
 - リードが同じテナントに無い → 404（leads.py:974 と同じ確かめ方）。
 - 表の名前は `tenant_table_ref(db, tenant_id, "meta_messages")`（backend/app/auth/dependencies.py:409）で作る。leads.py の既存の書き方と同じ。
-- commit の後、`publish_inbox_update` より前に `reset_tenant_context(db, tenant_id)`（backend/app/auth/dependencies.py:166）を呼ぶ（ADR-072。commit の後は search_path が外れるため）。
+- commit の後、`publish_inbox_update` より前に `reset_tenant_context(db, tenant_id)`（backend/app/auth/dependencies.py:339）を呼ぶ（ADR-072。commit の後は search_path が外れるため）。
 - リードの検索と新規作成は既存の `GET /leads?search=` と `POST /leads` を使う（新しい API を作らない・recon §8）。
 
 ### 4-6 取り込んだ会話への返信を止める
@@ -112,7 +112,7 @@
 ### 4-7 lead_channels は作らない
 
 - 取り込みは lead_channels（Facebook の相手番号とリードの結びつき）を作らない。本当の相手番号を持たないため。
-- 後で本物の Facebook 接続から同じお客さんが来ると、Webhook が別のリードを作る（webhook.py:583）。そのときは既存のリードの統合（ADR-1049）で1つにする（§7 R2）。
+- 後で本物の Facebook 接続から同じお客さんが来ると、Webhook が別のリードを作る（webhook.py:584）。そのときは既存のリードの統合（ADR-1049）で1つにする（§7 R2）。
 
 ### 4-8 会話画面で新しい方の50件を出す（K2 の前提・便1）
 
@@ -174,11 +174,11 @@
 | R1 | Facebook の画面の時刻が JST でない | §4-3 の savedAt との見張り＋下見で最初・最後の時刻を見せる |
 | R2 | 後で本物の Facebook 接続が来ると別リードができる | 統合（ADR-1049）で1つにする。取り込みの行は message_id が `fbcap-1:` で始まり、本物の行（m_ で始まる）と重ならない |
 | R3 | 週次の助言（analytics.py:2255）は conversation_logs しか読まず、取り込みの会話を数えない | 既存の分散であり、会話の一元化の本体（conversation-unification）で直す。本設計で conversation_logs に写すと分散が増えるため写さない |
-| R4 | 会話画面の直し（§4-8）が本物の会話の見え方も変える | 新しい方が出るのが正しい形。自動試験で before の続き読みを確かめる |
+| R4 | 会話画面の直し（§4-8）が本物の会話の見え方も変える。既存の試験 backend/tests/test_messages.py:335-354 は「limit=2 で古い方の msg1・msg2」と「before=id の大小」を前提にしており、そのままでは落ちる | 新しい方が出るのが正しい形。便1でこの試験の期待値を「新しい方の msg4・msg5」と「(created_at, id) より前」に書き換える（試験を消さない）。自動試験で before の続き読みを確かめる |
 | R5 | 保存ファイルの id が長い期間で変わる | lead_id を挟んだ message_id で、同じリードに同じファイルなら重ならない。id が変わった場合は重複が入る。【未確認】のため、段階1の実運用1か月後に重複の有無を数える（§9） |
 | R6 | お客さんの会話の中身が git・PR・ログに出る | 試験は架空の文だけ。取り込みのログに本文を出さない（件数と lead_id だけ） |
 | R7 | 成約しやすさの分析は、リードの窓口が messenger か instagram の会話しか数えない（analytics.py:2491）。tenant_004 のリードは窓口が unknown 54件・discord 2件で、取り込んでも数えられない（recon §11） | 【PO 判断待ち】案 a: 窓口が unknown か空のリードに取り込むとき、窓口を messenger に変える（下見に表示・messenger は tenant_004 で有効と確認済み）。案 b: 下見で注意だけ出し、担当者がリード編集で変える。案 c: 分析を会話の窓口で数えるよう直す（本設計の対象外）。決まるまで便2の実装カードは出さない |
-| R8 | 試験用の表の形（7ファイル）に is_manual 等の列が無く、試験が落ちる | 便2で7ファイルに列を足す（§9） |
+| R8 | 試験用の表の形（8ファイル）に is_manual 等の列が無く、試験が落ちる | 便2で8ファイルに列を足す（§9） |
 
 ## 8. 外部・過去事例の参照と我々への応用
 
@@ -190,8 +190,8 @@
 
 | 便 | 中身 | 触るファイル |
 |---|---|---|
-| 便1 | 会話画面で新しい方を出す（§4-8） | backend/app/routers/leads.py、frontend/src/pages/inbox/InboxMessageThread.tsx、frontend/src/pages/inbox/useInboxState.ts、frontend/src/lib/messages.ts、locales、試験 |
-| 便2 | 変換と API・返信の見張り（文字と画像の2本・§4-1〜4-7） | backend/app/services/conversation_import/、backend/app/routers/conversation_import.py、backend/app/main.py（router 登録・conv_logs の登録 main.py:716 の近く）、backend/app/routers/leads.py、試験。試験用の表の形に is_manual・recorded_by_user_id・occurred_at を足す7ファイル（審査 M2）: backend/tests/conftest.py（:155 と :2038）、backend/tests/test_conversations.py、backend/tests/test_discord_inbox.py、backend/tests/test_message_image_send.py、backend/tests/test_message_send.py、backend/tests/test_messages.py、backend/tests/test_webhook_instagram.py |
+| 便1 | 会話画面で新しい方を出す（§4-8） | backend/app/routers/leads.py、backend/tests/test_messages.py（:335-354 の期待値を書き換え・§7 R4）、frontend/src/pages/inbox/InboxMessageThread.tsx、frontend/src/pages/inbox/useInboxState.ts、frontend/src/lib/messages.ts、locales、試験 |
+| 便2 | 変換と API・返信の見張り（文字と画像の2本・§4-1〜4-7） | backend/app/services/conversation_import/、backend/app/routers/conversation_import.py、backend/app/main.py（router 登録・conv_logs の登録 main.py:716 の近く）、backend/app/routers/leads.py、試験。試験用の表の形に is_manual・recorded_by_user_id・occurred_at を足す8ファイル（審査 M2・2回目 N1）: backend/tests/conftest.py（:156 と :2038）、backend/tests/test_conversations.py（:114）、backend/tests/test_discord_inbox.py（:99）、backend/tests/test_message_image_send.py（:98）、backend/tests/test_message_send.py（:116）、backend/tests/test_messages.py（:115）、backend/tests/test_outbound_draft_send.py（:94）、backend/tests/test_webhook_instagram.py（:94）。conftest.py:2089 の分析用の表（LEAD_FACTORS_MSG_DDL）は足さない（分析の SELECT は is_manual を読まず、本設計は analytics.py を触らないため） |
 | 便3 | 取り込み画面（§4-9） | frontend/src/pages/inbox/ConversationImportPage.tsx、frontend/src/App.tsx、frontend/src/pages/inbox/InboxPage.tsx、locales、試験 |
 
 - DB の形は変えない（migrations なし）。

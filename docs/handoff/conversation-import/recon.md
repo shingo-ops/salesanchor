@@ -44,7 +44,7 @@
 - 【事実】migrations/20260622_010000_add_meta_messages_master_history_columns.sql:40 `occurred_at TIMESTAMPTZ`、:42 `recorded_by_user_id INTEGER`、:43 `is_manual BOOLEAN`。統合の受け皿の列は meta_messages に既にある。
 - 【事実】migrations/20260622_020000_migrate_conv_only_into_meta_messages.sql:2-15 で conversation_logs だけにあった行を meta_messages へ移した。meta_messages を正本にする向きで既に動いている。
 - 【事実】is_manual は backend/app で読み書きが0件（`git grep -c is_manual origin/main -- backend/app` が0）。
-- 【事実】受信（Webhook）: backend/app/routers/webhook.py:583 `_persist_meta_message` が lead_channels からリードを探すか作り、:723 `ON CONFLICT (message_id) WHERE message_id IS NOT NULL` で meta_messages に入れる。
+- 【事実】受信（Webhook）: backend/app/routers/webhook.py:584 `_persist_meta_message` が lead_channels からリードを探すか作り、:723 `ON CONFLICT (message_id) WHERE message_id IS NOT NULL` で meta_messages に入れる。
 - 【事実】手動記録は backend/app/routers/conv_logs.py:4 `POST /api/v1/leads/{lead_id}/conv-logs` で conversation_logs に入れる。
 
 ## 3. 受信箱の一覧と会話画面の読み方
@@ -110,5 +110,5 @@
 | 画像の送信の道 | `POST /leads/{lead_id}/messages/image`（:2407/2412）。直近 inbound の SELECT は :2460-2470、窓口からの推定は :2480-2483 | backend/app/routers/leads.py |
 | 会話画面の予備の SELECT | 添付の列が無いときの SELECT も `ORDER BY created_at ASC, id ASC LIMIT :limit` | backend/app/routers/leads.py:1035-1050 |
 | 会話の控えが上書きされる所 | 読み込み :425、SSE :598、定期の読み直し :616、送信の後 :839 | frontend/src/pages/inbox/useInboxState.ts |
-| commit 後の付け直し | reset_tenant_context は :166、tenant_table_ref は :409 | backend/app/auth/dependencies.py |
-| 試験用に meta_messages の形を自前で作るファイル | 7つ。どれも is_manual が無い | backend/tests/conftest.py（:155・:2038）ほか §9 の便2 の欄 |
+| commit 後の付け直し | reset_tenant_context は :339、tenant_table_ref は :409（origin/main で確認） | backend/app/auth/dependencies.py |
+| 試験用に meta_messages の形を自前で作るファイル | 8つ（conftest.py は :156・:2038・:2089 の3か所）。どれも is_manual が無い | `git grep -n -i "create table.*meta_messages" origin/main -- backend/tests`。一覧は design.md §9 の便2 の欄 |
