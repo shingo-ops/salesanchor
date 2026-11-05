@@ -362,7 +362,7 @@
   - 中身は「以前アプリの役割だった Discord のロールの番号」だけ。roles と同じ番号を同時には持たない（DB の SSOT。消したあとにだけ移る）
   - 点検（D2-3）はこの番号も「Bot が管理するロール」に入れ、全員から外す。Discord のロール自体は残し、確認画面の「消す候補」に出す
   - 同じ名前の役割をアプリで作り直したときは、確認画面で「つなぐ」になり、その番号を discord_retired_roles から消して roles に戻す（同じ commit）
-- 代替案: 名前だけでつなぐ（先例 `discord_role_sync.py:93-95` の型）→ 名前を変えると別のロールを作ってしまうので不採用（KGI-10a を満たせない）
+- 代替案: 名前だけでつなぐ（先例 `backend/app/services/discord_role_sync.py:93-95` の型）→ 名前を変えると別のロールを作ってしまうので不採用（KGI-10a を満たせない）
 
 ### D2-2 「スタッフ」ロール 1 つで 3 つの知らせの部屋を見せる
 - 設計図ファイルに Bot が管理するロール「スタッフ」を 1 つ書く（番号は第1段の取り込みの仕組みで設計図に入る）。アプリの役割ではないので DB には持たない
@@ -407,7 +407,7 @@
   - Discord の DM: `backend/app/discord_gateway/dm_writer.py:252` の commit のあと、`msg_row is not None` のときだけ（:231 の中で送ると commit 前に送ってしまう。Fable 審査 N4）
   - Messenger・Instagram: `backend/app/routers/webhook.py:938-947` の今の送信のとなり（今の meta_message_received は変えない）
 - メンション: leads の担当（users.id）→ staff.user_id → discord_user_id（`backend/app/services/lead_assign_notifier.py:32-34` と同じ引き方。共通の小さな関数に寄せる）。担当がいない・discord_user_id が無いときはメンションなしで送る
-- 中身: お客さんの名前・どこから（Discord / Messenger / Instagram）・アプリの商談の場所。本文は載せない（今の Meta の知らせが個人情報を載せない作法＝`webhook.py` の注記に揃える）
+- 中身: お客さんの名前・どこから（Discord / Messenger / Instagram）・アプリの商談の場所。本文は載せない（今の Meta の知らせが個人情報を載せない作法＝`backend/app/routers/webhook.py` の注記に揃える）
 
 ### D2-6 会社ごとに混ざらない
 - サーバーの番号はいつも `public.tenant_discord_config` の tenant_id と purpose='own' から引く（1 社 1 行＝R2-4）。役割・スタッフ・知らせは各社のスキーマから読む
@@ -440,7 +440,7 @@
 | 2c | 3 部屋・webhook の自動作成・notification_channels.blueprint_key | あり | 12・14・15 |
 | 2d | 返信の知らせ | なし | 13 |
 
-- 2a の分け方（2026-11-06 Opus。1 回に 1 つの変更・第1段 1a/1b の先例）: 2a-1＝列と表 2 つを作るだけ（移行・`backend/app/services/tenant.py` の新しい会社の DDL・構造の試験。プログラムの動きは変えない。カード `card-s2-2a1-role-link-tables.md`）。2a-2＝確認画面・反映の書き戻し・役割の削除で番号を移すプログラム（2a-1 の本番反映のあとにカードを作る）。KGI 8・10a・11 は 2a-2 で満たす
+- 2a の分け方（2026-11-06 Opus。1 回に 1 つの変更・第1段 1a/1b の先例）: 2a-1＝列と表 2 つを作るだけ（移行・`backend/app/services/tenant.py` の新しい会社の DDL・構造の試験。プログラムの動きは変えない。カード `docs/handoff/discord-server-management/card-s2-2a1-role-link-tables.md`）。2a-2＝確認画面・反映の書き戻し・役割の削除で番号を移すプログラム（2a-1 の本番反映のあとにカードを作る）。KGI 8・10a・11 は 2a-2 で満たす
 
 ## S2-6 受入条件と検証方法
 |基準|検証方法|
