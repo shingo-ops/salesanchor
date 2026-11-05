@@ -14,7 +14,12 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.services import tenant as tenant_service
-from tests.rls_bootstrap import _apply_migration_on_conn, bootstrap_tenant_schema, tenant_schema_lock
+from tests.rls_bootstrap import (
+    _apply_migration_on_conn,
+    bootstrap_tenant_schema,
+    public_bootstrap_lock,
+    tenant_schema_lock,
+)
 
 ADMIN_PG_URL = os.getenv("RLS_ADMIN_DATABASE_URL") or os.getenv("TEST_PG_URL")
 
@@ -94,8 +99,9 @@ async def test_new_tenant_has_system_key_and_migration_is_idempotent():
                     definition = index.scalar_one()
                     assert "UNIQUE" in definition and "WHERE (system_key IS NOT NULL)" in definition
             finally:
-                async with admin_engine.begin() as conn:
-                    await conn.execute(text(f"DROP SCHEMA IF EXISTS {_SCHEMA} CASCADE"))
+                async with public_bootstrap_lock(admin_engine):
+                    async with admin_engine.begin() as conn:
+                        await conn.execute(text(f"DROP SCHEMA IF EXISTS {_SCHEMA} CASCADE"))
     finally:
         await admin_engine.dispose()
 
