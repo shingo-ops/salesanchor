@@ -153,3 +153,18 @@ AUDIT ts=2026-11-05T05:23:52Z sha=39ee7fe6bba1 rows=9
 ### まだ確かめていないこと
 
 - 営業・CS の権限の違いが、会社が画面で直したものか、初期値の作りが時期で変わったものか（変更の記録はまだ読んでいない）。
+
+## 追記: 役割の PO 回答と Discord の役割の仕組みの確認（2026-11-05）
+
+PO の言葉: 「システム管理者は不要なので非表示テナント001と004だけで使うSAアプリのシステム管理をする人間専用のロール、2,ロールもロール権限もカスタマイズできるようにしたいが他セッションで作っているBotがDiscord側のロールをアプリと合わせる仕組みは壊れない？問題ない？」
+
+- 役割は選択肢 2（共用の役割は見るだけ・会社は写して自社の役割を作り、名前も権限も直せる）。
+- システム管理者を持つ人は 5 社とも 0 人（AUDIT ts=2026-11-05T10:54:27Z sha=da0aa8944de1）。オーナーは 001:2・003:0・004:1・005:1・006:1。
+- システム管理者（system_key=admin）を見る所: `backend/app/auth/dependencies.py:553` require_tenant_admin（オーナーかシステム管理者だけ通す）。使う窓口は `backend/app/routers/calendar.py`・`backend/app/routers/google_calendar.py`・`backend/app/routers/integrations.py`・`backend/app/routers/roles.py`（origin/main の git grep -c）。隠しても、オーナーが同じ関所を通るため今の利用者は困らない。
+
+### Discord の役割の仕組み（壊れるか）
+
+- 本線の `backend/app/services/discord_role_sync.py`: リードの顧客規模（小口・大口）に合わせて、Discord の顧客に役割を付ける。役割の名前は Discord 設定（tenant_discord_ticket_config の small_role_name・large_role_name）から読む。アプリの役割の表（roles・role_permissions・user_roles）は読まない。
+- 作業中の自社サーバー管理（release/discord-own-server-bin3b の `docs/handoff/discord-server-management/design.md:22` `:27`）: Discord の役割とチャンネルを、書いた設計図どおりに作る。人へ役割を付けることは対象外（design.md:27）。`backend/app/services/discord_blueprint.py` はアプリの役割の表を読まない（grep で roles・user_roles・system_key 0 件）。
+- 結論: 今あるものと作業中のものは、どちらもアプリの役割の表とつながっていない。今回の変更で壊れない。
+- 将来、アプリの役割と Discord の役割をつなぐ時の約束: 名前でなく変わらない番号（役割の番号か system_key）でつなぐ。会社が名前を直せるようになるため。
