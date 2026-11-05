@@ -18,6 +18,7 @@
 - docs/handoff/design-partner-card-ops/guards/03-file.md：触るファイルを列挙 → 上の 5 つと報告書だけ
 - docs/handoff/design-partner-card-ops/guards/05-pr.md：PR は Opus が作る → 実行役は push まで
 - docs/handoff/design-partner-card-ops/guards/07-migration.md：置くだけでは MIGRATION GUARD が落ちる → run_all_migrations.sh の末尾に登録する。採番は直近を実測（origin/main の最後は 20261106_120000）。migrations は CODEOWNERS 承認と GO の両方が要る（マージは Opus と PO 側）
+  - deploy.yml は触らない。理由（origin/main で実測）: `.github/workflows/migration-guard.yml:132-133` は「deploy.yml の `< migrations/<名前>` か、run_all_migrations.sh の `migrations/<名前>` のどちらか」で合格にする。`.github/workflows/deploy.yml:228` は「新しい移行は deploy.yml ではなく run_all_migrations.sh に足す」と書く。`backend/AGENTS.md:34` の「deploy.yml 登録必須」は古い書き方で、今回は従わない。migration-guard.yml の 1 番目の点検（models.py に Column を足したら deploy.yml に migrate_ が要る）は models.py を触らないので動かない。CI が deploy.yml への登録を求めて落ちたら、deploy.yml を変えずに停止して NEEDS_DECISION: と生出力
 - docs/handoff/design-partner-card-ops/guards/10-executor.md：作業前に preflight → 下の §0
 
 ## 受領確認
@@ -105,6 +106,14 @@ BEGIN
             '消した・番号を変えたスタッフの元の Discord の番号。点検がロールを外し、kick=true なら自社サーバーから外す');
         EXECUTE format('COMMENT ON COLUMN %I.discord_retired_members.kick IS %L', r.nspname,
             'true = スタッフを消した（自社サーバーから外す）。false = 番号を変えた（ロールだけ外す）');
+        EXECUTE format('COMMENT ON COLUMN %I.discord_retired_roles.discord_role_id IS %L', r.nspname,
+            '消したアプリの役割につながっていた Discord のロールの番号');
+        EXECUTE format('COMMENT ON COLUMN %I.discord_retired_roles.retired_at IS %L', r.nspname,
+            'この番号を覚えた日時');
+        EXECUTE format('COMMENT ON COLUMN %I.discord_retired_members.discord_user_id IS %L', r.nspname,
+            '消した・番号を変えたスタッフの元の Discord の番号');
+        EXECUTE format('COMMENT ON COLUMN %I.discord_retired_members.retired_at IS %L', r.nspname,
+            'この番号を覚えた日時');
         RAISE NOTICE 'discord role link tables created/verified for schema: %', r.nspname;
     END LOOP;
 END $$;
@@ -340,7 +349,7 @@ async def test_new_tenant_has_link_tables_and_migration_is_idempotent():
 - `bash -n scripts/run_all_migrations.sh` の生出力（何も出なければ「出力なし」と書く）
 - `grep -n "20261106_150000_add_discord_role_link_tables" scripts/run_all_migrations.sh` の生出力（1 行だけのはず）
 - `grep -n "discord_role_id\|discord_retired" backend/app/services/tenant.py` の生出力（5 行のはず: roles の列 1・索引 1・CREATE TABLE 2・discord_retired_roles の `discord_role_id TEXT PRIMARY KEY` 1。今の origin/main では 0 行。数が違えば停止して NEEDS_DECISION: と生出力）
-- `cd backend && python -m pytest tests/test_discord_role_link_ddl.py tests/test_roles_system_key_ddl.py -q` の生出力（PostgreSQL が無ければ PG の 2 件は skipped になる。単体の 5 件が passed であること）
+- `cd backend && python -m pytest tests/test_discord_role_link_ddl.py tests/test_roles_system_key_ddl.py -q` の生出力（PostgreSQL が無ければ PG の 2 件は skipped になる。単体の 6 件（新しい試験 3 件＋既存の試験 3 件）が passed であること）
 - `python scripts/check_schema_catchup_sync.py` の生出力（リポジトリの根で。setup_tenant.py・sync_tenant_schema.py は触っていないので変わらないはず）
 - `git diff --stat origin/main` の生出力（第2段の設計の文書 5 つ・このカード・§1〜§5 の 5 つ・報告書のほかに無いこと）
 - 手元に PostgreSQL があれば、§5 の PG の試験を TEST_PG_URL を付けて流し生出力を貼る。無ければ「PostgreSQL なし・CI の pytest と schema-check に任せる」と書く
