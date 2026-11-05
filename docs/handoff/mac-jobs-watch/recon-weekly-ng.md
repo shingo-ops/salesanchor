@@ -12,7 +12,7 @@
   - `20261027.txt` 11 行目 `RESULT=OK`（10/27 04:35 作成）
   - `20261102.txt` 11 行目 `RESULT=NG K1>200 K9>6.5k`（11/02 16:01 作成）
   - 名前に `-after1`・`-trial-…` が付いた試しのファイル 4 つ（日付 8 桁＋`.txt` の形ではない）
-  - `library-research-20261102.md`（結果ファイルではない）
+  - 置き場の中の調べ物の書類 library-research-20261102（結果ファイルではない。リポジトリ外）
 
 ## 見張り役の作り（scripts/mac-jobs-watch.sh・593 行）
 - :20-52 mjw_config（MJW_ 環境変数で上書き可）。:21 `home_dir="${HOME:-…}"`。
