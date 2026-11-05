@@ -118,3 +118,38 @@ AUDIT ts=2026-11-05T05:23:52Z sha=39ee7fe6bba1 rows=9
 - 備考・決済手数料の会社側の画面で、共用行に編集ボタンが出るか（窓口は自社行しか更新しないので、押しても 404 になる作り）。
 - 失注・成約理由の本番の件数。
 - 発送地域・送料（`backend/app/services/tenant.py:770`・`:782`）を「選択肢の表」に入れるか。
+
+---
+
+## 追記: 選択肢の表の全件棚卸し（2026-11-05・PO「不透明さをなくして棚卸し、他にテナント独自で持ったほうが良い値はあるか？例えばロールは？」）
+
+根拠: 本番の読み取り専用の道（AUDIT ts=2026-11-05T10:39:46Z sha=e434446ecea9 件数／10:39:57Z sha=cbd6aed063df 役割名／10:40:00Z sha=17004adcfa6e 失注成約理由／10:40:03Z sha=7e4fac7bcfbe 売り方／10:41:36Z sha=f883418274fb 役割の権限の指紋）と `backend/app/services/tenant.py` の行。
+
+### 会社の区画に写しを持っている選択肢（本番の中身）
+
+| 表 | 001 | 003 | 004 | 005 | 006 | 中身の比較 | 出どころ |
+|---|---|---|---|---|---|---|---|
+| roles（役割） | 8 | 7 | 8 | 7 | 7 | 7 つの名前（オーナー・システム管理者・マネージャー・営業・CS・仕入れ・発送）は全社同じ。001 に「点検用（見るだけ）」、004 に「スモーク専用」の自社の役割 | `backend/app/services/tenant.py:50` DEFAULT_ROLES を `backend/app/services/tenant.py:1617` で写す |
+| role_permissions（役割の権限） | — | — | — | — | — | オーナー 128・システム管理者 127・マネージャー 42・仕入れ 13・発送 11 は全社同じ指紋。営業は 29/29/42/42/31、CS は 15/15/21/21/15 で会社ごとに違う | 同上 |
+| close_reasons（失注・成約の理由） | 15 | 15 | 15 | 15 | 15 | 15 行（失注 8・成約 7）すべて 5 社とも同じ文言 | `backend/app/services/tenant.py:825` |
+| channel_masters（連絡ツール） | 6 | 6 | 6 | 6 | 6 | 5 社同じ（recon 本文） | `backend/app/services/tenant.py:1086` |
+| tenant_sales_form_options（売り方） | 5 | 0 | 5 | 0 | 5 | 実店舗・ECサイト・ライブ配信・卸・代理店・その他。3 社同じ。003・005 は 0 行 | `migrations/20260614_100000_create_sales_form_tables.sql` |
+| tcg_manufacturers／tcg_series／tcg_unit_evidence_rules（004 の区画） | 5/11/— | — | 5/11/4 | — | — | public へ写し済みの残り。`migrations/20260923_030000_promote_remaining_tcg_tables.sql` に「DROP しない（別途 PO 確認後）」 | 同 migration |
+| teams・notification_channels・shipping_zones・shipping_rates・badge_definitions・lead_playbook | 0〜1 | 0 | 0〜1 | 0 | 0〜1 | 会社が自分で作るもの。初期値の写しは無い | `backend/app/services/tenant.py:531` 他 |
+
+### コードに書き込まれた選択肢（表が無い）
+
+- 目標の種類: `backend/app/services/tenant.py:1161` CHECK（revenue・deal_count・close_rate・lead_count・conversion_rate）。
+- リードの状態: `frontend/src/constants/leadStatus.ts:10` 以下。
+- 会社・連絡先の状態、住所の種類、言語など: `backend/app/services/tenant.py:218` `backend/app/services/tenant.py:225` `backend/app/services/tenant.py:273` `backend/app/services/tenant.py:1145` の CHECK。
+- これらは画面や集計の動きと結び付いた「決まり」で、会社が足すと動きが壊れる。選択肢の表の対象外とする。
+
+### 観測から言えること
+
+- 役割は、名前は全社同じ初期値だが、権限は会社ごとに違う（営業・CS）。会社が自社の役割を足した例も 2 社ある。共用の値を「見られるが直せない」にすると、会社が営業の権限を直す今の使い方が出来なくなる。
+- 失注・成約の理由、売り方、連絡ツールは、全社で中身が同じ写し。共用＋会社独自の型にそのまま乗る。
+- 004 の区画の TCG の表は、共用へ移した後の残り。会社独自の値ではない。
+
+### まだ確かめていないこと
+
+- 営業・CS の権限の違いが、会社が画面で直したものか、初期値の作りが時期で変わったものか（変更の記録はまだ読んでいない）。
