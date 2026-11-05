@@ -1,4 +1,4 @@
-"""Initial approval uses Firebase; device credentials can only import Android LINE."""
+"""Initial approval uses an app login; device credentials can only import Android LINE."""
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, Request, Response, UploadFile

@@ -1718,6 +1718,7 @@ async def db_session(test_engine, setup_test_db):
     async with test_engine.begin() as conn:
         await conn.execute(text("DELETE FROM discord_channel_webhooks"))
         await conn.execute(text("DELETE FROM audit_logs"))
+        await conn.execute(text("DELETE FROM password_reset_tokens"))
         await conn.execute(text("DELETE FROM goals"))
         await conn.execute(text("DELETE FROM tenant_google_drive_config"))
         await conn.execute(text("DELETE FROM customer_scores"))

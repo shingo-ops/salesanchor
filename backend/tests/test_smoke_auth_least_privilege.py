@@ -1,6 +1,6 @@
 """smoke 認証経路の最小権限化（ADR-1017）のテスト。
 
-DB・Redis・Firebase には接続しない（すべてモック）。
+DB・Redis には接続しない（すべてモック）。
 """
 
 from types import SimpleNamespace
@@ -27,9 +27,9 @@ async def _run(bearer, user, token=SMOKE_TOKEN, email=SMOKE_EMAIL):
     request = MagicMock()
     cred = MagicMock()
     cred.credentials = bearer
-    with patch("app.auth.dependencies._init_firebase"), patch(
-        "app.auth.dependencies._get_client_ip", return_value="127.0.0.1"
-    ), patch("app.auth.dependencies._SMOKE_SERVICE_TOKEN", token), patch(
+    with patch("app.auth.dependencies._get_client_ip", return_value="127.0.0.1"), patch(
+        "app.auth.dependencies._SMOKE_SERVICE_TOKEN", token
+    ), patch(
         "app.auth.dependencies._SMOKE_SERVICE_EMAIL", email
     ), patch(
         "app.auth.dependencies.is_token_blacklisted", AsyncMock(return_value=False)
@@ -39,9 +39,6 @@ async def _run(bearer, user, token=SMOKE_TOKEN, email=SMOKE_EMAIL):
         "app.auth.dependencies.check_auth_rate_limit", AsyncMock(return_value=False)
     ), patch(
         "app.auth.dependencies.record_auth_failure", AsyncMock()
-    ), patch(
-        "app.auth.dependencies.firebase_auth.verify_id_token",
-        side_effect=Exception("invalid"),
     ):
         return await get_current_user(request, cred, _db_returning(user))
 
@@ -71,24 +68,23 @@ async def test_smoke_token_least_privilege_user_passes(caplog):
     assert SMOKE_TOKEN not in caplog.text
 
 
-async def test_smoke_disabled_when_env_empty_falls_through_to_firebase():
-    # token 空 → 不活性。Firebase 検証に入り（失敗して）401。
+async def test_smoke_disabled_when_env_empty_falls_through_to_reject():
+    # token 空 → 不活性。自社以外の札として断られて 401。
     with pytest.raises(HTTPException) as exc:
         await _run(SMOKE_TOKEN, _user(False), token="")
     assert exc.value.status_code == 401
     assert exc.value.detail == "無効な認証トークンです"
 
 
-async def test_smoke_mismatched_token_falls_through_to_firebase():
+async def test_smoke_mismatched_token_falls_through_to_reject():
     with pytest.raises(HTTPException) as exc:
         await _run("wrong-token", _user(False))
     assert exc.value.status_code == 401
     assert exc.value.detail == "無効な認証トークンです"
 
 
-async def test_smoke_token_passes_when_auth_provider_self(monkeypatch):
-    """T7・K6: 自社ログイン中でも smoke の札は通る（docs/handoff/block-firebase-token/design.md）"""
-    monkeypatch.setenv("AUTH_PROVIDER", "self")
+async def test_smoke_token_passes_after_foreign_tokens_are_rejected():
+    """T7・K6: 自社以外の札を断るようにした後も smoke の札は通る"""
     user = _user(False)
 
     result = await _run(SMOKE_TOKEN, user)

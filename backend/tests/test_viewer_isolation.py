@@ -2,7 +2,7 @@
 
 app.routes から APIRoute をすべて自動で列挙し、VIEWER_ROUTE_ALLOWLIST 以外の (method, path) を
 閲覧者のトークンで叩いて、すべて 401 になることを確かめる。API を足すたびに検査の対象になる。
-get_current_user は override しない。patch するのは _init_firebase・is_token_blacklisted・check_auth_rate_limit の3つだけ。
+get_current_user は override しない。patch するのは is_token_blacklisted・check_auth_rate_limit の2つだけ。
 """
 
 from __future__ import annotations
@@ -97,7 +97,6 @@ def _targets() -> list[tuple[str, str]]:
 
 def _patches():
     return (
-        patch("app.auth.dependencies._init_firebase"),
         patch("app.auth.dependencies.is_token_blacklisted", new=AsyncMock(return_value=False)),
         patch("app.auth.dependencies.check_auth_rate_limit", new=AsyncMock(return_value=False)),
     )
@@ -113,8 +112,8 @@ async def test_viewer_token_gets_401_on_every_app_route():
 
     not_401: list[str] = []
     unexpected: list[str] = []
-    p1, p2, p3 = _patches()
-    with p1, p2, p3:
+    p1, p2 = _patches()
+    with p1, p2:
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as http:
             for method, path in targets:
                 resp = await http.request(method, _fill(path), headers={"Authorization": f"Bearer {token}"})
@@ -148,11 +147,10 @@ async def test_viewer_token_still_401_after_passing_get_current_viewer():
         ),
     )()
     cred = HTTPAuthorizationCredentials(scheme="Bearer", credentials=token)
-    p1, p2, p3 = _patches()
+    p1, p2 = _patches()
     with (
         p1,
         p2,
-        p3,
         patch.object(viewer_dependencies, "is_token_blacklisted", new=AsyncMock(return_value=False)),
         patch.object(viewer_dependencies, "_load_viewer_row", new=AsyncMock(return_value=row)),
     ):

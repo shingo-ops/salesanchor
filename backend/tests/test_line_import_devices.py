@@ -33,7 +33,7 @@ def test_key_and_code_validation():
     assert svc.valid(row())
     assert svc.code_digest('ABCD-EFGH') == svc.code_digest('abcd efgh')
     assert svc.key_digest(TOKEN) == svc.digest(TOKEN)
-    for bad in ['firebase-token', 'sali1_short', TOKEN+'\n']:
+    for bad in ['not-a-device-key', 'sali1_short', TOKEN+'\n']:
         with pytest.raises(HTTPException):
             svc.key_digest(bad)
 
@@ -49,14 +49,14 @@ def client():
 
 def test_device_token_does_not_grant_approval(client):
     cli, _ = client
-    # Fake Firebase token is rejected before the approval service can be called.
-    with patch('app.auth.dependencies._init_firebase'), patch('app.auth.dependencies.is_token_blacklisted', new=AsyncMock(return_value=False)), patch('app.auth.dependencies.get_cached_jwt', new=AsyncMock(return_value=None)), patch('app.auth.dependencies.check_auth_rate_limit', new=AsyncMock(return_value=False)), patch('app.auth.dependencies.record_auth_failure', new=AsyncMock()), patch('app.auth.dependencies.firebase_auth.verify_id_token', side_effect=ValueError('invalid')), patch.object(svc,'approve',new_callable=AsyncMock) as approve:
+    # A device key is not an app login token; it is rejected before the approval service can be called.
+    with patch('app.auth.dependencies.is_token_blacklisted', new=AsyncMock(return_value=False)), patch('app.auth.dependencies.get_cached_jwt', new=AsyncMock(return_value=None)), patch('app.auth.dependencies.check_auth_rate_limit', new=AsyncMock(return_value=False)), patch('app.auth.dependencies.record_auth_failure', new=AsyncMock()), patch.object(svc,'approve',new_callable=AsyncMock) as approve:
         result = cli.post('/api/v1/tcg/line-devices/approve', headers={'Authorization':'Bearer '+TOKEN}, json={'user_code':'ABCD-EFGH'})
     assert result.status_code == 401
     approve.assert_not_called()
 
 
-def test_approval_requires_existing_firebase_admin(client):
+def test_approval_requires_existing_super_admin(client):
     cli, app = client
     app.dependency_overrides[require_super_admin] = lambda: SimpleNamespace(id=1)
     with patch.object(svc, 'approve', new=AsyncMock(return_value={'id':'example'})) as approve:

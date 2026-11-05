@@ -48,7 +48,6 @@ class FakeRedis:
 
 @pytest.fixture(autouse=True)
 def passkey_env(monkeypatch):
-    monkeypatch.setenv("AUTH_PROVIDER", "self")
     monkeypatch.setenv("AUTH_JWT_SECRET", SECRET)
     monkeypatch.delenv("AUTH_JWT_SECRET_PREVIOUS", raising=False)
     monkeypatch.delenv("AUTH_RP_ORIGIN", raising=False)
@@ -352,10 +351,10 @@ async def test_register_verify_broken_credential_is_400(http, redis, as_user):
     assert resp.json()["detail"] == "passkey_invalid"
 
 
-# ── T6 firebase では 404 ──────────────────────────────────────
+# ── T6 秘密が無ければ 404 ──────────────────────────────────────
 
-async def test_login_routes_are_404_when_provider_is_firebase(http, redis, monkeypatch):
-    monkeypatch.setenv("AUTH_PROVIDER", "firebase")
+async def test_login_routes_are_404_without_secret(http, redis, monkeypatch):
+    monkeypatch.delenv("AUTH_JWT_SECRET")
 
     options = await http.post(f"{AUTH_PATH}/passkey/login/options", headers=_headers())
     verify = await _login_verify(http, "x")

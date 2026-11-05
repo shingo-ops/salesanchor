@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-import os
 import secrets
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -52,7 +51,7 @@ from app.schemas.auth import PasswordChange
 from app.services import web_push
 from app.services.audit import record_audit_log
 from app.services.auth_mail import send_invite_email, send_new_device_mail, send_password_reset_email
-from app.services.invite import create_invite_token, invite_enabled, invite_url
+from app.services.invite import create_invite_token, invite_url
 from app.services.web_push import send_login_request_push
 
 router = APIRouter()
@@ -76,8 +75,8 @@ async def register_user(
       ② tenant_codeからテナントを検索
       ③ 同じメールアドレスのユーザーがいないか確認（いれば409）
       ④ usersテーブルにユーザーを作成（パスワードは NULL）
-      ⑤ AUTH_PROVIDER=self のとき、初回設定の鍵（purpose=invite・72時間）を作り、
-         commit の後に初回設定メールを送る（firebase の間は鍵もメールも作らない）
+      ⑤ 初回設定の鍵（purpose=invite・72時間）を作り、
+         commit の後に初回設定メールを送る
 
     注意:
       - パスワードは本人が初回設定メールのリンクから決める（ADR-1013 便4a）。
@@ -162,7 +161,7 @@ async def register_user(
         )
         await invalidate_user_permissions(tenant.id, user.id)
 
-    invite_raw = await create_invite_token(db, user.id) if invite_enabled() else None
+    invite_raw = await create_invite_token(db, user.id)
 
     await db.commit()
     await db.refresh(user)
@@ -183,7 +182,7 @@ async def logout(
     """
     ログアウトAPI。
     トークンをブラックリストに追加し、以降の利用を拒否する。
-    Firebase IDトークンの残存有効期限（最大1時間）をTTLとする。
+    アクセストークンの残存有効期限より長い 1 時間を TTL とする。
     自社ログインの更新用トークン（Cookie）があれば失効させ、Cookie を消す。
     """
     token = cred.credentials
@@ -201,7 +200,7 @@ async def logout(
     return {"message": "ログアウトしました"}
 
 
-# ── 自社ログイン（ADR-1013 便2。AUTH_PROVIDER=self のときだけ有効） ────────────
+# ── 自社ログイン（ADR-1013 便2） ────────────
 
 INVALID_CREDENTIALS = "invalid_credentials"
 INVALID_TOKEN_DETAIL = "無効な認証トークンです"
@@ -571,7 +570,7 @@ async def self_refresh(
     )
 
 
-# ── パスワード再設定（ADR-1013 便3。AUTH_PROVIDER に関係なく動く） ─────────────
+# ── パスワード再設定（ADR-1013 便3） ─────────────
 
 INVALID_OR_EXPIRED_TOKEN = "invalid_or_expired_token"
 PASSWORD_RESET_TTL = timedelta(minutes=30)
@@ -594,14 +593,6 @@ class PasswordResetDone(BaseModel):
     status: str = Field(default="password_updated", description="パスワードを更新した")
 
 
-def _password_reset_allowed(email: str) -> bool:
-    """再設定メールを送ってよい相手か。self なら全員。firebase の間は許可リストに載った email だけ（未設定・空は誰にも送らない）。"""
-    if self_tokens.auth_provider() == "self":
-        return True
-    allowed = {e.strip().lower() for e in os.getenv("AUTH_PASSWORD_RESET_ALLOWLIST", "").split(",") if e.strip()}
-    return email in allowed
-
-
 @router.post("/password-reset/request", response_model=PasswordResetAccepted)
 async def password_reset_request(
     data: PasswordResetRequest,
@@ -609,7 +600,7 @@ async def password_reset_request(
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
 ):
-    """再設定メールの申請。存在・停止・許可外の区別を応答に出さない（常に 200）。"""
+    """再設定メールの申請。存在・停止の区別を応答に出さない（常に 200）。"""
     _require_app_origin(request)
     email = data.email.strip().lower()
     if await count_password_reset_request(email) > PASSWORD_RESET_REQUEST_MAX:
@@ -621,7 +612,7 @@ async def password_reset_request(
             {"email": email},
         )
     ).first()
-    if row is not None and row.is_active and _password_reset_allowed(email):
+    if row is not None and row.is_active:
         now = datetime.now(timezone.utc)
         await db.execute(
             text(
@@ -709,7 +700,7 @@ async def password_reset_confirm(
     return PasswordResetDone(status="password_updated")
 
 
-# ── パスワード変更（ADR-1013 便4a。AUTH_PROVIDER に関係なく動く） ─────────────
+# ── パスワード変更（ADR-1013 便4a） ─────────────
 
 class PasswordChangeResponse(BaseModel):
     status: str = Field(default="password_updated", description="パスワードを更新した")

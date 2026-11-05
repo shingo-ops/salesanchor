@@ -76,7 +76,6 @@ def _auth_event_rows() -> list[dict]:
 
 @pytest.fixture(autouse=True)
 def base_env(monkeypatch):
-    monkeypatch.setenv("AUTH_PROVIDER", "self")
     monkeypatch.setenv("AUTH_JWT_SECRET", SECRET)
     monkeypatch.delenv("AUTH_JWT_SECRET_PREVIOUS", raising=False)
     monkeypatch.delenv("AUTH_RP_ORIGIN", raising=False)
@@ -112,7 +111,6 @@ def no_redis_and_spies():
          patch("app.routers.auth.send_new_device_mail", new=mail), \
          patch("app.routers.auth.publish_user_change", new=publish), \
          patch("app.routers.super_admin_login_requests.publish_user_change", new=publish), \
-         patch("app.auth.dependencies._init_firebase"), \
          patch("app.auth.dependencies.is_token_blacklisted", new=AsyncMock(return_value=False)), \
          patch("app.auth.dependencies.get_cached_jwt", new=AsyncMock(return_value=None)), \
          patch("app.auth.dependencies.check_auth_rate_limit", new=AsyncMock(return_value=False)), \

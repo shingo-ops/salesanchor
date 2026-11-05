@@ -1,8 +1,9 @@
 """setup_review_tenant.py の単体テスト。
 
-Firebase Admin SDK と DB をモックして以下を検証:
-- 通常実行: 既存 Firebase ユーザーの password update が呼ばれない
-- ALLOW_REVIEW_TENANT_PASSWORD_RESET=1: password update が呼ばれる
+DB をモックして以下を検証:
+- パスワードを書くのは、リセット指定のときと、まだパスワードが無いときだけ
+- ALLOW_REVIEW_TENANT_PASSWORD_RESET の読み取り
+- Firebase の部品を使っていない
 - customers テーブル参照が存在しない
 """
 from __future__ import annotations
@@ -23,13 +24,6 @@ _SCRIPT_PATH = Path(__file__).resolve().parent.parent.parent / "scripts" / "setu
 def _load_module():
     spec = importlib.util.spec_from_file_location("setup_review_tenant", _SCRIPT_PATH)
     mod = importlib.util.module_from_spec(spec)
-    # firebase_admin を先にモック
-    mock_fb = MagicMock()
-    mock_fb._apps = {}
-    sys.modules.setdefault("firebase_admin", mock_fb)
-    sys.modules.setdefault("firebase_admin.auth", MagicMock())
-    sys.modules.setdefault("firebase_admin.credentials", MagicMock())
-    sys.modules.setdefault("firebase_admin.exceptions", MagicMock())
     spec.loader.exec_module(mod)
     return mod
 
@@ -41,46 +35,29 @@ def _load_module():
 class TestPasswordResetGuard:
     """既存ユーザーに対するパスワード更新の制御を検証する。"""
 
-    def test_existing_user_no_reset_flag_skips_password_update(self, monkeypatch):
-        """通常実行（フラグなし）: 既存ユーザーへの password update は呼ばれない。"""
-        monkeypatch.delenv("ALLOW_REVIEW_TENANT_PASSWORD_RESET", raising=False)
+    def test_existing_password_without_reset_flag_is_kept(self):
+        """既存のパスワードがあり、リセット指定なし → 書かない。"""
         mod = _load_module()
+        assert mod._should_write_password(has_password=True, reset=False) is False
 
-        mock_update = MagicMock()
-        mock_generate = MagicMock(return_value="NewPass123!")
-
-        with patch.object(mod, "_firebase_update_password", mock_update), \
-             patch.object(mod, "_firebase_get_uid", return_value="existing-uid-abc"):
-            # _password_reset_requested() が False のとき update は呼ばれない
-            existing_uid = mod._firebase_get_uid("review@salesanchor.jp")
-            reset_requested = mod._password_reset_requested()
-
-            if existing_uid and not reset_requested:
-                pass  # update skipped
-            elif existing_uid and reset_requested:
-                new_pw = mock_generate()
-                mod._firebase_update_password(existing_uid, new_pw)
-
-        mock_update.assert_not_called()
-
-    def test_existing_user_with_reset_flag_calls_password_update(self, monkeypatch):
-        """ALLOW_REVIEW_TENANT_PASSWORD_RESET=1: 既存ユーザーへの password update が呼ばれる。"""
-        monkeypatch.setenv("ALLOW_REVIEW_TENANT_PASSWORD_RESET", "1")
+    def test_existing_password_with_reset_flag_is_written(self):
+        """既存のパスワードがあり、リセット指定あり → 書く。"""
         mod = _load_module()
+        assert mod._should_write_password(has_password=True, reset=True) is True
 
-        mock_update = MagicMock()
-        mock_generate = MagicMock(return_value="NewPass123!")
+    def test_no_password_is_written_without_flag(self):
+        """パスワードが無い（新しく作る） → 指定なしでも書く。"""
+        mod = _load_module()
+        assert mod._should_write_password(has_password=False, reset=False) is True
 
-        with patch.object(mod, "_firebase_update_password", mock_update), \
-             patch.object(mod, "_firebase_get_uid", return_value="existing-uid-abc"):
-            existing_uid = mod._firebase_get_uid("review@salesanchor.jp")
-            reset_requested = mod._password_reset_requested()
+    def test_no_password_with_reset_flag_is_written(self):
+        """パスワードが無く、リセット指定あり → 書く。"""
+        mod = _load_module()
+        assert mod._should_write_password(has_password=False, reset=True) is True
 
-            if existing_uid and reset_requested:
-                new_pw = mock_generate()
-                mod._firebase_update_password(existing_uid, new_pw)
-
-        mock_update.assert_called_once()
+    def test_script_has_no_firebase(self):
+        """スクリプトに Firebase の文字が無い（便2 の終わりの条件）。"""
+        assert "firebase" not in _SCRIPT_PATH.read_text(encoding="utf-8").lower()
 
     def test_password_reset_requested_false_without_env(self, monkeypatch):
         """ALLOW_REVIEW_TENANT_PASSWORD_RESET 未設定 → False。"""
