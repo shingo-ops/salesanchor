@@ -29,6 +29,7 @@ PO: しんご
 |---|---|
 | [翻訳・グロッサリ](translation-glossary/README.md) | 仕様書あり（KGI承認済み・design未） |
 | [帳票・フォーム送付（見積・請求書・フォーム）](invoice-form-send/README.md) | 仕様書あり（KGI承認済み・To-Be design済・recon未） |
+| [会話ファイルの取り込み](conversation-import/README.md) | 仕様書あり（KGI承認済み 2026-11-06・design 案あり） |
 | 顧客カルテ | 未作成 |
 | Bot・定型文 | 未作成 |
 | 帳票・フォーム送付（見積/請求/登録） | 未作成 |
