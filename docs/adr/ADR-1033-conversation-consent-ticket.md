@@ -23,7 +23,7 @@
 5. 同意票は ADR-136 の「GO #PR番号」の代わりにならない。危険 PR の GO は今までどおり PO 単独で、番号つきで受ける。
 6. 件のセッションへの決まった一文の送信は、agent-console の case-say の受け口だけで行う（design §14-10）。§4-5 の見張りの外で端末へ送るほかの道を作らない。
 
-詳しい設計は `docs/handoff/conversation-consent/design.md`（第5版・Architect 4回目 APPROVE）。
+詳しい設計は `docs/handoff/conversation-consent/design.md`（第5版・Architect 4回目 APPROVE）。What 6（件への一文・case-say）の設計は同じ設計書の §14（第11版・Architect APPROVE。送る判定は §14-10 と §14-13）。
 
 ## Why
 

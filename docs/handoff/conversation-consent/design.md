@@ -388,9 +388,9 @@ PO への返事の本文（ツール呼び出しの中ではない）の、**最
 
 ## 14. 改訂2: 件の窓へ、決まった一文だけを送る口（case-say）（2026-11-05）
 
-状態: 設計案 第6版の改訂（§14-10。サーバー側で宛先を決める形）。6〜8回目の審査は REVISE で、指摘を反映済み。9回目の審査で APPROVE（LOW 2件を反映済み）。PO 承認前。実装・反映は PO の実装承認の後。§14-3〜14-8 の第5版（手元の部品 case-say.py）は採用しない（§14-9 の判断）。§14-1・14-2 の目的と観測事実は第6版でも使う。
+状態: 設計案 第6版の改訂（§14-10。サーバー側で宛先を決める形）。6〜8回目の審査は REVISE で、指摘を反映済み。9回目の審査で APPROVE（LOW 2件を反映済み）。PO 承認前。実装・反映は PO の実装承認の後。§14-3〜14-8 の第5版（手元の部品 case-say.py）は採用しない（§14-9 の判断）。§14-1・14-2 の目的と観測事実は第6版でも使う。（2026-11-06 追記: この後、第11版で Architect APPROVE・PO が作り始めを承認し、agent-console v0.51.0 で導入済み。今の状態は §14-13 の末尾）
 向きの決定: PO 2026-11-05、選択肢「2. 作業画面アプリの裏側で件の窓を確かめる形に作り直す」に「2」と回答（作業画面アプリ = PO の Mac の agent-console。Sales Anchor 本番のサーバーではない）。
-名前の書き方（2026-11-06・PO「1」）: agent-console のファイルは、その行を書いた時点の版に固定した agent-console へのリンクで示す（§14-12 は f503e9b、§14-13 は b467656）。Mac の上で動くときにできるファイル（CH/… など）と、作らなかった案の名前は、どのリポジトリにも無いので「」で囲む。
+名前の書き方（2026-11-06・PO「1」）: §14-12 と §14-13 でコードの書式で書いていた agent-console のファイルのうち、server/・tests/ の下と agent-console.config.json は、その行を書いた時点の版に固定した agent-console へのリンクで示す（§14-12 は f503e9b、§14-13 は b467656）。ops/ の下・README と、§14-2〜§14-11 の agent-console の行の指し示しは、元の書き方のまま。Mac の上で動くときにできるファイル（CH/… など）・作らなかった案の名前・claude 本体の中の文字は、どのリポジトリにも無いので「」で囲む。
 きっかけ: PO 2026-11-05、選択肢「2. 私が打てるように見張りを見直す設計から始める（しんごさんの手間は減ります。ただ見張りを弱めることになるので、別の設計と審査が要り、試験は先になります）」に「2」と回答。
 
 ### 14-1 目的と、見える変化
@@ -852,7 +852,7 @@ PO の言葉: 「件の窓の今の作りに合わせて設計を小さく作り
 
 （２）件の AI がそのファイルを書けないようにする
 - 変更前: [server/case-sandbox.ts:249-252](https://github.com/GEN-RYU-System/agent-console/blob/f503e9bc7c92ec7d9787f7c1d24018564d115d77/server/case-sandbox.ts#L249-L252) `chSettingNames` の書き込み拒否は `remote-settings.json … settings.json|agents|hooks|commands|skills|CLAUDE.md`。
-- 変更後: 同じ並びに 「keybindings\\.json」 を足す。
+- 変更後: 同じ並びに keybindings.json の名前を足す（足した後の形: [server/case-sandbox.ts:250](https://github.com/GEN-RYU-System/agent-console/blob/b467656c721440c46307fe9f82d0f5f707bbd824/server/case-sandbox.ts#L250)）。
 
 （３）形が dontAsk でなければ道具を止める（安全網）
 - 変更前: `ops/case/case-guard.mjs:75-111` `decide` は道具の名前と道だけを見る。
@@ -962,7 +962,7 @@ K31・K33・K34・K35 は第6版のまま。K35 は○（§14-10-10）。
 
 #### 14-13-8 設計審査（第10版）と直し（第11版）
 
-**審査**（2026-11-06 00:03〜00:06 JST・クラウドの Opus・読むだけ・salesanchor 992539219 / agent-console b467656）: REVISE。B1〜B6 は○、B7 は×。必須1件・推奨2件。B1 の根拠: 実体の道は `resolveClaudeReal` が realpath で解き（agent-console [server/case-sandbox.ts:433-449](https://github.com/GEN-RYU-System/agent-console/blob/b467656c721440c46307fe9f82d0f5f707bbd824/server/case-sandbox.ts#L433-L449)）、その値が `AC_CLAUDE_BIN` になり（[server/sessions.ts:476](https://github.com/GEN-RYU-System/agent-console/blob/b467656c721440c46307fe9f82d0f5f707bbd824/server/sessions.ts#L476)）、台本はその道を exec する（`ops/shell/ccdiscord.zsh:31`・`:78`）。
+**審査**（2026-11-06 00:03〜00:06 JST・クラウドの Opus・読むだけ・salesanchor 992539219 / agent-console b467656）: REVISE。B1〜B6 は○、B7 は×。必須1件・推奨2件。B1 の根拠: 実体の道は `resolveClaudeReal` が realpath で解き（agent-console [server/case-sandbox.ts:433-449](https://github.com/GEN-RYU-System/agent-console/blob/b467656c721440c46307fe9f82d0f5f707bbd824/server/case-sandbox.ts#L433-L449)）、その値が `AC_CLAUDE_BIN` になり（[server/sessions.ts:476](https://github.com/GEN-RYU-System/agent-console/blob/b467656c721440c46307fe9f82d0f5f707bbd824/server/sessions.ts#L476)）、台本はその道を exec する（`ops/shell/ccdiscord.zsh:31`・`:78`）。（訂正 2026-11-06: b467656 の ccdiscord.zsh は77行で、exec は `:76`。`:31` はその道で版を読む行）
 
 - M1（必須）: §14-13-4 の K40 の行・§14-13-5 の便CS1・§14-10-4 の対象が第10版に合っていない。→ 直した（K40 は既存の2つの試験、便CS1 に 4b・K42、対象に [server/sessions.ts](https://github.com/GEN-RYU-System/agent-console/blob/b467656c721440c46307fe9f82d0f5f707bbd824/server/sessions.ts) と [agent-console.config.json](https://github.com/GEN-RYU-System/agent-console/blob/b467656c721440c46307fe9f82d0f5f707bbd824/agent-console.config.json)）。
 - M2（推奨）: 版を足す手順に K41 の測り直しが無い。K41 の頼み事を誰が打つかが無い。→ 版を足す手順を「PO が件を1つ開く → PO が K41 (a)(b) の頼み事と K32 の一文を打つ → Opus が画面の写しと状態ファイルを読むだけで、選ぶ画面0件と K41 の○を確かめる → 版を足す PR を出し、審査を通してから入れる」に置き換える。K41 の頼み事も PO が打つ（Opus は件の窓に打たない）。
