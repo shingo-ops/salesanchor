@@ -7,6 +7,7 @@
 | 起案日 | 2026-11-01 |
 | 方針の決定者 | Shingo（PO）。細部は PO の委任に基づき Opus が大手のやり方に沿って決めた（設計書 §3） |
 | 関連 | ADR-1013（自社ログインとパスキー）、ADR-1048（管理者の2段階。いつもの機械と番号の承認を本 ADR が全員向けに広げて引き取る。6桁の部分は ADR-1048 に残る）、ADR-1016（即時反映 SSE に人単位の宛先を足す・改訂 2026-11-01）、ADR-1008（人の正本は public.users）、ADR-027（i18n）、ADR-067・ADR-144（デザイントークンと UI ガバナンス）、ADR-136（危険 PR の GO） |
+| 改訂 | 2026-11-05 提案中: 許可できる人に「同じ会社のオーナーの役の人」を足す（社員が「会社の管理者に頼む」を押した依頼だけ）。ADR-1063 が採用されたら有効 |
 | 設計 | `docs/handoff/auth-new-device-approval/design.md`、現状 `docs/handoff/auth-new-device-approval/recon.md`、合格の基準 `docs/handoff/auth-new-device-approval/kgi.md` |
 
 ---
