@@ -1,0 +1,39 @@
+name: KGI Line Copies
+
+# paths を使わず常時実行する（doc-index-reachability.yml と同じ理由）。
+# 合格の線（kgi.md の K1・K9・K12）の写しが正本とずれたら赤にする。
+# 必須チェックへの登録は Ruleset の変更なので、このワークフローでは行わない。
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    name: kgi line copies
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Test the line-copy check
+        run: python3 -I scripts/tests/test_check_kgi_line_copies.py -v
+
+      - name: Check KGI line copies
+        shell: bash
+        run: |
+          set +e
+          python3 -I scripts/ci/check_kgi_line_copies.py --root . | tee /tmp/kgi-line-copies.txt
+          rc=${PIPESTATUS[0]}
+          set -e
+          echo "kgi-line-copies: $(grep '^SUMMARY' /tmp/kgi-line-copies.txt)" >> "$GITHUB_STEP_SUMMARY"
+          exit "$rc"
+
+      - name: Weekly check tests
+        run: bash scripts/dev/test_doc_entry_weekly_check.sh

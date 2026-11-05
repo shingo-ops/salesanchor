@@ -224,3 +224,8 @@
 | 要件の線が 210 | `grep -n "^| L1 " docs/handoff/doc-agenda-nav/library-requirements.md` の行に「**210**」がある |
 | 今の本線で合格になる | マージ後の origin/main の使い捨ての写しで台本を流し、`RESULT=OK`（K1 206・K9 7.4k のとき） |
 | 次の月曜に合格 | 2026-11-09 の週次点検の結果ファイルが `RESULT=OK` |
+
+## 18. 合格の線の写しのずれを見つける見張り（2026-11-05）
+
+- §17 の「範囲外で見つかった足りない仕組み」のうち、写しのずれの見張りと、週次点検の試験を CI に入れること。PO 原文「1,2を順番に実装」（2026-11-05）。
+- 設計: [line-copy-guard-design.md](line-copy-guard-design.md)。実装カード: [card-line-copy-guard.md](card-line-copy-guard.md)。
