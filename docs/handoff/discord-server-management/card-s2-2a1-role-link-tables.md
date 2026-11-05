@@ -10,6 +10,7 @@
   - backend/app/services/tenant.py（`_TENANT_TABLES_SQL` に §3 の 3 か所を足すだけ）
   - backend/tests/test_roles_system_key_ddl.py（31 行目の数を 2 → 3 にするだけ）
   - backend/tests/test_discord_role_link_ddl.py（新規）
+  - 改訂1（§5-改訂1）だけで触ってよい: backend/tests/rls_bootstrap.py（`_TENANT_LOOP_MIGRATIONS` に 1 行足すだけ）、origin/main を取り込む merge commit
 - 触らない: backend のほかのファイル（routers・services の他・conftest.py を含む）・frontend・i18n・openapi.json・ほかの migrations・scripts/setup_tenant.py・scripts/db/sync_tenant_schema.py・.github・deploy.yml・本番
 
 ## 読んだ節（guards/）
@@ -359,8 +360,63 @@ async def test_new_tenant_has_link_tables_and_migration_is_idempotent():
 
 - 【事実】初版の §5 は `_block` の区切りに `"CREATE TABLE IF NOT EXISTS {schema}.discord_retired_roles ("` と `..._members (` を渡していた。assert の外の文字列なので、CI「test-schema-dup gate」（`scripts/check_test_schema_dup.py`）が本番の表の定義の写しとして 2 件数え、赤になった（`backend/tests/test_discord_role_link_ddl.py (0 -> 2)`、Opus が手元で同じ rc=1 を再現）。
 - 直し: 区切りを `"{schema}.discord_retired_roles ("`・`"{schema}.discord_retired_members ("` にする（§5 は改訂済み）。tenant.py の中でそれぞれ 1 回だけ出る（Opus が `grep -c` で 1・1 を確認）ので、`_block` の `count == 1` はそのまま成り立つ。
-- 触るのは `backend/tests/test_discord_role_link_ddl.py` の 2 行だけ。ほかのファイルは変えない。§6 の最後の行（check_test_schema_dup.py の rc=0）を必ず流す。
-- commit の文: `test: drop CREATE TABLE prefix from retired-table markers (test-schema-dup gate)`
+- 【事実】PR を出したあと、origin/main に bb38918d7・b81375897 が入った。`backend/tests/test_roles_system_key_ddl.py` が次のように変わっている。
+  - テナント番号を 997 から 995 に変えた。
+  - 移行は `_apply_migration_on_conn(conn, _MIGRATION, schema_name=_SCHEMA)` で 1 つのテナントだけに絞って流す。
+  - 片付けの DROP SCHEMA は `public_bootstrap_lock` の中で流す。
+  - 同時に流したときのぶつかり（実装報告の DeadlockDetectedError と同じ種類）を止める直しである。
+  - 本 PR の新しい試験も 995 を使っているので、同じ番号が重なる。CI「guard-authoring/evaluation」は、PR の土台より main が先に進んだため error になっている。
+
+### 改訂1 の作業（この順に。触るのは 3 ファイルだけ）
+
+（１）`git fetch origin main` のあと `git merge --no-ff origin/main`（merge commit。rebase・force push はしない）。
+- 重なるのは `backend/tests/test_roles_system_key_ddl.py` だけのはず。
+- 直し方: origin/main の側をそのまま取る。そのうえで、`assert sql.count(marker) == 2` の 1 か所だけを `== 3` にする。
+- 同じ行の末尾の説明は `# roles の定義・部分一意索引 2 つ（system_key・discord_role_id）` にする。
+- ほかのファイルが重なったら、直さずに停止する。NEEDS_DECISION: と `git status` の生出力を返す。
+
+（２）`backend/tests/rls_bootstrap.py` の `_TENANT_LOOP_MIGRATIONS` に 1 行足す。
+- 場所は `"20261005_150000_add_roles_system_key.sql": 1,` のすぐ次。
+- 足す行: `"20261106_150000_add_discord_role_link_tables.sql": 1,`
+- この移行に、テナントを選ぶ条件は 1 か所しかない。Opus が `_TENANT_LOOP_SELECTOR_RE` と同じ正規表現で数え、1 だった。
+
+（３）`backend/tests/test_discord_role_link_ddl.py` を次のとおりにする。
+- import を `from tests.rls_bootstrap import (_apply_migration_on_conn, bootstrap_tenant_schema, public_bootstrap_lock, tenant_schema_lock,)` にする（origin/main の test_roles_system_key_ddl.py と同じ並び・括弧の書き方）。
+- `_TENANT_ID = 995` を `_TENANT_ID = 994` にする。直前の行に `# 995 は test_roles_system_key_ddl.py が使うため、試験・移行のどこにも無い 994 を使う` を書く。Opus が backend/tests と migrations を grep し、994 は 0 件だった。
+- `_block` の 2 つの区切りは §5（改訂済み）のとおりにする。
+- PG の試験の本体は、origin/main の `test_new_tenant_has_system_key_and_migration_is_idempotent` と同じ形にする。
+  - `tenant_schema_lock` の中を `try:`／`finally:` にする。
+  - 移行の 2 回流しは `await _apply_migration_on_conn(conn, _MIGRATION, schema_name=_SCHEMA)` を 2 回にする（`exec_driver_sql(migration_sql)` と `migration_sql = ...` の行は消す）。
+  - finally は `async with public_bootstrap_lock(admin_engine):` の中で `DROP SCHEMA IF EXISTS {_SCHEMA} CASCADE` を流す。
+  - 外側の finally には `await admin_engine.dispose()` だけを残す。
+  - `before`／`after` の比べ方と assert は変えない。
+- ファイルの最後に、単体の試験を 1 つ足す（origin/main の `test_roles_migration_is_scoped_to_own_tenant` と同じ形）。
+
+```python
+def test_link_migration_is_scoped_to_own_tenant():
+    from tests.rls_bootstrap import _scope_tenant_migration
+
+    sql = (_REPO_ROOT / "migrations" / _MIGRATION).read_text(encoding="utf-8")
+    scoped = _scope_tenant_migration(sql, _MIGRATION, _SCHEMA)
+    assert scoped.count(f"AND nspname = '{_SCHEMA}'") == 1
+    assert scoped != sql
+```
+
+### 改訂1 の確かめ（生出力を報告書の「改訂1」節に貼る）
+
+- `git log --oneline -3` と `git merge-base --is-ancestor origin/main HEAD; echo rc=$?`（rc=0 であること）
+- `cd backend && python -m pytest tests/test_discord_role_link_ddl.py tests/test_roles_system_key_ddl.py -q`。PostgreSQL が無ければ PG の 2 件は skipped になる。単体はすべて passed であること。
+- 手元に PostgreSQL があれば、2 つの PG の試験を TEST_PG_URL 付きで流す。直列で 1 回、`-n 4 --dist=loadfile` で 3 回。ぶつかりが出なければよい。無ければ「PostgreSQL なし・CI に任せる」と書く。
+- §6 の最後の行（check_test_schema_dup.py の rc=0）
+- `cd backend && ruff check tests/test_discord_role_link_ddl.py tests/test_roles_system_key_ddl.py tests/rls_bootstrap.py`
+- `git diff --name-only origin/main...HEAD` の生出力（PR #5174 の 13 ファイル＋`backend/tests/rls_bootstrap.py` の 14 ファイルであること）
+
+### 改訂1 の保存
+
+- merge commit の文は git の既定のまま。
+- 直しの commit の文: `test: scope 2a-1 PG test to its own tenant and drop CREATE TABLE markers (schema-dup gate, xdist)`
+- `git push origin release/discord-own-server-s2-2a1` を単独で流す。PR はもうある（#5174）ので作らない。
+- 報告書 `docs/handoff/discord-server-management/impl-report-s2-2a1.md` の最後に「改訂1」節を足し、同じ commit に入れる。
 
 ## §7 保存
 
