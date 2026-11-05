@@ -19,4 +19,19 @@
 
 ## 2回目
 
-（再審査の結果をここに足す）
+（2026-11-05 11:19-11:22Z・審査対象 ad8b9aa51）
+
+- 判定: **APPROVE**（必須0・推奨5）。返事は途中で切れずに全文読めた。
+- 試作の判定器（3-1 の定義どおり・python3 標準の ast）を origin/main 32b39bd59 の backend/app/ に当てて6件（leads.py:712・order_commissions.py:322/385/472・orders.py:440・tenant_profile.py:141）、d344d12ea^1 の calendar_service.py に当てて2件（:271→:276・:486→:488）。どちらも recon と行番号まで一致。
+- 今の lint を backend/app/ に当てても OK（420 file）。Rule A・B の結果は変わらない。K1〜K8 はすべて○×で判定できる。
+- 今のコードで、入れ子の def の中の commit は0件、finally の中の commit は0件。
+
+| 番号 | 重さ | 指摘 | 直した所 |
+|---|---|---|---|
+| R1 | 推奨 | ADR-072:103 が routers 限定のまま。「案 C」の名前が :75 のハイブリッド案と重なる | design.md 3-4 改訂の記録: :103 と :4 を v3 で直す。名前は「Rule C（commit 後の付け直し）」 |
+| R2 | 推奨 | `backend/tenant/CLAUDE.md:3,12` が routers 限定のまま・import が誤り（`from app.database`） | design.md 3-4 に直す行を足した（3-3 の案内文と同じ commit） |
+| R3 | 推奨 | finally の中の commit・match の case・break/continue・入れ子の def の扱いが未定義 | design.md 3-1 判定5 に1行ずつ書いた |
+| R4 | 推奨 | GO 記録の箇条書きが計画票の行4と行5の間に入り表が切れる | design.md 5 の表の後ろへ移した |
+| R5 | 推奨 | 行番号のずれ（:1026→:1025、:43→:44） | design.md 5 で直した |
+
+- 生の記録: クラウド実行 cse_01W47tdekV7doV49mCK53713

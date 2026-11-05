@@ -50,8 +50,13 @@
 2. 複合文（if・for・while・with・async with・try・match）は、たどる途中では**中にもぐらず文全体を1つの文**として見る。「`db` を含む」は、その文の ast の木のどこかに名前 `db`（`ast.Name(id='db')`）があること。
 3. 名前 `db` を含む最初の文が「`await <名前>(db, ...)` だけの式文」で、<名前> が `reset_tenant_context`・`set_tenant_context`、またはそのファイルの `from app.auth.dependencies import reset_tenant_context as X`（set_tenant_context も同じ）の X なら合格。
 4. `db` を含む別の文に先に着いたら違反。2 により、commit の次が `if x: await reset_tenant_context(db, tenant_id)` のような**条件付きの付け直しは違反**（付け直しは条件なしで直後に置く。ADR-072 §4 の「直後」）。`db` を含む文に着かずに終わる、または `db` を含まない return・raise で止まったら合格。
-5. 件数が recon の6件・2件と1件でも違えば、実装役は直さずに止めて Opus に生出力を返す（試し2回目の判定器の原本は手元に無く、この定義が正本）。
-6. 出力: `Violation(file, commit の行, 関数名, "C", "await db.commit() の後、db を使う前に reset_tenant_context(db, tenant_id) がない（:<違反の文の行>で db を使用）")`。
+5. 決めておく分岐（今の backend/app/ では入れ子の def の中の commit・finally の中の commit とも0件。設計審査2回目で実測）:
+   - finally の中の commit: finalbody の後ろ → try の後ろ、とたどる（1 と同じ）。
+   - match の case の中の commit: if と同じく、その match 文の後ろへ出る。
+   - break: その文を含む一番内側のループ（for・while）の後ろへ飛ぶ。continue: そこで止めて合格（ループの次の回は見ない。4章「止まらない部分」）。
+   - 入れ子の async def の中の commit: その入れ子の関数が対象の関数（(a)/(b)）のときだけ、その関数の中で判定する。外の関数へは出ない。
+6. 件数が recon の6件・2件と1件でも違えば、実装役は直さずに止めて Opus に生出力を返す（試し2回目の判定器の原本は手元に無く、この定義が正本）。
+7. 出力: `Violation(file, commit の行, 関数名, "C", "await db.commit() の後、db を使う前に reset_tenant_context(db, tenant_id) がない（:<違反の文の行>で db を使用）")`。
 
 ### 3-2. 対象のフォルダの分け方
 
@@ -82,7 +87,8 @@
 
 - 見本を2件足す: `scripts/tests/rule-fixtures/tenant-schema/fail-service-commit-without-reset/`（routers の外 `backend/app/services/zz_fixture_service.py.fixture` に飾りの無い関数・commit の後に db を使う → `expect: fail`・`expect_output: "[Rule C]"`・`rules: ["K01"]`）と `pass-service-commit-with-reset/`（同じ形で直後に reset → `expect: pass`）。既存2件の argv を `backend/app/` にする。
 - 規則台帳 `docs/specs/rule-enforcement/rules.yml` の K01 の reason を今の事実に書き換える（kind は review のまま。理由: for 文の中で commit し次の回の頭で db を使う形は見ない＝止まらない部分が残る）。新しい reason の要点: 見張りは backend/app/ 全体の commit の後を Rule C で見る／止まらない部分は「ループの次の回」「db 以外の名前の session」／検査は backend/app/ を変えた PR で走る。
-- 改訂の記録: `docs/adr/ADR-072-tenant-schema-prefix-enforcement.md` に v3 を足す（§4 に「3. 案 C 違反（Rule C）: 会社名付きの表名を使っていても、RLS のある表では commit の後の付け直しが要る。routers の外も対象」、変更履歴に v3 の行）。足した後 `node scripts/generate-adr-index.js` を流し `docs/adr/README.md` を一緒に commit する。
+- 改訂の記録: `docs/adr/ADR-072-tenant-schema-prefix-enforcement.md` に v3 を足す。§4 の前置き（:103 の「`backend/app/routers/` 配下で」）を「`backend/app/` 配下で（Rule A・B は endpoint だけ）」に直し、項目3「**Rule C（commit 後の付け直し）違反**: 会社名付きの表名を使っていても、RLS のある表では commit の後の付け直しが要る。routers の外も対象」を足す（「案 C」の名前は :75・:79 のハイブリッド案と重なるので使わない）。ステータス（:4）を v3 にし、変更履歴に v3 の行を足す。足した後 `node scripts/generate-adr-index.js` を流し `docs/adr/README.md` を一緒に commit する。
+- 詳細ページ `backend/tenant/CLAUDE.md`（`backend/AGENTS.md:10` が指す）: :3 の「`backend/app/routers/` 配下の write エンドポイント実装時」を「`backend/app/` で commit の後に db を使う関数の実装時（routers の外も）」に、:12 の誤った import `from app.database import reset_tenant_context` を `from app.auth.dependencies import reset_tenant_context` に直す（3-3 の案内文の直しと同じ commit）。
 - 決まりの文 `backend/AGENTS.md:10` は見出しの `**ADR-072 write endpoint**` だけを `**ADR-072 commit の後に db を使う関数（routers の外も）**` に直す。後ろの「`db.commit()` 直後に `reset_tenant_context()` 必須」は rules.yml K01 の anchor なので1字も変えない。
 
 ## 4. 弊害・トレードオフ
@@ -102,9 +108,9 @@
 | 2 | 実装カード（本書 3 章）で実装・push（`release/services-tenant-reset-after-commit`）。試験は Mac で回さない。CI で見る | クラウド Sonnet |
 | 3 | Draft PR（shingo-cc）→ CI 緑 → K1〜K7 を生出力で確認 | Opus |
 | 4 | マージ前の審査役（reviewer・opus・新規起動）APPROVE → 委任 GO 記録 → 確認済みコメント → 別の応答でマージ | Opus |
-
-- GO 記録が要る理由（`scripts/check-process-artifacts.js` の実物）: `^scripts/` を含む（:1026）・`docs/specs/rule-enforcement/rules.yml` を含む（:1037）・`backend/app/routers` を含む（:1055・:1858-1865）。`.github/workflows/lint-tenant-schema.yml` は危険扱いではない（:1049）。PO 本人の GO が要るのは `.github/workflows/workflow-lint.yml` だけ（:51-53）で、本件は触らないため委任 GO（名義「POの委任に基づくClaude Opus発行」・:43）で足りる。
 | 5 | deploy の成功・/health を確認（K8）。台帳・覚え書きを更新 | Opus |
+
+- GO 記録が要る理由（`scripts/check-process-artifacts.js` の実物）: `^scripts/` を含む（:1025）・`docs/specs/rule-enforcement/rules.yml` を含む（:1037）・`backend/app/routers` を含む（:1055・:1858-1865）。`.github/workflows/lint-tenant-schema.yml` は危険扱いではない（:1049）。PO 本人の GO が要るのは `.github/workflows/workflow-lint.yml` だけ（:51-53）で、本件は触らないため委任 GO（名義「POの委任に基づくClaude Opus発行」・:44）で足りる。
 
 ## 6. 継続
 
