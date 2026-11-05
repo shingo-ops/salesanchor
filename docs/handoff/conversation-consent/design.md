@@ -685,4 +685,98 @@ PO への返事の本文（ツール呼び出しの中ではない）の、**最
   - ふつうの置き場で動かした一覧: 12行。件の本体（pid 97478）の行は無い。行のキーは cwd・kind・name・pid・sessionId・startedAt・status の7つ。
   - `CLAUDE_CONFIG_DIR=CH` で動かした一覧: 1行。pid 97478・status `idle`・waitingFor なし。
   - 結論: ×。件の質問の待ちは、この一覧でも見分けられない。
-- 別の方法2（まだ設計していない・測っていない）: 件の Claude の仕掛け（hooks）で、PreToolUse（AskUserQuestion・ExitPlanMode）と PermissionRequest の時に印を書き、答えた後に消す。公式の説明書（code.claude.com/docs/en/hooks・2026-11-05 読んだ）に、PreToolUse が AskUserQuestion と ExitPlanMode にも当たると書かれている。答えを断った時に印が消える出来事が来るかは書かれておらず、未確認。Context7 は今月の上限で使えなかった。
+- 別の方法2（まだ設計していない・測っていない）: 件の Claude の仕掛け（hooks）で、PreToolUse（AskUserQuestion・ExitPlanMode）と PermissionRequest の時に印を書き、答えた後に消す。公式の説明書（code.claude.com/docs/en/hooks・2026-11-05 読んだ）に、PreToolUse が AskUserQuestion と ExitPlanMode にも当たると書かれている。答えを断った時に印が消える出来事が来るかは書かれておらず、未確認。Context7 は今月の上限で使えなかった。 → §14-11 で設計した。
+
+### 14-11 第7版: 件の「答え待ちの印」をサーバーが持つ
+
+#### 14-11-1 目的と見える変化
+
+- 目的: K30 で、件の状態ファイルからは「質問の選択肢が出ている」状態を見分けられなかった（§14-10-10）。この版では、件の Claude Code の仕掛け（hooks）からサーバーへ「答え待ちが始まった・終わった」を知らせ、サーバーが件ごとに印を持つ。印がある間、case-say は何も書かずに断る。
+- PO から見える変化: 件の窓に質問の選択肢・承認の確認が出ている間は、Opus が一文を送ろうとしても届かない（監査に「断った・理由 awaiting_input」が残る）。出ていない間は §14-10 のとおり一文が1回届く。
+- 第6版の 14-10-3 の判定1〜10はそのまま使う。この版は判定7に「サーバーの印が無いこと」を足す（判定7の状態ファイルの確かめは残す。印と状態ファイルの両方が通るときだけ貼る）。
+
+#### 14-11-2 観測事実（agent-console origin/main f503e9b）
+
+- 件の設定は `buildCaseSettings`（server/case-sandbox.ts:446-473）が作る。記録用の hook を `addHandlers` で足し、宛先を `--post http://127.0.0.1:<port>/api/agent/case-activity` にする（:450）。件の見張り（guard）は PreToolUse の全道具に同期で入り、`onFailure: "block"`・`timeout: 10` を使っている（:453）。許可の既定は `defaultMode: "dontAsk"`（:459）。
+- 共通の記録用 hook の一覧 `HOOK_SPECS`（server/activity-hooks.ts:52-71）は全窓に入る。Notification は使っていない（:47 のコメント）。`buildHandler`（:94-100）は `async: false` を書かない限り非同期にする。
+- 件からの知らせの受け口 `handleCaseActivity`（server/http.ts:433-451）: Origin があれば 403 → `caseOfRequest`（:396-414。送り元の番号を lsof で pid に引き、親をたどって件の本体の記録（pid と開始時刻）に行き着いたらその件）→ 本文 → session_id の固定（違えば 409）→ 記録 → 204。件は合言葉を持たず、どの件からの知らせかはサーバーが pid で決める。
+- 公式の説明書（code.claude.com/docs/en/hooks・2026-11-05 Opus が読んだ。Context7 は今月の上限で使えなかったため、本起動指示の代替で直接読んだ）: PreToolUse は AskUserQuestion と ExitPlanMode にも当たる。PermissionRequest は許可の確認が要る時に来る。Stop は利用者が止めた（割り込み）ときは来ない。hooks は既定で同期で、終わるまで Claude は先へ進まない（async を付けたものは待たない）。質問を Esc で断ったときに何の知らせが来るかは書かれていない（未確認）。`onFailure: "block"` の効き方は、読んだ抜き書きの範囲に節の本文が無く未確認（件の見張りが使っている書き方。K36 ⑥で確かめる）。
+- K30 の実測: 件の窓では許可の確認と計画の承認は出なかった（dontAsk のため。§14-10-10）。質問の選択肢は出た。
+
+#### 14-11-3 変更後の仕組み
+
+(a) 件だけに入る同期の hook（`buildCaseSettings` の中で足す。共通の `HOOK_SPECS` には入れないので、ふつうの窓は変わらない）。本体は新しい `hooks/case-wait-hook.mjs`。受け取った JSON から `hook_event_name`・`tool_name`・`session_id` だけを取り、新しい受け口へ POST する。会話の中身（tool_input・prompt）は送らない。
+
+| 出来事 | 絞り込み | 印 |
+|---|---|---|
+| PreToolUse | AskUserQuestion\|ExitPlanMode | 付ける |
+| PermissionRequest | （全部） | 付ける |
+| Elicitation | （全部） | 付ける |
+| PostToolUse・PostToolUseFailure | AskUserQuestion\|ExitPlanMode | 外す |
+| UserPromptSubmit | — | 外す |
+| Stop | — | 外す |
+
+- すべて同期（`async` を書かない）・`timeout: 5`。同期にする理由: 印を付ける知らせが届く前に選択肢が出ること、知らせの順が入れ替わる（外すが付けるより後に届く）ことを防ぐ。Claude は同期の hook が終わるまで先へ進まないので、知らせは起きた順にサーバーへ届く。
+- 付ける出来事は `onFailure: "block"`（件の見張りと同じ書き方。:453）。サーバーへ届かなければ、その質問・確認を出させない。外す出来事は失敗しても止めない（印が残るだけで、安全側）。
+- `case-wait-hook.mjs` は、サーバーが 204 を返したときだけ 0 で終わり、それ以外（接続できない・204 以外・5 秒を超える）は 2 で終わる。
+
+(b) 新しい受け口 `POST /api/agent/case-wait`（server/http.ts。`handleCaseActivity` と同じ順で確かめる）: POST 以外 405 → Origin があれば 403 → `caseOfRequest` で件を決める（決まらなければ 401）→ 本文（4KiB まで。`hook_event_name` が上の表の6種、`tool_name` は文字列か無し）→ `pinCaseSessionId` と同じ固定の確かめ（違えば 409）→ 印を更新して 204。表に無い出来事・形の違う本文は 400 で、印は変えない。
+
+(c) 印の置き場: サーバーのメモリの `Map<caseId, { awaiting: boolean; since: number; lastEvent: string }>`。件の本体の記録（`recordCaseMain`）と同じ所（server/sessions.ts）に置き、窓が終わったとき・一覧から外したときに一緒に消す。ファイルには書かない（正本は1か所）。窓を新しく作ったときは `awaiting: false` で始める（hooks は起動の時から入っているため）。つなぎ直した窓は §14-10-3(a)4 の `reattached` で case-say がもともと断るので、印の初期値の問題は起きない。
+
+(d) case-say の判定7に足す: その件の印が `awaiting: true` なら 409（理由 `awaiting_input`）。判定は貼る前（7）と Enter の前（9 (3)）の両方で行う。
+
+(e) 変えない物: 共通の `HOOK_SPECS`・ふつうの窓・画面のチャット・`handleCaseActivity`・件の部屋・Sales Anchor 側の見張りと許可。
+
+#### 14-11-4 対象と対象外
+
+- 対象（agent-console・PR 1本。便CS0）: server/case-sandbox.ts（件だけの hook を足す）、hooks/case-wait-hook.mjs と型（新規）、server/activity-setup.ts（写す）、server/http.ts（受け口と K36 用の読み取り口）、server/sessions.ts（印の置き場と消し方）、試験、README。case-say（送る仕組み）は作らない。
+- 対象（Sales Anchor）: 本書。
+- 対象外: 送る仕組み（便CS1）、ADR-1033（便CS2）、ふつうの窓の hooks。
+
+#### 14-11-5 代替案
+
+| 案 | 採否 | 理由 |
+|---|---|---|
+| 件だけの同期の hook でサーバーに印を持たせる（本案） | 採用 | 出来事の時点で確実に知らせが来る。正本はサーバーのメモリ1か所。ふつうの窓に触らない |
+| `claude agents --json` | 不採用 | 実測で質問の待ちを見分けられない（§14-10-10 別の方法1） |
+| 状態ファイル | 不採用 | 実測で×（K30） |
+| 画面の文字を読む（tmux の capture-pane） | 不採用 | 会話の中身を読むことになる。画面の形が版で変わると黙って外れる |
+| 非同期の hook | 不採用 | 印が付く前に貼れる・知らせの順が入れ替わる |
+| 今のまま PO が打つ（案 E） | 予備 | K36 が×のときの戻り先 |
+
+#### 14-11-6 リスクと対処
+
+| # | リスク | 対処 |
+|---|---|---|
+| R29 | 質問を Esc で断ったとき、外す知らせが来ない | 印が残り、case-say は断り続ける（安全側）。PO が件に何か打つ（UserPromptSubmit）と外れる。どの知らせが来るかを K36 で記録する |
+| R30 | サーバーが落ちている・遅いとき、付ける知らせが届かない | 付ける出来事は `onFailure: "block"` で、届かなければ質問を出させない。この効き方を K36 ⑥で確かめる（効かなければ×） |
+| R31 | 件が自分で受け口を呼び、印を外す | 影響は件自身の窓だけ（質問の選択肢に一文が入る）。件の許可は dontAsk で許可の確認は出ないので、ほかの窓や本番に届く承認は起きない。§14 R17・R24 と同じ水準 |
+| R32 | 件が自分の settings を書き換えて hook を外す | 件の設定ファイルは部屋の書き込み拒否に入っている（server/case-sandbox.ts:213-227 の保護の一覧）。外せても影響は R31 と同じ |
+| R33 | 担当（サブエージェント）が質問の道具を呼ぶ | 担当の hook も件の本体の子から送られ、`caseOfRequest` は同じ件に決まる。付けた印は PostToolUse か Stop で外れる。K36 ⑦で担当からの質問が出るかを1回記録する（出なければ「場面なし」） |
+| R34 | 同期の hook で件の動きが遅くなる | 当たるのは表の6種だけ。K36 ⑧で1回あたりの時間を記録する（目安 1 秒未満） |
+
+戻し方: agent-console を一つ前の版に戻す（hook と受け口が消える）。件を開き直せば設定は元に戻る。
+
+#### 14-11-7 成功条件
+
+| # | 基準 | 検証方法 |
+|---|---|---|
+| K36 | 本物の件の窓で、答え待ちの間だけ印が付き、答えると外れる | 便CS0 を反映した後、PO が件を1つ開き、Opus がサーバーの印を読むだけで記録（読む口は便CS0 で足す。件の id を渡すと `awaiting`・`lastEvent`・`since` だけを返す、合言葉付きの読み取り）: ① 開いた直後 false ② 質問の選択肢が出ている間 true ③ 選んで答えた後 false ④ 質問の選択肢で Esc → 値と lastEvent をそのまま記録（true のままなら安全側で○。false なら外れた知らせの名前を記録） ⑤ PO が何か打った後 false ⑥ サーバーを止めた状態で質問を頼む → 選択肢が出ないこと（出たら×） ⑦ 担当からの質問（出なければ場面なし） ⑧ 6種の hook の1回あたりの時間。①②③④⑤⑥が○なら○。×なら便CS1 に進まず案 E |
+| K37 | ふつうの窓の hooks が変わっていない | vitest で、件でない役割の設定に case-wait-hook が入らないこと。件の設定に表の6種が同期・timeout 5 で入り、付ける3種に onFailure block が付くこと |
+| K38 | 受け口の断り | vitest: 件に決まらない 401・Origin 403・表に無い出来事 400・session_id 違い 409 で、どれも印が変わらないこと。本文に会話の中身が入っていても印にも監査にも残らないこと |
+
+#### 14-11-8 実装の分け方
+
+- 便CS0（クラウドの Sonnet・agent-console の PR 1本）: 14-11-3 (a)〜(c) と読み取り口・K37・K38。送る仕組みは作らない。
+- PO: 便CS0 の版の反映。
+- Opus と PO: K36。
+- K36 が○なら、§14-10 の便CS1（判定7に 14-11-3 (d) を足す）・便CS2 へ。×なら案 E。
+
+#### 14-11-9 外部事例
+
+該当事例なし。理由: 自作の作業画面アプリの中で、Claude Code の hooks から自分のサーバーへ知らせる仕組みで、外部の数値事例では確かめられない。確かめは K36 の実測で行う。
+
+#### 14-11-10 設計審査（第7版）
+
+- （審査の後に書く）
