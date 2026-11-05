@@ -67,7 +67,12 @@
 | `backend/app/tasks/master_required_fields_monitor.py:1` | 管理者用 Discord に定期で送る作業の手本 |
 | `backend/app/celery_app.py:21` | 作業の登録（include）。足し忘れると未登録になる |
 | `backend/app/celery_app.py:69` | 定期の時間割（beat_schedule） |
-| `.github/workflows/migration-test.yml:2002` | 実 DB で全 migration を流す1周目（必須チェック「マイグレーションSQL 実行テスト（実DB）」） |
+| `.github/workflows/migration-test.yml:40` | paths-filter（migration 関係のファイルが変わった PR だけで job が動く） |
+| `.github/workflows/migration-test.yml:1352` | job「マイグレーション全件ドライラン（実DB）」の始まり。Python 3.12 と backend の依存を入れる |
+| `.github/workflows/migration-test.yml:2002` | 1周目。2026-06 までの migration しか流さない（新しい表は入らない） |
+| `.github/workflows/migration-test.yml:2071` | 全件ドライラン。登録された全 migration − 除外一覧を報告用 DB jarvis_report に流す（便5 はこの後に置く） |
+| `.github/workflows/migration-test.yml:2087` | まとめの job＝必須チェック「マイグレーションSQL 実行テスト（実DB）」 |
+| `migrations/003_add_phase1_tenant_tables.sql:176` | 会社の roles・user_roles は RLS で app.tenant_id を見る（文脈なしでは読めない） |
 | `.github/workflows/process-artifacts-gate.yml:8` | 起動は pull_request → 設定もスクリプトも PR 側のものが動く |
 | `.github/workflows/process-artifacts-gate.yml:27` | checkout は既定（PR のマージ用の写し） |
 | `scripts/check-process-artifacts.js:51` | PO だけが変えてよいファイルの一覧（今は workflow-lint.yml だけ） |

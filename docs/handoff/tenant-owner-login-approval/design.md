@@ -8,7 +8,7 @@
 **KGI**: docs/handoff/tenant-owner-login-approval/kgi.md（PO 承認済み 2026-11-05「1」）  
 **日付**: 2026-11-05  
 **担当**: Planner（Claude Opus）  
-**状態**: 設計案作成済み。設計審査（クラウドの architect）前。PO の実装承認前。
+**状態**: 設計案作成済み。設計審査1回目 REVISE（必須6・推奨4）を反映済み（§審査の反映）。再審査前。PO の実装承認前。
 
 ---
 
@@ -74,18 +74,21 @@
 - `/me/permissions`（`backend/app/routers/roles.py:145` 付近）の返り値に `is_tenant_owner` を足す。
 
 (2) 許可の共通化（運営とオーナーで同じ UPDATE を1か所に）
-- `backend/app/auth/devices.py` に `approve_request_as_admin(db, *, request_id, approver_user_id, note, tenant_id: int | None) -> (target_user_id, target_tenant_id) | None` を置く。
-  - 依頼と依頼した人を `public.auth_login_requests r JOIN public.users u ON u.id = r.user_id` で引く。`tenant_id` が渡されたら `AND u.tenant_id = :tenant_id` を付ける（オーナー用。他社の依頼は「無い」扱い＝404）。
-  - 依頼した人が許可する人と同じなら 403 `cannot_approve_own_request`。
-  - `UPDATE … SET status='approved', decided_at=now, decided_via='admin', decided_by_user_id=:approver, decided_note=:note WHERE id=:id AND status='pending' AND expires_at > now`。0 行なら 404。
+- `backend/app/auth/devices.py` に `approve_request_as_admin(db, *, request_id, approver_user_id, note, tenant_id: int | None, require_admin_requested: bool) -> (target_user_id, target_tenant_id)` を置く。HTTP の例外は投げず、結果の種類（`not_found`・`own_request`）を返すか専用の例外にし、受け口で今と同じ 404・403 に直す（運営の受け口の返事は変えない）。
+  - 判定の順番（運営の今の順 `backend/app/routers/super_admin_login_requests.py:117` 〜 161 と同じ）:
+    1. 依頼と依頼した人を `public.auth_login_requests r JOIN public.users u ON u.id = r.user_id WHERE r.id = :id` で引く。`tenant_id` が渡されたら `AND u.tenant_id = :tenant_id`、`require_admin_requested` が真なら `AND r.admin_requested_at IS NOT NULL` を付ける。無ければ 404（他社の依頼・頼まれていない依頼は「無い」扱い）。
+    2. 依頼した人が許可する人と同じなら 403 `cannot_approve_own_request`（UPDATE より前）。
+    3. `UPDATE … SET status='approved', decided_at=now, decided_via='admin', decided_by_user_id=:approver, decided_note=:note WHERE id=:id AND status='pending' AND expires_at > now`（オーナー用は同じ `admin_requested_at IS NOT NULL` も WHERE に入れる）。0 行なら 404。
+  - 運営は `tenant_id=None, require_admin_requested=False`、オーナーは `tenant_id=今の会社, require_admin_requested=True` で呼ぶ（ADR-1055 改訂行「社員が頼んだ依頼だけ」と一致させる）。
 - 運営の受け口 `backend/app/routers/super_admin_login_requests.py:107` はこの関数を `tenant_id=None` で呼ぶ形に置き換える（動きは同じ。既存の試験がそのまま通ることで確かめる）。
 - decided_via は既存の 'admin' を使う（制約の変更なし）。オーナーか運営かは監査の event 名と decided_by_user_id で分かる。
 
 (3) 頼むボタンの受け口（待っている社員の画面から）
-- `POST /auth/login-requests/ask-admin`（`backend/app/routers/auth.py` の poll の隣）。認証は待ち中 Cookie（`_load_login_request`、`backend/app/routers/auth.py:1318`）。`require_app_origin` を通す。
-- 依頼が pending かつ期限内でなければ 409 `not_pending`。
+- `POST /auth/login-requests/ask-admin`（`backend/app/routers/auth.py` の poll の隣）。poll（`backend/app/routers/auth.py:1378`）と同じく、最初に `_require_issuance_enabled()` と `_require_app_origin(request)` を通す。認証は待ち中 Cookie（`_load_login_request`、`backend/app/routers/auth.py:1318`）。
+- Cookie が無い・依頼が引けないときは poll と同じく `{"status":"expired"}` を返して Cookie を消す（`_pending_closed("expired")`。画面は待ちを終える）。依頼が pending かつ期限内でなければ 409 `not_pending`。
 - `UPDATE … SET admin_requested_at = now WHERE id=:id AND status='pending' AND expires_at > now AND admin_requested_at IS NULL RETURNING id`。0 行（もう頼んだ）なら知らせを出さずに `{"status":"already_requested"}` を返す（連打で知らせが増えない）。
-- 依頼した人の会社のオーナー一覧は `_owner_user_ids`（`backend/app/services/user_notices.py:73`）で取り、依頼した本人を除く。
+- 依頼した人の会社は `public.users` から引く（Cookie の依頼の user_id → tenant_id）。会社の roles・user_roles は RLS で `app.tenant_id` を見る（`migrations/003_add_phase1_tenant_tables.sql:176` 〜 214）ため、`set_tenant_context(db, tenant_id)` を張ってから `_owner_user_ids`（`backend/app/services/user_notices.py:73`）で取り、取り終えたら `clear_tenant_context(db)` で外す（この受け口はログイン前で、もともと会社の文脈が無い）。依頼した本人を除く。
+- 試験で「会社の文脈を張らないと 0 人になる」「張ると正しい人数」を salesanchor_app の実 PostgreSQL で確かめる（文脈の張り忘れを試験で止める）。
   - 0 人なら `{"status":"no_owner"}` を返す（画面は「会社の管理者が見つかりません。運営に連絡してください。」）。列は付けたまま（運営の一覧で分かる）。
   - 1 人以上なら、各オーナーに `publish_user_change(owner_id, TOPIC_AUTH_LOGIN_REQUEST)`（鈴を生で取り直させる）と、メール `send_staff_login_help_mail`（新設・`backend/app/services/auth_mail.py:192` の形に合わせ、リンク・番号・Cookie を入れない。中身は社員の名前・メール・時刻・機械・場所）を BackgroundTasks で送る。`{"status":"requested"}`。
 - 監査: `_record_auth_audit` で event `login_request_admin_asked`（request_id・人数）。
@@ -111,7 +114,9 @@
 
 - 新ファイル scripts/check_public_tenant_rls.py: DB に入って `public` の表のうち `tenant_id` 列を持ち `relrowsecurity = false` のものを数え、許可一覧に無いものがあれば名前を出して exit 1。
 - 許可一覧は1か所: 新ファイル backend/app/ops/tenant_rls_allowlist.py（表名 → 理由の dict）。CI のスクリプトと便6の毎日点検の両方がここを読む（データを分散させない）。
-- 置く場所: `.github/workflows/migration-test.yml:2002` の1周目の直後に1手を足す（全 migration を流した後の実 DB を見る）。この workflow は migration が変わる PR で動く＝新しい表が入りうる PR だけで動く。
+- 置く場所: job「マイグレーション全件ドライラン（実DB）」（`.github/workflows/migration-test.yml:1352`）の最後の手「全件ドライラン（失敗したら止める）」（`.github/workflows/migration-test.yml:2071`）の直後に1手を足し、全件を流し終えた報告用 DB `jarvis_report` を見る。1周目（`.github/workflows/migration-test.yml:2002`）は 2026-06 までの migration しか流さないため使わない。この job の結果は必須チェック「マイグレーションSQL 実行テスト（実DB）」（`.github/workflows/migration-test.yml:2087` のまとめの job）に集まる。job は Python 3.12 と backend の依存を入れ済み（`.github/workflows/migration-test.yml:1383` の setup-python と `.github/workflows/migration-test.yml:1393` の依存の導入）なので、スクリプトは `PYTHONPATH=backend` で許可一覧を import できる。
+- 起動の条件: `.github/workflows/migration-test.yml:40` の paths-filter に scripts/check_public_tenant_rls.py と backend/app/ops/tenant_rls_allowlist.py を足す（一覧やスクリプトだけを変える PR でも点検が動く）。
+- 限界: `scripts/migration-guard/dryrun-exclusions.tsv` で外された migration の表は見えない → この除外一覧も K10 で守る（便7）。
 - 最初の数え方: 最初の PR は「数えて出すだけ」の形で CI に流し、出た表の一覧（生出力）を Opus が1件ずつ理由を確かめて許可一覧に入れる。一覧の中身は PR に載せて PO に報告する。そのあと「落とす」形に切り替える（同じ PR の2つ目のコミット）。推測で一覧を作らない。
 - 試験（落ちる見本と通る見本）: backend/tests/test_check_public_tenant_rls.py を実 PostgreSQL（`RLS_ADMIN_DATABASE_URL`）で動かす。一時の表 public.ci_rls_probe（tenant_id 付き・RLS なし）→ スクリプトが 1 を返す。RLS を付ける → 0。最後に表を消す。
 
@@ -132,8 +137,8 @@
 - 後: 新ファイル .github/workflows/guard-files-gate.yml。
   - 起動は `pull_request_target`（types: opened, synchronize, reopened, edited, labeled）。基のブランチ（main）の定義だけが動く。
   - PR のコードを checkout しない・実行しない。`gh api repos/{repo}/pulls/{n}/files --paginate` で変わったファイル名だけを読む。権限は `contents: read`・`pull-requests: read`。
-  - 守るファイルの一覧はこの workflow の中に直接書く（PR 側から変えられない場所に置くため）: `.github/workflows/test.yml`・`.github/workflows/lint-tenant-schema.yml`・`.github/workflows/migration-test.yml`・`.github/workflows/workflow-lint.yml`・`.github/workflows/process-artifacts-gate.yml`・.github/workflows/guard-files-gate.yml 自身・`scripts/lint_tenant_schema.py`・`scripts/check-process-artifacts.js`・scripts/check_public_tenant_rls.py・backend/app/ops/tenant_rls_allowlist.py・backend/app/tasks/tenant_isolation_daily_check.py。
-  - 一覧のファイルが変わっていたら、PR に shingo-ops が書いた「GO #番号」のコメント（番号がその PR と一致）があるときだけ通す。無ければ落ちる。コメントの書き手は API の `user.login` で確かめる（本文の文字だけで信じない）。
+  - 守るファイルの一覧はこの workflow の中に直接書く（PR 側から変えられない場所に置くため）: `.github/workflows/test.yml`・`.github/workflows/lint-tenant-schema.yml`・`.github/workflows/migration-test.yml`・`.github/workflows/workflow-lint.yml`・`.github/workflows/process-artifacts-gate.yml`・.github/workflows/guard-files-gate.yml 自身・`scripts/lint_tenant_schema.py`・`scripts/check-process-artifacts.js`・`scripts/migration-dryrun-report.py`・`scripts/migration-guard/dryrun-exclusions.tsv`・scripts/check_public_tenant_rls.py・backend/app/ops/tenant_rls_allowlist.py・backend/app/tasks/tenant_isolation_daily_check.py・K2 の試験 backend/tests/test_tenant_login_requests.py・K8 の試験 backend/tests/test_check_public_tenant_rls.py。
+  - 一覧のファイルが変わっていたら、PR に shingo-ops が書いた「GO #番号 <SHA>」のコメントがあるときだけ通す。番号はその PR と一致し、SHA（7文字以上）は今の PR の head の SHA（`github.event.pull_request.head.sha`）の先頭と一致すること。GO の後に push すると head が変わるので、新しい GO が要る（古い GO で後から足した変更を通さない）。無ければ落ちる。コメントの書き手は API の `user.login` で確かめる（本文の文字だけで信じない）。
   - コメントを書いても pull_request_target は動き直さない。GO のコメントの後は、落ちた実行を `gh run rerun` でやり直す（やり直しは同じ PR の検査として結果が付く）。issue_comment で起動する形は、結果が PR の最新の写しに付かないため使わない。この点は設計審査で GitHub の文書と照らして確かめる。
   - 必須チェックに登録: ruleset 15777895 の必須一覧に「guard-files gate」を足す。Ruleset の変更は CLAUDE.md の危険操作 → PO に `bash scripts/permit-danger.sh` を頼み、Opus が `gh api` で足す。足す前後の ruleset を生で保存する。
   - この workflow 自身を足す PR は、まだ main に無いので自分を守れない → この PR は PO の「GO #番号」で合流する（危険 PR として扱う）。
@@ -151,14 +156,14 @@
 | 基準 | 検証方法 |
 |------|---------|
 | K1 オーナーが自社の社員を許可して入れる | 本番: 点検用の会社で社員が新しい機械でログイン→「会社の管理者に頼む」→オーナーが管理センターで許可→社員が入る。依頼が completed・decided_by_user_id がオーナー（ai_ro で読む） |
-| K2 他社の依頼は見えない・押せない | `pytest backend/tests/test_tenant_login_requests.py`（実 PostgreSQL・salesanchor_app）: A社オーナーの一覧に B社の依頼 0 件・許可は 404 |
+| K2 他社の依頼は見えない・押せない | `pytest backend/tests/test_tenant_login_requests.py`（実 PostgreSQL・salesanchor_app）: A社オーナーの一覧に B社の依頼 0 件・許可は 404。社員が頼んでいない自社の依頼も一覧に 0 件・許可は 404 |
 | K3 オーナー以外は使えない | 同じ試験で一般社員と admin 役は 403。画面の試験で isTenantOwner が偽ならメニューに出ない |
 | K4 自分の依頼は許可できない | 同じ試験で 403 `cannot_approve_own_request`。一覧にも自分の依頼は出ない |
 | K5 オーナーに知らせが届く | 試験: 頼むと publish とメール送信がオーナーごとに1回、2回目は 0 回。本番: PO の画面で鈴の数字とメール |
 | K6 記録が残る | 試験: decided_by_user_id・decided_note・audit_logs の event `login_request_approved_owner` が1行 |
 | K7 他社在籍が分からない | `pytest backend/tests/test_staff_create_users.py`: 他社・自社の重複とも同じ文言で「他の会社」を含まない |
 | K8 鍵の無い新しい表を止める | `pytest backend/tests/test_check_public_tenant_rls.py`（落ちる見本・通る見本）と、migration-test の新しい手が緑 |
-| K9 本番を毎日点検 | 管理者用 Discord に毎日1通。7日続けて緑（Opus が日ごとに数える） |
+| K9 本番を毎日点検 | 管理者用 Discord に毎日1通。7日続けて緑。数え方: PO が管理者用 Discord の7日分の投稿を画面で見て ○×（Opus が Discord を読めるかは未確認のため、PO の目視を正とする） |
 | K10 見張りを外す PR を止める | 見本の PR（守るファイルを1行変える下書き PR）で guard-files gate が赤、PO の「GO #番号」コメント後に緑。ruleset の必須一覧に名前がある（gh api の生出力） |
 | K11 文書から見張りに辿れる | tenant-rls README の表の見張りの名前が、ruleset・workflow の名前と一致（Opus が突き合わせ） |
 | 運営の許可が壊れていない | 既存の運営の許可の試験がそのまま緑 |
@@ -213,3 +218,22 @@
 - 完了後の監視: K9 の毎日 Discord（緑も送る）。K8 は migration を含む PR のたびに必須チェックで。K10 は見張りのファイルを触る PR のたびに必須チェックで。
 - 守り手: 見張りの workflow とスクリプトは便7 の guard-files gate が守る。決まりの表は `docs/specs/tenant-rls/README.md` に1か所。
 - 次フェーズへの引き継ぎ: 接続の使い回しの隙・Meta の Page 重複登録（report.md 穴2・穴3）は別の札。オーナーの「見送る」ボタンは要望が出たら別件。
+
+---
+
+## 審査の反映（設計審査1回目 REVISE・クラウドの architect・dc92d5602）
+
+| 指摘 | 重さ | 直したところ |
+|---|---|---|
+| N1 便5 の置き場所が1周目（2026-06 まで）で新しい表を見ない | 必須 | 便5「置く場所」を全件ドライランの後（jarvis_report）へ |
+| N2 ask-admin で会社の文脈が無いとオーナーが0人になる | 必須 | 便3(3) で set_tenant_context → `_owner_user_ids` → clear_tenant_context。試験を追加 |
+| N3 オーナーが社員の頼んでいない依頼まで許可できる | 必須 | 便3(2) に `require_admin_requested`。K2 の検証に追加 |
+| N4 GO が head に結び付かず、後の push でも通り続ける | 必須 | 便7 の GO を「GO #番号 <SHA>」にし head と一致を要求 |
+| N5 守る一覧に除外一覧・ドライランのスクリプト・試験が無い | 必須 | 便7 の一覧に4ファイル追加 |
+| N6 ADR の状態欄の字で索引が Accepted と出る | 必須 | ADR-1063 の状態欄を直し、索引を作り直し |
+| N7 共通関数の返し方と順番 | 推奨 | 便3(2) に順番と 404/403 の返し方を明記 |
+| N8 paths-filter に新しいファイル | 推奨 | 便5「起動の条件」 |
+| N9 ask-admin の発行停止と Cookie 無し | 推奨 | 便3(3) |
+| N10 K9 の数え方 | 推奨 | 受け入れ基準 K9 を PO の目視に |
+
+審査で未確認として残った点: クラウドから docs.github.com に届かず、pull_request_target と rerun の動きの公式文書の照合は審査役ができなかった。手元では公式文書を 2026-11-05 に直接確かめた（事例1）。`gh run rerun` で GO 後に緑にできるかは、便7 の見本 PR（K10 の検証）で実測して確かめる。
