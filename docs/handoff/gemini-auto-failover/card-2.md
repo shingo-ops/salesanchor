@@ -25,11 +25,13 @@
    - 変えない: 切り替えの条件・回数・remember・_count_switch・warning の文・failure_reason。
    - 直した2か所の直前に、1行のコメントで理由を書く: 「Client は消えると __del__ で接続を閉じる（google-genai）。呼び出しが終わるまで変数に持つ」。
 2. `backend/tests/test_gemini_route.py` に T13・T13b を足す（既存の試験は変えない）。
-   - T13（同期）: 最初の道は場所の断りを出す偽物（既存の `_failing_client(_location_error())`）。`gemini_route.build_client` を `lambda route: _real_client_unreachable()` に差し替える（既存 `:134` の実物の Client、届かない中継 127.0.0.1:9）。`_call(...)` が投げる例外について、次を確かめる。
+   - T13（同期）: 最初の道は場所の断りを出す偽物（既存の `_failing_client(_location_error())`）。`gemini_route.build_client` を `lambda route: _real_client_unreachable()` に差し替える（既存 `:134` の実物の Client、届かない中継 127.0.0.1:9）。`_call` は使わない（`config="cfg"` の文字列を渡すため、実物の Client は送る前に AttributeError で落ちる。2026-11-05 クラウド実行で観測）。`gemini_route.generate_content_routed(first, model="m", contents="c", config=None)` を直接呼ぶ。投げる例外について、次を確かめる。
      - `gemini_route.is_route_unreachable(exc)` が True であること。
      - `"client has been closed"` が `str(exc)` に無いこと。
+     - `"AssertionError"` が `_type_chain(exc)` に無いこと。
      直す前のコードでは RuntimeError（closed）になって落ちる、直した後は ConnectError 系になって通る、が狙い。
-   - T13b（非同期）: `build_client` を `side_effect` で、`ROUTE_DIRECT` なら `_failing_client(_location_error())`、`ROUTE_RELAY` なら `_real_client_unreachable()` を返すように差し替える。`gemini_route.agenerate_content_routed(model="m", contents="c", config=None)` で、T13 と同じ2点を確かめる。
+   - 見比べの手本: 既存の T6・T6b（`:149` 以降）は Client を変数に持ったまま同じ届かない中継へ送り、届かない判定が通る。T13・T13b の直した後の型の連なりは、T6・T6b と同じ型を含むはずである。
+   - T13b（非同期）: `build_client` を `side_effect` で、`ROUTE_DIRECT` なら `_failing_client(_location_error())`、`ROUTE_RELAY` なら `_real_client_unreachable()` を返すように差し替える。`gemini_route.agenerate_content_routed(model="m", contents="c", config=None)` で、T13 と同じ3点を確かめる。
    - T13・T13b の試験名に「keeps_switched_client_alive」を含める。
 
 ## 2. 実装前点検（外れたら実装せず BLOCKED:）
@@ -37,7 +39,10 @@
 - P1: `gemini_route.py:197` が `response = build_client(to).models.generate_content(` である。
 - P2: `gemini_route.py:220` が `response = await build_client(to).aio.models.generate_content(` である。
 - P3: `backend/tests/test_gemini_route.py:134` に `_real_client_unreachable` がある。
-- P4: 直す前のコードで T13 を先に流し、`client has been closed` で落ちることを確かめる（落ちなければ NEEDS_DECISION: で、出た例外の連なりを返す）。
+- P4: 直す前のコードで T13・T13b を先に流し、次の落ち方をすることを確かめる（違えば NEEDS_DECISION: で、出た例外の連なりを返す）。
+  - T13（同期・httpx）: 例外の文に `client has been closed` が出る（本番 §0 と同じ）。
+  - T13b（非同期・aiohttp）: 型の連なりに `builtins.AssertionError` が出る。aiohttp の `assert self._connector is not None` が、閉じた Client の非同期での表れ方である（2026-11-05 23:10 JST のクラウド実行で、直す前のコードの T13b がこの形で落ちたのを観測）。
+  - 判定の根拠: 直す前と後で違うのは「切り替え先の Client を変数に持つか」だけ。直した後に T6・T6b と同じ届かない判定へ変われば、原因は Client が先に消えることだと確定する。
 
 ## 3. 確かめ
 
@@ -47,7 +52,7 @@
 ## 4. 想定される分岐と止まる条件
 
 - P4 で落ちない（部品の版が違うなど）→ NEEDS_DECISION:。
-- 直した後も T13 が `client has been closed` で落ちる → BLOCKED:。そのときの例外の連なりを返す（`_type_chain`）。
+- 直した後も T13 が `client has been closed` で落ちる、または T13b の連なりに `AssertionError` が残る → BLOCKED:。そのときの例外の連なりを返す（`_type_chain`）。
 - 触るファイル2つ以外を変えたくなった → NEEDS_DECISION:。
 
 ## 5. 本番での確かめ（Opus がマージ後に行う）
