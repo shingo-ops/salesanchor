@@ -143,3 +143,22 @@ PG の試験（新しい会社の作り方で作った形と、移行を 2 回�
 ```
 
 この追記の commit を push したあとの先頭は、最後の返事に書く。
+
+## 改訂1
+
+### 作業
+- merge: `git merge --no-ff origin/main`（衝突なし・merge commit は既定の文）。merge 後の test_roles_system_key_ddl.py は origin/main の側のまま、`== 3` の行の説明を `# roles の定義・部分一意索引 2 つ（system_key・discord_role_id）` にした。
+- backend/tests/rls_bootstrap.py の `_TENANT_LOOP_MIGRATIONS` に `"20261106_150000_add_discord_role_link_tables.sql": 1,` を 1 行足した。
+- test_discord_role_link_ddl.py: import を括弧の並びに・テナント 994・区切りを `{schema}.discord_retired_roles (` / `_members (` に・PG の試験を try/finally と `_apply_migration_on_conn`・`public_bootstrap_lock` の形に・単体の試験 `test_link_migration_is_scoped_to_own_tenant` を足した。
+
+### 確かめ（生出力）
+- preflight: [1/3] network FAIL・[2/3] gh auth FAIL（クラウドで起こるもの）・[3/3] OK・[4/4] OK
+- `git log --oneline -3`（commit 前に報告書を足したため、この節を入れた commit が先頭になる）:
+  eb55c8776 Merge remote-tracking branch 'origin/main' into release/discord-own-server-s2-2a1 / 848ad4ccc / ff4835f91
+- `git merge-base --is-ancestor origin/main HEAD; echo rc=$?` → rc=0
+- `pytest tests/test_discord_role_link_ddl.py tests/test_roles_system_key_ddl.py -q` → `8 passed, 2 skipped in 11.01s`（skipped は PG の 2 件。末尾に `FAIL Required test coverage of 60% not reached. Total coverage: 0.50%` が出る＝2 ファイルだけ流したための網羅率ゲートで、試験の失敗ではない）
+- PG の試験（直列 1 回・`-n 4 --dist=loadfile` 3 回）: 流していない。ローカルの PostgreSQL 利用者作成の命令が見張りに止められたため（言い換えていない）。PostgreSQL なし・CI に任せる。
+- `check_test_schema_dup.py` → `テストへの新規スキーマ複製なし(pass)` / rc=0（test_discord_role_link_ddl.py: BASE=0 HEAD=0）
+- `ruff check ...` → `All checks passed!`
+- `git diff --name-only origin/main...HEAD`: 14 ファイル
+  .claude-pipeline/active-work.d/release-discord-own-server-s2-2a1.md, backend/app/services/tenant.py, backend/tests/rls_bootstrap.py, backend/tests/test_discord_role_link_ddl.py, backend/tests/test_roles_system_key_ddl.py, docs/handoff/discord-server-management/{card-s2-2a1-role-link-tables.md, design.md, impl-report-s2-2a1.md, recon.md}, docs/specs/discord-server-management/{README.md, ideal-state.md, kgi.md}, migrations/20261106_150000_add_discord_role_link_tables.sql, scripts/run_all_migrations.sh

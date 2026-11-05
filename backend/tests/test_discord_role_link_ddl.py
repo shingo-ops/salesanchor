@@ -14,13 +14,19 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.services import tenant as tenant_service
-from tests.rls_bootstrap import bootstrap_tenant_schema, tenant_schema_lock
+from tests.rls_bootstrap import (
+    _apply_migration_on_conn,
+    bootstrap_tenant_schema,
+    public_bootstrap_lock,
+    tenant_schema_lock,
+)
 
 ADMIN_PG_URL = os.getenv("RLS_ADMIN_DATABASE_URL") or os.getenv("TEST_PG_URL")
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _MIGRATION = "20261106_150000_add_discord_role_link_tables.sql"
-_TENANT_ID = 995
+# 995 は test_roles_system_key_ddl.py が使うため、試験・移行のどこにも無い 994 を使う
+_TENANT_ID = 994
 _SCHEMA = f"tenant_{_TENANT_ID:03d}"
 
 
@@ -41,11 +47,11 @@ def test_tenant_ddl_has_discord_role_id_and_retired_tables():
         " WHERE discord_role_id IS NOT NULL;"
     ) in sql
 
-    retired_roles = _block(sql, "CREATE TABLE IF NOT EXISTS {schema}.discord_retired_roles (")
+    retired_roles = _block(sql, "{schema}.discord_retired_roles (")
     assert "discord_role_id TEXT PRIMARY KEY" in retired_roles
     assert "retired_at      TIMESTAMPTZ NOT NULL DEFAULT now()" in retired_roles
 
-    retired_members = _block(sql, "CREATE TABLE IF NOT EXISTS {schema}.discord_retired_members (")
+    retired_members = _block(sql, "{schema}.discord_retired_members (")
     assert "discord_user_id TEXT PRIMARY KEY" in retired_members
     assert "kick            BOOLEAN NOT NULL" in retired_members
     assert "retired_at      TIMESTAMPTZ NOT NULL DEFAULT now()" in retired_members
@@ -104,28 +110,40 @@ async def test_new_tenant_has_link_tables_and_migration_is_idempotent():
     admin_engine = create_async_engine(ADMIN_PG_URL, echo=False)
     try:
         async with tenant_schema_lock(admin_engine, _TENANT_ID):
-            schema_name = await bootstrap_tenant_schema(admin_engine, _TENANT_ID)
-            assert schema_name == _SCHEMA
-            async with admin_engine.connect() as conn:
-                before = await _shape(conn)  # 新しい会社の作り方（tenant.py）で作った形
-            migration_sql = (_REPO_ROOT / "migrations" / _MIGRATION).read_text(encoding="utf-8")
-            async with admin_engine.begin() as conn:
-                await conn.exec_driver_sql(migration_sql)  # 1 回目
-                await conn.exec_driver_sql(migration_sql)  # 2 回目（冪等）
-            async with admin_engine.connect() as conn:
-                after = await _shape(conn)
-            assert before == after
-            assert after["columns"] == [
-                ("discord_retired_members", "discord_user_id", "text", "NO"),
-                ("discord_retired_members", "kick", "boolean", "NO"),
-                ("discord_retired_members", "retired_at", "timestamp with time zone", "NO"),
-                ("discord_retired_roles", "discord_role_id", "text", "NO"),
-                ("discord_retired_roles", "retired_at", "timestamp with time zone", "NO"),
-                ("roles", "discord_role_id", "text", "YES"),
-            ]
-            assert "UNIQUE" in after["index"]
-            assert "WHERE (discord_role_id IS NOT NULL)" in after["index"]
+            try:
+                schema_name = await bootstrap_tenant_schema(admin_engine, _TENANT_ID)
+                assert schema_name == _SCHEMA
+                async with admin_engine.connect() as conn:
+                    before = await _shape(conn)  # 新しい会社の作り方（tenant.py）で作った形
+                # 全テナントを回す正本を、この試験のテナントだけに絞って流す（他ワーカーのテナントに触れない）
+                async with admin_engine.begin() as conn:
+                    await _apply_migration_on_conn(conn, _MIGRATION, schema_name=_SCHEMA)  # 1 回目
+                    await _apply_migration_on_conn(conn, _MIGRATION, schema_name=_SCHEMA)  # 2 回目（冪等）
+                async with admin_engine.connect() as conn:
+                    after = await _shape(conn)
+                assert before == after
+                assert after["columns"] == [
+                    ("discord_retired_members", "discord_user_id", "text", "NO"),
+                    ("discord_retired_members", "kick", "boolean", "NO"),
+                    ("discord_retired_members", "retired_at", "timestamp with time zone", "NO"),
+                    ("discord_retired_roles", "discord_role_id", "text", "NO"),
+                    ("discord_retired_roles", "retired_at", "timestamp with time zone", "NO"),
+                    ("roles", "discord_role_id", "text", "YES"),
+                ]
+                assert "UNIQUE" in after["index"]
+                assert "WHERE (discord_role_id IS NOT NULL)" in after["index"]
+            finally:
+                async with public_bootstrap_lock(admin_engine):
+                    async with admin_engine.begin() as conn:
+                        await conn.execute(text(f"DROP SCHEMA IF EXISTS {_SCHEMA} CASCADE"))
     finally:
-        async with admin_engine.begin() as conn:
-            await conn.execute(text(f"DROP SCHEMA IF EXISTS {_SCHEMA} CASCADE"))
         await admin_engine.dispose()
+
+
+def test_link_migration_is_scoped_to_own_tenant():
+    from tests.rls_bootstrap import _scope_tenant_migration
+
+    sql = (_REPO_ROOT / "migrations" / _MIGRATION).read_text(encoding="utf-8")
+    scoped = _scope_tenant_migration(sql, _MIGRATION, _SCHEMA)
+    assert scoped.count(f"AND nspname = '{_SCHEMA}'") == 1
+    assert scoped != sql
