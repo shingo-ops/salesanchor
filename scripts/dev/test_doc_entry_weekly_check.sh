@@ -92,7 +92,7 @@ check "T1 rc=0" rc_is 0
 
 setup; { lines 199; echo '@~/kb/AGENTS.md'; } > "$T/home/.claude/CLAUDE.md"; run
 check "T2 K1=214" has K1=214
-check "T2 RESULT=NG K1>200" has_re '^RESULT=NG.*K1>200'
+check "T2 RESULT=NG K1>210" has_re '^RESULT=NG.*K1>210'
 check "T2 rc=1" rc_is 1
 
 setup; echo y > "$T/home/.claude/scripts/master-register-rules-guard.py"; run
