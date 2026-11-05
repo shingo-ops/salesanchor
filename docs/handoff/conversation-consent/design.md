@@ -823,7 +823,7 @@ PO への返事の本文（ツール呼び出しの中ではない）の、**最
 
 ### 14-12 第8版: 件の窓を「聞かずに進む形（dontAsk）」から外さない（2026-11-05・PO「1」で小さく作り直し）
 
-**状態**: 設計案作成済み（1回目の審査 REVISE を反映・再審査待ち）。第7版（答え待ちの印）は §14-11-11 の前提の誤りにより取りやめ。
+**状態**: 設計案作成済み（2回目の審査 REVISE を反映。2回目の指摘は MEDIUM 3件・LOW 2件で HIGH なし。直しはどれも書き方と範囲を狭める方向で、3回目の審査待ち）。第7版（答え待ちの印）は §14-11-11 の前提の誤りにより取りやめ。
 
 #### 14-12-1 目的と成功条件
 
@@ -831,19 +831,19 @@ PO の言葉: 「件の窓の今の作りに合わせて設計を小さく作り
 
 | 基準 | 検証方法 |
 |---|---|
-| K1 件の窓で Shift+Tab を押しても形が変わらない（画面下の帯に plan / accept edits / manual の表示が出ない） | 本物の件の窓へ tmux send-keys で BTab を3回送り、①画面の写し（tmux capture-pane）に `plan mode on`・`accept edits on`・`manual mode on` が0件 ②続けて K3 の「ls して」が通る。会話記録に形の項目があれば（項目名は実装役が実物の記録で確かめて報告する）最後の値が `dontAsk` |
+| K1 件の窓で Shift+Tab を押しても形が変わらない（画面下の帯に plan / accept edits / manual の表示が出ない） | 本物の件の窓へ tmux send-keys で BTab を3回送り、①画面の写し（tmux capture-pane）に `plan mode on`・`accept edits on`・`manual mode on` が0件 ②続けて K3 の「ls して」が通る。○×は①②だけで決める（会話記録の形の項目は参考として写すだけ） |
 | K2 本体の会話で形が dontAsk でないときは道具を1つも通さない（許可の問い合わせ画面が出ない＝case-say の貼り付けが問い合わせ画面に入らない） | case-guard の試験: `agent_id` が無く `permission_mode` が `plan`・`default`・`acceptEdits`・`auto`・`bypassPermissions` のとき終了コード2。`dontAsk`・項目なし・`agent_id` ありのときは今と同じ判定（同じ入力で今の版と同じ終了コード） |
-| K3 ふだんの件の作業が今までどおり通る（下請けの AI を含む） | 本物の件の窓で ①「ls して」と頼み Bash が通る ②「Agent で下請けを1つ動かして README を読ませて」と頼み、下請けの中の Read が通る（どちらも会話記録に tool_result があり `case-guard:` の拒否の文が無い） |
+| K3 ふだんの件の作業が今までどおり通る（下請けの AI を含む） | 本物の件の窓で ①「ls して」と頼み Bash が通る ②「Agent で下請けを1つ動かして README を読ませて」と頼み、下請けの中の Read が通る（どちらも会話記録に tool_result があり `case-guard:` の拒否の文が無い）。任意の確かめ: 下請けを動かしている途中で `/plan` を送り、画面の写しに許可の問い合わせ画面が出ないこと（出たら PO へ戻す） |
 | K4 件の AI が keybindings.json を書き換えられない | case-sandbox の試験: 部屋の書き込み拒否の正規表現に `CH/keybindings.json` が一致する。case-guard でも CH は作業場の外なので Edit/Write は止まる（既存） |
 | K5 既存の試験がすべて通る | agent-console の CI（vitest・型検査）緑 |
-| K6 計画の形に入っても、件を開き直せば dontAsk に戻る | 本物の件の窓で「/plan README を読んで」と送る→道具が `case-guard: permission mode is not dontAsk` で止まる→件を閉じて開き直す（同じ会話を --resume）→「ls して」が通る。×なら PO へ戻す |
+| K6 計画の形に入っても、件を開き直せば dontAsk に戻る | 本物の件の窓で「/plan README を読んで」と送る→道具が `case-guard: permission mode is not dontAsk` で止まる→件を閉じて開き直す（同じ会話を --resume。起動台本 `ops/shell/ccdiscord.zsh:72` が前から `--permission-mode dontAsk` を一緒に渡している）→「ls して」が通る。×なら PO へ戻す |
 | K7 入れた時点で開いている件の窓にも（１）が効く | v0.50.2 を入れる前から開いていた件の窓で、入れた後に K1 と同じ手順を行い同じ結果 |
 
 #### 14-12-2 変更前→変更後（agent-console・origin/main f503e9b = v0.50.1）
 
 （１）キーの割り当てを外すファイルを件ごとに書く
 - 変更前: `server/case-sandbox.ts:398-421` `rewriteCaseClaudeJson` は case-home の `.claude.json` だけを書き直す。case-home は `ops/shell/ccdiscord.zsh:61` で件の窓の設定置き場（CLAUDE_CONFIG_DIR）。
-- 変更後: 同じファイルに `writeCaseKeybindings(CH)` を足し、`CH/keybindings.json` に次を `writeAtomicSync` で書く。`server/sessions.ts:626` の `prepareCaseRoom(id)` の直後（`room` が null でないとき）に呼ぶ。こうすると新しく開くときだけでなく、つなぎ直し（`sessions.ts:691-698` の probe で既存の窓に戻る道。`beforeNew` は `:703` でしか呼ばれない）でも書かれる。書けなければ `CaseSandboxUnavailableError`（`prepareCaseRoom` と同じ扱い）。
+- 変更後: 同じファイルに `writeCaseKeybindings(CH)` を足し、`CH/keybindings.json` に次を `writeAtomicSync` で書く。`server/sessions.ts:626` の `prepareCaseRoom(id)` の直後（`room` が null でないとき）に呼ぶ。こうすると新しく開くときだけでなく、つなぎ直し（`sessions.ts:691-698` の probe で既存の窓に戻る道。`beforeNew` は `:703` でしか呼ばれない）でも書かれる。書けなければ `CaseSandboxUnavailableError`。これは `prepareCaseRoom` が room.sb などを書けないときと同じ扱いで、つなぎ直しでも今すでに同じ理由で開けなくなりうる。CH は agent-console が作って持つ置き場なので、書けないのは置き場そのものが壊れたときだけ。その場合に窓を開かないのは今と同じ考え方なので、つなぎ直しだけ警告で続ける分け方はしない（開けない件が増える道は、CH が壊れたときに限られることを受け入れる）。
   ```json
   {"bindings":[{"context":"Chat","bindings":{"shift+tab":null}}]}
   ```
@@ -858,10 +858,9 @@ PO の言葉: 「件の窓の今の作りに合わせて設計を小さく作り
 - 変更後: `decide` の先頭（`:76` の前）で `input.agent_id === undefined && typeof input.permission_mode === "string" && input.permission_mode !== "dontAsk"` なら `block("permission mode is not dontAsk; ask the person to close and reopen this case")`。項目が無いとき・`agent_id` があるとき（下請けの AI の中の道具）は今と同じ判定。
 - 根拠: 公式 hooks.md:737 共通入力の `permission_mode`（"default","plan","acceptEdits","auto","dontAsk","bypassPermissions"）。hooks.md:255・:745 下請けの中の道具では `agent_id` が入る。sub-agents.md:596 本体が dontAsk のとき下請けは自分の設定の形で動く（組み込みの下請けの形は未確認）ので、下請けには形の検査をかけない。本体が計画の形のときは本体の Agent 呼び出しがこの検査で止まるため、計画の形の下請けは生まれない。
 
-（４）再開で計画の形に戻らないようにする
-- 変更前: `server/case-sandbox.ts:463-467` `buildCaseSettings` の `permissions.deny` に ExitPlanMode は無い（`--tools` で外しているだけ。ccdiscord.zsh:72）。
-- 変更後: 同じ deny の並びに `"ExitPlanMode"` を1つ足す。
-- 根拠: 公式 sessions.md「permission mode on resume」: 端末で `--resume` すると計画の形は戻るが、deny 規則で ExitPlanMode を外している場合は戻さず、新しい会話と同じ形（件では `--permission-mode dontAsk`）で始まる。`--tools` で外した場合がこの例外に当たるかは文面に無いため、文面どおりの deny 規則を足す。K6 で判定。
+（４）取りやめ（2回目の審査で根拠の読み違いと分かったため）
+- 前の案: `buildCaseSettings` の deny に `"ExitPlanMode"` を足して、開き直しで計画の形に戻らないようにする。
+- 取りやめの理由: 公式 sessions.md「permission mode on resume」では、端末で `--resume` するとき `--permission-mode` を渡すと戻るはずの形はそれで上書きされる。件の起動台本 `ops/shell/ccdiscord.zsh:72` は前から `--permission-mode dontAsk` を `--resume`（:73-75）と一緒に渡している。だから開き直せば足さなくても dontAsk に戻る。足すと K6 で効き目を見分けられないので、変更を増やさない。
 
 （５）版を v0.50.2 にする（package.json・package-lock.json・extension/manifest.json・docs/CHANGELOG.md。#98 と同じ書き方。CHANGELOG に戻し方 `bash scripts/ac-update.sh v0.50.1` の1行）。
 
@@ -876,9 +875,10 @@ case-say 本体・Discord 側・room.sb の作り（CH は読み取り subpath �
 
 #### 14-12-5 危険と対処・戻し方
 
-- `/plan` を頭に付けた依頼で計画の形に入ると、Shift+Tab を外したので戻れない。対処: （３）で道具が止まり、拒否の文で AI が「件を閉じて開き直してください」と伝える。開き直すと（４）により新しい会話と同じ形（`--permission-mode dontAsk`、ccdiscord.zsh:72）で始まる。K6 が×なら PO へ戻す。
-- claude が CLAUDE_CONFIG_DIR 側の keybindings.json を読まない場合 K1 が×。対処: ×なら（１）（２）を戻すか（３）（４）だけ残すかを PO に聞く。
-- 入れた時点で開いている件の窓: 版を入れると agent-console が再起動し、開いている件はつなぎ直し（`sessions.ts:691-693`）になり、（１）はその時に書かれる。一方、開いている窓の hook が新しい版の case-guard を指すか（起動時の settings の道が realpath で旧版の置き場を指したままか）は未確認。K7 で（１）を判定し、（３）は新しく開いた窓（K6）で判定する。K7 が×なら、開いている件の窓を閉じて開き直すよう PO に1行で伝える。
+- `/plan` を頭に付けた依頼で計画の形に入ると、Shift+Tab を外したので戻れない。対処: （３）で道具が止まり、拒否の文で AI が「件を閉じて開き直してください」と伝える。開き直すと `ccdiscord.zsh:72` の `--permission-mode dontAsk` が戻るはずの形を上書きする（公式 sessions.md）。K6 が×なら PO へ戻す。
+- claude が CLAUDE_CONFIG_DIR 側の keybindings.json を読まない場合 K1 が×。対処: ×なら（１）（２）を戻すか（３）だけ残すかを PO に聞く。
+- 下請けを動かしている途中で本体が計画の形に入った場合: 公式 sub-agents.md は「本体が plan のとき下請けも plan」とするが、すでに動いている下請けの形が途中で変わるかは書かれていない（未確認）。変わると、下請けの道具は `agent_id` があるので（３）を素通りし、問い合わせ画面が出うる。Shift+Tab を（１）で外したので、途中で入る道は `/plan` を頭に付けた依頼だけになる。実物の確かめは K3 の後の任意の確かめ「下請けを動かしている途中で `/plan` を送る」で行い、問い合わせ画面が出たら PO へ戻す。
+- 入れた時点で開いている件の窓: 版を入れると agent-console が再起動し、開いている件はつなぎ直し（`sessions.ts:691-698`）になり、（１）はその時に書かれる。一方、開いている窓の hook が新しい版の case-guard を指すか（起動時の settings の道が realpath で旧版の置き場を指したままか）は未確認。K7 で（１）を判定し、（３）は新しく開いた窓（K6）で判定する。K7 が×なら、開いている件の窓を閉じて開き直すよう PO に1行で伝える。
 - 項目なしの扱い: `permission_mode` が来ない版の claude では今と同じ判定になる（強めない）。今の本体（2.1.318）が送るかは K6 の拒否の文で確かめる。
 - 戻し方: `bash scripts/ac-update.sh v0.50.1`（docs/CHANGELOG.md の既存の書き方）。
 
