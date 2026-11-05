@@ -710,6 +710,7 @@ async def update_lead(
         old_data=dict(old_row), new_data=audit_new_data,
     )
     await db.commit()
+    await reset_tenant_context(db, tenant_id)
     await invalidate_dashboard_cache(tenant_id)
     try:
         from app.services.sse_pubsub import publish_leads_update
