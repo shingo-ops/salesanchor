@@ -109,3 +109,10 @@ recon.md への補足（直しは design 側の判断に影響しない）: C3 �
 - `wc -l .github/workflows/lint-tenant-schema.yml` → `71`
 - `git show -s --format='%h %ad %s' --date=short 3b35ef7d0` / `07f1227f2` → 上の C7・C8
 - 未使用テナント番号: `backend/tests` を 960〜999 で grep → `960 … 979 988 989 990 992 994 995`
+
+## push 後の記録
+`git log --oneline -2`（1回目の push 後）:
+```
+f3b981967 docs: calendar-sync-tenant-reset の設計審査（REVISE）
+31988c9e6 docs: calendar sync tenant-context reset fix design (create/delete)
+```
