@@ -5,6 +5,8 @@ POST /api/v1/staff が users と user_roles も同じトランザクションで
 import pytest
 from sqlalchemy import text
 
+from app.routers.staff import EMAIL_UNAVAILABLE_DETAIL
+
 
 async def _seed_role(db_session):
     await db_session.execute(text("""
@@ -93,6 +95,8 @@ async def test_existing_user_with_roster_returns_409(client, db_session):
     res = await client.post("/api/v1/staff", json=_body("dup@example.com"))
 
     assert res.status_code == 409, res.text
+    assert res.json()["detail"] == EMAIL_UNAVAILABLE_DETAIL
+    assert "他の会社" not in res.json()["detail"]
     assert await _count(db_session, "users") == users_before
     assert await _count(db_session, "staff") == staff_before
 
@@ -112,7 +116,8 @@ async def test_user_in_other_tenant_returns_409_and_creates_nothing(client, db_s
     res = await client.post("/api/v1/staff", json=_body("othertenant@example.com"))
 
     assert res.status_code == 409, res.text
-    assert "他の会社" in res.json()["detail"]
+    assert res.json()["detail"] == EMAIL_UNAVAILABLE_DETAIL
+    assert "他の会社" not in res.json()["detail"]
     assert await _count(db_session, "users") == users_before
     assert await _count(db_session, "staff") == staff_before
     assert await _count(db_session, "user_roles") == roles_before
