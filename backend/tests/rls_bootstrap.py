@@ -151,7 +151,7 @@ async def _apply_migration(admin_engine, filename: str) -> None:
         await _apply_migration_on_conn(conn, filename)
 
 
-# 全テナントを回す正本 migration のうち、リード統合の試験（test_lead_merge_pg.py）が流すもの。
+# 全テナントを回す正本 migration のうち、試験が1つのテナントに絞って流すもの（lead_merge・calendar・roles の試験）。
 # 値は「テナントを選ぶ条件」が SQL に現れる回数（ずれたら検知して止める）。
 _TENANT_LOOP_SELECTOR_RE = re.compile(r"nspname\s*(?:LIKE\s+'tenant_%'|~\s+'\^tenant_(?:\\d|\[0-9\])\+\$')")
 _TENANT_LOOP_MIGRATIONS = {
@@ -169,6 +169,7 @@ _TENANT_LOOP_MIGRATIONS = {
     "20260621_020000_add_schedule_calendar_category_and_owner_settings.sql": 1,
     "20261103_200000_add_google_calendar_import_sync.sql": 1,
     "20261104_161223_add_calendar_events_meet_url.sql": 1,
+    "20261005_150000_add_roles_system_key.sql": 1,
 }
 
 
