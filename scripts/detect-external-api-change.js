@@ -81,15 +81,6 @@ const API_RULES = [
     ],
   },
   {
-    api: 'firebase',
-    patterns: [
-      /firebase_admin/i,
-      /firebase_auth/i,
-      /identitytoolkit/i,
-      /GOOGLE_APPLICATION_CREDENTIALS/,
-    ],
-  },
-  {
     api: 'discord',
     patterns: [
       /discord\.com\/api/i,

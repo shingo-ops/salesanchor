@@ -91,12 +91,10 @@ docker run -d \
   --cpus 1.0 \
   --security-opt no-new-privileges:true \
   --tmpfs /tmp:size=67108864 \
-  --volume "${REPO_DIR}/firebase-credentials.json:/app/firebase-credentials.json:ro" \
   --volume "${REPO_DIR}/tcg-sheets-sa.json:${REPO_DIR}/tcg-sheets-sa.json:ro" \
   --volume "${COMPOSE_PROJECT}_attachments_data:/data/attachments" \
   --volume "${COMPOSE_PROJECT}_geoip:/geoip:ro" \
   "${ENV_ARGS[@]}" \
-  --env GOOGLE_APPLICATION_CREDENTIALS=/app/firebase-credentials.json \
   --env TCG_SCHEMA="${TCG_SCHEMA:-tenant_004}" \
   --log-driver json-file \
   --log-opt max-size=20m \
