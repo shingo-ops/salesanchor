@@ -880,10 +880,10 @@ DB をモックして以下を検証:
 
 手順12 残りの文字の確かめ
     cd ~/sa && git grep -n -i firebase -- backend/app | tail -5
-    cd ~/sa && git grep -n "AUTH_PROVIDER\|AUTH_PASSWORD_RESET_ALLOWLIST\|_init_firebase\|firebase_auth\|firebase_admin\|invite_enabled\|auth_provider()" -- backend scripts ':!scripts/detect-external-api-change.js' ':!scripts/tests' | tail -5
+    cd ~/sa && git grep -n "AUTH_PROVIDER\|AUTH_PASSWORD_RESET_ALLOWLIST\|_init_firebase\|firebase_auth\|firebase_admin\|invite_enabled\|auth_provider()" -- backend scripts ':!scripts/detect-external-api-change.js' ':!scripts/tests' ':!scripts/snapshot/firebase.sh' | tail -5
     cd ~/sa && git grep -n -i firebase -- scripts/setup_review_tenant.py scripts/setup_tenant.py backend/scripts backend/requirements.txt | tail -5
     cd ~/sa && git grep -l -i firebase -- backend/tests | tail -10
-期待: 1 つめは `backend/app/services/tenant.py:616` の 1 行だけ。2 つめと 3 つめは 0 行。4 つめは `backend/tests/conftest.py`・`backend/tests/ops/test_ai_cloud_views.py`・`backend/tests/rls_bootstrap.py`・`backend/tests/test_export_inventory_for_sheet.py`・`backend/tests/test_setup_review_tenant.py`・`backend/tests/test_staff_create_users.py` の 6 つだけ。
+期待: 1 つめは `backend/app/auth/dependencies.py:178`（2-1(i) の文に入る設計書のパス名 `docs/handoff/firebase-removal/design.md`）と `backend/app/services/tenant.py:616` の 2 行だけ。2 つめと 3 つめは 0 行（`scripts/snapshot/firebase.sh` は Firebase の画面設定を写す運用の道具で、便4 で扱う。`firebase_authorized_domains` の語が当たるため除いて数える）。4 つめは `backend/tests/conftest.py`・`backend/tests/ops/test_ai_cloud_views.py`・`backend/tests/rls_bootstrap.py`・`backend/tests/test_export_inventory_for_sheet.py`・`backend/tests/test_self_auth.py`（§2 の文に入る設計書のパス名）・`backend/tests/test_setup_review_tenant.py`・`backend/tests/test_staff_create_users.py` の 7 つだけ。
 
 手順13 変わったファイルを確かめる
     cd ~/sa && git status --short | tail -40 && git diff --stat | tail -3
