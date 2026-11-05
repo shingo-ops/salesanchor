@@ -417,6 +417,20 @@ def test_k2_mail_has_no_link_and_includes_time_device_location():
     assert "IP Geolocation by DB-IP" in body
 
 
+def test_k2_mail_button_name_matches_screen_button():
+    """メールに書く押すボタンの名前は、画面のボタンの言葉（ja.json / en.json の notMe）と同じ（段F）。"""
+    import json
+    from pathlib import Path
+
+    from app.services import auth_mail
+
+    locales = Path(__file__).resolve().parents[2] / "frontend" / "src" / "locales"
+    ja = json.loads((locales / "ja.json").read_text("utf-8"))["login"]["deviceApproval"]["watcher"]["notMe"]
+    en = json.loads((locales / "en.json").read_text("utf-8"))["login"]["deviceApproval"]["watcher"]["notMe"]
+    assert f"「{ja}」" in auth_mail._NEW_DEVICE_BODY
+    assert f'"{en}"' in auth_mail._NEW_DEVICE_BODY
+
+
 # ── K3: 許可して入る ─────────────────────────────────────────────
 
 async def test_k3_correct_number_approves_and_waiting_machine_gets_tokens(enforce, machine, db_session, password_hash):
