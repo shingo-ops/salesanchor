@@ -30,6 +30,7 @@ from app.auth.dependencies import (
 from app.database import get_db
 from app.models import User
 from app.services.audit import record_audit_log
+from app.services.discord_blueprint import blueprint_path, build_plan, load_blueprint
 from app.services.discord_rest import DiscordAPIError, discord_api_request
 
 logger = logging.getLogger(__name__)
@@ -171,3 +172,105 @@ async def take_own_server_snapshot(
     return OwnServerSnapshotResponse(
         snapshot_id=snapshot_id, role_count=role_count, channel_count=channel_count
     )
+
+
+# ---------------------------------------------------------------- 確認（設計図と今のサーバーの差・便3a）
+
+_READ = "GET"  # 確認で Discord に呼ぶのは読み取りだけ
+
+
+class PlanRow(BaseModel):
+    kind: str
+    key: str
+    name: str
+    field: str | None = None
+    before: str | None = None
+    after: str | None = None
+    reason: str | None = None
+
+
+class DeleteCandidate(BaseModel):
+    kind: str
+    discord_id: str
+    name: str | None = None
+    parent_name: str | None = None
+    target: str | None = None
+
+
+class OwnServerPlanResponse(BaseModel):
+    plan_digest: str
+    changes: list[PlanRow]
+    blocked: list[PlanRow]
+    delete_candidates: list[DeleteCandidate]
+
+
+@router.get(
+    "/admin/discord/own-server/plan",
+    response_model=OwnServerPlanResponse,
+    dependencies=[Depends(require_permission("tenant.profile.edit"))],
+)
+async def check_own_server_plan(
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+) -> OwnServerPlanResponse:
+    """設計図と今の自社用サーバーを比べて、差を返す。読むだけ（DB にも Discord にも書かない）。"""
+    result = await db.execute(
+        text("SELECT guild_id FROM public.tenant_discord_config WHERE tenant_id = :tid AND purpose = 'own'"),
+        {"tid": tenant_id},
+    )
+    row = result.first()
+    if not row or not row[0]:
+        raise HTTPException(
+            status_code=422,
+            detail="自社用サーバーが未登録です。先に Bot を招待してください。",
+        )
+    guild_id = str(row[0])
+
+    path = blueprint_path(tenant_id)
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="設計図がまだありません。")
+    try:
+        blueprint = load_blueprint(path)
+    except ValueError as exc:
+        logger.warning("[discord_own_server] blueprint invalid tenant=%d: %s", tenant_id, exc)
+        raise HTTPException(status_code=422, detail="設計図の形が正しくありません。") from exc
+
+    bot_token: str | None = os.environ.get("DISCORD_BOT_TOKEN") or None
+    if not bot_token:
+        raise HTTPException(
+            status_code=503,
+            detail="Bot トークンが設定されていません。環境変数 DISCORD_BOT_TOKEN を確認してください。",
+        )
+
+    try:
+        roles: list[dict[str, Any]] = await discord_api_request(
+            method=_READ,
+            path=f"/guilds/{guild_id}/roles",
+            bot_token=bot_token,
+            expected_statuses=(200,),
+        ) or []
+        channels: list[dict[str, Any]] = await discord_api_request(
+            method=_READ,
+            path=f"/guilds/{guild_id}/channels",
+            bot_token=bot_token,
+            expected_statuses=(200,),
+        ) or []
+        me: dict[str, Any] = await discord_api_request(
+            method=_READ,
+            path="/users/@me",
+            bot_token=bot_token,
+            expected_statuses=(200,),
+        ) or {}
+        member: dict[str, Any] = await discord_api_request(
+            method=_READ,
+            path=f"/guilds/{guild_id}/members/{me.get('id')}",
+            bot_token=bot_token,
+            expected_statuses=(200,),
+        ) or {}
+    except DiscordAPIError as exc:
+        logger.warning("[discord_own_server] plan read failed tenant=%d: %s", tenant_id, exc)
+        raise HTTPException(status_code=502, detail="Discord から読み取れませんでした。") from exc
+
+    bot_role_ids = [str(r) for r in (member.get("roles") or [])]
+    plan = build_plan(blueprint, roles, channels, guild_id, bot_role_ids)
+    return OwnServerPlanResponse(**plan)

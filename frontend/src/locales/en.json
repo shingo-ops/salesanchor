@@ -3507,7 +3507,59 @@
     "loadError": "Could not load",
     "snapshot": "Read the current server",
     "snapshotDone": "Read the server ({{roles}} roles, {{channels}} channels)",
-    "snapshotFailed": "Could not read the server"
+    "snapshotFailed": "Could not read the server",
+    "check": "Check",
+    "planFailed": "Could not check",
+    "planNoBlueprint": "No blueprint yet",
+    "changesTitle": "Changes ({{count}})",
+    "blockedTitle": "Not allowed ({{count}}, will not run)",
+    "deleteTitle": "Delete candidates ({{count}})",
+    "deleteNote": "Delete candidates are never deleted automatically.",
+    "emptyRows": "None",
+    "col": {
+      "kind": "Type",
+      "name": "Name",
+      "field": "Field",
+      "before": "Before",
+      "after": "After",
+      "reason": "Reason",
+      "parent": "Parent",
+      "target": "Target"
+    },
+    "kind": {
+      "create_role": "Create role",
+      "update_role": "Update role",
+      "create_category": "Create category",
+      "update_category": "Update category",
+      "create_channel": "Create channel",
+      "update_channel": "Update channel",
+      "update_overwrite": "Update permissions"
+    },
+    "field": {
+      "name": "Name",
+      "color": "Color",
+      "hoist": "Display separately",
+      "mentionable": "Mentionable",
+      "permissions": "Permissions",
+      "topic": "Topic",
+      "parent": "Parent category",
+      "overwrite": "Permissions ({{target}})"
+    },
+    "reason": {
+      "role_above_bot": "The role is at or above the bot's role",
+      "everyone_name": "@everyone cannot be renamed",
+      "permission_bot_lacks": "The bot does not have this permission",
+      "overwrite_manage_roles": "Manage Roles cannot be set in overwrites",
+      "bot_role_missing": "The bot role was not found",
+      "missing_on_discord": "Not found on Discord",
+      "ambiguous": "More than one item has this name"
+    },
+    "deleteKind": {
+      "role": "Role",
+      "category": "Category",
+      "channel": "Channel",
+      "overwrite": "Permission overwrite"
+    }
   },
   "discordAutoSetup": {
     "title": "Auto setup",
