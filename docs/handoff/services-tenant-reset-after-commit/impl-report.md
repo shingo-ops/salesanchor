@@ -110,3 +110,10 @@ OK tenant-schema/pass-service-commit-with-reset [ADR-072 tenant schema lint (str
 - 見本ランナーは HEAD の写しを使うため、commit 前は新しい見本が落ちる。commit 後に全 28 件が通った。
 - K3 の leads:712 は db の使用が :759（invalidate_dashboard_cache は db を使わない）。件数・行は設計と一致。
 - 件数は設計どおり（K1=2・K3=6）で、止めずに進めた。
+
+## push 後の git log --oneline -3
+```
+8cc2ac66b feat: commit の後の会社付け直し漏れを見張りで止める（ADR-072 v3 Rule C）
+9b35cedcf Merge remote-tracking branch 'origin/main' into release/services-tenant-reset-after-commit
+c8f5816b3 docs: 設計審査2回目（APPROVE）の推奨5件を反映（分岐の扱い・ADR-072前置き・tenant CLAUDE.md・表割れ・行番号）
+```
