@@ -1,7 +1,7 @@
 # ADR-072: tenant schema 修飾の戦略統一（schema prefix と reset_tenant_context のハイブリッド）
 
 ## ステータス
-Proposed (v2 — Reviewer 指摘 PR #774 反映 2026-05-25)
+Proposed (v3 — commit 後の付け直し漏れ Rule C 追加 2026-11-05)
 
 ## 日付
 2026-05-25
@@ -100,10 +100,11 @@ v1 で提案した `app/db/tenant_schema.py` 新設は**取り下げる**。`is_
 
 ### 4. CI linter で両パターンを検証
 
-`.github/workflows/lint.yml` 等に静的解析ジョブを追加し、`backend/app/routers/` 配下で以下のいずれかを検出して fail させる:
+`.github/workflows/lint.yml` 等に静的解析ジョブを追加し、`backend/app/` 配下で（Rule A・B は endpoint だけ）以下のいずれかを検出して fail させる:
 
 1. **案 A 違反**: tenant 内テーブル名が `text(...)` 内に bare-table で出現し、**かつ** 同 endpoint が `reset_tenant_context()` を呼ばない
 2. **案 B 違反**: write 系 endpoint (`POST` / `PUT` / `PATCH` / `DELETE`) で `await db.commit()` を呼んでいるのに、その後 `reset_tenant_context()` を呼ばない
+3. **Rule C（commit 後の付け直し）違反**: 会社名付きの表名を使っていても、RLS のある表では commit の後の付け直しが要る。routers の外も対象
 
 PoC は `grep` / `ripgrep` ベースの shell スクリプトで開始する（false positive 率 < 5% を目標）。将来は `ast` 解析で `sqlalchemy.text(...)` 引数の文字列解析、および endpoint 関数の AST 走査によるカスタム linter ルールへ昇格。
 
@@ -168,3 +169,4 @@ PoC は `grep` / `ripgrep` ベースの shell スクリプトで開始する（f
 
 - **v1** (2026-05-25): 案 A 一択で起案。`app/db/tenant_schema.py` 新設提案。
 - **v2** (2026-05-25): Reviewer (PR #774) 指摘 Major 1 / Major 2 を反映。既存 `reset_tenant_context()` / `_dialect_supports_search_path` の発見を踏まえ、案 C (ハイブリッド) に方針変更。helper 共通化先を `app/auth/dependencies.py` に変更。Phase 計画を全面改訂。
+- **v3** (2026-11-05): Rule C（commit の後、db を使う前に会社の付け直しが無い関数を検出）を追加。見張りの対象を `backend/app/routers/` から `backend/app/` 全体へ（Rule A・B は endpoint だけのまま）。設計: docs/handoff/services-tenant-reset-after-commit/design.md

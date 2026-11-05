@@ -37,6 +37,7 @@ from app.auth.dependencies import (
     get_current_tenant,
     get_current_user,
     require_permission,
+    reset_tenant_context,
     tenant_table_ref,
 )
 from app.database import get_db
@@ -320,6 +321,7 @@ async def assign_commission(
         new_data={"role": data.role, "staff_id": data.staff_id},
     )
     await db.commit()
+    await reset_tenant_context(db, tenant_id)
 
     saved = await _get_one_commission_row(db, order_id, data.role, tenant_id)
     if not saved:
@@ -383,6 +385,7 @@ async def unassign_commission(
         new_data={"role": role, "staff_id": None, "calculated_amount": 0},
     )
     await db.commit()
+    await reset_tenant_context(db, tenant_id)
 
     saved = await _get_one_commission_row(db, order_id, role, tenant_id)
     return _row_to_response(saved)  # type: ignore[arg-type]
@@ -470,6 +473,7 @@ async def recalculate_order_commissions(
         },
     )
     await db.commit()
+    await reset_tenant_context(db, tenant_id)
 
     rows = await _list_commissions(db, order_id, tenant_id)
     by_role: dict[str, OrderCommissionResponse | None] = {r: None for r in ALL_ROLES}

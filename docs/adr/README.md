@@ -78,7 +78,7 @@
 | [ADR-069](./ADR-069-uptime-kuma-activation.md) | ADR-069: Uptime Kuma 監視ダッシュボードの有効化 | Accepted | — | — |
 | [ADR-070](./ADR-070-grafana-monitoring-integration.md) | ADR-070: Grafana ドメイン移行 + Uptime Kuma→Prometheus 統合 | Accepted | — | — |
 | [ADR-071](./ADR-071-orders-nav-placement.md) | ADR-071: 受注管理ナビゲーション導線の追加 | Accepted | — | — |
-| [ADR-072](./ADR-072-tenant-schema-prefix-enforcement.md) | ADR-072: tenant schema 修飾の戦略統一（schema prefix と reset_tenant_context のハイブリッド） | Proposed | — | — |
+| [ADR-072](./ADR-072-tenant-schema-prefix-enforcement.md) | ADR-072: tenant schema 修飾の戦略統一（schema prefix と reset_tenant_context のハイブリッド） | ## 日付 | — | — |
 | [ADR-073](./ADR-073-design-system-kgi-rubric.md) | ADR-073: デザインシステム KGI 100% ルーブリック | Accepted | — | — |
 | [ADR-074](./ADR-074-worktree-agent-enforcement.md) | ADR-074: Worktree強制によるエージェントPR混入防止 | Accepted | — | — |
 | [ADR-075](./ADR-075-github-secrets-only-policy.md) | ADR-075: GitHub Secrets 一元管理ポリシー | Accepted | — | — |

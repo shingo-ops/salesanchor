@@ -71,7 +71,7 @@ rules:
     source: backend/AGENTS.md
     anchor: "`db.commit()` 直後に `reset_tenant_context()` 必須"
     kind: review
-    reason: "gate候補（R6）: backend/app/routers/ の write endpoint の db.commit() 直後の reset_tenant_context() は lint-tenant-schema.yml の strict が検査するが、止まらない部分がある。scripts/lint_tenant_schema.py の Rule B は commit の数と reset の数を比べるだけで「直後」かどうかを見ず、一部の関数は検査を飛ばす。検査は routers/ を変えた PR だけ走る。決まり（backend/AGENTS.md:10）は write endpoint の commit 直後すべて"
+    reason: "gate候補（R6）: 見張りは backend/app/ 全体の async 関数で db.commit() の後に db を使う前の reset_tenant_context() を Rule C で見る（lint-tenant-schema.yml の strict）が、止まらない部分がある。for 文の中で commit し次の回の頭で db を使う形、db 以外の名前の session、同期の def、引数に tenant_id が無い関数は見ない。検査は backend/app/ を変えた PR で走る。決まり（backend/AGENTS.md:10）は commit の後に db を使う関数すべて"
   - id: K06
     source: backend/AGENTS.md
     anchor: "**ファイル命名規則（101番以降）**"

@@ -1,0 +1,4 @@
+async def make_x(db, tenant_id: int):
+    await db.commit()
+    row = await db.execute("select 1")
+    return row
