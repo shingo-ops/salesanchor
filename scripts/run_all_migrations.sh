@@ -1223,3 +1223,5 @@ run_sql migrations/20261105_100000_tenant_discord_config_purpose.sql
 run_sql migrations/20261105_120000_create_viewer_billing_profiles.sql
 # discord-server-management 便1b: 登録の表の主キーを (tenant_id, purpose) に替え、便1a の一意を外す（冪等）
 run_sql migrations/20261106_100000_tenant_discord_config_purpose_pk.sql
+# Google Meet: 各社スキーマの calendar_events に meet_url 列を足す（列1つ・追加のみ・冪等）
+run_sql migrations/20261104_161223_add_calendar_events_meet_url.sql

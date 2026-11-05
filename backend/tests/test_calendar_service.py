@@ -182,7 +182,7 @@ class TestListEvents:
     async def test_returns_events(self):
         from app.services.calendar_service import list_events
         now = datetime(2026, 6, 1, 10, 0, 0, tzinfo=timezone.utc)
-        row = (1, 2, "shared", "meeting", "テスト会議", None, None, now, now, False, None, "app", "synced", 2, now, now, "鈴木 花子", "田中 太郎")
+        row = (1, 2, "shared", "meeting", "テスト会議", None, None, now, now, False, None, "app", "synced", 2, now, now, "鈴木 花子", "田中 太郎", None)
         db = _make_db(fetchall_return=[row])
         result = await list_events(db, tenant_id=1, start="2026-06-01", end="2026-06-30")
         assert len(result) == 1
@@ -941,3 +941,266 @@ class TestRenewExpiringWebhooks:
         # 会社ごとに文脈を張り、最後に必ず外す
         set_ctx.assert_awaited_once()
         clear_ctx.assert_awaited_once()
+
+
+# ===========================================================================
+# 便3: Google Meet
+# ===========================================================================
+
+MEET = "https://meet.google.com/abc-defg-hij"
+
+
+class TestCanAddMeet:
+    @staticmethod
+    def _db(row):
+        db = AsyncMock()
+        result = MagicMock()
+        result.first = MagicMock(return_value=row)
+        db.execute = AsyncMock(return_value=result)
+        return db
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "row,user_id,expected",
+        [
+            (("bidirectional", 3), 3, True),
+            (("write_only", 3), 3, True),
+            (("read_only", 3), 3, False),
+            (("bidirectional", 3), 4, False),
+        ],
+    )
+    async def test_can_add_meet(self, row, user_id, expected):
+        from app.services.calendar_service import can_add_meet
+
+        assert await can_add_meet(self._db(row), 1, user_id) is expected
+
+    @pytest.mark.asyncio
+    async def test_not_connected_is_false(self):
+        from app.services.calendar_service import can_add_meet
+
+        assert await can_add_meet(self._db(None), 1, 3) is False
+
+
+class TestCreateEventWithMeet:
+    @staticmethod
+    def _db():
+        db = AsyncMock()
+        db.commit = AsyncMock()
+        insert_result = MagicMock()
+        insert_result.scalar_one = MagicMock(return_value=1)
+        sync_result = MagicMock()
+        sync_result.first = MagicMock(return_value=("bidirectional", 3))
+        db.execute = AsyncMock(side_effect=[insert_result, sync_result, MagicMock()])
+        return db
+
+    @staticmethod
+    def _payload():
+        return {
+            "title": "Meet 付き",
+            "start_datetime": "2026-06-01T10:00:00+09:00",
+            "end_datetime": "2026-06-01T11:00:00+09:00",
+            "add_meet": True,
+        }
+
+    @pytest.mark.asyncio
+    async def test_sends_create_request_and_saves_hangout_link(self):
+        from app.services.calendar_service import create_event
+
+        db = self._db()
+        gcreate = AsyncMock(return_value={"id": "g1", "hangoutLink": MEET})
+        with patch("app.services.google_calendar.create_event", gcreate):
+            result = await create_event(db, tenant_id=1, user_id=3, payload=self._payload())
+        assert result == {"id": 1, "meet_url": MEET}
+        assert gcreate.call_args.kwargs["conference"] is True
+        body = gcreate.call_args.args[2]
+        req = body["conferenceData"]["createRequest"]
+        assert req["conferenceSolutionKey"] == {"type": "hangoutsMeet"}
+        assert req["requestId"]
+        assert db.execute.call_args_list[2].args[1]["meet_url"] == MEET
+        # add_meet は表の列ではない
+        assert "add_meet" not in db.execute.call_args_list[0].args[1]
+
+    @pytest.mark.asyncio
+    async def test_request_id_is_new_each_time(self):
+        from app.services.calendar_service import create_event
+
+        ids = []
+        for _ in range(2):
+            gcreate = AsyncMock(return_value={"id": "g1", "hangoutLink": MEET})
+            with patch("app.services.google_calendar.create_event", gcreate):
+                await create_event(self._db(), tenant_id=1, user_id=3, payload=self._payload())
+            ids.append(gcreate.call_args.args[2]["conferenceData"]["createRequest"]["requestId"])
+        assert ids[0] != ids[1]
+
+    @pytest.mark.asyncio
+    async def test_pending_is_reread_until_link_appears(self):
+        from app.services.calendar_service import create_event
+
+        db = self._db()
+        pending = {"id": "g1", "conferenceData": {"createRequest": {"status": {"statusCode": "pending"}}}}
+        gcreate = AsyncMock(return_value=pending)
+        gget = AsyncMock(side_effect=[{"id": "g1"}, {"id": "g1", "hangoutLink": MEET}])
+        with patch("app.services.google_calendar.create_event", gcreate), patch(
+            "app.services.google_calendar.get_event", gget
+        ), patch("app.services.calendar_service.asyncio.sleep", AsyncMock()) as slept:
+            result = await create_event(db, tenant_id=1, user_id=3, payload=self._payload())
+        assert result["meet_url"] == MEET
+        assert gget.call_count == 2
+        assert slept.call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_pending_forever_leaves_meet_url_null_but_event_saved(self):
+        from app.services.calendar_service import create_event
+
+        db = self._db()
+        pending = {"id": "g1", "conferenceData": {"createRequest": {"status": {"statusCode": "pending"}}}}
+        gcreate = AsyncMock(return_value=pending)
+        gget = AsyncMock(return_value={"id": "g1"})
+        with patch("app.services.google_calendar.create_event", gcreate), patch(
+            "app.services.google_calendar.get_event", gget
+        ), patch("app.services.calendar_service.asyncio.sleep", AsyncMock()):
+            result = await create_event(db, tenant_id=1, user_id=3, payload=self._payload())
+        assert result == {"id": 1, "meet_url": None}
+        assert gget.call_count == 2
+        params = db.execute.call_args_list[2].args[1]
+        assert params["gid"] == "g1"
+        assert params["meet_url"] is None
+
+    @pytest.mark.asyncio
+    async def test_without_add_meet_no_conference(self):
+        from app.services.calendar_service import create_event
+
+        db = self._db()
+        gcreate = AsyncMock(return_value={"id": "g1"})
+        payload = self._payload()
+        payload.pop("add_meet")
+        with patch("app.services.google_calendar.create_event", gcreate):
+            result = await create_event(db, tenant_id=1, user_id=3, payload=payload)
+        assert result["meet_url"] is None
+        assert "conference" not in gcreate.call_args.kwargs
+        assert "conferenceData" not in gcreate.call_args.args[2]
+
+
+class TestUpdateEventWithMeet:
+    @pytest.mark.asyncio
+    async def test_add_meet_only_sends_conference_data_only(self):
+        from app.services.calendar_service import update_event
+
+        db = AsyncMock()
+        db.commit = AsyncMock()
+        row = MagicMock()
+        row.first = MagicMock(return_value=("g1", None))
+        sync = MagicMock()
+        sync.first = MagicMock(return_value=("bidirectional",))
+        db.execute = AsyncMock(side_effect=[row, sync, MagicMock()])
+
+        gupdate = AsyncMock(return_value={"id": "g1", "hangoutLink": MEET})
+        with patch("app.services.google_calendar.update_event", gupdate):
+            result = await update_event(db, tenant_id=1, event_id=9, user_id=3, payload={"add_meet": True})
+        assert result == {"id": 9, "meet_url": MEET}
+        body = gupdate.call_args.args[3]
+        assert list(body) == ["conferenceData"]
+        for key in ("summary", "start", "end"):
+            assert key not in body
+        assert gupdate.call_args.kwargs["conference"] is True
+        assert db.execute.call_args_list[2].args[1] == {"url": MEET, "id": 9}
+
+    @pytest.mark.asyncio
+    async def test_update_with_fields_and_meet_sends_full_body_plus_conference(self):
+        from app.services.calendar_service import update_event
+
+        db = AsyncMock()
+        db.commit = AsyncMock()
+        geid = MagicMock()
+        geid.first = MagicMock(return_value=("g1", None))
+        sync = MagicMock()
+        sync.first = MagicMock(return_value=("bidirectional",))
+        db.execute = AsyncMock(side_effect=[MagicMock(), geid, sync, MagicMock(), MagicMock()])
+
+        gupdate = AsyncMock(return_value={"id": "g1", "hangoutLink": MEET})
+        with patch("app.services.google_calendar.update_event", gupdate):
+            result = await update_event(
+                db, tenant_id=1, event_id=9, user_id=3, payload={"title": "題", "add_meet": True}
+            )
+        assert result == {"id": 9, "meet_url": MEET}
+        body = gupdate.call_args.args[3]
+        assert body["summary"] == "題"
+        assert "createRequest" in body["conferenceData"]
+        assert gupdate.call_args.kwargs["conference"] is True
+
+    @pytest.mark.asyncio
+    async def test_update_returns_existing_meet_url(self):
+        from app.services.calendar_service import update_event
+
+        db = AsyncMock()
+        db.commit = AsyncMock()
+        geid = MagicMock()
+        geid.first = MagicMock(return_value=(None, MEET))
+        sync = MagicMock()
+        sync.first = MagicMock(return_value=("none",))
+        db.execute = AsyncMock(side_effect=[MagicMock(), geid, sync])
+        result = await update_event(db, tenant_id=1, event_id=9, user_id=3, payload={"title": "題"})
+        assert result == {"id": 9, "meet_url": MEET}
+
+
+class TestUpsertMeetUrl:
+    @pytest.mark.asyncio
+    async def test_hangout_link_is_saved(self):
+        from app.services.calendar_service import upsert_from_google
+
+        db = AsyncMock()
+        origin_result = MagicMock()
+        origin_result.first = MagicMock(return_value=None)
+        db.execute = AsyncMock(side_effect=[origin_result, MagicMock()])
+        out = await upsert_from_google(
+            db,
+            tenant_id=1,
+            google_event={
+                "id": "ev1",
+                "summary": "Meet 付き",
+                "hangoutLink": MEET,
+                "start": {"dateTime": "2026-06-01T10:00:00+09:00"},
+                "end": {"dateTime": "2026-06-01T11:00:00+09:00"},
+            },
+            owner_user_id=9,
+        )
+        assert out == "upserted"
+        stmt, params = db.execute.call_args_list[1].args
+        assert params["meet_url"] == MEET
+        assert "meet_url         = EXCLUDED.meet_url" in stmt.text
+        assert "WHERE calendar_events.source = 'google'" in stmt.text
+
+    @pytest.mark.asyncio
+    async def test_no_hangout_link_is_null(self):
+        from app.services.calendar_service import upsert_from_google
+
+        db = AsyncMock()
+        origin_result = MagicMock()
+        origin_result.first = MagicMock(return_value=None)
+        db.execute = AsyncMock(side_effect=[origin_result, MagicMock()])
+        await upsert_from_google(
+            db,
+            tenant_id=1,
+            google_event={
+                "id": "ev2",
+                "start": {"dateTime": "2026-06-01T10:00:00+09:00"},
+                "end": {"dateTime": "2026-06-01T11:00:00+09:00"},
+            },
+            owner_user_id=9,
+        )
+        assert db.execute.call_args_list[1].args[1]["meet_url"] is None
+
+
+class TestListEventsMeetUrl:
+    @pytest.mark.asyncio
+    async def test_meet_url_is_last_column(self):
+        from app.services.calendar_service import list_events
+
+        now = datetime(2026, 6, 1, 10, 0, 0, tzinfo=timezone.utc)
+        row = (1, 2, "shared", "meeting", "会議", None, None, now, now, False, None, "app", "synced", 2, now, now, "鈴木", "田中", MEET)
+        db = _make_db(fetchall_return=[row])
+        result = await list_events(db, tenant_id=1, start="2026-06-01", end="2026-06-30")
+        assert result[0]["meet_url"] == MEET
+        assert result[0]["created_by_name"] == "田中"
+        sql = db.execute.call_args.args[0].text
+        assert sql.index("created_by_name") < sql.index("ce.meet_url")

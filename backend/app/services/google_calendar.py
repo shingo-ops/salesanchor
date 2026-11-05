@@ -374,32 +374,55 @@ async def get_events(db, tenant_id: int, *, time_min: str, time_max: str) -> lis
     return result.get("items", [])
 
 
-async def create_event(db, tenant_id: int, event_body: dict) -> dict:
-    """イベントを作成して Google Calendar API レスポンスを返す。"""
+async def get_event(db, tenant_id: int, event_id: str) -> dict:
+    """イベント 1 件を読んで Google Calendar API レスポンスを返す。"""
     service = await _get_service(db, tenant_id)
     calendar_id = await get_calendar_id(db, tenant_id)
 
     try:
         return await asyncio.to_thread(
-            service.events()
-            .insert(calendarId=calendar_id, body=event_body)
-            .execute
+            service.events().get(calendarId=calendar_id, eventId=event_id).execute
         )
+    except Exception as e:
+        raise RuntimeError(f"イベント取得に失敗: {e}") from e
+
+
+async def create_event(
+    db, tenant_id: int, event_body: dict, conference: bool = False
+) -> dict:
+    """イベントを作成して Google Calendar API レスポンスを返す。
+
+    conference が真のときだけ conferenceDataVersion=1 を付ける（Meet 作成に必要）。
+    """
+    service = await _get_service(db, tenant_id)
+    calendar_id = await get_calendar_id(db, tenant_id)
+
+    kwargs: dict = {"calendarId": calendar_id, "body": event_body}
+    if conference:
+        kwargs["conferenceDataVersion"] = 1
+
+    try:
+        return await asyncio.to_thread(service.events().insert(**kwargs).execute)
     except Exception as e:
         raise RuntimeError(f"イベント作成に失敗: {e}") from e
 
 
-async def update_event(db, tenant_id: int, event_id: str, event_body: dict) -> dict:
-    """イベントを更新して Google Calendar API レスポンスを返す。"""
+async def update_event(
+    db, tenant_id: int, event_id: str, event_body: dict, conference: bool = False
+) -> dict:
+    """イベントを更新して Google Calendar API レスポンスを返す。
+
+    conference が真のときだけ conferenceDataVersion=1 を付ける（Meet 作成に必要）。
+    """
     service = await _get_service(db, tenant_id)
     calendar_id = await get_calendar_id(db, tenant_id)
 
+    kwargs: dict = {"calendarId": calendar_id, "eventId": event_id, "body": event_body}
+    if conference:
+        kwargs["conferenceDataVersion"] = 1
+
     try:
-        return await asyncio.to_thread(
-            service.events()
-            .patch(calendarId=calendar_id, eventId=event_id, body=event_body)
-            .execute
-        )
+        return await asyncio.to_thread(service.events().patch(**kwargs).execute)
     except Exception as e:
         raise RuntimeError(f"イベント更新に失敗: {e}") from e
 
@@ -423,6 +446,7 @@ __all__ = [
     "get_auth_url",
     "exchange_code",
     "get_events",
+    "get_event",
     "create_event",
     "update_event",
     "delete_event",

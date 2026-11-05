@@ -273,7 +273,7 @@ class TestRouterStatus:
         mock_result.first.return_value = None
         mock_db.execute = AsyncMock(return_value=mock_result)
 
-        result = await connection_status(tenant_id=1, db=mock_db)
+        result = await connection_status(tenant_id=1, user=MagicMock(id=1), db=mock_db)
         assert result["connected"] is False
 
     @pytest.mark.asyncio
@@ -286,7 +286,7 @@ class TestRouterStatus:
         mock_result.first.return_value = ("primary", datetime(2026, 1, 1, tzinfo=timezone.utc))
         mock_db.execute = AsyncMock(return_value=mock_result)
 
-        result = await connection_status(tenant_id=1, db=mock_db)
+        result = await connection_status(tenant_id=1, user=MagicMock(id=1), db=mock_db)
         assert result["connected"] is True
         assert result["calendar_id"] == "primary"
 
@@ -768,3 +768,94 @@ class TestCalendarCRUD:
         with patch("app.services.google_calendar._get_service", AsyncMock(return_value=mock_svc)):
             with pytest.raises(RuntimeError, match="イベント削除"):
                 await delete_event(mock_db, tenant_id=1, event_id="evt-to-delete")
+
+
+class TestConferenceFlag:
+    """Meet 作成: conference が真のときだけ conferenceDataVersion=1 を付ける。"""
+
+    @staticmethod
+    def _service():
+        svc = MagicMock()
+        svc.events.return_value.insert.return_value.execute = MagicMock(return_value={"id": "g1"})
+        svc.events.return_value.patch.return_value.execute = MagicMock(return_value={"id": "g1"})
+        svc.events.return_value.get.return_value.execute = MagicMock(return_value={"id": "g1"})
+        return svc
+
+    @pytest.mark.asyncio
+    async def test_create_with_conference(self):
+        from app.services import google_calendar as gc
+
+        svc = self._service()
+        with patch.object(gc, "_get_service", AsyncMock(return_value=svc)), patch.object(
+            gc, "get_calendar_id", AsyncMock(return_value="primary")
+        ):
+            await gc.create_event(None, 1, {"summary": "x"}, conference=True)
+        kwargs = svc.events.return_value.insert.call_args.kwargs
+        assert kwargs["conferenceDataVersion"] == 1
+
+    @pytest.mark.asyncio
+    async def test_create_without_conference_has_no_version(self):
+        from app.services import google_calendar as gc
+
+        svc = self._service()
+        with patch.object(gc, "_get_service", AsyncMock(return_value=svc)), patch.object(
+            gc, "get_calendar_id", AsyncMock(return_value="primary")
+        ):
+            await gc.create_event(None, 1, {"summary": "x"})
+        assert "conferenceDataVersion" not in svc.events.return_value.insert.call_args.kwargs
+
+    @pytest.mark.asyncio
+    async def test_update_with_conference(self):
+        from app.services import google_calendar as gc
+
+        svc = self._service()
+        with patch.object(gc, "_get_service", AsyncMock(return_value=svc)), patch.object(
+            gc, "get_calendar_id", AsyncMock(return_value="primary")
+        ):
+            await gc.update_event(None, 1, "g1", {"conferenceData": {}}, conference=True)
+        kwargs = svc.events.return_value.patch.call_args.kwargs
+        assert kwargs["conferenceDataVersion"] == 1
+        assert kwargs["eventId"] == "g1"
+
+    @pytest.mark.asyncio
+    async def test_get_event_reads_one(self):
+        from app.services import google_calendar as gc
+
+        svc = self._service()
+        with patch.object(gc, "_get_service", AsyncMock(return_value=svc)), patch.object(
+            gc, "get_calendar_id", AsyncMock(return_value="primary")
+        ):
+            out = await gc.get_event(None, 1, "g1")
+        assert out == {"id": "g1"}
+        assert svc.events.return_value.get.call_args.kwargs == {"calendarId": "primary", "eventId": "g1"}
+
+
+class TestRouterStatusMeetAvailable:
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("mode,connector,user_id,expected", [
+        ("bidirectional", 1, 1, True),
+        ("read_only", 1, 1, False),
+        ("bidirectional", 1, 2, False),
+    ])
+    async def test_meet_available_comes_from_can_add_meet(self, mode, connector, user_id, expected):
+        from app.routers.google_calendar import connection_status
+
+        db = AsyncMock()
+        cfg = MagicMock()
+        cfg.first.return_value = ("primary", datetime(2026, 1, 1, tzinfo=timezone.utc))
+        target = MagicMock()
+        target.first.return_value = (mode, connector)
+        db.execute = AsyncMock(side_effect=[cfg, target])
+        result = await connection_status(tenant_id=1, user=MagicMock(id=user_id), db=db)
+        assert result["meet_available"] is expected
+
+    @pytest.mark.asyncio
+    async def test_not_connected_has_no_meet(self):
+        from app.routers.google_calendar import connection_status
+
+        db = AsyncMock()
+        cfg = MagicMock()
+        cfg.first.return_value = None
+        db.execute = AsyncMock(return_value=cfg)
+        result = await connection_status(tenant_id=1, user=MagicMock(id=1), db=db)
+        assert result["meet_available"] is False
