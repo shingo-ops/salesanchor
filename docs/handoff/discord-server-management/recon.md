@@ -106,13 +106,13 @@
 - `docs/adr/FEATURE-INDEX.md` に「Discord ロール同期」「自社サーバー」の行は無い（grep で 0 件）
 
 ### R2-2 アプリの役割（ロール）の表
-- `migrations/003_add_phase1_tenant_tables.sql:46-57` `{schema}.roles`（id / name / color '#xxxxxx' / priority / is_system / description、UNIQUE(tenant_id, name)）
-- `migrations/003_add_phase1_tenant_tables.sql:66-73` `{schema}.user_roles`（user_id = users.id、role_id、UNIQUE(user_id, role_id)）
+- `migrations/003_add_phase1_tenant_tables.sql:43-54` `{schema}.roles`（id / name / color '#xxxxxx' / priority / is_system / description、UNIQUE(tenant_id, name)）
+- `migrations/003_add_phase1_tenant_tables.sql:63-70` `{schema}.user_roles`（user_id = users.id、role_id、UNIQUE(user_id, role_id)）
 - `migrations/20261005_150000_add_roles_system_key.sql:37` system_key 列。`backend/app/routers/roles.py:53` `_visible_role_sql` が隠す役割を除く
 - Discord のロールの番号を持つ列は無い（`git grep -n -i discord_role_id origin/main -- backend migrations` 0 件）
-- テナントが役割を作る・名前と色を変える・消す: `backend/app/routers/roles.py:46`（変えられる列 name/color/priority/description）、`:203` POST、`:259` PATCH、`:332` DELETE。user_roles は ON DELETE CASCADE（`migrations/003_add_phase1_tenant_tables.sql:69`）
-- user_roles を書く所: `backend/app/routers/roles.py:520-580`（PUT）、`backend/app/services/role_assignment.py:74-81`（staff POST `backend/app/routers/staff.py:628`・PATCH `:700-702` から呼ぶ。見える役割を1つに置き換える）、`backend/app/routers/auth.py:156`
-- スタッフ: `{schema}.staff` に user_id・discord_user_id（UNIQUE(tenant_id, discord_user_id)）・status（active / inactive / pending、`migrations/019`:47-50）。DELETE は行ごと消す（`backend/app/routers/staff.py:741`）
+- テナントが役割を作る・名前と色を変える・消す: `backend/app/routers/roles.py:46`（変えられる列 name/color/priority/description）、`:203` POST、`:259` PATCH、`:332` DELETE。user_roles は ON DELETE CASCADE（`migrations/003_add_phase1_tenant_tables.sql:66`）。役割の削除は `backend/app/routers/roles.py:357` で行ごと消す（消したあとは、その役割の番号をアプリのどこからも引けない）
+- user_roles を書く所: `backend/app/routers/roles.py:520-580`（PUT）、`backend/app/services/role_assignment.py:74-86`（:74 で見える役割を消し、:81 で入れ、:86 で記録）（staff POST `backend/app/routers/staff.py:628`・PATCH `:700-702` から呼ぶ。見える役割を1つに置き換える）、`backend/app/routers/auth.py:156`
+- スタッフ: `{schema}.staff` に user_id・discord_user_id（UNIQUE(tenant_id, discord_user_id)）・status（active / inactive / pending、`migrations/019`:47-50）。DELETE は行ごと消す（`backend/app/routers/staff.py:741` の入口、:755 で行を消す。消したあとは、その人の discord_user_id をアプリのどこからも引けない）
 
 ### R2-3 メンバーへのロールの付け外しの先例（本番で動いている）
 - `backend/app/services/discord_role_sync.py:222-227` `PUT /guilds/{g}/members/{u}/roles/{r}`、`:230-236` `DELETE` 同じ道。どちらも `backend/app/services/discord_rest.py` の `discord_api_request` 経由（429 の待ち・5xx の再試行は discord_rest が持つ、同ファイル :148-152 の注記）
@@ -126,12 +126,12 @@
 - 自社サーバーは 1 社 1 つ: `migrations/20261105_100000_tenant_discord_config_purpose.sql:36` UNIQUE (tenant_id, purpose)
 
 ### R2-5 知らせ
-- 表: `migrations/009_add_phase4_tenant_tables.sql:9-19` `{schema}.notification_channels`（webhook_url VARCHAR(500) 平文、event_types TEXT の JSON 配列、is_active）。Discord のチャンネルの番号の列は無い
-- 種類の正本: `backend/app/schemas/notification.py:21-34`（4 種。LIKE '%値%' で照合するため部分文字列の重なり禁止 :26-28）
+- 表: `migrations/009_add_phase4_tenant_tables.sql:8-18` `{schema}.notification_channels`（webhook_url VARCHAR(500) 平文、event_types TEXT の JSON 配列、is_active）。Discord のチャンネルの番号の列は無い
+- 種類の正本: `backend/app/schemas/notification.py:8-21`（:18-21 の 4 種。LIKE '%値%' で照合するため部分文字列の重なり禁止 :15）
 - 担当決定: `backend/app/services/lead_assign_notifier.py:20`・`:32-34`（staff.user_id = leads の担当の users.id から discord_user_id を引いてメンション）
 - Meta の受信: `backend/app/routers/webhook.py:938-947` が `meta_message_received` を送る。メンションなし
-- Discord のお客さんの部屋: `backend/app/discord_gateway/ticket_channel_writer.py:246-257`（保存し、新しい行のときだけ先へ進む）。部屋の外は `:186-196` で outside_ticket_notice
-- Discord の DM: `backend/app/discord_gateway/dm_writer.py:219-252`（保存し `msg_row is not None` のときだけ会話の記録を書く）
+- Discord のお客さんの部屋: `backend/app/discord_gateway/ticket_channel_writer.py:246-257`（:246 で保存、:248 で commit、:250-257 で重なりなら戻る。新しい行のときだけ :259 から先へ進む）。部屋の外は `:186-196` で outside_ticket_notice
+- Discord の DM: `backend/app/discord_gateway/dm_writer.py:219-252`（:219 で保存結果、:231 の `msg_row is not None` のときだけ会話の記録を書き、:252 で commit）
 - 配信の失敗: テナント 4 に固定（`backend/app/services/tcg_distribution_svc.py:1159`、`backend/app/services/viewer_inventory_cache.py:64`）。管理側の送り先 `ADMIN_NOTIFICATION_DISCORD_WEBHOOK`（`backend/app/services/discord_notifier.py:40-42`）
 
 ### R2-6 Discord 公式仕様（Context7 は月の上限で使えず、docs.discord.com を直接読んだ・2026-11-05）
@@ -139,5 +139,11 @@
 - Modify Guild Role `PATCH /guilds/{g}/roles/{r}`（名前・色）
 - 【未確認】List Guild Members（全員の一覧）が GUILD_MEMBERS 特権インテントを要すること。`backend/app/discord_gateway/client.py:74` で members=True を指定しているが、開発者画面で有効かは試験サーバーで確かめる
 
+### R2-6b 設計図と Bot の見え方（第2段の審査で追加・2026-11-05）
+- 設計図は会社ごとのファイル（`backend/app/services/discord_blueprint.py:180` `BLUEPRINT_DIR`、:183 `blueprint_path(tenant_id)`）。新しく作った物の番号は、反映の記録から Opus が次の PR で設計図に書き足す（design.md 第1段の 4-8）
+- @everyone の VIEW_CHANNEL を拒む部屋に `"@bot"` の許可が無いと検査で止まる（`backend/app/services/discord_blueprint.py:167-168` の bot_sees）
+- 反映は Discord への送信の行だけを扱い、DB には書かない（`backend/app/services/discord_blueprint_apply.py:72` `apply_plan`、:79 で送り方を絞る）
+
 ### R2-7 未確認
+- 【未確認】List Guild Members の特権インテント・Create Webhook の権限は、第2段の審査（クラウド）では docs.discord.com に届かず照合できなかった。便2b・便2c のカードで、実装役の最初の作業として試験サーバーへの実際の呼び出しで確かめる（通らなければその便を止める）
 - 【未確認】テナント001 の自社用テストサーバーで、Bot のロールの順番が新しく作るロールより上にあるか（新しいロールは下に作られるため通常は上。試験で確かめる）
