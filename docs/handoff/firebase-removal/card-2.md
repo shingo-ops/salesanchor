@@ -720,6 +720,26 @@ async def test_smoke_token_passes_after_foreign_tokens_are_rejected():
 ```
 - 201 行目 `                    headers={"Authorization": "Bearer invalid-firebase-token"},` → `                    headers={"Authorization": "Bearer invalid-token"},`
 - 211 行目 `        前提: 同一IPで他ユーザーが AUTH_FAIL_MAX 回 Firebase検証失敗 → IPロック成立。` → `        前提: 同一IPで他ユーザーが AUTH_FAIL_MAX 回 札の検証に失敗 → IPロック成立。`
+- 57-62 行目（`_make_jwt`。一時記憶を使うのは自社の札だけになったため、試験の札に発行元を付けられるようにする。3回目の実行で `test_cached_jwt_user_bypasses_ip_lockout` が 429 になった原因）
+変更前:
+```python
+def _make_jwt(email: str = "test@example.com") -> str:
+    """署名なしのダミーJWT（ミドルウェアのメールデコード用）。"""
+    header = base64.urlsafe_b64encode(b'{"alg":"RS256","typ":"JWT"}').rstrip(b"=").decode()
+    payload_bytes = json.dumps({"email": email, "sub": "uid123"}).encode()
+```
+変更後:
+```python
+def _make_jwt(email: str = "test@example.com", iss: str | None = None) -> str:
+    """署名なしのダミーJWT（ミドルウェアのメールデコード用）。iss を渡すとその発行元の札になる。"""
+    header = base64.urlsafe_b64encode(b'{"alg":"RS256","typ":"JWT"}').rstrip(b"=").decode()
+    claims = {"email": email, "sub": "uid123"}
+    if iss is not None:
+        claims["iss"] = iss
+    payload_bytes = json.dumps(claims).encode()
+```
+- 248 行目 `                    headers={"Authorization": f"Bearer {_make_jwt('shingo@example.com')}"},` → `                    headers={"Authorization": f"Bearer {_make_jwt('shingo@example.com', iss='salesanchor')}"},`
+- ほかの `_make_jwt(...)` の呼び出し（334・401・519・546・575・604・634・653 行目）は変えない。
 
 (10) `backend/tests/test_line_import_devices.py`
 - 36 行目 `    for bad in ['firebase-token', 'sali1_short', TOKEN+'\n']:` → `    for bad in ['not-a-device-key', 'sali1_short', TOKEN+'\n']:`
