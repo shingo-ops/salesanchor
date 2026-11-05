@@ -145,7 +145,7 @@ Firebase は使わない設定に切り替えた（PO 2026-11-04「firebaseは�
 - `nginx/nginx.conf:96`（app.salesanchor.jp の塊）の CSP から `https://www.gstatic.com`、`https://*.googleapis.com`、`https://*.firebaseio.com` を外す。便1 の本番反映後、本番の画面の JS にこれらへの通信が 0 件であることを K1 で確かめてから外す。
 - 運用と監視:
   - `.github/workflows/external-state-snapshot.yml:82-88`（Firebase の段）を消す。GCP の段は残す。
-  - `.github/workflows/rotate-qa-firebase.yml`、`scripts/snapshot/firebase.sh`、`scripts/smoke/external-firebase.sh` を消す。
+  - .github/workflows/rotate-qa-firebase.yml、scripts/snapshot/firebase.sh、scripts/smoke/external-firebase.sh を消す。
   - `docs/external-state-contract.yml:29-37` を消す。
   - `scripts/detect-external-api-change.js:84-89` とその試験から Firebase の見張りを消す。
   - `monitoring/grafana/provisioning/dashboards/json/uptime-kuma.json:124-132` の板を消す。
@@ -220,7 +220,7 @@ Firebase は使わない設定に切り替えた（PO 2026-11-04「firebaseは�
 |---|---|
 | 便1 画面 | `frontend/` の下すべて（`frontend/.storybook/main.ts`・`frontend/package.json`・`frontend/package-lock.json`・`frontend/playwright.config.ts`・`frontend/vite.config.ts`・`src/` の下・`tests-e2e/` の下の 5 ファイル。ただし `frontend/Dockerfile`・`frontend/.env.example`・`frontend/api-contract/openapi.json` を除く）、`.github/workflows/e2e.yml`、`.github/workflows/karte-gate.yml` |
 | 便2 サーバー | `backend/app/` の下すべて（`backend/app/services/tenant.py` を除く）、`backend/requirements.txt`、`backend/scripts/CLAUDE.md`、`backend/tests/` の下（`backend/tests/conftest.py` の Firebase の既定の部分を含む。下の便4 の行に挙げた列の部分を除く）、`frontend/api-contract/openapi.json`（作り直し）、`scripts/setup_review_tenant.py`、「scripts／setup_single_test_user.py」、「scripts／setup_test_users.py」、`scripts/setup_tenant.py` |
-| 便3 配線 | `docker-compose.yml`、`frontend/Dockerfile`、`.env.example`、`frontend/.env.example`、`nginx/nginx.conf`、`scripts/blue-green-cutover.sh`、`.github/workflows/external-state-snapshot.yml`、`.github/workflows/rotate-qa-firebase.yml`、`docs/external-state-contract.yml`、`.github/workflows/e2e.yml`（注記の残り）、`monitoring/grafana/provisioning/dashboards/json/uptime-kuma.json`、`scripts/detect-external-api-change.js`、`scripts/tests/test-detect-external-api-change.js`、`scripts/smoke/external-firebase.sh`、`scripts/snapshot/firebase.sh` |
+| 便3 配線 | `docker-compose.yml`、`frontend/Dockerfile`、`.env.example`、`frontend/.env.example`、`nginx/nginx.conf`、`scripts/blue-green-cutover.sh`、`.github/workflows/external-state-snapshot.yml`、.github/workflows/rotate-qa-firebase.yml、`docs/external-state-contract.yml`、`.github/workflows/e2e.yml`（注記の残り）、`monitoring/grafana/provisioning/dashboards/json/uptime-kuma.json`、`scripts/detect-external-api-change.js`、`scripts/tests/test-detect-external-api-change.js`、scripts/smoke/external-firebase.sh、scripts/snapshot/firebase.sh |
 | 便4 DB の列 | `backend/app/services/tenant.py`、`backend/tests/conftest.py`（:512）、`backend/tests/rls_bootstrap.py`、`backend/tests/test_staff_create_users.py`、`backend/tests/ops/test_ai_cloud_views.py`、`migrations/20261024_100300_create_ai_cloud_views.sql`、`scripts/qa/seed-tenant.sql`、`backend/tests/test_export_inventory_for_sheet.py`（:75 は `public.users.firebase_uid`。staff の列とは別の表なので、便4 の recon で扱いを確かめる） |
 | 例外（§8-2） | 残りすべて |
 
