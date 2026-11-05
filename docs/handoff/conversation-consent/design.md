@@ -698,7 +698,7 @@ PO への返事の本文（ツール呼び出しの中ではない）の、**最
 #### 14-11-2 観測事実（agent-console origin/main f503e9b）
 
 - 件の設定は `buildCaseSettings`（server/case-sandbox.ts:446-472）が作る。記録用の hook を `addHandlers` で足し、宛先を `--post http://127.0.0.1:<port>/api/agent/case-activity` にする（:450）。件の見張り（guard）は PreToolUse の全道具に同期で入り、`onFailure: "block"`・`timeout: 10` を使っている（:453）。許可の既定は `defaultMode: "dontAsk"`（:460）。部屋の中から読めるファイルは名前で挙げた物だけで（`CASE_ROOM_READ_NAMED`・:212-221）、記録用 hook・見張りの hook はここに入っている。
-- 共通の記録用 hook の一覧 `HOOK_SPECS`（server/activity-hooks.ts:53-72）は全窓に入る。Notification は使っていない（:49 のコメント）。`buildHandler`（:94-100。:96）は `async: false` を書かない限り非同期にする。
+- 共通の記録用 hook の一覧 `HOOK_SPECS`（server/activity-hooks.ts:53-72）は全窓に入る。Notification は使っていない（:49 のコメント）。`buildHandler`（:96-102。:98）は `async: false` を書かない限り非同期にする。`HookSpec`（:35-45）と `Handler`（:79-86）には `onFailure` の欄が無く、この道では block を付けられない。件の見張りは `buildCaseSettings` の中で生の形で直接書いている（case-sandbox.ts:453）。
 - 件からの知らせの受け口 `handleCaseActivity`（server/http.ts:436-451）: Origin があれば 403 → `caseOfRequest`（:397-414。送り元の番号を lsof で pid に引き、親をたどって件の本体の記録（pid と開始時刻）に行き着いたらその件）→ 本文 → session_id の固定（違えば 409）→ 記録 → 204。件は合言葉を持たず、どの件からの知らせかはサーバーが pid で決める。
 - 公式の説明書（code.claude.com/docs/en/hooks・2026-11-05 Opus が読んだ。Context7 は今月の上限で使えなかったため、本起動指示の代替で直接読んだ）: PreToolUse は AskUserQuestion と ExitPlanMode にも当たる。PermissionRequest は許可の確認が要る時に来る。Stop は利用者が止めた（割り込み）ときは来ない。hooks は既定で同期で、終わるまで Claude は先へ進まない（async を付けたものは待たない）。質問を Esc で断ったときに何の知らせが来るかは書かれていない（未確認）。`onFailure: "block"`（v2.1.295 から。件の本体は 2.1.318）: 失敗に数えるのは「起動できない・0 と 2 以外で終わる・時間切れ」。block のとき、失敗はその出来事で 2 で終わったのと同じ動きになる（PreToolUse は道具を止める・UserPromptSubmit は入力を捨てる・Elicitation は断る）。PermissionRequest では断りになる。Stop には効かない。2 で終わったときの動き: PermissionRequest は 2 を無視して確認がそのまま出る・Stop は Claude を止めずに続けさせる・PostToolUse は Claude に知らせるだけ。同じ出来事の hook は並んで動く（2026-11-05 Opus が説明書を読み直して確かめた。10回目の審査の指摘）。
 - K30 の実測: 件の窓では許可の確認と計画の承認は出なかった（dontAsk のため。§14-10-10）。質問の選択肢は出た。
@@ -716,7 +716,8 @@ PO への返事の本文（ツール呼び出しの中ではない）の、**最
 | UserPromptSubmit | — | 外す |
 | Stop | — | 外す |
 
-- すべて同期・`timeout: 5`。`buildHandler` は `async: false` が無いと非同期にする（activity-hooks.ts:96）ので、spec に `async: false` を必ず書く。同期にする理由: 印を付ける知らせが届く前に選択肢が出ること、知らせの順が入れ替わる（外すが付けるより後に届く）ことを防ぐ。Claude は同期の hook が終わるまで先へ進まないので、知らせは起きた順にサーバーへ届く。
+- 作り方: `HOOK_SPECS`・`HookSpec`・`buildHandler` は使わず、変えない。`buildCaseSettings` の中で、件の見張り（case-sandbox.ts:453）と同じ生の形 `{ type: "command", command: p.nodeBin, args: [<case-wait-hook.mjs のパス>, "--post", "http://127.0.0.1:<port>/api/agent/case-wait"], timeout: 5 }` を各出来事の hooks に足す。`async` は書かない（書かなければ同期）。付ける3種だけ `onFailure: "block"` を足す。PreToolUse・PostToolUse・PostToolUseFailure は `matcher: "AskUserQuestion|ExitPlanMode"` の組、ほかは matcher 無しの組にする。
+- すべて同期・`timeout: 5`。同期にする理由: 印を付ける知らせが届く前に選択肢が出ること、知らせの順が入れ替わる（外すが付けるより後に届く）ことを防ぐ。Claude は同期の hook が終わるまで先へ進まないので、知らせは起きた順にサーバーへ届く。
 - 終わり方（2 は使わない。2 は出来事ごとに意味が違い、PermissionRequest では無視され、UserPromptSubmit では PO の入力を捨て、Stop では Claude を止めなくなるため）:
   - 付ける3種（PreToolUse・PermissionRequest・Elicitation）: サーバーが 204 を返したときだけ 0 で、何も出力しない。それ以外（接続できない・204 以外・5 秒を超える）は 1 で終わる。`onFailure: "block"` を付ける（件の見張りと同じ書き方。:453）。1 は失敗に数えられ、PreToolUse は道具を止め、PermissionRequest は断り、Elicitation は断る。サーバーへ届かなければ、その質問・確認を出させない。
   - 外す4種（PostToolUse・PostToolUseFailure・UserPromptSubmit・Stop）: 結果にかかわらず必ず 0 で終わり、何も出力しない。`onFailure` は付けない。届かなければ印が残るだけで、安全側。
@@ -769,7 +770,7 @@ PO への返事の本文（ツール呼び出しの中ではない）の、**最
 | # | 基準 | 検証方法 |
 |---|---|---|
 | K36 | 本物の件の窓で、答え待ちの間だけ印が付き、答えると外れる | 便CS0 を反映した後、PO が件を1つ開き、Opus がサーバーの印を読むだけで記録（読む口は便CS0 で足す。件の id を渡すと `awaiting`（pending が空でないか）・`pendingCount`・`lastEvent`・`since` だけを返す、合言葉付きの読み取り）: ① 開いた直後 false ② 質問の選択肢が出ている間 true ③ 選んで答えた後 false ④ 質問の選択肢で Esc → 値と lastEvent をそのまま記録（true のままなら安全側で○。false なら外れた知らせの名前を記録） ⑤ PO が何か打った後 false ⑥ サーバーを止めた状態で質問を頼む → 選択肢が出ないこと（出たら×） ⑦ 担当からの質問（出なければ場面なし） ⑧ 6種の hook の1回あたりの時間。①②③④⑤⑥が○なら○。×なら便CS1 に進まず案 E |
-| K37 | ふつうの窓の hooks が変わっていない。件の hook が正しく入り、正しく終わる | vitest で: 件でない役割の設定に case-wait-hook が入らないこと。件の設定に表の6種が `async` 無し・timeout 5 で入り、付ける3種だけに onFailure block が付くこと。`CASE_ROOM_READ_NAMED` に case-wait-hook.mjs があること。case-wait-hook.mjs を偽のサーバーで動かし、付ける3種は 204 で 0・接続できない／500／5 秒超で 1、外す4種はどれでも 0 で終わり、どの場合も何も出力しないこと（2 で終わる場合が無いこと） |
+| K37 | ふつうの窓の hooks が変わっていない。件の hook が正しく入り、正しく終わる | vitest で: 件でない役割の設定に case-wait-hook が入らないこと。`buildCaseSettings` が返す設定の JSON に、表の7つの出来事それぞれへ case-wait-hook の handler が `async` の鍵無し・`timeout: 5` で入り、PreToolUse・PermissionRequest・Elicitation の handler にだけ `onFailure: "block"` の鍵が実際にあり、外す4種には無いこと。`HOOK_SPECS` の中身が変わっていないこと。`CASE_ROOM_READ_NAMED` に case-wait-hook.mjs があること。case-wait-hook.mjs を偽のサーバーで動かし、付ける3種は 204 で 0・接続できない／500／5 秒超で 1、外す4種はどれでも 0 で終わり、どの場合も何も出力しないこと（2 で終わる場合が無いこと） |
 | K38 | 受け口の断りと印の数え方 | vitest: 件に決まらない 401・Origin 403・表に無い出来事 400・PreToolUse で tool_use_id 無し 400・session_id 違い 409 で、どれも印が変わらないこと。Pre(A)→Pre(B)→Post(B) で印が残り、Post(A) で空になること。PermissionRequest の印が Post では外れず UserPromptSubmit で外れること。本文に会話の中身が入っていても印にも監査にも残らないこと |
 
 #### 14-11-8 実装の分け方
@@ -791,3 +792,7 @@ PO への返事の本文（ツール呼び出しの中ではない）の、**最
   - LOW: 印が真偽1つで、担当の道具の終わりが本体の質問の印を外しうる → `tool_use_id` ごとに持つ（(c)・R33・K38）。spec に `async: false` が要る → (a) に書いた。行番号のずれ（dontAsk :460・注記 :49・HOOK_SPECS :53-72・handleCaseActivity :436）と R32 の引く所（:78）→ 直した。
   - 確かめて合っていた所（審査役）: 印の正本はメモリの1か所。ふつうの窓は変わらない。つなぎ直した窓は断る。K36〜K38 は○×で決まり、便CS1 より前にある。onFailure は説明書にあり、件の版で使える。
   - 未確認（審査役）: Esc で断ったときの知らせ・割り込みで Stop が来るか・AskUserQuestion に PermissionRequest が来るか（説明書に無い → K36）。
+- 11回目（babde1ad7・クラウドの Opus・2026-11-05）: REVISE（MEDIUM 1・LOW 1）。10回目の HIGH・MEDIUM は直っていた。直しから生まれた新しい穴は無し。
+  - MEDIUM: 「spec に async:false」で `buildHandler` の道を使うと、`HookSpec`・`Handler` に `onFailure` の欄が無く block を付けられない → 件の見張り（case-sandbox.ts:453）と同じ生の形で `buildCaseSettings` に直接書く、に決めた（(a)）。共通の部品を変えないので、ふつうの窓に触れない。K37 に「設定の JSON に onFailure の鍵が実際にあること」を書いた。Opus が実物で確かめた。
+  - LOW: buildHandler の行番号 → :96-102・:98 に直した。
+  - 未確認（審査役）: 担当（サブエージェント）の hook の session_id が本体と同じか（違えば 409 で質問が止まる。安全側。K36 ⑦で記録する）。Esc・割り込みの知らせ（K36）。
