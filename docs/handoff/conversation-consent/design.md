@@ -823,7 +823,7 @@ PO への返事の本文（ツール呼び出しの中ではない）の、**最
 
 ### 14-12 第8版: 件の窓を「聞かずに進む形（dontAsk）」から外さない（2026-11-05・PO「1」で小さく作り直し）
 
-**状態**: 設計案作成済み（3回目の審査 REVISE〈HIGH なし・MEDIUM 2件・LOW 2件〉を反映。4回目の審査待ち）。第7版（答え待ちの印）は §14-11-11 の前提の誤りにより取りやめ。
+**状態**: 設計案作成済み（4回目の審査 REVISE〈HIGH なし・MEDIUM 1件・LOW 1件〉を反映。5回目の審査待ち）。第7版（答え待ちの印）は §14-11-11 の前提の誤りにより取りやめ。
 
 #### 14-12-1 目的と成功条件
 
@@ -836,7 +836,7 @@ PO の言葉: 「件の窓の今の作りに合わせて設計を小さく作り
 | K3 ふだんの件の作業が今までどおり通る（下請けの AI を含む） | 本物の件の窓で ①「ls して」と頼み Bash が通る ②「Agent で下請けを1つ動かして README を読ませて」と頼み、下請けの中の Read が通る（どちらも会話記録に tool_result があり `case-guard:` の拒否の文が無い）。任意の確かめ: 下請けを動かしている途中で `/plan` を送り、画面の写しに許可の問い合わせ画面が出ないこと（出たら PO へ戻す） |
 | K4 件の AI が keybindings.json を書き換えられない | case-sandbox の試験: 部屋の書き込み拒否の正規表現に `CH/keybindings.json` が一致する。case-guard でも CH は作業場の外なので Edit/Write は止まる（既存） |
 | K5 既存の試験がすべて通る | agent-console の CI（vitest・型検査）緑 |
-| K6 計画の形に入っても、件を開き直せば dontAsk に戻る | 本物の件の窓で「/plan README を読んで」と送る→道具が `case-guard: permission mode is not dontAsk` で止まる。続けて次の2つを別々に行う。(a) 件の窓の tmux だけを落とし、agent-console を再起動する（復元の道 `server/restore.ts:179`→`sessions.ts:564` で AC_RESUME_ID が渡り、`ccdiscord.zsh:73-75` が同じ会話を `--resume` で開く。`:72` の `--permission-mode dontAsk` が一緒に渡る）→同じ会話で「ls して」が通る。(b) 画面で件を閉じ、新しい件として開く（件の役割は `resumeCommand` を持てない `server/config.ts:160-161`。会話の続きは失われる）→「ls して」が通る。どちらかが×なら PO へ戻す |
+| K6 計画の形に入っても、件を開き直せば dontAsk に戻る | 本物の件の窓で「/plan README を読んで」と送る→道具が `case-guard: permission mode is not dontAsk` で止まる。続けて次の2つを別々に行う。(a) この順で行う: ①agent-console を止める ②件の tmux セッションを kill-session ③agent-console を起動する（先に tmux を落とすと、動いている agent-console が `server/restore.ts:65`・`:94` で件を復元の一覧から外し、誤って×になる）。③の後、復元の一覧（open-sessions.json）に件の claudeSessionId が残っていることを確かめる。件の役割には `restoreCommand` がある（`agent-console.config.json:48`。`config.ts:160-161` が禁じるのは `resumeCommand` だけ）ので、復元の道 `server/restore.ts:179`→`sessions.ts:564` で AC_RESUME_ID が渡り、`ccdiscord.zsh:73-75` が同じ会話を `--resume` で開く。`:72` の `--permission-mode dontAsk` が一緒に渡る）→同じ会話で「ls して」が通る。(b) 画面で件を閉じ、新しい件として開く（件の役割は `resumeCommand` を持てない `server/config.ts:160-161`。会話の続きは失われる）→「ls して」が通る。どちらかが×なら PO へ戻す |
 | K7 入れた時点で開いている件の窓にも（１）が効く | v0.50.2 を入れる前から開いていた件の窓で、入れた後に K1 と同じ手順を行い同じ結果 |
 
 #### 14-12-2 変更前→変更後（agent-console・origin/main f503e9b = v0.50.1）
@@ -860,7 +860,7 @@ PO の言葉: 「件の窓の今の作りに合わせて設計を小さく作り
 
 （４）取りやめ（2回目の審査で根拠の読み違いと分かったため）
 - 前の案: `buildCaseSettings` の deny に `"ExitPlanMode"` を足して、開き直しで計画の形に戻らないようにする。
-- 取りやめの理由: 公式 sessions.md「permission mode on resume」では、端末で `--resume` するとき `--permission-mode` を渡すと戻るはずの形はそれで上書きされる。件の起動台本 `ops/shell/ccdiscord.zsh:72` は前から `--permission-mode dontAsk` を `--resume`（:73-75）と一緒に渡している。`--resume` が付くのは agent-console の再起動時の復元（`server/restore.ts:179`→`sessions.ts:564`）だけで、画面で閉じて開くと新しい会話になる（`server/config.ts:160-161`）。どちらの道でも足さなくても dontAsk で始まる（K6 の (a)(b) で判定）。足すと K6 で効き目を見分けられないので、変更を増やさない。
+- 取りやめの理由: 公式 sessions.md「permission mode on resume」では、端末で `--resume` するとき `--permission-mode` を渡すと戻るはずの形はそれで上書きされる。件の起動台本 `ops/shell/ccdiscord.zsh:72` は前から `--permission-mode dontAsk` を `--resume`（:73-75）と一緒に渡している。`--resume` が付くのは agent-console の再起動時の復元（件の役割に `restoreCommand` がある `agent-console.config.json:48`。`server/restore.ts:179`→`sessions.ts:564`）だけで、画面で閉じて開くと新しい会話になる（`server/config.ts:160-161`）。どちらの道でも足さなくても dontAsk で始まる（K6 の (a)(b) で判定）。足すと K6 で効き目を見分けられないので、変更を増やさない。
 
 （５）版を v0.50.2 にする（package.json・package-lock.json・extension/manifest.json・docs/CHANGELOG.md。#98 と同じ書き方。CHANGELOG に戻し方 `bash scripts/ac-update.sh v0.50.1` の1行）。
 
