@@ -168,3 +168,38 @@ PO の言葉: 「システム管理者は不要なので非表示テナント001
 - 作業中の自社サーバー管理（release/discord-own-server-bin3b の `docs/handoff/discord-server-management/design.md:22` `:27`）: Discord の役割とチャンネルを、書いた設計図どおりに作る。人へ役割を付けることは対象外（design.md:27）。`backend/app/services/discord_blueprint.py` はアプリの役割の表を読まない（grep で roles・user_roles・system_key 0 件）。
 - 結論: 今あるものと作業中のものは、どちらもアプリの役割の表とつながっていない。今回の変更で壊れない。
 - 将来、アプリの役割と Discord の役割をつなぐ時の約束: 名前でなく変わらない番号（役割の番号か system_key）でつなぐ。会社が名前を直せるようになるため。
+
+## 追記: S1 書く所・読む所の全数（2026-11-06・HEAD ee8f0a74d）
+
+調べ方: クラウドの調査役（Sonnet）2 回＋ Opus の手元の確かめ。行番号はすべて ee8f0a74d の時点。テストは除く。
+
+### S1-1. 6 つの表へ書く所（アプリのコード）
+
+| 表 | 会社側の窓口（権限） | 運営側の窓口（権限） |
+|---|---|---|
+| payment_fee_settings | `backend/app/routers/payment_fee_settings.py` POST :86・PATCH :123・DELETE :162（すべて suppliers.view） | `backend/app/routers/super_admin_payment_fee_settings.py` POST :82・PATCH :116・DELETE :151（require_super_admin） |
+| tcg_status_master | `backend/app/routers/status_master.py` POST :150・PATCH :179・DELETE :213・取り込み :323（すべて suppliers.view） | `backend/app/routers/super_admin_status_master.py` POST :155・PATCH :201・DELETE :254・取り込み :355（require_super_admin） |
+| tcg_note_master | `backend/app/routers/note_master.py` POST :160・PATCH :196・DELETE :234・取り込み :348（すべて suppliers.view） | `backend/app/routers/super_admin_note_master.py` POST :158・PATCH :192・DELETE :227・取り込み :329（require_super_admin） |
+| tcg_product_categories | `backend/app/routers/product_categories.py` POST :126・取り込み :229・PATCH :292（product_categories.edit）・DELETE :326（product_categories.delete） | `backend/app/routers/super_admin_product_categories.py` POST :129・取り込み :230・PATCH :288・DELETE :323（require_super_admin） |
+| line_units（view public.units 経由） | `backend/app/routers/units.py` POST :123・PATCH :149・DELETE :183・取り込み :287（すべて suppliers.view） | `backend/app/routers/super_admin_units.py` :154・:192・:220・:418 |
+| line_conditions（view public.conditions 経由） | `backend/app/routers/conditions.py` POST :206（conditions.create）・PATCH :270（conditions.update）・DELETE :324（conditions.delete）・取り込み :454（3 つとも要る） | `backend/app/routers/super_admin_conditions.py` :200・:253・:283・:415 |
+
+- 窓口はすべて `backend/app/main.py:445-469`（会社側）・`:562-617`（運営側）で prefix `/api/v1` に付く。
+- 会社側の書く文は、どれも `tenant_id = :tenant_id`（自社の番号）を付けて書く。共用の行（tenant_id が空）は、書く文の条件で外れる。例: `backend/app/routers/units.py:137-141`・`:171`・`:197`、`backend/app/routers/payment_fee_settings.py:102-108`・`:146`・`:176`。DB の守りは無く、コードの条件だけで守っている。
+- 会社側は書いた後に `reset_tenant_context` を呼ぶ（例: `backend/app/routers/units.py:145`・`:179`・`:204`・`:337`）。
+- 運営側は 6 本とも `set_operator_context` を呼ばない（recon §3 のとおり）。
+- scripts/ の中で 6 つの表と view へ書く文: 0 件（Grep。migrations/ は数えない）。
+- view の形: `migrations/20260922_080000_rename_line_analysis_tables.sql:26` `CREATE VIEW public.units AS TABLE public.line_units;`、`:77` `CREATE VIEW public.conditions AS TABLE public.line_conditions;`。1 つの表をそのまま見せる view なので、view への書き込みは元の表に通る。表の守りは元の表（line_units・line_conditions）に付ける。
+
+### S1-2. LINE 解析の接続（会社の印の中で動くか）
+
+- 投稿の解析の入口は `backend/app/tasks/tcg_extraction.py:106` `extract_and_analyze_source_message`。接続は同じファイルの専用の接続（`:94` `_engine = create_engine(_DB_URL, echo=False)`、`:97` `_get_sync_session`）。解析の本体 `analyze_extraction_job` を `:626` で呼ぶ。
+- やり直しの入口は `backend/app/services/tcg_product_master_svc.py:985` `reanalyze_extraction_job`。これも専用の接続（`:828` `create_engine`）で、`:935` で `analyze_extraction_job` を呼ぶ。
+- `tcg_extraction.py`・`tcg_analyzer_svc.py`・`line_analysis_v102_svc.py` に `set_tenant_context`・`app.tenant_id`・`search_path` の文字は 0 件（grep）。
+- 結論: 解析は会社の印も運営の印も立てない接続で動く。表の守りを付けると、解析の接続から見える行は、決まりの文が全員に見せる行（共用の行）だけになる。
+
+### S1-3. その他
+
+- `ACTIVE_CHANNEL_PLATFORMS`: 定義 `backend/app/services/channel_masters.py:19` の 1 か所だけ。backend と frontend/src で使う所は 0 件（grep）。
+- public.products を読む・書く運営の窓口 5 本（super_admin_aliases・super_admin_product_formats・super_admin_product_lines・super_admin_quantity_units・super_admin_weight_classes）: products は読むだけ。例: `backend/app/routers/super_admin_product_lines.py:150` `SELECT 1 FROM public.products WHERE product_line_id = :id LIMIT 1`。書くのは各自の表（product_formats・product_lines・quantity_units・weight_classes）。
+- 連絡ツールの `connection_type`: 値は auto か manual だけ（`backend/app/services/tenant.py:1091-1092` の CHECK、`migrations/20260611_100000_create_channel_masters.sql:45-46`）。意味は auto＝連携済みで自動取り込みのみ、manual＝手で入力する（同 migration :11）。使う所: 手で会話を記録するとき auto のチャネルは断る（`backend/app/routers/conv_logs.py:247`）、手で記録する欄は manual だけ出す（`frontend/src/pages/inbox/ManualRecordSection.tsx:50`）、管理画面は auto を削除不可で表示（`frontend/src/pages/admin/ChannelMastersPage.tsx:98-100`）、言語判定の除外（`backend/app/services/lang_judge.py:8`）。初期値: messenger・instagram・discord が auto、phone・in_person・whatsapp が manual（`backend/app/services/channel_masters.py:10-17`）。
