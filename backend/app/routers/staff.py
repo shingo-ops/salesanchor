@@ -60,6 +60,9 @@ logger = logging.getLogger(__name__)
 STAFF_CODE_MAX_LENGTH = 20
 _PLACEHOLDER_PREFIX = "TMP-"
 
+# 他社か自社かを言い分けない（ADR-1063 便1・K7）。他社在籍を文言から分からないようにする
+EMAIL_UNAVAILABLE_DETAIL = "このメールアドレスは登録できません。別のメールアドレスを使ってください。"
+
 
 def _new_placeholder_code() -> str:
     """INSERT 時の一意な仮コード（EMP-%05d へ UPDATE されるまでの値）。VARCHAR(20) に収める。"""
@@ -84,7 +87,7 @@ async def _resolve_user_for_new_staff(
         if existing["tenant_id"] != tenant_id:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="このメールアドレスは他の会社で使われています",
+                detail=EMAIL_UNAVAILABLE_DETAIL,
             )
         linked = await db.execute(
             text("SELECT 1 FROM staff WHERE user_id = :uid LIMIT 1"),
@@ -93,7 +96,7 @@ async def _resolve_user_for_new_staff(
         if linked.first() is not None:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="このメールアドレスのスタッフはすでに登録されています",
+                detail=EMAIL_UNAVAILABLE_DETAIL,
             )
         return int(existing["id"]), False
 
