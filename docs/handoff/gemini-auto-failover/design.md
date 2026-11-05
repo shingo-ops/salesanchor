@@ -2,7 +2,7 @@
 
 状態: 設計第1版（Opus、2026-11-05）。完了条件は PO 2026-11-05「1」で承認済み。実装の進め方（設計 → 点検 → 作る係 → わざと断られる試験）も同じ「1」で承認済み。
 設計審査（クラウドの Opus・同じ AI による点検で、独立した第三者の点検ではない）: 1回目 REVISE（R1〜R5）→ 7a1180fba で直し。2回目 REVISE（R1〜R5 は全部直ったと確認。必須 N1 は card-1 の「10番以外」の文言だけ、推奨 N2・N3）→ 041889ecf で直し、差分を Opus が確かめた。実物の google-genai 2.8.0 と aiohttp 3.14.5 で、非同期の呼び出しが届かない中継で ClientProxyConnectionError を出すことを点検役が実行して確かめた。
-根拠: [recon.md](recon.md)。決定の記録: [ADR-1062](../../adr/ADR-1062-gemini-auto-route-failover.md)。
+根拠: [recon.md](recon.md)（`docs/handoff/gemini-auto-failover/recon.md`）。決定の記録: [ADR-1062](../../adr/ADR-1062-gemini-auto-route-failover.md)。
 関連: ADR-1050（送り直し・諦めの知らせ）、ADR-1012（24時間保守）、docs/handoff/gemini-direct-default/design.md（10/02 の「直接が既定・人が中継に切り替える」。本件で置き換える）、docs/runbooks/gemini-egress-emergency.md。
 
 ## 1. 目的（PO の言葉）
