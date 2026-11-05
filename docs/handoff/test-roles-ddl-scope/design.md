@@ -144,7 +144,7 @@ def test_roles_migration_is_scoped_to_own_tenant():
 - 試験は Mac で回さない。CI（GitHub）とクラウドで回す。
 
 ## 8. 維持の仕組み
-- 守り手: CI の pytest（必須チェック）で毎回走る見張り試験と、2026-11-19 の数え直しをする Opus
+- 守り手: backend/tests/test_tenant_loop_migration_guard.py（CI の pytest・必須チェックで毎回走る）と、2026-11-19 の数え直しをする Opus
 - 見張り `backend/tests/test_tenant_loop_migration_guard.py` は CI の pytest（必須チェック）で毎回走る。新しい試験が全テナントを回す移行を参照すると、分類を書くまでマージできない。
 - 正本は `backend/tests/rls_bootstrap.py` の `_TENANT_LOOP_MIGRATIONS` 1か所。見張りはそこを読み、別の一覧を持たない（分類表は「どの試験がどう扱うか」だけ）。
 - K5 の数え直しは 2026-11-19 に Opus が行う（記憶 rule_c_reset_after_commit に書く）。
