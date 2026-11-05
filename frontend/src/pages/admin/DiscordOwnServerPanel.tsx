@@ -7,6 +7,7 @@
  * 権限:
  *   tenant.profile.view → 閲覧
  *   tenant.profile.edit → 登録の解除
+ *   tenant.profile.edit → 今のサーバーの読み取り
  *   tenant.profile.edit かつ channels.manage → Bot の招待
  */
 import { useEffect, useState } from "react";
@@ -27,6 +28,7 @@ interface DiscordOwnConfig {
 }
 
 const OWN_PATH = "/admin/discord-config/own";
+const SNAPSHOT_PATH = "/admin/discord/own-server/snapshot";
 
 type Notice = { kind: "success" | "danger"; text: string } | null;
 
@@ -43,6 +45,7 @@ export function DiscordOwnServerPanel() {
   const [inviting, setInviting] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [removing, setRemoving] = useState(false);
+  const [reading, setReading] = useState(false);
 
   // 招待から戻ったときの結果を 1 回だけ読み、URL の残りを消す
   useEffect(() => {
@@ -96,6 +99,25 @@ export function DiscordOwnServerPanel() {
     }
   };
 
+  const handleSnapshot = async () => {
+    setReading(true);
+    setNotice(null);
+    try {
+      const data = await api.post<{ snapshot_id: number; role_count: number; channel_count: number }>(
+        SNAPSHOT_PATH,
+        {},
+      );
+      setNotice({
+        kind: "success",
+        text: t("discordOwnServer.snapshotDone", { roles: data.role_count, channels: data.channel_count }),
+      });
+    } catch {
+      setNotice({ kind: "danger", text: t("discordOwnServer.snapshotFailed") });
+    } finally {
+      setReading(false);
+    }
+  };
+
   if (ownQ.isPending) return <LoadingBlock />;
 
   const guildId = ownQ.data?.guild_id ?? null;
@@ -127,6 +149,13 @@ export function DiscordOwnServerPanel() {
               {t("discordOwnServer.disconnect")}
             </Button>
           )}
+        </div>
+      )}
+      {isConnected && canEdit && (
+        <div className="dc-actions">
+          <Button variant="secondary" onClick={() => void handleSnapshot()} loading={reading}>
+            {t("discordOwnServer.snapshot")}
+          </Button>
         </div>
       )}
       <ConfirmModal
