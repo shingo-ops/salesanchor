@@ -10,7 +10,7 @@
 ## 1. 既存 ADR の検索
 
 - `git grep -i -l "viewer_accounts\|閲覧者" docs/adr/` の該当: ADR-021、ADR-1003、ADR-1009、ADR-1019。
-- docs/adr/FEATURE-INDEX.md は 閲覧・viewer・ドライブ・drive・請求書 の語で該当なし。ADR-101 は既存の設計（viewer-customer-sheet design）からたどった。
+- docs/adr/FEATURE-INDEX.md は 閲覧・viewer・ドライブ・drive の語で該当なし。「請求」の行（docs/adr/FEATURE-INDEX.md:159）が ADR-101 を指し、「決済・入金確認・PayPal・Wise」の行（同 :160）が ADR-104 を指す（2026-11-06 訂正。前の版は「請求書」の語で該当なしと書いていた）。
 - 今回変える決まり: ADR-1019 の Q7（削除の日数。実装は §4）。
 
 ## 2. 状態の決まりと、状態を読む場所
@@ -71,7 +71,8 @@
 - 会社情報の表は会社ごとのスキーマに置く（migrations/069_create_tenant_profile.sql:70〜:71）。新しい会社の既定行は tenant.py が入れる（同 :91）。
 - 会社別のデータの置き場の決まり: ADR-142 の Context と Decision 1〜3。作成処理は backend/app/services/tenant.py の _TENANT_TABLES_SQL（:195）・_RLS_ENABLE_SQL（:1206）・_RLS_POLICY_SQL（:1259）。手本は own_inventory（:1183・:1251・:1323）。
 - 文脈: set_tenant_context は backend/app/auth/dependencies.py:363、表名は同 :495 の tenant_table_ref。最高管理者の口に呼び出しは無い。裏の処理の呼び出しは backend/app/services/google_webhook.py:255、backend/app/discord_gateway/dm_writer.py:94。
-- 文脈を消して接続を返す処理は無い（backend/app で RESET ALL・DISCARD・pool_reset の grep が該当なし）。
+- 文脈は接続を返す前に消える。backend/app/database.py:60〜:61 の get_db の finally が clear_tenant_context（backend/app/auth/dependencies.py:447、ADR-131）を呼ぶ。裏の処理は get_db を通らないので自分で呼ぶ（同 :447 の説明）（2026-11-06 訂正。前の版は RESET ALL・DISCARD・pool_reset の grep だけで「無い」と書いていた）。
+- 運営の書き込みの文脈: `SET LOCAL app.is_operator = 'true'`（backend/app/routers/buyback_prices.py:392、backend/app/routers/super_admin_suppliers.py:61、裏の処理 backend/app/tasks/fx_rate_updater.py:70）。会社の口では空にする（backend/app/auth/dependencies.py:340〜:342）。
 
 ## 8. Google ドライブ
 
@@ -100,3 +101,15 @@
 - PayPal（日本の公式ヘルプ help293・2026-11-05 確認）: 相手のメール等か PayPal.Me で支払える。友達への送金はビジネスのアカウントで受け取れない。
 - 個人情報: 個人情報保護委員会ガイドライン通則編。3-4-1（使う必要がなくなったら遅滞なく消す努力義務）、3-1-1（目的の具体的な特定）、3-1-2（変更は関連のある範囲で、通知か公表）、3-1-3（目的外は原則本人の同意）。再登録防止で名簿を持つ場合の直接の記述は、読めた範囲（ページ前半）に無い。未確認。
 - Context7 は月間上限で利用不可。上記は公式ページを直接確認した。
+
+## 12. 第2回の審査のあとに確かめたこと（2026-11-06。生出力 /tmp/CC報告ファイル/contract-status/fix-facts-1106.txt・fix-facts-1106b.txt・fix-facts-1106c.txt）
+
+- 住所を5つに分けた先例: 取引先 public.suppliers の postal_code・prefecture・city・address1・address2（migrations/20260603_010000_add_suppliers_line_and_address.sql:21〜:25）。
+- 国の一覧: public.countries（migrations/20260621_010000_create_countries_master.sql:21〜:28）と画面の frontend/src/constants/countries.ts。両者を照合する仕組みは .github/workflows と scripts に無い（grep で該当なし）。
+- 都道府県の一覧は backend/app・frontend/src/constants・migrations に無い。frontend/src に「北海道」の語は0件。
+- 会社の電話の決まり: backend/app/schemas/base.py:16〜:23（`+\d{6,15}`・`\d{10,15}`・`0\d{9,10}`、区切り記号は外す）。ADR-126 §6。
+- 会社ごとの表から public への外部キーの先例: backend/app/services/tenant.py:516（role_permissions → public.permissions）、:603（staff → public.users）。
+- 変更の履歴: 会社ごとの audit_logs（tenant.py:484〜:494、old_data・new_data は JSONB）と record_audit_log（backend/app/services/audit.py:277）。
+- 部品の金型: frontend/src/components/ に TextField・Select・Tabs・Toggle・Checkbox・Modal・CountryCombobox がある。
+- 会社情報の口: GET・PUT /api/v1/admin/tenant-profile（backend/app/routers/tenant_profile.py:52〜:53・:85〜:86、backend/app/main.py:478）。閲覧者の運営の口: /super-admin/viewers/…（backend/app/routers/super_admin_viewers.py:347〜:374）。
+- 他テーマの境界: docs/specs/profile-account-settings/README.md（オーナー専用の設定はプロフィールのページに統合）、docs/specs/quote-invoice/ideal-state.md（B2B の支払い方法は PayPal と Wise）。
