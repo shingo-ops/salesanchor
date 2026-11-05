@@ -22,6 +22,8 @@ from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
+from tests.rls_bootstrap import public_bootstrap_lock
+
 ADMIN_PG_URL = os.getenv("RLS_ADMIN_DATABASE_URL") or os.getenv("TEST_PG_URL")
 APP_PG_URL = os.getenv("RLS_TEST_DATABASE_URL")
 
@@ -37,67 +39,79 @@ async def _bootstrap_minimal_schema(admin_engine, tenant_id: int) -> None:
     tenant_NNN スキーマと audit_logs テーブル（RLS 有効）を作成する。
     """
     schema = f"tenant_{tenant_id:03d}"
-    async with admin_engine.begin() as conn:
-        # public.tenants（存在しなければ作成）— rls_bootstrap.py と同一スキーマで競合を防ぐ
-        await conn.execute(text("""
-            CREATE TABLE IF NOT EXISTS public.tenants (
-                id INTEGER PRIMARY KEY,
-                tenant_code VARCHAR(50) NOT NULL UNIQUE DEFAULT '',
-                tenant_name VARCHAR(255) NOT NULL DEFAULT '',
-                company_name VARCHAR(255) NOT NULL DEFAULT '',
-                is_active BOOLEAN NOT NULL DEFAULT TRUE,
-                settings JSONB NOT NULL DEFAULT '{}'::jsonb,
-                created_at TIMESTAMP DEFAULT NOW()
+    async with public_bootstrap_lock(admin_engine):
+        async with admin_engine.begin() as conn:
+            # public.tenants（存在しなければ作成）— rls_bootstrap.py と同一スキーマで競合を防ぐ
+            await conn.execute(text("""
+                CREATE TABLE IF NOT EXISTS public.tenants (
+                    id INTEGER PRIMARY KEY,
+                    tenant_code VARCHAR(50) NOT NULL UNIQUE DEFAULT '',
+                    tenant_name VARCHAR(255) NOT NULL DEFAULT '',
+                    company_name VARCHAR(255) NOT NULL DEFAULT '',
+                    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                    settings JSONB NOT NULL DEFAULT '{}'::jsonb,
+                    created_at TIMESTAMP DEFAULT NOW()
+                )
+            """))
+            await conn.execute(
+                text(
+                    "INSERT INTO public.tenants (id, tenant_code) VALUES (:tid, :code)"
+                    " ON CONFLICT DO NOTHING"
+                ),
+                {"tid": tenant_id, "code": f"tenant_{tenant_id:03d}"},
             )
-        """))
-        await conn.execute(
-            text(
-                "INSERT INTO public.tenants (id, tenant_code) VALUES (:tid, :code)"
-                " ON CONFLICT DO NOTHING"
-            ),
-            {"tid": tenant_id, "code": f"tenant_{tenant_id:03d}"},
-        )
 
-        # テナントスキーマ
-        await conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {schema}"))
+            # テナントスキーマ
+            await conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {schema}"))
 
-        # audit_logs テーブル（RLS 対象）
-        await conn.execute(text(f"""
-            CREATE TABLE IF NOT EXISTS {schema}.audit_logs (
-                id BIGSERIAL PRIMARY KEY,
-                tenant_id INTEGER NOT NULL,
-                user_id INTEGER,
-                action VARCHAR(50),
-                table_name VARCHAR(100),
-                record_id INTEGER,
-                old_data JSONB,
-                new_data JSONB,
-                created_at TIMESTAMP DEFAULT NOW()
+            # audit_logs テーブル（RLS 対象）
+            await conn.execute(text(f"""
+                CREATE TABLE IF NOT EXISTS {schema}.audit_logs (
+                    id BIGSERIAL PRIMARY KEY,
+                    tenant_id INTEGER NOT NULL,
+                    user_id INTEGER,
+                    action VARCHAR(50),
+                    table_name VARCHAR(100),
+                    record_id INTEGER,
+                    old_data JSONB,
+                    new_data JSONB,
+                    created_at TIMESTAMP DEFAULT NOW()
+                )
+            """))
+
+            # アプリユーザーにスキーマ・テーブル・シーケンスへのアクセス権を付与
+            # （admin が作成したスキーマは app ユーザーからは無権限→ PUBLIC 付与で解消）
+            await conn.execute(text(f"GRANT USAGE ON SCHEMA {schema} TO PUBLIC"))
+            await conn.execute(text(f"GRANT ALL ON ALL TABLES IN SCHEMA {schema} TO PUBLIC"))
+            await conn.execute(text(f"GRANT ALL ON ALL SEQUENCES IN SCHEMA {schema} TO PUBLIC"))
+
+            # RLS 有効化とポリシー設定（tenant.py:1094/1152-1155 と同等）
+            await conn.execute(text(
+                f"ALTER TABLE {schema}.audit_logs ENABLE ROW LEVEL SECURITY"
+            ))
+            await conn.execute(text(
+                f"ALTER TABLE {schema}.audit_logs FORCE ROW LEVEL SECURITY"
+            ))
+            # 既存ポリシーがあれば削除してから再作成（冪等）
+            await conn.execute(text(
+                f"DROP POLICY IF EXISTS tenant_isolation_audit_logs ON {schema}.audit_logs"
+            ))
+            await conn.execute(text(f"""
+                CREATE POLICY tenant_isolation_audit_logs
+                ON {schema}.audit_logs
+                USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER)
+            """))
+
+
+async def _drop_minimal_schema(admin_engine) -> None:
+    """試験用のスキーマと public.tenants の行を、public の札の中で消す。"""
+    async with public_bootstrap_lock(admin_engine):
+        async with admin_engine.begin() as conn:
+            await conn.execute(text(f"DROP SCHEMA IF EXISTS {_SCHEMA} CASCADE"))
+            await conn.execute(
+                text("DELETE FROM public.tenants WHERE id = :tid"),
+                {"tid": _TENANT_ID},
             )
-        """))
-
-        # アプリユーザーにスキーマ・テーブル・シーケンスへのアクセス権を付与
-        # （admin が作成したスキーマは app ユーザーからは無権限→ PUBLIC 付与で解消）
-        await conn.execute(text(f"GRANT USAGE ON SCHEMA {schema} TO PUBLIC"))
-        await conn.execute(text(f"GRANT ALL ON ALL TABLES IN SCHEMA {schema} TO PUBLIC"))
-        await conn.execute(text(f"GRANT ALL ON ALL SEQUENCES IN SCHEMA {schema} TO PUBLIC"))
-
-        # RLS 有効化とポリシー設定（tenant.py:1094/1152-1155 と同等）
-        await conn.execute(text(
-            f"ALTER TABLE {schema}.audit_logs ENABLE ROW LEVEL SECURITY"
-        ))
-        await conn.execute(text(
-            f"ALTER TABLE {schema}.audit_logs FORCE ROW LEVEL SECURITY"
-        ))
-        # 既存ポリシーがあれば削除してから再作成（冪等）
-        await conn.execute(text(
-            f"DROP POLICY IF EXISTS tenant_isolation_audit_logs ON {schema}.audit_logs"
-        ))
-        await conn.execute(text(f"""
-            CREATE POLICY tenant_isolation_audit_logs
-            ON {schema}.audit_logs
-            USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER)
-        """))
 
 
 @pytest.mark.skipif(
@@ -152,12 +166,7 @@ async def test_audit_logs_insert_passes_with_set_tenant_context():
                 # ここに到達すれば RLS が通った証明
     finally:
         # テスト用スキーマをクリーンアップ
-        async with admin_engine.begin() as conn:
-            await conn.execute(text(f"DROP SCHEMA IF EXISTS {_SCHEMA} CASCADE"))
-            await conn.execute(
-                text("DELETE FROM public.tenants WHERE id = :tid"),
-                {"tid": _TENANT_ID},
-            )
+        await _drop_minimal_schema(admin_engine)
         await admin_engine.dispose()
         await app_engine.dispose()
 
@@ -206,11 +215,6 @@ async def test_audit_logs_insert_blocked_without_set_tenant_context():
                         },
                     )
     finally:
-        async with admin_engine.begin() as conn:
-            await conn.execute(text(f"DROP SCHEMA IF EXISTS {_SCHEMA} CASCADE"))
-            await conn.execute(
-                text("DELETE FROM public.tenants WHERE id = :tid"),
-                {"tid": _TENANT_ID},
-            )
+        await _drop_minimal_schema(admin_engine)
         await admin_engine.dispose()
         await app_engine.dispose()
