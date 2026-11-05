@@ -289,13 +289,13 @@ VITE_FIREBASE_AUTH_DOMAIN=auth.salesanchor.jp
     cd ~/sa && bash -n scripts/blue-green-cutover.sh && echo "bash OK" | tail -1
     cd ~/sa && (docker compose -f docker-compose.yml config -q 2>&1 || echo "compose config を流せない") | tail -5
 
-手順7 試験を流す（12 件全部の合格になること）
+手順7 試験を流す（11 件全部の合格になること。もとの 12 件から §2-9 で Firebase の試験 1 個を消すため。2026-11-05 の 2 回目の実行で 12 と書き違えていたのを直した）
     cd ~/sa/scripts/tests && node test-detect-external-api-change.js 2>&1 | tail -6
 
 手順8 残りの文字の確かめ
-    cd ~/sa && git grep -n -i "firebase\|gstatic\|googleapis\.com\|firebaseio" -- docker-compose.yml scripts/blue-green-cutover.sh frontend/Dockerfile .github/workflows/deploy.yml nginx/nginx.conf .github/workflows/external-state-snapshot.yml docs/external-state-contract.yml scripts/detect-external-api-change.js scripts/tests/test-detect-external-api-change.js monitoring .env.example frontend/.env.example .github/workflows/e2e.yml | tail -10
+    cd ~/sa && git grep -n -i "firebase\|gstatic\|googleapis\.com\|firebaseio" -- docker-compose.yml scripts/blue-green-cutover.sh frontend/Dockerfile .github/workflows/deploy.yml nginx/nginx.conf .github/workflows/external-state-snapshot.yml docs/external-state-contract.yml scripts/detect-external-api-change.js scripts/tests/test-detect-external-api-change.js monitoring/grafana .env.example frontend/.env.example .github/workflows/e2e.yml | tail -10
     cd ~/sa && git grep -n "AUTH_PROVIDER\|VITE_GCP_PROJECT_ID\|VITE_FIREBASE" -- . ':!docs' ':!.claude-pipeline' | tail -10
-期待: 1 つめは 0 行。2 つめは `.github/workflows/deploy.yml:318` と `:320` の `sed -e '/^AUTH_PROVIDER=/d'`・`-e '/^VITE_AUTH_PROVIDER=/d'` の 2 行だけ。
+期待: 1 つめは 0 行。2 つめは `.github/workflows/deploy.yml:318` と `:320` の `sed -e '/^AUTH_PROVIDER=/d'`・`-e '/^VITE_AUTH_PROVIDER=/d'` の 2 行だけ。 1 つめの monitoring は monitoring/grafana だけを見る（monitoring/prod2/gemini-egress/README.md の Gemini の通信の説明 2 行は Firebase と関係なく、触らない。2026-11-05 の 2 回目の実行で当たって止まったため直した）。
 
 手順9 変わったファイルを確かめる
     cd ~/sa && git status --short | tail -25 && git diff --stat | tail -3
@@ -312,7 +312,7 @@ BLOCKED: に入ったら、その場で作業を停止し、それまでの出�
 - P8 が「10 passed / 2 failed」でない → 数をそのまま報告して `BLOCKED: P8 と見えた数`。
 - 手順6 で JSON・YAML・bash のどれかが失敗 → 失敗した出力を報告し、§2 の消し方で直せるなら直してもう一度流す。直らなければ `BLOCKED: 形が壊れた とファイル名`。
 - 手順6 で `docker compose` が無い → 「compose config を流せない」と報告して先に進む（YAML の読み込みで代える）。compose が在って `.env` が無いことによる値の空の警告は先に進んでよい。それ以外の失敗は `BLOCKED: compose config と出力`。
-- 手順7 で 12 件全部の合格にならない → 赤の試験名と最後の 15 行を報告して `BLOCKED: 試験名`。
+- 手順7 で 11 件全部の合格にならない → 赤の試験名と最後の 15 行を報告して `BLOCKED: 試験名`。
 - 手順8 で期待と違う行が出た → 行をそのまま報告し、§2 の書き漏れか、§1 の触らない所かを書いて `BLOCKED: 残り`。
 - 変更前の文が見つからない・2 か所ある → `BLOCKED: ファイル名と行 変更前の文が一致しない`。
 - push が拒まれた → 出力の最後の 3 行を報告して `BLOCKED: push`（force はしない）。

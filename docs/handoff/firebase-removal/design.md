@@ -155,7 +155,7 @@ Firebase は使わない設定に切り替えた（PO 2026-11-04「firebaseは�
 - 危険 PR の GO（ADR-136）は、PO の委任に基づき Opus が発行する。
 - カード作成時の直し（2026-11-05、origin/main a7a66a2cc の実物点検）:
   - `.gitleaks.toml:38-41` は消さずに残す（§8-2 の例外）。偽の値の文字が `docs/handoff/firebase-removal/card-1.md:769-771` と `docs/handoff/app-visual-language/recon.md:1092-1094` に残っていて、docs は書き換えないため。
-  - `scripts/tests/test-detect-external-api-change.js` は今の main で 10 件合格・2 件不合格（便2 で `backend/app/auth/dependencies.py`・`backend/app/auth/utils.py` から Firebase の語が消えたため）。CI では流れていない。便3 で Firebase の試験 1 個（:125-135）と 31 件の表の 2 行（:198-199）を消し、件数を 29 にして 12 件全部の合格に戻す。
+  - `scripts/tests/test-detect-external-api-change.js` は今の main で 10 件合格・2 件不合格（便2 で `backend/app/auth/dependencies.py`・`backend/app/auth/utils.py` から Firebase の語が消えたため）。CI では流れていない。便3 で Firebase の試験 1 個（:125-135）と 31 件の表の 2 行（:198-199）を消し、件数を 29 にして 11 件全部の合格に戻す（12 件から Firebase の試験 1 個が減る。カード作成時に 12 と書き違えたのを 2026-11-05 に直した）。
   - `docs/external-state-contract.yml` で消すのは :29-39（firebase の塊とその後の空行）。:95 の注記の `.env.example:17` は、`.env.example` の行が動くので `:18` に直す。
   - 注記だけ直す: `.github/workflows/e2e.yml:9-11`（Firebase Auth で通す、という古い説明）と `.env.example:87`（Firebase プロジェクト→Google Cloud プロジェクト。同じプロジェクト）。
   - 鍵のファイルを外しても困らないことを確かめた。backend と worker で `GOOGLE_APPLICATION_CREDENTIALS` を読むコードは 0 件。表の書き出しは別の鍵 `TCG_SHEETS_SA_KEY_FILE`（`backend/app/tasks/tcg_mirror.py:62`）、Gemini は `GEMINI_API_KEY`（`backend/app/services/gemini_extraction_svc.py:262`）、カレンダーは OAuth の client の値を使う。本番の画面の JS に `googleapis.com`・`gstatic.com`・`firebaseio.com` は 0 件（2026-11-05 に本番の frontend の入れ物で数えた）。`AUTH_PROVIDER`・`VITE_AUTH_PROVIDER` を読むコードは `backend` と `frontend/src` に 0 件。
