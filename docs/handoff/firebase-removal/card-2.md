@@ -830,7 +830,9 @@ DB をモックして以下を検証:
     cd ~/sa && git grep -n "set_tenant_claim" -- backend scripts | tail -5
 
 手順3 部品を入れる（firebase-admin を入れない状態で入れ直す）
-    cd ~/sa/backend && python -m pip install -q uv && uv pip install --system -r requirements.txt -r requirements-dev.txt 2>&1 | tail -3
+（部品はリポジトリの外の Python 3.12 の venv `/tmp/v312` に入れる。py312-guard の決まり。以後の python・pytest・ruff はすべてこの venv のものを使う）
+    python3.12 -m venv /tmp/v312 && /tmp/v312/bin/python --version | tail -1
+    cd ~/sa/backend && /tmp/v312/bin/python -m pip install -q -r requirements.txt -r requirements-dev.txt 2>&1 | tail -3
 
 手順4 §2 の変更をする（2-1 から 2-14 の順。ファイルごとに変更前の文で場所を探す）
 
@@ -838,23 +840,23 @@ DB をモックして以下を検証:
     cd ~/sa && find scripts -maxdepth 1 -type f \( -name setup_single_test_user.py -o -name setup_test_users.py \) -delete && ls scripts/setup_single_test_user.py scripts/setup_test_users.py 2>&1 | tail -2
 
 手順6 firebase-admin を外した部品で入れ直す（手順3 の環境に firebase-admin が残っていれば外す）
-    cd ~/sa/backend && uv pip uninstall --system firebase-admin 2>&1 | tail -2; uv pip install --system -r requirements.txt -r requirements-dev.txt 2>&1 | tail -3
+    cd ~/sa/backend && /tmp/v312/bin/python -m pip uninstall -y firebase-admin 2>&1 | tail -2; /tmp/v312/bin/python -m pip install -q -r requirements.txt -r requirements-dev.txt 2>&1 | tail -3
 
 手順7 K2・K4 の確かめ（2-12 と同じ中身）
-    cd ~/sa/backend && python -c "import firebase_admin" 2>&1 | tail -1
-    cd ~/sa/backend && python -c "import google.oauth2.credentials, google.oauth2.service_account, google.auth.transport.requests, googleapiclient.discovery, googleapiclient.http, googleapiclient.errors, google_auth_oauthlib.flow, gspread, google.genai, google.generativeai" && echo "K4 OK" | tail -1
+    cd ~/sa/backend && /tmp/v312/bin/python -c "import firebase_admin" 2>&1 | tail -1
+    cd ~/sa/backend && /tmp/v312/bin/python -c "import google.oauth2.credentials, google.oauth2.service_account, google.auth.transport.requests, googleapiclient.discovery, googleapiclient.http, googleapiclient.errors, google_auth_oauthlib.flow, gspread, google.genai, google.generativeai" && echo "K4 OK" | tail -1
 
 手順8 API の説明文を作り直す
-    cd ~/sa/backend && ENVIRONMENT=test python -m tools.export_openapi ../frontend/api-contract/openapi.json 2>&1 | tail -3 && cd ~/sa && git diff --stat -- frontend/api-contract/openapi.json | tail -2
+    cd ~/sa/backend && ENVIRONMENT=test /tmp/v312/bin/python -m tools.export_openapi ../frontend/api-contract/openapi.json 2>&1 | tail -3 && cd ~/sa && git diff --stat -- frontend/api-contract/openapi.json | tail -2
 
 手順9 ruff（使っていない import はここで言われた所だけを外し、もう一度流して 0 件にする）
-    cd ~/sa/backend && ruff check . 2>&1 | tail -30
+    cd ~/sa/backend && /tmp/v312/bin/python -m ruff check . 2>&1 | tail -30
 
 手順10 触った試験を流す
-    cd ~/sa/backend && python -m pytest -q tests/test_self_auth.py tests/test_passkeys.py tests/test_passkey_login_enroll.py tests/test_new_device_approval.py tests/test_users_rls.py tests/test_register_invite.py tests/test_viewer_isolation.py tests/test_event_loop_nonblocking.py tests/test_smoke_auth_least_privilege.py tests/test_client_ip.py tests/test_security_hardening.py tests/test_line_import_devices.py tests/test_password_reset.py tests/test_staff_create_users.py tests/test_review_mail_notifier.py tests/test_setup_review_tenant.py tests/test_password_gen.py 2>&1 | tail -15
+    cd ~/sa/backend && /tmp/v312/bin/python -m pytest -q tests/test_self_auth.py tests/test_passkeys.py tests/test_passkey_login_enroll.py tests/test_new_device_approval.py tests/test_users_rls.py tests/test_register_invite.py tests/test_viewer_isolation.py tests/test_event_loop_nonblocking.py tests/test_smoke_auth_least_privilege.py tests/test_client_ip.py tests/test_security_hardening.py tests/test_line_import_devices.py tests/test_password_reset.py tests/test_staff_create_users.py tests/test_review_mail_notifier.py tests/test_setup_review_tenant.py tests/test_password_gen.py 2>&1 | tail -15
 
 手順11 全部の試験を流す（SQLite）
-    cd ~/sa/backend && python -m pytest -q -x -p no:cacheprovider 2>&1 | tail -15
+    cd ~/sa/backend && /tmp/v312/bin/python -m pytest -q -x -p no:cacheprovider 2>&1 | tail -15
 
 手順12 残りの文字の確かめ
     cd ~/sa && git grep -n -i firebase -- backend/app | tail -5
@@ -873,7 +875,9 @@ DB をモックして以下を検証:
 ## 4. 想定される分かれ道
 
 - P1〜P7 のどれかが外れた → 実装せず `BLOCKED: P番号 と見えたもの`。
-- 手順7 で `import firebase_admin` が通る → requirements-dev.txt など別の所から入っている。`uv pip show firebase-admin` の `Required-by` を報告して `BLOCKED: K2 firebase-admin が別の部品から入る`。
+- 手順3 で `python3.12` が無い、または `/tmp/v312/bin/python --version` が 3.12 で始まらない → 何も入れずに `BLOCKED: python3.12 が無い と見えた版`（別の版で venv を作らない）。
+- 手順3 の部品入れが失敗した → 出力の最後の 30 行を報告して `BLOCKED: 部品入れ失敗`。
+- 手順7 で `import firebase_admin` が通る → requirements-dev.txt など別の所から入っている。`/tmp/v312/bin/python -m pip show firebase-admin` の `Required-by` を報告して `BLOCKED: K2 firebase-admin が別の部品から入る`。
 - 手順7 で K4 の import が 1 つでも失敗 → 失敗した部品の名前を報告して `BLOCKED: K4 と部品の名前`（requirements.txt に足すかは Opus が決める）。
 - 手順8 で openapi.json の差分に、説明文（description）以外の変化（道筋・型・必須の印）がある → 差分の該当部分を報告して `BLOCKED: openapi の形が変わった`。
 - 手順10・11 で、§2 で変えていない試験が赤 → `git stash` で変更を退かして同じ試験を流し、もともと赤かを確かめる。もともと赤なら試験名と最後の 15 行を報告して先に進む。変更で赤になったなら、赤の試験名と最後の 30 行を報告して `BLOCKED: と試験名`。
