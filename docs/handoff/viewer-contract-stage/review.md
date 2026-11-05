@@ -133,3 +133,25 @@
 | R7 都道府県名の表示 | 言語で name_ja／name_en。DB のデータで t() の対象ではない |
 
 - 状態: 反映済み・再審査待ち。
+
+## 第4回の審査（2026-11-06・Opus の審査役。手元の reviewer）
+
+- 判定: REVISE。必須 N1・N2、推奨（１）〜（10）。M1〜M6 は実物と合うと確認された。
+- 設計担当が実物で確かめた: ai_ro の拒否の一覧（migrations/20261017_130100_create_ai_ro_views.sql:23）、ADR-1052 決定5、set_operator_context（backend/app/auth/dependencies.py:515・:532）、先例 super_admin_tenants.py:50・:93 と super_admin_suppliers.py:69・:73、fx_rate_updater.py:70 は SET、app_fx_rates の2本の決まり（:51〜:63）、tenant.py に FORCE は0件、reset_tenant_context は set_tenant_context を呼ぶ、countries の表の定義 :6〜:13。
+
+| 指摘 | 直した場所 |
+|---|---|
+| N1 ai_ro と ai_cloud の取り違え | design の隠す設定の段落・A18、recon §7・§8 |
+| N2 運営の印の張り方 | design §3-4 の（２）（５）と先例、RLS の段落 |
+| （１）配信の行番号と前提 | design :52、A34 |
+| （２）文脈を張る口の一覧 | design §3-4 |
+| （３）決まりを2本に | design の RLS の段落 |
+| （４）税率の行が無いとき・過去の日付 | design の税率と §3-4b |
+| （５）文面が無いときの 409／503 | design §3-4b・§3-6 |
+| （６）A22 の比べ方・FORCE なし | A22、RLS の段落の見出し |
+| （７）A31 を2つに | A31 |
+| （８）1回だけのデータの変更を流す役 | 最初の行と都道府県（SQL の頭で運営の印） |
+| （９）countries の引用 | design §3-4 |
+| （10）合格の前提 | 変わらず。§7-1 の2件と KGI の PO 承認が残る |
+
+- 状態: 反映済み・再審査待ち。

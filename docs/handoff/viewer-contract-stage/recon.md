@@ -63,7 +63,7 @@
 - 読み出し: backend/app/routers/invoices.py:109〜:128（`{tenant_schema}.tenant_profile`）。
 - 画面の権限: backend/app/routers/tenant_profile.py:55・:88（tenant.profile.view／edit）。
 - 項目: backend/app/schemas/tenant_profile.py:15〜:38。振込先・登録番号は無い。
-- ai_ro の隠す設定: migrations/20261024_100300_create_ai_cloud_views.sql:573〜:575。
+- 隠す設定は道で2つある（第4回の審査で訂正）。相談係の道（ai_cloud・ai_reader_cloud）は列の分類表 migrations/20261024_100300_create_ai_cloud_views.sql:573〜:575 で伏せる。Mac の AI の道（ai_ro）は列名の拒否の一覧 migrations/20261017_130100_create_ai_ro_views.sql:23 に当たる列を除くだけで、分類表を読まない（同ファイルに column_class・mask は0件）。
 - 本番の会社: テスト株式会社・権限確認用・HIGH LIFE JPN・テストテナント2・Sales Anchor App Review の5件（2026-11-05 ai_ro）。実在の事業者名は HIGH LIFE JPN だけに見えるが、発行元の法人は PO に未確認。
 - 会社情報の中身は ai_ro で隠れていて読めない。未確認。
 - 請求書に載る項目は 会社名・住所・電話・メール・サイトの5つ（backend/app/services/invoice_renderer.py:509〜:513）。印影の URL は渡していない。
@@ -81,7 +81,7 @@
 - 既存の呼び出し: backend/app/routers/shipping.py:511（失敗はログで続行）。
 - テスト保存の口: backend/app/routers/integrations.py:243〜:263。
 - 本番: HIGH LIFE JPN に1件。接続 2026-06-08。トークンの更新記録なし。送り状 0件。今も保存できるかは未確認。
-- 訂正: folder_id は ai_ro で隠す列（migrations/20261024_100300_create_ai_cloud_views.sql:274）。隠す列は空に見えるので、本番の「フォルダ未設定」は根拠にならない。本番の値は未確認。書く処理がコードに無いことだけが事実。
+- 訂正（第4回の審査）: folder_id を伏せるのは相談係の道の分類表（migrations/20261024_100300_create_ai_cloud_views.sql:274）で、ai_ro の拒否の一覧には当たらない。前回の「フォルダ未設定」をどちらの道で読んだかは記録が無く未確認。このため本番の値は未確認のまま扱い、§3-8 の分岐は PO の連携ページでの確認とテスト保存で決める。書く処理がコードに無いことだけが事実。
 - この表は会社別の RLS が FORCE で付いている（migrations/20261016_010000_add_google_config_rls.sql:11〜:15）。会社の文脈なしの処理からは読めない。
 - Google 公式: 6か月使わないトークンは無効。同意画面が Testing だと7日で失効。drive.file は、アプリが作ったファイルか、利用者がアプリに渡したファイルを扱える。人が作ったフォルダへ保存できるかは明記なし（未確認）。
 
