@@ -916,6 +916,26 @@ jobs:
               updated_at TIMESTAMPTZ   NOT NULL DEFAULT NOW()
           );
 
+          -- public.viewer_accounts: 20261016_150000_add_viewer_accounts.sql で本番作成済み。
+          --   20261104_220000_add_tcg_distribution_targets_viewer_account_id.sql が外部キーで参照するため、
+          --   前提として最小定義を登録する（id の型は本物と同じ BIGSERIAL）。
+          CREATE TABLE IF NOT EXISTS public.viewer_accounts (
+              id         BIGSERIAL   PRIMARY KEY,
+              email      TEXT        NOT NULL,
+              line_name  TEXT        NOT NULL,
+              status     TEXT        NOT NULL,
+              created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+              updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+          );
+          -- public.viewer_login_tokens: 20261016_150000_add_viewer_accounts.sql で本番作成済み。
+          --   20261105_120000_create_viewer_billing_profiles.sql が CHECK を付け替え COMMENT を書くため、
+          --   前提として最小定義を登録する（用途の CHECK は付け替え前の2値）。
+          CREATE TABLE IF NOT EXISTS public.viewer_login_tokens (
+              id                BIGSERIAL   PRIMARY KEY,
+              viewer_account_id BIGINT      NOT NULL REFERENCES public.viewer_accounts(id) ON DELETE CASCADE,
+              purpose           TEXT        NOT NULL,
+              CONSTRAINT ck_viewer_login_tokens_purpose CHECK (purpose IN ('signup_code', 'password_reset'))
+          );
           -- public.tcg_distribution_targets: 20260921_110000_pipeline_tables_public.sql で本番作成済み。
           --   20261012_210000_add_tcg_distribution_targets_review_sheet_name.sql が ALTER TABLE ... ADD COLUMN
           --   するため、前提として最小定義を登録する（review_sheet_name は当該 migration が足す列なので含めない）。

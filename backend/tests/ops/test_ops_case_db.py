@@ -626,7 +626,7 @@ def test_migration_stops_when_same_name_role_has_other_attributes(pg, role, alte
 def test_migration_is_idempotent(pg):
     pg.cursor().execute(_read(_CASE_SQL))
     pg.cursor().execute(_read(_CASE_SQL))
-    assert _one(pg, "SELECT count(*) FROM ops_case.deny_tables") == 10
+    assert _one(pg, "SELECT count(*) FROM ops_case.deny_tables") == 11
     assert _one(pg, "SELECT ops_case.grant_unmask_owner()") == 0
 
 
@@ -653,14 +653,14 @@ def test_is_denied_source_null_is_denied(pg):
     assert _one(pg, "SELECT ops_case.is_denied_source(NULL)") is True
 
 
-def test_deny_tables_has_ten_names(pg):
+def test_deny_tables_has_eleven_names(pg):
     c = pg.cursor()
     c.execute("SELECT table_name FROM ops_case.deny_tables")
     got = {r[0] for r in c.fetchall()}
     assert got == {
         "users", "viewer_accounts", "auth_events", "auth_refresh_tokens", "password_reset_tokens",
         "registration_tokens", "viewer_login_events", "viewer_login_tokens", "webauthn_credentials",
-        "tenant_carrier_credentials",
+        "tenant_carrier_credentials", "viewer_billing_profiles",
     }  # fmt: skip
 
 

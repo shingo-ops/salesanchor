@@ -12,6 +12,7 @@ API:
   3. Discord が GET /callback?guild_id=...&state=... にリダイレクト
   4. state 検証 → guild_id を tenant_discord_config に保存
   5. フロントエンドの /channels?discord_status=connected にリダイレクト
+     自社用（purpose=own）は /admin/discord-config?tab=own に戻す
 
 前提:
   Discord Developer Portal → OAuth2 → Redirects に
@@ -22,16 +23,20 @@ from __future__ import annotations
 import logging
 import os
 import re
+from typing import Literal
 from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import RedirectResponse
+from pydantic import BaseModel
 from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import (
     get_current_tenant,
     get_current_user,
+    load_user_permissions,
     require_permission,
     reset_tenant_context,
 )
@@ -102,19 +107,34 @@ def _build_invite_url(state: str) -> str:
 # ---------------------------------------------------------------------------
 
 
+class DiscordOAuthStartRequest(BaseModel):
+    purpose: Literal["customer", "own"] = "customer"
+
+
 @router.post(
     "/discord/oauth/start",
     dependencies=[Depends(require_permission("channels.manage"))],
 )
 async def discord_oauth_start(
+    body: DiscordOAuthStartRequest | None = None,
     current_user: User = Depends(get_current_user),
     tenant_id: int = Depends(get_current_tenant),
+    db: AsyncSession = Depends(get_db),
 ) -> dict:
     """Discord Bot Invite URL を発行し、state を Redis に保存する。"""
+    purpose = body.purpose if body else "customer"
+    if purpose == "own":
+        permissions = await load_user_permissions(db, tenant_id, current_user.id)
+        if "tenant.profile.edit" not in permissions:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="権限が不足しています: tenant.profile.edit",
+            )
     try:
         issued = await oauth_state.issue_state(
             tenant_id=tenant_id,
             staff_id=current_user.id,
+            extra={"purpose": purpose},
         )
     except oauth_state.OAuthStateError as e:
         logger.error("[discord_oauth] state 発行失敗: %s", e)
@@ -124,7 +144,7 @@ async def discord_oauth_start(
         )
 
     invite_url = _build_invite_url(issued["state"])  # type: ignore[arg-type]
-    logger.info("[discord_oauth] invite URL 発行 tenant=%d", tenant_id)
+    logger.info("[discord_oauth] invite URL 発行 tenant=%d purpose=%s", tenant_id, purpose)
     return {
         "invite_url": invite_url,
         "state": issued["state"],
@@ -175,8 +195,14 @@ async def discord_oauth_callback(
 
     tenant_id = payload.get("tenant_id")
     staff_id = payload.get("staff_id")
-    if not tenant_id:
+    # デプロイ前に発行した state には purpose が無い（期限 600 秒）。customer として扱う
+    purpose = payload.get("purpose", "customer")
+    if purpose not in ("customer", "own"):
         return RedirectResponse(f"{channels_url}?discord_status=error&reason=invalid_payload")
+    own_url = f"{_FRONTEND_BASE_URL}/admin/discord-config?tab=own"
+    base = own_url + "&" if purpose == "own" else channels_url + "?"
+    if not tenant_id:
+        return RedirectResponse(f"{base}discord_status=error&reason=invalid_payload")
 
     tenant_id = int(tenant_id)
 
@@ -189,31 +215,40 @@ async def discord_oauth_callback(
     await set_tenant_context(db, tenant_id)
 
     # guild_id と接続者を upsert
-    await db.execute(
-        text("""
-            INSERT INTO public.tenant_discord_config (tenant_id, guild_id, connected_by_staff_id)
-            VALUES (:tid, :guild_id, :staff_id)
-            ON CONFLICT (tenant_id)
-            DO UPDATE SET
-                guild_id = EXCLUDED.guild_id,
-                connected_by_staff_id = EXCLUDED.connected_by_staff_id,
-                updated_at = NOW()
-        """),
-        {"tid": tenant_id, "guild_id": guild_id, "staff_id": staff_id_int},
-    )
-    await record_audit_log(
-        db=db,
-        tenant_id=tenant_id,
-        user_id=staff_id_int if staff_id_int else tenant_id,
-        action="update",
-        table_name="tenant_discord_config",
-        record_id=tenant_id,
-        new_data={"guild_id": guild_id, "source": "discord_oauth_callback"},
-    )
-    await db.commit()
+    try:
+        await db.execute(
+            text("""
+                INSERT INTO public.tenant_discord_config (tenant_id, purpose, guild_id, connected_by_staff_id)
+                VALUES (:tid, :purpose, :guild_id, :staff_id)
+                ON CONFLICT (tenant_id, purpose)
+                DO UPDATE SET
+                    guild_id = EXCLUDED.guild_id,
+                    connected_by_staff_id = EXCLUDED.connected_by_staff_id,
+                    updated_at = NOW()
+            """),
+            {"tid": tenant_id, "purpose": purpose, "guild_id": guild_id, "staff_id": staff_id_int},
+        )
+        await record_audit_log(
+            db=db,
+            tenant_id=tenant_id,
+            user_id=staff_id_int if staff_id_int else tenant_id,
+            action="update",
+            table_name="tenant_discord_config",
+            record_id=tenant_id,
+            new_data={"guild_id": guild_id, "source": "discord_oauth_callback", "purpose": purpose},
+        )
+        await db.commit()
+    except IntegrityError:
+        # uq_tenant_discord_config_guild_id: 同じサーバーが既に登録されている
+        await db.rollback()
+        logger.warning(
+            "[discord_oauth] guild_id 登録済み tenant=%d purpose=%s guild_id=%s",
+            tenant_id, purpose, guild_id,
+        )
+        return RedirectResponse(f"{base}discord_status=error&reason=guild_already_registered")
     await reset_tenant_context(db, tenant_id)  # ADR-072
 
     logger.info(
-        "[discord_oauth] guild_id 保存 tenant=%d guild_id=%s", tenant_id, guild_id
+        "[discord_oauth] guild_id 保存 tenant=%d purpose=%s guild_id=%s", tenant_id, purpose, guild_id
     )
-    return RedirectResponse(f"{channels_url}?discord_status=connected")
+    return RedirectResponse(f"{base}discord_status=connected")

@@ -21,7 +21,7 @@ describe('Toggle migration (AY-3b)', () => {
   const files: Array<[string, number]> = [
     ['pages/account-settings/PreferencesSection.tsx', 1],
     ['pages/inbox/InboxSettingsModal.tsx', 4],
-    ['pages/schedule/SchedulePageImpl.tsx', 2],
+    ['pages/schedule/SchedulePageImpl.tsx', 3],
     ['pages/schedule/ScheduleSettingsPage.tsx', 2],
   ];
 

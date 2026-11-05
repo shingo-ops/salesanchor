@@ -6,10 +6,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import RolesPage from '../pages/roles/RolesPage';
 import en from '../locales/en.json';
 import { queryClient } from '../lib/query/apiQuery';
+import { registerTestDevSession } from '../test-utils/devSession';
 
 const mock = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), put: vi.fn(), patch: vi.fn(), delete: vi.fn() }));
 vi.mock('../lib/api', () => ({ api: mock }));
-vi.mock('../lib/firebase', () => ({ auth: { currentUser: { getIdToken: vi.fn().mockResolvedValue('token') } } }));
 let instance = createInstance(); const tr = (key: string) => String(instance.t(key));
 function wrap(node: React.ReactNode) { return <I18nextProvider i18n={instance}><MemoryRouter>{node}</MemoryRouter></I18nextProvider>; }
 const role = { id: 1, name: 'Role fixture', color: null, priority: 500, description: null, is_system: false, user_count: 0 };
@@ -17,6 +17,7 @@ const permission = { id: 10, key: 'customers.view', description: 'View customers
 
 beforeEach(async () => {
   vi.resetAllMocks(); instance = createInstance(); await instance.init({ lng: 'en', resources: { en: { translation: en } }, interpolation: { escapeValue: false } });
+  registerTestDevSession({ getAccessToken: async () => 'token', hasSession: () => true });
   vi.stubGlobal('fetch', vi.fn(() => { throw new Error('Unexpected network'); }));
   mock.get.mockImplementation(async (url: string) => {
     if (url === '/me/permissions') return { permissions: ['purchase_orders.create', 'roles.update'] };

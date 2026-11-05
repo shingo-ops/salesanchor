@@ -135,7 +135,8 @@ def test_endpoint_with_query_param_tenant_id_is_skipped():
 
 
 def test_non_router_function_is_skipped():
-    """通常の async 関数 (内部 helper) は endpoint と認識しない。"""
+    """通常の async 関数 (内部 helper) は endpoint と認識しない（Rule A・B）。
+    Rule C の対象だが commit が最後なので違反なし。"""
     p = _write_tmp("""
         from sqlalchemy import text
 
@@ -294,3 +295,127 @@ def test_warning_mode_violation_exits_0():
     """warning + 違反ファイル → 終了コード 0 (strict との取り違えに気づく)。"""
     r = _run_lint("warning", _VIOLATION_SRC)
     assert r.returncode == 0
+
+
+# ──────────────────────────────────────────────────────────────────
+# Rule C (commit 後の会社付け直し漏れ): 合格の形 (K3) / 違反の形 / 直す前の形 (K1)
+# ──────────────────────────────────────────────────────────────────
+
+
+def _rule_c(src: str):
+    return [v for v in lint_file(_write_tmp(src)) if v.rule == "C"]
+
+
+def test_rule_c_ok_alias_reset_name():
+    """別名 import (`reset_tenant_context as _reset_ctx`) で付け直しても違反なし。"""
+    assert _rule_c("""
+        from app.auth.dependencies import reset_tenant_context as _reset_ctx
+
+        async def svc(db, tenant_id: int):
+            await db.commit()
+            await _reset_ctx(db, tenant_id)
+            return await db.execute("x")
+    """) == []
+
+
+def test_rule_c_ok_url_tenant_id_endpoint():
+    """URL の tenant_id を受ける endpoint (Depends でない) は対象外。"""
+    assert _rule_c("""
+        @router.post("/t/{tenant_id}")
+        async def f(tenant_id: int, db=Depends(get_db)):
+            await db.commit()
+            return await db.execute("x")
+    """) == []
+
+
+def test_rule_c_ok_commit_is_last():
+    """commit が最後の文なら違反なし。"""
+    assert _rule_c("""
+        async def svc(db, tenant_id: int):
+            await db.execute("x")
+            await db.commit()
+    """) == []
+
+
+def test_rule_c_ok_commit_in_try_then_return_only():
+    """try の中の commit の後が db を使わない return だけなら違反なし。"""
+    assert _rule_c("""
+        async def svc(db, tenant_id: int):
+            try:
+                await db.commit()
+            except Exception:
+                raise
+            return {}
+    """) == []
+
+
+def test_rule_c_ok_commit_in_if_reset_right_after_if():
+    """if の中の commit の後、if の外の直後に reset があれば違反なし。"""
+    assert _rule_c("""
+        async def svc(db, tenant_id: int, flag):
+            if flag:
+                await db.commit()
+            await reset_tenant_context(db, tenant_id)
+            return await db.execute("x")
+    """) == []
+
+
+def test_rule_c_ok_sync_def_is_skipped():
+    """同期の def は対象外。"""
+    assert _rule_c("""
+        def svc(db, tenant_id: int):
+            db.commit()
+            db.execute("x")
+    """) == []
+
+
+def test_rule_c_violation_conditional_reset():
+    """commit の次が条件付きの付け直しなら違反。"""
+    vs = _rule_c("""
+        async def svc(db, tenant_id: int, x):
+            await db.commit()
+            if x:
+                await reset_tenant_context(db, tenant_id)
+            return 1
+    """)
+    assert len(vs) == 1
+    assert vs[0].function == "svc"
+
+
+def test_rule_c_violation_with_statement_uses_db():
+    """commit の次が db を使う with 文なら違反。"""
+    assert len(_rule_c("""
+        async def svc(db, tenant_id: int):
+            await db.commit()
+            async with db.begin():
+                pass
+    """)) == 1
+
+
+def test_rule_c_violation_decorated_non_router_function():
+    """router 以外の飾り付きで db と tenant_id を持つ関数も対象。"""
+    assert len(_rule_c("""
+        @some_decorator
+        async def svc(db, tenant_id: int):
+            await db.commit()
+            row = await db.execute("x")
+            return row
+    """)) == 1
+
+
+def test_rule_c_violation_pre_fix_calendar_shape():
+    """K1: 直す前の予定のコードの形 (commit の後に付け直さず db で読み直す)。"""
+    vs = _rule_c("""
+        async def create_event(db, tenant_id: int):
+            db.add(1)
+            await db.commit()
+            await db.refresh(1)
+            return 1
+
+        async def delete_event(db, tenant_id: int):
+            await db.commit()
+            row = await db.execute("x")
+            return row
+    """)
+    assert [v.function for v in vs] == ["create_event", "delete_event"]
+    assert all(v.rule == "C" for v in vs)

@@ -688,7 +688,7 @@
     "passkeyPromptSkip": "今はスキップ",
     "deviceApproval": {
       "title": "いつもの機械で許可してください",
-      "body": "この機械は初めてのログインです。いつもの機械に出る小窓で、下の番号を選んでください。",
+      "body": "この機械は初めてのログインです。いつもの機械のお知らせから依頼を開き、下の番号を選んでください。",
       "numberLabel": "確認の番号",
       "remaining": "残り {{time}}",
       "rateLimited": "少し待ってから続けます。",
@@ -704,17 +704,24 @@
       "recoverySubmit": "入る",
       "recoveryWrong": "合言葉が違うか、すでに使われています。",
       "watcher": {
-        "title": "新しい機械からのログイン依頼",
         "body": "あなたのアカウントに、知らない機械からログインしようとしています。",
         "device": "機械",
         "location": "場所の目安",
         "time": "時刻",
         "unknown": "不明",
         "pickNumber": "ログインしようとしている機械に出ている番号を選んでください。",
-        "notMe": "私ではない",
+        "notMe": "私ではありません",
         "rejectedTitle": "ログインを拒否しました",
         "rejectedBody": "心当たりがない場合は、念のためパスワードを変えてください。",
         "changePassword": "パスワードを変える"
+      },
+      "detail": {
+        "title": "新しい機械からのログイン",
+        "itsMe": "私です",
+        "approvedTitle": "ログインを許可しました",
+        "approvedBody": "新しい機械はこのまま使えます。",
+        "wrongNumberBody": "番号が違ったため、この依頼を取り消しました。もう一度ログインしてください。",
+        "closed": "この依頼は終わっています。"
       }
     }
   },
@@ -2802,7 +2809,8 @@
         "notice_extended": "延長のお知らせ",
         "notice_activated": "本登録のお知らせ",
         "notice_suspended": "停止のお知らせ",
-        "interview_request": "面談のお願い"
+        "interview_request": "面談のお願い",
+        "billing_form_request": "請求先フォームの送付"
       },
       "when": {
         "signup_request": "申込の前",
@@ -2813,7 +2821,8 @@
         "notice_extended": "延長したとき",
         "notice_activated": "本登録にしたとき",
         "notice_suspended": "停止したとき",
-        "interview_request": "期限の前日10時以降"
+        "interview_request": "期限の前日10時以降",
+        "billing_form_request": "請求先フォームを送ったとき"
       },
       "placeholders": {
         "signup_url": "申込ページのURL（自動で入ります）",
@@ -2824,7 +2833,9 @@
         "email": "メールアドレス",
         "password": "初期パスワード",
         "until_date": "延長後の期限の日付",
-        "expires_date": "お試し期限の日付"
+        "expires_date": "お試し期限の日付",
+        "form_url": "請求先フォームのURL（自動で入ります）",
+        "form_expires": "請求先フォームのリンクの期限の日付"
       },
       "placeholdersLabel": "差し込み項目",
       "placeholdersNone": "なし",
@@ -2908,7 +2919,42 @@
       "reissueExpires": "有効期限",
       "reissueInvite": "招待リンク",
       "reissueInviteFailed": "招待リンクを作れませんでした。もう一度作り直してください。",
-      "reissueOnlyOnce": "この画面を閉じると、コードと招待リンクは二度と表示されません。"
+      "reissueOnlyOnce": "この画面を閉じると、コードと招待リンクは二度と表示されません。",
+      "billingTitle": "請求先",
+      "billingEmpty": "まだ請求先が届いていません",
+      "billingLoadError": "請求先を読み込めませんでした",
+      "billingPartyType": "種別",
+      "billingCompany": "会社",
+      "billingIndividual": "個人",
+      "billingName": "宛名",
+      "billingContact": "担当者",
+      "billingPostal": "郵便番号",
+      "billingAddress": "住所",
+      "billingPhone": "電話番号",
+      "billingEmail": "請求書の送り先メール",
+      "billingSend": "請求先フォームを送る",
+      "billingConflictError": "本契約のお客さんにだけ送れます",
+      "billingRoom_sent": "Discord の部屋にリンクを送りました",
+      "billingRoom_failed": "部屋に送れませんでした。下の文をコピーして送ってください",
+      "billingRoom_no_room": "部屋がありません。下の文をコピーして送ってください",
+      "billingMailQueued": "メールの送信を手配しました",
+      "billingExpires": "リンクの期限",
+      "sheetTitle": "配信するシート",
+      "sheetEmpty": "シートはまだ登録されていません",
+      "sheetAdd": "シートを登録",
+      "sheetEdit": "シートを変更",
+      "sheetLastDistributed": "最後の配信",
+      "sheetLastResult": "結果",
+      "sheetDelivering": "配信中",
+      "sheetReasonManualOff": "手で止めています",
+      "sheetReasonSuspended": "停止中のため配信しません",
+      "sheetReasonNotContracted": "本契約ではないため配信しません",
+      "sheetBookId": "ブックの番号",
+      "sheetTabName": "タブ名",
+      "sheetConflictError": "この人にはもうシートがあります",
+      "sheetViewerNotFoundError": "お客さんが見つかりません",
+      "sheetSaveError": "シートを保存できませんでした",
+      "sheetLoadError": "シートを読み込めませんでした"
     },
     "fxRate": {
       "title": "為替レート管理（SSOT）",
@@ -3216,6 +3262,9 @@
     "weekView": "週",
     "listView": "一覧",
     "moreOptions": "詳しく入れる",
+    "addMeet": "Google Meet を付ける",
+    "joinMeet": "Google Meet で参加",
+    "meetFailed": "Google Meet を付けられませんでした",
     "shortcuts": {
       "title": "キーボードの近道",
       "today": "今日へ移動",
@@ -3286,18 +3335,6 @@
     "noRoles": "ロールが見つかりません",
     "permissionRequired": "この画面の編集には tenant.inventory_visibility.edit 権限が必要です"
   },
-  "firebaseError": {
-    "invalidCredential": "メールアドレスまたはパスワードが正しくありません。",
-    "invalidEmail": "メールアドレスの形式が正しくありません。",
-    "userDisabled": "このアカウントは無効になっています。管理者にお問い合わせください。",
-    "tooManyRequests": "ログイン試行回数が多すぎます。しばらく待ってから再試行してください。",
-    "networkRequestFailed": "ネットワークエラーです。接続を確認してから再試行してください。",
-    "operationNotAllowed": "このログイン方法は現在利用できません。サポートにお問い合わせください。",
-    "expiredActionCode": "このリンクの有効期限が切れています。最初からやり直してください。",
-    "invalidActionCode": "このリンクは無効です。最新のメールをご使用ください。",
-    "requiresRecentLogin": "セキュリティのため再ログインが必要です。一度サインアウトして再度ログインしてください。",
-    "default": "ログインに失敗しました。しばらく後に再試行してください。問題が続く場合はサポートにお問い合わせください。"
-  },
   "accountSettings": {
     "subtitle": "プロフィールとセキュリティの管理",
     "sectionProfile": "プロフィール",
@@ -3316,7 +3353,6 @@
     "newPassword": "新しいパスワード",
     "confirmPassword": "新しいパスワード（確認）",
     "passwordMismatch": "新しいパスワードが一致しません",
-    "passwordTooShort": "パスワードは8文字以上で入力してください",
     "passwordChanged": "パスワードを変更しました",
     "passkeyTitle": "顔・指紋でのログイン（パスキー）",
     "passkeyDescription": "この端末の顔認証・指紋認証でログインできるようにします。顔や指紋のデータは端末から出ません。",
@@ -3445,11 +3481,99 @@
     "saveError": "保存できませんでした",
     "invalidGuildId": "17〜20桁の数字で入力してください",
     "saved": "保存しました",
+    "tabCustomer": "顧客用",
+    "tabOwn": "自社用",
     "syncStatus": {
       "success": "同期済み",
       "failed": "同期失敗",
       "pending": "同期中",
       "not_linked": "Discord未連携"
+    }
+  },
+  "discordOwnServer": {
+    "title": "自社用サーバー",
+    "description": "社内の連絡に使う Discord サーバーです。Bot を招待すると登録されます。",
+    "connected": "接続済み",
+    "notConnected": "未接続",
+    "invite": "自社用サーバーに Bot を招待",
+    "disconnect": "登録を解除",
+    "confirmTitle": "自社用サーバーの登録を解除しますか？",
+    "confirmMessage": "Discord のサーバーそのものは消えません。アプリとのつながりだけを外します。",
+    "connectedSuccess": "自社用サーバーを登録しました",
+    "connectError": "登録できませんでした",
+    "guildAlreadyRegistered": "このサーバーは既に登録されています",
+    "requestFailed": "実行できませんでした",
+    "loadError": "読み込めませんでした",
+    "snapshot": "今のサーバーを読み取る",
+    "snapshotDone": "読み取りました（ロール {{roles}}・チャンネル {{channels}}）",
+    "snapshotFailed": "読み取れませんでした",
+    "check": "確認する",
+    "planFailed": "確認できませんでした",
+    "planNoBlueprint": "設計図がまだありません",
+    "changesTitle": "変わる（{{count}} 件）",
+    "blockedTitle": "できない（{{count}} 件・実行しません）",
+    "deleteTitle": "消す候補（{{count}} 件）",
+    "deleteNote": "消す候補は自動では消しません。",
+    "emptyRows": "ありません",
+    "apply": "反映する",
+    "applyConfirmTitle": "自社用サーバーに反映しますか？",
+    "applyConfirmMessage": "{{count}} 件を反映します。消す候補は消しません。",
+    "applyDone": "反映しました（成功 {{success}} 件・できない {{blocked}} 件・失敗 {{failed}} 件）",
+    "applyFailed": "反映できませんでした",
+    "applyConflict": "反映できませんでした。もう一度「確認する」を押してから反映してください",
+    "resultTitle": "反映の結果（{{count}} 件）",
+    "col": {
+      "kind": "種類",
+      "name": "名前",
+      "field": "項目",
+      "before": "前",
+      "after": "後",
+      "reason": "理由",
+      "parent": "親",
+      "target": "相手",
+      "status": "結果"
+    },
+    "status": {
+      "success": "成功",
+      "blocked": "できない",
+      "failed": "失敗"
+    },
+    "kind": {
+      "create_role": "ロールを作る",
+      "update_role": "ロールを直す",
+      "create_category": "カテゴリを作る",
+      "update_category": "カテゴリを直す",
+      "create_channel": "チャンネルを作る",
+      "update_channel": "チャンネルを直す",
+      "update_overwrite": "見せ方を直す"
+    },
+    "field": {
+      "name": "名前",
+      "color": "色",
+      "hoist": "別に表示",
+      "mentionable": "メンションできる",
+      "permissions": "権限",
+      "topic": "話題",
+      "parent": "親のカテゴリ",
+      "overwrite": "見せ方（{{target}}）"
+    },
+    "reason": {
+      "role_above_bot": "Bot と同じか上の順番のロールなので変えられません",
+      "everyone_name": "@everyone の名前は変えられません",
+      "permission_bot_lacks": "Bot が持っていない権限は付けられません",
+      "overwrite_manage_roles": "見せ方で「ロールの管理」は付けられません",
+      "bot_role_missing": "Bot のロールが見つかりません",
+      "missing_on_discord": "設計図にある物が Discord にありません",
+      "ambiguous": "同じ名前の物が 2 つ以上あります",
+      "depends_failed": "先に作る物が失敗したので実行しませんでした",
+      "discord_error": "Discord が受け付けませんでした",
+      "method_not_allowed": "この操作は実行しません"
+    },
+    "deleteKind": {
+      "role": "ロール",
+      "category": "カテゴリ",
+      "channel": "チャンネル",
+      "overwrite": "見せ方"
     }
   },
   "discordAutoSetup": {
@@ -5856,7 +5980,8 @@
     "title": "お知らせ",
     "empty": "知らせはありません",
     "kind": {
-      "discord_outside_ticket_post": "{{actor}} さんが #{{channel}} に書き込みました"
+      "discord_outside_ticket_post": "{{actor}} さんが #{{channel}} に書き込みました",
+      "login_request": "新しい機械（{{device}}）からログインの依頼があります"
     },
     "fallback": {
       "title": "担当者がいないときに受け取る人",

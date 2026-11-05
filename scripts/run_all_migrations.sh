@@ -1215,5 +1215,15 @@ run_sql migrations/20261103_120000_create_ai_job_assignments.sql
 run_sql migrations/20261103_150000_create_user_notices.sql
 # ADR-1059 便2: Google の予定の取り込み（列2つ・一意の部分索引・追加のみ・冪等）
 run_sql migrations/20261103_200000_add_google_calendar_import_sync.sql
+# 配信先とお客さん（閲覧者の名簿）をつなぐ列 viewer_account_id と部分一意索引（追加のみ・冪等）
+run_sql migrations/20261104_220000_add_tcg_distribution_targets_viewer_account_id.sql
 # discord-server-management 便1a: 登録の表に用途 purpose（既定 customer）・決まり・(tenant_id, purpose) の一意を足す（足すだけ・冪等）
 run_sql migrations/20261105_100000_tenant_discord_config_purpose.sql
+# viewer-customer-sheet 便2: 請求先の表 viewer_billing_profiles と鍵の用途 billing_form（追加と CHECK の付け替え・冪等）
+run_sql migrations/20261105_120000_create_viewer_billing_profiles.sql
+# discord-server-management 便1b: 登録の表の主キーを (tenant_id, purpose) に替え、便1a の一意を外す（冪等）
+run_sql migrations/20261106_100000_tenant_discord_config_purpose_pk.sql
+# Google Meet: 各社スキーマの calendar_events に meet_url 列を足す（列1つ・追加のみ・冪等）
+run_sql migrations/20261104_161223_add_calendar_events_meet_url.sql
+# discord-server-management 便2: 自社用サーバーの今の姿の記録と反映の記録の表を作る（作るだけ・冪等）
+run_sql migrations/20261106_120000_create_discord_server_snapshot_tables.sql

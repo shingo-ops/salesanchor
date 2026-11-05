@@ -16,7 +16,7 @@ class UserRegister(BaseModel):
 
     email は EmailStr ではなく簡易バリデーション（validate_email_loose）を使う。
     .local 等のRFC予約TLDも識別子として許容するため。実在性チェックは
-    上流のFirebase Auth側で担保される。パスワードは受け取らない
+    初回設定メールが届くことで担保される。パスワードは受け取らない
     （初回設定メールのリンクから本人が決める。ADR-1013 便4a）。
     """
     email: str = Field(min_length=3, max_length=255)

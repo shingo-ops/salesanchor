@@ -26,7 +26,7 @@
   ON CONFLICT 等で冪等に設計されている。
 
 注意:
-  - Firebase ユーザーの作成は別途実施すること（このスクリプトは DB 操作のみ）
+  - ログインできる利用者は、管理画面で担当者を追加すると初回設定メールで作られる（このスクリプトは DB 操作のみ）
   - Meta Channels の接続は OAuth フロー経由で別途実施すること
   - 作成後は CLAUDE.md 「新規テナント作成後の必須チェックリスト」を実施すること
 
@@ -468,7 +468,7 @@ async def main() -> None:
         logger.info("  schema_name : %s", schema_name)
         logger.info("")
         logger.info("次のステップ（手動実施）:")
-        logger.info("  1. Firebase ユーザーを作成する（管理画面または Firebase Console 経由）")
+        logger.info("  1. 管理画面で担当者を追加する（初回設定メールが届く）")
         logger.info("  2. ユーザーアカウントを API または admin UI 経由で作成する")
         logger.info("  3. Meta Channels を接続する（OAuth フロー経由）")
         logger.info("  4. CLAUDE.md「新規テナント作成後の必須チェックリスト」を実施する")

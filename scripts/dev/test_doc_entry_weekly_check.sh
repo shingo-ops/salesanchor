@@ -87,12 +87,13 @@ check "T1 K12_LAST" has K12_LAST=2027-01-01
 check "T1 K12_DUE=no" has K12_DUE=no
 check "T1 K12_OPEN_PR=none" has K12_OPEN_PR=none
 check "T1 PEER_LAST" has PEER_LAST=2027-01-31
+check "T1 LINE_COPY=skipped" has LINE_COPY=skipped
 check "T1 RESULT=OK" has RESULT=OK
 check "T1 rc=0" rc_is 0
 
 setup; { lines 199; echo '@~/kb/AGENTS.md'; } > "$T/home/.claude/CLAUDE.md"; run
 check "T2 K1=214" has K1=214
-check "T2 RESULT=NG K1>200" has_re '^RESULT=NG.*K1>200'
+check "T2 RESULT=NG K1>210" has_re '^RESULT=NG.*K1>210'
 check "T2 rc=1" rc_is 1
 
 setup; echo y > "$T/home/.claude/scripts/master-register-rules-guard.py"; run
@@ -249,6 +250,31 @@ check "T-G10 RESULT=NG" has_re '^RESULT=NG'
 setup; printf '%s\n' '| R-01 | 一 | AGENTS.md:H1:3 | 目録 | 0 |' >> "$LG"; printf '%s\n' 'x' 'x' 'x' '## H1' > "$T/repo/AGENTS.md"; run
 check "T-G11 L2_LINE_NG=1" has L2_LINE_NG=1
 check "T-G11 RESULT=NG" has_re '^RESULT=NG'
+
+# 合格線の写しの点検（LINE_COPY）。本物の kgi.md・要件・台本・試験を偽のリポジトリへ写す
+REAL_ROOT="$(cd "$SELF_DIR/../.." && pwd)"
+lc_setup() {
+  setup
+  local f
+  mkdir -p "$T/repo/docs/specs/doc-agenda-nav" "$T/repo/scripts/dev" "$T/home/Library/Application Support/agent-console"
+  for f in docs/specs/doc-agenda-nav/kgi.md docs/handoff/doc-agenda-nav/library-requirements.md \
+    scripts/dev/doc-entry-weekly-check.sh scripts/dev/test_doc_entry_weekly_check.sh; do
+    cp "$REAL_ROOT/$f" "$T/repo/$f"
+  done
+}
+lc_routines() {
+  printf '{"version":1,"items":[{"name":"入口の文書 週次点検","promptText":"…%s/20 以上（docs/specs/doc-agenda-nav/kgi.md の K12）…"}]}\n' "$1" \
+    > "$T/home/Library/Application Support/agent-console/routines.json"
+}
+
+lc_setup; lc_routines 18; run
+check "T-LC1 LINE_COPY=SAME" has LINE_COPY=SAME
+check "T-LC1 RESULT=OK" has RESULT=OK
+
+lc_setup; lc_routines 10; run
+check "T-LC2 LINE_COPY=DIFF" has LINE_COPY=DIFF
+check "T-LC2 RESULT=NG に LINE_COPY=DIFF" has_re '^RESULT=NG.*LINE_COPY=DIFF'
+check "T-LC2 rc=1" rc_is 1
 
 echo "PASS $PASS / FAIL $FAIL"
 [ "$FAIL" -eq 0 ]

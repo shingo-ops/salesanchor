@@ -120,6 +120,7 @@
   --comp-badge-success-solid: var(--success);
   /* danger solid: ライトは --danger(#e53e3e)で流用 */
   --comp-badge-danger-solid:  var(--danger);
+  --comp-badge-count-ring-color: var(--bg-surface);  /* 数の丸の外枠＝後ろの地の色（Instagram は真後ろの色） */
 
   /* purple バッジ（保留・発送済み） */
   --purple-bg: #e9d8fd;
@@ -309,6 +310,7 @@
   --comp-badge-success-solid: #15803d;   /* green-700 */
   /* danger solid ダーク: --danger=#f87171 は白文字と低コントラストのため別値 */
   --comp-badge-danger-solid:  #dc2626;   /* red-600 */
+  --comp-badge-count-ring-color: var(--bg-surface);  /* 数の丸の外枠＝後ろの地の色（Instagram は真後ろの色） */
 
   /* purple バッジ（ダーク） */
   --purple-bg: #3b1f6e;

@@ -86,12 +86,48 @@ function waitingTitle(): string {
   };
   return ja.login.deviceApproval.title;
 }
-function watcherTitle(): string {
-  const file = path.join(process.cwd(), "frontend/src/locales/ja.json");
-  const ja = JSON.parse(fs.readFileSync(file, "utf-8")) as {
-    login: { deviceApproval: { watcher: { title: string } } };
+type JaStrings = {
+  login: {
+    deviceApproval: {
+      watcher: { notMe: string };
+      detail: { title: string; itsMe: string; approvedTitle: string };
+    };
   };
-  return ja.login.deviceApproval.watcher.title;
+  notices: { kind: { login_request: string } };
+};
+function jaStrings(): JaStrings {
+  const file = path.join(process.cwd(), "frontend/src/locales/ja.json");
+  return JSON.parse(fs.readFileSync(file, "utf-8")) as JaStrings;
+}
+/** 小窓の題名（ja.json から読む） */
+function detailTitle(): string {
+  return jaStrings().login.deviceApproval.detail.title;
+}
+/** 鈴の依頼の行の文言（{{device}} の前後で照らす正規表現） */
+function bellRowPattern(): RegExp {
+  const [head, tail] = jaStrings().notices.kind.login_request.split("{{device}}");
+  const esc = (v: string) => v.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`${esc(head)}.*${esc(tail)}`);
+}
+/** 鈴を開いて依頼の行を押し、真ん中の小窓を開く。timeoutMs の間、開き直しながら待つ */
+async function openRequestFromBell(page: Page, timeoutMs: number): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  const bell = page.getByTestId("notice-bell");
+  while (Date.now() < deadline) {
+    await bell.hover();
+    const row = page.getByRole("button", { name: bellRowPattern() }).first();
+    try {
+      await row.waitFor({ state: "visible", timeout: 4_000 });
+      const urlBefore = page.url();
+      await row.click();
+      await page.getByRole("dialog").getByText(detailTitle(), { exact: true }).first().waitFor({ timeout: 10_000 });
+      if (page.url() !== urlBefore) throw new Error("URL changed when opening the request dialog");
+      return;
+    } catch {
+      await page.mouse.move(0, 0);
+    }
+  }
+  throw new Error("bell row not found");
 }
 
 const FIXED_FAIL = "操作に失敗しました（値は出しません）";
@@ -227,28 +263,34 @@ test.describe.serial("本番の受入: 新しい機械の許可（ADR-1055 段C�
     expect(cookies.some((k) => k.name === "sa_login_pending")).toBe(true);
   });
 
-  test("段3 K2（画面）: 許可の小窓が60秒以内に出る", async () => {
+  test("段3 K2（画面）: 鈴に依頼が60秒以内に出て、押すと詳しい画面が開く", async () => {
     const page = tPage;
     expect(page).not.toBeNull();
     const t0 = n202At > 0 ? n202At : Date.now();
     try {
-      await page!.getByText(watcherTitle(), { exact: true }).waitFor({ timeout: 60_000 });
+      await openRequestFromBell(page!, 60_000);
     } catch {
       throw new Error(FIXED_FAIL);
     }
     expect(Date.now() - t0 <= 60_000).toBe(true);
-    const dialog = page!.getByRole("dialog");
-    const fields = await dialog.locator("dd").allTextContents();
+    const fields = await page!.locator("dd").allTextContents();
     expect(fields.length).toBe(3);
     expect(fields.every((f) => f.trim().length > 0)).toBe(true);
   });
 
-  test("段4 K3: 番号を選ぶと新しい機械が入れる", async () => {
+  test("段4 K3: 「私です」→ 番号を選ぶと新しい機械が入れる", async () => {
     const page = tPage!;
     try {
       await authPace();
+      await page
+        .getByRole("dialog")
+        .getByRole("button", { name: jaStrings().login.deviceApproval.detail.itsMe, exact: true })
+        .click();
       await page.getByRole("dialog").getByRole("button", { name: matchNumber, exact: true }).click();
-      await page.getByText(watcherTitle(), { exact: true }).waitFor({ state: "hidden", timeout: 30_000 });
+      await page
+        .getByRole("dialog")
+        .getByText(jaStrings().login.deviceApproval.detail.approvedTitle, { exact: true })
+        .waitFor({ timeout: 30_000 });
     } catch {
       throw new Error(FIXED_FAIL);
     }
@@ -298,10 +340,10 @@ test.describe.serial("本番の受入: 新しい機械の許可（ADR-1055 段C�
     expect(cLogin.status).toBe(202);
     const page = tPage!;
     try {
-      await page.getByText(watcherTitle(), { exact: true }).waitFor({ timeout: 60_000 });
+      await openRequestFromBell(page, 60_000);
       await authPace();
-      await page.getByRole("button", { name: "私ではない", exact: true }).click();
-      await page.getByText(watcherTitle(), { exact: true }).waitFor({ state: "hidden", timeout: 30_000 });
+      await page.getByRole("button", { name: jaStrings().login.deviceApproval.watcher.notMe, exact: true }).click();
+      await page.getByRole("button", { name: jaStrings().login.deviceApproval.watcher.notMe, exact: true }).waitFor({ state: "hidden", timeout: 30_000 });
     } catch {
       throw new Error(FIXED_FAIL);
     }

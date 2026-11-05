@@ -130,6 +130,27 @@
       "again": "Send the email again",
       "backToLogin": "Back to log in"
     },
+    "billing": {
+      "title": "Billing information",
+      "company": "Company",
+      "individual": "Individual",
+      "partyRequired": "Please choose company or individual.",
+      "billToName": "Bill-to name",
+      "contactName": "Contact person",
+      "postalCode": "Postal code",
+      "postalCodeHelp": "With or without a hyphen (7 digits)",
+      "address": "Address",
+      "phone": "Phone number",
+      "phoneHelp": "With or without hyphens (10 to 11 digits)",
+      "invoiceEmail": "Email for invoices (optional)",
+      "invoiceEmailHelp": "Only fill this in if invoices should go to a different address from your registered email.",
+      "submit": "Submit",
+      "invalidInput": "Please check your entries. A contact person is required for a company.",
+      "doneTitle": "Thank you",
+      "doneDescription": "We have received your billing information. You can close this page.",
+      "invalidTitle": "This link cannot be used",
+      "invalidDescription": "The link has expired or has already been used. Please let us know."
+    },
     "signup": {
       "title": "Apply for access",
       "lineName": "LINE display name",

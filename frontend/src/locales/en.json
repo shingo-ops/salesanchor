@@ -688,7 +688,7 @@
     "passkeyPromptSkip": "Skip for now",
     "deviceApproval": {
       "title": "Approve from your usual device",
-      "body": "This is a new device. On your usual device, pick the number shown below in the pop-up.",
+      "body": "This is a new device. On your usual device, open the request from Notifications and pick the number shown below.",
       "numberLabel": "Confirmation number",
       "remaining": "{{time}} left",
       "rateLimited": "Waiting a little before continuing.",
@@ -704,17 +704,24 @@
       "recoverySubmit": "Sign in",
       "recoveryWrong": "The code is wrong or already used.",
       "watcher": {
-        "title": "Sign-in request from a new device",
         "body": "Someone is trying to sign in to your account from an unknown device.",
         "device": "Device",
         "location": "Approximate location",
         "time": "Time",
         "unknown": "Unknown",
         "pickNumber": "Pick the number shown on the device that is trying to sign in.",
-        "notMe": "This is not me",
+        "notMe": "This wasn't me",
         "rejectedTitle": "Sign-in rejected",
         "rejectedBody": "If you do not recognize it, change your password to be safe.",
         "changePassword": "Change password"
+      },
+      "detail": {
+        "title": "Login from a new device",
+        "itsMe": "This was me",
+        "approvedTitle": "Login approved",
+        "approvedBody": "The new device can now be used.",
+        "wrongNumberBody": "The number did not match, so this request was cancelled. Please sign in again.",
+        "closed": "This request has already ended."
       }
     }
   },
@@ -2802,7 +2809,8 @@
         "notice_extended": "Extension notice",
         "notice_activated": "Full registration notice",
         "notice_suspended": "Suspension notice",
-        "interview_request": "Interview request"
+        "interview_request": "Interview request",
+        "billing_form_request": "Billing form request"
       },
       "when": {
         "signup_request": "Before signing up",
@@ -2813,7 +2821,8 @@
         "notice_extended": "When the trial is extended",
         "notice_activated": "When switched to full registration",
         "notice_suspended": "When suspended",
-        "interview_request": "From 10:00 the day before expiry"
+        "interview_request": "From 10:00 the day before expiry",
+        "billing_form_request": "When the billing form is sent"
       },
       "placeholders": {
         "signup_url": "Sign-up page URL (filled in automatically)",
@@ -2824,7 +2833,9 @@
         "email": "Email address",
         "password": "Initial password",
         "until_date": "New expiry date after extension",
-        "expires_date": "Trial expiry date"
+        "expires_date": "Trial expiry date",
+        "form_url": "Billing form URL (filled in automatically)",
+        "form_expires": "Expiry date of the billing form link"
       },
       "placeholdersLabel": "Placeholders",
       "placeholdersNone": "None",
@@ -2908,7 +2919,42 @@
       "reissueExpires": "Expires",
       "reissueInvite": "Invite link",
       "reissueInviteFailed": "Could not create the invite link. Please reissue again.",
-      "reissueOnlyOnce": "Once you close this, the code and invite link cannot be shown again."
+      "reissueOnlyOnce": "Once you close this, the code and invite link cannot be shown again.",
+      "billingTitle": "Billing information",
+      "billingEmpty": "No billing information has been submitted yet",
+      "billingLoadError": "Could not load the billing information",
+      "billingPartyType": "Type",
+      "billingCompany": "Company",
+      "billingIndividual": "Individual",
+      "billingName": "Bill-to name",
+      "billingContact": "Contact person",
+      "billingPostal": "Postal code",
+      "billingAddress": "Address",
+      "billingPhone": "Phone number",
+      "billingEmail": "Invoice email",
+      "billingSend": "Send billing form",
+      "billingConflictError": "The form can only be sent to contracted customers",
+      "billingRoom_sent": "Sent the link to the Discord room",
+      "billingRoom_failed": "Could not send to the room. Copy the text below and send it yourself",
+      "billingRoom_no_room": "There is no room. Copy the text below and send it yourself",
+      "billingMailQueued": "Queued the email",
+      "billingExpires": "Link expires",
+      "sheetTitle": "Delivery sheet",
+      "sheetEmpty": "No sheet registered yet",
+      "sheetAdd": "Register sheet",
+      "sheetEdit": "Edit sheet",
+      "sheetLastDistributed": "Last delivery",
+      "sheetLastResult": "Result",
+      "sheetDelivering": "Delivering",
+      "sheetReasonManualOff": "Turned off manually",
+      "sheetReasonSuspended": "Not delivered: suspended",
+      "sheetReasonNotContracted": "Not delivered: not on a paid contract",
+      "sheetBookId": "Workbook ID",
+      "sheetTabName": "Tab name",
+      "sheetConflictError": "This customer already has a sheet",
+      "sheetViewerNotFoundError": "Customer not found",
+      "sheetSaveError": "Could not save the sheet",
+      "sheetLoadError": "Could not load the sheet"
     },
     "fxRate": {
       "title": "FX Rate Management (SSOT)",
@@ -3216,6 +3262,9 @@
     "weekView": "Week",
     "listView": "Schedule",
     "moreOptions": "More options",
+    "addMeet": "Add Google Meet",
+    "joinMeet": "Join with Google Meet",
+    "meetFailed": "Couldn't add Google Meet",
     "shortcuts": {
       "title": "Keyboard shortcuts",
       "today": "Go to today",
@@ -3286,18 +3335,6 @@
     "noRoles": "No roles found",
     "permissionRequired": "You need tenant.inventory_visibility.edit permission to edit this screen"
   },
-  "firebaseError": {
-    "invalidCredential": "Incorrect email address or password.",
-    "invalidEmail": "Email address format is invalid.",
-    "userDisabled": "This account has been disabled. Please contact your administrator.",
-    "tooManyRequests": "Too many sign-in attempts. Please wait a moment and try again.",
-    "networkRequestFailed": "Network error. Please check your connection and try again.",
-    "operationNotAllowed": "This sign-in method is not currently available. Please contact support.",
-    "expiredActionCode": "This link has expired. Please start over.",
-    "invalidActionCode": "This link is invalid. Please use the latest email.",
-    "requiresRecentLogin": "For security, please sign out and sign in again before changing your password.",
-    "default": "Sign-in failed. Please try again later. Contact support if the problem persists."
-  },
   "accountSettings": {
     "subtitle": "Manage your profile and security",
     "sectionProfile": "Profile",
@@ -3316,7 +3353,6 @@
     "newPassword": "New password",
     "confirmPassword": "Confirm new password",
     "passwordMismatch": "New passwords do not match",
-    "passwordTooShort": "Password must be at least 8 characters",
     "passwordChanged": "Password changed successfully",
     "passkeyTitle": "Sign in with face or fingerprint (passkeys)",
     "passkeyDescription": "Lets you sign in with this device's face or fingerprint check. Your face or fingerprint data never leaves the device.",
@@ -3445,11 +3481,99 @@
     "saveError": "Could not save",
     "invalidGuildId": "Enter a 17–20 digit number",
     "saved": "Saved",
+    "tabCustomer": "Customer server",
+    "tabOwn": "Own server",
     "syncStatus": {
       "success": "Synced",
       "failed": "Sync failed",
       "pending": "Syncing",
       "not_linked": "Discord not linked"
+    }
+  },
+  "discordOwnServer": {
+    "title": "Own server",
+    "description": "The Discord server your team uses internally. Inviting the bot registers it.",
+    "connected": "Connected",
+    "notConnected": "Not connected",
+    "invite": "Invite the bot to your own server",
+    "disconnect": "Remove registration",
+    "confirmTitle": "Remove the own server registration?",
+    "confirmMessage": "The Discord server itself is not deleted. Only its link to the app is removed.",
+    "connectedSuccess": "Your own server was registered",
+    "connectError": "Could not register the server",
+    "guildAlreadyRegistered": "This server is already registered",
+    "requestFailed": "Could not complete the request",
+    "loadError": "Could not load",
+    "snapshot": "Read the current server",
+    "snapshotDone": "Read the server ({{roles}} roles, {{channels}} channels)",
+    "snapshotFailed": "Could not read the server",
+    "check": "Check",
+    "planFailed": "Could not check",
+    "planNoBlueprint": "No blueprint yet",
+    "changesTitle": "Changes ({{count}})",
+    "blockedTitle": "Not allowed ({{count}}, will not run)",
+    "deleteTitle": "Delete candidates ({{count}})",
+    "deleteNote": "Delete candidates are never deleted automatically.",
+    "emptyRows": "None",
+    "apply": "Apply",
+    "applyConfirmTitle": "Apply to your own server?",
+    "applyConfirmMessage": "{{count}} changes will be applied. Delete candidates are not deleted.",
+    "applyDone": "Applied ({{success}} succeeded, {{blocked}} not allowed, {{failed}} failed)",
+    "applyFailed": "Could not apply",
+    "applyConflict": "Could not apply. Press Check again, then apply",
+    "resultTitle": "Apply results ({{count}})",
+    "col": {
+      "kind": "Type",
+      "name": "Name",
+      "field": "Field",
+      "before": "Before",
+      "after": "After",
+      "reason": "Reason",
+      "parent": "Parent",
+      "target": "Target",
+      "status": "Result"
+    },
+    "status": {
+      "success": "Succeeded",
+      "blocked": "Not allowed",
+      "failed": "Failed"
+    },
+    "kind": {
+      "create_role": "Create role",
+      "update_role": "Update role",
+      "create_category": "Create category",
+      "update_category": "Update category",
+      "create_channel": "Create channel",
+      "update_channel": "Update channel",
+      "update_overwrite": "Update permissions"
+    },
+    "field": {
+      "name": "Name",
+      "color": "Color",
+      "hoist": "Display separately",
+      "mentionable": "Mentionable",
+      "permissions": "Permissions",
+      "topic": "Topic",
+      "parent": "Parent category",
+      "overwrite": "Permissions ({{target}})"
+    },
+    "reason": {
+      "role_above_bot": "The role is at or above the bot's role",
+      "everyone_name": "@everyone cannot be renamed",
+      "permission_bot_lacks": "The bot does not have this permission",
+      "overwrite_manage_roles": "Manage Roles cannot be set in overwrites",
+      "bot_role_missing": "The bot role was not found",
+      "missing_on_discord": "Not found on Discord",
+      "ambiguous": "More than one item has this name",
+      "depends_failed": "Skipped because an earlier item failed",
+      "discord_error": "Discord rejected the request",
+      "method_not_allowed": "This operation is not run"
+    },
+    "deleteKind": {
+      "role": "Role",
+      "category": "Category",
+      "channel": "Channel",
+      "overwrite": "Permission overwrite"
     }
   },
   "discordAutoSetup": {
@@ -5856,7 +5980,8 @@
     "title": "Notifications",
     "empty": "No notifications",
     "kind": {
-      "discord_outside_ticket_post": "{{actor}} posted in #{{channel}}"
+      "discord_outside_ticket_post": "{{actor}} posted in #{{channel}}",
+      "login_request": "Login request from a new device ({{device}})"
     },
     "fallback": {
       "title": "Who receives notices when there is no assignee",

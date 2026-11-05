@@ -438,6 +438,7 @@ async def create_order_items(
         )
 
     await db.commit()
+    await reset_tenant_context(db, tenant_id)
     return [OrderItemResponse(**item) for item in await _get_order_items(db, tenant_id, order_id)]
 
 

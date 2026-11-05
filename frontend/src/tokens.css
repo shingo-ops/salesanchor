@@ -240,6 +240,9 @@
   --notice-panel-width:       360px;                     /* 知らせ一覧の幅 */
   --notice-panel-max-height:  60vh;                      /* 知らせ一覧の高さの上限 */
   --notice-unread-dot-size:   8px;                       /* 未読の丸 */
+  --notice-bell-icon-size:        var(--icon-lg);   /* 24px — 鈴の絵（Instagram 実測 24） */
+  --notice-bell-badge-offset-x:   11px;             /* 鈴の絵の左から数の丸の左まで（Instagram 実測） */
+  --notice-bell-badge-offset-y:   9px;              /* 鈴の絵の上から数の丸の上まで（Instagram 実測） */
 
   /* ---- レイアウト高さ制約ルール（全ページ遵守必須） ----
      .page-subtitle は margin-bottom: var(--space-3) = 12px（pages-layout.css）。
@@ -543,6 +546,9 @@
   /* Badge サイズ（min-height） */
   --comp-badge-height-sm:  20px;                       /* small */
   --comp-badge-height-md:  24px;                       /* medium */
+  --comp-badge-count-size:  18px;                 /* 数の丸の中身の高さ・最小幅（Instagram 実測 2026-11-05） */
+  --comp-badge-count-ring:  var(--space-2px);     /* 2px — 数の丸の外枠の太さ（Instagram 実測） */
+  --comp-badge-count-font:  var(--font-2xs);      /* 11.2px — Instagram 実測 11px に一番近い既存の段 */
 
   /* Badge ドットインジケーター */
   --comp-badge-dot-size:   var(--space-6px);           /* 6px */

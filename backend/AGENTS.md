@@ -7,7 +7,7 @@
 - 本番テナント: `tenant_code=highlife-jpn`（schema: `tenant_004`）
 - 撮影 / Meta App Review 用: `tenant_review`（schema: `tenant_006`、Demo データのみ）。`scripts/setup_review_tenant.py` 実行後はパスワードを必ずホスト側に保存すること（コンテナ `/tmp` は再起動で消える）。手順詳細: `backend/scripts/CLAUDE.md`
 - 既定値 `test-corp` は空テナント。移行 / バッチ実行時は必ず明示: `gh workflow run run-*-migration.yml -f tenant_code=highlife-jpn`・`docker exec -e TENANT_CODE=highlife-jpn ...`
-- **ADR-072 write endpoint**: `db.commit()` 直後に `reset_tenant_context()` 必須 → 詳細: `backend/tenant/CLAUDE.md`
+- **ADR-072 commit の後に db を使う関数（routers の外も）**: `db.commit()` 直後に `reset_tenant_context()` 必須 → 詳細: `backend/tenant/CLAUDE.md`
 
 ## 新規テナント作成時の不変条件チェック（ADR-034 マージまで暫定）
 

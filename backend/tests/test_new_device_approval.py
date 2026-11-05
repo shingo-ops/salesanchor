@@ -76,7 +76,6 @@ def _auth_event_rows() -> list[dict]:
 
 @pytest.fixture(autouse=True)
 def base_env(monkeypatch):
-    monkeypatch.setenv("AUTH_PROVIDER", "self")
     monkeypatch.setenv("AUTH_JWT_SECRET", SECRET)
     monkeypatch.delenv("AUTH_JWT_SECRET_PREVIOUS", raising=False)
     monkeypatch.delenv("AUTH_RP_ORIGIN", raising=False)
@@ -112,7 +111,6 @@ def no_redis_and_spies():
          patch("app.routers.auth.send_new_device_mail", new=mail), \
          patch("app.routers.auth.publish_user_change", new=publish), \
          patch("app.routers.super_admin_login_requests.publish_user_change", new=publish), \
-         patch("app.auth.dependencies._init_firebase"), \
          patch("app.auth.dependencies.is_token_blacklisted", new=AsyncMock(return_value=False)), \
          patch("app.auth.dependencies.get_cached_jwt", new=AsyncMock(return_value=None)), \
          patch("app.auth.dependencies.check_auth_rate_limit", new=AsyncMock(return_value=False)), \
@@ -417,6 +415,20 @@ def test_k2_mail_has_no_link_and_includes_time_device_location():
     assert "http" not in body.lower()
     assert "2026-11-01 10:00" in body and "iPhone・Safari" in body and "Tokyo, Japan" in body
     assert "IP Geolocation by DB-IP" in body
+
+
+def test_k2_mail_button_name_matches_screen_button():
+    """メールに書く押すボタンの名前は、画面のボタンの言葉（ja.json / en.json の notMe）と同じ（段F）。"""
+    import json
+    from pathlib import Path
+
+    from app.services import auth_mail
+
+    locales = Path(__file__).resolve().parents[2] / "frontend" / "src" / "locales"
+    ja = json.loads((locales / "ja.json").read_text("utf-8"))["login"]["deviceApproval"]["watcher"]["notMe"]
+    en = json.loads((locales / "en.json").read_text("utf-8"))["login"]["deviceApproval"]["watcher"]["notMe"]
+    assert f"「{ja}」" in auth_mail._NEW_DEVICE_BODY
+    assert f'"{en}"' in auth_mail._NEW_DEVICE_BODY
 
 
 # ── K3: 許可して入る ─────────────────────────────────────────────

@@ -4,8 +4,9 @@
 
 - 親: [docs/specs/discord-server-management/README.md](../../specs/discord-server-management/README.md)
 - あるべき姿: [ideal-state.md](../../specs/discord-server-management/ideal-state.md)　／　KGI: [kgi.md](../../specs/discord-server-management/kgi.md)
-- 下調べ: [recon.md](recon.md)（以下「R§n」は recon.md の節）
+- 下調べ: [recon.md](recon.md)（`docs/handoff/discord-server-management/recon.md`。以下「R§n」は recon.md の節）
 - 対象 ADR: ADR-091（Bot 権限の正本・変えない）、ADR-072（commit 後の reset_tenant_context）、ADR-027（画面の文字は t()）、ADR-144（画面部品の金型）、ADR-135・ADR-136（migrations を含む PR の GO 手順）、ADR-1037（移行のロック待ち 1 秒）、ADR-1024（ai_ro ビュー）。新規 ADR 案は §10
+- ADR の文書: `docs/adr/ADR-027-ui-internationalization.md`・`docs/adr/ADR-135-release-stowaway-prevention.md`・`docs/adr/ADR-144-ui-component-governance.md`
 - 状態: 2026-11-04 PO 承認済み（PO「1」＝この設計で承認し、自社用サーバーの登録から作り始める）。PO 決定「1」（設計図はプログラムと同じ場所に履歴付きで置く）を反映。便1a の実装カード: [card-bin1a-purpose-column.md](card-bin1a-purpose-column.md)（便1b は便1a の本番反映後に出す）
 
 ## 1. 目的と合格条件
@@ -233,6 +234,54 @@
 | 画面の文字が t() 経由・ja/en 同じキー | 既存の i18n 検査（CI） |
 | 消す処理が無い | 試験で discord_own_server.py（新規） に `"DELETE"` の Discord 呼び出しが無いこと |
 
+改訂2（2026-11-04、便1b のカード作成時の実物確認による。Opus の技術判断）
+- 3 行目の検証方法を「自社用に 1 回書いて 部屋の外の通知 0 件・受け取り係の記録に `unknown guild_id=<自社用サーバーの番号> — 未登録 guild のため無視` 1 行」に読み替える。§4-3 改訂1 で専用の記録の一文を作らないことにしたため（事実：`backend/app/discord_gateway/client.py:411-416` に今ある一文）
+- 同じサーバーを二重に登録しようとしたとき（`uq_tenant_discord_config_guild_id` に当たる）、今は 500 になる。便1b で招待の戻りがこれを受け、`reason=guild_already_registered` で画面に返す（顧客用・自社用の両方。成功の道は変えない）
+- 自社用の招待の開始は、`channels.manage` に加えて `tenant.profile.edit` も要る（§4-9 の「変えるのは tenant.profile.edit」と揃える）。既存の `require_permission` はどれか 1 つで通る形なので、`load_user_permissions`（`backend/app/auth/dependencies.py:598`）で 2 つ目を確かめる
+- 実装カード：docs/handoff/discord-server-management/card-bin1b-own-server-register.md
+
+改訂3（2026-11-05、便2 のカード作成時の実物確認による。Opus の技術判断。origin/main 3175aca5e で確かめた）
+- 新しい 2 表は、§4-1 の「同じ移行ファイル」ではなく便2 の新しい移行 migrations/20261106_120000_create_discord_server_snapshot_tables.sql（新規）に置く。改訂1 で移行を便1a・便1b に分けたため、便1 の移行には入っていない（事実：`migrations/` の最後は `migrations/20261106_100000_tenant_discord_config_purpose_pk.sql`）
+- §4-6 の「設計図と同じ形に直して」を「Discord の返事から必要な項目だけを抜いた形（`version: 1`）」に読み替える。権限の名前と数字の対応は便3 の discord_blueprint.py（新規）1 か所だけに置く約束（§4-5）なので、便2 で同じ対応を別に持たない。設計図の tenant_<id>.json（新規）へは Opus が便3 の対応表で直す
+- サーバーの番号を記録に入れない約束（§4-1）を守るため、@everyone のロール（番号がサーバーの番号と同じ。Context7 /discord/discord-api-docs）は `"@everyone"` と書く
+- 人を記録に入れない約束（§4-1）を守るため、チャンネルの人ごとの上書き（`type=1`）は外して数だけ残す
+- §4-1 の「ai_cloud のビューに新しい表の列の扱いを足す」は行わない。§11 U2 のとおり分類の無い文字の列は自動で伏せる側に倒れ、Opus は ai_ro で読むため。ai_cloud の移行と分類表は触らない
+- `tenant_id` に `public.tenants(id)` への外部キーを付ける（登録の表 `tenant_discord_config_tenant_id_fkey` と同じ）。行の制限（RLS）は付けない（登録の表と同じで、プログラムが tenant_id で絞る）
+- CI の許可リストと対応表を更新する：`.github/workflows/migration-guard.yml:224` の `PUBLIC_TABLES`（223 行の注記「新しいテーブルを public に追加した場合はここを更新すること」）、`backend/app/realtime/topics.py` の `NO_SIGNAL_ROUTES`（便1b の改訂4 で載せ忘れが CI 赤になった）
+- JSONB への書き込みは、試験の SQLite で `CAST(… AS JSONB)` が使えないため、`backend/app/routers/meta_inbox.py:152-158` と同じく方言で分ける
+- 便2 の確かめ方（KGI-3 の前半）：テナント001の自社用テストサーバーで「今のサーバーを読み取る」を押す → 「読み取りました（ロール n・チャンネル n）」が出る → `ai_ro.public__discord_server_snapshots` に 1 行増え、n が Discord の画面のロールとチャンネルの数と同じ
+- 実装カード：docs/handoff/discord-server-management/card-bin2-own-server-snapshot.md
+
+改訂4（2026-11-05、便3 のカード作成時の実物確認による。Opus の技術判断。origin/main 63cadad20 で確かめた）
+- 便3 を 2 つに分ける（変更は一度に 1 つ）。便3a＝§4-5 設計図の形と検査・最初の設計図 tenant_1.json・§4-7 確認・画面の「確認する」（KGI-3）。便3b＝§4-8 反映・画面の「反映する」（KGI-4〜6）。便3a は Discord に書かない（呼ぶのは GET だけ）。どちらも migrations なし
+- 事実（本番の読み取り、`ai_ro.public__discord_server_snapshots` id=1、2026-11-05 02:50 UTC）：テナント001の自社用サーバーは ロール 2（@everyone・Bot の「Sales Anchor」managed=true）、チャンネル 4（カテゴリ「テキストチャンネル」「ボイスチャンネル」・文字の「一般」・声の「一般」）。上書きは 0 件
+- 扱う種類は ロール・カテゴリ（type 4）・文字のチャンネル（type 0）だけ。ほかの種類（声 type 2 など）は §2 の対象外なので、確認の 3 つの一覧のどれにも出さない（消す候補にも出さない）
+- managed=true のロール（Bot 自身・連携が作るロール）は設計図に書かず、一覧のどれにも出さない。Bot 自身のロールは上書きの相手として `"@bot"` と書ける（Bot の利用者番号を `GET /users/@me`、その人のロールを `GET /guilds/{guild}/members/{bot}` で読む。後者は特別な許可が要らない：Discord 公式 developers/topics の Get Guild Member、List Guild Members だけが GUILD_MEMBERS を要る）
+- 権限の名前と数字の対応は Discord 公式の表（github.com/discord/discord-api-docs `developers/topics/permissions.mdx`、2026-10-29 更新 e3ea58903 を 2026-11-05 に取得。Context7 は月の上限で使えなかったため公式を直接読んだ）の 52 個（1<<0〜1<<52、47 番は表に無い）。表に無い数字（今の @everyone には 1<<47 が立っている）は比べず、反映のときも今の値をそのまま残す。名前に直せないために「変わる」が出続けることを防ぐ
+- 設計図の `sync_with_category` は使わない。Discord にその項目は無い。チャンネルの見せ方は各チャンネルの `overwrites` に書いた分だけを比べる
+- 上書きは書いた相手だけを比べる。Discord にあって設計図に無い相手（managed のロールのうち Bot 以外を除く）は「消す候補」に出す（自動で外さない）
+- 「できない」の判定（Discord 公式 permissions.mdx「Permission Hierarchy」と channel.mdx「Edit Channel Permissions」）：Bot の一番上のロールの順番と同じか上のロールを変える行／Bot が持たない権限（@everyone と Bot のロールの権限を合わせたもの。ADMINISTRATOR があれば全部持つ）をロールに付ける行・上書きで許す/拒む行／ADMINISTRATOR の無い Bot が上書きで MANAGE_ROLES を書く行／@everyone の名前を変える行
+- 設計図の検査に 1 つ足す：@everyone の VIEW_CHANNEL を拒む上書きがあるカテゴリ・チャンネルには、`"@bot"` に VIEW_CHANNEL を許す上書きも書く。無いと Bot がその中を見られなくなり、続きの反映が 403 になる（事実：`backend/app/routers/discord_auto_setup.py` の「Cause F」の注記と同じ理由）
+- 色は `color`（数字）で比べる。反映で送るときは公式の勧めどおり `colors.primary_color` で送る（`color` は非推奨。guild.mdx Modify Guild Role）
+- 確認の一覧の 1 行の単位：作る物は 1 物 1 行（作るときの上書きも含む）。直す物は 1 物 1 項目 1 行。上書きは 1 物 1 相手 1 行。KGI-4 の「4 種類で 4 件」はこの単位で数える
+- 確認の API は `tenant.profile.edit` を要る（ボタンを押すと Discord に読みに行くため。読み取りのボタンと同じ）
+- 設計図の検査にもう 1 つ足す：文字のチャンネルの名前に空白・英大文字を入れない（Discord が文字のチャンネル名を小文字・ハイフンに直すため、直された名前と比べて「変わる」が出続けるのを防ぐ）
+- 実装カード：docs/handoff/discord-server-management/card-bin3a-blueprint-plan.md
+- 便3a カードの審査（2026-11-05、Opus の自己審査。独立した第二者の審査ではない）：APPROVE。根拠：カードに書いた行の目印（`backend/app/routers/discord_own_server.py` の guild_id の SQL・`backend/tests/test_realtime_topics.py:29`・`frontend/src/lib/api.ts:13-21` の `ApiError.status`・`backend/tools/export_openapi.py`・`scripts/check_test_schema_dup.py`・guards の 4 ファイル・画面の試験 2 ファイル）を実物で確かめた。審査で直した点：`discord_server_apply_runs` は試験の共通表（conftest）に無いので、行が増えない試験は `discord_server_snapshots` だけにし、書き込みが無いことは差分の検索で確かめる形にした。未解決：無し（tenant_1.json で 0 件になることは試験 §4-2 の 1 と本番の「確認する」で確かめる）
+
+改訂5（2026-11-05、便3b のカード作成時の実物確認による。Opus の技術判断。origin/main a7a66a2cc で確かめ、f07c538ea でも該当ファイルに差が無いことを確かめた）
+- 便3a の審査役の指摘 3 件を便3b の最初に直す：M1 親のカテゴリが「できない」のチャンネルが「消す候補」に間違って出る（`backend/app/services/discord_blueprint.py:442-445` で探す前に飛ばしている）／M2 設計図のファイルが読めないと 500 になる（`backend/app/routers/discord_own_server.py:233-236` が `ValueError` だけ受ける）／M3 「GET だけ」の試験が文字の数え方で、`_READ` の変数を通すと書き込みを見落とす（`backend/app/routers/discord_own_server.py:179`・`backend/tests/test_discord_own_server_snapshot.py:258-262`）→ ast で `method=` に渡す値を全部調べる形にする
+- 反映の中身（何を Discord に送るか）は確認と同じ `build_plan` が 1 行ごとに作る（比べ方を 2 か所に書かない）。確認の返事と `plan_digest` には入れない（今の digest と試験がそのまま通る）。サーバーの番号は `{guild}`、同じ反映の中で先に作る物は `{ref:role:<key>}` の印で持ち、反映する係がその場で本物の番号に直す
+- 親が新しく作るカテゴリのチャンネル：今の比べ方の行はそのまま、送る中身だけ `{ref:category:<key>}` にする（そのままだと親を外す操作になる）
+- 送り方（Discord 公式 github.com/discord/discord-api-docs の guild.mdx Create/Modify Guild Role・Create Guild Channel、channel.mdx Modify Channel・Edit Channel Permissions、permissions.mdx Role Colors Object を 2026-11-05 に Opus が直接読んだ。Context7 は月の上限で使えなかったため、起動指示で許された公式の直接確認に代えた）：ロールの色は `colors.primary_color`、権限の数は 10 進の文字、上書きは `PUT /channels/{id}/permissions/{相手}` に `type 0`・`allow`・`deny`。`lock_permissions` は Modify Channel に無いので使わない
+- 表に無いビット（今の @everyone の 1<<47）は、ロールの権限でも上書きでも今の値を残して送る（改訂4 の続き）
+- 同時に 1 本だけ：Redis の `SET NX EX 600`（前例 `backend/app/tasks/viewer_inventory_cache.py:74`）。Redis につながらないときは 503 で止める（同時に 2 本走る道を残さない）。鍵は終わったら必ず外す
+- 1 行失敗しても続ける。作る行が失敗したら、それを使う行は Discord を呼ばずに「失敗（先に作る物が失敗）」にする
+- 消す処理は書かない：API と反映する係のファイルに `"DELETE"` の文字が無いことと、method が POST・PATCH・PUT の外なら呼ばないことを試験で確かめる
+- 反映の記録の表 `discord_server_apply_runs` の試験用の形は共通の試験の準備（conftest）に足す（`scripts/check_test_schema_dup.py:23-26` で conftest は対象外。便1b の CI 赤の再発防止）
+- 実装カード：docs/handoff/discord-server-management/card-bin3b-apply.md
+- 便3b カードの審査（2026-11-05、Opus の自己審査。独立した第二者の審査ではない）：APPROVE。根拠：カードに書いた行の目印（`backend/app/services/discord_blueprint.py:441-446`・`:477-480`・`:507-512`、`backend/app/routers/discord_own_server.py:90-98`・`:156-166`・`:179`・`:212-276`、`backend/app/services/discord_rest.py:26-42`、`backend/app/cache.py:62-64`、`backend/app/services/audit.py:277-286`、`backend/app/realtime/topics.py:104`、`backend/tests/test_realtime_topics.py:35-40`、`backend/tests/conftest.py:313-314`・`:1244-1253`・`:1744`、`backend/tests/test_discord_own_server_snapshot.py:258-262`、`frontend/src/pages/admin/DiscordOwnServerPanel.test.tsx:131-137`、`frontend/src/components/Badge.tsx:4`、移行の表の定義 `migrations/20261106_120000_create_discord_server_snapshot_tables.sql:35-48`）を実物で確かめた。KGI-4〜6 を試験で機械に確かめさせ、本番の確かめはテナント001の自社用テストサーバーで PO が画面で見る。未解決：U4（HIGH LIFE JPN に使う前に PO に確かめる。便3b はテナント001だけで確かめるので止めない）
+
 ## 9. 外部・過去事例の参照と我々への応用
 
 - HashiCorp Terraform の公式文書（Context7 `/websites/developer_hashicorp_terraform` で 2026-11-04 に確認）
@@ -248,6 +297,7 @@
 - 設計図の形の検査と、「顧客用だけ」の漏れ止めは CI の試験で毎回動く
 - 設計図の持ち主は Opus。変更は PR と審査を通す
 - 反映の記録（`discord_server_apply_runs`）で、いつ誰が何を変えたかを後から読める
+- 守り手: `backend/tests/test_discord_blueprints.py`（CI の pytest で毎回、設計図の形と権限の名前の表を検査する）
 
 ## 10. ADR 案（正式な番号は PO 承認のあとに採る）
 
@@ -274,3 +324,9 @@
 - U2 【解決 2026-11-04】ai_cloud は分類表に無い文字の列を伏せる（`migrations/20261024_100000_create_ai_cloud_meta.sql` の build_views、分類なしで文字の型は mask に落ちる）。新しい列・表を足しても失敗せず伏せる側に倒れる。便1 では ai_cloud の分類表を変えない（purpose は伏せたままでよい。Opus は ai_ro で読む）
 - U3 テナント001の自社用テストサーバーの用意（PO 側。便1 のマージ後でよい）
 - U4 HIGH LIFE JPN の今の登録が、PO の画像の自社サーバーと同じか（R§8）。同じなら、HIGH LIFE JPN は今の行を自社用に移し、顧客用を別に登録し直す話になるため、HIGH LIFE JPN に使う前に PO に確かめる
+
+便2 のカードの審査（2026-11-05、同じ AI による自己審査）：**APPROVE**
+- 実物との照合：カードの行の目印（`backend/tests/conftest.py:311-312`・`:1230`・`:1730`、`scripts/run_all_migrations.sh:1227`（ab8a6f725）、`backend/app/main.py:51`・`:325`、`backend/app/realtime/topics.py:103`、`.github/workflows/migration-guard.yml:223-224`、`backend/app/routers/meta_inbox.py:152-158`、`frontend/src/pages/admin/discord-config.css:57` の `dc-actions`、`frontend/src/locales/ja.json:3494`（ab8a6f725）の `discordOwnServer`）を origin/main 3175aca5e で読んで確かめた
+- 便1b の CI 赤 3 件（試験の中の表の定義・即時反映の対応表・試しの移行の仮の表）をカードの中で先に塞いだ
+- 約束（読むだけ・サーバーの番号を記録しない・人を記録しない・消す処理なし）を試験 9 本で機械に確かめさせる
+- U3 は解決（テナント001の自社用テストサーバーは PO が用意・登録済み、2026-11-05）。U4 は HIGH LIFE JPN に使う前に確かめる（便2 はテナント001だけで確かめるので止めない）

@@ -49,6 +49,7 @@ from app.routers import (
     discord_channel_invite,  # ADR-091 KPI5: チャンネル招待メッセージ送信 API
     discord_guild_config,  # Sprint D2: Discord Guild 設定 admin API
     discord_oauth,  # ADR-091 拡張: Discord Bot OAuth Invite フロー
+    discord_own_server,  # discord-server-management 便2: 自社用サーバーの今の姿の読み取り
     discord_reactions,  # discord-reaction: リアクション送受信 API
     discord_remove,  # ADR-091 KPI6: チャンネル削除・Kick・BAN API
     discord_role_resync,  # ADR-091 KPI7: ロール手動再同期 API
@@ -180,7 +181,7 @@ async def lifespan(app: FastAPI):
             "METADATA_FERNET_KEY の検証に失敗しました（Meta OAuth 系統は無効化されます）: %s", e
         )
 
-    # ADR-1013: 自社ログインの設定検査（既定 firebase・秘密なしなら何も起きない）
+    # ADR-1013: 自社ログインの設定検査（本番で秘密が無ければ起動を止める）
     self_tokens.validate_settings()
 
     # 基盤環境変数チェック（DATABASE_URL, REDIS_URL, CELERY_BROKER_URL）
@@ -323,6 +324,11 @@ app.include_router(
 # ADR-091 拡張: Bot招待後サーバー初期構築ウィザード
 app.include_router(
     discord_auto_setup.router, prefix="/api/v1", tags=["discord"],
+    dependencies=[Depends(get_current_tenant)],
+)
+# discord-server-management 便2: 自社用サーバーの今の姿の読み取り
+app.include_router(
+    discord_own_server.router, prefix="/api/v1", tags=["discord"],
     dependencies=[Depends(get_current_tenant)],
 )
 # ADR-091 KPI3: チケット機能設定 API (tenant admin)

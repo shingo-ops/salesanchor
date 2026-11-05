@@ -16,11 +16,6 @@ from app.auth import self_tokens
 INVITE_TTL = timedelta(hours=72)
 
 
-def invite_enabled() -> bool:
-    """初回設定の鍵とメールを作るか。AUTH_PROVIDER=self のときだけ（firebase の間は作らない）。"""
-    return self_tokens.auth_provider() == "self"
-
-
 async def create_invite_token(db: AsyncSession, user_id: int) -> str:
     """purpose=invite の鍵を 1 行 INSERT し、メールのリンクに入れる生の値を返す。"""
     now = datetime.now(timezone.utc)

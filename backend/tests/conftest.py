@@ -310,6 +310,10 @@ async def test_engine():
             statement = statement.replace("public.data_access_events", "data_access_events")
         if "public.tenant_discord_config" in statement:
             statement = statement.replace("public.tenant_discord_config", "tenant_discord_config")
+        if "public.discord_server_snapshots" in statement:
+            statement = statement.replace("public.discord_server_snapshots", "discord_server_snapshots")
+        if "public.discord_server_apply_runs" in statement:
+            statement = statement.replace("public.discord_server_apply_runs", "discord_server_apply_runs")
         if "public.registration_tokens" in statement:
             statement = statement.replace("public.registration_tokens", "registration_tokens")
         if "public.tenants" in statement:
@@ -1228,10 +1232,38 @@ async def setup_test_db(test_engine):
         # Sprint 8 / F8: テナント発行者情報 (PO PDF / メール差出人)
         await conn.execute(text("""
             CREATE TABLE IF NOT EXISTS tenant_discord_config (
-                tenant_id INTEGER PRIMARY KEY,
+                tenant_id INTEGER NOT NULL,
+                purpose   VARCHAR(16) NOT NULL DEFAULT 'customer',
                 guild_id  VARCHAR(32) NOT NULL,
+                connected_by_staff_id INTEGER,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (tenant_id, purpose),
+                UNIQUE (guild_id)
+            )
+        """))
+        # discord-server-management 便2: 自社用サーバーの今の姿（本番は JSONB。SQLite は文字で持つ）
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS discord_server_snapshots (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tenant_id INTEGER NOT NULL,
+                purpose VARCHAR(16) NOT NULL CHECK (purpose = 'own'),
+                body TEXT NOT NULL,
+                taken_by INTEGER,
+                taken_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
+        # discord-server-management 便3b: 反映の記録（本番は JSONB。SQLite は文字で持つ）
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS discord_server_apply_runs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tenant_id INTEGER NOT NULL,
+                purpose VARCHAR(16) NOT NULL CHECK (purpose = 'own'),
+                plan_digest VARCHAR(64) NOT NULL,
+                started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                finished_at TIMESTAMP,
+                applied_by INTEGER,
+                result TEXT
             )
         """))
         await conn.execute(text("""
@@ -1701,6 +1733,7 @@ async def db_session(test_engine, setup_test_db):
     async with test_engine.begin() as conn:
         await conn.execute(text("DELETE FROM discord_channel_webhooks"))
         await conn.execute(text("DELETE FROM audit_logs"))
+        await conn.execute(text("DELETE FROM password_reset_tokens"))
         await conn.execute(text("DELETE FROM goals"))
         await conn.execute(text("DELETE FROM tenant_google_drive_config"))
         await conn.execute(text("DELETE FROM customer_scores"))
@@ -1723,6 +1756,8 @@ async def db_session(test_engine, setup_test_db):
         # Sprint 8: tenant_profile
         await conn.execute(text("DELETE FROM tenant_profile"))
         # Sprint D2: tenant_discord_config
+        await conn.execute(text("DELETE FROM discord_server_apply_runs"))
+        await conn.execute(text("DELETE FROM discord_server_snapshots"))
         await conn.execute(text("DELETE FROM tenant_discord_config"))
         await conn.execute(text("DELETE FROM order_commissions"))
         await conn.execute(text("DELETE FROM tenant_commission_settings"))
@@ -1824,6 +1859,7 @@ ALL_TEST_PERMISSIONS = {
     "roles.view", "roles.create", "roles.update", "roles.delete", "roles.assign",
     "customers.view", "customers.create", "customers.update", "customers.delete",
     "leads.view", "leads.create", "leads.update", "leads.delete", "leads.convert",
+    "leads.discord_invite", "leads.discord_resync", "leads.discord_remove_channel", "leads.discord_kick", "leads.discord_ban",
     "deals.view", "deals.create", "deals.update", "deals.delete",
     "orders.view", "orders.create", "orders.update", "orders.delete",
     "teams.view", "teams.create", "teams.update", "teams.delete", "teams.manage_members",

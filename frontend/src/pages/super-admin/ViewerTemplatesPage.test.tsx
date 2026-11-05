@@ -15,6 +15,7 @@ vi.mock("../../hooks/useSuperAdmin", () => ({ useSuperAdmin: vi.fn() }));
 const KEYS = [
   "signup_request", "reissue_notice", "reissue_notice_no_invite", "room_welcome", "room_recreated",
   "notice_extended", "notice_activated", "notice_suspended", "interview_request",
+  "billing_form_request",
 ];
 const PLACEHOLDERS: Record<string, string[]> = {
   signup_request: ["signup_url"],
@@ -26,6 +27,7 @@ const PLACEHOLDERS: Record<string, string[]> = {
   notice_activated: [],
   notice_suspended: [],
   interview_request: ["expires_date"],
+  billing_form_request: ["form_url", "form_expires"],
 };
 const MANUAL = ["signup_request", "reissue_notice", "reissue_notice_no_invite"];
 

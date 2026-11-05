@@ -98,7 +98,8 @@ BEGIN
         ('viewer_login_events', '閲覧者ログインの記録'),
         ('viewer_login_tokens', '閲覧者ログインの札'),
         ('webauthn_credentials', 'パスキーの公開鍵・資格情報'),
-        ('tenant_carrier_credentials', '運送会社の資格情報');
+        ('tenant_carrier_credentials', '運送会社の資格情報'),
+        ('viewer_billing_profiles', '請求先（宛名・住所・電話）');
 END
 $deny$;
 

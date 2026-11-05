@@ -8,8 +8,10 @@ import pytest
 from fastapi import HTTPException
 
 from app.routers.calendar import (
+    CreateEventBody,
     SyncModeBody,
     UpdateEventBody,
+    create_event,
     delete_event,
     update_event,
     list_calendar_owners,
@@ -175,10 +177,12 @@ async def test_update_sync_mode_none():
 # ---- 便1: 「自分だけ」予定の守り（design.md §13-5） ----
 
 
-def _event_db(created_by, calendar_type, owner):
+def _event_db(created_by, calendar_type, owner, google_event_id=None, meet_url=None):
     db = AsyncMock()
     db.commit = AsyncMock()
-    db.execute = AsyncMock(return_value=_QueryResult(first=(created_by, calendar_type, owner)))
+    db.execute = AsyncMock(
+        return_value=_QueryResult(first=(created_by, calendar_type, owner, google_event_id, meet_url))
+    )
     return db
 
 
@@ -245,3 +249,111 @@ async def test_invalid_calendar_type_is_422():
         with pytest.raises(HTTPException) as exc:
             await update_event(9, UpdateEventBody(calendar_type="secret"), tenant_id=1, user=_mock_user(101), db=db)
     assert exc.value.status_code == 422
+
+
+# ---- 便3: Google Meet（K13・N-1・N-3・N-13） ----
+
+
+def _create_body(**kw):
+    return CreateEventBody(
+        title="打合せ",
+        start_datetime="2026-06-01T10:00:00+09:00",
+        end_datetime="2026-06-01T11:00:00+09:00",
+        **kw,
+    )
+
+
+@pytest.mark.asyncio
+async def test_create_with_meet_by_non_connector_is_422_and_nothing_written():
+    db = AsyncMock()
+    db.commit = AsyncMock()
+    with patch("app.routers.calendar.cal_svc.can_add_meet", new=AsyncMock(return_value=False)), patch(
+        "app.routers.calendar.cal_svc.create_event", new=AsyncMock()
+    ) as created:
+        with pytest.raises(HTTPException) as exc:
+            await create_event(_create_body(add_meet=True), tenant_id=1, user=_mock_user(101), db=db)
+    assert exc.value.status_code == 422
+    # サービスを呼ばない = 表にも Google にも何も入らない。500 に変わる穴も無い
+    created.assert_not_called()
+    db.execute.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_create_with_meet_by_connector_passes_add_meet_to_service():
+    db = AsyncMock()
+    with patch("app.routers.calendar.cal_svc.can_add_meet", new=AsyncMock(return_value=True)), patch(
+        "app.routers.calendar.cal_svc.create_event",
+        new=AsyncMock(return_value={"id": 5, "meet_url": "https://meet.google.com/abc-defg-hij"}),
+    ) as created:
+        result = await create_event(_create_body(add_meet=True), tenant_id=1, user=_mock_user(101), db=db)
+    assert result == {"id": 5, "meet_url": "https://meet.google.com/abc-defg-hij"}
+    assert created.call_args.kwargs["payload"]["add_meet"] is True
+
+
+@pytest.mark.asyncio
+async def test_create_without_meet_does_not_ask_can_add_meet():
+    db = AsyncMock()
+    with patch("app.routers.calendar.cal_svc.can_add_meet", new=AsyncMock(return_value=False)) as can, patch(
+        "app.routers.calendar.cal_svc.create_event", new=AsyncMock(return_value={"id": 6, "meet_url": None})
+    ) as created:
+        await create_event(_create_body(), tenant_id=1, user=_mock_user(101), db=db)
+    can.assert_not_called()
+    created.assert_called_once()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "can_meet,google_event_id,owner",
+    [
+        (False, "g1", 101),  # (1) つないだ本人ではない
+        (True, None, 101),  # (2) Google に送ってある予定ではない
+        (True, "g1", 202),  # (3) 持ち主が本人ではない
+    ],
+)
+async def test_update_with_meet_is_422_and_service_not_called(can_meet, google_event_id, owner):
+    db = _event_db(created_by=101, calendar_type="shared", owner=owner, google_event_id=google_event_id)
+    with patch("app.routers.calendar.get_user_system_keys", new=AsyncMock(return_value=[])), patch(
+        "app.routers.calendar.is_tenant_admin", return_value=False
+    ), patch("app.routers.calendar.cal_svc.can_add_meet", new=AsyncMock(return_value=can_meet)), patch(
+        "app.routers.calendar.cal_svc.update_event", new=AsyncMock()
+    ) as upd:
+        with pytest.raises(HTTPException) as exc:
+            await update_event(
+                9, UpdateEventBody(title="x", add_meet=True), tenant_id=1, user=_mock_user(101), db=db
+            )
+    assert exc.value.status_code == 422
+    upd.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_update_with_meet_when_meet_already_exists_drops_add_meet():
+    db = _event_db(
+        created_by=101, calendar_type="shared", owner=101, google_event_id="g1",
+        meet_url="https://meet.google.com/abc-defg-hij",
+    )
+    with patch("app.routers.calendar.get_user_system_keys", new=AsyncMock(return_value=[])), patch(
+        "app.routers.calendar.is_tenant_admin", return_value=False
+    ), patch("app.routers.calendar.cal_svc.can_add_meet", new=AsyncMock(return_value=True)), patch(
+        "app.routers.calendar.cal_svc.update_event", new=AsyncMock(return_value={"id": 9, "meet_url": "u"})
+    ) as upd:
+        await update_event(
+            9, UpdateEventBody(title="x", add_meet=True), tenant_id=1, user=_mock_user(101), db=db
+        )
+    assert "add_meet" not in upd.call_args.kwargs["payload"]
+    assert upd.call_args.kwargs["payload"]["title"] == "x"
+
+
+@pytest.mark.asyncio
+async def test_update_with_meet_passes_add_meet_when_allowed():
+    db = _event_db(created_by=101, calendar_type="shared", owner=101, google_event_id="g1")
+    with patch("app.routers.calendar.get_user_system_keys", new=AsyncMock(return_value=[])), patch(
+        "app.routers.calendar.is_tenant_admin", return_value=False
+    ), patch("app.routers.calendar.cal_svc.can_add_meet", new=AsyncMock(return_value=True)), patch(
+        "app.routers.calendar.cal_svc.update_event",
+        new=AsyncMock(return_value={"id": 9, "meet_url": "https://meet.google.com/abc-defg-hij"}),
+    ) as upd:
+        result = await update_event(
+            9, UpdateEventBody(add_meet=True), tenant_id=1, user=_mock_user(101), db=db
+        )
+    assert result["meet_url"] == "https://meet.google.com/abc-defg-hij"
+    assert upd.call_args.kwargs["payload"]["add_meet"] is True

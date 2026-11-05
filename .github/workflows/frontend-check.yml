@@ -36,6 +36,16 @@ jobs:
           node scripts/check-viewer-bundle.js
         working-directory: frontend
 
+      - name: Firebase removal check (本体の JS に Firebase と開発用の偽ログインが入らない)
+        run: |
+          files=$(find dist -name '*.js')
+          fb=$( (grep -ohiE 'firebase|identitytoolkit|securetoken|googleapis|gstatic' $files || true) | wc -l | tr -d ' ')
+          dev=$( (grep -ohE '__salesanchorE2eAuthUser|e2e-auth-user|e2e-firebase-auth-user|e2e-fake' $files || true) | wc -l | tr -d ' ')
+          echo "K1 firebase=$fb K6 dev=$dev"
+          test "$fb" -eq 0
+          test "$dev" -eq 0
+        working-directory: frontend
+
       - name: Verify check:all uses concurrently (退行防止)
         run: npm run check:concurrently
         working-directory: frontend

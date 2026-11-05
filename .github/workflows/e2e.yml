@@ -6,9 +6,8 @@ name: Frontend E2E (Playwright)
 # trace / screenshot / video を upload する。
 #
 # 実機 Meta OAuth は通さず、frontend が叩く /api/v1/* を Playwright route で
-# mock する設計（tests-e2e/utils/api-mock.ts）。Firebase Auth は
-# tests-e2e/utils/auth.ts で IndexedDB persistence + identitytoolkit endpoint
-# 経由で bypass する。
+# mock する設計（tests-e2e/utils/api-mock.ts）。ログインした状態は
+# tests-e2e/utils/auth.ts で保存領域に利用者を先に入れて作る。
 
 on:
   pull_request:
@@ -199,9 +198,6 @@ jobs:
       - name: Run visual-language screen check (3 widths)
         env:
           CI: 'true'
-          VITE_FIREBASE_API_KEY: AIzaSyE2E-dummy-api-key
-          VITE_FIREBASE_AUTH_DOMAIN: e2e-fixture.firebaseapp.com
-          VITE_GCP_PROJECT_ID: e2e-fixture
         run: npm run test:e2e:vl
 
       - name: Upload screen check report
@@ -305,10 +301,6 @@ jobs:
         env:
           # CI 上で webServer の reuseExistingServer=false が走る
           CI: 'true'
-          # Vite dev server に渡す Firebase 用ダミー値（mock 経由で bypass）
-          VITE_FIREBASE_API_KEY: AIzaSyE2E-dummy-api-key
-          VITE_FIREBASE_AUTH_DOMAIN: e2e-fixture.firebaseapp.com
-          VITE_GCP_PROJECT_ID: e2e-fixture
         run: npm run test:e2e
 
       # 失敗時 / 常時 artifact upload

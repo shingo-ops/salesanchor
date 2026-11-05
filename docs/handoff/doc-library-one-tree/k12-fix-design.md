@@ -164,3 +164,68 @@
 - **K12 19/20**（合格ライン 18/20）。K10 2/20。20 回とも終了コード 0。費用 $3.7054。
 - 外したのは T1 の1回。仕入元の欄がもうあると見つけ、作る前に PO に聞く答えで、CC_UI_GOVERNANCE.md を開く前に止まった（呼び出しは Explore 1・Bash 5・計画ファイルの Write 1）。T1 のもう1回は開いた。
 - §13 の条件を満たしたので、kgi.md の K9 の合格ラインを 7.5k に書き換えた。実装カード: [card-impl-k12.md](card-impl-k12.md)。
+
+## 15. 週次点検の K9 の線を 7.5k にそろえる（2026-11-05）
+
+- 起きたこと（事実）: kgi.md の K9 の線は §13 の PO 決定で 7.5k になった。週次点検 `scripts/dev/doc-entry-weekly-check.sh` は「合格線の正本はここ1か所（kgi.md の写し）」（同 7 行目）としながら、`K9_LIMIT_TOKENS=6500`（同 8 行目）と `add_ng "K9>6.5k"`（同 89 行目）のまま。今の K9 は 7.4k（baseline.md「便5 の直しの後の測り直し（2026-11-04）」）なので、次の週次点検は誤って NG を出す。線を変えたときに台本を直し忘れた。測り直しの記録の PR のマージ前審査で見つかった。
+- PO の承認: 2026-11-05 チャット「1」（点検の線を 7.5k にそろえる）。
+- 直し方（変更前 → 変更後）:
+  - 8 行目 `K9_LIMIT_TOKENS=6500` → `K9_LIMIT_TOKENS=7500`
+  - 89 行目 `add_ng "K9>6.5k"` → `add_ng "K9>7.5k"`
+- 触らない: 判定の式（88 行目）・K9 の測り方・ほかの線。`docs/handoff/doc-agenda-nav/library-requirements.md` の L1（K9 ≤ 6.5k、「PO 承認済み・変えない」）は別の題の合格条件なので変えず、食い違いを PO に報告する。
+- 選ばなかった案: 試験 `scripts/dev/test_doc_entry_weekly_check.sh` に K9 の線の試験を足す案。K9 は本物の `/context` でしか値が出ず、試験は `DOC_ENTRY_SKIP_K9=1` で飛ばしている。値を差し替える口を足すのは台本の作りの変更で、この直しの範囲を超える。
+- 戻し方: この PR を revert する（2 行が 6500・6.5k に戻る）。
+- 実装カード: [card-weekly-k9-line.md](card-weekly-k9-line.md)。
+
+| 基準 | 検証方法 |
+|---|---|
+| 線が 7.5k になっている | `grep -n -E "K9_LIMIT_TOKENS=|K9>" scripts/dev/doc-entry-weekly-check.sh` が 8 行目 `K9_LIMIT_TOKENS=7500`・89 行目 `add_ng "K9>7.5k"` の2件だけ |
+| 古い線が残っていない | `grep -c -E "6500|6\.5k" scripts/dev/doc-entry-weekly-check.sh` が 0 |
+| 既存の試験が通る | `bash scripts/dev/test_doc_entry_weekly_check.sh` が FAIL 0・終了コード 0 |
+| 次の月曜に誤った NG が出ない | 次の週次点検の結果に `K9>` が入らない（K9 が 7.5k 以下のとき） |
+
+- 結果: PR #5133 で本線に入った（2026-11-05 02:55 JST）。本線の台本は 8 行目 `K9_LIMIT_TOKENS=7500`・89 行目 `add_ng "K9>7.5k"`（`git show origin/main:scripts/dev/doc-entry-weekly-check.sh` で確かめた）。
+
+## 16. 要件 L1 の K9 の線も 7.5k にそろえる（2026-11-05）
+
+- 起きたこと（事実）: §15 で触らなかった `docs/handoff/doc-agenda-nav/library-requirements.md` 12 行目の L1 が「K9 ≤ 6.5k」のまま。同じ表の見出しは「PO 承認済み・変えない」なので、Opus の判断では変えず PO に示した。
+- PO の決定: Opus が示した3つの選択肢のうち、1「この書類の線も 7.5k に書き直し、決めた日付を残す」【おすすめ】に、2026-11-05 PO 原文「1,」。
+- 直し方: L1 の K9 を ~~6.5k~~ **7.5k** にし、表の見出しと表の下の注記に変更の日付と経緯を残す。
+- 触らない: K1 ≤ 200・L2〜L4。6.5k で判定した過去の記録（baseline.md・design.md・library-design.md・library-mura-design.md・library-stage*-result.md・library-review*.md）。どれもその時点の判定の記録で、今の合格線の正本は kgi.md。
+- 戻し方: この PR を revert する。
+
+| 基準 | 検証方法 |
+|---|---|
+| L1 の K9 が 7.5k | `grep -n "^| L1 " docs/handoff/doc-agenda-nav/library-requirements.md` の行に「**7.5k**」がある |
+| 決めた日付と経緯が残る | 同じファイルに「2026-11-05 PO 原文「1,」」がある |
+| 今の合格線を書いた場所に 6.5k が残っていない | `grep -n -E "6500|6\.5k" docs/specs/doc-agenda-nav/kgi.md scripts/dev/doc-entry-weekly-check.sh` の当たりが kgi.md の経緯と過去の値の欄だけ（20 行目・34 行目）。library-requirements.md の当たりは L1 の取り消し線・表の下の注記・§3 の過去の測定の行の3行だけ |
+
+- 結果: PR #5140 で本線に入った（2026-11-05 09:39 JST）。
+
+## 17. 行数 K1 の線を 210 行に上げる（2026-11-05）
+
+- 起きたこと（事実）: 2026-11-05 に origin/main 63cadad20 の使い捨ての写しで `bash scripts/dev/doc-entry-weekly-check.sh` を流すと `K1=206`・`K9=7.4k`・`RESULT=NG K1>200`。内訳（`wc -l`）は ~/.claude/CLAUDE.md 51・CLAUDE.md 10・AGENTS.md 46・~/kb/00-rules/chat-layout.md 36・~/kb/AGENTS.md 33・docs/INDEX.md 30。§12〜§14 で目次 `docs/INDEX.md` を会話の始めに読み込むようにしたとき、K9 だけ線を上げ、K1 ≤ 200 との両立を確かめていなかった（§16 で「触らない: K1 ≤ 200」と書いた）。このままだと次の月曜の週次点検も NG になる。
+- PO の決定: Opus が示した3つの選択肢のうち、1「行数の上限を 200 行から 210 行に上げる」【おすすめ】に、2026-11-05 PO 原文「1」。選ばれなかった案は「200 行のまま決まりの文を 6 行以上削る」「何もしない（月曜は NG）」。
+- 210 行の理由: 今の 206 行に 4 行の余裕。K9（7.5k）が読む量の上限として別に効いているので、行数だけ大きく増える道は K9 が止める。
+- 直し方（変更前 → 変更後）:
+  - `docs/specs/doc-agenda-nav/kgi.md`: K1 の合格ライン「200行以下」→「**210行以下**」。経緯の段落を K9 の段落の下に足す（Opus）
+  - `docs/handoff/doc-agenda-nav/library-requirements.md`: L1 の「K1 ≤ 200」→「K1 ≤ ~~200~~ **210**」と注記（Opus）
+  - `scripts/dev/doc-entry-weekly-check.sh` 7 行目 `K1_LIMIT=200` → `K1_LIMIT=210`（クラウドの Sonnet。[card-weekly-k1-line.md](card-weekly-k1-line.md)）
+  - `scripts/dev/test_doc_entry_weekly_check.sh` 95 行目 `check "T2 RESULT=NG K1>200" has_re '^RESULT=NG.*K1>200'` → `check "T2 RESULT=NG K1>210" has_re '^RESULT=NG.*K1>210'`（同。T2 の入力は K1=214 で 210 を超えるので、入力は変えない）
+- 触らない: K1 の数え方（`scripts/dev/doc-library-check.sh` の K1_DEF）・判定の式（台本 42 行目）・K9 など他の線。200 行で判定した過去の記録。
+- 戻し方: この PR を revert する。
+- 範囲外で見つかった足りない仕組み（別の題として PO に示す）: 合格の線の写し（kgi.md・台本・要件・定期実行の指示書）のずれを見つける見張りが無い／週次点検の試験が CI に入っていない／NG の知らせが作業画面に残るだけ／定期実行の指示書の控えが未確認。
+
+| 基準 | 検証方法 |
+|---|---|
+| 正本の線が 210 | `grep -n "^| K1 " docs/specs/doc-agenda-nav/kgi.md` の行に「**210行以下**」がある |
+| 台本の線が 210 | `grep -n -E "^K1_LIMIT=" scripts/dev/doc-entry-weekly-check.sh` が `7:K1_LIMIT=210` の1件 |
+| 試験が新しい線で通る | `bash scripts/dev/test_doc_entry_weekly_check.sh` が FAIL 0・終了コード 0。`grep -c "K1>200" scripts/dev/test_doc_entry_weekly_check.sh` が 0 |
+| 要件の線が 210 | `grep -n "^| L1 " docs/handoff/doc-agenda-nav/library-requirements.md` の行に「**210**」がある |
+| 今の本線で合格になる | マージ後の origin/main の使い捨ての写しで台本を流し、`RESULT=OK`（K1 206・K9 7.4k のとき） |
+| 次の月曜に合格 | 2026-11-09 の週次点検の結果ファイルが `RESULT=OK` |
+
+## 18. 合格の線の写しのずれを見つける見張り（2026-11-05）
+
+- §17 の「範囲外で見つかった足りない仕組み」のうち、写しのずれの見張りと、週次点検の試験を CI に入れること。PO 原文「1,2を順番に実装」（2026-11-05）。
+- 設計: [line-copy-guard-design.md](line-copy-guard-design.md)。実装カード: [card-line-copy-guard.md](card-line-copy-guard.md)。

@@ -23,14 +23,14 @@ from app.services.message_translator import (
     generate_outbound_draft,
     translate_inbound,
 )
-from tests.test_message_translator import _install_fake_genai, _make_gemini_json_response
+from tests.test_message_translator import _install_fake_genai, _make_gemini_json_response, stop_fake_genai
 
 
 @pytest.fixture(autouse=True)
 def reset_genai_cache():
-    message_translator._GENAI_CACHE.clear()
+    stop_fake_genai()
     yield
-    message_translator._GENAI_CACHE.clear()
+    stop_fake_genai()
 
 
 @pytest.mark.asyncio
@@ -67,7 +67,7 @@ async def test_translate_inbound_records_usage_event_with_message_id():
     _, kwargs = mock_usage_event.call_args
     assert kwargs["purpose"] == "translation_inbound"
     assert kwargs["model"] == MODEL_RECEIVE
-    assert kwargs["sdk"] == "google-generativeai"
+    assert kwargs["sdk"] == "google-genai"
     assert kwargs["tenant_id"] == 1
     assert kwargs["source_ref"] == "mid_ledger_1"
     assert kwargs["counts"].prompt_tokens == 100
@@ -83,9 +83,7 @@ async def test_translate_inbound_escalation_records_second_usage_event(monkeypat
     low_conf_resp = _make_gemini_json_response("下訳", confidence=0.10, original_language="en")
     escalated_resp = _make_gemini_json_response("上訳", confidence=0.95, original_language="en")
     genai = _install_fake_genai(low_conf_resp)
-    genai.GenerativeModel.return_value.generate_content_async = AsyncMock(
-        side_effect=[low_conf_resp, escalated_resp]
-    )
+    genai.side_effect = [low_conf_resp, escalated_resp]
 
     with patch.object(
         message_translator, "_get_cached_translation", new_callable=AsyncMock, return_value=None,

@@ -1,6 +1,6 @@
 /**
  * ADR-1054: 利用者が変わったら（ログアウトを含む）写しを全部消す。画面は描かない。
- * user の変化は、Firebase の onAuthStateChanged・自社ログインの subscribeSession・
+ * user の変化は、開発用の偽ログインの subscribe・自社ログインの subscribeSession・
  * api.ts の 401 → expireSession の 3 つの道すべてから AuthContext の user に届く。
  * 画面の部品が取りに行く（描いた後の useEffect）より先に消すため、useLayoutEffect を使う。
  */

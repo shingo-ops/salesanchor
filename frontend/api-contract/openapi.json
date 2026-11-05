@@ -1208,6 +1208,78 @@
         "title": "AnnounceResponse",
         "type": "object"
       },
+      "ApplyResultRow": {
+        "properties": {
+          "discord_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Discord Id"
+          },
+          "discord_status": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Discord Status"
+          },
+          "field": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "key",
+          "name",
+          "status"
+        ],
+        "title": "ApplyResultRow",
+        "type": "object"
+      },
       "Approval": {
         "properties": {
           "user_code": {
@@ -8120,6 +8192,11 @@
       },
       "CreateEventBody": {
         "properties": {
+          "add_meet": {
+            "default": false,
+            "title": "Add Meet",
+            "type": "boolean"
+          },
           "calendar_type": {
             "default": "shared",
             "title": "Calendar Type",
@@ -9035,6 +9112,57 @@
         "title": "DecisionBody",
         "type": "object"
       },
+      "DeleteCandidate": {
+        "properties": {
+          "discord_id": {
+            "title": "Discord Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "parent_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Name"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target"
+          }
+        },
+        "required": [
+          "kind",
+          "discord_id"
+        ],
+        "title": "DeleteCandidate",
+        "type": "object"
+      },
       "DeployButtonResponse": {
         "properties": {
           "channel_id": {
@@ -9340,6 +9468,49 @@
         "title": "DiscordConfigUpdate",
         "type": "object"
       },
+      "DiscordOAuthStartRequest": {
+        "properties": {
+          "purpose": {
+            "default": "customer",
+            "enum": [
+              "customer",
+              "own"
+            ],
+            "title": "Purpose",
+            "type": "string"
+          }
+        },
+        "title": "DiscordOAuthStartRequest",
+        "type": "object"
+      },
+      "DiscordOwnConfigResponse": {
+        "properties": {
+          "connected_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Connected At"
+          },
+          "guild_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Guild Id"
+          }
+        },
+        "title": "DiscordOwnConfigResponse",
+        "type": "object"
+      },
       "DiscordTicketConfigResponse": {
         "properties": {
           "large_channel_id": {
@@ -9601,6 +9772,17 @@
           "spreadsheet_id": {
             "title": "Spreadsheet Id",
             "type": "string"
+          },
+          "viewer_account_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Viewer Account Id"
           }
         },
         "required": [
@@ -9613,6 +9795,11 @@
       },
       "DistributionTargetItem": {
         "properties": {
+          "deliverable": {
+            "default": true,
+            "title": "Deliverable",
+            "type": "boolean"
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -9657,6 +9844,28 @@
               }
             ],
             "title": "Name"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "viewer_account_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Viewer Account Id"
           }
         },
         "required": [
@@ -9726,6 +9935,17 @@
               }
             ],
             "title": "Spreadsheet Id"
+          },
+          "viewer_account_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Viewer Account Id"
           }
         },
         "title": "DistributionTargetUpdate",
@@ -23135,6 +23355,115 @@
         "title": "OwnInventoryUpdate",
         "type": "object"
       },
+      "OwnServerApplyRequest": {
+        "properties": {
+          "plan_digest": {
+            "title": "Plan Digest",
+            "type": "string"
+          }
+        },
+        "required": [
+          "plan_digest"
+        ],
+        "title": "OwnServerApplyRequest",
+        "type": "object"
+      },
+      "OwnServerApplyResponse": {
+        "properties": {
+          "blocked_count": {
+            "title": "Blocked Count",
+            "type": "integer"
+          },
+          "failed_count": {
+            "title": "Failed Count",
+            "type": "integer"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/ApplyResultRow"
+            },
+            "title": "Results",
+            "type": "array"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "integer"
+          },
+          "success_count": {
+            "title": "Success Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "run_id",
+          "success_count",
+          "blocked_count",
+          "failed_count",
+          "results"
+        ],
+        "title": "OwnServerApplyResponse",
+        "type": "object"
+      },
+      "OwnServerPlanResponse": {
+        "properties": {
+          "blocked": {
+            "items": {
+              "$ref": "#/components/schemas/PlanRow"
+            },
+            "title": "Blocked",
+            "type": "array"
+          },
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/PlanRow"
+            },
+            "title": "Changes",
+            "type": "array"
+          },
+          "delete_candidates": {
+            "items": {
+              "$ref": "#/components/schemas/DeleteCandidate"
+            },
+            "title": "Delete Candidates",
+            "type": "array"
+          },
+          "plan_digest": {
+            "title": "Plan Digest",
+            "type": "string"
+          }
+        },
+        "required": [
+          "plan_digest",
+          "changes",
+          "blocked",
+          "delete_candidates"
+        ],
+        "title": "OwnServerPlanResponse",
+        "type": "object"
+      },
+      "OwnServerSnapshotResponse": {
+        "properties": {
+          "channel_count": {
+            "title": "Channel Count",
+            "type": "integer"
+          },
+          "role_count": {
+            "title": "Role Count",
+            "type": "integer"
+          },
+          "snapshot_id": {
+            "title": "Snapshot Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "snapshot_id",
+          "role_count",
+          "channel_count"
+        ],
+        "title": "OwnServerSnapshotResponse",
+        "type": "object"
+      },
       "OwnerRosterItem": {
         "properties": {
           "color": {
@@ -25040,6 +25369,73 @@
           "recent_extraction_jobs"
         ],
         "title": "PipelineSummaryResponse",
+        "type": "object"
+      },
+      "PlanRow": {
+        "properties": {
+          "after": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "After"
+          },
+          "before": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Before"
+          },
+          "field": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "kind",
+          "key",
+          "name"
+        ],
+        "title": "PlanRow",
         "type": "object"
       },
       "PostDetailResponse": {
@@ -37708,6 +38104,17 @@
       },
       "UpdateEventBody": {
         "properties": {
+          "add_meet": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Add Meet"
+          },
           "calendar_type": {
             "anyOf": [
               {
@@ -37855,7 +38262,7 @@
         "type": "object"
       },
       "UserRegister": {
-        "description": "ユーザー登録リクエスト\n\nemail は EmailStr ではなく簡易バリデーション（validate_email_loose）を使う。\n.local 等のRFC予約TLDも識別子として許容するため。実在性チェックは\n上流のFirebase Auth側で担保される。パスワードは受け取らない\n（初回設定メールのリンクから本人が決める。ADR-1013 便4a）。",
+        "description": "ユーザー登録リクエスト\n\nemail は EmailStr ではなく簡易バリデーション（validate_email_loose）を使う。\n.local 等のRFC予約TLDも識別子として許容するため。実在性チェックは\n初回設定メールが届くことで担保される。パスワードは受け取らない\n（初回設定メールのリンクから本人が決める。ADR-1013 便4a）。",
         "properties": {
           "email": {
             "maxLength": 255,
@@ -38226,6 +38633,264 @@
           "items"
         ],
         "title": "ViewerAdminListResponse",
+        "type": "object"
+      },
+      "ViewerBillingFormOpenRequest": {
+        "properties": {
+          "token": {
+            "description": "請求先フォームのリンクに入っている鍵",
+            "maxLength": 256,
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token"
+        ],
+        "title": "ViewerBillingFormOpenRequest",
+        "type": "object"
+      },
+      "ViewerBillingFormSendResponse": {
+        "description": "請求先フォームを送った結果。",
+        "properties": {
+          "expires_at": {
+            "description": "リンクの期限",
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "mail_queued": {
+            "description": "メールの送信を手配したか",
+            "title": "Mail Queued",
+            "type": "boolean"
+          },
+          "room_notice": {
+            "description": "部屋への送信結果",
+            "enum": [
+              "sent",
+              "failed",
+              "no_room"
+            ],
+            "title": "Room Notice",
+            "type": "string"
+          },
+          "room_notice_text": {
+            "description": "部屋へ送ろうとした文（リンクを含む。super admin だけが見る）",
+            "title": "Room Notice Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "room_notice",
+          "room_notice_text",
+          "mail_queued",
+          "expires_at"
+        ],
+        "title": "ViewerBillingFormSendResponse",
+        "type": "object"
+      },
+      "ViewerBillingFormSubmitRequest": {
+        "properties": {
+          "address": {
+            "description": "住所（前後の空白を除いて1〜200文字）",
+            "maxLength": 400,
+            "title": "Address",
+            "type": "string"
+          },
+          "bill_to_name": {
+            "description": "請求書の宛名（前後の空白を除いて1〜100文字）",
+            "maxLength": 200,
+            "title": "Bill To Name",
+            "type": "string"
+          },
+          "contact_name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "担当者名（1〜50文字。会社のときは必須）",
+            "title": "Contact Name"
+          },
+          "invoice_email": {
+            "anyOf": [
+              {
+                "maxLength": 254,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "請求書の送り先メール（任意）",
+            "title": "Invoice Email"
+          },
+          "party_type": {
+            "description": "company＝会社／individual＝個人",
+            "maxLength": 20,
+            "title": "Party Type",
+            "type": "string"
+          },
+          "phone": {
+            "description": "電話番号（ハイフン・空白を外して数字10〜11桁）",
+            "maxLength": 30,
+            "title": "Phone",
+            "type": "string"
+          },
+          "postal_code": {
+            "description": "郵便番号（ハイフン・空白を外して数字7桁）",
+            "maxLength": 30,
+            "title": "Postal Code",
+            "type": "string"
+          },
+          "token": {
+            "description": "請求先フォームのリンクに入っている鍵",
+            "maxLength": 256,
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "party_type",
+          "bill_to_name",
+          "postal_code",
+          "address",
+          "phone"
+        ],
+        "title": "ViewerBillingFormSubmitRequest",
+        "type": "object"
+      },
+      "ViewerBillingFormValues": {
+        "properties": {
+          "address": {
+            "default": "",
+            "description": "住所",
+            "title": "Address",
+            "type": "string"
+          },
+          "bill_to_name": {
+            "default": "",
+            "description": "請求書の宛名",
+            "title": "Bill To Name",
+            "type": "string"
+          },
+          "contact_name": {
+            "default": "",
+            "description": "担当者名",
+            "title": "Contact Name",
+            "type": "string"
+          },
+          "invoice_email": {
+            "default": "",
+            "description": "請求書の送り先メール",
+            "title": "Invoice Email",
+            "type": "string"
+          },
+          "party_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "company／individual。まだ無ければ null",
+            "title": "Party Type"
+          },
+          "phone": {
+            "default": "",
+            "description": "電話番号（数字）",
+            "title": "Phone",
+            "type": "string"
+          },
+          "postal_code": {
+            "default": "",
+            "description": "郵便番号（数字7桁）",
+            "title": "Postal Code",
+            "type": "string"
+          }
+        },
+        "title": "ViewerBillingFormValues",
+        "type": "object"
+      },
+      "ViewerBillingProfileResponse": {
+        "description": "お客さんが書いた請求先（管理画面の表示用）。",
+        "properties": {
+          "address": {
+            "description": "住所",
+            "title": "Address",
+            "type": "string"
+          },
+          "bill_to_name": {
+            "description": "請求書の宛名",
+            "title": "Bill To Name",
+            "type": "string"
+          },
+          "contact_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "担当者名",
+            "title": "Contact Name"
+          },
+          "invoice_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "請求書の送り先メール",
+            "title": "Invoice Email"
+          },
+          "party_type": {
+            "description": "company＝会社／individual＝個人",
+            "enum": [
+              "company",
+              "individual"
+            ],
+            "title": "Party Type",
+            "type": "string"
+          },
+          "phone": {
+            "description": "電話番号（数字10〜11桁）",
+            "title": "Phone",
+            "type": "string"
+          },
+          "postal_code": {
+            "description": "郵便番号（数字7桁）",
+            "title": "Postal Code",
+            "type": "string"
+          },
+          "updated_at": {
+            "description": "最後に保存した時刻",
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "party_type",
+          "bill_to_name",
+          "postal_code",
+          "address",
+          "phone",
+          "updated_at"
+        ],
+        "title": "ViewerBillingProfileResponse",
         "type": "object"
       },
       "ViewerLoginItem": {
@@ -39568,6 +40233,51 @@
         ]
       }
     },
+    "/api/v1/admin/discord-config/own": {
+      "delete": {
+        "description": "自社用サーバーの登録を外す（own の行だけ消す。顧客用の行と Discord のサーバーそのものは消えない）。",
+        "operationId": "delete_discord_own_config_api_v1_admin_discord_config_own_delete",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Discord Own Config",
+        "tags": [
+          "discord"
+        ]
+      },
+      "get": {
+        "description": "自社用サーバーの登録を取得する。未登録なら guild_id=None。",
+        "operationId": "get_discord_own_config_api_v1_admin_discord_config_own_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiscordOwnConfigResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Discord Own Config",
+        "tags": [
+          "discord"
+        ]
+      }
+    },
     "/api/v1/admin/discord-ticket-config": {
       "get": {
         "description": "チケット機能設定を取得する。未設定の場合はデフォルト値を返す。",
@@ -39689,6 +40399,107 @@
           }
         ],
         "summary": "Run Auto Setup",
+        "tags": [
+          "discord"
+        ]
+      }
+    },
+    "/api/v1/admin/discord/own-server/apply": {
+      "post": {
+        "description": "確認した差を自社用サーバーに反映する。作る・変えるだけで、消さない。",
+        "operationId": "apply_own_server_plan_api_v1_admin_discord_own_server_apply_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OwnServerApplyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnServerApplyResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Apply Own Server Plan",
+        "tags": [
+          "discord"
+        ]
+      }
+    },
+    "/api/v1/admin/discord/own-server/plan": {
+      "get": {
+        "description": "設計図と今の自社用サーバーを比べて、差を返す。読むだけ（DB にも Discord にも書かない）。",
+        "operationId": "check_own_server_plan_api_v1_admin_discord_own_server_plan_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnServerPlanResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Check Own Server Plan",
+        "tags": [
+          "discord"
+        ]
+      }
+    },
+    "/api/v1/admin/discord/own-server/snapshot": {
+      "post": {
+        "description": "自社用サーバーのロールとチャンネルを読み、記録に 1 行入れる。",
+        "operationId": "take_own_server_snapshot_api_v1_admin_discord_own_server_snapshot_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnServerSnapshotResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Take Own Server Snapshot",
         "tags": [
           "discord"
         ]
@@ -41320,7 +42131,7 @@
     },
     "/api/v1/auth/logout": {
       "post": {
-        "description": "ログアウトAPI。\nトークンをブラックリストに追加し、以降の利用を拒否する。\nFirebase IDトークンの残存有効期限（最大1時間）をTTLとする。\n自社ログインの更新用トークン（Cookie）があれば失効させ、Cookie を消す。",
+        "description": "ログアウトAPI。\nトークンをブラックリストに追加し、以降の利用を拒否する。\nアクセストークンの残存有効期限より長い 1 時間を TTL とする。\n自社ログインの更新用トークン（Cookie）があれば失効させ、Cookie を消す。",
         "operationId": "logout_api_v1_auth_logout_post",
         "responses": {
           "200": {
@@ -41667,7 +42478,7 @@
     },
     "/api/v1/auth/password-reset/request": {
       "post": {
-        "description": "再設定メールの申請。存在・停止・許可外の区別を応答に出さない（常に 200）。",
+        "description": "再設定メールの申請。存在・停止の区別を応答に出さない（常に 200）。",
         "operationId": "password_reset_request_api_v1_auth_password_reset_request_post",
         "requestBody": {
           "content": {
@@ -41947,7 +42758,7 @@
     },
     "/api/v1/auth/register": {
       "post": {
-        "description": "ユーザー登録API（super admin のみ実行可能）。\n\nフロー:\n  ① Origin と super admin 権限を確認\n  ② tenant_codeからテナントを検索\n  ③ 同じメールアドレスのユーザーがいないか確認（いれば409）\n  ④ usersテーブルにユーザーを作成（パスワードは NULL）\n  ⑤ AUTH_PROVIDER=self のとき、初回設定の鍵（purpose=invite・72時間）を作り、\n     commit の後に初回設定メールを送る（firebase の間は鍵もメールも作らない）\n\n注意:\n  - パスワードは本人が初回設定メールのリンクから決める（ADR-1013 便4a）。",
+        "description": "ユーザー登録API（super admin のみ実行可能）。\n\nフロー:\n  ① Origin と super admin 権限を確認\n  ② tenant_codeからテナントを検索\n  ③ 同じメールアドレスのユーザーがいないか確認（いれば409）\n  ④ usersテーブルにユーザーを作成（パスワードは NULL）\n  ⑤ 初回設定の鍵（purpose=invite・72時間）を作り、\n     commit の後に初回設定メールを送る\n\n注意:\n  - パスワードは本人が初回設定メールのリンクから決める（ADR-1013 便4a）。",
         "operationId": "register_user_api_v1_auth_register_post",
         "requestBody": {
           "content": {
@@ -45861,6 +46672,23 @@
       "post": {
         "description": "Discord Bot Invite URL を発行し、state を Redis に保存する。",
         "operationId": "discord_oauth_start_api_v1_discord_oauth_start_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/DiscordOAuthStartRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "content": {
@@ -45872,6 +46700,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "security": [
@@ -58537,7 +59375,7 @@
     },
     "/api/v1/staff/me": {
       "get": {
-        "description": "現在ログイン中ユーザの staff レコードを返す。\n\nロジック:\n  current_user.id（users.id）と staff.user_id の一致で staff を引く（ADR-1008）。\n  見つからなければ 404 を返す。\n\n実装メモ:\n  当初は firebase_uid 経路を主、email を fallback として設計したが、\n  `User` モデル（app/models.py）に `firebase_uid` カラムが無いため\n  `getattr(current_user, \"firebase_uid\", None)` は常に None を返し、\n  firebase_uid 経路は dead code になっていた（PR #166 review F1）。\n  `User` モデル側に firebase_uid を追加する改修は本 PR スコープ外のため、\n  経路を削除して email 一意路線に揃え、決定性は `ORDER BY` で確保する。\n  将来 `users.firebase_uid` を実装する場合は別 PR でこのエンドポイントに\n  経路を再導入する（その際は `ORDER BY` も維持）。\n\nアクセス制御:\n  自分の情報を取得する API なので staff.view 権限は不要。\n  get_current_user / get_current_tenant のみで十分。\n  （B-1 軽量スコープ: ui_preferences 反映のため全ユーザがアクセスできる必要がある）",
+        "description": "現在ログイン中ユーザの staff レコードを返す。\n\nロジック:\n  current_user.id（users.id）と staff.user_id の一致で staff を引く（ADR-1008）。\n  見つからなければ 404 を返す。\n\n実装メモ:\n  staff は users.id と staff.user_id の一致だけで引く（ADR-1008）。\n  決定性は `ORDER BY` で確保する。\n\nアクセス制御:\n  自分の情報を取得する API なので staff.view 権限は不要。\n  get_current_user / get_current_tenant のみで十分。\n  （B-1 軽量スコープ: ui_preferences 反映のため全ユーザがアクセスできる必要がある）",
         "operationId": "get_my_staff_api_v1_staff_me_get",
         "responses": {
           "200": {
@@ -67478,6 +68316,61 @@
         ]
       }
     },
+    "/api/v1/super-admin/viewers/{viewer_id}/billing-profile": {
+      "get": {
+        "operationId": "get_billing_profile_endpoint_api_v1_super_admin_viewers__viewer_id__billing_profile_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "viewer_id",
+            "required": true,
+            "schema": {
+              "title": "Viewer Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ViewerBillingProfileResponse"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Get Billing Profile Endpoint Api V1 Super Admin Viewers  Viewer Id  Billing Profile Get"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Billing Profile Endpoint",
+        "tags": [
+          "super-admin"
+        ]
+      }
+    },
     "/api/v1/super-admin/viewers/{viewer_id}/extend": {
       "post": {
         "operationId": "extend_endpoint_api_v1_super_admin_viewers__viewer_id__extend_post",
@@ -67624,6 +68517,53 @@
           }
         ],
         "summary": "Reissue Signup Code Endpoint",
+        "tags": [
+          "super-admin"
+        ]
+      }
+    },
+    "/api/v1/super-admin/viewers/{viewer_id}/send-billing-form": {
+      "post": {
+        "operationId": "send_billing_form_endpoint_api_v1_super_admin_viewers__viewer_id__send_billing_form_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "viewer_id",
+            "required": true,
+            "schema": {
+              "title": "Viewer Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViewerBillingFormSendResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Send Billing Form Endpoint",
         "tags": [
           "super-admin"
         ]
@@ -73576,6 +74516,88 @@
         "summary": "Set User Roles",
         "tags": [
           "roles"
+        ]
+      }
+    },
+    "/api/v1/viewer/billing-form/open": {
+      "post": {
+        "description": "鍵を使い切らずに確かめ、今の請求先（無ければ空）を返す。無効の理由は分けない（全部 400）。",
+        "operationId": "viewer_billing_form_open_api_v1_viewer_billing_form_open_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ViewerBillingFormOpenRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViewerBillingFormValues"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Viewer Billing Form Open",
+        "tags": [
+          "viewer"
+        ]
+      }
+    },
+    "/api/v1/viewer/billing-form/submit": {
+      "post": {
+        "description": "請求先を保存する。保存できたときだけ鍵が使い切られる（失敗したら同じリンクで送り直せる）。",
+        "operationId": "viewer_billing_form_submit_api_v1_viewer_billing_form_submit_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ViewerBillingFormSubmitRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Viewer Billing Form Submit",
+        "tags": [
+          "viewer"
         ]
       }
     },

@@ -52,11 +52,9 @@ _AUDIT = sa.table("audit_logs", sa.column("id"), sa.column("user_id"))
 
 @pytest.fixture(autouse=True)
 def reset_env(monkeypatch):
-    monkeypatch.setenv("AUTH_PROVIDER", "firebase")
     monkeypatch.delenv("AUTH_JWT_SECRET", raising=False)
     monkeypatch.delenv("AUTH_JWT_SECRET_PREVIOUS", raising=False)
     monkeypatch.delenv("AUTH_RP_ORIGIN", raising=False)
-    monkeypatch.setenv("AUTH_PASSWORD_RESET_ALLOWLIST", EMAIL)
 
 
 @pytest.fixture(autouse=True)
@@ -167,7 +165,7 @@ async def _confirm(http, token, password=NEW_PASSWORD, origin=ORIGIN):
 
 # ── request ──────────────────────────────────────────────────
 
-async def test_request_allowlisted_active_user_sends(http, db_session, sender):
+async def test_request_active_user_sends(http, db_session, sender):
     await _insert_user(db_session)
     resp = await _request(http)
     assert resp.status_code == 200
@@ -184,41 +182,14 @@ async def test_request_allowlisted_active_user_sends(http, db_session, sender):
     assert url.startswith("https://app.salesanchor.jp/reset-password?token=")
 
 
-async def test_request_empty_allowlist_firebase_sends_nothing(http, db_session, sender, monkeypatch):
-    monkeypatch.setenv("AUTH_PASSWORD_RESET_ALLOWLIST", "")
-    await _insert_user(db_session)
-    resp = await _request(http)
-    assert resp.status_code == 200 and resp.json() == {"status": "accepted"}
-    assert await _scalar(db_session, "SELECT COUNT(*) FROM password_reset_tokens WHERE user_id = :u", u=USER_ID) == 0
-    sender.assert_not_called()
-
-
-async def test_request_unset_allowlist_sends_nothing(http, db_session, sender, monkeypatch):
-    monkeypatch.delenv("AUTH_PASSWORD_RESET_ALLOWLIST", raising=False)
-    await _insert_user(db_session)
-    resp = await _request(http)
-    assert resp.status_code == 200
-    sender.assert_not_called()
-
-
 async def test_request_unknown_and_inactive_get_same_response(http, db_session, sender):
     await _insert_user(db_session, is_active=False)
-    ok = await _request(http)  # 許可リストに載っているが is_active=false
+    ok = await _request(http)  # 利用者はいるが is_active=false
     unknown = await _request(http, email="nobody@example.com")
     assert ok.status_code == unknown.status_code == 200
     assert ok.json() == unknown.json() == {"status": "accepted"}
     assert await _scalar(db_session, "SELECT COUNT(*) FROM password_reset_tokens") == 0
     sender.assert_not_called()
-
-
-async def test_request_self_provider_sends_without_allowlist(http, db_session, sender, monkeypatch):
-    monkeypatch.setenv("AUTH_PROVIDER", "self")
-    monkeypatch.setenv("AUTH_JWT_SECRET", "test-secret-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
-    monkeypatch.setenv("AUTH_PASSWORD_RESET_ALLOWLIST", "")
-    await _insert_user(db_session)
-    resp = await _request(http)
-    assert resp.status_code == 200
-    sender.assert_called_once()
 
 
 async def test_request_fourth_is_429_even_for_unknown_email(http, db_session, sender):
@@ -334,9 +305,9 @@ async def test_confirm_rate_limited_is_429(http, db_session):
     assert resp.status_code == 429
 
 
-# ── 本番設定のまま（firebase・秘密なし）でも 404 にならない ─────────
+# ── 秘密が無くても 404 にならない ─────────
 
-async def test_endpoints_not_404_with_firebase_and_no_secret(http, db_session, sender):
+async def test_endpoints_not_404_without_secret(http, db_session, sender):
     assert self_tokens.is_issuance_enabled() is False
     assert (await _request(http)).status_code == 200
     assert (await _confirm(http, "x")).status_code == 400

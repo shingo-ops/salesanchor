@@ -85,6 +85,34 @@ class TestT2RetriesExhausted:
         assert detail["raw"].endswith("(HTTP 503)")
 
 
+class TestT12ReasonRecorded:
+    """ADR-1062: 場所の断りを包んだ例外でも、記録の reason に元の理由が入る。"""
+
+    def test_wrapped_location_refusal_records_reason(self):
+        from google.genai import errors as genai_errors
+
+        from app.services import gemini_extraction_svc
+
+        api_err = genai_errors.APIError(
+            400,
+            {"error": {"code": 400, "status": "FAILED_PRECONDITION",
+                       "message": "User location is not supported for the API use."}},
+        )
+        try:
+            raise RuntimeError(
+                f"Gemini v8 API 呼び出し失敗: {gemini_extraction_svc._safe_error_message(api_err)}"
+            ) from api_err
+        except RuntimeError as wrapped:
+            exc = wrapped
+        env = _Env([exc])
+        with pytest.raises(RecordError):
+            env.run()
+        env.recorder.record_error_detail.assert_called_once()
+        detail = env.recorder.record_error_detail.call_args.args[0]
+        assert detail["reason"] == "400 FAILED_PRECONDITION: User location is not supported for the API use."
+        assert detail["raw"].endswith("(HTTP 400)")
+
+
 class TestT3NotRetried:
     @pytest.mark.parametrize(
         "exc",
