@@ -132,7 +132,7 @@
 - Meta の受信: `backend/app/routers/webhook.py:938-947` が `meta_message_received` を送る。メンションなし
 - Discord のお客さんの部屋: `backend/app/discord_gateway/ticket_channel_writer.py:246-257`（:246 で保存、:248 で commit、:250-257 で重なりなら戻る。新しい行のときだけ :259 から先へ進む）。部屋の外は `:186-196` で outside_ticket_notice
 - Discord の DM: `backend/app/discord_gateway/dm_writer.py:219-252`（:219 で保存結果、:231 の `msg_row is not None` のときだけ会話の記録を書き、:252 で commit）
-- 配信の失敗: テナント 4 に固定（`backend/app/services/tcg_distribution_svc.py:1159`、`backend/app/services/viewer_inventory_cache.py:64`）。管理側の送り先 `ADMIN_NOTIFICATION_DISCORD_WEBHOOK`（`backend/app/services/discord_notifier.py:40-42`）
+- 配信の失敗: テナント 4 に固定（`backend/app/services/tcg_distribution_svc.py:1159`、`backend/app/tasks/viewer_inventory_cache.py:63`）。管理側の送り先 `ADMIN_NOTIFICATION_DISCORD_WEBHOOK`（`backend/app/services/discord_notifier.py:40-42`）
 
 ### R2-6 Discord 公式仕様（Context7 は月の上限で使えず、docs.discord.com を直接読んだ・2026-11-05）
 - Add Guild Member Role `PUT /guilds/{guild.id}/members/{user.id}/roles/{role.id}`、Remove `DELETE` 同じ道。どちらも MANAGE_ROLES
@@ -144,6 +144,13 @@
 - @everyone の VIEW_CHANNEL を拒む部屋に `"@bot"` の許可が無いと検査で止まる（`backend/app/services/discord_blueprint.py:167-168` の bot_sees）
 - 反映は Discord への送信の行だけを扱い、DB には書かない（`backend/app/services/discord_blueprint_apply.py:72` `apply_plan`、:79 で送り方を絞る）
 
+### R2-6c 辞めたときに使う実物（PO 決定 2026-11-05 のあとで追加）
+- スタッフを消す画面には今も確認の窓がある（`frontend/src/pages/staff/StaffPage.tsx:377-385` の `ConfirmModal`、message に `common.irreversible`）。部品は `frontend/src/components/ConfirmModal.tsx`
+- スタッフの番号はテナント内で 1 つだけ（`migrations/019_create_staff_tables.sql:55` の UNIQUE (tenant_id, discord_user_id)）
+- スタッフの書く所: POST `backend/app/routers/staff.py:582`、PATCH :665、DELETE :741（DELETE 文 :755）
+- Bot には Kick Members が付与済み（`backend/app/routers/discord_oauth.py:63`）。顧客を外す今の機能は `backend/app/routers/discord_remove.py:141`（顧客用サーバーあて・監査の記録 :174-179）
+- Discord 公式（github.com/discord/discord-api-docs `developers/resources/guild.mdx`、2026-11-05 に Opus が直接読んだ。Context7 は月の上限で使えなかった）: Remove Guild Member＝`DELETE /guilds/{guild.id}/members/{user.id}`、KICK_MEMBERS が要る。List Guild Members は GUILD_MEMBERS 特権インテントが要る。Get Guild Member にその注記は無い
+
 ### R2-7 未確認
-- 【未確認】Create Webhook の権限は（List Guild Members は案B で使わなくなった）、第2段の審査（クラウド）では docs.discord.com に届かず照合できなかった。便2b・便2c のカードで、実装役の最初の作業として試験サーバーへの実際の呼び出しで確かめる（通らなければその便を止める）
+- 【未確認】Create Webhook の権限と、Kick が Bot のロールの順番に縛られるかは（List Guild Members は案B で使わなくなった）、第2段の審査（クラウド）では docs.discord.com に届かず照合できなかった。便2b・便2c のカードで、実装役の最初の作業として試験サーバーへの実際の呼び出しで確かめる（通らなければその便を止める）
 - 【未確認】テナント001 の自社用テストサーバーで、Bot のロールの順番が新しく作るロールより上にあるか（新しいロールは下に作られるため通常は上。試験で確かめる）

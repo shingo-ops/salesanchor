@@ -333,9 +333,9 @@
 
 ---
 
-# 第2段 設計案（2026-11-05・Fable 審査 REVISE を反映・PO 承認待ち）
+# 第2段 設計案（2026-11-05・Fable 審査 REVISE 2 回を反映・PO 承認待ち）
 
-根拠: recon の「第2段 recon」（R2-1〜R2-7）。要件: `docs/specs/discord-server-management/ideal-state.md` 2026-11-05 節。KGI: `docs/specs/discord-server-management/kgi.md` 第2段 8〜15。
+根拠: recon の「第2段 recon」（R2-1〜R2-7）。要件: `docs/specs/discord-server-management/ideal-state.md` 2026-11-05 節。KGI: `docs/specs/discord-server-management/kgi.md` 第2段 8〜16。
 
 ## S2-1 目的（PO の言葉から）
 自社サーバーのロールと知らせを、人が Discord で直さずアプリの登録どおりに保つ。アプリの役割を変えれば Discord のロールが付け外しされ、担当決定・お客さんの返信・部屋の外の書き込みが決まった部屋に担当者のメンションつきで届く。
@@ -343,6 +343,7 @@
 ## S2-2 対象と対象外
 - 対象: 自社用サーバー（purpose='own'）だけ。顧客用サーバーの今の動き（`backend/app/services/discord_role_sync.py` の規模ロール・auto-setup・部屋の外の通知の中身）は変えない
 - 対象外: アプリに登録していない人のロール全部（アプリの役割と同じ名前のロールでも）。Bot は触らない。Discord での手の操作は各社の責任（PO 決定 2026-11-05「2」）
+- 対象: アプリで消したスタッフ（辞めた人）。Bot が管理するロールを外し、自社サーバーから外す（PO 決定 2026-11-05「1」「1,消したときだけ外す」＝D2-7）。消したあとのこの扱いは「登録していない人」の対象外より先に決めた例外で、消した時点の番号 1 つだけに行う
 - 対象外: 配信の失敗の知らせを管理側へ移す直し（別テーマ。R2-5）
 
 ## S2-3 決めた作り（代替案と選んだ理由）
@@ -373,24 +374,28 @@
   1. 欲しい姿 = 状態が active で discord_user_id のあるスタッフごとに、user_roles（staff.user_id = user_roles.user_id）の役割の discord_role_id ＋「スタッフ」
   2. Bot が管理するロール = そのテナントの roles.discord_role_id の全部 ＋ discord_retired_roles の番号の全部 ＋「スタッフ」の番号
      - 「スタッフ」の番号の引き方: 会社の設計図（`blueprint_path(tenant_id)`）のロール「スタッフ」の discord_id。まだ書き足されていなければ、Discord のロール一覧から同じ名前を探す（1 件ならそれ、0 件・2 件以上なら点検を止めて記録に理由を残す）。第1段 4-8 の見分け方と同じ（Fable 審査 N6）
-  3. 見る相手は「アプリに登録したスタッフ（discord_user_id のある人。状態を問わない）」と「discord_retired_members の人」だけ（PO 決定 2026-11-05「2」＝案B）。1 人ずつ Get Guild Member（`GET /guilds/{g}/members/{u}`）で今のロールを読む。サーバーにいなければ（404）飛ばす
+  3. 見る相手は「アプリに登録したスタッフ（discord_user_id のある人。状態を問わない）」と「discord_retired_members の人」だけ（PO 決定 2026-11-05「2」＝案B、と辞めたときの決定＝D2-7）。1 人ずつ Get Guild Member（`GET /guilds/{g}/members/{u}`）で今のロールを読む。サーバーにいなければ（404）飛ばす
+     - 先に片付け: discord_retired_members の番号が今の staff にもある（同じ人を登録し直した）なら、その行を消して staff として扱う（staff の discord_user_id はテナント内で 1 つだけ＝`migrations/019_create_staff_tables.sql:55`）
      - 状態が active の人: 手順1 の欲しい姿と、管理するロールだけを比べる。足りなければ PUT、余れば DELETE
-     - 状態が active でない人（inactive・pending）: 管理するロールを全部外す
-     - discord_retired_members の人: 管理するロールを全部外し、外し終えたら（または 404 なら）その行を消す
+     - 状態が active でない人（inactive・pending）: 管理するロールを全部外す。サーバーからは外さない
+     - discord_retired_members の人: 管理するロールを全部外す。kick が true の行（消したスタッフ）は、続けて自社サーバーから外す（D2-7）。終えたら（または 404 なら）その行を消す
      - 管理していないロール（手作りのロール）は見ない＝KGI-10
   4. アプリに登録していない人には何もしない。全員の一覧（List Guild Members）は読まない。アプリの役割と同じ名前のロールを手で付けられていても外さない（PO 決定「Discordのサーバー先で手動操作を行うのはそのテナントごとの責任なのでそこは関与しなくて良い」）
-     - スタッフを消すとき（`backend/app/routers/staff.py:755`）と、スタッフの discord_user_id を変えるとき（PATCH）は、同じ commit で元の discord_user_id を `{schema}.discord_retired_members`（discord_user_id TEXT PRIMARY KEY、retired_at）に入れる。行が消えたあとも、次の点検でその人から管理するロールを外せる
+     - スタッフを消すとき（`backend/app/routers/staff.py:755` の DELETE と同じ commit。commit は :761）と、スタッフの discord_user_id を変えるとき（`backend/app/routers/staff.py:665` の PATCH で、元の値があり新しい値と違うとき）は、同じ commit で元の discord_user_id を `{schema}.discord_retired_members`（discord_user_id TEXT PRIMARY KEY、kick BOOLEAN NOT NULL、retired_at）に入れる。消すときは kick=true、番号を変えるときは kick=false。行が消えたあとも、次の点検でその人を扱える
+     - 同じ番号が 2 度入るとき（Fable 審査 N11）: `INSERT ... ON CONFLICT (discord_user_id) DO UPDATE SET retired_at = now(), kick = {schema}.discord_retired_members.kick OR EXCLUDED.kick`。staff の DELETE が重なりで失敗しない。一度 kick=true になった行は false に戻さない
      - 消した役割の番号（discord_retired_roles）も、見る相手からだけ外す。登録していない人に付いていても外さない
      - 1 回の点検で送る GET はスタッフの人数分。回数制限は discord_rest の待ちに任せる（R2-3）
 - 送り方: 先例と同じ `backend/app/services/discord_rest.py` の `discord_api_request` を使う（R2-3。429 の待ち・再試行を持つ）
-- いつ動くか: (a) 役割を書く所（`backend/app/routers/roles.py` PUT/DELETE、`backend/app/services/role_assignment.py`、`backend/app/routers/staff.py` の POST/PATCH/DELETE）の commit のあとに `asyncio.create_task` で（先例 `backend/app/routers/leads.py:728` と同じ）。(b) Celery の定期作業で 5 分ごとに全テナントの自社サーバー分（取りこぼし・あとからサーバーに入った人の分）＝KGI-9 の「5 分以内」
+- いつ動くか: (a) 役割を書く所（`backend/app/routers/roles.py` PUT/DELETE、`backend/app/services/role_assignment.py`、`backend/app/routers/staff.py` の POST:582/PATCH:665/DELETE:741）の commit のあとに `asyncio.create_task` で（先例 `backend/app/routers/leads.py:728` と同じ）。(b) Celery の定期作業で 5 分ごとに全テナントの自社サーバー分（取りこぼし・あとからサーバーに入った人の分）＝KGI-9・KGI-16 の「5 分以内」
+  - 利用者を作るときの既定の役割（`backend/app/routers/auth.py:156` の user_roles への INSERT。`/register`＝:62 の中）は (a) に入れず、(b) の定期で拾う（Fable 審査 N14）
 - 同時に 2 本走らないよう、テナントごとに Redis の短い鍵で 1 本にする
-- DELETE の範囲: この処理の `/guilds/{g}/members/{u}/roles/{r}` だけ。設計図の反映（`_ALLOWED_METHODS`）には DELETE を足さない。チャンネル・ロールそのものは今までどおり消さない
+- DELETE の範囲: この処理の `/guilds/{g}/members/{u}/roles/{r}`（ロールを外す）と、D2-7 の `/guilds/{g}/members/{u}`（自社サーバーから外す。kick=true の行だけ）の 2 つだけ。設計図の反映（`_ALLOWED_METHODS`＝`backend/app/services/discord_blueprint_apply.py:17`）には DELETE を足さない。チャンネル・ロールそのものは今までどおり消さない
 - 代替案: 書いたときだけ送る → スタッフの削除やサーバーへの後からの参加を取りこぼす。点検型は先例よりも 1 段強い
 
 ### D2-4 知らせの部屋と送り先のつなぎを自動で作る
 - 設計図ファイルに「アサイン連絡」「返信連絡」「部屋の外の書き込み」の 3 チャンネルを書く（D2-2 の見せ方つき）
 - 反映で部屋を作ったあと（またはつなぎが無い部屋に）、Bot が webhook を 1 本作り（`POST /channels/{id}/webhooks`、Manage Webhooks は付与済み＝ADR-091:76）、`{schema}.notification_channels` に行を作る
+- 部屋の Discord の番号の引き方（Fable 審査 N12）: 反映の直後は、その反映の結果の discord_id（`backend/app/services/discord_blueprint_apply.py:104`）。以後は、設計図に書き足された discord_id。まだ書き足されていなければ、Discord のチャンネル一覧から同じ名前の文字のチャンネルを探す（1 件ならそれ、0 件・2 件以上なら作らずに確認画面に理由を出す）。D2-3 手順2 の「スタッフ」と同じ見分け方
 - `notification_channels` に `blueprint_key TEXT NULL`（設計図の部屋の key。例 `assign_notice`）を足し、部分一意索引で 1 部屋 1 行にする（二重作成の防止）。部屋の Discord の番号は設計図（とその番号の書き足し）だけに持ち、notification_channels には持たない（Fable 審査 N7。番号の二重持ちを避ける）。event_types は部屋ごとに固定: アサイン連絡=lead_assigned、返信連絡=customer_reply_received、部屋の外=discord_outside_ticket_post
 - 今ある手で作った行は触らない（blueprint_key が NULL の行）。同じ種類が手作りの行にもあれば 2 か所に届くので、確認画面に「同じ種類の知らせの送り先がほかにもある」と出す
 - webhook_url は今の列のまま平文（R2-5。今の画面から入れる行も平文）。暗号化は今の仕組み全体の直しとして別に扱う（残るリスクに書く）
@@ -408,19 +413,30 @@
 - サーバーの番号はいつも `public.tenant_discord_config` の tenant_id と purpose='own' から引く（1 社 1 行＝R2-4）。役割・スタッフ・知らせは各社のスキーマから読む
 - 自動の試験で 2 社分のデータを置き、1 社の役割を変えても、もう 1 社のサーバー宛ての送信が 0 件であることを確かめる＝KGI-10c
 
+### D2-7 辞めたとき（アプリでスタッフを消したとき）
+- 根拠: PO 決定 2026-11-05（ideal-state.md「辞めたときの要件」）。消した＝辞めた。無効・番号の変更では外さない
+- 画面: スタッフを消すと、今も確認の窓が出る（`frontend/src/pages/staff/StaffPage.tsx:377-385` の `ConfirmModal`、「この操作は取り消せません。」＝`common.irreversible`）。この窓の message に、消す相手に discord_user_id があるときだけ 1 行足す: 「Discord の自社サーバーからも外れます。」（新しい鍵 `staff.deleteDiscordKickNote` を ja.json・en.json の両方に足す＝ADR-027。部品は今の ConfirmModal のまま。新しい部品・色の直書きは足さない＝ADR-144）。discord_user_id は今の一覧の応答に入っている（`backend/app/routers/staff.py:120`）
+- サーバー側: D2-3 のとおり、消すときに discord_retired_members に kick=true で 1 行入れる。次の点検（消したあとの create_task か 5 分ごと）で、管理するロールを外してから `DELETE /guilds/{own}/members/{u}`（Discord 公式: Remove Guild Member、KICK_MEMBERS が要る。Bot には付与済み＝`backend/app/routers/discord_oauth.py:63`）
+  - 送り先は D2-6 の自社サーバー（purpose='own'）だけ。顧客用サーバーには送らない（今の顧客を外す機能 `backend/app/routers/discord_remove.py:141` とは別の処理で、そちらは変えない）
+  - 監査の記録に 1 行残す（先例 `backend/app/routers/discord_remove.py:174-179` の action="delete"・table_name="discord_guild_member" と同じ形。record_id はスタッフの id）
+  - 外せなかったとき（403 など）: 点検の記録に理由を残し、行は消す（同じ人に何度も送らない）。ロールは先に外し終えている。サーバーの持ち主は Discord が外させない
+  - 404（もうサーバーにいない）は外し済みとして行を消す
+- 代替案: 消すボタンの処理の中で Discord に直接送る → Discord が落ちていると消す操作ごと失敗するか、外し漏れが残る。点検で送れば 5 分ごとに取り返せるので不採用
+
 ## S2-4 変更前と変更後（利用者に見えること）
 | | 今 | 変えたあと |
 |---|---|---|
 | 自社サーバーのロール | 人が手で作る | アプリの役割と同じロールを Bot が作り、名前と色も合わせる |
 | スタッフへのロール | 人が手で付ける | アプリの役割どおりに 5 分以内に付け外し |
+| 辞めた人 | 人が手で外す | アプリで消すと確認の窓に「Discord の自社サーバーからも外れます」と出て、5 分以内に自社サーバーから外れる |
 | 知らせの部屋 | 人が作り、webhook を画面に貼る | 設計図から作られ、つなぎも自動 |
 | お客さんの返信 | Meta だけ・メンションなし | Discord・Messenger・Instagram の 3 つ・担当者にメンション |
 
 ## S2-5 便の分け方（1 便 1 つの変更・ADR-135/136 の GO の手順に乗せる）
 | 便 | 中身 | 移行（migrations） | KGI |
 |---|---|---|---|
-| 2a | roles.discord_role_id・discord_retired_roles・discord_retired_members・確認画面と反映でアプリの役割を作る/つなぐ/変える・役割の削除で番号を移す | あり（全テナントの roles に列、表 2 つ） | 8・10a・11 |
-| 2b | 「スタッフ」ロール・付け外しの処理と定期作業 | なし | 9・10・10b・10c |
+| 2a | roles.discord_role_id・discord_retired_roles・discord_retired_members（kick 列つき）・確認画面と反映でアプリの役割を作る/つなぐ/変える・役割の削除で番号を移す・スタッフの DELETE（`backend/app/routers/staff.py:755`）と PATCH（:665）で番号を discord_retired_members に移す（Fable 審査 N13） | あり（全テナントの roles に列、表 2 つ） | 8・10a・11 |
+| 2b | 「スタッフ」ロール・付け外しの処理と定期作業・辞めた人を自社サーバーから外す（D2-7）・確認の窓の 1 行（ja/en の鍵） | なし | 9・10・10b・10c・16 |
 | 2c | 3 部屋・webhook の自動作成・notification_channels.blueprint_key | あり | 12・14・15 |
 | 2d | 返信の知らせ | なし | 13 |
 
@@ -436,11 +452,14 @@
 | KGI-11 同じ名前が 2 つで止まる | 確認画面の理由の表示・自動の試験 |
 | KGI-12〜14 決まった部屋に 1 件ずつ届く | Discord の目視・notification_logs の行の数・自動の試験（Messenger・Instagram は自動の試験だけ） |
 | KGI-15 人の Discord 設定の作業 0 件 | 試験の手順書で数える |
+| KGI-16 消すと自社サーバーから外れる・無効と番号の変更では外れない | 確認の窓の文を目視・時刻を控えて Discord のメンバー画面を見る・自動の試験（kick=true の行だけ `DELETE /guilds/{own}/members/{u}` を送る・無効の人と kick=false の行には送らない・顧客用サーバーの番号には送らない・同じ番号の 2 度目で staff の DELETE が失敗しない） |
 | 顧客用サーバーの今の動きが変わらない | 今の試験（discord_role_sync・auto-setup・部屋の外）が全部通る |
 
 ## S2-7 リスクと対処・戻し方・測り方
 - 登録していない人にアプリの役割のロールが手で付くと、そのまま残る（アプリの登録と Discord が食い違うことがある）。PO 決定で各社の責任とし、Bot は関与しない
-- 全員の一覧を読まないので、GUILD_MEMBERS 特権インテントに頼らない（Get Guild Member は特別な許可が要らない＝第1段 4-8 の注記）
+- 全員の一覧を読まないので、GUILD_MEMBERS 特権インテントに頼らない（List Guild Members だけが GUILD_MEMBERS を要る＝Discord 公式 `developers/resources/guild.mdx` の List Guild Members の警告。2026-11-05 に Opus が公式を直接読んで確かめた。注記は design.md 第1段 改訂4・§8＝:259）
+- Discord の番号の登録間違いで、別の人を自社サーバーから外すおそれ → 外すのは「消したスタッフに登録されていた番号」1 つだけで、確認の窓で消す相手の名前を出す。外された人は招待で入り直せる（Kick は出入り禁止ではない）。書き込みは消えない
+- Bot より上のロールを持つ人・サーバーの持ち主は外せない → 点検の記録に理由を残す（D2-7）
 - Discord の回数制限 → discord_rest の待ちに任せ、5 分ごとの点検で取り返す。1 回の点検で送る数を記録する
 - webhook_url の平文 → 今の作法のまま。Bot が作るのは自社サーバーの部屋だけ。漏れたときは部屋の webhook を消して作り直せば無効になる
 - 戻し方: 便ごとに revert。移行で足す列は NULL 許容で、使わなければ今の動きに戻る。定期作業は設定から外せば止まる。Discord に付けたロールは残る（消さない作法）ので、外したいときは点検を止めてから人が外す
@@ -458,9 +477,12 @@
 
 ## S2-11 未決（PO に戻すもの）
 - 決定済み: D2-3 手順4 は案B（PO 2026-11-05「2」。原文は ideal-state.md）
-- KGI 8〜15 の承認
+- 決定済み: 辞めたとき＝アプリで消したとき。ロールを外し自社サーバーから外す・消す前に確認の窓（PO 2026-11-05「1」「1,消したときだけ外す」＝D2-7）
+- KGI 8〜16 の承認
 
 ## S2-12 審査の記録
 - 2026-11-05 Fable（クラウド・読むだけ・HEAD 28a777d22）: REVISE。必須 3 件（Q1 要件より広い／N1 KGI-10b が作れない／N2 S2-2 と D2-3 の食い違い）、推奨 Q2〜Q4・N3〜N8
 - 反映: N1→D2-1 discord_retired_roles。N2・Q1→S2-2・D2-3 手順4 を案A/案B に分け PO へ→PO は案B（2026-11-05「2」）。N3→D2-2 `"@bot"`。N4→D2-5 commit 後。N5→D2-1 DB だけの行種と書き戻しの単位。N6→D2-3 手順2。N7→D2-4 blueprint_key。N8→recon の行番号（この版で実物の grep で全部引き直し）。Q2→KGI-14 に配信の失敗が 0 件。Q3→KGI-11 に「つなぐ前」。Q4→PO の決定の原文を ideal-state に残す（案の決定のとき）
-- 未確認のまま残すもの: Discord 公式仕様（審査のクラウドから docs.discord.com に届かない）。便2b・2c のカードの最初の作業で、試験サーバーへの実際の呼び出しで確かめる
+- 2026-11-05 Fable（2 回目・HEAD 60a8545b3）: REVISE。前回の Q1〜Q4・N1〜N7 は直った。N8 は 2 件残り（N9・N10）。新しく必須 Q5（消したスタッフ＝登録していない人から外す設計が KGI-10 と PO 決定より広い）、推奨 Q6・N9〜N14
+- 反映: Q5→PO に辞めたときを聞き、決定（消したときだけ外す・サーバーから外す・確認の窓）を ideal-state・KGI-16・D2-7 に入れ、KGI-10 から消したスタッフを外した。Q6→kgi.md に「決まったこと」を分けた。N9→S2-7 の注記の場所を第1段 改訂4（:259）に直した。N10→recon R2-5 の場所を `backend/app/tasks/viewer_inventory_cache.py:63` に直した。N11→D2-3 の ON CONFLICT。N12→D2-4 の部屋の番号の引き方。N13→S2-5 便2a。N14→D2-3 の auth.py:156
+- 未確認のまま残すもの: Create Webhook の権限・Kick が Bot のロールの順番に縛られるか。Remove Guild Member（KICK_MEMBERS）と List Guild Members（GUILD_MEMBERS が要る）は 2026-11-05 に Opus が公式（github.com/discord/discord-api-docs `developers/resources/guild.mdx`）を直接読んで確かめた。Context7 は月の上限で使えなかった。残りは便2b・2c のカードの最初の作業で、試験サーバーへの実際の呼び出しで確かめる
