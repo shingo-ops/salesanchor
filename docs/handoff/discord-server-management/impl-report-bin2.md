@@ -40,6 +40,15 @@ PREFLIGHT FAIL — 上の対策を実施し再実行(深追いしない)
 - `npm run lint -- <2 ファイル>`: `✖ 59 problems (0 errors, 59 warnings)`（警告は既存のファイル分。DiscordOwnServerPanel の 2 ファイルに警告なし）
 - `npx tsc --noEmit -p .`: 最初は生成型 `src/api/generated/schema` が無く 4 件エラー（既存ファイル・未生成が原因）。`npm run generate:api-types` で生成後 rc=0
 - `git grep -nE "style=|#[0-9a-fA-F]{3,6}\b|rgb\(" -- frontend/src/pages/admin/DiscordOwnServerPanel.tsx`: 0 行
+- commit 後の `check_test_schema_dup.py`: `[INFO] backend/tests/test_discord_own_server_snapshot.py: BASE=0 HEAD=0` / `テストへの新規スキーマ複製なし(pass)` rc=0
+- `git log --oneline -4`（commit 後）:
+  ```
+  4cbcb40be feat(discord): 自社用サーバーの今の姿を読み取る（discord-server-management 便2）
+  e2f86facf feat(db): 自社用サーバーの今の姿と反映の記録の表を作る（discord-server-management 便2）
+  81ab7b299 docs(discord): 便2 カードの目印を本線取り込み後の値に合わせる
+  a89caa285 Merge remote-tracking branch 'origin/main' into release/discord-own-server-bin2
+  ```
+- push（pre-push の提出前の入口: 落ちた検査 0 件・rc=0）: `81ab7b299..4cbcb40be  HEAD -> release/discord-own-server-bin2`
 - PostgreSQL なし・CI の migration-test に任せる
 - `git diff --stat origin/main`: 15 files changed, 1205 insertions(+), 3 deletions(-)（`.claude-pipeline` の札・カード・design.md はこの枝の既存コミット由来。報告書を足す前の値）
 
