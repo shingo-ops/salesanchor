@@ -239,6 +239,18 @@
 - 自社用の招待の開始は、`channels.manage` に加えて `tenant.profile.edit` も要る（§4-9 の「変えるのは tenant.profile.edit」と揃える）。既存の `require_permission` はどれか 1 つで通る形なので、`load_user_permissions`（`backend/app/auth/dependencies.py:598`）で 2 つ目を確かめる
 - 実装カード：docs/handoff/discord-server-management/card-bin1b-own-server-register.md
 
+改訂3（2026-11-05、便2 のカード作成時の実物確認による。Opus の技術判断。origin/main 3175aca5e で確かめた）
+- 新しい 2 表は、§4-1 の「同じ移行ファイル」ではなく便2 の新しい移行 migrations/20261106_120000_create_discord_server_snapshot_tables.sql（新規）に置く。改訂1 で移行を便1a・便1b に分けたため、便1 の移行には入っていない（事実：`migrations/` の最後は `migrations/20261106_100000_tenant_discord_config_purpose_pk.sql`）
+- §4-6 の「設計図と同じ形に直して」を「Discord の返事から必要な項目だけを抜いた形（`version: 1`）」に読み替える。権限の名前と数字の対応は便3 の discord_blueprint.py（新規）1 か所だけに置く約束（§4-5）なので、便2 で同じ対応を別に持たない。設計図の tenant_<id>.json（新規）へは Opus が便3 の対応表で直す
+- サーバーの番号を記録に入れない約束（§4-1）を守るため、@everyone のロール（番号がサーバーの番号と同じ。Context7 /discord/discord-api-docs）は `"@everyone"` と書く
+- 人を記録に入れない約束（§4-1）を守るため、チャンネルの人ごとの上書き（`type=1`）は外して数だけ残す
+- §4-1 の「ai_cloud のビューに新しい表の列の扱いを足す」は行わない。§11 U2 のとおり分類の無い文字の列は自動で伏せる側に倒れ、Opus は ai_ro で読むため。ai_cloud の移行と分類表は触らない
+- `tenant_id` に `public.tenants(id)` への外部キーを付ける（登録の表 `tenant_discord_config_tenant_id_fkey` と同じ）。行の制限（RLS）は付けない（登録の表と同じで、プログラムが tenant_id で絞る）
+- CI の許可リストと対応表を更新する：`.github/workflows/migration-guard.yml:224` の `PUBLIC_TABLES`（223 行の注記「新しいテーブルを public に追加した場合はここを更新すること」）、`backend/app/realtime/topics.py` の `NO_SIGNAL_ROUTES`（便1b の改訂4 で載せ忘れが CI 赤になった）
+- JSONB への書き込みは、試験の SQLite で `CAST(… AS JSONB)` が使えないため、`backend/app/routers/meta_inbox.py:152-158` と同じく方言で分ける
+- 便2 の確かめ方（KGI-3 の前半）：テナント001の自社用テストサーバーで「今のサーバーを読み取る」を押す → 「読み取りました（ロール n・チャンネル n）」が出る → `ai_ro.public__discord_server_snapshots` に 1 行増え、n が Discord の画面のロールとチャンネルの数と同じ
+- 実装カード：docs/handoff/discord-server-management/card-bin2-own-server-snapshot.md
+
 ## 9. 外部・過去事例の参照と我々への応用
 
 - HashiCorp Terraform の公式文書（Context7 `/websites/developer_hashicorp_terraform` で 2026-11-04 に確認）
@@ -280,3 +292,9 @@
 - U2 【解決 2026-11-04】ai_cloud は分類表に無い文字の列を伏せる（`migrations/20261024_100000_create_ai_cloud_meta.sql` の build_views、分類なしで文字の型は mask に落ちる）。新しい列・表を足しても失敗せず伏せる側に倒れる。便1 では ai_cloud の分類表を変えない（purpose は伏せたままでよい。Opus は ai_ro で読む）
 - U3 テナント001の自社用テストサーバーの用意（PO 側。便1 のマージ後でよい）
 - U4 HIGH LIFE JPN の今の登録が、PO の画像の自社サーバーと同じか（R§8）。同じなら、HIGH LIFE JPN は今の行を自社用に移し、顧客用を別に登録し直す話になるため、HIGH LIFE JPN に使う前に PO に確かめる
+
+便2 のカードの審査（2026-11-05、同じ AI による自己審査）：**APPROVE**
+- 実物との照合：カードの行の目印（`backend/tests/conftest.py:311-312`・`:1230`・`:1730`、`scripts/run_all_migrations.sh:1227`（ab8a6f725）、`backend/app/main.py:51`・`:325`、`backend/app/realtime/topics.py:103`、`.github/workflows/migration-guard.yml:223-224`、`backend/app/routers/meta_inbox.py:152-158`、`frontend/src/pages/admin/discord-config.css:57` の `dc-actions`、`frontend/src/locales/ja.json:3494`（ab8a6f725）の `discordOwnServer`）を origin/main 3175aca5e で読んで確かめた
+- 便1b の CI 赤 3 件（試験の中の表の定義・即時反映の対応表・試しの移行の仮の表）をカードの中で先に塞いだ
+- 約束（読むだけ・サーバーの番号を記録しない・人を記録しない・消す処理なし）を試験 9 本で機械に確かめさせる
+- U3 は解決（テナント001の自社用テストサーバーは PO が用意・登録済み、2026-11-05）。U4 は HIGH LIFE JPN に使う前に確かめる（便2 はテナント001だけで確かめるので止めない）

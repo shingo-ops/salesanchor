@@ -3504,7 +3504,10 @@
     "connectError": "登録できませんでした",
     "guildAlreadyRegistered": "このサーバーは既に登録されています",
     "requestFailed": "実行できませんでした",
-    "loadError": "読み込めませんでした"
+    "loadError": "読み込めませんでした",
+    "snapshot": "今のサーバーを読み取る",
+    "snapshotDone": "読み取りました（ロール {{roles}}・チャンネル {{channels}}）",
+    "snapshotFailed": "読み取れませんでした"
   },
   "discordAutoSetup": {
     "title": "自動セットアップ",
