@@ -162,3 +162,24 @@ PG の試験（新しい会社の作り方で作った形と、移行を 2 回�
 - `ruff check ...` → `All checks passed!`
 - `git diff --name-only origin/main...HEAD`: 14 ファイル
   .claude-pipeline/active-work.d/release-discord-own-server-s2-2a1.md, backend/app/services/tenant.py, backend/tests/rls_bootstrap.py, backend/tests/test_discord_role_link_ddl.py, backend/tests/test_roles_system_key_ddl.py, docs/handoff/discord-server-management/{card-s2-2a1-role-link-tables.md, design.md, impl-report-s2-2a1.md, recon.md}, docs/specs/discord-server-management/{README.md, ideal-state.md, kgi.md}, migrations/20261106_150000_add_discord_role_link_tables.sql, scripts/run_all_migrations.sh
+
+## 改訂2
+
+### 作業
+- 始める前: `git log -2 --oneline` → `27312d04c docs: card s2-2a1 revision 2` / `ef3f29018 test: scope 2a-1 PG test ...`（カードの指定どおり）。台帳 `bash scripts/ledger-lookup.sh release/discord-own-server-s2-2a1` は行を出した（IN_PROGRESS）。
+- （１）test_tenant_loop_migration_guard.py: rls_bootstrap.py の frozenset に `20261106_150000_add_discord_role_link_tables.sql` を足し、`test_discord_role_link_ddl.py`（scoped）の項目を足した。
+- （２）create_ai_cloud_views.sql: 3 行目 1075 → 1078、roles の列に discord_role_id、discord_retired_members / discord_retired_roles の 2 行（すべて mask・理由は空）。
+- （３）test_ai_cloud_views.py: `== n0 == 1075` → `1078`。
+- （４）reference-allowlist.tsv: 該当行の sha256 と 4 列目の末尾だけ。
+
+### 確かめ（生出力）
+- pytest（venv: python3.12 + requirements.txt/requirements-dev.txt + pytest-asyncio aiosqlite pytest-xdist pytest-cov）:
+  `pytest tests/test_tenant_loop_migration_guard.py tests/test_discord_role_link_ddl.py tests/test_roles_system_key_ddl.py -q -p no:cacheprovider --no-cov` → `10 passed, 2 skipped in 1.91s`
+- `pytest tests/ops/test_ai_cloud_views.py -q -p no:cacheprovider --no-cov` → `18 skipped in 1.55s`（PostgreSQL なし。t10 は流れていない・CI に任せる）
+- `grep -c "discord_retired_\|discord_role_id" migrations/20261024_100300_create_ai_cloud_views.sql` → `3`
+- sha256: ファイル `6b0e134838a14342f44093f60553577d6633122fe9c947332b9f069ea70172e5` / allowlist の 2 列目 `6b0e134838a14342f44093f60553577d6633122fe9c947332b9f069ea70172e5`（一致）
+- `python3 scripts/check-migration-value-writes.py repo` → `✅ 登録された 355 ファイルを走査: 値の書き込みを持つ 15 ファイル = 許可一覧 15 行 — 全件走査 通過` / rc=0
+- `pytest scripts/tests/test_migration_value_writes.py` → `34 passed in 5.27s`
+- `check_test_schema_dup.py`（commit 前に流した）→ `テストへの新規スキーマ複製なし(pass)` / rc=0（test_discord_role_link_ddl.py: BASE=0 HEAD=0）
+- `ruff check tests/test_tenant_loop_migration_guard.py tests/ops/test_ai_cloud_views.py` → `All checks passed!`
+- ファイル一覧（commit 前・`git diff --name-only $(git merge-base origin/main HEAD)`）は 18 ファイル（改訂1 の 14 ＋ test_ai_cloud_views.py・test_tenant_loop_migration_guard.py・create_ai_cloud_views.sql・reference-allowlist.tsv）。commit 後の `git diff --name-only origin/main...HEAD` は最後の返事に貼る。
