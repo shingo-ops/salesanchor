@@ -135,3 +135,11 @@ PG の試験（新しい会社の作り方で作った形と、移行を 2 回�
   6be4d8a6f docs: apply card review fixes to stage-2 2a-1 card (unit test count, column comments, deploy.yml note)
   ```
 - push と最後の `git rev-parse HEAD` は下に追記する。
+
+### push 後（1 回目の push: 1d1302d41..3d067d1b0）の git rev-parse HEAD の生出力
+
+```
+3d067d1b06d585fb13b394cdad6eec9358b74fac
+```
+
+この追記の commit を push したあとの先頭は、最後の返事に書く。
