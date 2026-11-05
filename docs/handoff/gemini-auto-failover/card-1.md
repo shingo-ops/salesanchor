@@ -41,7 +41,7 @@
 - `backend/app/services/line_analysis_v102_svc.py` のその場の送り直し（:463〜:516）。
 - backend/requirements.txt（google-generativeai の行は残す）。
 - docker-compose.yml・.env・scripts・.github。
-- 上の10番以外の既存の試験ファイル。
+- 上の10番・11番以外の既存の試験ファイル。
 
 ## 1. gemini_route.py（新規・丸ごと書く）
 
@@ -167,7 +167,7 @@ backend/tests/test_gemini_route_watch.py（新規）。session と redis は偽�
 
 理由の記録の試験（既存の試験ファイルに1つずつ足す。既存の検査は変えない）:
 - T11: `backend/tests/test_tcg_gemini_extraction.py` に、:695 と同じ形（_get_genai_client を差し替え・recorder は MagicMock）で、client.models.generate_content が場所の断りの APIError を投げ、切り替え先の client も同じ APIError を投げる試験を足す（gemini_route.build_client も差し替える）。RecordError が出て、record_error_detail に渡った dict の reason が「400 FAILED_PRECONDITION: User location is not supported for the API use.」、raw と category が今と同じ値であること。
-- T12: `backend/tests/test_api_error_auto_retry.py` に、_Env で call_gemini_raw_copy_v8 が場所の断りの APIError を RuntimeError で包んだもの（from exc）を投げる試験を足す。record_error_detail の dict の reason が T11 と同じ文、raw が「(HTTP 400)」で終わること。
+- T12: `backend/tests/test_api_error_auto_retry.py` に、_Env で call_gemini_raw_copy_v8 が場所の断りの APIError を `backend/app/services/gemini_raw_copy_v8.py:229` と同じ形で包んだもの（`RuntimeError(f"Gemini v8 API 呼び出し失敗: {gemini_extraction_svc._safe_error_message(api_err)}")` を `from api_err` で投げる）を投げる試験を足す。record_error_detail の dict の reason が T11 と同じ文、raw が「(HTTP 400)」で終わること。
 
 `backend/tests/test_message_translator.py` と `backend/tests/test_message_translator_usage_ledger.py`:
 - 古い部品の偽物（_install_fake_genai・_GENAI_CACHE）を、`app.services.gemini_route.agenerate_content_routed` を AsyncMock にする形に置き換える。応答の偽物（response.text と usage_metadata）は今のまま使う。
@@ -187,7 +187,7 @@ backend/tests/test_gemini_route_watch.py（新規）。session と redis は偽�
 
 - T6 または T6b で is_route_unreachable が False → 停止。NEEDS_DECISION: で型の連なりを返す。
 - APIError の作り方が部品の版で違う → 部品の中身（errors.py）を読んで合わせる。合わせ方を報告に書く。
-- 既存の試験（上の10番以外）が落ちる → 直さずに停止し、BLOCKED: で生出力のパスを返す。
+- 既存の試験（上の10番・11番以外）が落ちる → 直さずに停止し、BLOCKED: で生出力のパスを返す。
 - カードに無いファイルを触る必要が出た → 停止し、NEEDS_DECISION: で返す。
 - 迷ったら停止して NEEDS_DECISION: で Opus に戻す。
 - 終わったら commit（shingo-cc 名義、最後の行は Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>）→ git log -1 で確かめる → git push origin release/gemini-auto-failover → git log origin/release/gemini-auto-failover -1 で確かめる。PR は作らない（手元の Opus が作る）。
