@@ -3,7 +3,7 @@
 > この文書は何か（専門用語なしの1行）:
 > 保存した Facebook の会話ファイルを、選んだリードの会話として受信箱に入れる仕組みの設計。変換の共通の形を決め、後の WhatsApp・Instagram も同じ入口に足せるようにする。
 
-親: [仕様書の表紙](../../specs/inbox/conversation-import/README.md) ／ KGI: [kgi.md](../../specs/inbox/conversation-import/kgi.md) ／ 調査: [recon.md](recon.md) ／ 決定記録案: [ADR-1064](../../adr/ADR-1064-conversation-file-import.md)
+親: [仕様書の表紙](../../specs/inbox/conversation-import/README.md) ／ KGI: [kgi.md](../../specs/inbox/conversation-import/kgi.md) ／ 調査: [docs/handoff/conversation-import/recon.md](recon.md) ／ 決定記録案: [ADR-1064](../../adr/ADR-1064-conversation-file-import.md)
 
 状態: 設計案作成済み（Opus）／設計審査前／PO 実装承認前／実装未着手
 
