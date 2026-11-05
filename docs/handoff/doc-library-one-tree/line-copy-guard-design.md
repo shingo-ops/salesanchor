@@ -72,7 +72,7 @@
   - `# 合格線の正本はここ1か所（docs/specs/doc-agenda-nav/kgi.md の写し）`
   - → `# 合格線の正本は docs/specs/doc-agenda-nav/kgi.md。下の値はその写しで、ずれは scripts/ci/check_kgi_line_copies.py が見つける`
 - `# ---- PEER ----` の段の後、`if [ -z "$NG" ]` の前に、写しの段を足す:
-  - `$REPO/docs/specs/doc-agenda-nav/kgi.md` があれば `python3 -I "$SELF_DIR/../ci/check_kgi_line_copies.py" --root "$REPO" --routines "${DOC_ENTRY_ROUTINES:-$HOME_DIR/Library/Application Support/agent-console/routines.json}"` を流す。出力は捨てない（そのまま結果ファイルに残る）。
+  - 調べる先のリポジトリに kgi.md（`docs/specs/doc-agenda-nav/kgi.md`）があれば `python3 -I "$SELF_DIR/../ci/check_kgi_line_copies.py" --root "$REPO" --routines "${DOC_ENTRY_ROUTINES:-$HOME_DIR/Library/Application Support/agent-console/routines.json}"` を流す。出力は捨てない（そのまま結果ファイルに残る）。
   - 終了コード 0 → `LINE_COPY=SAME`、1 → `LINE_COPY=DIFF` と `add_ng "LINE_COPY=DIFF"`、それ以外 → `LINE_COPY=error` と `add_ng "LINE_COPY=error"`
   - kgi.md が無ければ `LINE_COPY=skipped`（NG にしない）
 - ほかの段・判定・線の値は変えない。
@@ -126,7 +126,7 @@
 
 ## 維持の仕組み
 
-- 見張る人: CI「kgi line copies」（全 PR と main への push）と、毎週月曜 16:00 の週次点検（指示書の写し C6）。
+- 守り手: CI「kgi line copies」（`.github/workflows/kgi-line-copies.yml`。全 PR と main への push）と、毎週月曜 16:00 の週次点検（`scripts/dev/doc-entry-weekly-check.sh`。指示書の写し C6）。
 - 新しい写しを足すとき: この台本の写しの一覧（§3-1）に1件足し、試験も1つ足す。一覧はこの台本の中の1か所だけ。
 - 項目2（週次点検の NG を Discord に知らせる）がマージされると、`LINE_COPY=DIFF` の NG も Discord に届く。
 
