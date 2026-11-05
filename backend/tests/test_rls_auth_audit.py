@@ -19,7 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from app.auth.dependencies import clear_tenant_context
 from app.routers.auth import _record_auth_audit
 from app.services.audit import record_audit_log
-from tests.rls_bootstrap import bootstrap_tenant_schema, tenant_schema_lock
+from tests.rls_bootstrap import bootstrap_tenant_schema, public_bootstrap_lock, tenant_schema_lock
 
 _RLS_DB_URL: Optional[str] = os.getenv("RLS_TEST_DATABASE_URL")
 _ADMIN_URL: str = os.getenv(
@@ -66,8 +66,9 @@ async def _remove_test_tenant_rows(conn) -> None:
 async def setup_schema(admin_engine):
     # 本物の定義（backend/app/services/tenant.py）でテナント 991 を作る。本番の表の作り方を試験に書き写さない
     async with tenant_schema_lock(admin_engine, _TENANT_ID):
-        async with admin_engine.begin() as conn:
-            await _remove_test_tenant_rows(conn)
+        async with public_bootstrap_lock(admin_engine):
+            async with admin_engine.begin() as conn:
+                await _remove_test_tenant_rows(conn)
         await bootstrap_tenant_schema(admin_engine, _TENANT_ID)
         async with admin_engine.begin() as conn:
             # 本物の作り方の権限付与は失敗すると全部付かないため、ここで付け直す（tenant.py:1691-1709）
@@ -77,8 +78,9 @@ async def setup_schema(admin_engine):
                 f"GRANT USAGE, SELECT ON SEQUENCE {_SCHEMA}.audit_logs_id_seq TO salesanchor_app"
             ))
         yield
-        async with admin_engine.begin() as conn:
-            await _remove_test_tenant_rows(conn)
+        async with public_bootstrap_lock(admin_engine):
+            async with admin_engine.begin() as conn:
+                await _remove_test_tenant_rows(conn)
 
 
 async def _count(admin_engine, event: str) -> int:
