@@ -8,6 +8,11 @@
   - Rule B: write 系 endpoint (`@router.post|put|patch|delete`) で
     `await db.commit()` を呼んでいるのに、関数内の `reset_tenant_context(...)` 呼び出し
     回数が commit 数に満たない → 案 B 違反 (Issue #563 と同根のバグ候補)。
+  - Rule C: backend/app/ 全体 (routers の外も) の async 関数で、`await db.commit()` の
+    後に実行されうる文のうち、最初に `db` を使う文が `await reset_tenant_context(db, ...)`
+    (または set_tenant_context) でない → commit 後の会社付け直し漏れ (RLS のある表が
+    別接続で見えなくなる)。対象は「tenant_id が Depends(get_current_tenant) の router
+    endpoint」か「引数に db と tenant_id の両方を持つ async 関数」。
 
 PoC は `--mode warning` (default) で違反を stderr 出力するが exit 0 を返す。
 Phase 4 で `--mode strict` に切り替えて required check 昇格する。
@@ -15,7 +20,7 @@ Phase 4 で `--mode strict` に切り替えて required check 昇格する。
 Usage:
   python3 scripts/lint_tenant_schema.py
   python3 scripts/lint_tenant_schema.py backend/app/routers/staff.py
-  python3 scripts/lint_tenant_schema.py --mode strict backend/app/routers/
+  python3 scripts/lint_tenant_schema.py --mode strict backend/app/
 
 参照:
   - docs/adr/ADR-072-tenant-schema-prefix-enforcement.md §4 (CI linter)
@@ -94,7 +99,7 @@ class Violation(NamedTuple):
     file: str
     line: int
     function: str
-    rule: str  # "A" / "B" / "SYNTAX"
+    rule: str  # "A" / "B" / "C" / "SYNTAX"
     message: str
 
 
@@ -236,6 +241,160 @@ def _has_tenant_table_ref_call(func: ast.AST) -> bool:
     return False
 
 
+# ---------------------------------------------------------------------------
+# Rule C: commit の後の会社付け直し漏れ (設計: docs/handoff/services-tenant-reset-after-commit/design.md 3-1)
+# ---------------------------------------------------------------------------
+
+RESET_FUNC_NAMES = frozenset({"reset_tenant_context", "set_tenant_context"})
+_DEPS_MODULE = "app.auth.dependencies"
+
+# 実行の列: (文, その文の位置で break したときの飛び先の列) のリスト
+_Seq = list
+
+
+def _is_commit_stmt(s: ast.stmt) -> bool:
+    """式文 `await db.commit()` か。"""
+    return (
+        isinstance(s, ast.Expr)
+        and isinstance(s.value, ast.Await)
+        and isinstance(s.value.value, ast.Call)
+        and isinstance(s.value.value.func, ast.Attribute)
+        and s.value.value.func.attr == "commit"
+        and isinstance(s.value.value.func.value, ast.Name)
+        and s.value.value.func.value.id == "db"
+    )
+
+
+def _wrap(stmts: list[ast.stmt], brk: _Seq) -> _Seq:
+    return [(x, brk) for x in stmts]
+
+
+def _collect_commits(
+    body: list[ast.stmt],
+    after: _Seq,
+    brk: _Seq,
+    out: list[tuple[ast.stmt, _Seq]],
+) -> None:
+    """body の中の `await db.commit()` ごとに「その後に実行されうる文の列」を集める。
+
+    入れ子の関数・クラスの中にはもぐらない。複合文の中は commit を探すためだけに
+    もぐり、後続の列には複合文を 1 つの文として積む。
+    """
+    for i, s in enumerate(body):
+        rest = _wrap(body[i + 1 :], brk) + after
+        if _is_commit_stmt(s):
+            out.append((s, rest))
+        elif isinstance(
+            s, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda)
+        ):
+            continue
+        elif isinstance(s, ast.If):
+            _collect_commits(s.body, rest, brk, out)
+            _collect_commits(s.orelse, rest, brk, out)
+        elif isinstance(s, (ast.For, ast.AsyncFor, ast.While)):
+            # break は一番内側のループの後ろへ。continue はそこで止める (次の回は見ない)。
+            _collect_commits(s.body, rest, rest, out)
+            _collect_commits(s.orelse, rest, brk, out)
+        elif isinstance(s, (ast.With, ast.AsyncWith)):
+            _collect_commits(s.body, rest, brk, out)
+        elif isinstance(s, (ast.Try, getattr(ast, "TryStar", ast.Try))):
+            fin = _wrap(s.finalbody, brk)
+            els = _wrap(s.orelse, brk)
+            _collect_commits(s.body, els + fin + rest, brk, out)
+            _collect_commits(s.orelse, fin + rest, brk, out)
+            for h in s.handlers:
+                _collect_commits(h.body, fin + rest, brk, out)
+            _collect_commits(s.finalbody, rest, brk, out)
+        elif isinstance(s, ast.Match):
+            for case in s.cases:
+                _collect_commits(case.body, rest, brk, out)
+
+
+def _uses_db(stmt: ast.AST) -> bool:
+    return any(isinstance(n, ast.Name) and n.id == "db" for n in ast.walk(stmt))
+
+
+def _first_db_stmt(seq: _Seq) -> ast.stmt | None:
+    """列をたどって最初に名前 `db` を含む文を返す。無ければ None (合格)。"""
+    i = 0
+    while i < len(seq):
+        st, brk = seq[i]
+        if isinstance(st, ast.Continue):
+            return None
+        if isinstance(st, ast.Break):
+            seq, i = brk, 0
+            continue
+        if _uses_db(st):
+            return st
+        if isinstance(st, (ast.Return, ast.Raise)):
+            return None
+        i += 1
+    return None
+
+
+def _reset_names(tree: ast.Module) -> frozenset[str]:
+    """付け直し関数として扱う名前 (別名 import を含む)。"""
+    names = set(RESET_FUNC_NAMES)
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom) and node.module == _DEPS_MODULE:
+            for a in node.names:
+                if a.name in RESET_FUNC_NAMES and a.asname:
+                    names.add(a.asname)
+    return frozenset(names)
+
+
+def _is_reset_stmt(st: ast.stmt, names: frozenset[str]) -> bool:
+    """`await <名前>(db, ...)` だけの式文か。"""
+    if not (isinstance(st, ast.Expr) and isinstance(st.value, ast.Await)):
+        return False
+    call = st.value.value
+    return (
+        isinstance(call, ast.Call)
+        and isinstance(call.func, ast.Name)
+        and call.func.id in names
+        and bool(call.args)
+        and isinstance(call.args[0], ast.Name)
+        and call.args[0].id == "db"
+    )
+
+
+def _is_rule_c_target(func: ast.AsyncFunctionDef) -> bool:
+    if _is_router_endpoint(func)[0]:
+        return _has_tenant_id_dep(func)
+    arg_names = {a.arg for a in func.args.args} | {
+        a.arg for a in func.args.kwonlyargs
+    }
+    return "db" in arg_names and "tenant_id" in arg_names
+
+
+def _check_rule_c(tree: ast.Module, path: Path) -> list[Violation]:
+    names = _reset_names(tree)
+    found: list[Violation] = []
+    for func in ast.walk(tree):
+        if not isinstance(func, ast.AsyncFunctionDef):
+            continue
+        if not _is_rule_c_target(func):
+            continue
+        commits: list[tuple[ast.stmt, _Seq]] = []
+        _collect_commits(func.body, [], [], commits)
+        for commit, seq in commits:
+            st = _first_db_stmt(seq)
+            if st is None or _is_reset_stmt(st, names):
+                continue
+            found.append(
+                Violation(
+                    str(path),
+                    commit.lineno,
+                    func.name,
+                    "C",
+                    "await db.commit() の後、db を使う前に "
+                    "reset_tenant_context(db, tenant_id) がない "
+                    f"(:{st.lineno}で db を使用)",
+                )
+            )
+    return found
+
+
 def lint_file(path: Path) -> list[Violation]:
     """1 ファイルを ast.parse して違反を返す。"""
     src = path.read_text(encoding="utf-8")
@@ -300,6 +459,7 @@ def lint_file(path: Path) -> list[Violation]:
                 )
             )
 
+    violations.extend(_check_rule_c(tree, path))
     return violations
 
 
@@ -310,8 +470,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "paths",
         nargs="*",
-        default=["backend/app/routers"],
-        help="ファイル or ディレクトリ (default: backend/app/routers)",
+        default=["backend/app"],
+        help="ファイル or ディレクトリ (default: backend/app)",
     )
     parser.add_argument(
         "--mode",
@@ -343,15 +503,16 @@ def main(argv: list[str] | None = None) -> int:
             )
         sys.stderr.write(f"\n{len(all_violations)} violation(s) found.\n")
 
-        rule_b_violations = [v for v in all_violations if v.rule == "B"]
-        if rule_b_violations:
-            sys.stderr.write(
-                "\n[Rule B 修正方法]\n"
-                "  await db.commit() の直後に必ず以下を追加してください:\n"
-                "    await reset_tenant_context(db, tenant_id)\n"
-                "  インポート: from app.database import reset_tenant_context\n"
-                "  参照: docs/adr/ADR-072-tenant-schema-prefix-enforcement.md\n"
-            )
+        fix_howto = (
+            "  await db.commit() の直後に必ず以下を追加してください:\n"
+            "    await reset_tenant_context(db, tenant_id)\n"
+            "  インポート: from app.auth.dependencies import reset_tenant_context\n"
+            "  参照: docs/adr/ADR-072-tenant-schema-prefix-enforcement.md\n"
+        )
+        if any(v.rule == "B" for v in all_violations):
+            sys.stderr.write("\n[Rule B 修正方法]\n" + fix_howto)
+        if any(v.rule == "C" for v in all_violations):
+            sys.stderr.write("\n[Rule C 修正方法]\n" + fix_howto)
 
         if args.mode == "strict":
             sys.stderr.write(
