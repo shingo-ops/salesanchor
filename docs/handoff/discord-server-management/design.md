@@ -240,7 +240,7 @@
 - 実装カード：docs/handoff/discord-server-management/card-bin1b-own-server-register.md
 
 改訂3（2026-11-05、便2 のカード作成時の実物確認による。Opus の技術判断。origin/main 3175aca5e で確かめた）
-- 新しい 2 表は、§4-1 の「同じ移行ファイル」ではなく便2 の新しい移行 migrations/20261106_120000_create_discord_server_snapshot_tables.sql（新規）に置く。改訂1 で移行を便1a・便1b に分けたため、便1 の移行には入っていない（事実：`migrations/` の最後は `20261106_100000_tenant_discord_config_purpose_pk.sql`）
+- 新しい 2 表は、§4-1 の「同じ移行ファイル」ではなく便2 の新しい移行 migrations/20261106_120000_create_discord_server_snapshot_tables.sql（新規）に置く。改訂1 で移行を便1a・便1b に分けたため、便1 の移行には入っていない（事実：`migrations/` の最後は `migrations/20261106_100000_tenant_discord_config_purpose_pk.sql`）
 - §4-6 の「設計図と同じ形に直して」を「Discord の返事から必要な項目だけを抜いた形（`version: 1`）」に読み替える。権限の名前と数字の対応は便3 の discord_blueprint.py（新規）1 か所だけに置く約束（§4-5）なので、便2 で同じ対応を別に持たない。設計図の tenant_<id>.json（新規）へは Opus が便3 の対応表で直す
 - サーバーの番号を記録に入れない約束（§4-1）を守るため、@everyone のロール（番号がサーバーの番号と同じ。Context7 /discord/discord-api-docs）は `"@everyone"` と書く
 - 人を記録に入れない約束（§4-1）を守るため、チャンネルの人ごとの上書き（`type=1`）は外して数だけ残す
