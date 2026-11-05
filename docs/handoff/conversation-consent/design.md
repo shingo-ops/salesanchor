@@ -885,3 +885,51 @@ case-say 本体・Discord 側・room.sb の作り（CH は読み取り subpath �
 #### 14-12-6 維持の仕組み
 
 case-guard の試験（K2）と case-sandbox の試験（K4・ファイルの中身）を agent-console の CI に入れ、外れたら赤になる。
+
+### 14-13 第9版: K30 を件の窓の今の形で決め直し、第6版（§14-10）で作る（2026-11-05・PO「1」）
+
+**状態**: 設計案（審査前）。PO の判断（2026-11-05・チャット）: 選択肢「1. 昼の×の判定を、今の前提で決め直します。そのうえで、一文を送る仕組みを作ります」に「1」。PO への説明では「判定を決め直したら、設計の審査をもう一度通し、その後クラウドで作り、合流と導入まで進める」と伝えた。第6版の PO 承認（§14-10-10「1. この設計で作り始めてよい」）は、K30・K35 が通ることを条件にしていた。本版はその K30 の判定の決め直しで、送る仕組み（§14-10-3）は変えない。
+
+#### 14-13-1 決め直す理由（観測事実）
+
+- K30 の ④（質問への答え待ち）の×は、件の窓に「選択肢の画面」が出たという前提で付けた（§14-10-10）。§14-11-11 で、その前提が誤りと分かった: 件の窓の起動 `ops/shell/ccdiscord.zsh:72`（agent-console v0.50.2 入り版でも同じ行）の `--tools "Bash,Read,Edit,Write,Glob,Grep,Agent,TodoWrite"` に AskUserQuestion・EnterPlanMode・ExitPlanMode は無い。件の AI は 11:54:42 に「AskUserQuestion は使えない」と答え、質問を文で書いて Stop した。PO が 11:54:57 に見た「選択肢」はこの文で、そのとき status が `idle` だったのは正しい読み（入力を待つ状態）。
+- ③（許可の確認）: 同じ行の `--permission-mode dontAsk` で、許可の確認は画面に出ない（§14-10-10 の ③ の観測: ファイルを作る依頼でも確認なし）。v0.50.2（§14-12）で、本体の形が dontAsk でないとき道具を1つも通さない（K2・agent-console `ops/case/case-guard.mjs` の `decide` の先頭）。Shift+Tab は外した（K1 合格・2026-11-05 22:28）。開き直しと再起動の復元でも dontAsk で始まる（K6 (a)(b) 合格・2026-11-05 22:47・23:23）。
+- ⑤（計画の承認待ち）: ExitPlanMode が道具に無いので、承認の画面は出ない（§14-11-11）。`/plan` を頭に付けた依頼で計画の形に入った場合も、道具は止まり、承認の画面は出ない（§14-12-5）。
+- 起動の時の画面: 件の `CH/.claude.json` は agent-console が毎回書き直し、`hasCompletedOnboarding: true` と、作業場所の `hasTrustDialogAccepted: true` を入れる（agent-console `server/case-sandbox.ts` `rewriteCaseClaudeJson`）。最初の案内と「このフォルダを信頼しますか」の画面は出ない。
+- 調子を聞く画面（"How is Claude doing?"）: 起動は `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1` を入れる（`ccdiscord.zsh:62`）。公式 env-vars の `CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY` の行に「`CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` が入っているときも調子を聞く画面は出ない（`CLAUDE_CODE_ENABLE_FEEDBACK_SURVEY_FOR_OTEL` で戻さない限り）」とある（code.claude.com/docs/en/env-vars・2026-11-05 Opus が直接読んだ。Context7 は今月の上限で使えなかった）。起動の台本に `CLAUDE_CODE_ENABLE_FEEDBACK_SURVEY_FOR_OTEL` は無い。
+- MCP の問い合わせ（Elicitation）: `--strict-mcp-config --disallowedTools "mcp__*"` で MCP が無いので起きない（§14-11-11）。
+
+#### 14-13-2 決め直した判定
+
+- K30: 条件付きの○。①入力待ち `idle`・②作業中 `busy` は実測で見分けられた（§14-10-10）。③④⑤の画面は、件の窓の今の起動の形では出ない（14-13-1）。このため判定7（状態ファイルで `idle`・待ちのキーなしのときだけ貼る）で、文が入るのは「入力を待つ欄」だけになる。
+- 条件（どれかが崩れたら案 E に戻す）: (1) 件の起動の道具の並びに AskUserQuestion・EnterPlanMode・ExitPlanMode・MCP が入っていない (2) `--permission-mode dontAsk` で起動する (3) case-guard が dontAsk でない形の道具を止める (4) `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` が入っていて、調子を聞く画面を戻す変数が無い。
+- 条件を守る仕組み: 便CS1 で、agent-console の試験に「起動の台本 `ops/shell/ccdiscord.zsh` の起動の行に (1)(2)(4) が成り立つ」ことを確かめる単体の試験を1本足す（K40）。(3) は K2 の試験が既に守る。起動の台本を変える PR はこの試験で赤になり、§14-13 を読み直す合図になる。
+- `claude agents --json` の確かめ（判定7 の後半）: 件の本体は、ふつうの置き場の一覧に出ない（§14-10-10 別の方法1）。判定7 の「行があれば、その行も idle で waitingFor が無い」は、行が無いときは状態ファイルだけで決める。この扱いは第6版のままで変えない。
+- 判定3 の補助の確かめ（本体の comm が `claude`）: 第6版の 14-10-3 の判定には無い（第5版の §14-3 の判定）。第6版で作るので、合わないことは影響しない。
+
+#### 14-13-3 残る危険と対処
+
+| # | 危険 | 対処 |
+|---|---|---|
+| R35 | `/plan` を頭に付けた依頼で計画の形に入った件へ一文が入る | 件の AI に文が届くだけで、道具は case-guard が止め、承認の画面は無い（§14-12）。件の返事で「閉じて開き直してください」と出る。外へ何かが漏れる道にはならない。K32 で場面があれば記録する |
+| R36 | claude の版が上がり、件の窓に新しい種類の選ぶ画面が加わる | 件の起動の台本は `DISABLE_AUTOUPDATER=1`（`ccdiscord.zsh:63`）。版は agent-console の版の更新のときだけ変わる。K32 の測りを版の更新のあとにもう一度行い、選ぶ画面が出たら案 E に戻して PO に報告する |
+| R37 | 件の AI が文で質問して止まっている間に、Opus の一文が「答え」として届く | 一文は固定（手順ファイルを読んで順に行う）で、件はそれを答えとして読む。手順書は PO が承認したものだけ（§14-10-3 (e)）。答えの代わりに手順を進めてよいかは、手順書の側で「件の質問が残っていれば、先に PO へ戻す」と書く（便2b-3b の手順書の書き換えで入れる） |
+
+#### 14-13-4 成功条件（足すもの）
+
+| 基準 | 検証方法 |
+|---|---|
+| K40 起動の台本が 14-13-2 の条件 (1)(2)(4) を満たす | agent-console の vitest: `ops/shell/ccdiscord.zsh` を文字として読み、起動の行の `--tools` の値に AskUserQuestion・EnterPlanMode・ExitPlanMode が無い・`mcp__*` を `--disallowedTools` で外している・`--permission-mode dontAsk` がある・`CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1` を export し `CLAUDE_CODE_ENABLE_FEEDBACK_SURVEY_FOR_OTEL` が無い。どれかが外れたら赤 |
+| K32 の足し（測り） | 本物で一文を送る前と後に、件の窓の画面の写し（tmux capture-pane）を取り、選ぶ画面（番号の選択肢・Yes/No）が0件であることを確かめる |
+
+K31・K33・K34・K35 は第6版のまま。K35 は○（§14-10-10）。
+
+#### 14-13-5 実装の分け方（第6版 §14-10-8 から変えるもの）
+
+- 測定 K30: 本版の判定で済み（条件付きの○）。
+- 便CS1（クラウドの Sonnet・agent-console の PR 1本）: §14-10-3 (a)(b)・README・K31・K34 の単体に、K40 の試験を足す。
+- 便CS2・PO の反映・K32・K33 は第6版のまま。
+
+#### 14-13-6 外部事例
+
+該当事例なし。理由: 判断の中心は、自作の件の窓の起動の形で出うる画面の洗い出しで、外部の数値事例では確かめられない。確かめは K40 と K32 の実測で行う。
