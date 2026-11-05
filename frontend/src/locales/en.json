@@ -704,7 +704,6 @@
       "recoverySubmit": "Sign in",
       "recoveryWrong": "The code is wrong or already used.",
       "watcher": {
-        "title": "Sign-in request from a new device",
         "body": "Someone is trying to sign in to your account from an unknown device.",
         "device": "Device",
         "location": "Approximate location",
