@@ -36,6 +36,7 @@ celery_app = Celery(
         "app.tasks.tcg_mirror",          # MIG-05 Task 3: TCG マスタミラーシート 日次書き出し
         "app.tasks.tcg_extraction",      # MIG-04 Stage 2: Gemini 抽出タスク
         "app.tasks.tcg_extraction_recovery",  # 抽出ジョブの停滞回収（design: docs/handoff/extraction-job-recovery/design.md）
+        "app.tasks.gemini_route_watch",  # ADR-1062: 解析が30分成功しないときと道の切り替えの知らせ
         "app.tasks.tcg_import_discard",  # REVIEW-STAGE: 期限切れ保留ジョブの破棄
         "app.tasks.rule_test",           # Rule Test System: ルールテスト実行
         "app.tasks.buyback_scraper",     # ADR-157: 買取相場ログ（シンソク + 買取ホムラ）
@@ -203,6 +204,11 @@ celery_app.conf.beat_schedule = {
     "recover-stale-extraction-jobs": {
         "task": "tcg.recover_stale_extraction_jobs",
         "schedule": 600.0,  # 10分
+    },
+    # ADR-1062: 解析の止まりと Gemini への道の切り替えを5分ごとに見て管理者用 Discord へ
+    "watch-gemini-route": {
+        "task": "app.tasks.gemini_route_watch.watch_gemini_route",
+        "schedule": 300.0,
     },
 
     # ADR-1059 便2: Google の予定の取り込み（15 分おき・知らせが落ちても追いつく）
