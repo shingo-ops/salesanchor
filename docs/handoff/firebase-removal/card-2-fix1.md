@@ -18,10 +18,10 @@ S3 は今は通っているが、一時記憶を通らず自社以外の札と�
 ## 0. 実装前点検（外れたら実装せず BLOCKED: で止まる）
 - P1 `git diff --quiet 87d75572a6ae7367e5c52d2ddd99e143f5e02508 HEAD -- backend scripts .github frontend` が終了 0（基準の後はこのカードの追加だけ）。
 - P2 `sed -n '72p' backend/tests/test_real_redis_lockout.py` が `CACHED_TOKEN = "cached-valid-token-abc123"`。
-- P3 `sed -n '24,26p' backend/tests/test_real_redis_lockout.py` が `import hashlib`・`import json`・`import os` の 3 行。
+- P3 `sed -n '25,27p' backend/tests/test_real_redis_lockout.py` が `import hashlib`・`import json`・`import os` の 3 行（24 行目は空行。Opus が 6c9a95038 で実測）。
 
 ## 1. 変更の中身（`backend/tests/test_real_redis_lockout.py` だけ）
-(a) 24 行目 `import hashlib` の直前に 1 行足す。
+(a) 25 行目 `import hashlib` の直前に 1 行足す（24 行目の空行はそのまま残す）。
 変更前:
 ```python
 import hashlib
@@ -34,7 +34,7 @@ import hashlib
 import json
 ```
 
-(b) 72 行目を置き換える。
+(b) 72 行目（(a) の後は 73 行目）を置き換える。
 変更前:
 ```python
 CACHED_TOKEN = "cached-valid-token-abc123"
@@ -66,7 +66,7 @@ CACHED_TOKEN = _unsigned_jwt({"iss": "salesanchor", "email": "shingo@example.com
 手順2 P1〜P3 を流し、結果をそのまま報告に貼る
     cd ~/sa && git diff --quiet 87d75572a6ae7367e5c52d2ddd99e143f5e02508 HEAD -- backend scripts .github frontend; echo "P1 exit=$?"
     cd ~/sa && sed -n '72p' backend/tests/test_real_redis_lockout.py | tail -1
-    cd ~/sa && sed -n '24,26p' backend/tests/test_real_redis_lockout.py | tail -3
+    cd ~/sa && sed -n '25,27p' backend/tests/test_real_redis_lockout.py | tail -3
 
 手順3 部品を入れる（Python 3.12 の venv `/tmp/v312`。py312-guard の決まり）
     cd ~/sa && python3.12 -m venv /tmp/v312 && /tmp/v312/bin/python --version | tail -1
