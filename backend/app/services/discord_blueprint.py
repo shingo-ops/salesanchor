@@ -222,6 +222,16 @@ def _row(kind: str, key: str, name: str, field: str | None, before: str | None, 
     return row
 
 
+def _keep(have: int, want: int) -> int:
+    """表に無いビットは今の値を残し、表にあるビットは設計図の値にする（設計 改訂4）。"""
+    return (have & ~KNOWN_MASK) | (want & KNOWN_MASK)
+
+
+def _action(method: str, path: str, body: dict[str, Any], creates: str | None = None) -> dict[str, Any]:
+    """反映で Discord に送る 1 回分。{guild}・{ref:…} の置き換えは反映する係が行う。"""
+    return {"method": method, "path": path, "json": body, "creates": creates}
+
+
 def build_plan(
     bp: Blueprint,
     roles: list[dict[str, Any]],
@@ -258,9 +268,15 @@ def build_plan(
     changes: list[list[dict[str, Any]]] = [[], [], [], []]
     blocked: list[list[dict[str, Any]]] = [[], [], [], []]
 
-    def emit(stage: int, row: dict[str, Any], reason: str | None = None) -> None:
+    actions: list[list[dict[str, Any]]] = [[], [], [], []]
+
+    def emit(stage: int, row: dict[str, Any], reason: str | None = None,
+             action: dict[str, Any] | None = None) -> None:
         if reason is None:
+            if action is None:
+                raise AssertionError("a change row needs an action")
             changes[stage].append(row)
+            actions[stage].append(action)
         else:
             row = dict(row)
             row["reason"] = reason
@@ -300,7 +316,11 @@ def build_plan(
             after = (f"name={role.name}; color={role.color}; hoist={_bool_text(role.hoist)}; "
                      f"mentionable={_bool_text(role.mentionable)}; permissions=[{_names_text(want_perms)}]")
             reason = "permission_bot_lacks" if perm_lacks(want_perms) else None
-            emit(0, _row("create_role", role.key, role.name, None, None, after), reason)
+            create_json = {"name": role.name, "permissions": str(want_perms),
+                           "colors": {"primary_color": role.color}, "hoist": role.hoist,
+                           "mentionable": role.mentionable}
+            emit(0, _row("create_role", role.key, role.name, None, None, after), reason,
+                 _action("POST", "/guilds/{guild}/roles", create_json, f"role:{role.key}"))
             continue
         fid = str(found.get("id"))
         used_roles.add(fid)
@@ -320,6 +340,14 @@ def build_plan(
         have_perms = _int(found.get("permissions"))
         if (have_perms & KNOWN_MASK) != (want_perms & KNOWN_MASK):
             diffs.append(("permissions", _names_text(have_perms), _names_text(want_perms)))
+        role_path = "/guilds/{guild}/roles/" + ("{guild}" if is_everyone else fid)
+        role_bodies: dict[str, dict[str, Any]] = {
+            "name": {"name": role.name},
+            "color": {"colors": {"primary_color": role.color}},
+            "hoist": {"hoist": role.hoist},
+            "mentionable": {"mentionable": role.mentionable},
+            "permissions": {"permissions": str(_keep(have_perms, want_perms))},
+        }
         for field, before, after in diffs:
             reason = None
             if field == "name" and is_everyone:
@@ -328,7 +356,8 @@ def build_plan(
                 reason = "role_above_bot"
             elif field == "permissions" and perm_lacks(want_perms):
                 reason = "permission_bot_lacks"
-            emit(0, _row("update_role", role.key, role.name, field, before, after), reason)
+            emit(0, _row("update_role", role.key, role.name, field, before, after), reason,
+                 _action("PATCH", role_path, role_bodies[field]))
 
     # ---- 上書き（カテゴリ・チャンネル共通）
     def target_id(target: str) -> tuple[str | None, str | None]:
@@ -342,6 +371,25 @@ def build_plan(
         if state.startswith("blocked:"):
             return None, state.split(":", 1)[1]
         return role_ids.get(key), None
+
+    def target_ref(target: str) -> str | None:
+        """設計図の相手 → 送るときの相手の番号（サーバーの番号と、この反映で作る物は置き換えの印）。"""
+        if target == EVERYONE:
+            return "{guild}"
+        if target == BOT:
+            return bot_target_id
+        key = target[len("role:"):]
+        if role_state.get(key, "new") == "new":
+            return "{ref:role:" + key + "}"
+        rid = role_ids.get(key)
+        return "{guild}" if rid == guild_id else rid
+
+    def overwrite_list(overwrites: list[Any]) -> list[dict[str, Any]]:
+        return [
+            {"id": target_ref(ow.target), "type": 0,
+             "allow": str(names_to_bits(ow.allow)), "deny": str(names_to_bits(ow.deny))}
+            for ow in overwrites
+        ]
 
     def overwrite_issue(allow: int, deny: int) -> str | None:
         if not bot_admin and ((allow | deny) & _MANAGE_ROLES):
@@ -386,7 +434,9 @@ def build_plan(
             if (cur_allow & KNOWN_MASK) == (allow & KNOWN_MASK) and (cur_deny & KNOWN_MASK) == (deny & KNOWN_MASK):
                 continue
             emit(3, _row("update_overwrite", holder.key, holder.name, field,
-                         _ow_text(cur_allow, cur_deny), _ow_text(allow, deny)), overwrite_issue(allow, deny))
+                         _ow_text(cur_allow, cur_deny), _ow_text(allow, deny)), overwrite_issue(allow, deny),
+                 _action("PUT", f"/channels/{found.get('id')}/permissions/{target_ref(ow.target)}",
+                         {"type": 0, "allow": str(_keep(cur_allow, allow)), "deny": str(_keep(cur_deny, deny))}))
         for oid, cur in current.items():
             if oid in written:
                 continue
@@ -426,14 +476,18 @@ def build_plan(
         if found is None:
             cat_state[cat.key] = "new"
             after = f"name={cat.name}; overwrites=[{bp_overwrite_summary(cat.overwrites)}]"
-            emit(1, _row("create_category", cat.key, cat.name, None, None, after), create_issue(cat.overwrites))
+            emit(1, _row("create_category", cat.key, cat.name, None, None, after), create_issue(cat.overwrites),
+                 _action("POST", "/guilds/{guild}/channels",
+                         {"name": cat.name, "type": 4, "permission_overwrites": overwrite_list(cat.overwrites)},
+                         f"category:{cat.key}"))
             continue
         fid = str(found.get("id"))
         used_cats.add(fid)
         cat_ids[cat.key] = fid
         cat_state[cat.key] = "found"
         if found.get("name") != cat.name:
-            emit(1, _row("update_category", cat.key, cat.name, "name", str(found.get("name")), cat.name))
+            emit(1, _row("update_category", cat.key, cat.name, "name", str(found.get("name")), cat.name),
+                 None, _action("PATCH", f"/channels/{fid}", {"name": cat.name}))
         compare_overwrites(cat, found, None)
 
     # ---- チャンネル
@@ -441,9 +495,18 @@ def build_plan(
     for ch in bp.channels:
         parent_state = cat_state.get(ch.category) if ch.category else None
         if parent_state and parent_state.startswith("blocked:"):
+            # 親が分からないので直さない。ただし Discord にある物は「消す候補」に出さない
+            if ch.discord_id:
+                used_chans.update(str(c.get("id")) for c in d_chans if str(c.get("id")) == ch.discord_id)
+            else:
+                used_chans.update(str(c.get("id")) for c in d_chans if c.get("name") == ch.name)
             emit(2, _row("update_channel", ch.key, ch.name, None, None, None), parent_state.split(":", 1)[1])
             continue
         parent_id = cat_ids.get(ch.category) if ch.category else None
+        # 送るときの親の番号：見つかっていればその番号、この反映で作るなら置き換えの印
+        parent_ref = parent_id
+        if parent_ref is None and ch.category and parent_state == "new":
+            parent_ref = "{ref:category:" + ch.category + "}"
         parent_name = bp_cats[ch.category].name if ch.category else None
         found = None
         problem = None
@@ -467,17 +530,28 @@ def build_plan(
         if found is None:
             after = (f"name={ch.name}; parent={parent_name}; topic={ch.topic or ''}; "
                      f"overwrites=[{bp_overwrite_summary(ch.overwrites)}]")
-            emit(2, _row("create_channel", ch.key, ch.name, None, None, after), create_issue(ch.overwrites))
+            create_json: dict[str, Any] = {"name": ch.name, "type": 0,
+                                           "permission_overwrites": overwrite_list(ch.overwrites)}
+            if ch.topic:
+                create_json["topic"] = ch.topic
+            if parent_ref is not None:
+                create_json["parent_id"] = parent_ref
+            emit(2, _row("create_channel", ch.key, ch.name, None, None, after), create_issue(ch.overwrites),
+                 _action("POST", "/guilds/{guild}/channels", create_json, f"channel:{ch.key}"))
             continue
+        chan_path = f"/channels/{found.get('id')}"
         used_chans.add(str(found.get("id")))
         if found.get("name") != ch.name:
-            emit(2, _row("update_channel", ch.key, ch.name, "name", str(found.get("name")), ch.name))
+            emit(2, _row("update_channel", ch.key, ch.name, "name", str(found.get("name")), ch.name),
+                 None, _action("PATCH", chan_path, {"name": ch.name}))
         if (found.get("topic") or "") != (ch.topic or ""):
-            emit(2, _row("update_channel", ch.key, ch.name, "topic", found.get("topic") or None, ch.topic or None))
+            emit(2, _row("update_channel", ch.key, ch.name, "topic", found.get("topic") or None, ch.topic or None),
+                 None, _action("PATCH", chan_path, {"topic": ch.topic or ""}))
         cur_parent = str(found["parent_id"]) if found.get("parent_id") else None
         if cur_parent != parent_id:
             cur_parent_name = str(cats_by_id[cur_parent].get("name")) if cur_parent in cats_by_id else cur_parent
-            emit(2, _row("update_channel", ch.key, ch.name, "parent", cur_parent_name, parent_name))
+            emit(2, _row("update_channel", ch.key, ch.name, "parent", cur_parent_name, parent_name),
+                 None, _action("PATCH", chan_path, {"parent_id": parent_ref}))
         compare_overwrites(ch, found, parent_name)
 
     # ---- 消す候補
@@ -504,10 +578,12 @@ def build_plan(
     out_changes = [row for stage in changes for row in stage]
     out_blocked = [row for stage in blocked for row in stage]
     out_deletes = [row for stage in deletes for row in stage]
+    out_actions = [a for stage in actions for a in stage]
     digest = hashlib.sha256(
         json.dumps(
             {"changes": out_changes, "blocked": out_blocked, "delete_candidates": out_deletes},
             sort_keys=True, ensure_ascii=False, separators=(",", ":"),
         ).encode()
     ).hexdigest()
-    return {"changes": out_changes, "blocked": out_blocked, "delete_candidates": out_deletes, "plan_digest": digest}
+    return {"changes": out_changes, "blocked": out_blocked, "delete_candidates": out_deletes,
+            "plan_digest": digest, "actions": out_actions}

@@ -9,6 +9,7 @@
  *   tenant.profile.edit → 登録の解除
  *   tenant.profile.edit → 今のサーバーの読み取り
  *   tenant.profile.edit → 確認（設計図と今のサーバーの差）
+ *   tenant.profile.edit → 反映
  *   tenant.profile.edit かつ channels.manage → Bot の招待
  */
 import { useEffect, useState } from "react";
@@ -55,9 +56,29 @@ interface OwnServerPlan {
   delete_candidates: DeleteCandidate[];
 }
 
+interface ApplyResultRow {
+  kind: string;
+  key: string;
+  name: string;
+  field: string | null;
+  status: "success" | "blocked" | "failed";
+  reason: string | null;
+  discord_id: string | null;
+  discord_status: number | null;
+}
+
+interface OwnServerApplyResult {
+  run_id: number;
+  success_count: number;
+  blocked_count: number;
+  failed_count: number;
+  results: ApplyResultRow[];
+}
+
 const OWN_PATH = "/admin/discord-config/own";
 const SNAPSHOT_PATH = "/admin/discord/own-server/snapshot";
 const PLAN_PATH = "/admin/discord/own-server/plan";
+const APPLY_PATH = "/admin/discord/own-server/apply";
 
 type Notice = { kind: "success" | "danger"; text: string } | null;
 
@@ -77,6 +98,9 @@ export function DiscordOwnServerPanel() {
   const [reading, setReading] = useState(false);
   const [checking, setChecking] = useState(false);
   const [plan, setPlan] = useState<OwnServerPlan | null>(null);
+  const [applyOpen, setApplyOpen] = useState(false);
+  const [applying, setApplying] = useState(false);
+  const [applyResult, setApplyResult] = useState<OwnServerApplyResult | null>(null);
 
   // 招待から戻ったときの結果を 1 回だけ読み、URL の残りを消す
   useEffect(() => {
@@ -152,6 +176,7 @@ export function DiscordOwnServerPanel() {
   const handleCheck = async () => {
     setChecking(true);
     setNotice(null);
+    setApplyResult(null);
     try {
       setPlan(await api.get<OwnServerPlan>(PLAN_PATH));
     } catch (err) {
@@ -165,6 +190,33 @@ export function DiscordOwnServerPanel() {
     }
   };
 
+  const handleApply = async () => {
+    if (!plan) return;
+    setApplying(true);
+    setNotice(null);
+    try {
+      const data = await api.post<OwnServerApplyResult>(APPLY_PATH, { plan_digest: plan.plan_digest });
+      setApplyResult(data);
+      setNotice({
+        kind: "success",
+        text: t("discordOwnServer.applyDone", {
+          success: data.success_count,
+          blocked: data.blocked_count,
+          failed: data.failed_count,
+        }),
+      });
+    } catch (err) {
+      const conflict = err instanceof ApiError && err.status === 409;
+      setNotice({
+        kind: "danger",
+        text: conflict ? t("discordOwnServer.applyConflict") : t("discordOwnServer.applyFailed"),
+      });
+    } finally {
+      setApplyOpen(false);
+      setApplying(false);
+    }
+  };
+
   const fieldLabel = (field: string | null) => {
     if (!field) return "";
     if (field.startsWith("overwrite:")) {
@@ -173,7 +225,8 @@ export function DiscordOwnServerPanel() {
     return t(`discordOwnServer.field.${field}`);
   };
 
-  const rowKeyOf = (row: PlanRow) => `${row.kind}:${row.key}:${row.field ?? ""}`;
+  const rowKeyOf = (row: Pick<PlanRow, "kind" | "key" | "field">) => `${row.kind}:${row.key}:${row.field ?? ""}`;
+  const statusVariant = { success: "success", blocked: "warning", failed: "danger" } as const;
   const emptyRows = <EmptyState size="compact" title={t("discordOwnServer.emptyRows")} />;
   const planColumns = [
     { key: "kind", header: t("discordOwnServer.col.kind"), renderCell: (row: PlanRow) => t(`discordOwnServer.kind.${row.kind}`) },
@@ -188,6 +241,23 @@ export function DiscordOwnServerPanel() {
       key: "reason",
       header: t("discordOwnServer.col.reason"),
       renderCell: (row: PlanRow) => (row.reason ? t(`discordOwnServer.reason.${row.reason}`) : ""),
+    },
+  ];
+  const resultColumns = [
+    { key: "kind", header: t("discordOwnServer.col.kind"), renderCell: (row: ApplyResultRow) => t(`discordOwnServer.kind.${row.kind}`) },
+    { key: "name", header: t("discordOwnServer.col.name") },
+    { key: "field", header: t("discordOwnServer.col.field"), renderCell: (row: ApplyResultRow) => fieldLabel(row.field) },
+    {
+      key: "status",
+      header: t("discordOwnServer.col.status"),
+      renderCell: (row: ApplyResultRow) => (
+        <Badge variant={statusVariant[row.status]}>{t(`discordOwnServer.status.${row.status}`)}</Badge>
+      ),
+    },
+    {
+      key: "reason",
+      header: t("discordOwnServer.col.reason"),
+      renderCell: (row: ApplyResultRow) => (row.reason ? t(`discordOwnServer.reason.${row.reason}`) : ""),
     },
   ];
   const deleteColumns = [
@@ -270,6 +340,26 @@ export function DiscordOwnServerPanel() {
             />
             <p className="dc-hint">{t("discordOwnServer.deleteNote")}</p>
           </div>
+          {canEdit && (
+            <div className="dc-actions">
+              <Button variant="primary" disabled={plan.changes.length === 0} onClick={() => setApplyOpen(true)}>
+                {t("discordOwnServer.apply")}
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+      {applyResult && (
+        <div className="dc-group">
+          <h4 className="dc-group-title">
+            {t("discordOwnServer.resultTitle", { count: applyResult.results.length })}
+          </h4>
+          <DataTable<ApplyResultRow>
+            columns={resultColumns}
+            data={applyResult.results}
+            rowKey={rowKeyOf}
+            emptyState={emptyRows}
+          />
         </div>
       )}
       <ConfirmModal
@@ -280,6 +370,15 @@ export function DiscordOwnServerPanel() {
         confirmLoading={removing}
         onConfirm={() => void handleRemove()}
         onCancel={() => setConfirmOpen(false)}
+      />
+      <ConfirmModal
+        open={applyOpen}
+        title={t("discordOwnServer.applyConfirmTitle")}
+        message={t("discordOwnServer.applyConfirmMessage", { count: plan?.changes.length ?? 0 })}
+        confirmLabel={t("discordOwnServer.apply")}
+        confirmLoading={applying}
+        onConfirm={() => void handleApply()}
+        onCancel={() => setApplyOpen(false)}
       />
     </Card>
   );

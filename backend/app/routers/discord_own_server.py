@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -27,10 +28,12 @@ from app.auth.dependencies import (
     require_permission,
     reset_tenant_context,
 )
+from app.cache import get_redis
 from app.database import get_db
 from app.models import User
 from app.services.audit import record_audit_log
-from app.services.discord_blueprint import blueprint_path, build_plan, load_blueprint
+from app.services.discord_blueprint import Blueprint, blueprint_path, build_plan, load_blueprint
+from app.services.discord_blueprint_apply import apply_plan
 from app.services.discord_rest import DiscordAPIError, discord_api_request
 
 logger = logging.getLogger(__name__)
@@ -176,9 +179,6 @@ async def take_own_server_snapshot(
 
 # ---------------------------------------------------------------- 確認（設計図と今のサーバーの差・便3a）
 
-_READ = "GET"  # 確認で Discord に呼ぶのは読み取りだけ
-
-
 class PlanRow(BaseModel):
     kind: str
     key: str
@@ -214,6 +214,18 @@ async def check_own_server_plan(
     tenant_id: int = Depends(get_current_tenant),
 ) -> OwnServerPlanResponse:
     """設計図と今の自社用サーバーを比べて、差を返す。読むだけ（DB にも Discord にも書かない）。"""
+    guild_id, blueprint, bot_token = await _load_own_context(db, tenant_id)
+    plan = await _read_and_plan(guild_id, blueprint, bot_token)
+    return OwnServerPlanResponse(
+        plan_digest=plan["plan_digest"],
+        changes=plan["changes"],
+        blocked=plan["blocked"],
+        delete_candidates=plan["delete_candidates"],
+    )
+
+
+async def _load_own_context(db: AsyncSession, tenant_id: int) -> tuple[str, Blueprint, str]:
+    """自社用サーバーの番号・設計図・Bot の鍵を用意する（確認と反映で同じ手順）。"""
     result = await db.execute(
         text("SELECT guild_id FROM public.tenant_discord_config WHERE tenant_id = :tid AND purpose = 'own'"),
         {"tid": tenant_id},
@@ -231,7 +243,7 @@ async def check_own_server_plan(
         raise HTTPException(status_code=404, detail="設計図がまだありません。")
     try:
         blueprint = load_blueprint(path)
-    except ValueError as exc:
+    except (ValueError, OSError) as exc:
         logger.warning("[discord_own_server] blueprint invalid tenant=%d: %s", tenant_id, exc)
         raise HTTPException(status_code=422, detail="設計図の形が正しくありません。") from exc
 
@@ -241,36 +253,155 @@ async def check_own_server_plan(
             status_code=503,
             detail="Bot トークンが設定されていません。環境変数 DISCORD_BOT_TOKEN を確認してください。",
         )
+    return guild_id, blueprint, bot_token
 
+
+async def _read_and_plan(guild_id: str, blueprint: Blueprint, bot_token: str) -> dict[str, Any]:
+    """Discord を GET で 4 回読み、設計図との差（build_plan の戻り値）を返す。"""
     try:
         roles: list[dict[str, Any]] = await discord_api_request(
-            method=_READ,
+            method="GET",
             path=f"/guilds/{guild_id}/roles",
             bot_token=bot_token,
             expected_statuses=(200,),
         ) or []
         channels: list[dict[str, Any]] = await discord_api_request(
-            method=_READ,
+            method="GET",
             path=f"/guilds/{guild_id}/channels",
             bot_token=bot_token,
             expected_statuses=(200,),
         ) or []
         me: dict[str, Any] = await discord_api_request(
-            method=_READ,
+            method="GET",
             path="/users/@me",
             bot_token=bot_token,
             expected_statuses=(200,),
         ) or {}
         member: dict[str, Any] = await discord_api_request(
-            method=_READ,
+            method="GET",
             path=f"/guilds/{guild_id}/members/{me.get('id')}",
             bot_token=bot_token,
             expected_statuses=(200,),
         ) or {}
     except DiscordAPIError as exc:
-        logger.warning("[discord_own_server] plan read failed tenant=%d: %s", tenant_id, exc)
+        logger.warning("[discord_own_server] plan read failed: %s", exc)
         raise HTTPException(status_code=502, detail="Discord から読み取れませんでした。") from exc
 
     bot_role_ids = [str(r) for r in (member.get("roles") or [])]
-    plan = build_plan(blueprint, roles, channels, guild_id, bot_role_ids)
-    return OwnServerPlanResponse(**plan)
+    return build_plan(blueprint, roles, channels, guild_id, bot_role_ids)
+
+
+# ---------------------------------------------------------------- 反映（便3b）
+
+class OwnServerApplyRequest(BaseModel):
+    plan_digest: str
+
+
+class ApplyResultRow(BaseModel):
+    kind: str
+    key: str
+    name: str
+    field: str | None = None
+    status: str
+    reason: str | None = None
+    discord_id: str | None = None
+    discord_status: int | None = None
+
+
+class OwnServerApplyResponse(BaseModel):
+    run_id: int
+    success_count: int
+    blocked_count: int
+    failed_count: int
+    results: list[ApplyResultRow]
+
+
+def _apply_insert_sql(db: AsyncSession) -> str:
+    """反映の記録を入れる文。PostgreSQL では JSONB に CAST し、SQLite（試験）では素の文字（_insert_sql と同じ分け方）。"""
+    bind = db.get_bind() if hasattr(db, "get_bind") else getattr(db, "bind", None)
+    name = getattr(getattr(bind, "dialect", None), "name", "") or ""
+    result_expr = "CAST(:result AS JSONB)" if name.startswith("postgresql") else ":result"
+    return (
+        "INSERT INTO public.discord_server_apply_runs"
+        " (tenant_id, purpose, plan_digest, started_at, finished_at, applied_by, result)"
+        f" VALUES (:tid, 'own', :digest, :started, :finished, :uid, {result_expr}) RETURNING id"
+    )
+
+
+@router.post(
+    "/admin/discord/own-server/apply",
+    response_model=OwnServerApplyResponse,
+    dependencies=[Depends(require_permission("tenant.profile.edit"))],
+)
+async def apply_own_server_plan(
+    body: OwnServerApplyRequest,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),
+) -> OwnServerApplyResponse:
+    """確認した差を自社用サーバーに反映する。作る・変えるだけで、消さない。"""
+    guild_id, blueprint, bot_token = await _load_own_context(db, tenant_id)
+
+    # 同時に 1 本だけ反映する
+    r = get_redis()
+    if r is None:
+        raise HTTPException(
+            status_code=503,
+            detail="同時に反映しないための仕組みにつながりません。少し待ってからやり直してください。",
+        )
+    lock_key = f"discord_own_apply:{tenant_id}"
+    if not await r.set(lock_key, "1", nx=True, ex=600):
+        raise HTTPException(status_code=409, detail="反映が動いています。終わってから確認し直してください。")
+
+    try:
+        started_at = datetime.now(timezone.utc)
+        plan = await _read_and_plan(guild_id, blueprint, bot_token)
+        if plan["plan_digest"] != body.plan_digest:
+            raise HTTPException(
+                status_code=409,
+                detail="確認したあとにサーバーか設計図が変わりました。確認し直してください。",
+            )
+
+        results = await apply_plan(plan, guild_id, bot_token)
+
+        inserted = await db.execute(
+            text(_apply_insert_sql(db)),
+            {
+                "tid": tenant_id,
+                "digest": plan["plan_digest"],
+                "started": started_at,
+                "finished": datetime.now(timezone.utc),
+                "uid": current_user.id,
+                "result": json.dumps({"rows": results}, ensure_ascii=False),
+            },
+        )
+        run_id = int(inserted.scalar_one())
+        counts = {s: sum(1 for x in results if x["status"] == s) for s in ("success", "blocked", "failed")}
+        await record_audit_log(
+            db=db,
+            tenant_id=tenant_id,
+            user_id=current_user.id,
+            action="create",
+            table_name="discord_server_apply_runs",
+            record_id=run_id,
+            new_data=counts,
+        )
+        await db.commit()
+        await reset_tenant_context(db, tenant_id)  # ADR-072
+
+        logger.info(
+            "[discord_own_server] apply tenant=%d run=%d success=%d blocked=%d failed=%d",
+            tenant_id, run_id, counts["success"], counts["blocked"], counts["failed"],
+        )
+        return OwnServerApplyResponse(
+            run_id=run_id,
+            success_count=counts["success"],
+            blocked_count=counts["blocked"],
+            failed_count=counts["failed"],
+            results=[ApplyResultRow(**x) for x in results],
+        )
+    finally:
+        try:
+            await r.delete(lock_key)
+        except Exception as exc:  # noqa: BLE001 - 鍵は 10 分で自然に消える
+            logger.warning("[discord_own_server] apply lock release failed tenant=%d: %s", tenant_id, exc)
