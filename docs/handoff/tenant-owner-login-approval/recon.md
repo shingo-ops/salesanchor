@@ -88,9 +88,9 @@
 |---|-------|---------|------|
 | 1 | 本番の接続役が salesanchor_app か | deploy の job log 1238・3166 行（report.md 追記） | ✅ 解消済み（salesanchor_app） |
 | 2 | 必須チェックの一覧 | `gh api` で ruleset 15777895 を取得（rulesets.json） | ✅ 解消済み。workflow-lint は必須でない |
-| 3 | 見張りのゲートは PR 側のコードで動くか | process-artifacts-gate.yml:8・27 と GitHub 公式文書（events-that-trigger-workflows: pull_request は PR のマージ用の写し、pull_request_target は基のブランチで動く） | ✅ 解消済み。PR 側で動く → PR が自分で見張りを外せる。K10 は pull_request_target で基のブランチの定義を動かす |
-| 4 | 本番で BYPASSRLS を持つ役の一覧 | ai_ro にカタログの見せ方が無く読めない | ⏳ 便5 の初回実行で読み、PO 報告のうえ許可一覧に固定（設計で手順化） |
-| 5 | public の tenant_id 付きで RLS の無い表の今の数 | CI の実 DB で数える | ⏳ 便4 の最初の実行（記録だけの形）で数え、理由つきの許可一覧にする（設計で手順化） |
+| 3 | 見張りのゲートは PR 側のコードで動くか | .github/workflows/process-artifacts-gate.yml:8・27 と GitHub 公式文書（events-that-trigger-workflows: pull_request は PR のマージ用の写し、pull_request_target は基のブランチで動く） | ✅ 解消済み。PR 側で動く → PR が自分で見張りを外せる。K10 は pull_request_target で基のブランチの定義を動かす |
+| 4 | 本番で BYPASSRLS を持つ役の一覧 | ai_ro にカタログの見せ方が無く読めない | ⏳ 便6 の初回実行で読み、PO 報告のうえ許可一覧に固定（設計で手順化） |
+| 5 | public の tenant_id 付きで RLS の無い表の今の数 | CI の実 DB で数える | ⏳ 便5 の最初の実行（記録だけの形）で数え、理由つきの許可一覧にする（設計で手順化） |
 | 6 | お客さまの会社のオーナーの人数 | お客さまの会社には触らない決まり | 対象外。オーナーがいなければ画面で「運営に連絡」と出す設計で吸収 |
 | 7 | Context7 での GitHub Actions 仕様の確認 | 月の上限で使えず（2026-11-05） | ✅ 公式文書を直接確認で代替（起動指示の許可） |
 
@@ -101,5 +101,5 @@
 ## 補足
 
 - 依頼の表に tenant_id は無い。会社の絞り込みは `public.users u ON u.id = r.user_id` で `u.tenant_id = get_current_tenant の会社` とする（運営の一覧と同じ JOIN）。
-- 運営の許可（super_admin_login_requests.py:107）と同じ UPDATE をオーナー用に書き写すと二重管理になる → 共通の関数に1か所化する。
+- 運営の許可（backend/app/routers/super_admin_login_requests.py:107）と同じ UPDATE をオーナー用に書き写すと二重管理になる → 共通の関数に1か所化する。
 - メールは全社で1つ（public.users）のため、スタッフ登録で「失敗か成功か」から他社在籍を推測される余地は消せない。文言の区別を無くすところまでが本件の範囲。
