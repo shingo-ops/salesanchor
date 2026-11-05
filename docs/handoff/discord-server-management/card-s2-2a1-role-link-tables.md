@@ -254,11 +254,11 @@ def test_tenant_ddl_has_discord_role_id_and_retired_tables():
         " WHERE discord_role_id IS NOT NULL;"
     ) in sql
 
-    retired_roles = _block(sql, "CREATE TABLE IF NOT EXISTS {schema}.discord_retired_roles (")
+    retired_roles = _block(sql, "{schema}.discord_retired_roles (")
     assert "discord_role_id TEXT PRIMARY KEY" in retired_roles
     assert "retired_at      TIMESTAMPTZ NOT NULL DEFAULT now()" in retired_roles
 
-    retired_members = _block(sql, "CREATE TABLE IF NOT EXISTS {schema}.discord_retired_members (")
+    retired_members = _block(sql, "{schema}.discord_retired_members (")
     assert "discord_user_id TEXT PRIMARY KEY" in retired_members
     assert "kick            BOOLEAN NOT NULL" in retired_members
     assert "retired_at      TIMESTAMPTZ NOT NULL DEFAULT now()" in retired_members
@@ -353,6 +353,14 @@ async def test_new_tenant_has_link_tables_and_migration_is_idempotent():
 - `python scripts/check_schema_catchup_sync.py` の生出力（リポジトリの根で。setup_tenant.py・sync_tenant_schema.py は触っていないので変わらないはず）
 - `git diff --stat origin/main` の生出力（第2段の設計の文書 5 つ・このカード・§1〜§5 の 5 つ・報告書のほかに無いこと）
 - 手元に PostgreSQL があれば、§5 の PG の試験を TEST_PG_URL を付けて流し生出力を貼る。無ければ「PostgreSQL なし・CI の pytest と schema-check に任せる」と書く
+- `BASE_SHA=$(git merge-base HEAD origin/main) HEAD_SHA=$(git rev-parse HEAD) python3 scripts/check_test_schema_dup.py; echo rc=$?` の生出力（リポジトリの根で。rc=0 であること。rc=1 なら停止して BLOCKED: と生出力）
+
+## §5-改訂1（2026-11-06・PR 審査で見つかったカードの不備）
+
+- 【事実】初版の §5 は `_block` の区切りに `"CREATE TABLE IF NOT EXISTS {schema}.discord_retired_roles ("` と `..._members (` を渡していた。assert の外の文字列なので、CI「test-schema-dup gate」（`scripts/check_test_schema_dup.py`）が本番の表の定義の写しとして 2 件数え、赤になった（`backend/tests/test_discord_role_link_ddl.py (0 -> 2)`、Opus が手元で同じ rc=1 を再現）。
+- 直し: 区切りを `"{schema}.discord_retired_roles ("`・`"{schema}.discord_retired_members ("` にする（§5 は改訂済み）。tenant.py の中でそれぞれ 1 回だけ出る（Opus が `grep -c` で 1・1 を確認）ので、`_block` の `count == 1` はそのまま成り立つ。
+- 触るのは `backend/tests/test_discord_role_link_ddl.py` の 2 行だけ。ほかのファイルは変えない。§6 の最後の行（check_test_schema_dup.py の rc=0）を必ず流す。
+- commit の文: `test: drop CREATE TABLE prefix from retired-table markers (test-schema-dup gate)`
 
 ## §7 保存
 
