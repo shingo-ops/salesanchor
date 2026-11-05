@@ -452,7 +452,7 @@
 | KGI-11 同じ名前が 2 つで止まる | 確認画面の理由の表示・自動の試験 |
 | KGI-12〜14 決まった部屋に 1 件ずつ届く | Discord の目視・notification_logs の行の数・自動の試験（Messenger・Instagram は自動の試験だけ） |
 | KGI-15 人の Discord 設定の作業 0 件 | 試験の手順書で数える |
-| KGI-16 消すと自社サーバーから外れる・無効と番号の書き換えでは外れない | 前提: テスト用スタッフ 2 人を自社と顧客用の両方のサーバーに入れておく（Fable 3 回目 N16）。確認の窓の文を目視・時刻を控えて Discord のメンバー画面を見る・自動の試験（kick=true の行だけ `DELETE /guilds/{own}/members/{u}` を送る・無効の人と kick=false の行には送らない・顧客用サーバーの番号には送らない・同じ番号の 2 度目で staff の DELETE が失敗しない） |
+| KGI-16 消すと自社サーバーから外れる・無効と番号の書き換えでは外れない | 前提: テスト用スタッフ 2 人を自社と顧客用の両方のサーバーに入れておく（Fable 3 回目 N16）。確認の窓の文を目視・時刻を控えて Discord のメンバー画面を見る・自動の試験（kick=true の行だけ `DELETE /guilds/{own}/members/{u}` を送る・無効の人と kick=false の行には送らない・顧客用サーバーの番号には送らない・同じ番号の 2 度目で staff の DELETE が失敗しない・PATCH で番号を書き換えると元の番号に kick=false の行が 1 つ入り、点検は元の番号の Bot が管理するロールにだけ DELETE を送り、members の DELETE は送らない＝Fable 4 回目 N17） |
 | 顧客用サーバーの今の動きが変わらない | 今の試験（discord_role_sync・auto-setup・部屋の外）が全部通る |
 
 ## S2-7 リスクと対処・戻し方・測り方
@@ -460,6 +460,7 @@
 - 全員の一覧を読まないので、GUILD_MEMBERS 特権インテントに頼らない（List Guild Members だけが GUILD_MEMBERS を要る＝Discord 公式 `developers/resources/guild.mdx` の List Guild Members の警告。2026-11-05 に Opus が公式を直接読んで確かめた。注記は design.md 第1段 改訂4・§8＝:259）
 - Discord の番号の登録間違いで、別の人を自社サーバーから外すおそれ → 外すのは「消したスタッフに登録されていた番号」1 つだけで、確認の窓で消す相手の名前を出す。外された人は招待で入り直せる（Kick は出入り禁止ではない）。書き込みは消えない
 - Bot より上のロールを持つ人・サーバーの持ち主は外せない → 点検の記録に理由を残す（D2-7）
+- テナントの物理削除（`backend/app/routers/super_admin_tenants.py:167`、会社のデータをまるごと消す SaaS 管理者の操作）では Discord に何もしない（対象外）。その会社の自社サーバーはその会社のもので、スタッフを 1 人ずつ外す処理は D2-7 のスタッフの DELETE だけに付ける（Fable 4 回目 N18）
 - Discord の回数制限 → discord_rest の待ちに任せ、5 分ごとの点検で取り返す。1 回の点検で送る数を記録する
 - webhook_url の平文 → 今の作法のまま。Bot が作るのは自社サーバーの部屋だけ。漏れたときは部屋の webhook を消して作り直せば無効になる
 - 戻し方: 便ごとに revert。移行で足す列は NULL 許容で、使わなければ今の動きに戻る。定期作業は設定から外せば止まる。Discord に付けたロールは残る（消さない作法）ので、外したいときは点検を止めてから人が外す
@@ -489,5 +490,7 @@
 - 2026-11-05 Fable（3 回目・HEAD eab189b54）: REVISE。前回の Q5・Q6・N9〜N14 は全部直った。指示した行番号は全部実物と一致。新しく必須 Q7（番号を変えたときの扱いが PO の言葉に無いのに「決まったこと」に入っていた）、推奨 N15（便2a の期間に消した人が窓で知らされずに後で外される）・N16（KGI-16 の試験の前提が無い）。審査は見張り（危ない語の検査）で途中停止
 - 反映: Q7→ideal-state から Opus が書いた 1 行を消し、kgi.md と S2-11 の「決めていないこと」へ移して PO に聞く。N15→S2-5 で行を入れる処理を便2b へ移し、外す処理・窓の 1 行と同じ便にした（2a は表を作るだけ）。N16→KGI-16 と S2-6 に前提を足した
 - 審査が確かめられなかった所を Opus が手元で読んだ（origin/main）: Kick Members は Bot に求める権限の一覧に入っている（`backend/app/routers/discord_oauth.py` の注記、今の顧客を外す機能 discord_remove.py が使用）。`backend/app/schemas/staff.py:124` StaffProfileUpdate に discord_user_id は無い（本人のプロフィール変更では番号を変えられない＝番号が変わる道は PATCH:665 だけ。POST:582 は新規）。`backend/app/services/discord_rest.py:34` discord_api_request は method を引数で受け、DELETE を止める作りは無い。`frontend/src/locales/ja.json:2083` に staff の名前空間がある
-- 【未確認】staff 行を消すほかの道（PATCH・DELETE 以外）: 検索の語が見張りに止められたため読めていない。便2b のカードで、実装役の最初の作業として Grep の道具で確かめる
+- staff 行を消すほかの道（Fable 4 回目が Grep の道具で確かめた・HEAD 8f2156020）: アプリの中は `backend/app/routers/staff.py:755` だけ（ORM の delete は 0 件）。会社ごと消す道が `backend/app/routers/super_admin_tenants.py:167`（DROP SCHEMA CASCADE＝テナントの物理削除）。ほかは試験と QA の道具だけ（`backend/tests/conftest.py:1809`・`scripts/test_lint_tenant_schema.py:80`・`scripts/qa/seed-tenant.sql:93`・`scripts/qa/cleanup-smoke-data.sh:106`）。staff.discord_user_id を書く道は POST（staff.py:602）と PATCH（:710）だけ
+- 2026-11-05 Fable（4 回目・HEAD 8f2156020）: APPROVE。Q7・N15・N16 は直った。S2-12 に書いた手元の事実は全部実物と一致。推奨 N17（KGI-16 の自動の試験に番号の書き換えを足す）・N18（上の未確認を結果に置き換え、テナントの物理削除の扱いを書く）
+- 反映: N17→S2-6 の KGI-16 の行。N18→この節の上の行と S2-7 の 1 行
 - 未確認のまま残すもの: Create Webhook の権限・Kick が Bot のロールの順番に縛られるか。Remove Guild Member（KICK_MEMBERS）と List Guild Members（GUILD_MEMBERS が要る）は 2026-11-05 に Opus が公式（github.com/discord/discord-api-docs `developers/resources/guild.mdx`）を直接読んで確かめた。Context7 は月の上限で使えなかった。残りは便2b・2c のカードの最初の作業で、試験サーバーへの実際の呼び出しで確かめる
