@@ -41,7 +41,6 @@ import { usePermissions } from "../hooks/usePermissions";
 import { useSuperAdmin } from "../hooks/useSuperAdmin";
 import { useSSE } from "../hooks/useSSE";
 import { RealtimeProvider } from "../lib/realtime/RealtimeProvider";
-import LoginApprovalWatcher from "../features/auth/LoginApprovalWatcher";
 import RecoveryCodePrompt from "../features/auth/RecoveryCodePrompt";
 import { listConversations } from "../lib/messages";
 import {
@@ -208,7 +207,6 @@ export default function MobileShell() {
 
   return (
     <RealtimeProvider>
-    <LoginApprovalWatcher />
     <RecoveryCodePrompt />
     <div className={tabbarHidden ? "mobile-shell mobile-shell--tabbar-hidden" : "mobile-shell"}>
       {/* ============ Outlet ============ */}

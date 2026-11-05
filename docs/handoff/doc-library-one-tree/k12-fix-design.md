@@ -183,3 +183,19 @@
 | 古い線が残っていない | `grep -c -E "6500|6\.5k" scripts/dev/doc-entry-weekly-check.sh` が 0 |
 | 既存の試験が通る | `bash scripts/dev/test_doc_entry_weekly_check.sh` が FAIL 0・終了コード 0 |
 | 次の月曜に誤った NG が出ない | 次の週次点検の結果に `K9>` が入らない（K9 が 7.5k 以下のとき） |
+
+- 結果: PR #5133 で本線に入った（2026-11-05 02:55 JST）。本線の台本は 8 行目 `K9_LIMIT_TOKENS=7500`・89 行目 `add_ng "K9>7.5k"`（`git show origin/main:scripts/dev/doc-entry-weekly-check.sh` で確かめた）。
+
+## 16. 要件 L1 の K9 の線も 7.5k にそろえる（2026-11-05）
+
+- 起きたこと（事実）: §15 で触らなかった `docs/handoff/doc-agenda-nav/library-requirements.md` 12 行目の L1 が「K9 ≤ 6.5k」のまま。同じ表の見出しは「PO 承認済み・変えない」なので、Opus の判断では変えず PO に示した。
+- PO の決定: Opus が示した3つの選択肢のうち、1「この書類の線も 7.5k に書き直し、決めた日付を残す」【おすすめ】に、2026-11-05 PO 原文「1,」。
+- 直し方: L1 の K9 を ~~6.5k~~ **7.5k** にし、表の見出しと表の下の注記に変更の日付と経緯を残す。
+- 触らない: K1 ≤ 200・L2〜L4。6.5k で判定した過去の記録（baseline.md・design.md・library-design.md・library-mura-design.md・library-stage*-result.md・library-review*.md）。どれもその時点の判定の記録で、今の合格線の正本は kgi.md。
+- 戻し方: この PR を revert する。
+
+| 基準 | 検証方法 |
+|---|---|
+| L1 の K9 が 7.5k | `grep -n "^| L1 " docs/handoff/doc-agenda-nav/library-requirements.md` の行に「**7.5k**」がある |
+| 決めた日付と経緯が残る | 同じファイルに「2026-11-05 PO 原文「1,」」がある |
+| 今の合格線を書いた場所に 6.5k が残っていない | `grep -n -E "6500|6\.5k" docs/specs/doc-agenda-nav/kgi.md scripts/dev/doc-entry-weekly-check.sh` の当たりが kgi.md の経緯と過去の値の欄だけ（20 行目・34 行目）。library-requirements.md の当たりは L1 の取り消し線・表の下の注記・§3 の過去の測定の行の3行だけ |

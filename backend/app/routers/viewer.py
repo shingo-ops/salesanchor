@@ -1,7 +1,8 @@
 """閲覧専用ページの API（ADR-1019 段2・設計 D1/D2）。
 
 POST /login・POST /logout・GET /inventory・POST /password・POST /password-reset/request・
-POST /password-reset/confirm・POST /signup の7本。
+POST /password-reset/confirm・POST /signup の7本（閲覧者のトークンで呼ぶもの）。
+加えて請求先フォームの POST /billing-form/open・POST /billing-form/submit（トークンを見ない公開の入口。鍵は本文の1回きりの鍵）。
 アプリの get_current_user とは別の経路で、Redis の jwt: 名前空間（キャッシュ関数）は使わない。
 """
 
@@ -47,6 +48,7 @@ from app.cache import (
 from app.client_ip import get_client_ip
 from app.database import get_db
 from app.routers.auth import PASSWORD_RESET_TTL, _require_app_origin
+from app.services import viewer_billing_form
 from app.services.auth_mail import send_viewer_password_reset_email
 from app.services.viewer_invite import create_viewer_invite
 from app.services.viewer_signup import SIGNUP_CODE_TTL, replace_signup_code
@@ -475,3 +477,99 @@ async def viewer_signup(
 
     invite_url = await create_viewer_invite(db) if limits_ok else None  # commit の後（Discord を待つ間 DB を開けない）
     return _signup_response(code, expires_at, invite_url)
+
+
+# ── 請求先フォーム（viewer-customer-sheet 便2）。鍵は本文の1回きりの鍵だけ。閲覧者のトークンは見ない ──
+BILLING_FORM_INVALID = "viewer_billing_form_invalid"
+
+
+class ViewerBillingFormOpenRequest(BaseModel):
+    token: str = Field(max_length=256, description="請求先フォームのリンクに入っている鍵")
+
+
+class ViewerBillingFormSubmitRequest(BaseModel):
+    token: str = Field(max_length=256, description="請求先フォームのリンクに入っている鍵")
+    party_type: str = Field(max_length=20, description="company＝会社／individual＝個人")
+    bill_to_name: str = Field(max_length=200, description="請求書の宛名（前後の空白を除いて1〜100文字）")
+    contact_name: str | None = Field(default=None, max_length=200, description="担当者名（1〜50文字。会社のときは必須）")
+    postal_code: str = Field(max_length=30, description="郵便番号（ハイフン・空白を外して数字7桁）")
+    address: str = Field(max_length=400, description="住所（前後の空白を除いて1〜200文字）")
+    phone: str = Field(max_length=30, description="電話番号（ハイフン・空白を外して数字10〜11桁）")
+    invoice_email: str | None = Field(default=None, max_length=254, description="請求書の送り先メール（任意）")
+
+
+class ViewerBillingFormValues(BaseModel):
+    party_type: str | None = Field(None, description="company／individual。まだ無ければ null")
+    bill_to_name: str = Field("", description="請求書の宛名")
+    contact_name: str = Field("", description="担当者名")
+    postal_code: str = Field("", description="郵便番号（数字7桁）")
+    address: str = Field("", description="住所")
+    phone: str = Field("", description="電話番号（数字）")
+    invoice_email: str = Field("", description="請求書の送り先メール")
+
+
+@router.post("/billing-form/open", response_model=ViewerBillingFormValues)
+async def viewer_billing_form_open(
+    data: ViewerBillingFormOpenRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """鍵を使い切らずに確かめ、今の請求先（無ければ空）を返す。無効の理由は分けない（全部 400）。"""
+    _require_app_origin(request)
+    ip = get_client_ip(request)
+    if await check_auth_rate_limit(ip):
+        raise HTTPException(status_code=429, detail=TOO_MANY)
+    viewer_id = await viewer_billing_form.peek_token(db, data.token)
+    if viewer_id is None:
+        await record_auth_failure(ip)
+        raise HTTPException(status_code=400, detail=BILLING_FORM_INVALID)
+    profile = await viewer_billing_form.get_profile(db, viewer_id)
+    if profile is None:
+        return ViewerBillingFormValues()
+    return ViewerBillingFormValues(
+        party_type=profile["party_type"],
+        bill_to_name=profile["bill_to_name"],
+        contact_name=profile["contact_name"] or "",
+        postal_code=profile["postal_code"],
+        address=profile["address"],
+        phone=profile["phone"],
+        invoice_email=profile["invoice_email"] or "",
+    )
+
+
+@router.post("/billing-form/submit")
+async def viewer_billing_form_submit(
+    data: ViewerBillingFormSubmitRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """請求先を保存する。保存できたときだけ鍵が使い切られる（失敗したら同じリンクで送り直せる）。"""
+    _require_app_origin(request)
+    ip = get_client_ip(request)
+    if await check_auth_rate_limit(ip):
+        raise HTTPException(status_code=429, detail=TOO_MANY)
+    try:
+        values = viewer_billing_form.clean_profile(
+            data.party_type, data.bill_to_name, data.contact_name, data.postal_code,
+            data.address, data.phone, data.invoice_email,
+        )
+    except viewer_billing_form.BillingInvalid as exc:
+        raise HTTPException(status_code=422, detail=f"viewer_billing_invalid:{exc.args[0]}") from None  # 鍵は消費しない
+
+    viewer_id = await viewer_billing_form.consume_token(db, data.token)
+    if viewer_id is None:
+        await db.rollback()
+        await record_auth_failure(ip)
+        raise HTTPException(status_code=400, detail=BILLING_FORM_INVALID)
+    if not await viewer_billing_form.is_active(db, viewer_id):
+        await db.commit()  # 鍵は消費済みのまま
+        raise HTTPException(status_code=400, detail=BILLING_FORM_INVALID)
+    try:
+        await viewer_billing_form.upsert_profile(db, viewer_id, values)
+        await db.commit()
+    except Exception:
+        await db.rollback()  # 鍵も戻る（同じリンクで送り直せる）
+        logger.error("viewer billing form save failed: viewer=%s", viewer_id)
+        raise HTTPException(status_code=500, detail="viewer_billing_save_failed") from None
+    logger.info("viewer billing form saved: viewer=%s", viewer_id)
+    return {"status": "saved"}

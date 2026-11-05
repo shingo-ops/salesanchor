@@ -22,6 +22,7 @@ from tests.viewer_template_fixtures import DEFAULT_BODIES, make_load_body
 KEYS = [
     "signup_request", "reissue_notice", "reissue_notice_no_invite", "room_welcome", "room_recreated",
     "notice_extended", "notice_activated", "notice_suspended", "interview_request",
+    "billing_form_request",
 ]
 
 

@@ -38336,6 +38336,264 @@
         "title": "ViewerAdminListResponse",
         "type": "object"
       },
+      "ViewerBillingFormOpenRequest": {
+        "properties": {
+          "token": {
+            "description": "請求先フォームのリンクに入っている鍵",
+            "maxLength": 256,
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token"
+        ],
+        "title": "ViewerBillingFormOpenRequest",
+        "type": "object"
+      },
+      "ViewerBillingFormSendResponse": {
+        "description": "請求先フォームを送った結果。",
+        "properties": {
+          "expires_at": {
+            "description": "リンクの期限",
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "mail_queued": {
+            "description": "メールの送信を手配したか",
+            "title": "Mail Queued",
+            "type": "boolean"
+          },
+          "room_notice": {
+            "description": "部屋への送信結果",
+            "enum": [
+              "sent",
+              "failed",
+              "no_room"
+            ],
+            "title": "Room Notice",
+            "type": "string"
+          },
+          "room_notice_text": {
+            "description": "部屋へ送ろうとした文（リンクを含む。super admin だけが見る）",
+            "title": "Room Notice Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "room_notice",
+          "room_notice_text",
+          "mail_queued",
+          "expires_at"
+        ],
+        "title": "ViewerBillingFormSendResponse",
+        "type": "object"
+      },
+      "ViewerBillingFormSubmitRequest": {
+        "properties": {
+          "address": {
+            "description": "住所（前後の空白を除いて1〜200文字）",
+            "maxLength": 400,
+            "title": "Address",
+            "type": "string"
+          },
+          "bill_to_name": {
+            "description": "請求書の宛名（前後の空白を除いて1〜100文字）",
+            "maxLength": 200,
+            "title": "Bill To Name",
+            "type": "string"
+          },
+          "contact_name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "担当者名（1〜50文字。会社のときは必須）",
+            "title": "Contact Name"
+          },
+          "invoice_email": {
+            "anyOf": [
+              {
+                "maxLength": 254,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "請求書の送り先メール（任意）",
+            "title": "Invoice Email"
+          },
+          "party_type": {
+            "description": "company＝会社／individual＝個人",
+            "maxLength": 20,
+            "title": "Party Type",
+            "type": "string"
+          },
+          "phone": {
+            "description": "電話番号（ハイフン・空白を外して数字10〜11桁）",
+            "maxLength": 30,
+            "title": "Phone",
+            "type": "string"
+          },
+          "postal_code": {
+            "description": "郵便番号（ハイフン・空白を外して数字7桁）",
+            "maxLength": 30,
+            "title": "Postal Code",
+            "type": "string"
+          },
+          "token": {
+            "description": "請求先フォームのリンクに入っている鍵",
+            "maxLength": 256,
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "party_type",
+          "bill_to_name",
+          "postal_code",
+          "address",
+          "phone"
+        ],
+        "title": "ViewerBillingFormSubmitRequest",
+        "type": "object"
+      },
+      "ViewerBillingFormValues": {
+        "properties": {
+          "address": {
+            "default": "",
+            "description": "住所",
+            "title": "Address",
+            "type": "string"
+          },
+          "bill_to_name": {
+            "default": "",
+            "description": "請求書の宛名",
+            "title": "Bill To Name",
+            "type": "string"
+          },
+          "contact_name": {
+            "default": "",
+            "description": "担当者名",
+            "title": "Contact Name",
+            "type": "string"
+          },
+          "invoice_email": {
+            "default": "",
+            "description": "請求書の送り先メール",
+            "title": "Invoice Email",
+            "type": "string"
+          },
+          "party_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "company／individual。まだ無ければ null",
+            "title": "Party Type"
+          },
+          "phone": {
+            "default": "",
+            "description": "電話番号（数字）",
+            "title": "Phone",
+            "type": "string"
+          },
+          "postal_code": {
+            "default": "",
+            "description": "郵便番号（数字7桁）",
+            "title": "Postal Code",
+            "type": "string"
+          }
+        },
+        "title": "ViewerBillingFormValues",
+        "type": "object"
+      },
+      "ViewerBillingProfileResponse": {
+        "description": "お客さんが書いた請求先（管理画面の表示用）。",
+        "properties": {
+          "address": {
+            "description": "住所",
+            "title": "Address",
+            "type": "string"
+          },
+          "bill_to_name": {
+            "description": "請求書の宛名",
+            "title": "Bill To Name",
+            "type": "string"
+          },
+          "contact_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "担当者名",
+            "title": "Contact Name"
+          },
+          "invoice_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "請求書の送り先メール",
+            "title": "Invoice Email"
+          },
+          "party_type": {
+            "description": "company＝会社／individual＝個人",
+            "enum": [
+              "company",
+              "individual"
+            ],
+            "title": "Party Type",
+            "type": "string"
+          },
+          "phone": {
+            "description": "電話番号（数字10〜11桁）",
+            "title": "Phone",
+            "type": "string"
+          },
+          "postal_code": {
+            "description": "郵便番号（数字7桁）",
+            "title": "Postal Code",
+            "type": "string"
+          },
+          "updated_at": {
+            "description": "最後に保存した時刻",
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "party_type",
+          "bill_to_name",
+          "postal_code",
+          "address",
+          "phone",
+          "updated_at"
+        ],
+        "title": "ViewerBillingProfileResponse",
+        "type": "object"
+      },
       "ViewerLoginItem": {
         "description": "ログイン記録1行。",
         "properties": {
@@ -67658,6 +67916,61 @@
         ]
       }
     },
+    "/api/v1/super-admin/viewers/{viewer_id}/billing-profile": {
+      "get": {
+        "operationId": "get_billing_profile_endpoint_api_v1_super_admin_viewers__viewer_id__billing_profile_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "viewer_id",
+            "required": true,
+            "schema": {
+              "title": "Viewer Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ViewerBillingProfileResponse"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Get Billing Profile Endpoint Api V1 Super Admin Viewers  Viewer Id  Billing Profile Get"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Billing Profile Endpoint",
+        "tags": [
+          "super-admin"
+        ]
+      }
+    },
     "/api/v1/super-admin/viewers/{viewer_id}/extend": {
       "post": {
         "operationId": "extend_endpoint_api_v1_super_admin_viewers__viewer_id__extend_post",
@@ -67804,6 +68117,53 @@
           }
         ],
         "summary": "Reissue Signup Code Endpoint",
+        "tags": [
+          "super-admin"
+        ]
+      }
+    },
+    "/api/v1/super-admin/viewers/{viewer_id}/send-billing-form": {
+      "post": {
+        "operationId": "send_billing_form_endpoint_api_v1_super_admin_viewers__viewer_id__send_billing_form_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "viewer_id",
+            "required": true,
+            "schema": {
+              "title": "Viewer Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViewerBillingFormSendResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Send Billing Form Endpoint",
         "tags": [
           "super-admin"
         ]
@@ -73756,6 +74116,88 @@
         "summary": "Set User Roles",
         "tags": [
           "roles"
+        ]
+      }
+    },
+    "/api/v1/viewer/billing-form/open": {
+      "post": {
+        "description": "鍵を使い切らずに確かめ、今の請求先（無ければ空）を返す。無効の理由は分けない（全部 400）。",
+        "operationId": "viewer_billing_form_open_api_v1_viewer_billing_form_open_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ViewerBillingFormOpenRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViewerBillingFormValues"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Viewer Billing Form Open",
+        "tags": [
+          "viewer"
+        ]
+      }
+    },
+    "/api/v1/viewer/billing-form/submit": {
+      "post": {
+        "description": "請求先を保存する。保存できたときだけ鍵が使い切られる（失敗したら同じリンクで送り直せる）。",
+        "operationId": "viewer_billing_form_submit_api_v1_viewer_billing_form_submit_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ViewerBillingFormSubmitRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Viewer Billing Form Submit",
+        "tags": [
+          "viewer"
         ]
       }
     },

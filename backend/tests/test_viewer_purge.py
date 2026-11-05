@@ -36,6 +36,8 @@ def _prepare(conn, async_url):
     cur.execute((MIGRATIONS / "20261016_150000_add_viewer_accounts.sql").read_text())
     # 配信先（pg fixture の migrate が public.tcg_distribution_targets を作る）に名簿の番号の列を足す
     cur.execute((MIGRATIONS / "20261104_220000_add_tcg_distribution_targets_viewer_account_id.sql").read_text())
+    # 請求先の表（名簿の行が消えると請求先も消えることを確かめる）
+    cur.execute((MIGRATIONS / "20261105_120000_create_viewer_billing_profiles.sql").read_text())
     return cur
 
 
@@ -138,6 +140,12 @@ def test_deleting_account_cascades_and_old_login_events_are_purged(pg):  # noqa:
         "VALUES (%s, decode(repeat('ab', 32), 'hex'), 'password_reset', NOW() + interval '30 minutes')",
         (gone,),
     )
+    cur.execute(
+        "INSERT INTO public.viewer_billing_profiles "
+        "(viewer_account_id, party_type, bill_to_name, contact_name, postal_code, address, phone) "
+        "VALUES (%s, 'company', '株式会社テスト', '担当テスト', '1000001', 'テスト県テスト市1-1', '0300000000')",
+        (gone,),
+    )
     for vid, name in ((gone, "gone-sheet"), (keep, "keep-sheet")):
         cur.execute(
             "INSERT INTO public.tcg_distribution_targets (name, spreadsheet_id, sheet_name, viewer_account_id) "
@@ -153,6 +161,7 @@ def test_deleting_account_cascades_and_old_login_events_are_purged(pg):  # noqa:
         ("viewer_status_changes", "viewer_id"),
         ("viewer_login_tokens", "viewer_account_id"),
         ("tcg_distribution_targets", "viewer_account_id"),
+        ("viewer_billing_profiles", "viewer_account_id"),
     ):
         cur.execute(f"SELECT count(*) FROM public.{table} WHERE {col} = %s", (gone,))
         assert cur.fetchone()[0] == 0, table

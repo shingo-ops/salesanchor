@@ -27,6 +27,7 @@ import { Select } from "../../components/Select";
 import { SubMenu, type SubMenuGroup } from "../../components/SubMenu";
 import { LoadingBlock } from "../../components/loading";
 import { useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
+import { ViewerBillingSection } from "./components/ViewerBillingSection";
 
 interface ViewerItem {
   id: number;
@@ -722,6 +723,15 @@ export default function ViewerAccountsPage() {
                 />
               )}
             </div>
+            <ViewerBillingSection
+              key={detail.id}
+              viewerId={detail.id}
+              active={detail.status === "active"}
+              running={running}
+              setRunning={setRunning}
+              renderCopyButton={copyButton}
+              formatDate={formatDate}
+            />
           </div>
         )}
       </Drawer>

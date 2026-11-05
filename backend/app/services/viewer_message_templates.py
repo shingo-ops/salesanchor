@@ -1,7 +1,7 @@
 """閲覧者向け文面のテンプレート（ADR-1019 段11 便1）。
 
-コードに持つのは「台帳」（9件の鍵・送り方・差し込み項目の集合・画面の名前の i18n キー）だけ。
-文面の本文は public.viewer_message_templates（DB）が正本（便2 で送る側 9件も DB から読む。コードに文面の写しは持たない）。
+コードに持つのは「台帳」（10件の鍵・送り方・差し込み項目の集合・画面の名前の i18n キー）だけ。
+文面の本文は public.viewer_message_templates（DB）が正本（便2 で送る側 10件も DB から読む。コードに文面の写しは持たない）。
 """
 from __future__ import annotations
 
@@ -50,6 +50,7 @@ LEDGER: tuple[TemplateSpec, ...] = (
     TemplateSpec("notice_activated", "auto", ()),
     TemplateSpec("notice_suspended", "auto", ()),
     TemplateSpec("interview_request", "auto", ("expires_date",)),
+    TemplateSpec("billing_form_request", "auto", ("form_url", "form_expires")),
 )
 _BY_KEY = {s.key: s for s in LEDGER}
 LINE_NAME_PREFIX = "{line_name}さん、"
@@ -205,7 +206,7 @@ async def save_body(
 
 
 async def list_rows(db: AsyncSession) -> list[dict]:
-    """台帳の9件を台帳の順で必ず返す。DB に行が無い鍵は body=None。"""
+    """台帳の10件を台帳の順で必ず返す。DB に行が無い鍵は body=None。"""
     result = await db.execute(
         text(
             "SELECT t.key, t.body, t.updated_at, "

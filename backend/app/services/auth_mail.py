@@ -132,6 +132,34 @@ def send_viewer_password_reset_email(to_addr: str, reset_url: str) -> None:
     _send_reset_mail(to_addr, reset_url, VIEWER_RESET_SUBJECT, _VIEWER_RESET_BODY)
 
 
+VIEWER_BILLING_FORM_SUBJECT = "【Sales Anchor】請求先フォームのご案内 / Billing information form"
+
+
+def send_viewer_billing_form_email(to_addr: str, subject: str, body: str) -> None:
+    """請求先フォームのメール（閲覧ページ用）。BackgroundTasks から呼ぶ。本文は組み立て済みでそのまま送る。
+
+    例外は外に出さずログに残す。ログに宛先の全体・本文（リンクを含む）を出さない。
+    """
+    settings = smtp_settings()
+    if settings is None:
+        logger.info("[auth_mail] SMTP not configured, skipping billing form mail")
+        return
+    try:
+        msg = MIMEMultipart("alternative")
+        msg["From"] = settings.mail_from
+        msg["To"] = to_addr
+        msg["Subject"] = subject
+        msg.attach(MIMEText(body, "plain", "utf-8"))
+
+        with smtplib.SMTP(settings.host, settings.port, timeout=15) as smtp:
+            smtp.starttls()
+            smtp.login(settings.user, settings.password)
+            smtp.send_message(msg)
+        logger.info("[auth_mail] billing form mail sent (to=%s)", _mask_addr(to_addr))
+    except Exception as e:  # noqa: BLE001
+        logger.error("[auth_mail] billing form mail failed (to=%s): %s", _mask_addr(to_addr), type(e).__name__)
+
+
 NEW_DEVICE_SUBJECT = "【Sales Anchor】新しい機械からのログイン / Login from a new device"
 
 _NEW_DEVICE_BODY = """Sales Anchor に、新しい機械からのログインがありました。

@@ -688,7 +688,7 @@
     "passkeyPromptSkip": "Skip for now",
     "deviceApproval": {
       "title": "Approve from your usual device",
-      "body": "This is a new device. On your usual device, pick the number shown below in the pop-up.",
+      "body": "This is a new device. On your usual device, open the request from Notifications and pick the number shown below.",
       "numberLabel": "Confirmation number",
       "remaining": "{{time}} left",
       "rateLimited": "Waiting a little before continuing.",
@@ -711,10 +711,18 @@
         "time": "Time",
         "unknown": "Unknown",
         "pickNumber": "Pick the number shown on the device that is trying to sign in.",
-        "notMe": "This is not me",
+        "notMe": "This wasn't me",
         "rejectedTitle": "Sign-in rejected",
         "rejectedBody": "If you do not recognize it, change your password to be safe.",
         "changePassword": "Change password"
+      },
+      "detail": {
+        "title": "Login from a new device",
+        "itsMe": "This was me",
+        "approvedTitle": "Login approved",
+        "approvedBody": "The new device can now be used.",
+        "wrongNumberBody": "The number did not match, so this request was cancelled. Please sign in again.",
+        "closed": "This request has already ended."
       }
     }
   },
@@ -2802,7 +2810,8 @@
         "notice_extended": "Extension notice",
         "notice_activated": "Full registration notice",
         "notice_suspended": "Suspension notice",
-        "interview_request": "Interview request"
+        "interview_request": "Interview request",
+        "billing_form_request": "Billing form request"
       },
       "when": {
         "signup_request": "Before signing up",
@@ -2813,7 +2822,8 @@
         "notice_extended": "When the trial is extended",
         "notice_activated": "When switched to full registration",
         "notice_suspended": "When suspended",
-        "interview_request": "From 10:00 the day before expiry"
+        "interview_request": "From 10:00 the day before expiry",
+        "billing_form_request": "When the billing form is sent"
       },
       "placeholders": {
         "signup_url": "Sign-up page URL (filled in automatically)",
@@ -2824,7 +2834,9 @@
         "email": "Email address",
         "password": "Initial password",
         "until_date": "New expiry date after extension",
-        "expires_date": "Trial expiry date"
+        "expires_date": "Trial expiry date",
+        "form_url": "Billing form URL (filled in automatically)",
+        "form_expires": "Expiry date of the billing form link"
       },
       "placeholdersLabel": "Placeholders",
       "placeholdersNone": "None",
@@ -2909,6 +2921,25 @@
       "reissueInvite": "Invite link",
       "reissueInviteFailed": "Could not create the invite link. Please reissue again.",
       "reissueOnlyOnce": "Once you close this, the code and invite link cannot be shown again.",
+      "billingTitle": "Billing information",
+      "billingEmpty": "No billing information has been submitted yet",
+      "billingLoadError": "Could not load the billing information",
+      "billingPartyType": "Type",
+      "billingCompany": "Company",
+      "billingIndividual": "Individual",
+      "billingName": "Bill-to name",
+      "billingContact": "Contact person",
+      "billingPostal": "Postal code",
+      "billingAddress": "Address",
+      "billingPhone": "Phone number",
+      "billingEmail": "Invoice email",
+      "billingSend": "Send billing form",
+      "billingConflictError": "The form can only be sent to contracted customers",
+      "billingRoom_sent": "Sent the link to the Discord room",
+      "billingRoom_failed": "Could not send to the room. Copy the text below and send it yourself",
+      "billingRoom_no_room": "There is no room. Copy the text below and send it yourself",
+      "billingMailQueued": "Queued the email",
+      "billingExpires": "Link expires",
       "sheetTitle": "Delivery sheet",
       "sheetEmpty": "No sheet registered yet",
       "sheetAdd": "Register sheet",
@@ -5879,7 +5910,8 @@
     "title": "Notifications",
     "empty": "No notifications",
     "kind": {
-      "discord_outside_ticket_post": "{{actor}} posted in #{{channel}}"
+      "discord_outside_ticket_post": "{{actor}} posted in #{{channel}}",
+      "login_request": "Login request from a new device ({{device}})"
     },
     "fallback": {
       "title": "Who receives notices when there is no assignee",
