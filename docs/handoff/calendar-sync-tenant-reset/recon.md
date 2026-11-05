@@ -22,13 +22,13 @@
 |---|------|------|
 | C1 | `create_event` は INSERT 後 `await db.commit()` して、`reset_tenant_context` を呼ばずに設定表を読む | `backend/app/services/calendar_service.py:271`→`:276` |
 | C2 | `delete_event` も同じ形。commit 後に `_get_sync_mode` で設定表を読む | `backend/app/services/calendar_service.py:486`→`:488` |
-| C3 | 同じ4ファイルのほかの commit はすべて直後に reset している | `calendar_service.py:364-365,403-404,411-412,423-424`／`backend/app/services/google_calendar.py:293-294`／`backend/app/routers/calendar.py:301-302,552-553`／`backend/app/routers/google_calendar.py:146-147,230-231`（L-all-commits.txt） |
+| C3 | 同じ4ファイルのほかの commit は、`calendar_service.py:302,:311`（関数の最後の DB 操作）を除き直後に reset している（設計審査で訂正） | `calendar_service.py:364-365,403-404,411-412,423-424`／`backend/app/services/google_calendar.py:293-294`／`backend/app/routers/calendar.py:301-302,552-553`／`backend/app/routers/google_calendar.py:146-147,230-231`（L-all-commits.txt） |
 | C4 | `reset_tenant_context` の説明: commit 後は別の接続が払い出されることがある | `backend/app/auth/dependencies.py:339-358` |
 | C5 | 接続の貸し出しは pool_size=20・max_overflow=10 | `backend/app/database.py:24-32` |
 | C6 | `get_db` は返却前に `clear_tenant_context` で `app.tenant_id=''` にする（ADR-131） | `backend/app/database.py:46-61`／`backend/app/auth/dependencies.py:361-379` |
 | C7 | 設定表は ENABLE+FORCE RLS。`tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::INTEGER`。空なら全行見えない | `migrations/20261016_010000_add_google_config_rls.sql`（2026-10-16 07f1227f2） |
 | C8 | 271 行目の commit は 2026-05-25（3b35ef7d0）から。10-16 までは設定表に RLS が無く、接続が変わっても読めた | F-pool-history.txt |
-| C9 | 機械の見張り `scripts/lint_tenant_schema.py` は routers の口だけを見る。services は対象外なので C1・C2 を止められなかった | `scripts/lint_tenant_schema.py:251-262`・`.github/workflows/lint-tenant-schema.yml:440` |
+| C9 | 機械の見張り `scripts/lint_tenant_schema.py` は routers の口だけを見る。services は対象外なので C1・C2 を止められなかった | `scripts/lint_tenant_schema.py:251-262`・`.github/workflows/lint-tenant-schema.yml:53,69`（設計審査で行番号を訂正） |
 | C10 | 実 PostgreSQL＋RLS の試験の土台がある（CI の test.yml が RLS_ADMIN/RLS_TEST_DATABASE_URL を与える） | `backend/tests/test_google_config_rls.py:14-64`・`.github/workflows/test.yml` |
 
 ## 未確認
