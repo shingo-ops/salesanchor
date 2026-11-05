@@ -22,6 +22,7 @@ PO が「こうしたい」と話す → 設計パートナーが設計図と仕
 | 2026-11-04 | recon（[../../handoff/discord-server-management/recon.md](../../handoff/discord-server-management/recon.md)）・設計図の置き場所 PO 決定「1」（リポジトリに履歴付き）・設計案（[../../handoff/discord-server-management/design.md](../../handoff/discord-server-management/design.md)、自己審査 APPROVE）・設計 PO 承認「1」（この設計で承認し、自社用サーバーの登録から作り始める）・便1a 実装カード（[../../handoff/discord-server-management/card-bin1a-purpose-column.md](../../handoff/discord-server-management/card-bin1a-purpose-column.md)） |
 
 | 2026-11-05 | 便3b（反映するボタン）本番反映。要件定義（誰を入れるか・ロール・知らせの部屋）を PO の言葉で記録。第2段 KGI 8〜15 を案として起こした（PO 承認待ち） |
+| 2026-11-06 | 第2段 KGI 8〜16 と第2段の設計を PO が承認（Fable 審査 4 回目 APPROVE のあと） |
 
 ## 文書
 
