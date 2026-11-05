@@ -30,7 +30,7 @@ from app.auth.dependencies import (
 from app.database import get_db
 from app.models import User
 from app.services.audit import record_audit_log
-from app.services.discord_blueprint import blueprint_path, build_plan, load_blueprint
+from app.services.discord_blueprint import Blueprint, blueprint_path, build_plan, load_blueprint
 from app.services.discord_rest import DiscordAPIError, discord_api_request
 
 logger = logging.getLogger(__name__)
@@ -176,9 +176,6 @@ async def take_own_server_snapshot(
 
 # ---------------------------------------------------------------- 確認（設計図と今のサーバーの差・便3a）
 
-_READ = "GET"  # 確認で Discord に呼ぶのは読み取りだけ
-
-
 class PlanRow(BaseModel):
     kind: str
     key: str
@@ -214,6 +211,18 @@ async def check_own_server_plan(
     tenant_id: int = Depends(get_current_tenant),
 ) -> OwnServerPlanResponse:
     """設計図と今の自社用サーバーを比べて、差を返す。読むだけ（DB にも Discord にも書かない）。"""
+    guild_id, blueprint, bot_token = await _load_own_context(db, tenant_id)
+    plan = await _read_and_plan(guild_id, blueprint, bot_token)
+    return OwnServerPlanResponse(
+        plan_digest=plan["plan_digest"],
+        changes=plan["changes"],
+        blocked=plan["blocked"],
+        delete_candidates=plan["delete_candidates"],
+    )
+
+
+async def _load_own_context(db: AsyncSession, tenant_id: int) -> tuple[str, Blueprint, str]:
+    """自社用サーバーの番号・設計図・Bot の鍵を用意する（確認と反映で同じ手順）。"""
     result = await db.execute(
         text("SELECT guild_id FROM public.tenant_discord_config WHERE tenant_id = :tid AND purpose = 'own'"),
         {"tid": tenant_id},
@@ -231,7 +240,7 @@ async def check_own_server_plan(
         raise HTTPException(status_code=404, detail="設計図がまだありません。")
     try:
         blueprint = load_blueprint(path)
-    except ValueError as exc:
+    except (ValueError, OSError) as exc:
         logger.warning("[discord_own_server] blueprint invalid tenant=%d: %s", tenant_id, exc)
         raise HTTPException(status_code=422, detail="設計図の形が正しくありません。") from exc
 
@@ -241,36 +250,39 @@ async def check_own_server_plan(
             status_code=503,
             detail="Bot トークンが設定されていません。環境変数 DISCORD_BOT_TOKEN を確認してください。",
         )
+    return guild_id, blueprint, bot_token
 
+
+async def _read_and_plan(guild_id: str, blueprint: Blueprint, bot_token: str) -> dict[str, Any]:
+    """Discord を GET で 4 回読み、設計図との差（build_plan の戻り値）を返す。"""
     try:
         roles: list[dict[str, Any]] = await discord_api_request(
-            method=_READ,
+            method="GET",
             path=f"/guilds/{guild_id}/roles",
             bot_token=bot_token,
             expected_statuses=(200,),
         ) or []
         channels: list[dict[str, Any]] = await discord_api_request(
-            method=_READ,
+            method="GET",
             path=f"/guilds/{guild_id}/channels",
             bot_token=bot_token,
             expected_statuses=(200,),
         ) or []
         me: dict[str, Any] = await discord_api_request(
-            method=_READ,
+            method="GET",
             path="/users/@me",
             bot_token=bot_token,
             expected_statuses=(200,),
         ) or {}
         member: dict[str, Any] = await discord_api_request(
-            method=_READ,
+            method="GET",
             path=f"/guilds/{guild_id}/members/{me.get('id')}",
             bot_token=bot_token,
             expected_statuses=(200,),
         ) or {}
     except DiscordAPIError as exc:
-        logger.warning("[discord_own_server] plan read failed tenant=%d: %s", tenant_id, exc)
+        logger.warning("[discord_own_server] plan read failed: %s", exc)
         raise HTTPException(status_code=502, detail="Discord から読み取れませんでした。") from exc
 
     bot_role_ids = [str(r) for r in (member.get("roles") or [])]
-    plan = build_plan(blueprint, roles, channels, guild_id, bot_role_ids)
-    return OwnServerPlanResponse(**plan)
+    return build_plan(blueprint, roles, channels, guild_id, bot_role_ids)
