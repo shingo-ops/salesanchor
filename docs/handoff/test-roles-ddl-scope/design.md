@@ -171,3 +171,37 @@ def test_roles_migration_is_scoped_to_own_tenant():
 | 見張りの過検出 | 文字だけ・コメントは `text_only` と理由で通す。新しい組は必ず落ちる＝審査を通る | ○ |
 | 受入条件の検証可能性 | K1〜K4 は CI の PASSED を生ログで読む。K5 は 11/19 にログを grep で数える | ○ |
 | 未解決 | 998 の重なり・番号の見張り・TEST_PG_URL だけの2本・pre-commit の範囲（§3 対象外に記録） | 事業判断は不要。次の便で扱う |
+
+## 11. 追加の直し: 片付けの DROP が共有の準備とぶつかった（2026-11-06）
+### 11-1. 事実（生ログ: /tmp/CC報告ファイル/test-roles-ddl-scope/pytest-log.txt 15771-15792）
+- 1回目の CI（head 4fbd7e0e5）で pytest は 1 failed, 8202 passed。落ちたのは別の試験 `backend/tests/test_google_config_rls.py` の準備（`DeadlockDetectedError`）。
+- DB ログ: 共有の準備（Migration 062）を流す接続が relation 392588 の ShareLock を待ち、その相手はこの試験の片付け `DROP SCHEMA IF EXISTS tenant_995 CASCADE`。片付け側は relation 392430 の AccessExclusiveLock を待ち、その相手は共有の準備。互いに待って止まった。
+- 共有の準備 `_bootstrap_public_shared`（`backend/tests/rls_bootstrap.py:290-297`）は public の移行 19 本を1つの transaction の中で流す（`backend/tests/rls_bootstrap.py:345-354` の `admin_engine.begin()`）。先に流した移行の表の鍵は最後まで持ったまま。
+- テナントの表は public の表を外部キーで指す: `public.users` 6 か所・`public.products` 5 か所・`public.permissions` 1 か所（`backend/app/services/tenant.py:848` ほか）。テナントのスキーマを CASCADE で消すと、指している public の表にも鍵がかかる。
+- 共有の準備は `public.permissions` を 002 で、`public.products` を 062 で触る（順番は `backend/tests/rls_bootstrap.py:14-34`）。
+- `bootstrap_tenant_schema` 自身の DROP（`backend/tests/rls_bootstrap.py:382`）は、共有の準備の札 `public_bootstrap_lock` の中で流している。この試験の片付けは札の外で流していた。
+### 11-2. 推測と未確認
+- 【推測・記録と整合】392430 = `public.permissions`、392588 = `public.products`。番号の表は CI の DB が消えたため確かめられない。直しはどちらの表かに依らない（札の外で public を指すスキーマを消すこと自体が原因）。
+- 【未確認】同じ形の片付け（札の外で DROP）は `backend/tests/test_rls_auth_audit.py:56`・`backend/tests/test_discord_oauth_rls.py:156`・`backend/tests/test_permission_resolution_pg.py:58` にもある。今回は直さず次の便に記録する（変更は一度に1つ）。
+### 11-3. 変更前後（`backend/tests/test_roles_system_key_ddl.py`）
+```python
+# 変更前（finally の中）
+async with admin_engine.begin() as conn:
+    await conn.execute(text(f"DROP SCHEMA IF EXISTS {_SCHEMA} CASCADE"))
+# 変更後（import に public_bootstrap_lock を足す）
+async with public_bootstrap_lock(admin_engine):
+    async with admin_engine.begin() as conn:
+        await conn.execute(text(f"DROP SCHEMA IF EXISTS {_SCHEMA} CASCADE"))
+```
+- 札の順番はテナントの札→共有の札で、`bootstrap_tenant_schema` を呼ぶ時と同じ。両方の札を使う試験は `backend/tests/test_lead_merge_pg.py:332`（テナント）→:306（共有）と `backend/tests/test_permission_resolution_pg.py:96`（テナント）→:101（共有）の2つで、どちらも同じ順。逆の順は無い（`grep -rln public_bootstrap_lock backend/tests` の14ファイルのうち `tenant_schema_lock` も使うのはこの2つと `backend/tests/rls_bootstrap.py` だけ）。
+### 11-4. もう1つの赤（guard-authoring/evaluation）
+- 事実: 結果は `"state":"error"`。`scripts/run-guard-evaluation.js:24-25` の `merge-base --is-ancestor base head` が失敗すると error になる。手元で同じ確かめをして exit=1、main が 5 件先に進んでいた。
+- 直し: origin/main をこの枝に merge する（rebase・force-push はしない）。
+### 11-5. 受入条件
+| 基準 | 検証方法 |
+|---|---|
+| K6: 片付けの DROP が `public_bootstrap_lock` の中にある | diff を読む |
+| K7: CI の pytest で failed 0 | CI の生ログの最終行 |
+| K8: guard-authoring/evaluation が緑 | `gh pr checks` |
+### 11-6. 審査
+判定: **APPROVE**（同じ AI による自己審査）。直しは既存の札を使い、新しい仕組みを作らない。未解決は 11-2 の3ファイル（次の便）。

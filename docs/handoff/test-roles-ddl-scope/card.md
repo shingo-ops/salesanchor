@@ -32,3 +32,8 @@ migrations/・backend/app/・.github/・frontend/・ほかの試験ファイル�
 
 ## 終わり方
 - push だけ。PR は作らない（Opus が作る）。最後の行は `DONE` か `BLOCKED: 理由` か `NEEDS_DECISION: 理由`
+
+## 追加（2026-11-06・design.md §11）
+1. 実物点検: `backend/tests/test_roles_system_key_ddl.py` の finally に `DROP SCHEMA IF EXISTS {_SCHEMA} CASCADE` が1か所だけあること。`backend/tests/rls_bootstrap.py` に `async def public_bootstrap_lock(admin_engine)` があること。違えば止める。
+2. import に `public_bootstrap_lock` を足し、その DROP を `async with public_bootstrap_lock(admin_engine):` の中に入れる（design.md §11-3 の通り。ほかは変えない）。
+3. コミット1つ。ruff。クラウドで `pytest tests/test_roles_system_key_ddl.py tests/test_tenant_loop_migration_guard.py -n 0`。
