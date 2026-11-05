@@ -19,7 +19,7 @@ RECEIVED firebase-removal-bin2 HEAD=（git rev-parse HEAD の 40 桁）
 - P3 `sed -n '13p' backend/requirements.txt` が `firebase-admin==6.6.0`。
 - P4 `sed -n '212p' backend/app/auth/dependencies.py` が `    firebase_closed = self_tokens.auth_provider() == "self"`。
 - P5 `sed -n '21p;33p' backend/app/auth/self_tokens.py` が `DEFAULT_AUTH_PROVIDER = "firebase"  # firebase | self` と `_VALID_PROVIDERS = ("firebase", "self")` の 2 行。
-- P6 `scripts/setup_single_test_user.py` と `scripts/setup_test_users.py` が在り、`git grep -n "setup_single_test_user\|setup_test_users" -- . ':!docs'` が 0 件（消すファイルを呼ぶ所が無い）。
+- P6 `scripts/setup_single_test_user.py` と `scripts/setup_test_users.py` が在り、`git grep -n "setup_single_test_user\|setup_test_users" -- . ':!docs' ':!scripts/setup_single_test_user.py' ':!scripts/setup_test_users.py'` が 0 件（消すファイルを、そのファイル自身の外から呼ぶ所が無い。消す 2 ファイルの中の自分の名前は数えない）。
 - P7 `git grep -n "set_tenant_claim" -- backend scripts` が `backend/app/auth/utils.py:13` の 1 件だけ。
 
 ## 1. 触るファイル
@@ -826,7 +826,7 @@ DB をモックして以下を検証:
     cd ~/sa && sed -n '13p' backend/requirements.txt | tail -1
     cd ~/sa && sed -n '212p' backend/app/auth/dependencies.py | tail -1
     cd ~/sa && sed -n '21p;33p' backend/app/auth/self_tokens.py | tail -2
-    cd ~/sa && ls scripts/setup_single_test_user.py scripts/setup_test_users.py | tail -2 && git grep -n "setup_single_test_user\|setup_test_users" -- . ':!docs' | wc -l
+    cd ~/sa && ls scripts/setup_single_test_user.py scripts/setup_test_users.py | tail -2 && git grep -n "setup_single_test_user\|setup_test_users" -- . ':!docs' ':!scripts/setup_single_test_user.py' ':!scripts/setup_test_users.py' | wc -l
     cd ~/sa && git grep -n "set_tenant_claim" -- backend scripts | tail -5
 
 手順3 部品を入れる（firebase-admin を入れない状態で入れ直す）
