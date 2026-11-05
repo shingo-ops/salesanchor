@@ -11,6 +11,7 @@
   - backend/tests/test_roles_system_key_ddl.py（31 行目の数を 2 → 3 にするだけ）
   - backend/tests/test_discord_role_link_ddl.py（新規）
   - 改訂1（§5-改訂1）だけで触ってよい: backend/tests/rls_bootstrap.py（`_TENANT_LOOP_MIGRATIONS` に 1 行足すだけ）、origin/main を取り込む merge commit
+  - 改訂2（§5-改訂2）だけで触ってよい: backend/tests/test_tenant_loop_migration_guard.py（`_REVIEWED` に 2 組足すだけ）、migrations/20261024_100300_create_ai_cloud_views.sql（分類の行を 1 か所直し 2 行足し、3 行目の数を直すだけ）、backend/tests/ops/test_ai_cloud_views.py（数を 1075 → 1078 にするだけ）、scripts/migration-guard/reference-allowlist.tsv（該当 1 行の sha256 と理由欄だけ）
 - 触らない: backend のほかのファイル（routers・services の他・conftest.py を含む）・frontend・i18n・openapi.json・ほかの migrations・scripts/setup_tenant.py・scripts/db/sync_tenant_schema.py・.github・deploy.yml・本番
 
 ## 読んだ節（guards/）
@@ -417,6 +418,64 @@ def test_link_migration_is_scoped_to_own_tenant():
 - 直しの commit の文: `test: scope 2a-1 PG test to its own tenant and drop CREATE TABLE markers (schema-dup gate, xdist)`
 - `git push origin release/discord-own-server-s2-2a1` を単独で流す。PR はもうある（#5174）ので作らない。
 - 報告書 `docs/handoff/discord-server-management/impl-report-s2-2a1.md` の最後に「改訂1」節を足し、同じ commit に入れる。
+
+## §5-改訂2（2026-11-06・CI の pytest で見つかったカードの不備）
+
+- 【事実】改訂1 の head ef3f29018 で、CI の pytest が 2 件落ちた（2 failed, 8206 passed。run 42074645369）。どちらも main の見張りの試験で、カードに書き忘れていた。
+  - `tests/test_tenant_loop_migration_guard.py::test_every_tenant_loop_migration_reference_is_classified`: 全テナントを回す移行を名前で書いた試験は、分類表 `_REVIEWED` に載せる決まり。`rls_bootstrap.py` と `test_discord_role_link_ddl.py` が新しい移行を書いているのに、表に無い。
+  - `tests/ops/test_ai_cloud_views.py::test_t10_classification_covers_real_shaped_tables`: 文字の型の列は、相談係用の伏せたビュー（ai_cloud）の分類表に行が要る。`roles.discord_role_id`・`discord_retired_roles.discord_role_id`・`discord_retired_members.discord_user_id` の 3 列が「分類なし」。
+- 分類の決め方: Discord の番号は、既にある `staff.discord_user_id`・`bots.discord_user_id`・`leads.discord_user_id` と同じく `mask`（伏せる）・理由は空にする。`kick`（真偽）と `retired_at`（日時）は型で通るので行は要らない（CI の GAP 3 件に出ていない）。
+- 先例: b5e818dec（user_notices の 4 列を足し、1064 → 1068）と同じ 3 ファイルの直し方。
+
+### 改訂2 の作業（この順に。触るのは 5 ファイルと報告書だけ）
+
+（１）`backend/tests/test_tenant_loop_migration_guard.py`
+- `"rls_bootstrap.py"` の frozenset で、`"20261104_161223_add_calendar_events_meet_url.sql",` の次の行に `"20261106_150000_add_discord_role_link_tables.sql",` を足す。
+- `"test_roles_system_key_ddl.py": (...)` の項目のすぐ次に、次の項目を足す。
+
+```python
+    "test_discord_role_link_ddl.py": (
+        "scoped",
+        "",
+        frozenset({"20261106_150000_add_discord_role_link_tables.sql"}),
+    ),
+```
+
+（２）`migrations/20261024_100300_create_ai_cloud_views.sql`（分類表の正本。値は分類の行だけ）
+- 3 行目の `1075 行` を `1078 行` にする。
+- `('tenant_*','roles',ARRAY['color','description','name','system_key'],'mask',''),` を `('tenant_*','roles',ARRAY['color','description','discord_role_id','name','system_key'],'mask',''),` にする。
+- `('tenant_*','discord_channel_webhooks',ARRAY['channel_id','webhook_id'],'mask',''),` のすぐ次に 2 行足す。
+
+```sql
+  ('tenant_*','discord_retired_members',ARRAY['discord_user_id'],'mask',''),
+  ('tenant_*','discord_retired_roles',ARRAY['discord_role_id'],'mask',''),
+```
+
+（３）`backend/tests/ops/test_ai_cloud_views.py`
+- `== n0 == 1075` を `== n0 == 1078` にする（1 か所）。
+
+（４）`scripts/migration-guard/reference-allowlist.tsv`
+- `migrations/20261024_100300_create_ai_cloud_views.sql` の行だけを直す。
+- 2 列目の sha256 を、（２）のあとの `sha256sum migrations/20261024_100300_create_ai_cloud_views.sql` の値にする。
+- 4 列目の末尾に ` / discord-server-management card-s2-2a1 §5-改訂2（分類3行追加）` を足す。ほかの列は変えない。区切りはタブのまま。
+
+（５）始める前に `git log -2 --oneline` の 1 行目が「docs: card s2-2a1 revision 2」、2 行目が ef3f29018 であること。違えば BLOCKED:。
+
+### 改訂2 の確かめ（生出力を報告書の「改訂2」節に貼る）
+
+- `cd backend && python -m pytest tests/test_tenant_loop_migration_guard.py tests/test_discord_role_link_ddl.py tests/test_roles_system_key_ddl.py -q -p no:cacheprovider --no-cov`（すべて passed、PG の分は skipped でよい）
+- `grep -c "discord_retired_\|discord_role_id" migrations/20261024_100300_create_ai_cloud_views.sql`（3 であること）
+- `sha256sum migrations/20261024_100300_create_ai_cloud_views.sql` と、allowlist の該当行の 2 列目（`cut -f2`）が同じこと
+- `python3 scripts/migration-guard/` にある検査があれば、repo モードで流した生出力（使い方は同じフォルダの README か `--help` を見る。分からなければ「流していない・CI に任せる」と書く）
+- §6 の check_test_schema_dup.py の rc=0
+- `cd backend && ruff check tests/test_tenant_loop_migration_guard.py tests/ops/test_ai_cloud_views.py`
+- `git diff --name-only origin/main...HEAD`（改訂1 の 14 ファイル＋この 4 ファイルの 18 ファイルであること）
+
+### 改訂2 の保存
+
+- commit の文: `test: classify 2a-1 link migration and Discord id columns for the tenant-loop and ai_cloud guards`
+- `git push origin release/discord-own-server-s2-2a1` を単独で流す。PR は作らない。
+- 報告書の最後に「改訂2」節を足し、同じ commit に入れる。
 
 ## §7 保存
 
