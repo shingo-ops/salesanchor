@@ -2,6 +2,7 @@
 
 - 作成：2026-10-02
 - 前提：`docker-compose.yml` の既定は 2026-10-02 以降「直接接続」。この runbook は、直接接続が再び失敗したときだけ使う緊急手段を記録したもの。
+- **2026-11-05 追記（ADR-1062）**：道は自動で切り替わるようになった（`backend/app/services/gemini_route.py`）。直接の道で場所の断り（400 "location is not supported"）が出たら中継へ、中継に届かなければ直接へ、1回の呼び出しの中で自動でやり直す。解析が30分成功しなければ管理者用 Discord に知らせが届く。**この runbook の手作業は、両方の道が駄目なとき（Discord に「解析が30分成功していません」が届き、切り替えの知らせの後も戻らないとき）だけ使う。** 2026-11-05 時点の本番 `.env` は GEMINI_PROXY_URL・GEMINI_GRPC_PROXY・grpc_proxy が中継の値（最初の道が中継）。設計: [docs/handoff/gemini-auto-failover/design.md](../handoff/gemini-auto-failover/design.md)
 - 関連設計：[docs/handoff/gemini-egress-via-prod2/design.md](../handoff/gemini-egress-via-prod2/design.md)
 - 関連 PR：#3857（デプロイ対象への `gemini-egress` 追加）、#3877・#3876（prod2 コンテナ化改訂）
 - 必要な権限：
@@ -71,6 +72,7 @@ on:
 デプロイが走ると、以下の手順で backend と celery-worker の両方に新しい `.env` の値が反映される。
 
 - **backend**：`.github/workflows/deploy.yml:324` の `bash scripts/blue-green-cutover.sh` が green コンテナを起動する際、`scripts/blue-green-cutover.sh:92` の `docker run ... --env-file "${REPO_DIR}/.env" ...` で `.env` の内容がそのままコンテナ環境変数として渡る（docker-compose の変数展開を経由しない直接渡し）。
+  - **2026-11-05 訂正**：実物は `--env-file` ではなく、`scripts/blue-green-cutover.sh:83-84` が `.env` のキー名を集め、`:97` で `--env NAME` として1つずつ渡す。`.env` に無い名前（例: grpc_proxy を足し忘れる）は backend に届かない。2026-11-05 は grpc_proxy が無く backend の訳す機能だけ取り残された（[recon §1・§5](../handoff/gemini-auto-failover/recon.md)）。
 - **celery-worker**：`.github/workflows/deploy.yml:337` で `docker compose stop -t 60 celery-worker`、`:341` で強制削除後、`:342` の `docker compose up -d --no-deps --remove-orphans frontend celery-worker celery-beat discord-gateway gemini-egress` が `docker-compose.yml` の `${GEMINI_PROXY_URL-}` / `${GEMINI_GRPC_PROXY-}` を `.env` の値で展開して再作成する。
 
 **手動で backend だけ即時反映させたい場合**（デプロイを待てない緊急時。PO の GO が別途必要）：
