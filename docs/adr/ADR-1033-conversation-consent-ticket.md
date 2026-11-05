@@ -21,8 +21,9 @@
 3. 同意の偽造を防ぐ見張りを足す。会話記録・台帳の Bash／Write／Edit／MultiEdit／NotebookEdit での操作、tmux・osascript・`/chat/queue` による端末への入力注入を止め、`consent_guard_blocked` を記録する（設計 §4-5）。
 4. 不要な停止を減らす。`rm -rf` の対象が `/tmp/CC報告ファイル/`・`/private/tmp/claude-501/`・作業場所の下なら止めない（設計 §4-6(a)）。`--body-file` が読めない停止の文に手順を示す（同 (b)）。
 5. 同意票は ADR-136 の「GO #PR番号」の代わりにならない。危険 PR の GO は今までどおり PO 単独で、番号つきで受ける。
+6. 件のセッションへの決まった一文の送信は、agent-console の case-say の受け口だけで行う（design §14-10）。§4-5 の見張りの外で端末へ送るほかの道を作らない。
 
-詳しい設計は `docs/handoff/conversation-consent/design.md`（第5版・Architect 4回目 APPROVE）。
+詳しい設計は `docs/handoff/conversation-consent/design.md`（第5版・Architect 4回目 APPROVE）。What 6（件への一文・case-say）の設計は同じ設計書の §14（第11版・Architect APPROVE。送る判定は §14-10 と §14-13）。
 
 ## Why
 
