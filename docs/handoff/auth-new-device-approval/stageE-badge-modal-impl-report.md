@@ -158,3 +158,62 @@ px を含む行は、tokens.css の定義行（+ の行）と、既存の行・B
  tests/prod-check/device-accept.spec.ts             |  16 +-
  31 files changed, 348 insertions(+), 1370 deletions(-)
 ```
+
+## 追記: §4-7-改訂
+
+### HEAD の確認
+作業開始時 `git rev-parse HEAD` = `origin/release/notice-badge-modal` = `ffd933b43bffd5033bf527f479fbe7b2da698270`（ffd933b43 で始まる。一致）。試験の直しは commit `12d638dd8`。
+
+### 変えた行の git diff（生出力）
+```
+@@ -136,7 +136,7 @@ test.describe("鈴（NoticeBell）", () => {
+-  test("PC: 鈴に丸い囲み・枠・影が無く、赤い数字は鈴の箱の内側。乗せると色だけ変わる", async ({ page }, testInfo) => {
++  test("PC: 鈴に丸い囲み・枠・影が無く、赤い数字は鈴の絵の右下に重なる（インスタの実測位置）。乗せると色だけ変わる", async ({ page }, testInfo) => {
+@@ -155,10 +155,17 @@
+-    expect(g!.x).toBeGreaterThanOrEqual(b!.x);
+-    expect(g!.y).toBeGreaterThanOrEqual(b!.y);
+-    expect(g!.x + g!.width).toBeLessThanOrEqual(b!.x + b!.width);
+-    expect(g!.y + g!.height).toBeLessThanOrEqual(b!.y + b!.height);
++    const i = await btn.locator("svg").first().boundingBox();
++    expect(i).not.toBeNull();
++    expect(i!.width).toBeCloseTo(24, 0);
++    expect(i!.height).toBeCloseTo(24, 0);
++    expect(g!.x - i!.x).toBeCloseTo(11, 0);
++    expect(g!.y - i!.y).toBeCloseTo(9, 0);
++    expect(g!.width).toBeCloseTo(22, 0);
++    expect(g!.height).toBeCloseTo(22, 0);
++    const a = await page.locator(".top-right-cluster .avatar-btn").boundingBox();
++    expect(a).not.toBeNull();
++    expect(g!.x + g!.width).toBeLessThanOrEqual(a!.x);
+```
+
+### 確かめ（生出力）
+(1) `npx tsc --noEmit -p tsconfig.json`（1回目、tail -20）:
+```
+src/features/tcg-sold-out/soldOutApi.ts(3,45): error TS2307: Cannot find module '../../api/generated/schema' or its corresponding type declarations.
+src/pages/inventory/OwnInventoryPage.tsx(11,33): error TS2307: Cannot find module '../../api/generated/schema' or its corresponding type declarations.
+src/pages/super-admin/components/SoldOutResultsPanel.tsx(34,27): error TS7006: Parameter 'line' implicitly has an 'any' type.
+src/pages/super-admin/components/SoldOutResultsPanel.tsx(34,33): error TS7006: Parameter 'index' implicitly has an 'any' type.
+```
+（2回目は出力なし。1回目の4件は生成物 api/generated/schema の不在によるもので、今回の変更の外。2回目に消えた理由は未確認）
+`npx tsc --noEmit -p tests-e2e/tsconfig.json`（試験の型設定）: 63 件のエラー。notice-bell.spec.ts に関わるのは次の1件のみで、今回の変更の外（既存行）:
+```
+tests-e2e/visual-language/notice-bell.spec.ts(56,22): error TS7006: Parameter 'route' implicitly has an 'any' type.
+```
+(2) `npx eslint tests-e2e/visual-language/notice-bell.spec.ts`:
+```
+/root/worktrees/salesanchor/release-notice-badge-modal/frontend/tests-e2e/visual-language/notice-bell.spec.ts
+  0:0  warning  File ignored because no matching configuration was supplied
+
+✖ 1 problem (0 errors, 1 warning)
+```
+(3) `npx playwright install chromium` は失敗:
+```
+Error: Download failed: server returned code 403 body 'request blocked: no rule or allowlist entry allows host "cdn.playwright.dev"'.
+```
+そのため `npx playwright test ... --project=vl-desktop-1280` は 7 件すべて起動前に失敗（`browserType.launch: Executable doesn't exist at /opt/pw-browsers/chromium_headless_shell-1217/...`）。ブラウザが起動できないため確認は飛ばす（CI を正とする）。位置の値（11・9・22・24）が実測と合うかは未確認。
+(4) 根で `bash scripts/dev/check-before-submit.sh`:
+```
+合計 9.5 秒 / 必須 16 件を表示 / 流した検査 18 件 / 落ちた検査 0 件
+結果: ○ 流した検査は全部通りました（終了コード 0）
+```
