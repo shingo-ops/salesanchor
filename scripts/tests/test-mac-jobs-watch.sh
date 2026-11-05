@@ -1,6 +1,7 @@
 #!/bin/bash
 # test-mac-jobs-watch.sh — scripts/mac-jobs-watch.sh の試験（design §4 K1 の ①〜㉙ ＋ disk-low D㉕〜D㉝）
 # （phone-missing の P㉞〜P㊸ は末尾。design-phone.md §4）
+# （週次点検の NG・未実行 weekly-ng / weekly-missing の W1〜W17 はその後。design-weekly-ng.md §4）
 #
 # すべて mktemp -d で作った一時ディレクトリの中だけで動く。偽の launchctl / curl を使い、
 # MJW_ 環境変数（状態・ログ・ロック・通知先・時刻）も一時領域へ向ける。HOME も一時領域に向ける。
@@ -812,6 +813,118 @@ out="$(PHONE_RECONNECT=0 bash "${PHONE_SH}")"; rc=$?
 eq "RC0-1 終了 1" "${rc}" "1"
 eq "RC0-2 connect 0 回" "$(nconnect)" "0"
 eq "RC0-3 dns-sd を呼ばない" "$(cat "${D}/fake/dnssd.calls" 2>/dev/null | grep -c . || true)" "0"
+
+# ── 週次点検の NG と未実行（weekly-ng・weekly-missing。design-weekly-ng.md §4 の W1〜W17）──
+# 置き場は ${D}/weekly。基準は 2026-11-09（月）19:00。置き場が無ければ判定しないので、既存の試験には影響しない
+wk_ts() { date -j -f '%Y-%m-%d %H:%M:%S' "$1" +%s; }
+wk_setup() { # wk_setup <日時> [weekly_seen]。置き場を作り、weekly_seen があれば状態に足す
+  setup "$(wk_ts "$1")"
+  export MJW_WEEKLY_DIR="${D}/weekly"
+  mkdir -p "${MJW_WEEKLY_DIR}"
+  if [ -n "${2:-}" ]; then printf 'weekly_seen=%s\n' "$2" >> "${D}/state/state"; fi
+}
+wk_file() { printf 'x\nRESULT=%s\n' "$2" > "${MJW_WEEKLY_DIR}/$1"; } # wk_file <名前> <RESULT= の後ろ>
+WK_1109_19="2026-11-09 19:00:00"
+
+# W1 NG が出たら 1 通
+wk_setup "${WK_1109_19}" 20261102; wk_file 20261109.txt "NG K1>210"
+run_mjw
+eq "W1-1 送信 1" "$(ncalls)" "1"
+sentmsg 1 | grep -q '入口の文書の週次点検（2026-11-09）が NG でした（K1>210）' && ok "W1-2 本文" || ng "W1-2 本文"
+eq "W1-3 weekly_seen=20261109" "$(stv weekly_seen)" "20261109"
+eq "W1-4 ログ alert" "$(logc 'result=alert send=ok')" "1"
+eq "W1-5 ログ events=weekly-ng" "$(logc 'events=weekly-ng')" "1"
+# W2 30 分後は送らない
+NOW0="${NOW}"; at $(( NOW0 + 1800 )); run_mjw
+eq "W2 30 分後: 送信 0（合計 1 のまま）" "$(ncalls)" "1"
+# W3 OK は知らせない
+wk_setup "${WK_1109_19}" 20261102; wk_file 20261109.txt "OK"
+run_mjw
+eq "W3-1 送信 0" "$(ncalls)" "0"
+eq "W3-2 weekly_seen=20261109" "$(stv weekly_seen)" "20261109"
+# W4 設置直後（weekly_seen が無い）は古い NG を知らせない
+wk_setup "2026-11-05 12:00:00"; wk_file 20261102.txt "NG K1>200 K9>6.5k"
+run_mjw
+eq "W4-1 送信 0" "$(ncalls)" "0"
+eq "W4-2 weekly_seen=20261102" "$(stv weekly_seen)" "20261102"
+# W5 初回（状態ファイルが無い）
+wk_setup "2026-11-05 12:00:00"; wk_file 20261102.txt "NG K1>200 K9>6.5k"
+rm -f "${D}/state/state" "${D}/state/problems"
+run_mjw
+w5n=0; for i in $(seq 1 "$(ncalls)"); do sentmsg "${i}" | grep -q '週次点検' && w5n=$(( w5n + 1 )); done
+eq "W5-1 どの本文にも週次点検が無い" "${w5n}" "0"
+eq "W5-2 weekly_seen=20261102" "$(stv weekly_seen)" "20261102"
+# W6 RESULT= 行が無い間は知らせず、足したら知らせる
+wk_setup "2026-11-09 16:30:00" 20261102; printf 'x\n' > "${MJW_WEEKLY_DIR}/20261109.txt"
+run_mjw
+eq "W6-1 送信 0" "$(ncalls)" "0"
+eq "W6-2 weekly_seen=20261102" "$(stv weekly_seen)" "20261102"
+printf 'RESULT=NG K1>210\n' >> "${MJW_WEEKLY_DIR}/20261109.txt"; at $(( NOW + 1800 )); run_mjw
+eq "W6-3 足した後: 送信 1" "$(ncalls)" "1"
+# W7 送信失敗なら次の回に送り直す
+wk_setup "${WK_1109_19}" 20261102; wk_file 20261109.txt "NG K1>210"
+echo 1 > "${D}/fake/curl.rc"; run_mjw
+eq "W7-1 失敗した回は weekly_seen を進めない" "$(stv weekly_seen)" "20261102"
+echo 0 > "${D}/fake/curl.rc"; at $(( NOW + 1800 )); run_mjw
+eq "W7-2 次の回で weekly_seen=20261109" "$(stv weekly_seen)" "20261109"
+eq "W7-3 ログ alert send=ok" "$(logc 'result=alert send=ok')" "1"
+# W8 締め切り（16:00＋2 時間）を過ぎても結果が無い
+wk_setup "2026-11-09 18:30:00" 20261102; wk_file 20261102.txt "OK"
+run_mjw
+eq "W8-1 送信 1" "$(ncalls)" "1"
+sentmsg 1 | grep -q '結果が、2 時間たっても出ていません（2026-11-09 の分）' && ok "W8-2 本文" || ng "W8-2 本文"
+has_prob "weekly-missing" && ok "W8-3 problems=weekly-missing" || ng "W8-3 problems=weekly-missing"
+W8_NOW="${NOW}"
+# W10 その後 OK が出たら「直りました」
+wk_file 20261109.txt "OK"; at $(( W8_NOW + 1800 )); run_mjw
+eq "W10-1 合計 2 通" "$(ncalls)" "2"
+sentmsg 2 | grep -q '直りました' && ok "W10-2 復旧文" || ng "W10-2 復旧文"
+has_prob "weekly-missing" && ng "W10-3 problems から消える" || ok "W10-3 problems から消える"
+eq "W10-4 weekly-ng は出ない" "$(logc 'events=weekly-ng')" "0"
+# W11 その後 NG が出たら NG の知らせと「直りました」
+wk_setup "2026-11-09 18:30:00" 20261102; wk_file 20261102.txt "OK"; run_mjw
+n1="$(ncalls)"; wk_file 20261109.txt "NG K9>7.5k"; at $(( NOW + 1800 )); run_mjw
+eq "W11-1 送信 2（NG と復旧）" "$(( $(ncalls) - n1 ))" "2"
+# W9 締め切り前は出さない
+wk_setup "2026-11-09 17:30:00" 20261102; wk_file 20261102.txt "OK"
+run_mjw
+eq "W9-1 送信 0" "$(ncalls)" "0"
+has_prob "weekly-missing" && ng "W9-2 problems に無い" || ok "W9-2 problems に無い"
+# W12 置き場が無ければ出さない
+wk_setup "${WK_1109_19}" 20261102; rm -rf "${MJW_WEEKLY_DIR}"
+run_mjw
+eq "W12-1 送信 0" "$(ncalls)" "0"
+has_prob "weekly-missing" && ng "W12-2 problems に無い" || ok "W12-2 problems に無い"
+# W13 NG の文から @ < バッククォートを除く
+wk_setup "${WK_1109_19}" 20261102; wk_file 20261109.txt 'NG K1>210 <@everyone> `x`'
+run_mjw
+sentmsg 1 | grep -q 'K1>210' && ok "W13-1 K1>210 は残る" || ng "W13-1 K1>210 は残る"
+sentmsg 1 | grep -q '@' && ng "W13-2 @ が無い" || ok "W13-2 @ が無い"
+sentmsg 1 | grep -q '<' && ng "W13-3 < が無い" || ok "W13-3 < が無い"
+sentmsg 1 | grep -q '`' && ng "W13-4 バッククォートが無い" || ok "W13-4 バッククォートが無い"
+# W14 dry-run は送らず状態も変えない
+wk_setup "${WK_1109_19}" 20261102; wk_file 20261109.txt "NG K1>210"
+before_state="$(cksum "${D}/state/state" "${D}/state/problems")"
+run_mjw --dry-run
+eq "W14-1 送信 0" "$(ncalls)" "0"
+eq "W14-2 状態を変えない" "$(cksum "${D}/state/state" "${D}/state/problems")" "${before_state}"
+eq "W14-3 ログ result=dry-run" "$(logc 'result=dry-run')" "1"
+eq "W14-4 ログ events=weekly-ng" "$(logc 'events=weekly-ng')" "1"
+# W15 25 時間後もまだ無ければ「まだ続いています」
+wk_setup "2026-11-09 18:30:00" 20261102; wk_file 20261102.txt "OK"; run_mjw
+n1="$(ncalls)"; at $(( NOW + 25 * 3600 )); run_mjw
+eq "W15-1 送信 1" "$(( $(ncalls) - n1 ))" "1"
+sentmsg "$(ncalls)" | grep -q 'まだ続いています' && ok "W15-2 まだ続いています" || ng "W15-2 まだ続いています"
+# W16 日曜: 締め切りは 11/02 の分で、それはある
+wk_setup "2026-11-08 12:00:00" 20261102; wk_file 20261102.txt "OK"
+run_mjw
+eq "W16 日曜: 送信 0" "$(ncalls)" "0"
+# W17 試しのファイルは読まない
+wk_setup "${WK_1109_19}" 20261102; wk_file 20261109-trial.txt "NG K1>210"
+run_mjw
+eq "W17-1 weekly-ng は出ない" "$(logc 'events=weekly-ng')" "0"
+has_prob "weekly-missing" && ok "W17-2 weekly-missing は出る" || ng "W17-2 weekly-missing は出る"
+unset MJW_WEEKLY_DIR
 
 echo "----"
 echo "PASS=${PASS} FAIL=${FAIL}"
