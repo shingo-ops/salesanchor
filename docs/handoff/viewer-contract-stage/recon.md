@@ -10,8 +10,8 @@
 ## 1. 既存 ADR の検索
 
 - `git grep -i -l "viewer_accounts\|閲覧者" docs/adr/` の該当: ADR-021、ADR-1003、ADR-1009、ADR-1019。
-- docs/adr/FEATURE-INDEX.md は 閲覧・viewer・ドライブ・drive の語で該当なし。「請求」の行（docs/adr/FEATURE-INDEX.md:159）が ADR-101 を指し、「決済・入金確認・PayPal・Wise」の行（同 :160）が ADR-104 を指す（2026-11-06 訂正。前の版は「請求書」の語で該当なしと書いていた）。
-- 今回変える決まり: ADR-1019 の Q7（削除の日数。実装は §4）。
+- docs/adr/FEATURE-INDEX.md は 閲覧・viewer・ドライブ・drive の語で該当なし。「請求」の行（docs/adr/FEATURE-INDEX.md:14）が ADR-101 を指し、「決済・入金確認・PayPal・Wise」の行（同 :15）が ADR-104 を指す（2026-11-06 訂正。行番号は第3回の審査の指摘で再訂正。前の版は「請求書」の語で該当なしと書いていた）。
+- 今回変える決まり: 閲覧者の名簿の90日の決まり（docs/handoff/gas-viewer-fresh-fast/review-fable.md:172 の Q7 に答えた docs/handoff/gas-viewer-fresh-fast/design.md:523〜:524。backend/app/tasks/maintenance.py:202 が参照）。実装は §4。ADR-1019 には Q7 も90日も無い（`grep -n "Q7\|90日" docs/adr/ADR-1019*.md` が0件。2026-11-06）。
 
 ## 2. 状態の決まりと、状態を読む場所
 

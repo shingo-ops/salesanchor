@@ -10,8 +10,8 @@ mode: handoff
 - 親（設計仕様書）: [docs/specs/viewer-contract-invoicing/README.md](../../specs/viewer-contract-invoicing/README.md)
 - 現状の記録: [recon.md](./recon.md)
 - 決めごとの控え: [decisions-draft.md](./decisions-draft.md)
-- 関係 ADR: [ADR-1061](../../adr/ADR-1061-viewer-contract-stage-and-invoicing.md)（草案）、ADR-1019（Q7 を改訂）、ADR-101（B2B 請求書。別の表にする）、ADR-144・ADR-067（金型とトークン）、ADR-027（i18n）、ADR-135・ADR-136（危険な変更の GO）
-- 状態: **設計案作成済み・第2回の審査（Opus の審査役と Fable）は REVISE で、指摘を 2026-11-06 に反映済み・再審査待ち（[review.md](./review.md)）・PO 未承認・実装未着手**
+- 関係 ADR: [ADR-1061](../../adr/ADR-1061-viewer-contract-stage-and-invoicing.md)（草案）、閲覧者の名簿の90日の決まり（docs/handoff/gas-viewer-fresh-fast/review-fable.md:172 の Q7 に答えた docs/handoff/gas-viewer-fresh-fast/design.md:523〜:524。backend/app/tasks/maintenance.py:202 が参照）を改訂。ADR-1019 には Q7 も90日も無い（2026-11-06 grep で0件）、ADR-101（B2B 請求書。別の表にする）、ADR-144・ADR-067（金型とトークン）、ADR-027（i18n）、ADR-135・ADR-136（危険な変更の GO）
+- 状態: **設計案作成済み・第3回の審査（Opus の審査役）は REVISE で、指摘を 2026-11-06 に反映済み・再審査待ち（[review.md](./review.md)）・PO 未承認・実装未着手**
 
 ## 1. 目的（PO の言葉から）
 
@@ -32,7 +32,7 @@ mode: handoff
 対象外（次の機会）:
 - 海外用フォルダの画面とトレカの請求書の保存（入れ物の列だけ今回足す）。
 - 海外の請求書の発行。今の B2B の請求書は会社情報を読むまま変えない。海外用の請求書情報は、登録できるが今回はどの請求書にも出ない。
-- 商材とプランの登録画面。今回は最初の1件を移行で入れ、足すときは行の追加で行う。**PO の確認項目（§7-2）**。
+- 商材とプランの登録画面。今回は最初の1件を「1回だけのデータの変更」（ADR-1007 決定1。§3-4 の「最初の行」）で入れ、足すときも同じ手順で行う。**PO の確認項目（§7-2）**。
 - サブスクの自動請求、オンライン決済、軽減税率。
 - 今の本契約 3件の契約記録の作成。
 - 請求書の記録の自動削除。最初の期限が来るのは7年以上先。
@@ -49,7 +49,7 @@ mode: handoff
 
 - 見られる期限は、今の trial_expires_at の1列を使う。別の列を作らない（1つの情報は1か所）。列の説明を「お試しと契約手続き中の、見られる期限」に直す。
 - 期限切れのログインは、新しい理由 viewer_contract_expired で止める。文言は「閲覧期限が過ぎています。担当者にご連絡ください。」（ja・en）。
-- 配信（backend/app/services/tcg_distribution_svc.py:725）は変えない。
+- 配信（backend/app/services/tcg_distribution_svc.py:725）は変えない。active 以外は not_contracted で配らない形（同 :724）なので、contracting は自動で配信なしになる（A34）。
 - 面談案内（viewer_interview_notice.py:57）は変えない。
 
 状態を読む次の場所へ contracting を足す。漏れると新しい状態の人が止まる。
@@ -109,7 +109,7 @@ mode: handoff
 
 **tax_rates**（税率）
 - id、rate_percent（NUMERIC(5,2)）、effective_from（DATE・一意）、created_by_user_id、created_at。
-- 最初の行は 10.00・2019-10-01。
+- 最初の行（10.00・2019-10-01）は、便2 の本番反映の後に PO が税率の画面で足す（ADR-1007 決定1 の「アプリ画面」）。移行では入れない。
 - 請求書は発行日に有効な行を読み、率を写す。後から行を足しても、発行済みは変わらない。
 - 画面は最高管理者のみ。行の追加だけで、過去の行は直せない（打ち間違いは未来の適用日の行に限り消せる）。
 
@@ -143,7 +143,9 @@ mode: handoff
 - PDF では「〒」と郵便番号の3桁目の後のハイフンを、表示のときだけ付ける。
 
 都道府県の一覧（1か所に置く。案A を取る）:
-- public.prefectures（code CHAR(2) 主キー＝JIS X 0401 の 01〜47、name_ja、name_en、sort_order）を新しく作り、移行で47行を入れる。prefecture_code はこの表への外部キー。
+- public.prefectures（code CHAR(2) 主キー＝JIS X 0401 の 01〜47、name_ja、name_en、sort_order）を新しく作る。移行は表の形だけで、行は入れない（ADR-1007 決定1）。prefecture_code はこの表への外部キー。
+- 47行の正本は docs/handoff/viewer-contract-stage/data/prefectures.sql の1ファイル（JIS X 0401 の番号と名前。ON CONFLICT (code) DO NOTHING）。本番へは「1回だけのデータの変更」（PO の合意 → DRY-RUN → COMMIT、記録を同じ場所に残す）で流す。試験は backend/tests/seed_data.py に読む関数を足して同じファイルから入れる（国の一覧が countries.ts を読む形と同じ。同ファイル :21〜:56）。47行を2か所に書かない。
+- 画面の表示は、言語が日本語なら name_ja、それ以外なら name_en を出す。都道府県名は DB のデータで、画面の文言（ADR-027 の t() の対象）ではない。国の名前を countries から出す今の形と同じ扱い。
 - 画面の選択肢は API でこの表から読む。画面のコードに都道府県名を書かない。
 - 案B（画面の定数ファイル＋DB の CHECK に47個を並べる）は取らない。同じ一覧が2か所になり、揃っているかを確かめる仕組みが今のリポジトリに無いため（国の一覧 frontend/src/constants/countries.ts と public.countries の照合も .github/workflows・scripts に無い。2026-11-06 grep）。
 
@@ -162,7 +164,14 @@ mode: handoff
 - **SSOT の境界**: 会社名・住所などは会社情報にもある。PO がこのリスクを聞いたうえで分ける形を選んだ（2026-11-05「2」）。請求書情報はこの2表が正本、会社情報は PO の PDF・送り状・今の B2B の請求書の正本。片方を直してももう片方は変わらない。画面の説明文にそう書く。B2B の請求書をこの表へ移すかは海外の請求書の設計で決める。
 - 置き場は会社ごとのスキーマ（tenant_NNN.tenant_invoice_profiles、tenant_NNN.tenant_invoice_registration）。会社別のデータはそこに置く決まり（ADR-142 の Context）で、会社情報（tenant_profile）も同じ場所にある。
 - ADR-142 の Decision 2 と 3 に従い、次を同じ変更で揃える。既存の全会社へ足す移行と、backend/app/services/tenant.py の _TENANT_TABLES_SQL（:195）・_RLS_ENABLE_SQL（:1206）・_RLS_POLICY_SQL（:1259）の3か所。ポリシー名は `<表名>_tenant_isolation`、条件は own_inventory と同じ（tenant.py:1323〜:1325）。権限は一括付与に任せる。既定の行は入れない。発行元の行が無ければ発行を止める。
-- 発行の処理は発行元の会社の番号で set_tenant_context を張り、表名は tenant_table_ref で書く（backend/app/auth/dependencies.py:363・:495）。commit の後は reset する（同 :425、ADR-072）。最高管理者の口には前例が無い（super_admin の口の grep で該当なし）。会社の番号を引数で受けて文脈を張る処理は裏の処理にある（backend/app/services/google_webhook.py:255、backend/app/discord_gateway/dm_writer.py:94）ので、この形を発行の処理に写す。
+- 発行の処理は発行元の会社の番号で set_tenant_context を張り、表名は tenant_table_ref で書く（backend/app/auth/dependencies.py:363・:495）。commit の後は reset する（同 :425、ADR-072）。
+- 文脈を張る順番は次で固定する。set_tenant_context は最後に `SET app.is_operator = ''` を流す（dependencies.py:383〜:385）ので、先に運営の印を張ると消える。
+  （１）set_tenant_context（発行元の会社の番号）
+  （２）`SET LOCAL app.is_operator = 'true'`
+  （３）書き込み
+  （４）commit
+  （５）reset_tenant_context
+- `SET LOCAL` は commit で消える。commit の後に裏で行うメール・ドライブの結果の書き込みは、取引ごとに（１）（２）を張り直す。最高管理者の口には前例が無い（super_admin の口の grep で該当なし）。会社の番号を引数で受けて文脈を張る処理は裏の処理にある（backend/app/services/google_webhook.py:255、backend/app/discord_gateway/dm_writer.py:94）ので、この形を発行の処理に写す。
 - 文脈は接続を返す前に消える（backend/app/database.py:60〜:61 の get_db が clear_tenant_context を呼ぶ。backend/app/auth/dependencies.py:447。ADR-131）。裏の処理は get_db を通らないので、処理の終わりで clear_tenant_context を呼ぶ（同 :447 の説明にある BackgroundTasks の形）。新しい public の表の SQL は public. を付けて書く。
 - 画面は今の会社情報のページ（frontend/src/pages/admin/TenantProfilePage.tsx）に「請求書情報」の区切りを足す。会社に1つの「インボイス登録」の欄を上に置き、その下で国内用と海外用を Tabs で切り替える。テナントオーナー専用の設定はこのページに置く決まり（docs/specs/profile-account-settings/README.md の境界）に合う。権限は今の tenant.profile.view／edit（同ページ :8〜:9）。部品は §3-4a。
 
@@ -188,16 +197,21 @@ mode: handoff
 既存の表への追加:
 - tenant_google_drive_config: overseas_folder_id（今回は使わない）。既存の folder_id を国内用と定める（どこからも書かれていないことを確認済み。recon §8）。
 
-ai_ro: 新しい個人情報の列と、tenant_invoice_profiles・tenant_invoice_registration・tenant_invoice_payment_methods の全項目（決まった値しか入らない列を除く）は隠す設定にする。migrations/20261024_100300_create_ai_cloud_views.sql:300・:573 と同じ形（会社ごとの表は 'tenant_*' の行で足す）。個人情報の表の一覧（migrations/20261031_210000_create_ops_case.sql:102）にも足す。
+ai_ro: 新しい個人情報の列と、tenant_invoice_profiles・tenant_invoice_registration・tenant_invoice_payment_methods の全項目（決まった値しか入らない列を除く）は隠す設定にする。新しい移行ファイルは作らず、既存の migrations/20261024_100300_create_ai_cloud_views.sql の :300・:573 と同じ形の行を足す（会社ごとの表は 'tenant_*' の行で足す）。このファイルは scripts/migration-guard/reference-allowlist.tsv:7 に sha256 で登録されているので、同じ変更で sha256 と理由の欄を直す。個人情報の表の一覧（migrations/20261031_210000_create_ops_case.sql:102）にも足す。
 
-最初の行（移行で入れる）:
-- 商材「在庫解析ツール」、プラン「在庫解析の閲覧とシート配信」、買い切り、200,000円（税抜）、機能2つ、既定の支払日数 3。発行元の会社は HIGH LIFE JPN（2026-11-05 PO「1」）。
+最初の行（移行では入れない。ADR-1007 決定1）:
+- 中身: 商材「在庫解析ツール」、プラン「在庫解析の閲覧とシート配信」、買い切り、200,000円（税抜）、機能2つ、既定の支払日数 3。発行元の会社は HIGH LIFE JPN（2026-11-05 PO「1」）。
+- 入れ方: 「1回だけのデータの変更」。SQL と記録を docs/handoff/viewer-contract-stage/ に置き、PO の合意 → DRY-RUN → COMMIT で流す。発行元の会社の番号は SQL に数字で書かず、DRY-RUN で会社名から引いた結果を PO に見せてから COMMIT する。
+- 試験は自分で行を用意する（試験の fixture）。本番の値を試験から読まない。
 
 RLS（ADR-1018 の段階①の型）: 新しい public の表（sa_products・sa_plans・sa_plan_features・sa_contracts・tax_rates・viewer_invoices・viewer_invoice_lines・viewer_invoice_number_seq・prefectures）は、読むのは全行可、書くのは `app.is_operator='true'` のときだけにする。ENABLE と FORCE を付ける（ADR-1018 Decision 3）。
 - 理由: どの表も書くのは運営（最高管理者の画面と、その発行に続く裏の処理）だけ。閲覧者や会社の人が書く経路は無い。請求書は金額と宛先を持ち、アプリの書き間違いを DB で止める価値がある。
 - 閲覧者の名簿と請求先（migrations/20261105_120000_create_viewer_billing_profiles.sql:2）は RLS を付けていない。こちらは閲覧者本人のフォームから書くので型が違う。
 - 書く処理は `SET LOCAL app.is_operator = 'true'` を張る（先例 backend/app/routers/buyback_prices.py:392、backend/app/routers/super_admin_suppliers.py:61）。裏の処理は自分で張る（先例 backend/app/tasks/fx_rate_updater.py:70）。
-- RLS で弾かれた UPDATE は誤りにならず0行になる。書く処理は更新した行数が1でなければ誤りとして止める。
+- 運営の印が無いときの動き（PostgreSQL 16 公式文書 Row Security Policies 5.9。2026-11-06 確認。Context7 は月の上限で使えず、公式文書を直接読んだ）:
+  - INSERT は WITH CHECK に当たり、誤り（new row violates row-level security policy）で止まる。
+  - UPDATE と DELETE は USING で行が見えず、誤りにならず0行になる。書く処理は変えた行数が1でなければ誤りとして止める。
+- 外部キーの確かめは RLS を通らない（同文書「Referential integrity checks … always bypass row security」）。名簿を消したときの SET NULL が FORCE の RLS の下で効くかは、文書に直接の記載が無いので A14 で確かめる。
 - 権限は migrations/20261105_120000_create_viewer_billing_profiles.sql の GRANT と同じ形で salesanchor_app に渡す。
 
 ### 3-4a. 画面の部品（金型）
@@ -230,6 +244,7 @@ RLS（ADR-1018 の段階①の型）: 新しい public の表（sa_products・sa
 | PUT | /admin/invoice-payment-methods/{id} | 1件直す |
 | DELETE | /admin/invoice-payment-methods/{id} | 1件消す |
 | GET | /prefectures | 都道府県の一覧（ログイン済みなら誰でも） |
+| PUT | /integrations/google-drive/folder | 国内用の保存先。drive_url を受け、extract_folder_id で番号を取り folder_id に入れる。番号が取れなければ 422。権限は今の連携の口と同じ require_tenant_admin（backend/app/routers/integrations.py:196） |
 
 運営（最高管理者。今の閲覧者の口 backend/app/routers/super_admin_viewers.py と同じ /super-admin/viewers の下）:
 
@@ -244,6 +259,20 @@ RLS（ADR-1018 の段階①の型）: 新しい public の表（sa_products・sa
 | POST | /super-admin/viewer-invoices/{id}/confirm-payment | 入金確認（paid_at を受ける） |
 | GET・POST | /super-admin/tax-rates | 税率の一覧と追加 |
 | DELETE | /super-admin/tax-rates/{id} | 未来の適用日の行だけ消せる。それ以外は 409 |
+
+- 運営の閲覧者の一覧（GET /super-admin/viewers。super_admin_viewers.py:196）に、行ごとの contract_status・invoice_id・invoice_number・invoice_status・due_date・mail_status（sent／failed／none）・drive_status（saved／failed／none）を足す。行のボタン（作成・入金確認・もう一度送る・もう一度保存）はこの値で出し分ける。
+
+送る項目と返す項目（型は Pydantic。名前は DB の列名と同じにする）:
+
+| 道 | 送る | 返す |
+|---|---|---|
+| PUT /admin/invoice-profiles/{region} | issuer_name・country_code・postal_code・prefecture_code・state_region・city・address1・address2・phone・email・website | 保存した行の全項目と updated_at |
+| PUT /admin/invoice-registration | is_invoice_registered・registration_number | 同じ2項目と updated_at |
+| POST・PUT /admin/invoice-payment-methods | region・method_type・display_name と種類ごとの列（§3-4 の表の列） | 保存した行の全項目 |
+| GET /prefectures | なし | code・name_ja・name_en・sort_order の配列 |
+| GET /super-admin/viewers/{viewer_id}/invoice-draft | なし | plans（id・name・unit_price_jpy）・bill_to・payment_methods（id・display_name・method_type。domestic の行。Wise は wise_currency が JPY の行だけ）・default_due_date・tax_rate_percent |
+| POST /super-admin/viewers/{viewer_id}/invoices | plan_id・payment_method_id・discounts（description・amount_jpy の配列）・due_date・save_default | 請求書の行（id・invoice_number・金額の6項目・status・mail_status・drive_status） |
+| POST …/confirm-payment | paid_at（日付） | 請求書・契約・閲覧者の新しい状態 |
 
 - 誤りの形は今の口と同じ（detail に理由）。発行で発行元の行・振込先・文面が足りないときは 409 と足りない項目の一覧を返す。
 
@@ -348,6 +377,10 @@ commit の後、裏で順に行う:
 | 4 | ボタンの切り替え・三点・直接移す道の削除 | 全部 | PO の入力とテストの後 |
 
 - 便2 の移行は危険な変更に当たる。ADR-136 の手順で GO を記録する。
+- 便2 の本番反映の後、便3 の前に行うこと（ADR-1007 決定1 の道。移行では値を入れない）:
+  （１）都道府県47行を「1回だけのデータの変更」で入れる（PO の合意 → DRY-RUN → COMMIT）。
+  （２）商材・プラン・機能の最初の行を同じ手順で入れる。
+  （３）PO が税率の画面で 10%・2019-10-01 の行を足す。
 - 便4 の前に PO が行うこと: 国内用の請求書情報の入力、文面2つの保存、保存先の指定。
 
 ## 5. 代替案と選んだ理由
@@ -413,26 +446,31 @@ commit の後、裏で順に行う:
 | A11 | 再発行で前が voided、新しい番号。有効な請求書は1件 | backend pytest |
 | A12 | 入金確認で本契約になり、期限切れの日時でも見られる | backend pytest＋本番確認 |
 | A13 | 期限切れ 3年以内の行は残り、3年を過ぎた行は消える。本契約は消えない | backend pytest（掃除の処理） |
-| A14 | 名簿を消しても請求書の行が残る | backend pytest |
+| A14 | 名簿を消しても請求書の行が残り、viewer_account_id が NULL になる | backend pytest（実 PostgreSQL・salesanchor_app・運営の印なし。FORCE の RLS の下で SET NULL が効くことを確かめる） |
 | A15 | 税率の行を足すと、適用日以降の請求書だけ変わる。発行済みは変わらない | backend pytest＋ Evaluator |
 | A16 | チェックして発行すると次回の既定が変わり、チェックなしは変わらない。発行済みの期限は変わらない | backend pytest＋ Evaluator |
 | A17 | プランと機能の行を足すと、作成画面の選択肢に出る | backend pytest＋ Evaluator |
-| A18 | 新しい列の値が ai_ro で読めない | CI（ai_ro の点検）＋本番の読み取り |
+| A18 | 新しい列の値が ai_ro で読めない | backend pytest（実 PostgreSQL で ai_cloud の見せ方を通して読み、隠す列が伏せられている）＋本番の reader 鍵での読み取り。CI に ai_ro 専用の手順名は無い（.github/workflows の grep 2026-11-06） |
 | A19 | 画面の文字はすべて t()。生の部品なし | CI（i18n・UI のガバナンス） |
 | A20 | 国内用と海外用を別々に保存でき、請求書は国内用の値を載せる。海外用や会社情報を直しても閲覧者の請求書は変わらない | backend pytest＋ Evaluator |
 | A21 | 別の会社の文脈では請求書情報の行が読めない | backend pytest（RLS の点検） |
 | A22 | 新しく作った会社と既存の会社で、請求書情報の3表の列・制約・RLS・ポリシーの差が0 | backend pytest（実 PostgreSQL。新しい会社を作る処理で1社作り、既存の1社と information_schema.columns・pg_constraint・pg_class.relrowsecurity と relforcerowsecurity・pg_policies を3表ぶん並べて比べ、差の行数が0） |
-| A23 | 最高管理者の画面から発行しても、発行元の会社の請求書情報と Google の接続を読める | backend pytest（実 PostgreSQL で salesanchor_app の権限）＋ Evaluator |
+| A23 | 最高管理者の画面から発行しても、発行元の会社の請求書情報と Google の接続を読め、public の表へ書ける。commit の後の裏の書き込み（mail_*・drive_*）も入る | backend pytest（実 PostgreSQL で salesanchor_app の権限。§3-4 の（１）〜（５）の順。順を逆にすると書けないことも確かめる）＋ Evaluator |
 | A24 | 登録が無のとき番号の欄が入力できず、値を送っても保存されない。有のとき T＋13桁以外は保存できない。PDF の番号の行は有のときだけ出る | backend pytest＋ frontend テスト＋ Evaluator |
 | A25 | 振込先を種類ごとに複数登録でき、種類を変えると入力欄が変わる。種類ごとの必須が無いと保存できない（DB の CHECK でも止まる） | backend pytest＋ frontend テスト＋ Evaluator |
 | A26 | 作成画面で選んだ振込先だけが PDF に載る。発行後に振込先を直しても消しても、発行済みの内容は変わらない。振込先が0件なら発行できない。作成画面に JPY 以外の Wise は出ない | backend pytest＋ Evaluator |
 | A27 | 住所の国が日本のとき、郵便番号7桁以外・都道府県なし・電話にハイフンや空白・10〜11桁以外は保存できない（画面と DB の CHECK の両方） | backend pytest＋ frontend テスト＋ Evaluator |
 | A28 | 住所の国が日本以外のとき、郵便番号なし・州の自由記入で保存でき、電話は数字6〜15桁だけ通る。PDF の電話は頭に「+」が付く | backend pytest＋ frontend テスト |
-| A29 | インボイス登録の有無と番号は会社に1行だけで、国内用と海外用の請求書の両方に同じ番号が載る | backend pytest（2行目の INSERT が一意制約で止まる）＋ Evaluator |
-| A30 | 都道府県の選択肢が DB の47行から出て、画面のコードに都道府県名が無い | backend pytest（47行）＋ CI の grep（frontend/src に「北海道」が0件） |
-| A31 | 運営の文脈なしで新しい public の表へ書くと0行で、書く処理は誤りとして止まる。運営の文脈ありなら書ける | backend pytest（実 PostgreSQL・salesanchor_app） |
+| A29 | インボイス登録の有無と番号は会社に1行だけ。国内用と海外用のどちらのタブからも同じ1行が見え、片方で直すともう片方にも出る。国内用の請求書の issuer_snapshot に番号が写る。海外の請求書の発行は今回の対象外なので、海外の請求書への載り方は海外の設計で確かめる | backend pytest（2行目の INSERT が一意制約で止まる・発行の写しに番号がある）＋ frontend テスト（2つのタブが同じ値）＋ Evaluator |
+| A30 | 都道府県の選択肢が DB の47行から出て、画面のコードに都道府県名が無い | backend pytest（試験の seed で47行・API が47行を返す・frontend/src を読んで「北海道」が0件）。CI に専用の手順名は作らず、backend の試験の中で確かめる |
+| A31 | 運営の印なしで新しい public の表へ書くと、INSERT は RLS の誤りで止まり、UPDATE と DELETE は0行になって書く処理が誤りとして止める。運営の印ありなら書ける | backend pytest（実 PostgreSQL・salesanchor_app。9表それぞれ） |
 | A32 | 振込先と請求書情報を足す・直す・消すと audit_logs に1行ずつ残り、口座番号は下4桁だけ | backend pytest |
 | A33 | 番号の採番を同時に2つ走らせても番号が重ならない | backend pytest（実 PostgreSQL・2接続） |
+| A34 | 契約手続き中（contracting）の閲覧者には配信されず、理由が not_contracted になる。入金確認で active になると配信される。配信の処理（tcg_distribution_svc.py:725 の `va.status <> 'active'`）は変えない | backend pytest（contracting の人の配信先の行の reason） |
+| A35 | 日本語のフォントが登録できないとき、発行が止まり請求書の行が作られない | backend pytest（フォントの読み込みを失敗させる） |
+| A36 | メールの送信に失敗したとき（SMTP 未設定を含む）、発行は成立し、行に「送信失敗」と「もう一度送る」が出る。再送の成功で mail_sent_at が入る | backend pytest＋ Evaluator |
+| A37 | 公開ポリシーの閲覧者の保存期間が3年、請求書の記録が7年、Google の用途にドライブ、利用目的に再登録の防止が載り、改訂日が入る | 本番の LP を PO が目視＋ lp のビルド |
+| A38 | 週1回の接続の見守りが動き、トークンの更新に失敗すると Discord の運用通知に1件出る | backend pytest（更新を失敗させる）＋本番の実行記録 |
 ## 9. 実装カードへ送ること
 
 - 状態を読む場所の全件 grep（`'trial'`・`"trial"`・`'active'`・`"active"`）を最初に行い、結果をカードの表と照合する。表に無い場所が出たら止まる。
