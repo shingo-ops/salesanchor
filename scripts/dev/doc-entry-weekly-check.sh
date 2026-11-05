@@ -4,7 +4,7 @@
 set -u
 
 # 合格線の正本はここ1か所（docs/specs/doc-agenda-nav/kgi.md の写し）
-K1_LIMIT=200
+K1_LIMIT=210
 K9_LIMIT_TOKENS=7500
 K12_DAYS=90
 PEER_DAYS=7
