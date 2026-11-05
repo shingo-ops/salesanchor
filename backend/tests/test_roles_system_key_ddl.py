@@ -28,7 +28,7 @@ def test_tenant_ddl_has_system_key_column_and_partial_unique_index():
     """実際の DDL（_TENANT_TABLES_SQL）を読む。DDL の文面は複製せず、roles の定義ブロックを区切りで取り出す。"""
     sql = tenant_service._TENANT_TABLES_SQL
     marker = "{schema}.roles ("
-    assert sql.count(marker) == 2  # roles の定義と、部分一意索引の ON {schema}.roles (system_key)
+    assert sql.count(marker) == 3  # roles の定義と、部分一意索引 2 つ（ON {schema}.roles (system_key) と (discord_role_id)）
     definition = sql.split(marker)[1]  # 最初の出現 = roles の列定義
     roles_block = definition[: definition.index(");")]
     assert "system_key TEXT" in roles_block
