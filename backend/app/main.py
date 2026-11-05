@@ -180,7 +180,7 @@ async def lifespan(app: FastAPI):
             "METADATA_FERNET_KEY の検証に失敗しました（Meta OAuth 系統は無効化されます）: %s", e
         )
 
-    # ADR-1013: 自社ログインの設定検査（既定 firebase・秘密なしなら何も起きない）
+    # ADR-1013: 自社ログインの設定検査（本番で秘密が無ければ起動を止める）
     self_tokens.validate_settings()
 
     # 基盤環境変数チェック（DATABASE_URL, REDIS_URL, CELERY_BROKER_URL）

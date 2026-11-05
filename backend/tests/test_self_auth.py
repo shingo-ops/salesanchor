@@ -35,7 +35,6 @@ _REFRESH = sa.table("auth_refresh_tokens", sa.column("id"))
 
 @pytest.fixture(autouse=True)
 def self_auth_env(monkeypatch):
-    monkeypatch.setenv("AUTH_PROVIDER", "self")
     monkeypatch.setenv("AUTH_JWT_SECRET", SECRET)
     monkeypatch.delenv("AUTH_JWT_SECRET_PREVIOUS", raising=False)
     monkeypatch.delenv("AUTH_RP_ORIGIN", raising=False)
@@ -181,8 +180,8 @@ async def test_ten_failures_lock_then_expiry_allows_login(http, db_session, pass
 
 # ── 5・6. 無効時 404・Origin 403 ──────────────────────────────
 
-async def test_login_and_refresh_404_when_provider_firebase(http, monkeypatch):
-    monkeypatch.setenv("AUTH_PROVIDER", "firebase")
+async def test_login_and_refresh_404_when_no_secret(http, monkeypatch):
+    monkeypatch.delenv("AUTH_JWT_SECRET")
 
     assert (await _login(http)).status_code == 404
     assert (await http.post(f"{AUTH_PATH}/refresh", headers={"origin": ORIGIN})).status_code == 404
@@ -349,8 +348,7 @@ async def _current_user(db, token):
     from app.auth.dependencies import get_current_user
 
     cred = HTTPAuthorizationCredentials(scheme="Bearer", credentials=token)
-    with patch("app.auth.dependencies._init_firebase"), \
-         patch("app.auth.dependencies.is_token_blacklisted", new=AsyncMock(return_value=False)), \
+    with patch("app.auth.dependencies.is_token_blacklisted", new=AsyncMock(return_value=False)), \
          patch("app.auth.dependencies.get_cached_jwt", new=AsyncMock(return_value=None)), \
          patch("app.auth.dependencies.check_auth_rate_limit", new=AsyncMock(return_value=False)), \
          patch("app.auth.dependencies.record_auth_failure", new=AsyncMock()), \
@@ -460,19 +458,14 @@ def test_validate_settings_accepts_valid_self_config():
     assert self_tokens.validate_settings() is None
 
 
-def test_validate_settings_accepts_default_firebase_without_secret(monkeypatch):
-    monkeypatch.setenv("AUTH_PROVIDER", "firebase")
+def test_validate_settings_accepts_no_secret_outside_production(monkeypatch):
+    monkeypatch.delenv("ENVIRONMENT", raising=False)
     monkeypatch.delenv("AUTH_JWT_SECRET")
     assert self_tokens.validate_settings() is None
 
 
-def test_validate_settings_rejects_unknown_provider(monkeypatch):
-    monkeypatch.setenv("AUTH_PROVIDER", "okta")
-    with pytest.raises(RuntimeError):
-        self_tokens.validate_settings()
-
-
-def test_validate_settings_rejects_self_without_secret(monkeypatch):
+def test_validate_settings_rejects_production_without_secret(monkeypatch):
+    monkeypatch.setenv("ENVIRONMENT", "production")
     monkeypatch.delenv("AUTH_JWT_SECRET")
     with pytest.raises(RuntimeError):
         self_tokens.validate_settings()
@@ -601,12 +594,11 @@ async def test_password_change_user_without_hash_is_400(http, db_session, as_use
     assert resp.json()["detail"] == "invalid_credentials"
 
 
-async def test_password_change_firebase_revokes_refresh_but_issues_nothing(
+async def test_password_change_without_secret_revokes_refresh_but_issues_nothing(
     http, db_session, password_hash, as_user, monkeypatch
 ):
     await _insert_user(db_session, hash_value=password_hash)
     cookie = await _login_cookie(http)
-    monkeypatch.setenv("AUTH_PROVIDER", "firebase")
     monkeypatch.delenv("AUTH_JWT_SECRET", raising=False)
 
     resp = await _change(http)
@@ -625,93 +617,74 @@ async def test_password_change_firebase_revokes_refresh_but_issues_nothing(
     assert cookie
 
 
-# ── 9b. 自社ログイン中は Firebase の札を受け付けない（docs/handoff/block-firebase-token/design.md） ──
+# ── 9b. 自社以外の札は受け付けない（docs/handoff/firebase-removal/design.md §5-2） ──
 
-FIREBASE_LIKE_TOKEN = "firebase-like-token-not-salesanchor"
+FOREIGN_TOKEN = "foreign-token-not-salesanchor"
 
 
 async def _current_user_with(db, token, *, cached=None, rate_limited=False):
-    """get_current_user を呼び、(利用者, 例外, 一時記憶の偽物, 失敗記録の偽物, Firebase 確認の偽物) を返す。
-    Firebase の確認の偽物は、いつも「正しい札」と答える（K1: それでも断ることを確かめる）。"""
+    """get_current_user を呼び、(利用者, 例外, 一時記憶の偽物, 失敗記録の偽物) を返す。"""
     from app.auth.dependencies import get_current_user
 
     cred = HTTPAuthorizationCredentials(scheme="Bearer", credentials=token)
     get_cached = AsyncMock(return_value=cached)
     record = AsyncMock()
-    verify = MagicMock(return_value={"email": EMAIL})
-    with patch("app.auth.dependencies._init_firebase"), \
-         patch("app.auth.dependencies.MFA_REQUIRED", False), \
-         patch("app.auth.dependencies.is_token_blacklisted", new=AsyncMock(return_value=False)), \
+    with patch("app.auth.dependencies.is_token_blacklisted", new=AsyncMock(return_value=False)), \
          patch("app.auth.dependencies.get_cached_jwt", new=get_cached), \
          patch("app.auth.dependencies.check_auth_rate_limit", new=AsyncMock(return_value=rate_limited)), \
          patch("app.auth.dependencies.record_auth_failure", new=record), \
-         patch("app.auth.dependencies.cache_jwt_result", new=AsyncMock()), \
-         patch("app.auth.dependencies.firebase_auth.verify_id_token", new=verify):
+         patch("app.auth.dependencies.cache_jwt_result", new=AsyncMock()):
         try:
             user = await get_current_user(_request(), cred, db)
         except HTTPException as exc:
-            return None, exc, get_cached, record, verify
-    return user, None, get_cached, record, verify
+            return None, exc, get_cached, record
+    return user, None, get_cached, record
 
 
-async def test_self_mode_rejects_firebase_token_even_if_firebase_accepts(db_session, password_hash):
+async def test_rejects_foreign_token(db_session, password_hash):
     """T1・K1"""
     await _insert_user(db_session, hash_value=password_hash)
 
-    user, exc, _, record, verify = await _current_user_with(db_session, FIREBASE_LIKE_TOKEN)
+    user, exc, _, record = await _current_user_with(db_session, FOREIGN_TOKEN)
 
     assert user is None and exc.status_code == 401
-    verify.assert_not_called()
+    assert exc.detail == "無効な認証トークンです"
     record.assert_awaited_once()
 
 
-async def test_self_mode_ignores_cached_firebase_token(db_session, password_hash):
+async def test_ignores_cached_foreign_token(db_session, password_hash):
     """T2・K2"""
     await _insert_user(db_session, hash_value=password_hash)
 
-    user, exc, get_cached, _, verify = await _current_user_with(
-        db_session, FIREBASE_LIKE_TOKEN, cached={"email": EMAIL}
+    user, exc, get_cached, _ = await _current_user_with(
+        db_session, FOREIGN_TOKEN, cached={"email": EMAIL}
     )
 
     assert user is None and exc.status_code == 401
     get_cached.assert_not_awaited()
-    verify.assert_not_called()
 
 
-async def test_self_mode_rate_limit_still_429_for_firebase_token(db_session):
+async def test_rate_limit_still_429_for_foreign_token(db_session):
     """T3・K5"""
-    user, exc, _, _, verify = await _current_user_with(db_session, FIREBASE_LIKE_TOKEN, rate_limited=True)
+    user, exc, _, _ = await _current_user_with(db_session, FOREIGN_TOKEN, rate_limited=True)
 
     assert user is None and exc.status_code == 429
-    verify.assert_not_called()
 
 
-async def test_self_mode_still_accepts_self_token_from_cache(db_session, password_hash):
+async def test_still_accepts_self_token_from_cache(db_session, password_hash):
     """T4・K3"""
     await _insert_user(db_session, hash_value=password_hash)
 
-    user, exc, get_cached, _, _ = await _current_user_with(db_session, _token(), cached={"email": EMAIL})
+    user, exc, get_cached, _ = await _current_user_with(db_session, _token(), cached={"email": EMAIL})
 
     assert exc is None and user.id == USER_ID
     get_cached.assert_awaited_once()
 
 
-async def test_self_mode_still_accepts_self_token_without_cache(db_session, password_hash):
+async def test_still_accepts_self_token_without_cache(db_session, password_hash):
     """T5・K3"""
     await _insert_user(db_session, hash_value=password_hash)
 
-    user, exc, _, _, verify = await _current_user_with(db_session, _token())
+    user, exc, _, _ = await _current_user_with(db_session, _token())
 
     assert exc is None and user.id == USER_ID
-    verify.assert_not_called()
-
-
-async def test_firebase_mode_still_accepts_firebase_token(db_session, password_hash, monkeypatch):
-    """T6・K4（戻し方: AUTH_PROVIDER=firebase なら今までどおり）"""
-    monkeypatch.setenv("AUTH_PROVIDER", "firebase")
-    await _insert_user(db_session, hash_value=password_hash)
-
-    user, exc, _, _, verify = await _current_user_with(db_session, FIREBASE_LIKE_TOKEN)
-
-    assert exc is None and user.email == EMAIL
-    verify.assert_called_once()

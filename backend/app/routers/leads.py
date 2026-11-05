@@ -1238,7 +1238,7 @@ async def mark_lead_messages_read(
 
     # Phase 1-E F9-S4 (Sprint 4 Reviewer F2): mark-read アクションを audit_log に記録。
     # 既読化の事実を残す。失敗時はログのみ（ユーザー操作は中断しない）。
-    # firebase_uid 列追加は別 follow-up（F9-S4 拡張版）。現状は user_id (DB id) のみ。
+    # 記録するのは user_id (DB id) だけ。
     if marked > 0:
         try:
             await record_audit_log(

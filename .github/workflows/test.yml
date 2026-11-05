@@ -165,6 +165,17 @@ jobs:
         working-directory: backend
         run: uv pip install --system -r requirements.txt -r requirements-dev.txt
 
+      - name: Firebase removal check (K2 K4)
+        working-directory: backend
+        run: |
+          if python -c "import firebase_admin" 2>/dev/null; then
+            echo "K2 NG: firebase_admin is importable"
+            exit 1
+          fi
+          echo "K2 OK: firebase_admin is not installed"
+          python -c "import google.oauth2.credentials, google.oauth2.service_account, google.auth.transport.requests, googleapiclient.discovery, googleapiclient.http, googleapiclient.errors, google_auth_oauthlib.flow, gspread, google.genai, google.generativeai"
+          echo "K4 OK: google libraries import"
+
       - name: Generate Fernet key for tests
         id: fernet
         run: |

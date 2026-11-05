@@ -54,21 +54,18 @@ async def test_t5_xff_rotation_does_not_evade_auth_lockout(monkeypatch):
     app.dependency_overrides[get_db] = _no_db
 
     statuses = []
-    with patch("app.auth.dependencies._init_firebase"), patch(
-        "firebase_admin.auth.verify_id_token", side_effect=Exception("invalid token")
-    ):
-        transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as client:
-            for i in range(11):
-                resp = await client.get(
-                    "/api/protected",
-                    headers={
-                        "Authorization": "Bearer invalid-firebase-token",
-                        "X-Real-IP": "10.3.0.1",
-                        "X-Forwarded-For": f"6.6.{i}.{i + 1}",
-                    },
-                )
-                statuses.append(resp.status_code)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        for i in range(11):
+            resp = await client.get(
+                "/api/protected",
+                headers={
+                    "Authorization": "Bearer invalid-token",
+                    "X-Real-IP": "10.3.0.1",
+                    "X-Forwarded-For": f"6.6.{i}.{i + 1}",
+                },
+            )
+            statuses.append(resp.status_code)
 
     assert statuses[:10] == [401] * 10, statuses
     assert statuses[10] == 429, statuses

@@ -303,7 +303,7 @@ async def get_avatar_urls_batch(
 
 
 # === ブルートフォース対策 ===
-# 認証失敗: IP単位、10回で15分ロック（Firebase token validation failure）
+# 認証失敗: IP単位、10回で15分ロック（token validation failure）
 AUTH_FAIL_MAX = 10
 AUTH_FAIL_LOCKOUT_TTL = 900  # 15分
 

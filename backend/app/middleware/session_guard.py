@@ -34,7 +34,7 @@ from app.client_ip import get_client_ip
 
 logger = logging.getLogger(__name__)
 
-# セッション追跡の有効期間: 1時間（Firebase JWTの最大有効期限と合わせる）
+# セッション追跡の有効期間: 1時間
 SESSION_IP_TTL = 3600
 
 # 「物理的に不可能な移動」判定: この秒数以内に国が変わったら強制再認証
