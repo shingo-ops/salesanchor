@@ -158,3 +158,29 @@ R1〜R6 はすべて design.md に入り、入れた中身も実物と合う。�
 - rls_bootstrap.py から `_TENANT_LOOP_SELECTOR_RE` を取り出して4本を数えた生出力: `078_create_calendar_events_tenant.sql 2`／`20260621_020000_add_schedule_calendar_category_and_owner_settings.sql 1`／`20261103_200000_add_google_calendar_import_sync.sql 1`／`20261104_161223_add_calendar_events_meet_url.sql 1`
 - `grep -n "await db.commit()" backend/app/services/calendar_service.py` → `271 302 311 364 403 411 423 486`
 - `grep -rln tenant_google_drive_config migrations` → 20260606_010000（作る）・20261016_010000（ALTER）ほか2本
+
+## 3回目
+
+- 審査対象: 直した `design.md`（枝 `release/calendar-sync-tenant-reset`・HEAD efbd28adc。照合した差分は `git diff 109304a38..efbd28adc -- design.md`）
+- 審査役: architect（製品コード・design.md は変えていない）
+- 審査日: 2026-11-05
+- 範囲: 2回目の取り決めどおり N1〜N3 の3点の照合だけ
+
+### 判定: APPROVE
+
+N1〜N3 はすべて design.md に入り、書かれた行番号・中身は実物と合う。design.md の差分は冒頭の審査の記録1行と §5 の3か所（土台・準備2・準備3）だけで、ほかの節は変わっていない。
+
+### N1〜N3 の照合
+
+| # | 結果 | design.md の場所 | 実物との照合 |
+|---|------|------|------|
+| N1 | 反映・合う | §5 準備2（:62） | 順番が 076 → 077 → `20260606_010000_add_google_drive_config.sql`（schema_name なし）→ 20261016 → 078 → … になった。`20261016_010000_add_google_config_rls.sql:11-12` は IF EXISTS なしの `ALTER TABLE public.tenant_google_drive_config`、作るのは `20260606_010000_add_google_drive_config.sql:16` `CREATE TABLE IF NOT EXISTS tenant_google_drive_config` で、20261016 より前に流れる。引用 `test_google_config_rls.py:45-49` は `_MIGRATIONS = (` 〜 `)` で 076 → 20260606 → 20261016 の並び＝一致。20260606 は全テナントを回す書き方が無い（`pg_namespace\|nspname\|tenant_%` 0件）・`rls_bootstrap.py` に名前が無い＝`_TENANT_BOOTSTRAP_MIGRATIONS` に入らず、schema_name なしで止まらない。間に挟まる 077 は drive の語0件で、並びの違いは影響しない |
+| N2 | 反映・合う | §5「土台」（:53） | 引用が `test_lead_merge_pg.py:52-65,303-309` に直った。:52 `_TABLE_MIGRATIONS = (`〜:65 `)`、:303 `async def _apply_table_migrations`〜:309 `_apply_migration_on_conn(conn, filename, schema_name=_SCHEMA if scoped else None)` で、全テナント migration をスキーマに限って流す形そのもの |
+| N3 | 反映・合う | §5 準備3（:63） | firebase_uid・username・email を人ごとに別の値（例 `cal-reset-97801`）にし、`'test-user'` を写さない、と書かれた。`rls_bootstrap.py:238` `firebase_uid VARCHAR(128) UNIQUE`、:256 の id=999 の値が `'test-user'` で一致。UNIQUE は firebase_uid だけ（username・email に UNIQUE なし :239-240）なので、別の値にすれば `ON CONFLICT (id) DO NOTHING` だけで足りる |
+
+### 確かめたコマンド（抜粋）
+- `git rev-parse HEAD` → `efbd28adc760ce5fce086c7e76aaa1e872f5b3cf`
+- `git diff --stat 109304a38..efbd28adc` → design-review.md +42・design.md 8行（4行入れ替え）
+- `grep -n tenant_google_drive_config` 20261016・20260606 → 20261016 :11,:12,:14,:15／20260606 :10（注記）,:16（CREATE）
+- `sed -n '40,52p' backend/tests/test_google_config_rls.py`・`sed -n '50,66p;300,312p' backend/tests/test_lead_merge_pg.py`・`sed -n '230,260p' backend/tests/rls_bootstrap.py` で上の行を目で確かめた
+- `grep -cE "pg_namespace|nspname|tenant_%" migrations/20260606_010000_add_google_drive_config.sql` → 0、`grep -n 20260606 backend/tests/rls_bootstrap.py` → 0件、`grep -c drive migrations/077_…` → 0
