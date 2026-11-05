@@ -110,4 +110,24 @@ CI に任せる（クラウドの実行機では全体を流しきる時間を�
 
 ## §8 保存
 
-（commit のあと下に追記）
+`git log --oneline -4`（報告書の追記 commit の前の生出力）:
+
+```
+74b3b38e8 feat(discord): 自社用サーバーへの反映ボタン（discord-server-management 便3b）
+fb246a1a8 fix(discord): 確認の直し 3 件と反映の中身（discord-server-management 便3b）
+24ec6a227 docs(discord): 便3b 反映ボタンの実装カードと設計 改訂5
+f07c538ea Merge pull request #5154 from shingo-ops/release/weekly-check-ng-notify
+```
+
+commit 後（新規の試験ファイルが追跡された状態）の `check_test_schema_dup.py`:
+
+```
+[INFO] backend/tests/test_discord_blueprint_apply.py: BASE=0 HEAD=0
+[INFO] backend/tests/test_discord_own_server_apply.py: BASE=0 HEAD=0
+[INFO] backend/tests/test_discord_own_server_plan.py: BASE=0 HEAD=0
+[INFO] backend/tests/test_discord_own_server_snapshot.py: BASE=0 HEAD=0
+テストへの新規スキーマ複製なし(pass)
+rc=0
+```
+
+カードは commit 2 つの指定だが、この報告書への追記のためだけに 3 つ目の commit（docs のみ）を足した。push は 3 つまとめて 1 回。push 後の `git rev-parse HEAD` はこの報告書の中に書けない（自分自身の sha になるため）ので、最終報告の文に書く。
