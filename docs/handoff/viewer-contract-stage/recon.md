@@ -1,0 +1,102 @@
+# recon: 閲覧者の契約手続きと請求書 — 現状の記録
+
+> この文書は何か（専門用語なしの1行）:
+> 手続きの段階と請求書を足す前に、今のプログラムと本番がどうなっているかを行番号つきで記録したもの。
+
+- 親（設計仕様書）: [docs/specs/viewer-contract-invoicing/README.md](../../specs/viewer-contract-invoicing/README.md)
+- 設計: [design.md](./design.md)
+- 基準: origin/main 9b96f0764（2026-11-05）。生出力は /tmp/CC報告ファイル/contract-status/ の recon-1105*.txt。
+
+## 1. 既存 ADR の検索
+
+- `git grep -i -l "viewer_accounts\|閲覧者" docs/adr/` の該当: ADR-021、ADR-1003、ADR-1009、ADR-1019。
+- docs/adr/FEATURE-INDEX.md は 閲覧・viewer・ドライブ・drive・請求書 の語で該当なし。ADR-101 は既存の設計（viewer-customer-sheet design）からたどった。
+- 今回変える決まり: ADR-1019 の Q7（削除の日数。実装は §4）。
+
+## 2. 状態の決まりと、状態を読む場所
+
+- 状態の一覧: migrations/20261016_150000_add_viewer_accounts.sql:21（ck_viewer_accounts_status）。
+- 履歴の操作の一覧: migrations/20261016_150000_add_viewer_accounts.sql:91（activate・suspend・unsuspend・extend・start_trial）。
+- ログイン後の判定: backend/app/auth/viewer_dependencies.py:86・:88・:89。一覧に無い状態は viewer_pending で拒否（同 :93〜:94）。
+- ログインの判定: backend/app/routers/viewer.py:190・:195・:202。
+- パスワード再発行を送る状態: backend/app/routers/viewer.py:65・:329。
+- Discord の受付を通す状態: backend/app/discord_gateway/viewer_trial.py:318。
+- 申込コードの再発行を通す状態: backend/app/services/viewer_admin.py:381。
+- 本契約にする・延長の前提: backend/app/services/viewer_admin.py:231・:255。
+- 停止の解除は、最後の停止記録の前の状態へ戻す: backend/app/services/viewer_admin.py:240 付近（from_status を読む）。新しい状態でも値の追加だけで動く。
+- 配信は本契約のみ: backend/app/services/tcg_distribution_svc.py:725（`va.status <> 'active'` は not_contracted）。
+- 期限前日の面談案内はお試しのみ: backend/app/discord_gateway/viewer_interview_notice.py:57。
+- 閲覧ページの停止の扱い: frontend/src/pages/viewer/ViewerApp.tsx:52・:60、frontend/src/pages/viewer/LoginView.tsx:24。
+- 管理画面: frontend/src/pages/super-admin/ViewerAccountsPage.tsx:94（左メニュー）・:441（行のボタン）。ファイルは 922 行。上限は frontend/scripts/check-page-size.js:7 の 1000 行で、便2 の審査で 1043 行が差し戻しになった（release-viewer-billing-form-bin2 の台帳）。
+
+## 3. フォーム
+
+- 鍵の期限: backend/app/services/viewer_billing_form.py:20（BILLING_FORM_TTL 7日）。
+- 本契約のみ: 同 :97・:138・:167。
+- 送る口: backend/app/routers/super_admin_viewers.py:423〜。鍵を消して作り直す。メールは BackgroundTasks（結果を画面が知らない）。
+- 送ったことの記録は無い。鍵の行は作り直しで消える（同 :431 以降と viewer_billing_form.py）。段階の判定に使える記録が今は無い。
+
+## 4. 自動削除と公開ポリシー
+
+- 90日の定数: backend/app/tasks/maintenance.py:33。7日の定数: 同 :34。
+- お試し: 同 :215。停止: 同 :220〜:225。申込のまま: 同 :231。
+- 公開ポリシー: lp/src/pages/privacy.astro:215・:216（90日で消す、請求先も一緒に消す）。利用目的: 同 :177 に請求書の発行はあるが、再登録の防止は無い。委託先の表: 同 :247 に Google はあるが、用途にドライブは無い。
+- 本番の件数（2026-11-05 ai_ro）: お試し 21件（うち期限切れ 19件）・本契約 3件。最も古いお試し期限は 2026-09-20 00:14 UTC。今の決まりでは 2026-12-19 に最初の削除が起きる。
+
+## 5. 商材・プラン・税率
+
+- 本番に商材・プラン・契約の表と列は無い（ai_ro の情報スキーマを検索）。
+- `sa_products`・`sa_plans`・`tax_rates`・`viewer_invoices` の名前は migrations と backend/app に無い（git grep・該当なし）。
+- 税率の保存場所は backend/app と migrations に無い。
+
+## 6. PDF とメール
+
+- B2B の PDF: backend/app/services/invoice_renderer.py:1〜:21（輸出向け。Description・HS コード固定）。登録番号・振込先・消費税の欄は無い。
+- 日本語フォントの登録: 同 :49〜。フォントが無いと Helvetica へ落ちる。Docker には IPA ゴシックが入る（backend/Dockerfile:14）。
+- B2B の番号: backend/app/routers/invoices.py:263（IN-0001-01 の形）。無効化: 同 :580（番号の頭に [VOID]）。
+- 閲覧者の請求先のメール: backend/app/services/auth_mail.py:138〜:152。本文だけで添付は無い。失敗はログだけ。
+- 請求先の表の項目: migrations/20261105_120000_create_viewer_billing_profiles.sql:8〜:20（invoice_email は任意）。
+- 文面の台帳: backend/app/services/viewer_message_templates.py:43〜:54。
+
+## 7. 会社情報
+
+- 読み出し: backend/app/routers/invoices.py:109〜:128（`{tenant_schema}.tenant_profile`）。
+- 画面の権限: backend/app/routers/tenant_profile.py:55・:88（tenant.profile.view／edit）。
+- 項目: backend/app/schemas/tenant_profile.py:15〜:38。振込先・登録番号は無い。
+- ai_ro の隠す設定: migrations/20261024_100300_create_ai_cloud_views.sql:573〜:575。
+- 本番の会社: テスト株式会社・権限確認用・HIGH LIFE JPN・テストテナント2・Sales Anchor App Review の5件（2026-11-05 ai_ro）。実在の事業者名は HIGH LIFE JPN だけに見えるが、発行元の法人は PO に未確認。
+- 会社情報の中身は ai_ro で隠れていて読めない。未確認。
+- 請求書に載る項目は 会社名・住所・電話・メール・サイトの5つ（backend/app/services/invoice_renderer.py:509〜:513）。印影の URL は渡していない。
+- 会社情報を読む他の処理: PO の PDF（backend/app/services/po_renderer.py:9）、送り状の確認（backend/app/services/label_validation.py:85）。
+- 会社情報の表は会社ごとのスキーマに置く（migrations/069_create_tenant_profile.sql:70〜:71）。新しい会社の既定行は tenant.py が入れる（同 :91）。
+- 会社別のデータの置き場の決まり: ADR-142 の Context と Decision 1〜3。作成処理は backend/app/services/tenant.py の _TENANT_TABLES_SQL（:195）・_RLS_ENABLE_SQL（:1206）・_RLS_POLICY_SQL（:1259）。手本は own_inventory（:1183・:1251・:1323）。
+- 文脈: set_tenant_context は backend/app/auth/dependencies.py:363、表名は同 :495 の tenant_table_ref。最高管理者の口に呼び出しは無い。裏の処理の呼び出しは backend/app/services/google_webhook.py:255、backend/app/discord_gateway/dm_writer.py:94。
+- 文脈を消して接続を返す処理は無い（backend/app で RESET ALL・DISCARD・pool_reset の grep が該当なし）。
+
+## 8. Google ドライブ
+
+- 接続は会社に1つ: migrations/20260606_010000_add_google_drive_config.sql:18。folder_id 列: 同 :23。書き込む処理は無い（backend/app/routers/integrations.py:202 と backend/app/services/google_drive_oauth.py:333 は読むだけ）。
+- 権限: backend/app/services/google_drive_oauth.py:49（drive.file）。保存: 同 :373。URL からフォルダ番号を取り出す: 同 :98。
+- 既存の呼び出し: backend/app/routers/shipping.py:511（失敗はログで続行）。
+- テスト保存の口: backend/app/routers/integrations.py:243〜:263。
+- 本番: HIGH LIFE JPN に1件。接続 2026-06-08。トークンの更新記録なし。送り状 0件。今も保存できるかは未確認。
+- 訂正: folder_id は ai_ro で隠す列（migrations/20261024_100300_create_ai_cloud_views.sql:274）。隠す列は空に見えるので、本番の「フォルダ未設定」は根拠にならない。本番の値は未確認。書く処理がコードに無いことだけが事実。
+- この表は会社別の RLS が FORCE で付いている（migrations/20261016_010000_add_google_config_rls.sql:11〜:15）。会社の文脈なしの処理からは読めない。
+- Google 公式: 6か月使わないトークンは無効。同意画面が Testing だと7日で失効。drive.file は、アプリが作ったファイルか、利用者がアプリに渡したファイルを扱える。人が作ったフォルダへ保存できるかは明記なし（未確認）。
+
+## 9. 画面の部品
+
+- メニュー: frontend/src/components/ContextMenu.tsx。三点アイコン: NAV_ICONS.more（frontend/src/pages/inbox/InboxThreadHeaderMobile.tsx:175〜:187 は生の button）。
+- 三点ボタン単体の金型は frontend/src/components に無い（ファイル名と more の grep）。docs/CC_UI_GOVERNANCE.md:13〜:14 により PO の許可を得て登録してから使う。
+- 入力: TextField・Select・Checkbox・Modal は金型あり（docs/CC_UI_GOVERNANCE.md:10・:25、frontend/src/components/Modal.tsx）。
+
+## 10. 外部の決まりの確認
+
+- 消費税: 国税庁 タックスアンサー6303（標準10%）。端数処理は1請求書・税率ごとに1回。
+- 請求書の写しの保存: 7年（インボイス Q&A 問79）。写しは記載事項が確認できる程度の記録でよい（同 問78）。docs/handoff/viewer-customer-sheet/recon.md:73 の確認済み記録。
+- 発行元の国内用: インボイスの登録なし（2026-11-05 PO「2」。PO の回答で、公表サイトの照合はしていない）。
+- 登録番号の形は T＋数字13桁で、適格請求書発行事業者の番号。適格請求書を交付できるのは登録した事業者だけ。登録は任意（国税庁 公表サイト「登録番号とは」、タックスアンサー6498）。課税事業者であることと、インボイスの登録は別の事柄。発行元が課税事業者かは未確認。
+- Wise（公式ヘルプ・2026-11-05 確認）: 支払いリンク・QR・Wisetag で依頼できる。円の入金用の口座情報は本人名義の口座からのみ。JPY の受取は Swift の一覧で、対象の登録国に日本の記載なし。
+- PayPal（日本の公式ヘルプ help293・2026-11-05 確認）: 相手のメール等か PayPal.Me で支払える。友達への送金はビジネスのアカウントで受け取れない。
+- 個人情報: 個人情報保護委員会ガイドライン通則編。3-4-1（使う必要がなくなったら遅滞なく消す努力義務）、3-1-1（目的の具体的な特定）、3-1-2（変更は関連のある範囲で、通知か公表）、3-1-3（目的外は原則本人の同意）。再登録防止で名簿を持つ場合の直接の記述は、読めた範囲（ページ前半）に無い。未確認。
+- Context7 は月間上限で利用不可。上記は公式ページを直接確認した。

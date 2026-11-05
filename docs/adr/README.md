@@ -3,7 +3,7 @@
 > このファイルは `scripts/generate-adr-index.js` により自動生成されます。
 > **手動編集禁止。** ADR ファイルを追加・変更後に `node scripts/generate-adr-index.js` を実行してください。
 
-最終更新: 2026-11-05 / ADR 総数: 219 件
+最終更新: 2026-11-05 / ADR 総数: 220 件
 
 ## 維持ルール（整合性を保つ・必須）
 
@@ -238,6 +238,7 @@
 | [ADR-1058](./ADR-1058-ai-job-assignments.md) | ADR-1058: アプリの中で働く AI の担当（AI とモデル）は DB の1か所で決め、スーパー管理の画面で見て切り替える・成功も失敗も使用の記録に1行ずつ残す・秘書は ChatGPT（Codex CLI・月額契約）も選べる | Accepted | — | — |
 | [ADR-1059](./ADR-1059-google-calendar-import-owner-private.md) | ADR-1059: Google カレンダーの予定をアプリに取り込む。取り込んだ予定は最初「自分だけ」で、アプリで1件ずつ「社員にも見せる」に切り替える | Accepted | — | — |
 | [ADR-1060](./ADR-1060-calendar-google-meet.md) | ADR-1060: 予定に Google Meet を付ける。付けられるのは Google をつないだ本人の予定だけで、URL は calendar_events.meet_url の 1 か所に置く | Accepted | — | — |
+| [ADR-1061](./ADR-1061-viewer-contract-stage-and-invoicing.md) | ADR-1061: 閲覧者に契約手続き中の状態を足し、商材・プラン・税率・請求書を専用の表に置き、お試しまで進んだ人を3年残す | Accepted | — | — |
 
 ## ステータス凡例
 
