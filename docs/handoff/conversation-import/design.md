@@ -5,7 +5,7 @@
 
 親: [仕様書の表紙](../../specs/inbox/conversation-import/README.md) ／ KGI: [kgi.md](../../specs/inbox/conversation-import/kgi.md) ／ 調査: [docs/handoff/conversation-import/recon.md](recon.md) ／ 決定記録案: [ADR-1064](../../adr/ADR-1064-conversation-file-import.md)
 
-状態: 設計案作成済み（Opus）／設計審査前／PO 実装承認前／実装未着手
+状態: 設計案作成済み（Opus）／クラウド審査1回目 REVISE を反映済み（[review-opus.md](review-opus.md)）／再審査前／PO 実装承認前／実装未着手
 
 ## 1. 目的
 
@@ -96,12 +96,17 @@
 | `POST /api/v1/leads/{lead_id}/conversation-import/commit`（multipart: file） | messaging.send | §4-2 で入れる。返す: `added`, `skipped`。errors があれば 400 |
 
 - リードが同じテナントに無い → 404（leads.py:974 と同じ確かめ方）。
+- 表の名前は `tenant_table_ref(db, tenant_id, "meta_messages")`（backend/app/auth/dependencies.py:409）で作る。leads.py の既存の書き方と同じ。
+- commit の後、`publish_inbox_update` より前に `reset_tenant_context(db, tenant_id)`（backend/app/auth/dependencies.py:166）を呼ぶ（ADR-072。commit の後は search_path が外れるため）。
 - リードの検索と新規作成は既存の `GET /leads?search=` と `POST /leads` を使う（新しい API を作らない・recon §8）。
 
 ### 4-6 取り込んだ会話への返信を止める
 
-- `backend/app/routers/leads.py` `send_lead_message`（:1776）の「直近 inbound を読む」SELECT（:1847 付近）に `is_manual` を足す。
-- その行の is_manual が TRUE なら、platform の判定より前に 400 を返す。detail は既存の書き方に合わせる。画面は今の送信失敗の表示がそのまま出る。
+- 送信の道は2本ある。両方に同じ見張りを入れる（審査 M1）。
+  - 文字: `send_lead_message`（backend/app/routers/leads.py:1776）。「直近 inbound を読む」SELECT は :1847 付近。
+  - 画像: `send_lead_image_message`（backend/app/routers/leads.py:2412・`POST /leads/{lead_id}/messages/image`）。「直近 inbound を読む」SELECT は :2460-2470。
+- 両方の SELECT に `is_manual` を足す。その行の is_manual が TRUE なら、platform の判定（文字 :1863-1867・画像 :2480-2483）より前に 400 を返す。detail は既存の書き方に合わせる。画面は今の送信失敗の表示がそのまま出る。
+- 判定は2本で同じ小さな関数にまとめ、書き写さない（実装カードで置き場所を決める）。
 - 本物の受信（Webhook）が後から来れば、その行が最新になり、普段どおり送れる。
 
 ### 4-7 lead_channels は作らない
@@ -115,8 +120,12 @@
   - `before` が無いとき: 新しい順に limit 件を取り、古い順に並べ直して返す（内側 `ORDER BY created_at DESC, id DESC LIMIT :limit`、外側 `ORDER BY created_at ASC, id ASC`）。
   - `before=<id>` のとき: その行の (created_at, id) より前の行を同じ方法で返す（`(created_at, id) < (:c, :i)`）。id の大小だけで比べると、取り込みのように後から過去の時刻で入った行で順番が崩れるため。
   - 返り値に `has_more: bool` を足す（limit+1 件取って判定）。
+  - 列の少ない予備の SELECT（leads.py:1035-1050・添付の列が無いとき）にも同じ並べ方・before・has_more を入れる（審査 M6）。
+  - before の行が無い、または別のリードの行のとき: 空の一覧と `has_more: false` を返す（404 にしない。画面は「前のメッセージを読む」を消すだけ）。
 - 画面（frontend/src/pages/inbox/InboxMessageThread.tsx・useInboxState.ts）:
   - has_more が true のとき、会話の一番上に「前のメッセージを読む」ボタン（Button 金型・t() の新しい鍵 `inbox.loadOlder`）を出す。押すと先頭の id を before にして取り、上に足す。
+  - 足した古い方は、最新の50件の控え（cache・useInboxState.ts:425）とは別の入れ物に持つ（審査 M4）。控えは SSE（:598）・定期の読み直し（:616）・送信の後（:839）で上書きされるため、同じ入れ物だと古い方が消える。
+  - 画面に出すのは「古い方＋最新の50件」を id で重複を除いてつないだもの。リードを切り替えたら古い方の入れ物を空にする。
   - 新しい部品・色の直書きは作らない。
 
 ### 4-9 取り込み画面
@@ -150,7 +159,10 @@
 | K4 2回取り込んでも増えない | 自動試験: 同じファイルを2回 commit し、2回目 added=0・skipped=全件、行数が変わらない。Evaluator: 画面の件数が同じ |
 | K5 翻訳0回・Discord 0件 | 自動試験: `enqueue_inbound_translation` と `send_discord_notification` を差し替え、呼ばれた回数 0 |
 | K6 その画面でリードを作れる | Evaluator: 取り込み画面で新規作成→そのリードに取り込み→受信箱に出る |
-| 返信を止める | 自動試験: 取り込みの行が最新 inbound のリードに送信すると 400。Webhook の行が後に来ると送信の判定へ進む |
+| 返信を止める（文字） | 自動試験: 取り込みの行が最新 inbound のリードに文字を送ると 400。Webhook の行が後に来ると送信の判定へ進む |
+| 返信を止める（画像） | 自動試験: 同じ条件で `POST /leads/{lead_id}/messages/image` が 400 |
+| 古い方が消えない | 自動試験（画面）: 「前のメッセージを読む」の後に読み直しが起きても、足した古い方が残る |
+| before が無い行 | 自動試験: 無い id・別リードの id で空の一覧と has_more=false |
 | 未読が増えない | 自動試験: 取り込み後の一覧の unread_count が 0 |
 | 時間帯の見張り | 自動試験: 最後の時刻が savedAt より後になるファイルで下見が `time_after_saved` |
 | 画面の決まり | CI: .github/workflows/frontend-check.yml と .github/workflows/ui-governance-gate.yml が緑 |
@@ -165,6 +177,8 @@
 | R4 | 会話画面の直し（§4-8）が本物の会話の見え方も変える | 新しい方が出るのが正しい形。自動試験で before の続き読みを確かめる |
 | R5 | 保存ファイルの id が長い期間で変わる | lead_id を挟んだ message_id で、同じリードに同じファイルなら重ならない。id が変わった場合は重複が入る。【未確認】のため、段階1の実運用1か月後に重複の有無を数える（§9） |
 | R6 | お客さんの会話の中身が git・PR・ログに出る | 試験は架空の文だけ。取り込みのログに本文を出さない（件数と lead_id だけ） |
+| R7 | 成約しやすさの分析は、リードの窓口が messenger か instagram の会話しか数えない（analytics.py:2491）。tenant_004 のリードは窓口が unknown 54件・discord 2件で、取り込んでも数えられない（recon §11） | 【PO 判断待ち】案 a: 窓口が unknown か空のリードに取り込むとき、窓口を messenger に変える（下見に表示・messenger は tenant_004 で有効と確認済み）。案 b: 下見で注意だけ出し、担当者がリード編集で変える。案 c: 分析を会話の窓口で数えるよう直す（本設計の対象外）。決まるまで便2の実装カードは出さない |
+| R8 | 試験用の表の形（7ファイル）に is_manual 等の列が無く、試験が落ちる | 便2で7ファイルに列を足す（§9） |
 
 ## 8. 外部・過去事例の参照と我々への応用
 
@@ -177,7 +191,7 @@
 | 便 | 中身 | 触るファイル |
 |---|---|---|
 | 便1 | 会話画面で新しい方を出す（§4-8） | backend/app/routers/leads.py、frontend/src/pages/inbox/InboxMessageThread.tsx、frontend/src/pages/inbox/useInboxState.ts、frontend/src/lib/messages.ts、locales、試験 |
-| 便2 | 変換と API・返信の見張り（§4-1〜4-7） | backend/app/services/conversation_import/、backend/app/routers/conversation_import.py、backend/app/main.py（router 登録・conv_logs の登録 main.py:716 の近く）、backend/app/routers/leads.py、試験 |
+| 便2 | 変換と API・返信の見張り（文字と画像の2本・§4-1〜4-7） | backend/app/services/conversation_import/、backend/app/routers/conversation_import.py、backend/app/main.py（router 登録・conv_logs の登録 main.py:716 の近く）、backend/app/routers/leads.py、試験。試験用の表の形に is_manual・recorded_by_user_id・occurred_at を足す7ファイル（審査 M2）: backend/tests/conftest.py（:155 と :2038）、backend/tests/test_conversations.py、backend/tests/test_discord_inbox.py、backend/tests/test_message_image_send.py、backend/tests/test_message_send.py、backend/tests/test_messages.py、backend/tests/test_webhook_instagram.py |
 | 便3 | 取り込み画面（§4-9） | frontend/src/pages/inbox/ConversationImportPage.tsx、frontend/src/App.tsx、frontend/src/pages/inbox/InboxPage.tsx、locales、試験 |
 
 - DB の形は変えない（migrations なし）。

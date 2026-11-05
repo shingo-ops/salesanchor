@@ -94,3 +94,21 @@
 ## 10. ADR 番号
 
 - 【事実】origin/main の最大は ADR-1063。開いている PR に ADR-1061（#5155）がある。ADR-1064 は origin/main・開いている PR の題名に無い（2026-11-06 確認）。
+
+## 11. 審査1回目のあとに確かめた事実（2026-11-06・Opus）
+
+本番は読み取り専用の鍵で ai_ro の見る窓から数だけ読んだ。中身は読んでいない。
+
+| 確かめたこと | 結果 | 出どころ |
+|---|---|---|
+| meta_messages に取り込みで使う列があるか | tenant_001・tenant_004 とも is_manual・recorded_by_user_id・occurred_at・seen_at・deleted_at がある | ai_ro.tenant_001__meta_messages・ai_ro.tenant_004__meta_messages の列一覧 |
+| tenant_004 で50件を超える会話のリード | 0件（deleted_at IS NULL） | ai_ro.tenant_004__meta_messages の lead_id ごとの件数 |
+| tenant_004 のリードの窓口 | unknown 54件・discord 2件。messenger は0件。状態はすべて lead | ai_ro.tenant_004__leads の channel_type・status ごとの件数 |
+| tenant_004 の窓口の台帳 | discord・in_person・instagram・messenger・phone・whatsapp がすべて有効 | ai_ro.tenant_004__channel_masters |
+| 成約分析が meta_messages を読む条件 | リードの窓口が instagram か messenger、状態が existing_customer か lost | backend/app/routers/analytics.py:2484-2505 |
+| 窓口を変えるときの見張り | 台帳で有効な値だけ通す。それ以外は 422 | backend/app/routers/leads.py:185-221 |
+| 画像の送信の道 | `POST /leads/{lead_id}/messages/image`（:2407/2412）。直近 inbound の SELECT は :2460-2470、窓口からの推定は :2480-2483 | backend/app/routers/leads.py |
+| 会話画面の予備の SELECT | 添付の列が無いときの SELECT も `ORDER BY created_at ASC, id ASC LIMIT :limit` | backend/app/routers/leads.py:1035-1050 |
+| 会話の控えが上書きされる所 | 読み込み :425、SSE :598、定期の読み直し :616、送信の後 :839 | frontend/src/pages/inbox/useInboxState.ts |
+| commit 後の付け直し | reset_tenant_context は :166、tenant_table_ref は :409 | backend/app/auth/dependencies.py |
+| 試験用に meta_messages の形を自前で作るファイル | 7つ。どれも is_manual が無い | backend/tests/conftest.py（:155・:2038）ほか §9 の便2 の欄 |
