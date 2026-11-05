@@ -65,3 +65,73 @@ it("hides the button when no server is registered", async () => {
   await screen.findByText("Not connected");
   expect(screen.queryByText("Read the current server")).toBeNull();
 });
+
+const PLAN_PATH = "/admin/discord/own-server/plan";
+const emptyPlan = { plan_digest: "d".repeat(64), changes: [], blocked: [], delete_candidates: [] };
+const mockPlan = (plan: unknown) => {
+  vi.mocked(api.get).mockImplementation(async (path: string) => {
+    if (path === "/admin/discord-config/own") return { guild_id: GUILD, connected_at: null };
+    if (path === PLAN_PATH) return plan;
+    return {};
+  });
+};
+
+it("shows changes, blocked rows and delete candidates after Check", async () => {
+  mockPlan({
+    plan_digest: "d".repeat(64),
+    changes: [
+      { kind: "create_role", key: "r1", name: "NewRole", field: null, before: null, after: "name=NewRole" },
+    ],
+    blocked: [
+      { kind: "update_role", key: "r2", name: "BlockedRole", field: "name", before: "a", after: "b", reason: "role_above_bot" },
+    ],
+    delete_candidates: [
+      { kind: "channel", discord_id: "55", name: "old-channel", parent_name: "OldCat", target: null },
+    ],
+  });
+  view();
+  fireEvent.click(await screen.findByText("Check"));
+  await screen.findByText("Changes (1)");
+  await screen.findByText("Not allowed (1, will not run)");
+  await screen.findByText("Delete candidates (1)");
+  expect(api.get).toHaveBeenCalledWith(PLAN_PATH);
+  expect(screen.getByText("Create role")).toBeTruthy();
+  expect(screen.getByText("BlockedRole")).toBeTruthy();
+  expect(screen.getByText("The role is at or above the bot's role")).toBeTruthy();
+  expect(screen.getByText("old-channel")).toBeTruthy();
+  expect(screen.getByText("OldCat")).toBeTruthy();
+  expect(screen.getByText("Delete candidates are never deleted automatically.")).toBeTruthy();
+});
+
+it("shows None for each empty group", async () => {
+  mockPlan(emptyPlan);
+  view();
+  fireEvent.click(await screen.findByText("Check"));
+  await screen.findByText("Changes (0)");
+  expect(await screen.findAllByText("None")).toHaveLength(3);
+});
+
+it("shows an error message when the check fails", async () => {
+  vi.mocked(api.get).mockImplementation(async (path: string) => {
+    if (path === "/admin/discord-config/own") return { guild_id: GUILD, connected_at: null };
+    throw new Error("boom");
+  });
+  view();
+  fireEvent.click(await screen.findByText("Check"));
+  await screen.findByText("Could not check");
+});
+
+it("hides Check without edit permission", async () => {
+  mockPerms((key) => key !== "tenant.profile.edit");
+  view();
+  await screen.findByText(GUILD);
+  await waitFor(() => expect(screen.queryByText("Check")).toBeNull());
+});
+
+it("has no apply button", async () => {
+  mockPlan(emptyPlan);
+  view();
+  fireEvent.click(await screen.findByText("Check"));
+  await screen.findByText("Changes (0)");
+  expect(screen.queryByRole("button", { name: /apply|反映/i })).toBeNull();
+});

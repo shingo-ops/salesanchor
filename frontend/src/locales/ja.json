@@ -3507,7 +3507,59 @@
     "loadError": "読み込めませんでした",
     "snapshot": "今のサーバーを読み取る",
     "snapshotDone": "読み取りました（ロール {{roles}}・チャンネル {{channels}}）",
-    "snapshotFailed": "読み取れませんでした"
+    "snapshotFailed": "読み取れませんでした",
+    "check": "確認する",
+    "planFailed": "確認できませんでした",
+    "planNoBlueprint": "設計図がまだありません",
+    "changesTitle": "変わる（{{count}} 件）",
+    "blockedTitle": "できない（{{count}} 件・実行しません）",
+    "deleteTitle": "消す候補（{{count}} 件）",
+    "deleteNote": "消す候補は自動では消しません。",
+    "emptyRows": "ありません",
+    "col": {
+      "kind": "種類",
+      "name": "名前",
+      "field": "項目",
+      "before": "前",
+      "after": "後",
+      "reason": "理由",
+      "parent": "親",
+      "target": "相手"
+    },
+    "kind": {
+      "create_role": "ロールを作る",
+      "update_role": "ロールを直す",
+      "create_category": "カテゴリを作る",
+      "update_category": "カテゴリを直す",
+      "create_channel": "チャンネルを作る",
+      "update_channel": "チャンネルを直す",
+      "update_overwrite": "見せ方を直す"
+    },
+    "field": {
+      "name": "名前",
+      "color": "色",
+      "hoist": "別に表示",
+      "mentionable": "メンションできる",
+      "permissions": "権限",
+      "topic": "話題",
+      "parent": "親のカテゴリ",
+      "overwrite": "見せ方（{{target}}）"
+    },
+    "reason": {
+      "role_above_bot": "Bot と同じか上の順番のロールなので変えられません",
+      "everyone_name": "@everyone の名前は変えられません",
+      "permission_bot_lacks": "Bot が持っていない権限は付けられません",
+      "overwrite_manage_roles": "見せ方で「ロールの管理」は付けられません",
+      "bot_role_missing": "Bot のロールが見つかりません",
+      "missing_on_discord": "設計図にある物が Discord にありません",
+      "ambiguous": "同じ名前の物が 2 つ以上あります"
+    },
+    "deleteKind": {
+      "role": "ロール",
+      "category": "カテゴリ",
+      "channel": "チャンネル",
+      "overwrite": "見せ方"
+    }
   },
   "discordAutoSetup": {
     "title": "自動セットアップ",

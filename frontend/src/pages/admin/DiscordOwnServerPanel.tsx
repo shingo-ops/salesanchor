@@ -8,17 +8,20 @@
  *   tenant.profile.view → 閲覧
  *   tenant.profile.edit → 登録の解除
  *   tenant.profile.edit → 今のサーバーの読み取り
+ *   tenant.profile.edit → 確認（設計図と今のサーバーの差）
  *   tenant.profile.edit かつ channels.manage → Bot の招待
  */
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { api } from "../../lib/api";
+import { api, ApiError } from "../../lib/api";
 import { useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
 import { usePermissions } from "../../hooks/usePermissions";
 import { Button } from "../../components/Button";
 import { Card } from "../../components/Card";
 import { Badge } from "../../components/Badge";
 import ConfirmModal from "../../components/ConfirmModal";
+import { DataTable } from "../../components/DataTable";
+import { EmptyState } from "../../components/EmptyState";
 import { LoadingBlock } from "../../components/loading";
 import "./discord-config.css";
 
@@ -27,8 +30,34 @@ interface DiscordOwnConfig {
   connected_at: string | null;
 }
 
+interface PlanRow {
+  kind: string;
+  key: string;
+  name: string;
+  field: string | null;
+  before: string | null;
+  after: string | null;
+  reason?: string | null;
+}
+
+interface DeleteCandidate {
+  kind: string;
+  discord_id: string;
+  name: string | null;
+  parent_name: string | null;
+  target: string | null;
+}
+
+interface OwnServerPlan {
+  plan_digest: string;
+  changes: PlanRow[];
+  blocked: PlanRow[];
+  delete_candidates: DeleteCandidate[];
+}
+
 const OWN_PATH = "/admin/discord-config/own";
 const SNAPSHOT_PATH = "/admin/discord/own-server/snapshot";
+const PLAN_PATH = "/admin/discord/own-server/plan";
 
 type Notice = { kind: "success" | "danger"; text: string } | null;
 
@@ -46,6 +75,8 @@ export function DiscordOwnServerPanel() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [removing, setRemoving] = useState(false);
   const [reading, setReading] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const [plan, setPlan] = useState<OwnServerPlan | null>(null);
 
   // 招待から戻ったときの結果を 1 回だけ読み、URL の残りを消す
   useEffect(() => {
@@ -118,6 +149,54 @@ export function DiscordOwnServerPanel() {
     }
   };
 
+  const handleCheck = async () => {
+    setChecking(true);
+    setNotice(null);
+    try {
+      setPlan(await api.get<OwnServerPlan>(PLAN_PATH));
+    } catch (err) {
+      const noBlueprint = err instanceof ApiError && err.status === 404;
+      setNotice({
+        kind: "danger",
+        text: noBlueprint ? t("discordOwnServer.planNoBlueprint") : t("discordOwnServer.planFailed"),
+      });
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  const fieldLabel = (field: string | null) => {
+    if (!field) return "";
+    if (field.startsWith("overwrite:")) {
+      return t("discordOwnServer.field.overwrite", { target: field.slice("overwrite:".length) });
+    }
+    return t(`discordOwnServer.field.${field}`);
+  };
+
+  const rowKeyOf = (row: PlanRow) => `${row.kind}:${row.key}:${row.field ?? ""}`;
+  const emptyRows = <EmptyState size="compact" title={t("discordOwnServer.emptyRows")} />;
+  const planColumns = [
+    { key: "kind", header: t("discordOwnServer.col.kind"), renderCell: (row: PlanRow) => t(`discordOwnServer.kind.${row.kind}`) },
+    { key: "name", header: t("discordOwnServer.col.name") },
+    { key: "field", header: t("discordOwnServer.col.field"), renderCell: (row: PlanRow) => fieldLabel(row.field) },
+    { key: "before", header: t("discordOwnServer.col.before"), renderCell: (row: PlanRow) => row.before ?? "" },
+    { key: "after", header: t("discordOwnServer.col.after"), renderCell: (row: PlanRow) => row.after ?? "" },
+  ];
+  const blockedColumns = [
+    ...planColumns,
+    {
+      key: "reason",
+      header: t("discordOwnServer.col.reason"),
+      renderCell: (row: PlanRow) => (row.reason ? t(`discordOwnServer.reason.${row.reason}`) : ""),
+    },
+  ];
+  const deleteColumns = [
+    { key: "kind", header: t("discordOwnServer.col.kind"), renderCell: (row: DeleteCandidate) => t(`discordOwnServer.deleteKind.${row.kind}`) },
+    { key: "name", header: t("discordOwnServer.col.name"), renderCell: (row: DeleteCandidate) => row.name ?? "" },
+    { key: "parent_name", header: t("discordOwnServer.col.parent"), renderCell: (row: DeleteCandidate) => row.parent_name ?? "" },
+    { key: "target", header: t("discordOwnServer.col.target"), renderCell: (row: DeleteCandidate) => row.target ?? "" },
+  ];
+
   if (ownQ.isPending) return <LoadingBlock />;
 
   const guildId = ownQ.data?.guild_id ?? null;
@@ -156,6 +235,41 @@ export function DiscordOwnServerPanel() {
           <Button variant="secondary" onClick={() => void handleSnapshot()} loading={reading}>
             {t("discordOwnServer.snapshot")}
           </Button>
+          <Button variant="primary" onClick={() => void handleCheck()} loading={checking}>
+            {t("discordOwnServer.check")}
+          </Button>
+        </div>
+      )}
+      {plan && (
+        <div className="dc-result">
+          <div className="dc-group">
+            <h4 className="dc-group-title">{t("discordOwnServer.changesTitle", { count: plan.changes.length })}</h4>
+            <DataTable<PlanRow>
+              columns={planColumns}
+              data={plan.changes}
+              rowKey={rowKeyOf}
+              emptyState={emptyRows}
+            />
+          </div>
+          <div className="dc-group">
+            <h4 className="dc-group-title">{t("discordOwnServer.blockedTitle", { count: plan.blocked.length })}</h4>
+            <DataTable<PlanRow>
+              columns={blockedColumns}
+              data={plan.blocked}
+              rowKey={rowKeyOf}
+              emptyState={emptyRows}
+            />
+          </div>
+          <div className="dc-group">
+            <h4 className="dc-group-title">{t("discordOwnServer.deleteTitle", { count: plan.delete_candidates.length })}</h4>
+            <DataTable<DeleteCandidate>
+              columns={deleteColumns}
+              data={plan.delete_candidates}
+              rowKey={(row) => `${row.kind}:${row.discord_id}:${row.target ?? ""}`}
+              emptyState={emptyRows}
+            />
+            <p className="dc-hint">{t("discordOwnServer.deleteNote")}</p>
+          </div>
         </div>
       )}
       <ConfirmModal

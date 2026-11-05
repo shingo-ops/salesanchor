@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "roles": [
+    {
+      "key": "everyone",
+      "discord_id": "@everyone",
+      "name": "@everyone",
+      "color": 0,
+      "hoist": false,
+      "mentionable": false,
+      "permissions": [
+        "CREATE_INSTANT_INVITE", "ADD_REACTIONS", "STREAM", "VIEW_CHANNEL", "SEND_MESSAGES",
+        "EMBED_LINKS", "ATTACH_FILES", "READ_MESSAGE_HISTORY", "MENTION_EVERYONE", "USE_EXTERNAL_EMOJIS",
+        "CONNECT", "SPEAK", "USE_VAD", "CHANGE_NICKNAME", "USE_APPLICATION_COMMANDS", "REQUEST_TO_SPEAK",
+        "CREATE_PUBLIC_THREADS", "CREATE_PRIVATE_THREADS", "USE_EXTERNAL_STICKERS", "SEND_MESSAGES_IN_THREADS",
+        "USE_EMBEDDED_ACTIVITIES", "USE_SOUNDBOARD", "CREATE_GUILD_EXPRESSIONS", "CREATE_EVENTS",
+        "USE_EXTERNAL_SOUNDS", "SEND_VOICE_MESSAGES", "SET_VOICE_CHANNEL_STATUS", "SEND_POLLS", "USE_EXTERNAL_APPS"
+      ]
+    }
+  ],
+  "categories": [
+    {"key": "text_cat", "discord_id": "1567709769337409726", "name": "テキストチャンネル", "overwrites": []},
+    {"key": "voice_cat", "discord_id": "1567709769337409727", "name": "ボイスチャンネル", "overwrites": []}
+  ],
+  "channels": [
+    {"key": "general", "discord_id": "1567709769337409728", "name": "一般", "type": "text",
+     "category": "text_cat", "topic": null, "overwrites": []}
+  ]
+}
