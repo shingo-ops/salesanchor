@@ -3263,6 +3263,9 @@
     "weekView": "Week",
     "listView": "Schedule",
     "moreOptions": "More options",
+    "addMeet": "Add Google Meet",
+    "joinMeet": "Join with Google Meet",
+    "meetFailed": "Couldn't add Google Meet",
     "shortcuts": {
       "title": "Keyboard shortcuts",
       "today": "Go to today",

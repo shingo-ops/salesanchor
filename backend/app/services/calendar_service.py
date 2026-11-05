@@ -16,7 +16,9 @@ from __future__ import annotations
   - sync_mode に応じて Google 同期の有無を切り替え
 """
 
+import asyncio
 import logging
+import uuid
 from datetime import date, datetime, time, timedelta
 from typing import Optional
 from zoneinfo import ZoneInfo
@@ -65,6 +67,56 @@ async def _get_sync_target(db: AsyncSession, tenant_id: int) -> tuple[str, Optio
     )
     record = row.first()
     return (record[0], record[1]) if record else ("none", None)
+
+
+async def can_add_meet(db: AsyncSession, tenant_id: int, user_id: int) -> bool:
+    """この人の予定を Google に送れるか（= Google Meet を付けてよいか）。
+
+    送る方式（bidirectional / write_only）で、Google をつないだ本人だけ真。
+    予定を Google に送る条件と Meet を付けてよい条件は同じ式なので 1 か所に置く。
+    """
+    sync_mode, connected_by = await _get_sync_target(db, tenant_id)
+    return sync_mode in ("bidirectional", "write_only") and connected_by == user_id
+
+
+def _meet_create_request() -> dict:
+    """Google に Meet を作らせる頼み。requestId は毎回新しい値にする（頼み直しのため）。"""
+    return {
+        "createRequest": {
+            "requestId": uuid.uuid4().hex,
+            "conferenceSolutionKey": {"type": "hangoutsMeet"},
+        }
+    }
+
+
+async def _resolve_meet_url(db: AsyncSession, tenant_id: int, google_event: dict) -> Optional[str]:
+    """Google の返事から Meet の URL を取り出す。作成が pending なら 1 秒おきに 2 回まで読み直す。
+
+    取れなければ None（予定そのものは保存済みなので失敗にはしない）。
+    """
+    url = google_event.get("hangoutLink")
+    if url:
+        return url
+    status_code = (
+        ((google_event.get("conferenceData") or {}).get("createRequest") or {})
+        .get("status", {})
+        .get("statusCode")
+    )
+    google_event_id = google_event.get("id")
+    if status_code == "pending" and google_event_id:
+        from app.services import google_calendar as gcal
+
+        for _ in range(2):
+            await asyncio.sleep(1)
+            try:
+                reread = await gcal.get_event(db, tenant_id, google_event_id)
+            except Exception as e:
+                logger.warning("Google Meet の読み直しに失敗 (google_event_id=%s): %s", google_event_id, e)
+                break
+            if reread.get("hangoutLink"):
+                return reread["hangoutLink"]
+    logger.warning("Google Meet の URL を取得できませんでした (google_event_id=%s)", google_event_id)
+    return None
 
 
 def _build_sync_origin_id(tenant_id: int, calendar_event_id: int) -> str:
@@ -135,7 +187,8 @@ async def list_events(
             f" ce.start_datetime, ce.end_datetime, ce.is_all_day, ce.google_event_id, ce.source,"
             f" ce.sync_status, ce.created_by_user_id, ce.created_at, ce.updated_at,"
             f" TRIM(COALESCE(owner.surname_jp,'') || ' ' || COALESCE(owner.given_name_jp,'')) AS owner_name,"
-            f" TRIM(COALESCE(created.surname_jp,'') || ' ' || COALESCE(created.given_name_jp,'')) AS created_by_name"
+            f" TRIM(COALESCE(created.surname_jp,'') || ' ' || COALESCE(created.given_name_jp,'')) AS created_by_name,"
+            f" ce.meet_url"
             f" FROM calendar_events ce"
             f" LEFT JOIN public.users owner_user ON owner_user.id = ce.user_id"
             f" LEFT JOIN staff owner ON owner.user_id = owner_user.id"
@@ -167,6 +220,7 @@ async def list_events(
             "updated_at": r[15].isoformat() if r[15] else None,
             "owner_name": r[16] or None,
             "created_by_name": r[17] or None,
+            "meet_url": r[18],
         }
         for r in rows
     ]
@@ -217,14 +271,21 @@ async def create_event(
     await db.commit()
 
     # Google Calendar に同期
-    sync_mode, connected_by = await _get_sync_target(db, tenant_id)
+    meet_url: Optional[str] = None
     # 接続は会社で1つ。つないだ人が作った予定だけ送り、ほかの人の予定はその人の Google に入れない（PO 2026-11-02）
-    if sync_mode in ("bidirectional", "write_only") and connected_by == user_id:
+    if await can_add_meet(db, tenant_id, user_id):
         try:
             from app.services import google_calendar as cal_svc
 
             google_body = _to_google_event_body(payload)
-            google_event = await cal_svc.create_event(db, tenant_id, google_body)
+            if payload.get("add_meet"):
+                google_body["conferenceData"] = _meet_create_request()
+                google_event = await cal_svc.create_event(
+                    db, tenant_id, google_body, conference=True
+                )
+                meet_url = await _resolve_meet_url(db, tenant_id, google_event)
+            else:
+                google_event = await cal_svc.create_event(db, tenant_id, google_body)
             google_event_id = google_event.get("id")
 
             origin_id = _build_sync_origin_id(tenant_id, event_id)
@@ -232,10 +293,11 @@ async def create_event(
                 text(
                     "UPDATE calendar_events"
                     " SET google_event_id = :gid, sync_origin_id = :oid,"
-                    "     sync_status = 'synced', last_synced_at = NOW()"
+                    "     sync_status = 'synced', last_synced_at = NOW(),"
+                    "     meet_url = :meet_url"
                     " WHERE id = :id"
                 ),
-                {"gid": google_event_id, "oid": origin_id, "id": event_id},
+                {"gid": google_event_id, "oid": origin_id, "id": event_id, "meet_url": meet_url},
             )
             await db.commit()
         except Exception as e:
@@ -247,8 +309,9 @@ async def create_event(
                 {"id": event_id},
             )
             await db.commit()
+            meet_url = None
 
-    return {"id": event_id}
+    return {"id": event_id, "meet_url": meet_url}
 
 
 # ---------------------------------------------------------------------------
@@ -286,8 +349,11 @@ async def update_event(
             else:
                 params[k] = payload[k]
 
+    add_meet = bool(payload.get("add_meet"))
     if not set_clauses:
-        return {"id": event_id}
+        if add_meet:
+            return await _attach_meet_only(db, tenant_id, event_id)
+        return {"id": event_id, "meet_url": None}
 
     set_clauses.append("sync_status = 'pending'")
     set_sql = ", ".join(set_clauses)
@@ -300,11 +366,12 @@ async def update_event(
 
     # Google Calendar に同期
     row = await db.execute(
-        text("SELECT google_event_id FROM calendar_events WHERE id = :id"),
+        text("SELECT google_event_id, meet_url FROM calendar_events WHERE id = :id"),
         {"id": event_id},
     )
     record = row.first()
     google_event_id = record[0] if record else None
+    meet_url: Optional[str] = record[1] if record is not None and len(record) > 1 else None
 
     sync_mode = await _get_sync_mode(db, tenant_id)
     if google_event_id and sync_mode in ("bidirectional", "write_only"):
@@ -312,7 +379,19 @@ async def update_event(
             from app.services import google_calendar as cal_svc
 
             google_body = _to_google_event_body(payload)
-            await cal_svc.update_event(db, tenant_id, google_event_id, google_body)
+            if add_meet and not meet_url:
+                google_body["conferenceData"] = _meet_create_request()
+                google_event = await cal_svc.update_event(
+                    db, tenant_id, google_event_id, google_body, conference=True
+                )
+                meet_url = await _resolve_meet_url(db, tenant_id, google_event)
+                if meet_url:
+                    await db.execute(
+                        text("UPDATE calendar_events SET meet_url = :url WHERE id = :id"),
+                        {"url": meet_url, "id": event_id},
+                    )
+            else:
+                await cal_svc.update_event(db, tenant_id, google_event_id, google_body)
             await db.execute(
                 text(
                     "UPDATE calendar_events"
@@ -332,7 +411,54 @@ async def update_event(
             await db.commit()
             await reset_tenant_context(db, tenant_id)
 
-    return {"id": event_id}
+    return {"id": event_id, "meet_url": meet_url}
+
+
+async def _save_meet_url(db: AsyncSession, tenant_id: int, event_id: int, meet_url: str) -> None:
+    """Meet の URL を calendar_events.meet_url（唯一の置き場所）に保存する。"""
+    await db.execute(
+        text("UPDATE calendar_events SET meet_url = :url WHERE id = :id"),
+        {"url": meet_url, "id": event_id},
+    )
+    await db.commit()
+    await reset_tenant_context(db, tenant_id)
+
+
+async def _attach_meet_only(db: AsyncSession, tenant_id: int, event_id: int) -> dict:
+    """Meet を付けるだけの直し。題名・時刻は送らず conferenceData だけを patch する。
+
+    _to_google_event_body は題名を空で作り時刻を空にするので、ここでは使わない。
+    """
+    row = await db.execute(
+        text("SELECT google_event_id, meet_url FROM calendar_events WHERE id = :id"),
+        {"id": event_id},
+    )
+    record = row.first()
+    google_event_id = record[0] if record else None
+    current_url = record[1] if record else None
+    if not google_event_id or current_url:
+        return {"id": event_id, "meet_url": current_url}
+    sync_mode = await _get_sync_mode(db, tenant_id)
+    if sync_mode not in ("bidirectional", "write_only"):
+        return {"id": event_id, "meet_url": None}
+
+    meet_url: Optional[str] = None
+    try:
+        from app.services import google_calendar as cal_svc
+
+        google_event = await cal_svc.update_event(
+            db,
+            tenant_id,
+            google_event_id,
+            {"conferenceData": _meet_create_request()},
+            conference=True,
+        )
+        meet_url = await _resolve_meet_url(db, tenant_id, google_event)
+    except Exception as e:
+        logger.warning("Google Meet の追加に失敗 (event_id=%s): %s", event_id, e)
+    if meet_url:
+        await _save_meet_url(db, tenant_id, event_id, meet_url)
+    return {"id": event_id, "meet_url": meet_url}
 
 
 # ---------------------------------------------------------------------------
@@ -467,12 +593,12 @@ async def upsert_from_google(
             " (user_id, created_by_user_id, calendar_type, title, description, location,"
             "  start_datetime, end_datetime, is_all_day,"
             "  google_event_id, google_calendar_id, source, sync_status,"
-            "  sync_origin_id, last_synced_at)"
+            "  sync_origin_id, last_synced_at, meet_url)"
             " VALUES"
             " (:owner, :owner, 'personal', :title, :desc, :loc,"
             "  :start, :end, :all_day,"
             "  :gid, :gcal_id, 'google', 'synced',"
-            "  :origin, NOW())"
+            "  :origin, NOW(), :meet_url)"
             " ON CONFLICT (google_event_id) WHERE google_event_id IS NOT NULL DO UPDATE SET"
             "   title            = EXCLUDED.title,"
             "   description      = EXCLUDED.description,"
@@ -480,6 +606,7 @@ async def upsert_from_google(
             "   start_datetime   = EXCLUDED.start_datetime,"
             "   end_datetime     = EXCLUDED.end_datetime,"
             "   is_all_day       = EXCLUDED.is_all_day,"
+            "   meet_url         = EXCLUDED.meet_url,"
             "   sync_status      = 'synced',"
             "   last_synced_at   = NOW(),"
             "   updated_at       = NOW()"
@@ -496,6 +623,7 @@ async def upsert_from_google(
             "gid": google_event_id,
             "gcal_id": "primary",
             "origin": origin_id,
+            "meet_url": google_event.get("hangoutLink"),
         },
     )
     return "upserted"

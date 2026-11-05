@@ -36,6 +36,7 @@ from app.auth.dependencies import (
 )
 from app.database import get_db
 from app.models import User
+from app.services import calendar_service
 from app.services import google_calendar as cal_svc
 
 logger = logging.getLogger(__name__)
@@ -241,6 +242,7 @@ async def disconnect(
 )
 async def connection_status(
     tenant_id: int = Depends(get_current_tenant),
+    user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """テナントの Google Calendar 接続状態を返す。"""
@@ -254,13 +256,21 @@ async def connection_status(
     record = row.first()
     if record is None:
         # 一度も連携したことがない
-        return {"connected": False, "configured": False, "calendar_id": None}
+        return {
+            "connected": False,
+            "configured": False,
+            "calendar_id": None,
+            "meet_available": False,
+        }
 
+    # Meet を付けてよいかの式は can_add_meet 1 か所だけ（ここでは書かない）
+    meet_available = await calendar_service.can_add_meet(db, tenant_id, user.id)
     return {
         "connected": True,
         "configured": True,
         "calendar_id": record[0],
         "connected_at": record[1].isoformat() if record[1] else None,
+        "meet_available": meet_available,
     }
 
 

@@ -3263,6 +3263,9 @@
     "weekView": "週",
     "listView": "一覧",
     "moreOptions": "詳しく入れる",
+    "addMeet": "Google Meet を付ける",
+    "joinMeet": "Google Meet で参加",
+    "meetFailed": "Google Meet を付けられませんでした",
     "shortcuts": {
       "title": "キーボードの近道",
       "today": "今日へ移動",
