@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { createInstance } from "i18next";
 import { I18nextProvider } from "react-i18next";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
@@ -13,6 +13,7 @@ vi.mock("../lib/api", () => ({ api }));
 import NoticeBell from "./NoticeBell";
 
 let instance = createInstance();
+const tr = (key: string) => String(instance.t(key));
 
 const REQUEST = {
   id: "req-1",
@@ -36,7 +37,7 @@ function Where() {
   return <div data-testid="where">{useLocation().pathname}</div>;
 }
 
-function renderBell() {
+function renderBell(variant: "floating" | "tab" = "tab") {
   render(
     <I18nextProvider i18n={instance}>
       <MemoryRouter initialEntries={["/"]}>
@@ -45,7 +46,7 @@ function renderBell() {
             path="*"
             element={
               <>
-                <NoticeBell variant="tab" />
+                <NoticeBell variant={variant} />
                 <Where />
               </>
             }
@@ -86,15 +87,25 @@ describe("NoticeBell login requests", () => {
     expect(rows[0].querySelectorAll("button").length).toBe(0);
   });
 
-  it("navigates to the detail page on click without marking anything read", async () => {
+  it("opens a centered dialog on click without changing the URL or marking anything read", async () => {
     mockApi(() => Promise.resolve({ items: [REQUEST] }));
     renderBell();
     await waitFor(() => expect(screen.getByText("3")).toBeTruthy());
     fireEvent.click(screen.getByTestId("notice-bell"));
     const row = await screen.findByRole("button", { name: /iPhone · Safari/ });
     fireEvent.click(row);
-    await waitFor(() => expect(screen.getByTestId("where").textContent).toBe("/account/login-requests/req-1"));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText(tr("login.deviceApproval.detail.title"))).toBeTruthy();
+    await within(dialog).findByRole("button", { name: tr("login.deviceApproval.detail.itsMe") });
+    expect(screen.getByTestId("where").textContent).toBe("/");
     expect(api.post).not.toHaveBeenCalled();
+  });
+
+  it("gives the unread badge the count size class", async () => {
+    mockApi(() => Promise.resolve({ items: [REQUEST] }));
+    renderBell("floating");
+    await waitFor(() => expect(screen.getByText("3")).toBeTruthy());
+    expect(screen.getByText("3").className).toContain("comp-badge--count");
   });
 
   it("still shows notices when the pending request call fails", async () => {
