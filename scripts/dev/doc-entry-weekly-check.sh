@@ -3,7 +3,7 @@
 # 使い方: bash scripts/dev/doc-entry-weekly-check.sh（RESULT=OK なら rc=0、NG なら rc=1）
 set -u
 
-# 合格線の正本はここ1か所（docs/specs/doc-agenda-nav/kgi.md の写し）
+# 合格線の正本は docs/specs/doc-agenda-nav/kgi.md。下の値はその写しで、ずれは scripts/ci/check_kgi_line_copies.py が見つける
 K1_LIMIT=210
 K9_LIMIT_TOKENS=7500
 K12_DAYS=90
@@ -332,6 +332,20 @@ print(max(ds) if ds else "none")' "$HOME_DIR/CC報告ファイル-keep/consent-w
 echo "PEER_LAST=$PEER"
 if [ "$PEER" = none ]; then add_ng "PEER_LAST=none"
 elif [ "$(days_between "$TODAY" "$PEER")" -ge "$PEER_DAYS" ]; then add_ng "PEER_LAST=$PEER"; fi
+
+# ---- LINE_COPY（合格線の写しのずれ。scripts/ci/check_kgi_line_copies.py。C6 は定期実行の指示書） ----
+if [ -f "$REPO/docs/specs/doc-agenda-nav/kgi.md" ]; then
+  LC_OUT="$(python3 -I "$SELF_DIR/../ci/check_kgi_line_copies.py" --root "$REPO" --routines "${DOC_ENTRY_ROUTINES:-$HOME_DIR/Library/Application Support/agent-console/routines.json}")"
+  LC_RC=$?
+  printf '%s\n' "$LC_OUT"
+  case "$LC_RC" in
+    0) echo "LINE_COPY=SAME" ;;
+    1) echo "LINE_COPY=DIFF"; add_ng "LINE_COPY=DIFF" ;;
+    *) echo "LINE_COPY=error"; add_ng "LINE_COPY=error" ;;
+  esac
+else
+  echo "LINE_COPY=skipped"
+fi
 
 if [ -z "$NG" ]; then
   echo "RESULT=OK"; exit 0
