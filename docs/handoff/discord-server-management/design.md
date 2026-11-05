@@ -294,7 +294,7 @@
 - U4 HIGH LIFE JPN の今の登録が、PO の画像の自社サーバーと同じか（R§8）。同じなら、HIGH LIFE JPN は今の行を自社用に移し、顧客用を別に登録し直す話になるため、HIGH LIFE JPN に使う前に PO に確かめる
 
 便2 のカードの審査（2026-11-05、同じ AI による自己審査）：**APPROVE**
-- 実物との照合：カードの行の目印（`backend/tests/conftest.py:311-312`・`:1230`・`:1730`、`scripts/run_all_migrations.sh:1225`、`backend/app/main.py:51`・`:325`、`backend/app/realtime/topics.py:103`、`.github/workflows/migration-guard.yml:223-224`、`backend/app/routers/meta_inbox.py:152-158`、`frontend/src/pages/admin/discord-config.css:57` の `dc-actions`、`frontend/src/locales/ja.json:3491` の `discordOwnServer`）を origin/main 3175aca5e で読んで確かめた
+- 実物との照合：カードの行の目印（`backend/tests/conftest.py:311-312`・`:1230`・`:1730`、`scripts/run_all_migrations.sh:1227`（ab8a6f725）、`backend/app/main.py:51`・`:325`、`backend/app/realtime/topics.py:103`、`.github/workflows/migration-guard.yml:223-224`、`backend/app/routers/meta_inbox.py:152-158`、`frontend/src/pages/admin/discord-config.css:57` の `dc-actions`、`frontend/src/locales/ja.json:3494`（ab8a6f725）の `discordOwnServer`）を origin/main 3175aca5e で読んで確かめた
 - 便1b の CI 赤 3 件（試験の中の表の定義・即時反映の対応表・試しの移行の仮の表）をカードの中で先に塞いだ
 - 約束（読むだけ・サーバーの番号を記録しない・人を記録しない・消す処理なし）を試験 9 本で機械に確かめさせる
 - U3 は解決（テナント001の自社用テストサーバーは PO が用意・登録済み、2026-11-05）。U4 は HIGH LIFE JPN に使う前に確かめる（便2 はテナント001だけで確かめるので止めない）

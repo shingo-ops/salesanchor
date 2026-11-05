@@ -2,8 +2,8 @@
 
 - 設計: docs/handoff/discord-server-management/design.md §4-1（新しい表）・§4-6・§4-9（「今のサーバーを読み取る」Button だけ）・§5 便2・§8 改訂3
 - PO 承認: 「1」（2026-11-04、この設計で承認）。「1」（2026-11-05、次の段階の設計に進む）。便1b は 2026-11-05 に本番反映済み・KGI-1 合格（PR #5127）
-- ブランチ: release/discord-own-server-bin2（origin/main 3175aca5e に、このカードと設計の改訂3を足したもの。実際の先頭は Opus が依頼文で伝える）
-- 実物の行番号はすべて origin/main 3175aca5e で Opus が読んで確かめたもの
+- ブランチ: release/discord-own-server-bin2（origin/main 3175aca5e にこのカードと設計の改訂3を足し、origin/main ab8a6f725 を取り込んだもの。実際の先頭は Opus が依頼文で伝える）
+- 実物の行番号はすべて origin/main 3175aca5e で Opus が読んで確かめたもの。ab8a6f725 の取り込みで変わったのは run_all_migrations.sh の末尾と ja/en の行の位置だけ（§2-1 は取り込み後の値）
 
 ## 触ってよいファイル（これと報告書 docs/handoff/discord-server-management/impl-report-bin2.md だけ）
 
@@ -136,10 +136,10 @@ COMMIT;
 
 ### §2-1 run_all_migrations.sh
 
-最後の `run_sql` の行は今これ（origin/main で実測・1225 行）:
+最後の `run_sql` の行は今これ（origin/main ab8a6f725 で実測・1227 行）:
 
 ```
-run_sql migrations/20261106_100000_tenant_discord_config_purpose_pk.sql
+run_sql migrations/20261104_161223_add_calendar_events_meet_url.sql
 ```
 
 この行のすぐ次に 2 行足す（ほかは 1 文字も変えない）:
