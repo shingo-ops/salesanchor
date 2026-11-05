@@ -37,7 +37,7 @@
 ### 4-1 共通の形と変換の登録表（後の段階も同じ入口）
 
 - 新しい場所: `backend/app/services/conversation_import/`
-  - `common.py`: 変換後の1件の形 `ImportedMessage`（凍結 dataclass）
+  - common.py（新規）: 変換後の1件の形 `ImportedMessage`（凍結 dataclass）
     - `source_message_id: str`（ファイル内の番号）
     - `occurred_at: datetime`（時間帯つき）
     - `direction: Literal["inbound", "outbound"]`（お客さん→inbound、こちら→outbound）
@@ -45,8 +45,8 @@
     - `text: str | None`
     - `is_attachment: bool`
   - 変換の結果 `ParsedFile`: `source`（例 "fbcap-1"）、`platform`（例 "messenger"）、`messages: list[ImportedMessage]`（ファイルの順）、`saved_at: datetime | None`、`errors: list[str]`
-  - `registry.py`: `PARSERS: dict[str, Callable[[bytes], ParsedFile]]`。形の名前（ファイルの format）で選ぶ。段階1は `{"fbcap-1": parse_fbcap1}` だけ。知らない形は 400。
-  - `fbcap.py`: `parse_fbcap1(raw: bytes) -> ParsedFile`
+  - registry.py（新規）: `PARSERS: dict[str, Callable[[bytes], ParsedFile]]`。形の名前（ファイルの format）で選ぶ。段階1は `{"fbcap-1": parse_fbcap1}` だけ。知らない形は 400。
+  - fbcap.py（新規）: `parse_fbcap1(raw: bytes) -> ParsedFile`
 - 変換は DB に触らない（純粋な関数）。試験はファイル→結果だけで書ける。
 
 ### 4-2 fbcap-1 から meta_messages への写し方（新しい表・列は作らない）
@@ -88,7 +88,7 @@
 - ファイル内で id が重なる → 400。
 - エラーの文は日本語の固定文をサーバーで返さず、`code`（例 `unknown_format`, `missing_id`, `time_after_saved`）と件数を返す。画面が t() で文にする（ADR-027）。
 
-### 4-5 API（新しい router: `backend/app/routers/conversation_import.py`）
+### 4-5 API（新しい router: backend/app/routers/conversation_import.py（新規））
 
 | 道 | 権限 | 中身 |
 |---|---|---|
@@ -122,7 +122,7 @@
 ### 4-9 取り込み画面
 
 - 道: `/lead-chat/import`（frontend/src/App.tsx の `/lead-chat` の近くに足す）。受信箱の上の操作欄（InboxPage.tsx:160 headerAction）に HeaderButton「会話を取り込む」を足す（権限 messaging.send のときだけ）。
-- 新しいページ: `frontend/src/pages/inbox/ConversationImportPage.tsx`。型は UnitImportPage.tsx と同じ2段（選ぶ→下見→取り込む）。
+- 新しいページ: frontend/src/pages/inbox/ConversationImportPage.tsx（新規）。型は UnitImportPage.tsx と同じ2段（選ぶ→下見→取り込む）。
   1. ファイル: `<TextField type="file" accept=".json,application/json">`
   2. リード: AsyncCombobox。loadOptions は `GET /leads?search=<文字>&per_page=20`。表示は「名前（LD-00001）」。
   3. リードの新規作成: リード欄の横に Button「新しいリードを作る」（権限 leads.create のときだけ）。押すと LeadsPage.tsx と同じ Modal＋LeadFormFields で `POST /leads`。作ったリードを選んだ状態にする。channel_type の初期値は messenger。
