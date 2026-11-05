@@ -168,7 +168,7 @@ _NEW_DEVICE_BODY = """Sales Anchor に、新しい機械からのログインが
 機械: {device}
 場所の目安: {location}
 {note}
-心当たりがなければ、いつもの機械でアプリを開いて「私ではない」を押し、パスワードを変えてください。
+心当たりがなければ、いつもの機械でアプリを開いて「私ではありません」を押し、パスワードを変えてください。
 このメールにリンクはありません。
 
 ---------------------------------------------
@@ -178,7 +178,7 @@ Time (JST): {when}
 Device: {device}
 Approximate location: {location}
 
-If this was not you, open the app on a device you usually use, press "This is not me", and change your password.
+If this was not you, open the app on a device you usually use, press "This wasn't me", and change your password.
 This email contains no links.
 ---------------------------------------------
 
