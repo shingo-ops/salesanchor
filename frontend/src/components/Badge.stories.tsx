@@ -53,6 +53,16 @@ export const Sizes: Story = {
   ),
 };
 
+export const Count: Story = {
+  render: () => (
+    <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center', flexWrap: 'wrap' }}>
+      <Badge variant="danger" appearance="solid" size="count">3</Badge>
+      <Badge variant="danger" appearance="solid" size="count">12</Badge>
+      <Badge variant="danger" appearance="solid" size="count">99+</Badge>
+    </div>
+  ),
+};
+
 export const WithDot: Story = {
   render: () => (
     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>

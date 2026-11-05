@@ -50,8 +50,8 @@
 
 .notice-bell-badge {
   position: absolute;
-  top: var(--space-1);
-  right: var(--space-1);
+  top: calc((var(--notice-bell-size) - var(--notice-bell-icon-size)) / 2 + var(--notice-bell-badge-offset-y));
+  left: calc((var(--notice-bell-size) - var(--notice-bell-icon-size)) / 2 + var(--notice-bell-badge-offset-x));
 }
 
 /* ── 一覧 ── */

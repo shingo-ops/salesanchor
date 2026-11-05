@@ -3,7 +3,7 @@
  *
  * variant  : 見た目の意味（neutral / info / success / warning / danger / purple）
  * appearance: soft（既定・淡い背景＋色文字）/ solid（塗り）
- * size     : sm / md
+ * size     : sm / md / count（count = 数の丸（Instagram 実測））
  * dot      : 先頭ドットインジケーター
  * icon     : 先頭アイコン
  *
@@ -15,7 +15,7 @@ import './Badge.css';
 
 export type BadgeVariant    = 'neutral' | 'info' | 'success' | 'warning' | 'danger' | 'purple';
 export type BadgeAppearance = 'soft' | 'solid';
-export type BadgeSize       = 'sm' | 'md';
+export type BadgeSize       = 'sm' | 'md' | 'count';
 
 export interface BadgeProps {
   /** 意味的バリアント（色） */

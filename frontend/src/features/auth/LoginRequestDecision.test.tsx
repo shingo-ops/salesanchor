@@ -1,14 +1,14 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { createInstance } from "i18next";
 import { I18nextProvider } from "react-i18next";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import en from "../../locales/en.json";
 
 const api = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn() }));
 vi.mock("../../lib/api", () => ({ api }));
 
-import LoginRequestDetailPage from "./LoginRequestDetailPage";
+import LoginRequestDecision from "./LoginRequestDecision";
 
 let instance = createInstance();
 const tr = (key: string) => String(instance.t(key));
@@ -22,13 +22,11 @@ const REQUEST = {
   candidates: ["12", "34", "56"],
 };
 
-function renderPage(id = "req-1") {
+function renderPage(requestId = "req-1") {
   render(
     <I18nextProvider i18n={instance}>
-      <MemoryRouter initialEntries={[`/account/login-requests/${id}`]}>
-        <Routes>
-          <Route path="/account/login-requests/:id" element={<LoginRequestDetailPage />} />
-        </Routes>
+      <MemoryRouter>
+        <LoginRequestDecision requestId={requestId} onLeave={() => {}} />
       </MemoryRouter>
     </I18nextProvider>,
   );
@@ -42,7 +40,7 @@ beforeEach(async () => {
 });
 afterEach(() => cleanup());
 
-describe("LoginRequestDetailPage", () => {
+describe("LoginRequestDecision", () => {
   it("shows device, location, time and the two buttons, but no numbers yet", async () => {
     api.get.mockResolvedValue({ items: [REQUEST] });
     renderPage();
