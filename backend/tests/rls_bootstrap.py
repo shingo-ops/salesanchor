@@ -165,6 +165,10 @@ _TENANT_LOOP_MIGRATIONS = {
     "20260902_100000_create_lead_attachments.sql": 1,
     "20260604_180000_analytics_agent_a_tables.sql": 1,
     "20260604_220000_create_translation_glossary.sql": 2,
+    "078_create_calendar_events_tenant.sql": 2,
+    "20260621_020000_add_schedule_calendar_category_and_owner_settings.sql": 1,
+    "20261103_200000_add_google_calendar_import_sync.sql": 1,
+    "20261104_161223_add_calendar_events_meet_url.sql": 1,
 }
 
 

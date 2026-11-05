@@ -269,6 +269,7 @@ async def create_event(
     )
     event_id = result.scalar_one()
     await db.commit()
+    await reset_tenant_context(db, tenant_id)  # ADR-072: commit 後は別接続になりうる。設定表は RLS（ADR-1018）
 
     # Google Calendar に同期
     meet_url: Optional[str] = None
@@ -484,6 +485,7 @@ async def delete_event(
         {"id": event_id},
     )
     await db.commit()
+    await reset_tenant_context(db, tenant_id)  # ADR-072
 
     sync_mode = await _get_sync_mode(db, tenant_id)
     if google_event_id and sync_mode in ("bidirectional", "write_only"):
