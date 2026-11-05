@@ -3,12 +3,11 @@
  * - 自分宛ての知らせを GET /notices で読む。画面を開いたとき・鈴を開いたとき・SSE の notices 合図で読み直す。
  * - 1 件を押すと、discord.com のリンクだけ新しいタブで開き、未読なら既読にして返った未読数で更新する。
  * - 自社ログインのときは、許可待ちのログインの依頼（GET /login-approvals/pending）を一覧の上に足し、未読数にも数える。
- *   依頼の行を押すと詳しい画面 /account/login-requests/:id へ行く（行にボタンは置かない・既読の印は付けない）。
+ *   依頼の行を押すと真ん中の小窓が開き、その中で決め切る（URL は変えない。行にボタンは置かない・既読の印は付けない）。
  * - 本文・Discord の id は扱わない（API も返さない）。
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
 import { useRealtimeRefresh } from "../hooks/useRealtimeRefresh";
 import { api } from "../lib/api";
 import { isDevSession } from "../lib/auth/devSessionSlot";
@@ -16,8 +15,10 @@ import { TOPICS } from "../lib/realtime/topics";
 import { relativeTime } from "../pages/inbox/inbox.types";
 import { BellOutline } from "../constants/icons";
 import { ICON } from "../constants/iconSizes";
-import type { PendingLoginRequest } from "../features/auth/LoginRequestDetailPage";
+import type { PendingLoginRequest } from "../features/auth/LoginRequestDecision";
+import LoginRequestDecision from "../features/auth/LoginRequestDecision";
 import { Badge } from "./Badge";
+import { Modal } from "./Modal";
 import { NoticeRow } from "./NoticeRow";
 import { Popover } from "./Popover";
 import "./NoticeBell.css";
@@ -59,7 +60,7 @@ export default function NoticeBell({ variant = "floating" }: NoticeBellProps = {
   const [unread, setUnread] = useState(0);
   const [open, setOpen] = useState(false);
   const [requests, setRequests] = useState<PendingLoginRequest[]>([]);
-  const navigate = useNavigate();
+  const [openRequestId, setOpenRequestId] = useState<string | null>(null);
   const selfMode = !isDevSession();
   const lastPendingFetchRef = useRef(0);
   const pendingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -133,7 +134,7 @@ export default function NoticeBell({ variant = "floating" }: NoticeBellProps = {
 
   const handleRequestClick = (req: PendingLoginRequest) => {
     setOpen(false);
-    navigate(`/account/login-requests/${req.id}`);
+    setOpenRequestId(req.id);
   };
 
   const handleRowClick = async (item: NoticeItem) => {
@@ -192,8 +193,25 @@ export default function NoticeBell({ variant = "floating" }: NoticeBellProps = {
     </div>
   );
 
+  const requestModal = (
+    <Modal
+      open={openRequestId !== null}
+      onClose={() => {
+        setOpenRequestId(null);
+        loadPending();
+      }}
+      title={t("login.deviceApproval.detail.title")}
+      size="sm"
+    >
+      {openRequestId !== null && (
+        <LoginRequestDecision requestId={openRequestId} onLeave={() => setOpenRequestId(null)} />
+      )}
+    </Modal>
+  );
+
   if (variant === "tab") {
     return (
+      <>
       <Popover
         placement="top"
         className="notice-bell-tab-slot"
@@ -211,19 +229,24 @@ export default function NoticeBell({ variant = "floating" }: NoticeBellProps = {
           )}
         </button>
       </Popover>
+      {requestModal}
+      </>
     );
   }
 
   return (
+    <>
     <Popover placement="bottom" openOnHover open={open} onOpenChange={handleOpenChange} content={content}>
       <button type="button" className="notice-bell-btn" aria-label={label} data-testid="notice-bell">
-        <BellOutline size={ICON.base} aria-hidden="true" />
+        <BellOutline size={ICON.lg} aria-hidden="true" />
         {totalUnread > 0 && (
-          <Badge variant="danger" appearance="solid" size="sm" className="notice-bell-badge">
+          <Badge variant="danger" appearance="solid" size="count" className="notice-bell-badge">
             {formatUnreadCount(totalUnread)}
           </Badge>
         )}
       </button>
     </Popover>
+    {requestModal}
+    </>
   );
 }
