@@ -3515,6 +3515,13 @@
     "deleteTitle": "Delete candidates ({{count}})",
     "deleteNote": "Delete candidates are never deleted automatically.",
     "emptyRows": "None",
+    "apply": "Apply",
+    "applyConfirmTitle": "Apply to your own server?",
+    "applyConfirmMessage": "{{count}} changes will be applied. Delete candidates are not deleted.",
+    "applyDone": "Applied ({{success}} succeeded, {{blocked}} not allowed, {{failed}} failed)",
+    "applyFailed": "Could not apply",
+    "applyConflict": "Could not apply. Press Check again, then apply",
+    "resultTitle": "Apply results ({{count}})",
     "col": {
       "kind": "Type",
       "name": "Name",
@@ -3523,7 +3530,13 @@
       "after": "After",
       "reason": "Reason",
       "parent": "Parent",
-      "target": "Target"
+      "target": "Target",
+      "status": "Result"
+    },
+    "status": {
+      "success": "Succeeded",
+      "blocked": "Not allowed",
+      "failed": "Failed"
     },
     "kind": {
       "create_role": "Create role",
@@ -3551,7 +3564,10 @@
       "overwrite_manage_roles": "Manage Roles cannot be set in overwrites",
       "bot_role_missing": "The bot role was not found",
       "missing_on_discord": "Not found on Discord",
-      "ambiguous": "More than one item has this name"
+      "ambiguous": "More than one item has this name",
+      "depends_failed": "Skipped because an earlier item failed",
+      "discord_error": "Discord rejected the request",
+      "method_not_allowed": "This operation is not run"
     },
     "deleteKind": {
       "role": "Role",

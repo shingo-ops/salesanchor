@@ -1208,6 +1208,78 @@
         "title": "AnnounceResponse",
         "type": "object"
       },
+      "ApplyResultRow": {
+        "properties": {
+          "discord_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Discord Id"
+          },
+          "discord_status": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Discord Status"
+          },
+          "field": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "key",
+          "name",
+          "status"
+        ],
+        "title": "ApplyResultRow",
+        "type": "object"
+      },
       "Approval": {
         "properties": {
           "user_code": {
@@ -23283,6 +23355,55 @@
         "title": "OwnInventoryUpdate",
         "type": "object"
       },
+      "OwnServerApplyRequest": {
+        "properties": {
+          "plan_digest": {
+            "title": "Plan Digest",
+            "type": "string"
+          }
+        },
+        "required": [
+          "plan_digest"
+        ],
+        "title": "OwnServerApplyRequest",
+        "type": "object"
+      },
+      "OwnServerApplyResponse": {
+        "properties": {
+          "blocked_count": {
+            "title": "Blocked Count",
+            "type": "integer"
+          },
+          "failed_count": {
+            "title": "Failed Count",
+            "type": "integer"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/ApplyResultRow"
+            },
+            "title": "Results",
+            "type": "array"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "integer"
+          },
+          "success_count": {
+            "title": "Success Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "run_id",
+          "success_count",
+          "blocked_count",
+          "failed_count",
+          "results"
+        ],
+        "title": "OwnServerApplyResponse",
+        "type": "object"
+      },
       "OwnServerPlanResponse": {
         "properties": {
           "blocked": {
@@ -40278,6 +40399,53 @@
           }
         ],
         "summary": "Run Auto Setup",
+        "tags": [
+          "discord"
+        ]
+      }
+    },
+    "/api/v1/admin/discord/own-server/apply": {
+      "post": {
+        "description": "確認した差を自社用サーバーに反映する。作る・変えるだけで、消さない。",
+        "operationId": "apply_own_server_plan_api_v1_admin_discord_own_server_apply_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OwnServerApplyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnServerApplyResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Apply Own Server Plan",
         "tags": [
           "discord"
         ]
