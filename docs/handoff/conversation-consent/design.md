@@ -843,7 +843,7 @@ PO の言葉: 「件の窓の今の作りに合わせて設計を小さく作り
 
 （１）キーの割り当てを外すファイルを件ごとに書く
 - 変更前: `server/case-sandbox.ts:398-421` `rewriteCaseClaudeJson` は case-home の `.claude.json` だけを書き直す。case-home は `ops/shell/ccdiscord.zsh:61` で件の窓の設定置き場（CLAUDE_CONFIG_DIR）。
-- 変更後: 同じファイルに `writeCaseKeybindings(CH)` を足し、`CH/keybindings.json` に次を `writeAtomicSync` で書く。`server/sessions.ts:626` の `prepareCaseRoom(id)` の直後（`room` が null でないとき）に呼ぶ。こうすると新しく開くときだけでなく、つなぎ直し（`sessions.ts:691-698` の probe で既存の窓に戻る道。`beforeNew` は `:703` でしか呼ばれない）でも書かれる。書けなければ `CaseSandboxUnavailableError`。これは `prepareCaseRoom` が room.sb などを書けないときと同じ扱いで、つなぎ直しでも今すでに同じ理由で開けなくなりうる。CH は agent-console が作って持つ置き場なので、書けないのは置き場そのものが壊れたときだけ。その場合に窓を開かないのは今と同じ考え方なので、つなぎ直しだけ警告で続ける分け方はしない（開けない件が増える道は、CH が壊れたときに限られることを受け入れる）。
+- 変更後: 同じファイルに `writeCaseKeybindings(CH)` を足し、`CH/keybindings.json` に次を `writeAtomicSync` で書く。`server/sessions.ts:627` の `checkCaseSandbox` の行の直後、`openTerminal` の前（`room` が null でないとき）に呼ぶ（実装時の訂正: 当初は `:626` の `prepareCaseRoom(id)` の直後としたが、そこでは case-home が無いとき `checkCaseSandbox` の⑩「case-home is missing」より先に書き込みが失敗し、既存の試験 `tests/unit/sessions.case.test.ts:374` が落ちた。`checkCaseSandbox` も `openTerminal` も新規・つなぎ直しの両方で通るので、意図は変わらない）。こうすると新しく開くときだけでなく、つなぎ直し（`sessions.ts:691-698` の probe で既存の窓に戻る道。`beforeNew` は `:703` でしか呼ばれない）でも書かれる。書けなければ `CaseSandboxUnavailableError`。これは `prepareCaseRoom` が room.sb などを書けないときと同じ扱いで、つなぎ直しでも今すでに同じ理由で開けなくなりうる。CH は agent-console が作って持つ置き場なので、書けないのは置き場そのものが壊れたときだけ。その場合に窓を開かないのは今と同じ考え方なので、つなぎ直しだけ警告で続ける分け方はしない（開けない件が増える道は、CH が壊れたときに限られることを受け入れる）。
   ```json
   {"bindings":[{"context":"Chat","bindings":{"shift+tab":null}}]}
   ```
