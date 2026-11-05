@@ -820,3 +820,59 @@ PO への返事の本文（ツール呼び出しの中ではない）の、**最
 - 計画の段階の中で case-say が貼った文がどう扱われるか。
 
 次の一手（PO の決めごと）: 第7版を進めるか・件の窓の形に合わせて設計を小さくし直すか。
+
+### 14-12 第8版: 件の窓を「聞かずに進む形（dontAsk）」から外さない（2026-11-05・PO「1」で小さく作り直し）
+
+**状態**: 設計案作成済み（審査前）。第7版（答え待ちの印）は §14-11-11 の前提の誤りにより取りやめ。
+
+#### 14-12-1 目的と成功条件
+
+PO の言葉: 「件の窓の今の作りに合わせて設計を小さく作り直す…計画の段階で窓が抜け出せない穴だけを直します」（PO 選択「1」）。
+
+| 基準 | 検証方法 |
+|---|---|
+| K1 件の窓で Shift+Tab を押しても形が変わらない（画面下の帯に plan / accept edits / manual の表示が出ない） | 本物の件の窓へ tmux send-keys で BTab を3回送り、①画面の写し（tmux capture-pane）に `plan mode on`・`accept edits on`・`manual mode on` が0件 ②件の会話記録の最後の permissionMode が `dontAsk` |
+| K2 形が dontAsk でないときは道具を1つも通さない（許可の問い合わせ画面が出ない＝case-say の貼り付けが問い合わせ画面に入らない） | case-guard の試験: `permission_mode` が `plan`・`default`・`acceptEdits`・`auto`・`bypassPermissions` のとき終了コード2、`dontAsk` と項目なしのとき今と同じ判定 |
+| K3 ふだんの件の作業が今までどおり通る | 本物の件の窓で「ls して」と頼み、Bash が通る（会話記録に tool_result があり拒否の文が無い） |
+| K4 件の AI が keybindings.json を書き換えられない | case-sandbox の試験: 部屋の書き込み拒否の正規表現に `CH/keybindings.json` が一致する。case-guard でも CH は作業場の外なので Edit/Write は止まる（既存） |
+| K5 既存の試験がすべて通る | agent-console の CI（vitest・型検査）緑 |
+
+#### 14-12-2 変更前→変更後（agent-console・origin/main f503e9b = v0.50.1）
+
+（１）キーの割り当てを外すファイルを件ごとに書く
+- 変更前: `server/case-sandbox.ts:398-421` `rewriteCaseClaudeJson` は case-home の `.claude.json` だけを書き直す。case-home は `ops/shell/ccdiscord.zsh:61` で件の窓の設定置き場（CLAUDE_CONFIG_DIR）。
+- 変更後: 同じファイルに `writeCaseKeybindings(CH)` を足し、`CH/keybindings.json` に次を `writeAtomicSync` で書く。`server/sessions.ts:629` の `beforeNew` で `rewriteCaseClaudeJson` の直後に呼ぶ。書けなければ `CaseSandboxUnavailableError`（件を開かない）。
+  ```json
+  {"bindings":[{"context":"Chat","bindings":{"shift+tab":null}}]}
+  ```
+- 根拠: 公式 keybindings.md「Unbind default shortcuts」（action を null で外す）、`chat:cycleMode` の既定は Shift+Tab（Windows の古い端末以外）。claude 2.1.318 本体に `keybindings.json` と `"bindings" array` の形の検査がある（/tmp/CC報告ファイル/plancheck/kb-strings.txt）。CLAUDE_CONFIG_DIR 側を読むかは未確認→K1 で判定。
+
+（２）件の AI がそのファイルを書けないようにする
+- 変更前: `server/case-sandbox.ts:250-253` `chSettingNames` の書き込み拒否は `remote-settings.json … settings.json|agents|hooks|commands|skills|CLAUDE.md`。
+- 変更後: 同じ並びに `keybindings\\.json` を足す。
+
+（３）形が dontAsk でなければ道具を止める（安全網）
+- 変更前: `ops/case/case-guard.mjs:71-107` `decide` は道具の名前と道だけを見る。
+- 変更後: `decide` の先頭で `typeof input.permission_mode === "string" && input.permission_mode !== "dontAsk"` なら `block("permission mode is not dontAsk; ask the person to close and reopen this case")`。項目が無いときは今と同じ判定。
+- 根拠: 公式 hooks.md の共通入力に `permission_mode`（"default","plan","acceptEdits","auto","dontAsk","bypassPermissions"）。PreToolUse の拒否は許可の問い合わせより先に効く。
+
+（４）版を v0.50.2 にする（package.json と変更履歴の既存の書き方に従う）。
+
+#### 14-12-3 触らない範囲
+
+case-say 本体・Discord 側・room.sb の作り（CH は読み取り subpath で許可済み `server/case-sandbox.ts:209-221`）・起動台本 `ops/shell/ccdiscord.zsh`・見張り類・salesanchor 側のコード。第7版の答え待ちの印は作らない。
+
+#### 14-12-4 代わりの案と選ばない理由
+
+- `/plan` を UserPromptSubmit で止める: 組み込みの `/plan` がこの合図を通るか未確認。（３）で問い合わせ画面は出ないので今回は入れない。
+- plansDirectory を部屋の中へ向ける: 計画は保存できても ExitPlanMode が無いので抜けられない穴は残る。
+
+#### 14-12-5 危険と対処・戻し方
+
+- `/plan` を頭に付けた依頼で計画の形に入ると、Shift+Tab を外したので戻れない。対処: （３）で道具が止まり、AI が「件を閉じて開き直してください」と伝える。開き直すと起動の引数 `--permission-mode dontAsk`（ccdiscord.zsh:72）で戻る。
+- claude が CLAUDE_CONFIG_DIR 側の keybindings.json を読まない場合 K1 が×。対処: 本物の窓の試験で判定し、×なら版を戻すか（３）だけ残すかを PO に聞く。
+- 戻し方: `bash scripts/ac-rollback.sh`（v0.50.1 へ）。
+
+#### 14-12-6 維持の仕組み
+
+case-guard の試験（K2）と case-sandbox の試験（K4・ファイルの中身）を agent-console の CI に入れ、外れたら赤になる。
