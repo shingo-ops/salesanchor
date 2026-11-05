@@ -239,7 +239,7 @@
 | [ADR-1059](./ADR-1059-google-calendar-import-owner-private.md) | ADR-1059: Google カレンダーの予定をアプリに取り込む。取り込んだ予定は最初「自分だけ」で、アプリで1件ずつ「社員にも見せる」に切り替える | Accepted | — | — |
 | [ADR-1060](./ADR-1060-calendar-google-meet.md) | ADR-1060: 予定に Google Meet を付ける。付けられるのは Google をつないだ本人の予定だけで、URL は calendar_events.meet_url の 1 か所に置く | Accepted | — | — |
 | [ADR-1062](./ADR-1062-gemini-auto-route-failover.md) | ADR-1062: Gemini への道は断られたら自動で切り替え、30分成功が無ければ知らせる | Proposed | — | — |
-| [ADR-1063](./ADR-1063-tenant-owner-login-approval-and-isolation-guards.md) | ADR-1063: 会社のオーナーが自社の社員の新しい機械のログインを許可する／会社の分け方を機械が毎回・毎日確かめる | Proposed | — | — |
+| [ADR-1063](./ADR-1063-tenant-owner-login-approval-and-isolation-guards.md) | ADR-1063: 会社のオーナーが自社の社員の新しい機械のログインを許可する／会社の分け方を機械が毎回・毎日確かめる | Accepted | — | — |
 
 ## ステータス凡例
 
