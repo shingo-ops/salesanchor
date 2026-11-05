@@ -585,7 +585,7 @@ PO への返事の本文（ツール呼び出しの中ではない）の、**最
 
 #### 14-10-4 対象と対象外
 
-- 対象（agent-console・PR 1本）: server/http.ts（受け口）、server/hub.ts（`caseSayVerdict` と送る手順・止めの印）、server/terminal-host/tmux-terminal.ts と tmux-protocol.ts（書ける状態の読み取り・区画の番号宛てにため込まず送る部品・条件付き Enter の命令。今の `write` は変えない）、server/case-agents.ts（状態ファイルの読み取りの部品を足す。今の番号の読み取りは変えない）、server/config.ts（`caseSayRoles`）、server/routine-audit.ts（2つの action）、server/activity-setup.ts（命令を写す）、hooks/ac-case-say.mjs と型の .d.mts（新規）、試験、README。
+- 対象（agent-console・PR 1本）: server/http.ts（受け口）、server/hub.ts（`caseSayVerdict` と送る手順・止めの印）、server/terminal-host/tmux-terminal.ts と tmux-protocol.ts（書ける状態の読み取り・区画の番号宛てにため込まず送る部品・条件付き Enter の命令。今の `write` は変えない）、server/case-agents.ts（状態ファイルの読み取りの部品を足す。今の番号の読み取りは変えない）、server/config.ts（`caseSayRoles`・`caseSayClaudeVersions`。第10版）、server/sessions.ts（件の記録に claude の実体の道を残す。第10版 §14-13-7）、agent-console.config.json（`caseSayClaudeVersions: ["2.1.318"]`。第10版）、server/routine-audit.ts（2つの action）、server/activity-setup.ts（命令を写す）、hooks/ac-case-say.mjs と型の .d.mts（新規）、試験、README。
 - 対象（Sales Anchor）: 本書、ADR-1033、docs/adr/README.md（再生成）。
 - 対象外: Sales Anchor の見張り・許可・settings、件の部屋の設定、画面のチャット、予約・定期実行の受け口。§4-5 の見張りが new-session・new-window・respawn-pane を止めない穴（§14-9）は別の件として残す。
 
@@ -919,7 +919,7 @@ case-guard の試験（K2）と case-sandbox の試験（K4・ファイルの中
 
 | 基準 | 検証方法 |
 |---|---|
-| K40 起動の台本が 14-13-2 の条件 (1)(2)(4) を満たす | agent-console の vitest: `ops/shell/ccdiscord.zsh` を文字として読み、起動の行の `--tools` の値に AskUserQuestion・EnterPlanMode・ExitPlanMode が無い・`mcp__*` を `--disallowedTools` で外している・`--permission-mode dontAsk` がある・`CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1` を export し `CLAUDE_CODE_ENABLE_FEEDBACK_SURVEY_FOR_OTEL` が無い。どれかが外れたら赤 |
+| K40 起動の台本が 14-13-2 の条件 (1)(2)(4) を満たす | 第10版で既存の試験を正本にした（§14-13-7 M3）: agent-console `tests/unit/ccdiscord-zsh.test.ts` の引数の試験（`--tools` の完全一致・`--permission-mode dontAsk`・`--strict-mcp-config`・`mcp__*`）と環境変数の並びの完全一致の試験。新しい試験は作らない。どれかが外れたら赤 |
 | K32 の足し（測り） | 本物で一文を送る前と後に、件の窓の画面の写し（tmux capture-pane）を取り、選ぶ画面（番号の選択肢・Yes/No）が0件であることを確かめる |
 
 K31・K33・K34・K35 は第6版のまま。K35 は○（§14-10-10）。
@@ -927,7 +927,7 @@ K31・K33・K34・K35 は第6版のまま。K35 は○（§14-10-10）。
 #### 14-13-5 実装の分け方（第6版 §14-10-8 から変えるもの）
 
 - 測定 K30: 本版の判定で済み（条件付きの○）。
-- 便CS1（クラウドの Sonnet・agent-console の PR 1本）: §14-10-3 (a)(b)・README・K31・K34 の単体に、K40 の試験を足す。
+- 便CS1（クラウドの Sonnet・agent-console の PR 1本）: §14-10-3 (a)(b)・判定4b（§14-13-7 M1）・README・K31・K34・K42 の単体。K40 は既存の2つの試験に注を足すだけ（§14-13-7 M3）。
 - 便CS2・PO の反映・K32・K33 は第6版のまま。
 
 #### 14-13-6 外部事例
@@ -957,4 +957,17 @@ K31・K33・K34・K35 は第6版のまま。K35 は○（§14-10-10）。
 | K42 版が並びに無い件には送らない | vitest: 件の実体の道の最後の名前が並びに無い版・版の形でない名前のとき、409 `claude_version_unverified` で書き込み0回。並びにある版なら判定5以降へ進む |
 | K41 下請けの途中の確認画面で判定7 をすり抜けない | 上の M2 の (a)(b)。本物の件の窓で Opus が読むだけ（K32 の前） |
 
-**状態**: 第10版の直しを入れた設計案（再審査前）。
+**状態**: 第10版の直しを入れた設計案。再審査は §14-13-8。
+
+#### 14-13-8 設計審査（第10版）と直し（第11版）
+
+**審査**（2026-11-06 00:03〜00:06 JST・クラウドの Opus・読むだけ・salesanchor 992539219 / agent-console b467656）: REVISE。B1〜B6 は○、B7 は×。必須1件・推奨2件。B1 の根拠: 実体の道は `resolveClaudeReal` が realpath で解き（agent-console `server/case-sandbox.ts:433-449`）、その値が `AC_CLAUDE_BIN` になり（`server/sessions.ts:476`）、台本はその道を exec する（`ops/shell/ccdiscord.zsh:31`・`:78`）。
+
+- M1（必須）: §14-13-4 の K40 の行・§14-13-5 の便CS1・§14-10-4 の対象が第10版に合っていない。→ 直した（K40 は既存の2つの試験、便CS1 に 4b・K42、対象に `server/sessions.ts` と `agent-console.config.json`）。
+- M2（推奨）: 版を足す手順に K41 の測り直しが無い。K41 の頼み事を誰が打つかが無い。→ 版を足す手順を「PO が件を1つ開く → PO が K41 (a)(b) の頼み事と K32 の一文を打つ → Opus が画面の写しと状態ファイルを読むだけで、選ぶ画面0件と K41 の○を確かめる → 版を足す PR を出し、審査を通してから入れる」に置き換える。K41 の頼み事も PO が打つ（Opus は件の窓に打たない）。
+- M3（推奨）: 決まりが3つ足りない。→ 次のとおり決める。
+  - `caseSayClaudeVersions` の各要素が `^\d+\.\d+\.\d+$` の形でないときは、`caseSayRoles` と同じく起動時エラーにする。
+  - 判定4b より前で断った監査の行は、版の欄を書かない（欄なし）。判定4b 以後は、読めた版、または版の形でない名前のときは空文字を書く。
+  - K42 に「`caseSayClaudeVersions` が既定の [] のとき、どの件にも 409 `claude_version_unverified` で書き込み0回」を1件足す。
+
+**状態**: 第11版の直しを入れた設計案（再審査前）。
