@@ -381,7 +381,7 @@
      - discord_retired_members の人: 管理するロールを全部外す。kick が true の行（消したスタッフ）は、続けて自社サーバーから外す（D2-7）。終えたら（または 404 なら）その行を消す
      - 管理していないロール（手作りのロール）は見ない＝KGI-10
   4. アプリに登録していない人には何もしない。全員の一覧（List Guild Members）は読まない。アプリの役割と同じ名前のロールを手で付けられていても外さない（PO 決定「Discordのサーバー先で手動操作を行うのはそのテナントごとの責任なのでそこは関与しなくて良い」）
-     - スタッフを消すとき（`backend/app/routers/staff.py:755` の DELETE と同じ commit。commit は :761）と、スタッフの discord_user_id を変えるとき（`backend/app/routers/staff.py:665` の PATCH で、元の値があり新しい値と違うとき）は、同じ commit で元の discord_user_id を `{schema}.discord_retired_members`（discord_user_id TEXT PRIMARY KEY、kick BOOLEAN NOT NULL、retired_at）に入れる。消すときは kick=true、番号を変えるときは kick=false（番号を変えたときに元の番号からロールを外すかは PO 未決＝S2-11。PO が「外さない」なら PATCH では行を入れない）。行が消えたあとも、次の点検でその人を扱える
+     - スタッフを消すとき（`backend/app/routers/staff.py:755` の DELETE と同じ commit。commit は :761）と、スタッフの discord_user_id を変えるとき（`backend/app/routers/staff.py:665` の PATCH で、元の値があり新しい値と違うとき）は、同じ commit で元の discord_user_id を `{schema}.discord_retired_members`（discord_user_id TEXT PRIMARY KEY、kick BOOLEAN NOT NULL、retired_at）に入れる。消すときは kick=true、番号を変えるときは kick=false（番号を変えたときに元の番号からロールを外す＝PO 決定 2026-11-05「1,アプリ側でdiscordのIDを変更したら元のIDからはロールは自動で外す」）。行が消えたあとも、次の点検でその人を扱える
      - 同じ番号が 2 度入るとき（Fable 審査 N11）: `INSERT ... ON CONFLICT (discord_user_id) DO UPDATE SET retired_at = now(), kick = {schema}.discord_retired_members.kick OR EXCLUDED.kick`。staff の DELETE が重なりで失敗しない。一度 kick=true になった行は false に戻さない
      - 消した役割の番号（discord_retired_roles）も、見る相手からだけ外す。登録していない人に付いていても外さない
      - 1 回の点検で送る GET はスタッフの人数分。回数制限は discord_rest の待ちに任せる（R2-3）
@@ -414,7 +414,7 @@
 - 自動の試験で 2 社分のデータを置き、1 社の役割を変えても、もう 1 社のサーバー宛ての送信が 0 件であることを確かめる＝KGI-10c
 
 ### D2-7 辞めたとき（アプリでスタッフを消したとき）
-- 根拠: PO 決定 2026-11-05（ideal-state.md「辞めたときの要件」）。消した＝辞めた。無効ではサーバーから外さない（番号の変更は S2-11 で PO 未決）
+- 根拠: PO 決定 2026-11-05（ideal-state.md「辞めたときの要件」）。消した＝辞めた。無効・番号の書き換えではサーバーから外さない（番号の書き換えは元の番号からロールだけ外す＝PO 決定「1,アプリ側でdiscordのIDを変更したら…」）
 - 画面: スタッフを消すと、今も確認の窓が出る（`frontend/src/pages/staff/StaffPage.tsx:377-385` の `ConfirmModal`、「この操作は取り消せません。」＝`common.irreversible`）。この窓の message に、消す相手に discord_user_id があるときだけ 1 行足す: 「Discord の自社サーバーからも外れます。」（新しい鍵 `staff.deleteDiscordKickNote` を ja.json・en.json の両方に足す＝ADR-027。部品は今の ConfirmModal のまま。新しい部品・色の直書きは足さない＝ADR-144）。discord_user_id は今の一覧の応答に入っている（`backend/app/routers/staff.py:120`）
 - サーバー側: D2-3 のとおり、消すときに discord_retired_members に kick=true で 1 行入れる。次の点検（消したあとの create_task か 5 分ごと）で、管理するロールを外してから `DELETE /guilds/{own}/members/{u}`（Discord 公式: Remove Guild Member、KICK_MEMBERS が要る。Bot には付与済み＝`backend/app/routers/discord_oauth.py:63`）
   - 送り先は D2-6 の自社サーバー（purpose='own'）だけ。顧客用サーバーには送らない（今の顧客を外す機能 `backend/app/routers/discord_remove.py:141` とは別の処理で、そちらは変えない）
@@ -452,7 +452,7 @@
 | KGI-11 同じ名前が 2 つで止まる | 確認画面の理由の表示・自動の試験 |
 | KGI-12〜14 決まった部屋に 1 件ずつ届く | Discord の目視・notification_logs の行の数・自動の試験（Messenger・Instagram は自動の試験だけ） |
 | KGI-15 人の Discord 設定の作業 0 件 | 試験の手順書で数える |
-| KGI-16 消すと自社サーバーから外れる・無効では外れない | 前提: テスト用スタッフ 2 人を自社と顧客用の両方のサーバーに入れておく（Fable 3 回目 N16）。確認の窓の文を目視・時刻を控えて Discord のメンバー画面を見る・自動の試験（kick=true の行だけ `DELETE /guilds/{own}/members/{u}` を送る・無効の人と kick=false の行には送らない・顧客用サーバーの番号には送らない・同じ番号の 2 度目で staff の DELETE が失敗しない） |
+| KGI-16 消すと自社サーバーから外れる・無効と番号の書き換えでは外れない | 前提: テスト用スタッフ 2 人を自社と顧客用の両方のサーバーに入れておく（Fable 3 回目 N16）。確認の窓の文を目視・時刻を控えて Discord のメンバー画面を見る・自動の試験（kick=true の行だけ `DELETE /guilds/{own}/members/{u}` を送る・無効の人と kick=false の行には送らない・顧客用サーバーの番号には送らない・同じ番号の 2 度目で staff の DELETE が失敗しない） |
 | 顧客用サーバーの今の動きが変わらない | 今の試験（discord_role_sync・auto-setup・部屋の外）が全部通る |
 
 ## S2-7 リスクと対処・戻し方・測り方
@@ -478,7 +478,7 @@
 ## S2-11 未決（PO に戻すもの）
 - 決定済み: D2-3 手順4 は案B（PO 2026-11-05「2」。原文は ideal-state.md）
 - 決定済み: 辞めたとき＝アプリで消したとき。ロールを外し自社サーバーから外す・消す前に確認の窓（PO 2026-11-05「1」「1,消したときだけ外す」＝D2-7）
-- 未決: スタッフの Discord の番号を別の番号に変えたとき、元の番号の人から Bot が管理するロールを外すか（Fable 3 回目 Q7。PO の言葉にまだ無い）。外すなら D2-3 のとおり PATCH で kick=false の行を入れる。外さないなら PATCH では行を入れず、元の番号の人は「登録していない人」として PO 決定「2」どおり触らない
+- 決定済み: 番号を書き換えたとき、元の番号の人から Bot が管理するロールを自動で外す。サーバーからは外さない（Fable 3 回目 Q7 を PO に聞いた。PO 2026-11-05「1,アプリ側でdiscordのIDを変更したら元のIDからはロールは自動で外す」）。D2-3 のとおり PATCH で kick=false の行を入れる
 - KGI 8〜16 の承認
 
 ## S2-12 審査の記録
