@@ -14,13 +14,19 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.services import tenant as tenant_service
-from tests.rls_bootstrap import bootstrap_tenant_schema, tenant_schema_lock
+from tests.rls_bootstrap import (
+    _apply_migration_on_conn,
+    bootstrap_tenant_schema,
+    public_bootstrap_lock,
+    tenant_schema_lock,
+)
 
 ADMIN_PG_URL = os.getenv("RLS_ADMIN_DATABASE_URL") or os.getenv("TEST_PG_URL")
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _MIGRATION = "20261005_150000_add_roles_system_key.sql"
-_TENANT_ID = 997
+# 997 は test_meta_channels.py と重なるため、試験・移行のどこにも無い 995 を使う
+_TENANT_ID = 995
 _SCHEMA = f"tenant_{_TENANT_ID:03d}"
 
 
@@ -67,31 +73,43 @@ async def test_new_tenant_has_system_key_and_migration_is_idempotent():
     admin_engine = create_async_engine(ADMIN_PG_URL, echo=False)
     try:
         async with tenant_schema_lock(admin_engine, _TENANT_ID):
-            schema_name = await bootstrap_tenant_schema(admin_engine, _TENANT_ID)
-            assert schema_name == _SCHEMA
-            migration_sql = (_REPO_ROOT / "migrations" / _MIGRATION).read_text(encoding="utf-8")
-            async with admin_engine.begin() as conn:
-                await conn.exec_driver_sql(migration_sql)  # 1 回目
-                await conn.exec_driver_sql(migration_sql)  # 2 回目（冪等）
-            async with admin_engine.connect() as conn:
-                column = await conn.execute(
-                    text(
-                        "SELECT data_type, is_nullable FROM information_schema.columns "
-                        "WHERE table_schema = :s AND table_name = 'roles' AND column_name = 'system_key'"
-                    ),
-                    {"s": _SCHEMA},
-                )
-                assert column.one() == ("text", "YES")
-                index = await conn.execute(
-                    text(
-                        "SELECT indexdef FROM pg_indexes "
-                        "WHERE schemaname = :s AND indexname = 'uq_roles_system_key'"
-                    ),
-                    {"s": _SCHEMA},
-                )
-                definition = index.scalar_one()
-                assert "UNIQUE" in definition and "WHERE (system_key IS NOT NULL)" in definition
+            try:
+                schema_name = await bootstrap_tenant_schema(admin_engine, _TENANT_ID)
+                assert schema_name == _SCHEMA
+                # 全テナントを回す正本を、この試験のテナントだけに絞って流す（他ワーカーのテナントに触れない）
+                async with admin_engine.begin() as conn:
+                    await _apply_migration_on_conn(conn, _MIGRATION, schema_name=_SCHEMA)  # 1 回目
+                    await _apply_migration_on_conn(conn, _MIGRATION, schema_name=_SCHEMA)  # 2 回目（冪等）
+                async with admin_engine.connect() as conn:
+                    column = await conn.execute(
+                        text(
+                            "SELECT data_type, is_nullable FROM information_schema.columns "
+                            "WHERE table_schema = :s AND table_name = 'roles' AND column_name = 'system_key'"
+                        ),
+                        {"s": _SCHEMA},
+                    )
+                    assert column.one() == ("text", "YES")
+                    index = await conn.execute(
+                        text(
+                            "SELECT indexdef FROM pg_indexes "
+                            "WHERE schemaname = :s AND indexname = 'uq_roles_system_key'"
+                        ),
+                        {"s": _SCHEMA},
+                    )
+                    definition = index.scalar_one()
+                    assert "UNIQUE" in definition and "WHERE (system_key IS NOT NULL)" in definition
+            finally:
+                async with public_bootstrap_lock(admin_engine):
+                    async with admin_engine.begin() as conn:
+                        await conn.execute(text(f"DROP SCHEMA IF EXISTS {_SCHEMA} CASCADE"))
     finally:
-        async with admin_engine.begin() as conn:
-            await conn.execute(text(f"DROP SCHEMA IF EXISTS {_SCHEMA} CASCADE"))
         await admin_engine.dispose()
+
+
+def test_roles_migration_is_scoped_to_own_tenant():
+    from tests.rls_bootstrap import _scope_tenant_migration
+
+    sql = (_REPO_ROOT / "migrations" / _MIGRATION).read_text(encoding="utf-8")
+    scoped = _scope_tenant_migration(sql, _MIGRATION, _SCHEMA)
+    assert scoped.count(f"AND nspname = '{_SCHEMA}'") == 1
+    assert scoped != sql
