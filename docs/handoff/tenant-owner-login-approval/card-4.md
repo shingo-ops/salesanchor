@@ -467,7 +467,7 @@ export default function TenantLoginRequestsPage() {
 
   if (!isTenantOwner) {
     return (
-      <PageLayout navKey="nav.tenantLoginRequests">
+      <PageLayout navKey="nav.tenantLoginRequests" subtitleKey="managementCenter.loginRequests.subtitle">
         <div className="error-message" role="alert">
           {t("managementCenter.loginRequests.ownerOnly")}
         </div>
