@@ -221,6 +221,9 @@ class SelfTokenResponse(BaseModel):
     access_token: str = Field(description="自社アクセストークン（Bearer）")
     token_type: str = Field(default="bearer", description="トークン種別")
     expires_in: int = Field(description="アクセストークンの有効秒数")
+    must_change_password: bool = Field(
+        default=False, description="仮パスワードのままか（真なら画面はパスワード変更ページへ移す・ADR-1068）"
+    )
 
 
 def _require_issuance_enabled() -> None:
@@ -399,7 +402,7 @@ async def self_login(
         await db.execute(
             text(
                 "SELECT id, email, tenant_id, is_active, password_argon2_hash, failed_login_count, locked_until, "
-                "last_login FROM public.users WHERE lower(email) = :email"
+                "last_login, password_must_change FROM public.users WHERE lower(email) = :email"
             ),
             {"email": email},
         )
@@ -504,6 +507,7 @@ async def self_login(
         access_token=access,
         token_type="bearer",
         expires_in=self_tokens.ACCESS_TOKEN_TTL_SECONDS,
+        must_change_password=bool(user_row.password_must_change),
     )
 
 
@@ -687,6 +691,7 @@ async def password_reset_confirm(
     await db.execute(
         text(
             "UPDATE public.users SET password_argon2_hash = :h, password_changed_at = :now, "
+            "password_must_change = false, "
             "failed_login_count = 0, locked_until = NULL WHERE id = :uid"
         ),
         {"h": new_hash, "now": now, "uid": user_row.id},
@@ -785,6 +790,7 @@ async def password_change(
     await db.execute(
         text(
             "UPDATE public.users SET password_argon2_hash = :h, password_changed_at = :at, "
+            "password_must_change = false, "
             "failed_login_count = 0, locked_until = NULL WHERE id = :uid"
         ),
         {"h": new_hash, "at": changed_at, "uid": user_row.id},

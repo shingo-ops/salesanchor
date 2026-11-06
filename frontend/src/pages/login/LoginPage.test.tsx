@@ -180,6 +180,41 @@ describe("LoginPage (self login)", () => {
     await waitFor(() => expect(fetchMock.mock.calls.some(([u]) => u === "/api/v1/auth/login")).toBe(true));
   });
 
+  it("must_change_password=true goes to /password-change and not to the passkey prompt or home", async () => {
+    mock.passkey = true;
+    fetchMock.mockImplementation((url: string) =>
+      Promise.resolve(
+        url === "/api/v1/auth/login"
+          ? new Response(
+              JSON.stringify({ access_token: "a.b.c", token_type: "bearer", expires_in: 900, must_change_password: true }),
+              { status: 200 },
+            )
+          : new Response(JSON.stringify({ detail: "invalid_credentials" }), { status: 401 }),
+      ),
+    );
+    render(
+      <I18nextProvider i18n={instance}>
+        <MemoryRouter initialEntries={["/login"]}>
+          <AuthProvider>
+            <Routes>
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/" element={<div data-testid="after-login" />} />
+              <Route path="/password-change" element={<div data-testid="password-change" />} />
+            </Routes>
+          </AuthProvider>
+        </MemoryRouter>
+      </I18nextProvider>,
+    );
+    await waitFor(() => expect(fetchMock.mock.calls.some(([u]) => u === "/api/v1/auth/refresh")).toBe(true));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    await fillAndSubmit();
+
+    expect(await screen.findByTestId("password-change")).toBeTruthy();
+    expect(screen.queryByTestId("after-login")).toBeNull();
+    expect(mock.getPasskeyPrompt).not.toHaveBeenCalled();
+  });
+
   it("login 401 shows one message without distinguishing the reason", async () => {
     fetchMock.mockImplementation(() =>
       Promise.resolve(new Response(JSON.stringify({ detail: "invalid_credentials" }), { status: 401 })),
