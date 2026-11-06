@@ -21,7 +21,7 @@
 ## 2. 現在地の要約（recon より）
 
 - 本番への自動反映は main への push だけ（`.github/workflows/deploy.yml:3-6`、environment の承認者なし）。main の ruleset 15777895 の必須チェック 16 件が、全員に効く唯一の関所（recon §2, §3）
-- ただし本番の鍵（secrets.VPS_HOST）を使う手動起動のワークフローが 6 本ある: `.github/workflows/line-import-operations.yml:4`、`.github/workflows/line-import-device.yml:4`、`.github/workflows/rotate-qa-firebase.yml:7`、`.github/workflows/setup-pgw.yml:7`、`.github/workflows/setup-pushgateway-once.yml:7`、`.github/workflows/verify-meta-subscriptions.yml:18`（設計審査1回目の指摘 M4）。手動起動では選んだブランチの最後のコミットが GITHUB_SHA になる（https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows 2026-10-27 閲覧）ので、main 以外のブランチの中身が鍵付きで動く前提で塞ぐ（R5）。ただし穴は手動起動だけでなく、リポジトリに置いた鍵を使う全ワークフローにある（§5 R5、設計審査2回目 must-3）
+- ただし本番の鍵（secrets.VPS_HOST）を使う手動起動のワークフローが 6 本ある: `.github/workflows/line-import-operations.yml:4`、`.github/workflows/line-import-device.yml:4`、rotate-qa-firebase.yml:7（その後 Firebase の取り外し 317bfb653 で削除済み。今は 5 本）、`.github/workflows/setup-pgw.yml:7`、`.github/workflows/setup-pushgateway-once.yml:7`、`.github/workflows/verify-meta-subscriptions.yml:18`（設計審査1回目の指摘 M4）。手動起動では選んだブランチの最後のコミットが GITHUB_SHA になる（https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows 2026-10-27 閲覧）ので、main 以外のブランチの中身が鍵付きで動く前提で塞ぐ（R5）。ただし穴は手動起動だけでなく、リポジトリに置いた鍵を使う全ワークフローにある（§5 R5、設計審査2回目 must-3）
 - 決まり 85 件のうち 止める 27・一部止める 11・無し 23・未確認 24（recon §4）。この数え方は人の判断を含むので、R1 で機械の数え方に置き換える
 - 手元の hook は手元の Claude だけ、リポジトリの hook はクラウドの Claude だけに効く。Codex と人の手には ruleset と CI 以外は効かない（recon §0）
 - マージ前の審査（ADR-1029）は hook だけで強制され、ruleset の承認数は 0。人の手のマージと GitHub 画面からのマージには効かない（recon §4 B04）。直近 30 件のマージ済み PR で `VERDICT: APPROVE on <sha> PR #n` のコメントがあったのは 3 件（#4811・#4804・#4802）、台帳の自動 DONE 化 PR 11 件は 0 件（審査1回目の実測。基準値）
