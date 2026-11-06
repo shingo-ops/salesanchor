@@ -71,6 +71,9 @@ def _bp_data() -> dict:
     data["roles"] = [r for r in data["roles"] if r["key"] != "staff"]
     # 第2段 2c で足した知らせの部屋 3 つも本番の Discord にまだ無いので除く（test_discord_notice_rooms.py で確かめる）
     data["channels"] = [c for c in data["channels"] if c["key"] not in NOTICE_ROOMS]
+    # ADR-1068 で足したスタッフ登録のカテゴリと受付の部屋も本番の Discord にまだ無いので除く（test_staff_join_api.py で確かめる）
+    data["categories"] = [c for c in data["categories"] if c["key"] != "staff_join_rooms"]
+    data["channels"] = [c for c in data["channels"] if c["key"] != "staff_join_reception"]
     return data
 
 

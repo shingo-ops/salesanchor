@@ -1,4 +1,4 @@
-from sqlalchemy import JSON, Boolean, Column, DateTime, ForeignKey, Integer, String
+from sqlalchemy import JSON, BigInteger, Boolean, Column, DateTime, ForeignKey, Integer, LargeBinary, String
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -38,3 +38,29 @@ class User(Base):
 
     # リレーション
     tenant = relationship("Tenant", back_populates="users")
+
+
+class StaffJoinInvite(Base):
+    """スタッフ自己登録の招待（ADR-1068）。表の定義は migrations/20261107_120000_create_staff_join_invites.sql。
+
+    招待の状態と、一人の人へつなぐ番号だけを持つ。名前・メールは置かない。鍵と登録番号は sha256 だけ。
+    FORCE RLS（会社別）。読み書きの前に set_tenant_context で会社を決める。
+    """
+    __tablename__ = "staff_join_invites"
+
+    id = Column(BigInteger().with_variant(Integer, "sqlite"), primary_key=True, autoincrement=True)
+    tenant_id = Column(Integer, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)
+    role_id = Column(Integer, nullable=False)  # 会社ごとのスキーマの roles.id（外部キーなし）
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    token_hash = Column(LargeBinary, nullable=False, unique=True)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    status = Column(String, nullable=False, default="open")  # open / submitted / linked / revoked
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    staff_id = Column(Integer, nullable=True)
+    reg_code_hash = Column(LargeBinary, nullable=True, unique=True)
+    reg_code_expires_at = Column(DateTime(timezone=True), nullable=True)
+    discord_channel_id = Column(String, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    submitted_at = Column(DateTime(timezone=True), nullable=True)
+    linked_at = Column(DateTime(timezone=True), nullable=True)
+    revoked_at = Column(DateTime(timezone=True), nullable=True)

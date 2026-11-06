@@ -32,6 +32,41 @@ async def ensure_target_below_me(
         )
 
 
+async def check_assignable_role(
+    db: AsyncSession,
+    tenant_id: int,
+    granter: User,
+    role_id: int,
+) -> int:
+    """granter が role_id を付与してよいかの検査（assign_single_role の前半と同じ）。granter の最大 priority を返す。
+
+    - role_id が同テナントに存在し、隠すロールでない（super admin 以外）こと → 違えば 400
+    - 付与するロールの priority が granter の最大 priority 未満であること → 違えば 403
+    """
+    hidden_params = _hidden_role_params(granter)
+    found = await db.execute(
+        _visible_text(
+            "SELECT id, priority FROM roles WHERE id = :rid AND tenant_id = :tid "
+            f"AND {_visible_role_sql()}"
+        ),
+        {"rid": role_id, "tid": tenant_id, **hidden_params},
+    )
+    role = found.mappings().first()
+    if role is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="指定の role_id はこのテナントに存在しません",
+        )
+
+    my_max = await _max_priority_for_user(db, granter.id)
+    if role["priority"] >= my_max:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"自分の最大priority以上のロール（id={role_id}）は付与できません",
+        )
+    return my_max
+
+
 async def assign_single_role(
     db: AsyncSession,
     tenant_id: int,
@@ -47,26 +82,7 @@ async def assign_single_role(
     - 隠すロール（super admin 向け）は super admin 以外の操作では外さない
     """
     hidden_params = _hidden_role_params(current_user)
-    found = await db.execute(
-        _visible_text(
-            "SELECT id, priority FROM roles WHERE id = :rid AND tenant_id = :tid "
-            f"AND {_visible_role_sql()}"
-        ),
-        {"rid": role_id, "tid": tenant_id, **hidden_params},
-    )
-    role = found.mappings().first()
-    if role is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="指定の role_id はこのテナントに存在しません",
-        )
-
-    my_max = await _max_priority_for_user(db, current_user.id)
-    if role["priority"] >= my_max:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"自分の最大priority以上のロール（id={role_id}）は付与できません",
-        )
+    my_max = await check_assignable_role(db, tenant_id, current_user, role_id)
     await ensure_target_below_me(db, target_user_id, my_max)
 
     await db.execute(

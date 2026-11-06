@@ -20,25 +20,19 @@ INVITE_MAX_AGE_SEC = 604800  # 7日（Discord の上限）
 INVITE_MAX_USES = 1
 
 
-async def create_viewer_invite(db: AsyncSession) -> str | None:
-    """招待リンク（https://discord.gg/<code>）を返す。作れなければ None。
+async def create_channel_invite(channel_id: str) -> str | None:
+    """指定の部屋に7日・1回だけ使える招待を1本作り、https://discord.gg/<code> を返す。作れなければ None。
 
-    呼び出し側は、この関数を呼ぶ前に自分の書き込みを commit しておくこと（未 commit の変更は捨てられる）。
+    閲覧者の申込とスタッフの申込（ADR-1068）で共用する。ログには例外の種類と HTTP の状態だけを出す。
     """
     status_code: int | None = None
     try:
-        row = (
-            await db.execute(text("SELECT reception_channel_id FROM public.viewer_discord_config WHERE id = 1"))
-        ).first()
-        await db.rollback()  # 読み取りだけ。Discord を待つ間、トランザクションを開いたままにしない
-        if row is None or not row[0]:
-            return None
         bot_token = os.environ.get("DISCORD_BOT_TOKEN")
         if not bot_token:
             return None
         result = await discord_api_request(
             method="POST",
-            path=f"/channels/{row[0]}/invites",
+            path=f"/channels/{channel_id}/invites",
             bot_token=bot_token,
             json={"max_age": INVITE_MAX_AGE_SEC, "max_uses": INVITE_MAX_USES, "unique": True},
             expected_statuses=(200,),
@@ -55,3 +49,21 @@ async def create_viewer_invite(db: AsyncSession) -> str | None:
     except Exception as exc:
         logger.warning("viewer invite: 作成失敗 kind=%s status=%s", type(exc).__name__, status_code)
         return None
+
+
+async def create_viewer_invite(db: AsyncSession) -> str | None:
+    """招待リンク（https://discord.gg/<code>）を返す。作れなければ None。
+
+    呼び出し側は、この関数を呼ぶ前に自分の書き込みを commit しておくこと（未 commit の変更は捨てられる）。
+    """
+    try:
+        row = (
+            await db.execute(text("SELECT reception_channel_id FROM public.viewer_discord_config WHERE id = 1"))
+        ).first()
+        await db.rollback()  # 読み取りだけ。Discord を待つ間、トランザクションを開いたままにしない
+        if row is None or not row[0]:
+            return None
+    except Exception as exc:
+        logger.warning("viewer invite: 作成失敗 kind=%s status=%s", type(exc).__name__, None)
+        return None
+    return await create_channel_invite(str(row[0]))
