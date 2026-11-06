@@ -7,9 +7,9 @@ ADR-088 基盤を拡張:
   - グロッサリ適用（専門用語・商品名・スラング の正確な訳 / 原語保持）
   - 確信度スコアリング（0–1）
   - モデル戦略:
-      受信和訳 = TRANSLATION_MODEL_RECEIVE（既定: gemini-2.5-flash、安い）
+      受信和訳 = TRANSLATION_MODEL_RECEIVE（既定: gemini-3.5-flash-lite、安い）
                  低確信度 / 長文 → TRANSLATION_MODEL_SEND にエスカレート
-      送信英訳 = TRANSLATION_MODEL_SEND（既定: gemini-2.5-pro、最上位必須）
+      送信英訳 = TRANSLATION_MODEL_SEND（既定: gemini-3.5-flash-lite）
   - 送信下訳の生成（保存・表示のみ。送信はしない）
   - 冪等: DB キャッシュヒットで API 呼ばない
 """
@@ -19,11 +19,12 @@ import logging
 import os
 import re
 from dataclasses import dataclass
-from typing import Any, Sequence
+from typing import Sequence
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.services import gemini_route
 from app.services.gemini_extraction_svc import _safe_error_message
 from app.services.llm_budget import (
     BudgetStatus,
@@ -92,25 +93,6 @@ class InboundLanguageSignals:
 
 _KANA_RE = re.compile(r"[\u3040-\u309F\u30A0-\u30FF]")
 _LATIN_WORD_RE = re.compile(r"[A-Za-z]{2,}")
-
-
-# ---------------------------------------------------------------------------
-# Gemini SDK lazy init (ADR-088 パターン踏襲)
-# ---------------------------------------------------------------------------
-
-_GENAI_CACHE: dict[str, Any] = {}
-
-
-def _get_genai_module() -> Any:
-    if "module" not in _GENAI_CACHE:
-        try:
-            import google.generativeai as genai
-        except ImportError as exc:
-            raise LLMConfigError(
-                "google-generativeai がインストールされていません。"
-            ) from exc
-        _GENAI_CACHE["module"] = genai
-    return _GENAI_CACHE["module"]
 
 
 def _ensure_api_key() -> str:
@@ -364,21 +346,15 @@ async def _call_gemini(
     Returns:
         (response_text, input_tokens, output_tokens, usage_counts)
     """
-    api_key = _ensure_api_key()
-    genai = _get_genai_module()
-    genai.configure(api_key=api_key)
+    _ensure_api_key()
+    from google.genai import types as genai_types
 
     try:
-        model = genai.GenerativeModel(
-            model_name=model_name,
-            generation_config={"temperature": 0.1},
+        response = await gemini_route.agenerate_content_routed(
+            model=model_name,
+            contents=prompt,
+            config=genai_types.GenerateContentConfig(temperature=0.1),
         )
-        if hasattr(model, "generate_content_async"):
-            response = await model.generate_content_async(prompt)
-        else:
-            import asyncio
-            loop = asyncio.get_running_loop()
-            response = await loop.run_in_executor(None, model.generate_content, prompt)
     except Exception as exc:
         logger.exception("[message_translator] Gemini call failed (model=%s): %s", model_name, _safe_error_message(exc))
         raise LLMParseError(f"Gemini API 呼び出し失敗: {exc}") from exc
@@ -492,7 +468,7 @@ async def translate_inbound(
     response_text, in_tokens, out_tokens, counts = await _call_gemini(prompt, model)
     await record_cost(db, tenant_id, in_tokens, out_tokens, model=model)
     await record_usage_event(
-        db, purpose="translation_inbound", model=model, sdk="google-generativeai",
+        db, purpose="translation_inbound", model=model, sdk="google-genai",
         counts=counts, tenant_id=tenant_id, source_ref=message_id,
     )
 
@@ -514,7 +490,7 @@ async def translate_inbound(
             await record_cost(db, tenant_id, in2, out2, model=MODEL_SEND)
             await record_usage_event(
                 db, purpose="translation_inbound_escalation", model=MODEL_SEND,
-                sdk="google-generativeai", counts=counts2, tenant_id=tenant_id,
+                sdk="google-genai", counts=counts2, tenant_id=tenant_id,
                 source_ref=message_id,
             )
             t2, c2, ol2, ft2 = _parse_translation_response(resp2)
@@ -646,7 +622,7 @@ async def generate_outbound_draft(
     response_text, in_tokens, out_tokens, counts = await _call_gemini(prompt, model)
     await record_cost(db, tenant_id, in_tokens, out_tokens, model=model)
     await record_usage_event(
-        db, purpose="translation_outbound", model=model, sdk="google-generativeai",
+        db, purpose="translation_outbound", model=model, sdk="google-genai",
         counts=counts, tenant_id=tenant_id,
         source_ref=str(lead_id) if lead_id is not None else None,
     )

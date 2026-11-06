@@ -41,7 +41,6 @@ class FakeRedis:
 
 @pytest.fixture(autouse=True)
 def enroll_env(monkeypatch):
-    monkeypatch.setenv("AUTH_PROVIDER", "self")
     monkeypatch.setenv("AUTH_JWT_SECRET", SECRET)
     monkeypatch.delenv("AUTH_JWT_SECRET_PREVIOUS", raising=False)
     monkeypatch.delenv("AUTH_RP_ORIGIN", raising=False)

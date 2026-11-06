@@ -117,36 +117,23 @@ async def approve_login_request(
     rid = devices.parse_request_id(request_id)
     if rid is None:
         raise HTTPException(status_code=404, detail="not_found")
-    target = (
-        await db.execute(
-            text(
-                "SELECT r.user_id, u.tenant_id FROM public.auth_login_requests r "
-                "JOIN public.users u ON u.id = r.user_id WHERE r.id = :id"
-            ),
-            {"id": rid},
-        )
-    ).first()
-    if target is None:
-        raise HTTPException(status_code=404, detail="not_found")
-    if target.user_id == current_user.id:
+    # 会社のオーナーの許可（ADR-1063）と同じ部品。super admin は会社を絞らず、頼んだかどうかも見ない
+    decision = await devices.approve_request_as_admin(
+        db,
+        request_id=rid,
+        approver_user_id=current_user.id,
+        note=body.note.strip(),
+        tenant_id=None,
+        require_admin_requested=False,
+    )
+    if decision.outcome == "own_request":
         raise HTTPException(status_code=403, detail="cannot_approve_own_request")
-    now = datetime.now(timezone.utc)
-    decided = (
-        await db.execute(
-            text(
-                "UPDATE public.auth_login_requests SET status = 'approved', decided_at = :now, "
-                "decided_via = 'admin', decided_by_user_id = :admin, decided_note = :note "
-                "WHERE id = :id AND status = 'pending' AND expires_at > :now RETURNING id"
-            ),
-            {"now": now, "admin": current_user.id, "note": body.note.strip(), "id": rid},
-        )
-    ).first()
-    if decided is None:
+    if decision.outcome != "approved":
         raise HTTPException(status_code=404, detail="not_found")
     # 依頼した人の会社の履歴に残す。依頼の id は UUID で整数の列に入らないので record_id は None、note の中身は書かない
     await _record_auth_audit(
         db,
-        tenant_id=target.tenant_id,
+        tenant_id=decision.target_tenant_id,
         user_id=current_user.id,
         action="update",
         table_name="auth_login_requests",
@@ -154,9 +141,9 @@ async def approve_login_request(
         new_data={
             "event": "login_request_approved_admin",
             "request_id": rid,
-            "target_user_id": target.user_id,
+            "target_user_id": decision.target_user_id,
         },
     )
     await db.commit()
-    await publish_user_change(target.user_id, TOPIC_AUTH_LOGIN_REQUEST)
+    await publish_user_change(decision.target_user_id, TOPIC_AUTH_LOGIN_REQUEST)
     return AdminApproveResult(status="approved")

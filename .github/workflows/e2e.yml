@@ -6,9 +6,8 @@ name: Frontend E2E (Playwright)
 # trace / screenshot / video を upload する。
 #
 # 実機 Meta OAuth は通さず、frontend が叩く /api/v1/* を Playwright route で
-# mock する設計（tests-e2e/utils/api-mock.ts）。Firebase Auth は
-# tests-e2e/utils/auth.ts で IndexedDB persistence + identitytoolkit endpoint
-# 経由で bypass する。
+# mock する設計（tests-e2e/utils/api-mock.ts）。ログインした状態は
+# tests-e2e/utils/auth.ts で保存領域に利用者を先に入れて作る。
 
 on:
   pull_request:

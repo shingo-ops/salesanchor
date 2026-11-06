@@ -1,6 +1,6 @@
 # backend/tenant — テナント操作ルール（ADR-072）
 
-`backend/CLAUDE.md` の詳細ページ。`backend/app/routers/` 配下の write エンドポイント実装時に参照。
+`backend/CLAUDE.md` の詳細ページ。`backend/app/` で commit の後に db を使う関数の実装時（routers の外も）に参照。
 
 ---
 
@@ -9,12 +9,12 @@
 `@router.post|put|patch|delete` を実装するたびに全て確認すること:
 
 - [ ] `await db.commit()` の**直後**に `await reset_tenant_context(db, tenant_id)` を呼ぶ
-- [ ] インポート: `from app.database import reset_tenant_context`
+- [ ] インポート: `from app.auth.dependencies import reset_tenant_context`
 - [ ] commit が複数ある場合は、**各 commit の直後**にそれぞれ呼ぶ（1対1対応）
 - [ ] `tenant_id` は `Depends(get_current_tenant)` 経由で受け取っているか
 
-違反は **pre-commit フック**と **CI（lint-tenant-schema.yml）** が自動検出して FAIL させる。
-ローカルでも確認: `python3 scripts/lint_tenant_schema.py --mode strict backend/app/routers/`
+違反は **CI（lint-tenant-schema.yml）** と push 前の確認（`scripts/dev/check-before-submit.sh`）が `backend/app/` 全体で自動検出して FAIL させる（pre-commit フックは `backend/app/routers/` の変更のときだけ走る）。
+ローカルでも確認: `python3 scripts/lint_tenant_schema.py --mode strict backend/app/`
 
 ---
 

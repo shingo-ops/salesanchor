@@ -5,6 +5,8 @@ POST /api/v1/staff が users と user_roles も同じトランザクションで
 import pytest
 from sqlalchemy import text
 
+from app.routers.staff import EMAIL_UNAVAILABLE_DETAIL
+
 
 async def _seed_role(db_session):
     await db_session.execute(text("""
@@ -93,6 +95,8 @@ async def test_existing_user_with_roster_returns_409(client, db_session):
     res = await client.post("/api/v1/staff", json=_body("dup@example.com"))
 
     assert res.status_code == 409, res.text
+    assert res.json()["detail"] == EMAIL_UNAVAILABLE_DETAIL
+    assert "他の会社" not in res.json()["detail"]
     assert await _count(db_session, "users") == users_before
     assert await _count(db_session, "staff") == staff_before
 
@@ -112,7 +116,8 @@ async def test_user_in_other_tenant_returns_409_and_creates_nothing(client, db_s
     res = await client.post("/api/v1/staff", json=_body("othertenant@example.com"))
 
     assert res.status_code == 409, res.text
-    assert "他の会社" in res.json()["detail"]
+    assert res.json()["detail"] == EMAIL_UNAVAILABLE_DETAIL
+    assert "他の会社" not in res.json()["detail"]
     assert await _count(db_session, "users") == users_before
     assert await _count(db_session, "staff") == staff_before
     assert await _count(db_session, "user_roles") == roles_before
@@ -233,7 +238,7 @@ async def test_patch_with_firebase_uid_is_ignored(client, db_session):
     assert stored is None
 
 
-# ── 初回設定メール（ADR-1013 便4a。新しく利用者ができたときだけ・AUTH_PROVIDER=self のときだけ） ──
+# ── 初回設定メール（ADR-1013 便4a。新しく利用者ができたときだけ） ──
 
 _SELF_SECRET = "test-secret-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 
@@ -260,7 +265,6 @@ async def invite_sender(db_session):
 
 @pytest.mark.asyncio
 async def test_new_user_gets_invite_key_and_one_mail_when_self(client, db_session, invite_sender, monkeypatch):
-    monkeypatch.setenv("AUTH_PROVIDER", "self")
     monkeypatch.setenv("AUTH_JWT_SECRET", _SELF_SECRET)
     await _seed_role(db_session)
 
@@ -275,20 +279,7 @@ async def test_new_user_gets_invite_key_and_one_mail_when_self(client, db_sessio
 
 
 @pytest.mark.asyncio
-async def test_new_user_gets_no_invite_when_firebase(client, db_session, invite_sender, monkeypatch):
-    monkeypatch.setenv("AUTH_PROVIDER", "firebase")
-    await _seed_role(db_session)
-
-    res = await client.post("/api/v1/staff", json=_body("invite-fb@example.com"))
-
-    assert res.status_code == 201, res.text
-    assert await _invite_count(db_session, "invite-fb@example.com") == 0
-    assert invite_sender.call_count == 0
-
-
-@pytest.mark.asyncio
 async def test_existing_user_gets_no_invite_even_when_self(client, db_session, invite_sender, monkeypatch):
-    monkeypatch.setenv("AUTH_PROVIDER", "self")
     monkeypatch.setenv("AUTH_JWT_SECRET", _SELF_SECRET)
     await _seed_role(db_session)
     await db_session.execute(text(

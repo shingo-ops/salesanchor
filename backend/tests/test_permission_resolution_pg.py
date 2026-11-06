@@ -34,7 +34,7 @@ from tests.rls_bootstrap import (
 
 ADMIN_PG_URL = os.getenv("RLS_ADMIN_DATABASE_URL") or os.getenv("TEST_PG_URL")
 
-_TENANT_ID = 998
+_TENANT_ID = 994
 _SCHEMA = f"tenant_{_TENANT_ID:03d}"
 _NEW_KEY = "zz.new_key.test"
 # この試験が検証する権限キー。bootstrap の DB に無ければ、試験の準備で自分で入れる（試験のデータは試験が持つ）
@@ -54,7 +54,7 @@ def bypass_permissions():
 
 
 async def _remove_test_tenant_rows(conn) -> None:
-    """この試験のテナント（id 998）が入れた行だけを消す。他のテナントの行には触れない。"""
+    """この試験のテナント（id 994）が入れた行だけを消す。他のテナントの行には触れない。"""
     await conn.execute(text(f"DROP SCHEMA IF EXISTS {_SCHEMA} CASCADE"))
     exists = await conn.scalar(text("SELECT to_regclass('public.tenant_settings')"))
     if exists is not None:
@@ -95,8 +95,9 @@ async def test_real_load_user_permissions_computes_owner_and_admin_and_fresh_ten
     try:
         async with tenant_schema_lock(admin_engine, _TENANT_ID):
             # 1) 前回の残りがあれば消す（この試験のテナントの行だけ）
-            async with admin_engine.begin() as conn:
-                await _remove_test_tenant_rows(conn)
+            async with public_bootstrap_lock(admin_engine):
+                async with admin_engine.begin() as conn:
+                    await _remove_test_tenant_rows(conn)
             # 2) 共有 public 表（public.tenants / public.permissions）を用意する。試験用テナントの行はまだ入れない
             async with public_bootstrap_lock(admin_engine):
                 async with admin_engine.begin() as conn:
@@ -235,8 +236,10 @@ async def test_real_load_user_permissions_computes_owner_and_admin_and_fresh_ten
                 )
                 assert phase.scalar_one() == "B"
     finally:
-        async with admin_engine.begin() as conn:
-            await _remove_test_tenant_rows(conn)
-            for key in inserted_keys:  # この試験が入れたキーだけを消す（元からあるキーは消さない）
-                await conn.execute(text("DELETE FROM public.permissions WHERE key = :k"), {"k": key})
+        async with tenant_schema_lock(admin_engine, _TENANT_ID):
+            async with public_bootstrap_lock(admin_engine):
+                async with admin_engine.begin() as conn:
+                    await _remove_test_tenant_rows(conn)
+                    for key in inserted_keys:  # この試験が入れたキーだけを消す（元からあるキーは消さない）
+                        await conn.execute(text("DELETE FROM public.permissions WHERE key = :k"), {"k": key})
         await admin_engine.dispose()

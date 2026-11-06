@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-import os
 import secrets
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -13,7 +12,7 @@ from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError
 from pydantic import BaseModel, EmailStr, Field
-from sqlalchemy import func, select, text
+from sqlalchemy import bindparam, func, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from webauthn import options_to_json, verify_authentication_response, verify_registration_response
@@ -51,8 +50,14 @@ from app.realtime.topics import TOPIC_AUTH_LOGIN_REQUEST
 from app.schemas.auth import PasswordChange
 from app.services import web_push
 from app.services.audit import record_audit_log
-from app.services.auth_mail import send_invite_email, send_new_device_mail, send_password_reset_email
-from app.services.invite import create_invite_token, invite_enabled, invite_url
+from app.services.auth_mail import (
+    send_invite_email,
+    send_new_device_mail,
+    send_password_reset_email,
+    send_staff_login_help_mail,
+)
+from app.services.invite import create_invite_token, invite_url
+from app.services.user_notices import _owner_user_ids
 from app.services.web_push import send_login_request_push
 
 router = APIRouter()
@@ -76,8 +81,8 @@ async def register_user(
       ② tenant_codeからテナントを検索
       ③ 同じメールアドレスのユーザーがいないか確認（いれば409）
       ④ usersテーブルにユーザーを作成（パスワードは NULL）
-      ⑤ AUTH_PROVIDER=self のとき、初回設定の鍵（purpose=invite・72時間）を作り、
-         commit の後に初回設定メールを送る（firebase の間は鍵もメールも作らない）
+      ⑤ 初回設定の鍵（purpose=invite・72時間）を作り、
+         commit の後に初回設定メールを送る
 
     注意:
       - パスワードは本人が初回設定メールのリンクから決める（ADR-1013 便4a）。
@@ -162,7 +167,7 @@ async def register_user(
         )
         await invalidate_user_permissions(tenant.id, user.id)
 
-    invite_raw = await create_invite_token(db, user.id) if invite_enabled() else None
+    invite_raw = await create_invite_token(db, user.id)
 
     await db.commit()
     await db.refresh(user)
@@ -183,7 +188,7 @@ async def logout(
     """
     ログアウトAPI。
     トークンをブラックリストに追加し、以降の利用を拒否する。
-    Firebase IDトークンの残存有効期限（最大1時間）をTTLとする。
+    アクセストークンの残存有効期限より長い 1 時間を TTL とする。
     自社ログインの更新用トークン（Cookie）があれば失効させ、Cookie を消す。
     """
     token = cred.credentials
@@ -201,7 +206,7 @@ async def logout(
     return {"message": "ログアウトしました"}
 
 
-# ── 自社ログイン（ADR-1013 便2。AUTH_PROVIDER=self のときだけ有効） ────────────
+# ── 自社ログイン（ADR-1013 便2） ────────────
 
 INVALID_CREDENTIALS = "invalid_credentials"
 INVALID_TOKEN_DETAIL = "無効な認証トークンです"
@@ -571,7 +576,7 @@ async def self_refresh(
     )
 
 
-# ── パスワード再設定（ADR-1013 便3。AUTH_PROVIDER に関係なく動く） ─────────────
+# ── パスワード再設定（ADR-1013 便3） ─────────────
 
 INVALID_OR_EXPIRED_TOKEN = "invalid_or_expired_token"
 PASSWORD_RESET_TTL = timedelta(minutes=30)
@@ -594,14 +599,6 @@ class PasswordResetDone(BaseModel):
     status: str = Field(default="password_updated", description="パスワードを更新した")
 
 
-def _password_reset_allowed(email: str) -> bool:
-    """再設定メールを送ってよい相手か。self なら全員。firebase の間は許可リストに載った email だけ（未設定・空は誰にも送らない）。"""
-    if self_tokens.auth_provider() == "self":
-        return True
-    allowed = {e.strip().lower() for e in os.getenv("AUTH_PASSWORD_RESET_ALLOWLIST", "").split(",") if e.strip()}
-    return email in allowed
-
-
 @router.post("/password-reset/request", response_model=PasswordResetAccepted)
 async def password_reset_request(
     data: PasswordResetRequest,
@@ -609,7 +606,7 @@ async def password_reset_request(
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
 ):
-    """再設定メールの申請。存在・停止・許可外の区別を応答に出さない（常に 200）。"""
+    """再設定メールの申請。存在・停止の区別を応答に出さない（常に 200）。"""
     _require_app_origin(request)
     email = data.email.strip().lower()
     if await count_password_reset_request(email) > PASSWORD_RESET_REQUEST_MAX:
@@ -621,7 +618,7 @@ async def password_reset_request(
             {"email": email},
         )
     ).first()
-    if row is not None and row.is_active and _password_reset_allowed(email):
+    if row is not None and row.is_active:
         now = datetime.now(timezone.utc)
         await db.execute(
             text(
@@ -709,7 +706,7 @@ async def password_reset_confirm(
     return PasswordResetDone(status="password_updated")
 
 
-# ── パスワード変更（ADR-1013 便4a。AUTH_PROVIDER に関係なく動く） ─────────────
+# ── パスワード変更（ADR-1013 便4a） ─────────────
 
 class PasswordChangeResponse(BaseModel):
     status: str = Field(default="password_updated", description="パスワードを更新した")
@@ -1461,6 +1458,90 @@ async def login_request_poll(
         token_type=issued.token_type,
         expires_in=issued.expires_in,
     )
+
+
+class LoginRequestAskAdminResponse(BaseModel):
+    status: str = Field(description="requested / already_requested / no_owner")
+
+
+@router.post("/login-requests/ask-admin", response_model=LoginRequestAskAdminResponse)
+async def login_request_ask_admin(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+):
+    """待つ機械で「会社の管理者に頼む」を押す（Cookie sa_login_pending・ADR-1063）。
+
+    依頼に頼んだ時刻を入れ、同じ会社のオーナー（本人を除く）に合図とメールを送る。1つの依頼で1回だけ。
+    オーナーがいないときも時刻は入る（super admin の許可は今までどおり使える）。
+    """
+    _require_issuance_enabled()
+    _require_app_origin(request)
+    row = await _load_login_request(db, request)
+    if row is None:
+        return _pending_closed("expired")
+    now = datetime.now(timezone.utc)
+    if row.status != "pending" or self_tokens._as_utc(row.expires_at) <= now:
+        raise HTTPException(status_code=409, detail="not_pending")
+    if not await devices.mark_admin_requested(db, str(row.id)):
+        await db.rollback()
+        return LoginRequestAskAdminResponse(status="already_requested")
+    info = (
+        await db.execute(
+            text(
+                "SELECT r.label, r.location, u.tenant_id, u.full_name, u.email "
+                "FROM public.auth_login_requests r JOIN public.users u ON u.id = r.user_id WHERE r.id = :id"
+            ),
+            {"id": str(row.id)},
+        )
+    ).first()
+    await set_tenant_context(db, info.tenant_id)
+    owner_ids = [uid for uid in await _owner_user_ids(db, info.tenant_id) if uid != row.user_id]
+    await clear_tenant_context(db)
+    owner_emails: list[str] = []
+    if owner_ids:
+        owner_emails = [
+            r[0]
+            for r in (
+                await db.execute(
+                    text(
+                        "SELECT email FROM public.users WHERE id IN :ids AND email IS NOT NULL ORDER BY id"
+                    ).bindparams(bindparam("ids", expanding=True)),
+                    {"ids": owner_ids},
+                )
+            ).all()
+        ]
+    await _record_auth_audit(
+        db,
+        tenant_id=info.tenant_id,
+        user_id=row.user_id,
+        action="update",
+        table_name="auth_login_requests",
+        record_id=None,
+        new_data={
+            "event": "login_request_admin_asked",
+            "request_id": str(row.id),
+            "owner_count": len(owner_ids),
+        },
+    )
+    await db.commit()
+    _audit(request, user_id=row.user_id, reason="admin_asked")
+    if not owner_ids:
+        return LoginRequestAskAdminResponse(status="no_owner")
+    for uid in owner_ids:
+        await publish_user_change(uid, TOPIC_AUTH_LOGIN_REQUEST)
+    staff = f"{info.full_name} <{info.email}>" if info.full_name else (info.email or "")
+    when = devices.jst_text(now)
+    for addr in owner_emails:
+        background_tasks.add_task(
+            send_staff_login_help_mail,
+            addr,
+            staff=staff,
+            when=when,
+            device=info.label or "不明 / unknown",
+            location=info.location,
+        )
+    return LoginRequestAskAdminResponse(status="requested")
 
 
 @router.post("/login-requests/recovery", response_model=SelfTokenResponse)

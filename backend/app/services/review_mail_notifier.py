@@ -11,7 +11,7 @@ review@salesanchor.jp 新着メール → Discord 通知サービス。
   - IMAP 未設定・接続失敗・Redis 障害のいずれでも本体を止めない。
 
 セキュリティ:
-  - メール本文・添付・Firebase oobCode は Discord に投稿しない。
+  - メール本文・添付・再設定リンクのコードは Discord に投稿しない。
   - REVIEW_MAIL_IMAP_PASSWORD はログに出力しない。
   - REVIEW_MAIL_DISCORD_MENTION は <@USER_ID> / <@&ROLE_ID> 形式のみ許可する。
   - allowed_mentions の parse:[] により件名・差出人由来の @everyone や <@ID> が

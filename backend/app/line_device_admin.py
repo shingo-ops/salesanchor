@@ -1,7 +1,7 @@
 """Scoped manual provisioning over the existing authorized VPS maintenance channel.
 
 Receives only {action, user_email, user_code|device_id} on stdin. Never receives
-an API key, password or Firebase token. No arbitrary SQL/command execution.
+an API key, password or login token. No arbitrary SQL/command execution.
 """
 import asyncio
 import json

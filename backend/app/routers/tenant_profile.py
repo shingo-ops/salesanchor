@@ -35,6 +35,7 @@ from app.auth.dependencies import (
     get_current_tenant,
     get_current_user,
     require_permission,
+    reset_tenant_context,
     tenant_table_ref,
 )
 from app.database import get_db
@@ -139,6 +140,7 @@ async def update_tenant_profile(
         record_id=existing["id"], new_data=payload,
     )
     await db.commit()
+    await reset_tenant_context(db, tenant_id)
 
     row = (await db.execute(
         text(f"""

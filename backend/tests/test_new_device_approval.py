@@ -29,9 +29,11 @@ PASSWORD = "correct horse battery staple"
 USER_ID = 2101
 OTHER_USER_ID = 2102
 ADMIN_ID = 2103
+OWNER_ID = 2104
 EMAIL = "nd-user@example.com"
 OTHER_EMAIL = "nd-other@example.com"
 ADMIN_EMAIL = "nd-admin@example.com"
+OWNER_EMAIL = "nd-owner@example.com"
 AUTH = "/api/v1/auth"
 FLOOR = 2100  # このファイルのユーザーは id >= 2100
 
@@ -76,7 +78,6 @@ def _auth_event_rows() -> list[dict]:
 
 @pytest.fixture(autouse=True)
 def base_env(monkeypatch):
-    monkeypatch.setenv("AUTH_PROVIDER", "self")
     monkeypatch.setenv("AUTH_JWT_SECRET", SECRET)
     monkeypatch.delenv("AUTH_JWT_SECRET_PREVIOUS", raising=False)
     monkeypatch.delenv("AUTH_RP_ORIGIN", raising=False)
@@ -105,6 +106,8 @@ def no_redis_and_spies():
 
     mail = MagicMock()
     publish = AsyncMock()
+    staff_mail = MagicMock()
+    owners = AsyncMock(return_value=[])
     with patch("app.routers.auth.check_auth_rate_limit", new=AsyncMock(return_value=False)), \
          patch("app.routers.auth.record_auth_failure", new=AsyncMock()), \
          patch("app.routers.auth.blacklist_token", new=AsyncMock(return_value=True)), \
@@ -112,7 +115,9 @@ def no_redis_and_spies():
          patch("app.routers.auth.send_new_device_mail", new=mail), \
          patch("app.routers.auth.publish_user_change", new=publish), \
          patch("app.routers.super_admin_login_requests.publish_user_change", new=publish), \
-         patch("app.auth.dependencies._init_firebase"), \
+         patch("app.routers.tenant_login_requests.publish_user_change", new=publish), \
+         patch("app.routers.auth.send_staff_login_help_mail", new=staff_mail), \
+         patch("app.routers.auth._owner_user_ids", new=owners), \
          patch("app.auth.dependencies.is_token_blacklisted", new=AsyncMock(return_value=False)), \
          patch("app.auth.dependencies.get_cached_jwt", new=AsyncMock(return_value=None)), \
          patch("app.auth.dependencies.check_auth_rate_limit", new=AsyncMock(return_value=False)), \
@@ -121,7 +126,7 @@ def no_redis_and_spies():
          patch("app.auth.dependencies.is_family_revoked", new=_is_revoked), \
          patch("app.auth.devices.mark_family_revoked", new=_mark), \
          patch("app.middleware.audit.AsyncSessionLocal", new=lambda: _FakeAuditSession()):
-        yield SimpleNamespace(mail=mail, publish=publish)
+        yield SimpleNamespace(mail=mail, publish=publish, staff_mail=staff_mail, owners=owners)
 
 
 @pytest.fixture
@@ -417,6 +422,20 @@ def test_k2_mail_has_no_link_and_includes_time_device_location():
     assert "http" not in body.lower()
     assert "2026-11-01 10:00" in body and "iPhone・Safari" in body and "Tokyo, Japan" in body
     assert "IP Geolocation by DB-IP" in body
+
+
+def test_k2_mail_button_name_matches_screen_button():
+    """メールに書く押すボタンの名前は、画面のボタンの言葉（ja.json / en.json の notMe）と同じ（段F）。"""
+    import json
+    from pathlib import Path
+
+    from app.services import auth_mail
+
+    locales = Path(__file__).resolve().parents[2] / "frontend" / "src" / "locales"
+    ja = json.loads((locales / "ja.json").read_text("utf-8"))["login"]["deviceApproval"]["watcher"]["notMe"]
+    en = json.loads((locales / "en.json").read_text("utf-8"))["login"]["deviceApproval"]["watcher"]["notMe"]
+    assert f"「{ja}」" in auth_mail._NEW_DEVICE_BODY
+    assert f'"{en}"' in auth_mail._NEW_DEVICE_BODY
 
 
 # ── K3: 許可して入る ─────────────────────────────────────────────
@@ -1121,3 +1140,163 @@ def test_device_approval_mode_defaults_to_off(monkeypatch):
     assert devices.approval_mode() == "enforce"
     monkeypatch.setenv("AUTH_DEVICE_APPROVAL", "whatever")
     assert devices.approval_mode() == "off"
+
+
+# ── ADR-1063 便3: 会社の管理者に頼む・会社のオーナーが許可する ──────────
+
+TENANT = 999
+
+
+@pytest.fixture
+def owner_keys():
+    """会社のオーナーの判定（user_roles）と会社（get_current_tenant）を差し替える。値は試験の中で変える。"""
+    from app.auth.dependencies import get_current_tenant
+    from app.main import app
+
+    state = SimpleNamespace(keys={"owner"}, tenant=TENANT)
+
+    async def fake_tenant():
+        return state.tenant
+
+    async def fake_keys(db, user_id):
+        return state.keys
+
+    app.dependency_overrides[get_current_tenant] = fake_tenant
+    with patch("app.auth.dependencies.get_user_system_keys", new=fake_keys):
+        yield state
+    app.dependency_overrides.pop(get_current_tenant, None)
+
+
+async def _owner_setup(db, password_hash):
+    await _insert_user(db, password_hash)  # 頼む社員
+    await _insert_user(db, password_hash, user_id=OWNER_ID, email=OWNER_EMAIL)
+    return self_tokens.create_access_token(OWNER_ID, OWNER_EMAIL, "pwd")
+
+
+async def _ask(client):
+    return await client.post(f"{AUTH}/login-requests/ask-admin", headers={"origin": ORIGIN})
+
+
+TENANT_URL = "/api/v1/tenant/login-requests"
+
+
+async def test_ask_admin_tells_each_owner_once(enforce, machine, db_session, password_hash, spies):
+    await _owner_setup(db_session, password_hash)
+    spies.owners.return_value = [OWNER_ID, USER_ID]  # 本人がオーナーでも本人には送らない
+    b, rid, number = await _pending_from_new_machine(machine, db_session)
+    spies.publish.reset_mock()
+
+    first = await _ask(b)
+    second = await _ask(b)
+
+    assert first.status_code == 200 and first.json()["status"] == "requested"
+    assert second.status_code == 200 and second.json()["status"] == "already_requested"
+    assert [c.args[0] for c in spies.publish.await_args_list] == [OWNER_ID]
+    spies.staff_mail.assert_called_once()
+    assert spies.staff_mail.call_args.args == (OWNER_EMAIL,)
+    assert EMAIL in spies.staff_mail.call_args.kwargs["staff"]
+    row = await _row(db_session, "SELECT admin_requested_at, status FROM auth_login_requests WHERE id = :id", id=rid)
+    assert row.admin_requested_at is not None and row.status == "pending"
+
+
+async def test_ask_admin_without_owner(enforce, machine, db_session, password_hash, spies):
+    await _owner_setup(db_session, password_hash)
+    b, rid, number = await _pending_from_new_machine(machine, db_session)
+    spies.publish.reset_mock()
+
+    resp = await _ask(b)
+
+    assert resp.status_code == 200 and resp.json()["status"] == "no_owner"
+    spies.publish.assert_not_awaited()
+    spies.staff_mail.assert_not_called()
+
+
+async def test_ask_admin_needs_waiting_request(enforce, machine, db_session, password_hash):
+    await _owner_setup(db_session, password_hash)
+    assert (await _ask(machine())).json()["status"] == "expired"  # Cookie が無い
+    b, rid, number = await _pending_from_new_machine(machine, db_session)
+    await db_session.execute(text("UPDATE auth_login_requests SET status = 'rejected' WHERE id = :id"), {"id": rid})
+    await db_session.commit()
+
+    resp = await _ask(b)
+
+    assert resp.status_code == 409 and resp.json()["detail"] == "not_pending"
+
+
+async def test_owner_lists_and_approves_and_machine_gets_in(enforce, machine, db_session, password_hash, owner_keys, spies):
+    owner_token = await _owner_setup(db_session, password_hash)
+    b, rid, number = await _pending_from_new_machine(machine, db_session)
+    assert (await _ask(b)).json()["status"] == "no_owner"  # 試験ではオーナー探しを空に差し替えている
+    owner = machine()
+
+    listed = await owner.get(TENANT_URL, headers=_bearer(owner_token))
+    assert listed.status_code == 200
+    assert [i["id"] for i in listed.json()["items"]] == [rid]
+    assert listed.json()["items"][0]["admin_requested_at"]
+
+    spies.publish.reset_mock()
+    with patch("app.routers.tenant_login_requests._record_auth_audit", new=AsyncMock()) as audit:
+        resp = await owner.post(f"{TENANT_URL}/{rid}/approve", json={"note": "電話で確認"}, headers=_bearer(owner_token))
+    assert resp.status_code == 200
+    row = await _row(db_session, "SELECT status, decided_by_user_id, decided_note, decided_via FROM auth_login_requests")
+    assert (row.status, row.decided_by_user_id, row.decided_note, row.decided_via) == ("approved", OWNER_ID, "電話で確認", "admin")
+    kwargs = audit.await_args.kwargs
+    assert kwargs["tenant_id"] == TENANT and kwargs["user_id"] == OWNER_ID and kwargs["record_id"] is None
+    assert kwargs["new_data"] == {"event": "login_request_approved_owner", "request_id": rid, "target_user_id": USER_ID}
+    assert [c.args[0] for c in spies.publish.await_args_list] == [USER_ID]
+
+    done = await _poll(b)
+    assert done.json()["access_token"]
+
+
+async def test_owner_cannot_approve_unasked_request(enforce, machine, db_session, password_hash, owner_keys):
+    owner_token = await _owner_setup(db_session, password_hash)
+    b, rid, number = await _pending_from_new_machine(machine, db_session)  # 頼むを押していない
+    owner = machine()
+
+    assert (await owner.get(TENANT_URL, headers=_bearer(owner_token))).json()["items"] == []
+    resp = await owner.post(f"{TENANT_URL}/{rid}/approve", json={"note": "x"}, headers=_bearer(owner_token))
+    assert resp.status_code == 404
+    assert (await _row(db_session, "SELECT status FROM auth_login_requests")).status == "pending"
+
+
+async def test_owner_of_other_company_sees_nothing(enforce, machine, db_session, password_hash, owner_keys):
+    owner_token = await _owner_setup(db_session, password_hash)
+    b, rid, number = await _pending_from_new_machine(machine, db_session)
+    await _ask(b)
+    owner_keys.tenant = 998  # 別の会社のオーナー
+    owner = machine()
+
+    assert (await owner.get(TENANT_URL, headers=_bearer(owner_token))).json()["items"] == []
+    resp = await owner.post(f"{TENANT_URL}/{rid}/approve", json={"note": "x"}, headers=_bearer(owner_token))
+    assert resp.status_code == 404
+    assert (await _row(db_session, "SELECT status FROM auth_login_requests")).status == "pending"
+
+
+@pytest.mark.parametrize("keys", [{"admin"}, {"sales"}, set()])
+async def test_only_owner_can_use_tenant_routes(enforce, machine, db_session, password_hash, owner_keys, keys):
+    owner_token = await _owner_setup(db_session, password_hash)
+    b, rid, number = await _pending_from_new_machine(machine, db_session)
+    await _ask(b)
+    owner_keys.keys = keys
+    other = machine()
+
+    listed = await other.get(TENANT_URL, headers=_bearer(owner_token))
+    resp = await other.post(f"{TENANT_URL}/{rid}/approve", json={"note": "x"}, headers=_bearer(owner_token))
+
+    assert listed.status_code == 403 and listed.json()["detail"] == "owner_only"
+    assert resp.status_code == 403 and resp.json()["detail"] == "owner_only"
+    assert (await _row(db_session, "SELECT status FROM auth_login_requests")).status == "pending"
+
+
+async def test_owner_cannot_approve_own_request(enforce, machine, db_session, password_hash, owner_keys):
+    await _owner_setup(db_session, password_hash)
+    b, rid, number = await _pending_from_new_machine(machine, db_session)
+    await _ask(b)
+    self_token = self_tokens.create_access_token(USER_ID, EMAIL, "pwd")  # 頼んだ本人がオーナーでも
+    me = machine()
+
+    assert (await me.get(TENANT_URL, headers=_bearer(self_token))).json()["items"] == []
+    resp = await me.post(f"{TENANT_URL}/{rid}/approve", json={"note": "自分"}, headers=_bearer(self_token))
+    assert resp.status_code == 403 and resp.json()["detail"] == "cannot_approve_own_request"
+    assert (await _row(db_session, "SELECT status FROM auth_login_requests")).status == "pending"

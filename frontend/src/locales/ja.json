@@ -1,4 +1,8 @@
 {
+  "calendarView": {
+    "more": "ほか {{count}} 件",
+    "allDay": "終日"
+  },
   "productCsv": {
     "downloadTemplate": "空のサンプルCSVを保存",
     "templateIntro": "見出しだけのCSVです。2行目から商品を入力し、見出しの順序を変えずにUTF-8のCSVで保存してください。",
@@ -704,7 +708,6 @@
       "recoverySubmit": "入る",
       "recoveryWrong": "合言葉が違うか、すでに使われています。",
       "watcher": {
-        "title": "新しい機械からのログイン依頼",
         "body": "あなたのアカウントに、知らない機械からログインしようとしています。",
         "device": "機械",
         "location": "場所の目安",
@@ -3516,6 +3519,13 @@
     "deleteTitle": "消す候補（{{count}} 件）",
     "deleteNote": "消す候補は自動では消しません。",
     "emptyRows": "ありません",
+    "apply": "反映する",
+    "applyConfirmTitle": "自社用サーバーに反映しますか？",
+    "applyConfirmMessage": "{{count}} 件を反映します。消す候補は消しません。",
+    "applyDone": "反映しました（成功 {{success}} 件・できない {{blocked}} 件・失敗 {{failed}} 件）",
+    "applyFailed": "反映できませんでした",
+    "applyConflict": "反映できませんでした。もう一度「確認する」を押してから反映してください",
+    "resultTitle": "反映の結果（{{count}} 件）",
     "col": {
       "kind": "種類",
       "name": "名前",
@@ -3524,7 +3534,13 @@
       "after": "後",
       "reason": "理由",
       "parent": "親",
-      "target": "相手"
+      "target": "相手",
+      "status": "結果"
+    },
+    "status": {
+      "success": "成功",
+      "blocked": "できない",
+      "failed": "失敗"
     },
     "kind": {
       "create_role": "ロールを作る",
@@ -3552,7 +3568,10 @@
       "overwrite_manage_roles": "見せ方で「ロールの管理」は付けられません",
       "bot_role_missing": "Bot のロールが見つかりません",
       "missing_on_discord": "設計図にある物が Discord にありません",
-      "ambiguous": "同じ名前の物が 2 つ以上あります"
+      "ambiguous": "同じ名前の物が 2 つ以上あります",
+      "depends_failed": "先に作る物が失敗したので実行しませんでした",
+      "discord_error": "Discord が受け付けませんでした",
+      "method_not_allowed": "この操作は実行しません"
     },
     "deleteKind": {
       "role": "ロール",

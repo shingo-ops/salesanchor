@@ -208,7 +208,7 @@ skip_check() { # id label req note
 echo "-- 速い組（毎回）--"
 run_check doc-index "check_doc_index --strict" "doc index" . python3 -I scripts/ci/check_doc_index.py --root . --strict
 run_check rule-registry "check_rule_registry" "-" . python3 -I scripts/ci/check_rule_registry.py
-run_check tenant-lint "lint_tenant_schema (strict)" "tenant schema lint" . python3 scripts/lint_tenant_schema.py --mode strict backend/app/routers/
+run_check tenant-lint "lint_tenant_schema (strict)" "tenant schema lint" . python3 scripts/lint_tenant_schema.py --mode strict backend/app/
 run_check claude-size "check-claude-size" "line count" frontend node scripts/check-claude-size.js
 run_check adr-index "generate-adr-index --check" "ADR index" . node scripts/generate-adr-index.js --check
 run_check ui-tests "test-ui-governance" "UI governance" . node scripts/tests/test-ui-governance.js

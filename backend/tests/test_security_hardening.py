@@ -54,10 +54,13 @@ from httpx import ASGITransport, AsyncClient
 # ヘルパー
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _make_jwt(email: str = "test@example.com") -> str:
-    """署名なしのダミーJWT（ミドルウェアのメールデコード用）。"""
+def _make_jwt(email: str = "test@example.com", iss: str | None = None) -> str:
+    """署名なしのダミーJWT（ミドルウェアのメールデコード用）。iss を渡すとその発行元の札になる。"""
     header = base64.urlsafe_b64encode(b'{"alg":"RS256","typ":"JWT"}').rstrip(b"=").decode()
-    payload_bytes = json.dumps({"email": email, "sub": "uid123"}).encode()
+    claims = {"email": email, "sub": "uid123"}
+    if iss is not None:
+        claims["iss"] = iss
+    payload_bytes = json.dumps(claims).encode()
     payload = base64.urlsafe_b64encode(payload_bytes).rstrip(b"=").decode()
     return f"{header}.{payload}.fake-signature"
 
@@ -182,14 +185,13 @@ class TestAuthDependency429:
         assert "認証試行" in resp.json()["detail"]
 
     async def test_get_current_user_records_failure_on_invalid_token(self):
-        """無効なFirebaseトークンで record_auth_failure が呼ばれる。"""
+        """自社以外の無効な札で record_auth_failure が呼ばれる。"""
         from app.main import app
 
         with patch("app.auth.dependencies.check_auth_rate_limit", new_callable=AsyncMock) as mock_check, \
              patch("app.auth.dependencies.is_token_blacklisted", new_callable=AsyncMock) as mock_bl, \
              patch("app.auth.dependencies.get_cached_jwt", new_callable=AsyncMock) as mock_cache, \
-             patch("app.auth.dependencies.record_auth_failure", new_callable=AsyncMock) as mock_record, \
-             patch("firebase_admin.auth.verify_id_token", side_effect=Exception("invalid token")):
+             patch("app.auth.dependencies.record_auth_failure", new_callable=AsyncMock) as mock_record:
             mock_check.return_value = False
             mock_bl.return_value = False
             mock_cache.return_value = None
@@ -198,7 +200,7 @@ class TestAuthDependency429:
             async with AsyncClient(transport=transport, base_url="http://test") as client:
                 resp = await client.get(
                     "/api/v1/companies",
-                    headers={"Authorization": "Bearer invalid-firebase-token"},
+                    headers={"Authorization": "Bearer invalid-token"},
                 )
 
         assert resp.status_code == 401
@@ -208,7 +210,7 @@ class TestAuthDependency429:
         """
         巻き添え再現テスト（2026-06 shingo事故の根本）。
 
-        前提: 同一IPで他ユーザーが AUTH_FAIL_MAX 回 Firebase検証失敗 → IPロック成立。
+        前提: 同一IPで他ユーザーが AUTH_FAIL_MAX 回 札の検証に失敗 → IPロック成立。
         期待: そのIPで JWTキャッシュ済みの有効トークンを持つユーザーは 200 で通過する。
         修正前: check_auth_rate_limit が get_cached_jwt より先に走るため 429 になる（赤）。
         修正後: キャッシュヒット時はロック判定をスキップするため 200 になる（緑）。
@@ -245,7 +247,7 @@ class TestAuthDependency429:
             async with AsyncClient(transport=transport, base_url="http://test") as client:
                 resp = await client.get(
                     "/api/v1/companies",
-                    headers={"Authorization": f"Bearer {_make_jwt('shingo@example.com')}"},
+                    headers={"Authorization": f"Bearer {_make_jwt('shingo@example.com', iss='salesanchor')}"},
                 )
 
         # キャッシュヒット → IPロックをスキップ → 200（または 403/404 だが 429 ではない）

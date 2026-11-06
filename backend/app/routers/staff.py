@@ -41,7 +41,7 @@ from app.schemas.staff import (
 )
 from app.services.audit import record_audit_log
 from app.services.auth_mail import send_invite_email
-from app.services.invite import create_invite_token, invite_enabled, invite_url
+from app.services.invite import create_invite_token, invite_url
 from app.services.role_assignment import assign_single_role
 from app.services.staff_avatar import (
     AVATAR_MAX_BYTES,
@@ -59,6 +59,9 @@ logger = logging.getLogger(__name__)
 # staff.staff_code は VARCHAR(20) NOT NULL（services/tenant.py の staff テーブル定義と同値）
 STAFF_CODE_MAX_LENGTH = 20
 _PLACEHOLDER_PREFIX = "TMP-"
+
+# 他社か自社かを言い分けない（ADR-1063 便1・K7）。他社在籍を文言から分からないようにする
+EMAIL_UNAVAILABLE_DETAIL = "このメールアドレスは登録できません。別のメールアドレスを使ってください。"
 
 
 def _new_placeholder_code() -> str:
@@ -84,7 +87,7 @@ async def _resolve_user_for_new_staff(
         if existing["tenant_id"] != tenant_id:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="このメールアドレスは他の会社で使われています",
+                detail=EMAIL_UNAVAILABLE_DETAIL,
             )
         linked = await db.execute(
             text("SELECT 1 FROM staff WHERE user_id = :uid LIMIT 1"),
@@ -93,7 +96,7 @@ async def _resolve_user_for_new_staff(
         if linked.first() is not None:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="このメールアドレスのスタッフはすでに登録されています",
+                detail=EMAIL_UNAVAILABLE_DETAIL,
             )
         return int(existing["id"]), False
 
@@ -262,14 +265,8 @@ async def get_my_staff(
       見つからなければ 404 を返す。
 
     実装メモ:
-      当初は firebase_uid 経路を主、email を fallback として設計したが、
-      `User` モデル（app/models.py）に `firebase_uid` カラムが無いため
-      `getattr(current_user, "firebase_uid", None)` は常に None を返し、
-      firebase_uid 経路は dead code になっていた（PR #166 review F1）。
-      `User` モデル側に firebase_uid を追加する改修は本 PR スコープ外のため、
-      経路を削除して email 一意路線に揃え、決定性は `ORDER BY` で確保する。
-      将来 `users.firebase_uid` を実装する場合は別 PR でこのエンドポイントに
-      経路を再導入する（その際は `ORDER BY` も維持）。
+      staff は users.id と staff.user_id の一致だけで引く（ADR-1008）。
+      決定性は `ORDER BY` で確保する。
 
     アクセス制御:
       自分の情報を取得する API なので staff.view 権限は不要。
@@ -639,8 +636,8 @@ async def create_staff(data: StaffCreate, background_tasks: BackgroundTasks,
             action="create", table_name="staff", record_id=new_id,
             new_data=data.model_dump(exclude_none=True, mode="json"),
         )
-        # 新しく利用者ができたときだけ、AUTH_PROVIDER=self なら初回設定の鍵を同じトランザクションで作る
-        invite_raw = await create_invite_token(db, user_id) if user_created and invite_enabled() else None
+        # 新しく利用者ができたときだけ、初回設定の鍵を同じトランザクションで作る
+        invite_raw = await create_invite_token(db, user_id) if user_created else None
         await db.commit()
         await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2
         await invalidate_user_permissions(tenant_id, user_id)

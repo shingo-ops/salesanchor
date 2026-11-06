@@ -8,6 +8,8 @@ name: ADR-072 Lint (Tenant Schema)
 #            のどちらも呼ばない。
 #   Rule B — write 系 endpoint で `await db.commit()` を呼ぶが、後続に
 #            `reset_tenant_context()` の呼び出しが対称的に来ない。
+#   Rule C — backend/app/ 全体（routers の外も）で `await db.commit()` の後、db を使う前に
+#            `reset_tenant_context(db, tenant_id)` が無い。
 #
 # Phase 3 (warning mode) で 75 violations を検出 → Phase 2.5 (PR #800) で 73 件、
 # Phase 3.5 (PR #818) で残 2 件 (false positive) を解消し、0 violations 達成。
@@ -50,7 +52,7 @@ jobs:
         run: |
           BASE="${{ github.event.pull_request.base.sha || 'HEAD~1' }}"
           CHANGED=$(git diff --name-only "$BASE"...HEAD 2>/dev/null || git diff --name-only HEAD~1 HEAD)
-          if echo "$CHANGED" | grep -qE "^(backend/app/routers/|scripts/lint_tenant_schema\.py|\.github/workflows/lint-tenant-schema\.yml)"; then
+          if echo "$CHANGED" | grep -qE "^(backend/app/|scripts/lint_tenant_schema\.py|\.github/workflows/lint-tenant-schema\.yml)"; then
             echo "relevant=true" >> "$GITHUB_OUTPUT"
           else
             echo "relevant=false" >> "$GITHUB_OUTPUT"
@@ -66,6 +68,6 @@ jobs:
       - name: Run ADR-072 linter (strict)
         if: steps.changes.outputs.relevant == 'true'
         run: |
-          python3 scripts/lint_tenant_schema.py --mode strict backend/app/routers/
+          python3 scripts/lint_tenant_schema.py --mode strict backend/app/
         # mode=strict: 違反があれば exit 1 で CI fail。
         # 違反が新規 PR で発生したら本 step で stop → 修正必須。

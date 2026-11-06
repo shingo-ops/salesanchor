@@ -6,7 +6,7 @@
 
 ## setup_review_tenant.py — Meta App Review テナントパスワード管理
 
-実行するたびに新パスワードが生成され Firebase + DB 両方を更新する。
+ALLOW_REVIEW_TENANT_PASSWORD_RESET=1 を付けて実行したとき（または利用者を新しく作ったとき）に新パスワードが生成され、DB（public.users のパスワード）を更新する。
 結果はコンテナ内 `/tmp/review_tenant_setup_*.txt` にしか書かれないため、
 **実行直後に必ずホスト側へ保存**:
 

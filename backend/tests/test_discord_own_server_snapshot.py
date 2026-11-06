@@ -256,10 +256,37 @@ async def test_snapshot_calls_discord_get_twice(client, factory, discord_mock):
 
 
 def test_router_has_only_get_calls_to_discord():
+    import ast
+
     source = Path(discord_own_server.__file__).read_text(encoding="utf-8")
-    for forbidden in ('method="POST"', 'method="PATCH"', 'method="PUT"', 'method="DELETE"', '"DELETE"'):
-        assert forbidden not in source, forbidden
-    assert source.count('method="GET"') == 2
+    assert '"DELETE"' not in source
+    tree = ast.parse(source)
+    funcs = [n for n in ast.walk(tree) if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))]
+    per_function: dict[str, int] = {}
+    for func in funcs:
+        # 入れ子の関数の中の呼び出しは、その関数の数に入れる（外側には数えない）
+        nested = {
+            id(n) for sub in ast.walk(func)
+            if sub is not func and isinstance(sub, (ast.FunctionDef, ast.AsyncFunctionDef))
+            for n in ast.walk(sub)
+        }
+        count = 0
+        for call in ast.walk(func):
+            if not isinstance(call, ast.Call) or id(call) in nested:
+                continue
+            for kw in call.keywords:
+                if kw.arg != "method":
+                    continue
+                # method に渡すのは文字の "GET" だけ（変数や式を渡していたら赤）
+                assert isinstance(kw.value, ast.Constant) and isinstance(kw.value.value, str), ast.dump(kw.value)
+                assert kw.value.value == "GET", kw.value.value
+                count += 1
+        per_function[func.name] = count
+    assert per_function.get("take_own_server_snapshot") == 2
+    assert per_function.get("_read_and_plan") == 4
+    others = {name: n for name, n in per_function.items()
+              if name not in ("take_own_server_snapshot", "_read_and_plan")}
+    assert all(n == 0 for n in others.values()), others
 
 
 def test_insert_sql_casts_jsonb_only_on_postgresql():
