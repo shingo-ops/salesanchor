@@ -19,7 +19,7 @@ mode: handoff
 | 2 | PR は ready で作る（Draft にしない）と明記 | ○（§6。PR は Opus が作る） |
 | 3 | 報告の宛先（完了報告の本文に生出力を全文） | ○（§7） |
 | 4 | 1つの作業に1つの目的（6入口の照合と Discord の手で打つ口を閉じる。連携の戻り口の証明 G3 は別の作業） | ○ |
-| 5 | 起点の明示（設計の枝の先頭から新しい枝） | ○（§5 手順1） |
+| 5 | 起点の明示（origin/main から new-worktree.sh で作業場所を作り、設計の枝を取り込む） | ○（§5 手順1） |
 | 6 | PR 欄の書式を良い例と禁止形で示す | ○（§6） |
 | 7 | 合格基準を出力まで縛る（想定外の削除が無いこと） | ○（§5 手順10） |
 | 8 | 件数の停止には名前を出す手順を対で置く | ○（§5 手順10） |
@@ -86,6 +86,8 @@ mode: handoff
 - 照合を偽物に差し替えない（monkeypatch・mock 禁止）。本物の users 行を足す。
 - `test_inbox_new_assignment_badge.py`: (1) users の表の DDL は `conftest.py` の `INBOX_BADGE_SQLITE_DDL` に足す (2) この engine の `sync_engine` に `before_cursor_execute`（`retval=True`）の仕掛けを足し、`public.users` を `users` に置き換える（`conftest.py:296-302` と同じ形。connect の手当て :75-81 は使わない）(3) assigned_to 10・20 の人を会社 999 で入れる。
 - `DiscordConfigPage.test.tsx`: :47-74 を新しい画面に合わせて書き直す。:138-152・:154-162 のチケット設定の試験は残す。:164-173 は `queryByRole("link", { name: "Change" })` が null になる形に直す。権限ありの試験で `getByRole("link", { name: "Change" })` の `href` が `/channels` であることを確かめる。
+- users 行を足す INSERT は、すべて末尾に `ON CONFLICT (id) DO NOTHING` を付ける（SQLite の DB は試験をまたいで共有されるため、付けないと同じ番号の2回目で落ちる。3回目の実行で `test_analytics.py`・`test_notification_event_routing.py` が落ちた）。
+- `leads.py` の `from app.services.tenant_users import ensure_user_in_tenant` は、`from app.services.meta_graph import (...)` の塊の後に置く（ruff の I001 の並び順）。
 - `test_discord_d2.py`: :307-340 の4本を消し、「PUT は 405・`public.tenant_discord_config` が変わらない」の試験1本に置き換える。
 
 ### 3-4. 新しい試験（design 10 節）
@@ -110,17 +112,18 @@ mode: handoff
 
 ## 5. 手順
 
-クラウドで行う。取り出したリポジトリの最上位を「作業場所」と呼び、命令は毎回その場所へ cd してから流す。1手順1命令。
+クラウドで行う。取り出したリポジトリの最上位を「本店」と呼ぶ。本店では編集も commit もしない（見張りが commit を止める。3回目の実行はこれで手順9で止まり、作業がすべて消えた。2026-11-06 Opus）。手順1で作る `~/worktrees/salesanchor/release-cross-tenant-user-ref-guard` を「作業場所」と呼び、手順1の後の命令は毎回その場所へ cd してから流す。編集も作業場所の中のファイルに行う。1手順1命令。
 
-手順1 枝を作る（起点は設計の枝の先頭）
-    cd 作業場所 && git fetch origin
-    cd 作業場所 && git switch -c release/cross-tenant-user-ref-guard origin/release/cross-tenant-user-ref-guard-design
-    cd 作業場所 && git log -1 --format=%H
-    期待する出力: 設計の枝の先頭の番号。報告に書く。
+手順1 作業場所を作り、設計の枝を取り込む（起点は origin/main）
+    cd 本店 && git fetch origin
+    cd 本店 && bash scripts/new-worktree.sh release/cross-tenant-user-ref-guard
+    cd 作業場所 && git merge --no-ff --no-edit origin/release/cross-tenant-user-ref-guard-design
+    cd 作業場所 && git log -1 --format=%H && git rev-parse origin/main
+    期待する出力: new-worktree.sh が作業場所の場所を出すこと。取り込みがぶつからないこと（設計の枝は文書だけ）。2つの番号を報告に書く。ぶつかったら BLOCKED: で終える。
 
 手順2 main との関係を確かめる
     cd 作業場所 && git merge-base --is-ancestor origin/main HEAD && echo up-to-date
-    期待する出力: up-to-date。出なければ、記録して続行する（PR の前に Opus が取り込みを決める）。
+    期待する出力: up-to-date。出なければ BLOCKED: で終える。
 
 手順3 対象ファイルが設計の基準から変わっていないか確かめる
     cd 作業場所 && git diff --stat 133808dce origin/main -- backend/app/routers/leads.py backend/app/routers/shifts.py backend/app/routers/goals.py backend/app/routers/teams.py backend/app/routers/discord_guild_config.py frontend/src/pages/admin/DiscordConfigPage.tsx frontend/src/pages/admin/DiscordConfigPage.test.tsx backend/tests/conftest.py backend/tests/test_inbox_new_assignment_badge.py backend/tests/test_analytics.py backend/tests/test_notification_event_routing.py backend/tests/test_shifts_pg.py backend/tests/test_discord_d2.py
@@ -148,7 +151,8 @@ mode: handoff
     cd 作業場所/frontend && npm run generate:api-types
 
 手順8 試験とビルドを流す
-    cd 作業場所/backend && /tmp/xtu-venv/bin/python -m pytest tests/test_inbox_new_assignment_badge.py tests/test_analytics.py tests/test_notification_event_routing.py tests/test_shifts.py tests/test_audit_goals_carrier.py tests/test_discord_d2.py tests/test_discord_own_server.py tests/test_shifts_pg.py tests/test_tenant_user_ref_guard_pg.py -q
+    cd 作業場所/backend && timeout 300 /tmp/xtu-venv/bin/python -m pytest tests/test_inbox_new_assignment_badge.py tests/test_analytics.py tests/test_notification_event_routing.py tests/test_shifts.py tests/test_audit_goals_carrier.py tests/test_discord_d2.py tests/test_discord_own_server.py tests/test_shifts_pg.py tests/test_tenant_user_ref_guard_pg.py -q --no-cov -p no:cacheprovider
+    （3回目の実行では、coverage を付けると全体が10分を超えた。`--no-cov` と `timeout 300` を必ず付ける。時間切れなら、同じ形で1ファイルずつ `timeout 150` で流し、止まったファイル名を報告に書く。背景に回さない）
     期待する出力: 全部 passed。`_pg` の試験が skipped になるのは想定どおり。その数と理由を報告に書いて続行する（CI で確かめる）。
     cd 作業場所/frontend && npx vitest run src/pages/admin/DiscordConfigPage.test.tsx
     期待する出力: 全部 passed。
@@ -163,12 +167,12 @@ mode: handoff
     cd 作業場所 && git log -1 --stat
     期待する出力: commit の番号と、§2 の表のファイルだけ。
 
-手順10 差分の点検
-    cd 作業場所 && git diff origin/release/cross-tenant-user-ref-guard-design --numstat
+手順10 差分の点検（手順1の取り込みの commit と、手順9の commit の差だけを見る）
+    cd 作業場所 && git diff --numstat HEAD^1 HEAD
     期待する出力: §2 の表のファイルだけ。削除の数（2列目）が 0 でないファイルは、名前と消えた行の要旨を報告に書く。表に無いファイルがあれば、その名前を報告に書いて停止する。
 
 手順11 push（PR は作らない。PR は Opus が手元で作る）
-    cd 作業場所 && git push -u origin HEAD
+    cd 作業場所 && git push -u origin release/cross-tenant-user-ref-guard
     cd 作業場所 && git ls-remote origin release/cross-tenant-user-ref-guard
     期待する出力: 手順9 の commit と同じ番号。
 
