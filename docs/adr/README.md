@@ -3,7 +3,7 @@
 > このファイルは `scripts/generate-adr-index.js` により自動生成されます。
 > **手動編集禁止。** ADR ファイルを追加・変更後に `node scripts/generate-adr-index.js` を実行してください。
 
-最終更新: 2026-11-05 / ADR 総数: 221 件
+最終更新: 2026-11-06 / ADR 総数: 223 件
 
 ## 維持ルール（整合性を保つ・必須）
 
@@ -240,6 +240,8 @@
 | [ADR-1060](./ADR-1060-calendar-google-meet.md) | ADR-1060: 予定に Google Meet を付ける。付けられるのは Google をつないだ本人の予定だけで、URL は calendar_events.meet_url の 1 か所に置く | Accepted | — | — |
 | [ADR-1062](./ADR-1062-gemini-auto-route-failover.md) | ADR-1062: Gemini への道は断られたら自動で切り替え、30分成功が無ければ知らせる | Proposed | — | — |
 | [ADR-1063](./ADR-1063-tenant-owner-login-approval-and-isolation-guards.md) | ADR-1063: 会社のオーナーが自社の社員の新しい機械のログインを許可する／会社の分け方を機械が毎回・毎日確かめる | Proposed | — | — |
+| [ADR-1065](./ADR-1065-calendar-view-component-fullcalendar-v6.md) | ADR-1065: 予定の時間割と月の升目は FullCalendar v6 を包んだ金型 CalendarView で出す | Proposed | — | — |
+| [ADR-1066](./ADR-1066-distribution-sheet-15-columns-product-id.md) | ADR-1066: 配信シートは PO が決めた15列の並びにし、最後に商品IDを載せる | Accepted | — | — |
 
 ## ステータス凡例
 

@@ -1,4 +1,8 @@
 {
+  "calendarView": {
+    "more": "ほか {{count}} 件",
+    "allDay": "終日"
+  },
   "productCsv": {
     "downloadTemplate": "空のサンプルCSVを保存",
     "templateIntro": "見出しだけのCSVです。2行目から商品を入力し、見出しの順序を変えずにUTF-8のCSVで保存してください。",
@@ -300,6 +304,7 @@
     "conditionsMaster": "状態マスタ",
     "productCategories": "商品カテゴリ",
     "superAdminSupplierExtractionRules": "抽出ルール設定",
+    "tenantLoginRequests": "ログインの許可待ち",
     "superAdminLoginRequests": "ログインの許可待ち",
     "units": "単位マスタ",
     "noteMaster": "備考マスタ",
@@ -419,6 +424,10 @@
     "subtitle": "リード・顧客情報を一元管理できます。"
   },
   "managementCenter": {
+    "loginRequests": {
+      "subtitle": "社員が新しい機械で「会社の管理者に頼む」を押した依頼です。本人であることを確かめてから許可してください。",
+      "ownerOnly": "この画面は会社のオーナーだけが開けます。"
+    },
     "sectionTeam": "チーム・人事",
     "sectionSecurity": "権限・セキュリティ",
     "sectionBusiness": "ビジネス設定",
@@ -695,7 +704,11 @@
       "rejected": "ログインは許可されませんでした。心当たりがなければ、パスワードを変えてください。",
       "expired": "許可の期限が切れました。もう一度ログインしてください。",
       "useRecoveryCode": "予備の合言葉で入る",
-      "noTrustedDevice": "いつもの機械も予備の合言葉も無いときは、管理者に連絡して本人確認を受けてください。",
+      "askAdmin": "会社の管理者に頼む",
+      "askAdminRequested": "会社の管理者に知らせました。許可されると、この画面は自動で進みます。",
+      "askAdminAlready": "会社の管理者にはもう知らせています。許可を待ってください。",
+      "askAdminNoOwner": "知らせる先の管理者が会社にいません。運営に連絡してください。",
+      "noTrustedDevice": "会社の管理者に頼むか、運営に連絡してください。",
       "help": "許可されると、この画面は自動で進みます。",
       "cancel": "ログイン画面に戻る",
       "recoveryTitle": "予備の合言葉で入る",
@@ -2095,6 +2108,7 @@
     "status": "ステータス",
     "noStaff": "スタッフが登録されていません",
     "deleteStaff": "スタッフを削除",
+    "deleteDiscordKickNote": "Discord の自社サーバーからも外れます。",
     "uiPreferences": "UI設定",
     "darkMode": "ダークモード",
     "showChatMenu": "チャットメニューを表示",
@@ -2243,7 +2257,8 @@
       "leadAssigned": "商談の担当アサイン",
       "metaMessageReceived": "Meta の新着メッセージ",
       "tcgDistributionError": "TCG在庫配信エラー",
-      "discordOutsideTicketPost": "部屋の外の書き込み（Discord）"
+      "discordOutsideTicketPost": "部屋の外の書き込み（Discord）",
+      "customerReplyReceived": "お客さんの返信"
     }
   },
   "erp": {
@@ -3510,6 +3525,14 @@
     "check": "確認する",
     "planFailed": "確認できませんでした",
     "planNoBlueprint": "設計図がまだありません",
+    "appRolesTitle": "アプリの役割（{{count}} 件）",
+    "appRoleState": {
+      "create": "作る",
+      "link": "つなぐ",
+      "update": "変える",
+      "unchanged": "変わらない",
+      "blocked": "できない"
+    },
     "changesTitle": "変わる（{{count}} 件）",
     "blockedTitle": "できない（{{count}} 件・実行しません）",
     "deleteTitle": "消す候補（{{count}} 件）",
@@ -3531,7 +3554,8 @@
       "reason": "理由",
       "parent": "親",
       "target": "相手",
-      "status": "結果"
+      "status": "結果",
+      "appRoleState": "Discord では"
     },
     "status": {
       "success": "成功",
@@ -3540,6 +3564,7 @@
     },
     "kind": {
       "create_role": "ロールを作る",
+      "link_role": "ロールをつなぐ",
       "update_role": "ロールを直す",
       "create_category": "カテゴリを作る",
       "update_category": "カテゴリを直す",
@@ -3567,7 +3592,10 @@
       "ambiguous": "同じ名前の物が 2 つ以上あります",
       "depends_failed": "先に作る物が失敗したので実行しませんでした",
       "discord_error": "Discord が受け付けませんでした",
-      "method_not_allowed": "この操作は実行しません"
+      "method_not_allowed": "この操作は実行しません",
+      "name_in_blueprint": "設計図に同じ名前のロールがあります",
+      "app_role_missing_on_discord": "つないでいたロールが Discord で消されています",
+      "app_role_link_in_use": "つないでいるロールをほかの物も使っています"
     },
     "deleteKind": {
       "role": "ロール",
@@ -5981,6 +6009,7 @@
     "empty": "知らせはありません",
     "kind": {
       "discord_outside_ticket_post": "{{actor}} さんが #{{channel}} に書き込みました",
+      "staff_login_request": "{{name}} さんが新しい機械からのログインの許可を求めています",
       "login_request": "新しい機械（{{device}}）からログインの依頼があります"
     },
     "fallback": {

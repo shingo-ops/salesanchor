@@ -10,6 +10,9 @@ import { registerTestDevSession } from "../test-utils/devSession";
 const api = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn() }));
 vi.mock("../lib/api", () => ({ api }));
 
+vi.mock("../hooks/usePermissions", () => ({ usePermissions: vi.fn(() => ({ isTenantOwner: false })) }));
+
+import { usePermissions } from "../hooks/usePermissions";
 import NoticeBell from "./NoticeBell";
 
 let instance = createInstance();
@@ -123,5 +126,52 @@ describe("NoticeBell login requests", () => {
     renderBell();
     await waitFor(() => expect(api.get).toHaveBeenCalledWith("/notices"));
     expect(api.get).not.toHaveBeenCalledWith("/login-approvals/pending");
+  });
+});
+
+describe("NoticeBell staff login requests (company owner)", () => {
+  const STAFF = {
+    id: "staff-1",
+    full_name: "Sato",
+    email: "sato@example.com",
+    created_at: new Date().toISOString(),
+  };
+  const mockOwnerApi = () => {
+    api.get.mockImplementation((path: string) => {
+      if (path === "/notices") return Promise.resolve({ items: [], unread_count: 0 });
+      if (path === "/login-approvals/pending") return Promise.resolve({ items: [] });
+      if (path === "/tenant/login-requests") return Promise.resolve({ items: [STAFF] });
+      return Promise.reject(new Error("unexpected"));
+    });
+  };
+  afterEach(() => {
+    vi.mocked(usePermissions).mockReturnValue({ isTenantOwner: false } as never);
+  });
+
+  it("B1 adds the staff request to the count and shows the name", async () => {
+    vi.mocked(usePermissions).mockReturnValue({ isTenantOwner: true } as never);
+    mockOwnerApi();
+    renderBell();
+    await waitFor(() => expect(screen.getByText("1")).toBeTruthy());
+    fireEvent.click(screen.getByTestId("notice-bell"));
+    expect(await screen.findByText(/Sato/)).toBeTruthy();
+  });
+
+  it("B2 clicking the staff request goes to the management center page", async () => {
+    vi.mocked(usePermissions).mockReturnValue({ isTenantOwner: true } as never);
+    mockOwnerApi();
+    renderBell();
+    await waitFor(() => expect(screen.getByText("1")).toBeTruthy());
+    fireEvent.click(screen.getByTestId("notice-bell"));
+    fireEvent.click(await screen.findByRole("button", { name: /Sato/ }));
+    await waitFor(() => expect(screen.getByTestId("where").textContent).toBe("/management-center/login-requests"));
+  });
+
+  it("B3 does not call the tenant endpoint for a non owner", async () => {
+    vi.mocked(usePermissions).mockReturnValue({ isTenantOwner: false } as never);
+    mockApi(() => Promise.resolve({ items: [REQUEST] }));
+    renderBell();
+    await waitFor(() => expect(screen.getByText("3")).toBeTruthy());
+    expect(api.get).not.toHaveBeenCalledWith("/tenant/login-requests");
   });
 });

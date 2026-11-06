@@ -67,7 +67,7 @@ it("hides the button when no server is registered", async () => {
 });
 
 const PLAN_PATH = "/admin/discord/own-server/plan";
-const emptyPlan = { plan_digest: "d".repeat(64), changes: [], blocked: [], delete_candidates: [] };
+const emptyPlan = { plan_digest: "d".repeat(64), changes: [], blocked: [], delete_candidates: [], app_roles: [] };
 const mockPlan = (plan: unknown) => {
   vi.mocked(api.get).mockImplementation(async (path: string) => {
     if (path === "/admin/discord-config/own") return { guild_id: GUILD, connected_at: null };
@@ -88,6 +88,7 @@ it("shows changes, blocked rows and delete candidates after Check", async () => 
     delete_candidates: [
       { kind: "channel", discord_id: "55", name: "old-channel", parent_name: "OldCat", target: null },
     ],
+    app_roles: [],
   });
   view();
   fireEvent.click(await screen.findByText("Check"));
@@ -108,7 +109,28 @@ it("shows None for each empty group", async () => {
   view();
   fireEvent.click(await screen.findByText("Check"));
   await screen.findByText("Changes (0)");
-  expect(await screen.findAllByText("None")).toHaveLength(3);
+  expect(await screen.findAllByText("None")).toHaveLength(4);
+});
+
+it("shows app roles with their state and reason after Check", async () => {
+  mockPlan({
+    plan_digest: "f".repeat(64),
+    changes: [],
+    blocked: [],
+    delete_candidates: [],
+    app_roles: [
+      { role_id: 1, name: "Sales", state: "create", reason: null },
+      { role_id: 2, name: "Office", state: "blocked", reason: "ambiguous" },
+    ],
+  });
+  view();
+  fireEvent.click(await screen.findByText("Check"));
+  await screen.findByText("App roles (2)");
+  expect((await screen.findAllByText("Sales")).length).toBeGreaterThanOrEqual(1);
+  expect((await screen.findAllByText("Office")).length).toBeGreaterThanOrEqual(1);
+  expect((await screen.findAllByText("Create")).length).toBeGreaterThanOrEqual(1);
+  expect((await screen.findAllByText("Cannot")).length).toBeGreaterThanOrEqual(1);
+  expect((await screen.findAllByText("More than one item has this name")).length).toBeGreaterThanOrEqual(1);
 });
 
 it("shows an error message when the check fails", async () => {
@@ -146,6 +168,7 @@ const twoChangesPlan = {
   ],
   blocked: [],
   delete_candidates: [],
+  app_roles: [],
 };
 const checkAndOpenApply = async () => {
   view();

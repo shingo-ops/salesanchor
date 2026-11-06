@@ -1208,6 +1208,40 @@
         "title": "AnnounceResponse",
         "type": "object"
       },
+      "AppRoleState": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "role_id": {
+            "title": "Role Id",
+            "type": "integer"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "role_id",
+          "name",
+          "state"
+        ],
+        "title": "AppRoleState",
+        "type": "object"
+      },
       "ApplyResultRow": {
         "properties": {
           "discord_id": {
@@ -18607,7 +18641,8 @@
           "lead_assigned",
           "meta_message_received",
           "tcg_distribution_error",
-          "discord_outside_ticket_post"
+          "discord_outside_ticket_post",
+          "customer_reply_received"
         ],
         "title": "NotificationEventType",
         "type": "string"
@@ -23420,6 +23455,14 @@
       },
       "OwnServerPlanResponse": {
         "properties": {
+          "app_roles": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/AppRoleState"
+            },
+            "title": "App Roles",
+            "type": "array"
+          },
           "blocked": {
             "items": {
               "$ref": "#/components/schemas/PlanRow"

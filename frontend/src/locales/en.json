@@ -1,4 +1,8 @@
 {
+  "calendarView": {
+    "more": "{{count}} more",
+    "allDay": "All day"
+  },
   "productCsv": {
     "downloadTemplate": "Download blank sample CSV",
     "templateIntro": "This CSV contains only column headings. Enter products from row 2, keep the heading order, and save as UTF-8 CSV.",
@@ -300,6 +304,7 @@
     "conditionsMaster": "Condition Master",
     "productCategories": "Product Categories",
     "superAdminSupplierExtractionRules": "Extraction Rules",
+    "tenantLoginRequests": "Login Approvals",
     "superAdminLoginRequests": "Login Approvals",
     "units": "Units",
     "noteMaster": "Note Master",
@@ -419,6 +424,10 @@
     "subtitle": "Manage leads and customer information in one place."
   },
   "managementCenter": {
+    "loginRequests": {
+      "subtitle": "Requests from staff who chose \"Ask my company admin\" on a new device. Confirm it is really them before approving.",
+      "ownerOnly": "Only the company owner can open this page."
+    },
     "sectionTeam": "Team & HR",
     "sectionSecurity": "Permissions & Security",
     "sectionBusiness": "Business Settings",
@@ -695,7 +704,11 @@
       "rejected": "The sign-in was not approved. If you do not recognize it, change your password.",
       "expired": "The approval expired. Please sign in again.",
       "useRecoveryCode": "Sign in with a recovery code",
-      "noTrustedDevice": "If you have neither a usual device nor a recovery code, contact an administrator to verify your identity.",
+      "askAdmin": "Ask my company admin",
+      "askAdminRequested": "We let your company admin know. This screen will continue automatically once they approve.",
+      "askAdminAlready": "Your company admin has already been notified. Please wait for approval.",
+      "askAdminNoOwner": "Your company has no admin to notify. Please contact support.",
+      "noTrustedDevice": "Ask your company admin, or contact support.",
       "help": "This screen continues automatically once approved.",
       "cancel": "Back to sign in",
       "recoveryTitle": "Sign in with a recovery code",
@@ -2095,6 +2108,7 @@
     "status": "Status",
     "noStaff": "No staff registered",
     "deleteStaff": "Delete Staff",
+    "deleteDiscordKickNote": "They will also be removed from your company's Discord server.",
     "uiPreferences": "UI Preferences",
     "darkMode": "Dark mode",
     "showChatMenu": "Show Chat menu",
@@ -2243,7 +2257,8 @@
       "leadAssigned": "Deal assignment",
       "metaMessageReceived": "New Meta message",
       "tcgDistributionError": "TCG distribution error",
-      "discordOutsideTicketPost": "Post outside a ticket room (Discord)"
+      "discordOutsideTicketPost": "Post outside a ticket room (Discord)",
+      "customerReplyReceived": "Customer reply"
     }
   },
   "erp": {
@@ -3510,6 +3525,14 @@
     "check": "Check",
     "planFailed": "Could not check",
     "planNoBlueprint": "No blueprint yet",
+    "appRolesTitle": "App roles ({{count}})",
+    "appRoleState": {
+      "create": "Create",
+      "link": "Link",
+      "update": "Change",
+      "unchanged": "No change",
+      "blocked": "Cannot"
+    },
     "changesTitle": "Changes ({{count}})",
     "blockedTitle": "Not allowed ({{count}}, will not run)",
     "deleteTitle": "Delete candidates ({{count}})",
@@ -3531,7 +3554,8 @@
       "reason": "Reason",
       "parent": "Parent",
       "target": "Target",
-      "status": "Result"
+      "status": "Result",
+      "appRoleState": "On Discord"
     },
     "status": {
       "success": "Succeeded",
@@ -3540,6 +3564,7 @@
     },
     "kind": {
       "create_role": "Create role",
+      "link_role": "Link role",
       "update_role": "Update role",
       "create_category": "Create category",
       "update_category": "Update category",
@@ -3567,7 +3592,10 @@
       "ambiguous": "More than one item has this name",
       "depends_failed": "Skipped because an earlier item failed",
       "discord_error": "Discord rejected the request",
-      "method_not_allowed": "This operation is not run"
+      "method_not_allowed": "This operation is not run",
+      "name_in_blueprint": "The blueprint has a role with the same name",
+      "app_role_missing_on_discord": "The linked role was deleted on Discord",
+      "app_role_link_in_use": "The linked role is also used by another item"
     },
     "deleteKind": {
       "role": "Role",
@@ -5981,6 +6009,7 @@
     "empty": "No notifications",
     "kind": {
       "discord_outside_ticket_post": "{{actor}} posted in #{{channel}}",
+      "staff_login_request": "{{name}} is asking to sign in from a new device",
       "login_request": "Login request from a new device ({{device}})"
     },
     "fallback": {

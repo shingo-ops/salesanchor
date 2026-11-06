@@ -893,9 +893,28 @@ async def setup_test_db(test_engine):
                 is_system BOOLEAN DEFAULT FALSE,
                 description VARCHAR(500),
                 system_key TEXT,
+                discord_role_id TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE(tenant_id, name)
+            )
+        """))
+        # discord-server-management 第2段 2a-1: つないだロールの番号はテナント内で一意・消した番号の表
+        await conn.execute(text(
+            "CREATE UNIQUE INDEX IF NOT EXISTS uq_roles_discord_role_id"
+            " ON roles (discord_role_id) WHERE discord_role_id IS NOT NULL"
+        ))
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS discord_retired_roles (
+                discord_role_id TEXT PRIMARY KEY,
+                retired_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS discord_retired_members (
+                discord_user_id TEXT PRIMARY KEY,
+                kick BOOLEAN NOT NULL,
+                retired_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """))
         await conn.execute(text("""
@@ -1812,6 +1831,8 @@ async def db_session(test_engine, setup_test_db):
         await conn.execute(text("DELETE FROM teams"))
         await conn.execute(text("DELETE FROM user_roles"))
         await conn.execute(text("DELETE FROM role_permissions"))
+        await conn.execute(text("DELETE FROM discord_retired_roles"))
+        await conn.execute(text("DELETE FROM discord_retired_members"))
         await conn.execute(text("DELETE FROM roles"))
         # テナント削除テスト用クリーンアップ（FK 順: audit → tenants）
         await conn.execute(text("DELETE FROM tenant_deletion_audit"))
@@ -1914,6 +1935,22 @@ def bypass_permissions():
     """
     with patch("app.auth.dependencies.load_user_permissions", _mock_load_user_permissions):
         yield
+
+
+@pytest.fixture(autouse=True)
+def _no_own_staff_sync_task(monkeypatch):
+    """第2段 2b: 書いたあとの 1 回の点検を試験では裏で動かさない（本物の DB・Discord へ行かないように）。"""
+    from app.services import discord_own_staff_sync
+
+    monkeypatch.setattr(discord_own_staff_sync, "SCHEDULE_ENABLED", False)
+
+
+@pytest.fixture(autouse=True)
+def _no_customer_reply_notice_task(monkeypatch):
+    """第2段 2d: お客さんの返信の知らせを試験では裏で動かさない（本物の DB・Discord へ行かないように）。"""
+    from app.services import customer_reply_notifier
+
+    monkeypatch.setattr(customer_reply_notifier, "SCHEDULE_ENABLED", False)
 
 
 @pytest_asyncio.fixture

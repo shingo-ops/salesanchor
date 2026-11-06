@@ -52,6 +52,7 @@ from app.database import AsyncSessionLocal
 from app.routers.notifications import send_discord_notification
 from app.services import encryption, meta_graph
 from app.services.conv_log_writer import write_conversation_log
+from app.services.customer_reply_notifier import send_customer_reply_notice
 from app.services.inbound_translation import enqueue_inbound_translation
 from app.services.message_translator import infer_original_language
 
@@ -944,6 +945,10 @@ async def process_messenger_event(body: dict) -> None:
                                 f"送信者ID: {sender_id[:8]}***\n"
                                 f"プラットフォーム: {platform}"
                             ),
+                        )
+                        # 第2段 2d: 担当者へお客さんの返信の知らせ（今の meta_message_received は変えない）
+                        await send_customer_reply_notice(
+                            db, tenant_id=tenant_id, lead_id=lead_id, source=platform,
                         )
                 finally:
                     # ADR-131/130: コネクションプール返却前にテナント文脈をクリア。

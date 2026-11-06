@@ -96,3 +96,61 @@
 - 【未確認】テナント001の自社用テストサーバーの guild_id（PO がこれから作る／招待する）
 - 【未確認】HIGH LIFE JPN の今の登録（1520505682317672458）が、PO が画像で見せた自社サーバーと同じか、顧客用の別サーバーか
 - 【未確認】HIGH LIFE JPN の自社サーバーで、SA Bot のロールが今どの順番にあるか（Bot の鍵が要るため、試験のときに画面の取り込み結果で確かめる）
+
+---
+
+## 第2段 recon（2026-11-05・origin/main 32b39bd59 を `git show origin/main:` で読んだ）
+
+### R2-1 既存 ADR の検索
+- `git grep -l -i discord origin/main -- docs/adr` 40 件。関係するもの: `docs/adr/ADR-091-discord-bot-scope-definition.md`（Bot の業務と権限の正本。:34 に「顧客規模と連動したロール自動付与 実装済み #1416」、:60 Manage Roles、:76 Manage Webhooks 実装済み）、`docs/adr/ADR-009-discord-gateway.md`、`docs/adr/ADR-159`（返信の webhook・FEATURE-INDEX :50）、`docs/adr/ADR-1008-person-ssot-users-id.md`（人の正本は users.id）
+- `docs/adr/FEATURE-INDEX.md` に「Discord ロール同期」「自社サーバー」の行は無い（grep で 0 件）
+
+### R2-2 アプリの役割（ロール）の表
+- `migrations/003_add_phase1_tenant_tables.sql:43-54` `{schema}.roles`（id / name / color '#xxxxxx' / priority / is_system / description、UNIQUE(tenant_id, name)）
+- `migrations/003_add_phase1_tenant_tables.sql:63-70` `{schema}.user_roles`（user_id = users.id、role_id、UNIQUE(user_id, role_id)）
+- `migrations/20261005_150000_add_roles_system_key.sql:37` system_key 列。`backend/app/routers/roles.py:53` `_visible_role_sql` が隠す役割を除く
+- Discord のロールの番号を持つ列は無い（`git grep -n -i discord_role_id origin/main -- backend migrations` 0 件）
+- テナントが役割を作る・名前と色を変える・消す: `backend/app/routers/roles.py:46`（変えられる列 name/color/priority/description）、`:203` POST、`:259` PATCH、`:332` DELETE。user_roles は ON DELETE CASCADE（`migrations/003_add_phase1_tenant_tables.sql:66`）。役割の削除は `backend/app/routers/roles.py:357` で行ごと消す（消したあとは、その役割の番号をアプリのどこからも引けない）
+- user_roles を書く所: `backend/app/routers/roles.py:520-580`（PUT）、`backend/app/services/role_assignment.py:74-86`（:74 で見える役割を消し、:81 で入れ、:86 で記録）（staff POST `backend/app/routers/staff.py:628`・PATCH `:700-702` から呼ぶ。見える役割を1つに置き換える）、`backend/app/routers/auth.py:156`
+- スタッフ: `{schema}.staff` に user_id・discord_user_id（UNIQUE(tenant_id, discord_user_id)）・status（active / inactive / pending、`migrations/019`:47-50）。DELETE は行ごと消す（`backend/app/routers/staff.py:741` の入口、:755 で行を消す。消したあとは、その人の discord_user_id をアプリのどこからも引けない）
+
+### R2-3 メンバーへのロールの付け外しの先例（本番で動いている）
+- `backend/app/services/discord_role_sync.py:222-227` `PUT /guilds/{g}/members/{u}/roles/{r}`、`:230-236` `DELETE` 同じ道。どちらも `backend/app/services/discord_rest.py` の `discord_api_request` 経由（429 の待ち・5xx の再試行は discord_rest が持つ、同ファイル :148-152 の注記）
+- ただしこの先例はロールを**名前で**探す（`:93-95`）。名前を変えるとつながりが切れる型
+- 呼び出し: `backend/app/routers/leads.py:728`（`asyncio.create_task` で応答を待たせない）
+
+### R2-4 設計図の反映（第1段）
+- `backend/app/services/discord_blueprint_apply.py:17` `_ALLOWED_METHODS = ("POST", "PATCH", "PUT")`。反映は DELETE を送れない
+- `backend/app/services/discord_blueprint.py` ロールは discord_id が無ければ名前で探す、2件以上は ambiguous で止める。上書きは相手ごとに PUT、設計図に無い上書き・ロール・チャンネルは消す候補として出すだけ
+- 設計図 `backend/app/discord_blueprints/tenant_1.json` は今 @everyone・カテゴリ2・チャンネル1 だけ
+- 自社サーバーは 1 社 1 つ: `migrations/20261105_100000_tenant_discord_config_purpose.sql:36` UNIQUE (tenant_id, purpose)
+
+### R2-5 知らせ
+- 表: `migrations/009_add_phase4_tenant_tables.sql:8-18` `{schema}.notification_channels`（webhook_url VARCHAR(500) 平文、event_types TEXT の JSON 配列、is_active）。Discord のチャンネルの番号の列は無い
+- 種類の正本: `backend/app/schemas/notification.py:8-21`（:18-21 の 4 種。LIKE '%値%' で照合するため部分文字列の重なり禁止 :15）
+- 担当決定: `backend/app/services/lead_assign_notifier.py:20`・`:32-34`（staff.user_id = leads の担当の users.id から discord_user_id を引いてメンション）
+- Meta の受信: `backend/app/routers/webhook.py:938-947` が `meta_message_received` を送る。メンションなし
+- Discord のお客さんの部屋: `backend/app/discord_gateway/ticket_channel_writer.py:246-257`（:246 で保存、:248 で commit、:250-257 で重なりなら戻る。新しい行のときだけ :259 から先へ進む）。部屋の外は `:186-196` で outside_ticket_notice
+- Discord の DM: `backend/app/discord_gateway/dm_writer.py:219-252`（:219 で保存結果、:231 の `msg_row is not None` のときだけ会話の記録を書き、:252 で commit）
+- 配信の失敗: テナント 4 に固定（`backend/app/services/tcg_distribution_svc.py:1159`、`backend/app/tasks/viewer_inventory_cache.py:63`）。管理側の送り先 `ADMIN_NOTIFICATION_DISCORD_WEBHOOK`（`backend/app/services/discord_notifier.py:40-42`）
+
+### R2-6 Discord 公式仕様（Context7 は月の上限で使えず、docs.discord.com を直接読んだ・2026-11-05）
+- Add Guild Member Role `PUT /guilds/{guild.id}/members/{user.id}/roles/{role.id}`、Remove `DELETE` 同じ道。どちらも MANAGE_ROLES
+- Modify Guild Role `PATCH /guilds/{g}/roles/{r}`（名前・色）
+- 【未確認】List Guild Members（全員の一覧）が GUILD_MEMBERS 特権インテントを要すること。`backend/app/discord_gateway/client.py:74` で members=True を指定しているが、開発者画面で有効かは試験サーバーで確かめる
+
+### R2-6b 設計図と Bot の見え方（第2段の審査で追加・2026-11-05）
+- 設計図は会社ごとのファイル（`backend/app/services/discord_blueprint.py:180` `BLUEPRINT_DIR`、:183 `blueprint_path(tenant_id)`）。新しく作った物の番号は、反映の記録から Opus が次の PR で設計図に書き足す（design.md 第1段の 4-8）
+- @everyone の VIEW_CHANNEL を拒む部屋に `"@bot"` の許可が無いと検査で止まる（`backend/app/services/discord_blueprint.py:167-168` の bot_sees）
+- 反映は Discord への送信の行だけを扱い、DB には書かない（`backend/app/services/discord_blueprint_apply.py:72` `apply_plan`、:79 で送り方を絞る）
+
+### R2-6c 辞めたときに使う実物（PO 決定 2026-11-05 のあとで追加）
+- スタッフを消す画面には今も確認の窓がある（`frontend/src/pages/staff/StaffPage.tsx:377-385` の `ConfirmModal`、message に `common.irreversible`）。部品は `frontend/src/components/ConfirmModal.tsx`
+- スタッフの番号はテナント内で 1 つだけ（`migrations/019_create_staff_tables.sql:55` の UNIQUE (tenant_id, discord_user_id)）
+- スタッフの書く所: POST `backend/app/routers/staff.py:582`、PATCH :665、DELETE :741（DELETE 文 :755）
+- Bot には Kick Members が付与済み（`backend/app/routers/discord_oauth.py:63`）。顧客を外す今の機能は `backend/app/routers/discord_remove.py:141`（顧客用サーバーあて・監査の記録 :174-179）
+- Discord 公式（github.com/discord/discord-api-docs `developers/resources/guild.mdx`、2026-11-05 に Opus が直接読んだ。Context7 は月の上限で使えなかった）: Remove Guild Member＝`DELETE /guilds/{guild.id}/members/{user.id}`、KICK_MEMBERS が要る。List Guild Members は GUILD_MEMBERS 特権インテントが要る。Get Guild Member にその注記は無い
+
+### R2-7 未確認
+- 【未確認】Create Webhook の権限と、Kick が Bot のロールの順番に縛られるかは（List Guild Members は案B で使わなくなった）、第2段の審査（クラウド）では docs.discord.com に届かず照合できなかった。便2b・便2c のカードで、実装役の最初の作業として試験サーバーへの実際の呼び出しで確かめる（通らなければその便を止める）
+- 【未確認】テナント001 の自社用テストサーバーで、Bot のロールの順番が新しく作るロールより上にあるか（新しいロールは下に作られるため通常は上。試験で確かめる）

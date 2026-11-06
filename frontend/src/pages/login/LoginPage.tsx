@@ -1,10 +1,10 @@
-import { useState, FormEvent, useEffect, useRef } from "react";
+import { useState, FormEvent, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../../contexts/AuthContext";
 import { authErrorMessage } from "../../lib/auth/authErrorMessage";
-import { SelfAuthError, pollLoginRequest, recoverLoginRequest } from "../../lib/auth/selfAuth";
-import type { LoginApprovalRequired } from "../../lib/auth/selfAuth";
+import { SelfAuthError, askAdminLoginRequest, pollLoginRequest, recoverLoginRequest } from "../../lib/auth/selfAuth";
+import type { AskAdminStatus, LoginApprovalRequired, LoginRequestPollStatus } from "../../lib/auth/selfAuth";
 import {
   autoRegisterPasskey,
   conditionalCreateSupported,
@@ -57,6 +57,9 @@ export default function LoginPage() {
   const [recoveryCode, setRecoveryCode] = useState("");
   const [recoveryBusy, setRecoveryBusy] = useState(false);
   const [recoveryError, setRecoveryError] = useState("");
+  // 「会社の管理者に頼む」（ADR-1063）。押した結果の文を出す
+  const [askResult, setAskResult] = useState<Exclude<AskAdminStatus, "expired"> | null>(null);
+  const [askBusy, setAskBusy] = useState(false);
   const pollDelayRef = useRef(POLL_INTERVAL_MS);
   const { signIn, signInWithPasskey, sendPasswordReset, user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -72,6 +75,35 @@ export default function LoginPage() {
     }
   }, [authLoading, user, navigate, from, enrolling, promptOpen]);
 
+  // 待ちを終えてログイン画面に戻す（期限切れ・断られた）。poll と「管理者に頼む」の両方から使う
+  const endApproval = useCallback((message: string) => {
+    setApproval(null);
+    setPollNotice("");
+    setAskResult(null);
+    setError(message);
+  }, []);
+
+  // poll の結果に従う。待ちを終えたら true
+  const applyPollStatus = useCallback(
+    (status: LoginRequestPollStatus): boolean => {
+      if (status === "rejected") {
+        endApproval(t("login.deviceApproval.rejected"));
+        return true;
+      }
+      if (status === "expired") {
+        endApproval(t("login.deviceApproval.expired"));
+        return true;
+      }
+      // completed: トークンを受けた。user が立つので上の自動遷移が進む
+      if (status === "completed") {
+        clearRecoveryPromptMarksForCurrentUser();
+        return true;
+      }
+      return false;
+    },
+    [endApproval, t],
+  );
+
   // 待ちの間: 残り時間を1秒ごとに更新し、15秒ごとに許可を確かめる（429 のときは30秒ごと）
   useEffect(() => {
     if (!approval) return;
@@ -84,31 +116,20 @@ export default function LoginPage() {
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
     pollDelayRef.current = POLL_INTERVAL_MS;
-    const stop = (message: string) => {
-      setApproval(null);
-      setPollNotice("");
-      setError(message);
-    };
     const run = async () => {
       try {
         const status = await pollLoginRequest();
         if (cancelled) return;
         pollDelayRef.current = POLL_INTERVAL_MS;
         setPollNotice("");
-        if (status === "rejected") return stop(t("login.deviceApproval.rejected"));
-        if (status === "expired") return stop(t("login.deviceApproval.expired"));
-        // completed: トークンを受けた。user が立つので上の自動遷移が進む
-        if (status === "completed") {
-          clearRecoveryPromptMarksForCurrentUser();
-          return;
-        }
+        if (applyPollStatus(status)) return;
       } catch (err) {
         if (cancelled) return;
         if (err instanceof SelfAuthError && err.status === 429) {
           pollDelayRef.current = POLL_BACKOFF_MS;
           setPollNotice(t("login.deviceApproval.rateLimited"));
         } else if (err instanceof SelfAuthError && (err.status === 401 || err.status === 404)) {
-          return stop(t("login.deviceApproval.expired"));
+          return void endApproval(t("login.deviceApproval.expired"));
         }
         // 通信の失敗などは次の回でやり直す
       }
@@ -119,7 +140,7 @@ export default function LoginPage() {
       cancelled = true;
       if (timer) clearTimeout(timer);
     };
-  }, [approval, t]);
+  }, [approval, applyPollStatus, endApproval, t]);
 
   // パスワードでログインした直後: 裏で作る → できなければ案内。どこで失敗しても必ず元の画面へ進む
   const afterPasswordSignIn = async () => {
@@ -179,6 +200,7 @@ export default function LoginPage() {
       const result = await signIn(email, password);
       if (result.kind === "approval_required") {
         setApproval(result);
+        setAskResult(null);
         setDeadline(Date.now() + result.expiresIn * 1000);
         setNow(Date.now());
         setEnrolling(false);
@@ -236,6 +258,34 @@ export default function LoginPage() {
     setApproval(null);
     setPollNotice("");
     setError("");
+    setAskResult(null);
+  };
+
+  const handleAskAdmin = async () => {
+    if (askBusy) return;
+    setError("");
+    setAskBusy(true);
+    try {
+      const status = await askAdminLoginRequest();
+      if (status === "expired") {
+        endApproval(t("login.deviceApproval.expired"));
+        return;
+      }
+      setAskResult(status);
+    } catch (err) {
+      if (err instanceof SelfAuthError && err.status === 409) {
+        // 依頼がもう終わっている: 状態の判断は poll の1か所に任せる
+        try {
+          applyPollStatus(await pollLoginRequest());
+        } catch {
+          endApproval(t("login.deviceApproval.expired"));
+        }
+      } else {
+        setError(authErrorMessage(err, t, "login"));
+      }
+    } finally {
+      setAskBusy(false);
+    }
   };
 
   const handleRecovery = async (e?: FormEvent) => {
@@ -295,6 +345,27 @@ export default function LoginPage() {
               <Button variant="outline" size="auth" shape="pill" fullWidth type="button" onClick={() => setRecoveryOpen(true)}>
                 {t("login.deviceApproval.useRecoveryCode")}
               </Button>
+            )}
+            <Button
+              variant="outline"
+              size="auth"
+              shape="pill"
+              fullWidth
+              type="button"
+              loading={askBusy}
+              disabled={askBusy || askResult !== null}
+              onClick={() => void handleAskAdmin()}
+            >
+              {t("login.deviceApproval.askAdmin")}
+            </Button>
+            {askResult === "requested" && (
+              <Callout variant="info" title={t("login.deviceApproval.askAdminRequested")} />
+            )}
+            {askResult === "already_requested" && (
+              <Callout variant="info" title={t("login.deviceApproval.askAdminAlready")} />
+            )}
+            {askResult === "no_owner" && (
+              <Callout variant="warning" title={t("login.deviceApproval.askAdminNoOwner")} />
             )}
             {!approval.hasTrustedDevice && !approval.hasRecoveryCodes && (
               <p>{t("login.deviceApproval.noTrustedDevice")}</p>

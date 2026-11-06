@@ -166,6 +166,14 @@ export async function recoverLoginRequest(code: string): Promise<void> {
   adoptAccessToken(res.access_token, res.expires_in);
 }
 
+export type AskAdminStatus = "requested" | "already_requested" | "no_owner" | "expired";
+
+/** 待つ機械で「会社の管理者に頼む」（ADR-1063）。依頼が終わっていれば 409 not_pending（SelfAuthError）。 */
+export async function askAdminLoginRequest(): Promise<AskAdminStatus> {
+  const res = await postAuth<{ status: AskAdminStatus }>("/login-requests/ask-admin");
+  return res.status;
+}
+
 async function refreshOnce(): Promise<string> {
   const run = async (): Promise<string> => {
     const res = await postAuth<TokenResponse>("/refresh");

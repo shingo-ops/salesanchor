@@ -28,6 +28,30 @@
 
 set -u
 
+# --- 記録（R4b・R4b-2）: どの道で終わっても 1 行足す。書けなくても入口の結果は変えない ---
+# 引数の読み取りより前に置く（引数の誤り・--help でも 1 行残す）。7 列目 流し方・8 列目 終了コード 2 の理由
+CBS_MODE="-"
+CBS_REASON="-"
+HEAD_SHA=""
+_cbs_now() { perl -MTime::HiRes=time -e 'printf "%.2f", time'; }
+CBS_T0=$(_cbs_now)
+_cbs_log() {
+  local rc=$? t1 secs common head branch caller reason
+  t1=$(_cbs_now)
+  secs=$(perl -e 'printf "%.1f", $ARGV[1] - $ARGV[0]' "$CBS_T0" "$t1" 2>/dev/null)
+  common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) || return $rc
+  head="$HEAD_SHA"
+  test -n "$head" || head=$(git rev-parse HEAD 2>/dev/null)
+  branch=$(git branch --show-current 2>/dev/null)
+  caller="${CHECK_BEFORE_SUBMIT_CALLER:-manual}"
+  reason="-"
+  test "$rc" = "2" && reason="$CBS_REASON"
+  printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$branch" "$head" "$rc" "$secs" "$caller" "$CBS_MODE" "$reason" \
+    >> "${common}/check-before-submit.log" 2>/dev/null
+  return $rc
+}
+trap _cbs_log EXIT
+
 FULL=0
 ONLY=""
 LIST_FIX=0
@@ -37,33 +61,17 @@ while test $# -gt 0; do
     --list-fixtures) LIST_FIX=1 ;;
     --only)
       if test $# -lt 2 || test -z "$2" || test "${2#--}" != "$2"; then
-        echo "--only には検査の id（カンマ区切り）を渡してください。終了コード 2"; exit 2
+        CBS_REASON=bad-arg; echo "--only には検査の id（カンマ区切り）を渡してください。終了コード 2"; exit 2
       fi
       shift; ONLY="$1" ;;
-    -h|--help) sed -n 2,16p "$0"; exit 0 ;;
-    *) echo "不明な引数: $1" >&2; exit 2 ;;
+    -h|--help) CBS_MODE=help; sed -n 2,16p "$0"; exit 0 ;;
+    *) CBS_REASON=bad-arg; echo "不明な引数: $1" >&2; exit 2 ;;
   esac
   shift
 done
 
-cd "$(git rev-parse --show-toplevel)" || exit 2
+cd "$(git rev-parse --show-toplevel)" || { CBS_REASON=cd-fail; exit 2; }
 
-# --- 記録（R4b）: どの道で終わっても 1 行足す。書けなくても入口の結果は変えない ---
-_cbs_now() { perl -MTime::HiRes=time -e 'printf "%.2f", time'; }
-CBS_T0=$(_cbs_now)
-_cbs_log() {
-  local rc=$? t1 secs common head branch caller
-  t1=$(_cbs_now)
-  secs=$(perl -e 'printf "%.1f", $ARGV[1] - $ARGV[0]' "$CBS_T0" "$t1" 2>/dev/null)
-  common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) || return $rc
-  head=$(git rev-parse HEAD 2>/dev/null)
-  branch=$(git branch --show-current 2>/dev/null)
-  caller="${CHECK_BEFORE_SUBMIT_CALLER:-manual}"
-  printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$branch" "$head" "$rc" "$secs" "$caller" \
-    >> "${common}/check-before-submit.log" 2>/dev/null
-  return $rc
-}
-trap _cbs_log EXIT
 REQ_FILE="docs/specs/rule-enforcement/required-checks.txt"
 
 # --only の id が知らないものなら止める（黙って 0 件にしない）。fixture-<見本名> は選ばれた見本の id
@@ -74,12 +82,24 @@ if test -n "$ONLY"; then
     case "$oid" in fixture-?*) continue ;; esac
     echo "--only に知らない id があります: ${oid}（終了コード 2）"
     echo "使える id: ${KNOWN_IDS} と fixture-<見本名>"
+    CBS_REASON=unknown-id
     exit 2
   done
 fi
 
+# 流し方（記録の 7 列目）。--only と --list-fixtures を一緒に渡すと list の道で終わるので list
+if test "$LIST_FIX" = "1"; then
+  CBS_MODE=list
+elif test -n "$ONLY"; then
+  CBS_MODE=only
+else
+  CBS_MODE=full
+fi
+
 # --- commit していない変更があれば止める（見本の runner は commit 済みの HEAD から写しを作るため） ---
-if test -n "$(git status --porcelain)"; then
+CBS_PORC=$(git status --porcelain)
+if test -n "$CBS_PORC"; then
+  if printf '%s\n' "$CBS_PORC" | grep -qv '^??'; then CBS_REASON=dirty-tracked; else CBS_REASON=dirty-untracked; fi
   echo "commit していない変更があります。commit してから流してください（終了コード 2）。"
   git status --short | head -20
   exit 2
@@ -88,15 +108,17 @@ fi
 # 必須チェックの一覧が読めない・0 件なら、何を流していないか示せないので止める
 if ! test -r "$REQ_FILE"; then
   echo "必須チェックの一覧が読めません: ${REQ_FILE}（終了コード 2）"
+  CBS_REASON=req-unreadable
   exit 2
 fi
 if test "$(grep -cvE '^[[:space:]]*(#|$)' "$REQ_FILE")" = "0"; then
   echo "必須チェックの一覧が 0 件です: ${REQ_FILE}（終了コード 2）"
+  CBS_REASON=req-empty
   exit 2
 fi
 
-MAIN_SHA=$(git rev-parse --verify -q origin/main) || { echo "origin/main が見つかりません（fetch は自動では行いません）。終了コード 2"; exit 2; }
-BASE_SHA=$(git merge-base origin/main HEAD) || { echo "origin/main との分岐点が見つかりません。終了コード 2"; exit 2; }
+MAIN_SHA=$(git rev-parse --verify -q origin/main) || { CBS_REASON=no-origin-main; echo "origin/main が見つかりません（fetch は自動では行いません）。終了コード 2"; exit 2; }
+BASE_SHA=$(git merge-base origin/main HEAD) || { CBS_REASON=no-merge-base; echo "origin/main との分岐点が見つかりません。終了コード 2"; exit 2; }
 HEAD_SHA=$(git rev-parse HEAD)
 CHANGED=$(git diff --name-only "${BASE_SHA}...HEAD")
 
@@ -135,6 +157,7 @@ fi
 # 見本のフォルダの名前が select だと、選別の id（fixture-select）と重なるので止める
 if test -d "scripts/tests/rule-fixtures/select"; then
   echo "見本のフォルダの名前が select です（scripts/tests/rule-fixtures/select）。選別の id（fixture-select）と重なるため名前を変えてください（終了コード 2）"
+  CBS_REASON=select-dir
   exit 2
 fi
 
@@ -387,6 +410,7 @@ if test $FAILS -gt 0; then
 fi
 if test $RAN -eq 0; then
   echo "結果: 流した検査が 0 件でした。何も確かめていないので通しません（終了コード 2）"
+  CBS_REASON=zero-checks
   exit 2
 fi
 echo "結果: ○ 流した検査は全部通りました（終了コード 0）"
