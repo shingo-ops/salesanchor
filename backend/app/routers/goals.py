@@ -33,6 +33,7 @@ from app.schemas.goal import (
     GoalWithActual,
 )
 from app.services.audit import record_audit_log
+from app.services.tenant_users import ensure_user_in_tenant
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -120,6 +121,7 @@ async def create_goal(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="user_id か team_id のどちらか一方のみ指定してください",
         )
+    await ensure_user_in_tenant(db, body.user_id, tenant_id)
 
     # upsert 判別: 既存行があれば action="update"、なければ "create"
     owner_where = "user_id = :user_id AND team_id IS NULL" if body.user_id is not None \

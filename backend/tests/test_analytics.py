@@ -681,6 +681,11 @@ class TestConversionByAttribute:
     async def test_conversion_by_attribute_team_and_mine(self, client, db_session):
         """team / mine の差、n、収縮率、overall_rate が返る"""
         today = date.today()
+        # 担当者の会社照合（ensure_user_in_tenant）が読む本物の users 行（会社 999）
+        await db_session.execute(
+            text("INSERT INTO users (id, tenant_id) VALUES (321, 999) ON CONFLICT (id) DO NOTHING")
+        )
+        await db_session.commit()
 
         for payload in [
             {"customer_name": "AttrLead1", "channel_type": "instagram", "country": "JP", "sales_form": "physical_store", "temperature": "Hot", "response_speed": "24h以内", "assigned_to": 999, "status": "existing_customer"},
@@ -754,6 +759,11 @@ class TestPriorityProspects:
     async def test_priority_prospects_rank_and_median_fallback(self, client, db_session):
         """team の smoothed_rate 平均、中央値代替、降順、欠軸除外を検証"""
         today = date.today()
+        # 担当者の会社照合（ensure_user_in_tenant）が読む本物の users 行（会社 999）
+        await db_session.execute(
+            text("INSERT INTO users (id, tenant_id) VALUES (321, 999) ON CONFLICT (id) DO NOTHING")
+        )
+        await db_session.commit()
 
         for payload in [
             {"customer_name": "PriorityLead1", "channel_type": "instagram", "country": "JP", "sales_form": "physical_store", "temperature": "Hot", "response_speed": "24h以内", "assigned_to": 999, "status": "existing_customer", "monthly_forecast": 100},

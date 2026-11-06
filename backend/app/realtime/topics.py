@@ -97,7 +97,6 @@ NO_SIGNAL_ROUTES: dict[tuple[str, str], str] = {
     ("DELETE", "/api/v1/admin/channel-masters/{master_id}"): _PENDING,
     ("DELETE", "/api/v1/admin/discord-config"): _PENDING,
     ("DELETE", "/api/v1/admin/discord-config/own"): _PENDING,
-    ("PUT", "/api/v1/admin/discord-config"): _PENDING,
     ("PUT", "/api/v1/admin/discord-ticket-config"): _PENDING,
     ("POST", "/api/v1/admin/discord-ticket-config/deploy-button"): _PENDING,
     ("POST", "/api/v1/admin/discord/auto-setup"): _PENDING,
