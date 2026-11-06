@@ -18,6 +18,23 @@ vi.mock("../../contexts/AuthContext", () => ({
   useAuth: () => ({ user: { uid: "user-a" } }),
 }));
 
+// FullCalendar は jsdom で描かない。金型を差し替える（SchedulePageImpl.test.tsx と同じ）
+const calendarProps = vi.hoisted(() => ({ current: null as null | Record<string, any> }));
+vi.mock("../../components/CalendarView", () => ({
+  CalendarView: (props: Record<string, any>) => {
+    calendarProps.current = props;
+    return (
+      <div data-testid="calendar-view">
+        {props.events.map((ev: { id: string; title: string }) => (
+          <button key={ev.id} type="button" onClick={(e) => props.onEventClick?.(ev.id, e.currentTarget.getBoundingClientRect())}>
+            {ev.title}
+          </button>
+        ))}
+      </div>
+    );
+  },
+}));
+
 // mode: ok = 答える・hang = 3 本は返事を返さない・fail = 3 本は失敗する（権限など 3 本以外はいつも答える）
 const answers = vi.hoisted(() => ({ mode: "ok" as "ok" | "hang" | "fail" }));
 

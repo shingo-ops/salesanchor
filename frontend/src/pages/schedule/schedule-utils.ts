@@ -63,14 +63,6 @@ export interface ScheduleItem {
   googleEventId?: string | null;
 }
 
-export interface DayLayoutItem {
-  item: ScheduleItem;
-  top: number;
-  left: number;
-  width: number;
-  height: number;
-}
-
 function parseLocalDate(date: string): Date {
   return new Date(date.includes("T") ? date : `${date}T00:00:00`);
 }
@@ -245,38 +237,30 @@ export function normalizeShift(shift: ApiShift, t: (key: string) => string): Sch
   };
 }
 
-type LayoutCandidate = {
-  item: ScheduleItem;
-  startOffset: number;
-  endOffset: number;
-};
+/** "event-12" → 12。シフト・仮の箱など予定でない id は null */
+export function eventNumericId(id: string): number | null {
+  const m = /^event-(\d+)$/.exec(id);
+  return m ? Number(m[1]) : null;
+}
 
-export function layoutDay(items: ScheduleItem[], rowHeight: number): DayLayoutItem[] {
-  const candidates: LayoutCandidate[] = items
-    .slice()
-    .sort((left, right) => left.start.getTime() - right.start.getTime())
-    .map((item) => ({
-      item,
-      startOffset: item.start.getHours() * rowHeight + (item.start.getMinutes() / 60) * rowHeight,
-      endOffset: item.end.getHours() * rowHeight + (item.end.getMinutes() / 60) * rowHeight,
-    }));
-
-  const lanes: LayoutCandidate[][] = [];
-  for (const candidate of candidates) {
-    let laneIndex = lanes.findIndex((existingLane) => existingLane.every((other) => candidate.endOffset <= other.startOffset || candidate.startOffset >= other.endOffset));
-    if (laneIndex < 0) {
-      laneIndex = lanes.length;
-      lanes.push([]);
-    }
-    lanes[laneIndex].push(candidate);
+/**
+ * 動かした後の終わり（送る値）。
+ * - 終日: FullCalendar の終わりは「次の日 0:00」なので 1 日戻し、その日の 23:59（design §3.3 の 3）
+ * - 終わりが null: 元の長さを保つ（終日は同じ 1 日）
+ * - 終日 → 時刻つきへ動かして終わりが null: 1 時間（元の 23 時間 59 分を引き継がない）
+ */
+export function toCalendarEnd(
+  start: Date,
+  end: Date | null,
+  allDay: boolean,
+  item: Pick<ScheduleItem, "start" | "end" | "allDay">,
+): Date {
+  if (allDay) {
+    const last = end ? addDays(end, -1) : start;
+    const lastDay = last.getTime() < start.getTime() ? start : last;
+    return combineDateTime(formatDateInput(lastDay), "23:59");
   }
-
-  const laneCount = Math.max(1, lanes.length);
-  return lanes.flatMap((lane, laneIndex) => lane.map((candidate) => ({
-    item: candidate.item,
-    top: candidate.startOffset,
-    left: (laneIndex / laneCount) * 100,
-    width: 100 / laneCount,
-    height: Math.max(candidate.endOffset - candidate.startOffset, rowHeight * 0.5),
-  })));
+  if (end) return end;
+  if (item.allDay) return new Date(start.getTime() + 60 * 60 * 1000);
+  return new Date(start.getTime() + (item.end.getTime() - item.start.getTime()));
 }

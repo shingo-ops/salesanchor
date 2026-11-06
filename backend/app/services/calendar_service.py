@@ -646,8 +646,27 @@ def _to_google_event_body(payload: dict) -> dict:
     end_dt = payload.get("end_datetime", "")
 
     if payload.get("is_all_day"):
-        body["start"] = {"date": str(start_dt)[:10]}
-        body["end"] = {"date": str(end_dt)[:10]}
+
+        def _jst_date(value: object) -> tuple[date, bool]:
+            # 日付だけの値はそのまま（2 つ目は「日付だけか」）。時刻つきは日本時間の日付にする
+            # （時差なしは日本時間とみなす）
+            s = str(value)
+            if "T" not in s:
+                return date.fromisoformat(s[:10]), True
+            dt = _parse_dt(s)
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=_JST)
+            return dt.astimezone(_JST).date(), False
+
+        start_day, start_plain = _jst_date(start_dt)
+        end_day, end_plain = _jst_date(end_dt)
+        if not end_plain:
+            # Google の終わりの日は「次の日」
+            end_day = end_day + timedelta(days=1)
+        if not (start_plain and end_plain) and end_day <= start_day:
+            end_day = start_day + timedelta(days=1)
+        body["start"] = {"date": start_day.isoformat()}
+        body["end"] = {"date": end_day.isoformat()}
     else:
         body["start"] = {"dateTime": start_dt, "timeZone": "Asia/Tokyo"}
         body["end"] = {"dateTime": end_dt, "timeZone": "Asia/Tokyo"}
