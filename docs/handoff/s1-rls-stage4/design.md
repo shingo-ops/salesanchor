@@ -90,7 +90,7 @@ COMMIT;
 - 順番の理由: 行と入口が少ない順。④-1 は PO の指示「在庫の動きから」。
 - 各便は migration を含むので危険パス。GO は ADR-136 の手順、委任 GO は ADR-1003 の範囲で Opus が出す（段階②b・③と同じ）。
 - 移行の置き場所と登録（各便のカードに書く）:
-  - ファイル: `migrations/<YYYYMMDD_HHMMSS>_add_<表>_rls.sql`（1 便 1 ファイル。④-2〜④-5 の 2 表の便も 1 ファイルに 2 表）。
+  - ファイル: migrations/<YYYYMMDD_HHMMSS>_add_<表>_rls.sql の形（1 便 1 ファイル。④-2〜④-5 の 2 表の便も 1 ファイルに 2 表）。
   - 登録: scripts/run_all_migrations.sh の末尾に `run_sql migrations/<ファイル>` を 1 行足す（:15「新マイグレーションは末尾の『ここから追加』セクションに追加すること」）。
   - 前提の表（CI の 2 つのジョブ。origin/main 6caae154f で確かめた。表の定義は書き写さない）:
     - inventory_movements・tenant_llm_budgets: migrations/062_create_inventory_movements_and_budget.sql（:88・:151 で作る）は scripts/migrate_inventory_sprint1.py:56 の一覧にあり、本番は run_all_migrations.sh:361 の `run_py`、CI は変更 SQL のジョブ migration-test.yml:1046-1047・全件ドライラン :1906-1907 で流れる。どちらも変更 SQL より前。足すものは無い。
@@ -160,5 +160,6 @@ COMMIT;
 
 ## 維持の仕組み
 
+- 守り手: 人手で守る（理由: RLS の付け忘れを止める CI の確かめは ADR-1063 便5 #5194 で入る予定で、まだ main に無い。入った後は CI の確かめが守る）
 - 新しく会社ごとの表を public に作って RLS を付け忘れると、ADR-1063 便5 の CI 確かめが落とす（許可一覧に理由を書かない限り）。
 - 型の選び方（型A／型C／付けない）は ADR-1067 に残し、次の表もこの表で判断する。
