@@ -116,7 +116,7 @@ export interface CalendarViewProps {
 
 ### 4-4 トークン（tokens.css の「Schedule page」の段に足す）
 ```css
-  --schedule-gridline-w:      1px;      /* 時間割の罫線の太さ（1時間の高さから引く） */
+  --schedule-gridline-w:      1px;      /* 時間割の罫線の太さ */
   --schedule-event-border-w:  2px;      /* 予定の枠の太さ（見積もり・重なり） */
   --schedule-event-estimate-style: dashed; /* 見積もりの枠の線の種類（実際は solid） */
 ```
@@ -136,7 +136,8 @@ export interface CalendarViewProps {
 ### 4-7 CSS（CalendarView.css）
 - `.comp-calendar` の中で、FullCalendar 6.1.22 の core・daygrid・timegrid が使う `--fc-*` 変数を全部トークンに置き換える。対応の例: `--fc-border-color: var(--schedule-gridline)`、`--fc-page-bg-color: var(--bg-surface)`、`--fc-neutral-bg-color: var(--schedule-hour-bg)`、`--fc-neutral-text-color: var(--text-muted)`、`--fc-today-bg-color: var(--schedule-slot-hover)`、`--fc-now-indicator-color: var(--schedule-now-line)`、`--fc-event-bg-color: var(--cal-personal-tint)`、`--fc-event-border-color: var(--cal-personal)`、`--fc-event-text-color: var(--cal-personal-text)`、`--fc-more-link-text-color: var(--accent)`、`--fc-highlight-color: var(--schedule-slot-hover)`。残りの変数（6.1.20 で core 27・daygrid 6・timegrid 11 の名前。recon の手順で 6.1.22 を数え直す）も同じ形で全部置く。寸法の変数（`--fc-small-font-size` など）は既存の寸法・文字のトークンに置く。
 - 変数を通らない直書きの色（6.1.20 で core に box-shadow 5・rgba 3、daygrid に rgba 2）は、出どころの class を特定し、(a) 使わない機能（ボタン・小窓・ドラッグ・選択）の物は使わないことを表にして PR 本文に書く、(b) 使う物は `.comp-calendar` の中のセレクタで `var(--shadow-*)` などのトークンに上書きする。
-- 1時間の高さ: `.comp-calendar .fc-timegrid-slot { height: calc(var(--schedule-row-height) - var(--schedule-gridline-w)); }`。K3 で 48px を測る。
+- 1時間の高さ: `.comp-calendar .fc-timegrid-slot { height: var(--schedule-row-height); }`。K3 で 48px を測る。
+  - 2026-11-06 直し: 初めは罫線の太さを引く calc にしていたが、評価役の実測（Storybook「2列」・34d640c49）で行の間隔が8組とも 47px だった。FullCalendar の表は罫線を行の高さに足さない（td の高さ 47px＝行の間隔 47px）ので、引かずに `--schedule-row-height` をそのまま当てる。罫線を引く設計にしたのは Opus の設計の入れ忘れ（実物で罫線の扱いを確かめていなかった）。
 - 時刻の列の幅は `--schedule-time-gutter-width`、月の升目の高さは `--schedule-month-cell-min-h`、予定の角丸は `--schedule-event-radius`、日の列の最小の幅は `--schedule-day-min-w`。
 - `#`・`rgb(`・`rgba(` の直書きは 0。px の直書きは 0（`calc()` の中の var だけ）。
 
