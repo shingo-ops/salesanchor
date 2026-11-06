@@ -16,6 +16,15 @@
         "USE_EMBEDDED_ACTIVITIES", "USE_SOUNDBOARD", "CREATE_GUILD_EXPRESSIONS", "CREATE_EVENTS",
         "USE_EXTERNAL_SOUNDS", "SEND_VOICE_MESSAGES", "SET_VOICE_CHANNEL_STATUS", "SEND_POLLS", "USE_EXTERNAL_APPS"
       ]
+    },
+    {
+      "key": "staff",
+      "discord_id": null,
+      "name": "スタッフ",
+      "color": 0,
+      "hoist": false,
+      "mentionable": false,
+      "permissions": []
     }
   ],
   "categories": [

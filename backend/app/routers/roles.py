@@ -39,6 +39,7 @@ from app.schemas.role import (
     UserRoleAssign,
     UserRoleResponse,
 )
+from app.services import discord_own_staff_sync as own_staff_sync
 from app.services.audit import record_audit_log
 
 router = APIRouter()
@@ -375,6 +376,7 @@ async def delete_role(
     await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2
 
     await invalidate_tenant_permissions(tenant_id)
+    own_staff_sync.schedule_own_staff_sync(tenant_id)  # 第2段 2b
 
 
 # =========================================================================
@@ -604,5 +606,6 @@ async def set_user_roles(
 
     # 対象ユーザーの権限キャッシュをパージ
     await invalidate_user_permissions(tenant_id, user_id)
+    own_staff_sync.schedule_own_staff_sync(tenant_id)  # 第2段 2b
 
     return {"user_id": user_id, "role_count": len(data.role_ids)}

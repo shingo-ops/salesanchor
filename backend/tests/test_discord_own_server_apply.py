@@ -65,7 +65,11 @@ def _channels() -> list[dict]:
 
 
 def _bp_data() -> dict:
-    return json.loads((BLUEPRINT_DIR / "tenant_1.json").read_text(encoding="utf-8"))
+    # 第2段 2b で足した「スタッフ」は本番の Discord にまだ無いので、本番の今の形と比べる試験では除く
+    # （「スタッフ」が確認で「作る」1 行になることは test_discord_own_staff_sync.py で確かめる）
+    data = json.loads((BLUEPRINT_DIR / "tenant_1.json").read_text(encoding="utf-8"))
+    data["roles"] = [r for r in data["roles"] if r["key"] != "staff"]
+    return data
 
 
 def _four_kinds() -> dict:

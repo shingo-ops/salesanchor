@@ -47,6 +47,7 @@ celery_app = Celery(
         "app.tasks.api_error_retry_weekly",  # ADR-1050: 解析の送り直しの週次件数
         "app.tasks.viewer_share_flag_monitor",  # ADR-1019 段6: 閲覧者の使い回しの疑いを運用 Discord へ
         "app.tasks.google_calendar_sync",  # ADR-1059 便2: Google の予定の取り込み
+        "app.tasks.discord_own_staff_sync",  # discord-server-management 第2段 2b: 自社サーバーのスタッフのロールの点検
     ],
 )
 
@@ -251,6 +252,11 @@ celery_app.conf.beat_schedule = {
     "notify-viewer-share-flags-hourly": {
         "task": "app.tasks.viewer_share_flag_monitor.notify_viewer_share_flags",
         "schedule": crontab(minute=15),  # 毎時15分（interval だと deploy の再起動で計測が初めからになるため）
+    },
+    # discord-server-management 第2段 2b: 自社サーバーのスタッフのロールをアプリの登録どおりに付け外し（5分ごと）
+    "discord-own-staff-sync": {
+        "task": "app.tasks.discord_own_staff_sync.sync_all_own_servers",
+        "schedule": 300.0,  # 5分
     },
 }
 

@@ -2108,6 +2108,7 @@
     "status": "ステータス",
     "noStaff": "スタッフが登録されていません",
     "deleteStaff": "スタッフを削除",
+    "deleteDiscordKickNote": "Discord の自社サーバーからも外れます。",
     "uiPreferences": "UI設定",
     "darkMode": "ダークモード",
     "showChatMenu": "チャットメニューを表示",
