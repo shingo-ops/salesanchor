@@ -1,6 +1,6 @@
 # design: 他社の人の番号と、持ち主の証明のない Discord サーバー番号を保存させない
 
-- 状態: 設計案 r2（Opus 作成）。Architect r1 は REVISE（13 節）。r1 の指摘を反映済み・r2 審査前
+- 状態: 設計案 r3（Opus 作成）。Architect r1・r2 は REVISE（13 節）。r2 の指摘を反映済み・r3 審査前
 - 基準: origin/main 133808dce（5fda4152b からの差分に、本設計が触る・引用するファイルの変更は無い: `git diff --stat 5fda4152b origin/main -- backend/app/routers backend/app/services frontend/src/pages/admin frontend/api-contract backend/tests/...` が空）
 - 根拠: 同じフォルダの recon.md（1・4・6 節）
 - 関係する ADR: ADR-1008（会社に属さない担当者を入れない）・ADR-072（commit 後の reset_tenant_context）・ADR-146（Discord は共通 bot 1台・guild_id から会社を引く）・ADR-027（画面の文字は t()）・ADR-144（画面部品は金型）
@@ -47,7 +47,7 @@ KPI（G1・G2 を支える観測値）:
 - backend/app/routers/goals.py:111 create_goal の user_id
 - backend/app/routers/teams.py:102 create_team・:147 update_team の leader_id
 - backend/app/routers/discord_guild_config.py:108-145 PUT /admin/discord-config（削除）
-- frontend/src/pages/admin/DiscordConfigPage.tsx の「① サーバー接続」カード（:403-446）と、それだけが使う状態・関数（:143-146・:197-224）
+- frontend/src/pages/admin/DiscordConfigPage.tsx の「① サーバー接続」カード（:403-447）と、それだけが使う状態・関数（:143-146・:195・:197-225）
 - 新しい共通の関数 1つ（backend/app/services/tenant_users.py）と試験
 
 対象外（理由）:
@@ -125,15 +125,17 @@ frontend/src/pages/admin/DiscordConfigPage.tsx の「① サーバー接続」�
 
 - 6入口の呼び出し元は画面だけ。返事が 422 になるのは他社の番号を送ったときだけで、画面は自社の人の一覧から選ぶ
 - 本番の4欄に他社の番号は 0件（recon.md 6-4）。既存の行の保存は止まらない
-- PUT /admin/discord-config を呼ぶのは DiscordConfigPage.tsx:206 だけ（`git grep -n "admin/discord-config" frontend/src` の全件: routeTitles.ts:41・InboxKartePanel.tsx:115 GET・discordSendError.ts:29 道の文字・DiscordOwnServerPanel.tsx・DiscordConfigPage.tsx:96/:206・ChannelsPage.tsx:117 GET）。PUT は :206 の1件
+- PUT /admin/discord-config を呼ぶのは DiscordConfigPage.tsx:206 だけ（`git grep -n "admin/discord-config" frontend/src` の画面のコード: routeTitles.ts:41 題名・InboxKartePanel.tsx:115 GET・discordSendError.ts:29 道の文字・DiscordOwnServerPanel.tsx:86 /own・DiscordConfigPage.tsx:96 GET/:206 PUT・ChannelsPage.tsx:117 GET・:211 GET・:236 DELETE・:589 画面移動。ほかは試験ファイル）。PUT は DiscordConfigPage.tsx:206 の1件
 - 照合を足すと赤になる既存の試験（r1 指摘 Q3。origin/main で確かめた）:
   - backend/tests/test_inbox_new_assignment_badge.py:355（assigned_to 20）・:368（assigned_to 10）。この試験は自前の SQLite（:64-93 INBOX_BADGE_SQLITE_DDL）で users の表が無い。:476（None）は通る
   - backend/tests/test_analytics.py:689・:762（assigned_to 321。users の行が無い）
   - backend/tests/test_notification_event_routing.py:246・:266・:285（assigned_to 7・7・9。:91-101 で staff の行だけを入れ、users の行が無い。:266 は値が同じでも update_data に assigned_to があれば照合が走るので赤）
-  - 直し方の決まり: 照合を偽物に差し替えない（mock 禁止）。試験の会社（999。backend/tests/conftest.py:1955）の本物の users 行を足す。自前 SQLite の試験は users の表と行を足す（conftest.py:301-302 の `public.users`→`users` の書き換えと同じ扱いにする）
-  - 通るもの: test_shifts.py・test_audit_goals_carrier.py は user_id 999 を使い、conftest.py:1522-1523 で会社 999 の人として入っている。teams の leader_id を送る試験は無い
+  - 直し方の決まり: 照合を偽物に差し替えない（mock 禁止）。試験の会社（999。backend/tests/conftest.py:1955）の本物の users 行を足す
+  - test_inbox_new_assignment_badge.py の自前 SQLite（:72-80）には conftest.py:301-302 の `public.users`→`users` の書き換えが無い。直し方: (1) users の表の DDL は conftest.py の INBOX_BADGE_SQLITE_DDL に足す（同ファイル :84-86 のとおり、表の定義を試験ごとに重ねない決まり）(2) この engine の connect の手当て（:75-81）に、同じ書き換えを足す（conftest.py:301-302 と同じ置き換え）(3) assigned_to 10・20 の人を会社 999 で入れる
+  - backend/tests/test_shifts_pg.py:90-93（r2 指摘で追加）: create_shift を user_id=2・会社 901（:24・:31 の SCHEMA tenant_901）で直接呼ぶ。この試験の DB の public.users は backend/tests/rls_bootstrap.py:258-264 の (999, 999) の1行だけなので 422 になる。直し方: 試験の中で public.users に (id=2, tenant_id=901) の行を入れてから呼ぶ。あわせて「他社の人（999）なら 422・行が増えない」の試験をこの PostgreSQL の形で足す（10 節）
+  - 通るもの（SQLite の client を使う試験だけ）: test_shifts.py・test_audit_goals_carrier.py は user_id 999 を使い、conftest.py:1522-1523 で会社 999 の人として入っている。teams の leader_id を送る試験は無い
 - frontend/src/pages/admin/DiscordConfigPage.test.tsx:47-74 は「Server ID」の欄を前提にしているので書き直す。:139-160 のチケット設定の試験（discord-ticket-config への api.put）は残す
-- 試験 backend/tests/test_discord_d2.py:307-339 の PUT の試験4本（test_put_saves_guild_id・test_get_after_put_returns_saved・test_put_invalid_guild_id_rejected・test_put_too_short_guild_id_rejected）は消し、「PUT は 405・表が変わらない」の試験1本に置き換える。backend/tests/test_discord_own_server.py は GET と戻り先の文字だけで PUT を使わない（:206・:248・:263）。触らない
+- 試験 backend/tests/test_discord_d2.py:307-339 の PUT の試験4本（test_put_saves_guild_id・test_get_after_put_returns_saved・test_put_invalid_guild_id_rejected・test_put_too_short_guild_id_rejected）は消し、「PUT は 405・表が変わらない」の試験1本に置き換える。backend/tests/test_discord_own_server.py は PUT を使わない（GET と DELETE :271・:276 だけ）。触らない
 - frontend/api-contract/openapi.json の DiscordConfigUpdate（:9490-）と PUT の道（operationId :40374）が消える
 - tests/prod-check/page-speed-targets.ts は画面の道を測るだけ。影響なし
 
@@ -218,6 +220,27 @@ DB の正本（SSOT）について: 人の正本は public.users のまま。新
 | Q4（必須）K3 の今の値 | 今 5・目標 5、10 節に行を足した |
 | Q5（推奨）試験の人の番号 | 確かめて問題なし（5 節「通るもの」） |
 
-### r2
+### r2（クラウド Architect・2026-11-06・a76499a9b）: REVISE
+
+結果はクラウドの実行記録から読んだ。指摘は Opus が origin/main 133808dce で読み直し、すべて事実と確かめた。
+
+| 観点 | 判定 |
+|---|---|
+| C1 行番号 | ×（DiscordConfigPage.tsx の範囲の終わりが1行ずつずれ） |
+| C2 G・K の測り方 | ○（K3 は5件で一致） |
+| C3 書く入口の漏れ | ○（5fda4152b から変更なし） |
+| C4 照合の正しさ・G3 の明記 | ○ |
+| C5 DB の正本 | ○ |
+| C6 壊れる試験の一覧 | ×（test_shifts_pg.py が漏れ） |
+
+| 指摘 | 対応 |
+|---|---|
+| Q1（必須）test_shifts_pg.py:90-93 が §5 に無い | 足した。会社901の users 行を入れる直し方と、PostgreSQL の形の他社試験を書いた |
+| Q2（必須）:197-224・:403-446 | :197-225・:403-447 に直した（:195 isGuildFormOpen も足した） |
+| Q3（推奨）自前 SQLite の書き換えと DDL の置き場 | 直し方を3つの手順で書いた |
+| Q4（推奨）「全件」に抜け | ChannelsPage.tsx:211・:236・:589 を足し、試験ファイルは除くと書いた |
+| Q5（推奨）test_discord_own_server.py は DELETE も使う | 文を直した |
+
+### r3
 
 （審査後に記入）
