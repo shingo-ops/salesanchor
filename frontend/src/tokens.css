@@ -400,7 +400,7 @@
   --schedule-gridline:       var(--calendar-grid-border); /* 時間グリッド/日列の罫線 */
   --schedule-now-line:       #ea4335;  /* 現在時刻ライン */
   --schedule-slot-hover:     rgba(37, 99, 235, .045); /* 空きスロット hover */
-  --schedule-row-height:     48px;     /* 1時間の高さ（標準） */
+  --schedule-row-height:     96px;     /* 1時間の高さ（Google カレンダーの実測に合わせた値） */
   --schedule-time-gutter-width: 60px;  /* 左の時刻ガリー幅 */
   --schedule-leftpanel-width: 256px;   /* 左パネル幅 */
   --schedule-event-radius:   6px;      /* 予定カード角丸 */
