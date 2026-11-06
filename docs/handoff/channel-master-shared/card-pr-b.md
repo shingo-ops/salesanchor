@@ -62,7 +62,7 @@ async def platforms_by_store(db, store: str) -> list[str]:
 ```
 
 決まり:
-- どの関数も SQL に `(tenant_id IS NULL OR tenant_id = :tenant_id)` を**明示で書く**（試験の SQLite には RLS が無いため。本番は RLS と二重の守り）
+- 会社を受け取る関数（list_channels・get_channel・list_channels_for_picker・get_channel_by_id・set_hidden）は SQL に `(tenant_id IS NULL OR tenant_id = :tenant_id)` を**明示で書く**。会社を受け取らない conversion_items・platforms_by_store は `tenant_id IS NULL`（共用の行だけ）で絞る（試験の SQLite には RLS が無いため。本番は RLS と二重の守り）
 - `public.channel_masters`・`public.channel_master_tenant_settings` の文字は、このファイルの定数2つにだけ書く。他のファイルは定数を import して使う（§12・§6 の検索 K7）
 - SQLite と PostgreSQL の両方で動く SQL にする（`= ANY(:list)` は使わない。必要なら IN を展開する）。UPSERT の `ON CONFLICT ... DO UPDATE` は両方で動く
 - 呼ぶ前の `set_tenant_context` は呼び出し側（ルーター）の今のやり方のまま
@@ -74,7 +74,7 @@ async def platforms_by_store(db, store: str) -> list[str]:
 | `backend/app/routers/conv_logs.py:77-95` `_get_channel_master` | `tenant_table_ref(db, tenant_id, "channel_masters")` を直接読む | 関数を消し、呼んでいる所は `channel_masters.get_channel` を使う（返す形は id・platform・display_name・connection_type を含む） |
 | `backend/app/routers/conv_logs.py:189-217` `GET /channel-masters` | 自社表の is_active 行を全部 | 引数 `for_: str \| None = Query(None, alias="for")`・`keep: str \| None = Query(None)` を足す。`for_ == "picker"` なら `list_channels_for_picker(keep_platform=keep)`、それ以外は `list_channels`。返す項目は今の5つ（id・platform・display_name・connection_type・is_active）に `is_shared`・`is_hidden` を足す。権限は今のまま（ログインだけ。選択欄で全員が読むため） |
 | `backend/app/routers/conv_logs.py:492-518` `POST /admin/channel-masters` | `{schema}.channel_masters` に INSERT。権限なし | `dependencies=[Depends(require_permission("tenant.profile.edit"))]` を足す。`get_channel` 相当で同じ platform（共用か自社）が既にあれば 409「同じ名前の連絡手段が既にあります」。無ければ `CHANNEL_MASTERS_TABLE` に `tenant_id`＝自社・`connection_type='manual'`・`conversation_store='conversation_logs'`・`is_verbatim=TRUE`・`conversion_item=NULL` で INSERT。commit の直後に `reset_tenant_context`（今のまま） |
-| 新 `PUT /admin/channel-masters/{master_id}/visibility`（同じファイル） | なし | 本文モデル `ChannelVisibilityUpdate(is_hidden: bool)`。`require_permission("tenant.profile.edit")`。`get_channel_by_id` が None→404、`connection_type == "auto"`→400「自動連携チャネルは隠せません」。`set_hidden` → `record_audit_log(db, tenant_id, current_user.id, "UPDATE", "channel_master_tenant_settings", master_id, old_data={"is_hidden": 前}, new_data={"is_hidden": 後})` → commit → `reset_tenant_context`。返す `{"id": master_id, "is_hidden": 後}` |
+| 新 `PUT /admin/channel-masters/{master_id}/visibility`（同じファイル） | なし | 本文モデル `ChannelVisibilityUpdate(is_hidden: bool)`。`require_permission("tenant.profile.edit")`。`get_channel_by_id` が None→404、`connection_type == "auto"`→400「自動連携チャネルは隠せません」。`set_hidden` → `record_audit_log(db, tenant_id, current_user.id, "update", "channel_master_tenant_settings", master_id, old_data={"is_hidden": 前}, new_data={"is_hidden": 後})` → commit → `reset_tenant_context`。返す `{"id": master_id, "is_hidden": 後}` |
 | `backend/app/routers/conv_logs.py:526-557` `DELETE /admin/channel-masters/{master_id}` | 自社表で 404・auto は 400・それ以外 is_active=false | `require_permission("tenant.profile.edit")` を足す。`get_channel_by_id` が None→404、auto→400（今の文言のまま）、`is_shared`→403「共用の連絡手段は消せません。隠す切り替えを使ってください」。自社行だけ `UPDATE {CHANNEL_MASTERS_TABLE} SET is_active=false, updated_at=now() WHERE id=:id AND tenant_id=:tenant_id` |
 | `backend/app/routers/leads.py:205-215` `_ensure_channel_type_in_master` | 自社表を直接読む | `await channel_masters.get_channel(db, tenant_id, normalized)` が None でなければ通す。422 の文言・`existing_value` の扱いは今のまま。隠したかは**見ない**（design D1-2） |
 | `backend/app/routers/analytics.py:2484-2507` `_fetch_lead_conversion_inputs` の会話2つ | `l.channel_type IN ('instagram', 'messenger')`・`l.channel_type = 'whatsapp'` | 関数の頭で `meta_platforms = await channel_masters.platforms_by_store(db, "meta_messages")`・`log_platforms = await ...("conversation_logs")`。SQL は IN をその場の値で展開（例 `:p0, :p1`）。どちらかが空なら、その問い合わせは流さず0行とする。読む行は今と同じ（instagram・messenger → Meta、whatsapp → 会話記録） |
@@ -114,7 +114,7 @@ async def platforms_by_store(db, store: str) -> list[str]:
 | 場所 | 変更 |
 |---|---|
 | `backend/tests/conftest.py:43` | `DEFAULT_CHANNEL_MASTERS` の import を消す |
-| `backend/tests/conftest.py:311-312` の並び | `public.channel_master_tenant_settings`→`channel_master_tenant_settings` を**先に**、`public.channel_masters`→`channel_masters` を後に足す（前者が後者を含むため順番が要る） |
+| `backend/tests/conftest.py:311-312` の並び | `public.channel_master_tenant_settings`→`channel_master_tenant_settings` を**先に**、`public.channel_masters`→`channel_masters` を後に足す（どちらも他方を部分文字列に含まないが、読みやすさのためこの順に並べる） |
 | `backend/tests/conftest.py:633-641` | SQLite の `channel_masters` を新しい形に: id・tenant_id NULL 可・platform・display_name・connection_type・conversation_store・is_verbatim・conversion_item・is_active・created_at・updated_at。`UNIQUE` は付けない（SQLite で NULL の一意を作れないため。重複は API の 409 と PG の試験で見る）。`channel_master_tenant_settings`（PRIMARY KEY (tenant_id, channel_master_id)）を足す |
 | `backend/tests/conftest.py:881-889` | 定数の代わりに design §3 の6行（tenant_id NULL）を試験の中に書いて入れる |
 | `backend/tests/rls_bootstrap.py:14-34` `_PG_BOOTSTRAP_MIGRATIONS` | 末尾に `"20261106_190000_create_public_channel_masters.sql"` を足す（PG の試験で表を作るため）。`:35-38` の古い migration は PR-C まで残す |
@@ -126,7 +126,7 @@ async def platforms_by_store(db, store: str) -> list[str]:
 | `backend/tests/test_system_roles.py:137` | `seed_default_channel_masters` の monkeypatch を消す |
 | `backend/tests/test_lang_judge.py:116-145` | `<> ALL(:excluded_channels)` の期待を、`NOT EXISTS` と `is_verbatim = FALSE` を含み `excluded_channels` を params に持たない、に書き換える |
 | `backend/tests/test_lead_conversion_factors.py:34・:264・:276` と `prepare` 呼び出し `:68・:77・:114・:122・:127`、`analyze` 呼び出し `:139・:152・:163・:185・:312` | 試験の頭に対応表 `CHANNEL_ITEMS` を置き、全部に渡す。数値の期待は**1つも変えない**（K5 の機械側）。足す: 対応表が3値でないと ValueError |
-| `backend/tests/test_lead_regression_generate.py:88・:255-256` | 同じく対応表を渡す。期待は変えない |
+| `backend/tests/test_lead_regression_generate.py:88・:255-256` | 同じく対応表を渡す。期待は変えない。加えて :246-252 は使い捨て PG（conftest の `LEAD_REGRESSION_PG_DDL`）で `_fetch_lead_conversion_inputs` を呼ぶ。PR-B の後この関数は `platforms_by_store` で `public.channel_masters` を読むため、その DDL に `public.channel_masters`（新しい形）と共用の instagram・messenger・whatsapp の3行を足す（CI では `LEAD_REGRESSION_PG_URL` が無く飛ばされるが、回したとき赤にしないため） |
 | 新 `backend/tests/test_channel_masters_shared.py`（SQLite） | K3: A社(1)の追加行がA社の一覧に出てB社(2)に出ない／B社がA社の行を DELETE・PUT すると 404／共用と同じ platform の追加は 409。K6: 会社作成の後、一覧に共用6つ。隠す: A社が phone を隠すと `for=picker` から消え、B社には出る／`keep=phone` なら残る／auto 行の PUT は 400／権限の無い人は 403（`app.auth.dependencies.load_user_permissions` を権限の無い集合に patch）／PUT で監査の記録が1件 |
 | 新 `backend/tests/test_channel_masters_shared_pg.py`（`RLS_ADMIN_DATABASE_URL` が無ければ skip。`rls_bootstrap` を使う） | 会社の役で共用行の UPDATE が0件／他社行が見えない／設定の表に他社行の番号を入れると RLS で拒まれる／試しの会社に会社行と設定を1行ずつ入れ `public.tenants` の行を消すと2つの表の行が0件 |
 | 新 `backend/tests/test_channel_master_literals.py` | §6 の K4 と K7 を試験にする（ファイルを読んで正規表現で数え、0件でなければ赤） |
@@ -166,6 +166,7 @@ git grep -nE 'DEFAULT_CHANNEL_MASTERS|ACTIVE_CHANNEL_PLATFORMS|seed_default_chan
 | api-contract-check が赤 | §1 の 6 の命令で作り直したか確かめる。手で openapi.json を直さない |
 | 手元で試験を回したくなる | 回さない。CI の結果を読む |
 | 権限の import で循環が起きる | `require_permission` は `app.auth.dependencies` から（他のルーターと同じ） |
+| 自社で一度消した（is_active=false）platform をもう一度足すと一意の決まりにぶつかり 500 になる | 今の表も同じ動き（前からある）。この PR では直さず、PR 本文に「既知」と1行書く |
 
 ## 9. 終わりの報告
 

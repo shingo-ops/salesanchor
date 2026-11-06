@@ -155,7 +155,7 @@ async def conversion_items(db) -> dict[str, str]:
 | 新 `PUT /api/v1/admin/channel-masters/{id}/visibility`（同じファイル） | 本文 `{"is_hidden": bool}`。`set_hidden` を呼ぶ。auto 行は 400・他社行と見えない行は 404。`require_permission("tenant.profile.edit")`。監査の記録（`record_audit_log`）を残す |
 | `backend/app/routers/conv_logs.py:526-557`（無効化） | 自社行だけ無効化できる。共用行は 403（隠すのは §2-2 の切り替えで行う）。`require_permission("tenant.profile.edit")` を足す |
 | `backend/app/routers/leads.py:204-216`（検証） | `get_channel` を使う（422 の決まりは今のまま） |
-| `backend/app/routers/analytics.py:2483-2507`（会話の読み込み） | `JOIN public.channel_masters cm ON cm.platform = l.channel_type AND cm.tenant_id IS NULL AND cm.conversion_item IS NOT NULL AND cm.conversation_store = 'meta_messages'`（Meta の表）／`= 'conversation_logs'`（会話記録の表）。読む行は今と同じ（instagram・messenger → Meta、whatsapp → 会話記録） |
+| `backend/app/routers/analytics.py:2483-2507`（会話の読み込み） | （改訂 2026-11-06: §12 の「表名は channel_masters.py だけ」と K7 に合わせ、実装は `channel_masters.platforms_by_store()` で platform を読み IN をその場で広げる形にする。実装カード card-pr-b.md §3 が正。読む行は下の JOIN 案と同じ）旧案: `JOIN public.channel_masters cm ON cm.platform = l.channel_type AND cm.tenant_id IS NULL AND cm.conversion_item IS NOT NULL AND cm.conversation_store = 'meta_messages'`（Meta の表）／`= 'conversation_logs'`（会話記録の表）。読む行は今と同じ（instagram・messenger → Meta、whatsapp → 会話記録） |
 | `backend/app/routers/analytics.py:2537-2538` | `items = await conversion_items(db)` を読み `lcf.analyze(leads, messages, items)` に渡す |
 | `backend/app/services/lead_conversion_factors.py:42-47` | `CHANNEL_*`・`META_CHANNELS`・`CHANNELS` を消す |
 | `backend/app/services/lead_conversion_factors.py:173・:188` | `prepare(leads, messages, channel_items)`。`lead.channel_type not in channel_items` で外す |
