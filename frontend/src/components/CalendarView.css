@@ -45,7 +45,7 @@
 
 /* ---- 寸法 ---- */
 .comp-calendar .fc-timegrid-slot {
-  height: calc(var(--schedule-row-height) - var(--schedule-gridline-w));
+  height: var(--schedule-row-height);
 }
 
 .comp-calendar .fc-timegrid-axis {
