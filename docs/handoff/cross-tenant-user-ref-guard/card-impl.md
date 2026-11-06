@@ -99,7 +99,9 @@ mode: handoff
 ## 4. 守ること
 
 - 担当は sleep しない（待ちは設計者が期限付きで行う）。
-- ファイルの作成と編集は Write／Edit ツールで行い、ヒアドキュメントで書かない。
+- ファイルの作成と編集は Write／Edit ツールで行い、ヒアドキュメントで書かない。python などのスクリプトでファイルを書き換えない（1回目の実行で起きたため明記。2026-11-06 Opus）。
+- PostgreSQL を自分で立てない（initdb・pg_ctl・作業用の場所の作り直しをしない）。`_pg` の試験は CI の使い捨て PostgreSQL で確かめる。手元では skip になってよい。
+- `rm` を使わない（見張りが止める。1回目の実行はこれで止まった）。
 - PR を作る前に `scripts/dev/validate-pr-body.sh` に本文を標準入力で渡し、exit 0 を確かめる（PR は Opus が作る）。
 - フックや自動判定に止められたら、言い換えて再試行せず、止まった手順・最後のコマンド・理由の原文を報告して終える。
 - 停止するのは次のときだけ: 本番への接続・DB への書き込み・マージ・`main` への push・`--force`・ファイルの削除が要るとき／金型にない部品が要るとき／design.md と食い違うのに design.md どおりに作れないとき／§2 の表に無いファイルを直さないと試験が通らないとき。
@@ -141,7 +143,7 @@ mode: handoff
 
 手順8 試験とビルドを流す
     cd 作業場所/backend && python -m pytest tests/test_inbox_new_assignment_badge.py tests/test_analytics.py tests/test_notification_event_routing.py tests/test_shifts.py tests/test_audit_goals_carrier.py tests/test_discord_d2.py tests/test_discord_own_server.py tests/test_shifts_pg.py tests/test_tenant_user_ref_guard_pg.py -q
-    期待する出力: 全部 passed。PostgreSQL が無くて skipped になったら、その数と理由を報告に書いて続行する（CI で確かめる）。
+    期待する出力: 全部 passed。`_pg` の試験が skipped になるのは想定どおり。その数と理由を報告に書いて続行する（CI で確かめる）。
     cd 作業場所/frontend && npx vitest run src/pages/admin/DiscordConfigPage.test.tsx
     期待する出力: 全部 passed。
     cd 作業場所/frontend && npx tsc --noEmit
