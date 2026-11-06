@@ -264,3 +264,19 @@ origin/main c481f5e7d を自分で読み、本番の読み取りの道で制約�
 - 通知: backend/app/services/lead_assign_notifier.py は自社区画の staff を user_id で引く。他社の user_id では行が無く、他社へは送られない（同ファイル :20-60 を読んだ）。
 - 起きること: 自社のリード編集の権限を持つ利用者が、他社の利用者番号を担当に入れると、分析画面に他社の利用者名が出る。他社の業務の記録（リード・請求書など）は読めない。
 - 未確認: 利用者番号を外から知る手段の有無。analytics.py の他の結合（:1350・:1384・:1418）と leads.py の他の箇所で同じことが起きるか。
+
+### 追記2: 全体の洗い出し（クラウド調査 cse_01HHUUpPSWXmQD81bwbQwF3Q ＋ 自分で確かめ・origin/main c481f5e7d）
+
+| 番号 | 場所 | 起きること | 判定 | 根拠 |
+|---|---|---|---|---|
+| 1 | leads.py:405-459・:578-596 → analytics.py:110-119 | 担当に他社の利用者番号を入れると分析画面に他社の利用者名が出る | 届く | 上の節 |
+| 2 | badges.py:99-117（付与）→ badges.py:82-95（順位表） | バッジ付与で他社の利用者番号を入れると順位表に他社の利用者名が出る。付与には `badges.manage` が要る | 届く | 付与は badge の存在だけ確認し user_id は確認しない。本番 user_badges の制約は badge_id の外部キーと UNIQUE だけで user_id の外部キーは無い（5区画とも。reader 出力を目視） |
+| 3 | tenant_policy.py:104-127 | 列名を入力のキーから組み立てる | 届かない | キーは schemas/tenant_policy.py:26-34 の決まった8項目だけ（pydantic の model_dump）。WHERE tenant_id は付いている |
+| 4 | meta.py:225-270 `deletion-status` | 確認コードだけで削除の進み具合を返す | 届かない | 返すのは進み具合と日時だけで会社の情報を含まない。コードは secrets.token_hex(4)（meta.py:120）。Meta の仕様上ログイン無しで公開する窓口 |
+| 5 | webhook.py:265-294 → meta_page_routing | 届いた page_id で会社を決める | 届かない | 署名（HMAC-SHA256）を先に確かめ、合わなければ 403（:276-284）。秘密鍵が無ければ 500 |
+| 6 | services/inventory_movements.py:23 | 商品番号だけで public.products を引く | 届かない | backend/app に呼び出し元が0件（git grep） |
+| 7 | 裏で動く処理の `set_tenant_context` 呼び出し（50か所） | 会社番号を引数で受ける | 未確認 | 呼び出し元すべての会社番号の出どころを読んでいない |
+
+- 1・2 とも、読めるのは他社の利用者名（username）だけ。他社の業務の記録（リード・請求書など）は読めない。
+- 1・2 とも原因は同じ型: 利用者番号を受け取る入力に「自社の利用者か」の確認が無い＋ public.users の読み取りの守りが全行。
+- 前例: companies.py:357 `_ensure_sales_rep_in_tenant`（ADR-1008）は同じ確認を既にしている。
