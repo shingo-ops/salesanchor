@@ -143,6 +143,7 @@ from app.routers import (
     teams,
     tenant_admin_inventory_visibility,
     tenant_commission_settings,  # ADR-021 Phase 5 / Sprint 5: 報酬計算 MVP
+    tenant_login_requests,  # ADR-1063: 会社のオーナーが社員のログインを許可する
     tenant_policy,  # ADR-106: テナントポリシー設定
     tenant_profile,  # Sprint 8 / F8: PO PDF / メール差出人情報
     translation,  # ADR-110: 翻訳サブシステム（グロッサリ CRUD + 送信下訳）
@@ -252,6 +253,7 @@ app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
 # ADR-1055: 知らない機械からのログインの許可。一覧は /api/v1/auth/ の外（login の回数の枠を使わない）
 app.include_router(login_approvals.router, prefix="/api/v1", tags=["auth"])
 app.include_router(super_admin_login_requests.router, prefix="/api/v1", tags=["super-admin"])
+app.include_router(tenant_login_requests.router, prefix="/api/v1", tags=["tenant"], dependencies=[Depends(get_current_tenant)])
 # ADR-1019 段2: 閲覧専用ページの API（login・logout・inventory。閲覧者のトークンだけを見る）
 app.include_router(viewer.router, prefix="/api/v1/viewer", tags=["viewer"])
 # Meta Webhook（認証不要 - Metaのサーバーからアクセスされる）
