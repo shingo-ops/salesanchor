@@ -107,6 +107,7 @@ services:
       # backend コンテナも Bot トークンが必要（discord-gateway だけでは不足）
       # ADR-146 B方式: per-tenant トークン（DISCORD_BOT_TOKEN_4）を共通トークンに統合
       - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN:-}
+      - DISCORD_CLIENT_SECRET=${DISCORD_CLIENT_SECRET:-}
       # API連携: Googleドライブ OAuth（ユーザー委任方式）。カレンダーと同一の OAuth
       # クライアントを流用可。この3行が無いと .env に値があっても os.getenv が空になり
       # 連携が動かない（compose passthrough 漏れ対策）。
