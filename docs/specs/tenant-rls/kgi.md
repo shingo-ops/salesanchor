@@ -26,9 +26,9 @@
 | ② | suppliers, tenant_google_calendar_config, tenant_google_drive_config | 他社の行が 0 行に見える。共通（tenant_id が空）の仕入先は全社で読める |
 | ③ | tenants, tenant_paypal_config, users, auth_refresh_tokens, password_reset_tokens, webauthn_credentials, registration_tokens | 方針（RLS を付けるか、付けずに代わりの守りにするか）を別途 PO と決めてから設定。→ 決定（PO 2026-10-16「y」）: 案 C＝書込・削除だけ DB で止め読取は全行可（tenants・tenant_paypal_config・users・registration_tokens）、認証トークン 3 表は RLS を付けない（ADR-1018 Decision 6） |
 
-## 段階④の KGI（案・PO 承認待ち）
+## 段階④の KGI（PO 承認済み）
 
-**状態: 案（2026-11-06 起案。PO の承認待ち）**。A 区分（`migrations/` を含む）のため PO 承認が必須ゲート。対象は会社の列を持つ public の 8 表: inventory_movements, discord_server_snapshots, discord_server_apply_runs, tenant_discord_config, tenant_discord_ticket_config, google_webhook_subscriptions, tenant_llm_budgets, tenant_settings（ADR-1067、設計 [../../handoff/s1-rls-stage4/design.md](../../handoff/s1-rls-stage4/design.md)）。
+**状態: PO 承認済み（2026-11-06 起案、同日 PO チャット「1」で KGI-4〜6 と 5 便の順番を承認）**。A 区分（`migrations/` を含む）のため PO 承認が必須ゲート。対象は会社の列を持つ public の 8 表: inventory_movements, discord_server_snapshots, discord_server_apply_runs, tenant_discord_config, tenant_discord_ticket_config, google_webhook_subscriptions, tenant_llm_budgets, tenant_settings（ADR-1067、設計 [../../handoff/s1-rls-stage4/design.md](../../handoff/s1-rls-stage4/design.md)）。
 
 | ID | 目標（○×で判定） | 判定方法 | 現在値（2026-11-06 20:33 JST） | 判定 |
 |---|---|---|---|---|
