@@ -21,7 +21,7 @@
 - 閲覧者の正本は public.viewer_accounts、請求先の正本は public.viewer_billing_profiles のまま。本テーマで写しを持つのは、発行時点の請求書の中だけ。
 - B2B の請求書（ADR-101・会社ごとの invoices）とは別の表にする。
 - トレカ商品のマスタとは別の表にする。
-- 閲覧者の請求書に載せる発行元の情報の正本は tenant_invoice_profiles（国内用・海外用）。会社情報（tenant_profile）は既存の用途の正本のまま。
+- 差出人の情報の正本: 会社名・メール・サイトは tenant_profile、住所と電話は tenant_profile_addresses（国内用・海外用）。書類はすべて get_issuer で読む。
 
 ## 維持の仕組み
 

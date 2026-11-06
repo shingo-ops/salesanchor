@@ -73,6 +73,15 @@
 - 文脈: set_tenant_context は backend/app/auth/dependencies.py:277、表名は同 :409 の tenant_table_ref。最高管理者の口に呼び出しは無い。裏の処理の呼び出しは backend/app/services/google_webhook.py:255、backend/app/discord_gateway/dm_writer.py:94。
 - 文脈は接続を返す前に消える。backend/app/database.py:60〜:61 の get_db の finally が clear_tenant_context（backend/app/auth/dependencies.py:361、ADR-131）を呼ぶ。裏の処理は get_db を通らないので自分で呼ぶ（同 :361 の説明）（2026-11-06 訂正。前の版は RESET ALL・DISCARD・pool_reset の grep だけで「無い」と書いていた）。
 - 運営の書き込みの文脈（第5回の審査で訂正）: 写す先例は set_operator_context／reset_operator_context（backend/app/auth/dependencies.py:429・:446。使う口は backend/app/routers/super_admin_tenants.py:50・:93、backend/app/routers/super_admin_suppliers.py:69・:73）。backend/app/routers/buyback_prices.py:392・:864 は生の `SET LOCAL`、backend/app/tasks/fx_rate_updater.py:70 は `SET` を直接流す形で、どちらも写さない。会社の口では空にする（backend/app/auth/dependencies.py:254〜:256）。
+- 差出人を読む処理の全件（2026-11-06。origin/main を取り込んだ後の HEAD で grep。生出力 /tmp/CC報告ファイル/contract-status/ssot-verify-1106.txt・ssot-verify-1106b.txt・reader-lang-1106.txt。評価役の挙げた場所を設計担当が自分で照合した）:
+  - B2B の請求書と見積書: backend/app/routers/invoices.py:109〜:128（company_name・company_name_en・address・phone・email・website を読む）。呼び出し :829・:875・:1007。PDF は backend/app/services/invoice_renderer.py:509〜:513・:579〜:583。見出しは英語（同 :267）、輸出の項目を載せる（同 :11）。
+  - 発注書: backend/app/services/po_renderer.py:253〜:273。住所は1行で描く。見出しは「発注書 / Purchase Order」。
+  - FedEx の申請書と申請メール: backend/app/services/label_validation.py:82〜:103（company_name・company_name_en・address・phone・email を読む）。呼び出し backend/app/routers/shipping.py:780・:815。英語の会社名を先に使う（label_validation.py:127・:159）。
+  - backend/app でこの他に tenant_profile を読む処理は無い（会社情報の口 backend/app/routers/tenant_profile.py と作成処理 backend/app/services/tenant.py:1147〜:1164 を除く）。
+- 表の形: backend/app/services/tenant.py:1147〜:1161。tenant_id 列は無い。address は TEXT 1欄、phone は VARCHAR(50)。
+- 画面: frontend/src/pages/admin/TenantProfilePage.tsx（263行）。文字の欄は TextFieldControl（同 :26）。管理センターの左メニュー「ビジネス設定」（frontend/src/locales/ja.json:433）に「発行者情報」として既にある（frontend/src/pages/management-center/ManagementCenterPage.tsx:80。道は frontend/src/App.tsx:402）。名前は frontend/src/locales/ja.json:277・:2061。
+- 試験で tenant_profile を使う箇所: backend/tests の7ファイル・51か所（test_tenant_profile.py 16、test_inventory_sprint8_migrations.py 13 ほか）。
+- 発注書の写しの列（company_name_snapshot・contact_info_snapshot。migrations/063_tenant_rbac_extensions.sql:63・:67）は backend/app に書く処理が無い（grep 0件）。
 
 ## 8. Google ドライブ
 
