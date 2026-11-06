@@ -2108,6 +2108,7 @@
     "status": "Status",
     "noStaff": "No staff registered",
     "deleteStaff": "Delete Staff",
+    "deleteDiscordKickNote": "They will also be removed from your company's Discord server.",
     "uiPreferences": "UI Preferences",
     "darkMode": "Dark mode",
     "showChatMenu": "Show Chat menu",

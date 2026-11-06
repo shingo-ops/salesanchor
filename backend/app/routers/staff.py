@@ -39,6 +39,7 @@ from app.schemas.staff import (
     StaffUIPreferences,
     StaffUpdate,
 )
+from app.services import discord_own_staff_sync as own_staff_sync
 from app.services.audit import record_audit_log
 from app.services.auth_mail import send_invite_email
 from app.services.invite import create_invite_token, invite_url
@@ -143,6 +144,14 @@ _UPDATABLE = {
     "surname_en", "given_name_en", "discord_user_id",
     "status", "is_employee",
 }
+
+# 第2段 2b: 消した・番号を変えたスタッフの元の Discord の番号（設計 S2-3 D2-3・D2-7・D2-8）。
+# 一度 kick=true になった行は false に戻さない。同じ番号が 2 度入っても失敗しない
+_RETIRE_MEMBER_SQL = text(
+    "INSERT INTO discord_retired_members (discord_user_id, kick) VALUES (:did, :kick)"
+    " ON CONFLICT (discord_user_id) DO UPDATE SET retired_at = CURRENT_TIMESTAMP,"
+    " kick = discord_retired_members.kick OR EXCLUDED.kick"
+)
 
 
 async def _fetch_emails(db: AsyncSession, staff_id: int) -> list[str]:
@@ -641,6 +650,7 @@ async def create_staff(data: StaffCreate, background_tasks: BackgroundTasks,
         await db.commit()
         await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2
         await invalidate_user_permissions(tenant_id, user_id)
+        own_staff_sync.schedule_own_staff_sync(tenant_id)  # 第2段 2b: 自社サーバーのロールを合わせる
         if invite_raw is not None:
             background_tasks.add_task(send_invite_email, data.primary_email, invite_url(invite_raw))
     except HTTPException:
@@ -715,6 +725,15 @@ async def update_staff(staff_id: int, data: StaffUpdate,
             params,
         )
 
+    # 第2段 2b: Discord の番号を書き換えたら、元の番号を辞めた人の表へ（kick=false＝ロールだけ外す・設計 D2-3）
+    old_discord_user_id = old_row["discord_user_id"]
+    if (
+        "discord_user_id" in update_data
+        and old_discord_user_id
+        and update_data["discord_user_id"] != old_discord_user_id
+    ):
+        await db.execute(_RETIRE_MEMBER_SQL, {"did": str(old_discord_user_id), "kick": False})
+
     if ui_prefs is not None:
         prefs = StaffUIPreferences(**ui_prefs) if isinstance(ui_prefs, dict) else ui_prefs
         await _upsert_ui_prefs(db, staff_id, prefs)
@@ -733,6 +752,7 @@ async def update_staff(staff_id: int, data: StaffUpdate,
     await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2: commit 後の SELECT で search_path 喪失を防ぐ
     if role_changed:
         await invalidate_user_permissions(tenant_id, old_row["user_id"])
+    own_staff_sync.schedule_own_staff_sync(tenant_id)  # 第2段 2b
 
     fetched = await db.execute(
         _visible_text(f"SELECT {_STAFF_COLS} FROM staff s {_ROLE_JOIN} WHERE s.id = :id"),
@@ -756,6 +776,15 @@ async def delete_staff(staff_id: int, db: AsyncSession = Depends(get_db),
     try:
         # 副テーブルは ON DELETE CASCADE で消える
         await db.execute(text("DELETE FROM staff WHERE id = :id"), {"id": staff_id})
+        # 第2段 2b: Discord の番号のある人は自社サーバーから外す行を入れる（kick=true・次の点検で外す・設計 D2-7）
+        if old_row["discord_user_id"]:
+            await db.execute(_RETIRE_MEMBER_SQL, {"did": str(old_row["discord_user_id"]), "kick": True})
+            await record_audit_log(
+                db=db, tenant_id=tenant_id, user_id=current_user.id,
+                action="delete", table_name="discord_guild_member", record_id=staff_id,
+                new_data={"staff_id": staff_id, "discord_user_id": str(old_row["discord_user_id"]),
+                          "purpose": "own", "action": "kick"},
+            )
         await record_audit_log(
             db=db, tenant_id=tenant_id, user_id=current_user.id,
             action="delete", table_name="staff", record_id=staff_id,
@@ -763,6 +792,7 @@ async def delete_staff(staff_id: int, db: AsyncSession = Depends(get_db),
         )
         await db.commit()
         await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2
+        own_staff_sync.schedule_own_staff_sync(tenant_id)  # 第2段 2b
     except IntegrityError:
         await db.rollback()
         raise HTTPException(

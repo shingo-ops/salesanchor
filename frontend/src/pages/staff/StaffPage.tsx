@@ -377,7 +377,7 @@ export default function StaffPage() {
       <ConfirmModal
         open={!!deleteTarget}
         title={t("staff.deleteStaff")}
-        message={<><strong>{deleteTarget?.surname_jp} {deleteTarget?.given_name_jp}</strong>{t("common.deleteConfirmSuffix")}<br />{t("common.irreversible")}</>}
+        message={<><strong>{deleteTarget?.surname_jp} {deleteTarget?.given_name_jp}</strong>{t("common.deleteConfirmSuffix")}<br />{t("common.irreversible")}{deleteTarget?.discord_user_id ? <><br />{t("staff.deleteDiscordKickNote")}</> : null}</>}
         confirmLabel={t("common.delete")}
         danger
         onConfirm={performDelete}

@@ -423,6 +423,17 @@
   - 404（もうサーバーにいない）は外し済みとして行を消す
 - 代替案: 消すボタンの処理の中で Discord に直接送る → Discord が落ちていると消す操作ごと失敗するか、外し漏れが残る。点検で送れば 5 分ごとに取り返せるので不採用
 
+### D2-8 便2b の作りの細かい決め（2026-11-06 Opus。カード card-s2-2b-staff-role-sync.md を書くときに実物で確かめた）
+- 定期の点検は Celery の worker で動く。今の worker には Bot の鍵が渡っていない（`docker-compose.yml:225-235` の celery-worker の environment に DISCORD_BOT_TOKEN が無い。backend は :109）。PO 決定 2026-11-06「1、」（worker に backend と同じ Bot の鍵を渡す）により、celery-worker の environment に `- DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN:-}` を 1 行足す。新しい鍵は作らない。deploy は worker を毎回作り直す（`.github/workflows/deploy.yml:474-481`）ので、この 1 行は次の deploy で効く
+- 監査の 1 行（D2-7）は、点検の時ではなく、スタッフを消す DELETE の同じ commit で書く。理由: 監査の表の user_id は NOT NULL（`backend/app/services/tenant.py:487`）で、5 分ごとの点検には操作した人がいない。形は先例（`backend/app/routers/discord_remove.py:174-179`）と同じ action="delete"・table_name="discord_guild_member"・record_id はスタッフの id。外した結果（外せた・403 等）は worker の記録に出す
+- 「一度 kick=true の行は false に戻さない」（D2-3）の文は、SQLite の試験でも通る形にする: `ON CONFLICT (discord_user_id) DO UPDATE SET retired_at = CURRENT_TIMESTAMP, kick = discord_retired_members.kick OR EXCLUDED.kick`（表の名前は search_path で引く。今の staff.py の書き方と同じ）
+- D2-3 (a) の「役割を書く所」のうち `backend/app/services/role_assignment.py` は commit しない（呼ぶのは staff.py の POST・PATCH だけ）ので、点検の呼び出しは staff.py の側に置く。roles.py は `set_user_roles`（PUT /users/{id}/roles）と `delete_role` の 2 か所
+- 同時に 2 本走らない鍵: Redis の `discord:own_staff_sync:{tenant_id}`（120 秒）。取れないときはその回は何もしない（5 分ごとの点検が拾う＝KGI-9 の 5 分の中）。Redis が使えないときは鍵なしで進める（PUT・DELETE は何度送っても同じ結果）
+- 一時的な失敗（Discord の 5xx・429・つながらない）は、辞めた人の表の行を残して次の点検でやり直す。403 などそれ以外は記録に理由を残して行を消す（D2-7）
+- Discord の番号が数字でない登録（手入力の間違い）は送らずに数える（skipped）
+- 設計図 `backend/app/discord_blueprints/tenant_1.json` に「スタッフ」（key `staff`・権限なし）を足す。Discord に作るのは今の確認・反映の画面（設計図どおりにロールを作る）。作るまでは、点検は「スタッフ」の番号が見つからない理由を記録に出して止まる（D2-3 手順2）
+- 設計図を読む今の試験（`backend/tests/test_discord_own_server_plan.py:59-60`・`backend/tests/test_discord_own_server_apply.py:67-68` の `_bp_data()`）は「本番の今の形と差が 0」を確かめているので、`_bp_data()` で `staff` を除いて読む形にする。足した「スタッフ」が確認で「作る」1 行になることは新しい試験で確かめる
+
 ## S2-4 変更前と変更後（利用者に見えること）
 | | 今 | 変えたあと |
 |---|---|---|
@@ -483,6 +494,7 @@
 - 決定済み: 辞めたとき＝アプリで消したとき。ロールを外し自社サーバーから外す・消す前に確認の窓（PO 2026-11-05「1」「1,消したときだけ外す」＝D2-7）
 - 決定済み: 番号を書き換えたとき、元の番号の人から Bot が管理するロールを自動で外す。サーバーからは外さない（Fable 3 回目 Q7 を PO に聞いた。PO 2026-11-05「1,アプリ側でdiscordのIDを変更したら元のIDからはロールは自動で外す」）。D2-3 のとおり PATCH で kick=false の行を入れる
 - 決定済み: KGI 8〜16 とこの設計を承認（PO 2026-11-06 回答「1、推測は禁止して事実確認を怠らずに…確立したなら進める。」＝選択肢 1「承認する」。最初の便2a の作業カードを作る。便2a は移行を含むので、実装を始める前に PO の確認を取る）
+- 決定済み: 5 分ごとの点検を動かす worker に、backend と同じ Bot の鍵を渡す（PO 2026-11-06 回答「1、」＝選択肢 1。D2-8 の 1 行目）
 
 ## S2-12 審査の記録
 - 2026-11-05 Fable（クラウド・読むだけ・HEAD 28a777d22）: REVISE。必須 3 件（Q1 要件より広い／N1 KGI-10b が作れない／N2 S2-2 と D2-3 の食い違い）、推奨 Q2〜Q4・N3〜N8
