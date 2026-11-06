@@ -17,6 +17,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
 from app.auth.dependencies import set_tenant_context
@@ -46,6 +47,15 @@ def _create_shifts(connection) -> None:
         cur.execute(
             f"INSERT INTO {SCHEMA}.shifts (tenant_id, user_id, shift_date, start_time, end_time) VALUES "
             f"({TENANT_ID}, 1, '2026-11-02', '09:00', '18:00'), ({TENANT_ID}, 1, '2026-12-01', '10:00', '19:00')"
+        )
+
+
+def _insert_public_user(connection, *, user_id: int, tenant_id: int) -> None:
+    """担当者の会社照合（ensure_user_in_tenant）が読む public.users の本物の行を入れる。"""
+    with connection.cursor() as cur:
+        cur.execute(
+            "INSERT INTO public.users (id, tenant_id) VALUES (%s, %s) ON CONFLICT (id) DO NOTHING",
+            (user_id, tenant_id),
         )
 
 
@@ -87,6 +97,7 @@ def test_p2_create_writes_date_and_time_columns(pg, monkeypatch):
         return None
 
     monkeypatch.setattr(router, "record_audit_log", _no_audit)
+    _insert_public_user(pg[0], user_id=2, tenant_id=TENANT_ID)
     data = router.ShiftCreate(user_id=2, shift_date="2026-11-03", start_time="09:00", end_time="18:00")
 
     async def call(db):
@@ -96,3 +107,25 @@ def test_p2_create_writes_date_and_time_columns(pg, monkeypatch):
     assert created.shift_date == date(2026, 11, 3)
     assert created.start_time == time(9, 0)
     assert created.end_time == time(18, 0)
+
+
+def test_p3_create_rejects_user_of_other_tenant(pg, monkeypatch):
+    """他社の人（会社 999）の番号では 422。行は増えない（ADR-1008）。"""
+    _create_shifts(pg[0])
+
+    async def _no_audit(**_kwargs):
+        return None
+
+    monkeypatch.setattr(router, "record_audit_log", _no_audit)
+    _insert_public_user(pg[0], user_id=3, tenant_id=999)
+    data = router.ShiftCreate(user_id=3, shift_date="2026-11-04", start_time="09:00", end_time="18:00")
+
+    async def call(db):
+        return await router.create_shift(data=data, db=db, tenant_id=TENANT_ID, current_user=SimpleNamespace(id=1))
+
+    with pytest.raises(HTTPException) as exc:
+        _run(pg, call)
+    assert exc.value.status_code == 422
+    with pg[0].cursor() as cur:
+        cur.execute(f"SELECT COUNT(*) FROM {SCHEMA}.shifts")
+        assert cur.fetchone()[0] == 2
