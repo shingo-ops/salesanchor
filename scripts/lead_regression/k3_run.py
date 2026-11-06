@@ -51,7 +51,7 @@ def run(out_dir: Path) -> dict:
     for s in SEEDS:
         ds = gen.generate(s, BASE_DATE)
         redraws.append(ds.redraws)
-        res = lcf.analyze(ds.leads, ds.messages)
+        res = lcf.analyze(ds.leads, ds.messages, gen.CHANNEL_ITEMS)
         if res.status != "ok":
             not_comp_a += 1
         else:
@@ -69,7 +69,7 @@ def run(out_dir: Path) -> dict:
         statuses = [lead.status for lead in ds.leads]
         random.Random(1000000 + s).shuffle(statuses)
         shuffled = [dataclasses.replace(lead, status=st) for lead, st in zip(ds.leads, statuses)]
-        res_c = lcf.analyze(shuffled, ds.messages)
+        res_c = lcf.analyze(shuffled, ds.messages, gen.CHANNEL_ITEMS)
         if res_c.status != "ok":
             not_comp_c += 1
         else:
@@ -98,7 +98,7 @@ def run(out_dir: Path) -> dict:
 
     # K3d の比べる側（本番の値の Dataset）
     ds = gen.generate(PROD_SEED, BASE_DATE)
-    res_d = lcf.analyze(ds.leads, ds.messages)
+    res_d = lcf.analyze(ds.leads, ds.messages, gen.CHANNEL_ITEMS)
     k3d = []
     if res_d.fit is not None and res_d.fit.computable:
         for idx, item in enumerate(res_d.items, start=1):

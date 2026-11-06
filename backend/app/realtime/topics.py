@@ -95,6 +95,7 @@ _PENDING = "段階2で画面に当てるときに決める"
 NO_SIGNAL_ROUTES: dict[tuple[str, str], str] = {
     ("POST", "/api/v1/admin/channel-masters"): _PENDING,
     ("DELETE", "/api/v1/admin/channel-masters/{master_id}"): _PENDING,
+    ("PUT", "/api/v1/admin/channel-masters/{master_id}/visibility"): _PENDING,
     ("DELETE", "/api/v1/admin/discord-config"): _PENDING,
     ("DELETE", "/api/v1/admin/discord-config/own"): _PENDING,
     ("PUT", "/api/v1/admin/discord-ticket-config"): _PENDING,
