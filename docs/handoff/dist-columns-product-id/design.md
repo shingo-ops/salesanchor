@@ -8,8 +8,8 @@ mode: handoff
 > お客さんのシートへ送る在庫の表を、PO が決めた15列の並びに変え、最後に商品IDを足すための設計。
 
 - 現状の記録: [recon.md](./recon.md)
-- 関係 ADR: ADR-1014（在庫の行の定義は1か所）、ADR-1019（閲覧ページの列）、ADR-1023、ADR-099。新しい ADR を1つ起こす（§8）。
-- 状態: **設計案作成済み・設計審査済み（自己審査 APPROVE 条件つき: [review-architect.md](./review-architect.md)）・PO 実装承認まだ・実装未着手**
+- 関係 ADR: ADR-1014（在庫の行の定義は1か所）、ADR-1019（閲覧ページの列）、ADR-1023、ADR-099。ADR-1066 を起こした（§8）。
+- 状態: **設計案作成済み・設計審査済み（自己審査 APPROVE 条件つき: [review-architect.md](./review-architect.md)）・PO 実装承認済み（2026-11-06「2」作ってよい。すぐ反映する）・実装カード: [card.md](./card.md)・決定: ADR-1066**
 
 ## 1. 目的（PO の言葉から）
 
