@@ -105,7 +105,7 @@ CREATE TABLE IF NOT EXISTS public.channel_master_tenant_settings (
 
 ## 3-2. 名簿に無い値の後始末（1回だけのデータ変更・§9 D2 の PO 回答）
 
-- 台本: docs/handoff/channel-master-shared/data-d2/ の precheck.sql・dryrun.sql・commit.sql・verify.sql・rollback.sql と入口 run.sh。`.sql` は `.gitignore:35` で記録から外れるため、5つは `git add -f` で記録に入れた（中身は番号と件数だけで、お客さんの名前・会話は無い）。PO が `!` で `bash run.sh <段>` を流す（manual-only 鍵）。担当（Sonnet）は流さない。
+- 台本: docs/handoff/channel-master-shared/data-d2/ の precheck.sql・dryrun.sql・commit.sql・verify.sql・rollback.sql と入口 run.sh。拡張子 sql のファイルは `.gitignore:35` で記録から外れるため、5つは `git add -f` で記録に入れた（中身は番号と件数だけで、お客さんの名前・会話は無い）。PO が `!` で `bash run.sh <段>` を流す（manual-only 鍵）。担当（Sonnet）は流さない。
 - 順番: precheck → dryrun → backup → commit → verify。commit の前に PO へ同意票。
 - 中身（件数は recon §4-2。2026-11-06 の読み取り）:
 
