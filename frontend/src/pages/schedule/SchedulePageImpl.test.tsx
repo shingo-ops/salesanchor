@@ -497,3 +497,34 @@ describe("SchedulePage Google Meet (K12)", () => {
     expect(screen.queryByRole("link", { name: joinLabel() })).toBeNull();
   });
 });
+
+describe("SchedulePage slot click opens create at the clicked hour", () => {
+  const openAt = async (slotIndex: number | null) => {
+    const { container } = view();
+    await waitFor(() => expect(container.querySelectorAll(".schedule-day-column").length).toBeGreaterThan(0));
+    if (slotIndex === null) {
+      fireEvent.click(container.querySelector(".schedule-day-head") as HTMLElement);
+    } else {
+      const column = container.querySelectorAll(".schedule-day-column")[0];
+      fireEvent.click(column.querySelectorAll(".schedule-slot")[slotIndex] as HTMLElement);
+    }
+    const inputs = await screen.findAllByLabelText(i18n.t("schedule.time"));
+    return inputs as HTMLInputElement[];
+  };
+
+  it.each([
+    [10, "10:00", "11:00"],
+    [4, "04:00", "05:00"],
+    [15, "15:00", "16:00"],
+  ])("slot %i opens at %s-%s", async (index, start, end) => {
+    const inputs = await openAt(index);
+    expect(inputs[0].value).toBe(start);
+    expect(inputs[1].value).toBe(end);
+  });
+
+  it("day head keeps the default 07:00-08:00", async () => {
+    const inputs = await openAt(null);
+    expect(inputs[0].value).toBe("07:00");
+    expect(inputs[1].value).toBe("08:00");
+  });
+});
