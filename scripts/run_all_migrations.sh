@@ -1241,3 +1241,5 @@ run_sql migrations/20261107_100000_add_inventory_movements_rls.sql
 run_sql migrations/20261107_110000_add_discord_server_records_rls.sql
 # staff-self-registration 1回目: スタッフ招待の表 staff_join_invites を作る（作るだけ・冪等・RLS 付き）
 run_sql migrations/20261107_120000_create_staff_join_invites.sql
+# ADR-1067 段階④ 便④-3: tenant_discord_config・tenant_discord_ticket_config に会社ごとの RLS（型C: 読取は全行・書込は自社か運営）。冪等・1 取引
+run_sql migrations/20261107_130000_add_discord_config_rls.sql
