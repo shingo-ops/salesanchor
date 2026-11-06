@@ -25,8 +25,8 @@ ADMIN_PG_URL = os.getenv("RLS_ADMIN_DATABASE_URL") or os.getenv("TEST_PG_URL")
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _MIGRATION = "20261106_150000_add_discord_role_link_tables.sql"
-# 995 は test_roles_system_key_ddl.py が使うため、試験・移行のどこにも無い 994 を使う
-_TENANT_ID = 994
+# 995 は test_roles_system_key_ddl.py、994 は test_permission_resolution_pg.py が使うため、試験・移行のどこにも無い 988 を使う
+_TENANT_ID = 988
 _SCHEMA = f"tenant_{_TENANT_ID:03d}"
 
 

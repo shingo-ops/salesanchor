@@ -183,3 +183,34 @@ PG の試験（新しい会社の作り方で作った形と、移行を 2 回�
 - `check_test_schema_dup.py`（commit 前に流した）→ `テストへの新規スキーマ複製なし(pass)` / rc=0（test_discord_role_link_ddl.py: BASE=0 HEAD=0）
 - `ruff check tests/test_tenant_loop_migration_guard.py tests/ops/test_ai_cloud_views.py` → `All checks passed!`
 - ファイル一覧（commit 前・`git diff --name-only $(git merge-base origin/main HEAD)`）は 18 ファイル（改訂1 の 14 ＋ test_ai_cloud_views.py・test_tenant_loop_migration_guard.py・create_ai_cloud_views.sql・reference-allowlist.tsv）。commit 後の `git diff --name-only origin/main...HEAD` は最後の返事に貼る。
+
+## 改訂3
+
+### 作業
+- 始める前: `git log -2 --oneline` → `de27bd666 docs: card s2-2a1 revision 3` / `434b95375 Merge origin/main ...`（カードの指定どおり）。台帳 `bash scripts/ledger-lookup.sh release/discord-own-server-s2-2a1` は行を出した（IN_PROGRESS）。
+- （２）`git merge --no-edit origin/main`（7e0bc67b1）→ `CONFLICT (content): Merge conflict in scripts/run_all_migrations.sh` の 1 件だけ（`git diff --name-only --diff-filter=U` も同ファイルのみ）。
+- （３）末尾を本線の 2 行→PR の 2 行の順の 6 行にし、印を消した。（４）`git commit --no-edit` で merge commit d771bb04c（親 de27bd666 と 7e0bc67b1）。
+- （５）test_discord_role_link_ddl.py の 28・29 行目を 988 に。
+
+### 確かめ（生出力）
+- `git show HEAD --format='%H %P' -s` → `d771bb04c2c8d18a098a911c5715cb67c2110a67 de27bd6665553b9736358e2ad2845085222d8864 7e0bc67b1dd39f658fa37ca3da1ca39277dd3fb8`（親 2 つ。この節を入れる commit の前の状態）
+- `tail -6 scripts/run_all_migrations.sh`:
+  ```
+  # discord-server-management 便2: 自社用サーバーの今の姿の記録と反映の記録の表を作る（作るだけ・冪等）
+  run_sql migrations/20261106_120000_create_discord_server_snapshot_tables.sql
+  # ADR-1063 便2: ログイン許可の依頼に「会社の管理者に頼んだ時刻」の列と部分索引を足す（列1つ・追加のみ・冪等）
+  run_sql migrations/20261106_140000_add_login_request_admin_requested_at.sql
+  # discord-server-management 第2段 2a-1: roles に Discord のロールの番号の列、消した番号を覚える表 2 つを作る（作るだけ・冪等）
+  run_sql migrations/20261106_150000_add_discord_role_link_tables.sql
+  ```
+- `bash -n scripts/run_all_migrations.sh` → rc=0
+- `grep -c "<<<<<<<\|>>>>>>>" scripts/run_all_migrations.sh` → `0`
+- `git grep -n -w 988 -- backend migrations scripts`:
+  ```
+  backend/tests/test_discord_role_link_ddl.py:28:# 995 は test_roles_system_key_ddl.py、994 は test_permission_resolution_pg.py が使うため、試験・移行のどこにも無い 988 を使う
+  backend/tests/test_discord_role_link_ddl.py:29:_TENANT_ID = 988
+  ```
+- `pytest tests/test_tenant_loop_migration_guard.py tests/test_discord_role_link_ddl.py tests/test_roles_system_key_ddl.py -q -p no:cacheprovider --no-cov` → `10 passed, 2 skipped in 1.46s`
+- `check_test_schema_dup.py` → `テストへの新規スキーマ複製なし(pass)` / rc=0（test_discord_role_link_ddl.py: BASE=0 HEAD=0）
+- `ruff check tests/test_discord_role_link_ddl.py` → `All checks passed!`
+- `git diff --name-only origin/main...HEAD` → 18 ファイル（改訂2 と同じ。最後の返事に生出力）
