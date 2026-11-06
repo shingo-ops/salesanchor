@@ -126,6 +126,12 @@ mode: handoff
     cd 作業場所 && git diff --stat 133808dce origin/main -- backend/app/routers/leads.py backend/app/routers/shifts.py backend/app/routers/goals.py backend/app/routers/teams.py backend/app/routers/discord_guild_config.py frontend/src/pages/admin/DiscordConfigPage.tsx frontend/src/pages/admin/DiscordConfigPage.test.tsx backend/tests/conftest.py backend/tests/test_inbox_new_assignment_badge.py backend/tests/test_analytics.py backend/tests/test_notification_event_routing.py backend/tests/test_shifts_pg.py backend/tests/test_discord_d2.py
     期待する出力: 空。差分があれば記録して続行し、報告に書く。
 
+手順3b Python 3.12 の作業用の環境を作り、backend の依存を入れる（py312-guard の決まり。2回目の実行は手順7でこれに止められ、作業がすべて消えた。編集より前に行う）
+    cd 作業場所/backend && python3.12 -m venv /tmp/xtu-venv
+    cd 作業場所/backend && /tmp/xtu-venv/bin/pip install -q -r requirements.txt -r requirements-dev.txt > /tmp/xtu-pip.txt 2>&1
+    cd 作業場所 && tail -3 /tmp/xtu-pip.txt
+    期待する出力: エラーの行が無いこと。python3.12 が無い・入れられないときは、ここで BLOCKED: で終える（まだ何も直していないので失うものは無い）。以後の backend の命令はすべて /tmp/xtu-venv/bin/python で流す。
+
 手順4 §3-1 の backend と §3-2 の画面を直し、§3-3・§3-4 の試験を書く。
 
 手順5 照合の直書きの数を確かめる（K3）
@@ -137,12 +143,12 @@ mode: handoff
     期待する出力: monkeypatch・mock で差し替える行が無いこと。出た行をすべて報告に書く。
 
 手順7 API の形を作り直す（手で書かない）
-    cd 作業場所/backend && ENVIRONMENT=test python -m tools.export_openapi ../frontend/api-contract/openapi.json
+    cd 作業場所/backend && ENVIRONMENT=test /tmp/xtu-venv/bin/python -m tools.export_openapi ../frontend/api-contract/openapi.json
     cd 作業場所/frontend && npm ci
     cd 作業場所/frontend && npm run generate:api-types
 
 手順8 試験とビルドを流す
-    cd 作業場所/backend && python -m pytest tests/test_inbox_new_assignment_badge.py tests/test_analytics.py tests/test_notification_event_routing.py tests/test_shifts.py tests/test_audit_goals_carrier.py tests/test_discord_d2.py tests/test_discord_own_server.py tests/test_shifts_pg.py tests/test_tenant_user_ref_guard_pg.py -q
+    cd 作業場所/backend && /tmp/xtu-venv/bin/python -m pytest tests/test_inbox_new_assignment_badge.py tests/test_analytics.py tests/test_notification_event_routing.py tests/test_shifts.py tests/test_audit_goals_carrier.py tests/test_discord_d2.py tests/test_discord_own_server.py tests/test_shifts_pg.py tests/test_tenant_user_ref_guard_pg.py -q
     期待する出力: 全部 passed。`_pg` の試験が skipped になるのは想定どおり。その数と理由を報告に書いて続行する（CI で確かめる）。
     cd 作業場所/frontend && npx vitest run src/pages/admin/DiscordConfigPage.test.tsx
     期待する出力: 全部 passed。
