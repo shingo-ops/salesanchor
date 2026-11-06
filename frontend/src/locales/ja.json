@@ -3570,7 +3570,8 @@
       "update_category": "カテゴリを直す",
       "create_channel": "チャンネルを作る",
       "update_channel": "チャンネルを直す",
-      "update_overwrite": "見せ方を直す"
+      "update_overwrite": "見せ方を直す",
+      "link_notice": "知らせのつなぎを作る"
     },
     "field": {
       "name": "名前",
@@ -3595,7 +3596,10 @@
       "method_not_allowed": "この操作は実行しません",
       "name_in_blueprint": "設計図に同じ名前のロールがあります",
       "app_role_missing_on_discord": "つないでいたロールが Discord で消されています",
-      "app_role_link_in_use": "つないでいるロールをほかの物も使っています"
+      "app_role_link_in_use": "つないでいるロールをほかの物も使っています",
+      "notice_other_route": "同じ種類の知らせの送り先がほかにもあります（2 か所に届きます）",
+      "notice_room_unavailable": "知らせの部屋を用意できないため、つなぎを作れません",
+      "webhook_token_missing": "Discord から送り先の鍵が返りませんでした"
     },
     "deleteKind": {
       "role": "ロール",

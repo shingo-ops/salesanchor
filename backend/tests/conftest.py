@@ -1311,9 +1311,14 @@ async def setup_test_db(test_engine):
                 event_types TEXT DEFAULT '[]',
                 is_active BOOLEAN DEFAULT TRUE,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                blueprint_key TEXT,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """))
+        await conn.execute(text(
+            "CREATE UNIQUE INDEX IF NOT EXISTS uq_notification_channels_blueprint_key"
+            " ON notification_channels (blueprint_key) WHERE blueprint_key IS NOT NULL"
+        ))
         await conn.execute(text("""
             CREATE TABLE IF NOT EXISTS notification_logs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -33,6 +33,21 @@
   ],
   "channels": [
     {"key": "general", "discord_id": "1567709769337409728", "name": "一般", "type": "text",
-     "category": "text_cat", "topic": null, "overwrites": []}
+     "category": "text_cat", "topic": null, "overwrites": []},
+    {"key": "assign_notice", "discord_id": null, "name": "アサイン連絡", "type": "text",
+     "category": "text_cat", "topic": null,
+     "overwrites": [{"target": "@everyone", "deny": ["VIEW_CHANNEL"]},
+                    {"target": "role:staff", "allow": ["VIEW_CHANNEL"]},
+                    {"target": "@bot", "allow": ["VIEW_CHANNEL"]}]},
+    {"key": "reply_notice", "discord_id": null, "name": "返信連絡", "type": "text",
+     "category": "text_cat", "topic": null,
+     "overwrites": [{"target": "@everyone", "deny": ["VIEW_CHANNEL"]},
+                    {"target": "role:staff", "allow": ["VIEW_CHANNEL"]},
+                    {"target": "@bot", "allow": ["VIEW_CHANNEL"]}]},
+    {"key": "outside_notice", "discord_id": null, "name": "部屋の外の書き込み", "type": "text",
+     "category": "text_cat", "topic": null,
+     "overwrites": [{"target": "@everyone", "deny": ["VIEW_CHANNEL"]},
+                    {"target": "role:staff", "allow": ["VIEW_CHANNEL"]},
+                    {"target": "@bot", "allow": ["VIEW_CHANNEL"]}]}
   ]
 }

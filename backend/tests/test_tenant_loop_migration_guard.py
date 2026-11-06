@@ -91,6 +91,11 @@ _REVIEWED: dict[str, tuple[str, str, frozenset[str]]] = {
         "",
         frozenset({"20261106_150000_add_discord_role_link_tables.sql"}),
     ),
+    "test_notification_channels_blueprint_key_ddl.py": (
+        "text_only",
+        "文字として読むだけ",
+        frozenset({"20261106_210000_add_notification_channels_blueprint_key.sql"}),
+    ),
     "condition_value_columns.py": (
         "text_only",
         "コメント（:6）に名前が出るだけ",
