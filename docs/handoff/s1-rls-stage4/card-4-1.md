@@ -1,6 +1,6 @@
 # 実装カード 便④-1 — public.inventory_movements に RLS（型A）
 
-- 状態: 草案（クラウド設計審査 1 回目 REVISE＝card-4-1-review.md を §11 のとおり反映。2 回目の審査の前）。PO の実装承認は design.md 冒頭（2026-11-06「1」: KGI-4〜6 と 5 便の順番、「最初の在庫の動きの分から作り始め、本番に出して確かめるところまで進めます。」）。
+- 状態: 審査済み（クラウド設計審査 2 回目 APPROVE＝card-4-1-review.md）。PO の実装承認は design.md 冒頭（2026-11-06「1」: KGI-4〜6 と 5 便の順番、「最初の在庫の動きの分から作り始め、本番に出して確かめるところまで進めます。」）。
 - 根拠の版: origin/main 5574bf327（2026-11-06 23:58 JST に fetch）。行番号はすべてこの版。
 - 設計: [design.md](design.md) §2-1（型A）・§3（④-1 行）・§4（試験）・§5（K4-1・K4-2・K5-1・K5-2）・§7（戻し方）。現状: [recon.md](recon.md)。
 - 実装ブランチ: `release/s1-rls-stage4-bin1`（origin/main から作る）。1 便 1 PR。PR は Draft で起票する。

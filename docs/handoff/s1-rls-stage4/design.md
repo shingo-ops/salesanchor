@@ -4,7 +4,7 @@
 
 - 状態: **PO 承認済み**（2026-11-06 チャット「1」。問い「この目標と順番で承認する【おすすめ】：最初の在庫の動きの分から作り始め、本番に出して確かめるところまで進めます。」への答え。KGI-4〜6 と 5 便の順番を承認）。PO の方向の指示: 2026-11-06 チャット「1」（問い「8 件すべてに守りを足す設計をする【おすすめ】：在庫の動きから順に、入口を1件ずつ調べて設計します。」への答え）。
 - 根拠: [docs/handoff/s1-rls-stage4/recon.md](recon.md)（以下 R と書く。R§4 は recon の 4 章）。決定の記録: [ADR-1067](../../adr/ADR-1067-public-tenant-config-tables-rls.md)。前例: ADR-1018・ADR-145。
-- 自己審査: 同じ AI（Claude Opus）が Planner と Architect を順に担った。独立した第二者の審査ではない。各便のカードの前にクラウドの設計審査を通す。審査の記録: [review-opus.md](review-opus.md)（1 回目 REVISE、指摘 1〜3 を反映済み）。
+- 自己審査: 同じ AI（Claude Opus）が Planner と Architect を順に担った。独立した第二者の審査ではない。各便のカードの前にクラウドの設計審査を通す。審査の記録: [review-opus.md](review-opus.md)（7 回目 APPROVE）。
 
 ## 1. 目的と利用者に見える変化
 
@@ -93,7 +93,7 @@ COMMIT;
   - ファイル: migrations/<YYYYMMDD_HHMMSS>_add_<表>_rls.sql の形（1 便 1 ファイル。④-2〜④-5 の 2 表の便も 1 ファイルに 2 表）。
   - 登録: scripts/run_all_migrations.sh の末尾に `run_sql migrations/<ファイル>` を 1 行足す（:15「新マイグレーションは末尾の『ここから追加』セクションに追加すること」）。
   - 前提の表（CI の 2 つのジョブ。origin/main 6caae154f で確かめた。表の定義は書き写さない）:
-    - inventory_movements・tenant_llm_budgets: migrations/062_create_inventory_movements_and_budget.sql（:88・:151 で作る）は scripts/migrate_inventory_sprint1.py:56 の一覧にあり、本番は run_all_migrations.sh:361 の `run_py`、CI は変更 SQL のジョブ migration-test.yml:1046-1047・全件ドライラン :1906-1907 で流れる。どちらも変更 SQL より前。足すものは無い。
+    - inventory_movements・tenant_llm_budgets: migrations/062_create_inventory_movements_and_budget.sql（:88・:151 で作る）は scripts/migrate_inventory_sprint1.py:58 の一覧にあり、本番は run_all_migrations.sh:361 の `run_py`、CI は変更 SQL のジョブ migration-test.yml:1046-1047・全件ドライラン :1906-1907 で流れる。どちらも変更 SQL より前。足すものは無い。
     - tenant_discord_config・tenant_settings: 変更 SQL のジョブの `PUBLIC_SQL` :480・:498、全件ドライラン :1824・:1831 に定義済み。tenant_discord_ticket_config: 変更 SQL のジョブ :491 に定義済み、全件ドライランは run_all:425 で作られる。足すものは無い。
     - google_webhook_subscriptions（④-4）・discord_server_snapshots と discord_server_apply_runs（④-2）: 全件ドライランは run_all（:376・:1217・:1229）で作られる。変更 SQL のジョブには無い（migration-test.yml を表の名で grep して 0 件）。このため ④-2・④-4 のカードで、変更 SQL を流す前に前提の移行を先に流す step を 1 つ足す。前例は migration-test.yml:1299-1338 の「変更 SQL の前提の移行を先に実行」（`contains(steps.detect.outputs.changed_sql, '<その便のファイル>')` で絞る）。④-2 は 20261106_120000_create_discord_server_snapshot_tables.sql（tenants だけを指す。tenants は :187 に定義済み）。④-4 は 077_calendar_sync_mode_and_webhook_subscriptions.sql → 20261103_200000_add_google_calendar_import_sync.sql の順（077 が ALTER する tenant_google_calendar_config は :957 に定義済み）。
 - ADR-1063 便5 の許可一覧には、8 表を「段階④で RLS を付ける予定（ADR-1067 便④-N）」の理由で載せておき、各便で 1 行ずつ消す。これで便5 の CI 確かめを先に「落とす形」へ切り替えられる。
