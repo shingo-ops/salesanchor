@@ -1,0 +1,156 @@
+/**
+ * CalendarView.css — FullCalendar 6.1.22 の見た目をトークンだけで決める（ADR-1065・ADR-067）
+ *
+ * - `--fc-*` は 6.1.22 の core・daygrid・timegrid が使う 28 個を全部ここで置き換える
+ *   （frontend の試験 T4 が node_modules から数えて漏れを見る）
+ * - 値は var() だけ。px・#・rgb の直書きをしない
+ */
+
+/* ---- FullCalendar の変数をトークンへ ---- */
+.comp-calendar {
+  /* core */
+  --fc-small-font-size: var(--font-xs);
+  --fc-page-bg-color: var(--bg-surface);
+  --fc-neutral-bg-color: var(--schedule-hour-bg);
+  --fc-neutral-text-color: var(--text-muted);
+  --fc-border-color: var(--schedule-gridline);
+  --fc-button-text-color: var(--bg-surface);
+  --fc-button-bg-color: var(--accent);
+  --fc-button-border-color: var(--accent);
+  --fc-button-hover-bg-color: var(--accent-hover);
+  --fc-button-hover-border-color: var(--accent-hover);
+  --fc-button-active-bg-color: var(--accent-hover);
+  --fc-button-active-border-color: var(--accent-hover);
+  --fc-event-bg-color: var(--cal-personal-tint);
+  --fc-event-border-color: var(--cal-personal);
+  --fc-event-text-color: var(--cal-personal-text);
+  --fc-event-selected-overlay-color: var(--schedule-slot-hover);
+  --fc-more-link-bg-color: var(--bg-surface);
+  --fc-more-link-text-color: var(--accent);
+  --fc-event-resizer-thickness: var(--space-2);
+  --fc-event-resizer-dot-total-width: var(--space-2);
+  --fc-event-resizer-dot-border-width: var(--schedule-gridline-w);
+  --fc-non-business-color: var(--bg-subtle);
+  --fc-bg-event-color: var(--cal-holiday-tint);
+  --fc-bg-event-opacity: var(--opacity-faint);
+  --fc-highlight-color: var(--schedule-slot-hover);
+  --fc-today-bg-color: var(--schedule-slot-hover);
+  --fc-now-indicator-color: var(--schedule-now-line);
+  /* daygrid */
+  --fc-daygrid-event-dot-width: var(--schedule-month-dot-size);
+
+  color: var(--text-primary);
+  font-size: var(--font-sm);
+}
+
+/* ---- 寸法 ---- */
+.comp-calendar .fc-timegrid-slot {
+  height: calc(var(--schedule-row-height) - var(--schedule-gridline-w));
+}
+
+.comp-calendar .fc-timegrid-axis {
+  width: var(--schedule-time-gutter-width);
+}
+
+.comp-calendar .fc-timegrid-slot-label,
+.comp-calendar .fc-timegrid-axis-cushion {
+  color: var(--schedule-hour-label);
+}
+
+.comp-calendar .fc-timegrid-col {
+  min-width: var(--schedule-day-min-w);
+}
+
+.comp-calendar--month .fc-daygrid-day-frame {
+  min-height: var(--schedule-month-cell-min-h);
+}
+
+/* ---- 変数を通らない直書きの影・背景（使う物だけ上書き） ---- */
+.comp-calendar .fc-event-selected,
+.comp-calendar .fc-event:focus {
+  box-shadow: var(--shadow-xs);
+}
+
+.comp-calendar .fc-event-dragging.fc-event-selected {
+  box-shadow: var(--shadow-sm);
+}
+
+.comp-calendar .fc-daygrid-more-link:hover,
+.comp-calendar .fc-daygrid-dot-event:hover,
+.comp-calendar .fc-daygrid-dot-event.fc-event-mirror {
+  background: var(--bg-hover);
+}
+
+/* ボタン・小窓は使わない（headerToolbar: false・moreLinkClick が表示名を返す）が、
+   出た場合に直書きの影が残らないよう置き換えておく */
+.comp-calendar .fc-button:focus,
+.comp-calendar .fc-button-primary:focus,
+.comp-calendar .fc-button-primary:not(:disabled).fc-button-active:focus,
+.comp-calendar .fc-button-primary:not(:disabled):active:focus {
+  box-shadow: var(--shadow-xs);
+}
+
+.comp-calendar .fc-popover {
+  box-shadow: var(--shadow-dropdown);
+}
+
+/* ---- 予定 ---- */
+.comp-calendar .comp-calendar__event {
+  border-radius: var(--schedule-event-radius);
+  border-width: var(--schedule-gridline-w);
+  border-style: solid;
+}
+
+.comp-calendar .comp-calendar__time {
+  margin-right: var(--space-1);
+  font-weight: var(--font-weight-medium);
+}
+
+.comp-calendar .comp-calendar__event--tone-meeting {
+  --fc-event-bg-color: var(--cal-meeting-tint);
+  --fc-event-border-color: var(--cal-meeting);
+  --fc-event-text-color: var(--cal-meeting-text);
+}
+
+.comp-calendar .comp-calendar__event--tone-purchase {
+  --fc-event-bg-color: var(--cal-purchase-tint);
+  --fc-event-border-color: var(--cal-purchase);
+  --fc-event-text-color: var(--cal-purchase-text);
+}
+
+.comp-calendar .comp-calendar__event--tone-shipping {
+  --fc-event-bg-color: var(--cal-shipping-tint);
+  --fc-event-border-color: var(--cal-shipping);
+  --fc-event-text-color: var(--cal-shipping-text);
+}
+
+.comp-calendar .comp-calendar__event--tone-billing {
+  --fc-event-bg-color: var(--cal-billing-tint);
+  --fc-event-border-color: var(--cal-billing);
+  --fc-event-text-color: var(--cal-billing-text);
+}
+
+.comp-calendar .comp-calendar__event--tone-release {
+  --fc-event-bg-color: var(--cal-release-tint);
+  --fc-event-border-color: var(--cal-release);
+  --fc-event-text-color: var(--cal-release-text);
+}
+
+.comp-calendar .comp-calendar__event--tone-holiday {
+  --fc-event-bg-color: var(--cal-holiday-tint);
+  --fc-event-border-color: var(--cal-holiday);
+  --fc-event-text-color: var(--cal-holiday-text);
+}
+
+/* 見積もり: 点線の枠・地は面の色（実際は solid） */
+.comp-calendar .comp-calendar__event--line-dashed {
+  --fc-event-bg-color: var(--bg-surface);
+  border-style: var(--schedule-event-estimate-style);
+  border-width: var(--schedule-event-border-w);
+}
+
+/* 重なり: 赤い枠 */
+.comp-calendar .comp-calendar__event--conflict {
+  border-color: var(--danger);
+  border-width: var(--schedule-event-border-w);
+}

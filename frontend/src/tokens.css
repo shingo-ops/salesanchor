@@ -419,6 +419,9 @@
   --schedule-empty-icon-bg:  var(--calendar-google-blue-light); /* 空状態アイコン背景 */
   --schedule-empty-icon-color: var(--calendar-google-blue); /* 空状態アイコン前景 */
   --schedule-control-border: var(--border); /* ビュー/操作コントロール枠線 */
+  --schedule-gridline-w:      1px;      /* 時間割の罫線の太さ（1時間の高さから引く） */
+  --schedule-event-border-w:  2px;      /* 予定の枠の太さ（見積もり・重なり） */
+  --schedule-event-estimate-style: dashed; /* 見積もりの枠の線の種類（実際は solid） */
 
   /* ---- Schedule category colors (Google Calendar handoff) ---- */
   --cal-personal:        #1e3a8a;  --cal-personal-tint: #e9edf7;  --cal-personal-text: #1e3a8a;
