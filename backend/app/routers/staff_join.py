@@ -34,7 +34,7 @@ from app.auth.viewer_signup_code import format_signup_code, generate_signup_code
 from app.cache import check_auth_rate_limit, invalidate_user_permissions, record_auth_failure
 from app.client_ip import get_client_ip
 from app.database import get_db
-from app.models import StaffJoinInvite, User
+from app.models import User
 from app.schemas.staff import StaffCreate, StaffStatus
 from app.schemas.staff_join import (
     StaffJoinInfo,
@@ -92,17 +92,19 @@ async def create_join_invite(
     await check_assignable_role(db, tenant_id, current_user, data.role_id)  # 400 / 403
     key = new_join_key(tenant_id)
     expires_at = _now() + JOIN_LINK_TTL
-    invite = StaffJoinInvite(
-        tenant_id=tenant_id,
-        role_id=data.role_id,
-        created_by=current_user.id,
-        token_hash=hash_join_key(key),
-        expires_at=expires_at,
-        status="open",
-    )
-    db.add(invite)
-    await db.flush()
-    invite_id = int(invite.id)
+    invite_id = int((await db.execute(
+        text(
+            "INSERT INTO staff_join_invites (tenant_id, role_id, created_by, token_hash, expires_at, status) "
+            "VALUES (:tid, :rid, :uid, :th, :exp, 'open') RETURNING id"
+        ),
+        {
+            "tid": tenant_id,
+            "rid": data.role_id,
+            "uid": current_user.id,
+            "th": hash_join_key(key),
+            "exp": expires_at,
+        },
+    )).scalar_one())
     await db.commit()
     await reset_tenant_context(db, tenant_id)
     return StaffJoinInviteCreated(id=invite_id, url=join_url(key), expires_at=expires_at)
@@ -116,10 +118,13 @@ async def list_join_invites(
 ):
     """open・submitted を新しい順に返す（状態・役割名・期限・作った人）。鍵は返さない。"""
     rows = (await db.execute(
-        select(StaffJoinInvite)
-        .where(StaffJoinInvite.tenant_id == tenant_id, StaffJoinInvite.status.in_(("open", "submitted")))
-        .order_by(StaffJoinInvite.created_at.desc(), StaffJoinInvite.id.desc())
-    )).scalars().all()
+        text(
+            "SELECT id, status, role_id, expires_at, created_at, created_by FROM staff_join_invites "
+            "WHERE tenant_id = :tid AND status IN ('open', 'submitted') "
+            "ORDER BY created_at DESC, id DESC"
+        ),
+        {"tid": tenant_id},
+    )).all()
     role_names = {
         int(r[0]): r[1]
         for r in (await db.execute(
@@ -148,12 +153,14 @@ async def list_join_invites(
     ]
 
 
-async def _load_open_invite(db: AsyncSession, tenant_id: int, invite_id: int) -> StaffJoinInvite:
+async def _load_open_invite(db: AsyncSession, tenant_id: int, invite_id: int):
     invite = (await db.execute(
-        select(StaffJoinInvite)
-        .where(StaffJoinInvite.id == invite_id, StaffJoinInvite.tenant_id == tenant_id)
-        .with_for_update()
-    )).scalars().first()
+        text(
+            "SELECT id, status, role_id FROM staff_join_invites "
+            "WHERE id = :id AND tenant_id = :tid FOR UPDATE"
+        ),
+        {"id": invite_id, "tid": tenant_id},
+    )).first()
     if invite is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="招待が見つかりません")
     if invite.status != "open":
@@ -174,8 +181,13 @@ async def reissue_join_invite(
     await check_assignable_role(db, tenant_id, current_user, int(invite.role_id))
     key = new_join_key(tenant_id)
     expires_at = _now() + JOIN_LINK_TTL
-    invite.token_hash = hash_join_key(key)
-    invite.expires_at = expires_at
+    await db.execute(
+        text(
+            "UPDATE staff_join_invites SET token_hash = :th, expires_at = :exp "
+            "WHERE id = :id AND tenant_id = :tid"
+        ),
+        {"th": hash_join_key(key), "exp": expires_at, "id": invite_id, "tid": tenant_id},
+    )
     await db.commit()
     await reset_tenant_context(db, tenant_id)
     return StaffJoinInviteCreated(id=invite_id, url=join_url(key), expires_at=expires_at)
@@ -189,9 +201,14 @@ async def revoke_join_invite(
     tenant_id: int = Depends(get_current_tenant),
 ):
     """open の招待だけ。revoked にする。"""
-    invite = await _load_open_invite(db, tenant_id, invite_id)
-    invite.status = "revoked"
-    invite.revoked_at = _now()
+    await _load_open_invite(db, tenant_id, invite_id)
+    await db.execute(
+        text(
+            "UPDATE staff_join_invites SET status = 'revoked', revoked_at = :now "
+            "WHERE id = :id AND tenant_id = :tid"
+        ),
+        {"now": _now(), "id": invite_id, "tid": tenant_id},
+    )
     await db.commit()
     await reset_tenant_context(db, tenant_id)
     return {"id": invite_id, "status": "revoked"}
@@ -199,7 +216,7 @@ async def revoke_join_invite(
 
 # ─────────────────────── ログイン不要（鍵で引く） ───────────────────────
 
-async def _open_invite_by_key(db: AsyncSession, key: str, ip: str, *, for_update: bool) -> StaffJoinInvite:
+async def _open_invite_by_key(db: AsyncSession, key: str, ip: str, *, for_update: bool):
     """鍵から有効な招待を引く。無効はすべて同じ 404。鍵の先頭の会社番号で set_tenant_context してから RLS のもとで引く。"""
     parsed = parse_join_key(key)
     if parsed is None:
@@ -213,10 +230,13 @@ async def _open_invite_by_key(db: AsyncSession, key: str, ip: str, *, for_update
         await record_auth_failure(ip)
         raise _invalid()
     await set_tenant_context(db, tenant_id)
-    query = select(StaffJoinInvite).where(StaffJoinInvite.token_hash == hash_join_key(raw))
+    sql = (
+        "SELECT id, tenant_id, role_id, created_by, status, expires_at FROM staff_join_invites "
+        "WHERE token_hash = :th"
+    )
     if for_update:
-        query = query.with_for_update()
-    invite = (await db.execute(query)).scalars().first()
+        sql += " FOR UPDATE"
+    invite = (await db.execute(text(sql), {"th": hash_join_key(raw)})).first()
     expires = as_utc(invite.expires_at) if invite is not None else None
     if (
         invite is None
@@ -296,12 +316,22 @@ async def submit_join(key: str, data: StaffJoinSubmit, request: Request, db: Asy
         # (4) 登録番号 (5) 行を submitted に
         code = generate_signup_code()
         now = _now()
-        invite.status = "submitted"
-        invite.user_id = user_id
-        invite.staff_id = staff_id
-        invite.reg_code_hash = signup_code_sha256(code)
-        invite.reg_code_expires_at = now + REG_CODE_TTL
-        invite.submitted_at = now
+        await db.execute(
+            text(
+                "UPDATE staff_join_invites SET status = 'submitted', user_id = :uid, staff_id = :sid, "
+                "reg_code_hash = :rh, reg_code_expires_at = :rexp, submitted_at = :now "
+                "WHERE id = :id AND tenant_id = :tid"
+            ),
+            {
+                "uid": user_id,
+                "sid": staff_id,
+                "rh": signup_code_sha256(code),
+                "rexp": now + REG_CODE_TTL,
+                "now": now,
+                "id": int(invite.id),
+                "tid": tenant_id,
+            },
+        )
         # (6) commit → reset_tenant_context → invalidate_user_permissions
         await db.commit()
         await reset_tenant_context(db, tenant_id)
