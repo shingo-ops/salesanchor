@@ -1,6 +1,6 @@
 # 実装カード 便④-4 — public.google_webhook_subscriptions に RLS（型C）
 
-- 状態: 草案（クラウド設計審査の前）。PO の実装承認は design.md 冒頭（2026-11-06「1」: KGI-4〜6 と 5 便の順番）。完走の指示は PO 2026-11-07 チャット「PRマージ、デプロイまで完走させてくれ」。次の 3 つの表へ進むことは PO 2026-11-07 チャット「1」（便④-2 の報告の選択肢 1）。
+- 状態: クラウド設計審査 2 回目（HEAD 6f00f1d51）の指摘 6 件（すべて「直した方がよい」）を反映済み。指摘は Opus が実物 9ffbc1997 と照らして正しいと確かめた。PO の実装承認は design.md 冒頭（2026-11-06「1」: KGI-4〜6 と 5 便の順番）。完走の指示は PO 2026-11-07 チャット「PRマージ、デプロイまで完走させてくれ」。次の 3 つの表へ進むことは PO 2026-11-07 チャット「1」（便④-2 の報告の選択肢 1）。
 - 根拠の版: origin/main 9ffbc1997（2026-11-07 07:15 JST に fetch。便④-3 #5227 の合流後）。行番号はすべてこの版。
 - 設計: [design.md](design.md) §2（表ごとの型: 型C）・§2-2（型C のポリシー）・§3（④-4 行と「前提の表」:98・:107）・§4（試験 型C ①〜⑥）・§5（K4-1・K4-2・K5-1・K5-2）・§7（戻し方）。現状: [recon.md](recon.md) R§4-5。手本: 便④-3 [card-4-3.md](card-4-3.md) と、合流済みの backend/tests/test_discord_config_rls.py。CI の前提の step の手本: 便④-2 [card-4-2.md](card-4-2.md) と `.github/workflows/migration-test.yml:1339-1347`。
 - 実装ブランチ: `release/s1-rls-stage4-bin4`（origin/main 9ffbc1997 から作った。カードはこのブランチに Opus が置く）。1 便 1 PR。PR は Draft で起票する。
@@ -87,7 +87,7 @@ run_sql migrations/20261107_150000_add_google_webhook_subscriptions_rls.sql
 - `_fresh()` の中身（使い捨て DB `gws_rls_<hex12>`、app_engine は `pool_size=1, max_overflow=0`）:
   1. admin の接続で `_ensure_public_users(conn)`（rls_bootstrap.py）。続けて admin で `INSERT INTO public.tenants (id, tenant_code, tenant_name, company_name, is_active) VALUES (968, 'tenant_968', 'T968', 'T968', TRUE), (969, 'tenant_969', 'T969', 'T969', TRUE)`。
   2. 本物の移行を本番と同じ順で `_apply_migration(admin_engine, <名>)` で当てる（表の定義を試験に書き写さない）: `076_add_google_calendar_config.sql` → `077_calendar_sync_mode_and_webhook_subscriptions.sql` → `20261103_200000_add_google_calendar_import_sync.sql`。
-     - 076 は public.users を外部キーで指す（:108）。1 の `_ensure_public_users` で用意される。
+     - 076 は public.users を外部キーで指す（076:21 `connected_by_user_id INTEGER REFERENCES users(id)`）。1 の `_ensure_public_users` で用意される。
      - 20261103_200000 は `tenant_\d+` の置き場を回す部分を持つが、使い捨て DB にはその置き場が無いので 0 回まわるだけ。
   3. admin で `_GRANT_DDL`（便④-3 の試験と同じ）。
   4. admin で各社 1 行ずつ INSERT: `(tenant_id, channel_id, expiration)` = `(968, 'ch968', now() + interval '3 days')`・`(969, 'ch969', now() + interval '3 days')`。
@@ -95,12 +95,12 @@ run_sql migrations/20261107_150000_add_google_webhook_subscriptions_rls.sql
   - 1〜2 のどれかが使い捨て DB で通らないときは、通らない理由を記録して止まり、Opus に戻す（推測で定義を書き足さない）。
 - 試験（design §4 型C ①〜⑥）。すべて app_engine（アプリの接続役 salesanchor_app・NOBYPASSRLS）で行う:
   - ① 文脈なし（新しい接続）で SELECT すると 968・969 の両方の行が見える（2 行）。969 の文脈でも 968 の行が見える。同じ接続で `SET app.tenant_id = ''` の後の SELECT もエラー（22P02）にならず 2 行。加えて、文脈なしで `SELECT tenant_id, channel_token_hash FROM google_webhook_subscriptions WHERE channel_id = 'ch969'`（backend/app/services/google_webhook.py:212 の受け口と同じ文）が 1 行返る。
-  - ② 968 の文脈で tenant_id=969 の INSERT が 42501（channel_id は 'x969'。tenant_id の UNIQUE と channel_id の UNIQUE より先に RLS で止まることを sqlstate で確かめる）。
+  - ② 968 の文脈で `INSERT INTO google_webhook_subscriptions (tenant_id, channel_id, expiration) VALUES (969, 'x969', now() + interval '3 days')` が 42501（expiration は NOT NULL で既定値が無いので必ず入れる。077:31。969 の行は既にあるので、tenant_id の UNIQUE より先に RLS で止まることを sqlstate で確かめる）。
   - ③ 968 の文脈で 969 の行への UPDATE（sync_token だけ変える）・DELETE が 0 行。後で admin で 969 の行が元のまま 1 行あることを確かめる。
   - ④ 運営の文脈（`app.is_operator='true'`・`app.tenant_id=''`）で 969 の行の UPDATE が 1 行（取引は最後に ROLLBACK してよい）。
   - ⑤ 同じ移行をもう一度当ててもエラーにならず、`pg_policies` の本数が 4 のまま。
   - ⑥ 968 の文脈で自社の行の tenant_id を 969 へ付け替える UPDATE が 42501。
-  - ⑦ 書込の入口と同じ文脈の張り方で、自社の行の書込が通る: app_engine の接続で `SET app.tenant_id = '968'` と `SET app.is_operator = ''`（backend/app/auth/dependencies.py:297-298 の set_tenant_context と同じ 2 文。set_config でなく SET）を流し、次の 3 文がエラー無く通り、admin で値が変わったことを確かめる。最後に同じ接続で `SET app.tenant_id = ''` に戻す。
+  - ⑦ 書込の入口と同じ文脈の張り方で、自社の行の書込が通る: app_engine の接続で `SET app.tenant_id = '968'` と `SET app.is_operator = ''`（backend/app/auth/dependencies.py:298-299 の set_tenant_context と同じ 2 文。set_config でなく SET。:297 の search_path は張らない。表は public にあり、試験の接続の既定の search_path で見つかるため）を流す。次の 3 文を順に流し、**各文の直後に `await conn.commit()` してから** admin（別の接続）で値を確かめる（commit 前の値は admin から見えない。手本 test_discord_config_rls.py:371 の「最後に 1 回だけ commit」はまねない）。最後に同じ接続で `SET app.tenant_id = ''` を流して `await conn.commit()` する（手本 :373-374 のように rollback で終えない）。
     - google_webhook.py:117-129 と同じ `INSERT INTO google_webhook_subscriptions (tenant_id, channel_id, resource_id, calendar_id, expiration, channel_token_hash) VALUES (968, 'ch968x', 'r968', 'primary', now() + interval '7 days', 'h968') ON CONFLICT (tenant_id) DO UPDATE SET channel_id = EXCLUDED.channel_id, resource_id = EXCLUDED.resource_id, expiration = EXCLUDED.expiration, channel_token_hash = EXCLUDED.channel_token_hash, created_at = NOW()`（既にある 968 の行に当たり UPDATE 側を通る）。確かめ: channel_id が 'ch968x'。
     - google_webhook.py:353-358 と同じ `UPDATE google_webhook_subscriptions SET sync_token = 's968' WHERE tenant_id = 968` が 1 行。確かめ: sync_token が 's968'。
     - google_webhook.py:190-192 と同じ `DELETE FROM google_webhook_subscriptions WHERE tenant_id = 968` が 1 行。確かめ: 968 の行が 0 行、969 の行は 1 行のまま。
@@ -153,8 +153,8 @@ run_sql migrations/20261107_150000_add_google_webhook_subscriptions_rls.sql
 - K4-2: 会社ごとの行数が上の基準値と同じ（会社 1・4 が各 1）。
 - K5-1: 反映時刻以降の backend・celery-worker・celery-beat のログで `42501`・`row-level security`・`invalid input syntax for type integer` が 0 件。加えて celery-worker のログで `Google 取り込み失敗`（google_calendar_sync.py:66）と `Webhook 更新失敗`（google_webhook.py:409）が 0 件。
 - K5-2（design §5 ④-4 を、本番で観測できる形に置き換えたもの。理由は下）:
-  1. 反映後に 15 分おきの取り込み（celery_app.py:216-219 `sync_google_calendar_all`）が 1 回以上 `succeeded` になる。この作業は会社ごとに文脈を張って google_webhook_subscriptions を読み、sync_token を UPDATE する（§6 の 3 行目の書込の入口を本番で通る）。
-  2. 期限の点検を反映後に 1 回手で起こす: `docker exec astro-webapp-celery-worker-1 celery -A app.celery_app call app.tasks.google_calendar_sync.renew_google_calendar_webhooks`（無制限鍵の SSH。DB は直接触らない。アプリの通常の作業を 1 回起こすだけ）。そのログが `succeeded` でエラー 0。基準値の期限はどちらも 2 日より先なので、更新は 0 件のはず（文脈なしの全社の読取だけを通る）。
+  1. 反映時刻以降の celery-worker のログに `Google 取り込み完了 (tenant=1,` と `Google 取り込み完了 (tenant=4,`（google_webhook.py:363-365）が各 1 件以上ある。作業の `succeeded` だけでは足りない（同期が対象外・未接続のときはこの行を出さずに返るため。google_webhook.py:265-266・:274-276）。この行は会社の文脈を張って google_webhook_subscriptions を読み、Google が次の印を返したときは sync_token を UPDATE した後（:352-359）、commit の後に出る。次の印が無い回は UPDATE を通らないので、UPDATE が通ることは CI の試験⑦で確かめる。
+  - 期限の点検（renew）を手で起こすことはしない。理由: 期限が 48 時間以内なら Google を呼んで行を書き換える作業で（google_webhook.py:48・:392-405）、会社 4 の行に触れうるため。renew の読取は文脈なしの SELECT で、CI の試験①と同じ形で確かめ済みになる。毎日 04:30 JST の定時の renew（celery_app.py:221-224）は、反映の翌朝に K5-1 の `Webhook 更新失敗` 0 件で見る（マージの条件にはしない）。
   - 置き換えの理由（事実）: design §5 は「Google の通知の受け口が反映後に 1 回以上 200 を返す」としていたが、2026-11-07 07:20 JST に nginx の直近 24 時間のログで `google-calendar/webhook` が 0 件、backend の直近 72 時間でも 0 件だった。通知はいつ来るか分からず、待っても観測できない恐れがある。受け口の読取（文脈なしの SELECT）は CI の試験①の追加の 1 文（google_webhook.py:212 と同じ文）で確かめる。
 - 画面での確かめ: 無し（書込の入口は裏の作業と設定画面の切替だけで、上の K5-2 の 1 で本番の書込を通る）。
 
