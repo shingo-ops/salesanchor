@@ -427,3 +427,10 @@ e. fork PR のワークフロー実行の承認設定
 - 12-10 c: 個人アカウントでのランナーグループ。
 - 12-10 d: 同名ステータスの上書きの明文。
 - 12-12: PIPELINE_PAT の権限範囲。
+
+## 13. R4b-2 第1便の調べ（2026-11-06・読み取りのみ）
+- origin/main 8ab21523307f577241e05b863180b0bad7af200c の frontend/.husky/pre-push:44-57・63-69、scripts/dev/check-before-submit.sh:40-99・138・390、scripts/dev/validate-pr-body.sh:322-340、scripts/tests/test_check_before_submit.py:245・310-330・403・454 を読んだ（行番号は design.md「R4b-2」の現在地）
+- 記録 /Users/tanizawashingo/salesanchor/.git/check-before-submit.log：2026-10-30 23:17〜2026-11-06 10:01 JST の数えと 167 行の内訳は /tmp/CC報告ファイル/k8-20261106/（summary.md・ns-breakdown.md）
+- 終了コード 2 の 5 行は /tmp/CC報告ファイル/r4b2-20261106/rc2-all.tsv。2 つの枝の作業場所は `git worktree list` に無い。PR は #4961・#5092（どちらもマージ済み）
+- 一時の repo で `git status --porcelain` が追跡外のファイルだけで `?? untracked.txt` を返すことを実測（git 2.39.3）
+- 未確認：終了コード 2 の 5 回の理由

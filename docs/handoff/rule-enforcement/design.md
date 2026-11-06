@@ -1053,3 +1053,83 @@ APPROVE。根拠：呼び出し元・時間切れ・所要秒は origin/main と
 - 3 回目（reviewer・opus、新規、2026-10-31）：APPROVE。採否に関わる指摘なし。test.sh が session_start.py を流して値を比べることを、値を変えた写しで NG が 1 件増えることで実測。任意 3 件（試験⑤の理由は test.sh が CI で流れないことを書き分ける・見張りとの関係は「prepare だけを変える PR」・リスクの「K1②③」は「試験②③」）はこの版に入れた。未確認のまま残るもの：node:20-slim の git（どちらでも 0 で終わる形）、試験③の別名の PATH が ubuntu で通るか（K1 の CI の結果で確かめる）
 - Claude Opus 設計担当の判定：APPROVE（3 回目の審査と同じ。未確認の 2 件はどちらも K1・K4 の実測で ○× が決まり、設計の採否を変えない）
 - 実装（2026-10-31、クラウド Sonnet）：frontend/package.json（prepare）・scripts/new-worktree.sh（注記）・scripts/agent-hooks/cloud/rules.md（pull を禁止に追加）・scripts/tests/test_check_before_submit.py の 4 ファイルを変え、試験①〜⑤（test_check_before_submit.py の 14〜18）を足した。
+
+## R4b-2 push の前の確認の「抜け道」を記録で見えるようにする（第1便：記録だけ・2026-11-06 PO「1」で着手）
+
+### 目的（PO の言葉で）
+確認を通っていない中身が PR に載る件数を 0 にする。そのために、まず「確認を通らずに push が通った場面」を推測でなく記録で数えられるようにする。誤って止める回数は 0 のまま保つ（この便では何も止めない）。
+
+### なぜ当初の R4b-2（PR 作成時に印が無ければ止める）をやめたか
+- R4b の K8（2026-11-06 10:01 JST 数え・範囲 6 日 10 時間 44 分）：pre-push 790 回・止めた 3 回・誤って止めた 0 回。印なし（nostamp）167 行。
+- 167 行の内訳（生出力 /tmp/CC報告ファイル/k8-20261106/ns-breakdown.md・ns-final.tsv）：PR 作成時 59 行・作成後の本文直し（gh pr edit）94 行・枝が見つからない 9 行・PR と結び付かない 5 行。PR 単位では期間中の PR 266 件のうち 51 件（クラウド発の中身 34・手元 10・不明 7）。
+- 手元で作った 10 件の型（同 ns-create-local-context.tsv）：①PR 作成が push より 1〜2 分先で、同じ中身の push は pre-push を通った 4 件 ②確かめた中身と数秒〜数十秒後に push した中身が別 5 件 ③入口が使えず（終了コード 2）通り抜けた 2 件 ④その中身の push が手元の記録に無い 4 件（1 件に複数の型あり）。
+- PR に載る中身は push 済みの中身であり、push はすべて pre-push を通る。PR 作成時に手元の印で止めると 1 日約 8 回止まり、その大半は push で確かめ済みの中身（誤止め）になる。→ 守る場所を push 側に寄せる（PO 2026-11-06「1」）。
+
+### 現在地（origin/main 8ab21523307f577241e05b863180b0bad7af200c で確認）
+- frontend/.husky/pre-push:44-53：push する中身が今の HEAD と違う・削除・行なしのときは「飛ばした」と表示して入口を流さない。**記録に 1 行も残らない**。
+- frontend/.husky/pre-push:55-57：印が HEAD と同じなら入口を流さず通す。**記録に残らない**（試験 scripts/tests/test_check_before_submit.py の test_prepush_skips_check_when_stamp_matches_head は `log_rows() == []` を確かめている）。
+- frontend/.husky/pre-push:63-69：終了コード 1 だけ止める。2 は理由を表示して通す（R4b K4 で PO 承認済みの決まり）。0・1・2 以外は何も表示せず通す（#4902 審査の nit (2)）。
+- scripts/dev/check-before-submit.sh:66 で記録の trap を張る。それより前の :40・:44（引数の誤り）と :49（cd 失敗）は記録が残らない（#4902 審査の nit (1)）。
+- scripts/dev/check-before-submit.sh:77・85・91・95・98・99・138・390 が終了コード 2 の出口。記録（:62）には終了コードしか残らず、**どの理由の 2 かが分からない**。
+- 期間中の終了コード 2 は 5 回（release/test-schema-dup-ops-case-card 1・release/line-like-speed-batch3g-shifts 4。秒は 0.1〜1.0）。秒から早い出口であることは分かるが、理由は記録に無く、作業場所も消えているため**未確認**。
+- :82 は `git status --porcelain` が空でなければ 2。追跡外のファイル 1 つだけでも空でなくなる（git 2.39.3 の一時の repo で実測：`?? untracked.txt`）。既存の試験 test_prepush_does_not_stop_on_uncommitted_change も追跡外のファイルで 2 になることを確かめている。
+- 記録ファイルを読む所（origin/main を git grep）：scripts/tests/test_check_before_submit.py:245・403・454 だけ。いずれも列を番号（[3]・[5]）で読み、列の数は確かめていない。書く所は check-before-submit.sh:62 と validate-pr-body.sh:331・338。
+- 印ありで通る所要秒を確かめる試験は無い（#4902 審査の nit (3)）。
+
+### 対象と対象外
+- 対象：frontend/.husky/pre-push・scripts/dev/check-before-submit.sh・scripts/tests/test_check_before_submit.py
+- 対象外（変えない）：止める・通すの判定（終了コード 2 は今までどおり通す。0・1・2 以外も今までどおり通す）。validate-pr-body.sh・PR 本文の見張り・CI・必須チェック・クラウドの rules.md。記録ファイルの場所と既存の 6 列の意味。
+
+### 変える前と後
+| 場面 | 今 | 第1便の後 |
+|---|---|---|
+| push する中身が HEAD と違う・削除・行なし | 表示だけ。記録なし | 同じ記録ファイルに 1 行（4 列目 `skip-otherhead` / `skip-delete` / `skip-empty`、6 列目 `pre-push`、7 列目に push した中身の SHA。削除・行なしは `-`） |
+| 印が HEAD と同じ | 表示だけ。記録なし | 1 行（4 列目 `stamp`、6 列目 `pre-push`、5 列目は秒） |
+| 入口が終了コード 2 | 記録は `2` だけ | 7 列目に理由の短い名（下の表） |
+| 入口が 0・1・2 以外 | 無表示で通す | 「入口が想定外の終わり方をした（終了コード N）。止めずに通す。CI が止める」と表示して通す（判定は変えない） |
+| 引数の誤り・cd 失敗 | 記録なし | trap を引数の読み取りより前に張り、`2` と理由を記録 |
+
+終了コード 2 の理由の名（7 列目）：`bad-arg`（:40・:44）・`cd-fail`（:49）・`unknown-id`（:77）・`dirty-untracked`（:82 で追跡外のファイルだけ）・`dirty-tracked`（:82 で追跡中のファイルに変更あり）・`req-unreadable`（:91）・`req-empty`（:95）・`no-origin-main`（:98）・`no-merge-base`（:99）・`select-dir`（:138）・`zero-checks`（:390）。名は台本の中の 1 か所（出口の直前で変数に入れる）で決め、別の表は作らない。
+
+- 記録は今の 1 ファイル（`$(git rev-parse --git-common-dir)/check-before-submit.log`）だけに足す。新しい記録ファイル・新しい台帳は作らない（記録の置き場を 1 か所に保つ）。
+- 7 列目は足すだけ。既存の 6 列の意味は変えない。validate-pr-body.sh の行は 6 列のまま（読む側は列の番号で読むので混在してよい）。
+
+### ほかの案と選ばなかった理由
+- 終了コード 2 をすぐ止める：追跡外のファイルが 1 つあるだけで push が止まる（実測）。R4b K4（PO 承認）と食い違い、5 回の理由も未確認のまま止めることになる。→ 理由を数えてから第2便で決める
+- 入口を HEAD のきれいな写しで流し、作業場所の状態で 2 にならないようにする：効果は大きいが、写しの作成時間・ディスク・見本の runner との関係が未測定。第2便の候補として残す
+- PR 作成時に PR の head（origin の枝）と記録を突き合わせる：クラウドの pre-push の記録はクラウドの箱の中にあり手元から見えない（R4c）。手元だけで判定できないので今回は選ばない
+
+### 受入条件
+| 基準 | 検証方法 |
+|---|---|
+| K1 中身が HEAD と違う push で、記録に `skip-otherhead` の 1 行が増え、7 列目が push した SHA | test_check_before_submit.py に試験を足す（push の行を別 SHA で渡す） |
+| K2 削除の push で `skip-delete`、行なしで `skip-empty` が 1 行増える | 同上 |
+| K3 印が HEAD と同じとき `stamp` の 1 行が増え、pre-push が 5 秒以内で終わる（nit (3)） | 既存の test_prepush_skips_check_when_stamp_matches_head を「1 行・4 列目 stamp・秒 < 5」に書き換える |
+| K4 追跡外のファイルだけで 2 のとき 7 列目 `dirty-untracked`、追跡中の変更で `dirty-tracked` | 試験 2 本（既存 test_prepush_does_not_stop_on_uncommitted_change に 7 列目の確かめを足し、追跡中の変更の版を 1 本足す） |
+| K5 不明な引数で終わっても 1 行残り、4 列目 2・7 列目 `bad-arg` | 試験 1 本（nit (1)） |
+| K6 入口が 3 で終わる写しで、pre-push が「想定外の終わり方」を表示して rc 0 | 試験 1 本（入口を `exit 3` の写しに差し替え。nit (2)） |
+| K7 判定は変わらない：違反の写しで rc 1、追跡外のファイルで rc 0 | 既存の試験がそのまま pass |
+| K8 CI の existing rule tests と必須 16 件が pass | PR の CI 結果 |
+| K9（反映後 7 日）`stamp`・`skip-*`・2 の理由ごとの回数を数え、「確認を通らずに push が通った中身」の数を出す | 手元の記録を数える。数え方：`skip-otherhead` の 7 列目の SHA と 2 の行の HEAD について、同じ SHA の 0 の行が記録にあるか。無いものを「抜け」として PR 番号付きで表にし、PO に第2便（止める範囲）を諮る |
+
+### リスクと対処
+- 記録の書き込みに失敗して push が止まる → 書き込みは `2>/dev/null || true`（今の :63 と同じ）で、失敗しても判定を変えない。試験 K7
+- 行が増えて記録ファイルが大きくなる → 1 行約 120 バイト・6 日半で pre-push 790 回。skip と stamp を足しても同じ桁。片付けは要らない
+- 7 列目の無い古い行と混ざる → 読む側は列の番号で読む（現在地のとおり）。数えるときは列の数で分ける
+- クラウドの push はクラウドの箱の記録に残り、手元では数えられない → K9 の対象は手元の push だけと明記する。クラウドの分は R4c の範囲
+- 戻し方：merge commit を revert。記録の行は git の管理場所の中のファイルなので残っても害はない
+
+### 影響範囲（呼び出し元の全走査）
+- frontend/.husky/pre-push：new-worktree.sh・クラウドの session_start.py で core.hooksPath を frontend/.husky にした全作業場所の push（R4c 便3）
+- check-before-submit.sh：pre-push・手で流す人・validate-pr-body.sh は呼ばない（印を読むだけ）。試験 test_check_before_submit.py
+- 記録ファイルを読む所：上の試験 3 か所と、手元の数え（K8・K9）だけ
+
+### 維持の仕組み
+- 守り手：scripts/tests/test_check_before_submit.py（CI の existing rule tests で毎回）。7 列目の名を変えると K4・K5 の試験が落ちる
+- 数える人：Claude Opus 設計担当が第1便の反映から 7 日目に K9 を数え、PO に第2便を諮る（agent-console の予約に登録する）
+
+### 外部・過去事例の参照と我々への応用
+該当なし（自社の push 前の仕組みの記録を足すだけで、外の事例が判断を左右しない）。過去の自社の事例として R4b の K8（誤止め 0・印なし 167 行の大半が数え方の産物）を根拠にした。
+
+### Opus 自己審査（同じ AI の審査。独立の審査は reviewer が行う）
+APPROVE。根拠：止める・通すの判定を変えないので誤止めは増えない（K7）。読む側が列の番号で読むことを試験の本文で確かめた。未確認：終了コード 2 の 5 回の理由（作業場所が消えており確かめられない）→ この便の K4・K9 で今後の分を数える。
