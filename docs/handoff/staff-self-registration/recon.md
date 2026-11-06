@@ -53,7 +53,7 @@
   - `backend/app/routers/viewer.py:252` で変更が成功したら false に戻す。
   - 画面は `frontend/src/pages/viewer/ViewerApp.tsx:134` で `must_change_password` を見る。
 - 本体の共通の入口は `backend/app/auth/dependencies.py:108` の get_current_user。
-  - 戻り口は2つ: Redis の一時記憶が当たったとき（同ファイルの「② キャッシュ」）と、`_authenticate_self_token`（`backend/app/auth/dependencies.py:55`）。
+  - 戻り口は3つ: smoke 用（`backend/app/auth/dependencies.py:159`）、Redis の一時記憶が当たったとき（同ファイルの「② キャッシュ」）、`_authenticate_self_token`（`backend/app/auth/dependencies.py:55`）。設計審査 R6 で2つから訂正。
 - 認証アプリ（TOTP）は backend/app に無い。設計だけが #4827 にある（ADR-1048、REVIEW）。
 
 ## 4. Discord（閲覧者の受付＝本件のひな形）

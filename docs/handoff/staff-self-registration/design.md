@@ -82,10 +82,11 @@
   - `tenant_id INTEGER NOT NULL REFERENCES public.tenants(id)`
   - `role_id INTEGER NOT NULL`（会社のスキーマの roles の id。外部キーは付けない。会社ごとのスキーマのため）
   - `created_by INTEGER NOT NULL REFERENCES public.users(id)`
-  - `token_sha256 BYTEA NOT NULL UNIQUE`、`expires_at TIMESTAMPTZ NOT NULL`
+  - `token_hash BYTEA NOT NULL UNIQUE`（32 バイトの CHECK 付き）、`expires_at TIMESTAMPTZ NOT NULL`
   - `status TEXT NOT NULL CHECK (status IN ('open','submitted','linked','revoked'))`
   - `user_id INTEGER NULL REFERENCES public.users(id)`、`staff_id INTEGER NULL`
-  - `reg_code_sha256 BYTEA NULL UNIQUE`、`reg_code_expires_at TIMESTAMPTZ NULL`
+  - `reg_code_hash BYTEA NULL UNIQUE`（NULL か 32 バイトの CHECK 付き）、`reg_code_expires_at TIMESTAMPTZ NULL`
+  - 列名は `hash` で終える。今の鍵の表（`migrations/20261013_160000_add_self_hosted_auth_tables.sql:51` の `token_hash`）と同じ名前の付け方で、AI 用の読み取りビューの拒否リスト（`migrations/20261017_130100_create_ai_ro_views.sql:23` の `hash`）に当たり、ビューから外れる。中身は sha256。
   - `discord_channel_id TEXT NULL`（2回目で使う。二重の個室を防ぐ）
   - `created_at`、`submitted_at`、`linked_at`、`revoked_at`（TIMESTAMPTZ）
 - 人の正本は public.users と staff のままにする（ADR-1008）。
@@ -101,7 +102,7 @@
   - フラグメント（`#` の後ろ）を使うと、鍵がアクセスログや Referer に残らない。
 - ログインしていない入口は、鍵の先頭の数字で会社の文脈を決める（`set_tenant_context`）。そのうえで RLS のもとで sha256 を引く。
   - 会社の番号を書き換えても、別の会社の行は見えない。sha256 も一致しない。
-- 作り直すと `token_sha256` と `expires_at` を上書きする。古い鍵の行は残らないので、古い鍵は開けない（KGI 3）。
+- 作り直すと `token_hash` と `expires_at` を上書きする。古い鍵の行は残らないので、古い鍵は開けない（KGI 3）。
 
 ### 3-3. API
 
@@ -142,7 +143,7 @@
        - 監査ログの user_id も `created_by`。new_data に `"via":"self_registration"` を入れる。
     3. メールの重複は 409。文言は今の `EMAIL_UNAVAILABLE_DETAIL` と同じ（ADR-1063 What 6）。
     4. 登録番号を作る。`generate_signup_code`／`signup_code_sha256` をそのまま使う。
-    5. 行を submitted にし、user_id・staff_id・reg_code を入れる。
+    5. 行を submitted にし、user_id・staff_id・reg_code_hash・reg_code_expires_at を入れる。
     6. commit → `reset_tenant_context` → `invalidate_user_permissions`。
        - ロール合わせ（`schedule_own_staff_sync`）は呼ばない。Discord ID がまだ無いため。
   - 招待メールの鍵（`create_invite_token`）は作らない。メールも送らない。
@@ -234,7 +235,7 @@
   - 管理者のロール（下の手順4）が1つも無ければ、何も変えずに「受付の準備ができていません。管理者に連絡してください」と返す。失敗には数えない。管理者が見られない個室は作らない。
 - 番号が合ったとき（1 トランザクション）:
   1. 会社の文脈を付ける。
-  2. 行を `FOR UPDATE` で取る（`reg_code_sha256` が一致・submitted・期限内）。無ければ失敗に数える。
+  2. 行を `FOR UPDATE` で取る（`reg_code_hash` が一致・submitted・期限内）。無ければ失敗に数える。
   3. staff の discord_user_id が既にあるとき、またはこの Discord ID を別の staff が持っているときは、「既に登録済み」と返す。
   4. 個室を作る:
      - カテゴリは `staff_join_rooms`。
@@ -245,7 +246,7 @@
   6. 書き込み:
      - users の `password_argon2_hash`、`password_must_change=true`、`is_active=true`。
      - staff の `discord_user_id`。
-     - 招待の行を linked にし、`discord_channel_id` を入れ、`reg_code_sha256=NULL` にする。
+     - 招待の行を linked にし、`discord_channel_id` を入れ、`reg_code_hash=NULL` にする。
   7. commit → `reset_tenant_context`。
   8. 個室に出す: メール、仮パスワード、ログインの URL、「最初のログインで変更してください」。
   9. `schedule_own_staff_sync(tenant_id)` を予約する（スタッフのロールと役割のロールが付く）。
@@ -351,7 +352,7 @@
 | R3 | 必須 | `backend/app/services/role_assignment.py:49-70` は priority しか見ない。招待を作った人が停止・権限を失っても申込が通る | §3-3（申込時に検査し直す）、§6 |
 | R4 | 推奨 | 共用関数が `user_created` を返さないと、招待メールの分岐（`backend/app/routers/staff.py:649-655`）が変わる | §3-3 |
 | R5 | 推奨 | 鍵の先頭が数字でない・会社が無いときの扱いが無い。SQLite の試験では RLS の分離を示せない | §3-3 |
-| R6 | 推奨 | get_current_user の戻り口は3つ（smoke `backend/app/auth/dependencies.py:159`）。自分の情報の道が未特定 | §4-2（1か所で止める。`/api/v1/me/permissions` を許可） |
+| R6 | 推奨 | get_current_user の戻り口は3つ（smoke `backend/app/auth/dependencies.py:159`）。自分の情報の道が未特定 | §4-2（1か所で止める。当初は `/api/v1/me/permissions` も許可したが、S1 で外した） |
 | R7 | 推奨 | 管理者ロールが無いとき・2回目の照合（KGI 7）・commit 後の投稿失敗の扱いが無い | §4-3 |
 | — | 訂正 | recon の viewer_dependencies.py の行番号 | recon §3（106-108 に訂正） |
 
@@ -363,7 +364,7 @@
 | S1 | 必須 | パスワード変更ページの道と置き場所が決まっていない。今の設定画面とシェルは許可一覧に無い道を呼ぶので、403 が続き、同じページへ何度も移す | §4-2（シェルの無い新しい道、変更欄の切り出し、移す処理の止め、許可一覧から me/permissions を外す） |
 | S2 | 推奨 | 審査の返事が記録の上限で途中までしか読めなかった（R7 の「軽い穴」とだけ読めた）。Opus が R7 の道を読み直し、再設定で決めたパスワードの後にもう一度変更させる二重の手間を見つけて直した | §4-2（再設定の確定でも must_change を false にする） |
 
-- 3回目: 2026-11-07、対象 4a15cf7c9。判定 APPROVE（必須の指摘なし）。S1・S2 は「合う」。シェルの無い並びと ProtectedRoute は API を呼ばない。ログアウトは get_current_user を通らない（`backend/app/routers/auth.py:181-187`）。再設定の確定は、1回限り・期限付きの鍵（`:663`）、is_active の確認（`:681`）、全セッションの失効（`:693`）が揃っており、must_change を false にしても危険は無い。推奨2件は次のとおり直した:
+- 3回目: 2026-11-07、対象 4a15cf7c9。判定 APPROVE（必須の指摘なし）。S1・S2 は「合う」。シェルの無い並びと ProtectedRoute は API を呼ばない。ログアウトは get_current_user を通らない（`backend/app/routers/auth.py:181-187`）。再設定の確定は、1回限り・期限付きの鍵（`:663`）、is_active の確認（`:681`）、全セッションの失効（`:695`）が揃っており、must_change を false にしても危険は無い。推奨2件は次のとおり直した:
 
 | # | 重さ | 指摘 | 直した場所 |
 |---|---|---|---|
