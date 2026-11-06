@@ -26,6 +26,7 @@ import re
 from typing import Literal
 from urllib.parse import urlencode
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
@@ -49,6 +50,12 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 _DISCORD_CLIENT_ID = os.getenv("DISCORD_CLIENT_ID", "1499458730171961535")
+_DISCORD_TOKEN_URL = "https://discord.com/api/oauth2/token"
+
+
+def _client_secret() -> str:
+    # 値はログ・応答・転送先 URL に出さない（K4）
+    return os.getenv("DISCORD_CLIENT_SECRET", "")
 
 # Bot permissions integer (confirmed from Developer Portal 2026-06-16).
 # 2026-10-17: +Create Instant Invite (bit 0). 805432406 -> 805432407 (PO decision, ADR-091).
@@ -102,6 +109,52 @@ def _build_invite_url(state: str) -> str:
     return f"https://discord.com/oauth2/authorize?{urlencode(params)}"
 
 
+class _ExchangeError(Exception):
+    def __init__(self, reason: str) -> None:
+        super().__init__(reason)
+        self.reason = reason
+
+
+async def _exchange_code_for_guild_id(code: str) -> str:
+    """code を Discord で交換し、応答の guild.id を返す（公式: Advanced Bot Authorization）。"""
+    secret = _client_secret()
+    if not secret:
+        raise _ExchangeError("discord_not_configured")
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.post(
+                _DISCORD_TOKEN_URL,
+                data={
+                    "grant_type": "authorization_code",
+                    "code": code,
+                    "redirect_uri": _DISCORD_CALLBACK_URL,
+                },
+                auth=(_DISCORD_CLIENT_ID, secret),
+            )
+    except httpx.HTTPError as e:
+        logger.warning("[discord_oauth] code 交換の通信失敗: %s", type(e).__name__)
+        raise _ExchangeError("code_exchange_failed") from None
+    if resp.status_code != 200:
+        err = ""
+        try:
+            err = str(resp.json().get("error", ""))[:40]
+        except (ValueError, AttributeError):
+            pass
+        logger.warning(
+            "[discord_oauth] code 交換の拒否 status=%d error=%s", resp.status_code, err
+        )
+        raise _ExchangeError("code_exchange_failed")
+    try:
+        guild = resp.json().get("guild") or {}
+        gid = str(guild.get("id", ""))
+    except (ValueError, AttributeError):
+        gid = ""
+    if not re.fullmatch(r"\d{17,19}", gid):
+        logger.warning("[discord_oauth] 交換の応答に guild が無い")
+        raise _ExchangeError("missing_guild_in_token")
+    return gid
+
+
 # ---------------------------------------------------------------------------
 # POST /discord/oauth/start
 # ---------------------------------------------------------------------------
@@ -130,6 +183,12 @@ async def discord_oauth_start(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="権限が不足しています: tenant.profile.edit",
             )
+    if not _client_secret():
+        logger.error("[discord_oauth] DISCORD_CLIENT_SECRET 未設定のため開始しない")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="一時的に Discord 連携を開始できません（設定不足）",
+        )
     try:
         issued = await oauth_state.issue_state(
             tenant_id=tenant_id,
@@ -161,9 +220,10 @@ async def discord_oauth_start(
 async def discord_oauth_callback(
     guild_id: str | None = Query(None),
     state: str | None = Query(None),
+    code: str | None = Query(None),
     db: AsyncSession = Depends(get_db),
 ) -> RedirectResponse:
-    """Discord からのコールバック。guild_id を tenant_discord_config に保存する。
+    """Discord からのコールバック。code を交換し、応答の guild.id を tenant_discord_config に保存する。
 
     このエンドポイントは Discord からのリダイレクトなので JWT 認証なし。
     tenant_id は state ペイロードから取得する（CSRF 対策: state は one-time 使用）。
@@ -208,6 +268,21 @@ async def discord_oauth_callback(
 
     staff_id_int = int(staff_id) if staff_id else None
 
+    # URL の guild_id は目安（hint）。Discord に code を交換させ、応答の guild.id だけを保存する。
+    # 交換は state 消費の後・DB の取引を開く前（外部待ちで取引を開いたままにしない）。
+    if not code:
+        return RedirectResponse(f"{base}discord_status=error&reason=missing_code")
+    try:
+        verified = await _exchange_code_for_guild_id(code)
+    except _ExchangeError as e:
+        return RedirectResponse(f"{base}discord_status=error&reason={e.reason}")
+    if verified != guild_id:
+        logger.warning(
+            "[discord_oauth] guild_id 不一致 tenant=%d purpose=%s url_guild_id=%s verified=%s",
+            tenant_id, purpose, guild_id, verified,
+        )
+        return RedirectResponse(f"{base}discord_status=error&reason=guild_mismatch")
+
     # tenant context を設定（audit_logs の RLS に必要: app.tenant_id が未設定のまま
     # INSERT すると RLS ポリシー tenant_isolation_audit_logs に弾かれ 500 になる）
     # get_db の finally → clear_tenant_context が全経路（成功・例外）でリセットを担保
@@ -226,7 +301,7 @@ async def discord_oauth_callback(
                     connected_by_staff_id = EXCLUDED.connected_by_staff_id,
                     updated_at = NOW()
             """),
-            {"tid": tenant_id, "purpose": purpose, "guild_id": guild_id, "staff_id": staff_id_int},
+            {"tid": tenant_id, "purpose": purpose, "guild_id": verified, "staff_id": staff_id_int},
         )
         await record_audit_log(
             db=db,
@@ -235,7 +310,12 @@ async def discord_oauth_callback(
             action="update",
             table_name="tenant_discord_config",
             record_id=tenant_id,
-            new_data={"guild_id": guild_id, "source": "discord_oauth_callback", "purpose": purpose},
+            new_data={
+                "guild_id": verified,
+                "source": "discord_oauth_callback",
+                "purpose": purpose,
+                "verified_by": "token_exchange",
+            },
         )
         await db.commit()
     except IntegrityError:
@@ -243,12 +323,12 @@ async def discord_oauth_callback(
         await db.rollback()
         logger.warning(
             "[discord_oauth] guild_id 登録済み tenant=%d purpose=%s guild_id=%s",
-            tenant_id, purpose, guild_id,
+            tenant_id, purpose, verified,
         )
         return RedirectResponse(f"{base}discord_status=error&reason=guild_already_registered")
     await reset_tenant_context(db, tenant_id)  # ADR-072
 
     logger.info(
-        "[discord_oauth] guild_id 保存 tenant=%d purpose=%s guild_id=%s", tenant_id, purpose, guild_id
+        "[discord_oauth] guild_id 保存 tenant=%d purpose=%s guild_id=%s", tenant_id, purpose, verified
     )
     return RedirectResponse(f"{base}discord_status=connected")
