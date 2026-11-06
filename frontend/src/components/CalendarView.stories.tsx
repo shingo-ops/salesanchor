@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { CalendarView } from './CalendarView';
 import type { CalendarViewEvent } from './CalendarView';
+import { DEFAULT_OWNER_COLOR } from '../pages/schedule/schedule-owner';
 
 /** 今日から offsetDays 日後の hour 時 minute 分 */
 function at(offsetDays: number, hour: number, minute = 0): Date {
@@ -85,6 +86,37 @@ export const OutsideHours: Story = {
     events: [
       { id: 'o1', title: 'Early start', start: at(0, 7), end: at(0, 8, 30), tone: 'purchase' },
       { id: 'o2', title: 'Late finish', start: at(0, 20), end: at(0, 21, 30), tone: 'shipping' },
+    ],
+  },
+};
+
+const noop = () => {};
+
+export const GoogleLike: Story = {
+  args: {
+    mode: 'days',
+    dayCount: 7,
+    timeStyle: 'meridiem',
+    eventLayout: 'stacked',
+    hourRange: 'full',
+    scrollToNow: true,
+    weekStart: 0,
+    events: [
+      ...baseEvents(),
+      { id: 'g1', title: 'Short call', start: at(0, 12, 30), end: at(0, 13), tone: 'personal' },
+    ],
+    onSelectRange: noop,
+    onEventMove: noop,
+    onEventResize: noop,
+    onEventClick: noop,
+  },
+};
+
+export const OwnerColor: Story = {
+  args: {
+    events: [
+      { id: 'w1', title: 'Owner A', start: at(0, 10), end: at(0, 11), color: DEFAULT_OWNER_COLOR },
+      { id: 'w2', title: 'Owner B', start: at(0, 13), end: at(0, 14), color: DEFAULT_OWNER_COLOR },
     ],
   },
 };
