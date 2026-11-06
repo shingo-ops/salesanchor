@@ -3,7 +3,7 @@
 > この文書は何か（専門用語なしの1行）:
 > 会社ごとに写している連絡手段の名簿を、全社1つの名簿（共用の行＋会社独自の行）に作り直し、分析・カルテ・言語判定がその名簿の性質を読んで動くようにする手順。
 
-- 状態: **設計案作成済み（Opus）／D1・D1-2・D2 PO回答済み（§2-2・§9）・D2 のデータ変更 本番実施済み（§3-2）／クラウド審査1回目 REVISE → 2回目 APPROVE（§13・推奨5件と未確認1件を反映済み）／PO 実装承認 2026-11-06「1」（作り直しを始める）／PR-A のカード発行（card-pr-a.md）・実装未着手**
+- 状態: **設計案作成済み（Opus）／D1・D1-2・D2 PO回答済み（§2-2・§9）・D2 のデータ変更 本番実施済み（§3-2）／クラウド審査1回目 REVISE → 2回目 APPROVE（§13・推奨5件と未確認1件を反映済み）／PO 実装承認 2026-11-06「1」（作り直しを始める）／PR-A（#5206）本番反映済み 2026-11-06 22:22 JST／共用6行 本番投入済み（§3）／PR-B のカード発行（card-pr-b.md）・実装未着手**
 - 親: KGI ../../specs/db-ssot/channel-master/kgi.md（PO承認済み 2026-11-06）／ recon docs/handoff/channel-master-shared/recon.md
 - 元の要件: ../../specs/db-ssot/classification-master/design.md:106・:111-117（1テーブル・持ち主の印あり）
 - 基準: origin/main 7e0bc67b1（2026-11-06 取得）
@@ -12,7 +12,7 @@
 
 | 文書 | この設計での使い方 |
 |---|---|
-| ADR-145（public.products の FORCE RLS） | 共用＝運営だけ書ける／会社行＝自社だけ、の守りをそのまま写す（`migrations/20260626_130000_force_rls_public_products.sql:5-39`） |
+| ADR-145（public.products の FORCE RLS） | 共用＝運営だけ書ける／会社行＝自社だけ、の守りをそのまま写す（`migrations/20260626_130000_force_rls_public_products.sql:5-38`） |
 | ADR-SA-17（用語集の2層） | 同じ型の前例（`migrations/20260605_010000_rls_translation_glossary.sql`） |
 | ADR-1007 決定1（migration は形だけ） | 6行の投入は migration に書かない。1回だけのデータ変更（DRY-RUN→COMMIT・SQLは本フォルダ）で入れる（`docs/adr/ADR-1007-migration-structure-only-run-once.md:31-36`） |
 | ADR-1007 決定3（会社の作成は完全に） | 新しい会社に写しを作らない＝作成処理から名簿の投入を外す（共用行がある前提） |
@@ -57,7 +57,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_channel_masters_conversion_item ON public.c
 CREATE INDEX IF NOT EXISTS idx_channel_masters_tenant_id ON public.channel_masters (tenant_id);
 ```
 
-- RLS は ADR-145 の4つの守り（SELECT: NULL行＋自社行／INSERT・UPDATE・DELETE: NULL行は `app.is_operator='true'` だけ・会社行は自社だけ）を、表名だけ変えて写す（`migrations/20260626_130000_force_rls_public_products.sql:5-39`）。ENABLE と FORCE の両方。
+- RLS は ADR-145 の4つの守り（SELECT: NULL行＋自社行／INSERT・UPDATE・DELETE: NULL行は `app.is_operator='true'` だけ・会社行は自社だけ）を、表名だけ変えて写す（`migrations/20260626_130000_force_rls_public_products.sql:5-38`）。ENABLE と FORCE の両方。
 - 会社を消したときの片付け: 会社の物理削除は `public.tenants` の行を消す（`backend/app/routers/super_admin_tenants.py:105` の関数の「public.tenants DELETE（CASCADE）」の段）。2つの新しい表の `tenant_id` に `REFERENCES public.tenants(id) ON DELETE CASCADE` を付け、会社行と隠す設定が一緒に消えるようにする（前例 `migrations/20260604_080000_create_registration_tokens.sql:8`）。FORCE RLS の下でも連鎖で消えることは §5 の PG 試験で確かめる（2回目の審査で未確認だった点）。
 - `conversion_item` を共用行だけに限る理由: 成約の分析は15項目で固定（`backend/app/services/lead_conversion_factors.py:70-87`）。会社が足した手段で項目が増減すると、分析の形が会社ごとに変わるため。
 - 会社行を manual だけに限る理由: 自動で取り込む手段は連携の部品が名前を書くため、会社が足しても届かない（今の POST も manual 固定 `backend/app/routers/conv_logs.py:508-510`）。
@@ -102,6 +102,8 @@ CREATE TABLE IF NOT EXISTS public.channel_master_tenant_settings (
 - 値の根拠: platform・display_name・connection_type は今の定数（`backend/app/services/channel_masters.py:10-17`）と本番5社の行（recon §4・全社同じ6行）。conversation_store は今の分析の読み分け（`backend/app/routers/analytics.py:2491・:2503`）と言語判定の説明（`backend/app/services/lang_judge.py:3-10`）。is_verbatim は `backend/app/services/lang_judge.py:8-10・:31・:84・:122`。conversion_item は `backend/app/services/lead_conversion_factors.py:75-76・:229-230`（基準＝Messenger は `frontend/src/locales/ja.json:884-885`「Messenger より」）。
 - 手順: 同じフォルダに data-change.sql（新しく作る台本）を置く。中身は INSERT ... ON CONFLICT DO NOTHING。共用行は FORCE RLS で運営だけが書けるため、台本の BEGIN の直後に `SET LOCAL app.is_operator = 'true'` を置く（戻しの台本も同じ）。DRY-RUN（BEGIN→INSERT→SELECT count→ROLLBACK）→ COMMIT。実行は無制限鍵が要るため、PO の `!` 実行に台本で頼む（memory: 本番データ変更は台本ファイル化）。
 - 会社独自の行の移し: 本番は 0件（recon §4）。同じ SQL で「各社の表にあり共用に無い platform」を `tenant_id` 付きで移す文を入れ、DRY-RUN で 0件を確かめる。
+- 台本（実際に使ったもの）: data-six/ の precheck.sql・dryrun.sql・commit.sql・verify.sql・rollback.sql と入口 run.sh（`git add -f` で記録。中身は名簿の6行と件数だけ）。会社独自の行は precheck の2つ目で「5社の古い名簿に6つ以外が0件」を確かめたため、移す文は置いていない。
+- 実施記録（2026-11-06 JST・PO の `!`）: precheck → dryrun → commit → verify の順に流し、すべて合格。Opus が 23:38 JST に読み取り専用の鍵で後の値を確認: 共用 id 7〜12 の6行が上の表と一致・会社行0（/tmp/CC報告ファイル/chm-six-recheck.txt）。
 
 ## 3-2. 名簿に無い値の後始末（1回だけのデータ変更・§9 D2 の PO 回答）
 
@@ -153,7 +155,7 @@ async def conversion_items(db) -> dict[str, str]:
 | 新 `PUT /api/v1/admin/channel-masters/{id}/visibility`（同じファイル） | 本文 `{"is_hidden": bool}`。`set_hidden` を呼ぶ。auto 行は 400・他社行と見えない行は 404。`require_permission("tenant.profile.edit")`。監査の記録（`record_audit_log`）を残す |
 | `backend/app/routers/conv_logs.py:526-557`（無効化） | 自社行だけ無効化できる。共用行は 403（隠すのは §2-2 の切り替えで行う）。`require_permission("tenant.profile.edit")` を足す |
 | `backend/app/routers/leads.py:204-216`（検証） | `get_channel` を使う（422 の決まりは今のまま） |
-| `backend/app/routers/analytics.py:2483-2507`（会話の読み込み） | `JOIN public.channel_masters cm ON cm.platform = l.channel_type AND cm.tenant_id IS NULL AND cm.conversion_item IS NOT NULL AND cm.conversation_store = 'meta_messages'`（Meta の表）／`= 'conversation_logs'`（会話記録の表）。読む行は今と同じ（instagram・messenger → Meta、whatsapp → 会話記録） |
+| `backend/app/routers/analytics.py:2483-2507`（会話の読み込み） | （改訂 2026-11-06: §12 の「表名は channel_masters.py だけ」と K7 に合わせ、実装は `channel_masters.platforms_by_store()` で platform を読み IN をその場で広げる形にする。実装カード card-pr-b.md §3 が正。読む行は下の JOIN 案と同じ）旧案: `JOIN public.channel_masters cm ON cm.platform = l.channel_type AND cm.tenant_id IS NULL AND cm.conversion_item IS NOT NULL AND cm.conversation_store = 'meta_messages'`（Meta の表）／`= 'conversation_logs'`（会話記録の表）。読む行は今と同じ（instagram・messenger → Meta、whatsapp → 会話記録） |
 | `backend/app/routers/analytics.py:2537-2538` | `items = await conversion_items(db)` を読み `lcf.analyze(leads, messages, items)` に渡す |
 | `backend/app/services/lead_conversion_factors.py:42-47` | `CHANNEL_*`・`META_CHANNELS`・`CHANNELS` を消す |
 | `backend/app/services/lead_conversion_factors.py:173・:188` | `prepare(leads, messages, channel_items)`。`lead.channel_type not in channel_items` で外す |
