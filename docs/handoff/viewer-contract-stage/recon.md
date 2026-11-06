@@ -69,21 +69,21 @@
 - 請求書に載る項目は 会社名・住所・電話・メール・サイトの5つ（backend/app/services/invoice_renderer.py:509〜:513）。印影の URL は渡していない。
 - 会社情報を読む他の処理: PO の PDF（backend/app/services/po_renderer.py:9）、送り状の確認（backend/app/services/label_validation.py:85）。
 - 会社情報の表は会社ごとのスキーマに置く（migrations/069_create_tenant_profile.sql:70〜:71）。新しい会社の既定行は tenant.py が入れる（同 :91）。
-- 会社別のデータの置き場の決まり: ADR-142 の Context と Decision 1〜3。作成処理は backend/app/services/tenant.py の _TENANT_TABLES_SQL（:195）・_RLS_ENABLE_SQL（:1206）・_RLS_POLICY_SQL（:1259）。手本は own_inventory（:1183・:1251・:1323）。
-- 文脈: set_tenant_context は backend/app/auth/dependencies.py:363、表名は同 :495 の tenant_table_ref。最高管理者の口に呼び出しは無い。裏の処理の呼び出しは backend/app/services/google_webhook.py:255、backend/app/discord_gateway/dm_writer.py:94。
-- 文脈は接続を返す前に消える。backend/app/database.py:60〜:61 の get_db の finally が clear_tenant_context（backend/app/auth/dependencies.py:447、ADR-131）を呼ぶ。裏の処理は get_db を通らないので自分で呼ぶ（同 :447 の説明）（2026-11-06 訂正。前の版は RESET ALL・DISCARD・pool_reset の grep だけで「無い」と書いていた）。
-- 運営の書き込みの文脈: `SET LOCAL app.is_operator = 'true'`（backend/app/routers/buyback_prices.py:392、backend/app/routers/super_admin_suppliers.py:61、裏の処理 backend/app/tasks/fx_rate_updater.py:70）。会社の口では空にする（backend/app/auth/dependencies.py:340〜:342）。
+- 会社別のデータの置き場の決まり: ADR-142 の Context と Decision 1〜3。作成処理は backend/app/services/tenant.py の _TENANT_TABLES_SQL（:195）・_RLS_ENABLE_SQL（:1221）・_RLS_POLICY_SQL（:1274）。手本は own_inventory（:1198・:1266・:1338）。
+- 文脈: set_tenant_context は backend/app/auth/dependencies.py:277、表名は同 :409 の tenant_table_ref。最高管理者の口に呼び出しは無い。裏の処理の呼び出しは backend/app/services/google_webhook.py:255、backend/app/discord_gateway/dm_writer.py:94。
+- 文脈は接続を返す前に消える。backend/app/database.py:60〜:61 の get_db の finally が clear_tenant_context（backend/app/auth/dependencies.py:361、ADR-131）を呼ぶ。裏の処理は get_db を通らないので自分で呼ぶ（同 :361 の説明）（2026-11-06 訂正。前の版は RESET ALL・DISCARD・pool_reset の grep だけで「無い」と書いていた）。
+- 運営の書き込みの文脈（第5回の審査で訂正）: 写す先例は set_operator_context／reset_operator_context（backend/app/auth/dependencies.py:429・:446。使う口は backend/app/routers/super_admin_tenants.py:50・:93、backend/app/routers/super_admin_suppliers.py:69・:73）。backend/app/routers/buyback_prices.py:392・:864 は生の `SET LOCAL`、backend/app/tasks/fx_rate_updater.py:70 は `SET` を直接流す形で、どちらも写さない。会社の口では空にする（backend/app/auth/dependencies.py:254〜:256）。
 
 ## 8. Google ドライブ
 
 - 接続は会社に1つ: migrations/20260606_010000_add_google_drive_config.sql:18。folder_id 列: 同 :23。書き込む処理は無い（backend/app/routers/integrations.py:202 と backend/app/services/google_drive_oauth.py:333 は読むだけ）。
 - 権限: backend/app/services/google_drive_oauth.py:49（drive.file）。保存: 同 :373。URL からフォルダ番号を取り出す: 同 :98。
 - 既存の呼び出し: backend/app/routers/shipping.py:511（失敗はログで続行）。
-- テスト保存の口: backend/app/routers/integrations.py:243〜:263。
-- 本番: HIGH LIFE JPN に1件。接続 2026-06-08。トークンの更新記録なし。送り状 0件。今も保存できるかは未確認。
+- テスト保存の口: backend/app/routers/integrations.py:243〜:263。PO が貼ったフォルダの URL から番号を取り、そこへ保存する（同 :254・:263）。
+- 本番: HIGH LIFE JPN に1件。接続 2026-06-08。トークンの更新記録なし。送り状 0件。今も保存できるかは、2026-11-06 の PO のテスト保存で「指定したフォルダに保存できた」と確かめた（design §7-1）。
 - 訂正（第4回の審査）: folder_id を伏せるのは相談係の道の分類表（migrations/20261024_100300_create_ai_cloud_views.sql:274）で、ai_ro の拒否の一覧には当たらない。前回の「フォルダ未設定」をどちらの道で読んだかは記録が無く未確認。このため本番の値は未確認のまま扱い、§3-8 の分岐は PO の連携ページでの確認とテスト保存で決める。書く処理がコードに無いことだけが事実。
 - この表は会社別の RLS が FORCE で付いている（migrations/20261016_010000_add_google_config_rls.sql:11〜:15）。会社の文脈なしの処理からは読めない。
-- Google 公式: 6か月使わないトークンは無効。同意画面が Testing だと7日で失効。drive.file は、アプリが作ったファイルか、利用者がアプリに渡したファイルを扱える。人が作ったフォルダへ保存できるかは明記なし（未確認）。
+- Google 公式: 6か月使わないトークンは無効。同意画面が Testing だと7日で失効。drive.file は、アプリが作ったファイルか、利用者がアプリに渡したファイルを扱える。人が作ったフォルダへ保存できるかは明記なし。実際に保存できたことは 2026-11-06 の PO のテスト保存で確かめた（design §7-1）。同意画面が Testing か本番公開かは未確認。
 
 ## 9. 画面の部品
 
@@ -105,10 +105,10 @@
 ## 12. 第2回の審査のあとに確かめたこと（2026-11-06。生出力 /tmp/CC報告ファイル/contract-status/fix-facts-1106.txt・fix-facts-1106b.txt・fix-facts-1106c.txt）
 
 - 住所を5つに分けた先例: 取引先 public.suppliers の postal_code・prefecture・city・address1・address2（migrations/20260603_010000_add_suppliers_line_and_address.sql:21〜:25）。
-- 国の一覧: public.countries（migrations/20260621_010000_create_countries_master.sql:21〜:28）と画面の frontend/src/constants/countries.ts。両者を照合する仕組みは .github/workflows と scripts に無い（grep で該当なし）。
+- 国の一覧: public.countries（migrations/20260621_010000_create_countries_master.sql:6〜:13）と画面の frontend/src/constants/countries.ts。両者を照合する仕組みは .github/workflows と scripts に無い（grep で該当なし）。
 - 都道府県の一覧は backend/app・frontend/src/constants・migrations に無い。frontend/src に「北海道」の語は0件。
 - 会社の電話の決まり: backend/app/schemas/base.py:16〜:23（`+\d{6,15}`・`\d{10,15}`・`0\d{9,10}`、区切り記号は外す）。ADR-126 §6。
-- 会社ごとの表から public への外部キーの先例: backend/app/services/tenant.py:516（role_permissions → public.permissions）、:603（staff → public.users）。
+- 会社ごとの表から public への外部キーの先例: backend/app/services/tenant.py:518（role_permissions → public.permissions）、:605（staff → public.users）。
 - 変更の履歴: 会社ごとの audit_logs（tenant.py:484〜:494、old_data・new_data は JSONB）と record_audit_log（backend/app/services/audit.py:277）。
 - 部品の金型: frontend/src/components/ に TextField・Select・Tabs・Toggle・Checkbox・Modal・CountryCombobox がある。
 - 会社情報の口: GET・PUT /api/v1/admin/tenant-profile（backend/app/routers/tenant_profile.py:52〜:53・:85〜:86、backend/app/main.py:478）。閲覧者の運営の口: /super-admin/viewers/…（backend/app/routers/super_admin_viewers.py:347〜:374）。
