@@ -1437,7 +1437,8 @@ async def setup_test_db(test_engine):
                 decided_device_id INTEGER,
                 decided_note TEXT,
                 reject_reason TEXT,
-                failed_code_attempts INTEGER NOT NULL DEFAULT 0
+                failed_code_attempts INTEGER NOT NULL DEFAULT 0,
+                admin_requested_at TIMESTAMP
             )
         """))
         await conn.execute(text("""
