@@ -179,6 +179,15 @@ INBOX_BADGE_META_MESSAGES_DDL = """
     )
 """
 
+# update_lead の担当者の会社照合（ensure_user_in_tenant）が読む public.users 相当。
+# SQLite ではスキーマ修飾が使えないため、試験側で public.users を users に書き換えて流す。
+INBOX_BADGE_USERS_DDL = """
+    CREATE TABLE users (
+        id INTEGER PRIMARY KEY,
+        tenant_id INTEGER NOT NULL
+    )
+"""
+
 # engine fixture が順に execute する DDL 一式（leads → sales_form_options →
 # sales_form_selections → meta_messages の順。外部キー的な参照順ではないが
 # 元のテスト内の実行順を保つ）。
@@ -187,6 +196,7 @@ INBOX_BADGE_SQLITE_DDL = (
     INBOX_BADGE_SALES_FORM_OPTIONS_DDL,
     INBOX_BADGE_SALES_FORM_SELECTIONS_DDL,
     INBOX_BADGE_META_MESSAGES_DDL,
+    INBOX_BADGE_USERS_DDL,
 )
 
 # test_sqlite_alter_table_does_not_support_add_column_if_not_exists 用:

@@ -305,39 +305,15 @@ class TestDiscordGuildConfigAPI:
         assert body["role_partner"] == "Partner"
 
     @pytest.mark.asyncio
-    async def test_put_saves_guild_id(self, app_client):
+    async def test_put_is_not_allowed_and_table_unchanged(self, app_client, db_session):
+        """手で打つ登録口は閉じた: PUT は 405 で、tenant_discord_config は変わらない。"""
         resp = await app_client.put(
             "/api/v1/admin/discord-config",
             json={"guild_id": "1288437029213835356"},
         )
-        assert resp.status_code == 200
-        assert resp.json()["guild_id"] == "1288437029213835356"
-
-    @pytest.mark.asyncio
-    async def test_get_after_put_returns_saved(self, app_client):
-        await app_client.put(
-            "/api/v1/admin/discord-config",
-            json={"guild_id": "1288437029213835356"},
-        )
-        resp = await app_client.get("/api/v1/admin/discord-config")
-        assert resp.status_code == 200
-        assert resp.json()["guild_id"] == "1288437029213835356"
-
-    @pytest.mark.asyncio
-    async def test_put_invalid_guild_id_rejected(self, app_client):
-        resp = await app_client.put(
-            "/api/v1/admin/discord-config",
-            json={"guild_id": "not-a-number"},
-        )
-        assert resp.status_code == 422
-
-    @pytest.mark.asyncio
-    async def test_put_too_short_guild_id_rejected(self, app_client):
-        resp = await app_client.put(
-            "/api/v1/admin/discord-config",
-            json={"guild_id": "12345"},
-        )
-        assert resp.status_code == 422
+        assert resp.status_code == 405
+        count = (await db_session.execute(text("SELECT COUNT(*) FROM tenant_discord_config"))).scalar_one()
+        assert count == 0
 
     @pytest.mark.asyncio
     async def test_get_connected_by_staff_name_is_null(self, app_client, db_session):
