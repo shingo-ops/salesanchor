@@ -3,7 +3,7 @@
 > この文書は何か（専門用語なしの1行）:
 > 会社ごとに写している連絡手段の名簿を、全社1つの名簿（共用の行＋会社独自の行）に作り直し、分析・カルテ・言語判定がその名簿の性質を読んで動くようにする手順。
 
-- 状態: **設計案作成済み（Opus）／未決2件（§9 D1・D2）PO確認待ち／クラウド審査 未実施／実装未着手**
+- 状態: **設計案作成済み（Opus）／D1 PO回答済み（§2-2）・D1-2・D2 PO確認待ち／クラウド審査 未実施／実装未着手**
 - 親: KGI ../../specs/db-ssot/channel-master/kgi.md（PO承認済み 2026-11-06）／ recon docs/handoff/channel-master-shared/recon.md
 - 元の要件: ../../specs/db-ssot/classification-master/design.md:106・:111-117（1テーブル・持ち主の印あり）
 - 基準: origin/main 7e0bc67b1（2026-11-06 取得）
@@ -61,6 +61,31 @@ CREATE INDEX IF NOT EXISTS idx_channel_masters_tenant_id ON public.channel_maste
 - `conversion_item` を共用行だけに限る理由: 成約の分析は15項目で固定（`backend/app/services/lead_conversion_factors.py:70-87`）。会社が足した手段で項目が増減すると、分析の形が会社ごとに変わるため。
 - 会社行を manual だけに限る理由: 自動で取り込む手段は連携の部品が名前を書くため、会社が足しても届かない（今の POST も manual 固定 `backend/app/routers/conv_logs.py:508-510`）。
 
+## 2-2. 会社ごとの「隠す」設定（D1 の PO 回答）
+
+- PO 回答（2026-11-06 原文）: 「2,管理センター側で設定画面を設けてそこで設定できるようにする」
+- 置き場: 名簿の行は写さない。会社ごとの「隠す」だけを別の表に1行で持つ（値は名簿1か所・設定は設定1か所）。
+
+```sql
+CREATE TABLE IF NOT EXISTS public.channel_master_tenant_settings (
+    tenant_id          INTEGER NOT NULL,
+    channel_master_id  INTEGER NOT NULL REFERENCES public.channel_masters(id) ON DELETE CASCADE,
+    is_hidden          BOOLEAN NOT NULL DEFAULT FALSE,
+    updated_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_by_user_id INTEGER NULL,
+    PRIMARY KEY (tenant_id, channel_master_id)
+);
+```
+
+- RLS: SELECT・INSERT・UPDATE・DELETE とも自社の行だけ（`tenant_id = current_setting('app.tenant_id')::int`）。ENABLE と FORCE。PR-A で名簿の表と一緒に作る。
+- 行が無い＝隠していない。本番の初期値は0行（今隠している会社は0・recon §4）。データ変更は要らない。
+- 隠せる行: 手入力の行（共用の電話・対面・WhatsApp と、会社が足した行）。自動で取り込む Messenger・Instagram・Discord は隠せない（届く会話は連携の部品が書くため、隠しても届き続け、画面と食い違う）。API は auto 行に 400。
+- 会社が足した行の「消す」（is_active=false）は今のまま残す。「隠す」は戻せる切り替え、「消す」は名簿からの取り下げ。
+- 設定画面: 管理センターの「チャネル設定」（`frontend/src/pages/management-center/ManagementCenterPage.tsx:83` の channel-masters・`frontend/src/App.tsx:406` で `frontend/src/pages/admin/ChannelMastersPage.tsx` を出す）に「この会社で使う」の切り替えを各行に置く。部品は金型 `frontend/src/components/Toggle.tsx`（ADR-144）。見出しと説明は i18n キー `channelMasters.visible`・`channelMasters.visibleHelp` を ja/en 同時に足す（ADR-027）。
+- 変えられる人: 画面を開ける人と同じ `tenant.profile.edit`（`frontend/src/pages/management-center/ManagementCenterPage.tsx:83`）。API にも `require_permission("tenant.profile.edit")`（`backend/app/auth/dependencies.py:589`）を付ける。
+- 事実（2026-11-06）: 今の追加・無効化の API（`backend/app/routers/conv_logs.py:491-518`・`:524-557`）は、ログインしていれば権限を見ずに通る（`get_current_user` と `get_current_tenant` だけ）。自社の名簿の中に限られるが、PR-B で同じ権限を付けて閉じる。
+- 隠した行の効き目: §9 D1-2 の PO 回答で決める。
+
 ## 3. 共用6行の投入（1回だけのデータ変更・ADR-1007 決定1）
 
 | platform | display_name | connection_type | conversation_store | is_verbatim | conversion_item |
@@ -87,18 +112,23 @@ CHANNEL_MASTERS_TABLE = "public.channel_masters"
 async def list_channels(db, tenant_id, *, active_only=True) -> list[dict]:
     # WHERE (tenant_id = :tenant_id OR tenant_id IS NULL) [AND is_active] ORDER BY platform
 async def get_channel(db, tenant_id, platform) -> dict | None:
+async def list_channels_for_picker(db, tenant_id, *, keep_platform=None) -> list[dict]:
+    # list_channels から自社が隠した行を外す。keep_platform（編集中のリードの今の値）は隠していても残す
+async def set_hidden(db, tenant_id, channel_master_id, is_hidden, user_id) -> None:
+    # manual 行だけ。public.channel_master_tenant_settings に UPSERT
 async def conversion_items(db) -> dict[str, str]:
     # WHERE tenant_id IS NULL AND conversion_item IS NOT NULL AND is_active → {platform: item}
 ```
-返す形は今の一覧（`backend/app/routers/conv_logs.py:208-217`）に `is_shared`（tenant_id IS NULL）を足したもの。
+返す形は今の一覧（`backend/app/routers/conv_logs.py:208-217`）に `is_shared`（tenant_id IS NULL）と `is_hidden`（自社の設定）を足したもの。
 
 ### 4-2. 付け替える所
 | 場所 | 変更 |
 |---|---|
 | `backend/app/routers/conv_logs.py:77-95`（1件取得） | `get_channel` を使う |
 | `backend/app/routers/conv_logs.py:189-217`（一覧） | `list_channels` を使う。返す項目に `is_shared` を足す（今の項目はそのまま） |
-| `backend/app/routers/conv_logs.py:492-518`（追加） | `public.channel_masters` に `tenant_id`＝自社で入れる。共用に同じ platform があれば 409 |
-| `backend/app/routers/conv_logs.py:526-557`（無効化） | 自社行だけ無効化できる。共用行は §9 D1 の答えで決める（案: 403） |
+| `backend/app/routers/conv_logs.py:492-518`（追加） | `public.channel_masters` に `tenant_id`＝自社で入れる。共用に同じ platform があれば 409。`require_permission("tenant.profile.edit")` を足す |
+| 新 `PUT /api/v1/admin/channel-masters/{id}/visibility`（同じファイル） | 本文 `{"is_hidden": bool}`。`set_hidden` を呼ぶ。auto 行は 400・他社行と見えない行は 404。`require_permission("tenant.profile.edit")`。監査の記録（`record_audit_log`）を残す |
+| `backend/app/routers/conv_logs.py:526-557`（無効化） | 自社行だけ無効化できる。共用行は 403（隠すのは §2-2 の切り替えで行う）。`require_permission("tenant.profile.edit")` を足す |
 | `backend/app/routers/leads.py:204-216`（検証） | `get_channel` を使う（422 の決まりは今のまま） |
 | `backend/app/routers/analytics.py:2483-2507`（会話の読み込み） | `JOIN public.channel_masters cm ON cm.platform = l.channel_type AND cm.tenant_id IS NULL AND cm.conversion_item IS NOT NULL AND cm.conversation_store = 'meta_messages'`（Meta の表）／`= 'conversation_logs'`（会話記録の表）。読む行は今と同じ（instagram・messenger → Meta、whatsapp → 会話記録） |
 | `backend/app/routers/analytics.py:2537-2538` | `items = await conversion_items(db)` を読み `lcf.analyze(leads, messages, items)` に渡す |
@@ -111,7 +141,7 @@ async def conversion_items(db) -> dict[str, str]:
 | `backend/app/services/channel_masters.py:10-19` | `DEFAULT_CHANNEL_MASTERS`・`ACTIVE_CHANNEL_PLATFORMS` を消す。別名 `CHANNEL_TYPE_ALIASES`（:21-24）は入力の言い換えなので残す |
 | `scripts/migrate_20260621_030000_backfill_lead_channel_type.py` | 2026-06 の1回きりの埋め戻しで、消す定数を読むため、ファイルごと消す（PR 本文の消すファイル欄に書く） |
 | `scripts/lead_regression/generate.py:80・:157・:174-175・:304-305・:313-314・:412` | 作り物のデータを作る台本。`lcf.CHANNEL_*` を自分の中の定数に置き換え、`analyze` に対応表を渡す（K4 の対象外・台本は試験用） |
-| 画面 `frontend/src/pages/admin/ChannelMastersPage.tsx:100-106` | 消すボタンを `connection_type === "manual" && !ch.is_shared` のときだけ出す（D1 の答えで変わる）。共用の行には既存の金型の札で「共用」を出す（i18n キー `channelMasters.shared` を ja/en 同時に足す・ADR-027・ADR-144） |
+| 画面 `frontend/src/pages/admin/ChannelMastersPage.tsx:100-106` | 消すボタンを `connection_type === "manual" && !ch.is_shared` のときだけ出す。manual の行すべてに §2-2 の切り替えを出す。共用の行には既存の金型の札で「共用」を出す（i18n キー `channelMasters.shared` を ja/en 同時に足す・ADR-027・ADR-144） |
 
 ### 4-3. 変えない所（触らない範囲）
 - 連携の部品が自分の名前を書く処理: backend/app/routers/webhook.py・discord_gateway・backend/app/routers/leads.py:1866-1871・:2482-2486・:2689（送信の道）・backend/app/services/user_notices.py:63・backend/app/routers/contact_channel_links.py:69-97
@@ -128,12 +158,13 @@ async def conversion_items(db) -> dict[str, str]:
 | 新（同じファイル） | K6: 会社の作成後、`tenant_NNN.channel_masters` が作られず、一覧に共用6つが出る |
 | backend/tests/test_lead_conversion_factors.py:34・:264・:276 | 定数を試験の中の値に置き換え、対応表を渡す。既存の数値の期待はそのまま（K5 の機械側） |
 | backend/tests/test_channel_type_control.py・backend/tests/test_conv_logs_router.py:367-395・backend/tests/test_system_roles.py:137 | 表の置き場の変更に合わせる |
+| 新（同じファイル） | 隠す: A社が電話を隠すとA社の選択欄から消えB社には出る／隠しても編集中のリードの今の値は選択欄に残る／auto 行は400／権限の無い人は403 |
 | backend/tests/rls_bootstrap.py:36・:185・backend/tests/test_value_migrations_neutralized.py:84 | 古い migration のセレクタ行に頼っている。古い表を消すまで（§6）はそのまま。 |
 | RLS（PG の試験・RLS_ADMIN_DATABASE_URL があるとき） | 会社の役で共用行の UPDATE が 0件、他社行が見えない |
 
 ## 6. 出す順番（それぞれ前が本番で確かめ終わってから）
 
-1. PR-A（migration・GO要）: §2 の表と RLS だけ。本番反映後、読み取り専用の窓で表が在り0行を確認
+1. PR-A（migration・GO要）: §2 の表と §2-2 の設定の表、それぞれの RLS だけ。本番反映後、読み取り専用の窓で2つの表が在り0行を確認
 2. データ変更: §3 を DRY-RUN→COMMIT。共用6行を確認（K1 の前半）
 3. PR-B（コード）: §4・§5。反映後に K2（5社の画面）・K5（001社の分析の前後一致）を確かめる
 4. PR-C（GO要・危ない操作）: 古い `tenant_NNN.channel_masters` を消す。条件＝PR-B 反映後に検索で読む所0・7日間エラー0。消す前にPOへ同意票
@@ -150,20 +181,23 @@ async def conversion_items(db) -> dict[str, str]:
 | K4 直書き0 | `git grep -nE "['\"](messenger\|instagram\|whatsapp\|discord\|phone\|in_person)['\"]\|CHANNEL_(MESSENGER\|INSTAGRAM\|WHATSAPP)\|META_CHANNELS" origin/main -- backend/app/routers/analytics.py backend/app/services/lead_conversion_factors.py backend/app/services/lang_judge.py` の分析・カルテ・言語判定の部分が 0件（backend/app/routers/analytics.py の他の画面の行が出た場合は一覧にして対象外の理由を書く） |
 | K5 001社の分析が前後で同じ | PR-B の前に `GET /analytics/lead-conversion-factors`（001社）の応答を丸ごと保存。反映後に同じものを取り、全項目一致（diff 0行） |
 | K6 新しい会社で写し0・6つ表示 | §5 の新しい試験が CI で緑 |
+| D1 会社ごとに隠せる | 管理センターの「チャネル設定」で電話を切り、リードの連絡手段の選択欄から電話が消える。切り戻すと出る。別の会社では出たまま（本番は試しの会社で確かめ、終わったら戻す） |
 
 ## 8. 弊害と対処
 
 | 弊害 | 対処 |
 |---|---|
 | PR-B を先に出すと名簿が空で、リードの保存が422になる | §6 の順番を守る。PR-B のカードに「共用6行が本番に在ること」を着手条件として書く |
-| 会社が共用の電話などを隠せなくなる（今は消すボタンがある `frontend/src/pages/admin/ChannelMastersPage.tsx:100-106`） | 本番で隠している会社は0（全社6行とも有効・recon §4）。扱いは §9 D1 |
+| 共用の行の「消す」がなくなる（今は消すボタンがある `frontend/src/pages/admin/ChannelMastersPage.tsx:100-106`） | 代わりに §2-2 の「隠す」切り替えで同じことができる。本番で消している会社は0（recon §4） |
+| 隠した連絡手段の昔のリードを編集すると値が消える恐れ | 選択欄は編集中のリードの今の値を残す（`list_channels_for_picker` の keep_platform）。保存の検証（`backend/app/routers/leads.py:204-216`）は隠したかを見ない |
 | 分析の項目の対応を名簿で変えると分析の形が変わる | `conversion_item` を共用行だけ・値を3つに限る（§2 の制約）。変えるのは運営だけ |
 | 読み取り専用の窓では会社独自の行が見えない（FORCE RLS） | K1 は表の数で数える。会社行は試験（K3）で確かめる |
 | 相談係の窓（ai_cloud）には新しい表が載らない（分類表に無い表は載らない） | 本テーマでは載せない。要るときは分類表の SQL に行を足す別作業 |
 
 ## 9. 未決（POに1件ずつ確認）
 
-- **D1**: 会社が共用の連絡手段（電話・対面・WhatsApp）を自社の選択欄から隠せるようにするか。今は消すボタンで隠せるが、使っている会社は0。案: 隠せないようにする（他の共用名簿と同じ。運営だけが変えられる）。
+- **D1**（PO 回答済み 2026-11-06「2,管理センター側で設定画面を設けてそこで設定できるようにする」）: 会社ごとに隠せる。管理センターの「チャネル設定」で切り替える。形は §2-2。
+- **D1-2**: 隠した連絡手段の、昔の記録の扱い。案: 隠すのは「新しく入れるときの選択欄」だけ。昔のリードの表示・成約の分析・言語判定は今のまま数える（K5 のため。隠しても数字が変わらない）。
 - **D2**: 名簿に無い値（不明 97件・メール 9件・紹介 2件・SNS 3件・meta_messenger 3件）をどうするか。案: 本テーマでは行を書き換えない（K5 のため）。メール・紹介・SNS は連絡手段でなく流入元の値とみられるため、流入元の台帳を作る時に扱う。
 
 ## 10. Opus が技術で決めたこと（KGI の設計送り事項 3〜5）
