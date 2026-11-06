@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "../../i18n";
@@ -9,11 +9,29 @@ vi.mock("../../contexts/AuthContext", () => ({
   useAuth: () => ({ user: { uid: "user-a" } }),
 }));
 
+// FullCalendar は jsdom で描かない。金型を差し替え、渡された props を取り出せるようにする
+const calendarProps = vi.hoisted(() => ({ current: null as null | Record<string, any> }));
+vi.mock("../../components/CalendarView", () => ({
+  CalendarView: (props: Record<string, any>) => {
+    calendarProps.current = props;
+    return (
+      <div data-testid="calendar-view">
+        {props.events.map((ev: { id: string; title: string }) => (
+          <button key={ev.id} type="button" onClick={(e) => props.onEventClick?.(ev.id, e.currentTarget.getBoundingClientRect())}>
+            {ev.title}
+          </button>
+        ))}
+      </div>
+    );
+  },
+}));
+
 const answers = vi.hoisted(() => ({
   isTenantAdmin: false,
   connected: false,
   meetAvailable: false,
   events: [] as Array<Record<string, unknown>>,
+  shifts: [] as Array<Record<string, unknown>>,
   canManageOthers: false,
 }));
 
@@ -35,6 +53,7 @@ vi.mock("../../lib/api", () => ({
       }
       if (path.startsWith("/calendar/events")) return { events: answers.events };
       if (path === "/google-calendar/connect/start") return { auth_url: "https://accounts.example/auth" };
+      if (path.startsWith("/shifts")) return answers.shifts;
       return [];
     }),
     post: vi.fn(async () => ({})),
@@ -56,7 +75,9 @@ beforeEach(async () => {
   answers.connected = false;
   answers.meetAvailable = false;
   answers.events = [];
+  answers.shifts = [];
   answers.canManageOthers = false;
+  calendarProps.current = null;
   hrefSetter.mockReset();
   const fake = { ...window.location } as Record<string, unknown>;
   Object.defineProperty(fake, "href", { configurable: true, get: () => "http://localhost/", set: hrefSetter });
@@ -498,33 +519,160 @@ describe("SchedulePage Google Meet (K12)", () => {
   });
 });
 
-describe("SchedulePage slot click opens create at the clicked hour", () => {
-  const openAt = async (slotIndex: number | null) => {
-    const { container } = view();
-    await waitFor(() => expect(container.querySelectorAll(".schedule-day-column").length).toBeGreaterThan(0));
-    if (slotIndex === null) {
-      fireEvent.click(container.querySelector(".schedule-day-head") as HTMLElement);
-    } else {
-      const column = container.querySelectorAll(".schedule-day-column")[0];
-      fireEvent.click(column.querySelectorAll(".schedule-slot")[slotIndex] as HTMLElement);
-    }
-    const inputs = await screen.findAllByLabelText(i18n.t("schedule.time"));
-    return inputs as HTMLInputElement[];
+describe("SchedulePage on CalendarView", () => {
+  const ready = async () => {
+    view();
+    await screen.findByRole("button", { name: i18n.t("schedule.create") });
+    await waitFor(() => expect(calendarProps.current).not.toBeNull());
   };
+  const selectRange = (start: Date, end: Date, allDay: boolean) => {
+    act(() => {
+      calendarProps.current?.onSelectRange(start, end, allDay, null);
+    });
+  };
+  const pendingOf = () =>
+    (calendarProps.current?.events as Array<Record<string, any>>).find((ev) => ev.id === "pending");
+  const eventOf = (id: string) =>
+    (calendarProps.current?.events as Array<Record<string, any>>).find((ev) => ev.id === id);
 
   it.each([
     [10, "10:00", "11:00"],
     [4, "04:00", "05:00"],
     [15, "15:00", "16:00"],
-  ])("slot %i opens at %s-%s", async (index, start, end) => {
-    const inputs = await openAt(index);
+  ])("T1: a selected range at %i o'clock opens at %s-%s", async (hour, start, end) => {
+    await ready();
+    selectRange(new Date(2026, 10, 10, hour, 0), new Date(2026, 10, 10, hour + 1, 0), false);
+    const inputs = (await screen.findAllByLabelText(i18n.t("schedule.time"))) as HTMLInputElement[];
     expect(inputs[0].value).toBe(start);
     expect(inputs[1].value).toBe(end);
   });
 
-  it("day head keeps the default 07:00-08:00", async () => {
-    const inputs = await openAt(null);
+  it("T2: a pending box shows while creating and goes away when the popover closes", async () => {
+    await ready();
+    expect(pendingOf()).toBeUndefined();
+    selectRange(new Date(2026, 10, 10, 10, 0), new Date(2026, 10, 10, 11, 0), false);
+    await screen.findByPlaceholderText(i18n.t("schedule.eventTitle"));
+    const pending = pendingOf();
+    expect(pending?.id).toBe("pending");
+    expect(pending?.title).toBe(i18n.t("schedule.noTitle"));
+    expect(pending?.editable).toBe(false);
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    await waitFor(() => expect(pendingOf()).toBeUndefined());
+  });
+
+  it("T3: a one-day click in the month view keeps the 07:00-08:00 default", async () => {
+    await ready();
+    fireEvent.keyDown(document.body, { key: "m" });
+    await waitFor(() => expect(calendarProps.current?.mode).toBe("month"));
+    selectRange(new Date(2026, 10, 10), new Date(2026, 10, 11), true);
+    const inputs = (await screen.findAllByLabelText(i18n.t("schedule.time"))) as HTMLInputElement[];
     expect(inputs[0].value).toBe("07:00");
     expect(inputs[1].value).toBe("08:00");
+    expect(pendingOf()).toBeUndefined();
+  });
+
+  it("T4: dragging several days in the month view opens an all-day event", async () => {
+    await ready();
+    fireEvent.keyDown(document.body, { key: "m" });
+    await waitFor(() => expect(calendarProps.current?.mode).toBe("month"));
+    selectRange(new Date(2026, 10, 10), new Date(2026, 10, 13), true);
+    const toggle = (await screen.findByRole("switch", { name: i18n.t("schedule.allDay") })) as HTMLInputElement;
+    expect(toggle.checked).toBe(true);
+    const dates = screen.getAllByDisplayValue(/^2026-11-/) as HTMLInputElement[];
+    expect(dates[0].value).toBe("2026-11-10");
+    expect(dates[1].value).toBe("2026-11-12");
+  });
+
+  it("T5: only events the user can move are editable", async () => {
+    answers.events = [
+      apiEvent({}),
+      apiEvent({ id: 5, title: "Imported All Day", source: "google", is_all_day: true }),
+      apiEvent({ id: 6, title: "Imported Timed", source: "google" }),
+    ];
+    answers.shifts = [{
+      id: 3, user_id: 101, shift_date: new Date().toISOString().slice(0, 10), start_time: "09:00:00",
+      end_time: "18:00:00", shift_type: "work", notes: null, created_at: "2026-10-01T00:00:00Z",
+    }];
+    await ready();
+    await screen.findByText("Own Event");
+    expect(eventOf("event-1")?.editable).toBe(true);
+    expect(eventOf("event-6")?.editable).toBe(true);
+    expect(eventOf("event-5")?.editable).toBe(false);
+    expect(eventOf("shift-3")?.editable).toBe(false);
+  });
+
+  it("T6: moving an event patches it with the numeric id and reverts on failure", async () => {
+    answers.events = [apiEvent({})];
+    await ready();
+    await screen.findByText("Own Event");
+    const start = new Date(2026, 10, 12, 14, 0);
+    const end = new Date(2026, 10, 12, 15, 0);
+    const revert = vi.fn();
+    await act(async () => {
+      await calendarProps.current?.onEventMove("event-1", start, end, false, revert);
+    });
+    expect(api.patch).toHaveBeenCalledTimes(1);
+    const [path, body] = vi.mocked(api.patch).mock.calls[0] as [string, Record<string, unknown>];
+    expect(path).toBe("/calendar/events/1");
+    expect(body).toEqual({
+      title: "Own Event",
+      start_datetime: start.toISOString(),
+      end_datetime: end.toISOString(),
+      is_all_day: false,
+    });
+    expect("category" in body).toBe(false);
+    expect(revert).not.toHaveBeenCalled();
+
+    vi.mocked(api.patch).mockRejectedValueOnce(new Error("move failed"));
+    await act(async () => {
+      await calendarProps.current?.onEventMove("event-1", start, end, false, revert);
+    });
+    expect(revert).toHaveBeenCalledTimes(1);
+    expect(await screen.findByText("move failed")).toBeTruthy();
+  });
+
+  it("T7: editing and deleting send the numeric id, not event-1", async () => {
+    answers.events = [apiEvent({})];
+    view();
+    fireEvent.click(await screen.findByText("Own Event"));
+    fireEvent.click((await screen.findAllByRole("button", { name: i18n.t("schedule.editEvent") }))[0]);
+    fireEvent.click(await screen.findByRole("button", { name: i18n.t("common.save") }));
+    await waitFor(() => expect(api.patch).toHaveBeenCalled());
+    expect(vi.mocked(api.patch).mock.calls[0][0]).toBe("/calendar/events/1");
+
+    fireEvent.click(await screen.findByText("Own Event"));
+    fireEvent.click((await screen.findAllByRole("button", { name: i18n.t("schedule.deleteEvent") }))[0]);
+    await waitFor(() => expect(api.delete).toHaveBeenCalled());
+    expect(vi.mocked(api.delete).mock.calls[0][0]).toBe("/calendar/events/1");
+  });
+
+  it("T8: moving an all-day event sends the last day at 23:59", async () => {
+    answers.events = [apiEvent({ id: 3, title: "Trip", is_all_day: true })];
+    await ready();
+    await screen.findByText("Trip");
+    await act(async () => {
+      await calendarProps.current?.onEventMove("event-3", new Date(2026, 10, 10), new Date(2026, 10, 12), true, vi.fn());
+    });
+    const body = vi.mocked(api.patch).mock.calls[0][1] as Record<string, unknown>;
+    expect(body.start_datetime).toBe(new Date(2026, 10, 10, 0, 0).toISOString());
+    expect(body.end_datetime).toBe(new Date(2026, 10, 11, 23, 59).toISOString());
+    expect(body.is_all_day).toBe(true);
+  });
+
+  it("T9: week view passes Sunday, 7 days and weekStart 0; day view passes today and 1", async () => {
+    await ready();
+    const weekDate = calendarProps.current?.date as Date;
+    expect(weekDate.getDay()).toBe(0);
+    expect(calendarProps.current?.dayCount).toBe(7);
+    expect(calendarProps.current?.weekStart).toBe(0);
+    expect(calendarProps.current?.mode).toBe("days");
+    fireEvent.keyDown(document.body, { key: "d" });
+    await waitFor(() => expect(calendarProps.current?.dayCount).toBe(1));
+    const dayDate = calendarProps.current?.date as Date;
+    const today = new Date();
+    expect(dayDate.getFullYear()).toBe(today.getFullYear());
+    expect(dayDate.getMonth()).toBe(today.getMonth());
+    expect(dayDate.getDate()).toBe(today.getDate());
+    expect(calendarProps.current?.dayCount).toBe(1);
   });
 });
