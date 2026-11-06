@@ -1,6 +1,6 @@
 # design: 予定の画面を Google カレンダーと同じ使い心地にする（作り直し）（2026-11-06）
 
-状態: 成功条件 G1〜G14 は **PO 承認済み**（2026-11-06、PO 原文「1.」＝「この14項目で決める」を選択）。設計審査 1 回目は REVISE（§9）→ 改訂 1 で直した。2 回目は未実施。実装は未着手。
+状態: 成功条件 G1〜G14 は **PO 承認済み**（2026-11-06、PO 原文「1.」＝「この14項目で決める」を選択）。設計審査 1 回目・2 回目は REVISE（§9）→ 改訂 2 で直した。3 回目は未実施。実装は未着手。
 実装の承認: PO はこのセッションの冒頭で「PRマージ、デプロイまで完走させてくれ」、3 択で「3」（違いもまとめて設計し直してから全部いっしょに作る）と指示した。設計審査の APPROVE と便ごとのカードが揃った便から作る。
 根拠: `docs/handoff/schedule-gcal-clone/recon.md`（以下 recon）。前の設計 `docs/handoff/schedule-gcal-alignment/design.md`（K1〜K14）を引き継ぎ、便2（K8〜K11）はこの設計に入れ直す。
 
@@ -45,19 +45,24 @@ G14 を外す理由: Google の ToDo を読むには、今の接続（予定の�
 
 | 足す口 | 中身 | 受ける成功条件 |
 |---|---|---|
-| `onSelectRange(start, end, anchor)` | `selectable` を口があるときだけ有効。押す・引っぱるで範囲を返す | G1・G2・G8 |
+| `onSelectRange(start, end, allDay, anchor)` | `selectable` を口があるときだけ有効。押す・引っぱるで範囲を返す。刻みは 15 分（`snapDuration: "00:15"`。今の `slotDuration` 1 時間 `CalendarView.tsx:117` のままだと 1 時間刻みになる・timegrid `internal.js:1017`）。中身の決まりは下の「選んだ範囲の決まり」 | G1・G2・G8 |
 | `onEventMove` / `onEventResize` | `editable` を口があるときだけ有効。予定ごとの `editable` で動かせない予定を止める（FullCalendar の予定ごとの上書き。recon §5） | G8・G9 |
 | 予定ごとの色 `color` | 担当者の色（DB が正本・画面は受けた値を使うだけ）。無いときは今の `tone` | G4 |
 | 目盛りの形 | 「午前9時」の形（言語は画面の言語に合わせる。日本語・英語の 2 つを `t()` 側で持つ） | G5 |
 | 1 時間の高さ | 新しいトークンは作らない。金型は既に `--schedule-row-height` を使う（`frontend/src/components/CalendarView.css:48`）。この値を G6 の測定で決め直す（1 か所）。ADR-1065 What 5 が「48px」と値を書いているので、改訂で値を書かない形にする（下の改訂の範囲） | G6 |
 | 押した場所の四角 | 今の `onEventClick(id)`・`onDayClick(date)` は場所を返さない（`frontend/src/components/CalendarView.tsx` の `eventClick`・`navLinkDayClick`）。今の詳しくの小窓と「他 N 件」の小窓は押した所の四角を基準に出る（`SchedulePageImpl.tsx:803,905`）。`onEventClick(id, rect)` に変え、rect は FullCalendar の `EventClickArg.el.getBoundingClientRect()`（6.1.22 の型 `EventClickArg { el; event; jsEvent; view }`）。呼ぶ側の今の使い方（id だけ）は引数が増えるだけで壊れない | G8・C6 |
-| 「他 N 件」を押したとき | 今の金型は表示を切り替えるだけ（`moreLinkClick` が `arg.view.type` を返す）。口 `onMoreClick(date, rect)` を足し、渡されたときは FullCalendar の小窓を出さず呼ぶ側に任せる（`MoreLinkHandler` は `void` を返してよい・6.1.22 の型）。rect は `MoreLinkArg.jsEvent.target` の要素の四角。口が無いときは今のまま | C6 |
+| 「他 N 件」を押したとき | 今の金型は表示を切り替えるだけ（`moreLinkClick` が `arg.view.type` を返す）。口 `onMoreClick(date, rect)` を足し、渡されたときは FullCalendar の小窓を出さず呼ぶ側に任せる（`MoreLinkHandler` は `void` を返してよい・6.1.22 の型）。rect は `MoreLinkArg.jsEvent.target` の要素の四角。口があるときも**戻り値は `arg.view.type`（今の表示）を返す**（`void` や `"popover"` を返すと FullCalendar が自分の小窓を開く・core `internal-common.js:7462`・審査 2 回目 Q1）。口が無いときは今のまま | C6 |
 | 引っぱる部品 | `interactionPlugin`（`@fullcalendar/interaction` 6.1.22・`frontend/package.json:75` に既にある）を金型の `PLUGINS` に足す。選択・動かす・長さを変えるはこれが無いと動かない（recon §5） | G1・G2・G8 |
 | 見える時間の幅 | 金型は予定から見える時間を絞る（`CalendarView.tsx:42-43,60` `startHour=8`・`endHour=20`・`computeHourRange`）。Google は 0 時〜24 時を出して今の時刻へ送る。口で「0〜24 時を出す」を選べるようにする | G13 |
 | 開いたときの位置 `scrollTime` | 今の時刻の 1 時間前 | G13 |
 | 箱の中身 | 題名＋時刻の 2 行。札は出さない | G4 |
 | 月の高さ | 今の金型は `height="auto"`（中身の高さ）。口 `fillHeight`（真偽）を足し、真のときは FullCalendar の `height="100%"` にして、包む枠の高さ（呼ぶ側が画面の残りの高さを渡す）いっぱいに広げる。偽・無しは今のまま | G10 |
 | 週の始まり `firstDay` | 今の画面は日曜始まり（`frontend/src/pages/schedule/schedule-utils.ts:130,136` `addDays(..., -getDay())`）。Google の観測も 11/1（日）〜7（土）。金型の固定値 1（月曜）を口で渡せるようにし、予定の画面は 0（日曜）を渡す | — |
+
+選んだ範囲の決まり（`onSelectRange`・審査 2 回目 Q3）:
+- 押しただけ（選んだ長さが 15 分以下）のときは、押した刻みの頭（15 分単位）から 1 時間に広げて返す。引っぱったときは選んだ範囲そのまま。Google と同じく 10:00 の枠の上の方を押すと 10:00〜11:00。
+- `anchor`（小窓の基準の四角）: `DateSelectArg.jsEvent` があるときは押した位置の 1 点（`clientX`・`clientY`、幅と高さ 0）。`jsEvent` が null のとき（6.1.22 の型 `jsEvent: MouseEvent | null`）は `null` を返し、画面は今の `openCreate(date, null)` と同じく基準なしの置き場所で開く（近道 c `:1424` と同じ道）。
+- 月の升目（`allDay` が真で返る）: 画面は今の月の升目の作り方（`onSelectDay` `SchedulePageImpl.tsx:874`→ その日の 7 時から 1 時間・§6 ③）をそのまま使う。終日の行で選んだとき（週・日の表示）は終日の予定として小窓を開く。
 
 ADR-1065 の改訂（便1 の PR に入れる）。直すのは 3 か所:
 1. What 5「1時間の高さは `--schedule-row-height`（48px）」→「1時間の高さはトークン `--schedule-row-height` の値で決める（値は tokens.css 1 か所）」。
@@ -68,7 +73,7 @@ ADR-1065 の改訂（便1 の PR に入れる）。直すのは 3 か所:
 
 前の便2 カード（`origin/release/schedule-gcal-bin2-design` 9545d849d の `docs/handoff/schedule-gcal-alignment/design.md` §5-6・§11-2。審査 APPROVE）から、次の 5 つをそのまま引き継ぐ（1 回目の審査 Q1 で、前の版の書き方が間違っていた）:
 
-1. 送る道と中身（旧 K9・N-12）: 離したら `PATCH /calendar/events/{id}` に、今の保存（`SchedulePageImpl.tsx` の保存の処理）と同じ形で、題名・開始・終了・終日・説明・場所をまとめて送る。題名などは動かす予定の今の値。`category` と `calendar_type` は送らない（直す口の受け取り `UpdateEventBody` `backend/app/routers/calendar.py:114-121` に `category` が無い）。開始と終了だけを送ると、裏側が Google へ送る中身を送られた欄だけで作り、Google 側の題名が空で上書きされる（旧カード §5-6）。
+1. 送る道と中身（旧 K9・N-12）: 離したら `PATCH /calendar/events/{id}` に、今の保存（`SchedulePageImpl.tsx` の保存の処理）と同じ形で、題名・開始・終了・終日・説明・場所をまとめて送る。題名などは動かす予定の今の値。`category` と `calendar_type` は送らない（直す口の受け取り `UpdateEventBody` `backend/app/routers/calendar.py:118-126`（origin/main 9571ce84e） に `category` が無い）。開始と終了だけを送ると、裏側が Google へ送る中身を送られた欄だけで作り、Google 側の題名が空で上書きされる（旧カード §5-6）。
 2. 失敗したとき: 元の位置に戻し、今の失敗の帯（`setError` の形）を出す。FullCalendar の `eventDrop`・`eventResize` の `revert()` を使う。
 3. 終日を動かしたときの終わり（N-14）: 終わりは「新しい最後の日の 23:59（日本時間）」で作る（`combineDateTime(新しい最後の日, "23:59")`）。FullCalendar の終日の終わりは「次の日の 0:00」で返るので、1 日引いてから作る。次の日の 0:00 では送らない（Google で 1 日長くなる）。
 4. 終日が Google で 1 日前にずれる不具合の直し（N-5・PO 2026-11-04「1」で便2 に入れると決めた件）: 裏側 `backend/app/services/calendar_service.py` の `_to_google_event_body` の終日の枝だけを、旧カード §5-6 の手順 1〜4 のとおりに変える（日付だけの値はそのまま／時刻つきは日本時間の日付にする／終わりは +1 日）。2026-11-06 の時点で main に入っていない（`calendar_service.py:648-650` に `str(start_dt)[:10]` が残る・1 回目の審査 C5）。試験は旧カード §11-2 の 6・7（`TestToGoogleEventBody` に 6 件、`TestCreateEvent`・`TestUpdateEvent` に各 1 件）。
@@ -175,3 +180,14 @@ ADR-1065 の改訂（便1 の PR に入れる）。直すのは 3 か所:
 - 1 回目は祝日の節（§3.4）と便0 のカードを見ていない（後から足したため）。2 回目で見てもらう。
 - 未確認のまま残るもの: G6 の Google 側の 1 時間の css の実寸（便2 で同じ窓の画面写しで測る＝G6 の検証方法そのもの）。祝日の案 A は採らないので確かめない。
 - Context7 は月の上限で使えなかった。FullCalendar の仕様は公式資料を直接読んだ（recon §5）。
+
+### 2 回目（2026-11-06 14:38 UTC・クラウド Opus・対象 0b49f99ea）: REVISE・便0不可
+
+- R1 ○（Q1〜Q7 は直っている）。R2 ×・R3 ○・R4 ×・R5 ×。
+- R2 で FullCalendar 6.1.22 の型（`EventClickArg.el`・`MoreLinkHandler`・`height`・`firstDay`・`scrollTime`・予定ごとの `editable`/`color`・`revert`）は成り立つと npm pack の中身で確かめた。
+- R3 `holidays==0.108` を Python 3.12 で数えて 2026 年 18 件・2027 年 17 件（合計 35 件）。内閣府の表はクラウドから接続を断られた（403）ので、内閣府との日付の突き合わせは便4 の試験で行う（§3.4 のとおり）。
+- 直した場所:
+  - Q1（必須）「他 N 件」で void を返すと FullCalendar の小窓が開く → §3.2 の行を「戻り値は `arg.view.type`」に直した。
+  - Q2（必須）便0 で見出し（:709）も 0 時になる → `card-bin0.md` を 3 か所の変更（口の型 :682 に `hour?`・枠 :783 で `hour` を渡す・呼び出し :1574）に直し、見出しが 7 時のままの試験を 1 件足した。
+  - Q3（推奨）刻み・押しただけの長さ・anchor・月の升目 → §3.2 に「選んだ範囲の決まり」。
+  - Q4（推奨）`UpdateEventBody` の行 → `calendar.py:118-126`。

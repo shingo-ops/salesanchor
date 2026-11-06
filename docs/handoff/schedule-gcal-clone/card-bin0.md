@@ -6,24 +6,48 @@
 ## 枝と作業場所
 - 起点 `origin/main`。枝 `release/schedule-slot-hour-fix`。`bash scripts/new-worktree.sh release/schedule-slot-hour-fix --claude` で作り、その中で作業する。
 
-## 変えるもの（2 ファイルだけ）
+## 変えるもの（2 ファイルだけ・審査 2 回目 Q2 で改訂）
 
-### 1. `frontend/src/pages/schedule/SchedulePageImpl.tsx`（origin/main の 1574 行目）
+### 1. `frontend/src/pages/schedule/SchedulePageImpl.tsx`（行は origin/main 9571ce84e）
+変える所は 3 か所（審査 2 回目 Q2: :1574 だけを変えると、週の日付の見出し :709 も同じ口を通るので見出しが 0 時で開いてしまう）。
+
+(1) 時間割の口の型（:682）
+変更前:
+```tsx
+  onSelectSlot: (date: Date, rect: AnchorRect) => void;
+```
+変更後:
+```tsx
+  onSelectSlot: (date: Date, rect: AnchorRect, hour?: number) => void;
+```
+
+(2) 時間の枠（:783）。見出し（:709）は変えない。
+変更前:
+```tsx
+                      onSelectSlot(base, event.currentTarget.getBoundingClientRect());
+```
+変更後:
+```tsx
+                      onSelectSlot(base, event.currentTarget.getBoundingClientRect(), hour);
+```
+
+(3) 呼び出し（:1574）
 変更前:
 ```tsx
                       onSelectSlot={(date, rect) => openCreate(date, rect)}
 ```
 変更後:
 ```tsx
-                      onSelectSlot={(date, rect) => openCreate(date, rect, date.getHours())}
+                      onSelectSlot={(date, rect, hour) => openCreate(date, rect, hour)}
 ```
-この 1 行だけを変える。`openCreate`（:1237）・`WORKDAY_START`（:106）・月の表示の `onSelectDay`（:1550）・作るボタン（:1515）・近道 c（:1424）は触らない（月と作るボタンは今のまま 7 時で開く）。
+見出しは hour を渡さない → `openCreate` の既定値（`hour: number = WORKDAY_START`・:1237）が効き、今のまま 7 時で開く。`openCreate`（:1237）・`WORKDAY_START`（:106）・月の表示の `onSelectDay`（:1550）・作るボタン（:1515）・近道 c（:1424）は触らない。
 
 ### 2. `frontend/src/pages/schedule/SchedulePageImpl.test.tsx`
 新しい `describe("SchedulePage slot click opens create at the clicked hour")` を 1 つ足す。
 - 週の表示で、今日の列の `.schedule-slot` の 11 番目（10 時）を押す → 小窓の開始時刻の入力欄が `10:00`、終了が `11:00`。
 - 同じく 5 番目（4 時）→ `04:00`／`05:00`、16 番目（15 時）→ `15:00`／`16:00`。
-- 時刻の入力欄の探し方は、既存の試験と同じやり方（`screen` のロールか表示値）を使う。`container.querySelectorAll(".schedule-slot")` で枠を取ってよい（列は今日を含む週の列を使う）。
+- 週の日付の見出し（`.schedule-day-head` の今日）を押す → `07:00`／`08:00`（今のまま）。
+- 時刻の入力欄は 2 つとも `schedule.time` のラベル。`screen.getAllByLabelText(i18n.t("schedule.time"))` で取り、[0] が開始・[1] が終了（審査 2 回目で既存試験と照合）。`container.querySelectorAll(".schedule-slot")` で枠を取ってよい（列は今日を含む週の列を使う）。
 
 ## 触らない範囲
 - 上の 2 ファイル以外。css・トークン・文言（ja.json/en.json）・裏側は触らない。
