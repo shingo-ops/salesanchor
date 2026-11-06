@@ -200,6 +200,10 @@ async def lifespan(app: FastAPI):
                 raise RuntimeError(f"Required env var {_var} is not set")
             _logger.warning("必須環境変数 %s が未設定です（ENFORCE_WEBHOOK_SECRETS=1 で起動を強制失敗させられます）", _var)
 
+    # Discord 連携の戻り口は code を交換するため秘密の鍵が要る（空でも起動は止めない）
+    if not os.getenv("DISCORD_CLIENT_SECRET"):
+        _logger.warning("環境変数 DISCORD_CLIENT_SECRET が未設定です（Discord 連携の開始口は 503 を返します）")
+
     await init_redis()
     yield
     await close_redis()

@@ -251,6 +251,13 @@ GET API で `staff` テーブルを JOIN して接続者名を返す。
 
 ---
 
+### 戻り口でのサーバーの持ち主の確かめ（2026-11-07 追記・G3）
+
+- 戻り口は Discord から受けた `code` を `https://discord.com/api/oauth2/token` で交換し、応答の `guild.id` だけを保存する。
+- URL の `guild_id` は公式のとおり目安（hint）としてだけ使う。応答の `guild.id` と違えば保存しない（`reason=guild_mismatch`）。`code` が無い・交換が拒否された・応答に guild が無い場合も保存しない（`missing_code`・`code_exchange_failed`・`missing_guild_in_token`）。
+- 秘密の鍵 `DISCORD_CLIENT_SECRET` は GitHub Secrets → deploy.yml → .env → docker-compose の backend → `os.getenv` の1本道で渡す（ADR-075）。鍵が無い間は開始口が 503 を返す。
+- 設計: `docs/handoff/discord-oauth-ownership-proof/design.md`
+
 ## Scope（対象外）
 
 - Discord サーバーの初期構築・チャンネル設計（人手で行う）

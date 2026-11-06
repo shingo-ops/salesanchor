@@ -146,7 +146,16 @@ def _payload(**extra) -> dict:
 
 async def _callback(client, guild_id: str = _GUILD_OWN):
     return await client.get(
-        "/api/v1/discord/oauth/callback", params={"state": "s", "guild_id": guild_id}
+        "/api/v1/discord/oauth/callback",
+        params={"state": "s", "guild_id": guild_id, "code": "c"},
+    )
+
+
+def _exchange(guild_id: str):
+    """code の交換を差し替える（この試験は用途ごとの行と戻り先を見る。交換そのものは test_discord_oauth.py）。"""
+    return patch(
+        "app.routers.discord_oauth._exchange_code_for_guild_id",
+        AsyncMock(return_value=guild_id),
     )
 
 
@@ -156,7 +165,8 @@ async def _callback(client, guild_id: str = _GUILD_OWN):
 
 
 @pytest.mark.asyncio
-async def test_01_start_empty_body_is_customer(client):
+async def test_01_start_empty_body_is_customer(client, monkeypatch):
+    monkeypatch.setenv("DISCORD_CLIENT_SECRET", "test-secret-not-real")
     issue = _issue_mock()
     with patch("app.routers.discord_oauth.oauth_state.issue_state", issue):
         res = await client.post("/api/v1/discord/oauth/start", json={})
@@ -165,7 +175,8 @@ async def test_01_start_empty_body_is_customer(client):
 
 
 @pytest.mark.asyncio
-async def test_02_start_own_with_edit_permission(client):
+async def test_02_start_own_with_edit_permission(client, monkeypatch):
+    monkeypatch.setenv("DISCORD_CLIENT_SECRET", "test-secret-not-real")
     issue = _issue_mock()
     with patch("app.routers.discord_oauth.oauth_state.issue_state", issue):
         res = await client.post("/api/v1/discord/oauth/start", json={"purpose": "own"})
@@ -200,7 +211,9 @@ async def test_04_start_unknown_purpose_is_422(client):
 
 @pytest.mark.asyncio
 async def test_05_callback_own_creates_own_row_and_returns_to_own_tab(client, factory):
-    with patch("app.routers.discord_oauth.oauth_state.consume_state", _consume(_payload(purpose="own"))):
+    with patch(
+        "app.routers.discord_oauth.oauth_state.consume_state", _consume(_payload(purpose="own"))
+    ), _exchange(_GUILD_OWN):
         res = await _callback(client)
     assert res.status_code in (302, 307)
     assert res.headers["location"] == f"{_FRONTEND}/admin/discord-config?tab=own&discord_status=connected"
@@ -209,7 +222,9 @@ async def test_05_callback_own_creates_own_row_and_returns_to_own_tab(client, fa
 
 @pytest.mark.asyncio
 async def test_06_callback_without_purpose_is_customer(client, factory):
-    with patch("app.routers.discord_oauth.oauth_state.consume_state", _consume(_payload())):
+    with patch(
+        "app.routers.discord_oauth.oauth_state.consume_state", _consume(_payload())
+    ), _exchange(_GUILD_CUSTOMER):
         res = await _callback(client, _GUILD_CUSTOMER)
     assert res.headers["location"] == f"{_FRONTEND}/channels?discord_status=connected"
     assert await _rows(factory) == [(_TENANT, "customer", _GUILD_CUSTOMER)]
@@ -226,7 +241,9 @@ async def test_07_callback_unknown_purpose_is_invalid_payload(client, factory):
 @pytest.mark.asyncio
 async def test_08_registering_own_keeps_customer_row(client, factory):
     await _insert(factory, _TENANT, "customer", _GUILD_CUSTOMER)
-    with patch("app.routers.discord_oauth.oauth_state.consume_state", _consume(_payload(purpose="own"))):
+    with patch(
+        "app.routers.discord_oauth.oauth_state.consume_state", _consume(_payload(purpose="own"))
+    ), _exchange(_GUILD_OWN):
         res = await _callback(client)
     assert res.status_code in (302, 307)
     assert await _rows(factory) == [
@@ -241,7 +258,9 @@ async def test_11_callback_guild_already_registered(client, factory, owner):
     """別の会社、または同じ会社の別の用途で登録済みのサーバーは 500 にならず戻り先で知らせる。"""
     await _insert(factory, owner[0], owner[1], _GUILD_OTHER)
     before = await _rows(factory)
-    with patch("app.routers.discord_oauth.oauth_state.consume_state", _consume(_payload(purpose="own"))):
+    with patch(
+        "app.routers.discord_oauth.oauth_state.consume_state", _consume(_payload(purpose="own"))
+    ), _exchange(_GUILD_OTHER):
         res = await _callback(client, _GUILD_OTHER)
     assert res.status_code in (302, 307)
     assert res.headers["location"] == (
