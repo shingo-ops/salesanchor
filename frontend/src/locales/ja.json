@@ -3973,7 +3973,13 @@
     "platformPlaceholder": "例: whatsapp_personal",
     "displayNamePlaceholder": "例: WhatsApp（個人）",
     "add": "追加",
-    "saveError": "追加に失敗しました"
+    "saveError": "追加に失敗しました",
+    "visible": "この会社で使う",
+    "visibleHelp": "切ると、リードの連絡手段の選択欄に出なくなります。昔のリードの値と分析はそのままです",
+    "visibleAriaLabel": "{{name}} をこの会社で使う",
+    "visibilityError": "切り替えに失敗しました",
+    "shared": "共用",
+    "duplicateError": "同じ名前の連絡手段が既にあります"
   },
   "funnel": {
     "sectionTitle": "ファネルダッシュボード",

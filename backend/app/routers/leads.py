@@ -47,7 +47,7 @@ from app.schemas.lead import (
     SalesFormOptionResponse,
     SalesFormSelectionResponse,
 )
-from app.services import encryption, meta_graph
+from app.services import channel_masters, encryption, meta_graph
 from app.services import messaging_window as mw
 from app.services.audit import record_audit_log
 from app.services.channel_masters import normalize_channel_type_value
@@ -202,18 +202,7 @@ async def _ensure_channel_type_in_master(
     if existing_value is not None and normalized == existing_value:
         return normalized
 
-    channel_masters_t = tenant_table_ref(db, tenant_id, "channel_masters")
-    result = await db.execute(
-        text(
-            f"""
-            SELECT platform
-            FROM {channel_masters_t}
-            WHERE platform = :platform AND is_active = TRUE
-            """
-        ),
-        {"platform": normalized},
-    )
-    if result.scalar_one_or_none() is not None:
+    if await channel_masters.get_channel(db, tenant_id, normalized) is not None:
         return normalized
 
     raise HTTPException(
