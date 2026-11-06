@@ -100,6 +100,7 @@ from app.routers import (
     shifts,
     shipping,
     staff,
+    staff_join,  # ADR-1068: スタッフ自己登録の招待
     staff_reports,
     status_master,  # ステータスマスタ テナント用
     super_admin_ai_jobs,  # ADR-1058 段2: AI の担当の画面
@@ -199,6 +200,10 @@ async def lifespan(app: FastAPI):
                 raise RuntimeError(f"Required env var {_var} is not set")
             _logger.warning("必須環境変数 %s が未設定です（ENFORCE_WEBHOOK_SECRETS=1 で起動を強制失敗させられます）", _var)
 
+    # Discord 連携の戻り口は code を交換するため秘密の鍵が要る（空でも起動は止めない）
+    if not os.getenv("DISCORD_CLIENT_SECRET"):
+        _logger.warning("環境変数 DISCORD_CLIENT_SECRET が未設定です（Discord 連携の開始口は 503 を返します）")
+
     await init_redis()
     yield
     await close_redis()
@@ -268,6 +273,8 @@ app.include_router(
 )
 # ADR-159: 担当者アイコン画像の公開配信（認証不要 - Discord が avatar_url として取得。推測不能 token）
 app.include_router(public_staff_avatars.public_router, prefix="/api", tags=["public"])
+# ADR-1068: スタッフ自己登録の申込（認証不要 - 鍵で引く。無効は全部 404）
+app.include_router(staff_join.public_router, prefix="/api/v1", tags=["staff-join"])
 
 # --- 認証必須なルーター（デフォルトで認証が強制される） ---
 # dependencies=[Depends(get_current_tenant)] により、
@@ -529,6 +536,11 @@ app.include_router(
 app.include_router(integrations.public_router, prefix="/api/v1", tags=["integrations"])
 app.include_router(
     integrations.router, prefix="/api/v1", tags=["integrations"],
+    dependencies=[Depends(get_current_tenant)],
+)
+# ADR-1068: スタッフ招待の管理。/staff/{staff_id} より前に登録する（/staff/join-invites を取り違えないため）
+app.include_router(
+    staff_join.router, prefix="/api/v1", tags=["staff-join"],
     dependencies=[Depends(get_current_tenant)],
 )
 # Phase 1 再設計: staff / bots

@@ -33124,6 +33124,236 @@
         "title": "StaffEmailInput",
         "type": "object"
       },
+      "StaffJoinInfo": {
+        "description": "ログイン不要の GET の返事。",
+        "properties": {
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "role_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role Name"
+          },
+          "tenant_name": {
+            "title": "Tenant Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tenant_name",
+          "expires_at"
+        ],
+        "title": "StaffJoinInfo",
+        "type": "object"
+      },
+      "StaffJoinInviteCreate": {
+        "properties": {
+          "role_id": {
+            "title": "Role Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "role_id"
+        ],
+        "title": "StaffJoinInviteCreate",
+        "type": "object"
+      },
+      "StaffJoinInviteCreated": {
+        "description": "作成・作り直しの返事。URL はこの1回だけ返す。",
+        "properties": {
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "url",
+          "expires_at"
+        ],
+        "title": "StaffJoinInviteCreated",
+        "type": "object"
+      },
+      "StaffJoinInviteItem": {
+        "properties": {
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "created_by": {
+            "title": "Created By",
+            "type": "integer"
+          },
+          "created_by_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By Name"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "role_id": {
+            "title": "Role Id",
+            "type": "integer"
+          },
+          "role_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role Name"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "role_id",
+          "expires_at",
+          "created_by"
+        ],
+        "title": "StaffJoinInviteItem",
+        "type": "object"
+      },
+      "StaffJoinSubmit": {
+        "properties": {
+          "given_name_en": {
+            "description": "英語名（名）。必須（ADR-159）",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Given Name En",
+            "type": "string"
+          },
+          "given_name_jp": {
+            "maxLength": 50,
+            "minLength": 1,
+            "title": "Given Name Jp",
+            "type": "string"
+          },
+          "given_name_kana": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Given Name Kana"
+          },
+          "primary_email": {
+            "maxLength": 255,
+            "title": "Primary Email",
+            "type": "string"
+          },
+          "surname_en": {
+            "description": "英語名（姓）。必須（ADR-159）",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Surname En",
+            "type": "string"
+          },
+          "surname_jp": {
+            "maxLength": 50,
+            "minLength": 1,
+            "title": "Surname Jp",
+            "type": "string"
+          },
+          "surname_kana": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Surname Kana"
+          }
+        },
+        "required": [
+          "surname_jp",
+          "given_name_jp",
+          "surname_en",
+          "given_name_en",
+          "primary_email"
+        ],
+        "title": "StaffJoinSubmit",
+        "type": "object"
+      },
+      "StaffJoinSubmitted": {
+        "description": "申込の返事。登録番号はこの1回だけ見せる。",
+        "properties": {
+          "discord_invite_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Discord Invite Url"
+          },
+          "registration_code": {
+            "title": "Registration Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "registration_code"
+        ],
+        "title": "StaffJoinSubmitted",
+        "type": "object"
+      },
       "StaffProfileUpdate": {
         "description": "本人専用プロフィール更新スキーマ（氏名・電話番号）。権限不要。英語名は指定する場合は必須（空不可）。",
         "properties": {
@@ -46867,7 +47097,7 @@
     },
     "/api/v1/discord/oauth/callback": {
       "get": {
-        "description": "Discord からのコールバック。guild_id を tenant_discord_config に保存する。\n\nこのエンドポイントは Discord からのリダイレクトなので JWT 認証なし。\ntenant_id は state ペイロードから取得する（CSRF 対策: state は one-time 使用）。",
+        "description": "Discord からのコールバック。code を交換し、応答の guild.id を tenant_discord_config に保存する。\n\nこのエンドポイントは Discord からのリダイレクトなので JWT 認証なし。\ntenant_id は state ペイロードから取得する（CSRF 対策: state は one-time 使用）。",
         "operationId": "discord_oauth_callback_api_v1_discord_oauth_callback_get",
         "parameters": [
           {
@@ -46900,6 +47130,22 @@
                 }
               ],
               "title": "State"
+            }
+          },
+          {
+            "in": "query",
+            "name": "code",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Code"
             }
           }
         ],
@@ -56773,6 +57019,100 @@
         ]
       }
     },
+    "/api/v1/public/staff-join/{key}": {
+      "get": {
+        "description": "会社名・役割名・期限を返す。無効なら 404 を1種類で返す。",
+        "operationId": "get_join_info_api_v1_public_staff_join__key__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "title": "Key",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffJoinInfo"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Join Info",
+        "tags": [
+          "staff-join"
+        ]
+      },
+      "post": {
+        "description": "申込。users（無効）・staff（登録待ち）・役割を作り、登録番号を1回だけ返す。メールは送らない。",
+        "operationId": "submit_join_api_v1_public_staff_join__key__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "title": "Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StaffJoinSubmit"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffJoinSubmitted"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Submit Join",
+        "tags": [
+          "staff-join"
+        ]
+      }
+    },
     "/api/v1/purchase-orders": {
       "get": {
         "operationId": "list_pos_api_v1_purchase_orders_get",
@@ -59631,6 +59971,176 @@
         "summary": "Review Report",
         "tags": [
           "staff_reports"
+        ]
+      }
+    },
+    "/api/v1/staff/join-invites": {
+      "get": {
+        "description": "open・submitted を新しい順に返す（状態・役割名・期限・作った人）。鍵は返さない。",
+        "operationId": "list_join_invites_api_v1_staff_join_invites_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/StaffJoinInviteItem"
+                  },
+                  "title": "Response List Join Invites Api V1 Staff Join Invites Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Join Invites",
+        "tags": [
+          "staff-join"
+        ]
+      },
+      "post": {
+        "description": "招待を1本作り、URL を1回だけ返す。メールは送らない。",
+        "operationId": "create_join_invite_api_v1_staff_join_invites_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StaffJoinInviteCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffJoinInviteCreated"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Join Invite",
+        "tags": [
+          "staff-join"
+        ]
+      }
+    },
+    "/api/v1/staff/join-invites/{invite_id}/reissue": {
+      "post": {
+        "description": "open の招待だけ。新しい鍵を作り、期限を 72 時間に戻す。古い鍵は開けなくなる。",
+        "operationId": "reissue_join_invite_api_v1_staff_join_invites__invite_id__reissue_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invite_id",
+            "required": true,
+            "schema": {
+              "title": "Invite Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffJoinInviteCreated"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Reissue Join Invite",
+        "tags": [
+          "staff-join"
+        ]
+      }
+    },
+    "/api/v1/staff/join-invites/{invite_id}/revoke": {
+      "post": {
+        "description": "open の招待だけ。revoked にする。",
+        "operationId": "revoke_join_invite_api_v1_staff_join_invites__invite_id__revoke_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invite_id",
+            "required": true,
+            "schema": {
+              "title": "Invite Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Revoke Join Invite",
+        "tags": [
+          "staff-join"
         ]
       }
     },

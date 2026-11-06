@@ -29,7 +29,10 @@
   ],
   "categories": [
     {"key": "text_cat", "discord_id": "1567709769337409726", "name": "テキストチャンネル", "overwrites": []},
-    {"key": "voice_cat", "discord_id": "1567709769337409727", "name": "ボイスチャンネル", "overwrites": []}
+    {"key": "voice_cat", "discord_id": "1567709769337409727", "name": "ボイスチャンネル", "overwrites": []},
+    {"key": "staff_join_rooms", "discord_id": null, "name": "スタッフ登録",
+     "overwrites": [{"target": "@everyone", "deny": ["VIEW_CHANNEL"]},
+                    {"target": "@bot", "allow": ["VIEW_CHANNEL"]}]}
   ],
   "channels": [
     {"key": "general", "discord_id": "1567709769337409728", "name": "一般", "type": "text",
@@ -48,6 +51,10 @@
      "category": "text_cat", "topic": null,
      "overwrites": [{"target": "@everyone", "deny": ["VIEW_CHANNEL"]},
                     {"target": "role:staff", "allow": ["VIEW_CHANNEL"]},
-                    {"target": "@bot", "allow": ["VIEW_CHANNEL"]}]}
+                    {"target": "@bot", "allow": ["VIEW_CHANNEL"]}]},
+    {"key": "staff_join_reception", "discord_id": null, "name": "スタッフ受付", "type": "text",
+     "category": null, "topic": null,
+     "overwrites": [{"target": "@everyone", "allow": ["VIEW_CHANNEL"], "deny": ["SEND_MESSAGES"]},
+                    {"target": "@bot", "allow": ["VIEW_CHANNEL", "SEND_MESSAGES"]}]}
   ]
 }

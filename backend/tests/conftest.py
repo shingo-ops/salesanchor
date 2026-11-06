@@ -342,6 +342,8 @@ async def test_engine():
             statement = statement.replace("public.auth_refresh_tokens", "auth_refresh_tokens")
         if "public.password_reset_tokens" in statement:
             statement = statement.replace("public.password_reset_tokens", "password_reset_tokens")
+        if "public.staff_join_invites" in statement:
+            statement = statement.replace("public.staff_join_invites", "staff_join_invites")
         if "public.webauthn_credentials" in statement:
             statement = statement.replace("public.webauthn_credentials", "webauthn_credentials")
         if "public.passkey_enroll_prompt_skips" in statement:
@@ -1552,6 +1554,28 @@ async def setup_test_db(test_engine):
                 created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
             )
         """))
+        # ADR-1068: public.staff_join_invites の SQLite 版（BYTEA→BLOB, BIGSERIAL→INTEGER, TIMESTAMPTZ→TIMESTAMP）
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS staff_join_invites (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tenant_id INTEGER NOT NULL,
+                role_id INTEGER NOT NULL,
+                created_by INTEGER NOT NULL,
+                token_hash BLOB NOT NULL UNIQUE,
+                expires_at TIMESTAMP NOT NULL,
+                status TEXT NOT NULL DEFAULT 'open'
+                    CHECK (status IN ('open', 'submitted', 'linked', 'revoked')),
+                user_id INTEGER,
+                staff_id INTEGER,
+                reg_code_hash BLOB UNIQUE,
+                reg_code_expires_at TIMESTAMP,
+                discord_channel_id TEXT,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                submitted_at TIMESTAMP,
+                linked_at TIMESTAMP,
+                revoked_at TIMESTAMP
+            )
+        """))
         # ADR-1013 便5: public.webauthn_credentials の SQLite 版（BYTEA→BLOB, UUID→TEXT, TEXT[]→TEXT, BIGSERIAL→INTEGER）
         await conn.execute(text("""
             CREATE TABLE IF NOT EXISTS webauthn_credentials (
@@ -1807,6 +1831,7 @@ async def db_session(test_engine, setup_test_db):
         await conn.execute(text("DELETE FROM discord_channel_webhooks"))
         await conn.execute(text("DELETE FROM audit_logs"))
         await conn.execute(text("DELETE FROM password_reset_tokens"))
+        await conn.execute(text("DELETE FROM staff_join_invites"))
         await conn.execute(text("DELETE FROM goals"))
         await conn.execute(text("DELETE FROM tenant_google_drive_config"))
         await conn.execute(text("DELETE FROM customer_scores"))
@@ -2063,6 +2088,7 @@ async def client(db_session):
         # Phase 1-B-1 wiring (B-1): /staff/me 追加に伴うスタッフ系テスト
         "app.routers.staff",
         "app.services.role_assignment",
+        "app.services.staff_create",  # ADR-1068: POST /staff の中身を切り出した先
         # Sprint 8 / F8: テナント発行者情報
         "app.routers.tenant_profile",
         # Sprint D2: Discord Guild 設定

@@ -1235,3 +1235,11 @@ run_sql migrations/20261106_150000_add_discord_role_link_tables.sql
 run_sql migrations/20261106_190000_create_public_channel_masters.sql
 # discord-server-management 第2段 2c: 知らせの送り先に設計図の部屋の key の列と一意の索引を足す（作るだけ・冪等）
 run_sql migrations/20261106_210000_add_notification_channels_blueprint_key.sql
+# ADR-1067 段階④ 便④-1: inventory_movements に会社ごとの RLS（型A）。冪等・1 取引
+run_sql migrations/20261107_100000_add_inventory_movements_rls.sql
+# ADR-1067 段階④ 便④-2: discord_server_snapshots・discord_server_apply_runs に会社ごとの RLS（型A）。冪等・1 取引
+run_sql migrations/20261107_110000_add_discord_server_records_rls.sql
+# staff-self-registration 1回目: スタッフ招待の表 staff_join_invites を作る（作るだけ・冪等・RLS 付き）
+run_sql migrations/20261107_120000_create_staff_join_invites.sql
+# staff-self-registration 2回目: users に仮パスワードの印 password_must_change を足す（足すだけ・冪等）
+run_sql migrations/20261107_130000_add_users_password_must_change.sql

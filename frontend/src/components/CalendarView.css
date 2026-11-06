@@ -142,6 +142,18 @@
   --fc-event-text-color: var(--cal-holiday-text);
 }
 
+/* 担当者の色の箱: 地と枠は予定ごとの色（eventDidMount が要素に --comp-calendar-owner-color を置く）、文字は塗りの上の色 */
+.comp-calendar .comp-calendar__event--owner-color {
+  --fc-event-bg-color: var(--comp-calendar-owner-color);
+  --fc-event-border-color: var(--comp-calendar-owner-color);
+  --fc-event-text-color: var(--on-solid);
+}
+
+/* 担当者の色の見積もり: 地は面の色（下の見積もりの規則）なので、文字は本文の色 */
+.comp-calendar .comp-calendar__event--owner-color.comp-calendar__event--line-dashed {
+  --fc-event-text-color: var(--text-primary);
+}
+
 /* 見積もり: 点線の枠・地は面の色（実際は solid） */
 .comp-calendar .comp-calendar__event--line-dashed {
   --fc-event-bg-color: var(--bg-surface);
@@ -153,4 +165,14 @@
 .comp-calendar .comp-calendar__event--conflict {
   border-color: var(--danger);
   border-width: var(--schedule-event-border-w);
+}
+
+.comp-calendar--fill {
+  height: 100%;
+}
+
+.comp-calendar .comp-calendar__content--stacked {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }

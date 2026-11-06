@@ -1,7 +1,12 @@
 {
   "calendarView": {
     "more": "ほか {{count}} 件",
-    "allDay": "終日"
+    "allDay": "終日",
+    "am": "午前{{time}}",
+    "pm": "午後{{time}}",
+    "clockHour": "{{hour}}時",
+    "clockMinute": "{{hour}}:{{minute}}",
+    "timeRange": "{{start}}～{{end}}"
   },
   "productCsv": {
     "downloadTemplate": "空のサンプルCSVを保存",
