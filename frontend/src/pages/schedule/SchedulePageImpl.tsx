@@ -679,7 +679,7 @@ function ScheduleWeekGrid({
   ownerByUserId: Map<number, CalendarOwner>;
   currentOwnerUserId: number | null;
   currentTime: Date;
-  onSelectSlot: (date: Date, rect: AnchorRect) => void;
+  onSelectSlot: (date: Date, rect: AnchorRect, hour?: number) => void;
   onSelectEvent: (item: ScheduleItem, rect: AnchorRect) => void;
 }) {
   const { t } = useTranslation();
@@ -780,7 +780,7 @@ function ScheduleWeekGrid({
                     onClick={(event) => {
                       const base = new Date(day.date);
                       base.setHours(hour, 0, 0, 0);
-                      onSelectSlot(base, event.currentTarget.getBoundingClientRect());
+                      onSelectSlot(base, event.currentTarget.getBoundingClientRect(), hour);
                     }}
                   />
                 ))}
@@ -1571,7 +1571,7 @@ export default function SchedulePage() {
                       ownerByUserId={ownerByUserId}
                       currentOwnerUserId={currentOwnerUserId}
                       currentTime={currentTime}
-                      onSelectSlot={(date, rect) => openCreate(date, rect)}
+                      onSelectSlot={(date, rect, hour) => openCreate(date, rect, hour)}
                       onSelectEvent={(item, rect) => openDetail(item, rect)}
                     />
                   </div>
