@@ -12,6 +12,7 @@
   - backend/tests/test_discord_role_link_ddl.py（新規）
   - 改訂1（§5-改訂1）だけで触ってよい: backend/tests/rls_bootstrap.py（`_TENANT_LOOP_MIGRATIONS` に 1 行足すだけ）、origin/main を取り込む merge commit
   - 改訂2（§5-改訂2）だけで触ってよい: backend/tests/test_tenant_loop_migration_guard.py（`_REVIEWED` に 2 組足すだけ）、migrations/20261024_100300_create_ai_cloud_views.sql（分類の行を 1 か所直し 2 行足し、3 行目の数を直すだけ）、backend/tests/ops/test_ai_cloud_views.py（数を 1075 → 1078 にするだけ）、scripts/migration-guard/reference-allowlist.tsv（該当 1 行の sha256 と理由欄だけ）
+  - 改訂3（§5-改訂3）だけで触ってよい: origin/main を取り込む merge commit（ぶつかる scripts/run_all_migrations.sh の末尾を §5-改訂3 のとおりに直すだけ）、backend/tests/test_discord_role_link_ddl.py（28・29 行目の番号とコメントだけ）
 - 触らない: backend のほかのファイル（routers・services の他・conftest.py を含む）・frontend・i18n・openapi.json・ほかの migrations・scripts/setup_tenant.py・scripts/db/sync_tenant_schema.py・.github・deploy.yml・本番
 
 ## 読んだ節（guards/）
@@ -476,6 +477,57 @@ def test_link_migration_is_scoped_to_own_tenant():
 - commit の文: `test: classify 2a-1 link migration and Discord id columns for the tenant-loop and ai_cloud guards`
 - `git push origin release/discord-own-server-s2-2a1` を単独で流す。PR は作らない。
 - 報告書の最後に「改訂2」節を足し、同じ commit に入れる。
+
+## §5-改訂3（2026-11-06・マージ前の審査で見つかった本線とのぶつかり）
+
+- 【事実】改訂2 のあと、本線が 7e0bc67b1 まで進んだ。審査役の `git merge-tree` で `CONFLICT (content): Merge conflict in scripts/run_all_migrations.sh` が出た。本線と PR が、どちらも末尾の `run_sql migrations/20261106_120000_create_discord_server_snapshot_tables.sql` の次に 2 行（コメント 1 行と run_sql 1 行）を足したため。
+- 【事実】本線の試験 `backend/tests/test_permission_resolution_pg.py:37` が `_TENANT_ID = 994` になった。PR の `backend/tests/test_discord_role_link_ddl.py:29` も 994。試験同士はテナントごとの札で順番に動くので壊れないが、「他と重ならない番号」の決まりに反する。
+- 【事実】Opus が origin/main 7e0bc67b1 で `git grep -n -w 988 origin/main -- backend migrations scripts` を流し、0 件だった。
+
+### 改訂3 の作業（この順に）
+
+（１）始める前に `git log -2 --oneline` の 1 行目が「docs: card s2-2a1 revision 3」、2 行目が 434b95375 であること。違えば BLOCKED:。
+
+（２）`git fetch origin main` のあと `git merge --no-edit origin/main`。ぶつかるのは `scripts/run_all_migrations.sh` だけのはず。ほかのファイルでもぶつかったら `git merge --abort` して BLOCKED: とぶつかったファイルの一覧。
+
+（３）`scripts/run_all_migrations.sh` の末尾を、印（`<<<<<<<`・`=======`・`>>>>>>>`）を消して、次の順の 6 行にする（時刻の順。本線の 2 行が先、PR の 2 行が後）。ほかの行は変えない。
+
+```bash
+# discord-server-management 便2: 自社用サーバーの今の姿の記録と反映の記録の表を作る（作るだけ・冪等）
+run_sql migrations/20261106_120000_create_discord_server_snapshot_tables.sql
+# ADR-1063 便2: ログイン許可の依頼に「会社の管理者に頼んだ時刻」の列と部分索引を足す（列1つ・追加のみ・冪等）
+run_sql migrations/20261106_140000_add_login_request_admin_requested_at.sql
+# discord-server-management 第2段 2a-1: roles に Discord のロールの番号の列、消した番号を覚える表 2 つを作る（作るだけ・冪等）
+run_sql migrations/20261106_150000_add_discord_role_link_tables.sql
+```
+
+- 本線側の 2 行の文字は、本線の実物（`git show origin/main:scripts/run_all_migrations.sh | tail -4`）と一字も違えない。
+
+（４）`git add scripts/run_all_migrations.sh` のあと `git commit --no-edit` で merge commit を作る。
+
+（５）`backend/tests/test_discord_role_link_ddl.py` の 28・29 行目を次の 2 行にする。ほかの行は変えない。
+
+```python
+# 995 は test_roles_system_key_ddl.py、994 は test_permission_resolution_pg.py が使うため、試験・移行のどこにも無い 988 を使う
+_TENANT_ID = 988
+```
+
+### 改訂3 の確かめ（生出力を報告書の「改訂3」節に貼る）
+
+- `git show HEAD~1 --stat`（merge commit。親が 2 つ）と `tail -6 scripts/run_all_migrations.sh`
+- `bash -n scripts/run_all_migrations.sh` の rc=0
+- `grep -c "<<<<<<<\|>>>>>>>" scripts/run_all_migrations.sh`（0 であること）
+- `git grep -n -w 988 -- backend migrations scripts`（test_discord_role_link_ddl.py の 2 行だけであること）
+- `cd backend && python -m pytest tests/test_tenant_loop_migration_guard.py tests/test_discord_role_link_ddl.py tests/test_roles_system_key_ddl.py -q -p no:cacheprovider --no-cov`（すべて passed、PG の分は skipped でよい）
+- §6 の check_test_schema_dup.py の rc=0
+- `cd backend && ruff check tests/test_discord_role_link_ddl.py`
+- `git diff --name-only origin/main...HEAD`（改訂2 と同じ 18 ファイルであること）
+
+### 改訂3 の保存
+
+- （５）の commit の文: `test: use tenant 988 in the 2a-1 DDL test (994 is now used by test_permission_resolution_pg)`
+- 報告書の最後に「改訂3」節を足し、（５）と同じ commit に入れる。
+- `git push origin release/discord-own-server-s2-2a1` を単独で流す。PR は作らない。
 
 ## §7 保存
 
