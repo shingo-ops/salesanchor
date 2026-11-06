@@ -1233,3 +1233,5 @@ run_sql migrations/20261106_140000_add_login_request_admin_requested_at.sql
 run_sql migrations/20261106_150000_add_discord_role_link_tables.sql
 # チャネル名簿 PR-A: 全社1つの名簿 public.channel_masters と会社ごとの隠す設定の表を作る（作るだけ・冪等）
 run_sql migrations/20261106_190000_create_public_channel_masters.sql
+# discord-server-management 第2段 2c: 知らせの送り先に設計図の部屋の key の列と一意の索引を足す（作るだけ・冪等）
+run_sql migrations/20261106_210000_add_notification_channels_blueprint_key.sql

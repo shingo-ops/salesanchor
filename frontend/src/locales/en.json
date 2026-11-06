@@ -3565,7 +3565,8 @@
       "update_category": "Update category",
       "create_channel": "Create channel",
       "update_channel": "Update channel",
-      "update_overwrite": "Update permissions"
+      "update_overwrite": "Update permissions",
+      "link_notice": "Create notice link"
     },
     "field": {
       "name": "Name",
@@ -3590,7 +3591,10 @@
       "method_not_allowed": "This operation is not run",
       "name_in_blueprint": "The blueprint has a role with the same name",
       "app_role_missing_on_discord": "The linked role was deleted on Discord",
-      "app_role_link_in_use": "The linked role is also used by another item"
+      "app_role_link_in_use": "The linked role is also used by another item",
+      "notice_other_route": "Another destination also receives this notice type (it will arrive twice)",
+      "notice_room_unavailable": "The notice room is not available, so the link cannot be created",
+      "webhook_token_missing": "Discord did not return the webhook token"
     },
     "deleteKind": {
       "role": "Role",
