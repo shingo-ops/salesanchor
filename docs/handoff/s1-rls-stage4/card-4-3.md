@@ -14,6 +14,7 @@
 | 3 | `backend/tests/test_discord_config_rls.py` | 新規。§5 |
 | 4 | `docs/handoff/s1-rls-stage4/card-4-3.md` | このカード（Opus が置く。実装役は触らない） |
 | 5 | `.claude-pipeline/active-work.d/release-s1-rls-stage4-bin3.md` | 台帳（Opus が本店の写しに置く。実装役は触らない） |
+| 6 | `backend/tests/test_tenant_loop_migration_guard.py` | 追記（2026-11-07 CI で分かった分。§5-2）。`_REVIEWED` に 1 項目足すだけ |
 
 - 実装の直前に `git ls-tree --name-only origin/main migrations/ | tail -3` を流し、`20261107_130000` より後の名前の移行、または同じ名前の移行が main に入っていたら止まって Opus に戻す（名前を自分で変えない）。
 - `.github/workflows/migration-test.yml` は触らない（§4。前提の表は変更 SQL のジョブに定義済み）。
@@ -109,6 +110,20 @@ run_sql migrations/20261107_130000_add_discord_config_rls.sql
   - conftest.py は 2 表を SQLite に作り、`public.` を外す書き換え（:321-322）と後片付けの DELETE（:1796）も SQLite の上で行う。RLS は SQLite に無い。触らない。
   - test_discord_oauth_rls.py は実 PostgreSQL を使うが、作る表は public.tenants と会社の置き場の audit_logs だけ（:46・:69）。2 表は作らず、本 PR の移行も当てない。影響なし。
   - 残りの 12 本は conftest.py の SQLite の DB を使う（実 PostgreSQL の接続先を持たない。test_discord_own_server.py:290 の "postgresql://unused" は接続しない文字列）。影響なし。触らない。
+
+## 5-2. 見張りの分類表への登録（追記: 2026-11-07、PR #5227 の 1 回目の CI で分かった分）
+
+- 事実: CI（run 42284520698、HEAD d07d5b874）で `tests/test_tenant_loop_migration_guard.py::test_every_tenant_loop_migration_reference_is_classified` だけが落ちた（1 failed, 8359 passed）。理由の文: `test_discord_config_rls.py -> 099_add_discord_guild_config.sql; test_discord_config_rls.py -> 20260602_120000_add_discord_ticket_config.sql`。同じ記録に新しい試験の 42501（2 表とも「violates row-level security policy」各 2 件）が出ており、新しい試験そのものは動いて通っている。
+- 決まり（同ファイル :1-6）: 全テナントを回す移行を名前で参照する試験は `_REVIEWED` に分類を書く。本試験は `_fresh()` で `CREATE DATABASE` する使い捨て DB なので分類は `own_database`（:302-305 の確かめ「CREATE DATABASE が本文にある」を満たす）。
+- 直し: `_REVIEWED` の `"test_tcg_work_matching_integration.py": (...)` の項目の直後（閉じの `}` :233 の前）に、次の 5 行を足す。ほかの行は変えない。
+
+```python
+    "test_discord_config_rls.py": (
+        "own_database",
+        "",
+        frozenset({"099_add_discord_guild_config.sql", "20260602_120000_add_discord_ticket_config.sql"}),
+    ),
+```
 
 ## 6. 書込の入口（触らないが、文脈があることの根拠。origin/main 468a224c5）
 
