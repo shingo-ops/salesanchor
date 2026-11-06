@@ -208,6 +208,79 @@ describe("LoginPage (self login)", () => {
   });
 });
 
+describe("LoginPage (ask company admin)", () => {
+  beforeEach(() => {
+    registerDevSession(null);
+  });
+
+  // 202 の待ち画面を出し、ask-admin と poll の返事を差し替えられるようにする
+  async function openWaitingScreen(askRes: () => Response, pollRes?: () => Response) {
+    fetchMock.mockImplementation((url: string) => {
+      if (url === "/api/v1/auth/login") {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              status: "device_approval_required",
+              match_number: "73",
+              expires_in: 600,
+              has_trusted_device: false,
+              has_recovery_codes: false,
+            }),
+            { status: 202 },
+          ),
+        );
+      }
+      if (url === "/api/v1/auth/login-requests/ask-admin") return Promise.resolve(askRes());
+      if (url === "/api/v1/auth/login-requests/poll" && pollRes) return Promise.resolve(pollRes());
+      return Promise.resolve(new Response(JSON.stringify({ detail: "invalid_credentials" }), { status: 401 }));
+    });
+    await renderLoginWithHome();
+    await fillAndSubmit();
+    await waitFor(() => expect(screen.getByTestId("login-approval-number").textContent).toBe("73"));
+  }
+
+  const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
+
+  it("T1 requested shows the message and disables the button", async () => {
+    await openWaitingScreen(() => json({ status: "requested" }));
+    const button = screen.getByRole("button", { name: tr("login.deviceApproval.askAdmin") });
+
+    fireEvent.click(button);
+
+    expect(await screen.findByText(tr("login.deviceApproval.askAdminRequested"))).toBeTruthy();
+    await waitFor(() => expect((button as HTMLButtonElement).disabled).toBe(true));
+  });
+
+  it("T2 no_owner shows the no-owner message", async () => {
+    await openWaitingScreen(() => json({ status: "no_owner" }));
+
+    fireEvent.click(screen.getByRole("button", { name: tr("login.deviceApproval.askAdmin") }));
+
+    expect(await screen.findByText(tr("login.deviceApproval.askAdminNoOwner"))).toBeTruthy();
+  });
+
+  it("T3 expired leaves the waiting screen with the expired message", async () => {
+    await openWaitingScreen(() => json({ status: "expired" }));
+
+    fireEvent.click(screen.getByRole("button", { name: tr("login.deviceApproval.askAdmin") }));
+
+    expect(await screen.findByText(tr("login.deviceApproval.expired"))).toBeTruthy();
+    expect(screen.queryByTestId("login-approval-number")).toBeNull();
+  });
+
+  it("T4 409 not_pending then poll rejected shows the rejected message", async () => {
+    await openWaitingScreen(
+      () => json({ detail: "not_pending" }, 409),
+      () => json({ status: "rejected" }),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: tr("login.deviceApproval.askAdmin") }));
+
+    expect(await screen.findByText(tr("login.deviceApproval.rejected"))).toBeTruthy();
+    expect(screen.queryByTestId("login-approval-number")).toBeNull();
+  });
+});
+
 describe("LoginPage (passkey button)", () => {
   beforeEach(() => {
     registerDevSession(null);

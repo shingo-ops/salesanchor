@@ -304,6 +304,7 @@
     "conditionsMaster": "状態マスタ",
     "productCategories": "商品カテゴリ",
     "superAdminSupplierExtractionRules": "抽出ルール設定",
+    "tenantLoginRequests": "ログインの許可待ち",
     "superAdminLoginRequests": "ログインの許可待ち",
     "units": "単位マスタ",
     "noteMaster": "備考マスタ",
@@ -423,6 +424,10 @@
     "subtitle": "リード・顧客情報を一元管理できます。"
   },
   "managementCenter": {
+    "loginRequests": {
+      "subtitle": "社員が新しい機械で「会社の管理者に頼む」を押した依頼です。本人であることを確かめてから許可してください。",
+      "ownerOnly": "この画面は会社のオーナーだけが開けます。"
+    },
     "sectionTeam": "チーム・人事",
     "sectionSecurity": "権限・セキュリティ",
     "sectionBusiness": "ビジネス設定",
@@ -699,7 +704,11 @@
       "rejected": "ログインは許可されませんでした。心当たりがなければ、パスワードを変えてください。",
       "expired": "許可の期限が切れました。もう一度ログインしてください。",
       "useRecoveryCode": "予備の合言葉で入る",
-      "noTrustedDevice": "いつもの機械も予備の合言葉も無いときは、管理者に連絡して本人確認を受けてください。",
+      "askAdmin": "会社の管理者に頼む",
+      "askAdminRequested": "会社の管理者に知らせました。許可されると、この画面は自動で進みます。",
+      "askAdminAlready": "会社の管理者にはもう知らせています。許可を待ってください。",
+      "askAdminNoOwner": "知らせる先の管理者が会社にいません。運営に連絡してください。",
+      "noTrustedDevice": "会社の管理者に頼むか、運営に連絡してください。",
       "help": "許可されると、この画面は自動で進みます。",
       "cancel": "ログイン画面に戻る",
       "recoveryTitle": "予備の合言葉で入る",
@@ -5985,6 +5994,7 @@
     "empty": "知らせはありません",
     "kind": {
       "discord_outside_ticket_post": "{{actor}} さんが #{{channel}} に書き込みました",
+      "staff_login_request": "{{name}} さんが新しい機械からのログインの許可を求めています",
       "login_request": "新しい機械（{{device}}）からログインの依頼があります"
     },
     "fallback": {

@@ -91,6 +91,7 @@ import ChannelMastersPage from "./pages/admin/ChannelMastersPage";
 import ManagementCenterPage from "./pages/management-center/ManagementCenterPage";
 import FxRatePage from "./pages/super-admin/FxRatePage";
 import LoginRequestsPage from "./pages/super-admin/LoginRequestsPage";
+import TenantLoginRequestsPage from "./pages/management-center/TenantLoginRequestsPage";
 import ViewerAccountsPage from "./pages/super-admin/ViewerAccountsPage";
 import ViewerTemplatesPage from "./pages/super-admin/ViewerTemplatesPage";
 import TcgProductImportPage from "./pages/super-admin/TcgProductImportPage";
@@ -406,6 +407,7 @@ function App() {
                       <Route path="channel-masters"     element={<ChannelMastersPage />} />
                       <Route path="channels"            element={<ChannelsPage />} />
                       <Route path="bots"                element={<BotsPage />} />
+                      <Route path="login-requests"      element={<TenantLoginRequestsPage />} />
                       <Route path="suppliers"           element={<SuppliersPage />} />
                       <Route path="status-master"       element={<StatusMasterPage />} />
                       <Route path="conditions"          element={<ConditionsPage />} />

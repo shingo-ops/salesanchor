@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { MemoryRouter } from "react-router-dom";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import NoticeBell, { type NoticeItem } from "./NoticeBell";
 import { api } from "../lib/api";
@@ -50,6 +51,13 @@ const meta = {
   title: "Components/NoticeBell",
   component: NoticeBellStory,
   parameters: { layout: "padded" },
+  decorators: [
+    (Story) => (
+      <MemoryRouter>
+        <Story />
+      </MemoryRouter>
+    ),
+  ],
   tags: ["autodocs"],
   args: { items: MOCK_ITEMS, unreadCount: 1 },
 } satisfies Meta<typeof NoticeBellStory>;
