@@ -29,8 +29,8 @@
 
 - `backend/app/routers/conv_logs.py` :77-95 名簿1件取得 / :189-217 一覧（is_active・platform順）/ :240-251 自動取込の手段は手入力不可 / :492-518 管理者が手入力の手段を追加 / :526-557 無効化（auto は400）
 - `backend/app/routers/leads.py:186-221` リードの連絡手段を名簿で検証（無ければ422）
-- 画面: `ChannelTypeCombobox.tsx:44`、`ChannelMastersPage.tsx`（/admin/channel-masters）、`ManualRecordSection.tsx:47-50`、`ManagementCenterPage.tsx:83`、`AdminHubPage.tsx:50`、`App.tsx:382/406`
-- 試験: conftest.py:43/623/873、test_channel_type_control.py、test_conv_logs_router.py:367-395、test_system_roles.py:137、rls_bootstrap.py:36/185、test_tenant_loop_migration_guard.py、test_value_migrations_neutralized.py:84
+- 画面: `frontend/src/components/ChannelTypeCombobox.tsx:44`、`frontend/src/pages/admin/ChannelMastersPage.tsx`（/admin/channel-masters）、`frontend/src/pages/inbox/ManualRecordSection.tsx:47-50`、`frontend/src/pages/management-center/ManagementCenterPage.tsx:83`、`frontend/src/pages/admin/AdminHubPage.tsx:50`、`frontend/src/App.tsx:382/406`
+- 試験: backend/tests/conftest.py:43/623/873、backend/tests/test_channel_type_control.py、backend/tests/test_conv_logs_router.py:367-395、backend/tests/test_system_roles.py:137、backend/tests/rls_bootstrap.py:36/185、backend/tests/test_tenant_loop_migration_guard.py、backend/tests/test_value_migrations_neutralized.py:84
 - 生出力: /tmp/CC報告ファイル/chm-recon1.txt・chm-recon4.txt（リポジトリ外）
 
 ## 3. 名前を直書きして選んでいる箇所（K4の対象）
@@ -43,7 +43,7 @@
 | `backend/app/services/lead_conversion_factors.py:188・229-230` | 対象の絞り込み・「WhatsAppか」「Instagramか」の印 | カルテ（対象） |
 | `backend/app/services/lang_judge.py:31`（使用 :92・:127） | `("phone", "in_person")` を除外 | 言語判定（対象） |
 | `backend/app/tasks/avatar.py:164・222・310` | messenger/instagram だけ顔写真を取る | 外部サービス（Meta）の都合。対象外候補・設計で判断 |
-| webhook.py・discord_gateway・送信処理・user_notices.py:63・contact_channel_links.py:69-97 | つなぐ部品が自分の名前を書く | 対象外 |
+| backend/app/routers/webhook.py・discord_gateway・送信処理・backend/app/services/user_notices.py:63・backend/app/routers/contact_channel_links.py:69-97 | つなぐ部品が自分の名前を書く | 対象外 |
 
 ## 4. 本番の件数（2026-11-06・読み取り専用の鍵）
 
@@ -64,6 +64,6 @@
 ## 5. 既存の「全社共用＋会社独自」の型（そろえる先）
 
 - 【事実】public の表に `tenant_id INTEGER`（NULL=共用・運営管理）: `migrations/20260920_060000_note_master_tenant_id.sql:1-7`、`migrations/20260919_020000_master_ssot_public_tables.sql`
-- 【事実】読むときは `WHERE (tenant_id = :tenant_id OR tenant_id IS NULL)`: `backend/app/routers/status_master.py:257`、note_master.py:152/280、conditions.py:384、payment_fee_settings.py:70
-- 【事実】運営画面は `tenant_id IS NULL` の行だけ、会社画面は自社行だけを編集（super_admin_note_master.py ほか）
+- 【事実】読むときは `WHERE (tenant_id = :tenant_id OR tenant_id IS NULL)`: `backend/app/routers/status_master.py:257`、backend/app/routers/note_master.py:152/280、backend/app/routers/conditions.py:384、backend/app/routers/payment_fee_settings.py:70
+- 【事実】運営画面は `tenant_id IS NULL` の行だけ、会社画面は自社行だけを編集（backend/app/routers/super_admin_note_master.py ほか）
 - 【事実】列名が文書（owner_tenant_id）とコード（tenant_id）で食い違う。設計で既存コードの `tenant_id` にそろえる案を出す（要件の意味は同じ）。
