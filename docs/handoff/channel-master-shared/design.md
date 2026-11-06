@@ -73,7 +73,7 @@ CREATE INDEX IF NOT EXISTS idx_channel_masters_tenant_id ON public.channel_maste
 | whatsapp | WhatsApp | manual | conversation_logs | TRUE | channel_whatsapp |
 
 - 値の根拠: platform・display_name・connection_type は今の定数（`backend/app/services/channel_masters.py:10-17`）と本番5社の行（recon §4・全社同じ6行）。conversation_store は今の分析の読み分け（`backend/app/routers/analytics.py:2491・:2503`）と言語判定の説明（`backend/app/services/lang_judge.py:3-10`）。is_verbatim は `backend/app/services/lang_judge.py:8-10・:31`。conversion_item は `backend/app/services/lead_conversion_factors.py:75-76・:229-230`（基準＝Messenger は ja.json:871-872「Messenger より」）。
-- 手順: `docs/handoff/channel-master-shared/data-change.sql` に INSERT ... ON CONFLICT DO NOTHING を置き、DRY-RUN（BEGIN→INSERT→SELECT count→ROLLBACK）→ COMMIT。実行は無制限鍵が要るため、PO の `!` 実行に台本で頼む（memory: 本番データ変更は台本ファイル化）。
+- 手順: 同じフォルダに data-change.sql（新しく作る台本）を置く。中身は INSERT ... ON CONFLICT DO NOTHING。DRY-RUN（BEGIN→INSERT→SELECT count→ROLLBACK）→ COMMIT。実行は無制限鍵が要るため、PO の `!` 実行に台本で頼む（memory: 本番データ変更は台本ファイル化）。
 - 会社独自の行の移し: 本番は 0件（recon §4）。同じ SQL で「各社の表にあり共用に無い platform」を `tenant_id` 付きで移す文を入れ、DRY-RUN で 0件を確かめる。
 
 ## 4. 読み書きの付け替え（アプリのコード）
@@ -172,12 +172,13 @@ async def conversion_items(db) -> dict[str, str]:
 - 送り事項4（古い表）: PR-C まで残す。消すのは GO 後（§6）。
 - 送り事項5（流入元）: 対象外（表紙の境界で PO 承認済み）。
 
-## 11. 外部事例
+## 11. 外部・過去事例の参照と我々への応用
 
 - 該当事例は使わない。理由: 同じ DB の中で既に同じ型（ADR-145 の products、ADR-SA-17 の用語集、note_master など）が本番で動いており、社内の前例のほうが直接の根拠になるため。
 
 ## 12. 維持の仕組み
 
-- 直書きの戻りを止める: PR-B で `backend/tests/test_channel_master_literals.py` を足し、§7 K4 の検索を試験にする（分析・カルテ・言語判定の3ファイルに名前の直書きが出たら赤）。
+- 守り手: 設計担当（Opus）。PR-A〜PR-C の各段のあとに本番を読み取り専用の鍵で数えて確かめる。
+- 直書きの戻りを止める: PR-B で試験 test_channel_master_literals.py（新しく作る）を backend/tests に足し、§7 K4 の検索を試験にする（分析・カルテ・言語判定の3ファイルに名前の直書きが出たら赤）。
 - 名簿の表を読むのは `backend/app/services/channel_masters.py` だけ（PR-B の試験で `public.channel_masters` の文字が他の `backend/app` に出ないことを確かめる）。
 - 共用行の変更は運営だけ（RLS で強制）。
