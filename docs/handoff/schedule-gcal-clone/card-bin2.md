@@ -299,7 +299,7 @@ vi.mock("../../components/CalendarView", () => ({
 | T2 | T1 の後の `calendarProps.current.events[0]` | id "pending"・題名「（タイトルなし）」・`editable: false`。小窓を閉じると無くなる |
 | T3 | 月の表示で `onSelectRange(11/10 0:00, 11/11 0:00, true, null)` | 07:00 / 08:00（今の月の升目と同じ） |
 | T4 | 月の表示で `onSelectRange(11/10, 11/13, true, null)` | 終日の欄がオン・開始 11/10・終了 11/12 |
-| T5 | events の `editable` | 自分の予定 true・他人（管理者でない）false・シフト false・取り込んだ終日 false |
+| T5 | events の `editable` | 自分の予定 true・他人（管理者でない）false・シフト false・取り込んだ終日 false。「他人」は持ち主の無い予定（user_id・created_by_user_id とも null）で確かめる。管理者でないと他の担当者の印が出ず、他人の持ち物の予定は画面に出ないため（SchedulePageImpl.tsx:186-189・:634）。持ち主の無い予定は管理者でなくても出る |
 | T6 | `onEventMove("event-1", 新しい開始, 新しい終了, false, revert)` | `api.patch` が `/calendar/events/1` に title・start・end・is_all_day・description・location を付けて 1 回。`category` は無い。失敗させると `revert` が 1 回呼ばれ、失敗の文が出る |
 | T7 | 予定を開いて直して保存・削除 | `api.patch` / `api.delete` の宛先が `/calendar/events/1`（`event-1` ではない） |
 | T8 | 終日の予定を `onEventMove(id, 11/10, 11/12 0:00, true, revert)` | 送る終わりが 11/11 23:59 の値（`combineDateTime("2026-11-11","23:59").toISOString()`） |
@@ -375,3 +375,4 @@ grep -rn "ScheduleWeekGrid\|ScheduleMonthGrid\|gridScrollRef\|DEFAULT_ROW_HEIGHT
 
 - 1 回目（2026-11-07・クラウドの Opus・HEAD 1538745c）: REVISE。直さないと実装で迷う 1 件（Esc の扱いが §1 と §2-2 で食い違い）と、行のずれ（CSS の消す範囲・他 N 件・token の使い道）、直した方がよい 4 件（layoutDay の試験は無い・日別小窓の型は既に null あり・月の 1 日押しで前の仮の箱が残る・終日から時刻つきへ動かしたときの長さ）。全部この版で直した（§2-2・§2-3・§2-7・§3・§4・§5・§6・§7 の 5）。
 - 2 回目（2026-11-07・クラウドの Opus・HEAD 7c82afd3）: APPROVE。1 回目の 9 件は全部直っていると確認。新しい useEffect で仮の箱を誤って消す・残す道は無し。直した方がよい 1 件（@media の行を規則の終わりまで書く）を §4 で直した。
+- 3 回目（2026-11-07・手元の Opus 審査役・PR #5232・HEAD 8afd3a42）: REQUEST_CHANGES。T5 に「他人（管理者でない）false」が無い。実装は §1〜§7 どおり。管理者でないと他の担当者の印が出ず、他人の予定は画面に出ないと分かったため、T5 の「他人」を持ち主の無い予定で確かめる形に §6 を直した。
