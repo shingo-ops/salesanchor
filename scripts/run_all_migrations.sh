@@ -1231,3 +1231,5 @@ run_sql migrations/20261106_120000_create_discord_server_snapshot_tables.sql
 run_sql migrations/20261106_140000_add_login_request_admin_requested_at.sql
 # discord-server-management 第2段 2a-1: roles に Discord のロールの番号の列、消した番号を覚える表 2 つを作る（作るだけ・冪等）
 run_sql migrations/20261106_150000_add_discord_role_link_tables.sql
+# チャネル名簿 PR-A: 全社1つの名簿 public.channel_masters と会社ごとの隠す設定の表を作る（作るだけ・冪等）
+run_sql migrations/20261106_190000_create_public_channel_masters.sql
