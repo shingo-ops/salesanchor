@@ -20,8 +20,8 @@
 
 ## 1. 今の名簿の作り（会社ごとの写し）
 
-- 【事実】表の定義は会社ごとの領域に作る: `backend/app/services/tenant.py:1086`（`{schema}.channel_masters`: id, tenant_id, platform, display_name, connection_type auto/manual, is_active, created_at, UNIQUE(platform)）、索引 :1097-1098、RLS :1247・:1288-1289
-- 【事実】中身はコードの定数から各社へ写す: `backend/app/services/channel_masters.py:10-17`（messenger/instagram/discord=auto、phone 電話/in_person 対面/whatsapp=manual）。投入関数 `backend/app/services/tenant.py:1582-1587`
+- 【事実】表の定義は会社ごとの領域に作る: `backend/app/services/tenant.py:1101`（`{schema}.channel_masters`: id, tenant_id, platform, display_name, connection_type auto/manual, is_active, created_at, UNIQUE(platform)）、索引 :1112-1113、RLS :1262・:1303-1304（origin/main 133808dce で照合）
+- 【事実】中身はコードの定数から各社へ写す: `backend/app/services/channel_masters.py:10-17`（messenger/instagram/discord=auto、phone 電話/in_person 対面/whatsapp=manual）。投入関数 `backend/app/services/tenant.py:1597-1602`
 - 【事実】別名: `backend/app/services/channel_masters.py:21-24`（whatsapp_personal・whatsapp_business→whatsapp）
 - 【事実】旧移行: `migrations/20260611_100000_create_channel_masters.sql`
 

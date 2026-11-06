@@ -3,7 +3,7 @@
 > この文書は何か（専門用語なしの1行）:
 > 会社ごとに写している連絡手段の名簿を、全社1つの名簿（共用の行＋会社独自の行）に作り直し、分析・カルテ・言語判定がその名簿の性質を読んで動くようにする手順。
 
-- 状態: **設計案作成済み（Opus）／D1・D1-2・D2 PO回答済み（§2-2・§9）・D2 のデータ変更 本番実施済み（§3-2）／クラウド審査 未実施／実装未着手**
+- 状態: **設計案作成済み（Opus）／D1・D1-2・D2 PO回答済み（§2-2・§9）・D2 のデータ変更 本番実施済み（§3-2）／クラウド審査1回目 REVISE（§13）→ 指摘6件を反映済み・2回目の審査待ち／実装未着手**
 - 親: KGI ../../specs/db-ssot/channel-master/kgi.md（PO承認済み 2026-11-06）／ recon docs/handoff/channel-master-shared/recon.md
 - 元の要件: ../../specs/db-ssot/classification-master/design.md:106・:111-117（1テーブル・持ち主の印あり）
 - 基準: origin/main 7e0bc67b1（2026-11-06 取得）
@@ -24,9 +24,9 @@
 
 | | 変更前 | 変更後 |
 |---|---|---|
-| 名簿の置き場 | 会社ごとに `tenant_NNN.channel_masters`（`backend/app/services/tenant.py:1086`） | `public.channel_masters` 1つ。`tenant_id` NULL＝共用（運営が管理）・値あり＝その会社専用 |
+| 名簿の置き場 | 会社ごとに `tenant_NNN.channel_masters`（`backend/app/services/tenant.py:1101`） | `public.channel_masters` 1つ。`tenant_id` NULL＝共用（運営が管理）・値あり＝その会社専用 |
 | 6つの中身の正本 | コードの定数 `DEFAULT_CHANNEL_MASTERS`（`backend/app/services/channel_masters.py:10-17`）を各社へ写す | DB の共用6行が正本。定数は消す（試験の準備だけが自分で行を作る） |
-| 会社の作成 | 作成時に6行を写す（`backend/app/services/tenant.py:1582-1587`） | 写さない（共用行をそのまま読む） |
+| 会社の作成 | 作成時に6行を写す（`backend/app/services/tenant.py:1597-1602`） | 写さない（共用行をそのまま読む） |
 | 分析の会話の読み分け | `'instagram','messenger'` と `'whatsapp'` の直書き（`backend/app/routers/analytics.py:2491・:2503`） | 名簿の列 `conversation_store` と `conversion_item` で選ぶ |
 | カルテの要因計算 | `CHANNEL_*` 定数（`backend/app/services/lead_conversion_factors.py:42-47・:188・:229-230`） | 呼び出し側が名簿から読んだ「チャネル→項目」の対応表を渡す |
 | 言語判定の除外 | `("phone","in_person")` 直書き（`backend/app/services/lang_judge.py:31`） | 名簿の列 `is_verbatim = false` の行を除外 |
@@ -78,10 +78,11 @@ CREATE TABLE IF NOT EXISTS public.channel_master_tenant_settings (
 ```
 
 - RLS: SELECT・INSERT・UPDATE・DELETE とも自社の行だけ（`tenant_id = current_setting('app.tenant_id')::int`）。ENABLE と FORCE。PR-A で名簿の表と一緒に作る。
+- 他社の行を指せないようにする: INSERT・UPDATE の WITH CHECK に `EXISTS (SELECT 1 FROM public.channel_masters cm WHERE cm.id = channel_master_id AND cm.connection_type = 'manual' AND (cm.tenant_id IS NULL OR cm.tenant_id = current_setting('app.tenant_id')::int))` を足す。API の `set_hidden` も同じ条件で行を探し、無ければ 404。試験（§5）に「B社の行の番号で隠すと 404、DB へ直接入れても RLS で拒まれる」を足す。
 - 行が無い＝隠していない。本番の初期値は0行（今隠している会社は0・recon §4）。データ変更は要らない。
 - 隠せる行: 手入力の行（共用の電話・対面・WhatsApp と、会社が足した行）。自動で取り込む Messenger・Instagram・Discord は隠せない（届く会話は連携の部品が書くため、隠しても届き続け、画面と食い違う）。API は auto 行に 400。
 - 会社が足した行の「消す」（is_active=false）は今のまま残す。「隠す」は戻せる切り替え、「消す」は名簿からの取り下げ。
-- 設定画面: 管理センターの「チャネル設定」（`frontend/src/pages/management-center/ManagementCenterPage.tsx:83` の channel-masters・`frontend/src/App.tsx:406` で `frontend/src/pages/admin/ChannelMastersPage.tsx` を出す）に「この会社で使う」の切り替えを各行に置く。部品は金型 `frontend/src/components/Toggle.tsx`（ADR-144）。見出しと説明は i18n キー `channelMasters.visible`・`channelMasters.visibleHelp` を ja/en 同時に足す（ADR-027）。
+- 設定画面: 管理センターの「チャネル設定」（`frontend/src/pages/management-center/ManagementCenterPage.tsx:83` の channel-masters・`frontend/src/App.tsx:407` で `frontend/src/pages/admin/ChannelMastersPage.tsx` を出す）に「この会社で使う」の切り替えを各行に置く。部品は金型 `frontend/src/components/Toggle.tsx`（ADR-144）。見出しと説明は i18n キー `channelMasters.visible`・`channelMasters.visibleHelp` を ja/en 同時に足す（ADR-027）。
 - 変えられる人: 画面を開ける人と同じ `tenant.profile.edit`（`frontend/src/pages/management-center/ManagementCenterPage.tsx:83`）。API にも `require_permission("tenant.profile.edit")`（`backend/app/auth/dependencies.py:589`）を付ける。
 - 事実（2026-11-06）: 今の追加・無効化の API（`backend/app/routers/conv_logs.py:491-518`・`:524-557`）は、ログインしていれば権限を見ずに通る（`get_current_user` と `get_current_tenant` だけ）。自社の名簿の中に限られるが、PR-B で同じ権限を付けて閉じる。
 - 隠した行の効き目: §9 D1-2 の PO 回答で決める。今の「消す」がどこまで効くかの事実は recon §6。
@@ -97,13 +98,13 @@ CREATE TABLE IF NOT EXISTS public.channel_master_tenant_settings (
 | in_person | 対面 | manual | conversation_logs | FALSE | NULL |
 | whatsapp | WhatsApp | manual | conversation_logs | TRUE | channel_whatsapp |
 
-- 値の根拠: platform・display_name・connection_type は今の定数（`backend/app/services/channel_masters.py:10-17`）と本番5社の行（recon §4・全社同じ6行）。conversation_store は今の分析の読み分け（`backend/app/routers/analytics.py:2491・:2503`）と言語判定の説明（`backend/app/services/lang_judge.py:3-10`）。is_verbatim は `backend/app/services/lang_judge.py:8-10・:31`。conversion_item は `backend/app/services/lead_conversion_factors.py:75-76・:229-230`（基準＝Messenger は ja.json:871-872「Messenger より」）。
+- 値の根拠: platform・display_name・connection_type は今の定数（`backend/app/services/channel_masters.py:10-17`）と本番5社の行（recon §4・全社同じ6行）。conversation_store は今の分析の読み分け（`backend/app/routers/analytics.py:2491・:2503`）と言語判定の説明（`backend/app/services/lang_judge.py:3-10`）。is_verbatim は `backend/app/services/lang_judge.py:8-10・:31・:84・:122`。conversion_item は `backend/app/services/lead_conversion_factors.py:75-76・:229-230`（基準＝Messenger は `frontend/src/locales/ja.json:884-885`「Messenger より」）。
 - 手順: 同じフォルダに data-change.sql（新しく作る台本）を置く。中身は INSERT ... ON CONFLICT DO NOTHING。DRY-RUN（BEGIN→INSERT→SELECT count→ROLLBACK）→ COMMIT。実行は無制限鍵が要るため、PO の `!` 実行に台本で頼む（memory: 本番データ変更は台本ファイル化）。
 - 会社独自の行の移し: 本番は 0件（recon §4）。同じ SQL で「各社の表にあり共用に無い platform」を `tenant_id` 付きで移す文を入れ、DRY-RUN で 0件を確かめる。
 
 ## 3-2. 名簿に無い値の後始末（1回だけのデータ変更・§9 D2 の PO 回答）
 
-- 台本: docs/handoff/channel-master-shared/data-d2/ の precheck.sql・dryrun.sql・commit.sql・verify.sql・rollback.sql と入口 run.sh。PO が `!` で `bash run.sh <段>` を流す（manual-only 鍵）。担当（Sonnet）は流さない。
+- 台本: docs/handoff/channel-master-shared/data-d2/ の precheck.sql・dryrun.sql・commit.sql・verify.sql・rollback.sql と入口 run.sh。`.sql` は `.gitignore:35` で記録から外れるため、5つは `git add -f` で記録に入れた（中身は番号と件数だけで、お客さんの名前・会話は無い）。PO が `!` で `bash run.sh <段>` を流す（manual-only 鍵）。担当（Sonnet）は流さない。
 - 順番: precheck → dryrun → backup → commit → verify。commit の前に PO へ同意票。
 - 中身（件数は recon §4-2。2026-11-06 の読み取り）:
 
@@ -157,11 +158,13 @@ async def conversion_items(db) -> dict[str, str]:
 | `backend/app/services/lead_conversion_factors.py:173・:188` | `prepare(leads, messages, channel_items)`。`lead.channel_type not in channel_items` で外す |
 | `backend/app/services/lead_conversion_factors.py:229-230` | `channel_items.get(lead.channel_type) == "channel_whatsapp"`／`"channel_instagram"`（項目名は ITEM_KEYS:75-76 の名前） |
 | `backend/app/services/lead_conversion_factors.py` 冒頭 | `channel_items` の値の集合が `{"baseline","channel_whatsapp","channel_instagram"}` でなければ `ValueError`。呼び出し側は 409「分析の設定が名簿にそろっていません」 |
-| `backend/app/services/lang_judge.py:31・:122・:127` | `AND NOT EXISTS (SELECT 1 FROM public.channel_masters cm WHERE cm.platform = cl.channel_type AND cm.is_verbatim = FALSE AND (cm.tenant_id IS NULL OR cm.tenant_id = :tenant_id))`。名簿に無い値（例: 004社の meta_messenger 3件）は今と同じく数に入る |
+| `backend/app/services/lang_judge.py:31・:84・:92・:122・:127`（1つ目の問い合わせ :84・:92 と2つ目 :122・:127 の両方） | `AND NOT EXISTS (SELECT 1 FROM public.channel_masters cm WHERE cm.platform = cl.channel_type AND cm.is_verbatim = FALSE AND (cm.tenant_id IS NULL OR cm.tenant_id = :tenant_id))`。名簿に無い値（例: 004社の meta_messenger 3件）は今と同じく数に入る |
 | `backend/app/services/tenant.py:1101-1113・:1262・:1303-1304・:1597-1602・:1788`（origin/main 8ab21523 の行。7e0bc67b1 から +15 行ずれた・中身は同じ） | 新しい会社に表と行を作らない（関数と呼び出しを消す）。既存会社の古い表は §6 まで残す |
 | `backend/app/services/channel_masters.py:10-19` | `DEFAULT_CHANNEL_MASTERS`・`ACTIVE_CHANNEL_PLATFORMS` を消す。別名 `CHANNEL_TYPE_ALIASES`（:21-24）は入力の言い換えなので残す |
 | `scripts/migrate_20260621_030000_backfill_lead_channel_type.py` | 2026-06 の1回きりの埋め戻しで、消す定数を読むため、ファイルごと消す（PR 本文の消すファイル欄に書く） |
-| `scripts/lead_regression/generate.py:80・:157・:174-175・:304-305・:313-314・:412` | 作り物のデータを作る台本。`lcf.CHANNEL_*` を自分の中の定数に置き換え、`analyze` に対応表を渡す（K4 の対象外・台本は試験用） |
+| `scripts/lead_regression/generate.py:80・:157・:174-175・:305・:313-314・:546・:552・:568` と `scripts/lead_regression/k3_run.py:54・:72・:101` | 作り物のデータを作る台本。`lcf.CHANNEL_*` を台本の中の定数に置き換える（:546・:552・:568 の SQL 文の中も同じ定数を使う）。`lcf.analyze` の呼び出しすべてに対応表 `{"messenger":"baseline","instagram":"channel_instagram","whatsapp":"channel_whatsapp"}` を渡す（台本は試験用で本番の名簿を読まない・K4 の対象外） |
+| 画面 `frontend/src/components/ChannelTypeCombobox.tsx:44`（リードの連絡手段の選択欄）と `frontend/src/pages/inbox/ManualRecordSection.tsx:47`（受信箱の手入力欄） | 選択に使う口 `GET /channel-masters?for=picker&keep=<今の値>` を読む（隠した行が外れる）。選択欄は `keep` に `value` を渡す。手入力欄は `keep` に `currentPlatform` を渡す |
+| `backend/app/routers/conv_logs.py:189-217`（一覧）の引数 | `for=picker` のときは `list_channels_for_picker(keep_platform=keep)`。指定なしは今と同じく全行（設定画面 `frontend/src/pages/admin/ChannelMastersPage.tsx:36` 用・`is_hidden` 付き） |
 | 画面 `frontend/src/pages/admin/ChannelMastersPage.tsx:100-106` | 消すボタンを `connection_type === "manual" && !ch.is_shared` のときだけ出す。manual の行すべてに §2-2 の切り替えを出す。共用の行には既存の金型の札で「共用」を出す（i18n キー `channelMasters.shared` を ja/en 同時に足す・ADR-027・ADR-144） |
 
 ### 4-3. 変えない所（触らない範囲）
@@ -177,7 +180,7 @@ async def conversion_items(db) -> dict[str, str]:
 | backend/tests/conftest.py:43・:623・:873 | 定数の読み込みをやめ、試験の準備で `channel_masters`（SQLite では public を外す書き換えを :301 の並びに1行足す）に共用6行を入れる |
 | 新 test_channel_masters_shared.py | K3: A社が足した行がA社の一覧に出てB社に出ない／B社がA社の行を無効化できない／共用と同じ platform の追加は409 |
 | 新（同じファイル） | K6: 会社の作成後、`tenant_NNN.channel_masters` が作られず、一覧に共用6つが出る |
-| backend/tests/test_lead_conversion_factors.py:34・:264・:276 | 定数を試験の中の値に置き換え、対応表を渡す。既存の数値の期待はそのまま（K5 の機械側） |
+| backend/tests/test_lead_conversion_factors.py:34・:264・:276・backend/tests/test_lead_regression_generate.py:88・:255-256 | 定数を試験の中の値に置き換え、対応表を渡す。既存の数値の期待はそのまま（K5 の機械側） |
 | backend/tests/test_channel_type_control.py・backend/tests/test_conv_logs_router.py:367-395・backend/tests/test_system_roles.py:137 | 表の置き場の変更に合わせる |
 | 新（同じファイル） | 隠す: A社が電話を隠すとA社の選択欄から消えB社には出る／隠しても編集中のリードの今の値は選択欄に残る／auto 行は400／権限の無い人は403 |
 | backend/tests/rls_bootstrap.py:36・:185・backend/tests/test_value_migrations_neutralized.py:84 | 古い migration のセレクタ行に頼っている。古い表を消すまで（§6）はそのまま。 |
@@ -189,7 +192,7 @@ async def conversion_items(db) -> dict[str, str]:
 1. PR-A（migration・GO要）: §2 の表と §2-2 の設定の表、それぞれの RLS だけ。本番反映後、読み取り専用の窓で2つの表が在り0行を確認
 2. データ変更: §3 を DRY-RUN→COMMIT。共用6行を確認（K1 の前半）
 3. PR-B（コード）: §4・§5。反映後に K2（5社の画面）・K5（001社の分析の前後一致）を確かめる
-4. PR-C（GO要・危ない操作）: 古い `tenant_NNN.channel_masters` を消す。条件＝PR-B 反映後に検索で読む所0・7日間エラー0。消す前にPOへ同意票
+4. PR-C（GO要・危ない操作）: 古い `tenant_NNN.channel_masters` を消す。条件＝PR-B 反映後に検索で読む所0・7日間エラー0。消す前にPOへ同意票。同じ PR で、毎回の反映で全 migration を流し直す台本（`scripts/run_all_migrations.sh:14`「何度実行しても安全」）から古い表を作る行 `scripts/run_all_migrations.sh:570` を外す。外さないと次の反映で会社ごとの表が作り直される。古い migration に頼る試験（`backend/tests/rls_bootstrap.py:36・:186`・`backend/tests/test_tenant_loop_migration_guard.py:42・:119`・`backend/tests/test_value_migrations_neutralized.py:26・:86`）と、読み取り専用の窓の列の登録（`migrations/20261024_100300_create_ai_cloud_views.sql:352-354` の tenant_* channel_masters 3行）も同じ PR で整える。K1 は PR-C の反映を2回またいで tenant_* が0のままかで確かめる
 
 戻し方: PR-B は差し戻しのPRで戻る（古い表は PR-C まで残っており中身も変わっていない）。PR-A の表は使われなければ害が無い。データ変更は `DELETE FROM public.channel_masters WHERE tenant_id IS NULL`（PR-B を戻した後だけ）。
 
@@ -197,13 +200,22 @@ async def conversion_items(db) -> dict[str, str]:
 
 | 基準 | 検証方法 |
 |---|---|
-| K1 共用の表=1・会社ごとの表=0 | 読み取り専用の鍵で `information_schema.tables` の `table_name='channel_masters'` を schema ごとに数える（PR-C 後に public 1・tenant_* 0）。PR-C 前は検索 `git grep -n "tenant_table_ref(db, tenant_id, \"channel_masters\")\|{schema}.channel_masters" origin/main -- backend/app` が 0件 |
+| K1 共用の表=1・会社ごとの表=0 | 読み取り専用の鍵で `information_schema.tables` の `table_name='channel_masters'` を schema ごとに数える（PR-C 後に public 1・tenant_* 0）。PR-C 前は下の「検索 K1」が 0件 |
 | K2 5社で同じ6つ | 各社の管理者で「チャネル設定」を開き、6つの名前と並びを切替前の画面写しと突き合わせる。リード編集の連絡手段の選択欄も同じ |
 | K3 会社独自は自社だけ | §5 の新しい試験が CI で緑 |
-| K4 直書き0 | `git grep -nE "['\"](messenger\|instagram\|whatsapp\|discord\|phone\|in_person)['\"]\|CHANNEL_(MESSENGER\|INSTAGRAM\|WHATSAPP)\|META_CHANNELS" origin/main -- backend/app/routers/analytics.py backend/app/services/lead_conversion_factors.py backend/app/services/lang_judge.py` の分析・カルテ・言語判定の部分が 0件（backend/app/routers/analytics.py の他の画面の行が出た場合は一覧にして対象外の理由を書く） |
+| K4 直書き0 | 下の「検索 K4」の分析・カルテ・言語判定の部分が 0件。検索が働くことは、今の origin/main で流して10件出ることで先に確かめる（backend/app/routers/analytics.py の他の画面の行が出た場合は一覧にして対象外の理由を書く） |
 | K5 001社の分析が前後で同じ | PR-B の前に `GET /analytics/lead-conversion-factors`（001社）の応答を丸ごと保存。反映後に同じものを取り、全項目一致（diff 0行） |
 | K6 新しい会社で写し0・6つ表示 | §5 の新しい試験が CI で緑 |
 | D1 会社ごとに隠せる | 管理センターの「チャネル設定」で電話を切り、リードの連絡手段の選択欄から電話が消える。切り戻すと出る。別の会社では出たまま（本番は試しの会社で確かめ、終わったら戻す） |
+
+検索の命令（表の中では `|` を書けないため、ここに原文で置く。そのまま流す）:
+
+```bash
+# 検索 K1（PR-B 後 0件）
+git grep -nE 'tenant_table_ref\(db, tenant_id, "channel_masters"\)|\{schema\}\.channel_masters' origin/main -- backend/app
+# 検索 K4（PR-B 後 0件。今の origin/main では10件出る）
+git grep -nE "['\"](messenger|instagram|whatsapp|discord|phone|in_person)['\"]|CHANNEL_(MESSENGER|INSTAGRAM|WHATSAPP)|META_CHANNELS" origin/main -- backend/app/routers/analytics.py backend/app/services/lead_conversion_factors.py backend/app/services/lang_judge.py
+```
 
 ## 8. 弊害と対処
 
@@ -238,3 +250,11 @@ async def conversion_items(db) -> dict[str, str]:
 - 直書きの戻りを止める: PR-B で試験 test_channel_master_literals.py（新しく作る）を backend/tests に足し、§7 K4 の検索を試験にする（分析・カルテ・言語判定の3ファイルに名前の直書きが出たら赤）。
 - 名簿の表を読むのは `backend/app/services/channel_masters.py` だけ（PR-B の試験で `public.channel_masters` の文字が他の `backend/app` に出ないことを確かめる）。
 - 共用行の変更は運営だけ（RLS で強制）。
+
+## 13. 審査記録
+
+| 回 | 日時 | 審査役 | 対象 | 判定 | 指摘と反映 |
+|---|---|---|---|---|---|
+| 1 | 2026-11-06 16:25 JST | クラウド Opus（Architect・読むだけ） | 4b81a3ad3（行番号は origin/main 33568df4f で照合） | REVISE | 必須3: C1 行番号のずれ4か所（tenant.py・App.tsx・ja.json）→ 133808dce で照合し直して修正／C2 K1・K4 の検索が表の中の `\|` で働かない→ §7 の表の外に原文で置き、今の origin/main で K4 10件・K1 11件出ることを確かめた／C3 付け替え漏れ（lang_judge.py の1つ目の問い合わせ :84・:92、lead_regression の generate.py :546・:552・:568・k3_run.py・試験、選択欄2つの読み口）→ §4-2・§5 に追加。推奨3: C4 設定の表に他社行の番号が入る→ §2-2 に WITH CHECK と 404／C5 毎回の反映で古い migration が表を作り直す→ §6 PR-C に run_all_migrations.sh:570 を外す等を追加／C6 data-d2 の .sql が .gitignore:35 で記録外→ `git add -f` で記録 |
+
+審査結果の原文は、クラウドの記録（session cse_01HHUUpRLn4MH2dDaZZRhNnf）に残っている。審査役が結果を commit しようとしたところ、見張りに止められたため、置き場の枝は作られていない。
