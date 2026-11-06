@@ -2,7 +2,7 @@
 
 - 状態: 設計審査済み（Architect r5 APPROVE・13 節）。実装は未着手
 - 基準: origin/main 133808dce（5fda4152b からの差分に、本設計が触る・引用するファイルの変更は無い: `git diff --stat 5fda4152b origin/main -- backend/app/routers backend/app/services frontend/src/pages/admin frontend/api-contract backend/tests/...` が空）
-- 根拠: 同じフォルダの recon.md（1・4・6 節）
+- 根拠: docs/handoff/cross-tenant-user-ref-guard/recon.md（1・4・6 節）
 - 関係する ADR: ADR-1008（会社に属さない担当者を入れない）・ADR-072（commit 後の reset_tenant_context）・ADR-146（Discord は共通 bot 1台・guild_id から会社を引く）・ADR-027（画面の文字は t()）・ADR-144（画面部品は金型）
 
 ## 0. PO の言葉（原文）
