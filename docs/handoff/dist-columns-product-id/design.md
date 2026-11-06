@@ -7,7 +7,7 @@ mode: handoff
 > この文書は何か（専門用語なしの1行）:
 > お客さんのシートへ送る在庫の表を、PO が決めた15列の並びに変え、最後に商品IDを足すための設計。
 
-- 現状の記録: [recon.md](./recon.md)
+- 現状の記録: [recon.md](./recon.md)（docs/handoff/dist-columns-product-id/recon.md）
 - 関係 ADR: ADR-1014（在庫の行の定義は1か所）、ADR-1019（閲覧ページの列）、ADR-1023、ADR-099。ADR-1066 を起こした（§8）。
 - 状態: **設計案作成済み・設計審査済み（自己審査 APPROVE 条件つき: [review-architect.md](./review-architect.md)）・PO 実装承認済み（2026-11-06「2」作ってよい。すぐ反映する）・実装カード: [card.md](./card.md)・決定: ADR-1066**
 
@@ -113,8 +113,8 @@ mode: handoff
 ### 4-3. 触らない範囲
 
 - SQL（`distribution_rows_parts`・`_distribution_final_select`）。商品IDは今も SELECT に出ている（recon §2）。
-- `viewer_inventory_cache.py`・閲覧ページ API・フロント画面。
-- `line_import_admin.py`（件数しか使わない）。
+- `backend/app/tasks/viewer_inventory_cache.py`・閲覧ページ API・フロント画面。
+- `backend/app/line_import_admin.py`（件数しか使わない）。
 - 在庫一覧の GAS（1hc・1Tb）。
 - 要確認タブの書き込み・配信先の登録・DB の表。
 
@@ -136,9 +136,9 @@ mode: handoff
   - `backend/tests/test_tcg_distribution.py:346-357`・`:360-368`: `DIST_HEADERS` は15列・PO の並びと完全一致・末尾は「商品ID」。`_GAS_COLUMNS` は今のまま14列（閲覧ページ用）であることを確かめる形に直す。
   - `backend/tests/test_tcg_result_order.py:353-362`: `DIST_HEADERS` の並びの確かめを新しい15列に直す。行（`fetch_output_rows` の既定＝14列）の確かめは変えない。
 - 足す:
-  - `fetch_output_rows(db, columns=_SHEET_COLUMNS)` の行が15列で、15列目が商品の id の文字、2列目が Status の値（pg 試験。`test_tcg_result_order.py` の `_single_output_row` を使う）。
+  - `fetch_output_rows(db, columns=_SHEET_COLUMNS)` の行が15列で、15列目が商品の id の文字、2列目が Status の値（pg 試験。`backend/tests/test_tcg_result_order.py` の `_single_output_row` を使う）。
   - `run_distribution` が `build_distribution_rows` を `columns=_SHEET_COLUMNS` で呼ぶ（mock。`backend/tests/test_distribution_rows_builder.py:134` の型）。
-  - `viewer_inventory_cache` が `build_distribution_rows` を引数なしで呼び、写しのキーが `_GAS_COLUMNS ∪ {offer_type}` のまま（既存の `test_viewer_inventory_cache.py:86` が守る。変えない）。
+  - `viewer_inventory_cache` が `build_distribution_rows` を引数なしで呼び、写しのキーが `_GAS_COLUMNS ∪ {offer_type}` のまま（既存の `backend/tests/test_viewer_inventory_cache.py:86` が守る。変えない）。
   - `_SHEET_COLUMNS` の各列名が `_distribution_final_select` の出す列に含まれる（列名の打ち間違いを止める）。
 
 ## 7. 受入条件
@@ -147,7 +147,7 @@ mode: handoff
 |---|---|
 | K1 配信シートの1行目が PO 指定の15列と完全一致（○×） | 反映後の最初の配信のあと、山崎涼太郎さんの「価格表」の在庫集計タブ1行目を Drive の読み取りで見る（Opus）。配信テストのシートも同じ |
 | K2 全行の「商品ID」が空でない（空 0件で○） | K1 と同じ読み取りで O 列を数える。あわせて reader 鍵で配信先の `last_distributed_count` と行数が一致 |
-| K3 閲覧ページの写しの項目が変わらない（○×） | CI の `test_viewer_inventory_cache.py` が緑。反映後に閲覧ページの列の数が今と同じ（PO 目視・画面1枚） |
+| K3 閲覧ページの写しの項目が変わらない（○×） | CI の `backend/tests/test_viewer_inventory_cache.py` が緑。反映後に閲覧ページの列の数が今と同じ（PO 目視・画面1枚） |
 | K4 在庫一覧（GAS）の画面の列と値が今と同じ（○×） | 反映後に在庫一覧を開き、ハドウシーカー（BOX）の1行で Status・値段・数・発送が正しい列に出る（PO 目視） |
 | K5 並びを変えても行の数と値が変わらない（差 0件で○） | pg 試験: 同じデータで `fetch_output_rows(db)`（14列）と `fetch_output_rows(db, columns=_SHEET_COLUMNS)` を取り、行数が同じで、共通の14列の値が列名ごとに全行一致。本番の件数は解析のたびに動くので比べない |
 | K6 商品IDが正しい商品を指す（3件中3件で○） | K1 の読み取りから3行を選び、reader 鍵で `public.products` の名前と Japanese Title が一致 |
@@ -171,8 +171,9 @@ mode: handoff
 - 並びの正本は `_SHEET_LAYOUT` の1か所。見出しと列名を組で持つので、片方だけ直すずれが起きない。
 - 試験が「PO 指定の15列と完全一致」を確かめる。並びを変えると CI が赤になる。変えるときは ADR を直してから試験を直す。
 - 閲覧ページの写しは `_GAS_COLUMNS`（14列）で別に守る。商品IDが閲覧ページに出ないことは既存の試験が守る。
+- 守り手: Opus（設計統括）。試験 backend/tests/test_tcg_distribution.py が並びを守る。列の並びを変えてよいのは PO の決定だけ。
 
-## 11. 外部事例
+## 11. 外部・過去事例の参照と我々への応用
 
 - 直接の外部事例は使わない。理由: 自社の配信シートの列の並びを変える作業で、成否は自社の読み手（GAS・お客さんの式）が列の位置に頼るかどうかだけで決まる。それは recon §5・§6 の実物の確認と §9 の確認1で判定する。
 - 一般的な知見として、列を名前で読む読み手は並び替えに強く、位置で読む読み手は壊れる。だから在庫一覧の GAS は名前で読む作りになっている（recon §5）。

@@ -56,14 +56,14 @@ mode: handoff
 - `backend/tests/test_tcg_result_order.py:337-362` `fetch_output_rows` の行が14列・位置で値を確かめる・`DIST_HEADERS[:12]`・`[12]`・`[13]`
 - `backend/tests/test_viewer_inventory_cache.py:48-49,86,236,282` `_GAS_COLUMNS` で行を作る・キーが `_GAS_COLUMNS ∪ {offer_type}`
 - `backend/tests/test_inventory_distribution_rows_pg.py:4,98,149` `fetch_output_rows` の出力が変更前の SQL と1文字も同じ（T1）
-- そのほか `fetch_output_rows` を位置で読む試験: `test_tcg_condition_review.py`・`test_tcg_work_matching_integration.py`・`test_tcg_completion_safety.py`・`test_v102_human_decisions_pg.py`・`test_line_analysis_v102_pg.py`（いずれも `fetch_output_rows(db, ...)` を呼ぶ。行番号は §3 の grep 出力）
+- そのほか `fetch_output_rows` を位置で読む試験: `backend/tests/test_tcg_condition_review.py`・`backend/tests/test_tcg_work_matching_integration.py`・`backend/tests/test_tcg_completion_safety.py`・`backend/tests/test_v102_human_decisions_pg.py`・`backend/tests/test_line_analysis_v102_pg.py`（いずれも `fetch_output_rows(db, ...)` を呼ぶ。行番号は §3 の grep 出力）
 
 ## 5. シートを読む GAS（在庫一覧の画面）
 
 - 手元の写し5つすべてが、見出しの名前で列を探している（位置で読まない）:
-  - `~/tcg-viewer-1hc-release/Code.js:70` `sheetHeader.indexOf(col)`（許可リスト13列）
-  - `~/tcg-viewer-1tb-head/コード.js:71` 同（14列）
-  - `~/tcg-client-viewer/src/Code.js:68`・`~/tcg-inventory-viewer-prod-1hc/Code.js:69`・`~/tcg-inventory-viewer-1tb/コード.js:69` 同
+  - ~/tcg-viewer-1hc-release/Code.js:70（リポジトリの外） `sheetHeader.indexOf(col)`（許可リスト13列）
+  - ~/tcg-viewer-1tb-head/コード.js:71（リポジトリの外） 同（14列）
+  - ~/tcg-client-viewer/src/Code.js:68（リポジトリの外）・~/tcg-inventory-viewer-prod-1hc/Code.js:69（リポジトリの外）・~/tcg-inventory-viewer-1tb/コード.js:69（リポジトリの外） 同
 - 【事実】どの版も許可リストにある名前だけを取る。「商品ID」は許可リストに無いので、画面には出ない。
 - 【未確認】本番に入っている版そのもの（clasp で今の版を取り寄せての確認）はしていない。手元の古い版から新しい版まで5つとも同じ読み方なので、本番の版も同じと見ている（推測）。実装後に画面で確かめる（design K4）。
 
