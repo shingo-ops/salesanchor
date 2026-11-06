@@ -40,7 +40,6 @@ from sqlalchemy.orm import sessionmaker
 # Python 3.14: mock.patch は target の親 package が submodule を attribute として
 # 保持していることを要求する。app.auth.dependencies を先に import しておく。
 import app.auth.dependencies  # noqa: F401
-from app.services.channel_masters import DEFAULT_CHANNEL_MASTERS
 
 # PostgreSQL専用テスト（*_pg.py ファイル）向け DDL 定数
 # SQLite用 conftest fixtures の suppliers テーブル（AUTOINCREMENT）とは別物。
@@ -308,6 +307,11 @@ async def test_engine():
         if "ILIKE" in statement:
             statement = statement.replace(" ILIKE ", " LIKE ").replace("\nILIKE ", "\nLIKE ")
         # SQLite はスキーマプレフィックスを持たない。スキーマ修飾名をテーブル名に書き換える。
+        # settings を先に置き換える（channel_masters の置き換えが途中を壊さないよう順番を守る）
+        if "public.channel_master_tenant_settings" in statement:
+            statement = statement.replace("public.channel_master_tenant_settings", "channel_master_tenant_settings")
+        if "public.channel_masters" in statement:
+            statement = statement.replace("public.channel_masters", "channel_masters")
         if "public.users" in statement:
             statement = statement.replace("public.users", "users")
         if "public.permissions" in statement:
@@ -632,12 +636,26 @@ async def setup_test_db(test_engine):
         await conn.execute(text("""
             CREATE TABLE IF NOT EXISTS channel_masters (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                tenant_id INTEGER NOT NULL DEFAULT 999,
-                platform VARCHAR(30) NOT NULL UNIQUE,
+                tenant_id INTEGER NULL,
+                platform VARCHAR(50) NOT NULL,
                 display_name VARCHAR(100) NOT NULL,
                 connection_type VARCHAR(10) NOT NULL,
+                conversation_store VARCHAR(20) NOT NULL DEFAULT 'conversation_logs',
+                is_verbatim BOOLEAN NOT NULL DEFAULT TRUE,
+                conversion_item VARCHAR(30) NULL,
                 is_active BOOLEAN NOT NULL DEFAULT TRUE,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS channel_master_tenant_settings (
+                tenant_id INTEGER NOT NULL,
+                channel_master_id INTEGER NOT NULL,
+                is_hidden BOOLEAN NOT NULL DEFAULT FALSE,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_by_user_id INTEGER NULL,
+                PRIMARY KEY (tenant_id, channel_master_id)
             )
         """))
         # 便D-1: deals テーブルDDL 除去済み（2026-07-28）。DROP は便E。
@@ -878,14 +896,34 @@ async def setup_test_db(test_engine):
                 INSERT OR IGNORE INTO countries (code, name, dial_code, is_active)
                 VALUES (:code, :name, :dial_code, 1)
             """), {"code": code, "name": name, "dial_code": dial})
-        for platform, display_name, connection_type in DEFAULT_CHANNEL_MASTERS:
+        # 共用6行（design §3）。試験の準備が自分で入れる（tenant_id NULL = 共用）
+        shared_channel_rows = (
+            ("messenger", "Messenger", "auto", "meta_messages", 1, "baseline"),
+            ("instagram", "Instagram", "auto", "meta_messages", 1, "channel_instagram"),
+            ("discord", "Discord", "auto", "meta_messages", 1, None),
+            ("phone", "電話", "manual", "conversation_logs", 0, None),
+            ("in_person", "対面", "manual", "conversation_logs", 0, None),
+            ("whatsapp", "WhatsApp", "manual", "conversation_logs", 1, "channel_whatsapp"),
+        )
+        for platform, display_name, connection_type, store, verbatim, item in shared_channel_rows:
+            exists = await conn.execute(
+                text("SELECT 1 FROM channel_masters WHERE tenant_id IS NULL AND platform = :platform"),
+                {"platform": platform},
+            )
+            if exists.first() is not None:
+                continue
             await conn.execute(text("""
-                INSERT OR IGNORE INTO channel_masters (platform, display_name, connection_type, is_active)
-                VALUES (:platform, :display_name, :connection_type, 1)
+                INSERT INTO channel_masters
+                    (tenant_id, platform, display_name, connection_type, conversation_store,
+                     is_verbatim, conversion_item, is_active)
+                VALUES (NULL, :platform, :display_name, :connection_type, :store, :verbatim, :item, 1)
             """), {
                 "platform": platform,
                 "display_name": display_name,
                 "connection_type": connection_type,
+                "store": store,
+                "verbatim": verbatim,
+                "item": item,
             })
         for code, name_ja, name_en in _load_tcg_type_seed_rows():
             await conn.execute(text("""
@@ -2125,6 +2163,23 @@ CREATE TABLE tenant_001.audit_logs (
     created_at TIMESTAMPTZ DEFAULT NOW());
 CREATE TABLE IF NOT EXISTS public.registration_tokens (
     id SERIAL PRIMARY KEY, tenant_id INTEGER NOT NULL, lead_id INTEGER NOT NULL);
+-- 名簿（新しい形）。この DDL に public.tenants は無いため外部キーは付けない。試験は共用行（tenant_id IS NULL）だけ読む
+CREATE TABLE IF NOT EXISTS public.channel_masters (
+    id INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    tenant_id INTEGER NULL,
+    platform VARCHAR(50) NOT NULL,
+    display_name VARCHAR(100) NOT NULL,
+    connection_type VARCHAR(10) NOT NULL,
+    conversation_store VARCHAR(20) NOT NULL,
+    is_verbatim BOOLEAN NOT NULL DEFAULT TRUE,
+    conversion_item VARCHAR(30) NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now());
+INSERT INTO public.channel_masters (tenant_id, platform, display_name, connection_type, conversation_store, is_verbatim, conversion_item) VALUES
+  (NULL, 'messenger', 'Messenger', 'auto', 'meta_messages', TRUE, 'baseline'),
+  (NULL, 'instagram', 'Instagram', 'auto', 'meta_messages', TRUE, 'channel_instagram'),
+  (NULL, 'whatsapp', 'WhatsApp', 'manual', 'conversation_logs', TRUE, 'channel_whatsapp');
 INSERT INTO tenant_001.close_reasons (type, label, sort_order) VALUES
   ('lost', 'r1', 1), ('lost', 'r2', 2), ('lost', 'r3', 3), ('lost', 'r4', 4), ('lost', 'r5', 5),
   ('lost', 'r6', 6), ('lost', 'r7', 7), ('lost', 'r8', 99),

@@ -2,9 +2,9 @@ from __future__ import annotations
 
 """channel_masters の共通定義と、名簿（全社1つの表）の読み口。
 
-名簿は `public.channel_masters` 1つ。tenant_id が NULL の行は共用（運営が管理）、
+名簿は全社で1つの表（下の CHANNEL_MASTERS_TABLE）。tenant_id が NULL の行は共用（運営が管理）、
 値がある行はその会社専用。会社ごとの「隠す」設定は
-`public.channel_master_tenant_settings` に1行で持つ。
+別の表（CHANNEL_SETTINGS_TABLE）に1行で持つ。
 
 名簿の表を読み書きする SQL はこのファイルだけに置く（他のファイルは関数を呼ぶ）。
 表名の文字列も、下の定数2つにだけ書く。
@@ -130,7 +130,8 @@ async def set_hidden(
         text(
             f"INSERT INTO {CHANNEL_SETTINGS_TABLE} "
             f"(tenant_id, channel_master_id, is_hidden, updated_at, updated_by_user_id) "
-            f"SELECT :tenant_id, id, :is_hidden, CURRENT_TIMESTAMP, :user_id "
+            f"SELECT CAST(:tenant_id AS INTEGER), id, CAST(:is_hidden AS BOOLEAN), CURRENT_TIMESTAMP, "
+            f"CAST(:user_id AS INTEGER) "
             f"FROM {CHANNEL_MASTERS_TABLE} "
             f"WHERE id = :channel_master_id AND (tenant_id IS NULL OR tenant_id = :tenant_id) "
             f"ON CONFLICT (tenant_id, channel_master_id) DO UPDATE SET "
