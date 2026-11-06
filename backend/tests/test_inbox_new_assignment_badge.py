@@ -80,6 +80,13 @@ async def engine():
         dbapi_conn.create_function("NOW", 0, _fake_now)
         dbapi_conn.execute("PRAGMA foreign_keys = ON")
 
+    @event.listens_for(eng.sync_engine, "before_cursor_execute", retval=True)
+    def _rewrite_public_users(conn, cursor, statement, parameters, context, executemany):
+        # SQLite はスキーマ修飾名を持たない（conftest.py の同名の仕掛けと同じ形）
+        if "public.users" in statement:
+            statement = statement.replace("public.users", "users")
+        return statement, parameters
+
     async with eng.begin() as conn:
         # leads / tenant_sales_form_options / lead_sales_form_selections /
         # meta_messages の DDL は conftest.py の INBOX_BADGE_SQLITE_DDL に集約
@@ -166,6 +173,15 @@ async def _insert_lead(
             "id": lead_id, "tenant_id": tenant_id, "customer_name": customer_name,
             "assigned_to": assigned_to, "assignment_opened_at": assignment_opened_at,
         },
+    )
+    await db_session.commit()
+
+
+async def _insert_user(db_session, *, user_id: int, tenant_id: int = 999):
+    """担当者の会社照合が読む users 行（本物の行。照合は差し替えない）。"""
+    await db_session.execute(
+        text("INSERT INTO users (id, tenant_id) VALUES (:id, :tenant_id) ON CONFLICT (id) DO NOTHING"),
+        {"id": user_id, "tenant_id": tenant_id},
     )
     await db_session.commit()
 
@@ -349,6 +365,8 @@ def test_a11_both_migration_and_tenant_service_have_new_column():
 
 @pytest.mark.asyncio
 async def test_a3_assignment_change_resets_opened_at(db_session):
+    await _insert_user(db_session, user_id=10)
+    await _insert_user(db_session, user_id=20)
     await _insert_lead(db_session, lead_id=1, assigned_to=10, assignment_opened_at="2026-01-01T00:00:00")
 
     async with _client(db_session, user_id=10) as ac:
@@ -362,6 +380,7 @@ async def test_a3_assignment_change_resets_opened_at(db_session):
 
 @pytest.mark.asyncio
 async def test_a4_same_assignee_resave_keeps_opened_at(db_session):
+    await _insert_user(db_session, user_id=10)
     await _insert_lead(db_session, lead_id=1, assigned_to=10, assignment_opened_at="2026-01-01T00:00:00")
 
     async with _client(db_session, user_id=10) as ac:

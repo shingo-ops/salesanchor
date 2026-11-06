@@ -44,32 +44,24 @@ beforeEach(async () => {
 });
 afterEach(() => { cleanup(); queryClient.clear(); });
 
-it("shows connected state with read-only server ID and a Change button", async () => {
+it("shows connected state with read-only server ID and a Change link to the Channels page", async () => {
   view();
   await screen.findByText(GUILD);
   expect(screen.getByText("Connected")).toBeTruthy();
   expect(screen.queryByLabelText("Server ID")).toBeNull();
-  fireEvent.click(screen.getByRole("button", { name: "Change" }));
-  expect((screen.getByLabelText("Server ID") as HTMLInputElement).value).toBe(GUILD);
-  expect(screen.getByRole("button", { name: "Cancel" })).toBeTruthy();
+  expect(screen.getByRole("link", { name: "Change" }).getAttribute("href")).toBe("/channels");
+  expect(screen.queryByRole("button", { name: "Change" })).toBeNull();
 });
 
-it("shows unconnected state with a form and disables auto setup with a reason", async () => {
+it("shows unconnected state with a link to the Channels page and disables auto setup with a reason", async () => {
   mockGets(unconnectedConfig, emptyTicket);
   view();
   await screen.findByText("Not connected");
-  expect(screen.getByLabelText("Server ID")).toBeTruthy();
-  expect(screen.getByRole("button", { name: "Connect" })).toBeTruthy();
+  expect(screen.queryByLabelText("Server ID")).toBeNull();
+  expect(screen.getByRole("link", { name: "Connect on Channels page" }).getAttribute("href")).toBe("/channels");
+  expect(screen.getByText("Connect your Discord server with the connect button on the Channels page.")).toBeTruthy();
   expect((screen.getByRole("button", { name: "Run auto setup" }) as HTMLButtonElement).disabled).toBe(true);
   expect(screen.getByText("Connect the server first")).toBeTruthy();
-});
-
-it("rejects an invalid server ID without calling the API", async () => {
-  mockGets(unconnectedConfig, emptyTicket);
-  view();
-  fireEvent.change(await screen.findByLabelText("Server ID"), { target: { value: "abc" } });
-  fireEvent.click(screen.getByRole("button", { name: "Connect" }));
-  expect(await screen.findByText("Enter a 17–20 digit number")).toBeTruthy();
   expect(api.put).not.toHaveBeenCalled();
 });
 
@@ -167,7 +159,7 @@ it("hides edit controls without edit permission", async () => {
   } as unknown as ReturnType<typeof usePermissions>);
   view();
   await screen.findByText(GUILD);
-  expect(screen.queryByRole("button", { name: "Change" })).toBeNull();
+  expect(screen.queryByRole("link", { name: "Change" })).toBeNull();
   expect(screen.queryByRole("button", { name: "Run auto setup" })).toBeNull();
   expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
 });

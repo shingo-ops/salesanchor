@@ -30,6 +30,7 @@ from app.schemas.team import (
     TeamUpdate,
 )
 from app.services.audit import record_audit_log
+from app.services.tenant_users import ensure_user_in_tenant
 
 router = APIRouter()
 
@@ -106,6 +107,7 @@ async def create_team(
     current_user: User = Depends(get_current_user),
 ):
     """チームを作成する"""
+    await ensure_user_in_tenant(db, data.leader_id, tenant_id)
     try:
         result = await db.execute(
             text("""
@@ -158,6 +160,8 @@ async def update_team(
 
     update_data = data.model_dump(exclude_unset=True)
     update_data = {k: v for k, v in update_data.items() if k in _UPDATABLE_COLUMNS}
+    if "leader_id" in update_data:
+        await ensure_user_in_tenant(db, update_data["leader_id"], tenant_id)
     if not update_data:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="更新するフィールドを指定してください")
 

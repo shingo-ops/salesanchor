@@ -100,6 +100,14 @@ async def _insert_staff(db, *, tenant_id, user_id, surname_jp, given_name_jp, di
     )
 
 
+async def _insert_user(db, *, tenant_id, user_id):
+    """担当者の会社照合（ensure_user_in_tenant）が読む本物の users 行。"""
+    await db.execute(
+        text("INSERT INTO users (id, tenant_id) VALUES (:id, :tenant_id) ON CONFLICT (id) DO NOTHING"),
+        {"id": user_id, "tenant_id": tenant_id},
+    )
+
+
 async def _insert_lead(db, *, tenant_id, lead_id, customer_name, lead_code, assigned_to=None):
     await db.execute(
         text("""
@@ -236,6 +244,7 @@ async def test_patch_channel_404_when_other_tenant(client, db_session):
 async def test_patch_lead_assigned_to_changed_sends_notification_once(client, db_session):
     await _insert_lead(db_session, tenant_id=999, lead_id=1, customer_name="Acme",
                        lead_code="L-0001", assigned_to=None)
+    await _insert_user(db_session, tenant_id=999, user_id=7)
     await _insert_staff(db_session, tenant_id=999, user_id=7, surname_jp="佐藤", given_name_jp="太郎",
                         discord_user_id=FAKE_DISCORD_ID_ALT)
     await db_session.commit()
@@ -259,6 +268,7 @@ async def test_patch_lead_assigned_to_changed_sends_notification_once(client, db
 async def test_patch_lead_same_assigned_to_does_not_notify(client, db_session):
     await _insert_lead(db_session, tenant_id=999, lead_id=2, customer_name="Acme",
                        lead_code="L-0002", assigned_to=7)
+    await _insert_user(db_session, tenant_id=999, user_id=7)
     await db_session.commit()
 
     captured, fake_create_task = _capture_create_task()
@@ -279,6 +289,7 @@ async def test_patch_lead_same_assigned_to_does_not_notify(client, db_session):
 async def test_patch_lead_returns_200_even_if_notify_raises(client, db_session):
     await _insert_lead(db_session, tenant_id=999, lead_id=3, customer_name="Acme",
                        lead_code="L-0003", assigned_to=None)
+    await _insert_user(db_session, tenant_id=999, user_id=9)
     await db_session.commit()
 
     with patch("app.services.lead_assign_notifier.notify_lead_assigned",

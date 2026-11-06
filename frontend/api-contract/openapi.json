@@ -9487,21 +9487,6 @@
         "title": "DiscordConfigResponse",
         "type": "object"
       },
-      "DiscordConfigUpdate": {
-        "properties": {
-          "guild_id": {
-            "maxLength": 20,
-            "minLength": 17,
-            "title": "Guild Id",
-            "type": "string"
-          }
-        },
-        "required": [
-          "guild_id"
-        ],
-        "title": "DiscordConfigUpdate",
-        "type": "object"
-      },
       "DiscordOAuthStartRequest": {
         "properties": {
           "purpose": {
@@ -40366,51 +40351,6 @@
           }
         ],
         "summary": "Get Discord Config",
-        "tags": [
-          "discord"
-        ]
-      },
-      "put": {
-        "description": "Discord Guild ID を設定 / 更新する (upsert)。",
-        "operationId": "update_discord_config_api_v1_admin_discord_config_put",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/DiscordConfigUpdate"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DiscordConfigResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Update Discord Config",
         "tags": [
           "discord"
         ]
