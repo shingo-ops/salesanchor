@@ -1346,6 +1346,16 @@ jobs:
             echo "✅ $sqlfile 成功"
           done
 
+      - name: 変更 SQL の前提の移行を先に実行（Google カレンダーの通知の登録の表）
+        if: steps.detect.outputs.has_sql_changes == 'true' && contains(steps.detect.outputs.changed_sql, 'migrations/20261107_150000_add_google_webhook_subscriptions_rls.sql')
+        run: |
+          # 20261107_150000 は google_webhook_subscriptions（077）と、その列を足す 20261103_200000 が先にある前提（本番と同じ順）
+          for sqlfile in migrations/077_calendar_sync_mode_and_webhook_subscriptions.sql migrations/20261103_200000_add_google_calendar_import_sync.sql; do
+            echo "▶ $sqlfile を前提として実行中..."
+            psql -h localhost -U jarvis -d jarvis_db -v ON_ERROR_STOP=1 -f "$sqlfile"
+            echo "✅ $sqlfile 成功"
+          done
+
       - name: 変更 SQL を 1回目実行（実行可否・構文チェック）
         if: steps.detect.outputs.has_sql_changes == 'true'
         run: |
