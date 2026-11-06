@@ -27,7 +27,7 @@ mode: handoff
 - 商材・プラン・契約の表、税率の表と画面。
 - 閲覧者の請求書（国内）の発行、PDF、メール添付、ドライブ保存、再発行、入金確認。
 - 会社情報の住所と電話を国内用・海外用に分けて登録する形への変更、インボイス登録と振込先の登録（§3-4）。
-- 差出人を載せる今の書類（B2B の請求書・見積書・発注書・FedEx の申請書）の読み先を、1つの読み出しの道へ切り替える（§3-4）。
+- 差出人を載せる今の書類のうち、見積書と B2B の請求書の読み先を、1つの読み出しの道へ切り替える（§3-4）。発注書と FedEx の申請書は切り替えない（PO 2026-11-06「発注書は使わないので破棄、使うのは見積もりと請求書のみ」）。
 - 名簿を3年残す変更と公開ポリシーの書き換え。
 
 対象外（次の機会）:
@@ -146,7 +146,7 @@ mode: handoff
 - address（1欄の自由記入）と phone（自由記入）の2列は、新しい住所の表に置き換える。画面と API からは書けなくする（TenantProfileUpdate から2項目を外す。backend/app/schemas/tenant_profile.py:33〜:34。extra の設定が無いので、外した項目を送っても無視される）。今の GET /admin/tenant-profile の返す値（TenantProfileResponse。同 :18〜:19）からも2項目を外す。古い値を読む API は新しい GET /admin/tenant-profile/addresses だけにする（口を1つにする）。
 - 2列は消さずに、読むだけの古い値として残す。理由: 1欄の自由記入を5欄へ機械で分けられないため、値を写す移行は作らない。PO が新しい欄へ入れ直すまで、今の書類が空にならないように読む。
 - 古い値を読むのは「その会社にその region の住所の行が無いとき」だけ（§3-4 の「発行元を読む1つの道」）。新しい値を書くのは新しい表だけ。
-- 2列を消す移行は後の便にする。条件: 本番の全会社で、古い値があるのに「今の書類が読む region（§7-1 で決まったもの。domestic と overseas の両方が対象になりうる）のどれか1つでも行が無い」会社が0件。region ごとに件数を数える。数え方は読み取り専用の鍵で件数だけを数える（中身は出さない）。
+- 2列を消す移行は後の便にする。条件は2つ。(1) 本番の全会社で、古い値があるのに domestic か overseas のどちらか1つでも行が無い会社が0件（見積書と請求書はどちらの region も選べるため両方を数える）。(2) 古い2列を読む発注書と FedEx の申請書の口が、消されているか get_issuer へ切り替わっている（§3-4 の「対象外」）。region ごとに件数を数える。数え方は読み取り専用の鍵で件数だけを数える（中身は出さない）。
 - 画面は、国内用と海外用のそれぞれについて、その region の行が無く古い値があるとき、そのタブに「前の住所」として古い値を読むだけで見せ、新しい欄へ入れ直す案内を出す。
 
 **tenant_profile_addresses**（会社の住所と電話。国内用と海外用。会社ごとのスキーマ）
@@ -179,12 +179,10 @@ mode: handoff
 - 返すもの: 会社名の2つ（company_name と company_name_en の両方。region で1つに絞らない）、住所（その region の行の各欄）、電話、メール、サイト、インボイス登録の有無と番号。
 - 会社名の選び方は書類ごとに今の動きのまま変えない（§2「見た目と項目は変えない」）:
   - B2B の請求書と見積書: company_name、空なら company_name_en（backend/app/routers/invoices.py:121）。
-  - 発注書: company_name（backend/app/services/po_renderer.py:369 の「発行:」の行）。
-  - FedEx の申請書: company_name_en、空なら company_name（backend/app/services/label_validation.py:159）。申請メール: company_name_en、空なら決まった文字「Our Company」（同 :233）。
   - 閲覧者の請求書（新しい書類）: company_name。空なら発行を止める。
 - その region の住所の行が無いとき: 住所と電話は tenant_profile の古い address・phone を返し、「古い値」の印を付ける。閲覧者の請求書は古い値を使わず、発行を止める（§3-4b の issuer_address）。今の書類は古い値で今までどおり出る。
 - 会社名が空のとき: 閲覧者の請求書は発行を止める（同 company_name）。今の書類は上の書類ごとの選び方のまま変えない。
-- 差出人を読む今の処理は次の3つ（grep 2026-11-06。生出力 /tmp/CC報告ファイル/contract-status/ssot-verify-1106.txt・ssot-verify-1106b.txt）。どれも tenant_profile の address・phone を直接読んでいる。この3つを get_issuer に切り替える。
+- 差出人を読む今の処理は次の3つ（grep 2026-11-06。生出力 /tmp/CC報告ファイル/contract-status/ssot-verify-1106.txt・ssot-verify-1106b.txt）。どれも tenant_profile の address・phone を直接読んでいる。このうち B2B の請求書と見積書の1つだけを get_issuer に切り替える。発注書と FedEx の2つは切り替えず、今のまま古い列を読む（下の「対象外」）。
   - B2B の請求書と見積書: backend/app/routers/invoices.py:109〜:128 の _fetch_tenant_profile（呼び出し :829・:875・:1007）。PDF は backend/app/services/invoice_renderer.py:509〜:513・:579〜:583。
   - 発注書: backend/app/services/po_renderer.py:253〜:273（住所を1行で描く :371〜:373 付近）。
   - FedEx の申請書と申請メール: backend/app/services/label_validation.py:82〜:103 の get_tenant_profile（呼び出し backend/app/routers/shipping.py:780・:815）。
@@ -198,9 +196,11 @@ mode: handoff
     - 最初の選択は空にし、選ばないと保存できない。取引先の国から自動で入れる形（PO への選択肢3）は取らない。取引先の住所の国の列は空を許す（migrations/030_create_company_contact_subtables.sql:55 の country_code CHAR(2)。NOT NULL なし）ため、自動で決められない書類が出る。
     - 画面の部品は今の作る画面が使っている SelectControl（frontend/src/components/Select。QuoteCreatePage.tsx:24・:159、InvoiceCreatePage.tsx:20・:303）。選択肢の文字は t()。詳しい画面には選んだ値を読むだけで出す。
     - quotes と invoices は会社ごとのスキーマの表（backend/app/services/tenant.py:798・:864）。ADR-142 に従い、全会社へ足す移行と _TENANT_TABLES_SQL を同じ変更で揃える。値は決まった2つなので、相談係の道では隠さない（決まった値しか入らない列の扱い）。
-  - 発注書と FedEx の申請書: 今は作る画面が無い（下の事実）。どちらの region を読むかは **PO に確かめる（§7-1）**。
-    - 発注書の画面は 2026-10-11 に「使っていない画面」として消した（commit 7a2f39c20「refactor: remove unused purchase-orders page」。PurchaseOrdersPage.tsx と PurchaseOrdersFormModal.tsx を削除）。origin/main の frontend/src に purchase-orders の道は無い（git grep 2026-11-06）。PDF とメールの口（backend/app/routers/purchase_orders.py:354・:385・:495）だけが残る。
-    - FedEx の申請書の画面（frontend/src/pages/integrations/FedexLabelValidationTab.tsx:57 の FedexLabelValidationTab）は、origin/main でどのファイルからも読み込まれていない（git grep 2026-11-06。他の当たりは CSS の読み込みだけ）。口（backend/app/routers/shipping.py:780・:815）だけが残る。
+  - 発注書と FedEx の申請書: 対象外。切り替えない（PO 2026-11-06「発注書は使わないので破棄、使うのは見積もりと請求書のみ」）。
+    - 2つとも今は作る画面が無い。発注書の画面は 2026-10-11 に「使っていない画面」として消した（commit 7a2f39c20「refactor: remove unused purchase-orders page」）。口（backend/app/routers/purchase_orders.py:354・:385・:495）だけが残る。FedEx の申請書の画面（frontend/src/pages/integrations/FedexLabelValidationTab.tsx:57）は origin/main のどこからも読み込まれていない（git grep 2026-11-06）。口（backend/app/routers/shipping.py:780・:815）だけが残る。
+    - 2つの残った口は今のまま tenant_profile の古い address・phone を読む。古い2列は読むだけで残すので、2つの動きは変わらない。
+    - 発注書を消す作業（残った口・po_renderer.py・その試験・表）は、この設計に入れない。別の設計で行う。表とその中のデータを消すのは元に戻せないため、件数を数えて PO に確かめてから行う。
+    - FedEx の申請書も消すかは **PO に確かめる（§7-1）**。PO の「使うのは見積もりと請求書のみ」から使わないと読んだが、消すとは言われていない。
     - 生出力: /tmp/CC報告ファイル/contract-status/dropdown-recon-1106.txt〜dropdown-recon4-1106.txt。
 - 古い住所は1欄の文字、新しい住所は欄ごとの値。get_issuer は欄を決まった順でつないだ1つの文字も返し、今の書類は描き方を変えずにそれを載せる（新しい PDF の配置は閲覧者の請求書だけ）。
 - 閲覧者の請求書は domestic を読む。発行時に get_issuer の結果を issuer_snapshot に写す。発行後に会社情報を直しても発行済みは変わらない。
@@ -227,7 +227,7 @@ mode: handoff
 - 生の `SET LOCAL` を text() で流さない。pytest は SQLite でも動くので文の誤りになる（同 :264〜:274 の説明）。
 - 運営の印は接続に残る（SET。SET LOCAL ではない）。（５）と、接続を返す前の clear_tenant_context で消す。commit の後に裏で行うメール・ドライブの結果の書き込みは、裏の処理の頭で（１）（２）を張る。最高管理者の口には前例が無い（super_admin の口の grep で該当なし）。会社の番号を引数で受けて文脈を張る処理は裏の処理にある（backend/app/services/google_webhook.py:255、backend/app/discord_gateway/dm_writer.py:94）ので、この形を発行の処理に写す。
 - 文脈は接続を返す前に消える（backend/app/database.py:60〜:61 の get_db が clear_tenant_context を呼ぶ。backend/app/auth/dependencies.py:361。ADR-131）。裏の処理は get_db を通らないので、処理の終わりで clear_tenant_context を呼ぶ（同 :361 の説明にある BackgroundTasks の形）。新しい public の表の SQL は public. を付けて書く。
-- 画面は今の会社情報のページ（frontend/src/pages/admin/TenantProfilePage.tsx）を直す。管理センターの左のメニュー「ビジネス設定」（frontend/src/locales/ja.json:433 の managementCenter.sectionBusiness）の「発行者情報」から開くページ（frontend/src/pages/management-center/ManagementCenterPage.tsx:80、frontend/src/App.tsx:402）。同じページは /admin/tenant-profile（App.tsx:373、frontend/src/pages/admin/AdminHubPage.tsx:25）と、見積・請求書の作成画面のボタン（frontend/src/pages/invoice-create/InvoiceCreatePage.tsx:219）からも開く。名前を変えるとこの入口すべてに効く。新しいメニューは作らない。並びは上から、会社名（日本語・英語）・メール・サイト・印影・既定の言語（今の欄。住所と電話の自由記入の2欄は外す）、「住所と電話」（国内用と海外用を Tabs で切り替え、5欄と電話）、「インボイス登録」（会社に1つ）、「振込先」。メニューとページの名前を「発行者情報」から「会社情報」に変えるかは §7-2（今の文言 frontend/src/locales/ja.json:277・:2061。説明文 :2062 は発注書とメールだけを書いているので、請求書を足して直す）。権限は今の tenant.profile.view／edit（同ページ :8〜:9）。テナントオーナー専用の設定はこのページに置く決まり（docs/specs/profile-account-settings/README.md の境界）に合う。部品は §3-4a。
+- 画面は今の会社情報のページ（frontend/src/pages/admin/TenantProfilePage.tsx）を直す。管理センターの左のメニュー「ビジネス設定」（frontend/src/locales/ja.json:433 の managementCenter.sectionBusiness）の「発行者情報」から開くページ（frontend/src/pages/management-center/ManagementCenterPage.tsx:80、frontend/src/App.tsx:402）。同じページは /admin/tenant-profile（App.tsx:373、frontend/src/pages/admin/AdminHubPage.tsx:25）と、見積・請求書の作成画面のボタン（frontend/src/pages/invoice-create/InvoiceCreatePage.tsx:219）からも開く。名前を変えるとこの入口すべてに効く。新しいメニューは作らない。並びは上から、会社名（日本語・英語）・メール・サイト・印影・既定の言語（今の欄。住所と電話の自由記入の2欄は外す）、「住所と電話」（国内用と海外用を Tabs で切り替え、5欄と電話）、「インボイス登録」（会社に1つ）、「振込先」。メニューとページの名前を「発行者情報」から「会社情報」に変えるかは §7-2（今の文言 frontend/src/locales/ja.json:277・:2061。説明文 :2062 は発注書とメールだけを書いているので、見積書と請求書に直す。発注書は使わないため（PO 2026-11-06））。権限は今の tenant.profile.view／edit（同ページ :8〜:9）。テナントオーナー専用の設定はこのページに置く決まり（docs/specs/profile-account-settings/README.md の境界）に合う。部品は §3-4a。
 
 **tenant_invoice_payment_methods**（振込先。PO 2026-11-05「振込先は複数登録できるようにできる？初めにプルアダウンでWise、PayPal、銀行口座で選択するプルダウンを表示させておいて、選択した値によって入力欄が変化する仕組み」「登録ページで登録請求書発行時はプルダウンで選択をイメージしている」）
 - 振込先の正本はこの表だけ。1つの振込先を1行とする。region（domestic／overseas）でどちらの請求書の選択肢に出すかを分ける。置き場、RLS、作成処理への反映は tenant_profile_addresses と同じ（ポリシー名 tenant_invoice_payment_methods_tenant_isolation）。
@@ -464,7 +464,7 @@ commit の後、裏で順に行う:
 
 - **3年保持と個人情報の決まり**: 今の公開ポリシーは90日で消すと書いており、申込済みの人はその前提で登録した。再登録防止は今の利用目的に無い。ガイドライン 3-1-2 は、変更は関連のある範囲で通知か公表が要ると定める。関連のある範囲と言えるかは**未確認**。専門家の確認は未実施。PO の判断項目（§7-2）。
 - **古い住所が残る間**: 入れ直すまで、今の書類は古い住所で出て、閲覧者の請求書は発行できない。画面に入れ直す案内を出す。2列を消すのは数えてから（§4）。
-- **今の書類の住所の書き方が変わる**: 入れ直した後は、欄を決まった順でつないだ文字が載る。電話はハイフンなしになる。B2B の請求書・見積書・発注書・FedEx の申請書の見た目を、切り替えの前と後で比べる（A41）。
+- **今の書類の住所の書き方が変わる**: 入れ直した後は、欄を決まった順でつないだ文字が載る。電話はハイフンなしになる。B2B の請求書と見積書の見た目を、切り替えの前と後で比べる（A41）。発注書と FedEx の申請書は切り替えないので変わらない。
 - **ドライブが切れている**: 発行とメールは進み、「未保存」と出る。週1回の見守りで知らせる。
 - **メールが届かない**: 「送信失敗」と出す。届いたかの確認は SMTP の受付までで、相手の受信は分からない。
 - **二重発行**: 有効な請求書は契約に1件まで（部分一意索引）。
@@ -483,7 +483,8 @@ commit の後、裏で順に行う:
 - ~~発行元（HIGH LIFE JPN）が消費税の課税事業者か~~ → 消費税を納めていると回答（2026-11-06 PO「1」。PO の回答で、申告書の照合はしていない）。§3-5 の常に10%を足す形のまま。
 
 - 見積書と B2B の請求書は、作る画面のプルダウンで国内向けか海外向けを選ぶ形にした（2026-11-06 PO の問い「プルダウンで選択してその選択によって分岐させる方法は？」に、作れることを確かめて設計した）。
-- **画面の無い発注書と FedEx の申請書がどちらの住所を読むか（未回答）**: どちらも今は作る画面が無い（§3-4）。答えが無いとこの2つの切り替えを作れない。
+- 発注書と FedEx の申請書は切り替えない（PO 2026-11-06「発注書は使わないので破棄、使うのは見積もりと請求書のみ」。2026-11-06 回答）。
+- **FedEx の申請書も消すか（未回答）**: 発注書は「破棄」と言われた。FedEx の申請書は「使うのは見積もりと請求書のみ」から使わないと読んだが、消すかは言われていない。答えは今回の設計を止めない。古い2列を消す条件（§3-4）にだけ効く。
 
 ### 7-2. 承認のときに一緒に確かめること
 
@@ -549,7 +550,7 @@ commit の後、裏で順に行う:
 | A37 | 公開ポリシーの閲覧者の保存期間が3年、請求書の記録が7年、Google の用途にドライブ、利用目的に再登録の防止が載り、改訂日が入る | 本番の LP を PO が目視＋ lp のビルド |
 | A38 | 週1回の接続の見守りが動き、トークンの更新に失敗すると Discord の運用通知に1件出る | backend pytest（更新を失敗させる）＋本番の実行記録 |
 | A40 | 差出人を読む処理が get_issuer の1つだけになる。get_issuer は backend/app/services/issuer.py に置く。backend/app で tenant_profile を読む SQL は、このファイルと例外の2つ（会社情報の口 backend/app/routers/tenant_profile.py、会社を作る処理 backend/app/services/tenant.py の表の作成と既定の行の INSERT）の外に0件。会社情報の更新の口で address・phone を送っても保存されない | backend pytest（backend/app の .py を読んで「tenant_profile」を含む行を数え、上の3ファイル以外で0件なら合格。ソースを読む試験の先例 backend/tests/test_tenant_loop_migration_guard.py） |
-| A41 | 見積書と B2B の請求書は、選んだ region（値が空の前の書類は overseas）の住所と電話を載せる。発注書・FedEx の申請書と申請メールは、§7-1 で決めた region の住所と電話を載せる。その region の行が無い会社では、切り替え前と同じ古い住所が載る。会社名は §3-4 の書類ごとの選び方のとおりで、切り替えの前と後で同じ文字になる（日本語名と英語名の両方が入った会社で確かめる） | backend pytest（行あり・行なしの2通りで PDF の文字を pdfminer.six で読む。先例 backend/tests/test_po_renderer.py:81〜:89。申請メールは返す文字を比べる）。FedEx の申請書の PDF から文字を取り出せるかは未確認で、取り出せなければ重ねる前の値を渡す関数の引数で確かめる |
+| A41 | 見積書と B2B の請求書は、選んだ region（値が空の前の書類は overseas）の住所と電話を載せる。発注書・FedEx の申請書と申請メールは切り替えず、切り替え前と同じ文字が載る。その region の行が無い会社では、切り替え前と同じ古い住所が載る。会社名は §3-4 の書類ごとの選び方のとおりで、切り替えの前と後で同じ文字になる（日本語名と英語名の両方が入った会社で確かめる） | backend pytest（行あり・行なしの2通りで PDF の文字を pdfminer.six で読む。先例 backend/tests/test_po_renderer.py:81〜:89。発注書と FedEx は切り替え前の試験がそのまま通る） |
 | A42 | 国内用の住所の行が無いと、閲覧者の請求書は 409 issuer_address で止まり、古い住所では発行されない。国内用と海外用のタブのそれぞれで、その行が無く古い値があるとき、古い住所（読むだけ）と入れ直しの案内が出る | backend pytest＋ frontend テスト＋ Evaluator |
 | A43 | 見積書と請求書の作る画面に「国内向け／海外向け」の選択があり、選ばないと保存できない。見積書から作った請求書は見積書の値を引き継ぐ。発行の後は値を直せない | backend pytest（作る・引き継ぐ・発行後に直す口が 409 か 422 で止まる）＋ frontend テスト＋ Evaluator |
 ## 9. 実装カードへ送ること
@@ -573,7 +574,7 @@ commit の後、裏で順に行う:
 | ①人 | PO（住所と電話の入れ直し・登録・振込先・文面・保存先の入力、テストの支払い）、会社情報を直す各社の人 | 便2 の後と便4 の前に PO が行うこと（§4）。入れ直すまで画面に案内を出す（§3-4） |
 | ②エージェント | 実装役は design.md・カードを読む。.claude/agents・docs/ai-agents・AGENTS.md に viewer_accounts の語は0件 | 実装カードに §9 の全件 grep と止まる条件を書く。周知の追加は不要 |
 | ③機械 | 名簿の掃除 purge_viewer_accounts（backend/app/celery_app.py の定時登録、backend/tests/test_viewer_purge.py）。会社の表の作成 _TENANT_TABLES_SQL（backend/tests/test_rls_tenant_meta_config.py・test_roles_system_key_ddl.py）。移行の点検（.github/workflows/migration-guard.yml・migration-test.yml・schema-check.yml） | 掃除の試験を3年の条件に直す（A13）。会社の表の差の試験を足す（A22）。移行は migration-test で全会社へ流す |
-| ④データ | public に新しい9表。全会社のスキーマに3表。tenant_profile の address・phone は書けなくなり読むだけ（差出人の読み出し: invoices.py・po_renderer.py・label_validation.py。試験 backend/tests の7ファイル・51か所 grep 2026-11-06）。tenant_google_drive_config に1列（読む処理: integrations.py・google_drive_oauth.py・carrier_credentials.py。試験 test_google_config_rls.py） | 既存の列は変えない。新しい列は NULL 可で今は使わない。tenant_004 本番の行は増えるだけ |
+| ④データ | public に新しい9表。全会社のスキーマに3表。tenant_profile の address・phone は書けなくなり読むだけ（差出人の読み出しのうち切り替えるのは invoices.py だけ。po_renderer.py・label_validation.py は今のまま古い列を読む。試験 backend/tests の7ファイル・51か所 grep 2026-11-06）。tenant_google_drive_config に1列（読む処理: integrations.py・google_drive_oauth.py・carrier_credentials.py。試験 test_google_config_rls.py） | 既存の列は変えない。新しい列は NULL 可で今は使わない。tenant_004 本番の行は増えるだけ |
 | ⑤本番 | 便1（掃除の条件）と便2（移行）は本番の DB を変える | 便1 は 2026-12-19 より前。便2 は ADR-136 の GO。直前のバックアップを確かめる |
 | ⑥外部 | 閲覧者（メール・ログインの期限）、Google ドライブ、Wise・PayPal、公開ポリシー（lp/src/pages/privacy.astro） | 実在のお客さんには送らない（§9）。ドライブは今あるフォルダへ保存する形に決まった（2026-11-06 PO のテスト保存。§3-8）。Wise は円の入金をテストの支払いで確かめる |
 
