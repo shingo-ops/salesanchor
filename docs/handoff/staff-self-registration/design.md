@@ -184,7 +184,7 @@
 - 申込ページ:
   - 新しいファイル frontend/src/pages/staff-join/StaffJoinPage.tsx。
   - `frontend/src/App.tsx` のログイン不要の道（`/reset-password` の並び、`frontend/src/App.tsx:175`）に `/staff-join` を足す。
-  - 入力欄は `StaffFormFields` を使う（役割の欄は出さない）。
+  - 入力欄は、新規作成 Modal（frontend/src/pages/staff/StaffPage.tsx の姓名・かな・英語名・主メールの7欄）を新しい部品 frontend/src/pages/staff/StaffIdentityFields.tsx に切り出して共用する（StaffFormFields は英語名の欄が無く、メールが入力不可のため使わない。2026-11-07 Opus 点検）。新規作成 Modal の見た目と動きは変えない。
   - 完了画面に出すもの:
     - 番号（4文字ずつ区切り、コピーボタン付き）。
     - Discord の参加リンク。
