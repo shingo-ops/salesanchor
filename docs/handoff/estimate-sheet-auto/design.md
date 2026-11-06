@@ -44,41 +44,14 @@
 5. Item = 英語名（空なら日本語名）＋ J:K の印。
 6. 全体を、条件タブ H 列に書いたシリーズの順（H が空なら文字の順）、同じシリーズの中は発売日の新しい順に並べる。文字の並び順に頼らないため（PO 2026-11-07 の問いを受けて）。
 
-式（在庫集計の値は文字なので `VALUE()` で数に直す。recon §6）:
+式（在庫集計の値は文字なので `VALUE()` で数に直す。recon §6）。**改行を入れずに1行で貼る**（セルに打つと改行で入力が終わる。2026-11-07 試しのシートで「=LET(」だけが入り解析エラーになった）:
 ```
-=LET(
- src, FILTER('在庫集計'!A2:O, '在庫集計'!O2:O<>""),
- lo, '条件'!B2, big, '条件'!B3, tol, '条件'!B4,
- ex, IFERROR(FILTER('条件'!D2:D, '条件'!D2:D<>""), "#なし#"),
- st, FILTER('条件'!F2:F, '条件'!F2:F<>""),
- sr, '条件'!H2:H,
- pr, IFERROR(VALUE(CHOOSECOLS(src,7)), -1),
- qt, IFERROR(VALUE(CHOOSECOLS(src,8)), 0),
- keep, (pr>=0) * (qt>lo)
-   * ISNA(MATCH(CHOOSECOLS(src,11), ex, 0))
-   * ISNUMBER(MATCH(CHOOSECOLS(src,6), st, 0))
-   * ((COUNTA(sr)=0) + ISNUMBER(MATCH(CHOOSECOLS(src,13), sr, 0)) > 0),
- d, FILTER(HSTACK(src, pr, qt), keep>0),
- keys, UNIQUE(CHOOSECOLS(d, 15, 6)),
- head, {"商品ID","状態","型番","日本語名","Item","値段","仕入元","在庫数","投稿日時","シリーズ","発売日"},
- body, REDUCE(head, SEQUENCE(ROWS(keys)), LAMBDA(acc, i, VSTACK(acc, LET(
-   g,  FILTER(d, CHOOSECOLS(d,15)=INDEX(keys,i,1), CHOOSECOLS(d,6)=INDEX(keys,i,2)),
-   g2, FILTER(g, CHOOSECOLS(g,17) >= IF(MAX(CHOOSECOLS(g,17))>=big, big, 0)),
-   mn, MIN(CHOOSECOLS(g2,16)),
-   g3, FILTER(g2, CHOOSECOLS(g2,16) <= mn+tol),
-   b,  CHOOSEROWS(SORT(g3, 17, FALSE, 16, TRUE), 1),
-   en, INDEX(b,1,5), jp, INDEX(b,1,4),
-   sfx, IFERROR(VLOOKUP(INDEX(b,1,6), '条件'!J2:K, 2, FALSE), ""),
-   HSTACK(INDEX(b,1,15), INDEX(b,1,6), INDEX(b,1,3), jp,
-          IF(en="", jp, en) & sfx, INDEX(b,1,16), INDEX(b,1,11),
-          INDEX(b,1,17), INDEX(b,1,1), INDEX(b,1,13), INDEX(b,1,12))
- )))),
- rows, CHOOSEROWS(body, SEQUENCE(ROWS(body)-1, 1, 2)),
- sl, IFERROR(FILTER(sr, sr<>""), "#なし#"),
- so, IFERROR(MATCH(CHOOSECOLS(rows,10), sl, 0), 999),
- IFERROR(VSTACK(head, SORT(rows, so, TRUE, 10, TRUE, 11, FALSE)), head)
-)
+=ARRAYFORMULA(LET(src,FILTER('在庫集計'!A2:O,'在庫集計'!O2:O<>""),lo,'条件'!B2,big,'条件'!B3,tol,'条件'!B4,ex,IFERROR(FILTER('条件'!D2:D,'条件'!D2:D<>""),"#なし#"),st,FILTER('条件'!F2:F,'条件'!F2:F<>""),sr,'条件'!H2:H,pr,IFERROR(VALUE(CHOOSECOLS(src,7)),-1),qt,IFERROR(VALUE(CHOOSECOLS(src,8)),0),keep,(pr>=0)*(qt>lo)*ISNA(MATCH(CHOOSECOLS(src,11),ex,0))*ISNUMBER(MATCH(CHOOSECOLS(src,6),st,0))*((COUNTA(sr)=0)+ISNUMBER(MATCH(CHOOSECOLS(src,13),sr,0))>0),d,FILTER(HSTACK(src,pr,qt),keep>0),keys,UNIQUE(CHOOSECOLS(d,15,6)),head,{"商品ID","状態","型番","日本語名","Item","値段","仕入元","在庫数","投稿日時","シリーズ","発売日"},body,REDUCE(head,SEQUENCE(ROWS(keys)),LAMBDA(acc,i,VSTACK(acc,LET(grp,FILTER(d,CHOOSECOLS(d,15)=INDEX(keys,i,1),CHOOSECOLS(d,6)=INDEX(keys,i,2)),grpa,FILTER(grp,CHOOSECOLS(grp,17)>=IF(MAX(CHOOSECOLS(grp,17))>=big,big,0)),mn,MIN(CHOOSECOLS(grpa,16)),grpb,FILTER(grpa,CHOOSECOLS(grpa,16)<=mn+tol),best,CHOOSEROWS(SORT(grpb,17,FALSE,16,TRUE),1),en,INDEX(best,1,5),jp,INDEX(best,1,4),sfx,IFERROR(VLOOKUP(INDEX(best,1,6),'条件'!J2:K,2,FALSE),""),HSTACK(INDEX(best,1,15),INDEX(best,1,6),INDEX(best,1,3),jp,IF(en="",jp,en)&sfx,INDEX(best,1,16),INDEX(best,1,11),INDEX(best,1,17),INDEX(best,1,1),INDEX(best,1,13),INDEX(best,1,12)))))),picked,CHOOSEROWS(body,SEQUENCE(ROWS(body)-1,1,2)),sl,IFERROR(FILTER(sr,sr<>""),"#なし#"),so,IFERROR(MATCH(CHOOSECOLS(picked,10),sl,0),999),IFERROR(VSTACK(head,SORT(picked,so,TRUE,10,TRUE,11,FALSE)),head)))
 ```
+- 2026-11-07 の試しで直した2点（観測）:
+  - `ARRAYFORMULA` で全体を包む。包まないと LET の中の `VALUE(CHOOSECOLS(...))` や比べる式が1つの値しか返さない（`SUM(--(pr>=0))` が包まないと 1、包むと 88）。
+  - LET の名前にセル番地と同じ形（`g2`・`g3`）を使わない。`#NAME?`「関数 LET の引数 3 は有効な名前ではありません。」になる。`grp`/`grpa`/`grpb`/`best`/`picked` に替えた。
+  - 旧い式は途中のエラーを `IFERROR` が隠し、見出しだけ・見出しの繰り返しが出ていた。
 - 列の番号: 在庫集計の 1〜15 ＋ 16=数にした値段、17=数にした在庫。
 - 残る行が0件のときは途中がエラーになり、最後の `IFERROR(…, head)` で見出しだけ出す。
 
@@ -87,15 +60,9 @@
 - 今の見積もり用 96〜106行目（特別な箱とカードのまとめ売り、11行）を写す。
 - 行を足せば見積もり用の自動の行の下に出る。
 
-### 3-4 見積もり用 A2（式1本）
+### 3-4 見積もり用 A2（式1本・1行で貼る）
 ```
-=LET(
- a, IFERROR(FILTER(CHOOSECOLS('自動選定'!A2:K, 3,4,5,6), '自動選定'!A2:A<>""), {"","","",""}),
- m, IFERROR(FILTER('手入力'!A2:D, '手入力'!C2:C<>""), {"","","",""}),
- all, VSTACK(a, m),
- r, FILTER(all, CHOOSECOLS(all,3)<>""),
- IFERROR(HSTACK(SEQUENCE(ROWS(r)), r), "")
-)
+=ARRAYFORMULA(LET(auto,IFERROR(FILTER(CHOOSECOLS('自動選定'!A2:K,3,4,5,6),'自動選定'!A2:A<>""),{"","","",""}),hand,IFERROR(FILTER('手入力'!A2:D,'手入力'!C2:C<>""),{"","","",""}),both,VSTACK(auto,hand),rr,FILTER(both,CHOOSECOLS(both,3)<>""),IFERROR(HSTACK(SEQUENCE(ROWS(rr)),rr),"")))
 ```
 - 先に A2:E106 の今の値・式を消す（残っていると式が広がれず `#REF!` になる）。
 - 消す前に見積もり用タブを丸ごと複製し「見積もり用_元」として残す（戻し方）。
@@ -140,6 +107,14 @@
 | K7 | 自動の行で Item が空の行0・同じ Item 名の重複0 | 見積もり用で数える式 |
 | K8 | 英語名が空の商品は日本語名で出る | 英語名が空の商品を1つ選んで見る |
 | K9 | 条件を変えてから表示が変わるまで10秒以内 | 時計で測る |
+
+### 7-1 試しのシートでの結果（2026-11-07・PO の Drive の新しい試しのシート。伊藤さんのシートと PO の写しは触っていない）
+- 入れたデータ: 在庫集計 88行（2026-11-06 の写しから抜き出し）、条件 10/50/100・状態2つ・シリーズ2つ。
+- 自動選定: 8行が出た。先頭が ハドウシーカー（商品ID 466045）Sealed box 11,000・在庫50 → **K1 ○**。
+- 見積もり用: 自動の8行の下に手入力の1行（SR 100cards 41,000）が続き、NO が 1〜9 → K5 の前半 ○。
+- 請求: E4 に `Aura Seeker` → G4 に 11000 が出た。
+- 7行目と8行目の Item がどちらも `TWO LEGENDS`（商品ID 68 と 83）→ **K7 ×**（§9 のとおり商品マスタの英語名を直すまで）。
+- K2〜K4・K6・K8・K9 はまだ試していない。
 
 ## 8. 実装の進め方（PO の判断待ち）
 - 式の貼り付けは製品コードではないが、作業は実装にあたる。Opus は書き込まない。
