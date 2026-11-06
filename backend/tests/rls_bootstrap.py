@@ -170,6 +170,7 @@ _TENANT_LOOP_MIGRATIONS = {
     "20261103_200000_add_google_calendar_import_sync.sql": 1,
     "20261104_161223_add_calendar_events_meet_url.sql": 1,
     "20261005_150000_add_roles_system_key.sql": 1,
+    "20261106_150000_add_discord_role_link_tables.sql": 1,
 }
 
 

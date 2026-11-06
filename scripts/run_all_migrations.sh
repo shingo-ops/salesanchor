@@ -1229,3 +1229,5 @@ run_sql migrations/20261104_161223_add_calendar_events_meet_url.sql
 run_sql migrations/20261106_120000_create_discord_server_snapshot_tables.sql
 # ADR-1063 便2: ログイン許可の依頼に「会社の管理者に頼んだ時刻」の列と部分索引を足す（列1つ・追加のみ・冪等）
 run_sql migrations/20261106_140000_add_login_request_admin_requested_at.sql
+# discord-server-management 第2段 2a-1: roles に Discord のロールの番号の列、消した番号を覚える表 2 つを作る（作るだけ・冪等）
+run_sql migrations/20261106_150000_add_discord_role_link_tables.sql
