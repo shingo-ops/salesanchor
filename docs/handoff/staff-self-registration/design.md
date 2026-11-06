@@ -204,7 +204,7 @@
 ### 4-2. 変えるまで止める
 
 - `backend/app/auth/dependencies.py:108` の get_current_user には戻り口が3つある（smoke 用・一時記憶が当たったとき・`_authenticate_self_token` の後。§10 R6）。戻り口ごとに足すと漏れるので、今の関数を内側の関数に改名し、get_current_user はそれを呼んだ後に1か所で次を行う:
-  - `user.password_must_change` が真で、道が許可一覧に無ければ、403 `password_change_required`。
+  - `SELECT password_must_change FROM public.users WHERE id = :id`（text()。§4-1 のとおり ORM に列は無い）で読んだ値が真で、`request.url.path` が許可一覧に無ければ、403 `password_change_required`。
 - 許可一覧（1か所の定数）: `/api/v1/auth/password/change` だけ（§10 S1 で `/api/v1/me/permissions` を外した。下の変更ページはこれを呼ばない）。
   - `/api/v1/auth/logout` は get_current_user を使わない（`backend/app/routers/auth.py:181-187`）ので、一覧に入れなくても止まらない。
 - `/password/change` の成功時の UPDATE に `password_must_change = false` を足す。

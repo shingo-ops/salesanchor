@@ -34,6 +34,8 @@ interface Session {
 export interface TokenResponse {
   access_token: string;
   expires_in: number;
+  /** 仮パスワードのままか（login の返事だけ。無ければ false 扱い・ADR-1068） */
+  must_change_password?: boolean;
 }
 
 let session: Session | null = null;
@@ -117,7 +119,7 @@ export interface LoginApprovalRequired {
   hasRecoveryCodes: boolean;
 }
 
-export type SelfLoginResult = { kind: "ok" } | LoginApprovalRequired;
+export type SelfLoginResult = { kind: "ok"; mustChangePassword: boolean } | LoginApprovalRequired;
 
 interface ApprovalRequiredResponse {
   match_number: string;
@@ -140,7 +142,7 @@ export async function selfLogin(email: string, password: string): Promise<SelfLo
   }
   const tokens = data as TokenResponse;
   adoptAccessToken(tokens.access_token, tokens.expires_in);
-  return { kind: "ok" };
+  return { kind: "ok", mustChangePassword: tokens.must_change_password === true };
 }
 
 export type LoginRequestPollStatus = "pending" | "rejected" | "expired" | "completed";

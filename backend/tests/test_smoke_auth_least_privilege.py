@@ -18,6 +18,8 @@ SMOKE_EMAIL = "smoke-user@example.com"
 def _db_returning(user):
     result = MagicMock()
     result.scalar_one_or_none.return_value = user
+    # 仮パスワードの変更強制（ADR-1068）の SELECT password_must_change は偽（強制なし）を返す
+    result.scalar.return_value = False
     db = MagicMock()
     db.execute = AsyncMock(return_value=result)
     return db

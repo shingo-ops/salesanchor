@@ -13,6 +13,7 @@ import MobileShell from "./components/MobileShell";
 import { useIsMobile } from "./hooks/useIsMobile";
 import LoginPage from "./pages/login/LoginPage";
 import ResetPasswordPage from "./pages/reset-password/ResetPasswordPage";
+import PasswordChangePage from "./pages/password-change/PasswordChangePage";
 import DashboardPage from "./pages/dashboard/DashboardPage";
 import FollowUpsPage from "./pages/dashboard/FollowUpsPage";
 import FunnelLeadsPage from "./pages/dashboard/FunnelLeadsPage";
@@ -180,6 +181,8 @@ function App() {
                   {/* フルスクリーン専用ルート: 認証あり・シェル（サイドバー/ヘッダー）なし */}
                   <Route element={<ProtectedRoute><Outlet /></ProtectedRoute>}>
                     <Route path="/management-center/integrations/:carrier/setup-guide" element={<CarrierSetupGuidePage />} />
+                    {/* ADR-1068: 仮パスワードの変更ページ（シェル無し・このページ自身は他の API を呼ばない） */}
+                    <Route path="/password-change" element={<PasswordChangePage />} />
                   </Route>
                   <Route
                     element={
