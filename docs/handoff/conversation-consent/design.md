@@ -1080,6 +1080,11 @@ K31・K33・K34・K35 は第6版のまま。K35 は○（§14-10-10）。
 6. Opus の窓の見張り: 共通の同期 hook `GUARD_IFS`（[server/activity-hooks.ts:12-19](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/activity-hooks.ts#L12-L19)）の 5 行目（Bash）と 6 行目（Read）は、dataDir の親フォルダの名前を含む道を止める。PO の Mac の dataDir がその名前の下にあるかは設定の値で決まり、本書には書かない（U2・K57 で確かめる）。
 7. probe の台本の文はコードの定数（Opus・PO の文は入らない）。
 8. 監査: 発火・○・×・中断・無効化・通知をすべて `routine-audit.jsonl` に残す（`caseClaudeVersionProbe`・`caseClaudeVersionNotice`）。本文・鍵・合言葉は書かない。
+9. 記録を残す（PO 2026-11-06「記録も残るようにして」）: 自動の確かめは1回ごとに後から読める記録を残し、消さない。
+   - 監査の書き方は追記だけ（[server/routine-audit.ts:73](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/routine-audit.ts#L73) `appendFile`。同ファイルに消す・切り詰める処理は無い）。本機能も消す・切り詰める処理を足さない。
+   - `caseClaudeVersionProbe` の1行に必ず入れる欄: 始めた時刻・終わった時刻・`claudeVersion`・sha256 の先頭16桁・`outcome`（ok / denied / aborted）・×の番号（E1〜E4・P0〜P5・R1）・発火の理由（t1 / t2）・`probeCaseId`。`caseClaudeVersionNotice` の1行: 時刻・reason（n1〜n5）・`claudeVersion`・sha256 の先頭16桁。
+   - D5 の記録の項目は消さない（§14-14-3 D5）。使えなくなった版も `usable: false` で残り、`lastProbeAt`・`lastResult`・`failCount` が履歴の要約になる。
+   - 読み方: PO は画面の案内（D1 ①）と `/api/state` の `caseSayVersions` で今の状態を見る。過去の履歴は Opus が監査を読んで PO に報告する。履歴を一覧で見る新しい画面は本版では作らない（作るなら別の設計・PO 判断）。
 
 #### 14-14-7 使用量
 
@@ -1104,11 +1109,12 @@ K31・K33・K34・K35 は第6版のまま。K35 は○（§14-10-10）。
 | K55 | 本物で人の手なしに版が使えるようになる | 便CS3a を入れた後（PO の Mac）: ① サーバーを起き直す → 10 分以内に probe の件が開いて閉じ、記録に `usable: true` の項目が 1 つ・監査 `caseClaudeVersionProbe` ok（Opus は記録と監査を読むだけ） ② PO が件を 1 つ開き、Opus が `ac-case-say.mjs` を 1 回（K32 と同じ）→ 200 ③ PO のふつうの claude が更新されたとき（起きたときに行う。起きなければ「場面なし」）: PO が件を開く → 画面と macOS に D1 n1 → probe → 記録に 2 つ目 → 開いていたその件へ case-say が 200（開き直し不要）。①②が○で○ |
 | K56 | 使用量の実測 | K55 ① の probe で: 所要時間・写しのディスク・指紋の計算時間・実体のサイズ・（取れれば）件の鍵の使用量を、数値のまま本書 §14-14-7 に書き足す |
 | K57 | Opus の窓から記録と鍵を読めない | PO が開いた Opus の窓で、記録ファイルを Bash で cat・Read で開く操作を頼み、見張りで止まることを返事で確かめる（値は出させない）。止まらなければ×で PO に報告（MAC が最後の守り。設計を見直す） |
+| K59 | 記録が残る（§14-14-6 の 9） | vitest: probe の ok・denied・aborted のそれぞれで監査に `caseClaudeVersionProbe` が1行ずつ追記され、§14-14-6 の 9 の欄が全部ある。2回 probe した後も1回目の行が残る。本物: K55 ① の後、Opus が監査の該当行を読み、欄が全部あることを確かめる |
 | K58 | 既存の試験が通る | agent-console の CI（ci.yml: `npm ci`・typecheck・lint・vitest）が緑。K40（ccdiscord-zsh.test.ts）・K2・K31・K34 は変えない。便CS3b で config の試験（case-say.test.ts:360-396）を外し、同梱の設定に `caseSayClaudeVersions` があれば起動時エラーになる試験を足す |
 
 #### 14-14-9 便の分け方と触らない範囲
 
-- 便CS3a（agent-console・PR 1 本・クラウドの Sonnet）: D5（記録・鍵・MAC）、D2（指紋）、D3'（状態ファイルの `version`・活動の記録・R・画面の写し）、D4（probe の件・台本・入力の拒否・復元から外す）、D1（4 つの出し先）、起動時の再 probe、4b の置き換え（この便の間は「記録の使える項目 ∪ config の一覧」で通す。過渡期）、部屋の deny、監査 action 2 つ、理由 2 つ、README、試験 K50〜K54・K58。版は CHANGELOG の決まりで付ける。
+- 便CS3a（agent-console・PR 1 本・クラウドの Sonnet）: D5（記録・鍵・MAC）、D2（指紋）、D3'（状態ファイルの `version`・活動の記録・R・画面の写し）、D4（probe の件・台本・入力の拒否・復元から外す）、D1（4 つの出し先）、起動時の再 probe、4b の置き換え（この便の間は「記録の使える項目 ∪ config の一覧」で通す。過渡期）、部屋の deny、監査 action 2 つ、理由 2 つ、README、試験 K50〜K54・K58・K59。版は CHANGELOG の決まりで付ける。
 - PO: 便CS3a の反映（いつもの手順）。
 - Opus（読むだけ）: K55 ①②・K56・K57。×なら便CS3b に進まず PO に報告。
 - 便CS3b（agent-console・PR 1 本・クラウドの Sonnet）: 4b を「記録だけ」にし、config の `caseSayClaudeVersions` を外す（同梱の設定・型・parse・README:309-318 の節・試験）。設定に鍵が残っていれば起動時エラー。CHANGELOG に戻し方（同梱の設定に `caseSayClaudeVersions` を戻す 1 行を含む）。
