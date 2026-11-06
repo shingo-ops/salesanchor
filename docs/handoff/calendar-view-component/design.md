@@ -1,7 +1,7 @@
 # 予定の時間割・月の升目の金型（CalendarView）— design
 
 状態: 設計案（Opus 作成 2026-11-06）・Opus 自己審査 APPROVE（§10。同じ AI による審査で、独立した第二者の審査ではない）・PO 決定済み（2026-11-06「1」）・実装未着手。
-調査: [recon.md](recon.md)。ADR: [ADR-1065](../../adr/ADR-1065-calendar-view-component-fullcalendar-v6.md)。
+調査: [recon.md](recon.md)（docs/handoff/calendar-view-component/recon.md）。ADR: [ADR-1065](../../adr/ADR-1065-calendar-view-component-fullcalendar-v6.md)。
 
 ## 1 目的（PO の言葉と、読み取った目的）
 - PO（2026-11-06「1」）: 「FullCalendar を包んだ部品を部品集に登録して、予定画面に使う」。
@@ -9,7 +9,7 @@
 - 目的: agent-console の予定画面（PO 承認済みの成功条件（１）（５）（８）（９））を、金型とトークンだけで作れるようにする。時間割と月の升目を、ページごとの作り込みでなく部品集の1か所で持つ。
 
 ## 2 成功条件（○×で判定）
-| 番号 | 条件 | 判定のしかた |
+| 番号 | 基準 | 検証方法 |
 |---|---|---|
 | K1 | 部品集に `CalendarView` が増え、Storybook に「Components/CalendarView」の見本が7つ出る（2列・7列・月・重なり・見積もりの点線・時間外の予定・暗い画面） | CI の Storybook build check が緑。stories のファイルに7つの export |
 | K2 | 2列（今日・明日）と7列の時間割、月曜始まりの月の升目が出る | 試験 T3（FullCalendar に渡す値）が緑 |

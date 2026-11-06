@@ -38,8 +38,8 @@
 - CSS の検査: frontend/scripts/check-css-hardcoded-colors.js（色の直書き）、check-css-hardcoded-values.js（opacity・border-radius・z-index・animation の数の直書き。tokens.css・index.css は対象外）、check-dark-parity.js（index.css の明暗の変数の一致）、check-stories-count.js（components/*.tsx に .stories.tsx が要る）。
 
 ## 6 文言
-- 金型の文言は react-i18next の `t()`（例 components/NoticeBell.tsx:157）。辞書は frontend/src/locales/ja.json・en.json。
-- agent-console は SA の ja.json を取り込んで自分の辞書と重ねる（agent-console src/i18n.ts:3,19）。SA に足したキーはそのまま agent-console でも引ける。
+- 金型の文言は react-i18next の `t()`（例 frontend/src/components/NoticeBell.tsx:157）。辞書は frontend/src/locales/ja.json・en.json。
+- agent-console は SA の ja.json を取り込んで自分の辞書と重ねる（agent-console リポジトリの src の i18n.ts の3行目・19行目）。SA に足したキーはそのまま agent-console でも引ける。
 
 ## 7 agent-console での使われ方
 - `@sa` は salesanchor origin/main の frontend/src の写し（agent-console scripts/sa-sync.mjs: `git archive origin/main frontend/src` を .sa-cache/ へ展開）。写すのは frontend/src だけで、node_modules・package.json は写さない。
@@ -49,7 +49,7 @@
 ## 8 CSP（inline style）
 - FullCalendar v6 は実行時に `<style>` を差し込む（6.1.22 の release に「styles must be provided another way, or upgrade to v7」）。
 - salesanchor: nginx/nginx.conf:96・:320 とも `style-src 'self' 'unsafe-inline'`。
-- agent-console: server/http.ts:729 `style-src 'self' 'unsafe-inline'`（理由は :724 の xterm）。
+- agent-console: リポジトリの server の http.ts の729行目 `style-src 'self' 'unsafe-inline'`（理由は724行目の xterm）。
 - どちらも今の設定で差し込みは止められない。
 
 ## 9 時刻の扱い
