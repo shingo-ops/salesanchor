@@ -251,7 +251,7 @@ export function toCalendarEnd(start: Date, end: Date | null, allDay: boolean, it
 
 ## 4. schedule.css
 
-- 消す: 使われなくなった class の規則だけ。候補は :333-580（`.schedule-grid*`・`.schedule-day-head*`・`.schedule-day-column*`・`.schedule-time-label`・`.schedule-slot*`・`.schedule-event*`）と :581-608,610-645,693-705 の月の升目（`.schedule-month`・`__head`・`__grid`・`__cell*`・`__date`・`__events`・`__more*`）、それに画面の幅で切り替える部分（@media）の中の `.schedule-grid__*`（:1462・:1473-1481）。:707 の `.schedule-popover-backdrop` は消さない。
+- 消す: 使われなくなった class の規則だけ。候補は :333-580（`.schedule-grid*`・`.schedule-day-head*`・`.schedule-day-column*`・`.schedule-time-label`・`.schedule-slot*`・`.schedule-event*`）と :581-608,610-645,693-705 の月の升目（`.schedule-month`・`__head`・`__grid`・`__cell*`・`__date`・`__events`・`__more*`）、それに画面の幅で切り替える部分（@media）の中の `.schedule-grid__*`（:1462-1465・:1473-1484）。:707 の `.schedule-popover-backdrop` は消さない。
 - 残す: `ScheduleDayListPopover`（:955-967）と一覧が使う `.schedule-month__event`・`__dot`・`__time`・`__title` など、消した後も tsx に出てくる class。
 - 消す前に、各 class 名を `grep -rn "<class名>" frontend/src --include="*.tsx" --include="*.ts"` で確かめ、0 件のものだけ消す。消した class の一覧を PR 本文に書く。
 - 足す（色・寸法の直書きなし）:
@@ -374,3 +374,4 @@ grep -rn "ScheduleWeekGrid\|ScheduleMonthGrid\|gridScrollRef\|DEFAULT_ROW_HEIGHT
 ## 12. 審査の記録
 
 - 1 回目（2026-11-07・クラウドの Opus・HEAD 1538745c）: REVISE。直さないと実装で迷う 1 件（Esc の扱いが §1 と §2-2 で食い違い）と、行のずれ（CSS の消す範囲・他 N 件・token の使い道）、直した方がよい 4 件（layoutDay の試験は無い・日別小窓の型は既に null あり・月の 1 日押しで前の仮の箱が残る・終日から時刻つきへ動かしたときの長さ）。全部この版で直した（§2-2・§2-3・§2-7・§3・§4・§5・§6・§7 の 5）。
+- 2 回目（2026-11-07・クラウドの Opus・HEAD 7c82afd3）: APPROVE。1 回目の 9 件は全部直っていると確認。新しい useEffect で仮の箱を誤って消す・残す道は無し。直した方がよい 1 件（@media の行を規則の終わりまで書く）を §4 で直した。
