@@ -9,14 +9,15 @@
 
 | # | ファイル | 変更 |
 |---|---|---|
-| 1 | `migrations/20261107_130000_add_discord_config_rls.sql` | 新規。§2 の SQL を一字一句この内容で作る |
+| 1 | `migrations/20261107_140000_add_discord_config_rls.sql` | 新規。§2 の SQL を一字一句この内容で作る |
 | 2 | `scripts/run_all_migrations.sh` | 末尾（今の最終行 :1243 `run_sql migrations/20261107_120000_create_staff_join_invites.sql` の次の行）に §3 の 2 行を足す |
 | 3 | `backend/tests/test_discord_config_rls.py` | 新規。§5 |
 | 4 | `docs/handoff/s1-rls-stage4/card-4-3.md` | このカード（Opus が置く。実装役は触らない） |
 | 5 | `.claude-pipeline/active-work.d/release-s1-rls-stage4-bin3.md` | 台帳（Opus が本店の写しに置く。実装役は触らない） |
 | 6 | `backend/tests/test_tenant_loop_migration_guard.py` | 追記（2026-11-07 CI で分かった分。§5-2）。`_REVIEWED` に 1 項目足すだけ |
+| 7 | （移行の名前の付け替え） | 追記（2026-11-07 06:05 JST）。本線 #5229 が同じ時刻 `20261107_130000` の移行を先に入れたため、本 PR の移行を `20261107_140000` へ付け替える。§5-3 |
 
-- 実装の直前に `git ls-tree --name-only origin/main migrations/ | tail -3` を流し、`20261107_130000` より後の名前の移行、または同じ名前の移行が main に入っていたら止まって Opus に戻す（名前を自分で変えない）。
+- 実装の直前に `git ls-tree --name-only origin/main migrations/ | tail -3` を流し、`20261107_140000` より後の名前の移行、または同じ時刻の移行が main に入っていたら止まって Opus に戻す（名前を自分で変えない）。
 - `.github/workflows/migration-test.yml` は触らない（§4。前提の表は変更 SQL のジョブに定義済み）。
 - 触らない: プログラム（backend/app 配下すべて。書込の入口はどれも会社の文脈がある。§6）、`backend/tests/conftest.py`、`backend/tests/rls_bootstrap.py`、frontend、他の表。
 
@@ -70,10 +71,10 @@ COMMIT;
 
 ```bash
 # ADR-1067 段階④ 便④-3: tenant_discord_config・tenant_discord_ticket_config に会社ごとの RLS（型C: 読取は全行・書込は自社か運営）。冪等・1 取引
-run_sql migrations/20261107_130000_add_discord_config_rls.sql
+run_sql migrations/20261107_140000_add_discord_config_rls.sql
 ```
 
-- 本番の順: 2 表を作る・形を変える移行（099 :413、20260602_120000 :425、150000 :428、160000 :431、20260602_200000 :443、20260626_120000 :676、20261105_100000 :1221、20261106_100000 :1225）はすべて本 SQL（末尾 :1245 になる）より先に流れる。
+- 本番の順: 2 表を作る・形を変える移行（099 :413、20260602_120000 :425、150000 :428、160000 :431、20260602_200000 :443、20260626_120000 :676、20261105_100000 :1221、20261106_100000 :1225）はすべて本 SQL（本線 c1987922d の末尾 :1245 `20261107_130000_add_users_password_must_change.sql` の次、:1247 になる）より先に流れる。
 - 移行を流す役は jarvis（本番で rolsuper=t・rolbypassrls=t。2026-11-07 04:21 JST に読んだ）。後の移行が 2 表を UPDATE しても RLS に止められない。
 
 ## 4. CI の前提の表（足す step は無い）
@@ -94,7 +95,7 @@ run_sql migrations/20261107_130000_add_discord_config_rls.sql
      - 20260930_130000 は行の値と既定値を変えるだけで形を変えないので当てない（design §4）。
   3. admin で `_GRANT_DDL`（便④-2 の試験と同じ 2 行）。
   4. admin で各社 1 行ずつ両方の表に INSERT（974 と 975）。tenant_discord_config: `(tenant_id, purpose, guild_id)` = `(974, 'customer', 'g974')`・`(975, 'customer', 'g975')`。tenant_discord_ticket_config: `(tenant_id, ticket_category_id, ticket_button_channel_id)` = `(974, 'c974', 'b974')`・`(975, 'c975', 'b975')`。
-  5. `_apply_migration(admin_engine, "20261107_130000_add_discord_config_rls.sql")`。
+  5. `_apply_migration(admin_engine, "20261107_140000_add_discord_config_rls.sql")`。
   - 1〜2 のどれかが使い捨て DB で通らないときは、通らない理由を記録して止まり、Opus に戻す（推測で定義を書き足さない）。
 - 試験（design §4 型C ①〜⑥ を 2 表それぞれに。`@pytest.mark.parametrize` で表名を回してよい）。すべて app_engine（アプリの接続役 salesanchor_app・NOBYPASSRLS）で行う:
   - ① 文脈なし（新しい接続）で SELECT すると 974・975 の両方の行が見える（2 行）。975 の文脈でも 974 の行が見える。同じ接続で `SET app.tenant_id = ''` の後の SELECT もエラー（22P02）にならず 2 行。
@@ -124,6 +125,17 @@ run_sql migrations/20261107_130000_add_discord_config_rls.sql
         frozenset({"099_add_discord_guild_config.sql", "20260602_120000_add_discord_ticket_config.sql"}),
     ),
 ```
+
+## 5-3. 移行の名前の付け替え（追記: 2026-11-07 06:05 JST、Opus）
+
+- 事実: 本線 c1987922d（#5229）が `migrations/20261107_130000_add_users_password_must_change.sql` を入れ、`scripts/run_all_migrations.sh` の末尾 :1244-1245 に 2 行を足した。本 PR の移行と時刻が同じで、run_all の同じ場所に足すため、本線を取り込むとぶつかる。#5229 の移行は users に列を足すだけで、本 PR の 2 表には触らない。#5229 の本番反映は 2026-11-07 05:57 JST に始まっており、本 PR の反映より先に終わる。
+- 直し方（実装役がする）:
+  1. 本線 origin/main を取り込む（`--no-edit`）。`scripts/run_all_migrations.sh` がぶつかる。
+  2. ぶつかりは次の形で解く: 本線の行をすべてそのまま残す。本線の末尾 `run_sql migrations/20261107_130000_add_users_password_must_change.sql` の次に、§3 の 2 行（名前は `20261107_140000_add_discord_config_rls.sql`）を置く。ほかの行は変えない。
+  3. `git mv migrations/20261107_130000_add_discord_config_rls.sql migrations/20261107_140000_add_discord_config_rls.sql`。中身は変えない。
+  4. `backend/tests/test_discord_config_rls.py` の `_MIGRATION = "20261107_130000_add_discord_config_rls.sql"` の 1 行だけを `20261107_140000_add_discord_config_rls.sql` に変える。
+  5. `git grep -n "20261107_130000_add_discord_config_rls" -- migrations scripts backend` が 0 件であること（カードは Opus が直し済み。この §5-3 の説明文にだけ旧名が残る）。
+- 確かめ: 移行の中身が変わっていない（名前の変更だけ）。`bash scripts/check-migration-duplicate-registration.sh` が通る（流せなければその旨を書く）。
 
 ## 6. 書込の入口（触らないが、文脈があることの根拠。origin/main 468a224c5）
 
@@ -184,7 +196,7 @@ COMMIT;
 - §5 の 2 の移行のどれかが使い捨て DB で失敗する。
 - 974・975 が既に使われている。
 - 既にある Discord の試験 13 本のどれかが落ちる。
-- main に `20261107_130000` 以降の移行が先に入った。
+- main に `20261107_140000` 以降の移行が先に入った（`20261107_130000` との重なりは §5-3 で解消済み）。
 - 上の以外でも、カードに書いていない変更が要ると分かったとき。
 
 ## 11. 危険パスと GO
