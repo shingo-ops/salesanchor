@@ -46751,7 +46751,7 @@
     },
     "/api/v1/discord/oauth/callback": {
       "get": {
-        "description": "Discord からのコールバック。guild_id を tenant_discord_config に保存する。\n\nこのエンドポイントは Discord からのリダイレクトなので JWT 認証なし。\ntenant_id は state ペイロードから取得する（CSRF 対策: state は one-time 使用）。",
+        "description": "Discord からのコールバック。code を交換し、応答の guild.id を tenant_discord_config に保存する。\n\nこのエンドポイントは Discord からのリダイレクトなので JWT 認証なし。\ntenant_id は state ペイロードから取得する（CSRF 対策: state は one-time 使用）。",
         "operationId": "discord_oauth_callback_api_v1_discord_oauth_callback_get",
         "parameters": [
           {
@@ -46784,6 +46784,22 @@
                 }
               ],
               "title": "State"
+            }
+          },
+          {
+            "in": "query",
+            "name": "code",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Code"
             }
           }
         ],
