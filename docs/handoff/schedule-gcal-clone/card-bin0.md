@@ -44,10 +44,10 @@
 
 ### 2. `frontend/src/pages/schedule/SchedulePageImpl.test.tsx`
 新しい `describe("SchedulePage slot click opens create at the clicked hour")` を 1 つ足す。
-- 週の表示で、今日の列の `.schedule-slot` の 11 番目（10 時）を押す → 小窓の開始時刻の入力欄が `10:00`、終了が `11:00`。
+- 週の表示（初めの表示・:1137）で、最初の列 `container.querySelectorAll(".schedule-day-column")[0]` の中の `.schedule-slot` の 11 番目（10 時・添字 10）を押す → 小窓の開始時刻の入力欄が `10:00`、終了が `11:00`。
 - 同じく 5 番目（4 時）→ `04:00`／`05:00`、16 番目（15 時）→ `15:00`／`16:00`。
-- 週の日付の見出し（`.schedule-day-head` の今日）を押す → `07:00`／`08:00`（今のまま）。
-- 時刻の入力欄は 2 つとも `schedule.time` のラベル。`screen.getAllByLabelText(i18n.t("schedule.time"))` で取り、[0] が開始・[1] が終了（審査 2 回目で既存試験と照合）。`container.querySelectorAll(".schedule-slot")` で枠を取ってよい（列は今日を含む週の列を使う）。
+- 最初の `.schedule-day-head` を押す → `07:00`／`08:00`（今のまま）。
+- 時刻の入力欄は 2 つとも `schedule.time` のラベル。`screen.getAllByLabelText(i18n.t("schedule.time"))` で取り、[0] が開始・[1] が終了（審査 2 回目で既存試験と照合）。時刻だけを見る試験なので列はどれでもよく、最初の列を使う（`.schedule-slot` を画面全体から取ると 7 列×24＝168 個になるので、必ず列の中から取る・審査 3 回目 Q1）。
 
 ## 触らない範囲
 - 上の 2 ファイル以外。css・トークン・文言（ja.json/en.json）・裏側は触らない。
