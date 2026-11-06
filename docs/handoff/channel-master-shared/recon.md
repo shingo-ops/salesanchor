@@ -29,7 +29,7 @@
 
 - `backend/app/routers/conv_logs.py` :77-95 名簿1件取得 / :189-217 一覧（is_active・platform順）/ :240-251 自動取込の手段は手入力不可 / :492-518 管理者が手入力の手段を追加 / :526-557 無効化（auto は400）
 - `backend/app/routers/leads.py:186-221` リードの連絡手段を名簿で検証（無ければ422）
-- 画面: `frontend/src/components/ChannelTypeCombobox.tsx:44`、`frontend/src/pages/admin/ChannelMastersPage.tsx`（/admin/channel-masters）、`frontend/src/pages/inbox/ManualRecordSection.tsx:47-50`、`frontend/src/pages/management-center/ManagementCenterPage.tsx:83`、`frontend/src/pages/admin/AdminHubPage.tsx:50`、`frontend/src/App.tsx:382/406`
+- 画面: `frontend/src/components/ChannelTypeCombobox.tsx:44`、`frontend/src/pages/admin/ChannelMastersPage.tsx`（/admin/channel-masters）、`frontend/src/pages/inbox/ManualRecordSection.tsx:47-50`、`frontend/src/pages/management-center/ManagementCenterPage.tsx:83`、`frontend/src/pages/admin/AdminHubPage.tsx:50`、`frontend/src/App.tsx:383/407`
 - 試験: backend/tests/conftest.py:43/623/873、backend/tests/test_channel_type_control.py、backend/tests/test_conv_logs_router.py:367-395、backend/tests/test_system_roles.py:137、backend/tests/rls_bootstrap.py:36/185、backend/tests/test_tenant_loop_migration_guard.py、backend/tests/test_value_migrations_neutralized.py:84
 - 生出力: /tmp/CC報告ファイル/chm-recon1.txt・chm-recon4.txt（リポジトリ外）
 
