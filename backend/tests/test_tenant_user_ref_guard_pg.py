@@ -34,7 +34,12 @@ from app.routers import goals as goals_router
 from app.routers import leads as leads_router
 from app.routers import shifts as shifts_router
 from app.routers import teams as teams_router
-from tests.rls_bootstrap import bootstrap_tenant_schema, tenant_schema_lock
+from tests.rls_bootstrap import (
+    _apply_migration_on_conn,
+    bootstrap_tenant_schema,
+    public_bootstrap_lock,
+    tenant_schema_lock,
+)
 
 ADMIN_PG_URL = os.getenv("RLS_ADMIN_DATABASE_URL") or os.getenv("TEST_PG_URL")
 pytestmark = pytest.mark.skipif(
@@ -55,7 +60,24 @@ _SHIFTS_END_BANNER = "-- === ERP連携ログ ===\n"
 _PERMS = {"leads.create", "leads.update", "shifts.manage", "goals.edit", "teams.create", "teams.update"}
 _NOT_FOUND = "指定された担当者が見つかりません"
 
+# テナント作成では作られない leads の列を作る本物の migration（この順で流す）。
+_LEAD_COLUMN_MIGRATIONS = (
+    "090_add_lead_contact_links.sql",
+    "091_add_leads_discord_messaging_columns.sql",
+    "095_add_lead_social_links.sql",
+    "099_add_discord_guild_config.sql",
+    "20260602_120000_add_discord_ticket_config.sql",
+)
+
 _bootstrapped = False
+
+
+async def _apply_lead_column_migrations(engine) -> None:
+    """leads の列を作る本物の migration を、試験のテナントのスキーマだけに流す。"""
+    async with public_bootstrap_lock(engine):
+        async with engine.begin() as conn:
+            for filename in _LEAD_COLUMN_MIGRATIONS:
+                await _apply_migration_on_conn(conn, filename, schema_name=_SCHEMA)
 
 
 def _shifts_table_sql() -> str:
@@ -119,6 +141,7 @@ async def env():
         async with tenant_schema_lock(engine, _TENANT_ID):
             if not _bootstrapped:
                 await bootstrap_tenant_schema(engine, _TENANT_ID)
+                await _apply_lead_column_migrations(engine)
                 async with engine.begin() as conn:
                     exists = (await conn.execute(text(f"SELECT to_regclass('{_SCHEMA}.shifts')"))).scalar()
                     if exists is None:
