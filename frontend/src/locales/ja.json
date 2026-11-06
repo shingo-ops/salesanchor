@@ -3510,6 +3510,14 @@
     "check": "確認する",
     "planFailed": "確認できませんでした",
     "planNoBlueprint": "設計図がまだありません",
+    "appRolesTitle": "アプリの役割（{{count}} 件）",
+    "appRoleState": {
+      "create": "作る",
+      "link": "つなぐ",
+      "update": "変える",
+      "unchanged": "変わらない",
+      "blocked": "できない"
+    },
     "changesTitle": "変わる（{{count}} 件）",
     "blockedTitle": "できない（{{count}} 件・実行しません）",
     "deleteTitle": "消す候補（{{count}} 件）",
@@ -3531,7 +3539,8 @@
       "reason": "理由",
       "parent": "親",
       "target": "相手",
-      "status": "結果"
+      "status": "結果",
+      "appRoleState": "Discord では"
     },
     "status": {
       "success": "成功",
@@ -3540,6 +3549,7 @@
     },
     "kind": {
       "create_role": "ロールを作る",
+      "link_role": "ロールをつなぐ",
       "update_role": "ロールを直す",
       "create_category": "カテゴリを作る",
       "update_category": "カテゴリを直す",
@@ -3567,7 +3577,10 @@
       "ambiguous": "同じ名前の物が 2 つ以上あります",
       "depends_failed": "先に作る物が失敗したので実行しませんでした",
       "discord_error": "Discord が受け付けませんでした",
-      "method_not_allowed": "この操作は実行しません"
+      "method_not_allowed": "この操作は実行しません",
+      "name_in_blueprint": "設計図に同じ名前のロールがあります",
+      "app_role_missing_on_discord": "つないでいたロールが Discord で消されています",
+      "app_role_link_in_use": "つないでいるロールをほかの物も使っています"
     },
     "deleteKind": {
       "role": "ロール",

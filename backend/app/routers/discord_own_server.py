@@ -28,11 +28,19 @@ from app.auth.dependencies import (
     require_permission,
     reset_tenant_context,
 )
+from app.auth.system_roles import TENANT_HIDDEN_SYSTEM_KEYS
 from app.cache import get_redis
 from app.database import get_db
 from app.models import User
+from app.routers.roles import _visible_role_sql, _visible_text
 from app.services.audit import record_audit_log
-from app.services.discord_blueprint import Blueprint, blueprint_path, build_plan, load_blueprint
+from app.services.discord_blueprint import (
+    APP_ROLE_KEY_PREFIX,
+    Blueprint,
+    blueprint_path,
+    build_plan,
+    load_blueprint,
+)
 from app.services.discord_blueprint_apply import apply_plan
 from app.services.discord_rest import DiscordAPIError, discord_api_request
 
@@ -197,11 +205,19 @@ class DeleteCandidate(BaseModel):
     target: str | None = None
 
 
+class AppRoleState(BaseModel):
+    role_id: int
+    name: str
+    state: str
+    reason: str | None = None
+
+
 class OwnServerPlanResponse(BaseModel):
     plan_digest: str
     changes: list[PlanRow]
     blocked: list[PlanRow]
     delete_candidates: list[DeleteCandidate]
+    app_roles: list[AppRoleState] = []
 
 
 @router.get(
@@ -215,12 +231,13 @@ async def check_own_server_plan(
 ) -> OwnServerPlanResponse:
     """設計図と今の自社用サーバーを比べて、差を返す。読むだけ（DB にも Discord にも書かない）。"""
     guild_id, blueprint, bot_token = await _load_own_context(db, tenant_id)
-    plan = await _read_and_plan(guild_id, blueprint, bot_token)
+    plan = await _read_and_plan(db, guild_id, blueprint, bot_token)
     return OwnServerPlanResponse(
         plan_digest=plan["plan_digest"],
         changes=plan["changes"],
         blocked=plan["blocked"],
         delete_candidates=plan["delete_candidates"],
+        app_roles=plan.get("app_roles", []),
     )
 
 
@@ -256,8 +273,8 @@ async def _load_own_context(db: AsyncSession, tenant_id: int) -> tuple[str, Blue
     return guild_id, blueprint, bot_token
 
 
-async def _read_and_plan(guild_id: str, blueprint: Blueprint, bot_token: str) -> dict[str, Any]:
-    """Discord を GET で 4 回読み、設計図との差（build_plan の戻り値）を返す。"""
+async def _read_and_plan(db: AsyncSession, guild_id: str, blueprint: Blueprint, bot_token: str) -> dict[str, Any]:
+    """Discord を GET で 4 回読み、アプリの役割を DB から読み、設計図との差（build_plan の戻り値）を返す。"""
     try:
         roles: list[dict[str, Any]] = await discord_api_request(
             method="GET",
@@ -288,7 +305,13 @@ async def _read_and_plan(guild_id: str, blueprint: Blueprint, bot_token: str) ->
         raise HTTPException(status_code=502, detail="Discord から読み取れませんでした。") from exc
 
     bot_role_ids = [str(r) for r in (member.get("roles") or [])]
-    return build_plan(blueprint, roles, channels, guild_id, bot_role_ids)
+    # アプリの役割（第2段 2a-2）。管理者の隠しロールは見る人が誰でも Discord の対象にしない
+    app_result = await db.execute(
+        _visible_text(f"SELECT id, name, color, discord_role_id FROM roles WHERE {_visible_role_sql()} ORDER BY id"),
+        {"show_hidden": False, "hidden_keys": sorted(TENANT_HIDDEN_SYSTEM_KEYS)},
+    )
+    app_roles = [dict(r) for r in app_result.mappings().all()]
+    return build_plan(blueprint, roles, channels, guild_id, bot_role_ids, app_roles=app_roles)
 
 
 # ---------------------------------------------------------------- 反映（便3b）
@@ -314,6 +337,33 @@ class OwnServerApplyResponse(BaseModel):
     blocked_count: int
     failed_count: int
     results: list[ApplyResultRow]
+
+
+_APP_ROLE_WRITE_KINDS = ("create_role", "link_role")
+
+
+async def _write_back_app_roles(db: AsyncSession, results: list[dict[str, Any]]) -> int:
+    """反映で作った・見つけたロールの番号をアプリの役割に書く（第2段 2a-2）。書いた数を返す。
+
+    既に番号がある役割は書き換えない。その番号を「消した番号の表」から外す（つなぎ直したロールを外さないため）。
+    """
+    written = 0
+    for x in results:
+        key = str(x.get("key") or "")
+        if (x.get("status") != "success" or x.get("kind") not in _APP_ROLE_WRITE_KINDS
+                or not key.startswith(APP_ROLE_KEY_PREFIX) or not x.get("discord_id")):
+            continue
+        role_id = int(key[len(APP_ROLE_KEY_PREFIX):])
+        res = await db.execute(
+            text("UPDATE roles SET discord_role_id = :did WHERE id = :rid AND discord_role_id IS NULL"),
+            {"did": str(x["discord_id"]), "rid": role_id},
+        )
+        written += int(res.rowcount or 0)
+        await db.execute(
+            text("DELETE FROM discord_retired_roles WHERE discord_role_id = :did"),
+            {"did": str(x["discord_id"])},
+        )
+    return written
 
 
 def _apply_insert_sql(db: AsyncSession) -> str:
@@ -355,7 +405,7 @@ async def apply_own_server_plan(
 
     try:
         started_at = datetime.now(timezone.utc)
-        plan = await _read_and_plan(guild_id, blueprint, bot_token)
+        plan = await _read_and_plan(db, guild_id, blueprint, bot_token)
         if plan["plan_digest"] != body.plan_digest:
             raise HTTPException(
                 status_code=409,
@@ -363,6 +413,7 @@ async def apply_own_server_plan(
             )
 
         results = await apply_plan(plan, guild_id, bot_token)
+        app_roles_written = await _write_back_app_roles(db, results)
 
         inserted = await db.execute(
             text(_apply_insert_sql(db)),
@@ -384,7 +435,7 @@ async def apply_own_server_plan(
             action="create",
             table_name="discord_server_apply_runs",
             record_id=run_id,
-            new_data=counts,
+            new_data={**counts, "app_roles_written": app_roles_written},
         )
         await db.commit()
         await reset_tenant_context(db, tenant_id)  # ADR-072

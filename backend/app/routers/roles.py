@@ -356,6 +356,15 @@ async def delete_role(
             detail="自分と同等以上のpriorityを持つロールは削除できません",
         )
 
+    # 第2段 2a-2: つないでいた Discord のロールの番号を「消した番号の表」へ移す（点検がその番号のロールを登録した人から外す・設計 S2-3 D2-3）
+    await db.execute(
+        text(
+            "INSERT INTO discord_retired_roles (discord_role_id)"
+            " SELECT discord_role_id FROM roles WHERE id = :id AND discord_role_id IS NOT NULL"
+            " ON CONFLICT (discord_role_id) DO NOTHING"
+        ),
+        {"id": role_id},
+    )
     await db.execute(text("DELETE FROM roles WHERE id = :id"), {"id": role_id})
     await record_audit_log(
         db=db, tenant_id=tenant_id, user_id=current_user.id,
