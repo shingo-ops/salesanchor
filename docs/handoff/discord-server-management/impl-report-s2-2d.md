@@ -173,3 +173,30 @@ frontend/src/locales/ja.json
 ## push した sha
 
 commit が自分の sha を含められないため、push 後の `git rev-parse HEAD` の生出力は最後の返事に書く。
+
+## 追補 A（CI「test-schema-dup gate」の赤の直し）
+
+### 確かめ 1（check_test_schema_dup.py・生出力）
+```
+[INFO] backend/tests/test_customer_reply_notifier.py: BASE=0 HEAD=0
+[INFO] backend/tests/test_notification_event_routing.py: BASE=0 HEAD=0
+[INFO] backend/tests/test_webhook_instagram.py: BASE=5 HEAD=5
+テストへの新規スキーマ複製なし(pass)
+rc=0
+```
+
+### 確かめ 2（pytest の結果の行）
+```
+53 passed, 4 warnings in 356.70s (0:05:56)
+```
+（部分実行のため `FAIL Required test coverage of 60% not reached. Total coverage: 2.95%` も出た。試験の失敗ではない。）
+
+### 確かめ 3（ruff）
+最初の実行は test_customer_reply_notifier.py の未使用 import 6 件（F401）で rc=1。`ruff check --fix` をこのファイルだけに掛けた後:
+```
+All checks passed!
+ruff_rc=0
+```
+
+### 確かめ 4（既存行の削除）
+`git diff origin/main...HEAD -- backend/tests/test_webhook_instagram.py | grep '^-' | grep -v '^---'` → 0 行
