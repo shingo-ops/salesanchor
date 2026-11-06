@@ -1336,6 +1336,16 @@ jobs:
             echo "✅ $sqlfile 成功"
           done
 
+      - name: 変更 SQL の前提の移行を先に実行（Discord サーバーの記録の表）
+        if: steps.detect.outputs.has_sql_changes == 'true' && contains(steps.detect.outputs.changed_sql, 'migrations/20261107_110000_add_discord_server_records_rls.sql')
+        run: |
+          # 20261107_110000 は discord_server_snapshots と discord_server_apply_runs（20261106_120000）が先にある前提（本番と同じ順）
+          for sqlfile in migrations/20261106_120000_create_discord_server_snapshot_tables.sql; do
+            echo "▶ $sqlfile を前提として実行中..."
+            psql -h localhost -U jarvis -d jarvis_db -v ON_ERROR_STOP=1 -f "$sqlfile"
+            echo "✅ $sqlfile 成功"
+          done
+
       - name: 変更 SQL を 1回目実行（実行可否・構文チェック）
         if: steps.detect.outputs.has_sql_changes == 'true'
         run: |
