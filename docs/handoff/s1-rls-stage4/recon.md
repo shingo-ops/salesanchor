@@ -102,8 +102,8 @@
 | backend/app/routers/super_admin_llm_budget.py:154 | INSERT（upsert） | 運営（文脈なし） |
 | backend/app/routers/tcg_analysis_dashboard.py:526 | SELECT | 運営（:466） |
 | backend/app/services/llm_budget.py:434・475・527・567 | SELECT・UPDATE・UPDATE・INSERT | 呼び出し元 backend/app/services/message_translator.py:462-490・614-623（翻訳。画面 backend/app/routers/translation.py・leads.py・conv_logs.py と Celery backend/app/tasks/translation.py から）Celery 側は backend/app/tasks/translation.py:79 で set_tenant_context の後に呼ぶ（U3 で確認） |
-| backend/app/services/discord_notifier.py:222・254 | UPDATE（通知の間引き） | 予算切れの通知（:182・:208）から。呼び出し元の文脈は翻訳と同じ |
-| backend/app/services/translation_monitor.py:114・129 | SELECT・INSERT | 会社（:59 set_tenant_context） |
+| backend/app/services/discord_notifier.py:222・254 | UPDATE（通知の間引き） | 呼ばれない。入口の notify_budget_exhausted を呼ぶ所が backend/app の中に 0 件（2026-11-06 grep、§7） |
+| backend/app/services/translation_monitor.py:114・129 | SELECT・INSERT | **文脈なし**。:59 で張った文脈は check_translation_health の終わり :106 で clear_tenant_context が外す。その後の notify_translation_anomaly（:158）→ :186 の SELECT と :206 の INSERT は文脈なし（§7 で訂正） |
 
 ### 4-7. tenant_settings（5 行）
 | 箇所 | 種類 | 文脈 |
@@ -130,3 +130,28 @@
 | U4 | export_inventory_for_sheet.py の接続役 | `DATABASE_URL`（アプリの接続役）。文脈は張らない。型A にすると 0 行になる | scripts/export_inventory_for_sheet.py:182 |
 | U5 | 会社スキーマに同名の表があるか | 窓口のビュー 417 本（tenant_*）に 8 表の名前は 0 件 | AUDIT sha=8a083664564d・42166385014e、pg_tables 直接 AUDIT sha=e126252f03aa（2026-11-06）。8 表とも public にだけある |
 | U6 | 本番の守りの状態をカタログで読めるか（K4-1 の測り方） | 読める。users は ENABLE・FORCE とも有効、ポリシー 4 本。inventory_movements は両方とも無効 | AUDIT sha=ffc923a4ba16・356907e75a95（2026-11-06T11:32Z） |
+
+## 7. 外の仕組みからの入口（API と通知の受け口）と 8 表（2026-11-06、origin/main e322c72）
+
+調べ方: 認証なしで外から呼ばれる受け口を `public_router` と `/webhook`・`callback` で全部挙げた。各受け口のファイルが取り込む部品を全部たどり（import の連鎖、python の ast で機械的に）、8 表を読み書きする 27 ファイルに届くかを見た。届いたものは、実際に 8 表を読み書きする関数まで行番号で追った。
+
+| 受け口 | 場所 | 8 表に届くか | 結果 |
+|---|---|---|---|
+| Messenger の受信 | backend/app/routers/webhook.py:242・266 | 届くのは裏の翻訳の仕事だけ | backend/app/tasks/translation.py:79 で会社の文脈を張ってから予算を読み書き（backend/app/services/message_translator.py:463・486・615 check_budget）。型C で動く |
+| Meta の接続の戻り | backend/app/routers/meta_inbox.py:314 | import の連鎖では届くが、予算の関数を呼ばない | 8 表に触らない |
+| Google カレンダーの通知 | backend/app/routers/google_calendar.py:396 | google_webhook_subscriptions を読む | 合言葉の照合（backend/app/services/google_webhook.py:212）は文脈の前の SELECT。型C は読取が全行可なので動く。その後の取り込みは裏の仕事で会社の文脈（backend/app/services/google_webhook.py:255・278） |
+| Google カレンダーの接続の戻り | backend/app/routers/google_calendar.py:91 | 届かない | :211 で会社の文脈の後に tenant_google_calendar_config（会社のスキーマ）へ書く。8 表の外 |
+| Discord の接続の戻り | backend/app/routers/discord_oauth.py:160 | tenant_discord_config に書く | :99 で set_tenant_context の後に :105 の INSERT。型C で動く |
+| Google Drive の接続の戻り | backend/app/routers/integrations.py:104 | 届かない（取り込む部品 18 に 8 表の部品 0） | 影響なし |
+| PayPal の戻り・取消・通知 | backend/app/routers/integrations.py:759・821・887 | 届かない | 影響なし |
+| 社員登録の招待 | backend/app/routers/registration_tokens.py:164・210・363・452 | 届かない（部品 13 に 0） | 影響なし |
+| 社員の顔写真 | backend/app/routers/public_staff_avatars.py:21 | 届かない（部品 2 に 0） | 影響なし |
+| Discord の受け口（常駐） | backend/app/discord_bot/client.py | 4-3・4-4・U1・U2 のとおり | 文脈の前の読取があるので型C |
+
+裏の定期の仕事で文脈が抜ける所（新しく見つけた 1 件）:
+
+- 翻訳の見張り（毎時 0 分、backend/app/celery_app.py:147-149）。backend/app/services/translation_monitor.py:206 の `_update_last_notified`（tenant_llm_budgets への INSERT … ON CONFLICT）は文脈なしで走る。理由は :106 で文脈を外した後に呼ぶため。外した後の app.tenant_id は空（backend/app/auth/dependencies.py clear_tenant_context の SET app.tenant_id = ''）。型C で書込を止めると、この INSERT は失敗する。失敗は :208 で警告の記録だけになる。結果、通知の間引きの時刻が残らず、異常が続く間は毎時通知が出る（間引き 1 時間・見張り 1 時間なので、回数は今とほぼ同じ）。設計 §3 の④-5 で、:206 の前に会社の文脈を張る。
+- 予算切れの通知（backend/app/services/discord_notifier.py:182・208 notify_budget_exhausted）は呼ぶ所が 0 件。:222・:254 の UPDATE は動かない。
+- llm_budget を取り込むほかの 7 ファイルは、使用量の記録（llm_usage_events、8 表の外）だけを使う。予算の表の関数を呼ぶのは message_translator だけ。
+- 社員とロールの画面（backend/app/routers/roles.py:379、backend/app/routers/staff.py:653・755）から呼ぶ社員の同期は、backend/app/services/discord_own_staff_sync.py:108 で会社の文脈を張ってから :110 で読む。
+

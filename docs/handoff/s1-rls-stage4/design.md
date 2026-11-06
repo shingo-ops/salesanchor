@@ -69,7 +69,7 @@ CREATE POLICY <表>_delete ON public.<表> FOR DELETE
 | ④-2 | discord_server_snapshots・discord_server_apply_runs | なし |
 | ④-3 | tenant_discord_config・tenant_discord_ticket_config | なし（書込の入口はすべて会社の文脈あり。R§4-3・4-4） |
 | ④-4 | google_webhook_subscriptions | なし（書込の入口 register・stop・sync は会社の文脈あり。R§4-5、backend/app/routers/calendar.py の呼び出し） |
-| ④-5 | tenant_llm_budgets・tenant_settings | 運営画面の書込 2 か所（super_admin_llm_budget.py の upsert、super_admin_phase_switch.py の切替）で、書く直前に `set_operator_context`、`finally` で `reset_operator_context`。段階②b の型（会社の文脈の後に運営の文脈、finally で戻す） |
+| ④-5 | tenant_llm_budgets・tenant_settings | 運営画面の書込 2 か所（super_admin_llm_budget.py の upsert、super_admin_phase_switch.py の切替）で、書く直前に `set_operator_context`、`finally` で `reset_operator_context`。段階②b の型（会社の文脈の後に運営の文脈、finally で戻す）。加えて翻訳の見張りの書込 backend/app/services/translation_monitor.py:206 の前に `set_tenant_context`、終わりに `clear_tenant_context`（R§7） |
 
 - 順番の理由: 行と入口が少ない順。④-1 は PO の指示「在庫の動きから」。
 - 各便は migration を含むので危険パス。GO は ADR-136 の手順、委任 GO は ADR-1003 の範囲で Opus が出す（段階②b・③と同じ）。
@@ -81,7 +81,7 @@ CREATE POLICY <表>_delete ON public.<表> FOR DELETE
 - 会社番号は他の試験と重ならない番号（例 984・985）を使う。
 - 型A: ①自社文脈で INSERT・SELECT できる ②他社文脈で SELECT が 0 行 ③他社の tenant_id で INSERT が 42501 ④他社行の UPDATE・DELETE が 0 行 ⑤運営文脈で全社の SELECT ができる ⑥文脈なしで SELECT 0 行。
 - 型C: ①文脈なし・他社文脈で SELECT が全行 ②他社の tenant_id で INSERT が 42501 ③他社行の UPDATE・DELETE が 0 行 ④運営文脈で他社行の UPDATE が 1 行。
-- ④-5 は運営画面 2 本の API 試験（保存が通る・終わった後に `app.is_operator` が空に戻る）。
+- ④-5 は運営画面 2 本の API 試験（保存が通る・終わった後に `app.is_operator` が空に戻る）。翻訳の見張りの通知の試験 1 本（通知の後に tenant_llm_budgets の時刻が入る）。
 
 ## 5. 受入条件（KGI 案は kgi.md の KGI-4〜6）
 
@@ -98,7 +98,7 @@ CREATE POLICY <表>_delete ON public.<表> FOR DELETE
 
 | リスク | 対処 |
 |---|---|
-| 書込の入口に会社の文脈が無いと、INSERT は 42501 で失敗、UPDATE は静かに 0 行になる（段階②b の教訓） | R§4 で全入口の文脈を行番号で確かめた。運営画面の 2 か所だけ文脈が無く、④-5 で足す。各便の反映後に K5-1 で数える |
+| 書込の入口に会社の文脈が無いと、INSERT は 42501 で失敗、UPDATE は静かに 0 行になる（段階②b の教訓） | R§4 と R§7（外の仕組みからの入口）で全入口の文脈を行番号で確かめた。文脈が無い書込は運営画面の 2 か所と翻訳の見張りの 1 か所で、④-5 で足す。各便の反映後に K5-1 で数える |
 | 型C で読めてしまう | 秘密の列は無い（R§5-5）。読取の絞り込みは §8 の後続で扱う |
 | 会社を作る処理 backend/app/services/tenant.py:1803 が初期行を書けなくなる | :1780 で新しい会社の文脈を張ってから書く。型C の INSERT の条件を満たす。④-5 の試験に「会社を作る」を 1 本入れる |
 | 運営の文脈がつなぎの使い回しで残る | finally で reset_operator_context。`get_db` の終わりの clear_tenant_context（database.py:57-61）が二重の守り |
