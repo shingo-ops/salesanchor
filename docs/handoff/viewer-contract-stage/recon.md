@@ -133,3 +133,21 @@
 - FedEx の申請書の画面（frontend/src/pages/integrations/FedexLabelValidationTab.tsx:57）は、origin/main のどのファイルからも読み込まれていない。口（backend/app/routers/shipping.py:780・:815）だけが残る。
 - 取引先の住所の国は company_addresses.country_code CHAR(2)（migrations/030_create_company_contact_subtables.sql:55）。NOT NULL が無く、空を許す。仕入先（suppliers）に国の列は無い（tenant.py:968 の表定義）。
 - 本番で国が空の取引先が何件あるかは、まだ数えていない（reader 鍵が要る）。
+
+## 14. 取引先の国で国内向けか海外向けかを自動で決める形の確認（2026-11-06〜07。生出力 /tmp/CC報告ファイル/contract-status/reader-country-1106.txt・update-paths-1106.txt・update-paths2-1106.txt・tp-readers-1106.txt）
+
+- 請求書が請求先の写しを作る処理は backend/app/routers/invoices.py:66 の _fetch_address_snapshot。company_addresses の address_type と is_default = TRUE（:84〜:86）で1行を読み、country_code を "country" として返す（:104 付近）。呼び出しは :268〜:269（見積書から作る :241）・:367〜:368（直接作る :339）・:1003〜:1004（見積書の PDF :972）の6か所。
+- 見積書を作る口は backend/app/routers/quotes.py:146。今は請求先の住所を読まない。
+- 見積書と請求書の取引先は作った後に直せない。直す口の項目に company_id が無い（backend/app/schemas/quote.py:54〜:61、backend/app/schemas/invoice.py:54〜:59）。
+- 取引先の国の入れ方: frontend/src/pages/companies/CompaniesPage.tsx:550 は2文字の制限だけ（大文字にしない）。CompanyAddressModal.tsx:143〜:144 は大文字にして2文字か空かを確かめる。
+- tenant_profile を読む場所は backend/app と frontend/src で57行（git grep origin/main）。差出人として読むのは invoices.py・po_renderer.py・label_validation.py の3つ。他は会社情報の口・表の作成・最高管理者の DB の表の一覧だけ。
+- 本番の件数（2026-11-06。読み取り専用の鍵で件数だけを数えた。中身は出していない）:
+
+| 会社 | 取引先 | 見積書 | 請求書 | 既定の請求先なし | 請求先の国が空 | JP | JP 以外 | 形の崩れ |
+|---|---|---|---|---|---|---|---|---|
+| 主な会社 | 51 | 0 | 0 | 2 | 1 | 0 | 48 | 0 |
+| 他の会社1 | 1 | 1 | 1 | 1 | 0 | 0 | 0 | 0 |
+| 他の会社2〜4 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+
+- このため、主な会社の51社のうち48社は自動で決まり、すべて海外向けになる。3社は決められない。
+- §13 の「本番で国が空の取引先が何件あるかは、まだ数えていない」は、この節で数えた。
