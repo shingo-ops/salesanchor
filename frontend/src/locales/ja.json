@@ -761,6 +761,11 @@
     "passkeyExists": "この端末のパスキーはすでに登録されています。",
     "passkeyLimit": "パスキーは10個まで登録できます。"
   },
+  "passwordChangePage": {
+    "title": "パスワードの変更",
+    "subtitle": "最初のログインです。仮のパスワードを自分のパスワードに変えてください",
+    "signOut": "ログアウト"
+  },
   "resetPasswordPage": {
     "subtitle": "メールのリンクから、新しいパスワードを決めます。",
     "title": "パスワードの設定",

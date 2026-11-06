@@ -1413,6 +1413,7 @@ async def setup_test_db(test_engine):
                 last_login TIMESTAMP,
                 password_argon2_hash TEXT,
                 password_changed_at TIMESTAMP,
+                password_must_change BOOLEAN NOT NULL DEFAULT FALSE,
                 failed_login_count INTEGER NOT NULL DEFAULT 0,
                 locked_until TIMESTAMP
             )
