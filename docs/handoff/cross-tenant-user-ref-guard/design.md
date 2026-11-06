@@ -1,6 +1,6 @@
 # design: 他社の人の番号と、持ち主の証明のない Discord サーバー番号を保存させない
 
-- 状態: 設計案 r3（Opus 作成）。Architect r1・r2・r3 は REVISE（13 節）。r3 の指摘を反映済み・r4 審査前
+- 状態: 設計案 r4（Opus 作成）。Architect r1〜r4 は REVISE（13 節）。r4 の指摘を反映済み・r5 審査前
 - 基準: origin/main 133808dce（5fda4152b からの差分に、本設計が触る・引用するファイルの変更は無い: `git diff --stat 5fda4152b origin/main -- backend/app/routers backend/app/services frontend/src/pages/admin frontend/api-contract backend/tests/...` が空）
 - 根拠: 同じフォルダの recon.md（1・4・6 節）
 - 関係する ADR: ADR-1008（会社に属さない担当者を入れない）・ADR-072（commit 後の reset_tenant_context）・ADR-146（Discord は共通 bot 1台・guild_id から会社を引く）・ADR-027（画面の文字は t()）・ADR-144（画面部品は金型）
@@ -117,7 +117,8 @@ frontend/src/pages/admin/DiscordConfigPage.tsx の「① サーバー接続」�
 - 変更後:
   - 未接続: 説明の文と、金型 `ButtonLink`（:20 で読み込み済み）で `/channels` へ案内するボタン
   - 接続済み: 番号の表示はそのまま。「変更」ボタンは同じく `/channels` への `ButtonLink`
-- 消すもの: `editingGuild`・`guildSaving`・`guildError`・`guildSaved` の状態、`handleGuildSave`・`handleGuildCancel`、`isGuildFormOpen`、`guildId` のうちこのカードだけが使う部分。`SNOWFLAKE_RE` はチケット設定（:232・:236）で使うので残す
+  - どちらの `ButtonLink` も今の「変更」ボタン（:440）と同じく `canEdit` のときだけ出す
+- 消すもの: `editingGuild`・`guildSaving`・`guildError`・`guildSaved` の状態、`handleGuildSave`・`handleGuildCancel`、`isGuildFormOpen`。番号を打つ欄が無くなるので、欄の値 `guildId` も持たない: `useSeededForm` の guild 側（:140-142）、`fetchAll` の :189 の1行、使い手が無くなる `toGuildId`（:111）を消す。`fetchAll` の CONFIG_PATH の取り直し（:186）は残す（表示の `savedGuildId`（:193）は今と同じく `configQ.data` から読む）。:374 の `!guildReady` は `!configQ.data` に置き換える（読めなかった時に「未接続」と誤って出さず、今と同じく誤りの文だけを出すため）。`useSeededForm` の読み込み（:16）はチケット設定（:154）が使うので残す。`SNOWFLAKE_RE` はチケット設定（:232・:236）で使うので残す
 - 文字: 新しいキー `discordConfig.connectViaChannels`（ボタン）と `discordConfig.connectViaChannelsHint`（説明）を ja.json・en.json の両方に足す。使わなくなるキー（serverIdLabel・serverIdPlaceholder・serverIdHint・invalidGuildId など）は、`git grep` でほかに使う所が無いものだけ両方から消す
 - 色・余白の直書きをしない。既存の class（dc-row・dc-actions 等）と金型だけを使う
 
@@ -131,10 +132,10 @@ frontend/src/pages/admin/DiscordConfigPage.tsx の「① サーバー接続」�
   - backend/tests/test_analytics.py:689・:762（assigned_to 321。users の行が無い）
   - backend/tests/test_notification_event_routing.py:246・:266・:285（assigned_to 7・7・9。:91-101 で staff の行だけを入れ、users の行が無い。:266 は値が同じでも update_data に assigned_to があれば照合が走るので赤）
   - 直し方の決まり: 照合を偽物に差し替えない（mock 禁止）。試験の会社（999。backend/tests/conftest.py:1955）の本物の users 行を足す
-  - test_inbox_new_assignment_badge.py の自前 SQLite（:72-80）には conftest.py:301-302 の `public.users`→`users` の書き換えが無い。直し方: (1) users の表の DDL は conftest.py の INBOX_BADGE_SQLITE_DDL に足す（同ファイル :84-86 のとおり、表の定義を試験ごとに重ねない決まり）(2) この engine に before_cursor_execute の仕掛け（retval=True）を足し、`public.users` を `users` に置き換える（conftest.py:296-302 と同じ形。connect の手当て :75-81 は SQL 文を書き換えられないので使わない）(3) assigned_to 10・20 の人を会社 999 で入れる
+  - test_inbox_new_assignment_badge.py の自前 SQLite（:72-81）には conftest.py:301-302 の `public.users`→`users` の書き換えが無い。直し方: (1) users の表の DDL は conftest.py の INBOX_BADGE_SQLITE_DDL に足す（同ファイル :84-86 のとおり、表の定義を試験ごとに重ねない決まり）(2) この engine に before_cursor_execute の仕掛け（retval=True）を足し、`public.users` を `users` に置き換える（conftest.py:296-302 と同じ形。connect の手当て :75-81 は SQL 文を書き換えられないので使わない）(3) assigned_to 10・20 の人を会社 999 で入れる
   - backend/tests/test_shifts_pg.py:90-93（r2 指摘で追加）: create_shift を user_id=2・会社 901（:24・:31 の SCHEMA tenant_901）で直接呼ぶ。この試験の DB の public.users は backend/tests/rls_bootstrap.py:258-264 の (999, 999) の1行だけなので 422 になる。直し方: 試験の中で public.users に (id=2, tenant_id=901) の行を入れてから呼ぶ。あわせて「他社の人（999）なら 422・行が増えない」の試験をこの PostgreSQL の形で足す（10 節）
   - 通るもの（SQLite の client を使う試験だけ）: test_shifts.py・test_audit_goals_carrier.py は user_id 999 を使い、conftest.py:1522-1523 で会社 999 の人として入っている。teams の leader_id を送る試験は無い
-- frontend/src/pages/admin/DiscordConfigPage.test.tsx:47-74 は「Server ID」の欄を前提にしているので書き直す。:138-152・:154-162 のチケット設定の試験（discord-ticket-config への api.put）は残す
+- frontend/src/pages/admin/DiscordConfigPage.test.tsx:47-74 は「Server ID」の欄を前提にしているので書き直す。:138-152・:154-162 のチケット設定の試験（discord-ticket-config への api.put）は残す。:164-173 の権限なしの試験は、「変更」がリンクになるので `queryByRole("button", { name: "Change" })` を `queryByRole("link", { name: "Change" })` に直す（ボタンのままだと何も無くても通ってしまうため）。権限ありの試験で `getByRole("link", { name: "Change" })` の行き先が `/channels` であることも確かめる
 - 試験 backend/tests/test_discord_d2.py:307-340 の PUT の試験4本（test_put_saves_guild_id・test_get_after_put_returns_saved・test_put_invalid_guild_id_rejected・test_put_too_short_guild_id_rejected）は消し、「PUT は 405・表が変わらない」の試験1本に置き換える。backend/tests/test_discord_own_server.py は PUT を使わない（GET :263・:267・:280 と DELETE :271・:276 だけ）。触らない
 - frontend/api-contract/openapi.json の DiscordConfigUpdate（:9490-）と PUT の道（operationId :40374）が消える
 - tests/prod-check/page-speed-targets.ts は画面の道を測るだけ。影響なし
@@ -259,5 +260,22 @@ DB の正本（SSOT）について: 人の正本は public.users のまま。新
 | Q4（推奨）own_server は GET も使う | GET :263・:267・:280 を書き足した |
 
 ### r4
+
+結果はクラウドの実行記録から読んだ（審査の担当は Opus・head c64ed192c・origin/main 5a8b0dd91 で照合）。指摘は Opus が origin/main で読み直し、すべて事実と確かめた（test_inbox :81 は PRAGMA の行。DiscordConfigPage.tsx :189 は fetchAll の setGuildId、:374 は guildReady。DiscordConfigPage.test.tsx :170 は button で探している）。
+
+| 観点 | 判定 |
+|---|---|
+| C1 行番号 | ×（:72-80 は :72-81） |
+| C6 壊れる試験の一覧 | ○ |
+| C7 r1〜r3 の必須指摘 | ○ |
+| C8 実装の範囲 | ○ |
+
+| 指摘 | 対応 |
+|---|---|
+| Q1（必須）test_inbox の自前 SQLite は :72-81 | 直した |
+| Q2（推奨）「guildId のうちこのカードだけが使う部分」が曖昧 | 消す所（:140-142・:189・:111）と残す所（:186・:16）、:374 の置き換えを書いた |
+| Q3（推奨）権限なしの試験 :164-173 がリンクだと素通りする | link で探す形に直し、権限ありの行き先の確認を足した。リンクは canEdit のときだけ出すと書いた |
+
+### r5
 
 （審査後に記入）
