@@ -106,6 +106,13 @@ async def fetch_movements(
     sql += "ORDER BY occurred_at ASC, id ASC"
 
     async with engine.connect() as conn:
+        # ADR-1067 便④-1: inventory_movements は RLS（型A）。読む前に同じ取引で会社の文脈を張る。
+        # engine.connect() は最初の execute で取引が自動で始まり、抜けるときに戻される（SQLAlchemy 2.0
+        # 「Commit As You Go」）。is_local=true なので文脈は取引の終わりで消え、接続の使い回しに残らない。
+        await conn.execute(
+            text("SELECT set_config('app.tenant_id', :tid_ctx, true)"),
+            {"tid_ctx": str(tenant_id)},
+        )
         rows = (await conn.execute(text(sql), params)).mappings().all()
     return [dict(r) for r in rows]
 
