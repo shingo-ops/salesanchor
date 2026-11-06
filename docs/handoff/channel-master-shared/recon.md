@@ -67,3 +67,17 @@
 - 【事実】読むときは `WHERE (tenant_id = :tenant_id OR tenant_id IS NULL)`: `backend/app/routers/status_master.py:257`、backend/app/routers/note_master.py:152/280、backend/app/routers/conditions.py:384、backend/app/routers/payment_fee_settings.py:70
 - 【事実】運営画面は `tenant_id IS NULL` の行だけ、会社画面は自社行だけを編集（backend/app/routers/super_admin_note_master.py ほか）
 - 【事実】列名が文書（owner_tenant_id）とコード（tenant_id）で食い違う。設計で既存コードの `tenant_id` にそろえる案を出す（要件の意味は同じ）。
+
+## 6. 今の「消す」（is_active=false）がどこまで効くか（2026-11-06・origin/main 8ab21523 で行の中身が 7e0bc67b1 と同じことを `git diff --stat` で確認）
+
+| 場所 | 消した手段の扱い（事実） |
+|---|---|
+| 一覧の API `backend/app/routers/conv_logs.py:205` | `WHERE is_active = true`。消した行は返らない |
+| 管理センター「チャネル設定」 `frontend/src/pages/admin/ChannelMastersPage.tsx:36` | 上の API を読むため、消した行は画面から消える。画面から元に戻す手段は無い |
+| リードの連絡手段の選択欄 `frontend/src/components/ChannelTypeCombobox.tsx:46` | `is_active` の行だけ出す。使う画面は `frontend/src/pages/leads/LeadEditPage.tsx:165`・`frontend/src/pages/leads/LeadsPage.tsx:318` |
+| 同じ選択欄の表示 `frontend/src/components/ChannelTypeCombobox.tsx:84-88` | 今の値が一覧に無いと、表示名でなく値そのもの（例: phone）が出る |
+| リードの保存の検証 `backend/app/routers/leads.py:201` | 今の値と同じなら名簿を見ずに通す。新しく選ぶときだけ `is_active = TRUE` の行を見る（:204-211） |
+| 受信箱の手入力欄 `frontend/src/pages/inbox/ManualRecordSection.tsx:55-56・:110`（`frontend/src/pages/inbox/InboxMessageThread.tsx:864`） | 開いている会話の手段が一覧に無いと、手入力欄ごと出ない |
+| 会話記録の追加 `backend/app/routers/conv_logs.py:241-246`（:77-88 の読み口） | `is_active = true` の行だけ見る。消した手段では、昔の会話にも記録を足せない（400） |
+| 成約の分析・言語判定 | 名簿を読まず名前の直書きで選ぶ（§3）。消しても数は変わらない |
+

@@ -84,7 +84,7 @@ CREATE TABLE IF NOT EXISTS public.channel_master_tenant_settings (
 - 設定画面: 管理センターの「チャネル設定」（`frontend/src/pages/management-center/ManagementCenterPage.tsx:83` の channel-masters・`frontend/src/App.tsx:406` で `frontend/src/pages/admin/ChannelMastersPage.tsx` を出す）に「この会社で使う」の切り替えを各行に置く。部品は金型 `frontend/src/components/Toggle.tsx`（ADR-144）。見出しと説明は i18n キー `channelMasters.visible`・`channelMasters.visibleHelp` を ja/en 同時に足す（ADR-027）。
 - 変えられる人: 画面を開ける人と同じ `tenant.profile.edit`（`frontend/src/pages/management-center/ManagementCenterPage.tsx:83`）。API にも `require_permission("tenant.profile.edit")`（`backend/app/auth/dependencies.py:589`）を付ける。
 - 事実（2026-11-06）: 今の追加・無効化の API（`backend/app/routers/conv_logs.py:491-518`・`:524-557`）は、ログインしていれば権限を見ずに通る（`get_current_user` と `get_current_tenant` だけ）。自社の名簿の中に限られるが、PR-B で同じ権限を付けて閉じる。
-- 隠した行の効き目: §9 D1-2 の PO 回答で決める。
+- 隠した行の効き目: §9 D1-2 の PO 回答で決める。今の「消す」がどこまで効くかの事実は recon §6。
 
 ## 3. 共用6行の投入（1回だけのデータ変更・ADR-1007 決定1）
 
@@ -137,7 +137,7 @@ async def conversion_items(db) -> dict[str, str]:
 | `backend/app/services/lead_conversion_factors.py:229-230` | `channel_items.get(lead.channel_type) == "channel_whatsapp"`／`"channel_instagram"`（項目名は ITEM_KEYS:75-76 の名前） |
 | `backend/app/services/lead_conversion_factors.py` 冒頭 | `channel_items` の値の集合が `{"baseline","channel_whatsapp","channel_instagram"}` でなければ `ValueError`。呼び出し側は 409「分析の設定が名簿にそろっていません」 |
 | `backend/app/services/lang_judge.py:31・:122・:127` | `AND NOT EXISTS (SELECT 1 FROM public.channel_masters cm WHERE cm.platform = cl.channel_type AND cm.is_verbatim = FALSE AND (cm.tenant_id IS NULL OR cm.tenant_id = :tenant_id))`。名簿に無い値（例: 004社の meta_messenger 3件）は今と同じく数に入る |
-| `backend/app/services/tenant.py:1086-1098・:1247・:1288-1289・:1582-1587・:1773` | 新しい会社に表と行を作らない（関数と呼び出しを消す）。既存会社の古い表は §6 まで残す |
+| `backend/app/services/tenant.py:1101-1113・:1262・:1303-1304・:1597-1602・:1788`（origin/main 8ab21523 の行。7e0bc67b1 から +15 行ずれた・中身は同じ） | 新しい会社に表と行を作らない（関数と呼び出しを消す）。既存会社の古い表は §6 まで残す |
 | `backend/app/services/channel_masters.py:10-19` | `DEFAULT_CHANNEL_MASTERS`・`ACTIVE_CHANNEL_PLATFORMS` を消す。別名 `CHANNEL_TYPE_ALIASES`（:21-24）は入力の言い換えなので残す |
 | `scripts/migrate_20260621_030000_backfill_lead_channel_type.py` | 2026-06 の1回きりの埋め戻しで、消す定数を読むため、ファイルごと消す（PR 本文の消すファイル欄に書く） |
 | `scripts/lead_regression/generate.py:80・:157・:174-175・:304-305・:313-314・:412` | 作り物のデータを作る台本。`lcf.CHANNEL_*` を自分の中の定数に置き換え、`analyze` に対応表を渡す（K4 の対象外・台本は試験用） |
