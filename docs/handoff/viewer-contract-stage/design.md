@@ -337,7 +337,7 @@ RLS（ADR-1018 の段階①の型。会社ごとの2表は今の会社ごとの�
 
 ### 3-4c. 他のテーマとの境界
 
-- 見積もりと B2B の請求書（docs/specs/quote-invoice/ideal-state.md、ADR-101）: B2B は会社ごとの invoices の表のまま触らない。そちらにある PayPal と Wise の支払い方法（同 ideal-state.md の支払い方法の段落）とこの振込先の表を1つにするかは、海外の請求書の設計で決める。それまでは閲覧者の請求書だけがこの表を読む。
+- 見積もりと B2B の請求書（docs/specs/quote-invoice/ideal-state.md、ADR-101）: B2B は会社ごとの invoices の表に issuer_region の1列を足す以外は触らない（§3-4）。そちらにある PayPal と Wise の支払い方法（同 ideal-state.md の支払い方法の段落）とこの振込先の表を1つにするかは、海外の請求書の設計で決める。それまでは閲覧者の請求書だけがこの表を読む。
 - 会社のプロフィールとアカウント設定（docs/specs/profile-account-settings/README.md の境界）: テナントオーナー専用の設定はプロフィールのページに統合する決まりに合わせ、会社情報のページを直して区切りを足す。独立した画面は作らない。
 
 ### 3-5. 請求書の作成と計算
@@ -440,9 +440,9 @@ commit の後、裏で順に行う:
   （１）都道府県47行を「1回だけのデータの変更」で入れる（PO の合意 → DRY-RUN → COMMIT）。
   （２）商材・プラン・機能の最初の行を同じ手順で入れる。
   （３）PO が税率の画面で 10%・2019-10-01 の行を足す。
-- 便2 の本番反映の後に PO が行うこと: 会社情報のページで国内用と海外用の住所と電話を入れ直す。入れ直すまで今の書類は古い住所で出る（§3-4）。
+- 便2 の本番反映の後に PO が行うこと: 会社情報のページで国内用と海外用の会社名・メール・サイト・住所・電話を入れ直す。入れ直すまで今の書類は古い値で出る（§3-4）。
 - 便4 の前に PO が行うこと: インボイス登録と振込先の入力、文面2つの保存、保存先の指定。
-- 古い住所と電話の2列を消す移行は、§3-4 の条件（古い値があり新しい行が無い会社が0件）を数えてから、別の便で行う。
+- 古い6列（会社名の2つ・メール・サイト・住所・電話）を消す移行は、§3-4 の条件（古い値があり新しい行が無い会社が0件）を数えてから、別の便で行う。
 
 ## 5. 代替案と選んだ理由
 
@@ -486,6 +486,7 @@ commit の後、裏で順に行う:
 - ~~見積書と B2B の請求書を作る画面のプルダウンで選ぶ形~~ → 取引先の既定の請求先の国で自動で決める形に改めた（2026-11-06 PO「顧客情報の住所で自動的にシステムが判断する仕組みに出来る？請求先が日本なら国内向け、海外なら海外向け」）。対象は請求書だけ（2026-11-07 PO「見積もりは今回はパス、請求書だけで考える」）。
 - ~~国内向けか海外向けかを決められない取引先の扱い~~ → 請求書を作らせず、請求先の国を入れる案内を出す（2026-11-07 PO「請求書は顧客情報が登録されていないと作れない仕組みにしたいので1」）。
 - ~~見積書の PDF に載せる自社の会社情報~~ → 海外用の行を載せる（2026-11-07 PO「1,見積もりは顧客名は必須にしない、成約前の顧客にも使用するため顧客情報がない場合があるので」）。
+- **B2B の請求書の PDF にインボイスの登録番号の行を足すか（未回答）**: 設計審査（2026-11-07）の指摘。§2 は「今の書類は見た目と項目を変えない」、A29 は「その region の行が有のときだけ番号を載せる」で食い違う。今の B2B の PDF に番号を描く処理は無い（origin/main の backend/app/services/invoice_renderer.py を grep して0件）。足すなら invoice_renderer.py を直す対象に書き足し、§2 を直す。足さないなら A29 の PDF の部分を消す。
 - ~~見積書を取引先なしで作れるようにするか~~ → 別の設計で後から進める（2026-11-07 PO「1」）。今は登録済みの取引先と担当者が必須で、PO の言葉「顧客名は必須にしない」と違う。tasks/todo.md に積んだ。
 - ~~会社名・メール・サイトとインボイス登録を会社に1つ~~ → 国内用と海外用で1つずつ持つ形に改めた（2026-11-06 PO「国内と海外で登録できるようにする」「これも国内と海外で2つ、分社している場合に備えて」）。
 - 発注書と FedEx の申請書は切り替えない（PO 2026-11-06「発注書は使わないので破棄、使うのは見積もりと請求書のみ」。2026-11-06 回答）。
@@ -530,7 +531,7 @@ commit の後、裏で順に行う:
 | A13 | 期限切れ 3年以内の行は残り、3年を過ぎた行は消える。本契約は消えない | backend pytest（掃除の処理） |
 | A14 | 名簿を消しても請求書の行が残り、viewer_account_id が NULL になる | backend pytest（実 PostgreSQL・salesanchor_app・運営の印なし。FORCE の RLS の下で SET NULL が効くことを確かめる） |
 | A15 | 税率の行を足すと、適用日以降の請求書だけ変わる。発行済みは変わらない。表が空でないとき、今日以前の日付と最新行以前の日付は 422。今日以前の適用日の行の削除は 409 | backend pytest＋ Evaluator |
-| A39 | 発行と再発行の前の確かめで、足りない項目ごとに 409 とキーの配列（§3-4b の6つ）が返る。画面は t() で文にして出し、detail に日本語の文が無い | backend pytest＋ frontend テスト＋ Evaluator |
+| A39 | 発行と再発行の前の確かめで、足りない項目ごとに 409 とキーの配列（§3-4b の5つ）が返る。画面は t() で文にして出し、detail に日本語の文が無い | backend pytest＋ frontend テスト＋ Evaluator |
 | A16 | チェックして発行すると次回の既定が変わり、チェックなしは変わらない。発行済みの期限は変わらない | backend pytest＋ Evaluator |
 | A17 | プランと機能の行を足すと、作成画面の選択肢に出る | backend pytest＋ Evaluator |
 | A18 | 新しい個人情報の列と会社ごとの新しい2表の値が、相談係の道（ai_reader_cloud）で伏せて見える（masked）。Mac の道（ai_ro）は今と同じで変えない | backend pytest（実 PostgreSQL で ai_cloud の見せ方を通して読み、隠す列が masked）＋本番で ai_reader_cloud の道から1件読む。CI に専用の手順名は無い（.github/workflows の grep 2026-11-06） |
@@ -579,7 +580,7 @@ commit の後、裏で順に行う:
 | ①人 | PO（住所と電話の入れ直し・登録・振込先・文面・保存先の入力、テストの支払い）、会社情報を直す各社の人 | 便2 の後と便4 の前に PO が行うこと（§4）。入れ直すまで画面に案内を出す（§3-4） |
 | ②エージェント | 実装役は design.md・カードを読む。.claude/agents・docs/ai-agents・AGENTS.md に viewer_accounts の語は0件 | 実装カードに §9 の全件 grep と止まる条件を書く。周知の追加は不要 |
 | ③機械 | 名簿の掃除 purge_viewer_accounts（backend/app/celery_app.py の定時登録、backend/tests/test_viewer_purge.py）。会社の表の作成 _TENANT_TABLES_SQL（backend/tests/test_rls_tenant_meta_config.py・test_roles_system_key_ddl.py）。移行の点検（.github/workflows/migration-guard.yml・migration-test.yml・schema-check.yml） | 掃除の試験を3年の条件に直す（A13）。会社の表の差の試験を足す（A22）。移行は migration-test で全会社へ流す |
-| ④データ | public に新しい9表。全会社のスキーマに2表と、quotes・invoices に issuer_region の1列ずつ。tenant_profile の company_name・company_name_en・email・website・address・phone は書けなくなり読むだけ（差出人の読み出しのうち切り替えるのは invoices.py だけ。po_renderer.py・label_validation.py は今のまま古い列を読む。試験 backend/tests の7ファイル・51か所 grep 2026-11-06）。tenant_google_drive_config に1列（読む処理: integrations.py・google_drive_oauth.py・carrier_credentials.py。試験 test_google_config_rls.py） | 既存の列は変えない。新しい列は NULL 可で今は使わない。tenant_004 本番の行は増えるだけ |
+| ④データ | public に新しい9表。全会社のスキーマに2表と、invoices に issuer_region の1列（quotes には足さない）。tenant_profile の company_name・company_name_en・email・website・address・phone は書けなくなり読むだけ（差出人の読み出しのうち切り替えるのは invoices.py だけ。po_renderer.py・label_validation.py は今のまま古い列を読む。試験 backend/tests の7ファイル・51か所 grep 2026-11-06）。tenant_google_drive_config に1列（読む処理: integrations.py・google_drive_oauth.py・carrier_credentials.py。試験 test_google_config_rls.py） | 既存の列は変えない。invoices.issuer_region は NULL 可で、作り済みの請求書は空のまま（PDF では overseas として読む）。新しく作る請求書から値が入る。tenant_004 本番の行は増えるだけ |
 | ⑤本番 | 便1（掃除の条件）と便2（移行）は本番の DB を変える | 便1 は 2026-12-19 より前。便2 は ADR-136 の GO。直前のバックアップを確かめる |
 | ⑥外部 | 閲覧者（メール・ログインの期限）、Google ドライブ、Wise・PayPal、公開ポリシー（lp/src/pages/privacy.astro） | 実在のお客さんには送らない（§9）。ドライブは今あるフォルダへ保存する形に決まった（2026-11-06 PO のテスト保存。§3-8）。Wise は円の入金をテストの支払いで確かめる |
 
