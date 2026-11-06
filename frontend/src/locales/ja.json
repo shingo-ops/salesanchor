@@ -1,4 +1,8 @@
 {
+  "calendarView": {
+    "more": "ほか {{count}} 件",
+    "allDay": "終日"
+  },
   "productCsv": {
     "downloadTemplate": "空のサンプルCSVを保存",
     "templateIntro": "見出しだけのCSVです。2行目から商品を入力し、見出しの順序を変えずにUTF-8のCSVで保存してください。",
