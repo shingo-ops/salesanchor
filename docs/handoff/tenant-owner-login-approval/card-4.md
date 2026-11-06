@@ -199,19 +199,19 @@ export async function askAdminLoginRequest(): Promise<AskAdminStatus> {
               {t("login.deviceApproval.askAdmin")}
             </Button>
             {askResult === "requested" && (
-              <Callout variant="info">{t("login.deviceApproval.askAdminRequested")}</Callout>
+              <Callout variant="info" title={t("login.deviceApproval.askAdminRequested")} />
             )}
             {askResult === "already_requested" && (
-              <Callout variant="info">{t("login.deviceApproval.askAdminAlready")}</Callout>
+              <Callout variant="info" title={t("login.deviceApproval.askAdminAlready")} />
             )}
             {askResult === "no_owner" && (
-              <Callout variant="warning">{t("login.deviceApproval.askAdminNoOwner")}</Callout>
+              <Callout variant="warning" title={t("login.deviceApproval.askAdminNoOwner")} />
             )}
             {!approval.hasTrustedDevice && !approval.hasRecoveryCodes && (
               <p>{t("login.deviceApproval.noTrustedDevice")}</p>
             )}
 ```
-（Callout の title は任意のはず。必須で型が通らなければ BLOCKED: Callout）
+（Callout の title は必須（frontend/src/components/Callout.tsx の CalloutProps）。文は title に入れ、本文は付けない。Opus 2026-11-06 訂正: 初回のクラウド実行で tsc TS2741 が出たため）
 
 ### 2-4 LoginPage.test.tsx（既存の書き方・mock に合わせて足す。既存の試験は消さない・変えない）
 既存の待ち画面の試験と同じやり方で 202 の待ち画面を出し、`fetch`（または既存が mock しているもの）で `/login-requests/ask-admin` に対し次を返す試験を 4 本:
