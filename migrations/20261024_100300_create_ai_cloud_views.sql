@@ -1,6 +1,6 @@
 -- ADR-1052 段1: 相談係用の伏せたビュー ai_cloud を作る（冪等・1 トランザクション）。
 -- 一覧には載せない。run_all_migrations.sh の EXIT trap が、毎回の実行の最後に流す（ai_ro と同じ形）。
--- 1) 分類表 ai_cloud_meta.column_class を空にして下の 1078 行を入れ直す（このファイルが正本。行の足し引きはこの SQL の変更で行う）。
+-- 1) 分類表 ai_cloud_meta.column_class を空にして下の 1083 行を入れ直す（このファイルが正本。行の足し引きはこの SQL の変更で行う）。
 -- 2) ai_cloud を作り直す。3) ai_cloud_meta.build_views() で全ビューを作り、build_log に 1 行書く。
 -- 4) ai_reader_cloud に ai_cloud の USAGE と SELECT だけを付ける。
 -- 分類表の元: docs/handoff/cloud-case-ai/stage1-column-class.tsv（表ごと・class ごとにまとめて unnest で入れる）。
@@ -65,6 +65,11 @@ FROM (VALUES
   ('public','buyback_shop_products',ARRAY['product_name'],'mask',''),
   ('public','buyback_shop_products',ARRAY['product_type'],'mask','値の決まりが無く自由に入る列のため伏せる（初期は最小）'),
   ('public','buyback_shop_products',ARRAY['shop_code'],'mask',''),
+  ('public','channel_masters',ARRAY['connection_type'],'allow','値の決まり channel_masters_connection_type_check で値が限られる'),
+  ('public','channel_masters',ARRAY['conversation_store'],'allow','値の決まり channel_masters_conversation_store_check で値が限られる'),
+  ('public','channel_masters',ARRAY['conversion_item'],'allow','値の決まり channel_masters_conversion_item_check で値が限られる'),
+  ('public','channel_masters',ARRAY['display_name'],'mask',''),
+  ('public','channel_masters',ARRAY['platform'],'mask','会社が画面から足せる値のため伏せる（初期は最小）'),
   ('public','condition_definitions',ARRAY['code'],'allow','共用マスタ（運営が入れる一覧）。共用の一覧表の記号（tenant 側も一覧表だけに出る）'),
   ('public','condition_definitions',ARRAY['name'],'allow','【名前を含む】共用マスタ（運営が入れる一覧）。状態の一覧の名前'),
   ('public','condition_definitions',ARRAY['name_en'],'allow','【名前を含む】共用マスタ（運営が入れる一覧）。状態の一覧の英語名'),
