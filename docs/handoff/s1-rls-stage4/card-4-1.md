@@ -1,6 +1,6 @@
 # 実装カード 便④-1 — public.inventory_movements に RLS（型A）
 
-- 状態: 草案（クラウド設計審査の前）。PO の実装承認は design.md 冒頭（2026-11-06「1」: KGI-4〜6 と 5 便の順番、「最初の在庫の動きの分から作り始め、本番に出して確かめるところまで進めます。」）。
+- 状態: 草案（クラウド設計審査 1 回目 REVISE＝card-4-1-review.md を §11 のとおり反映。2 回目の審査の前）。PO の実装承認は design.md 冒頭（2026-11-06「1」: KGI-4〜6 と 5 便の順番、「最初の在庫の動きの分から作り始め、本番に出して確かめるところまで進めます。」）。
 - 根拠の版: origin/main 5574bf327（2026-11-06 23:58 JST に fetch）。行番号はすべてこの版。
 - 設計: [design.md](design.md) §2-1（型A）・§3（④-1 行）・§4（試験）・§5（K4-1・K4-2・K5-1・K5-2）・§7（戻し方）。現状: [recon.md](recon.md)。
 - 実装ブランチ: `release/s1-rls-stage4-bin1`（origin/main から作る）。1 便 1 PR。PR は Draft で起票する。
@@ -10,13 +10,13 @@
 | # | ファイル | 変更 |
 |---|---|---|
 | 1 | `migrations/20261107_100000_add_inventory_movements_rls.sql` | 新規。§2 の SQL を一字一句この内容で作る |
-| 2 | `scripts/run_all_migrations.sh` | 末尾（今の最終行 :1237 `run_sql migrations/20261106_210000_add_notification_channels_blueprint_key.sql` の後）に §3 の 2 行を足す |
+| 2 | `scripts/run_all_migrations.sh` | 末尾（今の最終行 :1237 `run_sql migrations/20261106_210000_add_notification_channels_blueprint_key.sql` の次の行。区切りの見出しは無い）に §3 の 2 行を足す |
 | 3 | `scripts/export_inventory_for_sheet.py` | :108-109 の 1 か所だけ。§4 |
 | 4 | `backend/tests/test_inventory_movements_rls.py` | 新規。§5 |
 | 5 | `.claude-pipeline/active-work.d/release-s1-rls-stage4-bin1.md` | 台帳（Opus が本店の写しに置く。実装役は触らない） |
 
 - 実装の直前に `git ls-tree --name-only origin/main migrations/ | tail -3` を流し、`20261107_100000` より後の名前の移行が main に入っていたら止まって Opus に戻す（名前を自分で変えない）。
-- 触らない: `backend/tests/rls_bootstrap.py`（`_PG_BOOTSTRAP_MIGRATIONS` に新しい移行を足さない。共有の試験 DB の inventory_movements は RLS 無しのままにし、既にある試験 test_inventory_sprint1_migrations.py:304-340 の文脈なし INSERT を壊さない）、`backend/app/ops/tenant_rls_allowlist.py`（ADR-1063 便5 の許可一覧。#5194 の版でも中身は空 `{}`。本便では触らない）、frontend、他の 7 表。
+- 触らない: `backend/tests/rls_bootstrap.py`（`_PG_BOOTSTRAP_MIGRATIONS` に新しい移行を足さない。共有の試験 DB の inventory_movements は RLS 無しのままにし、既にある試験 test_inventory_sprint1_migrations.py:304-340 の文脈なし INSERT を壊さない）、ADR-1063 便5 の許可一覧（`backend/app/ops/tenant_rls_allowlist.py`。origin/main 5574bf327 には無い＝便5 の PR #5194 が未合流。本便では作らない・触らない。便5 が入った後に一覧の追記が要るかは便5 側で扱う）、frontend、他の 7 表。
 
 ## 2. 移行 SQL（design §2-1 の型A を表名で埋めたもの）
 
@@ -81,7 +81,7 @@ run_sql migrations/20261107_100000_add_inventory_movements_rls.sql
 
 - 会社番号: 976（自社）・977（他社）。backend/tests で未使用（`git grep -n -E "\b(976|977)\b" origin/main -- backend/tests` が 0 件であることを実装の前に確かめる。1 件でもあれば止まって Opus に戻す）。
 - `_fresh()` の中身（使い捨て DB `imv_rls_<hex12>`、app_engine は `pool_size=1, max_overflow=0`）:
-  1. admin で `_ensure_public_users(conn)`（tenants・users の最小の土台）→ tenants に 976・977 を INSERT。
+  1. tenants・users の土台は作らない（`_ensure_public_users` も呼ばない・tenants に INSERT しない）。inventory_movements に tenants・users への外部キーは無い（migrations/062_create_inventory_movements_and_budget.sql:87-140 の外部キーは products・suppliers だけ）。前例 test_suppliers_rls.py:86 は使い捨て DB で `bootstrap_public_products` を直接呼ぶ。
   2. `await bootstrap_public_products(admin_engine)`（rls_bootstrap.py:327。002・056・062 ほかを本番の順で当て、inventory_movements と products・suppliers を本物の移行で作る。表の定義を試験に書き写さない）。
   3. admin で products に 1 行（`INSERT INTO public.products (name, stock_quantity) VALUES ('imv rls', 100) RETURNING id`。前例 test_inventory_sprint1_migrations.py:313-316）。
   4. admin で `_GRANT_DDL`（test_users_rls.py:57-60 と同じ 2 行）。
@@ -124,6 +124,8 @@ run_sql migrations/20261107_100000_add_inventory_movements_rls.sql
   - 入れ物の名前を先に読む: `docker ps --format '{{.Names}}' | grep backend`（blue-green の後は astro-webapp-backend-1。scripts/blue-green-cutover.sh:27・Step 6）。
   - 流す: `cd /home/ubuntu/salesanchor && docker exec -i astro-webapp-backend-1 python - --tenant 1 --since 2000-01-01 --output /dev/null < scripts/export_inventory_for_sheet.py`。
   - 会社 1（test-corp）を使う。tenant 4（highlife-jpn）は使わない。
+  - 標準入力で流すときの台本の名前: 台本は :43 で `Path(__file__)` を使う。標準入力の Python でも `__file__` は `'<stdin>'` になり落ちない（2026-11-07 に Opus が手元の Python 3.12.8 で `echo 'print(repr(__file__))' | python3.12 -` を流して `'<stdin>'` を確認。審査 1 回目の指摘 1 はこの実測で退けた）。`<stdin>` から作る :43-45 の道は sys.path に足すだけで、台本は sqlalchemy しか読み込まない。
+  - 反映の前の 1 回目は手順の試しも兼ねる。終了コードが 0 でない・`OK:` 行が出ないときは、合流しないで止まり、生出力を残して設計に戻す。
   - 反映の前に 1 回（古い台本・RLS なし）、反映の後に 1 回（新しい台本・RLS あり）流し、両方で終了コード 0・ログに `OK: 0 rows written to /dev/null`・`export 失敗` が 0 件。行数が前後で一致（0 = 0）。
   - 本番が 0 行なので、行数の一致は弱い確かめになる。「自社の行が見え、他社の行が見えない」ことの強い確かめは §5 ⑨（CI・アプリの接続役）で行う。
   - 道: 無制限鍵（読むだけの調査。AGENTS.md の恒常許可の範囲外の DB 読み取りを含むので、本カードが審査役の APPROVE を受けた手順として ADR-1003 追記 2026-11-02 に従い Opus が控えを取って流す）。
@@ -154,3 +156,13 @@ COMMIT;
 ## 10. 危険パスと GO
 
 - `migrations/` と `scripts/` を含む＝危険 PR（ADR-135・ADR-136）。マージの前に、審査役（reviewer・opus）の APPROVE、CI 全緑、直前のバックアップの確認（デプロイの Pre-deploy DB backup）を揃え、PR 本文に `### GO記録`（POの委任に基づくClaude Opus発行・委任の根拠 ADR-1003・PR 番号・HEAD・日時・相乗りの PR が無いこと）を書く。
+
+## 11. 設計審査 1 回目（card-4-1-review.md・REVISE・5 件）の反映
+
+| 指摘 | 扱い | どこを直したか |
+|---|---|---|
+| 1 標準入力の Python は `__file__` が無く :43 で落ちる | 退けた（実測） | §7 K5-2 に実測と、1 回目で落ちたら止まる決まりを足した |
+| 2 許可一覧のファイルは origin/main に無い | 受けた | §1 の触らない範囲 |
+| 3 design §3 が `false` のまま | 受けた | design.md §3 の ④-1 行を `true` にし、理由をこのカード §4 へ向けた |
+| 4 tenants の INSERT の列が無い・要らない | 受けた | §5 `_fresh()` 手順 1（土台を作らない） |
+| 5 「ここから追加」の見出しは無い | 受けた（カードの文言は「末尾」。見出しが無いことを明記） | §1 表の 2 行目 |

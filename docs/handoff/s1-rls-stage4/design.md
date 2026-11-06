@@ -81,7 +81,7 @@ COMMIT;
 
 | 便 | 表 | migration 以外の変更 |
 |---|---|---|
-| ④-1 | inventory_movements | scripts/export_inventory_for_sheet.py:108（origin/main 6caae154f の `engine.connect()`）の接続で、読む前に会社の文脈（`set_config('app.tenant_id', <会社>, false)`）を張る。張らないと型A で 0 行になる（R§6 U4: `DATABASE_URL`＝アプリの接続役） |
+| ④-1 | inventory_movements | scripts/export_inventory_for_sheet.py:108（origin/main 6caae154f の `engine.connect()`）の接続で、読む前に会社の文脈（`set_config('app.tenant_id', <会社>, true)`。取引の間だけ。`false` だと共有の接続に文脈が残る。理由と根拠は card-4-1.md §4）を張る。張らないと型A で 0 行になる（R§6 U4: `DATABASE_URL`＝アプリの接続役） |
 | ④-2 | discord_server_snapshots・discord_server_apply_runs | なし |
 | ④-3 | tenant_discord_config・tenant_discord_ticket_config | なし（書込の入口はすべて会社の文脈あり。R§4-3・4-4） |
 | ④-4 | google_webhook_subscriptions | なし（書込の入口 register・stop・sync は会社の文脈あり。R§4-5、backend/app/routers/calendar.py の呼び出し） |
