@@ -1,6 +1,6 @@
 # design: Discord 連携の戻り口で、サーバーの持ち主を Discord に確かめてから保存する（G3）
 
-- 状態: 設計案作成済み（審査前）。実装は未着手
+- 状態: 設計案作成済み・審査1回目 REVISE を反映（再審査待ち）。実装は未着手
 - 基準: origin/main 5574bf327
 - 根拠: docs/handoff/discord-oauth-ownership-proof/recon.md（以下 recon）
 - 前の設計: docs/handoff/cross-tenant-user-ref-guard/design.md 1・7・8 節（G3 を次の作業に積んだ）
@@ -27,7 +27,7 @@
 | K1 | Discord を通らずに戻り口を開いて番号を送ったときに保存される行 | ある（recon 1） | 0 | 自動試験: code なし・Discord が拒否する code・Discord の答えと URL の番号が違う、の3通りで行が増えない／変わらない |
 | K2 | Discord の画面でボットを入れたときにつながる | つながる | つながる | 反映後、PO がテナント001で顧客用・自社用を解除→再接続し「接続済み」が出る |
 | K3 | 保存される番号が Discord の答えの番号だけ | URL の番号 | Discord の答え | 自動試験（保存値＝交換の応答の guild.id）＋反映後の本番の新しい行の guild_id が、PO が選んだサーバーの番号と一致 |
-| K4 | 秘密の鍵の値が出る所 | — | 0 | `git grep` で値が無い・試験でログと転送先 URL に鍵・code・access_token が出ない |
+| K4 | 秘密の鍵の値が出る所（画面・記録・アプリのログ・コード） | — | 0 | `git grep` で値が無い（10 節）・試験でアプリのログ・転送先 URL・応答に鍵が出ない。あわせて code・access_token もアプリのログに出さない |
 
 ## 3. 対象と対象外
 
@@ -36,7 +36,7 @@
 - docker-compose.yml の backend の環境変数に DISCORD_CLIENT_SECRET を1行
 - .github/workflows/deploy.yml の .env 書き込みに DISCORD_CLIENT_SECRET を2行（消す sed と heredoc）
 - backend/app/main.py の起動時の警告に DISCORD_CLIENT_SECRET を足す
-- backend/tests/test_discord_oauth.py の戻り口の試験の書き換えと追加
+- backend/tests/test_discord_oauth.py の戻り口の試験の書き換えと追加。開始口の今の試験 :190・:219・:246 には試験用の鍵の環境変数を入れる（4-2 で鍵が無いと 503 になるため）
 - docs/adr/ADR-091 に追記（戻り口は code を交換し、応答の guild だけを使う）＋ `node scripts/generate-adr-index.js`
 
 対象外（理由つき）:
@@ -106,7 +106,7 @@ async def _exchange_code_for_guild_id(code: str) -> str:
         err = ""
         try:
             err = str(resp.json().get("error", ""))[:40]
-        except ValueError:
+        except (ValueError, AttributeError):
             pass
         logger.warning("[discord_oauth] code 交換の拒否 status=%d error=%s", resp.status_code, err)
         raise _ExchangeError("code_exchange_failed")
@@ -122,6 +122,8 @@ async def _exchange_code_for_guild_id(code: str) -> str:
 ```
 - `import httpx` を先頭に足す
 - 応答の本文・access_token・refresh_token・code・鍵はログに出さない。出すのは status と Discord の `error` の語（例 `invalid_grant`）だけ
+- 応答の本文が辞書でない JSON でも、`AttributeError` を受けて 500 にしない（:109・:116 の両方）
+- Discord からの転送の URL には Discord の決まりで code が入る。web サーバーのアクセスログには残る。code は1回だけ使え、交換には鍵が要るので、code だけでは保存も横取りもできない。アプリのログには書かない
 - `httpx` の `data=` は `application/x-www-form-urlencoded` で送る（公式の条件）。`auth=(id, secret)` は HTTP Basic（公式の条件）
 
 ### 4-4. 戻り口（:160-254）
@@ -164,7 +166,8 @@ async def _exchange_code_for_guild_id(code: str) -> str:
 
 | リスク | 対処 |
 |---|---|
-| U1: 今の招待で戻り先に code が付かない | 反映直後に PO がテナント001で確かめる（10 節 K2）。失敗理由が `missing_code` なら、PO が Discord 開発者画面のボット設定で「code grant を必須」を入れる（公式の勧め・コード変更なし）→ もう一度試す。それでも駄目なら PR を revert |
+| U1: 今の招待で戻り先に code が付かない（公式は bot と applications.commands だけなら token は要らないと書く・recon 8） | 合流の前に確かめる（12 節 0）。PO の 11/6 の再接続のブラウザの履歴にある戻り口の URL に `code=` があるかを見る。無ければ、合流の前に PO が開発者画面のボット設定で「Requires OAuth2 Code Grant」を入れ、もう一度履歴で `code=` を確かめる（公式の勧め・コード変更なし）。それでも無ければ合流しない（設計を戻して PO に聞く） |
+| K2 の確かめで、会社1の行が消えたまま残る（画面の連携ボタンは未接続のときだけ出る: frontend/src/pages/channels/ChannelsPage.tsx:530・frontend/src/pages/admin/DiscordOwnServerPanel.tsx:304。解除は行を消す: backend/app/routers/discord_guild_config.py:104・:167） | 確かめは会社1（開発の試しの会社）だけで行う。失敗したら 12 節 4 の戻しの流れ: revert → 反映 → PO がもう一度つなぐ（今の戻り口は code を見ないのでつながる）→ Opus が読み取りの道で会社1の2行が戻ったことを確かめる。止まる範囲: 戻るまで、会社1の顧客用サーバーの書き込みは会社を引けない（backend/app/discord_gateway/client.py:104 の guild から会社を引く処理）。他の会社（4・6）の行には触らない |
 | 鍵が GitHub Secrets に入る前に反映される | 開始口が 503 で止まる（4-2）。連携は止まるが、偽の登録は入らない。順番は 12 節で「鍵 → 合流」に固定 |
 | 鍵がログに出る | ログに出す値を status と error の語だけに限る（4-3）。試験で caplog と転送先 URL に鍵の文字が無いことを確かめる |
 | Discord の応答が遅い | 10 秒で打ち切り `code_exchange_failed`。DB の取引は開く前（4-4） |
@@ -204,9 +207,10 @@ async def _exchange_code_for_guild_id(code: str) -> str:
 | 正しい code で、応答の guild.id が保存され connected | 自動試験（保存値を読む） |
 | 交換の送り方が公式どおり（form・Basic・grant_type・code・redirect_uri） | 自動試験で MockTransport が受けた要求を確かめる |
 | 鍵が無いと開始口が 503、戻り口は `discord_not_configured` | 自動試験 |
-| ログと転送先 URL に鍵・code・access_token が出ない | 自動試験（caplog・location に試験用の値が含まれない） |
+| アプリのログと転送先 URL に鍵・code・access_token が出ない | 自動試験（caplog・location に試験用の値が含まれない） |
+| K4: 鍵の値がコードと文書に無い | Opus は鍵の値を持たない。合流の前に `git grep -n -iE "DISCORD_CLIENT_SECRET\s*[=:]\s*['\"]?[A-Za-z0-9_-]{20,}"` が 0 件（値の形の文字列が書かれていない）。鍵は GitHub Secrets だけにある（`gh secret list` で名前だけ確かめる） |
 | state を1回使ったら同じ state で2回目は `invalid_state` | 既存の試験の形（今と同じ） |
-| 既存の試験（:306 など）を code ありの形に直して緑 | CI |
+| 既存の試験（戻り口 :306 など・開始口 :190・:219・:246）を code あり／鍵ありの形に直して緑 | CI |
 | 自社用の戻り先が `/admin/discord-config?tab=own&…` のまま | 自動試験 |
 | deploy.yml と compose に DISCORD_CLIENT_SECRET が入る | 差分の審査・反映後に `gh run view` で deploy 成功 |
 | K2: 本番で顧客用・自社用がつながる | 反映後、PO がテナント001で解除→再接続 |
@@ -221,15 +225,29 @@ async def _exchange_code_for_guild_id(code: str) -> str:
 ## 12. 実装の進め方（1つの作業）
 
 順番を固定する:
+0. **実装の前に** U1 を確かめる: PO が、11/6 にテナント001で再接続したときのブラウザの履歴から、`api.salesanchor.jp/api/v1/discord/oauth/callback` の URL に `code=` があるかだけを見て答える（値は書き写さない）。無い場合は 6 節 U1 の手当て
 1. 実装（クラウドの Sonnet・実装カード）→ CI 緑 → 審査役 → GO 記録（委任・ADR-1003。deploy.yml を含むので ADR-136 の3行まとめを PO に出す）
 2. **合流の前に**、PO が秘密の鍵を入れる（secrets の変更は PO 本人・ADR-1003 例外）:
    1. Discord 開発者画面 → Sales Anchor のアプリ（client id 1499458730171961535）→ OAuth2 → Client Secret → Reset Secret → 出た値を写す（1回しか表示されない）
    2. GitHub の shingo-ops/salesanchor → Settings → Secrets and variables → Actions → New repository secret → 名前 `DISCORD_CLIENT_SECRET`、値を貼る
    3. Opus が `gh secret list` で名前があることだけ確かめる（値は見ない）
 3. 合流 → 反映（deploy 成功を確かめる）
-4. PO がテナント001で顧客用・自社用を解除→再接続（K2）。失敗理由が `missing_code` なら 6 節の手当て
+4. PO がテナント001で顧客用・自社用を解除→再接続（K2）。失敗したら、その場で次の戻しの流れにする: (1) Opus が PR を revert して反映 (2) PO がもう一度つなぐ (3) Opus が読み取りの道で会社1の顧客用・自社用の2行があることを確かめる。会社4・6 の行は触らない
 5. Opus が読み取りの道で K3 を確かめる
 
 ## 13. 審査（Architect）
+
+### 1回目（2026-11-06 15:31Z・クラウドの Opus・読み取りのみ・対象 c774b7d5e・照合 origin/main 8a13f5328）: REVISE
+
+- C1 ×（recon の試験の行番号1か所）／C2 未確認（クラウドから docs.discord.com に届かない）／C3 ○（tenant_discord_config への書き込みは discord_oauth.py:221 の INSERT だけ。他は SELECT と DELETE）／C4 ○条件つき／C5 ×／C6 ○
+- Q1 必須: K2 の確かめで失敗すると会社1の行が消えたまま残る → 6 節に行を足し、12 節 4 に戻しの流れを書いた
+- Q2 推奨: 転送の URL の code はアクセスログに残る → K4 の対象を「アプリのログ」と明記し、4-3 に理由を書いた
+- Q3 推奨: 開始口の今の試験は鍵が無いと赤 → 3 節と 10 節に足した
+- Q4 推奨: 拒否の応答の本文が辞書でないと AttributeError → 4-3 :109 の except を直した
+- Q5 推奨: recon 6 の行番号を直した
+- Q6 推奨: K4 の `git grep` の確かめを 10 節に足した
+- C2 の代わり: Opus が手元で公式を 2026-11-07 に再取得した。交換の URL・項目・form だけ・Basic 認証・応答の guild は 4-3 と一致。一方で公式は「bot と applications.commands だけなら token は要らない」と書くので、U1 を実装の前に確かめる順に変えた（12 節 0・6 節）
+
+### 2回目
 
 （未実施）

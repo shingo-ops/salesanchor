@@ -65,7 +65,7 @@ Context7 は月の上限で使えなかった（`Monthly quota exceeded`）。�
 
 ## 6. 既存の試験
 
-- backend/tests/test_discord_oauth.py: :306 正常（state と guild_id で connected）、:334・:344・:398 state なし／無効／guild_id なし、:363 set_tenant_context の順。:280-318 招待の URL の項目
+- backend/tests/test_discord_oauth.py: 開始口 :186-295（:190 invite_url と state・:219 権限の数字・:246 招待の URL の項目）。戻り口 :302-（:306 正常＝state と guild_id で connected、:334・:344・:398 state なし／無効／guild_id なし、:363 set_tenant_context の順）
 - backend/tests/test_discord_oauth_rls.py:122・:179 監査の記録と RLS
 
 ## 7. 本番の今の行（読み取りの道・2026-11-06 15:20Z・rows=4）
@@ -81,6 +81,6 @@ Context7 は月の上限で使えなかった（`Monthly quota exceeded`）。�
 
 ## 8. 未確認
 
-- U1: 今の招待（bot applications.commands + response_type=code）で、戻り先に `code` が実際に付くか。ADR-091:162-163・:263 は付くと記録するが、生の URL の記録は repo に無い。Discord 公式は bot と applications.commands だけのとき code が付くかを明言しない
+- U1: 今の招待（bot applications.commands + response_type=code）で、戻り先に `code` が実際に付くか。ADR-091:162-163・:263 は付くと記録するが、生の URL の記録は repo に無い。Discord 公式は bot と applications.commands だけのとき code が付くかを明言しない。2026-11-07 再取得: 公式は「bot と applications.commands だけなら利用者の access token を取る必要が無い」「response_type は、それ以外の scope を求めるときだけ必須」と書く（code が付かない可能性を否定できない）
 - U2: 既存の4行のサーバーに、ボットが本当に入っているか（偽の登録が過去に無いか）。ボットの鍵が要るので読み取りの道では見られない
 - U3: Discord 開発者画面に、すでに秘密の鍵が発行済みか（作り直すと前の鍵は使えなくなる。コードで使う所は 0 件なので影響先は repo の中には無い）
