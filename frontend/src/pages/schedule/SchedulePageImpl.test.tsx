@@ -33,6 +33,7 @@ const answers = vi.hoisted(() => ({
   events: [] as Array<Record<string, unknown>>,
   shifts: [] as Array<Record<string, unknown>>,
   canManageOthers: false,
+  selfMissing: false,
 }));
 
 vi.mock("../../lib/api", () => ({
@@ -48,7 +49,7 @@ vi.mock("../../lib/api", () => ({
           owners: [
             { staff_id: 7, user_id: 101, staff_code: "A01", name: "Owner Self", primary_email: null, color: null, is_visible: true, share_mode: "self", is_self: true },
             { staff_id: 8, user_id: 202, staff_code: "B02", name: "Owner Other", primary_email: null, color: null, is_visible: false, share_mode: "view", is_self: false },
-          ],
+          ].filter((o) => !(answers.selfMissing && o.is_self)),
         };
       }
       if (path.startsWith("/calendar/events")) return { events: answers.events };
@@ -77,6 +78,7 @@ beforeEach(async () => {
   answers.events = [];
   answers.shifts = [];
   answers.canManageOthers = false;
+  answers.selfMissing = false;
   calendarProps.current = null;
   hrefSetter.mockReset();
   const fake = { ...window.location } as Record<string, unknown>;
@@ -599,6 +601,15 @@ describe("SchedulePage on CalendarView", () => {
     expect(eventOf("event-6")?.editable).toBe(true);
     expect(eventOf("event-5")?.editable).toBe(false);
     expect(eventOf("shift-3")?.editable).toBe(false);
+  });
+
+  it("T5: another owner's event is not editable for a non-admin", async () => {
+    answers.canManageOthers = false;
+    answers.selfMissing = true;
+    answers.events = [apiEvent({ id: 2, user_id: 202, created_by_user_id: 202, title: "Other Event" })];
+    await ready();
+    await screen.findByText("Other Event");
+    expect(eventOf("event-2")?.editable).toBe(false);
   });
 
   it("T6: moving an event patches it with the numeric id and reverts on failure", async () => {
