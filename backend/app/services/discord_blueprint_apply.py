@@ -6,13 +6,14 @@
   - blocked の行は Discord を呼ばない
   - 1 行失敗しても残りの行を続ける。先に作る物が失敗した行は呼ばずに失敗にする
   - 結果にサーバーの番号を入れない
+  - webhook を作る行（第2段 2c）は、返事の id と token から送り先の URL を作って webhook_urls に入れる。結果には入れない
 """
 from __future__ import annotations
 
 import re
 from typing import Any
 
-from app.services.discord_rest import DiscordAPIError, discord_api_request
+from app.services.discord_rest import DiscordAPIError, discord_api_request, webhook_execute_url
 
 _ALLOWED_METHODS = ("POST", "PATCH", "PUT")
 _GUILD_MARK = "{guild}"
@@ -69,7 +70,7 @@ def _result(row: dict[str, Any], status: str, reason: str | None = None,
     }
 
 
-async def apply_plan(plan: dict[str, Any], guild_id: str, bot_token: str) -> list[dict[str, Any]]:
+async def apply_plan(plan: dict[str, Any], guild_id: str, bot_token: str, webhook_urls: dict[str, str] | None = None) -> list[dict[str, Any]]:
     """確認の結果（changes と actions）を Discord に反映し、行ごとの結果を返す。"""
     guild_id = str(guild_id)
     created: dict[str, str] = {}
@@ -83,8 +84,13 @@ async def apply_plan(plan: dict[str, Any], guild_id: str, bot_token: str) -> lis
         if action.get("method") not in _ALLOWED_METHODS:
             results.append(_result(row, "failed", "method_not_allowed"))
             continue
+        webhook_for = action.get("webhook_for")
+        if webhook_for and webhook_urls is None:
+            # 送り先を書く所が無い呼び方では webhook を作らない（作っても使えない webhook が残るだけ）
+            results.append(_result(row, "failed", "method_not_allowed"))
+            continue
         try:
-            path = _fix_text(action["path"], guild_id, created)
+            path =_fix_text(action["path"], guild_id, created)
             body = _fix_value(action["json"], guild_id, created)
         except _Unresolved:
             results.append(_result(row, "failed", "depends_failed"))
@@ -99,6 +105,15 @@ async def apply_plan(plan: dict[str, Any], guild_id: str, bot_token: str) -> lis
             )
         except DiscordAPIError as exc:
             results.append(_result(row, "failed", "discord_error", discord_status=exc.status_code))
+            continue
+        if webhook_for:
+            hook_id = reply.get("id") if isinstance(reply, dict) else None
+            hook_token = reply.get("token") if isinstance(reply, dict) else None
+            if not hook_id or not hook_token:
+                results.append(_result(row, "failed", "webhook_token_missing"))
+                continue
+            webhook_urls[str(webhook_for)] = webhook_execute_url(str(hook_id), str(hook_token))
+            results.append(_result(row, "success"))
             continue
         new_id: str | None = None
         creates = action.get("creates")
