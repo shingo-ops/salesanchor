@@ -355,3 +355,94 @@ def _no_customer_reply_notice_task(monkeypatch):
 - `NEEDS_DECISION: <決めてほしいこと>`
 
 END OF CARD
+
+---
+
+## 追補 A（2026-11-06・CI「test-schema-dup gate」の赤の直し）
+
+### なぜ
+CI の test-schema-dup gate（`scripts/check_test_schema_dup.py`）が赤。実測（PR #5201 head 4396dd9ff の CI ログ）:
+`backend/tests/test_customer_reply_notifier.py (0 -> 5)`。§9 の webhook の試験のために、`test_webhook_instagram.py` の表の定義（leads・meta_messages・tenant_meta_config・tenants・lead_channels の 5 つの CREATE TABLE）を新しい試験ファイルに写したのが原因。テストに表の定義の新しい写しを増やすことは決まりで禁止（docs/specs/process-hardening/design-pillar3.md 柱3-a/b）。
+
+### やること（これだけ）
+1. `backend/tests/test_customer_reply_notifier.py` から、見出し `# webhook（test_webhook_instagram.py の webhook_env と _insert_tenant_meta_config を写す）` の区切り線から**ファイルの終わりまで**を消す（`_LEADS_DDL`〜`_LEAD_CHANNELS_DDL`・`webhook_engine`・`webhook_db`・`_insert_tenant_meta_config`・`_wrap_session_for_set_noop`・`webhook_env`・`_messenger_body`・試験 `test_webhook_new_message_calls_notice_once`・`test_webhook_duplicate_message_does_not_call_notice`）。その結果使われなくなった import（`event`・`create_async_engine`・`AsyncSession`・`sessionmaker`・`ExitStack` 等）は ruff が言うものだけ消す。他の試験は 1 文字も変えない。
+2. `backend/tests/test_webhook_instagram.py` の**ファイルの最後**に、次の 2 つの試験と助けを足す（既存の `db_session`・`webhook_env`・`_insert_tenant_meta_config` をそのまま使う。既存の行は 1 行も変えない・消さない）。
+
+```python
+# ---------------------------------------------------------------------------
+# 第2段 2d: お客さんの返信の知らせ（新しい受信のときだけ 1 回）
+# ---------------------------------------------------------------------------
+
+
+def _customer_reply_messenger_body(mid: str) -> dict:
+    return {
+        "object": "page",
+        "entry": [{
+            "id": "PAGE-A",
+            "messaging": [{
+                "sender": {"id": "PSID-100"},
+                "timestamp": 1714400000,
+                "message": {"mid": mid, "text": "Hello"},
+            }],
+        }],
+    }
+
+
+@pytest.mark.asyncio
+async def test_webhook_new_message_calls_customer_reply_notice_once(db_session, webhook_env):
+    from app.routers import webhook as wh
+
+    await _insert_tenant_meta_config(db_session, tenant_id=999, page_id="PAGE-A")
+    notice_mock = AsyncMock(return_value=True)
+
+    with patch("app.routers.webhook.enqueue_inbound_translation"), \
+            patch("app.routers.webhook.send_customer_reply_notice", new=notice_mock):
+        await wh.process_messenger_event(_customer_reply_messenger_body("mid-notice-1"))
+
+    assert notice_mock.await_count == 1
+    res = await db_session.execute(text("SELECT id FROM leads WHERE channel_type = 'messenger'"))
+    lead_id = res.scalar()
+    assert lead_id is not None
+    assert notice_mock.await_args.kwargs == {
+        "tenant_id": 999, "lead_id": lead_id, "source": "messenger",
+    }
+
+
+@pytest.mark.asyncio
+async def test_webhook_duplicate_message_does_not_call_customer_reply_notice(db_session, webhook_env):
+    from app.routers import webhook as wh
+
+    await _insert_tenant_meta_config(db_session, tenant_id=999, page_id="PAGE-A")
+    notice_mock = AsyncMock(return_value=True)
+
+    with patch("app.routers.webhook.enqueue_inbound_translation"), \
+            patch("app.routers.webhook.send_customer_reply_notice", new=notice_mock):
+        await wh.process_messenger_event(_customer_reply_messenger_body("mid-notice-2"))
+        assert notice_mock.await_count == 1
+        await wh.process_messenger_event(_customer_reply_messenger_body("mid-notice-2"))
+
+    assert notice_mock.await_count == 1
+```
+
+3. 上の docstring の「対象」に `app.routers.webhook.process_messenger_event` が書いてあれば、その行は消し、代わりに `（webhook の 2 件は test_webhook_instagram.py の末尾）` と 1 行書く。
+
+### 触らない
+- `backend/app/` の全ファイル・conftest.py・他の試験・design.md。§1〜§11 で作ったものは変えない。
+
+### 確かめ（生出力を impl-report-s2-2d.md の末尾「追補 A」に貼る）
+1. `BASE_SHA=$(git merge-base origin/main HEAD) HEAD_SHA=HEAD python3 scripts/check_test_schema_dup.py` → 最後の行が `テストへの新規スキーマ複製なし(pass)`、rc=0
+2. `cd backend && python -m pytest tests/test_customer_reply_notifier.py tests/test_webhook_instagram.py -q` → 0 failed（件数を貼る。test_customer_reply_notifier は 2 件減り、test_webhook_instagram は 2 件増える）
+3. `cd backend && ruff check tests/test_customer_reply_notifier.py tests/test_webhook_instagram.py` → rc=0
+4. `git diff origin/main...HEAD -- backend/tests/test_webhook_instagram.py | grep '^-' | grep -v '^---'` → 0 行（既存行を消していない）
+
+### 保存
+- 1 つの commit。文は `test(discord): 2d の webhook 試験を既存の試験ファイルへ移す（表の定義の写しをなくす）`、最後の行に `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`
+- `git push origin release/discord-own-server-s2-2d`（force は使わない）
+
+### 想定分岐
+- 確かめ 1 が pass にならない: 止めて NEEDS_DECISION（生出力）
+- 確かめ 2 で移した 2 件が落ちる: 既存の webhook_env が `send_discord_notification` も止めていることを確かめ、落ちた理由の生出力を貼って NEEDS_DECISION（試験の中身は変えない）
+- 確かめ 4 が 0 行でない: 止めて NEEDS_DECISION
+
+### 報告
+impl-report-s2-2d.md の末尾に「追補 A」の節を足して commit に含める。最後の行は `DONE: <sha>` / `BLOCKED: <理由>` / `NEEDS_DECISION: <内容>` のどれか 1 つ。
