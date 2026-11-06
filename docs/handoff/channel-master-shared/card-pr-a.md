@@ -111,7 +111,7 @@ COMMIT;
 
 ## 触らない
 
-- `backend/`（:484 の数の1か所を除く）・`frontend/`・`.github/`・`deploy.yml`・`docs/`（このカードに無いファイル全部）。
+- `backend/`（:484 の数の1か所を除く）・`frontend/`・`.github/`（下の「改訂1」の1か所を除く）・`deploy.yml`・`docs/`（このカードに無いファイル全部）。
 - 既存の migration（`migrations/20260611_100000_create_channel_masters.sql`・`backend/app/services/tenant.py` の会社ごとの表）。古い表は PR-C まで残す。
 - `migrations/20261024_100300_create_ai_cloud_views.sql` は、やること4の5行と 3 行目の数だけ。`backend/tests/ops/test_ai_cloud_views.py` は :484 の数だけ。`scripts/migration-guard/reference-allowlist.tsv` は :7 の 2 列目と 4 列目の末尾だけ。
 - 行を入れる文（INSERT・UPDATE）を migration に書かない（共用6行はこの後の別のデータ変更で PO が流す・ADR-1007）。
@@ -128,3 +128,11 @@ COMMIT;
 ## 終わりの報告
 
 - 最後の行は `DONE` か `BLOCKED: 理由` か `NEEDS_DECISION: 問い`。HEAD の sha・変更ファイル一覧（`git diff --name-only origin/main...HEAD`）・各検査の終了コードを付ける。
+
+## 改訂1（2026-11-06・マージ前審査で見つかった設計の入れ忘れ）
+
+- 事実: PR #5206 の CI「models.py に新 Column → deploy.yml にマイグレーション追記必須」がチェック4で止まった。設定の表の外部キー `REFERENCES public.channel_masters(id)` の参照先が、`.github/workflows/migration-guard.yml:224` の `PUBLIC_TABLES` に無いため。このカードは `.github/` を触らないとしており、この1か所を入れ忘れていた。
+- 前例: e2f86facf（discord-server-management 便2）が同じ一覧の末尾に新しい public の表を足している。
+- やること: `.github/workflows/migration-guard.yml:224` の `PUBLIC_TABLES="..."` の閉じる `"` の直前（今の末尾は `discord_server_apply_runs`）に、半角空白区切りで ` channel_masters channel_master_tenant_settings` を足す。ほかの行・ほかの語は変えない。
+- 変更ファイルは、このカード自身を含めて 7 つになる（元の5つ＋`.github/workflows/migration-guard.yml`＋このカード）。
+- 終わりの確かめ: migration-guard の新しい run が緑。

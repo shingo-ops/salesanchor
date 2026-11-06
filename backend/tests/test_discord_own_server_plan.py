@@ -24,7 +24,7 @@ from app.auth.dependencies import get_current_tenant, get_current_user
 from app.database import get_db
 from app.models import User
 from app.routers import discord_own_server
-from app.services.discord_blueprint import BLUEPRINT_DIR, Blueprint, build_plan
+from app.services.discord_blueprint import BLUEPRINT_DIR, NOTICE_ROOMS, Blueprint, build_plan
 from app.services.discord_rest import DiscordAPIError
 
 _G = "1567709769337409000"
@@ -61,6 +61,8 @@ def _bp_data() -> dict:
     # （「スタッフ」が確認で「作る」1 行になることは test_discord_own_staff_sync.py で確かめる）
     data = json.loads((BLUEPRINT_DIR / "tenant_1.json").read_text(encoding="utf-8"))
     data["roles"] = [r for r in data["roles"] if r["key"] != "staff"]
+    # 第2段 2c で足した知らせの部屋 3 つも本番の Discord にまだ無いので除く（test_discord_notice_rooms.py で確かめる）
+    data["channels"] = [c for c in data["channels"] if c["key"] not in NOTICE_ROOMS]
     return data
 
 

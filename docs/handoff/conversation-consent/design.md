@@ -974,3 +974,243 @@ K31・K33・K34・K35 は第6版のまま。K35 は○（§14-10-10）。
 **再審査**（2026-11-06 00:11〜00:12 JST・クラウドの Opus・読むだけ・salesanchor fca230859 / agent-console b467656）: **APPROVE**。C1〜C4 は○。必須の指摘なし。推奨2件（:906 の K40 の言い回しが古い・版を足す手順と K42 の表の行に第11版の直しが入っていない）は、言い回しだけの直しとしてこの版で直した。
 
 **状態**: 設計審査済み（第11版・APPROVE）。PO の実装承認は §14-13 の冒頭（2026-11-05 PO「1」と、同日の「判定を決め直したら、設計の審査をもう一度通し、その後クラウドで作り、合流と導入まで進める」）に基づく。（2026-11-06 追記: GEN-RYU-System/agent-console PR #100 で合流（412717f）し、agent-console v0.51.0 で導入済み。実際の件の窓での K32・K33・K41・K7 の確かめは、PO が件を1つ開いた後に行う）
+
+### 14-14 第12版: 件の claude の版を人の手なしで確かめて使う（2026-11-06・PO「1」）
+
+**状態**: 設計案・審査4回目 APPROVE（4稿）。その推奨3件を取り込んだ5稿（当て先は §14-14-15）。設計書は本線に合流済み（2026-11-06・#5208）。便CS3c（ADR-1033 What 6 の例外と第12版への参照の直し）は #5210 で ADR-1033 に入れる。実装（便CS3a）は未着手。審査1回目の必須の直し7件と推奨3件の当て先は §14-14-12、審査2回目の必須の直し5件と推奨3件の当て先は §14-14-13、審査3回目の必須の直し3件と推奨3件の当て先は §14-14-14、審査4回目の推奨3件の当て先は §14-14-15。守りの水準は PO 2026-11-06「1」（うっかり防止の水準。同じ Mac の AI が技術的には書き換えられることを受け入れる）。PO の決定の原文は「1」。意味は『使ってよい版の一覧を config から、サーバーが自分で書く dataDir の記録へ移す』（設計役の3回目が出した PO 判断の選択肢1）。3回目の設計（D1 版ずれ通知・D2 写しで固定・D3' サーバー内部の判定・D4 probe の件・D5 dataDir の記録・便の順・S1〜S7・危険1〜3）は本書に入っていなかったため、本節で agent-console origin/main aabdeef（v0.52.0）の実物で確かめ直して書き下ろす。本節が正本。行番号はすべて aabdeef の物。
+
+#### 14-14-1 目的と決定
+
+- 今の形（第10・11版。§14-13-7 M1・§14-13-8）: 件の claude の版は、件を開くたびに PATH から解いた実体の道の最後の名前（[server/sessions.ts:513-515](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/sessions.ts#L513-L515) `prepareCaseRoom` → [server/case-sandbox.ts:432-449](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/case-sandbox.ts#L432-L449) `resolveClaudeReal`）。case-say の判定 4b は、その名前が config の `caseSayClaudeVersions`（[server/config.ts:88](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/config.ts#L88)・同梱の [agent-console.config.json:9](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/agent-console.config.json#L9) は `["2.1.318", "2.1.319"]`）に入っているときだけ通す（[server/hub.ts:538-542](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/hub.ts#L538-L542)）。版を足す手順は README:313-318 の4段（PO が件を開く → PO が K41 (a)(b) と K32 の一文を打つ → Opus が読む → PR・審査・導入）。
+- 観測事実（人の手の量）: 2.1.319 を足した PR #101（54f7c74・v0.51.1）は、コードを変えずに 7 ファイル・8 行（config・README・試験の期待値・版番号3か所・CHANGELOG）を変え、PO の操作・Opus の測り・審査・ac-update を要した。PO のふつうの claude が更新されるたびに同じ量がかかり、更新から版を足すまでの間、case-say は全件 `claude_version_unverified` で止まる。その事実は Opus が呼んで断られるまで誰にも知らされない（監査の行だけ。断りの行を書くのは [server/http.ts:554](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/http.ts#L554) `refused(409, reason, …)`。:543-553 は欄の組み立てと成功のときの道）。
+- 決定（PO「1」）: 一覧の正本を、サーバーだけが書く dataDir の記録へ移す。版の○×はサーバーが自分で開く「probe の件」で機械的に確かめ、人は打たない・読まない・PR を出さない。config の `caseSayClaudeVersions` は無くす（便CS3b）。
+- ADR-1033 What 6 の例外（審査1回目 C4・必須1）: ADR-1033:24 What 6 は「件のセッションへの決まった一文の送信は case-say の受け口だけで行う。§4-5 の見張りの外で端末へ送るほかの道を作らない」。本版は、サーバーが自分で開いた probe の件（D4）にだけ、コードの定数の文 3 つ（文1〜文3）を送る道を足す。条件: (a) 宛先は `versionProbe: true` の件だけ（PO の件・Opus の窓へは送れない）、(b) 文は定数で Opus・PO・外からの入力は入らない、(c) 打ち方は case-say と同じ `sendToPane`（区画 `%N` と pid の条件付き）・Enter の前の idle の確かめ直し、(d) 発火はサーバーの内側だけ（受け口・命令を作らない）、(e) 1回ごとに監査に残す（§14-14-6 の 9）。この例外は PO の決定「1」（版の○×を人の手なしにする）から来る。ADR-1033 の本文を直すのは便CS3c（§14-14-9）。便CS3c は便CS3a の合流より前に合流させる（ADR を先に直し、実装を後から合わせる。AGENTS.md の ADR 優先。審査2回目 必須4）。
+- 変えない物: PO の件・Opus の窓へ送る文は1種類（[server/hub.ts:140](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/hub.ts#L140) `caseSayText`・:571 で組む・README:302）、宛先の決め方（判定 4。[server/hub.ts:521-537](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/hub.ts#L521-L537)・README:304）、判定 1〜3・5〜9、Sales Anchor 側の見張り、起動台本 `ops/shell/ccdiscord.zsh`（K40 の2つの試験が守る）。
+
+#### 14-14-2 変更前後
+
+| 項目 | 変更前（v0.52.0） | 変更後（第12版） |
+|---|---|---|
+| 使ってよい版の正本 | config `caseSayClaudeVersions`（config.ts:88・:411-416、config.json:9） | dataDir の記録「case-say-claude-versions.json」（D5。書き手はサーバーだけ） |
+| 版の○×を決める人 | PO が打つ・Opus が読む・PR で足す（README:313-318） | サーバーが probe の件で機械条件（§14-14-4）により決める（D3'・D4） |
+| 判定 4b の比べ方 | 実体の道の最後の名前が一覧にあるか（hub.ts:538-542） | 件を開いたときの実体の指紋（sha256・size）が記録の使える項目と一致するか（D2）。名前は表示と監査の欄 |
+| 版ずれの知らせ | 無し（caseSayRefused の監査行だけ） | 画面の案内・macOS 通知・監査 `caseClaudeVersionNotice`（D1） |
+| サーバー起動時 | 版について何もしない | 記録を読み、各項目の指紋を実体と比べ直す。PATH の claude が未記録なら probe を予約（§14-14-6 の再 probe） |
+| 断りの理由 | `claude_version_unverified` | 同じ。確かめ中は `claude_version_probing`、probe の件への送信は `version_probe_session` を足す |
+| README | 「claude の版の一覧」節（:309-318） | 「版はサーバーが自分で確かめる」節に置き換え。人の手順は×のときの PO の手（§14-14-5）だけ |
+| 試験 | tests/unit/case-say.test.ts:334-357（K42）・:360-396（config） | K42 を記録の形に書き換え。config の試験は便CS3b で外す |
+
+#### 14-14-3 D1〜D5（読む物・書く物・file:line）
+
+**D5 dataDir の記録（正本）**
+- 書く物: 「<dataDir>/case-say-claude-versions.json」。形は `{ "version": 1, "entries": [ { "sha256", "size", "claudeVersion", "real", "verifiedAt", "probeCaseId", "checks": { "E1".."E4", "P0".."P5" }, "usable", "lastProbeAt", "lastResult", "failCount", "mac" } ] }`。項目の鍵は `sha256`（版の名前は表示用。同じ名前で中身が違えば別の項目）。書き方は [server/json-store.ts:30-36](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/json-store.ts#L30-L36) `writeJsonAtomic`（tmp＋rename・0600）。読み方は同 :20-27 `readJsonFile`。壊れていれば上書きせず「使える版 0」として扱い D1 で知らせる（open-sessions と同じ考え。[server/session-store.ts:60-63](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/session-store.ts#L60-L63)）。
+- 書く条件: probe が○のときだけ `usable: true` の項目を書く。人が手で足す命令は作らない（`scripts/ac-case-macos.mjs accept` のような形も作らない。理由: 人の手なしが目的。×のときの手は §14-14-5）。項目は消さず、起動時の再確認で指紋が合わなければ `usable: false` にする。
+- 読む側: 新しい部品「server/case-say-versions.ts」（`CaseSayVersionStore`）が起動時に読み、メモリに写しを持つ。判定 4b（`caseSayTarget`。同期関数 hub.ts:521）はメモリで決める。
+- 部屋からの守り: 件の部屋の書き込み拒否 [server/case-sandbox.ts:70-87](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/case-sandbox.ts#L70-L87) `CASE_DENY_WRITE` には D/cases・case-gh・hooks・activity は入っているが dataDir 直下のファイルは入っていない → 記録と鍵（§14-14-6 の 1）を `CASE_DENY_WRITE` と `CASE_DENY_READ`（同 :89-100）に足す。room.sb は件を開くたびに書き直す（sessions.ts:513-532）ので、入れた後に開いた件から効く。
+- 既存の似た形: macOS の版の記録「case-room-macos.json」（[server/case-proxy.ts:98-109](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/case-proxy.ts#L98-L109)・[scripts/ac-case-macos.mjs:34-36](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/scripts/ac-case-macos.mjs#L34-L36)）。違いは、あちらは人が命令で書き、こちらはサーバーだけが書く。
+
+**D2 実体の写し（指紋）で固定**
+- 指紋を取る時点（審査1回目の推奨1を採用）: 件の claude を起動する前に取る。`createCase`（sessions.ts:394-414。async）の中で、写しを作った後・`spawnSession` を呼ぶ前に `resolveClaudeReal` で実体を解き、sha256・size を流し読みで計算し、その `real` と指紋を `spawnSession` → `prepareCaseRoom` へ渡す（`prepareCaseRoom` は渡された `real` を使い、解き直さない）。起動した後に計算すると、開いてから計算するまでの間に中身を変えられるため。計算に 60 秒かかれば件は開くが 4b は `claude_version_unverified`・D1 n1 に理由を付ける。残る隙（計算してから起動台本が exec するまでの差し替え）は E2（固いリンクでない）と起動時の再確認（§14-14-6 の 3）で減らすだけで、無くはならない（PO「1」の水準で受け入れる）。
+- 読む物: 件を開くときに解いた実体の道 `claudeReal`（sessions.ts:514。[server/sessions.ts:661](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/sessions.ts#L661) で `caseClaudeReal`（:219 の Map）に残す。起動台本はこの道を `AC_CLAUDE_BIN` として受け（:504）、`ccdiscord.zsh:19` で実行できることを確かめ、`:76` で exec する）。
+- 書く物: `caseClaudeReal` の値を `{ real, size, sha256 }` に広げる（上の時点で取った値。流し読みは非同期で、サーバーを止めない）。指紋を持たない件（どの道で開いたかを問わない。復元 restore.ts:125-190 を含む）は、4b で必ず `claude_version_unverified`（誤って通す方へ倒さない）。復元の道に同じ計算を足すかは便CS3a の実装の選択で、どちらでも K50 の「指紋なし→409」で確かめる。実体のサイズと計算時間は未確認（U5）。大きすぎると分かれば、件を開くときは `size`・`mtime`・`ino` の一致で代え、sha256 は起動時と probe のときだけ計算する（K56 で測って決める）。
+- 判定 4b の新しい形: 件の指紋（sha256・size）が記録の `usable: true` の項目と一致 → 通す。あわせて最後の名前が `CLAUDE_VERSION_PATTERN`（[server/config.ts:409](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/config.ts#L409)）に合うことは引き続き要求する（監査の `claudeVersion` 欄 [server/routine-audit.ts:58-59](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/routine-audit.ts#L58-L59) に書くため）。名前だけでは通らない。
+
+**D3' サーバー内部の判定**
+- 版の○×を決める材料は、サーバー自身が持つ物だけ: (a) 自分が開いた probe の件の状態ファイル（[server/case-agents.ts:91-125](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/case-agents.ts#L91-L125) `readCaseStateFile`。今は `pid`・`status`・`waitKeys` だけを取る → `version` も取る。K30 の実測で 17 キーの中に `version` があった（§14-10-10）。値の形は未確認 U1）、(b) 自分が受けた件の活動の記録。probe の判定のため、probe の件の設定だけに道具の記録の hook を 2 本足す（審査2回目 必須1・2）。`buildCaseSettings`（[server/case-sandbox.ts:455](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/case-sandbox.ts#L455)）に引数 `{ versionProbe: true }` を足し、その時だけ PreToolUse と PostToolUse に matcher `"*"`・同期（`async: false`・`timeout: 5`）の handler を 1 本ずつ足す。引数の道は `createCase` → `writeCaseFiles`（[server/sessions.ts:405](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/sessions.ts#L405) で呼ぶ。[server/case-sandbox.ts:496](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/case-sandbox.ts#L496)）→ `buildCaseSettings`（case-sandbox.ts:504 で呼ぶ）で、`writeCaseFiles` にも同じ引数を足して渡す（審査3回目 推奨1）。`createCase`（sessions.ts:394）にも任意の引数 `versionProbe` を足す。どれも任意の引数で、渡さなければ今と同じ（PO の件の設定は変わらない）。Session に probe の印を付けるのは `spawnSession` の直後（`initialName` を付ける :408 と同じ所）とする（審査4回目 推奨3）。同期にする理由（審査3回目 必須2）: handler の既定は非同期（[server/activity-hooks.ts:98](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/activity-hooks.ts#L98)）で、送信は 2 秒で打ち切り、失敗しても黙る（[hooks/activity-hook.mjs:14](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/hooks/activity-hook.mjs#L14)・:293-301）。非同期のままだと post の記録が `idle` の後に届き、判定の時点で「post が 0 件」が成り立って P3 が誤って○になり得る。同期なら claude は hook が終わるまで次へ進まない。activity-hook はいつも exit 0 で終わる（:332）ので、道具を止めない。PO の件は今と同じく引数なしで呼ぶので、PO の件の設定は今の版と1文字も変わらない。2 本の送り先は新しい受け口 `POST /api/agent/case-probe-activity`（`activity-hook.mjs --post <その url>`。hook は入力をそのまま送り、記録はサーバーが作る。[hooks/activity-hook.mjs:320-327](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/hooks/activity-hook.mjs#L320-L327)。受け口の作りは [server/http.ts:455-470](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/http.ts#L455-L470) `handleCaseActivity` と同じ順）。新しい受け口は件を `caseOfRequest` で引き、それが今動いている probe の件（`runningVersionProbe.caseId`）でなければ 403 にする。受けた入力は `runActivityHook` に渡さない。このため活動の記録にも `applyPre` にも入らず、Agent の開始の記録（`starts` の description など）を上書きしない（[server/activity.ts:462-463](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/activity.ts#L462-L463)・:517-527）。サーバーは probe の実行中だけ、メモリに次の欄だけを持つ: `ts`・`phase`（"pre" / "post"）・`agent_id`・`tool`・`tool_use_id`・`permission_mode`（`tool_input`・`tool_response` は持たない）。probe が終われば捨て、数えた結果を監査の行に残す（§14-14-6 の 9）。今の記録の道は P3 の照合に使わない。ファイルを書く道具の PostToolUse の記録に `tool_use_id` が無く（[hooks/activity-hook.mjs:162-166](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/hooks/activity-hook.mjs#L162-L166)）、Bash・Read の PostToolUse は来ない（activity-hooks.ts:55）ため。共通の `HOOK_SPECS`（PO のふつうの窓にも効く）と `handleCaseActivity` は変えない。コードの名前は `versionProbe` にそろえる（Session の欄 `versionProbe: true`・記録の欄 `runningVersionProbe`・409 の理由 `version_probe_session`・`buildCaseSettings` の引数 `{ versionProbe: true }`）。sessions.ts:714 の引数 `probe` と tmux-runner の `probeSession` に紛れないため（審査2回目 推奨1）。本書では短く probe と書く。公式の hooks の説明（code.claude.com/docs/en/hooks・2026-11-06 に読んだ。Context7 は月の上限で使えなかった）では、PreToolUse の入力に `permission_mode`（`"plan"` などの値）と `tool_use_id` があり、合う hook は並んで同時に走る。case-guard が exit 2 で止めたときに、同時に走った probe の道具の記録の hook が最後まで送れるかは書かれていない（U13）。送れなければ P3 は×に倒れる（誤って○にはならない）。既存の記録の受け口は（[server/http.ts:455-470](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/http.ts#L455-L470) `handleCaseActivity` → [server/activity.ts:491](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/activity.ts#L491) 返事の全文・:584 `chat()`・:592 `files()`。記録される出来事は [server/activity-hooks.ts:53-72](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/activity-hooks.ts#L53-L72) `HOOK_SPECS`: PostToolUse は `Agent|Write|Edit|MultiEdit|NotebookEdit` だけ（:55）で Bash は入らない。SubagentStart :62・SubagentStop :56・Stop :60）、(c) probe の件の R（手順書の置き場）に probe が書かせたファイルの有無と中身（サーバーが lstat して読む。64KiB 上限・リンク拒否は case-agents.ts:19-37 と同じ読み方）、(d) tmux の画面の写し `capture-pane -p -t %N`（probe の件だけ。PO の件の画面は読まない。§14-11-5 で画面を読まないと決めたのは PO の会話を読まないためで、probe の件の画面はサーバーが自分で作った会話）。
+- 使わない物: Opus の報告・PO の目視・`claude agents --json`（件は出ない。§14-10-10 別の方法1）。
+- 実体そのものの確かめ（E1〜E4。§14-14-4）もサーバーが行う。`--version` はサーバーが `execFile(real, ["--version"])` で読む（[server/agents.ts:127-134](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/agents.ts#L127-L134) `fetchClaudeVersion` と同じ形。起動台本も同じ命令を `ccdiscord.zsh:31` で件の起動のたびに実行している）。
+
+**D4 probe の件**
+- サーバーが自分で開く件のセッション。開き方は `createCase`（[server/sessions.ts:394-414](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/sessions.ts#L394-L414)）をサーバーの内側から呼ぶ。役割は `discord-case`（同梱の設定で `caseSandbox: true` の役割はこれ 1 つ。[agent-console.config.json:46-53](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/agent-console.config.json#L46-L53)）。起動台本も PO の件と同じ `ccdiscordcase`（K40 で守る物を変えない）。名前は `probe claude <版>`。写しは `createCaseClone`（[server/case-clone.ts:90](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/case-clone.ts#L90) から。:102 で `git clone --local --no-checkout --no-hardlinks`）で作る。Session に `versionProbe: true`（メモリ）を足す。
+- 本店での fetch（審査1回目の推奨3）: `createCaseClone` は写しを作る前に、本店の作業場所 M で `git fetch origin main` を打つ（case-clone.ts:96）。probe の件もこれを通るので、probe 1 回につき M の `origin/main` の参照が新しくなる。M の作業中のファイル・ブランチ・index は変わらない（fetch は参照と物だけ）。PO の件を開くときと同じ副作用で、新しい種類の副作用ではない。
+- 枠（審査1回目の推奨2）: probe は、probe を開いた後も件の枠が 1 つ以上空くときだけ始める（`hasCapacity`（sessions.ts:562）の数え方で、空きが 2 以上）。足りなければ予約のまま待ち、PO が件を閉じて空きが 2 以上になったら始める。probe の最中に PO が件を開こうとして枠が足りないときは、PO を優先する: probe を中断（`aborted`）して閉じ、PO の件を開く。
+- gh の鍵（審査1回目 C4 の2点目）: probe の件も起動台本（`ccdiscord.zsh:41-43`）で shingo-cc の gh の鍵を持つ。起動台本は変えない（K40）。文1〜文3 は R にファイルを書くことしか頼まず、gh・git push は頼まない。件の中の見張り（case-guard・部屋の拒否）は PO の件と同じに効く。probe の件が gh を使ったかは活動の記録（PostToolUse には Bash は残らない。HOOK_SPECS :55）では見えないため、上の probe の道具の記録（`phase: "pre"`）に `tool` が `Bash` の行が 1 つでもあれば P5 を×にする（文1〜文3 は Bash を要らない）。
+- 発火: (t1) 件を開くとき（spawnSession :654-661）、解いた実体の指紋が記録の使える項目に無い → D1 で知らせ、同じ指紋の probe が無ければ 1 つ予約。(t2) サーバー起動時、`resolveClaudeReal(config.claudeBin, PATH)` の指紋が記録に無い → 復元（[server/restore.ts:125-190](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/restore.ts#L125-L190)）と `hub.start()`（index.ts:127）の後に probe を 1 つ予約。(t3) 人の操作・Opus の呼び出しでは起こさない。同時に動く probe は 1 つ。1 つの指紋につき、×の後は 24 時間は再 probe せず、連続 3 回×で止める（記録の `failCount`・`lastProbeAt`）。枠（`hasCapacity` sessions.ts:562）が無ければ予約のまま待つ。
+- 台本（サーバーが probe の窓へ打つ。打ち方は case-say の判定 4・5・7・8・9 と同じ道: 区画 `%N` と pid の条件付き送信 [server/terminal-host/tmux-terminal.ts:306-321](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/terminal-host/tmux-terminal.ts#L306-L321) `sendToPane`、Enter の前に状態ファイル idle を確かめ直す。4b は飛ばす（4b を作るための窓）。送る文はコードの定数 3 つで、Opus の入力は入らない）。文の中の `<R>` はその probe の件の R:
+  - 文1: `<R>/probe-1.txt に ok とだけ書いてください。`
+  - 文2: `Agent で下請けを1つ動かし、下請けに <R>/probe-2.txt へ ok とだけ書かせてください。`
+  - 文3: `/plan <R>/probe-3.txt に ok とだけ書いてください。`
+  - 判定は §14-14-4 の P0〜P5。終わったら probe の件を閉じる（[server/sessions.ts:793](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/sessions.ts#L793) `close`）。片付け（U8 を決めた）: sessions.ts の中では、閉じる道（`close` → `closeRunning` → `remove` :762-773）は件のファイルも写し W も消さない。`removeCaseFiles`（[server/case-sandbox.ts:545-555](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/case-sandbox.ts#L545-L555)。D/cases・case-gh・case-home を消す）と、W・R（手順書の置き場。[server/case-sandbox.ts:62](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/case-sandbox.ts#L62)）の `rm` を呼ぶのは、sessions.ts では開くのに失敗したとき（:411-413）だけ。`onRemoved`（:341）に付く聞き手は sessions.ts の外にあり読んでいない。そこで probe の片付けは、閉じた後に自分で (1) `removeCaseFiles(D, probeId, { tmp: true, tmpRoot })`、(2) `rm(R, { recursive: true, force: true })`（:412 と同じ）、(3) `rm(W, { recursive: true, force: true })`（:413 と同じく `W === caseCloneDir(H, probeId)` のときだけ）を打つ。どれも既に消えていれば何もしない形で呼ぶ（`.catch(() => undefined)` は :411-413 と同じ）。これで聞き手の有無に依らず残らない。K52 で「probe の後に D/cases/<probeId>・R・W が無い」を確かめる。
+- probe の件への他からの入力はすべて断る: 画面の端末入力（[server/ws.ts:36-39](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/ws.ts#L36-L39) → sessions.write :780）・チャット（hub.ts:617 `enqueueChat`）・`submitText`（:765）・名前の変更・case-say（判定 4 に `versionProbe` → 409 `version_probe_session`）。復元の一覧には書かない（[server/restore.ts:94](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/restore.ts#L94) の filter に `versionProbe` を足す）。記録に `runningVersionProbe: { caseId, startedAt }` を書き、起動時の片付けの順は次で固定する（U9 を決めた）: (1) `startupSweep`（[server/terminal-host/tmux-runner.ts:95](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/terminal-host/tmux-runner.ts#L95)）が返す `ac-*` の名前の一覧を受ける（startupSweep 自体は消さない。一覧を返して設定を読み直すだけ）。(2) 記録に `runningVersionProbe` があり、その `ac-<caseId>` が一覧にあれば、その 1 つだけ kill-session する（ほかの `ac-*` には触らない）。(3) その probe の W を上と同じ条件で消し、R を消し、D/cases などを `removeCaseFiles` で消す。(4) `runningVersionProbe` を消し、項目の `lastResult: "aborted"`・監査 aborted。(5) その後に復元（restore.ts。probe は復元の一覧に入らない）。
+
+**D1 版ずれ通知**
+- 出す場面: (n1) 件を開いたとき、指紋が使える項目に無い。(n2) 起動時、PATH の claude が未記録。(n3) 起動時の再確認で、記録の項目の実体が無い・指紋が違う → `usable: false` に変えた。(n4) probe が×（P 番号付き）。(n5) 記録が読めない・MAC が合わない項目を捨てた。(n6) 監査に書けなかった（§14-14-6 の 9）。
+- 出し先: ① Snapshot（[server/hub.ts:78-95](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/hub.ts#L78-L95)）に `caseVersionNotices` を足す（`restoreNotices` :82・`setRestoreNotices` :353-355 と同じ作り。画面の案内。文言は画面側の i18n）。② macOS 通知（[server/notify.ts:34-41](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/notify.ts#L34-L41) `osascriptSender`。config の `notify.macos` が true のとき。1 場面につき 1 回）。③ 監査 `routine-audit.jsonl` に `caseClaudeVersionNotice`（reason n1〜n5・claudeVersion・sha256 の先頭 16 桁。[server/routine-audit.ts:11](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/routine-audit.ts#L11) の action に `caseClaudeVersionNotice`・`caseClaudeVersionProbe` の 2 つを足す）。④ `/api/state`（[server/http.ts:194-208](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/http.ts#L194-L208)）に `caseSayVersions: { usable: [版の名前], probing: [版の名前] }` を足す（画面用。Opus 用の新しい読み口は作らない。Opus は case-say の 409 の reason で知る）。
+- Opus への見え方: 断りの理由は `claude_version_unverified` のまま。probe が動いている・指紋の計算中は `claude_version_probing`（README:306 の理由の一覧に足す）。
+
+#### 14-14-4 ○×の判定の機械条件
+
+使える＝E1〜E4 が全部○ かつ P0〜P5 が全部○ かつ R1 が○。1 つでも×なら使えない（記録に `usable: false`・`lastResult: "<×の番号>"`）。
+
+| # | 条件 | 読む物 | ○ | × |
+|---|---|---|---|---|
+| E1 | 実体の道の最後の名前が `^\d+\.\d+\.\d+$` | `resolveClaudeReal` の戻り（case-sandbox.ts:433-449） | 合う | 合わない |
+| E2 | 実体が通常ファイル・実行可・固いリンクでない | `statSync`・`accessSync X_OK`（sessions.ts:487-489 と同じ）・`nlink === 1` | 全部 | どれか外れ |
+| E3 | `<real> --version` の出力が E1 の版で始まる（15 秒以内） | `execFile`（agents.ts:127-134 の形） | 一致 | 不一致・時間切れ・空 |
+| E4 | sha256・size が取れた | ファイルを流して読む | 取れた | 読めない |
+| P0 | probe の件を開いて 60 秒以内に状態ファイルが読める | `readCaseStateFile`（case-agents.ts:91） | ちょうど 1 つ・JSON の pid ＝ファイル名の pid ＝区画の pid・`status === "idle"`・`waitKeys` 空・`version` キーがあれば値に E1 の版の文字が含まれる | どれか外れ・60 秒超 |
+| P1 | 文1 の後、道具が通る | R の `probe-1.txt`・状態ファイル | 120 秒以内にファイルがあり中身が `ok`（前後の空白を除く）・その後 `idle` に戻る | 無い・中身違い・時間切れ |
+| P2 | 文2 の後、下請けが通る（K41 (a)） | R の `probe-2.txt`・活動の記録（PostToolUse・SubagentStart・SubagentStop）・状態ファイル | 180 秒以内に次が全部: ファイルが `ok`・PostToolUse の `tool: "Write"` で `path` が `<R>/probe-2.txt` に完全一致し `agent_id` が空でない行が 1 以上（下請けが書いた証拠。主の会話が書いた行は数えない）・その `agent_id` の SubagentStart と SubagentStop が各 1 以上・`idle` に戻る | どれか外れ（主の会話だけが書いたときも×） |
+| P3 | 文3 の後、計画の形では道具が止まる（K41 (b)） | probe の道具の記録（§14-14-3 D3' (b)。pre と post）・R の `probe-3.txt`・状態ファイル・P4 | 120 秒以内に次が全部: 主の会話（`agent_id` なし）の pre の行で `permission_mode: "plan"` のものが 1 以上で、その行の `tool_use_id` がどれも空でない・その行と同じ `tool_use_id` の post の行が 0 件・文3 の送信から判定までの間に主の会話の post の行が `tool_use_id` を問わず 0 件（審査3回目 必須1）（照合は probe の道具の記録の pre と post どうしで行う。post は道具が通ったときだけ来るので、0 件は case-guard [ops/case/case-guard.mjs:76](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/ops/case/case-guard.mjs#L76) が止めた形。case-guard は stderr と exit 2 だけでサーバーへ何も送らないので、止めたことは「試みた記録があり、通った記録が無い」で読む）・P2 の間に post の行が 1 以上来ていた（post の道が働いている証拠。これが無いと「post が 0 件」がいつでも成り立つため）・P1・P2 の間の probe の道具の記録の pre の行が、どれも同じ `tool_use_id` の post の行と対になっている（post が途中で消えていない証拠。審査4回目 推奨2）・ファイルが無い・`idle` に戻り、その後 3 秒待ってから判定する（hook の送信の打ち切り 2 秒より長く待つ。審査3回目 必須2）・P4 が 0 件。参考記録: 返事（activity.ts:491）に `permission mode is not dontAsk` が含まれるか（含まれなくても×にしない。U7） | どれか外れ。道具を 1 度も試みなかった（pre の plan の行が 0）ときも×（止める仕組みが働いた証拠が無いため）。通った道具の post の行があれば×（審査2回目 必須1）。pre の plan の行に `tool_use_id` が空の物がある・文3 の後に主の会話の post の行が 1 つでもある も×（審査3回目 必須1）。P1・P2 の pre の行に対の post が無い物がある も×（審査4回目 推奨2） |
+| P4 | 選ぶ画面が出ない | P0〜P3 の各 `idle` 復帰の時点の probe の件の `capture-pane -p -t %N`（probe の件だけ）。数えるのは、監査に残すのと同じ、制御文字を除き末尾 4KiB に切った写し（K55 ② の数と合わせる。審査3回目 推奨2） | 次の形が 0 件: 行頭の番号付き選択肢（`^\s*[❯>]?\s*\d+\.\s`）が 2 行以上連続・`\(y/n\)`・`Do you want to`・`Esc to cancel`・`Yes` と `No` が同じ行 | 1 件以上。正規表現は probe の件の画面の写しで確かめる（U6・K55 ①）。PO の件の画面は読まない |
+| P5 | 全体が 10 分以内・待ちの間の `status` が `idle`・`busy` 以外にならない・probe の道具の記録の pre に `tool: "Bash"` の行が無い | 時計・状態ファイル・probe の道具の記録 | ○ | 時間切れ・他の値（値を記録）・Bash の行がある |
+| R1 | 記録の項目の MAC が鍵と合う・`version: 1` | 記録ファイル・鍵ファイル（§14-14-6 の 1） | 合う | 合わない項目は捨てる |
+
+件を開いたとき（判定 4b）: その件の指紋（D2）が `usable: true` の項目の `sha256`・`size` と一致すれば通す。一致する項目が無く、同じ指紋の probe が動いている・指紋の計算中なら `claude_version_probing`。それ以外は `claude_version_unverified`。
+
+#### 14-14-5 止まり方
+
+- probe が×（P0〜P5 のどれか）: その指紋は使えない。D1 n4 で知らせ、監査 `caseClaudeVersionProbe`（outcome denied・`failedCheck` に×の番号。審査4回目 推奨1）。case-say はその版の件へ 409 のまま。人が記録に手で足す口は無い。PO の手は 2 つ: (a) claude をふつうの手で前の版に戻す（PO の操作。手順は本書に書かない）か、(b) ×の番号を見て設計を見直す（P4 なら claude に新しい選ぶ画面が加わった可能性。案 E（§14-10-5）へ戻し、本書を直してから再び probe）。24 時間後・連続 3 回までは自動で再 probe する。3 回×で止まり、D1 n4 に「設計者の確認が要る」を付ける。
+- probe が途中で終わる（サーバー再起動・件が開けない 503・時間切れ）: `lastResult: "aborted"`・`failCount` は増やさない。次の発火（件を開く・起動）で再 probe。
+- 記録が読めない（壊れた JSON）・MAC が合わない項目: 上書きしない・捨てた項目は書き戻さない。使える版は 0。D1 n5。PO が記録ファイルを別名に退避してサーバーを起き直すと再 probe が走る（これだけが人の手。壊れた記録は PO 確認なしに消さない。AGENTS.md の不可逆操作の考え）。
+- 指紋の計算が終わらない（U5）: 4b は `claude_version_probing`。60 秒で打ち切り、`claude_version_unverified`・D1 n1 に理由を付ける。
+- 戻し方: agent-console を便CS3a の一つ前の版に戻す（`bash scripts/ac-update.sh v0.52.0`。記録ファイルと鍵は残るが古い版は読まない。config の `caseSayClaudeVersions` が同梱の設定にそのまま残っていれば、戻した版はそれで動く）。便CS3b の後に戻すときは、同梱の設定に `caseSayClaudeVersions` を戻す必要があるので、便CS3b の CHANGELOG にその 1 行を書く。
+- 予備: 案 E（今のまま PO が打つ）。
+
+#### 14-14-6 偽造を減らす手（起動時の再 probe を含む）
+
+3回目の危険 1〜3 を実物で確かめ直した形:
+
+| # | 危険 | 対処 |
+|---|---|---|
+| 危険1 | 記録の偽造: Opus（部屋の外。PO と同じ利用者で動く）が dataDir の記録に `usable: true` の項目を書く | 下の 1（MAC）・2（指紋）・6（下請けの見張り）。残る危険（PO 2026-11-06「1」で受け入れ済み）: Opus 本体の会話は見張りに止められないので、鍵を読んで MAC を作り、項目を書ける。監査を Edit で直すこともできる。守りの水準はうっかり防止で、悪意への対策ではない（agent-console のほかの合言葉と同じ水準） |
+| 危険2 | 実体の差し替え: 版の名前はそのままで中身を変える・偽の実体を版の名前で置く | 2（指紋が鍵。名前だけでは通らない）・3（起動時の再確認で指紋が違えば使えなくする）・E3（`--version` の答えと名前の一致） |
+| 危険3 | probe の汚染: 人や Opus が probe の窓に打つ・PO の件の画面を読んでしまう・新しい選ぶ画面を見逃す | 4（probe の件への入力を全部断る）・D3'（画面を読むのは probe の件だけ）・P4（選ぶ画面の形を数える。形は実物で決める U6）・P5（想定外の status を記録して×） |
+
+1. 記録の書き手はサーバーだけ・項目ごとに MAC を付ける。鍵は `<dataDir>/case-say-claude-versions.key`（0600。起動時に無ければ作る。[server/reserve-token.ts:28-39](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/reserve-token.ts#L28-L39) と同じ形）。読んだとき MAC が合わない項目は捨て、D1 n5。
+2. 判定は指紋（sha256・size）で行い、版の名前では行わない（D2）。
+3. 起動時の再 probe: (a) 軽い方＝記録の各 `usable` 項目について、実体 `real` を stat・sha256 し直し、無い・違えば `usable: false`（D1 n3・監査）。(b) 重い方＝PATH の claude を解き、その指紋が記録に無ければ probe の件を開く（D4 t2）。既に使える指紋では窓を開き直さない（使用量を増やさない）。
+4. probe の件への入力はサーバーだけ（§14-14-3 D4）。probe の件は case-say の宛先にもならない（`version_probe_session`）。
+5. 件の部屋から記録・鍵を書けない・読めない（`CASE_DENY_WRITE`・`CASE_DENY_READ` に足す。§14-14-3 D5）。
+6. 見張りの実際の範囲（審査1回目 C3・必須2。実物どおりに書き直した）: 共通の同期 hook `GUARD_IFS`（[server/activity-hooks.ts:12-19](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/activity-hooks.ts#L12-L19)）のうち、dataDir の親フォルダの名前を含む道を止めるのは :15（Bash）と :18（Read）。本体の [hooks/ac-routine-guard.mjs](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/hooks/ac-routine-guard.mjs) は、:2「入力に agent_id があるときだけ判定する」・:27-28 で agent_id が空なら通す。:5 で Grep・Glob は対象外。:7「誤用防止であり、悪意への対策ではない。引用符や glob で迂回できる」。
+   - 止まる物: 下請け（Agent で動かした担当）の Bash と Read のうち、道の文字列にその名前をそのまま含む物。
+   - 止まらない物: Opus 本体の会話の全部（Bash・Read・Write・Edit・Grep・Glob）。下請けの Write・Edit・Grep・Glob。`\` や引用符・glob で名前を崩した道。
+   - 鍵は dataDir に置いたまま（審査が挙げた Keychain へ移す案は採らない。PO 2026-11-06「1」）。上の止まらない物から来る偽造の危険は、危険1 の「残る危険」として PO が受け入れた。
+   - PO の Mac の dataDir がその名前の下にあるかは設定の値で決まり、本書には書かない（U2・K57 で確かめる）。
+   - Opus 本体が監査と記録を読めることは、上の範囲から来る（9 の読み方の前提。K57 とは食い違わない）。
+7. probe の台本の文はコードの定数（Opus・PO の文は入らない）。
+8. 監査: 発火・○・×・中断・無効化・通知をすべて `routine-audit.jsonl` に残す（`caseClaudeVersionProbe`・`caseClaudeVersionNotice`）。本文・鍵・合言葉は書かない。例外は 9 の `paneSamples` だけ（probe の件の画面の写し。サーバーが自分で開いた件で、送った文は定数の文1〜文3 だけなので PO の会話を含まない）。
+9. 記録を残す（PO 2026-11-06「記録も残るようにして」）: 自動の確かめは1回ごとに後から読める記録を残し、消さない。
+   - 監査の書き方は追記だけ（[server/routine-audit.ts:73](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/routine-audit.ts#L73) `appendFile`。同ファイルに消す・切り詰める処理は無い）。本機能も消す・切り詰める処理を足さない。
+   - `caseClaudeVersionProbe` の1行に必ず入れる欄: 始めた時刻・終わった時刻・`claudeVersion`・sha256 の先頭16桁・`outcome`（ok / denied / aborted）・×の番号（E1〜E4・P0〜P5・R1）・発火の理由（t1 / t2）・`probeCaseId`・`counts`（P2・P3・P5 で数えた数: P2 の下請けの Write の post の行・P2 の間の post の行・pre の plan の行・plan の行に合う post の行・pre の Bash の行・P1・P2 の pre の行のうち対の post が無い行。活動の記録と probe の道具の記録は後で消えるため、数をここに残す。審査2回目 推奨2）・`paneSamples`（P0〜P3 の各 `idle` 復帰の時点の probe の件の `capture-pane` 1 枚ずつ・最大 4 枚・各 4KiB まで・制御文字を除く。K55 ② の U6 の確かめに使う。監査は1件1行の JSON の追記で、`JSON.stringify` して追記するだけなので行の長さの上限は無い。[server/routine-audit.ts:69-78](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/routine-audit.ts#L69-L78)。MAC の対象にはしない。MAC は D5 の記録の改ざんを見る物で、監査は証拠の記録のため。審査2回目 必須5）。`caseClaudeVersionNotice` の1行: 時刻・reason（n1〜n5）・`claudeVersion`・sha256 の先頭16桁・`outcome` は "ok"。2 つの action の行とも `callerSessionId` は null（省けない欄。[server/routine-audit.ts:24](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/routine-audit.ts#L24)。審査4回目 推奨1）。×の番号の欄の名前は `failedCheck` にそろえる。
+   - 監査の型の直し（便CS3a。審査3回目 必須3）: `RoutineAuditEntry`（[server/routine-audit.ts:13-62](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/routine-audit.ts#L13-L62)）の `outcome`（今は :16 で `"ok" | "denied"` だけ）に `"aborted"` を足す。欄 `startedAt`・`endedAt`・`sha16`・`failedCheck`（×の番号）・`trigger`（t1 / t2）・`probeCaseId`・`counts`・`paneSamples` を足す。:2 の注記「token・本文の中身は書かない」に「例外: `caseClaudeVersionProbe` の `paneSamples`（設計 conversation-consent §14-14-6 の 8・9）」を書き足す。`audit_failed` は監査に書けなかったことの印なので監査の `outcome` には入れず、記録の `lastResult` だけに入る。
+   - D5 の記録の項目は消さない（§14-14-3 D5）。使えなくなった版も `usable: false` で残り、`lastProbeAt`・`lastResult`・`failCount` が履歴の要約になる。
+   - 読み方: PO は画面の案内（D1 ①）と `/api/state` の `caseSayVersions` で今の状態を見る。過去の履歴は Opus 本体の会話が `routine-audit.jsonl` と記録ファイルを Read（または Bash の `grep`・`tail`）で読み、PO に報告する。見張りは本体の会話を止めない（6）ので、新しい読み口は作らない。下請けには読ませない（止まる）。履歴を一覧で見る新しい画面は本版では作らない（作るなら別の設計・PO 判断）。
+   - 監査に書けなかったとき（審査1回目 C6・必須5）: 今の `writeAudit`（[server/http.ts:580](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/http.ts#L580)）は失敗を console.error に出すだけで続く。本機能は監査の追記を `await` し、失敗したら (a) 新しい通知 n6（D1 の 4 つの出し先のうち監査を除く 3 つ）を出し、(b) その probe を中断して `usable: true` を書かない（記録の無い○を作らない）。`lastResult: "audit_failed"`・`failCount` は増やさない。
+   - 監査を直されたとき: 記録の項目の `lastProbeAt`・`lastResult` は MAC の対象に入れる。監査の行と記録が食い違えば、Opus は報告でそれを書く（直された監査を正としない）。Opus 本体が両方を直す危険は危険1 の受け入れの内。
+
+#### 14-14-7 使用量
+
+| 項目 | 見込み | 根拠 |
+|---|---|---|
+| probe 1 回の claude の使用量（トークン） | 未確認 | 根拠となる実測が無い。文 3 つ・下請け 1 つ・返事 3 回の小さい会話だが、数は書けない。K56 で測る |
+| probe 1 回の時間 | 10 分以内（P5 の上限） | 上限は設計で決めた値。実測は K56 |
+| probe の発火回数 | claude の版が変わるたび 1 回（×なら最大 3 回） | 版の変化の頻度は未確認（U10）。観測は 2.1.318 → 2.1.319 が 2026-11-05〜06 の間に 1 回（docs/CHANGELOG.md:6） |
+| 写しのディスク | 未確認 | `git clone --local --no-checkout`（case-clone.ts:102）。大きさは測っていない |
+| 指紋の計算 | 未確認（U5） | 実体のサイズを測っていない |
+| 使う鍵 | 件の鍵（`ccdiscord.zsh:45-49` が Keychain から取る専用の項目） | この鍵が PO の購読と同じ契約かは未確認（U3）。同じなら PO の枚数を減らす |
+
+#### 14-14-8 成功条件
+
+| # | 基準 | 検証方法 |
+|---|---|---|
+| K50 | 判定 4b は記録だけで決まる | vitest（tests/unit/case-say.test.ts の K42 を書き換え）: 使える項目と指紋が一致 → 判定 5 以降へ。項目が無い・`usable: false`・sha256 違い・size 違い・MAC 違い → 409 `claude_version_unverified`・書き込み 0 回。同じ指紋の probe 中・計算中 → 409 `claude_version_probing`・書き込み 0 回。4b より前で断った行に版の欄が無いこと（既存） |
+| K51 | probe の台本と○×が機械条件どおり | vitest（偽の tmux・偽の状態ファイル・偽の R・偽の活動の記録）: P0〜P5 のそれぞれを 1 つだけ×にして `usable` にならない・`lastResult` が×の番号・監査 denied。誤って○にしない場面を 1 つずつ: probe-2.txt を主の会話（`agent_id` なし）だけが書いた → P2 ×。文3 の後に pre の plan の行が 0 → P3 ×。plan の行と同じ `tool_use_id` の post の行がある（道具が通った）→ P3 ×。P2 の間に post の行が 0 → P3 ×。pre の plan の行の `tool_use_id` が空 → P3 ×。文3 の後に主の会話の post の行が（`tool_use_id` が空でも）1 つある → P3 ×。P1・P2 の pre の行のうち 1 つに対の post が無い → P3 ×。post の行が `idle` の後 2 秒以内に届く（偽の遅れ）→ 判定は待ってから行うので P3 ×。probe の 2 本の handler が `async` を持たず `timeout: 5` である。pre に Bash の行 → P5 ×。`buildCaseSettings` を引数なしで呼んだ設定（PO の件）は今の版の出力と完全に一致し、`{ versionProbe: true }` のときだけ 2 本増える。共通の `HOOK_SPECS` は変わらない。新しい受け口は probe でない件からの送信を 403 にし、活動の記録に 1 行も足さない（Agent の開始の記録の description・subagentType・model が上書きされない）。PO の件が枠を求めたら probe が aborted で閉じる。空きが 1 のとき probe は始まらない。全部○で `usable: true`・MAC 付き・監査 ok。probe の件への画面入力・チャット・submitText・名前の変更・case-say がどれも断られ、端末への書き込み 0 回。文 3 つがコードの定数と一致 |
+| K52 | 起動時の再 probe と片付け | vitest: probe の後（ok・denied・aborted のどれでも）に D/cases/<probeId>・R・W が無い。起動時の片付けで kill-session するのは `runningVersionProbe` の `ac-<id>` 1 つだけ（ほかの `ac-*` はそのまま）・その後に復元が走る。件の指紋を起動前に取る（偽の実体を起動の後に差し替えても、記録される指紋は起動前の物）。指紋を持たない件は 4b で 409。記録の項目の実体の中身を変えて起動 → `usable: false`・D1 n3・監査。実体を消して起動 → 同じ。PATH の claude の指紋が未記録 → probe が 1 つ予約される（同時に 2 つにならない）。使える指紋では probe の窓を開かない。残っていた `runningVersionProbe` の tmux セッションを消す |
+| K53 | 記録の守り | vitest: MAC 違いの項目を捨てて上書きしない・壊れた JSON で使える版 0・D1 n5。鍵が無ければ作り 0600。case-sandbox の試験で `CASE_DENY_WRITE`・`CASE_DENY_READ` に記録と鍵がある |
+| K54 | D1 の出し先 | vitest: n1〜n5 のそれぞれで Snapshot の `caseVersionNotices`・`/api/state` の `caseSayVersions`・監査 `caseClaudeVersionNotice` が 1 件ずつ、macOS 通知（差し替えた送信関数）が 1 回。n6 は監査を除く 3 つに 1 件ずつ |
+| K55 | 本物で人の手なしに版が使えるようになる | 便CS3a を入れた後（PO の Mac）: ① サーバーを起き直す → 10 分以内に probe の件が開いて閉じ、記録に `usable: true` の項目が 1 つ・監査 `caseClaudeVersionProbe` ok（Opus は記録と監査を読むだけ） ② U6 の確かめ: ① の監査の行の `paneSamples`（§14-14-6 の 9）を Opus 本体が Read で読み、P4 の正規表現が当たった数と、Opus が目で数えた選ぶ画面の数が一致する（PO の件の画面は読まない） ③ PO が件を 1 つ開き、Opus が `ac-case-say.mjs` を 1 回（K32 と同じ）→ 200 ④ PO のふつうの claude が更新されたとき（起きたときに行う。起きなければ「場面なし」）: PO が件を開く → 画面と macOS に D1 n1 → probe → 記録に 2 つ目 → 開いていたその件へ case-say が 200（開き直し不要）。①〜③が○で○。④は場面が来たときに○×を足す |
+| K56 | 使用量の実測 | K55 ① の probe で: 所要時間・写しのディスク・指紋の計算時間・実体のサイズ・（取れれば）件の鍵の使用量を、数値のまま本書 §14-14-7 に書き足す |
+| K57 | 見張りの範囲が §14-14-6 の 6 のとおり（止まる物は止まり、止まらない物は本書どおり止まらない） | 便CS3a を入れた後、Opus 本体が PO の Mac で、導入済みの `hooks/ac-routine-guard.mjs` の `judge` を node で呼ぶ（下請けは起動しない。手元で起動してよい担当の決まりを変えないため）。入力は作った JSON だけで、記録と鍵の中身は開かない。出すのは終了コードだけ（道の値は画面に出さない）: ① `agent_id` あり・`tool_name: "Read"`・`file_path` が記録の道 → 2。② 同じで `Bash`・`cat <記録の道>` → 2。③ 鍵の道で ①② → 2。④ `agent_id` あり・`Grep` → 0（止まらないことが本書どおり）。⑤ `agent_id` なし（本体）で ① → 0（本書どおり）。①〜③のどれかが 0 → dataDir がその名前の下に無い（U2 が×）。×なら PO に報告し、§14-14-6 の 6 を直す。`\` で崩した道は試さない（迂回の手を作らない） |
+| K58 | 既存の試験が通る | agent-console の CI（ci.yml: `npm ci`・typecheck・lint・vitest）が緑。K40（ccdiscord-zsh.test.ts）・K2・K31・K34 は変えない。便CS3b で config の試験（tests/unit/case-say.test.ts:360-396）を外し、同梱の設定に `caseSayClaudeVersions` があれば起動時エラーになる試験を足す |
+| K59 | 記録が残る（§14-14-6 の 9） | vitest: probe の ok・denied・aborted のそれぞれで監査に `caseClaudeVersionProbe` が1行ずつ追記され、§14-14-6 の 9 の欄が全部ある（`counts`・`paneSamples` を含む）。2回 probe した後も1回目の行が残る。監査の追記を失敗させると n6 が 3 つの出し先に 1 件ずつ出て、`usable: true` が書かれない。本物: K55 ① の後、Opus 本体の会話が監査の該当行を Read で読み、欄が全部あることを確かめる |
+
+#### 14-14-9 便の分け方と触らない範囲
+
+- 便CS3a（agent-console・PR 1 本・クラウドの Sonnet）: D5（記録・鍵・MAC）、D2（起動前の指紋）、D3'（状態ファイルの `version`・probe の件の設定だけの道具の記録 2 本と受け口 `case-probe-activity`・活動の記録・R・probe の件の画面の写し）、D4（probe の件・役割 `discord-case`・台本・入力の拒否・復元から外す・枠の空き 2 以上・自分で片付け・起動時の片付けの順）、D1（4 つの出し先・n1〜n6）、起動時の再 probe、4b の置き換え（この便の間は「記録の使える項目 ∪ config の一覧」で通す。過渡期）、部屋の deny、監査 action 2 つと型の直し（§14-14-6 の 9）、理由 2 つ、README、試験 K50〜K54・K58・K59。版は CHANGELOG の決まりで付ける。
+- PO: 便CS3a の反映（いつもの手順）。
+- Opus（読むだけ）: K55 ①②・K56・K57。×なら便CS3b に進まず PO に報告。
+- 便CS3b（agent-console・PR 1 本・クラウドの Sonnet）: 4b を「記録だけ」にし、config の `caseSayClaudeVersions` を外す（同梱の設定・型・parse・README:309-318 の節・試験）。設定に鍵が残っていれば起動時エラー。CHANGELOG に戻し方（同梱の設定に `caseSayClaudeVersions` を戻す 1 行を含む）。
+- 便CS3c（Sales Anchor・docs PR 1 本・便CS3a より先に合流）: ADR-1033:26 の「第11版」を第12版に直す。ADR-1033:24 What 6 に、probe の件への定数の文 3 つの例外（§14-14-1 の条件 (a)〜(e)）を足す（ADR の変更なので `node scripts/generate-adr-index.js` を回す）。本書の状態を更新。
+- 便の順: CS3c → CS3a → K55〜K57 → CS3b（審査2回目 必須4。ADR を先に直す）。CS3a の過渡期に config の一覧を残すのは、probe が 1 度も○になる前に case-say が全件止まるのを避けるため。
+- 触らない範囲: PO の件へ送る文（hub.ts:140・:571・README:302）、共通の `HOOK_SPECS`（activity-hooks.ts:53-72。足すのは probe の件の設定の 2 本だけ）、PO の件の設定（`buildCaseSettings` を引数なしで呼んだ出力）、`handleCaseActivity`（http.ts:455-470）と活動の記録（activity.ts）、`GUARD_IFS` と `hooks/ac-routine-guard.mjs`、宛先の決め方（hub.ts:521-537・README:304）、判定 1〜3・5〜9、`ops/shell/ccdiscord.zsh`、`ops/case/case-guard.mjs`、Sales Anchor 側の見張り・許可・settings、画面のチャット、予約・定期実行、`claude agents --json` の扱い、PO の件の画面（`capture-pane` は probe の件だけ）、tmux の設定。
+
+#### 14-14-10 外部事例
+
+該当事例なし。理由: 判断の中心は、自作の作業画面アプリの中で「版の○×を誰が・何を材料に決めるか」で、外部の数値事例では確かめられない。確かめは K50〜K57 の試験と実測で行う。
+
+#### 14-14-11 未確認
+
+- U1 件の状態ファイルの `version` キーの値の形（K30 は名前だけ記録した。§14-10-10）。合わなければ P0 のこの条件は外し、E3 だけで版の文字を確かめる。
+- U2 PO の Mac の dataDir が、`GUARD_IFS`（activity-hooks.ts:15・:18）の規則の名前の下にあるか（K57 で確かめる。値は本書に書かない）。
+- U3 件のログインの鍵（`ccdiscord.zsh:45-49`）が PO の購読と同じ契約か。
+- U4 probe 1 回の claude の使用量（トークン）。
+- U5 claude の実体のサイズと sha256 の計算時間。
+- U6 P4 の選ぶ画面の正規表現が実物の画面に合うか。確かめは K55 ② で、監査の行の `paneSamples`（K55 ① の probe の件の画面の写し）だけで行う。PO の件の画面は読まない。合わなければ probe は×（P4）に倒れ、正規表現を直す便を出す（誤って○にはならない側の外れは、選ぶ画面を見逃す側。K55 ④ の場面で D1 n4 が出なければ見逃しの疑いとして PO に報告する）。
+- U7 件の AI が case-guard の拒否の文を返事に写すか（P3 の参考記録）。
+- U8 決めた（§14-14-3 D4 の片付け）: sessions.ts の閉じる道は件のファイルも W も消さない。sessions.ts の外の `onRemoved` の聞き手は読んでいないが、probe は自分で消すので答えに依らない。
+- U9 決めた（§14-14-3 D4 の起動時の片付けの順 (1)〜(5)）。
+- U13 case-guard が exit 2 で道具を止めたとき、同時に走った probe の道具の記録（pre）の hook が受け口まで送り終わるか（公式の説明に書かれていない）。送れなければ P3 は×に倒れ、K55 ① が×になる。そのときは P3 の材料を見直す便を出す（誤って○にはならない）。
+- U14 文3 の後の post だけが送信の失敗（2 秒の打ち切り・受け口の誤り）で消え、同時に case-guard が道具を通した場合は、P3 が誤って○になり得る。P1・P2 で pre と post が全部対になることを求めて post の道が働いていることは確かめるが、文3 の後だけ消える場合は防げない。残る危険として受け入れる（2 つが重なったときだけ起きる。審査4回目 推奨2）。
+- U15 P1・P2 で道具が失敗した・止められたために post が来なかった場合も、P3 の「pre と post が全部対」が外れて×になる（誤って×になる側。安全な側に倒れる）。K55 ① で P3 が×のときは、監査の `counts` の「対の post が無い行」の数を見て、この場合かどうかを切り分ける（マージ前審査 LOW-1・LOW-2）。
+- U10 PO のふつうの claude の更新の頻度。
+- U11 下請け（Agent）の Write が case-guard を通るか（K3 ② で確かめたのは Read。P2 の前提）。
+- U12 3回目の設計の文そのもの（D1〜D5・S1〜S7・危険1〜3）は本書に無く、本節が書き下ろし。3回目との食い違いがあれば本節を正本とする。
+
+#### 14-14-12 審査1回目（REVISE）の当て先
+
+審査1回目: クラウドの審査役（2026-11-06 12:20〜12:24Z・対象 f2910b13 の本節と agent-console aabdeef）。指摘の原文と Opus の照合は Opus の手元の記録に残し、本書には当て先だけを書く。
+
+| 指摘 | 直した所 |
+|---|---|
+| 必須1 ADR-1033 What 6 の例外 | §14-14-1「ADR-1033 What 6 の例外」・§14-14-9 便CS3c |
+| 必須2 見張りの実際の範囲・受け入れ・K57 | §14-14-6 の危険1・6（PO 2026-11-06「1」で残る危険を受け入れ）・K57 |
+| 必須3 P3 はサーバーが受ける記録で○・P2 は下請けの Write 必須 | §14-14-3 D3' (b)・§14-14-4 P2・P3・K51（2回目で記録の道を直した。§14-14-13） |
+| 必須4 U6 は probe の件の画面で | §14-14-4 P4・K55 ①・U6 |
+| 必須5 Opus 本体の読み方・監査に書けないとき | §14-14-6 の 9・D1 n6・K54・K59 |
+| 必須6 probe の役割・U8・U9 | §14-14-3 D4（役割 `discord-case`・片付け・起動時の順）・K52・U8・U9 |
+| 必須7 引用 3 か所 | §14-14-1（http.ts:554）・§14-14-3 D4（case-clone.ts:90・:96・:102）・§14-14-6 の 6（activity-hooks.ts:15・:18） |
+| 推奨1 指紋は起動の前に | §14-14-3 D2「指紋を取る時点」・K52 |
+| 推奨2 probe が枠をふさぐとき | §14-14-3 D4「枠」・K51 |
+| 推奨3 本店での fetch の副作用 | §14-14-3 D4「本店での fetch」 |
+| C4 2点目 probe も gh の鍵を持つ | §14-14-3 D4「gh の鍵」・P5 の Bash の条件 |
+
+#### 14-14-13 審査2回目（REVISE）の当て先
+
+審査2回目: クラウドの審査役（2026-11-06・対象 5e273c00 の本節と agent-console aabdeef）。指摘の原文と Opus の照合（実物の写しで確かめた行）は Opus の手元の記録に残し、本書には当て先だけを書く。Opus の照合で、2稿の `--case-pre` は hook の引数だったが、件の hook は入力をそのまま送り記録はサーバーが作る（activity-hook.mjs:320-327・http.ts:455-470）ため、引数がサーバーに届かないことも分かった。これも必須1・2 の直しで同時に直した。
+
+| 指摘 | 直した所 |
+|---|---|
+| 必須1 P3 の照合が書く道具の post の記録（`tool_use_id` が無い）に頼っていた | §14-14-3 D3' (b) probe の道具の記録（pre と post）・§14-14-4 P3（同じ記録どうしで照合・P2 の間の post の行を必須）・K51 |
+| 必須2 `--case-pre` が PO の件にも効き、`applyPre` に入る | §14-14-3 D3' (b)（`buildCaseSettings` の引数 `versionProbe`・新しい受け口で活動の記録に入れない）・§14-14-9 触らない範囲・K51 |
+| 必須3 R が残る | §14-14-3 D4 の片付け (2)・起動時の片付け (3)・K52 |
+| 必須4 ADR を後で直す順 | §14-14-1「ADR-1033 What 6 の例外」・§14-14-9 便の順（CS3c が先） |
+| 必須5 `paneSamples` の置き場・MAC・上限、K55 の番号 | §14-14-6 の 8・9（監査の行・MAC の外・各 4KiB・最大 4 枚）・K55（①〜④）・K59・U6 |
+| C1 引用 3 点 | [docs/CHANGELOG.md:6](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/docs/CHANGELOG.md#L6)・[tests/unit/case-say.test.ts](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/tests/unit/case-say.test.ts)・sessions.ts:411-413 |
+| 推奨1 名前の紛れ | §14-14-3 D3' (b) の末尾（コードの名前は `versionProbe`） |
+| 推奨2 数を監査に残す | §14-14-6 の 9 `counts` |
+| 推奨3 K56 の結果で指紋を変えるとき | 取り入れる。K56 の結果で size・mtime・ino に代えると決まったら、その時点で本書を直して審査に出す（実装役は決めない） |
+
+#### 14-14-14 審査3回目（REVISE）の当て先
+
+審査3回目: クラウドの審査役（2026-11-06・対象 e3739a79 の本節と agent-console aabdeef）。2回目の必須1〜5 はどれも○。新しく見つかった穴への直しは次のとおり。指摘の原文は Opus の手元の記録に残し、本書には当て先だけを書く。Opus は指摘の行（routine-audit.ts:13・:16・:69-78、activity-hooks.ts:98、activity-hook.mjs:14・:293-301・:332、sessions.ts:405、case-sandbox.ts:496・:504）を aabdeef の写しで確かめた。
+
+| 指摘 | 直した所 |
+|---|---|
+| 必須1 P3 で pre の `tool_use_id` が空のときの扱いが無い | §14-14-4 P3（空なら×・文3 の後の主の会話の post は `tool_use_id` を問わず 0 件）・K51 |
+| 必須2 probe の hook が非同期で、post が `idle` の後に届くと誤って○ | §14-14-3 D3' (b)（同期・`timeout: 5`）・§14-14-4 P3（`idle` の後 3 秒待つ）・K51 |
+| 必須3 監査の引用の行が無い・`outcome` に aborted が無い・:2 の注記 | §14-14-6 の 9（routine-audit.ts:69-78・型の直し・注記の例外）・便CS3a |
+| 推奨1 引数の道 | §14-14-3 D3' (b)（`createCase` → `writeCaseFiles` → `buildCaseSettings`） |
+| 推奨2 P4 は切った写しで数える | §14-14-4 P4 |
+| 推奨3 K58 と K59 の順 | §14-14-8 の表 |
+
+#### 14-14-15 審査4回目（APPROVE）の推奨の当て先
+
+審査4回目: クラウドの審査役（2026-11-06・対象 19ae5ce3 の本節と agent-console aabdeef）。判定は APPROVE。3回目の必須1〜3 はどれも○、前の回に○だった物で崩れた物は無い。推奨3件を次のとおり取り込んだ。指摘の原文は Opus の手元の記録に残す。Opus は routine-audit.ts:24（`callerSessionId` は省けない欄。審査役は :27 付近と書いたが実物は :24）と sessions.ts:394・:405・:407-408 を aabdeef の写しで確かめた。
+
+| 推奨 | 直した所 |
+|---|---|
+| 推奨1 ×の番号の欄の名前・`callerSessionId`・通知の `outcome` | §14-14-5（`failedCheck`）・§14-14-6 の 9（両 action とも `callerSessionId` は null・通知は "ok"） |
+| 推奨2 post が消えていない証拠 | §14-14-4 P3（P1・P2 で pre と post が全部対）・K51・U14（文3 の後だけ消える場合は残る危険） |
+| 推奨3 `createCase` の引数と印を付ける所 | §14-14-3 D3' (b)（`createCase` に任意の引数・`spawnSession` の直後） |
+| マージ前審査 LOW-1・LOW-2（対の post が無い数・誤って×の場合） | §14-14-6 の 9 `counts`・U15 |
