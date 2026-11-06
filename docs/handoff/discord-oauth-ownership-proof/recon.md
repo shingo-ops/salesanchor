@@ -81,6 +81,8 @@ Context7 は月の上限で使えなかった（`Monthly quota exceeded`）。�
 
 ## 8. 未確認
 
+- U1 は 2026-11-07 に確かめ済み（PO「1」で Opus が Chrome の履歴を見た。値は読まず、項目の名前だけ）: 戻り口の記録 9 件すべてに `code` がある。会社1の 11/6 の2回（14:32:43Z・14:33:14Z。7 節の行の作成時刻と一致）は `code`・`guild_id`・`iss`・`permissions`・`state`。8/31〜10/2 の5件は `code`・`guild_id`・`permissions`・`state`。→ 今の招待のまま code は付く。開発者画面の設定は要らない
+
 - U1: 今の招待（bot applications.commands + response_type=code）で、戻り先に `code` が実際に付くか。ADR-091:162-163・:263 は付くと記録するが、生の URL の記録は repo に無い。Discord 公式は bot と applications.commands だけのとき code が付くかを明言しない。2026-11-07 再取得: 公式は「bot と applications.commands だけなら利用者の access token を取る必要が無い」「response_type は、それ以外の scope を求めるときだけ必須」と書く（code が付かない可能性を否定できない）
 - U2: 既存の4行のサーバーに、ボットが本当に入っているか（偽の登録が過去に無いか）。ボットの鍵が要るので読み取りの道では見られない
 - U3: Discord 開発者画面に、すでに秘密の鍵が発行済みか（作り直すと前の鍵は使えなくなる。コードで使う所は 0 件なので影響先は repo の中には無い）

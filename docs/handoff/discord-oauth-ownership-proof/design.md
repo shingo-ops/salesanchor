@@ -225,7 +225,7 @@ async def _exchange_code_for_guild_id(code: str) -> str:
 ## 12. 実装の進め方（1つの作業）
 
 順番を固定する:
-0. **実装の前に** U1 を確かめる: PO が、11/6 にテナント001で再接続したときのブラウザの履歴から、`api.salesanchor.jp/api/v1/discord/oauth/callback` の URL に `code=` があるかだけを見て答える（値は書き写さない）。履歴に無い場合・`code=` が無い場合は 6 節 U1 の手当て
+0. **済み（2026-11-07）**: 戻り口の URL に `code` が付くことを確かめた（recon 8）。以下は記録として残す。U1 を確かめる: PO が、11/6 にテナント001で再接続したときのブラウザの履歴から、`api.salesanchor.jp/api/v1/discord/oauth/callback` の URL に `code=` があるかだけを見て答える（値は書き写さない）。履歴に無い場合・`code=` が無い場合は 6 節 U1 の手当て
 1. 実装（クラウドの Sonnet・実装カード）→ CI 緑 → 審査役 → GO 記録（委任・ADR-1003。deploy.yml を含むので ADR-136 の3行まとめを PO に出す）
 2. **合流の前に**、PO が秘密の鍵を入れる（secrets の変更は PO 本人・ADR-1003 例外）:
    1. Discord 開発者画面 → Sales Anchor のアプリ（client id 1499458730171961535）→ OAuth2 → Client Secret → Reset Secret → 出た値を写す（1回しか表示されない）
