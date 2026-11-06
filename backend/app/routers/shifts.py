@@ -19,6 +19,7 @@ from app.auth.dependencies import (
 from app.database import get_db
 from app.models import User
 from app.services.audit import record_audit_log
+from app.services.tenant_users import ensure_user_in_tenant
 
 router = APIRouter()
 
@@ -79,6 +80,7 @@ async def list_shifts(
 async def create_shift(data: ShiftCreate, db: AsyncSession = Depends(get_db),
                        tenant_id: int = Depends(get_current_tenant),
                        current_user: User = Depends(get_current_user)):
+    await ensure_user_in_tenant(db, data.user_id, tenant_id)
     try:
         result = await db.execute(
             text(f"""

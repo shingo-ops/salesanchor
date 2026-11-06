@@ -59,6 +59,7 @@ from app.services.meta_graph import (
     MetaGraphTimeoutError,
     MetaGraphTransportError,
 )
+from app.services.tenant_users import ensure_user_in_tenant
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -415,6 +416,7 @@ async def create_lead(
     current_user: User = Depends(get_current_user),
 ):
     """リードを登録する（lead_codeは自動採番、prospect_rankは自動算出）"""
+    await ensure_user_in_tenant(db, data.assigned_to, tenant_id)
     rank = compute_prospect_rank(
         _enum_to_str(data.temperature),
         _enum_to_str(data.estimated_scale),
@@ -514,6 +516,8 @@ async def update_lead(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="リードが見つかりません")
 
     update_data = data.model_dump(exclude_unset=True)
+    if "assigned_to" in update_data:
+        await ensure_user_in_tenant(db, update_data["assigned_to"], tenant_id)
     # ADR-108 Phase B-1: sales_form_selections は _UPDATABLE_COLUMNS 外で個別処理
     sales_form_selections_data = update_data.pop("sales_form_selections", None)
     close_reason_memo = update_data.pop("close_reason_memo", None)

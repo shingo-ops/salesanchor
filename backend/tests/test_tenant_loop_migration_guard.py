@@ -81,6 +81,19 @@ _REVIEWED: dict[str, tuple[str, str, frozenset[str]]] = {
             }
         ),
     ),
+    "test_tenant_user_ref_guard_pg.py": (
+        "scoped",
+        "",
+        frozenset(
+            {
+                "090_add_lead_contact_links.sql",
+                "091_add_leads_discord_messaging_columns.sql",
+                "095_add_lead_social_links.sql",
+                "099_add_discord_guild_config.sql",
+                "20260602_120000_add_discord_ticket_config.sql",
+            }
+        ),
+    ),
     "test_roles_system_key_ddl.py": (
         "scoped",
         "",
