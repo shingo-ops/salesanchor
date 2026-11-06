@@ -212,8 +212,10 @@
 - 画面の動き（§10 S1）:
   - 今の設定画面（`/account/settings`、`frontend/src/App.tsx:298`）はシェルの中にある。シェルは許可一覧に無い道を多く呼ぶ（`frontend/src/components/DesktopShell.tsx:35-40`）。SecuritySection の本体も、表示するとすぐに他の道を呼ぶ（`frontend/src/pages/account-settings/SecuritySection.tsx:39`・`:148`・`:331-334`）。だから、ここへは移さない。
   - 新しい道 `/password-change` を、シェルの無いログイン必須の並び（`frontend/src/App.tsx:180-182`。ProtectedRoute は API を呼ばない）に足す。新しいファイル frontend/src/pages/password-change/PasswordChangePage.tsx。
-  - 変更欄（`frontend/src/pages/account-settings/SecuritySection.tsx:240-325` の form）を、新しいファイル frontend/src/features/auth/PasswordChangeForm.tsx に切り出す。SecuritySection とこのページの両方がそれを使う（同じ部品を2つ書かない）。SecuritySection の見た目と動きは変えない。
-  - ページに出すもの: 変更欄と、ログアウトのボタン（今の useAuth のログアウトを使う）。他の API は呼ばない。成功したら `/` へ移す。
+  - 変更欄（`frontend/src/pages/account-settings/SecuritySection.tsx:284-329` の form（:240 は関数の始まり。3回目の審査 T1 で訂正））を、新しいファイル frontend/src/features/auth/PasswordChangeForm.tsx に切り出す。SecuritySection とこのページの両方がそれを使う（同じ部品を2つ書かない）。SecuritySection の見た目と動きは変えない。
+  - ページに出すもの: 変更欄と、ログアウトのボタン（今の useAuth のログアウトを使う）。このページ自身は他の API を呼ばない。
+  - シェルの外の UiPrefs・Locale・Theme の3つの Provider は `/staff/me` を呼ぶ（`frontend/src/contexts/UiPrefsContext.tsx:103`・`frontend/src/contexts/LocaleContext.tsx:46`・`frontend/src/contexts/ThemeContext.tsx:76`）。このページでは 403 になるが、catch で既定値に戻って動く（同 `:108`・`:53`・`:83`。Opus が origin/main で照合）。この3つは変えない。移す処理は api.ts の「今の道が /password-change なら移さない」で止まる（3回目の審査 T2）。
+  - 変更が成功したら `window.location.assign("/")` でページ全体を読み込み直し、3つの Provider の設定を取り直す（T2）。
   - ログインの返事が真なら、`/password-change` へ移す。
   - `frontend/src/lib/api.ts` の共通の失敗処理で、403 `password_change_required` を受けたら `/password-change` へ移す。今の道が既に `/password-change` なら移さない（同じページへ何度も移すのを防ぐ）。
 - 影響: 既存の人は全員 false なので、何も変わらない。
@@ -361,4 +363,11 @@
 | S1 | 必須 | パスワード変更ページの道と置き場所が決まっていない。今の設定画面とシェルは許可一覧に無い道を呼ぶので、403 が続き、同じページへ何度も移す | §4-2（シェルの無い新しい道、変更欄の切り出し、移す処理の止め、許可一覧から me/permissions を外す） |
 | S2 | 推奨 | 審査の返事が記録の上限で途中までしか読めなかった（R7 の「軽い穴」とだけ読めた）。Opus が R7 の道を読み直し、再設定で決めたパスワードの後にもう一度変更させる二重の手間を見つけて直した | §4-2（再設定の確定でも must_change を false にする） |
 
-- 3回目: 直した版で、もう一度クラウドで審査する。返事は記録で切れないよう短くしてもらう。結果はこの下に書き足す。
+- 3回目: 2026-11-07、対象 4a15cf7c9。判定 APPROVE（必須の指摘なし）。S1・S2 は「合う」。シェルの無い並びと ProtectedRoute は API を呼ばない。ログアウトは get_current_user を通らない（`backend/app/routers/auth.py:181-187`）。再設定の確定は、1回限り・期限付きの鍵（`:663`）、is_active の確認（`:681`）、全セッションの失効（`:693`）が揃っており、must_change を false にしても危険は無い。推奨2件は次のとおり直した:
+
+| # | 重さ | 指摘 | 直した場所 |
+|---|---|---|---|
+| T1 | 推奨 | SecuritySection の form の行番号は 284-329 | §4-2 |
+| T2 | 推奨 | シェル外の3つの Provider が `/staff/me` を呼ぶ。403 でも既定値で動くことを明記し、成功後に設定を取り直す | §4-2 |
+
+- 状態: 設計審査済み（クラウドの Opus 審査、3回目 APPROVE。推奨は反映済み）。
