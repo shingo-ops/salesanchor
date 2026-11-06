@@ -111,6 +111,7 @@ describe("review timing", () => {
     first.unmount();
     view();
     await screen.findByText("Card A");
+    await act(async () => {}); // effect を流して最初の frame を予約させる
     await flushFrames();
     expect(timingPosts()).toHaveLength(2);
     expect((timingPosts()[1][1] as { entry: string }).entry).toBe("return");
