@@ -31,8 +31,9 @@ _PG_BOOTSTRAP_MIGRATIONS = [
     "20260921_060000_create_product_kinds.sql",
     "20260921_070000_rename_tcg_type_master_to_type_master.sql",
     "20261015_130000_add_permissions_rls.sql",
-    "20261106_190000_create_public_channel_masters.sql",
 ]
+# public.tenants を参照するため、tenants を用意した後に流す
+_PG_AFTER_TENANTS_MIGRATIONS = ("20261106_190000_create_public_channel_masters.sql",)
 _TENANT_BOOTSTRAP_MIGRATIONS = [
     "20260611_100000_create_channel_masters.sql",
     "20260614_100000_create_sales_form_tables.sql",
@@ -355,6 +356,10 @@ async def bootstrap_tenant_schema(admin_engine, tenant_id: int) -> str:
             async with public_bootstrap_lock(admin_engine):
                 await _bootstrap_public_shared(conn)
                 await _ensure_public_users(conn)
+                raw_after_tenants = await conn.get_raw_connection()
+                for filename in _PG_AFTER_TENANTS_MIGRATIONS:
+                    sql = (_MIGRATIONS_DIR / filename).read_text("utf-8")
+                    await raw_after_tenants.driver_connection.execute(sql)
                 await conn.execute(
                     text("""
                         INSERT INTO public.tenants (

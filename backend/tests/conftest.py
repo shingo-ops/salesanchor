@@ -1914,6 +1914,8 @@ async def db_session(test_engine, setup_test_db):
         await conn.execute(text("DELETE FROM roles"))
         # テナント削除テスト用クリーンアップ（FK 順: audit → tenants）
         await conn.execute(text("DELETE FROM tenant_deletion_audit"))
+        await conn.execute(text("DELETE FROM channel_master_tenant_settings"))
+        await conn.execute(text("DELETE FROM channel_masters WHERE tenant_id IS NOT NULL"))
         await conn.execute(text("DELETE FROM tenants WHERE id > 90"))
 
 
