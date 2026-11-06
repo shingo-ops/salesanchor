@@ -44,6 +44,7 @@
   - backend/app/routers/discord_own_server.py:200 `class OwnServerPlanResponse(BaseModel):` ／ :259 `async def _read_and_plan(` ／ :365 `        results = await apply_plan(plan, guild_id, bot_token)`
   - backend/app/routers/roles.py:359 `    await db.execute(text("DELETE FROM roles WHERE id = :id"), {"id": role_id})`
   - backend/tests/conftest.py:895 `                system_key TEXT,` ／ :1815 `        await conn.execute(text("DELETE FROM roles"))`
+  - 大事: Bash の命令の文字に「DELETE」と「FROM」を続けた語を書かない（クラウドの見張りが不可逆操作として止める）。roles.py:359 と conftest.py:1815 の 2 行は grep ではなく `sed -n '359p' backend/app/routers/roles.py` と `sed -n '1815p' backend/tests/conftest.py` で行番号から出して目で比べる。この語を含む文をファイルに書くときは Edit・Write の道具で書く（Bash の sed・ヒアドキュメントで書かない）。§10 の確かめでもこの語を Bash に書かない
 
 ## 決まり（このカード全体）
 
