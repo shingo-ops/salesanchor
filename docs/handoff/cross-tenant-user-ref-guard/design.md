@@ -163,6 +163,7 @@ DB の正本（SSOT）について: 人の正本は public.users のまま。新
 
 ## 8. 維持の仕組み
 
+- 守り手: backend/tests/test_tenant_user_ref_guard_pg.py（6入口の拒否・自社成功・担当なしを CI の PostgreSQL で毎回確かめる）
 - 自動試験（10. の表）を残す。入口を変えたら試験が赤になる
 - 別便（台帳に積む）: 照合済みの既存6件を共通の関数へ寄せ、`FROM public.users WHERE id = :... AND tenant_id` の直書きを routers から無くす。その後、直書きを lint で止める
 - 別便: badges.py・buddy.py の片付け
@@ -189,7 +190,7 @@ DB の正本（SSOT）について: 人の正本は public.users のまま。新
 | routers 内の照合の直書きが 5 のまま（K3） | `git grep -n "FROM public.users WHERE id = :uid AND tenant_id" backend/app/routers` が5件 |
 | 照合の試験は本物の users 行で通す（mock なし） | 差分に照合関数の差し替え（monkeypatch・mock）が無いことを審査で確かめる |
 
-## 11. 外部事例
+## 11. 外部・過去事例の参照と我々への応用
 
 該当事例なし。理由: この変更は「保存の前に、参照する番号が同じ会社のものか確かめる」という、前例（ADR-1008・companies.py:357）と同じ型の適用で、新しい方式を選ぶ判断を含まない。Discord 側も、既にある連携の道に一本化するだけ。
 
