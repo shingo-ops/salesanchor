@@ -11,14 +11,14 @@
 - ADR-146（Discord は共通 bot 1台・guild_id から会社を引く）
 - 前例2: backend/app/routers/notice_fallback_recipients.py:94-101（受け取る人の番号を `tenant_id = :tid AND is_active` で照合してから保存）
 
-## 1. 他社に届く道（確定 2件）
+## 1. 他社に届く道（確定 1件。2件目は 6-1 で取り消し）
 
 | # | 場所 | 何が起きるか | 見えるもの |
 |---|---|---|---|
 | 1 | backend/app/routers/leads.py:405-459（作成）・:578-596（更新）の assigned_to | 会社の照合なしで任意の人の番号を保存できる。本番の leads は外部キー0件（AUDIT ts=2026-11-06T06:40:42Z sha=ad3eddf9b8d9 rows=0） | backend/app/routers/analytics.py:110-119 が public.users を結ぶため、他社の人のユーザー名が集計に出る |
-| 2 | backend/app/routers/badges.py:99-117（付与・badges.manage 権限）→ :82-95（順位表 `LEFT JOIN public.users u ON u.id = ub.user_id`） | 会社の照合なしで任意の人の番号にバッジを付けられる。user_badges の user_id は5区画とも外部キーなし（読み取りの道で確認） | 順位表に他社の人のユーザー名が出る |
+| ~~2~~（取り消し・6-1） | backend/app/routers/badges.py:99-117（付与・badges.manage 権限）→ :82-95（順位表 `LEFT JOIN public.users u ON u.id = ub.user_id`） | 会社の照合なしで任意の人の番号にバッジを付けられる。user_badges の user_id は5区画とも外部キーなし（読み取りの道で確認） | 順位表に他社の人のユーザー名が出る |
 
-どちらも見えるのは他社の人のユーザー名だけで、他社の商談・顧客・金額は出ない。
+1件目で見えるのは他社の人のユーザー名だけで、他社の商談・顧客・金額は出ない。
 
 ## 2. 届かないと確かめた候補（4件）
 
@@ -180,3 +180,63 @@
 - 4. の新しい候補が本番で使われたか。読み取りの道では数えられなかった: tenant_NNN.audit_logs（AUDIT ts=2026-11-06T07:33:47Z sha=e43a68a81e6c result=db_error:InsufficientPrivilege）・public.tenant_discord_config（AUDIT ts=2026-11-06T07:34:06Z sha=8c32c81ca020 result=db_error:InsufficientPrivilege）とも読み取りの鍵に権限が無い
 - Meta のページ番号は会社をまたいで一意の決まりがあるか（2社が同じページを連携したとき、どちらに届くか）
 - 3-2 は「会社番号がどこから来るか」の確かめ。会社番号が正しくても、その会社の中で他社の人の番号を保存できる道（1. の2件と同じ型）は別の観点。設計で、人の番号を受け取る全入口を数える
+
+## 6. 追記: 人の番号を受け取る全入口（2026-11-06）
+
+5 の3つ目「人の番号を受け取る全入口を数える」の結果。
+
+### 6-1. 取り消し: バッジとバディは本番で動いていない
+
+- backend/app/routers/badges.py・backend/app/routers/buddy.py はファイルが残っているが、backend/app/main.py に登録が無い（`grep -n "buddy\|badges" backend/app/main.py` が0件。backend/app 内で2ファイルを読み込む所も0件）
+- migrations/079_remove_buddy_badges.sql:6 で権限 buddy・badges を消している
+- 本番の確かめ（ログインなし）: `/api/v1/badges/leaderboard` → 404、`/api/v1/buddy/pairs` → 404。比べる相手 `/api/v1/shifts` → 401（登録されていてログインを求める）
+- よって 1. の2件目（バッジ）は他社に届かない。表から取り消す
+
+### 6-2. 数え方
+
+- 依頼の形（スキーマ）の欄で人の番号を持つもの 63件（scratchpad の uscan.py の出力）と、窓口の引数で人の番号を持つもの 15件（pscan.py の出力）を全部読んだ
+- 読み出しの窓口（GET の絞り込み）は、その会社の表の行を絞るだけなので、他社の行は出ない。対象外
+- Discord の利用者番号（discord_user_id 等）は public.users の番号ではないので対象外
+
+### 6-3. 書く入口の判定（全件）
+
+| 入口 | 欄 | 会社の照合 | 判定 |
+|---|---|---|---|
+| backend/app/routers/companies.py:391・:543 | sales_rep_id | あり（:357 `_ensure_sales_rep_in_tenant`） | 済み |
+| backend/app/routers/teams.py:266 add_team_member | user_id | あり | 済み |
+| backend/app/routers/roles.py:536 set_user_roles | user_id | あり | 済み |
+| backend/app/routers/notice_fallback_recipients.py:94-101 | user_ids | あり | 済み |
+| backend/app/routers/bots.py:122 `_ensure_owner_user_exists` | owner_staff_id | あり | 済み |
+| backend/app/routers/order_commissions.py:241 `_validate_staff` | staff_id | あり | 済み |
+| backend/app/routers/staff.py create/update | user_id | 依頼で受け取らない（指定すると拒否。番号は内部で作る） | 済み |
+| backend/app/routers/calendar.py:225 update_calendar_owner | 窓口の user_id | その会社の staff 表で引く（`FROM staff s ... WHERE s.user_id = :user_id`） | 届かない |
+| backend/app/routers/leads.py:806 convert_lead | （LeadConvertRequest.assigned_to） | 使っていない（:806-866 で読まない） | 届かない |
+| **backend/app/routers/leads.py:411 create_lead** | assigned_to | **なし** | **ふさぐ** |
+| **backend/app/routers/leads.py:499 update_lead** | assigned_to | **なし** | **ふさぐ** |
+| **backend/app/routers/shifts.py:79 create_shift** | user_id | **なし**（表に外部キーなし: migrations/011_add_phase5_tenant_tables.sql:11） | **ふさぐ** |
+| **backend/app/routers/goals.py:111 create_goal** | user_id | **なし**（外部キーは public.users だけで会社は見ない: migrations/075_create_goals.sql:55） | **ふさぐ** |
+| **backend/app/routers/teams.py:102 create_team** | leader_id | **なし**（外部キーなし: migrations/003_add_phase1_tenant_tables.sql:108） | **ふさぐ** |
+| **backend/app/routers/teams.py:147 update_team** | leader_id | **なし** | **ふさぐ** |
+
+ふさぐ入口は 6件（4ファイル）。名前が見えるのは leads の1件（analytics.py:110-119）。ほかの5件は番号が保存されるだけで、名前は出ない（shifts・goals・teams の読み出しは public.users を結ばない。teams.py:234・:295 の結びはメンバーの表で、メンバー追加は照合済み）。
+
+goals.py:111 の team_id は会社ごとの表 teams を指す。別の会社の表は search_path で見えないので、他社の番号を入れても他社のチームには結びつかない。対象外。
+
+### 6-4. 本番に既に入っている他社の番号（読み取りの道）
+
+AUDIT ts=2026-11-06T07:54:29Z sha=bd4cfa3fd323 rows=20 result=ok。5社（tenant_001・003・004・005・006）× 4欄で、自社の人でない番号の数を数えた。
+
+| 欄 | 入っている数（5社合計） | 自社の人でない数 |
+|---|---|---|
+| leads.assigned_to | 0 | 0 |
+| shifts.user_id | 0 | 0 |
+| goals.user_id | 6（tenant_006） | 0 |
+| teams.leader_id | 0 | 0 |
+
+照合を足しても、今あるデータで保存が止まる行は無い。
+
+### 6-5. Discord のサーバー番号を手で打つ欄（4. の3件目）の使われ方
+
+- 画面 frontend/src/pages/admin/DiscordConfigPage.tsx:197-219 `handleGuildSave` が PUT /admin/discord-config を呼ぶ。:411-433 に番号を打つ欄と「接続」ボタンがある
+- 持ち主の証明がある道（連携ボタン）は frontend/src/pages/channels/ChannelsPage.tsx:191-194 `handleDiscordConnect` → POST /discord/oauth/start
+- 試験 backend/tests/test_discord_d2.py・backend/tests/test_discord_own_server.py が `/admin/discord-config` を参照する（PUT を使うかは実装時に読む）
