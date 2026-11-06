@@ -122,6 +122,10 @@
 - ログインしていない2本の道（GET と POST の `/public/staff-join/{鍵}`）:
   - `check_auth_rate_limit` で IP の回数を確かめる。
   - 無効な理由（期限切れ・使用済み・取消・存在しない）は区別せず、すべて 404 にする（推測防止）。
+- 鍵の読み方（§10 R5）:
+  - 形が `^[1-9][0-9]{0,9}\.[A-Za-z0-9_-]{43}$` に合わないときは、DB を引かずに 404。
+  - 先頭の会社番号の会社が無い・停止中のときも、同じ 404。
+  - 会社の分離は PostgreSQL の試験（CI の pytest PostgreSQL RLS）で示す。SQLite では set_tenant_context が何もしない（`backend/app/auth/dependencies.py:293-294`）ため、SQLite の試験を分離の根拠にしない。
 - 申込 `POST /public/staff-join/{鍵}`:
   - 受け取る項目: StaffCreate から役割・状態・user_id・discord_user_id・is_employee・ui_preferences・additional_emails を除いたもの。
     - 姓名（日本語・かな・英語）と主メール。
@@ -130,7 +134,11 @@
     1. 招待の行を `FOR UPDATE` で取る（open で期限内）。
     2. 人と staff を作る。今の `create_staff` の中身（`backend/app/routers/staff.py:606-648`）を、サービス関数 `create_staff_record` に切り出して、POST /staff と共用する。
        - staff は `status='pending'`。
+       - users は `is_active=false` で作る（§10 R1）。ログイン・パスワード再設定の申請（`backend/app/routers/auth.py:602-641`）・トークンの道（`backend/app/auth/dependencies.py:72`）はすべて is_active を見るので、Discord の照合までは入れない。2回目の §4-3 手順6で true にする。
+       - 既存の users は使い回さない（§10 R2）。同じメールの users がどこかに1件でもあれば 409（文言は `EMAIL_UNAVAILABLE_DETAIL`）。POST /staff の使い回し（`backend/app/routers/staff.py:86-102`）は今のまま。共用関数は引数 `allow_reuse`（POST /staff は真、申込は偽）と `is_active` を受け取る。
+       - 共用関数は `(staff_id, user_id, user_created)` を返す。招待メールの鍵を作る部分（`backend/app/routers/staff.py:649-655`）は POST /staff 側に残す（§10 R4）。
        - 役割の付与者は、招待を作った人（`created_by` の User）。
+       - 申込の時点で、招待を作った人を検査し直す（§10 R3）: users.is_active が真、今も staff.create を持つ、役割の検査が通る。どれか1つでも通らなければ 403。画面は「管理者に連絡してください」。
        - 監査ログの user_id も `created_by`。new_data に `"via":"self_registration"` を入れる。
     3. メールの重複は 409。文言は今の `EMAIL_UNAVAILABLE_DETAIL` と同じ（ADR-1063 What 6）。
     4. 登録番号を作る。`generate_signup_code`／`signup_code_sha256` をそのまま使う。
@@ -182,7 +190,8 @@
     - 次の手順の説明3行。
 - 守ること:
   - 部品は components の金型だけを使う（ADR-144）。色はトークン（ADR-067）。文言は全部 `t()`、ja と en は同じキー（ADR-027）。
-  - コピーボタンと読み取り専用の欄に既存の金型が無い場合は、金型を足してから使う。直書きはしない（実装カードで実物を点検して決める）。
+  - コピーボタン専用の金型は無い（`frontend/src/components/` に copy・clipboard の名前のファイルは 0 件、2026-11-07 点検）。今ある書き方に合わせて、金型の Button（variant secondary・size sm）を押すと `navigator.clipboard.writeText` で写し、2 秒だけ文言を「コピーしました」に変える（`frontend/src/pages/super-admin/ViewerAccountsPage.tsx:292-299`・`:503-508` と同じ）。新しい金型は足さない。
+  - 読み取り専用の欄は、今ある TextFieldControl の読み取り専用の指定で出す。指定が無ければ実装を止めて報告する（金型を勝手に足さない。`docs/CC_UI_GOVERNANCE.md:13-15`）。
 
 ## 4. 2回目（KGI 6〜10）
 
@@ -193,10 +202,11 @@
 
 ### 4-2. 変えるまで止める
 
-- `backend/app/auth/dependencies.py:108` の get_current_user には戻り口が2つある（一時記憶が当たったときと、`_authenticate_self_token` の後）。両方で次を行う:
+- `backend/app/auth/dependencies.py:108` の get_current_user には戻り口が3つある（smoke 用・一時記憶が当たったとき・`_authenticate_self_token` の後。§10 R6）。戻り口ごとに足すと漏れるので、今の関数を内側の関数に改名し、get_current_user はそれを呼んだ後に1か所で次を行う:
   - `user.password_must_change` が真で、道が許可一覧に無ければ、403 `password_change_required`。
-- 許可一覧（1か所の定数）: `/api/v1/auth/password/change`、`/api/v1/auth/logout`。
-  - 実装カードで、画面が最初に読む「自分の情報」の道を実物で特定して足す。
+- 許可一覧（1か所の定数）: `/api/v1/auth/password/change`、`/api/v1/me/permissions`。
+  - `/api/v1/me/permissions` は、画面がどのページでも最初に読む自分の情報（`frontend/src/hooks/usePermissions.ts:22`）。
+  - `/api/v1/auth/logout` は get_current_user を使わない（`backend/app/routers/auth.py:181-187`）ので、一覧に入れなくても止まらない。
 - `/password/change` の成功時の UPDATE に `password_must_change = false` を足す。
 - ログインの返事（SelfTokenResponse）に `must_change_password: bool` を足す。
 - 画面の動き:
@@ -214,6 +224,9 @@
 - 振り分け: `backend/app/discord_gateway/client.py:263` の閲覧者の分岐の直後に、`staff_join_` の分岐を足して `return` する。
   - お客様のチケットの道（`ticket_open`）には入らない。リードは作らない（KGI 13）。
 - 会社の決め方: guild の番号から purpose='own' で引く新しい関数（今の `_resolve_tenant_id` は customer 専用のまま）。
+- 番号を照合する前に、次を見る（§10 R7）:
+  - この Discord ID を、この会社の staff が既に持っていれば「既に登録済み」と返す。失敗には数えない（KGI 7 の試験はこの道で見る）。
+  - 管理者のロール（下の手順4）が1つも無ければ、何も変えずに「受付の準備ができていません。管理者に連絡してください」と返す。失敗には数えない。管理者が見られない個室は作らない。
 - 番号が合ったとき（1 トランザクション）:
   1. 会社の文脈を付ける。
   2. 行を `FOR UPDATE` で取る（`reg_code_sha256` が一致・submitted・期限内）。無ければ失敗に数える。
@@ -225,13 +238,14 @@
      - `backend/app/discord_gateway/private_channel.py:50` の `create_private_text_channel` に、既定が空のキーワード引数 `extra_view_role_ids` を足して使う。今の呼び出し元は変わらない。
   5. 仮パスワードは `secrets.token_urlsafe(18)` で作り、`check_password` で検査し、別スレッドで `hash_password` する（`backend/app/discord_gateway/viewer_trial.py:333` と同じ）。
   6. 書き込み:
-     - users の `password_argon2_hash` と `password_must_change=true`。
+     - users の `password_argon2_hash`、`password_must_change=true`、`is_active=true`。
      - staff の `discord_user_id`。
      - 招待の行を linked にし、`discord_channel_id` を入れ、`reg_code_sha256=NULL` にする。
   7. commit → `reset_tenant_context`。
   8. 個室に出す: メール、仮パスワード、ログインの URL、「最初のログインで変更してください」。
   9. `schedule_own_staff_sync(tenant_id)` を予約する（スタッフのロールと役割のロールが付く）。
   - 失敗したら rollback して、個室を消す（閲覧者と同じ）。
+  - commit の後に個室への投稿（手順8）が失敗したとき（§10 R7）: 同じ内容を、本人だけに見える返事（ephemeral の followup）で送る。それも失敗したときは記録に残し、本人には「パスワードを忘れた」から再設定するよう案内する（この時点で is_active は真なので、再設定のメールが届く）。
 - 受付ボタンの設置:
   - `backend/app/viewer_discord_cli.py` と同じ型の CLI に action `post-staff-button` を足す。stdin の JSON だけを受け取る。
   - 管理者は、本番の決まった手順で1回だけ置く。
@@ -240,7 +254,8 @@
 ### 4-4. 1回目と2回目の間
 
 - 1回目だけが本番に入った間は、受付ボタンがまだ無い。
-- そのため、実際のスタッフにリンクを渡すのは2回目が本番に入ってから（PO への案内に書く）。
+- 申込で作った人は is_active=false なので、この間はログインもパスワード再設定もできない（§10 R1。運用ではなくコードで止める）。
+- 実際のスタッフにリンクを渡すのは2回目が本番に入ってから（PO への案内に書く）。
 
 ## 5. 3回目（KGI 11〜12）— 骨組みだけ
 
@@ -257,9 +272,11 @@
 
 | リスク | 対処 |
 |---|---|
-| リンクが漏れると、他人が登録できる | 72 時間・1 回限り・取り消し可。作られるのは「登録待ち」で、Discord の番号と個室を経ないとパスワードが無い |
+| リンクが漏れると、他人が登録できる | 72 時間・1 回限り・取り消し可。作られる人は is_active=false で、Discord の番号と個室を経ないとログインも再設定もできない。既存の人は使い回さない |
 | 仮パスワードが Discord に残る | 閲覧者と同じ（PO 決定）。変えるまで他の画面は止まる |
-| 招待を作った人の役割が後で下がった | 申込の時点で役割の検査をし直し、通らなければ 403。画面は「管理者に連絡してください」 |
+| 招待を作った人が後で停止された・権限や役割が下がった | 申込の時点で、その人の is_active・staff.create・役割の検査をし直し、どれかが通らなければ 403。画面は「管理者に連絡してください」 |
+| 個室を作った後の投稿だけが失敗する | 本人だけに見える返事で同じ内容を送る。それも失敗したら記録し、「パスワードを忘れた」からの再設定を案内する |
+| 管理者の Discord ロールが無いまま受付が動く | 番号を照合する前に止め、何も変えずに案内だけ返す（失敗に数えない） |
 | 自社サーバーの Bot に招待の権限が無い | リンクは null。完了画面で案内する。権限を足すかは PO に聞く |
 | お客様のチケットに混ざる | custom_id の前置きを分け、`ticket_open` の前で `return` する。既存試験と新しい試験で確かめる |
 | 会社の取り違え | 表は FORCE RLS。鍵の会社の番号を書き換えても sha256 が一致しない |
@@ -286,6 +303,12 @@
   - 実装の後は、CI の必須の試験が守る。止めない道の一覧は、backend/app/auth/dependencies.py の1つの定数に置く。
 - 試験:
   - 招待の作成・作り直し・期限・取消・申込・重複。
+  - 申込の後にパスワード再設定を申請しても、鍵が作られずメールも出ない（§10 R1）。
+  - 申込のメールが既存の users にあれば、同じ会社でも 409（§10 R2）。POST /staff の使い回しは今のまま（既存試験が緑）。
+  - 招待を作った人が停止・staff.create なしなら 403（§10 R3）。
+  - 鍵の形が違う・会社が無いときは 404（§10 R5）。
+  - password_must_change が真なら、許可一覧以外の道は3つの戻り口（smoke を含む）のどれでも 403（§10 R6）。
+  - 既に登録済みの Discord ID は失敗に数えない。管理者ロールが無いときは何も作らない（§10 R7）。
   - 403 で止める仕組み。
   - Discord の照合・回数制限・二重防止。
   - お客様のチケットの振り分けが変わらないこと。
@@ -308,6 +331,24 @@
   - 受入条件は、§1 の表の検証方法で○×が決まる。
   - 実装範囲: 触るファイルと、触らない範囲（お客様のチケット、閲覧者の動き、管理者の新規作成）を書いた。
 - 実装カードで実物を確かめる点（設計の前提は変えない）:
-  - 画面が最初に読む「自分の情報」の道の名前（§4-2 の許可一覧）。
-  - コピーボタンの金型があるか（§3-5）。
   - 自社サーバーの Bot に招待の権限が付いているか（§3-4。無いときの動きは決めてある）。
+- この自己審査では、§10 の R1・R2 を見落としていた。
+
+## 10. クラウドの設計審査（Opus・読むだけ）
+
+- 1回目: 2026-11-07、対象 979004eff。判定 REVISE。
+- 指摘と直し方:
+
+| # | 重さ | 指摘 | 直した場所 |
+|---|---|---|---|
+| R1 | 必須 | 申込で作る users が is_active=true だと、パスワード再設定（`backend/app/routers/auth.py:602-641`）で Discord を通らずにログインできる | §3-3（is_active=false で作る）、§4-3 手順6（true にする）、§4-4、§6、§8 |
+| R2 | 必須 | `backend/app/routers/staff.py:86-102` が同じ会社の既存 users を使い回すため、申込で他人のアカウントに staff が付き、2回目でパスワードが上書きされうる | §3-3（申込は新規だけ。既存メールは 409） |
+| R3 | 必須 | `backend/app/services/role_assignment.py:49-70` は priority しか見ない。招待を作った人が停止・権限を失っても申込が通る | §3-3（申込時に検査し直す）、§6 |
+| R4 | 推奨 | 共用関数が `user_created` を返さないと、招待メールの分岐（`backend/app/routers/staff.py:649-655`）が変わる | §3-3 |
+| R5 | 推奨 | 鍵の先頭が数字でない・会社が無いときの扱いが無い。SQLite の試験では RLS の分離を示せない | §3-3 |
+| R6 | 推奨 | get_current_user の戻り口は3つ（smoke `backend/app/auth/dependencies.py:159`）。自分の情報の道が未特定 | §4-2（1か所で止める。`/api/v1/me/permissions` を許可） |
+| R7 | 推奨 | 管理者ロールが無いとき・2回目の照合（KGI 7）・commit 後の投稿失敗の扱いが無い | §4-3 |
+| — | 訂正 | recon の viewer_dependencies.py の行番号 | recon §3（106-108 に訂正） |
+
+- 審査の確認で合っていた点: 引用の行番号（上の訂正以外）、NOBYPASSRLS による会社の分離（`backend/app/auth/dependencies.py:280`）、Redis の道でも DB を読み直すこと（`backend/app/auth/dependencies.py:187-192`）、KGI 1〜10 と 13 が○×で判定できること。
+- 2回目: 直した版で、もう一度クラウドで審査する。結果はこの下に書き足す。

@@ -49,7 +49,7 @@
 - public.users に password_must_change の列は無い。
   - viewer_accounts には有る（`migrations/20261016_150000_add_viewer_accounts.sql:13`）。
 - 閲覧者の「変更するまで止める」型:
-  - `backend/app/auth/viewer_dependencies.py:27-30` の require_viewer_password_ok が 403 password_change_required を返す。
+  - `backend/app/auth/viewer_dependencies.py:106-108` の require_viewer_password_ok が 403 password_change_required を返す（審査で 27-30 から訂正）。
   - `backend/app/routers/viewer.py:252` で変更が成功したら false に戻す。
   - 画面は `frontend/src/pages/viewer/ViewerApp.tsx:134` で `must_change_password` を見る。
 - 本体の共通の入口は `backend/app/auth/dependencies.py:108` の get_current_user。
