@@ -33,7 +33,7 @@
 | ID | 目標（○×で判定） | 判定方法 | 現在値（2026-11-06 20:33 JST） | 判定 |
 |---|---|---|---|---|
 | KGI-4 | 8 表すべてが RLS 有効（ENABLE と FORCE）でポリシー 4 本。反映の前後で 8 表の行数が変わらない | reader 鍵の道で `pg_class.relrowsecurity / relforcerowsecurity` と `pg_policies` の件数、表ごとの行数を反映の前後に読む | 8 表とも RLS なし・ポリシー 0 本（inventory_movements で確認、AUDIT sha=ffc923a4ba16）。行数は計 17 行（recon §3） | ×（未着手） |
-| KGI-5 | 各便の反映後、backend・worker・beat・discord-gateway のログで 42501 と `row-level security` が 0 件。その便で触る入口が本番で動く | 反映時刻以降の `docker logs` を数える。入口ごとの確かめは design §5 K5-2 | 未着手 | — |
+| KGI-5 | 各便の反映後、backend・worker・beat・discord-gateway のログで 42501 と `row-level security` と `invalid input syntax for type integer` が 0 件。その便で触る入口が本番で動く | 反映時刻以降の `docker logs` を数える。入口ごとの確かめは design §5 K5-2 | 未着手 | — |
 | KGI-6 | アプリの接続役で、許されない読み書きを DB が拒否する（8 表それぞれ）。便5 の CI 確かめの許可一覧から 8 表が消えて CI が緑 | CI の Backend Tests が緑で、PostgreSQL のログに 8 表それぞれ `violates row-level security policy` が 1 件以上。便5 の許可一覧の中身 | 未着手 | — |
 
 ## 運用方針

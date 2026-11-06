@@ -48,7 +48,7 @@
 | 箇所 | 種類 | 文脈 |
 |---|---|---|
 | backend/app/services/inventory_movements.py:38 | SELECT（不変条件の確かめ、試験用の道具） | 呼び出し元は試験だけ（本番コードに呼び出しなし） |
-| scripts/export_inventory_for_sheet.py:98-118 | SELECT（手で流す CSV 書き出し） | `engine.connect()` で直接つなぎ、文脈を張らない。`WHERE tenant_id = :tid` だけ |
+| scripts/export_inventory_for_sheet.py:98-110（接続は :108。origin/main 6caae154f） | SELECT（手で流す CSV 書き出し） | `engine.connect()` で直接つなぎ、文脈を張らない。`WHERE tenant_id = :tid` だけ |
 - 本番コードに INSERT・UPDATE・DELETE は無い（2026-10-02 に取込機能を削除。inventory_movements.py:4-11 の説明）。
 
 ### 4-2. discord_server_snapshots（1 行）・discord_server_apply_runs（0 行）
@@ -64,9 +64,9 @@
 | backend/app/discord_gateway/client.py:108-126 `_resolve_tenant_id` | SELECT（guild_id → 会社） | 前（文脈なし） |
 | backend/app/tasks/discord_own_staff_sync.py:24 `_run_all` | SELECT（全社の一覧） | 横断 |
 | backend/app/services/discord_role_sync.py:66 | SELECT | 前（文脈なし）。`_get_guild_and_role_names`（:53-80）が自分で AsyncSessionLocal を開き、文脈を張らずに読む（U2 で確認） |
-| backend/app/routers/discord_guild_config.py:71・199 | SELECT | 会社（:65・:193） |
-| backend/app/routers/discord_guild_config.py:122 | INSERT | 会社（:116） |
-| backend/app/routers/discord_guild_config.py:160・223 | DELETE | 会社（:155・:218） |
+| backend/app/routers/discord_guild_config.py:55・143（origin/main 6caae154f） | SELECT | 会社（:49・:137 の get_current_tenant） |
+| （削除済み）discord_guild_config.py の手で guild を入れる INSERT | — | ea0142e71「close manual Discord guild PUT」で無くなった。書込の入口が 1 つ減った |
+| backend/app/routers/discord_guild_config.py:104・167 | DELETE | 会社（:99・:162 の get_current_tenant） |
 | backend/app/routers/discord_oauth.py:221 | INSERT | 会社（:215 で set_tenant_context） |
 | backend/app/routers/discord_own_server.py:124・247 | SELECT | 会社（:119・呼び出し元 :233/:393） |
 | backend/app/routers/discord_remove.py:63 | SELECT | 会社（`_get_guild_id` の呼び出し元 :82・:145・:195 はどれも `Depends(get_current_tenant)`＝:85・:148・:198） |
@@ -81,7 +81,7 @@
 | backend/app/discord_gateway/ticket_channel_creator.py:54 `get_ticket_config` | SELECT | 呼び出しが 2 つ: ticket_channel_creator.py:305 は会社（:292 で set_tenant_context の後）／backend/app/discord_gateway/client.py:308 は前（:303 `_resolve_tenant_id` の直後に新しいセッションを開き、文脈を張らずに読む）。U1 で確認 |
 | backend/app/routers/discord_auto_setup.py:127・391 | SELECT・INSERT | 会社（:91） |
 | backend/app/routers/discord_channel_invite.py:105 | SELECT | 会社（:68） |
-| backend/app/routers/discord_guild_config.py:88 | SELECT | 会社（:65） |
+| backend/app/routers/discord_guild_config.py:72 | SELECT | 会社（:49） |
 | backend/app/routers/discord_ticket_config.py:113・147・240 | SELECT・INSERT・SELECT | 会社（:104・:141・:228） |
 | backend/app/services/discord_role_sync.py:67 | SELECT（JOIN） | 4-3 と同じ |
 
@@ -141,7 +141,7 @@
 | Meta の接続の戻り | backend/app/routers/meta_inbox.py:314 | import の連鎖では届くが、予算の関数を呼ばない | 8 表に触らない |
 | Google カレンダーの通知 | backend/app/routers/google_calendar.py:396 | google_webhook_subscriptions を読む | 合言葉の照合（backend/app/services/google_webhook.py:212）は文脈の前の SELECT。型C は読取が全行可なので動く。その後の取り込みは裏の仕事で会社の文脈（backend/app/services/google_webhook.py:255・278） |
 | Google カレンダーの接続の戻り | backend/app/routers/google_calendar.py:91 | 届かない | :211 で会社の文脈の後に tenant_google_calendar_config（会社のスキーマ）へ書く。8 表の外 |
-| Discord の接続の戻り | backend/app/routers/discord_oauth.py:160 | tenant_discord_config に書く | :99 で set_tenant_context の後に :105 の INSERT。型C で動く |
+| Discord の接続の戻り | backend/app/routers/discord_oauth.py:160 | tenant_discord_config に書く | :215 で set_tenant_context の後に :221 の INSERT（origin/main 6caae154f で確認。旧記載 :99・:105 は誤り）。型C で動く |
 | Google Drive の接続の戻り | backend/app/routers/integrations.py:104 | 届かない（取り込む部品 18 に 8 表の部品 0） | 影響なし |
 | PayPal の戻り・取消・通知 | backend/app/routers/integrations.py:759・821・887 | 届かない | 影響なし |
 | 社員登録の招待 | backend/app/routers/registration_tokens.py:164・210・363・452 | 届かない（部品 13 に 0） | 影響なし |

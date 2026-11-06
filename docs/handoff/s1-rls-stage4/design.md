@@ -81,7 +81,7 @@ COMMIT;
 
 | 便 | 表 | migration 以外の変更 |
 |---|---|---|
-| ④-1 | inventory_movements | scripts/export_inventory_for_sheet.py:117 の接続で、読む前に会社の文脈（`set_config('app.tenant_id', <会社>, false)`）を張る。張らないと型A で 0 行になる（R§6 U4: `DATABASE_URL`＝アプリの接続役） |
+| ④-1 | inventory_movements | scripts/export_inventory_for_sheet.py:108（origin/main 6caae154f の `engine.connect()`）の接続で、読む前に会社の文脈（`set_config('app.tenant_id', <会社>, false)`）を張る。張らないと型A で 0 行になる（R§6 U4: `DATABASE_URL`＝アプリの接続役） |
 | ④-2 | discord_server_snapshots・discord_server_apply_runs | なし |
 | ④-3 | tenant_discord_config・tenant_discord_ticket_config | なし（書込の入口はすべて会社の文脈あり。R§4-3・4-4） |
 | ④-4 | google_webhook_subscriptions | なし（書込の入口 register・stop・sync は会社の文脈あり。R§4-5、backend/app/routers/calendar.py の呼び出し） |
@@ -89,14 +89,18 @@ COMMIT;
 
 - 順番の理由: 行と入口が少ない順。④-1 は PO の指示「在庫の動きから」。
 - 各便は migration を含むので危険パス。GO は ADR-136 の手順、委任 GO は ADR-1003 の範囲で Opus が出す（段階②b・③と同じ）。
+- 移行の置き場所と登録（各便のカードに書く）:
+  - ファイル: `migrations/<YYYYMMDD_HHMMSS>_add_<表>_rls.sql`（1 便 1 ファイル。④-2〜④-5 の 2 表の便も 1 ファイルに 2 表）。
+  - 登録: scripts/run_all_migrations.sh の末尾に `run_sql migrations/<ファイル>` を 1 行足す（:15「新マイグレーションは末尾の『ここから追加』セクションに追加すること」）。
+  - 前提の表: 移行が ALTER する表が CI の 2 つのジョブに在ること。inventory_movements・tenant_llm_budgets を作る migrations/062_create_inventory_movements_and_budget.sql は run_all_migrations.sh にも migration-test.yml にも無い（grep 0 件、origin/main 6caae154f）。このため ④-1・④-5 では、.github/workflows/migration-test.yml の 2 か所の `PUBLIC_SQL`（変更 SQL のジョブ :479 付近・全件ドライラン :1824 付近）に、その表の最小の `CREATE TABLE IF NOT EXISTS`（062 と同じ列・型）を足す。tenant_discord_config・tenant_settings は 2 か所とも定義済み（:480・:498、:1824・:1831）。tenant_discord_ticket_config は :491 に定義済み。google_webhook_subscriptions（077）・discord_server_snapshots と discord_server_apply_runs（20261106_120000）は run_all_migrations.sh に登録済み（:376・:1229）なので全件ドライランには在る。変更 SQL のジョブに在るかは、カードを書くときに `grep -n "<表>" .github/workflows/migration-test.yml` で確かめ、無ければ同じく足す。
 - ADR-1063 便5 の許可一覧には、8 表を「段階④で RLS を付ける予定（ADR-1067 便④-N）」の理由で載せておき、各便で 1 行ずつ消す。これで便5 の CI 確かめを先に「落とす形」へ切り替えられる。
 
 ## 4. 試験（実 PostgreSQL・アプリの接続役。前例: backend/tests/test_users_rls.py）
 
-- 本物の migration を当てて試す（表の定義を試験に書き写さない。test-schema-dup の見張り）。前提の表は migration-test.yml に登録する。
+- 本物の migration を当てて試す（表の定義を試験に書き写さない。test-schema-dup の見張り）。使い捨て DB に backend/tests/rls_bootstrap.py の `_apply_migration` で、前提の表を作る移行（④-1・④-5 は 062、④-5 は 070 も、④-3 は 20260602_120000、④-4 は 077、④-2 は 20261106_120000）を当ててから、その便の移行を当てる。
 - 会社番号は他の試験と重ならない番号（例 984・985）を使う。
-- 型A: ①自社文脈で INSERT・SELECT できる ②他社文脈で SELECT が 0 行 ③他社の tenant_id で INSERT が 42501 ④他社行の UPDATE・DELETE が 0 行 ⑤運営文脈で全社の SELECT ができる ⑥文脈なしで SELECT 0 行（新しい接続の場合と、`SET app.tenant_id=''` の後の場合の両方。後者でエラーにならず 0 行）⑦同じ移行を 2 回当ててもエラーにならない。
-- 型C: ①文脈なし・他社文脈で SELECT が全行 ②他社の tenant_id で INSERT が 42501 ③他社行の UPDATE・DELETE が 0 行 ④運営文脈（`app.is_operator='true'`・`app.tenant_id=''`）で他社行の UPDATE が 1 行 ⑤同じ移行を 2 回当ててもエラーにならない。
+- 型A: ①自社文脈で INSERT・SELECT できる ②他社文脈で SELECT が 0 行 ③他社の tenant_id で INSERT が 42501 ④他社行の UPDATE・DELETE が 0 行 ⑤運営文脈で全社の SELECT ができる ⑥文脈なしで SELECT 0 行（新しい接続の場合と、`SET app.tenant_id=''` の後の場合の両方。後者でエラーにならず 0 行）⑦同じ移行を 2 回当ててもエラーにならない ⑧自社文脈で自社の行の tenant_id を他社へ付け替える UPDATE が 42501（前例 backend/tests/test_users_rls.py:293-296）。
+- 型C: ①文脈なし・他社文脈で SELECT が全行 ②他社の tenant_id で INSERT が 42501 ③他社行の UPDATE・DELETE が 0 行 ④運営文脈（`app.is_operator='true'`・`app.tenant_id=''`）で他社行の UPDATE が 1 行 ⑤同じ移行を 2 回当ててもエラーにならない ⑥自社文脈で自社の行の tenant_id を他社へ付け替える UPDATE が 42501。
 - ④-5 は運営画面 2 本の API 試験（`SET app.tenant_id=''` の済んだ接続で保存が通る・終わった後に `app.is_operator` が空に戻る）。翻訳の見張りの通知の試験 1 本（通知の後に tenant_llm_budgets の時刻が入る）。
 
 ## 5. 受入条件（KGI 案は kgi.md の KGI-4〜6）
@@ -106,7 +110,7 @@ COMMIT;
 | K4-1 8 表すべてが本番で RLS 有効（ENABLE と FORCE）でポリシー 4 本 | 各便の反映後、reader 鍵の道で `pg_class.relrowsecurity / relforcerowsecurity` と `pg_policies` の件数を読む（読めることを確かめ済み: R§6 U6。反映前の基準値は 8 表とも False/False・0 本） |
 | K4-2 反映の前後で 8 表の行数が変わらない | reader 鍵の道で R§3 と同じ集計を反映の前後に流し、表ごとに一致 |
 | K5-1 各便の反映後、backend・worker・beat・discord-gateway のログに 42501 と `row-level security` と `invalid input syntax for type integer` が 0 件 | 反映時刻以降の `docker logs` を数える（前例 KGI-2 と同じ数え方） |
-| K5-2 各便で触る入口が本番で動く | ④-1: 書き出し台本を 1 社分流して 0 行のままエラー 0。④-3: Discord の受け口のログに `tenant 未登録` が新しく出ない。④-4: Google 通知の受け口・期限点検のログにエラー 0。④-5: 運営画面で予算を同じ値で保存して 200 |
+| K5-2 各便で触る入口が本番で動く | ④-1: 書き出し台本を 1 社分流し、出た行数が反映前に同じ会社で流した行数と一致し、エラー 0。④-2: 自社の Discord サーバーの記録を画面から 1 回取り、応答 200 で discord_server_snapshots の行が 1 増える（reader 鍵の道で数える）。④-3: 反映時刻以降の discord-gateway のログで `tenant_id 逆引き失敗`（backend/app/discord_gateway/client.py:123）が 0 件、かつ自社サーバーでチケットを 1 件出して作られる（`tenant 未登録`（:297）は登録の無いサーバーからでも正当に出るので数えない）。④-4: 期限の点検を反映後に 1 回手で起こし（カードに起こし方を書く）、そのログにエラー 0、かつ Google の通知の受け口が反映後に 1 回以上 200 を返す（backend のログで数える）。④-5: 運営画面で予算を同じ値で保存して 200、段階の切替の画面を開いて 200 |
 | K6-1 アプリの接続役で、許されない読み書きを DB が拒否する | CI の Backend Tests が緑で、PostgreSQL のログに 8 表それぞれ `violates row-level security policy` が 1 件以上 |
 | K6-2 便5 の CI 確かめで「RLS の無い会社ごとの表」が 0 | 便④-5 の後、便5 の許可一覧から 8 表がすべて消え、CI が緑 |
 
@@ -123,7 +127,8 @@ COMMIT;
 ## 7. 戻し方
 
 - 各便の migration と対の戻し SQL をカードに書く: `BEGIN; DROP POLICY IF EXISTS <表>_select ON public.<表>;`（insert・update・delete も同じ）`ALTER TABLE public.<表> NO FORCE ROW LEVEL SECURITY; ALTER TABLE public.<表> DISABLE ROW LEVEL SECURITY; COMMIT;`。データは変えないので、戻しても行は失われない。
-- ④-5 のコード変更は PR を戻すだけで元に戻る。
+- 戻しの SQL だけを流しても、次のデプロイで scripts/run_all_migrations.sh がすべての移行を流し直すため（:14）、RLS がまた付く。だから戻すときは、その便の PR を戻す（run_sql の 1 行と移行のファイルが消える）ことと、戻しの SQL を流すことを同じ便で行う。順番は、戻しの PR を main に入れる → デプロイ → 戻しの SQL を流す → K4-1 と同じ読み方で RLS なし・ポリシー 0 本を確かめる。
+- ④-5 は RLS とコードの両方を含む。コードだけを先に戻すと、RLS が残ったまま運営画面の保存が止まる。このため 1 つの戻しの PR で両方を戻し、上と同じ順で流す（コードだけを戻す PR は作らない）。
 
 ## 8. 触らない範囲・後続
 
