@@ -103,8 +103,8 @@ def _app_state(app: dict[str, Any], state: str, reason: str | None = None) -> di
                     app_role_states.append(_app_state(app, "blocked", "app_role_missing_on_discord"))
                     continue
                 if linked in used_roles:
-                    emit(0, _row("update_role", key, name, None, None, None), "ambiguous")
-                    app_role_states.append(_app_state(app, "blocked", "ambiguous"))
+                    emit(0, _row("update_role", key, name, None, None, None), "app_role_link_in_use")
+                    app_role_states.append(_app_state(app, "blocked", "app_role_link_in_use"))
                     continue
                 used_roles.add(linked)
                 app_diffs: list[tuple[str, str, str]] = []
@@ -178,11 +178,21 @@ def _app_state(app: dict[str, Any], state: str, reason: str | None = None) -> di
 
 ## §3 backend/app/routers/discord_own_server.py
 
-（１）import（:35-36）を次にする:
+（１）import（:25-37 の `from app.` で始まる塊）を、並びごと次の形にする（ruff の I001 に合う順。`app.auth.system_roles` は `app.auth.dependencies` の塊の次、`app.routers.roles` は `app.models` の次で `app.services.audit` の前）:
 
 ```python
+from app.auth.dependencies import (
+    get_current_tenant,
+    get_current_user,
+    require_permission,
+    reset_tenant_context,
+)
 from app.auth.system_roles import TENANT_HIDDEN_SYSTEM_KEYS
+from app.cache import get_redis
+from app.database import get_db
+from app.models import User
 from app.routers.roles import _visible_role_sql, _visible_text
+from app.services.audit import record_audit_log
 from app.services.discord_blueprint import (
     APP_ROLE_KEY_PREFIX,
     Blueprint,
@@ -191,6 +201,7 @@ from app.services.discord_blueprint import (
     load_blueprint,
 )
 from app.services.discord_blueprint_apply import apply_plan
+from app.services.discord_rest import DiscordAPIError, discord_api_request
 ```
 
 - `app.routers.roles` からの import は `backend/app/routers/staff.py:33` と同じ形（隠しロールの条件を 1 か所に保つため。同じ条件を書き写さない）
@@ -326,7 +337,7 @@ async def _write_back_app_roles(db: AsyncSession, results: list[dict[str, Any]])
 - 画面の口の試験（client で叩く）:
   14. `test_plan_lists_app_roles_without_hidden_admin`：役割を 3 つ入れる（「営業」・「事務」・system_key `admin` の「管理者」）→ GET plan の `app_roles` は 2 件で、名前は「営業」「事務」だけ
   15. `test_apply_writes_discord_role_id_for_create_and_link`：「営業」（Discord に無い）・「事務」（Discord に同じ名前が 1 つ、番号 <B>）、`discord_retired_roles` に <B> を 1 行入れておく → 確認 → 反映 → roles の「営業」の discord_role_id が write_mock の返した番号（901 から）、「事務」が <B>。`discord_retired_roles` に <B> が無い。write_mock の呼ばれた回数は 1（POST だけ）
-  16. `test_second_check_after_apply_is_unchanged`：15 のあと world に作ったロールを足してから（write_mock の返事を world のロールに足す形で）もう一度確認 → 2 件とも state `unchanged`・changes 0 行
+  16. `test_second_check_after_apply_is_unchanged`：15 のあと world に作ったロールを足してから（write_mock の返事を world のロールに足す形で）もう一度確認 → 2 件とも state `unchanged`・changes 0 行。world に足すロールの `color` は、その役割の色を `hex_color_to_int` で直した数と同じにする（違うと update が出る）。「事務」の Discord 側のロール（番号 <B>）の color も、15 の準備の時点で同じ数にしておく
   17. `test_delete_role_moves_linked_id_to_retired`：discord_role_id のある役割を `DELETE /api/v1/roles/<id>` で消す → `discord_retired_roles` に 1 行。つないでいない役割を消す → 0 行のまま。（roles の削除は `roles.delete` の権限と priority の点検がある。`backend/tests/test_roles.py` の削除の試験の準備の仕方をそのまま使う。分からなければ BLOCKED:）
 
 ## §7 frontend/src/pages/admin/DiscordOwnServerPanel.tsx（・同じ名前の .test.tsx）
@@ -375,7 +386,8 @@ interface AppRoleState {
 ```
 
 - 新しい部品・CSS・色の値を足さない（既にある `dc-group`・`dc-group-title`・DataTable・EmptyState だけ）
-- .test.tsx: 既にある確認の試験の返事（plan の模型）に `app_roles` を足し（既存の試験の模型には `app_roles: []`）、新しい試験を 1 つ足す: `app_roles` に「営業」state `create` と「事務」state `blocked` reason `ambiguous` を返すと、画面に「アプリの役割（2 件）」「作る」「できない」「同じ名前の物が 2 つ以上あります」が出る（i18n は試験の既存のやり方に合わせる）
+- .test.tsx: 既にある確認の試験の返事（plan の模型。`emptyPlan`（:70）を含む）に `app_roles: []` を足す。既存の試験「shows None for each empty group」（:106-112）は表が 4 つになるので、`toHaveLength(3)` を `toHaveLength(4)` に変える（既存の試験で変えてよいのはこの数字 1 つと `app_roles: []` を足すことだけ）
+- 新しい試験を 1 つ足す: changes・blocked・delete_candidates は空、`app_roles` に名前 `Sales` state `create` と名前 `Office` state `blocked` reason `ambiguous` を返す（試験ファイルに日本語の文字を書かない。eslint の no-japanese-literal は試験も見る＝frontend/eslint.config.js:31）。試験は英語で動く（:33 の `i18n.changeLanguage("en")`）ので、期待の文字は en.json の値で書く: `App roles (2)`・`Sales`・`Create`・`Cannot`・`More than one item has this name`。1 つの文字が 2 か所に出て `findByText` が落ちるときは `findAllByText` にして件数 1 以上を確かめる
 
 ## §8 frontend/src/locales/ja.json・en.json（`discordOwnServer` の中に足すだけ）
 
@@ -384,6 +396,7 @@ interface AppRoleState {
 | `kind.link_role` | ロールをつなぐ | Link role |
 | `reason.name_in_blueprint` | 設計図に同じ名前のロールがあります | The blueprint has a role with the same name |
 | `reason.app_role_missing_on_discord` | つないでいたロールが Discord で消されています | The linked role was deleted on Discord |
+| `reason.app_role_link_in_use` | つないでいるロールをほかの物も使っています | The linked role is also used by another item |
 | `appRolesTitle` | アプリの役割（{{count}} 件） | App roles ({{count}}) |
 | `appRoleState.create` | 作る | Create |
 | `appRoleState.link` | つなぐ | Link |
@@ -423,7 +436,7 @@ interface AppRoleState {
 
 - preflight が失敗した → 停止。BLOCKED: と生出力（クラウドでは [1/3][2/3] の FAIL を除く。§0 のとおり）
 - §0 の「変更前」の行が違う（ほかの PR が先に変えた）→ 書いてある文で同じ場所が一意に見つかればそこに足し、報告書に実際の行番号を書く。見つからない・2 か所あるなら停止。NEEDS_DECISION: と前後 10 行
-- 既存の試験（§10 の 1 行目のうち、新しいファイル以外）が落ちた → 新しい挙動に合わせて既存の試験を書き換えない。停止して BLOCKED: と生出力。ただし既存の試験の模型に `app_roles` が無いために frontend の型の点検が落ちる所は、§7 のとおり `app_roles: []` を足してよい
+- 既存の試験（§10 の 1 行目のうち、新しいファイル以外）が落ちた → 新しい挙動に合わせて既存の試験を書き換えない。停止して BLOCKED: と生出力。ただし既存の試験の模型に `app_roles` が無いために frontend の型の点検が落ちる所は、§7 のとおり `app_roles: []` を足してよい。「shows None for each empty group」の数 3→4 も §7 のとおり変えてよい（この 2 つ以外の既存の試験は変えない）
 - SQLite で `INSERT … SELECT … ON CONFLICT` が通らない → roles.py の文を変えずに停止。BLOCKED: と生出力（本番は PostgreSQL 16 で通る文。試験の側の事情なので Opus が決める）
 - `from app.routers.roles import …` で循環 import の誤りが出た → 停止。BLOCKED: と生出力（隠しロールの条件を書き写さない）
 - openapi.json の差が §9 の範囲を超える → 停止。NEEDS_DECISION:
