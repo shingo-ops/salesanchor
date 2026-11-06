@@ -1,7 +1,12 @@
 {
   "calendarView": {
     "more": "{{count}} more",
-    "allDay": "All day"
+    "allDay": "All day",
+    "am": "{{time}} AM",
+    "pm": "{{time}} PM",
+    "clockHour": "{{hour}}",
+    "clockMinute": "{{hour}}:{{minute}}",
+    "timeRange": "{{start}} – {{end}}"
   },
   "productCsv": {
     "downloadTemplate": "Download blank sample CSV",
