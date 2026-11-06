@@ -69,7 +69,7 @@
   - 401 行: IntegrityError のとき「もう紐付いています」と返す。
   - 失敗したら個室を消す。
   - 419 行: 持ち主のいない個室を片付ける。
-- コードの形は `backend/app/services/viewer_signup_code.py`:
+- コードの形は `backend/app/auth/viewer_signup_code.py`:
   - Crockford base32 で 16 文字（80 ビット）。
   - normalize で揃え、sha256 だけを保存する。
   - 画面では 4 文字ずつハイフンで区切る。

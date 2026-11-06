@@ -173,8 +173,8 @@
     - 操作は「作り直す」と「取り消す」。取り消しは ConfirmModal を使う。
   - 登録待ちの人は、今の状態の表示（`staff.status_pending`）で一覧に出る。
 - 申込ページ:
-  - 新しいファイル `frontend/src/pages/staff-join/StaffJoinPage.tsx`。
-  - `App.tsx` のログイン不要の道（`/reset-password` の並び、`frontend/src/App.tsx:175`）に `/staff-join` を足す。
+  - 新しいファイル frontend/src/pages/staff-join/StaffJoinPage.tsx。
+  - `frontend/src/App.tsx` のログイン不要の道（`/reset-password` の並び、`frontend/src/App.tsx:175`）に `/staff-join` を足す。
   - 入力欄は `StaffFormFields` を使う（役割の欄は出さない）。
   - 完了画面に出すもの:
     - 番号（4文字ずつ区切り、コピーボタン付き）。
@@ -207,7 +207,7 @@
 
 ### 4-3. Discord の受付（自社サーバー）
 
-- 新しいファイル `backend/app/discord_gateway/staff_join.py`。`viewer_trial.py` と同じ順で書く。
+- 新しいファイル backend/app/discord_gateway/staff_join.py。`backend/app/discord_gateway/viewer_trial.py` と同じ順で書く。
   - ボタンの custom_id は `staff_join_open`。前置きは `staff_join_`。
   - 番号の入力欄（Modal）は 16〜19 文字。
   - 失敗回数は Redis の `staff_code_fail:{member.id}` に数える。5 回／3600 秒（KGI 6）。
@@ -223,7 +223,7 @@
      - 見られるのは、本人・Bot・管理者のロール。
      - 管理者のロール＝アプリで `staff.create` を持つ役割のうち、`roles.discord_role_id` がある Discord ロール。正本はアプリの権限。
      - `backend/app/discord_gateway/private_channel.py:50` の `create_private_text_channel` に、既定が空のキーワード引数 `extra_view_role_ids` を足して使う。今の呼び出し元は変わらない。
-  5. 仮パスワードは `secrets.token_urlsafe(18)` で作り、`check_password` で検査し、別スレッドで `hash_password` する（`viewer_trial.py:333` と同じ）。
+  5. 仮パスワードは `secrets.token_urlsafe(18)` で作り、`check_password` で検査し、別スレッドで `hash_password` する（`backend/app/discord_gateway/viewer_trial.py:333` と同じ）。
   6. 書き込み:
      - users の `password_argon2_hash` と `password_must_change=true`。
      - staff の `discord_user_id`。
@@ -282,6 +282,8 @@
 
 ## 8. 維持の仕組み
 
+- 守り手: 人手で守る
+  - 実装の後は、CI の必須の試験が守る。止めない道の一覧は、backend/app/auth/dependencies.py の1つの定数に置く。
 - 試験:
   - 招待の作成・作り直し・期限・取消・申込・重複。
   - 403 で止める仕組み。
