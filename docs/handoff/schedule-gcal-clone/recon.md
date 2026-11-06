@@ -18,8 +18,8 @@ PO の依頼（原文）:
 | `docs/adr/ADR-1057-google-calendar-owner-only-sync.md` | 接続は会社で 1 つ。Google へ送るのはつないだ本人の予定だけ |
 | `docs/adr/ADR-1059-google-calendar-import-owner-private.md` | 持ち主の Google の予定を取り込む |
 | `docs/adr/ADR-1060-calendar-google-meet.md` | Meet を付ける（便3・本番済） |
-| `docs/adr/ADR-027-ui-internationalization.md`・`ADR-067-design-token-enforcement.md`・`ADR-144-ui-component-governance.md` | 文字は t()・色と大きさはトークン・部品は金型を先に使う |
-| `docs/adr/ADR-135-release-stowaway-prevention.md`・`ADR-136-cc-bot-github-identity.md` | 危険な道を含む便は PO の「GO #番号」 |
+| `docs/adr/ADR-027-ui-internationalization.md`・`docs/adr/ADR-067-design-token-enforcement.md`・`docs/adr/ADR-144-ui-component-governance.md` | 文字は t()・色と大きさはトークン・部品は金型を先に使う |
+| `docs/adr/ADR-135-release-stowaway-prevention.md`・`docs/adr/ADR-136-cc-bot-github-identity.md` | 危険な道を含む便は PO の「GO #番号」 |
 
 前の設計: `docs/handoff/schedule-gcal-alignment/design.md`（K1〜K14。便1 #5124・便3 #5135 は本番済。便2 は設計の枝 `origin/release/schedule-gcal-bin2-design` で審査合格のまま main に入っていない）。
 
@@ -28,7 +28,7 @@ PO の依頼（原文）:
 - 便2 のカードは 2026-11-04 23:48 にクラウドの再審査 3 回目で APPROVE（`origin/release/schedule-gcal-bin2-design` 9545d849d）。
 - 便2 の着手条件は「便1 が本番に出て PO が K1〜K7 を見たあと」（`docs/handoff/schedule-gcal-alignment/design.md:50`）。
 - PR #5124 のコメントに「K2 は本番反映後にブラウザで確かめる」とある。PO に K1〜K7 の確認を頼んだ記録・K2 をブラウザで確かめた記録は見つからない（`git grep "K1〜K7"`・`gh pr view 5124 --json comments`）。
-- 台帳 `.claude-pipeline/active-work.d/release-schedule-gcal-bin2-design.md` は IN_PROGRESS のまま。
+- 台帳 release-schedule-gcal-bin2-design.md（枝 origin/release/schedule-gcal-bin2-design にだけある） は IN_PROGRESS のまま。
 - 結論（事実の並び）: 着手条件の確認依頼を Opus が出さず、便2 は誰も動かさないまま止まった。
 
 ## 2. 本番の不具合（同じ操作で毎回起きる・原因はコードで確認）
@@ -47,9 +47,9 @@ PO の依頼（原文）:
 | # | Google カレンダー | Sales Anchor | 根拠 |
 |---|---|---|---|
 | D1 | 箱に題名と「午後12:30〜1:30」。札なし | 題名と「商談・打合せ」の札。時刻は隠れる | B3 |
-| D2 | 目盛り「午後1時」 | 「13:00」 | `SchedulePageImpl.tsx:757` |
+| D2 | 目盛り「午後1時」 | 「13:00」 | `frontend/src/pages/schedule/SchedulePageImpl.tsx:757` |
 | D3 | 1 時間の高さ 約 69px（画面写し上） | 約 34px（画面写し上。css は `--schedule-row-height: 48px` `frontend/src/tokens.css:403`） | 同じ縮尺の画面写しで比べた。css の実寸は Google 側未確認 |
-| D4 | 終日の行に「文化の日」（「日本の祝日」カレンダー） | 祝日を出す仕組みが無い。種類の選択肢に「日本の祝日」はある | `git grep -i holiday` はシフトの休みだけ（`schedule-utils.ts:235`） |
+| D4 | 終日の行に「文化の日」（「日本の祝日」カレンダー） | 祝日を出す仕組みが無い。種類の選択肢に「日本の祝日」はある | `git grep -i holiday` はシフトの休みだけ（`frontend/src/pages/schedule/schedule-utils.ts:235`） |
 | D5 | 枠を押すと押した時刻。押した所に「（タイトルなし）」の仮の箱 | 07:00 固定（B1）。仮の箱なし | 本番で操作 |
 | D6 | 小窓: 題名欄が先頭で入力状態。日時は 1 行の文（「11月 4日 (水曜日) 午後4:00 – 午後5:00」）。ゲスト・Meet・場所・説明は押すと開く 1 行。下に「その他のオプション」「保存」 | 種類の選択・終日・Meet・社員にも見せる・日付と時刻の入力欄 4 つ | 本番で操作（Google 側は保存せず閉じた） |
 | D7 | 引っぱって作る・つかんで動かす・長さを変える | どれも無い（`onPointerDown`・`onMouseDown`・`draggable` 0 件） | 前の設計の便2（K8〜K11） |
@@ -62,10 +62,10 @@ PO の依頼（原文）:
 
 ## 4. 金型と今の作り（SSOT）
 
-- 金型 `frontend/src/components/CalendarView.tsx`（168 行）は FullCalendar を包む。`editable={false}`・`selectable={false}`（`:160-161`）、`firstDay={1}` 月曜始まり固定（`:150`）、目盛り `{hour:'2-digit',minute:'2-digit',hour12:false}`（`:35`）、色は種類 7 つの `tone`（`frontend/src/components/calendarView.utils.ts:9-16`）だけ。押す口は `onEventClick`・`onDayClick` だけ（`calendarView.utils.ts` の `CalendarViewProps`）。
-- Sales Anchor の予定の画面は金型を使っていない。`frontend/src` の中で `CalendarView` を使う画面は 0 件（`grep -rln CalendarView frontend/src`）。自前の時間割が `SchedulePageImpl.tsx`（1624 行）＋ `schedule.css`（1489 行）にある。
+- 金型 `frontend/src/components/CalendarView.tsx`（168 行）は FullCalendar を包む。`editable={false}`・`selectable={false}`（`:160-161`）、`firstDay={1}` 月曜始まり固定（`:150`）、目盛り `{hour:'2-digit',minute:'2-digit',hour12:false}`（`:35`）、色は種類 7 つの `tone`（`frontend/src/components/calendarView.utils.ts:9-16`）だけ。押す口は `onEventClick`・`onDayClick` だけ（`frontend/src/components/calendarView.utils.ts` の `CalendarViewProps`）。
+- Sales Anchor の予定の画面は金型を使っていない。`frontend/src` の中で `CalendarView` を使う画面は 0 件（`grep -rln CalendarView frontend/src`）。自前の時間割が `frontend/src/pages/schedule/SchedulePageImpl.tsx`（1624 行）＋ `schedule.css`（1489 行）にある。
 - → ADR-1065 What 1 と食い違う（時間割が 2 か所）。
-- 予定の色は担当者の色（`SchedulePageImpl.tsx:198-210` `getOwnerMeta`。色は裏側 `backend/app/routers/calendar.py:183` `COALESCE(cos.color, :default_color)` から＝DB が正本）。金型の `tone` は種類の色で、担当者の色を受ける口が無い。
+- 予定の色は担当者の色（`frontend/src/pages/schedule/SchedulePageImpl.tsx:198-210` `getOwnerMeta`。色は裏側 `backend/app/routers/calendar.py:183` `COALESCE(cos.color, :default_color)` から＝DB が正本）。金型の `tone` は種類の色で、担当者の色を受ける口が無い。
 
 ## 5. 公式資料（Context7 は月の上限で使えなかった：`Monthly quota exceeded`。公式を直接読んだ）
 
