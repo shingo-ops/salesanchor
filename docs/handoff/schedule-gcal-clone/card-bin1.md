@@ -234,11 +234,12 @@ export function pointRect(ev: { clientX: number; clientY: number } | null | unde
 | `timeRange` | `{{start}}～{{end}}` | `{{start}} – {{end}}` |
 
 ### 5. `frontend/src/components/CalendarView.test.tsx`
-今の試験は消さず・変えずに足す。変えてよいのは次の 2 行だけ:
+今の試験は消さず・変えずに足す。変えてよいのは次の 3 か所だけ:
+- 1 行目に足す（実装の 2 回目で、commit 前の検査 `eslint --max-warnings=0` が T7 の日本語の期待値を `local/no-japanese-literal` の警告として止めたため。前例 `frontend/src/components/DataTable.test.tsx:1`・`frontend/src/pages/inbox/discordSendError.test.ts:1`）: `/* eslint-disable local/no-japanese-literal -- テスト: 午前・午後の時刻が Google と同じ日本語で出ることを検証する（ADR-027・precedent: DataTable.test.tsx） */`
 - T3 の `expect(onEventClick).toHaveBeenCalledWith('e1');`（`frontend/src/components/CalendarView.test.tsx:192`）→ `expect(onEventClick).toHaveBeenCalledWith('e1', null);`（`el` を渡していないので四角は null・審査 Q1）。
 - T4: 数える包みに `readPackageFiles('interaction', (n) => n === 'index.js' || n.startsWith('internal'))` を足す。interaction の `--fc-*` が増えて漏れが出たら、css に足さずに BLOCKED: で止める。
 - T6 `toMeridiemHour`: 0→{12,false}、9→{9,false}、12→{12,true}、13→{1,true}、23→{11,true}。
-- T7 `formatTimeRange`（`t` は試験の中で ja の文を返す小さな関数を作る）: 20:00〜21:00 → `午後8時～9時`、12:30〜13:30 → `午後12:30～1:30`、11:30〜12:30 → `午前11:30～午後12:30`、end null → `午後8時`、omitSameMeridiem 偽で 20:00〜21:00 → `午後8時～午後9時`。
+- T7 `formatTimeRange`（`t` は試験の中で `import ja from '../locales/ja.json'` の `calendarView` の文を引き、`{{名前}}` を値で置き換える小さな関数を作る。文を試験に書き写さない）: 20:00〜21:00 → `午後8時～9時`、12:30〜13:30 → `午後12:30～1:30`、11:30〜12:30 → `午前11:30～午後12:30`、end null → `午後8時`、omitSameMeridiem 偽で 20:00〜21:00 → `午後8時～午後9時`。
 - T8 `normalizeSelectedRange`: 10:00〜10:15（押しただけ）→ 10:00〜11:00、10:00〜12:00 → そのまま、終日はそのまま。
 - T9 `scrollTimeForNow`: 12:34 → `11:00:00`、0:10 → `00:00:00`。
 - T10 FullCalendar に渡す値（今の mock の `captured.props` を使う）:
