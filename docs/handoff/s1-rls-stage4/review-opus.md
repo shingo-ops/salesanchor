@@ -41,4 +41,13 @@
 | 10 | 中 | 「062 は CI に無い」は誤り | 正しい指摘。scripts/migrate_inventory_sprint1.py:56 の一覧に 062。本番 run_all:361、CI :1046-1047・:1906-1907 で変更 SQL より前に流れる | design §3 から「PUBLIC_SQL に定義を足す」を消し、流れている場所を書いた |
 | 11 | 中 | 戻しの順がデプロイの順と食い違う | 正しい指摘。deploy.yml の手順は 1. コードと docker compose → 2. 移行 | design §7・ADR-1067 戻し方を「戻しの SQL → 確かめ → 戻しの PR → デプロイ → 確かめ」に。間のデプロイ 0 件を先に確かめる |
 | 12 | 軽 | ④-2・④-4 の表は変更 SQL のジョブに無い | 正しい指摘。migration-test.yml を表の名で grep して 0 件 | design §3 に前提の移行を先に流す step（前例 :1299-1338）。④-4 は 077 → 20261103_200000（077 が触る tenant_google_calendar_config は :957 に在る） |
-| 13 | 軽 | 前提の移行の一覧が足りない | 正しい指摘。表ごとに `git grep -l` と run_all の行番号で作り直した | design §4 に表ごとの作る移行と形を変える移行を run_all の順で。066 は run_all に無く当てない（本番の列は reader 鍵で読めず未確認） |
+| 13 | 軽 | 前提の移行の一覧が足りない | 正しい指摘。表ごとに `git grep -l` と run_all の行番号で作り直した | design §4 に表ごとの作る移行と形を変える移行を run_all の順で（4 回目 #14 で直した: 066・070 は run_py の Python 移行で流れる） |
+
+# 4 回目（クラウド Opus）
+
+| # | 重さ | 指摘 | Opus の確かめ | 直した場所 |
+|---|---|---|---|---|
+| 14 | 軽 | 066・070 は run_all に在る（run_py 経由） | 正しい指摘。scripts/migrate_inventory_sprint5_to_7.py:77 に 066、scripts/migrate_inventory_sprint9.py:52 に 070。run_all:363・:365 の `run_py` で流れる。3 回目は run_sql の行だけを grep して見落とした | design §4 ④-5 の順を 062 → 066 → 20260604_220000、070 → 080 → 20260604_050000 に。「未確認」の文を消した。#13 の行も直した |
+| 15 | 中 | 戻しの SQL を誰がどの道で流すかが無い。戻しの PR の GO 待ちが抜けている | 正しい指摘。reader 鍵では書けない。移行は `psql -U jarvis`（scripts/run_all_migrations.sh:24-25・:118）。戻しの PR は migrations/ を含むので ADR-136 の GO が要る | design §7・ADR-1067 戻し方に「PO の許可で無制限鍵・移行と同じ役で流す」と、「戻しの PR の GO を先に受ける → デプロイ 0 件 → 戻しの SQL → …」の順を書いた |
+| 16 | 軽 | 「毎回のデプロイで全部流れる（:14）」は根拠違い | 正しい指摘。:14 は set -e の注記。流れる条件は .github/workflows/deploy.yml:38-43 の paths と :765 の `steps.gate.outputs.migrations`、前回の成功デプロイと版が違えば :73-78 で全部 | design §7・ADR-1067 の根拠を差し替え、docs だけのデプロイでは流れないと書いた |
+| — | — | （Opus が足した）既にある試験への影響 | `git grep -l` で 8 表に触る試験は backend/tests/test_*.py に 21 本 | design §4 に「その便の表に触る試験をカードに列挙し、Backend Tests 全部緑を合格条件に。落ちたら試験の側で会社の文脈を張る（ポリシーを緩めない）」 |
