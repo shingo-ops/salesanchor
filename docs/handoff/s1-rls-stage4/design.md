@@ -1,0 +1,130 @@
+# 設計 — S1 段階④（public の会社ごとの 8 表の RLS）
+
+> この文書は何か：会社ごとの設定・記録の 8 表に、データベース自身が「他社の行を書かせない（表によっては見せない）」守りを付ける計画です。表ごとに型を選び、5 便に分けて 1 便ずつ本番に出します。
+
+- 状態: **設計案（PO の KGI 承認待ち）**。PO の方向の指示: 2026-11-06 チャット「1」（問い「8 件すべてに守りを足す設計をする【おすすめ】：在庫の動きから順に、入口を1件ずつ調べて設計します。」への答え）。
+- 根拠: [recon.md](recon.md)（以下 R と書く。R§4 は recon の 4 章）。決定の記録: [ADR-1067](../../adr/ADR-1067-public-tenant-config-tables-rls.md)。前例: ADR-1018・ADR-145。
+- 自己審査: 同じ AI（Claude Opus）が Planner と Architect を順に担った。独立した第二者の審査ではない。各便のカードの前にクラウドの設計審査を通す。
+
+## 1. 目的と利用者に見える変化
+
+- 目的: アプリのどこかで会社の絞り込み（`WHERE tenant_id`）を書き忘れても、他社の設定を書き換えたり、他社の記録を読んだりできないようにする。今は SQL の 1 行だけが守りで、DB 側の守りが無い（R§5）。
+- 利用者に見える変化: 無い。画面・Discord・Google 予定の動きは変わらない。変わるのは、絞り込みを書き忘れた不具合が起きたときに、DB がその読み書きを止める点。
+- 対象外: 全社共用の一覧 6 表・運営の記録 4 表（ADR-1063 便5 の許可一覧に理由付きで載せる）。認証トークンの 3 表（ADR-1018 Decision 6 のまま）。
+
+## 2. 表ごとの型（R§4 の入口から決めた）
+
+| 表 | 型 | 選んだ理由（R の根拠） |
+|---|---|---|
+| inventory_movements | 型A: 読み書きとも自社だけ（運営は読める） | 本番 0 行（R§3）。本番コードの書込なし。読むのは試験用の道具と手で流す書き出しだけ（R§4-1） |
+| discord_server_snapshots | 型A | 書くのは会社の画面だけ（discord_own_server.py:107、:119 で会社の文脈）。読む箇所なし（R§4-2） |
+| discord_server_apply_runs | 型A | 同上（:375、:389） |
+| tenant_discord_config | 型C: 書込・削除は自社か運営だけ。読取は全行可 | 会社が決まる前に読む: Discord の受け口 client.py:108-126、全社の点検 tasks/discord_own_staff_sync.py:24、文脈なしの新しい接続 services/discord_role_sync.py:59-60（R§4-3） |
+| tenant_discord_ticket_config | 型C | 文脈を張らない接続で読む: client.py:308（_resolve_tenant_id の直後に新しい接続で get_ticket_config）、discord_role_sync.py:67（R§4-4） |
+| google_webhook_subscriptions | 型C | 会社が決まる前に読む: verify_channel google_webhook.py:212。全社の期限点検 :395（R§4-5） |
+| tenant_llm_budgets | 型C ＋運営画面に運営の文脈を足す | 運営画面が全社を読む（super_admin_llm_budget.py:102・121、tcg_analysis_dashboard.py:526）。運営の保存 :154 は文脈なし（R§4-6） |
+| tenant_settings | 型C ＋運営画面に運営の文脈を足す | 段階の切替 super_admin_phase_switch.py:126-129 → phase_gate.py:147 が文脈なしで書く（R§4-7） |
+
+### 2-1. 型A のポリシー（ADR-145 の型から、共用行の道を外したもの）
+```sql
+ALTER TABLE public.<表> ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.<表> FORCE ROW LEVEL SECURITY;
+CREATE POLICY <表>_select ON public.<表> FOR SELECT
+  USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER
+         OR current_setting('app.is_operator', true) = 'true');
+CREATE POLICY <表>_insert ON public.<表> FOR INSERT
+  WITH CHECK (tenant_id = current_setting('app.tenant_id', true)::INTEGER);
+CREATE POLICY <表>_update ON public.<表> FOR UPDATE
+  USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER)
+  WITH CHECK (tenant_id = current_setting('app.tenant_id', true)::INTEGER);
+CREATE POLICY <表>_delete ON public.<表> FOR DELETE
+  USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER);
+```
+- tenant_id が空の行は本番に 0 行（R§3）。空の行はどの文脈からも書けない。
+
+### 2-2. 型C のポリシー（ADR-1018 段階③便C users と同じ考え方）
+```sql
+ALTER TABLE public.<表> ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.<表> FORCE ROW LEVEL SECURITY;
+CREATE POLICY <表>_select ON public.<表> FOR SELECT USING (true);
+CREATE POLICY <表>_insert ON public.<表> FOR INSERT
+  WITH CHECK (tenant_id = current_setting('app.tenant_id', true)::INTEGER
+              OR current_setting('app.is_operator', true) = 'true');
+CREATE POLICY <表>_update ON public.<表> FOR UPDATE
+  USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER
+         OR current_setting('app.is_operator', true) = 'true')
+  WITH CHECK (tenant_id = current_setting('app.tenant_id', true)::INTEGER
+              OR current_setting('app.is_operator', true) = 'true');
+CREATE POLICY <表>_delete ON public.<表> FOR DELETE
+  USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER
+         OR current_setting('app.is_operator', true) = 'true');
+```
+- 型C は「読めてしまう」守りの穴を残す。8 表に秘密の値の列は無い（R§5-5）。読取まで絞ると、会社が決まる前の入口（R§5-2）が止まる。読取の絞り込みは、入口を「会社を引くだけの関数」に置き換えてから別の段階で考える（本段階の対象外。§8）。
+
+## 3. 便の分け方（1 便ずつ: 出す → 本番で確かめる → 次）
+
+| 便 | 表 | migration 以外の変更 |
+|---|---|---|
+| ④-1 | inventory_movements | scripts/export_inventory_for_sheet.py:117 の接続で、読む前に会社の文脈（`set_config('app.tenant_id', <会社>, false)`）を張る。張らないと型A で 0 行になる（R§6 U4: `DATABASE_URL`＝アプリの接続役） |
+| ④-2 | discord_server_snapshots・discord_server_apply_runs | なし |
+| ④-3 | tenant_discord_config・tenant_discord_ticket_config | なし（書込の入口はすべて会社の文脈あり。R§4-3・4-4） |
+| ④-4 | google_webhook_subscriptions | なし（書込の入口 register・stop・sync は会社の文脈あり。R§4-5、routers/calendar.py の呼び出し） |
+| ④-5 | tenant_llm_budgets・tenant_settings | 運営画面の書込 2 か所（super_admin_llm_budget.py の upsert、super_admin_phase_switch.py の切替）で、書く直前に `set_operator_context`、`finally` で `reset_operator_context`。段階②b の型（会社の文脈の後に運営の文脈、finally で戻す） |
+
+- 順番の理由: 行と入口が少ない順。④-1 は PO の指示「在庫の動きから」。
+- 各便は migration を含むので危険パス。GO は ADR-136 の手順、委任 GO は ADR-1003 の範囲で Opus が出す（段階②b・③と同じ）。
+- ADR-1063 便5 の許可一覧には、8 表を「段階④で RLS を付ける予定（ADR-1067 便④-N）」の理由で載せておき、各便で 1 行ずつ消す。これで便5 の CI 確かめを先に「落とす形」へ切り替えられる。
+
+## 4. 試験（実 PostgreSQL・アプリの接続役。前例: backend/tests/test_users_rls.py）
+
+- 本物の migration を当てて試す（表の定義を試験に書き写さない。test-schema-dup の見張り）。前提の表は migration-test.yml に登録する。
+- 会社番号は他の試験と重ならない番号（例 984・985）を使う。
+- 型A: ①自社文脈で INSERT・SELECT できる ②他社文脈で SELECT が 0 行 ③他社の tenant_id で INSERT が 42501 ④他社行の UPDATE・DELETE が 0 行 ⑤運営文脈で全社の SELECT ができる ⑥文脈なしで SELECT 0 行。
+- 型C: ①文脈なし・他社文脈で SELECT が全行 ②他社の tenant_id で INSERT が 42501 ③他社行の UPDATE・DELETE が 0 行 ④運営文脈で他社行の UPDATE が 1 行。
+- ④-5 は運営画面 2 本の API 試験（保存が通る・終わった後に `app.is_operator` が空に戻る）。
+
+## 5. 受入条件（KGI 案は kgi.md の KGI-4〜6）
+
+| 基準 | 検証方法 |
+|---|---|
+| K4-1 8 表すべてが本番で RLS 有効（ENABLE と FORCE）でポリシー 4 本 | 各便の反映後、reader 鍵の道で `pg_class.relrowsecurity / relforcerowsecurity` と `pg_policies` の件数を読む（読めることを確かめ済み: R§6 U6。反映前の基準値は 8 表とも False/False・0 本） |
+| K4-2 反映の前後で 8 表の行数が変わらない | reader 鍵の道で R§3 と同じ集計を反映の前後に流し、表ごとに一致 |
+| K5-1 各便の反映後、backend・worker・beat・discord-gateway のログに 42501 と `row-level security` が 0 件 | 反映時刻以降の `docker logs` を数える（前例 KGI-2 と同じ数え方） |
+| K5-2 各便で触る入口が本番で動く | ④-1: 書き出し台本を 1 社分流して 0 行のままエラー 0。④-3: Discord の受け口のログに `tenant 未登録` が新しく出ない。④-4: Google 通知の受け口・期限点検のログにエラー 0。④-5: 運営画面で予算を同じ値で保存して 200 |
+| K6-1 アプリの接続役で、許されない読み書きを DB が拒否する | CI の Backend Tests が緑で、PostgreSQL のログに 8 表それぞれ `violates row-level security policy` が 1 件以上 |
+| K6-2 便5 の CI 確かめで「RLS の無い会社ごとの表」が 0 | 便④-5 の後、便5 の許可一覧から 8 表がすべて消え、CI が緑 |
+
+## 6. リスクと対処
+
+| リスク | 対処 |
+|---|---|
+| 書込の入口に会社の文脈が無いと、INSERT は 42501 で失敗、UPDATE は静かに 0 行になる（段階②b の教訓） | R§4 で全入口の文脈を行番号で確かめた。運営画面の 2 か所だけ文脈が無く、④-5 で足す。各便の反映後に K5-1 で数える |
+| 型C で読めてしまう | 秘密の列は無い（R§5-5）。読取の絞り込みは §8 の後続で扱う |
+| 会社を作る処理 services/tenant.py:1803 が初期行を書けなくなる | :1780 で新しい会社の文脈を張ってから書く。型C の INSERT の条件を満たす。④-5 の試験に「会社を作る」を 1 本入れる |
+| 運営の文脈がつなぎの使い回しで残る | finally で reset_operator_context。`get_db` の終わりの clear_tenant_context（database.py:57-61）が二重の守り |
+| デプロイ中の約 70 秒、reader 鍵の道が使えない | 数分おいて流し直す（ADR-1024 の運用） |
+
+## 7. 戻し方
+
+- 各便の migration と対の戻し SQL をカードに書く: `DROP POLICY ... ; ALTER TABLE public.<表> NO FORCE ROW LEVEL SECURITY; ALTER TABLE public.<表> DISABLE ROW LEVEL SECURITY;`。データは変えないので、戻しても行は失われない。
+- ④-5 のコード変更は PR を戻すだけで元に戻る。
+
+## 8. 触らない範囲・後続
+
+- 触らない: 全社共用の一覧 6 表・運営の記録 4 表、会社スキーマの表、認証トークン 3 表、画面（frontend）。
+- 後続（本段階の対象外。必要になったら PO に聞く）: 型C の 5 表の読取の絞り込み。会社が決まる前の入口を「guild_id や channel から会社だけを返す関数」に置き換える必要がある。
+
+## 9. 外部・過去事例の参照と我々への応用
+
+- 社内の前例（直接の根拠）: ADR-1018 段階①〜③。11 表のうち 8 表に RLS を付け、各段階の反映後に 42501・row-level security が 0 件（docs/specs/tenant-rls/kgi.md KGI-2、2026-10-16 17:30）。段階②b で「書込の入口に運営の文脈が無いと UPDATE が静かに 0 行」を見つけ、入口を全部数えてから出す手順にした。本設計 R§4 はその手順に従った。
+- 外部の仕様: PostgreSQL の RLS は `FORCE` を付けると表の持ち主にも効き、superuser と BYPASSRLS の役割には効かない。根拠: PostgreSQL 16 公式文書「5.8. Row Security Policies」（https://www.postgresql.org/docs/16/ddl-rowsecurity.html、2026-11-06 取得）の原文「Superusers and roles with the BYPASSRLS attribute always bypass the row security system when accessing a table. Table owners normally bypass row security as well, though a table owner can choose to be subject to row security with ALTER TABLE ... FORCE ROW LEVEL SECURITY.」と「If no policy exists for the table, a default-deny policy is used」。Context7 は月の上限に達して使えなかったため、起動指示の許可に従い公式文書を直接読んだ。適用: 両方の型で FORCE を付ける。ポリシーを付ける前に ENABLE だけを先に流すと、その間は全拒否になるため、ENABLE・FORCE・ポリシー 4 本を 1 つの移行の中で入れる。
+- 外部の導入事例の数値は使わない。理由: 本段階は社内の前例と同じ型の繰り返しで、判断の根拠は社内の実測で足りる。
+
+## 10. PO に決めてもらうこと
+
+- KGI-4〜6（docs/specs/tenant-rls/kgi.md の追記）と、5 便の順番の承認。A 区分（migration を含む）のため PO の承認が要る（docs/STANDARD-WORKFLOW.md §1）。
+
+## 維持の仕組み
+
+- 新しく会社ごとの表を public に作って RLS を付け忘れると、ADR-1063 便5 の CI 確かめが落とす（許可一覧に理由を書かない限り）。
+- 型の選び方（型A／型C／付けない）は ADR-1067 に残し、次の表もこの表で判断する。
