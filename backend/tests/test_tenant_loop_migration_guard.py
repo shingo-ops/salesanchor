@@ -47,6 +47,7 @@ _REVIEWED: dict[str, tuple[str, str, frozenset[str]]] = {
                 "20261005_150000_add_roles_system_key.sql",
                 "20261103_200000_add_google_calendar_import_sync.sql",
                 "20261104_161223_add_calendar_events_meet_url.sql",
+                "20261106_150000_add_discord_role_link_tables.sql",
             }
         ),
     ),
@@ -84,6 +85,11 @@ _REVIEWED: dict[str, tuple[str, str, frozenset[str]]] = {
         "scoped",
         "",
         frozenset({"20261005_150000_add_roles_system_key.sql"}),
+    ),
+    "test_discord_role_link_ddl.py": (
+        "scoped",
+        "",
+        frozenset({"20261106_150000_add_discord_role_link_tables.sql"}),
     ),
     "condition_value_columns.py": (
         "text_only",
