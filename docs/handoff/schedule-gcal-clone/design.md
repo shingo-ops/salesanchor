@@ -49,7 +49,8 @@ G14 を外す理由: Google の ToDo を読むには、今の接続（予定の�
 | `onEventMove` / `onEventResize` | `editable` を口があるときだけ有効。予定ごとの `editable` で動かせない予定を止める（FullCalendar の予定ごとの上書き。recon §5） | G8・G9 |
 | 予定ごとの色 `color` | 担当者の色（DB が正本・画面は受けた値を使うだけ）。無いときは今の `tone` | G4 |
 | 目盛りの形 | 「午前9時」の形（言語は画面の言語に合わせる。日本語・英語の 2 つを `t()` 側で持つ） | G5 |
-| 1 時間の高さ | トークン `--calendar-hour-height`（新設。値は G6 の測定で決める） | G6 |
+| 1 時間の高さ | 新しいトークンは作らない。金型は既に `--schedule-row-height` を使う（`frontend/src/components/CalendarView.css:48`）。この値を G6 の測定で決め直す（1 か所） | G6 |
+| 見える時間の幅 | 金型は予定から見える時間を絞る（`CalendarView.tsx:42-43,60` `startHour=8`・`endHour=20`・`computeHourRange`）。Google は 0 時〜24 時を出して今の時刻へ送る。口で「0〜24 時を出す」を選べるようにする | G13 |
 | 開いたときの位置 `scrollTime` | 今の時刻の 1 時間前 | G13 |
 | 箱の中身 | 題名＋時刻の 2 行。札は出さない | G4 |
 | 月の高さ | 升目を画面の残りの高さいっぱいに広げる | G10 |
