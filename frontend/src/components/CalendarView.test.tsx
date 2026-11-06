@@ -457,7 +457,7 @@ describe('T10 new props passed to FullCalendar', () => {
   it('passes per-event editable and sets the owner color through eventDidMount', () => {
     const colored: CalendarViewEvent[] = [
       timed('c1', '2026-11-02T10:00:00', '2026-11-02T11:00:00', {
-        color: '#123456',
+        color: 'rgb(18, 52, 86)',
         editable: false,
       }),
       timed('c2', '2026-11-02T12:00:00', '2026-11-02T13:00:00'),
@@ -473,7 +473,7 @@ describe('T10 new props passed to FullCalendar', () => {
     );
     const el = document.createElement('div');
     p.eventDidMount({ event: { extendedProps: { source: colored[0] } }, el });
-    expect(el.style.getPropertyValue('--comp-calendar-owner-color')).toBe('#123456');
+    expect(el.style.getPropertyValue('--comp-calendar-owner-color')).toBe('rgb(18, 52, 86)');
     const plain = document.createElement('div');
     p.eventDidMount({ event: { extendedProps: { source: colored[1] } }, el: plain });
     expect(plain.style.getPropertyValue('--comp-calendar-owner-color')).toBe('');
