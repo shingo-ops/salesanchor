@@ -252,3 +252,15 @@ PO（2026-11-06）「ロールと権限だがマスタ類と同じ構造を想�
 - salesanchor_app は持ち主ではないため、FORCE が無くても守りは効く（PostgreSQL の RLS は持ち主以外に常に効く）。
 - public.users の読み取りの守りは `true`（全社の行が読める）。
 - 未確認: すべての処理が app.tenant_id をログインの札から付けているか。外から SQL を差し込める場所が無いか。
+
+## 追記: 他社に届く道 1件の確かめ（2026-11-06・別テーマへ渡す）
+
+origin/main c481f5e7d を自分で読み、本番の読み取りの道で制約を見た。
+
+- 作成: backend/app/routers/leads.py:405-459 `create_lead` は `data.assigned_to` をそのまま INSERT する。所属の会社の確認は無い。入力の型は backend/app/schemas/lead.py:124・:169 `int | None = Field(default=None, ge=1)` だけ。
+- 更新: backend/app/routers/leads.py:578-596 は `update_data` の assigned_to をそのまま UPDATE する。:744-752 は担当変更の通知を出す。所属の確認は無い。
+- DB の止め: 本番の leads（全区画）に外部キー制約は0件（AUDIT ts=2026-11-06T06:40:42Z sha=ad3eddf9b8d9 rows=0）。
+- 見える所: backend/app/routers/analytics.py:110-119 `conversion_analysis` は `LEFT JOIN public.users u ON u.id = l.assigned_to` で username を返す。public.users の読み取りの守りは `true` のため、他社の利用者の username が返る。
+- 通知: backend/app/services/lead_assign_notifier.py は自社区画の staff を user_id で引く。他社の user_id では行が無く、他社へは送られない（同ファイル :20-60 を読んだ）。
+- 起きること: 自社のリード編集の権限を持つ利用者が、他社の利用者番号を担当に入れると、分析画面に他社の利用者名が出る。他社の業務の記録（リード・請求書など）は読めない。
+- 未確認: 利用者番号を外から知る手段の有無。analytics.py の他の結合（:1350・:1384・:1418）と leads.py の他の箇所で同じことが起きるか。
