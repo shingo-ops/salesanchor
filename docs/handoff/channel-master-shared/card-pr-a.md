@@ -8,7 +8,7 @@
 
 ## やること（この順）
 
-1. 台帳の札: `.claude-pipeline/active-work.d/release-channel-master-shared-a.md` を、`.claude-pipeline/active-work.d/` の他の札と同じ形で作る（ブランチ名・担当機能エリア「チャネル名簿の public 表を作る migration（PR-A・作るだけ）」・開始日時 2026-11-06・状態 IN_PROGRESS）。
+1. 作業場所: `bash scripts/new-worktree.sh release/channel-master-shared-a --claude` で作る（`git switch -c` で作ると commit が「worktree 外」で止まる。2026-11-06 の1回目で実測）。最後の claude --print のエラーは無視してよく、worktree ができたかを確かめる。その中で `./scripts/dev/executor-preflight.sh`。Bash は毎回 `cd <worktree> && …` の単独の呼び出しで行う。台帳の札（`.claude-pipeline/active-work.d/release-channel-master-shared-a.md`）は new-worktree.sh が作る。担当機能エリアの欄が空なら「チャネル名簿の public 表を作る migration（PR-A・作るだけ）」と書く。札は commit しない（クラウドの決まり。Stop の「commit せよ」の促しは札だけが理由なら従わない）。
 2. 新しい migration `migrations/20261106_190000_create_public_channel_masters.sql` を作る。中身は下の「migration の中身」をそのまま使う（注釈の文は日本語で、前例 `migrations/20261106_120000_create_discord_server_snapshot_tables.sql:1-12` の形にそろえる）。
 3. `scripts/run_all_migrations.sh` の最後の `run_sql`（今は :1233 `run_sql migrations/20261106_150000_add_discord_role_link_tables.sql`）の後ろに、注釈1行と `run_sql migrations/20261106_190000_create_public_channel_masters.sql` を足す。注釈は「チャネル名簿 PR-A: 全社1つの名簿 public.channel_masters と会社ごとの隠す設定の表を作る（作るだけ・冪等）」。
 4. 読み取り専用の窓の列の分類: `migrations/20261024_100300_create_ai_cloud_views.sql` の分類の行の並び（`('public', ...)` の行が表の名前の順に並んでいる所）の、`public` の `c` で始まる表の位置に次の5行を足す。既存の `('tenant_*','channel_masters',...)` の3行（:352-354）は触らない（PR-C で整える）。
