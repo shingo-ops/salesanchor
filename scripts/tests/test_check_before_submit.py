@@ -27,6 +27,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -128,6 +129,9 @@ class CheckBeforeSubmit(unittest.TestCase):
         self.assertEqual(len(rows), 1, rows)
         self.assertEqual(rows[0][2:4], [git(self.wt, "rev-parse", "HEAD"), "0"])
         self.assertEqual(rows[0][5], "manual")
+        self.assertEqual(len(rows[0]), 8, rows)
+        self.assertEqual(rows[0][6], "full")
+        self.assertEqual(rows[0][7], "-")
 
     # 2 違反 2 種類
     def test_tenant_schema_violation_fails(self):
@@ -169,6 +173,7 @@ class CheckBeforeSubmit(unittest.TestCase):
         self.commit("test: touch fixture folder")
         rc, out = self.run_script("--list-fixtures")
         self.assertEqual(set(out.split()), base | {"tenant-schema", "doc-index"}, out)
+        self.assertEqual(self.log_rows()[-1][6], "list")
 
     # 4 commit していない変更
     def test_uncommitted_change_exits_2(self):
@@ -274,6 +279,8 @@ class CheckBeforeSubmit(unittest.TestCase):
         rows = self.log_rows()
         self.assertEqual(len(rows), 1, rows)
         self.assertEqual(rows[0][3], "0")
+        self.assertEqual(rows[0][6], "only")
+        self.assertEqual(rows[0][7], "-")
 
     def test_old_stamp_is_kept_when_run_exits_2(self):
         with open(self.stamp_path(), "w", encoding="utf-8") as fh:
@@ -282,6 +289,7 @@ class CheckBeforeSubmit(unittest.TestCase):
         self.assertEqual(rc, 2, out)
         self.assertEqual(self.read_stamp(), "a" * 40)
         self.assertEqual(self.log_rows()[-1][3], "2")  # 終了コード 2 の道でも記録する
+        self.assertEqual(self.log_rows()[-1][6:], ["-", "unknown-id"])
 
     # 9 審査の残り (a)(b)(d)
     def test_only_fixture_select_exits_2(self):
@@ -312,10 +320,17 @@ class CheckBeforeSubmit(unittest.TestCase):
         self.install_prepush()
         with open(self.stamp_path(), "w", encoding="utf-8") as fh:
             fh.write(git(self.wt, "rev-parse", "HEAD") + "\n")
+        t0 = time.monotonic()
         rc, out = self.run_prepush(self.push_line())
+        elapsed = time.monotonic() - t0
         self.assertEqual(rc, 0, out)
         self.assertIn("流した印あり", out)
-        self.assertEqual(self.log_rows(), [])  # 入口は流れていない
+        self.assertLess(elapsed, 5, "入口を流してしまった可能性（%.1f 秒）" % elapsed)
+        head = git(self.wt, "rev-parse", "HEAD")
+        rows = self.log_rows()  # 入口は流れず、stamp の 1 行だけ
+        self.assertEqual(len(rows), 1, rows)
+        self.assertEqual(len(rows[0]), 8, rows)
+        self.assertEqual((rows[0][3], rows[0][5], rows[0][6], rows[0][7]), ("stamp", "pre-push", head, "-"))
 
     def test_prepush_does_not_stop_on_uncommitted_change(self):
         self.install_prepush()
@@ -327,6 +342,8 @@ class CheckBeforeSubmit(unittest.TestCase):
         rows = self.log_rows()
         self.assertEqual(len(rows), 1, rows)
         self.assertEqual((rows[0][3], rows[0][5]), ("2", "pre-push"))
+        self.assertEqual(len(rows[0]), 8, rows)
+        self.assertEqual(rows[0][7], "dirty-untracked")
 
     def test_prepush_skips_when_pushed_content_differs_from_head(self):
         self.install_prepush()
@@ -337,7 +354,69 @@ class CheckBeforeSubmit(unittest.TestCase):
             rc, out = self.run_prepush(text)
             self.assertEqual(rc, 0, out)
             self.assertIn("飛ばした", out)
-        self.assertEqual(self.log_rows(), [])
+        rows = self.log_rows()
+        self.assertEqual(len(rows), 3, rows)  # 入口の行（数の 4 列目）は無く、飛ばした 3 行だけ
+        self.assertTrue(all(len(r) == 8 for r in rows), rows)
+        self.assertEqual([r[3] for r in rows], ["skip-otherhead", "skip-delete", "skip-empty"])
+        self.assertTrue(all(r[5] == "pre-push" for r in rows), rows)
+        self.assertEqual(rows[0][6:], [git(self.wt, "rev-parse", "HEAD~1"), "refs/heads/x"])
+        self.assertEqual(rows[1][6:], ["-", "refs/heads/x"])
+        self.assertEqual(rows[2][6:], ["-", "-"])
+
+    def test_prepush_logs_skip_head_and_otherhead(self):
+        self.install_prepush()
+        head = git(self.wt, "rev-parse", "HEAD")
+        prev = git(self.wt, "rev-parse", "HEAD~1")
+        text = "refs/heads/x %s refs/heads/x %s\nrefs/heads/y %s refs/heads/y %s\n" % (head, ZERO, prev, ZERO)
+        rc, out = self.run_prepush(text)
+        self.assertEqual(rc, 0, out)
+        self.assertIn("飛ばした", out)
+        rows = self.log_rows()
+        self.assertEqual(len(rows), 2, rows)
+        self.assertEqual((rows[0][3], rows[0][6], rows[0][7]), ("skip-head", head, "refs/heads/x"))
+        self.assertEqual((rows[1][3], rows[1][6], rows[1][7]), ("skip-otherhead", prev, "refs/heads/y"))
+
+    def test_prepush_logs_skip_tag(self):
+        self.install_prepush()
+        prev = git(self.wt, "rev-parse", "HEAD~1")
+        rc, out = self.run_prepush("refs/tags/v1 %s refs/tags/v1 %s\n" % (prev, ZERO))
+        self.assertEqual(rc, 0, out)
+        rows = self.log_rows()
+        self.assertEqual(len(rows), 1, rows)
+        self.assertEqual((rows[0][3], rows[0][7]), ("skip-tag", "refs/tags/v1"))
+
+    def test_prepush_dirty_tracked_reason(self):
+        self.put("docs/zz-tracked.md", "x\n")
+        self.commit("test: add tracked file")
+        self.install_prepush()
+        self.put("docs/zz-tracked.md", "y\n")  # 追記で追跡中の変更にする
+        rc, out = self.run_prepush(self.push_line())
+        self.assertEqual(rc, 0, out)
+        rows = self.log_rows()
+        self.assertEqual(len(rows), 1, rows)
+        self.assertEqual((rows[0][3], rows[0][7]), ("2", "dirty-tracked"))
+
+    def test_prepush_unexpected_exit_code_passes(self):
+        self.install_prepush()
+        fake = os.path.join(self.tmp, "fake-exit3.sh")
+        with open(fake, "w", encoding="utf-8") as fh:
+            fh.write("#!/bin/bash\nexit 3\n")
+        self.put(SCRIPT_REL, src=fake)
+        self.commit("test: script exits 3")
+        rc, out = self.run_prepush(self.push_line())
+        self.assertEqual(rc, 0, out)
+        self.assertIn("想定外の終わり方", out)
+        self.assertIn("終了コード 3", out)
+
+    def test_bad_arg_and_help_are_logged(self):
+        rc, out = self.run_script("--no-such-arg")
+        self.assertEqual(rc, 2, out)
+        last = self.log_rows()[-1]
+        self.assertEqual((last[3], last[6], last[7]), ("2", "-", "bad-arg"))
+        rc, out = self.run_script("--help")
+        self.assertEqual(rc, 0, out)
+        last = self.log_rows()[-1]
+        self.assertEqual((last[3], last[6], last[7]), ("0", "help", "-"))
 
     def test_prepush_works_when_git_passes_git_dir_env(self):
         # git は hook に GIT_DIR・GIT_WORK_TREE を渡す。入口の中の試し（別の repo を作る）が狂わないこと
