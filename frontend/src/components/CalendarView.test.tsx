@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render } from '@testing-library/react';
 import { readdirSync, readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
 import { CalendarView } from './CalendarView';
 import { computeHourRange, eventClassNames } from './calendarView.utils';
 import type { CalendarViewEvent } from './calendarView.utils';
@@ -34,7 +34,7 @@ beforeEach(() => {
   captured.props = {};
 });
 
-const NODE_MODULES = fileURLToPath(new URL('../../node_modules/', import.meta.url));
+const NODE_MODULES = resolve(process.cwd(), 'node_modules') + '/';
 
 function readPackageFiles(pkg: string, filter: (name: string) => boolean): string {
   const dir = `${NODE_MODULES}@fullcalendar/${pkg}/`;
@@ -203,7 +203,7 @@ describe('T4 every --fc-* variable is overridden in CalendarView.css', () => {
     const names = [...new Set(sources.match(/--fc-[a-z0-9-]+/g) ?? [])].sort();
     expect(names.length).toBeGreaterThan(0);
 
-    const css = readFileSync(fileURLToPath(new URL('./CalendarView.css', import.meta.url)), 'utf8');
+    const css = readFileSync(resolve(process.cwd(), 'src/components/CalendarView.css'), 'utf8');
     const rootBlock = css.slice(css.indexOf('.comp-calendar {'), css.indexOf('}', css.indexOf('.comp-calendar {')));
     const missing = names.filter((name) => !new RegExp(`${name}\\s*:`).test(rootBlock));
     expect(missing).toEqual([]);
