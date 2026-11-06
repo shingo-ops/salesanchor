@@ -221,5 +221,5 @@ PO（2026-11-06）「ロールと権限だがマスタ類と同じ構造を想�
 - 役割の番号を持つ表は 3 つ: role_permissions（`backend/app/services/tenant.py:515`）・user_roles（`:524`）・staff.role_id（`:613`）。付け直すときは 3 表とも直す。
 - user_roles.user_id は public.users を指す（外部キーは無い。`backend/app/services/tenant.py:523`）。人の表がすでに 1 か所なので、1 つの表にまとめても人との結び付きは張れる。
 - 役割の表を書いたり読んだりするファイル（origin/main の git grep -c -P。表名を単語で照合）: アプリ本体 11（`backend/app/auth/dependencies.py`・`backend/app/auth/system_roles.py`・`backend/app/routers/auth.py`・`backend/app/routers/roles.py`・`backend/app/routers/staff.py`・`backend/app/routers/tenant_admin_inventory_visibility.py`・`backend/app/schemas/role.py`・`backend/app/services/discord_blueprint.py`・`backend/app/services/role_assignment.py`・`backend/app/services/tenant.py`・`backend/app/services/user_notices.py`）、画面 2、試験 25、migrations 13、scripts 14。
-- `backend/app/services/discord_blueprint.py` の 5 件が Discord の役割か、アプリの役割の表かはまだ確かめていない（Discord は別セッションの担当）。
+- `backend/app/services/discord_blueprint.py` の 5 件（:118・:127・:141・:145・:291）はすべて bp.roles（Discord の設計図の役割）で、アプリの役割の表は読まない（origin/main の git grep）。アプリ本体で役割の表を使うのは、これを除く 10 ファイル。
 - 営業・CS の権限は会社ごとに違う（本節の前の役割の権限の指紋、AUDIT ts=2026-11-05T10:41:36Z sha=f883418274fb）。
