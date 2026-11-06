@@ -367,7 +367,7 @@ export default function DiscordConfigPage() {
           </div>
           {!isConnected ? (
             <>
-              <p>{t("discordConfig.connectViaChannelsHint")}</p>
+              <p className="dc-desc">{t("discordConfig.connectViaChannelsHint")}</p>
               {canEdit && (
                 <div className="dc-actions">
                   <ButtonLink variant="primary" to="/channels">
