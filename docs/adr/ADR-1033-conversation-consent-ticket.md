@@ -22,8 +22,9 @@
 4. 不要な停止を減らす。`rm -rf` の対象が `/tmp/CC報告ファイル/`・`/private/tmp/claude-501/`・作業場所の下なら止めない（設計 §4-6(a)）。`--body-file` が読めない停止の文に手順を示す（同 (b)）。
 5. 同意票は ADR-136 の「GO #PR番号」の代わりにならない。危険 PR の GO は今までどおり PO 単独で、番号つきで受ける。
 6. 件のセッションへの決まった一文の送信は、agent-console の case-say の受け口だけで行う（design §14-10）。§4-5 の見張りの外で端末へ送るほかの道を作らない。
+   - 例外（design §14-14-1・第12版・PO 2026-11-06「1」）: agent-console のサーバーが件の claude の版を確かめるために自分で開いた probe の件（`versionProbe: true` の件）にだけ、コードの定数の文 3 つ（文1〜文3）を送ってよい。条件は次の5つ。(a) 宛先は `versionProbe: true` の件だけで、PO の件・Opus の窓へは送れない。(b) 文は定数で、Opus・PO・外からの入力は入らない。(c) 打ち方は case-say と同じ `sendToPane`（区画 `%N` と pid の条件付き）で、Enter の前に idle を確かめ直す。(d) 発火はサーバーの内側だけで、受け口・命令を作らない。(e) 1回ごとに監査に残す（design §14-14-6 の 9）。
 
-詳しい設計は `docs/handoff/conversation-consent/design.md`（第5版・Architect 4回目 APPROVE）。What 6（件への一文・case-say）の設計は同じ設計書の §14（第11版・Architect APPROVE。送る判定は §14-10 と §14-13）。
+詳しい設計は `docs/handoff/conversation-consent/design.md`（第5版・Architect 4回目 APPROVE）。What 6（件への一文・case-say）の設計は同じ設計書の §14（第12版・Architect 4回目 APPROVE。送る判定は §14-10 と §14-13、probe の件の例外と版の確かめは §14-14）。
 
 ## Why
 

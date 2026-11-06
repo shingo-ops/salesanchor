@@ -242,9 +242,6 @@ export function DiscordOwnServerPanel() {
     { key: "field", header: t("discordOwnServer.col.field"), renderCell: (row: PlanRow) => fieldLabel(row.field) },
     { key: "before", header: t("discordOwnServer.col.before"), renderCell: (row: PlanRow) => row.before ?? "" },
     { key: "after", header: t("discordOwnServer.col.after"), renderCell: (row: PlanRow) => row.after ?? "" },
-  ];
-  const blockedColumns = [
-    ...planColumns,
     {
       key: "reason",
       header: t("discordOwnServer.col.reason"),
@@ -354,7 +351,7 @@ export function DiscordOwnServerPanel() {
           <div className="dc-group">
             <h4 className="dc-group-title">{t("discordOwnServer.blockedTitle", { count: plan.blocked.length })}</h4>
             <DataTable<PlanRow>
-              columns={blockedColumns}
+              columns={planColumns}
               data={plan.blocked}
               rowKey={rowKeyOf}
               emptyState={emptyRows}

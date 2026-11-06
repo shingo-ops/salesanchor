@@ -2257,7 +2257,8 @@
       "leadAssigned": "商談の担当アサイン",
       "metaMessageReceived": "Meta の新着メッセージ",
       "tcgDistributionError": "TCG在庫配信エラー",
-      "discordOutsideTicketPost": "部屋の外の書き込み（Discord）"
+      "discordOutsideTicketPost": "部屋の外の書き込み（Discord）",
+      "customerReplyReceived": "お客さんの返信"
     }
   },
   "erp": {
@@ -3486,15 +3487,10 @@
     "connectionTitle": "サーバー接続",
     "connected": "接続済み",
     "notConnected": "未接続",
-    "serverIdLabel": "サーバーID",
-    "serverIdPlaceholder": "例: 1288437029213835356",
-    "serverIdHint": "サーバー名を右クリック →「サーバーIDをコピー」",
     "change": "変更",
-    "connect": "接続する",
+    "connectViaChannels": "チャネル画面で連携する",
+    "connectViaChannelsHint": "Discord サーバーとの連携は、チャネル画面の連携ボタンから行います。",
     "loadError": "読み込めませんでした",
-    "saveError": "保存できませんでした",
-    "invalidGuildId": "17〜20桁の数字で入力してください",
-    "saved": "保存しました",
     "tabCustomer": "顧客用",
     "tabOwn": "自社用",
     "syncStatus": {
@@ -3569,7 +3565,8 @@
       "update_category": "カテゴリを直す",
       "create_channel": "チャンネルを作る",
       "update_channel": "チャンネルを直す",
-      "update_overwrite": "見せ方を直す"
+      "update_overwrite": "見せ方を直す",
+      "link_notice": "知らせのつなぎを作る"
     },
     "field": {
       "name": "名前",
@@ -3594,7 +3591,10 @@
       "method_not_allowed": "この操作は実行しません",
       "name_in_blueprint": "設計図に同じ名前のロールがあります",
       "app_role_missing_on_discord": "つないでいたロールが Discord で消されています",
-      "app_role_link_in_use": "つないでいるロールをほかの物も使っています"
+      "app_role_link_in_use": "つないでいるロールをほかの物も使っています",
+      "notice_other_route": "同じ種類の知らせの送り先がほかにもあります（2 か所に届きます）",
+      "notice_room_unavailable": "知らせの部屋を用意できないため、つなぎを作れません",
+      "webhook_token_missing": "Discord から送り先の鍵が返りませんでした"
     },
     "deleteKind": {
       "role": "ロール",

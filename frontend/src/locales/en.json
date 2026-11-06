@@ -2257,7 +2257,8 @@
       "leadAssigned": "Deal assignment",
       "metaMessageReceived": "New Meta message",
       "tcgDistributionError": "TCG distribution error",
-      "discordOutsideTicketPost": "Post outside a ticket room (Discord)"
+      "discordOutsideTicketPost": "Post outside a ticket room (Discord)",
+      "customerReplyReceived": "Customer reply"
     }
   },
   "erp": {
@@ -3486,15 +3487,10 @@
     "connectionTitle": "Server connection",
     "connected": "Connected",
     "notConnected": "Not connected",
-    "serverIdLabel": "Server ID",
-    "serverIdPlaceholder": "e.g. 1288437029213835356",
-    "serverIdHint": "Right-click the server name → \"Copy Server ID\"",
     "change": "Change",
-    "connect": "Connect",
+    "connectViaChannels": "Connect on Channels page",
+    "connectViaChannelsHint": "Connect your Discord server with the connect button on the Channels page.",
     "loadError": "Could not load",
-    "saveError": "Could not save",
-    "invalidGuildId": "Enter a 17–20 digit number",
-    "saved": "Saved",
     "tabCustomer": "Customer server",
     "tabOwn": "Own server",
     "syncStatus": {
@@ -3569,7 +3565,8 @@
       "update_category": "Update category",
       "create_channel": "Create channel",
       "update_channel": "Update channel",
-      "update_overwrite": "Update permissions"
+      "update_overwrite": "Update permissions",
+      "link_notice": "Create notice link"
     },
     "field": {
       "name": "Name",
@@ -3594,7 +3591,10 @@
       "method_not_allowed": "This operation is not run",
       "name_in_blueprint": "The blueprint has a role with the same name",
       "app_role_missing_on_discord": "The linked role was deleted on Discord",
-      "app_role_link_in_use": "The linked role is also used by another item"
+      "app_role_link_in_use": "The linked role is also used by another item",
+      "notice_other_route": "Another destination also receives this notice type (it will arrive twice)",
+      "notice_room_unavailable": "The notice room is not available, so the link cannot be created",
+      "webhook_token_missing": "Discord did not return the webhook token"
     },
     "deleteKind": {
       "role": "Role",

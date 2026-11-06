@@ -179,6 +179,15 @@ INBOX_BADGE_META_MESSAGES_DDL = """
     )
 """
 
+# update_lead の担当者の会社照合（ensure_user_in_tenant）が読む public.users 相当。
+# SQLite ではスキーマ修飾が使えないため、試験側で public.users を users に書き換えて流す。
+INBOX_BADGE_USERS_DDL = """
+    CREATE TABLE users (
+        id INTEGER PRIMARY KEY,
+        tenant_id INTEGER NOT NULL
+    )
+"""
+
 # engine fixture が順に execute する DDL 一式（leads → sales_form_options →
 # sales_form_selections → meta_messages の順。外部キー的な参照順ではないが
 # 元のテスト内の実行順を保つ）。
@@ -187,6 +196,7 @@ INBOX_BADGE_SQLITE_DDL = (
     INBOX_BADGE_SALES_FORM_OPTIONS_DDL,
     INBOX_BADGE_SALES_FORM_SELECTIONS_DDL,
     INBOX_BADGE_META_MESSAGES_DDL,
+    INBOX_BADGE_USERS_DDL,
 )
 
 # test_sqlite_alter_table_does_not_support_add_column_if_not_exists 用:
@@ -1311,9 +1321,14 @@ async def setup_test_db(test_engine):
                 event_types TEXT DEFAULT '[]',
                 is_active BOOLEAN DEFAULT TRUE,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                blueprint_key TEXT,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """))
+        await conn.execute(text(
+            "CREATE UNIQUE INDEX IF NOT EXISTS uq_notification_channels_blueprint_key"
+            " ON notification_channels (blueprint_key) WHERE blueprint_key IS NOT NULL"
+        ))
         await conn.execute(text("""
             CREATE TABLE IF NOT EXISTS notification_logs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1943,6 +1958,14 @@ def _no_own_staff_sync_task(monkeypatch):
     from app.services import discord_own_staff_sync
 
     monkeypatch.setattr(discord_own_staff_sync, "SCHEDULE_ENABLED", False)
+
+
+@pytest.fixture(autouse=True)
+def _no_customer_reply_notice_task(monkeypatch):
+    """第2段 2d: お客さんの返信の知らせを試験では裏で動かさない（本物の DB・Discord へ行かないように）。"""
+    from app.services import customer_reply_notifier
+
+    monkeypatch.setattr(customer_reply_notifier, "SCHEDULE_ENABLED", False)
 
 
 @pytest_asyncio.fixture

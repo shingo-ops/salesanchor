@@ -534,9 +534,11 @@ def test_tenant_1_blueprint_creates_staff_role_once():
         Blueprint.model_validate(data), _production_roles(), _production_channels(), _PLAN_GUILD, [_BOT_ROLE],
     )
 
-    assert len(plan["changes"]) == 1
+    assert [c["kind"] for c in plan["changes"]] == ["create_role", "create_channel", "create_channel", "create_channel"]
     assert plan["changes"][0]["kind"] == "create_role"
     assert plan["changes"][0]["name"] == "スタッフ"
+    assert [c["name"] for c in plan["changes"][1:]] == ["アサイン連絡", "返信連絡", "部屋の外の書き込み"]
+    assert plan["blocked"] == []
 
 
 def test_beat_schedule_runs_every_5_minutes():

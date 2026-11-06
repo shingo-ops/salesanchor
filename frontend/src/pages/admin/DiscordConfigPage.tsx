@@ -12,7 +12,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
-import { useApiCache, useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
+import { useApiCache, useApiQuery } from "../../lib/query/apiQuery";
 import { useSeededForm } from "../../lib/query/useSeededForm";
 import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
@@ -108,7 +108,6 @@ interface TicketForm {
   largeRoleName: string;
 }
 
-const toGuildId = (data: DiscordConfig): string => data.guild_id ?? "";
 const toTicketForm = (data: DiscordTicketConfig): TicketForm => ({
   ticketCategoryId: data.ticket_category_id ?? "",
   ticketButtonChannelId: data.ticket_button_channel_id ?? "",
@@ -131,19 +130,9 @@ export default function DiscordConfigPage() {
   const ticketConfig = ticketQ.data ?? null;
   const loadError = configQ.error || ticketQ.error ? t("discordConfig.loadError") : "";
   const cache = useApiCache();
-  const invalidate = useInvalidateApi();
   const [tab, setTab] = useState<"customer" | "own">(() =>
     new URLSearchParams(window.location.search).get("tab") === "own" ? "own" : "customer",
   );
-
-  // サーバー接続
-  const { form: guildId, setForm: setGuildId, ready: guildReady } = useSeededForm(
-    CONFIG_PATH, configQ.data, toGuildId, "",
-  );
-  const [editingGuild, setEditingGuild] = useState(false);
-  const [guildSaving, setGuildSaving] = useState(false);
-  const [guildError, setGuildError] = useState("");
-  const [guildSaved, setGuildSaved] = useState(false);
 
   // チケット設定
   const emptyTicketForm: TicketForm = {
@@ -182,47 +171,15 @@ export default function DiscordConfigPage() {
 
   /** サーバーの最新値を取り直して画面に反映する（自動セットアップの後。開いた時は useApiQuery が読む） */
   const fetchAll = async () => {
-    const [data, ticketData] = await Promise.all([
+    const [, ticketData] = await Promise.all([
       cache.fetch(CONFIG_PATH, () => api.get<DiscordConfig>(CONFIG_PATH)),
       cache.fetch(TICKET_PATH, () => api.get<DiscordTicketConfig>(TICKET_PATH)),
     ]);
-    if (data) setGuildId(toGuildId(data));
     if (ticketData) setTicketForm(toTicketForm(ticketData));
   };
 
   const savedGuildId = config?.guild_id ?? "";
   const isConnected = savedGuildId !== "";
-  const isGuildFormOpen = !isConnected || editingGuild;
-
-  const handleGuildSave = async () => {
-    if (!SNOWFLAKE_RE.test(guildId.trim())) {
-      setGuildError(t("discordConfig.invalidGuildId"));
-      return;
-    }
-    setGuildSaving(true);
-    setGuildError("");
-    setGuildSaved(false);
-    try {
-      const updated = await api.put<DiscordConfig>("/admin/discord-config", { guild_id: guildId.trim() });
-      // 保存の返事は guild_id だけが本物（ほかの欄は既定値）なので、写しは guild_id だけ書き換えて取り直す
-      cache.update<DiscordConfig>(["admin", "discord-config"], (old) => ({ ...old, guild_id: updated.guild_id }));
-      void invalidate(["admin", "discord-config"]);
-      setGuildId(toGuildId(updated));
-      setEditingGuild(false);
-      setGuildSaved(true);
-      setTimeout(() => setGuildSaved(false), FEEDBACK_MS);
-    } catch {
-      setGuildError(t("discordConfig.saveError"));
-    } finally {
-      setGuildSaving(false);
-    }
-  };
-
-  const handleGuildCancel = () => {
-    setGuildId(savedGuildId);
-    setGuildError("");
-    setEditingGuild(false);
-  };
 
   /** 入力値を検証し、問題があれば表示用の文言を返す */
   const validateTicket = (): string | null => {
@@ -371,7 +328,7 @@ export default function DiscordConfigPage() {
   }
 
   // 読めなかった時は、空の値で上書きしないようにフォームを出さず、誤りの文だけを出す
-  if (!guildReady || !ticketReady) {
+  if (!configQ.data || !ticketReady) {
     return (
       <PageLayout navKey="nav.discordConfig">
         <div className="dc-page">
@@ -408,39 +365,24 @@ export default function DiscordConfigPage() {
               {isConnected ? t("discordConfig.connected") : t("discordConfig.notConnected")}
             </Badge>
           </div>
-          {isGuildFormOpen ? (
+          {!isConnected ? (
             <>
-              <TextField
-                label={t("discordConfig.serverIdLabel")}
-                value={guildId}
-                onChange={(e) => setGuildId(e.target.value)}
-                disabled={!canEdit}
-                placeholder={t("discordConfig.serverIdPlaceholder")}
-                helperText={t("discordConfig.serverIdHint")}
-                error={guildError || undefined}
-                fullWidth
-              />
+              <p className="dc-desc">{t("discordConfig.connectViaChannelsHint")}</p>
               {canEdit && (
                 <div className="dc-actions">
-                  <Button variant="primary" onClick={handleGuildSave} disabled={guildSaving} loading={guildSaving}>
-                    {isConnected ? t("common.save") : t("discordConfig.connect")}
-                  </Button>
-                  {isConnected && (
-                    <Button variant="ghost" onClick={handleGuildCancel} disabled={guildSaving}>
-                      {t("common.cancel")}
-                    </Button>
-                  )}
+                  <ButtonLink variant="primary" to="/channels">
+                    {t("discordConfig.connectViaChannels")}
+                  </ButtonLink>
                 </div>
               )}
             </>
           ) : (
             <div className="dc-row">
               <span className="dc-server-id dc-grow">{savedGuildId}</span>
-              {guildSaved && <Badge variant="success">{t("discordConfig.saved")}</Badge>}
               {canEdit && (
-                <Button variant="secondary" size="sm" onClick={() => setEditingGuild(true)}>
+                <ButtonLink variant="secondary" size="sm" to="/channels">
                   {t("discordConfig.change")}
-                </Button>
+                </ButtonLink>
               )}
             </div>
           )}

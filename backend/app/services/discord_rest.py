@@ -17,6 +17,12 @@ import httpx
 logger = logging.getLogger(__name__)
 
 _DISCORD_API_BASE = "https://discord.com/api/v10"
+
+
+def webhook_execute_url(webhook_id: str, token: str) -> str:
+    """webhook の送り先の URL（Discord 公式の形。notification_channels.webhook_url に入れる形と同じ）。"""
+    return f"https://discord.com/api/webhooks/{webhook_id}/{token}"
+
 _TIMEOUT_SEC = 10.0
 _MAX_RETRIES = 5
 _BACKOFF_BASE_SEC = 5
