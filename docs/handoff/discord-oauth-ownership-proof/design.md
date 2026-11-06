@@ -1,6 +1,6 @@
 # design: Discord 連携の戻り口で、サーバーの持ち主を Discord に確かめてから保存する（G3）
 
-- 状態: 設計案作成済み・審査1回目 REVISE を反映（再審査待ち）。実装は未着手
+- 状態: 設計案作成済み・設計審査済み（2回目 APPROVE・推奨4件反映）。実装は未着手
 - 基準: origin/main 5574bf327
 - 根拠: docs/handoff/discord-oauth-ownership-proof/recon.md（以下 recon）
 - 前の設計: docs/handoff/cross-tenant-user-ref-guard/design.md 1・7・8 節（G3 を次の作業に積んだ）
@@ -166,8 +166,8 @@ async def _exchange_code_for_guild_id(code: str) -> str:
 
 | リスク | 対処 |
 |---|---|
-| U1: 今の招待で戻り先に code が付かない（公式は bot と applications.commands だけなら token は要らないと書く・recon 8） | 合流の前に確かめる（12 節 0）。PO の 11/6 の再接続のブラウザの履歴にある戻り口の URL に `code=` があるかを見る。無ければ、合流の前に PO が開発者画面のボット設定で「Requires OAuth2 Code Grant」を入れ、もう一度履歴で `code=` を確かめる（公式の勧め・コード変更なし）。それでも無ければ合流しない（設計を戻して PO に聞く） |
-| K2 の確かめで、会社1の行が消えたまま残る（画面の連携ボタンは未接続のときだけ出る: frontend/src/pages/channels/ChannelsPage.tsx:530・frontend/src/pages/admin/DiscordOwnServerPanel.tsx:304。解除は行を消す: backend/app/routers/discord_guild_config.py:104・:167） | 確かめは会社1（開発の試しの会社）だけで行う。失敗したら 12 節 4 の戻しの流れ: revert → 反映 → PO がもう一度つなぐ（今の戻り口は code を見ないのでつながる）→ Opus が読み取りの道で会社1の2行が戻ったことを確かめる。止まる範囲: 戻るまで、会社1の顧客用サーバーの書き込みは会社を引けない（backend/app/discord_gateway/client.py:104 の guild から会社を引く処理）。他の会社（4・6）の行には触らない |
+| U1: 今の招待で戻り先に code が付かない（公式は bot と applications.commands だけなら token は要らないと書く・recon 8） | 合流の前に確かめる（12 節 0）。PO の 11/6 の再接続のブラウザの履歴にある戻り口の URL に `code=` があるかを見る。履歴に戻り口の URL が残っていなければ、今のコードのまま会社1で解除→再接続し、その戻り口の URL を見る（今の戻り口は code を見ないので、つながりは変わらない）。`code=` が無ければ、合流の前に PO が開発者画面のボット設定で「Requires OAuth2 Code Grant」を入れ、もう一度会社1で解除→再接続して戻り口の URL に `code=` があるかを見る（公式の勧め・コード変更なし）。それでも無ければ合流しない（設計を戻して PO に聞く） |
+| K2 の確かめで、会社1の行が消えたまま残る（画面の連携ボタンは未接続のときだけ出る: frontend/src/pages/channels/ChannelsPage.tsx:530・frontend/src/pages/admin/DiscordOwnServerPanel.tsx:304。解除は行を消す: backend/app/routers/discord_guild_config.py:104・:167） | 確かめは会社1（開発の試しの会社）だけで行う。失敗したら 12 節 4 の戻しの流れ: revert → 反映 → PO がもう一度つなぐ（今の戻り口は code を見ないのでつながる）→ Opus が読み取りの道で会社1の2行が戻ったことを確かめる。止まる範囲: 戻るまで、会社1の顧客用サーバーの書き込みは会社を引けない（backend/app/discord_gateway/client.py:101-119 `_resolve_tenant_id` の guild から会社を引く処理）。他の会社（4・6）の行には触らない |
 | 鍵が GitHub Secrets に入る前に反映される | 開始口が 503 で止まる（4-2）。連携は止まるが、偽の登録は入らない。順番は 12 節で「鍵 → 合流」に固定 |
 | 鍵がログに出る | ログに出す値を status と error の語だけに限る（4-3）。試験で caplog と転送先 URL に鍵の文字が無いことを確かめる |
 | Discord の応答が遅い | 10 秒で打ち切り `code_exchange_failed`。DB の取引は開く前（4-4） |
@@ -181,7 +181,7 @@ async def _exchange_code_for_guild_id(code: str) -> str:
 | A（採用） | 戻り口で code を交換し、応答の guild.id だけを保存 | Discord 公式が示す確かめ方。guild_id は hint としてだけ使えと公式が書く |
 | B | ボットの鍵で「ボットがそのサーバーに入っているか」を確かめる | ボットが入っていることは、操作した人が持ち主である証明にならない（前の設計 7 節 D と同じ理由）。他人が入れたボットのサーバーを横取りできる |
 | C | 開始口で state を返さない | 呼び手は招待 URL から state を読める（URL の中にある）。閉じきれない |
-| D | scope に identify を足して必ず code の流れにする | 利用者の Discord の画面に項目が増える。U1 が起きたときの手当ては開発者画面の設定で足りるので、先には変えない |
+| D | scope に identify を足して必ず code の流れにする | 利用者の Discord の画面に項目が増える。U1 が起きたときは、まず開発者画面の設定で手当てする（6 節 U1）。それでも code が付かなければ合流せず、この案を含めて PO に聞く |
 
 ## 8. 維持の仕組み
 
@@ -225,14 +225,14 @@ async def _exchange_code_for_guild_id(code: str) -> str:
 ## 12. 実装の進め方（1つの作業）
 
 順番を固定する:
-0. **実装の前に** U1 を確かめる: PO が、11/6 にテナント001で再接続したときのブラウザの履歴から、`api.salesanchor.jp/api/v1/discord/oauth/callback` の URL に `code=` があるかだけを見て答える（値は書き写さない）。無い場合は 6 節 U1 の手当て
+0. **実装の前に** U1 を確かめる: PO が、11/6 にテナント001で再接続したときのブラウザの履歴から、`api.salesanchor.jp/api/v1/discord/oauth/callback` の URL に `code=` があるかだけを見て答える（値は書き写さない）。履歴に無い場合・`code=` が無い場合は 6 節 U1 の手当て
 1. 実装（クラウドの Sonnet・実装カード）→ CI 緑 → 審査役 → GO 記録（委任・ADR-1003。deploy.yml を含むので ADR-136 の3行まとめを PO に出す）
 2. **合流の前に**、PO が秘密の鍵を入れる（secrets の変更は PO 本人・ADR-1003 例外）:
    1. Discord 開発者画面 → Sales Anchor のアプリ（client id 1499458730171961535）→ OAuth2 → Client Secret → Reset Secret → 出た値を写す（1回しか表示されない）
    2. GitHub の shingo-ops/salesanchor → Settings → Secrets and variables → Actions → New repository secret → 名前 `DISCORD_CLIENT_SECRET`、値を貼る
    3. Opus が `gh secret list` で名前があることだけ確かめる（値は見ない）
 3. 合流 → 反映（deploy 成功を確かめる）
-4. PO がテナント001で顧客用・自社用を解除→再接続（K2）。失敗したら、その場で次の戻しの流れにする: (1) Opus が PR を revert して反映 (2) PO がもう一度つなぐ (3) Opus が読み取りの道で会社1の顧客用・自社用の2行があることを確かめる。会社4・6 の行は触らない
+4. PO がテナント001で顧客用・自社用を解除→再接続（K2）。失敗したら、その場で次の戻しの流れにする: (1) Opus が PR を revert する（revert の PR も deploy.yml を含むので、委任の GO 記録を残してから合流）して反映 (2) PO がもう一度つなぐ (3) Opus が読み取りの道で会社1の顧客用・自社用の2行があることを確かめる。会社4・6 の行は触らない
 5. Opus が読み取りの道で K3 を確かめる
 
 ## 13. 審査（Architect）
@@ -248,6 +248,11 @@ async def _exchange_code_for_guild_id(code: str) -> str:
 - Q6 推奨: K4 の `git grep` の確かめを 10 節に足した
 - C2 の代わり: Opus が手元で公式を 2026-11-07 に再取得した。交換の URL・項目・form だけ・Basic 認証・応答の guild は 4-3 と一致。一方で公式は「bot と applications.commands だけなら token は要らない」と書くので、U1 を実装の前に確かめる順に変えた（12 節 0・6 節）
 
-### 2回目
+### 2回目（2026-11-06 15:37Z・クラウドの Opus・対象 1ca54cbf9）: APPROVE
 
-（未実施）
+- Q1〜Q6 すべて直った（引用の行は origin/main と一致）。必須の指摘は 0
+- R1 推奨: client.py の引用を :101-119 に → 直した
+- R2 推奨: revert の PR にも GO 記録が要る → 12 節 4 に書いた
+- R3 推奨: 開発者画面の設定の後は解除→再接続しないと新しい URL が残らない・履歴に無いときの手順 → 6 節 U1 に書いた
+- R4 推奨: 7 節 D の言い切りが 6 節と食い違う → 6 節に合わせた
+- 推奨4件の直しは文言だけで、手順の順番と判定は変えていない
