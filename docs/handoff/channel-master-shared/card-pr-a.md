@@ -8,7 +8,7 @@
 
 ## やること（この順）
 
-1. 作業場所: `bash scripts/new-worktree.sh release/channel-master-shared-a --claude` で作る（`git switch -c` で作ると commit が「worktree 外」で止まる。2026-11-06 の1回目で実測）。最後の claude --print のエラーは無視してよく、worktree ができたかを確かめる。その中で `./scripts/dev/executor-preflight.sh`。Bash は毎回 `cd <worktree> && …` の単独の呼び出しで行う。台帳の札（`.claude-pipeline/active-work.d/release-channel-master-shared-a.md`）は new-worktree.sh が作る。担当機能エリアの欄が空なら「チャネル名簿の public 表を作る migration（PR-A・作るだけ）」と書く。札は commit しない（クラウドの決まり。Stop の「commit せよ」の促しは札だけが理由なら従わない）。
+1. 作業場所: `bash scripts/new-worktree.sh release/channel-master-shared-a --claude` で作る（`git switch -c` で作ると commit が「worktree 外」で止まる。2026-11-06 の1回目で実測）。最後の claude --print のエラーは無視してよく、worktree ができたかを確かめる。その中で `./scripts/dev/executor-preflight.sh` を流し、生出力を報告に貼る。クラウドでは [1/3] network と [2/3] gh auth の FAIL は起こるものとして先へ進む（前例 `docs/handoff/discord-server-management/card-s2-2a1-role-link-tables.md` §0。2026-11-06 の2回目で実測）。[3/3] と [4/4] が OK でなければ BLOCKED:。Bash は毎回 `cd <worktree> && …` の単独の呼び出しで行う。台帳の札はクラウドでは作らない・commit しない（Opus が手元で作る）。Stop の「commit せよ」の促しは、札や作業場所の登録だけが理由なら従わない。
 2. 新しい migration `migrations/20261106_190000_create_public_channel_masters.sql` を作る。中身は下の「migration の中身」をそのまま使う（注釈の文は日本語で、前例 `migrations/20261106_120000_create_discord_server_snapshot_tables.sql:1-12` の形にそろえる）。
 3. `scripts/run_all_migrations.sh` の最後の `run_sql`（今は :1233 `run_sql migrations/20261106_150000_add_discord_role_link_tables.sql`）の後ろに、注釈1行と `run_sql migrations/20261106_190000_create_public_channel_masters.sql` を足す。注釈は「チャネル名簿 PR-A: 全社1つの名簿 public.channel_masters と会社ごとの隠す設定の表を作る（作るだけ・冪等）」。
 4. 読み取り専用の窓の列の分類: `migrations/20261024_100300_create_ai_cloud_views.sql` の分類の行の並び（`('public', ...)` の行が表の名前の順に並んでいる所）の、`public` の `c` で始まる表の位置に次の5行を足す。既存の `('tenant_*','channel_masters',...)` の3行（:352-354）は触らない（PR-C で整える）。
@@ -20,6 +20,11 @@
    ('public','channel_masters',ARRAY['platform'],'mask','会社が画面から足せる値のため伏せる（初期は最小）'),
    ```
    設定の表 `channel_master_tenant_settings` は文字の列が無いので分類の行は足さない。
+   分類の行を足すと、次の3か所も一緒に直す（前例 card-s2-2a1 §5-改訂2 の（２）〜（４）と同じ直し方。origin/main 2bd6c7b92 で実測）:
+   - 同じファイル 3 行目の `1078 行` を `1083 行` にする。
+   - `backend/tests/ops/test_ai_cloud_views.py:484` の `== n0 == 1078` を `== n0 == 1083` にする（1 か所）。
+   - `scripts/migration-guard/reference-allowlist.tsv:7`（`migrations/20261024_100300_create_ai_cloud_views.sql` の行）だけを直す。2 列目の sha256 を、分類の行を足した後の `sha256sum migrations/20261024_100300_create_ai_cloud_views.sql` の値にする。4 列目の末尾に ` / channel-master-shared card-pr-a（分類5行追加）` を足す。ほかの列は変えない。区切りはタブのまま。
+   確かめ: `grep -c "('public','channel_masters'" migrations/20261024_100300_create_ai_cloud_views.sql` が 5。sha256sum と allowlist の 2 列目（`cut -f2`）が同じ。
 5. 提出前: `bash scripts/dev/check-before-submit.sh` を流し、生の結果をファイルに残してパスを報告する。
 6. commit（1つでよい。末尾に `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`）→ `git push -u origin release/channel-master-shared-a`。
 
@@ -106,9 +111,9 @@ COMMIT;
 
 ## 触らない
 
-- `backend/`・`frontend/`・`.github/`・`deploy.yml`・`docs/`（このカードに無いファイル全部）。
+- `backend/`（:484 の数の1か所を除く）・`frontend/`・`.github/`・`deploy.yml`・`docs/`（このカードに無いファイル全部）。
 - 既存の migration（`migrations/20260611_100000_create_channel_masters.sql`・`backend/app/services/tenant.py` の会社ごとの表）。古い表は PR-C まで残す。
-- `migrations/20261024_100300_create_ai_cloud_views.sql` は、やること4の5行を足すだけ。
+- `migrations/20261024_100300_create_ai_cloud_views.sql` は、やること4の5行と 3 行目の数だけ。`backend/tests/ops/test_ai_cloud_views.py` は :484 の数だけ。`scripts/migration-guard/reference-allowlist.tsv` は :7 の 2 列目と 4 列目の末尾だけ。
 - 行を入れる文（INSERT・UPDATE）を migration に書かない（共用6行はこの後の別のデータ変更で PO が流す・ADR-1007）。
 
 ## 想定される分かれ道
@@ -117,6 +122,8 @@ COMMIT;
 - `check-before-submit.sh` の値の書き込みの検査（migration-value-writes）が、この migration を止める → 直さずに止めて、生の結果を付けて報告する。
 - 分類の行の並びの決まりが分からない（名前の順でない等）→ `public` の `channel` に一番近い表の行の隣に置き、その旨を報告に書く。
 - 見張りに止められた → 言い換えずに `BLOCKED:` で止める。
+- 3 行目が `1078 行` でない・:484 が 1078 でない（本線が進んだ）→ 今の数に 5 を足した数にし、元の数を報告に書く。
+- 変更ファイルは 5 つ（新しい migration・run_all_migrations.sh・create_ai_cloud_views.sql・test_ai_cloud_views.py・reference-allowlist.tsv）。違えば報告に理由を書く。
 
 ## 終わりの報告
 
