@@ -300,6 +300,7 @@
     "conditionsMaster": "Condition Master",
     "productCategories": "Product Categories",
     "superAdminSupplierExtractionRules": "Extraction Rules",
+    "tenantLoginRequests": "Login Approvals",
     "superAdminLoginRequests": "Login Approvals",
     "units": "Units",
     "noteMaster": "Note Master",
@@ -419,6 +420,10 @@
     "subtitle": "Manage leads and customer information in one place."
   },
   "managementCenter": {
+    "loginRequests": {
+      "subtitle": "Requests from staff who chose \"Ask my company admin\" on a new device. Confirm it is really them before approving.",
+      "ownerOnly": "Only the company owner can open this page."
+    },
     "sectionTeam": "Team & HR",
     "sectionSecurity": "Permissions & Security",
     "sectionBusiness": "Business Settings",
@@ -695,7 +700,11 @@
       "rejected": "The sign-in was not approved. If you do not recognize it, change your password.",
       "expired": "The approval expired. Please sign in again.",
       "useRecoveryCode": "Sign in with a recovery code",
-      "noTrustedDevice": "If you have neither a usual device nor a recovery code, contact an administrator to verify your identity.",
+      "askAdmin": "Ask my company admin",
+      "askAdminRequested": "We let your company admin know. This screen will continue automatically once they approve.",
+      "askAdminAlready": "Your company admin has already been notified. Please wait for approval.",
+      "askAdminNoOwner": "Your company has no admin to notify. Please contact support.",
+      "noTrustedDevice": "Ask your company admin, or contact support.",
       "help": "This screen continues automatically once approved.",
       "cancel": "Back to sign in",
       "recoveryTitle": "Sign in with a recovery code",
@@ -5981,6 +5990,7 @@
     "empty": "No notifications",
     "kind": {
       "discord_outside_ticket_post": "{{actor}} posted in #{{channel}}",
+      "staff_login_request": "{{name}} is asking to sign in from a new device",
       "login_request": "Login request from a new device ({{device}})"
     },
     "fallback": {
