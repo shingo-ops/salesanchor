@@ -37,6 +37,8 @@
 - .github/workflows/deploy.yml の .env 書き込みに DISCORD_CLIENT_SECRET を2行（消す sed と heredoc）
 - backend/app/main.py の起動時の警告に DISCORD_CLIENT_SECRET を足す
 - backend/tests/test_discord_oauth.py の戻り口の試験の書き換えと追加。開始口の今の試験 :190・:219・:246 には試験用の鍵の環境変数を入れる（4-2 で鍵が無いと 503 になるため）
+- backend/tests/test_discord_own_server.py（2026-11-07 実装カードを書くときに見つけた抜け。審査の後の追記）: 開始口の試験 test_01・test_02 に試験用の鍵の環境変数を入れる。戻り口の試験 test_05・test_06・test_08・test_11 は `_callback` に `code` を足し、`_exchange_code_for_guild_id` を URL と同じ番号を返す偽物に差し替える（この試験は用途ごとの行と戻り先を見るもの。交換そのものは test_discord_oauth.py で本物の httpx の流れで確かめる）。test_03・test_04・test_07 は 503 や交換より前で止まるので変えない
+- frontend/api-contract/openapi.json（生成される型 frontend/src/api/generated/ は .gitignore:128 で commit しない。2026-11-07 実装カードを書くときに見つけた抜け。審査の後の追記）: 戻り口に `code` の引数が増え、openapi.json の `/api/v1/discord/oauth/callback`（origin/main の 46752 行目）が変わる。`python -m tools.export_openapi` と `npm run generate:api-types`（型の確かめ用）で作り直す（手で書かない）
 - docs/adr/ADR-091 に追記（戻り口は code を交換し、応答の guild だけを使う）＋ `node scripts/generate-adr-index.js`
 
 対象外（理由つき）:
@@ -211,6 +213,8 @@ async def _exchange_code_for_guild_id(code: str) -> str:
 | K4: 鍵の値がコードと文書に無い | Opus は鍵の値を持たない。合流の前に `git grep -n -iE "DISCORD_CLIENT_SECRET\s*[=:]\s*['\"]?[A-Za-z0-9_-]{20,}"` が 0 件（値の形の文字列が書かれていない）。鍵は GitHub Secrets だけにある（`gh secret list` で名前だけ確かめる） |
 | state を1回使ったら同じ state で2回目は `invalid_state` | 既存の試験の形（今と同じ） |
 | 既存の試験（戻り口 :306 など・開始口 :190・:219・:246）を code あり／鍵ありの形に直して緑 | CI |
+| 自社用の試験（test_discord_own_server.py の test_01〜08・11）が code あり／鍵ありの形で緑 | CI |
+| openapi.json が API の形と一致 | 既存の CI（api-contract-check） |
 | 自社用の戻り先が `/admin/discord-config?tab=own&…` のまま | 自動試験 |
 | deploy.yml と compose に DISCORD_CLIENT_SECRET が入る | 差分の審査・反映後に `gh run view` で deploy 成功 |
 | K2: 本番で顧客用・自社用がつながる | 反映後、PO がテナント001で解除→再接続 |
@@ -236,6 +240,8 @@ async def _exchange_code_for_guild_id(code: str) -> str:
 5. Opus が読み取りの道で K3 を確かめる
 
 ## 13. 審査（Architect）
+
+審査の後の追記（2026-11-07 Opus）: 3 節と 10 節に test_discord_own_server.py を足した。3 節に API の形の作り直し（openapi.json と生成される型）を足した。処理の設計（4 節）・順番（12 節）・判定（2 節）は変えていない。設計の審査はやり直さず、マージ前の審査役がこの追記も見る
 
 ### 1回目（2026-11-06 15:31Z・クラウドの Opus・読み取りのみ・対象 c774b7d5e・照合 origin/main 8a13f5328）: REVISE
 
