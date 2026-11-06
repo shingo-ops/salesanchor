@@ -4,10 +4,13 @@
  * - 1 件を押すと、discord.com のリンクだけ新しいタブで開き、未読なら既読にして返った未読数で更新する。
  * - 自社ログインのときは、許可待ちのログインの依頼（GET /login-approvals/pending）を一覧の上に足し、未読数にも数える。
  *   依頼の行を押すと真ん中の小窓が開き、その中で決め切る（URL は変えない。行にボタンは置かない・既読の印は付けない）。
+ * - 会社のオーナーのときは、社員が「会社の管理者に頼む」を押した依頼（GET /tenant/login-requests）も足し、押すと管理センターの許可待ちの画面へ移る（ADR-1063）。
  * - 本文・Discord の id は扱わない（API も返さない）。
  */
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { usePermissions } from "../hooks/usePermissions";
 import { useRealtimeRefresh } from "../hooks/useRealtimeRefresh";
 import { api } from "../lib/api";
 import { isDevSession } from "../lib/auth/devSessionSlot";
@@ -38,6 +41,17 @@ interface NoticeList {
   unread_count: number;
 }
 
+/** 社員の依頼（会社のオーナーだけ・GET /tenant/login-requests の行のうち使う所だけ） */
+interface StaffLoginRequest {
+  id: string;
+  full_name: string | null;
+  email: string | null;
+  created_at: string | null;
+}
+
+/** 社員の依頼の行を押したときに開く画面 */
+export const STAFF_LOGIN_REQUESTS_PATH = "/management-center/login-requests";
+
 /** 許可待ちの依頼の取得の最短の間隔（ミリ秒） */
 export const PENDING_FETCH_MIN_INTERVAL_MS = 5_000;
 
@@ -61,6 +75,9 @@ export default function NoticeBell({ variant = "floating" }: NoticeBellProps = {
   const [open, setOpen] = useState(false);
   const [requests, setRequests] = useState<PendingLoginRequest[]>([]);
   const [openRequestId, setOpenRequestId] = useState<string | null>(null);
+  const [staffRequests, setStaffRequests] = useState<StaffLoginRequest[]>([]);
+  const { isTenantOwner } = usePermissions();
+  const navigate = useNavigate();
   const selfMode = !isDevSession();
   const lastPendingFetchRef = useRef(0);
   const pendingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -84,7 +101,17 @@ export default function NoticeBell({ variant = "floating" }: NoticeBellProps = {
     } catch {
       // 取れなかったときは今の表示のまま（次の合図でやり直す）
     }
-  }, []);
+    if (!isTenantOwner) {
+      setStaffRequests([]);
+      return;
+    }
+    try {
+      const res = await api.get<{ items: StaffLoginRequest[] }>("/tenant/login-requests");
+      setStaffRequests(res.items ?? []);
+    } catch {
+      // 取れなかったときは今の表示のまま（次の合図でやり直す）
+    }
+  }, [isTenantOwner]);
 
   // 5秒に1回までにまとめる。間隔の内に来た呼び出しは、間隔が明けたときに1回だけ流す
   const loadPending = useCallback(() => {
@@ -137,6 +164,11 @@ export default function NoticeBell({ variant = "floating" }: NoticeBellProps = {
     setOpenRequestId(req.id);
   };
 
+  const handleStaffRequestClick = () => {
+    setOpen(false);
+    navigate(STAFF_LOGIN_REQUESTS_PATH);
+  };
+
   const handleRowClick = async (item: NoticeItem) => {
     if (item.link_url && item.link_url.startsWith(ALLOWED_LINK_PREFIX)) {
       window.open(item.link_url, "_blank", "noopener");
@@ -153,13 +185,13 @@ export default function NoticeBell({ variant = "floating" }: NoticeBellProps = {
     }
   };
 
-  const totalUnread = unread + requests.length;
+  const totalUnread = unread + requests.length + staffRequests.length;
   const label = totalUnread > 0 ? t("notices.bellLabelUnread", { count: totalUnread }) : t("notices.bellLabel");
 
   const content = (
     <div className="notice-panel">
       <div className="notice-panel-title">{t("notices.title")}</div>
-      {items.length === 0 && requests.length === 0 ? (
+      {items.length === 0 && requests.length === 0 && staffRequests.length === 0 ? (
         <div className="notice-panel-empty">{t("notices.empty")}</div>
       ) : (
         <ul className="notice-panel-list">
@@ -172,6 +204,18 @@ export default function NoticeBell({ variant = "floating" }: NoticeBellProps = {
                 meta={relativeTime(req.created_at, t, i18n.language)}
                 unread
                 onClick={() => handleRequestClick(req)}
+              />
+            </li>
+          ))}
+          {staffRequests.map((req) => (
+            <li key={`staff-login-request-${req.id}`}>
+              <NoticeRow
+                title={t("notices.kind.staff_login_request", {
+                  name: req.full_name || req.email || "-",
+                })}
+                meta={relativeTime(req.created_at, t, i18n.language)}
+                unread
+                onClick={handleStaffRequestClick}
               />
             </li>
           ))}

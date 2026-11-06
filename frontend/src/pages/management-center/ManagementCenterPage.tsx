@@ -27,7 +27,7 @@ interface RawNavItem extends NavItem {
 
 export default function ManagementCenterPage() {
   const { t } = useTranslation();
-  const { hasPermission, hasAny } = usePermissions();
+  const { hasPermission, hasAny, isTenantOwner } = usePermissions();
 
   const rawSections: { key: string; titleKey: string; items: RawNavItem[] }[] = [
     {
@@ -83,6 +83,7 @@ export default function ManagementCenterPage() {
         { to: "channel-masters", labelKey: "nav.channelMasters", visible: hasPermission("tenant.profile.edit") },
         { to: "bots",           labelKey: "nav.bots",           visible: hasPermission("bots.view") },
         { to: "notifications",  labelKey: "nav.notifications",  visible: hasPermission("notifications.manage") },
+        { to: "login-requests", labelKey: "nav.tenantLoginRequests", visible: isTenantOwner },
       ],
     },
   ];
