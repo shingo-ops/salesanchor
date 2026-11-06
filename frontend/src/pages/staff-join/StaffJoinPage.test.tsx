@@ -12,7 +12,7 @@ const tr = (key: string) => String(instance.t(key));
 let fetchMock: ReturnType<typeof vi.fn>;
 let writeText: ReturnType<typeof vi.fn>;
 
-const KEY = "1.abcDEF_-0123456789abcdefghijklmnopqrstuvwxyz";
+const KEY = "1." + "a".repeat(43);
 const INFO = { tenant_name: "Fixture Co", role_name: "Fixture role", expires_at: "2030-01-01T00:00:00Z" };
 const CODE = "ABCD-EFGH-JKLM-NPQR";
 
@@ -128,6 +128,44 @@ describe("StaffJoinPage", () => {
 
     expect(writeText).toHaveBeenCalledWith(CODE);
     expect(await screen.findByRole("button", { name: tr("staffJoin.copied") })).toBeTruthy();
+  });
+
+  it("429 on the first load shows the too-many notice in the unusable-link frame", async () => {
+    fetchMock.mockImplementation(() => json({ detail: "rate" }, 429));
+    renderAt(`/staff-join#k=${KEY}`);
+
+    expect(await screen.findByText(tr("staffJoin.invalidTitle"))).toBeTruthy();
+    expect(screen.getByText(tr("staffJoin.tooMany"))).toBeTruthy();
+    expect(screen.queryByText(tr("staffJoin.invalidBody"))).toBeNull();
+  });
+
+  it("429 on submit shows the too-many message", async () => {
+    fetchMock.mockImplementation((_url: string, init?: RequestInit) =>
+      init?.method === "POST" ? json({ detail: "rate" }, 429) : json(INFO, 200),
+    );
+    renderAt(`/staff-join#k=${KEY}`);
+    await screen.findByText("Company: Fixture Co");
+    fillAll();
+    fireEvent.click(screen.getByRole("button", { name: tr("staffJoin.submit") }));
+
+    expect(await screen.findByText(tr("staffJoin.tooMany"))).toBeTruthy();
+  });
+
+  it("pressing submit twice in a row sends only one POST", async () => {
+    fetchMock.mockImplementation((_url: string, init?: RequestInit) =>
+      init?.method === "POST"
+        ? json({ registration_code: CODE, discord_invite_url: null }, 200)
+        : json(INFO, 200),
+    );
+    renderAt(`/staff-join#k=${KEY}`);
+    await screen.findByText("Company: Fixture Co");
+    fillAll();
+    const form = screen.getByRole("button", { name: tr("staffJoin.submit") }).closest("form") as HTMLFormElement;
+    fireEvent.submit(form);
+    fireEvent.submit(form);
+
+    await screen.findByText(tr("staffJoin.doneTitle"));
+    expect(fetchMock.mock.calls.filter((c) => c[1]?.method === "POST")).toHaveLength(1);
   });
 
   it("409 shows the returned message and 403 asks to contact the administrator", async () => {

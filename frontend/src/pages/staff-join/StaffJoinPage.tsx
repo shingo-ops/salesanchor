@@ -1,4 +1,4 @@
-import { useEffect, useState, FormEvent } from "react";
+import { useEffect, useRef, useState, FormEvent } from "react";
 import { useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { PageLayout } from "../../components/PageLayout";
@@ -44,6 +44,8 @@ export default function StaffJoinPage() {
   const [form, setForm] = useState<StaffIdentityState>(emptyStaffIdentity);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [loadTooMany, setLoadTooMany] = useState(false);
+  const submittingRef = useRef(false);
   const [result, setResult] = useState<Submitted | null>(null);
   const [copied, setCopied] = useState(false);
   const [copyFailed, setCopyFailed] = useState(false);
@@ -55,6 +57,7 @@ export default function StaffJoinPage() {
     }
     let cancelled = false;
     setPhase("loading");
+    setLoadTooMany(false);
     fetch(`${API}/${encodeURIComponent(key)}`)
       .then(async (res) => {
         if (!res.ok) throw new Error(String(res.status));
@@ -65,8 +68,10 @@ export default function StaffJoinPage() {
         setInfo(data);
         setPhase("ready");
       })
-      .catch(() => {
-        if (!cancelled) setPhase("invalid");
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setLoadTooMany(err instanceof Error && err.message === "429");
+        setPhase("invalid");
       });
     return () => {
       cancelled = true;
@@ -75,7 +80,8 @@ export default function StaffJoinPage() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (saving) return;
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     setError("");
     setSaving(true);
     try {
@@ -114,6 +120,7 @@ export default function StaffJoinPage() {
     } catch {
       setError(t("staffJoin.submitError"));
     } finally {
+      submittingRef.current = false;
       setSaving(false);
     }
   };
@@ -136,7 +143,7 @@ export default function StaffJoinPage() {
 
       {phase === "invalid" && (
         <Callout variant="warning" title={t("staffJoin.invalidTitle")}>
-          {t("staffJoin.invalidBody")}
+          {loadTooMany ? t("staffJoin.tooMany") : t("staffJoin.invalidBody")}
         </Callout>
       )}
 

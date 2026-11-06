@@ -207,7 +207,7 @@ export function StaffJoinInviteListModal({ open, onClose }: ListProps) {
             <Button variant="secondary" size="sm" disabled={busyId !== null} onClick={() => void reissue(i)}>
               {t("staff.join.reissue")}
             </Button>
-            <Button variant="danger" size="sm" onClick={() => setRevokeTarget(i)}>
+            <Button variant="danger" size="sm" disabled={busyId !== null} onClick={() => setRevokeTarget(i)}>
               {t("staff.join.revoke")}
             </Button>
           </span>
