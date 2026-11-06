@@ -51,3 +51,13 @@
 | 15 | 中 | 戻しの SQL を誰がどの道で流すかが無い。戻しの PR の GO 待ちが抜けている | 正しい指摘。reader 鍵では書けない。移行は `psql -U jarvis`（scripts/run_all_migrations.sh:24-25・:118）。戻しの PR は migrations/ を含むので ADR-136 の GO が要る | design §7・ADR-1067 戻し方に「PO の許可で無制限鍵・移行と同じ役で流す」と、「戻しの PR の GO を先に受ける → デプロイ 0 件 → 戻しの SQL → …」の順を書いた |
 | 16 | 軽 | 「毎回のデプロイで全部流れる（:14）」は根拠違い | 正しい指摘。:14 は set -e の注記。流れる条件は .github/workflows/deploy.yml:38-43 の paths と :765 の `steps.gate.outputs.migrations`、前回の成功デプロイと版が違えば :73-78 で全部 | design §7・ADR-1067 の根拠を差し替え、docs だけのデプロイでは流れないと書いた |
 | — | — | （Opus が足した）既にある試験への影響 | `git grep -l` で 8 表に触る試験は backend/tests/test_*.py に 21 本 | design §4 に「その便の表に触る試験をカードに列挙し、Backend Tests 全部緑を合格条件に。落ちたら試験の側で会社の文脈を張る（ポリシーを緩めない）」 |
+
+# 5 回目（クラウド Opus）
+
+4 回目の #14〜#16 の直しは正しいと確認された。④-1 のカードは書ける状態との判定（在庫の動きの表に書き込む本番コードは 0 件）。
+
+| # | 重さ | 指摘 | Opus の確かめ | 直した場所 |
+|---|---|---|---|---|
+| 17 | 軽 | 手で戻すコマンドに鍵待ちの上限が無い | 正しい指摘。run_all:57 の SQL_LOCK_TIMEOUT 既定 1s が :118 で PGOPTIONS に入る | design §7 のコマンドに lock_timeout=1s と流し直しを足した。ADR-1067 にも |
+| 18 | 軽 | 試験の数から conftest.py・rls_bootstrap.py が抜けている | 正しい指摘。backend/tests 全体で 23 本。conftest.py:1789-1791 が Discord の 3 表を文脈なしで後片付けに消す | design §4 に 23 本の内訳と、④-2・④-3 のカードに後片付けの確かめを足すと書いた |
+| 19 | 軽 | 手で戻す許可の根拠が違う | 正しい指摘。本文は AGENTS.md:23-26。求めるのは作業ごとの PO の GO | design §7・ADR-1067 の根拠を AGENTS.md:26・ADR-1003 に差し替えた |
