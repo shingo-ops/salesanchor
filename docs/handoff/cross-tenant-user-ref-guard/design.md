@@ -1,7 +1,7 @@
 # design: 他社の人の番号と、持ち主の証明のない Discord サーバー番号を保存させない
 
-- 状態: 設計案（Opus 作成）。審査前
-- 基準: origin/main c481f5e7d
+- 状態: 設計案 r2（Opus 作成）。Architect r1 は REVISE（13 節）。r1 の指摘を反映済み・r2 審査前
+- 基準: origin/main 133808dce（5fda4152b からの差分に、本設計が触る・引用するファイルの変更は無い: `git diff --stat 5fda4152b origin/main -- backend/app/routers backend/app/services frontend/src/pages/admin frontend/api-contract backend/tests/...` が空）
 - 根拠: 同じフォルダの recon.md（1・4・6 節）
 - 関係する ADR: ADR-1008（会社に属さない担当者を入れない）・ADR-072（commit 後の reset_tenant_context）・ADR-146（Discord は共通 bot 1台・guild_id から会社を引く）・ADR-027（画面の文字は t()）・ADR-144（画面部品は金型）
 
@@ -10,22 +10,26 @@
 - 「不透明さをなくして対策してほしい、50箇所はどうなっている？」
 - 「fableが最終評価、DBのSSOTとセキュリティリスクで問題がなければGO」
 
+- 「1、推測は禁止して事実確認を怠らずに確実性を重視して最も効果があり、現状把握の粒度が細く、精度が高いエビデンスを確立して安全に進めてくれ。（以下、常設の条件）」（r1 審査後、Opus が示した選択肢「1. 今回の便は6入口と手で打つ Discord の登録口を閉じる。連携ボタンの戻り口の証明は次の便（PO が Discord の秘密の鍵を設定する）」への回答）
+
 この設計の GO 条件は2つ目の原文のとおり。Fable の最終評価で「DB の正本（SSOT）」と「セキュリティの危険」に問題が無いこと。
 
 ## 1. 目的と、利用者に見える変化
 
-- 目的: ある会社の画面から、別の会社の人の番号を担当者などとして保存できないようにする。持ち主だと証明していない Discord サーバーを、自社のものとして登録できないようにする
+- 目的: ある会社の画面から、別の会社の人の番号を担当者などとして保存できないようにする。Discord サーバー番号を手で打って登録する口を閉じる（持ち主の証明の無い登録口を1つ減らす）
+- この便で閉じきれないもの: 連携ボタンの戻り口（backend/app/routers/discord_oauth.py:160-254）も持ち主の証明をしていない。戻り口は Discord から返る `code` を交換せず（:161-165 の引数に code が無い）、URL の `guild_id`（:162）をそのまま保存する（:219-230）。開始口は1回札を呼び手に返す（:150）。よって channels.manage 権限の人は、戻り口を直接開いて未登録の任意のサーバー番号を登録できる。直すには Discord の秘密の鍵（client secret）が要り、今どこにも配線されていない（:51 に `_DISCORD_CLIENT_ID` だけ）。PO の選択「1」により次の便（G3・8 節）
 - 利用者に見える変化:
   - 普段の操作（自社の人を選んで保存）は今までと同じ
   - 別の会社の人の番号を送ると、保存されずに「指定された担当者が見つかりません」が返る
-  - Discord の設定画面で、サーバー番号を手で打つ欄が無くなる。代わりに「チャネル画面で連携する」ボタンを置き、今ある連携ボタン（Discord で持ち主が許可する道）へ案内する。連携済みの会社の設定はそのまま残る
+  - Discord の設定画面で、サーバー番号を手で打つ欄が無くなる。代わりに「チャネル画面で連携する」ボタンを置き、今ある連携ボタンへ案内する。連携済みの会社の設定はそのまま残る
 
 ## 2. 成功条件（KGI）
 
 | # | 成功条件 | 今 | 目標 | 判定 |
 |---|---|---|---|---|
 | G1 | 会社の照合なしで人の番号を保存できる入口の数 | 6（recon.md 6-3） | 0 | 6入口すべてで「他社の人の番号 → 422・行が増えない／変わらない」の自動試験が緑 |
-| G2 | 持ち主の証明なしで Discord サーバー番号を登録できる入口の数 | 1（recon.md 4） | 0 | PUT /admin/discord-config が 405 を返し、表が変わらない自動試験が緑 |
+| G2 | Discord サーバー番号を手で打って登録できる入口の数 | 1（recon.md 4） | 0 | PUT /admin/discord-config が 405 を返し、表が変わらない自動試験が緑 |
+| G3（次の便・この便の対象外） | 持ち主の証明なしで連携の戻り口から登録できること | ある（discord_oauth.py:160-254） | ない | 次の便の設計で決める。この便では数えない |
 
 KPI（G1・G2 を支える観測値）:
 
@@ -33,7 +37,7 @@ KPI（G1・G2 を支える観測値）:
 |---|---|---|---|
 | K1 | 自社の人の番号での保存（6入口） | 今までどおり 2xx | 自動試験 |
 | K2 | 本番の4欄で自社の人でない番号の数 | 0 のまま（今 0: recon.md 6-4） | 読み取りの道で 6-4 と同じ SQL を反映後に流す |
-| K3 | 照合の書き方の置き場 | 新しい6入口は共通の1関数だけを呼ぶ | `git grep -n "FROM public.users WHERE id = :uid AND tenant_id" backend/app/routers` で新しい直書きが増えていない |
+| K3 | routers 内の照合の直書きの数 | 今 5 → 5 のまま（新しい6入口は共通の1関数だけを呼ぶ） | `git grep -n "FROM public.users WHERE id = :uid AND tenant_id" backend/app/routers` の件数。今の5件: bots.py:125・companies.py:362・roles.py:511・roles.py:545・teams.py:266（origin/main 133808dce）。notice_fallback は `_users_ref` を使うので数に入らない |
 
 ## 3. 対象と対象外
 
@@ -49,7 +53,8 @@ KPI（G1・G2 を支える観測値）:
 対象外（理由）:
 - 照合済みの6入口（companies・teams のメンバー追加・roles・notice_fallback・bots・order_commissions）の書き換え。動いていて、返す番号（422/400）や文面が試験で決まっている。共通の関数へ寄せるのは別便（8. 維持の仕組み）
 - badges.py・buddy.py。本番で登録されていない（recon.md 6-1）。ファイルの片付けは別便
-- 自社用サーバー（purpose=own）の登録。連携の道（discord_oauth.py）だけで、手で打つ道は無い
+- 連携の戻り口（discord_oauth.py:160-254）の持ち主の証明（code の交換）。customer・own の両方がこの戻り口を通る。秘密の鍵の設定が要るので次の便（G3）
+- 自社用サーバー（purpose=own）の手で打つ道は元から無い（own の登録は戻り口だけ）
 - Meta のページ番号の会社をまたぐ一意の決まり（recon.md 5。未確認のまま。別に調べる）
 - DB の外部キーや制約の追加（会社ごとの表から public.users へ「同じ会社」を強制する制約は、PostgreSQL の外部キーでは書けない。7. 代替案）
 
@@ -80,8 +85,9 @@ async def ensure_user_in_tenant(db: AsyncSession, user_id: int | None, tenant_id
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=USER_NOT_IN_TENANT)
 ```
 
-- 有効（is_active）かは見ない。前例 companies.py:357 と同じ。休止中の人が担当のまま残る行を、ほかの項目の保存で止めないため
-- 文面は前例 companies.py:357 の関数が返す文と同じ
+- 有効（is_active）かは見ない。前例 companies.py:357 `_ensure_sales_rep_in_tenant` と同じ。休止中の人が担当のまま残る行を、ほかの項目の保存で止めないため
+- 文面は前例（companies.py:368）と同じ
+- public.users の読み取りは RLS が `USING (true)`（migrations/20261016_180000_add_users_write_rls.sql:10）なので、会社の絞り込みは SQL の `tenant_id = :tid` が担う。この条件を外さない
 
 ### 4-2. 6つの入口
 
@@ -120,8 +126,15 @@ frontend/src/pages/admin/DiscordConfigPage.tsx の「① サーバー接続」�
 - 6入口の呼び出し元は画面だけ。返事が 422 になるのは他社の番号を送ったときだけで、画面は自社の人の一覧から選ぶ
 - 本番の4欄に他社の番号は 0件（recon.md 6-4）。既存の行の保存は止まらない
 - PUT /admin/discord-config を呼ぶのは DiscordConfigPage.tsx:206 だけ（`git grep -n "admin/discord-config" frontend/src` の全件: routeTitles.ts:41・InboxKartePanel.tsx:115 GET・discordSendError.ts:29 道の文字・DiscordOwnServerPanel.tsx・DiscordConfigPage.tsx:96/:206・ChannelsPage.tsx:117 GET）。PUT は :206 の1件
+- 照合を足すと赤になる既存の試験（r1 指摘 Q3。origin/main で確かめた）:
+  - backend/tests/test_inbox_new_assignment_badge.py:355（assigned_to 20）・:368（assigned_to 10）。この試験は自前の SQLite（:64-93 INBOX_BADGE_SQLITE_DDL）で users の表が無い。:476（None）は通る
+  - backend/tests/test_analytics.py:689・:762（assigned_to 321。users の行が無い）
+  - backend/tests/test_notification_event_routing.py:246・:266・:285（assigned_to 7・7・9。:91-101 で staff の行だけを入れ、users の行が無い。:266 は値が同じでも update_data に assigned_to があれば照合が走るので赤）
+  - 直し方の決まり: 照合を偽物に差し替えない（mock 禁止）。試験の会社（999。backend/tests/conftest.py:1955）の本物の users 行を足す。自前 SQLite の試験は users の表と行を足す（conftest.py:301-302 の `public.users`→`users` の書き換えと同じ扱いにする）
+  - 通るもの: test_shifts.py・test_audit_goals_carrier.py は user_id 999 を使い、conftest.py:1522-1523 で会社 999 の人として入っている。teams の leader_id を送る試験は無い
+- frontend/src/pages/admin/DiscordConfigPage.test.tsx:47-74 は「Server ID」の欄を前提にしているので書き直す。:139-160 のチケット設定の試験（discord-ticket-config への api.put）は残す
 - 試験 backend/tests/test_discord_d2.py:307-339 の PUT の試験4本（test_put_saves_guild_id・test_get_after_put_returns_saved・test_put_invalid_guild_id_rejected・test_put_too_short_guild_id_rejected）は消し、「PUT は 405・表が変わらない」の試験1本に置き換える。backend/tests/test_discord_own_server.py は GET と戻り先の文字だけで PUT を使わない（:206・:248・:263）。触らない
-- frontend/api-contract/openapi.json の DiscordConfigUpdate（:9456-）と PUT の道（:40337 付近）が消える
+- frontend/api-contract/openapi.json の DiscordConfigUpdate（:9490-）と PUT の道（operationId :40374）が消える
 - tests/prod-check/page-speed-targets.ts は画面の道を測るだけ。影響なし
 
 ## 6. リスクと対処
@@ -130,7 +143,8 @@ frontend/src/pages/admin/DiscordConfigPage.tsx の「① サーバー接続」�
 |---|---|
 | 照合の SELECT が1回増えて遅くなる | 主キー（id）で1行引くだけ。前例 companies と同じ |
 | 手で番号を打っていた会社が困る | 連携ボタンは今もチャネル画面にあり、連携済みの設定は残る。画面で案内する |
-| 連携の道（discord_oauth.py）まで壊す | 触らない。試験で連携の戻り口の既存試験が緑のままを確かめる |
+| 連携の道（discord_oauth.py）まで壊す | この便では触らない。連携の戻り口の既存試験が緑のままを確かめる |
+| 連携の戻り口に証明が無いまま残る（G3） | この便では閉じない。手で打つ口を閉じても、戻り口を直接開けば未登録のサーバー番号を登録できる。他社が登録済みの番号は一意の決まり（:241-248 guild_already_registered）で取れない。次の便を台帳に積み、PO の秘密の鍵の設定を待つ |
 | 照合の書き方が増えてばらばらになる（コードの正本が割れる） | 新しい入口は共通の関数だけを呼ぶ（K3）。既存6件の寄せ替えは別便で行う |
 
 DB の正本（SSOT）について: 人の正本は public.users のまま。新しい表・列・写しは作らない。照合は正本を読むだけ。
@@ -142,13 +156,14 @@ DB の正本（SSOT）について: 人の正本は public.users のまま。新
 | A. DB の制約で止める | 会社ごとの表から public.users へ「同じ会社」の外部キー | 外部キーは「同じ会社」の条件を書けない。複合の外部キーにするには users に (id, tenant_id) の一意と各表に tenant_id 列の揃えが要り、移行が大きい。本番 DB の変更になる |
 | B. 各入口に SQL を直書き | 前例と同じ書き方を6か所 | 同じ照合が6か所増え、直し漏れの元になる |
 | C. 共通の関数（採用） | 1関数を6入口から呼ぶ | 変更が小さく、DB を変えない。後で既存6件も寄せられる |
-| D. Discord の PUT に照合を足す | bot がそのサーバーに入っているかを確かめる | bot が入っていることは持ち主の証明にならない。連携（Discord で持ち主が許可）だけが証明になる |
+| D. Discord の PUT に照合を足す | bot がそのサーバーに入っているかを確かめる | bot が入っていることは持ち主の証明にならない。証明になるのは、Discord が返す code を秘密の鍵で交換し、その応答の guild を使う形。今の連携の戻り口はそれをしていない（G3・次の便） |
 
 ## 8. 維持の仕組み
 
 - 自動試験（10. の表）を残す。入口を変えたら試験が赤になる
 - 別便（台帳に積む）: 照合済みの既存6件を共通の関数へ寄せ、`FROM public.users WHERE id = :... AND tenant_id` の直書きを routers から無くす。その後、直書きを lint で止める
 - 別便: badges.py・buddy.py の片付け
+- 次の便（G3・台帳に積む）: 連携の戻り口で code を交換し、Discord の応答の guild だけを保存する。前提は PO が Discord 開発者画面の秘密の鍵（client secret）を本番の secrets に入れること（secrets の変更と外部画面の操作は PO の仕事）
 
 ## 9. 戻し方
 
@@ -168,6 +183,8 @@ DB の正本（SSOT）について: 人の正本は public.users のまま。新
 | 画面の文字が t() 経由、ja/en が同じキー | 既存の CI（i18n の確かめ） |
 | openapi.json が API の形と一致 | 既存の CI（api-contract-check） |
 | 本番の4欄で自社の人でない番号が 0 | 反映後に読み取りの道で recon.md 6-4 の SQL |
+| routers 内の照合の直書きが 5 のまま（K3） | `git grep -n "FROM public.users WHERE id = :uid AND tenant_id" backend/app/routers` が5件 |
+| 照合の試験は本物の users 行で通す（mock なし） | 差分に照合関数の差し替え（monkeypatch・mock）が無いことを審査で確かめる |
 
 ## 11. 外部事例
 
@@ -179,5 +196,28 @@ DB の正本（SSOT）について: 人の正本は public.users のまま。新
 - 実装はクラウドの Sonnet。実装カードは本設計の審査が通ってから書く
 
 ## 13. 審査（Architect）
+
+### r1（クラウド Architect・2026-11-06）: REVISE
+
+結果はクラウドの実行記録から読んだ（審査役のコミットは作業場所の見張りに止められ、push されていない）。
+
+| 観点 | 判定 |
+|---|---|
+| C1 行番号 | × |
+| C2 K3 の今の値と 10 節の行 | × |
+| C3 ほかの書き込み口（current_user.id か照合済み） | ○ |
+| C4 照合の正しさ／連携の戻り口の証明 | ×（照合は正しい。戻り口に証明が無い） |
+| C5 | ○ |
+| C6 5 節に壊れる試験が無い | × |
+
+| 指摘 | 対応 |
+|---|---|
+| Q1（必須）戻り口で code を交換する | PO の選択「1」で次の便（G3）へ。1・2・3・6・7・8 節を直した |
+| Q2（必須）行番号 | openapi :9490・:40374、recon の tcg_distribution_svc.py:1175・079 :5 に直した。基準を 133808dce に上げた |
+| Q3（必須）試験 | 5 節に赤になる試験と直し方の決まりを書いた |
+| Q4（必須）K3 の今の値 | 今 5・目標 5、10 節に行を足した |
+| Q5（推奨）試験の人の番号 | 確かめて問題なし（5 節「通るもの」） |
+
+### r2
 
 （審査後に記入）

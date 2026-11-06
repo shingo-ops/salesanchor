@@ -1,6 +1,6 @@
 # recon: 他社の人の番号が入る道と、会社番号を設定する全呼び出しの確かめ
 
-- 基準: origin/main c481f5e7d（git archive で取り出した写しを読んだ）
+- 基準: origin/main c481f5e7d（git archive で取り出した写しを読んだ）。r2 で origin/main 133808dce に照らして行番号を直した（下の印「r2 訂正」）
 - 調べた日: 2026-11-06
 - 前段: docs/handoff/master-shared-tenant-rule/recon.md「追記: 他社に届く道 1件の確かめ」「追記2: 全体の洗い出し」（PR #5155 のブランチ）
 
@@ -156,7 +156,7 @@
 - backend/app/tasks/dashboard.py の refresh_tenant_kpi（作業名 app.tasks.dashboard.refresh_tenant_kpi）も、app 内に呼ぶ所が無い。会社番号を引数で受けるので、将来呼ぶときは呼び出し元の確かめが要る
 - backend/app/routers/tcg_product_import.py:498 は会社番号を渡さずに戻す（＝空にする）。運営だけの窓口で、共用の商品を消した後の片付け
 - backend/app/routers/auth.py:124・:153 register_user は運営だけ。会社を選ぶのは運営
-- 運営向け通知の固定の会社4: backend/app/tasks/viewer_inventory_cache.py:63・backend/app/services/tcg_distribution_svc.py:1159（どちらも send_discord_notification を tenant_id=4 で呼ぶ）
+- 運営向け通知の固定の会社4: backend/app/tasks/viewer_inventory_cache.py:63・backend/app/services/tcg_distribution_svc.py:1175（r2 訂正: 旧 :1159）（どちらも send_discord_notification を tenant_id=4 で呼ぶ）
 
 ## 4. 対応表を書く窓口の確かめ（3-2 の前提）
 
@@ -164,7 +164,7 @@
 
 | 対応表 | 書く窓口 | 会社番号 | 外部の番号の出どころ | 判定 |
 |---|---|---|---|---|
-| public.tenant_discord_config（Discord のサーバー番号） | backend/app/routers/discord_oauth.py:215-235（連携の戻り口） | Redis の1回札（開始は Depends(get_current_tenant)） | Discord の連携の応答 | 持ち主の証明あり |
+| public.tenant_discord_config（Discord のサーバー番号） | backend/app/routers/discord_oauth.py:160-254（連携の戻り口） | Redis の1回札（開始は Depends(get_current_tenant)） | **URL の guild_id（:162）をそのまま保存（:219-230）。code を交換しない。開始口は札を呼び手に返す（:150）** | **持ち主の証明なし（r2 訂正: 旧「あり」は誤り）。次の便（design.md G3）** |
 | 同上 | backend/app/routers/discord_guild_config.py:108-145 PUT /admin/discord-config（tenant.profile.edit 権限） | Depends(get_current_tenant) | **依頼の本文の guild_id をそのまま保存**。持ち主の照合なし | **新しい候補（3件目）** |
 | tenant_meta_config（Meta のページ番号） | backend/app/routers/meta_inbox.py:190-250 | ログインの会社 | Meta の連携で受け取ったページの鍵 | 持ち主の証明あり |
 
@@ -188,7 +188,7 @@
 ### 6-1. 取り消し: バッジとバディは本番で動いていない
 
 - backend/app/routers/badges.py・backend/app/routers/buddy.py はファイルが残っているが、backend/app/main.py に登録が無い（`grep -n "buddy\|badges" backend/app/main.py` が0件。backend/app 内で2ファイルを読み込む所も0件）
-- migrations/079_remove_buddy_badges.sql:6 で権限 buddy・badges を消している
+- migrations/079_remove_buddy_badges.sql:5（r2 訂正: 旧 :6） で権限 buddy・badges を消している
 - 本番の確かめ（ログインなし）: `/api/v1/badges/leaderboard` → 404、`/api/v1/buddy/pairs` → 404。比べる相手 `/api/v1/shifts` → 401（登録されていてログインを求める）
 - よって 1. の2件目（バッジ）は他社に届かない。表から取り消す
 
