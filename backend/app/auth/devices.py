@@ -449,3 +449,95 @@ def parse_request_id(value: str) -> str | None:
         return str(uuid.UUID(value))
     except (ValueError, AttributeError, TypeError):
         return None
+
+
+class AdminDecision(NamedTuple):
+    """管理者の許可の結果。outcome は approved / own_request / not_found。"""
+
+    outcome: str
+    target_user_id: int | None = None
+    target_tenant_id: int | None = None
+
+
+async def mark_admin_requested(db: AsyncSession, request_id: str) -> bool:
+    """「会社の管理者に頼む」を押した時刻を入れる。待っていて未期限で、まだ頼んでいないときだけ True（ADR-1063）。"""
+    now = _now()
+    row = (
+        await db.execute(
+            text(
+                "UPDATE public.auth_login_requests SET admin_requested_at = :now "
+                "WHERE id = :id AND status = 'pending' AND expires_at > :now AND admin_requested_at IS NULL "
+                "RETURNING id"
+            ),
+            {"now": now, "id": request_id},
+        )
+    ).first()
+    return row is not None
+
+
+async def list_admin_requested(db: AsyncSession, *, tenant_id: int, exclude_user_id: int):
+    """同じ会社の人が「会社の管理者に頼む」を押した、待っている依頼（自分の依頼は除く）。
+
+    表 auth_login_requests には RLS が無いので、会社の絞り込み u.tenant_id は必ずここで付ける（ADR-1063）。
+    """
+    return (
+        await db.execute(
+            text(
+                "SELECT r.id, r.user_id, u.email, u.full_name, r.status, r.label, r.location, "
+                "r.created_at, r.expires_at, r.admin_requested_at "
+                "FROM public.auth_login_requests r JOIN public.users u ON u.id = r.user_id "
+                "WHERE u.tenant_id = :tid AND r.status = 'pending' AND r.expires_at > :now "
+                "AND r.admin_requested_at IS NOT NULL AND r.user_id <> :me "
+                "ORDER BY r.admin_requested_at DESC LIMIT 200"
+            ),
+            {"tid": tenant_id, "now": _now(), "me": exclude_user_id},
+        )
+    ).all()
+
+
+async def approve_request_as_admin(
+    db: AsyncSession,
+    *,
+    request_id: str,
+    approver_user_id: int,
+    note: str,
+    tenant_id: int | None,
+    require_admin_requested: bool,
+) -> AdminDecision:
+    """管理者が依頼を許可する（super admin と会社のオーナーで同じ部品・ADR-1063）。commit は呼び出し側。
+
+    tenant_id を渡すと、その会社の人の依頼だけを対象にする（会社のオーナー）。None は会社を絞らない（super admin）。
+    require_admin_requested が True なら「会社の管理者に頼む」を押した依頼だけを対象にする。
+    """
+    sql = (
+        "SELECT r.user_id, u.tenant_id FROM public.auth_login_requests r "
+        "JOIN public.users u ON u.id = r.user_id WHERE r.id = :id"
+    )
+    params: dict = {"id": request_id}
+    if tenant_id is not None:
+        sql += " AND u.tenant_id = :tid"
+        params["tid"] = tenant_id
+    if require_admin_requested:
+        sql += " AND r.admin_requested_at IS NOT NULL"
+    target = (await db.execute(text(sql), params)).first()
+    if target is None:
+        return AdminDecision("not_found")
+    if target.user_id == approver_user_id:
+        return AdminDecision("own_request")
+    update_sql = (
+        "UPDATE public.auth_login_requests SET status = 'approved', decided_at = :now, "
+        "decided_via = 'admin', decided_by_user_id = :admin, decided_note = :note "
+        "WHERE id = :id AND status = 'pending' AND expires_at > :now"
+    )
+    if require_admin_requested:
+        update_sql += " AND admin_requested_at IS NOT NULL"
+    update_sql += " RETURNING id"
+    decided = (
+        await db.execute(
+            text(update_sql),
+            {"now": _now(), "admin": approver_user_id, "note": note, "id": request_id},
+        )
+    ).first()
+    if decided is None:
+        return AdminDecision("not_found")
+    return AdminDecision("approved", target.user_id, target.tenant_id)

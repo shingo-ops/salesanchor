@@ -43,6 +43,8 @@ _PUBLIC_NO_AUTH_ROUTES: frozenset[tuple[str, str]] = frozenset(
         # login と同じく、ログイン前の口でトークンから得られる権限が無い（試験では Origin が無く 403 になる）
         ("POST", "/api/v1/auth/login-requests/poll"),
         ("POST", "/api/v1/auth/login-requests/recovery"),
+        # ADR-1063: 「会社の管理者に頼む」も Cookie sa_login_pending だけで動き、トークンを見ない
+        ("POST", "/api/v1/auth/login-requests/ask-admin"),
         ("POST", "/api/v1/auth/logout"),
         ("POST", "/api/v1/auth/passkey/login/options"),
         ("POST", "/api/v1/auth/passkey/login/verify"),

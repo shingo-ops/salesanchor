@@ -26,7 +26,7 @@ from app.auth.dependencies import (
     require_permission,
     reset_tenant_context,
 )
-from app.auth.system_roles import TENANT_HIDDEN_SYSTEM_KEYS, is_tenant_admin
+from app.auth.system_roles import TENANT_HIDDEN_SYSTEM_KEYS, is_tenant_admin, is_tenant_owner
 from app.cache import invalidate_tenant_permissions, invalidate_user_permissions
 from app.database import get_db
 from app.models import User
@@ -160,6 +160,8 @@ async def get_my_permissions(
         "user_id": current_user.id,
         # owner / admin のシステムロールを持つか（user_roles が正本。users.role は使わない）
         "is_tenant_admin": is_tenant_admin(system_keys),
+        # オーナー（system_key=owner）だけか。ログインの許可待ちの鈴を出すかに使う（ADR-1063）
+        "is_tenant_owner": is_tenant_owner(system_keys),
         "is_super_admin": bool(getattr(current_user, "is_super_admin", False)),
         # Sprint 9 / F9 v1.2: 中央 admin が自テナントの Phase 状態を取得するために必要
         "tenant_id": tenant_id,

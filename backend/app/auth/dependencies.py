@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from app.auth import self_tokens
-from app.auth.system_roles import compute_permission_keys, is_tenant_admin
+from app.auth.system_roles import compute_permission_keys, is_tenant_admin, is_tenant_owner
 from app.cache import (
     cache_jwt_result,
     cache_tenant,
@@ -564,6 +564,20 @@ async def require_tenant_admin(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="この操作は管理者のみ実行できます",
         )
+    return user
+
+
+async def require_tenant_owner(
+    tenant_id: int = Depends(get_current_tenant),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> User:
+    """会社のオーナー（system_key=owner）だけ通す。admin は通さない（ADR-1063）。
+
+    判定の正本は user_roles。users.role は見ない。
+    """
+    if not is_tenant_owner(await get_user_system_keys(db, user.id)):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="owner_only")
     return user
 
 
