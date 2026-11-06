@@ -503,11 +503,13 @@ CREATE TABLE IF NOT EXISTS {schema}.roles (
     is_system BOOLEAN DEFAULT FALSE,
     description VARCHAR(500),
     system_key TEXT,
+    discord_role_id TEXT,                   -- つながる Discord のロールの番号（discord-server-management 第2段）
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     UNIQUE(tenant_id, name)
 );
 CREATE UNIQUE INDEX IF NOT EXISTS uq_roles_system_key ON {schema}.roles (system_key) WHERE system_key IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_roles_discord_role_id ON {schema}.roles (discord_role_id) WHERE discord_role_id IS NOT NULL;
 
 -- ロール×権限のリンク
 CREATE TABLE IF NOT EXISTS {schema}.role_permissions (
@@ -1080,6 +1082,19 @@ CREATE TABLE IF NOT EXISTS {schema}.notice_fallback_recipients (
     user_id    INTEGER PRIMARY KEY,         -- 受け取る人の public.users.id
     updated_by INTEGER,                     -- 設定した人の public.users.id
     updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- discord-server-management 第2段: 消したアプリの役割の Discord のロールの番号（点検が登録した人から外す）
+CREATE TABLE IF NOT EXISTS {schema}.discord_retired_roles (
+    discord_role_id TEXT PRIMARY KEY,
+    retired_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- discord-server-management 第2段: 消した・番号を変えたスタッフの元の Discord の番号（kick=true は自社サーバーから外す）
+CREATE TABLE IF NOT EXISTS {schema}.discord_retired_members (
+    discord_user_id TEXT PRIMARY KEY,
+    kick            BOOLEAN NOT NULL,
+    retired_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 -- SA-02 / F3: チャネル統制マスタ（新規テナント初期シード対象）

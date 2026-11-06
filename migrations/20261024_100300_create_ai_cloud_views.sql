@@ -1,6 +1,6 @@
 -- ADR-1052 段1: 相談係用の伏せたビュー ai_cloud を作る（冪等・1 トランザクション）。
 -- 一覧には載せない。run_all_migrations.sh の EXIT trap が、毎回の実行の最後に流す（ai_ro と同じ形）。
--- 1) 分類表 ai_cloud_meta.column_class を空にして下の 1075 行を入れ直す（このファイルが正本。行の足し引きはこの SQL の変更で行う）。
+-- 1) 分類表 ai_cloud_meta.column_class を空にして下の 1078 行を入れ直す（このファイルが正本。行の足し引きはこの SQL の変更で行う）。
 -- 2) ai_cloud を作り直す。3) ai_cloud_meta.build_views() で全ビューを作り、build_log に 1 行書く。
 -- 4) ai_reader_cloud に ai_cloud の USAGE と SELECT だけを付ける。
 -- 分類表の元: docs/handoff/cloud-case-ai/stage1-column-class.tsv（表ごと・class ごとにまとめて unnest で入れる）。
@@ -391,6 +391,8 @@ FROM (VALUES
   ('tenant_*','customer_scores',ARRAY['override_note','signal_summary'],'mask',''),
   ('tenant_*','customer_scores',ARRAY['tier'],'allow','値の決まり customer_scores_tier_check で値が限られる'),
   ('tenant_*','discord_channel_webhooks',ARRAY['channel_id','webhook_id'],'mask',''),
+  ('tenant_*','discord_retired_members',ARRAY['discord_user_id'],'mask',''),
+  ('tenant_*','discord_retired_roles',ARRAY['discord_role_id'],'mask',''),
   ('tenant_*','erp_sync_logs',ARRAY['direction'],'mask','値の決まりが無く自由に入る列のため伏せる（初期は最小）'),
   ('tenant_*','erp_sync_logs',ARRAY['error_message'],'mask',''),
   ('tenant_*','erp_sync_logs',ARRAY['status','sync_type'],'mask','値の決まりが無く自由に入る列のため伏せる（初期は最小）'),
@@ -526,7 +528,7 @@ FROM (VALUES
   ('tenant_*','quotes',ARRAY['shipping_carrier'],'mask','値の決まりが無く自由に入る列のため伏せる（初期は最小）'),
   ('tenant_*','quotes',ARRAY['shipping_country'],'mask',''),
   ('tenant_*','quotes',ARRAY['status'],'mask','値の決まりが無く自由に入る列のため伏せる（初期は最小）'),
-  ('tenant_*','roles',ARRAY['color','description','name','system_key'],'mask',''),
+  ('tenant_*','roles',ARRAY['color','description','discord_role_id','name','system_key'],'mask',''),
   ('tenant_*','shifts',ARRAY['notes'],'mask',''),
   ('tenant_*','shifts',ARRAY['shift_type'],'mask','値の決まりが無く自由に入る列のため伏せる（初期は最小）'),
   ('tenant_*','shipping_rates',ARRAY['carrier','currency','zone'],'mask','値の決まりが無く自由に入る列のため伏せる（初期は最小）'),
