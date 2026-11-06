@@ -106,15 +106,15 @@ mode: handoff
 - id、plan_id、viewer_account_id（ON DELETE SET NULL）、tenant_id（将来の導入支援用。今回は常に NULL）、status（in_progress／active／cancelled）、started_at、activated_at、created_at、updated_at。
 - 同じ閲覧者・同じプランの in_progress と active は1件まで（部分一意索引）。
 - 「契約に進む」で in_progress を作る。
-- 段階の正本は viewer_accounts.status（試用・手続き中・本契約・停止）。sa_contracts は「何を売ったか」の記録で、段階の判定には使わない（第5回の審査）。
+- 閲覧者の状態の正本は viewer_accounts.status（試用・手続き中・本契約・停止）。sa_contracts は「何を売ったか」の記録で、状態の判定には使わない（第5回・第6回の審査）。
 - 手続き中の停止・停止解除・手作業の延長では sa_contracts の行を変えない。cancelled にする操作は今回作らない（列の値として予約するだけ）。
 
 **tax_rates**（税率）
 - id、rate_percent（NUMERIC(5,2)）、effective_from（DATE・一意）、created_by_user_id、created_at。
 - 最初の行（10.00・2019-10-01）は、便2 の本番反映の後に PO が税率の画面で足す（ADR-1007 決定1 の「アプリ画面」）。移行では入れない。
 - 請求書は発行日に有効な行を読み、率を写す。後から行を足しても、発行済みは変わらない。
-- 画面は最高管理者のみ。行の追加だけで、過去の行は直せない（打ち間違いは未来の適用日の行に限り消せる）。
-- 足す行の適用日は、今ある最も新しい行の適用日より後で、かつ今日（日本時間）以降でなければ 422。表が空のときだけ過去の日付を入れられる（最初の 2019-10-01 のため）。過去の日付を後から足すと、発行済みの請求書の率と表の上の率が食い違うため止める（第5回の審査）。
+- 画面は最高管理者のみ。行の追加だけで、過去の行は直せない（打ち間違いは明日以降の適用日の行に限り消せる）。
+- 足す行の適用日は、今ある最も新しい行の適用日より後で、かつ明日（日本時間）以降でなければ 422。表が空のときだけ過去の日付を入れられる（最初の 2019-10-01 のため）。過去や今日の日付を後から足すと、発行済みの請求書の率と表の上の率が食い違うため止める（第5回・第6回の審査）。
 
 **viewer_invoices**（請求書）
 - id、invoice_number（一意）、contract_id（SET NULL）、viewer_account_id（SET NULL）、status（issued／paid／voided）、replaces_invoice_id（再発行元）。
@@ -264,9 +264,9 @@ RLS（ADR-1018 の段階①の型。会社ごとの3表は今の会社ごとの�
 | POST | /super-admin/viewer-invoices/{id}/resave-drive | もう一度保存 |
 | POST | /super-admin/viewer-invoices/{id}/confirm-payment | 入金確認（paid_at を受ける） |
 | GET・POST | /super-admin/tax-rates | 税率の一覧と追加 |
-| DELETE | /super-admin/tax-rates/{id} | 未来の適用日の行だけ消せる。それ以外は 409 |
+| DELETE | /super-admin/tax-rates/{id} | 明日（日本時間）以降の適用日の行だけ消せる。それ以外は 409 |
 
-- 運営の閲覧者の一覧（GET /super-admin/viewers。super_admin_viewers.py:196）に、行ごとの contract_status・invoice_id・invoice_number・invoice_status・due_date・mail_status（sent／failed／none）・drive_status（saved／failed／none）を足す。行のボタン（作成・入金確認・もう一度送る・もう一度保存）はこの値で出し分ける。
+- 運営の閲覧者の一覧（GET /super-admin/viewers。super_admin_viewers.py:196）に、行ごとの contract_status・invoice_id・invoice_number・invoice_status・due_date・mail_status（sent／failed／none）・drive_status（saved／failed／none）を足す。行のボタン（作成・入金確認・もう一度送る・もう一度保存）は viewer_accounts.status・form_sent・invoice_status・mail_status・drive_status で出し分ける。contract_status は sa_contracts.status を表示に使うだけで、ボタンの判定には使わない（§3-1。停止中の手続き中の人にボタンを出さないため）。
 
 送る項目と返す項目（型は Pydantic。名前は DB の列名と同じにする）:
 
@@ -280,7 +280,7 @@ RLS（ADR-1018 の段階①の型。会社ごとの3表は今の会社ごとの�
 | POST /super-admin/viewers/{viewer_id}/invoices | plan_id・payment_method_id・discounts（description・amount_jpy の配列）・due_date・save_default | 請求書の行（id・invoice_number・金額の6項目・status・mail_status・drive_status） |
 | POST …/confirm-payment | paid_at（日付） | 請求書・契約・閲覧者の新しい状態 |
 
-- 誤りの形は今の口と同じ（detail に理由）。発行と再発行の前の確かめで、発行元の行・振込先・文面・発行日に有効な税率の行のどれかが足りないときは 409 と足りない項目の一覧を返す。一覧は項目の名前（キー）の配列で返し、画面が t() で文に直す（ADR-027。detail に日本語の文を入れない）。もう一度送るで文面が無いときは今の口と同じ 503。
+- 誤りの形は今の口と同じ（detail に理由）。発行と再発行の前の確かめで、発行元の行・振込先・文面・発行日に有効な税率の行のどれかが足りないときは 409 と足りない項目の一覧を返す。一覧は項目の名前（キー）の配列で返し、画面が t() で文に直す（ADR-027。detail に日本語の文を入れない）。キーは issuer_profile（発行元の行）・company_name・address・registration_number（登録が有のとき）・payment_method・mail_template・tax_rate の7つ。もう一度送るで文面が無いときは今の口と同じ 503。
 
 ### 3-4c. 他のテーマとの境界
 
@@ -421,7 +421,7 @@ commit の後、裏で順に行う:
 - ~~登録の有無の欄が指すもの~~ → インボイスの登録（T の番号を持つ登録）とする。PO が 2026-11-06 に「インボイス登録の有無と番号を会社に1つだけ持つ」と書いたため。画面の欄の名前は「インボイス登録」とする案（§7-2 で確かめる）。
 - ~~テスト保存の結果~~ → 今あるフォルダへ保存でき、指定したフォルダにファイルがあった（2026-11-06 PO「1」。選択肢の「1. 保存でき、指定したフォルダにファイルがあった」）。§3-8 の分岐は「今あるフォルダへ保存できた → 上の形のまま」に決まる。Picker は足さない。設計担当は画面を見ていないので、PO の報告を根拠とする。
 
-- 発行元（HIGH LIFE JPN）が消費税の課税事業者か。課税事業者でないなら、請求書に消費税の行を出すか（§3-5 は今、常に10%を足す形）。
+- 発行元（HIGH LIFE JPN）が消費税の課税事業者か。課税事業者でないなら、請求書に消費税の行を出すか（§3-5 は今、常に10%を足す形）。答えが「課税事業者でない」なら、§3-5・A7・tax_rates・§4 の（３）・KGI を設計し直して審査し直す。
 
 ### 7-2. 承認のときに一緒に確かめること
 
@@ -457,7 +457,8 @@ commit の後、裏で順に行う:
 | A12 | 入金確認で本契約になり、期限切れの日時でも見られる | backend pytest＋本番確認 |
 | A13 | 期限切れ 3年以内の行は残り、3年を過ぎた行は消える。本契約は消えない | backend pytest（掃除の処理） |
 | A14 | 名簿を消しても請求書の行が残り、viewer_account_id が NULL になる | backend pytest（実 PostgreSQL・salesanchor_app・運営の印なし。FORCE の RLS の下で SET NULL が効くことを確かめる） |
-| A15 | 税率の行を足すと、適用日以降の請求書だけ変わる。発行済みは変わらない | backend pytest＋ Evaluator |
+| A15 | 税率の行を足すと、適用日以降の請求書だけ変わる。発行済みは変わらない。表が空でないとき、今日以前の日付と最新行以前の日付は 422。今日以前の適用日の行の削除は 409 | backend pytest＋ Evaluator |
+| A39 | 発行と再発行の前の確かめで、足りない項目ごとに 409 とキーの配列（§3-4b の7つ）が返る。画面は t() で文にして出し、detail に日本語の文が無い | backend pytest＋ frontend テスト＋ Evaluator |
 | A16 | チェックして発行すると次回の既定が変わり、チェックなしは変わらない。発行済みの期限は変わらない | backend pytest＋ Evaluator |
 | A17 | プランと機能の行を足すと、作成画面の選択肢に出る | backend pytest＋ Evaluator |
 | A18 | 新しい個人情報の列と請求書情報の3表の値が、相談係の道（ai_reader_cloud）で伏せて見える（masked）。Mac の道（ai_ro）は今と同じで変えない | backend pytest（実 PostgreSQL で ai_cloud の見せ方を通して読み、隠す列が masked）＋本番で ai_reader_cloud の道から1件読む。CI に専用の手順名は無い（.github/workflows の grep 2026-11-06） |

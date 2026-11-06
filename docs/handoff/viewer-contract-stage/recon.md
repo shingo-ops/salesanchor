@@ -68,7 +68,7 @@
 - 会社情報の中身は ai_ro で隠れていて読めない。未確認。
 - 請求書に載る項目は 会社名・住所・電話・メール・サイトの5つ（backend/app/services/invoice_renderer.py:509〜:513）。印影の URL は渡していない。
 - 会社情報を読む他の処理: PO の PDF（backend/app/services/po_renderer.py:9）、送り状の確認（backend/app/services/label_validation.py:85）。
-- 会社情報の表は会社ごとのスキーマに置く（migrations/069_create_tenant_profile.sql:70〜:71）。新しい会社の既定行は tenant.py が入れる（同 :91）。
+- 会社情報の表は会社ごとのスキーマに置く（migrations/069_create_tenant_profile.sql:70〜:71）。新しい会社の既定行は backend/app/services/tenant.py:1163〜:1164 が入れる（069 の注記は同ファイル :88。第6回の審査で訂正）。
 - 会社別のデータの置き場の決まり: ADR-142 の Context と Decision 1〜3。作成処理は backend/app/services/tenant.py の _TENANT_TABLES_SQL（:195）・_RLS_ENABLE_SQL（:1221）・_RLS_POLICY_SQL（:1274）。手本は own_inventory（:1198・:1266・:1338）。
 - 文脈: set_tenant_context は backend/app/auth/dependencies.py:277、表名は同 :409 の tenant_table_ref。最高管理者の口に呼び出しは無い。裏の処理の呼び出しは backend/app/services/google_webhook.py:255、backend/app/discord_gateway/dm_writer.py:94。
 - 文脈は接続を返す前に消える。backend/app/database.py:60〜:61 の get_db の finally が clear_tenant_context（backend/app/auth/dependencies.py:361、ADR-131）を呼ぶ。裏の処理は get_db を通らないので自分で呼ぶ（同 :361 の説明）（2026-11-06 訂正。前の版は RESET ALL・DISCARD・pool_reset の grep だけで「無い」と書いていた）。
