@@ -1083,7 +1083,8 @@ APPROVE。根拠：呼び出し元・時間切れ・所要秒は origin/main と
 ### 変える前と後
 記録の 1 行の形（同じ記録ファイルにだけ書く）：
 - 1〜6 列目は今と同じ意味（時刻 UTC・ブランチ・HEAD・4 列目・5 列目 秒・6 列目 呼び元）。
-- check-before-submit.sh の行は、終了コードにかかわらず 8 列にそろえる。7 列目は流し方で、`full`（--only なしで検査を流した）・`only`（--only）・`list`（--list-fixtures）・`help`（--help）・`-`（流し方が決まる前に終わった）。8 列目は終了コード 2 の理由の名、2 以外は `-`。
+- check-before-submit.sh の行は、終了コードにかかわらず 8 列にそろえる。7 列目は流し方で、`full`（--only なしで検査を流した。--full 引数の有無は問わない）・`only`（--only）・`list`（--list-fixtures）・`help`（--help）・`-`（流し方が決まる前に終わった）。8 列目は終了コード 2 の理由の名、2 以外は `-`。7・8 列目の変数は trap を置く前に `-` で初期化する（未設定のまま trap で読むと行が書かれない。審査役が bash 3.2.57 で実測）。
+- check-before-submit.sh の行の 3 列目は、流し始めに決めた HEAD_SHA（:100。印 :396 と同じ値）が決まった後はそれを書き、決まる前に終わったときは今の HEAD を書く（今は終わった時点の HEAD :59 なので、流している間に commit すると確かめていない SHA が 0・full で残る）。
 - pre-push の行は 8 列。1〜3 列目は check-before-submit.sh と同じ取り方（`date -u +%Y-%m-%dT%H:%M:%SZ`・`git branch --show-current`・`git rev-parse HEAD`）。5 列目は `-`（pre-push は sh で動き秒を測らない。所要秒は試験 K3 で確かめる）。6 列目 `pre-push`。7 列目は push の行の手元の SHA（削除・行なしは `-`）。8 列目は push の行の送り先の ref（行なしは `-`）。
 - 置き場所は `$(git rev-parse --path-format=absolute --git-common-dir)/check-before-submit.log`（check-before-submit.sh:58 と同じ）。印（.ok）の置き場 `--absolute-git-dir` とは別なので取り違えない。
 - 書き込みは失敗しても判定を変えない（`2>/dev/null || true`。validate-pr-body.sh:332・339 と同じ書き方）。
@@ -1111,20 +1112,21 @@ APPROVE。根拠：呼び出し元・時間切れ・所要秒は origin/main と
 | 基準 | 検証方法 |
 |---|---|
 | K1 中身が HEAD と違う push・削除の push・行なしの push で、それぞれ `skip-otherhead`（7 列目 push した SHA・8 列目 ref）・`skip-delete`・`skip-empty` の行が増える | 既存の test_prepush_skips_when_pushed_content_differs_from_head（試験 :331-340。今は :340 で `log_rows() == []`）を「3 行・4 列目が順に skip-otherhead / skip-delete / skip-empty・6 列目 pre-push・8 列」に書き換える |
-| K2 2 つの ref を 1 回で push し片方が HEAD と違うとき `skip-head` と `skip-otherhead` の 2 行、`refs/tags/` への push で `skip-tag` | 試験 2 本を足す |
+| K2 2 つの ref を 1 回で push し片方が HEAD と違うとき `skip-head` と `skip-otherhead` の 2 行、`refs/tags/` への push で `skip-tag` | 試験 2 本を足す。タグの試験は、タグの SHA を HEAD 以外にするか HEAD と違う行と一緒に渡す（タグの SHA が HEAD だけだと飛ばされず入口が流れる。pre-push:48・52） |
 | K3 印が HEAD と同じとき `stamp` の 1 行が増え、pre-push が 5 秒以内で終わる（nit (3)） | 既存の test_prepush_skips_check_when_stamp_matches_head（:311-318。今は :318 で `log_rows() == []`）を「1 行・4 列目 stamp・所要秒 < 5（試験の側で測る）」に書き換える |
 | K4 追跡外のファイルだけで 2 のとき 8 列目 `dirty-untracked`、追跡中の変更で `dirty-tracked` | 既存 test_prepush_does_not_stop_on_uncommitted_change に 8 列目の確かめを足し、追跡中の変更の版を 1 本足す |
 | K5 不明な引数で終わっても 1 行残り、4 列目 2・7 列目 `-`・8 列目 `bad-arg`。--help は 4 列目 0・7 列目 `help` | 試験 2 本（nit (1)） |
 | K6 入口が 3 で終わる写しで、pre-push が「想定外の終わり方」を表示して rc 0 | 試験 1 本。入口を `exit 3` だけの写しに差し替えるには put() の src= で渡すか直接上書きし commit する（put() に文字を渡すと追記になる。試験 :95-102）（nit (2)） |
-| K7 判定は変わらない：違反の写しで rc 1、追跡外のファイルで rc 0。--only・--list-fixtures の行の 7 列目が `only`・`list` | 既存の試験（K1・K3 で書き換える 2 本を除く）がそのまま pass。:270-276 の --only の試験に 7 列目の確かめを足す |
+| K7 判定は変わらない：違反の写しで rc 1、追跡外のファイルで rc 0。--only・--list-fixtures の行の 7 列目が `only`・`list` | 既存の試験（K1・K3 で書き換える 2 本を除く）がそのまま pass。:270-276 の --only の試験と、--list-fixtures を流す既存の試験（:153-170 付近）に 7 列目の確かめを足す。既存の確かめは消さない |
 | K8 CI の existing rule tests と必須 16 件が pass | PR の CI 結果 |
-| K9（反映後 7 日）手元の記録で「確認を通らずに push が通った中身」を数える | 対象は 6 列目 `pre-push` の 8 列の行だけ（手で流した manual の行は数えない）。抜けの候補 = 4 列目 `skip-otherhead`・`skip-head` の 7 列目の SHA と、4 列目 2 の行の 3 列目の SHA。それぞれ「4 列目 0・7 列目 full」の行が同じ SHA で記録にあれば確認済み、無ければ抜け。`skip-tag`・`skip-delete`・`skip-empty` は数えない。抜けを PR 番号付きの表にし、2 の理由ごとの回数と並べて PO に第2便（止める範囲）を諮る |
+| K9（反映後 7 日）手元の記録で「確認を通らずに push が通った中身」を数える | 抜けの候補は 6 列目 `pre-push` の 8 列の行だけから取る：4 列目 `skip-otherhead`・`skip-head` の行の 7 列目の SHA と、4 列目が 0・1 以外の数（2・3 以上）の行の 3 列目の SHA。確認済みの突き合わせ先は 6 列目を問わない（手で流した manual も含む）8 列の行で、4 列目 0・7 列目 full・3 列目が同じ SHA・1 列目の時刻が候補の行の時刻以前のもの。あれば確認済み、無ければ抜け。`skip-tag`・`skip-delete`・`skip-empty` は数えない。抜けを PR 番号付きの表にし、2 の理由ごとの回数と並べて PO に第2便（止める範囲）を諮る |
 
 ### リスクと対処
 - 記録の書き込みに失敗して push が止まる → 書き込みは失敗しても判定を変えない形にする。試験 K7
 - 行が増えて記録ファイルが大きくなる → 1 行約 150 バイト・6 日半で pre-push 790 回。skip と stamp を足しても同じ桁。片付けは要らない
 - 列の数の違う行が混ざる → 列の数で 3 種に分けて数える（上の決まり）
 - クラウドの push はクラウドの箱の記録に残り、手元では数えられない → K9 の対象は手元の push だけと明記する。クラウドの分は R4c の範囲
+- `--no-verify` で外した push と、入口が強制終了（SIGKILL など）で trap が動かなかった push は行が残らず、K9 では数えられない → --no-verify は決まりで禁止（design.md:837・scripts/agent-hooks/cloud/rules.md:15）。K9 の報告に「数えられない場面」として書く
 - 戻し方：merge commit を revert。記録の行は git の管理場所の中のファイルなので残っても害はない
 
 ### 影響範囲（呼び出し元の全走査）
@@ -1141,6 +1143,7 @@ APPROVE。根拠：呼び出し元・時間切れ・所要秒は origin/main と
 
 ### 審査
 - 1 回目（reviewer・opus、2026-11-06）：REVISE。現在地の行番号と理由の名の対応は origin/main と一致。採否に関わる指摘 3 件（①試験 :340 も壊れる ②0 の行は --only・--list-fixtures・--help でも残り、全部を流した証拠にならず K9 が抜けを少なく数える ③複数の ref・タグの push で 7 列目と 4 列目が決まらない）と任意 7 件（:471 は列の数を確かめている・trap は関数と開始時刻ごと動かす・cd-fail はほとんど残らない・`|| true` の出どころ・pre-push の行の 1〜3・5 列目と置き場所・列の数の決まり・K6 の写しの作り方）。→ 7・8 列目を分けて流し方を入れ、K9 の突き合わせ先を「0・full」に限り、pre-push は push の行ごとに 1 行・種類の順を決め、K1 を既存試験の書き換えにした。任意 7 件はすべてこの版に入れた。生出力 /tmp/CC報告ファイル/rev-r4b2/
+- 2 回目（reviewer・opus、2026-11-06）：REVISE。1 回目の 10 件はすべて反映済み・行番号はすべて origin/main 8ab21523 と一致・判定を変えない設計で誤止めの要素なし。採否に関わる指摘 2 件（どちらも K9：①確認済みの突き合わせ先から手で流した行を外すかが読めない ②終了コード 3 以上で通った push が候補に入っていない）と任意 7 件（--list-fixtures の試験の場所・full と --full 引数の字の重なり・タグの試験の SHA・7・8 列目の変数の初期化・3 列目を HEAD_SHA にそろえる・確認済みは push より前か・--no-verify はリスクに書く）。→ K9 を候補と突き合わせ先に書き分け、候補を 0・1 以外の数に広げ、突き合わせは時刻が候補以前の行に限った。任意 7 件もすべて入れた。生出力 /tmp/CC報告ファイル/rev-r4b2-round2/
 
 ### Opus 自己審査（同じ AI の審査。独立の審査は reviewer が行う）
-APPROVE（2 回目の審査待ち）。根拠：止める・通すの判定を変えないので誤止めは増えない（K7）。壊れる既存の試験 2 本（:318・:340）は書き換えを受入条件に入れた。未確認：終了コード 2 の 5 回の理由（作業場所が消えており確かめられない）→ この便の K4・K9 で今後の分を数える。CI の bash 5 で trap を前へ動かした形が同じ動きか（K5・K8 の CI 結果で確かめる）。
+APPROVE（3 回目の審査待ち）。根拠：止める・通すの判定を変えないので誤止めは増えない（K7）。壊れる既存の試験 2 本（:318・:340）は書き換えを受入条件に入れた。未確認：終了コード 2 の 5 回の理由（作業場所が消えており確かめられない）→ この便の K4・K9 で今後の分を数える。CI の bash 5 で trap を前へ動かした形が同じ動きか（K5・K8 の CI 結果で確かめる）。
