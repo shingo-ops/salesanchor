@@ -1241,3 +1241,5 @@ run_sql migrations/20261107_100000_add_inventory_movements_rls.sql
 run_sql migrations/20261107_110000_add_discord_server_records_rls.sql
 # staff-self-registration 1回目: スタッフ招待の表 staff_join_invites を作る（作るだけ・冪等・RLS 付き）
 run_sql migrations/20261107_120000_create_staff_join_invites.sql
+# staff-self-registration 2回目: users に仮パスワードの印 password_must_change を足す（足すだけ・冪等）
+run_sql migrations/20261107_130000_add_users_password_must_change.sql

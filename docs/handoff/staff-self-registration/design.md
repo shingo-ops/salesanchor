@@ -199,7 +199,7 @@
 ### 4-1. 列（migration・1本）
 
 - `ALTER TABLE public.users ADD COLUMN IF NOT EXISTS password_must_change BOOLEAN NOT NULL DEFAULT false;`
-- ORM の User にも同じ列を足す。
+- ORM の User には足さない。読み書きは text() の SQL で行う（前例: `backend/app/auth/dependencies.py:68` の password_changed_at）。models.py に Column を足すと migration-guard のチェック1が deploy.yml の変更を求めるため。
 
 ### 4-2. 変えるまで止める
 
