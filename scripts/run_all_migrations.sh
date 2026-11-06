@@ -1237,3 +1237,5 @@ run_sql migrations/20261106_190000_create_public_channel_masters.sql
 run_sql migrations/20261106_210000_add_notification_channels_blueprint_key.sql
 # ADR-1067 段階④ 便④-1: inventory_movements に会社ごとの RLS（型A）。冪等・1 取引
 run_sql migrations/20261107_100000_add_inventory_movements_rls.sql
+# ADR-1067 段階④ 便④-2: discord_server_snapshots・discord_server_apply_runs に会社ごとの RLS（型A）。冪等・1 取引
+run_sql migrations/20261107_110000_add_discord_server_records_rls.sql
