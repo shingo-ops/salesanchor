@@ -203,3 +203,23 @@ PO の言葉: 「システム管理者は不要なので非表示テナント001
 - `ACTIVE_CHANNEL_PLATFORMS`: 定義 `backend/app/services/channel_masters.py:19` の 1 か所だけ。backend と frontend/src で使う所は 0 件（grep）。
 - public.products を読む・書く運営の窓口 5 本（super_admin_aliases・super_admin_product_formats・super_admin_product_lines・super_admin_quantity_units・super_admin_weight_classes）: products は読むだけ。例: `backend/app/routers/super_admin_product_lines.py:150` `SELECT 1 FROM public.products WHERE product_line_id = :id LIMIT 1`。書くのは各自の表（product_formats・product_lines・quantity_units・weight_classes）。
 - 連絡ツールの `connection_type`: 値は auto か manual だけ（`backend/app/services/tenant.py:1091-1092` の CHECK、`migrations/20260611_100000_create_channel_masters.sql:45-46`）。意味は auto＝連携済みで自動取り込みのみ、manual＝手で入力する（同 migration :11）。使う所: 手で会話を記録するとき auto のチャネルは断る（`backend/app/routers/conv_logs.py:247`）、手で記録する欄は manual だけ出す（`frontend/src/pages/inbox/ManualRecordSection.tsx:50`）、管理画面は auto を削除不可で表示（`frontend/src/pages/admin/ChannelMastersPage.tsx:98-100`）、言語判定の除外（`backend/app/services/lang_judge.py:8`）。初期値: messenger・instagram・discord が auto、phone・in_person・whatsapp が manual（`backend/app/services/channel_masters.py:10-17`）。
+
+## 追記: 役割と権限を 1 つの表にまとめる場合の現状（2026-11-06）
+
+PO（2026-11-06）「ロールと権限だがマスタ類と同じ構造を想定していて1つのDBでテナントIDで分類する仕組みを想定しているが認識はあっているか？値を1つのDBに集約して引用するイメージ」を受けて調べた。根拠は origin/main（fetch 後）と本番の読み取り専用の道。
+
+| 表 | 今の置き場所 | 本番の件数 | 根拠 |
+|---|---|---|---|
+| 権限の一覧 permissions | public（1 か所・全社共通） | 135 | AUDIT ts=2026-11-06T03:13:35Z sha=0b87ffb7419d |
+| 人 users | public（1 か所・tenant_id で分ける・RLS と FORCE あり） | 15（001:3・003:1・004:4・005:2・006:5） | `backend/app/models.py:23`、AUDIT ts=2026-11-06T03:10:32Z sha=5d6c9c3b94f3、03:13:41Z sha=812c8ec9658f |
+| 役割 roles | 各社の区画（tenant_001〜006） | 001:8・003:7・004:8・005:7・006:7 | `backend/app/services/tenant.py:497`、AUDIT 03:13:35Z sha=0b87ffb7419d |
+| 役割の権限 role_permissions | 各社の区画 | 001:392・003:365・004:385・005:384・006:367 | `backend/app/services/tenant.py:513`、同上 |
+| 人と役割 user_roles | 各社の区画 | 001:3・003:1・004:4・005:2・006:4 | `backend/app/services/tenant.py:521`、同上 |
+
+- 区画の 3 表は RLS あり・FORCE なし（AUDIT 03:10:32Z sha=5d6c9c3b94f3）。public.permissions・public.users は RLS と FORCE あり。
+- 役割の番号は各社とも 1 から始まり重なる（001:1〜2611、003:1〜2540、004:1〜2589、005:1〜2518、006:1〜2552。各社の行の tenant_id はすべて自社。AUDIT 03:13:37Z sha=824ccbcf7d57）。1 つの表にまとめるには番号の付け直しが要る。
+- 役割の番号を持つ表は 3 つ: role_permissions（`backend/app/services/tenant.py:515`）・user_roles（`:524`）・staff.role_id（`:613`）。付け直すときは 3 表とも直す。
+- user_roles.user_id は public.users を指す（外部キーは無い。`backend/app/services/tenant.py:523`）。人の表がすでに 1 か所なので、1 つの表にまとめても人との結び付きは張れる。
+- 役割の表を書いたり読んだりするファイル（origin/main の git grep -c -P。表名を単語で照合）: アプリ本体 11（`backend/app/auth/dependencies.py`・`backend/app/auth/system_roles.py`・`backend/app/routers/auth.py`・`backend/app/routers/roles.py`・`backend/app/routers/staff.py`・`backend/app/routers/tenant_admin_inventory_visibility.py`・`backend/app/schemas/role.py`・`backend/app/services/discord_blueprint.py`・`backend/app/services/role_assignment.py`・`backend/app/services/tenant.py`・`backend/app/services/user_notices.py`）、画面 2、試験 25、migrations 13、scripts 14。
+- `backend/app/services/discord_blueprint.py` の 5 件が Discord の役割か、アプリの役割の表かはまだ確かめていない（Discord は別セッションの担当）。
+- 営業・CS の権限は会社ごとに違う（本節の前の役割の権限の指紋、AUDIT ts=2026-11-05T10:41:36Z sha=f883418274fb）。
