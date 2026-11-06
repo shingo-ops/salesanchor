@@ -70,4 +70,7 @@ git diff --stat origin/main...HEAD
 - 試験が赤 → 直さずに止めて報告。
 
 ## 7. 審査の記録
-- （ここに Opus が審査の結果を書く）
+- 実装（クラウド Sonnet・2026-11-07 08:42 JST・bd8b7ccd4）: 差分は `schedule.css` の 9 行追加・1 行削除で、§2 の文と一字一句同じ（Opus が `git diff origin/main...origin/release/schedule-fill-height-v2` で確認）。
+- 検証（クラウド Sonnet 実行）: vitest `Tests 129 passed (129)`・`Test Files 4 passed (6)`。残り 2 ファイルはブラウザ型の試験で、クラウドに chromium が無く起動できなかった（エラーは `Executable doesn't exist` の 1 種だけ）。この 2 ファイルは CI で流れるので、Opus の判断で先へ進めた。check:all は終了コード 0（0 errors・59 warnings。いずれも既存の警告）。build は終了コード 0。push 前の入口の検査で落ちた検査は 0 件。
+- §6 の分かれ道: 1 回目の実行は vitest の終了コード 1 で止まった（上の chromium の件）。カードの規則どおりで、変更は無かった。
+- 設計の審査: 変更は 1 ファイルの CSS 1 規則で、本番の画面で同じ規則を差し込んで測っている（「実物で確かめた事実」の最後の項）。そのためクラウドの別審査は回さず、マージ前の Reviewer（Opus）の審査で兼ねる。
