@@ -991,7 +991,7 @@ K31・K33・K34・K35 は第6版のまま。K35 は○（§14-10-10）。
 
 | 項目 | 変更前（v0.52.0） | 変更後（第12版） |
 |---|---|---|
-| 使ってよい版の正本 | config `caseSayClaudeVersions`（config.ts:88・:411-416、config.json:9） | dataDir の記録 `case-say-claude-versions.json`（D5。書き手はサーバーだけ） |
+| 使ってよい版の正本 | config `caseSayClaudeVersions`（config.ts:88・:411-416、config.json:9） | dataDir の記録「case-say-claude-versions.json」（D5。書き手はサーバーだけ） |
 | 版の○×を決める人 | PO が打つ・Opus が読む・PR で足す（README:313-318） | サーバーが probe の件で機械条件（§14-14-4）により決める（D3'・D4） |
 | 判定 4b の比べ方 | 実体の道の最後の名前が一覧にあるか（hub.ts:538-542） | 件を開いたときの実体の指紋（sha256・size）が記録の使える項目と一致するか（D2）。名前は表示と監査の欄 |
 | 版ずれの知らせ | 無し（caseSayRefused の監査行だけ） | 画面の案内・macOS 通知・監査 `caseClaudeVersionNotice`（D1） |
@@ -1003,11 +1003,11 @@ K31・K33・K34・K35 は第6版のまま。K35 は○（§14-10-10）。
 #### 14-14-3 D1〜D5（読む物・書く物・file:line）
 
 **D5 dataDir の記録（正本）**
-- 書く物: `<dataDir>/case-say-claude-versions.json`。形は `{ "version": 1, "entries": [ { "sha256", "size", "claudeVersion", "real", "verifiedAt", "probeCaseId", "checks": { "E1".."E4", "P0".."P5" }, "usable", "lastProbeAt", "lastResult", "failCount", "mac" } ] }`。項目の鍵は `sha256`（版の名前は表示用。同じ名前で中身が違えば別の項目）。書き方は [server/json-store.ts:30-36](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/json-store.ts#L30-L36) `writeJsonAtomic`（tmp＋rename・0600）。読み方は同 :20-27 `readJsonFile`。壊れていれば上書きせず「使える版 0」として扱い D1 で知らせる（open-sessions と同じ考え。[server/session-store.ts:60-63](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/session-store.ts#L60-L63)）。
+- 書く物: 「<dataDir>/case-say-claude-versions.json」。形は `{ "version": 1, "entries": [ { "sha256", "size", "claudeVersion", "real", "verifiedAt", "probeCaseId", "checks": { "E1".."E4", "P0".."P5" }, "usable", "lastProbeAt", "lastResult", "failCount", "mac" } ] }`。項目の鍵は `sha256`（版の名前は表示用。同じ名前で中身が違えば別の項目）。書き方は [server/json-store.ts:30-36](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/json-store.ts#L30-L36) `writeJsonAtomic`（tmp＋rename・0600）。読み方は同 :20-27 `readJsonFile`。壊れていれば上書きせず「使える版 0」として扱い D1 で知らせる（open-sessions と同じ考え。[server/session-store.ts:60-63](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/session-store.ts#L60-L63)）。
 - 書く条件: probe が○のときだけ `usable: true` の項目を書く。人が手で足す命令は作らない（`scripts/ac-case-macos.mjs accept` のような形も作らない。理由: 人の手なしが目的。×のときの手は §14-14-5）。項目は消さず、起動時の再確認で指紋が合わなければ `usable: false` にする。
-- 読む側: 新しい部品 `server/case-say-versions.ts`（`CaseSayVersionStore`）が起動時に読み、メモリに写しを持つ。判定 4b（`caseSayTarget`。同期関数 hub.ts:521）はメモリで決める。
+- 読む側: 新しい部品「server/case-say-versions.ts」（`CaseSayVersionStore`）が起動時に読み、メモリに写しを持つ。判定 4b（`caseSayTarget`。同期関数 hub.ts:521）はメモリで決める。
 - 部屋からの守り: 件の部屋の書き込み拒否 [server/case-sandbox.ts:70-87](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/case-sandbox.ts#L70-L87) `CASE_DENY_WRITE` には D/cases・case-gh・hooks・activity は入っているが dataDir 直下のファイルは入っていない → 記録と鍵（§14-14-6 の 1）を `CASE_DENY_WRITE` と `CASE_DENY_READ`（同 :89-100）に足す。room.sb は件を開くたびに書き直す（sessions.ts:513-532）ので、入れた後に開いた件から効く。
-- 既存の似た形: macOS の版の記録 `case-room-macos.json`（[server/case-proxy.ts:98-109](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/case-proxy.ts#L98-L109)・[scripts/ac-case-macos.mjs:34-36](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/scripts/ac-case-macos.mjs#L34-L36)）。違いは、あちらは人が命令で書き、こちらはサーバーだけが書く。
+- 既存の似た形: macOS の版の記録「case-room-macos.json」（[server/case-proxy.ts:98-109](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/case-proxy.ts#L98-L109)・[scripts/ac-case-macos.mjs:34-36](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/scripts/ac-case-macos.mjs#L34-L36)）。違いは、あちらは人が命令で書き、こちらはサーバーだけが書く。
 
 **D2 実体の写し（指紋）で固定**
 - 指紋を取る時点（審査1回目の推奨1を採用）: 件の claude を起動する前に取る。`createCase`（sessions.ts:394-414。async）の中で、写しを作った後・`spawnSession` を呼ぶ前に `resolveClaudeReal` で実体を解き、sha256・size を流し読みで計算し、その `real` と指紋を `spawnSession` → `prepareCaseRoom` へ渡す（`prepareCaseRoom` は渡された `real` を使い、解き直さない）。起動した後に計算すると、開いてから計算するまでの間に中身を変えられるため。計算に 60 秒かかれば件は開くが 4b は `claude_version_unverified`・D1 n1 に理由を付ける。残る隙（計算してから起動台本が exec するまでの差し替え）は E2（固いリンクでない）と起動時の再確認（§14-14-6 の 3）で減らすだけで、無くはならない（PO「1」の水準で受け入れる）。
@@ -1185,7 +1185,7 @@ K31・K33・K34・K35 は第6版のまま。K35 は○（§14-10-10）。
 | 必須3 R が残る | §14-14-3 D4 の片付け (2)・起動時の片付け (3)・K52 |
 | 必須4 ADR を後で直す順 | §14-14-1「ADR-1033 What 6 の例外」・§14-14-9 便の順（CS3c が先） |
 | 必須5 `paneSamples` の置き場・MAC・上限、K55 の番号 | §14-14-6 の 8・9（監査の行・MAC の外・各 4KiB・最大 4 枚）・K55（①〜④）・K59・U6 |
-| C1 引用 3 点 | `docs/CHANGELOG.md:6`・`tests/unit/case-say.test.ts`・sessions.ts:411-413 |
+| C1 引用 3 点 | [docs/CHANGELOG.md:6](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/docs/CHANGELOG.md#L6)・[tests/unit/case-say.test.ts](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/tests/unit/case-say.test.ts)・sessions.ts:411-413 |
 | 推奨1 名前の紛れ | §14-14-3 D3' (b) の末尾（コードの名前は `versionProbe`） |
 | 推奨2 数を監査に残す | §14-14-6 の 9 `counts` |
 | 推奨3 K56 の結果で指紋を変えるとき | 取り入れる。K56 の結果で size・mtime・ino に代えると決まったら、その時点で本書を直して審査に出す（実装役は決めない） |
