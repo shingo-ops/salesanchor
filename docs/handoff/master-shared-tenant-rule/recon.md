@@ -242,3 +242,13 @@ PO（2026-11-06）「ロールと権限だがマスタ類と同じ構造を想�
 - 共通＋自社方式の候補は、業務の記録に付く選択肢（本 recon 前段の一覧: close_reasons 5社同一15行・channel_masters 5社同一6行・tenant_sales_form_options 等）に限られる。
 - 外部とつなぐ設定（API 系）は public に tenant_id 付きで置かれている。守りの強制あり: tenant_carrier_credentials・tenant_google_calendar_config・tenant_google_drive_config・tenant_paypal_config・tenant_features。守りなし: tenant_discord_config・tenant_discord_ticket_config・tenant_llm_budgets・tenant_settings・payment_fee_settings・google_webhook_subscriptions。tenant_meta_config は会社ごとの区画（RLS あり・FORCE なし）。
 - 未確認: 守りなしの6表を読む処理がすべて tenant_id で絞っているか。会社ごとの区画で表の数が 73〜103 と違う理由。
+
+## 追記: 1つの表にまとめた場合の漏えい範囲の現状（2026-11-06）
+
+本番の読み取りの道で確かめた。AUDIT sha=25fc382077cb・4d0e4f15a2d6・1c68003069d5。
+
+- 表の持ち主は全 471 表（public 127・会社ごとの区画 344）とも jarvis。アプリの接続の役 salesanchor_app は 471 表すべてを読める（has_table_privilege SELECT が 471/471）。
+- 会社ごとの区画の守り（例 tenant_003.leads・invoices）は `tenant_id = current_setting('app.tenant_id')`。public の表の守り（suppliers・tenant_carrier_credentials・users の更新削除）も同じ `app.tenant_id` で判定する。区画に置いても public に置いても、他社の分を止める壁は同じ仕組み。
+- salesanchor_app は持ち主ではないため、FORCE が無くても守りは効く（PostgreSQL の RLS は持ち主以外に常に効く）。
+- public.users の読み取りの守りは `true`（全社の行が読める）。
+- 未確認: すべての処理が app.tenant_id をログインの札から付けているか。外から SQL を差し込める場所が無いか。
