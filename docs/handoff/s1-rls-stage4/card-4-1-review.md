@@ -49,3 +49,43 @@
 - 指摘 1 の直し案コマンドの実動作。
 - CI の Backend Tests が §5 の新規試験を skip せず走らせるか（test.yml の環境変数は確認済みだが、実走は見ていない）。
 - 本番の `docker exec ... astro-webapp-backend-1` が blue-green の後も同名か（scripts/blue-green-cutover.sh:27 の記述のみ確認）。カードは先に名前を読む手順を入れている。
+
+## 2回目
+
+**判定: APPROVE**（1回目の 5 件はすべて §11 の表どおりに処理済み。直しで新しく出た食い違いは 0 件。軽い注記 1 件のみで、直さなくても進めてよい）
+
+- 審査対象: 枝 release/s1-rls-stage4-design の HEAD 60cf823d0（`git rev-parse origin/release/s1-rls-stage4-design` で確認）。差分は `git diff b2ae0dd1d 60cf823d0`（card-4-1.md と design.md の 2 ファイルのみ）。
+- 照合先: origin/main 5574bf327（`git rev-parse origin/main` で確認。`git show origin/main:<path>` で照合）。
+- 審査役は本番・製品コードに触っていない。外部サイトも見ていない。実 PostgreSQL は使っていない。
+
+### 指摘 1（退けた件）— 退けた理由は成り立つ。重さ: 解消（問題なし）
+
+- 【事実】実測: `echo 'print(repr(__file__))' | python3.12 -` の出力は `'<stdin>'`（Python 3.12.3、このクラウドの実行環境）。`python3`（3.11.18）でも同じ `'<stdin>'`。1回目の「`__file__` は未定義で NameError」は誤りだった。
+- 【事実】引数つきでも確認: `printf 'import sys\nprint(repr(__file__), sys.argv)\n' | python3.12 - --tenant 1 --since 2000-01-01` は `'<stdin>' ['-', '--tenant', '1', '--since', '2000-01-01']`。argparse が読む `sys.argv[1:]` はカードの流し方で渡る。
+- 【事実】scripts/export_inventory_for_sheet.py:43-45（origin/main）は `Path(__file__).resolve().parent.parent` を sys.path に足すだけ。`'<stdin>'` では実行ディレクトリ基準の `/` になり、足されても無害。import は :47-48 の sqlalchemy のみ（app 側の import なし）。:205 `if __name__ == "__main__":` は標準入力でも真。入れ物は backend/Dockerfile:1 `python:3.12-slim`、本実測と同じ系統。
+- 【事実】card-4-1.md §7 K5-2（`:124-128` 付近）に、実測の記述と「1回目で終了コード 0 でない・`OK:` 行が出ないときは合流せず止まる」が足されている。1回目の私の指摘の趣旨（動かない手順で進めない）は、この保険で満たされる。
+- 【未確認】本番の入れ物（astro-webapp-backend-1）の中での実走。カードも「反映の前の 1 回目が手順の試しを兼ねる」と明記している。
+
+### 指摘 2 — 反映済み。重さ: 解消
+- 【事実】card-4-1.md:22 の「触らない」が「`backend/app/ops/tenant_rls_allowlist.py`。origin/main 5574bf327 には無い＝便5 の PR #5194 が未合流。本便では作らない・触らない」に直っている。`git show origin/main:backend/app/ops/tenant_rls_allowlist.py` は「path does not exist」で、記述と一致。
+- 【未確認】#5194 の中身。1回目と同じ。カードの記述は「無い」とだけ言っていて、中身には踏み込んでいない。
+
+### 指摘 3 — 反映済み。重さ: 解消
+- 【事実】design.md:84 が `set_config('app.tenant_id', <会社>, true)` に直り、理由の参照先（card-4-1.md §4）が書かれた。card-4-1.md:70 の実装コードも `true` で、2 文書は一致。
+
+### 指摘 4 — 反映済み。重さ: 解消
+- 【事実】card-4-1.md:84 が「tenants・users の土台は作らない（`_ensure_public_users` も呼ばない・tenants に INSERT しない）」に直っている。根拠の「外部キーは products・suppliers だけ」は origin/main の migrations/062_create_inventory_movements_and_budget.sql:91（products）・:97（suppliers）と一致（:50 は別の表の列。tenants・users への REFERENCES は inventory_movements にない）。前例 backend/tests/test_suppliers_rls.py:86 は `await bootstrap_public_products(admin_engine)` を直接呼んでおり一致。rls_bootstrap.py:327 に関数が実在。
+- 【事実】この直しで §5 の ①〜⑨ や手順 3（products へ name・stock_quantity のみ INSERT、前例 test_inventory_sprint1_migrations.py:313-316 と同形）に矛盾は出ていない。
+
+### 指摘 5 — 反映済み。重さ: 解消
+- 【事実】card-4-1.md:13 が「:1237 `run_sql migrations/20261106_210000_add_notification_channels_blueprint_key.sql` の次の行。区切りの見出しは無い」に直っている。origin/main の scripts/run_all_migrations.sh は 1237 行で、末尾がその `run_sql`。`git ls-tree --name-only origin/main migrations/` の末尾は 20261106_210000 で、20261107_100000 より後の名前は無い。976・977 は `git grep -n -E "\b(976|977)\b" origin/main -- backend/tests` で 0 件。
+
+### 直しで新しく出た食い違い（0 件）と注記（1 件・直さなくてよい）
+- 【事実】新しい食い違いは見つからなかった。§11 の表の「どこを直したか」の参照先は、実際の変更箇所と一致する（§1・§5・§7・design.md §3）。
+- 注記: §7 K5-2 の「手元の Python 3.12.8」は、私の実測（3.12.3 と 3.11.18）と版が違うが、結果（`'<stdin>'`）は同じ。Opus が 3.12.8 で流した事実の裏取りはしていない。【未確認】。結論には影響しないので直し不要。
+
+### 【未確認】（1回目から変わらない分）
+- 実 PostgreSQL での §5 `_fresh()` の通り方。CI の Backend Tests が §5 の新規試験を skip せず走らせるか。本番の blue-green 後の入れ物名。いずれもカードに「通らなければ止まって Opus に戻す」「先に名前を読む」の手当てがある。
+
+### 結び
+- 【事実】`migrations/`・`scripts/` を含む実装の PR は、カード §10 のとおり危険 PR（ADR-135・ADR-136）。マージの前に別途の審査・CI 全緑・GO が要る。本審査は設計カードの審査で、実装の審査ではない。
