@@ -18085,6 +18085,20 @@
         "title": "LoginRequestApprove",
         "type": "object"
       },
+      "LoginRequestAskAdminResponse": {
+        "properties": {
+          "status": {
+            "description": "requested / already_requested / no_owner",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "LoginRequestAskAdminResponse",
+        "type": "object"
+      },
       "LoginRequestDecision": {
         "properties": {
           "reason": {
@@ -36777,6 +36791,132 @@
         "title": "TenantDeleteRequest",
         "type": "object"
       },
+      "TenantLoginRequestItem": {
+        "properties": {
+          "admin_requested_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "会社の管理者に頼んだ日時",
+            "title": "Admin Requested At"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "依頼した日時",
+            "title": "Created At"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "依頼した人のメールアドレス",
+            "title": "Email"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "期限",
+            "title": "Expires At"
+          },
+          "full_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "依頼した人の名前",
+            "title": "Full Name"
+          },
+          "id": {
+            "description": "依頼の ID（UUID）",
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "待つ機械の種類",
+            "title": "Label"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "場所の目安（IP Geolocation by DB-IP）",
+            "title": "Location"
+          },
+          "status": {
+            "description": "依頼の状態",
+            "title": "Status",
+            "type": "string"
+          },
+          "user_id": {
+            "description": "依頼した人",
+            "title": "User Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "user_id",
+          "status"
+        ],
+        "title": "TenantLoginRequestItem",
+        "type": "object"
+      },
+      "TenantLoginRequestList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/TenantLoginRequestItem"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "TenantLoginRequestList",
+        "type": "object"
+      },
       "TenantPolicyRead": {
         "properties": {
           "agg_price_threshold_jpy": {
@@ -41954,6 +42094,28 @@
           }
         },
         "summary": "Self Login",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/login-requests/ask-admin": {
+      "post": {
+        "description": "待つ機械で「会社の管理者に頼む」を押す（Cookie sa_login_pending・ADR-1063）。\n\n依頼に頼んだ時刻を入れ、同じ会社のオーナー（本人を除く）に合図とメールを送る。1つの依頼で1回だけ。\nオーナーがいないときも時刻は入る（super admin の許可は今までどおり使える）。",
+        "operationId": "login_request_ask_admin_api_v1_auth_login_requests_ask_admin_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginRequestAskAdminResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Login Request Ask Admin",
         "tags": [
           "auth"
         ]
@@ -73694,6 +73856,91 @@
         "summary": "Update Tenant Commission Settings",
         "tags": [
           "tenant_commission_settings"
+        ]
+      }
+    },
+    "/api/v1/tenant/login-requests": {
+      "get": {
+        "description": "同じ会社の人が「会社の管理者に頼む」を押した、待っている依頼。自分の依頼は出さない。",
+        "operationId": "list_tenant_login_requests_api_v1_tenant_login_requests_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantLoginRequestList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Tenant Login Requests",
+        "tags": [
+          "tenant"
+        ]
+      }
+    },
+    "/api/v1/tenant/login-requests/{request_id}/approve": {
+      "post": {
+        "description": "オーナーが許可する。別の会社の依頼・頼んでいない依頼は 404、自分の依頼は 403。待つ機械は poll で入る。",
+        "operationId": "approve_tenant_login_request_api_v1_tenant_login_requests__request_id__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminApproveBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminApproveResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Approve Tenant Login Request",
+        "tags": [
+          "tenant"
         ]
       }
     },

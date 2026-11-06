@@ -19,6 +19,11 @@ def is_tenant_admin(system_keys: set[str]) -> bool:
     return bool(system_keys & {ROLE_KEY_OWNER, ROLE_KEY_ADMIN})
 
 
+def is_tenant_owner(system_keys: set[str]) -> bool:
+    """オーナー（system_key=owner）だけか。admin は入れない（ADR-1063）。"""
+    return ROLE_KEY_OWNER in system_keys
+
+
 def compute_permission_keys(
     stored_keys: set[str],
     system_keys: set[str],

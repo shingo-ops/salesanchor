@@ -220,3 +220,67 @@ def send_new_device_mail(
         logger.info("[auth_mail] new device mail sent (to=%s)", _mask_addr(to_addr))
     except Exception as e:  # noqa: BLE001
         logger.error("[auth_mail] new device mail failed (to=%s): %s", _mask_addr(to_addr), type(e).__name__)
+
+
+STAFF_LOGIN_HELP_SUBJECT = "【Sales Anchor】社員からログインの許可の依頼 / Login approval request from a staff member"
+
+_STAFF_LOGIN_HELP_BODY = """Sales Anchor で、社員が新しい機械からのログインの許可を頼んでいます。
+
+社員: {staff}
+日時（日本時間）: {when}
+機械: {device}
+場所の目安: {location}
+
+本人に電話か対面で確かめてから、アプリの「管理センター」→「ログインの許可待ち」で許可してください。
+心当たりのない依頼は許可しないでください。
+このメールにリンクはありません。
+
+---------------------------------------------
+A staff member is asking for approval to log in to Sales Anchor from a new device.
+
+Staff: {staff}
+Time (JST): {when}
+Device: {device}
+Approximate location: {location}
+
+Confirm with the staff member by phone or in person, then approve it in the app under "Admin Center" -> "Pending login approvals".
+Do not approve a request you do not recognize.
+This email contains no links.
+---------------------------------------------
+
+{geo_credit}
+Sales Anchor
+"""
+
+
+def send_staff_login_help_mail(
+    to_addr: str, *, staff: str, when: str, device: str, location: str | None
+) -> None:
+    """社員が「会社の管理者に頼む」を押したことをオーナーに知らせる（ADR-1063）。BackgroundTasks から呼ぶ同期関数。
+
+    リンクを入れない。パスワード・番号・Cookie の値は入れない。失敗しても外に出さずログに残す。
+    """
+    settings = smtp_settings()
+    if settings is None:
+        logger.info("[auth_mail] SMTP not configured, skipping staff login help mail")
+        return
+    try:
+        body = _STAFF_LOGIN_HELP_BODY.format(
+            staff=staff,
+            when=when,
+            device=device,
+            location=location or "不明 / unknown",
+            geo_credit=GEO_CREDIT if location else "",
+        )
+        msg = MIMEMultipart("alternative")
+        msg["From"] = settings.mail_from
+        msg["To"] = to_addr
+        msg["Subject"] = STAFF_LOGIN_HELP_SUBJECT
+        msg.attach(MIMEText(body, "plain", "utf-8"))
+        with smtplib.SMTP(settings.host, settings.port, timeout=15) as smtp:
+            smtp.starttls()
+            smtp.login(settings.user, settings.password)
+            smtp.send_message(msg)
+        logger.info("[auth_mail] staff login help mail sent (to=%s)", _mask_addr(to_addr))
+    except Exception as e:  # noqa: BLE001
+        logger.error("[auth_mail] staff login help mail failed (to=%s): %s", _mask_addr(to_addr), type(e).__name__)
