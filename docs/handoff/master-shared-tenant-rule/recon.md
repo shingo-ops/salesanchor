@@ -223,3 +223,22 @@ PO（2026-11-06）「ロールと権限だがマスタ類と同じ構造を想�
 - 役割の表を書いたり読んだりするファイル（origin/main の git grep -c -P。表名を単語で照合）: アプリ本体 11（`backend/app/auth/dependencies.py`・`backend/app/auth/system_roles.py`・`backend/app/routers/auth.py`・`backend/app/routers/roles.py`・`backend/app/routers/staff.py`・`backend/app/routers/tenant_admin_inventory_visibility.py`・`backend/app/schemas/role.py`・`backend/app/services/discord_blueprint.py`・`backend/app/services/role_assignment.py`・`backend/app/services/tenant.py`・`backend/app/services/user_notices.py`）、画面 2、試験 25、migrations 13、scripts 14。
 - `backend/app/services/discord_blueprint.py` の 5 件（:118・:127・:141・:145・:291）はすべて bp.roles（Discord の設計図の役割）で、アプリの役割の表は読まない（origin/main の git grep）。アプリ本体で役割の表を使うのは、これを除く 10 ファイル。
 - 営業・CS の権限は会社ごとに違う（本節の前の役割の権限の指紋、AUDIT ts=2026-11-05T10:41:36Z sha=f883418274fb）。
+
+## 追記: マスタ以外の表をこの方式にするかの現状（2026-11-06）
+
+本番の読み取りの道（pg_class）で数えた。AUDIT sha=3c1f47cb04e1・29954ad37f88・478f40b4f86c。
+
+| 区画 | 表の数 | 守り(RLS)あり | 強制(FORCE)あり |
+|---|---|---|---|
+| public | 127 | 25 | 25 |
+| tenant_001 | 103 | 58 | 1 |
+| tenant_003 | 73 | 58 | 1 |
+| tenant_004 | 95 | 58 | 1 |
+| tenant_005 | 73 | 58 | 1 |
+| tenant_006 | 73 | 58 | 1 |
+
+- 業務の記録（受信箱 meta_messages・conversation_logs、leads、companies・contacts、quotes・quote_items、invoices・invoice_items、orders・order_items・order_financials 等）は会社ごとの区画にある。
+- ADR-106 決定1（docs/adr/ADR-106-sa-multitenant-policy.md:17）は「顧客・商品・注文…は会社ごとに完全分離。SSOT の1か所の単位がテナント単位」と決めている。業務の記録に「全社共通の値」は無い。
+- 共通＋自社方式の候補は、業務の記録に付く選択肢（本 recon 前段の一覧: close_reasons 5社同一15行・channel_masters 5社同一6行・tenant_sales_form_options 等）に限られる。
+- 外部とつなぐ設定（API 系）は public に tenant_id 付きで置かれている。守りの強制あり: tenant_carrier_credentials・tenant_google_calendar_config・tenant_google_drive_config・tenant_paypal_config・tenant_features。守りなし: tenant_discord_config・tenant_discord_ticket_config・tenant_llm_budgets・tenant_settings・payment_fee_settings・google_webhook_subscriptions。tenant_meta_config は会社ごとの区画（RLS あり・FORCE なし）。
+- 未確認: 守りなしの6表を読む処理がすべて tenant_id で絞っているか。会社ごとの区画で表の数が 73〜103 と違う理由。
