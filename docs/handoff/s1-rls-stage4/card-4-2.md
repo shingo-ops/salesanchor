@@ -1,6 +1,6 @@
 # 実装カード 便④-2 — public.discord_server_snapshots・public.discord_server_apply_runs に RLS（型A）
 
-- 状態: 草案（クラウド設計審査の前）。PO の実装承認は design.md 冒頭（2026-11-06「1」: KGI-4〜6 と 5 便の順番）。完走の指示は PO 2026-11-07 チャット「PRマージ、デプロイまで完走させてくれ」。
+- 状態: 草案（クラウド設計審査 1 回目 REVISE〔T1 会社番号 978 が使用中・T2 代わりの確かめの前提〕を直した版。2 回目の審査の前）。PO の実装承認は design.md 冒頭（2026-11-06「1」: KGI-4〜6 と 5 便の順番）。完走の指示は PO 2026-11-07 チャット「PRマージ、デプロイまで完走させてくれ」。
 - 根拠の版: origin/main a03e222c2（2026-11-07 02:30 JST に fetch。便④-1 #5221 の合流後）。行番号はすべてこの版。
 - 設計: [design.md](design.md) §2-1（型A）・§3（④-2 行と「前提の表」）・§4（試験）・§5（K4-1・K4-2・K5-1・K5-2）・§7（戻し方）。現状: [recon.md](recon.md) R§4-2。手本: 便④-1 [card-4-1.md](card-4-1.md) と、合流済みの backend/tests/test_inventory_movements_rls.py。
 - 実装ブランチ: `release/s1-rls-stage4-bin2`（origin/main から作る）。1 便 1 PR。PR は Draft で起票する。
@@ -94,24 +94,24 @@ run_sql migrations/20261107_110000_add_discord_server_records_rls.sql
 
 手本: 合流済みの backend/tests/test_inventory_movements_rls.py（便④-1。:20-33 の skipif・:59-97 の `_fresh()`・:99 `_admin_exec`・:107 `_ctx_conn`・:120 `_sqlstate`）。同じ形で書く。
 
-- 会社番号: 978（自社）・979（他社）。backend/tests で未使用（`git grep -n -E "\b(978|979)\b" origin/main -- backend/tests` が 0 件。a03e222c2 で確かめた。実装の前にもう一度流し、1 件でもあれば止まって Opus に戻す）。
+- 会社番号: 972（自社）・973（他社）。backend/tests で未使用（`git grep -n -w 972 origin/main -- backend/tests` と `git grep -n -w 973 origin/main -- backend/tests` がどちらも 0 件。a03e222c2 で確かめた（初版の 978 は test_calendar_sync_tenant_reset_pg.py:38 で使用中だったため替えた。macOS の git grep -E は \b を解さないので -w を使う）。実装の前にもう一度流し、1 件でもあれば止まって Opus に戻す）。
 - `_fresh()` の中身（使い捨て DB `dsr_rls_<hex12>`、app_engine は `pool_size=1, max_overflow=0`）:
-  1. admin の接続で `_ensure_public_users(conn)`（rls_bootstrap.py:213。public.tenants と public.users を作り、tenant 999 を入れる）。続けて admin で `INSERT INTO public.tenants (id, tenant_code, tenant_name, company_name, is_active) VALUES (978, 'tenant_978', 'T978', 'T978', TRUE), (979, 'tenant_979', 'T979', 'T979', TRUE)`。2 表は tenants を外部キーで指す（20261106_120000:17・:37）。
+  1. admin の接続で `_ensure_public_users(conn)`（rls_bootstrap.py:213。public.tenants と public.users を作り、tenant 999 を入れる）。続けて admin で `INSERT INTO public.tenants (id, tenant_code, tenant_name, company_name, is_active) VALUES (972, 'tenant_972', 'T972', 'T972', TRUE), (973, 'tenant_973', 'T973', 'T973', TRUE)`。2 表は tenants を外部キーで指す（20261106_120000:17・:37）。
   2. `_apply_migration(admin_engine, "20261106_120000_create_discord_server_snapshot_tables.sql")`（2 表を本物の移行で作る。表の定義を試験に書き写さない）。
   3. admin で `_GRANT_DDL`（便④-1 の試験 :43-46 と同じ 2 行）。
-  4. admin で各社 1 行ずつ両方の表に INSERT（978 と 979）。snapshots: `purpose='own'`・`body='{"version":1,"roles":[],"channels":[]}'::jsonb`・`taken_by=1`。apply_runs: `purpose='own'`・`plan_digest='d'`・`applied_by=1`・`result='{"rows":[]}'::jsonb`。
+  4. admin で各社 1 行ずつ両方の表に INSERT（972 と 973）。snapshots: `purpose='own'`・`body='{"version":1,"roles":[],"channels":[]}'::jsonb`・`taken_by=1`。apply_runs: `purpose='own'`・`plan_digest='d'`・`applied_by=1`・`result='{"rows":[]}'::jsonb`。
   5. `_apply_migration(admin_engine, "20261107_110000_add_discord_server_records_rls.sql")`。
   - 1〜2 のどれかが使い捨て DB で通らないときは、通らない理由を記録して止まり、Opus に戻す（design §4。推測で定義を書き足さない）。
 - 試験（design §4 型A ①〜⑧ を 2 表それぞれに。`@pytest.mark.parametrize` で表名を回してよい）。すべて app_engine（アプリの接続役 salesanchor_app・NOBYPASSRLS）で行う:
-  - ① 978 の文脈で INSERT でき、SELECT で 978 の行だけが 2 行（土台の 1 行＋今の 1 行）見える。
-  - ② 979 の文脈で SELECT すると 978 の行が 0 行。
-  - ③ 978 の文脈で tenant_id=979 の INSERT が 42501。
-  - ④ 978 の文脈で 979 の行への UPDATE（snapshots は taken_by、apply_runs は plan_digest だけ変える）・DELETE が 0 行。後で admin で 979 の行が元のまま 1 行あることを確かめる。
-  - ⑤ 運営の文脈（`app.is_operator='true'`・会社の文脈なし）で SELECT が 978・979 の両方の行を返す。
+  - ① 972 の文脈で INSERT でき、SELECT で 972 の行だけが 2 行（土台の 1 行＋今の 1 行）見える。
+  - ② 973 の文脈で SELECT すると 972 の行が 0 行。
+  - ③ 972 の文脈で tenant_id=973 の INSERT が 42501。
+  - ④ 972 の文脈で 973 の行への UPDATE（snapshots は taken_by、apply_runs は plan_digest だけ変える）・DELETE が 0 行。後で admin で 973 の行が元のまま 1 行あることを確かめる。
+  - ⑤ 運営の文脈（`app.is_operator='true'`・会社の文脈なし）で SELECT が 972・973 の両方の行を返す。
   - ⑥ 文脈なしの SELECT が 0 行。新しい接続の場合と、同じ接続で `SET app.tenant_id = ''` の後の場合の両方。後者でエラー（22P02）にならない。
   - ⑦ 同じ移行をもう一度当ててもエラーにならず、`pg_policies` の本数が 2 表とも 4 のまま。
-  - ⑧ 978 の文脈で自社の行の tenant_id を 979 へ付け替える UPDATE が 42501。
-  - ⑨ 書込の入口と同じ文脈の張り方で書ける: app_engine の接続で `SET app.tenant_id = '978'` と `SET app.is_operator = ''`（backend/app/auth/dependencies.py:251-256 の get_current_tenant と同じ 2 文。set_config でなく SET）を流し、backend/app/routers/discord_own_server.py の `_insert_sql` と同じ文（`INSERT INTO public.discord_server_snapshots (tenant_id, purpose, body, taken_by) VALUES (:tid, 'own', CAST(:body AS JSONB), :uid) RETURNING id`）が id を 1 つ返す。apply_runs も `_apply_insert_sql`（:377-386）と同じ文（`INSERT INTO public.discord_server_apply_runs (tenant_id, purpose, plan_digest, started_at, finished_at, applied_by, result) VALUES (:tid, 'own', :digest, :started, :finished, :uid, CAST(:result AS JSONB)) RETURNING id`）で id を 1 つ返す。RETURNING が SELECT のポリシーにも通ることの確かめ。
+  - ⑧ 972 の文脈で自社の行の tenant_id を 973 へ付け替える UPDATE が 42501。
+  - ⑨ 書込の入口と同じ文脈の張り方で書ける: app_engine の接続で `SET app.tenant_id = '972'` と `SET app.is_operator = ''`（backend/app/auth/dependencies.py:251-256 の get_current_tenant と同じ 2 文。set_config でなく SET）を流し、backend/app/routers/discord_own_server.py の `_insert_sql` と同じ文（`INSERT INTO public.discord_server_snapshots (tenant_id, purpose, body, taken_by) VALUES (:tid, 'own', CAST(:body AS JSONB), :uid) RETURNING id`）が id を 1 つ返す。apply_runs も `_apply_insert_sql`（:377-386）と同じ文（`INSERT INTO public.discord_server_apply_runs (tenant_id, purpose, plan_digest, started_at, finished_at, applied_by, result) VALUES (:tid, 'own', :digest, :started, :finished, :uid, CAST(:result AS JSONB)) RETURNING id`）で id を 1 つ返す。RETURNING が SELECT のポリシーにも通ることの確かめ。
 - 既にある試験への影響（`git grep -l -E "discord_server_snapshots|discord_server_apply_runs" origin/main -- backend/tests` = 6 本: conftest.py・test_discord_notice_rooms.py・test_discord_own_server_app_roles.py・test_discord_own_server_apply.py・test_discord_own_server_plan.py・test_discord_own_server_snapshot.py）:
   - conftest.py は 2 表を SQLite に作り（:1275-1296。`AUTOINCREMENT`）、`public.` を外す書き換え（:323-326）と後片付けの DELETE（:1794-1795）も SQLite の上で行う。RLS は SQLite に無いので、design §4 の「後片付けの後に行が残っていないこと」の心配は起きない。触らない。
   - 残りの 5 本は conftest.py の SQLite の DB を使う。本 PR の移行は流れないので影響なし。触らない。
@@ -143,6 +143,8 @@ run_sql migrations/20261107_110000_add_discord_server_records_rls.sql
 - K5-1: 反映時刻以降の backend・celery-worker・celery-beat・discord-gateway の `docker logs --since <反映時刻>` で `42501`・`row-level security`・`invalid input syntax for type integer` が 0 件。
 - K5-2（書込の入口）: design §5 の「自社の Discord サーバーの記録を画面から 1 回取り、応答 200 で行が 1 増える」は、ログインした人の操作が要る。PO が席に戻ったら頼む（待ちの間も次の便は進めてよい。ただし④-2 の K5-2 が済むまで KPI の「確かめ済み」には数えない）。
   - その前の代わりの確かめ（Opus が反映の直後に行う・本番に何も残さない）: backend の入れ物の Python で、アプリと同じ接続（環境変数 DATABASE_URL＝アプリの接続役）を開き、1 つの取引の中で ① `SET LOCAL app.tenant_id = '1'`・`SET LOCAL app.is_operator = ''` ② §5 ⑨ と同じ INSERT … RETURNING id を 2 表に 1 回ずつ（id が返る）③ SAVEPOINT の中で tenant_id=3 の INSERT が 42501 ④ 最後に ROLLBACK。流した後、2 表の行数が反映前と同じであること（K4-2 の読み方）を確かめる。会社 1（test-corp）と 3 だけを使う。会社 4（highlife-jpn）は使わない。
+  - 流す前に、会社 1 と 3 が public.tenants にあることを読んで確かめる（`SELECT id FROM public.tenants WHERE id IN (1,3)` が 2 行）。2 表は tenants を外部キーで指す（20261106_120000:17・:37）ので、無いと ② が外部キーの誤りで落ち、42501 の確かめにならない。2 行でなければ流さずに止まる。
+  - ROLLBACK しても採番の値（id の続き番号）は戻らない。2 表の id に 1 つずつ欠番が出る。行の数と中身は変わらない。
   - 道: 無制限鍵。本カードが審査役の APPROVE を受けた手順として、ADR-1003 追記 2026-11-02 に従い Opus が流す。反映前の自動控え（deploy.yml の Pre-deploy DB backup）の名前を先に確かめる。
 
 ## 9. 戻し方（design §7 を表名で埋めたもの）
@@ -168,7 +170,7 @@ COMMIT;
 ## 10. 想定される分岐（実装役が出会ったら止まって Opus に戻す）
 
 - `_ensure_public_users` か 20261106_120000 が使い捨て DB で失敗する。
-- 978・979 が既に使われている。
+- 972・973 が既に使われている。
 - migration-test の変更 SQL のジョブで、足した step の前に tenants が無い。
 - 既にある Discord の試験 5 本のどれかが落ちる。
 - 上の以外でも、カードに書いていない変更が要ると分かったとき。
