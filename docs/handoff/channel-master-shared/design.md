@@ -3,7 +3,7 @@
 > この文書は何か（専門用語なしの1行）:
 > 会社ごとに写している連絡手段の名簿を、全社1つの名簿（共用の行＋会社独自の行）に作り直し、分析・カルテ・言語判定がその名簿の性質を読んで動くようにする手順。
 
-- 状態: **設計案作成済み（Opus）／D1・D1-2 PO回答済み（§2-2・§9）・D2 PO確認待ち／クラウド審査 未実施／実装未着手**
+- 状態: **設計案作成済み（Opus）／D1・D1-2・D2 PO回答済み（§2-2・§9）・D2 のデータ変更 本番実施済み（§3-2）／クラウド審査 未実施／実装未着手**
 - 親: KGI ../../specs/db-ssot/channel-master/kgi.md（PO承認済み 2026-11-06）／ recon docs/handoff/channel-master-shared/recon.md
 - 元の要件: ../../specs/db-ssot/classification-master/design.md:106・:111-117（1テーブル・持ち主の印あり）
 - 基準: origin/main 7e0bc67b1（2026-11-06 取得）
@@ -119,6 +119,7 @@ CREATE TABLE IF NOT EXISTS public.channel_master_tenant_settings (
 - 写し: backup 段で、消す14表だけを pg_dump（--data-only）で /home/ubuntu/backups/tenant_drop/ に取る。残す表は写さない（戻すときに二重にならない）。
 - 戻し方: rollback.sql（001・004 を元の値へ）と `run.sh restore006 <写し>`（006 の14表を流し戻す）。
 - 成約分析への影響: 001・004 の対象は全件 status=lead。分析は existing_customer・lost だけを数える（`backend/app/routers/analytics.py:2491-2503`）ので数は変わらない。K5 の基準はこの変更の後に取る。
+- 実施記録（2026-11-06 JST・PO の `!`）: precheck 17項目合格 → dryrun 合格（ROLLBACK）→ backup 15:58 /home/ubuntu/backups/tenant_drop/20261106T065839Z_tenant_006_d2_14tables.sql（65109 bytes・COPY 14）→ commit（UPDATE 1・54・3、DELETE 計252、COMMIT）。Opus が読み取り専用の鍵で後の値を確認: 001 unknown 0・id6=discord／004 unknown 0・meta_messenger 0／006 リード0・会話0・会社0・注文0・スタッフ4・ログイン用の人5（/tmp/CC報告ファイル/chm-d2-after.txt）。
 - 残る物: 006 の添付11件のファイル本体（lead_attachments.file_path が指す先）は消さない。消すかは別に PO へ聞く。
 
 ## 4. 読み書きの付け替え（アプリのコード）
