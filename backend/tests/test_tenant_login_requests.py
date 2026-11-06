@@ -2,7 +2,7 @@
 
 使い捨て DB を作り、本物の create_tenant_schema（rls_bootstrap）と migration を流し、
 アプリ接続役 salesanchor_app（NOBYPASSRLS）で確かめる。
-(1) オーナー探し _owner_user_ids は会社の文脈が無いと 0 人（RLS）、文脈があればその会社のオーナーだけ。
+(1) オーナー探し _owner_user_ids は会社の文脈が無いと RLS が拒否する、文脈があればその会社のオーナーだけ。
 (2) devices の部品は別の会社・頼んでいない依頼・自分の依頼を許可しない。一覧は同じ会社の頼んだ依頼だけ。
 (3) require_tenant_owner はオーナーだけ通す（admin・社員・別の会社のオーナーは 403）。
 """
@@ -17,6 +17,7 @@ from urllib.parse import urlsplit, urlunsplit
 
 import pytest
 from fastapi import HTTPException
+from sqlalchemy.exc import DBAPIError
 
 ADMIN_PG_URL = os.getenv("RLS_ADMIN_DATABASE_URL") or os.getenv("TEST_PG_URL")
 APP_PG_URL = os.getenv("RLS_TEST_DATABASE_URL")
@@ -152,7 +153,10 @@ async def test_owner_lookup_needs_tenant_context():
     async with _fresh() as (_admin, app_engine):
         async with _session(app_engine) as db:
             await clear_tenant_context(db)
-            assert await _owner_user_ids(db, _TA) == []
+            # 会社の設定が空だと RLS の型変換で拒否される（フェイルクローズ・行は返らない）
+            with pytest.raises(DBAPIError):
+                await _owner_user_ids(db, _TA)
+            await db.rollback()
             await set_tenant_context(db, _TA)
             assert await _owner_user_ids(db, _TA) == [_OWNER_A]
             await clear_tenant_context(db)
