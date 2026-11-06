@@ -204,15 +204,18 @@
 
 - `backend/app/auth/dependencies.py:108` の get_current_user には戻り口が3つある（smoke 用・一時記憶が当たったとき・`_authenticate_self_token` の後。§10 R6）。戻り口ごとに足すと漏れるので、今の関数を内側の関数に改名し、get_current_user はそれを呼んだ後に1か所で次を行う:
   - `user.password_must_change` が真で、道が許可一覧に無ければ、403 `password_change_required`。
-- 許可一覧（1か所の定数）: `/api/v1/auth/password/change`、`/api/v1/me/permissions`。
-  - `/api/v1/me/permissions` は、画面がどのページでも最初に読む自分の情報（`frontend/src/hooks/usePermissions.ts:22`）。
+- 許可一覧（1か所の定数）: `/api/v1/auth/password/change` だけ（§10 S1 で `/api/v1/me/permissions` を外した。下の変更ページはこれを呼ばない）。
   - `/api/v1/auth/logout` は get_current_user を使わない（`backend/app/routers/auth.py:181-187`）ので、一覧に入れなくても止まらない。
 - `/password/change` の成功時の UPDATE に `password_must_change = false` を足す。
+- パスワード再設定の確定（`backend/app/routers/auth.py` の再設定の確定。is_active を見る行は `:681`）の UPDATE にも `password_must_change = false` を足す。本人がメールの鍵で自分のパスワードを決めたため（§10 S2 の候補。§4-3 の「再設定へ案内」の道で二重に変更させない）。
 - ログインの返事（SelfTokenResponse）に `must_change_password: bool` を足す。
-- 画面の動き:
-  - 返事が真なら、パスワード変更の画面へ移す。
-  - `frontend/src/lib/api.ts` の共通の失敗処理で、403 `password_change_required` を受けたら同じ画面へ移す。
-  - 変更の部品は `frontend/src/pages/account-settings/SecuritySection.tsx` の変更欄を使う（同じ部品を2つ書かない）。
+- 画面の動き（§10 S1）:
+  - 今の設定画面（`/account/settings`、`frontend/src/App.tsx:298`）はシェルの中にある。シェルは許可一覧に無い道を多く呼ぶ（`frontend/src/components/DesktopShell.tsx:35-40`）。SecuritySection の本体も、表示するとすぐに他の道を呼ぶ（`frontend/src/pages/account-settings/SecuritySection.tsx:39`・`:148`・`:331-334`）。だから、ここへは移さない。
+  - 新しい道 `/password-change` を、シェルの無いログイン必須の並び（`frontend/src/App.tsx:180-182`。ProtectedRoute は API を呼ばない）に足す。新しいファイル frontend/src/pages/password-change/PasswordChangePage.tsx。
+  - 変更欄（`frontend/src/pages/account-settings/SecuritySection.tsx:240-325` の form）を、新しいファイル frontend/src/features/auth/PasswordChangeForm.tsx に切り出す。SecuritySection とこのページの両方がそれを使う（同じ部品を2つ書かない）。SecuritySection の見た目と動きは変えない。
+  - ページに出すもの: 変更欄と、ログアウトのボタン（今の useAuth のログアウトを使う）。他の API は呼ばない。成功したら `/` へ移す。
+  - ログインの返事が真なら、`/password-change` へ移す。
+  - `frontend/src/lib/api.ts` の共通の失敗処理で、403 `password_change_required` を受けたら `/password-change` へ移す。今の道が既に `/password-change` なら移さない（同じページへ何度も移すのを防ぐ）。
 - 影響: 既存の人は全員 false なので、何も変わらない。
 
 ### 4-3. Discord の受付（自社サーバー）
@@ -351,4 +354,11 @@
 | — | 訂正 | recon の viewer_dependencies.py の行番号 | recon §3（106-108 に訂正） |
 
 - 審査の確認で合っていた点: 引用の行番号（上の訂正以外）、NOBYPASSRLS による会社の分離（`backend/app/auth/dependencies.py:280`）、Redis の道でも DB を読み直すこと（`backend/app/auth/dependencies.py:187-192`）、KGI 1〜10 と 13 が○×で判定できること。
-- 2回目: 直した版で、もう一度クラウドで審査する。結果はこの下に書き足す。
+- 2回目: 2026-11-07、対象 ee50d2e43。判定 REVISE。R1〜R7 の直しは全部「合う」。新しい指摘:
+
+| # | 重さ | 指摘 | 直した場所 |
+|---|---|---|---|
+| S1 | 必須 | パスワード変更ページの道と置き場所が決まっていない。今の設定画面とシェルは許可一覧に無い道を呼ぶので、403 が続き、同じページへ何度も移す | §4-2（シェルの無い新しい道、変更欄の切り出し、移す処理の止め、許可一覧から me/permissions を外す） |
+| S2 | 推奨 | 審査の返事が記録の上限で途中までしか読めなかった（R7 の「軽い穴」とだけ読めた）。Opus が R7 の道を読み直し、再設定で決めたパスワードの後にもう一度変更させる二重の手間を見つけて直した | §4-2（再設定の確定でも must_change を false にする） |
+
+- 3回目: 直した版で、もう一度クラウドで審査する。返事は記録で切れないよう短くしてもらう。結果はこの下に書き足す。
