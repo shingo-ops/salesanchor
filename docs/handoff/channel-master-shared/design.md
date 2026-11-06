@@ -101,6 +101,26 @@ CREATE TABLE IF NOT EXISTS public.channel_master_tenant_settings (
 - 手順: 同じフォルダに data-change.sql（新しく作る台本）を置く。中身は INSERT ... ON CONFLICT DO NOTHING。DRY-RUN（BEGIN→INSERT→SELECT count→ROLLBACK）→ COMMIT。実行は無制限鍵が要るため、PO の `!` 実行に台本で頼む（memory: 本番データ変更は台本ファイル化）。
 - 会社独自の行の移し: 本番は 0件（recon §4）。同じ SQL で「各社の表にあり共用に無い platform」を `tenant_id` 付きで移す文を入れ、DRY-RUN で 0件を確かめる。
 
+## 3-2. 名簿に無い値の後始末（1回だけのデータ変更・§9 D2 の PO 回答）
+
+- 台本: docs/handoff/channel-master-shared/data-d2/ の precheck.sql・dryrun.sql・commit.sql・verify.sql・rollback.sql と入口 run.sh。PO が `!` で `bash run.sh <段>` を流す（manual-only 鍵）。担当（Sonnet）は流さない。
+- 順番: precheck → dryrun → backup → commit → verify。commit の前に PO へ同意票。
+- 中身（件数は recon §4-2。2026-11-06 の読み取り）:
+
+| 会社 | 変えること | 件数 |
+|---|---|---|
+| 001 テスト株式会社 | リード id 6 の unknown → discord（6つから `secrets.choice` で無作為に選んだ結果） | 1 |
+| 004 HIGH LIFE JPN | リード unknown → messenger（id は台本に固定）／会話記録 meta_messenger → messenger（id 1・3・4） | 54・3 |
+| 006 審査用 | 仕事のデータ14表を空にする（翻訳29・下書き6・会話46・添付11・リードの連絡先4・請求明細1・請求1・見積明細1・見積1・注文の金額9・注文26・担当者8・会社30・リード74） | 計252 |
+
+- 残すもの（006）: スタッフ4・役割7・役割の権限・ログイン用の人5（public.users）・目標10・商品5・理由15・名簿6・設定類・監査ログ。共用の表（public）に 006 の仕事のデータは無い（tenant_id=6 は設定7表と users だけ。`/tmp/CC報告ファイル/chm-pub6.txt`）。
+- 消す順番: 子から親へ（本番の外部キーの一覧 `/tmp/CC報告ファイル/chm-t006-fk.txt`。companies→leads と contacts→leads が「消すのを止める」型のため leads を最後）。会社の外から 006 の表への外部キーは0（`/tmp/CC報告ファイル/chm-t006-fkin.txt`）。
+- 止まり方: どの段も、件数が設計の数と1件でも違えばゼロ除算で失敗し、COMMIT に届かない。
+- 写し: backup 段で、消す14表だけを pg_dump（--data-only）で /home/ubuntu/backups/tenant_drop/ に取る。残す表は写さない（戻すときに二重にならない）。
+- 戻し方: rollback.sql（001・004 を元の値へ）と `run.sh restore006 <写し>`（006 の14表を流し戻す）。
+- 成約分析への影響: 001・004 の対象は全件 status=lead。分析は existing_customer・lost だけを数える（`backend/app/routers/analytics.py:2491-2503`）ので数は変わらない。K5 の基準はこの変更の後に取る。
+- 残る物: 006 の添付11件のファイル本体（lead_attachments.file_path が指す先）は消さない。消すかは別に PO へ聞く。
+
 ## 4. 読み書きの付け替え（アプリのコード）
 
 ### 4-1. 1か所の読み口
@@ -164,6 +184,7 @@ async def conversion_items(db) -> dict[str, str]:
 
 ## 6. 出す順番（それぞれ前が本番で確かめ終わってから）
 
+0. データ変更（§3-2・名簿に無い値の後始末）: 他の段と独立。PO の同意票の後に流し、verify が全部通ることを確かめる
 1. PR-A（migration・GO要）: §2 の表と §2-2 の設定の表、それぞれの RLS だけ。本番反映後、読み取り専用の窓で2つの表が在り0行を確認
 2. データ変更: §3 を DRY-RUN→COMMIT。共用6行を確認（K1 の前半）
 3. PR-B（コード）: §4・§5。反映後に K2（5社の画面）・K5（001社の分析の前後一致）を確かめる
