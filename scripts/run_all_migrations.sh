@@ -1243,3 +1243,5 @@ run_sql migrations/20261107_110000_add_discord_server_records_rls.sql
 run_sql migrations/20261107_120000_create_staff_join_invites.sql
 # staff-self-registration 2回目: users に仮パスワードの印 password_must_change を足す（足すだけ・冪等）
 run_sql migrations/20261107_130000_add_users_password_must_change.sql
+# ADR-1067 段階④ 便④-3: tenant_discord_config・tenant_discord_ticket_config に会社ごとの RLS（型C: 読取は全行・書込は自社か運営）。冪等・1 取引
+run_sql migrations/20261107_140000_add_discord_config_rls.sql

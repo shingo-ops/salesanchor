@@ -230,6 +230,11 @@ _REVIEWED: dict[str, tuple[str, str, frozenset[str]]] = {
             }
         ),
     ),
+    "test_discord_config_rls.py": (
+        "own_database",
+        "",
+        frozenset({"099_add_discord_guild_config.sql", "20260602_120000_add_discord_ticket_config.sql"}),
+    ),
 }
 
 # 同じファイルに2種類の扱いがあるもの（消した表の照合は文字だけ）
