@@ -103,6 +103,8 @@ run_sql migrations/20261107_130000_add_discord_config_rls.sql
   - ⑤ 同じ移行をもう一度当ててもエラーにならず、`pg_policies` の本数が 2 表とも 4 のまま。
   - ⑥ 974 の文脈で自社の行の tenant_id を 975 へ付け替える UPDATE が 42501。
   - ⑦ 書込の入口と同じ文脈の張り方で、自社の行の upsert が通る: app_engine の接続で `SET app.tenant_id = '974'` と `SET app.is_operator = ''`（backend/app/auth/dependencies.py:252・:256 の get_current_tenant と同じ 2 文。set_config でなく SET）を流し、backend/app/routers/discord_oauth.py:220-228 と同じ `INSERT … ON CONFLICT (tenant_id, purpose) DO UPDATE SET guild_id = EXCLUDED.guild_id, connected_by_staff_id = EXCLUDED.connected_by_staff_id, updated_at = NOW()`（既にある 974/customer の行に当たり UPDATE 側を通る）と、backend/app/routers/discord_ticket_config.py:146-167 と同じ `INSERT … ON CONFLICT (tenant_id) DO UPDATE SET …` が、どちらもエラー無く通り、admin で値が変わったことを確かめる。最後に同じ接続で `SET app.tenant_id = ''` に戻す。
+    - 入れる値: tenant_discord_config は `(tid, purpose, guild_id, staff_id)` = `(974, 'customer', 'g974x', NULL)`（'g975' と重ならない新しい値。uq_tenant_discord_config_guild_id に当たらない）。tenant_discord_ticket_config は `(tid, category_id, button_channel_id, staff_role_id, welcome_template, small_channel_id, large_channel_id, small_role_name, large_role_name)` = `(974, 'c974x', 'b974x', NULL, 'w974', NULL, NULL, 'Member', 'Partner')`（NOT NULL の welcome_template・small_role_name・large_role_name に値を入れる。20260602_120000:10、20260602_160000:14-15）。
+    - 確かめ: admin で 974/customer の guild_id が 'g974x'、974 の ticket_category_id が 'c974x' になっている。
 - 既にある試験への影響（`git grep -l -E "tenant_discord_(ticket_)?config" origin/main -- backend/tests` = 14 本: conftest.py と test_discord_*.py 13 本）:
   - conftest.py は 2 表を SQLite に作り、`public.` を外す書き換え（:321-322）と後片付けの DELETE（:1796）も SQLite の上で行う。RLS は SQLite に無い。触らない。
   - test_discord_oauth_rls.py は実 PostgreSQL を使うが、作る表は public.tenants と会社の置き場の audit_logs だけ（:46・:69）。2 表は作らず、本 PR の移行も当てない。影響なし。
@@ -135,10 +137,11 @@ run_sql migrations/20261107_130000_add_discord_config_rls.sql
 
 基準値（2026-11-07 04:21 JST、反映前に Opus が読んだ）: 2 表とも RLS f/f・ポリシー 0 本・持ち主 jarvis。tenant_discord_config: 会社 1 customer 1・会社 1 own 1・会社 4 customer 1・会社 6 customer 1（計 4）。tenant_discord_ticket_config: 会社 1・4・6 が各 1（計 3）。
 
+- 読む道: K4-1・K4-2 は design §5 のとおり reader 鍵の道で読む。reader 鍵の道で読めない項目があったときだけ、無制限鍵で読むだけにする。その許可は PO 2026-11-07 チャット「GO記録やSSHへの無制限鍵へのアクセス等、必要な権限は全て必要な場合は使用して良い許可を与える」（この段階④の作業についての PO の許可）と ADR-1003 による。どちらの道で読んだかを結果のコメントに書く。
 - K4-1: 2 表とも relrowsecurity / relforcerowsecurity が t/t、ポリシー各 4 本。
 - K4-2: 2 表の会社ごとの行数が上の基準値と同じ。
 - K5-1: 反映時刻以降の backend・celery-worker・celery-beat・discord-gateway のログで `42501`・`row-level security`・`invalid input syntax for type integer` が 0 件。加えて discord-gateway のログで `tenant_id 逆引き失敗`（client.py:124）が 0 件。
-- K5-2（読取が会社の文脈なしでも通ること・本番に何も書かない）: postgres の入れ物で jarvis から `BEGIN READ ONLY; SET LOCAL ROLE salesanchor_app; SELECT count(*) FROM public.tenant_discord_config; SELECT count(*) FROM public.tenant_discord_ticket_config; ROLLBACK;` を流し、4 と 3（基準値と同じ）が返る。Discord の受け口が会社を引く読み方（文脈なし・アプリの接続役）と同じ条件。
+- K5-2（読取が会社の文脈なしでも通ること・本番に何も書かない）: reader 鍵の道では役を salesanchor_app に替えられないため、これだけは無制限鍵で読む（上の「読む道」の PO の許可による。読むだけの取引で、書く文は流さない）。postgres の入れ物で jarvis から `BEGIN READ ONLY; SET LOCAL ROLE salesanchor_app; SELECT count(*) FROM public.tenant_discord_config; SELECT count(*) FROM public.tenant_discord_ticket_config; ROLLBACK;` を流し、4 と 3（基準値と同じ）が返る。Discord の受け口が会社を引く読み方（文脈なし・アプリの接続役）と同じ条件。
 - 画面での確かめ（PO 戻り後）: 自社の Discord サーバーでチケットを 1 件出して作られる（design §5 K5-2）。待ちの間も次の便は進めてよい。
 
 ## 9. 戻し方（design §7 を表名で埋めたもの）
