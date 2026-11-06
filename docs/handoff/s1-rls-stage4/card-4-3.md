@@ -102,7 +102,7 @@ run_sql migrations/20261107_130000_add_discord_config_rls.sql
   - ④ 運営の文脈（`app.is_operator='true'`・`app.tenant_id=''`）で 975 の行の UPDATE が 1 行（取引は最後に ROLLBACK してよい）。
   - ⑤ 同じ移行をもう一度当ててもエラーにならず、`pg_policies` の本数が 2 表とも 4 のまま。
   - ⑥ 974 の文脈で自社の行の tenant_id を 975 へ付け替える UPDATE が 42501。
-  - ⑦ 書込の入口と同じ文脈の張り方で、自社の行の upsert が通る: app_engine の接続で `SET app.tenant_id = '974'` と `SET app.is_operator = ''`（backend/app/auth/dependencies.py:252・:256 の get_current_tenant と同じ 2 文。set_config でなく SET）を流し、backend/app/routers/discord_oauth.py:220-228 と同じ `INSERT … ON CONFLICT (tenant_id, purpose) DO UPDATE SET guild_id = EXCLUDED.guild_id, connected_by_staff_id = EXCLUDED.connected_by_staff_id, updated_at = NOW()`（既にある 974/customer の行に当たり UPDATE 側を通る）と、backend/app/routers/discord_ticket_config.py:146-167 と同じ `INSERT … ON CONFLICT (tenant_id) DO UPDATE SET …` が、どちらもエラー無く通り、admin で値が変わったことを確かめる。最後に同じ接続で `SET app.tenant_id = ''` に戻す。
+  - ⑦ 書込の入口と同じ文脈の張り方で、自社の行の upsert が通る: app_engine の接続で `SET app.tenant_id = '974'` と `SET app.is_operator = ''`（backend/app/auth/dependencies.py:252・:256 の get_current_tenant と同じ 2 文。set_config でなく SET）を流し、backend/app/routers/discord_oauth.py:295-303（2026-11-07 本線 aa4b166eb の行番号） と同じ `INSERT … ON CONFLICT (tenant_id, purpose) DO UPDATE SET guild_id = EXCLUDED.guild_id, connected_by_staff_id = EXCLUDED.connected_by_staff_id, updated_at = NOW()`（既にある 974/customer の行に当たり UPDATE 側を通る）と、backend/app/routers/discord_ticket_config.py:146-167 と同じ `INSERT … ON CONFLICT (tenant_id) DO UPDATE SET …` が、どちらもエラー無く通り、admin で値が変わったことを確かめる。最後に同じ接続で `SET app.tenant_id = ''` に戻す。
     - 入れる値: tenant_discord_config は `(tid, purpose, guild_id, staff_id)` = `(974, 'customer', 'g974x', NULL)`（'g975' と重ならない新しい値。uq_tenant_discord_config_guild_id に当たらない）。tenant_discord_ticket_config は `(tid, category_id, button_channel_id, staff_role_id, welcome_template, small_channel_id, large_channel_id, small_role_name, large_role_name)` = `(974, 'c974x', 'b974x', NULL, 'w974', NULL, NULL, 'Member', 'Partner')`（NOT NULL の welcome_template・small_role_name・large_role_name に値を入れる。20260602_120000:10、20260602_160000:14-15）。
     - 確かめ: admin で 974/customer の guild_id が 'g974x'、974 の ticket_category_id が 'c974x' になっている。
 - 既にある試験への影響（`git grep -l -E "tenant_discord_(ticket_)?config" origin/main -- backend/tests` = 14 本: conftest.py と test_discord_*.py 13 本）:
@@ -114,7 +114,7 @@ run_sql migrations/20261107_130000_add_discord_config_rls.sql
 
 | 表 | 書込 | 文脈 |
 |---|---|---|
-| tenant_discord_config | backend/app/routers/discord_oauth.py:221 INSERT … ON CONFLICT DO UPDATE | :215 `set_tenant_context`（SET。取引をまたいで残る） |
+| tenant_discord_config | backend/app/routers/discord_oauth.py:296 INSERT … ON CONFLICT DO UPDATE | :290 `set_tenant_context`（SET。取引をまたいで残る） |
 | tenant_discord_config | backend/app/routers/discord_guild_config.py:104・:167 DELETE | :99・:162 `Depends(get_current_tenant)` |
 | tenant_discord_ticket_config | backend/app/routers/discord_auto_setup.py:391 INSERT … ON CONFLICT DO UPDATE | :91 `Depends(get_current_tenant)`。書込の後 :436 commit・:437 `reset_tenant_context` |
 | tenant_discord_ticket_config | backend/app/routers/discord_ticket_config.py:147 INSERT … ON CONFLICT DO UPDATE | :141 `Depends(get_current_tenant)` |
