@@ -13,6 +13,7 @@ from sqlalchemy import text
 from app.auth.dependencies import set_tenant_context, tenant_table_ref
 from app.routers.notifications import send_discord_notification
 from app.schemas.notification import NotificationEventType
+from app.services.staff_mention import assignee_name_and_mention
 
 logger = logging.getLogger(__name__)
 
@@ -23,16 +24,8 @@ async def notify_lead_assigned(tenant_id: int, lead_id: int, assigned_to_user_id
 
         async with AsyncSessionLocal() as db:
             await set_tenant_context(db, tenant_id)          # ADR-072（生 SET は CI がブロック）
-            staff_t = tenant_table_ref(db, tenant_id, "staff")
             leads_t = tenant_table_ref(db, tenant_id, "leads")
 
-            # design.md のサンプルは last_name/first_name だが、実スキーマ
-            # （migrations/019_create_staff_tables.sql:40-41）は surname_jp/given_name_jp。
-            staff_row = (await db.execute(
-                text(f"SELECT discord_user_id, surname_jp, given_name_jp FROM {staff_t} "
-                     f"WHERE user_id = :uid"),
-                {"uid": assigned_to_user_id},
-            )).mappings().first()
             lead_row = (await db.execute(
                 text(f"SELECT customer_name FROM {leads_t} WHERE id = :lid"),
                 {"lid": lead_id},
@@ -40,10 +33,7 @@ async def notify_lead_assigned(tenant_id: int, lead_id: int, assigned_to_user_id
             if not lead_row:
                 return
 
-            name = " ".join(filter(None, [
-                (staff_row or {}).get("surname_jp"), (staff_row or {}).get("given_name_jp")])) or ""
-            did = str((staff_row or {}).get("discord_user_id") or "")
-            mention = [did] if did.isdigit() else None       # 数字以外は渡さない
+            name, mention = await assignee_name_and_mention(db, tenant_id, assigned_to_user_id)
 
             # PO が 2026-10-29 に「お客さんの名前で知らせる」と決めた（リード番号は画面・通知に出さない）。
             # 名前の出どころは受信箱の見出しと同じ leads.customer_name

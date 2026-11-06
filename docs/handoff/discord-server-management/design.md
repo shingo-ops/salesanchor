@@ -434,6 +434,18 @@
 - 設計図 `backend/app/discord_blueprints/tenant_1.json` に「スタッフ」（key `staff`・権限なし）を足す。Discord に作るのは今の確認・反映の画面（設計図どおりにロールを作る）。作るまでは、点検は「スタッフ」の番号が見つからない理由を記録に出して止まる（D2-3 手順2）
 - 設計図を読む今の試験（`backend/tests/test_discord_own_server_plan.py:59-60`・`backend/tests/test_discord_own_server_apply.py:67-68` の `_bp_data()`）は「本番の今の形と差が 0」を確かめているので、`_bp_data()` で `staff` を除いて読む形にする。足した「スタッフ」が確認で「作る」1 行になることは新しい試験で確かめる
 
+### D2-9 便の順番を 2d → 2c にする（2026-11-06 Opus）
+- 2d（返信の知らせ）は移行なし・送る所を足すだけで、知らせの種類 `customer_reply_received` を作る。2c（3 部屋と webhook の自動作成）は「返信連絡」の部屋の event_types にこの種類を入れる（D2-4）。種類が先に無いと 2c の行は API の検査（`backend/app/schemas/notification.py` の enum に無い値は拒否）に通らないので、2d を先に出す
+- 2d を先に出しても、2c が入るまでは「返信連絡」の送り先が無い。その間は、管理者が今の通知の画面で `customer_reply_received` を選んだ送り先にだけ届く（選んでいなければ 0 件。今の知らせの作りどおりで、ほかの送り先には届かない）
+
+### D2-10 便2d の作りの細かい決め（2026-11-06 Opus。カード card-s2-2d-customer-reply-notice.md を書くときに実物で確かめた）
+- Discord の DM には送る所を作らない。今の受信は DM を読まずに戻る（`backend/app/discord_gateway/client.py:402-404`、ADR-146 F7 の PO 決定）。`backend/app/discord_gateway/dm_writer.py` を呼ぶ本番の所は無い（`grep -rn dm_writer backend/app` で当たるのは注記 2 か所だけ）。D2-5 の DM の送る所は、受信そのものが無いので置かない。KGI-13 の Discord の確かめはお客さんの部屋で行う
+- お客さんの部屋（`backend/app/discord_gateway/ticket_channel_writer.py`）は、新しい行の commit と重なりの戻りのあと（`if attachment_url:` の前）に、待たない予約（create_task）で送る。添付の保存や翻訳の予約より先に置き、それらの失敗で知らせが抜けないようにする。担当者の書き込みはそれより前で戻るので送らない
+- Messenger・Instagram（`backend/app/routers/webhook.py`）は、今の meta_message_received の送信の直後に同じセッションで送る（重なりは `if msg_id is None: continue` で先に除かれる）
+- 中身: お客さんの名前（空なら「名前の無いリード」＝担当決定の知らせと同じ）・どこから（Discord / Messenger / Instagram）・アプリの場所 `{FRONTEND_BASE_URL}/lead-chat?lead_id={id}`（頭が無ければ `https://app.salesanchor.jp`。先例 `backend/app/routers/discord_oauth.py:84`。ALLOWED_ORIGINS は先頭が旧ドメインなので使わない）。本文・送った人の番号は載せない
+- 担当者の引き方は `backend/app/services/staff_mention.py` の 1 つの関数にまとめ、担当決定の知らせ（`backend/app/services/lead_assign_notifier.py`）も同じ関数を使う（同じ SQL を 2 か所に書かない）
+- 失敗は飲み込み、rollback と reset_tenant_context をしてから戻る。ログは例外の型の名前だけ
+
 ## S2-4 変更前と変更後（利用者に見えること）
 | | 今 | 変えたあと |
 |---|---|---|
@@ -508,3 +520,4 @@
 - 2026-11-05 Fable（4 回目・HEAD 8f2156020）: APPROVE。Q7・N15・N16 は直った。S2-12 に書いた手元の事実は全部実物と一致。推奨 N17（KGI-16 の自動の試験に番号の書き換えを足す）・N18（上の未確認を結果に置き換え、テナントの物理削除の扱いを書く）
 - 反映: N17→S2-6 の KGI-16 の行。N18→この節の上の行と S2-7 の 1 行
 - 未確認のまま残すもの: Create Webhook の権限・Kick が Bot のロールの順番に縛られるか。Remove Guild Member（KICK_MEMBERS）と List Guild Members（GUILD_MEMBERS が要る）は 2026-11-05 に Opus が公式（github.com/discord/discord-api-docs `developers/resources/guild.mdx`）を直接読んで確かめた。Context7 は月の上限で使えなかった。残りは便2b・2c のカードの最初の作業で、試験サーバーへの実際の呼び出しで確かめる
+- 2026-11-06 便2d カードの審査（Opus の自己審査。独立した第二者の審査ではない）: APPROVE。根拠: カードに書いた行の目印（`backend/app/discord_gateway/ticket_channel_writer.py` の `if inserted_row is None:`・`if attachment_url:`・import、`backend/app/routers/webhook.py` の import・meta_message_received の送信・`if msg_id is None:`、`backend/app/services/lead_assign_notifier.py` の staff の SELECT、`backend/app/routers/notifications.py` の embed の description と content のメンション、`backend/tests/test_notification_event_routing.py:140-149`・`_SessionCtx`・`_FakeDiscordAsyncClient`、`backend/tests/test_ticket_channel_translation.py:51-54` の `_mock_result`、`backend/tests/test_webhook_instagram.py` の `webhook_env`、`backend/tests/conftest.py:1941` の `_no_own_staff_sync_task`）を origin/main f3aa12485 で確かめた。`customer_reply_received` は今の 4 つの値と互いに部分文字列にならない（今の試験 `test_event_type_values_are_pairwise_non_substrings` が確かめる）。未解決: 無し（DM の扱いは D2-10）
