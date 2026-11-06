@@ -1,6 +1,6 @@
 # design: 他社の人の番号と、持ち主の証明のない Discord サーバー番号を保存させない
 
-- 状態: 設計案 r4（Opus 作成）。Architect r1〜r4 は REVISE（13 節）。r4 の指摘を反映済み・r5 審査前
+- 状態: 設計審査済み（Architect r5 APPROVE・13 節）。実装は未着手
 - 基準: origin/main 133808dce（5fda4152b からの差分に、本設計が触る・引用するファイルの変更は無い: `git diff --stat 5fda4152b origin/main -- backend/app/routers backend/app/services frontend/src/pages/admin frontend/api-contract backend/tests/...` が空）
 - 根拠: 同じフォルダの recon.md（1・4・6 節）
 - 関係する ADR: ADR-1008（会社に属さない担当者を入れない）・ADR-072（commit 後の reset_tenant_context）・ADR-146（Discord は共通 bot 1台・guild_id から会社を引く）・ADR-027（画面の文字は t()）・ADR-144（画面部品は金型）
@@ -278,4 +278,13 @@ DB の正本（SSOT）について: 人の正本は public.users のまま。新
 
 ### r5
 
-（審査後に記入）
+結果はクラウドの実行記録から読んだ（審査の担当は Opus・head 30d7e0148・origin/main 5a8b0dd91 で照合。基準 133808dce から対象ファイルの差分なし）。VERDICT: APPROVE。
+
+| 観点 | 判定 |
+|---|---|
+| C1 行番号 | ○（r4 で直した行とほかの引用すべてが一致） |
+| C2 guildId の消す範囲 | ○（残る使い手なし。useSeededForm.ts:30 の ready は data があるときだけ真なので、`!configQ.data` でも読めなかった時の表示は同じ） |
+| C3 権限なし試験 | ○（ButtonLink.tsx:46-49 は `to` で `<a>` を描く。試験は MemoryRouter で包んでいる :34。英語の文字は "Change"） |
+| C7 r1〜r4 の必須指摘 | ○（r1 Q1 は PO の選択で次の作業 G3） |
+
+指摘: なし
