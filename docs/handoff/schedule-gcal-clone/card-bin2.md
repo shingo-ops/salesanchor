@@ -63,7 +63,13 @@ const canMoveItem = (item: ScheduleItem) =>
 const canEditSelected = Boolean(popover?.item && canEditItem(popover.item));
 ```
 
-`closePopover`（:1281-1283）と `saveEvent` の成功時（:1312）・`deleteEvent` の成功時（:1328）・`openDetail`（:1262）・Esc で閉じるとき（:1400-1401）で `setPendingRange(null)` も呼ぶ。
+仮の箱を消すのは次の 1 か所にまとめる（閉じる・保存・削除・Esc・詳細を開く、のどの道で小窓が閉じても拾える。近道の処理 :1389-1432 には触らない）:
+```tsx
+useEffect(() => {
+  if (popover?.mode !== "create") setPendingRange(null);
+}, [popover]);
+```
+- `openDetail`（:1262）は小窓を `mode: "detail"` にするので、この 1 か所で消える。`closePopover`・`saveEvent`・`deleteEvent`・Esc の処理は変えない。
 
 ### 2-3 選んだ範囲から作る小窓を開く
 
@@ -95,6 +101,7 @@ const openCreateRange = (start: Date, end: Date, allDay: boolean, anchor: Anchor
 `onSelectRange` に渡す関数（design §3.2「選んだ範囲の決まり」）:
 ```tsx
 const handleSelectRange = (start: Date, end: Date, allDay: boolean, anchor: AnchorRect | null) => {
+  setPendingRange(null); // 前の仮の箱を消す（月の 1 日押しの道は仮の箱を出さない）
   const oneDay = allDay && addDays(start, 1).getTime() === end.getTime();
   if (view === "month" && oneDay) {
     openCreate(start, anchor); // 今の月の升目と同じ: その日の 7 時から 1 時間（§6 ③）
@@ -207,8 +214,8 @@ const patchMoved = async (id: string, start: Date, end: Date | null, allDay: boo
 )}
 ```
 - `viewDays[0]` は週なら日曜（`getWeekDays` `schedule-utils.ts:134-138`）、日なら当日。金型の days は `date` の日から始まるので日曜を渡す。
-- `dayList` の型（:1144）の `anchor` を `AnchorRect | null` にする（金型の rect は null があり得る）。`ScheduleDayListPopover` の `anchor` の型も同じに合わせる（中で使う `usePopoverPlacement(anchor: AnchorRect | null)` :145 は null を受ける）。型だけの変更で中身は変えない。
-- `monthMaxEvents={3}`: 今の月の升目も 3 件出して残りを「他 N 件」にしている（:878 `slice(0, 3)`・:898）。
+- `dayList` の型（:1144）の `anchor` を `AnchorRect | null` にする（金型の rect は null があり得る）。`ScheduleDayListPopover` の `anchor` は既に `AnchorRect | null`（:931）なので変えない。型だけの変更で中身は変えない。
+- `monthMaxEvents={3}`: 今の月の升目も 3 件出して残りを「他 N 件」にしている（:878 `slice(0, 3)`・:899-909）。
 - `schedule.title` は既にある（ja.json:3204「スケジュール」）。
 - `onDayClick`: 月の升目の日付の数字を押すと、その日の日の表示へ移る（Google と同じ。金型の `navLinks`）。今の画面は日付の数字に別の動きが無く、升目のどこを押しても作る小窓（:874）なので、升目の余白を押したときの動き（§2-3 の 1 日押し）は変わらない。
 
@@ -228,21 +235,23 @@ export function eventNumericId(id: string): number | null {
  * 動かした後の終わり（送る値）。
  * - 終日: FullCalendar の終わりは「次の日 0:00」なので 1 日戻し、その日の 23:59（design §3.3 の 3）
  * - 終わりが null: 元の長さを保つ（終日は同じ 1 日）
+ * - 終日 → 時刻つきへ動かして終わりが null: 1 時間（元の 23 時間 59 分を引き継がない）
  */
-export function toCalendarEnd(start: Date, end: Date | null, allDay: boolean, item: Pick<ScheduleItem, "start" | "end">): Date {
+export function toCalendarEnd(start: Date, end: Date | null, allDay: boolean, item: Pick<ScheduleItem, "start" | "end" | "allDay">): Date {
   if (allDay) {
     const last = end ? addDays(end, -1) : start;
     const lastDay = last.getTime() < start.getTime() ? start : last;
     return combineDateTime(formatDateInput(lastDay), "23:59");
   }
   if (end) return end;
+  if (item.allDay) return new Date(start.getTime() + 60 * 60 * 1000);
   return new Date(start.getTime() + (item.end.getTime() - item.start.getTime()));
 }
 ```
 
 ## 4. schedule.css
 
-- 消す: 使われなくなった class の規則だけ。候補は :333-580（`.schedule-grid*`・`.schedule-day-head*`・`.schedule-day-column*`・`.schedule-time-label`・`.schedule-slot*`・`.schedule-event*`）と :581-605,610-640,693-707 の月の升目（`.schedule-month`・`__head`・`__grid`・`__cell*`・`__date`・`__events`・`__more*`）。
+- 消す: 使われなくなった class の規則だけ。候補は :333-580（`.schedule-grid*`・`.schedule-day-head*`・`.schedule-day-column*`・`.schedule-time-label`・`.schedule-slot*`・`.schedule-event*`）と :581-608,610-645,693-705 の月の升目（`.schedule-month`・`__head`・`__grid`・`__cell*`・`__date`・`__events`・`__more*`）、それに画面の幅で切り替える部分（@media）の中の `.schedule-grid__*`（:1462・:1473-1481）。:707 の `.schedule-popover-backdrop` は消さない。
 - 残す: `ScheduleDayListPopover`（:955-967）と一覧が使う `.schedule-month__event`・`__dot`・`__time`・`__title` など、消した後も tsx に出てくる class。
 - 消す前に、各 class 名を `grep -rn "<class名>" frontend/src --include="*.tsx" --include="*.ts"` で確かめ、0 件のものだけ消す。消した class の一覧を PR 本文に書く。
 - 足す（色・寸法の直書きなし）:
@@ -258,7 +267,7 @@ export function toCalendarEnd(start: Date, end: Date | null, allDay: boolean, it
 
 - 測った事実（2026-11-07・Opus・同じ Chrome の窓 1620×1448・倍率 2）: Google カレンダーの週の表示で9 時と 10 時の目盛りの文字の上端が 520.5 と 616.5 → **96**。Sales Anchor の今の画面の 1 時間の枠（`.schedule-slot`）の高さ → **48**。
 - `frontend/src/tokens.css:403` の `--schedule-row-height: 48px;` を `96px;` に変える。コメントは「1時間の高さ（Google カレンダーの実測に合わせた値）」。
-- この token の使い道は `components/CalendarView.css:48` と、消す `schedule.css:491-493,522` だけ（grep 済み）。他の画面は変わらない。
+- この token の使い道は `components/CalendarView.css:48` と、消す `schedule.css:491-493,522`・消す関数の中の `SchedulePageImpl.tsx:756,764,769,779` だけ（grep 済み・審査で確認）。金型を呼ぶ画面は予定の画面だけなので、他の画面は変わらない。
 - まだ確かめていないこと: Google の高さが窓の高さで変わるか（窓の大きさを変えられず測れなかった）。G6 は窓 1448 で判定する。
 
 ## 6. 試験（SchedulePageImpl.test.tsx・SchedulePageCache.test.tsx）
@@ -296,7 +305,7 @@ vi.mock("../../components/CalendarView", () => ({
 | T8 | 終日の予定を `onEventMove(id, 11/10, 11/12 0:00, true, revert)` | 送る終わりが 11/11 23:59 の値（`combineDateTime("2026-11-11","23:59").toISOString()`） |
 | T9 | 週の表示で渡す `date` と `dayCount`・`weekStart` | 日曜・7・0。日の表示は当日・1 |
 
-schedule-utils.test.ts: `eventNumericId`（"event-12"→12、"shift-3"→null、"pending"→null）と `toCalendarEnd`（終日 1 日・終日 3 日・終わり null の時刻つき）。`layoutDay` の試験は消す。
+schedule-utils.test.ts: `eventNumericId`（"event-12"→12、"shift-3"→null、"pending"→null）と `toCalendarEnd`（終日 1 日・終日 3 日・終わり null の時刻つき・終日の予定を時刻つきへ動かして終わり null → 1 時間）。`layoutDay` の試験は今のファイルに無いので、消すものは無い。
 
 ## 7. 裏側: 終日が Google で 1 日前にずれる直し（design §3.3 の 4）
 
@@ -305,6 +314,7 @@ schedule-utils.test.ts: `eventNumericId`（"event-12"→12、"shift-3"→null、
 2. `T` があるときは `_parse_dt` で読み、時差が無ければ `replace(tzinfo=_JST)`、その後 `astimezone(_JST).date()`。
 3. 始まり = 始まりの日。終わり = 終わりの日 + 1 日（Google の終わりは次の日）。終わり ≤ 始まりなら 始まり + 1 日。
 4. 時刻つきの枝（:651-653）・説明・場所は変えない。
+5. 始まりと終わりで形が違う（片方だけ日付だけ）ときも、それぞれを 1・2 の決まりで日付にしてから 3 を当てる。
 
 試験（`backend/tests/test_calendar_service.py`）:
 - `TestToGoogleEventBody` に 6 件:
@@ -360,3 +370,7 @@ grep -rn "ScheduleWeekGrid\|ScheduleMonthGrid\|gridScrollRef\|DEFAULT_ROW_HEIGHT
 - `getOwnerMeta` が色を返さない予定がある（その時の色の決め方はカードに無い）。
 - 金型の口・型が足りない（金型は触らない決まり）。
 - `schedule.css` の class が tsx 以外（他の css・storybook）から使われている。
+
+## 12. 審査の記録
+
+- 1 回目（2026-11-07・クラウドの Opus・HEAD 1538745c）: REVISE。直さないと実装で迷う 1 件（Esc の扱いが §1 と §2-2 で食い違い）と、行のずれ（CSS の消す範囲・他 N 件・token の使い道）、直した方がよい 4 件（layoutDay の試験は無い・日別小窓の型は既に null あり・月の 1 日押しで前の仮の箱が残る・終日から時刻つきへ動かしたときの長さ）。全部この版で直した（§2-2・§2-3・§2-7・§3・§4・§5・§6・§7 の 5）。
