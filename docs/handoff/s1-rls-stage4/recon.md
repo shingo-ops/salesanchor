@@ -78,7 +78,7 @@
 | 箇所 | 種類 | 文脈 |
 |---|---|---|
 | backend/app/discord_gateway/outside_ticket_notice.py:51 `_is_staff` | SELECT | 会社（呼び出し元 ticket_channel_writer.py:193 は :180 の set_tenant_context の後。U1 で確認） |
-| backend/app/discord_gateway/ticket_channel_creator.py:54 `get_ticket_config` | SELECT | 呼び出しが 2 つ: ticket_channel_creator.py:305 は会社（:292 で set_tenant_context の後）／discord_gateway/client.py:308 は前（:303 `_resolve_tenant_id` の直後に新しいセッションを開き、文脈を張らずに読む）。U1 で確認 |
+| backend/app/discord_gateway/ticket_channel_creator.py:54 `get_ticket_config` | SELECT | 呼び出しが 2 つ: ticket_channel_creator.py:305 は会社（:292 で set_tenant_context の後）／backend/app/discord_gateway/client.py:308 は前（:303 `_resolve_tenant_id` の直後に新しいセッションを開き、文脈を張らずに読む）。U1 で確認 |
 | backend/app/routers/discord_auto_setup.py:127・391 | SELECT・INSERT | 会社（:91） |
 | backend/app/routers/discord_channel_invite.py:105 | SELECT | 会社（:68） |
 | backend/app/routers/discord_guild_config.py:88 | SELECT | 会社（:65） |
@@ -91,7 +91,7 @@
 | backend/app/services/google_webhook.py:212 `verify_channel` | SELECT（channel → 会社） | 前（Google からの通知の受け口） |
 | backend/app/services/google_webhook.py:395 `renew_expiring_webhooks` | SELECT（期限切れ間近の全社） | 横断。その後 :404 で会社ごとに set_tenant_context |
 | backend/app/services/google_webhook.py:85・119 `register_webhook` | SELECT・INSERT | 呼び出し元が文脈を張る（:387 の説明・:404） |
-| backend/app/services/google_webhook.py:170・191 `stop_webhook` | SELECT・DELETE | 呼び出し元 routers/calendar.py:566（register は :559）は会社の画面。register の他の呼び出し元 tasks/google_calendar_sync.py:62（:44 で会社の文脈）・google_webhook.py:405（:404 で会社の文脈）。U2 で確認 |
+| backend/app/services/google_webhook.py:170・191 `stop_webhook` | SELECT・DELETE | 呼び出し元 backend/app/routers/calendar.py:566（register は :559）は会社の画面。register の他の呼び出し元 backend/app/tasks/google_calendar_sync.py:62（:44 で会社の文脈）・google_webhook.py:405（:404 で会社の文脈）。U2 で確認 |
 | backend/app/services/google_webhook.py:283・355 `sync_tenant_from_google` | SELECT・UPDATE | 会社（:255・:278） |
 | backend/app/tasks/google_calendar_sync.py:55 | SELECT | 会社（:44） |
 
@@ -101,7 +101,7 @@
 | backend/app/routers/super_admin_llm_budget.py:102・121 | SELECT（全社の一覧・1 社） | 運営（:101 require_super_admin、get_db だけ） |
 | backend/app/routers/super_admin_llm_budget.py:154 | INSERT（upsert） | 運営（文脈なし） |
 | backend/app/routers/tcg_analysis_dashboard.py:526 | SELECT | 運営（:466） |
-| backend/app/services/llm_budget.py:434・475・527・567 | SELECT・UPDATE・UPDATE・INSERT | 呼び出し元 services/message_translator.py:462-490・614-623（翻訳。画面 routers/translation.py・leads.py・conv_logs.py と Celery tasks/translation.py から）Celery 側は tasks/translation.py:79 で set_tenant_context の後に呼ぶ（U3 で確認） |
+| backend/app/services/llm_budget.py:434・475・527・567 | SELECT・UPDATE・UPDATE・INSERT | 呼び出し元 backend/app/services/message_translator.py:462-490・614-623（翻訳。画面 backend/app/routers/translation.py・leads.py・conv_logs.py と Celery backend/app/tasks/translation.py から）Celery 側は backend/app/tasks/translation.py:79 で set_tenant_context の後に呼ぶ（U3 で確認） |
 | backend/app/services/discord_notifier.py:222・254 | UPDATE（通知の間引き） | 予算切れの通知（:182・:208）から。呼び出し元の文脈は翻訳と同じ |
 | backend/app/services/translation_monitor.py:114・129 | SELECT・INSERT | 会社（:59 set_tenant_context） |
 
@@ -109,7 +109,7 @@
 | 箇所 | 種類 | 文脈 |
 |---|---|---|
 | backend/app/routers/tenant_policy.py:65・101・129・153 | SELECT・SELECT・UPDATE・SELECT | 会社（:52・:88） |
-| backend/app/routers/super_admin_phase_switch.py:72・126・129 → services/phase_gate.py:75・147 | SELECT・INSERT（upsert） | 運営（:89 require_super_admin、文脈なし） |
+| backend/app/routers/super_admin_phase_switch.py:72・126・129 → backend/app/services/phase_gate.py:75・147 | SELECT・INSERT（upsert） | 運営（:89 require_super_admin、文脈なし） |
 | backend/app/services/tenant.py:1803 `create_tenant_schema` | INSERT（会社を作るときの初期行） | :1780 で `set_config('app.tenant_id', <新しい会社>, true)` |
 
 ## 5. 分かったこと（事実）
@@ -125,8 +125,8 @@
 | 番号 | 問い | 結果 | 根拠 |
 |---|---|---|---|
 | U1 | outside_ticket_notice.py:51・ticket_channel_creator.py:54 は文脈の前か | :51 は会社の文脈の中。:54 の get_ticket_config は client.py:308 から文脈なしで呼ばれる | ticket_channel_writer.py:180→:193、client.py:303→:308、ticket_channel_creator.py:292→:305 |
-| U2 | discord_role_sync.py:66-67・discord_remove.py:63・google_webhook.py:170/191 の呼び出し元の文脈 | role_sync は文脈なし（自分でセッションを開く）。discord_remove は会社。stop_webhook は会社の画面から | discord_role_sync.py:53-80、discord_remove.py:85/148/198、routers/calendar.py:559/566 |
-| U3 | Celery の翻訳から llm_budget の書込までに文脈があるか | ある | tasks/translation.py:79 set_tenant_context → :81 ensure_inbound_translations |
+| U2 | discord_role_sync.py:66-67・discord_remove.py:63・google_webhook.py:170/191 の呼び出し元の文脈 | role_sync は文脈なし（自分でセッションを開く）。discord_remove は会社。stop_webhook は会社の画面から | discord_role_sync.py:53-80、discord_remove.py:85/148/198、backend/app/routers/calendar.py:559/566 |
+| U3 | Celery の翻訳から llm_budget の書込までに文脈があるか | ある | backend/app/tasks/translation.py:79 set_tenant_context → :81 ensure_inbound_translations |
 | U4 | export_inventory_for_sheet.py の接続役 | `DATABASE_URL`（アプリの接続役）。文脈は張らない。型A にすると 0 行になる | scripts/export_inventory_for_sheet.py:182 |
 | U5 | 会社スキーマに同名の表があるか | 窓口のビュー 417 本（tenant_*）に 8 表の名前は 0 件 | AUDIT sha=8a083664564d・42166385014e、pg_tables 直接 AUDIT sha=e126252f03aa（2026-11-06）。8 表とも public にだけある |
 | U6 | 本番の守りの状態をカタログで読めるか（K4-1 の測り方） | 読める。users は ENABLE・FORCE とも有効、ポリシー 4 本。inventory_movements は両方とも無効 | AUDIT sha=ffc923a4ba16・356907e75a95（2026-11-06T11:32Z） |

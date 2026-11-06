@@ -3,7 +3,7 @@
 > この文書は何か：会社ごとの設定・記録の 8 表に、データベース自身が「他社の行を書かせない（表によっては見せない）」守りを付ける計画です。表ごとに型を選び、5 便に分けて 1 便ずつ本番に出します。
 
 - 状態: **設計案（PO の KGI 承認待ち）**。PO の方向の指示: 2026-11-06 チャット「1」（問い「8 件すべてに守りを足す設計をする【おすすめ】：在庫の動きから順に、入口を1件ずつ調べて設計します。」への答え）。
-- 根拠: [recon.md](recon.md)（以下 R と書く。R§4 は recon の 4 章）。決定の記録: [ADR-1067](../../adr/ADR-1067-public-tenant-config-tables-rls.md)。前例: ADR-1018・ADR-145。
+- 根拠: [docs/handoff/s1-rls-stage4/recon.md](recon.md)（以下 R と書く。R§4 は recon の 4 章）。決定の記録: [ADR-1067](../../adr/ADR-1067-public-tenant-config-tables-rls.md)。前例: ADR-1018・ADR-145。
 - 自己審査: 同じ AI（Claude Opus）が Planner と Architect を順に担った。独立した第二者の審査ではない。各便のカードの前にクラウドの設計審査を通す。
 
 ## 1. 目的と利用者に見える変化
@@ -19,7 +19,7 @@
 | inventory_movements | 型A: 読み書きとも自社だけ（運営は読める） | 本番 0 行（R§3）。本番コードの書込なし。読むのは試験用の道具と手で流す書き出しだけ（R§4-1） |
 | discord_server_snapshots | 型A | 書くのは会社の画面だけ（discord_own_server.py:107、:119 で会社の文脈）。読む箇所なし（R§4-2） |
 | discord_server_apply_runs | 型A | 同上（:375、:389） |
-| tenant_discord_config | 型C: 書込・削除は自社か運営だけ。読取は全行可 | 会社が決まる前に読む: Discord の受け口 client.py:108-126、全社の点検 tasks/discord_own_staff_sync.py:24、文脈なしの新しい接続 services/discord_role_sync.py:59-60（R§4-3） |
+| tenant_discord_config | 型C: 書込・削除は自社か運営だけ。読取は全行可 | 会社が決まる前に読む: Discord の受け口 client.py:108-126、全社の点検 backend/app/tasks/discord_own_staff_sync.py:24、文脈なしの新しい接続 backend/app/services/discord_role_sync.py:59-60（R§4-3） |
 | tenant_discord_ticket_config | 型C | 文脈を張らない接続で読む: client.py:308（_resolve_tenant_id の直後に新しい接続で get_ticket_config）、discord_role_sync.py:67（R§4-4） |
 | google_webhook_subscriptions | 型C | 会社が決まる前に読む: verify_channel google_webhook.py:212。全社の期限点検 :395（R§4-5） |
 | tenant_llm_budgets | 型C ＋運営画面に運営の文脈を足す | 運営画面が全社を読む（super_admin_llm_budget.py:102・121、tcg_analysis_dashboard.py:526）。運営の保存 :154 は文脈なし（R§4-6） |
@@ -68,7 +68,7 @@ CREATE POLICY <表>_delete ON public.<表> FOR DELETE
 | ④-1 | inventory_movements | scripts/export_inventory_for_sheet.py:117 の接続で、読む前に会社の文脈（`set_config('app.tenant_id', <会社>, false)`）を張る。張らないと型A で 0 行になる（R§6 U4: `DATABASE_URL`＝アプリの接続役） |
 | ④-2 | discord_server_snapshots・discord_server_apply_runs | なし |
 | ④-3 | tenant_discord_config・tenant_discord_ticket_config | なし（書込の入口はすべて会社の文脈あり。R§4-3・4-4） |
-| ④-4 | google_webhook_subscriptions | なし（書込の入口 register・stop・sync は会社の文脈あり。R§4-5、routers/calendar.py の呼び出し） |
+| ④-4 | google_webhook_subscriptions | なし（書込の入口 register・stop・sync は会社の文脈あり。R§4-5、backend/app/routers/calendar.py の呼び出し） |
 | ④-5 | tenant_llm_budgets・tenant_settings | 運営画面の書込 2 か所（super_admin_llm_budget.py の upsert、super_admin_phase_switch.py の切替）で、書く直前に `set_operator_context`、`finally` で `reset_operator_context`。段階②b の型（会社の文脈の後に運営の文脈、finally で戻す） |
 
 - 順番の理由: 行と入口が少ない順。④-1 は PO の指示「在庫の動きから」。
@@ -100,7 +100,7 @@ CREATE POLICY <表>_delete ON public.<表> FOR DELETE
 |---|---|
 | 書込の入口に会社の文脈が無いと、INSERT は 42501 で失敗、UPDATE は静かに 0 行になる（段階②b の教訓） | R§4 で全入口の文脈を行番号で確かめた。運営画面の 2 か所だけ文脈が無く、④-5 で足す。各便の反映後に K5-1 で数える |
 | 型C で読めてしまう | 秘密の列は無い（R§5-5）。読取の絞り込みは §8 の後続で扱う |
-| 会社を作る処理 services/tenant.py:1803 が初期行を書けなくなる | :1780 で新しい会社の文脈を張ってから書く。型C の INSERT の条件を満たす。④-5 の試験に「会社を作る」を 1 本入れる |
+| 会社を作る処理 backend/app/services/tenant.py:1803 が初期行を書けなくなる | :1780 で新しい会社の文脈を張ってから書く。型C の INSERT の条件を満たす。④-5 の試験に「会社を作る」を 1 本入れる |
 | 運営の文脈がつなぎの使い回しで残る | finally で reset_operator_context。`get_db` の終わりの clear_tenant_context（database.py:57-61）が二重の守り |
 | デプロイ中の約 70 秒、reader 鍵の道が使えない | 数分おいて流し直す（ADR-1024 の運用） |
 
