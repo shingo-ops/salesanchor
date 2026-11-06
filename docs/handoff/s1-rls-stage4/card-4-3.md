@@ -137,11 +137,11 @@ run_sql migrations/20261107_130000_add_discord_config_rls.sql
 
 基準値（2026-11-07 04:21 JST、反映前に Opus が読んだ）: 2 表とも RLS f/f・ポリシー 0 本・持ち主 jarvis。tenant_discord_config: 会社 1 customer 1・会社 1 own 1・会社 4 customer 1・会社 6 customer 1（計 4）。tenant_discord_ticket_config: 会社 1・4・6 が各 1（計 3）。
 
-- 読む道: K4-1・K4-2 は design §5 のとおり reader 鍵の道で読む。reader 鍵の道で読めない項目があったときだけ、無制限鍵で読むだけにする。その許可は PO 2026-11-07 チャット「GO記録やSSHへの無制限鍵へのアクセス等、必要な権限は全て必要な場合は使用して良い許可を与える」（この段階④の作業についての PO の許可）と ADR-1003 による。どちらの道で読んだかを結果のコメントに書く。
+- 読む道: 基準値・K4-1・K4-2 は design §5 のとおり reader 鍵の道（docs/handoff/ai-readonly-db-path/usage.md）で読む。無制限鍵で本番 DB を読むことはしない。reader 鍵の道で読めない項目があったら、そこで止まって PO に戻す。
 - K4-1: 2 表とも relrowsecurity / relforcerowsecurity が t/t、ポリシー各 4 本。
 - K4-2: 2 表の会社ごとの行数が上の基準値と同じ。
 - K5-1: 反映時刻以降の backend・celery-worker・celery-beat・discord-gateway のログで `42501`・`row-level security`・`invalid input syntax for type integer` が 0 件。加えて discord-gateway のログで `tenant_id 逆引き失敗`（client.py:124）が 0 件。
-- K5-2（読取が会社の文脈なしでも通ること・本番に何も書かない）: reader 鍵の道では役を salesanchor_app に替えられないため、これだけは無制限鍵で読む（上の「読む道」の PO の許可による。読むだけの取引で、書く文は流さない）。postgres の入れ物で jarvis から `BEGIN READ ONLY; SET LOCAL ROLE salesanchor_app; SELECT count(*) FROM public.tenant_discord_config; SELECT count(*) FROM public.tenant_discord_ticket_config; ROLLBACK;` を流し、4 と 3（基準値と同じ）が返る。Discord の受け口が会社を引く読み方（文脈なし・アプリの接続役）と同じ条件。
+- K5-2（design §5 ④-3 のとおり）: 反映時刻以降の discord-gateway のログで `tenant_id 逆引き失敗`（client.py:124）が 0 件（K5-1 と同じ数え方。`tenant 未登録` は数えない）。会社の文脈なしの読取が通ることは、CI の試験①（アプリの接続役で 2 行とも読める）で確かめる。本番で役を替えて読む確かめは行わない。
 - 画面での確かめ（PO 戻り後）: 自社の Discord サーバーでチケットを 1 件出して作られる（design §5 K5-2）。待ちの間も次の便は進めてよい。
 
 ## 9. 戻し方（design §7 を表名で埋めたもの）
