@@ -2257,7 +2257,8 @@
       "leadAssigned": "Deal assignment",
       "metaMessageReceived": "New Meta message",
       "tcgDistributionError": "TCG distribution error",
-      "discordOutsideTicketPost": "Post outside a ticket room (Discord)"
+      "discordOutsideTicketPost": "Post outside a ticket room (Discord)",
+      "customerReplyReceived": "Customer reply"
     }
   },
   "erp": {

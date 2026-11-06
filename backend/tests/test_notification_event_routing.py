@@ -146,6 +146,7 @@ async def test_list_event_types_returns_all_codes(client):
         "meta_message_received",
         "tcg_distribution_error",
         "discord_outside_ticket_post",
+        "customer_reply_received",
     ]
 
 
