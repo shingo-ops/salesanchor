@@ -4,7 +4,7 @@
 > 会社ごとに写している連絡手段の名簿を、全社1つの名簿（共用の行＋会社独自の行）に作り直し、分析・カルテ・言語判定がその名簿の性質を読んで動くようにする手順。
 
 - 状態: **設計案作成済み（Opus）／未決2件（§9 D1・D2）PO確認待ち／クラウド審査 未実施／実装未着手**
-- 親: KGI ../../specs/db-ssot/channel-master/kgi.md（PO承認済み 2026-11-06）／ recon ./recon.md
+- 親: KGI ../../specs/db-ssot/channel-master/kgi.md（PO承認済み 2026-11-06）／ recon docs/handoff/channel-master-shared/recon.md
 - 元の要件: ../../specs/db-ssot/classification-master/design.md:106・:111-117（1テーブル・持ち主の印あり）
 - 基準: origin/main 7e0bc67b1（2026-11-06 取得）
 
@@ -178,7 +178,7 @@ async def conversion_items(db) -> dict[str, str]:
 
 ## 12. 維持の仕組み
 
-- 守り手: 設計担当（Opus）。PR-A〜PR-C の各段のあとに本番を読み取り専用の鍵で数えて確かめる。
+- 守り手: 設計担当（Opus）。名簿を読む唯一の入口 backend/app/services/channel_masters.py の変更を見張る。PR-A〜PR-C の各段のあとに本番を読み取り専用の鍵で数えて確かめる。
 - 直書きの戻りを止める: PR-B で試験 test_channel_master_literals.py（新しく作る）を backend/tests に足し、§7 K4 の検索を試験にする（分析・カルテ・言語判定の3ファイルに名前の直書きが出たら赤）。
 - 名簿の表を読むのは `backend/app/services/channel_masters.py` だけ（PR-B の試験で `public.channel_masters` の文字が他の `backend/app` に出ないことを確かめる）。
 - 共用行の変更は運営だけ（RLS で強制）。
