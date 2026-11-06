@@ -1,4 +1,8 @@
 {
+  "calendarView": {
+    "more": "{{count}} more",
+    "allDay": "All day"
+  },
   "productCsv": {
     "downloadTemplate": "Download blank sample CSV",
     "templateIntro": "This CSV contains only column headings. Enter products from row 2, keep the heading order, and save as UTF-8 CSV.",
