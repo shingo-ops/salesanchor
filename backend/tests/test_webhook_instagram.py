@@ -1377,3 +1377,58 @@ async def test_long_message_id_persists(db_session, webhook_env):
         "SELECT channel_type FROM leads WHERE channel_type = 'instagram'"
     ))
     assert res.scalar() == "instagram"
+
+
+# ---------------------------------------------------------------------------
+# 第2段 2d: お客さんの返信の知らせ（新しい受信のときだけ 1 回）
+# ---------------------------------------------------------------------------
+
+
+def _customer_reply_messenger_body(mid: str) -> dict:
+    return {
+        "object": "page",
+        "entry": [{
+            "id": "PAGE-A",
+            "messaging": [{
+                "sender": {"id": "PSID-100"},
+                "timestamp": 1714400000,
+                "message": {"mid": mid, "text": "Hello"},
+            }],
+        }],
+    }
+
+
+@pytest.mark.asyncio
+async def test_webhook_new_message_calls_customer_reply_notice_once(db_session, webhook_env):
+    from app.routers import webhook as wh
+
+    await _insert_tenant_meta_config(db_session, tenant_id=999, page_id="PAGE-A")
+    notice_mock = AsyncMock(return_value=True)
+
+    with patch("app.routers.webhook.enqueue_inbound_translation"), \
+            patch("app.routers.webhook.send_customer_reply_notice", new=notice_mock):
+        await wh.process_messenger_event(_customer_reply_messenger_body("mid-notice-1"))
+
+    assert notice_mock.await_count == 1
+    res = await db_session.execute(text("SELECT id FROM leads WHERE channel_type = 'messenger'"))
+    lead_id = res.scalar()
+    assert lead_id is not None
+    assert notice_mock.await_args.kwargs == {
+        "tenant_id": 999, "lead_id": lead_id, "source": "messenger",
+    }
+
+
+@pytest.mark.asyncio
+async def test_webhook_duplicate_message_does_not_call_customer_reply_notice(db_session, webhook_env):
+    from app.routers import webhook as wh
+
+    await _insert_tenant_meta_config(db_session, tenant_id=999, page_id="PAGE-A")
+    notice_mock = AsyncMock(return_value=True)
+
+    with patch("app.routers.webhook.enqueue_inbound_translation"), \
+            patch("app.routers.webhook.send_customer_reply_notice", new=notice_mock):
+        await wh.process_messenger_event(_customer_reply_messenger_body("mid-notice-2"))
+        assert notice_mock.await_count == 1
+        await wh.process_messenger_event(_customer_reply_messenger_body("mid-notice-2"))
+
+    assert notice_mock.await_count == 1

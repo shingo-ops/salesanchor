@@ -18626,7 +18626,8 @@
           "lead_assigned",
           "meta_message_received",
           "tcg_distribution_error",
-          "discord_outside_ticket_post"
+          "discord_outside_ticket_post",
+          "customer_reply_received"
         ],
         "title": "NotificationEventType",
         "type": "string"

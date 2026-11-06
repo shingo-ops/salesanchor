@@ -1955,6 +1955,14 @@ def _no_own_staff_sync_task(monkeypatch):
     monkeypatch.setattr(discord_own_staff_sync, "SCHEDULE_ENABLED", False)
 
 
+@pytest.fixture(autouse=True)
+def _no_customer_reply_notice_task(monkeypatch):
+    """第2段 2d: お客さんの返信の知らせを試験では裏で動かさない（本物の DB・Discord へ行かないように）。"""
+    from app.services import customer_reply_notifier
+
+    monkeypatch.setattr(customer_reply_notifier, "SCHEDULE_ENABLED", False)
+
+
 @pytest_asyncio.fixture
 async def client(db_session):
     """

@@ -2257,7 +2257,8 @@
       "leadAssigned": "商談の担当アサイン",
       "metaMessageReceived": "Meta の新着メッセージ",
       "tcgDistributionError": "TCG在庫配信エラー",
-      "discordOutsideTicketPost": "部屋の外の書き込み（Discord）"
+      "discordOutsideTicketPost": "部屋の外の書き込み（Discord）",
+      "customerReplyReceived": "お客さんの返信"
     }
   },
   "erp": {
