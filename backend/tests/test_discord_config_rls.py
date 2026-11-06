@@ -42,7 +42,7 @@ _BASE_MIGRATIONS = [
     "20261105_100000_tenant_discord_config_purpose.sql",
     "20261106_100000_tenant_discord_config_purpose_pk.sql",
 ]
-_MIGRATION = "20261107_130000_add_discord_config_rls.sql"
+_MIGRATION = "20261107_140000_add_discord_config_rls.sql"
 _GRANT_DDL = """
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO salesanchor_app;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO salesanchor_app;
