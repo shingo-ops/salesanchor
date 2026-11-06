@@ -3523,6 +3523,14 @@
     "check": "Check",
     "planFailed": "Could not check",
     "planNoBlueprint": "No blueprint yet",
+    "appRolesTitle": "App roles ({{count}})",
+    "appRoleState": {
+      "create": "Create",
+      "link": "Link",
+      "update": "Change",
+      "unchanged": "No change",
+      "blocked": "Cannot"
+    },
     "changesTitle": "Changes ({{count}})",
     "blockedTitle": "Not allowed ({{count}}, will not run)",
     "deleteTitle": "Delete candidates ({{count}})",
@@ -3544,7 +3552,8 @@
       "reason": "Reason",
       "parent": "Parent",
       "target": "Target",
-      "status": "Result"
+      "status": "Result",
+      "appRoleState": "On Discord"
     },
     "status": {
       "success": "Succeeded",
@@ -3553,6 +3562,7 @@
     },
     "kind": {
       "create_role": "Create role",
+      "link_role": "Link role",
       "update_role": "Update role",
       "create_category": "Create category",
       "update_category": "Update category",
@@ -3580,7 +3590,10 @@
       "ambiguous": "More than one item has this name",
       "depends_failed": "Skipped because an earlier item failed",
       "discord_error": "Discord rejected the request",
-      "method_not_allowed": "This operation is not run"
+      "method_not_allowed": "This operation is not run",
+      "name_in_blueprint": "The blueprint has a role with the same name",
+      "app_role_missing_on_discord": "The linked role was deleted on Discord",
+      "app_role_link_in_use": "The linked role is also used by another item"
     },
     "deleteKind": {
       "role": "Role",

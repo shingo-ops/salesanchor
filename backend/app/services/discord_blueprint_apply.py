@@ -76,6 +76,10 @@ async def apply_plan(plan: dict[str, Any], guild_id: str, bot_token: str) -> lis
     results: list[dict[str, Any]] = []
 
     for row, action in zip(plan["changes"], plan["actions"]):
+        if action.get("method") == "DB":
+            # アプリの側に番号を書くだけの行（第2段 2a-2 のロールをつなぐ）。Discord には送らない
+            results.append(_result(row, "success", discord_id=str(action["json"]["discord_role_id"])))
+            continue
         if action.get("method") not in _ALLOWED_METHODS:
             results.append(_result(row, "failed", "method_not_allowed"))
             continue

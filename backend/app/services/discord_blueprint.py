@@ -232,14 +232,34 @@ def _action(method: str, path: str, body: dict[str, Any], creates: str | None = 
     return {"method": method, "path": path, "json": body, "creates": creates}
 
 
+# アプリの役割の行の key の頭（第2段 2a-2）。設計図の key は ^[a-z0-9_]+$ なのでぶつからない
+APP_ROLE_KEY_PREFIX = "app_role:"
+_HEX_COLOR = re.compile(r"^#[0-9A-Fa-f]{6}$")
+
+
+def hex_color_to_int(value: Any) -> int:
+    """アプリの役割の色（'#RRGGBB'）を Discord の色の数にする。空や形が違うときは 0（色なし）。"""
+    if isinstance(value, str) and _HEX_COLOR.match(value):
+        return int(value[1:], 16)
+    return 0
+
+
+def _app_state(app: dict[str, Any], state: str, reason: str | None = None) -> dict[str, Any]:
+    return {"role_id": int(app["id"]), "name": str(app["name"]), "state": state, "reason": reason}
+
+
 def build_plan(
     bp: Blueprint,
     roles: list[dict[str, Any]],
     channels: list[dict[str, Any]],
     guild_id: str,
     bot_role_ids: Any,
+    app_roles: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    """設計図と Discord の今の姿の差を出す。Discord の返事そのものを受ける純粋な関数。"""
+    """設計図と Discord の今の姿の差を出す。Discord の返事そのものを受ける純粋な関数。
+
+    app_roles: アプリの役割（id・name・color・discord_role_id）。None なら今までと同じ結果（第2段 2a-2）。
+    """
     guild_id = str(guild_id)
     bot_ids = {str(i) for i in bot_role_ids}
 
@@ -358,6 +378,71 @@ def build_plan(
                 reason = "permission_bot_lacks"
             emit(0, _row("update_role", role.key, role.name, field, before, after), reason,
                  _action("PATCH", role_path, role_bodies[field]))
+
+    # ---- アプリの役割（第2段 2a-2・設計 S2-3 D2-1）。設計図のロールの後に見る
+    app_role_states: list[dict[str, Any]] = []
+    if app_roles is not None:
+        bp_role_names = {role.name for role in bp.roles}
+        linked_ids = {str(a["discord_role_id"]) for a in app_roles if a.get("discord_role_id")}
+        d_roles_by_id = {str(r.get("id")): r for r in d_roles}
+        for app in sorted(app_roles, key=lambda a: int(a["id"])):
+            key = f"{APP_ROLE_KEY_PREFIX}{int(app['id'])}"
+            name = str(app["name"])
+            color = hex_color_to_int(app.get("color"))
+            linked = str(app["discord_role_id"]) if app.get("discord_role_id") else None
+            if name in bp_role_names:
+                emit(0, _row("update_role", key, name, None, None, None), "name_in_blueprint")
+                app_role_states.append(_app_state(app, "blocked", "name_in_blueprint"))
+                continue
+            if linked is not None:
+                found = d_roles_by_id.get(linked)
+                if found is None:
+                    emit(0, _row("update_role", key, name, None, None, None), "app_role_missing_on_discord")
+                    app_role_states.append(_app_state(app, "blocked", "app_role_missing_on_discord"))
+                    continue
+                if linked in used_roles:
+                    emit(0, _row("update_role", key, name, None, None, None), "app_role_link_in_use")
+                    app_role_states.append(_app_state(app, "blocked", "app_role_link_in_use"))
+                    continue
+                used_roles.add(linked)
+                app_diffs: list[tuple[str, str, str]] = []
+                if found.get("name") != name:
+                    app_diffs.append(("name", str(found.get("name")), name))
+                if _int(found.get("color")) != color:
+                    app_diffs.append(("color", str(_int(found.get("color"))), str(color)))
+                if not app_diffs:
+                    app_role_states.append(_app_state(app, "unchanged"))
+                    continue
+                app_above = _int(found.get("position")) >= bot_top
+                for field, before, after in app_diffs:
+                    body = {"name": name} if field == "name" else {"colors": {"primary_color": color}}
+                    emit(0, _row("update_role", key, name, field, before, after),
+                         "role_above_bot" if app_above else None,
+                         _action("PATCH", "/guilds/{guild}/roles/" + linked, body))
+                if app_above:
+                    app_role_states.append(_app_state(app, "blocked", "role_above_bot"))
+                else:
+                    app_role_states.append(_app_state(app, "update"))
+                continue
+            same = [r for r in d_roles if r.get("name") == name
+                    and str(r.get("id")) not in used_roles and str(r.get("id")) not in linked_ids]
+            if len(same) > 1:
+                used_roles.update(str(r.get("id")) for r in same)
+                emit(0, _row("update_role", key, name, None, None, None), "ambiguous")
+                app_role_states.append(_app_state(app, "blocked", "ambiguous"))
+                continue
+            if same:
+                fid = str(same[0].get("id"))
+                used_roles.add(fid)
+                emit(0, _row("link_role", key, name, None, None, fid), None,
+                     _action("DB", "", {"discord_role_id": fid}))
+                app_role_states.append(_app_state(app, "link"))
+                continue
+            emit(0, _row("create_role", key, name, None, None, f"name={name}; color={color}"), None,
+                 _action("POST", "/guilds/{guild}/roles",
+                         {"name": name, "permissions": "0", "colors": {"primary_color": color},
+                          "hoist": False, "mentionable": False}, key))
+            app_role_states.append(_app_state(app, "create"))
 
     # ---- 上書き（カテゴリ・チャンネル共通）
     def target_id(target: str) -> tuple[str | None, str | None]:
@@ -585,5 +670,8 @@ def build_plan(
             sort_keys=True, ensure_ascii=False, separators=(",", ":"),
         ).encode()
     ).hexdigest()
-    return {"changes": out_changes, "blocked": out_blocked, "delete_candidates": out_deletes,
-            "plan_digest": digest, "actions": out_actions}
+    out: dict[str, Any] = {"changes": out_changes, "blocked": out_blocked, "delete_candidates": out_deletes,
+                           "plan_digest": digest, "actions": out_actions}
+    if app_roles is not None:
+        out["app_roles"] = app_role_states
+    return out
