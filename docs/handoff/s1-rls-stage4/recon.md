@@ -22,7 +22,7 @@
 - 画面からの要求: `backend/app/auth/dependencies.py` の `get_current_tenant` が `SET search_path`・`SET app.tenant_id = '<会社>'`・`SET app.is_operator = ''` を張る（dependencies.py 内 `get_current_tenant` 本文、`SET app.tenant_id` の行）。
 - 道具: `set_tenant_context`（非同期）・`set_tenant_context_sync`（Celery）・`set_tenant_context_cursor`（生カーソル）・`reset_tenant_context`（commit 後の張り直し）・`clear_tenant_context`（返却前に空へ）・`set_operator_context`（`app.is_operator='true'`）・`reset_operator_context`。
 - `backend/app/database.py:46-61` の `get_db` は開始時に何も張らず、終わりに `clear_tenant_context` を呼ぶ。→ `get_db` だけを使う運営画面（`require_super_admin`）は、会社の文脈も運営の文脈も空のまま SQL を流す。
-- ポリシーの比べ方の前例: `tenant_id = current_setting('app.tenant_id', true)::INTEGER`。文脈が空だと右辺は NULL になり、行は 0 件に見える。
+- ポリシーの比べ方の前例: `tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::INTEGER`（migrations/20261016_180000_add_users_write_rls.sql）。文脈を外した接続は `app.tenant_id=''` を持つ（backend/app/auth/dependencies.py:379）。NULLIF が無いと `''::INTEGER` が 22P02 で失敗する（migrations/20260605_020000_fix_translation_glossary_rls_cast.sql:3-11）。NULLIF があれば右辺は NULL になり、行は 0 件に見える。
 
 ## 3. 本番の行数（reader 鍵の道・ADR-1024、2026-11-06T11:20:42Z、AUDIT sha=62bad8783d59）
 

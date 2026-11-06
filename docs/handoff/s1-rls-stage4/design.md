@@ -4,7 +4,7 @@
 
 - 状態: **設計案（PO の KGI 承認待ち）**。PO の方向の指示: 2026-11-06 チャット「1」（問い「8 件すべてに守りを足す設計をする【おすすめ】：在庫の動きから順に、入口を1件ずつ調べて設計します。」への答え）。
 - 根拠: [docs/handoff/s1-rls-stage4/recon.md](recon.md)（以下 R と書く。R§4 は recon の 4 章）。決定の記録: [ADR-1067](../../adr/ADR-1067-public-tenant-config-tables-rls.md)。前例: ADR-1018・ADR-145。
-- 自己審査: 同じ AI（Claude Opus）が Planner と Architect を順に担った。独立した第二者の審査ではない。各便のカードの前にクラウドの設計審査を通す。
+- 自己審査: 同じ AI（Claude Opus）が Planner と Architect を順に担った。独立した第二者の審査ではない。各便のカードの前にクラウドの設計審査を通す。審査の記録: [review-opus.md](review-opus.md)（1 回目 REVISE、指摘 1〜3 を反映済み）。
 
 ## 1. 目的と利用者に見える変化
 
@@ -27,37 +27,53 @@
 
 ### 2-1. 型A のポリシー（ADR-145 の型から、共用行の道を外したもの）
 ```sql
+BEGIN;
 ALTER TABLE public.<表> ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.<表> FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS <表>_select ON public.<表>;
 CREATE POLICY <表>_select ON public.<表> FOR SELECT
-  USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER
+  USING (tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::INTEGER
          OR current_setting('app.is_operator', true) = 'true');
+DROP POLICY IF EXISTS <表>_insert ON public.<表>;
 CREATE POLICY <表>_insert ON public.<表> FOR INSERT
-  WITH CHECK (tenant_id = current_setting('app.tenant_id', true)::INTEGER);
+  WITH CHECK (tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::INTEGER);
+DROP POLICY IF EXISTS <表>_update ON public.<表>;
 CREATE POLICY <表>_update ON public.<表> FOR UPDATE
-  USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER)
-  WITH CHECK (tenant_id = current_setting('app.tenant_id', true)::INTEGER);
+  USING (tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::INTEGER)
+  WITH CHECK (tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::INTEGER);
+DROP POLICY IF EXISTS <表>_delete ON public.<表>;
 CREATE POLICY <表>_delete ON public.<表> FOR DELETE
-  USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER);
+  USING (tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::INTEGER);
+COMMIT;
 ```
+- 3 点の決まり（クラウド審査 2026-11-06 の指摘 1〜3。型A・型C とも）:
+  - `NULLIF(…, '')` を必ず付ける。文脈を外した接続は `app.tenant_id=''` を持つ（backend/app/auth/dependencies.py:379）。`''::INTEGER` は NULL にならず `invalid input syntax for type integer`（22P02）で失敗する。同じ穴は migrations/20260605_020000_fix_translation_glossary_rls_cast.sql で一度直した。手本 migrations/20261016_180000_add_users_write_rls.sql も NULLIF 付き。
+  - 各 `CREATE POLICY` の前に `DROP POLICY IF EXISTS`。scripts/run_all_migrations.sh は毎回すべての移行を流し（:14）、`ON_ERROR_STOP=1`（:25）なので、2 回目のデプロイで `policy already exists` になると止まる。
+  - `BEGIN;`〜`COMMIT;` で 1 つのトランザクションにまとめる。run_sql は `psql < file` で流すだけで、まとめる指定が無い。まとめないと ENABLE の後・ポリシーの前に全拒否の間ができる。前例 migrations/20261106_120000_create_discord_server_snapshot_tables.sql:13・:69。
 - tenant_id が空の行は本番に 0 行（R§3）。空の行はどの文脈からも書けない。
 
 ### 2-2. 型C のポリシー（ADR-1018 段階③便C users と同じ考え方）
 ```sql
+BEGIN;
 ALTER TABLE public.<表> ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.<表> FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS <表>_select ON public.<表>;
 CREATE POLICY <表>_select ON public.<表> FOR SELECT USING (true);
+DROP POLICY IF EXISTS <表>_insert ON public.<表>;
 CREATE POLICY <表>_insert ON public.<表> FOR INSERT
-  WITH CHECK (tenant_id = current_setting('app.tenant_id', true)::INTEGER
+  WITH CHECK (tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::INTEGER
               OR current_setting('app.is_operator', true) = 'true');
+DROP POLICY IF EXISTS <表>_update ON public.<表>;
 CREATE POLICY <表>_update ON public.<表> FOR UPDATE
-  USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER
+  USING (tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::INTEGER
          OR current_setting('app.is_operator', true) = 'true')
-  WITH CHECK (tenant_id = current_setting('app.tenant_id', true)::INTEGER
+  WITH CHECK (tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::INTEGER
               OR current_setting('app.is_operator', true) = 'true');
+DROP POLICY IF EXISTS <表>_delete ON public.<表>;
 CREATE POLICY <表>_delete ON public.<表> FOR DELETE
-  USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER
+  USING (tenant_id = NULLIF(current_setting('app.tenant_id', true), '')::INTEGER
          OR current_setting('app.is_operator', true) = 'true');
+COMMIT;
 ```
 - 型C は「読めてしまう」守りの穴を残す。8 表に秘密の値の列は無い（R§5-5）。読取まで絞ると、会社が決まる前の入口（R§5-2）が止まる。読取の絞り込みは、入口を「会社を引くだけの関数」に置き換えてから別の段階で考える（本段階の対象外。§8）。
 
@@ -79,9 +95,9 @@ CREATE POLICY <表>_delete ON public.<表> FOR DELETE
 
 - 本物の migration を当てて試す（表の定義を試験に書き写さない。test-schema-dup の見張り）。前提の表は migration-test.yml に登録する。
 - 会社番号は他の試験と重ならない番号（例 984・985）を使う。
-- 型A: ①自社文脈で INSERT・SELECT できる ②他社文脈で SELECT が 0 行 ③他社の tenant_id で INSERT が 42501 ④他社行の UPDATE・DELETE が 0 行 ⑤運営文脈で全社の SELECT ができる ⑥文脈なしで SELECT 0 行。
-- 型C: ①文脈なし・他社文脈で SELECT が全行 ②他社の tenant_id で INSERT が 42501 ③他社行の UPDATE・DELETE が 0 行 ④運営文脈で他社行の UPDATE が 1 行。
-- ④-5 は運営画面 2 本の API 試験（保存が通る・終わった後に `app.is_operator` が空に戻る）。翻訳の見張りの通知の試験 1 本（通知の後に tenant_llm_budgets の時刻が入る）。
+- 型A: ①自社文脈で INSERT・SELECT できる ②他社文脈で SELECT が 0 行 ③他社の tenant_id で INSERT が 42501 ④他社行の UPDATE・DELETE が 0 行 ⑤運営文脈で全社の SELECT ができる ⑥文脈なしで SELECT 0 行（新しい接続の場合と、`SET app.tenant_id=''` の後の場合の両方。後者でエラーにならず 0 行）⑦同じ移行を 2 回当ててもエラーにならない。
+- 型C: ①文脈なし・他社文脈で SELECT が全行 ②他社の tenant_id で INSERT が 42501 ③他社行の UPDATE・DELETE が 0 行 ④運営文脈（`app.is_operator='true'`・`app.tenant_id=''`）で他社行の UPDATE が 1 行 ⑤同じ移行を 2 回当ててもエラーにならない。
+- ④-5 は運営画面 2 本の API 試験（`SET app.tenant_id=''` の済んだ接続で保存が通る・終わった後に `app.is_operator` が空に戻る）。翻訳の見張りの通知の試験 1 本（通知の後に tenant_llm_budgets の時刻が入る）。
 
 ## 5. 受入条件（KGI 案は kgi.md の KGI-4〜6）
 
@@ -89,7 +105,7 @@ CREATE POLICY <表>_delete ON public.<表> FOR DELETE
 |---|---|
 | K4-1 8 表すべてが本番で RLS 有効（ENABLE と FORCE）でポリシー 4 本 | 各便の反映後、reader 鍵の道で `pg_class.relrowsecurity / relforcerowsecurity` と `pg_policies` の件数を読む（読めることを確かめ済み: R§6 U6。反映前の基準値は 8 表とも False/False・0 本） |
 | K4-2 反映の前後で 8 表の行数が変わらない | reader 鍵の道で R§3 と同じ集計を反映の前後に流し、表ごとに一致 |
-| K5-1 各便の反映後、backend・worker・beat・discord-gateway のログに 42501 と `row-level security` が 0 件 | 反映時刻以降の `docker logs` を数える（前例 KGI-2 と同じ数え方） |
+| K5-1 各便の反映後、backend・worker・beat・discord-gateway のログに 42501 と `row-level security` と `invalid input syntax for type integer` が 0 件 | 反映時刻以降の `docker logs` を数える（前例 KGI-2 と同じ数え方） |
 | K5-2 各便で触る入口が本番で動く | ④-1: 書き出し台本を 1 社分流して 0 行のままエラー 0。④-3: Discord の受け口のログに `tenant 未登録` が新しく出ない。④-4: Google 通知の受け口・期限点検のログにエラー 0。④-5: 運営画面で予算を同じ値で保存して 200 |
 | K6-1 アプリの接続役で、許されない読み書きを DB が拒否する | CI の Backend Tests が緑で、PostgreSQL のログに 8 表それぞれ `violates row-level security policy` が 1 件以上 |
 | K6-2 便5 の CI 確かめで「RLS の無い会社ごとの表」が 0 | 便④-5 の後、便5 の許可一覧から 8 表がすべて消え、CI が緑 |
@@ -106,7 +122,7 @@ CREATE POLICY <表>_delete ON public.<表> FOR DELETE
 
 ## 7. 戻し方
 
-- 各便の migration と対の戻し SQL をカードに書く: `DROP POLICY ... ; ALTER TABLE public.<表> NO FORCE ROW LEVEL SECURITY; ALTER TABLE public.<表> DISABLE ROW LEVEL SECURITY;`。データは変えないので、戻しても行は失われない。
+- 各便の migration と対の戻し SQL をカードに書く: `BEGIN; DROP POLICY IF EXISTS <表>_select ON public.<表>;`（insert・update・delete も同じ）`ALTER TABLE public.<表> NO FORCE ROW LEVEL SECURITY; ALTER TABLE public.<表> DISABLE ROW LEVEL SECURITY; COMMIT;`。データは変えないので、戻しても行は失われない。
 - ④-5 のコード変更は PR を戻すだけで元に戻る。
 
 ## 8. 触らない範囲・後続
@@ -117,7 +133,7 @@ CREATE POLICY <表>_delete ON public.<表> FOR DELETE
 ## 9. 外部・過去事例の参照と我々への応用
 
 - 社内の前例（直接の根拠）: ADR-1018 段階①〜③。11 表のうち 8 表に RLS を付け、各段階の反映後に 42501・row-level security が 0 件（docs/specs/tenant-rls/kgi.md KGI-2、2026-10-16 17:30）。段階②b で「書込の入口に運営の文脈が無いと UPDATE が静かに 0 行」を見つけ、入口を全部数えてから出す手順にした。本設計 R§4 はその手順に従った。
-- 外部の仕様: PostgreSQL の RLS は `FORCE` を付けると表の持ち主にも効き、superuser と BYPASSRLS の役割には効かない。根拠: PostgreSQL 16 公式文書「5.8. Row Security Policies」（https://www.postgresql.org/docs/16/ddl-rowsecurity.html、2026-11-06 取得）の原文「Superusers and roles with the BYPASSRLS attribute always bypass the row security system when accessing a table. Table owners normally bypass row security as well, though a table owner can choose to be subject to row security with ALTER TABLE ... FORCE ROW LEVEL SECURITY.」と「If no policy exists for the table, a default-deny policy is used」。Context7 は月の上限に達して使えなかったため、起動指示の許可に従い公式文書を直接読んだ。適用: 両方の型で FORCE を付ける。ポリシーを付ける前に ENABLE だけを先に流すと、その間は全拒否になるため、ENABLE・FORCE・ポリシー 4 本を 1 つの移行の中で入れる。
+- 外部の仕様: PostgreSQL の RLS は `FORCE` を付けると表の持ち主にも効き、superuser と BYPASSRLS の役割には効かない。根拠: PostgreSQL 16 公式文書「5.8. Row Security Policies」（https://www.postgresql.org/docs/16/ddl-rowsecurity.html、2026-11-06 取得）の原文「Superusers and roles with the BYPASSRLS attribute always bypass the row security system when accessing a table. Table owners normally bypass row security as well, though a table owner can choose to be subject to row security with ALTER TABLE ... FORCE ROW LEVEL SECURITY.」と「If no policy exists for the table, a default-deny policy is used」。Context7 は月の上限に達して使えなかったため、起動指示の許可に従い公式文書を直接読んだ。適用: 両方の型で FORCE を付ける。ポリシーを付ける前に ENABLE だけを先に流すと、その間は全拒否になるため、ENABLE・FORCE・ポリシー 4 本を 1 つの移行の中で、`BEGIN;`〜`COMMIT;` で囲んで入れる（§2 の決まり）。
 - 外部の導入事例の数値は使わない。理由: 本段階は社内の前例と同じ型の繰り返しで、判断の根拠は社内の実測で足りる。
 
 ## 10. PO に決めてもらうこと

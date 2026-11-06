@@ -21,7 +21,7 @@
 4. 運営画面の 2 つの書込（AI の予算の保存、会社の段階の切替）は、書く直前に運営の文脈を張り、終わりに必ず外す。翻訳の見張りの通知時刻の書込（translation_monitor.py:206、文脈が外れた後に走る）は、書く直前に会社の文脈を張る（recon §7）。
 5. 1 便に 1〜2 表ずつ、5 便に分けて出す（④-1 在庫の動き → ④-2 Discord の取込記録 2 表 → ④-3 Discord 設定 2 表 → ④-4 Google 通知 → ④-5 予算・会社設定）。各便で「出す → 本番で確かめる → 次」。
 6. ADR-1063 便5 の CI 確かめは、8 表を理由「段階④で RLS を付ける予定（ADR-1067 便④-N）」で許可一覧に入れて始め、便ごとに 1 表ずつ消す。便④-5 の後に許可一覧から 8 表が消える。
-7. 1 つの移行の中で ENABLE・FORCE・ポリシー 4 本をまとめて入れる。
+7. 1 つの移行の中で ENABLE・FORCE・ポリシー 4 本をまとめ、`BEGIN;`〜`COMMIT;` で囲む。各 `CREATE POLICY` の前に `DROP POLICY IF EXISTS` を置く（移行は毎回すべて流れるため）。会社の比べ方は `NULLIF(current_setting('app.tenant_id', true), '')::INTEGER`（文脈を外した接続は空文字を持つため）。
 
 ## Why（なぜ）
 
@@ -35,7 +35,7 @@
 
 ## 戻し方
 
-- 便ごとに、その便の表だけを戻す。`DROP POLICY`（4 本）→ `ALTER TABLE … NO FORCE ROW LEVEL SECURITY` → `ALTER TABLE … DISABLE ROW LEVEL SECURITY`。行は消えない（design §7）。
+- 便ごとに、その便の表だけを戻す。`DROP POLICY IF EXISTS`（4 本）→ `ALTER TABLE … NO FORCE ROW LEVEL SECURITY` → `ALTER TABLE … DISABLE ROW LEVEL SECURITY`。行は消えない（design §7）。
 - 運営の文脈を足すコード（便④-5）は、その PR を戻せばよい。
 
 ## 測り方
