@@ -61,6 +61,23 @@
 - 【事実】001 の分析対象リード: instagram 156・messenger 157・whatsapp 157（K5の基準値の元）
 - 生出力: /tmp/CC報告ファイル/chm-prod.txt・channel-prod1.txt（件数のみ）
 
+### 4-2. 名簿に無い値の持ち主は試しのデータか（2026-11-06・件数のみ）
+
+- 【事実】会社の名前: 001「テスト株式会社」・006「Sales Anchor App Review」（審査用）・004 は実在の会社名。
+- 【事実】作られた日: 001 の1件 2026-10-10／004 の54件 2026-06-02〜07-03（4日に集中）／006 の56件 2025-05-17〜2026-07-25。
+- 【事実】004 の不明54件は、その会社のリード56件のうち54件。担当者なし・初回問い合わせ日なし・メール/電話/各連絡先IDなし。
+- 【事実】どの連絡手段か跡がある件数（受信の記録・会話記録から）:
+
+| 会社 | 値 | 跡なし | 跡あり（内訳） |
+|---|---|---|---|
+| 001 | unknown 1 | 1 | 0 |
+| 004 | unknown 54 | 50 | 4（instagram 1・phone 1・messenger 2） |
+| 006 | unknown 42 | 38 | 4（instagram 1・messenger 1・instagram と messenger 両方 2） |
+| 006 | email 9・referral 2・sns 3 | 14 | 0 |
+
+- 【未確認】004 の54件が試しのデータかどうか（名前は実在の会社。中身からは決められない）。
+- 生出力: /tmp/CC報告ファイル/chm-tenants.txt・chm-t004a〜d.txt・chm-t006d.txt・chm-t001d.txt（件数のみ）
+
 ## 5. 既存の「全社共用＋会社独自」の型（そろえる先）
 
 - 【事実】public の表に `tenant_id INTEGER`（NULL=共用・運営管理）: `migrations/20260920_060000_note_master_tenant_id.sql:1-7`、`migrations/20260919_020000_master_ssot_public_tables.sql`
