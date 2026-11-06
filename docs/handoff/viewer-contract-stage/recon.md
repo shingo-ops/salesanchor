@@ -122,3 +122,14 @@
 - 部品の金型: frontend/src/components/ に TextField・Select・Tabs・Toggle・Checkbox・Modal・CountryCombobox がある。
 - 会社情報の口: GET・PUT /api/v1/admin/tenant-profile（backend/app/routers/tenant_profile.py:52〜:53・:85〜:86、backend/app/main.py:478）。閲覧者の運営の口: /super-admin/viewers/…（backend/app/routers/super_admin_viewers.py:347〜:374）。
 - 他テーマの境界: docs/specs/profile-account-settings/README.md（オーナー専用の設定はプロフィールのページに統合）、docs/specs/quote-invoice/ideal-state.md（B2B の支払い方法は PayPal と Wise）。
+
+## 13. 書類ごとに国内向けか海外向けかを選ぶ形の確認（2026-11-06。生出力 /tmp/CC報告ファイル/contract-status/dropdown-recon-1106.txt〜dropdown-recon4-1106.txt）
+
+- 見積書と請求書の PDF は、出すたびにその時点の会社情報から作る。backend/app/routers/invoices.py:829 前後（請求書 PDF）・:875 前後（PayPal の写し PDF）・:1007 前後（見積書 PDF）が毎回 `_fetch_tenant_profile` を読む。発行元の写しの列は無い。
+- 見積書から請求書を作る口は backend/app/routers/invoices.py:235〜:332。見積書の値を INSERT で引き継ぐ形（company_id・contact_id・currency 等）。直接作る口は同 :333。下書きを直す口は同 :446。
+- quotes と invoices は会社ごとのスキーマの表（backend/app/services/tenant.py:798・:864）。
+- 見積書と請求書の作る画面は、選択の部品として SelectControl を既に使う（frontend/src/pages/quote-create/QuoteCreatePage.tsx:24・:159、frontend/src/pages/invoice-create/InvoiceCreatePage.tsx:20・:303）。
+- 発注書の画面は 2026-10-11 の commit 7a2f39c20 で消えた。frontend/src/pages に purchase-orders は無い。口（backend/app/routers/purchase_orders.py:354・:385・:495）だけが残る。
+- FedEx の申請書の画面（frontend/src/pages/integrations/FedexLabelValidationTab.tsx:57）は、origin/main のどのファイルからも読み込まれていない。口（backend/app/routers/shipping.py:780・:815）だけが残る。
+- 取引先の住所の国は company_addresses.country_code CHAR(2)（migrations/030_create_company_contact_subtables.sql:55）。NOT NULL が無く、空を許す。仕入先（suppliers）に国の列は無い（tenant.py:968 の表定義）。
+- 本番で国が空の取引先が何件あるかは、まだ数えていない（reader 鍵が要る）。

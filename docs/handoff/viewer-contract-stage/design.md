@@ -188,10 +188,20 @@ mode: handoff
   - B2B の請求書と見積書: backend/app/routers/invoices.py:109〜:128 の _fetch_tenant_profile（呼び出し :829・:875・:1007）。PDF は backend/app/services/invoice_renderer.py:509〜:513・:579〜:583。
   - 発注書: backend/app/services/po_renderer.py:253〜:273（住所を1行で描く :371〜:373 付近）。
   - FedEx の申請書と申請メール: backend/app/services/label_validation.py:82〜:103 の get_tenant_profile（呼び出し backend/app/routers/shipping.py:780・:815）。
-- 今の書類がどちらの region を読むかは **PO に確かめる（§7-1）**。設計担当の案は、書類の言葉から読んだもの:
-  - B2B の請求書と見積書 → overseas。見出しが英語（INVOICE・QUOTATION。invoice_renderer.py:267）で、輸出の項目（HS コード）を載せる（同 :11）。
-  - FedEx の申請書と申請メール → overseas。英語の会社名を先に使う（label_validation.py:127・:159）。
-  - 発注書 → domestic。見出しと項目名が日本語（po_renderer.py:369・:392・:395）。
+- 今の書類がどちらの region を読むか（PO 2026-11-06「国内向けか海外向けかプルダウンで選択してその選択によって分岐させる方法は？」「会社情報は国内と海外でそれぞれ登録できる仕組みを想定している」）:
+  - 見積書と B2B の請求書: 作る画面でプルダウン「国内向け／海外向け」を選び、選んだ region の会社情報を載せる。
+    - 選んだ値は書類の行に1つだけ持つ（quotes.issuer_region・invoices.issuer_region。値は domestic／overseas）。住所そのものは書類に写さない。住所の正本は tenant_profile_addresses の1か所のまま。
+    - 見積書から請求書を作るときは、見積書の値を引き継ぐ（作る処理 backend/app/routers/invoices.py:235〜:332 の INSERT に1列足す）。見積書を経ずに作る請求書（同 :333）は、画面で選ぶ値を必須にする。
+    - 下書き（status が draft）の間は直せる（請求書の更新の口 同 :446）。発行の後は直せない。
+    - PDF は今と同じく、出すたびにその時点の会社情報から作る（同 :829・:875・:1007 が毎回 tenant_profile を読む。写しの列は無い）。そのため、会社情報を直した後に出し直すと、選んだ側の新しい住所が載る。今の動きと同じで、今回は変えない。
+    - 前に作った書類（値が空）は overseas として読む。見出しが英語のため（invoice_renderer.py:267）。移行で値を書き込まない（ADR-1007 決定1）。この扱いは §7-2 で PO に確かめる。
+    - 最初の選択は空にし、選ばないと保存できない。取引先の国から自動で入れる形（PO への選択肢3）は取らない。取引先の住所の国の列は空を許す（migrations/030_create_company_contact_subtables.sql:55 の country_code CHAR(2)。NOT NULL なし）ため、自動で決められない書類が出る。
+    - 画面の部品は今の作る画面が使っている SelectControl（frontend/src/components/Select。QuoteCreatePage.tsx:24・:159、InvoiceCreatePage.tsx:20・:303）。選択肢の文字は t()。詳しい画面には選んだ値を読むだけで出す。
+    - quotes と invoices は会社ごとのスキーマの表（backend/app/services/tenant.py:798・:864）。ADR-142 に従い、全会社へ足す移行と _TENANT_TABLES_SQL を同じ変更で揃える。値は決まった2つなので、相談係の道では隠さない（決まった値しか入らない列の扱い）。
+  - 発注書と FedEx の申請書: 今は作る画面が無い（下の事実）。どちらの region を読むかは **PO に確かめる（§7-1）**。
+    - 発注書の画面は 2026-10-11 に「使っていない画面」として消した（commit 7a2f39c20「refactor: remove unused purchase-orders page」。PurchaseOrdersPage.tsx と PurchaseOrdersFormModal.tsx を削除）。origin/main の frontend/src に purchase-orders の道は無い（git grep 2026-11-06）。PDF とメールの口（backend/app/routers/purchase_orders.py:354・:385・:495）だけが残る。
+    - FedEx の申請書の画面（frontend/src/pages/integrations/FedexLabelValidationTab.tsx:57 の FedexLabelValidationTab）は、origin/main でどのファイルからも読み込まれていない（git grep 2026-11-06。他の当たりは CSS の読み込みだけ）。口（backend/app/routers/shipping.py:780・:815）だけが残る。
+    - 生出力: /tmp/CC報告ファイル/contract-status/dropdown-recon-1106.txt〜dropdown-recon4-1106.txt。
 - 古い住所は1欄の文字、新しい住所は欄ごとの値。get_issuer は欄を決まった順でつないだ1つの文字も返し、今の書類は描き方を変えずにそれを載せる（新しい PDF の配置は閲覧者の請求書だけ）。
 - 閲覧者の請求書は domestic を読む。発行時に get_issuer の結果を issuer_snapshot に写す。発行後に会社情報を直しても発行済みは変わらない。
 - 今の書類の写しの列（purchase_orders の company_name_snapshot・contact_info_snapshot。migrations/063_tenant_rbac_extensions.sql:63・:67）は、アプリから書く処理が無い（backend/app の grep で0件）。今回は触らない。
@@ -472,10 +482,12 @@ commit の後、裏で順に行う:
 
 - ~~発行元（HIGH LIFE JPN）が消費税の課税事業者か~~ → 消費税を納めていると回答（2026-11-06 PO「1」。PO の回答で、申告書の照合はしていない）。§3-5 の常に10%を足す形のまま。
 
-- **今の書類がどちらの住所を読むか（未回答）**: B2B の請求書と見積書・FedEx の申請書は海外用、発注書は国内用とする案（§3-4 の「発行元を読む1つの道」）。答えが無いと今の書類の切り替えを作れない。
+- 見積書と B2B の請求書は、作る画面のプルダウンで国内向けか海外向けを選ぶ形にした（2026-11-06 PO の問い「プルダウンで選択してその選択によって分岐させる方法は？」に、作れることを確かめて設計した）。
+- **画面の無い発注書と FedEx の申請書がどちらの住所を読むか（未回答）**: どちらも今は作る画面が無い（§3-4）。答えが無いとこの2つの切り替えを作れない。
 
 ### 7-2. 承認のときに一緒に確かめること
 
+- 前に作った見積書と請求書（国内向けか海外向けかの値が空）を、海外向けとして読む扱い。
 - 成功条件の11番の見出し「請求書情報を分けて持てる」を、今の決定（会社情報は1か所、住所と電話と振込先だけ国内用と海外用）に合わせて言い直すか（成功条件は PO 承認済みのため）。
 - 状態の表示名「契約手続き中」。
 - 手続き中の人にも手作業の「延長」を出す。
@@ -537,8 +549,9 @@ commit の後、裏で順に行う:
 | A37 | 公開ポリシーの閲覧者の保存期間が3年、請求書の記録が7年、Google の用途にドライブ、利用目的に再登録の防止が載り、改訂日が入る | 本番の LP を PO が目視＋ lp のビルド |
 | A38 | 週1回の接続の見守りが動き、トークンの更新に失敗すると Discord の運用通知に1件出る | backend pytest（更新を失敗させる）＋本番の実行記録 |
 | A40 | 差出人を読む処理が get_issuer の1つだけになる。get_issuer は backend/app/services/issuer.py に置く。backend/app で tenant_profile を読む SQL は、このファイルと例外の2つ（会社情報の口 backend/app/routers/tenant_profile.py、会社を作る処理 backend/app/services/tenant.py の表の作成と既定の行の INSERT）の外に0件。会社情報の更新の口で address・phone を送っても保存されない | backend pytest（backend/app の .py を読んで「tenant_profile」を含む行を数え、上の3ファイル以外で0件なら合格。ソースを読む試験の先例 backend/tests/test_tenant_loop_migration_guard.py） |
-| A41 | B2B の請求書・見積書・発注書・FedEx の申請書と申請メールが、§7-1 で決めた region の住所と電話を載せる。その region の行が無い会社では、切り替え前と同じ古い住所が載る。会社名は §3-4 の書類ごとの選び方のとおりで、切り替えの前と後で同じ文字になる（日本語名と英語名の両方が入った会社で確かめる） | backend pytest（行あり・行なしの2通りで PDF の文字を pdfminer.six で読む。先例 backend/tests/test_po_renderer.py:81〜:89。申請メールは返す文字を比べる）。FedEx の申請書の PDF から文字を取り出せるかは未確認で、取り出せなければ重ねる前の値を渡す関数の引数で確かめる |
+| A41 | 見積書と B2B の請求書は、選んだ region（値が空の前の書類は overseas）の住所と電話を載せる。発注書・FedEx の申請書と申請メールは、§7-1 で決めた region の住所と電話を載せる。その region の行が無い会社では、切り替え前と同じ古い住所が載る。会社名は §3-4 の書類ごとの選び方のとおりで、切り替えの前と後で同じ文字になる（日本語名と英語名の両方が入った会社で確かめる） | backend pytest（行あり・行なしの2通りで PDF の文字を pdfminer.six で読む。先例 backend/tests/test_po_renderer.py:81〜:89。申請メールは返す文字を比べる）。FedEx の申請書の PDF から文字を取り出せるかは未確認で、取り出せなければ重ねる前の値を渡す関数の引数で確かめる |
 | A42 | 国内用の住所の行が無いと、閲覧者の請求書は 409 issuer_address で止まり、古い住所では発行されない。国内用と海外用のタブのそれぞれで、その行が無く古い値があるとき、古い住所（読むだけ）と入れ直しの案内が出る | backend pytest＋ frontend テスト＋ Evaluator |
+| A43 | 見積書と請求書の作る画面に「国内向け／海外向け」の選択があり、選ばないと保存できない。見積書から作った請求書は見積書の値を引き継ぐ。発行の後は値を直せない | backend pytest（作る・引き継ぐ・発行後に直す口が 409 か 422 で止まる）＋ frontend テスト＋ Evaluator |
 ## 9. 実装カードへ送ること
 
 - 状態を読む場所の全件 grep（`'trial'`・`"trial"`・`'active'`・`"active"`）を最初に行い、結果をカードの表と照合する。表に無い場所が出たら止まる。
