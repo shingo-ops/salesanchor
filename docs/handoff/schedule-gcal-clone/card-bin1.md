@@ -149,7 +149,15 @@ export function pointRect(ev: { clientX: number; clientY: number } | null | unde
 - `import interactionPlugin from '@fullcalendar/interaction';` を足し、`PLUGINS = [timeGridPlugin, dayGridPlugin, interactionPlugin]`。
 - 新しい props を受ける（既定値: `timeStyle = 'h24'`・`eventLayout = 'inline'`・`hourRange = 'events'`・`scrollToNow = false`・`weekStart = 1`・`fillHeight = false`）。
 - `range`: `hourRange === 'full'` なら `{ slotMinTime: '00:00:00', slotMaxTime: '24:00:00' }`、そうでなければ今の `computeHourRange`。
-- `fcEvents` の各予定に、`ev.color` があるとき `backgroundColor: ev.color`・`borderColor: ev.color`、`ev.editable !== undefined` のとき `editable: ev.editable` を足す（無いときは今と同じ形）。
+- `fcEvents` の各予定に、`ev.editable !== undefined` のとき `editable: ev.editable` を足す（無いときは今と同じ形）。**`backgroundColor`・`borderColor`・`color` は FullCalendar に渡さない**（渡すと FullCalendar が要素に色を直接書き、見積もりの地と重なりの赤枠より強くなる・core `internal-common.js:7199-7201`・審査 Q2）。
+- 担当者の色は `<FullCalendar>` の `eventDidMount` で置く:
+  ```ts
+  eventDidMount={(arg) => {
+    const color = (arg.event.extendedProps.source as CalendarViewEvent).color;
+    if (color) arg.el.style.setProperty('--comp-calendar-owner-color', color);
+  }}
+  ```
+  （色の値は DB から来たデータ。css に色を書くのではなく、変数に入れるだけ。css 側の 3 がこの変数を使う）
 - `const omitSameMeridiem = i18n.language?.startsWith('ja') ?? false;`
 - `renderContent`:
   - `renderEventContent` があれば今のまま。
@@ -184,23 +192,35 @@ export function pointRect(ev: { clientX: number; clientY: number } | null | unde
 - FullCalendar の型名（`DateSelectArg` など）を import して使ってよいが、`export` しない（ADR-1065 What 3）。
 
 ### 3. `frontend/src/components/CalendarView.css`
-足すのは次の 3 つだけ（値は var() だけ・px や # を書かない）:
+（審査 1 回目 Q1・Q2 を 2026-11-07 に直した版）
+足すのは次の 4 つだけ（値は var() だけ・px や # を書かない）。
+置く場所: 1 と 2 はファイルの末尾。3 と 4 は **`.comp-calendar__event--tone-holiday` の規則の直後、`/* 見積もり: 点線の枠…` の規則より前**（同じ強さの規則は後ろが勝つため。見積もりの面の色の地と重なりの赤枠を、担当者の色より後ろに置いて勝たせる・ADR-1065 What 5・審査 Q2）。
 ```css
+/* 1 */
 .comp-calendar--fill {
   height: 100%;
 }
 
+/* 2 */
 .comp-calendar .comp-calendar__content--stacked {
   display: flex;
   flex-direction: column;
   min-width: 0;
 }
 
-/* 担当者の色の箱: 地と枠は予定ごとの色（FullCalendar が付ける）、文字は塗りの上の色 */
+/* 3 担当者の色の箱: 地と枠は予定ごとの色（eventDidMount が要素に --comp-calendar-owner-color を置く）、文字は塗りの上の色 */
 .comp-calendar .comp-calendar__event--owner-color {
+  --fc-event-bg-color: var(--comp-calendar-owner-color);
+  --fc-event-border-color: var(--comp-calendar-owner-color);
   --fc-event-text-color: var(--on-solid);
 }
+
+/* 4 担当者の色の見積もり: 地は面の色（下の見積もりの規則）なので、文字は本文の色 */
+.comp-calendar .comp-calendar__event--owner-color.comp-calendar__event--line-dashed {
+  --fc-event-text-color: var(--text-primary);
+}
 ```
+（4 は 2 つの class を持つので強さが上。置く場所は 3 の直後でよい。`--text-primary` は `frontend/src/index.css:24`）
 
 ### 4. `frontend/src/locales/ja.json`・`frontend/src/locales/en.json`
 `calendarView` の中に同じキーを足す（既存の `more`・`allDay` は変えない）:
@@ -214,7 +234,8 @@ export function pointRect(ev: { clientX: number; clientY: number } | null | unde
 | `timeRange` | `{{start}}～{{end}}` | `{{start}} – {{end}}` |
 
 ### 5. `frontend/src/components/CalendarView.test.tsx`
-今の試験は消さず・変えずに足す（T4 だけ 1 行変える）:
+今の試験は消さず・変えずに足す。変えてよいのは次の 2 行だけ:
+- T3 の `expect(onEventClick).toHaveBeenCalledWith('e1');`（`frontend/src/components/CalendarView.test.tsx:192`）→ `expect(onEventClick).toHaveBeenCalledWith('e1', null);`（`el` を渡していないので四角は null・審査 Q1）。
 - T4: 数える包みに `readPackageFiles('interaction', (n) => n === 'index.js' || n.startsWith('internal'))` を足す。interaction の `--fc-*` が増えて漏れが出たら、css に足さずに BLOCKED: で止める。
 - T6 `toMeridiemHour`: 0→{12,false}、9→{9,false}、12→{12,true}、13→{1,true}、23→{11,true}。
 - T7 `formatTimeRange`（`t` は試験の中で ja の文を返す小さな関数を作る）: 20:00〜21:00 → `午後8時～9時`、12:30〜13:30 → `午後12:30～1:30`、11:30〜12:30 → `午前11:30～午後12:30`、end null → `午後8時`、omitSameMeridiem 偽で 20:00〜21:00 → `午後8時～午後9時`。
@@ -228,7 +249,7 @@ export function pointRect(ev: { clientX: number; clientY: number } | null | unde
   - `onMoreClick` を渡すと `moreLinkClick` が onMoreClick を呼び、onDayClick は呼ばず、戻り値は `arg.view.type`。
   - `eventClick({ event: { id: 'e1' }, el })` で onEventClick が ('e1', 四角) で呼ばれる（el は `getBoundingClientRect` を持つ小さな物で作る）。
   - `weekStart={0}` で `firstDay` が 0。`fillHeight` で `height` が `'100%'`。`hourRange="full"` で `slotMinTime` `00:00:00`・`slotMaxTime` `24:00:00`。`scrollToNow` で `scrollTime` が `HH:00:00` の形。`timeStyle="meridiem"` で `slotLabelContent` が関数。
-  - `color: '#123456'`・`editable: false` の予定で、`events[0]` に `backgroundColor`・`borderColor`・`editable: false` が付き、`eventClassNames` に `comp-calendar__event--owner-color` が入る。
+  - `color: '#123456'`・`editable: false` の予定で、`events[0]` に `editable: false` が付き、`backgroundColor`・`borderColor` は付かない。`eventClassNames` に `comp-calendar__event--owner-color` が入る。`eventDidMount({ event: { extendedProps: { source: その予定 } }, el: document.createElement('div') })` の後、その el の `style.getPropertyValue('--comp-calendar-owner-color')` が `#123456`。color の無い予定では空。
   - 試験の中に色を書くのは予定のデータとしての値だけ（css には書かない）。
 
 ### 6. `frontend/src/components/CalendarView.stories.tsx`
