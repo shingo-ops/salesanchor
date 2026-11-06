@@ -358,7 +358,8 @@ async def bootstrap_tenant_schema(admin_engine, tenant_id: int) -> str:
                 await _ensure_public_users(conn)
                 raw_after_tenants = await conn.get_raw_connection()
                 for filename in _PG_AFTER_TENANTS_MIGRATIONS:
-                    sql = (_MIGRATIONS_DIR / filename).read_text("utf-8")
+                    # この transaction の中で流すので BEGIN/COMMIT は除く
+                    sql = (_MIGRATIONS_DIR / filename).read_text("utf-8").replace("BEGIN;", "").replace("COMMIT;", "")
                     await raw_after_tenants.driver_connection.execute(sql)
                 await conn.execute(
                     text("""
