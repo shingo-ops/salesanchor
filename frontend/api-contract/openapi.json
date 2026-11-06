@@ -4398,6 +4398,19 @@
         "title": "ChannelUpdate",
         "type": "object"
       },
+      "ChannelVisibilityUpdate": {
+        "properties": {
+          "is_hidden": {
+            "title": "Is Hidden",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "is_hidden"
+        ],
+        "title": "ChannelVisibilityUpdate",
+        "type": "object"
+      },
       "ChannelsResponse": {
         "properties": {
           "rows": {
@@ -40311,6 +40324,65 @@
         ]
       }
     },
+    "/api/v1/admin/channel-masters/{master_id}/visibility": {
+      "put": {
+        "operationId": "update_channel_master_visibility_api_v1_admin_channel_masters__master_id__visibility_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "master_id",
+            "required": true,
+            "schema": {
+              "title": "Master Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChannelVisibilityUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Update Channel Master Visibility Api V1 Admin Channel Masters  Master Id  Visibility Put",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "チャネルを隠す／戻す（テナント管理者）",
+        "tags": [
+          "conv-logs",
+          "conv-logs"
+        ]
+      }
+    },
     "/api/v1/admin/discord-config": {
       "delete": {
         "description": "Discord 連携を切断する（tenant_discord_config 行を削除）。",
@@ -44477,6 +44549,40 @@
     "/api/v1/channel-masters": {
       "get": {
         "operationId": "list_channel_masters_api_v1_channel_masters_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "for",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "For"
+            }
+          },
+          {
+            "in": "query",
+            "name": "keep",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Keep"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -44491,6 +44597,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "security": [
