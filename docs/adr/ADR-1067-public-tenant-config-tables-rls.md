@@ -36,8 +36,10 @@
 ## 戻し方
 
 - 便ごとに、その便の表だけを戻す。`DROP POLICY IF EXISTS`（4 本）→ `ALTER TABLE … NO FORCE ROW LEVEL SECURITY` → `ALTER TABLE … DISABLE ROW LEVEL SECURITY`。行は消えない（design §7）。
-- 移行は毎回のデプロイですべて流れ直す（scripts/run_all_migrations.sh:14）。戻しの SQL だけでは次のデプロイで RLS がまた付く。だから、その便の PR を戻す（run_sql の行と移行のファイルを消す）→ デプロイ → 戻しの SQL、の順で同じ便の中で行う。
-- 便④-5 はコードと RLS を 1 つの戻しの PR でまとめて戻す。コードだけを先に戻すと、RLS が残ったまま運営画面の保存が止まる。
+- 移行は毎回のデプロイですべて流れ直す（scripts/run_all_migrations.sh:14）。戻しの SQL だけでは次のデプロイで RLS がまた付く。だから同じ便の中で、戻しの SQL を流す → RLS なしを確かめる → その便の PR を戻す（run_sql の行と移行のファイルを消す）→ デプロイ → もう一度 RLS なしを確かめる、の順で行う。
+- この順にする理由: デプロイは先にコードを入れ替えてから移行を流す（.github/workflows/deploy.yml の手順 1→2）。PR を先に戻すと、古いコードが RLS 付きの表で動く時間ができる。各便の新しいコードは RLS が無くても動く。
+- 戻しの SQL の前に、走っている・待っているデプロイが 0 件であることを確かめる（間に別のデプロイが走ると RLS がまた付く）。
+- 便④-5 はコードと RLS を 1 つの戻しの PR でまとめて戻す（コードだけを戻す PR は作らない）。
 
 ## 測り方
 

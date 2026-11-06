@@ -92,12 +92,21 @@ COMMIT;
 - 移行の置き場所と登録（各便のカードに書く）:
   - ファイル: `migrations/<YYYYMMDD_HHMMSS>_add_<表>_rls.sql`（1 便 1 ファイル。④-2〜④-5 の 2 表の便も 1 ファイルに 2 表）。
   - 登録: scripts/run_all_migrations.sh の末尾に `run_sql migrations/<ファイル>` を 1 行足す（:15「新マイグレーションは末尾の『ここから追加』セクションに追加すること」）。
-  - 前提の表: 移行が ALTER する表が CI の 2 つのジョブに在ること。inventory_movements・tenant_llm_budgets を作る migrations/062_create_inventory_movements_and_budget.sql は run_all_migrations.sh にも migration-test.yml にも無い（grep 0 件、origin/main 6caae154f）。このため ④-1・④-5 では、.github/workflows/migration-test.yml の 2 か所の `PUBLIC_SQL`（変更 SQL のジョブ :479 付近・全件ドライラン :1824 付近）に、その表の最小の `CREATE TABLE IF NOT EXISTS`（062 と同じ列・型）を足す。tenant_discord_config・tenant_settings は 2 か所とも定義済み（:480・:498、:1824・:1831）。tenant_discord_ticket_config は :491 に定義済み。google_webhook_subscriptions（077）・discord_server_snapshots と discord_server_apply_runs（20261106_120000）は run_all_migrations.sh に登録済み（:376・:1229）なので全件ドライランには在る。変更 SQL のジョブに在るかは、カードを書くときに `grep -n "<表>" .github/workflows/migration-test.yml` で確かめ、無ければ同じく足す。
+  - 前提の表（CI の 2 つのジョブ。origin/main 6caae154f で確かめた。表の定義は書き写さない）:
+    - inventory_movements・tenant_llm_budgets: migrations/062_create_inventory_movements_and_budget.sql（:88・:151 で作る）は scripts/migrate_inventory_sprint1.py:56 の一覧にあり、本番は run_all_migrations.sh:361 の `run_py`、CI は変更 SQL のジョブ migration-test.yml:1046-1047・全件ドライラン :1906-1907 で流れる。どちらも変更 SQL より前。足すものは無い。
+    - tenant_discord_config・tenant_settings: 変更 SQL のジョブの `PUBLIC_SQL` :480・:498、全件ドライラン :1824・:1831 に定義済み。tenant_discord_ticket_config: 変更 SQL のジョブ :491 に定義済み、全件ドライランは run_all:425 で作られる。足すものは無い。
+    - google_webhook_subscriptions（④-4）・discord_server_snapshots と discord_server_apply_runs（④-2）: 全件ドライランは run_all（:376・:1217・:1229）で作られる。変更 SQL のジョブには無い（migration-test.yml を表の名で grep して 0 件）。このため ④-2・④-4 のカードで、変更 SQL を流す前に前提の移行を先に流す step を 1 つ足す。前例は migration-test.yml:1299-1338 の「変更 SQL の前提の移行を先に実行」（`contains(steps.detect.outputs.changed_sql, '<その便のファイル>')` で絞る）。④-2 は 20261106_120000_create_discord_server_snapshot_tables.sql（tenants だけを指す。tenants は :187 に定義済み）。④-4 は 077_calendar_sync_mode_and_webhook_subscriptions.sql → 20261103_200000_add_google_calendar_import_sync.sql の順（077 が ALTER する tenant_google_calendar_config は :957 に定義済み）。
 - ADR-1063 便5 の許可一覧には、8 表を「段階④で RLS を付ける予定（ADR-1067 便④-N）」の理由で載せておき、各便で 1 行ずつ消す。これで便5 の CI 確かめを先に「落とす形」へ切り替えられる。
 
 ## 4. 試験（実 PostgreSQL・アプリの接続役。前例: backend/tests/test_users_rls.py）
 
-- 本物の migration を当てて試す（表の定義を試験に書き写さない。test-schema-dup の見張り）。使い捨て DB に backend/tests/rls_bootstrap.py の `_apply_migration` で、前提の表を作る移行（④-1・④-5 は 062、④-5 は 070 も、④-3 は 20260602_120000、④-4 は 077、④-2 は 20261106_120000）を当ててから、その便の移行を当てる。
+- 本物の migration を当てて試す（表の定義を試験に書き写さない。test-schema-dup の見張り）。使い捨て DB に backend/tests/rls_bootstrap.py の `_apply_migration` で、前提の表を作る移行と、その後に形を変える移行を本番と同じ順（run_all_migrations.sh の順。sprint1 は :361）に当ててから、その便の移行を当てる。表ごとの一覧（origin/main 6caae154f で `git grep -l <表> -- migrations` と run_all の行番号から作った。カードを書くときに同じ方法で流し直す）:
+  - ④-1 inventory_movements: 062。
+  - ④-2 discord_server_snapshots・discord_server_apply_runs: 20261106_120000（run_all:1229）。
+  - ④-3 tenant_discord_config: 099_add_discord_guild_config.sql（:413）→ 20260602_200000（:443）→ 20260626_120000（:676）→ 20261105_100000（:1221）→ 20261106_100000（:1225）。tenant_discord_ticket_config: 20260602_120000（:425）→ 20260602_150000（:428）→ 20260602_160000（:431）。20260930_130000（:1056）は行の値を変えるだけで形を変えないので当てない。
+  - ④-4 google_webhook_subscriptions: 077（:376）→ 20261103_200000（:1217）。077 は tenant_google_calendar_config を ALTER するので、その前に 076（:375）を当てる。
+  - ④-5 tenant_llm_budgets: 062 → 20260604_220000_create_translation_glossary.sql（run_all:518、:142 で ALTER）。066（:33 で ALTER）は run_all に無い（grep 0 件）ので当てない。本番に 066 の列が在るかは reader 鍵で読めず（information_schema が 0 行、AUDIT sha=ddf04b4a4dd4）未確認。RLS の試験は列に依らないので止めない。tenant_settings: 070_add_spreadsheet_phase.sql（:47 で作る。run_all に無い＝grep 0 件。本番の表は在る）→ 080_phase_b_migration.sql（run_all:379、:33 で既定値を変える）→ 20260604_050000_add_tenant_policy_columns.sql（:459、:24 で列を足す）。20260604_160000 は注記で名を出すだけで形を変えない。
+  - 一覧の各ファイルが試験の DB で通らないときは、通らない理由（足りない前提の表）を記録して止まり、Opus に戻す（推測で定義を書き足さない）。
 - 会社番号は他の試験と重ならない番号（例 984・985）を使う。
 - 型A: ①自社文脈で INSERT・SELECT できる ②他社文脈で SELECT が 0 行 ③他社の tenant_id で INSERT が 42501 ④他社行の UPDATE・DELETE が 0 行 ⑤運営文脈で全社の SELECT ができる ⑥文脈なしで SELECT 0 行（新しい接続の場合と、`SET app.tenant_id=''` の後の場合の両方。後者でエラーにならず 0 行）⑦同じ移行を 2 回当ててもエラーにならない ⑧自社文脈で自社の行の tenant_id を他社へ付け替える UPDATE が 42501（前例 backend/tests/test_users_rls.py:293-296）。
 - 型C: ①文脈なし・他社文脈で SELECT が全行 ②他社の tenant_id で INSERT が 42501 ③他社行の UPDATE・DELETE が 0 行 ④運営文脈（`app.is_operator='true'`・`app.tenant_id=''`）で他社行の UPDATE が 1 行 ⑤同じ移行を 2 回当ててもエラーにならない ⑥自社文脈で自社の行の tenant_id を他社へ付け替える UPDATE が 42501。
@@ -127,8 +136,10 @@ COMMIT;
 ## 7. 戻し方
 
 - 各便の migration と対の戻し SQL をカードに書く: `BEGIN; DROP POLICY IF EXISTS <表>_select ON public.<表>;`（insert・update・delete も同じ）`ALTER TABLE public.<表> NO FORCE ROW LEVEL SECURITY; ALTER TABLE public.<表> DISABLE ROW LEVEL SECURITY; COMMIT;`。データは変えないので、戻しても行は失われない。
-- 戻しの SQL だけを流しても、次のデプロイで scripts/run_all_migrations.sh がすべての移行を流し直すため（:14）、RLS がまた付く。だから戻すときは、その便の PR を戻す（run_sql の 1 行と移行のファイルが消える）ことと、戻しの SQL を流すことを同じ便で行う。順番は、戻しの PR を main に入れる → デプロイ → 戻しの SQL を流す → K4-1 と同じ読み方で RLS なし・ポリシー 0 本を確かめる。
-- ④-5 は RLS とコードの両方を含む。コードだけを先に戻すと、RLS が残ったまま運営画面の保存が止まる。このため 1 つの戻しの PR で両方を戻し、上と同じ順で流す（コードだけを戻す PR は作らない）。
+- 戻しの SQL だけを流しても、次のデプロイで scripts/run_all_migrations.sh がすべての移行を流し直すため（:14）、RLS がまた付く。だから戻すときは、戻しの SQL を流すことと、その便の PR を戻す（run_sql の 1 行と移行のファイルが消える）ことを同じ便で行う。
+- 順番は「戻しの SQL を流す → K4-1 と同じ読み方で RLS なし・ポリシー 0 本を確かめる → 戻しの PR を main に入れる → デプロイ → もう一度 RLS なし・ポリシー 0 本を確かめる」。理由: デプロイは先にコードを入れ替えて動かし、その後で移行を流す（.github/workflows/deploy.yml の手順「1. Deploy to VPS (code + env + docker compose)」→「2. Run database migrations」）。戻しの PR を先に入れると、古いコードが RLS 付きの表で動く時間ができる。先に RLS を外せば、各便の新しいコード（会社・運営の文脈を張るだけ）は RLS が無くても動くので、止まる時間が無い。
+- 戻しの SQL を流してから戻しの PR のデプロイまでの間に別のデプロイが走ると、RLS がまた付く。このため戻しの SQL を流す前に `gh run list --workflow deploy.yml` で走っている・待っているデプロイが 0 件であることを確かめ、戻しの PR はすぐに入れる。デプロイ後の確かめで RLS が付いていたら、戻しの SQL をもう一度流す。
+- ④-5 は RLS とコードの両方を含む。コードと RLS を 1 つの戻しの PR で戻し、上と同じ順で流す（コードだけを戻す PR は作らない。コードだけを先に戻すと、RLS が残ったまま運営画面の保存が止まる）。
 
 ## 8. 触らない範囲・後続
 

@@ -31,3 +31,14 @@
 | 9 | 軽 | 行番号のずれ | export_inventory_for_sheet.py:108 が接続。discord_guild_config.py の手で入れる INSERT は ea0142e71 で消えた。discord_oauth.py は :215 で文脈 → :221 INSERT（recon の旧記載 :99・:105 は誤り） | recon・design の行番号を origin/main 6caae154f に合わせた |
 
 - 審査役の未確認: 試験用 PostgreSQL では SQL を流していない（クラウドの見張りが止める）。これは各便の CI（Backend Tests・migration-test）で確かめる。
+
+# 3 回目（クラウド Opus）
+
+- 実行: session cse_01HHUUpSvUs4W6waxGyCX2uR、139 秒。判定 REVISE（最後の判定行は記録の切れで読めず、本文の指摘から REVISE と扱う）。2 回目の #6〜#9 は直っていると確かめられた。
+
+| # | 重さ | 指摘 | 私の確かめ（origin/main 6caae154f） | 直し |
+|---|---|---|---|---|
+| 10 | 中 | 「062 は CI に無い」は誤り | 正しい指摘。scripts/migrate_inventory_sprint1.py:56 の一覧に 062。本番 run_all:361、CI :1046-1047・:1906-1907 で変更 SQL より前に流れる | design §3 から「PUBLIC_SQL に定義を足す」を消し、流れている場所を書いた |
+| 11 | 中 | 戻しの順がデプロイの順と食い違う | 正しい指摘。deploy.yml の手順は 1. コードと docker compose → 2. 移行 | design §7・ADR-1067 戻し方を「戻しの SQL → 確かめ → 戻しの PR → デプロイ → 確かめ」に。間のデプロイ 0 件を先に確かめる |
+| 12 | 軽 | ④-2・④-4 の表は変更 SQL のジョブに無い | 正しい指摘。migration-test.yml を表の名で grep して 0 件 | design §3 に前提の移行を先に流す step（前例 :1299-1338）。④-4 は 077 → 20261103_200000（077 が触る tenant_google_calendar_config は :957 に在る） |
+| 13 | 軽 | 前提の移行の一覧が足りない | 正しい指摘。表ごとに `git grep -l` と run_all の行番号で作り直した | design §4 に表ごとの作る移行と形を変える移行を run_all の順で。066 は run_all に無く当てない（本番の列は reader 鍵で読めず未確認） |
