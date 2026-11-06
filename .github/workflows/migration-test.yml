@@ -46,6 +46,8 @@ jobs:
               - 'scripts/run_all_migrations.sh'
               - 'scripts/migration-guard/**'
               - 'scripts/migration-dryrun-report.py'
+              - 'scripts/check_public_tenant_rls.py'
+              - 'backend/app/ops/tenant_rls_allowlist.py'
               - '.github/workflows/migration-test.yml'
 
   # run_all_migrations.sh の登録先ファイルが実在するかを全件点検する。
@@ -2090,6 +2092,16 @@ jobs:
           PGUSER: jarvis
         run: |
           python3 scripts/migration-dryrun-report.py run --db jarvis_report --rounds 2 --psql psql
+
+      - name: 会社の列があるのに RLS の無い public の表を数える（ADR-1063 K8・段1 は数えて出すだけ）
+        # 全件ドライランを流し終えた報告用 DB（jarvis_report）を見る。許可一覧は backend/app/ops/tenant_rls_allowlist.py の1か所。
+        # 段1 は --report-only（名前を出すだけ）。段2 で一覧を確かめてから --report-only を外して落とす形にする。
+        env:
+          PGHOST: localhost
+          PGUSER: jarvis
+          PYTHONPATH: ${{ github.workspace }}/backend
+        run: |
+          python3 scripts/check_public_tenant_rls.py --db jarvis_report --report-only
 
   # ルールセット必須 Check の名前と一致させる。always() で常に実行し、
   # - migration 変更あり: migration-test-run / migration-full-dryrun の結果を報告
