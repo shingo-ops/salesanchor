@@ -3,7 +3,7 @@
 > このファイルは `scripts/generate-adr-index.js` により自動生成されます。
 > **手動編集禁止。** ADR ファイルを追加・変更後に `node scripts/generate-adr-index.js` を実行してください。
 
-最終更新: 2026-11-06 / ADR 総数: 224 件
+最終更新: 2026-11-06 / ADR 総数: 225 件
 
 ## 維持ルール（整合性を保つ・必須）
 
@@ -243,6 +243,7 @@
 | [ADR-1065](./ADR-1065-calendar-view-component-fullcalendar-v6.md) | ADR-1065: 予定の時間割と月の升目は FullCalendar v6 を包んだ金型 CalendarView で出す | Proposed | — | — |
 | [ADR-1066](./ADR-1066-distribution-sheet-15-columns-product-id.md) | ADR-1066: 配信シートは PO が決めた15列の並びにし、最後に商品IDを載せる | Accepted | — | — |
 | [ADR-1067](./ADR-1067-public-tenant-config-tables-rls.md) | ADR-1067: 会社の列を持つ public の 8 表に RLS を付ける（段階④） | Proposed | — | — |
+| [ADR-1068](./ADR-1068-staff-self-registration.md) | ADR-1068: スタッフの自己登録（招待リンク → 申込 → Discord の番号 → 個室と初回ログイン） | Proposed | — | — |
 
 ## ステータス凡例
 
