@@ -111,7 +111,7 @@ async def test_builder_ok_returns_fetch_rows_as_is(caplog):
     ):
         result = await svc.build_distribution_rows(db)
     assert result.kind == "ok" and result.rows is rows and result.message == ""
-    fetch.assert_awaited_once_with(db, include_flag_single=False, max_age_hours=48)
+    fetch.assert_awaited_once_with(db, include_flag_single=False, max_age_hours=48, columns=svc._GAS_COLUMNS)
     assert [r for r in caplog.records if "[dist]" in r.getMessage()] == []
 
 
@@ -138,3 +138,11 @@ async def test_run_distribution_calls_build_distribution_rows():
         result = await svc.run_distribution(AsyncMock())
     mock_build.assert_awaited_once()
     assert result["errors"] == [{"target_id": None, "error": "x"}]
+
+
+async def test_run_distribution_builds_rows_with_sheet_columns():
+    built = svc.DistributionRowsResult(kind="hold", rows=[], message="x")
+    mock_build = AsyncMock(return_value=built)
+    with patch.object(svc, "build_distribution_rows", new=mock_build):
+        await svc.run_distribution(AsyncMock())
+    assert mock_build.await_args.kwargs["columns"] == svc._SHEET_COLUMNS
