@@ -13,6 +13,8 @@ import MobileShell from "./components/MobileShell";
 import { useIsMobile } from "./hooks/useIsMobile";
 import LoginPage from "./pages/login/LoginPage";
 import ResetPasswordPage from "./pages/reset-password/ResetPasswordPage";
+import StaffJoinPage from "./pages/staff-join/StaffJoinPage";
+import PasswordChangePage from "./pages/password-change/PasswordChangePage";
 import DashboardPage from "./pages/dashboard/DashboardPage";
 import FollowUpsPage from "./pages/dashboard/FollowUpsPage";
 import FunnelLeadsPage from "./pages/dashboard/FunnelLeadsPage";
@@ -173,6 +175,8 @@ function App() {
                   <Route path="/login" element={<LoginPage />} />
                   {/* ADR-1013: パスワード再設定・初回設定（メールのリンクから来る。認証不要） */}
                   <Route path="/reset-password" element={<ResetPasswordPage />} />
+                  {/* ADR-1068: スタッフ自己登録の申込（管理者が手で送る /staff-join#k=<鍵>。認証不要） */}
+                  <Route path="/staff-join" element={<StaffJoinPage />} />
                   {/* ADR-SA-03: 顧客登録フォーム（認証不要・トークン署名で検証） */}
                   <Route path="/register" element={<RegisterPage />} />
                   <Route path="/register/address" element={<RegisterAddressPage />} />
@@ -180,6 +184,8 @@ function App() {
                   {/* フルスクリーン専用ルート: 認証あり・シェル（サイドバー/ヘッダー）なし */}
                   <Route element={<ProtectedRoute><Outlet /></ProtectedRoute>}>
                     <Route path="/management-center/integrations/:carrier/setup-guide" element={<CarrierSetupGuidePage />} />
+                    {/* ADR-1068: 仮パスワードの変更ページ（シェル無し・このページ自身は他の API を呼ばない） */}
+                    <Route path="/password-change" element={<PasswordChangePage />} />
                   </Route>
                   <Route
                     element={

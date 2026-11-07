@@ -107,6 +107,7 @@ services:
       # backend コンテナも Bot トークンが必要（discord-gateway だけでは不足）
       # ADR-146 B方式: per-tenant トークン（DISCORD_BOT_TOKEN_4）を共通トークンに統合
       - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN:-}
+      - DISCORD_CLIENT_SECRET=${DISCORD_CLIENT_SECRET:-}
       # API連携: Googleドライブ OAuth（ユーザー委任方式）。カレンダーと同一の OAuth
       # クライアントを流用可。この3行が無いと .env に値があっても os.getenv が空になり
       # 連携が動かない（compose passthrough 漏れ対策）。
@@ -233,6 +234,8 @@ services:
       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
       - CELERY_BROKER_URL=${CELERY_BROKER_URL:-redis://redis:6379/1}
       - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND:-redis://redis:6379/2}
+      # discord-server-management 第2段 2b: 自社サーバーのスタッフのロールの5分ごとの点検（backend と同じ Bot の鍵。PO 2026-11-06「1、」）
+      - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN:-}
       # ADR-110: 翻訳エンジン復旧（Phase 1）— recon.md A-2 注入漏れ修正
       # backend(docker-compose.yml:93-94) と同パターンで渡す。
       # GEMINI_API_KEY: Gemini 翻訳 API キー（未設定だと LLMConfigError で全翻訳スキップ）

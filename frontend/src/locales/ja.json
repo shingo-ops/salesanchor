@@ -1,7 +1,12 @@
 {
   "calendarView": {
     "more": "ほか {{count}} 件",
-    "allDay": "終日"
+    "allDay": "終日",
+    "am": "午前{{time}}",
+    "pm": "午後{{time}}",
+    "clockHour": "{{hour}}時",
+    "clockMinute": "{{hour}}:{{minute}}",
+    "timeRange": "{{start}}～{{end}}"
   },
   "productCsv": {
     "downloadTemplate": "空のサンプルCSVを保存",
@@ -755,6 +760,11 @@
     "passkeyCancelled": "顔・指紋の確認が取り消されました。もう一度お試しください。",
     "passkeyExists": "この端末のパスキーはすでに登録されています。",
     "passkeyLimit": "パスキーは10個まで登録できます。"
+  },
+  "passwordChangePage": {
+    "title": "パスワードの変更",
+    "subtitle": "最初のログインです。仮のパスワードを自分のパスワードに変えてください",
+    "signOut": "ログアウト"
   },
   "resetPasswordPage": {
     "subtitle": "メールのリンクから、新しいパスワードを決めます。",
@@ -2108,6 +2118,7 @@
     "status": "ステータス",
     "noStaff": "スタッフが登録されていません",
     "deleteStaff": "スタッフを削除",
+    "deleteDiscordKickNote": "Discord の自社サーバーからも外れます。",
     "uiPreferences": "UI設定",
     "darkMode": "ダークモード",
     "showChatMenu": "チャットメニューを表示",
@@ -2121,7 +2132,58 @@
     "givenNameKana": "名前ふりがな",
     "status_pending": "保留",
     "fullName": "氏名",
-    "subtitle": "スタッフ情報とUI設定を管理します。"
+    "subtitle": "スタッフ情報とUI設定を管理します。",
+    "join": {
+      "createButton": "招待リンクを作る",
+      "listButton": "招待リンクの一覧",
+      "createTitle": "招待リンクを作る",
+      "create": "作成",
+      "inviteUrl": "招待リンク",
+      "inviteExpires": "期限: {{date}}",
+      "inviteNoMail": "メールは送りません。このリンクを、新しいスタッフに手で送ってください。",
+      "copy": "コピー",
+      "copied": "コピーしました",
+      "copyFailed": "コピーできませんでした。リンクを選んで手でコピーしてください。",
+      "listTitle": "招待リンクの一覧",
+      "colStatus": "状態",
+      "colRole": "役割",
+      "colExpires": "期限",
+      "colCreatedBy": "作った人",
+      "status_open": "受付中",
+      "status_submitted": "申込済み",
+      "reissue": "作り直す",
+      "revoke": "取り消す",
+      "revokeTitle": "招待リンクを取り消す",
+      "revokeMessage": "この招待リンクを取り消します。取り消すと、このリンクは使えなくなります。",
+      "empty": "招待リンクはありません"
+    }
+  },
+  "staffJoin": {
+    "title": "スタッフ登録",
+    "subtitle": "お名前とメールアドレスを入力してください。",
+    "company": "会社: {{name}}",
+    "role": "役割: {{name}}",
+    "expires": "このリンクの期限: {{date}}",
+    "submit": "登録を申し込む",
+    "errorTitle": "申し込めませんでした",
+    "submitError": "申し込めませんでした。時間をおいてもう一度お試しください。",
+    "contactAdmin": "管理者に連絡してください",
+    "tooMany": "アクセスが多すぎます。しばらくしてからもう一度お試しください。",
+    "invalidTitle": "このリンクは使えません",
+    "invalidBody": "このリンクは使えません。管理者に新しいリンクを頼んでください",
+    "doneTitle": "申し込みを受け付けました",
+    "doneBody": "下の登録番号を使って、Discord で登録を進めてください。",
+    "codeLabel": "登録番号",
+    "codeOnce": "この番号は今回しか表示されません。コピーして控えてください。",
+    "copy": "コピー",
+    "copied": "コピーしました",
+    "copyFailed": "コピーできませんでした。番号を選んで手でコピーしてください。",
+    "discordJoin": "Discord に参加する",
+    "discordLater": "Discord の参加リンクは管理者から届きます",
+    "discordLaterBody": "参加リンクは管理者にお尋ねください。",
+    "step1": "Discord に入る",
+    "step2": "受付で登録番号を入れる",
+    "step3": "個室で案内を受け取る"
   },
   "teams": {
     "title": "チーム管理",
@@ -2256,7 +2318,8 @@
       "leadAssigned": "商談の担当アサイン",
       "metaMessageReceived": "Meta の新着メッセージ",
       "tcgDistributionError": "TCG在庫配信エラー",
-      "discordOutsideTicketPost": "部屋の外の書き込み（Discord）"
+      "discordOutsideTicketPost": "部屋の外の書き込み（Discord）",
+      "customerReplyReceived": "お客さんの返信"
     }
   },
   "erp": {
@@ -3485,15 +3548,10 @@
     "connectionTitle": "サーバー接続",
     "connected": "接続済み",
     "notConnected": "未接続",
-    "serverIdLabel": "サーバーID",
-    "serverIdPlaceholder": "例: 1288437029213835356",
-    "serverIdHint": "サーバー名を右クリック →「サーバーIDをコピー」",
     "change": "変更",
-    "connect": "接続する",
+    "connectViaChannels": "チャネル画面で連携する",
+    "connectViaChannelsHint": "Discord サーバーとの連携は、チャネル画面の連携ボタンから行います。",
     "loadError": "読み込めませんでした",
-    "saveError": "保存できませんでした",
-    "invalidGuildId": "17〜20桁の数字で入力してください",
-    "saved": "保存しました",
     "tabCustomer": "顧客用",
     "tabOwn": "自社用",
     "syncStatus": {
@@ -3523,6 +3581,14 @@
     "check": "確認する",
     "planFailed": "確認できませんでした",
     "planNoBlueprint": "設計図がまだありません",
+    "appRolesTitle": "アプリの役割（{{count}} 件）",
+    "appRoleState": {
+      "create": "作る",
+      "link": "つなぐ",
+      "update": "変える",
+      "unchanged": "変わらない",
+      "blocked": "できない"
+    },
     "changesTitle": "変わる（{{count}} 件）",
     "blockedTitle": "できない（{{count}} 件・実行しません）",
     "deleteTitle": "消す候補（{{count}} 件）",
@@ -3544,7 +3610,8 @@
       "reason": "理由",
       "parent": "親",
       "target": "相手",
-      "status": "結果"
+      "status": "結果",
+      "appRoleState": "Discord では"
     },
     "status": {
       "success": "成功",
@@ -3553,12 +3620,14 @@
     },
     "kind": {
       "create_role": "ロールを作る",
+      "link_role": "ロールをつなぐ",
       "update_role": "ロールを直す",
       "create_category": "カテゴリを作る",
       "update_category": "カテゴリを直す",
       "create_channel": "チャンネルを作る",
       "update_channel": "チャンネルを直す",
-      "update_overwrite": "見せ方を直す"
+      "update_overwrite": "見せ方を直す",
+      "link_notice": "知らせのつなぎを作る"
     },
     "field": {
       "name": "名前",
@@ -3580,7 +3649,13 @@
       "ambiguous": "同じ名前の物が 2 つ以上あります",
       "depends_failed": "先に作る物が失敗したので実行しませんでした",
       "discord_error": "Discord が受け付けませんでした",
-      "method_not_allowed": "この操作は実行しません"
+      "method_not_allowed": "この操作は実行しません",
+      "name_in_blueprint": "設計図に同じ名前のロールがあります",
+      "app_role_missing_on_discord": "つないでいたロールが Discord で消されています",
+      "app_role_link_in_use": "つないでいるロールをほかの物も使っています",
+      "notice_other_route": "同じ種類の知らせの送り先がほかにもあります（2 か所に届きます）",
+      "notice_room_unavailable": "知らせの部屋を用意できないため、つなぎを作れません",
+      "webhook_token_missing": "Discord から送り先の鍵が返りませんでした"
     },
     "deleteKind": {
       "role": "ロール",
@@ -3903,7 +3978,13 @@
     "platformPlaceholder": "例: whatsapp_personal",
     "displayNamePlaceholder": "例: WhatsApp（個人）",
     "add": "追加",
-    "saveError": "追加に失敗しました"
+    "saveError": "追加に失敗しました",
+    "visible": "この会社で使う",
+    "visibleHelp": "切ると、リードの連絡手段の選択欄に出なくなります。昔のリードの値と分析はそのままです",
+    "visibleAriaLabel": "{{name}} をこの会社で使う",
+    "visibilityError": "切り替えに失敗しました",
+    "shared": "共用",
+    "duplicateError": "同じ名前の連絡手段が既にあります"
   },
   "funnel": {
     "sectionTitle": "ファネルダッシュボード",

@@ -1,7 +1,12 @@
 {
   "calendarView": {
     "more": "{{count}} more",
-    "allDay": "All day"
+    "allDay": "All day",
+    "am": "{{time}} AM",
+    "pm": "{{time}} PM",
+    "clockHour": "{{hour}}",
+    "clockMinute": "{{hour}}:{{minute}}",
+    "timeRange": "{{start}} – {{end}}"
   },
   "productCsv": {
     "downloadTemplate": "Download blank sample CSV",
@@ -755,6 +760,11 @@
     "passkeyCancelled": "Face or fingerprint check was cancelled. Please try again.",
     "passkeyExists": "A passkey for this device is already registered.",
     "passkeyLimit": "You can register up to 10 passkeys."
+  },
+  "passwordChangePage": {
+    "title": "Change your password",
+    "subtitle": "This is your first sign-in. Please replace the temporary password with your own.",
+    "signOut": "Sign out"
   },
   "resetPasswordPage": {
     "subtitle": "Choose a new password using the link from your email.",
@@ -2108,6 +2118,7 @@
     "status": "Status",
     "noStaff": "No staff registered",
     "deleteStaff": "Delete Staff",
+    "deleteDiscordKickNote": "They will also be removed from your company's Discord server.",
     "uiPreferences": "UI Preferences",
     "darkMode": "Dark mode",
     "showChatMenu": "Show Chat menu",
@@ -2121,7 +2132,58 @@
     "givenNameKana": "Given name (Kana)",
     "status_pending": "Pending",
     "fullName": "Full Name",
-    "subtitle": "Manage staff accounts and UI preferences."
+    "subtitle": "Manage staff accounts and UI preferences.",
+    "join": {
+      "createButton": "Create invite link",
+      "listButton": "Invite links",
+      "createTitle": "Create invite link",
+      "create": "Create",
+      "inviteUrl": "Invite link",
+      "inviteExpires": "Expires: {{date}}",
+      "inviteNoMail": "No email is sent. Send this link to the new staff member yourself.",
+      "copy": "Copy",
+      "copied": "Copied",
+      "copyFailed": "Could not copy. Please select the link and copy it manually.",
+      "listTitle": "Invite links",
+      "colStatus": "Status",
+      "colRole": "Role",
+      "colExpires": "Expires",
+      "colCreatedBy": "Created by",
+      "status_open": "Open",
+      "status_submitted": "Submitted",
+      "reissue": "Reissue",
+      "revoke": "Revoke",
+      "revokeTitle": "Revoke invite link",
+      "revokeMessage": "This invite link will be revoked and can no longer be used.",
+      "empty": "No invite links"
+    }
+  },
+  "staffJoin": {
+    "title": "Staff registration",
+    "subtitle": "Enter your name and email address.",
+    "company": "Company: {{name}}",
+    "role": "Role: {{name}}",
+    "expires": "This link expires: {{date}}",
+    "submit": "Submit registration",
+    "errorTitle": "Could not submit",
+    "submitError": "Could not submit. Please try again later.",
+    "contactAdmin": "Please contact your administrator",
+    "tooMany": "Too many requests. Please try again later.",
+    "invalidTitle": "This link cannot be used",
+    "invalidBody": "This link cannot be used. Please ask your administrator for a new link.",
+    "doneTitle": "Your registration was received",
+    "doneBody": "Use the registration number below to continue on Discord.",
+    "codeLabel": "Registration number",
+    "codeOnce": "This number is shown only this once. Please copy and keep it.",
+    "copy": "Copy",
+    "copied": "Copied",
+    "copyFailed": "Could not copy. Please select the number and copy it manually.",
+    "discordJoin": "Join Discord",
+    "discordLater": "Your administrator will send you the Discord invite link",
+    "discordLaterBody": "Please ask your administrator for the invite link.",
+    "step1": "Join Discord",
+    "step2": "Enter the registration number at the reception",
+    "step3": "Receive your instructions in your private room"
   },
   "teams": {
     "title": "Teams",
@@ -2256,7 +2318,8 @@
       "leadAssigned": "Deal assignment",
       "metaMessageReceived": "New Meta message",
       "tcgDistributionError": "TCG distribution error",
-      "discordOutsideTicketPost": "Post outside a ticket room (Discord)"
+      "discordOutsideTicketPost": "Post outside a ticket room (Discord)",
+      "customerReplyReceived": "Customer reply"
     }
   },
   "erp": {
@@ -3485,15 +3548,10 @@
     "connectionTitle": "Server connection",
     "connected": "Connected",
     "notConnected": "Not connected",
-    "serverIdLabel": "Server ID",
-    "serverIdPlaceholder": "e.g. 1288437029213835356",
-    "serverIdHint": "Right-click the server name → \"Copy Server ID\"",
     "change": "Change",
-    "connect": "Connect",
+    "connectViaChannels": "Connect on Channels page",
+    "connectViaChannelsHint": "Connect your Discord server with the connect button on the Channels page.",
     "loadError": "Could not load",
-    "saveError": "Could not save",
-    "invalidGuildId": "Enter a 17–20 digit number",
-    "saved": "Saved",
     "tabCustomer": "Customer server",
     "tabOwn": "Own server",
     "syncStatus": {
@@ -3523,6 +3581,14 @@
     "check": "Check",
     "planFailed": "Could not check",
     "planNoBlueprint": "No blueprint yet",
+    "appRolesTitle": "App roles ({{count}})",
+    "appRoleState": {
+      "create": "Create",
+      "link": "Link",
+      "update": "Change",
+      "unchanged": "No change",
+      "blocked": "Cannot"
+    },
     "changesTitle": "Changes ({{count}})",
     "blockedTitle": "Not allowed ({{count}}, will not run)",
     "deleteTitle": "Delete candidates ({{count}})",
@@ -3544,7 +3610,8 @@
       "reason": "Reason",
       "parent": "Parent",
       "target": "Target",
-      "status": "Result"
+      "status": "Result",
+      "appRoleState": "On Discord"
     },
     "status": {
       "success": "Succeeded",
@@ -3553,12 +3620,14 @@
     },
     "kind": {
       "create_role": "Create role",
+      "link_role": "Link role",
       "update_role": "Update role",
       "create_category": "Create category",
       "update_category": "Update category",
       "create_channel": "Create channel",
       "update_channel": "Update channel",
-      "update_overwrite": "Update permissions"
+      "update_overwrite": "Update permissions",
+      "link_notice": "Create notice link"
     },
     "field": {
       "name": "Name",
@@ -3580,7 +3649,13 @@
       "ambiguous": "More than one item has this name",
       "depends_failed": "Skipped because an earlier item failed",
       "discord_error": "Discord rejected the request",
-      "method_not_allowed": "This operation is not run"
+      "method_not_allowed": "This operation is not run",
+      "name_in_blueprint": "The blueprint has a role with the same name",
+      "app_role_missing_on_discord": "The linked role was deleted on Discord",
+      "app_role_link_in_use": "The linked role is also used by another item",
+      "notice_other_route": "Another destination also receives this notice type (it will arrive twice)",
+      "notice_room_unavailable": "The notice room is not available, so the link cannot be created",
+      "webhook_token_missing": "Discord did not return the webhook token"
     },
     "deleteKind": {
       "role": "Role",
@@ -3903,7 +3978,13 @@
     "platformPlaceholder": "e.g. whatsapp_personal",
     "displayNamePlaceholder": "e.g. WhatsApp (Personal)",
     "add": "Add",
-    "saveError": "Failed to add"
+    "saveError": "Failed to add",
+    "visible": "Use in this company",
+    "visibleHelp": "Turned off channels are hidden from the lead channel picker. Existing leads and analytics are unchanged.",
+    "visibleAriaLabel": "Use {{name}} in this company",
+    "visibilityError": "Failed to update visibility",
+    "shared": "Shared",
+    "duplicateError": "A channel with the same name already exists"
   },
   "funnel": {
     "sectionTitle": "Funnel Dashboard",

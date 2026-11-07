@@ -11,7 +11,6 @@ CRUD を提供する。UI設定は ネストで含めて返す/更新する。
 """
 
 import logging
-import uuid
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, UploadFile, status
 from sqlalchemy import text
@@ -39,6 +38,7 @@ from app.schemas.staff import (
     StaffUIPreferences,
     StaffUpdate,
 )
+from app.services import discord_own_staff_sync as own_staff_sync
 from app.services.audit import record_audit_log
 from app.services.auth_mail import send_invite_email
 from app.services.invite import create_invite_token, invite_url
@@ -54,64 +54,24 @@ from app.services.staff_avatar import (
     process_avatar,
     save_avatar,
 )
+from app.services.staff_create import (
+    EMAIL_UNAVAILABLE_DETAIL,
+    STAFF_CODE_MAX_LENGTH,
+    create_staff_record,
+    new_placeholder_code,
+)
+from app.services.staff_create import (
+    replace_additional_emails as _replace_additional_emails,
+)
+from app.services.staff_create import (
+    upsert_ui_prefs as _upsert_ui_prefs,
+)
 
 logger = logging.getLogger(__name__)
-# staff.staff_code は VARCHAR(20) NOT NULL（services/tenant.py の staff テーブル定義と同値）
-STAFF_CODE_MAX_LENGTH = 20
-_PLACEHOLDER_PREFIX = "TMP-"
 
-# 他社か自社かを言い分けない（ADR-1063 便1・K7）。他社在籍を文言から分からないようにする
-EMAIL_UNAVAILABLE_DETAIL = "このメールアドレスは登録できません。別のメールアドレスを使ってください。"
-
-
-def _new_placeholder_code() -> str:
-    """INSERT 時の一意な仮コード（EMP-%05d へ UPDATE されるまでの値）。VARCHAR(20) に収める。"""
-    return _PLACEHOLDER_PREFIX + uuid.uuid4().hex[: STAFF_CODE_MAX_LENGTH - len(_PLACEHOLDER_PREFIX)]
-
-
-async def _resolve_user_for_new_staff(
-    db: AsyncSession, tenant_id: int, data: StaffCreate,
-) -> tuple[int, bool]:
-    """POST /staff 用: 名簿に紐付ける users.id を決める（既存を再利用 or 新規作成。ADR-1008 決定5）。
-
-    同じ email の users が、同テナントで名簿なし → それを使う / 同テナントで名簿あり → 409 /
-    別テナント → 409 / 無し → 作る。呼び出し側のトランザクション内で実行する（commit しない）。
-    戻り値は (users.id, 新しく作ったか)。
-    """
-    found = await db.execute(
-        text("SELECT id, tenant_id FROM public.users WHERE lower(email) = lower(:email) LIMIT 1"),
-        {"email": data.primary_email},
-    )
-    existing = found.mappings().first()
-    if existing is not None:
-        if existing["tenant_id"] != tenant_id:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=EMAIL_UNAVAILABLE_DETAIL,
-            )
-        linked = await db.execute(
-            text("SELECT 1 FROM staff WHERE user_id = :uid LIMIT 1"),
-            {"uid": existing["id"]},
-        )
-        if linked.first() is not None:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=EMAIL_UNAVAILABLE_DETAIL,
-            )
-        return int(existing["id"]), False
-
-    display_name = f"{data.surname_jp} {data.given_name_jp}"
-    created = await db.execute(
-        text("""
-            INSERT INTO public.users (tenant_id, username, email, full_name, is_active)
-            VALUES (:tid, :name, :email, :name, true)
-            RETURNING id
-        """),
-        {"tid": tenant_id, "name": display_name, "email": data.primary_email},
-    )
-    return int(created.scalar_one()), True
-
-
+# 試験（test_staff_code_auto_number・test_staff_create_users）が従来の名前で読む。中身は services/staff_create.py
+_new_placeholder_code = new_placeholder_code
+__all__ = ["EMAIL_UNAVAILABLE_DETAIL", "STAFF_CODE_MAX_LENGTH", "_new_placeholder_code", "router"]
 router = APIRouter()
 
 # PATCH /staff で role_id が変わるときだけ要る権限（roles.assign）。Depends の外から呼ぶ。
@@ -143,6 +103,14 @@ _UPDATABLE = {
     "surname_en", "given_name_en", "discord_user_id",
     "status", "is_employee",
 }
+
+# 第2段 2b: 消した・番号を変えたスタッフの元の Discord の番号（設計 S2-3 D2-3・D2-7・D2-8）。
+# 一度 kick=true になった行は false に戻さない。同じ番号が 2 度入っても失敗しない
+_RETIRE_MEMBER_SQL = text(
+    "INSERT INTO discord_retired_members (discord_user_id, kick) VALUES (:did, :kick)"
+    " ON CONFLICT (discord_user_id) DO UPDATE SET retired_at = CURRENT_TIMESTAMP,"
+    " kick = discord_retired_members.kick OR EXCLUDED.kick"
+)
 
 
 async def _fetch_emails(db: AsyncSession, staff_id: int) -> list[str]:
@@ -197,58 +165,6 @@ async def _compose(db: AsyncSession, main_row: dict) -> StaffResponse:
         locale=await _fetch_locale(db, main_row["user_id"]),
         theme=await _fetch_theme(db, main_row["user_id"]),
     )
-
-
-async def _upsert_ui_prefs(db: AsyncSession, staff_id: int, prefs: StaffUIPreferences | None) -> None:
-    """UI設定を upsert。prefs=None なら StaffUIPreferences のデフォルト値で行を作る。
-
-    migration 019 の design は「役割権限 AND 本人のUI設定」で最終表示を決めるため、
-    staff_ui_preferences 行は全スタッフに存在すべき。POST /staff で ui_preferences
-    省略時もデフォルト値で行を作成する。
-    """
-    if prefs is None:
-        prefs = StaffUIPreferences()  # pydantic デフォルト値
-    await db.execute(
-        text("""
-            INSERT INTO staff_ui_preferences (
-                staff_id, dark_mode, show_chat_menu, show_sales_menu,
-                show_settings_menu, show_admin_menu, show_sidebar
-            ) VALUES (:sid, :dm, :chat, :sales, :settings, :admin, :sidebar)
-            ON CONFLICT (staff_id) DO UPDATE SET
-                dark_mode = EXCLUDED.dark_mode,
-                show_chat_menu = EXCLUDED.show_chat_menu,
-                show_sales_menu = EXCLUDED.show_sales_menu,
-                show_settings_menu = EXCLUDED.show_settings_menu,
-                show_admin_menu = EXCLUDED.show_admin_menu,
-                show_sidebar = EXCLUDED.show_sidebar,
-                updated_at = NOW()
-        """),
-        {
-            "sid": staff_id, "dm": prefs.dark_mode,
-            "chat": prefs.show_chat_menu, "sales": prefs.show_sales_menu,
-            "settings": prefs.show_settings_menu, "admin": prefs.show_admin_menu,
-            "sidebar": prefs.show_sidebar,
-        },
-    )
-
-
-async def _replace_additional_emails(
-    db: AsyncSession, staff_id: int, emails: list[StaffEmailInput]
-) -> None:
-    """副メール群を全削除 → 全 INSERT で置換（冪等）"""
-    await db.execute(
-        text("DELETE FROM staff_emails WHERE staff_id = :sid"),
-        {"sid": staff_id},
-    )
-    for e in emails:
-        await db.execute(
-            text("""
-                INSERT INTO staff_emails (staff_id, email, purpose)
-                VALUES (:sid, :email, :purpose)
-                ON CONFLICT (staff_id, email) DO NOTHING
-            """),
-            {"sid": staff_id, "email": e.email, "purpose": e.purpose},
-        )
 
 
 @router.get("/staff/me", response_model=StaffResponse)
@@ -593,54 +509,19 @@ async def create_staff(data: StaffCreate, background_tasks: BackgroundTasks,
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="user_id は指定できません",
         )
-    # staff_code は常にサーバー側で自動採番する（クライアント指定は受け付けない）
-    staff_code = _new_placeholder_code()
     try:
-        user_id, user_created = await _resolve_user_for_new_staff(db, tenant_id, data)
-        result = await db.execute(
-            text("""
-                INSERT INTO staff (
-                    tenant_id, user_id, staff_code,
-                    surname_jp, given_name_jp, surname_kana, given_name_kana,
-                    surname_en, given_name_en, discord_user_id,
-                    status, is_employee
-                ) VALUES (
-                    :tid, :uid, :code,
-                    :sjp, :gjp, :sk, :gk,
-                    :sen, :gen, :did,
-                    :st, :is_emp
-                )
-                RETURNING id
-            """),
-            {
-                "tid": tenant_id, "uid": user_id, "code": staff_code,
-                "sjp": data.surname_jp, "gjp": data.given_name_jp,
-                "sk": data.surname_kana, "gk": data.given_name_kana,
-                "sen": data.surname_en, "gen": data.given_name_en,
-                "did": data.discord_user_id,
-                "st": data.status.value,
-                "is_emp": bool(data.is_employee),
-            },
-        )
-        new_id = result.scalar_one()
-        await db.execute(
-            text("UPDATE staff SET staff_code = :code WHERE id = :id"),
-            {"code": f"EMP-{new_id:05d}", "id": new_id},
-        )
-        # ロールの正本は user_roles。staff.role_id には書かない（ADR-1008 P4a）
-        await assign_single_role(db, tenant_id, current_user, user_id, data.role_id)
-        await _upsert_ui_prefs(db, new_id, data.ui_preferences)
-        await _replace_additional_emails(db, new_id, data.additional_emails)
-        await record_audit_log(
-            db=db, tenant_id=tenant_id, user_id=current_user.id,
-            action="create", table_name="staff", record_id=new_id,
-            new_data=data.model_dump(exclude_none=True, mode="json"),
+        # staff_code は常にサーバー側で自動採番する（クライアント指定は受け付けない）。
+        # 中身は services/staff_create.py（招待リンクからの自己登録と共用。ADR-1068）
+        new_id, user_id, user_created = await create_staff_record(
+            db, tenant_id, data,
+            granter=current_user, allow_reuse=True, is_active=True,
         )
         # 新しく利用者ができたときだけ、初回設定の鍵を同じトランザクションで作る
         invite_raw = await create_invite_token(db, user_id) if user_created else None
         await db.commit()
         await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2
         await invalidate_user_permissions(tenant_id, user_id)
+        own_staff_sync.schedule_own_staff_sync(tenant_id)  # 第2段 2b: 自社サーバーのロールを合わせる
         if invite_raw is not None:
             background_tasks.add_task(send_invite_email, data.primary_email, invite_url(invite_raw))
     except HTTPException:
@@ -715,6 +596,15 @@ async def update_staff(staff_id: int, data: StaffUpdate,
             params,
         )
 
+    # 第2段 2b: Discord の番号を書き換えたら、元の番号を辞めた人の表へ（kick=false＝ロールだけ外す・設計 D2-3）
+    old_discord_user_id = old_row["discord_user_id"]
+    if (
+        "discord_user_id" in update_data
+        and old_discord_user_id
+        and update_data["discord_user_id"] != old_discord_user_id
+    ):
+        await db.execute(_RETIRE_MEMBER_SQL, {"did": str(old_discord_user_id), "kick": False})
+
     if ui_prefs is not None:
         prefs = StaffUIPreferences(**ui_prefs) if isinstance(ui_prefs, dict) else ui_prefs
         await _upsert_ui_prefs(db, staff_id, prefs)
@@ -733,6 +623,7 @@ async def update_staff(staff_id: int, data: StaffUpdate,
     await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2: commit 後の SELECT で search_path 喪失を防ぐ
     if role_changed:
         await invalidate_user_permissions(tenant_id, old_row["user_id"])
+    own_staff_sync.schedule_own_staff_sync(tenant_id)  # 第2段 2b
 
     fetched = await db.execute(
         _visible_text(f"SELECT {_STAFF_COLS} FROM staff s {_ROLE_JOIN} WHERE s.id = :id"),
@@ -756,6 +647,15 @@ async def delete_staff(staff_id: int, db: AsyncSession = Depends(get_db),
     try:
         # 副テーブルは ON DELETE CASCADE で消える
         await db.execute(text("DELETE FROM staff WHERE id = :id"), {"id": staff_id})
+        # 第2段 2b: Discord の番号のある人は自社サーバーから外す行を入れる（kick=true・次の点検で外す・設計 D2-7）
+        if old_row["discord_user_id"]:
+            await db.execute(_RETIRE_MEMBER_SQL, {"did": str(old_row["discord_user_id"]), "kick": True})
+            await record_audit_log(
+                db=db, tenant_id=tenant_id, user_id=current_user.id,
+                action="delete", table_name="discord_guild_member", record_id=staff_id,
+                new_data={"staff_id": staff_id, "discord_user_id": str(old_row["discord_user_id"]),
+                          "purpose": "own", "action": "kick"},
+            )
         await record_audit_log(
             db=db, tenant_id=tenant_id, user_id=current_user.id,
             action="delete", table_name="staff", record_id=staff_id,
@@ -763,6 +663,7 @@ async def delete_staff(staff_id: int, db: AsyncSession = Depends(get_db),
         )
         await db.commit()
         await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2
+        own_staff_sync.schedule_own_staff_sync(tenant_id)  # 第2段 2b
     except IntegrityError:
         await db.rollback()
         raise HTTPException(

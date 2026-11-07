@@ -36,6 +36,8 @@ _PUBLIC_NO_AUTH_ROUTES: frozenset[tuple[str, str]] = frozenset(
         ("GET", "/api/v1/integrations/paypal/return"),
         ("GET", "/api/v1/meta/deletion-status"),
         ("GET", "/api/v1/public/register"),
+        # ADR-1068: スタッフ自己登録の申込。鍵は URL の1回きりの鍵だけで確かめ、閲覧者のトークンを見ない（無効は全部 404）
+        ("GET", "/api/v1/public/staff-join/{key}"),
         ("GET", "/api/v1/webhook/messenger"),
         ("GET", "/metrics"),
         ("POST", "/api/v1/auth/login"),
@@ -56,6 +58,7 @@ _PUBLIC_NO_AUTH_ROUTES: frozenset[tuple[str, str]] = frozenset(
         ("POST", "/api/v1/integrations/paypal/webhook"),
         ("POST", "/api/v1/meta/data-deletion"),
         ("POST", "/api/v1/public/register"),
+        ("POST", "/api/v1/public/staff-join/{key}"),
         ("POST", "/api/v1/public/register/address"),
         ("POST", "/api/v1/public/register/change-billing"),
         # viewer-customer-sheet 便2: 請求先フォームの2本は閲覧者のトークンを見ない。

@@ -21,7 +21,7 @@ Sales Anchor は B2B SaaS CRM として、顧客とのコミュニケーショ�
 
 > Discord サーバーに入らなくても、Sales Anchor アプリで同等の使用感を実現し、アプリ内で全て完結させる
 
-## KPI（Bot の担当業務 7 項目）
+## KPI（Bot の担当業務 9 項目）
 
 | # | KPI | 状態 | PR |
 |---|-----|------|-----|
@@ -32,12 +32,14 @@ Sales Anchor は B2B SaaS CRM として、顧客とのコミュニケーショ�
 | 5 | チャンネル招待メッセージの送信 | 実装済み | #1404 |
 | 6 | アプリからの顧客削除操作 | 実装済み | #1413 |
 | 7 | 顧客規模と連動したロール自動付与 | 実装済み | #1416 |
+| 8 | 自社サーバーのスタッフのロールをアプリの役割どおりに付け外しする（Bot が管理するロールだけ） | 設計済み（discord-server-management 第2段） | — |
+| 9 | 知らせの部屋の webhook を作る | 設計済み（discord-server-management 第2段） | — |
 
 ## Decision
 
 ### Bot 担当業務の定義
 
-Discord Bot の担当業務を上記 7 項目と定義する。
+Discord Bot の担当業務を上記 9 項目と定義する。
 
 #### 設計方針
 
@@ -248,6 +250,13 @@ OAuth callback 時に `state` ペイロードの `staff_id` を保存し、
 GET API で `staff` テーブルを JOIN して接続者名を返す。
 
 ---
+
+### 戻り口でのサーバーの持ち主の確かめ（2026-11-07 追記・G3）
+
+- 戻り口は Discord から受けた `code` を `https://discord.com/api/oauth2/token` で交換し、応答の `guild.id` だけを保存する。
+- URL の `guild_id` は公式のとおり目安（hint）としてだけ使う。応答の `guild.id` と違えば保存しない（`reason=guild_mismatch`）。`code` が無い・交換が拒否された・応答に guild が無い場合も保存しない（`missing_code`・`code_exchange_failed`・`missing_guild_in_token`）。
+- 秘密の鍵 `DISCORD_CLIENT_SECRET` は GitHub Secrets → deploy.yml → .env → docker-compose の backend → `os.getenv` の1本道で渡す（ADR-075）。鍵が無い間は開始口が 503 を返す。
+- 設計: `docs/handoff/discord-oauth-ownership-proof/design.md`
 
 ## Scope（対象外）
 

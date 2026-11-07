@@ -49,11 +49,19 @@ interface DeleteCandidate {
   target: string | null;
 }
 
+interface AppRoleState {
+  role_id: number;
+  name: string;
+  state: string;
+  reason?: string | null;
+}
+
 interface OwnServerPlan {
   plan_digest: string;
   changes: PlanRow[];
   blocked: PlanRow[];
   delete_candidates: DeleteCandidate[];
+  app_roles: AppRoleState[];
 }
 
 interface ApplyResultRow {
@@ -234,9 +242,6 @@ export function DiscordOwnServerPanel() {
     { key: "field", header: t("discordOwnServer.col.field"), renderCell: (row: PlanRow) => fieldLabel(row.field) },
     { key: "before", header: t("discordOwnServer.col.before"), renderCell: (row: PlanRow) => row.before ?? "" },
     { key: "after", header: t("discordOwnServer.col.after"), renderCell: (row: PlanRow) => row.after ?? "" },
-  ];
-  const blockedColumns = [
-    ...planColumns,
     {
       key: "reason",
       header: t("discordOwnServer.col.reason"),
@@ -265,6 +270,19 @@ export function DiscordOwnServerPanel() {
     { key: "name", header: t("discordOwnServer.col.name"), renderCell: (row: DeleteCandidate) => row.name ?? "" },
     { key: "parent_name", header: t("discordOwnServer.col.parent"), renderCell: (row: DeleteCandidate) => row.parent_name ?? "" },
     { key: "target", header: t("discordOwnServer.col.target"), renderCell: (row: DeleteCandidate) => row.target ?? "" },
+  ];
+  const appRoleColumns = [
+    { key: "name", header: t("discordOwnServer.col.name") },
+    {
+      key: "state",
+      header: t("discordOwnServer.col.appRoleState"),
+      renderCell: (row: AppRoleState) => t(`discordOwnServer.appRoleState.${row.state}`),
+    },
+    {
+      key: "reason",
+      header: t("discordOwnServer.col.reason"),
+      renderCell: (row: AppRoleState) => (row.reason ? t(`discordOwnServer.reason.${row.reason}`) : ""),
+    },
   ];
 
   if (ownQ.isPending) return <LoadingBlock />;
@@ -313,6 +331,15 @@ export function DiscordOwnServerPanel() {
       {plan && (
         <div className="dc-result">
           <div className="dc-group">
+            <h4 className="dc-group-title">{t("discordOwnServer.appRolesTitle", { count: plan.app_roles.length })}</h4>
+            <DataTable<AppRoleState>
+              columns={appRoleColumns}
+              data={plan.app_roles}
+              rowKey={(row) => `app_role:${row.role_id}`}
+              emptyState={emptyRows}
+            />
+          </div>
+          <div className="dc-group">
             <h4 className="dc-group-title">{t("discordOwnServer.changesTitle", { count: plan.changes.length })}</h4>
             <DataTable<PlanRow>
               columns={planColumns}
@@ -324,7 +351,7 @@ export function DiscordOwnServerPanel() {
           <div className="dc-group">
             <h4 className="dc-group-title">{t("discordOwnServer.blockedTitle", { count: plan.blocked.length })}</h4>
             <DataTable<PlanRow>
-              columns={blockedColumns}
+              columns={planColumns}
               data={plan.blocked}
               rowKey={rowKeyOf}
               emptyState={emptyRows}

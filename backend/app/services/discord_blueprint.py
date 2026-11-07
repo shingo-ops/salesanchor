@@ -15,8 +15,18 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 
+from app.schemas.notification import NotificationEventType
+
 EVERYONE = "@everyone"
 BOT = "@bot"
+
+# 第2段 2c（設計 D2-11）: 知らせの部屋の key → 届ける知らせの種類。対応はここ 1 か所だけ
+NOTICE_ROOMS: dict[str, str] = {
+    "assign_notice": NotificationEventType.lead_assigned.value,
+    "reply_notice": NotificationEventType.customer_reply_received.value,
+    "outside_notice": NotificationEventType.discord_outside_ticket_post.value,
+}
+NOTICE_WEBHOOK_NAME = "Sales Anchor"  # Discord の決まり: clyde・discord を入れない・80 字まで
 
 # 出典: Discord 公式 github.com/discord/discord-api-docs developers/topics/permissions.mdx
 # （e3ea58903、2026-10-29 更新）の表。47 番は無い。
@@ -232,14 +242,36 @@ def _action(method: str, path: str, body: dict[str, Any], creates: str | None = 
     return {"method": method, "path": path, "json": body, "creates": creates}
 
 
+# アプリの役割の行の key の頭（第2段 2a-2）。設計図の key は ^[a-z0-9_]+$ なのでぶつからない
+APP_ROLE_KEY_PREFIX = "app_role:"
+_HEX_COLOR = re.compile(r"^#[0-9A-Fa-f]{6}$")
+
+
+def hex_color_to_int(value: Any) -> int:
+    """アプリの役割の色（'#RRGGBB'）を Discord の色の数にする。空や形が違うときは 0（色なし）。"""
+    if isinstance(value, str) and _HEX_COLOR.match(value):
+        return int(value[1:], 16)
+    return 0
+
+
+def _app_state(app: dict[str, Any], state: str, reason: str | None = None) -> dict[str, Any]:
+    return {"role_id": int(app["id"]), "name": str(app["name"]), "state": state, "reason": reason}
+
+
 def build_plan(
     bp: Blueprint,
     roles: list[dict[str, Any]],
     channels: list[dict[str, Any]],
     guild_id: str,
     bot_role_ids: Any,
+    app_roles: list[dict[str, Any]] | None = None,
+    notice_links: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    """設計図と Discord の今の姿の差を出す。Discord の返事そのものを受ける純粋な関数。"""
+    """設計図と Discord の今の姿の差を出す。Discord の返事そのものを受ける純粋な関数。
+
+    app_roles: アプリの役割（id・name・color・discord_role_id）。None なら今までと同じ結果（第2段 2a-2）。
+    notice_links: 知らせの送り先の行（blueprint_key・event_types・is_active）。None なら今までと同じ結果（第2段 2c）。
+    """
     guild_id = str(guild_id)
     bot_ids = {str(i) for i in bot_role_ids}
 
@@ -265,10 +297,10 @@ def build_plan(
     used_chans: set[str] = set()
 
     # rows[stage] = [(row, is_blocked)]
-    changes: list[list[dict[str, Any]]] = [[], [], [], []]
-    blocked: list[list[dict[str, Any]]] = [[], [], [], []]
+    changes: list[list[dict[str, Any]]] = [[], [], [], [], []]
+    blocked: list[list[dict[str, Any]]] = [[], [], [], [], []]
 
-    actions: list[list[dict[str, Any]]] = [[], [], [], []]
+    actions: list[list[dict[str, Any]]] = [[], [], [], [], []]
 
     def emit(stage: int, row: dict[str, Any], reason: str | None = None,
              action: dict[str, Any] | None = None) -> None:
@@ -358,6 +390,71 @@ def build_plan(
                 reason = "permission_bot_lacks"
             emit(0, _row("update_role", role.key, role.name, field, before, after), reason,
                  _action("PATCH", role_path, role_bodies[field]))
+
+    # ---- アプリの役割（第2段 2a-2・設計 S2-3 D2-1）。設計図のロールの後に見る
+    app_role_states: list[dict[str, Any]] = []
+    if app_roles is not None:
+        bp_role_names = {role.name for role in bp.roles}
+        linked_ids = {str(a["discord_role_id"]) for a in app_roles if a.get("discord_role_id")}
+        d_roles_by_id = {str(r.get("id")): r for r in d_roles}
+        for app in sorted(app_roles, key=lambda a: int(a["id"])):
+            key = f"{APP_ROLE_KEY_PREFIX}{int(app['id'])}"
+            name = str(app["name"])
+            color = hex_color_to_int(app.get("color"))
+            linked = str(app["discord_role_id"]) if app.get("discord_role_id") else None
+            if name in bp_role_names:
+                emit(0, _row("update_role", key, name, None, None, None), "name_in_blueprint")
+                app_role_states.append(_app_state(app, "blocked", "name_in_blueprint"))
+                continue
+            if linked is not None:
+                found = d_roles_by_id.get(linked)
+                if found is None:
+                    emit(0, _row("update_role", key, name, None, None, None), "app_role_missing_on_discord")
+                    app_role_states.append(_app_state(app, "blocked", "app_role_missing_on_discord"))
+                    continue
+                if linked in used_roles:
+                    emit(0, _row("update_role", key, name, None, None, None), "app_role_link_in_use")
+                    app_role_states.append(_app_state(app, "blocked", "app_role_link_in_use"))
+                    continue
+                used_roles.add(linked)
+                app_diffs: list[tuple[str, str, str]] = []
+                if found.get("name") != name:
+                    app_diffs.append(("name", str(found.get("name")), name))
+                if _int(found.get("color")) != color:
+                    app_diffs.append(("color", str(_int(found.get("color"))), str(color)))
+                if not app_diffs:
+                    app_role_states.append(_app_state(app, "unchanged"))
+                    continue
+                app_above = _int(found.get("position")) >= bot_top
+                for field, before, after in app_diffs:
+                    body = {"name": name} if field == "name" else {"colors": {"primary_color": color}}
+                    emit(0, _row("update_role", key, name, field, before, after),
+                         "role_above_bot" if app_above else None,
+                         _action("PATCH", "/guilds/{guild}/roles/" + linked, body))
+                if app_above:
+                    app_role_states.append(_app_state(app, "blocked", "role_above_bot"))
+                else:
+                    app_role_states.append(_app_state(app, "update"))
+                continue
+            same = [r for r in d_roles if r.get("name") == name
+                    and str(r.get("id")) not in used_roles and str(r.get("id")) not in linked_ids]
+            if len(same) > 1:
+                used_roles.update(str(r.get("id")) for r in same)
+                emit(0, _row("update_role", key, name, None, None, None), "ambiguous")
+                app_role_states.append(_app_state(app, "blocked", "ambiguous"))
+                continue
+            if same:
+                fid = str(same[0].get("id"))
+                used_roles.add(fid)
+                emit(0, _row("link_role", key, name, None, None, fid), None,
+                     _action("DB", "", {"discord_role_id": fid}))
+                app_role_states.append(_app_state(app, "link"))
+                continue
+            emit(0, _row("create_role", key, name, None, None, f"name={name}; color={color}"), None,
+                 _action("POST", "/guilds/{guild}/roles",
+                         {"name": name, "permissions": "0", "colors": {"primary_color": color},
+                          "hoist": False, "mentionable": False}, key))
+            app_role_states.append(_app_state(app, "create"))
 
     # ---- 上書き（カテゴリ・チャンネル共通）
     def target_id(target: str) -> tuple[str | None, str | None]:
@@ -491,6 +588,7 @@ def build_plan(
         compare_overwrites(cat, found, None)
 
     # ---- チャンネル
+    chan_ref: dict[str, str | None] = {}  # bp key → つなぎで送る部屋の番号か置き換えの印（第2段 2c）
     bp_cats = {c.key: c for c in bp.categories}
     for ch in bp.channels:
         parent_state = cat_state.get(ch.category) if ch.category else None
@@ -500,6 +598,7 @@ def build_plan(
                 used_chans.update(str(c.get("id")) for c in d_chans if str(c.get("id")) == ch.discord_id)
             else:
                 used_chans.update(str(c.get("id")) for c in d_chans if c.get("name") == ch.name)
+            chan_ref[ch.key] = None
             emit(2, _row("update_channel", ch.key, ch.name, None, None, None), parent_state.split(":", 1)[1])
             continue
         parent_id = cat_ids.get(ch.category) if ch.category else None
@@ -525,6 +624,7 @@ def build_plan(
             elif same:
                 found = same[0]
         if problem:
+            chan_ref[ch.key] = None
             emit(2, _row("update_channel", ch.key, ch.name, None, None, None), problem)
             continue
         if found is None:
@@ -536,9 +636,12 @@ def build_plan(
                 create_json["topic"] = ch.topic
             if parent_ref is not None:
                 create_json["parent_id"] = parent_ref
-            emit(2, _row("create_channel", ch.key, ch.name, None, None, after), create_issue(ch.overwrites),
+            issue = create_issue(ch.overwrites)
+            emit(2, _row("create_channel", ch.key, ch.name, None, None, after), issue,
                  _action("POST", "/guilds/{guild}/channels", create_json, f"channel:{ch.key}"))
+            chan_ref[ch.key] = None if issue else "{ref:channel:" + ch.key + "}"
             continue
+        chan_ref[ch.key] = str(found.get("id"))
         chan_path = f"/channels/{found.get('id')}"
         used_chans.add(str(found.get("id")))
         if found.get("name") != ch.name:
@@ -553,6 +656,35 @@ def build_plan(
             emit(2, _row("update_channel", ch.key, ch.name, "parent", cur_parent_name, parent_name),
                  None, _action("PATCH", chan_path, {"parent_id": parent_ref}))
         compare_overwrites(ch, found, parent_name)
+
+    # ---- 知らせの部屋のつなぎ（第2段 2c・設計 D2-11）。webhook を作り、送り先の行は反映のあとアプリが書く
+    if notice_links is not None:
+        linked = {str(x.get("blueprint_key")) for x in notice_links if x.get("blueprint_key")}
+        manual_events: set[str] = set()
+        for x in notice_links:
+            if x.get("blueprint_key") or not x.get("is_active"):
+                continue
+            raw = x.get("event_types")
+            if isinstance(raw, str):
+                try:
+                    raw = json.loads(raw or "[]")
+                except ValueError:
+                    raw = []
+            if isinstance(raw, list):
+                manual_events.update(str(e) for e in raw)
+        for ch in bp.channels:
+            event = NOTICE_ROOMS.get(ch.key)
+            if event is None or ch.key in linked:
+                continue
+            note = "notice_other_route" if event in manual_events else None
+            row = _row("link_notice", ch.key, ch.name, None, None, f"event={event}", note)
+            ref = chan_ref.get(ch.key)
+            if ref is None:
+                emit(4, row, "notice_room_unavailable")
+                continue
+            action = _action("POST", f"/channels/{ref}/webhooks", {"name": NOTICE_WEBHOOK_NAME})
+            action["webhook_for"] = ch.key
+            emit(4, row, None, action)
 
     # ---- 消す候補
     deletes: list[list[dict[str, Any]]] = [[], [], [], []]
@@ -585,5 +717,8 @@ def build_plan(
             sort_keys=True, ensure_ascii=False, separators=(",", ":"),
         ).encode()
     ).hexdigest()
-    return {"changes": out_changes, "blocked": out_blocked, "delete_candidates": out_deletes,
-            "plan_digest": digest, "actions": out_actions}
+    out: dict[str, Any] = {"changes": out_changes, "blocked": out_blocked, "delete_candidates": out_deletes,
+                           "plan_digest": digest, "actions": out_actions}
+    if app_roles is not None:
+        out["app_roles"] = app_role_states
+    return out

@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import set_tenant_context
 from app.discord_gateway import outside_ticket_notice
+from app.services import customer_reply_notifier
 from app.services.inbound_translation import enqueue_inbound_translation
 from app.services.message_translator import infer_original_language
 
@@ -255,6 +256,11 @@ async def process_ticket_channel_message(
                 message_id,
             )
             return True
+
+        # 第2段 2d: 新しい行で commit できたときだけ、担当者にお客さんの返信を知らせる（待たない）
+        customer_reply_notifier.schedule_customer_reply_notice(
+            db_factory, tenant_id=tenant_id, lead_id=lead.lead_id, source="discord",
+        )
 
         if attachment_url:
             original_filename = None

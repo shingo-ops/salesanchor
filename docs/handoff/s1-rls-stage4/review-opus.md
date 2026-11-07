@@ -1,0 +1,71 @@
+# 設計審査の記録 — S1 段階④（クラウド Opus・1 回目）
+
+- 審査した版: release/s1-rls-stage4-design HEAD fdc521ba842bb74484e4e4d8fe2413a2c46105c6（審査役が `git rev-parse HEAD` で一致を確認）。比べた main: feae3a8。
+- 実行: クラウドの一回実行（2026-11-06T12:55:39Z〜12:59:40Z、229 秒）。読むだけ。クラウドの見張りに止められた操作 2 件（試験用 PostgreSQL の起動、削除の語を含む grep）。
+- 判定: **REVISE**。
+- 記録の制約: 実行記録の取得は返事の本文を途中で切って返す。指摘 1〜2 と 3 の冒頭までは読めた。残り（約 3,700 字）は読めていない。読めなかった分は、直した版で 2 回目の審査を流して確かめる。
+
+## 指摘と対応
+
+| # | 重さ | 指摘（審査役の文） | Opus が自分で確かめたこと | 対応 |
+|---|---|---|---|---|
+| 1 | 重大 | ポリシーに `NULLIF` が無く、文脈を外した接続（`app.tenant_id=''`）で `22P02` になる。運営画面の保存が 500 になる | backend/app/auth/dependencies.py:379 `SET app.tenant_id = ''`。手本 migrations/20261016_180000_add_users_write_rls.sql は全ポリシーが `NULLIF(current_setting('app.tenant_id', true), '')::INTEGER` | design.md §2 の全ポリシーを NULLIF 付きに。試験に「`SET app.tenant_id=''` の後」を追加。K5-1 の数える語に `invalid input syntax for type integer` を追加。recon.md の誤った説明を直した |
+| 2 | 重大 | `CREATE POLICY` が冪等でなく、2 回目のデプロイで止まる | scripts/run_all_migrations.sh:14「全マイグレーションは冪等設計」、:25 `ON_ERROR_STOP=1`。手本は各 CREATE の前に `DROP POLICY IF EXISTS` | 各 CREATE POLICY の前に DROP POLICY IF EXISTS。戻し SQL も IF EXISTS。試験に「2 回当ててもエラーなし」を追加 |
+| 3 | 中 | 「1 つの移行で入れるので全拒否の間は無い」は保証されない。run_sql にトランザクションの指定が無い | 前例 migrations/20261106_120000_create_discord_server_snapshot_tables.sql:13 `BEGIN;`・:69 `COMMIT;` | 型A・型C とも `BEGIN;`〜`COMMIT;` で囲む。ADR-1067 What 7 も直した |
+| 4〜 | 未読 | 記録が途中で切れて読めなかった | — | 2 回目の審査で確かめる |
+
+# 2 回目（クラウド Opus）
+
+- 審査した版: HEAD 2c983ebfcc189c05c8b098d1a7d7f683af8e57e1（審査役が一致を確認）。比べた main: feae3a8。
+- 実行: 2026-11-06T13:07:34Z〜13:11:16Z（212 秒・27 手）。読むだけ。クラウドの見張りに止められた操作 2 件（削除の語を含む grep、psql の語を含む grep）。語を外して同じ点を調べ直した。
+- 判定: **REVISE**（中 2・軽 4）。1 回目の指摘 1〜3 の直しは正しいと確認された。会社の文脈なしで書く入口の漏れは 0 件（8 表で約 60 か所を照合）。PostgreSQL 16 の仕様との食い違いは 0 件。
+- 今回は返事が切れずに全部読めた。
+
+| # | 重さ | 指摘 | Opus が自分で確かめたこと（origin/main 6caae154f） | 対応 |
+|---|---|---|---|---|
+| 4 | 中 | 戻しの SQL を手で流しても、次のデプロイで RLS がまた付く。④-5 でコードだけ戻すと運営画面の保存が止まる | scripts/run_all_migrations.sh:14「全マイグレーションは冪等設計」で毎回全部流す | design §7・ADR-1067「戻し方」に、PR を戻す → デプロイ → 戻しの SQL の順と、④-5 は 1 つの PR で両方戻すことを書いた |
+| 5 | 中 | 移行のファイル名・登録手順が無い。062 が run_all にも migration-test.yml にも無く、全件ドライランで表が無いと落ちる | `grep 062_` が run_all_migrations.sh・migration-test.yml とも 0 件。tenant_discord_config・tenant_settings は migration-test.yml :480・:498・:1824・:1831 に定義あり | design §3 に置き場所・登録・前提の表の足し方を書いた。§4 に試験で前提の移行を当てる順を書いた |
+| 6 | 軽 | 自社の行の tenant_id を他社へ付け替える試験が無い | backend/tests/test_users_rls.py:294 の UPDATE と :296 の 42501 | 型A ⑧・型C ⑥ を足した |
+| 7 | 軽 | K5-2 が○×で判定できない（④-2 が無い、`tenant 未登録` は正当にも出る、④-4 の点検が動く保証が無い） | client.py:123 `tenant_id 逆引き失敗`、:297 `tenant 未登録のため ticket 発行スキップ` | K5-2 を便ごとの数で判定できる形に書き直した |
+| 8 | 軽 | KGI-5 に `invalid input syntax for type integer` が無い | kgi.md の KGI-5 行 | 足した |
+| 9 | 軽 | 行番号のずれ | export_inventory_for_sheet.py:108 が接続。discord_guild_config.py の手で入れる INSERT は ea0142e71 で消えた。discord_oauth.py は :215 で文脈 → :221 INSERT（recon の旧記載 :99・:105 は誤り） | recon・design の行番号を origin/main 6caae154f に合わせた |
+
+- 審査役の未確認: 試験用 PostgreSQL では SQL を流していない（クラウドの見張りが止める）。これは各便の CI（Backend Tests・migration-test）で確かめる。
+
+# 3 回目（クラウド Opus）
+
+- 実行: session cse_01HHUUpSvUs4W6waxGyCX2uR、139 秒。判定 REVISE（最後の判定行は記録の切れで読めず、本文の指摘から REVISE と扱う）。2 回目の #6〜#9 は直っていると確かめられた。
+
+| # | 重さ | 指摘 | 私の確かめ（origin/main 6caae154f） | 直し |
+|---|---|---|---|---|
+| 10 | 中 | 「062 は CI に無い」は誤り | 正しい指摘。scripts/migrate_inventory_sprint1.py:56 の一覧に 062。本番 run_all:361、CI :1046-1047・:1906-1907 で変更 SQL より前に流れる | design §3 から「PUBLIC_SQL に定義を足す」を消し、流れている場所を書いた |
+| 11 | 中 | 戻しの順がデプロイの順と食い違う | 正しい指摘。deploy.yml の手順は 1. コードと docker compose → 2. 移行 | design §7・ADR-1067 戻し方を「戻しの SQL → 確かめ → 戻しの PR → デプロイ → 確かめ」に。間のデプロイ 0 件を先に確かめる |
+| 12 | 軽 | ④-2・④-4 の表は変更 SQL のジョブに無い | 正しい指摘。migration-test.yml を表の名で grep して 0 件 | design §3 に前提の移行を先に流す step（前例 :1299-1338）。④-4 は 077 → 20261103_200000（077 が触る tenant_google_calendar_config は :957 に在る） |
+| 13 | 軽 | 前提の移行の一覧が足りない | 正しい指摘。表ごとに `git grep -l` と run_all の行番号で作り直した | design §4 に表ごとの作る移行と形を変える移行を run_all の順で（4 回目 #14 で直した: 066・070 は run_py の Python 移行で流れる） |
+
+# 4 回目（クラウド Opus）
+
+| # | 重さ | 指摘 | Opus の確かめ | 直した場所 |
+|---|---|---|---|---|
+| 14 | 軽 | 066・070 は run_all に在る（run_py 経由） | 正しい指摘。scripts/migrate_inventory_sprint5_to_7.py:77 に 066、scripts/migrate_inventory_sprint9.py:52 に 070。run_all:363・:365 の `run_py` で流れる。3 回目は run_sql の行だけを grep して見落とした | design §4 ④-5 の順を 062 → 066 → 20260604_220000、070 → 080 → 20260604_050000 に。「未確認」の文を消した。#13 の行も直した |
+| 15 | 中 | 戻しの SQL を誰がどの道で流すかが無い。戻しの PR の GO 待ちが抜けている | 正しい指摘。reader 鍵では書けない。移行は `psql -U jarvis`（scripts/run_all_migrations.sh:24-25・:118）。戻しの PR は migrations/ を含むので ADR-136 の GO が要る | design §7・ADR-1067 戻し方に「PO の許可で無制限鍵・移行と同じ役で流す」と、「戻しの PR の GO を先に受ける → デプロイ 0 件 → 戻しの SQL → …」の順を書いた |
+| 16 | 軽 | 「毎回のデプロイで全部流れる（:14）」は根拠違い | 正しい指摘。:14 は set -e の注記。流れる条件は .github/workflows/deploy.yml:38-43 の paths と :765 の `steps.gate.outputs.migrations`、前回の成功デプロイと版が違えば :73-78 で全部 | design §7・ADR-1067 の根拠を差し替え、docs だけのデプロイでは流れないと書いた |
+| — | — | （Opus が足した）既にある試験への影響 | `git grep -l` で 8 表に触る試験は backend/tests/test_*.py に 21 本 | design §4 に「その便の表に触る試験をカードに列挙し、Backend Tests 全部緑を合格条件に。落ちたら試験の側で会社の文脈を張る（ポリシーを緩めない）」 |
+
+# 5 回目（クラウド Opus）
+
+4 回目の #14〜#16 の直しは正しいと確認された。④-1 のカードは書ける状態との判定（在庫の動きの表に書き込む本番コードは 0 件）。
+
+| # | 重さ | 指摘 | Opus の確かめ | 直した場所 |
+|---|---|---|---|---|
+| 17 | 軽 | 手で戻すコマンドに鍵待ちの上限が無い | 正しい指摘。run_all:57 の SQL_LOCK_TIMEOUT 既定 1s が :118 で PGOPTIONS に入る | design §7 のコマンドに lock_timeout=1s と流し直しを足した。ADR-1067 にも |
+| 18 | 軽 | 試験の数から conftest.py・rls_bootstrap.py が抜けている | 正しい指摘。backend/tests 全体で 23 本。conftest.py:1789-1791 が Discord の 3 表を文脈なしで後片付けに消す | design §4 に 23 本の内訳と、④-2・④-3 のカードに後片付けの確かめを足すと書いた |
+| 19 | 軽 | 手で戻す許可の根拠が違う | 正しい指摘。本文は AGENTS.md:23-26。求めるのは作業ごとの PO の GO | design §7・ADR-1067 の根拠を AGENTS.md:26・ADR-1003 に差し替えた |
+
+# 6・7 回目（クラウド Opus・HEAD a3dd69861）
+
+6 回目は確かめの途中で、クラウドの見張りに止められた（検索語に SQL の削除の語が入っていた）。7 回目は、その行を行番号で読む指示に変えて流した。判定は **APPROVE**。#19（AGENTS.md:26）が正しいことと、便④-1 の実装カードを書いてよいことが確かめられた。
+
+| # | 重さ | 指摘 | Opus の確かめ | 直した場所 |
+|---|---|---|---|---|
+| 20 | 軽 | conftest.py の後片付けの行は 1789-1791 ではなく 1779-1781 | 版の違いによるずれ。origin/main 6caae154f と最新の origin/main では 1789-1791、設計ブランチの古い写し（HEAD）では 1779-1781（`git show <版>:backend/tests/conftest.py \| grep -n` で確かめた）。設計の根拠は origin/main 基準なので、番号は直さない | design §4 に、どの版の行番号かを書き足した |

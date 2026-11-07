@@ -22,13 +22,19 @@ from dataclasses import dataclass
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.services.channel_masters import CHANNEL_MASTERS_TABLE
+
 logger = logging.getLogger(__name__)
 
 # 判定確定に必要な最小レコード数
 _MIN_RECORDS_FOR_CONFIDENT_JUDGMENT = 3
 
-# 多数決から除外するチャネル種別（文字の verbatim が保証されない手動チャネル）
-_EXCLUDED_MANUAL_CHANNELS = ("phone", "in_person")
+# 多数決から除外するチャネルは、名簿の is_verbatim = FALSE の行（文字が原文と保証されない手動チャネル）。
+_NOT_VERBATIM_CLAUSE = (
+    f"AND NOT EXISTS (SELECT 1 FROM {CHANNEL_MASTERS_TABLE} cm "
+    f"WHERE cm.platform = cl.channel_type AND cm.is_verbatim = FALSE "
+    f"AND (cm.tenant_id IS NULL OR cm.tenant_id = :tenant_id))"
+)
 
 
 @dataclass(frozen=True)
@@ -81,7 +87,7 @@ async def judge_recipient_language(
                   AND cl.direction        = 'inbound'
                   AND cl.original_language IS NOT NULL
                   AND cl.deleted_at       IS NULL
-                  AND cl.channel_type    <> ALL(:excluded_channels)
+                  {_NOT_VERBATIM_CLAUSE}
             ) sub
             GROUP BY original_language
             ORDER BY cnt DESC
@@ -89,7 +95,7 @@ async def judge_recipient_language(
         """),
         {
             "lead_id": lead_id,
-            "excluded_channels": list(_EXCLUDED_MANUAL_CHANNELS),
+            "tenant_id": tenant_id,
         },
     )
     row = result.first()
@@ -119,12 +125,12 @@ async def judge_recipient_language(
                   AND cl.direction        = 'inbound'
                   AND cl.original_language IS NOT NULL
                   AND cl.deleted_at       IS NULL
-                  AND cl.channel_type    <> ALL(:excluded_channels)
+                  {_NOT_VERBATIM_CLAUSE}
             ) sub
         """),
         {
             "lead_id": lead_id,
-            "excluded_channels": list(_EXCLUDED_MANUAL_CHANNELS),
+            "tenant_id": tenant_id,
         },
     )
     total_row = total_result.first()

@@ -5,23 +5,20 @@
 
 API:
   GET    /api/v1/admin/discord-config   — 現在の設定取得
-  PUT    /api/v1/admin/discord-config   — guild_id 設定 / 更新
   DELETE /api/v1/admin/discord-config   — Discord 切断（行削除）
   GET    /api/v1/admin/discord-config/own — 自社用の登録の取得
   DELETE /api/v1/admin/discord-config/own — 自社用の登録の解除
 
 権限:
   GET:    tenant.profile.view
-  PUT:    tenant.profile.edit
   DELETE: tenant.profile.edit
 """
 from __future__ import annotations
 
 import logging
-import re
 
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -33,8 +30,6 @@ from app.services.audit import record_audit_log
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-_GUILD_ID_RE = re.compile(r"^\d{17,20}$")
-
 
 class DiscordConfigResponse(BaseModel):
     guild_id: str | None = None
@@ -42,17 +37,6 @@ class DiscordConfigResponse(BaseModel):
     connected_by_staff_name: str | None = None
     role_member: str = "Member"
     role_partner: str = "Partner"
-
-
-class DiscordConfigUpdate(BaseModel):
-    guild_id: str = Field(..., min_length=17, max_length=20)
-
-    @field_validator("guild_id")
-    @classmethod
-    def validate_guild_id(cls, v: str) -> str:
-        if not _GUILD_ID_RE.match(v):
-            raise ValueError("Guild ID は17〜20桁の数字で入力してください")
-        return v
 
 
 @router.get(
@@ -103,46 +87,6 @@ async def get_discord_config(
         role_member=role_member,
         role_partner=role_partner,
     )
-
-
-@router.put(
-    "/admin/discord-config",
-    response_model=DiscordConfigResponse,
-    dependencies=[Depends(require_permission("tenant.profile.edit"))],
-)
-async def update_discord_config(
-    data: DiscordConfigUpdate,
-    db: AsyncSession = Depends(get_db),
-    tenant_id: int = Depends(get_current_tenant),
-    current_user: User = Depends(get_current_user),
-) -> DiscordConfigResponse:
-    """Discord Guild ID を設定 / 更新する (upsert)。"""
-    await db.execute(
-        text("""
-            INSERT INTO public.tenant_discord_config (tenant_id, purpose, guild_id)
-            VALUES (:tid, 'customer', :guild_id)
-            ON CONFLICT (tenant_id, purpose)
-            DO UPDATE SET guild_id = EXCLUDED.guild_id, updated_at = NOW()
-        """),
-        {"tid": tenant_id, "guild_id": data.guild_id},
-    )
-    await record_audit_log(
-        db=db,
-        tenant_id=tenant_id,
-        user_id=current_user.id,
-        action="update",
-        table_name="tenant_discord_config",
-        record_id=tenant_id,
-        new_data={"guild_id": data.guild_id},
-    )
-    await db.commit()
-    await reset_tenant_context(db, tenant_id)  # ADR-072: commit 後の search_path 復元
-
-    logger.info(
-        "[discord_config] updated tenant=%d guild_id=%s by user=%d",
-        tenant_id, data.guild_id, current_user.id,
-    )
-    return DiscordConfigResponse(guild_id=data.guild_id)
 
 
 @router.delete(

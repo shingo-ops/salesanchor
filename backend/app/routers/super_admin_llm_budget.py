@@ -22,7 +22,7 @@ from pydantic import BaseModel, Field, condecimal
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.dependencies import require_super_admin
+from app.auth.dependencies import require_super_admin, reset_operator_context, set_operator_context
 from app.database import get_db
 
 logger = logging.getLogger(__name__)
@@ -148,27 +148,33 @@ async def upsert_budget(
 
     AC4.6: admin が予算編集 → 即 DB 反映。
     """
-    await db.execute(
-        text(
-            """
-            INSERT INTO public.tenant_llm_budgets
-                (tenant_id, monthly_budget_usd, current_month_usd,
-                 last_reset_at, hard_stop, notify_admin)
-            VALUES (:tid, :budget, 0, NOW(), :hard_stop, :notify_admin)
-            ON CONFLICT (tenant_id) DO UPDATE
-                SET monthly_budget_usd = EXCLUDED.monthly_budget_usd,
-                    hard_stop          = EXCLUDED.hard_stop,
-                    notify_admin       = EXCLUDED.notify_admin
-            """
-        ),
-        {
-            "tid": tenant_id,
-            "budget": str(data.monthly_budget_usd),
-            "hard_stop": data.hard_stop,
-            "notify_admin": data.notify_admin,
-        },
-    )
-    await db.commit()
+    await set_operator_context(db)
+    try:
+        await db.execute(
+            text(
+                """
+                INSERT INTO public.tenant_llm_budgets
+                    (tenant_id, monthly_budget_usd, current_month_usd,
+                     last_reset_at, hard_stop, notify_admin)
+                VALUES (:tid, :budget, 0, NOW(), :hard_stop, :notify_admin)
+                ON CONFLICT (tenant_id) DO UPDATE
+                    SET monthly_budget_usd = EXCLUDED.monthly_budget_usd,
+                        hard_stop          = EXCLUDED.hard_stop,
+                        notify_admin       = EXCLUDED.notify_admin
+                """
+            ),
+            {
+                "tid": tenant_id,
+                "budget": str(data.monthly_budget_usd),
+                "hard_stop": data.hard_stop,
+                "notify_admin": data.notify_admin,
+            },
+        )
+        await reset_operator_context(db)
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
 
     # 更新後を再取得して返す
     result = await db.execute(

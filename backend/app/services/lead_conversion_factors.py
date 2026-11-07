@@ -39,12 +39,12 @@ CUSTOMER_TYPE_PRICE = LeadCustomerType.price.value
 INITIATIVE_INBOUND = "inbound"
 INITIATIVE_OUTBOUND = "outbound"
 
-# channel_type は channel_masters の platform の値。
-CHANNEL_MESSENGER = "messenger"
-CHANNEL_INSTAGRAM = "instagram"
-CHANNEL_WHATSAPP = "whatsapp"
-META_CHANNELS = (CHANNEL_INSTAGRAM, CHANNEL_MESSENGER)  # meta_messages を読む
-CHANNELS = (CHANNEL_MESSENGER, CHANNEL_INSTAGRAM, CHANNEL_WHATSAPP)
+# channel_type は channel_masters の platform の値。どの手段がどの項目かは、
+# 呼び出し側が名簿から読んだ対応表 channel_items（{platform: conversion_item}）で渡す。
+CHANNEL_ITEM_BASELINE = "baseline"
+CHANNEL_ITEM_WHATSAPP = "channel_whatsapp"
+CHANNEL_ITEM_INSTAGRAM = "channel_instagram"
+CHANNEL_ITEM_VALUES = frozenset({CHANNEL_ITEM_BASELINE, CHANNEL_ITEM_WHATSAPP, CHANNEL_ITEM_INSTAGRAM})
 
 COUNTRY_US = "US"
 COUNTRY_GB = "GB"
@@ -170,7 +170,7 @@ class Prepared:
         return len(self.y) - sum(self.y)
 
 
-def prepare(leads: list[LeadRow], messages: list[MessageRow]) -> Prepared:
+def prepare(leads: list[LeadRow], messages: list[MessageRow], channel_items: dict[str, str]) -> Prepared:
     """§2-3〜§2-5: 外す決まりを上から当て、説明の行列を作る。"""
     by_lead = _ordered_messages(messages)
     excluded = {k: 0 for k in EXCLUDED_KEYS}
@@ -185,7 +185,7 @@ def prepare(leads: list[LeadRow], messages: list[MessageRow]) -> Prepared:
             continue
         # 2. other_values（空・対象外の値。温度は列挙外の値もここに入れる）
         if (
-            lead.channel_type not in CHANNELS
+            lead.channel_type not in channel_items
             or lead.country not in COUNTRIES
             or lead.temperature not in (TEMPERATURE_HOT, TEMPERATURE_WARM, TEMPERATURE_COLD)
             or lead.initiative not in (INITIATIVE_INBOUND, INITIATIVE_OUTBOUND)
@@ -226,8 +226,8 @@ def prepare(leads: list[LeadRow], messages: list[MessageRow]) -> Prepared:
             1.0 if SALES_FORM_WHOLESALE in lead.sales_form_values else 0.0,
             1.0 if first_reply <= FIRST_REPLY_LIMIT_SECONDS else 0.0,
             1.0 if partner_mean <= PARTNER_REPLY_LIMIT_SECONDS else 0.0,
-            1.0 if lead.channel_type == CHANNEL_WHATSAPP else 0.0,
-            1.0 if lead.channel_type == CHANNEL_INSTAGRAM else 0.0,
+            1.0 if channel_items.get(lead.channel_type) == CHANNEL_ITEM_WHATSAPP else 0.0,
+            1.0 if channel_items.get(lead.channel_type) == CHANNEL_ITEM_INSTAGRAM else 0.0,
             1.0 if lead.country == COUNTRY_GB else 0.0,
             1.0 if lead.country == COUNTRY_AU else 0.0,
             1.0 if lead.temperature == TEMPERATURE_HOT else 0.0,
@@ -384,8 +384,10 @@ class Analysis:
     prepared: Prepared
 
 
-def analyze(leads: list[LeadRow], messages: list[MessageRow]) -> Analysis:
-    prep = prepare(leads, messages)
+def analyze(leads: list[LeadRow], messages: list[MessageRow], channel_items: dict[str, str]) -> Analysis:
+    if set(channel_items.values()) != CHANNEL_ITEM_VALUES:
+        raise ValueError("channel_items の値は baseline・channel_whatsapp・channel_instagram の3つでなければなりません")
+    prep = prepare(leads, messages, channel_items)
     won, lost = prep.won_count, prep.lost_count
     if min(won, lost) / ITEM_COUNT < REQUIRED_PER_ITEM:
         return Analysis("insufficient", len(prep.y), won, lost, prep.excluded, [], None, prep)

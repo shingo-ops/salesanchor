@@ -32,6 +32,7 @@ from app.schemas.lead_conversion_factors import (
     LeadConversionFactorItem,
     LeadConversionFactorsResponse,
 )
+from app.services import channel_masters
 from app.services import lead_conversion_factors as lcf
 from app.services.time import _jst_month_range_utc
 
@@ -2481,31 +2482,47 @@ async def _fetch_lead_conversion_inputs(
 
     # 状態で外れるリードのメッセージは読まない（§2-4 の 1 が最初に当たるため結果は同じ）
     messages: list[lcf.MessageRow] = []
-    meta_rows = (
-        await db.execute(
-            text(
-                "SELECT m.lead_id AS lead_id, m.id AS id, m.direction AS direction, "
-                "m.created_at AS ts "
-                "FROM meta_messages m JOIN leads l ON l.id = m.lead_id "
-                "WHERE m.deleted_at IS NULL "
-                "AND l.channel_type IN ('instagram', 'messenger') "
-                "AND l.status IN ('existing_customer', 'lost')"
-            )
+    meta_platforms = await channel_masters.platforms_by_store(db, "meta_messages")
+    log_platforms = await channel_masters.platforms_by_store(db, "conversation_logs")
+    meta_rows: list = []
+    if meta_platforms:
+        meta_params = {f"p{i}": p for i, p in enumerate(meta_platforms)}
+        meta_in = ", ".join(f":{k}" for k in meta_params)
+        meta_rows = list(
+            (
+                await db.execute(
+                    text(
+                        "SELECT m.lead_id AS lead_id, m.id AS id, m.direction AS direction, "
+                        "m.created_at AS ts "
+                        "FROM meta_messages m JOIN leads l ON l.id = m.lead_id "
+                        "WHERE m.deleted_at IS NULL "
+                        f"AND l.channel_type IN ({meta_in}) "
+                        "AND l.status IN ('existing_customer', 'lost')"
+                    ),
+                    meta_params,
+                )
+            ).mappings()
         )
-    ).mappings()
-    wa_rows = (
-        await db.execute(
-            text(
-                "SELECT c.lead_id AS lead_id, c.id AS id, c.direction AS direction, "
-                "c.occurred_at AS ts "
-                "FROM conversation_logs c JOIN leads l ON l.id = c.lead_id "
-                "WHERE c.deleted_at IS NULL "
-                "AND l.channel_type = 'whatsapp' "
-                "AND l.status IN ('existing_customer', 'lost')"
-            )
+    wa_rows: list = []
+    if log_platforms:
+        log_params = {f"p{i}": p for i, p in enumerate(log_platforms)}
+        log_in = ", ".join(f":{k}" for k in log_params)
+        wa_rows = list(
+            (
+                await db.execute(
+                    text(
+                        "SELECT c.lead_id AS lead_id, c.id AS id, c.direction AS direction, "
+                        "c.occurred_at AS ts "
+                        "FROM conversation_logs c JOIN leads l ON l.id = c.lead_id "
+                        "WHERE c.deleted_at IS NULL "
+                        f"AND l.channel_type IN ({log_in}) "
+                        "AND l.status IN ('existing_customer', 'lost')"
+                    ),
+                    log_params,
+                )
+            ).mappings()
         )
-    ).mappings()
-    for r in list(meta_rows) + list(wa_rows):
+    for r in meta_rows + wa_rows:
         if r["ts"] is None:
             continue
         messages.append(
@@ -2535,7 +2552,14 @@ async def lead_conversion_factors_summary(
     - status: ok / insufficient（件数が足りない）/ not_computable（計算できない）
     """
     leads, messages = await _fetch_lead_conversion_inputs(db)
-    result = lcf.analyze(leads, messages)
+    items = await channel_masters.conversion_items(db)
+    try:
+        result = lcf.analyze(leads, messages, items)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail="分析の設定が名簿にそろっていません",
+        ) from exc
     return LeadConversionFactorsResponse(
         status=result.status,
         included_count=result.included_count,

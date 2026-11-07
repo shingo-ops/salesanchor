@@ -39,6 +39,7 @@ from app.schemas.role import (
     UserRoleAssign,
     UserRoleResponse,
 )
+from app.services import discord_own_staff_sync as own_staff_sync
 from app.services.audit import record_audit_log
 
 router = APIRouter()
@@ -356,6 +357,15 @@ async def delete_role(
             detail="自分と同等以上のpriorityを持つロールは削除できません",
         )
 
+    # 第2段 2a-2: つないでいた Discord のロールの番号を「消した番号の表」へ移す（点検がその番号のロールを登録した人から外す・設計 S2-3 D2-3）
+    await db.execute(
+        text(
+            "INSERT INTO discord_retired_roles (discord_role_id)"
+            " SELECT discord_role_id FROM roles WHERE id = :id AND discord_role_id IS NOT NULL"
+            " ON CONFLICT (discord_role_id) DO NOTHING"
+        ),
+        {"id": role_id},
+    )
     await db.execute(text("DELETE FROM roles WHERE id = :id"), {"id": role_id})
     await record_audit_log(
         db=db, tenant_id=tenant_id, user_id=current_user.id,
@@ -366,6 +376,7 @@ async def delete_role(
     await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2
 
     await invalidate_tenant_permissions(tenant_id)
+    own_staff_sync.schedule_own_staff_sync(tenant_id)  # 第2段 2b
 
 
 # =========================================================================
@@ -595,5 +606,6 @@ async def set_user_roles(
 
     # 対象ユーザーの権限キャッシュをパージ
     await invalidate_user_permissions(tenant_id, user_id)
+    own_staff_sync.schedule_own_staff_sync(tenant_id)  # 第2段 2b
 
     return {"user_id": user_id, "role_count": len(data.role_ids)}

@@ -10,6 +10,8 @@ export interface ChannelMasterOption {
   display_name: string;
   connection_type: "auto" | "manual";
   is_active: boolean;
+  is_shared?: boolean;
+  is_hidden?: boolean;
 }
 
 interface ChannelTypeComboboxProps {
@@ -37,11 +39,14 @@ export function ChannelTypeCombobox({
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  // 最初の値（編集中のリードの今の値）は、隠した連絡手段でも選択欄に残す
+  const keepRef = useRef(value);
 
   useEffect(() => {
     let mounted = true;
     setLoading(true);
-    api.get<ChannelMasterOption[]>("/channel-masters")
+    const keep = keepRef.current ? `&keep=${encodeURIComponent(keepRef.current)}` : "";
+    api.get<ChannelMasterOption[]>(`/channel-masters?for=picker${keep}`)
       .then((rows) => {
         if (mounted) setChannels(rows.filter((row) => row.is_active));
       })
