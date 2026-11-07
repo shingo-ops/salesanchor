@@ -214,3 +214,19 @@ it("hides Apply without edit permission", async () => {
   await screen.findByText(GUILD);
   await waitFor(() => expect(screen.queryByText("Apply")).toBeNull());
 });
+
+it("shows the plain sentence for the reason when returning from Discord", async () => {
+  window.history.pushState({}, "", "/admin/discord-config?tab=own&discord_status=error&reason=invalid_state");
+  view();
+  await screen.findByText(i18n.t("discordConnect.error.stateExpired"));
+});
+
+it("shows the plain sentence when starting the invite fails", async () => {
+  mockConfig(null);
+  vi.mocked(api.post).mockRejectedValue(
+    Object.assign(new ApiError("x", 503, null), { responseDetail: { reason: "redis_error" } }),
+  );
+  view();
+  fireEvent.click(await screen.findByText("Invite the bot to your own server"));
+  await screen.findByText(i18n.t("discordConnect.error.serviceUnavailable"));
+});

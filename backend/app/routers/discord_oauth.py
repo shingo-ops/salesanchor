@@ -181,13 +181,13 @@ async def discord_oauth_start(
         if "tenant.profile.edit" not in permissions:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="権限が不足しています: tenant.profile.edit",
+                detail={"reason": "permission_denied"},
             )
     if not _client_secret():
         logger.error("[discord_oauth] DISCORD_CLIENT_SECRET 未設定のため開始しない")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="一時的に Discord 連携を開始できません（設定不足）",
+            detail={"reason": "discord_not_configured"},
         )
     try:
         issued = await oauth_state.issue_state(
@@ -199,7 +199,7 @@ async def discord_oauth_start(
         logger.error("[discord_oauth] state 発行失敗: %s", e)
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="一時的に Discord 連携を開始できません（Redis 接続失敗）",
+            detail={"reason": "redis_error"},
         )
 
     invite_url = _build_invite_url(issued["state"])  # type: ignore[arg-type]

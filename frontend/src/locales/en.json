@@ -1526,7 +1526,6 @@
     "discordAddBot": "Add Bot to Discord Server",
     "discordBotConnected": "Bot connected",
     "discordConnectedSuccess": "Bot successfully added to your Discord server.",
-    "discordConnectError": "Failed to connect Discord. Please try again.",
     "discordNoServer": "No Discord server connected yet",
     "discordNoServerDesc": "Add a Bot to your Discord server to start message integration.",
     "discordOpenSettings": "Open Discord settings",
@@ -3571,8 +3570,6 @@
     "confirmTitle": "Remove the own server registration?",
     "confirmMessage": "The Discord server itself is not deleted. Only its link to the app is removed.",
     "connectedSuccess": "Your own server was registered",
-    "connectError": "Could not register the server",
-    "guildAlreadyRegistered": "This server is already registered",
     "requestFailed": "Could not complete the request",
     "loadError": "Could not load",
     "snapshot": "Read the current server",
@@ -6088,6 +6085,20 @@
       "clear": "Clear selection",
       "count": "{{count}} people",
       "saved": "Saved"
+    }
+  },
+  "discordConnect": {
+    "error": {
+      "stateExpired": "The connection timed out. Please try again.",
+      "discordInterrupted": "The steps in Discord were interrupted, so the connection was not completed. Please try again.",
+      "serverNotSelected": "No server was selected, so the connection was not completed. Please choose the server to add.",
+      "serverNotVerified": "The selected server could not be verified. Please try again.",
+      "serverAlreadyRegistered": "This server is already registered, so the connection was not completed. Please choose a different server.",
+      "discordCheckFailed": "The check with Discord did not go through, so the connection was not completed. Please wait a moment and try again.",
+      "serviceUnavailable": "A temporary system problem stopped the connection. Please wait a moment and try again. If this keeps happening, please contact support.",
+      "permissionDenied": "You don't have permission to do this. Please ask your company administrator to give you permission.",
+      "unknown": "The connection was not completed. Please try again. If this keeps happening, please contact support.",
+      "disconnectFailed": "The connection could not be removed. Please try again. If this keeps happening, please contact support."
     }
   }
 }
