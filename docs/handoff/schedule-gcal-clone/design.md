@@ -441,3 +441,12 @@ PO 承認: 成功条件 G12（§2）。便5 の着手は PO が 2026-11-07「1�
 - 推奨 1 件: 検索の欄の Enter が変換の確定でも走る → `event.nativeEvent.isComposing || event.keyCode === 229` で先に返す（今の近道 `frontend/src/pages/schedule/SchedulePageImpl.tsx:1284-1285` と同じ形）をカード §5-3 に足した。
 - 推奨 1 件: 試験 F3 の「見出しの日付が変わる」が比べる値を決めていない・`rangeText` は K7 の describe（`frontend/src/pages/schedule/SchedulePageImpl.test.tsx:249`）の中だけ → 期待値を `getWeekDays`・`formatDayLabel`（`frontend/src/pages/schedule/schedule-utils.ts:137`・`:161` で export 済み）で作り、`rangeText` を F の describe にも置くと決めた。画面の部品のファイルに export は足さない。
 - ○: 期間が無いときの `WHERE TRUE`・`ESCAPE` の意味と S3 の値・道のぶつかり無し（`/calendar/events/{event_id}` は PATCH と DELETE だけ）・金型 Popover・ListRow・EmptyState・TextFieldControl の口・`isLoading`・訳と日付の関数・カードの目印はすべて実物と一致。
+
+### 9 回目（便5・G12）: 2 回目 APPROVE（2026-11-07 14:03〜14:04 UTC・クラウドの Opus・origin/release/schedule-gcal-search-bin5 631d14b3a・照合は origin/main 67d7bbf87・セッション cse_01HHUUpR6HRDSTAKnSXpcQSn）
+
+- 結果は返事の本文で全部読んだ（途中で切れていない）。
+- (1) ○ カード §2 の例で作られる WHERE は `ce.start_datetime < :end AND ce.end_datetime > :start` の順で、`backend/app/services/calendar_service.py:164-167` と同じ。
+- (2) ○ 変換中の扱いは `frontend/src/pages/schedule/SchedulePageImpl.tsx:1284-1285` と同じ形。`TextFieldControl` は `onKeyDown` を input に渡す（`frontend/src/components/TextField.tsx:37`・`:44`・`:55`）。型は審査役が「未確認」としたため Opus が手元の `@types/react` で確かめた（`KeyboardEvent` は DOM の `KeyboardEvent` を `nativeEvent` に持ち、`keyCode: number` がある）。最後の型の確かめは実装の `tsc` で行う。
+- (3) ○ F3 の期待値の式は `formatRangeTitle` の週の文（`SchedulePageImpl.tsx:138-144`・`:1162`）と一致。
+- (4) ○ 新しい食い違いなし。
+
