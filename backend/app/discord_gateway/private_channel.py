@@ -6,6 +6,7 @@ ticket_channel_creator.py から切り出した。ログの文字列は切り出
 from __future__ import annotations
 
 import logging
+from collections.abc import Sequence
 from typing import Any
 
 import discord
@@ -57,8 +58,12 @@ async def create_private_text_channel(
     log_context: str,
     topic: str | None = None,
     log_name: str | None = None,
+    extra_view_role_ids: Sequence[str] = (),
 ) -> discord.TextChannel | None:
-    """本人・スタッフのロール・bot だけが見られるテキスト部屋を作る。失敗時は None。"""
+    """本人・スタッフのロール・bot だけが見られるテキスト部屋を作る。失敗時は None。
+
+    extra_view_role_ids: 見られるロールを足す（既定は空＝今までと同じ。スタッフ自己登録の管理者ロール用）。
+    """
     overwrites: dict[Any, discord.PermissionOverwrite] = {
         guild.default_role: discord.PermissionOverwrite(view_channel=False),
         member: discord.PermissionOverwrite(
@@ -80,6 +85,21 @@ async def create_private_text_channel(
             logger.warning(
                 "[ticket] staff_role_id=%s not found in guild %s",
                 staff_role_id,
+                log_context,
+            )
+
+    for extra_id in extra_view_role_ids:
+        extra_role = guild.get_role(int(extra_id))
+        if extra_role:
+            overwrites[extra_role] = discord.PermissionOverwrite(
+                view_channel=True,
+                send_messages=True,
+                read_message_history=True,
+            )
+        else:
+            logger.warning(
+                "[ticket] extra view role_id=%s not found in guild %s",
+                extra_id,
                 log_context,
             )
 
