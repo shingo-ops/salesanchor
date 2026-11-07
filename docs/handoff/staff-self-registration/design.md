@@ -277,7 +277,8 @@
 **変えること**
 1. 設計図 `tenant_1.json` の `staff_join_reception` の @everyone の deny に、`CREATE_PUBLIC_THREADS`・`CREATE_PRIVATE_THREADS`・`SEND_MESSAGES_IN_THREADS`・`ADD_REACTIONS` を足す（SEND_MESSAGES の deny と VIEW_CHANNEL の allow はそのまま）。名前はすべて `backend/app/services/discord_blueprint.py:33` の PERMISSION_BITS にある。USE_APPLICATION_COMMANDS は断らない（ボタンを押す操作を止めないことを、公式の説明で確かめられていないため変えない）。
 2. ボタンを置く処理を共通の関数にする: `backend/app/services/staff_join.py` に `ensure_reception_button(guild_id, token, tenant_id, request=discord_api_request) -> dict` を足す。中身は今の `staff_join_discord_cli._post_staff_button` の Discord 部分と同じ（部屋を `find_blueprint_channel_id` で引く → 直近50件に custom_id `staff_join_open` があれば置かない → 無ければ1回置く）。返り値は `{"status": "posted"|"exists"|"not_configured"|"discord_error", "message_id": ...}`。CLI はこの関数を呼ぶだけにする（CLI の入出力は変えない）。
-3. 適用の最後に、ボタンを置く: `apply_own_server_plan` で `apply_plan` の結果を得た後、DB の commit と `reset_tenant_context` の後に `ensure_reception_button` を呼ぶ。
+3. 適用の最後に、ボタンを置く: `apply_own_server_plan` で `apply_plan` の結果を得た後、DB の commit と `reset_tenant_context` の後に `ensure_reception_button` を呼ぶ。設計図（`_load_own_context` が返す blueprint）の channels に key `staff_join_reception` が無いときは呼ばない（行も足さない）。今の適用の試験（`backend/tests/test_discord_own_server_apply.py:76` で受付の部屋を除いている）はそのまま通る。
+   - 応答の success_count・failed_count は、足した行を含めて数える。DB の記録（result の rows・監査ログの件数）は今のまま足した行を含めない。
    - 結果は適用の結果の行に1行足す: kind `post_button`・key `staff_join_reception`・name「スタッフ受付」・status は posted/exists なら success、それ以外は failed、reason は `exists`・`not_configured`・`discord_error`。
    - 失敗しても適用全体は失敗にしない（部屋やロールの反映はもう済んでいるため）。例外は種類だけをログに出す。
    - 記録 `discord_server_apply_runs` には足さない（DB への書き込みを増やさない。返事と画面にだけ出す）。
