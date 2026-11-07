@@ -1,0 +1,20 @@
+# 2026-11-07 reader 道(ADR-1024)で取得。q20: public の RLS 表の FORCE と所有者 / q21: 接続中の役 / q22: ログイン役の bypassrls
+## q20
+SELECT c.relforcerowsecurity AS force_rls, pg_get_userbyid(c.relowner) AS owner, count(*) AS n, string_agg(c.relname, ',' ORDER BY c.relname) AS tables FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind='r' AND c.relrowsecurity GROUP BY 1,2 ORDER BY 1,2;
+force_rls	owner	n	tables
+True	jarvis	36	accuracy_gold_rows,accuracy_gold_versions,analysis_error_report_events,analysis_error_report_fields,analysis_error_reports,app_fx_rate_history,app_fx_rates,channel_master_tenant_settings,channel_masters,discord_server_apply_runs,discord_server_snapshots,fedex_etd_images,google_webhook_subscriptions,inventory_movements,ops_control,ops_incident_events,ops_incidents,permissions,product_blank_confirmations,product_packagings,products,registration_tokens,staff_join_invites,suppliers,tenant_carrier_credentials,tenant_discord_config,tenant_discord_ticket_config,tenant_features,tenant_google_calendar_config,tenant_google_drive_config,tenant_llm_budgets,tenant_paypal_config,tenant_settings,tenants,translation_glossary,users
+## q21
+SELECT usename, application_name, count(*) FROM pg_stat_activity WHERE datname IS NOT NULL GROUP BY 1,2 ORDER BY 1,2;
+usename	application_name	count
+ai_reader		1
+salesanchor_app		2
+salesanchor_app	salesanchor_backend	8
+## q22
+SELECT r.rolname, r.rolsuper, r.rolbypassrls FROM pg_roles r WHERE r.rolcanlogin ORDER BY 1;
+rolname	rolsuper	rolbypassrls
+ai_reader	False	False
+ai_reader_cloud	False	False
+ai_unmask	False	False
+jarvis	True	True
+qa_tenant006_rw	False	False
+salesanchor_app	False	False
