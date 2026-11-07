@@ -107,3 +107,118 @@ git ls-tree --name-only origin/main migrations/ | grep 20261107   # 180000 は�
 for b in $(git branch -r --format='%(refname:short)'); do git ls-tree --name-only $b migrations/ | grep -q 20261107_180000 && echo $b; done   # 出力なし
 git log origin/main --merges --format='%h %cI %s' --since=2026-11-06 | grep channel-master   # #5230 2026-11-07T11:06:03+09:00
 ```
+
+---
+
+## 2回目
+
+- 審査役: 設計審査役（Architect・クラウドの定期実行）。読むだけ。コード・SQL・試験・ADR は変えていない
+- 対象: `release/channel-master-pr-c` 8e4fb409b の `card-pr-c.md`・`docs/adr/ADR-1069-drop-tenant-channel-masters.md`（・`docs/adr/README.md` の1行）
+- 照合先: origin/main 44a6ccce1（1回目と同じ。`git diff --stat 2969725e9 origin/main -- scripts/run_all_migrations.sh migrations/ scripts/migration-guard/ docs/handoff/cloud-case-ai/ .github/ backend/tests/rls_bootstrap.py backend/tests/test_tenant_loop_migration_guard.py backend/tests/test_value_migrations_neutralized.py backend/tests/ops/test_ai_cloud_views.py backend/tests/test_rls_bootstrap_ordering.py backend/tests/test_tcg_work_matching_integration.py backend/tests/test_leads_assignment_opened_at_pg.py scripts/check-process-artifacts.js docs/adr/` は出力なし。カード §1 の行番号はそのまま有効）
+
+### 判定: **REVISE**
+
+1回目の M1〜M3・R1〜R5 は全部カードに入った（下の①）。ただし、直した所に新しく3つの食い違いがある。どれも実装役か Opus が手順どおりに進むと止まるか、確かめが成り立たない。M4〜M6 を直せば APPROVE できる（直し方は数行ずつ）。
+
+### 必須
+
+#### M4. ADR-1069 の索引の状態が「Accepted」になっている（本文は Proposed）
+- 【事実】`docs/adr/ADR-1069-drop-tenant-channel-masters.md:5` の状態の欄は「Proposed（…確かめたら Accepted に上げる）」。索引を作る `scripts/generate-adr-index.js:51-52` は表の欄をそのまま取り、`:59` で小文字にして `accept` を含めば Accepted、`:60` の Proposed より先に当てる。だから `docs/adr/README.md:247`（このブランチで足した行）は `Accepted` になっている
+- 【事実】`node scripts/generate-adr-index.js --check` は「✅ 最新の状態」（rc=0）。CI「ADR index is up to date」（`.github/workflows/adr-index-check.yml:29-31`）は通るが、索引は間違った状態を正として載せる
+- 【事実】他の ADR はこの罠を避けている: ADR-1068 `:5`「採用に上げる」、ADR-1067 `:5`「決定済みへ進める」（どちらも `:59` の語に当たらない）
+- 直し方（Opus。実装役は docs/adr を触らない決まり）: `:5` の括弧の中を、`:59` の語（accept・承認・採択・完了・実装済・done）を含まない言い方にする。例「Proposed（PO 本人の「GO #PR番号」でマージし、本番で K1＝会社ごとの表0 を反映2回またいで確かめたら採用に上げる）」。そのあと `node scripts/generate-adr-index.js` を流し、README の行が `Proposed` になることを確かめる
+- 確かめた命令: `sed -n '33,60p' scripts/generate-adr-index.js`・`git diff 3c66d4bf6 8e4fb409b -- docs/adr/README.md`・`node scripts/generate-adr-index.js --check`・`head -12 docs/adr/ADR-1068-staff-self-registration.md docs/adr/ADR-1067-public-tenant-config-tables-rls.md`
+
+#### M5. カード §3 の c「CI のログから `test_drop_tenant_channel_masters_pg.py ... PASSED` の行を貼る」は、その行が CI のログに出ない
+- 【事実】backend の試験は `.github/workflows/test.yml:253` の `pytest -q --tb=short` で流れ、`backend/pyproject.toml` の addopts（`[tool.pytest.ini_options]` の `-n auto --dist=loadfile …`）で xdist が付く。`-q` で `-v`/`-rA` が無いので、通った試験はファイル名の行を出さない（点だけ）。skip の理由の一覧も出ない
+- 【推測】実装役は「該当行が無い＝合格にできない」と読み、§3 の c で止まる（BLOCKED）か、別の流し方を自分で足す
+- 直し方（どちらかをカードに書く）:
+  - (a) 判定を「`pytest-run` が緑」に替え、理由を一文書く: CI では `GITHUB_ACTIONS=true` なので skipif（カード 2-11 の `pytestmark`）は偽。さらに `pg` 試験部品は環境が無いと assert で落ちる（`backend/tests/test_tcg_work_matching_integration.py:386-391`）ので、CI では「黙って skip」にならない。貼るのはログ末尾の `N passed` の行
+  - (b) ファイル名の行が欲しいなら、PR コメントではなく試験の中で確かめる（例: 2回流した後の件数を assert）。ログの形に頼らない
+- 確かめた命令: `sed -n '225,258p' .github/workflows/test.yml`・`sed -n '45,80p' backend/pyproject.toml | grep -n addopts`
+
+#### M6. カード §5 の2 の控えの SELECT と §3 の h（・ADR-1069 の確かめ方）の数え方は、読み取り専用の道では成り立たない
+- 【事実】`docs/handoff/ai-readonly-db-path/usage.md:15`「読めるのは `ai_ro` スキーマのビュー…ベース表（`public.users` 等）は読めない（42501）」。カード `card-pr-c.md:153` は `SELECT * FROM tenant_00X.channel_masters`（ベース表）なので 42501 で失敗する
+- 【事実】`migrations/20261017_130100_create_ai_ro_views.sql:25-33` は `public` と `tenant\_%` の実在の表から `ai_ro` のビューを作り、`:23` の除外語（password・_token など）に channel_masters の列は当たらない（列は id・tenant_id・platform・display_name・connection_type・is_active・created_at。`migrations/20260611_100000_create_channel_masters.sql:40-50`）。だから `ai_ro.tenant_00X__channel_masters` で全列が読める（カード §1 `:14` もこのビューがあると書く）
+- 【事実（PostgreSQL の決まり）】`information_schema.tables` は、呼び手がその表に権限を持つものだけを見せる。reader はベース表に権限が無い（usage.md:15）ので、`card-pr-c.md:139`（§3 の h）・`ADR-1069:39` の数え方は、表が残っていても tenant_* 0 と出て、public も 0 になる（「public 1」が満たせず、tenant_* 0 は表が残っていても出る）
+- 直し方（Opus）:
+  - §5 の2: `SELECT * FROM ai_ro.tenant_00X__channel_masters ORDER BY id`（5社、1文ずつ）。デプロイ中は ai_ro が約70秒外れる（usage.md §4）ので、反映を始める前に取る
+  - §3 の h と ADR-1069 `:39`: 権限で絞られない目録で数える。例 `SELECT n.nspname FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE c.relname='channel_masters' AND c.relkind='r' ORDER BY 1`（期待: public だけ）。【推測】reader の役割から `pg_catalog` は読める（既定で PUBLIC に読み権限）。初回に1回流して確かめる
+  - 置き場所: usage.md:16 は「出力は `/tmp/CC報告ファイル/` 配下に保存しチャットに貼らない」。カードの `docs/handoff/channel-master-shared/pr-c-backup/`（repo に commit）との関係を一文で決める（中身は連絡手段の名前6行で秘密は無いが、決まりの例外であることを書く）
+- 確かめた命令: `git show origin/main:docs/handoff/ai-readonly-db-path/usage.md | sed -n 1,40p`・`sed -n '18,40p' migrations/20261017_130100_create_ai_ro_views.sql`
+
+### 推奨
+
+- R6. 2-11 の手順6（`card-pr-c.md:122`）は、この試験の DB では空の比べになる。【事実】`pg` 試験部品は `provision`・`migrate`（`test_tcg_work_matching_integration.py:406-408`）で TCG 系の表を作るが、`public.channel_masters` を作る `20261106_190000_create_public_channel_masters.sql` は流さない（このファイルの中に channel の文字は supplier_channels だけ）。そして 20261106 は `public.tenants` を参照する（`:15`）。【推測】`to_regclass` は前後とも NULL で、手順6 は何も確かめない。「この DB には public の表が無いので手順6 は省く」と書くか、何を守りたいかを書き直す
+- R7. 2-11 の手順1 の片付け（`card-pr-c.md:117`、スキーマを消す文）は要らない。【事実】`pg` 試験部品は試験ごとに専用 DB を作り（`:398`）、終わりに DB ごと消す（`:434`）。片付けの文を試験に書かないほうが、見張りの危険語にも当たらない
+- R8. `pg` は3つ組を返す（`test_tcg_work_matching_integration.py:425` `yield connection, engine, url…`）。手本どおり `connection, _, _ = pg`（`backend/tests/test_leads_assignment_opened_at_pg.py:104`）と一文書く
+- R9. 試験 DB には部品が作る `tenant_006`・`tenant_902`・`tenant_901`（`:407`・`:35`）もあり、20260611 と新 migration は全 `tenant_\d+` に効く。手順4・5 を2つのスキーマに絞るのは正しいが、手順4・5 の `IN (...)` を外して「全 tenant_ スキーマで0」にすると、ループの範囲も確かめられる（任意）
+
+### 観点ごとの結果
+
+#### ① 1回目の指摘の直り（origin/main と照合）
+
+| 指摘 | 結果 | 根拠 |
+|---|---|---|
+| M1 チェック6 | 直った | `card-pr-c.md:8`・`:138`・`:144` に PR 本文の `ADR-1069`・`ADR-1007`。【事実】`.github/workflows/migration-guard.yml:343-391`（origin/main）は本文の `ADR-[0-9]+` があれば exit 0。ADR の中身・状態は見ない |
+| M2 使い捨て DB の試験 | 直った（ただし証拠の取り方が M5） | `card-pr-c.md:47`・`:112-124`・`:134`。2-8 の「試験からは流さない」は消え、`_REVIEWED` に own_database で登録（`:88-101`） |
+| M3 控え | 一部（reader の道に替えたが、読む表が M6） | `card-pr-c.md:153`。`deploy.yml:214`・`:221` の参照は origin/main と一致 |
+| R1 PR 本文の欄 | 直った | `card-pr-c.md:145`。消した行のあるファイル8本を「削除するファイル:」に並べる |
+| R2 ordering 試験 | 直った | `card-pr-c.md:137` に `test_rls_bootstrap_ordering.py` |
+| R3 TSV の表現 | 直った | `card-pr-c.md:22`（データ行 1057・SQL 1084・試験は読まない） |
+| R4 エラーを数える所 | 直った（決めるのは Opus と明記） | `card-pr-c.md:152` |
+| R5 時刻の確かめ | 直った | `card-pr-c.md:46`。【事実】今も origin/main・全リモート枝に 20261107_180000 は無い（下の命令、出力なし） |
+| （1回目⑥ revert の GO） | 直った | `card-pr-c.md:159` |
+
+#### ② 2-11 の試験が実行できるか — できる（M5・R6〜R8 を除く）
+- 【事実】`pg`（`test_tcg_work_matching_integration.py:384-434`）は CI だけで動き（`:386` assert、`:390-391` localhost・jarvis_test_db だけ）、`tcg_work_test_<uuid>` の専用 DB を作り（`:393`・`:398`）、`provision`・`tenant_006`/`tenant_902` のスキーマ作成・`migrate` を済ませて渡す（`:406-408`）。既存の `SCHEMA = "tenant_901"`（`:35`）もこの DB の中だけ。カードの `tenant_9101`・`tenant_9102` は重ならない
+- 【事実】20260611（`migrations/20260611_100000_create_channel_masters.sql:24-79`）が要るのは `pg_namespace`・`pg_policies` と `current_setting` だけ。関数・型・他の表を要らない。`SUBSTRING(nspname FROM 8)::INTEGER` は `tenant_9101` → 9101 で通る。seed は無効化済み（`:71-72`）なので行は入らない
+- 【事実】このファイルの中に channel_masters の文字は無い（`grep -n channel` は supplier_channels だけ）。部品が先に同名の表や依存（ビュー・外部キー）を作ることは無いので、CASCADE 無しの消す文は通る【推測：provision の中身は全部は読んでいない。channel の文字が無いことで判断】
+- 【事実】手順4 の `information_schema.tables` は、ここでは表の持ち主（試験の接続＝jarvis）で数えるので見える。M6 とは別（M6 は reader の場合）
+- 【事実】CI の pytest は `RLS_ADMIN_DATABASE_URL`（`.github/workflows/test.yml:236`、jarvis_test_db）を渡すので、部品の条件を満たす。手本の `test_leads_assignment_opened_at_pg.py:36-46` と同じ入口
+- 【事実】`check_test_schema_dup.py` は試験の文字列中の新しい表を作る文を拾う。カードは本体の SQL ファイルを読んで流す（`:115`）ので当たらない。`check-process-artifacts.js:967-989` の DROP 検出は migration のパス（`isMigrationPath`）だけを見るので、試験ファイルは対象外
+
+#### ③ 2-8 の `_REVIEWED` と両向きの検査（`test_tenant_loop_migration_guard.py:294-307`・`:310-329`）— 釣り合う
+- 【事実】新 migration の `nspname ~ '^tenant_\d+$'` は `_LOOP_RE`（`:19-22`）に当たり、名前は `_MIGRATION_NAME_RE`（`:23`）に合う。だから新しい試験は (新試験, 20260611)・(新試験, 20261107_180000) の2組を「実物」に持つ。カードの登録（`card-pr-c.md:88-101`）はこの2組と一致
+- 【事実】2-7 後、rls_bootstrap.py の 20260611 の文字は `:38`・`:188` の2か所だけ（`grep -rn 20260611_100000 backend/tests`）で両方消える。2-8 で `:42` を消すので釣り合う。test_value_migrations_neutralized.py は 2-9 で `:84-88` を消しても `:26` が残るので、`:137` を残すのが正しい
+- 【事実】own_database の条件（`:318-320`）は `"test_tcg_work_matching_integration import"` の文字で満たす。カードの import 行 `from tests.test_tcg_work_matching_integration import pg as pg` はこれを含む
+- 【推測】新しい試験の説明やコメントに他の全社ループの migration の名前（例 20260614・20261106 以外の loop 物）を書くと、その組も登録が要る。カードに「試験ファイルに書く migration の名前はこの2本だけ」と一言あると安全（任意）
+
+#### ④ ADR-1069 の書式・CI・番号
+- 書式: 【事実】見出し・項目表（ステータス・備考・起案日・方針の決定者・関連・設計・根拠）・`---` の形は ADR-1067・ADR-1068 と同じ。参照先の ADR-1007・135・136・1003・1024・145 はどれも docs/adr に実在（`ls docs/adr | grep`）
+- 索引: CI は通るが状態が間違って載る（M4）
+- 番号: 【事実】`git ls-tree origin/main docs/adr/` に ADR-1069 は無い。fetch した全リモート枝で ADR-1069 のファイルを持つのはこの枝だけ。開いている PR（91件）を `is:pr is:open ADR-1069` で検索して 0件。重なりは無い
+- 【未確認】リモート枝として fetch されていない PR の head（フォーク等）は見ていない
+
+#### ⑤ ほかに実装役が止まる点
+- M5（ログの行が出ない）が一番止まりやすい
+- 【事実】チェック6 は本文の最初の `ADR-` を見るだけで、状態を見ない（`:369-375`）。M4 の直しは CI には影響しない
+- 【推測】2-11 の試験は `pg` 部品の provision・migrate を丸ごと流すので、1本でも数秒〜十数秒かかる。`--dist=loadfile` なので他の試験とは並ぶ。問題にはならない見込み
+
+### 未確認
+
+- U5. 試験は流していない（読むだけの役。PostgreSQL を立てていない）。②③は静的な読み
+- U6. reader の役割で `pg_catalog`（pg_class・pg_namespace）が読めるか（M6 の直し方の前提）。本番に繋いでいない
+- U7. `pg` 部品の `provision`（`test_tcg_work_matching_integration.py:51-`）の中身は全部は読んでいない
+- U8. 見張り（クラウドの PreToolUse フック）が、読むだけの grep 1本を、検索語に DB を消す語が入っていたことで止めた。言い換えて流し直してはいない。その grep で取ろうとした行番号（`pg` 部品の yield・DB を消す行）は、先に読んだ `sed -n '370,460p'` の出力から数えた（`:425`・`:434`）
+
+### 確かめた命令（2回目）
+
+```bash
+git -C ~/w-prc2 log --oneline -3                     # 8e4fb409b
+git diff 3c66d4bf6 8e4fb409b --stat                  # ADR-1069・README・card の3本
+git rev-parse --short origin/main                    # 44a6ccce1
+sed -n '33,60p' scripts/generate-adr-index.js; node scripts/generate-adr-index.js --check   # ✅ rc=0
+for b in $(git branch -r --format='%(refname:short)'); do git ls-tree --name-only $b docs/adr/ | grep -q ADR-1069 && echo $b; done   # この枝だけ
+gh api -X GET search/issues -f q='repo:shingo-ops/salesanchor is:pr is:open ADR-1069' --jq .total_count   # 0（open 全体 91）
+for b in $(git branch -r --format='%(refname:short)'); do git ls-tree --name-only $b migrations/ | grep -q 20261107_180000 && echo $b; done   # 出力なし
+git show origin/main:backend/tests/test_tcg_work_matching_integration.py | sed -n '370,460p'
+git show origin/main:migrations/20260611_100000_create_channel_masters.sql | cat -n
+grep -n '_REVIEWED\|_EXTRA_TEXT_ONLY\|20260611\|test_leads_assignment_opened_at_pg\|^def ' backend/tests/test_tenant_loop_migration_guard.py
+grep -rn '20260611_100000' backend/tests
+sed -n '225,258p' .github/workflows/test.yml; grep -n addopts backend/pyproject.toml
+git show origin/main:docs/handoff/ai-readonly-db-path/usage.md | sed -n 1,40p
+sed -n '18,40p' migrations/20261017_130100_create_ai_ro_views.sql
+git show origin/main:.github/workflows/migration-guard.yml | sed -n '343,391p'
+sed -n '955,1000p' scripts/check-process-artifacts.js
+```
