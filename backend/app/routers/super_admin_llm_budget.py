@@ -170,8 +170,8 @@ async def upsert_budget(
                 "notify_admin": data.notify_admin,
             },
         )
-        await reset_operator_context(db)
         await db.commit()
+        await reset_operator_context(db)
     except Exception:
         await db.rollback()
         raise

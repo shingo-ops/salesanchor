@@ -153,8 +153,8 @@ async def switch_phase_endpoint(
                 exc,
             )
 
-        await reset_operator_context(db)
         await db.commit()
+        await reset_operator_context(db)
     except Exception:
         await db.rollback()
         raise
