@@ -126,6 +126,21 @@ export function formatDraftDateLine(
   });
 }
 
+/** 検索の結果の 2 行目（便5 G12）。終日は「11月10日(火) 終日」、時間ありは formatDraftDateLine と同じ形 */
+export function formatSearchResultLine(item: ScheduleItem, t: Translate, language: string): string {
+  return formatDraftDateLine(
+    {
+      startDate: formatDateInput(item.start),
+      startTime: formatTimeInput(item.start),
+      endDate: item.allDay ? formatDateInput(item.start) : formatDateInput(item.end),
+      endTime: formatTimeInput(item.end),
+      allDay: item.allDay,
+    },
+    t,
+    language,
+  );
+}
+
 export function formatDateInput(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
