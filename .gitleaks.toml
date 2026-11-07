@@ -44,6 +44,8 @@ regexes = [
   "tBHItJI5svbpez7KI4CCXg",
   # スタッフ申込ページの試験 frontend/src/pages/staff-join/StaffJoinPage.test.tsx の架空の招待鍵（実値でない。PR #5228 の前のコミットの履歴に残るため除外）
   "1\\.abcDEF_\\-0123456789abcdefghijklmnopqrstuvwxyz",
+  # 見出しの設定の名前 public.tcg_distribution_settings の key（秘密でない。PR #5258 の履歴に残るため除外）
+  "v102_condition_heading",
 ]
 
 # =============================================================
