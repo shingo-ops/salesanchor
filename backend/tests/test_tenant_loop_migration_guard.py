@@ -39,7 +39,6 @@ _REVIEWED: dict[str, tuple[str, str, frozenset[str]]] = {
                 "20260604_090000_create_conversation_logs.sql",
                 "20260604_180000_analytics_agent_a_tables.sql",
                 "20260604_220000_create_translation_glossary.sql",
-                "20260611_100000_create_channel_masters.sql",
                 "20260614_100000_create_sales_form_tables.sql",
                 "20260621_020000_add_schedule_calendar_category_and_owner_settings.sql",
                 "20260715_100000_add_conversation_logs_lead_fk.sql",
@@ -161,6 +160,16 @@ _REVIEWED: dict[str, tuple[str, str, frozenset[str]]] = {
             {
                 "20260729_043520_drop_deals.sql",
                 "20261015_090000_add_leads_assignment_opened_at.sql",
+            }
+        ),
+    ),
+    "test_drop_tenant_channel_masters_pg.py": (
+        "own_database",
+        "",
+        frozenset(
+            {
+                "20260611_100000_create_channel_masters.sql",
+                "20261107_180000_drop_tenant_channel_masters.sql",
             }
         ),
     ),

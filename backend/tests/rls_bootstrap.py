@@ -35,7 +35,6 @@ _PG_BOOTSTRAP_MIGRATIONS = [
 # public.tenants を参照するため、tenants を用意した後に流す
 _PG_AFTER_TENANTS_MIGRATIONS = ("20261106_190000_create_public_channel_masters.sql",)
 _TENANT_BOOTSTRAP_MIGRATIONS = [
-    "20260611_100000_create_channel_masters.sql",
     "20260614_100000_create_sales_form_tables.sql",
 ]
 _PUBLIC_BOOTSTRAP_LOCK_NAMESPACE = 20260623
@@ -185,7 +184,6 @@ def _scope_tenant_migration(sql: str, filename: str, schema_name: str) -> str:
             raise ValueError("Canonical tenant selector changed; review required")
         return _TENANT_LOOP_SELECTOR_RE.sub(lambda m: f"{m.group(0)} AND nspname = '{schema_name}'", sql)
     selectors = {
-        "20260611_100000_create_channel_masters.sql": "\n        WHERE nspname ~ '^tenant_\\d+$'\n",
         "20260614_100000_create_sales_form_tables.sql": "\n    WHERE nspname LIKE 'tenant_%'\n",
     }
     if not re.fullmatch(r"tenant_[0-9]+", schema_name):
