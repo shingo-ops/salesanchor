@@ -14,7 +14,6 @@
 
 import { LoadingBlock } from "../../components/loading";
 import { useMemo, useState, FormEvent } from "react";
-import type { LucideIcon } from "../../constants/icons";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { useApiCache, useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
@@ -25,12 +24,18 @@ import { Select } from "../../components/Select";
 import { RadioControl } from "../../components/RadioControl";
 import { Button } from "../../components/Button";
 import { usePermissions } from "../../hooks/usePermissions";
-import { CATEGORY_ICONS, STATUS_ICONS } from "../../constants/icons";
+import { SlashOutline, STATUS_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 import { TextareaControl } from "../../components/Textarea";
 import { TextFieldControl } from "../../components/TextField";
-import { Checkbox } from "../../components/Checkbox";
-import { CheckboxControl } from "../../components/CheckboxControl";
+import { Badge } from "../../components/Badge";
+import { SegmentedToggle, type SegmentedOption } from "../../components/SegmentedToggle";
+import { ROLE_ROWS, rowMenuLabelKey } from "../../constants/menuPermissions";
+import {
+  applyState, buildRows, canSetEdit, canSetView, rowState,
+  type PermRow, type RowState,
+} from "./rolePermissionRows";
+import "./RolesPage.css";
 
 interface Role {
   id: number;
@@ -52,31 +57,29 @@ interface Permission {
   category: string;
 }
 
-// カテゴリ表示順とアイコン（constants/icons.tsx で一元管理）
+// 「メニュー以外の許可」の区分の並び（小さい順・無い区分は後ろ）
 /* eslint-disable local/no-japanese-literal -- DB 定義のカテゴリキー（backend permission prefix と一致・変更不可） */
-const CATEGORY_META: Record<string, { icon: LucideIcon; order: number }> = {
-  "レポート": { icon: CATEGORY_ICONS["レポート"], order: 1  },
-  "顧客":     { icon: CATEGORY_ICONS["顧客"],     order: 2  },
-  "リード":   { icon: CATEGORY_ICONS["リード"],   order: 3  },
-  "案件":     { icon: CATEGORY_ICONS["案件"],     order: 4  },
-  "注文":     { icon: CATEGORY_ICONS["注文"],     order: 5  },
-  "チーム":   { icon: CATEGORY_ICONS["チーム"],   order: 6  },
-  "ロール":   { icon: CATEGORY_ICONS["ロール"],   order: 7  },
-  "システム": { icon: CATEGORY_ICONS["システム"], order: 99 },
-};
-
-// 各カテゴリの「メニュー表示」に対応する view系権限キー
-// トグルONで .view を付与、OFFで .view を外す
-const MENU_VIEW_KEY: Record<string, string[]> = {
-  "顧客": ["customers.view"],
-  "リード": ["leads.view"],
-  "注文": ["orders.view"],
-  "チーム": ["teams.view"],
-  "ロール": ["roles.view"],
-  "レポート": ["dashboard.view", "reports.view"],
-  "システム": ["system.audit_view"],
+const CATEGORY_ORDER: Record<string, number> = {
+  "レポート": 1,
+  "顧客": 2,
+  "リード": 3,
+  "案件": 4,
+  "注文": 5,
+  "チーム": 6,
+  "ロール": 7,
+  "システム": 99,
 };
 /* eslint-enable local/no-japanese-literal */
+
+type SectionId = PermRow["section"];
+const SECTION_ORDER: SectionId[] = ["sidebar", "team", "data", "business", "other"];
+const SECTION_TITLE_KEY: Record<SectionId, string> = {
+  sidebar: "roles.sectionSidebar",
+  team: "managementCenter.sectionTeam",
+  data: "managementCenter.sectionData",
+  business: "managementCenter.sectionBusiness",
+  other: "roles.sectionOther",
+};
 
 // ロール表示色の選択肢（12色、視覚的に明確に区別できるよう Tailwind 500系で統一）
 // 正方形スウォッチで表示、ラジオボタン選択
@@ -138,17 +141,10 @@ export default function RolesPage() {
   const [roleForm, setRoleForm] = useState(emptyRoleForm);
   const [deleteTarget, setDeleteTarget] = useState<Role | null>(null);
 
-  // カテゴリ別に権限をグループ化
-  const grouped = useMemo(() => {
-    const map = new Map<string, Permission[]>();
-    for (const p of permissions) {
-      if (!map.has(p.category)) map.set(p.category, []);
-      map.get(p.category)!.push(p);
-    }
-    return Array.from(map.entries()).sort(
-      ([a], [b]) => (CATEGORY_META[a]?.order ?? 100) - (CATEGORY_META[b]?.order ?? 100),
-    );
-  }, [permissions]);
+  // メニューごとの行（正本 constants/menuPermissions.ts）+ 残りの許可は区分ごとの行
+  const rows = useMemo(() => buildRows(permissions, ROLE_ROWS, CATEGORY_ORDER), [permissions]);
+  const permByKey = useMemo(() => new Map(permissions.map((p) => [p.key, p])), [permissions]);
+  const [openRowIds, setOpenRowIds] = useState<Set<string>>(() => new Set());
 
   const selectedRole = roles.find((r) => r.id === selectedRoleId) ?? null;
   const isSystemRole = selectedRole?.is_system ?? false;
@@ -172,48 +168,60 @@ export default function RolesPage() {
   const canEditPerms = hasPermission("roles.update") && !isSystemRole;
   const canTogglePerms = canEditPerms && permsReady;
 
-  // 個別権限のトグル
-  const togglePerm = (id: number) => {
-    if (!canTogglePerms) return;
-    const next = new Set(editedPermIds);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    setEditedPermIds(next);
-  };
+  // 持っている許可の鍵（編集中）。行の計算は鍵で行い、保存する一覧は id のまま（menu.* もそのまま残る）
+  const heldKeys = useMemo(() => {
+    const s = new Set<string>();
+    for (const p of permissions) if (editedPermIds.has(p.id)) s.add(p.key);
+    return s;
+  }, [permissions, editedPermIds]);
 
-  // カテゴリ一括トグル（そのカテゴリの全権限を一斉ON/OFF）
-  const toggleCategory = (category: string, on: boolean) => {
+  // 行の3択を押したとき: その行の許可だけを変える
+  const setRowState = (row: PermRow, state: RowState) => {
     if (!canTogglePerms) return;
-    const catPerms = permissions.filter((p) => p.category === category);
+    const nextKeys = applyState(heldKeys, row.keys, state);
     const next = new Set(editedPermIds);
-    for (const p of catPerms) {
-      if (on) next.add(p.id);
+    for (const k of row.keys) {
+      const p = permByKey.get(k);
+      if (!p) continue;
+      if (nextKeys.has(k)) next.add(p.id);
       else next.delete(p.id);
     }
     setEditedPermIds(next);
   };
 
-  // 「メニュー表示」専用トグル（.view 系のみON/OFF）
-  const toggleMenuVisibility = (category: string, on: boolean) => {
+  // 許可1つずつの切替
+  const setKeyAllowed = (key: string, allowed: boolean) => {
     if (!canTogglePerms) return;
-    const keys = MENU_VIEW_KEY[category];
-    if (!keys) return;
-    const targetPerms = permissions.filter((p) => keys.includes(p.key));
+    const p = permByKey.get(key);
+    if (!p) return;
     const next = new Set(editedPermIds);
-    for (const p of targetPerms) {
-      if (on) next.add(p.id);
-      else next.delete(p.id);
-    }
+    if (allowed) next.add(p.id);
+    else next.delete(p.id);
     setEditedPermIds(next);
   };
 
-  const isCategoryMenuVisible = (category: string): boolean => {
-    const keys = MENU_VIEW_KEY[category];
-    if (!keys) return true;
-    const targetPerms = permissions.filter((p) => keys.includes(p.key));
-    if (targetPerms.length === 0) return true;
-    return targetPerms.every((p) => editedPermIds.has(p.id));
+  const toggleRowOpen = (rowId: string) => {
+    setOpenRowIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(rowId)) next.delete(rowId);
+      else next.add(rowId);
+      return next;
+    });
   };
+
+  const rowName = (row: PermRow): string =>
+    row.menus ? row.menus.map((m) => t(rowMenuLabelKey(m))).join("・") : (row.category ?? "");
+
+  const stateOptions = (row: PermRow): SegmentedOption<"off" | "view" | "edit">[] => [
+    { value: "off", icon: STATUS_ICONS.error, label: t("roles.stateOff"), tone: "danger" },
+    { value: "view", icon: SlashOutline, label: t("roles.stateView"), tone: "neutral", disabled: !canSetView(row.keys) },
+    { value: "edit", icon: STATUS_ICONS.check, label: t("roles.stateEdit"), tone: "success", disabled: !canSetEdit(row.keys) },
+  ];
+
+  const keyOptions: SegmentedOption<"deny" | "allow">[] = [
+    { value: "deny", icon: STATUS_ICONS.error, label: t("roles.permDeny"), tone: "danger" },
+    { value: "allow", icon: STATUS_ICONS.check, label: t("roles.permAllow"), tone: "success" },
+  ];
 
   // 保存
   const savePermissions = async () => {
@@ -368,56 +376,82 @@ export default function RolesPage() {
                 </div>
               </div>
 
-              <div className="permission-groups">
-                {grouped.map(([category, perms]) => {
-                  const meta = CATEGORY_META[category] ?? { icon: CATEGORY_ICONS["_default"], order: 100 };
-                  const CategoryIcon = meta.icon;
-                  const menuVisible = isCategoryMenuVisible(category);
-                  const allChecked = perms.every((p) => editedPermIds.has(p.id));
+              <p className="role-perm-legend">{t("roles.legend")}</p>
+              <div className="role-perm-sections">
+                {SECTION_ORDER.map((section) => {
+                  const sectionRows = rows.filter((r) => r.section === section);
+                  if (sectionRows.length === 0) return null;
                   return (
-                    <section key={category} className="permission-group">
-                      <header className="permission-group-header">
-                        <div className="permission-group-title">
-                          <span className="permission-group-icon" aria-hidden="true">
-                            <CategoryIcon size={ICON.md} />
-                          </span>
-                          <span>{t("roles.categoryPagePerm", { category })}</span>
-                        </div>
-                        <div className="permission-group-toggles">
-                          <span title={t("roles.toggleAllTitle")}>
-                            <Checkbox
-                              label={t("roles.selectAll")}
-                              checked={allChecked}
-                              disabled={!canTogglePerms}
-                              onChange={(e) => toggleCategory(category, e.target.checked)}
-                            />
-                          </span>
-                          {MENU_VIEW_KEY[category] && (
-                            <span title={t("roles.menuVisibilityTitle")}>
-                              <Checkbox
-                                label={t("roles.showMenu")}
-                                checked={menuVisible}
-                                disabled={!canTogglePerms}
-                                onChange={(e) => toggleMenuVisibility(category, e.target.checked)}
-                              />
-                            </span>
-                          )}
-                        </div>
-                      </header>
-                      <div className="permission-group-body">
-                        {perms.map((p) => (
-                          <label key={p.id} className="permission-item">
-                            <CheckboxControl
-                              checked={editedPermIds.has(p.id)}
-                              disabled={!canTogglePerms}
-                              onChange={() => togglePerm(p.id)}
-                            />
-                            <div className="permission-item-text">
-                              <div className="permission-item-desc">{p.description}</div>
+                    <section key={section} className="role-perm-section">
+                      <header className="role-perm-section-header">{t(SECTION_TITLE_KEY[section])}</header>
+                      {sectionRows.map((row) => {
+                        const name = rowName(row);
+                        const state = rowState(row.keys, heldKeys);
+                        const isOpen = openRowIds.has(row.id);
+                        const hasDetail = !row.fixed && row.keys.length >= 2;
+                        const menuCount = row.menus?.length ?? 0;
+                        return (
+                          <div key={row.id} className="role-perm-row">
+                            <div className="role-perm-row-main">
+                              <div className="role-perm-row-text">
+                                <span className="role-perm-row-name">{name}</span>
+                                {menuCount >= 2 && (
+                                  <span className="role-perm-row-note">{t("roles.menusTogether", { count: menuCount })}</span>
+                                )}
+                                {row.noteKey && <span className="role-perm-row-note">{t(row.noteKey)}</span>}
+                              </div>
+                              <div className="role-perm-row-controls">
+                                {hasDetail && (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    aria-expanded={isOpen}
+                                    onClick={() => toggleRowOpen(row.id)}
+                                  >
+                                    {state === "mixed"
+                                      ? <Badge variant="warning" size="sm">{t("roles.individual")}</Badge>
+                                      : t("roles.individual")}
+                                  </Button>
+                                )}
+                                {row.fixed ? (
+                                  <span className="role-perm-row-fixed">
+                                    {t(row.fixed === "always" ? "roles.fixedAlways" : "roles.fixedOwner")}
+                                  </span>
+                                ) : (
+                                  <SegmentedToggle
+                                    options={stateOptions(row)}
+                                    value={state === "mixed" ? null : state}
+                                    onChange={(v) => setRowState(row, v)}
+                                    aria-label={name}
+                                    disabled={!canTogglePerms}
+                                  />
+                                )}
+                              </div>
                             </div>
-                          </label>
-                        ))}
-                      </div>
+                            {hasDetail && isOpen && (
+                              <div className="role-perm-detail">
+                                {row.keys.map((k) => {
+                                  const p = permByKey.get(k);
+                                  if (!p) return null;
+                                  return (
+                                    <div key={k} className="role-perm-detail-row">
+                                      <span className="role-perm-detail-name">{p.description}</span>
+                                      <SegmentedToggle
+                                        options={keyOptions}
+                                        value={heldKeys.has(k) ? "allow" : "deny"}
+                                        onChange={(v) => setKeyAllowed(k, v === "allow")}
+                                        aria-label={p.description}
+                                        disabled={!canTogglePerms}
+                                      />
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </section>
                   );
                 })}
