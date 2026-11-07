@@ -2,7 +2,7 @@
 
 - 調査の根拠: `docs/handoff/discord-guild-membership-check/recon.md`（以下 recon §n）
 - 関係する設計: `docs/handoff/discord-oauth-ownership-proof/design.md`（G3。U2 はその残り）
-- 状態: U2 本体は実装・本番実行済み（2026-11-07・全行 o）。§14 の追補は設計案（審査前）
+- 状態: U2 本体は実装・本番実行済み（2026-11-07・全行 o）。§14 の追補は設計審査済み（2回目 APPROVE・14-11）。実装は未着手
 
 ## 0. PO の言葉（原文）
 
@@ -214,7 +214,7 @@ grep -c -w -E 'POST|PUT|PATCH|DELETE|INSERT|UPDATE|commit' scripts/ops/discord_g
 
 ## 14. 追補: 登録に無い2つのサーバーの名前を PO の画面にだけ出す（2026-11-07）
 
-- 状態: 設計案（Opus 作成・審査前）。実装は未着手
+- 状態: 設計審査済み（2回目 APPROVE・推奨3件を反映・14-11）。実装は未着手
 - ブランチ: release/discord-unregistered-guild-names
 
 ### 14-0. PO の言葉（原文）と、K2 の例外の範囲
@@ -256,10 +256,10 @@ def clean_name(name) -> str:
     """名前を1行に収める。"""
 
 def unregistered_lines(rows, guilds, viewer_ids) -> list[str]:
-    """rows = (tenant_id, purpose, guild_id)。guilds = 応答の要素（id と name）。
+    """rows = (tenant_id, purpose, guild_id)。rows 側の guild_id も judge と同じく str(guild_id).strip() で比べる。guilds 側の id は str(g["id"])。guilds = 応答の要素（id と name）。
     viewer_ids = viewer_discord_config の guild_id を str(...).strip() した集合。
     登録に無いボットのサーバーだけを `unregistered name=<clean_name> is_viewer_guild=<o|x>` の形で返す。
-    同じ id が2回あっても1行にする（id で重複を除く。judge の数は集合で数えるため）。並びは clean_name の文字の順（同じ名前なら出る順）。"""
+    同じ id が2回あっても1行にする（id で重複を除き、先に出たほうの名前を残す。judge の数は集合で数えるため）。並びは clean_name の文字の順（同じ名前なら出る順）。"""
 ```
 
 - `clean_name` の決まり（この順に行う）: (1) `None` や文字列でない値は `(no_name)`。(2) `unicodedata.category(ch)` が `C` で始まる文字（制御文字・改行・ゼロ幅などの書式文字）と、`Zl`・`Zp`（行の区切り U+2028・段落の区切り U+2029）を消す。(3) その後で 17 桁以上の数字の並び（`\d{17,}`）を `#` 1文字に置き換える（消した後に並べるので、ゼロ幅文字で区切った数字もつながってから置き換わる。名前に番号が書かれていても K2 の検査 (1) に当たらないように）。(4) 前後の空白を除き、100 文字を超えたら 100 文字で切って末尾に `~` を足す。(5) 空になったら `(no_name)`
@@ -274,7 +274,7 @@ unregistered name=<名前> is_viewer_guild=<o|x>
 ...（N 行）
 ```
 
-- 旗の読み取り: `sys.argv[1:]` に `--self-test` があれば今と同じ。それ以外で `--show-unregistered-names` があれば旗あり。どちらでも無い引数は無視しない: `error=unexpected` で終了コード 1（打ち間違いで名前が出ないまま「合格」に見えるのを防ぐ）
+- 旗の読み取り: `sys.argv[1:]` に `--self-test` があれば今と同じ。それ以外で `--show-unregistered-names` があれば旗あり。どちらでも無い引数は無視しない: `error=unexpected` で終了コード 1（打ち間違いで名前が出ないまま「合格」に見えるのを防ぐ）。この判定は app を import する前（`run()` を呼ぶ前）に行う（app の無いクラウドでも試せるように）
 - 書き込みに当たる語（§4-1 の一覧）は今までどおり 0 回（A4）
 
 #### 14-3-2. 自己試験（`--self-test`・今の4つに2つ足して `self-test ok 6`）
@@ -320,7 +320,7 @@ unregistered name=<名前> is_viewer_guild=<o|x>
 | B1 | names.txt の `unregistered name=` の行の数が `unregistered_bot_guilds=` の値と同じ（N1） | 下の (6) と (7) の数が同じ |
 | B2 | names.txt に 17〜20 桁の数字 0 件・`token` 0 件・形以外の行 0 件（N3） | 下の (1)(2)(8) がすべて 0 |
 | B3 | 書き込みの語が単語として 0 件（N4） | §10 の A4 (4)(5) を新しい py に流す（(4)=0・(5)=1）。新しい .sh にも (4) を流して 0 |
-| B4 | 自己試験が通る | クラウドで `python3 -I scripts/ops/discord_guild_membership_check.py --self-test` → `self-test ok 6` |
+| B4 | 自己試験が通る | クラウドで `python3 -I scripts/ops/discord_guild_membership_check.py --self-test` → `self-test ok 6`。あわせて `python3 -I scripts/ops/discord_guild_membership_check.py --bogus; echo "exit=$?"` → 標準エラーに `error=unexpected`・`exit=1`（知らない引数） |
 | B5 | 旗なしの出力が変わらない（N4） | 流す前に Opus が前回の run.txt（7行・`bot_guild_count=6`〜`unregistered_bot_guilds=2`）を `/tmp/CC報告ファイル/u2/run-prev.txt` に写す（既存の .sh は run.txt を上書きするため・2026-11-07 写し済み・7行）。実行の後に PO が既存の `scripts/ops/discord-guild-membership-check.sh` も流し、`diff /tmp/CC報告ファイル/u2/run-prev.txt /tmp/CC報告ファイル/u2/run.txt` → 差分 0 行（サーバーの出入りが無い限り） |
 | B6 | 登録の行が消えも増えもしない（K3・K4 の補助） | §10 の A6 と同じ前後比較（reader・diff 0 行・行数 4） |
 
@@ -364,3 +364,11 @@ grep -c -v -E '^(bot_guild_count=[0-9]+|config_rows=[0-9]+|tenant=[0-9]+ purpose
 - Q2（推奨）消す順で、ゼロ幅文字で区切った数字が18桁残る。U+2028/2029 は種類 Zl/Zp で C に入らない → clean_name の順番 (1)〜(5) を明記し、Zl・Zp も消す。T6 に U+2028 と「9桁＋ゼロ幅＋9桁」を足した
 - Q3（推奨）§10 A6 の表に誤った文が残る → 打ち消し線にして §14-10 を指した
 - Q4（推奨）重複した id で B1 が合わなくなる → unregistered_lines は id で重複を除くと明記した
+
+#### 2回目（2026-11-07 08:37Z・クラウドの Opus・HEAD c2f27d2b4）: APPROVE
+
+- (a) 1回目の Q1〜Q4 は解けている（run-prev.txt が Mac にあることはクラウドから未確認。Opus が 2026-11-07 に `wc -l` で7行を確かめた）。(b) 審査役が clean_name の見本を10通り（U+2028・U+2029・9桁＋U+200B＋9桁・改行とタブ・18桁・150文字・None ほか）で流し、`\d{17,20}` 0件・C/Zl/Zp 0件・長さ101以下・空と None は `(no_name)`
+- Q1（推奨）rows 側の strip → unregistered_lines の説明に `str(guild_id).strip()` を足した
+- Q2（推奨）重複したときに残す名前 → 先に出たほうを残すと足した
+- Q3（推奨）状態の行が古い・知らない引数の試験が無い → 状態を直し、旗の判定を app の import の前に行うと決め、B4 に `--bogus` で `error=unexpected`・`exit=1` を手で流す手順を足した
+- 未解決の事項: なし
