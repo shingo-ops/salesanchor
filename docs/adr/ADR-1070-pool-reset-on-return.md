@@ -13,9 +13,9 @@
 
 ## What（何を決めたか）
 
-1. backend/app/database.py の async `engine`（postgresql のとき）だけに、`pool_reset_on_return=None` と pool の `reset` イベントのハンドラを付ける。ハンドラは rollback → `RESET ALL` → commit の順に流し、捨てる接続（`reset_state.terminate_only`）には何もしない。
+1. backend/app/database.py の async `engine`（postgresql のとき）だけに、`pool_reset_on_return=None` と pool の `reset` イベントのハンドラを付ける（登録は `install_pool_reset(engine)` に切り出し、試験も同じ関数を使う）。ハンドラは rollback → `RESET ALL` → commit の順に流し、捨てる接続（`reset_state.terminate_only`）には何もしない。
 2. `admin_engine` と、作業台本・Celery の同期 engine には付けない。
-3. 2 便に分ける。便1 は、commit・rollback の後に文脈を張り直していない 7 か所（設計 §4-1）に `reset_tenant_context(db, tenant_id)` を足すだけ。便2 は Bx だけ。便1 を本番で測ってから便2 を出す。
+3. 2 便に分ける。便1 は、commit・rollback の後に文脈を張り直していない 6 起点・8 か所（設計 §4-1）に `reset_tenant_context(db, tenant_id)` を足すだけ。便2 は Bx だけ。便1 を本番で測ってから便2 を出す。
 
 ## Why（なぜ）
 
@@ -23,7 +23,7 @@
 - SQLAlchemy 公式の PostgreSQL の例は「RESET ALL の後に rollback」。この順だと RESET ALL 自体が rollback で取り消される（recon m1 の A）。rollback を先にし、最後に commit で確定させる形（Bx）だけが、返した接続を idle・文脈空にした（recon m1・m2・m7）。
 - `DISCARD ALL` は準備済み文も消す（ADR-065 と衝突）。backend/app は一時表・サーバー側カーソルを使っていない（設計 §2）ので `RESET ALL` だけで足りる。
 - 速さ: 1 回の貸し借りで中央値 +0.44ms（recon m5）。
-- Bx の後は、文脈を張り忘れたコードは「前の値で偶然動く」でなく 0 行・例外になる（漏れない側に倒れる）。その箇所を全部数え（m9）、Bx で新たに壊れる 7 か所は便1 で先に直す。Bx の前から動いていない既存の不具合（Discord の配信失敗通知・ロール同期の記録など）は退行ではないので混ぜない（設計 §4-3）。
+- Bx の後は、文脈を張り忘れたコードは「前の値で偶然動く」でなく 0 行・例外になる（漏れない側に倒れる）。その箇所を全部数え（m9）、Bx で新たに壊れる 6 起点・8 か所は便1 で先に直す。Bx の前から動いていない既存の不具合（Discord の配信失敗通知・ロール同期の記録など）は退行ではないので混ぜない（設計 §4-3）。
 
 ## 戻し方
 
@@ -31,7 +31,7 @@
 
 ## 測り方
 
-- 設計 §6 の K1〜K6（health の応答、本番ログのエラー件数、Celery の既存エラーの件数、借りた直後の文脈が空の試験、`idle in transaction` の残り 0、会社1 の画面確認）。基準値は 2026-11-07 実測。
+- 設計 §6 の K1〜K6（health の応答、本番ログのエラー件数、Celery の既存エラーの件数、借りた直後の文脈が空の試験、`idle in transaction` の残り 0、会社1 の画面確認）。物差しは docs/handoff/s1-rls-stage5/k-baseline.sh 1 つで、基準値はその生の出力（2026-11-07T09:17Z）。各便の配備の直前にも取り直す。
 
 ## 触らない範囲
 
