@@ -12,9 +12,8 @@ import sys
 from sqlalchemy import text
 
 from app.database import AsyncSessionLocal
-from app.discord_gateway import staff_join_texts as T
-from app.services.discord_rest import DiscordAPIError, discord_api_request
-from app.services.staff_join import RECEPTION_CHANNEL_KEY, find_blueprint_channel_id
+from app.services.discord_rest import discord_api_request
+from app.services.staff_join import ensure_reception_button
 
 _ACTIONS = ("post-staff-button",)
 
@@ -48,31 +47,12 @@ async def _post_staff_button(tenant_id: int, session_factory, request) -> dict:
     if row is None or not row[0]:
         raise StaffJoinDiscordError("not_configured")
     token = _token()
-    try:
-        channel_id = await find_blueprint_channel_id(str(row[0]), token, tenant_id, RECEPTION_CHANNEL_KEY, 0)
-    except DiscordAPIError:
-        raise StaffJoinDiscordError("discord_error") from None
-    if channel_id is None:
-        raise StaffJoinDiscordError("not_configured")
-    try:
-        messages = await request(method="GET", path=f"/channels/{channel_id}/messages?limit=50", bot_token=token) or []
-    except DiscordAPIError:
-        raise StaffJoinDiscordError("discord_error") from None
-    for msg in messages:
-        for comp_row in msg.get("components") or []:
-            for comp in comp_row.get("components") or []:
-                if comp.get("custom_id") == T.OPEN_BUTTON_CUSTOM_ID:
-                    return {"posted": False, "reason": "exists"}
-    try:
-        sent = await request(
-            method="POST",
-            path=f"/channels/{channel_id}/messages",
-            bot_token=token,
-            json=T.reception_message_payload(),
-        )
-    except DiscordAPIError:
-        raise StaffJoinDiscordError("discord_error") from None
-    return {"posted": True, "message_id": (sent or {}).get("id")}
+    result = await ensure_reception_button(str(row[0]), token, tenant_id, request=request)
+    if result["status"] == "posted":
+        return {"posted": True, "message_id": result.get("message_id")}
+    if result["status"] == "exists":
+        return {"posted": False, "reason": "exists"}
+    raise StaffJoinDiscordError(result["status"])
 
 
 async def run(payload: dict, session_factory=AsyncSessionLocal, request=discord_api_request) -> dict:

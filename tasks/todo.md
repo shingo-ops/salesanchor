@@ -8,6 +8,7 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|---------|-----|------|
+| 見積書をお客さん（取引先・担当者）の登録なしで作れるようにする | PO待ち | 未着手。今は取引先と担当者が必須（origin/main backend/app/schemas/quote.py:41〜:42・backend/app/routers/quotes.py:184）。PO 2026-11-07 で閲覧者の契約と請求書の設計から外し、別の設計で進めると決定 | 閲覧者の契約と請求書の設計が終わった後、KGI を PO と決めて recon から始める | docs/handoff/viewer-contract-stage/design.md §3-4・§7-1 / docs/specs/viewer-contract-invoicing/ideal-state.md 27・28 | 2026-11-07 |
 | Gemini の道の自動切り替え・止まりの見張り（ADR-1062） | Opus設計/Sonnet実装 | 設計・カード作成済み（2026-11-05）。実装・本番反映はこの PR の後 | 2026-11-19 に2週間分の「解析が30分成功していません」の知らせの回数を Discord の履歴と DB の当てはめで数え、空振り2回以上なら条件を見直す | docs/handoff/gemini-auto-failover/design.md §9 / ADR-1062 | 2026-11-05 |
 | 共用商品の必須9項目の定着（ADR-1020 便4） | Opus設計/Sonnet実装 | 便1〜3b本番反映済。定着点検で抜け道1・欠け5（X1〜X6）。便4a POST/PATCH /products の検査・4b 文書・4c 週次Discord通知・4d 画面試験を必須の集約へ を順に反映中 | 各便の本番反映を確認。4c の初回通知（月曜09:00）で V1 の件数を確認 | docs/handoff/master-register-required-fields/design.md / ADR-1020 / PR #4440 | 2026-10-17 |
 | PR作成前検査とマージ前GO検査の分離 | Agent | PR #3824はPO GOを記録してマージ済み。Deploy36390769039成功、API正常。自動worktree回収・台帳DONEを確認 | 限定修正は完了。代理GO制度とreaper残存lock対策は別範囲 | EV-20260928-PR-LIFECYCLE-GATES / docs/handoff/go-record-transcription/pr-lifecycle-design.md / PR #3824 | 2026-09-28 |
