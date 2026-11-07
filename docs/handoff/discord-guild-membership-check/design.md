@@ -2,7 +2,7 @@
 
 - 調査の根拠: `docs/handoff/discord-guild-membership-check/recon.md`（以下 recon §n）
 - 関係する設計: `docs/handoff/discord-oauth-ownership-proof/design.md`（G3。U2 はその残り）
-- 状態: 設計案（審査3回目 APPROVE・推奨1件を反映済み。PO の実装の承認待ち）
+- 状態: 設計案（審査3回目 APPROVE・推奨1件を反映済み。2026-11-07 PO「1」で実装の承認あり。実装カード card-impl.md）
 
 ## 0. PO の言葉（原文）
 
