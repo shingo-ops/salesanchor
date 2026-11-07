@@ -5,7 +5,7 @@ mode: handoff
 
 親: [design-pool-reset.md](./design-pool-reset.md) §3（便1 の行）・§4-1・§5（便1 の行）・§6・§7 R5。ADR: [ADR-1070](../../adr/ADR-1070-pool-reset-on-return.md) What 3。
 
-- 状態: カード作成済み（2026-11-07 Opus）。
+- 状態: カード作成済み（2026-11-07 Opus）。1 回目のクラウド実行（2026-11-07 10:05Z）は手順4で止まった。クラウドの環境に sqlalchemy と pytest が無かったため。依存を入れる手順 2-2 を入れ忘れたのが原因で、2-2 を足した。手順9に各箇所の前後3行の diff を足した。
 - 実装承認: PO 2026-11-07「1」（S1 段階⑤の前に、接続の返却時に文脈を消す仕組みを 2 便で先に出す選択）と、同日の PO の指示「PRマージ、デプロイまで完走させてくれ」。設計は 3 回目の審査で APPROVE（review-design-pool-reset-r3.md）。マージと本番への反映の GO は兼ねない（Opus が委任に基づき別に出す）。
 - 担当: クラウドの Sonnet（実装）。Opus は審査・PR 作成・GO・マージ判断。
 - 区分: A（`backend/app/routers/`・`backend/app/services/`・`backend/app/discord_gateway/` を触る。ADR-1015）。migrations・deploy.yml・scripts・.github は触らない。
@@ -90,6 +90,7 @@ mode: handoff
 
 1. `cd <repo> && git fetch origin release/s1-rls-pool-reset-bin1 main` → `cd <repo> && git checkout -B release/s1-rls-pool-reset-bin1 origin/release/s1-rls-pool-reset-bin1`。`cd <repo> && git log --oneline -3` の出力を記録する。
 2. `cd <repo> && git merge-base --is-ancestor origin/main HEAD; echo rc=$?` が `rc=0` であることを記録する（0 でなければ記録して続け、報告に書く）。
+2-2. 依存を入れる（CI の .github/workflows/test.yml:166 と同じ組）。`cd <repo>/backend && python --version && pip install -q -r requirements.txt -r requirements-dev.txt 2>&1 | tail -30; echo rc=$?` と `cd <repo>/backend && pip check 2>&1 | tail -20` の出力を報告に書く。pip install が rc=0 でなければ、出力の最後 30 行を報告に書いて BLOCKED で終える。pip check の壊れの報告は記録して続ける。Python の版が 3.12 でなくても止まらず、版を報告に書く（最後の判定は CI の 3.12）。
 3. §3 の 8 か所を Edit で直す。
 4. `cd <repo>/backend && python -c "import app.services.message_translator, app.services.priority_scoring, app.discord_gateway.ticket_channel_writer, app.routers.tenant_commission_settings, app.routers.products, app.routers.webhook; print('import ok')"` が `import ok` を出すこと（R5）。失敗したら出力の最後 40 行を報告に書く。
 5. `cd <repo> && grep -n "reset_tenant_context" backend/app/discord_gateway/ticket_channel_writer.py backend/app/services/message_translator.py backend/app/services/priority_scoring.py backend/app/routers/tenant_commission_settings.py backend/app/routers/products.py backend/app/routers/webhook.py | tail -60` の全文を報告に書く。
@@ -98,7 +99,7 @@ mode: handoff
    - それ以外の理由の赤は直さずに記録し、出力の最後 80 行を報告に書いて続ける。
 7. `cd <repo> && python3 scripts/lint_tenant_schema.py --mode strict backend/app/ > /tmp/lint_tenant.txt 2>&1; echo rc=$?` と `tail -20 /tmp/lint_tenant.txt`（CI の .github/workflows/lint-tenant-schema.yml:71 と同じ呼び方） の出力を報告に書く（Rule C: commit の後の最初の文が reset か）。
 8. `cd <repo> && git add backend/app/discord_gateway/ticket_channel_writer.py backend/app/services/message_translator.py backend/app/services/priority_scoring.py backend/app/routers/tenant_commission_settings.py backend/app/routers/products.py backend/app/routers/webhook.py`（手順6 で試験を直したら、そのファイルも名前で足す）。
-9. `cd <repo> && git diff --cached --stat | tail -20` を報告に書く。合格: 変えたファイルが §2 の表のものだけ、各製品ファイルの deletions は起点1 の import 行の 1 だけ（ticket_channel_writer.py）で他は 0。違えば、違うファイル名と行を報告に書く。
+9. `cd <repo> && git diff --cached --stat | tail -20` と `cd <repo> && git diff --cached -U3 | head -300` を報告に書く（後者は §7 の 3 の「前後3行」に使う）。合格: 変えたファイルが §2 の表のものだけ、各製品ファイルの deletions は起点1 の import 行の 1 だけ（ticket_channel_writer.py）で他は 0。違えば、違うファイル名と行を報告に書く。
 10. commit: `cd <repo> && git commit -m "fix(s1-rls): reset tenant context after commit/rollback at 8 sites (ADR-1070 bin1)" -m "Co-Authored-By: Claude Sonnet <noreply@anthropic.com>"`。続けて `cd <repo> && git diff origin/main...HEAD --name-only | tail -30` を報告に書く。合格: `docs/handoff/s1-rls-stage5/card-pool-reset-bin1.md` と §2 のファイルだけ。
 11. push: `cd <repo> && git push -u origin HEAD`。出力の全文を報告に書く。続けて `cd <repo> && git ls-remote origin release/s1-rls-pool-reset-bin1` と `cd <repo> && git rev-parse HEAD` を報告に書き、一致を確かめる。
 
