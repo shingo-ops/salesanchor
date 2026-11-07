@@ -104,8 +104,8 @@ PO の依頼（原文）:
 
 ### 7.3 FullCalendar 6.1.22 の中身（unpkg の `@fullcalendar/timegrid@6.1.22/internal.js` を取り寄せて読んだ。Context7 は `Monthly quota exceeded` で使えなかった）
 
-- `computeSegHStyle`（`internal.js:802-829`）: `slotEventOverlap` が true のとき、予定の幅を 2 倍まで広げ（`farCoord = Math.min(1, nearCoord + (farCoord - nearCoord) * 2)`）、後ろに重なる予定がある先の予定は右に 20px 空ける（`marginRight = 10 * 2`）。`zIndex = stackDepth + 1`。→ 2 つが重なると、先の予定は列の幅 −20px、後の予定は列の半分から右端まで、後が上。
-- `isInset = rect.stackForward > 0`（`:762`）の予定に `fc-timegrid-event-harness-inset` が付き、標準の css が `box-shadow: 0 0 0 1px var(--fc-page-bg-color)`（面の色の縁）を付ける。
+- `computeSegHStyle`（`internal.js:802-829`）: `slotEventOverlap` が true のとき、予定の幅を 2 倍まで広げる（`farCoord = Math.min(1, nearCoord + (farCoord - nearCoord) * 2)`）。`zIndex = stackDepth + 1`。右に 20px 空ける枝（`:826` `!segHCoords.stackForward` のとき `marginRight = 10 * 2`）は通らない。`webToRects`（`:616-632`）が後ろに何も無い予定にも `rect.stackForward = processNodes(...) + 1`（`:622`）で 1 以上を入れるため（4 回目の審査で判明・Opus が scratchpad の 6.1.22 の写しで同じ行を確認）。→ 2 つが重なると、先の予定は列の幅のまま縮まず、後の予定が列の半分から右端までを上に重ねて覆う。
+- `isInset = rect.stackForward > 0`（`:762`）は上の理由で全部の予定が真になり、全部に `fc-timegrid-event-harness-inset` が付く。標準の css が `box-shadow: 0 0 0 1px var(--fc-page-bg-color)`（面の色の縁）を付ける。
 - 標準の css（`:1149`）: `.fc-timegrid-col-events { margin: 0 2.5% 0 2px }`・`.fc-timegrid-event .fc-event-main { padding: 1px 1px 0 }`・`.fc-timegrid-now-indicator-line { border-width: 1px 0 0; left:0; right:0 }`・`.fc-timegrid-now-indicator-arrow`（時刻の欄の三角）・`.fc-timegrid-now-indicator-container { overflow: hidden }`・`.fc-timegrid-slot-label { vertical-align: middle }`・`.fc-timegrid-slot-label-cushion { padding: 0 4px }`。
 - 公式資料 v6（legacy.fullcalendar.io/v6）: `slotEventOverlap` は既定 true・「At most half of each event will be obscured」。`dayHeaderContent` の引数に `date`・`text`・`isToday`。`nowIndicatorClassNames`・`nowIndicatorContent` の引数に `isAxis`・`date`。`slotLabelContent` の引数に `date`・`text`。
 
