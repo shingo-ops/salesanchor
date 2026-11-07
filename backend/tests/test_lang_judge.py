@@ -113,8 +113,8 @@ async def test_judge_returns_empty_when_no_records():
 
 
 @pytest.mark.asyncio
-async def test_judge_sql_uses_all_with_list_param_for_excluded_channels():
-    """除外チャネルは `<> ALL(:excluded_channels)` + list で渡す（asyncpg は NOT IN タプルを構文エラーにする）。"""
+async def test_judge_sql_excludes_non_verbatim_channels_via_master():
+    """除外チャネルは名簿の is_verbatim = FALSE の行（NOT EXISTS）で決める。直書きの配列は渡さない。"""
     from app.services.lang_judge import judge_recipient_language
 
     captured: list[tuple[str, dict]] = []
@@ -140,6 +140,8 @@ async def test_judge_sql_uses_all_with_list_param_for_excluded_channels():
 
     assert len(captured) == 2
     for sql, params in captured:
-        assert "NOT IN :excluded_channels" not in sql
-        assert "<> ALL(:excluded_channels)" in sql
-        assert isinstance(params["excluded_channels"], list)
+        assert "excluded_channels" not in sql
+        assert "NOT EXISTS" in sql
+        assert "is_verbatim = FALSE" in sql
+        assert "excluded_channels" not in params
+        assert params["tenant_id"] == 6

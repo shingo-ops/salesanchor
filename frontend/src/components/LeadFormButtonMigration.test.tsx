@@ -77,7 +77,7 @@ beforeEach(async () => {
     if (url === '/leads') return [lead];
     if (url === '/leads/7') return lead;
     if (url === '/countries') return [{ code: 'ZZ', name: 'Fixture Country', dial_code: '+999', is_active: true }];
-    if (url === '/channel-masters') return [{ id: 1, platform: 'fixture', display_name: 'Fixture Channel', connection_type: 'manual', is_active: true }];
+    if (url.startsWith('/channel-masters')) return [{ id: 1, platform: 'fixture', display_name: 'Fixture Channel', connection_type: 'manual', is_active: true }];
     if (url === '/close-reasons?type=lost') return [{ id: 42, label: 'Fixture Reason', type: 'lost', is_active: true }];
     if (url === '/me/permissions') return { permissions };
     throw new Error('Unexpected GET ' + url);

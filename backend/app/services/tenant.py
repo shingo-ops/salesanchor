@@ -31,7 +31,6 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.system_roles import ROLE_KEY_ADMIN, ROLE_KEY_OWNER, SYSTEM_MANAGE_KEY
-from app.services.channel_masters import DEFAULT_CHANNEL_MASTERS
 
 logger = logging.getLogger(__name__)
 
@@ -1097,21 +1096,6 @@ CREATE TABLE IF NOT EXISTS {schema}.discord_retired_members (
     retired_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- SA-02 / F3: チャネル統制マスタ（新規テナント初期シード対象）
-CREATE TABLE IF NOT EXISTS {schema}.channel_masters (
-    id SERIAL PRIMARY KEY,
-    tenant_id INTEGER NOT NULL DEFAULT {tenant_id},
-    platform VARCHAR(30) NOT NULL,
-    display_name VARCHAR(100) NOT NULL,
-    connection_type VARCHAR(10) NOT NULL
-        CHECK (connection_type IN ('auto', 'manual')),
-    is_active BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE (platform)
-);
-CREATE INDEX IF NOT EXISTS idx_channel_masters_tenant_id ON {schema}.channel_masters (tenant_id);
-CREATE INDEX IF NOT EXISTS idx_channel_masters_platform ON {schema}.channel_masters (platform);
-
 -- Phase 1-D Sprint 1 / migration 040: Meta OAuth 接続情報（Page / IG Business Account）
 -- 同じ DDL は migrations/040_create_tenant_meta_config.sql にも置いてあり、
 -- 既存テナントへの後付けはそちらの SQL を使う。新規テナントはこの本ブロックで自動作成される。
@@ -1259,7 +1243,6 @@ ALTER TABLE {schema}.company_discord ENABLE ROW LEVEL SECURITY;
 ALTER TABLE {schema}.contact_emails ENABLE ROW LEVEL SECURITY;
 ALTER TABLE {schema}.contact_discord ENABLE ROW LEVEL SECURITY;
 ALTER TABLE {schema}.contact_contact_channels ENABLE ROW LEVEL SECURITY;
-ALTER TABLE {schema}.channel_masters ENABLE ROW LEVEL SECURITY;
 -- ADR-015 §7: テナント別 AI 対応プレイブック
 ALTER TABLE {schema}.lead_playbook ENABLE ROW LEVEL SECURITY;
 -- D-2: A在庫（ADR SA-04/05）
@@ -1298,10 +1281,6 @@ BEGIN
     END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_isolation_teams' AND schemaname = '{schema_raw}') THEN
         CREATE POLICY tenant_isolation_teams ON {schema}.teams
-            USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER);
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'tenant_isolation_channel_masters' AND schemaname = '{schema_raw}') THEN
-        CREATE POLICY tenant_isolation_channel_masters ON {schema}.channel_masters
             USING (tenant_id = current_setting('app.tenant_id', true)::INTEGER);
     END IF;
     -- 連携テーブルは tenant_id カラムを持たないため、親テーブルのRLSをEXISTS経由で参照
@@ -1594,26 +1573,6 @@ async def _assign_permissions_to_role(
             )
 
 
-async def seed_default_channel_masters(db: AsyncSession, tenant_id: int, schema_name: str) -> None:
-    """標準 channel_masters を冪等に投入する。"""
-    for platform, display_name, connection_type in DEFAULT_CHANNEL_MASTERS:
-        await db.execute(
-            text(f"""
-                INSERT INTO {schema_name}.channel_masters
-                    (tenant_id, platform, display_name, connection_type)
-                VALUES
-                    (:tenant_id, :platform, :display_name, :connection_type)
-                ON CONFLICT (platform) DO NOTHING
-            """),
-            {
-                "tenant_id": tenant_id,
-                "platform": platform,
-                "display_name": display_name,
-                "connection_type": connection_type,
-            },
-        )
-
-
 async def seed_system_roles(db: AsyncSession, tenant_id: int, schema_name: str) -> None:
     """
     共通6ロールをシードする（冪等）。
@@ -1783,9 +1742,6 @@ async def create_tenant_schema(
 
         # 4. システムロール（オーナー/メンバー）をシード（DML → db）
         await seed_system_roles(db, safe_id, schema_name)
-
-        # 4b. F3: 標準 channel_masters をシード（DML → db）
-        await seed_default_channel_masters(db, safe_id, schema_name)
 
         # 6. Sprint 9 / F9 v1.2: public.tenant_settings に Phase='B' で初期行を seed（DML → db）。
         #    migration 070 未適用環境では tenant_settings テーブルが存在しないので

@@ -9,10 +9,14 @@
  */
 import { useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { api } from "../../lib/api";
+import { api, ApiError } from "../../lib/api";
 import { useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
 import { PageLayout } from "../../components/PageLayout";
 import { Button } from "../../components/Button";
+import { Badge } from "../../components/Badge";
+import { DataTable } from "../../components/DataTable";
+import type { DataTableColumn } from "../../components/DataTable";
+import { Toggle } from "../../components/Toggle";
 import { TextFieldControl } from "../../components/TextField";
 import { LoadingBlock, Spinner } from "../../components/loading";
 
@@ -22,6 +26,8 @@ interface ChannelMaster {
   display_name: string;
   connection_type: "auto" | "manual";
   is_active: boolean;
+  is_shared: boolean;
+  is_hidden: boolean;
 }
 
 /** 応答は配列か { data: 配列 } のどちらか（今までの読み方のまま） */
@@ -55,12 +61,26 @@ export default function ChannelMastersPage() {
       setNewPlatform("");
       setNewDisplayName("");
       void invalidate(CHANNEL_MASTERS_HEAD);
-    } catch {
-      setError(t("channelMasters.saveError"));
+    } catch (e) {
+      setError(
+        e instanceof ApiError && e.status === 409
+          ? t("channelMasters.duplicateError")
+          : t("channelMasters.saveError"),
+      );
     } finally {
       setSaving(false);
     }
   }, [newPlatform, newDisplayName, invalidate, t]);
+
+  const handleVisibility = useCallback(async (id: number, isHidden: boolean) => {
+    setError(null);
+    try {
+      await api.put(`/admin/channel-masters/${id}/visibility`, { is_hidden: isHidden });
+      void invalidate(CHANNEL_MASTERS_HEAD);
+    } catch {
+      setError(t("channelMasters.visibilityError"));
+    }
+  }, [invalidate, t]);
 
   const handleDelete = useCallback(async (id: number) => {
     setError(null);
@@ -72,6 +92,54 @@ export default function ChannelMastersPage() {
     }
   }, [invalidate, t]);
 
+  const columns: DataTableColumn<ChannelMaster>[] = [
+    { key: "platform", header: t("channelMasters.platform") },
+    { key: "displayName", header: t("channelMasters.displayName"), renderCell: (ch) => ch.display_name },
+    {
+      key: "type",
+      header: t("channelMasters.type"),
+      renderCell: (ch) => (
+        <>
+          {ch.connection_type === "auto" ? t("channelMasters.typeAuto") : t("channelMasters.typeManual")}
+          {ch.is_shared && (
+            <>
+              {" "}
+              <Badge variant="neutral" size="sm">{t("channelMasters.shared")}</Badge>
+            </>
+          )}
+        </>
+      ),
+    },
+    {
+      key: "visible",
+      header: t("channelMasters.visible"),
+      renderCell: (ch) =>
+        ch.connection_type === "manual" ? (
+          <Toggle
+            checked={!ch.is_hidden}
+            onCheckedChange={(v) => void handleVisibility(ch.id, !v)}
+            aria-label={t("channelMasters.visibleAriaLabel", { name: ch.display_name })}
+          />
+        ) : null,
+    },
+    {
+      key: "actions",
+      header: t("channelMasters.actions"),
+      renderCell: (ch) =>
+        ch.connection_type === "manual" && !ch.is_shared ? (
+          <Button
+            type="button"
+            variant="danger"
+            size="sm"
+            onClick={() => handleDelete(ch.id)}
+            aria-label={t("channelMasters.deleteAriaLabel", { name: ch.display_name })}
+          >
+            {t("channelMasters.delete")}
+          </Button>
+        ) : null,
+    },
+  ];
+
   return (
     <PageLayout
       navKey="nav.channelMasters"
@@ -81,36 +149,8 @@ export default function ChannelMastersPage() {
         <LoadingBlock />
       ) : (
         <>
-          <table className="channel-masters-table">
-            <thead>
-              <tr>
-                <th>{t("channelMasters.platform")}</th>
-                <th>{t("channelMasters.displayName")}</th>
-                <th>{t("channelMasters.type")}</th>
-                <th>{t("channelMasters.actions")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {channels.map((ch) => (
-                <tr key={ch.id}>
-                  <td>{ch.platform}</td>
-                  <td>{ch.display_name}</td>
-                  <td>{ch.connection_type === "auto" ? t("channelMasters.typeAuto") : t("channelMasters.typeManual")}</td>
-                  <td>
-                    {ch.connection_type === "manual" && (
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(ch.id)}
-                        aria-label={t("channelMasters.deleteAriaLabel", { name: ch.display_name })}
-                      >
-                        {t("channelMasters.delete")}
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <p className="text-xs text-token-text-secondary">{t("channelMasters.visibleHelp")}</p>
+          <DataTable columns={columns} data={channels} rowKey={(ch) => String(ch.id)} />
 
           {shownError && <p role="alert" className="channel-masters-error">{shownError}</p>}
 
