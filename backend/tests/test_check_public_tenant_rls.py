@@ -19,6 +19,12 @@ from urllib.parse import urlsplit, urlunsplit
 
 import pytest
 
+from tests.conftest import (
+    RLS_PROBE_NO_TENANT_DDL,
+    RLS_PROBE_OTHER_SCHEMA_DDL,
+    RLS_PROBE_TABLE_DDL,
+)
+
 ADMIN_PG_URL = os.getenv("RLS_ADMIN_DATABASE_URL") or os.getenv("TEST_PG_URL")
 
 pytestmark = pytest.mark.skipif(
@@ -70,14 +76,14 @@ def _exec(conn, sql: str) -> None:
 
 def test_r1_table_without_rls_fails(conn):
     mod = _load_script()
-    _exec(conn, "CREATE TABLE public.ci_rls_probe (id int PRIMARY KEY, tenant_id int NOT NULL)")
+    _exec(conn, RLS_PROBE_TABLE_DDL)
     assert mod.find_tables_without_rls(conn) == ["ci_rls_probe"]
     assert mod.run(conn, {}, report_only=False) == 1
 
 
 def test_r2_rls_enabled_passes(conn):
     mod = _load_script()
-    _exec(conn, "CREATE TABLE public.ci_rls_probe (id int PRIMARY KEY, tenant_id int NOT NULL)")
+    _exec(conn, RLS_PROBE_TABLE_DDL)
     _exec(conn, "ALTER TABLE public.ci_rls_probe ENABLE ROW LEVEL SECURITY")
     assert mod.find_tables_without_rls(conn) == []
     assert mod.run(conn, {}, report_only=False) == 0
@@ -85,7 +91,7 @@ def test_r2_rls_enabled_passes(conn):
 
 def test_r3_allowlisted_with_reason_passes(conn):
     mod = _load_script()
-    _exec(conn, "CREATE TABLE public.ci_rls_probe (id int PRIMARY KEY, tenant_id int NOT NULL)")
+    _exec(conn, RLS_PROBE_TABLE_DDL)
     assert mod.run(conn, {"ci_rls_probe": "試験用の理由"}, report_only=False) == 0
 
 
@@ -97,13 +103,13 @@ def test_r4_blank_reason_fails(conn):
 
 def test_r5_report_only_does_not_fail(conn):
     mod = _load_script()
-    _exec(conn, "CREATE TABLE public.ci_rls_probe (id int PRIMARY KEY, tenant_id int NOT NULL)")
+    _exec(conn, RLS_PROBE_TABLE_DDL)
     assert mod.run(conn, {}, report_only=True) == 0
 
 
 def test_r6_only_public_tables_with_tenant_id(conn):
     mod = _load_script()
-    _exec(conn, "CREATE TABLE public.ci_no_tenant (id int PRIMARY KEY)")
+    _exec(conn, RLS_PROBE_NO_TENANT_DDL)
     _exec(conn, "CREATE SCHEMA ci_other")
-    _exec(conn, "CREATE TABLE ci_other.ci_rls_probe (id int PRIMARY KEY, tenant_id int NOT NULL)")
+    _exec(conn, RLS_PROBE_OTHER_SCHEMA_DDL)
     assert mod.find_tables_without_rls(conn) == []
