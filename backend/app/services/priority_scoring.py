@@ -270,6 +270,7 @@ async def label_lead_messages(
             FROM meta_messages
             WHERE lead_id = :lid
               AND lead_id IS NOT NULL
+              AND is_manual IS NOT TRUE
             ORDER BY created_at
             """
         ),

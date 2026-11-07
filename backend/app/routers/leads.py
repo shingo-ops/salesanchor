@@ -996,7 +996,7 @@ async def list_lead_messages(
         )
 
     # messages 取得
-    where = ["lead_id = :lead_id", "tenant_id = :tenant_id"]
+    where = ["lead_id = :lead_id", "tenant_id = :tenant_id", "deleted_at IS NULL"]
     params: dict = {"lead_id": lead_id, "tenant_id": tenant_id, "limit": limit}
     if before is not None:
         where.append("id < :before")
@@ -1097,22 +1097,20 @@ async def list_lead_messages(
                 exc_info=True,
             )
 
-    # platform は messages 末尾の最新値を採用（pagination 対象外）
+    # platform は自動連携の行の最新値を採用（手の記録は除く。pagination 対象外）
     latest_platform: Optional[str] = None
-    if messages:
-        latest_platform = messages[-1]["platform"]
-    else:
-        plat_q = await db.execute(
-            text(
-                f"SELECT platform FROM {meta_messages_t} "
-                "WHERE lead_id = :lead_id AND tenant_id = :tenant_id "
-                "ORDER BY created_at DESC, id DESC LIMIT 1"
-            ),
-            {"lead_id": lead_id, "tenant_id": tenant_id},
-        )
-        plat_row = plat_q.first()
-        if plat_row:
-            latest_platform = plat_row[0]
+    plat_q = await db.execute(
+        text(
+            f"SELECT platform FROM {meta_messages_t} "
+            "WHERE lead_id = :lead_id AND tenant_id = :tenant_id "
+            "AND is_manual IS NOT TRUE "
+            "ORDER BY created_at DESC, id DESC LIMIT 1"
+        ),
+        {"lead_id": lead_id, "tenant_id": tenant_id},
+    )
+    plat_row = plat_q.first()
+    if plat_row:
+        latest_platform = plat_row[0]
 
     # last_inbound_at（messaging_window 用）— pagination の影響を受けないように
     # フィルタ無しで再クエリ
@@ -1120,7 +1118,7 @@ async def list_lead_messages(
         text(
             f"SELECT MAX(created_at) FROM {meta_messages_t} "
             "WHERE lead_id = :lead_id AND tenant_id = :tenant_id "
-            "AND direction = 'inbound'"
+            "AND direction = 'inbound' AND is_manual IS NOT TRUE"
         ),
         {"lead_id": lead_id, "tenant_id": tenant_id},
     )
@@ -1305,6 +1303,7 @@ async def mark_lead_message_unread(
             WHERE lead_id = :lead_id
               AND tenant_id = :tenant_id
               AND direction = 'inbound'
+              AND is_manual IS NOT TRUE
             ORDER BY created_at DESC, id DESC
             LIMIT 1
         """),
@@ -1838,6 +1837,7 @@ async def send_lead_message(
             WHERE lead_id = :lead_id
               AND tenant_id = :tenant_id
               AND direction = 'inbound'
+              AND is_manual IS NOT TRUE
             ORDER BY created_at DESC, id DESC
             LIMIT 1
         """),
@@ -2456,6 +2456,7 @@ async def send_lead_image_message(
             SELECT created_at, sender_id, platform
             FROM {meta_messages_t}
             WHERE lead_id = :lead_id AND tenant_id = :tenant_id AND direction = 'inbound'
+              AND is_manual IS NOT TRUE
             ORDER BY created_at DESC, id DESC LIMIT 1
         """),
         {"lead_id": lead_id, "tenant_id": tenant_id},

@@ -245,6 +245,11 @@ _REVIEWED: dict[str, tuple[str, str, frozenset[str]]] = {
         "",
         frozenset({"20260604_220000_create_translation_glossary.sql"}),
     ),
+    "test_conversation_unify_bin1.py": (
+        "text_only",
+        "文字として読むだけ",
+        frozenset({"20261108_100000_rebuild_company_stats_on_meta_messages.sql"}),
+    ),
 }
 
 # 同じファイルに2種類の扱いがあるもの（消した表の照合は文字だけ）

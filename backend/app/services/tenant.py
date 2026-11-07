@@ -1043,6 +1043,19 @@ CREATE INDEX IF NOT EXISTS idx_meta_messages_ts     ON {schema}.meta_messages (c
 CREATE UNIQUE INDEX IF NOT EXISTS idx_meta_messages_message_id_unique
     ON {schema}.meta_messages (message_id)
     WHERE message_id IS NOT NULL;
+-- 会話の一本化 便1: 手の記録の列（migrations/20260622_010000 と同じ名前・型・既定値）。新しい会社でも読む側の条件が動くようにする
+ALTER TABLE {schema}.meta_messages
+    ADD COLUMN IF NOT EXISTS contact_id          INTEGER,
+    ADD COLUMN IF NOT EXISTS company_id          INTEGER,
+    ADD COLUMN IF NOT EXISTS deal_id             INTEGER,
+    ADD COLUMN IF NOT EXISTS channel_identity    VARCHAR(255),
+    ADD COLUMN IF NOT EXISTS original_language   VARCHAR(10),
+    ADD COLUMN IF NOT EXISTS status              VARCHAR(20) DEFAULT 'sent',
+    ADD COLUMN IF NOT EXISTS analysis            JSONB,
+    ADD COLUMN IF NOT EXISTS occurred_at         TIMESTAMPTZ,
+    ADD COLUMN IF NOT EXISTS deleted_at          TIMESTAMPTZ DEFAULT NULL,
+    ADD COLUMN IF NOT EXISTS recorded_by_user_id INTEGER DEFAULT NULL,
+    ADD COLUMN IF NOT EXISTS is_manual           BOOLEAN DEFAULT NULL;
 -- ADR-119: lead_channels — 1 lead : N platforms（クロスプラットフォーム名寄せ）
 -- webhook が source 文字列比較ではなくこのテーブルを lookup 権威として使う
 CREATE TABLE IF NOT EXISTS {schema}.lead_channels (

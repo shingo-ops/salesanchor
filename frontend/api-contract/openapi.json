@@ -4251,6 +4251,7 @@
             "type": "string"
           },
           "platform": {
+            "maxLength": 20,
             "title": "Platform",
             "type": "string"
           }
@@ -75955,7 +75956,7 @@
     },
     "/api/v1/{company_id}/conv-logs": {
       "get": {
-        "description": "会社の全 conversation_logs を時系列で返す。\ncontact_id で絞り込み可（省略時は全 contact の混在表示）。\n論理削除済み（deleted_at IS NOT NULL）は除外。",
+        "description": "会社の全 meta_messages を時系列で返す。\ncontact_id で絞り込み可（省略時は全 contact の混在表示）。\n論理削除済み（deleted_at IS NOT NULL）は除外。",
         "operationId": "list_company_conv_logs_api_v1__company_id__conv_logs_get",
         "parameters": [
           {

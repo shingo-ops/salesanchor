@@ -76,21 +76,16 @@ def test_sql_has_on_conflict():
 # 4. direction は 'inbound' / 'outbound' が使用される
 # ---------------------------------------------------------------------------
 def test_direction_values_in_callers():
-    """webhook.py と dm_writer.py で正しい direction・エラーログが実装されているか grep で確認。"""
+    """会話の一本化 便1: webhook.py と dm_writer.py は conversation_logs への写しを呼ばない。"""
     repo_root = Path(__file__).resolve().parents[2]
 
     webhook_py = repo_root / "backend" / "app" / "routers" / "webhook.py"
     content = webhook_py.read_text(encoding="utf-8")
-    assert 'direction="inbound"' in content, "webhook.py: inbound が見当たらない"
-    assert 'direction="outbound"' in content, "webhook.py: outbound（エコー）が見当たらない"
-    # エラーログにチャネル・ext_id が含まれていること
-    assert "channel=%s" in content, "webhook.py: エラーログにチャネル情報がない"
-    assert "ext_id=%s" in content, "webhook.py: エラーログに ext_id がない"
+    assert "write_conversation_log" not in content, "webhook.py: 写しの呼び出しが残っている"
 
     dm_writer_py = repo_root / "backend" / "app" / "discord_gateway" / "dm_writer.py"
     dm_content = dm_writer_py.read_text(encoding="utf-8")
-    assert 'direction="inbound"' in dm_content, "dm_writer.py: inbound が見当たらない"
-    assert "ext_id=%s" in dm_content, "dm_writer.py: エラーログに ext_id がない"
+    assert "write_conversation_log" not in dm_content, "dm_writer.py: 写しの呼び出しが残っている"
 
 
 # ---------------------------------------------------------------------------

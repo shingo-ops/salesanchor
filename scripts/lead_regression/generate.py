@@ -311,9 +311,6 @@ def _chunks(rows: list[str], size: int = 200) -> list[list[str]]:
 
 
 def expected_counts(ds: Dataset) -> dict[str, int]:
-    meta_leads = {i for i, lead in enumerate(ds.leads) if lead.channel_type in PLATFORM_META}
-    wa_leads = {i for i, lead in enumerate(ds.leads) if lead.channel_type == CHANNEL_WHATSAPP}
-    meta_msgs = [m for m in ds.gen_messages if m.lead_index in meta_leads]
     return {
         "leads": len(ds.leads),
         "won": sum(1 for lead in ds.leads if lead.status == lcf.STATUS_WON),
@@ -322,9 +319,7 @@ def expected_counts(ds: Dataset) -> dict[str, int]:
         "deal_close_reasons": sum(1 for o in ds.close_reason_order if o is not None),
         "lead_channels_instagram": sum(1 for lead in ds.leads if lead.channel_type == CHANNEL_INSTAGRAM),
         "lead_channels_messenger": sum(1 for lead in ds.leads if lead.channel_type == CHANNEL_MESSENGER),
-        "meta_messages": len(meta_msgs),
-        "conv_logs_meta_copy": sum(1 for m in meta_msgs if m.direction == lcf.DIRECTION_INBOUND),
-        "conv_logs_whatsapp": sum(1 for m in ds.gen_messages if m.lead_index in wa_leads),
+        "meta_messages": len(ds.gen_messages),
     }
 
 
@@ -427,10 +422,8 @@ def render_sql(ds: Dataset, tenant_id: int, mode: str) -> str:
         w(",\n".join("  " + r for r in part))
         w(f") AS v(lead_code, platform, external_id) JOIN {schema}.leads l ON l.lead_code = v.lead_code;")
 
-    # meta_messages（Instagram・Facebook）と conversation_logs
+    # meta_messages（Instagram・Facebook・WhatsApp）
     meta_rows: list[str] = []
-    copy_rows: list[str] = []
-    wa_rows: list[str] = []
     for m in ds.gen_messages:
         lead = ds.leads[m.lead_index]
         code = ds.lead_codes[m.lead_index]
@@ -457,13 +450,6 @@ def render_sql(ds: Dataset, tenant_id: int, mode: str) -> str:
                     )
                     + ")"
                 )
-                copy_rows.append(
-                    "("
-                    + ", ".join(
-                        [_q(code), _q(platform), _q(psid), "'inbound'", _q(psid), _q(m.body), _q(m.message_id), _ts(m.ts)]
-                    )
-                    + ")"
-                )
             else:
                 meta_rows.append(
                     "("
@@ -476,8 +462,20 @@ def render_sql(ds: Dataset, tenant_id: int, mode: str) -> str:
                     + ")"
                 )
         else:
-            wa_rows.append(
-                "(" + ", ".join([_q(code), _q(platform), _q(m.direction), _q(m.body), _ts(m.ts)]) + ")"
+            # WhatsApp も meta_messages に入れる（言語は入れない。occurred_at も入れない）
+            if m.direction == lcf.DIRECTION_INBOUND:
+                sender_recipient = [_q(psid), "NULL"]
+            else:
+                sender_recipient = [_q("tlr-page"), _q(psid)]
+            meta_rows.append(
+                "("
+                + ", ".join(
+                    [
+                        _q(code), _q(platform), *sender_recipient, _q(m.body), _q(m.direction),
+                        "NULL", _q(m.message_id), "NULL", _ts(m.ts),
+                    ]
+                )
+                + ")"
             )
 
     for part in _chunks(meta_rows):
@@ -495,32 +493,6 @@ def render_sql(ds: Dataset, tenant_id: int, mode: str) -> str:
             ") AS v(lead_code, platform, sender_id, recipient_id, message_text, direction, raw_payload, "
             "message_id, original_language, created_at)"
         )
-        w(f"JOIN {schema}.leads l ON l.lead_code = v.lead_code;")
-
-    for part in _chunks(copy_rows):
-        w(
-            f"INSERT INTO {schema}.conversation_logs (tenant_id, lead_id, channel_type, channel_identity, "
-            "direction, sender, content_text, external_message_id, occurred_at, created_at)"
-        )
-        w(f"SELECT {tenant_id}, l.id, v.channel_type, v.channel_identity, v.direction, v.sender, v.content_text,")
-        w("       v.external_message_id, v.occurred_at, v.occurred_at")
-        w("FROM (VALUES")
-        w(",\n".join("  " + r for r in part))
-        w(
-            ") AS v(lead_code, channel_type, channel_identity, direction, sender, content_text, "
-            "external_message_id, occurred_at)"
-        )
-        w(f"JOIN {schema}.leads l ON l.lead_code = v.lead_code;")
-
-    for part in _chunks(wa_rows):
-        w(
-            f"INSERT INTO {schema}.conversation_logs (tenant_id, lead_id, channel_type, direction, "
-            "content_text, occurred_at, created_at)"
-        )
-        w(f"SELECT {tenant_id}, l.id, v.channel_type, v.direction, v.content_text, v.occurred_at, v.occurred_at")
-        w("FROM (VALUES")
-        w(",\n".join("  " + r for r in part))
-        w(") AS v(lead_code, channel_type, direction, content_text, occurred_at)")
         w(f"JOIN {schema}.leads l ON l.lead_code = v.lead_code;")
 
     # 件数の点検
@@ -566,17 +538,6 @@ def render_sql(ds: Dataset, tenant_id: int, mode: str) -> str:
             "meta_messages",
             f"SELECT count(*) FROM {schema}.meta_messages WHERE message_id LIKE '{prefix}%'",
             exp["meta_messages"],
-        ),
-        (
-            "conversation_logs（Instagram・Facebook の写し）",
-            f"SELECT count(*) FROM {schema}.conversation_logs WHERE external_message_id LIKE '{prefix}%'",
-            exp["conv_logs_meta_copy"],
-        ),
-        (
-            "conversation_logs（WhatsApp）",
-            f"SELECT count(*) FROM {schema}.conversation_logs c JOIN {schema}.leads l ON l.id = c.lead_id "
-            f"WHERE l.lead_code LIKE 'TLR-%' AND c.channel_type = '{CHANNEL_WHATSAPP}'",
-            exp["conv_logs_whatsapp"],
         ),
     ]
     for label, sql, want in checks:
