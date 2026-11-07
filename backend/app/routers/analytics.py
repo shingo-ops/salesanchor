@@ -2253,9 +2253,10 @@ async def weekly_advisor_defensive(
     try:
         contact_result = await db.execute(
             text("""
-                SELECT company_id, MAX(occurred_at) AS last_conversation_at
-                FROM conversation_logs
+                SELECT company_id, MAX(COALESCE(occurred_at, created_at)) AS last_conversation_at
+                FROM meta_messages
                 WHERE company_id IS NOT NULL
+                  AND deleted_at IS NULL
                 GROUP BY company_id
             """),
         )
@@ -2484,9 +2485,11 @@ async def _fetch_lead_conversion_inputs(
     messages: list[lcf.MessageRow] = []
     meta_platforms = await channel_masters.platforms_by_store(db, "meta_messages")
     log_platforms = await channel_masters.platforms_by_store(db, "conversation_logs")
+    # 会話は meta_messages だけから読む。2つの置き場の窓口を順番を保って重複なく合わせる
+    all_platforms = list(dict.fromkeys([*meta_platforms, *log_platforms]))
     meta_rows: list = []
-    if meta_platforms:
-        meta_params = {f"p{i}": p for i, p in enumerate(meta_platforms)}
+    if all_platforms:
+        meta_params = {f"p{i}": p for i, p in enumerate(all_platforms)}
         meta_in = ", ".join(f":{k}" for k in meta_params)
         meta_rows = list(
             (
@@ -2503,26 +2506,7 @@ async def _fetch_lead_conversion_inputs(
                 )
             ).mappings()
         )
-    wa_rows: list = []
-    if log_platforms:
-        log_params = {f"p{i}": p for i, p in enumerate(log_platforms)}
-        log_in = ", ".join(f":{k}" for k in log_params)
-        wa_rows = list(
-            (
-                await db.execute(
-                    text(
-                        "SELECT c.lead_id AS lead_id, c.id AS id, c.direction AS direction, "
-                        "c.occurred_at AS ts "
-                        "FROM conversation_logs c JOIN leads l ON l.id = c.lead_id "
-                        "WHERE c.deleted_at IS NULL "
-                        f"AND l.channel_type IN ({log_in}) "
-                        "AND l.status IN ('existing_customer', 'lost')"
-                    ),
-                    log_params,
-                )
-            ).mappings()
-        )
-    for r in meta_rows + wa_rows:
+    for r in meta_rows:
         if r["ts"] is None:
             continue
         messages.append(

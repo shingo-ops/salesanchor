@@ -108,3 +108,6 @@ async def test_list_company_conv_logs_deleted_at_filter():
     # SQL テキストに deleted_at IS NULL が含まれる
     sql_text = str(mock_db.execute.call_args[0][0])
     assert "deleted_at IS NULL" in sql_text
+    # 会話は meta_messages だけから読む
+    assert "meta_messages" in sql_text
+    assert "conversation_logs" not in sql_text
