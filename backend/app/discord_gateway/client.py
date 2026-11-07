@@ -26,6 +26,8 @@ from sqlalchemy import text
 from app.cache import close_redis, get_redis, init_redis
 from app.discord_gateway import (
     bot_texts,
+    staff_join,
+    staff_join_texts,
     ticket_channel_creator,
     ticket_channel_writer,
     viewer_bot_texts,
@@ -80,6 +82,7 @@ class JarvisDiscordClient(discord.Client):
         self._reconcile_task: asyncio.Task[None] | None = None
         self._viewer_sweep_task: asyncio.Task[None] | None = None
         self._viewer_interview_task: asyncio.Task[None] | None = None
+        self._staff_join_sweep_task: asyncio.Task[None] | None = None
 
         # asyncpg 用 DB URL（postgresql+asyncpg:// → postgresql:// に正規化）
         raw_url = database_url or os.environ.get(
@@ -142,6 +145,8 @@ class JarvisDiscordClient(discord.Client):
             self._viewer_sweep_task.cancel()
         if self._viewer_interview_task is not None and not self._viewer_interview_task.done():
             self._viewer_interview_task.cancel()
+        if self._staff_join_sweep_task is not None and not self._staff_join_sweep_task.done():
+            self._staff_join_sweep_task.cancel()
         await self.reaction_writer.close()
         await close_redis()
         await super().close()
@@ -164,6 +169,23 @@ class JarvisDiscordClient(discord.Client):
             self._viewer_sweep_task = asyncio.create_task(self._viewer_room_sweep_loop())
         if self._viewer_interview_task is None:
             self._viewer_interview_task = asyncio.create_task(self._viewer_interview_loop())
+        if self._staff_join_sweep_task is None:
+            self._staff_join_sweep_task = asyncio.create_task(self._staff_join_sweep_loop())
+
+    async def _staff_join_sweep_loop(self) -> None:
+        """持ち主のいないスタッフ登録の個室を、起動時に1回・その後24時間ごとに片付ける（失敗は警告のみ）。"""
+        while True:
+            try:
+                db_factory = self._db_factory()
+                for tenant_id, guild_id in await staff_join.list_own_guilds(db_factory):
+                    guild = self.get_guild(int(guild_id))
+                    if guild is not None:
+                        await staff_join.sweep_orphan_rooms(guild, db_factory, tenant_id)
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("[staff-join] sweep loop failed: %s", type(exc).__name__)
+            await asyncio.sleep(86400)
 
     async def _viewer_room_sweep_loop(self) -> None:
         """消された閲覧者の部屋を、起動時に1回・その後24時間ごとに片付ける（失敗は警告のみ）。"""
@@ -267,6 +289,14 @@ class JarvisDiscordClient(discord.Client):
                 raise
             except Exception:  # noqa: BLE001
                 logger.warning("[viewer-trial] handler failed", exc_info=True)
+            return
+        if custom_id.startswith(staff_join_texts.CUSTOM_ID_PREFIX):
+            try:
+                await staff_join.handle_interaction(interaction, self._db_factory())
+            except asyncio.CancelledError:
+                raise
+            except Exception:  # noqa: BLE001
+                logger.warning("[staff-join] handler failed", exc_info=True)
             return
         if interaction.type != discord.InteractionType.component:
             return
