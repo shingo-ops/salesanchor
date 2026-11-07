@@ -485,7 +485,8 @@ async def apply_own_server_plan(
 
         # 受付の部屋が設計図にあるときだけ、ボタン付きの投稿を置く（設計 §4-5）。DB の記録・監査ログには足さない
         response_rows = list(results)
-        if any(c.key == RECEPTION_CHANNEL_KEY for c in blueprint.channels):
+        reception = next((c for c in blueprint.channels if c.key == RECEPTION_CHANNEL_KEY), None)
+        if reception is not None:
             try:
                 button = await ensure_reception_button(guild_id, bot_token, tenant_id)
             except Exception as exc:  # noqa: BLE001 - 部屋やロールの反映は済んでいるため適用は失敗にしない
@@ -496,7 +497,7 @@ async def apply_own_server_plan(
             response_rows.append({
                 "kind": "post_button",
                 "key": RECEPTION_CHANNEL_KEY,
-                "name": "スタッフ受付",
+                "name": reception.name,
                 "field": None,
                 "status": "success" if posted_ok else "failed",
                 "reason": None if button_status == "posted" else button_status,

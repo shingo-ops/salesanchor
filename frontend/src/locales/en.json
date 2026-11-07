@@ -3650,6 +3650,8 @@
       "ambiguous": "More than one item has this name",
       "depends_failed": "Skipped because an earlier item failed",
       "discord_error": "Discord rejected the request",
+      "exists": "The button is already posted",
+      "not_configured": "The reception channel was not found",
       "method_not_allowed": "This operation is not run",
       "name_in_blueprint": "The blueprint has a role with the same name",
       "app_role_missing_on_discord": "The linked role was deleted on Discord",

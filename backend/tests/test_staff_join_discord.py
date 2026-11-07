@@ -479,8 +479,10 @@ async def test_sweep_without_category_deletes_nothing(sweep_env, monkeypatch):
 
 
 async def test_cli_posts_button_only_when_absent(monkeypatch):
+    from app.services import staff_join as svc
+
     monkeypatch.setenv("DISCORD_BOT_TOKEN", "dummy-token-for-test")
-    monkeypatch.setattr(staff_join_discord_cli, "find_blueprint_channel_id", AsyncMock(return_value="3001"))
+    monkeypatch.setattr(svc, "find_blueprint_channel_id", AsyncMock(return_value="3001"))
     calls: list = []
     existing: list = []
 
@@ -516,7 +518,9 @@ async def test_cli_not_configured_and_bad_input(monkeypatch):
     with pytest.raises(staff_join_discord_cli.StaffJoinDiscordError) as exc:
         await staff_join_discord_cli.run({"action": "post-staff-button", "tenant_id": 1}, session_factory=no_own)
     assert exc.value.code == "not_configured"
-    monkeypatch.setattr(staff_join_discord_cli, "find_blueprint_channel_id", AsyncMock(return_value=None))
+    from app.services import staff_join as svc
+
+    monkeypatch.setattr(svc, "find_blueprint_channel_id", AsyncMock(return_value=None))
     has_own = _factory(lambda stmt, params=None: _Rows([("10",)]))
     with pytest.raises(staff_join_discord_cli.StaffJoinDiscordError) as exc:
         await staff_join_discord_cli.run({"action": "post-staff-button", "tenant_id": 1}, session_factory=has_own)
