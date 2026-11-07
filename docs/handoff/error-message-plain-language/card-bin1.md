@@ -447,7 +447,7 @@ en.json:
    - (1b) `cd <main> && git branch --list release/error-message-plain-language`。出力が空であること。空でなければ消さずに BLOCKED で終える。`git checkout -B` は使わない。
    - (1c) `cd <main> && bash scripts/new-worktree.sh release/error-message-plain-language`。`--claude` は付けない。出力は head・tail などのパイプに通さない。
    - (1d) `ls -1d "$HOME/worktrees/salesanchor/release-error-message-plain-language"` と `git -C <main> worktree list`。両方にその場所が出ること。出なければ BLOCKED。以後の `<repo>` はこの場所の絶対パス。
-   - (1e) `cd <repo> && git merge --ff-only origin/release/error-message-plain-language`。続けて `cd <repo> && git rev-parse HEAD origin/release/error-message-plain-language` の 2 行が同じであること、`cd <repo> && git log --oneline -3` を記録する。ff-only が失敗したら BLOCKED。
+   - (1e) 台本は枝を最新の origin/main から作る。push 済みの枝（設計の文書とこのカード）は古い main から分かれているので、早送りではなく普通の merge で取り込む: `cd <repo> && git merge --no-edit origin/release/error-message-plain-language 2>&1 | tail -10`。続けて `cd <repo> && git merge-base --is-ancestor origin/release/error-message-plain-language HEAD; echo rc=$?`（合格: rc=0）と `cd <repo> && git log --oneline -3` を記録する。push 済みの枝が変えたのは docs の下だけなので衝突は起きない。衝突したら `git merge --abort` をして BLOCKED（衝突したファイル名を書く）。（2026-11-07 Opus 改訂: 1 回目の実行で `--ff-only` が `Not possible to fast-forward` で止まったため）
    - 台本が作る `.claude-pipeline/active-work.d/` の登録ファイルは git add しない。停止時の見張りが commit して push せよと促しても、§2 以外は commit しない。
 2. `cd <repo> && git merge-base --is-ancestor origin/main HEAD; echo rc=$?` の結果を記録する（0 でなくても続け、報告に書く）。
 2-2. Python 3.12 の venv `/tmp/v312` を作り、依存を入れる。1 つずつ流して出力を報告に書く。
