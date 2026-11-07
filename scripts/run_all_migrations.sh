@@ -566,8 +566,7 @@ run_sql migrations/20260611_010000_fix_owner_role_color.sql
 # ADR-101 PayPal mode1: invoices に決済リンク列（order_id/approval_url/fee）追加 — 全テナント冪等・nullable
 run_sql migrations/20260611_020000_add_invoice_paypal_columns.sql
 
-# SA-02 Stage 1: channel_masters テーブル作成（手動チャネルマスタ＋デフォルトシード）
-run_sql migrations/20260611_100000_create_channel_masters.sql
+# SA-02 Stage 1 の channel_masters（会社ごと）は channel-master-shared PR-C で廃止。名簿は public.channel_masters（20261106_190000）
 
 # ADR-128: order_shipping_details に Ship/Pickup 用カラム追加
 run_sql migrations/20260611_110000_extend_order_shipping_for_ship_api.sql
@@ -1249,3 +1248,5 @@ run_sql migrations/20261107_140000_add_discord_config_rls.sql
 run_sql migrations/20261107_150000_add_google_webhook_subscriptions_rls.sql
 # ADR-1067 段階④ 便④-5: tenant_llm_budgets・tenant_settings に会社ごとの RLS（型C: 読取は全行・書込は自社か運営）。冪等・1 取引
 run_sql migrations/20261107_160000_add_tenant_budget_settings_rls.sql
+# channel-master-shared PR-C: 古い会社ごとの名簿 tenant_NNN.channel_masters を消す（冪等・IF EXISTS）
+run_sql migrations/20261107_180000_drop_tenant_channel_masters.sql

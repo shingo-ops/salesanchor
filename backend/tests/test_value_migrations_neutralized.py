@@ -81,13 +81,6 @@ def test_neutralized_3d_migration_has_no_value_writes(filename):
         assert pattern.search(body) is None, f"{filename}: 値を書く文が残っている ({pattern.pattern})"
 
 
-def test_channel_masters_selector_line_is_kept_byte_identical():
-    # rls_bootstrap.py の正本のセレクタ（ちょうど 1 回）。変えると bootstrap_tenant_schema が落ちる
-    sql = (MIGRATIONS_DIR / "20260611_100000_create_channel_masters.sql").read_text("utf-8")
-
-    assert sql.count("\n        WHERE nspname ~ '^tenant_\\d+$'\n") == 1
-
-
 async def _run_file_on_conn(conn, filename: str) -> None:
     from tests.rls_bootstrap import _apply_migration_on_conn
 
