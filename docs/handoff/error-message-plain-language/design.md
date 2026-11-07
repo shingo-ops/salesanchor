@@ -1,7 +1,7 @@
 # Phase 3 設計 — 失敗したときの文（便1: Discord 連携）＋アプリ全体の見張り
 
 - 状態: 設計審査済み（2回目 APPROVE）・PO 承認済み（Discord の KGI と §4-3 の文の一覧。2026-11-07。PO が 5 と 7 の文を自分で書き直し、2 の文は Opus の言い換え案に「1」）。便1 の実装承認: 同日 PO「1」（選択肢「この文で決まり、全部の文がそろったので作り始めます」）。アプリ全体の KGI（§2-2）は PO 確認待ち
-- 根拠: `recon.md`（Discord の事実・全体の件数）、`inventory.md`（全件一覧）、決まり本体 `docs/adr/ADR-1071-plain-language-error-messages.md`
+- 根拠: `docs/handoff/error-message-plain-language/recon.md`（Discord の事実・全体の件数）、`docs/handoff/error-message-plain-language/inventory.md`（全件一覧）、決まり本体 `docs/adr/ADR-1071-plain-language-error-messages.md`
 - 土台: origin/main `67d7bbf87`
 
 ## 1. 目的（PO の言葉）
@@ -157,6 +157,7 @@
 
 - 便1: 戻り口のコードと表の突き合わせ試験（§4-6）で、新しい理由の入れ忘れを止める
 - 全体: 見張り W1・W2 の基準値を便ごとに下げる。決まりは ADR-1071
+- 守り手: frontend の CI の試験（突き合わせ・文の一致）。基準値の引き下げは便ごとに Opus
 
 ## 9. 未確認
 
