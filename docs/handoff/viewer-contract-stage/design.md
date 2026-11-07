@@ -8,7 +8,7 @@ mode: handoff
 > お試しから本契約までの間に手続きの段階を足し、商材とプラン、請求書の発行、ドライブ保存、名簿を3年残す決まりをどう作るかの設計。
 
 - 親（設計仕様書）: [docs/specs/viewer-contract-invoicing/README.md](../../specs/viewer-contract-invoicing/README.md)
-- 現状の記録: [recon.md](./recon.md)
+- 現状の記録: [docs/handoff/viewer-contract-stage/recon.md](./recon.md)
 - 決めごとの控え: [decisions-draft.md](./decisions-draft.md)
 - 関係 ADR: [ADR-1061](../../adr/ADR-1061-viewer-contract-stage-and-invoicing.md)（草案）、閲覧者の名簿の90日の決まり（docs/handoff/gas-viewer-fresh-fast/review-fable.md:172 の Q7 に答えた docs/handoff/gas-viewer-fresh-fast/design.md:523〜:524。backend/app/tasks/maintenance.py:202 が参照）を改訂。ADR-1019 には Q7 も90日も無い（2026-11-06 grep で0件）、ADR-101（B2B 請求書。別の表にする）、ADR-144・ADR-067（金型とトークン）、ADR-027（i18n）、ADR-135・ADR-136（危険な変更の GO）
 - 状態: **設計案作成済み・第4回の審査（Opus の審査役）は REVISE で、指摘を 2026-11-06 に反映済み・再審査待ち（[review.md](./review.md)）・PO 未承認・実装未着手**
