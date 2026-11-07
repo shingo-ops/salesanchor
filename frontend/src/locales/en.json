@@ -3206,6 +3206,9 @@
     }
   },
   "schedule": {
+    "searchPlaceholder": "Search events by title",
+    "searchResults": "Search results",
+    "searchNoResults": "No matching events",
     "title": "Schedule",
     "subtitle": "Manage schedules and sync with Google Calendar.",
     "settings": "Settings",

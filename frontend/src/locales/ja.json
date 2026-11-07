@@ -3206,6 +3206,9 @@
     }
   },
   "schedule": {
+    "searchPlaceholder": "題名で予定を探す",
+    "searchResults": "検索の結果",
+    "searchNoResults": "見つかりませんでした",
     "title": "スケジュール",
     "subtitle": "予定を管理しGoogleカレンダーと同期できます。",
     "settings": "設定",

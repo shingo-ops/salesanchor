@@ -150,22 +150,28 @@ async def _is_app_origin(
 async def list_events(
     db: AsyncSession,
     tenant_id: int,
-    start: str,
-    end: str,
+    start: Optional[str] = None,
+    end: Optional[str] = None,
     calendar_type: Optional[str] = None,
     user_id: Optional[int] = None,
+    title_query: Optional[str] = None,
+    limit: Optional[int] = None,
 ) -> list[dict]:
     """期間・タイプでカレンダーイベントを取得する。
 
     calendar_type が 'shared' の場合は全ユーザーのイベント。
     calendar_type が 'personal' の場合は user_id のイベントのみ。
     どの指定でも、他人の 'personal' は返さない（'shared' か user_id 本人の予定だけ）。
+    title_query は題名の部分一致（%・_・\\ は文字として扱う）。指定時は新しい順・limit 件まで。
     """
-    filters = [
-        "start_datetime < :end",
-        "end_datetime > :start",
-    ]
-    params: dict = {"start": _parse_dt(start), "end": _parse_dt(end)}
+    filters: list[str] = []
+    params: dict = {}
+    if end is not None:
+        filters.append("start_datetime < :end")
+        params["end"] = _parse_dt(end)
+    if start is not None:
+        filters.append("end_datetime > :start")
+        params["start"] = _parse_dt(start)
 
     if calendar_type == "shared":
         filters.append("calendar_type = 'shared'")
@@ -174,13 +180,19 @@ async def list_events(
         filters.append("user_id = :uid")
         params["uid"] = user_id
 
-    where = " AND ".join(f"ce.{f}" for f in filters)
+    where = " AND ".join(f"ce.{f}" for f in filters) or "TRUE"
     # 見せ方の絞り: 他人の「自分だけ」予定は常に返さない
     if user_id is None:
         where += " AND ce.calendar_type = 'shared'"
     else:
         where += " AND (ce.calendar_type = 'shared' OR ce.user_id = :me)"
         params["me"] = user_id
+    if title_query is not None:
+        escaped = title_query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        where += " AND ce.title ILIKE :title_q ESCAPE '\\'"
+        params["title_q"] = f"%{escaped}%"
+    if limit is not None:
+        params["limit"] = limit
     result = await db.execute(
         text(
             f"SELECT ce.id, ce.user_id, ce.calendar_type, ce.category, ce.title, ce.description, ce.location,"
@@ -195,7 +207,8 @@ async def list_events(
             f" LEFT JOIN public.users created_user ON created_user.id = ce.created_by_user_id"
             f" LEFT JOIN staff created ON created.user_id = created_user.id"
             f" WHERE {where}"
-            f" ORDER BY ce.start_datetime"
+            f" ORDER BY ce.start_datetime{' DESC' if title_query is not None else ''}"
+            f"{' LIMIT :limit' if limit is not None else ''}"
         ),
         params,
     )

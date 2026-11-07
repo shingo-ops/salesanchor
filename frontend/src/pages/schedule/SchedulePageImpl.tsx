@@ -13,6 +13,9 @@ import { useTranslation } from "react-i18next";
 import { Button } from "../../components/Button";
 import { CalendarView, type CalendarViewEvent } from "../../components/CalendarView";
 import { ContextMenu } from "../../components/ContextMenu";
+import { EmptyState } from "../../components/EmptyState";
+import { ListRow } from "../../components/ListRow";
+import { Popover } from "../../components/Popover";
 import { ButtonLink } from "../../components/ButtonLink";
 import { Modal } from "../../components/Modal";
 import { PageLayout } from "../../components/PageLayout";
@@ -45,6 +48,7 @@ import {
   formatDayKey,
   formatDayLabel,
   formatDraftDateLine,
+  formatSearchResultLine,
   formatMonthLabel,
   formatTimeInput,
   formatTimeRange,
@@ -935,6 +939,11 @@ export default function SchedulePage() {
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   // 表示切替の一覧（金型 ContextMenu・design §3.9・G11）。開いている間は文字の近道を効かせない
   const [viewMenu, setViewMenu] = useState<{ x: number; y: number } | null>(null);
+  // 便5（G12）: 検索の欄・打った文字・Enter で決めた文字・結果の小窓
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchText, setSearchText] = useState("");
+  const [searchQuery, setSearchQuery] = useState<string | null>(null);
+  const [searchResultsOpen, setSearchResultsOpen] = useState(false);
   // 押す・引っぱるで選んだ範囲の仮の箱（design §3.7）。DB にも Google にも送らない
   const [pendingRange, setPendingRange] = useState<{ start: Date; end: Date; allDay: boolean } | null>(null);
 
@@ -958,6 +967,14 @@ export default function SchedulePage() {
   const holidaysQ = useApiQuery<{ holidays: ApiHoliday[] }>(
     `/calendar/holidays?start=${formatDayKey(rangeStart)}&end=${formatDayKey(rangeEnd)}&lang=${holidayLang}`,
     { enabled: live },
+  );
+  const searchQ = useApiQuery<{ events: ApiCalendarEvent[] }>(
+    `/calendar/events/search?q=${encodeURIComponent(searchQuery ?? "")}`,
+    { enabled: live && searchQuery !== null },
+  );
+  const searchResults = useMemo(
+    () => (Array.isArray(searchQ.data?.events) ? searchQ.data.events.map(normalizeEvent) : []),
+    [searchQ.data],
   );
   const invalidate = useInvalidateApi();
   const built = useMemo(
@@ -1161,6 +1178,16 @@ export default function SchedulePage() {
   const timedEvents = visibleEvents.filter((item) => !item.allDay);
   const viewLabel = formatRangeTitle(view, anchorDate);
   const SearchIcon = NAV_ICONS.search;
+  const closeSearch = () => {
+    setSearchOpen(false);
+    setSearchText("");
+    setSearchQuery(null);
+    setSearchResultsOpen(false);
+  };
+  const jumpToResult = (item: ScheduleItem) => {
+    setAnchorDate(new Date(item.start.getFullYear(), item.start.getMonth(), item.start.getDate()));
+    closeSearch();
+  };
   const SettingsIcon = NAV_ICONS.settings;
 
   const toggleOwner = (ownerId: number) => {
@@ -1363,14 +1390,64 @@ export default function SchedulePage() {
                 {gcalConnected ? t("schedule.connectBtnConnected") : t("schedule.connectBtn")}
               </Button>
             )}
-            <Button
-              variant="ghost"
-              size="md"
-              iconOnly
-              aria-label={t("common.search")}
-            >
-              <SearchIcon size={18} aria-hidden="true" />
-            </Button>
+            {searchOpen ? (
+              <Popover
+                open={searchResultsOpen}
+                onOpenChange={setSearchResultsOpen}
+                placement="bottom"
+                content={
+                  <div role="listbox" aria-label={t("schedule.searchResults")}>
+                    {searchQ.isLoading ? null : searchResults.length === 0 ? (
+                      <EmptyState size="compact" title={t("schedule.searchNoResults")} />
+                    ) : (
+                      searchResults.map((item) => (
+                        <ListRow
+                          key={item.id}
+                          title={item.title}
+                          subtitle={formatSearchResultLine(item, t, i18n.language)}
+                          onClick={() => jumpToResult(item)}
+                        />
+                      ))
+                    )}
+                  </div>
+                }
+              >
+                <TextFieldControl
+                  variant="search"
+                  type="search"
+                  autoFocus
+                  aria-label={t("common.search")}
+                  placeholder={t("schedule.searchPlaceholder")}
+                  value={searchText}
+                  onChange={(event) => setSearchText(event.target.value)}
+                  // 金型 Popover はトリガーを押すと開閉が切り替わる（Popover.tsx handleTriggerClick）。欄を押して直すたびに結果が閉じないよう止める
+                  onClick={(event) => event.stopPropagation()}
+                  onKeyDown={(event) => {
+                    // 変換中の Enter は確定なので探さない（Safari は確定の Enter で isComposing が偽になるため 229 も見る。今の近道 SchedulePageImpl.tsx:1284-1285 と同じ形）
+                    if (event.nativeEvent.isComposing || event.keyCode === 229) return;
+                    if (event.key === "Enter") {
+                      const next = searchText.trim();
+                      if (next.length === 0) return;
+                      setSearchQuery(next);
+                      setSearchResultsOpen(true);
+                    } else if (event.key === "Escape") {
+                      event.stopPropagation();
+                      closeSearch();
+                    }
+                  }}
+                />
+              </Popover>
+            ) : (
+              <Button
+                variant="ghost"
+                size="md"
+                iconOnly
+                aria-label={t("common.search")}
+                onClick={() => setSearchOpen(true)}
+              >
+                <SearchIcon size={18} aria-hidden="true" />
+              </Button>
+            )}
             {canManageOwners && (
               <Button
                 variant="ghost"
