@@ -66,15 +66,15 @@ async def list_events(
     ...（説明の文に 1 行足す: title_query は題名の部分一致（%・_・\ は文字として扱う）。指定時は新しい順・limit 件まで）
     filters: list[str] = []
     params: dict = {}
-    if start is not None:
-        filters.append("end_datetime > :start")
-        params["start"] = _parse_dt(start)
     if end is not None:
         filters.append("start_datetime < :end")
         params["end"] = _parse_dt(end)
+    if start is not None:
+        filters.append("end_datetime > :start")
+        params["start"] = _parse_dt(start)
 ```
 
-- 期間を渡す今の呼び出しで、SQL の文字の並びが変わらないよう、**`start_datetime < :end` を先・`end_datetime > :start` を後**の順で足す（上の 2 つの `if` は end を先に書き直してよい。今の順「`start_datetime < :end` → `end_datetime > :start`」と同じになればよい）。
+- 期間を渡す今の呼び出しで、SQL の文字の並びが変わらないよう、**`start_datetime < :end` を先・`end_datetime > :start` を後**の順で足す（**必ず上の順（`if end` が先・`if start` が後）で書く**。今の順「`start_datetime < :end` → `end_datetime > :start`」（`backend/app/services/calendar_service.py:164-167`）と同じにするため。入れ替えない）。
 - `calendar_type` の枝はそのまま（`filters.append(...)` のまま）。
 - `where = " AND ".join(f"ce.{f}" for f in filters)` は、filters が空のとき空文字になる。その直後の見せ方の絞り（`if user_id is None: where += " AND ce.calendar_type = 'shared'"` ／ `else: where += " AND (ce.calendar_type = 'shared' OR ce.user_id = :me)"`）が `" AND ..."` で始まるため、**空のときは `"TRUE"` から始める**:
 
@@ -251,6 +251,8 @@ export function formatSearchResultLine(item: ScheduleItem, t: Translate, languag
                   // 金型 Popover はトリガーを押すと開閉が切り替わる（Popover.tsx handleTriggerClick）。欄を押して直すたびに結果が閉じないよう止める
                   onClick={(event) => event.stopPropagation()}
                   onKeyDown={(event) => {
+                    // 変換中の Enter は確定なので探さない（Safari は確定の Enter で isComposing が偽になるため 229 も見る。今の近道 SchedulePageImpl.tsx:1284-1285 と同じ形）
+                    if (event.nativeEvent.isComposing || event.keyCode === 229) return;
                     if (event.key === "Enter") {
                       const next = searchText.trim();
                       if (next.length === 0) return;
@@ -310,7 +312,8 @@ export function formatSearchResultLine(item: ScheduleItem, t: Translate, languag
 - 作り物の api（目印: `if (path.startsWith("/calendar/events")) return { events: answers.events };`）の**前**に `if (path.startsWith("/calendar/events/search")) return { events: answers.searchEvents };` を足す。`answers` に `searchEvents: [] as ...`（`events` と同じ型）と、初期化に `answers.searchEvents = [];` を足す。
 - F1: 虫めがね（`common.search` の名前のボタン）を押すと検索の欄（role searchbox か textbox で同じ名前）が出て、focus がそこにある。
 - F2: `answers.searchEvents` に「商談A」（2026-12-15 10:00〜11:00）を入れ、欄に「商談」と打って Enter → 作り物の api が `/calendar/events/search?q=%E5%95%86%E8%AB%87` で呼ばれ、結果に「商談A」が出る。
-- F3: F2 の結果の行を押すと、見出しの期間の文（今の試験が見ている見出しの日付）が 2026 年 12 月 15 日を含む週に変わり、検索の欄が閉じて虫めがねのボタンに戻る。
+- F3: F2 の結果の行を押すと、`rangeText()` が次の `expected` と一致する。`` const days = getWeekDays(new Date(2026, 11, 15)); const expected = `${formatDayLabel(days[0])} - ${formatDayLabel(days[6])}`; ``（`formatDayLabel`・`getWeekDays` は `frontend/src/pages/schedule/schedule-utils.ts:137`・`:161` で export 済み。週の見出しは `SchedulePageImpl.tsx:138-144` の `formatRangeTitle` がこの形で作り `:1162` の `viewLabel` に入る。`SchedulePageImpl.tsx` に export は足さない）。検索の欄が閉じて虫めがねのボタンに戻る。
+- 見出しの文を読む小さな関数 `rangeText()`（`.schedule-shell__range` の textContent を返す）を F の describe の中で定義する（今の `rangeText` は `SchedulePageImpl.test.tsx:249` の K7 の describe の中だけにあり、F からは使えない）。
 - F4: `answers.searchEvents = []` で Enter → 「schedule.searchNoResults」の文（訳のキーで見る今の試験の流儀に合わせる）が出る。
 - F5: 欄で Esc → 欄が閉じて虫めがねのボタンに戻る。続けて `t` を押すと今日へ戻る近道が今までどおり効く（Esc が近道を壊していない）。
 
