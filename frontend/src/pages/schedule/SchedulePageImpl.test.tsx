@@ -33,6 +33,7 @@ const answers = vi.hoisted(() => ({
   meetAvailable: false,
   events: [] as Array<Record<string, unknown>>,
   shifts: [] as Array<Record<string, unknown>>,
+  holidays: [] as Array<Record<string, unknown>>,
   canManageOthers: false,
   selfMissing: false,
 }));
@@ -53,6 +54,7 @@ vi.mock("../../lib/api", () => ({
           ].filter((o) => !(answers.selfMissing && o.is_self)),
         };
       }
+      if (path.startsWith("/calendar/holidays")) return { holidays: answers.holidays };
       if (path.startsWith("/calendar/events")) return { events: answers.events };
       if (path === "/google-calendar/connect/start") return { auth_url: "https://accounts.example/auth" };
       if (path.startsWith("/shifts")) return answers.shifts;
@@ -78,6 +80,7 @@ beforeEach(async () => {
   answers.meetAvailable = false;
   answers.events = [];
   answers.shifts = [];
+  answers.holidays = [];
   answers.canManageOthers = false;
   answers.selfMissing = false;
   calendarProps.current = null;
@@ -728,6 +731,34 @@ describe("SchedulePage on CalendarView", () => {
     expect(body.start_datetime).toBe(new Date(2026, 10, 10, 0, 0).toISOString());
     expect(body.end_datetime).toBe(new Date(2026, 10, 11, 23, 59).toISOString());
     expect(body.is_all_day).toBe(true);
+  });
+
+  it("H1: a holiday reaches the calendar as an all-day, immovable holiday event", async () => {
+    answers.holidays = [{ date: "2026-11-03", name: "文化の日" }];
+    await ready();
+    await waitFor(() => expect(eventOf("holiday-2026-11-03")).toBeTruthy());
+    const holiday = eventOf("holiday-2026-11-03")!;
+    expect(holiday.title).toBe("文化の日");
+    expect(holiday.tone).toBe("holiday");
+    expect(holiday.allDay).toBe(true);
+    expect(holiday.editable).toBe(false);
+  });
+
+  it("H2: clicking a holiday opens no dialog", async () => {
+    answers.holidays = [{ date: "2026-11-03", name: "文化の日" }];
+    await ready();
+    fireEvent.click(await screen.findByText("文化の日"));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.queryByRole("button", { name: i18n.t("schedule.editEvent") })).toBeNull();
+  });
+
+  it("H3: the holiday request carries lang=ja and the current range", async () => {
+    await ready();
+    await waitFor(() => {
+      const paths = mockGet.mock.calls.map((call) => String(call[0]));
+      expect(paths.some((p) => /^\/calendar\/holidays\?start=\d{4}-\d{2}-\d{2}&end=\d{4}-\d{2}-\d{2}&lang=ja$/.test(p))).toBe(true);
+    });
   });
 
   it("T9: week view passes Sunday, 7 days and weekStart 0; day view passes today and 1", async () => {

@@ -1,4 +1,4 @@
-import { formatMeridiem, formatTimeRange as formatEventTimeRange } from "../../components/calendarView.utils";
+import { formatMeridiem, formatTimeRange as formatEventTimeRange, type CalendarViewEvent } from "../../components/calendarView.utils";
 
 export type ScheduleView = "day" | "week" | "month" | "list";
 export type DemoState = "normal" | "loading" | "empty";
@@ -270,6 +270,30 @@ export function normalizeShift(shift: ApiShift, t: (key: string) => string): Sch
     ownerName: null,
     description: shift.notes ?? null,
   };
+}
+
+export interface ApiHoliday {
+  date: string; // YYYY-MM-DD
+  name: string;
+}
+
+/** 祝日を金型の予定の形にする。終日・動かせない・tone holiday（design §3.6・§3.10） */
+export function toHolidayEvents(holidays: ApiHoliday[] | undefined): CalendarViewEvent[] {
+  if (!Array.isArray(holidays)) return [];
+  return holidays.flatMap((holiday) => {
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(holiday.date);
+    if (!match) return [];
+    const start = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+    return [{
+      id: `holiday-${holiday.date}`,
+      title: holiday.name,
+      start: holiday.date,
+      end: formatDateInput(addDays(start, 1)),
+      allDay: true,
+      tone: "holiday" as const,
+      editable: false,
+    }];
+  });
 }
 
 /** "event-12" → 12。シフト・仮の箱など予定でない id は null */
