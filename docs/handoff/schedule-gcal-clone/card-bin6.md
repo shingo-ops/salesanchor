@@ -10,7 +10,7 @@
 
 - このカードに書いたこと以外はしない。迷ったら止めて `NEEDS_DECISION:` で返す。
 - 作業は必ず `bash scripts/new-worktree.sh release/schedule-gcal-look-bin6 --claude` で作った作業場所の中で行う（作業場所の外の commit は見張りが止める）。
-- 色・寸法の直書き禁止。css の値は `var()`・`calc()`・`%`・`transparent`・`0`・`none`・`top` だけ。新しい寸法はトークン（§4）だけ。
+- 色・寸法の直書き禁止。css の色・寸法の値は `var()`・`calc()`・`%`・`transparent`・`0` だけ（`flex`・`center`・`absolute` などの言葉の値は可）。新しい寸法はトークン（§4）だけ。
 - 画面の文字は `t()` だけ。今回は新しい文言キーは無い（曜日は `Intl`、時刻は既存の `calendarView.am/pm/clockHour`）。
 - 試験は Mac で回さない。クラウドの作業場所で回す（`cd frontend && npx vitest run src/components/CalendarView.test.tsx`・`npx tsc --noEmit`・`npm run lint`）。
 
@@ -234,13 +234,13 @@ export function formatSlotLabel(
 ## 6. 試験（CalendarView.test.tsx）
 
 - import に `formatSlotLabel`・`formatWeekdayShort` を足す。
-- `:125` の `expect(p.slotEventOverlap).toBe(false);` はそのまま（既定）。新しい `describe('T8 appearance schedule', ...)` に次を足す:
+- `:125` の `expect(p.slotEventOverlap).toBe(false);` はそのまま（既定）。新しい `describe('T11 appearance schedule', ...)` に次を足す:
   1. `appearance="schedule"` かつ `mode="days"` で `fcProps().slotEventOverlap === true`。
   2. `appearance="schedule"` かつ `mode="month"` で `fcProps().slotEventOverlap === undefined`（月には渡さない）・`dayHeaderContent === undefined`。
   3. 包み（`container.querySelector('.comp-calendar')`）に `comp-calendar--schedule` が付く。既定（`appearance` なし）では付かない。
   4. `fcProps().slotLabelContent({ date: new Date(2026, 10, 8, 0, 0), text: '00:00' })` が `''`。`new Date(2026, 10, 8, 9, 0)` で `timeStyle="meridiem"` なら `'calendarView.am'`（この試験の `t` の差し替えはキーをそのまま返すため）、`timeStyle="h24"` なら渡した `text`（`'09:00'`）。
   5. `fcProps().dayHeaderContent({ date: new Date(2026, 10, 8), isToday: true })` を `render` すると `.comp-calendar__daynum--today` が 1 つ・数字は `8`。`isToday: false` では 0 個。
-- `describe('T9 formatWeekdayShort / formatSlotLabel', ...)`（`T7` の `tJa` の作り方を同じく使う）:
+- `describe('T12 formatWeekdayShort / formatSlotLabel', ...)`（`T7` の `tJa` の作り方を同じく使う）:
   - `formatWeekdayShort(new Date(2026, 10, 8), 'ja')` が `'日'`、`'en'` で `'Sun'`。
   - `formatSlotLabel(new Date(2026, 10, 8, 0, 0), '00:00', tJa, 'meridiem')` と `'h24'` の両方が `''`。
   - `formatSlotLabel(new Date(2026, 10, 8, 9, 0), '09:00', tJa, 'meridiem')` が `'午前9時'`。`'h24'` で `'09:00'`。
@@ -268,7 +268,7 @@ export const ScheduleAppearance: Story = {
   },
 };
 ```
-（`at` は同じファイル `:17` 付近の既存の関数。他の args は `meta.args` の既定を使う。型が合わなければ既存の `Week` の args の形に合わせる）
+（`at` は同じファイル `:8` の既存の関数。他の args は `meta.args` の既定を使う。型が合わなければ既存の `Week` の args の形に合わせる）
 
 ## 8. ADR-1065
 
