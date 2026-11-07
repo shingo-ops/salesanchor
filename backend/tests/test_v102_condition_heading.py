@@ -218,6 +218,20 @@ def test_heading_condition_replaces_with_marker(monkeypatch):
     assert _call() == ("Unsearched pack", "R3:未サーチ@見出し:L1")
 
 
+def test_heading_condition_keeps_leading_single_word_flag(monkeypatch):
+    _fake_resolver(monkeypatch, ("Unsearched pack", "R3:未サーチ", []))
+    got = _call(pf=_pf(basis="単品語あり・要確認(x),R5:パック既定"))
+    assert got == ("Unsearched pack", "単品語あり・要確認(x),R3:未サーチ@見出し:L1")
+    assert got[1].startswith("単品語あり・要確認(x),R3:")
+    assert condition_decided_by_word(got[1])
+
+
+def test_heading_condition_without_flag_starts_with_r3(monkeypatch):
+    _fake_resolver(monkeypatch, ("Unsearched pack", "R3:未サーチ", []))
+    got = _call()
+    assert got is not None and got[1].startswith("R3:")
+
+
 def test_heading_condition_accepts_product_kubun_default_prefix(monkeypatch):
     _fake_resolver(monkeypatch, ("Unsearched pack", "R4c:商品分類既定>R2:未サーチ", []))
     assert _call() == ("Unsearched pack", "R4c:商品分類既定>R2:未サーチ@見出し:L1")

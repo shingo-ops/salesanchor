@@ -1000,6 +1000,7 @@ _HEADING_DEFAULT_BASIS_SUFFIXES = ("R4:単位既定", "R5:パック既定")  # �
 _HEADING_FLAG_NOTE_PREFIX = "単品語あり・要確認("
 _HEADING_KUBUN_DEFAULT_PREFIX = "R4c:商品分類既定>"
 _HEADING_WORD_BASIS_RE = re.compile(r"^R[23]:")
+_HEADING_FLAG_NOTE_RE = re.compile(r"^単品語あり・要確認\([^)]*\),")
 
 
 def _heading_block(
@@ -1062,7 +1063,9 @@ def _heading_condition(
     new_groups, old_groups = groups(new_condition), groups(product_first["condition"])
     if len(new_groups) != 1 or new_groups != old_groups or None in new_groups:
         return None
-    return new_condition, f"{hb}@見出し:L{heading_line}"
+    m = _HEADING_FLAG_NOTE_RE.match(basis)
+    flag = m.group(0) if m else ""
+    return new_condition, f"{flag}{hb}@見出し:L{heading_line}"
 
 
 def _possible_missing_lines(items: list[dict], lines: list[str], *, until_last_price_line: bool = False) -> list[int]:
