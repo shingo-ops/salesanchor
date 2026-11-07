@@ -114,12 +114,14 @@ END $$;
 - 型は `backend/tests/test_leads_assignment_opened_at_pg.py:36-46` と同じ: `from tests.test_tcg_work_matching_integration import pg as pg  # noqa: F401  fixture` を使い、`pytestmark = pytest.mark.skipif(os.getenv("GITHUB_ACTIONS") != "true", reason="Disposable CI PostgreSQL service required")`。ファイルの中に `CREATE DATABASE` の文字が無ければ見張り（`test_tenant_loop_migration_guard.py:318-320`）の条件は `test_tcg_work_matching_integration import` の文字で満たす
 - migration の中身は本体のファイルを読んで流す（書き写さない。`test_leads_assignment_opened_at_pg.py:73-76` と同じ）
 - 試験の中身（1つの関数でよい）:
-  1. `tenant_9101`・`tenant_9102` のスキーマを作る（既存の会社番号とぶつけない。終わりに `DROP SCHEMA ... CASCADE` で片付ける）
+  0. 冒頭で `connection, _, _ = pg`（`pg` は3つ組を返す。手本 `test_leads_assignment_opened_at_pg.py:104`）。`pg` は試験ごとに専用 DB を作り、終わりに DB ごと消す（`test_tcg_work_matching_integration.py:398`・`:434`）ので、試験の中に片付けの文は書かない
+  1. `tenant_9101`・`tenant_9102` のスキーマを作る（既存の会社番号とぶつけない）
   2. `migrations/20260611_100000_create_channel_masters.sql` を流す → 2つのスキーマに `channel_masters` があることを確かめる
   3. `migrations/20261107_180000_drop_tenant_channel_masters.sql` を2回流す（2回目もエラーにならない）
-  4. `SELECT count(*) FROM information_schema.tables WHERE table_name='channel_masters' AND table_schema IN ('tenant_9101','tenant_9102')` が 0
-  5. `SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE c.relname='channel_masters_id_seq' AND n.nspname IN ('tenant_9101','tenant_9102')` が 0
-  6. public.channel_masters がある DB なら、それは消えていない（`to_regclass('public.channel_masters')` が流す前後で同じ）
+  4. `SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE c.relname IN ('channel_masters','channel_masters_id_seq') AND n.nspname ~ '^tenant_\d+$'` が 0（全 tenant_ スキーマで数える。部品が作る tenant_006・tenant_902・tenant_901 もループの範囲に入るので、範囲も一緒に確かめる）
+  5. 手順2の直後に同じ文で数えて 4（2スキーマ × 表と連番）以上であることも assert する（消す前に在ったことの確かめ。この assert が試験の中の証拠になる）
+  - public の名簿（`20261106_190000_create_public_channel_masters.sql`）はこの試験の DB では作らない（`pg` 部品が流さない・`public.tenants` を要る）。public が残ることは本番の §3 の h で確かめる
+  - 試験ファイルに書く migration の名前はこの2本（20260611・20261107_180000）だけにする。他の全社ループの migration の名前を書くと `_REVIEWED` の登録が要る
 - 20260611 が他の前提（関数・型）を要求して2で落ちたら、出力を貼って BLOCKED:（足場を勝手に作らない）
 - この試験は手元では skip になる。確かめは CI（§3 の c）
 
@@ -131,12 +133,12 @@ END $$;
 |---|---|
 | a. 古い表を作る道が無い | `grep -n "20260611_100000_create_channel_masters" scripts/run_all_migrations.sh backend/tests/rls_bootstrap.py` が0件 |
 | b. 新しい migration が登録されている | `grep -n "20261107_180000_drop_tenant_channel_masters" scripts/run_all_migrations.sh` が1件で、ファイルの最後の run_sql |
-| c. migration が冪等で、表と連番が消える | 2-11 の試験が CI（backend の pytest）で pass。CI のログから該当行（`test_drop_tenant_channel_masters_pg.py ... PASSED`）を PR コメントに貼る。skip になっていたら合格にしない。psql で直に流して確かめない（クラウドの決まり: SQL は pytest の中だけ） |
+| c. migration が冪等で、表と連番が消える | CI の `pytest-run` が緑。理由: CI は `GITHUB_ACTIONS=true` なので 2-11 の skipif は偽。`pg` 部品は環境が無いと assert で落ちる（`test_tcg_work_matching_integration.py:386-391`）ので CI では黙って skip にならない。CI は `pytest -q`（`.github/workflows/test.yml:253`）でファイル名の行を出さないので、PR コメントにはログ末尾の `N passed` の行を貼る。psql で直に流して確かめない（クラウドの決まり: SQL は pytest の中だけ） |
 | d. 分類の件数 | `grep -c "^  ('" migrations/20261024_100300_create_ai_cloud_views.sql` の前後差が -3。`grep -n "'tenant_\*','channel_masters'" migrations/20261024_100300_create_ai_cloud_views.sql` が0件 |
 | e. 検索 K1 | §1 の検索が0件のまま |
 | f. 試験 | `backend/tests/test_tenant_loop_migration_guard.py`・`backend/tests/test_value_migrations_neutralized.py`・`backend/tests/test_rls_bootstrap_ordering.py`・`scripts/tests/test_migration_value_writes.py` を手元で流して全部通る。PG が要る試験（T10・2-11 など）は CI で確かめる |
 | g. CI | 必須チェックが緑。ただし process-artifacts gate は「DROP TABLE に PO の GO 記録が無い」で赤のままになるのが正しい（GO は PO 本人がマージ前に出す）。migration-guard のチェック6 は PR 本文の `ADR-1069` で通る。それ以外の赤は直す |
-| h. 本番（マージ後・Opus が行う） | 読み取り専用の鍵で `information_schema.tables` の `table_name='channel_masters'` を schema ごとに数え、public 1・tenant_* 0。反映を2回またいで変わらない（設計 K1） |
+| h. 本番（マージ後・Opus が行う） | 読み取り専用の鍵で `SELECT n.nspname, c.relname FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE c.relname IN ('channel_masters','channel_masters_id_seq') ORDER BY 1,2` を流し、public の2行だけ。反映を2回またいで変わらない（設計 K1）。`information_schema.tables` は reader の権限で絞られて表が残っていても 0 と出るので使わない。反映前の実測（2026-11-07 15:01 JST）: public と tenant_001・003・004・005・006 の各2行、計12行（reader で pg_catalog が読めることも確認済み） |
 
 ## 4. 想定分岐
 
@@ -150,7 +152,7 @@ END $$;
 ## 5. 本番に出す前と後（Opus と PO が行う。実装役はしない）
 
 1. 条件の確認: 2026-11-14 02:06 UTC 以降に、PR-B 反映後のエラーが0（設計 §6 の4 の②）。数える所は Opus が条件の確認の前に決めて PR に書く（候補: 本番 backend のログで channel_masters・conv_logs・lang_judge を含む ERROR 行の件数／Deploy 以降の監視の通知）。PR-B の本番反映の成功時刻も Deploy to VPS の記録で確かめて書く
-2. 控え（AGENTS.md の決まりどおり reader 鍵の道・SELECT だけ）: 反映の直前に、読み取り専用の鍵で5社それぞれ `SELECT * FROM tenant_00X.channel_masters ORDER BY id` を1文ずつ流し、出力と sha256 を `docs/handoff/channel-master-shared/pr-c-backup/` に置く。加えて Deploy to VPS のログの `✅ Backup:` 行（`.github/workflows/deploy.yml:214`・`:221`、全体の控え）のファイル名を PR に記録する。pg_dump が要るときは PO が `!` で流す
+2. 控え（AGENTS.md の決まりどおり reader 鍵の道・SELECT だけ）: 反映を始める前に（デプロイ中は ai_ro が約70秒外れる・usage.md §4）、読み取り専用の鍵で5社それぞれ `SELECT * FROM ai_ro.tenant_00X__channel_masters ORDER BY id` を1文ずつ流す（ベース表は reader では 42501。ビュー5本の実在は 2026-11-07 15:01 JST に確認済み）。出力と sha256 を `docs/handoff/channel-master-shared/pr-c-backup/` に置く。usage.md:16 の「出力は /tmp/CC報告ファイル/ に置く」の例外: 中身は連絡手段の名前など6行×5社で秘密の列は無く、戻すときの正本として repo に残す必要があるため（PO の決めた範囲の外に出すものではない）。加えて Deploy to VPS のログの `✅ Backup:` 行（`.github/workflows/deploy.yml:214`・`:221`、全体の控え）のファイル名を PR に記録する。pg_dump が要るときは PO が `!` で流す
 3. PO 本人の「GO #PR番号」→ PR 本文の GO記録に原文を転記 → マージ → Deploy to VPS の成功を確かめる
 4. §3 の h を反映直後と次の反映の後の2回数える
 

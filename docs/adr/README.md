@@ -244,7 +244,7 @@
 | [ADR-1066](./ADR-1066-distribution-sheet-15-columns-product-id.md) | ADR-1066: 配信シートは PO が決めた15列の並びにし、最後に商品IDを載せる | Accepted | — | — |
 | [ADR-1067](./ADR-1067-public-tenant-config-tables-rls.md) | ADR-1067: 会社の列を持つ public の 8 表に RLS を付ける（段階④） | Proposed | — | — |
 | [ADR-1068](./ADR-1068-staff-self-registration.md) | ADR-1068: スタッフの自己登録（招待リンク → 申込 → Discord の番号 → 個室と初回ログイン） | Proposed | — | — |
-| [ADR-1069](./ADR-1069-drop-tenant-channel-masters.md) | ADR-1069: 古い会社ごとの連絡手段の名簿（tenant_NNN.channel_masters）を消す | Accepted | — | — |
+| [ADR-1069](./ADR-1069-drop-tenant-channel-masters.md) | ADR-1069: 古い会社ごとの連絡手段の名簿（tenant_NNN.channel_masters）を消す | Proposed | — | — |
 
 ## ステータス凡例
 

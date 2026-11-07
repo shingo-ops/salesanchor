@@ -2,7 +2,7 @@
 
 | 項目 | 内容 |
 |------|------|
-| ステータス | Proposed（PO 本人の「GO #PR番号」でマージし、本番で K1＝会社ごとの表0 を反映2回またいで確かめたら Accepted に上げる） |
+| ステータス | Proposed（PO 本人の「GO #PR番号」でマージし、本番で K1＝会社ごとの表0 を反映2回またいで確かめたら採用に上げる） |
 | 備考 | 設計 `docs/handoff/channel-master-shared/design.md` §6 の4（PR-C）は PO 実装承認 2026-11-06「1」の範囲。PO 2026-11-07「1,2を順番に」（2＝PR-C）。表を消すので ADR-1003 の例外にあたり、委任 GO では出さない |
 | 起案日 | 2026-11-07 |
 | 方針の決定者 | Shingo（PO）。細部は PO の委任に基づき Opus が設計 |
@@ -16,7 +16,7 @@
 1. 会社ごとの連絡手段の名簿 `tenant_NNN.channel_masters`（と連番 `channel_masters_id_seq`）を、新しい migration で全社分消す。`DROP TABLE IF EXISTS` で、CASCADE は付けない。
 2. 毎回の反映で全 migration を流し直す台本 `scripts/run_all_migrations.sh` から、古い表を作る `20260611_100000_create_channel_masters.sql` の行を外す。古い migration のファイル自体は過去の記録として残す。
 3. 試験の足場（`backend/tests/rls_bootstrap.py` ほか）と、読み取り専用の窓の列の分類（`migrations/20261024_100300_create_ai_cloud_views.sql` の tenant_* channel_masters 3行）を同じ PR で外す。
-4. 消す前に、5社の表の中身を読み取り専用の鍵で控え（SELECT の出力と sha256）として残す。反映の全体の控えは deploy の `scripts/backup.sh` に任せる。
+4. 消す前に、5社の表の中身を読み取り専用の鍵で（`ai_ro` のビューから）控え（SELECT の出力と sha256）として残す。反映の全体の控えは deploy の `scripts/backup.sh` に任せる。
 5. マージは次の3つが揃ってから: PR-B 反映後に検索 K1 が0件／PR-B 反映から7日間エラー0（最短 2026-11-14）／PO 本人の「GO #PR番号」。
 
 ## Why（なぜ）
@@ -36,6 +36,6 @@
 
 | 基準 | 検証方法 |
 |---|---|
-| 会社ごとの表が0 | 読み取り専用の鍵で `information_schema.tables` の `table_name='channel_masters'` を schema ごとに数え、public 1・tenant_* 0。反映を2回またいで変わらない |
+| 会社ごとの表が0 | 読み取り専用の鍵で `pg_class` と `pg_namespace` から `channel_masters`・`channel_masters_id_seq` を schema ごとに並べ、public の2行だけ。反映を2回またいで変わらない（`information_schema.tables` は reader の権限で絞られるので使わない） |
 | 冪等で連番も消える | CI の使い捨て PostgreSQL の試験 `backend/tests/test_drop_tenant_channel_masters_pg.py` が pass |
 | 作り直されない | `scripts/run_all_migrations.sh` に 20260611 の行が無い |
