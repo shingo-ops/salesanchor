@@ -90,6 +90,16 @@
 - leads.py:3143-3189: 重複を消す → 13表を付け替える → 空欄を埋める → loser のリードを消す。
 - conversation_logs の FK は ON DELETE RESTRICT。付け替えの一覧（:3014）から外すと、会話の写しを持つリードの統合が最後の段で止まる。
 
+### 8-6 設計審査2回目で足した事実（2026-11-07・origin/main 170ff9612・生出力 /tmp/CC報告ファイル/conv/arch2-verify*.txt・meta-readers.txt・r6〜r10）
+- 画像の送信 leads.py:2453-2460 は `direction = 'inbound' ORDER BY created_at DESC, id DESC LIMIT 1` の sender_id・platform で送り先を決める。未読に戻す leads.py:1300-1310 も同じ並びで1行を選ぶ。
+- 手の記録の削除は `UPDATE ... SET deleted_at = :now`（conv_logs.py:440-441）。leads.py と meta_inbox.py には deleted_at の語が 0 件。analytics.py:2498・:2517・lang_judge.py:79・:118 は条件あり。
+- 会話の流れは `ORDER BY created_at ASC, id ASC`（leads.py:1018・:1037）。成約分析は meta 側 `m.created_at AS ts`（analytics.py:2496）、conv 側 `c.occurred_at AS ts`（:2515）。
+- 言語判定の除外条件は conversation_logs 側だけ（lang_judge.py:33-37 が `cm.platform = cl.channel_type`）。名簿で is_verbatim=FALSE は phone・in_person（r10.txt）。
+- 本番の言語付き受信（消した印なし）: 会社1 meta 1842（instagram 931・messenger 909・discord 2）・conv 0。会社4 meta 25・conv 1（r6・r9）。消した印の付いた行は両社・両表とも 0。
+- 会社4 の conv の1行（id=6・リード38・phone・en）は meta id=109（phone・en）と同じ会話。リード38 の meta の言語付き受信はこの1行だけ（r7・r8）。今の判定は en・1件・未確定。
+- 画面は `res.confident && res.language !== null` のときだけ言語を変える（frontend/src/pages/inbox/useInboxState.ts:723）。
+- meta_messages を読む所の一覧は meta-readers.txt（72行）。leads.py:1412（訳）・:1567（添付の取り直し）は message_id で1行を指す。reaction_writer.py:115・discord_reactions.py:107 は Discord の行を指す。
+
 ## 9. 未確認
 - 手で記録した会話が、本番画面の会話の流れに出ないこと（コードからは出ない作り。画面では見ていない）。
 - 会社1（テスト株式会社）の 5421 件を何に使っているか。
