@@ -103,6 +103,7 @@ const CALENDAR_EVENTS_API = /^\/api\/v1\/calendar\/events$/;
     await expect(page.locator("main")).toBeVisible();
     await expect(page.locator("main .sa-loading-block")).toHaveCount(0);
     await expect(page.locator(NO_ERROR_BANNER)).toHaveCount(0);
+    await expect(page.locator(".error-message")).toHaveCount(0);
   });
 
   test("S11 リードの詳細が開く", async ({ authedPage: page }) => {
@@ -118,6 +119,7 @@ const CALENDAR_EVENTS_API = /^\/api\/v1\/calendar\/events$/;
     await expect(page.locator("main")).toBeVisible();
     await expect(page.locator("main .sa-loading-block")).toHaveCount(0);
     await expect(page.locator(NO_ERROR_BANNER)).toHaveCount(0);
+    await expect(page.locator(".error-message")).toHaveCount(0);
   });
 
   test("S12 予定表が開きエラーが出ない", async ({ authedPage: page }) => {
@@ -129,8 +131,8 @@ const CALENDAR_EVENTS_API = /^\/api\/v1\/calendar\/events$/;
     await page.goto("/schedule");
     expect((await events).status(), "予定の API の応答").toBeLessThan(400);
     await expect(page.locator("main .comp-calendar")).toBeVisible();
-    await expect(page.locator("main .sa-loading-block")).toHaveCount(0);
-    await expect(page.locator(NO_ERROR_BANNER)).toHaveCount(0);
+    await expect(page.locator("main .schedule-loading")).toHaveCount(0);
+    await expect(page.locator("main .schedule-error")).toHaveCount(0);
     await page.waitForTimeout(5_000);
     expect(errors, `console.error が ${errors.length} 件`).toHaveLength(0);
   });
@@ -139,6 +141,8 @@ const CALENDAR_EVENTS_API = /^\/api\/v1\/calendar\/events$/;
   - 予定表の目印は金型 CalendarView の外枠の class `comp-calendar`（`frontend/src/components/CalendarView.tsx:159-160,232`。FullCalendar の名前は金型の外に出さない ADR-1065 に合わせる）。SchedulePage の中にあることを実物で確かめる。
   - `GET /api/v1/leads` の返事が配列であること（`backend/app/routers/leads.py:214-217` の `list[LeadResponse]`）。
   - InventoryPage・LeadEditPage・SchedulePage が開いただけで GET 以外を送らないこと。
+  - エラーの出方は画面ごとに違う（審査 2026-11-08 の指摘。生出力 `/tmp/CC報告ファイル/recon-produi-15.txt`）。在庫表は `.error-message`（`frontend/src/pages/inventory/InventoryPage.tsx:549`）、リードの詳細も `.error-message`（`frontend/src/pages/leads/LeadEditPage.tsx:147`）。S4 と同じく `.error-banner` と `.error-message` の両方が 0 件であることを見る。予定表は読み込み中が `.schedule-loading`（`SchedulePageImpl.tsx:876`）、失敗が `.schedule-error`（`SchedulePageImpl.tsx:1525`）なので、この 2 つが 0 件であることを見る。
+  - 予定表は開くと `GET /api/v1/shifts` も呼ぶ（`SchedulePageImpl.tsx:961`）。`shifts.view` が要る（`backend/app/routers/shifts.py:83-84`）。点検用の人の役割「点検用（見るだけ）」は `shifts.view` を持つ（`/tmp/CC報告ファイル/checker-perms.txt:2`、本番の読み取り 2026-11-07）。403 の console.error で S12 が落ちることは無い。
   - リードの番号は失敗の文に出さない（公開リポジトリの実行記録に残るため。ADR-1053 と同じ考え）。上のコードは道すじの形と状態の番号だけを出す。
 
 ## 5. 選ばなかった案
@@ -159,6 +163,7 @@ const CALENDAR_EVENTS_API = /^\/api\/v1\/calendar\/events$/;
 | 配備のたびにログインが 1 回増え、ログインの絞り（10r/m・burst 5、ADR-1051 Why）に当たる | 1 回の点検でログインは 1 回。配備が続いても concurrency で点検は 1 本ずつ。絞りは送り元ごとで、GitHub の機械とお客さんは別 |
 | 配備のたびに知らせが鳴りすぎる | 合格は知らせない。落ちたときだけ。今まで毎朝落ちていた S3 は本件で直る |
 | 配備の直後はまだ切替の途中で落ちる | `workflow_run` は配備の仕事が終わってから動く。配備は切替と確認を終えてから終わる（deploy.yml の blue-green と nginx の確認）。それでも落ちた場合は retries 1 で 1 回だけ試し直す |
+| `workflow_run` で動くとき、取り出す版（GITHUB_SHA）は main の最後の commit で、配備した commit と違うことがある（GitHub 公式資料 events-that-trigger-workflows の表） | 点検は本番の URL を外から開くだけで、取り出した版は点検の台本にしか使わない。続けて合流があれば、その配備の後にもう一度点検が動く |
 | 文書だけの合流でも配備が動き、点検も動く | GitHub の公開リポジトリの機械で、費用は 0。1 回 5〜6 分。困るほど多ければ、件数を数えてから絞り方を決める（勝手に絞らない） |
 
 戻し方: 本 PR を revert する PR を出して合流する（nginx は配備が前の設定へ作り直す。点検の入口は消える）。
@@ -177,7 +182,7 @@ const CALENDAR_EVENTS_API = /^\/api\/v1\/calendar\/events$/;
 ## 9. 手順（担当）
 
 1. 設計の審査（クラウド）。REVISE なら直して再審査。
-2. 実装（クラウドの Sonnet）。§4 のとおり。ADR 2 本の改訂と README の作り直しも含む。CI を緑にする。
+2. 実装（クラウドの Sonnet）。§4 のとおり。ADR 2 本の改訂は Opus が設計と一緒に済ませた（実装役は触らない）。CI を緑にする。
 3. マージ前の審査役（reviewer・opus）が最新の HEAD で APPROVE。
 4. GO 記録（PO の委任に基づく Claude Opus 発行）→ 合流 → 配備。
 5. K1〜K6 を配備の後の自動実行で確かめる。K7 は翌朝の実行で確かめる。
