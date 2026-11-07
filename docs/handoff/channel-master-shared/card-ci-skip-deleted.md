@@ -8,6 +8,8 @@
 - 基準: origin/main 198c583c0（2026-11-07 取得）。行番号はこの版で Opus が読んで確かめた
 - ブランチ: `release/migration-test-skip-deleted`（作成済み）
 - 起票: Draft・`--base main`・`shingo-cc` 名義。危険パス（migrations/・deploy.yml・本番 scripts/）は含まない
+- 現在地: docs/handoff/channel-master-shared/recon.md（名簿の付け替え全体の現在地）。この直しの観測事実は下の §0
+- 関係する ADR: ADR-135（main への合流＝本番に出してよい宣言。この PR は危険パスを含まないので待たずに合流できる）・ADR-136（危険 PR の GO。PR-B は scripts/ を含むため GO 記録が要る。この直しはその PR-B を通すための前段）
 - 読んだ決まり: docs/handoff/design-partner-card-ops/guards/00-common.md・04-worktree.md・05-pr.md・10-executor.md
 - 受領確認: 着手の前に、§0 の1202行目の文が手元と同じかを1行で返してから始める
 - 停止: 迷ったら止まり、`BLOCKED:` か `NEEDS_DECISION:` で理由を返す
@@ -67,7 +69,7 @@
 
 ## 7. 維持の仕組み
 
-- 守り手: 設計担当（Opus）。台本を消す PR が出たとき、migration-test の「変更スクリプトを 1回目実行」が消した台本を動かしていないことを CI の記録で確かめる。
+- 守り手: 設計担当（Opus）。見張る所は .github/workflows/migration-test.yml の 1202 行目。台本を消す PR が出たとき、migration-test の「変更スクリプトを 1回目実行」が消した台本を動かしていないことを CI の記録で確かめる。
 - 前例の無い穴だったため、直しの理由を 1202 行目の上のコメントに残す。同じ確認の中で台本を選ぶ所はこの1か所だけ（`:1209`）。
 
 END OF CARD
