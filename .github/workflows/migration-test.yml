@@ -1199,7 +1199,8 @@ jobs:
           # shallow checkout 等で base SHA が無いと git diff は `fatal: bad object` になる。
           # これを `|| true` で握りつぶすと「変更なし」と誤判定し、migration を実際には
           # 実行しないまま緑（false-positive）になるため、明示的に exit 1 する。
-          if ! ALL_CHANGED=$(git diff --name-only "$BASE" "$HEAD"); then
+          # --diff-filter=d: PR で消したファイルは一覧から外す（消した台本を動かそうとして落ちるのを防ぐ）
+          if ! ALL_CHANGED=$(git diff --name-only --diff-filter=d "$BASE" "$HEAD"); then
             echo "::error::git diff $BASE..$HEAD に失敗（base SHA 不在の可能性）。fail-closed でジョブを失敗させます。checkout の fetch-depth: 0 を確認してください。"
             exit 1
           fi

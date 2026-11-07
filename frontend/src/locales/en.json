@@ -3978,7 +3978,13 @@
     "platformPlaceholder": "e.g. whatsapp_personal",
     "displayNamePlaceholder": "e.g. WhatsApp (Personal)",
     "add": "Add",
-    "saveError": "Failed to add"
+    "saveError": "Failed to add",
+    "visible": "Use in this company",
+    "visibleHelp": "Turned off channels are hidden from the lead channel picker. Existing leads and analytics are unchanged.",
+    "visibleAriaLabel": "Use {{name}} in this company",
+    "visibilityError": "Failed to update visibility",
+    "shared": "Shared",
+    "duplicateError": "A channel with the same name already exists"
   },
   "funnel": {
     "sectionTitle": "Funnel Dashboard",

@@ -164,7 +164,7 @@ async def conversion_items(db) -> dict[str, str]:
 | `backend/app/services/lang_judge.py:31・:84・:92・:122・:127`（1つ目の問い合わせ :84・:92 と2つ目 :122・:127 の両方） | `AND NOT EXISTS (SELECT 1 FROM public.channel_masters cm WHERE cm.platform = cl.channel_type AND cm.is_verbatim = FALSE AND (cm.tenant_id IS NULL OR cm.tenant_id = :tenant_id))`。名簿に無い値（例: 004社の meta_messenger 3件）は今と同じく数に入る |
 | `backend/app/services/tenant.py:1101-1113・:1262・:1303-1304・:1597-1602・:1788`（origin/main 8ab21523 の行。7e0bc67b1 から +15 行ずれた・中身は同じ） | 新しい会社に表と行を作らない（関数と呼び出しを消す）。既存会社の古い表は §6 まで残す |
 | `backend/app/services/channel_masters.py:10-19` | `DEFAULT_CHANNEL_MASTERS`・`ACTIVE_CHANNEL_PLATFORMS` を消す。別名 `CHANNEL_TYPE_ALIASES`（:21-24）は入力の言い換えなので残す |
-| `scripts/migrate_20260621_030000_backfill_lead_channel_type.py` | 2026-06 の1回きりの埋め戻しで、消す定数を読むため、ファイルごと消す（PR 本文の消すファイル欄に書く） |
+| scripts/migrate_20260621_030000_backfill_lead_channel_type.py（PR-B で削除済み。消えたファイルなので引用の印を外した） | 2026-06 の1回きりの埋め戻しで、消す定数を読むため、ファイルごと消す（PR 本文の消すファイル欄に書く） |
 | `scripts/lead_regression/generate.py:80・:157・:174-175・:305・:313-314・:546・:552・:568` と `scripts/lead_regression/k3_run.py:54・:72・:101` | 作り物のデータを作る台本。`lcf.CHANNEL_*` を台本の中の定数に置き換える（:546・:552・:568 の SQL 文の中も同じ定数を使う）。`lcf.analyze` の呼び出しすべてに対応表 `{"messenger":"baseline","instagram":"channel_instagram","whatsapp":"channel_whatsapp"}` を渡す（台本は試験用で本番の名簿を読まない・K4 の対象外） |
 | 画面 `frontend/src/components/ChannelTypeCombobox.tsx:44`（リードの連絡手段の選択欄）と `frontend/src/pages/inbox/ManualRecordSection.tsx:47`（受信箱の手入力欄） | 選択に使う口 `GET /channel-masters?for=picker&keep=<今の値>` を読む（隠した行が外れる）。選択欄は `keep` に `value` を渡す。手入力欄は `keep` に `currentPlatform` を渡す |
 | `backend/app/routers/conv_logs.py:189-217`（一覧）の引数 | `for=picker` のときは `list_channels_for_picker(keep_platform=keep)`。指定なしは今と同じく全行（設定画面 `frontend/src/pages/admin/ChannelMastersPage.tsx:36` 用・`is_hidden` 付き） |
@@ -210,7 +210,7 @@ async def conversion_items(db) -> dict[str, str]:
 | K2 5社で同じ6つ | 各社の管理者で「チャネル設定」を開き、6つの名前と並びを切替前の画面写しと突き合わせる。リード編集の連絡手段の選択欄も同じ |
 | K3 会社独自は自社だけ | §5 の新しい試験が CI で緑 |
 | K4 直書き0 | 下の「検索 K4」の分析・カルテ・言語判定の部分が 0件。検索が働くことは、今の origin/main で流して10件出ることで先に確かめる（backend/app/routers/analytics.py の他の画面の行が出た場合は一覧にして対象外の理由を書く） |
-| K5 001社の分析が前後で同じ | PR-B の前に `GET /analytics/lead-conversion-factors`（001社）の応答を丸ごと保存。反映後に同じものを取り、全項目一致（diff 0行） |
+| K5 001社の分析が前後で同じ | （PO 2026-11-07「1」で方法を変更。応答を安全に取る道が無いため）入力側: PR-B の前に読み取り専用の鍵で 001 社の分析の入力（leads 472行・lead_sales_form_selections 470行・meta_messages 3678行・WhatsApp 1739行、2026-11-06 23:50 ごろ取得、sha256 付き）を保存。反映後に同じ問い合わせで取り直し、全件一致（diff 0行）。計算側: `backend/tests/test_lead_conversion_factors.py` の数値の期待を1つも変えずに CI 緑 |
 | K6 新しい会社で写し0・6つ表示 | §5 の新しい試験が CI で緑 |
 | D1 会社ごとに隠せる | 管理センターの「チャネル設定」で電話を切り、リードの連絡手段の選択欄から電話が消える。切り戻すと出る。別の会社では出たまま（本番は試しの会社で確かめ、終わったら戻す） |
 
