@@ -30,6 +30,7 @@ import "../schedule.css";
 import {
   type AnchorRect,
   type ApiCalendarEvent,
+  type ApiHoliday,
   type ApiShift,
   type DemoState,
   LIST_VIEW_DAYS,
@@ -55,6 +56,7 @@ import {
   normalizeShift,
   startOfMonth,
   toCalendarEnd,
+  toHolidayEvents,
   toRangeEnd,
   toRangeStart,
 } from "./schedule-utils";
@@ -911,7 +913,7 @@ function buildSchedule(
 }
 
 export default function SchedulePage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { hasPermission, isTenantAdmin } = usePermissions();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -949,6 +951,12 @@ export default function SchedulePage() {
   );
   const shiftsQ = useApiQuery<ApiShift[]>(
     `/shifts?date_from=${formatDayKey(rangeStart)}&date_to=${formatDayKey(rangeEnd)}`,
+    { enabled: live },
+  );
+  // 便4（G7）: 日本の祝日。会社によらず同じ。取れなくても予定の画面は止めない（読み込み中・失敗の文には入れない）
+  const holidayLang = i18n.language?.startsWith("en") ? "en" : "ja";
+  const holidaysQ = useApiQuery<{ holidays: ApiHoliday[] }>(
+    `/calendar/holidays?start=${formatDayKey(rangeStart)}&end=${formatDayKey(rangeEnd)}&lang=${holidayLang}`,
     { enabled: live },
   );
   const invalidate = useInvalidateApi();
@@ -1239,6 +1247,7 @@ export default function SchedulePage() {
       color: getOwnerMeta(ownerByUserId, item.ownerUserId, currentOwnerUserId).color,
       editable: canMoveItem(item),
     })),
+    ...toHolidayEvents(holidaysQ.data?.holidays),
   ];
 
   // 動かす・長さを変える（design §3.3）
