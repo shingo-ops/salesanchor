@@ -14,6 +14,7 @@
 - security-recon: [docs/handoff/gas-viewer-fresh-fast/security-recon.md](../../../handoff/gas-viewer-fresh-fast/security-recon.md)
 - design: [docs/handoff/gas-viewer-fresh-fast/design.md](../../../handoff/gas-viewer-fresh-fast/design.md)
 - ADR: [ADR-1019](../../../adr/ADR-1019-inventory-viewer-separate-accounts.md)
+- 子の設計仕様書（契約手続きと請求書。草案）: [docs/specs/viewer-contract-invoicing/README.md](../../viewer-contract-invoicing/README.md)
 
 ## 境界（他テーマとの取り決め）
 
