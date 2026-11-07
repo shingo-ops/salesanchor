@@ -191,9 +191,9 @@ PR 本文: tokens.css にトークンを 2 つ足すので、`frontend/scripts/c
 高さ: 閉じた形は題名・日時 1 行・種類・切り替え 0〜2 行・場所 1 行・説明 1 行で、今の 496 より低くなる。全部開いた形の高さは今の 544 に近い。小窓の高さの上限（`frontend/src/pages/schedule.css:372-387` の `max-height: min(var(--schedule-popover-max-h), calc(100vh - var(--space-6)))`）と中身だけを巻く形（`:417-429`）は変えないので、高さ 768 でもボタンは中に収まる → G3 ④。本番で 1448 と 768 の 2 通りで測る（高さを変えられないときは、上限の計算の値を書き、768 では測れなかったと報告する）。
 
 表示の切替（G11）:
-- 4 つのボタン（`SchedulePageImpl.tsx:1332-1345`）を、今の表示の名前（「週」）＋下向きの絵（`NAV_ICONS.chevronDown`）の金型 `Button` 1 つにする。`aria-haspopup="menu"`・`aria-expanded` を付ける。
+- 4 つのボタン（`frontend/src/pages/schedule/SchedulePageImpl.tsx:1332-1345`）を、今の表示の名前（「週」）＋下向きの絵（`NAV_ICONS.chevronDown`）の金型 `Button` 1 つにする。`aria-haspopup="menu"`・`aria-expanded` を付ける。
 - 押すと金型 `ContextMenu`（`frontend/src/components/ContextMenu.tsx`・受信箱で使っている）を、ボタンの左下を基準に開く。中身は日・週・月・一覧の 4 つ。選ぶと切り替わって閉じる。Esc・外を押すと閉じる（金型の動き）。
-- 開いている間は文字の近道（d・w・m など）を効かせない（`SchedulePageImpl.tsx:1236` の「小窓が開いている」に足す）。
+- 開いている間は文字の近道（d・w・m など）を効かせない（`frontend/src/pages/schedule/SchedulePageImpl.tsx:1236` の「小窓が開いている」に足す）。
 - 表示切替には新しい css の class を作らない。古い `.schedule-view-switch*`（`frontend/src/pages/schedule.css:57-90`）は消す。
 - 金型 ContextMenu は document の mousedown で「外を押した」と見て閉じる（`frontend/src/components/ContextMenu.tsx:141`）。開いているときに切替ボタンを押すと閉じてすぐ開き直す（審査 1 回目 M1）。開いているときだけボタンの mousedown を止め、閉じるのはボタンの click が行う（金型は変えない）。
 
@@ -202,7 +202,7 @@ PR 本文: tokens.css にトークンを 2 つ足すので、`frontend/scripts/c
 - 表示切替に金型 `NavDropdown` → 行き先が画面の住所（route）に結び付いた部品で、表示の切り替えには使えない。
 - 日時の 1 行を自前の文字の組み立てで作る → 金型の時刻の書き方（便2・便6 と同じ「午前10時」）と分かれる。金型の関数を使う。
 
-試験（`frontend/src/pages/schedule/SchedulePageImpl.test.tsx`・`schedule-utils.test.ts`）:
+試験（`frontend/src/pages/schedule/SchedulePageImpl.test.tsx`・`frontend/src/pages/schedule/schedule-utils.test.ts`）:
 - 近道の試験の `pressed`（`:246-247`）は「表示切替のボタンの名前がその表示か」に変える。
 - T1・T3・T4（`:539-585`）は先に日時の 1 行を押してから欄を読む。T1 は 1 行に「午前10時～午前11時」「午前4時～午前5時」「午後3時～午後4時」が出ることも見る。
 - 足す（C1〜C4・既存の T1〜T9 と名前を分ける）: 作る小窓で題名の欄に文字が入っている（`document.activeElement`）、場所・説明は 1 行だけで欄が無い／押すと欄が出る、表示切替のボタンを押すと 4 つが出て「月」を選ぶと月になる、切替を開いている間は「d」が効かず、閉じた後は効く。
@@ -345,9 +345,9 @@ PR 本文: tokens.css にトークンを 2 つ足すので、`frontend/scripts/c
 ### 7 回目（便3・G3・G11）: APPROVE（2026-11-07・2 回目は 11:40〜11:42 UTC・クラウドの Opus 2 回・origin/release/schedule-gcal-create-bin3 b9cafcb1b・照合は origin/main 37fa04f7b）
 
 - 結果はファイルに commit させず、返事の本文で読んだ。1 回目の返事は記録の上で途中から切れた（(4) 以降は読めていない）ため、(4)(5) だけを短い返事で 2 回目に回した（セッション cse_01HHUUpSviko7E4E978kBaVX・cse_01HHUUpSGw9UVCwgS7oK5r83）。
-- (1) ○ H1: React 18.3.1 と Chromium で、直す前は開いた直後の文字の行き先が BODY、直した後は題名の欄（`TextField.tsx:43-55` は ref を渡す）。M1: 直す前は 2 回目の押しで一覧が開いたまま、直した後は閉じる（`ContextMenu.tsx:136-142`・`Button.tsx:41,68`）。M2: `eslint.config.js:31` は warn・前例 `CalendarView.test.tsx:1`。L ○。
+- (1) ○ H1: React 18.3.1 と Chromium で、直す前は開いた直後の文字の行き先が BODY、直した後は題名の欄（`frontend/src/components/TextField.tsx:43-55` は ref を渡す）。M1: 直す前は 2 回目の押しで一覧が開いたまま、直した後は閉じる（`frontend/src/components/ContextMenu.tsx:136-142`・`frontend/src/components/Button.tsx:41,68`）。M2: `frontend/eslint.config.js:31` は warn・前例 `frontend/src/components/CalendarView.test.tsx:1`。L ○。
 - (2) ○ 「…」: 幅 320 で文字の実寸 471 に対し見える幅 275、はみ出さない。
-- (3) ○ 場所・説明の欄: 下書きの値は文字列で既定は空（`SchedulePageImpl.tsx:77-78`・`:984-985`・`:1155-1156`）。
-- (4) ○ 試験の直しで既存の試験は落ちない（コードを読んで確かめた・vitest は回していない）。C4 の順: 金型の Esc は document で受けて伝わりを止め（`ContextMenu.tsx:122-131`）、近道は window で受ける（`SchedulePageImpl.tsx:1272-1276`）。開いている間の d は `:1236`・`:1246` で止まり、閉じた後は `:1258` で日に変わる。
+- (3) ○ 場所・説明の欄: 下書きの値は文字列で既定は空（`frontend/src/pages/schedule/SchedulePageImpl.tsx:77-78`・`:984-985`・`:1155-1156`）。
+- (4) ○ 試験の直しで既存の試験は落ちない（コードを読んで確かめた・vitest は回していない）。C4 の順: 金型の Esc は document で受けて伝わりを止め（`frontend/src/components/ContextMenu.tsx:122-131`）、近道は window で受ける（`frontend/src/pages/schedule/SchedulePageImpl.tsx:1272-1276`）。開いている間の d は `:1236`・`:1246` で止まり、閉じた後は `:1258` で日に変わる。
 - (5) ○ 新しい食い違いなし。推奨 1 件: カード §8 の想定分岐の範囲「:297-397」→ 実物の describe は `:244-399` → 直した。
 - 試験を実際に回すのは実装の CI で確かめる。
