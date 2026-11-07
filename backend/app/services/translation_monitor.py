@@ -203,9 +203,12 @@ async def notify_translation_anomaly(
     sent = await _post_webhook(content)
     if sent:
         try:
+            await set_tenant_context(db, tenant_id)
             await _update_last_notified(db, tenant_id)
+            await clear_tenant_context(db)
             await db.commit()
         except Exception as exc:
+            await db.rollback()
             logger.warning("[translation_monitor] デバウンス更新失敗: %s", exc)
     return sent
 
