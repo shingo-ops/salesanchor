@@ -246,7 +246,7 @@
 | [ADR-1067](./ADR-1067-public-tenant-config-tables-rls.md) | ADR-1067: 会社の列を持つ public の 8 表に RLS を付ける（段階④） | Proposed | — | — |
 | [ADR-1068](./ADR-1068-staff-self-registration.md) | ADR-1068: スタッフの自己登録（招待リンク → 申込 → Discord の番号 → 個室と初回ログイン） | Proposed | — | — |
 | [ADR-1070](./ADR-1070-pool-reset-on-return.md) | ADR-1070: 接続を貸し出しに戻すたびに会社の文脈を消す（Bx） | Proposed | — | — |
-| [ADR-1071](./ADR-1071-plain-language-error-messages.md) | ADR-1071: 失敗したときの文は「何が起きたか＋次にすること」を誰でも分かる言葉で出す | Proposed | — | — |
+| [ADR-1071](./ADR-1071-plain-language-error-messages.md) | ADR-1071: 失敗したときの文は「何が起きたか＋次にすること」を誰でも分かる言葉で出す | Accepted | — | — |
 
 ## ステータス凡例
 
