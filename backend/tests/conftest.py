@@ -2260,3 +2260,10 @@ async def create_user_notice_tables(conn):
     """user_notices と、宛先の解決に使う表を作る（conn は engine.begin() の接続）。"""
     for ddl in USER_NOTICE_DDL:
         await conn.execute(text(ddl))
+
+
+# ADR-1063 便5: RLS の点検（scripts/check_public_tenant_rls.py）の試験で、使い捨ての DB に作る見本の表。
+# 本番の表の写しではない。backend/tests/test_check_public_tenant_rls.py が使う。
+RLS_PROBE_TABLE_DDL = "CREATE TABLE public.ci_rls_probe (id int PRIMARY KEY, tenant_id int NOT NULL)"
+RLS_PROBE_NO_TENANT_DDL = "CREATE TABLE public.ci_no_tenant (id int PRIMARY KEY)"
+RLS_PROBE_OTHER_SCHEMA_DDL = "CREATE TABLE ci_other.ci_rls_probe (id int PRIMARY KEY, tenant_id int NOT NULL)"
