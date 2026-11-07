@@ -14,9 +14,9 @@
 
 | # | 基準 | 検証方法 |
 |---|---|---|
-| K1 | Discord 連携の失敗 12 種類（recon §3-1 の 11 コード＋始めるときの失敗。§4-2 の表）それぞれで、起きたことと次にすることの1文が出る | 画面の試験: 理由ごとに URL を与えて表示文が §4-3 の文と一致（12＋未知 1 = 13 件）。PO は §4-3 の一覧を読んで○× |
+| K1 | Discord 連携の失敗 12 種類（戻り口の 12 コード（reason= 9 個と Discord との確認の失敗 3 個。grep で全件）を画面の 11 種類にまとめたもの＋始めるときの権限の失敗。§4-2 の表）それぞれで、起きたことと次にすることの1文が出る | 画面の試験: 理由ごとに URL を与えて表示文が §4-3 の文と一致（12＋未知 1 = 13 件）。PO は §4-3 の一覧を読んで○× |
 | K2 | 顧客用（/channels）と自社用（Discord 設定の自社タブ）で、同じ理由なら同じ文 | 2画面の試験が同じ対応表を通ることを確かめる（同じ理由コードで同じ文言キー）。両画面が同じ関数を import していることを grep で確かめる |
-| K3 | 本番で PO が試し用の入口を開くと、時間切れの文が出る。入口は何も書き込まない | PO がログインした状態で `https://api.salesanchor.jp/api/v1/discord/oauth/callback?state=test-expired&guild_id=100000000000000000` を開く → /channels に「時間切れにより連携できませんでした。もう一度お試しください。」。書き込みが無いことは §4-5 |
+| K3 | 本番で PO が試し用の入口を開くと、時間切れの文が出る。入口は何も書き込まない | 前提: 本番の札の保管庫（Redis）が正常なとき。ログインは不要（戻り口は認証なし。discord_oauth.py:228）。`https://api.salesanchor.jp/api/v1/discord/oauth/callback?state=test-expired&guild_id=100000000000000000` を開く → /channels に「時間切れにより連携できませんでした。もう一度お試しください。」。保管庫が止まっていると 11 の文になる（oauth_state.py:153-156 → discord_oauth.py:248-250）。そのときは保管庫が戻ってから開き直す。書き込みが無いことは §4-5 |
 
 ### 2-2. アプリ全体 — PO 承認待ち（提案）
 
@@ -91,15 +91,15 @@
 
 | ファイル:行 | 変更前 | 変更後 |
 |---|---|---|
-| backend/app/routers/discord_oauth.py:182-185 | `detail="権限が不足しています: tenant.profile.edit"` | `detail={"code": "permission_denied"}` |
-| backend/app/routers/discord_oauth.py:188-191 | `detail="一時的に Discord 連携を開始できません（設定不足）"` | `detail={"code": "discord_not_configured"}` |
-| backend/app/routers/discord_oauth.py:200-203 | `detail="一時的に Discord 連携を開始できません（Redis 接続失敗）"` | `detail={"code": "redis_error"}` |
+| backend/app/routers/discord_oauth.py:182-185 | `detail="権限が不足しています: tenant.profile.edit"` | `detail={"reason": "permission_denied"}` |
+| backend/app/routers/discord_oauth.py:188-191 | `detail="一時的に Discord 連携を開始できません（設定不足）"` | `detail={"reason": "discord_not_configured"}` |
+| backend/app/routers/discord_oauth.py:200-203 | `detail="一時的に Discord 連携を開始できません（Redis 接続失敗）"` | `detail={"reason": "redis_error"}` |
 | frontend/src/features/discord-connect/discordConnectError.ts（新規） | — | `getDiscordConnectErrorKey(reason: string \| null): string`。§4-2 のコード→文言キーの表。表に無ければ `discordConnect.error.unknown`。ADR-159 の discordSendError.ts と同じ書き方（定数の配列＋switch） |
 | frontend/src/pages/channels/ChannelsPage.tsx:135-137 | `t("channels.discordConnectError")` 固定 | `t(getDiscordConnectErrorKey(url.searchParams.get("reason")))` |
-| frontend/src/pages/channels/ChannelsPage.tsx:226 | `e instanceof ApiError ? e.message : …` | `ApiError` の `responseDetail.code` を `getDiscordConnectErrorKey` に通す（code が無ければ unknown） |
+| frontend/src/pages/channels/ChannelsPage.tsx:226 | `e instanceof ApiError ? e.message : …` | `ApiError` の `responseDetail.reason` を `getDiscordConnectErrorKey` に通す（reason が無ければ unknown） |
 | frontend/src/pages/channels/ChannelsPage.tsx:244 | 同上（切断） | `t("discordConnect.error.disconnectFailed")` |
 | frontend/src/pages/admin/DiscordOwnServerPanel.tsx:121-126 | guild_already_registered だけ専用、他は connectError | `t(getDiscordConnectErrorKey(params.get("reason")))` |
-| frontend/src/pages/admin/DiscordOwnServerPanel.tsx:146 | 開始の失敗で `discordOwnServer.requestFailed` | 226 と同じ（responseDetail.code を表に通す） |
+| frontend/src/pages/admin/DiscordOwnServerPanel.tsx:146 | 開始の失敗で `discordOwnServer.requestFailed` | 226 と同じ（responseDetail.reason を表に通す） |
 | frontend/src/locales/ja.json・en.json | `channels.discordConnectError`（1529）、`discordOwnServer.connectError`（3574）、`discordOwnServer.guildAlreadyRegistered`（3575） | 新しい `discordConnect.error.*` 10 キー（§4-3 の下の一覧）。古い3キーは使う所が無くなるので消す（同じ意味の文を2か所に置かない） |
 | docs/handoff/discord-oauth-ownership-proof/design.md:45 | 「接続に失敗しました（理由: …）」 | 事実（recon §3-3）と、本設計で直したことを書く |
 
@@ -123,8 +123,8 @@
 | frontend: discordConnectError.test.ts | 14 の理由（§4-3）すべてで期待の文言キーが返る。未知・null で unknown |
 | frontend: 戻り口のコードと表の突き合わせ | 試験が `backend/app/routers/discord_oauth.py` を文字列で読み、`reason=xxx` と `_ExchangeError("xxx")` のコードを全部取り出し、表に全部あることを確かめる（サーバーにコードを足して表を忘れると落ちる）。CI の frontend 試験は repo 全体を取り出している（.github/workflows/frontend-check.yml:15 checkout）が、frontend から ../backend を読めるかは審査で確かめる |
 | frontend: ChannelsPage・DiscordOwnServerPanel | `?discord_status=error&reason=invalid_state` で時間切れの文、`reason=guild_already_registered` で両画面が同じ文 |
-| backend: test_discord_oauth.py | 開始の 403・503 の detail が `{"code": ...}` で、日本語を含まない |
-| i18n | ja/en 同じキー（既存の CI） |
+| backend: test_discord_oauth.py | 開始の 403・503 の detail が `{"reason": ...}` で、日本語を含まない |
+| i18n | discordConnectError.test.ts で、表が返し得る全キーが ja.json と en.json の両方にあることを確かめる（既存の i18n 検査 frontend/scripts/check-i18n-missing-keys.js:30 は t("…") に直書きされたキーしか見ないため。手本 src/components/CalendarView.test.tsx） |
 
 ## 5. アプリ全体の見張り（A1。PO の承認後に便0 として作る）
 
@@ -160,3 +160,11 @@
 
 - frontend の試験から ../backend のファイルを読めるか（CI・手元とも）。読めない場合の代わり（backend 側の試験で frontend の表を読む等）は審査で決める
 - en の文（ja の §4-3 の承認後に作る）
+
+## 10. 設計審査の記録
+
+| 回 | 日時 | 審査役 | 判定 | 指摘と対応 |
+|---|---|---|---|---|
+| 1 | 2026-11-07 14:01 UTC | クラウドの Sonnet（読むだけ。対象 commit 7643967a8） | REVISE | (1) 関数で返す文言キーは既存の i18n 検査 check-i18n-missing-keys.js:30 に見えない → §4-6 の i18n 行を「試験で ja/en 両方のキーを確かめる」に直した (2) 前例 discordSendError.ts は detail.reason で受ける → 開始の detail を `{"reason": ...}` にそろえた（§4-4・§4-6） (3) K3 は保管庫（Redis）が止まっていると別の文になる・ログイン不要 → K3 に前提と外れたときの扱いを書いた (4) K1 の「11 コード」は grep で 12 → 直した |
+
+- §9 の未確認（frontend の試験から ../backend を読めるか）への答えは、実行記録の返事が途中で切れていて読めなかった。2 回目の審査で確かめる
