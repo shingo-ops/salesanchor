@@ -1,4 +1,4 @@
-# 会話の表を会社の中で1つにまとめる — 設計（KGI は PO 承認済み・設計審査2回目 REVISE を反映）
+# 会話の表を会社の中で1つにまとめる — 設計（KGI は PO 承認済み・設計審査3回目 APPROVE）
 
 > この文書は何か（1行）: 会社ごとに2つある会話の表を meta_messages の1つにまとめ、全会話を必ずリードに結ぶまでの手順。
 > 現在地: [recon.md](recon.md)。上位: docs/specs/db-ssot/conversation-unification/design.md・docs/specs/db-ssot/ideal-state.md。関連 ADR: ADR-106・ADR-096・ADR-110・ADR-1049・ADR-136・ADR-1003。
@@ -27,6 +27,7 @@
 - 手の記録を meta_messages へ: conv_logs.py の作成・取得・変更・削除を meta_messages に向ける。API の形（URL・返す項目）は変えない。入れる値:
   - is_manual=true・recorded_by_user_id・occurred_at（画面の入力）・created_at（= occurred_at）・platform（= channel_type）・direction・message_text（= content_text）。
   - created_at を occurred_at にそろえる理由: 会話の流れは created_at の順（leads.py:1018・:1037）、成約分析は meta 側を m.created_at で読む（analytics.py:2496）。今の手の記録は occurred_at で読まれている（analytics.py:2515）。そろえれば、昨日の電話を今日記録しても流れの正しい位置に並び、成約分析の時刻も今と同じになる（recon §8-6）。
+  - 変更 API（今の conv_logs.py:377 付近）で occurred_at を直すときは、created_at も同じ値に直す。
   - 消すときは今と同じ「消した印」（deleted_at）を付ける。行は残す（今の conv_logs.py:440 と同じ・監査の記録も今と同じ）。
   - sender_id = `'manual:user_' || recorded_by_user_id`（空を許さない列。前例は recon §8-2）。sender_name は空。
   - message_id = `'manual_' || 新しい uuid`（訳のキー。一意）。
@@ -38,10 +39,10 @@
   - 翻訳の見張り translation_monitor.py:80-90。
   - 画像の送信 leads.py:2453-2460（直近 inbound の sender_id・platform で送り先を決める）。
   - 未読に戻す leads.py:1300-1310（直近 inbound の1行を選ぶ）。
+  - 本文のラベル付け priority_scoring.py:268。今は手の記録が入っていない。担当が書いた要約は相手の言葉そのものではないので、今と同じく入れない（言語判定で電話・対面を外すのと同じ考え）。
   - 会話の流れ（leads.py:963 から始まる取得）には手の記録も出す（K3）。
 - 消した印の付いた行を出さない（recon §8-6。leads.py・meta_inbox.py には今 deleted_at の条件が1つも無い）。`deleted_at IS NULL` を次に足す:
   - 会話の流れ leads.py:1010-1040 の2つの取得（添付列ありと無しの両方）。
-  - 本文のラベル付け priority_scoring.py:268。
   - 新しく meta を読む所（companies.py の会話タブ・v_company_stats）にも付ける。analytics.py・lang_judge.py は付いている。
   - 上の除外リストの所は手の記録を読まないので、消した印の条件は要らない。
 - 影響なしと確かめた所: 既読 leads.py:1207（未読数は手の記録を数えない）、訳 leads.py:1412・添付の取り直し :1567（message_id で1行を指す）、Discord の反応 reaction_writer.py:115・discord_reactions.py:107（Discord の行だけ）。
@@ -51,7 +52,7 @@
 - 名簿の conversation_store を全窓口 meta_messages にする（値の変更は seed の決まりに従う。詳細はカードで決める）。
 - 毎朝の突合（celery_app.py:151-157・sa02_recon_monitor.py）を外す。逆向きの台本2本と、その試験を消す。
 - リード統合の一覧 leads.py:3014 の conversation_logs は便3 まで残す（外すと統合が止まる。recon §8-5）。
-- 試験: 手の記録が meta_messages に入り、会話の流れの API に出ること。写しが書かれないこと。手の記録が最新でも、送信の宛先・画像の送信の宛先・未読に戻す行・24時間の窓・受信箱の一覧の宛先と未読数が変わらないこと。消した手の記録が流れに出ないこと。過去の時刻で記録した手の記録が、流れのその時刻の位置に並ぶこと。電話の手の記録が言語判定に数えられないこと。
+- 試験: 手の記録が meta_messages に入り、会話の流れの API に出ること。写しが書かれないこと。手の記録が最新でも、送信の宛先・画像の送信の宛先・未読に戻す行・24時間の窓・受信箱の一覧の宛先と未読数が変わらないこと。消した手の記録が流れに出ないこと。過去の時刻で記録した手の記録が、流れのその時刻の位置に並ぶこと。あとで時刻を直した手の記録が、直した時刻の位置に並ぶこと。本文のラベル付けに手の記録が入らないこと。電話の手の記録が言語判定に数えられないこと。
 ### 便2 lead_id を必須にし、リードを消すときは止める（migration・危険 PR）
 - 先に、リード無しの1件（会社4 id=14・2026-05-14 の英文の問い合わせ）の扱いを PO が決める。
 - `ALTER COLUMN lead_id SET NOT NULL`、FK を ON DELETE RESTRICT に替える（ADR-1049 の統合は付け替えてから消すので止まらない。recon §8-5）。
@@ -77,6 +78,7 @@
 
 ## 7. 戻し方
 - 便1: revert で写しと読む所が戻る。便1 の間に meta_messages にだけ入った手の記録は、戻すと会話タブに出なくなる（数はカードで数える）。
+- 便1 の v_company_stats の作り直しは revert では戻らない（ビューは meta を読んだまま）。戻すときは、元の定義（migrations/20260612_120000_fix_company_stats_ssot.sql）で作り直す migration を別に出す。
 - 便2: 制約を外す migration。便3: 控えから戻す。
 
 ## 8. 維持の仕組み
@@ -105,3 +107,12 @@
   2. 手の記録を消すと消した印が付くが、会話の流れなどが印を見ない → 消した印を付ける方を残し、読む所に条件を足した（行を本当に消す案は、監査と 410 の返し方が今と変わるので採らない）。
   3. 会話の流れは created_at、手の記録は occurred_at → 手の記録の created_at を occurred_at にそろえた。
   4. 言語判定の「原文でない窓口を外す」条件が meta 側に無い → meta の platform で付け直した。K5 の比べ方を画面が使う値に定めた。
+### 3回目（2026-11-07・クラウド architect opus・HEAD df5b52d59・116秒）: APPROVE
+- 2回目の4件は正しく入った。recon §8-6 の行番号はすべて一致。空を許さない列と message_id の一意も便1 の値で満たす。
+- 中・低の指摘と扱い:
+  1. 中: 変更 API で occurred_at を直すとき created_at がずれる → 便1 の値に足した。試験はカードで足す。
+  2. 低: 本文のラベル付けに手の記録が入る → 今と同じく入れない（除外リストに移した）。
+  3. 低: 新しい会社を作った直後、meta_messages に is_manual・deleted_at などの列が無い（tenant.py:1025-1039。列は run_all_migrations で付く）→ カードで確かめる。
+  4. 低: v_company_stats の作り直しは revert で戻らない → §7 に書いた。
+  5. 低: K5 の成約分析・週次の助言の「同じ問い」が未固定 → カードで文として固定する。
+- 未確認（審査役）: lead_id が空で入る道が主要3か所のほかに無いか → 便2 のカードで確かめる。
