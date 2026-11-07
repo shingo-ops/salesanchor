@@ -23,7 +23,7 @@
 | # | 基準 | 検証方法 |
 |---|---|---|
 | A1 | 新しく足した失敗の文が決まりに合わないと、CI が落ちる | 試しの PR で悪い例（サーバーに日本語の文の直書きを1つ足す／次の行動の無い文言を1つ足す）を入れ、見張りが赤になることを確かめる |
-| A2 | 決まりに合わない今の文の数が、便ごとに減り、最後は 0 | 基準値のファイルの数（W1・W2。2026-11-08 の数え直しで str と f 文字列 722・次の行動の無い文言 209。recon §4-2）を便ごとに記録 |
+| A2 | 決まりに合わない今の文の数が、便ごとに減り、最後は 0 | 基準値のファイルの数（W1・W2。2026-11-08 の数え直しで W1 は 739（106 ファイル・設計審査の実測。str と f 文字列だけなら 722）・W2 は 209。recon §4-2）を便ごとに記録 |
 
 ## 3. 外部・過去事例の参照と我々への応用
 
@@ -132,7 +132,7 @@
 
 | 見張り | 数えるもの | 基準値 | 置き場 |
 |---|---|---|---|
-| W1 サーバーの文の直書き | backend/app の HTTPException の detail のうち (a) 中の文字列に日本語がある（dict・f 文字列も含む）か (b) 文字列・f 文字列で識別子の形でないもの。数え方の全文は card-guard.md §3-2 | 722（str と f 文字列だけ。dict 12・その他 4 の日本語を足すと約 738。正の値は台本が書く基準値のファイル） | `backend/tests/test_error_detail_guard.py`＋`backend/tests/error_detail_baseline.json`（ファイルごとの数）。backend の pytest で走る。増えたら赤・減ったら基準値の引き下げを求めて赤 |
+| W1 サーバーの文の直書き | backend/app の HTTPException の detail のうち (a) 中の文字列に日本語がある（dict・f 文字列も含む）か (b) 文字列・f 文字列で識別子の形でないもの。数え方の全文は card-guard.md §3-2 | 739（106 ファイル。設計審査が §3-2 の決まりで数えた実測。str と f 文字列だけなら 722。正の値は台本が書く基準値のファイル） | `backend/tests/test_error_detail_guard.py`＋`backend/tests/error_detail_baseline.json`（ファイルごとの数）。backend の pytest で走る。増えたら赤・減ったら基準値の引き下げを求めて赤 |
 | W2 次の行動の無い文言 | ja.json の葉の文字列で「失敗」「エラー」`できません`を含み、次の行動の語（もう一度・お試し・連絡・確認して・ください）を含まないキー | 209 | `frontend/scripts/check-error-text-next-action.js`＋`frontend/scripts/error-text-next-action-baseline.json`（キーの一覧と例外）。`npm run check:all` に入れる。新しいキーは赤・直ったキーが残っていたら赤 |
 | G1 突き合わせ試験の穴 | サーバーの Discord 連携のファイルだけを変えた PR で、画面の突き合わせ試験が走らない | — | `.github/workflows/e2e.yml` の変更判定（detect-changes の frontend）に `backend/app/routers/discord_oauth.py` を足す |
 
@@ -174,5 +174,6 @@
 | 1 | 2026-11-07 14:01 UTC | クラウドの Sonnet（読むだけ。対象 commit 7643967a8） | REVISE | (1) 関数で返す文言キーは既存の i18n 検査 check-i18n-missing-keys.js:30 に見えない → §4-6 の i18n 行を「試験で ja/en 両方のキーを確かめる」に直した (2) 前例 discordSendError.ts は detail.reason で受ける → 開始の detail を `{"reason": ...}` にそろえた（§4-4・§4-6） (3) K3 は保管庫（Redis）が止まっていると別の文になる・ログイン不要 → K3 に前提と外れたときの扱いを書いた (4) K1 の「11 コード」は grep で 12 → 直した |
 
 | 2 | 2026-11-07 14:07 UTC | クラウドの Sonnet（読むだけ。対象 commit 05fda8f27） | APPROVE（軽い直し付き） | (A) 1回目の4点はすべて直っている (B) ../backend は読める。根拠を frontend-check.yml から実際に試験を回す e2e.yml:92・95 に差し替え、§9 を確認済みにした (C1) 開始の失敗の `responseDetail` の形 → Opus が api.ts:131-133・164-171 を読み、POST は `body.detail` がそのまま入ると確かめ §4-4 に書いた。取り出しを1関数にまとめた (C2) 突き合わせの正規表現が曖昧 → §4-6 に3つの式と数の確かめを書いた (C3) 返事が途中で切れて読めなかった（実行記録の上限） |
+| 3 | 2026-11-07 19:00 UTC | クラウドの Opus（読むだけ。対象 commit 1d54a5107。アプリ全体の見張り W1・W2・G1） | REVISE | 実測: W1 の自己点検は合計 6 で合う・backend/app は 739 件 106 ファイル・読めないファイル 0。W2 は 209 件・自己点検 0/1/1/2 で合う。G1 は e2e.yml:50-55 と :84-87 で効く。直し: (1) 指示書 §5 (1e) を switch -C ＋ rev-parse の一致確認に直した（前例 stageW-card.md） (2) 自己点検の b.0 を失敗の文にし、基準 keys に b.0 を足した（配列の道すじも数えることを確かめる） (3) W1 の目安を実測 739 にした（§2-2・§5・指示書 §5 手順4） |
 
 - 1回目の §9 の未確認（../backend を読めるか）は、2回目で確認済みになった

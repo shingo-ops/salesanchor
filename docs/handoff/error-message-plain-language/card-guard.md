@@ -138,7 +138,7 @@ mode: handoff
 
 自己点検（動くたびに最初に行う。失敗したら `自己点検に失敗（数え方が壊れている）` で exit 1）。作り物の辞書で:
 
-- `{ "a": { "x": "保存に失敗しました", "y": "保存に失敗しました。もう一度お試しください。", "z": "エラー" }, "b": ["読み込めません", "読み込めませんでした。管理者に連絡してください。"] }` と、基準 `{ "exempt": { "a.z": "表の見出し" }, "keys": ["a.x"] }` で問題 0 件
+- `{ "a": { "x": "保存に失敗しました", "y": "保存に失敗しました。もう一度お試しください。", "z": "エラー" }, "b": ["読み込みに失敗しました", "読み込めませんでした。管理者に連絡してください。"] }` と、基準 `{ "exempt": { "a.z": "表の見出し" }, "keys": ["a.x", "b.0"] }` で問題 0 件（配列の道すじ b.0 も違反として数えることを確かめる）
 - 同じ辞書に `"a.w": "送信できませんでした"` を足すと問題 1 件（増えた）
 - 元の辞書で `a.x` を `"保存に失敗しました。もう一度お試しください。"` に変えると問題 1 件（減った）
 - 基準の `exempt` を `{ "a.z": " " }` にすると問題 2 件（理由が空・増えた）
@@ -169,7 +169,7 @@ mode: handoff
    - (1b) `cd <main> && git branch --list release/error-text-guard`。出力が空であること。空でなければ消さずに BLOCKED で終える。`git checkout -B` は使わない。
    - (1c) `cd <main> && bash scripts/new-worktree.sh release/error-text-guard`。`--claude` は付けない。出力は head・tail などのパイプに通さない。
    - (1d) `ls -1d "$HOME/worktrees/salesanchor/release-error-text-guard"` と `git -C <main> worktree list`。両方にその場所が出ること。出なければ BLOCKED。以後の `<repo>` はこの場所の絶対パス。
-   - (1e) push 済みの枝を普通の merge で取り込む: `cd <repo> && git merge --no-edit origin/release/error-text-guard 2>&1 | tail -10`。続けて `cd <repo> && git merge-base --is-ancestor origin/release/error-text-guard HEAD; echo rc=$?`（合格: rc=0）と `cd <repo> && git log --oneline -3`。衝突したら `git merge --abort` をして BLOCKED（衝突したファイル名を書く）。
+   - (1e) push 済みの枝の先頭に合わせる（前例 `docs/handoff/auth-new-device-approval/stageW-card.md`）: `cd <repo> && git switch -C release/error-text-guard origin/release/error-text-guard`。続けて `cd <repo> && git rev-parse HEAD` と `cd <repo> && git rev-parse origin/release/error-text-guard` を流し、2 つが同じことを報告に書く（違えば BLOCKED）。続けて `cd <repo> && git log --oneline -3`。rebase・reset はしない。
    - 台本が作る `.claude-pipeline/active-work.d/` の登録ファイルは git add しない。
 2. `cd <repo> && git merge-base --is-ancestor origin/main HEAD; echo rc=$?` の結果を記録する（0 でなくても続け、報告に書く）。
 2-2. Python 3.12 の venv `/tmp/v312` を作り、依存を入れる。1 つずつ流して出力を報告に書く。
@@ -184,7 +184,7 @@ mode: handoff
 4. 基準値を台本で作る:
    - (4a) W1: 試験ファイルの数える関数を使い、`backend/app` の今の件数で `backend/tests/error_detail_baseline.json` を書き出す。書き出しは試験ファイルに `if __name__ == "__main__":` の入口を作り、`cd <repo>/backend && /tmp/v312/bin/python tests/test_error_detail_guard.py --write-baseline` で書く形にする（数え方を 2 か所に置かないため）。続けて `cd <repo>/backend && /tmp/v312/bin/python -c "import json;d=json.load(open('tests/error_detail_baseline.json'));print(len(d), sum(d.values()))"`。
    - (4b) W2: 同じく台本に `--write-baseline` の入口を作り、`cd <repo>/frontend && node scripts/check-error-text-next-action.js --write-baseline` で `keys` を書く（`exempt` は空）。続けて `cd <repo>/frontend && node -e "const b=require('./scripts/error-text-next-action-baseline.json');console.log(b.keys.length, Object.keys(b.exempt).length)"`。
-   - 期待の目安（Opus が 2026-11-08 に origin/main `857fa2721` で数えた値）: W1 は str と f 文字列だけで 722 件（日本語 659・英語の文 63）。§3-2 の (a) は dict などの中の日本語も数えるので、これより多くなる（dict 12・その他 4 が日本語）。W2 は 209 件。違っても止まらず、数を報告に書く。
+   - 期待の目安（Opus が 2026-11-08 に origin/main `857fa2721` で数えた値）: W1 は 739 件・106 ファイル（設計審査が §3-2 の決まりのとおりに数えた実測。str と f 文字列だけなら 722）。W2 は 209 件。違っても止まらず、数を報告に書く。
 5. 試験と検査:
    - (5a) `cd <repo>/backend && /tmp/v312/bin/python -m pytest -q --no-cov -p no:cacheprovider -n 0 -rA tests/test_error_detail_guard.py 2>&1 | tail -30`。timeout 引数は 600000。合格: 3 つ passed・赤 0。
    - (5b) `cd <repo>/frontend && npm run check:error-text-next-action 2>&1 | tail -10`。合格: `✅` の 1 行。
