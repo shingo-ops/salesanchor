@@ -17,7 +17,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.dependencies import set_tenant_context
+from app.auth.dependencies import reset_tenant_context, set_tenant_context
 from app.discord_gateway import outside_ticket_notice
 from app.services import customer_reply_notifier
 from app.services.inbound_translation import enqueue_inbound_translation
@@ -247,6 +247,7 @@ async def process_ticket_channel_message(
         result = await db.execute(insert_sql, insert_params)
         inserted_row = result.first()
         await db.commit()
+        await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
 
         if inserted_row is None:
             logger.debug(
