@@ -2,7 +2,7 @@
 
 | 項目 | 内容 |
 |------|------|
-| ステータス | Proposed（草案。アプリ全体の KGI は PO の返事待ち） |
+| ステータス | Accepted（2026-11-08。アプリ全体の KGI A1・A2 を PO が「1」で承認） |
 | 備考 | PO 2026-11-07 原文:「失敗したときは非エンジニアでも分かるエラー内容とアクションプランを提示するようにしてくれ、例えば「時間切れにより連携できませんでした。もう一度お試しください。」のように。これはDisocrdに限らずエラー内容全ての要件定義になる」。Discord 連携の KGI（12 種類・2画面同じ文・本番で時間切れの文）は PO「1」で承認済み |
 | 起案日 | 2026-11-07 |
 | 方針の決定者 | Shingo（PO）。細部は PO の委任に基づき Opus が設計 |
@@ -39,5 +39,7 @@
 
 ## 維持の仕組み
 
-- CI の見張り（design.md §5）: サーバーの文の直書きの数・次の行動が無い文言の数が、記録した基準値を超えたら落ちる。
-- 便ごとに基準値を下げ、基準値のファイルの変更履歴で減り方が見える。
+- W1 サーバーの文の直書き: `backend/tests/test_error_detail_guard.py` が `backend/app` の HTTPException の detail を数え、`backend/tests/error_detail_baseline.json`（ファイルごとの数）より増えたら CI が落ちる。減ったのに基準値を下げていなくても落ちる。外部サービス向けなどで文が要る行は、その行かすぐ上の行に `error-detail-exempt: <理由>` を書く。
+- W2 次の行動の無い文言: `frontend/scripts/check-error-text-next-action.js` が `ja.json` の失敗の文を調べ、`frontend/scripts/error-text-next-action-baseline.json` に無い違反が増えたら落ちる（`npm run check:all`）。直したキーが一覧に残っていても落ちる。失敗の文でないものは同じファイルの `exempt` に理由を付けて書く。
+- 理由コードの対応表と突き合わせ試験: 理由コードの対応表（前例 `frontend/src/features/discord-connect/discordConnectError.ts`）を新しく作ったら、その理由コードを出すサーバーのファイルを `.github/workflows/e2e.yml` の detect-changes の frontend の一覧に足す。サーバーだけを変えた PR でも突き合わせ試験が走るようにするため。
+- 直す PR の中で基準値を下げる。基準値のファイルの変更履歴で減り方が見える。最後は 0。
