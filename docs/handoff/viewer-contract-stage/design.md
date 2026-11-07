@@ -195,7 +195,7 @@ mode: handoff
   - PDF は今と同じく、出すたびにその時点の会社情報から作る（同 :829・:875 が毎回読む。写しの列は無い）。そのため、会社情報を直した後に出し直すと、決まった側の新しい会社情報が載る。今の動きと同じで、今回は変えない。
   - 前に作った請求書（値が空）は、PDF を出すときに overseas として読む。見出しが英語のため（invoice_renderer.py:267）。移行で値を書き込まない（ADR-1007 決定1）。本番で値が空になる請求書は、主な会社で0件、他の会社で1件（recon §14）。この扱いは §7-2 で PO に確かめる。
   - invoices は会社ごとのスキーマの表（backend/app/services/tenant.py:864）。ADR-142 に従い、全会社へ足す移行と _TENANT_TABLES_SQL を同じ変更で揃える。値は決まった2つなので、相談係の道では隠さない（決まった値しか入らない列の扱い）。
-  - B2B の請求書の PDF の登録番号（PO 2026-11-07「1」。1 は「登録があるときだけ、番号を請求書に印刷する」）: 今の PDF に番号を描く処理は無い（origin/main の backend/app/services/invoice_renderer.py を grep して0件。生出力 /tmp/CC報告ファイル/contract-status/invoice-renderer-1107.py）。変える点は3つ。(1) InvoiceRenderData（同 :148〜:152 の tenant_* の並び）の後ろに tenant_registration_number: Optional[str] = None を足す。(2) 発行者の欄の Web の行（同 :260〜:263）の直後に、値があるときだけ同じ字の大きさ 8 で「Registration No.: 番号」の1行を描き、y を 4mm 下げる。今の欄の見出し（TEL:・Email:・Web:）が英語の決まった文字なので、それに揃える。(3) render_invoice_pdf（同 :435〜。会社情報を渡すのは :509〜:513）だけが get_issuer の registration_number を渡す。get_issuer は登録無の行と古い値のときは None を返すので、そのときは行を描かない。render_quote_pdf（同 :520〜）は渡さない（見積書は今回変えない）。
+  - B2B の請求書の PDF の登録番号（PO 2026-11-07「1」。1 は「登録があるときだけ、番号を請求書に印刷する」）: 今の PDF に番号を描く処理は無い（origin/main の backend/app/services/invoice_renderer.py を grep して0件。生出力 /tmp/CC報告ファイル/contract-status/invoice-renderer-1107.py）。変える点は3つ。(1) InvoiceRenderData（同 :148〜:152 の tenant_* の並び）の後ろに tenant_registration_number: Optional[str] = None を足す。(2) 発行者の欄の Web の行（同 :260〜:263）の直後に、値があるときだけ同じ字の大きさ 8 で「Registration No.: 番号」の1行を描き、y を 4mm 下げる。今の欄の見出し（TEL:・Email:・Web:）が英語の決まった文字なので、それに揃える。(3) 値を詰める場所は2つに分ける。請求書の PDF を作る口（origin/main の backend/app/routers/invoices.py:829 と :875。今は _fetch_tenant_profile の dict を渡す）を get_issuer(tenant, その請求書の region) に切り替え、渡す dict に registration_number のキーを含める。render_invoice_pdf（invoice_renderer.py:435〜）は get_issuer を呼ばず、受け取った dict から :513 の直後に tenant_registration_number=tenant_profile.get("registration_number") を足すだけにする。get_issuer は登録無の行と古い値のときは None を返すので、そのときは行を描かない。render_quote_pdf（同 :520〜。会社情報を渡すのは :579〜:583）には足さない（見積書は今回変えない）。
   - 見積書（PO 2026-11-07「見積もりは今回はパス」）: 見積書の表と作る口と画面は変えない。quotes に列を足さない。見積書の PDF（invoices.py:972〜。会社情報を読むのは :1007）は、get_issuer(tenant, overseas) で海外用の行を載せる（PO 2026-11-07「1,見積もりは顧客名は必須にしない、成約前の顧客にも使用するため顧客情報がない場合があるので」。1 は「見積書にも新しい海外向けの情報を載せる」）。取引先の国では決めない。理由は PO の言葉のとおり、見積書は取引先の情報が無い場面でも使うため。海外用の行が無い会社では、get_issuer の決まりどおり古い値が載る（今と同じ）。
   - 見積書を取引先なしで作れるようにするか: 今の見積書は、登録済みの取引先と担当者が無いと作れない（origin/main の backend/app/schemas/quote.py:41〜:42 で必須。backend/app/routers/quotes.py:184 で取引先にリードが無いと 422）。PO の言葉「顧客名は必須にしない」はこの今の形と違う。今回の設計には入れず、別の設計で後から進める（PO 2026-11-07「1」。1 は「お客さんなしで見積書を作れる作業は、あとで別に進める」）。生出力: /tmp/CC報告ファイル/contract-status/quote-required-1107.txt。
   - 生出力: /tmp/CC報告ファイル/contract-status/update-paths-1106.txt・update-paths2-1106.txt・reader-country-1106.txt・quote-mentions-1107.txt。
@@ -465,8 +465,8 @@ commit の後、裏で順に行う:
 ## 6. リスクと対処
 
 - **3年保持と個人情報の決まり**: 今の公開ポリシーは90日で消すと書いており、申込済みの人はその前提で登録した。再登録防止は今の利用目的に無い。ガイドライン 3-1-2 は、変更は関連のある範囲で通知か公表が要ると定める。関連のある範囲と言えるかは**未確認**。専門家の確認は未実施。PO の判断項目（§7-2）。
-- **古い住所が残る間**: 入れ直すまで、今の書類は古い住所で出て、閲覧者の請求書は発行できない。画面に入れ直す案内を出す。2列を消すのは数えてから（§4）。
-- **今の書類の住所の書き方が変わる**: 入れ直した後は、欄を決まった順でつないだ文字が載る。電話はハイフンなしになる。B2B の請求書の見た目を、切り替えの前と後で比べる（A41）。会社名・メール・サイトも、その region の行を入れた後はその行の値に変わる。発注書と FedEx の申請書は切り替えないので変わらない。
+- **古い値が残る間**: 入れ直すまで、今の書類は古い値で出て、閲覧者の請求書は発行できない。画面に入れ直す案内を出す。古い6列を消すのは数えてから（§4）。
+- **今の書類の住所の書き方が変わる**: 入れ直した後は、欄を決まった順でつないだ文字が載る。電話はハイフンなしになる。B2B の請求書の見た目を、切り替えの前と後で比べる（A41）。会社名・メール・サイトも、その region の行を入れた後はその行の値に変わる。その region の行が登録有のときだけ、B2B の請求書に登録番号の1行が載る（PO 2026-11-07、ideal-state 29）。見積書には載らない。発注書と FedEx の申請書は切り替えないので変わらない。
 - **ドライブが切れている**: 発行とメールは進み、「未保存」と出る。週1回の見守りで知らせる。
 - **メールが届かない**: 「送信失敗」と出す。届いたかの確認は SMTP の受付までで、相手の受信は分からない。
 - **二重発行**: 有効な請求書は契約に1件まで（部分一意索引）。
