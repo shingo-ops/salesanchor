@@ -15,6 +15,7 @@ import { Outlet, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { PageLayout } from "../../components/PageLayout";
 import { usePermissions } from "../../hooks/usePermissions";
+import { canSeeMenu, type MenuId } from "../../constants/menuPermissions";
 import type { NavItem, NavSection } from "../../types/nav";
 import { SubMenu } from "../../components/SubMenu";
 import type { SubMenuGroup } from "../../components/SubMenu";
@@ -27,34 +28,35 @@ interface RawNavItem extends NavItem {
 
 export default function ManagementCenterPage() {
   const { t } = useTranslation();
-  const { hasPermission, hasAny, isTenantOwner } = usePermissions();
+  const { hasAny, isTenantOwner } = usePermissions();
+  const can = (id: MenuId) => canSeeMenu(id, hasAny);
 
   const rawSections: { key: string; titleKey: string; items: RawNavItem[] }[] = [
     {
       key: "team",
       titleKey: "managementCenter.sectionTeam",
       items: [
-        { to: "staff",      labelKey: "nav.staff",             visible: hasPermission("staff.view") },
-        { to: "roles",      labelKey: "nav.roles",             visible: hasAny("roles.view", "roles.create") },
-        { to: "teams",      labelKey: "nav.teams",             visible: hasPermission("teams.view") },
-        { to: "shifts",     labelKey: "nav.shifts",            visible: hasPermission("shifts.view") },
-        { to: "commission", labelKey: "nav.commissionSettings", visible: hasPermission("orders.view") },
+        { to: "staff",      labelKey: "nav.staff",             visible: can("staff") },
+        { to: "roles",      labelKey: "nav.roles",             visible: can("roles") },
+        { to: "teams",      labelKey: "nav.teams",             visible: can("teams") },
+        { to: "shifts",     labelKey: "nav.shifts",            visible: can("shifts") },
+        { to: "commission", labelKey: "nav.commissionSettings", visible: can("commissionSettings") },
         { to: "reports",    labelKey: "nav.reports",           visible: true },
         { to: "tenant-policy", labelKey: "nav.tenantPolicy",
-          visible: hasAny("tenant.profile.edit", "tenant.profile.view") },
+          visible: can("tenantPolicy") },
       ],
     },
     {
       key: "data",
       titleKey: "managementCenter.sectionData",
       items: [
-        { to: "suppliers",      labelKey: "nav.suppliers",      visible: hasPermission("suppliers.view") },
-        { to: "status-master",  labelKey: "nav.statusMaster",   visible: hasPermission("suppliers.view") },
-        { to: "conditions",         labelKey: "nav.conditionsMaster",   visible: hasPermission("conditions.view") },
-        { to: "product-categories", labelKey: "nav.productCategories",  visible: hasPermission("product_categories.view") },
-        { to: "units",              labelKey: "nav.units",               visible: hasPermission("suppliers.view") },
-        { to: "note-master",    labelKey: "nav.noteMaster",     visible: hasPermission("suppliers.view") },
-        { to: "data",           labelKey: "nav.dataManagement", visible: hasPermission("erp.view") },
+        { to: "suppliers",      labelKey: "nav.suppliers",      visible: can("suppliers") },
+        { to: "status-master",  labelKey: "nav.statusMaster",   visible: can("statusMaster") },
+        { to: "conditions",         labelKey: "nav.conditionsMaster",   visible: can("conditionsMaster") },
+        { to: "product-categories", labelKey: "nav.productCategories",  visible: can("productCategories") },
+        { to: "units",              labelKey: "nav.units",               visible: can("units") },
+        { to: "note-master",    labelKey: "nav.noteMaster",     visible: can("noteMaster") },
+        { to: "data",           labelKey: "nav.dataManagement", visible: can("dataManagement") },
       ],
     },
     {
@@ -62,15 +64,15 @@ export default function ManagementCenterPage() {
       key: "apiIntegration",
       titleKey: "managementCenter.sectionApiIntegration",
       items: [
-        { to: "integrations/google-drive", labelKey: "nav.integrationGoogleDrive", visible: hasPermission("erp.view") },
-        { to: "integrations/fedex",        labelKey: "nav.integrationFedex",       visible: hasPermission("erp.view") },
-        { to: "integrations/dhl",          labelKey: "nav.integrationDhl",         visible: hasPermission("erp.view") },
-        { to: "integrations/ups",          labelKey: "nav.integrationUps",         visible: hasPermission("erp.view") },
-        { to: "integrations/paypal",       labelKey: "nav.integrationPaypal",      visible: hasPermission("erp.view") },
+        { to: "integrations/google-drive", labelKey: "nav.integrationGoogleDrive", visible: can("integrationGoogleDrive") },
+        { to: "integrations/fedex",        labelKey: "nav.integrationFedex",       visible: can("integrationFedex") },
+        { to: "integrations/dhl",          labelKey: "nav.integrationDhl",         visible: can("integrationDhl") },
+        { to: "integrations/ups",          labelKey: "nav.integrationUps",         visible: can("integrationUps") },
+        { to: "integrations/paypal",       labelKey: "nav.integrationPaypal",      visible: can("integrationPaypal") },
         { to: "discord-config",     labelKey: "nav.discordConfig",
-          visible: hasAny("tenant.profile.edit", "tenant.profile.view") },
+          visible: can("discordConfig") },
         { to: "discord-announce",   labelKey: "nav.discordAnnounce",
-          visible: hasAny("tenant.profile.edit", "tenant.profile.view") },
+          visible: can("discordAnnounce") },
       ],
     },
     {
@@ -78,11 +80,11 @@ export default function ManagementCenterPage() {
       titleKey: "managementCenter.sectionBusiness",
       items: [
         { to: "tenant-profile", labelKey: "nav.tenantProfile",
-          visible: hasAny("tenant.profile.edit", "tenant.profile.view") },
-        { to: "channels",       labelKey: "nav.channels",       visible: hasPermission("channels.view") },
-        { to: "channel-masters", labelKey: "nav.channelMasters", visible: hasPermission("tenant.profile.edit") },
-        { to: "bots",           labelKey: "nav.bots",           visible: hasPermission("bots.view") },
-        { to: "notifications",  labelKey: "nav.notifications",  visible: hasPermission("notifications.manage") },
+          visible: can("tenantProfile") },
+        { to: "channels",       labelKey: "nav.channels",       visible: can("channels") },
+        { to: "channel-masters", labelKey: "nav.channelMasters", visible: can("channelMasters") },
+        { to: "bots",           labelKey: "nav.bots",           visible: can("bots") },
+        { to: "notifications",  labelKey: "nav.notifications",  visible: can("notifications") },
         { to: "login-requests", labelKey: "nav.tenantLoginRequests", visible: isTenantOwner },
       ],
     },

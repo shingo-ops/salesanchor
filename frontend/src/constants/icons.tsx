@@ -83,6 +83,7 @@ import {
   PlusIcon as PlusOutlineIcon,
   HeartIcon as HeartOutlineIcon,
   CheckCircleIcon as CheckCircleOutlineIcon,
+  SlashIcon as SlashOutlineIcon,
 } from "@heroicons/react/24/outline";
 
 
@@ -158,6 +159,7 @@ const BellOutline         = hi(BellOutlineIcon);
 const ChatBubbleOutline   = hi(ChatBubbleOvalLeftOutlineIcon); /* 空状態 outline 版 */
 const Bars3Outline        = hi(Bars3OutlineIcon);              /* mobile menu button */
 const PlusOutline         = hi(PlusOutlineIcon);
+const SlashOutline        = hi(SlashOutlineIcon);              /* 斜め線（3択切替の「表示のみ」） */
 
 // ステータス（✓ ⚠ ✕ の代替）
 export const STATUS_ICONS = {
@@ -169,6 +171,7 @@ export const STATUS_ICONS = {
 // 個別エクスポート（StatusBar 等で直接参照）
 export { Check, Warning, X };
 export { BellOutline };
+export { SlashOutline };
 
 // カテゴリ（RolesPage の CATEGORY_META 用）
 // "_default" はフォールバック用
