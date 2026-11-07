@@ -1,6 +1,6 @@
 # 設計 — 接続を貸し出しに戻すたびに会社の文脈を消す（Bx・ADR-1070）
 
-- 状態: 設計案（Opus 作成）。審査1回目 REVISE（review-design-pool-reset.md）→ M1〜M4・R1〜R9 を反映済み。差分の再審査待ち。
+- 状態: 設計案（Opus 作成）。審査1回目 REVISE → M1〜M4・R1〜R9 を反映。審査2回目 REVISE（review-design-pool-reset-r2.md・必須 N1）→ N1〜N5 を反映。T1 の判定の行の確認待ち。
 - 基準: origin/main 170ff9612（2026-11-07 fetch）。b2bf39632 との差は backend/app・backend/requirements.txt・scripts/lint_tenant_schema.py で 0 件（審査 §冒頭）なので行番号は同じ。
 - 前段の調査: docs/handoff/s1-rls-stage5/recon-pool-reset.md（r1〜m8）・xtenant-evidence.md（T 箇所と本番の実測）・recon-pool-reset-m9.md（文脈なしで RLS 表に触る箇所の全数）
 - 関係する決定: ADR-131（get_db の finally で文脈を戻す）・ADR-072（tenant schema 修飾と commit 後の reset_tenant_context）・ADR-1067（S1 段階④）・ADR-065（準備済み文のキャッシュ）
@@ -168,10 +168,10 @@ if DATABASE_URL.startswith("postgresql"):
 
 | # | 試験 | 作り方 | 判定 |
 |---|---|---|---|
-| T1 | 本体の engine に付くこと | `subprocess.run([sys.executable, "-c", ...], env={..., "DATABASE_URL": "postgresql+asyncpg://u:p@127.0.0.1:1/x"})` で別の Python を起こし、`import app.database as d` の後に `event.contains(d.engine.sync_engine.pool, "reset", d._reset_session_state)` と `d.engine.sync_engine.pool._reset_on_return is None` を表示させる（create_async_engine は作るだけでは接続しないので DB は要らない）。同じ形で DATABASE_URL を `sqlite+aiosqlite:///:memory:` にした場合は False になることも確かめる。別の Python で動かすのは、同じ pytest の中で app.database を読み直すと他の試験の engine が入れ替わるため | postgresql: True・True。sqlite: False |
+| T1 | 本体の engine に付くこと | `subprocess.run([sys.executable, "-c", ...], env={..., "DATABASE_URL": "postgresql+asyncpg://u:p@127.0.0.1:1/x"})` で別の Python を起こし、`import app.database as d` の後に `event.contains(d.engine.sync_engine.pool, "reset", d._reset_session_state)` と、`from sqlalchemy.pool.base import reset_none` の上で `d.engine.sync_engine.pool._reset_on_return is reset_none` を表示させる（SQLAlchemy 2.0.38 は `pool_reset_on_return=None` を `ResetStyle.reset_none` に置き換えて持つ: 上流 lib/sqlalchemy/pool/base.py:95-107・:287-291。`is None` は常に False なので使わない。審査 2 回目 N1）。create_async_engine は作るだけでは接続しないので DB は要らない。同じ形で DATABASE_URL を `sqlite+aiosqlite:///:memory:` にした場合は `event.contains` が False になることだけを判定にする（sqlite 側の `_reset_on_return` は既定の `reset_rollback` で、判定に使わない）。別の Python で動かすのは、同じ pytest の中で app.database を読み直すと他の試験の engine が入れ替わるため | postgresql: True・True。sqlite: `event.contains` が False |
 | T2 | 借りた直後の文脈が空（漏れの形） | `RLS_TEST_DATABASE_URL` から `create_async_engine(url, pool_size=1, max_overflow=0, pool_reset_on_return=None)` を作り `install_pool_reset(eng)`。session A で `set_config('app.tenant_id','991',false)`・`set_config('app.is_operator','true',false)`・`SET search_path TO tenant_991, public` → commit → close。session B で `pg_backend_pid()` が A と同じ（同じ接続）、`current_setting('app.tenant_id', true)` と `current_setting('app.is_operator', true)` が空か NULL、`SHOW search_path` が `"$user", public` | 3 つとも空・既定 |
 | T3 | 対照（Bx を外すと T2 が赤になること） | T2 と同じ engine を `install_pool_reset` を呼ばず、`pool_reset_on_return` も既定のままで作り、同じ手順 | session B で `app.tenant_id` が `991`・`app.is_operator` が `true` のまま（＝今の本番の漏れ。T2 の判定がこれを見分けられる証拠） |
-| T4 | 失敗した取引の後も次が借りられる | T2 の engine で session A が `SELECT 1/0` を流して例外を受け、rollback せずに close。session B で `SELECT 1` | 1 が返る。`pg_stat_activity` の自分の接続の state が `idle in transaction (aborted)` でない |
+| T4 | 回帰の確認: Bx が入っていても、失敗した取引の後に例外を出さず次が借りられる（Bx の有無を見分ける試験ではない。AsyncSession の close が先に rollback するため。審査 2 回目 N4） | T2 の engine で session A が `SELECT 1/0` を流して例外を受け、rollback せずに close。session B で `SELECT 1` | 1 が返る（state の判定は置かない。自分の問い合わせ中の接続は常に `active` で何も見分けないため） |
 
 - T2〜T4 は PostgreSQL が要る。`RLS_TEST_DATABASE_URL` が無いとき、環境変数 `CI` が `true` なら skip ではなく `pytest.fail` にする（CI で黙って飛ばされないように）。手元（CI が無い）では skip。既存の書き方（backend/tests/test_rls_auth_audit.py:24-35 の skipif）に CI の判定を足す形。
 - CI では .github/workflows/test.yml の pytest-run ジョブ（:114・:218-253、`RLS_TEST_DATABASE_URL` は :234）で流れ、必須チェック「pytest (SQLite + PostgreSQL RLS)」（:262-263）がその結果を集約する。backend に変更がある PR なので detect-changes で飛ばされない。
@@ -179,13 +179,15 @@ if DATABASE_URL.startswith("postgresql"):
 ## 6. 受入条件（KGI）
 
 物差しは 1 つ: docs/handoff/s1-rls-stage5/k-baseline.sh（読み取りだけ。health の GET を 60 回、4 コンテナの `docker logs` を 7 種の文字で数え、コンテナ起動からの時間で 1 時間あたりに直す）。基準値はこの台本の生の出力 k-baseline-20261107T0917Z.txt。各便の配備の直前にも同じ台本で取り直して PR に貼る（その時点の基準値）。配備でコンテナが入れ替わると `docker logs` は起動からしか数えられないので、「配備後 24 時間」は次の配備でコンテナが入れ替わる前に数える。24 時間に満たずに入れ替わる場合は、入れ替わる直前に数えて、その時間を書く。
+- 基準値と事後値は同じ機械（PO の Mac）・同じ回線で取る。K1 の中央値の大半は手元から本番までの回線の時間なので、機械が変わると +10% の判定が意味を失う（審査 2 回目 N5）。
+- 09:17Z の基準値はコンテナ起動から約 15 分の窓しかない（審査 2 回目 N2）。そのため便1 の配備の直前に、コンテナがなるべく長く動いた状態で k-baseline.sh を取り直し、それを便1 の基準値にする。そこで 0 でないマスがあれば、そのマスの K2 の判定は「0 件」でなく「1 時間あたりの件数が基準値から増えない」に置き換え、置き換えたマスを PR に書く。便2 も同じ扱い。
 
 | # | 基準 | 検証方法 | 基準値（k-baseline-20261107T0917Z.txt・2026-11-07T09:17Z） |
 |---|---|---|---|
 | K1 | 本番の /api/health が 60 回中 60 回 200、中央値が配備直前の基準値の +10% 以内 | 配備後に k-baseline.sh（`k1_ok200`・`k1_median_ms`） | 60/60 が 200・中央値 1079.2ms・p95 1172.9ms |
 | K2 | 配備後の本番ログで、下の 5 種 × 4 コンテナの 20 マスがすべて 0 件 | k-baseline.sh の K2/K3 行 | 20 マスすべて 0 件（下の表） |
 | K3 | 配備後、celery-worker の ① `traceback` の件数と `close_exc` の件数が同じ（既存の `Exception closing connection` 以外の traceback が 0 件）、② `close_exc_per_h` が 20 以下 | 同上 | ① 3 件と 3 件で同じ ② 12.7／時（参考: 07:43〜08:48Z の別の数え方では 18 件／約 65 分＝約 16.6／時）。20 は 2 回の実測の大きい方に 2 割足した上限 |
-| K4（便2 だけ） | 借りた直後の接続の文脈が空で、Bx を外すとそれを見分けられる | §5 便2 の T1〜T4 が必須チェック「pytest (SQLite + PostgreSQL RLS)」の中で緑（skip でない）。CI の pytest の出力に test_pool_reset_on_return.py の 4 件が passed で出ることを PR で確かめる | — |
+| K4（便2 だけ） | 借りた直後の接続の文脈が空で、Bx を外すとそれを見分けられる（見分けるのは T1〜T3。T4 は回帰の確認） | §5 便2 の T1〜T4 が必須チェック「pytest (SQLite + PostgreSQL RLS)」の中で緑（skip でない）。CI の pytest の出力に test_pool_reset_on_return.py の 4 件が passed で出ることを PR で確かめる | — |
 | K5（便2 だけ） | 返した接続が `idle in transaction` で残らない | 配備後に reader 鍵で pg_stat_activity を読み、アプリの役の接続で state が `idle in transaction` かつ state_change が 1 分より前のものが 0 件 | 配備前に同じ読み方で取る |
 | K6（便2 だけ） | 会社1 で画面の主な操作が通る | 本番で会社1 の在庫表・リードの詳細・カレンダーを開き、エラー表示が無い（評価役が画面で確かめる） | — |
 
@@ -241,7 +243,7 @@ SQLAlchemy の根拠は、上流のタグ rel_2_0_38 のファイルを行つき
 ## 維持の仕組み
 
 - 仕組みで守る: Bx が入ると、文脈を張り忘れた新しいコードは「前の値で偶然動く」ことがなくなり、0 行か例外になる（漏れが起きない側に倒れる）。
-- 試験で守る: backend/tests/test_pool_reset_on_return.py（§5 便2 の T1〜T4）が必須チェックの中で毎回流れる。database.py から `install_pool_reset(engine)` の呼び出しを外すと T1 が赤、`_reset_session_state` の中身を外すと T2 が赤（T3 が「外した状態」を見分けられることの証拠）。CI で PostgreSQL が無いときは skip でなく失敗にする。
+- 試験で守る: backend/tests/test_pool_reset_on_return.py（§5 便2 の T1〜T4）が必須チェックの中で毎回流れる。database.py から `install_pool_reset(engine)` の呼び出しを外すと T1 が赤、`_reset_session_state` の中身を外すと T2 が赤（T3 が「外した状態」を見分けられることの証拠）。Bx の有無を見分けるのは T1〜T3 で、T4 は回帰の確認だけを担う。CI で PostgreSQL が無いときは skip でなく失敗にする。
 - 物差しで守る: k-baseline.sh を、この先の RLS の便（S1 段階⑤）でも配備の前後に同じ形で流す。
 - 既存の見張り: scripts/lint_tenant_schema.py の Rule C（commit の後の最初の文が reset か）は今のまま動く。
 - 担当: 配備後 24 時間の K2・K3 の数え直しは Opus（設計担当）が行い、結果を本書の末尾に追記する。

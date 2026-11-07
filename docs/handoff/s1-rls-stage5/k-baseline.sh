@@ -2,7 +2,7 @@
 # K1〜K3 の基準値と事後値を同じ方法で取る（読み取りのみ）。設計: design-pool-reset.md §6
 # 使い方: bash docs/handoff/s1-rls-stage5/k-baseline.sh > <出力ファイル>
 # - K1: https://api.salesanchor.jp/api/health を 60 回（1 秒おき）。状態コードと秒数。
-# - K2/K3: 4 コンテナの docker logs（コンテナ起動から今まで）を 6 種の文字列で数え、1 時間あたりに直す。
+# - K2/K3: 4 コンテナの docker logs（コンテナ起動から今まで）を 7 種の文字列で数え、1 時間あたりに直す。
 # 本番で書き込む操作は無い（docker logs / docker inspect / curl の GET だけ）。
 set -u
 
