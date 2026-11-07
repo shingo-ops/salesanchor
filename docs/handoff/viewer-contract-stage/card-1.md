@@ -264,12 +264,19 @@ def test_suspended_uses_later_of_suspend_and_access_end(pg):  # noqa: F811
 
 手順3 §2 の変更をする（2-1 から 2-5 の順。Edit ツールで行う）
 
-手順4 道具を入れる
-    cd ~/sa/backend && pip install -q -r requirements.txt 2>&1 | tail -3
-    cd ~/sa && (pip install -q ruff 2>&1 | tail -1); ruff --version | tail -1
+手順4 道具を入れる（本番と同じ Python 3.12 の venv を作業場所の外 ~/venv312 に作る。素の pip は見張り py312-guard が止めるので使わない）
+    python3.12 --version 2>&1 | tail -1
+    python3.12 -m venv ~/venv312 2>&1 | tail -3
+    ~/venv312/bin/python --version 2>&1 | tail -1
+    cd ~/sa/backend && ~/venv312/bin/pip install -q -r requirements.txt 2>&1 | tail -3
+    cd ~/sa/backend && ~/venv312/bin/pip install -q -r requirements-dev.txt 2>&1 | tail -3
+    ~/venv312/bin/ruff --version | tail -1
+  python3.12 が無いときだけ、1行目と2行目の代わりに次を流す（それも失敗したら `BLOCKED: python3.12 なし`）:
+    uv venv --python 3.12 ~/venv312 2>&1 | tail -3
+    ~/venv312/bin/python -m ensurepip 2>&1 | tail -1
 
 手順5 形（期待: ruff は All checks passed!、残りの grep は 0・3・1・1・1・1）
-    cd ~/sa && ruff check backend/app/tasks/maintenance.py backend/tests/test_viewer_purge.py 2>&1 | tail -10
+    cd ~/sa && ~/venv312/bin/ruff check backend/app/tasks/maintenance.py backend/tests/test_viewer_purge.py 2>&1 | tail -10
     cd ~/sa && grep -rn "VIEWER_RETENTION_DAYS" backend --include=*.py | wc -l
     cd ~/sa && grep -c "VIEWER_RETENTION_YEARS" backend/app/tasks/maintenance.py
     cd ~/sa && grep -c "Preventing repeated free-trial registrations" lp/src/pages/privacy.astro
@@ -278,7 +285,7 @@ def test_suspended_uses_later_of_suspend_and_access_end(pg):  # noqa: F811
     cd ~/sa && grep -c "<td>1.8</td><td>2026-11-08</td>" lp/src/pages/privacy.astro
 
 手順6 試験（期待: 1 passed と 4 skipped。PostgreSQL の試験は GitHub の CI だけで動くので、ここでは skipped で良い。本当の合否は CI で Opus が見る）
-    cd ~/sa/backend && python3 -m pytest -q -p no:cacheprovider tests/test_viewer_purge.py 2>&1 | tail -15
+    cd ~/sa/backend && ~/venv312/bin/python -m pytest -q -p no:cacheprovider tests/test_viewer_purge.py 2>&1 | tail -15
 
 手順7 ポリシーのページを組み立てる（期待: 最後の数行に Complete が出て、エラーが無い）
     cd ~/sa/lp && npm ci 2>&1 | tail -3
@@ -309,7 +316,7 @@ commit 文の末尾には空行を1つ置いて `Co-Authored-By: Claude Sonnet 5
 - 記録して続ける（値を報告に書き、判定は Opus がする）:
   - P2〜P5 や手順5 の件数が期待と違う。
   - 手順4 の requirements が一部入らない（手順6 で import できれば続ける）。
-  - ruff が I（並び順）だけを出した → `ruff check --fix --select I` を同じ 2 ファイルに流して、その結果を書く。I 以外を出したら `BLOCKED: ruff`。
+  - ruff が I（並び順）だけを出した → `~/venv312/bin/ruff check --fix --select I` を同じ 2 ファイルに流して、その結果を書く。I 以外を出したら `BLOCKED: ruff`。
   - `git status` に §1 の 3 個以外が出た → それを add せず、名前を報告に書く。
 
 ## 5. 報告の形
