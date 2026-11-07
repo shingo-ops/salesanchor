@@ -578,10 +578,11 @@ class _PgEnv:
 def _cleanup_pg(cur, perm_keys, *, drop_tenant: bool) -> None:
     """この試験が入れた物だけ消す（ほかの会社・ほかの行には触れない）。"""
     cur.execute("DELETE FROM public.staff_join_invites WHERE tenant_id = %s", (PG_TENANT,))
+    if drop_tenant:
+        cur.execute(f"DROP SCHEMA IF EXISTS {PG_SCHEMA} CASCADE")
     cur.execute("DELETE FROM public.users WHERE id = %s", (PG_USER,))
     if not drop_tenant:
         return
-    cur.execute(f"DROP SCHEMA IF EXISTS {PG_SCHEMA} CASCADE")
     cur.execute("DELETE FROM public.tenants WHERE id = %s", (PG_TENANT,))
     if perm_keys:
         cur.execute("DELETE FROM public.permissions WHERE key = ANY(%s)", (list(perm_keys),))
