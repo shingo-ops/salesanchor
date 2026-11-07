@@ -778,3 +778,63 @@ def test_wrong_or_expired_code_is_invalid_and_changes_nothing(shared_pg):
     assert it2.followup.send.await_args.args[0] == T.CODE_INVALID
     it2.guild.create_text_channel.assert_not_awaited()
     assert _state(cur, invite_id)[2][0] == "submitted"
+
+
+# ── 受付のボタンを置く共通の関数（設計 §4-5）──────────────────
+
+
+def _button_request(messages=None, *, post_error: bool = False):
+    from app.services.discord_rest import DiscordAPIError
+
+    async def _fake(**kwargs):
+        if kwargs["method"] == "GET":
+            return messages or []
+        if post_error:
+            raise DiscordAPIError("boom", status_code=500)
+        return {"id": "9001"}
+
+    return AsyncMock(side_effect=_fake)
+
+
+def _post_calls(request) -> list:
+    return [c for c in request.await_args_list if c.kwargs["method"] == "POST"]
+
+
+async def test_ensure_reception_button_posts_once():
+    from app.services import staff_join as svc
+
+    request = _button_request()
+    with patch.object(svc, "find_blueprint_channel_id", AsyncMock(return_value="555")):
+        result = await svc.ensure_reception_button("1", "tok", TENANT_ID, request=request)
+    assert result == {"status": "posted", "message_id": "9001"}
+    assert len(_post_calls(request)) == 1
+
+
+async def test_ensure_reception_button_exists_does_not_post():
+    from app.services import staff_join as svc
+
+    existing = [{"components": [{"components": [{"custom_id": T.OPEN_BUTTON_CUSTOM_ID}]}]}]
+    request = _button_request(existing)
+    with patch.object(svc, "find_blueprint_channel_id", AsyncMock(return_value="555")):
+        result = await svc.ensure_reception_button("1", "tok", TENANT_ID, request=request)
+    assert result == {"status": "exists"}
+    assert len(_post_calls(request)) == 0
+
+
+async def test_ensure_reception_button_without_room_is_not_configured():
+    from app.services import staff_join as svc
+
+    request = _button_request()
+    with patch.object(svc, "find_blueprint_channel_id", AsyncMock(return_value=None)):
+        result = await svc.ensure_reception_button("1", "tok", TENANT_ID, request=request)
+    assert result == {"status": "not_configured"}
+    request.assert_not_awaited()
+
+
+async def test_ensure_reception_button_discord_error_is_returned_not_raised():
+    from app.services import staff_join as svc
+
+    request = _button_request(post_error=True)
+    with patch.object(svc, "find_blueprint_channel_id", AsyncMock(return_value="555")):
+        result = await svc.ensure_reception_button("1", "tok", TENANT_ID, request=request)
+    assert result == {"status": "discord_error"}
