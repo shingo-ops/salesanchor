@@ -71,7 +71,7 @@
 - 見出しの文字を `_resolve_condition(heading_text, product_first["product_category"], product_first["unit_kubun"], ctx.cond_entries, ctx.cond_canonical_to_uuid, ctx.product_first.scoped_cond_entries)` に通す（引数の並びは既存の呼び出しと同じに合わせる。0-2 で確かめた並びが違えば止まる）。返り値の 1 つ目を新しい状態、2 つ目を `hb`、3 つ目は捨てる。
 - `hb` が `単品語あり・要確認(` で始まれば None。`hb` から先頭の `R4c:商品分類既定>` を除いた残りが `re.match(r"^R[23]:", ...)` に当たらなければ None。
 - 群: `groups(c) = {e.get("value_group") for e in ctx.cond_entries if e.get("canonical") == c}`。新しい状態と今の状態（`product_first["condition"]`）の両方で要素がちょうど 1 つ・None でない・等しいときだけ続ける。それ以外は None。
-- 返り値 `(新しい状態, f"{hb}@見出し:L{見出しの最小行番号}")`。
+- 返り値 `(新しい状態, f"{flag}{hb}@見出し:L{見出しの最小行番号}")`。`flag` は `basis` の先頭が `re.match(r"^単品語あり・要確認\([^)]*\),", basis)` に当たればその当たった文字、当たらなければ空文字（第4.8版。先頭の単品語の印を落とさない）。
 - `product_first` の中の鍵の名前（`condition_basis`・`product_category`・`unit_kubun`・`condition`）は 0-2 で実物を確かめる。名前が違えば止まる（NEEDS_DECISION）。
 2-3. `_extract_one` の差し込み: 前後の文字の一致で次を置き換える。
 
