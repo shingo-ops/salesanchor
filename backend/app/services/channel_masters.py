@@ -1,14 +1,18 @@
-from __future__ import annotations
-
 """channel_masters の共通定義と、名簿（全社1つの表）の読み口。
 
 名簿は全社で1つの表（下の CHANNEL_MASTERS_TABLE）。tenant_id が NULL の行は共用（運営が管理）、
 値がある行はその会社専用。会社ごとの「隠す」設定は
 別の表（CHANNEL_SETTINGS_TABLE）に1行で持つ。
 
-名簿の表を読み書きする SQL はこのファイルだけに置く（他のファイルは関数を呼ぶ）。
-表名の文字列も、下の定数2つにだけ書く。
+表名の文字列は、下の定数2つにだけ書く。他のファイルは表名を直書きせず、この定数を使う。
+名簿を読む SQL と「隠す」設定を書く SQL は、このファイルに置く。
+このファイルの外で名簿の表に触る SQL は次の3か所だけ（増やすときはここに書き足す）:
+- backend/app/routers/conv_logs.py create_channel_master: 会社専用の行を足す（INSERT）
+- backend/app/routers/conv_logs.py deactivate_channel_master: 会社専用の行を無効にする（UPDATE）
+- backend/app/services/lang_judge.py: 書き写さない連絡手段を除く条件（読むだけ）
 """
+
+from __future__ import annotations
 
 from typing import Any, Final
 
