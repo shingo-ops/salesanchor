@@ -1,6 +1,6 @@
 # 実装カード 便④-5 — public.tenant_llm_budgets・public.tenant_settings に RLS（型C）＋運営の書込 2 か所と翻訳の見張りの書込 1 か所に文脈を足す
 
-- 状態: 設計案（Opus 作成）。クラウド設計審査 1 回目 REVISE（指摘1〜4）を反映した 2 版。再審査の前。PO の実装承認は design.md 冒頭（2026-11-06「1」: KGI-4〜6 と 5 便の順番）。完走の指示は PO 2026-11-07 チャット「PRマージ、デプロイまで完走させてくれ」。次の 3 つの表へ進むことは PO 2026-11-07 チャット「1」。
+- 状態: 設計審査済み。クラウド設計審査 1 回目 REVISE（指摘1〜4）→ 2 版で 2 回目 APPROVE（3834ae255。2026-11-07 09:13 JST）。2 回目の小さな指摘1〜4 も反映した 3 版。PO の実装承認は design.md 冒頭（2026-11-06「1」: KGI-4〜6 と 5 便の順番）。完走の指示は PO 2026-11-07 チャット「PRマージ、デプロイまで完走させてくれ」。次の 3 つの表へ進むことは PO 2026-11-07 チャット「1」。
 - 根拠の版: origin/main d8db9b69d（2026-11-07 便④-4 #5233 の合流後に fetch）。行番号はすべてこの版。
 - 設計: [design.md](design.md) §2 :25-26（2 表とも型C＋運営画面に運営の文脈）・§3 :88（④-5 で足すコード 3 か所）・:96-97（前提の表）・:108（前提の移行の順）・§4 :114（④-5 の試験）・§5 :123（K5-2 ④-5）・:133（会社を作る処理）・:144（コードと RLS を 1 つの戻しの PR で戻す）。手本: 便④-4 [card-4-4.md](card-4-4.md) と、合流済みの backend/tests/test_google_webhook_subscriptions_rls.py。
 - 実装ブランチ: `release/s1-rls-stage4-bin5`（origin/main d8db9b69d から作った。カードはこのブランチに Opus が置く）。1 便 1 PR。PR は Draft で起票する。
@@ -114,7 +114,7 @@ run_sql migrations/20261107_160000_add_tenant_budget_settings_rls.sql
   - ⑦ 予算の保存（運営）: session で `SET app.tenant_id = ''` と `SET app.is_operator = ''` を流して commit（get_db の後と同じ「文脈なし」）。`from app.routers.super_admin_llm_budget import LLMBudgetUpdate, upsert_budget` を直に `await upsert_budget(967, LLMBudgetUpdate(monthly_budget_usd=Decimal("25.00"), hard_stop=True, notify_admin=True), db=session)` で呼ぶ。確かめ: 例外なく返り、返り値の monthly_budget_usd が 25.00。admin で 967 の monthly_budget_usd が 25.00。続けて `await session.close()` の後、同じ app_engine（`pool_size=1, max_overflow=0` なので同じ接続が戻る）から新しい接続を取り、`SELECT current_setting('app.is_operator', true)` が `''`（運営の印が接続に残っていない。§6 冒頭）。§6-1 の直しが無いと INSERT が 42501 で落ちることを、直しの前にこの試験を流して確かめ、その生出力も残す。
   - ⑧ 段階の切替（運営）: ⑦と同じ文脈なしの session。record_audit_log は**差し替えない**（使い捨て DB には tenant_967.audit_logs が無いので本物の呼び出しが失敗し、§6-2 の savepoint の道を通る。その理由を試験の説明文に書く）。`await switch_phase_endpoint(967, PhaseSwitchRequest(phase="A"), db=session, current_user=types.SimpleNamespace(id=1))`。確かめ: 例外なく返り、返り値の phase が 'A'。admin で 967 の spreadsheet_phase が 'A'（記録の失敗で切替が消えていない）。⑦と同じく `session.close()` の後の新しい接続で `current_setting('app.is_operator', true)` が `''`。直しの前に流して 42501 で落ちることを確かめ、生出力を残す。
   - ⑨ 翻訳の見張りの通知: ⑦と同じ文脈なしの session。`app.services.translation_monitor._post_webhook` を `AsyncMock(return_value=True)` で差し替え、`await notify_translation_anomaly(session, 966, TranslationHealthSnapshot(100, 30, 40, 0.30, 0.40), tenant_code="t966")`。確かめ: 返り値 True。admin で 966 の `last_translation_monitor_notified_at` が NULL でない（試験の前は NULL であることも確かめる）。同じ session で `SELECT 1` が通る（取引が壊れていない）。⑦と同じく `session.close()` の後の新しい接続で `current_setting('app.tenant_id', true)` が `''`。直しの前に流すと時刻が NULL のままで落ちることを確かめ、生出力を残す。
-  - ⑦〜⑨の「新しい接続で空」の確かめは、§6 冒頭の古い形（commit の後に外す）では `'true'`／`'966'` が残って落ちる。手元で古い形でも 1 回流して落ちることを確かめ、生出力を残す（落ちなければ試験が漏れを確かめていないので止まって Opus に戻す）。
+  - ⑦〜⑨の「新しい接続で空」の確かめは、§6 冒頭の古い形（commit の後に外す）では `'true'`／`'966'` が残って落ちる。手元で古い形でも 1 回流して落ちることを確かめ、生出力を残す。ここでの「古い形」は、新しい形から `reset_operator_context`／`clear_tenant_context` の行だけを `await db.commit()` の後へ移したもの（⑧の savepoint は残す。外すと記録の失敗で先に落ち、印の残りを確かめられない）（落ちなければ試験が漏れを確かめていないので止まって Opus に戻す）。
   - ⑩ 会社を作る処理: app_engine の接続で取引を始め、`SELECT set_config('app.tenant_id', '965', true)`（backend/app/services/tenant.py:1779-1782 と同じ）の後、tenant.py:1800-1814 と同じ INSERT（`INSERT INTO public.tenant_settings (tenant_id, spreadsheet_phase, inventory_agg_filter, agg_price_threshold_jpy, agg_qty_threshold, quote_validity_days, default_currency, document_language, duty_incoterms, issue_mode) VALUES (965, 'B', 'none', 0, 0, 1, 'JPY', 'en', 'DAP', 'pdf') ON CONFLICT (tenant_id) DO NOTHING`）を流して commit。確かめ: admin で 965 の行が 1 行。
 - 既にある試験への影響:
   - backend/tests/test_translation_monitor.py の `notify_translation_anomaly` の試験（:120-180）は、どれも `_post_webhook` が False を返す道で、§6-3 で変える `if sent:` の中に入らない。変えずに通ることを確かめる。
@@ -141,6 +141,7 @@ run_sql migrations/20261107_160000_add_tenant_budget_settings_rls.sql
 
 - 理由（事実）: SQLAlchemy は commit の後に次の取引を自動で始める。commit の後に `SET app.is_operator = ''` を流すと、その SET は commit されない取引に入る。session を閉じるとき（get_db の finally の `clear_tenant_context` も含めて）その取引は巻き戻され、SET も消える（PostgreSQL の SET は取引の巻き戻しで元に戻る）。接続の返却時の後始末は巻き戻しだけで、設定は戻さない。結果、commit 済みの `app.is_operator='true'` が接続に残り、同じ接続を次に使う要求が運営の印を持ったまま動く。
 - commit の前に外せば、外したことも commit される。途中で例外が出たら `db.rollback()` で書込と運営の印の両方が取り消される（印を張った SET も同じ取引の中のため）。
+- backend/app/auth/dependencies.py:446-457 の `reset_operator_context` の説明文と使用例は「commit 後に外す」と書くが、それは古い形。本便では説明文を変えない（§1 の外）。カードの形に従う。
 - 既にある fx_rate_admin.py:135-149 は commit の後に外す古い形で、同じ漏れがある。本便では直さない（Opus が台帳に残す）。手本にしない。
 
 ### 6-1. backend/app/routers/super_admin_llm_budget.py
@@ -153,7 +154,7 @@ run_sql migrations/20261107_160000_add_tenant_budget_settings_rls.sql
     await set_operator_context(db)
     try:
         await db.execute(
-            ...（:152-170 のまま）
+            ...（:152-169 のまま）
         )
         await reset_operator_context(db)
         await db.commit()
@@ -233,7 +234,7 @@ run_sql migrations/20261107_160000_add_tenant_budget_settings_rls.sql
 
 | 書込 | 場所 | 文脈 |
 |---|---|---|
-| tenant_llm_budgets UPDATE（月替わり）・UPDATE（費用の加算）・INSERT（行を作る） | backend/app/services/llm_budget.py:475・:527・:567 | 呼び出し元 backend/app/services/message_translator.py:462-490・:614-623。message_translator を呼ぶ入口はどれも会社の文脈を張った session: 翻訳の作業 backend/app/tasks/translation.py:128-142（`set_tenant_context`）、backend/app/routers/leads.py:1386-1445（`get_current_tenant`）、backend/app/routers/conv_logs.py:152-153（`set_tenant_context`） |
+| tenant_llm_budgets UPDATE（月替わり）・UPDATE（費用の加算）・INSERT（行を作る） | backend/app/services/llm_budget.py:475・:527・:567 | 呼び出し元 backend/app/services/message_translator.py:462-490・:614-623。message_translator を呼ぶ入口はどれも会社の文脈を張った session: 翻訳の作業 backend/app/tasks/translation.py:78-79（`set_tenant_context`）、backend/app/routers/leads.py:1386-1445（`get_current_tenant`）、backend/app/routers/conv_logs.py:152-153（`set_tenant_context`）、backend/app/routers/translation.py:126-166 `outbound_preview`（`get_current_tenant`。:614-623 `generate_outbound_draft` の入口） |
 | tenant_llm_budgets UPDATE | backend/app/services/discord_notifier.py:222・:254（notify_budget_exhausted） | 呼び出し元が無い（`grep -rn notify_budget_exhausted backend/app` は定義だけ） |
 | tenant_settings UPDATE | backend/app/routers/tenant_policy.py:129 | `get_current_tenant`（backend/app/auth/dependencies.py）が `app.tenant_id` を自社に張る |
 | tenant_settings INSERT … ON CONFLICT DO NOTHING | backend/app/services/tenant.py:1800-1814（会社を作る処理） | :1779-1782 で新しい会社の `app.tenant_id` を張ってから書く（§5 ⑩で確かめる） |
