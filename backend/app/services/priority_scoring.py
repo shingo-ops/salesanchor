@@ -247,7 +247,9 @@ async def calibrate_tenant_weights(
             "cold": is_cold_start,
         },
     )
+    from app.auth.dependencies import reset_tenant_context  # noqa: PLC0415
     await db.commit()
+    await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
     return weights
 
 
@@ -310,7 +312,9 @@ async def label_lead_messages(
         saved += 1
 
     if saved > 0:
+        from app.auth.dependencies import reset_tenant_context  # noqa: PLC0415
         await db.commit()
+        await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
     return saved
 
 
@@ -436,7 +440,9 @@ async def _compute_and_persist(
             "now": now,
         },
     )
+    from app.auth.dependencies import reset_tenant_context  # noqa: PLC0415
     await db.commit()
+    await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
 
     return CustomerScoreResponse(
         lead_id=lead_id,

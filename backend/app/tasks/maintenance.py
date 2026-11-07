@@ -30,7 +30,7 @@ DATA_ACCESS_RETENTION_DAYS = int(os.getenv("DATA_ACCESS_RETENTION_DAYS", "60"))
 AUTH_EVENT_RETENTION_DAYS = int(os.getenv("AUTH_EVENT_RETENTION_DAYS", "90"))
 
 # 閲覧専用ページ（ADR-1019 Q7）。環境変数にしない（プライバシーポリシーの記載と揃えるため）
-VIEWER_RETENTION_DAYS = 90  # 期限切れ trial・停止 suspended を消すまで
+VIEWER_RETENTION_YEARS = 3  # 見られる期限（停止はその日と最後の停止の遅い方）から消すまで（ADR-1061）
 VIEWER_PENDING_DAYS = 7  # 申込のまま確認されない pending を消すまで
 VIEWER_LOGIN_EVENT_RETENTION_DAYS = 90
 
@@ -199,31 +199,44 @@ def purge_auth_events():
     retry_jitter=True,
 )
 def purge_viewer_accounts():
-    """閲覧専用アカウントの毎日の掃除（ADR-1019 Q7）。public の表なのでテナント文脈は使わない。
+    """閲覧専用アカウントの毎日の掃除（ADR-1019 Q7。期間は ADR-1061 で3年）。public の表なのでテナント文脈は使わない。
 
-    1. 期限切れから 90 日たった trial  2. 停止（suspend 記録）から 90 日たった suspended
+    1. 見られる期限（trial_expires_at）から 3 年たった trial
+    2. 最後の停止記録と見られる期限の遅い方から 3 年たった suspended（停止記録の無い行は消さない）
     3. 7 日たった pending  4. 90 日より古いログイン記録
-    アカウントを消すと、ログイン記録・状態履歴・鍵は CASCADE で一緒に消える。
+    本契約（active）は消さない。
+    アカウントを消すと、ログイン記録・状態履歴・鍵・請求先は CASCADE で一緒に消える。
     件数だけログに出す（email は出さない）。
     """
     engine = _get_sync_engine()
     Session = sessionmaker(engine)
     with Session() as session:
         trial_expired = session.execute(
-            text(f"""
-                DELETE FROM public.viewer_accounts
-                WHERE status = 'trial' AND trial_expires_at < NOW() - INTERVAL '{VIEWER_RETENTION_DAYS} days'
-            """)
+            text(
+                "DELETE FROM public.viewer_accounts "
+                "WHERE status = 'trial' AND trial_expires_at < NOW() - make_interval(years => :y)"
+            ),
+            {"y": VIEWER_RETENTION_YEARS},
         ).rowcount
+        # 停止の人: 最後の停止記録と見られる期限の遅い方から数える（GREATEST は NULL を無視する）。
+        # 停止記録の無い行は EXISTS で外す（今までと同じく消さない）
         suspended = session.execute(
-            text(f"""
+            text("""
                 DELETE FROM public.viewer_accounts a
                 WHERE a.status = 'suspended'
-                  AND (
-                      SELECT max(c.created_at) FROM public.viewer_status_changes c
+                  AND EXISTS (
+                      SELECT 1 FROM public.viewer_status_changes c
                       WHERE c.viewer_id = a.id AND c.action = 'suspend'
-                  ) < NOW() - INTERVAL '{VIEWER_RETENTION_DAYS} days'
-            """)
+                  )
+                  AND GREATEST(
+                      (
+                          SELECT max(c.created_at) FROM public.viewer_status_changes c
+                          WHERE c.viewer_id = a.id AND c.action = 'suspend'
+                      ),
+                      a.trial_expires_at
+                  ) < NOW() - make_interval(years => :y)
+            """),
+            {"y": VIEWER_RETENTION_YEARS},
         ).rowcount
         pending = session.execute(
             text(f"""

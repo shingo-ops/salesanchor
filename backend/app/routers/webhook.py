@@ -578,6 +578,7 @@ async def _create_outbound_lead_for_echo(
         {"code": f"LD-{lead_id:05d}", "id": lead_id},
     )
     await db.commit()
+    await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
     return lead_id
 
 

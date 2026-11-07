@@ -704,6 +704,7 @@ async def delete_product(
         await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
     except IntegrityError as exc:
         await db.rollback()
+        await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
         logger.warning(
             "delete_product IntegrityError fallback: tenant=%d product=%d err=%s",
             tenant_id, product_id, exc.orig,

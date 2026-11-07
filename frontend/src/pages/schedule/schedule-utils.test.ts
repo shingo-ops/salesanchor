@@ -1,15 +1,20 @@
+/* eslint-disable local/no-japanese-literal -- テスト: 作る小窓の日時の 1 行が Google と同じ日本語で出ることを検証する（ADR-027・precedent: CalendarView.test.tsx） */
 import { describe, expect, it } from "vitest";
 import i18n from "../../i18n";
 import ja from "../../locales/ja.json";
 import {
   eventNumericId,
   fitPopover,
+  formatDraftDateLine,
+  formatSearchResultLine,
   normalizeShift,
   toCalendarEnd,
+  toHolidayEvents,
   toRangeEnd,
   toRangeStart,
   type AnchorRect,
   type ApiShift,
+  type ScheduleItem,
 } from "./schedule-utils";
 
 const baseShift: ApiShift = {
@@ -32,6 +37,80 @@ describe("normalizeShift", () => {
 
   it("non-holiday uses the ja translation of schedule.shiftLabel", () => {
     expect(normalizeShift(baseShift, t).title).toBe(ja.schedule.shiftLabel);
+  });
+});
+
+describe("formatDraftDateLine", () => {
+  const t = i18n.getFixedT("ja");
+  const d = { startDate: "2026-11-10", startTime: "10:00", endDate: "2026-11-10", endTime: "11:00", allDay: false };
+  const line = (patch: Partial<typeof d>) => formatDraftDateLine({ ...d, ...patch }, t, "ja");
+
+  it("same-day timed range", () => {
+    expect(line({})).toBe("11月10日(火) 午前10時～午前11時");
+  });
+
+  it("afternoon range", () => {
+    expect(line({ startTime: "12:30", endTime: "13:30" })).toBe("11月10日(火) 午後12:30～午後1:30");
+  });
+
+  it("all-day single day", () => {
+    expect(line({ allDay: true })).toBe("11月10日(火) 終日");
+  });
+
+  it("all-day multiple days", () => {
+    expect(line({ allDay: true, endDate: "2026-11-12" })).toBe("11月10日(火)～11月12日(木)");
+  });
+
+  it("range across midnight", () => {
+    expect(line({ startTime: "23:00", endDate: "2026-11-11", endTime: "01:00" })).toBe(
+      "11月10日(火) 午後11時～11月11日(水) 午前1時",
+    );
+  });
+
+  it("empty when the start is unreadable", () => {
+    expect(line({ startTime: "" })).toBe("");
+  });
+
+  it("start only when the end time is unreadable", () => {
+    expect(line({ endTime: "" })).toBe("11月10日(火) 午前10時");
+  });
+});
+
+describe("formatSearchResultLine", () => {
+  const t = i18n.getFixedT("ja");
+  const item = (patch: Partial<ScheduleItem>): ScheduleItem => ({
+    id: "event-1",
+    title: "商談A",
+    start: new Date(2026, 10, 10, 10, 0),
+    end: new Date(2026, 10, 10, 11, 0),
+    allDay: false,
+    category: null,
+    calendarType: "shared",
+    source: "app",
+    ownerUserId: 101,
+    ownerName: null,
+    ...patch,
+  });
+
+  it("U1: timed event matches formatDraftDateLine for the same values", () => {
+    const expected = formatDraftDateLine(
+      { startDate: "2026-11-10", startTime: "10:00", endDate: "2026-11-10", endTime: "11:00", allDay: false },
+      t,
+      "ja",
+    );
+    expect(formatSearchResultLine(item({}), t, "ja")).toBe(expected);
+  });
+
+  it("U2: all-day event shows a single date and the all-day label", () => {
+    const line = formatSearchResultLine(
+      item({ allDay: true, start: new Date(2026, 10, 10), end: new Date(2026, 10, 11) }),
+      t,
+      "ja",
+    );
+    expect(line).toContain("11月10日");
+    expect(line).not.toContain("11/11");
+    expect(line).not.toContain("11日");
+    expect(line).toContain(t("schedule.allDay"));
   });
 });
 
@@ -137,5 +216,31 @@ describe("list view range", () => {
   it("crosses a year boundary", () => {
     const anchor = new Date(2026, 11, 15);
     expect(toRangeEnd("list", anchor)).toEqual(new Date(2027, 0, 14));
+  });
+});
+
+describe("toHolidayEvents", () => {
+  it("U1: makes an all-day, immovable holiday event", () => {
+    expect(toHolidayEvents([{ date: "2026-11-03", name: "文化の日" }])).toEqual([
+      {
+        id: "holiday-2026-11-03",
+        title: "文化の日",
+        start: "2026-11-03",
+        end: "2026-11-04",
+        allDay: true,
+        tone: "holiday",
+        editable: false,
+      },
+    ]);
+  });
+
+  it("U2: month end rolls over to the next year", () => {
+    expect(toHolidayEvents([{ date: "2026-12-31", name: "x" }])[0].end).toBe("2027-01-01");
+  });
+
+  it("U3: drops malformed dates and returns [] for undefined / []", () => {
+    expect(toHolidayEvents([{ date: "2026/11/03", name: "x" }])).toEqual([]);
+    expect(toHolidayEvents(undefined)).toEqual([]);
+    expect(toHolidayEvents([])).toEqual([]);
   });
 });

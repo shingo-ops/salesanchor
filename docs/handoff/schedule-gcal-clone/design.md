@@ -126,8 +126,8 @@ ADR-1065 の改訂（便1 の PR に入れる）。直すのは 3 か所:
 | 渡すもの | 中身 | 成功条件 |
 |---|---|---|
 | `slotEventOverlap: true` | 今の `false`（`frontend/src/components/CalendarView.tsx:171`）を `'schedule'` のときだけ true。重なりの形は recon §7.3 の `computeSegHStyle` | G19 |
-| `dayHeaderContent` | 曜日と日付の数字の 2 つの `span`。曜日は新しい関数 `formatWeekdayShort(date, language)`（`calendarView.utils.ts` に足す・`Intl.DateTimeFormat(language, { weekday: 'short' })`）。数字は `date.getDate()`。今日（引数の `isToday`）は数字に `comp-calendar__daynum--today` | G15 |
-| `slotLabelContent` | 今の時刻の文字の作り方（`timeStyle` が `'meridiem'` なら `formatMeridiem`・`:176`、`'h24'` なら今の 24 時間の形）を、時が 0 で分が 0 のときだけ空の文字にする関数で包む（新しい関数 `formatSlotLabel(date, text, t, timeStyle)`・`calendarView.utils.ts`。`h24` は FullCalendar の引数 `text` をそのまま返す・作り方は card-bin6.md §2-2） | G18 |
+| `dayHeaderContent` | 曜日と日付の数字の 2 つの `span`。曜日は新しい関数 `formatWeekdayShort(date, language)`（`frontend/src/components/calendarView.utils.ts` に足す・`Intl.DateTimeFormat(language, { weekday: 'short' })`）。数字は `date.getDate()`。今日（引数の `isToday`）は数字に `comp-calendar__daynum--today` | G15 |
+| `slotLabelContent` | 今の時刻の文字の作り方（`timeStyle` が `'meridiem'` なら `formatMeridiem`・`:176`、`'h24'` なら今の 24 時間の形）を、時が 0 で分が 0 のときだけ空の文字にする関数で包む（新しい関数 `formatSlotLabel(date, text, t, timeStyle)`・`frontend/src/components/calendarView.utils.ts`。`h24` は FullCalendar の引数 `text` をそのまま返す・作り方は card-bin6.md §2-2） | G18 |
 
 css（`CalendarView.css` の末尾に足す。値は var() と calc() と % だけ）:
 
@@ -213,6 +213,81 @@ PR 本文: tokens.css にトークンを 2 つ足すので、`frontend/scripts/c
 
 台帳・ADR: ADR の改訂は無い（金型 Button・ContextMenu・TextFieldControl を今の口のまま使う。金型に口を足さない）。文言は ADR-027 に従い t() だけ。
 
+### 3.10 便4: 日本の祝日を終日の行に出す（G7・G9・2026-11-07）
+
+出どころは §3.4 の案 C（部品 `holidays==0.108` を裏側に 1 つ足す）。カードは `docs/handoff/schedule-gcal-clone/card-bin4.md`。
+
+本番の今: 祝日は出ない（11 月の週・月に 11/3・11/23 の箱が無い）→ G7 ×。
+
+確かめた事実（2026-11-07・origin/main 18565cd1b）:
+- 裏側の予定の道は `backend/app/routers/calendar.py:138-157`（`GET /calendar/events`・`get_current_tenant`）。祝日の道は無い。
+- 依存は `backend/requirements.txt` で、本番の箱は `backend/Dockerfile:18-21` で `pip install -r requirements.txt` する（版上げは配備で入る）。
+- 画面の予定は `frontend/src/pages/schedule/SchedulePageImpl.tsx:903-910`（`useApiQuery` 3 本）で読み、`:1176-1198` の `calendarEvents` で金型に渡す。押したときは `:1405-1408` が `itemById` で探し、無ければ何もしない。動かすときは `patchMoved`（`:1202-`）が `itemById` 無しで元に戻す。
+- 金型は `tone: "holiday"`（`frontend/src/components/calendarView.utils.ts:16`）と色（`frontend/src/components/CalendarView.css:139-142`）を既に持ち、`editable: false` で予定ごとにつかめなくできる（`frontend/src/components/calendarView.utils.ts:44-45`）。
+- 期間は `toRangeStart`・`toRangeEnd`（`frontend/src/pages/schedule/schedule-utils.ts:145-157`）。終わりは含まない日（週は翌週の頭・月は翌月 1 日）。
+- 部品の言語: Japan は en_US・ja・th を持ち、既定は ja（holidays の公式説明 https://holidays.readthedocs.io/en/latest/ を 2026-11-07 に直接読んだ。Context7 は月の上限で使えなかった）。
+- 内閣府の表の 2026・2027 年は 35 件（Mac で取得した syukujitsu.csv を Shift_JIS から読み直して数えた）。
+
+作り方:
+1. 裏側に 新しいファイル backend/app/services/holiday_service.py の `list_japan_holidays(start, end, lang)` を作る（正本はこの関数 1 か所。DB に持たない）。
+2. `GET /calendar/holidays?start=YYYY-MM-DD&end=YYYY-MM-DD&lang=ja|en` を `backend/app/routers/calendar.py` に足す。返すのは `{"holidays":[{"date","name"}]}`。ログインは要る（`get_current_tenant`）が、会社によらず同じ答え。`end <= start` と 400 日を超える期間は 422。
+3. openapi.json を生成し直す（CI「API contract is up to date」）。
+4. 画面は 4 本目の `useApiQuery` で読み、`toHolidayEvents` で `allDay: true`・`tone: "holiday"`・`editable: false` の箱にして `calendarEvents` の最後に足す。名前は画面の言語（`i18n.language` が en で始まれば en、それ以外は ja）で裏側が返すので、文言キーは足さない。
+5. 祝日の読み込みは、読み込み中の印・取れなかった文に入れない（祝日が取れなくても予定は見える）。
+6. 押しても何も開かない・つかめない（G9）は、今の `itemById` の形と `editable: false` で満たす（画面の分岐を足さない）。
+
+選ばなかった案:
+- 祝日を `/calendar/events` の答えに混ぜる → 予定（会社の DB）と祝日（部品）の正本が 1 本の答えに混ざり、予定の直し・消しの道が祝日を予定と取り違える恐れがある。道を分ける。
+- 画面に祝日の表を持つ（npm の部品や手書きの表）→ 裏側と画面で 2 か所になる（SSOT 違反）。裏側の 1 か所にする。
+
+範囲の外（記録だけ）: 月の升目の前後の月の日（例: 11 月の表示の 10/26〜10/31）には祝日も予定も出ない（今の期間の作りのまま）。一覧の表示は金型を使わないので祝日は出ない（G7 は週と月）。月の升目の「他 N 件」を押して出る一覧の小窓は予定だけから作る（`frontend/src/pages/schedule/SchedulePageImpl.tsx:1276-1277` の visibleEvents）ので、祝日は件数に数えられても小窓の一覧には出ない。直すなら別の便にする（8 回目の審査の推奨）。
+
+試験と確かめ: カード §6・§7。本番では 11 月の週（11/2〜11/8）と月で「文化の日」「勤労感謝の日」が終日の行に出ること（G7）、押して何も開かず、引っぱっても動かないこと（G9）を Chrome で見る。
+
+### 3.11 便5: 題名で予定を探す（G12・2026-11-07）
+
+PO 承認: 成功条件 G12（§2）。便5 の着手は PO が 2026-11-07「1」（便3〜便5 を順に進める）で承認。
+
+今の形（2026-11-07 に origin/main 04edc8e4a で確かめた）:
+- 虫めがねのボタンは押しても何も起きない。`frontend/src/pages/schedule/SchedulePageImpl.tsx` の見出しの `aria-label={t("common.search")}` の金型 Button に `onClick` が無い（recon B4）。
+- 予定の一覧の道 `GET /calendar/events`（`backend/app/routers/calendar.py` の `list_events`）は期間（start・end 必須）と種類でしか絞れない。題名の絞り込みは無い。
+- 見せてよい予定の決まり（共有の予定＋自分の予定だけ。他人の「自分だけ」は返さない）は `backend/app/services/calendar_service.py` の `list_events` の中の 1 か所だけにある。
+
+作り方:
+1. 裏側（道を 1 本足す・見せてよい予定の決まりは 1 か所のまま）
+   - `calendar_service.list_events` に、省略できる引数 `title_query: Optional[str] = None` と `limit: Optional[int] = None` を足し、`start`・`end` を省略できるようにする（`Optional[str] = None`）。start・end が None のときは期間の条件を付けない。今の呼び出し（期間を渡す）の SQL は 1 字も変えない。
+   - `title_query` があるときだけ `ce.title ILIKE :title_q ESCAPE '\'` を足す。`:title_q` は `%` + 文字の `\`・`%`・`_` を `\` で逃がした値 + `%`。並びは `ORDER BY ce.start_datetime DESC`（新しい予定が上）、`limit` があるときだけ `LIMIT :limit`。
+   - 新しい道 `GET /calendar/events/search?q=...` を `list_events` の道のすぐ後に置く。`q` は前後の空白を除いて 1〜100 文字（外れたら 422）。返す形は `{"events": [...]}` で `/calendar/events` と同じ。件数は最大 50。ログイン必須（`get_current_tenant`・`get_current_user`）。
+   - `/calendar/events/{event_id}` は PATCH と DELETE だけで GET は無い（`backend/app/routers/calendar.py` の `@router.patch` `@router.delete`）。GET の `/calendar/events/search` とはぶつからない。
+2. 画面（金型だけで作る・色や大きさの直値なし）
+   - 虫めがねを押すと、見出しの虫めがねの場所に金型 `TextFieldControl`（`variant="search"`・`type="search"`）が出て、すぐ文字が打てる。中の文字の例は「題名で予定を探す」（新しい言葉は ja.json・en.json に同じキーで足す）。
+   - 打った文字で道を呼ぶのは、Enter を押したときだけ（1 文字ごとに呼ばない）。
+   - 結果は金型 `Popover`（制御式 `open`・`onOpenChange`。子＝トリガーは検索の欄）の中に金型 `ListRow` を並べる。1 行の題名は予定の題名、下の行は「11月10日(火) 午前10時～午前11時」の形（便3 の `formatDraftDateLine` を使う。終日の予定は「11月10日(火) 終日」）。見つからないときは金型 `EmptyState` で「見つかりませんでした」。
+   - 結果の行を押すと、表示の基準日（`setAnchorDate`）をその予定の始まりの日にし、検索の欄と結果を閉じる。表示の種類（日・週・月・一覧）は変えない。
+   - Esc で検索の欄と結果を閉じ、虫めがねに戻る。検索の欄の中では文字の近道は効かない（今の近道の処理は入力欄を除外済み）。
+3. 触らないもの: 金型 `frontend/src/components/`、migrations、deploy、本番 scripts、DB の形、`/calendar/events` の今の動き。
+
+受入れ（G12）:
+
+| 基準 | 検証方法 |
+|---|---|
+| 虫めがねを押すと検索の欄が出て、そのまま文字が打てる | 試験（押して入力欄に focus）と本番で目視 |
+| 「商談」で Enter を押すと、題名に「商談」を含む予定が新しい順に出る（最大 50 件） | 裏側の試験（SQL の条件と並び・件数）、画面の試験（作り物の答えが行に出る）、本番で目視 |
+| 他人の「自分だけ」の予定は検索に出ない | 裏側の試験（見せてよい予定の条件が同じ SQL に入る） |
+| `%` や `_` を打っても全部が当たらない | 裏側の試験（逃がした値になる） |
+| 結果の行を押すと、その予定の日が画面に出る | 画面の試験（押した後に見出しの日付が変わる）、本番で目視 |
+| 当たりが無いと「見つかりませんでした」が出る | 画面の試験 |
+| Esc で閉じる | 画面の試験 |
+
+選ばなかった案:
+- 画面に読み込んだ予定（今の週だけ）の中を探す: 先の週や前の月の予定が探せない。G12 の「探して押すとその日へ飛ぶ」が成り立たない。
+- `/calendar/events` に `q` を足す: 期間が必須の道なので、期間を外す変更が今の呼び出し全部に響く。道を分ければ今の道は 1 字も変わらない。
+- 新しい service 関数を作り SQL を写す: 見せてよい予定の決まりが 2 か所になる（SSOT 違反）。
+
+心配と対処:
+- 予定が多い会社で遅くなる: 最大 50 件・Enter のときだけ呼ぶ。題名の索引は今回は足さない（DB を触らない）。遅さが出たら別の作業で索引を足す。
+- 金型 Popover はトリガー（検索の欄）を押すと開閉が切り替わる（`frontend/src/components/Popover.tsx` の `handleTriggerClick`）。欄を押して直すたびに結果が閉じないよう、検索の欄の `onClick` で `stopPropagation` する（金型は変えない）。
+
 ### 3.4 祝日の出どころ（2026-11-06 に確かめて決めた）
 
 確かめた事実:
@@ -233,7 +308,7 @@ PR 本文: tokens.css にトークンを 2 つ足すので、`frontend/scripts/c
 
 ### 3.5 検索
 
-- 今ある予定の一覧の道で題名を探す（新しい道を作るかは、便5 の前に今の道に絞り込みがあるかを読んで決める）。
+- 2026-11-07 に読んで決めた: 今の一覧の道には題名の絞り込みが無く期間が必須なので、読み取りの道 `GET /calendar/events/search` を 1 本足す。見せてよい予定の決まりは `calendar_service.list_events` の 1 か所のまま使う。作り方は §3.11。
 
 ## 4. 便の分け方（作る順）
 
@@ -244,7 +319,7 @@ PR 本文: tokens.css にトークンを 2 つ足すので、`frontend/scripts/c
 | 便2 | 予定の画面を金型に載せ替え・目盛り・高さ・箱・今の時刻へ・月の高さと帯・引っぱる／動かす・終日のずれの直し（§3.3 の 4） | G2・G4〜G6・G8〜G10・G13 | なし（保存の道は既存。裏側は `backend/app/services/calendar_service.py` の `_to_google_event_body` の終日の枝と `backend/tests/test_calendar_service.py` だけ。移行・deploy・scripts は無い） |
 | 便3 | Google 型の作る小窓・表示切替を 1 つに | G3・G11 | なし |
 | 便4 | 祝日（案 C） | G7 | なし（移行なし。依存の追加 1 つ） |
-| 便5 | 検索 | G12 | 未定（便5 の前に確認） |
+| 便5 | 検索（§3.11） | G12 | なし（移行・deploy・scripts・DB の形は無い。裏側は読み取りの道 1 本と `calendar_service.list_events` の省略できる引数だけ） |
 | 便6 | 見た目 5 か所（§3.8）。金型に口 1 つ・css・トークン 2 つ・予定の画面に 1 行 | G15〜G19 | なし（frontend だけ。移行・deploy・scripts・DB は無い） |
 
 便0 を先に出す理由: 今の本番で毎回起きる間違いで、1 行で直り、載せ替えを待つ理由がない。
@@ -351,3 +426,27 @@ PR 本文: tokens.css にトークンを 2 つ足すので、`frontend/scripts/c
 - (4) ○ 試験の直しで既存の試験は落ちない（コードを読んで確かめた・vitest は回していない）。C4 の順: 金型の Esc は document で受けて伝わりを止め（`frontend/src/components/ContextMenu.tsx:122-131`）、近道は window で受ける（`frontend/src/pages/schedule/SchedulePageImpl.tsx:1272-1276`）。開いている間の d は `:1236`・`:1246` で止まり、閉じた後は `:1258` で日に変わる。
 - (5) ○ 新しい食い違いなし。推奨 1 件: カード §8 の想定分岐の範囲「:297-397」→ 実物の describe は `:244-399` → 直した。
 - 試験を実際に回すのは実装の CI で確かめる。
+
+### 8 回目（便4・G7・G9）: APPROVE（2026-11-07 12:40〜12:43 UTC・クラウドの Opus・origin/release/schedule-gcal-holiday-bin4 edb43370e・セッション cse_01HHUUpR2rYa2ud1RduecWHt）
+
+- 結果は返事の本文で全部読んだ（途中で切れていない）。
+- (1) ○ Python 3.12.3＋holidays 0.108 でカード §2 の関数を実行。2026-01-01〜2028-01-01 は 35 日で、カード §6 S1（内閣府の表）と順番まで全件一致。lang=en の 2026-11-03 は「Culture Day」。2027-03-22 は「振替休日」。
+- (2) ○ HEAD の写しにカード §2・§3 を入れて確かめた。欄名 date と import の date はぶつからない。範囲が空・401 日は 422、400 日は通る。既存の test_calendar_owner_api と合わせて 25 passed・ruff 合格。openapi 生成の差は `/api/v1/calendar/holidays`・`HolidayItem`・`HolidayListResponse` の 3 つだけ。
+- (3) ○ 型（`frontend/src/components/calendarView.utils.ts:33-45`）・押しても開かない（`frontend/src/pages/schedule/SchedulePageImpl.tsx:1174`・`:1405-1407`）・動かせない（`:1202-1207` で revert）・読み込み中に入れない（`:917`・`:919`）・試験の作り物は決まりの無い道に `[]`（`frontend/src/pages/schedule/SchedulePageImpl.test.tsx:62`）。
+- (4) ○ 行番号は HEAD と一致。便3 は origin/main に入っている。推奨 1 件（月の「他 N 件」の一覧に祝日が出ない）→ §3.10 の範囲の外に記録した。
+
+### 9 回目（便5・G12）: 1 回目 REVISE（2026-11-07・クラウドの Opus・origin/release/schedule-gcal-search-bin5 d64dc4e6f）
+
+- 必須 1 件: カード §2 の例は `if start` が先で、写すと期間を渡す今の呼び出しの SQL の順が変わる（今は `backend/app/services/calendar_service.py:164-167` で `start_datetime < :end` が先）→ `if end` を先に書き、「書き直してよい」を「必ずこの順・入れ替えない」に改めた。
+- 推奨 1 件: 検索の欄の Enter が変換の確定でも走る → `event.nativeEvent.isComposing || event.keyCode === 229` で先に返す（今の近道 `frontend/src/pages/schedule/SchedulePageImpl.tsx:1284-1285` と同じ形）をカード §5-3 に足した。
+- 推奨 1 件: 試験 F3 の「見出しの日付が変わる」が比べる値を決めていない・`rangeText` は K7 の describe（`frontend/src/pages/schedule/SchedulePageImpl.test.tsx:249`）の中だけ → 期待値を `getWeekDays`・`formatDayLabel`（`frontend/src/pages/schedule/schedule-utils.ts:137`・`:161` で export 済み）で作り、`rangeText` を F の describe にも置くと決めた。画面の部品のファイルに export は足さない。
+- ○: 期間が無いときの `WHERE TRUE`・`ESCAPE` の意味と S3 の値・道のぶつかり無し（`/calendar/events/{event_id}` は PATCH と DELETE だけ）・金型 Popover・ListRow・EmptyState・TextFieldControl の口・`isLoading`・訳と日付の関数・カードの目印はすべて実物と一致。
+
+### 9 回目（便5・G12）: 2 回目 APPROVE（2026-11-07 14:03〜14:04 UTC・クラウドの Opus・origin/release/schedule-gcal-search-bin5 631d14b3a・照合は origin/main 67d7bbf87・セッション cse_01HHUUpR6HRDSTAKnSXpcQSn）
+
+- 結果は返事の本文で全部読んだ（途中で切れていない）。
+- (1) ○ カード §2 の例で作られる WHERE は `ce.start_datetime < :end AND ce.end_datetime > :start` の順で、`backend/app/services/calendar_service.py:164-167` と同じ。
+- (2) ○ 変換中の扱いは `frontend/src/pages/schedule/SchedulePageImpl.tsx:1284-1285` と同じ形。`TextFieldControl` は `onKeyDown` を input に渡す（`frontend/src/components/TextField.tsx:37`・`:44`・`:55`）。型は審査役が「未確認」としたため Opus が手元の `@types/react` で確かめた（`KeyboardEvent` は DOM の `KeyboardEvent` を `nativeEvent` に持ち、`keyCode: number` がある）。最後の型の確かめは実装の `tsc` で行う。
+- (3) ○ F3 の期待値の式は `formatRangeTitle` の週の文（`frontend/src/pages/schedule/SchedulePageImpl.tsx:138-144`・`:1162`）と一致。
+- (4) ○ 新しい食い違いなし。
+

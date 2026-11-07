@@ -1,6 +1,7 @@
 import os
 from typing import AsyncGenerator
 
+from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
@@ -29,8 +30,31 @@ if DATABASE_URL.startswith("postgresql"):
         pool_pre_ping=True,
         pool_timeout=30,  # コネクションプール枯渇時の無限待機を防止（30秒で諦めて503を返す）
         connect_args=_connect_args,
+        pool_reset_on_return=None,  # ADR-1070: pool 自身の rollback を止め、_reset_session_state に任せる
     )
+
+
+def _reset_session_state(dbapi_connection, connection_record, reset_state):
+    """ADR-1070 Bx: 接続を返すたびに rollback → RESET ALL → commit。"""
+    if reset_state.terminate_only:          # 捨てる接続（GC・切り離し）は触らない
+        return
+    dbapi_connection.rollback()             # 開いている取引を閉じる（失敗した取引も）
+    cur = dbapi_connection.cursor()
+    try:
+        cur.execute("RESET ALL")            # app.tenant_id・app.is_operator・search_path を初期値へ
+    finally:
+        cur.close()
+    dbapi_connection.commit()               # RESET を確定させて idle で返す
+
+
+def install_pool_reset(async_engine) -> None:
+    """ADR-1070: pool_reset_on_return=None で作った async engine に Bx を付ける。試験もこの関数を使う。"""
+    event.listen(async_engine.sync_engine.pool, "reset", _reset_session_state)
+
+
 engine = create_async_engine(DATABASE_URL, **_engine_kwargs)
+if DATABASE_URL.startswith("postgresql"):
+    install_pool_reset(engine)
 
 # 非同期セッションの作成
 AsyncSessionLocal = sessionmaker(

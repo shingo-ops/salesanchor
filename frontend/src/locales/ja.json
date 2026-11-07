@@ -1526,7 +1526,6 @@
     "discordAddBot": "BotをDiscordサーバーに追加",
     "discordBotConnected": "Bot接続済み",
     "discordConnectedSuccess": "DiscordサーバーにBotを追加しました。",
-    "discordConnectError": "Discord連携に失敗しました。もう一度お試しください。",
     "discordNoServer": "接続済みDiscordサーバーがありません",
     "discordNoServerDesc": "BotをDiscordサーバーに追加してメッセージ連携を開始しましょう。",
     "discordOpenSettings": "Discord設定を開く",
@@ -3223,6 +3222,9 @@
     }
   },
   "schedule": {
+    "searchPlaceholder": "題名で予定を探す",
+    "searchResults": "検索の結果",
+    "searchNoResults": "見つかりませんでした",
     "title": "スケジュール",
     "subtitle": "予定を管理しGoogleカレンダーと同期できます。",
     "settings": "設定",
@@ -3354,7 +3356,7 @@
     "monthView": "月",
     "weekView": "週",
     "listView": "一覧",
-    "moreOptions": "詳しく入れる",
+    "dateTimeLine": "{{date}} {{time}}",
     "addMeet": "Google Meet を付ける",
     "joinMeet": "Google Meet で参加",
     "meetFailed": "Google Meet を付けられませんでした",
@@ -3588,8 +3590,6 @@
     "confirmTitle": "自社用サーバーの登録を解除しますか？",
     "confirmMessage": "Discord のサーバーそのものは消えません。アプリとのつながりだけを外します。",
     "connectedSuccess": "自社用サーバーを登録しました",
-    "connectError": "登録できませんでした",
-    "guildAlreadyRegistered": "このサーバーは既に登録されています",
     "requestFailed": "実行できませんでした",
     "loadError": "読み込めませんでした",
     "snapshot": "今のサーバーを読み取る",
@@ -6105,6 +6105,20 @@
       "clear": "選択をクリア",
       "count": "{{count}} 人",
       "saved": "保存しました"
+    }
+  },
+  "discordConnect": {
+    "error": {
+      "stateExpired": "時間切れにより連携できませんでした。もう一度お試しください。",
+      "discordInterrupted": "Discordでの操作が途中で止まったため、連携できませんでした。もう一度お試しください。",
+      "serverNotSelected": "サーバーを選択していないため連携できませんでした。追加するサーバーを選んでください。",
+      "serverNotVerified": "選択したサーバーが確認できませんでした。もう一度お試しください。",
+      "serverAlreadyRegistered": "このサーバーはすでに登録されているため、連携できませんでした。別のサーバーを選んでください。",
+      "discordCheckFailed": "Discordとの確認がうまくいかず、連携できませんでした。時間をおいてもう一度お試しください。",
+      "serviceUnavailable": "システムの一時的な不具合で連携できませんでした。時間をおいてもう一度お試しください。続く場合はサポートにお問い合わせください。",
+      "permissionDenied": "この操作をする権限がありません。会社の管理者に権限を付けてもらってください。",
+      "unknown": "連携できませんでした。もう一度お試しください。続く場合はサポートにお問い合わせください。",
+      "disconnectFailed": "連携を外せませんでした。もう一度お試しください。続く場合はサポートにお問い合わせください。"
     }
   }
 }

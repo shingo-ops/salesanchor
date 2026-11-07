@@ -24,6 +24,7 @@ import ConfirmModal from "../../components/ConfirmModal";
 import { DataTable } from "../../components/DataTable";
 import { EmptyState } from "../../components/EmptyState";
 import { LoadingBlock } from "../../components/loading";
+import { getDiscordConnectErrorKey, getDiscordConnectErrorReason } from "../../features/discord-connect/discordConnectError";
 import "./discord-config.css";
 
 interface DiscordOwnConfig {
@@ -118,13 +119,7 @@ export function DiscordOwnServerPanel() {
     if (status === "connected") {
       setNotice({ kind: "success", text: t("discordOwnServer.connectedSuccess") });
     } else if (status === "error") {
-      setNotice({
-        kind: "danger",
-        text:
-          params.get("reason") === "guild_already_registered"
-            ? t("discordOwnServer.guildAlreadyRegistered")
-            : t("discordOwnServer.connectError"),
-      });
+      setNotice({ kind: "danger", text: t(getDiscordConnectErrorKey(params.get("reason"))) });
     }
     window.history.replaceState({}, "", window.location.pathname + "?tab=own");
     // eslint-disable-next-line react-hooks/exhaustive-deps -- 開いたとき 1 回だけ
@@ -141,8 +136,8 @@ export function DiscordOwnServerPanel() {
       });
       window.open(data.invite_url, "_blank", "noopener,noreferrer");
       window.addEventListener("focus", () => void refresh(), { once: true });
-    } catch {
-      setNotice({ kind: "danger", text: t("discordOwnServer.requestFailed") });
+    } catch (e) {
+      setNotice({ kind: "danger", text: t(getDiscordConnectErrorKey(getDiscordConnectErrorReason(e))) });
     } finally {
       setInviting(false);
     }
