@@ -69,7 +69,7 @@ def _event(cur, vid, days_ago):
 
 
 def _emails(cur):
-    cur.execute("SELECT email FROM public.viewer_accounts ORDER BY email")
+    cur.execute('SELECT email FROM public.viewer_accounts ORDER BY email COLLATE "C"')
     return [r[0] for r in cur.fetchall()]
 
 
