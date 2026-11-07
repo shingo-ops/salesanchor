@@ -10,14 +10,14 @@
 - 検索: `docs/adr/FEATURE-INDEX.md` の「権限 / role / 認証」行（ADR-023 / ADR-032）と、`ls docs/adr | grep -i -E "role|perm|rbac"`。
 - 関係するもの:
   - ADR-147（共通6ロール標準化）: ロールの種類と既定の許可。本件はロールの種類も既定の許可も変えない。
-  - ADR-144（UI 部品の金型）: 新しい部品は `components/` に `Xxx.tsx` + `Xxx.css`（var() のみ）+ `Xxx.stories.tsx` で登録する。正本 `docs/CC_UI_GOVERNANCE.md`。
+  - ADR-144（UI 部品の金型）: 新しい部品は `components/` に Xxx.tsx + `Xxx.css`（var() のみ）+ Xxx.stories.tsx で登録する。正本 `docs/CC_UI_GOVERNANCE.md`。
   - ADR-067（デザイントークン）: 色・寸法は CSS 変数だけ。
-  - ADR-027（画面の言葉）: 文字は `t()` 経由。`ja.json` と `en.json` に同じ鍵。
+  - ADR-027（画面の言葉）: 文字は `t()` 経由。ja.json と en.json に同じ鍵。
 - 関係しないもの: ADR-023 / ADR-032（ログインの仕組み）、ADR-1011 / ADR-1034（AI の作業許可の台帳。アプリの役割とは別物）。
 
 ## 2. 今の役割の画面
 
-- ファイル: `frontend/src/pages/roles/RolesPage.tsx`（513 行）。試験ファイルは無い（`ls frontend/src/pages/roles` → `RolesPage.tsx` だけ）。
+- ファイル: `frontend/src/pages/roles/RolesPage.tsx`（513 行）。試験ファイルは無い（`ls frontend/src/pages/roles` → `frontend/src/pages/roles/RolesPage.tsx` だけ）。
 - 区分の並び順とアイコン: `frontend/src/pages/roles/RolesPage.tsx:57-66`（CATEGORY_META）。
 - 「メニュー表示」の切替に使う鍵: `frontend/src/pages/roles/RolesPage.tsx:70-78`（MENU_VIEW_KEY）。
 - 読み込み:

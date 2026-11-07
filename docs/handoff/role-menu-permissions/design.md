@@ -8,7 +8,7 @@
 | PO の決定 | ①Discord の権限画面の形で ✕／✓ の3択（2026-11-07）②完成イメージの見た目は「イメージ通り」（2026-11-07）③メニューごとに設定。同じ許可のメニューは1行にまとめる案2（2026-11-07「2」）④営業ロールの許可は AI が変えない。PO が自分で設定する（2026-11-07「2」） |
 | 部品の新設の許可（CC_UI_GOVERNANCE.md:14） | PO が ✕ ／ ✓ の3択の切替を含む完成イメージを「イメージ通り」と承認した（2026-11-07）。3択の金型は `components/` に無い（recon §6）ため、この承認を `SegmentedToggle` の新設の許可として扱う（Opus 判断・PO の常時委譲の範囲） |
 | 完成イメージ | https://claude.ai/artifact/EpTEWEwpePki7C52Krcdb3 の「案2」 |
-| 危険 PR か | いいえ。`migrations/`・`deploy.yml`・本番 `scripts/` を含まない |
+| 危険 PR か | いいえ。`migrations/`・`.github/workflows/deploy.yml`・本番 `scripts/` を含まない |
 
 ## 0. 目的（PO の言葉）
 
@@ -33,8 +33,8 @@
 | 8 | まとめた行の名前は、左の列と管理センターのメニュー名をそのままつないだものになる | 自動試験（行の名前の鍵が左の列・管理センターと同じ鍵） |
 | 9 | 左の列（PC・スマホ）と管理センターのメニューの出方は今と1つも変わらない | 既存の試験が緑＋新しい試験（許可が全部無い・§5-1 の条件の許可を1つずつ持つ・全部持つ、のそれぞれで、置き換え前の式と `canSeeMenu` の結果が全メニューで同じ） |
 | 10 | オーナーなどシステムのロールと、編集の許可が無い人には、切替が押せない（今と同じ） | 自動試験 |
-| 11 | 色・寸法の直書き 0 件、画面の日本語の直書き 0 件、`ja.json` と `en.json` の鍵が一致 | CI（UI 金型の関所・ESLint・言葉の鍵の検査）が緑 |
-| 12 | 新しい切替部品がカタログ（Storybook）に出る | `SegmentedToggle.stories.tsx` があり、Storybook のビルドが緑 |
+| 11 | 色・寸法の直書き 0 件、画面の日本語の直書き 0 件、ja.json と en.json の鍵が一致 | CI（UI 金型の関所・ESLint・言葉の鍵の検査）が緑 |
+| 12 | 新しい切替部品がカタログ（Storybook）に出る | `frontend/src/components/SegmentedToggle.stories.tsx` があり、Storybook のビルドが緑 |
 | 13 | 本番で営業ロールを開いて何も保存しなければ、営業の許可の数は変わらない | 本番の読み取り専用 DB で、開く前と後の `role_permissions` の件数が同じ |
 | 14 | スマホの幅（390px）でも行が横にはみ出さない | 自動の画面試験か本番で目で見る |
 
@@ -49,16 +49,16 @@
 
 - 対象（画面だけ）:
   - `frontend/src/pages/roles/RolesPage.tsx` の右側（許可の並べ方と切替）。
-  - 新しい部品 `frontend/src/components/SegmentedToggle.tsx` / `.css` / `.stories.tsx` / `.test.tsx`。
-  - 行の計算 `frontend/src/pages/roles/rolePermissionRows.ts` と試験 `rolePermissionRows.test.ts`、正本の試験 `frontend/src/constants/menuPermissions.test.ts`（§1 の 2〜9）。
+  - 新しい部品 `frontend/src/components/SegmentedToggle.tsx` / `.css` / .stories.tsx / .test.tsx。
+  - 行の計算 `frontend/src/pages/roles/rolePermissionRows.ts` と試験 `frontend/src/pages/roles/rolePermissionRows.test.ts`、正本の試験 `frontend/src/constants/menuPermissions.test.ts`（§1 の 2〜9）。
   - 本番の許可 135 件の写し `docs/handoff/role-menu-permissions/perms-135.tsv`（試験の材料。Opus が本番の読み取り専用 DB から取った）。
-  - 既存の `DesktopShell.test.tsx`・`MobileShell.test.tsx`・`ManagementCenterPage.test.tsx` は直さずに緑のまま。
+  - 既存の `frontend/src/components/DesktopShell.test.tsx`・`frontend/src/components/MobileShell.test.tsx`・`frontend/src/pages/management-center/ManagementCenterPage.test.tsx` は直さずに緑のまま。
   - 新しい設定 `frontend/src/constants/menuPermissions.ts`（メニューと許可の対応の正本）。
-  - 左の列（`DesktopShell.tsx` / `MobileShell.tsx`）と管理センター（`ManagementCenterPage.tsx`）の「許可で出す条件」を、上の正本から読むように置き換える。出方は変えない。
+  - 左の列（`frontend/src/components/DesktopShell.tsx` / `frontend/src/components/MobileShell.tsx`）と管理センター（`frontend/src/pages/management-center/ManagementCenterPage.tsx`）の「許可で出す条件」を、上の正本から読むように置き換える。出方は変えない。
   - `frontend/src/constants/icons.tsx` に斜め線のアイコンを1つ登録する。
-  - `ja.json` / `en.json` に言葉の鍵を足す。
+  - ja.json / en.json に言葉の鍵を足す。
 - 対象外:
-  - サーバー（`backend/`）、DB、`migrations/`、`deploy.yml`、本番 `scripts/`。
+  - サーバー（`backend/`）、DB、`migrations/`、`.github/workflows/deploy.yml`、本番 `scripts/`。
   - どのロールの許可も変えない（営業の会話の許可は PO が自分で付ける）。
   - 左側のロールの一覧・ロールの作成/編集/削除の窓。今のまま。
   - 管理センターへの入口を出す条件（`frontend/src/components/DesktopShell.tsx:186-191`）。11 個の許可の一覧で、管理センターの中の条件と完全には一致しない（例: `conditions.view` だけの人は入口が出ない）。出方が変わるため今回は触らない。§9 の「次の課題」に記す。
@@ -114,12 +114,12 @@ export function canSeeMenu(id: MenuId, hasAny: (...keys: string[]) => boolean): 
 ```
 
 - 置き換え: 上の表の「今の場所」の条件を `canSeeMenu("…", hasAny)` に替える。各自の設定（`prefs.show_sales_menu` / `prefs.show_chat_menu`）・`isTenantOwner`・`visible: true`・行き先の選び分け（`salesLinkTo`）は今のまま画面側に残す。
-- `MobileShell.tsx` は今 `hasAny` を取り出していない（`frontend/src/components/MobileShell.tsx:79`）。`usePermissions()` から `hasAny` も取り出す。
+- `frontend/src/components/MobileShell.tsx` は今 `hasAny` を取り出していない（`frontend/src/components/MobileShell.tsx:79`）。`usePermissions()` から `hasAny` も取り出す。
 
 ### 5-2. 役割の画面の行（同じ正本に書く）
 
 - 行の形: `{ id, section, menus: MenuId[] | null, keys: string[], fixed?: "always" | "ownerOnly", noteKey?: string }`。
-- 行の名前: `menus` の `labelKey` を `t()` して「・」でつなぐ。下の表の日本語の行名は説明用。画面に出る名前は今の nav の文言になる（2026-11-07 の `ja.json`: 受信箱・在庫表・見積・請求管理・顧客管理・受注管理・売上管理・報酬管理・報酬設定・ステータスマスタ・状態マスタ・商品カテゴリ・発行者情報・テナントポリシー・Discord 連携設定・Discordアナウンス・チャンネル・チャネル管理・通知設定・ログインの許可待ち）。`menus` が2つ以上なら下に「N つのメニューが1つの許可で一緒に出たり消えたりします」。
+- 行の名前: `menus` の `labelKey` を `t()` して「・」でつなぐ。下の表の日本語の行名は説明用。画面に出る名前は今の nav の文言になる（2026-11-07 の ja.json: 受信箱・在庫表・見積・請求管理・顧客管理・受注管理・売上管理・報酬管理・報酬設定・ステータスマスタ・状態マスタ・商品カテゴリ・発行者情報・テナントポリシー・Discord 連携設定・Discordアナウンス・チャンネル・チャネル管理・通知設定・ログインの許可待ち）。`menus` が2つ以上なら下に「N つのメニューが1つの許可で一緒に出たり消えたりします」。
 
 | 区切り | 行（メニュー） | 行の許可 | 補足 |
 |---|---|---|---|
@@ -146,7 +146,7 @@ export function canSeeMenu(id: MenuId, hasAny: (...keys: string[]) => boolean): 
 | 事業 | ログイン申請 | なし | 固定「オーナーだけに出ます」 |
 | メニュー以外の許可 | 残りを区分（`category`）ごとに1行 | 上のどの行にも入らず `menu.` で始まらない許可 | 行の名前は DB の区分名（今の画面と同じ） |
 
-- 区切りの置き方: 管理センターでは Googleドライブ・FedEx などは「API連携」、Discord は「API連携」の区切りにある（`ManagementCenterPage.tsx:62` 付近）。役割の画面では、1つの許可で一緒に出るメニューを1行にまとめるため、`erp.view` の行は「データ」に、`tenant.profile.*` の行は「事業」に置く（行は1つの区切りにしか置けないため）。
+- 区切りの置き方: 管理センターでは Googleドライブ・FedEx などは「API連携」、Discord は「API連携」の区切りにある（`frontend/src/pages/management-center/ManagementCenterPage.tsx:62` 付近）。役割の画面では、1つの許可で一緒に出るメニューを1行にまとめるため、`erp.view` の行は「データ」に、`tenant.profile.*` の行は「事業」に置く（行は1つの区切りにしか置けないため）。
 - 「メニュー以外の許可」は自動で作る。正本に書くのは「上の行に入れた許可」だけ。新しい許可が DB に増えても、この区切りに自動で出る。
 - 本番の 135 件で、この区切りに入る見込みの許可: `deals.*` `goals.*` `analytics.*` `archive.*` `badges.*` `buddy.*` `central.*` `inventory.visibility.*` `tenant.inventory_visibility.edit` `phase.switch` `purchase_orders.*` `shipping.*` `staff_reports.*` `system.*`。
 
@@ -177,7 +177,7 @@ export function canSeeMenu(id: MenuId, hasAny: (...keys: string[]) => boolean): 
 
 ## 7. 新しい部品 `SegmentedToggle`（ADR-144 の金型）
 
-- 置き場: `frontend/src/components/SegmentedToggle.tsx` / `.css` / `.stories.tsx` / `.test.tsx`。
+- 置き場: `frontend/src/components/SegmentedToggle.tsx` / `.css` / .stories.tsx / .test.tsx。
 - 業務の意味は持たせない（許可という言葉を部品に入れない）。
 - 形:
 
@@ -207,11 +207,11 @@ export interface SegmentedToggleProps<V extends string> {
   - 押せないボタン: 薄くする変数（`--opacity-dim`）。
   - 大きさ: 既存の寸法の変数（`--size-icon-btn-sm` など）。直の数字は書かない。
   - フォーカス: `--focus-ring-shadow`。
-- アイコン: ✕ は `STATUS_ICONS.error`、✓ は `STATUS_ICONS.check`。斜め線は `@heroicons/react/24/outline` の `SlashIcon` を `constants/icons.tsx` に登録して使う（今の `hi()` の包み方に合わせる）。
+- アイコン: ✕ は `STATUS_ICONS.error`、✓ は `STATUS_ICONS.check`。斜め線は `@heroicons/react/24/outline` の `SlashIcon` を `frontend/src/constants/icons.tsx` に登録して使う（今の `hi()` の包み方に合わせる）。
 - カタログ: 3択・2択・どれも選ばれていない・押せない、の4つの見本。
 - 試験: 押すと `onChange` が値つきで呼ばれる。押せないボタンでは呼ばれない。`aria-checked` が正しい。
 
-## 8. 言葉の鍵（`ja.json` / `en.json` に同じ鍵）
+## 8. 言葉の鍵（ja.json / en.json に同じ鍵）
 
 | 鍵 | 日本語 | 英語 |
 |---|---|---|
@@ -238,15 +238,15 @@ export interface SegmentedToggleProps<V extends string> {
 ## 9. 影響範囲・危険と対処・戻し方
 
 - 呼び出し元:
-  - `canSeeMenu` を使うのは `DesktopShell.tsx` / `MobileShell.tsx` / `ManagementCenterPage.tsx` / `RolesPage.tsx` の4つだけ。
-  - `SegmentedToggle` を使うのは `RolesPage.tsx` だけ。
+  - `canSeeMenu` を使うのは `frontend/src/components/DesktopShell.tsx` / `frontend/src/components/MobileShell.tsx` / `frontend/src/pages/management-center/ManagementCenterPage.tsx` / `frontend/src/pages/roles/RolesPage.tsx` の4つだけ。
+  - `SegmentedToggle` を使うのは `frontend/src/pages/roles/RolesPage.tsx` だけ。
 - 危険と対処:
-  - メニューの出方が変わってしまう → §1 の 9。置き換え前の条件と置き換え後の条件を、許可の組み合わせごとに比べる試験を足す。既存の `DesktopShell.test.tsx` も緑のまま。
+  - メニューの出方が変わってしまう → §1 の 9。置き換え前の条件と置き換え後の条件を、許可の組み合わせごとに比べる試験を足す。既存の `frontend/src/components/DesktopShell.test.tsx` も緑のまま。
   - 保存で許可が消える → §1 の 6 と 13。画面に出ない `menu.*` を消さない試験。本番は保存しない確認だけ。
   - 自分が持たない許可を ✓ で付けようとすると、保存でサーバーが断る（403）。これは今の「全部」の欄と同じ動き。今回は変えない。
 - 戻し方: この PR のマージを取り消す（revert）。サーバーと DB は変えていないので、画面が前に戻るだけ。
 - 次の課題（今回はしない）:
-  - 管理センターの入口を出す条件を正本から作る（`DesktopShell.tsx:186-191`）。出方が変わるので PO の確認が要る。
+  - 管理センターの入口を出す条件を正本から作る（`frontend/src/components/DesktopShell.tsx:186-191`）。出方が変わるので PO の確認が要る。
   - `menu.*` 19 件と、使わなくなった言葉の鍵の整理。
 
 ## 10. 自己審査（Opus・同じ AI による審査で、独立した審査ではない）
@@ -273,7 +273,8 @@ export interface SegmentedToggleProps<V extends string> {
 
 ## 12. 維持の仕組み（誰が・何が守るか）
 
-- メニューと許可の対応は `menuPermissions.ts` の1か所だけ。左の列・管理センター・役割の画面が同じものを読むので、片方だけ変わることが無い。
+- メニューと許可の対応は `frontend/src/constants/menuPermissions.ts` の1か所だけ。左の列・管理センター・役割の画面が同じものを読むので、片方だけ変わることが無い。
 - 新しいメニューを足す人は `MENUS` に1行足す。足さないと役割の画面に出ない。これを試験で止める（§1 の 7: 全部の許可がどこかの行に出る）。
 - 新しい許可が DB に増えたときは「メニュー以外の許可」に自動で出る。消えて設定できない許可は出ない。
 - 色・寸法・言葉は CI（UI 金型の関所・ESLint・言葉の鍵の検査）が止める。
+- 守り手: `frontend/src/constants/menuPermissions.test.ts`（メニューの出る条件の一致）と `frontend/src/pages/roles/rolePermissionRows.test.ts`（全部の許可がどこかの行に出る）を CI の frontend 試験が毎回走らせる。
