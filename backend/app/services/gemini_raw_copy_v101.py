@@ -938,7 +938,7 @@ def _extract_one(
         heading = _heading_condition(item, lines, product_first, ctx, status_context)
         if heading is not None:
             condition, basis = heading
-        review =[*review, *({"line": item["price_line"], **r} for r in product_first["review_extra"])]
+        review = [*review, *({"line": item["price_line"], **r} for r in product_first["review_extra"])]
     else:
         unit_canonical, kubun, _resolved = resolve_unit_v2(_find_unit(item, roles, shared, lines, ctx) or "", ctx.unit_alias_to_info)
         condition, _cond_id, basis = resolve_condition_v2(
