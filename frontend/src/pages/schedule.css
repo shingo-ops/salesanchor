@@ -94,9 +94,17 @@
   grid-template-columns: var(--schedule-leftpanel-width) minmax(0, 1fr);
   grid-template-rows: 1fr; /* fill all remaining height so .schedule-main can stretch */
   gap: var(--schedule-shell-gap);
-  flex: 1;        /* consume remaining height in .schedule-page flex column */
+  flex: 1;        /* the parent .page-layout-content is display:block, so height comes from the rule below */
   min-height: 0;
   align-items: stretch; /* .schedule-sidebar keeps align-self:start; .schedule-main fills cell */
+}
+
+/* 幅 1024px 以上: 親 .page-layout-content（display:block・高さ確定）いっぱいに伸ばし、升目を画面の下まで届かせる（G10・G13）。
+   1023px 以下は今のまま（1 列に並ぶため 100% にすると左の欄が高さを取り、升目が隠れる） */
+@media (min-width: 1024px) {
+  .schedule-shell__content {
+    height: 100%;
+  }
 }
 
 .schedule-sidebar {
