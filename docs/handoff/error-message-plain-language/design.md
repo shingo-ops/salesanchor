@@ -1,6 +1,6 @@
 # Phase 3 設計 — 失敗したときの文（便1: Discord 連携）＋アプリ全体の見張り
 
-- 状態: 設計審査済み（2回目 APPROVE）。PO 承認済みは Discord の KGI のみ。アプリ全体の KGI（§2-2）と文の一覧（§4-3）は PO 確認待ち
+- 状態: 設計審査済み（2回目 APPROVE）・PO 承認済み（Discord の KGI と §4-3 の文の一覧。2026-11-07。PO が 5 と 7 の文を自分で書き直し、2 の文は Opus の言い換え案に「1」）。便1 の実装承認: 同日 PO「1」（選択肢「この文で決まり、全部の文がそろったので作り始めます」）。アプリ全体の KGI（§2-2）は PO 確認待ち
 - 根拠: `recon.md`（Discord の事実・全体の件数）、`inventory.md`（全件一覧）、決まり本体 `docs/adr/ADR-1071-plain-language-error-messages.md`
 - 土台: origin/main `67d7bbf87`
 
@@ -70,12 +70,12 @@
 | # | 理由 | 文（ja） |
 |---|---|---|
 | 1 | invalid_state | 時間切れにより連携できませんでした。もう一度お試しください。 |
-| 2 | missing_state | Discordから戻るときの情報が足りず、連携できませんでした。もう一度お試しください。 |
+| 2 | missing_state | Discordでの操作が途中で止まったため、連携できませんでした。もう一度お試しください。（PO 2026-11-07「1」で採用） |
 | 3 | invalid_payload | 同上（2 と同じ文言キー） |
 | 4 | missing_code | 同上（2 と同じ文言キー） |
-| 5 | missing_guild_id | サーバーが選ばれなかったため、連携できませんでした。もう一度お試しいただき、追加するサーバーを選んでください。 |
+| 5 | missing_guild_id | サーバーを選択していないため連携できませんでした。追加するサーバーを選んでください。（PO 2026-11-07 の文） |
 | 6 | invalid_guild_id | 同上（2 と同じ文言キー） |
-| 7 | guild_mismatch | 選んだサーバーを確かめられなかったため、連携できませんでした。もう一度お試しください。 |
+| 7 | guild_mismatch | 選択したサーバーが確認できませんでした。もう一度お試しください。（PO 2026-11-07 の文） |
 | 8 | guild_already_registered | このサーバーはすでに登録されているため、連携できませんでした。別のサーバーを選んでください。 |
 | 9 | code_exchange_failed | Discordとの確認がうまくいかず、連携できませんでした。時間をおいてもう一度お試しください。 |
 | 10 | missing_guild_in_token | 同上（7 と同じ文言キー） |
@@ -85,7 +85,7 @@
 | 14 | 切断の失敗 | 連携を外せませんでした。もう一度お試しください。続く場合はサポートにお問い合わせください。 |
 
 - 2・3・4・6 は、利用者から見て同じ出来事（戻りの情報がおかしい）なので同じ文。7・10 も同じ。
-- 文言キーは 10 個: stateExpired（1）・returnInfoMissing（2・3・4・6）・serverNotSelected（5）・serverNotVerified（7・10）・serverAlreadyRegistered（8）・discordCheckFailed（9）・serviceUnavailable（11）・permissionDenied（12）・unknown（13）・disconnectFailed（14）。すべて `discordConnect.error.` の下。
+- 文言キーは 10 個: stateExpired（1）・discordInterrupted（2・3・4・6）・serverNotSelected（5）・serverNotVerified（7・10）・serverAlreadyRegistered（8）・discordCheckFailed（9）・serviceUnavailable（11）・permissionDenied（12）・unknown（13）・disconnectFailed（14）。すべて `discordConnect.error.` の下。
 
 ### 4-4. 変えるファイル（変更前→後）
 
@@ -149,7 +149,7 @@
 
 | 便 | 中身 | 状態 |
 |---|---|---|
-| 便1 | Discord 連携（本書 §4） | 設計審査済み・文の一覧の PO 確認待ち |
+| 便1 | Discord 連携（本書 §4） | PO 承認済み・実装カード作成へ |
 | 便0 | 見張り W1・W2（§5） | アプリ全体の KGI の承認待ち |
 | 便2 以降 | Meta・Google カレンダー・外部連携の戻り口、画面で e.message を出す箇所、サーバーの直書き（多い画面から） | 未着手 |
 
@@ -161,7 +161,7 @@
 ## 9. 未確認
 
 - （確認済み・2回目の審査）frontend の試験から ../backend は読める。根拠は §4-6
-- en の文（ja の §4-3 の承認後に作る）
+- （決定済み）en の文は Opus が ja の承認済みの文から作り、実装カード card-bin1.md §3-9 に全文を置いた（en は PO の承認対象外。ja と同じ意味・同じ順）
 
 ## 10. 設計審査の記録
 
