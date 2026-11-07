@@ -4,6 +4,7 @@
 # - K1: https://api.salesanchor.jp/api/health を 60 回（1 秒おき）。状態コードと秒数。
 # - K2/K3: 4 コンテナの docker logs（コンテナ起動から今まで）を 7 種の文字列で数え、1 時間あたりに直す。
 # 本番で書き込む操作は無い（docker logs / docker inspect / curl の GET だけ）。
+# 基準値と事後値は同じ機械（PO の Mac）・同じ回線で流す（K1 の中央値の大半は回線の時間のため。設計 §6）。
 set -u
 
 KEY="${HOME}/.ssh/manual-only/id_ed25519"

@@ -1,6 +1,6 @@
 # 設計 — 接続を貸し出しに戻すたびに会社の文脈を消す（Bx・ADR-1070）
 
-- 状態: 設計案（Opus 作成）。審査1回目 REVISE → M1〜M4・R1〜R9 を反映。審査2回目 REVISE（review-design-pool-reset-r2.md・必須 N1）→ N1〜N5 を反映。T1 の判定の行の確認待ち。
+- 状態: 設計案（Opus 作成）。審査1回目 REVISE → M1〜M4・R1〜R9 を反映。審査2回目 REVISE（review-design-pool-reset-r2.md・必須 N1）→ N1〜N5 を反映。審査3回目 APPROVE（review-design-pool-reset-r3.md）→ 推奨 N6・N7 も反映。
 - 基準: origin/main 170ff9612（2026-11-07 fetch）。b2bf39632 との差は backend/app・backend/requirements.txt・scripts/lint_tenant_schema.py で 0 件（審査 §冒頭）なので行番号は同じ。
 - 前段の調査: docs/handoff/s1-rls-stage5/recon-pool-reset.md（r1〜m8）・xtenant-evidence.md（T 箇所と本番の実測）・recon-pool-reset-m9.md（文脈なしで RLS 表に触る箇所の全数）
 - 関係する決定: ADR-131（get_db の finally で文脈を戻す）・ADR-072（tenant schema 修飾と commit 後の reset_tenant_context）・ADR-1067（S1 段階④）・ADR-065（準備済み文のキャッシュ）
@@ -180,7 +180,7 @@ if DATABASE_URL.startswith("postgresql"):
 
 物差しは 1 つ: docs/handoff/s1-rls-stage5/k-baseline.sh（読み取りだけ。health の GET を 60 回、4 コンテナの `docker logs` を 7 種の文字で数え、コンテナ起動からの時間で 1 時間あたりに直す）。基準値はこの台本の生の出力 k-baseline-20261107T0917Z.txt。各便の配備の直前にも同じ台本で取り直して PR に貼る（その時点の基準値）。配備でコンテナが入れ替わると `docker logs` は起動からしか数えられないので、「配備後 24 時間」は次の配備でコンテナが入れ替わる前に数える。24 時間に満たずに入れ替わる場合は、入れ替わる直前に数えて、その時間を書く。
 - 基準値と事後値は同じ機械（PO の Mac）・同じ回線で取る。K1 の中央値の大半は手元から本番までの回線の時間なので、機械が変わると +10% の判定が意味を失う（審査 2 回目 N5）。
-- 09:17Z の基準値はコンテナ起動から約 15 分の窓しかない（審査 2 回目 N2）。そのため便1 の配備の直前に、コンテナがなるべく長く動いた状態で k-baseline.sh を取り直し、それを便1 の基準値にする。そこで 0 でないマスがあれば、そのマスの K2 の判定は「0 件」でなく「1 時間あたりの件数が基準値から増えない」に置き換え、置き換えたマスを PR に書く。便2 も同じ扱い。
+- 09:17Z の基準値はコンテナ起動から約 15 分の窓しかない（審査 2 回目 N2）。そのため便1 の配備の直前に、コンテナがなるべく長く動いた状態で k-baseline.sh を取り直し、それを便1 の基準値にする。そこで 0 でないマスがあれば、そのマスの K2 の判定は「0 件」でなく「1 時間あたりの件数が基準値から増えない」に置き換え、置き換えたマスを PR に書く。K3 ② の上限も、取り直した基準値の `close_exc_per_h` が 16.6 を超えたら、その値の 1.2 倍に置き換えて PR に書く（審査 3 回目 N6）。便2 も同じ扱い。
 
 | # | 基準 | 検証方法 | 基準値（k-baseline-20261107T0917Z.txt・2026-11-07T09:17Z） |
 |---|---|---|---|
