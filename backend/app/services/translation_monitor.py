@@ -70,6 +70,7 @@ async def check_translation_health(
                 f"LEFT JOIN {table_ref} mt "
                 f"  ON mt.message_id = m.message_id AND mt.target_language = 'ja' "
                 f"WHERE m.direction = 'inbound' "
+                f"  AND m.is_manual IS NOT TRUE "
                 f"  AND m.created_at >= :since"
             ),
             {"since": since},

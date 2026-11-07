@@ -934,6 +934,7 @@ async def list_conversations(
             FROM meta_messages mm
             WHERE mm.tenant_id = :tenant_id
               AND mm.lead_id IS NOT NULL
+              AND mm.is_manual IS NOT TRUE
               {latest_extra}
         ),
         agg AS (
@@ -946,6 +947,7 @@ async def list_conversations(
             FROM meta_messages mm
             WHERE mm.tenant_id = :tenant_id
               AND mm.lead_id IS NOT NULL
+              AND mm.is_manual IS NOT TRUE
             GROUP BY mm.lead_id
         )
         SELECT

@@ -116,7 +116,9 @@ _META_MESSAGES_DDL = """
         seen_at TIMESTAMP,
         seen_by_staff_id INTEGER,
         page_id VARCHAR(50),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        deleted_at TIMESTAMP,
+        is_manual BOOLEAN
     )
 """
 
@@ -522,7 +524,9 @@ def _mock_scalar(scalar_value):
 
 @pytest.mark.asyncio
 async def test_dm_writer_creates_new_lead():
-    """初回 DM 受信 → lead が新規作成され、meta_messages + conversation_logs に inbound 行が INSERT される。
+    """初回 DM 受信 → lead が新規作成され、meta_messages に inbound 行が INSERT される。
+
+    会話の一本化 便1: conversation_logs には 1 行も書かない（写しをやめた）。
 
     実行シーケンス（ADR-119、set_tenant_context は AsyncMock の dialect guard で no-op）:
       1. Stage 1: SELECT leads JOIN lead_channels → None（未登録）
@@ -530,10 +534,7 @@ async def test_dm_writer_creates_new_lead():
       3. INSERT lead_channels（_ensure_lead_channel）
       4. UPDATE leads SET discord_dm_channel_id（existing_dm_channel_id=None のため）
       5. INSERT meta_messages RETURNING id（→ id=10）
-      6. [SA-02 R2] SELECT deals WHERE lead_id → None（案件なし: company_id=None）
-      7. [SA-02 R1] SELECT contacts WHERE lead_id → None（contact なし: contact_id=None）
-      8. [SA-02] INSERT conversation_logs RETURNING id（→ id=42）
-      9. commit
+      6. commit
     """
     from app.discord_gateway.dm_writer import upsert_lead_and_message
 
@@ -544,9 +545,6 @@ async def test_dm_writer_creates_new_lead():
         _mock_result(None),      # (3) INSERT lead_channels (_ensure_lead_channel)
         _mock_result(None),      # (4) UPDATE discord_dm_channel_id
         _mock_result((10,)),     # (5) INSERT meta_messages RETURNING id=10
-        _mock_result(None),      # (6) SA-02: SELECT deals → 案件なし（company_id=None）
-        _mock_result(None),      # (7) SA-02: SELECT contacts → contact なし（contact_id=None）
-        _mock_scalar(42),        # (8) SA-02: INSERT conversation_logs RETURNING id=42
     ]
 
     await upsert_lead_and_message(
@@ -560,9 +558,11 @@ async def test_dm_writer_creates_new_lead():
         created_at=datetime.now(timezone.utc),
     )
 
-    # 8回の execute + 1回の commit（R1: _get_contact_id_for_lead SELECT が追加）
-    assert mock_session.execute.call_count == 8
+    # 5回の execute + 1回の commit。conversation_logs への INSERT（と会社・連絡先の SELECT）は無い
+    assert mock_session.execute.call_count == 5
     assert mock_session.commit.call_count == 1
+    for call in mock_session.execute.call_args_list:
+        assert "conversation_logs" not in str(call.args[0])
 
 
 @pytest.mark.asyncio

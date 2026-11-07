@@ -29,7 +29,6 @@ celery_app = Celery(
         "app.tasks.verify_meta_subscriptions",
         "app.tasks.priority_scoring_check",
         "app.tasks.translation",  # ADR-110: 翻訳バックグラウンドタスク
-        "app.tasks.sa02_recon_monitor",  # SA-02 §10: 並走期間 日次突合
         "app.tasks.review_mail_monitor",  # review@salesanchor.jp 新着メール → Discord 通知
         "app.tasks.ops_mail_monitor",  # さくらの点検・障害のメール → 運用 Discord（outage-recovery-watch 便3）
         "app.tasks.fx_rate_updater",     # 為替レート SSOT: USD/JPY を1日2回更新
@@ -147,13 +146,6 @@ celery_app.conf.beat_schedule = {
     "check-translation-health": {
         "task": "app.tasks.translation.check_translation_health",
         "schedule": crontab(minute=0),  # 毎時0分
-    },
-    # SA-02 §10: 並走期間 日次突合（meta_messages vs conversation_logs）毎日 AM8:00 JST
-    # 差異あり → Discord 通知。差異ゼロ → INFO ログのみ。
-    # 並走終了（段階2移行完了 + 読み取り切替後14日）後にこのエントリを削除すること。
-    "sa02-daily-recon": {
-        "task": "app.tasks.sa02_recon_monitor.run_sa02_daily_recon",
-        "schedule": crontab(hour=8, minute=0),  # JST 8:00（timezone=Asia/Tokyo が適用済み）
     },
     # review@salesanchor.jp の INBOX を 5 分ごとに確認して新着を Discord 通知
     # 未設定（REVIEW_MAIL_IMAP_HOST 等）の場合は no-op で安全スキップ
