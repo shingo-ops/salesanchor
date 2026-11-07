@@ -2243,6 +2243,43 @@ LEAD_FACTORS_MSG_DDL = {
     """,
 }
 
+# 会話の一本化の試験用の表（SQLite 用の最小定義）
+CONV_UNIFY_MESSAGE_TRANSLATIONS_DDL = """
+    CREATE TABLE IF NOT EXISTS message_translations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        message_id TEXT NOT NULL,
+        target_language VARCHAR(10),
+        translated_text TEXT
+    )
+"""
+
+CONV_UNIFY_MESSAGE_LABELS_DDL = """
+    CREATE TABLE IF NOT EXISTS message_labels (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        tenant_id INTEGER,
+        message_id INTEGER,
+        lead_id INTEGER,
+        label TEXT,
+        confidence REAL,
+        direction TEXT,
+        source TEXT
+    )
+"""
+
+CONV_UNIFY_CONVERSATION_LOGS_DDL = """
+    CREATE TABLE IF NOT EXISTS conversation_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        tenant_id INTEGER NOT NULL DEFAULT 999,
+        lead_id INTEGER,
+        channel_type TEXT,
+        direction TEXT,
+        content_text TEXT,
+        external_message_id TEXT,
+        occurred_at TIMESTAMP,
+        deleted_at TIMESTAMP
+    )
+"""
+
 
 # アプリ内の鈴（user_notices）の試験用の表（SQLite 用の最小定義）
 USER_NOTICE_DDL = [

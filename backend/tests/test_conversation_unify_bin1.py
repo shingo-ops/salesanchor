@@ -30,7 +30,12 @@ from sqlalchemy import event, text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
-from tests.conftest import INBOX_BADGE_META_MESSAGES_DDL
+from tests.conftest import (
+    CONV_UNIFY_CONVERSATION_LOGS_DDL,
+    CONV_UNIFY_MESSAGE_LABELS_DDL,
+    CONV_UNIFY_MESSAGE_TRANSLATIONS_DDL,
+    INBOX_BADGE_META_MESSAGES_DDL,
+)
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _MIGRATION = _REPO_ROOT / "migrations" / "20261108_100000_rebuild_company_stats_on_meta_messages.sql"
@@ -43,43 +48,6 @@ _EXTRA_META_COLUMNS = (
     "recorded_by_user_id INTEGER",
     "original_language VARCHAR(10)",
 )
-
-_MESSAGE_TRANSLATIONS_DDL = """
-    CREATE TABLE IF NOT EXISTS message_translations (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        message_id TEXT NOT NULL,
-        target_language VARCHAR(10),
-        translated_text TEXT
-    )
-"""
-
-_MESSAGE_LABELS_DDL = """
-    CREATE TABLE IF NOT EXISTS message_labels (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        tenant_id INTEGER,
-        message_id INTEGER,
-        lead_id INTEGER,
-        label TEXT,
-        confidence REAL,
-        direction TEXT,
-        source TEXT
-    )
-"""
-
-_CONVERSATION_LOGS_DDL = """
-    CREATE TABLE IF NOT EXISTS conversation_logs (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        tenant_id INTEGER NOT NULL DEFAULT 999,
-        lead_id INTEGER,
-        channel_type TEXT,
-        direction TEXT,
-        content_text TEXT,
-        external_message_id TEXT,
-        occurred_at TIMESTAMP,
-        deleted_at TIMESTAMP
-    )
-"""
-
 
 @pytest_asyncio.fixture
 async def env(db_session):
@@ -97,7 +65,11 @@ async def env(db_session):
     await db_session.execute(text(INBOX_BADGE_META_MESSAGES_DDL))
     for col in _EXTRA_META_COLUMNS:
         await db_session.execute(text(f"ALTER TABLE meta_messages ADD COLUMN {col}"))
-    for ddl in (_MESSAGE_TRANSLATIONS_DDL, _MESSAGE_LABELS_DDL, _CONVERSATION_LOGS_DDL):
+    for ddl in (
+        CONV_UNIFY_MESSAGE_TRANSLATIONS_DDL,
+        CONV_UNIFY_MESSAGE_LABELS_DDL,
+        CONV_UNIFY_CONVERSATION_LOGS_DDL,
+    ):
         await db_session.execute(text(ddl))
     await db_session.commit()
 
