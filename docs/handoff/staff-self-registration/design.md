@@ -263,6 +263,49 @@
 - 申込で作った人は is_active=false なので、この間はログインもパスワード再設定もできない（§10 R1。運用ではなくコードで止める）。
 - 実際のスタッフにリンクを渡すのは2回目が本番に入ってから（PO への案内に書く）。
 
+### 4-5. 受付の部屋は自動の準備で作る（2026-11-07 追加）
+
+**PO の言葉（2026-11-07）**: 「作って良い、アプリ側の自動セットアップに作る機能を作成してセットアップ時に作られるようにして、誰でも見ることが出来るが書き込みは出来ない、チケットを押すだけのチャンネル」
+
+**今の形（事実・origin/main c8eaceaa2）**
+- 部屋そのものは、すでに設計図にある: `backend/app/discord_blueprints/tenant_1.json` の key `staff_join_reception`（名前「スタッフ受付」・カテゴリなし）。@everyone は VIEW_CHANNEL を許し SEND_MESSAGES を断る。Bot は VIEW_CHANNEL・SEND_MESSAGES を許す。
+- 管理画面の「適用」（`POST /admin/discord/own-server/apply`、`backend/app/routers/discord_own_server.py:421`）は、設計図との差を Discord に反映する。作る・変えるだけで消さない。
+- ボタン付きの投稿は、別の CLI `backend/app/staff_join_discord_cli.py` を本番で手で流すまで置かれない。
+- @everyone のサーバー全体の権限（設計図の roles の everyone）には CREATE_PUBLIC_THREADS・CREATE_PRIVATE_THREADS・SEND_MESSAGES_IN_THREADS・ADD_REACTIONS がある。Discord の公式説明（docs.discord.com/developers/topics/permissions、2026-11-07 取得）では、SEND_MESSAGES は「スレッドの中の送信を許さない」、スレッドの中の送信は SEND_MESSAGES_IN_THREADS、スレッドを作るのは CREATE_PUBLIC_THREADS・CREATE_PRIVATE_THREADS と別の権限。つまり今の設計図では、受付の部屋でスレッドを作って書き込め、リアクションも足せる。
+- 本番（2026-11-07 時点）: 自社サーバーに「スタッフ受付」の部屋はまだ無い。
+
+**変えること**
+1. 設計図 `backend/app/discord_blueprints/tenant_1.json` の `staff_join_reception` の @everyone の deny に、`CREATE_PUBLIC_THREADS`・`CREATE_PRIVATE_THREADS`・`SEND_MESSAGES_IN_THREADS`・`ADD_REACTIONS` を足す（SEND_MESSAGES の deny と VIEW_CHANNEL の allow はそのまま）。名前はすべて `backend/app/services/discord_blueprint.py:33` の PERMISSION_BITS にある。USE_APPLICATION_COMMANDS は断らない（ボタンを押す操作を止めないことを、公式の説明で確かめられていないため変えない）。
+2. ボタンを置く処理を共通の関数にする: `backend/app/services/staff_join.py` に `ensure_reception_button(guild_id, token, tenant_id, request=discord_api_request) -> dict` を足す。中身は今の `staff_join_discord_cli._post_staff_button` の Discord 部分と同じ（部屋を `find_blueprint_channel_id` で引く → 直近50件に custom_id `staff_join_open` があれば置かない → 無ければ1回置く）。返り値は `{"status": "posted"|"exists"|"not_configured"|"discord_error", "message_id": ...}`。CLI はこの関数を呼ぶだけにする（CLI の入出力は変えない）。
+3. 適用の最後に、ボタンを置く: `apply_own_server_plan` で `apply_plan` の結果を得た後、DB の commit と `reset_tenant_context` の後に `ensure_reception_button` を呼ぶ。設計図（`_load_own_context` が返す blueprint）の channels に key `staff_join_reception` が無いときは呼ばない（行も足さない）。今の適用の試験（`backend/tests/test_discord_own_server_apply.py:76` で受付の部屋を除いている）はそのまま通る。
+   - 応答の success_count・failed_count は、足した行を含めて数える。DB の記録（result の rows・監査ログの件数）は今のまま足した行を含めない。
+   - 結果は適用の結果の行に1行足す: kind `post_button`・key `staff_join_reception`・name は設計図の部屋の name（直書きしない）・status は posted/exists なら success、それ以外は failed、reason は `exists`・`not_configured`・`discord_error`。
+   - 失敗しても適用全体は失敗にしない（部屋やロールの反映はもう済んでいるため）。例外は種類だけをログに出す。
+   - 記録 `discord_server_apply_runs` には足さない（DB への書き込みを増やさない。返事と画面にだけ出す）。
+4. 画面の文言: `frontend/src/locales/ja.json`・`frontend/src/locales/en.json` の `discordOwnServer.kind` に `post_button`（ja「受付のボタンを置く」・en「Post the reception button」）を足す。画面のコードは変えない（`frontend/src/pages/admin/DiscordOwnServerPanel.tsx:252` は `t(\`discordOwnServer.kind.${row.kind}\`)` で表示するため）。
+   - reason も同じく `t(\`discordOwnServer.reason.${row.reason}\`)` で表示する（`frontend/src/pages/admin/DiscordOwnServerPanel.tsx:265`）。`discordOwnServer.reason` に `exists`（ja「ボタンは既に置いてあります」・en「The button is already posted」）と `not_configured`（ja「受付の部屋が見つかりません」・en「The reception channel was not found」）を足す（`discord_error` は既にある）。審査（2026-11-07）の指摘で追加。
+5. 今の CLI の試験（`backend/tests/test_staff_join_discord.py` の test_cli_posts_button_only_when_absent・test_cli_not_configured_and_bad_input）は、CLI のモジュールの `find_blueprint_channel_id` を差し替えている。CLI からその名前が消えるので、差し替え先をサービス側のモジュール `app.services.staff_join` に変える。試験の中身（期待する出力）は変えない。審査（2026-11-07）の指摘で追加。
+
+**対象外**
+- お客様のサーバー（purpose='customer'）。この設計図は自社サーバー用だけ。
+- 確認（`GET .../plan`）の表示。ボタンは Discord の設定の差ではないため、確認の行には出さず、適用の結果にだけ出す。
+- 適用のボタンは差が0件のとき押せない（`frontend/src/pages/admin/DiscordOwnServerPanel.tsx:372`）。部屋が既にあり、ボタンだけが消えた場合は、今までどおり CLI で置き直す。
+
+**受入条件**
+
+| 基準 | 検証方法 |
+|---|---|
+| 適用すると「スタッフ受付」が作られ、ボタン付きの投稿が1件だけ置かれる | 試験: Discord を偽物にして apply を呼び、結果に post_button success が1行、投稿の POST が1回 |
+| もう一度適用しても、ボタンは増えない | 試験: 既にボタンがあると POST が0回・結果は success（reason exists） |
+| ボタンを置けなくても、適用そのものは成功を返す | 試験: 投稿で DiscordAPIError → 応答 200・post_button failed（discord_error） |
+| 誰でも見えて、書き込み・スレッド・リアクションはできない | 試験: 設計図を読み、staff_join_reception の @everyone が allow VIEW_CHANNEL、deny に SEND_MESSAGES・CREATE_PUBLIC_THREADS・CREATE_PRIVATE_THREADS・SEND_MESSAGES_IN_THREADS・ADD_REACTIONS。本番: 適用の後、管理者でないアカウントで部屋が見え、入力欄が出ないことを PO が目で確かめる |
+| CLI の動きは変わらない | 今の CLI の試験が、差し替え先だけを直して、期待する出力は変えずに通る |
+| 結果の表に翻訳キーがそのまま出ない | ja・en の `discordOwnServer.reason` に exists・not_configured・discord_error がある（スクリプトでキーを照合） |
+
+**戻し方**: この PR を revert する。Discord に作られた部屋は消えない（適用は消さない）。要らなければ Discord の画面で部屋を消す。
+
+**自己審査（Opus・同じ AI による審査）**: APPROVE。根拠: 部屋の定義は既存の設計図の1か所だけを直し、データを分けない。ボタンの処理は CLI と適用で1つの関数を共有する。適用の成否の決め方は変えない。未確認: 公式の説明に「ボタンを押す操作に要る権限」の記述は見つけていない（断る権限に入れないことで避けた）。
+
 ## 5. 3回目（KGI 11〜12）— 骨組みだけ
 
 - 始める条件: 別のセッションの認証アプリが本番に入ったこと。
