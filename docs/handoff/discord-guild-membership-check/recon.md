@@ -44,7 +44,7 @@
   - `limit` は 1〜200・既定 200
   - 「200 guilds by default, which is the maximum number of guilds a non-bot user can join」→ ボットは 200 を超えうるので `after` で続きを取る
   - 大きなシャーディングをするアプリは `shard` 指定が必要
-- 主要ライブラリ discord.py（`discord/http.py` の `get_guilds`）はボットの鍵でこの道を使い、`limit`・`before`・`after`・`with_counts` を送る
+- 主要ライブラリ discord.py（同ライブラリ内 discord/http.py の `get_guilds`）はボットの鍵でこの道を使い、`limit`・`before`・`after`・`with_counts` を送る
 - この製品の gateway はシャーディングを使っていない（`git grep -i shard -- backend/app/discord_gateway` → 当たり無し）
 - Context7 は月の上限に達して使えなかった（`Monthly quota exceeded`）。代わりに公式ページを直接読んだ
 

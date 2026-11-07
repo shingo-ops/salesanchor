@@ -40,10 +40,10 @@ backend の入れ物の中で `python -` として標準入力から流す。入
 
 - 先頭で `--self-test` を受けたら §4-1-4 の自己試験だけを行い、app を import せずに終わる（外のつなぎなしで試せるように）
 - それ以外は次の順:
-  0. 出力を絞る（審査1回目 Q1・Q2、2回目 Q4）: app を import する**前**に `logging.disable(logging.CRITICAL)` と `warnings.simplefilter("ignore")` を実行する。app の import は一番外側の `try` の**中**で行う（import の失敗も `error=unexpected` にする）（`discord_rest.py:77-80・:106-109・:121-124・:136-139` の警告・エラー記録は path に `after=<番号>` を含み、4xx では応答の本文も含むため。設定が無くても WARNING 以上は標準エラーに出る）。`from app.database import AsyncSessionLocal, engine` の直後に `engine.sync_engine.echo = False` を実行する（`database.py:20` は `ENVIRONMENT` が production 以外だと SQL 文を出す設定で、`docker-compose.yml:69` の既定は development。本番の値は未確認なので、値によらず止める）
+  0. 出力を絞る（審査1回目 Q1・Q2、2回目 Q4）: app を import する**前**に `logging.disable(logging.CRITICAL)` と `warnings.simplefilter("ignore")` を実行する。app の import は一番外側の `try` の**中**で行う（import の失敗も `error=unexpected` にする）（`backend/app/services/discord_rest.py:77-80・:106-109・:121-124・:136-139` の警告・エラー記録は path に `after=<番号>` を含み、4xx では応答の本文も含むため。設定が無くても WARNING 以上は標準エラーに出る）。`from app.database import AsyncSessionLocal, engine` の直後に `engine.sync_engine.echo = False` を実行する（`backend/app/database.py:20` は `ENVIRONMENT` が production 以外だと SQL 文を出す設定で、`docker-compose.yml:69` の既定は development。本番の値は未確認なので、値によらず止める）
   1. `os.environ.get("DISCORD_BOT_TOKEN")` が空なら `error=missing_env` を出して終了コード 1
   2. DB: `from app.database import AsyncSessionLocal`（recon §5・SSOT）。セッション内で最初に `SET TRANSACTION READ ONLY` を実行し、続けて `SELECT tenant_id, purpose, guild_id FROM public.tenant_discord_config ORDER BY tenant_id, purpose` だけを流す。失敗時は `error=db_error` で終了コード 1（例外の本文は出さない）
-  3. Discord: `from app.services.discord_rest import discord_api_request, DiscordAPIError`（recon §5・送り直しの SSOT）。`method="GET"`、`path="/users/@me/guilds?limit=200"`（2回目からは `&after=<前回の最後の id>`）、`expected_statuses=(200,)`。返りが 200 件未満になったら止める。上限 50 回（1万サーバー）で止まらなければ `error=too_many_pages` で終了コード 1。`DiscordAPIError` は `error=discord_error status=<status_code>` で終了コード 1。`status_code` が `None`（ネットワークの失敗・`discord_rest.py:82-84`）のときは `status=000` と出す
+  3. Discord: `from app.services.discord_rest import discord_api_request, DiscordAPIError`（recon §5・送り直しの SSOT）。`method="GET"`、`path="/users/@me/guilds?limit=200"`（2回目からは `&after=<前回の最後の id>`）、`expected_statuses=(200,)`。返りが 200 件未満になったら止める。上限 50 回（1万サーバー）で止まらなければ `error=too_many_pages` で終了コード 1。`DiscordAPIError` は `error=discord_error status=<status_code>` で終了コード 1。`status_code` が `None`（ネットワークの失敗・`backend/app/services/discord_rest.py:82-84`）のときは `status=000` と出す
   4. 判定: §4-1-3 の純粋関数 `judge(rows, bot_ids)` に渡して出力する
   5. 終わりに必ず `await engine.dispose()`（`try/finally`）
 - 一番外側（app の import と `asyncio.run(main())` の両方を包む所）で `Exception` を捕まえ、`error=unexpected` だけを標準エラーに出して終了コード 1。traceback・例外の本文は出さない（審査 Q3）
@@ -136,6 +136,7 @@ ssh "${SSH_OPTS[@]}" "$HOST" 'docker exec -i -w /app astro-webapp-backend-1 pyth
 - 一回きりの確認。定期化しない（対象外）
 - G3 以後の登録は Discord が持ち主を確かめた番号だけになった（G3 design）ので、同じ確認が要るのは G3 前の行だけ
 - スクリプトは残す。また前からの行を疑う場面で同じ手順を使える
+- 守り手: Opus（設計担当）。再び使うときは本書 §10 の受入条件と §12 の手順を読み直してから流す
 
 ## 9. 戻し方
 
@@ -174,7 +175,7 @@ grep -c -w -E 'POST|PUT|PATCH|DELETE|INSERT|UPDATE|commit' scripts/ops/discord_g
 ## 11. 外部・過去事例の参照と我々への応用
 
 - discord.py の `get_guilds`（recon §4）: ボットの鍵で `/users/@me/guilds` を `after` 付きで読む。同じ読み方をそのまま使う
-- 社内の前例: `scripts/ops/place-secretary-token.sh`（PO の `!`・manual-only 鍵・値を出さない）、`line-import-device.yml:69`（入れ物の中で一回だけ動かす）
+- 社内の前例: `scripts/ops/place-secretary-token.sh`（PO の `!`・manual-only 鍵・値を出さない）、`.github/workflows/line-import-device.yml:69`（入れ物の中で一回だけ動かす）
 - 数値の外部事例は不要: 一回きりの読み取りで、成否は本番の出力で直接判定できるため
 
 ## 12. 実装の進め方（1つの作業）
@@ -188,9 +189,9 @@ grep -c -w -E 'POST|PUT|PATCH|DELETE|INSERT|UPDATE|commit' scripts/ops/discord_g
 
 ### 1回目（2026-11-07 05:13Z・クラウドの Opus・HEAD 145ebf451）: REVISE
 
-- (1) 引用の行: 合う（`database.py` の sessionmaker の終わりは :40）。(2) 書き込みの道: 無い。(4) `python -` と `-w /app`: 合う（`Dockerfile:4`・:24）
-- Q1（必須）`discord_rest.py` の警告記録が path の `after=<番号>` を出す → §4-1 の手順0 `logging.disable(logging.CRITICAL)`（import の前）
-- Q2（必須）`database.py:20` の echo の既定（ENVIRONMENT が production 以外で SQL 文を出す） → §4-1 の手順0 `engine.sync_engine.echo = False`。`database.py` と `docker-compose.yml:69` を Opus が手元で照合済み
+- (1) 引用の行: 合う（`backend/app/database.py` の sessionmaker の終わりは :40）。(2) 書き込みの道: 無い。(4) `python -` と `-w /app`: 合う（`Dockerfile:4`・:24）
+- Q1（必須）`backend/app/services/discord_rest.py` の警告記録が path の `after=<番号>` を出す → §4-1 の手順0 `logging.disable(logging.CRITICAL)`（import の前）
+- Q2（必須）`backend/app/database.py:20` の echo の既定（ENVIRONMENT が production 以外で SQL 文を出す） → §4-1 の手順0 `engine.sync_engine.echo = False`。`backend/app/database.py` と `docker-compose.yml:69` を Opus が手元で照合済み
 - Q3（必須）想定外の例外の traceback・標準エラーが検査から漏れる → 一番外側の `error=unexpected`、`engine.dispose()`、§4-2 を `2>&1 | tee`、A3 に「形以外の行 0 件」を追加
 - Q4（推奨）T4 に `bot_guild_count` の行を追加
 - Q5（推奨）A4 を `grep -w` にし、注釈・文字列にも書き込みの語を書かないと明記
@@ -207,6 +208,6 @@ grep -c -w -E 'POST|PUT|PATCH|DELETE|INSERT|UPDATE|commit' scripts/ops/discord_g
 
 ### 3回目（2026-11-07 05:30Z・クラウドの Opus・HEAD b408a5133）: APPROVE
 
-- (a) 2回目の4点は解けている。(b) 審査役が見本ファイルで「A3・A4 の命令」を流した: (1)(2) は 0、(3) は正しい行だけで 0・1行足すと 1、(4) は 0、(5) は 1。(c) `missing_env` の改名は合う。(d) A6 の範囲は合う（時刻の列は reader でそのまま見える `meta.sql:122-127`、行数4は recon §1 と一致）
+- (a) 2回目の4点は解けている。(b) 審査役が見本ファイルで「A3・A4 の命令」を流した: (1)(2) は 0、(3) は正しい行だけで 0・1行足すと 1、(4) は 0、(5) は 1。(c) `missing_env` の改名は合う。(d) A6 の範囲は合う（時刻の列は reader でそのまま見える `migrations/20261024_100000_create_ai_cloud_meta.sql:122-127`、行数4は recon §1 と一致）
 - Q1（推奨）`2>&1` は ssh 全体にかかるので、ssh・docker の警告で (3) が 1 になりうる → (3) が 0 でないときの扱いを「A3・A4 の命令」の下に1行足した
 - 未解決の事項: なし。Discord 公式の決まりは審査の環境から読めないため、Opus が recon §4 で公式ページを直接読んだ結果に依る。本番で全サーバーが返るかは A1（対照）で判定する
