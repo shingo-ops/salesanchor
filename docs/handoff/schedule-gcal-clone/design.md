@@ -2,6 +2,7 @@
 
 状態: 成功条件 G1〜G14 は **PO 承認済み**（2026-11-06、PO 原文「1.」＝「この14項目で決める」を選択）。設計審査 1 回目・2 回目は REVISE、3 回目は **APPROVE**（§9）。3 回目の推奨 2 件も直した。実装は未着手。
 実装の承認: PO はこのセッションの冒頭で「PRマージ、デプロイまで完走させてくれ」、3 択で「3」（違いもまとめて設計し直してから全部いっしょに作る）と指示した。設計審査の APPROVE と便ごとのカードが揃った便から作る。
+追加（2026-11-07）: 見た目 5 か所の成功条件 G15〜G19 は **PO 承認済み**（PO 原文「１，」＝「この決め方で設計を進める」を選択）。作り方は §3.8・便6。設計審査は §9 の 4 回目。
 根拠: `docs/handoff/schedule-gcal-clone/recon.md`（以下 recon）。前の設計 `docs/handoff/schedule-gcal-alignment/design.md`（K1〜K14）を引き継ぎ、便2（K8〜K11）はこの設計に入れ直す。
 
 ## 1. 目的
@@ -32,6 +33,19 @@
 | G14 | ToDo（Google のタスク）は**今回は出さない** | — | D10 |
 
 G14 を外す理由: Google の ToDo を読むには、今の接続（予定の読み書きの許可だけ）に別の許可を足して、会社の Google 接続をつなぎ直す必要がある（`backend/app/services/google_calendar.py` の `_SCOPES`）。Google の審査準備も別の作業で進んでいる。入れるなら別の作業として PO に聞く。
+
+
+### 2.1 見た目 5 か所（G15〜G19・2026-11-07 追加）
+
+測る場所: 本番 /schedule の週の表示・Chrome 窓 1620×1448（Google の実測 recon §7.1 と同じ条件）。色は Google の値を写さず、今のトークンを使う（ADR-067・§6）。
+
+| # | 基準 | 検証方法 | recon |
+|---|---|---|---|
+| G15 | 日付の帯: 曜日（11〜12px）と日付の数字（24〜28px）が 2 段。今日の数字は直径 44〜48px の丸の中に白字。帯の高さ 76〜92px。今日の列の地は他の列と同じ色 | `.fc-col-header-cell` と中の 2 つの文字の getBoundingClientRect・getComputedStyle。今日と別の日の列の `.fc-timegrid-col` の背景色を比べる | §7.1・§7.2 |
+| G16 | 今の時刻の線: 今日の列にだけ出る・太さ 2px・列の左端に直径 10〜14px の丸。時刻の欄の三角は出ない | `.fc-timegrid-now-indicator-line` の数と幅・`border-top-width`・`::before` の大きさと左端・`.fc-timegrid-now-indicator-arrow` が見えない（幅 0 か `display: none`） | §7.1・§7.3 |
+| G17 | 予定の箱: 枠が地と同じ色（見えない）・1 時間の予定の幅＝列の幅 −10〜16px・高さ 92〜95px・文字 12px・行高 14〜16px・左の余白 8px（見積もりの点線と重なりの赤枠は今のまま） | 1 時間の予定の `.fc-timegrid-event` の getBoundingClientRect と getComputedStyle | §7.1・§7.2 |
+| G18 | 時刻の文字: 10〜12px。文字の上下の真ん中と 1 時間の線の差が ±3px 以内。午前 0 時の文字は出ない（全 24 時間で 23 個） | `.fc-timegrid-slot-label-cushion` の矩形と `.fc-timegrid-slot` の上端を比べる。文字のある数を数える | §7.1・§7.2 |
+| G19 | 重なり: 30 分ずれて重なる 2 つの予定で、後の予定が先の予定の上に重なる（後の `z-index` が大きく、後の左端が先の左端と右端の間）。先の予定の幅は後の予定の幅より広い | 自分の試し用の予定 2 つを本番で作って測り、消す（PO に作る日時を伝えてから） | §7.1・§7.3 |
 
 ## 3. 作り方（How）
 
@@ -103,6 +117,43 @@ ADR-1065 の改訂（便1 の PR に入れる）。直すのは 3 か所:
 - FullCalendar の選んだ範囲の色付け（`selectMirror`）は使わない。理由: 色付けには題名が出ないため。仮の予定は画面の状態だけにあり、DB にも Google にも送らない。
 - 文言 `schedule.untitled` は便2 で ja/en に足す（今のキーに同じ意味のものがあればそれを使う。便2 のカードで実物を確かめる）。
 
+### 3.8 見た目 5 か所（G15〜G19・便6）
+
+方針: 金型 `CalendarView` に口を 1 つ足し（`appearance`）、予定の画面だけがそれを使う。既定は今の見た目のまま（見本帳・他の画面が増えても変わらない）。見た目はすべて `CalendarView.css` の `.comp-calendar--schedule.comp-calendar--days` の下にトークンだけで書く（月の表示の今日の升目・曜日の行に効かせないため。包みの class `comp-calendar--${mode}` は `CalendarView.tsx:156`）。下の表の選び方はすべてこの 2 つの class の下。画面側（`SchedulePageImpl.tsx`・`schedule.css`）に見た目を書かない。
+
+口: `appearance?: 'plain' | 'schedule'`（既定 `'plain'`）。`'schedule'` のとき包みの class に `comp-calendar--schedule` を足し、`mode === 'days'` のときだけ次の 3 つを FullCalendar に渡す。月の表示は変えない。
+
+| 渡すもの | 中身 | 成功条件 |
+|---|---|---|
+| `slotEventOverlap: true` | 今の `false`（`CalendarView.tsx:171`）を `'schedule'` のときだけ true。重なりの形は recon §7.3 の `computeSegHStyle` | G19 |
+| `dayHeaderContent` | 曜日と日付の数字の 2 つの `span`。曜日は新しい関数 `formatWeekdayShort(date, language)`（`calendarView.utils.ts` に足す・`Intl.DateTimeFormat(language, { weekday: 'short' })`）。数字は `date.getDate()`。今日（引数の `isToday`）は数字に `comp-calendar__daynum--today` | G15 |
+| `slotLabelContent` | 今の `formatMeridiem`（`:176`）を、時が 0 で分が 0 のときだけ空の文字にする関数で包む（新しい関数 `formatSlotLabel(date, t)`・`calendarView.utils.ts`） | G18 |
+
+css（`CalendarView.css` の末尾に足す。値は var() と calc() と % だけ）:
+
+| 何 | 書き方 | 成功条件 |
+|---|---|---|
+| 今日の列の地 | `.comp-calendar--schedule.comp-calendar--days { --fc-today-bg-color: var(--bg-surface); }` | G15 |
+| 日付の帯 | `.comp-calendar__day-head` を縦に並べ中央寄せ・上下の余白 `var(--space-2)`・間 `var(--space-1)`。`.fc-col-header-cell` の太字を `var(--font-weight-normal)` に | G15 |
+| 曜日の文字 | `font-size: var(--font-2xs)`・`font-weight: var(--font-weight-medium)`・`color: var(--schedule-hour-label)`。今日は `color: var(--schedule-today)` | G15 |
+| 日付の数字 | `font-size: var(--schedule-day-num-size)`・`width`/`height: var(--schedule-mini-size)`・`border-radius: var(--radius-full)`・中央寄せ。今日は `background: var(--schedule-today)`・`color: var(--on-solid)` | G15 |
+| 今の線 | `.fc-timegrid-now-indicator-line { border-top-width: var(--schedule-now-line-w); }`。`::before` で丸（`width`/`height: var(--schedule-now-dot-size)`・`border-radius: var(--radius-full)`・`background: var(--schedule-now-line)`・左 0・上下の中心を線に合わせる calc）。`.fc-timegrid-now-indicator-arrow { display: none; }` | G16 |
+| 予定の箱 | `.fc-timegrid-col-events { margin-right: var(--space-3); }`。`.comp-calendar__event:not(.comp-calendar__event--line-dashed) { --fc-event-border-color: var(--fc-event-bg-color); }`（見積もりの点線は除く。重なりの赤枠は `:165-168` が `border-color` を直接書くので残る）。`.fc-timegrid-event { font-size: var(--font-xs); line-height: var(--line-height-tight); }`・`.fc-timegrid-event .fc-event-main { padding: var(--space-1) var(--space-2) 0; }` | G17 |
+| 時刻の文字 | `.fc-timegrid-slot-label { vertical-align: top; }`・`.fc-timegrid-slot-label-cushion { font-size: var(--font-2xs); font-weight: var(--font-weight-medium); transform: translateY(-50%); }` | G18 |
+
+新しいトークン（`frontend/src/tokens.css` の `--schedule-*` の並び・`:422-424` の後）: `--schedule-now-line-w: 2px;`（今の時刻の線の太さ）・`--schedule-now-dot-size: 12px;`（今の時刻の丸）。色ではないので暗い表示の追加は要らない（`:640` 以降の暗い表示は色だけを持つ）。
+
+予定の画面: `SchedulePageImpl.tsx:1392` の `<CalendarView>` に `appearance="schedule"` を 1 行足すだけ。
+
+ADR-1065: What の「見た目は金型の css でトークンに置き換える」の範囲内（新しい依存・色の直書きなし）。口の追加は便1 と同じく ADR-1065 の口の一覧に 1 行足す。
+
+試験（`CalendarView.test.tsx`）:
+- `:125` の `slotEventOverlap` を「既定は false・`appearance="schedule"` かつ days では true・month では渡さない」に分ける。
+- `formatWeekdayShort`（ja で 2026-11-08 が「日」・en で「Sun」）と `formatSlotLabel`（0 時は空・9 時は「午前9時」）。
+- `appearance="schedule"` で `dayHeaderContent` が今日だけ `--today` を付ける。
+- T4（`--fc-*` を全部置き換える）は変えない。
+- 見本帳（`CalendarView.stories.tsx`）に `appearance="schedule"` の週の例を 1 つ足す（重なる 2 つの予定を含む）。
+
 ### 3.4 祝日の出どころ（2026-11-06 に確かめて決めた）
 
 確かめた事実:
@@ -135,6 +186,7 @@ ADR-1065 の改訂（便1 の PR に入れる）。直すのは 3 か所:
 | 便3 | Google 型の作る小窓・表示切替を 1 つに | G3・G11 | なし |
 | 便4 | 祝日（案 C） | G7 | なし（移行なし。依存の追加 1 つ） |
 | 便5 | 検索 | G12 | 未定（便5 の前に確認） |
+| 便6 | 見た目 5 か所（§3.8）。金型に口 1 つ・css・トークン 2 つ・予定の画面に 1 行 | G15〜G19 | なし（frontend だけ。移行・deploy・scripts・DB は無い） |
 
 便0 を先に出す理由: 今の本番で毎回起きる間違いで、1 行で直り、載せ替えを待つ理由がない。
 
@@ -156,6 +208,10 @@ ADR-1065 の改訂（便1 の PR に入れる）。直すのは 3 か所:
 | FullCalendar の見た目がトークン外の色を持つ | 金型の css だけでトークンに置き換える（ADR-067）。画面側に色を書かない |
 | Google の見た目をまねすぎる | 仕組みと手の動きだけ合わせる。Google の絵・ロゴ・名前は使わない |
 | 狭い窓で小窓がはみ出る | G3 を高さ 768 でも測る |
+| 便6 の重なりで、先の予定は後の予定に隠れた所が押せない | 先の予定は左半分と右の 20px が見えて押せる（recon §7.3）。G19 の測定で、先の予定の見えている所を押して詳しくの小窓が開くことも確かめる |
+| 便6 の枠を消すと見積もりの点線が見えなくなる | 点線の予定は `:not(.comp-calendar__event--line-dashed)` で外す。受入れで点線の予定を目で見る |
+| 便6 の時刻の文字を上へ半分ずらすと、一番上の文字が切れる | 一番上（0 時）は文字を出さない（G18）。`hourRange='events'` で 8 時から始まる使い方は `appearance='plain'` のままなので影響しない |
+| 便6 で月の表示が変わる | 3 つの設定は `mode === 'days'` のときだけ渡す。css はすべて `.comp-calendar--days` の下に書く。受入れで月の表示の見た目が変わらないことを画面写しで比べる |
 
 ## 7. 外部・過去事例の参照と我々への応用
 
@@ -166,6 +222,7 @@ ADR-1065 の改訂（便1 の PR に入れる）。直すのは 3 か所:
 
 - 時間割は金型 1 か所。新しい画面が時間割を自前で書いたら、UI の見張り（ADR-144）で止める対象に加えるかを便2 で決める。
 - 金型の口ごとに見本帳の例と単体の試験を置く。
+- 便6 の見た目は `CalendarView.css` の `.comp-calendar--schedule.comp-calendar--days` の 1 か所だけ。数値の見張り（`frontend/scripts/check-css-hardcoded-values.js`）と色の見張り（`check-css-hardcoded-colors.js`）が CI で直書きを止める。
 - 守り手: frontend/src/pages/schedule/SchedulePageImpl.test.tsx（押した時刻で小窓が開くことを CI の試験で毎回確かめる。金型に載せ替えた後は frontend/src/components/CalendarView.test.tsx が加わる）
 
 ## 9. 審査
@@ -198,3 +255,7 @@ ADR-1065 の改訂（便1 の PR に入れる）。直すのは 3 か所:
 
 - S1〜S5 すべて ○（引用の行は origin/main 5574bf327 で照合。`moreLinkClick` が文字列を返すと `zoomTo` に進み小窓は開かない＝`internal-common.js:7462`。便0 の変更前の 3 か所は一字一句一致）。必須の指摘なし。
 - 推奨 2 件を直した: Q1 便0 の試験で枠を列の中から取る（`docs/handoff/schedule-gcal-clone/card-bin0.md`）。Q2 月の升目・終日の行で複数日を引っぱったら複数日の終日の予定（§3.2）。
+
+### 4 回目（便6・G15〜G19）: 未実施
+
+- 審査の後にここへ結果を書く。
