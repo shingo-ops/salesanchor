@@ -761,6 +761,11 @@
     "passkeyExists": "A passkey for this device is already registered.",
     "passkeyLimit": "You can register up to 10 passkeys."
   },
+  "passwordChangePage": {
+    "title": "Change your password",
+    "subtitle": "This is your first sign-in. Please replace the temporary password with your own.",
+    "signOut": "Sign out"
+  },
   "resetPasswordPage": {
     "subtitle": "Choose a new password using the link from your email.",
     "title": "Set your password",

@@ -127,6 +127,41 @@ describe("401 handling (self login)", () => {
     expect(currentAccessToken()).toBe("tok-old");
   });
 
+  describe("403 password_change_required (ADR-1068)", () => {
+    let assign: ReturnType<typeof vi.fn>;
+    const stubLocation = (pathname: string) => {
+      assign = vi.fn();
+      vi.stubGlobal("location", { pathname, assign });
+    };
+
+    it("moves to /password-change and still returns the 403 to the caller", async () => {
+      stubLocation("/leads");
+      handler = () => json(403, { detail: "password_change_required" });
+
+      await expect(api.get("/leads")).rejects.toMatchObject({ status: 403 });
+
+      expect(assign).toHaveBeenCalledWith("/password-change");
+    });
+
+    it("does not move when already on /password-change", async () => {
+      stubLocation("/password-change");
+      handler = () => json(403, { detail: "password_change_required" });
+
+      await expect(api.get("/leads")).rejects.toMatchObject({ status: 403 });
+
+      expect(assign).not.toHaveBeenCalled();
+    });
+
+    it("does not move for other 403 details", async () => {
+      stubLocation("/leads");
+      handler = () => json(403, { detail: "forbidden" });
+
+      await expect(api.get("/leads")).rejects.toMatchObject({ status: 403 });
+
+      expect(assign).not.toHaveBeenCalled();
+    });
+  });
+
   it("401 on passkey register/list/delete endpoints: one refresh, then the request is retried once", async () => {
     for (const [method, path] of [
       ["post", "/auth/passkey/register/options"],

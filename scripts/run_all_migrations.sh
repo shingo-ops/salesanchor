@@ -1245,3 +1245,7 @@ run_sql migrations/20261107_120000_create_staff_join_invites.sql
 run_sql migrations/20261107_130000_add_users_password_must_change.sql
 # ADR-1067 段階④ 便④-3: tenant_discord_config・tenant_discord_ticket_config に会社ごとの RLS（型C: 読取は全行・書込は自社か運営）。冪等・1 取引
 run_sql migrations/20261107_140000_add_discord_config_rls.sql
+# ADR-1067 段階④ 便④-4: google_webhook_subscriptions に会社ごとの RLS（型C: 読取は全行・書込は自社か運営）。冪等・1 取引
+run_sql migrations/20261107_150000_add_google_webhook_subscriptions_rls.sql
+# ADR-1067 段階④ 便④-5: tenant_llm_budgets・tenant_settings に会社ごとの RLS（型C: 読取は全行・書込は自社か運営）。冪等・1 取引
+run_sql migrations/20261107_160000_add_tenant_budget_settings_rls.sql

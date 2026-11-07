@@ -105,7 +105,32 @@ def _verified_sid(token: str) -> str | None:
     return sid if isinstance(sid, str) and sid else None
 
 
+# 仮パスワードのままのユーザー（password_must_change=true）が通れる道（ADR-1068）。1か所の定数。
+_MUST_CHANGE_ALLOWED_PATHS = frozenset({"/api/v1/auth/password/change"})
+
+
 async def get_current_user(
+    request: Request,
+    cred: HTTPAuthorizationCredentials = Depends(security),
+    db: AsyncSession = Depends(get_db),
+) -> User:
+    """_resolve_current_user の結果に、仮パスワードの変更強制（ADR-1068）を1か所で足す。"""
+    user = await _resolve_current_user(request, cred, db)
+    must_change = (
+        await db.execute(
+            text("SELECT password_must_change FROM public.users WHERE id = :id"),
+            {"id": user.id},
+        )
+    ).scalar()
+    if must_change and request.url.path not in _MUST_CHANGE_ALLOWED_PATHS:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="password_change_required",
+        )
+    return user
+
+
+async def _resolve_current_user(
     request: Request,
     cred: HTTPAuthorizationCredentials = Depends(security),
     db: AsyncSession = Depends(get_db),

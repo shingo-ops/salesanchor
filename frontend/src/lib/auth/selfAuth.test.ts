@@ -42,7 +42,7 @@ describe("selfAuth", () => {
     subscribeSession(listener);
 
     const result = await selfLogin("a@example.com", "pw");
-    expect(result).toEqual({ kind: "ok" });
+    expect(result).toEqual({ kind: "ok", mustChangePassword: false });
 
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe("/api/v1/auth/login");

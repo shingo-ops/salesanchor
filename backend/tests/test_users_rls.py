@@ -53,6 +53,8 @@ _DEVICE_MIGRATIONS = (
     "001_create_auth_events.sql",
     "20261101_130000_add_new_device_approval.sql",
 )
+# ADR-1068: self_login・パスワード再設定が読み書きする仮パスワードの印
+_MUST_CHANGE_MIGRATION = "20261107_130000_add_users_password_must_change.sql"
 _GRANT_DDL = """
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO salesanchor_app;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO salesanchor_app;
@@ -110,6 +112,7 @@ async def _fresh():
         await _apply_migration(admin_engine, _MIGRATIONS[0])
         for mig in _DEVICE_MIGRATIONS:
             await _apply_migration(admin_engine, mig)
+        await _apply_migration(admin_engine, _MUST_CHANGE_MIGRATION)
         async with admin_engine.begin() as conn:
             for uid, tid, email in ((_USER_A, _TENANT_A, _EMAIL_A), (_USER_B, _TENANT_B, _EMAIL_B)):
                 await conn.execute(

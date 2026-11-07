@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import i18n from "../../i18n";
 import ja from "../../locales/ja.json";
 import {
+  eventNumericId,
   fitPopover,
   normalizeShift,
+  toCalendarEnd,
   toRangeEnd,
   toRangeStart,
   type AnchorRect,
@@ -70,6 +72,53 @@ describe("fitPopover", () => {
     const { left, top } = fitPopover(null, { width: 320, height: 400 }, { width: 1000, height: 800 }, margin);
     expect(left).toBe(340);
     expect(top).toBe(200);
+  });
+});
+
+describe("eventNumericId", () => {
+  it("takes the number out of an event id", () => {
+    expect(eventNumericId("event-12")).toBe(12);
+  });
+
+  it("returns null for a shift id", () => {
+    expect(eventNumericId("shift-3")).toBeNull();
+  });
+
+  it("returns null for the pending box", () => {
+    expect(eventNumericId("pending")).toBeNull();
+  });
+});
+
+describe("toCalendarEnd", () => {
+  const timedItem = {
+    start: new Date(2026, 10, 10, 9, 0),
+    end: new Date(2026, 10, 10, 10, 30),
+    allDay: false,
+  };
+  const allDayItem = {
+    start: new Date(2026, 10, 10, 0, 0),
+    end: new Date(2026, 10, 10, 23, 59),
+    allDay: true,
+  };
+
+  it("all-day one day: goes back one day and ends at 23:59", () => {
+    const end = toCalendarEnd(new Date(2026, 10, 10), new Date(2026, 10, 11), true, allDayItem);
+    expect(end).toEqual(new Date(2026, 10, 10, 23, 59));
+  });
+
+  it("all-day three days: ends at 23:59 of the last day", () => {
+    const end = toCalendarEnd(new Date(2026, 10, 10), new Date(2026, 10, 13), true, allDayItem);
+    expect(end).toEqual(new Date(2026, 10, 12, 23, 59));
+  });
+
+  it("timed with no end: keeps the original length", () => {
+    const start = new Date(2026, 10, 12, 14, 0);
+    expect(toCalendarEnd(start, null, false, timedItem)).toEqual(new Date(2026, 10, 12, 15, 30));
+  });
+
+  it("all-day moved to timed with no end: one hour", () => {
+    const start = new Date(2026, 10, 12, 14, 0);
+    expect(toCalendarEnd(start, null, false, allDayItem)).toEqual(new Date(2026, 10, 12, 15, 0));
   });
 });
 

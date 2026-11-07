@@ -1199,7 +1199,8 @@ jobs:
           # shallow checkout 等で base SHA が無いと git diff は `fatal: bad object` になる。
           # これを `|| true` で握りつぶすと「変更なし」と誤判定し、migration を実際には
           # 実行しないまま緑（false-positive）になるため、明示的に exit 1 する。
-          if ! ALL_CHANGED=$(git diff --name-only "$BASE" "$HEAD"); then
+          # --diff-filter=d: PR で消したファイルは一覧から外す（消した台本を動かそうとして落ちるのを防ぐ）
+          if ! ALL_CHANGED=$(git diff --name-only --diff-filter=d "$BASE" "$HEAD"); then
             echo "::error::git diff $BASE..$HEAD に失敗（base SHA 不在の可能性）。fail-closed でジョブを失敗させます。checkout の fetch-depth: 0 を確認してください。"
             exit 1
           fi
@@ -1341,6 +1342,16 @@ jobs:
         run: |
           # 20261107_110000 は discord_server_snapshots と discord_server_apply_runs（20261106_120000）が先にある前提（本番と同じ順）
           for sqlfile in migrations/20261106_120000_create_discord_server_snapshot_tables.sql; do
+            echo "▶ $sqlfile を前提として実行中..."
+            psql -h localhost -U jarvis -d jarvis_db -v ON_ERROR_STOP=1 -f "$sqlfile"
+            echo "✅ $sqlfile 成功"
+          done
+
+      - name: 変更 SQL の前提の移行を先に実行（Google カレンダーの通知の登録の表）
+        if: steps.detect.outputs.has_sql_changes == 'true' && contains(steps.detect.outputs.changed_sql, 'migrations/20261107_150000_add_google_webhook_subscriptions_rls.sql')
+        run: |
+          # 20261107_150000 は google_webhook_subscriptions（077）と、その列を足す 20261103_200000 が先にある前提（本番と同じ順）
+          for sqlfile in migrations/077_calendar_sync_mode_and_webhook_subscriptions.sql migrations/20261103_200000_add_google_calendar_import_sync.sql; do
             echo "▶ $sqlfile を前提として実行中..."
             psql -h localhost -U jarvis -d jarvis_db -v ON_ERROR_STOP=1 -f "$sqlfile"
             echo "✅ $sqlfile 成功"

@@ -31983,6 +31983,12 @@
             "title": "Expires In",
             "type": "integer"
           },
+          "must_change_password": {
+            "default": false,
+            "description": "仮パスワードのままか（真なら画面はパスワード変更ページへ移す・ADR-1068）",
+            "title": "Must Change Password",
+            "type": "boolean"
+          },
           "token_type": {
             "default": "bearer",
             "description": "トークン種別",
