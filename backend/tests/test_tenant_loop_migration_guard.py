@@ -240,6 +240,11 @@ _REVIEWED: dict[str, tuple[str, str, frozenset[str]]] = {
         "",
         frozenset({"20261103_200000_add_google_calendar_import_sync.sql"}),
     ),
+    "test_tenant_budget_settings_rls.py": (
+        "own_database",
+        "",
+        frozenset({"20260604_220000_create_translation_glossary.sql"}),
+    ),
 }
 
 # 同じファイルに2種類の扱いがあるもの（消した表の照合は文字だけ）
