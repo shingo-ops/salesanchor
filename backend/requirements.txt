@@ -10,6 +10,8 @@ pydantic-settings==2.13.1
 bcrypt==4.2.1
 phonenumbers==8.13.52
 pycountry==24.6.1
+# 予定の画面の日本の祝日（schedule-gcal-clone design §3.4 案 C）
+holidays==0.108
 python-jose[cryptography]==3.5.0
 httpx==0.28.1
 redis[hiredis]>=5.0.0
