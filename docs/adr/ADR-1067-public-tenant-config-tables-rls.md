@@ -47,5 +47,8 @@
 
 ## 触らない範囲
 
-- 便5 の残り 10 表（共用の一覧 6、運営の記録 4）は本 ADR の対象外。理由つきで便5 の許可一覧に残す。
+- 便5 の残りの表は本 ADR の対象外。理由つきで便5 の許可一覧（backend/app/ops/tenant_rls_allowlist.py）に入れた（#5194、本番は 11 件）。
+  - 運営の全社共用の行に加えて会社の画面から会社の行も足せる 6 表（`line_conditions`・`line_units`・`payment_fee_settings`・`tcg_note_master`・`tcg_status_master`・`tcg_product_categories`）。全社共用だけの表ではない。RLS は次の段で読み方と一緒に付ける（PO 2026-11-07「ｃ1」）。次の段では、別名の VIEW（`public.conditions`・`public.units`）が持ち主の権限で読まれない形にすることも設計に入れる。
+  - Webhook で会社を探す 1 表（`meta_page_routing`）、運営の記録・移行の控え 4 表（`llm_usage_events`・`data_deletion_logs`・`tenant_deletion_audit`・`products_category_classification_backup`）。
+- 備考（What 6 の実際）: 便5 は許可一覧を空で始め、8 表は便④-1〜④-5 で先に RLS が付いた。そのため 8 表は許可一覧に入らずに済んだ。
 - 会社ごとのスキーマ（`tenant_XXX`）の表（ADR-072 の search_path で分離済み）。
