@@ -688,3 +688,83 @@ async def test_still_accepts_self_token_without_cache(db_session, password_hash)
     user, exc, _, _ = await _current_user_with(db_session, _token())
 
     assert exc is None and user.id == USER_ID
+
+
+# ── 11. 仮パスワードの変更強制（ADR-1068・2回目） ─────────────────────
+
+def _request_for(path):
+    return Request({"type": "http", "method": "GET", "path": path, "headers": [], "client": ("203.0.113.9", 1234)})
+
+
+async def _current_user_at(db, token, path):
+    from app.auth.dependencies import get_current_user
+
+    cred = HTTPAuthorizationCredentials(scheme="Bearer", credentials=token)
+    with patch("app.auth.dependencies.is_token_blacklisted", new=AsyncMock(return_value=False)), \
+         patch("app.auth.dependencies.get_cached_jwt", new=AsyncMock(return_value=None)), \
+         patch("app.auth.dependencies.check_auth_rate_limit", new=AsyncMock(return_value=False)), \
+         patch("app.auth.dependencies.record_auth_failure", new=AsyncMock()), \
+         patch("app.auth.dependencies.cache_jwt_result", new=AsyncMock()):
+        return await get_current_user(_request_for(path), cred, db)
+
+
+async def test_must_change_blocks_ordinary_path_with_403(db_session, password_hash):
+    await _insert_user(db_session, hash_value=password_hash, password_must_change=True)
+
+    with pytest.raises(HTTPException) as exc:
+        await _current_user_at(db_session, _token(), "/api/v1/leads")
+
+    assert exc.value.status_code == 403
+    assert exc.value.detail == "password_change_required"
+
+
+async def test_must_change_allows_password_change_path(db_session, password_hash):
+    await _insert_user(db_session, hash_value=password_hash, password_must_change=True)
+
+    user = await _current_user_at(db_session, _token(), "/api/v1/auth/password/change")
+
+    assert user.id == USER_ID
+
+
+async def test_must_change_false_passes_as_before(db_session, password_hash):
+    await _insert_user(db_session, hash_value=password_hash, password_must_change=False)
+
+    user = await _current_user_at(db_session, _token(), "/api/v1/leads")
+
+    assert user.id == USER_ID
+
+
+async def test_login_response_reports_must_change_password(http, db_session, password_hash):
+    await _insert_user(db_session, hash_value=password_hash, password_must_change=True)
+    await _insert_user(
+        db_session, hash_value=password_hash, user_id=2002, email="normal@example.com", password_must_change=False
+    )
+
+    flagged = await _login(http)
+    normal = await _login(http, email="normal@example.com")
+
+    assert flagged.status_code == 200 and flagged.json()["must_change_password"] is True
+    assert normal.status_code == 200 and normal.json()["must_change_password"] is False
+
+
+async def test_password_change_clears_must_change(http, db_session, password_hash, as_user):
+    await _insert_user(db_session, hash_value=password_hash, password_must_change=True)
+
+    assert (await _change(http)).status_code == 200
+
+    row = await _row(db_session, "SELECT password_must_change FROM users WHERE id = :id", id=USER_ID)
+    assert not row.password_must_change
+
+
+def test_change_and_reset_confirm_updates_clear_must_change():
+    """/password/change と /password-reset/confirm の UPDATE 文は、どちらも印を false に戻す。"""
+    import inspect
+
+    from app.routers import auth as auth_router
+
+    source = inspect.getsource(auth_router)
+    assert source.count("password_must_change = false") == 2
+    for marker in ('"UPDATE public.users SET password_argon2_hash = :h, password_changed_at = :now, "',
+                   '"UPDATE public.users SET password_argon2_hash = :h, password_changed_at = :at, "'):
+        index = source.index(marker)
+        assert "password_must_change = false" in source[index:index + 200]

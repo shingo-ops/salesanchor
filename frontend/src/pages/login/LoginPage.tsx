@@ -48,6 +48,8 @@ export default function LoginPage() {
   const [enrolling, setEnrolling] = useState(false);
   const [promptOpen, setPromptOpen] = useState(false);
   const [promptBusy, setPromptBusy] = useState(false);
+  // 仮パスワードのままログインした（ADR-1068）。自動遷移で元のページへ移さない
+  const [mustChange, setMustChange] = useState(false);
   // 知らない機械からのログイン（202）: いつもの機械で許可するまで待つ（ADR-1055）
   const [approval, setApproval] = useState<LoginApprovalRequired | null>(null);
   const [deadline, setDeadline] = useState(0);
@@ -70,10 +72,10 @@ export default function LoginPage() {
 
   // KGI-3: ログイン済みユーザーはアプリ本体へ自動遷移
   useEffect(() => {
-    if (!authLoading && user && !enrolling && !promptOpen) {
+    if (!authLoading && user && !enrolling && !promptOpen && !mustChange) {
       navigate(from, { replace: true });
     }
-  }, [authLoading, user, navigate, from, enrolling, promptOpen]);
+  }, [authLoading, user, navigate, from, enrolling, promptOpen, mustChange]);
 
   // 待ちを終えてログイン画面に戻す（期限切れ・断られた）。poll と「管理者に頼む」の両方から使う
   const endApproval = useCallback((message: string) => {
@@ -205,6 +207,14 @@ export default function LoginPage() {
         setNow(Date.now());
         setEnrolling(false);
         setLoading(false);
+        return;
+      }
+      if (result.mustChangePassword) {
+        // 仮パスワードのまま（ADR-1068）: パスキー案内を挟まず、変更ページへ移す
+        setMustChange(true);
+        setEnrolling(false);
+        setLoading(false);
+        navigate("/password-change", { replace: true });
         return;
       }
     } catch (err) {

@@ -95,7 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signIn = async (email: string, password: string): Promise<SelfLoginResult> => {
     if (dev) {
       await dev.signIn(email, password);
-      return { kind: "ok" };
+      return { kind: "ok", mustChangePassword: false };
     }
     const result = await selfLogin(email, password);
     // 新しいログインでは案内を出し直せるように、前のログインの印を消す
@@ -142,7 +142,7 @@ export function useAuth() {
     return {
       user: dev.getUser(),
       loading: false,
-      signIn: async (): Promise<SelfLoginResult> => ({ kind: "ok" }),
+      signIn: async (): Promise<SelfLoginResult> => ({ kind: "ok", mustChangePassword: false }),
       signInWithPasskey: async () => {},
       signOut: async () => {},
       sendPasswordReset: async () => {},
