@@ -1,0 +1,58 @@
+/**
+ * SegmentedToggle — 2〜3 択のアイコン切替
+ * ADR-067: 全カラー・寸法は CSS 変数参照のみ
+ */
+
+.comp-segmented {
+  display: inline-flex;
+  flex-shrink: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.comp-segmented__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-width: var(--size-icon-btn-sm);
+  height: var(--size-icon-btn-sm);
+  padding: 0 var(--space-1);
+  border: 0;
+  background: var(--bg-subtle);
+  color: var(--text-muted);
+  font-family: inherit;
+  cursor: pointer;
+  transition: color var(--transition-micro), background var(--transition-micro);
+}
+
+.comp-segmented__btn + .comp-segmented__btn {
+  border-left: 1px solid var(--border);
+}
+
+.comp-segmented__btn:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring-shadow);
+}
+
+.comp-segmented__btn:disabled {
+  opacity: var(--opacity-dim);
+  cursor: not-allowed;
+}
+
+/* 選ばれたボタン */
+.comp-segmented__btn--danger.comp-segmented__btn--checked {
+  background: var(--color-error-bg);
+  color: var(--color-error);
+}
+
+.comp-segmented__btn--neutral.comp-segmented__btn--checked {
+  background: var(--border-strong);
+  color: var(--text-primary);
+}
+
+.comp-segmented__btn--success.comp-segmented__btn--checked {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}

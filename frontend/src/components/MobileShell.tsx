@@ -38,6 +38,7 @@ import { useTheme } from "../contexts/ThemeContext";
 import { useUiPrefs } from "../contexts/UiPrefsContext";
 import { MobileTabbarContext } from "../hooks/useMobileTabbarHidden";
 import { usePermissions } from "../hooks/usePermissions";
+import { canSeeMenu } from "../constants/menuPermissions";
 import { useSuperAdmin } from "../hooks/useSuperAdmin";
 import { useSSE } from "../hooks/useSSE";
 import { RealtimeProvider } from "../lib/realtime/RealtimeProvider";
@@ -77,6 +78,8 @@ export default function MobileShell() {
   const { theme, changeTheme } = useTheme();
   const { signOut } = useAuth();
   const { hasPermission, loading: permsLoading } = usePermissions();
+  // hasAny と同じ意味（どれか1つ持てば真）。既存の試験が hasPermission だけを差し替えるため、それから作る
+  const hasAny = (...keys: string[]) => keys.some((k) => hasPermission(k));
   const { prefs, loading: uiPrefsLoading } = useUiPrefs();
   const { isSuperAdmin } = useSuperAdmin();
 
@@ -114,18 +117,17 @@ export default function MobileShell() {
 
   // ── nav items 解決（Layout.tsx:169-391 の権限判定を移植） ──
 
-  const showCrmLink =
-    hasPermission("leads.view") || hasPermission("customers.view");
+  const showCrmLink = canSeeMenu("leads", hasAny);
 
   const showSalesLink =
     prefs.show_sales_menu &&
-    (hasPermission("quotes.view") || hasPermission("invoices.view"));
+    canSeeMenu("quotesInvoices", hasAny);
   const salesLinkTo = hasPermission("quotes.view") ? "/quotes" : "/invoices";
 
   const menuItems: ResolvedNavItem[] = navLoading
     ? []
     : [
-        ...(hasPermission("dashboard.view")
+        ...(canSeeMenu("dashboard", hasAny)
           ? [
               resolveItem(
                 "dashboard",
@@ -299,7 +301,7 @@ export default function MobileShell() {
         )}
 
         {/* 在庫: products.view 権限 */}
-        {hasPermission("products.view") && (
+        {canSeeMenu("inventory", hasAny) && (
           <NavLink
             to="/inventory"
             className={({ isActive }) =>
@@ -313,7 +315,7 @@ export default function MobileShell() {
         )}
 
         {/* 受注管理: orders.view 権限 */}
-        {hasPermission("orders.view") && (
+        {canSeeMenu("orders", hasAny) && (
           <NavLink
             to="/orders"
             className={({ isActive }) =>
