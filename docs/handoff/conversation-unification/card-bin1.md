@@ -8,7 +8,7 @@
 - ブランチ: `release/conversation-unify-bin1`（`bash scripts/new-worktree.sh release/conversation-unify-bin1 --claude`）
 - 読んだ決まり: docs/handoff/design-partner-card-ops/guards/00-common.md・04-worktree.md・05-pr.md・10-executor.md
 - 受領確認: 着手の前に、このカードの §0 の3つを満たしたかを1行で返してから始める
-- 起票: Draft・`--base main`・`shingo-cc` 名義。**危険 PR**（`migrations/`・`scripts/run_all_migrations.sh`・本番 `scripts/smoke_test_post_deploy.sh` を含む。ADR-135・ADR-136）。マージ・本番反映は担当が行わない
+- 起票: Opus が手元で行う（担当は push まで）。Draft・`--base main`・`shingo-cc` 名義。**危険 PR**（`migrations/`・`scripts/run_all_migrations.sh`・本番 `scripts/smoke_test_post_deploy.sh` を含む。ADR-135・ADR-136）。マージ・本番反映は担当が行わない
 
 ## 0. 着手条件（満たさなければ止まって BLOCKED: で返す）
 
@@ -27,7 +27,7 @@
 
 ## 1. やること（この順）
 
-1. `./scripts/dev/executor-preflight.sh || exit 1`
+1. クラウドの事前確認（`scripts/dev/executor-preflight.sh` の4項目のうち、クラウドで確かめられる2つ）: `git config user.name shingo-cc` と `git rev-parse --verify origin/main`。どちらかが失敗したら BLOCKED:。残りの2つ（api.github.com への到達・gh の名義）はクラウドに gh が無いため流さない。PR の起票と gh の確認は Opus が手元で行う（2026-11-08 クラウド1回目で preflight が `[1/3] network` と `[2/3] gh auth` で FAIL したことを受けた変更。前例: `docs/handoff/api-error-auto-retry/card-1.md:5`「PR はクラウドで作らない」）
 2. §2 の書く所を直す（写しをやめる）
 3. §3 の手の記録の API を meta_messages に向ける
 4. §4 の「手の記録を自動連携の行として扱わない」条件と「消した印」の条件を足す
@@ -254,7 +254,7 @@ git grep -n 'is_manual IS NOT TRUE' HEAD -- backend/app
 
 - `DONE`／`BLOCKED: 理由`／`NEEDS_DECISION: 問い` のどれかで始める
 - 停止したとき: その場で手を止め、`BLOCKED:` で始めて、止まった手順・命令・生の出力を返す。自分で回り道を作らない
-- PR 番号・HEAD・CI の結果（名前と結論の生の一覧）・§10 の4つの検索の生の出力・消したファイル・変えた試験の一覧・`git diff main...HEAD --name-only` の生の出力
+- push した HEAD（40桁）・§10 の4つの検索の生の出力・消したファイル・変えた試験の一覧・`git diff main...HEAD --name-only` の生の出力
 - 推測で埋めない。読めなかった出力は「読めなかった」と書く
 
 ## 15. 反映の後（Opus が行う。担当はしない）
