@@ -165,6 +165,50 @@ PR 本文: tokens.css にトークンを 2 つ足すので、`frontend/scripts/c
 - T4（`--fc-*` を全部置き換える）は変えない。
 - 見本帳（`frontend/src/components/CalendarView.stories.tsx`）に `appearance="schedule"` の週の例を 1 つ足す（重なる 2 つの予定を含む）。
 
+### 3.9 便3: 作る小窓を Google の形に・表示切替を 1 つのボタンに（G3・G11・2026-11-07）
+
+本番の今（2026-11-07 にアプリで測った・窓 900×1279）:
+- 作る小窓は幅 320。高さは閉じた形で 496、「詳しく入れる」を押すと 544。
+- 開いた瞬間の文字の行き先は BODY（題名の欄に入らない）→ G3 ① ×。
+- 日時は日付と時刻の欄が 4 つ並ぶ → G3 ② ×。
+- 場所・説明は「詳しく入れる」の奥。Meet は切り替えの 1 行 → G3 ③ は一部だけ。
+- ボタンは小窓の中に収まっている → G3 ④ ○（recon B2 の 26px はみ出しは便2 で直った）。
+- 表示の切替は 4 つのボタンが並ぶ（`frontend/src/pages/schedule/SchedulePageImpl.tsx:1332-1345`）→ G11 ×。
+
+作る小窓（`SchedulePopover`・`frontend/src/pages/schedule/SchedulePageImpl.tsx:213-515`）の変え方。変えるのは作るとき（mode が create）の見た目で、詳しく見る・直すときの中身は今と同じ項目を出す:
+1. 上の帯: 作るときは「予定を追加」の札と種類の札を出さない（閉じる × は残す）。直す・詳しく見るときは今のまま。
+2. 題名: 一番上に置く。作るときは見出しの文字を出さず、読み上げ用に `aria-label`（「タイトル」）を付ける。作るときは開いた瞬間に欄へ文字が入る（`autoFocus`）→ G3 ①。
+3. 日時の 1 行: 時計の絵＋「11月10日(火) 午前10時～午前11時」の 1 行のボタン。押すと今の「終日」の切り替えと日付・時刻の欄 4 つが出る → G3 ②。作るとき以外は最初から開いた形（今と同じ欄）。
+   - 文は新しい関数 `formatDraftDateLine`（`frontend/src/pages/schedule/schedule-utils.ts`）で作る。曜日つきの日付は `Intl.DateTimeFormat(language, { month: "long", day: "numeric", weekday: "short" })`（ja で「11月10日(火)」・Mac の node で確認）。時刻は金型の `formatTimeRange`（`frontend/src/components/calendarView.utils.ts:224`）を午前・午後を省かない形で使う。「～」は既存の `calendarView.timeRange`。
+   - 新しい文言キーは `schedule.dateTimeLine`「{{date}} {{time}}」の 1 つだけ。
+   - 終日 1 日は「11月10日(火) 終日」、終日で複数日は「11月10日(火)～11月12日(木)」、日をまたぐ時刻つきは「11月10日(火) 午後11時～11月11日(水) 午前1時」。日付が読めないときは空、終わりだけ読めないときは始まりだけ。
+4. 種類・Meet・共有: 今の欄・切り替えのまま、日時の下に置く。Meet は「Google Meet を付ける」の 1 行の切り替えで、押すと付く（Google も 1 行のボタン）。G3 ③ の「押すと開く 1 行」に当たる（中身の入力が無いので開く物が無い）。
+5. 場所・説明: 作るときは地図の絵＋「場所を追加」、線の絵＋「説明を追加」の 1 行のボタン。押すとその欄が出て、文字がそこに入る → G3 ③。値があるときと、作るとき以外は最初から欄を出す。
+6. 「詳しく入れる」のボタン・状態 `expanded`・文言キー `schedule.moreOptions`（ja・en）・css `.schedule-popover__more` を消す。
+7. 絵は金型の絵の表 `SCHEDULE_POPOVER_ICONS`（`frontend/src/constants/icons.tsx:360`）に heroicons の `ClockIcon`・`MapPinIcon`・`Bars3BottomLeftIcon`（outline・2.2.0 にあると確認済み）を足して使う。
+8. 1 行のボタンは金型 `Button`（ghost・sm・fullWidth）。左寄せだけ `.schedule-popover .schedule-popover__line { justify-content: flex-start; }` を足す（色・寸法の直書きなし）。
+
+高さ: 閉じた形は題名・日時 1 行・種類・切り替え 0〜2 行・場所 1 行・説明 1 行で、今の 496 より低くなる。全部開いた形の高さは今の 544 に近い。小窓の高さの上限（`frontend/src/pages/schedule.css:372-387` の `max-height: min(var(--schedule-popover-max-h), calc(100vh - var(--space-6)))`）と中身だけを巻く形（`:417-429`）は変えないので、高さ 768 でもボタンは中に収まる → G3 ④。本番で 1448 と 768 の 2 通りで測る（高さを変えられないときは、上限の計算の値を書き、768 では測れなかったと報告する）。
+
+表示の切替（G11）:
+- 4 つのボタン（`SchedulePageImpl.tsx:1332-1345`）を、今の表示の名前（「週」）＋下向きの絵（`NAV_ICONS.chevronDown`）の金型 `Button` 1 つにする。`aria-haspopup="menu"`・`aria-expanded` を付ける。
+- 押すと金型 `ContextMenu`（`frontend/src/components/ContextMenu.tsx`・受信箱で使っている）を、ボタンの左下を基準に開く。中身は日・週・月・一覧の 4 つ。選ぶと切り替わって閉じる。Esc・外を押すと閉じる（金型の動き）。
+- 開いている間は文字の近道（d・w・m など）を効かせない（`SchedulePageImpl.tsx:1236` の「小窓が開いている」に足す）。
+- 新しい css の class は作らない（`frontend/scripts/check-page-header-actions.js` が `-view-select` などの名前を止める）。古い `.schedule-view-switch*`（`frontend/src/pages/schedule.css:57-90`）は消す。
+
+選ばなかった案:
+- 「詳しく入れる」を残して中を並べ替えるだけ → G3 ③（場所・説明が 1 行ずつ開く）を満たさない。
+- 表示切替に金型 `NavDropdown` → 行き先が画面の住所（route）に結び付いた部品で、表示の切り替えには使えない。
+- 日時の 1 行を自前の文字の組み立てで作る → 金型の時刻の書き方（便2・便6 と同じ「午前10時」）と分かれる。金型の関数を使う。
+
+試験（`frontend/src/pages/schedule/SchedulePageImpl.test.tsx`・`schedule-utils.test.ts`）:
+- 近道の試験の `pressed`（`:246-247`）は「表示切替のボタンの名前がその表示か」に変える。
+- T1・T3・T4（`:539-585`）は先に日時の 1 行を押してから欄を読む。T1 は 1 行に「午前10時～午前11時」「午前4時～午前5時」「午後3時～午後4時」が出ることも見る。
+- 足す: 作る小窓で題名の欄に文字が入っている（`document.activeElement`）、場所・説明は 1 行だけで欄が無い／押すと欄が出る、表示切替のボタンを押すと 4 つが出て「月」を選ぶと月になる、切替を開いている間は「d」が効かない。
+- `formatDraftDateLine` の 7 通り（カード §6）。
+
+台帳・ADR: ADR の改訂は無い（金型 Button・ContextMenu・TextFieldControl を今の口のまま使う。金型に口を足さない）。文言は ADR-027 に従い t() だけ。
+
 ### 3.4 祝日の出どころ（2026-11-06 に確かめて決めた）
 
 確かめた事実:
