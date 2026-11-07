@@ -101,7 +101,7 @@
 
 - 3択の切替の金型は無い。似たもの:
   - `Toggle`（2択）、`IconToggleButton`（押す/押さない）、`Tabs`、`ChoiceCardGroup`（縦のカード型ラジオ）、`CheckboxControl`、`Badge`（neutral/info/success/warning/danger/purple）、`Button`（primary/secondary/ghost/danger/outline/tab）。
-- アイコン: `frontend/src/constants/icons.tsx:163-167` に `STATUS_ICONS.check`（✓）と `STATUS_ICONS.error`（✕）。斜め線は未登録。`@heroicons/react` 2.2.0 に `SlashIcon` がある（`frontend/node_modules/@heroicons/react/24/outline/SlashIcon.js`）。
+- アイコン: `frontend/src/constants/icons.tsx:163-167` に `STATUS_ICONS.check`（✓）と `STATUS_ICONS.error`（✕）。斜め線は未登録。`@heroicons/react` 2.2.0 に `SlashIcon` がある（frontend/node_modules/@heroicons/react/24/outline/SlashIcon.js）。
 - 色の変数: `frontend/src/tokens.css:619-624`（`--color-error*` / `--color-success*`）、`frontend/src/index.css:19,26`（`--bg-subtle` / `--text-muted`）。暗い画面用は `frontend/src/tokens.css:667-672`。
 
 ## 7. 未確認

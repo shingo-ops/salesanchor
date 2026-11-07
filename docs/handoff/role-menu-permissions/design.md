@@ -251,7 +251,7 @@ export interface SegmentedToggleProps<V extends string> {
 
 ## 10. 自己審査（Opus・同じ AI による審査で、独立した審査ではない）
 
-- 既存の仕様・ADR との整合: ADR-144 / 067 / 027 / 147 と食い違いなし。サーバーの置き換え保存（`backend/app/routers/roles.py:416-493`）をそのまま使う。
+- 既存の仕様・ADR との整合: ADR-144 / ADR-067 / ADR-027 / ADR-147 と食い違いなし。サーバーの置き換え保存（`backend/app/routers/roles.py:416-493`）をそのまま使う。
 - 根拠: 行番号は recon の実物。許可 135 件は本番の読み取り結果。
 - 受入の基準: 14 件すべて○×で判定できる。
 - 実装の範囲: §3 の対象のファイルだけ。触らない場所も §3 に書いた。
@@ -269,7 +269,7 @@ export interface SegmentedToggleProps<V extends string> {
   5. 低 連携と Discord の区切り → §5-2 に置き方の理由を書いた。
   6. 低 roles.py の行番号 → recon §3 を直した。
   7. 低 本文色と §1 の 9 の範囲 → §7 に `--text-primary`、§1 の 9 に試験の範囲を書いた。
-- 審査の未確認: `SlashIcon` の有無（審査の場所に node_modules が無い）→ recon §6 で Opus が手元で確かめ済み（`frontend/node_modules/@heroicons/react/24/outline/SlashIcon.js`）。
+- 審査の未確認: `SlashIcon` の有無（審査の場所に node_modules が無い）→ recon §6 で Opus が手元で確かめ済み（frontend/node_modules/@heroicons/react/24/outline/SlashIcon.js）。
 
 ## 12. 維持の仕組み（誰が・何が守るか）
 
