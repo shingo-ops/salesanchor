@@ -6,6 +6,7 @@
 | 現在地 | `docs/handoff/role-menu-permissions/recon.md` |
 | ADR | 新規なし。理由: サーバー・DB・許可の意味を変えない画面の作り直しで、新しい仕組みの決定を含まないため。部品の追加は ADR-144 の手順に従う |
 | PO の決定 | ①Discord の権限画面の形で ✕／✓ の3択（2026-11-07）②完成イメージの見た目は「イメージ通り」（2026-11-07）③メニューごとに設定。同じ許可のメニューは1行にまとめる案2（2026-11-07「2」）④営業ロールの許可は AI が変えない。PO が自分で設定する（2026-11-07「2」） |
+| 部品の新設の許可（CC_UI_GOVERNANCE.md:14） | PO が ✕ ／ ✓ の3択の切替を含む完成イメージを「イメージ通り」と承認した（2026-11-07）。3択の金型は `components/` に無い（recon §6）ため、この承認を `SegmentedToggle` の新設の許可として扱う（Opus 判断・PO の常時委譲の範囲） |
 | 完成イメージ | https://claude.ai/artifact/EpTEWEwpePki7C52Krcdb3 の「案2」 |
 | 危険 PR か | いいえ。`migrations/`・`deploy.yml`・本番 `scripts/` を含まない |
 
@@ -28,9 +29,9 @@
 | 4 | ✓ を押して保存すると、その行の許可が全部付く | 自動試験（送る一覧 = 行の許可すべて） |
 | 5 | 一部だけ持つ行は「個別」と出る。開くと許可1つずつを ✕ ／ ✓ で切り替えられる | 自動試験＋本番で営業ロールの「リード・顧客」行が「個別」と出ることを目で見る |
 | 6 | 画面を開いて何も触らないと「保存」は押せない。送る一覧も変わらない（画面に出ない `menu.*` 19 件も残る） | 自動試験（未変更で保存ボタン無効・1行変えて戻すと未変更に戻る・保存の一覧に `menu.*` が残る） |
-| 7 | 本番の許可 135 件のうち `menu.*` 19 件を除く 116 件が、どれか1つの行に必ず出る。2つの行に重ねて出る許可は 0 件 | 自動試験（本番と同じ 135 件の一覧を入れて数える） |
+| 7 | 本番の許可 135 件のうち `menu.*` 19 件を除く 116 件が、どれか1つの行に必ず出る。2つの行に重ねて出る許可は 0 件 | 自動試験（本番の 135 件の写し `docs/handoff/role-menu-permissions/perms-135.tsv` を試験の中の配列に写して数える） |
 | 8 | まとめた行の名前は、左の列と管理センターのメニュー名をそのままつないだものになる | 自動試験（行の名前の鍵が左の列・管理センターと同じ鍵） |
-| 9 | 左の列（PC・スマホ）と管理センターのメニューの出方は今と1つも変わらない | 既存の試験が緑＋新しい試験（許可の組み合わせごとに出るメニューが前と同じ） |
+| 9 | 左の列（PC・スマホ）と管理センターのメニューの出方は今と1つも変わらない | 既存の試験が緑＋新しい試験（許可が全部無い・§5-1 の条件の許可を1つずつ持つ・全部持つ、のそれぞれで、置き換え前の式と `canSeeMenu` の結果が全メニューで同じ） |
 | 10 | オーナーなどシステムのロールと、編集の許可が無い人には、切替が押せない（今と同じ） | 自動試験 |
 | 11 | 色・寸法の直書き 0 件、画面の日本語の直書き 0 件、`ja.json` と `en.json` の鍵が一致 | CI（UI 金型の関所・ESLint・言葉の鍵の検査）が緑 |
 | 12 | 新しい切替部品がカタログ（Storybook）に出る | `SegmentedToggle.stories.tsx` があり、Storybook のビルドが緑 |
@@ -49,6 +50,9 @@
 - 対象（画面だけ）:
   - `frontend/src/pages/roles/RolesPage.tsx` の右側（許可の並べ方と切替）。
   - 新しい部品 `frontend/src/components/SegmentedToggle.tsx` / `.css` / `.stories.tsx` / `.test.tsx`。
+  - 行の計算 `frontend/src/pages/roles/rolePermissionRows.ts` と試験 `rolePermissionRows.test.ts`、正本の試験 `frontend/src/constants/menuPermissions.test.ts`（§1 の 2〜9）。
+  - 本番の許可 135 件の写し `docs/handoff/role-menu-permissions/perms-135.tsv`（試験の材料。Opus が本番の読み取り専用 DB から取った）。
+  - 既存の `DesktopShell.test.tsx`・`MobileShell.test.tsx`・`ManagementCenterPage.test.tsx` は直さずに緑のまま。
   - 新しい設定 `frontend/src/constants/menuPermissions.ts`（メニューと許可の対応の正本）。
   - 左の列（`DesktopShell.tsx` / `MobileShell.tsx`）と管理センター（`ManagementCenterPage.tsx`）の「許可で出す条件」を、上の正本から読むように置き換える。出方は変えない。
   - `frontend/src/constants/icons.tsx` に斜め線のアイコンを1つ登録する。
@@ -121,7 +125,7 @@ export function canSeeMenu(id: MenuId, hasAny: (...keys: string[]) => boolean): 
 |---|---|---|---|
 | 左の列 | ダッシュボード | `dashboard.view` | 編集の許可が無いので ✓ は押せない |
 | 左の列 | スケジュール | なし | 固定「誰にでも出ます」 |
-| 左の列 | 会話（`nav.leadChat`） | `messaging.view` `messaging.send` | 注記「メニューは各自の表示設定でも切り替わります」 |
+| 左の列 | 会話（`nav.leadChat`） | `messaging.view` `messaging.send` | 注記「メニューは許可では消えず、各自の表示設定だけで切り替わります」（`roles.noteChatPrefs`。DesktopShell 252・MobileShell 283 は `prefs.show_chat_menu` だけで出す） |
 | 左の列 | 在庫 | `products.view/create/update/delete` | |
 | 左の列 | 見積・請求 | `quotes.view/create/update/delete/approve` `invoices.view/create/update/void` | 注記「メニューは各自の表示設定でも切り替わります」 |
 | 左の列 | リード・顧客（`nav.leads`） | `leads.*`（10 件）`customers.*`（4 件） | |
@@ -142,6 +146,7 @@ export function canSeeMenu(id: MenuId, hasAny: (...keys: string[]) => boolean): 
 | 事業 | ログイン申請 | なし | 固定「オーナーだけに出ます」 |
 | メニュー以外の許可 | 残りを区分（`category`）ごとに1行 | 上のどの行にも入らず `menu.` で始まらない許可 | 行の名前は DB の区分名（今の画面と同じ） |
 
+- 区切りの置き方: 管理センターでは Googleドライブ・FedEx などは「API連携」、Discord は「API連携」の区切りにある（`ManagementCenterPage.tsx:62` 付近）。役割の画面では、1つの許可で一緒に出るメニューを1行にまとめるため、`erp.view` の行は「データ」に、`tenant.profile.*` の行は「事業」に置く（行は1つの区切りにしか置けないため）。
 - 「メニュー以外の許可」は自動で作る。正本に書くのは「上の行に入れた許可」だけ。新しい許可が DB に増えても、この区切りに自動で出る。
 - 本番の 135 件で、この区切りに入る見込みの許可: `deals.*` `goals.*` `analytics.*` `archive.*` `badges.*` `buddy.*` `central.*` `inventory.visibility.*` `tenant.inventory_visibility.edit` `phase.switch` `purchase_orders.*` `shipping.*` `staff_reports.*` `system.*`。
 
@@ -198,7 +203,7 @@ export interface SegmentedToggleProps<V extends string> {
 - 見た目（CSS は `var()` だけ）:
   - 外枠: `--border` の線と角丸の変数。
   - 選ばれていないボタン: 背景 `--bg-subtle`、アイコン `--text-muted`。
-  - 選ばれたボタン: danger は `--color-error-bg` と `--color-error`、neutral は `--border-strong` 系と本文色、success は `--color-success-bg` と `--color-success`。
+  - 選ばれたボタン: danger は `--color-error-bg` と `--color-error`、neutral は `--border-strong` 系と本文色 `--text-primary`、success は `--color-success-bg` と `--color-success`。
   - 押せないボタン: 薄くする変数（`--opacity-dim`）。
   - 大きさ: 既存の寸法の変数（`--size-icon-btn-sm` など）。直の数字は書かない。
   - フォーカス: `--focus-ring-shadow`。
@@ -223,6 +228,7 @@ export interface SegmentedToggleProps<V extends string> {
 | `roles.fixedAlways` | 誰にでも出ます | Shown to everyone |
 | `roles.fixedOwner` | オーナーだけに出ます | Shown to the owner only |
 | `roles.notePrefs` | メニューは各自の表示設定でも切り替わります | Each person's display setting can also hide this menu |
+| `roles.noteChatPrefs` | メニューは許可では消えず、各自の表示設定だけで切り替わります | This menu is not hidden by permissions; only each person's display setting hides it |
 | `roles.noteReports` | メニューはいつも出ます。中の数字の見え方が変わります | The menu is always shown. This changes which numbers are visible |
 | `roles.noteChannelMasters` | 連絡手段の名簿は編集可のときだけ出ます | The channel list menu is shown only with Can edit |
 | `roles.noteEditOnly` | メニューは編集可のときだけ出ます | The menu is shown only with Can edit |
@@ -245,7 +251,7 @@ export interface SegmentedToggleProps<V extends string> {
 
 ## 10. 自己審査（Opus・同じ AI による審査で、独立した審査ではない）
 
-- 既存の仕様・ADR との整合: ADR-144 / 067 / 027 / 147 と食い違いなし。サーバーの置き換え保存（`backend/app/routers/roles.py:414-480`）をそのまま使う。
+- 既存の仕様・ADR との整合: ADR-144 / 067 / 027 / 147 と食い違いなし。サーバーの置き換え保存（`backend/app/routers/roles.py:416-493`）をそのまま使う。
 - 根拠: 行番号は recon の実物。許可 135 件は本番の読み取り結果。
 - 受入の基準: 14 件すべて○×で判定できる。
 - 実装の範囲: §3 の対象のファイルだけ。触らない場所も §3 に書いた。
@@ -253,7 +259,17 @@ export interface SegmentedToggleProps<V extends string> {
 
 ## 11. クラウドの設計審査
 
-- （審査の結果をここに書く）
+- 実行: クラウド Opus（読むだけ）、2026-11-07 10:56〜10:58 UTC、対象 HEAD `5b7bf0ec4`。
+- 判定: APPROVE（高 0・中 4・低 3）。
+- 指摘と対応:
+  1. 中「会話」行の注記が実物と違う（`prefs.show_chat_menu` だけで出る）→ §5-2 の注記を直し、鍵 `roles.noteChatPrefs` を §8 に足した。
+  2. 中 135 件の一覧が実装役に届かない → `perms-135.tsv` を置き、§1 の 7 と §3 に書いた。
+  3. 中 試験のファイルが対象に無い → §3 に足した。
+  4. 中 新しい部品の PO 許可 → 冒頭の表に1行足した。
+  5. 低 連携と Discord の区切り → §5-2 に置き方の理由を書いた。
+  6. 低 roles.py の行番号 → recon §3 を直した。
+  7. 低 本文色と §1 の 9 の範囲 → §7 に `--text-primary`、§1 の 9 に試験の範囲を書いた。
+- 審査の未確認: `SlashIcon` の有無（審査の場所に node_modules が無い）→ recon §6 で Opus が手元で確かめ済み（`frontend/node_modules/@heroicons/react/24/outline/SlashIcon.js`）。
 
 ## 12. 維持の仕組み（誰が・何が守るか）
 

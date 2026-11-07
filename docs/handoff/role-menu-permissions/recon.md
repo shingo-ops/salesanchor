@@ -34,8 +34,8 @@
 ## 3. サーバー側（変えない）
 
 - `GET /permissions`: `backend/app/routers/roles.py:115-126`。全 135 件を返す。`menu.*` も含む。
-- `GET /roles/{id}/permissions`: `backend/app/routers/roles.py:384-411`。
-- `PUT /roles/{id}/permissions`: `backend/app/routers/roles.py:414-480`。
+- `GET /roles/{id}/permissions`: `backend/app/routers/roles.py:386-414`。
+- `PUT /roles/{id}/permissions`: `backend/app/routers/roles.py:416-493`。
   - 送った一覧で丸ごと置き換える。
   - システムのロールは 403。
   - 自分以上の優先度のロールは 403。
