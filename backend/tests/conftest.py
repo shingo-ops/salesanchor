@@ -174,7 +174,9 @@ INBOX_BADGE_META_MESSAGES_DDL = """
         page_id VARCHAR(50),
         attachment_url TEXT,
         attachment_type VARCHAR(20),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        deleted_at TIMESTAMP,
+        is_manual BOOLEAN
     )
 """
 
@@ -642,7 +644,7 @@ async def setup_test_db(test_engine):
                 platform VARCHAR(50) NOT NULL,
                 display_name VARCHAR(100) NOT NULL,
                 connection_type VARCHAR(10) NOT NULL,
-                conversation_store VARCHAR(20) NOT NULL DEFAULT 'conversation_logs',
+                conversation_store VARCHAR(20) NOT NULL DEFAULT 'meta_messages',
                 is_verbatim BOOLEAN NOT NULL DEFAULT TRUE,
                 conversion_item VARCHAR(30) NULL,
                 is_active BOOLEAN NOT NULL DEFAULT TRUE,
@@ -903,9 +905,9 @@ async def setup_test_db(test_engine):
             ("messenger", "Messenger", "auto", "meta_messages", 1, "baseline"),
             ("instagram", "Instagram", "auto", "meta_messages", 1, "channel_instagram"),
             ("discord", "Discord", "auto", "meta_messages", 1, None),
-            ("phone", "電話", "manual", "conversation_logs", 0, None),
-            ("in_person", "対面", "manual", "conversation_logs", 0, None),
-            ("whatsapp", "WhatsApp", "manual", "conversation_logs", 1, "channel_whatsapp"),
+            ("phone", "電話", "manual", "meta_messages", 0, None),
+            ("in_person", "対面", "manual", "meta_messages", 0, None),
+            ("whatsapp", "WhatsApp", "manual", "meta_messages", 1, "channel_whatsapp"),
         )
         for platform, display_name, connection_type, store, verbatim, item in shared_channel_rows:
             exists = await conn.execute(
@@ -2162,7 +2164,7 @@ CREATE TABLE tenant_001.meta_messages (
     message_id TEXT, message_text TEXT, direction VARCHAR(10) NOT NULL DEFAULT 'inbound', raw_payload JSONB,
     created_at TIMESTAMPTZ DEFAULT NOW(), recipient_id VARCHAR(100), messaging_type VARCHAR(20),
     message_tag VARCHAR(50), page_id VARCHAR(50), original_language VARCHAR(10), occurred_at TIMESTAMPTZ,
-    deleted_at TIMESTAMPTZ DEFAULT NULL);
+    deleted_at TIMESTAMPTZ DEFAULT NULL, is_manual BOOLEAN);
 CREATE UNIQUE INDEX ON tenant_001.meta_messages (message_id) WHERE message_id IS NOT NULL;
 CREATE TABLE tenant_001.conversation_logs (
     id SERIAL PRIMARY KEY, tenant_id INTEGER NOT NULL, lead_id INTEGER REFERENCES tenant_001.leads(id) ON DELETE RESTRICT,
@@ -2208,7 +2210,7 @@ CREATE TABLE IF NOT EXISTS public.channel_masters (
 INSERT INTO public.channel_masters (tenant_id, platform, display_name, connection_type, conversation_store, is_verbatim, conversion_item) VALUES
   (NULL, 'messenger', 'Messenger', 'auto', 'meta_messages', TRUE, 'baseline'),
   (NULL, 'instagram', 'Instagram', 'auto', 'meta_messages', TRUE, 'channel_instagram'),
-  (NULL, 'whatsapp', 'WhatsApp', 'manual', 'conversation_logs', TRUE, 'channel_whatsapp');
+  (NULL, 'whatsapp', 'WhatsApp', 'manual', 'meta_messages', TRUE, 'channel_whatsapp');
 INSERT INTO tenant_001.close_reasons (type, label, sort_order) VALUES
   ('lost', 'r1', 1), ('lost', 'r2', 2), ('lost', 'r3', 3), ('lost', 'r4', 4), ('lost', 'r5', 5),
   ('lost', 'r6', 6), ('lost', 'r7', 7), ('lost', 'r8', 99),
@@ -2228,7 +2230,8 @@ LEAD_FACTORS_MSG_DDL = {
             lead_id INTEGER, platform VARCHAR(20) NOT NULL DEFAULT 'messenger',
             sender_id VARCHAR(100) NOT NULL DEFAULT 'x', message_text TEXT,
             direction VARCHAR(10) NOT NULL DEFAULT 'inbound',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, deleted_at TIMESTAMP)
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, deleted_at TIMESTAMP,
+            is_manual BOOLEAN)
     """,
     "conversation_logs": """
         CREATE TABLE IF NOT EXISTS conversation_logs (

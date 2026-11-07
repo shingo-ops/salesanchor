@@ -1079,7 +1079,7 @@ async def list_company_conv_logs(
     db: AsyncSession = Depends(get_db),
 ) -> list[dict]:
     """
-    会社の全 conversation_logs を時系列で返す。
+    会社の全 meta_messages を時系列で返す。
     contact_id で絞り込み可（省略時は全 contact の混在表示）。
     論理削除済み（deleted_at IS NOT NULL）は除外。
     """
@@ -1092,21 +1092,25 @@ async def list_company_conv_logs(
     }
     contact_filter = ""
     if contact_id is not None:
-        contact_filter = "AND cl.contact_id = :contact_id"
+        contact_filter = "AND m.contact_id = :contact_id"
         params["contact_id"] = contact_id
 
     result = await db.execute(
         text(
-            f"SELECT cl.id, cl.contact_id, cl.lead_id, cl.channel_type, cl.direction, "
-            f"       cl.content_text, cl.translated_text, cl.occurred_at, "
-            f"       cl.recorded_by_user_id, "
+            f"SELECT m.id, m.contact_id, m.lead_id, m.platform, m.direction, "
+            f"       m.message_text, "
+            f"       (SELECT mt.translated_text FROM {schema}.message_translations mt "
+            f"        WHERE mt.message_id = m.message_id "
+            f"        ORDER BY (mt.target_language = 'ja') DESC, mt.id ASC LIMIT 1), "
+            f"       COALESCE(m.occurred_at, m.created_at), "
+            f"       m.recorded_by_user_id, "
             f"       co.display_name AS contact_display_name "
-            f"FROM {schema}.conversation_logs cl "
-            f"LEFT JOIN {schema}.contacts co ON co.id = cl.contact_id "
-            f"WHERE cl.company_id = :company_id "
-            f"  AND cl.deleted_at IS NULL "
+            f"FROM {schema}.meta_messages m "
+            f"LEFT JOIN {schema}.contacts co ON co.id = m.contact_id "
+            f"WHERE m.company_id = :company_id "
+            f"  AND m.deleted_at IS NULL "
             f"  {contact_filter} "
-            f"ORDER BY cl.occurred_at DESC "
+            f"ORDER BY COALESCE(m.occurred_at, m.created_at) DESC, m.id DESC "
             f"LIMIT :limit"
         ),
         params,

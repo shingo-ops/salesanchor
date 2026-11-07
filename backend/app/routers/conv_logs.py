@@ -15,11 +15,12 @@
 from __future__ import annotations
 
 import logging
+import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -34,7 +35,7 @@ from app.database import get_db
 from app.models import User
 from app.services import channel_masters
 from app.services.audit import record_audit_log
-from app.services.conv_log_writer import _get_company_id_for_lead
+from app.services.conv_log_writer import _get_company_id_for_lead, _get_contact_id_for_lead
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +67,7 @@ class ConvLogUpdate(BaseModel):
 
 
 class ChannelMasterCreate(BaseModel):
-    platform: str  # 例: "whatsapp_personal"
+    platform: str = Field(..., max_length=20)  # 例: "whatsapp_personal"（meta_messages.platform が VARCHAR(20)）
     display_name: str  # 例: "WhatsApp（個人）"
 
 
@@ -84,13 +85,13 @@ async def _fetch_conv_log(
     tenant_id: int,
     log_id: int,
 ) -> dict[str, Any] | None:
-    """conversation_logs から 1 行取得（deleted は除外しない）。"""
+    """meta_messages から 1 行取得（deleted は除外しない）。"""
     schema = f"tenant_{tenant_id:03d}"
     result = await db.execute(
         text(
-            f"SELECT id, lead_id, channel_type, direction, content_text, "
-            f"occurred_at, deleted_at, recorded_by_user_id "
-            f"FROM {schema}.conversation_logs "
+            f"SELECT id, lead_id, platform, direction, message_text, "
+            f"occurred_at, deleted_at, recorded_by_user_id, message_id, is_manual "
+            f"FROM {schema}.meta_messages "
             f"WHERE id = :id"
         ),
         {"id": log_id},
@@ -107,30 +108,31 @@ async def _fetch_conv_log(
         "occurred_at": row[5],
         "deleted_at": row[6],
         "recorded_by_user_id": row[7],
+        "message_id": row[8],
+        "is_manual": row[9],
     }
 
 
 async def _fire_translation(
     db: AsyncSession,
     tenant_id: int,
-    log_id: int,
+    message_id: str,
     content_text: str,
     direction: str = "inbound",
 ) -> None:
-    """ensure_inbound_translations を発火し、結果を conversation_logs に書き戻す。
+    """ensure_inbound_translations を発火し、原文の言語を meta_messages に書き戻す。
 
     outbound（担当者発言）は inbound 専用翻訳を呼ばない（early return）。
     失敗しても呼び出し元の処理は継続する（try/except で非致命的）。
     """
     if direction != "inbound":
-        logger.debug("[conv_logs] skip translation for outbound log_id=%d", log_id)
+        logger.debug("[conv_logs] skip translation for outbound message_id=%s", message_id)
         return
 
     from app.services.message_translator import ensure_inbound_translations
 
     schema = f"tenant_{tenant_id:03d}"
     table_ref = f"{schema}.message_translations"
-    message_id = f"conv_log_{log_id}"
 
     try:
         await set_tenant_context(db, tenant_id)  # reset_tenant_context 後に RLS 用コンテキストを再設定
@@ -144,24 +146,22 @@ async def _fire_translation(
         result = results.get("ja", next(iter(results.values())))
         await db.execute(
             text(
-                f"UPDATE {schema}.conversation_logs "
-                f"SET translated_text = :translated_text, "
-                f"    original_language = :original_language "
-                f"WHERE id = :id"
+                f"UPDATE {schema}.meta_messages "
+                f"SET original_language = :lang "
+                f"WHERE message_id = :mid"
             ),
             {
-                "translated_text": result.translated_text,
-                "original_language": result.original_language,
-                "id": log_id,
+                "lang": result.original_language,
+                "mid": message_id,
             },
         )
         await db.commit()
         await reset_tenant_context(db, tenant_id)
-        logger.info("[conv_logs] translation done log_id=%d conf=%.2f", log_id, result.confidence)
+        logger.info("[conv_logs] translation done message_id=%s conf=%.2f", message_id, result.confidence)
     except Exception:
         logger.warning(
-            "[conv_logs] translation failed log_id=%d channel=conv_log ext_id=%s（処理は継続）",
-            log_id, message_id, exc_info=True,
+            "[conv_logs] translation failed channel=conv_log ext_id=%s（処理は継続）",
+            message_id, exc_info=True,
         )
 
 
@@ -221,16 +221,23 @@ async def create_conv_log(
             detail=f"チャネル '{body.channel_type}' は自動連携チャネルのため手動入力は禁止です（SA-02-design §4）",
         )
 
+    if len(body.channel_type) > 20:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="連絡手段の名前が長すぎます",
+        )
+
     schema = f"tenant_{tenant_id:03d}"
 
     # 重複チェック: 同一 lead_id + channel_type + content_text + occurred_at ±1h + deleted_at IS NULL
     if not body.allow_duplicate:
         dup_result = await db.execute(
             text(
-                f"SELECT id, occurred_at FROM {schema}.conversation_logs "
+                f"SELECT id, occurred_at FROM {schema}.meta_messages "
                 f"WHERE lead_id = :lead_id "
-                f"  AND channel_type = :channel_type "
-                f"  AND content_text = :content_text "
+                f"  AND is_manual = TRUE "
+                f"  AND platform = :channel_type "
+                f"  AND message_text = :content_text "
                 f"  AND deleted_at IS NULL "
                 f"  AND occurred_at BETWEEN :oc_min AND :oc_max "
                 f"LIMIT 1"
@@ -256,30 +263,38 @@ async def create_conv_log(
             )
 
     company_id = await _get_company_id_for_lead(db, lead_id)
+    contact_id = await _get_contact_id_for_lead(db, lead_id)
+    message_id = f"manual_{uuid.uuid4().hex}"
 
+    # 会話の流れは created_at 順で並ぶため、created_at も occurred_at と同じ値にする
     result = await db.execute(
         text(
-            f"INSERT INTO {schema}.conversation_logs "
-            f"(tenant_id, lead_id, company_id, channel_type, direction, content_text, "
-            f" occurred_at, recorded_by_user_id) "
-            f"VALUES (:tenant_id, :lead_id, :company_id, :channel_type, :direction, :content_text, "
-            f"        :occurred_at, :user_id) "
+            f"INSERT INTO {schema}.meta_messages "
+            f"(tenant_id, lead_id, company_id, contact_id, platform, direction, message_text, "
+            f" occurred_at, created_at, recorded_by_user_id, is_manual, sender_id, sender_name, "
+            f" message_id) "
+            f"VALUES (:tenant_id, :lead_id, :company_id, :contact_id, :channel_type, :direction, "
+            f"        :content_text, :occurred_at, :occurred_at, :user_id, TRUE, :sender_id, NULL, "
+            f"        :message_id) "
             f"RETURNING id"
         ),
         {
             "tenant_id": tenant_id,
             "lead_id": lead_id,
             "company_id": company_id,
+            "contact_id": contact_id,
             "channel_type": body.channel_type,
             "direction": body.direction,
             "content_text": body.content_text,
             "occurred_at": body.occurred_at,
             "user_id": current_user.id,
+            "sender_id": f"manual:user_{current_user.id}",
+            "message_id": message_id,
         },
     )
     log_id = result.scalar_one()
     await record_audit_log(
-        db, tenant_id, current_user.id, "create", "conversation_logs",
+        db, tenant_id, current_user.id, "create", "meta_messages",
         record_id=log_id,
         new_data={
             "lead_id": lead_id,
@@ -295,7 +310,7 @@ async def create_conv_log(
 
     # 翻訳を非同期発火（失敗しても 201 を返す）
     if body.content_text:
-        await _fire_translation(db, tenant_id, log_id, body.content_text, body.direction)
+        await _fire_translation(db, tenant_id, message_id, body.content_text, body.direction)
 
     return {"id": log_id}
 
@@ -320,11 +335,14 @@ async def list_conv_logs(
     schema = f"tenant_{tenant_id:03d}"
     result = await db.execute(
         text(
-            f"SELECT id, channel_type, direction, content_text, translated_text, "
-            f"occurred_at, recorded_by_user_id, created_at "
-            f"FROM {schema}.conversation_logs "
-            f"WHERE lead_id = :lead_id AND deleted_at IS NULL "
-            f"ORDER BY occurred_at ASC"
+            f"SELECT m.id, m.platform, m.direction, m.message_text, "
+            f"(SELECT mt.translated_text FROM {schema}.message_translations mt "
+            f" WHERE mt.message_id = m.message_id "
+            f" ORDER BY (mt.target_language = 'ja') DESC, mt.id ASC LIMIT 1), "
+            f"m.occurred_at, m.recorded_by_user_id, m.created_at "
+            f"FROM {schema}.meta_messages m "
+            f"WHERE m.lead_id = :lead_id AND m.is_manual = TRUE AND m.deleted_at IS NULL "
+            f"ORDER BY m.occurred_at ASC, m.id ASC"
         ),
         {"lead_id": lead_id},
     )
@@ -365,7 +383,11 @@ async def update_conv_log(
     await set_tenant_context(db, tenant_id)
 
     existing = await _fetch_conv_log(db, tenant_id, log_id)
-    if existing is None or existing.get("lead_id") != lead_id:
+    if (
+        existing is None
+        or existing.get("lead_id") != lead_id
+        or existing.get("is_manual") not in (True, 1)
+    ):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="会話ログが見つかりません")
     if existing.get("deleted_at") is not None:
         raise HTTPException(status_code=status.HTTP_410_GONE, detail="削除済みの会話ログは編集できません")
@@ -381,9 +403,16 @@ async def update_conv_log(
         return {"id": log_id, "updated": False}
 
     schema = f"tenant_{tenant_id:03d}"
-    set_clause = ", ".join(f"{k} = :{k}" for k in updates)
+    set_parts: list[str] = []
+    if "content_text" in updates:
+        set_parts.append("message_text = :content_text")
+    if "occurred_at" in updates:
+        # 会話の流れは created_at 順で並ぶため、occurred_at と同じ値にそろえる
+        set_parts.append("occurred_at = :occurred_at")
+        set_parts.append("created_at = :occurred_at")
+    set_clause = ", ".join(set_parts)
     await db.execute(
-        text(f"UPDATE {schema}.conversation_logs SET {set_clause} WHERE id = :id"),
+        text(f"UPDATE {schema}.meta_messages SET {set_clause} WHERE id = :id"),
         {**updates, "id": log_id},
     )
     old_data = {
@@ -391,7 +420,7 @@ async def update_conv_log(
         "occurred_at": existing["occurred_at"].isoformat() if existing["occurred_at"] else None,
     }
     await record_audit_log(
-        db, tenant_id, current_user.id, "update", "conversation_logs",
+        db, tenant_id, current_user.id, "update", "meta_messages",
         record_id=log_id,
         old_data=old_data,
         new_data={k: (v.isoformat() if isinstance(v, datetime) else v) for k, v in updates.items()},
@@ -402,7 +431,7 @@ async def update_conv_log(
     # content_text 変更時は再翻訳
     new_text = updates.get("content_text")
     if new_text:
-        await _fire_translation(db, tenant_id, log_id, new_text, existing["direction"])
+        await _fire_translation(db, tenant_id, existing["message_id"], new_text, existing["direction"])
 
     return {"id": log_id, "updated": True}
 
@@ -428,7 +457,11 @@ async def delete_conv_log(
     await set_tenant_context(db, tenant_id)
 
     existing = await _fetch_conv_log(db, tenant_id, log_id)
-    if existing is None or existing.get("lead_id") != lead_id:
+    if (
+        existing is None
+        or existing.get("lead_id") != lead_id
+        or existing.get("is_manual") not in (True, 1)
+    ):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="会話ログが見つかりません")
     if existing.get("deleted_at") is not None:
         raise HTTPException(status_code=status.HTTP_410_GONE, detail="すでに削除済みです")
@@ -437,13 +470,13 @@ async def delete_conv_log(
     now = datetime.now(tz=timezone.utc)
     await db.execute(
         text(
-            f"UPDATE {schema}.conversation_logs "
+            f"UPDATE {schema}.meta_messages "
             f"SET deleted_at = :now WHERE id = :id"
         ),
         {"now": now, "id": log_id},
     )
     await record_audit_log(
-        db, tenant_id, current_user.id, "delete", "conversation_logs",
+        db, tenant_id, current_user.id, "delete", "meta_messages",
         record_id=log_id,
         old_data={
             "content_text": existing["content_text"],
@@ -485,7 +518,7 @@ async def create_channel_master(
             f"INSERT INTO {channel_masters.CHANNEL_MASTERS_TABLE} "
             f"(tenant_id, platform, display_name, connection_type, conversation_store, "
             f"is_verbatim, conversion_item, is_active) "
-            f"VALUES (:tenant_id, :platform, :display_name, 'manual', 'conversation_logs', "
+            f"VALUES (:tenant_id, :platform, :display_name, 'manual', 'meta_messages', "
             f"TRUE, NULL, true) "
             f"RETURNING id"
         ),

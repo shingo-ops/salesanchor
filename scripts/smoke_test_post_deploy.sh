@@ -155,14 +155,14 @@ if grep -q '^SA18_PHASE2_ENABLED=1' .env 2>/dev/null; then
     && echo "[7d] PASS: v_company_stats readable (${VCS_CNT} rows)" \
     || { echo "[7d] FAIL: v_company_stats read error — ${VCS_CNT}"; exit 1; }
 
-  # [7e] salesanchor_app で conversation_logs が読めるか
+  # [7e] salesanchor_app で meta_messages が読めるか
   CL_CNT=$(docker exec -e PGPASSWORD="${APP_PASS}" "${POSTGRES}" \
     psql -U salesanchor_app -d jarvis_db -t -v ON_ERROR_STOP=1 \
-    -c "SET app.tenant_id = '4'; SET app.is_operator = ''; SELECT count(*) FROM tenant_004.conversation_logs;" \
+    -c "SET app.tenant_id = '4'; SET app.is_operator = ''; SELECT count(*) FROM tenant_004.meta_messages;" \
     2>&1 | grep -v '^SET' | tr -d ' \n')
   [[ "${CL_CNT}" =~ ^[0-9]+$ ]] \
-    && echo "[7e] PASS: conversation_logs readable (${CL_CNT} rows)" \
-    || { echo "[7e] FAIL: conversation_logs read error — ${CL_CNT}"; exit 1; }
+    && echo "[7e] PASS: meta_messages readable (${CL_CNT} rows)" \
+    || { echo "[7e] FAIL: meta_messages read error — ${CL_CNT}"; exit 1; }
 
 else
   echo "[7] INFO: SA18_PHASE2_ENABLED 未設定 — jarvis モード（Phase2 切替前）— アプリ接続確認はスキップ"

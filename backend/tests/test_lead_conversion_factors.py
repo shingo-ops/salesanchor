@@ -285,16 +285,11 @@ async def _load(db_session, ds: gen.Dataset, *, extra_deleted: bool = False):
     channel = {lead_.id: lead_.channel_type for lead_ in ds.leads}
     for m in ds.gen_messages:
         lead_id = m.lead_index + 1
-        if channel[lead_id] == CHANNEL_WHATSAPP:
-            await db_session.execute(
-                text("INSERT INTO conversation_logs (lead_id, direction, content_text, occurred_at) VALUES (:l, :d, :b, :t)"),
-                dict(l=lead_id, d=m.direction, b=m.body, t=_fmt(m.ts)),
-            )
-        else:
-            await db_session.execute(
-                text("INSERT INTO meta_messages (lead_id, platform, direction, message_text, created_at) VALUES (:l, :p, :d, :b, :t)"),
-                dict(l=lead_id, p=channel[lead_id], d=m.direction, b=m.body, t=_fmt(m.ts)),
-            )
+        # 会話は meta_messages だけに入れる（WhatsApp も同じ表）
+        await db_session.execute(
+            text("INSERT INTO meta_messages (lead_id, platform, direction, message_text, created_at) VALUES (:l, :p, :d, :b, :t)"),
+            dict(l=lead_id, p=channel[lead_id], d=m.direction, b=m.body, t=_fmt(m.ts)),
+        )
     if extra_deleted:
         # 消した行（deleted_at あり）は読まない: 読むと最初の返信が 0 秒になる行を 1 つ足す
         meta_lead = next(lead_ for lead_ in ds.leads if lead_.channel_type != CHANNEL_WHATSAPP)

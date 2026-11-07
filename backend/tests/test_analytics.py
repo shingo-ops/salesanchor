@@ -916,27 +916,26 @@ class TestReasons:
 # W-1 復元（#2455 で誤削除 → 外科的復元）
 # ─────────────────────────────────────────────
 
-async def _ensure_conversation_logs_table(db_session):
-    """weekly-advisor_defensive 用に SQLite 互換 conversation_logs を作成する。"""
-    await db_session.execute(text("DROP TABLE IF EXISTS conversation_logs"))
+async def _ensure_meta_messages_table(db_session):
+    """weekly-advisor_defensive 用に SQLite 互換 meta_messages を作成する（会話は meta_messages だけから読む）。"""
+    await db_session.execute(text("DROP TABLE IF EXISTS meta_messages"))
     await db_session.execute(text("""
-        CREATE TABLE conversation_logs (
+        CREATE TABLE meta_messages (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             tenant_id INTEGER NOT NULL DEFAULT 999,
             company_id INTEGER,
             contact_id INTEGER,
             lead_id INTEGER,
-            channel_type TEXT,
-            channel_identity TEXT,
+            platform TEXT,
+            sender_id TEXT,
             direction TEXT,
-            sender TEXT,
-            content_text TEXT,
-            external_message_id TEXT,
+            message_text TEXT,
+            message_id TEXT,
             raw_payload TEXT,
             occurred_at TIMESTAMP,
             deleted_at TIMESTAMP,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            is_manual BOOLEAN,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """))
     await db_session.commit()
@@ -978,7 +977,7 @@ class TestWeeklyAdvisorDefensive:
         """守り3種が score 降順で返り、scope=mine が効く"""
         today = date.today()
         await _ensure_data_access_events_table(db_session)
-        await _ensure_conversation_logs_table(db_session)
+        await _ensure_meta_messages_table(db_session)
 
         reorder_lead = await client.post("/api/v1/leads", json={"customer_name": "Reorder Lead", "status": "existing_customer"})
         reorder_lead_id = reorder_lead.json()["id"]
@@ -1054,12 +1053,12 @@ class TestWeeklyAdvisorDefensive:
             "d10": str(today - timedelta(days=10)),
         })
         await db_session.execute(text("""
-            INSERT INTO conversation_logs (tenant_id, company_id, contact_id, lead_id, channel_type, channel_identity, direction, sender, content_text, external_message_id, occurred_at)
+            INSERT INTO meta_messages (tenant_id, company_id, contact_id, lead_id, platform, sender_id, direction, message_text, message_id, occurred_at)
             VALUES
-                (999, :reorder_co, :reorder_ct, NULL, 'messenger', 'm-1', 'inbound', 'customer', 'reorder', 'msg-r', :c20),
-                (999, :churn_co, :churn_ct, NULL, 'messenger', 'm-2', 'inbound', 'customer', 'churn', 'msg-c', :c80),
-                (999, :comm_co, :comm_ct, NULL, 'messenger', 'm-3', 'inbound', 'customer', 'comm', 'msg-m', :c34),
-                (999, :other_co, :other_ct, NULL, 'messenger', 'm-4', 'inbound', 'customer', 'other', 'msg-o', :c10)
+                (999, :reorder_co, :reorder_ct, NULL, 'messenger', 'm-1', 'inbound', 'reorder', 'msg-r', :c20),
+                (999, :churn_co, :churn_ct, NULL, 'messenger', 'm-2', 'inbound', 'churn', 'msg-c', :c80),
+                (999, :comm_co, :comm_ct, NULL, 'messenger', 'm-3', 'inbound', 'comm', 'msg-m', :c34),
+                (999, :other_co, :other_ct, NULL, 'messenger', 'm-4', 'inbound', 'other', 'msg-o', :c10)
         """), {
             "reorder_co": reorder_co_id,
             "reorder_ct": reorder_ct_id,

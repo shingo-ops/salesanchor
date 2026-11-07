@@ -39,7 +39,6 @@ import hmac
 import json
 import logging
 import os
-from datetime import datetime, timezone
 from typing import Any, Iterable, Optional
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, Request
@@ -51,7 +50,6 @@ from app.auth.dependencies import clear_tenant_context, reset_tenant_context, se
 from app.database import AsyncSessionLocal
 from app.routers.notifications import send_discord_notification
 from app.services import encryption, meta_graph
-from app.services.conv_log_writer import write_conversation_log
 from app.services.customer_reply_notifier import send_customer_reply_notice
 from app.services.inbound_translation import enqueue_inbound_translation
 from app.services.message_translator import infer_original_language
@@ -807,52 +805,15 @@ async def process_messenger_event(body: dict) -> None:
                     await set_tenant_context(db, tenant_id)
 
                     for m in messages:
-                        _occurred = (
-                            datetime.fromtimestamp(
-                                int(m["timestamp"]) / 1000, tz=timezone.utc
-                            )
-                            if m.get("timestamp")
-                            else datetime.now(tz=timezone.utc)
-                        )
-
-                        # ── J1 エコー受信（アプリ外送信）: conv_logs のみ書く ──
+                        # ── J1 エコー受信（アプリ外送信）: 便1 では何も書かない ──
                         if m.get("is_echo"):
-                            try:
-                                echo_lead_id = await _find_lead_id_for_psid(
-                                    db, platform, m["sender_id"]
-                                )
-                                if echo_lead_id is None:
-                                    echo_lead_id = (
-                                        await _create_outbound_lead_for_echo(
-                                            db,
-                                            f"tenant_{tenant_id:03d}",
-                                            tenant_id,
-                                            m["sender_id"],
-                                        )
-                                    )
-                                await write_conversation_log(
-                                    db,
-                                    tenant_id=tenant_id,
-                                    lead_id=echo_lead_id,
-                                    channel_type=platform,
-                                    channel_identity=m["sender_id"],
-                                    direction="outbound",
-                                    sender=page_id_for_message,
-                                    content_text=m["message_text"],
-                                    external_message_id=m["message_id"],
-                                    occurred_at=_occurred,
-                                )
-                                await db.commit()
-                                await reset_tenant_context(db, tenant_id)
-                            except Exception:
-                                logging.warning(
-                                    "[Meta] echo lead/conv_log write failed channel=%s ext_id=%s（Webhook処理は継続）",
-                                    platform, m.get("message_id"),
-                                    exc_info=True,
-                                )
+                            logging.info(
+                                "[webhook] echo skipped (conversation unification bin1): sender=%s",
+                                m.get("sender_id"),
+                            )
                             continue
 
-                        # ── inbound: meta_messages + conv_logs に書く ──
+                        # ── inbound: meta_messages に書く ──
                         msg_id, lead_id = await _persist_meta_message(
                             db,
                             tenant_id=tenant_id,
@@ -872,29 +833,6 @@ async def process_messenger_event(body: dict) -> None:
                                 m["message_id"],
                             )
                             continue
-
-                        # SA-02 Stage 1: inbound を conv_logs にも書く
-                        try:
-                            await write_conversation_log(
-                                db,
-                                tenant_id=tenant_id,
-                                lead_id=lead_id,
-                                channel_type=platform,
-                                channel_identity=m["sender_id"],
-                                direction="inbound",
-                                sender=m["sender_id"],
-                                content_text=m["message_text"],
-                                external_message_id=m["message_id"],
-                                occurred_at=_occurred,
-                            )
-                            await db.commit()
-                            await reset_tenant_context(db, tenant_id)
-                        except Exception:
-                            logging.warning(
-                                "[Meta] inbound conv_log write failed channel=%s ext_id=%s（Webhook処理は継続）",
-                                platform, m.get("message_id"),
-                                exc_info=True,
-                            )
 
                         # アバター画像URLをバックグラウンドで取得・キャッシュ
                         # 例外は握り潰してWebhook処理本体に影響させない

@@ -32,7 +32,7 @@ _MIN_RECORDS_FOR_CONFIDENT_JUDGMENT = 3
 # 多数決から除外するチャネルは、名簿の is_verbatim = FALSE の行（文字が原文と保証されない手動チャネル）。
 _NOT_VERBATIM_CLAUSE = (
     f"AND NOT EXISTS (SELECT 1 FROM {CHANNEL_MASTERS_TABLE} cm "
-    f"WHERE cm.platform = cl.channel_type AND cm.is_verbatim = FALSE "
+    f"WHERE cm.platform = m.platform AND cm.is_verbatim = FALSE "
     f"AND (cm.tenant_id IS NULL OR cm.tenant_id = :tenant_id))"
 )
 
@@ -59,7 +59,7 @@ async def judge_recipient_language(
 ) -> LangJudgeResult:
     """リードの受信履歴から相手言語を多数決で判定する（読み取り専用）。
 
-    meta_messages（自動連携）と conversation_logs（手動文字記録）を UNION ALL し、
+    meta_messages（自動連携と手の記録）から、
     direction='inbound' かつ original_language IS NOT NULL の行を集計する。
 
     RLS 互換: set_tenant_context は呼び出し元が責任を持つ。本関数はクエリのみ。
@@ -68,28 +68,14 @@ async def judge_recipient_language(
 
     result = await db.execute(
         text(f"""
-            SELECT original_language, COUNT(*) AS cnt
-            FROM (
-                -- 自動連携チャネル（Messenger / Instagram / Discord）
-                SELECT original_language
-                FROM {schema}.meta_messages
-                WHERE lead_id          = :lead_id
-                  AND direction        = 'inbound'
-                  AND original_language IS NOT NULL
-                  AND deleted_at       IS NULL
-
-                UNION ALL
-
-                -- 手動文字記録チャネル（phone/in_person は除外）
-                SELECT cl.original_language
-                FROM {schema}.conversation_logs cl
-                WHERE cl.lead_id          = :lead_id
-                  AND cl.direction        = 'inbound'
-                  AND cl.original_language IS NOT NULL
-                  AND cl.deleted_at       IS NULL
-                  {_NOT_VERBATIM_CLAUSE}
-            ) sub
-            GROUP BY original_language
+            SELECT m.original_language, COUNT(*) AS cnt
+            FROM {schema}.meta_messages m
+            WHERE m.lead_id          = :lead_id
+              AND m.direction        = 'inbound'
+              AND m.original_language IS NOT NULL
+              AND m.deleted_at       IS NULL
+              {_NOT_VERBATIM_CLAUSE}
+            GROUP BY m.original_language
             ORDER BY cnt DESC
             LIMIT 1
         """),
@@ -109,24 +95,12 @@ async def judge_recipient_language(
     total_result = await db.execute(
         text(f"""
             SELECT COUNT(*) AS total
-            FROM (
-                SELECT 1
-                FROM {schema}.meta_messages
-                WHERE lead_id          = :lead_id
-                  AND direction        = 'inbound'
-                  AND original_language IS NOT NULL
-                  AND deleted_at       IS NULL
-
-                UNION ALL
-
-                SELECT 1
-                FROM {schema}.conversation_logs cl
-                WHERE cl.lead_id          = :lead_id
-                  AND cl.direction        = 'inbound'
-                  AND cl.original_language IS NOT NULL
-                  AND cl.deleted_at       IS NULL
-                  {_NOT_VERBATIM_CLAUSE}
-            ) sub
+            FROM {schema}.meta_messages m
+            WHERE m.lead_id          = :lead_id
+              AND m.direction        = 'inbound'
+              AND m.original_language IS NOT NULL
+              AND m.deleted_at       IS NULL
+              {_NOT_VERBATIM_CLAUSE}
         """),
         {
             "lead_id": lead_id,

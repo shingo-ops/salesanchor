@@ -67,6 +67,8 @@ interface Props {
   sendReaction: (messageId: number, emojiName: string, emojiId?: string) => Promise<void>;
   /** Discord リアクション取り消し */
   deleteReaction: (messageId: number, emojiName: string, emojiId?: string) => Promise<void>;
+  /** 手の記録を保存したあと、会話の流れを読み直す */
+  onManualRecordSaved?: () => void;
   /**
    * 一覧へ戻る（スマホの1画面1ページ用）。useInboxState の backToList をそのまま渡す。
    * PC・タブレットでは一覧が常に見えているのでボタン自体を出さない。
@@ -98,7 +100,7 @@ export function InboxMessageThread({
   trimmedDraft, submitSend, retrySend, handleKeyDown,
   attachedFile, setAttachedFile, clearAttachment,
   recipientLanguageSetting, setRecipientLanguage,
-  sendReaction, deleteReaction,
+  sendReaction, deleteReaction, onManualRecordSaved,
 }: Props) {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
@@ -864,6 +866,7 @@ export function InboxMessageThread({
         <ManualRecordSection
           leadId={selectedLeadId}
           currentPlatform={selectedConversation?.platform ?? null}
+          onSaved={onManualRecordSaved}
         />
       )}
 
