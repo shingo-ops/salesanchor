@@ -4,11 +4,14 @@
 backend の入れ物の中で `python -` として標準入力から流す（scripts/ops/discord-guild-membership-check.sh）。
 DB は読み取り専用の1本の SELECT だけ。Discord は GET だけ。
 出力にサーバーの番号・名前・ボットの鍵・例外の本文は出さない。
+例外: 旗 --show-unregistered-names があるときだけ、登録に無いボットのサーバーの名前を出す
+（design.md 14。番号・鍵・登録済みのサーバーの名前は出ない。DB は読み取り専用の SELECT が2本）。
 """
 import asyncio
 import os
 import re
 import sys
+import unicodedata
 
 PAGE_LIMIT = 200
 MAX_PAGES = 50
@@ -37,6 +40,51 @@ def judge(rows, bot_ids):
     unregistered = len([b for b in bot_ids if b not in registered])
     lines.append("unregistered_bot_guilds=%d" % unregistered)
     return lines
+
+
+def clean_name(name):
+    """名前を1行に収める。"""
+    # (1) 文字列でない値
+    if not isinstance(name, str):
+        return "(no_name)"
+    # (2) 制御文字・書式文字（種類 C*）と行・段落の区切り（Zl・Zp）を消す
+    kept = []
+    for ch in name:
+        cat = unicodedata.category(ch)
+        if cat.startswith("C") or cat in ("Zl", "Zp"):
+            continue
+        kept.append(ch)
+    text = "".join(kept)
+    # (3) 17桁以上の数字の並びを # に置き換える
+    text = re.sub(r"\d{17,}", "#", text)
+    # (4) 前後の空白を除き、100文字で切る
+    text = text.strip()
+    if len(text) > 100:
+        text = text[:100] + "~"
+    # (5) 空なら
+    return text or "(no_name)"
+
+
+def unregistered_lines(rows, guilds, viewer_ids):
+    """登録に無いボットのサーバーだけを `unregistered name=<名前> is_viewer_guild=<o|x>` の形で返す。
+
+    rows = (tenant_id, purpose, guild_id)。guilds = 応答の要素（id と name）。
+    viewer_ids = 閲覧ページの申し込み用サーバーの番号の集合（strip 済みの文字列）。
+    id で重複を除き、先に出たほうの名前を残す。並びは clean_name の文字の順（同じ名前なら出る順）。
+    """
+    registered = {str(r[2]).strip() for r in rows}
+    seen = set()
+    picked = []
+    for g in guilds:
+        gid = str(g["id"])
+        if gid in seen:
+            continue
+        seen.add(gid)
+        if gid in registered:
+            continue
+        picked.append((clean_name(g.get("name")), "o" if gid in viewer_ids else "x"))
+    picked.sort(key=lambda item: item[0])
+    return ["unregistered name=%s is_viewer_guild=%s" % (n, mark) for n, mark in picked]
 
 
 async def fetch_all(request):
@@ -102,10 +150,44 @@ def _self_test():
         "unregistered_bot_guilds=3",
     ], out
 
-    print("self-test ok 4")
+    # T5: 登録2行・ボット側4件（登録済み2・viewer 1・その他1）→ 登録に無い2行だけ、名前の順
+    rows = [(1, "customer", "10"), (2, "own", " 20 ")]
+    guilds = [
+        {"id": "10", "name": "Registered One"},
+        {"id": "30", "name": "Zeta Fake"},
+        {"id": "20", "name": "Registered Two"},
+        {"id": "40", "name": "Alpha Fake"},
+        {"id": "40", "name": "Alpha Dup"},
+    ]
+    out = unregistered_lines(rows, guilds, {"30"})
+    assert out == [
+        "unregistered name=Alpha Fake is_viewer_guild=x",
+        "unregistered name=Zeta Fake is_viewer_guild=o",
+    ], out
+
+    # T6: clean_name
+    messy = (
+        "A\nB\tC​D E F"
+        + "1" * 18
+        + "123456789​123456789"
+        + "z" * 150
+    )
+    cleaned = clean_name(messy)
+    for ch in cleaned:
+        cat = unicodedata.category(ch)
+        assert not cat.startswith("C") and cat not in ("Zl", "Zp"), repr(ch)
+    assert re.search(r"\d{17,20}", cleaned) is None, cleaned
+    assert len(cleaned) <= 101, len(cleaned)
+    assert clean_name("a" * 150) == "a" * 100 + "~"
+    assert clean_name("1" * 18) == "#"
+    assert clean_name("123456789​123456789") == "#"
+    assert clean_name(None) == "(no_name)"
+    assert clean_name("​\n") == "(no_name)"
+
+    print("self-test ok 6")
 
 
-async def _main(AsyncSessionLocal, engine, discord_api_request, DiscordAPIError):
+async def _main(AsyncSessionLocal, engine, discord_api_request, DiscordAPIError, show_names=False):
     from sqlalchemy import text
 
     try:
@@ -123,6 +205,12 @@ async def _main(AsyncSessionLocal, engine, discord_api_request, DiscordAPIError)
                     )
                 )
                 rows = [(r[0], r[1], r[2]) for r in result.all()]
+                viewer_ids = set()
+                if show_names:
+                    viewer_result = await session.execute(
+                        text("SELECT guild_id FROM public.viewer_discord_config")
+                    )
+                    viewer_ids = {str(r[0]).strip() for r in viewer_result.all()}
         except Exception:
             raise CheckFailure("db_error")
 
@@ -144,6 +232,9 @@ async def _main(AsyncSessionLocal, engine, discord_api_request, DiscordAPIError)
         bot_ids = {str(g["id"]) for g in guilds}
         for line in judge(rows, bot_ids):
             print(line)
+        if show_names:
+            for line in unregistered_lines(rows, guilds, viewer_ids):
+                print(line)
         return 0
     except CheckFailure as failure:
         print("error=%s" % failure.mark, file=sys.stderr)
@@ -152,7 +243,7 @@ async def _main(AsyncSessionLocal, engine, discord_api_request, DiscordAPIError)
         await engine.dispose()
 
 
-def run():
+def run(show_names=False):
     try:
         import logging
         import warnings
@@ -164,14 +255,20 @@ def run():
         engine.sync_engine.echo = False
         from app.services.discord_rest import DiscordAPIError, discord_api_request
 
-        return asyncio.run(_main(AsyncSessionLocal, engine, discord_api_request, DiscordAPIError))
+        return asyncio.run(
+            _main(AsyncSessionLocal, engine, discord_api_request, DiscordAPIError, show_names)
+        )
     except Exception:
         print("error=unexpected", file=sys.stderr)
         return 1
 
 
 if __name__ == "__main__":
-    if "--self-test" in sys.argv[1:]:
+    _args = sys.argv[1:]
+    if "--self-test" in _args:
         _self_test()
+    elif all(a == "--show-unregistered-names" for a in _args):
+        sys.exit(run("--show-unregistered-names" in _args))
     else:
-        sys.exit(run())
+        print("error=unexpected", file=sys.stderr)
+        sys.exit(1)
