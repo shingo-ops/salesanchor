@@ -1,6 +1,6 @@
 # 実装カード 便④-5 — public.tenant_llm_budgets・public.tenant_settings に RLS（型C）＋運営の書込 2 か所と翻訳の見張りの書込 1 か所に文脈を足す
 
-- 状態: 設計案（Opus 作成）。クラウド設計審査の前。PO の実装承認は design.md 冒頭（2026-11-06「1」: KGI-4〜6 と 5 便の順番）。完走の指示は PO 2026-11-07 チャット「PRマージ、デプロイまで完走させてくれ」。次の 3 つの表へ進むことは PO 2026-11-07 チャット「1」。
+- 状態: 設計案（Opus 作成）。クラウド設計審査 1 回目 REVISE（指摘1〜4）を反映した 2 版。再審査の前。PO の実装承認は design.md 冒頭（2026-11-06「1」: KGI-4〜6 と 5 便の順番）。完走の指示は PO 2026-11-07 チャット「PRマージ、デプロイまで完走させてくれ」。次の 3 つの表へ進むことは PO 2026-11-07 チャット「1」。
 - 根拠の版: origin/main d8db9b69d（2026-11-07 便④-4 #5233 の合流後に fetch）。行番号はすべてこの版。
 - 設計: [design.md](design.md) §2 :25-26（2 表とも型C＋運営画面に運営の文脈）・§3 :88（④-5 で足すコード 3 か所）・:96-97（前提の表）・:108（前提の移行の順）・§4 :114（④-5 の試験）・§5 :123（K5-2 ④-5）・:133（会社を作る処理）・:144（コードと RLS を 1 つの戻しの PR で戻す）。手本: 便④-4 [card-4-4.md](card-4-4.md) と、合流済みの backend/tests/test_google_webhook_subscriptions_rls.py。
 - 実装ブランチ: `release/s1-rls-stage4-bin5`（origin/main d8db9b69d から作った。カードはこのブランチに Opus が置く）。1 便 1 PR。PR は Draft で起票する。
@@ -12,7 +12,7 @@
 | 1 | `migrations/20261107_160000_add_tenant_budget_settings_rls.sql` | 新規。§2 の SQL を一字一句この内容で作る |
 | 2 | `scripts/run_all_migrations.sh` | 末尾（今の最終行 :1249 `run_sql migrations/20261107_150000_add_google_webhook_subscriptions_rls.sql` の次の行）に §3 の 2 行を足す |
 | 3 | `backend/app/routers/super_admin_llm_budget.py` | §6-1 のとおり（取り込み 1 行と `upsert_budget` の書込を囲む） |
-| 4 | `backend/app/routers/super_admin_phase_switch.py` | §6-2 のとおり（取り込み 1 行と `switch_phase_endpoint` の書込〜commit を囲む） |
+| 4 | `backend/app/routers/super_admin_phase_switch.py` | §6-2 のとおり（取り込み 1 行と `switch_phase_endpoint` の書込〜commit を囲む。記録の呼び出しを savepoint に入れる） |
 | 5 | `backend/app/services/translation_monitor.py` | §6-3 のとおり（`notify_translation_anomaly` の末尾の書込だけ） |
 | 6 | `backend/tests/test_tenant_budget_settings_rls.py` | 新規。§5 |
 | 7 | `backend/tests/test_tenant_loop_migration_guard.py` | `_REVIEWED` に 1 項目足すだけ（§5-2） |
@@ -111,9 +111,10 @@ run_sql migrations/20261107_160000_add_tenant_budget_settings_rls.sql
   - ⑤ 同じ移行をもう一度当ててもエラーにならず、`pg_policies` の本数が各表 4 のまま。
   - ⑥ 966 の文脈で自社の行の tenant_id を 967 へ付け替える UPDATE が 42501。
 - 入口の試験（design §4 :114・:133。各 1 本）。session は `async_sessionmaker(app_engine, expire_on_commit=False)()` で作る:
-  - ⑦ 予算の保存（運営）: session で `SET app.tenant_id = ''` と `SET app.is_operator = ''` を流して commit（get_db の後と同じ「文脈なし」）。`from app.routers.super_admin_llm_budget import LLMBudgetUpdate, upsert_budget` を直に `await upsert_budget(967, LLMBudgetUpdate(monthly_budget_usd=Decimal("25.00"), hard_stop=True, notify_admin=True), db=session)` で呼ぶ。確かめ: 例外なく返り、返り値の monthly_budget_usd が 25.00。admin で 967 の monthly_budget_usd が 25.00。同じ session で `SELECT current_setting('app.is_operator', true)` が `''`。§6-1 の直しが無いと INSERT が 42501 で落ちることを、直しの前にこの試験を流して確かめ、その生出力も残す。
-  - ⑧ 段階の切替（運営）: ⑦と同じ文脈なしの session。`app.routers.super_admin_phase_switch.record_audit_log` を `unittest.mock.AsyncMock()` で差し替える（使い捨て DB に tenant_967.audit_logs が無いため。差し替えの理由を試験の説明文に書く）。`await switch_phase_endpoint(967, PhaseSwitchRequest(phase="A"), db=session, current_user=types.SimpleNamespace(id=1))`。確かめ: 返り値の phase が 'A'。admin で 967 の spreadsheet_phase が 'A'。同じ session で `current_setting('app.is_operator', true)` が `''`。直しの前に流して 42501 を確かめ、生出力を残す。
-  - ⑨ 翻訳の見張りの通知: ⑦と同じ文脈なしの session。`app.services.translation_monitor._post_webhook` を `AsyncMock(return_value=True)` で差し替え、`await notify_translation_anomaly(session, 966, TranslationHealthSnapshot(100, 30, 40, 0.30, 0.40), tenant_code="t966")`。確かめ: 返り値 True。admin で 966 の `last_translation_monitor_notified_at` が NULL でない（試験の前は NULL であることも確かめる）。同じ session で `current_setting('app.tenant_id', true)` が `''`。続けて同じ session で `SELECT 1` が通る（取引が壊れていない）。直しの前に流すと時刻が NULL のままで落ちることを確かめ、生出力を残す。
+  - ⑦ 予算の保存（運営）: session で `SET app.tenant_id = ''` と `SET app.is_operator = ''` を流して commit（get_db の後と同じ「文脈なし」）。`from app.routers.super_admin_llm_budget import LLMBudgetUpdate, upsert_budget` を直に `await upsert_budget(967, LLMBudgetUpdate(monthly_budget_usd=Decimal("25.00"), hard_stop=True, notify_admin=True), db=session)` で呼ぶ。確かめ: 例外なく返り、返り値の monthly_budget_usd が 25.00。admin で 967 の monthly_budget_usd が 25.00。続けて `await session.close()` の後、同じ app_engine（`pool_size=1, max_overflow=0` なので同じ接続が戻る）から新しい接続を取り、`SELECT current_setting('app.is_operator', true)` が `''`（運営の印が接続に残っていない。§6 冒頭）。§6-1 の直しが無いと INSERT が 42501 で落ちることを、直しの前にこの試験を流して確かめ、その生出力も残す。
+  - ⑧ 段階の切替（運営）: ⑦と同じ文脈なしの session。record_audit_log は**差し替えない**（使い捨て DB には tenant_967.audit_logs が無いので本物の呼び出しが失敗し、§6-2 の savepoint の道を通る。その理由を試験の説明文に書く）。`await switch_phase_endpoint(967, PhaseSwitchRequest(phase="A"), db=session, current_user=types.SimpleNamespace(id=1))`。確かめ: 例外なく返り、返り値の phase が 'A'。admin で 967 の spreadsheet_phase が 'A'（記録の失敗で切替が消えていない）。⑦と同じく `session.close()` の後の新しい接続で `current_setting('app.is_operator', true)` が `''`。直しの前に流して 42501 で落ちることを確かめ、生出力を残す。
+  - ⑨ 翻訳の見張りの通知: ⑦と同じ文脈なしの session。`app.services.translation_monitor._post_webhook` を `AsyncMock(return_value=True)` で差し替え、`await notify_translation_anomaly(session, 966, TranslationHealthSnapshot(100, 30, 40, 0.30, 0.40), tenant_code="t966")`。確かめ: 返り値 True。admin で 966 の `last_translation_monitor_notified_at` が NULL でない（試験の前は NULL であることも確かめる）。同じ session で `SELECT 1` が通る（取引が壊れていない）。⑦と同じく `session.close()` の後の新しい接続で `current_setting('app.tenant_id', true)` が `''`。直しの前に流すと時刻が NULL のままで落ちることを確かめ、生出力を残す。
+  - ⑦〜⑨の「新しい接続で空」の確かめは、§6 冒頭の古い形（commit の後に外す）では `'true'`／`'966'` が残って落ちる。手元で古い形でも 1 回流して落ちることを確かめ、生出力を残す（落ちなければ試験が漏れを確かめていないので止まって Opus に戻す）。
   - ⑩ 会社を作る処理: app_engine の接続で取引を始め、`SELECT set_config('app.tenant_id', '965', true)`（backend/app/services/tenant.py:1779-1782 と同じ）の後、tenant.py:1800-1814 と同じ INSERT（`INSERT INTO public.tenant_settings (tenant_id, spreadsheet_phase, inventory_agg_filter, agg_price_threshold_jpy, agg_qty_threshold, quote_validity_days, default_currency, document_language, duty_incoterms, issue_mode) VALUES (965, 'B', 'none', 0, 0, 1, 'JPY', 'en', 'DAP', 'pdf') ON CONFLICT (tenant_id) DO NOTHING`）を流して commit。確かめ: admin で 965 の行が 1 行。
 - 既にある試験への影響:
   - backend/tests/test_translation_monitor.py の `notify_translation_anomaly` の試験（:120-180）は、どれも `_post_webhook` が False を返す道で、§6-3 で変える `if sent:` の中に入らない。変えずに通ることを確かめる。
@@ -136,7 +137,11 @@ run_sql migrations/20261107_160000_add_tenant_budget_settings_rls.sql
 
 ## 6. コードの直し（3 か所）
 
-型は design §3 :88 のとおり、既にある運営の書込 backend/app/routers/fx_rate_admin.py:135-149（`set_operator_context` → `try:` 書込と commit → `finally: reset_operator_context`）と同じ。
+型（設計審査 指摘1 で直した）: 運営の印を外す `reset_operator_context` は **commit の前**に、同じ取引の中で流す。
+
+- 理由（事実）: SQLAlchemy は commit の後に次の取引を自動で始める。commit の後に `SET app.is_operator = ''` を流すと、その SET は commit されない取引に入る。session を閉じるとき（get_db の finally の `clear_tenant_context` も含めて）その取引は巻き戻され、SET も消える（PostgreSQL の SET は取引の巻き戻しで元に戻る）。接続の返却時の後始末は巻き戻しだけで、設定は戻さない。結果、commit 済みの `app.is_operator='true'` が接続に残り、同じ接続を次に使う要求が運営の印を持ったまま動く。
+- commit の前に外せば、外したことも commit される。途中で例外が出たら `db.rollback()` で書込と運営の印の両方が取り消される（印を張った SET も同じ取引の中のため）。
+- 既にある fx_rate_admin.py:135-149 は commit の後に外す古い形で、同じ漏れがある。本便では直さない（Opus が台帳に残す）。手本にしない。
 
 ### 6-1. backend/app/routers/super_admin_llm_budget.py
 
@@ -150,9 +155,11 @@ run_sql migrations/20261107_160000_add_tenant_budget_settings_rls.sql
         await db.execute(
             ...（:152-170 のまま）
         )
-        await db.commit()
-    finally:
         await reset_operator_context(db)
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
 ```
 
 - :173 以降の再取得（SELECT）は囲まない（読取は全行。運営の文脈は要らない）。
@@ -161,7 +168,7 @@ run_sql migrations/20261107_160000_add_tenant_budget_settings_rls.sql
 
 - 取り込み :24 `from app.auth.dependencies import require_super_admin` を次にする:
   `from app.auth.dependencies import require_super_admin, reset_operator_context, set_operator_context`
-- `switch_phase_endpoint` の :128 `# DB 更新` 〜 :153 `await db.commit()` を、次の形で囲む（中の文は 1 字も変えない。字下げだけ 4 つ深くする）:
+- `switch_phase_endpoint` の :128 `# DB 更新` 〜 :153 `await db.commit()` を、次の形にする。変えるのは (a) 全体を囲む、(b) `await record_audit_log(` の呼び出しを `async with db.begin_nested():` の中に入れる、(c) commit の前に `reset_operator_context` を流す、の 3 点だけ。record_audit_log の引数・except の中身・コメントの文は 1 字も変えない（字下げだけ深くする）:
 
 ```python
     await set_operator_context(db)
@@ -171,19 +178,23 @@ run_sql migrations/20261107_160000_add_tenant_budget_settings_rls.sql
 
         # AC9.4: audit_log 記録（B/C 切替時の証跡用）
         try:
-            await record_audit_log(
-                ...（:134-141 のまま）
-            )
+            async with db.begin_nested():
+                await record_audit_log(
+                    ...（:134-141 のまま）
+                )
         except Exception as exc:  # noqa: BLE001
             ...（:144-151 のまま）
 
-        await db.commit()
-    finally:
         await reset_operator_context(db)
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
 ```
 
 - :126 `old_phase = await get_phase(...)`（読取）は囲まない。`get_phase_endpoint`（GET）は触らない。
-- 【観測・本便では直さない】record_audit_log（backend/app/services/audit.py）は `tenant_{id:03d}.audit_logs` に書く。そこで失敗すると PostgreSQL の取引が中断し、except で握っても続く commit で切替が残らない恐れがある。これは本便の前からある振る舞いで、本便の RLS とは関係しない（本便で audit の行は変えない）。直すかは別の件として Opus が台帳に残す。
+- `begin_nested()` を足す理由（設計審査 指摘3。事実はコードから）: record_audit_log（backend/app/services/audit.py:277-:320）は `tenant_{id:03d}.audit_logs` に INSERT する。その表のポリシーは `tenant_id = current_setting('app.tenant_id', true)::INTEGER`（NULLIF なし。backend/app/services/tenant.py:1288-1289）。運営の要求には会社の文脈が無く `app.tenant_id` は空なので、この INSERT はエラーになり PostgreSQL の取引全体が中断する。今のコードは except で握るが、続く commit は中断した取引を確定できず、段階の切替も保存されない。元のコメント（:144-147「切替自体は成功させて warning ログを残す」）の意図どおりにするため、記録だけを取引の中の小さな区切り（savepoint）に入れ、失敗してもその区切りだけを巻き戻す。本番でこの失敗が実際に起きているかは確かめていない（reader 鍵は tenant_004.audit_logs を読む権限が無く 42501。2026-11-07 09:06 JST）。
+- 運営の切替で記録（audit）が書かれないこと自体は本便では直さない（会社の文脈を張るかは audit の設計の件）。Opus が台帳に残す。
 
 ### 6-3. backend/app/services/translation_monitor.py
 
@@ -206,13 +217,14 @@ run_sql migrations/20261107_160000_add_tenant_budget_settings_rls.sql
         try:
             await set_tenant_context(db, tenant_id)
             await _update_last_notified(db, tenant_id)
+            await clear_tenant_context(db)
             await db.commit()
         except Exception as exc:
             await db.rollback()
             logger.warning("[translation_monitor] デバウンス更新失敗: %s", exc)
-        finally:
-            await clear_tenant_context(db)
 ```
+
+- 文脈を外す `clear_tenant_context` は commit の前に流す（§6 冒頭と同じ理由。commit の後に外すと、その SET は session を閉じるときの巻き戻しで消える）。例外のときは `db.rollback()` が文脈を張った SET も取り消す。呼び出し元 `_run_health_check`（backend/app/tasks/translation.py）は本関数の後に会社の文脈を当てにしない（次の会社は `check_translation_health` が自分で張って外す）。
 
 - 理由（事実）: 毎時の見張り（backend/app/tasks/translation.py:120-129 → `_run_health_check`）は 1 つの session で全社を回す。`check_translation_health` は :59 で会社の文脈を張り、:106 の finally で外す。その後に呼ばれる本関数の書込（:206 → :125-135 の INSERT … ON CONFLICT）は文脈なしになり、型C では 42501 で落ちる。`db.rollback()` を足すのは、落ちた取引を残すと同じ session の次の会社の読取が「current transaction is aborted」で止まるため。
 - `_get_last_notified`（:109-122 の SELECT）は直さない（読取は全行）。
@@ -221,7 +233,7 @@ run_sql migrations/20261107_160000_add_tenant_budget_settings_rls.sql
 
 | 書込 | 場所 | 文脈 |
 |---|---|---|
-| tenant_llm_budgets UPDATE（月替わり）・UPDATE（費用の加算）・INSERT（行を作る） | backend/app/services/llm_budget.py:475・:527・:567 | 呼び出し元 backend/app/services/message_translator.py:462-490・:614-623。翻訳の作業 backend/app/tasks/translation.py が `set_tenant_context` を張った session で呼ぶ |
+| tenant_llm_budgets UPDATE（月替わり）・UPDATE（費用の加算）・INSERT（行を作る） | backend/app/services/llm_budget.py:475・:527・:567 | 呼び出し元 backend/app/services/message_translator.py:462-490・:614-623。message_translator を呼ぶ入口はどれも会社の文脈を張った session: 翻訳の作業 backend/app/tasks/translation.py:128-142（`set_tenant_context`）、backend/app/routers/leads.py:1386-1445（`get_current_tenant`）、backend/app/routers/conv_logs.py:152-153（`set_tenant_context`） |
 | tenant_llm_budgets UPDATE | backend/app/services/discord_notifier.py:222・:254（notify_budget_exhausted） | 呼び出し元が無い（`grep -rn notify_budget_exhausted backend/app` は定義だけ） |
 | tenant_settings UPDATE | backend/app/routers/tenant_policy.py:129 | `get_current_tenant`（backend/app/auth/dependencies.py）が `app.tenant_id` を自社に張る |
 | tenant_settings INSERT … ON CONFLICT DO NOTHING | backend/app/services/tenant.py:1800-1814（会社を作る処理） | :1779-1782 で新しい会社の `app.tenant_id` を張ってから書く（§5 ⑩で確かめる） |
@@ -235,7 +247,7 @@ run_sql migrations/20261107_160000_add_tenant_budget_settings_rls.sql
 | §1 の 1〜7 以外に差分が無い（8 は Opus） | `git diff origin/main...HEAD --name-only` |
 | 移行 SQL が §2 と一字一句同じ | `diff` で 0 行 |
 | run_all の差分が §3 の 2 行の追加だけ | `git diff origin/main...HEAD -- scripts/run_all_migrations.sh` |
-| プログラムの差分が §6-1〜6-3 だけ（中の文は字下げ以外変わらない） | `git diff origin/main...HEAD -w -- backend/app` で、足した行が取り込み 2 行・`set_operator_context`/`try:`/`finally:`/`reset_operator_context` の各 2 組・§6-3 の 4 行だけ |
+| プログラムの差分が §6-1〜6-3 だけ（中の文は字下げ以外変わらない） | `git diff origin/main...HEAD -w -- backend/app` で、足した行が取り込み 2 行・`set_operator_context`/`try:`/`reset_operator_context`/`except Exception:`/`await db.rollback()`/`raise` の各 2 組・§6-2 の `async with db.begin_nested():` 1 行・§6-3 の 3 行（`set_tenant_context`・`clear_tenant_context`・`await db.rollback()`）だけ。`reset_operator_context`・`clear_tenant_context` はどれも `await db.commit()` の直前の行 |
 | §5 ⑦〜⑨が直しの前に落ち、直しの後に通る | 直しの前後で手元の PostgreSQL（または CI）で流した生出力 |
 | CI の Backend Tests・migration-test・ADR index ほか必須チェックが全部緑 | `gh pr checks <PR>` |
 | 新しい試験が CI で実行されて通っている（skip でない） | CI の PostgreSQL のログに `violates row-level security policy for table "tenant_llm_budgets"` と `"tenant_settings"` が両方出る |
@@ -249,7 +261,7 @@ run_sql migrations/20261107_160000_add_tenant_budget_settings_rls.sql
 - K4-1: 2 表とも relrowsecurity / relforcerowsecurity が t/t、ポリシー各 4 本（計 8）。
 - K4-2: 会社ごとの行数が上の基準値と同じ。
 - K5-1: 反映時刻以降の backend・celery-worker・celery-beat のログで `42501`・`row-level security`・`invalid input syntax for type integer`・`デバウンス更新失敗`（translation_monitor.py）が 0 件。
-- K5-2（design §5 :123 ④-5）: 運営画面で予算を同じ値で保存して 200、段階の切替の画面を開いて 200。運営（super admin）のログインが要るので PO に画面で確かめてもらう（PO の戻り後）。マージの条件にはしない。代わりに §5 ⑦⑧で同じ関数を「文脈なし」の接続から呼んで確かめる。
+- K5-2（design §5 :123 ④-5）: 運営画面で予算を同じ値で保存して 200、段階の切替の画面を開いて 200。運営（super admin）のログインが要るので PO に画面で確かめてもらう（PO の戻り後）。段階の切替は本番では押さない（会社の段階が実際に変わるため。開いて 200 まで）。マージの条件にはしない。代わりに §5 ⑦⑧で同じ関数を「文脈なし」の接続から呼んで確かめる。
 - 翻訳の見張りの書込は本番で一度も起きていない（上の基準値）ため、本番では観測しない。§5 ⑨で確かめる。毎時の見張りの作業が反映後も `succeeded` で終わることを K5-1 と同じログで 1 回見る。
 
 ## 9. 戻し方（design §7 を表名で埋めたもの）
