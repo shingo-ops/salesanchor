@@ -312,8 +312,8 @@ export function formatSearchResultLine(item: ScheduleItem, t: Translate, languag
 - 作り物の api（目印: `if (path.startsWith("/calendar/events")) return { events: answers.events };`）の**前**に `if (path.startsWith("/calendar/events/search")) return { events: answers.searchEvents };` を足す。`answers` に `searchEvents: [] as ...`（`events` と同じ型）と、初期化に `answers.searchEvents = [];` を足す。
 - F1: 虫めがね（`common.search` の名前のボタン）を押すと検索の欄（role searchbox か textbox で同じ名前）が出て、focus がそこにある。
 - F2: `answers.searchEvents` に「商談A」（2026-12-15 10:00〜11:00）を入れ、欄に「商談」と打って Enter → 作り物の api が `/calendar/events/search?q=%E5%95%86%E8%AB%87` で呼ばれ、結果に「商談A」が出る。
-- F3: F2 の結果の行を押すと、`rangeText()` が次の `expected` と一致する。`` const days = getWeekDays(new Date(2026, 11, 15)); const expected = `${formatDayLabel(days[0])} - ${formatDayLabel(days[6])}`; ``（`formatDayLabel`・`getWeekDays` は `frontend/src/pages/schedule/schedule-utils.ts:137`・`:161` で export 済み。週の見出しは `SchedulePageImpl.tsx:138-144` の `formatRangeTitle` がこの形で作り `:1162` の `viewLabel` に入る。`SchedulePageImpl.tsx` に export は足さない）。検索の欄が閉じて虫めがねのボタンに戻る。
-- 見出しの文を読む小さな関数 `rangeText()`（`.schedule-shell__range` の textContent を返す）を F の describe の中で定義する（今の `rangeText` は `SchedulePageImpl.test.tsx:249` の K7 の describe の中だけにあり、F からは使えない）。
+- F3: F2 の結果の行を押すと、`rangeText()` が次の `expected` と一致する。`` const days = getWeekDays(new Date(2026, 11, 15)); const expected = `${formatDayLabel(days[0])} - ${formatDayLabel(days[6])}`; ``（`formatDayLabel`・`getWeekDays` は `frontend/src/pages/schedule/schedule-utils.ts:137`・`:161` で export 済み。週の見出しは `frontend/src/pages/schedule/SchedulePageImpl.tsx:138-144` の `formatRangeTitle` がこの形で作り `:1162` の `viewLabel` に入る。`frontend/src/pages/schedule/SchedulePageImpl.tsx` に export は足さない）。検索の欄が閉じて虫めがねのボタンに戻る。
+- 見出しの文を読む小さな関数 `rangeText()`（`.schedule-shell__range` の textContent を返す）を F の describe の中で定義する（今の `rangeText` は `frontend/src/pages/schedule/SchedulePageImpl.test.tsx:249` の K7 の describe の中だけにあり、F からは使えない）。
 - F4: `answers.searchEvents = []` で Enter → 「schedule.searchNoResults」の文（訳のキーで見る今の試験の流儀に合わせる）が出る。
 - F5: 欄で Esc → 欄が閉じて虫めがねのボタンに戻る。続けて `t` を押すと今日へ戻る近道が今までどおり効く（Esc が近道を壊していない）。
 
