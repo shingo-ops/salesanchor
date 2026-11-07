@@ -1,9 +1,9 @@
 # 接続プールの返却時リセット 調査（recon-pool-reset）
 
 - 役割: 調査役（読む＋使い捨て DB での測定のみ）。製品コード・本番・secret には触っていない。PR は作らない。
-- 起点: origin/main（9cf750f29）から `release/s1-rls-pool-reset-recon`。背景は `origin/release/s1-rls-stage5-review:docs/handoff/s1-rls-stage5/review-cloud-1.md` の (k)（commit の後の SET が close の rollback で消え、接続に前の値が残る）。
+- 起点: origin/main（9cf750f29）から `release/s1-rls-pool-reset-recon`。背景は 未合流のブランチ release/s1-rls-stage5-review（594737ba8）にあるクラウド審査1回目の記録 review-cloud-1 の (k)（commit の後の SET が close の rollback で消え、接続に前の値が残る）。
 - 測定環境: クラウドのサンドボックスで `pg_ctlcluster 16 main start`。PostgreSQL 16.15（localhost・使い捨て DB `kmeasure`）。Python 3.12 の venv に backend/requirements.txt と同じ版（backend/requirements.txt:4-6 `sqlalchemy==2.0.38`・`asyncpg==0.31.0`・`psycopg2-binary==2.9.10`）を入れた。
-- 台本: `docs/handoff/s1-rls-stage5/pool_reset_measure.py`（m1〜m7）・`m8_scan.py`・`m8_scan2.py`（m8 の構文木走査）。製品コードではない。
+- 台本: `docs/handoff/s1-rls-stage5/pool_reset_measure.py`（m1〜m7）・`docs/handoff/s1-rls-stage5/m8_scan.py`・`docs/handoff/s1-rls-stage5/m8_scan2.py`（m8 の構文木走査）。製品コードではない。
 - **未確認の宣言**: 候補 A/B/Bx の「公式の例どおり」は https://docs.sqlalchemy.org/en/20/dialects/postgresql.html を開いて確かめていない（この実行では外部ページを読んでいない）。B・Bx の形は SQLAlchemy 2.0.38 の pool 実装（下記）を読んで組んだ。
 
 ## 候補の定義（台本 pool_reset_measure.py:50-66・:68-100）
@@ -479,7 +479,7 @@ SQLAlchemy 2.0.38 の返却処理（/opt/kvenv/lib/python3.12/site-packages/sqla
 
 **方法**: 2 本の構文木走査を台本にした。
 - `docs/handoff/s1-rls-stage5/m8_scan.py backend/app`: 関数ごとに `<db|session|…>.commit()` の後、次の commit か `set_tenant_context`・`reset_tenant_context`・`set_tenant_context_sync` 呼び出しまでの間に、同じ session への操作（execute・add・flush・refresh 等）または session を引数に渡す呼び出しがあるものを拾う（分岐・ループは見ず行番号順。拾い過ぎ寄り）。出力: 74 件。
-- `m8_scan2.py backend/app`: 中で commit する補助関数（session を引数に取る・名前で突き合わせ・395 個）を呼んだ後に同じ session を使う箇所。名前の取り違えがあり得る近似。出力: 51 件。
+- `docs/handoff/s1-rls-stage5/m8_scan2.py backend/app`: 中で commit する補助関数（session を引数に取る・名前で突き合わせ・395 個）を呼んだ後に同じ session を使う箇所。名前の取り違えがあり得る近似。出力: 51 件。
 
 各件は commit 行から後続の行を開いて、触る表を読んだ。記号: **Q** = schema 名つき（変数 `{schema}`・`tenant_table_ref`）／**P** = `public.` つき（TCG_SCHEMA は `"public"`: backend/app/services/tcg_analyzer_svc.py:58 ほか）／**T** = tenant 表を schema 名なしで触る（別テナントの search_path で読み書きしうる）／**R** = 後続は文脈の SET だけ（表は触らない）／**N** = 誤検出（commit が分岐の終端で後続は別の経路）／**未確認** = 本文を読んでいない。
 

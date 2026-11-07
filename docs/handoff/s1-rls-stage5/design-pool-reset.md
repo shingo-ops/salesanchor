@@ -246,4 +246,4 @@ SQLAlchemy の根拠は、上流のタグ rel_2_0_38 のファイルを行つき
 - 試験で守る: backend/tests/test_pool_reset_on_return.py（§5 便2 の T1〜T4）が必須チェックの中で毎回流れる。database.py から `install_pool_reset(engine)` の呼び出しを外すと T1 が赤、`_reset_session_state` の中身を外すと T2 が赤（T3 が「外した状態」を見分けられることの証拠）。Bx の有無を見分けるのは T1〜T3 で、T4 は回帰の確認だけを担う。CI で PostgreSQL が無いときは skip でなく失敗にする。
 - 物差しで守る: k-baseline.sh を、この先の RLS の便（S1 段階⑤）でも配備の前後に同じ形で流す。
 - 既存の見張り: scripts/lint_tenant_schema.py の Rule C（commit の後の最初の文が reset か）は今のまま動く。
-- 担当: 配備後 24 時間の K2・K3 の数え直しは Opus（設計担当）が行い、結果を本書の末尾に追記する。
+- 守り手: Opus（設計担当）。配備後 24 時間の K2・K3 の数え直しは Opus（設計担当）が行い、結果を本書の末尾に追記する。
