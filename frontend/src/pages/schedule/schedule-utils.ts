@@ -1,3 +1,5 @@
+import { formatMeridiem, formatTimeRange as formatEventTimeRange, type CalendarViewEvent } from "../../components/calendarView.utils";
+
 export type ScheduleView = "day" | "week" | "month" | "list";
 export type DemoState = "normal" | "loading" | "empty";
 
@@ -89,6 +91,39 @@ export function clamp(value: number, min: number, max: number): number {
 
 export function combineDateTime(date: string, time: string): Date {
   return parseDateTime(date, time);
+}
+
+type Translate = (key: string, opts?: Record<string, unknown>) => string;
+
+/**
+ * 作る小窓の日時の 1 行（design §3.9・G3 ②）。例「11月10日(火) 午前10時～午前11時」。
+ * 日付が読めないときは空。終わりだけ読めないときは始まりだけ。
+ */
+export function formatDraftDateLine(
+  value: { startDate: string; startTime: string; endDate: string; endTime: string; allDay: boolean },
+  t: Translate,
+  language: string,
+): string {
+  const day = (date: Date) =>
+    new Intl.DateTimeFormat(language, { month: "long", day: "numeric", weekday: "short" }).format(date);
+  const start = parseDateTime(value.startDate, value.allDay ? "00:00" : value.startTime);
+  if (Number.isNaN(start.getTime())) return "";
+  const end = parseDateTime(value.endDate, value.allDay ? "00:00" : value.endTime);
+  const endValid = !Number.isNaN(end.getTime());
+  if (value.allDay) {
+    if (!endValid || value.endDate === value.startDate) {
+      return t("schedule.dateTimeLine", { date: day(start), time: t("schedule.allDay") });
+    }
+    return t("calendarView.timeRange", { start: day(start), end: day(end) });
+  }
+  if (!endValid) return t("schedule.dateTimeLine", { date: day(start), time: formatMeridiem(start, t) });
+  if (value.endDate === value.startDate) {
+    return t("schedule.dateTimeLine", { date: day(start), time: formatEventTimeRange(start, end, t, false) });
+  }
+  return t("calendarView.timeRange", {
+    start: t("schedule.dateTimeLine", { date: day(start), time: formatMeridiem(start, t) }),
+    end: t("schedule.dateTimeLine", { date: day(end), time: formatMeridiem(end, t) }),
+  });
 }
 
 export function formatDateInput(date: Date): string {
@@ -235,6 +270,30 @@ export function normalizeShift(shift: ApiShift, t: (key: string) => string): Sch
     ownerName: null,
     description: shift.notes ?? null,
   };
+}
+
+export interface ApiHoliday {
+  date: string; // YYYY-MM-DD
+  name: string;
+}
+
+/** 祝日を金型の予定の形にする。終日・動かせない・tone holiday（design §3.6・§3.10） */
+export function toHolidayEvents(holidays: ApiHoliday[] | undefined): CalendarViewEvent[] {
+  if (!Array.isArray(holidays)) return [];
+  return holidays.flatMap((holiday) => {
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(holiday.date);
+    if (!match) return [];
+    const start = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+    return [{
+      id: `holiday-${holiday.date}`,
+      title: holiday.name,
+      start: holiday.date,
+      end: formatDateInput(addDays(start, 1)),
+      allDay: true,
+      tone: "holiday" as const,
+      editable: false,
+    }];
+  });
 }
 
 /** "event-12" → 12。シフト・仮の箱など予定でない id は null */

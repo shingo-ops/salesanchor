@@ -1,3 +1,4 @@
+/* eslint-disable local/no-japanese-literal -- テスト: 作る小窓の日時の 1 行が Google と同じ日本語で出ることを検証する（ADR-027・precedent: CalendarView.test.tsx） */
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -32,6 +33,7 @@ const answers = vi.hoisted(() => ({
   meetAvailable: false,
   events: [] as Array<Record<string, unknown>>,
   shifts: [] as Array<Record<string, unknown>>,
+  holidays: [] as Array<Record<string, unknown>>,
   canManageOthers: false,
   selfMissing: false,
 }));
@@ -52,6 +54,7 @@ vi.mock("../../lib/api", () => ({
           ].filter((o) => !(answers.selfMissing && o.is_self)),
         };
       }
+      if (path.startsWith("/calendar/holidays")) return { holidays: answers.holidays };
       if (path.startsWith("/calendar/events")) return { events: answers.events };
       if (path === "/google-calendar/connect/start") return { auth_url: "https://accounts.example/auth" };
       if (path.startsWith("/shifts")) return answers.shifts;
@@ -77,6 +80,7 @@ beforeEach(async () => {
   answers.meetAvailable = false;
   answers.events = [];
   answers.shifts = [];
+  answers.holidays = [];
   answers.canManageOthers = false;
   answers.selfMissing = false;
   calendarProps.current = null;
@@ -243,8 +247,12 @@ describe("SchedulePage popover placement (K1)", () => {
 
 describe("SchedulePage keyboard shortcuts (K7)", () => {
   const rangeText = () => document.querySelector(".schedule-shell__range")?.textContent ?? "";
-  const pressed = (name: string) =>
-    screen.getByRole("button", { name }).getAttribute("aria-pressed") === "true";
+  const viewSwitch = () => {
+    const el = document.querySelector('button[aria-haspopup="menu"]');
+    if (!el) throw new Error("view switch button is missing");
+    return el;
+  };
+  const pressed = (name: string) => viewSwitch().textContent === name;
   const press = (key: string, init: Record<string, unknown> = {}, target: Element = document.body) =>
     fireEvent.keyDown(target, { key, ...init });
   const ready = async () => {
@@ -387,6 +395,7 @@ describe("SchedulePage keyboard shortcuts (K7)", () => {
       await screen.findByPlaceholderText(i18n.t("schedule.eventTitle"));
       press("m");
       expect(pressed(i18n.t("schedule.monthView"))).toBe(false);
+      expect(pressed(i18n.t("schedule.weekView"))).toBe(true);
     });
 
     it("ignores letter keys while the shortcut list is open", async () => {
@@ -395,6 +404,7 @@ describe("SchedulePage keyboard shortcuts (K7)", () => {
       await screen.findByRole("dialog", { name: i18n.t("schedule.shortcuts.title") });
       press("m");
       expect(pressed(i18n.t("schedule.monthView"))).toBe(false);
+      expect(pressed(i18n.t("schedule.weekView"))).toBe(true);
     });
   });
 });
@@ -538,15 +548,66 @@ describe("SchedulePage on CalendarView", () => {
     (calendarProps.current?.events as Array<Record<string, any>>).find((ev) => ev.id === id);
 
   it.each([
-    [10, "10:00", "11:00"],
-    [4, "04:00", "05:00"],
-    [15, "15:00", "16:00"],
-  ])("T1: a selected range at %i o'clock opens at %s-%s", async (hour, start, end) => {
+    [10, "10:00", "11:00", "午前10時～午前11時"],
+    [4, "04:00", "05:00", "午前4時～午前5時"],
+    [15, "15:00", "16:00", "午後3時～午後4時"],
+  ])("T1: a selected range at %i o'clock opens at %s-%s", async (hour, start, end, lineText) => {
     await ready();
     selectRange(new Date(2026, 10, 10, hour, 0), new Date(2026, 10, 10, hour + 1, 0), false);
+    const line = await screen.findByRole("button", { name: new RegExp(lineText) });
+    fireEvent.click(line);
     const inputs = (await screen.findAllByLabelText(i18n.t("schedule.time"))) as HTMLInputElement[];
     expect(inputs[0].value).toBe(start);
     expect(inputs[1].value).toBe(end);
+  });
+
+  it("C1: selecting a range focuses the title field and shows no header label", async () => {
+    await ready();
+    selectRange(new Date(2026, 10, 10, 10, 0), new Date(2026, 10, 10, 11, 0), false);
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByPlaceholderText(i18n.t("schedule.eventTitle"))),
+    );
+    expect(screen.queryByText(i18n.t("schedule.addEvent"))).toBeNull();
+  });
+
+  it("C2: location and description are closed lines that open on click and take focus", async () => {
+    await ready();
+    selectRange(new Date(2026, 10, 10, 10, 0), new Date(2026, 10, 10, 11, 0), false);
+    await screen.findByPlaceholderText(i18n.t("schedule.eventTitle"));
+    expect(screen.queryByPlaceholderText(i18n.t("schedule.locationPlaceholder"))).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: i18n.t("schedule.locationPlaceholder") }));
+    const location = await screen.findByPlaceholderText(i18n.t("schedule.locationPlaceholder"));
+    await waitFor(() => expect(document.activeElement).toBe(location));
+    expect(screen.queryByPlaceholderText(i18n.t("schedule.descriptionPlaceholder"))).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: i18n.t("schedule.descriptionPlaceholder") }));
+    const description = await screen.findByPlaceholderText(i18n.t("schedule.descriptionPlaceholder"));
+    await waitFor(() => expect(document.activeElement).toBe(description));
+  });
+
+  it("C3: the single view button opens a menu of four views and picks one", async () => {
+    await ready();
+    const button = screen.getByRole("button", { name: i18n.t("schedule.weekView") });
+    fireEvent.click(button);
+    const menu = await screen.findByRole("menu");
+    expect(menu).toBeTruthy();
+    expect(screen.getAllByRole("menuitem")).toHaveLength(4);
+    fireEvent.click(screen.getByRole("menuitem", { name: i18n.t("schedule.monthView") }));
+    await waitFor(() => expect(calendarProps.current?.mode).toBe("month"));
+    await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
+  });
+
+  it("C4: letter shortcuts are ignored while the view menu is open", async () => {
+    await ready();
+    fireEvent.click(screen.getByRole("button", { name: i18n.t("schedule.weekView") }));
+    await screen.findByRole("menu");
+    fireEvent.keyDown(document.body, { key: "d" });
+    expect(document.querySelector('button[aria-haspopup="menu"]')?.textContent).toBe(i18n.t("schedule.weekView"));
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
+    fireEvent.keyDown(document.body, { key: "d" });
+    await waitFor(() =>
+      expect(document.querySelector('button[aria-haspopup="menu"]')?.textContent).toBe(i18n.t("schedule.dayView")),
+    );
   });
 
   it("T2: a pending box shows while creating and goes away when the popover closes", async () => {
@@ -567,6 +628,7 @@ describe("SchedulePage on CalendarView", () => {
     fireEvent.keyDown(document.body, { key: "m" });
     await waitFor(() => expect(calendarProps.current?.mode).toBe("month"));
     selectRange(new Date(2026, 10, 10), new Date(2026, 10, 11), true);
+    fireEvent.click(await screen.findByRole("button", { name: /午前7時～午前8時/ }));
     const inputs = (await screen.findAllByLabelText(i18n.t("schedule.time"))) as HTMLInputElement[];
     expect(inputs[0].value).toBe("07:00");
     expect(inputs[1].value).toBe("08:00");
@@ -578,6 +640,7 @@ describe("SchedulePage on CalendarView", () => {
     fireEvent.keyDown(document.body, { key: "m" });
     await waitFor(() => expect(calendarProps.current?.mode).toBe("month"));
     selectRange(new Date(2026, 10, 10), new Date(2026, 10, 13), true);
+    fireEvent.click(await screen.findByRole("button", { name: /11月10日\(火\)～11月12日\(木\)/ }));
     const toggle = (await screen.findByRole("switch", { name: i18n.t("schedule.allDay") })) as HTMLInputElement;
     expect(toggle.checked).toBe(true);
     const dates = screen.getAllByDisplayValue(/^2026-11-/) as HTMLInputElement[];
@@ -668,6 +731,34 @@ describe("SchedulePage on CalendarView", () => {
     expect(body.start_datetime).toBe(new Date(2026, 10, 10, 0, 0).toISOString());
     expect(body.end_datetime).toBe(new Date(2026, 10, 11, 23, 59).toISOString());
     expect(body.is_all_day).toBe(true);
+  });
+
+  it("H1: a holiday reaches the calendar as an all-day, immovable holiday event", async () => {
+    answers.holidays = [{ date: "2026-11-03", name: "文化の日" }];
+    await ready();
+    await waitFor(() => expect(eventOf("holiday-2026-11-03")).toBeTruthy());
+    const holiday = eventOf("holiday-2026-11-03")!;
+    expect(holiday.title).toBe("文化の日");
+    expect(holiday.tone).toBe("holiday");
+    expect(holiday.allDay).toBe(true);
+    expect(holiday.editable).toBe(false);
+  });
+
+  it("H2: clicking a holiday opens no dialog", async () => {
+    answers.holidays = [{ date: "2026-11-03", name: "文化の日" }];
+    await ready();
+    fireEvent.click(await screen.findByText("文化の日"));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.queryByRole("button", { name: i18n.t("schedule.editEvent") })).toBeNull();
+  });
+
+  it("H3: the holiday request carries lang=ja and the current range", async () => {
+    await ready();
+    await waitFor(() => {
+      const paths = mockGet.mock.calls.map((call) => String(call[0]));
+      expect(paths.some((p) => /^\/calendar\/holidays\?start=\d{4}-\d{2}-\d{2}&end=\d{4}-\d{2}-\d{2}&lang=ja$/.test(p))).toBe(true);
+    });
   });
 
   it("T9: week view passes Sunday, 7 days and weekStart 0; day view passes today and 1", async () => {

@@ -12,6 +12,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/Button";
 import { CalendarView, type CalendarViewEvent } from "../../components/CalendarView";
+import { ContextMenu } from "../../components/ContextMenu";
 import { ButtonLink } from "../../components/ButtonLink";
 import { Modal } from "../../components/Modal";
 import { PageLayout } from "../../components/PageLayout";
@@ -29,6 +30,7 @@ import "../schedule.css";
 import {
   type AnchorRect,
   type ApiCalendarEvent,
+  type ApiHoliday,
   type ApiShift,
   type DemoState,
   LIST_VIEW_DAYS,
@@ -42,6 +44,7 @@ import {
   formatDateInput,
   formatDayKey,
   formatDayLabel,
+  formatDraftDateLine,
   formatMonthLabel,
   formatTimeInput,
   formatTimeRange,
@@ -53,6 +56,7 @@ import {
   normalizeShift,
   startOfMonth,
   toCalendarEnd,
+  toHolidayEvents,
   toRangeEnd,
   toRangeStart,
 } from "./schedule-utils";
@@ -141,7 +145,7 @@ function formatRangeTitle(view: ScheduleView, anchorDate: Date): string {
 
 /**
  * 小窓を出したあとに実寸を測って置く（測る前は見えなくする）。
- * 画面の大きさが変わったとき・中身の高さが変わったとき（「詳しく入れる」など）は測り直す。
+ * 画面の大きさが変わったとき・中身の高さが変わったとき（場所・説明の欄を開いたときなど）は測り直す。
  */
 function usePopoverPlacement(anchor: AnchorRect | null) {
   const ref = useRef<HTMLDivElement | null>(null);
@@ -176,7 +180,7 @@ function usePopoverPlacement(anchor: AnchorRect | null) {
   const style: CSSProperties = pos
     ? { left: pos.left, top: pos.top }
     : { left: 0, top: 0, visibility: "hidden" };
-  return { ref, style };
+  return { ref, style, placed: pos !== null };
 }
 
 function getCalendarMeta(category: CalendarId | null) {
@@ -236,13 +240,28 @@ function SchedulePopover({
   /** Google Meet を付けてよいか（つないだ本人の予定だけ。サーバーも同じ条件で断る） */
   meetAvailable: boolean;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const EditIcon = SCHEDULE_POPOVER_ICONS.edit;
   const DeleteIcon = SCHEDULE_POPOVER_ICONS.delete;
   const CloseIcon = SCHEDULE_POPOVER_ICONS.close;
+  const ClockIcon = SCHEDULE_POPOVER_ICONS.clock;
+  const LocationIcon = SCHEDULE_POPOVER_ICONS.location;
+  const DescriptionIcon = SCHEDULE_POPOVER_ICONS.description;
+  const creating = mode === "create";
   const editable = canEdit || mode === "create";
-  const { ref: popoverRef, style: position } = usePopoverPlacement(anchor);
-  const [expanded, setExpanded] = useState(mode !== "create");
+  const { ref: popoverRef, style: position, placed } = usePopoverPlacement(anchor);
+  // 作るときは日時・場所・説明を 1 行で閉じて出し、押すと開く（design §3.9・G3 ②③）
+  const [dateOpen, setDateOpen] = useState(false);
+  const [locationOpen, setLocationOpen] = useState(false);
+  const [descriptionOpen, setDescriptionOpen] = useState(false);
+  const showDate = !creating || dateOpen;
+  const showLocation = !creating || locationOpen || draft.location !== "";
+  const showDescription = !creating || descriptionOpen || draft.description !== "";
+  // 作るときは、小窓が見えてから題名の欄に文字が入るようにする（隠れている間の autoFocus は効かない・G3 ①）
+  const titleRef = useRef<HTMLInputElement | null>(null);
+  useEffect(() => {
+    if (creating && placed) titleRef.current?.focus();
+  }, [creating, placed]);
   const meta = getCalendarMeta(draft.category);
   const dateLabel = item ? formatDayLabel(item.start) : "";
   const timeLabel = item ? formatTimeRange(item.start, item.end, item.allDay, "ja-JP", t("schedule.allDay")) : "";
@@ -265,10 +284,12 @@ function SchedulePopover({
       <div ref={popoverRef} className="schedule-popover" style={position} onClick={(event) => event.stopPropagation()}>
         <div className="schedule-popover__header">
           <div className="schedule-popover__header-meta">
-            <span className="schedule-popover__kicker">
-              {mode === "create" ? t("schedule.addEvent") : mode === "edit" ? t("schedule.editEvent") : t("schedule.eventDetail")}
-            </span>
-            {meta && (
+            {!creating && (
+              <span className="schedule-popover__kicker">
+                {mode === "edit" ? t("schedule.editEvent") : t("schedule.eventDetail")}
+              </span>
+            )}
+            {!creating && meta && (
               <span
                 className="schedule-category-chip"
                 style={{ background: cssVar(meta.tintVar), color: cssVar(meta.textVar) }}
@@ -337,14 +358,91 @@ function SchedulePopover({
         ) : (
           <div className="schedule-popover__body schedule-popover__body--form">
             <label className="schedule-field">
-              <span className="schedule-field__label">{t("schedule.eventTitle")}</span>
+              {!creating && <span className="schedule-field__label">{t("schedule.eventTitle")}</span>}
               <TextFieldControl
                 variant="schedule"
                 value={draft.title}
                 onChange={(event) => onDraftChange({ ...draft, title: event.target.value })}
                 placeholder={t("schedule.eventTitle")}
+                aria-label={t("schedule.eventTitle")}
+                ref={titleRef}
               />
             </label>
+
+            {showDate ? (
+              <>
+                <div className="schedule-field schedule-field--inline">
+                  <span className="schedule-field__label">{t("schedule.allDay")}</span>
+                  <Toggle
+                    checked={draft.allDay}
+                    aria-label={t("schedule.allDay")}
+                    onCheckedChange={(next) => onDraftChange({
+                      ...draft,
+                      allDay: next,
+                      startTime: next ? "00:00" : draft.startTime,
+                      endTime: next ? "23:59" : draft.endTime,
+                    })}
+                  />
+                </div>
+
+                <div className="schedule-field-group">
+                  <label className="schedule-field">
+                    <span className="schedule-field__label">{t("schedule.eventStart")}</span>
+                    <TextFieldControl
+                      variant="schedule"
+                      type="date"
+                      value={draft.startDate}
+                      onChange={(event) => onDraftChange({ ...draft, startDate: event.target.value })}
+                    />
+                  </label>
+                  {!draft.allDay && (
+                    <label className="schedule-field">
+                      <span className="schedule-field__label">{t("schedule.time")}</span>
+                      <TextFieldControl
+                        variant="schedule"
+                        type="time"
+                        value={draft.startTime}
+                        onChange={(event) => onDraftChange({ ...draft, startTime: event.target.value })}
+                      />
+                    </label>
+                  )}
+                </div>
+
+                <div className="schedule-field-group">
+                  <label className="schedule-field">
+                    <span className="schedule-field__label">{t("schedule.eventEnd")}</span>
+                    <TextFieldControl
+                      variant="schedule"
+                      type="date"
+                      value={draft.endDate}
+                      onChange={(event) => onDraftChange({ ...draft, endDate: event.target.value })}
+                    />
+                  </label>
+                  {!draft.allDay && (
+                    <label className="schedule-field">
+                      <span className="schedule-field__label">{t("schedule.time")}</span>
+                      <TextFieldControl
+                        variant="schedule"
+                        type="time"
+                        value={draft.endTime}
+                        onChange={(event) => onDraftChange({ ...draft, endTime: event.target.value })}
+                      />
+                    </label>
+                  )}
+                </div>
+              </>
+            ) : (
+              <Button
+                variant="ghost"
+                size="sm"
+                fullWidth
+                layoutClassName="schedule-popover__line"
+                onClick={() => setDateOpen(true)}
+              >
+                <ClockIcon size={18} aria-hidden="true" />
+                <span className="schedule-popover__line-text">{formatDraftDateLine(draft, t, i18n.language)}</span>
+              </Button>
+            )}
 
             <label className="schedule-field">
               <span className="schedule-field__label">{t("schedule.category")}</span>
@@ -369,20 +467,6 @@ function SchedulePopover({
               </SelectControl>
             </label>
 
-            <div className="schedule-field schedule-field--inline">
-              <span className="schedule-field__label">{t("schedule.allDay")}</span>
-              <Toggle
-                checked={draft.allDay}
-                aria-label={t("schedule.allDay")}
-                onCheckedChange={(next) => onDraftChange({
-                  ...draft,
-                  allDay: next,
-                  startTime: next ? "00:00" : draft.startTime,
-                  endTime: next ? "23:59" : draft.endTime,
-                })}
-              />
-            </div>
-
             {joinMeetLink}
             {meetAvailable && !item?.meetUrl && (
               <div className="schedule-field schedule-field--inline">
@@ -406,54 +490,7 @@ function SchedulePopover({
               </div>
             )}
 
-            <div className="schedule-field-group">
-              <label className="schedule-field">
-                <span className="schedule-field__label">{t("schedule.eventStart")}</span>
-                <TextFieldControl
-                  variant="schedule"
-                  type="date"
-                  value={draft.startDate}
-                  onChange={(event) => onDraftChange({ ...draft, startDate: event.target.value })}
-                />
-              </label>
-              {!draft.allDay && (
-                <label className="schedule-field">
-                  <span className="schedule-field__label">{t("schedule.time")}</span>
-                  <TextFieldControl
-                    variant="schedule"
-                    type="time"
-                    value={draft.startTime}
-                    onChange={(event) => onDraftChange({ ...draft, startTime: event.target.value })}
-                  />
-                </label>
-              )}
-            </div>
-
-            <div className="schedule-field-group">
-              <label className="schedule-field">
-                <span className="schedule-field__label">{t("schedule.eventEnd")}</span>
-                <TextFieldControl
-                  variant="schedule"
-                  type="date"
-                  value={draft.endDate}
-                  onChange={(event) => onDraftChange({ ...draft, endDate: event.target.value })}
-                />
-              </label>
-              {!draft.allDay && (
-                <label className="schedule-field">
-                  <span className="schedule-field__label">{t("schedule.time")}</span>
-                  <TextFieldControl
-                    variant="schedule"
-                    type="time"
-                    value={draft.endTime}
-                    onChange={(event) => onDraftChange({ ...draft, endTime: event.target.value })}
-                  />
-                </label>
-              )}
-            </div>
-
-            {expanded && (
-              <>
+            {showLocation ? (
               <label className="schedule-field">
                 <span className="schedule-field__label">{t("schedule.eventLocation")}</span>
                 <TextFieldControl
@@ -461,9 +498,17 @@ function SchedulePopover({
                   value={draft.location}
                   onChange={(event) => onDraftChange({ ...draft, location: event.target.value })}
                   placeholder={t("schedule.locationPlaceholder")}
+                  autoFocus={locationOpen}
                 />
               </label>
+            ) : (
+              <Button variant="ghost" size="sm" fullWidth layoutClassName="schedule-popover__line" onClick={() => setLocationOpen(true)}>
+                <LocationIcon size={18} aria-hidden="true" />
+                <span className="schedule-popover__line-text">{t("schedule.locationPlaceholder")}</span>
+              </Button>
+            )}
 
+            {showDescription ? (
               <label className="schedule-field">
                 <span className="schedule-field__label">{t("schedule.eventDescription")}</span>
                 <TextareaControl
@@ -472,21 +517,19 @@ function SchedulePopover({
                   value={draft.description}
                   onChange={(event) => onDraftChange({ ...draft, description: event.target.value })}
                   placeholder={t("schedule.descriptionPlaceholder")}
+                  autoFocus={descriptionOpen}
                 />
               </label>
-              </>
+            ) : (
+              <Button variant="ghost" size="sm" fullWidth layoutClassName="schedule-popover__line" onClick={() => setDescriptionOpen(true)}>
+                <DescriptionIcon size={18} aria-hidden="true" />
+                <span className="schedule-popover__line-text">{t("schedule.descriptionPlaceholder")}</span>
+              </Button>
             )}
           </div>
         )}
 
         <div className="schedule-popover__footer">
-          {mode === "create" && !expanded && (
-            <span className="schedule-popover__more">
-              <Button variant="ghost" onClick={() => setExpanded(true)}>
-                {t("schedule.moreOptions")}
-              </Button>
-            </span>
-          )}
           {mode !== "detail" ? (
             <>
               <Button variant="primary" onClick={onSave} disabled={!draft.title.trim()}>
@@ -870,7 +913,7 @@ function buildSchedule(
 }
 
 export default function SchedulePage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { hasPermission, isTenantAdmin } = usePermissions();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -890,6 +933,8 @@ export default function SchedulePage() {
   // 月の「他 N 件」の日の一覧の小窓（予定の小窓 popover とは別の状態。同時には開かない）
   const [dayList, setDayList] = useState<{ date: Date; anchor: AnchorRect | null } | null>(null);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  // 表示切替の一覧（金型 ContextMenu・design §3.9・G11）。開いている間は文字の近道を効かせない
+  const [viewMenu, setViewMenu] = useState<{ x: number; y: number } | null>(null);
   // 押す・引っぱるで選んだ範囲の仮の箱（design §3.7）。DB にも Google にも送らない
   const [pendingRange, setPendingRange] = useState<{ start: Date; end: Date; allDay: boolean } | null>(null);
 
@@ -906,6 +951,12 @@ export default function SchedulePage() {
   );
   const shiftsQ = useApiQuery<ApiShift[]>(
     `/shifts?date_from=${formatDayKey(rangeStart)}&date_to=${formatDayKey(rangeEnd)}`,
+    { enabled: live },
+  );
+  // 便4（G7）: 日本の祝日。会社によらず同じ。取れなくても予定の画面は止めない（読み込み中・失敗の文には入れない）
+  const holidayLang = i18n.language?.startsWith("en") ? "en" : "ja";
+  const holidaysQ = useApiQuery<{ holidays: ApiHoliday[] }>(
+    `/calendar/holidays?start=${formatDayKey(rangeStart)}&end=${formatDayKey(rangeEnd)}&lang=${holidayLang}`,
     { enabled: live },
   );
   const invalidate = useInvalidateApi();
@@ -1196,6 +1247,7 @@ export default function SchedulePage() {
       color: getOwnerMeta(ownerByUserId, item.ownerUserId, currentOwnerUserId).color,
       editable: canMoveItem(item),
     })),
+    ...toHolidayEvents(holidaysQ.data?.holidays),
   ];
 
   // 動かす・長さを変える（design §3.3）
@@ -1233,12 +1285,13 @@ export default function SchedulePage() {
     if (event.isComposing || event.keyCode === 229) return;
     // 2. 近道の一覧が開いている間はページ側は何もしない（Esc は金型 Modal が閉じる）
     if (shortcutsOpen) return;
-    const windowOpen = popover !== null || dayList !== null;
+    const windowOpen = popover !== null || dayList !== null || viewMenu !== null;
     // 3. Esc は入力欄の中でも小窓を閉じる
     if (event.key === "Escape") {
       if (windowOpen) {
         setPopover(null);
         setDayList(null);
+        setViewMenu(null);
       }
       return;
     }
@@ -1329,19 +1382,36 @@ export default function SchedulePage() {
                 <SettingsIcon size={18} aria-hidden="true" />
               </Button>
             )}
-            <div className="schedule-view-switch" role="group" aria-label={t("schedule.viewSelect")}>
-              {(["day", "week", "month", "list"] as const).map((nextView) => (
-                <button
-                  key={nextView}
-                  type="button"
-                  className={`schedule-view-switch__button${view === nextView ? " schedule-view-switch__button--active" : ""}`}
-                  aria-pressed={view === nextView}
-                  onClick={() => setView(nextView)}
-                >
-                  {t(`schedule.${nextView}View`)}
-                </button>
-              ))}
-            </div>
+            <Button
+              variant="secondary"
+              size="md"
+              aria-haspopup="menu"
+              aria-expanded={viewMenu !== null}
+              onMouseDown={(event) => {
+                // 金型 ContextMenu は document の mousedown で「外を押した」と見て閉じる（ContextMenu.tsx:141）。
+                // 開いているときにこのボタンを押すと、閉じた直後の click で開き直してしまう（審査 1 回目 M1・Chromium で再現）。
+                // 開いているときだけ、ボタンの mousedown を document に届けない。閉じるのは下の onClick が行う
+                if (viewMenu !== null) event.stopPropagation();
+              }}
+              onClick={(event) => {
+                const rect = event.currentTarget.getBoundingClientRect();
+                setViewMenu((open) => (open ? null : { x: rect.left, y: rect.bottom }));
+              }}
+            >
+              {t(`schedule.${view}View`)}
+              <NAV_ICONS.chevronDown size={16} aria-hidden="true" />
+            </Button>
+            <ContextMenu
+              open={viewMenu !== null}
+              onClose={() => setViewMenu(null)}
+              anchor={viewMenu}
+              ariaLabel={t("schedule.viewSelect")}
+              items={(["day", "week", "month", "list"] as const).map((nextView) => ({
+                key: nextView,
+                label: t(`schedule.${nextView}View`),
+                onSelect: () => setView(nextView),
+              }))}
+            />
           </div>
         }
       >
@@ -1395,6 +1465,7 @@ export default function SchedulePage() {
                       dayCount={view === "day" ? 1 : 7}
                       events={calendarEvents}
                       weekStart={0}
+                      appearance="schedule"
                       timeStyle="meridiem"
                       eventLayout="stacked"
                       hourRange="full"
