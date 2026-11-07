@@ -44,7 +44,9 @@ export function ManualRecordSection({ leadId, currentPlatform }: Props) {
   // チャネルマスタを取得して手動チャネル判定
   useEffect(() => {
     api
-      .get<ChannelMaster[]>("/channel-masters")
+      .get<ChannelMaster[]>(
+        `/channel-masters?for=picker${currentPlatform ? `&keep=${encodeURIComponent(currentPlatform)}` : ""}`,
+      )
       .then((res) => {
         const all: ChannelMaster[] = Array.isArray(res) ? res : (res as { data?: ChannelMaster[] }).data ?? [];
         const manuals = all.filter((c) => c.connection_type === "manual");

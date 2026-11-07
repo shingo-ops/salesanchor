@@ -134,7 +134,6 @@ async def test_create_tenant_schema_seeds_phase_b(monkeypatch):
 
     monkeypatch.setattr(tenant_service, "_execute_statements_preserving_do_blocks", noop)
     monkeypatch.setattr(tenant_service, "seed_system_roles", AsyncMock())
-    monkeypatch.setattr(tenant_service, "seed_default_channel_masters", AsyncMock())
     monkeypatch.setattr(tenant_service, "_META_PAGE_ROUTING_TRIGGER_SQL", "SELECT 1")
     db.execute = AsyncMock()
     ddl_db.execute = AsyncMock()

@@ -22,6 +22,16 @@ _SCRIPTS = Path(__file__).resolve().parents[2] / "scripts" / "lead_regression"
 sys.path.insert(0, str(_SCRIPTS))
 import generate as gen  # noqa: E402
 
+# 名簿から読む「チャネル→項目」の対応表（試験の中の値。本番の名簿は読まない）
+CHANNEL_MESSENGER = "messenger"
+CHANNEL_INSTAGRAM = "instagram"
+CHANNEL_WHATSAPP = "whatsapp"
+CHANNEL_ITEMS = {
+    CHANNEL_MESSENGER: "baseline",
+    CHANNEL_INSTAGRAM: "channel_instagram",
+    CHANNEL_WHATSAPP: "channel_whatsapp",
+}
+
 T0 = dt.datetime(2026, 1, 1, 0, 0, tzinfo=dt.timezone.utc)
 IDX = {k: i + 1 for i, k in enumerate(lcf.ITEM_KEYS)}  # 行列の列（0 は定数）
 
@@ -31,7 +41,7 @@ def lead(i: int = 1, **kw) -> lcf.LeadRow:
         id=i,
         status=lcf.STATUS_WON,
         initiative=lcf.INITIATIVE_INBOUND,
-        channel_type=lcf.CHANNEL_MESSENGER,
+        channel_type=CHANNEL_MESSENGER,
         country=lcf.COUNTRY_US,
         temperature=lcf.TEMPERATURE_COLD,
         estimated_scale=lcf.SCALE_SMALL,
@@ -65,7 +75,7 @@ def basic_msgs(lead_id: int = 1, first_reply: float = 60, partner_gap: float = 6
     [(3600, 1.0), (3601, 0.0)],
 )
 def test_first_reply_boundary(first_reply, expect):
-    prep = lcf.prepare([lead()], basic_msgs(first_reply=first_reply))
+    prep = lcf.prepare([lead()], basic_msgs(first_reply=first_reply), CHANNEL_ITEMS)
     assert prep.x[0][IDX["first_reply_within_1h"]] == expect
 
 
@@ -74,7 +84,7 @@ def test_first_reply_boundary(first_reply, expect):
     [(21600, 1.0), (21601, 0.0)],
 )
 def test_partner_reply_boundary(gap, expect):
-    prep = lcf.prepare([lead()], basic_msgs(partner_gap=gap))
+    prep = lcf.prepare([lead()], basic_msgs(partner_gap=gap), CHANNEL_ITEMS)
     assert prep.x[0][IDX["partner_reply_within_6h"]] == expect
 
 
@@ -111,7 +121,7 @@ def test_outbound_first_lead_uses_first_outbound_after_first_inbound():
     ],
 )
 def test_exclusion_each_kind(key, lead_kw, msgs):
-    prep = lcf.prepare([lead(**lead_kw)], msgs if msgs is not None else basic_msgs())
+    prep = lcf.prepare([lead(**lead_kw)], msgs if msgs is not None else basic_msgs(), CHANNEL_ITEMS)
     assert prep.excluded[key] == 1
     assert sum(prep.excluded.values()) == 1
     assert prep.lead_ids == []
@@ -119,12 +129,12 @@ def test_exclusion_each_kind(key, lead_kw, msgs):
 
 def test_excluded_first_match_only():
     # 状態も国も対象外 → by_status だけに数える
-    prep = lcf.prepare([lead(status="lead", country="JP")], basic_msgs())
+    prep = lcf.prepare([lead(status="lead", country="JP")], basic_msgs(), CHANNEL_ITEMS)
     assert prep.excluded["by_status"] == 1 and prep.excluded["other_values"] == 0
 
 
 def test_wholesale_included_means_wholesale():
-    prep = lcf.prepare([lead(sales_form_values=["ec_site", lcf.SALES_FORM_WHOLESALE])], basic_msgs())
+    prep = lcf.prepare([lead(sales_form_values=["ec_site", lcf.SALES_FORM_WHOLESALE])], basic_msgs(), CHANNEL_ITEMS)
     assert prep.x[0][IDX["sales_form_wholesale"]] == 1.0
     assert prep.x[0][IDX["message_count"]] == 3.0
 
@@ -136,10 +146,24 @@ def _big_dataset_leads(seed: int = 1):
 
 
 def test_insufficient_when_few_leads():
-    res = lcf.analyze([lead()], basic_msgs())
+    res = lcf.analyze([lead()], basic_msgs(), CHANNEL_ITEMS)
     assert res.status == "insufficient"
     assert res.items == []
     assert res.included_count == 1
+
+
+@pytest.mark.parametrize(
+    "bad_items",
+    [
+        {},
+        {CHANNEL_MESSENGER: "baseline"},
+        {CHANNEL_MESSENGER: "baseline", CHANNEL_INSTAGRAM: "channel_instagram"},
+        {CHANNEL_MESSENGER: "baseline", CHANNEL_INSTAGRAM: "channel_instagram", CHANNEL_WHATSAPP: "other"},
+    ],
+)
+def test_analyze_rejects_channel_items_without_the_three_values(bad_items):
+    with pytest.raises(ValueError):
+        lcf.analyze([lead()], basic_msgs(), bad_items)
 
 
 def test_complete_separation_is_not_computable_not_exception():
@@ -149,7 +173,7 @@ def test_complete_separation_is_not_computable_not_exception():
         lcf.LeadRow(**{**lead_.__dict__, "status": lcf.STATUS_WON if lead_.competitor_check else lcf.STATUS_LOST})
         for lead_ in ds.leads
     ]
-    res = lcf.analyze(leads, ds.messages)
+    res = lcf.analyze(leads, ds.messages, CHANNEL_ITEMS)
     assert res.status == "not_computable"
     assert res.items == []
     items = lcf.item_results(res.fit)
@@ -160,7 +184,7 @@ def test_complete_separation_is_not_computable_not_exception():
 # ── 作り物のデータの計算 ──────────────────────────────────────
 def test_ok_returns_15_items_in_order():
     ds = _big_dataset_leads()
-    res = lcf.analyze(ds.leads, ds.messages)
+    res = lcf.analyze(ds.leads, ds.messages, CHANNEL_ITEMS)
     assert res.status == "ok"
     assert [it["key"] for it in res.items] == list(lcf.ITEM_KEYS)
     assert res.included_count == 470 and res.won_count == 150 and res.lost_count == 320
@@ -182,7 +206,7 @@ SM_SEED1 = {
 
 def _fit_seed1():
     ds = gen.generate(1, dt.date(2026, 11, 1))
-    res = lcf.analyze(ds.leads, ds.messages)
+    res = lcf.analyze(ds.leads, ds.messages, CHANNEL_ITEMS)
     assert res.fit is not None and res.fit.computable
     return res.prepared, res.fit
 
@@ -261,7 +285,7 @@ async def _load(db_session, ds: gen.Dataset, *, extra_deleted: bool = False):
     channel = {lead_.id: lead_.channel_type for lead_ in ds.leads}
     for m in ds.gen_messages:
         lead_id = m.lead_index + 1
-        if channel[lead_id] == lcf.CHANNEL_WHATSAPP:
+        if channel[lead_id] == CHANNEL_WHATSAPP:
             await db_session.execute(
                 text("INSERT INTO conversation_logs (lead_id, direction, content_text, occurred_at) VALUES (:l, :d, :b, :t)"),
                 dict(l=lead_id, d=m.direction, b=m.body, t=_fmt(m.ts)),
@@ -273,7 +297,7 @@ async def _load(db_session, ds: gen.Dataset, *, extra_deleted: bool = False):
             )
     if extra_deleted:
         # 消した行（deleted_at あり）は読まない: 読むと最初の返信が 0 秒になる行を 1 つ足す
-        meta_lead = next(lead_ for lead_ in ds.leads if lead_.channel_type != lcf.CHANNEL_WHATSAPP)
+        meta_lead = next(lead_ for lead_ in ds.leads if lead_.channel_type != CHANNEL_WHATSAPP)
         first = min(m.ts for m in ds.gen_messages if m.lead_index + 1 == meta_lead.id)
         await db_session.execute(
             text(
@@ -309,7 +333,7 @@ async def test_endpoint_equals_direct_function(client, db_session, msg_tables):
     res = await client.get(_URL)
     assert res.status_code == 200
     body = res.json()
-    direct = lcf.analyze(ds.leads, ds.messages)
+    direct = lcf.analyze(ds.leads, ds.messages, CHANNEL_ITEMS)
     assert direct.status == "ok"
     assert body["status"] == "ok"
     assert (body["included_count"], body["won_count"], body["lost_count"]) == (470, 150, 320)
