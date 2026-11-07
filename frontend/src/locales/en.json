@@ -3337,7 +3337,7 @@
     "monthView": "Month",
     "weekView": "Week",
     "listView": "Schedule",
-    "moreOptions": "More options",
+    "dateTimeLine": "{{date}} {{time}}",
     "addMeet": "Add Google Meet",
     "joinMeet": "Join with Google Meet",
     "meetFailed": "Couldn't add Google Meet",
