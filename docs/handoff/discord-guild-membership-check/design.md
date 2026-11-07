@@ -292,7 +292,7 @@ unregistered name=<名前> is_viewer_guild=<o|x>
 
 ### 14-4. 影響範囲（呼び出し元の全走査）
 
-- `discord_guild_membership_check.py` を呼ぶのは `scripts/ops/discord-guild-membership-check.sh` と新しい .sh だけ（どちらも PO の `!`）。CI・定期処理・backend からは呼ばれない（Opus が 2026-11-07 に worktree 170ff9612 で `.sh`・`.py`・`.yml`・`.yaml`・`.json`・`.toml` を grep した結果、呼び出しは `scripts/ops/discord-guild-membership-check.sh:11` の1か所だけ）
+- `scripts/ops/discord_guild_membership_check.py` を呼ぶのは `scripts/ops/discord-guild-membership-check.sh` と新しい .sh だけ（どちらも PO の `!`）。CI・定期処理・backend からは呼ばれない（Opus が 2026-11-07 に worktree 170ff9612 で拡張子 sh・py・yml・yaml・json・toml のファイルを grep した結果、呼び出しは `scripts/ops/discord-guild-membership-check.sh:11` の1か所だけ）
 - 既存の部品（`AsyncSessionLocal`・`discord_api_request`）は中身を変えない
 
 ### 14-5. リスクと対処
