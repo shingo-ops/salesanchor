@@ -36,6 +36,16 @@
 | KGI-5 | 各便の反映後、backend・worker・beat・discord-gateway のログで 42501 と `row-level security` と `invalid input syntax for type integer` が 0 件。その便で触る入口が本番で動く | 反映時刻以降の `docker logs` を数える。入口ごとの確かめは design §5 K5-2 | 未着手 | — |
 | KGI-6 | アプリの接続役で、許されない読み書きを DB が拒否する（8 表それぞれ）。便5 の CI 確かめの許可一覧から 8 表が消えて CI が緑 | CI の Backend Tests が緑で、PostgreSQL のログに 8 表それぞれ `violates row-level security policy` が 1 件以上。便5 の許可一覧の中身 | 未着手 | — |
 
+## 段階⑤の KGI（PO 承認済み）
+
+**状態: PO 承認済み（2026-11-07 起案、同日 PO チャット「1」。問い「この目標で承認する【おすすめ】：設計を書き、確かめてから、1〜2表ずつ作って本番に出すところまで進めます。」への答え）**。A 区分（`migrations/` を含む）のため PO 承認が必須ゲート。対象は運営の共用行に加えて会社の画面から会社の行も足せる public の 6 表: line_conditions, line_units, tcg_note_master, tcg_status_master, tcg_product_categories, payment_fee_settings と、別名の入口（ビュー）public.conditions・public.units（ADR-1069、設計 [../../handoff/s1-rls-stage5/design.md](../../handoff/s1-rls-stage5/design.md)）。方向は PO 2026-11-07「ｃ1」（6 表を許可一覧に載せ、次の段で RLS を付ける）。
+
+| ID | 目標（○×で判定） | 判定方法 | 現在値（2026-11-07 13:18 JST） | 判定 |
+|---|---|---|---|---|
+| KGI-7 | 6 表すべてが RLS 有効（ENABLE と FORCE）でポリシー 4 本。別名の入口 2 つが「読む人の権限で読む」設定（`security_invoker=true`）。反映の前後で 6 表の行数（計 171）が変わらない | reader 鍵の道で `pg_class.relrowsecurity / relforcerowsecurity`・`pg_policies` の件数・ビューの `reloptions`・表ごとの行数を反映の前後に読む | 6 表とも RLS なし・ポリシー 0 本、ビュー 2 つは設定なし（AUDIT sha=a26bad3add6c 前後の読取）。行数 line_conditions 28・line_units 10・payment_fee_settings 7・tcg_note_master 99・tcg_status_master 21・tcg_product_categories 6、すべて共用の行（会社の行 0。AUDIT sha=b376a44f1d7b） | ×（未着手） |
+| KGI-8 | 各便の反映後 24 時間、backend・worker・beat のログで 42501 と `row-level security` と `invalid input syntax` が 0 件。運営画面と会社画面の 6 つのマスタの保存が 200。解析の結果件数が反映前の同じ時間帯と比べて減っていない | 反映時刻以降の `docker logs` を数える。保存は便ごとに 1 回確かめる（design §5 K8-2）。解析の結果件数は reader 鍵の道で反映前後の同じ長さの時間帯を数える | 未着手（便ごとに反映前の基準値を取る） | — |
+| KGI-9 | アプリの接続役で、他社の文脈からの書込を DB が拒否する（6 表それぞれ・ビュー経由も含む）。全移行を流した後もビューの設定が残ることを CI が確かめる。RLS の無い表の許可一覧が 11 → 5 | CI の Backend Tests が緑で、PostgreSQL のログに 6 表それぞれ `violates row-level security policy` が 1 件以上。全件ドライランの後の確かめ（scripts/check_public_tenant_rls.py）が緑。許可一覧（backend/app/ops/tenant_rls_allowlist.py）の件数 | 試験 0 本・ビューの確かめなし・許可一覧 11 | — |
+
 ## 運用方針
 
 - 変更は一度に 1 段階。各段階で「適用 → 本番確認 → 次の段階」。
