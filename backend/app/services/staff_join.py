@@ -17,8 +17,9 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.discord_gateway import staff_join_texts as T
 from app.services.discord_blueprint import blueprint_path, load_blueprint
-from app.services.discord_rest import discord_api_request
+from app.services.discord_rest import DiscordAPIError, discord_api_request
 from app.services.viewer_invite import create_channel_invite
 
 logger = logging.getLogger(__name__)
@@ -124,3 +125,32 @@ async def create_reception_invite(db: AsyncSession, tenant_id: int) -> str | Non
     except Exception as exc:  # noqa: BLE001
         logger.warning("staff join invite: 受付の招待を作れず kind=%s", type(exc).__name__)
         return None
+
+
+async def ensure_reception_button(guild_id: str, token: str, tenant_id: int, request=None) -> dict:
+    """受付の部屋にボタン付きの投稿を1回だけ置く（設計 §4-5）。例外は投げない。
+
+    返り値: {"status": "posted", "message_id": id} | {"status": "exists"}
+            | {"status": "not_configured"} | {"status": "discord_error"}
+    """
+    if request is None:
+        request = discord_api_request
+    try:
+        channel_id = await find_blueprint_channel_id(guild_id, token, tenant_id, RECEPTION_CHANNEL_KEY, 0)
+        if channel_id is None:
+            return {"status": "not_configured"}
+        messages = await request(method="GET", path=f"/channels/{channel_id}/messages?limit=50", bot_token=token) or []
+        for msg in messages:
+            for comp_row in msg.get("components") or []:
+                for comp in comp_row.get("components") or []:
+                    if comp.get("custom_id") == T.OPEN_BUTTON_CUSTOM_ID:
+                        return {"status": "exists"}
+        sent = await request(
+            method="POST",
+            path=f"/channels/{channel_id}/messages",
+            bot_token=token,
+            json=T.reception_message_payload(),
+        )
+    except DiscordAPIError:
+        return {"status": "discord_error"}
+    return {"status": "posted", "message_id": (sent or {}).get("id")}

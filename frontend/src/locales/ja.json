@@ -3627,7 +3627,8 @@
       "create_channel": "チャンネルを作る",
       "update_channel": "チャンネルを直す",
       "update_overwrite": "見せ方を直す",
-      "link_notice": "知らせのつなぎを作る"
+      "link_notice": "知らせのつなぎを作る",
+      "post_button": "受付のボタンを置く"
     },
     "field": {
       "name": "名前",
@@ -3649,6 +3650,8 @@
       "ambiguous": "同じ名前の物が 2 つ以上あります",
       "depends_failed": "先に作る物が失敗したので実行しませんでした",
       "discord_error": "Discord が受け付けませんでした",
+      "exists": "ボタンは既に置いてあります",
+      "not_configured": "受付の部屋が見つかりません",
       "method_not_allowed": "この操作は実行しません",
       "name_in_blueprint": "設計図に同じ名前のロールがあります",
       "app_role_missing_on_discord": "つないでいたロールが Discord で消されています",
