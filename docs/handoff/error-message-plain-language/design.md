@@ -1,6 +1,6 @@
 # Phase 3 設計 — 失敗したときの文（便1: Discord 連携）＋アプリ全体の見張り
 
-- 状態: 設計案作成済み（設計審査前）。PO 承認済みは Discord の KGI のみ。アプリ全体の KGI（§2-2）と文の一覧（§4-3）は PO 確認待ち
+- 状態: 設計審査済み（2回目 APPROVE）。PO 承認済みは Discord の KGI のみ。アプリ全体の KGI（§2-2）と文の一覧（§4-3）は PO 確認待ち
 - 根拠: `recon.md`（Discord の事実・全体の件数）、`inventory.md`（全件一覧）、決まり本体 `docs/adr/ADR-1071-plain-language-error-messages.md`
 - 土台: origin/main `67d7bbf87`
 
@@ -96,12 +96,14 @@
 | backend/app/routers/discord_oauth.py:200-203 | `detail="一時的に Discord 連携を開始できません（Redis 接続失敗）"` | `detail={"reason": "redis_error"}` |
 | frontend/src/features/discord-connect/discordConnectError.ts（新規） | — | `getDiscordConnectErrorKey(reason: string \| null): string`。§4-2 のコード→文言キーの表。表に無ければ `discordConnect.error.unknown`。ADR-159 の discordSendError.ts と同じ書き方（定数の配列＋switch） |
 | frontend/src/pages/channels/ChannelsPage.tsx:135-137 | `t("channels.discordConnectError")` 固定 | `t(getDiscordConnectErrorKey(url.searchParams.get("reason")))` |
-| frontend/src/pages/channels/ChannelsPage.tsx:226 | `e instanceof ApiError ? e.message : …` | `ApiError` の `responseDetail.reason` を `getDiscordConnectErrorKey` に通す（reason が無ければ unknown） |
+| frontend/src/pages/channels/ChannelsPage.tsx:226 | `e instanceof ApiError ? e.message : …` | discordConnectError.ts に `getDiscordConnectErrorReason(e: unknown): string \| null` を置き（`e` が `ApiError` で `responseDetail` が `reason` 文字列を持つときだけ返す。それ以外は null）、その結果を `getDiscordConnectErrorKey` に通す。取り出しはこの1関数だけにする |
 | frontend/src/pages/channels/ChannelsPage.tsx:244 | 同上（切断） | `t("discordConnect.error.disconnectFailed")` |
 | frontend/src/pages/admin/DiscordOwnServerPanel.tsx:121-126 | guild_already_registered だけ専用、他は connectError | `t(getDiscordConnectErrorKey(params.get("reason")))` |
-| frontend/src/pages/admin/DiscordOwnServerPanel.tsx:146 | 開始の失敗で `discordOwnServer.requestFailed` | 226 と同じ（responseDetail.reason を表に通す） |
+| frontend/src/pages/admin/DiscordOwnServerPanel.tsx:144-145 | 開始の失敗で `discordOwnServer.requestFailed`（`catch {` で e を受けていない） | `catch (e)` にして 226 と同じ2関数を通す |
 | frontend/src/locales/ja.json・en.json | `channels.discordConnectError`（1529）、`discordOwnServer.connectError`（3574）、`discordOwnServer.guildAlreadyRegistered`（3575） | 新しい `discordConnect.error.*` 10 キー（§4-3 の下の一覧）。古い3キーは使う所が無くなるので消す（同じ意味の文を2か所に置かない） |
 | docs/handoff/discord-oauth-ownership-proof/design.md:45 | 「接続に失敗しました（理由: …）」 | 事実（recon §3-3）と、本設計で直したことを書く |
+
+- 開始の失敗の受け取りの事実: 両画面とも `api.post("/discord/oauth/start")`（ChannelsPage.tsx:194・DiscordOwnServerPanel.tsx:139）。POST は送り直しをしない（frontend/src/lib/api.ts:131-133）ので、503 も 403 と同じく api.ts:164-171 で `new ApiError(message, status, body.detail)` になり、`responseDetail` は `{"reason": ...}` そのもの。通信そのものの失敗・時間切れは ApiError でないので unknown の文になる
 
 触らない範囲:
 - 戻り口の判定の順番・保存の処理・監査記録（discord_oauth.py 220-334 の処理は変えない。コードの文字列も変えない）
@@ -121,7 +123,7 @@
 | 試験 | 中身 |
 |---|---|
 | frontend: discordConnectError.test.ts | 14 の理由（§4-3）すべてで期待の文言キーが返る。未知・null で unknown |
-| frontend: 戻り口のコードと表の突き合わせ | 試験が `backend/app/routers/discord_oauth.py` を文字列で読み、`reason=xxx` と `_ExchangeError("xxx")` のコードを全部取り出し、表に全部あることを確かめる（サーバーにコードを足して表を忘れると落ちる）。CI の frontend 試験は repo 全体を取り出している（.github/workflows/frontend-check.yml:15 checkout）が、frontend から ../backend を読めるかは審査で確かめる |
+| frontend: 戻り口のコードと表の突き合わせ | 試験が `readFileSync("../backend/app/routers/discord_oauth.py", "utf8")` で読み、次の3つの正規表現でコードを取り出す: `/reason=([a-z_]+)/g`（278 行の `reason={e.reason}` は `{` で始まるので拾わない）、`/_ExchangeError\("([a-z_]+)"\)/g`、`/"reason":\s*"([a-z_]+)"/g`（開始の3か所）。重複を除いた集合が 13 個（戻り口 12＋permission_denied）であることと、全部が表にあることを確かめる（数の確かめで正規表現の壊れも止める）。読めることの根拠: CI の frontend 試験（.github/workflows/e2e.yml の unit-run）は 95 行の `actions/checkout@v5` を with なしで使い repo 全体を取り出し、92 行で `working-directory: frontend`。同じ読み方の前例 frontend/src/features/tcg-product-import/TcgProductImportPanel.test.tsx:127 |
 | frontend: ChannelsPage・DiscordOwnServerPanel | `?discord_status=error&reason=invalid_state` で時間切れの文、`reason=guild_already_registered` で両画面が同じ文 |
 | backend: test_discord_oauth.py | 開始の 403・503 の detail が `{"reason": ...}` で、日本語を含まない |
 | i18n | discordConnectError.test.ts で、表が返し得る全キーが ja.json と en.json の両方にあることを確かめる（既存の i18n 検査 frontend/scripts/check-i18n-missing-keys.js:30 は t("…") に直書きされたキーしか見ないため。手本 src/components/CalendarView.test.tsx） |
@@ -147,7 +149,7 @@
 
 | 便 | 中身 | 状態 |
 |---|---|---|
-| 便1 | Discord 連携（本書 §4） | 設計案作成済み |
+| 便1 | Discord 連携（本書 §4） | 設計審査済み・文の一覧の PO 確認待ち |
 | 便0 | 見張り W1・W2（§5） | アプリ全体の KGI の承認待ち |
 | 便2 以降 | Meta・Google カレンダー・外部連携の戻り口、画面で e.message を出す箇所、サーバーの直書き（多い画面から） | 未着手 |
 
@@ -158,7 +160,7 @@
 
 ## 9. 未確認
 
-- frontend の試験から ../backend のファイルを読めるか（CI・手元とも）。読めない場合の代わり（backend 側の試験で frontend の表を読む等）は審査で決める
+- （確認済み・2回目の審査）frontend の試験から ../backend は読める。根拠は §4-6
 - en の文（ja の §4-3 の承認後に作る）
 
 ## 10. 設計審査の記録
@@ -167,4 +169,6 @@
 |---|---|---|---|---|
 | 1 | 2026-11-07 14:01 UTC | クラウドの Sonnet（読むだけ。対象 commit 7643967a8） | REVISE | (1) 関数で返す文言キーは既存の i18n 検査 check-i18n-missing-keys.js:30 に見えない → §4-6 の i18n 行を「試験で ja/en 両方のキーを確かめる」に直した (2) 前例 discordSendError.ts は detail.reason で受ける → 開始の detail を `{"reason": ...}` にそろえた（§4-4・§4-6） (3) K3 は保管庫（Redis）が止まっていると別の文になる・ログイン不要 → K3 に前提と外れたときの扱いを書いた (4) K1 の「11 コード」は grep で 12 → 直した |
 
-- §9 の未確認（frontend の試験から ../backend を読めるか）への答えは、実行記録の返事が途中で切れていて読めなかった。2 回目の審査で確かめる
+| 2 | 2026-11-07 14:07 UTC | クラウドの Sonnet（読むだけ。対象 commit 05fda8f27） | APPROVE（軽い直し付き） | (A) 1回目の4点はすべて直っている (B) ../backend は読める。根拠を frontend-check.yml から実際に試験を回す e2e.yml:92・95 に差し替え、§9 を確認済みにした (C1) 開始の失敗の `responseDetail` の形 → Opus が api.ts:131-133・164-171 を読み、POST は `body.detail` がそのまま入ると確かめ §4-4 に書いた。取り出しを1関数にまとめた (C2) 突き合わせの正規表現が曖昧 → §4-6 に3つの式と数の確かめを書いた (C3) 返事が途中で切れて読めなかった（実行記録の上限） |
+
+- 1回目の §9 の未確認（../backend を読めるか）は、2回目で確認済みになった
