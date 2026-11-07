@@ -12063,6 +12063,40 @@
         "title": "HTTPValidationError",
         "type": "object"
       },
+      "HolidayItem": {
+        "properties": {
+          "date": {
+            "title": "Date",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date",
+          "name"
+        ],
+        "title": "HolidayItem",
+        "type": "object"
+      },
+      "HolidayListResponse": {
+        "properties": {
+          "holidays": {
+            "items": {
+              "$ref": "#/components/schemas/HolidayItem"
+            },
+            "title": "Holidays",
+            "type": "array"
+          }
+        },
+        "required": [
+          "holidays"
+        ],
+        "title": "HolidayListResponse",
+        "type": "object"
+      },
       "ImportJobResponse": {
         "properties": {
           "created_at": {
@@ -44621,6 +44655,83 @@
           }
         ],
         "summary": "Update Event",
+        "tags": [
+          "calendar",
+          "calendar"
+        ]
+      }
+    },
+    "/api/v1/calendar/holidays": {
+      "get": {
+        "description": "日本の祝日を期間で返す。会社によらず同じ（ログインは要る）。",
+        "operationId": "list_holidays_api_v1_calendar_holidays_get",
+        "parameters": [
+          {
+            "description": "この日から（含む） 例: 2026-11-01",
+            "in": "query",
+            "name": "start",
+            "required": true,
+            "schema": {
+              "description": "この日から（含む） 例: 2026-11-01",
+              "format": "date",
+              "title": "Start",
+              "type": "string"
+            }
+          },
+          {
+            "description": "この日まで（含まない） 例: 2026-12-01",
+            "in": "query",
+            "name": "end",
+            "required": true,
+            "schema": {
+              "description": "この日まで（含まない） 例: 2026-12-01",
+              "format": "date",
+              "title": "End",
+              "type": "string"
+            }
+          },
+          {
+            "description": "祝日の名前の言語",
+            "in": "query",
+            "name": "lang",
+            "required": false,
+            "schema": {
+              "default": "ja",
+              "description": "祝日の名前の言語",
+              "pattern": "^(ja|en)$",
+              "title": "Lang",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HolidayListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Holidays",
         "tags": [
           "calendar",
           "calendar"

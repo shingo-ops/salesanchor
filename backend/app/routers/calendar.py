@@ -8,6 +8,7 @@ from __future__ import annotations
   POST   /calendar/events         — イベント作成（DB保存 → Google同期）
   PATCH  /calendar/events/{id}    — イベント更新
   DELETE /calendar/events/{id}    — イベント削除
+  GET    /calendar/holidays       — 日本の祝日（期間・言語）
   GET    /calendar/sync-mode      — 同期モード確認
   PATCH  /calendar/sync-mode      — 同期モード変更（admin のみ）
 
@@ -15,6 +16,7 @@ from __future__ import annotations
 """
 
 import logging
+from datetime import date
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -34,6 +36,7 @@ from app.auth.system_roles import is_tenant_admin
 from app.database import get_db
 from app.models import User
 from app.services import calendar_service as cal_svc
+from app.services import holiday_service
 
 logger = logging.getLogger(__name__)
 
@@ -154,6 +157,35 @@ async def list_events(
         user_id=user.id,
     )
     return {"events": events}
+
+
+class HolidayItem(BaseModel):
+    date: str
+    name: str
+
+
+class HolidayListResponse(BaseModel):
+    holidays: list[HolidayItem]
+
+
+# 長すぎる期間は断る（月の表示は最大 31 日。年をまたぐ見方も 400 日に収まる）
+_HOLIDAY_MAX_DAYS = 400
+
+
+@router.get("/calendar/holidays", tags=["calendar"], response_model=HolidayListResponse)
+async def list_holidays(
+    start: date = Query(..., description="この日から（含む） 例: 2026-11-01"),
+    end: date = Query(..., description="この日まで（含まない） 例: 2026-12-01"),
+    lang: str = Query("ja", pattern="^(ja|en)$", description="祝日の名前の言語"),
+    tenant_id: int = Depends(get_current_tenant),
+):
+    """日本の祝日を期間で返す。会社によらず同じ（ログインは要る）。"""
+    if end <= start or (end - start).days > _HOLIDAY_MAX_DAYS:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="invalid holiday range",
+        )
+    return {"holidays": holiday_service.list_japan_holidays(start, end, lang)}
 
 
 # ---------------------------------------------------------------------------

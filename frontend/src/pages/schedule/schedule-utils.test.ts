@@ -8,6 +8,7 @@ import {
   formatDraftDateLine,
   normalizeShift,
   toCalendarEnd,
+  toHolidayEvents,
   toRangeEnd,
   toRangeStart,
   type AnchorRect,
@@ -175,5 +176,31 @@ describe("list view range", () => {
   it("crosses a year boundary", () => {
     const anchor = new Date(2026, 11, 15);
     expect(toRangeEnd("list", anchor)).toEqual(new Date(2027, 0, 14));
+  });
+});
+
+describe("toHolidayEvents", () => {
+  it("U1: makes an all-day, immovable holiday event", () => {
+    expect(toHolidayEvents([{ date: "2026-11-03", name: "文化の日" }])).toEqual([
+      {
+        id: "holiday-2026-11-03",
+        title: "文化の日",
+        start: "2026-11-03",
+        end: "2026-11-04",
+        allDay: true,
+        tone: "holiday",
+        editable: false,
+      },
+    ]);
+  });
+
+  it("U2: month end rolls over to the next year", () => {
+    expect(toHolidayEvents([{ date: "2026-12-31", name: "x" }])[0].end).toBe("2027-01-01");
+  });
+
+  it("U3: drops malformed dates and returns [] for undefined / []", () => {
+    expect(toHolidayEvents([{ date: "2026/11/03", name: "x" }])).toEqual([]);
+    expect(toHolidayEvents(undefined)).toEqual([]);
+    expect(toHolidayEvents([])).toEqual([]);
   });
 });
