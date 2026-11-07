@@ -2,7 +2,7 @@
 
 - 調査の根拠: `docs/handoff/discord-guild-membership-check/recon.md`（以下 recon §n）
 - 関係する設計: `docs/handoff/discord-oauth-ownership-proof/design.md`（G3。U2 はその残り）
-- 状態: 設計案（審査前）
+- 状態: 設計案（審査1回目 REVISE を反映・2回目の審査待ち）
 
 ## 0. PO の言葉（原文）
 
@@ -40,11 +40,14 @@ backend の入れ物の中で `python -` として標準入力から流す。入
 
 - 先頭で `--self-test` を受けたら §4-1-4 の自己試験だけを行い、app を import せずに終わる（外のつなぎなしで試せるように）
 - それ以外は次の順:
+  0. 出力を絞る（審査 Q1・Q2）: app を import する**前**に `logging.disable(logging.CRITICAL)` を実行する（`discord_rest.py:77-80・:106-109・:121-124・:136-139` の警告・エラー記録は path に `after=<番号>` を含み、4xx では応答の本文も含むため。設定が無くても WARNING 以上は標準エラーに出る）。`from app.database import AsyncSessionLocal, engine` の直後に `engine.sync_engine.echo = False` を実行する（`database.py:20` は `ENVIRONMENT` が production 以外だと SQL 文を出す設定で、`docker-compose.yml:69` の既定は development。本番の値は未確認なので、値によらず止める）
   1. `os.environ.get("DISCORD_BOT_TOKEN")` が空なら `error=no_token` を出して終了コード 1
   2. DB: `from app.database import AsyncSessionLocal`（recon §5・SSOT）。セッション内で最初に `SET TRANSACTION READ ONLY` を実行し、続けて `SELECT tenant_id, purpose, guild_id FROM public.tenant_discord_config ORDER BY tenant_id, purpose` だけを流す。失敗時は `error=db_error` で終了コード 1（例外の本文は出さない）
   3. Discord: `from app.services.discord_rest import discord_api_request, DiscordAPIError`（recon §5・送り直しの SSOT）。`method="GET"`、`path="/users/@me/guilds?limit=200"`（2回目からは `&after=<前回の最後の id>`）、`expected_statuses=(200,)`。返りが 200 件未満になったら止める。上限 50 回（1万サーバー）で止まらなければ `error=too_many_pages` で終了コード 1。`DiscordAPIError` は `error=discord_error status=<status_code>` で終了コード 1
   4. 判定: §4-1-3 の純粋関数 `judge(rows, bot_ids)` に渡して出力する
-- 書き込みに当たる語を持たない: `POST`・`PUT`・`PATCH`・`DELETE`・`INSERT`・`UPDATE`・`commit` がファイルに 0 回（受入 A4 で機械で数える。`DELETE` は HTTP と SQL の両方の意味で 0）
+  5. 終わりに必ず `await engine.dispose()`（`try/finally`）
+- 一番外側（`asyncio.run(main())` を包む所）で `Exception` を捕まえ、`error=unexpected` だけを標準エラーに出して終了コード 1。traceback・例外の本文は出さない（審査 Q3）
+- 書き込みに当たる語を持たない: `POST`・`PUT`・`PATCH`・`DELETE`・`INSERT`・`UPDATE`・`commit` が単語としてファイルに 0 回（受入 A4 で `grep -w` で数える。`DELETE` は HTTP と SQL の両方の意味で 0）。注釈・文字列にもこれらの語を書かない
 
 #### 4-1-1. 出力の形（標準出力・これ以外は出さない）
 
@@ -61,7 +64,7 @@ unregistered_bot_guilds=<ボットは入っているが登録に無いサーバ�
 
 #### 4-1-2. 失敗の形（標準エラー・1行）
 
-`error=<no_token|db_error|discord_error status=NNN|too_many_pages>` だけ。
+`error=<no_token|db_error|discord_error status=NNN|too_many_pages|unexpected>` だけ。§4-2 で標準出力とまとめて run.txt に残し、A3 の検査に含める。
 
 #### 4-1-3. 純粋関数
 
@@ -79,7 +82,7 @@ def judge(rows: list[tuple[int, str, str]], bot_ids: set[str]) -> list[str]:
 - T1: 登録2行・ボット側に1行だけ一致 → 一致した行が `o`、もう1行が `x`、`unregistered_bot_guilds` が正しい
 - T2: 出力のどの行にも 17〜20 桁の数字が無い（`re.search(r"\d{17,20}", line)` が None）
 - T3: ページ分け: 200件・200件・3件を返す偽の取得関数で、取得が3回で止まり、2回目・3回目の path に前回最後の id が `after=` で入る（取得部分は `fetch_all(request)` として偽物を差し込める形にする）
-- T4: 登録0行 → `config_rows=0` と `unregistered_bot_guilds=<ボット数>` だけ
+- T4: 登録0行 → `bot_guild_count=<ボット数>`・`config_rows=0`・`unregistered_bot_guilds=<ボット数>` の3行だけ
 
 ### 4-2. `scripts/ops/discord-guild-membership-check.sh`（新規・PO が `!` で流す）
 
@@ -96,7 +99,7 @@ HOST="ubuntu@49.212.137.46"
 OUT_DIR="/tmp/CC報告ファイル/u2"
 mkdir -p "$OUT_DIR"
 ssh "${SSH_OPTS[@]}" "$HOST" 'docker exec -i -w /app astro-webapp-backend-1 python -' \
-  < "$HERE/discord_guild_membership_check.py" | tee "$OUT_DIR/run.txt"
+  < "$HERE/discord_guild_membership_check.py" 2>&1 | tee "$OUT_DIR/run.txt"
 ```
 
 - 入れ物名・作業場所は `.github/workflows/line-import-device.yml:69` と `backend/Dockerfile:4` に合わせる（recon §5）
@@ -145,11 +148,11 @@ ssh "${SSH_OPTS[@]}" "$HOST" 'docker exec -i -w /app astro-webapp-backend-1 pyth
 |---|---|---|
 | A1 | 会社1 の customer・own が両方 `o`（2026-11-07 に PO がボットを入れてつないだ行・対照） | 本番実行の出力 run.txt |
 | A2 | 会社4・会社6 の行がそれぞれ1行、`o` か `x` で出る（K1） | run.txt |
-| A3 | run.txt に 17〜20 桁の数字が 0 件、`token` の語が 0 件（K2） | `grep -c -E '[0-9]{17,20}' run.txt` → 0、`grep -c -i token run.txt` → 0 |
-| A4 | スクリプトに書き込みの語が 0 件（K3） | `grep -c -E 'POST\|PUT\|PATCH\|DELETE\|INSERT\|UPDATE\|commit' scripts/ops/discord_guild_membership_check.py` → 0 |
+| A3 | run.txt（標準出力と標準エラーの両方）に 17〜20 桁の数字が 0 件、`token` の語が 0 件、§4-1-1・§4-1-2 の形以外の行が 0 件（K2） | `grep -c -E '[0-9]{17,20}' run.txt` → 0、`grep -c -i token run.txt` → 0、`grep -c -v -E '^(bot_guild_count=[0-9]+\|config_rows=[0-9]+\|tenant=[0-9]+ purpose=(customer\|own) bot_in_guild=[ox]\|unregistered_bot_guilds=[0-9]+\|error=(no_token\|db_error\|discord_error status=[0-9]{3}\|too_many_pages\|unexpected))$' run.txt` → 0 |
+| A4 | スクリプトに書き込みの語が 0 件（K3） | `grep -c -w -E 'POST\|PUT\|PATCH\|DELETE\|INSERT\|UPDATE\|commit' scripts/ops/discord_guild_membership_check.py` → 0 |
 | A5 | 自己試験が通る | クラウドで `python3 -I scripts/ops/discord_guild_membership_check.py --self-test` → `self-test ok 4` |
-| A6 | 実行の前後で登録の行が同じ（K3） | reader で実行前後に `config.txt` と同じ問い合わせを流し、4行の `updated_at` が同じ |
-| A7 | `x` が出た会社の行を消していない（K4） | A6 と同じ |
+| A6 | 実行の前後で登録の行が同じ（K3） | reader で実行の前と後に同じ問い合わせ `SELECT tenant_id, purpose, length(guild_id), md5(guild_id), created_at, updated_at FROM ai_ro.public__tenant_discord_config ORDER BY tenant_id, purpose` を流し（番号そのものは出さない）、2つの出力を `diff` → 差分 0 行・行数 4 |
+| A7 | `x` が出た会社の行を消していない（K4） | A6 の後の出力に、`x` が出た会社の行が残っている（行数 4 のまま） |
 
 ## 11. 外部・過去事例の参照と我々への応用
 
@@ -166,4 +169,12 @@ ssh "${SSH_OPTS[@]}" "$HOST" 'docker exec -i -w /app astro-webapp-backend-1 pyth
 
 ## 13. 審査（Architect）
 
-（審査の後に記入）
+### 1回目（2026-11-07 05:13Z・クラウドの Opus・HEAD 145ebf451）: REVISE
+
+- (1) 引用の行: 合う（`database.py` の sessionmaker の終わりは :40）。(2) 書き込みの道: 無い。(4) `python -` と `-w /app`: 合う（`Dockerfile:4`・:24）
+- Q1（必須）`discord_rest.py` の警告記録が path の `after=<番号>` を出す → §4-1 の手順0 `logging.disable(logging.CRITICAL)`（import の前）
+- Q2（必須）`database.py:20` の echo の既定（ENVIRONMENT が production 以外で SQL 文を出す） → §4-1 の手順0 `engine.sync_engine.echo = False`。`database.py` と `docker-compose.yml:69` を Opus が手元で照合済み
+- Q3（必須）想定外の例外の traceback・標準エラーが検査から漏れる → 一番外側の `error=unexpected`、`engine.dispose()`、§4-2 を `2>&1 | tee`、A3 に「形以外の行 0 件」を追加
+- Q4（推奨）T4 に `bot_guild_count` の行を追加
+- Q5（推奨）A4 を `grep -w` にし、注釈・文字列にも書き込みの語を書かないと明記
+- Q6（推奨）design.md:151（A6）への指摘。実行記録の表示が途中で切れていて本文を読めなかった。A6 は「行数・作成日時・更新日時・番号の長さと要約値（md5）を前後で diff して差分0行」に強めた。2回目の審査で、Q6 の指摘が解けたかの確認を頼む
