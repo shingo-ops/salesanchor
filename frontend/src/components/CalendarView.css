@@ -176,3 +176,95 @@
   flex-direction: column;
   min-width: 0;
 }
+
+/* ---- 予定の画面の見た目（appearance="schedule"・時間割だけ・ADR-1065 What 7・design §3.8） ---- */
+.comp-calendar--schedule.comp-calendar--days {
+  --fc-today-bg-color: transparent;
+}
+
+.comp-calendar--schedule.comp-calendar--days .fc-col-header-cell {
+  font-weight: var(--font-weight-normal);
+}
+
+.comp-calendar--schedule.comp-calendar--days .comp-calendar__day-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2) 0;
+}
+
+.comp-calendar--schedule.comp-calendar--days .comp-calendar__dayname {
+  font-size: var(--font-2xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--schedule-hour-label);
+}
+
+.comp-calendar--schedule.comp-calendar--days .fc-day-today .comp-calendar__dayname {
+  color: var(--schedule-today);
+}
+
+.comp-calendar--schedule.comp-calendar--days .comp-calendar__daynum {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--schedule-mini-size);
+  height: var(--schedule-mini-size);
+  border-radius: var(--radius-full);
+  font-size: var(--schedule-day-num-size);
+  color: var(--text-primary);
+}
+
+.comp-calendar--schedule.comp-calendar--days .comp-calendar__daynum--today {
+  background: var(--schedule-today);
+  color: var(--on-solid);
+}
+
+.comp-calendar--schedule.comp-calendar--days .fc-timegrid-now-indicator-line {
+  border-top-width: var(--schedule-now-line-w);
+}
+
+.comp-calendar--schedule.comp-calendar--days .fc-timegrid-now-indicator-line::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: calc((var(--schedule-now-dot-size) + var(--schedule-now-line-w)) / -2);
+  width: var(--schedule-now-dot-size);
+  height: var(--schedule-now-dot-size);
+  border-radius: var(--radius-full);
+  background: var(--schedule-now-line);
+  transform: translateX(-50%);
+}
+
+.comp-calendar--schedule.comp-calendar--days .fc-timegrid-now-indicator-arrow {
+  display: none;
+}
+
+.comp-calendar--schedule.comp-calendar--days .fc-timegrid-col-events {
+  margin-right: var(--space-3);
+}
+
+.comp-calendar--schedule.comp-calendar--days .comp-calendar__event:not(.comp-calendar__event--line-dashed) {
+  --fc-event-border-color: var(--fc-event-bg-color);
+}
+
+.comp-calendar--schedule.comp-calendar--days .fc-timegrid-event {
+  font-size: var(--font-xs);
+  line-height: var(--line-height-tight);
+}
+
+.comp-calendar--schedule.comp-calendar--days .fc-timegrid-event .fc-event-main {
+  padding: var(--space-1) var(--space-2) 0;
+}
+
+.comp-calendar--schedule.comp-calendar--days .fc-timegrid-slot-label {
+  vertical-align: top;
+  font-size: var(--font-2xs);
+  line-height: var(--line-height-tight);
+}
+
+.comp-calendar--schedule.comp-calendar--days .fc-timegrid-slot-label-cushion {
+  display: inline-block;
+  font-weight: var(--font-weight-medium);
+  transform: translateY(-50%);
+}

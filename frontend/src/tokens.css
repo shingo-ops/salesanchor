@@ -422,6 +422,8 @@
   --schedule-gridline-w:      1px;      /* 時間割の罫線の太さ */
   --schedule-event-border-w:  2px;      /* 予定の枠の太さ（見積もり・重なり） */
   --schedule-event-estimate-style: dashed; /* 見積もりの枠の線の種類（実際は solid） */
+  --schedule-now-line-w: 2px;     /* 今の時刻の線の太さ（G16） */
+  --schedule-now-dot-size: 12px;  /* 今の時刻の丸の直径（G16） */
 
   /* ---- Schedule category colors (Google Calendar handoff) ---- */
   --cal-personal:        #1e3a8a;  --cal-personal-tint: #e9edf7;  --cal-personal-text: #1e3a8a;
