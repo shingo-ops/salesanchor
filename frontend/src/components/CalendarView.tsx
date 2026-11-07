@@ -18,7 +18,9 @@ import {
   computeHourRange,
   eventClassNames,
   formatMeridiem,
+  formatSlotLabel,
   formatTimeRange,
+  formatWeekdayShort,
   normalizeSelectedRange,
   pointRect,
   rectOf,
@@ -64,6 +66,7 @@ export function CalendarView({
   onEventResize,
   onMoreClick,
   ariaLabel,
+  appearance = 'plain',
   className,
 }: CalendarViewProps) {
   const { t, i18n } = useTranslation();
@@ -151,9 +154,12 @@ export function CalendarView({
     );
   };
 
+  const isSchedule = appearance === 'schedule';
+
   const wrapperClass = [
     'comp-calendar',
     `comp-calendar--${mode}`,
+    isSchedule ? 'comp-calendar--schedule' : null,
     fillHeight ? 'comp-calendar--fill' : null,
     className,
   ]
@@ -168,13 +174,34 @@ export function CalendarView({
     slotLabelFormat: SLOT_LABEL_FORMAT,
     slotMinTime: range.slotMinTime,
     slotMaxTime: range.slotMaxTime,
-    slotEventOverlap: false,
+    slotEventOverlap: isSchedule,
     allDaySlot: true,
     allDayContent: t('calendarView.allDay'),
     snapDuration: '00:15:00',
-    ...(timeStyle === 'meridiem'
-      ? { slotLabelContent: (arg: { date: Date }) => formatMeridiem(arg.date, t) }
-      : {}),
+    ...(isSchedule
+      ? {
+          slotLabelContent: (arg: { date: Date; text: string }) =>
+            formatSlotLabel(arg.date, arg.text, t, timeStyle),
+          dayHeaderContent: (arg: { date: Date; isToday: boolean }) => (
+            <span className="comp-calendar__day-head">
+              <span className="comp-calendar__dayname">
+                {formatWeekdayShort(arg.date, i18n.language ?? 'en')}
+              </span>
+              <span
+                className={
+                  arg.isToday
+                    ? 'comp-calendar__daynum comp-calendar__daynum--today'
+                    : 'comp-calendar__daynum'
+                }
+              >
+                {arg.date.getDate()}
+              </span>
+            </span>
+          ),
+        }
+      : timeStyle === 'meridiem'
+        ? { slotLabelContent: (arg: { date: Date }) => formatMeridiem(arg.date, t) }
+        : {}),
     ...(scrollToNow ? { scrollTime: initialScrollTime } : {}),
   };
   const monthProps = {

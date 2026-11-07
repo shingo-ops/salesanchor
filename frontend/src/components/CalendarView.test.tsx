@@ -8,7 +8,9 @@ import { CalendarView } from './CalendarView';
 import {
   computeHourRange,
   eventClassNames,
+  formatSlotLabel,
   formatTimeRange,
+  formatWeekdayShort,
   normalizeSelectedRange,
   scrollTimeForNow,
   toMeridiemHour,
@@ -477,5 +479,97 @@ describe('T10 new props passed to FullCalendar', () => {
     const plain = document.createElement('div');
     p.eventDidMount({ event: { extendedProps: { source: colored[1] } }, el: plain });
     expect(plain.style.getPropertyValue('--comp-calendar-owner-color')).toBe('');
+  });
+});
+
+describe('T11 appearance schedule', () => {
+  const events: CalendarViewEvent[] = [timed('e1', '2026-11-02T10:00:00', '2026-11-02T11:00:00')];
+
+  it('overlaps events in days mode', () => {
+    render(
+      <CalendarView mode="days" date="2026-11-02" events={events} appearance="schedule" ariaLabel="cal" />,
+    );
+    expect(fcProps().slotEventOverlap).toBe(true);
+  });
+
+  it('passes nothing to month mode', () => {
+    render(
+      <CalendarView mode="month" date="2026-11-02" events={events} appearance="schedule" ariaLabel="cal" />,
+    );
+    expect(fcProps().slotEventOverlap).toBeUndefined();
+    expect(fcProps().dayHeaderContent).toBeUndefined();
+  });
+
+  it('adds the wrapper class only for schedule', () => {
+    const { container, rerender } = render(
+      <CalendarView mode="days" date="2026-11-02" events={events} appearance="schedule" ariaLabel="cal" />,
+    );
+    expect(container.querySelector('.comp-calendar')?.classList.contains('comp-calendar--schedule')).toBe(true);
+    rerender(<CalendarView mode="days" date="2026-11-02" events={events} ariaLabel="cal" />);
+    expect(container.querySelector('.comp-calendar')?.classList.contains('comp-calendar--schedule')).toBe(false);
+  });
+
+  it('blanks the 0:00 label and formats the others', () => {
+    render(
+      <CalendarView
+        mode="days"
+        date="2026-11-02"
+        events={events}
+        appearance="schedule"
+        timeStyle="meridiem"
+        ariaLabel="cal"
+      />,
+    );
+    const label = fcProps().slotLabelContent;
+    expect(label({ date: new Date(2026, 10, 8, 0, 0), text: '00:00' })).toBe('');
+    expect(label({ date: new Date(2026, 10, 8, 9, 0), text: '09:00' })).toBe('calendarView.am');
+    cleanup();
+    render(
+      <CalendarView
+        mode="days"
+        date="2026-11-02"
+        events={events}
+        appearance="schedule"
+        timeStyle="h24"
+        ariaLabel="cal"
+      />,
+    );
+    expect(fcProps().slotLabelContent({ date: new Date(2026, 10, 8, 9, 0), text: '09:00' })).toBe('09:00');
+  });
+
+  it('renders the day header with a today marker', () => {
+    render(
+      <CalendarView mode="days" date="2026-11-02" events={events} appearance="schedule" ariaLabel="cal" />,
+    );
+    const head = fcProps().dayHeaderContent;
+    const today = render(head({ date: new Date(2026, 10, 8), isToday: true }));
+    expect(today.container.querySelectorAll('.comp-calendar__daynum--today')).toHaveLength(1);
+    expect(today.container.querySelector('.comp-calendar__daynum')?.textContent).toBe('8');
+    cleanup();
+    const other = render(head({ date: new Date(2026, 10, 8), isToday: false }));
+    expect(other.container.querySelectorAll('.comp-calendar__daynum--today')).toHaveLength(0);
+  });
+});
+
+describe('T12 formatWeekdayShort / formatSlotLabel', () => {
+  const messages = ja.calendarView as Record<string, string>;
+  const tJa = (key: string, opts?: Record<string, unknown>): string => {
+    const text = messages[key.replace('calendarView.', '')] ?? key;
+    return text.replace(/\{\{(\w+)\}\}/g, (_m, name: string) => String(opts?.[name] ?? ''));
+  };
+
+  it('formats the short weekday', () => {
+    expect(formatWeekdayShort(new Date(2026, 10, 8), 'ja')).toBe('日');
+    expect(formatWeekdayShort(new Date(2026, 10, 8), 'en')).toBe('Sun');
+  });
+
+  it('blanks 0:00 in both styles', () => {
+    expect(formatSlotLabel(new Date(2026, 10, 8, 0, 0), '00:00', tJa, 'meridiem')).toBe('');
+    expect(formatSlotLabel(new Date(2026, 10, 8, 0, 0), '00:00', tJa, 'h24')).toBe('');
+  });
+
+  it('formats other hours', () => {
+    expect(formatSlotLabel(new Date(2026, 10, 8, 9, 0), '09:00', tJa, 'meridiem')).toBe('午前9時');
+    expect(formatSlotLabel(new Date(2026, 10, 8, 9, 0), '09:00', tJa, 'h24')).toBe('09:00');
   });
 });
