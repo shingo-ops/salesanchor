@@ -46,6 +46,7 @@
 | 場所（origin/main 7947055fe） | 変更前 | 変更後 |
 |---|---|---|
 | `backend/app/routers/webhook.py:54` | `from app.services.conv_log_writer import write_conversation_log` | 消す（このファイルで使う所が無くなるため） |
+| `backend/app/routers/webhook.py:810-816` `_occurred = (...)` | Meta の時刻から作り、echo の枝（`:843`）と受信の写し（`:888`）だけで使う | 消す（下の2つを直すと使う所が無くなるため）。便1.5 で echo を meta に付け直すときは、便1.5 のカードで `m["timestamp"]` から作り直す |
 | `backend/app/routers/webhook.py:818-853` の echo の枝 `if m.get("is_echo"):` | リードを探し、無ければ `_create_outbound_lead_for_echo` で作り、`write_conversation_log(... direction="outbound" ...)`・commit・reset・`continue` | 枝の中身を「ログに1行出して `continue`」だけにする（`logging.info("[webhook] echo skipped (conversation unification bin1): sender=%s", m.get("sender_id"))`。このファイルに `logger` は無く、`:40` の `import logging` を使う。`logger` を新しく作らない）。リードを作らない・何も書かない。`_create_outbound_lead_for_echo` と `_find_lead_id_for_psid` の関数そのものは**消さない**（便1.5 で使う。他から呼ばれなくなっても残す） |
 | `backend/app/routers/webhook.py:876-897` 受信の写し | `try: await write_conversation_log(...)`・commit・reset、`except` で warning | ブロックごと消す。直前の meta_messages への書き込みと、その後の処理はそのまま |
 | `backend/app/discord_gateway/dm_writer.py:38` | `from app.services.conv_log_writer import write_conversation_log` | 消す |
@@ -220,6 +221,8 @@ git grep -n 'is_manual IS NOT TRUE' HEAD -- backend/app
 
 `docs/handoff/conversation-unification/data-store/` に一式がある（Opus が用意。担当は触らない）。名簿 id 10・11・12 の会話の置き場を meta_messages にする。§5 の成約分析は値の前後で同じ結果になる形にしてあるので、反映と値の変更の順番は結果に効かない。
 
+会社が足した行（tenant_id あり）は数えず、変えない。理由: 便1 の後は手の記録の書き込みも読み込みも置き場の値を見ずに meta_messages を使い（§3・§5）、成約分析が見るのは共用行だけ（`backend/app/services/channel_masters.py:164-174` `platforms_by_store` は `tenant_id IS NULL AND conversion_item IS NOT NULL AND is_active = true`）。2026-11-08 の本番は共用の6行だけで、会社の行は0（`/tmp/CC報告ファイル/conv/r5-cm.txt`）。反映までに会社の行が増えたら、precheck の一覧に出る。その行は便3（古い表を消す）の前に PO に扱いを聞く。
+
 ## 12. 想定される分かれ道（こうなったらこうする）
 
 | 起きたこと | どうする |
@@ -260,7 +263,7 @@ git grep -n 'is_manual IS NOT TRUE' HEAD -- backend/app
   - 反映の**前**に5つ×5社を流し、全部合格（各ファイルの冒頭の「合格」の条件）であることを確かめて基準にする。1つでも不合格なら反映しない。2026-11-08 に Opus が1回目を流し、25件とも差 0（`/tmp/CC報告ファイル/conv/k5/before/`・まとめ `/tmp/CC報告ファイル/conv/k5-before-summary.txt`）。反映の直前にもう1回流す
   - 反映の**後**（PR の反映の後と、§11 の名簿の値を流した後の2回）に同じ文を流す。反映の後に手で記録した行は meta にしか無いので差に出る。差が出たら、その会社・リードの meta の行のうち created_at が反映時刻より後の行を数え、差がその行だけで説明できるときだけ合格とする。説明できない差が1つでもあれば止めて PO へ
   - 以下は5つの文が何を比べるかの説明（文が正）
-  - 成約分析の入力: 会社ごとに、成約・失注のリードの会話の (lead_id, direction, 時刻) の集まり。今の形 = meta（instagram・messenger のリード、created_at）＋ conversation_logs（whatsapp のリード、occurred_at）。新しい形 = meta だけ（3つの窓口のリード、created_at）。2026-11-07 23:50 JST に Opus が下見: 5社とも差 0（001 社 1739 行。`/tmp/CC報告ファイル/conv/card6/q15.txt`）、同じ時刻で向きの違う行の組 0（`q16.txt`。並べ替えで結果が変わらない）
+  - 成約分析の入力: 会社ごとに、成約・失注のリードの会話の (lead_id, direction, 時刻) の集まり。比べるのは whatsapp のリードだけ。理由: 今の形で conversation_logs から読む窓口は `platforms_by_store(db, "conversation_logs")`（`channel_masters.py:164-174`。共用行・conversion_item あり・有効）で、2026-11-08 の本番では whatsapp だけ（電話 id10・対面 id11 は conversion_item が空。`/tmp/CC報告ファイル/conv/r5-cm.txt`）。今の形 = meta（instagram・messenger のリード、created_at）＋ conversation_logs（whatsapp のリード、occurred_at）。新しい形 = meta だけ（3つの窓口のリード、created_at）。2026-11-07 23:50 JST に Opus が下見: 5社とも差 0（001 社 1739 行。`/tmp/CC報告ファイル/conv/card6/q15.txt`）、同じ時刻で向きの違う行の組 0（`q16.txt`。並べ替えで結果が変わらない）
   - 週次の助言: 会社ごとの最終会話日。今の形 = conversation_logs の MAX(occurred_at)（company_id あり）。新しい形 = meta の MAX(COALESCE(occurred_at, created_at))（company_id あり・消した印なし）
   - 会社詳細の会話タブ: 会社ごとの件数と最新時刻（今の形 = conversation_logs、新しい形 = meta）
   - v_company_stats: 5社の全行の conversation_count・last_conversation_at

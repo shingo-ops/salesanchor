@@ -1,4 +1,5 @@
 -- K5-1 成約分析の入力（WhatsApp のリードの会話）。今の形 = conversation_logs（occurred_at）、新しい形 = meta_messages（created_at）。
+-- 比べるのは whatsapp のリードだけ: 今の形で conversation_logs から読む窓口は platforms_by_store（channel_masters.py:164-174、共用行・conversion_item あり・有効）で、2026-11-08 の本番では whatsapp だけ（phone・in_person は conversion_item が空）。
 -- Instagram・Facebook のリードは前後とも meta_messages の同じ問いなので比べない。読み取り専用（ai_ro）。NNN を会社の3桁に替えて1社ずつ流す。
 -- 合格: old_minus_new = 0 かつ new_minus_old = 0 かつ tie_groups_mixed_direction = 0。反映の前と後の両方で流す。
 SELECT 'NNN' AS t,
