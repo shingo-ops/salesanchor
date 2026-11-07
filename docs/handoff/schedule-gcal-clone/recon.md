@@ -95,16 +95,16 @@ PO の依頼（原文）:
 
 ### 7.2 コード（origin/main 9cf750f29）
 
-- 金型を使う画面は予定の画面 1 か所だけ: `frontend/src/pages/schedule/SchedulePageImpl.tsx:1392-1421`（`timeStyle="meridiem"`・`eventLayout="stacked"`・`hourRange="full"`）。ほかは試験の差し替えだけ（`SchedulePageImpl.test.tsx:15`・`SchedulePageCache.test.tsx:24`）。
+- 金型を使う画面は予定の画面 1 か所だけ: `frontend/src/pages/schedule/SchedulePageImpl.tsx:1392-1421`（`timeStyle="meridiem"`・`eventLayout="stacked"`・`hourRange="full"`）。ほかは試験の差し替えだけ（`frontend/src/pages/schedule/SchedulePageImpl.test.tsx:15`・`frontend/src/pages/schedule/SchedulePageCache.test.tsx:24`）。
 - 重なり: `frontend/src/components/CalendarView.tsx:171` `slotEventOverlap: false`。試験 `frontend/src/components/CalendarView.test.tsx:125` が `false` を固定。
-- 日付の帯: `dayHeaderContent` を渡していない（`CalendarView.tsx:204-245`）。日本語の既定の形「11/1(日)」が出る。
-- 時刻の文字: `CalendarView.tsx:175-177` で `formatMeridiem`。午前 0 時も文字を出す。
+- 日付の帯: `dayHeaderContent` を渡していない（`frontend/src/components/CalendarView.tsx:204-245`）。日本語の既定の形「11/1(日)」が出る。
+- 時刻の文字: `frontend/src/components/CalendarView.tsx:175-177` で `formatMeridiem`。午前 0 時も文字を出す。
 - 見た目は `frontend/src/components/CalendarView.css` だけ（178 行・var() のみ）。今日の列 `:37` `--fc-today-bg-color: var(--schedule-slot-hover)`・今の線 `:38`・予定の枠 `:98-102`（`border-width: var(--schedule-gridline-w)`）・担当者の色 `:146-150`（地と枠が同じ色）・見積もり `:158-162`（地は面の色・点線）・重なりの赤枠 `:165-168`。
 - 既にあるトークン（`frontend/src/tokens.css`）: `:398` `--schedule-day-num-size: 1.625rem`（26px・曜日の帯の日付）・`:396` `--schedule-mini-size: 46px`・`:399` `--schedule-today: var(--accent-bright)`・`:401` `--schedule-now-line`・`:417` `--schedule-hour-label`・`:13` `--font-2xs`（11.2px）・`:14` `--font-xs`（12px）・`:29-30` `--font-weight-normal`/`medium`・`:35` `--line-height-tight: 1.25`・`:75-76` `--space-2`/`--space-3`・`:102` `--radius-full`・`:544` `--on-solid`。今の線の太さと丸の大きさのトークンは無い。
 
-### 7.3 FullCalendar 6.1.22 の中身（unpkg の `@fullcalendar/timegrid@6.1.22/internal.js` を取り寄せて読んだ。Context7 は `Monthly quota exceeded` で使えなかった）
+### 7.3 FullCalendar 6.1.22 の中身（unpkg の @fullcalendar/timegrid@6.1.22/internal.js を取り寄せて読んだ。Context7 は `Monthly quota exceeded` で使えなかった）
 
-- `computeSegHStyle`（`internal.js:802-829`）: `slotEventOverlap` が true のとき、予定の幅を 2 倍まで広げる（`farCoord = Math.min(1, nearCoord + (farCoord - nearCoord) * 2)`）。`zIndex = stackDepth + 1`。右に 20px 空ける枝（`:826` `!segHCoords.stackForward` のとき `marginRight = 10 * 2`）は通らない。`webToRects`（`:616-632`）が後ろに何も無い予定にも `rect.stackForward = processNodes(...) + 1`（`:622`）で 1 以上を入れるため（4 回目の審査で判明・Opus が scratchpad の 6.1.22 の写しで同じ行を確認）。→ 2 つが重なると、先の予定は列の幅のまま縮まず、後の予定が列の半分から右端までを上に重ねて覆う。
+- `computeSegHStyle`（internal.js:802-829）: `slotEventOverlap` が true のとき、予定の幅を 2 倍まで広げる（`farCoord = Math.min(1, nearCoord + (farCoord - nearCoord) * 2)`）。`zIndex = stackDepth + 1`。右に 20px 空ける枝（`:826` `!segHCoords.stackForward` のとき `marginRight = 10 * 2`）は通らない。`webToRects`（`:616-632`）が後ろに何も無い予定にも `rect.stackForward = processNodes(...) + 1`（`:622`）で 1 以上を入れるため（4 回目の審査で判明・Opus が scratchpad の 6.1.22 の写しで同じ行を確認）。→ 2 つが重なると、先の予定は列の幅のまま縮まず、後の予定が列の半分から右端までを上に重ねて覆う。
 - `isInset = rect.stackForward > 0`（`:762`）は上の理由で全部の予定が真になり、全部に `fc-timegrid-event-harness-inset` が付く。標準の css が `box-shadow: 0 0 0 1px var(--fc-page-bg-color)`（面の色の縁）を付ける。
 - 標準の css（`:1149`）: `.fc-timegrid-col-events { margin: 0 2.5% 0 2px }`・`.fc-timegrid-event .fc-event-main { padding: 1px 1px 0 }`・`.fc-timegrid-now-indicator-line { border-width: 1px 0 0; left:0; right:0 }`・`.fc-timegrid-now-indicator-arrow`（時刻の欄の三角）・`.fc-timegrid-now-indicator-container { overflow: hidden }`・`.fc-timegrid-slot-label { vertical-align: middle }`・`.fc-timegrid-slot-label-cushion { padding: 0 4px }`。
 - 公式資料 v6（legacy.fullcalendar.io/v6）: `slotEventOverlap` は既定 true・「At most half of each event will be obscured」。`dayHeaderContent` の引数に `date`・`text`・`isToday`。`nowIndicatorClassNames`・`nowIndicatorContent` の引数に `isAxis`・`date`。`slotLabelContent` の引数に `date`・`text`。

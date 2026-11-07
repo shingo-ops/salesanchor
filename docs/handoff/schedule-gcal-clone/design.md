@@ -59,13 +59,13 @@ G14 を外す理由: Google の ToDo を読むには、今の接続（予定の�
 
 | 足す口 | 中身 | 受ける成功条件 |
 |---|---|---|
-| `onSelectRange(start, end, allDay, anchor)` | `selectable` を口があるときだけ有効。押す・引っぱるで範囲を返す。刻みは 15 分（`snapDuration: "00:15"`。今の `slotDuration` 1 時間 `frontend/src/components/CalendarView.tsx:117` のままだと 1 時間刻みになる・timegrid `internal.js:1017`）。中身の決まりは下の「選んだ範囲の決まり」 | G1・G2・G8 |
+| `onSelectRange(start, end, allDay, anchor)` | `selectable` を口があるときだけ有効。押す・引っぱるで範囲を返す。刻みは 15 分（`snapDuration: "00:15"`。今の `slotDuration` 1 時間 `frontend/src/components/CalendarView.tsx:117` のままだと 1 時間刻みになる・timegrid internal.js:1017）。中身の決まりは下の「選んだ範囲の決まり」 | G1・G2・G8 |
 | `onEventMove` / `onEventResize` | `editable` を口があるときだけ有効。予定ごとの `editable` で動かせない予定を止める（FullCalendar の予定ごとの上書き。recon §5） | G8・G9 |
 | 予定ごとの色 `color` | 担当者の色（DB が正本・画面は受けた値を使うだけ）。無いときは今の `tone` | G4 |
 | 目盛りの形 | 「午前9時」の形（言語は画面の言語に合わせる。日本語・英語の 2 つを `t()` 側で持つ） | G5 |
 | 1 時間の高さ | 新しいトークンは作らない。金型は既に `--schedule-row-height` を使う（`frontend/src/components/CalendarView.css:48`）。この値を G6 の測定で決め直す（1 か所）。ADR-1065 What 5 が「48px」と値を書いているので、改訂で値を書かない形にする（下の改訂の範囲） | G6 |
 | 押した場所の四角 | 今の `onEventClick(id)`・`onDayClick(date)` は場所を返さない（`frontend/src/components/CalendarView.tsx` の `eventClick`・`navLinkDayClick`）。今の詳しくの小窓と「他 N 件」の小窓は押した所の四角を基準に出る（`frontend/src/pages/schedule/SchedulePageImpl.tsx:803,905`）。`onEventClick(id, rect)` に変え、rect は FullCalendar の `EventClickArg.el.getBoundingClientRect()`（6.1.22 の型 `EventClickArg { el; event; jsEvent; view }`）。呼ぶ側の今の使い方（id だけ）は引数が増えるだけで壊れない | G8・C6 |
-| 「他 N 件」を押したとき | 今の金型は表示を切り替えるだけ（`moreLinkClick` が `arg.view.type` を返す）。口 `onMoreClick(date, rect)` を足し、渡されたときは FullCalendar の小窓を出さず呼ぶ側に任せる（`MoreLinkHandler` は `void` を返してよい・6.1.22 の型）。rect は `MoreLinkArg.jsEvent.target` の要素の四角。口があるときも**戻り値は `arg.view.type`（今の表示）を返す**（`void` や `"popover"` を返すと FullCalendar が自分の小窓を開く・core `internal-common.js:7462`・審査 2 回目 Q1）。口が無いときは今のまま | C6 |
+| 「他 N 件」を押したとき | 今の金型は表示を切り替えるだけ（`moreLinkClick` が `arg.view.type` を返す）。口 `onMoreClick(date, rect)` を足し、渡されたときは FullCalendar の小窓を出さず呼ぶ側に任せる（`MoreLinkHandler` は `void` を返してよい・6.1.22 の型）。rect は `MoreLinkArg.jsEvent.target` の要素の四角。口があるときも**戻り値は `arg.view.type`（今の表示）を返す**（`void` や `"popover"` を返すと FullCalendar が自分の小窓を開く・core internal-common.js:7462・審査 2 回目 Q1）。口が無いときは今のまま | C6 |
 | 引っぱる部品 | `interactionPlugin`（`@fullcalendar/interaction` 6.1.22・`frontend/package.json:75` に既にある）を金型の `PLUGINS` に足す。選択・動かす・長さを変えるはこれが無いと動かない（recon §5） | G1・G2・G8 |
 | 見える時間の幅 | 金型は予定から見える時間を絞る（`frontend/src/components/CalendarView.tsx:42-43,60` `startHour=8`・`endHour=20`・`computeHourRange`）。Google は 0 時〜24 時を出して今の時刻へ送る。口で「0〜24 時を出す」を選べるようにする | G13 |
 | 開いたときの位置 `scrollTime` | 今の時刻の 1 時間前 | G13 |
@@ -119,13 +119,13 @@ ADR-1065 の改訂（便1 の PR に入れる）。直すのは 3 か所:
 
 ### 3.8 見た目 5 か所（G15〜G19・便6）
 
-方針: 金型 `CalendarView` に口を 1 つ足し（`appearance`）、予定の画面だけがそれを使う。既定は今の見た目のまま（見本帳・他の画面が増えても変わらない）。見た目はすべて `CalendarView.css` の `.comp-calendar--schedule.comp-calendar--days` の下にトークンだけで書く（月の表示の今日の升目・曜日の行に効かせないため。包みの class `comp-calendar--${mode}` は `CalendarView.tsx:156`）。下の表の選び方はすべてこの 2 つの class の下。画面側（`SchedulePageImpl.tsx`・`schedule.css`）に見た目を書かない。
+方針: 金型 `CalendarView` に口を 1 つ足し（`appearance`）、予定の画面だけがそれを使う。既定は今の見た目のまま（見本帳・他の画面が増えても変わらない）。見た目はすべて `CalendarView.css` の `.comp-calendar--schedule.comp-calendar--days` の下にトークンだけで書く（月の表示の今日の升目・曜日の行に効かせないため。包みの class `comp-calendar--${mode}` は `frontend/src/components/CalendarView.tsx:156`）。下の表の選び方はすべてこの 2 つの class の下。画面側（`frontend/src/pages/schedule/SchedulePageImpl.tsx`・`schedule.css`）に見た目を書かない。
 
 口: `appearance?: 'plain' | 'schedule'`（既定 `'plain'`）。`'schedule'` のとき包みの class に `comp-calendar--schedule` を足し、`mode === 'days'` のときだけ次の 3 つを FullCalendar に渡す。月の表示は変えない。
 
 | 渡すもの | 中身 | 成功条件 |
 |---|---|---|
-| `slotEventOverlap: true` | 今の `false`（`CalendarView.tsx:171`）を `'schedule'` のときだけ true。重なりの形は recon §7.3 の `computeSegHStyle` | G19 |
+| `slotEventOverlap: true` | 今の `false`（`frontend/src/components/CalendarView.tsx:171`）を `'schedule'` のときだけ true。重なりの形は recon §7.3 の `computeSegHStyle` | G19 |
 | `dayHeaderContent` | 曜日と日付の数字の 2 つの `span`。曜日は新しい関数 `formatWeekdayShort(date, language)`（`calendarView.utils.ts` に足す・`Intl.DateTimeFormat(language, { weekday: 'short' })`）。数字は `date.getDate()`。今日（引数の `isToday`）は数字に `comp-calendar__daynum--today` | G15 |
 | `slotLabelContent` | 今の時刻の文字の作り方（`timeStyle` が `'meridiem'` なら `formatMeridiem`・`:176`、`'h24'` なら今の 24 時間の形）を、時が 0 で分が 0 のときだけ空の文字にする関数で包む（新しい関数 `formatSlotLabel(date, text, t, timeStyle)`・`calendarView.utils.ts`。`h24` は FullCalendar の引数 `text` をそのまま返す・作り方は card-bin6.md §2-2） | G18 |
 
@@ -143,9 +143,9 @@ css（`CalendarView.css` の末尾に足す。値は var() と calc() と % だ�
 
 新しいトークン（`frontend/src/tokens.css` の `--schedule-*` の並び・`:422-424` の後）: `--schedule-now-line-w: 2px;`（今の時刻の線の太さ）・`--schedule-now-dot-size: 12px;`（今の時刻の丸）。色ではないので暗い表示の追加は要らない（`:640` 以降の暗い表示は色だけを持つ）。
 
-予定の画面: `SchedulePageImpl.tsx:1392` の `<CalendarView>` に `appearance="schedule"` を 1 行足すだけ。
+予定の画面: `frontend/src/pages/schedule/SchedulePageImpl.tsx:1392` の `<CalendarView>` に `appearance="schedule"` を 1 行足すだけ。
 
-組み合わせの決まり（5 回目の審査 R3）: G18 の「線の高さに合わせる」は `hourRange="full"`（予定の画面の今の値・`SchedulePageImpl.tsx` の `<CalendarView>` の `hourRange="full"`）で守る。`hourRange="events"` と組むと一番上の時刻の文字が半分切れる。これは今使う画面が無いので直さず、見本帳の例は `hourRange="full"` で作る。`timeStyle` は `'meridiem'`・`'h24'` のどちらでも 0 時だけ空にする。
+組み合わせの決まり（5 回目の審査 R3）: G18 の「線の高さに合わせる」は `hourRange="full"`（予定の画面の今の値・`frontend/src/pages/schedule/SchedulePageImpl.tsx` の `<CalendarView>` の `hourRange="full"`）で守る。`hourRange="events"` と組むと一番上の時刻の文字が半分切れる。これは今使う画面が無いので直さず、見本帳の例は `hourRange="full"` で作る。`timeStyle` は `'meridiem'`・`'h24'` のどちらでも 0 時だけ空にする。
 
 ADR-1065 の改訂（便6 の PR に入れる。ADR-1065 に口の一覧は無いので、What に 1 行足す・4 回目の審査③）:
 - What 7 を足す:「見た目の型 `appearance` を口で選べる。`'plain'`（標準）は今の形。`'schedule'`（Sales Anchor の予定の画面）は時間割のときだけ、日付の帯を 2 段・今の線を丸つき・予定の枠を地と同じ色・時刻の文字を線の高さに合わせ、重なりは後の予定を先の予定の上に重ねて置く（PO 2026-11-07 G15〜G19 承認）」。
@@ -155,7 +155,7 @@ ADR-1065 の改訂（便6 の PR に入れる。ADR-1065 に口の一覧は無�
 
 PR 本文: tokens.css にトークンを 2 つ足すので、`frontend/scripts/check-new-tokens.js` が求める「デザイントークン変更時」のチェック項目を PR 本文に入れる（4 回目の審査・観点 5）。
 
-試験（`CalendarView.test.tsx`）:
+試験（`frontend/src/components/CalendarView.test.tsx`）:
 - `:125` の `slotEventOverlap` を「既定は false・`appearance="schedule"` かつ days では true・month では渡さない」に分ける。
 - `formatWeekdayShort`（ja で 2026-11-08 が「日」・en で「Sun」）と `formatSlotLabel`（0 時は空・9 時は「午前9時」）。
 - `appearance="schedule"` で `dayHeaderContent` が今日だけ `--today` を付ける。
@@ -163,7 +163,7 @@ PR 本文: tokens.css にトークンを 2 つ足すので、`frontend/scripts/c
 - `appearance="schedule"` の金型に渡した `slotLabelContent` が 0 時で空・9 時で「午前9時」を返す（金型の props を通して見る・5 回目の審査 R2）。
 - 試験の日付は `new Date(2026, 10, 8)` のように手元の時刻で作る（文字の日付から作ると地名の時差でずれる・5 回目の審査 R5）。
 - T4（`--fc-*` を全部置き換える）は変えない。
-- 見本帳（`CalendarView.stories.tsx`）に `appearance="schedule"` の週の例を 1 つ足す（重なる 2 つの予定を含む）。
+- 見本帳（`frontend/src/components/CalendarView.stories.tsx`）に `appearance="schedule"` の週の例を 1 つ足す（重なる 2 つの予定を含む）。
 
 ### 3.4 祝日の出どころ（2026-11-06 に確かめて決めた）
 
@@ -233,7 +233,7 @@ PR 本文: tokens.css にトークンを 2 つ足すので、`frontend/scripts/c
 
 - 時間割は金型 1 か所。新しい画面が時間割を自前で書いたら、UI の見張り（ADR-144）で止める対象に加えるかを便2 で決める。
 - 金型の口ごとに見本帳の例と単体の試験を置く。
-- 便6 の見た目は `CalendarView.css` の `.comp-calendar--schedule.comp-calendar--days` の 1 か所だけ。数値の見張り（`frontend/scripts/check-css-hardcoded-values.js`）と色の見張り（`check-css-hardcoded-colors.js`）が CI で直書きを止める。
+- 便6 の見た目は `CalendarView.css` の `.comp-calendar--schedule.comp-calendar--days` の 1 か所だけ。数値の見張り（`frontend/scripts/check-css-hardcoded-values.js`）と色の見張り（`frontend/scripts/check-css-hardcoded-colors.js`）が CI で直書きを止める。
 - 守り手: frontend/src/pages/schedule/SchedulePageImpl.test.tsx（押した時刻で小窓が開くことを CI の試験で毎回確かめる。金型に載せ替えた後は frontend/src/components/CalendarView.test.tsx が加わる）
 
 ## 9. 審査
@@ -264,7 +264,7 @@ PR 本文: tokens.css にトークンを 2 つ足すので、`frontend/scripts/c
 
 ### 3 回目（2026-11-06 14:44 UTC・クラウド Opus・対象 39966f85c）: APPROVE・便0可
 
-- S1〜S5 すべて ○（引用の行は origin/main 5574bf327 で照合。`moreLinkClick` が文字列を返すと `zoomTo` に進み小窓は開かない＝`internal-common.js:7462`。便0 の変更前の 3 か所は一字一句一致）。必須の指摘なし。
+- S1〜S5 すべて ○（引用の行は origin/main 5574bf327 で照合。`moreLinkClick` が文字列を返すと `zoomTo` に進み小窓は開かない＝internal-common.js:7462。便0 の変更前の 3 か所は一字一句一致）。必須の指摘なし。
 - 推奨 2 件を直した: Q1 便0 の試験で枠を列の中から取る（`docs/handoff/schedule-gcal-clone/card-bin0.md`）。Q2 月の升目・終日の行で複数日を引っぱったら複数日の終日の予定（§3.2）。
 
 ### 4 回目（便6・G15〜G19）: REVISE（2026-11-07・クラウドの Opus・origin/release/schedule-gcal-look-v2 aef7c764f）
@@ -276,9 +276,9 @@ PR 本文: tokens.css にトークンを 2 つ足すので、`frontend/scripts/c
 ### 5 回目（便6・G15〜G19）: APPROVE（2026-11-07 07:36〜07:40 UTC・クラウドの Opus・origin/release/schedule-gcal-look-v2 6f56e9552・照合は origin/main 9cf750f29 と FullCalendar 6.1.22 の npm pack）
 
 - 観点: (1) 4 回目の指摘 5 件の直し ○ (2) G18 の文字の真ん中 ○ (3) i18n・UI ○ (4) 試験の直し方 ○ (5) 新しい食い違い ○（必須なし）。
-- (1) 右 20px は空かない（`internal.js:622` で全部の予定が `stackForward ≥ 1`・`:826` の枝を通らない）。G15 は画素の色で比べる形、文字の大きさと行高は外側の枠、ADR-1065 は What 7、PR 本文に check-new-tokens の項目。
+- (1) 右 20px は空かない（internal.js:622 で全部の予定が `stackForward ≥ 1`・`:826` の枝を通らない）。G15 は画素の色で比べる形、文字の大きさと行高は外側の枠、ADR-1065 は What 7、PR 本文に check-new-tokens の項目。
 - (2) 行の高さ 11.2px × 1.25 = 14px。文字の箱の上端は線 + 0.5px（枠 1px の半分）。`translateY(-50%)` で 7px 上がり、箱の真ん中は線 + 0.5px。字の形のずれを入れても約 2.2px で ±3px 以内。
-- (3) ADR-027 は日付の書き方も対象。言語で Intl を切り替える前例 `schedule-utils.ts:103` があり、Intl を止める見張りは無い。
+- (3) ADR-027 は日付の書き方も対象。言語で Intl を切り替える前例 `frontend/src/pages/schedule/schedule-utils.ts:103` があり、Intl を止める見張りは無い。
 - (4) `:125` を分ける案で足りる。T4 は `.comp-calendar {` の塊を切り出すので変えずに通る。
 - 推奨を直した: R1 包みの class の試験・R2 0 時の文字の試験・R3 `hourRange`/`timeStyle` との組み合わせ（§3.8）・R4 今日の列の地を `transparent`・R5 試験の日付の作り方。R6（日付の帯の class 名と行高）は便6 のカードで class 名を `comp-calendar__day-head`・`comp-calendar__dayname`・`comp-calendar__daynum` に固定する。R7（冒頭の「4 回目」の表記）は冒頭を直した。
 - 審査の結果のファイルは、クラウドの見張り（作業場所の外での commit 禁止）に止められて push されなかった。中身は実行の記録（RemoteTrigger の run log・セッション cse_01HHUUpQXH3goWYWdFkgnNpJ）の最後の返事で全部読めた（切れていない）。審査役は指示どおり言い換えずに止まった。

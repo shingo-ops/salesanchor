@@ -28,14 +28,14 @@
 | `frontend/src/pages/schedule/SchedulePageImpl.tsx` | `:1392` の `<CalendarView` に `appearance="schedule"` を 1 行足すだけ |
 | `docs/adr/ADR-1065-calendar-view-component-fullcalendar-v6.md` | What 7・Why 1 行・設計・根拠の欄（§8） |
 | `docs/adr/README.md` | `node scripts/generate-adr-index.js` で作り直す（手で書かない） |
-| `.claude-pipeline/active-work.d/release-schedule-gcal-look-bin6.md` | 台帳（new-worktree.sh が作る形のまま・状態を更新） |
+| .claude-pipeline/active-work.d/release-schedule-gcal-look-bin6.md | 台帳（new-worktree.sh が作る形のまま・状態を更新） |
 
 触らない（変えたら差し戻し）:
-- `frontend/src/pages/schedule.css`・`SchedulePageImpl.tsx` の `:1392` 以外（見た目は金型の css だけに書く）
+- `frontend/src/pages/schedule.css`・`frontend/src/pages/schedule/SchedulePageImpl.tsx` の `:1392` 以外（見た目は金型の css だけに書く）
 - 既存の css の規則（`CalendarView.css:1-178`）。足すのは末尾だけ
-- 月の表示（`monthProps`・`CalendarView.tsx:180-202`）
+- 月の表示（`monthProps`・`frontend/src/components/CalendarView.tsx:180-202`）
 - T4（`--fc-*` を全部置き換える試験）
-- 移行（migrations）・`deploy.yml`・`scripts/`・backend
+- 移行（migrations）・`.github/workflows/deploy.yml`・`scripts/`・backend
 
 ## 2. calendarView.utils.ts
 
@@ -116,7 +116,7 @@ export function formatSlotLabel(
         : {}),
 ```
 - `formatMeridiem` の import は残す（`'plain'` の枝で使う）。
-- 引数の形の根拠: `slotLabelContent` は `{level, time, date, view, text}`（FullCalendar timegrid 6.1.22）、`dayHeaderContent` は `{date, view, text, isToday, ...}`（core 6.1.22 `internal-common.js:6227`）。
+- 引数の形の根拠: `slotLabelContent` は `{level, time, date, view, text}`（FullCalendar timegrid 6.1.22）、`dayHeaderContent` は `{date, view, text, isToday, ...}`（core 6.1.22 internal-common.js:6227）。
 
 ## 4. tokens.css
 
