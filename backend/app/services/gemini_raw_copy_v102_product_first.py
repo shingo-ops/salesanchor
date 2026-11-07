@@ -124,6 +124,14 @@ class WorkName:
 
 
 @dataclass(frozen=True)
+class ConditionHeadingRule:
+    """ADR-1041 What 5：状態の見出しの規則（設定 v102_condition_heading から作る）。"""
+
+    max_lines: int
+    sentence_end_re: re.Pattern[str]
+
+
+@dataclass(frozen=True)
 class ProductFirstMasters:
     """商品を先に決める流れに要るマスタ（読み取り専用）。"""
 
@@ -147,6 +155,8 @@ class ProductFirstMasters:
     scoped_cond_entries: Mapping[str, tuple[dict, ...]] = field(default_factory=dict)
     # ADR-1041：商品の分類（kubun_type）→ その分類で取れる単位の名前（line_units.canonical）。設定 v102_kubun_allowed_units から読む。空なら働かない
     kubun_allowed_units: Mapping[str, frozenset[str]] = field(default_factory=dict)
+    # ADR-1041 What 5：状態の見出しの規則。設定 v102_condition_heading から読む。None なら働かない
+    condition_heading: ConditionHeadingRule | None = None
 
 
 _RELEASE_DATE_SQL = """
@@ -161,6 +171,7 @@ _CONDITION_UNIT_SQL = """
 _SET_UNIT_SQL = "SELECT canonical FROM public.line_units WHERE code = :code AND is_active = TRUE"
 _KUBUN_ALLOWED_UNITS_KEY = "v102_kubun_allowed_units"  # public.tcg_distribution_settings の key（値は JSON：区分名 → 単位名の配列）
 _KUBUN_ALLOWED_UNITS_SQL = "SELECT value FROM public.tcg_distribution_settings WHERE key = :key"
+_CONDITION_HEADING_KEY = "v102_condition_heading"  # 同じ表の key（値は JSON：max_lines・sentence_end・trailing_chars）
 _ACTIVE_UNIT_NAMES_SQL = "SELECT canonical FROM public.line_units WHERE is_active = TRUE"
 _ACTIVE_KUBUN_TYPES_SQL = "SELECT kubun_type FROM public.tcg_product_categories WHERE is_active = TRUE"
 _IGNORE_PHRASES_SQL = """
@@ -387,6 +398,7 @@ def load_product_first_masters(session: Session) -> ProductFirstMasters:
     masters = ProductFirstMasters(
         entries, kubun_map, cond_unit, phrases, g2_index, plural_words, work_names, set_unit, product_release=release,
         kubun_allowed_units=_load_kubun_allowed_units(session),
+        condition_heading=_load_condition_heading(session),
     )
     check_product_first_masters(masters)
     return masters
@@ -434,6 +446,54 @@ def _load_kubun_allowed_units(session: Session) -> dict[str, frozenset[str]]:
     units = {str(r[0]) for r in session.execute(text(_ACTIVE_UNIT_NAMES_SQL)).fetchall() if r[0]}
     kubuns = {str(r[0]) for r in session.execute(text(_ACTIVE_KUBUN_TYPES_SQL)).fetchall() if r[0]}
     return validate_kubun_allowed_units(raw, kubuns, units)
+
+
+_CONDITION_HEADING_KEYS = frozenset({"max_lines", "sentence_end", "trailing_chars"})
+_CONDITION_HEADING_MAX_LINES = (1, 5)
+
+
+def validate_condition_heading(raw: str | None) -> ConditionHeadingRule | None:
+    """設定 v102_condition_heading の値（JSON 文字列）を検査して規則にする（純粋関数）。
+
+    key が無い（None）のは切り替え前の正常な状態なので debug だけ。{} は取り消しの値でログなし。
+    それ以外で形が合わないときは logger.warning（値そのものは出さない）を出して None を返す（None なら見出しの規則は働かない）。
+    語・記号はコードに書かず、値から式を作る。
+    """
+    if raw is None:
+        logger.debug("[condition_heading] 設定 %s がありません。状態の見出しは使いません", _CONDITION_HEADING_KEY)
+        return None
+    try:
+        data = json.loads(raw)
+    except (TypeError, ValueError):
+        logger.warning("[condition_heading] 設定 %s が JSON として読めません。状態の見出しは使いません", _CONDITION_HEADING_KEY)
+        return None
+    if data == {}:  # 取り消しの値
+        return None
+    if not isinstance(data, dict) or set(data) != _CONDITION_HEADING_KEYS:
+        logger.warning("[condition_heading] 設定 %s の key の組が違います。状態の見出しは使いません", _CONDITION_HEADING_KEY)
+        return None
+    max_lines = data["max_lines"]
+    low, high = _CONDITION_HEADING_MAX_LINES
+    if isinstance(max_lines, bool) or not isinstance(max_lines, int) or not low <= max_lines <= high:
+        logger.warning("[condition_heading] 設定 %s の max_lines が整数の %d〜%d ではありません。状態の見出しは使いません", _CONDITION_HEADING_KEY, low, high)
+        return None
+    sentence_end = data["sentence_end"]
+    if not isinstance(sentence_end, list) or not sentence_end or not all(isinstance(w, str) and w for w in sentence_end):
+        logger.warning("[condition_heading] 設定 %s の sentence_end が空でない文字列の配列ではありません。状態の見出しは使いません", _CONDITION_HEADING_KEY)
+        return None
+    trailing = data["trailing_chars"]
+    if not isinstance(trailing, str):
+        logger.warning("[condition_heading] 設定 %s の trailing_chars が文字列ではありません。状態の見出しは使いません", _CONDITION_HEADING_KEY)
+        return None
+    pattern = re.compile("(" + "|".join(re.escape(w) for w in sentence_end) + ")[" + re.escape(trailing) + r"\s]*$")
+    return ConditionHeadingRule(max_lines, pattern)
+
+
+def _load_condition_heading(session: Session) -> ConditionHeadingRule | None:
+    """設定を読み、検査を通った規則だけを返す（読み取りのみ。行が無ければ None）。"""
+    rows = session.execute(text(_KUBUN_ALLOWED_UNITS_SQL), {"key": _CONDITION_HEADING_KEY}).fetchall()
+    raw = str(rows[0][0]) if rows and rows[0][0] is not None else None
+    return validate_condition_heading(raw)
 
 
 def check_product_first_masters(masters: ProductFirstMasters) -> None:

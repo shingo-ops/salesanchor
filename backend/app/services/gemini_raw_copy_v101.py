@@ -36,7 +36,9 @@ from app.services.gemini_raw_copy_v102_followup import (
 from app.services.gemini_raw_copy_v102_product_first import (
     PRODUCT_KUBUN_UNKNOWN,
     REVIEW_PRODUCT_MULTIPLE,
+    ConditionHeadingRule,
     ProductFirstMasters,
+    _resolve_condition,
     resolve_product_first,
 )
 from app.services.gemini_raw_copy_v102_soldout_ref import (
@@ -45,6 +47,7 @@ from app.services.gemini_raw_copy_v102_soldout_ref import (
     SoldoutRefDecision,
     SoldoutRefPost,
     build_ref_rows,
+    condition_decided_by_word,
     decide_soldout_inherit,
     decide_soldout_ref,
     soldout_targets,
@@ -932,7 +935,10 @@ def _extract_one(
         unit_canonical, kubun, condition, basis = (
             product_first["unit"], product_first["unit_kubun"], product_first["condition"], product_first["condition_basis"]
         )
-        review = [*review, *({"line": item["price_line"], **r} for r in product_first["review_extra"])]
+        heading = _heading_condition(item, lines, product_first, ctx, status_context)
+        if heading is not None:
+            condition, basis = heading
+        review =[*review, *({"line": item["price_line"], **r} for r in product_first["review_extra"])]
     else:
         unit_canonical, kubun, _resolved = resolve_unit_v2(_find_unit(item, roles, shared, lines, ctx) or "", ctx.unit_alias_to_info)
         condition, _cond_id, basis = resolve_condition_v2(
@@ -988,6 +994,75 @@ def _is_price_shaped(text: str) -> bool:
     if _PRICE_SHAPE_RE.search(norm):
         return True
     return bool(_BARE_NUMBER_RE.fullmatch(norm)) and not _YEAR_RE.fullmatch(norm)
+
+
+_HEADING_DEFAULT_BASIS_SUFFIXES = ("R4:単位既定", "R5:パック既定")  # いつもの値で決まった印（末尾一致）
+_HEADING_FLAG_NOTE_PREFIX = "単品語あり・要確認("
+_HEADING_KUBUN_DEFAULT_PREFIX = "R4c:商品分類既定>"
+_HEADING_WORD_BASIS_RE = re.compile(r"^R[23]:")
+
+
+def _heading_block(
+    lines: list[str], first_line: int, owned: frozenset[int] | set[int], rule: ConditionHeadingRule
+) -> tuple[str, int] | None:
+    """件の最初の行のすぐ上にある「件に入っていない行の塊」（状態の見出し）と、その最も小さい行番号。無ければ None（ADR-1041 What 5）。
+
+    空行と件の行は飛ばし、最初に当たった件でない行から上へ最大 rule.max_lines 行集める。値段の形の行が混じる・止めた行が件の行なら None。
+    文で終わる行（rule.sentence_end_re）は除く。
+    """
+    n = first_line - 1
+    while n >= 1 and (not lines[n - 1].strip() or n in owned):
+        n -= 1
+    got: list[int] = []
+    while n >= 1 and len(got) < rule.max_lines and lines[n - 1].strip() and n not in owned:
+        got.append(n)
+        n -= 1
+    if any(_is_price_shaped(lines[g - 1]) for g in got):
+        return None
+    if n >= 1 and lines[n - 1].strip() and n in owned:
+        return None
+    got = [g for g in sorted(got) if not rule.sentence_end_re.search(lines[g - 1].strip())]
+    if not got:
+        return None
+    return "\n".join(lines[g - 1] for g in got), min(got)
+
+
+def _heading_condition(
+    item: dict, lines: list[str], product_first: dict | None, ctx: V101Context, status_context: StatusContext | None
+) -> tuple[str, str] | None:
+    """いつもの値で決まった件の状態を、すぐ上の見出しの語で決め直す。(状態, 印) か None（今のまま）。
+
+    採る条件：見出しの語が R2・R3 で決まり、単品語の要確認でなく、新しい状態と今の状態が同じ群（一意）のとき。
+    """
+    if product_first is None or status_context is None or ctx.product_first is None:
+        return None
+    rule = ctx.product_first.condition_heading
+    if rule is None:
+        return None
+    basis = product_first["condition_basis"]
+    if condition_decided_by_word(basis) or not basis.endswith(_HEADING_DEFAULT_BASIS_SUFFIXES):
+        return None
+    block = _heading_block(lines, min(item["lines"]), status_context.owned_lines, rule)
+    if block is None:
+        return None
+    heading_text, heading_line = block
+    new_condition, hb, _reviews = _resolve_condition(
+        heading_text, product_first["product_category"], product_first["unit_kubun"],
+        ctx.cond_entries, ctx.cond_canonical_to_uuid, ctx.product_first.scoped_cond_entries,
+    )
+    if new_condition is None or hb.startswith(_HEADING_FLAG_NOTE_PREFIX):
+        return None
+    rest = hb[len(_HEADING_KUBUN_DEFAULT_PREFIX):] if hb.startswith(_HEADING_KUBUN_DEFAULT_PREFIX) else hb
+    if not _HEADING_WORD_BASIS_RE.match(rest):
+        return None
+
+    def groups(canonical: str) -> set:
+        return {e.get("value_group") for e in ctx.cond_entries if e.get("canonical") == canonical}
+
+    new_groups, old_groups = groups(new_condition), groups(product_first["condition"])
+    if len(new_groups) != 1 or new_groups != old_groups or None in new_groups:
+        return None
+    return new_condition, f"{hb}@見出し:L{heading_line}"
 
 
 def _possible_missing_lines(items: list[dict], lines: list[str], *, until_last_price_line: bool = False) -> list[int]:
