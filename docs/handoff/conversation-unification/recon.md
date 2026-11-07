@@ -35,7 +35,7 @@
 ## 4. 2つの表に書いている所（【事実】）
 | 何 | 場所 | 書く表 |
 |---|---|---|
-| Meta の受信（Webhook） | backend/app/routers/webhook.py:723 | meta_messages |
+| Meta の受信（Webhook） | backend/app/routers/webhook.py:712（INSERT の始まり） | meta_messages |
 | 同じ受信の写し | backend/app/routers/webhook.py:832（echo）・:877（inbound） | conversation_logs |
 | Discord の DM | backend/app/discord_gateway/dm_writer.py:233 | conversation_logs（meta と同じ冪等キー） |
 | 手で記録（受信箱の「手で記録」欄） | frontend/src/pages/inbox/ManualRecordSection.tsx:79 → backend/app/routers/conv_logs.py:262 | conversation_logs だけ |
@@ -63,6 +63,33 @@
 - 重複の確かめは backend/app/routers/conv_logs.py:227-254（同じリード・窓口・本文・±1時間で 409）。自動連携の窓口は手で書けない（:218-221）。
 - 会社4 の meta_messages には platform='phone' の行がすでにある（q8 の後の問い: platforms=discord,instagram,messenger,phone）。
 
-## 8. 未確認
+## 8. 設計審査1回目で足した事実（2026-11-07・origin/main 170ff9612 と本番 reader で Opus が照合。生出力 /tmp/CC報告ファイル/conv/arch1-verify*.txt・r1〜r5）
+### 8-1 recon に無かった conversation_logs の使い道
+- 集計ビュー v_company_stats: migrations/20260612_120000_fix_company_stats_ssot.sql:61-63 `LEFT JOIN %I.conversation_logs cl ON cl.company_id = c.id`（会話数・最終会話日）。読む所: backend/app/routers/companies.py:196・backend/app/routers/leads.py:3347・scripts/smoke_test_post_deploy.sh:149-156 [7d]。このビューがある間は conversation_logs を DROP できない。
+- AI 読み取り用の伏せ字の決まり: migrations/20261024_100300_create_ai_cloud_views.sql:387-395・:613（conversation_logs の列ごとの mask/allow）。
+- 書く手伝いの本体 backend/app/services/conv_log_writer.py（company_id を companies.lead_id から補う :117-130）。手の記録も同じ関数を使う（conv_logs.py:37・:258）。
+- ルーターの登録 backend/app/main.py:43・:730。conv_logs.py には名簿 channel_masters の作成・表示切替・無効化（:470・:511・:552）も同居。
+- 試験・道具（便3 で片付ける）: backend/tests の17本（conftest.py・rls_bootstrap.py:165-166・test_conv_logs_router.py ほか）、.github/workflows/migration-test.yml:319・:469・:1593、frontend/api-contract/openapi.json、frontend/tests-e2e/visual-language/inbox-lead-merge.spec.ts:34、scripts/run_all_migrations.sh。
+### 8-2 meta_messages の形（tenant.py:1025-1045）
+- 空を許さない列: tenant_id・platform（既定 messenger）・sender_id（既定なし）・direction。message_id は空可で、空でない値は一意。
+- 手の記録で sender_id を埋める決まりが要る。前例: migrations/20260622_020000_migrate_conv_only_into_meta_messages.sql:70 `'migrated:conv_log_' || id`。
+### 8-3 meta_messages を「自動連携の行だけ」と前提にしている所（手の記録が入ると壊れる）
+- 送信の宛先: leads.py:1834-1844（直近の inbound 行の sender_id・platform で送り先を決める）。
+- 24時間の窓: leads.py:1119-1128（直近 inbound の時刻）。最新の窓口: leads.py:1102-1112。
+- 受信箱の一覧: meta_inbox.py:920-947（最新行の platform・sender_id・page_id、未読数、最後の受信時刻）。
+- 翻訳の見張り: translation_monitor.py:80-90（inbound の数と訳の欠け）。
+- 影響なし: avatar.py:304-308（messenger・instagram に限る）、data_deletion.py:116（sender_id 一致で消す）、priority_scoring.py:268（本文のラベル付け）。
+### 8-4 本番の数（便1 の前後で変わるかの下見・2026-11-07 08:30Z）
+| 会社 | meta の company_id あり | conversation_logs の company_id あり | 成約分析の入力（電話・対面・WhatsApp のリード） |
+|---|---|---|---|
+| 1 | 0 / 5421 | 0 / 3579 | conv 1739件・157リード ／ meta 1739件・157リード（最初と最後の時刻も同じ） |
+| 4 | 0 / 25 | 0 / 6 | 0 ／ 0 |
+- 会社の会話数・最終会話日（v_company_stats）と会社詳細の会話タブは、今は全社で 0 件・空（company_id が全部空のため）。
+- meta の occurred_at と created_at が違う行: 会社1 0件、会社4 1件。
+### 8-5 リード統合（ADR-1049）の順番
+- leads.py:3143-3189: 重複を消す → 13表を付け替える → 空欄を埋める → loser のリードを消す。
+- conversation_logs の FK は ON DELETE RESTRICT。付け替えの一覧（:3014）から外すと、会話の写しを持つリードの統合が最後の段で止まる。
+
+## 9. 未確認
 - 手で記録した会話が、本番画面の会話の流れに出ないこと（コードからは出ない作り。画面では見ていない）。
 - 会社1（テスト株式会社）の 5421 件を何に使っているか。
