@@ -1,4 +1,4 @@
-"""閲覧専用アカウントの毎日の掃除 purge_viewer_accounts の試験（ADR-1019 Q7・段4a-1）。
+"""閲覧専用アカウントの毎日の掃除 purge_viewer_accounts の試験（ADR-1019 Q7・段4a-1、ADR-1061 で3年）。
 
 実 PostgreSQL（CI の使い捨て DB。pg fixture）に migration を流して確かめる。SQLite・mock は使わない。
 本番や共有の DB には接続しない（pg fixture が localhost の jarvis_test_db だけを許す）。
@@ -90,29 +90,32 @@ def test_task_is_registered_and_scheduled():
 
 
 @needs_ci_pg
-def test_trial_expired_91_days_is_deleted_89_days_stays(pg):  # noqa: F811
+def test_trial_is_kept_3_years_after_expiry(pg):  # noqa: F811
     conn, engine, async_url = pg
     cur = _prepare(conn, async_url)
-    _account(cur, "t91@x.com", "trial", trial_days_ago=91)
-    _account(cur, "t89@x.com", "trial", trial_days_ago=89)
-    _account(cur, "active@x.com", "active", created_days_ago=400)
+    _account(cur, "t1100@x.com", "trial", trial_days_ago=1100)
+    _account(cur, "t1090@x.com", "trial", trial_days_ago=1090)
+    _account(cur, "t91@x.com", "trial", trial_days_ago=91)  # 前の決まり（90日）では消えていた行
+    _account(cur, "active@x.com", "active", trial_days_ago=2000, created_days_ago=2000)  # 本契約は消さない
     result = _run_purge(engine)
     assert result["trial_expired"] == 1
-    assert _emails(cur) == ["active@x.com", "t89@x.com"]
+    assert _emails(cur) == ["active@x.com", "t1090@x.com", "t91@x.com"]
 
 
 @needs_ci_pg
-def test_suspended_by_suspend_record_age(pg):  # noqa: F811
+def test_suspended_uses_later_of_suspend_and_access_end(pg):  # noqa: F811
     conn, engine, async_url = pg
     cur = _prepare(conn, async_url)
-    s91 = _account(cur, "s91@x.com", "suspended")
-    s89 = _account(cur, "s89@x.com", "suspended")
-    _account(cur, "snorecord@x.com", "suspended", created_days_ago=400)  # suspend の記録が無い行は消えない
-    _suspend_record(cur, s91, 91)
-    _suspend_record(cur, s89, 89)
+    old = _account(cur, "s-old@x.com", "suspended", trial_days_ago=1100)
+    late_end = _account(cur, "s-late-end@x.com", "suspended", trial_days_ago=1090)
+    recent = _account(cur, "s-recent@x.com", "suspended")
+    _account(cur, "snorecord@x.com", "suspended", trial_days_ago=2000, created_days_ago=2000)  # 停止記録が無い行は消えない
+    _suspend_record(cur, old, 1100)
+    _suspend_record(cur, late_end, 1100)  # 停止は3年より前でも、見られる期限が3年以内なので残る
+    _suspend_record(cur, recent, 91)  # 前の決まり（90日）では消えていた行
     result = _run_purge(engine)
     assert result["suspended"] == 1
-    assert _emails(cur) == ["s89@x.com", "snorecord@x.com"]
+    assert _emails(cur) == ["s-late-end@x.com", "s-recent@x.com", "snorecord@x.com"]
 
 
 @needs_ci_pg
@@ -131,7 +134,7 @@ def test_pending_older_than_7_days_is_deleted_trial_stays(pg):  # noqa: F811
 def test_deleting_account_cascades_and_old_login_events_are_purged(pg):  # noqa: F811
     conn, engine, async_url = pg
     cur = _prepare(conn, async_url)
-    gone = _account(cur, "gone@x.com", "trial", trial_days_ago=95)
+    gone = _account(cur, "gone@x.com", "trial", trial_days_ago=1100)
     keep = _account(cur, "keep@x.com", "active")
     _event(cur, gone, 1)
     _suspend_record(cur, gone, 100)
