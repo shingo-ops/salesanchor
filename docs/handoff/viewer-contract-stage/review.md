@@ -234,3 +234,11 @@
 - 直し: card-1-fix1.md（1e6d3517b）。試験の並べ方を `COLLATE "C"` に固定する 1 行。クラウドの担当が DONE（cd4812c27）。差分は 1 行足し・1 行消しで、カードの文と一致した。
 - guard-authoring の失敗は、枝が古い本線（b803ee5a7）の上にあり、評価が「本線の先端が枝に含まれる」を満たさなかったため（台本の state error の分岐）。origin/main（9cf750f29）を枝に取り込んだ（57d70ad24。衝突なし）。
 - process-artifacts は GO 記録が無いため（backend/app/tasks を含む）。マージの前に、委任の GO を PR 本文に書く（ADR-1003。例外の操作は含まない。消す行は 90 日から 3 年に減る）。
+
+## 2026-11-08 便1 のマージと本番の確かめ（Opus、PR #5250）
+- 本線が「最新を取り込んでから」を求める設定（strict = true）のため、マージ直前に origin/main を2回取り込んだ（6c603e666 → 57125cdd3、6ba1198d4 → b81328e67）。どちらも PR の7ファイルとの重なり 0 件、7ファイルの中身は取り込み前後で差分 0 バイト。
+- 各 HEAD で審査役（opus）が APPROVE。b81328e67 で CI 42 pass・10 skipping・失敗 0、マージ可能状態 CLEAN。委任の GO 記録を PR 本文に、確認済みコメントを PR に残した。
+- マージ: 2026-11-08 01:13 JST（merge commit 04af68986）。本番への反映（Deploy to VPS）は success（2026-11-08 01:22 JST 終了）。
+- 公開中のプライバシーポリシー（HTTP 200）に Version: 1.8・Effective Date: December 1, 2026・Last Updated: November 8, 2026・3 years・Google Drive が出ることを確かめた。改訂日はマージの日と一致する。
+- 作業札は自動の PR #5269 で DONE になった。
+- まだ確かめていないこと: 毎日の自動削除が本番で新しい 3 年の決まりで動いたか（次に動いた記録と、消えた件数）。

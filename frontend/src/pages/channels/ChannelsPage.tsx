@@ -30,6 +30,7 @@ import { STATUS_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 import { PageLayout } from "../../components/PageLayout";
 import { Button } from "../../components/Button";
+import { getDiscordConnectErrorKey, getDiscordConnectErrorReason } from "../../features/discord-connect/discordConnectError";
 
 interface Channel {
   page_id: string;
@@ -133,7 +134,7 @@ export default function ChannelsPage() {
         setBanner({ type: "success", text: t("channels.discordConnectedSuccess") });
         // 接続の結果は、開いた時の useApiQuery の読みで出る
       } else {
-        setBanner({ type: "error", text: t("channels.discordConnectError") });
+        setBanner({ type: "error", text: t(getDiscordConnectErrorKey(url.searchParams.get("reason"))) });
       }
       url.search = "";
       window.history.replaceState({}, "", url.pathname);
@@ -223,7 +224,7 @@ export default function ChannelsPage() {
       focusListenerRef.current = handleFocus;
       focusTimerRef.current = setTimeout(() => window.addEventListener("focus", handleFocus), 1000);
     } catch (e) {
-      const msg = e instanceof ApiError ? e.message : (e instanceof Error ? e.message : t("channels.discordConnectError"));
+      const msg = t(getDiscordConnectErrorKey(getDiscordConnectErrorReason(e)));
       setBanner({ type: "error", text: msg });
       setDiscordConnecting(false);
     }
@@ -240,8 +241,8 @@ export default function ChannelsPage() {
       void invalidate(["admin", "discord-config"]);
       setDiscordDisconnectOpen(false);
       setBanner({ type: "success", text: t("channels.discordDisconnectedSuccess") });
-    } catch (e) {
-      const msg = e instanceof ApiError ? e.message : (e instanceof Error ? e.message : t("channels.discordConnectError"));
+    } catch {
+      const msg = t("discordConnect.error.disconnectFailed");
       setBanner({ type: "error", text: msg });
     } finally {
       setDiscordDisconnecting(false);

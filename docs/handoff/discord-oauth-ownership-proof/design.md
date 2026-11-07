@@ -42,7 +42,7 @@
 - docs/adr/ADR-091 に追記（戻り口は code を交換し、応答の guild だけを使う）＋ `node scripts/generate-adr-index.js`
 
 対象外（理由つき）:
-- 画面（frontend）: 新しい失敗の理由は、今ある受け取り（recon 5）で「接続に失敗しました（理由: …）」（顧客用）／「接続に失敗しました」の文（自社用）として出る。文言の追加は別作業
+- 画面（frontend）: 失敗したときの文は、理由ごとに「何が起きたか＋次にすること」の文を出す（顧客用・自社用で同じ文）。対応表は frontend/src/features/discord-connect/discordConnectError.ts、文は docs/handoff/error-message-plain-language/design.md §4-3（ADR-1071 便1 で直した。それまで顧客用は理由を読まず 1 つの文を出していた）
 - 招待の scope の変更: 今の scope で code が付くと ADR-091 に記録がある（recon 2・8 U1）。付かなかったときの手当ては 6 節
 - 既存の4行の点検（recon 8 U2）: ボットの鍵が要る。別作業として台帳に積む（8 節）
 - access_token の取り消し: 保存も記録もしないで捨てる。取り消しの呼び出しは足さない（scope は bot と applications.commands だけで、利用者の情報は読めない）
