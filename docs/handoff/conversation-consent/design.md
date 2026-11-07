@@ -1027,9 +1027,10 @@ K31・K33・K34・K35 は第6版のまま。K35 は○（§14-10-10）。
 - gh の鍵（審査1回目 C4 の2点目）: probe の件も起動台本（`ccdiscord.zsh:41-43`）で shingo-cc の gh の鍵を持つ。起動台本は変えない（K40）。文1〜文3 は R にファイルを書くことしか頼まず、gh・git push は頼まない。件の中の見張り（case-guard・部屋の拒否）は PO の件と同じに効く。probe の件が gh を使ったかは活動の記録（PostToolUse には Bash は残らない。HOOK_SPECS :55）では見えないため、上の probe の道具の記録（`phase: "pre"`）に `tool` が `Bash` の行が 1 つでもあれば P5 を×にする（文1〜文3 は Bash を要らない）。
 - 発火: (t1) 件を開くとき（spawnSession :654-661）、解いた実体の指紋が記録の使える項目に無い → D1 で知らせ、同じ指紋の probe が無ければ 1 つ予約。(t2) サーバー起動時、`resolveClaudeReal(config.claudeBin, PATH)` の指紋が記録に無い → 復元（[server/restore.ts:125-190](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/restore.ts#L125-L190)）と `hub.start()`（index.ts:127）の後に probe を 1 つ予約。(t3) 人の操作・Opus の呼び出しでは起こさない。同時に動く probe は 1 つ。1 つの指紋につき、×の後は 24 時間は再 probe せず、連続 3 回×で止める（記録の `failCount`・`lastProbeAt`）。枠（`hasCapacity` sessions.ts:562）が無ければ予約のまま待つ。
 - 台本（サーバーが probe の窓へ打つ。打ち方は case-say の判定 4・5・7・8・9 と同じ道: 区画 `%N` と pid の条件付き送信 [server/terminal-host/tmux-terminal.ts:306-321](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/terminal-host/tmux-terminal.ts#L306-L321) `sendToPane`、Enter の前に状態ファイル idle を確かめ直す。4b は飛ばす（4b を作るための窓）。送る文はコードの定数 3 つで、Opus の入力は入らない）。文の中の `<R>` はその probe の件の R:
-  - 文1: `<R>/probe-1.txt に ok とだけ書いてください。`
-  - 文2: `Agent で下請けを1つ動かし、下請けに <R>/probe-2.txt へ ok とだけ書かせてください。`
-  - 文3: `/plan <R>/probe-3.txt に ok とだけ書いてください。`
+  - 文1: `<R>/probe-1.txt に Write ツールで ok とだけ書いてください。Bash は使わないでください。`
+  - 文2: `Agent で下請けを1つ動かし、下請けに <R>/probe-2.txt へ Write ツールで ok とだけ書かせてください。あなたも下請けも Bash は使わないでください。`
+  - 文3: `/plan <R>/probe-3.txt に Write ツールで ok とだけ書いてください。`
+  - 文4: `計画どおり進めてください。`（文3 の返事が plan の pre なしで終わったときだけ 1 回。§14-14-16）
   - 判定は §14-14-4 の P0〜P5。終わったら probe の件を閉じる（[server/sessions.ts:793](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/sessions.ts#L793) `close`）。片付け（U8 を決めた）: sessions.ts の中では、閉じる道（`close` → `closeRunning` → `remove` :762-773）は件のファイルも写し W も消さない。`removeCaseFiles`（[server/case-sandbox.ts:545-555](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/case-sandbox.ts#L545-L555)。D/cases・case-gh・case-home を消す）と、W・R（手順書の置き場。[server/case-sandbox.ts:62](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/case-sandbox.ts#L62)）の `rm` を呼ぶのは、sessions.ts では開くのに失敗したとき（:411-413）だけ。`onRemoved`（:341）に付く聞き手は sessions.ts の外にあり読んでいない。そこで probe の片付けは、閉じた後に自分で (1) `removeCaseFiles(D, probeId, { tmp: true, tmpRoot })`、(2) `rm(R, { recursive: true, force: true })`（:412 と同じ）、(3) `rm(W, { recursive: true, force: true })`（:413 と同じく `W === caseCloneDir(H, probeId)` のときだけ）を打つ。どれも既に消えていれば何もしない形で呼ぶ（`.catch(() => undefined)` は :411-413 と同じ）。これで聞き手の有無に依らず残らない。K52 で「probe の後に D/cases/<probeId>・R・W が無い」を確かめる。
 - probe の件への他からの入力はすべて断る: 画面の端末入力（[server/ws.ts:36-39](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/ws.ts#L36-L39) → sessions.write :780）・チャット（hub.ts:617 `enqueueChat`）・`submitText`（:765）・名前の変更・case-say（判定 4 に `versionProbe` → 409 `version_probe_session`）。復元の一覧には書かない（[server/restore.ts:94](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/restore.ts#L94) の filter に `versionProbe` を足す）。記録に `runningVersionProbe: { caseId, startedAt }` を書き、起動時の片付けの順は次で固定する（U9 を決めた）: (1) `startupSweep`（[server/terminal-host/tmux-runner.ts:95](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/server/terminal-host/tmux-runner.ts#L95)）が返す `ac-*` の名前の一覧を受ける（startupSweep 自体は消さない。一覧を返して設定を読み直すだけ）。(2) 記録に `runningVersionProbe` があり、その `ac-<caseId>` が一覧にあれば、その 1 つだけ kill-session する（ほかの `ac-*` には触らない）。(3) その probe の W を上と同じ条件で消し、R を消し、D/cases などを `removeCaseFiles` で消す。(4) `runningVersionProbe` を消し、項目の `lastResult: "aborted"`・監査 aborted。(5) その後に復元（restore.ts。probe は復元の一覧に入らない）。
 
@@ -1051,8 +1052,8 @@ K31・K33・K34・K35 は第6版のまま。K35 は○（§14-10-10）。
 | P0 | probe の件を開いて 60 秒以内に状態ファイルが読める | `readCaseStateFile`（case-agents.ts:91） | ちょうど 1 つ・JSON の pid ＝ファイル名の pid ＝区画の pid・`status === "idle"`・`waitKeys` 空・`version` キーがあれば値に E1 の版の文字が含まれる | どれか外れ・60 秒超 |
 | P1 | 文1 の後、道具が通る | R の `probe-1.txt`・状態ファイル | 120 秒以内にファイルがあり中身が `ok`（前後の空白を除く）・その後 `idle` に戻る | 無い・中身違い・時間切れ |
 | P2 | 文2 の後、下請けが通る（K41 (a)） | R の `probe-2.txt`・活動の記録（PostToolUse・SubagentStart・SubagentStop）・状態ファイル | 180 秒以内に次が全部: ファイルが `ok`・PostToolUse の `tool: "Write"` で `path` が `<R>/probe-2.txt` に完全一致し `agent_id` が空でない行が 1 以上（下請けが書いた証拠。主の会話が書いた行は数えない）・その `agent_id` の SubagentStart と SubagentStop が各 1 以上・`idle` に戻る | どれか外れ（主の会話だけが書いたときも×） |
-| P3 | 文3 の後、計画の形では道具が止まる（K41 (b)） | probe の道具の記録（§14-14-3 D3' (b)。pre と post）・R の `probe-3.txt`・状態ファイル・P4 | 120 秒以内に次が全部: 主の会話（`agent_id` なし）の pre の行で `permission_mode: "plan"` のものが 1 以上で、その行の `tool_use_id` がどれも空でない・その行と同じ `tool_use_id` の post の行が 0 件・文3 の送信から判定までの間に主の会話の post の行が `tool_use_id` を問わず 0 件（審査3回目 必須1）（照合は probe の道具の記録の pre と post どうしで行う。post は道具が通ったときだけ来るので、0 件は case-guard [ops/case/case-guard.mjs:76](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/ops/case/case-guard.mjs#L76) が止めた形。case-guard は stderr と exit 2 だけでサーバーへ何も送らないので、止めたことは「試みた記録があり、通った記録が無い」で読む）・P2 の間に post の行が 1 以上来ていた（post の道が働いている証拠。これが無いと「post が 0 件」がいつでも成り立つため）・P1・P2 の間の probe の道具の記録の pre の行が、どれも同じ `tool_use_id` の post の行と対になっている（post が途中で消えていない証拠。審査4回目 推奨2）・ファイルが無い・`idle` に戻り、その後 3 秒待ってから判定する（hook の送信の打ち切り 2 秒より長く待つ。審査3回目 必須2）・P4 が 0 件。参考記録: 返事（activity.ts:491）に `permission mode is not dontAsk` が含まれるか（含まれなくても×にしない。U7） | どれか外れ。道具を 1 度も試みなかった（pre の plan の行が 0）ときも×（止める仕組みが働いた証拠が無いため）。通った道具の post の行があれば×（審査2回目 必須1）。pre の plan の行に `tool_use_id` が空の物がある・文3 の後に主の会話の post の行が 1 つでもある も×（審査3回目 必須1）。P1・P2 の pre の行に対の post が無い物がある も×（審査4回目 推奨2） |
-| P4 | 選ぶ画面が出ない | P0〜P3 の各 `idle` 復帰の時点の probe の件の `capture-pane -p -t %N`（probe の件だけ）。数えるのは、監査に残すのと同じ、制御文字を除き末尾 4KiB に切った写し（K55 ② の数と合わせる。審査3回目 推奨2） | 次の形が 0 件: 行頭の番号付き選択肢（`^\s*[❯>]?\s*\d+\.\s`）が 2 行以上連続・`\(y/n\)`・`Do you want to`・`Esc to cancel`・`Yes` と `No` が同じ行 | 1 件以上。正規表現は probe の件の画面の写しで確かめる（U6・K55 ①）。PO の件の画面は読まない |
+| P3 | 文3 の後、計画の形では道具が止まる（K41 (b)） | probe の道具の記録（§14-14-3 D3' (b)。pre と post）・R の `probe-3.txt`・状態ファイル・P4 | 待ち方は §14-14-16 の 2（文3 の返事で plan の pre が無ければ文4 を 1 回送る。文3・文4 それぞれ 120 秒まで）。次が全部: 主の会話（`agent_id` なし）の pre の行で `permission_mode: "plan"` のものが 1 以上で、その行の `tool_use_id` がどれも空でない・その行と同じ `tool_use_id` の post の行が 0 件・文3 の送信から判定までの間に主の会話の post の行が `tool_use_id` を問わず 0 件（審査3回目 必須1）（照合は probe の道具の記録の pre と post どうしで行う。post は道具が通ったときだけ来るので、0 件は case-guard [ops/case/case-guard.mjs:76](https://github.com/GEN-RYU-System/agent-console/blob/aabdeefbbd1b8eb3eeaa51dd4d4ef1cbad9ab012/ops/case/case-guard.mjs#L76) が止めた形。case-guard は stderr と exit 2 だけでサーバーへ何も送らないので、止めたことは「試みた記録があり、通った記録が無い」で読む）・P2 の間に post の行が 1 以上来ていた（post の道が働いている証拠。これが無いと「post が 0 件」がいつでも成り立つため）・P1・P2 の間の probe の道具の記録の pre の行が、どれも同じ `tool_use_id` の post の行と対になっている（post が途中で消えていない証拠。審査4回目 推奨2）・ファイルが無い・`idle` に戻り、その後 3 秒待ってから判定する（hook の送信の打ち切り 2 秒より長く待つ。審査3回目 必須2）・P4 が 0 件。参考記録: 返事（activity.ts:491）に `permission mode is not dontAsk` が含まれるか（含まれなくても×にしない。U7） | どれか外れ。道具を 1 度も試みなかった（pre の plan の行が 0）ときも×（止める仕組みが働いた証拠が無いため）。通った道具の post の行があれば×（審査2回目 必須1）。pre の plan の行に `tool_use_id` が空の物がある・文3 の後に主の会話の post の行が 1 つでもある も×（審査3回目 必須1）。P1・P2 の pre の行に対の post が無い物がある も×（審査4回目 推奨2） |
+| P4 | 選ぶ画面が出ない | P0〜P3 の各 `idle` 復帰の時点の probe の件の `capture-pane -p -t %N`（probe の件だけ）。数えるのは、監査に残すのと同じ、制御文字を除き末尾 4KiB に切った写し（K55 ② の数と合わせる。審査3回目 推奨2） | 次の形が 0 件: 行頭の番号付き選択肢（`^\s*[❯>]?\s*\d+\.\s`）が 2 行以上連続し、その塊の中に選ぶ印の付いた行（`^\s*[❯>]\s*\d+\.\s`）が 1 つ以上ある物（§14-14-16 の 3）・`\(y/n\)`・`Do you want to`・`Esc to cancel`・`Yes` と `No` が同じ行 | 1 件以上。正規表現は probe の件の画面の写しで確かめる（U6・K55 ①）。PO の件の画面は読まない |
 | P5 | 全体が 10 分以内・待ちの間の `status` が `idle`・`busy` 以外にならない・probe の道具の記録の pre に `tool: "Bash"` の行が無い | 時計・状態ファイル・probe の道具の記録 | ○ | 時間切れ・他の値（値を記録）・Bash の行がある |
 | R1 | 記録の項目の MAC が鍵と合う・`version: 1` | 記録ファイル・鍵ファイル（§14-14-6 の 1） | 合う | 合わない項目は捨てる |
 
@@ -1214,3 +1215,63 @@ K31・K33・K34・K35 は第6版のまま。K35 は○（§14-10-10）。
 | 推奨2 post が消えていない証拠 | §14-14-4 P3（P1・P2 で pre と post が全部対）・K51・U14（文3 の後だけ消える場合は残る危険） |
 | 推奨3 `createCase` の引数と印を付ける所 | §14-14-3 D3' (b)（`createCase` に任意の引数・`spawnSession` の直後） |
 | マージ前審査 LOW-1・LOW-2（対の post が無い数・誤って×の場合） | §14-14-6 の 9 `counts`・U15 |
+
+#### 14-14-16 第12版の直し1: claude 2.1.319 で probe が P3 で×になった件（2026-11-08）
+
+経緯（事実）: v0.55.1 を入れた後、PO の Mac で claude 2.1.319 の probe が 2 回×になった（記録の項目: `usable: false`・`lastResult: "P3"`・`failCount: 2`・`lastProbeAt: 2026-11-07T17:34:31Z`。Opus 本体が node で結果と時刻の欄だけを読んだ。MAC の欄は読んでいない）。§14-14-5 (b) の「×の番号を見て設計を見直す」と U6 の「合わなければ正規表現を直す便を出す」に当たる。3 回目の×で自動の再 probe は止まる（`PROBE_MAX_FAILS = 3`。agent-console 2372b23 の server/case-say-probe.ts:17・:315）ので、直す前に 3 回目を起こさない。
+
+原因の切り分け（クラウドで、本物の claude 2.1.319 を件と同じ起動の形で 8 回動かした。生の記録は Opus の手元の記録に残す。件の画面・PO の件は読んでいない）:
+
+| 観測 | 数 | 意味 |
+|---|---|---|
+| 文3（`/plan …`）だけでは、主の会話の plan の pre が来ない | 2 / 2（文4 を送らなかった回）。PO の Mac の 2 回の×も同じ形 | 2.1.319 は計画の形で計画を文で答えて止まり、道具を試みない。P3 の「pre の plan の行が 1 以上」が成り立たない |
+| 文4「計画どおり進めてください。」を送ると、plan の pre が来て case-guard が止め、post が来ない・probe-3.txt ができない | 6 / 6 | 止める仕組みが働いた証拠（P3 が見たい物）が文4 で取れる |
+| 旧 P4 の数え方（番号付きの行 2 行以上の塊）が、計画の文の「1. 2. 3.」に当たる | 8 / 8（文3・文4 の後の画面） | 選ぶ画面が無いのに P4 が×になる（誤って×） |
+| 新 P4（塊の中に `❯` か `>` の付いた番号の行があるときだけ数える） | 0 / 16 画面 | 計画の文には当たらない。本物の選ぶ画面（`❯ 1. Yes`。agent-console 2372b23 の docs/handoff/chat2/recon.md:62-71 にある 2.1.296 の画面の写し）には当たる |
+| 新しい文1・文2（`Write ツールで`・`Bash は使わないでください`）での Bash の pre | 0 / 8 | P5 の Bash の条件が誤って×になる道を減らす |
+| 新しい文1・文2 で probe-1.txt・probe-2.txt が `ok` | 4 / 4（許可の規則を件と同じ `Edit(//<abs>/**)` の形にした回） | P1・P2 は文を変えても通る |
+
+直す物（agent-console の server/case-say-probe.ts だけ。ほかは触らない）:
+
+1. 文（§14-14-3 D4 の台本）を次の 4 つにする。文4 は定数で、Opus の入力は入らない。
+   - 文1: `<R>/probe-1.txt に Write ツールで ok とだけ書いてください。Bash は使わないでください。`
+   - 文2: `Agent で下請けを1つ動かし、下請けに <R>/probe-2.txt へ Write ツールで ok とだけ書かせてください。あなたも下請けも Bash は使わないでください。`
+   - 文3: `/plan <R>/probe-3.txt に Write ツールで ok とだけ書いてください。`
+   - 文4: `計画どおり進めてください。`（文3 の返事が終わっても plan の pre が無いときだけ、1 回だけ送る）
+2. P3 の待ち方（§14-14-4 P3 の「120 秒以内に」を次で置き換える。○×の条件そのものは変えない）:
+   - (a) 文3 を送った時刻を `sent3At` とする。`PROBE_P3_MS`（120 秒）の間、1 秒ごとに状態ファイルと記録を見る。
+   - (b) `sent3At` 以後に主の会話の plan の pre があり、状態が `idle` → 文4 を送らずに (e) へ。
+   - (c) plan の pre が無く、状態が `idle` で、次のどちらかが成り立つ → 文3 の返事が終わったとみて、文4 を 1 回だけ送る: ① `sent3At` 以後に状態 `busy` を 1 度でも見た ② `sent3At` から `PROBE_P3_QUIET_MS`（20 秒）たった。② は、返事が 1 秒の見回しの間に始まって終わり `busy` を見逃した場合の受け皿。送った直後の状態ファイルはまだ `idle` のことがある（probeSend は `busy` になるのを待たない。agent-console 2372b23 server/hub.ts:607-640）ので、① か ② が無いうちは送らない。
+   - (d) 文4 を送れなかった（probeSend が false）→ P3 ×。送れたら、その時刻から `PROBE_P3_MS` の間に「plan の pre があり、状態が `idle`」を待つ。来なければ P3 ×。
+   - (e) その後は今と同じ: 3 秒待つ・画面の写しを取る・`countTools(records, sent2At, sent3At)` で数える。数える範囲は `sent3At` 以後のままなので、文4 の後の pre・post も P3 の材料に入る（文4 の後に主の会話の post が 1 つでもあれば×のまま）。
+   - 文4 は文3 の返事の中で 1 回だけ。2 回目は送らない。
+3. P4 の数え方（§14-14-4 P4 の「行頭の番号付き選択肢が 2 行以上連続」を次で置き換える。ほかの 4 つの形は変えない）: `^\s*[❯>]?\s*\d+\.\s` に合う行が 2 行以上続く塊のうち、塊の中に `^\s*[❯>]\s*\d+\.\s` に合う行（選ぶ印の付いた番号の行）が 1 つ以上ある物だけを数える。
+4. 監査の `counts` に `p3FollowUp`（文4 を送ったら 1、送らなければ 0）を足す。§14-14-6 の 9 の欄に足す。
+
+時間の上限: 文3 と文4 の待ちは最大で 120 秒ずつ。全体の上限 10 分（P5・`PROBE_TOTAL_MS`）は変えない。上限を越えたら今と同じく P5 ×（`tick` の deadline）。
+
+×の数え方への影響: 直した版を入れた後、24 時間の待ち（`PROBE_RETRY_AFTER_FAIL_MS`。最後の×から）が明けた後の、最初の件を開くとき（t1）かサーバーの起動（t2）で probe が走る。2026-11-07T17:34:31Z の 24 時間後は 2026-11-08T17:34:31Z（日本時間 11/9 02:34）。○なら `failCount: 0`・`usable: true`（case-say-probe.ts:583）。×なら 3 回目で止まり、D1 n4 に「設計者の確認が要る」が付く。
+
+変わらない物: E1〜E4・P0〜P2・P5・R1 の条件、記録・鍵・MAC、24 時間・3 回の規則、probe の件の開き方・片付け、PO の件と Opus の窓（case-say の判定 4・5・7・8・9）、case-guard・部屋の拒否、hooks。
+
+成功条件（この直しの分）:
+
+| 基準 | 検証方法 |
+|---|---|
+| K51 の追加: 文3 の返事で plan の pre が来た → 文4 を送らない・P3 ○ | vitest（偽の状態ファイル・偽の記録）: 送った文が 3 つ・`counts.p3FollowUp === 0` |
+| K51 の追加: 文3 の返事が plan の pre なしで `busy` → `idle` に終わる → 文4 を 1 回だけ送り、その後の plan の pre（post なし）で P3 ○ | vitest: 送った文が 4 つで 4 つ目が文4 の定数と一致・`p3FollowUp === 1` |
+| K51 の追加: `busy` を 1 度も見ないまま `idle` → 20 秒たつまで文4 を送らない・20 秒後に送る | vitest（偽の時計）: 19 秒の時点で送った文 3 つ・21 秒の時点で 4 つ |
+| K51 の追加: 文4 の後も plan の pre が来ない → P3 ×（文4 は 1 回だけ） | vitest: `lastResult: "P3"`・送った文が 4 つ |
+| K51 の追加: 文4 の送信が失敗 → P3 × | vitest |
+| K51 の追加: 文4 の後に主の会話の post がある → P3 × | vitest |
+| K51 の追加: P4 — 印の無い番号付きの計画の文（`1. …`・`2. …`）は 0・`❯ 1. Yes` と `  2. No` の画面は 1 以上・既存の (y/n) などの形は今と同じ | vitest（`countPickScreens` の単体） |
+| K51 の追加: 文1〜文4 の定数が本節の文と一字一句同じ | vitest |
+| K58 既存の試験が通る | agent-console の CI が緑 |
+| K55 ① 本物で ok | 24 時間明け後の最初の probe で記録に `usable: true`・`lastResult: "ok"`・監査 `caseClaudeVersionProbe` ok・`counts.p3FollowUp` の値を Opus 本体が読んで本書に書き足す |
+
+残る危険:
+- U16 文4 で plan の pre が来なかった回は今回の試しでは 0 / 6 だが、claude の版が変われば起き得る。そのときは P3 ×（誤って○にはならない側）。
+- U17 文4 の文は、計画の形を外す（`ExitPlanMode`）許しと読まれる恐れがある。外れて道具が通れば post が来るので P3 ×（誤って○にはならない側）。今回の 6 回では外れていない（post 0）。
+- U18 新 P4 は、選ぶ画面の印が `❯`・`>` 以外に変わると見逃す。そのときは K55 ② の `paneSamples` の目視で気づく（U6 と同じ）。
+
+外部事例: 該当事例なし。理由は §14-14-10 と同じ（自作の仕組みの中の判定の直しで、確かめは試験と実測で行う）。
