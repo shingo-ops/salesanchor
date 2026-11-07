@@ -27,7 +27,7 @@
 | T1 | backend/app/services/priority_scoring.py `label_lead_messages` の `if saved > 0: await db.commit()`（そのあと呼び出し元が続けて読む） | `_compute_and_persist` が commit 後に message_labels・tenant_calibrations を読み、customer_scores へ書く。commit 後は別の接続になりうる | E1・E2 で 0（通っていない） |
 | T2 | backend/app/routers/customer_priority.py `get_message_labels` → `label_lead_messages` の commit 後に message_labels を読む | 同上 | E1 で 0 |
 | T3 | backend/app/routers/webhook.py `_create_outbound_lead_for_echo` の末尾 `await db.commit()`（張り直し無し）→ 呼び出し元が `write_conversation_log` | companies・contacts を読み、conversation_logs へ書く。conv_log_writer.py の説明（5 行目）「commit 後は reset_tenant_context を呼んでから本関数を呼ぶこと」に反する | E3 で 0（通っていない） |
-| T4 | backend/app/services/calendar_service.py 同期の `except` 内 `UPDATE calendar_events SET sync_status='failed'` | try の中の commit（:303 付近）が成功した後に例外が出た場合、張り直し無しで更新 | 件数からは切り分け不能（E7）。経路は commit 自体の失敗後のみ |
+| T4 | backend/app/services/calendar_service.py 同期の `except` 内 `UPDATE calendar_events SET sync_status='failed'` | try の中の commit（:303 付近）が成功した後に例外が出た場合、張り直し無しで更新 | 件数からは切り分け不能（E7）。経路は commit 自体の失敗後のみ。**改訂（2026-11-07）: 漏れではない。** :303 の commit が失敗した後の except は取引が中断状態で、Bx の有無にかかわらず UPDATE は通らない。commit が成功する側は :271-272・google_calendar の :293-294 で reset 済み（design-pool-reset.md §4-2） |
 
 T ではないと確かめた箇所（本文を読んだ）:
 - auth.py register_user: commit 後の `db.refresh(user)` は public.users（SELECT 方針 true）→ 影響なし
@@ -54,7 +54,7 @@ Bx を入れると、返却のたびに RESET ALL が commit されるので、�
 
 ## 4. 設計への入力（結論）
 
-1. Bx を入れると T1〜T4 は「漏れ」から「失敗（空の文脈＝search_path public）」に変わる（fail closed）。T1〜T3 は commit の直後に `reset_tenant_context` を足して、Bx と同じ便で直す。T4 は except の先頭で rollback→reset を足す。
+1. Bx を入れると T1〜T4 は「漏れ」から「失敗（空の文脈＝search_path public）」に変わる（fail closed）。T1〜T3 は commit の直後に `reset_tenant_context` を足して、Bx の前の便（便1）で直す。T4 は直さない（漏れではない。§2 の T4 の改訂と design-pool-reset.md §4-2）。m9 で見つかった残りの箇所も便1 で直す（design-pool-reset.md §4-1）。
 2. §3 の operator の残りは Bx だけで消える。個別の直しは要らない（直しても害はないが、変更は一度に 1 つ）。
 3. 本番の既存データの修復は不要（E4〜E6 が 0）。
 
