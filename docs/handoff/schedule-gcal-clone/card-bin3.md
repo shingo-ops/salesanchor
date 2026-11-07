@@ -9,7 +9,7 @@
 ## 0. 作業者への決まり
 
 - このカードに書いたこと以外はしない。迷ったら止めて `NEEDS_DECISION:` で返す。
-- 色・寸法の直書き禁止。css に足すのは §5 の 1 規則だけ。
+- 色・寸法の直書き禁止。css に足すのは §5 の 2 規則だけ。
 - 画面の文字は `t()` だけ。新しい文言キーは `schedule.dateTimeLine` の 1 つだけ（§4）。
 - 金型（`frontend/src/components/`）の中身は変えない。使うだけ。
 
@@ -114,9 +114,22 @@ export function formatDraftDateLine(
   .schedule-popover .schedule-popover__line {
     justify-content: flex-start;
   }
+
+  /* 金型 Button は折り返さない（Button.css の white-space: nowrap）。長い文は小窓の幅で「…」にする */
+  .schedule-popover__line-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
   ```
 
 ## 6. SchedulePageImpl.tsx 作る小窓（SchedulePopover :213-515）
+
+6-0. 位置決めの関数 `usePopoverPlacement`（:146-182）:
+- 小窓は最初の描画で `visibility: hidden` にして測ってから見せる（:176-178）。隠れている間は `autoFocus` が効かない（審査 1 回目 H1・Chromium で再現）。そこで「見えたか」を返す。
+- `:142-145` のコメントの「（「詳しく入れる」など）」を「（場所・説明の欄を開いたときなど）」に変える。
+- `:181` `return { ref, style };` → `return { ref, style, placed: pos !== null };`
+- `:687` の `const { ref, style } = usePopoverPlacement(anchor);` は変えない（`placed` を使わない）。
 
 6-1. import:
 - `:9` は今のまま（`useState` は既にある）。
@@ -132,6 +145,7 @@ export function formatDraftDateLine(
   const DescriptionIcon = SCHEDULE_POPOVER_ICONS.description;
   const creating = mode === "create";
   ```
+- `:244` `const { ref: popoverRef, style: position } = usePopoverPlacement(anchor);` → `const { ref: popoverRef, style: position, placed } = usePopoverPlacement(anchor);`
 - `:245` `const [expanded, setExpanded] = useState(mode !== "create");` を消し、次に置き換える:
   ```tsx
   // 作るときは日時・場所・説明を 1 行で閉じて出し、押すと開く（design §3.9・G3 ②③）
@@ -139,9 +153,15 @@ export function formatDraftDateLine(
   const [locationOpen, setLocationOpen] = useState(false);
   const [descriptionOpen, setDescriptionOpen] = useState(false);
   const showDate = !creating || dateOpen;
-  const showLocation = !creating || locationOpen;
-  const showDescription = !creating || descriptionOpen;
+  const showLocation = !creating || locationOpen || draft.location !== "";
+  const showDescription = !creating || descriptionOpen || draft.description !== "";
+  // 作るときは、小窓が見えてから題名の欄に文字が入るようにする（隠れている間の autoFocus は効かない・G3 ①）
+  const titleRef = useRef<HTMLInputElement | null>(null);
+  useEffect(() => {
+    if (creating && placed) titleRef.current?.focus();
+  }, [creating, placed]);
   ```
+  （`useRef`・`useEffect` は `:9` で既に import 済み。`draft.location`・`draft.description` は文字の型で、`createDraft`（:109-）が `""` を入れる。違ったら `NEEDS_DECISION:`）
 
 6-3. 上の帯（:267-279 の `schedule-popover__header-meta` の中）: 札 2 つを作るとき以外だけ出す。
 ```tsx
@@ -171,10 +191,11 @@ export function formatDraftDateLine(
        onChange={(event) => onDraftChange({ ...draft, title: event.target.value })}
        placeholder={t("schedule.eventTitle")}
        aria-label={t("schedule.eventTitle")}
-       autoFocus={creating}
+       ref={titleRef}
      />
    </label>
    ```
+   （題名には `autoFocus` を付けない。focus は 6-2 の `useEffect` が入れる）
 2. 日時:
    ```tsx
    {showDate ? (
@@ -192,7 +213,7 @@ export function formatDraftDateLine(
        onClick={() => setDateOpen(true)}
      >
        <ClockIcon size={18} aria-hidden="true" />
-       {formatDraftDateLine(draft, t, i18n.language)}
+       <span className="schedule-popover__line-text">{formatDraftDateLine(draft, t, i18n.language)}</span>
      </Button>
    )}
    ```
@@ -209,17 +230,18 @@ export function formatDraftDateLine(
          value={draft.location}
          onChange={(event) => onDraftChange({ ...draft, location: event.target.value })}
          placeholder={t("schedule.locationPlaceholder")}
-         autoFocus={creating}
+         autoFocus={locationOpen}
        />
      </label>
    ) : (
      <Button variant="ghost" size="sm" fullWidth layoutClassName="schedule-popover__line" onClick={() => setLocationOpen(true)}>
        <LocationIcon size={18} aria-hidden="true" />
-       {t("schedule.locationPlaceholder")}
+       <span className="schedule-popover__line-text">{t("schedule.locationPlaceholder")}</span>
      </Button>
    )}
    ```
-7. 説明: 6 と同じ形。欄は今の `TextareaControl`（:466-474、`rows={4}`）に `autoFocus={creating}` を足す。閉じた形は `DescriptionIcon` と `t("schedule.descriptionPlaceholder")`、押すと `setDescriptionOpen(true)`。
+   （`autoFocus={locationOpen}`: 1 行を押して開いたときだけ欄に文字が入る。小窓はもう見えているので効く。最初から値があって開いている形では題名から focus を奪わない）
+7. 説明: 6 と同じ形。欄は今の `TextareaControl`（:466-474、`rows={4}`）に `autoFocus={descriptionOpen}` を足す。閉じた形は `DescriptionIcon` と `<span className="schedule-popover__line-text">{t("schedule.descriptionPlaceholder")}</span>`、押すと `setDescriptionOpen(true)`。
 - `{expanded && ( … )}`（:455-477）は 6・7 に置き換わるので消す。
 
 6-5. 下の帯（:482-489）: `{mode === "create" && !expanded && ( <span className="schedule-popover__more"> … </span> )}` を消す。保存・取消（:490-511）は変えない。
@@ -227,7 +249,8 @@ export function formatDraftDateLine(
 想定分岐:
 - `autoFocus` を lint（jsx-a11y/no-autofocus など）が止めたら、止めた規則名を書いて `NEEDS_DECISION:`（規則を切らない）。
 - `Button` が子に絵と文字を並べられない（型で止まる）なら `NEEDS_DECISION:`。
-- 1 行のボタンの文字が切れて 2 行になるのは可（幅 320 で日をまたぐ文は長い）。
+- 金型 Button は折り返さない（`white-space: nowrap`）。長い文は §5 の `.schedule-popover__line-text` で末尾が「…」になる。2 行にはならない。
+- 金型 Button の中で `<span>` が「…」にならない（はみ出す）ときは、Button.css を変えずに `NEEDS_DECISION:`。
 
 ## 7. SchedulePageImpl.tsx 表示切替（:1229-1345）
 
@@ -259,6 +282,12 @@ if (event.key === "Escape") {
   size="md"
   aria-haspopup="menu"
   aria-expanded={viewMenu !== null}
+  onMouseDown={(event) => {
+    // 金型 ContextMenu は document の mousedown で「外を押した」と見て閉じる（ContextMenu.tsx:141）。
+    // 開いているときにこのボタンを押すと、閉じた直後の click で開き直してしまう（審査 1 回目 M1・Chromium で再現）。
+    // 開いているときだけ、ボタンの mousedown を document に届けない。閉じるのは下の onClick が行う
+    if (viewMenu !== null) event.stopPropagation();
+  }}
   onClick={(event) => {
     const rect = event.currentTarget.getBoundingClientRect();
     setViewMenu((open) => (open ? null : { x: rect.left, y: rect.bottom }));
@@ -281,9 +310,14 @@ if (event.key === "Escape") {
 ```
 想定分岐:
 - `NAV_ICONS.chevronDown` を JSX で直接書けず型で止まったら、`const ChevronDownIcon = NAV_ICONS.chevronDown;` を関数の中に置いて使う。
-- `check-page-header-actions.js` が止めたら、止めた文を書いて `NEEDS_DECISION:`（class を作って逃げない）。
+- `Button` が `onMouseDown` を受けない（型で止まる）なら `NEEDS_DECISION:`（金型は変えない）。
 
 ## 8. 試験
+
+試験の 2 ファイルとも、答えの日本語を直接書く。commit 前の検査（lint-staged・`eslint --max-warnings=0`・規則 `local/no-japanese-literal`）で止まらないよう、両ファイルの 1 行目に次の 1 行を足す（先例 `frontend/src/components/CalendarView.test.tsx:1`・審査 1 回目 M2）:
+```ts
+/* eslint-disable local/no-japanese-literal -- テスト: 作る小窓の日時の 1 行が Google と同じ日本語で出ることを検証する（ADR-027・precedent: CalendarView.test.tsx） */
+```
 
 `frontend/src/pages/schedule/schedule-utils.test.ts`（`const t = i18n.getFixedT("ja");` の形は `:27` と同じ）:
 `describe("formatDraftDateLine", …)` に次の 7 つ。`d = { startDate: "2026-11-10", startTime: "10:00", endDate: "2026-11-10", endTime: "11:00", allDay: false }` を元に変える:
@@ -299,11 +333,17 @@ if (event.key === "Escape") {
 言語は `"ja"` を渡す。
 
 `frontend/src/pages/schedule/SchedulePageImpl.test.tsx`:
-- `:246-247` の `pressed` を次にする（表示切替のボタンの名前が今の表示の名前か）:
+- `:246-247` の `pressed` を次にする（表示切替のボタンの文字が今の表示の名前か）。ボタンが無いときは試験を落とす（「無いから false」で効かない試験が通ってしまうのを防ぐ・審査 1 回目の指摘）:
   ```tsx
-  const pressed = (name: string) =>
-    screen.queryByRole("button", { name })?.getAttribute("aria-haspopup") === "menu";
+  const viewSwitch = () => {
+    const el = document.querySelector('button[aria-haspopup="menu"]');
+    if (!el) throw new Error("view switch button is missing");
+    return el;
+  };
+  const pressed = (name: string) => viewSwitch().textContent === name;
   ```
+  （この画面で `aria-haspopup` を持つボタンは表示切替の 1 つだけ。37fa04f7b の `frontend/src/pages/schedule/` に `aria-haspopup` は 0 件）
+- 「効かない」試験 2 つ（:384-390「popover が開いている」・:392-399「近道の一覧が開いている」）は、`expect(pressed(i18n.t("schedule.monthView"))).toBe(false);` の後に `expect(pressed(i18n.t("schedule.weekView"))).toBe(true);` を足す（今の表示が週のまま残っていることを見る）。
 - T1（:539-550）: `selectRange` の後に日時の 1 行を押してから欄を読む。1 行の文も見る:
   ```tsx
   const line = await screen.findByRole("button", { name: new RegExp(lineText) });
@@ -312,11 +352,12 @@ if (event.key === "Escape") {
   `it.each` の表に 4 つ目の値として `"午前10時～午前11時"`・`"午前4時～午前5時"`・`"午後3時～午後4時"` を足す（`lineText`）。
 - T3（:565-574）: `selectRange` の後に `fireEvent.click(await screen.findByRole("button", { name: /午前7時～午前8時/ }));` を足してから欄を読む。
 - T4（:576-585）: `selectRange` の後に `fireEvent.click(await screen.findByRole("button", { name: /11月10日\(火\)～11月12日\(木\)/ }));` を足してから切り替えと日付を読む。
-- 足す（`describe("SchedulePage on CalendarView")` の中）:
-  - T6: 範囲を選ぶと題名の欄に文字が入る: `expect(document.activeElement).toBe(screen.getByPlaceholderText(i18n.t("schedule.eventTitle")))`。札「予定を追加」は出ない（`queryByText(i18n.t("schedule.addEvent"))` が null）。
-  - T7: 作る小窓では `queryByPlaceholderText(i18n.t("schedule.locationPlaceholder"))` が null で、ボタン「場所を追加」がある。押すと欄が出て、その欄に文字が入る（activeElement）。説明も同じ（`descriptionPlaceholder`）。
-  - T8: 表示切替のボタン（名前「週」）を押すと `role="menu"` が出て `menuitem` が 4 つ。「月」を押すと `calendarProps.current?.mode` が `"month"` になり、menu が消える。
-  - T9: 表示切替を開いたまま `d` を押しても表示は変わらない（ボタンの名前は「週」のまま）。
+- 足す（`describe("SchedulePage on CalendarView")` の中）。名前は既存の T1〜T9 と重ならないよう C1〜C4 にする:
+  - C1: 範囲を選ぶと題名の欄に文字が入る: `await waitFor(() => expect(document.activeElement).toBe(screen.getByPlaceholderText(i18n.t("schedule.eventTitle"))))`。札「予定を追加」は出ない（`queryByText(i18n.t("schedule.addEvent"))` が null）。
+    - 注意: 試験の環境（jsdom）は `visibility: hidden` を見ないので、この試験だけでは H1（隠れている間の autoFocus）を見つけられない。H1 は本番の Chrome で G3 ① として確かめる（Opus が行う）。
+  - C2: 作る小窓では `queryByPlaceholderText(i18n.t("schedule.locationPlaceholder"))` が null で、ボタン「場所を追加」がある。押すと欄が出て、その欄に文字が入る（activeElement）。説明も同じ（`descriptionPlaceholder`）。
+  - C3: 表示切替のボタン（文字「週」）を押すと `role="menu"` が出て `menuitem` が 4 つ。「月」を押すと `calendarProps.current?.mode` が `"month"` になり、menu が消える。
+  - C4: 表示切替を開いたまま `d` を押しても表示は変わらない（`calendarProps.current?.mode` が `"week"` のまま・ボタンの文字は「週」のまま）。続けて Esc で menu を閉じ、もう一度 `d` を押すと `"day"` になる（近道そのものは生きていることを見る）。
 - 文字は `i18n.t(...)` で取る（ja が既定の試験の作り）。日本語を直接書いた正規表現は、`it.each` の答えと T3・T4 だけ（答えの文そのものを見るため）。
 
 想定分岐:

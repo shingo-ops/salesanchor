@@ -177,16 +177,16 @@ PR 本文: tokens.css にトークンを 2 つ足すので、`frontend/scripts/c
 
 作る小窓（`SchedulePopover`・`frontend/src/pages/schedule/SchedulePageImpl.tsx:213-515`）の変え方。変えるのは作るとき（mode が create）の見た目で、詳しく見る・直すときの中身は今と同じ項目を出す:
 1. 上の帯: 作るときは「予定を追加」の札と種類の札を出さない（閉じる × は残す）。直す・詳しく見るときは今のまま。
-2. 題名: 一番上に置く。作るときは見出しの文字を出さず、読み上げ用に `aria-label`（「タイトル」）を付ける。作るときは開いた瞬間に欄へ文字が入る（`autoFocus`）→ G3 ①。
+2. 題名: 一番上に置く。作るときは見出しの文字を出さず、読み上げ用に `aria-label`（「タイトル」）を付ける。作るときは開いた瞬間に欄へ文字が入る → G3 ①。小窓は最初の描画で隠して（`visibility: hidden`）測ってから見せるので、`autoFocus` は効かない（審査 1 回目 H1・Chromium で再現）。位置決めの関数が「見えた」を返し、見えた後に `ref` で focus する。
 3. 日時の 1 行: 時計の絵＋「11月10日(火) 午前10時～午前11時」の 1 行のボタン。押すと今の「終日」の切り替えと日付・時刻の欄 4 つが出る → G3 ②。作るとき以外は最初から開いた形（今と同じ欄）。
    - 文は新しい関数 `formatDraftDateLine`（`frontend/src/pages/schedule/schedule-utils.ts`）で作る。曜日つきの日付は `Intl.DateTimeFormat(language, { month: "long", day: "numeric", weekday: "short" })`（ja で「11月10日(火)」・Mac の node で確認）。時刻は金型の `formatTimeRange`（`frontend/src/components/calendarView.utils.ts:224`）を午前・午後を省かない形で使う。「～」は既存の `calendarView.timeRange`。
    - 新しい文言キーは `schedule.dateTimeLine`「{{date}} {{time}}」の 1 つだけ。
    - 終日 1 日は「11月10日(火) 終日」、終日で複数日は「11月10日(火)～11月12日(木)」、日をまたぐ時刻つきは「11月10日(火) 午後11時～11月11日(水) 午前1時」。日付が読めないときは空、終わりだけ読めないときは始まりだけ。
 4. 種類・Meet・共有: 今の欄・切り替えのまま、日時の下に置く。Meet は「Google Meet を付ける」の 1 行の切り替えで、押すと付く（Google も 1 行のボタン）。G3 ③ の「押すと開く 1 行」に当たる（中身の入力が無いので開く物が無い）。
-5. 場所・説明: 作るときは地図の絵＋「場所を追加」、線の絵＋「説明を追加」の 1 行のボタン。押すとその欄が出て、文字がそこに入る → G3 ③。値があるときと、作るとき以外は最初から欄を出す。
+5. 場所・説明: 作るときは地図の絵＋「場所を追加」、線の絵＋「説明を追加」の 1 行のボタン。押すとその欄が出て、文字がそこに入る → G3 ③。値があるときと、作るとき以外は最初から欄を出す。欄に文字が入るのは 1 行を押して開いたときだけ（最初から開いている欄は題名から focus を奪わない）。
 6. 「詳しく入れる」のボタン・状態 `expanded`・文言キー `schedule.moreOptions`（ja・en）・css `.schedule-popover__more` を消す。
 7. 絵は金型の絵の表 `SCHEDULE_POPOVER_ICONS`（`frontend/src/constants/icons.tsx:360`）に heroicons の `ClockIcon`・`MapPinIcon`・`Bars3BottomLeftIcon`（outline・2.2.0 にあると確認済み）を足して使う。
-8. 1 行のボタンは金型 `Button`（ghost・sm・fullWidth）。左寄せだけ `.schedule-popover .schedule-popover__line { justify-content: flex-start; }` を足す（色・寸法の直書きなし）。
+8. 1 行のボタンは金型 `Button`（ghost・sm・fullWidth）。左寄せの `.schedule-popover .schedule-popover__line { justify-content: flex-start; }` と、文字の包み `.schedule-popover__line-text`（`min-width: 0; overflow: hidden; text-overflow: ellipsis;`）の 2 規則を足す（色・寸法の直書きなし）。金型 Button は折り返さない（`white-space: nowrap`）ので、長い文は末尾が「…」になる。
 
 高さ: 閉じた形は題名・日時 1 行・種類・切り替え 0〜2 行・場所 1 行・説明 1 行で、今の 496 より低くなる。全部開いた形の高さは今の 544 に近い。小窓の高さの上限（`frontend/src/pages/schedule.css:372-387` の `max-height: min(var(--schedule-popover-max-h), calc(100vh - var(--space-6)))`）と中身だけを巻く形（`:417-429`）は変えないので、高さ 768 でもボタンは中に収まる → G3 ④。本番で 1448 と 768 の 2 通りで測る（高さを変えられないときは、上限の計算の値を書き、768 では測れなかったと報告する）。
 
@@ -194,7 +194,8 @@ PR 本文: tokens.css にトークンを 2 つ足すので、`frontend/scripts/c
 - 4 つのボタン（`SchedulePageImpl.tsx:1332-1345`）を、今の表示の名前（「週」）＋下向きの絵（`NAV_ICONS.chevronDown`）の金型 `Button` 1 つにする。`aria-haspopup="menu"`・`aria-expanded` を付ける。
 - 押すと金型 `ContextMenu`（`frontend/src/components/ContextMenu.tsx`・受信箱で使っている）を、ボタンの左下を基準に開く。中身は日・週・月・一覧の 4 つ。選ぶと切り替わって閉じる。Esc・外を押すと閉じる（金型の動き）。
 - 開いている間は文字の近道（d・w・m など）を効かせない（`SchedulePageImpl.tsx:1236` の「小窓が開いている」に足す）。
-- 新しい css の class は作らない（`frontend/scripts/check-page-header-actions.js` が `-view-select` などの名前を止める）。古い `.schedule-view-switch*`（`frontend/src/pages/schedule.css:57-90`）は消す。
+- 表示切替には新しい css の class を作らない。古い `.schedule-view-switch*`（`frontend/src/pages/schedule.css:57-90`）は消す。
+- 金型 ContextMenu は document の mousedown で「外を押した」と見て閉じる（`frontend/src/components/ContextMenu.tsx:141`）。開いているときに切替ボタンを押すと閉じてすぐ開き直す（審査 1 回目 M1）。開いているときだけボタンの mousedown を止め、閉じるのはボタンの click が行う（金型は変えない）。
 
 選ばなかった案:
 - 「詳しく入れる」を残して中を並べ替えるだけ → G3 ③（場所・説明が 1 行ずつ開く）を満たさない。
@@ -204,8 +205,11 @@ PR 本文: tokens.css にトークンを 2 つ足すので、`frontend/scripts/c
 試験（`frontend/src/pages/schedule/SchedulePageImpl.test.tsx`・`schedule-utils.test.ts`）:
 - 近道の試験の `pressed`（`:246-247`）は「表示切替のボタンの名前がその表示か」に変える。
 - T1・T3・T4（`:539-585`）は先に日時の 1 行を押してから欄を読む。T1 は 1 行に「午前10時～午前11時」「午前4時～午前5時」「午後3時～午後4時」が出ることも見る。
-- 足す: 作る小窓で題名の欄に文字が入っている（`document.activeElement`）、場所・説明は 1 行だけで欄が無い／押すと欄が出る、表示切替のボタンを押すと 4 つが出て「月」を選ぶと月になる、切替を開いている間は「d」が効かない。
-- `formatDraftDateLine` の 7 通り（カード §6）。
+- 足す（C1〜C4・既存の T1〜T9 と名前を分ける）: 作る小窓で題名の欄に文字が入っている（`document.activeElement`）、場所・説明は 1 行だけで欄が無い／押すと欄が出る、表示切替のボタンを押すと 4 つが出て「月」を選ぶと月になる、切替を開いている間は「d」が効かず、閉じた後は効く。
+- 近道の「効かない」試験は、表示切替のボタンが無いときに落ちる形にし、週のままであることも見る。
+- 試験の環境（jsdom）は `visibility: hidden` を見ないので、H1 は試験では見つけられない。本番の Chrome で G3 ① として確かめる。
+- 試験の 2 ファイルは答えの日本語を直接書くので、1 行目で `local/no-japanese-literal` を外す（先例 `frontend/src/components/CalendarView.test.tsx:1`・審査 1 回目 M2）。
+- `formatDraftDateLine` の 7 通り（カード §8）。
 
 台帳・ADR: ADR の改訂は無い（金型 Button・ContextMenu・TextFieldControl を今の口のまま使う。金型に口を足さない）。文言は ADR-027 に従い t() だけ。
 
@@ -326,3 +330,14 @@ PR 本文: tokens.css にトークンを 2 つ足すので、`frontend/scripts/c
 - (4) `:125` を分ける案で足りる。T4 は `.comp-calendar {` の塊を切り出すので変えずに通る。
 - 推奨を直した: R1 包みの class の試験・R2 0 時の文字の試験・R3 `hourRange`/`timeStyle` との組み合わせ（§3.8）・R4 今日の列の地を `transparent`・R5 試験の日付の作り方。R6（日付の帯の class 名と行高）は便6 のカードで class 名を `comp-calendar__day-head`・`comp-calendar__dayname`・`comp-calendar__daynum` に固定する。R7（冒頭の「4 回目」の表記）は冒頭を直した。
 - 審査の結果のファイルは、クラウドの見張り（作業場所の外での commit 禁止）に止められて push されなかった。中身は実行の記録（RemoteTrigger の run log・セッション cse_01HHUUpQXH3goWYWdFkgnNpJ）の最後の返事で全部読めた（切れていない）。審査役は指示どおり言い換えずに止まった。
+
+### 6 回目（便3・G3・G11）: REVISE（2026-11-07 11:12〜11:20 UTC・クラウドの Opus・origin/release/schedule-gcal-create-bin3 50e56c0b4・照合は origin/main 37fa04f7b）
+
+- 審査の結果のファイルは、5 回目と同じくクラウドの見張り（作業場所の外での commit 禁止）に止められて push されなかった。中身は実行の記録（セッション cse_01HHUUpTnMjo55nyv2JCfsv5）の最後の返事で読んだ。書いた結果のファイルの本文は記録の上で途中から切れていて、軽い指摘 L1〜L6 の一部は返事の要約だけで読んだ（まだ確かめていない部分がある）。
+- ○: `formatDraftDateLine` の 7 通りの答えは node で全部一致（TZ=UTC でも同じ）。行番号はおおむね一致。ADR-144・ADR-067・ADR-027 の本文には触れない。
+- H1（重い）: 小窓は最初の描画で `visibility: hidden`（`frontend/src/pages/schedule/SchedulePageImpl.tsx:176-178`）なので、題名の `autoFocus` は本物の Chrome で効かない（React 18.3.1 と Chromium で再現。jsdom の試験は見逃す）→ 位置決めの関数が `placed` を返し、見えた後に `ref` で focus する形に直した（§3.9 の 2・カード §6-0・§6-2）。
+- M1（中）: 金型 ContextMenu の mousedown で閉じるため、切替ボタンの再押しで開き直す（Chromium で再現）→ 開いているときだけボタンの mousedown を止める（§3.9 表示の切替・カード §7-3）。
+- M2（中）: 試験の日本語が commit 前の検査で止まる → 両試験ファイルの 1 行目で規則を外す（カード §8）。
+- L（軽い）: 金型 Button は折り返さない → 「…」にする規則を足した。新しい試験名 T6〜T9 が既存と重なる → C1〜C4。`check-page-header-actions.js` はどこからも回っていない → カードの想定分岐から消した。近道の「効かない」試験が弱い → ボタンが無いと落ちる形と、週のままの確認を足した。設計とカードの食い違い（設計の「値があるときは欄を出す」がカードに無い・試験の節番号）→ 揃えた。行番号の小さなずれ（keydown の取り付けは `:1272`）→ カードは `:1229-1275` の範囲指定のままで、該当の書き換えは文の照合で行う。
+- 次の審査（7 回目）は、結果をファイルに commit させず、返事の本文に全部書かせる。
+
