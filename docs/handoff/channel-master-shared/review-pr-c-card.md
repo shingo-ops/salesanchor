@@ -222,3 +222,86 @@ sed -n '18,40p' migrations/20261017_130100_create_ai_ro_views.sql
 git show origin/main:.github/workflows/migration-guard.yml | sed -n '343,391p'
 sed -n '955,1000p' scripts/check-process-artifacts.js
 ```
+
+## 3回目
+
+- 審査役: 設計審査役（Architect・クラウドの定期実行）。読むだけ。コード・SQL・試験・ADR は変えていない。DB には繋いでいない
+- 対象: `release/channel-master-pr-c` 16dec1ed0（直しは `git diff f3e56ccf9 16dec1ed0` の3ファイル: ADR-1069・docs/adr/README.md・card-pr-c.md）
+- 照合先: origin/main 44a6ccce1（2回目と同じ）
+
+### 判定: **APPROVE**
+
+2回目の必須 M4〜M6 は全部直った。推奨 R6〜R9 も全部入った。直しで新しく壊れた所・実装役が止まる所は見つからなかった。下の推奨 R10〜R13 は任意（直さなくても実装役は進める）。
+
+### 必須
+
+なし。
+
+### ① 2回目の指摘の直り
+
+| 指摘 | 結果 | 根拠（【事実】） |
+|---|---|---|
+| M4 索引の状態 | 直った | `ADR-1069-drop-tenant-channel-masters.md:5` は「…確かめたら採用に上げる」。`scripts/generate-adr-index.js:59` の語（accept・承認・採択・完了・実装済・done）に当たらず、`:60` の propos で Proposed。`docs/adr/README.md:247` は `Proposed`。`node scripts/generate-adr-index.js --check` は「✅ 最新の状態」rc=0 |
+| M5 CI ログの行 | 直った | `card-pr-c.md:136` が判定を「`pytest-run` が緑」に替え、skipif が CI で偽になる理由と `pg` 部品の assert（`test_tcg_work_matching_integration.py:386-391`、origin/main で一致）を書き、貼るのは末尾の `N passed`。加えて `:122`（手順5）で消す前の件数を試験の中で assert し、証拠を試験に持たせた（2回目の直し方 (a)＋(b)） |
+| M6 reader の道 | 直った | §5 の2（`card-pr-c.md:155`）は `ai_ro.tenant_00X__channel_masters`。ビュー名は `migrations/20261017_130100_create_ai_ro_views.sql:52` の `t.sch || '__' || t.rel`（`tenant_001__channel_masters` は 27 バイトで 63 以下なので切り詰め無し）と一致。§3 の h（`:141`）と ADR-1069 `:39`・`:19` は `pg_class`/`pg_namespace` に替わり、`information_schema.tables` を使わない理由も書いた。保存先の例外も一文で決めた |
+| R6 public の比べ | 直った | `card-pr-c.md:123` で手順6を外し、public は本番の h で確かめると書いた |
+| R7 片付け | 直った | `:117`（手順0）で片付けの文を書かないと明記。`:118` の `DROP SCHEMA ... CASCADE` は消えた |
+| R8 3つ組 | 直った | `:117` に `connection, _, _ = pg`（手本 `test_leads_assignment_opened_at_pg.py:104`） |
+| R9 全 tenant_ | 直った | `:121` の `n.nspname ~ '^tenant_\d+$'`（IN 外し） |
+
+### ② 2-11 の手順0・4・5 の SQL は `pg` 部品の DB で成り立つか — 成り立つ
+
+- 【事実】20260611 の id は `SERIAL`（`migrations/20260611_100000_create_channel_masters.sql:41`）なので連番は `channel_masters_id_seq` で表に OWNED BY。表を消せば連番も消える（PostgreSQL の決まり）。手順4 の `relname IN ('channel_masters','channel_masters_id_seq')` はこの2つを数える
+- 【事実】試験の接続は表の持ち主（jarvis）なので `pg_class` も `information_schema` も見える。`pg_catalog` は権限で行を絞らない
+- 【事実】部品の DB の tenant_ スキーマ（tenant_006・tenant_902・tenant_901・試験の tenant_9101・9102）は全部 `^tenant_\d+$` に当たり、20260611 と新 migration のループ（`:24-` と card 2-1 の DO 文）も同じ正規表現系なので、手順5 の件数は 5 スキーマ × 2 = 10（「4 以上」を満たす）、手順4 は 0 になる 【推測：部品が作るスキーマを全部は数えていない。少なくとも 9101・9102 の 4 はある】
+- 【事実】`backend/tests/test_tcg_work_matching_integration.py` の中の channel の文字は supplier_channels だけ（`grep -n channel`）。部品が同名の表・依存を先に作らない
+- 【事実】見張り `test_tenant_loop_migration_guard.py:263-281` が `_LOOP_RE` で走査するのは `migrations/*.sql` だけ。試験ファイルに `nspname ~ '^tenant_` を書いても新しい組は生まれない。組は 2-8 の2本のまま釣り合う
+- 【事実】`pytest-run` は `.github/workflows/test.yml:114` の仕事の id（表示名は `:115` の `pytest-run-internal`、まとめは `:262` の `pytest`）
+
+### ③ §3 の h・§5 の2 と usage.md（origin/main）の食い違い — 食い違いは無い（行番号1つだけずれ）
+
+- 【事実】usage.md:17「読めるのは ai_ro のビュー…ベース表は読めない（42501）」→ §5 の2 は ai_ro のビュー、h は pg_catalog。ベース表を読まない。合う
+- 【事実】usage.md:15「1 回に SQL は 1 文」→ h は1文、§5 の2 は「1文ずつ」。合う。usage.md:16 の行数の既定 200 にも収まる（12行・6行）
+- 【事実】usage.md:39「デプロイのたびに ai_ro は約70秒外れる（先頭で DROP、最後に作り直す）」→ §5 の2「反映を始める前に」。合う。h は pg_catalog なので外れている間も読める
+- 【事実】`scripts/run_all_migrations.sh:220`・`:224` が先頭で ai_cloud・ai_ro を外し、`:236-273` の EXIT trap が作り直す。だから新 migration の CASCADE 無しの消す文はビューの依存で止まらず、作り直しは消えた表を拾わない（`20261017_130100_create_ai_ro_views.sql:25-33` は実在の表から作る）
+- 【事実】保存先: usage.md:18（card は `:16` と書く。R11）「出力は /tmp/CC報告ファイル/ に保存しチャットに貼らない」と §5「必要な列・行だけを取り」。card は例外を理由つきで書いた。中身の列（id・tenant_id・platform・display_name・connection_type・is_active・created_at）に usage の除外語（`20261017_130100:23`）に当たる列は無い
+- 【記録として扱う】Opus の本番実測（2026-11-07 15:01 JST、reader で pg_catalog 12行・ai_ro ビュー6本）。12行は public 2（表と IDENTITY の連番。`20261106_190000_create_public_channel_masters.sql:14` の IDENTITY の既定名は `channel_masters_id_seq`）＋5社×2 と合う。【推測】ビュー6本は tenant 5本＋`ai_ro.public__channel_masters`。card `:155` の「ビュー5本」は tenant の5本の意味で矛盾は無い（R13）
+- 【推測】h の文は relkind を絞らないが、ai_ro・ai_cloud のビュー名は `tenant_00X__channel_masters` 形なので当たらない。実測12行がそれを裏づける
+
+### ④ 直しで新しく壊れた所・止まる点
+
+- 新しく壊れた所: 見つからない
+- 【事実】backend の ruff は `tests` を除外（`backend/pyproject.toml` の `[tool.ruff]` exclude）。手順4 の SQL を Python の普通の文字列に書くと `\d` で SyntaxWarning が出るが、試験は落ちない（R10）
+- 【事実】`filterwarnings` の設定は pyproject に無い（`grep -n filterwarnings backend/pyproject.toml` 出力なし）ので、警告で試験が赤にはならない
+
+### 推奨（任意）
+
+- R10. `card-pr-c.md:121` の SQL を試験に書くとき、Python の文字列は `r"..."` にする（Python 3.12 は `'\d'` に SyntaxWarning）。一文足せば実装役が迷わない
+- R11. `card-pr-c.md:155` の「usage.md:16」は origin/main では `:18`（`:16` は limit の行）。「usage.md §2 の保存先」と節で指すと行ずれに強い。また「PO の決めた範囲の外に出すものではない」は Opus の判断なので、PR 本文に「保存先の例外は Opus の判断。PO が止めれば /tmp に移す」と書いて PO の目に入れるとよい
+- R12. `card-pr-c.md:136` の `pytest-run` は仕事の id。PR の画面に出る名前は `pytest-run-internal`（`test.yml:115`）と必須のまとめ `pytest`（`:262`）。どちらを見るかを括弧で足すと実装役が探さずに済む
+- R13. `card-pr-c.md:155`「ビュー5本」を「tenant のビュー5本（public を入れて6本）」にすると Opus の実測記録と数が揃う
+
+### 未確認
+
+- U9. 試験は流していない（PostgreSQL を立てていない）。②は静的な読み
+- U10. reader で pg_catalog が読めること・ビュー6本・12行は Opus の本番実測の記録に頼った（DB に繋がない役）
+- U11. 本番5社の表の中身が今も6行ずつで秘密の列が無いことは、card §1 の記録に頼った
+
+### 確かめた命令（3回目）
+
+```bash
+git rev-parse HEAD origin/release/channel-master-pr-c   # 16dec1ed0 両方
+git rev-parse --short origin/main                       # 44a6ccce1
+git diff --stat f3e56ccf9 16dec1ed0; git diff f3e56ccf9 16dec1ed0
+node scripts/generate-adr-index.js --check; echo rc=$?  # ✅ rc=0
+grep -n 1069 docs/adr/README.md                         # :247 Proposed
+sed -n '45,65p' scripts/generate-adr-index.js
+git show origin/main:docs/handoff/ai-readonly-db-path/usage.md | cat -n | sed -n 1,80p
+grep -n 'ai_ro\|ai_cloud\|trap' scripts/run_all_migrations.sh
+sed -n '18,70p' migrations/20261017_130100_create_ai_ro_views.sql
+grep -n 'SERIAL\|IDENTITY' migrations/20260611_100000_create_channel_masters.sql migrations/20261106_190000_create_public_channel_masters.sql
+sed -n '15,30p;255,300p' backend/tests/test_tenant_loop_migration_guard.py
+sed -n '384,392p' backend/tests/test_tcg_work_matching_integration.py; grep -n channel backend/tests/test_tcg_work_matching_integration.py
+grep -n 'pytest-run\|^  [a-z_-]*:$' .github/workflows/test.yml
+grep -n -A8 '\[tool.ruff' backend/pyproject.toml; grep -n 'filterwarnings\|addopts' backend/pyproject.toml
+```
