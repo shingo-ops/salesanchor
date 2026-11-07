@@ -44564,6 +44564,55 @@
         ]
       }
     },
+    "/api/v1/calendar/events/search": {
+      "get": {
+        "description": "題名の一部で予定を探す。見せてよい予定の決まりは list_events と同じ。新しい順・最大 50 件。",
+        "operationId": "search_events_api_v1_calendar_events_search_get",
+        "parameters": [
+          {
+            "description": "題名の一部（前後の空白は除く・1〜100 文字）",
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "description": "題名の一部（前後の空白は除く・1〜100 文字）",
+              "title": "Q",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Search Events",
+        "tags": [
+          "calendar",
+          "calendar"
+        ]
+      }
+    },
     "/api/v1/calendar/events/{event_id}": {
       "delete": {
         "description": "アプリ内のイベントを削除し、Google Calendar からも削除する。",

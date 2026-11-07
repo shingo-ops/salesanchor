@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import i18n from "../../i18n";
 import { queryClient } from "../../lib/query/apiQuery";
 import SchedulePage from "./SchedulePageImpl";
+import { formatDayLabel, getWeekDays } from "./schedule-utils";
 
 vi.mock("../../contexts/AuthContext", () => ({
   useAuth: () => ({ user: { uid: "user-a" } }),
@@ -32,6 +33,7 @@ const answers = vi.hoisted(() => ({
   connected: false,
   meetAvailable: false,
   events: [] as Array<Record<string, unknown>>,
+  searchEvents: [] as Array<Record<string, unknown>>,
   shifts: [] as Array<Record<string, unknown>>,
   holidays: [] as Array<Record<string, unknown>>,
   canManageOthers: false,
@@ -55,6 +57,7 @@ vi.mock("../../lib/api", () => ({
         };
       }
       if (path.startsWith("/calendar/holidays")) return { holidays: answers.holidays };
+      if (path.startsWith("/calendar/events/search")) return { events: answers.searchEvents };
       if (path.startsWith("/calendar/events")) return { events: answers.events };
       if (path === "/google-calendar/connect/start") return { auth_url: "https://accounts.example/auth" };
       if (path.startsWith("/shifts")) return answers.shifts;
@@ -79,6 +82,7 @@ beforeEach(async () => {
   answers.connected = false;
   answers.meetAvailable = false;
   answers.events = [];
+  answers.searchEvents = [];
   answers.shifts = [];
   answers.holidays = [];
   answers.canManageOthers = false;
@@ -776,5 +780,80 @@ describe("SchedulePage on CalendarView", () => {
     expect(dayDate.getMonth()).toBe(today.getMonth());
     expect(dayDate.getDate()).toBe(today.getDate());
     expect(calendarProps.current?.dayCount).toBe(1);
+  });
+});
+
+describe("SchedulePage search by title (G12)", () => {
+  const rangeText = () => document.querySelector(".schedule-shell__range")?.textContent ?? "";
+  const searchName = () => i18n.t("common.search");
+  const ready = async () => {
+    view();
+    await screen.findByRole("button", { name: i18n.t("schedule.create") });
+  };
+  const searchButton = () => screen.getByRole("button", { name: searchName() });
+  const searchField = () =>
+    (screen.queryByRole("searchbox", { name: searchName() }) ?? screen.queryByRole("textbox", { name: searchName() })) as HTMLInputElement | null;
+  const search = (text: string) => {
+    const field = searchField();
+    if (!field) throw new Error("search field is missing");
+    fireEvent.change(field, { target: { value: text } });
+    fireEvent.keyDown(field, { key: "Enter" });
+  };
+
+  it("F1: the magnifier opens a focused search field", async () => {
+    await ready();
+    fireEvent.click(searchButton());
+    const field = searchField();
+    expect(field).not.toBeNull();
+    expect(document.activeElement).toBe(field);
+  });
+
+  it("F2: Enter asks the search path with the encoded query and lists the hit", async () => {
+    answers.searchEvents = [
+      apiEvent({ id: 11, title: "商談A", start_datetime: "2026-12-15T10:00:00", end_datetime: "2026-12-15T11:00:00" }),
+    ];
+    await ready();
+    fireEvent.click(searchButton());
+    search("商談");
+    await waitFor(() => expect(mockGet).toHaveBeenCalledWith("/calendar/events/search?q=%E5%95%86%E8%AB%87"));
+    expect(await screen.findByText("商談A")).toBeTruthy();
+  });
+
+  it("F3: clicking a hit jumps to its week and closes the field", async () => {
+    answers.searchEvents = [
+      apiEvent({ id: 11, title: "商談A", start_datetime: "2026-12-15T10:00:00", end_datetime: "2026-12-15T11:00:00" }),
+    ];
+    await ready();
+    fireEvent.click(searchButton());
+    search("商談");
+    fireEvent.click(await screen.findByText("商談A"));
+    const days = getWeekDays(new Date(2026, 11, 15));
+    const expected = `${formatDayLabel(days[0])} - ${formatDayLabel(days[6])}`;
+    await waitFor(() => expect(rangeText()).toBe(expected));
+    expect(searchField()).toBeNull();
+    expect(screen.getByRole("button", { name: searchName() })).toBeTruthy();
+  });
+
+  it("F4: no hit shows the no-results text", async () => {
+    answers.searchEvents = [];
+    await ready();
+    fireEvent.click(searchButton());
+    search("商談");
+    expect(await screen.findByText(i18n.t("schedule.searchNoResults"))).toBeTruthy();
+  });
+
+  it("F5: Esc closes the field and the t shortcut still goes back to today", async () => {
+    await ready();
+    const initial = rangeText();
+    fireEvent.click(searchButton());
+    const field = searchField();
+    if (!field) throw new Error("search field is missing");
+    fireEvent.keyDown(field, { key: "Escape" });
+    expect(searchField()).toBeNull();
+    expect(screen.getByRole("button", { name: searchName() })).toBeTruthy();
+    fireEvent.keyDown(document.body, { key: "j" });
+    expect(rangeText()).not.toBe(initial);
+    fireEvent.keyDown(document.body, { key: "t" });
+    expect(rangeText()).toBe(initial);
   });
 });

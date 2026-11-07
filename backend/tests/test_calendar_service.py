@@ -270,6 +270,53 @@ class TestListEvents:
         assert ":me" not in stmt.text
         assert "me" not in params
 
+    @pytest.mark.asyncio
+    async def test_s1_range_call_unchanged(self):
+        """S1: 期間だけの呼び出しは ILIKE・LIMIT・DESC を持たず、条件の順も今のまま。"""
+        from app.services.calendar_service import list_events
+        db = _make_db(fetchall_return=[])
+        await list_events(db, tenant_id=1, start="2026-06-01", end="2026-06-30")
+        stmt, _params = db.execute.call_args.args
+        assert "ILIKE" not in stmt.text
+        assert "LIMIT" not in stmt.text
+        assert "DESC" not in stmt.text
+        assert "ce.start_datetime < :end AND ce.end_datetime > :start" in stmt.text
+
+    @pytest.mark.asyncio
+    async def test_s2_title_search_sql_and_params(self):
+        """S2: 題名検索は ILIKE・新しい順・LIMIT が入り、期間の条件は入らない。"""
+        from app.services.calendar_service import list_events
+        db = _make_db(fetchall_return=[])
+        await list_events(db, tenant_id=1, user_id=7, title_query="商談", limit=50)
+        stmt, params = db.execute.call_args.args
+        assert "ce.title ILIKE :title_q ESCAPE" in stmt.text
+        assert "ORDER BY ce.start_datetime DESC" in stmt.text
+        assert "LIMIT :limit" in stmt.text
+        assert "(ce.calendar_type = 'shared' OR ce.user_id = :me)" in stmt.text
+        assert ":start" not in stmt.text
+        assert ":end" not in stmt.text
+        assert params["title_q"] == "%商談%"
+        assert params["limit"] == 50
+        assert params["me"] == 7
+
+    @pytest.mark.asyncio
+    async def test_s3_title_query_escapes_wildcards(self):
+        """S3: %・_・\\ は文字として扱う。"""
+        from app.services.calendar_service import list_events
+        db = _make_db(fetchall_return=[])
+        await list_events(db, tenant_id=1, user_id=7, title_query="50%_off\\", limit=50)
+        _stmt, params = db.execute.call_args.args
+        assert params["title_q"] == "%50\\%\\_off\\\\%"
+
+    @pytest.mark.asyncio
+    async def test_s4_no_range_where_is_valid(self):
+        """S4: 期間なし・user_id なしでも WHERE が壊れない。"""
+        from app.services.calendar_service import list_events
+        db = _make_db(fetchall_return=[])
+        await list_events(db, tenant_id=1, user_id=None, title_query="x")
+        stmt, _params = db.execute.call_args.args
+        assert "WHERE TRUE AND ce.calendar_type = 'shared'" in stmt.text
+
 
 class TestCreateEvent:
     @pytest.mark.asyncio
