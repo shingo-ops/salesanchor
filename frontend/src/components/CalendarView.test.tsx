@@ -1,9 +1,18 @@
+/* eslint-disable local/no-japanese-literal -- テスト: 午前・午後の時刻が Google と同じ日本語で出ることを検証する（ADR-027・precedent: DataTable.test.tsx） */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render } from '@testing-library/react';
 import { readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import ja from '../locales/ja.json';
 import { CalendarView } from './CalendarView';
-import { computeHourRange, eventClassNames } from './calendarView.utils';
+import {
+  computeHourRange,
+  eventClassNames,
+  formatTimeRange,
+  normalizeSelectedRange,
+  scrollTimeForNow,
+  toMeridiemHour,
+} from './calendarView.utils';
 import type { CalendarViewEvent } from './calendarView.utils';
 
 // FullCalendar は jsdom で描けないので差し替え、渡された props を見る（design §6）
@@ -189,7 +198,7 @@ describe('T3 props passed to FullCalendar', () => {
     );
     const p = fcProps();
     p.eventClick({ event: { id: 'e1' } });
-    expect(onEventClick).toHaveBeenCalledWith('e1');
+    expect(onEventClick).toHaveBeenCalledWith('e1', null);
   });
 });
 
@@ -199,6 +208,7 @@ describe('T4 every --fc-* variable is overridden in CalendarView.css', () => {
       readPackageFiles('core', (n) => n === 'index.js' || n.startsWith('internal')),
       readPackageFiles('daygrid', (n) => n === 'index.js' || n.startsWith('internal')),
       readPackageFiles('timegrid', (n) => n === 'index.js' || n.startsWith('internal')),
+      readPackageFiles('interaction', (n) => n === 'index.js' || n.startsWith('internal')),
     ].join('\n');
     const names = [...new Set(sources.match(/--fc-[a-z0-9-]+/g) ?? [])].sort();
     expect(names.length).toBeGreaterThan(0);
@@ -215,5 +225,257 @@ describe('T5 FullCalendar internals the more-link handling relies on', () => {
     const src = readPackageFiles('core', (n) => n === 'internal-common.js');
     expect(src).toContain("if (!moreLinkClick || moreLinkClick === 'popover')");
     expect(src).toContain('context.calendarApi.zoomTo(date, moreLinkClick)');
+  });
+});
+
+describe('T6 toMeridiemHour', () => {
+  it('maps 24-hour values to 12-hour values like Google', () => {
+    expect(toMeridiemHour(0)).toEqual({ hour12: 12, pm: false });
+    expect(toMeridiemHour(9)).toEqual({ hour12: 9, pm: false });
+    expect(toMeridiemHour(12)).toEqual({ hour12: 12, pm: true });
+    expect(toMeridiemHour(13)).toEqual({ hour12: 1, pm: true });
+    expect(toMeridiemHour(23)).toEqual({ hour12: 11, pm: true });
+  });
+});
+
+describe('T7 formatTimeRange', () => {
+  const messages = ja.calendarView as Record<string, string>;
+  const tJa = (key: string, opts?: Record<string, unknown>): string => {
+    const text = messages[key.replace('calendarView.', '')] ?? key;
+    return text.replace(/\{\{(\w+)\}\}/g, (_m, name: string) => String(opts?.[name] ?? ''));
+  };
+  const d = (h: number, m = 0) => new Date(2026, 10, 5, h, m);
+
+  it('omits the end meridiem when it matches the start', () => {
+    expect(formatTimeRange(d(20), d(21), tJa, true)).toBe('午後8時～9時');
+    expect(formatTimeRange(d(12, 30), d(13, 30), tJa, true)).toBe('午後12:30～1:30');
+  });
+
+  it('keeps the end meridiem when it differs', () => {
+    expect(formatTimeRange(d(11, 30), d(12, 30), tJa, true)).toBe('午前11:30～午後12:30');
+  });
+
+  it('returns only the start when there is no end', () => {
+    expect(formatTimeRange(d(20), null, tJa, true)).toBe('午後8時');
+  });
+
+  it('keeps the end meridiem when omitSameMeridiem is false', () => {
+    expect(formatTimeRange(d(20), d(21), tJa, false)).toBe('午後8時～午後9時');
+  });
+});
+
+describe('T8 normalizeSelectedRange', () => {
+  const d = (h: number, m = 0) => new Date(2026, 10, 5, h, m);
+
+  it('widens a click-only selection to one hour', () => {
+    const r = normalizeSelectedRange(d(10), d(10, 15), false);
+    expect(r.start).toEqual(d(10));
+    expect(r.end).toEqual(d(11));
+  });
+
+  it('keeps a longer selection', () => {
+    const r = normalizeSelectedRange(d(10), d(12), false);
+    expect(r.start).toEqual(d(10));
+    expect(r.end).toEqual(d(12));
+  });
+
+  it('keeps an all-day selection', () => {
+    const r = normalizeSelectedRange(d(0), d(0, 15), true);
+    expect(r.end).toEqual(d(0, 15));
+  });
+});
+
+describe('T9 scrollTimeForNow', () => {
+  it('returns one hour before now', () => {
+    expect(scrollTimeForNow(new Date(2026, 10, 5, 12, 34))).toBe('11:00:00');
+  });
+
+  it('does not go before midnight', () => {
+    expect(scrollTimeForNow(new Date(2026, 10, 5, 0, 10))).toBe('00:00:00');
+  });
+});
+
+describe('T10 new props passed to FullCalendar', () => {
+  const events: CalendarViewEvent[] = [timed('e1', '2026-11-02T10:00:00', '2026-11-02T11:00:00')];
+  const d = (h: number, m = 0) => new Date(2026, 10, 5, h, m);
+  const box = (rect: Record<string, number>) => ({ getBoundingClientRect: () => rect });
+
+  it('leaves interaction off when no handler is passed', () => {
+    render(<CalendarView mode="days" date="2026-11-02" events={events} ariaLabel="cal" />);
+    const p = fcProps();
+    expect(p.selectable).toBe(false);
+    expect(p.editable).toBe(false);
+    expect(p.firstDay).toBe(1);
+    expect(p.height).toBe('auto');
+  });
+
+  it('selects a range and clears the selection', () => {
+    const onSelectRange = vi.fn();
+    const unselect = vi.fn();
+    render(
+      <CalendarView
+        mode="days"
+        date="2026-11-02"
+        events={events}
+        onSelectRange={onSelectRange}
+        ariaLabel="cal"
+      />,
+    );
+    const p = fcProps();
+    expect(p.selectable).toBe(true);
+    p.select({
+      start: d(10),
+      end: d(10, 15),
+      allDay: false,
+      jsEvent: { clientX: 5, clientY: 7 },
+      view: { calendar: { unselect } },
+    });
+    expect(onSelectRange).toHaveBeenCalledWith(d(10), d(11), false, {
+      top: 7,
+      bottom: 7,
+      left: 5,
+      right: 5,
+      width: 0,
+      height: 0,
+    });
+    expect(unselect).toHaveBeenCalledTimes(1);
+    p.select({
+      start: d(10),
+      end: d(12),
+      allDay: false,
+      jsEvent: null,
+      view: { calendar: { unselect } },
+    });
+    expect(onSelectRange).toHaveBeenLastCalledWith(d(10), d(12), false, null);
+  });
+
+  it('moves an event', () => {
+    const onEventMove = vi.fn();
+    const revert = vi.fn();
+    render(
+      <CalendarView
+        mode="days"
+        date="2026-11-02"
+        events={events}
+        onEventMove={onEventMove}
+        ariaLabel="cal"
+      />,
+    );
+    const p = fcProps();
+    expect(p.editable).toBe(true);
+    expect(p.eventStartEditable).toBe(true);
+    expect(p.eventDurationEditable).toBe(false);
+    p.eventDrop({ event: { id: 'e1', start: d(10), end: d(11), allDay: false }, revert });
+    expect(onEventMove).toHaveBeenCalledWith('e1', d(10), d(11), false, revert);
+  });
+
+  it('resizes an event', () => {
+    const onEventResize = vi.fn();
+    const revert = vi.fn();
+    render(
+      <CalendarView
+        mode="days"
+        date="2026-11-02"
+        events={events}
+        onEventResize={onEventResize}
+        ariaLabel="cal"
+      />,
+    );
+    const p = fcProps();
+    expect(p.eventDurationEditable).toBe(true);
+    p.eventResize({ event: { id: 'e1', start: d(10), end: d(12) }, revert });
+    expect(onEventResize).toHaveBeenCalledWith('e1', d(10), d(12), revert);
+  });
+
+  it('routes the more-link to onMoreClick instead of onDayClick', () => {
+    const onMoreClick = vi.fn();
+    const onDayClick = vi.fn();
+    render(
+      <CalendarView
+        mode="month"
+        date="2026-11-02"
+        events={events}
+        onMoreClick={onMoreClick}
+        onDayClick={onDayClick}
+        ariaLabel="cal"
+      />,
+    );
+    const p = fcProps();
+    const day = new Date(2026, 10, 5);
+    const rect = { top: 1, right: 4, bottom: 3, left: 2, width: 2, height: 2 };
+    const result = p.moreLinkClick({
+      date: day,
+      jsEvent: { target: box(rect) },
+      view: { type: 'dayGridMonth' },
+    });
+    expect(onMoreClick).toHaveBeenCalledWith(day, rect);
+    expect(onDayClick).not.toHaveBeenCalled();
+    expect(result).toBe('dayGridMonth');
+    p.moreLinkClick({ date: day, jsEvent: { target: null }, view: { type: 'dayGridMonth' } });
+    expect(onMoreClick).toHaveBeenLastCalledWith(day, null);
+  });
+
+  it('passes the event rectangle to onEventClick', () => {
+    const onEventClick = vi.fn();
+    render(
+      <CalendarView
+        mode="days"
+        date="2026-11-02"
+        events={events}
+        onEventClick={onEventClick}
+        ariaLabel="cal"
+      />,
+    );
+    const rect = { top: 1, right: 4, bottom: 3, left: 2, width: 2, height: 2 };
+    fcProps().eventClick({ event: { id: 'e1' }, el: box(rect) });
+    expect(onEventClick).toHaveBeenCalledWith('e1', rect);
+  });
+
+  it('applies weekStart, fillHeight, hourRange, scrollToNow and timeStyle', () => {
+    render(
+      <CalendarView
+        mode="days"
+        date="2026-11-02"
+        events={events}
+        weekStart={0}
+        fillHeight
+        hourRange="full"
+        scrollToNow
+        timeStyle="meridiem"
+        ariaLabel="cal"
+      />,
+    );
+    const p = fcProps();
+    expect(p.firstDay).toBe(0);
+    expect(p.height).toBe('100%');
+    expect(p.slotMinTime).toBe('00:00:00');
+    expect(p.slotMaxTime).toBe('24:00:00');
+    expect(p.scrollTime).toMatch(/^\d{2}:00:00$/);
+    expect(typeof p.slotLabelContent).toBe('function');
+  });
+
+  it('passes per-event editable and sets the owner color through eventDidMount', () => {
+    const colored: CalendarViewEvent[] = [
+      timed('c1', '2026-11-02T10:00:00', '2026-11-02T11:00:00', {
+        color: 'rgb(18, 52, 86)',
+        editable: false,
+      }),
+      timed('c2', '2026-11-02T12:00:00', '2026-11-02T13:00:00'),
+    ];
+    render(<CalendarView mode="days" date="2026-11-02" events={colored} ariaLabel="cal" />);
+    const p = fcProps();
+    expect(p.events[0].editable).toBe(false);
+    expect(p.events[0]).not.toHaveProperty('backgroundColor');
+    expect(p.events[0]).not.toHaveProperty('borderColor');
+    expect(p.events[1]).not.toHaveProperty('editable');
+    expect(p.eventClassNames({ event: { extendedProps: { source: colored[0] } } })).toContain(
+      'comp-calendar__event--owner-color',
+    );
+    const el = document.createElement('div');
+    p.eventDidMount({ event: { extendedProps: { source: colored[0] } }, el });
+    expect(el.style.getPropertyValue('--comp-calendar-owner-color')).toBe('rgb(18, 52, 86)');
+    const plain = document.createElement('div');
+    p.eventDidMount({ event: { extendedProps: { source: colored[1] } }, el: plain });
+    expect(plain.style.getPropertyValue('--comp-calendar-owner-color')).toBe('');
   });
 });

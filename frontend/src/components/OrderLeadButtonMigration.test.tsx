@@ -35,7 +35,7 @@ beforeEach(async () => {
     if (url === '/contacts?company_id=4&per_page=100') return [{ id: 5, contact_code: 'P5', display_name: 'Contact', surname: null, given_name: null, primary_email: null, is_primary_contact: true }];
     if (url.endsWith('/shipping') || url.endsWith('/purchase')) throw new Error('not found');
     if (url === '/leads') return leadRows;
-    if (url === '/countries' || url === '/channel-masters' || url === '/close-reasons?type=lost') return [];
+    if (url === '/countries' || url.startsWith('/channel-masters') || url === '/close-reasons?type=lost') return [];
     throw new Error('Unexpected GET ' + url);
   });
   mock.post.mockImplementation(() => { throw new Error('Unexpected POST'); });

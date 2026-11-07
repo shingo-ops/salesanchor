@@ -1,0 +1,54 @@
+# ADR-1067: 会社の列を持つ public の 8 表に RLS を付ける（段階④）
+
+| 項目 | 内容 |
+|------|------|
+| ステータス | Proposed（目標と順番は PO が決めた。備考を参照。便④-5 の本番確認の後に決定済みへ進める） |
+| 備考 | PO 2026-11-06「1」（問い「8 件すべてに守りを足す設計をする【おすすめ】：在庫の動きから順に、入口を1件ずつ調べて設計します。」への答え）。2026-11-06 PO「1」（問い「この目標と順番で承認する【おすすめ】：最初の在庫の動きの分から作り始め、本番に出して確かめるところまで進めます。」への答え）で KGI と順番を承認 |
+| 起案日 | 2026-11-06 |
+| 方針の決定者 | Shingo（PO） |
+| 関連 | ADR-1018（public の RLS 段階①〜③・本 ADR はその続き）、ADR-1063（便5: RLS の無い会社ごとの表を CI で止める）、ADR-145（FORCE RLS の手本）、ADR-072（会社ごとのスキーマ）、ADR-131（接続ごとの文脈リセット）、ADR-136・ADR-1003（危険 PR の GO と委任） |
+| 設計・根拠 | [design.md](../handoff/s1-rls-stage4/design.md)、[recon.md](../handoff/s1-rls-stage4/recon.md)、KGI [kgi.md](../specs/tenant-rls/kgi.md) KGI-4〜6 |
+
+---
+
+## What（何を決めたか）
+
+1. 次の 8 表に RLS を付ける（ENABLE と FORCE、ポリシー 4 本）。
+2. 型A（自社の行だけ読み書き。運営は読むだけ可）: `inventory_movements`・`discord_server_snapshots`・`discord_server_apply_runs`。
+   - 読取: `tenant_id = 自社` または運営の文脈。
+   - 作成・変更・削除: `tenant_id = 自社` のときだけ。
+3. 型C（読取は全行可。作成・変更・削除は自社か運営の文脈のときだけ）: `tenant_discord_config`・`tenant_discord_ticket_config`・`google_webhook_subscriptions`・`tenant_llm_budgets`・`tenant_settings`。ADR-1018 段階③の案 C と同じ考え方。
+4. 運営画面の 2 つの書込（AI の予算の保存、会社の段階の切替）は、書く直前に運営の文脈を張り、終わりに必ず外す。翻訳の見張りの通知時刻の書込（translation_monitor.py:206、文脈が外れた後に走る）は、書く直前に会社の文脈を張る（recon §7）。
+5. 1 便に 1〜2 表ずつ、5 便に分けて出す（④-1 在庫の動き → ④-2 Discord の取込記録 2 表 → ④-3 Discord 設定 2 表 → ④-4 Google 通知 → ④-5 予算・会社設定）。各便で「出す → 本番で確かめる → 次」。
+6. ADR-1063 便5 の CI 確かめは、8 表を理由「段階④で RLS を付ける予定（ADR-1067 便④-N）」で許可一覧に入れて始め、便ごとに 1 表ずつ消す。便④-5 の後に許可一覧から 8 表が消える。
+7. 1 つの移行の中で ENABLE・FORCE・ポリシー 4 本をまとめ、`BEGIN;`〜`COMMIT;` で囲む。各 `CREATE POLICY` の前に `DROP POLICY IF EXISTS` を置く（移行は毎回すべて流れるため）。会社の比べ方は `NULLIF(current_setting('app.tenant_id', true), '')::INTEGER`（文脈を外した接続は空文字を持つため）。
+
+## Why（なぜ）
+
+- 便5 の確かめ（2026-11-06）で、会社の列を持つのに RLS の無い public の表が 18 見つかった。そのうちこの 8 表は会社ごとの行を持つ。今の守りは各 SQL の `WHERE tenant_id` 1 行だけで、書き忘れが 1 か所あると他社の行に届く。
+- 型を 2 つに分けたのは、入口を全部数えた結果（recon §4・§6）。
+  - 型A の 3 表は、会社の文脈の外から読む本番の入口が無い。
+  - 型C の 5 表は、会社が決まる前に読む入口がある。Discord の受け口（client.py:108-126・:308、discord_role_sync.py:53-80）、Google の通知の受け口（google_webhook.py:212）、全社の点検（discord_own_staff_sync.py:24・google_webhook.py:395）、文脈なしの運営画面（super_admin_llm_budget.py・super_admin_phase_switch.py）。読取まで止めると、これらが黙って 0 行になる。
+- 段階②b の教訓: 書込の入口に文脈が無いと、INSERT は 42501 で落ち、UPDATE は静かに 0 行になる。だから書込の入口を全部数えてから出す。運営画面の 2 つの書込には文脈を足す。
+- PostgreSQL 16 公式文書「5.8. Row Security Policies」によると、表の持ち主は FORCE を付けないと RLS を通らない。また、ポリシーの無い表は全部拒否になる。だから FORCE を付け、ポリシーと同じ移行で有効にする（design §9）。
+- 本番の行数は 8 表で計 17 行（recon §3）。tenant_id が空の行は 0。読取を全行可にしても、今より見える行は増えない。
+
+## 戻し方
+
+- 便ごとに、その便の表だけを戻す。`DROP POLICY IF EXISTS`（4 本）→ `ALTER TABLE … NO FORCE ROW LEVEL SECURITY` → `ALTER TABLE … DISABLE ROW LEVEL SECURITY`。行は消えない（design §7）。
+- 移行は、backend・scripts・migrations などを含むデプロイのたびにすべて流れ直す（.github/workflows/deploy.yml:38-43・:765、前回の成功デプロイと版が違うときは :73-78 で全部）。戻しの SQL だけでは次のそういうデプロイで RLS がまた付く。だから同じ便の中で、戻しの PR を作って GO を受ける（ADR-136）→ 走っているデプロイ 0 件を確かめる → 戻しの SQL を流す → RLS なしを確かめる → すぐに戻しの PR を入れる（run_sql の行と移行のファイルを消す）→ デプロイ → もう一度 RLS なしを確かめる、の順で行う。
+- 戻しの SQL は書き込みなので reader 鍵では流せない。作業ごとの PO の GO（AGENTS.md:26、ADR-1003）を得て無制限鍵で入り、移行と同じ役と鍵待ちの上限（`psql -U jarvis`・`lock_timeout=1s`、scripts/run_all_migrations.sh:25・:57）で流す。
+- この順にする理由: デプロイは先にコードを入れ替えてから移行を流す（.github/workflows/deploy.yml の手順 1→2）。PR を先に戻すと、古いコードが RLS 付きの表で動く時間ができる。各便の新しいコードは RLS が無くても動く。
+- 便④-5 はコードと RLS を 1 つの戻しの PR でまとめて戻す（コードだけを戻す PR は作らない）。
+
+## 測り方
+
+- KGI-4〜6（docs/specs/tenant-rls/kgi.md）。8 表の RLS の状態とポリシー数は、reader 鍵の道で `pg_class`・`pg_policies` を読む（読めることを 2026-11-06 に確認、recon §6 U6）。
+
+## 触らない範囲
+
+- 便5 の残りの表は本 ADR の対象外。理由つきで便5 の許可一覧（backend/app/ops/tenant_rls_allowlist.py）に入れた（#5194、本番は 11 件）。
+  - 運営の全社共用の行に加えて会社の画面から会社の行も足せる 6 表（`line_conditions`・`line_units`・`payment_fee_settings`・`tcg_note_master`・`tcg_status_master`・`tcg_product_categories`）。全社共用だけの表ではない。RLS は次の段で読み方と一緒に付ける（PO 2026-11-07「ｃ1」）。次の段では、別名の VIEW（`public.conditions`・`public.units`）が持ち主の権限で読まれない形にすることも設計に入れる。
+  - Webhook で会社を探す 1 表（`meta_page_routing`）、運営の記録・移行の控え 4 表（`llm_usage_events`・`data_deletion_logs`・`tenant_deletion_audit`・`products_category_classification_backup`）。
+- 備考（What 6 の実際）: 便5 は許可一覧を空で始め、8 表は便④-1〜④-5 で先に RLS が付いた。そのため 8 表は許可一覧に入らずに済んだ。
+- 会社ごとのスキーマ（`tenant_XXX`）の表（ADR-072 の search_path で分離済み）。

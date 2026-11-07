@@ -12,10 +12,17 @@ import { useTranslation } from 'react-i18next';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
+import interactionPlugin from '@fullcalendar/interaction';
 import jaLocale from '@fullcalendar/core/locales/ja';
 import {
   computeHourRange,
   eventClassNames,
+  formatMeridiem,
+  formatTimeRange,
+  normalizeSelectedRange,
+  pointRect,
+  rectOf,
+  scrollTimeForNow,
   type CalendarViewEvent,
   type CalendarViewProps,
 } from './calendarView.utils';
@@ -27,11 +34,12 @@ export type {
   CalendarEventLine,
   CalendarViewEvent,
   CalendarViewProps,
+  CalendarViewRect,
 } from './calendarView.utils';
 
 const DAYS_VIEW = 'calendarDays';
 const MONTH_VIEW = 'dayGridMonth';
-const PLUGINS = [timeGridPlugin, dayGridPlugin];
+const PLUGINS = [timeGridPlugin, dayGridPlugin, interactionPlugin];
 const SLOT_LABEL_FORMAT = { hour: '2-digit', minute: '2-digit', hour12: false } as const;
 
 export function CalendarView({
@@ -45,6 +53,16 @@ export function CalendarView({
   renderEventContent,
   onEventClick,
   onDayClick,
+  timeStyle = 'h24',
+  eventLayout = 'inline',
+  hourRange = 'events',
+  scrollToNow = false,
+  weekStart = 1,
+  fillHeight = false,
+  onSelectRange,
+  onEventMove,
+  onEventResize,
+  onMoreClick,
   ariaLabel,
   className,
 }: CalendarViewProps) {
@@ -57,9 +75,14 @@ export function CalendarView({
   const dateKey = initialDate.getTime();
 
   const range = useMemo(
-    () => computeHourRange(events, startHour, endHour),
-    [events, startHour, endHour],
+    () =>
+      hourRange === 'full'
+        ? { slotMinTime: '00:00:00', slotMaxTime: '24:00:00' }
+        : computeHourRange(events, startHour, endHour),
+    [events, startHour, endHour, hourRange],
   );
+
+  const initialScrollTime = useMemo(() => scrollTimeForNow(new Date()), []);
 
   const fcEvents = useMemo(
     () =>
@@ -69,6 +92,7 @@ export function CalendarView({
         start: ev.start,
         end: ev.end,
         allDay: ev.allDay,
+        ...(ev.editable !== undefined ? { editable: ev.editable } : {}),
         extendedProps: { source: ev },
       })),
     [events],
@@ -93,21 +117,46 @@ export function CalendarView({
 
   const locale = i18n.language?.startsWith('ja') ? jaLocale : undefined;
 
+  const omitSameMeridiem = i18n.language?.startsWith('ja') ?? false;
+
   const renderContent = (arg: {
     timeText: string;
-    event: { title: string; extendedProps: Record<string, unknown> };
+    event: {
+      title: string;
+      start: Date | null;
+      end: Date | null;
+      allDay: boolean;
+      extendedProps: Record<string, unknown>;
+    };
   }): ReactNode => {
     const source = arg.event.extendedProps.source as CalendarViewEvent;
     if (renderEventContent) return renderEventContent(source, arg.timeText);
+    const timeText =
+      timeStyle === 'meridiem' && !arg.event.allDay && arg.event.start
+        ? formatTimeRange(arg.event.start, arg.event.end, t, omitSameMeridiem)
+        : arg.timeText;
+    if (eventLayout === 'stacked') {
+      return (
+        <span className="comp-calendar__content comp-calendar__content--stacked">
+          <span className="comp-calendar__title">{arg.event.title}</span>
+          {timeText ? <span className="comp-calendar__time">{timeText}</span> : null}
+        </span>
+      );
+    }
     return (
       <>
-        {arg.timeText ? <span className="comp-calendar__time">{arg.timeText}</span> : null}
+        {timeText ? <span className="comp-calendar__time">{timeText}</span> : null}
         <span className="comp-calendar__title">{arg.event.title}</span>
       </>
     );
   };
 
-  const wrapperClass = ['comp-calendar', `comp-calendar--${mode}`, className]
+  const wrapperClass = [
+    'comp-calendar',
+    `comp-calendar--${mode}`,
+    fillHeight ? 'comp-calendar--fill' : null,
+    className,
+  ]
     .filter(Boolean)
     .join(' ');
 
@@ -122,13 +171,26 @@ export function CalendarView({
     slotEventOverlap: false,
     allDaySlot: true,
     allDayContent: t('calendarView.allDay'),
+    snapDuration: '00:15:00',
+    ...(timeStyle === 'meridiem'
+      ? { slotLabelContent: (arg: { date: Date }) => formatMeridiem(arg.date, t) }
+      : {}),
+    ...(scrollToNow ? { scrollTime: initialScrollTime } : {}),
   };
   const monthProps = {
     fixedWeekCount: false,
     dayMaxEvents: monthMaxEvents,
     moreLinkContent: (arg: { num: number }) => t('calendarView.more', { count: arg.num }),
-    moreLinkClick: (arg: { date: Date; view: { type: string } }) => {
-      onDayClick?.(arg.date);
+    moreLinkClick: (arg: {
+      date: Date;
+      jsEvent: { target: EventTarget | null };
+      view: { type: string };
+    }) => {
+      if (onMoreClick) {
+        onMoreClick(arg.date, rectOf(arg.jsEvent.target as Element | null));
+      } else {
+        onDayClick?.(arg.date);
+      }
       // 小窓を開かず、同じ月の表示へ切り替えるだけにする（design §4-3-1）
       return arg.view.type;
     },
@@ -147,19 +209,37 @@ export function CalendarView({
         initialView={viewName}
         initialDate={initialDate}
         headerToolbar={false}
-        firstDay={1}
+        firstDay={weekStart}
         nowIndicator
         {...(isMonth ? monthProps : daysProps)}
         eventClick={(arg) => {
-          onEventClick?.(arg.event.id);
+          onEventClick?.(arg.event.id, rectOf(arg.el));
         }}
         eventClassNames={(arg) =>
           eventClassNames(arg.event.extendedProps.source as CalendarViewEvent)
         }
+        eventDidMount={(arg) => {
+          const color = (arg.event.extendedProps.source as CalendarViewEvent).color;
+          if (color) arg.el.style.setProperty('--comp-calendar-owner-color', color);
+        }}
         eventContent={renderContent}
-        editable={false}
-        selectable={false}
-        height="auto"
+        selectable={Boolean(onSelectRange)}
+        selectMirror={false}
+        select={(arg) => {
+          const r = normalizeSelectedRange(arg.start, arg.end, arg.allDay);
+          onSelectRange?.(r.start, r.end, arg.allDay, pointRect(arg.jsEvent));
+          arg.view.calendar.unselect();
+        }}
+        editable={Boolean(onEventMove || onEventResize)}
+        eventStartEditable={Boolean(onEventMove)}
+        eventDurationEditable={Boolean(onEventResize)}
+        eventDrop={(arg) => {
+          onEventMove?.(arg.event.id, arg.event.start as Date, arg.event.end, arg.event.allDay, arg.revert);
+        }}
+        eventResize={(arg) => {
+          onEventResize?.(arg.event.id, arg.event.start as Date, arg.event.end, arg.revert);
+        }}
+        height={fillHeight ? '100%' : 'auto'}
         locale={locale}
         events={fcEvents}
       />

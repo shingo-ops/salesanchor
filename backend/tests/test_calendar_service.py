@@ -103,6 +103,49 @@ class TestToGoogleEventBody:
         assert body["end"]["date"] == "2026-06-02"
         assert "dateTime" not in body["start"]
 
+    @staticmethod
+    def _all_day(start: str, end: str) -> dict:
+        from app.services.calendar_service import _to_google_event_body
+        return _to_google_event_body(
+            {"title": "終日", "start_datetime": start, "end_datetime": end, "is_all_day": True}
+        )
+
+    def test_all_day_utc_one_day_uses_jst_date(self):
+        body = self._all_day("2026-06-30T15:00:00.000Z", "2026-07-01T14:59:00.000Z")
+        assert body["start"] == {"date": "2026-07-01"}
+        assert body["end"] == {"date": "2026-07-02"}
+
+    def test_all_day_utc_three_days_uses_jst_date(self):
+        body = self._all_day("2026-06-30T15:00:00.000Z", "2026-07-03T14:59:00.000Z")
+        assert body["start"] == {"date": "2026-07-01"}
+        assert body["end"] == {"date": "2026-07-04"}
+
+    def test_all_day_with_jst_offset(self):
+        body = self._all_day("2026-07-01T00:00:00+09:00", "2026-07-01T23:59:00+09:00")
+        assert body["start"] == {"date": "2026-07-01"}
+        assert body["end"] == {"date": "2026-07-02"}
+
+    def test_all_day_without_offset_is_jst(self):
+        body = self._all_day("2026-07-01T00:00:00", "2026-07-01T23:59:00")
+        assert body["start"] == {"date": "2026-07-01"}
+        assert body["end"] == {"date": "2026-07-02"}
+
+    def test_all_day_round_trip_through_google_times(self):
+        from zoneinfo import ZoneInfo
+        from app.services.calendar_service import _google_times
+
+        body = self._all_day("2026-06-30T15:00:00.000Z", "2026-07-01T14:59:00.000Z")
+        s, e, all_day = _google_times(body["start"], body["end"])
+        jst = ZoneInfo("Asia/Tokyo")
+        assert all_day is True
+        assert s == datetime(2026, 7, 1, 0, 0, tzinfo=jst)
+        assert e == datetime(2026, 7, 1, 23, 59, tzinfo=jst)
+
+    def test_all_day_end_before_start_becomes_one_day(self):
+        body = self._all_day("2026-07-05T00:00:00+09:00", "2026-07-01T23:59:00+09:00")
+        assert body["start"] == {"date": "2026-07-05"}
+        assert body["end"] == {"date": "2026-07-06"}
+
     def test_with_description_and_location(self):
         from app.services.calendar_service import _to_google_event_body
         payload = {
@@ -358,6 +401,33 @@ class TestCreateEvent:
         assert params["gid"] == "g1"
         assert params["oid"] == "app:1:1"
 
+    @pytest.mark.asyncio
+    async def test_create_all_day_sends_jst_date_to_google(self):
+        """終日を ...Z の形で送っても、Google へ渡す日付は日本時間の日付になる。"""
+        from app.services.calendar_service import create_event
+
+        db = AsyncMock()
+        db.commit = AsyncMock()
+        insert_result = MagicMock()
+        insert_result.scalar_one = MagicMock(return_value=1)
+        sync_result = MagicMock()
+        sync_result.first = MagicMock(return_value=("bidirectional", 3))
+        db.execute = AsyncMock(side_effect=[insert_result, sync_result, MagicMock()])
+
+        gcreate = AsyncMock(return_value={"id": "g1"})
+        with patch("app.services.google_calendar.create_event", gcreate):
+            payload = {
+                "title": "終日の予定",
+                "start_datetime": "2026-06-30T15:00:00.000Z",
+                "end_datetime": "2026-07-01T14:59:00.000Z",
+                "is_all_day": True,
+                "calendar_type": "shared",
+            }
+            await create_event(db, tenant_id=1, user_id=3, payload=payload)
+        body = gcreate.call_args.args[2]
+        assert body["start"] == {"date": "2026-07-01"}
+        assert body["end"] == {"date": "2026-07-02"}
+
 
 class TestUpdateEvent:
     @pytest.mark.asyncio
@@ -407,6 +477,34 @@ class TestUpdateEvent:
         assert "user_id = :user_id" in stmt.text
         assert params["calendar_type"] == "personal"
         assert params["user_id"] == 1
+
+    @pytest.mark.asyncio
+    async def test_update_all_day_sends_jst_date_to_google(self):
+        """終日を ...Z の形で直しても、Google へ渡す日付は日本時間の日付になる。"""
+        from app.services.calendar_service import update_event
+
+        db = AsyncMock()
+        db.commit = AsyncMock()
+        geid = MagicMock()
+        geid.first = MagicMock(return_value=("g1", None))
+        sync = MagicMock()
+        sync.first = MagicMock(return_value=("bidirectional",))
+        db.execute = AsyncMock(side_effect=[MagicMock(), geid, sync, MagicMock()])
+
+        gupdate = AsyncMock(return_value={"id": "g1"})
+        with patch("app.services.google_calendar.update_event", gupdate):
+            await update_event(
+                db, tenant_id=1, event_id=9, user_id=3,
+                payload={
+                    "title": "終日",
+                    "start_datetime": "2026-06-30T15:00:00.000Z",
+                    "end_datetime": "2026-07-01T14:59:00.000Z",
+                    "is_all_day": True,
+                },
+            )
+        body = gupdate.call_args.args[3]
+        assert body["start"] == {"date": "2026-07-01"}
+        assert body["end"] == {"date": "2026-07-02"}
 
 
 class TestDeleteEvent:

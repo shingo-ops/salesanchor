@@ -2,12 +2,12 @@
 
 | 項目 | 内容 |
 |------|------|
-| ステータス | Proposed（K1〜K9 が ○ になり、agent-console の予定画面で使われたら採用に上げる） |
+| ステータス | Proposed（Sales Anchor の予定の画面か agent-console の予定画面のどちらかで使われ、K1〜K9 が ○ になったら採用に上げる） |
 | 備考 | PO 2026-11-06「1」：問い「FullCalendar を包んだ部品を部品集に登録して、予定画面に使う【おすすめ】」への答え |
 | 起案日 | 2026-11-06 |
 | 方針の決定者 | Shingo（PO） |
 | 関連 | ADR-067（トークン強制）、ADR-073（部品ごとの stories）、ADR-144（金型の登録）、ADR-027（文言は t()） |
-| 設計・根拠 | [design.md](../handoff/calendar-view-component/design.md)、[recon.md](../handoff/calendar-view-component/recon.md)、[card.md](../handoff/calendar-view-component/card.md) |
+| 設計・根拠 | [design.md](../handoff/calendar-view-component/design.md)、[recon.md](../handoff/calendar-view-component/recon.md)、[card.md](../handoff/calendar-view-component/card.md)。2026-11-07 改訂（What 5・What 6・ステータスの条件）: [schedule-gcal-clone design.md §3.2](../handoff/schedule-gcal-clone/design.md)、[card-bin1.md](../handoff/schedule-gcal-clone/card-bin1.md) |
 
 ---
 
@@ -17,8 +17,8 @@
 2. FullCalendar は v6 の 6.1.22 に固定する（`^` を付けない）。5つのパッケージは同じ版にする。
 3. FullCalendar の型や名前は金型の外に出さない。呼ぶ側が見るのは `CalendarView` とその型だけ。
 4. 見た目は FullCalendar の `--fc-*` 変数を全部トークンで上書きして決める。変数を通らない直書きの色は、セレクタで上書きするか、使わない機能の物だと記録する。試験が変数の漏れを数える。
-5. 1時間の高さは `--schedule-row-height`（48px）。見積もりは点線、重なりは赤枠（`--danger`）。
-6. 送るボタン・見出しは FullCalendar の物を使わず、呼ぶ側が金型 Button で置く。ドラッグ・選択は使わない。
+5. 1時間の高さはトークン `--schedule-row-height` の値で決める（値は tokens.css 1 か所）。見積もりは点線、重なりは赤枠（`--danger`）。
+6. 送るボタン・見出しは FullCalendar の物を使わず、呼ぶ側が金型 Button で置く。選択・動かす・長さを変える・他 N 件の小窓は、呼ぶ側が口を渡したときだけ使う。
 
 ## Why（なぜ）
 

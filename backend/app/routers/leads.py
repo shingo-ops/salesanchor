@@ -47,7 +47,7 @@ from app.schemas.lead import (
     SalesFormOptionResponse,
     SalesFormSelectionResponse,
 )
-from app.services import encryption, meta_graph
+from app.services import channel_masters, encryption, meta_graph
 from app.services import messaging_window as mw
 from app.services.audit import record_audit_log
 from app.services.channel_masters import normalize_channel_type_value
@@ -59,6 +59,7 @@ from app.services.meta_graph import (
     MetaGraphTimeoutError,
     MetaGraphTransportError,
 )
+from app.services.tenant_users import ensure_user_in_tenant
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -201,18 +202,7 @@ async def _ensure_channel_type_in_master(
     if existing_value is not None and normalized == existing_value:
         return normalized
 
-    channel_masters_t = tenant_table_ref(db, tenant_id, "channel_masters")
-    result = await db.execute(
-        text(
-            f"""
-            SELECT platform
-            FROM {channel_masters_t}
-            WHERE platform = :platform AND is_active = TRUE
-            """
-        ),
-        {"platform": normalized},
-    )
-    if result.scalar_one_or_none() is not None:
+    if await channel_masters.get_channel(db, tenant_id, normalized) is not None:
         return normalized
 
     raise HTTPException(
@@ -415,6 +405,7 @@ async def create_lead(
     current_user: User = Depends(get_current_user),
 ):
     """リードを登録する（lead_codeは自動採番、prospect_rankは自動算出）"""
+    await ensure_user_in_tenant(db, data.assigned_to, tenant_id)
     rank = compute_prospect_rank(
         _enum_to_str(data.temperature),
         _enum_to_str(data.estimated_scale),
@@ -514,6 +505,8 @@ async def update_lead(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="リードが見つかりません")
 
     update_data = data.model_dump(exclude_unset=True)
+    if "assigned_to" in update_data:
+        await ensure_user_in_tenant(db, update_data["assigned_to"], tenant_id)
     # ADR-108 Phase B-1: sales_form_selections は _UPDATABLE_COLUMNS 外で個別処理
     sales_form_selections_data = update_data.pop("sales_form_selections", None)
     close_reason_memo = update_data.pop("close_reason_memo", None)

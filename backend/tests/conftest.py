@@ -40,7 +40,6 @@ from sqlalchemy.orm import sessionmaker
 # Python 3.14: mock.patch は target の親 package が submodule を attribute として
 # 保持していることを要求する。app.auth.dependencies を先に import しておく。
 import app.auth.dependencies  # noqa: F401
-from app.services.channel_masters import DEFAULT_CHANNEL_MASTERS
 
 # PostgreSQL専用テスト（*_pg.py ファイル）向け DDL 定数
 # SQLite用 conftest fixtures の suppliers テーブル（AUTOINCREMENT）とは別物。
@@ -179,6 +178,15 @@ INBOX_BADGE_META_MESSAGES_DDL = """
     )
 """
 
+# update_lead の担当者の会社照合（ensure_user_in_tenant）が読む public.users 相当。
+# SQLite ではスキーマ修飾が使えないため、試験側で public.users を users に書き換えて流す。
+INBOX_BADGE_USERS_DDL = """
+    CREATE TABLE users (
+        id INTEGER PRIMARY KEY,
+        tenant_id INTEGER NOT NULL
+    )
+"""
+
 # engine fixture が順に execute する DDL 一式（leads → sales_form_options →
 # sales_form_selections → meta_messages の順。外部キー的な参照順ではないが
 # 元のテスト内の実行順を保つ）。
@@ -187,6 +195,7 @@ INBOX_BADGE_SQLITE_DDL = (
     INBOX_BADGE_SALES_FORM_OPTIONS_DDL,
     INBOX_BADGE_SALES_FORM_SELECTIONS_DDL,
     INBOX_BADGE_META_MESSAGES_DDL,
+    INBOX_BADGE_USERS_DDL,
 )
 
 # test_sqlite_alter_table_does_not_support_add_column_if_not_exists 用:
@@ -298,6 +307,11 @@ async def test_engine():
         if "ILIKE" in statement:
             statement = statement.replace(" ILIKE ", " LIKE ").replace("\nILIKE ", "\nLIKE ")
         # SQLite はスキーマプレフィックスを持たない。スキーマ修飾名をテーブル名に書き換える。
+        # settings を先に置き換える（channel_masters の置き換えが途中を壊さないよう順番を守る）
+        if "public.channel_master_tenant_settings" in statement:
+            statement = statement.replace("public.channel_master_tenant_settings", "channel_master_tenant_settings")
+        if "public.channel_masters" in statement:
+            statement = statement.replace("public.channel_masters", "channel_masters")
         if "public.users" in statement:
             statement = statement.replace("public.users", "users")
         if "public.permissions" in statement:
@@ -328,6 +342,8 @@ async def test_engine():
             statement = statement.replace("public.auth_refresh_tokens", "auth_refresh_tokens")
         if "public.password_reset_tokens" in statement:
             statement = statement.replace("public.password_reset_tokens", "password_reset_tokens")
+        if "public.staff_join_invites" in statement:
+            statement = statement.replace("public.staff_join_invites", "staff_join_invites")
         if "public.webauthn_credentials" in statement:
             statement = statement.replace("public.webauthn_credentials", "webauthn_credentials")
         if "public.passkey_enroll_prompt_skips" in statement:
@@ -622,12 +638,26 @@ async def setup_test_db(test_engine):
         await conn.execute(text("""
             CREATE TABLE IF NOT EXISTS channel_masters (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                tenant_id INTEGER NOT NULL DEFAULT 999,
-                platform VARCHAR(30) NOT NULL UNIQUE,
+                tenant_id INTEGER NULL,
+                platform VARCHAR(50) NOT NULL,
                 display_name VARCHAR(100) NOT NULL,
                 connection_type VARCHAR(10) NOT NULL,
+                conversation_store VARCHAR(20) NOT NULL DEFAULT 'conversation_logs',
+                is_verbatim BOOLEAN NOT NULL DEFAULT TRUE,
+                conversion_item VARCHAR(30) NULL,
                 is_active BOOLEAN NOT NULL DEFAULT TRUE,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS channel_master_tenant_settings (
+                tenant_id INTEGER NOT NULL,
+                channel_master_id INTEGER NOT NULL,
+                is_hidden BOOLEAN NOT NULL DEFAULT FALSE,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_by_user_id INTEGER NULL,
+                PRIMARY KEY (tenant_id, channel_master_id)
             )
         """))
         # 便D-1: deals テーブルDDL 除去済み（2026-07-28）。DROP は便E。
@@ -868,14 +898,34 @@ async def setup_test_db(test_engine):
                 INSERT OR IGNORE INTO countries (code, name, dial_code, is_active)
                 VALUES (:code, :name, :dial_code, 1)
             """), {"code": code, "name": name, "dial_code": dial})
-        for platform, display_name, connection_type in DEFAULT_CHANNEL_MASTERS:
+        # 共用6行（design §3）。試験の準備が自分で入れる（tenant_id NULL = 共用）
+        shared_channel_rows = (
+            ("messenger", "Messenger", "auto", "meta_messages", 1, "baseline"),
+            ("instagram", "Instagram", "auto", "meta_messages", 1, "channel_instagram"),
+            ("discord", "Discord", "auto", "meta_messages", 1, None),
+            ("phone", "電話", "manual", "conversation_logs", 0, None),
+            ("in_person", "対面", "manual", "conversation_logs", 0, None),
+            ("whatsapp", "WhatsApp", "manual", "conversation_logs", 1, "channel_whatsapp"),
+        )
+        for platform, display_name, connection_type, store, verbatim, item in shared_channel_rows:
+            exists = await conn.execute(
+                text("SELECT 1 FROM channel_masters WHERE tenant_id IS NULL AND platform = :platform"),
+                {"platform": platform},
+            )
+            if exists.first() is not None:
+                continue
             await conn.execute(text("""
-                INSERT OR IGNORE INTO channel_masters (platform, display_name, connection_type, is_active)
-                VALUES (:platform, :display_name, :connection_type, 1)
+                INSERT INTO channel_masters
+                    (tenant_id, platform, display_name, connection_type, conversation_store,
+                     is_verbatim, conversion_item, is_active)
+                VALUES (NULL, :platform, :display_name, :connection_type, :store, :verbatim, :item, 1)
             """), {
                 "platform": platform,
                 "display_name": display_name,
                 "connection_type": connection_type,
+                "store": store,
+                "verbatim": verbatim,
+                "item": item,
             })
         for code, name_ja, name_en in _load_tcg_type_seed_rows():
             await conn.execute(text("""
@@ -893,9 +943,28 @@ async def setup_test_db(test_engine):
                 is_system BOOLEAN DEFAULT FALSE,
                 description VARCHAR(500),
                 system_key TEXT,
+                discord_role_id TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE(tenant_id, name)
+            )
+        """))
+        # discord-server-management 第2段 2a-1: つないだロールの番号はテナント内で一意・消した番号の表
+        await conn.execute(text(
+            "CREATE UNIQUE INDEX IF NOT EXISTS uq_roles_discord_role_id"
+            " ON roles (discord_role_id) WHERE discord_role_id IS NOT NULL"
+        ))
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS discord_retired_roles (
+                discord_role_id TEXT PRIMARY KEY,
+                retired_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS discord_retired_members (
+                discord_user_id TEXT PRIMARY KEY,
+                kick BOOLEAN NOT NULL,
+                retired_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """))
         await conn.execute(text("""
@@ -1292,9 +1361,14 @@ async def setup_test_db(test_engine):
                 event_types TEXT DEFAULT '[]',
                 is_active BOOLEAN DEFAULT TRUE,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                blueprint_key TEXT,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """))
+        await conn.execute(text(
+            "CREATE UNIQUE INDEX IF NOT EXISTS uq_notification_channels_blueprint_key"
+            " ON notification_channels (blueprint_key) WHERE blueprint_key IS NOT NULL"
+        ))
         await conn.execute(text("""
             CREATE TABLE IF NOT EXISTS notification_logs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1377,6 +1451,7 @@ async def setup_test_db(test_engine):
                 last_login TIMESTAMP,
                 password_argon2_hash TEXT,
                 password_changed_at TIMESTAMP,
+                password_must_change BOOLEAN NOT NULL DEFAULT FALSE,
                 failed_login_count INTEGER NOT NULL DEFAULT 0,
                 locked_until TIMESTAMP
             )
@@ -1478,6 +1553,28 @@ async def setup_test_db(test_engine):
                 expires_at TIMESTAMP NOT NULL,
                 used_at TIMESTAMP,
                 created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
+        # ADR-1068: public.staff_join_invites の SQLite 版（BYTEA→BLOB, BIGSERIAL→INTEGER, TIMESTAMPTZ→TIMESTAMP）
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS staff_join_invites (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tenant_id INTEGER NOT NULL,
+                role_id INTEGER NOT NULL,
+                created_by INTEGER NOT NULL,
+                token_hash BLOB NOT NULL UNIQUE,
+                expires_at TIMESTAMP NOT NULL,
+                status TEXT NOT NULL DEFAULT 'open'
+                    CHECK (status IN ('open', 'submitted', 'linked', 'revoked')),
+                user_id INTEGER,
+                staff_id INTEGER,
+                reg_code_hash BLOB UNIQUE,
+                reg_code_expires_at TIMESTAMP,
+                discord_channel_id TEXT,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                submitted_at TIMESTAMP,
+                linked_at TIMESTAMP,
+                revoked_at TIMESTAMP
             )
         """))
         # ADR-1013 便5: public.webauthn_credentials の SQLite 版（BYTEA→BLOB, UUID→TEXT, TEXT[]→TEXT, BIGSERIAL→INTEGER）
@@ -1735,6 +1832,7 @@ async def db_session(test_engine, setup_test_db):
         await conn.execute(text("DELETE FROM discord_channel_webhooks"))
         await conn.execute(text("DELETE FROM audit_logs"))
         await conn.execute(text("DELETE FROM password_reset_tokens"))
+        await conn.execute(text("DELETE FROM staff_join_invites"))
         await conn.execute(text("DELETE FROM goals"))
         await conn.execute(text("DELETE FROM tenant_google_drive_config"))
         await conn.execute(text("DELETE FROM customer_scores"))
@@ -1812,9 +1910,13 @@ async def db_session(test_engine, setup_test_db):
         await conn.execute(text("DELETE FROM teams"))
         await conn.execute(text("DELETE FROM user_roles"))
         await conn.execute(text("DELETE FROM role_permissions"))
+        await conn.execute(text("DELETE FROM discord_retired_roles"))
+        await conn.execute(text("DELETE FROM discord_retired_members"))
         await conn.execute(text("DELETE FROM roles"))
         # テナント削除テスト用クリーンアップ（FK 順: audit → tenants）
         await conn.execute(text("DELETE FROM tenant_deletion_audit"))
+        await conn.execute(text("DELETE FROM channel_master_tenant_settings"))
+        await conn.execute(text("DELETE FROM channel_masters WHERE tenant_id IS NOT NULL"))
         await conn.execute(text("DELETE FROM tenants WHERE id > 90"))
 
 
@@ -1916,6 +2018,22 @@ def bypass_permissions():
         yield
 
 
+@pytest.fixture(autouse=True)
+def _no_own_staff_sync_task(monkeypatch):
+    """第2段 2b: 書いたあとの 1 回の点検を試験では裏で動かさない（本物の DB・Discord へ行かないように）。"""
+    from app.services import discord_own_staff_sync
+
+    monkeypatch.setattr(discord_own_staff_sync, "SCHEDULE_ENABLED", False)
+
+
+@pytest.fixture(autouse=True)
+def _no_customer_reply_notice_task(monkeypatch):
+    """第2段 2d: お客さんの返信の知らせを試験では裏で動かさない（本物の DB・Discord へ行かないように）。"""
+    from app.services import customer_reply_notifier
+
+    monkeypatch.setattr(customer_reply_notifier, "SCHEDULE_ENABLED", False)
+
+
 @pytest_asyncio.fixture
 async def client(db_session):
     """
@@ -1973,6 +2091,7 @@ async def client(db_session):
         # Phase 1-B-1 wiring (B-1): /staff/me 追加に伴うスタッフ系テスト
         "app.routers.staff",
         "app.services.role_assignment",
+        "app.services.staff_create",  # ADR-1068: POST /staff の中身を切り出した先
         # Sprint 8 / F8: テナント発行者情報
         "app.routers.tenant_profile",
         # Sprint D2: Discord Guild 設定
@@ -2073,6 +2192,23 @@ CREATE TABLE tenant_001.audit_logs (
     created_at TIMESTAMPTZ DEFAULT NOW());
 CREATE TABLE IF NOT EXISTS public.registration_tokens (
     id SERIAL PRIMARY KEY, tenant_id INTEGER NOT NULL, lead_id INTEGER NOT NULL);
+-- 名簿（新しい形）。この DDL に public.tenants は無いため外部キーは付けない。試験は共用行（tenant_id IS NULL）だけ読む
+CREATE TABLE IF NOT EXISTS public.channel_masters (
+    id INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    tenant_id INTEGER NULL,
+    platform VARCHAR(50) NOT NULL,
+    display_name VARCHAR(100) NOT NULL,
+    connection_type VARCHAR(10) NOT NULL,
+    conversation_store VARCHAR(20) NOT NULL,
+    is_verbatim BOOLEAN NOT NULL DEFAULT TRUE,
+    conversion_item VARCHAR(30) NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now());
+INSERT INTO public.channel_masters (tenant_id, platform, display_name, connection_type, conversation_store, is_verbatim, conversion_item) VALUES
+  (NULL, 'messenger', 'Messenger', 'auto', 'meta_messages', TRUE, 'baseline'),
+  (NULL, 'instagram', 'Instagram', 'auto', 'meta_messages', TRUE, 'channel_instagram'),
+  (NULL, 'whatsapp', 'WhatsApp', 'manual', 'conversation_logs', TRUE, 'channel_whatsapp');
 INSERT INTO tenant_001.close_reasons (type, label, sort_order) VALUES
   ('lost', 'r1', 1), ('lost', 'r2', 2), ('lost', 'r3', 3), ('lost', 'r4', 4), ('lost', 'r5', 5),
   ('lost', 'r6', 6), ('lost', 'r7', 7), ('lost', 'r8', 99),
@@ -2124,3 +2260,10 @@ async def create_user_notice_tables(conn):
     """user_notices と、宛先の解決に使う表を作る（conn は engine.begin() の接続）。"""
     for ddl in USER_NOTICE_DDL:
         await conn.execute(text(ddl))
+
+
+# ADR-1063 便5: RLS の点検（scripts/check_public_tenant_rls.py）の試験で、使い捨ての DB に作る見本の表。
+# 本番の表の写しではない。backend/tests/test_check_public_tenant_rls.py が使う。
+RLS_PROBE_TABLE_DDL = "CREATE TABLE public.ci_rls_probe (id int PRIMARY KEY, tenant_id int NOT NULL)"
+RLS_PROBE_NO_TENANT_DDL = "CREATE TABLE public.ci_no_tenant (id int PRIMARY KEY)"
+RLS_PROBE_OTHER_SCHEMA_DDL = "CREATE TABLE ci_other.ci_rls_probe (id int PRIMARY KEY, tenant_id int NOT NULL)"

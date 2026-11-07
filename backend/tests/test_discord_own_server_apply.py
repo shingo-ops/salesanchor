@@ -26,7 +26,8 @@ from app.auth.dependencies import get_current_tenant, get_current_user
 from app.database import get_db
 from app.models import User
 from app.routers import discord_own_server
-from app.services.discord_blueprint import BLUEPRINT_DIR
+from app.services.discord_blueprint import BLUEPRINT_DIR, NOTICE_ROOMS
+from app.services.discord_rest import DiscordAPIError
 
 _TENANT = 7
 _OTHER_TENANT = 8
@@ -65,7 +66,16 @@ def _channels() -> list[dict]:
 
 
 def _bp_data() -> dict:
-    return json.loads((BLUEPRINT_DIR / "tenant_1.json").read_text(encoding="utf-8"))
+    # 第2段 2b で足した「スタッフ」は本番の Discord にまだ無いので、本番の今の形と比べる試験では除く
+    # （「スタッフ」が確認で「作る」1 行になることは test_discord_own_staff_sync.py で確かめる）
+    data = json.loads((BLUEPRINT_DIR / "tenant_1.json").read_text(encoding="utf-8"))
+    data["roles"] = [r for r in data["roles"] if r["key"] != "staff"]
+    # 第2段 2c で足した知らせの部屋 3 つも本番の Discord にまだ無いので除く（test_discord_notice_rooms.py で確かめる）
+    data["channels"] = [c for c in data["channels"] if c["key"] not in NOTICE_ROOMS]
+    # ADR-1068 で足したスタッフ登録のカテゴリと受付の部屋も本番の Discord にまだ無いので除く（test_staff_join_api.py で確かめる）
+    data["categories"] = [c for c in data["categories"] if c["key"] != "staff_join_rooms"]
+    data["channels"] = [c for c in data["channels"] if c["key"] != "staff_join_reception"]
+    return data
 
 
 def _four_kinds() -> dict:
@@ -373,3 +383,96 @@ async def test_apply_response_and_record_do_not_contain_the_guild_id(client, fac
     rows = await _run_rows(factory)
     assert len(rows) == 1
     assert _GUILD_OWN not in rows[0][1]
+
+
+# ── 受付のボタン（設計 §4-5）─────────────────────────────────
+
+
+def _reception_channel() -> dict:
+    data = json.loads((BLUEPRINT_DIR / "tenant_1.json").read_text(encoding="utf-8"))
+    return next(c for c in data["channels"] if c["key"] == "staff_join_reception")
+
+
+def _staff_join_discord(messages=None, *, post_error: bool = False):
+    """ensure_reception_button の中の Discord（部屋の検索・直近の投稿・投稿）の偽物。"""
+
+    async def _fake(**kwargs):
+        path = kwargs["path"]
+        if kwargs["method"] == "GET" and path.endswith("/channels"):
+            return [{"id": "555", "name": "スタッフ受付", "type": 0}]
+        if kwargs["method"] == "GET":
+            return messages or []
+        if post_error:
+            raise DiscordAPIError("boom", status_code=500)
+        return {"id": "9001"}
+
+    return AsyncMock(side_effect=_fake)
+
+
+def _button_posts(mock) -> list:
+    return [c for c in mock.await_args_list if c.kwargs["method"] == "POST"]
+
+
+async def _apply_with_reception(client, factory, bp_file, sj_mock):
+    await _insert_config(factory, _TENANT, "own", _GUILD_OWN)
+    data = _four_kinds()
+    data["channels"].append(_reception_channel())
+    _write_bp(bp_file, data)
+    digest = await _plan_digest(client)
+    with patch("app.services.staff_join.discord_api_request", sj_mock), patch(
+        "app.services.staff_join.blueprint_path", lambda tenant_id: bp_file
+    ):
+        return await client.post(_APPLY_URL, json={"plan_digest": digest})
+
+
+@pytest.mark.asyncio
+async def test_apply_posts_reception_button_once(client, factory, bp_file):
+    sj = _staff_join_discord()
+    resp = await _apply_with_reception(client, factory, bp_file, sj)
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    rows = [r for r in body["results"] if r["kind"] == "post_button"]
+    assert len(rows) == 1
+    assert rows[0]["key"] == "staff_join_reception"
+    assert rows[0]["status"] == "success"
+    assert rows[0]["reason"] is None
+    assert rows[0]["discord_id"] == "9001"
+    assert body["results"][-1]["kind"] == "post_button"
+    assert body["success_count"] == sum(1 for r in body["results"] if r["status"] == "success")
+    assert len(_button_posts(sj)) == 1
+
+
+@pytest.mark.asyncio
+async def test_apply_does_not_post_reception_button_again_when_it_exists(client, factory, bp_file):
+    existing = [{"components": [{"components": [{"custom_id": "staff_join_open"}]}]}]
+    sj = _staff_join_discord(existing)
+    resp = await _apply_with_reception(client, factory, bp_file, sj)
+    assert resp.status_code == 200, resp.text
+    rows = [r for r in resp.json()["results"] if r["kind"] == "post_button"]
+    assert len(rows) == 1
+    assert rows[0]["status"] == "success"
+    assert rows[0]["reason"] == "exists"
+    assert len(_button_posts(sj)) == 0
+
+
+@pytest.mark.asyncio
+async def test_apply_still_returns_200_when_button_post_fails(client, factory, bp_file):
+    sj = _staff_join_discord(post_error=True)
+    resp = await _apply_with_reception(client, factory, bp_file, sj)
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    rows = [r for r in body["results"] if r["kind"] == "post_button"]
+    assert len(rows) == 1
+    assert rows[0]["status"] == "failed"
+    assert rows[0]["reason"] == "discord_error"
+    assert body["failed_count"] == sum(1 for r in body["results"] if r["status"] == "failed") >= 1
+
+
+def test_blueprint_reception_room_everyone_is_view_only():
+    ov = next(o for o in _reception_channel()["overwrites"] if o["target"] == "@everyone")
+    assert ov["allow"] == ["VIEW_CHANNEL"]
+    assert len(ov["deny"]) == 5
+    assert set(ov["deny"]) == {
+        "SEND_MESSAGES", "CREATE_PUBLIC_THREADS", "CREATE_PRIVATE_THREADS",
+        "SEND_MESSAGES_IN_THREADS", "ADD_REACTIONS",
+    }

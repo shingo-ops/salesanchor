@@ -69,6 +69,24 @@ const SESSION_END_PATHS = new Set(["/auth/password/change", "/auth/logout"]);
 // ログイン後に使うパスキーの口（登録・一覧・削除）。/auth/ 配下でも 401 では更新を 1 回送る
 const REAUTH_AUTH_PREFIXES = ["/auth/passkey/register/", "/auth/passkeys"];
 
+const PASSWORD_CHANGE_PATH = "/password-change";
+
+/**
+ * 仮パスワードのままの人は、backend が 403 password_change_required で断る（ADR-1068）。
+ * その返事を受けたら変更ページへ移す。今そのページにいるときは移さない（同じページへ何度も移すのを防ぐ）。
+ * 返事はそのまま呼び出し側へ返す（ここでは読み取りの複製だけを使う）。
+ */
+async function moveToPasswordChangeIfRequired(res: Response): Promise<void> {
+  if (res.status !== 403 || isDevSession()) return;
+  if (window.location.pathname === PASSWORD_CHANGE_PATH) return;
+  try {
+    const body = (await res.clone().json()) as { detail?: unknown };
+    if (body?.detail === "password_change_required") window.location.assign(PASSWORD_CHANGE_PATH);
+  } catch {
+    // 読めない返事は何もしない
+  }
+}
+
 /**
  * fetch の 401 を自社ログインの規則で扱う（開発用の偽ログインのときは素通し）。
  * - /auth/ で始まる口の 401 では refresh しない（login・refresh 自身の 401 で往復しないため）。
@@ -80,6 +98,7 @@ const REAUTH_AUTH_PREFIXES = ["/auth/passkey/register/", "/auth/passkeys"];
  */
 async function fetchWithReauth(url: string, init: RequestInit, path: string): Promise<Response> {
   const res = await fetch(url, init);
+  await moveToPasswordChangeIfRequired(res);
   if (res.status !== 401 || isDevSession()) return res;
 
   if (path.startsWith("/auth/") && !REAUTH_AUTH_PREFIXES.some((p) => path.startsWith(p))) {
@@ -97,6 +116,7 @@ async function fetchWithReauth(url: string, init: RequestInit, path: string): Pr
     ...init,
     headers: { ...(init.headers as Record<string, string>), Authorization: `Bearer ${token}` },
   });
+  await moveToPasswordChangeIfRequired(retried);
   if (retried.status === 401) expireSession();
   return retried;
 }

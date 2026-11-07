@@ -81,6 +81,19 @@ _REVIEWED: dict[str, tuple[str, str, frozenset[str]]] = {
             }
         ),
     ),
+    "test_tenant_user_ref_guard_pg.py": (
+        "scoped",
+        "",
+        frozenset(
+            {
+                "090_add_lead_contact_links.sql",
+                "091_add_leads_discord_messaging_columns.sql",
+                "095_add_lead_social_links.sql",
+                "099_add_discord_guild_config.sql",
+                "20260602_120000_add_discord_ticket_config.sql",
+            }
+        ),
+    ),
     "test_roles_system_key_ddl.py": (
         "scoped",
         "",
@@ -90,6 +103,11 @@ _REVIEWED: dict[str, tuple[str, str, frozenset[str]]] = {
         "scoped",
         "",
         frozenset({"20261106_150000_add_discord_role_link_tables.sql"}),
+    ),
+    "test_notification_channels_blueprint_key_ddl.py": (
+        "text_only",
+        "文字として読むだけ",
+        frozenset({"20261106_210000_add_notification_channels_blueprint_key.sql"}),
     ),
     "condition_value_columns.py": (
         "text_only",
@@ -211,6 +229,21 @@ _REVIEWED: dict[str, tuple[str, str, frozenset[str]]] = {
                 "20260920_010000_phase3_fk_rewire_unit_condition.sql",
             }
         ),
+    ),
+    "test_discord_config_rls.py": (
+        "own_database",
+        "",
+        frozenset({"099_add_discord_guild_config.sql", "20260602_120000_add_discord_ticket_config.sql"}),
+    ),
+    "test_google_webhook_subscriptions_rls.py": (
+        "own_database",
+        "",
+        frozenset({"20261103_200000_add_google_calendar_import_sync.sql"}),
+    ),
+    "test_tenant_budget_settings_rls.py": (
+        "own_database",
+        "",
+        frozenset({"20260604_220000_create_translation_glossary.sql"}),
     ),
 }
 

@@ -340,6 +340,34 @@ def _single_output_row(pg, keywords):
     return output[0]
 
 
+def test_sheet_columns_rows_have_fifteen_columns_with_product_id(pg):
+    product_id = _product_with_keywords(pg, [("kw", 1)])
+    seed(pg, name="Keyword title", reasons="", product_id=product_id, condition_id=pg["normal"],
+         condition_canonical="Sealed box", condition_basis="TEST", price_normalized=1000,
+         quantity_normalized=3, note_ja=None)
+
+    async def run():
+        engine = create_async_engine(pg["url"])
+        try:
+            async with AsyncSession(engine) as db:
+                return (
+                    await distribution.fetch_output_rows(db),
+                    await distribution.fetch_output_rows(db, columns=distribution._SHEET_COLUMNS),
+                )
+        finally:
+            await engine.dispose()
+
+    default_rows, sheet_rows = asyncio.run(run())
+    assert len(default_rows) == len(sheet_rows) == 1
+    assert all(len(row) == 15 for row in sheet_rows)
+    assert all(len(row) == 14 for row in default_rows)
+    assert sheet_rows[0][14] == str(product_id)
+    assert sheet_rows[0][1] == default_rows[0][distribution._GAS_COLUMNS.index("status")]
+    for default_row, sheet_row in zip(default_rows, sheet_rows):
+        for index, column in enumerate(distribution._GAS_COLUMNS):
+            assert sheet_row[distribution._SHEET_COLUMNS.index(column)] == default_row[index]
+
+
 def test_search_keywords_joined_in_position_order(pg):
     row = _single_output_row(pg, [("second", 2), ("first", 1)])
     assert row[12] == "first | second"
@@ -352,12 +380,10 @@ def test_search_keywords_empty_string_when_none(pg):
 
 def test_existing_twelve_columns_unchanged(pg):
     row = _single_output_row(pg, [("kw", 1)])
-    assert distribution.DIST_HEADERS[:12] == [
-        "投稿日時", "Mark", "Japanese Title", "English Title", "Condition", "Unit Price",
-        "Quantity", "Note_JA", "Status", "Release Date", "Series", "提供者",
+    assert distribution.DIST_HEADERS == [
+        "投稿日時", "Status", "Mark", "Japanese Title", "English Title", "Condition", "Unit Price",
+        "Quantity", "Ship_JA", "Note_JA", "提供者", "Release Date", "Series", "Search Keywords", "商品ID",
     ]
-    assert distribution.DIST_HEADERS[12] == "Search Keywords"
-    assert distribution.DIST_HEADERS[13] == "Ship_JA"
     assert row[1:4] == ["TM", "Keyword title", "Test Title"]
     assert row[4:7] == ["Sealed box", "1000", "3"]
     assert row[9] == "2026-01-02"

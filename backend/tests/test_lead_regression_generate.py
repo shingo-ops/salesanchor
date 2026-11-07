@@ -85,7 +85,7 @@ def test_marks_are_unique_and_prefixed(ds):
 
 
 def test_k2_all_470_computable_and_none_excluded(ds):
-    res = lcf.analyze(ds.leads, ds.messages)
+    res = lcf.analyze(ds.leads, ds.messages, gen.CHANNEL_ITEMS)
     assert res.included_count == 470
     assert all(v == 0 for v in res.excluded.values())
     for lead in ds.leads:
@@ -169,7 +169,11 @@ PG_URL = os.getenv("LEAD_REGRESSION_PG_URL")
 pg_only = pytest.mark.skipif(not PG_URL, reason="LEAD_REGRESSION_PG_URL（使い捨ての PostgreSQL）が無い")
 
 
-_TEARDOWN = "DROP SCHEMA IF EXISTS tenant_001 CASCADE; DROP TABLE IF EXISTS public.registration_tokens;"
+_TEARDOWN = (
+    "DROP SCHEMA IF EXISTS tenant_001 CASCADE; "
+    "DROP TABLE IF EXISTS public.registration_tokens; "
+    "DROP TABLE IF EXISTS public.channel_masters;"
+)
 
 _RECORDS = """
 INSERT INTO pg_temp.tlr_record_started VALUES (now() - interval '1 hour');
@@ -252,8 +256,8 @@ async def test_pg_commit_counts_precheck_and_analysis(pg, ds):
             leads, messages = await _fetch_lead_conversion_inputs(conn)
     finally:
         await engine.dispose()
-    got = lcf.analyze(leads, messages)
-    want = lcf.analyze(ds.leads, ds.messages)
+    got = lcf.analyze(leads, messages, gen.CHANNEL_ITEMS)
+    want = lcf.analyze(ds.leads, ds.messages, gen.CHANNEL_ITEMS)
     assert got.status == "ok" and got.included_count == 470 and got.excluded["by_status"] == 2
     for a, b in zip(got.items, want.items):
         assert a["key"] == b["key"]

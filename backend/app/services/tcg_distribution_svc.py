@@ -45,23 +45,26 @@ TCG_SCHEMA = "public"
 # 安全装置 #5: 書き込み行数上限
 DIST_ROW_LIMIT = 5000
 
-# 出力ヘッダー（確定・14列）
-DIST_HEADERS = [
-    "投稿日時",
-    "Mark",
-    "Japanese Title",
-    "English Title",
-    "Condition",
-    "Unit Price",
-    "Quantity",
-    "Note_JA",
-    "Status",
-    "Release Date",
-    "Series",
-    "提供者",
-    "Search Keywords",
-    "Ship_JA",
-]
+# 配信シートの列（見出し, 行の列名）。並びは PO 決定（2026-11-06）。正本はここ1か所。
+_SHEET_LAYOUT = (
+    ("投稿日時", "posted_at"),
+    ("Status", "status"),
+    ("Mark", "mark"),
+    ("Japanese Title", "japanese_title"),
+    ("English Title", "english_title"),
+    ("Condition", "condition"),
+    ("Unit Price", "unit_price"),
+    ("Quantity", "quantity"),
+    ("Ship_JA", "ship_ja"),
+    ("Note_JA", "note_ja"),
+    ("提供者", "provider"),
+    ("Release Date", "release_date"),
+    ("Series", "series"),
+    ("Search Keywords", "search_keywords"),
+    ("商品ID", "product_id"),
+)
+DIST_HEADERS = [header for header, _ in _SHEET_LAYOUT]
+_SHEET_COLUMNS = tuple(column for _, column in _SHEET_LAYOUT)
 
 _SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
@@ -249,7 +252,7 @@ def _sold_out_filter() -> str:
     return "lower(btrim(COALESCE(ar.status, ''))) NOT IN ('sold out', 'soldout')"
 
 
-# 配信行の出力列（GAS の14列 → 在庫表が使う列の順）。distribution_rows_sql の最終 SELECT と同じ並び。
+# 閲覧ページの写しと試験が使う並び（14列）。配信シートの並びは `_SHEET_LAYOUT`（ADR-1066）
 _GAS_COLUMNS = (
     "posted_at", "mark", "japanese_title", "english_title", "condition", "unit_price", "quantity",
     "note_ja", "status", "release_date", "series", "provider", "search_keywords", "ship_ja",
@@ -425,14 +428,23 @@ def distribution_rows_sql(*, include_flag_single: bool, age_condition: str, merg
     return f"{head}\n        {final}"
 
 
+def _cell(row, column: str):
+    """配信行の1マス。product_id だけ文字にする（None は空文字）。ほかの列は row[column] のまま。"""
+    if column == "product_id":
+        value = row[column]
+        return "" if value is None else str(value)
+    return row[column]
+
+
 async def fetch_output_rows(
     db: AsyncSession,
     *,
     include_flag_single: bool = False,
     max_age_hours: int | None = None,
+    columns: tuple[str, ...] = _GAS_COLUMNS,
 ) -> list[list[str]]:
     """
-    配信対象行を14列（DIST_HEADERS）で取得する。行の定義は distribution_rows_sql（まとめなし）。
+    配信対象行を取得する。既定は14列（_GAS_COLUMNS）。配信シートは columns=_SHEET_COLUMNS。行の定義は distribution_rows_sql（まとめなし）。
 
     注意: 現在の全レコードは engine_version='compat-v1'（GAS計算値）。
     正規化ルール（NR0001〜NR0136）は新エンジン再解析まで未適用。
@@ -447,7 +459,7 @@ async def fetch_output_rows(
 
     result = await db.execute(sql, bind_params)
     rows = result.mappings().all()
-    return [[row[column] for column in _GAS_COLUMNS] for row in rows]
+    return [[_cell(row, column) for column in columns] for row in rows]
 
 
 # ---------------------------------------------------------------------------
@@ -930,7 +942,9 @@ class DistributionRowsResult:
     message: str
 
 
-async def build_distribution_rows(db: AsyncSession) -> DistributionRowsResult:
+async def build_distribution_rows(
+    db: AsyncSession, *, columns: tuple[str, ...] = _GAS_COLUMNS,
+) -> DistributionRowsResult:
     """配信行を作る手順 0（#8）・0-b（#8b）・1（設定）・2（出力データ取得）。ログは出さない（呼び出し側が決める）。
 
     analysis_runs・extraction_jobs・load_distribution_settings の例外は捕まえない。
@@ -988,7 +1002,9 @@ async def build_distribution_rows(db: AsyncSession) -> DistributionRowsResult:
 
     # 2. 出力データ取得
     try:
-        rows = await fetch_output_rows(db, include_flag_single=include_flag_single, max_age_hours=max_age_hours)
+        rows = await fetch_output_rows(
+            db, include_flag_single=include_flag_single, max_age_hours=max_age_hours, columns=columns,
+        )
     except Exception as exc:
         return DistributionRowsResult(kind="error", rows=[], message=f"出力データ取得失敗: {exc}")
     return DistributionRowsResult(kind="ok", rows=rows, message="")
@@ -1012,7 +1028,7 @@ async def run_distribution(
     """
     started_at = datetime.now(timezone.utc)
 
-    result = await build_distribution_rows(db)
+    result = await build_distribution_rows(db, columns=_SHEET_COLUMNS)
     if result.kind != "ok":
         if result.kind == "hold":
             logger.warning("[dist] %s", result.message)

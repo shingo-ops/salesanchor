@@ -42,6 +42,8 @@ regexes = [
   # 段W の試験 backend/tests/test_web_push.py の架空の購読鍵（実値でない。PR #5013 の履歴に残るため除外）
   "BNcRdreALRFXTkOOUHK1EtK2wtaz5Ry4YfYCA_0QTpQtUbVlUls0VJXg7A8u\\-Ts1XbjhazAkj7I99e8QcYP7DkM",
   "tBHItJI5svbpez7KI4CCXg",
+  # スタッフ申込ページの試験 frontend/src/pages/staff-join/StaffJoinPage.test.tsx の架空の招待鍵（実値でない。PR #5228 の前のコミットの履歴に残るため除外）
+  "1\\.abcDEF_\\-0123456789abcdefghijklmnopqrstuvwxyz",
 ]
 
 # =============================================================

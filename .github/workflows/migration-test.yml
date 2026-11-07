@@ -46,6 +46,8 @@ jobs:
               - 'scripts/run_all_migrations.sh'
               - 'scripts/migration-guard/**'
               - 'scripts/migration-dryrun-report.py'
+              - 'scripts/check_public_tenant_rls.py'
+              - 'backend/app/ops/tenant_rls_allowlist.py'
               - '.github/workflows/migration-test.yml'
 
   # run_all_migrations.sh の登録先ファイルが実在するかを全件点検する。
@@ -1199,7 +1201,8 @@ jobs:
           # shallow checkout 等で base SHA が無いと git diff は `fatal: bad object` になる。
           # これを `|| true` で握りつぶすと「変更なし」と誤判定し、migration を実際には
           # 実行しないまま緑（false-positive）になるため、明示的に exit 1 する。
-          if ! ALL_CHANGED=$(git diff --name-only "$BASE" "$HEAD"); then
+          # --diff-filter=d: PR で消したファイルは一覧から外す（消した台本を動かそうとして落ちるのを防ぐ）
+          if ! ALL_CHANGED=$(git diff --name-only --diff-filter=d "$BASE" "$HEAD"); then
             echo "::error::git diff $BASE..$HEAD に失敗（base SHA 不在の可能性）。fail-closed でジョブを失敗させます。checkout の fetch-depth: 0 を確認してください。"
             exit 1
           fi
@@ -1331,6 +1334,26 @@ jobs:
         run: |
           # 20261106_140000 は auth_login_requests（20261101_130000）に列を足すので、その前提を本番と同じ順で先に入れる
           for sqlfile in migrations/001_create_auth_events.sql migrations/20261013_160000_add_self_hosted_auth_tables.sql migrations/20261101_130000_add_new_device_approval.sql; do
+            echo "▶ $sqlfile を前提として実行中..."
+            psql -h localhost -U jarvis -d jarvis_db -v ON_ERROR_STOP=1 -f "$sqlfile"
+            echo "✅ $sqlfile 成功"
+          done
+
+      - name: 変更 SQL の前提の移行を先に実行（Discord サーバーの記録の表）
+        if: steps.detect.outputs.has_sql_changes == 'true' && contains(steps.detect.outputs.changed_sql, 'migrations/20261107_110000_add_discord_server_records_rls.sql')
+        run: |
+          # 20261107_110000 は discord_server_snapshots と discord_server_apply_runs（20261106_120000）が先にある前提（本番と同じ順）
+          for sqlfile in migrations/20261106_120000_create_discord_server_snapshot_tables.sql; do
+            echo "▶ $sqlfile を前提として実行中..."
+            psql -h localhost -U jarvis -d jarvis_db -v ON_ERROR_STOP=1 -f "$sqlfile"
+            echo "✅ $sqlfile 成功"
+          done
+
+      - name: 変更 SQL の前提の移行を先に実行（Google カレンダーの通知の登録の表）
+        if: steps.detect.outputs.has_sql_changes == 'true' && contains(steps.detect.outputs.changed_sql, 'migrations/20261107_150000_add_google_webhook_subscriptions_rls.sql')
+        run: |
+          # 20261107_150000 は google_webhook_subscriptions（077）と、その列を足す 20261103_200000 が先にある前提（本番と同じ順）
+          for sqlfile in migrations/077_calendar_sync_mode_and_webhook_subscriptions.sql migrations/20261103_200000_add_google_calendar_import_sync.sql; do
             echo "▶ $sqlfile を前提として実行中..."
             psql -h localhost -U jarvis -d jarvis_db -v ON_ERROR_STOP=1 -f "$sqlfile"
             echo "✅ $sqlfile 成功"
@@ -2090,6 +2113,16 @@ jobs:
           PGUSER: jarvis
         run: |
           python3 scripts/migration-dryrun-report.py run --db jarvis_report --rounds 2 --psql psql
+
+      - name: 会社の列があるのに RLS の無い public の表を見つけたら落とす（ADR-1063 K8）
+        # 全件ドライランを流し終えた報告用 DB（jarvis_report）を見る。許可一覧は backend/app/ops/tenant_rls_allowlist.py の1か所。
+        # 許可一覧に無い表が 1 件でもあれば落ちる。RLS を付けるか、理由を書いて許可一覧に足す。
+        env:
+          PGHOST: localhost
+          PGUSER: jarvis
+          PYTHONPATH: ${{ github.workspace }}/backend
+        run: |
+          python3 scripts/check_public_tenant_rls.py --db jarvis_report
 
   # ルールセット必須 Check の名前と一致させる。always() で常に実行し、
   # - migration 変更あり: migration-test-run / migration-full-dryrun の結果を報告

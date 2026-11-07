@@ -26,6 +26,16 @@ sys.path.insert(0, str(REPO_ROOT / "backend"))
 from app.services import lead_conversion_factors as lcf  # noqa: E402
 from app.services.message_translator import infer_original_language  # noqa: E402
 
+# 台本の中の定数（本番の名簿は読まない。lcf.analyze に渡す対応表もここに置く）
+CHANNEL_MESSENGER = "messenger"
+CHANNEL_INSTAGRAM = "instagram"
+CHANNEL_WHATSAPP = "whatsapp"
+CHANNEL_ITEMS = {
+    CHANNEL_MESSENGER: "baseline",
+    CHANNEL_INSTAGRAM: "channel_instagram",
+    CHANNEL_WHATSAPP: "channel_whatsapp",
+}
+
 # ── 件数 ──────────────────────────────────────────────────
 N_LEADS = 470
 N_WON = 150
@@ -77,7 +87,7 @@ OUTBOUND_BODIES = (
     "Just following up on our previous message.",
 )
 
-PLATFORM_META = (lcf.CHANNEL_INSTAGRAM, lcf.CHANNEL_MESSENGER)
+PLATFORM_META = (CHANNEL_INSTAGRAM, CHANNEL_MESSENGER)
 
 
 @dataclass
@@ -154,7 +164,7 @@ def generate(seed: int, base_date: dt.date) -> Dataset:
     partner_fast = _alloc(rng, ["1", "0"], [235, 235])
     customer_type = _alloc(rng, [lcf.CUSTOMER_TYPE_TRUST, lcf.CUSTOMER_TYPE_PRICE], [235, 235])
     competitor = _alloc(rng, ["1", "0"], [235, 235])
-    channel = _alloc(rng, [lcf.CHANNEL_MESSENGER, lcf.CHANNEL_INSTAGRAM, lcf.CHANNEL_WHATSAPP], _split3(rng, n))
+    channel = _alloc(rng, [CHANNEL_MESSENGER, CHANNEL_INSTAGRAM, CHANNEL_WHATSAPP], _split3(rng, n))
     country = _alloc(rng, list(lcf.COUNTRIES), _split3(rng, n))
     temperature = _alloc(
         rng, [lcf.TEMPERATURE_COLD, lcf.TEMPERATURE_WARM, lcf.TEMPERATURE_HOT], _split3(rng, n)
@@ -171,8 +181,8 @@ def generate(seed: int, base_date: dt.date) -> Dataset:
         e += ln["sales_form_wholesale"] if sales_form[i] == lcf.SALES_FORM_WHOLESALE else 0.0
         e += ln["first_reply_within_1h"] if first_fast[i] == "1" else 0.0
         e += ln["partner_reply_within_6h"] if partner_fast[i] == "1" else 0.0
-        e += ln["channel_whatsapp"] if channel[i] == lcf.CHANNEL_WHATSAPP else 0.0
-        e += ln["channel_instagram"] if channel[i] == lcf.CHANNEL_INSTAGRAM else 0.0
+        e += ln["channel_whatsapp"] if channel[i] == CHANNEL_WHATSAPP else 0.0
+        e += ln["channel_instagram"] if channel[i] == CHANNEL_INSTAGRAM else 0.0
         e += ln["country_gb"] if country[i] == lcf.COUNTRY_GB else 0.0
         e += ln["country_au"] if country[i] == lcf.COUNTRY_AU else 0.0
         e += ln["temperature_hot"] if temperature[i] == lcf.TEMPERATURE_HOT else 0.0
@@ -302,7 +312,7 @@ def _chunks(rows: list[str], size: int = 200) -> list[list[str]]:
 
 def expected_counts(ds: Dataset) -> dict[str, int]:
     meta_leads = {i for i, lead in enumerate(ds.leads) if lead.channel_type in PLATFORM_META}
-    wa_leads = {i for i, lead in enumerate(ds.leads) if lead.channel_type == lcf.CHANNEL_WHATSAPP}
+    wa_leads = {i for i, lead in enumerate(ds.leads) if lead.channel_type == CHANNEL_WHATSAPP}
     meta_msgs = [m for m in ds.gen_messages if m.lead_index in meta_leads]
     return {
         "leads": len(ds.leads),
@@ -310,8 +320,8 @@ def expected_counts(ds: Dataset) -> dict[str, int]:
         "lost": sum(1 for lead in ds.leads if lead.status == lcf.STATUS_LOST),
         "selections": len(ds.leads),
         "deal_close_reasons": sum(1 for o in ds.close_reason_order if o is not None),
-        "lead_channels_instagram": sum(1 for lead in ds.leads if lead.channel_type == lcf.CHANNEL_INSTAGRAM),
-        "lead_channels_messenger": sum(1 for lead in ds.leads if lead.channel_type == lcf.CHANNEL_MESSENGER),
+        "lead_channels_instagram": sum(1 for lead in ds.leads if lead.channel_type == CHANNEL_INSTAGRAM),
+        "lead_channels_messenger": sum(1 for lead in ds.leads if lead.channel_type == CHANNEL_MESSENGER),
         "meta_messages": len(meta_msgs),
         "conv_logs_meta_copy": sum(1 for m in meta_msgs if m.direction == lcf.DIRECTION_INBOUND),
         "conv_logs_whatsapp": sum(1 for m in ds.gen_messages if m.lead_index in wa_leads),
@@ -543,13 +553,13 @@ def render_sql(ds: Dataset, tenant_id: int, mode: str) -> str:
         (
             "lead_channels instagram",
             f"SELECT count(*) FROM {schema}.lead_channels WHERE external_id LIKE 'tlr-psid-%' "
-            f"AND platform = '{lcf.CHANNEL_INSTAGRAM}'",
+            f"AND platform = '{CHANNEL_INSTAGRAM}'",
             exp["lead_channels_instagram"],
         ),
         (
             "lead_channels messenger",
             f"SELECT count(*) FROM {schema}.lead_channels WHERE external_id LIKE 'tlr-psid-%' "
-            f"AND platform = '{lcf.CHANNEL_MESSENGER}'",
+            f"AND platform = '{CHANNEL_MESSENGER}'",
             exp["lead_channels_messenger"],
         ),
         (
@@ -565,7 +575,7 @@ def render_sql(ds: Dataset, tenant_id: int, mode: str) -> str:
         (
             "conversation_logs（WhatsApp）",
             f"SELECT count(*) FROM {schema}.conversation_logs c JOIN {schema}.leads l ON l.id = c.lead_id "
-            f"WHERE l.lead_code LIKE 'TLR-%' AND c.channel_type = '{lcf.CHANNEL_WHATSAPP}'",
+            f"WHERE l.lead_code LIKE 'TLR-%' AND c.channel_type = '{CHANNEL_WHATSAPP}'",
             exp["conv_logs_whatsapp"],
         ),
     ]

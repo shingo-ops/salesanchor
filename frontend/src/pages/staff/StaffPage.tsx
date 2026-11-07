@@ -30,6 +30,8 @@ import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
 import { StaffFormFields, type StaffFormState, type StaffRole } from "./StaffFormFields";
 import { TextFieldControl } from "../../components/TextField";
+import { StaffIdentityFields } from "./StaffIdentityFields";
+import { StaffJoinInviteCreateModal, StaffJoinInviteListModal } from "./StaffJoinInviteModals";
 import { Checkbox } from "../../components/Checkbox";
 
 interface StaffUIPreferences {
@@ -118,6 +120,9 @@ export default function StaffPage() {
   const roles = rolesQ.data ?? [];
   // 新規作成モーダル
   const [showCreate, setShowCreate] = useState(false);
+  // 招待リンク（ADR-1068）
+  const [showInviteCreate, setShowInviteCreate] = useState(false);
+  const [showInviteList, setShowInviteList] = useState(false);
   const [createForm, setCreateForm] = useState<CreateFormState>(emptyCreateForm);
   // 編集ドロワー
   const { drawerOpen, editId, editForm, setEditForm, handleRowClick, closeDrawer } =
@@ -214,11 +219,26 @@ export default function StaffPage() {
       {shownError && <div className="error-message">{shownError}</div>}
       <ContentToolbar
         right={hasPermission("staff.create") ? (
-          <Button variant="primary" size="sm" layoutClassName="field-h-md" onClick={() => { setShowCreate(true); setCreateForm(emptyCreateForm); }}>
-            {t("staff.newStaff")}
-          </Button>
+          <>
+            <Button variant="secondary" size="sm" layoutClassName="field-h-md" onClick={() => setShowInviteList(true)}>
+              {t("staff.join.listButton")}
+            </Button>
+            <Button variant="secondary" size="sm" layoutClassName="field-h-md" onClick={() => setShowInviteCreate(true)}>
+              {t("staff.join.createButton")}
+            </Button>
+            <Button variant="primary" size="sm" layoutClassName="field-h-md" onClick={() => { setShowCreate(true); setCreateForm(emptyCreateForm); }}>
+              {t("staff.newStaff")}
+            </Button>
+          </>
         ) : undefined}
       />
+
+      {hasPermission("staff.create") && (
+        <>
+          <StaffJoinInviteCreateModal open={showInviteCreate} onClose={() => setShowInviteCreate(false)} roles={roles} />
+          <StaffJoinInviteListModal open={showInviteList} onClose={() => setShowInviteList(false)} />
+        </>
+      )}
 
       {/* 新規作成 Modal（全項目・既存 UX 保持） */}
       <Modal
@@ -228,27 +248,10 @@ export default function StaffPage() {
         size="md"
       >
         <form onSubmit={handleCreateSubmit}>
-          <div className="form-group"><label>{t("staff.surnameJp")} *</label>
-            <TextFieldControl required value={createForm.surname_jp} onChange={(e) => setCreateForm({ ...createForm, surname_jp: e.target.value })} />
-          </div>
-          <div className="form-group"><label>{t("staff.givenNameJp")} *</label>
-            <TextFieldControl required value={createForm.given_name_jp} onChange={(e) => setCreateForm({ ...createForm, given_name_jp: e.target.value })} />
-          </div>
-          <div className="form-group"><label>{t("staff.surnameKana")}</label>
-            <TextFieldControl value={createForm.surname_kana} onChange={(e) => setCreateForm({ ...createForm, surname_kana: e.target.value })} />
-          </div>
-          <div className="form-group"><label>{t("staff.givenNameKana")}</label>
-            <TextFieldControl value={createForm.given_name_kana} onChange={(e) => setCreateForm({ ...createForm, given_name_kana: e.target.value })} />
-          </div>
-          <div className="form-group"><label>{t("staff.surnameEn")} *</label>
-            <TextFieldControl required aria-required="true" value={createForm.surname_en} onChange={(e) => setCreateForm({ ...createForm, surname_en: e.target.value })} />
-          </div>
-          <div className="form-group"><label>{t("staff.givenNameEn")} *</label>
-            <TextFieldControl required aria-required="true" value={createForm.given_name_en} onChange={(e) => setCreateForm({ ...createForm, given_name_en: e.target.value })} />
-          </div>
-          <div className="form-group"><label>{t("staff.primaryEmail")} *</label>
-            <TextFieldControl required type="email" value={createForm.primary_email} onChange={(e) => setCreateForm({ ...createForm, primary_email: e.target.value })} />
-          </div>
+          <StaffIdentityFields
+            form={createForm}
+            onChange={(field, value) => setCreateForm((prev) => ({ ...prev, [field]: value }))}
+          />
           <div className="form-group"><label>Discord ID</label>
             <TextFieldControl value={createForm.discord_user_id} onChange={(e) => setCreateForm({ ...createForm, discord_user_id: e.target.value })} />
           </div>
@@ -377,7 +380,7 @@ export default function StaffPage() {
       <ConfirmModal
         open={!!deleteTarget}
         title={t("staff.deleteStaff")}
-        message={<><strong>{deleteTarget?.surname_jp} {deleteTarget?.given_name_jp}</strong>{t("common.deleteConfirmSuffix")}<br />{t("common.irreversible")}</>}
+        message={<><strong>{deleteTarget?.surname_jp} {deleteTarget?.given_name_jp}</strong>{t("common.deleteConfirmSuffix")}<br />{t("common.irreversible")}{deleteTarget?.discord_user_id ? <><br />{t("staff.deleteDiscordKickNote")}</> : null}</>}
         confirmLabel={t("common.delete")}
         danger
         onConfirm={performDelete}
