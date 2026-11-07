@@ -126,8 +126,8 @@ ADR-1065 の改訂（便1 の PR に入れる）。直すのは 3 か所:
 | 渡すもの | 中身 | 成功条件 |
 |---|---|---|
 | `slotEventOverlap: true` | 今の `false`（`frontend/src/components/CalendarView.tsx:171`）を `'schedule'` のときだけ true。重なりの形は recon §7.3 の `computeSegHStyle` | G19 |
-| `dayHeaderContent` | 曜日と日付の数字の 2 つの `span`。曜日は新しい関数 `formatWeekdayShort(date, language)`（`calendarView.utils.ts` に足す・`Intl.DateTimeFormat(language, { weekday: 'short' })`）。数字は `date.getDate()`。今日（引数の `isToday`）は数字に `comp-calendar__daynum--today` | G15 |
-| `slotLabelContent` | 今の時刻の文字の作り方（`timeStyle` が `'meridiem'` なら `formatMeridiem`・`:176`、`'h24'` なら今の 24 時間の形）を、時が 0 で分が 0 のときだけ空の文字にする関数で包む（新しい関数 `formatSlotLabel(date, text, t, timeStyle)`・`calendarView.utils.ts`。`h24` は FullCalendar の引数 `text` をそのまま返す・作り方は card-bin6.md §2-2） | G18 |
+| `dayHeaderContent` | 曜日と日付の数字の 2 つの `span`。曜日は新しい関数 `formatWeekdayShort(date, language)`（`frontend/src/components/calendarView.utils.ts` に足す・`Intl.DateTimeFormat(language, { weekday: 'short' })`）。数字は `date.getDate()`。今日（引数の `isToday`）は数字に `comp-calendar__daynum--today` | G15 |
+| `slotLabelContent` | 今の時刻の文字の作り方（`timeStyle` が `'meridiem'` なら `formatMeridiem`・`:176`、`'h24'` なら今の 24 時間の形）を、時が 0 で分が 0 のときだけ空の文字にする関数で包む（新しい関数 `formatSlotLabel(date, text, t, timeStyle)`・`frontend/src/components/calendarView.utils.ts`。`h24` は FullCalendar の引数 `text` をそのまま返す・作り方は card-bin6.md §2-2） | G18 |
 
 css（`CalendarView.css` の末尾に足す。値は var() と calc() と % だけ）:
 
@@ -164,6 +164,85 @@ PR 本文: tokens.css にトークンを 2 つ足すので、`frontend/scripts/c
 - 試験の日付は `new Date(2026, 10, 8)` のように手元の時刻で作る（文字の日付から作ると地名の時差でずれる・5 回目の審査 R5）。
 - T4（`--fc-*` を全部置き換える）は変えない。
 - 見本帳（`frontend/src/components/CalendarView.stories.tsx`）に `appearance="schedule"` の週の例を 1 つ足す（重なる 2 つの予定を含む）。
+
+### 3.9 便3: 作る小窓を Google の形に・表示切替を 1 つのボタンに（G3・G11・2026-11-07）
+
+本番の今（2026-11-07 にアプリで測った・窓 900×1279）:
+- 作る小窓は幅 320。高さは閉じた形で 496、「詳しく入れる」を押すと 544。
+- 開いた瞬間の文字の行き先は BODY（題名の欄に入らない）→ G3 ① ×。
+- 日時は日付と時刻の欄が 4 つ並ぶ → G3 ② ×。
+- 場所・説明は「詳しく入れる」の奥。Meet は切り替えの 1 行 → G3 ③ は一部だけ。
+- ボタンは小窓の中に収まっている → G3 ④ ○（recon B2 の 26px はみ出しは便2 で直った）。
+- 表示の切替は 4 つのボタンが並ぶ（`frontend/src/pages/schedule/SchedulePageImpl.tsx:1332-1345`）→ G11 ×。
+
+作る小窓（`SchedulePopover`・`frontend/src/pages/schedule/SchedulePageImpl.tsx:213-515`）の変え方。変えるのは作るとき（mode が create）の見た目で、詳しく見る・直すときの中身は今と同じ項目を出す:
+1. 上の帯: 作るときは「予定を追加」の札と種類の札を出さない（閉じる × は残す）。直す・詳しく見るときは今のまま。
+2. 題名: 一番上に置く。作るときは見出しの文字を出さず、読み上げ用に `aria-label`（「タイトル」）を付ける。作るときは開いた瞬間に欄へ文字が入る → G3 ①。小窓は最初の描画で隠して（`visibility: hidden`）測ってから見せるので、`autoFocus` は効かない（審査 1 回目 H1・Chromium で再現）。位置決めの関数が「見えた」を返し、見えた後に `ref` で focus する。
+3. 日時の 1 行: 時計の絵＋「11月10日(火) 午前10時～午前11時」の 1 行のボタン。押すと今の「終日」の切り替えと日付・時刻の欄 4 つが出る → G3 ②。作るとき以外は最初から開いた形（今と同じ欄）。
+   - 文は新しい関数 `formatDraftDateLine`（`frontend/src/pages/schedule/schedule-utils.ts`）で作る。曜日つきの日付は `Intl.DateTimeFormat(language, { month: "long", day: "numeric", weekday: "short" })`（ja で「11月10日(火)」・Mac の node で確認）。時刻は金型の `formatTimeRange`（`frontend/src/components/calendarView.utils.ts:224`）を午前・午後を省かない形で使う。「～」は既存の `calendarView.timeRange`。
+   - 新しい文言キーは `schedule.dateTimeLine`「{{date}} {{time}}」の 1 つだけ。
+   - 終日 1 日は「11月10日(火) 終日」、終日で複数日は「11月10日(火)～11月12日(木)」、日をまたぐ時刻つきは「11月10日(火) 午後11時～11月11日(水) 午前1時」。日付が読めないときは空、終わりだけ読めないときは始まりだけ。
+4. 種類・Meet・共有: 今の欄・切り替えのまま、日時の下に置く。Meet は「Google Meet を付ける」の 1 行の切り替えで、押すと付く（Google も 1 行のボタン）。G3 ③ の「押すと開く 1 行」に当たる（中身の入力が無いので開く物が無い）。
+5. 場所・説明: 作るときは地図の絵＋「場所を追加」、線の絵＋「説明を追加」の 1 行のボタン。押すとその欄が出て、文字がそこに入る → G3 ③。値があるときと、作るとき以外は最初から欄を出す。欄に文字が入るのは 1 行を押して開いたときだけ（最初から開いている欄は題名から focus を奪わない）。
+6. 「詳しく入れる」のボタン・状態 `expanded`・文言キー `schedule.moreOptions`（ja・en）・css `.schedule-popover__more` を消す。
+7. 絵は金型の絵の表 `SCHEDULE_POPOVER_ICONS`（`frontend/src/constants/icons.tsx:360`）に heroicons の `ClockIcon`・`MapPinIcon`・`Bars3BottomLeftIcon`（outline・2.2.0 にあると確認済み）を足して使う。
+8. 1 行のボタンは金型 `Button`（ghost・sm・fullWidth）。左寄せの `.schedule-popover .schedule-popover__line { justify-content: flex-start; }` と、文字の包み `.schedule-popover__line-text`（`min-width: 0; overflow: hidden; text-overflow: ellipsis;`）の 2 規則を足す（色・寸法の直書きなし）。金型 Button は折り返さない（`white-space: nowrap`）ので、長い文は末尾が「…」になる。
+
+高さ: 閉じた形は題名・日時 1 行・種類・切り替え 0〜2 行・場所 1 行・説明 1 行で、今の 496 より低くなる。全部開いた形の高さは今の 544 に近い。小窓の高さの上限（`frontend/src/pages/schedule.css:372-387` の `max-height: min(var(--schedule-popover-max-h), calc(100vh - var(--space-6)))`）と中身だけを巻く形（`:417-429`）は変えないので、高さ 768 でもボタンは中に収まる → G3 ④。本番で 1448 と 768 の 2 通りで測る（高さを変えられないときは、上限の計算の値を書き、768 では測れなかったと報告する）。
+
+表示の切替（G11）:
+- 4 つのボタン（`frontend/src/pages/schedule/SchedulePageImpl.tsx:1332-1345`）を、今の表示の名前（「週」）＋下向きの絵（`NAV_ICONS.chevronDown`）の金型 `Button` 1 つにする。`aria-haspopup="menu"`・`aria-expanded` を付ける。
+- 押すと金型 `ContextMenu`（`frontend/src/components/ContextMenu.tsx`・受信箱で使っている）を、ボタンの左下を基準に開く。中身は日・週・月・一覧の 4 つ。選ぶと切り替わって閉じる。Esc・外を押すと閉じる（金型の動き）。
+- 開いている間は文字の近道（d・w・m など）を効かせない（`frontend/src/pages/schedule/SchedulePageImpl.tsx:1236` の「小窓が開いている」に足す）。
+- 表示切替には新しい css の class を作らない。古い `.schedule-view-switch*`（`frontend/src/pages/schedule.css:57-90`）は消す。
+- 金型 ContextMenu は document の mousedown で「外を押した」と見て閉じる（`frontend/src/components/ContextMenu.tsx:141`）。開いているときに切替ボタンを押すと閉じてすぐ開き直す（審査 1 回目 M1）。開いているときだけボタンの mousedown を止め、閉じるのはボタンの click が行う（金型は変えない）。
+
+選ばなかった案:
+- 「詳しく入れる」を残して中を並べ替えるだけ → G3 ③（場所・説明が 1 行ずつ開く）を満たさない。
+- 表示切替に金型 `NavDropdown` → 行き先が画面の住所（route）に結び付いた部品で、表示の切り替えには使えない。
+- 日時の 1 行を自前の文字の組み立てで作る → 金型の時刻の書き方（便2・便6 と同じ「午前10時」）と分かれる。金型の関数を使う。
+
+試験（`frontend/src/pages/schedule/SchedulePageImpl.test.tsx`・`frontend/src/pages/schedule/schedule-utils.test.ts`）:
+- 近道の試験の `pressed`（`:246-247`）は「表示切替のボタンの名前がその表示か」に変える。
+- T1・T3・T4（`:539-585`）は先に日時の 1 行を押してから欄を読む。T1 は 1 行に「午前10時～午前11時」「午前4時～午前5時」「午後3時～午後4時」が出ることも見る。
+- 足す（C1〜C4・既存の T1〜T9 と名前を分ける）: 作る小窓で題名の欄に文字が入っている（`document.activeElement`）、場所・説明は 1 行だけで欄が無い／押すと欄が出る、表示切替のボタンを押すと 4 つが出て「月」を選ぶと月になる、切替を開いている間は「d」が効かず、閉じた後は効く。
+- 近道の「効かない」試験は、表示切替のボタンが無いときに落ちる形にし、週のままであることも見る。
+- 試験の環境（jsdom）は `visibility: hidden` を見ないので、H1 は試験では見つけられない。本番の Chrome で G3 ① として確かめる。
+- 試験の 2 ファイルは答えの日本語を直接書くので、1 行目で `local/no-japanese-literal` を外す（先例 `frontend/src/components/CalendarView.test.tsx:1`・審査 1 回目 M2）。
+- `formatDraftDateLine` の 7 通り（カード §8）。
+
+台帳・ADR: ADR の改訂は無い（金型 Button・ContextMenu・TextFieldControl を今の口のまま使う。金型に口を足さない）。文言は ADR-027 に従い t() だけ。
+
+### 3.10 便4: 日本の祝日を終日の行に出す（G7・G9・2026-11-07）
+
+出どころは §3.4 の案 C（部品 `holidays==0.108` を裏側に 1 つ足す）。カードは `docs/handoff/schedule-gcal-clone/card-bin4.md`。
+
+本番の今: 祝日は出ない（11 月の週・月に 11/3・11/23 の箱が無い）→ G7 ×。
+
+確かめた事実（2026-11-07・origin/main 18565cd1b）:
+- 裏側の予定の道は `backend/app/routers/calendar.py:138-157`（`GET /calendar/events`・`get_current_tenant`）。祝日の道は無い。
+- 依存は `backend/requirements.txt` で、本番の箱は `backend/Dockerfile:18-21` で `pip install -r requirements.txt` する（版上げは配備で入る）。
+- 画面の予定は `frontend/src/pages/schedule/SchedulePageImpl.tsx:903-910`（`useApiQuery` 3 本）で読み、`:1176-1198` の `calendarEvents` で金型に渡す。押したときは `:1405-1408` が `itemById` で探し、無ければ何もしない。動かすときは `patchMoved`（`:1202-`）が `itemById` 無しで元に戻す。
+- 金型は `tone: "holiday"`（`frontend/src/components/calendarView.utils.ts:16`）と色（`frontend/src/components/CalendarView.css:139-142`）を既に持ち、`editable: false` で予定ごとにつかめなくできる（`frontend/src/components/calendarView.utils.ts:44-45`）。
+- 期間は `toRangeStart`・`toRangeEnd`（`frontend/src/pages/schedule/schedule-utils.ts:145-157`）。終わりは含まない日（週は翌週の頭・月は翌月 1 日）。
+- 部品の言語: Japan は en_US・ja・th を持ち、既定は ja（holidays の公式説明 https://holidays.readthedocs.io/en/latest/ を 2026-11-07 に直接読んだ。Context7 は月の上限で使えなかった）。
+- 内閣府の表の 2026・2027 年は 35 件（Mac で取得した syukujitsu.csv を Shift_JIS から読み直して数えた）。
+
+作り方:
+1. 裏側に 新しいファイル backend/app/services/holiday_service.py の `list_japan_holidays(start, end, lang)` を作る（正本はこの関数 1 か所。DB に持たない）。
+2. `GET /calendar/holidays?start=YYYY-MM-DD&end=YYYY-MM-DD&lang=ja|en` を `backend/app/routers/calendar.py` に足す。返すのは `{"holidays":[{"date","name"}]}`。ログインは要る（`get_current_tenant`）が、会社によらず同じ答え。`end <= start` と 400 日を超える期間は 422。
+3. openapi.json を生成し直す（CI「API contract is up to date」）。
+4. 画面は 4 本目の `useApiQuery` で読み、`toHolidayEvents` で `allDay: true`・`tone: "holiday"`・`editable: false` の箱にして `calendarEvents` の最後に足す。名前は画面の言語（`i18n.language` が en で始まれば en、それ以外は ja）で裏側が返すので、文言キーは足さない。
+5. 祝日の読み込みは、読み込み中の印・取れなかった文に入れない（祝日が取れなくても予定は見える）。
+6. 押しても何も開かない・つかめない（G9）は、今の `itemById` の形と `editable: false` で満たす（画面の分岐を足さない）。
+
+選ばなかった案:
+- 祝日を `/calendar/events` の答えに混ぜる → 予定（会社の DB）と祝日（部品）の正本が 1 本の答えに混ざり、予定の直し・消しの道が祝日を予定と取り違える恐れがある。道を分ける。
+- 画面に祝日の表を持つ（npm の部品や手書きの表）→ 裏側と画面で 2 か所になる（SSOT 違反）。裏側の 1 か所にする。
+
+範囲の外（記録だけ）: 月の升目の前後の月の日（例: 11 月の表示の 10/26〜10/31）には祝日も予定も出ない（今の期間の作りのまま）。一覧の表示は金型を使わないので祝日は出ない（G7 は週と月）。月の升目の「他 N 件」を押して出る一覧の小窓は予定だけから作る（`frontend/src/pages/schedule/SchedulePageImpl.tsx:1276-1277` の visibleEvents）ので、祝日は件数に数えられても小窓の一覧には出ない。直すなら別の便にする（8 回目の審査の推奨）。
+
+試験と確かめ: カード §6・§7。本番では 11 月の週（11/2〜11/8）と月で「文化の日」「勤労感謝の日」が終日の行に出ること（G7）、押して何も開かず、引っぱっても動かないこと（G9）を Chrome で見る。
 
 ### 3.4 祝日の出どころ（2026-11-06 に確かめて決めた）
 
@@ -282,3 +361,32 @@ PR 本文: tokens.css にトークンを 2 つ足すので、`frontend/scripts/c
 - (4) `:125` を分ける案で足りる。T4 は `.comp-calendar {` の塊を切り出すので変えずに通る。
 - 推奨を直した: R1 包みの class の試験・R2 0 時の文字の試験・R3 `hourRange`/`timeStyle` との組み合わせ（§3.8）・R4 今日の列の地を `transparent`・R5 試験の日付の作り方。R6（日付の帯の class 名と行高）は便6 のカードで class 名を `comp-calendar__day-head`・`comp-calendar__dayname`・`comp-calendar__daynum` に固定する。R7（冒頭の「4 回目」の表記）は冒頭を直した。
 - 審査の結果のファイルは、クラウドの見張り（作業場所の外での commit 禁止）に止められて push されなかった。中身は実行の記録（RemoteTrigger の run log・セッション cse_01HHUUpQXH3goWYWdFkgnNpJ）の最後の返事で全部読めた（切れていない）。審査役は指示どおり言い換えずに止まった。
+
+### 6 回目（便3・G3・G11）: REVISE（2026-11-07 11:12〜11:20 UTC・クラウドの Opus・origin/release/schedule-gcal-create-bin3 50e56c0b4・照合は origin/main 37fa04f7b）
+
+- 審査の結果のファイルは、5 回目と同じくクラウドの見張り（作業場所の外での commit 禁止）に止められて push されなかった。中身は実行の記録（セッション cse_01HHUUpTnMjo55nyv2JCfsv5）の最後の返事で読んだ。書いた結果のファイルの本文は記録の上で途中から切れていて、軽い指摘 L1〜L6 の一部は返事の要約だけで読んだ（まだ確かめていない部分がある）。
+- ○: `formatDraftDateLine` の 7 通りの答えは node で全部一致（TZ=UTC でも同じ）。行番号はおおむね一致。ADR-144・ADR-067・ADR-027 の本文には触れない。
+- H1（重い）: 小窓は最初の描画で `visibility: hidden`（`frontend/src/pages/schedule/SchedulePageImpl.tsx:176-178`）なので、題名の `autoFocus` は本物の Chrome で効かない（React 18.3.1 と Chromium で再現。jsdom の試験は見逃す）→ 位置決めの関数が `placed` を返し、見えた後に `ref` で focus する形に直した（§3.9 の 2・カード §6-0・§6-2）。
+- M1（中）: 金型 ContextMenu の mousedown で閉じるため、切替ボタンの再押しで開き直す（Chromium で再現）→ 開いているときだけボタンの mousedown を止める（§3.9 表示の切替・カード §7-3）。
+- M2（中）: 試験の日本語が commit 前の検査で止まる → 両試験ファイルの 1 行目で規則を外す（カード §8）。
+- L（軽い）: 金型 Button は折り返さない → 「…」にする規則を足した。新しい試験名 T6〜T9 が既存と重なる → C1〜C4。`check-page-header-actions.js` はどこからも回っていない → カードの想定分岐から消した。近道の「効かない」試験が弱い → ボタンが無いと落ちる形と、週のままの確認を足した。設計とカードの食い違い（設計の「値があるときは欄を出す」がカードに無い・試験の節番号）→ 揃えた。行番号の小さなずれ（keydown の取り付けは `:1272`）→ カードは `:1229-1275` の範囲指定のままで、該当の書き換えは文の照合で行う。
+- 次の審査（7 回目）は、結果をファイルに commit させず、返事の本文に全部書かせる。
+
+
+### 7 回目（便3・G3・G11）: APPROVE（2026-11-07・2 回目は 11:40〜11:42 UTC・クラウドの Opus 2 回・origin/release/schedule-gcal-create-bin3 b9cafcb1b・照合は origin/main 37fa04f7b）
+
+- 結果はファイルに commit させず、返事の本文で読んだ。1 回目の返事は記録の上で途中から切れた（(4) 以降は読めていない）ため、(4)(5) だけを短い返事で 2 回目に回した（セッション cse_01HHUUpSviko7E4E978kBaVX・cse_01HHUUpSGw9UVCwgS7oK5r83）。
+- (1) ○ H1: React 18.3.1 と Chromium で、直す前は開いた直後の文字の行き先が BODY、直した後は題名の欄（`frontend/src/components/TextField.tsx:43-55` は ref を渡す）。M1: 直す前は 2 回目の押しで一覧が開いたまま、直した後は閉じる（`frontend/src/components/ContextMenu.tsx:136-142`・`frontend/src/components/Button.tsx:41,68`）。M2: `frontend/eslint.config.js:31` は warn・前例 `frontend/src/components/CalendarView.test.tsx:1`。L ○。
+- (2) ○ 「…」: 幅 320 で文字の実寸 471 に対し見える幅 275、はみ出さない。
+- (3) ○ 場所・説明の欄: 下書きの値は文字列で既定は空（`frontend/src/pages/schedule/SchedulePageImpl.tsx:77-78`・`:984-985`・`:1155-1156`）。
+- (4) ○ 試験の直しで既存の試験は落ちない（コードを読んで確かめた・vitest は回していない）。C4 の順: 金型の Esc は document で受けて伝わりを止め（`frontend/src/components/ContextMenu.tsx:122-131`）、近道は window で受ける（`frontend/src/pages/schedule/SchedulePageImpl.tsx:1272-1276`）。開いている間の d は `:1236`・`:1246` で止まり、閉じた後は `:1258` で日に変わる。
+- (5) ○ 新しい食い違いなし。推奨 1 件: カード §8 の想定分岐の範囲「:297-397」→ 実物の describe は `:244-399` → 直した。
+- 試験を実際に回すのは実装の CI で確かめる。
+
+### 8 回目（便4・G7・G9）: APPROVE（2026-11-07 12:40〜12:43 UTC・クラウドの Opus・origin/release/schedule-gcal-holiday-bin4 edb43370e・セッション cse_01HHUUpR2rYa2ud1RduecWHt）
+
+- 結果は返事の本文で全部読んだ（途中で切れていない）。
+- (1) ○ Python 3.12.3＋holidays 0.108 でカード §2 の関数を実行。2026-01-01〜2028-01-01 は 35 日で、カード §6 S1（内閣府の表）と順番まで全件一致。lang=en の 2026-11-03 は「Culture Day」。2027-03-22 は「振替休日」。
+- (2) ○ HEAD の写しにカード §2・§3 を入れて確かめた。欄名 date と import の date はぶつからない。範囲が空・401 日は 422、400 日は通る。既存の test_calendar_owner_api と合わせて 25 passed・ruff 合格。openapi 生成の差は `/api/v1/calendar/holidays`・`HolidayItem`・`HolidayListResponse` の 3 つだけ。
+- (3) ○ 型（`frontend/src/components/calendarView.utils.ts:33-45`）・押しても開かない（`frontend/src/pages/schedule/SchedulePageImpl.tsx:1174`・`:1405-1407`）・動かせない（`:1202-1207` で revert）・読み込み中に入れない（`:917`・`:919`）・試験の作り物は決まりの無い道に `[]`（`frontend/src/pages/schedule/SchedulePageImpl.test.tsx:62`）。
+- (4) ○ 行番号は HEAD と一致。便3 は origin/main に入っている。推奨 1 件（月の「他 N 件」の一覧に祝日が出ない）→ §3.10 の範囲の外に記録した。

@@ -3337,7 +3337,7 @@
     "monthView": "月",
     "weekView": "週",
     "listView": "一覧",
-    "moreOptions": "詳しく入れる",
+    "dateTimeLine": "{{date}} {{time}}",
     "addMeet": "Google Meet を付ける",
     "joinMeet": "Google Meet で参加",
     "meetFailed": "Google Meet を付けられませんでした",
