@@ -21,7 +21,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.dependencies import require_super_admin
+from app.auth.dependencies import require_super_admin, reset_operator_context, set_operator_context
 from app.database import get_db
 from app.models import User
 from app.services.audit import record_audit_log
@@ -125,32 +125,39 @@ async def switch_phase_endpoint(
     # 現在 Phase を取得（audit log の old_data 用）
     old_phase: Phase = await get_phase(tenant_id, db)
 
-    # DB 更新
-    applied = await set_phase(tenant_id, new_phase, db)  # type: ignore[arg-type]
-
-    # AC9.4: audit_log 記録（B/C 切替時の証跡用）
+    await set_operator_context(db)
     try:
-        await record_audit_log(
-            db=db,
-            tenant_id=tenant_id,
-            user_id=int(current_user.id),
-            action="phase.switch",
-            table_name="tenant_settings",
-            record_id=tenant_id,
-            old_data={"phase": old_phase},
-            new_data={"phase": applied},
-        )
-    except Exception as exc:  # noqa: BLE001
-        # audit_logs テーブルが存在しない / 一時的な障害で記録不能な場合は
-        # 切替自体は成功させて warning ログを残す。AC9.4 の証跡用なので
-        # 切替トランザクションを巻き戻すほどの severity ではない。
-        logger.warning(
-            "audit_log 記録失敗 (tenant_id=%s, action=phase.switch, err=%s)",
-            tenant_id,
-            exc,
-        )
+        # DB 更新
+        applied = await set_phase(tenant_id, new_phase, db)  # type: ignore[arg-type]
 
-    await db.commit()
+        # AC9.4: audit_log 記録（B/C 切替時の証跡用）
+        try:
+            async with db.begin_nested():
+                await record_audit_log(
+                    db=db,
+                    tenant_id=tenant_id,
+                    user_id=int(current_user.id),
+                    action="phase.switch",
+                    table_name="tenant_settings",
+                    record_id=tenant_id,
+                    old_data={"phase": old_phase},
+                    new_data={"phase": applied},
+                )
+        except Exception as exc:  # noqa: BLE001
+            # audit_logs テーブルが存在しない / 一時的な障害で記録不能な場合は
+            # 切替自体は成功させて warning ログを残す。AC9.4 の証跡用なので
+            # 切替トランザクションを巻き戻すほどの severity ではない。
+            logger.warning(
+                "audit_log 記録失敗 (tenant_id=%s, action=phase.switch, err=%s)",
+                tenant_id,
+                exc,
+            )
+
+        await reset_operator_context(db)
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
 
     return PhaseResponse(
         tenant_id=tenant_id,
