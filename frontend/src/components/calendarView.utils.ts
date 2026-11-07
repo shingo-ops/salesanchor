@@ -83,6 +83,8 @@ export interface CalendarViewProps {
   /** 月の「ほか N 件」。渡したときは onDayClick を呼ばずにこちらを呼ぶ */
   onMoreClick?: (date: Date, rect: CalendarViewRect | null) => void;
   ariaLabel: string;
+  /** 見た目の型。'plain'（既定）は今の形。'schedule' は予定の画面の形（ADR-1065 What 7・design §3.8） */
+  appearance?: 'plain' | 'schedule';
   className?: string;
 }
 
@@ -194,6 +196,25 @@ export function formatClock(date: Date, t: Translate): string {
 export function formatMeridiem(date: Date, t: Translate): string {
   const key = toMeridiemHour(date.getHours()).pm ? 'calendarView.pm' : 'calendarView.am';
   return t(key, { time: formatClock(date, t) });
+}
+
+/** 曜日の短い名前（ja「日」・en「Sun」）。日付の帯の上の段（design §3.8・G15） */
+export function formatWeekdayShort(date: Date, language: string): string {
+  return new Intl.DateTimeFormat(language, { weekday: 'short' }).format(date);
+}
+
+/**
+ * 時刻の目盛りの文字。0 時 0 分だけ空にする（Google と同じ・G18）。
+ * meridiem は formatMeridiem、h24 は FullCalendar が作った文字（text）をそのまま使う。
+ */
+export function formatSlotLabel(
+  date: Date,
+  text: string,
+  t: Translate,
+  timeStyle: 'h24' | 'meridiem',
+): string {
+  if (date.getHours() === 0 && date.getMinutes() === 0) return '';
+  return timeStyle === 'meridiem' ? formatMeridiem(date, t) : text;
 }
 
 /**

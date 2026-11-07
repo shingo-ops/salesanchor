@@ -121,6 +121,22 @@ export const OwnerColor: Story = {
   },
 };
 
+export const ScheduleAppearance: Story = {
+  args: {
+    mode: 'days',
+    dayCount: 7,
+    appearance: 'schedule',
+    timeStyle: 'meridiem',
+    eventLayout: 'stacked',
+    hourRange: 'full',
+    events: [
+      { id: 'a1', title: 'Meeting A', start: at(0, 10), end: at(0, 11), tone: 'meeting' },
+      { id: 'a2', title: 'Meeting B', start: at(0, 10, 30), end: at(0, 11, 30), tone: 'personal' },
+      { id: 'a3', title: 'Estimate', start: at(1, 13), end: at(1, 14), tone: 'billing', line: 'dashed' },
+    ],
+  },
+};
+
 function DarkSample() {
   useEffect(() => {
     const root = document.documentElement;

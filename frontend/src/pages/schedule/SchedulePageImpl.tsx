@@ -1395,6 +1395,7 @@ export default function SchedulePage() {
                       dayCount={view === "day" ? 1 : 7}
                       events={calendarEvents}
                       weekStart={0}
+                      appearance="schedule"
                       timeStyle="meridiem"
                       eventLayout="stacked"
                       hourRange="full"
