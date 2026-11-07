@@ -83,6 +83,9 @@ import {
   PlusIcon as PlusOutlineIcon,
   HeartIcon as HeartOutlineIcon,
   CheckCircleIcon as CheckCircleOutlineIcon,
+  ClockIcon as ClockOutlineIcon,
+  MapPinIcon as MapPinOutlineIcon,
+  Bars3BottomLeftIcon as Bars3BottomLeftOutlineIcon,
 } from "@heroicons/react/24/outline";
 
 
@@ -148,6 +151,9 @@ const XOutline          = hi(XMarkOutlineIcon);
 const GearEightOutline    = hi(Cog8ToothOutlineIcon);
 const PencilSquareOutline = hi(PencilSquareOutlineIcon);
 const TrashOutline        = hi(TrashOutlineIcon);
+const ClockOutline        = hi(ClockOutlineIcon);
+const MapPinOutline       = hi(MapPinOutlineIcon);
+const Bars3BottomLeftOutline = hi(Bars3BottomLeftOutlineIcon);
 const CommandLine         = hi(CommandLineIcon);
 const BanknotesOutline    = hi(BanknotesOutlineIcon);
 const EyeOutline          = hi(EyeOutlineIcon);
@@ -361,6 +367,9 @@ export const SCHEDULE_POPOVER_ICONS = {
   edit:   PencilSquareOutline,  // PencilSquareIcon outline
   delete: TrashOutline,         // TrashIcon outline
   close:  XOutline,             // XMarkIcon outline
+  clock:       ClockOutline,           // ClockIcon outline — 日時の 1 行
+  location:    MapPinOutline,          // MapPinIcon outline — 場所の 1 行
+  description: Bars3BottomLeftOutline, // Bars3BottomLeftIcon outline — 説明の 1 行
 } satisfies Record<string, Icon>;
 
 export const PASSWORD_FIELD_ICONS = {

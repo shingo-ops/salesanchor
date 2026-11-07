@@ -1,9 +1,11 @@
+/* eslint-disable local/no-japanese-literal -- テスト: 作る小窓の日時の 1 行が Google と同じ日本語で出ることを検証する（ADR-027・precedent: CalendarView.test.tsx） */
 import { describe, expect, it } from "vitest";
 import i18n from "../../i18n";
 import ja from "../../locales/ja.json";
 import {
   eventNumericId,
   fitPopover,
+  formatDraftDateLine,
   normalizeShift,
   toCalendarEnd,
   toRangeEnd,
@@ -32,6 +34,42 @@ describe("normalizeShift", () => {
 
   it("non-holiday uses the ja translation of schedule.shiftLabel", () => {
     expect(normalizeShift(baseShift, t).title).toBe(ja.schedule.shiftLabel);
+  });
+});
+
+describe("formatDraftDateLine", () => {
+  const t = i18n.getFixedT("ja");
+  const d = { startDate: "2026-11-10", startTime: "10:00", endDate: "2026-11-10", endTime: "11:00", allDay: false };
+  const line = (patch: Partial<typeof d>) => formatDraftDateLine({ ...d, ...patch }, t, "ja");
+
+  it("same-day timed range", () => {
+    expect(line({})).toBe("11月10日(火) 午前10時～午前11時");
+  });
+
+  it("afternoon range", () => {
+    expect(line({ startTime: "12:30", endTime: "13:30" })).toBe("11月10日(火) 午後12:30～午後1:30");
+  });
+
+  it("all-day single day", () => {
+    expect(line({ allDay: true })).toBe("11月10日(火) 終日");
+  });
+
+  it("all-day multiple days", () => {
+    expect(line({ allDay: true, endDate: "2026-11-12" })).toBe("11月10日(火)～11月12日(木)");
+  });
+
+  it("range across midnight", () => {
+    expect(line({ startTime: "23:00", endDate: "2026-11-11", endTime: "01:00" })).toBe(
+      "11月10日(火) 午後11時～11月11日(水) 午前1時",
+    );
+  });
+
+  it("empty when the start is unreadable", () => {
+    expect(line({ startTime: "" })).toBe("");
+  });
+
+  it("start only when the end time is unreadable", () => {
+    expect(line({ endTime: "" })).toBe("11月10日(火) 午前10時");
   });
 });
 
