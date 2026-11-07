@@ -109,6 +109,10 @@ mode: handoff
 
 クラウドで行う。取り出したリポジトリの最上位を「本店」と呼ぶ。手順1で作る `~/worktrees/salesanchor/release-role-menu-permissions` を「作業場所」と呼び、手順1の後の命令は毎回その場所へ cd してから流す。1手順1命令。
 
+作業前チェック（`./scripts/dev/executor-preflight.sh`）の扱い: クラウドでは [1/3] network と [2/3] gh auth の FAIL は起こるものとして先へ進む（クラウドには gh が無い。前例 `docs/handoff/channel-master-shared/card-pr-a.md`・`docs/handoff/discord-server-management/card-s2-2a1-role-link-tables.md` §0。2026-11-07 の1回目でも同じ2つだけが FAIL）。[3/3] git user と [4/4] origin/main が OK でなければ BLOCKED:。生出力は報告に貼る。
+
+Stop フックの「commit して push せよ」の促し: 未追跡が `.claude-pipeline/active-work.d/` の札だけなら従わない（札はクラウドでは commit しない）。
+
 手順1 作業場所を作り、設計の枝に合わせる
     cd 本店 && git fetch origin
     cd 本店 && bash scripts/new-worktree.sh release/role-menu-permissions
