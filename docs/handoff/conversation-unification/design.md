@@ -53,6 +53,32 @@
 - 毎朝の突合（celery_app.py:151-157・sa02_recon_monitor.py）を外す。逆向きの台本2本と、その試験を消す。
 - リード統合の一覧 leads.py:3014 の conversation_logs は便3 まで残す（外すと統合が止まる。recon §8-5）。
 - 試験: 手の記録が meta_messages に入り、会話の流れの API に出ること。写しが書かれないこと。手の記録が最新でも、送信の宛先・画像の送信の宛先・未読に戻す行・24時間の窓・受信箱の一覧の宛先と未読数が変わらないこと。消した手の記録が流れに出ないこと。過去の時刻で記録した手の記録が、流れのその時刻の位置に並ぶこと。あとで時刻を直した手の記録が、直した時刻の位置に並ぶこと。本文のラベル付けに手の記録が入らないこと。電話の手の記録が言語判定に数えられないこと。
+### 便1.5（草案・KGI は PO 承認待ち）アプリから直接送った返信も受信箱に出す
+PO 要件（2026-11-07 原文）: 「Messangerに限らず、受信箱で送受信管理している連絡媒体は全てに適応させる要件定義として、SAアプリでなく直接スマホアプリ等から返信を返しても受信箱に表示させる」。PO 選択「2. 今回から新しいノートに残す」。
+- 窓口ごとの今（recon §9）:
+  - Messenger: 受け取りの解析はある（webhook.py:369-386 の is_echo）。ただし購読の既定 meta_graph.py:45-52 に `message_echoes` が無い。本番の購読記録にも無い。Meta 公式の購読項目一覧に `message_echoes`（"A notification is sent when your business has sent a message."）がある。
+  - Instagram: Meta 公式の Instagram 版の説明では、返信の写しは `messages` の購読で `is_echo` 付きで届く。解析 A 形式は受ける。B 形式（webhook.py:421-423）は捨てている。
+  - Discord チケット: スタッフが Discord で直接書いた文は捨てている（ticket_channel_writer.py:208-216 「non-customer message ignored」）。アプリからの送信は Discord の webhook で担当の名前を使って送る（leads.py:2246-2270 ADR-159）。届いた写しは webhook_id 付きなので :199 で飛ばしている。直接書いた文と区別できる。
+  - Discord DM: 受け取り自体を全部飛ばしている（client.py:432-435 ADR-146 F7）。受信箱の窓口ではないので対象外。
+  - WhatsApp・電話・対面: 自動の連携が無い（名簿で manual）。手の記録で残す。WhatsApp の連携が付いた時に同じ型を当てる（whatsapp-intake で扱う）。
+  - 本番の Meta 接続: 全社で有効 0 件（各社 tenant_meta_config の is_active 数 0）。本番で直接の目視は接続を付け直すまでできない。
+- 変更（すべて meta_messages だけに書く。conversation_logs には書かない）:
+  - 返信の写し（echo）を meta_messages に outbound で入れる。`ON CONFLICT (message_id) WHERE message_id IS NOT NULL DO NOTHING`。echo の app_id が自社アプリ（META_APP_ID）なら入れない（アプリから送った分は送信の処理が既に入れている。二重を防ぐ）。
+  - アプリの送信の INSERT（leads.py:2086・2346・2532/2552・2843/2863）にも同じ ON CONFLICT を付ける（写しが先に届いても送信が失敗しない保険）。
+  - 購読の既定に `message_echoes` を足す。既存の接続は付け直しで反映（接続画面の操作。PO の作業）。
+  - B 形式の echo も A 形式と同じく outbound で受ける。
+  - `_create_outbound_lead_for_echo`（webhook.py:537-581）の窓口の決め打ち "messenger" を、届いた窓口にする。
+  - Discord チケット: bot でも客でもない人の文を outbound で入れる（sender_name はその人の表示名）。
+- 便1 との関係: 便1 で webhook.py:832 の写し先を外すとき、echo の行き先はこの便で meta に付け直す。echo は購読が無いため本番で今まで 0 件（recon §8 p10）なので、便1 と便1.5 の間に失う返信は無い。
+- KGI 草案（PO 承認待ち）:
+
+| # | 基準 | 検証方法 |
+|---|---|---|
+| K6 | Messenger のスマホアプリまたは Meta Business Suite から送った返信が、その相手の会話の流れに1件だけ出る | 接続後、PO が1通送り本番画面で目視（○×）。CI では記録した echo の形で試験 |
+| K7 | Instagram アプリから送った返信が、同じく1件だけ出る | K6 と同じ |
+| K8 | Discord のチケットチャンネルにスタッフが直接書いた返信が、1件だけ出る | PO が1通書き本番画面で目視（○×）＋ CI 試験 |
+| K9 | アプリから送った返信が二重に出ない | 送信1通につき meta_messages の行が1（本番 ai_ro で message_id の重複 0）＋ CI 試験（写しが先・後の両方） |
+
 ### 便2 lead_id を必須にし、リードを消すときは止める（migration・危険 PR）
 - 先に、リード無しの1件（会社4 id=14・2026-05-14 の英文の問い合わせ）の扱いを PO が決める。
 - `ALTER COLUMN lead_id SET NOT NULL`、FK を ON DELETE RESTRICT に替える（ADR-1049 の統合は付け替えてから消すので止まらない。recon §8-5）。

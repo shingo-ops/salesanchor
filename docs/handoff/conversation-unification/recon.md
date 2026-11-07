@@ -100,6 +100,23 @@
 - 画面は `res.confident && res.language !== null` のときだけ言語を変える（frontend/src/pages/inbox/useInboxState.ts:723）。
 - meta_messages を読む所の一覧は meta-readers.txt（72行）。leads.py:1412（訳）・:1567（添付の取り直し）は message_id で1行を指す。reaction_writer.py:115・discord_reactions.py:107 は Discord の行を指す。
 
+### 8-7 アプリから直接送った返信（2026-11-07・origin/main と本番 reader と Meta 公式資料で Opus が照合。生出力 /tmp/CC報告ファイル/conv/card/echo-grep.txt・echo2.txt）
+- 購読の既定 backend/app/services/meta_graph.py:45-52 は messages・messaging_postbacks・message_deliveries・message_reads・messaging_referrals・message_reactions。message_echoes は無い。
+- 本番の購読記録: 会社4 は14行・会社6 は1行で、どれも message_echoes 無し。有効（is_active）は全社 0 行。会社1・3・5 は 0 行。
+- 解析 A 形式 backend/app/routers/webhook.py:369-386 は is_echo を受けて客の id を recipient から取る。B 形式 :421-423 は is_echo を捨てる。
+- echo の書き先は conversation_logs だけ（webhook.py:832）。本番で messenger・instagram の outbound が conversation_logs に入ったことは 0 件。
+- Discord チケット backend/app/discord_gateway/ticket_channel_writer.py:199-206 は bot・webhook を飛ばす。:208-216 は客以外の人の文を捨てる。アプリからの送信は webhook で担当名義（backend/app/routers/leads.py:2246-2270）。
+- Discord DM は backend/app/discord_gateway/client.py:430-435 で全部飛ばす（ADR-146 F7）。
+- 本番の Discord 行（会社1）は inbound 2・outbound 2 で、最後は 2026-10-02。
+- Meta 公式（Context7 は月の上限で使えず、本起動指示の代替として公式資料を直接確認）:
+  - Messenger の webhooks: 購読項目に message_echoes がある。説明は "A notification is sent when your business has sent a message."
+  - Messenger の message-echoes: is_echo・app_id（送ったアプリの id）・metadata・mid が付く。Page inbox から送った分の app_id は受信箱アプリの id。
+  - Instagram の messaging webhook: "This callback will occur when a message has been sent by your Instagram account." is_echo が付く。購読は messages。
+- META_APP_ID は環境変数で読む（meta_graph.py:160・meta_inbox.py:488）。
+- 送信の INSERT（backend/app/routers/leads.py:2084-2098）に ON CONFLICT は無い。
+
 ## 9. 未確認
+- Meta の echo を本番で受けられるか（全社とも接続が無効なので試せない）。Meta アプリ画面側の購読項目（外部の画面）。
+- Instagram の返信の写しが今の接続で実際に届いていたか（届いた記録は 0 件）。
 - 手で記録した会話が、本番画面の会話の流れに出ないこと（コードからは出ない作り。画面では見ていない）。
 - 会社1（テスト株式会社）の 5421 件を何に使っているか。
