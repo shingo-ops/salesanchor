@@ -2,7 +2,7 @@
 
 非 PG: Discord・Redis・DB をモックして、振り分け・回数制限・既に登録済み・管理者ロールなし・個室の失敗・
        commit 後の投稿失敗・片付け・専用スクリプト・部屋の見える人。
-PG（CI の使い捨て DB。pg fixture）: 番号が合ったときの users・staff・招待の書き込みと、各失敗で何も変わらないこと。
+PG（CI の共有の試験 DB。RLS_ADMIN_DATABASE_URL）: 番号が合ったときの users・staff・招待の書き込みと、各失敗で何も変わらないこと。
 テストデータはすべて架空。
 """
 
@@ -10,11 +10,14 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import discord  # 他の試験の discord 差し替えより先に実物を読み込む
+import psycopg2
 import pytest
+from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
 from app import staff_join_discord_cli
@@ -22,10 +25,8 @@ from app.auth.viewer_signup_code import normalize_signup_code, signup_code_sha25
 from app.discord_gateway import private_channel, staff_join, ticket_channel_creator, viewer_trial
 from app.discord_gateway import staff_join_texts as T
 from app.discord_gateway.client import JarvisDiscordClient
-from tests.rls_bootstrap import bootstrap_tenant_schema
+from tests.rls_bootstrap import _apply_migration, bootstrap_tenant_schema, public_bootstrap_lock
 from tests.test_super_admin_viewers import needs_ci_pg
-from tests.test_tcg_work_matching_integration import MIGRATIONS
-from tests.test_tcg_work_matching_integration import pg as pg  # noqa: F401  fixture
 from tests.test_viewer_discord_trial import _guild, _interaction, _member, _Redis, _text_channel
 
 GUILD_ID = 111222333444555666
@@ -556,33 +557,84 @@ async def test_find_blueprint_channel_id_by_type(monkeypatch, tmp_path):
 
 # ── PG ────────────────────────────────────────────────────────
 
-PG_TENANT = 907
-PG_SCHEMA = "tenant_907"
+PG_TENANT = 973
+PG_SCHEMA = "tenant_973"
 PG_USER = 5001
+# 共有の試験 DB には全部の migration が流れ済み。足りない物だけ、この順で流す
+PG_MIGRATIONS = (
+    "20261013_160000_add_self_hosted_auth_tables.sql",
+    "20261107_130000_add_users_password_must_change.sql",
+    "20261107_120000_create_staff_join_invites.sql",
+)
 
 
-def _prep_pg(conn, async_url, *, admin_roles=True):
+class _PgEnv:
+    def __init__(self, conn, async_url) -> None:
+        self.conn = conn
+        self.async_url = async_url
+        self.perm_keys: list[str] = []  # この試験が入れた permissions の key（後で消す）
+
+
+def _cleanup_pg(cur, perm_keys, *, drop_tenant: bool) -> None:
+    """この試験が入れた物だけ消す（ほかの会社・ほかの行には触れない）。"""
+    cur.execute("DELETE FROM public.staff_join_invites WHERE tenant_id = %s", (PG_TENANT,))
+    cur.execute("DELETE FROM public.users WHERE id = %s", (PG_USER,))
+    if not drop_tenant:
+        return
+    cur.execute(f"DROP SCHEMA IF EXISTS {PG_SCHEMA} CASCADE")
+    cur.execute("DELETE FROM public.tenants WHERE id = %s", (PG_TENANT,))
+    if perm_keys:
+        cur.execute("DELETE FROM public.permissions WHERE key = ANY(%s)", (list(perm_keys),))
+
+
+@pytest.fixture
+def shared_pg():
+    """共有の試験 DB（RLS_ADMIN_DATABASE_URL）につなぐ。後始末は終わりに必ず行う。"""
+    url = os.getenv("RLS_ADMIN_DATABASE_URL") or os.getenv("TEST_PG_URL")
+    if not url:
+        pytest.skip("RLS_ADMIN_DATABASE_URL 未設定")
+    parsed = make_url(url).set(drivername="postgresql")
+    conn = psycopg2.connect(
+        host=parsed.host,
+        port=parsed.port,
+        user=parsed.username,
+        password=parsed.password,
+        dbname=parsed.database,
+    )
+    conn.autocommit = True
+    env = _PgEnv(conn, url)
+    try:
+        yield env
+    finally:
+        try:
+            _cleanup_pg(conn.cursor(), env.perm_keys, drop_tenant=True)
+        finally:
+            conn.close()
+
+
+def _prep_pg(env, *, admin_roles=True):
     async def _bootstrap():
-        # 本物の migration 順で public 表と tenant_907 の表（staff・roles・role_permissions）を作る
-        engine = create_async_engine(async_url, echo=False)
+        # 本物の migration 順で public 表と tenant_973 の表（staff・roles・role_permissions）を作る
+        engine = create_async_engine(env.async_url, echo=False)
         try:
             await bootstrap_tenant_schema(engine, PG_TENANT)
+            async with public_bootstrap_lock(engine):
+                for filename in PG_MIGRATIONS:
+                    await _apply_migration(engine, filename)
         finally:
             await engine.dispose()
 
     asyncio.run(_bootstrap())
-    cur = conn.cursor()
-    cur.execute(
-        "ALTER TABLE public.users ADD COLUMN IF NOT EXISTS password_argon2_hash TEXT, "
-        "ADD COLUMN IF NOT EXISTS password_must_change BOOLEAN NOT NULL DEFAULT false"
-    )
-    cur.execute((MIGRATIONS / "20261107_120000_create_staff_join_invites.sql").read_text())
+    cur = env.conn.cursor()
+    _cleanup_pg(cur, env.perm_keys, drop_tenant=False)
     cur.execute("SELECT set_config('app.tenant_id', %s, false)", (str(PG_TENANT),))
     cur.execute(
         "INSERT INTO public.permissions (key, resource, action, description, category) VALUES "
         "('staff.create', 'staff', 'create', 'スタッフを作成する', 'スタッフ管理'), "
-        "('staff.view', 'staff', 'view', 'スタッフを閲覧する', 'スタッフ管理') ON CONFLICT (key) DO NOTHING"
+        "('staff.view', 'staff', 'view', 'スタッフを閲覧する', 'スタッフ管理') "
+        "ON CONFLICT (key) DO NOTHING RETURNING key"
     )
+    env.perm_keys.extend(row[0] for row in cur.fetchall())
     cur.execute(
         "INSERT INTO public.users (id, tenant_id, email, is_active) VALUES (%s, %s, 'new@example.com', FALSE)",
         (PG_USER, PG_TENANT),
@@ -665,10 +717,9 @@ def _state(cur, invite_id):
 
 
 @needs_ci_pg
-def test_code_match_writes_users_staff_and_invite(pg):  # noqa: F811
-    conn, _, async_url = pg
-    cur, invite_id, _ = _prep_pg(conn, async_url)
-    it, channel, sync = _run_pg(async_url, code=CODE.lower())
+def test_code_match_writes_users_staff_and_invite(shared_pg):
+    cur, invite_id, _ = _prep_pg(shared_pg)
+    it, channel, sync = _run_pg(shared_pg.async_url, code=CODE.lower())
     assert it.followup.send.await_args.args[0] == T.ROOM_CREATED.format(channel_id=9001)
     user, staff, invite = _state(cur, invite_id)
     assert user[0] is True and user[1] is True and user[2].startswith("$argon2")
@@ -683,12 +734,11 @@ def test_code_match_writes_users_staff_and_invite(pg):  # noqa: F811
 
 
 @needs_ci_pg
-def test_second_attempt_is_already_registered_and_makes_no_room(pg):  # noqa: F811
-    conn, _, async_url = pg
-    cur, invite_id, _ = _prep_pg(conn, async_url)
-    first, _, _ = _run_pg(async_url)
+def test_second_attempt_is_already_registered_and_makes_no_room(shared_pg):
+    cur, invite_id, _ = _prep_pg(shared_pg)
+    first, _, _ = _run_pg(shared_pg.async_url)
     assert first.followup.send.await_args.args[0] == T.ROOM_CREATED.format(channel_id=9001)
-    second, ch2, sync2 = _run_pg(async_url, channel=_text_channel(9002, "y"))
+    second, ch2, sync2 = _run_pg(shared_pg.async_url, channel=_text_channel(9002, "y"))
     assert second.followup.send.await_args.args[0] == T.ALREADY_REGISTERED
     second.guild.create_text_channel.assert_not_awaited()
     sync2.assert_not_called()
@@ -696,10 +746,9 @@ def test_second_attempt_is_already_registered_and_makes_no_room(pg):  # noqa: F8
 
 
 @needs_ci_pg
-def test_room_failure_rolls_back_everything(pg):  # noqa: F811
-    conn, _, async_url = pg
-    cur, invite_id, _ = _prep_pg(conn, async_url)
-    it, _, sync = _run_pg(async_url, create_error=True)
+def test_room_failure_rolls_back_everything(shared_pg):
+    cur, invite_id, _ = _prep_pg(shared_pg)
+    it, _, sync = _run_pg(shared_pg.async_url, create_error=True)
     assert it.followup.send.await_args.args[0] == T.ROOM_FAILED
     user, staff, invite = _state(cur, invite_id)
     assert user[0] is False and user[2] is None
@@ -709,10 +758,9 @@ def test_room_failure_rolls_back_everything(pg):  # noqa: F811
 
 
 @needs_ci_pg
-def test_no_admin_role_changes_nothing(pg):  # noqa: F811
-    conn, _, async_url = pg
-    cur, invite_id, _ = _prep_pg(conn, async_url, admin_roles=False)
-    it, _, _ = _run_pg(async_url)
+def test_no_admin_role_changes_nothing(shared_pg):
+    cur, invite_id, _ = _prep_pg(shared_pg, admin_roles=False)
+    it, _, _ = _run_pg(shared_pg.async_url)
     assert it.followup.send.await_args.args[0] == T.NOT_READY
     it.guild.create_text_channel.assert_not_awaited()
     user, staff, invite = _state(cur, invite_id)
@@ -720,13 +768,12 @@ def test_no_admin_role_changes_nothing(pg):  # noqa: F811
 
 
 @needs_ci_pg
-def test_wrong_or_expired_code_is_invalid_and_changes_nothing(pg):  # noqa: F811
-    conn, _, async_url = pg
-    cur, invite_id, _ = _prep_pg(conn, async_url)
-    it, _, _ = _run_pg(async_url, code="2222-3333-4444-5555")
+def test_wrong_or_expired_code_is_invalid_and_changes_nothing(shared_pg):
+    cur, invite_id, _ = _prep_pg(shared_pg)
+    it, _, _ = _run_pg(shared_pg.async_url, code="2222-3333-4444-5555")
     assert it.followup.send.await_args.args[0] == T.CODE_INVALID
     cur.execute("UPDATE public.staff_join_invites SET reg_code_expires_at = NOW() - interval '1 hour' WHERE id=%s", (invite_id,))
-    it2, _, _ = _run_pg(async_url)
+    it2, _, _ = _run_pg(shared_pg.async_url)
     assert it2.followup.send.await_args.args[0] == T.CODE_INVALID
     it2.guild.create_text_channel.assert_not_awaited()
     assert _state(cur, invite_id)[2][0] == "submitted"
