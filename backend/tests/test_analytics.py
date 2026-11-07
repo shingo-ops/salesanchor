@@ -17,6 +17,7 @@ from zoneinfo import ZoneInfo
 
 import pytest
 from sqlalchemy import text
+from tests.conftest import INBOX_BADGE_META_MESSAGES_DDL
 
 _JST = ZoneInfo("Asia/Tokyo")
 
@@ -919,25 +920,9 @@ class TestReasons:
 async def _ensure_meta_messages_table(db_session):
     """weekly-advisor_defensive 用に SQLite 互換 meta_messages を作成する（会話は meta_messages だけから読む）。"""
     await db_session.execute(text("DROP TABLE IF EXISTS meta_messages"))
-    await db_session.execute(text("""
-        CREATE TABLE meta_messages (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            tenant_id INTEGER NOT NULL DEFAULT 999,
-            company_id INTEGER,
-            contact_id INTEGER,
-            lead_id INTEGER,
-            platform TEXT,
-            sender_id TEXT,
-            direction TEXT,
-            message_text TEXT,
-            message_id TEXT,
-            raw_payload TEXT,
-            occurred_at TIMESTAMP,
-            deleted_at TIMESTAMP,
-            is_manual BOOLEAN,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    """))
+    await db_session.execute(text(INBOX_BADGE_META_MESSAGES_DDL))
+    for col in ("company_id INTEGER", "contact_id INTEGER", "occurred_at TIMESTAMP"):
+        await db_session.execute(text(f"ALTER TABLE meta_messages ADD COLUMN {col}"))
     await db_session.commit()
 
 
