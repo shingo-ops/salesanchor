@@ -1,9 +1,9 @@
 """lang_judge.py — 相手言語の多数決判定ヘルパー（読み取り専用）
 
-B案 UNION ALL 設計（PO承認済み）:
-  - meta_messages（自動連携: Messenger/Instagram/Discord inbound）
-  - conversation_logs（手動文字記録 inbound、ただし phone/in_person は除外）
-  を UNION ALL して original_language の多数決を取る。
+会話の一本化 便1 以降の設計:
+  - meta_messages（自動連携: Messenger/Instagram/Discord inbound と、手の記録の inbound）
+    だけから original_language の多数決を取る。
+  - 手の記録のうち phone/in_person など原文でない窓口は除外する。
 
 除外条件（channel_masters.connection_type で確定）:
   - phone（電話）: 会話内容の verbatim ではなく要約が入る可能性があるため
