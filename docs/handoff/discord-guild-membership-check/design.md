@@ -2,7 +2,7 @@
 
 - 調査の根拠: `docs/handoff/discord-guild-membership-check/recon.md`（以下 recon §n）
 - 関係する設計: `docs/handoff/discord-oauth-ownership-proof/design.md`（G3。U2 はその残り）
-- 状態: 設計案（審査2回目 REVISE を反映・3回目の審査待ち）
+- 状態: 設計案（審査3回目 APPROVE・推奨1件を反映済み。PO の実装の承認待ち）
 
 ## 0. PO の言葉（原文）
 
@@ -169,6 +169,7 @@ grep -c -w -E 'POST|PUT|PATCH|DELETE|INSERT|UPDATE|commit' scripts/ops/discord_g
 
 - (3) の対照として、実装役はクラウドで正しい形の行だけの見本ファイル（0 件になる）と、`foo` を1行足した見本ファイル（1 件になる）の両方で (3) を流し、生出力を残す
 - `grep -c` は 0 件のとき終了コード 1 を返す。判定は終了コードではなく出力された数で行う
+- (3) が 0 でないときは不合格として止まり、会社4・6 の結果を使わない。ssh や docker 自身の警告が混ざっただけの場合もあるため、(1) と (2) が両方 0 のときに限って、余計な行を Opus が読んで PO に見せる（(1) か (2) が 0 でなければ run.txt を誰にも見せず、PO に止まったことだけを伝える）
 
 ## 11. 外部・過去事例の参照と我々への応用
 
@@ -203,3 +204,9 @@ grep -c -w -E 'POST|PUT|PATCH|DELETE|INSERT|UPDATE|commit' scripts/ops/discord_g
 - Q3（推奨）ネットワークの失敗で status が None → `status=000` と決め、§4-1-2 に書いた
 - Q4（推奨）app の import を一番外側の try の中へ入れ、`warnings.simplefilter("ignore")` を足した
 - Opus が自分で見つけた点: 失敗の印 `error=no_token` は A3 (2) の `token` 検査に当たってしまう → `error=missing_env` に改名した。A3 (3) の型を手元の見本2つで流し、正しい行だけなら 0 件・`foo` を足すと 1 件、(2) は両方 0 件を確認（生出力は Opus の手元の作業場所）
+
+### 3回目（2026-11-07 05:30Z・クラウドの Opus・HEAD b408a5133）: APPROVE
+
+- (a) 2回目の4点は解けている。(b) 審査役が見本ファイルで「A3・A4 の命令」を流した: (1)(2) は 0、(3) は正しい行だけで 0・1行足すと 1、(4) は 0、(5) は 1。(c) `missing_env` の改名は合う。(d) A6 の範囲は合う（時刻の列は reader でそのまま見える `meta.sql:122-127`、行数4は recon §1 と一致）
+- Q1（推奨）`2>&1` は ssh 全体にかかるので、ssh・docker の警告で (3) が 1 になりうる → (3) が 0 でないときの扱いを「A3・A4 の命令」の下に1行足した
+- 未解決の事項: なし。Discord 公式の決まりは審査の環境から読めないため、Opus が recon §4 で公式ページを直接読んだ結果に依る。本番で全サーバーが返るかは A1（対照）で判定する
