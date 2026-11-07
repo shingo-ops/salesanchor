@@ -22,7 +22,7 @@ from app.auth.viewer_signup_code import normalize_signup_code, signup_code_sha25
 from app.discord_gateway import private_channel, staff_join, ticket_channel_creator, viewer_trial
 from app.discord_gateway import staff_join_texts as T
 from app.discord_gateway.client import JarvisDiscordClient
-from tests.rls_bootstrap import _ensure_public_users
+from tests.rls_bootstrap import bootstrap_tenant_schema
 from tests.test_super_admin_viewers import needs_ci_pg
 from tests.test_tcg_work_matching_integration import MIGRATIONS
 from tests.test_tcg_work_matching_integration import pg as pg  # noqa: F401  fixture
@@ -562,63 +562,51 @@ PG_USER = 5001
 
 
 def _prep_pg(conn, async_url, *, admin_roles=True):
-    async def _users():
+    async def _bootstrap():
+        # 本物の migration 順で public 表と tenant_907 の表（staff・roles・role_permissions）を作る
         engine = create_async_engine(async_url, echo=False)
         try:
-            async with engine.begin() as aconn:
-                await _ensure_public_users(aconn)
+            await bootstrap_tenant_schema(engine, PG_TENANT)
         finally:
             await engine.dispose()
 
-    asyncio.run(_users())
+    asyncio.run(_bootstrap())
     cur = conn.cursor()
     cur.execute(
         "ALTER TABLE public.users ADD COLUMN IF NOT EXISTS password_argon2_hash TEXT, "
         "ADD COLUMN IF NOT EXISTS password_must_change BOOLEAN NOT NULL DEFAULT false"
     )
-    cur.execute(
-        "INSERT INTO public.tenants (id, tenant_code, tenant_name, company_name, is_active) "
-        "VALUES (%s, 'tenant_907', 't', 't', TRUE) ON CONFLICT (id) DO NOTHING",
-        (PG_TENANT,),
-    )
     cur.execute((MIGRATIONS / "20261107_120000_create_staff_join_invites.sql").read_text())
     cur.execute("SELECT set_config('app.tenant_id', %s, false)", (str(PG_TENANT),))
-    cur.execute(f"CREATE SCHEMA IF NOT EXISTS {PG_SCHEMA}")
     cur.execute(
-        f"CREATE TABLE {PG_SCHEMA}.staff (id SERIAL PRIMARY KEY, tenant_id INTEGER NOT NULL, "
-        "user_id INTEGER NOT NULL, discord_user_id VARCHAR(50), status TEXT NOT NULL DEFAULT 'pending', "
-        "UNIQUE (tenant_id, discord_user_id))"
+        "INSERT INTO public.permissions (key, resource, action, description, category) VALUES "
+        "('staff.create', 'staff', 'create', 'スタッフを作成する', 'スタッフ管理'), "
+        "('staff.view', 'staff', 'view', 'スタッフを閲覧する', 'スタッフ管理') ON CONFLICT (key) DO NOTHING"
     )
-    cur.execute(
-        f"CREATE TABLE {PG_SCHEMA}.roles (id SERIAL PRIMARY KEY, tenant_id INTEGER NOT NULL, name TEXT, "
-        "system_key TEXT, discord_role_id TEXT)"
-    )
-    cur.execute(f"CREATE TABLE {PG_SCHEMA}.role_permissions (role_id INTEGER NOT NULL, permission_id INTEGER NOT NULL)")
-    cur.execute("CREATE TABLE IF NOT EXISTS public.permissions (id SERIAL PRIMARY KEY, key TEXT UNIQUE NOT NULL)")
-    cur.execute("INSERT INTO public.permissions (key) VALUES ('staff.create'), ('staff.view') ON CONFLICT DO NOTHING")
     cur.execute(
         "INSERT INTO public.users (id, tenant_id, email, is_active) VALUES (%s, %s, 'new@example.com', FALSE)",
         (PG_USER, PG_TENANT),
     )
     cur.execute(
-        f"INSERT INTO {PG_SCHEMA}.staff (tenant_id, user_id, status) VALUES (%s, %s, 'pending') RETURNING id",
+        f"INSERT INTO {PG_SCHEMA}.staff (tenant_id, user_id, staff_code, surname_jp, given_name_jp, status) "
+        "VALUES (%s, %s, 'EMP-90701', '試験', '太郎', 'pending') RETURNING id",
         (PG_TENANT, PG_USER),
     )
     staff_id = cur.fetchone()[0]
     if admin_roles:
-        d = "4001" if admin_roles else None
+        # 本物が作る admin ロール（system_key='admin'）に Discord のロール 4001 をつなぐ
+        cur.execute(f"UPDATE {PG_SCHEMA}.roles SET discord_role_id = '4001' WHERE system_key = 'admin'")
+        # マネージャー（4002）は staff.create を持つ。営業（4003）は staff.view だけ＝管理者のロールではない
+        cur.execute(f"UPDATE {PG_SCHEMA}.roles SET discord_role_id = '4002' WHERE name = 'マネージャー'")
+        cur.execute(f"UPDATE {PG_SCHEMA}.roles SET discord_role_id = '4003' WHERE name = '営業'")
         cur.execute(
-            f"INSERT INTO {PG_SCHEMA}.roles (tenant_id, name, system_key, discord_role_id) VALUES "
-            "(%s, 'admin', 'admin', %s), (%s, 'manager', NULL, '4002'), (%s, 'viewer', NULL, '4003') RETURNING id",
-            (PG_TENANT, d, PG_TENANT, PG_TENANT),
+            f"DELETE FROM {PG_SCHEMA}.role_permissions WHERE role_id IN "
+            f"(SELECT id FROM {PG_SCHEMA}.roles WHERE name IN ('マネージャー', '営業'))"
         )
-        ids = [r[0] for r in cur.fetchall()]
-        # manager（4002）は staff.create を持つ。viewer（4003）は staff.view だけ＝管理者のロールではない
-        cur.execute("SELECT id, key FROM public.permissions WHERE key IN ('staff.create','staff.view')")
-        perm = {k: i for i, k in cur.fetchall()}
         cur.execute(
-            f"INSERT INTO {PG_SCHEMA}.role_permissions (role_id, permission_id) VALUES (%s, %s), (%s, %s)",
-            (ids[1], perm["staff.create"], ids[2], perm["staff.view"]),
+            f"INSERT INTO {PG_SCHEMA}.role_permissions (role_id, permission_id) "
+            f"SELECT r.id, p.id FROM {PG_SCHEMA}.roles r, public.permissions p "
+            "WHERE (r.name = 'マネージャー' AND p.key = 'staff.create') OR (r.name = '営業' AND p.key = 'staff.view')"
         )
     cur.execute(
         "INSERT INTO public.staff_join_invites (tenant_id, role_id, created_by, token_hash, expires_at, status, "
