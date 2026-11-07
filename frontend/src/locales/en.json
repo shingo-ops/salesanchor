@@ -3627,7 +3627,8 @@
       "create_channel": "Create channel",
       "update_channel": "Update channel",
       "update_overwrite": "Update permissions",
-      "link_notice": "Create notice link"
+      "link_notice": "Create notice link",
+      "post_button": "Post the reception button"
     },
     "field": {
       "name": "Name",

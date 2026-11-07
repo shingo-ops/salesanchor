@@ -3627,7 +3627,8 @@
       "create_channel": "チャンネルを作る",
       "update_channel": "チャンネルを直す",
       "update_overwrite": "見せ方を直す",
-      "link_notice": "知らせのつなぎを作る"
+      "link_notice": "知らせのつなぎを作る",
+      "post_button": "受付のボタンを置く"
     },
     "field": {
       "name": "名前",

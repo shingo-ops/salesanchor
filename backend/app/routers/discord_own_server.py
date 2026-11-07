@@ -44,6 +44,7 @@ from app.services.discord_blueprint import (
 )
 from app.services.discord_blueprint_apply import apply_plan
 from app.services.discord_rest import DiscordAPIError, discord_api_request
+from app.services.staff_join import RECEPTION_CHANNEL_KEY, ensure_reception_button
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -482,16 +483,38 @@ async def apply_own_server_plan(
         await db.commit()
         await reset_tenant_context(db, tenant_id)  # ADR-072
 
+        # 受付の部屋が設計図にあるときだけ、ボタン付きの投稿を置く（設計 §4-5）。DB の記録・監査ログには足さない
+        response_rows = list(results)
+        if any(c.key == RECEPTION_CHANNEL_KEY for c in blueprint.channels):
+            try:
+                button = await ensure_reception_button(guild_id, bot_token, tenant_id)
+            except Exception as exc:  # noqa: BLE001 - 部屋やロールの反映は済んでいるため適用は失敗にしない
+                logger.warning("[discord_own_server] reception button failed kind=%s", type(exc).__name__)
+                button = {"status": "discord_error"}
+            button_status = str(button.get("status"))
+            posted_ok = button_status in ("posted", "exists")
+            response_rows.append({
+                "kind": "post_button",
+                "key": RECEPTION_CHANNEL_KEY,
+                "name": "スタッフ受付",
+                "field": None,
+                "status": "success" if posted_ok else "failed",
+                "reason": None if button_status == "posted" else button_status,
+                "discord_id": button.get("message_id") if button_status == "posted" else None,
+                "discord_status": None,
+            })
+        response_counts = {s: sum(1 for x in response_rows if x["status"] == s) for s in ("success", "blocked", "failed")}
+
         logger.info(
             "[discord_own_server] apply tenant=%d run=%d success=%d blocked=%d failed=%d",
-            tenant_id, run_id, counts["success"], counts["blocked"], counts["failed"],
+            tenant_id, run_id, response_counts["success"], response_counts["blocked"], response_counts["failed"],
         )
         return OwnServerApplyResponse(
             run_id=run_id,
-            success_count=counts["success"],
-            blocked_count=counts["blocked"],
-            failed_count=counts["failed"],
-            results=[ApplyResultRow(**x) for x in results],
+            success_count=response_counts["success"],
+            blocked_count=response_counts["blocked"],
+            failed_count=response_counts["failed"],
+            results=[ApplyResultRow(**x) for x in response_rows],
         )
     finally:
         try:
