@@ -504,7 +504,9 @@ async def translate_inbound(
         db, table_ref, tenant_id, message_id, target_language,
         translated_text, model, confidence, effective_original_language,
     )
+    from app.auth.dependencies import reset_tenant_context  # noqa: PLC0415
     await db.commit()
+    await reset_tenant_context(db, tenant_id)  # ADR-072 Phase 2.5
 
     logger.info(
         "[translator] inbound done: message_id=%s conf=%.2f model=%s",
