@@ -249,13 +249,13 @@
      - 招待の行を linked にし、`discord_channel_id` を入れ、`reg_code_hash=NULL` にする。
   7. commit → `reset_tenant_context`。
   8. 個室に出す: メール、仮パスワード、ログインの URL、「最初のログインで変更してください」。
-  9. `schedule_own_staff_sync(tenant_id)` を予約する（スタッフのロールと役割のロールが付く）。
+  9. `schedule_own_staff_sync(tenant_id)` を予約する。ただしロール合わせは status='active' の人にしかロールを付けない（backend/app/services/discord_own_staff_sync.py:164）。自己登録の人は 3回目で active になるまでロールが付かず、Discord では自分の個室だけが見える。急ぐときは管理者がスタッフ編集で状態を有効に変える（PATCH /staff/{id} はロール合わせを呼ぶ。backend/app/routers/staff.py:626）。ロール合わせは変えない（2026-11-07 Opus 点検。本番の staff は active 2 件・Discord ID 0 件）。
   - 失敗したら rollback して、個室を消す（閲覧者と同じ）。
   - commit の後に個室への投稿（手順8）が失敗したとき（§10 R7）: 同じ内容を、本人だけに見える返事（ephemeral の followup）で送る。それも失敗したときは記録に残し、本人には「パスワードを忘れた」から再設定するよう案内する（この時点で is_active は真なので、再設定のメールが届く）。
 - 受付ボタンの設置:
   - `backend/app/viewer_discord_cli.py` と同じ型の CLI に action `post-staff-button` を足す。stdin の JSON だけを受け取る。
   - 管理者は、本番の決まった手順で1回だけ置く。
-- 持ち主のいない個室の片付けは、閲覧者の `sweep_orphan_rooms` と同じ考え方で、`discord_channel_id` を見る。
+- 持ち主のいない個室の片付けは、閲覧者の `sweep_orphan_rooms` と同じ考え方で、`discord_channel_id` を見る。作ってから 10 分たった部屋だけを見る（照合の途中は discord_channel_id がまだ空のため）。
 
 ### 4-4. 1回目と2回目の間
 

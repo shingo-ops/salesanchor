@@ -26,6 +26,7 @@ logger = logging.getLogger(__name__)
 JOIN_LINK_TTL = timedelta(hours=72)  # backend/app/services/invite.py の INVITE_TTL と同じ値
 REG_CODE_TTL = timedelta(days=7)  # Discord の招待の上限（viewer_invite.INVITE_MAX_AGE_SEC）に合わせる
 RECEPTION_CHANNEL_KEY = "staff_join_reception"
+ROOMS_CATEGORY_KEY = "staff_join_rooms"  # 個室を置くカテゴリ（type 4）
 _DEFAULT_FRONTEND_BASE_URL = "https://app.salesanchor.jp"
 
 # 会社番号（先頭 0 なし・最大 10 桁）. 鍵本体（token_urlsafe(32) は 43 文字）
@@ -72,23 +73,32 @@ def as_utc(value: datetime | str | None) -> datetime | None:
     return value.astimezone(timezone.utc)
 
 
-async def _find_reception_channel_id(guild_id: str, token: str, tenant_id: int) -> str | None:
-    """設計図の key staff_join_reception の部屋の番号。discord_id があればそれ、無ければ名前が一意に1つ当たれば。
+async def find_blueprint_channel_id(
+    guild_id: str, token: str, tenant_id: int, key: str, channel_type: int
+) -> str | None:
+    """設計図の key の部屋（type 0）かカテゴリ（type 4）の番号。
 
+    discord_id があればそれ。無ければ、名前が一致し type が channel_type の物が1つだけならその番号、他は None。
     discord_own_staff_sync._find_staff_role_id と同じ引き方。
     """
     path = blueprint_path(tenant_id)
     if not path.exists():
         return None
     bp = load_blueprint(path)
-    channel = next((c for c in bp.channels if c.key == RECEPTION_CHANNEL_KEY), None)
-    if channel is None:
+    items = bp.categories if channel_type == 4 else bp.channels
+    item = next((c for c in items if c.key == key), None)
+    if item is None:
         return None
-    if channel.discord_id:
-        return str(channel.discord_id)
+    if item.discord_id:
+        return str(item.discord_id)
     found = await discord_api_request(method="GET", path=f"/guilds/{guild_id}/channels", bot_token=token) or []
-    hits = [str(c.get("id")) for c in found if c.get("name") == channel.name and c.get("type") == 0]
+    hits = [str(c.get("id")) for c in found if c.get("name") == item.name and c.get("type") == channel_type]
     return hits[0] if len(hits) == 1 else None
+
+
+async def _find_reception_channel_id(guild_id: str, token: str, tenant_id: int) -> str | None:
+    """設計図の key staff_join_reception の部屋の番号（find_blueprint_channel_id を key・type 0 で呼ぶだけ）。"""
+    return await find_blueprint_channel_id(guild_id, token, tenant_id, RECEPTION_CHANNEL_KEY, 0)
 
 
 async def create_reception_invite(db: AsyncSession, tenant_id: int) -> str | None:
