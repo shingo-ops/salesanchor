@@ -46,7 +46,7 @@
 | 場所（origin/main 7947055fe） | 変更前 | 変更後 |
 |---|---|---|
 | `backend/app/routers/webhook.py:54` | `from app.services.conv_log_writer import write_conversation_log` | 消す（このファイルで使う所が無くなるため） |
-| `backend/app/routers/webhook.py:818-853` の echo の枝 `if m.get("is_echo"):` | リードを探し、無ければ `_create_outbound_lead_for_echo` で作り、`write_conversation_log(... direction="outbound" ...)`・commit・reset・`continue` | 枝の中身を「ログに1行出して `continue`」だけにする（`logger.info("[webhook] echo skipped (conversation unification bin1): sender=%s", m.get("sender_id"))`）。リードを作らない・何も書かない。`_create_outbound_lead_for_echo` と `_find_lead_id_for_psid` の関数そのものは**消さない**（便1.5 で使う。他から呼ばれなくなっても残す） |
+| `backend/app/routers/webhook.py:818-853` の echo の枝 `if m.get("is_echo"):` | リードを探し、無ければ `_create_outbound_lead_for_echo` で作り、`write_conversation_log(... direction="outbound" ...)`・commit・reset・`continue` | 枝の中身を「ログに1行出して `continue`」だけにする（`logging.info("[webhook] echo skipped (conversation unification bin1): sender=%s", m.get("sender_id"))`。このファイルに `logger` は無く、`:40` の `import logging` を使う。`logger` を新しく作らない）。リードを作らない・何も書かない。`_create_outbound_lead_for_echo` と `_find_lead_id_for_psid` の関数そのものは**消さない**（便1.5 で使う。他から呼ばれなくなっても残す） |
 | `backend/app/routers/webhook.py:876-897` 受信の写し | `try: await write_conversation_log(...)`・commit・reset、`except` で warning | ブロックごと消す。直前の meta_messages への書き込みと、その後の処理はそのまま |
 | `backend/app/discord_gateway/dm_writer.py:38` | `from app.services.conv_log_writer import write_conversation_log` | 消す |
 | `backend/app/discord_gateway/dm_writer.py:230-250` | `# SA-02 Stage 1: conversation_logs にも書く` からの写し | 消す。`:252` の `await db.commit()` は残す |
@@ -70,7 +70,7 @@ URL・受け取る形・返す項目・状態番号（201・404・409・410）�
 | `:82-110` `_fetch_conv_log` | `SELECT id, lead_id, platform, direction, message_text, occurred_at, deleted_at, recorded_by_user_id, message_id, is_manual FROM {schema}.meta_messages WHERE id = :id`。返す辞書のキーは今の8つ（channel_type・content_text の名前のまま）に `message_id`・`is_manual` を足す |
 | `:113-165` `_fire_translation` | 引数の `log_id` を `message_id: str` に替える（`:133` の `f"conv_log_{log_id}"` を消し、渡された message_id を使う）。書き戻しは `UPDATE {schema}.meta_messages SET original_language = :lang WHERE message_id = :mid` だけにする（translated_text の写しをやめる。訳は message_translations に残る）。`results.get("ja", next(iter(results.values())))` の選び方と、例外を握って warning にする形は今のまま |
 | `:196-300` 作成 | `:212-222` の 400 は今のまま。`body.channel_type` が 20 文字を超えたら 400「連絡手段の名前が長すぎます」を足す。重複確認 `:227-256` は `FROM {schema}.meta_messages WHERE lead_id = :lead_id AND is_manual = TRUE AND deleted_at IS NULL AND platform = :channel_type AND message_text = :content_text AND occurred_at BETWEEN :from AND :to`（±1時間・409 の文言は今のまま）。INSERT `:260-279` は §3 の対応表の列で `INSERT INTO {schema}.meta_messages (tenant_id, lead_id, company_id, contact_id, platform, direction, message_text, occurred_at, created_at, recorded_by_user_id, is_manual, sender_id, sender_name, message_id) VALUES (...) RETURNING id`。company_id は今と同じ `_get_company_id_for_lead`、contact_id は `_get_contact_id_for_lead`（どちらも `app.services.conv_log_writer` から import）。監査 `:281-292` の表の名前は `"meta_messages"`、record_id は新しい meta の id（画面の名前の対応 `ja.json:2564`・`en.json:2564` に既にある）。翻訳の発火は INSERT した message_id で呼ぶ。返す `{"id": 新しい meta の id}` |
-| `:308-344` 一覧 | `SELECT m.id, m.platform, m.direction, m.message_text, (SELECT mt.translated_text FROM {schema}.message_translations mt WHERE mt.message_id = m.message_id ORDER BY (mt.target_language = 'ja') DESC, mt.id ASC LIMIT 1), m.occurred_at, m.recorded_by_user_id, m.created_at FROM {schema}.meta_messages m WHERE m.lead_id = :lead_id AND m.is_manual = TRUE AND m.deleted_at IS NULL ORDER BY m.occurred_at ASC, m.id ASC`。返すキーは今の8つのまま |
+| `:308-344` 一覧 | `SELECT m.id, m.platform, m.direction, m.message_text, (SELECT mt.translated_text FROM {schema}.message_translations mt WHERE mt.message_id = m.message_id ORDER BY (mt.target_language = 'ja') DESC, mt.id ASC LIMIT 1), m.occurred_at, m.recorded_by_user_id, m.created_at FROM {schema}.meta_messages m WHERE m.lead_id = :lead_id AND m.is_manual = TRUE AND m.deleted_at IS NULL ORDER BY m.occurred_at ASC, m.id ASC`。返すキーは今の8つのまま。作成で created_at を occurred_at と同じ値にするため、返す `created_at` は「記録した時刻」でなく「会話の時刻」になる。これを PR 本文の「変わること」に1行書く |
 | `:352-407` 変更 | `existing` が None、lead が違う、**または `existing["is_manual"] is not True`** なら 404（自動連携の行を手の記録の API で直させない）。410 は今のまま。UPDATE の列は `content_text`→`message_text`、`occurred_at` を直すときは `created_at` も同じ値にする（`SET message_text = :message_text` / `SET occurred_at = :occurred_at, created_at = :occurred_at`）。監査は表の名前 `"meta_messages"`、old_data・new_data のキーは今のまま（content_text・occurred_at）。再翻訳は `existing["message_id"]` で呼ぶ |
 | `:415-455` 削除 | 404 に `is_manual is not True` を足す（変更と同じ）。`UPDATE {schema}.meta_messages SET deleted_at = :now WHERE id = :id`。監査は表の名前 `"meta_messages"`、old_data は今のまま |
 | `:488` 付近 `create_channel_master` の INSERT | `'conversation_logs'` を `'meta_messages'` にする（新しく足す会社独自の手動窓口も meta に置く） |
@@ -100,11 +100,11 @@ URL・受け取る形・返す項目・状態番号（201・404・409・410）�
 | `backend/app/routers/companies.py:1082-1131` 会社の会話タブ | `SELECT m.id, m.contact_id, m.lead_id, m.platform, m.direction, m.message_text, (SELECT mt.translated_text FROM {schema}.message_translations mt WHERE mt.message_id = m.message_id ORDER BY (mt.target_language = 'ja') DESC, mt.id ASC LIMIT 1), COALESCE(m.occurred_at, m.created_at), m.recorded_by_user_id, co.display_name FROM {schema}.meta_messages m LEFT JOIN {schema}.contacts co ON co.id = m.contact_id WHERE m.company_id = :company_id AND m.deleted_at IS NULL {contact_filter} ORDER BY COALESCE(m.occurred_at, m.created_at) DESC, m.id DESC LIMIT :limit`。contact_filter は `m.contact_id`。返すキー10個（channel_type・content_text の名前のまま）は今のまま。関数の説明文の「conversation_logs」を「meta_messages」に |
 | `backend/app/services/lang_judge.py:33-37` `_NOT_VERBATIM_CLAUSE` | `cm.platform = cl.channel_type` を `cm.platform = m.platform` に |
 | `backend/app/services/lang_judge.py:45-76`・`:85-111` | どちらも UNION ALL をやめ、meta_messages だけの1つの問い合わせにする: `FROM {schema}.meta_messages m WHERE m.lead_id = :lead_id AND m.direction = 'inbound' AND m.original_language IS NOT NULL AND m.deleted_at IS NULL {_NOT_VERBATIM_CLAUSE}`。params の `tenant_id` は残す。説明文の「conversation_logs」を消す |
-| `scripts/lead_regression/generate.py:430-524` | WhatsApp の会話を conversation_logs から読む所を、analytics と同じく meta_messages から読む形にする。`copy_rows`（conversation_logs への写し）を消す。期待の数（試験）は変えない |
+| `scripts/lead_regression/generate.py:430-524`（試験用の種を**書く**所） | (1) `:478-481` の WhatsApp の枝（`else:`）を、`wa_rows` でなく `meta_rows` に足す形にする。列の値は Instagram・Facebook の行と同じ並び（`code, platform, sender_id, recipient_id, message_text, direction, raw_payload, message_id, original_language, created_at`）で、受信は `_q(psid), "NULL"`、送信は `_q("tlr-page"), _q(psid)`。`raw_payload` は `"NULL"`、`message_id` は `_q(m.message_id)`（`tlr-s{seed}-m…` で一意）、`original_language` は `"NULL"`（今の conversation_logs の WhatsApp の行にも言語は無い）、`created_at` は `_ts(m.ts)`。occurred_at は入れない（今の meta の種と同じ） (2) `copy_rows`・`wa_rows` と、その2つの INSERT の繰り返し（`:500-524`）を消す (3) `:313-327` `expected_counts` の `"meta_messages"` を `len(ds.gen_messages)` に替え、`"conv_logs_meta_copy"`・`"conv_logs_whatsapp"` の2つのキーを消す（`meta_leads`・`wa_leads`・`meta_msgs` の変数が使われなくなったら消す） (4) `:570-579` の件数の点検から conversation_logs の2つ（写し・WhatsApp）を消す。meta_messages の点検は残す（数は (3) で変わる）。`docs/handoff/lead-regression/sql/delete_tenant_001.sql` は変えない（conversation_logs も meta も lead で消すので、そのまま通る） |
 
 ## 6. 集計ビューの作り直し（migration）
 
-新しいファイル `migrations/20261108_100000_rebuild_company_stats_on_meta_messages.sql`。`scripts/run_all_migrations.sh` の末尾（`:66` の `20261107_160000` の行の後）に、説明の1行と `run_sql migrations/20261108_100000_rebuild_company_stats_on_meta_messages.sql` を足す。
+新しいファイル `migrations/20261108_100000_rebuild_company_stats_on_meta_messages.sql`。`scripts/run_all_migrations.sh` の末尾（`:1251` の `20261107_160000` の行の後。その後ろに別の行が足されていたら、その一番後ろ）に、説明の1行と `run_sql migrations/20261108_100000_rebuild_company_stats_on_meta_messages.sql` を足す。
 
 中身の決まり:
 - `DO $$ ... $$` で `pg_namespace` の `^tenant_\d+$` を回す（`migrations/20260612_120000_fix_company_stats_ssot.sql:107-164` と同じ形）
@@ -181,10 +181,12 @@ GROUP BY c.id
 ### 9-2. 直す試験（データの入れ先を meta_messages にするだけ。期待は変えない）
 
 - `backend/tests/test_conv_logs_router.py`・`test_company_conv_logs.py`・`test_conv_logs_fire_translation.py`: 手の記録の入れ先・読み先を meta_messages に。翻訳は `message_id` が `manual_` で始まることを見る
-- `backend/tests/test_analytics.py`（conversation_logs が6か所）・`test_lead_conversion_factors.py`（1か所）・`test_lead_regression_generate.py`（3か所）: 会話の種を meta_messages に入れる。**数値の期待は1つも変えない**
+- `backend/tests/test_analytics.py`（conversation_logs が6か所）・`test_lead_conversion_factors.py`（1か所）: 会話の種を meta_messages に入れる。**数値の期待は1つも変えない**
+- `backend/tests/test_lead_regression_generate.py`: §5 の generate.py の直しに合わせて、次の**1か所だけ**期待を変える。`:236` の `conversation_logs WHERE external_message_id LIKE 'tlr-s20261101-%'` が `exp["conv_logs_meta_copy"]` と同じ、を「`SELECT count(*) FROM tenant_001.conversation_logs c JOIN tenant_001.leads l ON l.id = c.lead_id WHERE l.lead_code LIKE 'TLR-%'` が 0」に替える（写しをやめた印）。`:235`（meta の数 = `exp["meta_messages"]`）と `:239`（tlr の meta の occurred_at が空）は文を変えない（`:235` の数は (3) で WhatsApp の分だけ増えるのが正しい。`:239` は §5 で occurred_at を入れないので通る）。`:182` の記録と `:282` の表の一覧は変えない。成約分析の答え（`:250` 以降のオッズ比の比べ）は1つも変えない
 - `backend/tests/test_discord_inbox.py`（3か所）: 写しを確かめている所は「conversation_logs に1行も書かれない」に反転
 - `backend/tests/test_conv_backbone_ben1b.py`（7か所）: `write_conversation_log` の関数そのものの試験は残す。webhook・dm_writer が写しを呼ぶことを確かめている所があれば「呼ばない」に反転
-- `backend/tests/test_lead_merge_pg.py`・`rls_bootstrap.py`・`test_channel_masters_shared_pg.py`・`test_tenant_loop_migration_guard.py`: 変えない（便3 まで conversation_logs の表は残る）
+- `backend/tests/test_lead_merge_pg.py`・`rls_bootstrap.py`・`test_channel_masters_shared_pg.py`: 変えない（便3 まで conversation_logs の表は残る）
+- `backend/tests/test_tenant_loop_migration_guard.py`: `_REVIEWED` に9-3 の10の1行を足すだけ。ほかは変えない
 
 ### 9-3. 足す試験（新 `backend/tests/test_conversation_unify_bin1.py`、SQLite）
 
@@ -225,7 +227,7 @@ git grep -n 'is_manual IS NOT TRUE' HEAD -- backend/app
 | §0 の行が基準と違う | BLOCKED: で差を返す |
 | SQLite の試験で `IS NOT TRUE` が通らない | `COALESCE(is_manual, FALSE) = FALSE` に替えてよい（PG と同じ意味）。替えたら §10 の4つ目の検索の語も同じに替え、PR 本文に書く |
 | 9-1 の表以外にも meta_messages を自前で作る試験があり、列が無くて落ちる | その定義に列を足すだけにする。期待は変えない |
-| 数値の期待（test_analytics・test_lead_conversion_factors・test_lead_regression_generate）が1つでも変わる | 期待を書き換えない。BLOCKED: で差を返す |
+| 数値の期待（test_analytics・test_lead_conversion_factors・test_lead_regression_generate）が、9-2 で決めた1か所のほかに1つでも変わる | 期待を書き換えない。BLOCKED: で差を返す |
 | `_create_outbound_lead_for_echo` が使われなくなったと lint が止める | 関数に `# noqa` を付けず、NEEDS_DECISION: で返す |
 | migration の `CREATE OR REPLACE VIEW` が試験や CI で「列を変えられない」と落ちる | DROP に替えない。BLOCKED: で生の出力を返す |
 | `test_tenant_loop_migration_guard` が落ちる | 9-3 の10の登録を確かめる。直らなければ BLOCKED: |
@@ -254,7 +256,10 @@ git grep -n 'is_manual IS NOT TRUE' HEAD -- backend/app
 
 ## 15. 反映の後（Opus が行う。担当はしない）
 
-- 反映の**前**に、K5 の基準値を読み取り専用の鍵で取って保存する（下の問いの「今の形」）。反映の後に「新しい形」で取り、差 0 を確かめる
+- K5 の「同じ問い」は `docs/handoff/conversation-unification/k5/` の5つの文で固定する（k5-1 成約分析・k5-2 週次の助言・k5-3 会社の会話タブ・k5-4 v_company_stats・k5-5 言語判定）。どれも「今の形」と「新しい形」を同じデータで1つの文の中で比べ、差の数を返す。読み取り専用の鍵で、`NNN` を 001・003・004・005・006 に替えて1社ずつ流し、生の出力を `/tmp/CC報告ファイル/conv/k5/` に保存する
+  - 反映の**前**に5つ×5社を流し、全部合格（各ファイルの冒頭の「合格」の条件）であることを確かめて基準にする。1つでも不合格なら反映しない。2026-11-08 に Opus が1回目を流し、25件とも差 0（`/tmp/CC報告ファイル/conv/k5/before/`・まとめ `/tmp/CC報告ファイル/conv/k5-before-summary.txt`）。反映の直前にもう1回流す
+  - 反映の**後**（PR の反映の後と、§11 の名簿の値を流した後の2回）に同じ文を流す。反映の後に手で記録した行は meta にしか無いので差に出る。差が出たら、その会社・リードの meta の行のうち created_at が反映時刻より後の行を数え、差がその行だけで説明できるときだけ合格とする。説明できない差が1つでもあれば止めて PO へ
+  - 以下は5つの文が何を比べるかの説明（文が正）
   - 成約分析の入力: 会社ごとに、成約・失注のリードの会話の (lead_id, direction, 時刻) の集まり。今の形 = meta（instagram・messenger のリード、created_at）＋ conversation_logs（whatsapp のリード、occurred_at）。新しい形 = meta だけ（3つの窓口のリード、created_at）。2026-11-07 23:50 JST に Opus が下見: 5社とも差 0（001 社 1739 行。`/tmp/CC報告ファイル/conv/card6/q15.txt`）、同じ時刻で向きの違う行の組 0（`q16.txt`。並べ替えで結果が変わらない）
   - 週次の助言: 会社ごとの最終会話日。今の形 = conversation_logs の MAX(occurred_at)（company_id あり）。新しい形 = meta の MAX(COALESCE(occurred_at, created_at))（company_id あり・消した印なし）
   - 会社詳細の会話タブ: 会社ごとの件数と最新時刻（今の形 = conversation_logs、新しい形 = meta）
