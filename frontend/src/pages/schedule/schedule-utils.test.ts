@@ -6,6 +6,7 @@ import {
   eventNumericId,
   fitPopover,
   formatDraftDateLine,
+  formatSearchResultLine,
   normalizeShift,
   toCalendarEnd,
   toHolidayEvents,
@@ -13,6 +14,7 @@ import {
   toRangeStart,
   type AnchorRect,
   type ApiShift,
+  type ScheduleItem,
 } from "./schedule-utils";
 
 const baseShift: ApiShift = {
@@ -71,6 +73,44 @@ describe("formatDraftDateLine", () => {
 
   it("start only when the end time is unreadable", () => {
     expect(line({ endTime: "" })).toBe("11月10日(火) 午前10時");
+  });
+});
+
+describe("formatSearchResultLine", () => {
+  const t = i18n.getFixedT("ja");
+  const item = (patch: Partial<ScheduleItem>): ScheduleItem => ({
+    id: "event-1",
+    title: "商談A",
+    start: new Date(2026, 10, 10, 10, 0),
+    end: new Date(2026, 10, 10, 11, 0),
+    allDay: false,
+    category: null,
+    calendarType: "shared",
+    source: "app",
+    ownerUserId: 101,
+    ownerName: null,
+    ...patch,
+  });
+
+  it("U1: timed event matches formatDraftDateLine for the same values", () => {
+    const expected = formatDraftDateLine(
+      { startDate: "2026-11-10", startTime: "10:00", endDate: "2026-11-10", endTime: "11:00", allDay: false },
+      t,
+      "ja",
+    );
+    expect(formatSearchResultLine(item({}), t, "ja")).toBe(expected);
+  });
+
+  it("U2: all-day event shows a single date and the all-day label", () => {
+    const line = formatSearchResultLine(
+      item({ allDay: true, start: new Date(2026, 10, 10), end: new Date(2026, 10, 11) }),
+      t,
+      "ja",
+    );
+    expect(line).toContain("11月10日");
+    expect(line).not.toContain("11/11");
+    expect(line).not.toContain("11日");
+    expect(line).toContain(t("schedule.allDay"));
   });
 });
 
