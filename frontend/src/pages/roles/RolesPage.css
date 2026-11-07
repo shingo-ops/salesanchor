@@ -1,0 +1,95 @@
+/**
+ * 役割の画面 右側: メニューごとの行（Discord の権限画面の形）
+ * ADR-067: 全カラー・寸法は CSS 変数参照のみ
+ */
+
+.role-perm-legend {
+  margin: 0 0 var(--space-4);
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+}
+
+.role-perm-sections {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.role-perm-section {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.role-perm-section-header {
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-subtle);
+  border-bottom: 1px solid var(--border);
+  font-weight: var(--font-weight-semi);
+  color: var(--text-primary);
+}
+
+.role-perm-row + .role-perm-row {
+  border-top: 1px solid var(--border);
+}
+
+.role-perm-row-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+}
+
+.role-perm-row-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.role-perm-row-name {
+  font-size: var(--font-base);
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+.role-perm-row-note {
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+}
+
+.role-perm-row-controls {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.role-perm-row-fixed {
+  font-size: var(--font-sm);
+  color: var(--text-muted);
+}
+
+.role-perm-detail {
+  padding: var(--space-2) var(--space-4) var(--space-3);
+  background: var(--bg-subtle);
+  border-top: 1px solid var(--border);
+}
+
+.role-perm-detail-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+}
+
+.role-perm-detail-name {
+  min-width: 0;
+  font-size: var(--font-sm);
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}

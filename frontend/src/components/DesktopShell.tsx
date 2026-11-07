@@ -32,6 +32,7 @@ import { useLocale } from "../contexts/LocaleContext";
 import { useTheme } from "../contexts/ThemeContext";
 import { useUiPrefs } from "../contexts/UiPrefsContext";
 import { usePermissions } from "../hooks/usePermissions";
+import { canSeeMenu } from "../constants/menuPermissions";
 import { useSuperAdmin } from "../hooks/useSuperAdmin";
 import { useSSE } from "../hooks/useSSE";
 import { RealtimeProvider } from "../lib/realtime/RealtimeProvider";
@@ -174,11 +175,11 @@ export default function DesktopShell() {
 
   /* ---- permission-filtered sub-item lists ---- */
 
-  const showCrmLink = hasPermission("leads.view") || hasPermission("customers.view");
+  const showCrmLink = canSeeMenu("leads", hasAny);
 
   const showSalesLink =
     prefs.show_sales_menu &&
-    (hasPermission("quotes.view") || hasPermission("invoices.view"));
+    canSeeMenu("quotesInvoices", hasAny);
   const salesLinkTo = hasPermission("quotes.view") ? "/quotes" : "/invoices";
 
   // 管理センターリンクを表示する権限チェック（いずれか1つでも持っていれば表示）
@@ -228,7 +229,7 @@ export default function DesktopShell() {
             <div className="sidebar-loading-dot"><LoadingBlock size="sm" inline /></div>
           ) : (
             <>
-              {hasPermission("dashboard.view") && (
+              {canSeeMenu("dashboard", hasAny) && (
                 <NavLink
                   to="/"
                   end
@@ -270,7 +271,7 @@ export default function DesktopShell() {
                 </NavLink>
               )}
 
-              {hasPermission("products.view") && (
+              {canSeeMenu("inventory", hasAny) && (
                 <NavLink
                   to="/inventory"
                   className={({ isActive }) => `sidebar-item${isActive ? " active" : ""}`}
@@ -315,7 +316,7 @@ export default function DesktopShell() {
                 </NavLink>
               )}
 
-              {hasPermission("orders.view") && (
+              {canSeeMenu("orders", hasAny) && (
                 <NavLink
                   to="/orders"
                   className={({ isActive }) => `sidebar-item${isActive ? " active" : ""}`}
@@ -328,7 +329,7 @@ export default function DesktopShell() {
 
               {/* 区切り4 (ADR-021 改修): 売上管理（受注管理の直下）。
                   専用権限 sales.view は未定義のため orders.view を流用。 */}
-              {hasPermission("orders.view") && (
+              {canSeeMenu("sales", hasAny) && (
                 <NavLink
                   to="/sales"
                   className={({ isActive }) => `sidebar-item${isActive ? " active" : ""}`}
@@ -341,7 +342,7 @@ export default function DesktopShell() {
 
               {/* 区切り4 (ADR-021 改修): 報酬管理（売上管理の直下）。
                   専用権限 commissions.view は未定義のため orders.view を流用。 */}
-              {hasPermission("orders.view") && (
+              {canSeeMenu("commissions", hasAny) && (
                 <NavLink
                   to="/commissions"
                   className={({ isActive }) => `sidebar-item${isActive ? " active" : ""}`}

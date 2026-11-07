@@ -5,7 +5,7 @@
  * QueryClient はアプリと同じ 1 個（apiQuery.ts の queryClient）を使い、毎回消す。
  */
 import type { ComponentType } from "react";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -15,6 +15,7 @@ import OrdersPage from "../../pages/orders/OrdersPage";
 import RolesPage from "../../pages/roles/RolesPage";
 import StaffEditPage from "../../pages/staff/StaffEditPage";
 import StaffPage from "../../pages/staff/StaffPage";
+import { rowMenuLabelKey } from "../../constants/menuPermissions";
 import { api } from "../api";
 import { QueryAuthSync } from "./QueryAuthSync";
 import { queryClient } from "./apiQuery";
@@ -137,8 +138,9 @@ describe("revisit shows the copy first (Q1)", () => {
 });
 
 describe("edits wait until the record is read (Q2)", () => {
+  const rowGroup = () => screen.findByRole("radiogroup", { name: rowMenuLabelKey("leads") });
   const permissionBox = () =>
-    screen.getByText("Fixture Permission").closest("label")!.querySelector("input") as HTMLInputElement;
+    within(screen.getByRole("radiogroup", { name: rowMenuLabelKey("leads") })).getByRole("radio", { name: "roles.stateOff" }) as HTMLButtonElement;
 
   it("keeps the role permission boxes disabled until that role's permissions are read", async () => {
     let release: (value: unknown) => void = () => {};
@@ -147,12 +149,13 @@ describe("edits wait until the record is read (Q2)", () => {
       (path === "/roles/1/permissions" ? held : answer(path)) as never,
     );
     render(<Tree c={{ Page: RolesPage, route: "/roles", at: "/roles" }} />);
-    await screen.findByText("Fixture Permission");
+    await rowGroup();
     expect(permissionBox().disabled).toBe(true);
 
     release([permission]);
     await waitFor(() => expect(permissionBox().disabled).toBe(false));
-    expect(permissionBox().checked).toBe(true);
+    const viewOnly = within(screen.getByRole("radiogroup", { name: rowMenuLabelKey("leads") })).getByRole("radio", { name: "roles.stateView" });
+    expect(viewOnly.getAttribute("aria-checked")).toBe("true");
   });
 
   it("does not show the staff form when the staff could not be read", async () => {

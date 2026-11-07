@@ -1,4 +1,5 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { rowMenuLabelKey } from '../constants/menuPermissions';
 import { createInstance } from 'i18next';
 import { I18nextProvider } from 'react-i18next';
 import { MemoryRouter } from 'react-router-dom';
@@ -32,8 +33,13 @@ afterEach(() => { cleanup(); queryClient.clear(); vi.restoreAllMocks(); vi.unstu
 
 describe('purchase and admin editor Button migration', () => {
   it('role permission cancel restores the server baseline and writes zero', async () => {
-    render(wrap(<RolesPage />)); await screen.findAllByText('Role fixture'); const checkbox = await screen.findByRole('checkbox', { name: /View customers/ }) as HTMLInputElement; await waitFor(() => expect(checkbox.checked).toBe(true));
-    const cancel = screen.getByRole('button', { name: tr('roles.cancelChanges') }) as HTMLButtonElement; expect(cancel.disabled).toBe(true); fireEvent.click(checkbox); expect(checkbox.checked).toBe(false); expect(cancel.disabled).toBe(false); fireEvent.click(cancel);
-    expect(checkbox.checked).toBe(true); expect(cancel.disabled).toBe(true); expect(mock.put).not.toHaveBeenCalled();
+    render(wrap(<RolesPage />)); await screen.findAllByText('Role fixture');
+    const group = await screen.findByRole('radiogroup', { name: tr(rowMenuLabelKey('leads')) });
+    const viewOnly = within(group).getByRole('radio', { name: tr('roles.stateView') }) as HTMLButtonElement;
+    const hidden = within(group).getByRole('radio', { name: tr('roles.stateOff') }) as HTMLButtonElement;
+    await waitFor(() => expect(viewOnly.getAttribute('aria-checked')).toBe('true'));
+    const cancel = screen.getByRole('button', { name: tr('roles.cancelChanges') }) as HTMLButtonElement; expect(cancel.disabled).toBe(true); fireEvent.click(hidden);
+    expect(hidden.getAttribute('aria-checked')).toBe('true'); expect(viewOnly.getAttribute('aria-checked')).toBe('false'); expect(cancel.disabled).toBe(false); fireEvent.click(cancel);
+    expect(viewOnly.getAttribute('aria-checked')).toBe('true'); expect(cancel.disabled).toBe(true); expect(mock.put).not.toHaveBeenCalled();
   });
 });
