@@ -121,6 +121,7 @@ async def test_create_conv_log_manual_channel_success():
             return_value={"id": 5, "platform": "phone", "display_name": "電話", "connection_type": "manual"}
         )),
         patch("app.routers.conv_logs._get_company_id_for_lead", new=AsyncMock(return_value=None)),
+        patch("app.routers.conv_logs._get_contact_id_for_lead", new=AsyncMock(return_value=None)),
         patch("app.routers.conv_logs.record_audit_log", new=AsyncMock()),
         patch("app.routers.conv_logs._fire_translation", new=AsyncMock()),
     ):
@@ -158,6 +159,7 @@ async def test_create_conv_log_company_id_in_insert():
             return_value={"id": 5, "platform": "phone", "display_name": "電話", "connection_type": "manual"}
         )),
         patch("app.routers.conv_logs._get_company_id_for_lead", new=AsyncMock(return_value=42)),
+        patch("app.routers.conv_logs._get_contact_id_for_lead", new=AsyncMock(return_value=None)),
         patch("app.routers.conv_logs.record_audit_log", new=AsyncMock()) as mock_audit,
         patch("app.routers.conv_logs._fire_translation", new=AsyncMock()),
     ):
@@ -201,6 +203,7 @@ async def test_create_conv_log_no_company_id_does_not_error():
             return_value={"id": 5, "platform": "phone", "display_name": "電話", "connection_type": "manual"}
         )),
         patch("app.routers.conv_logs._get_company_id_for_lead", new=AsyncMock(return_value=None)),
+        patch("app.routers.conv_logs._get_contact_id_for_lead", new=AsyncMock(return_value=None)),
         patch("app.routers.conv_logs.record_audit_log", new=AsyncMock()),
         patch("app.routers.conv_logs._fire_translation", new=AsyncMock()),
     ):
@@ -234,6 +237,7 @@ async def test_update_deleted_log_returns_410():
                 "content_text": "old", "occurred_at": datetime(2026, 6, 11, tzinfo=timezone.utc),
                 "deleted_at": datetime(2026, 6, 11, 12, tzinfo=timezone.utc),  # 削除済み
                 "recorded_by_user_id": 1,
+                "is_manual": True, "message_id": "manual_test",
             }
         )),
     ):
@@ -266,6 +270,7 @@ async def test_delete_conv_log_sets_deleted_at():
                 "occurred_at": datetime(2026, 6, 11, tzinfo=timezone.utc),
                 "deleted_at": None,  # 未削除
                 "recorded_by_user_id": 1,
+                "is_manual": True, "message_id": "manual_test",
             }
         )),
         patch("app.routers.conv_logs.record_audit_log", new=AsyncMock()),
@@ -348,6 +353,7 @@ async def test_create_conv_log_force_skips_duplicate_check():
             return_value={"id": 5, "platform": "phone", "display_name": "電話", "connection_type": "manual"}
         )),
         patch("app.routers.conv_logs._get_company_id_for_lead", new=AsyncMock(return_value=None)),
+        patch("app.routers.conv_logs._get_contact_id_for_lead", new=AsyncMock(return_value=None)),
         patch("app.routers.conv_logs.record_audit_log", new=AsyncMock()),
         patch("app.routers.conv_logs._fire_translation", new=AsyncMock()),
     ):
@@ -518,6 +524,7 @@ async def test_create_conv_log_company_id_in_insert_params():
             return_value={"id": 5, "platform": "phone", "display_name": "電話", "connection_type": "manual"}
         )),
         patch("app.routers.conv_logs._get_company_id_for_lead", new=AsyncMock(return_value=42)),
+        patch("app.routers.conv_logs._get_contact_id_for_lead", new=AsyncMock(return_value=None)),
         patch("app.routers.conv_logs.record_audit_log", new=AsyncMock()),
         patch("app.routers.conv_logs._fire_translation", new=AsyncMock()),
     ):
@@ -561,6 +568,7 @@ async def test_create_conv_log_company_id_in_audit_log():
             return_value={"id": 5, "platform": "phone", "display_name": "電話", "connection_type": "manual"}
         )),
         patch("app.routers.conv_logs._get_company_id_for_lead", new=AsyncMock(return_value=99)),
+        patch("app.routers.conv_logs._get_contact_id_for_lead", new=AsyncMock(return_value=None)),
         patch("app.routers.conv_logs.record_audit_log", new=mock_audit),
         patch("app.routers.conv_logs._fire_translation", new=AsyncMock()),
     ):
@@ -603,6 +611,7 @@ async def test_create_conv_log_no_company_id_still_returns_201():
             return_value={"id": 5, "platform": "phone", "display_name": "電話", "connection_type": "manual"}
         )),
         patch("app.routers.conv_logs._get_company_id_for_lead", new=AsyncMock(return_value=None)),
+        patch("app.routers.conv_logs._get_contact_id_for_lead", new=AsyncMock(return_value=None)),
         patch("app.routers.conv_logs.record_audit_log", new=AsyncMock()),
         patch("app.routers.conv_logs._fire_translation", new=AsyncMock()),
     ):

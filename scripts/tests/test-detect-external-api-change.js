@@ -114,9 +114,8 @@ test('既知の Meta 呼び出しファイルを検出', () => {
     ['backend/app/tasks/refresh_meta_tokens.py', ['meta']],
     ['backend/app/tasks/verify_meta_subscriptions.py', ['meta']],
     ['backend/app/tasks/avatar.py', ['meta']],
-    ['backend/app/tasks/sa02_recon_monitor.py', ['discord']],
   ];
-  assert.strictEqual(cases.length, 8);
+  assert.strictEqual(cases.length, 7);
   for (const [filePath, expectedApis] of cases) {
     expectClassified(filePath, expectedApis);
   }
@@ -183,7 +182,6 @@ test('recon 既知ファイル 29 件をすべて個別検出する', () => {
     ['backend/app/tasks/refresh_meta_tokens.py', ['meta']],
     ['backend/app/tasks/verify_meta_subscriptions.py', ['meta']],
     ['backend/app/tasks/avatar.py', ['meta']],
-    ['backend/app/tasks/sa02_recon_monitor.py', ['discord']],
     ['backend/app/services/discord_rest.py', ['discord']],
     ['backend/app/services/discord_sender.py', ['discord']],
     ['backend/app/services/discord_notifier.py', ['discord']],
@@ -200,7 +198,7 @@ test('recon 既知ファイル 29 件をすべて個別検出する', () => {
     ['backend/app/services/fx_rate.py', ['fx_rate']],
   ];
 
-  assert.strictEqual(cases.length, 29);
+  assert.strictEqual(cases.length, 28);
   for (const [filePath, expectedApis] of cases) {
     expectClassified(filePath, expectedApis);
   }

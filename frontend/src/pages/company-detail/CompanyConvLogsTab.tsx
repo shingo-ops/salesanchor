@@ -1,7 +1,7 @@
 /**
  * CompanyConvLogsTab — 会社別会話ログ一覧（SA-02 Stage 4）
  *
- * 会社の全 conversation_logs を時系列で表示（読み取り専用）。
+ * 会社の全 meta_messages を時系列で表示（読み取り専用）。
  * contact フィルタで絞り込み可能。
  * 自動受信・手動記録の混在スレッド表示。
  */

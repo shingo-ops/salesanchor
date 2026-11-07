@@ -2,8 +2,8 @@
 
 検証項目:
   1. write_conversation_log(lead_id=None) は ValueError を返す
-  2. echo の未知 PSID は outbound lead を自動作成し、conversation_logs に紐づく
-  3. echo の既知 PSID は既存 lead を使い、lead を増やさない
+  2. echo の未知 PSID は、会話の一本化 便1 以降はリードを作らず、conversation_logs にも書かない
+  3. echo の既知 PSID は、会話の一本化 便1 以降は conversation_logs に書かず、lead を増やさない
 """
 
 from __future__ import annotations
@@ -233,33 +233,15 @@ async def test_echo_unknown_psid_creates_outbound_lead(db_session, webhook_env, 
 
     await wh.process_messenger_event(body)
 
-    res = await db_session.execute(text(
-        "SELECT id, customer_name, initiative, lead_code FROM leads ORDER BY id"
-    ))
-    lead = res.mappings().first()
-    assert lead is not None
-    assert lead["customer_name"] == "Messenger:00001234"
-    assert lead["initiative"] == "outbound"
-    assert lead["lead_code"] == f"LD-{lead['id']:05d}"
+    # 便1: echo は何も書かない。リードも作らない
+    res = await db_session.execute(text("SELECT COUNT(*) FROM leads"))
+    assert res.scalar() == 0
 
-    res = await db_session.execute(text(
-        "SELECT lead_id, direction, sender, content_text "
-        "FROM conversation_logs WHERE external_message_id = 'mid-echo-unknown'"
-    ))
-    conv = res.mappings().first()
-    assert conv is not None
-    assert conv["lead_id"] == lead["id"]
-    assert conv["direction"] == "outbound"
-    assert conv["sender"] == "PAGE-A"
-    assert conv["content_text"] == "Echo"
+    res = await db_session.execute(text("SELECT COUNT(*) FROM conversation_logs"))
+    assert res.scalar() == 0
 
-    res = await db_session.execute(text(
-        "SELECT platform, external_id FROM lead_channels"
-    ))
-    channel = res.mappings().first()
-    assert channel is not None
-    assert channel["platform"] == "messenger"
-    assert channel["external_id"] == "PSID-00001234"
+    res = await db_session.execute(text("SELECT COUNT(*) FROM lead_channels"))
+    assert res.scalar() == 0
 
 
 @pytest.mark.asyncio
@@ -295,13 +277,8 @@ async def test_echo_known_psid_uses_existing_lead(db_session, webhook_env, monke
     res = await db_session.execute(text("SELECT COUNT(*) FROM leads"))
     assert res.scalar() == 1
 
+    # 便1: echo は conversation_logs に書かない
     res = await db_session.execute(text(
-        "SELECT lead_id, direction, sender, content_text "
-        "FROM conversation_logs WHERE external_message_id = 'mid-echo-known'"
+        "SELECT COUNT(*) FROM conversation_logs WHERE external_message_id = 'mid-echo-known'"
     ))
-    conv = res.mappings().first()
-    assert conv is not None
-    assert conv["lead_id"] == 42
-    assert conv["direction"] == "outbound"
-    assert conv["sender"] == "PAGE-A"
-    assert conv["content_text"] == "Echo"
+    assert res.scalar() == 0

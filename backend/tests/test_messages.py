@@ -133,7 +133,9 @@ _META_MESSAGES_DDL = """
         seen_by_staff_id INTEGER,
         attachment_url TEXT,
         attachment_type VARCHAR(20),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        deleted_at TIMESTAMP,
+        is_manual BOOLEAN
     )
 """
 

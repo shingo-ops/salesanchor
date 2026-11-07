@@ -1249,3 +1249,5 @@ run_sql migrations/20261107_140000_add_discord_config_rls.sql
 run_sql migrations/20261107_150000_add_google_webhook_subscriptions_rls.sql
 # ADR-1067 段階④ 便④-5: tenant_llm_budgets・tenant_settings に会社ごとの RLS（型C: 読取は全行・書込は自社か運営）。冪等・1 取引
 run_sql migrations/20261107_160000_add_tenant_budget_settings_rls.sql
+# 会話の一本化 便1: v_company_stats の会話の数え方を meta_messages に付け替える（CREATE OR REPLACE VIEW・列は同じ・値は変えない）。冪等
+run_sql migrations/20261108_100000_rebuild_company_stats_on_meta_messages.sql

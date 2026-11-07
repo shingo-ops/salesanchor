@@ -117,7 +117,9 @@ _META_MESSAGES_DDL = """
         page_id VARCHAR(50),
         attachment_url TEXT,
         attachment_type VARCHAR(20),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        deleted_at TIMESTAMP,
+        is_manual BOOLEAN
     )
 """
 

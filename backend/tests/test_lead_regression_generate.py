@@ -233,7 +233,8 @@ async def test_pg_commit_counts_precheck_and_analysis(pg, ds):
     assert await _count(pg, "SELECT count(*) FROM tenant_001.leads WHERE status = 'existing_customer'") == 150
     assert await _count(pg, "SELECT count(*) FROM tenant_001.deal_close_reasons") == exp["deal_close_reasons"] == 320
     assert await _count(pg, "SELECT count(*) FROM tenant_001.meta_messages WHERE message_id LIKE 'tlr-s20261101-%'") == exp["meta_messages"]
-    assert await _count(pg, "SELECT count(*) FROM tenant_001.conversation_logs WHERE external_message_id LIKE 'tlr-s20261101-%'") == exp["conv_logs_meta_copy"]
+    # 写しをやめた印: TLR- のリードには conversation_logs の行が 1 つも無い
+    assert await _count(pg, "SELECT count(*) FROM tenant_001.conversation_logs c JOIN tenant_001.leads l ON l.id = c.lead_id WHERE l.lead_code LIKE 'TLR-%'") == 0
     # 時刻はすべて書き込む日の 2 日以上前
     assert await _count(pg, "SELECT count(*) FROM tenant_001.meta_messages WHERE message_id LIKE 'tlr-%' AND created_at > now() - interval '2 days'") == 0
     assert await _count(pg, "SELECT count(*) FROM tenant_001.meta_messages WHERE message_id LIKE 'tlr-%' AND occurred_at IS NOT NULL") == 0

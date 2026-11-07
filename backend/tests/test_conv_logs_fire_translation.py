@@ -56,7 +56,9 @@ async def test_fire_translation_sets_tenant_context_before_ensure():
             new=AsyncMock(side_effect=mock_reset_tenant_context),
         ) as mock_reset,
     ):
-        await _fire_translation(db=db, tenant_id=4, log_id=42, content_text="Hello")
+        await _fire_translation(
+            db=db, tenant_id=4, message_id="manual_" + "a" * 32, content_text="Hello"
+        )
 
     # set_tenant_context が ensure_inbound_translations より先に呼ばれている
     assert call_order[0] == "set_tenant_context", (
@@ -65,8 +67,15 @@ async def test_fire_translation_sets_tenant_context_before_ensure():
     assert "ensure_inbound_translations" in call_order
     mock_set.assert_awaited_once_with(db, 4)
     mock_reset.assert_awaited_once_with(db, 4)
-    # DB に translated_text が書き戻されること
+    # meta_messages に原文の言語だけが書き戻されること（訳は message_translations に残る）
     db.execute.assert_called_once()
+    sql = str(db.execute.call_args[0][0])
+    params = db.execute.call_args[0][1]
+    assert "meta_messages" in sql
+    assert "translated_text" not in sql
+    assert params == {"lang": "en", "mid": "manual_" + "a" * 32}
+    # ensure_inbound_translations には渡した message_id がそのまま渡る（conv_log_ の付け替えをしない）
+    assert mock_ensure_patch.await_args.kwargs["message_id"] == "manual_" + "a" * 32
     db.commit.assert_called_once()
 
 
@@ -91,7 +100,7 @@ async def test_fire_translation_skips_outbound():
             new=AsyncMock(),
         ) as mock_ensure:
             await _fire_translation(
-                db=db, tenant_id=4, log_id=99, content_text="Hello", direction="outbound"
+                db=db, tenant_id=4, message_id="manual_x", content_text="Hello", direction="outbound"
             )
 
     mock_ensure.assert_not_awaited()
@@ -131,7 +140,7 @@ async def test_fire_translation_fires_for_inbound():
         ),
     ):
         await _fire_translation(
-            db=db, tenant_id=4, log_id=10, content_text="Hello", direction="inbound"
+            db=db, tenant_id=4, message_id="manual_y", content_text="Hello", direction="inbound"
         )
 
     mock_ensure.assert_awaited_once()
