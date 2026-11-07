@@ -307,6 +307,32 @@ class TestDiscordOAuthStart:
             f"state が一致しません: {qs.get('state')}"
         )
 
+    @pytest.mark.asyncio
+    async def test_start_own_without_edit_permission_returns_reason(self, app_client, monkeypatch):
+        """自社用で tenant.profile.edit が無いと 403。detail は理由コードだけで日本語を含まない（ADR-1071）。"""
+        monkeypatch.setenv("DISCORD_CLIENT_SECRET", _SECRET)
+        with patch(
+            "app.routers.discord_oauth.load_user_permissions",
+            AsyncMock(return_value=set(_ALL_PERMS)),
+        ):
+            res = await app_client.post("/api/v1/discord/oauth/start", json={"purpose": "own"})
+        assert res.status_code == 403
+        assert res.json()["detail"] == {"reason": "permission_denied"}
+
+    @pytest.mark.asyncio
+    async def test_start_state_store_down_returns_reason(self, app_client, monkeypatch):
+        """札を発行できないと 503。detail は理由コードだけ（ADR-1071）。"""
+        from app.services import oauth_state
+
+        monkeypatch.setenv("DISCORD_CLIENT_SECRET", _SECRET)
+        with patch(
+            "app.routers.discord_oauth.oauth_state.issue_state",
+            AsyncMock(side_effect=oauth_state.OAuthStateError("down")),
+        ):
+            res = await app_client.post("/api/v1/discord/oauth/start")
+        assert res.status_code == 503
+        assert res.json()["detail"] == {"reason": "redis_error"}
+
 
 # ---------------------------------------------------------------------------
 # GET /api/v1/discord/oauth/callback
@@ -644,6 +670,7 @@ class TestDiscordOAuthOwnershipProof:
         with patch("app.routers.discord_oauth.oauth_state.issue_state", issue):
             res = await app_client.post("/api/v1/discord/oauth/start")
         assert res.status_code == 503
+        assert res.json()["detail"] == {"reason": "discord_not_configured"}
         issue.assert_not_called()
 
     @pytest.mark.asyncio
