@@ -11,9 +11,9 @@ import LegalLayout from '../layouts/LegalLayout.astro';
   <p class="!my-6">
     <strong>Sales Anchor</strong> — Multi-Channel CRM SaaS for B2B Trading Card Exporters<br>
     Operated by: HIGH LIFE JPN (Representative: Shingo Tanizawa (谷澤 伸吾))<br>
-    Effective Date: May 21, 2026<br>
-    Last Updated: May 21, 2026<br>
-    Version: 1.5
+    Effective Date: December 1, 2026<br>
+    Last Updated: November 8, 2026<br>
+    Version: 1.8
   </p>
 
   <h2>Introduction</h2>
@@ -175,6 +175,7 @@ import LegalLayout from '../layouts/LegalLayout.astro';
     <li>Legal compliance and responding to legal requests</li>
     <li>Service notifications and maintenance announcements</li>
     <li>Issuing invoices to contracted Inventory Viewer customers</li>
+    <li>Preventing repeated free-trial registrations by former Inventory Viewer users</li>
   </ul>
 
   <h3>5.2 Purpose for End User Information</h3>
@@ -212,8 +213,9 @@ import LegalLayout from '../layouts/LegalLayout.astro';
     </thead>
     <tbody>
       <tr><td>User Account</td><td>During account active period</td></tr>
-      <tr><td>Inventory Viewer Account</td><td>During the trial or contract period; deleted 90 days after the trial expires without extension or 90 days after suspension. Login records: 90 days</td></tr>
+      <tr><td>Inventory Viewer Account</td><td>During the trial or contract period, and for 3 years after access ends (the trial or payment deadline passes, or the account is suspended, whichever is later). Unconfirmed applications: 7 days. Login records: 90 days</td></tr>
       <tr><td>Inventory Viewer Billing Information</td><td>Deleted together with the Inventory Viewer Account</td></tr>
+      <tr><td>Inventory Viewer Invoices</td><td>7 years from issuance (tax-law retention obligation)</td></tr>
       <tr><td>Message History</td><td>Main DB: Recent 3 years / Archive DB: Beyond 3 years (deletable upon client request)</td></tr>
       <tr><td>End User Identifiers (PSID / IGSID)</td><td>Same as message history; deleted upon data deletion request</td></tr>
       <tr><td>Authentication Tokens</td><td>Maximum 60 days (Meta specification)</td></tr>
@@ -244,7 +246,7 @@ import LegalLayout from '../layouts/LegalLayout.astro';
     </thead>
     <tbody>
       <tr><td>SAKURA internet Inc.</td><td>Server infrastructure</td><td>Japan</td></tr>
-      <tr><td>Google LLC</td><td>Authentication (Google Identity Platform) / AI-assisted message translation (Gemini API — paid tier, DPA in place)</td><td>United States</td></tr>
+      <tr><td>Google LLC</td><td>Authentication (Google Identity Platform) / AI-assisted message translation (Gemini API — paid tier, DPA in place) / Storage of issued invoices (Google Drive)</td><td>United States</td></tr>
       <tr><td>Meta Platforms, Inc.</td><td>Messenger/Instagram API</td><td>United States</td></tr>
       <tr><td>Cloudflare, Inc.</td><td>DNS</td><td>United States</td></tr>
       <tr><td>GitHub, Inc.</td><td>Source code management</td><td>United States</td></tr>
@@ -390,6 +392,7 @@ import LegalLayout from '../layouts/LegalLayout.astro';
       <tr><td>1.5</td><td>2026-05-21</td><td>Effective Date updated to today; GDPR mention added; Cookie table added; Data Deletion Callback flow clarified</td></tr>
       <tr><td>1.6</td><td>2026-05-21</td><td>§6.1 corrected: replaced inaccurate "no transfer outside Japan" with accurate description of US-provider data flows; §6.3 added PSID/IGSID retention period</td></tr>
       <tr><td>1.7</td><td>2026-06-03</td><td>§4.4 added: AI-assisted message translation via Google Gemini API disclosure (APPI Art.25 outsourcing, GDPR Art.6(1)(f)); §5.2 updated: added AI translation purpose; §7.2 updated: Google LLC entry expanded to include Gemini API; §9.2 updated: AI translation cache (message_translations) added to deletion scope</td></tr>
+      <tr><td>1.8</td><td>2026-11-08</td><td>§5.1 added: preventing repeated free-trial registrations; §6.3 updated: Inventory Viewer Account retained for 3 years after access ends, Inventory Viewer Invoices retained for 7 years; §7.2 updated: Google Drive added for invoice storage; header version and dates corrected (effective December 1, 2026)</td></tr>
     </tbody>
   </table>
 
