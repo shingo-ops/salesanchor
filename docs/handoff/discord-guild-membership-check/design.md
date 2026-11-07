@@ -152,7 +152,7 @@ ssh "${SSH_OPTS[@]}" "$HOST" 'docker exec -i -w /app astro-webapp-backend-1 pyth
 | A3 | run.txt（標準出力と標準エラーの両方）に 17〜20 桁の数字が 0 件、`token` の語が 0 件、§4-1-1・§4-1-2 の形以外の行が 0 件（K2） | 下の「A3・A4 の命令」の (1)〜(3) がすべて 0 |
 | A4 | スクリプトに書き込みの語が単語として 0 件（K3） | 下の「A3・A4 の命令」の (4) が 0。あわせて (5) の対照（わざと語を入れた写し）が 1 以上になり、命令が効いていることを示す |
 | A5 | 自己試験が通る | クラウドで `python3 -I scripts/ops/discord_guild_membership_check.py --self-test` → `self-test ok 4` |
-| A6 | 実行の前後で登録の行が消えも増えもせず、作成・更新の時刻が同じ（K3 の補助・§14-10 で前提を訂正） | reader で実行の前と後に `SELECT tenant_id, purpose, guild_id, created_at, updated_at FROM ai_ro.public__tenant_discord_config ORDER BY tenant_id, purpose` を流し、2つの出力を `diff` → 差分 0 行・行数 4。reader では番号が `masked:len=N:digits` に置き換わる（`migrations/20261024_100000_create_ai_cloud_meta.sql:138`・`migrations/20261024_100300_create_ai_cloud_views.sql:274`）。このため**同じ長さの番号への書き換えは A6 では判定できない**。また updated_at を自動で直す仕掛けは無い（`migrations/099_add_discord_guild_config.sql:6-11`）。番号を書き換えないことは、A6 ではなく READ ONLY（§4-1 手順2）・GET だけ（手順3）・A4 で保証する |
+| A6 | 実行の前後で登録の行が消えも増えもせず、作成・更新の時刻が同じ（K3 の補助・§14-10 で前提を訂正） | reader で実行の前と後に `SELECT tenant_id, purpose, guild_id, created_at, updated_at FROM ai_ro.public__tenant_discord_config ORDER BY tenant_id, purpose` を流し、2つの出力を `diff` → 差分 0 行・行数 4。~~reader では番号が `masked:len=N:digits` に置き換わる…このため同じ長さの番号への書き換えは A6 では判定できない~~（誤り。§14-10 で訂正: reader の ai_ro は伏せないので番号そのものも比べている）。また updated_at を自動で直す仕掛けは無い（`migrations/099_add_discord_guild_config.sql:6-11`）。番号を書き換えないことは、A6 ではなく READ ONLY（§4-1 手順2）・GET だけ（手順3）・A4 で保証する |
 | A7 | `x` が出た会社の行を消していない（K4） | A6 の後の出力に、`x` が出た会社の行が残っている（行数 4 のまま） |
 
 ### A3・A4 の命令（表の外に書く。`|` をそのまま書くため）
@@ -259,10 +259,10 @@ def unregistered_lines(rows, guilds, viewer_ids) -> list[str]:
     """rows = (tenant_id, purpose, guild_id)。guilds = 応答の要素（id と name）。
     viewer_ids = viewer_discord_config の guild_id を str(...).strip() した集合。
     登録に無いボットのサーバーだけを `unregistered name=<clean_name> is_viewer_guild=<o|x>` の形で返す。
-    並びは clean_name の文字の順（同じ名前なら出る順）。"""
+    同じ id が2回あっても1行にする（id で重複を除く。judge の数は集合で数えるため）。並びは clean_name の文字の順（同じ名前なら出る順）。"""
 ```
 
-- `clean_name` の決まり: `None` や文字列でない値は `(no_name)`。`unicodedata.category(ch)` が `C` で始まる文字（制御文字・改行・書式文字）を消す。17 桁以上の数字の並びは `#` 1文字に置き換える（名前に番号が書かれていても K2 の検査 (1) に当たらないように）。前後の空白を除き、100 文字を超えたら 100 文字で切って末尾に `~` を足す。空になったら `(no_name)`
+- `clean_name` の決まり（この順に行う）: (1) `None` や文字列でない値は `(no_name)`。(2) `unicodedata.category(ch)` が `C` で始まる文字（制御文字・改行・ゼロ幅などの書式文字）と、`Zl`・`Zp`（行の区切り U+2028・段落の区切り U+2029）を消す。(3) その後で 17 桁以上の数字の並び（`\d{17,}`）を `#` 1文字に置き換える（消した後に並べるので、ゼロ幅文字で区切った数字もつながってから置き換わる。名前に番号が書かれていても K2 の検査 (1) に当たらないように）。(4) 前後の空白を除き、100 文字を超えたら 100 文字で切って末尾に `~` を足す。(5) 空になったら `(no_name)`
 - 出力の形（旗ありのとき・標準出力）: §4-1-1 の行のすぐ後に、`unregistered_lines` の行を続ける
 
 ```
@@ -280,7 +280,7 @@ unregistered name=<名前> is_viewer_guild=<o|x>
 #### 14-3-2. 自己試験（`--self-test`・今の4つに2つ足して `self-test ok 6`）
 
 - T5: 登録2行・ボット側4件（うち2件は登録済み、1件は viewer の番号）→ 2行だけ返る。viewer の行が `o`、他方が `x`。登録済みの名前が出ない。名前の文字の順に並ぶ
-- T6: `clean_name` に「改行・タブ・ゼロ幅の書式文字・18 桁の数字・150 文字」を混ぜた名前と `None` を渡す → 制御文字が残らない、`\d{17,20}` に当たらない、100 文字＋`~`、`None` は `(no_name)`
+- T6: `clean_name` に「改行・タブ・ゼロ幅の書式文字・U+2028・18 桁の数字・「9桁＋ゼロ幅の文字＋9桁」・150 文字」を混ぜた名前と `None` を渡す → 制御文字が残らない、`\d{17,20}` に当たらない、100 文字＋`~`、`None` は `(no_name)`
 
 #### 14-3-3. `scripts/ops/discord-unregistered-guild-names.sh`（新規・PO が `!` で流す）
 
@@ -321,7 +321,7 @@ unregistered name=<名前> is_viewer_guild=<o|x>
 | B2 | names.txt に 17〜20 桁の数字 0 件・`token` 0 件・形以外の行 0 件（N3） | 下の (1)(2)(8) がすべて 0 |
 | B3 | 書き込みの語が単語として 0 件（N4） | §10 の A4 (4)(5) を新しい py に流す（(4)=0・(5)=1）。新しい .sh にも (4) を流して 0 |
 | B4 | 自己試験が通る | クラウドで `python3 -I scripts/ops/discord_guild_membership_check.py --self-test` → `self-test ok 6` |
-| B5 | 旗なしの出力が変わらない（N4） | 実行の後に PO が既存の `scripts/ops/discord-guild-membership-check.sh` も流し、run.txt を前回の7行（`bot_guild_count=6`〜`unregistered_bot_guilds=2`）と `diff` → 差分 0 行（サーバーの出入りが無い限り） |
+| B5 | 旗なしの出力が変わらない（N4） | 流す前に Opus が前回の run.txt（7行・`bot_guild_count=6`〜`unregistered_bot_guilds=2`）を `/tmp/CC報告ファイル/u2/run-prev.txt` に写す（既存の .sh は run.txt を上書きするため・2026-11-07 写し済み・7行）。実行の後に PO が既存の `scripts/ops/discord-guild-membership-check.sh` も流し、`diff /tmp/CC報告ファイル/u2/run-prev.txt /tmp/CC報告ファイル/u2/run.txt` → 差分 0 行（サーバーの出入りが無い限り） |
 | B6 | 登録の行が消えも増えもしない（K3・K4 の補助） | §10 の A6 と同じ前後比較（reader・diff 0 行・行数 4） |
 
 ```bash
@@ -341,7 +341,7 @@ grep -c -v -E '^(bot_guild_count=[0-9]+|config_rows=[0-9]+|tenant=[0-9]+ purpose
 1. クラウドの Sonnet が 14-3 の2ファイルを書き、B3・B4 をクラウドで流して生出力を残す
 2. 審査役 reviewer（opus）→ CI 緑 → 委任 GO（`scripts/` は危ない場所）→ main へ取り込み
 3. 取り込み後の main からスクリプト2本を `/tmp/CC報告ファイル/u2/bin2/` へ写し、Git の blob の番号が main と同じことを確かめる（worktree はマージで消えるため・前回の教訓）
-4. 実行前の reader → PO が `! bash /tmp/CC報告ファイル/u2/bin2/discord-unregistered-guild-names.sh` → PO が `! bash /tmp/CC報告ファイル/u2/bin2/discord-guild-membership-check.sh`（B5）→ 実行後の reader → B1〜B6 を判定
+4. run-prev.txt があることを確かめる（B5）→ 実行前の reader → PO が `! bash /tmp/CC報告ファイル/u2/bin2/discord-unregistered-guild-names.sh` → PO が `! bash /tmp/CC報告ファイル/u2/bin2/discord-guild-membership-check.sh`（B5）→ 実行後の reader → B1〜B6 を判定
 5. 名前と viewer かどうかを PO へ。扱い（そのまま・ボットを抜く・会社に登録する）は PO に聞く。抜く・登録するは別の作業
 
 ### 14-9. 維持の仕組み
@@ -354,3 +354,13 @@ grep -c -v -E '^(bot_guild_count=[0-9]+|config_rows=[0-9]+|tenant=[0-9]+ purpose
 - §10 A6 の「reader では番号が `masked:len=N:digits` に置き換わる」は誤り。Mac の reader が読む `ai_ro` は伏せない。伏せるのはクラウドの相談係 AI が読む `ai_cloud` だけ（`docs/adr/ADR-1024-ai-readonly-db-path.md:131`「PO 決定: 「1」…Mac の AI は今の ai_ro のまま。2026-10-30」）。`migrations/20261024_100300_create_ai_cloud_views.sql:274` は `ai_cloud` の決まり
 - このため A6 の前後比較では番号そのものも比べており、同じ長さの番号への書き換えも diff に出る。A6 の判定（差分 0 行・行数 4）と前回の結果（2026-11-07・差分 0 行）は変わらない
 - reader の出力には番号がそのまま入るので、before.txt・after.txt は Mac の /tmp だけに置き、中身をチャット・PR に出さない（差分の行数だけを報告する）
+
+### 14-11. 審査（Architect）
+
+#### 1回目（2026-11-07 08:29Z・クラウドの Opus・HEAD bc882f55d）: REVISE
+
+- (a)(b)(d)(e)(f) 合う。(d) は審査役が見本ファイルで (1)(2)=0・(6)=(7)=2・(8)=0、1行足して (8)=1 を確かめた。(a) のうち「応答に name が入る」はクラウドから未確認（recon §4 で Opus が公式ページを直接読んだ結果に依る）
+- Q1（必須）既存の .sh は run.txt を上書きするので、B5 の比べる相手が残らない → B5 と 14-8 手順4 に `run-prev.txt` への写しを足した。Opus が 2026-11-07 に写し済み（7行）
+- Q2（推奨）消す順で、ゼロ幅文字で区切った数字が18桁残る。U+2028/2029 は種類 Zl/Zp で C に入らない → clean_name の順番 (1)〜(5) を明記し、Zl・Zp も消す。T6 に U+2028 と「9桁＋ゼロ幅＋9桁」を足した
+- Q3（推奨）§10 A6 の表に誤った文が残る → 打ち消し線にして §14-10 を指した
+- Q4（推奨）重複した id で B1 が合わなくなる → unregistered_lines は id で重複を除くと明記した
