@@ -1295,10 +1295,10 @@ K31・K33・K34・K35 は第6版のまま。K35 は○（§14-10-10）。
 決定（Opus）: 製品コードは変えない。agent-console の定期実行（PO 2026-10-14「このアプリの定期実行で管理させる」）に 1 件足し、毎日 1 回、Opus が版の記録を読んで、下の表のどれかを行う。手順の正本は本節で、定期実行の指示文は本節を読ませるだけにする（指示文と手順の二重持ちをしない）。
 
 観測事実（2026-11-08 09:00〜09:40 JST）:
-- 定期実行は `dataDir/routines.json` の 1 か所に持つ。AI は `node "<dataDir>/bin/ac-routine.mjs" add|update|enable|disable|list` で触る（agent-console 6aaba26 README.md「ac-routine の使い方」）。開始が他の有効な定期実行・予約と 60 分未満なら 400。有効な定期実行の開始は 09:00（月〜金）・11:00・12:00（毎日）・13:00（火・木）・14:00・16:00（月）。03:30 は空いている（`ac-routine.mjs list` の結果）。
+- 定期実行は agent-console の dataDir の routines.json の 1 か所に持つ。AI は `node "<dataDir>/bin/ac-routine.mjs" add|update|enable|disable|list` で触る（agent-console 6aaba26 README.md「ac-routine の使い方」）。開始が他の有効な定期実行・予約と 60 分未満なら 400。有効な定期実行の開始は 09:00（月〜金）・11:00・12:00（毎日）・13:00（火・木）・14:00・16:00（月）。03:30 は空いている（`ac-routine.mjs list` の結果）。
 - probe が走るきっかけは、件を開いたとき（t1）とサーバーの起動（t2）だけ（agent-console 6aaba26 server/case-say-probe-wiring.ts:139-146・:182-190）。×の後 24 時間の待ちが明けても、時計で走り直す仕組みは無い。予約が待ちで捨てられる（server/case-say-probe.ts:296-300）。
 - サーバーの再起動は `launchctl kickstart -k gui/<uid>/local.agent-console.server`（scripts/lib/ac-common.sh:30・:499）。件の本体は専用の tmux の中で動き、再起動で止まらない（README.md「keep-sessions」）。チャットの送信の予約はメモリだけで、再起動で消える（README.md「v0.13.0」）。
-- ×の後の材料は監査 `dataDir/routine-audit.jsonl` の `action: "caseClaudeVersionProbe"` の行に残る: `outcome`・`failedCheck`・`counts`・`paneSamples`（画面の写し 4KiB×最大 4）・`claudeVersion`・`startedAt`・`endedAt`（server/case-say-probe.ts:584-599）。
+- ×の後の材料は監査 agent-console の dataDir の routine-audit.jsonl の `action: "caseClaudeVersionProbe"` の行に残る: `outcome`・`failedCheck`・`counts`・`paneSamples`（画面の写し 4KiB×最大 4）・`claudeVersion`・`startedAt`・`endedAt`（server/case-say-probe.ts:584-599）。
 - `failCount` は ○ でしか 0 に戻らない。3 回で止まった後は、直した版を入れても probe は走らない（server/case-say-probe.ts:321-328・:619-628。記録には MAC があり、手で書き換えない）。
 
 見回りの手順（毎日 03:30 JST。読む物は版の記録の `claudeVersion`・`usable`・`lastResult`・`failCount`・`lastProbeAt` と、記録の外側の `runningVersionProbe` の有無だけ。MAC の欄・鍵は読まない。記録は書かない）:
@@ -1317,7 +1317,7 @@ K31・K33・K34・K35 は第6版のまま。K35 は○（§14-10-10）。
 3. 本書に新しい節（§14-14-18 以降）を書く。節には、その×の `lastProbeAt` の時刻をそのまま書く（C・D の見分けに使う）。
 4. 設計の審査をクラウドで受ける（APPROVE まで最大 3 回。3 回で通らなければ `NEEDS_DECISION:`）。
 5. 直しが次の範囲に収まるときだけ続ける: agent-console の server/case-say-probe.ts の、送る文・待ち方・画面の数え方。E1〜E4・P0〜P5・R1 の○×の条件を緩める直し、24 時間・3 回の規則、記録・鍵・MAC、hooks・見張り・許可に触る直しは `NEEDS_DECISION:`。
-6. カード → クラウドの実装役 → CI → マージ前の審査役（opus） → マージ → タグ → `scripts/ac-update.sh` で反映。反映した日の翌日以降の見回りで C になり、確かめ直す。
+6. カード → クラウドの実装役 → CI → マージ前の審査役（opus） → マージ → タグ → agent-console の scripts/ac-update.sh で反映。反映した日の翌日以降の見回りで C になり、確かめ直す。
 7. どこかで止まったら、そこまでの事実を返して `BLOCKED:` か `NEEDS_DECISION:` で終える（閉じずに残る。agent-console README.md「自動クローズ」）。
 
 変わらない物: agent-console の製品コード、E1〜E4・P0〜P5・R1 の条件、24 時間・3 回の規則、記録・MAC、通知 n1〜n6 の文、hooks・見張り・許可。
