@@ -112,7 +112,7 @@ async def create_payment_fee_setting(
         log_hidden_error("payment_fee_settings.create_payment_fee_setting", exc)
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="重複または制約違反",
+            detail="conflict_constraint",
         )
     row = result.mappings().first()
     await db.commit()
@@ -135,7 +135,7 @@ async def update_payment_fee_setting(
     update_data = data.model_dump(exclude_unset=True)
     update_data = {k: v for k, v in update_data.items() if k in _UPDATABLE}
     if not update_data:
-        raise HTTPException(status_code=400, detail="更新するフィールドを指定してください")
+        raise HTTPException(status_code=400, detail="no_fields_to_update")
     set_clauses = ", ".join(f"{k} = :{k}" for k in update_data)
     update_data["id"] = setting_id
     update_data["tenant_id"] = tenant_id
@@ -150,7 +150,7 @@ async def update_payment_fee_setting(
     except IntegrityError as exc:
         await db.rollback()
         log_hidden_error("payment_fee_settings.update_payment_fee_setting", exc)
-        raise HTTPException(status_code=409, detail="制約違反")
+        raise HTTPException(status_code=409, detail="conflict_constraint")
     row = result.mappings().first()
     if not row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="決済手数料設定が見つかりません")

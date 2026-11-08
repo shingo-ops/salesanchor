@@ -288,7 +288,7 @@ async def update_role(
     update_data = data.model_dump(exclude_unset=True)
     update_data = {k: v for k, v in update_data.items() if k in _UPDATABLE_COLUMNS}
     if not update_data:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="更新するフィールドを指定してください")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="no_fields_to_update")
 
     if "priority" in update_data and update_data["priority"] >= my_max:
         raise HTTPException(

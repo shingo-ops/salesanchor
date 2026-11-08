@@ -141,7 +141,7 @@ async def update_dex(
         updatable = _TRAINER_UPDATABLE
     validated = {k: v for k, v in validated.items() if k in updatable}
     if not validated:
-        raise HTTPException(status_code=400, detail="更新するフィールドを指定してください")
+        raise HTTPException(status_code=400, detail="no_fields_to_update")
     set_clauses = ", ".join(f"{k} = :{k}" for k in validated)
     validated["id"] = entry_id
     result = await db.execute(

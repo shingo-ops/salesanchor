@@ -163,7 +163,7 @@ async def update_team(
     if "leader_id" in update_data:
         await ensure_user_in_tenant(db, update_data["leader_id"], tenant_id)
     if not update_data:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="更新するフィールドを指定してください")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="no_fields_to_update")
 
     set_clauses = ", ".join(f"{k} = :{k}" for k in update_data)
     update_data["id"] = team_id

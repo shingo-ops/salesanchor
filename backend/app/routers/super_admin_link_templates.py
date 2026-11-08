@@ -132,7 +132,7 @@ async def upsert_link_template(
         log_hidden_error("super_admin_link_templates.upsert_link_template", exc)
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="制約違反",
+            detail="conflict_constraint",
         )
     row = result.mappings().first()
     await db.commit()

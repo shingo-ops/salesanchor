@@ -121,7 +121,7 @@ async def test_create_and_duplicate_returns_409(pg_client):
     assert phrase not in dup.text
     assert "[SQL" not in dup.text
     assert "DETAIL" not in dup.text
-    assert dup.json()["detail"] == "重複または制約違反"
+    assert dup.json()["detail"] == "conflict_constraint"
 
 
 @requires_pg

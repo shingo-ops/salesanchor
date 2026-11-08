@@ -509,7 +509,7 @@ async def create_contact(
         logger.warning("create_contact IntegrityError: tenant=%d, err=%s", tenant_id, e.orig)
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="担当者の登録に失敗しました（contact_code 重複または制約違反の可能性）",
+            detail="conflict_constraint",
         )
     await invalidate_dashboard_cache(tenant_id)
     return await _compose_response(db, dict(row))
@@ -542,7 +542,7 @@ async def update_contact(
     if not update_data:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="更新するフィールドを少なくとも1つ指定してください",
+            detail="no_fields_to_update",
         )
     emails = update_data.pop("emails", None)
     discord = update_data.pop("discord", None)

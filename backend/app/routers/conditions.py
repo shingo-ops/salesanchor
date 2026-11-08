@@ -292,7 +292,7 @@ async def update_condition(
     update_data = {k: v for k, v in update_data.items() if k in _UPDATABLE}
     if not update_data:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="更新するフィールドを指定してください"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="no_fields_to_update"
         )
     set_clauses = ", ".join(f"{k} = :{k}" for k in update_data)
     update_data["id"] = condition_id
@@ -590,7 +590,7 @@ async def create_condition_alias(
     except IntegrityError as exc:
         await db.rollback()
         log_hidden_error("conditions.create_condition_alias", exc)
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="重複または FK 違反")
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="conflict_constraint")
     row = result.mappings().first()
     await db.commit()
     await reset_tenant_context(db, tenant_id)  # ADR-072

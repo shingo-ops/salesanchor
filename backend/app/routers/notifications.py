@@ -121,7 +121,7 @@ async def update_channel(channel_id: int, data: ChannelUpdate, db: AsyncSession 
     update_data = {k: v for k, v in data.model_dump(exclude_unset=True).items()
                    if k in _UPDATABLE}
     if not update_data:
-        raise HTTPException(status_code=400, detail="更新するフィールドを指定してください")
+        raise HTTPException(status_code=400, detail="no_fields_to_update")
     if "event_types" in update_data:
         update_data["event_types"] = json.dumps(
             [e.value if hasattr(e, "value") else e for e in update_data["event_types"]])

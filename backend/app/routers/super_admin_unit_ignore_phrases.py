@@ -72,7 +72,7 @@ async def create_unit_ignore_phrase(
         log_hidden_error("super_admin_unit_ignore_phrases.create_unit_ignore_phrase", exc)
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="重複または制約違反",
+            detail="conflict_constraint",
         )
     row = result.mappings().first()
     await db.commit()
@@ -93,7 +93,7 @@ async def update_unit_ignore_phrase(
         k: v for k, v in data.model_dump(exclude_unset=True).items() if k in _UPDATABLE
     }
     if not update_data:
-        raise HTTPException(status_code=400, detail="更新するフィールドを指定してください")
+        raise HTTPException(status_code=400, detail="no_fields_to_update")
     set_clauses = ", ".join(f"{k} = :{k}" for k in update_data)
     update_data["id"] = phrase_id
     try:
@@ -107,7 +107,7 @@ async def update_unit_ignore_phrase(
     except IntegrityError as exc:
         await db.rollback()
         log_hidden_error("super_admin_unit_ignore_phrases.update_unit_ignore_phrase", exc)
-        raise HTTPException(status_code=409, detail="制約違反")
+        raise HTTPException(status_code=409, detail="conflict_constraint")
     row = result.mappings().first()
     if not row:
         raise HTTPException(status_code=404, detail=_NOT_FOUND)
