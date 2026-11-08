@@ -31,7 +31,8 @@ export interface CalendarOwner {
   isSelf: boolean;
 }
 
-export const DEFAULT_OWNER_COLOR = "#1a73e8";
+/** 持ち主が見つからない時に画面に描く色。持ち主の色の正本はサーバー（backend/app/routers/calendar.py の _DEFAULT_OWNER_COLOR） */
+export const DEFAULT_OWNER_COLOR = "var(--calendar-google-blue)";
 
 export function normalizeOwner(owner: ApiCalendarOwner): CalendarOwner {
   return {
@@ -40,7 +41,7 @@ export function normalizeOwner(owner: ApiCalendarOwner): CalendarOwner {
     staffCode: owner.staff_code,
     name: owner.name,
     primaryEmail: owner.primary_email,
-    color: owner.color || DEFAULT_OWNER_COLOR,
+    color: owner.color,
     visible: Boolean(owner.is_visible),
     shareMode: owner.share_mode === "view" || owner.share_mode === "edit" ? owner.share_mode : "self",
     isSelf: owner.is_self,

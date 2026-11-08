@@ -10,6 +10,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import type { CSSProperties, ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { Badge } from "../../components/Badge";
 import { Button } from "../../components/Button";
 import { CalendarView, type CalendarViewEvent } from "../../components/CalendarView";
 import { ContextMenu } from "../../components/ContextMenu";
@@ -25,7 +26,7 @@ import { TextFieldControl } from "../../components/TextField";
 import { Toggle } from "../../components/Toggle";
 import { CheckboxControl } from "../../components/CheckboxControl";
 import { SCHEDULE_POPOVER_ICONS, NAV_ICONS } from "../../constants/icons";
-import { CALENDARS, CALENDAR_MAP, type CalendarId, cssVar } from "../../features/schedule/calendars.config";
+import { CALENDARS, CALENDAR_MAP, type CalendarId } from "../../features/schedule/calendars.config";
 import { api } from "../../lib/api";
 import { usePermissions } from "../../hooks/usePermissions";
 import { useApiQuery, useInvalidateApi } from "../../lib/query/apiQuery";
@@ -296,38 +297,39 @@ function SchedulePopover({
               </span>
             )}
             {!creating && meta && (
-              <span
-                className="schedule-category-chip"
-                style={{ background: cssVar(meta.tintVar), color: cssVar(meta.textVar) }}
-              >
+              <Badge variant={meta.badgeVariant} size="md">
                 {t(meta.labelKey)}
-              </span>
+              </Badge>
             )}
           </div>
           <div className="schedule-popover__actions">
             {mode === "detail" && canEdit && item && (
-              <button
-                className="modal-icon-btn"
+              <Button
+                variant="ghost"
+                size="md"
+                iconOnly
                 onClick={onSave}
                 aria-label={t("schedule.editEvent")}
                 title={t("schedule.editEvent")}
               >
                 <EditIcon size={18} />
-              </button>
+              </Button>
             )}
             {mode !== "create" && canEdit && item && (
-              <button
-                className="modal-icon-btn modal-icon-btn--danger"
+              <Button
+                variant="ghost"
+                size="md"
+                iconOnly
                 onClick={onDelete}
                 aria-label={t("schedule.deleteEvent")}
                 title={t("schedule.deleteEvent")}
               >
                 <DeleteIcon size={18} />
-              </button>
+              </Button>
             )}
-            <button className="modal-icon-btn" onClick={onClose} aria-label={t("common.close")}>
+            <Button variant="ghost" size="md" iconOnly onClick={onClose} aria-label={t("common.close")}>
               <CloseIcon size={18} />
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -741,9 +743,9 @@ function ScheduleDayListPopover({
         <div className="schedule-popover__header">
           <span className="schedule-popover__kicker">{formatDayLabel(date)}</span>
           <div className="schedule-popover__actions">
-            <button className="modal-icon-btn" onClick={onClose} aria-label={t("common.close")}>
+            <Button variant="ghost" size="md" iconOnly onClick={onClose} aria-label={t("common.close")}>
               <CloseIcon size={18} />
-            </button>
+            </Button>
           </div>
         </div>
         <div className="schedule-popover__body">
@@ -1364,6 +1366,8 @@ export default function SchedulePage() {
     ? monthItems(timedEvents.concat(allDayEvents), dayList.date)
     : [];
 
+  const BannerCloseIcon = SCHEDULE_POPOVER_ICONS.close;
+
   return (
     <div className="schedule-page">
       <PageLayout
@@ -1529,13 +1533,16 @@ export default function SchedulePage() {
             {banner && (
               <div className={banner.type === "success" ? "success-banner" : "error-banner"}>
                 {banner.message}
-                <button
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  iconOnly
+                  layoutClassName="schedule-banner__close"
                   onClick={() => setBanner(null)}
-                  className="schedule-banner__close"
                   aria-label={t("common.close")}
                 >
-                  ×
-                </button>
+                  <BannerCloseIcon size={16} />
+                </Button>
               </div>
             )}
 

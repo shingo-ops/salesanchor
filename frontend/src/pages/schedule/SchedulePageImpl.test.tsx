@@ -876,3 +876,48 @@ describe("SchedulePage search by title (G12)", () => {
     expect(rangeText()).toBe(initial);
   });
 });
+
+describe("SchedulePage on component molds (G26-G28)", () => {
+  it("G26: detail popover buttons are mold Buttons and no .modal-icon-btn remains", async () => {
+    answers.events = [apiEvent({})];
+    view();
+    fireEvent.click(await screen.findByText("Own Event"));
+    for (const key of ["schedule.editEvent", "schedule.deleteEvent", "common.close"]) {
+      const button = (await screen.findAllByRole("button", { name: i18n.t(key) }))[0];
+      expect(button.className).toContain("comp-btn--ghost");
+      expect(button.className).toContain("comp-btn--icon-only");
+    }
+    expect(document.querySelectorAll(".modal-icon-btn").length).toBe(0);
+  });
+
+  it("G27: the category chip is a mold Badge without inline style", async () => {
+    answers.events = [apiEvent({})];
+    view();
+    fireEvent.click(await screen.findByText("Own Event"));
+    await screen.findAllByRole("button", { name: i18n.t("schedule.editEvent") });
+    const badge = document.querySelector(".schedule-popover .comp-badge");
+    if (!badge) throw new Error("badge is missing");
+    expect(badge.className).toContain("comp-badge--info");
+    expect(badge.className).toContain("comp-badge--soft");
+    expect(badge.hasAttribute("style")).toBe(false);
+    expect(badge.textContent).toBe(i18n.t("schedule.calendarLabels.meeting"));
+  });
+
+  it("G28: the banner close is a mold Button with an svg icon and dismisses the banner", async () => {
+    render(<MemoryRouter initialEntries={["/schedule?connected=true"]}><SchedulePage /></MemoryRouter>);
+    const message = i18n.t("schedule.connectSuccess");
+    expect(await screen.findByText(message)).toBeTruthy();
+    const banner = screen.getByText(message).closest("div");
+    if (!banner) throw new Error("banner is missing");
+    const close = Array.from(banner.querySelectorAll("button")).find(
+      (b) => b.getAttribute("aria-label") === i18n.t("common.close"),
+    );
+    if (!close) throw new Error("close button is missing");
+    expect(close.className).toContain("comp-btn--sm");
+    expect(close.className).toContain("comp-btn--icon-only");
+    expect(close.className).toContain("schedule-banner__close");
+    expect(close.querySelector("svg")).not.toBeNull();
+    fireEvent.click(close);
+    await waitFor(() => expect(screen.queryByText(message)).toBeNull());
+  });
+});
