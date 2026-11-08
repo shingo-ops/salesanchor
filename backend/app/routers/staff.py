@@ -298,7 +298,7 @@ async def update_my_profile(
         if k in _PROFILE_UPDATABLE
     }
     if not update_data:
-        raise HTTPException(status_code=400, detail="更新するフィールドを少なくとも1つ指定してください")
+        raise HTTPException(status_code=400, detail="no_fields_to_update")
 
     set_sql = ", ".join(f"{k} = :{k}" for k in update_data)
     await db.execute(
@@ -569,7 +569,7 @@ async def update_staff(staff_id: int, data: StaffUpdate,
                             detail="メールアドレスはここでは変更できません")
     if not update_data:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                            detail="更新するフィールドを少なくとも1つ指定してください")
+                            detail="no_fields_to_update")
 
     ui_prefs = update_data.pop("ui_preferences", None)
     additional_emails = update_data.pop("additional_emails", None)

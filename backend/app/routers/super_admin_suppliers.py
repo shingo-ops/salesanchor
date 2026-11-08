@@ -168,7 +168,7 @@ async def create_supplier(
         log_hidden_error("super_admin_suppliers.create_supplier", exc)
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="重複または制約違反",
+            detail="conflict_constraint",
         )
     row = result.mappings().first()
     new_id = row["id"]
@@ -200,7 +200,7 @@ async def update_supplier(
     update_data = data.model_dump(exclude_unset=True)
     update_data = {k: v for k, v in update_data.items() if k in _SUPPLIER_UPDATABLE}
     if not update_data:
-        raise HTTPException(status_code=400, detail="更新するフィールドを指定してください")
+        raise HTTPException(status_code=400, detail="no_fields_to_update")
     set_clauses = ", ".join(f"{k} = :{k}" for k in update_data)
     update_data["id"] = supplier_id
     try:
@@ -214,7 +214,7 @@ async def update_supplier(
     except IntegrityError as exc:
         await db.rollback()
         log_hidden_error("super_admin_suppliers.update_supplier", exc)
-        raise HTTPException(status_code=409, detail="制約違反")
+        raise HTTPException(status_code=409, detail="conflict_constraint")
     row = result.mappings().first()
     if not row:
         raise HTTPException(status_code=404, detail="仕入元が見つかりません")
@@ -603,7 +603,7 @@ async def create_routing(
         log_hidden_error("super_admin_suppliers.create_routing", exc)
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="重複または FK 違反",
+            detail="conflict_constraint",
         )
     row = result.mappings().first()
     await db.commit()
@@ -779,7 +779,7 @@ async def update_supplier_extraction_rules(
     update_data = data.model_dump(exclude_unset=True)
     update_data = {k: v for k, v in update_data.items() if k in _EXTRACTION_RULE_UPDATABLE}
     if not update_data:
-        raise HTTPException(status_code=400, detail="更新するフィールドを指定してください")
+        raise HTTPException(status_code=400, detail="no_fields_to_update")
 
     set_clauses = ", ".join(f"{k} = :{k}" for k in update_data)
     update_data["id"] = supplier_id

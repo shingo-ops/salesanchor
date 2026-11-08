@@ -220,7 +220,7 @@ async def update_bot(bot_id: int, data: BotUpdate,
     update_data = data.model_dump(exclude_unset=True, mode="python")
     if not update_data:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                            detail="更新するフィールドを少なくとも1つ指定してください")
+                            detail="no_fields_to_update")
     update_data = {k: v for k, v in update_data.items() if k in _UPDATABLE}
     if update_data.get("owner_staff_id") is not None:
         await _ensure_owner_user_exists(db, update_data["owner_staff_id"], tenant_id)
