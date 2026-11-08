@@ -184,7 +184,7 @@
 
 ## 11. 便2: サーバーの共通の2種類の文を理由コードにする（A2 の1回目）
 
-- 状態: 設計案作成済み（2026-11-08 Opus）。PO の選択「2」（サーバーの文を直す作業から始める）と「PRマージ、デプロイまで完走」の委任に基づく。実装カード `card-bin2.md`。
+- 状態: 設計案作成済み（2026-11-08 Opus）。PO の選択「2」（サーバーの文を直す作業から始める）と「PRマージ、デプロイまで完走」の委任に基づく。実装カード `docs/handoff/error-message-plain-language/card-bin2.md`。
 - 調べた土台: origin/main `b6b89095c4d9cbedca3c17b66b0191ec96457413`。
 
 ### 11-1. 何が起きるか（利用者に見える変化）
@@ -194,7 +194,7 @@
 
 ### 11-2. 現在地（事実）
 
-- 対象の文と件数（W1 の数え方。backend/app の全 `.py`。文字どおりの一致の数と ast の数が同じ＝この文は `HTTPException` の detail 以外に使われていない）:
+- 対象の文と件数（W1 の数え方。backend/app の全 .py ファイル。文字どおりの一致の数と ast の数が同じ＝この文は `HTTPException` の detail 以外に使われていない）:
 
 | 文（今） | 件数 | 新しい理由コード |
 |---|---|---|
@@ -210,14 +210,14 @@
   合計 92 件（`no_fields_to_update` 50 件・46 ファイル、`conflict_constraint` 42 件・21 ファイル）。状態番号（400・409・422）は変えない。
 - 画面がサーバーの文を受ける所は `frontend/src/lib/api.ts` の2か所（`request` の 163-171 行・`requestForm` の 251-258 行）。detail が文字列ならそのまま `ApiError.message` にする。サーバーだけコードに変えると、画面にコードがそのまま出る → 画面とサーバーを同じ PR で変える。
 - 対象の文に頼る所（`git grep`、origin/main、backend/app と docs を除く）: `backend/tests/test_super_admin_unit_ignore_phrases.py:124`（`"重複または制約違反"` と一致を見る）の1か所だけ。画面のコード・e2e・scripts には無い。
-- `err.message` や detail を決まったコードと比べる画面のコード（`api.ts:84`・`authErrorMessage.ts`・`ReviewRegisterProductForm.tsx:131`・`productDetailModel.ts:205`・`ProductFormatsMasterPanel.tsx:145-146`・`ViewerAccountsPage.tsx:282`・`TypeMasterPanel.tsx:139` ほか）は、今回の2つのコードを使っていない。表に無いコードは今までどおりそのまま `message` に入るので、動きは変わらない。
-- 文言の表は `frontend/src/locales/ja.json`・`en.json` の2つだけ（キー数は同じ）。`apiError` の区切りはまだ無い。
+- `err.message` や detail を決まったコードと比べる画面のコード（`frontend/src/lib/api.ts:84`・`frontend/src/lib/auth/authErrorMessage.ts`・`frontend/src/features/tcg-analysis-review/ReviewRegisterProductForm.tsx:131`・`frontend/src/features/tcg-product-import/productDetailModel.ts:205`・`frontend/src/pages/super-admin/components/ProductFormatsMasterPanel.tsx:145-146`・`frontend/src/pages/super-admin/ViewerAccountsPage.tsx:282`・`frontend/src/pages/super-admin/components/TypeMasterPanel.tsx:139` ほか）は、今回の2つのコードを使っていない。表に無いコードは今までどおりそのまま `message` に入るので、動きは変わらない。
+- 文言の表は `frontend/src/locales/ja.json`・`frontend/src/locales/en.json` の2つだけ（キー数は同じ）。`apiError` の区切りはまだ無い。
 - 直接 `fetch` する画面（RegisterPage など 14 ファイル）は、今回の 47 ファイルの口を呼ばない（呼び先は public/register・erp・shipping・inbox など）。
 
 ### 11-3. 方針
 
 - サーバー: 92 か所の detail を理由コードの文字列に置き換える（W1 は識別子の形の文字列を違反にしない）。
-- 画面: 共通の理由コード → 文言キーの対応表を1か所 `frontend/src/lib/apiErrorReason.ts` に作る（便1 の `discordConnectError.ts` と同じ考え）。`api.ts` の2か所は、detail がこの表のコードのときだけ `i18n.t(キー)` を `message` にする。表に無いときは今までどおり。`ApiError.responseDetail` には元のコードが残る。
+- 画面: 共通の理由コード → 文言キーの対応表を1か所 `frontend/src/lib/apiErrorReason.ts` に作る（便1 の `frontend/src/features/discord-connect/discordConnectError.ts` と同じ考え）。`frontend/src/lib/api.ts` の2か所は、detail がこの表のコードのときだけ `i18n.t(キー)` を `message` にする。表に無いときは今までどおり。`ApiError.responseDetail` には元のコードが残る。
 - 選ばなかった案: (a) サーバーで言語を見て文を返す → 文がサーバーと画面の2か所に分かれる（ADR-1071 は表1か所）。(b) 画面ごとに直す → 47 ファイルの口を呼ぶ画面が多く、同じ対応を何十か所にも書くことになる。
 - 「見つかりません」の種類（221 件・75 ファイル・文 92 種類）は便3 以降。何が見つからないかの名前を残す形を別に決める。
 
@@ -252,5 +252,5 @@
 
 ### 11-8. 継続
 
-- 新しく理由コードを足すときは `apiErrorReason.ts` の表に1行と ja/en の文を足す。突き合わせ試験（B4）が、表とサーバーのずれを両側の PR で止める。
+- 新しく理由コードを足すときは `frontend/src/lib/apiErrorReason.ts` の表に1行と ja/en の文を足す。突き合わせ試験（B4）が、表とサーバーのずれを両側の PR で止める。
 - W1 の基準値は直した PR の中で下げる（下げないと CI が赤）。
