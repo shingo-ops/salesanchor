@@ -152,7 +152,7 @@ async def create_product_category(
         log_hidden_error("super_admin_product_categories.create_product_category", exc)
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="重複または制約違反",
+            detail="conflict_constraint",
         )
     row = result.mappings().first()
     await db.commit()
@@ -298,7 +298,7 @@ async def update_product_category(
     update_data = data.model_dump(exclude_unset=True)
     update_data = {k: v for k, v in update_data.items() if k in _UPDATABLE}
     if not update_data:
-        raise HTTPException(status_code=400, detail="更新するフィールドを指定してください")
+        raise HTTPException(status_code=400, detail="no_fields_to_update")
     set_clauses = ", ".join(f"{k} = :{k}" for k in update_data)
     update_data["id"] = category_id
     try:
@@ -312,7 +312,7 @@ async def update_product_category(
     except IntegrityError as exc:
         await db.rollback()
         log_hidden_error("super_admin_product_categories.update_product_category", exc)
-        raise HTTPException(status_code=409, detail="制約違反")
+        raise HTTPException(status_code=409, detail="conflict_constraint")
     row = result.mappings().first()
     if not row:
         raise HTTPException(status_code=404, detail="商品カテゴリが見つかりません")

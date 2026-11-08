@@ -37,6 +37,7 @@ import {
   type ApiShift,
   type DemoState,
   LIST_VIEW_DAYS,
+  THREE_DAY_VIEW_DAYS,
   type ScheduleItem,
   type ScheduleView,
   addDays,
@@ -142,6 +143,7 @@ function addHours(date: Date, amount: number): Date {
 function formatRangeTitle(view: ScheduleView, anchorDate: Date): string {
   if (view === "month") return formatMonthLabel(anchorDate);
   if (view === "day") return formatDayLabel(anchorDate);
+  if (view === "threeDay") return `${formatDayLabel(anchorDate)} - ${formatDayLabel(addDays(anchorDate, THREE_DAY_VIEW_DAYS - 1))}`;
   if (view === "list") return `${formatDayLabel(anchorDate)} - ${formatDayLabel(addDays(anchorDate, LIST_VIEW_DAYS - 1))}`;
   const days = getWeekDays(anchorDate);
   return `${formatDayLabel(days[0])} - ${formatDayLabel(days[6])}`;
@@ -847,6 +849,7 @@ function ScheduleShortcutsModal({ open, onClose }: { open: boolean; onClose: () 
     { keys: ["J", "→"], labelKey: "next" },
     { keys: ["K", "←"], labelKey: "prev" },
     { keys: ["D"], labelKey: "day" },
+    { keys: ["X"], labelKey: "threeDay" },
     { keys: ["W"], labelKey: "week" },
     { keys: ["M"], labelKey: "month" },
     { keys: ["A"], labelKey: "list" },
@@ -930,6 +933,7 @@ export default function SchedulePage() {
   const demoState = (searchParams.get("demoState") as DemoState | null) ?? "normal";
   const [view, setView] = useState<ScheduleView>("week");
   const [anchorDate, setAnchorDate] = useState(() => new Date());
+  const [panelOpen, setPanelOpen] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [banner, setBanner] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [popover, setPopover] = useState<SchedulePopoverState | null>(null);
@@ -1161,7 +1165,7 @@ export default function SchedulePage() {
       setAnchorDate((current) => addMonths(current, direction === "next" ? 1 : -1));
       return;
     }
-    const step = view === "day" ? 1 : view === "list" ? LIST_VIEW_DAYS : 7;
+    const step = view === "day" ? 1 : view === "threeDay" ? THREE_DAY_VIEW_DAYS : view === "list" ? LIST_VIEW_DAYS : 7;
     setAnchorDate((current) => addDays(current, direction === "next" ? step : -step));
   };
 
@@ -1170,6 +1174,8 @@ export default function SchedulePage() {
     ? getMonthCells(anchorDate)
     : view === "day"
       ? [new Date(anchorDate.getFullYear(), anchorDate.getMonth(), anchorDate.getDate())]
+      : view === "threeDay"
+        ? Array.from({ length: THREE_DAY_VIEW_DAYS }, (_, i) => addDays(new Date(anchorDate.getFullYear(), anchorDate.getMonth(), anchorDate.getDate()), i))
       : view === "list"
         ? []
         : getWeekDays(anchorDate);
@@ -1338,6 +1344,7 @@ export default function SchedulePage() {
       case "k":
       case "ArrowLeft": navigatePeriod("prev"); break;
       case "d": setView("day"); break;
+      case "x": setView("threeDay"); break;
       case "w": setView("week"); break;
       case "m": setView("month"); break;
       case "a": setView("list"); break;
@@ -1361,7 +1368,18 @@ export default function SchedulePage() {
     <div className="schedule-page">
       <PageLayout
         navKey="nav.schedule"
-        subtitleKey="schedule.subtitle"
+        headerStart={
+          <Button
+            variant="ghost"
+            size="md"
+            iconOnly
+            aria-label={t("schedule.togglePanel")}
+            aria-expanded={panelOpen}
+            onClick={() => setPanelOpen((open) => !open)}
+          >
+            <NAV_ICONS.menu size={20} aria-hidden="true" />
+          </Button>
+        }
         noScroll
         headerLeft={
           <>
@@ -1483,7 +1501,7 @@ export default function SchedulePage() {
               onClose={() => setViewMenu(null)}
               anchor={viewMenu}
               ariaLabel={t("schedule.viewSelect")}
-              items={(["day", "week", "month", "list"] as const).map((nextView) => ({
+              items={(["day", "threeDay", "week", "month", "list"] as const).map((nextView) => ({
                 key: nextView,
                 label: t(`schedule.${nextView}View`),
                 onSelect: () => setView(nextView),
@@ -1492,18 +1510,20 @@ export default function SchedulePage() {
           </div>
         }
       >
-        <div className="schedule-shell__content">
-          <ScheduleSidebar
-            currentMonth={currentMonth}
-            selectedDate={anchorDate}
-            owners={owners}
-            visibleOwnerIds={visibleOwnerIds}
-            onToggleOwner={toggleOwner}
-            onCreate={() => openCreate(anchorDate, null)}
-            onJumpToDate={jumpToDate}
-            onShiftMonth={shiftMonth}
-            canManageOthers={canManageOwners}
-          />
+        <div className={panelOpen ? "schedule-shell__content" : "schedule-shell__content schedule-shell__content--panel-hidden"}>
+          {panelOpen && (
+            <ScheduleSidebar
+              currentMonth={currentMonth}
+              selectedDate={anchorDate}
+              owners={owners}
+              visibleOwnerIds={visibleOwnerIds}
+              onToggleOwner={toggleOwner}
+              onCreate={() => openCreate(anchorDate, null)}
+              onJumpToDate={jumpToDate}
+              onShiftMonth={shiftMonth}
+              canManageOthers={canManageOwners}
+            />
+          )}
 
           <main className="schedule-main">
             {banner && (
@@ -1539,7 +1559,7 @@ export default function SchedulePage() {
                     <CalendarView
                       mode={view === "month" ? "month" : "days"}
                       date={view === "month" ? anchorDate : viewDays[0]}
-                      dayCount={view === "day" ? 1 : 7}
+                      dayCount={view === "day" ? 1 : view === "threeDay" ? THREE_DAY_VIEW_DAYS : 7}
                       events={calendarEvents}
                       weekStart={0}
                       appearance="schedule"

@@ -513,7 +513,7 @@ async def update_lead(
     close_reasons_input = update_data.pop("close_reasons", None)
     update_data = {k: v for k, v in update_data.items() if k in _UPDATABLE_COLUMNS}
     if not update_data and sales_form_selections_data is None and close_reasons_input is None:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="更新するフィールドを指定してください")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="no_fields_to_update")
 
     # Enum→文字列変換
     for key in ("type", "status", "temperature", "estimated_scale", "customer_type", "response_speed"):

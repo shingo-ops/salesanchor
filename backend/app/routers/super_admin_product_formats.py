@@ -101,7 +101,7 @@ async def create_product_format(
         log_hidden_error("super_admin_product_formats.create_product_format", exc)
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="重複または制約違反",
+            detail="conflict_constraint",
         )
     row = result.mappings().first()
     await db.commit()
@@ -121,7 +121,7 @@ async def update_product_format(
     update_data = data.model_dump(exclude_unset=True)
     update_data = {k: v for k, v in update_data.items() if k in _UPDATABLE}
     if not update_data:
-        raise HTTPException(status_code=400, detail="更新するフィールドを指定してください")
+        raise HTTPException(status_code=400, detail="no_fields_to_update")
     set_clauses = ", ".join(f"{k} = :{k}" for k in update_data)
     update_data["id"] = format_id
     try:
@@ -135,7 +135,7 @@ async def update_product_format(
     except IntegrityError as exc:
         await db.rollback()
         log_hidden_error("super_admin_product_formats.update_product_format", exc)
-        raise HTTPException(status_code=409, detail="制約違反")
+        raise HTTPException(status_code=409, detail="conflict_constraint")
     row = result.mappings().first()
     if not row:
         raise HTTPException(status_code=404, detail="フォーマットが見つかりません")
@@ -197,7 +197,7 @@ async def replace_product_format_games(
     except IntegrityError as exc:
         await db.rollback()
         log_hidden_error("super_admin_product_formats.replace_product_format_games", exc)
-        raise HTTPException(status_code=409, detail="制約違反")
+        raise HTTPException(status_code=409, detail="conflict_constraint")
     await db.commit()
     games = await _game_ids_for(db, [format_id])
     return ProductFormatResponse(**dict(fmt), game_ids=games.get(format_id, []))

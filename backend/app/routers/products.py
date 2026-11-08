@@ -463,7 +463,7 @@ async def update_product(
     packaging_fields = {k: v for k, v in update_data.items() if k in LEGACY_FIELDS}
     update_data = {k: v for k, v in update_data.items() if k in _UPDATABLE_COLUMNS}
     if not update_data and not packaging_fields:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="更新するフィールドを指定してください")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="no_fields_to_update")
 
     if packaging_fields and ctx["dialect"] == "postgresql":
         tenant_of_row = (await db.execute(

@@ -233,7 +233,7 @@ async def update_order_shipping(
     if not update_data:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="更新するフィールドを指定してください",
+            detail="no_fields_to_update",
         )
 
     set_clauses = ", ".join(f"{k} = :{k}" for k in update_data)

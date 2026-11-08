@@ -3,6 +3,8 @@ import "./PageLayout.css";
 
 interface PageLayoutBaseProps {
   subtitleKey?: string;
+  /** タイトルより左に置くコンテンツ（メニューボタン等）。見た目は渡さない */
+  headerStart?: React.ReactNode;
   /** タイトルのすぐ右に並べるコンテンツ（ナビゲーション等）*/
   headerLeft?: React.ReactNode;
   headerAction?: React.ReactNode;
@@ -31,6 +33,7 @@ export function PageLayout({
   navKey,
   titleText,
   subtitleKey,
+  headerStart,
   headerLeft,
   headerAction,
   noScroll,
@@ -42,6 +45,7 @@ export function PageLayout({
     <div className={slimHeaderOnMobile ? "page-layout page-layout--slim-header" : "page-layout"}>
       <header className="page-layout-header">
         <div className={`page-layout-title-row${subtitleKey ? " page-layout-title-row--has-subtitle" : ""}`}>
+          {headerStart}
           <h2 className="text-page-title">{navKey ? t(navKey) : titleText}</h2>
           {headerLeft}
           {headerAction && (
