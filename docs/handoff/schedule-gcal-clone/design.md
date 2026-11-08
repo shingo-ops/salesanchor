@@ -77,7 +77,7 @@ PO の選択（2026-11-08）「1」＝「残りの5か所を決められた部�
 | G30 | 使われなくなった見た目の規則を消した: `frontend/src/components.css` の `.modal-icon-btn` の 3 つと `frontend/src/pages/schedule.css` の `.schedule-category-chip` が 0 件。`.schedule-banner__close` は置き場所の 2 行（左の間・縦の真ん中）だけ | `grep -c` で数える | R8-5 |
 | G31 | 月表示の日付の数字が、升目の上の真ん中に出る（文字 12px・太さ 500）。各月の 1 日だけ「M月1日」（M は月の数字）の形。今日の数字は直径 24px の青い丸に白い字で、今日の升目の地は塗らない（今は升目全体が薄い青・数字は右上「2日」） | 本番の月表示で、今日と 1 日と普通の日の数字の要素の getBoundingClientRect・文字の大きさ・太さ・地の色、今日の升目 `.fc-day-today` の地の色（透明）を読む。単体の試験で「M月1日」（M は月の数字）と今日の丸の class | R9-1・R9-3 |
 | G32 | 月表示の曜日の行の文字が、時間割の曜日と同じ（文字 11.2px・太さ 500・時刻の文字と同じ灰色）。今は 13.6px・太さ 700・黒 | 本番の月表示で `.fc-col-header-cell` の中の文字の大きさ・太さ・色を読む | R9-1 |
-| G33 | 月表示の、時刻のある 1 日だけの予定が 1 行「色の点（8px）＋始まりの時刻（例「午後8時」）＋題名」で、枠の線と地の色が無い。行の高さは 20〜24px（Google 実測 22px）。終日の予定と日をまたぐ予定は今の帯のまま | 本番の月表示で時刻のある予定 1 つの高さ・`border-width`・地の色・点の要素の大きさと、中の文字を読む。単体の試験で 1 行の形と、終日の予定が帯のままなこと | R9-2・R9-4 |
+| G33 | 月表示の、時刻のある 1 日だけの予定が 1 行「色の点（8px）＋始まりの時刻（例「午後8時」）＋題名」で、枠の線と地の色が無い。行の高さは 20〜24px（Google 実測 22px）。終日の予定は今の帯のまま。日をまたぐ時刻のある予定は帯の枠と地のまま、点は出さず中の文字は「始まりの時刻＋題名」の 1 行 | 本番の月表示で時刻のある予定 1 つの高さ・`border-width`・地の色・点の要素の大きさと、中の文字を読む。帯の予定（`.fc-daygrid-block-event`）の中の点の要素の `display` が `none`。単体の試験で 1 行の形と、終日の予定が帯のままなこと | R9-2・R9-4 |
 | G34 | 予定の詳しくの小窓の日時が 1 行「11月6日(金) 午後12時30分～午後1時30分」の形（作る小窓・検索の結果と同じ文の作り方）。別の行の日付は無くなる。終日は「11月6日(金) 終日」 | 本番で時刻のある予定と終日の予定を押し、小窓の日時の行の文字を読む。`.schedule-popover__date` が 0 個。単体の試験 | R9-5 |
 | G35 | 一覧の表示の行の時刻が 12 時間の形（例「午前7時～午前8時」）。今は「07:00 - 08:00」 | 本番の一覧の表示で、行の時刻の文字を読む。単体の試験 | R9-5 |
 
@@ -403,15 +403,19 @@ PO 2026-11-09「1、2」の 2（設計に無かった見た目の違いを直す
 - R9-5: 詳しくの小窓の時刻は 24 時間の形 `formatTimeRange`（`frontend/src/pages/schedule/schedule-utils.ts:164-168`）で、日付は別の行（`frontend/src/pages/schedule/SchedulePageImpl.tsx:273-274`・`:339-340`）。一覧の表示の行も同じ 24 時間の形（`:831`）。時間割の箱は「午前7時～8時」の 12 時間の形なので、アプリの中でも形が食い違う。作る小窓と検索の結果の 1 行は `formatDraftDateLine`／`formatSearchResultLine`（`frontend/src/pages/schedule/schedule-utils.ts:102-142`）で、Google と同じ「日付＋12 時間の時刻」の形が既に在る。`formatTimeRange`（schedule-utils）を使うのはこの 2 か所だけ（2026-11-09 に grep）。
 
 作り方（A 組・決められた部品と既存の関数で足りる所）:
-1. 月表示の日付（G31）: 金型 CalendarView の `monthProps` に、`appearance="schedule"` の時だけ `dayCellContent` を渡す。中身は `<span className={今日 ? 'comp-calendar__monthnum comp-calendar__monthnum--today' : 'comp-calendar__monthnum'}>{1 日なら new Intl.DateTimeFormat(言語, { month: 'short', day: 'numeric' }).format(日) それ以外は 日.getDate()}</span>`（ja は「M月1日」（M は月の数字）・en は「Nov 1」。新しい文言キーは要らない）。css は `CalendarView.css` に `.comp-calendar--schedule.comp-calendar--month` の段を足す:
+1. 月表示の日付（G31）: 金型 CalendarView の `monthProps` に、`appearance="schedule"` の時だけ `dayCellContent` を渡す。引数は `(arg: { date: Date; isToday: boolean })` の 2 つだけ使う（FullCalendar の型名は金型の外に出さない・ADR-1065 の決まり 3）。中身は `<span className={今日 ? 'comp-calendar__monthnum comp-calendar__monthnum--today' : 'comp-calendar__monthnum'}>{1 日なら new Intl.DateTimeFormat(言語, { month: 'short', day: 'numeric' }).format(日) それ以外は 日.getDate()}</span>`（ja は「M月1日」（M は月の数字）・en は「Nov 1」。新しい文言キーは要らない）。css は `CalendarView.css` に `.comp-calendar--schedule.comp-calendar--month` の段を足す:
    - `--fc-today-bg-color: transparent;`
    - `.fc-daygrid-day-top { justify-content: center; }`
    - `.comp-calendar__monthnum`: 横並びの真ん中・`min-width` と `height` は新しいトークン `--schedule-month-daynum-size`（24px・`frontend/src/tokens.css` の予定の段に `--schedule-month-dot-size` の次）・`padding: 0 var(--space-1)`・`border-radius: var(--radius-full)`・`font-size: var(--font-xs)`・`font-weight: var(--font-weight-medium)`・`color: var(--text-primary)`
    - `.comp-calendar__monthnum--today`: `background: var(--schedule-today)`・`color: var(--on-solid)`（時間割の今日の丸 `:218-221` と同じ 2 つ）
 2. 曜日の行（G32）: 同じ段に `.fc-col-header-cell` の `font-size: var(--font-2xs)`・`font-weight: var(--font-weight-medium)`・`color: var(--schedule-hour-label)`（時間割の曜日 `:197-201` と同じ 3 つ）。
-3. 予定の 1 行（G33）: 金型の `renderContent` で、`mode === 'month'` かつ予定の画面の見た目かつ終日でなく始まりと終わりが同じ日の予定は、`eventLayout` に関係なく `<span className="fc-daygrid-event-dot" />`（FullCalendar の点の規則をそのまま使う。色は予定の種類の `--fc-event-border-color`）＋`<span className="comp-calendar__time">{formatMeridiem(始まり, t)}</span>`＋`<span className="comp-calendar__title">{題名}</span>` の 1 行にする。css は同じ段に `.fc-daygrid-dot-event.comp-calendar__event { border-width: 0; background: transparent; color: var(--text-primary); }` と `.comp-calendar__title` の `overflow: hidden; text-overflow: ellipsis`。終日・日をまたぐ予定（FullCalendar が帯の形 `fc-daygrid-block-event` で出す物）は今のまま。
+3. 予定の 1 行（G33）: 金型の `renderContent` で、`mode === 'month'` かつ予定の画面の見た目かつ終日でない予定は、`eventLayout` に関係なく `<span className="fc-daygrid-event-dot" />`（色は予定の種類の `--fc-event-border-color`）＋`<span className="comp-calendar__time">{formatMeridiem(始まり, t)}</span>`＋`<span className="comp-calendar__title">{題名}</span>` の 1 行にする。点の形にするか帯の形にするかは金型で判定しない。FullCalendar が決める（6.1.22 の `internal.js:133-139` `hasListItemDisplay`: 終日でない・週の行の中で 1 列だけ・始まりと終わりがその列に在る。終わりは含まない数え方なので 23時〜翌0時の予定も点の形）。css は同じ段に次の 3 つ:
+   - `.fc-daygrid-dot-event.comp-calendar__event { border-width: 0; background: transparent; color: var(--text-primary); }`
+   - `.fc-daygrid-block-event .fc-daygrid-event-dot { display: none; }`（帯の形になった日をまたぐ予定から点を隠す）
+   - `.comp-calendar__title` の `overflow: hidden; text-overflow: ellipsis`
+   終日の予定は今の中身（`renderContent` の今の分かれ道）のまま。日をまたぐ時刻のある予定は帯の枠と地のまま、中の文字だけ 1 行になる。
 4. 詳しくの小窓（G34）: `frontend/src/pages/schedule/SchedulePageImpl.tsx:273-274` を `const timeLabel = item ? formatSearchResultLine(item, t, i18n.language) : "";` の 1 つにし、`:340` の `schedule-popover__date` の行と `dateLabel` を消す。`frontend/src/pages/schedule.css:409` の `.schedule-popover__date,` を消す。
-5. 一覧の表示（G35）: `:831` を `{item.allDay ? t("schedule.allDay") : formatEventTimeRange(item.start, item.end, t, false)}`（`schedule-utils.ts:1` と同じく `calendarView.utils` の `formatTimeRange` を読む）にする。これで schedule-utils の `formatTimeRange` を使う所が 0 になるので、関数と、その試験があれば試験も消す（実装の前に grep で 0 を確かめる）。
+5. 一覧の表示（G35）: `:831` を `{item.allDay ? t("schedule.allDay") : formatEventTimeRange(item.start, item.end, t, false)}`にする。読み込みは `frontend/src/pages/schedule/SchedulePageImpl.tsx:56` の `formatTimeRange,`（`./schedule-utils` から）を消し、`import { formatTimeRange as formatEventTimeRange } from "../../components/calendarView.utils";` を足す（`schedule-utils.ts:1` と同じ名前の付け方）。`:274` も作り方 4 で消えるので、ページから schedule-utils の `formatTimeRange` を読む所は 0 になる。これで schedule-utils の `formatTimeRange` を使う所が 0 になるので、関数と、その試験があれば試験も消す（実装の前に grep で 0 を確かめる）。
 
 B 組（金型を変える必要がある・または何を正とするか PO が決める所。今回は変えない）:
 - 作る小窓: Google は幅約 600px・角の丸み 28px・題名の欄は下線だけで 22px・行の高さ 40px・下のボタンは「その他のオプション」と青い「保存」（保存が右）。アプリは幅 320px・角の丸み 8px・題名は丸い枠の 13.6px・行の高さ 28px・「保存」「キャンセル」（保存が左）。題名の「下線だけ」の形は欄の部品 `TextFieldControl` に無く、足すには部品を変える（ADR-144・PO の承認が要る）。幅・丸み・行の高さは `--schedule-popover-width`（`frontend/src/pages/schedule.css:7` と `frontend/src/tokens.css:409` の 2 か所に同じ名前で在る＝直す時に 1 か所にする）と欄の大きさの金型（`--field-h-sm` 28px・`--field-h-md` 36px）に関わる。
@@ -422,6 +426,7 @@ B 組（金型を変える必要がある・または何を正とするか PO �
 
 選ばなかった案:
 - 月表示の予定を FullCalendar の既定の中身に戻す（`renderContent` を月で渡さない）: 時刻が「8p」の形になり、時間割と同じ「午後8時」の形にならない。点だけは既定の規則を使い、文字は金型で作る。
+- 点にするかを金型の中で「終日でなく始まりと終わりが同じ日」と判定する: FullCalendar の規則（終わりは含まない数え方）と食い違い、23時〜翌0時の予定や終わりの無い予定が点の形の枠に 2 行で出る（クラウドの審査 12 回目 1 回目の指摘）。規則を写すと版ごとにずれるので、判定は FullCalendar に任せ css で点を隠す。
 - 今日の丸の大きさに既存の `--size-icon-btn-sm`（28px）を使う: 役目が違い、Google の 24px とも合わない。予定の段に 1 つ足す（ADR-067 の「役目ごとに 1 つ」）。
 - 詳しくの小窓の時刻だけ 12 時間の形にして日付の行を残す: Google は 1 行で、作る小窓・検索の結果とも形が揃わない。
 
@@ -431,7 +436,9 @@ B 組（金型を変える必要がある・または何を正とするか PO �
 - `fc-daygrid-event-dot` は FullCalendar の class 名を借りる: 版を上げて名前が変わると点が出なくなる。版は ADR-1065 で 6.1.22 に固定。単体の試験で点の要素が在ることを確かめる。
 - ダーク: 使う色は全部トークン（`--schedule-today`・`--on-solid`・`--text-primary`・`--schedule-hour-label`）。
 
-戻し方: 便9 の PR を revert する（frontend だけ・DB や設定は変えない）。
+ADR の改訂: ADR-1065 の決まり 7 は「`'schedule'` は時間割のときだけ」と書いてある。便9 は月表示にも広げるので、PO が G31〜G35 を承認したら、便9 の実装の PR で決まり 7 に次の 1 文を足す（承認の前に ADR は変えない）:「月の升目のときは、日付を升目の上の真ん中に・今日を丸で・曜日を時間割と同じ文字で・時刻のある 1 日の予定を点＋時刻＋題名の 1 行で出す（PO 承認 G31〜G35）。」あわせて `node scripts/generate-adr-index.js` で索引を作り直す。
+
+戻し方: 便9 の PR を revert する（frontend と ADR-1065 の 1 文だけ・DB や設定は変えない）。
 
 ### 3.4 祝日の出どころ（2026-11-06 に確かめて決めた）
 
@@ -468,7 +475,7 @@ B 組（金型を変える必要がある・または何を正とするか PO �
 | 便6 | 見た目 5 か所（§3.8）。金型に口 1 つ・css・トークン 2 つ・予定の画面に 1 行 | G15〜G19 | なし（frontend だけ。移行・deploy・scripts・DB は無い） |
 | 便7 | 上の帯を 1 段・左上のメニューボタン・3日間・1時間の高さ・今の時刻の丸・一番上の文字（§3.12）。金型 PageLayout に口 1 つ・金型 CalendarView に測り直し 1 つ・css・トークン 3 つ | G20〜G25 | なし（frontend だけ。移行・deploy・scripts・DB は無い） |
 | 便8 | 残りの部品を決められた部品に差し替える（§3.13 の A 組）。ボタン 5 つ・札 1 つ・持ち主の色・使わなくなった規則を消す。部品の追加・変更なし | G26〜G30 | なし（frontend だけ。移行・deploy・scripts・DB は無い） |
-| 便9 | 月表示の日付・今日の丸・曜日の行・予定の 1 行の形、詳しくの小窓と一覧の時刻の形（§3.14 の A 組）。金型 CalendarView の月の中身 2 つ・css・トークン 1 つ・予定の画面の 2 か所 | G31〜G35 | なし（frontend だけ。移行・deploy・scripts・DB は無い） |
+| 便9 | 月表示の日付・今日の丸・曜日の行・予定の 1 行の形、詳しくの小窓と一覧の時刻の形（§3.14 の A 組）。金型 CalendarView の月の中身 2 つ・css・トークン 1 つ・予定の画面の 2 か所・ADR-1065 の決まり 7 に月の 1 文（§3.14「ADR の改訂」・PO 承認の後） | G31〜G35 | なし（frontend だけ。移行・deploy・scripts・DB は無い） |
 
 便0 を先に出す理由: 今の本番で毎回起きる間違いで、1 行で直り、載せ替えを待つ理由がない。
 
@@ -647,3 +654,13 @@ B 組（金型を変える必要がある・または何を正とするか PO �
 - (2) ○ 試験の持ち主は test:54-55 で 2 人とも `color: null`。Impl:218 は `owner?.color ?? DEFAULT_OWNER_COLOR`。frontend/src の試験に色の値を見る所は 0 件。`eslint.config.js:120-131` は lucide-react だけを止め、層の止め（no-restricted-paths・boundaries）は 0 件。features から components を import する file は 39 件（DistributionPreview.tsx:13-14 を含む）。
 - (3) ○ 直しは design.md だけ（15 行足し・3 行消し）。カードの「前」のコード・G29 の 22 件・試験の書き方は触っていない。
 - 指摘なし。
+
+### 12 回目（便9・G31〜G35）: 1 回目 REVISE（2026-11-08 15:22〜15:23 UTC・クラウドの Opus・origin/release/schedule-gcal-visual-diff-design 2290995ae・セッション cse_01HHUUpTkvBHehF64msxPetj）
+
+- 結果は返事の本文で全部読んだ（途中で切れていない）。
+- (1) ○ R9-1〜R9-5 の行は c8fd2ad77 の実物と合う。npm pack した `@fullcalendar/daygrid@6.1.22` の `internal.js:157-164` にも、点を既定の中身の中で描く作りが在る（6.1.20 の写しと同じ）。
+- (2) × 必須 1 件と直したこと: 点の形の条件は 6.1.22 の `internal.js:133-139`（終わりは含まない数え方）で、作り方 3 の「同じ日」と食い違う → 金型では判定せず、終日でない月の予定に点を描き、帯の予定は css `.fc-daygrid-block-event .fc-daygrid-event-dot { display: none; }` で隠す形に直した。G33 の受入れと「選ばなかった案」も直した。
+- (3) ○ G31〜G35 は数値・文字・要素の個数で ○× を決められる。
+- (4) × 必須 1 件と直したこと: ADR-1065 の決まり 7 は「`'schedule'` は時間割のときだけ」 → §3.14 に「ADR の改訂」（PO 承認の後に便9 の PR で 1 文足す・索引を作り直す）を足し、便9 の行と戻し方にも書いた。
+- 推奨 2 件と直したこと: 作り方 1 に `dayCellContent` の引数 `(arg: { date: Date; isToday: boolean })` を書いた。作り方 5 に `SchedulePageImpl.tsx:56` の読み込みの付け替えを書いた。
+- schedule-utils の `formatTimeRange` を使うのは 2 か所だけで、専用の試験は無い（審査の grep）。
