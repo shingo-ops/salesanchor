@@ -54,12 +54,12 @@ PO の言葉（2026-11-08）: 「ヘッダーをGoogleと同じく上部だけ�
 
 | # | 基準 | 検証方法 | recon |
 |---|---|---|---|
-| G20 | 上の帯が 1 段。ページ題「スケジュール」の下の説明の文が出ない。帯の高さ（`.page-layout-header` の高さ）が 64px 以下 | 窓 1440 幅で `.page-subtitle` が 0 個・`.page-layout-header` の getBoundingClientRect().height | R7-1 |
-| G21 | 帯の一番左（ページ題より左）にメニューボタン（三本線）がある。押すと左の欄（小さい月の表・カレンダーの一覧）が消えて、時間割が左の欄の幅のぶん広がる。もう一度押すと戻る。開いた時は出ている | 押す前後で `.schedule-sidebar` の有無と `.schedule-calendar` の幅を読む（差が 256px±16px） | R7-2 |
+| G20 | 上の帯が 1 段。ページ題「スケジュール」の下の説明の文が出ない。帯の高さ（`.page-layout-header` の高さ）が 72px 以下（計算 70px＝上の余白 10＋題の行 40＋下の余白 20・`frontend/src/pages-layout.css:62-75`・`frontend/src/tokens.css:223-224`。説明の文の無い他の画面と同じ高さ。金型の余白は全画面に響くので変えない） | 窓 1440 幅で `.page-subtitle` が 0 個・`.page-layout-header` の getBoundingClientRect().height | R7-1 |
+| G21 | 帯の一番左（ページ題より左）にメニューボタン（三本線）がある。押すと左の欄（小さい月の表・カレンダーの一覧）が消えて、時間割が左の欄の幅のぶん広がる。もう一度押すと戻る。開いた時は出ている | 押す前後で `.schedule-sidebar` の有無と `.schedule-calendar` の幅を読む（差が 276px±16px＝左の欄 256px＋間の `--schedule-shell-gap` 20px・`frontend/src/pages/schedule.css:5`） | R7-2 |
 | G22 | 表示の切替に「日・3日間・週・月・一覧」がこの順で並ぶ。3日間を選ぶと列が 3 本（選んでいる日から 3 日）。‹ › で 3 日ずつ進む・戻る。キー「x」でも 3日間になる | 切替を開いて並びを読む・`.fc-col-header-cell` の数・› を押して最初の列の日付が 3 日進むのを見る | R7-3 |
 | G23 | 1 時間の高さが窓の高さで変わる: 時間割の見える高さ ÷ 13 を 16px 刻みに丸め、48px 以上 96px 以下。窓 1440x723 で 48px・時間割の見える高さ 1073px で 80px・1242px で 96px（Google の実測と同じ） | `.fc-timegrid-slot` の高さと `.fc-scroller-liquid-absolute` の高さを読む。左の欄を出し入れした後も予定の箱の位置が 1 時間の線とずれない（10 時の予定の箱の上端と 10 時の線の差が 2px 以内） | R7-4 |
 | G24 | 今の時刻の丸（直径 12px）が欠けずに丸ごと見える | 丸の getBoundingClientRect の幅と、画面写しで丸の左右が切れていないこと | R7-5 |
-| G25 | 昼（例: 午後3時台）に開くと、一番上に見える時刻の文字（例:「午後2時」）が上で切れない。上端は「今の 1 時間前の 30 分」（例: 午後3時31分なら午後2時30分。Google の実測 午前3時31分→上端 午前2時30分と同じ） | 開いた直後に、一番上に見える時刻の文字の上端が時間割の見える上端より下にある | R7-6 |
+| G25 | 昼（例: 午後3時台）に開くと、一番上に見える時刻の文字（例:「午後3時」）が上で切れない。上端は「今の 1 時間前の 30 分」（例: 午後3時31分なら午後2時30分。Google の実測 午前3時31分→上端 午前2時30分と同じ） | 開いた直後に、一番上に見える時刻の文字の上端が時間割の見える上端より下にある | R7-6 |
 
 ## 3. 作り方（How）
 
@@ -305,7 +305,7 @@ PO 承認: 成功条件 G12（§2）。便5 の着手は PO が 2026-11-07「1�
 ### 3.12 便7: 上の帯を 1 段・左上のメニューボタン・3日間・1時間の高さ・不具合 2 つ（G20〜G25・2026-11-08）
 
 確かめた事実（行番号は origin/main 5a531586a）:
-- R7-1: 帯が 2 段なのは、予定の画面が説明の文の口を渡しているため（`frontend/src/pages/schedule/SchedulePageImpl.tsx:1363` `subtitleKey="schedule.subtitle"`）。金型は口があると題の行の下に `p.page-subtitle` を出す（`frontend/src/components/PageLayout.tsx:51-53`）。
+- R7-1: 帯が 2 段なのは、予定の画面が説明の文の口を渡しているため（`frontend/src/pages/schedule/SchedulePageImpl.tsx:1364` `subtitleKey="schedule.subtitle"`）。金型は口があると題の行の下に `p.page-subtitle` を出す（`frontend/src/components/PageLayout.tsx:51-53`）。
 - R7-2: 金型 PageLayout は題 `h2` を先に出し、その後に `headerLeft`（`frontend/src/components/PageLayout.tsx:45-46`）。題より左に何かを置く口は無い。三本線の絵は `NAV_ICONS.menu`（`frontend/src/constants/icons.tsx:246`）に在る。左の欄は `.schedule-shell__content` の 2 列の左（`frontend/src/pages/schedule.css:57-65`・幅は `--schedule-leftpanel-width` 256px）。
 - R7-3: 表示の種類は `"day" | "week" | "month" | "list"`（`frontend/src/pages/schedule/schedule-utils.ts:3`）。期間は `toRangeStart/End`（同 :195-207）、送り幅は `navigatePeriod`（`SchedulePageImpl.tsx:1164`）、列の日は `viewDays`（同 :1169-1175）、題は `formatRangeTitle`（同 :142-148）、切替は `ContextMenu`（同 :1486）、キーは `handleShortcut`（同 :1340-1343）と近道の一覧（同 :845-856）、金型へは `dayCount={view === "day" ? 1 : 7}`（同 :1542）。金型は `dayCount` 日の `timeGrid` を作る（`frontend/src/components/CalendarView.tsx:104-107`）。
 - R7-4: 1 時間の高さは常に `--schedule-row-height` 96px（`frontend/src/components/CalendarView.css:48`・`frontend/src/tokens.css` の予定の段）。Google は窓で変わる（scratchpad 実測: 時間割の見える高さ 517→48px・1073→80px・1242→96px。3 点とも「÷13 を 16px 刻みに一番近い値・下限 48px」で一致）。FullCalendar は窓の大きさの変化だけを聞く（`windowResize`）ので、左の欄の出し入れでは測り直さない。
@@ -313,7 +313,7 @@ PO 承認: 成功条件 G12（§2）。便5 の着手は PO が 2026-11-07「1�
 - R7-6: 開いた時の上端は「今 −1 時間 の 00 分」（`frontend/src/components/calendarView.utils.ts:238`）。時刻の文字は線の上下の真ん中に置くため半分上へずらす（`CalendarView.css:260-270`）。上端が線ちょうどなので、その線の文字の上半分が見える範囲の外に出る。
 
 作り方:
-1. 帯を 1 段（G20）: `SchedulePageImpl.tsx:1363` の `subtitleKey="schedule.subtitle"` を消す。文言キー `schedule.subtitle` は ja/en に残す（他で使っていないが、消すと他の道具の確かめに響くかを今回は調べない。残しても画面は変わらない）。
+1. 帯を 1 段（G20）: `SchedulePageImpl.tsx:1364` の `subtitleKey="schedule.subtitle"` を消す。説明の文の無い PageLayout は検査 `frontend/scripts/check-page-layout.js:94` で落ちるので、同じファイルの `SUBTITLE_ALLOWLIST`（`:27-32`）に `'schedule/SchedulePageImpl'`（理由: PO 2026-11-08 の「上の帯を 1 段」）を足す。文言キー `schedule.subtitle` は ja/en に残す（他で使っていないが、消すと他の道具の確かめに響くかを今回は調べない。残しても画面は変わらない）。
 2. メニューボタン（G21）: 金型 PageLayout に口 `headerStart?: ReactNode` を 1 つ足し、`h2` の前に出す。見た目の props は足さない（`docs/specs/design-system/component-ssot/page-title/design.md` D1 の「見た目は金型が独占」を守る。中身の口であり `headerLeft` と同じ種類）。予定の画面は `headerStart` に金型 `Button`（`variant="ghost" size="md" iconOnly`・`aria-label={t("schedule.togglePanel")}`・`aria-expanded`・中身 `NAV_ICONS.menu`）を置く。状態はページの `useState(true)`（保存しない・開いた時は出ている）。閉じている時は `.schedule-shell__content` に `schedule-shell__content--panel-hidden` を足し、`ScheduleSidebar` を出さない（描かない）。css は `.schedule-shell__content--panel-hidden { grid-template-columns: minmax(0, 1fr); }` を 1 つだけ（幅を問わず 1 列）。
 3. 3日間（G22）: 種類に `"threeDay"` を足す。`toRangeStart` は選んでいる日の 0 時、`toRangeEnd` はその +3 日。`viewDays` はその日から 3 日。`navigatePeriod` の送り幅 3。`formatRangeTitle` は「最初の日 - 3 日目」。切替の並びは `["day", "threeDay", "week", "month", "list"]`。キー「x」（Google の「自分で決めた日数」と同じキー）。近道の一覧に `{ keys: ["X"], labelKey: "threeDay" }` を「D」の次に。金型へは `dayCount={view === "day" ? 1 : view === "threeDay" ? 3 : 7}`。文言 `schedule.threeDayView`「3日間」/「3 days」・`schedule.shortcuts.threeDay`「3日間の表示」/「3-day view」・`schedule.togglePanel`「メニュー」/「Main menu」を ja/en に同じキーで足す。
 4. 1 時間の高さ（G23）: css だけで決める（JS で高さを測って書かない＝値の出どころを 1 つにする）。
@@ -498,3 +498,14 @@ PO 承認: 成功条件 G12（§2）。便5 の着手は PO が 2026-11-07「1�
 - (3) ○ F3 の期待値の式は `formatRangeTitle` の週の文（`frontend/src/pages/schedule/SchedulePageImpl.tsx:138-144`・`:1162`）と一致。
 - (4) ○ 新しい食い違いなし。
 
+### 10 回目（便7・G20〜G25）: 1 回目 REVISE（2026-11-08 00:07〜00:12 UTC・クラウドの Opus・origin/release/schedule-gcal-topbar 96bb760aa・セッション cse_01HHUUpR1m4FSUyRkL6r75vw）
+
+- 結果は返事の本文で全部読んだ（途中で切れていない）。
+- (1) ○ 本体の送り枠だけが liquid（timegrid 6.1.22 `internal.js:193`・終日の段 `:179` には無い）で class は `fc-scroller-liquid-absolute`（core `internal-common.js:6735`・上下左右 0 の絶対配置）。now-indicator-container の既定は `overflow:hidden`（詳しさ 0,2,0）でカードの規則（0,3,0）が勝つ。`updateSize`→`_resize`→`handleSizing`（`:6994`）→ slot の測り直し（timegrid `:435-450`）。
+- (2) △ 式・容器の解決は ○。css の 2 検査は node で PASSED。stylelint と tsc は審査役の場所に node_modules が無く未確認（実装の CI で確かめる）。
+- (3) ○ `ScheduleView` を使うのは schedule-utils と SchedulePageImpl だけ。`NAV_ICONS.menu`（`frontend/src/constants/icons.tsx:246`）・`ghost`/`md`（`frontend/src/components/buttonAppearance.ts:1-2`）は実在。
+- 必須 3 件と直したこと:
+  - 説明の文を消すと `frontend/scripts/check-page-layout.js:94` が rc=1 → `SUBTITLE_ALLOWLIST` に `'schedule/SchedulePageImpl'` を足すと決め、カード §1・§6-2 に足した。
+  - G21 の幅の差は左の欄 256 と間 20 で 276px → 基準を 276±16 に直した。
+  - G20 の帯は計算 70px で 64px を外れる → 金型の余白は全画面に響くので変えず、基準を 72px 以下に直した（説明の文の無い他の画面と同じ高さ）。
+- 推奨 3 件と直したこと: 消す行は `:1364`（`:1363` は navKey）に直した。G25 の例を「午後3時」に直した。カード §5 に check-new-tokens の PR 本文の項目を足した。

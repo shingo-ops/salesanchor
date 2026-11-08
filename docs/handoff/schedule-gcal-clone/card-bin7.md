@@ -30,6 +30,7 @@
 | `frontend/src/pages/schedule.css` | 規則 1 つを足す（§6-3） |
 | `frontend/src/locales/ja.json`・`en.json` | キー 3 つ（§7） |
 | `frontend/src/components/CalendarView.test.tsx`・`frontend/src/pages/schedule/schedule-utils.test.ts`・`frontend/src/pages/schedule/SchedulePageImpl.test.tsx` | 試験（§8） |
+| `frontend/scripts/check-page-layout.js` | `SUBTITLE_ALLOWLIST`（`:27-32`）の末尾に `'schedule/SchedulePageImpl', // 予定の画面: 上の帯を 1 段（PO 2026-11-08・design §3.12）` を 1 行足すだけ。他は変えない（§6-2 #8 で説明の文を消すと `:94` の検査が落ちるため） |
 | `docs/specs/design-system/component-ssot/page-title/design.md` | 口の追加を 1 行記録（§9） |
 | .claude-pipeline/active-work.d/release-schedule-gcal-topbar-bin7.md | 台帳（new-worktree.sh が作る形のまま・状態を更新） |
 
@@ -37,7 +38,7 @@
 - `schedule.css` の `@media (max-width: 1023px)`・`(max-width: 767px)` の中
 - 文言キー `schedule.subtitle`（ja/en に残す）
 - 月の表示（`monthProps`）・既存の css の規則（足すのは末尾だけ）
-- 移行（migrations）・`.github/workflows/`・`scripts/`・backend
+- 移行（migrations）・`.github/workflows/`・リポジトリ直下の `scripts/`・backend・`frontend/scripts/` の他のファイル
 
 ## 2. PageLayout.tsx
 
@@ -123,6 +124,8 @@ export function scrollTimeForNow(now: Date): string {
 ```
 （トークンは 4 行になる。設計の「3 つ」は min・step・hours。`row-fit` は計算式の置き場で、css 本体に `cqh` を直書きしないため。）
 
+PR 本文: tokens.css にトークンを足すので、`frontend/scripts/check-new-tokens.js` が求める項目 `- [x] 新しいトークンを追加した場合、その理由を概要欄に記載した` を入れ、概要欄に理由（1 時間の高さを時間割の見える高さに合わせる・design §3.12 G23）を書く。
+
 ## 6. 予定の画面
 
 ### 6-1 schedule-utils.ts
@@ -140,7 +143,7 @@ export function scrollTimeForNow(now: Date): string {
 5. `navigatePeriod`（`:1164`）: `const step = view === "day" ? 1 : view === "threeDay" ? THREE_DAY_VIEW_DAYS : view === "list" ? LIST_VIEW_DAYS : 7;`
 6. `viewDays`（`:1169-1175`）の `day` の枝の次に `: view === "threeDay" ? Array.from({ length: THREE_DAY_VIEW_DAYS }, (_, i) => addDays(new Date(anchorDate.getFullYear(), anchorDate.getMonth(), anchorDate.getDate()), i))` を足す。
 7. キー（`:1340` `case "d"` の次）: `case "x": setView("threeDay"); break;`
-8. `:1363` `subtitleKey="schedule.subtitle"` の行を消す。その位置に:
+8. `:1364` `subtitleKey="schedule.subtitle"` の行を消す。その位置に:
 ```tsx
         headerStart={
           <Button
