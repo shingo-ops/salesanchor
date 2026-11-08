@@ -153,8 +153,9 @@
 |---|---|---|
 | 便1 | Discord 連携（本書 §4） | 本番反映済み・PO 目視合格（2026-11-07） |
 | 便0 | 見張り W1・W2・G1（§5。card-guard.md） | 本番反映済み（2026-11-08。基準値 W1 739・W2 209） |
-| 便2 | サーバーの共通の2種類の文（項目の指定なし・重複や食い違い）92 件を理由コードに＋画面の共通の対応表（§11。card-bin2.md） | 設計案作成済み（2026-11-08） |
-| 便3 以降 | 「見つかりません」の種類（221 件）、Meta・Google カレンダー・外部連携の戻り口、画面で e.message を出す箇所、残りのサーバーの直書き | 未着手 |
+| 便2 | サーバーの共通の2種類の文（項目の指定なし・重複や食い違い）92 件を理由コードに＋画面の共通の対応表（§11。card-bin2.md） | 本番反映済み（2026-11-08 12:54 JST・#5287・W1 739→647） |
+| 便3 | 「（指定された）〇〇が見つかりません」の形の 198 件を `not_found:<対象>` に＋画面で名前を残した文（§12） | 設計案作成済み（2026-11-08） |
+| 便4 以降 | 残りの「見つかりません」（f 文字列 11・案内つき 9・その他 7・英語 24。§12-2）、Meta・Google カレンダー・外部連携の戻り口、画面で e.message を出す箇所、残りのサーバーの直書き | 未着手 |
 
 ## 8. 継続（維持の仕組み）
 
@@ -184,7 +185,7 @@
 
 ## 11. 便2: サーバーの共通の2種類の文を理由コードにする（A2 の1回目）
 
-- 状態: 設計案作成済み（2026-11-08 Opus）。PO の選択「2」（サーバーの文を直す作業から始める）と「PRマージ、デプロイまで完走」の委任に基づく。実装カード `docs/handoff/error-message-plain-language/card-bin2.md`。
+- 状態: 本番反映済み（2026-11-08 12:54 JST。#5287。B5 合格）。設計は 2026-11-08 Opus。PO の選択「2」（サーバーの文を直す作業から始める）と「PRマージ、デプロイまで完走」の委任に基づく。実装カード `docs/handoff/error-message-plain-language/card-bin2.md`。
 - 調べた土台: origin/main `b6b89095c4d9cbedca3c17b66b0191ec96457413`。
 
 ### 11-1. 何が起きるか（利用者に見える変化）
@@ -254,3 +255,359 @@
 
 - 新しく理由コードを足すときは `frontend/src/lib/apiErrorReason.ts` の表に1行と ja/en の文を足す。突き合わせ試験（B4）が、表とサーバーのずれを両側の PR で止める。
 - W1 の基準値は直した PR の中で下げる（下げないと CI が赤）。
+
+## 12. 便3: 「〇〇が見つかりません」を、名前を残した理由コードにする（A2 の2回目）
+
+- 状態: 設計案作成済み（2026-11-08 Opus）。PO の選択「1」（「見つかりません」の文を直す設計を始める）に基づく。PO の承認待ち: §12-4 の文の型と §12-5 の名前（特に「変えた理由」のある 11 行）。
+- 調べた土台: `36ea9b7b2a1a38509ca1d6c82d9ba9847b6ed8dd` の写し（git archive）。その後の origin/main `986df80cd404f2edec89ce6476ee2fbe876fecd2` までの 10 commit は、`backend/app`・`frontend/src/lib/api.ts`・`frontend/src/lib/apiErrorReason.ts`・`frontend/src/locales/ja.json`・`frontend/src/locales/en.json`・`frontend/tests-e2e/order-*.spec.ts`・`backend/tests/test_staff_me.py`・W1 の基準値に触れていない（`git diff --name-only 36ea9b7b2 986df80cd` の絞り込みが 0 行）。
+
+### 12-1. 何が起きるか（利用者に見える変化）
+
+- 開いていたものが別の人に消されたときなどに出る「リードが見つかりません」のような文が、日本語の画面では「リードが見つかりませんでした。画面を読み込み直してから、もう一度お試しください。」、英語の画面では英語になる。
+- 今は、サーバーが作った日本語の文が英語の画面でもそのまま出る。次にすることも書かれていない。「import_job」「routing」「staff レコード」など内部の名前が出る文もある。
+
+### 12-2. 現在地（事実）
+
+- 数え方: W1（`backend/tests/test_error_detail_guard.py`）が違反とする 647 件を1件ずつ書き出し、文の形で分けた（調べ用の台本は読むだけ。結果の数は下の表）。
+- 形で選んだ数（A 群）: 文が `(指定された|指定の)?〇〇が見つかりません` の形だけ・状態番号が 404・括弧の案内なし → 201 件・65 ファイル（すべて `backend/app/routers`）。このうち PDF の3か所（下の対象外）を除いた 198 件・65 ファイルが便3 の対象。状態番号の書き方は `status.HTTP_404_NOT_FOUND` 136・`404` 64・`http_status.HTTP_404_NOT_FOUND` 1。名詞は 68 種類（`指定された`・`指定の` を外して数える）。
+- 対象外（便4 以降。形が違い、1件ずつ文を決める必要がある）:
+  - PDF の3か所: `backend/app/routers/invoices.py:825`（GET /invoices/{invoice_id}/pdf）・`backend/app/routers/invoices.py:921`（GET /invoices/{invoice_id}/paypal-copy-pdf）・`backend/app/routers/invoices.py:990`（GET /quotes/{quote_id}/pdf）。画面は `window.open` で新しいタブに開く（`frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx:152`・`:156`、`frontend/src/pages/quote-detail/QuoteDetailPage.tsx:92`）ので、サーバーの返事がそのままタブに出る。コードにすると今より読めなくなるため、今の日本語の文のまま残す
+  - f 文字列 11: `backend/app/routers/companies.py:754`・`:759`、`backend/app/routers/contacts.py:755`・`:760`、`backend/app/routers/leads.py:3088`・`:3093`（統合の id 入り）、`backend/app/routers/leads.py:615`（400）、`backend/app/routers/super_admin_link_templates.py:93`・`:157`、`backend/app/routers/tcg_distribution.py:227`、`backend/app/routers/tcg_line_import.py:476`
+  - 括弧の案内つき 9: `backend/app/routers/leads.py:1676`・`:1928`・`:2731`（409・Meta 接続）、`backend/app/routers/meta_inbox.py:423`（400）、`backend/app/routers/note_master.py:228`・`:252`、`backend/app/routers/reports.py:125`、`backend/app/routers/translation.py:324`・`:357`
+  - その他 7: `backend/app/routers/buddy.py:110`（400）、`backend/app/routers/companies.py:366`（422）、`backend/app/routers/leads.py:1825`（400）、`backend/app/routers/order_shipping_details.py:455`、`backend/app/routers/tcg_distribution.py:111`・`:145`（422）、`backend/app/routers/tenant_admin_inventory_visibility.py:124`
+  - 英語 24（例 `backend/app/routers/meta.py:255` の `Confirmation code not found` は `lp/src/pages/deletion-status.astro:69` と `frontend/tests-e2e/scene8-data-deletion.spec.ts:171` が使う）
+  - `backend/app/services/tenant_users.py:6` の `USER_NOT_IN_TENANT`（同じ文だが 422 で、変数なので W1 の数に入らない。`backend/tests/test_tenant_user_ref_guard_pg.py:61` が一致を見る）は変えない。
+- 対象の文に頼る所（`git grep -F` で 1 文ずつ。`backend/app`・`docs`・`frontend/src/locales` を除く全体）:
+  - `frontend/tests-e2e/order-commission.spec.ts:151`・`:158`・`:165`、`frontend/tests-e2e/order-financial.spec.ts:158`、`frontend/tests-e2e/order-purchase.spec.ts:129`・`:136`・`:150`、`frontend/tests-e2e/order-shipping.spec.ts:173`・`:187`: 404 の返事の見本に今の文を入れている。画面（`frontend/src/components/OrderFinancialPanel.tsx:124`・`frontend/src/components/PurchaseDetailPanel.tsx:171`・`frontend/src/components/ShippingDetailPanel.tsx:225`）は状態番号 404 だけで「未登録」と判断し、文は読まない。
+  - `backend/tests/test_staff_me.py:81`: `"staff" in detail or "見つかりません" in detail`。
+  - 画面のコード（`frontend/src/**`、locales を除く）で対象の文を比べる所は 0 件。`backend/app` の中で detail の文を比べる所も 0 件（`.detail ==`・`in .detail` などの grep）。
+- 今ある「見つからない」系のコード（`not_found`・`company_not_found`・`template_not_found`・`viewer_not_found`・`passkey_not_found`・`attachment_not_found`・`request_not_found`）は、画面が文字どおりに比べている（例 `frontend/src/pages/super-admin/ViewerAccountsPage.tsx`）。新しいコードはこれらと重ならない形にする。
+- 画面がサーバーの文を受ける所は `frontend/src/lib/api.ts` の2か所（`request` の 164-175 行・`requestForm` の 255-264 行。便2 の `apiErrorReasonKey`）。直接 `fetch` する画面のうち A 群の口を呼ぶものは無い（`ShippingDetailPanel` の elogi-csv は detail を読まず `common.downloadFailed` を出す。`StaffJoinPage` の呼び先は public/staff-join で A 群の `_load_open_invite` ではない。`frontend/src/pages/inbox/InboxMessageThread.tsx:318` は A 群の口 GET /leads/{lead_id}/messages/{message_id}/attachment-url（`backend/app/routers/leads.py:1557`・`:1573`）を直接 `fetch` するが、`res.ok` だけを見て本文の文を読まない（`:322-326`）ので見え方は変わらない）。
+- 3つ目の受け口 `requestBlob`（`frontend/src/lib/api.ts:201`・`getBlob` は `:284`）は失敗した返事の本文をそのまま文にする。呼び先は書き出し15か所と受信箱の添付ファイル（`frontend/src/pages/inbox/InboxMessageThread.tsx:294` → GET /leads/{lead_id}/attachments/{attachment_id}・`backend/app/routers/leads.py:1467`）だけで、A 群の口を呼ばない（便3 の影響なし）。請求書・見積もりの PDF は `getBlob` を通らず `window.open` で開く（対象外の PDF 3か所）。
+- 名前の言葉は、画面の文言（`frontend/src/locales/ja.json`）に同じ物を指す見出しがあるものはそれに合わせた（§12-5 の「変えた理由」）。
+
+### 12-3. 方針
+
+- サーバー: 198 か所の detail を `not_found:<対象>` の文字列に置き換える（§12-10）。状態番号は変えない。W1 は `:` を含む識別子の形を違反にしない。
+- 画面: `frontend/src/lib/apiErrorReason.ts` に「対象 → 名前の文言キー」の表（67 行）を足し、`not_found:` で始まる detail を `apiError.notFound`（名前を差し込む型の文）にする。表に無い対象は `apiError.notFoundUnknown`（名前なしの文）にする。コードの生の値は画面に出さない（ADR-1071 What 3）。`frontend/src/lib/api.ts` の2か所は、この結果で文を作る（関数を1つにまとめ、2か所から呼ぶ）。
+- `not_found`（`:` なし）や `company_not_found` などの今のコードは `not_found:` で始まらないので、今までどおりそのまま `message` に入る。
+- 選ばなかった案: (a) 名前ごとに 67 個のコードを作る（`lead_not_found` など）→ 便2 の表に 67 行と文 67 個が増え、型の文を1か所で直せない。(b) 名前をサーバーから文字で送る（`{"reason": "not_found", "target": "リード"}`）→ 名前の言葉がサーバーに残り、英語にできない（ADR-1071 What 4）。(c) 「見つかりません」を全部同じ文にする → 何が見つからないかが分からなくなる（PO の目的「誰でも分かる」に反する）。
+
+### 12-4. 文の型（PO の承認待ち。ja は ADR-1071 の型。en は同じ意味）
+
+| キー | ja | en |
+|---|---|---|
+| `apiError.notFound` | {{target}}が見つかりませんでした。画面を読み込み直してから、もう一度お試しください。 | {{target}} could not be found. Reload the page and try again. |
+| `apiError.notFoundUnknown` | お探しのものが見つかりませんでした。画面を読み込み直してから、もう一度お試しください。 | What you were looking for could not be found. Reload the page and try again. |
+
+- 例: `not_found:lead` → 「リードが見つかりませんでした。画面を読み込み直してから、もう一度お試しください。」／"The lead could not be found. Reload the page and try again."
+- 名前の文言キーは `apiError.notFoundTarget.<対象>`（ja は §12-5 の「日本語の名前」、en は「英語の名前」。en は文頭に来るので The・Your を含めて書く）。
+- W2（`frontend/scripts/check-error-text-next-action.js:28-29`）: 型の文は失敗の語に当たらず（「見つかりません」は失敗の語ではない）、次にすることの語（もう一度・お試し・ください）を含む。名前だけの値は失敗の語を含まない。W2 の基準値 209 は変わらない。
+- 差し込みは i18next の `{{target}}`。`frontend/src/i18n.ts:38` は `escapeValue: false`（React が守る）。
+
+### 12-5. 名前の表（67 種類・198 か所。PO の承認待ち）
+
+| コード | 日本語の名前 | 英語の名前 | か所 | 今の文 | 名前を変えた理由 |
+|---|---|---|---|---|---|
+| `not_found:lead` | リード | The lead | 16 | リードが見つかりません / 指定されたリードが見つかりません |  |
+| `not_found:order` | 注文 | The order | 11 | 注文が見つかりません |  |
+| `not_found:company` | 会社 | The company | 7 | 会社が見つかりません / 指定された会社が見つかりません / 指定の会社が見つかりません |  |
+| `not_found:condition` | 状態 | The condition | 7 | 状態が見つかりません |  |
+| `not_found:product` | 商品 | The product | 6 | 商品が見つかりません / 指定の商品が見つかりません |  |
+| `not_found:contact` | 担当者 | The contact | 6 | 担当者が見つかりません / 指定された担当者が見つかりません |  |
+| `not_found:alias` | 別名 | The alias | 5 | aliasが見つかりません / 別名が見つかりません | 内部の英語名 alias を、同じものの画面の言葉「別名」(unitMaster.aliases) にした |
+| `not_found:invoice` | 請求書 | The invoice | 5 | 請求書が見つかりません |  |
+| `not_found:supplier_master` | 仕入元 | The supplier | 5 | 仕入元が見つかりません |  |
+| `not_found:team` | チーム | The team | 5 | チームが見つかりません |  |
+| `not_found:bot` | ボット | The bot | 4 | Botが見つかりません | 画面の見出し「ボット」(nav.bots) に合わせた |
+| `not_found:my_staff_profile` | あなたのスタッフ情報 | Your staff profile | 4 | 現在のユーザに紐づく staff レコードが見つかりません / 現在のユーザーに紐づく担当者が見つかりません | 内部の言葉 staff レコード を日常語にした; 同じもの（ログイン中の人の名簿行）を同じ言葉にした |
+| `not_found:calendar_event` | 予定 | The event | 4 | イベントが見つかりません | 画面の「予定を編集」等 (schedule.editEvent) に合わせた |
+| `not_found:quote` | 見積もり | The quote | 4 | 見積もりが見つかりません |  |
+| `not_found:order_purchase` | 仕入情報 | The purchase details | 4 | 仕入情報が見つかりません |  |
+| `not_found:payment_fee_setting` | 決済手数料設定 | The payment fee setting | 4 | 決済手数料設定が見つかりません |  |
+| `not_found:product_category` | 商品カテゴリ | The product category | 4 | 商品カテゴリが見つかりません |  |
+| `not_found:supplier` | 仕入先 | The supplier | 4 | 仕入先が見つかりません / 指定された仕入先が見つかりません |  |
+| `not_found:role` | ロール | The role | 4 | ロールが見つかりません |  |
+| `not_found:status` | ステータス | The status | 4 | ステータスが見つかりません |  |
+| `not_found:unit` | 単位 | The unit | 4 | 単位が見つかりません |  |
+| `not_found:order_financial` | 売上情報 | The sales details | 3 | 売上情報が見つかりません |  |
+| `not_found:order_shipping` | 発送情報 | The shipping details | 3 | 発送情報が見つかりません |  |
+| `not_found:staff` | スタッフ | The staff member | 3 | スタッフが見つかりません |  |
+| `not_found:condition_definition` | コンディション定義 | The condition definition | 3 | コンディション定義が見つかりません |  |
+| `not_found:product_format` | フォーマット | The format | 3 | フォーマットが見つかりません |  |
+| `not_found:quantity_unit` | 数量単位 | The quantity unit | 3 | 数量単位が見つかりません |  |
+| `not_found:distribution_target` | 配信先 | The distribution target | 3 | 配信先が見つかりません |  |
+| `not_found:line_import_job` | 取り込み作業 | The import job | 3 | import_job が見つかりません | 内部の英語名 import_job を日常語にした |
+| `not_found:calendar_owner` | 担当者 | The person in charge | 2 | 担当者が見つかりません |  |
+| `not_found:conv_log` | 会話ログ | The conversation log | 2 | 会話ログが見つかりません |  |
+| `not_found:channel_master` | チャネル | The channel | 2 | チャネルが見つかりません |  |
+| `not_found:goal` | 目標 | The goal | 2 | 目標が見つかりません |  |
+| `not_found:inventory_offer` | オファー | The offer | 2 | 指定されたオファーが見つかりません |  |
+| `not_found:message` | メッセージ | The message | 2 | メッセージが見つかりません |  |
+| `not_found:notice` | お知らせ | The notification | 2 | 知らせが見つかりません | 画面の見出し「お知らせ」(notices.title) に合わせた |
+| `not_found:notification_channel` | チャンネル | The channel | 2 | チャンネルが見つかりません |  |
+| `not_found:own_inventory` | 自社在庫 | The own inventory item | 2 | 自社在庫が見つかりません |  |
+| `not_found:product_master` | 商品マスタ | The product master entry | 2 | マスタが見つかりません | 何のマスタか分からないため、口 /super-admin/product-masters と画面の見出し「商品マスタ」(nav.products) に合わせた |
+| `not_found:dex_entry` | 図鑑エントリ | The dex entry | 2 | 図鑑エントリが見つかりません |  |
+| `not_found:knowledge_rule` | ルール | The rule | 2 | ルールが見つかりません |  |
+| `not_found:note_master` | 備考マスタ | The note master entry | 2 | 備考マスタが見つかりません |  |
+| `not_found:product_kind` | 大分類 | The division | 2 | 大分類が見つかりません |  |
+| `not_found:product_line` | 小分類 | The product line | 2 | 小分類が見つかりません |  |
+| `not_found:tcg_series` | シリーズ | The series | 2 | シリーズが見つかりません |  |
+| `not_found:tcg_type` | 種別 | The type | 2 | 種別が見つかりません |  |
+| `not_found:tenant` | テナント | The tenant | 2 | テナントが見つかりません |  |
+| `not_found:weight_class` | 重量クラス | The weight class | 2 | 重量クラスが見つかりません |  |
+| `not_found:archive_target` | アーカイブする対象 | The item to archive | 1 | 対象レコードが見つかりません | 内部の言葉 レコード を日常語にした |
+| `not_found:archive` | アーカイブ | The archive | 1 | アーカイブが見つかりません |  |
+| `not_found:badge` | バッジ | The badge | 1 | バッジが見つかりません |  |
+| `not_found:close_reason` | 理由 | The reason | 1 | 指定された理由が見つかりません |  |
+| `not_found:deal` | 商談 | The deal | 1 | 指定された商談が見つかりません |  |
+| `not_found:message_label` | ラベル | The label | 1 | ラベルが見つかりません |  |
+| `not_found:meta_page` | 接続済みの Facebook ページ | The connected Facebook Page | 1 | 該当する接続済 Page が見つかりません | 内部の言葉 該当する接続済 Page を日常語にした |
+| `not_found:role_commission` | このロールの報酬 | The commission for this role | 1 | 該当ロールの報酬レコードが見つかりません | 内部の言葉 レコード を日常語にした |
+| `not_found:purchase_order` | 仕入注文 | The purchase order | 1 | 仕入注文が見つかりません |  |
+| `not_found:order_item` | 受注明細 | The order line | 1 | 指定された受注明細が見つかりません |  |
+| `not_found:user` | ユーザー | The user | 1 | 指定されたユーザーが見つかりません |  |
+| `not_found:shift` | シフト | The shift | 1 | シフトが見つかりません |  |
+| `not_found:shipping_zone` | ゾーン | The zone | 1 | ゾーンが見つかりません |  |
+| `not_found:shipping_rate` | 料金 | The rate | 1 | 料金が見つかりません |  |
+| `not_found:staff_join_invite` | 招待 | The invitation | 1 | 招待が見つかりません |  |
+| `not_found:staff_report` | レポート | The report | 1 | レポートが見つかりません |  |
+| `not_found:discord_routing` | Discord紐付け | The Discord routing | 1 | routing が見つかりません | 内部の英語名 routing を画面の言葉「Discord紐付け」(superAdmin.suppliersAdmin.discordRouting) にした |
+| `not_found:knowledge_link` | リンク | The link | 1 | リンクが見つかりません |  |
+| `not_found:team_member` | メンバー | The member | 1 | メンバーが見つかりません |  |
+
+- 同じ日本語の名前でも、指す物が違うものはコードを分けた（担当者: 顧客の担当者 `contact` と予定の担当者 `calendar_owner`。チャネル `channel_master` とチャンネル `notification_channel`。仕入元 `supplier_master`（全社の仕入元）と仕入先 `supplier`（各社の仕入先））。言葉は今の文のまま。あとで言い分けたくなったら表の1行だけ直せる。
+- 「変えた理由」が空の行は、今の文の名前のまま（`指定された`・`指定の` だけ外す）。
+
+### 12-6. KGI（便3）と確かめ方
+
+| 基準 | 検証方法 |
+|---|---|
+| C1: サーバーの決まりに合わない文が 647 → 449 に減る | `python tests/test_error_detail_guard.py --write-baseline` の出力が 449 件。W1 の試験3本が緑。基準値の表の差分が 65 ファイルの行の減り（0 になったファイルは行ごと消える）だけ |
+| C2: 67 種類のコードを受けたとき、日本語の画面は §12-4 の型に §12-5 の日本語の名前を入れた文、英語の画面は英語の文を出す | `frontend/src/lib/apiErrorReason.test.ts` に足す試験: 表の全 67 行 × ja/en で、作った文が「型＋名前」と一致し、`{{` やコードの生の値（`not_found:`）を含まない。`frontend/src/lib/api.httpError.test.ts` に足す試験: `request` と `requestForm` それぞれ `not_found:lead` で ja/en の文、`responseDetail` は元のコード |
+| C3: 表に無い対象・今のコードは壊れない | 同じ試験: `not_found:zzz` は `apiError.notFoundUnknown` の文。`not_found`・`company_not_found`・`viewer_already_linked` はそのまま `message`。便2 の2コードは便2 の文のまま |
+| C4: サーバーと表がずれない | 突き合わせ試験を両側に置く（便2 と同じ形）: `backend/tests/test_api_error_reason_sync.py` に「`backend/app` の `"not_found:<x>"` の x がすべて表にある」「表の対象がすべて `backend/app` で使われている」を足す。`frontend/src/lib/apiErrorReason.test.ts` にも同じ2つ。サーバーだけ・画面だけを変えた PR のどちらでも走る |
+| C5: 404 の状態番号で判断している画面の動きが変わらない | `frontend/tests-e2e/order-*.spec.ts` の見本の detail を新しいコードに直し、e2e が緑。`backend/tests/test_staff_me.py:81` を `== "not_found:my_staff_profile"` にして緑 |
+| C6: 本番に入る | Deploy to VPS が成功。本番の画面の JS（`https://app.salesanchor.jp/` が読み込む JS を curl で取る）に en の型の文 `could not be found. Reload the page and try again.` と ja の名前「Discord紐付け」が入っている。サーバーの返事は認証が要るので本番では見ない（CI の C1・C2 で確かめる） |
+| C7: PO が名前を確かめる | PO が §12-5 の表（特に「変えた理由」の 11 行）を読んで○× |
+
+### 12-7. 弊害・トレードオフ
+
+- 文がどの画面でも同じ型になる。画面ごとに言い分けたいときは、その画面が `responseDetail` のコードを見て別の文を出せる。
+- 「画面を読み込み直す」で直らない場合（URL を手で打った・消えた物を指す古いリンク）もある。読み込み直すと一覧に無いことが分かり、次にすることが分かる。
+- このリポジトリの外のプログラムがサーバーの日本語の文を読んで判断していると、動きが変わる。リポジトリの中には 0 件（§12-2）。外のプログラムは未確認。状態番号 404 は変えないので、番号で判断するものは影響を受けない。
+- 画面が `err.message` を出さずに自分の文を出している所（例 `frontend/src/pages/inbox/useInboxState.ts:432` の `inbox.noLead`）は、見た目が変わらない。
+
+### 12-8. 戻し方
+
+- PR の取り込みを戻す（revert）。DB・設定の変更は無い。
+
+### 12-9. 継続
+
+- 新しく「見つからない」を返すときは `not_found:<対象>` を使い、`frontend/src/lib/apiErrorReason.ts` の表に1行と ja/en の名前を足す。表に無い対象は C4 の突き合わせ試験が両側の PR で止める。日本語の文の直書きは W1 が止める。
+- `.github/workflows/e2e.yml` の detect-changes には足さない。サーバーだけを変えた PR は backend の pytest の突き合わせ試験（C4）で止まる（便2 §11-5 B4 と同じ）。
+- W1 の基準値は直した PR の中で下げる（下げないと CI が赤）。
+
+### 12-10. 置き換える 198 か所（ファイル:行 → 新しい detail）
+
+| ファイル:行 | 口 | 今の文 | 新しい detail |
+|---|---|---|---|
+| backend/app/routers/archives.py:93 | POST /archives | 対象レコードが見つかりません | `not_found:archive_target` |
+| backend/app/routers/archives.py:135 | POST /archives/{archive_id}/restore | アーカイブが見つかりません | `not_found:archive` |
+| backend/app/routers/badges.py:105 | POST /badges/award | バッジが見つかりません | `not_found:badge` |
+| backend/app/routers/bots.py:118 | GET /bots/{bot_id} | Botが見つかりません | `not_found:bot` |
+| backend/app/routers/bots.py:218 | PATCH /bots/{bot_id} | Botが見つかりません | `not_found:bot` |
+| backend/app/routers/bots.py:262 | POST /bots/{bot_id}/rotate-key | Botが見つかりません | `not_found:bot` |
+| backend/app/routers/bots.py:298 | DELETE /bots/{bot_id} | Botが見つかりません | `not_found:bot` |
+| backend/app/routers/buyback_prices.py:774 | GET /buyback-prices/{shop_product_id}/history | 指定の商品が見つかりません | `not_found:product` |
+| backend/app/routers/buyback_prices.py:842 | POST /buyback-prices/{shop_product_id}/link | 指定の商品が見つかりません | `not_found:product` |
+| backend/app/routers/calendar.py:234 | GET /calendar/owners | 現在のユーザーに紐づく担当者が見つかりません | `not_found:my_staff_profile` |
+| backend/app/routers/calendar.py:330 | PATCH /calendar/owners/{user_id} | 担当者が見つかりません | `not_found:calendar_owner` |
+| backend/app/routers/calendar.py:381 | PATCH /calendar/owners/{user_id} | 担当者が見つかりません | `not_found:calendar_owner` |
+| backend/app/routers/calendar.py:471 | PATCH /calendar/events/{event_id} | イベントが見つかりません | `not_found:calendar_event` |
+| backend/app/routers/calendar.py:478 | PATCH /calendar/events/{event_id} | イベントが見つかりません | `not_found:calendar_event` |
+| backend/app/routers/calendar.py:551 | DELETE /calendar/events/{event_id} | イベントが見つかりません | `not_found:calendar_event` |
+| backend/app/routers/calendar.py:555 | DELETE /calendar/events/{event_id} | イベントが見つかりません | `not_found:calendar_event` |
+| backend/app/routers/close_reasons.py:116 | PATCH /close-reasons/{reason_id} | 指定された理由が見つかりません | `not_found:close_reason` |
+| backend/app/routers/companies.py:353 | GET /companies/{company_id} | 会社が見つかりません | `not_found:company` |
+| backend/app/routers/companies.py:389 | POST /companies | 指定されたリードが見つかりません | `not_found:lead` |
+| backend/app/routers/companies.py:467 | POST /companies | 指定された商談が見つかりません | `not_found:deal` |
+| backend/app/routers/companies.py:530 | PATCH /companies/{company_id} | 会社が見つかりません | `not_found:company` |
+| backend/app/routers/companies.py:642 | DELETE /companies/{company_id} | 会社が見つかりません | `not_found:company` |
+| backend/app/routers/conditions.py:200 | GET /conditions/{condition_id} | 状態が見つかりません | `not_found:condition` |
+| backend/app/routers/conditions.py:288 | PATCH /conditions/{condition_id} | 状態が見つかりません | `not_found:condition` |
+| backend/app/routers/conditions.py:341 | DELETE /conditions/{condition_id} | 状態が見つかりません | `not_found:condition` |
+| backend/app/routers/conditions.py:544 | GET /conditions/{condition_id}/aliases | 状態が見つかりません | `not_found:condition` |
+| backend/app/routers/conditions.py:579 | POST /conditions/{condition_id}/aliases | 状態が見つかりません | `not_found:condition` |
+| backend/app/routers/conditions.py:621 | DELETE /conditions/aliases/{alias_id} | 別名が見つかりません | `not_found:alias` |
+| backend/app/routers/contact_channel_links.py:138 | GET /contacts/{contact_id}/channel-links | 担当者が見つかりません | `not_found:contact` |
+| backend/app/routers/contacts.py:330 | GET /companies/{company_id}/contacts | 会社が見つかりません | `not_found:company` |
+| backend/app/routers/contacts.py:402 | GET /contacts/{contact_id} | 担当者が見つかりません | `not_found:contact` |
+| backend/app/routers/contacts.py:425 | POST /contacts | 指定の会社が見つかりません | `not_found:company` |
+| backend/app/routers/contacts.py:536 | PATCH /contacts/{contact_id} | 担当者が見つかりません | `not_found:contact` |
+| backend/app/routers/contacts.py:626 | DELETE /contacts/{contact_id} | 担当者が見つかりません | `not_found:contact` |
+| backend/app/routers/conv_logs.py:391 | PATCH /leads/{lead_id}/conv-logs/{log_id} | 会話ログが見つかりません | `not_found:conv_log` |
+| backend/app/routers/conv_logs.py:465 | DELETE /leads/{lead_id}/conv-logs/{log_id} | 会話ログが見つかりません | `not_found:conv_log` |
+| backend/app/routers/conv_logs.py:554 | PUT /admin/channel-masters/{master_id}/visibility | チャネルが見つかりません | `not_found:channel_master` |
+| backend/app/routers/conv_logs.py:594 | DELETE /admin/channel-masters/{master_id} | チャネルが見つかりません | `not_found:channel_master` |
+| backend/app/routers/customer_priority.py:103 | POST /leads/{lead_id}/priority-score/override | リードが見つかりません | `not_found:lead` |
+| backend/app/routers/customer_priority.py:250 | PATCH /leads/{lead_id}/message-labels/{label_id}/override | ラベルが見つかりません | `not_found:message_label` |
+| backend/app/routers/discord_channel_invite.py:90 | POST /discord/channel-invite/{lead_id} | リードが見つかりません | `not_found:lead` |
+| backend/app/routers/discord_remove.py:54 | (関数 _get_lead_discord_info) | リードが見つかりません | `not_found:lead` |
+| backend/app/routers/discord_role_resync.py:62 | POST /discord/sync-role/{lead_id} | リードが見つかりません | `not_found:lead` |
+| backend/app/routers/goals.py:203 | PATCH /goals/{goal_id} | 目標が見つかりません | `not_found:goal` |
+| backend/app/routers/goals.py:243 | DELETE /goals/{goal_id} | 目標が見つかりません | `not_found:goal` |
+| backend/app/routers/inventory_offers.py:700 | PATCH /super-admin/inventory-offers/{offer_id} | 指定されたオファーが見つかりません | `not_found:inventory_offer` |
+| backend/app/routers/inventory_offers.py:762 | DELETE /super-admin/inventory-offers/{offer_id} | 指定されたオファーが見つかりません | `not_found:inventory_offer` |
+| backend/app/routers/invoices.py:230 | GET /invoices/{invoice_id} | 請求書が見つかりません | `not_found:invoice` |
+| backend/app/routers/invoices.py:256 | POST /invoices/from-quote/{quote_id} | 見積もりが見つかりません | `not_found:quote` |
+| backend/app/routers/invoices.py:353 | POST /invoices | 指定された担当者が見つかりません | `not_found:contact` |
+| backend/app/routers/invoices.py:462 | PATCH /invoices/{invoice_id} | 請求書が見つかりません | `not_found:invoice` |
+| backend/app/routers/invoices.py:574 | POST /invoices/{invoice_id}/void | 請求書が見つかりません | `not_found:invoice` |
+| backend/app/routers/invoices.py:644 | POST /invoices/{invoice_id}/paypal-link | 請求書が見つかりません | `not_found:invoice` |
+| backend/app/routers/invoices.py:751 | POST /invoices/{invoice_id}/paypal-confirm | 請求書が見つかりません | `not_found:invoice` |
+| backend/app/routers/leads.py:386 | GET /leads/{lead_id} | リードが見つかりません | `not_found:lead` |
+| backend/app/routers/leads.py:505 | PATCH /leads/{lead_id} | リードが見つかりません | `not_found:lead` |
+| backend/app/routers/leads.py:777 | DELETE /leads/{lead_id} | リードが見つかりません | `not_found:lead` |
+| backend/app/routers/leads.py:820 | POST /leads/{lead_id}/convert | リードが見つかりません | `not_found:lead` |
+| backend/app/routers/leads.py:993 | GET /leads/{lead_id}/messages | リードが見つかりません | `not_found:lead` |
+| backend/app/routers/leads.py:1195 | POST /leads/{lead_id}/messages/mark-read | リードが見つかりません | `not_found:lead` |
+| backend/app/routers/leads.py:1294 | POST /leads/{lead_id}/messages/mark-unread | リードが見つかりません | `not_found:lead` |
+| backend/app/routers/leads.py:1402 | POST /leads/{lead_id}/messages/{message_id}/translate | リードが見つかりません | `not_found:lead` |
+| backend/app/routers/leads.py:1418 | POST /leads/{lead_id}/messages/{message_id}/translate | メッセージが見つかりません | `not_found:message` |
+| backend/app/routers/leads.py:1557 | GET /leads/{lead_id}/messages/{message_id}/attachment-url | リードが見つかりません | `not_found:lead` |
+| backend/app/routers/leads.py:1573 | GET /leads/{lead_id}/messages/{message_id}/attachment-url | メッセージが見つかりません | `not_found:message` |
+| backend/app/routers/leads.py:1799 | POST /leads/{lead_id}/messages | リードが見つかりません | `not_found:lead` |
+| backend/app/routers/leads.py:2451 | POST /leads/{lead_id}/messages/image | リードが見つかりません | `not_found:lead` |
+| backend/app/routers/meta_inbox.py:586 | DELETE /meta/connect/{page_id} | 該当する接続済 Page が見つかりません | `not_found:meta_page` |
+| backend/app/routers/notice_fallback_recipients.py:93 | PUT /notice-fallback-recipients | 会社が見つかりません | `not_found:company` |
+| backend/app/routers/notices.py:98 | POST /notices/{notice_id}/read | 知らせが見つかりません | `not_found:notice` |
+| backend/app/routers/notices.py:107 | POST /notices/{notice_id}/read | 知らせが見つかりません | `not_found:notice` |
+| backend/app/routers/notifications.py:139 | PATCH /notification-channels/{channel_id} | チャンネルが見つかりません | `not_found:notification_channel` |
+| backend/app/routers/notifications.py:155 | DELETE /notification-channels/{channel_id} | チャンネルが見つかりません | `not_found:notification_channel` |
+| backend/app/routers/order_commissions.py:105 | (関数 _ensure_order_exists) | 注文が見つかりません | `not_found:order` |
+| backend/app/routers/order_commissions.py:360 | DELETE /orders/{order_id}/commissions/{role} | 該当ロールの報酬レコードが見つかりません | `not_found:role_commission` |
+| backend/app/routers/order_financials.py:96 | (関数 _ensure_order_exists) | 注文が見つかりません | `not_found:order` |
+| backend/app/routers/order_financials.py:203 | GET /orders/{order_id}/financial | 売上情報が見つかりません | `not_found:order_financial` |
+| backend/app/routers/order_financials.py:225 | PATCH /orders/{order_id}/financial | 売上情報が見つかりません | `not_found:order_financial` |
+| backend/app/routers/order_financials.py:282 | DELETE /orders/{order_id}/financial | 売上情報が見つかりません | `not_found:order_financial` |
+| backend/app/routers/order_purchase_details.py:112 | (関数 _ensure_order_exists) | 注文が見つかりません | `not_found:order` |
+| backend/app/routers/order_purchase_details.py:211 | GET /orders/{order_id}/purchase | 仕入情報が見つかりません | `not_found:order_purchase` |
+| backend/app/routers/order_purchase_details.py:233 | PATCH /orders/{order_id}/purchase | 仕入情報が見つかりません | `not_found:order_purchase` |
+| backend/app/routers/order_purchase_details.py:293 | DELETE /orders/{order_id}/purchase | 仕入情報が見つかりません | `not_found:order_purchase` |
+| backend/app/routers/order_purchase_details.py:335 | PATCH /orders/{order_id}/purchase/status | 仕入情報が見つかりません | `not_found:order_purchase` |
+| backend/app/routers/order_shipping_details.py:82 | (関数 _ensure_order_exists) | 注文が見つかりません | `not_found:order` |
+| backend/app/routers/order_shipping_details.py:203 | GET /orders/{order_id}/shipping | 発送情報が見つかりません | `not_found:order_shipping` |
+| backend/app/routers/order_shipping_details.py:225 | PATCH /orders/{order_id}/shipping | 発送情報が見つかりません | `not_found:order_shipping` |
+| backend/app/routers/order_shipping_details.py:282 | DELETE /orders/{order_id}/shipping | 発送情報が見つかりません | `not_found:order_shipping` |
+| backend/app/routers/order_shipping_details.py:365 | GET /orders/{order_id}/shipping/elogi-csv | 注文が見つかりません | `not_found:order` |
+| backend/app/routers/orders.py:355 | GET /orders/{order_id} | 注文が見つかりません | `not_found:order` |
+| backend/app/routers/orders.py:376 | GET /orders/{order_id}/items | 注文が見つかりません | `not_found:order` |
+| backend/app/routers/orders.py:402 | POST /orders/{order_id}/items | 注文が見つかりません | `not_found:order` |
+| backend/app/routers/orders.py:537 | PATCH /orders/{order_id} | 注文が見つかりません | `not_found:order` |
+| backend/app/routers/orders.py:593 | PATCH /orders/{order_id}/paid | 注文が見つかりません | `not_found:order` |
+| backend/app/routers/orders.py:638 | DELETE /orders/{order_id} | 注文が見つかりません | `not_found:order` |
+| backend/app/routers/own_inventory.py:165 | GET /own-inventory/{own_inventory_id} | 自社在庫が見つかりません | `not_found:own_inventory` |
+| backend/app/routers/own_inventory.py:193 | PATCH /own-inventory/{own_inventory_id} | 自社在庫が見つかりません | `not_found:own_inventory` |
+| backend/app/routers/payment_fee_settings.py:156 | PATCH /payment-fee-settings/{setting_id} | 決済手数料設定が見つかりません | `not_found:payment_fee_setting` |
+| backend/app/routers/payment_fee_settings.py:181 | DELETE /payment-fee-settings/{setting_id} | 決済手数料設定が見つかりません | `not_found:payment_fee_setting` |
+| backend/app/routers/product_categories.py:320 | PATCH /product-categories/{category_id} | 商品カテゴリが見つかりません | `not_found:product_category` |
+| backend/app/routers/product_categories.py:345 | DELETE /product-categories/{category_id} | 商品カテゴリが見つかりません | `not_found:product_category` |
+| backend/app/routers/product_masters.py:138 | PATCH /super-admin/product-masters/{master_id} | マスタが見つかりません | `not_found:product_master` |
+| backend/app/routers/product_masters.py:157 | DELETE /super-admin/product-masters/{master_id} | マスタが見つかりません | `not_found:product_master` |
+| backend/app/routers/products.py:338 | GET /products/{product_id} | 商品が見つかりません | `not_found:product` |
+| backend/app/routers/products.py:460 | PATCH /products/{product_id} | 商品が見つかりません | `not_found:product` |
+| backend/app/routers/products.py:663 | DELETE /products/{product_id} | 商品が見つかりません | `not_found:product` |
+| backend/app/routers/products.py:763 | GET /products/{product_id}/check-inventory | 商品が見つかりません | `not_found:product` |
+| backend/app/routers/purchase_orders.py:84 | (関数 _resolve_tenant_supplier_id) | 指定された仕入先が見つかりません | `not_found:supplier` |
+| backend/app/routers/purchase_orders.py:155 | GET /purchase-orders/{po_id} | 仕入注文が見つかりません | `not_found:purchase_order` |
+| backend/app/routers/purchase_orders.py:197 | POST /purchase-orders | 指定された受注明細が見つかりません | `not_found:order_item` |
+| backend/app/routers/quotes.py:140 | GET /quotes/{quote_id} | 見積もりが見つかりません | `not_found:quote` |
+| backend/app/routers/quotes.py:165 | POST /quotes | 指定された会社が見つかりません | `not_found:company` |
+| backend/app/routers/quotes.py:175 | POST /quotes | 指定された担当者が見つかりません | `not_found:contact` |
+| backend/app/routers/quotes.py:280 | PATCH /quotes/{quote_id} | 見積もりが見つかりません | `not_found:quote` |
+| backend/app/routers/quotes.py:414 | DELETE /quotes/{quote_id} | 見積もりが見つかりません | `not_found:quote` |
+| backend/app/routers/roles.py:277 | PATCH /roles/{role_id} | ロールが見つかりません | `not_found:role` |
+| backend/app/routers/roles.py:349 | DELETE /roles/{role_id} | ロールが見つかりません | `not_found:role` |
+| backend/app/routers/roles.py:400 | GET /roles/{role_id}/permissions | ロールが見つかりません | `not_found:role` |
+| backend/app/routers/roles.py:430 | PUT /roles/{role_id}/permissions | ロールが見つかりません | `not_found:role` |
+| backend/app/routers/roles.py:517 | GET /users/{user_id}/roles | 指定されたユーザーが見つかりません | `not_found:user` |
+| backend/app/routers/shifts.py:114 | DELETE /shifts/{shift_id} | シフトが見つかりません | `not_found:shift` |
+| backend/app/routers/shipping.py:151 | DELETE /shipping/zones/{zone_id} | ゾーンが見つかりません | `not_found:shipping_zone` |
+| backend/app/routers/shipping.py:253 | DELETE /shipping/rates/{rate_id} | 料金が見つかりません | `not_found:shipping_rate` |
+| backend/app/routers/staff.py:205 | GET /staff/me | 現在のユーザに紐づく staff レコードが見つかりません | `not_found:my_staff_profile` |
+| backend/app/routers/staff.py:290 | PATCH /staff/me/profile | 現在のユーザに紐づく staff レコードが見つかりません | `not_found:my_staff_profile` |
+| backend/app/routers/staff.py:351 | (関数 _my_staff_id_and_token) | 現在のユーザに紐づく staff レコードが見つかりません | `not_found:my_staff_profile` |
+| backend/app/routers/staff.py:497 | GET /staff/{staff_id} | スタッフが見つかりません | `not_found:staff` |
+| backend/app/routers/staff.py:561 | PATCH /staff/{staff_id} | スタッフが見つかりません | `not_found:staff` |
+| backend/app/routers/staff.py:646 | DELETE /staff/{staff_id} | スタッフが見つかりません | `not_found:staff` |
+| backend/app/routers/staff_join.py:165 | (関数 _load_open_invite) | 招待が見つかりません | `not_found:staff_join_invite` |
+| backend/app/routers/staff_reports.py:158 | POST /staff-reports/{report_id}/review | レポートが見つかりません | `not_found:staff_report` |
+| backend/app/routers/status_master.py:207 | PATCH /status-master/{entry_id} | ステータスが見つかりません | `not_found:status` |
+| backend/app/routers/status_master.py:232 | DELETE /status-master/{entry_id} | ステータスが見つかりません | `not_found:status` |
+| backend/app/routers/super_admin_aliases.py:171 | PATCH /super-admin/aliases/{alias_id} | aliasが見つかりません | `not_found:alias` |
+| backend/app/routers/super_admin_aliases.py:187 | DELETE /super-admin/aliases/{alias_id} | aliasが見つかりません | `not_found:alias` |
+| backend/app/routers/super_admin_condition_defs.py:129 | PATCH /super-admin/condition-definitions/{def_id} | コンディション定義が見つかりません | `not_found:condition_definition` |
+| backend/app/routers/super_admin_condition_defs.py:162 | DELETE /super-admin/condition-definitions/{def_id} | コンディション定義が見つかりません | `not_found:condition_definition` |
+| backend/app/routers/super_admin_condition_defs.py:182 | GET /super-admin/condition-definitions/{def_id}/links | コンディション定義が見つかりません | `not_found:condition_definition` |
+| backend/app/routers/super_admin_conditions.py:265 | PATCH /super-admin/conditions/{condition_id} | 状態が見つかりません | `not_found:condition` |
+| backend/app/routers/super_admin_conditions.py:289 | DELETE /super-admin/conditions/{condition_id} | 状態が見つかりません | `not_found:condition` |
+| backend/app/routers/super_admin_conditions.py:507 | DELETE /super-admin/conditions/aliases/{alias_id} | 別名が見つかりません | `not_found:alias` |
+| backend/app/routers/super_admin_dex.py:153 | PATCH /super-admin/dex/{dex_kind}/{entry_id} | 図鑑エントリが見つかりません | `not_found:dex_entry` |
+| backend/app/routers/super_admin_dex.py:173 | DELETE /super-admin/dex/{dex_kind}/{entry_id} | 図鑑エントリが見つかりません | `not_found:dex_entry` |
+| backend/app/routers/super_admin_knowledge.py:158 | PATCH /super-admin/knowledge/{rule_id} | ルールが見つかりません | `not_found:knowledge_rule` |
+| backend/app/routers/super_admin_knowledge.py:174 | DELETE /super-admin/knowledge/{rule_id} | ルールが見つかりません | `not_found:knowledge_rule` |
+| backend/app/routers/super_admin_note_master.py:222 | PATCH /super-admin/note-master/{note_id} | 備考マスタが見つかりません | `not_found:note_master` |
+| backend/app/routers/super_admin_note_master.py:244 | DELETE /super-admin/note-master/{note_id} | 備考マスタが見つかりません | `not_found:note_master` |
+| backend/app/routers/super_admin_payment_fee_settings.py:146 | PATCH /super-admin/payment-fee-settings/{setting_id} | 決済手数料設定が見つかりません | `not_found:payment_fee_setting` |
+| backend/app/routers/super_admin_payment_fee_settings.py:168 | DELETE /super-admin/payment-fee-settings/{setting_id} | 決済手数料設定が見つかりません | `not_found:payment_fee_setting` |
+| backend/app/routers/super_admin_product_categories.py:318 | PATCH /super-admin/product-categories/{category_id} | 商品カテゴリが見つかりません | `not_found:product_category` |
+| backend/app/routers/super_admin_product_categories.py:341 | DELETE /super-admin/product-categories/{category_id} | 商品カテゴリが見つかりません | `not_found:product_category` |
+| backend/app/routers/super_admin_product_formats.py:141 | PATCH /super-admin/product-formats/{format_id} | フォーマットが見つかりません | `not_found:product_format` |
+| backend/app/routers/super_admin_product_formats.py:164 | PUT /super-admin/product-formats/{format_id}/games | フォーマットが見つかりません | `not_found:product_format` |
+| backend/app/routers/super_admin_product_formats.py:234 | DELETE /super-admin/product-formats/{format_id} | フォーマットが見つかりません | `not_found:product_format` |
+| backend/app/routers/super_admin_product_kinds.py:123 | PATCH /super-admin/product-kinds/{kind_id} | 大分類が見つかりません | `not_found:product_kind` |
+| backend/app/routers/super_admin_product_kinds.py:156 | DELETE /super-admin/product-kinds/{kind_id} | 大分類が見つかりません | `not_found:product_kind` |
+| backend/app/routers/super_admin_product_lines.py:123 | PATCH /super-admin/product-lines/{line_id} | 小分類が見つかりません | `not_found:product_line` |
+| backend/app/routers/super_admin_product_lines.py:166 | DELETE /super-admin/product-lines/{line_id} | 小分類が見つかりません | `not_found:product_line` |
+| backend/app/routers/super_admin_quantity_units.py:140 | PATCH /super-admin/quantity-units/{unit_id} | 数量単位が見つかりません | `not_found:quantity_unit` |
+| backend/app/routers/super_admin_quantity_units.py:186 | DELETE /super-admin/quantity-units/{unit_id} | 数量単位が見つかりません | `not_found:quantity_unit` |
+| backend/app/routers/super_admin_quantity_units.py:206 | GET /super-admin/quantity-units/{unit_id}/links | 数量単位が見つかりません | `not_found:quantity_unit` |
+| backend/app/routers/super_admin_status_master.py:249 | PATCH /super-admin/status-master/{entry_id} | ステータスが見つかりません | `not_found:status` |
+| backend/app/routers/super_admin_status_master.py:272 | DELETE /super-admin/status-master/{entry_id} | ステータスが見つかりません | `not_found:status` |
+| backend/app/routers/super_admin_suppliers.py:220 | PATCH /super-admin/suppliers/{supplier_id} | 仕入元が見つかりません | `not_found:supplier_master` |
+| backend/app/routers/super_admin_suppliers.py:245 | DELETE /super-admin/suppliers/{supplier_id} | 仕入元が見つかりません | `not_found:supplier_master` |
+| backend/app/routers/super_admin_suppliers.py:624 | DELETE /super-admin/suppliers/discord-routing/{routing_id} | routing が見つかりません | `not_found:discord_routing` |
+| backend/app/routers/super_admin_suppliers.py:731 | GET /super-admin/suppliers/{supplier_id}/extraction-rules | 仕入元が見つかりません | `not_found:supplier_master` |
+| backend/app/routers/super_admin_suppliers.py:802 | PATCH /super-admin/suppliers/{supplier_id}/extraction-rules | 仕入元が見つかりません | `not_found:supplier_master` |
+| backend/app/routers/super_admin_suppliers.py:971 | POST /super-admin/suppliers/{supplier_id}/knowledge-links | 仕入元が見つかりません | `not_found:supplier_master` |
+| backend/app/routers/super_admin_suppliers.py:1025 | DELETE /super-admin/suppliers/{supplier_id}/knowledge-links/{link_id} | リンクが見つかりません | `not_found:knowledge_link` |
+| backend/app/routers/super_admin_tcg.py:130 | PATCH /super-admin/tcg/series/{series_id} | シリーズが見つかりません | `not_found:tcg_series` |
+| backend/app/routers/super_admin_tcg.py:146 | DELETE /super-admin/tcg/series/{series_id} | シリーズが見つかりません | `not_found:tcg_series` |
+| backend/app/routers/super_admin_tcg.py:231 | PATCH /super-admin/tcg/types/{type_id} | 種別が見つかりません | `not_found:tcg_type` |
+| backend/app/routers/super_admin_tcg.py:250 | DELETE /super-admin/tcg/types/{type_id} | 種別が見つかりません | `not_found:tcg_type` |
+| backend/app/routers/super_admin_tenants.py:61 | DELETE /super-admin/tenants/{tenant_id} | テナントが見つかりません | `not_found:tenant` |
+| backend/app/routers/super_admin_tenants.py:124 | DELETE /super-admin/tenants/{tenant_id}/physical | テナントが見つかりません | `not_found:tenant` |
+| backend/app/routers/super_admin_units.py:203 | PATCH /super-admin/units/{unit_id} | 単位が見つかりません | `not_found:unit` |
+| backend/app/routers/super_admin_units.py:226 | DELETE /super-admin/units/{unit_id} | 単位が見つかりません | `not_found:unit` |
+| backend/app/routers/super_admin_units.py:300 | DELETE /super-admin/units/aliases/{alias_id} | 別名が見つかりません | `not_found:alias` |
+| backend/app/routers/super_admin_weight_classes.py:123 | PATCH /super-admin/weight-classes/{class_id} | 重量クラスが見つかりません | `not_found:weight_class` |
+| backend/app/routers/super_admin_weight_classes.py:156 | DELETE /super-admin/weight-classes/{class_id} | 重量クラスが見つかりません | `not_found:weight_class` |
+| backend/app/routers/suppliers.py:256 | GET /suppliers/{supplier_id} | 仕入先が見つかりません | `not_found:supplier` |
+| backend/app/routers/suppliers.py:299 | PATCH /suppliers/{supplier_id} | 仕入先が見つかりません | `not_found:supplier` |
+| backend/app/routers/suppliers.py:330 | DELETE /suppliers/{supplier_id} | 仕入先が見つかりません | `not_found:supplier` |
+| backend/app/routers/tcg_distribution.py:124 | GET /tcg/distribution/targets/{target_id} | 配信先が見つかりません | `not_found:distribution_target` |
+| backend/app/routers/tcg_distribution.py:147 | PUT /tcg/distribution/targets/{target_id} | 配信先が見つかりません | `not_found:distribution_target` |
+| backend/app/routers/tcg_distribution.py:162 | DELETE /tcg/distribution/targets/{target_id} | 配信先が見つかりません | `not_found:distribution_target` |
+| backend/app/routers/tcg_line_import.py:371 | GET /tcg/line-import/{import_job_id} | import_job が見つかりません | `not_found:line_import_job` |
+| backend/app/routers/tcg_line_import.py:443 | (関数 _resolve_supplier_impl) | import_job が見つかりません | `not_found:line_import_job` |
+| backend/app/routers/tcg_line_import.py:603 | POST /tcg/line-import/{import_job_id}/commit | import_job が見つかりません | `not_found:line_import_job` |
+| backend/app/routers/teams.py:93 | GET /teams/{team_id} | チームが見つかりません | `not_found:team` |
+| backend/app/routers/teams.py:159 | PATCH /teams/{team_id} | チームが見つかりません | `not_found:team` |
+| backend/app/routers/teams.py:208 | DELETE /teams/{team_id} | チームが見つかりません | `not_found:team` |
+| backend/app/routers/teams.py:234 | GET /teams/{team_id}/members | チームが見つかりません | `not_found:team` |
+| backend/app/routers/teams.py:266 | POST /teams/{team_id}/members | チームが見つかりません | `not_found:team` |
+| backend/app/routers/teams.py:328 | DELETE /teams/{team_id}/members/{user_id} | メンバーが見つかりません | `not_found:team_member` |
+| backend/app/routers/units.py:177 | PATCH /units/{unit_id} | 単位が見つかりません | `not_found:unit` |
+| backend/app/routers/units.py:202 | DELETE /units/{unit_id} | 単位が見つかりません | `not_found:unit` |
