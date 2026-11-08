@@ -353,15 +353,15 @@ PO 承認: 成功条件 G12（§2）。便5 の着手は PO が 2026-11-07「1�
 ### 3.13 便8: 残りの部品を決められた部品に差し替える（G26〜G30・2026-11-08）
 
 確かめた事実（行番号は origin/main 36ea9b7b2）:
-- R8-1: 小窓のボタン 4 つは生の `<button className="modal-icon-btn">`。詳しくの小窓: 直す `frontend/src/pages/schedule/SchedulePageImpl.tsx:308-317`・消す `:318-327`（`modal-icon-btn--danger`）・閉じる `:328-330`。その日の一覧の小窓: 閉じる `:744-746`。絵は `SCHEDULE_POPOVER_ICONS`（`:250-252`・`:735`）で `size={18}`。見た目は `frontend/src/components.css:362-385`（36px＝`--space-9`・丸・地は透明・乗せると `--bg-hover`・消すは乗せると `--danger-bg`）。`.modal-icon-btn` を使うのはこの 4 つだけ（2026-11-08 に `frontend/src` 全体を grep。他は `frontend/src/tokens.css:81` の説明の文だけ）。決められたボタンの部品 `frontend/src/components/Button.tsx` は `variant="ghost"`（地は透明・文字は `--text-primary`・乗せると `--bg-subtle`・`frontend/src/components/Button.css:83-103`）と `iconOnly`（36px＝`--size-icon-btn`・`Button.css:149-155`・`frontend/src/tokens.css:167`）を持ち、`aria-label` と `title` はそのまま渡る（`Button.tsx:236`・`:262-263`）。同じ画面の上の帯は既に `<Button variant="ghost" size="sm" iconOnly ...>` を使っている（`SchedulePageImpl.tsx:1388`）。
+- R8-1: 小窓のボタン 4 つは生の `<button className="modal-icon-btn">`。詳しくの小窓: 直す `frontend/src/pages/schedule/SchedulePageImpl.tsx:308-317`・消す `:318-327`（`modal-icon-btn--danger`）・閉じる `:328-330`。その日の一覧の小窓: 閉じる `:744-746`。絵は `SCHEDULE_POPOVER_ICONS`（`:250-252`・`:735`）で `size={18}`。見た目は `frontend/src/components.css:362-385`（36px＝`--space-9`・丸・地は透明・乗せると `--bg-hover`・消すは乗せると `--danger-bg`）。`.modal-icon-btn` を使うのはこの 4 つだけ（2026-11-08 に `frontend/src` 全体を grep。他は `frontend/src/tokens.css:81` の説明の文だけ）。決められたボタンの部品 `frontend/src/components/Button.tsx` は `variant="ghost"`（地は透明・文字は `--text-primary`・乗せると `--bg-subtle`・`frontend/src/components/Button.css:83-103`）と `iconOnly`（36px＝`--size-icon-btn`・`Button.css:149-155`・`frontend/src/tokens.css:167`）を持ち、`aria-label` と `title` はそのまま渡る（`aria-label` は `Button.tsx:54`・`:67`、`title` を含む残りは `...rest` で `:55`・`:68`）。同じ画面の上の帯は既に `<Button variant="ghost" size="sm" iconOnly ...>` を使っている（`SchedulePageImpl.tsx:1388`）。
 - R8-2: 知らせの帯の × は生の `<button className="schedule-banner__close">×</button>`（`SchedulePageImpl.tsx:1532-1538`）で、中身は文字の「×」。見た目は `frontend/src/pages/schedule.css:1026-1032`。帯は `?connected=true`／`false` で開いた時に出る（`SchedulePageImpl.tsx:1012-1020`）。帯は横並び（flex）ではない（`schedule.css:1034-1041`・`frontend/src/components.css:698-706`）。
-- R8-3: 種類の札は生の `<span className="schedule-category-chip" style={{ background: cssVar(meta.tintVar), color: cssVar(meta.textVar) }}>`（`SchedulePageImpl.tsx:298-304`）。色は `frontend/src/features/schedule/calendars.config.ts:23-73` に 7 種類 × 3 つ＝21 個の直書き（`colorVar`・`tintVar`・`textVar`）。`colorVar` はどこからも読まれていない。`tintVar`・`textVar` を読むのは `:301` だけ。`cssVar`（`calendars.config.ts:82-84`）は値をそのまま返すだけで、使うのは `:301` だけ。ダークの時も明るい色のまま出る（直書きのため）。決められた札の部品 `frontend/src/components/Badge.tsx` は 6 色（neutral・info・success・warning・danger・purple）を持ち、色はトークン（`Badge.css:324-329`・ライトとダークの両方がある）。札の試験 `calendars.config.test.ts` は文言キーだけを見る。
+- R8-3: 種類の札は生の `<span className="schedule-category-chip" style={{ background: cssVar(meta.tintVar), color: cssVar(meta.textVar) }}>`（`SchedulePageImpl.tsx:298-304`）。色は `frontend/src/features/schedule/calendars.config.ts:23-73` に 7 種類 × 3 つ＝21 個の直書き（`colorVar`・`tintVar`・`textVar`）。`colorVar` はどこからも読まれていない。`tintVar`・`textVar` を読むのは `:301` だけ。`cssVar`（`calendars.config.ts:82-84`）は値をそのまま返すだけで、使うのは `:301` だけ。ダークの時も明るい色のまま出る（直書きのため）。決められた札の部品 `frontend/src/components/Badge.tsx` は 6 色（neutral・info・success・warning・danger・purple）を持ち、色はトークン（soft の 6 色は `Badge.css:71-76`・ライトとダークの両方がある）。札の試験 `calendars.config.test.ts` は文言キーだけを見る。
 - R8-4: 持ち主の色が無い時の色 `DEFAULT_OWNER_COLOR = "#1a73e8"`（`frontend/src/pages/schedule/schedule-owner.ts:34`）。使う所は `normalizeOwner`（同 `:43`）・`getOwnerMeta`（`SchedulePageImpl.tsx:218`）・見本帳（`frontend/src/components/CalendarView.stories.tsx:5`・`:118-119`）。持ち主の色の正本はサーバー: 色が無い時は `backend/app/routers/calendar.py:50` の `_DEFAULT_OWNER_COLOR = "#1a73e8"` で必ず埋めて返す（`:243`・`:250`・`:269`・`:368`・`:377`・`:392`）。同じ色のトークン `--calendar-google-blue`（ライト `#1a73e8`・ダーク `#8ab4f8`・`frontend/src/index.css:184`・`:385`）が在る。金型 CalendarView は色を css の変数に入れるだけ（`frontend/src/components/CalendarView.tsx:261-262`）なので `var(...)` の文字でも効く。設定の画面の色の欄 `<input type="color" value={owner.color}>`（`frontend/src/pages/schedule/ScheduleSettingsPage.tsx:145-148`・`:198-201`）は `#` の 6 桁でないと黒になるので、`normalizeOwner` の色に `var(...)` を入れてはいけない。
 - R8-5: 消す規則を使う所は他に無い（`.modal-icon-btn` は R8-1・`.schedule-category-chip` と `.schedule-banner__close` は `SchedulePageImpl.tsx` だけ。2026-11-08 に `frontend/src` 全体を grep）。
 
 作り方（A 組・決められた部品がそのまま使える所）:
 1. 小窓のボタン 4 つ（G26）: `<Button variant="ghost" size="md" iconOnly aria-label=... title=... onClick=...>` にする。中身の絵と `size={18}` は今のまま。大きさは今と同じ 36px（`size="md"`）。消すボタンも `ghost`。
-2. 帯の ×（G27）: `<Button variant="ghost" size="sm" iconOnly aria-label={t("common.close")} layoutClassName="schedule-banner__close" onClick=...>` にし、中身を `SCHEDULE_POPOVER_ICONS.close`（`size={16}`）にする。`schedule.css` の `.schedule-banner__close` は置き場所の 2 行 `margin-left: var(--space-3); vertical-align: middle;` だけにする（`layoutClassName` は外側の置き場所専用の口・`Button.tsx:232-233`）。
+2. 帯の ×（G27）: `<Button variant="ghost" size="sm" iconOnly aria-label={t("common.close")} layoutClassName="schedule-banner__close" onClick=...>` にし、中身を `SCHEDULE_POPOVER_ICONS.close`（`size={16}`）にする。`schedule.css` の `.schedule-banner__close` は置き場所の 2 行 `margin-left: var(--space-3); vertical-align: middle;` だけにする（`layoutClassName` は外側の置き場所専用の口・`Button.tsx:37-38`）。
 3. 種類の札（G28）: `CalendarMeta` に `badgeVariant: BadgeVariant` を足し、`colorVar`・`tintVar`・`textVar` と `cssVar` を消す。札は `<Badge variant={meta.badgeVariant} size="md">{t(meta.labelKey)}</Badge>`。色の対応は会議=info・個人=purple・仕入れ=success・発送=danger・請求=warning・リリース=neutral・祝日=purple（今の色に一番近い色の組。祝日と個人は同じ紫になる）。
 4. 持ち主の色が無い時（G29）: `DEFAULT_OWNER_COLOR` を `"var(--calendar-google-blue)"` にする（画面に描く時だけの色）。`normalizeOwner` の `|| DEFAULT_OWNER_COLOR` は消し `owner.color` だけにする（正本はサーバーで、必ず埋めて返す・R8-4）。
 5. 消す規則（G30）: `frontend/src/components.css:362-385` の `.modal-icon-btn` の 3 つ（直前の説明の 1 行も）と `schedule.css:381-389` の `.schedule-category-chip`。`frontend/src/tokens.css:81` の説明の文の「（.modal-icon-btn 等）」は消す。
@@ -383,6 +383,7 @@ B 組（決められた部品が形に合わない所・今回は変えない・
 - 札の色が少し変わる（例: 会議は `#e8f0fe` の地→`--info-bg` `#bee3f8`）: 決められた色に揃えるのが目的。ダークでも暗い地の色になる（今は明るい地のまま）。
 - 帯の × が 28px の丸になり、帯が少し高くなる: 押しやすくなる。帯の文字の並びは変えない。
 - サーバーが色を空で返すと、設定の画面の色の欄が黒になる: サーバーは必ず埋める（R8-4 の 6 か所）。今の画面の表示でも `getOwnerMeta` が持ち主の無い時に色を補う形は残る。
+- 試験の作り物の持ち主は `color: null`（`frontend/src/pages/schedule/SchedulePageImpl.test.tsx:54-55`）なので、直した後は `normalizeOwner` が null をそのまま返す。画面の色は `getOwnerMeta`（`SchedulePageImpl.tsx:218`）の `??` で補われるので、既存の試験は変わらない。
 
 ### 3.4 祝日の出どころ（2026-11-06 に確かめて決めた）
 
@@ -577,3 +578,14 @@ B 組（決められた部品が形に合わない所・今回は変えない・
 - (3) ○ 1・2 回目に ○ だった所は変わっていない。
 - 推奨 1 件と直したこと: 見出しの判定の行は `:95-98`（判定式 :95-96・止める if :98）→ カードを `:95-98` に直した。
 - 残る未確認: stylelint と tsc（実装の CI で確かめる）。
+
+### 11 回目（便8・G26〜G30）: 1 回目 REVISE（2026-11-08 10:13〜10:15 UTC・クラウドの Opus・origin/release/schedule-mold-bin8 b225e7513・セッション cse_01HHUUpRoDXmriDdcK7fvqzm）
+
+- 結果は返事の本文で全部読んだ（途中で切れていない）。
+- (1) ○ カードの行番号と「前」のコードは 36ea9b7b2 の実物と一字一句同じ。:938 は `SchedulePage`（:922〜）の中の `banner` の useState。
+- (2) ○ Button は variant・size・iconOnly・layoutClassName を持ち、title は `...rest` で渡る。`size="md"` は大きさの class を付けない（`frontend/src/components/buttonAppearance.ts:39`）。Badge は `BadgeVariant` を export（`Badge.tsx:16`）。`SCHEDULE_POPOVER_ICONS` は先頭で import 済み（:27）。消す名前を使う所はカードの所だけ。
+- (3) ○ G29 は 0＋21＋1＋0＝22 件。カードどおりで 0 件。stories は 0 件のまま。
+- (4) ○ apiEvent（test:142）・view（:104）・MemoryRouter（:3）・answers（:31）で (a)〜(e) が書ける。帯は loading の判定より前に描かれる（Impl:1529）。
+- (5) × 必須 2 件と直したこと: R8-1 と作り方 2 の `Button.tsx:236`・`:262-263`・`:232-233` は実物（74 行）に無い → `aria-label` は `:54`・`:67`、`title` を含む残りは `...rest` で `:55`・`:68`、`layoutClassName` は `:37-38` に直した。R8-3 の `Badge.css:324-329` は実物（85 行）に無い → soft の 6 色は `:71-76` に直した。
+- 推奨 1 件と直したこと: 試験の作り物の持ち主は `color: null`（test:54-55）で、直した後の `normalizeOwner` は null を返す → 「心配と対処」に、画面の色は `getOwnerMeta:218` の `??` で補われ既存の試験は変わらないと足した。
+- 未確認とされた 1 件の確かめ: features 層から components を import してよいか → `frontend/eslint.config.js:120-131` の `no-restricted-imports` は lucide-react だけを止める。前例は `frontend/src/features/tcg-distribution/DistributionPreview.tsx` など 5 件以上（2026-11-08 grep）。
