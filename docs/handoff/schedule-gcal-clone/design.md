@@ -4,6 +4,7 @@
 実装の承認: PO はこのセッションの冒頭で「PRマージ、デプロイまで完走させてくれ」、3 択で「3」（違いもまとめて設計し直してから全部いっしょに作る）と指示した。設計審査の APPROVE と便ごとのカードが揃った便から作る。
 追加（2026-11-07）: 見た目 5 か所の成功条件 G15〜G19 は **PO 承認済み**（PO 原文「１，」＝「この決め方で設計を進める」を選択）。作り方は §3.8・便6。設計審査は §9 の 4 回目（REVISE）・5 回目（**APPROVE**）。
 追加（2026-11-08）: 便8（残りの部品を決められた部品に差し替える・G26〜G30）は PO の選択「1」（2026-11-08）。作り方は §3.13。設計審査は §9 の 11 回目。
+追加（2026-11-09）: 便9（月表示・詳しくの小窓と一覧の時刻を Google の形に・G31〜G35）は PO の選択「1、2」（2026-11-08）で設計した。作り方は §3.14。設計審査は §9 の 12 回目（APPROVE）。G31〜G35 の承認と実装はまだ（PO の承認待ち）。
 根拠: `docs/handoff/schedule-gcal-clone/recon.md`（以下 recon）。前の設計 `docs/handoff/schedule-gcal-alignment/design.md`（K1〜K14）を引き継ぎ、便2（K8〜K11）はこの設計に入れ直す。
 
 ## 1. 目的
@@ -664,3 +665,11 @@ ADR の改訂: ADR-1065 の決まり 7 は「`'schedule'` は時間割のとき�
 - (4) × 必須 1 件と直したこと: ADR-1065 の決まり 7 は「`'schedule'` は時間割のときだけ」 → §3.14 に「ADR の改訂」（PO 承認の後に便9 の PR で 1 文足す・索引を作り直す）を足し、便9 の行と戻し方にも書いた。
 - 推奨 2 件と直したこと: 作り方 1 に `dayCellContent` の引数 `(arg: { date: Date; isToday: boolean })` を書いた。作り方 5 に `SchedulePageImpl.tsx:56` の読み込みの付け替えを書いた。
 - schedule-utils の `formatTimeRange` を使うのは 2 か所だけで、専用の試験は無い（審査の grep）。
+
+### 12 回目（便9・G31〜G35）: 2 回目 APPROVE（2026-11-08 15:28〜15:29 UTC・クラウドの Opus・origin/release/schedule-gcal-visual-diff-design 3169bb07d・セッション cse_01HHUUpSQJA9hhx3dQN7t8uG）
+
+- 結果は返事の本文で全部読んだ（途中で切れていない）。
+- (1) ○ npm pack した 6.1.22 で、点の形は `hasListItemDisplay`（`internal.js:133-139`）、帯の予定は `fc-daygrid-block-event`（`:146`）、点の形の予定は `fc-daygrid-dot-event`（`:157`）。css で帯の予定の点だけが消え、点の形の予定には点が出る。点の色を地の色に替える規則は時間割だけ（`frontend/src/components/CalendarView.css:247-249`）。終日の予定は今の中身のまま（`frontend/src/components/CalendarView.tsx:149-165`）。予定の画面は `renderEventContent` を渡していない（grep 0 件）。ADR の改訂と推奨 2 件も直っている。
+- (2) ○ G33 の受入れ・選ばなかった案・ADR の改訂・戻し方・便9 の行が互いに合う。
+- (3) ○ 直しは design.md だけ。1 回目に ○ だった所は変わっていない。
+- 指摘なし。
