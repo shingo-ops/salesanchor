@@ -416,7 +416,7 @@ PO 2026-11-09「1、2」の 2（設計に無かった見た目の違いを直す
    - `.comp-calendar__title` の `overflow: hidden; text-overflow: ellipsis`
    終日の予定は今の中身（`renderContent` の今の分かれ道）のまま。日をまたぐ時刻のある予定は帯の枠と地のまま、中の文字だけ 1 行になる。
 4. 詳しくの小窓（G34）: `frontend/src/pages/schedule/SchedulePageImpl.tsx:273-274` を `const timeLabel = item ? formatSearchResultLine(item, t, i18n.language) : "";` の 1 つにし、`:340` の `schedule-popover__date` の行と `dateLabel` を消す。`frontend/src/pages/schedule.css:409` の `.schedule-popover__date,` を消す。
-5. 一覧の表示（G35）: `:831` を `{item.allDay ? t("schedule.allDay") : formatEventTimeRange(item.start, item.end, t, false)}`にする。読み込みは `frontend/src/pages/schedule/SchedulePageImpl.tsx:56` の `formatTimeRange,`（`./schedule-utils` から）を消し、`import { formatTimeRange as formatEventTimeRange } from "../../components/calendarView.utils";` を足す（`schedule-utils.ts:1` と同じ名前の付け方）。`:274` も作り方 4 で消えるので、ページから schedule-utils の `formatTimeRange` を読む所は 0 になる。これで schedule-utils の `formatTimeRange` を使う所が 0 になるので、関数と、その試験があれば試験も消す（実装の前に grep で 0 を確かめる）。
+5. 一覧の表示（G35）: `:831` を `{item.allDay ? t("schedule.allDay") : formatEventTimeRange(item.start, item.end, t, false)}`にする。読み込みは `frontend/src/pages/schedule/SchedulePageImpl.tsx:56` の `formatTimeRange,`（`./schedule-utils` から）を消し、`import { formatTimeRange as formatEventTimeRange } from "../../components/calendarView.utils";` を足す（`frontend/src/pages/schedule/schedule-utils.ts:1` と同じ名前の付け方）。`:274` も作り方 4 で消えるので、ページから schedule-utils の `formatTimeRange` を読む所は 0 になる。これで schedule-utils の `formatTimeRange` を使う所が 0 になるので、関数と、その試験があれば試験も消す（実装の前に grep で 0 を確かめる）。
 
 B 組（金型を変える必要がある・または何を正とするか PO が決める所。今回は変えない）:
 - 作る小窓: Google は幅約 600px・角の丸み 28px・題名の欄は下線だけで 22px・行の高さ 40px・下のボタンは「その他のオプション」と青い「保存」（保存が右）。アプリは幅 320px・角の丸み 8px・題名は丸い枠の 13.6px・行の高さ 28px・「保存」「キャンセル」（保存が左）。題名の「下線だけ」の形は欄の部品 `TextFieldControl` に無く、足すには部品を変える（ADR-144・PO の承認が要る）。幅・丸み・行の高さは `--schedule-popover-width`（`frontend/src/pages/schedule.css:7` と `frontend/src/tokens.css:409` の 2 か所に同じ名前で在る＝直す時に 1 か所にする）と欄の大きさの金型（`--field-h-sm` 28px・`--field-h-md` 36px）に関わる。
@@ -663,7 +663,7 @@ ADR の改訂: ADR-1065 の決まり 7 は「`'schedule'` は時間割のとき�
 - (2) × 必須 1 件と直したこと: 点の形の条件は 6.1.22 の `internal.js:133-139`（終わりは含まない数え方）で、作り方 3 の「同じ日」と食い違う → 金型では判定せず、終日でない月の予定に点を描き、帯の予定は css `.fc-daygrid-block-event .fc-daygrid-event-dot { display: none; }` で隠す形に直した。G33 の受入れと「選ばなかった案」も直した。
 - (3) ○ G31〜G35 は数値・文字・要素の個数で ○× を決められる。
 - (4) × 必須 1 件と直したこと: ADR-1065 の決まり 7 は「`'schedule'` は時間割のときだけ」 → §3.14 に「ADR の改訂」（PO 承認の後に便9 の PR で 1 文足す・索引を作り直す）を足し、便9 の行と戻し方にも書いた。
-- 推奨 2 件と直したこと: 作り方 1 に `dayCellContent` の引数 `(arg: { date: Date; isToday: boolean })` を書いた。作り方 5 に `SchedulePageImpl.tsx:56` の読み込みの付け替えを書いた。
+- 推奨 2 件と直したこと: 作り方 1 に `dayCellContent` の引数 `(arg: { date: Date; isToday: boolean })` を書いた。作り方 5 に `frontend/src/pages/schedule/SchedulePageImpl.tsx:56` の読み込みの付け替えを書いた。
 - schedule-utils の `formatTimeRange` を使うのは 2 か所だけで、専用の試験は無い（審査の grep）。
 
 ### 12 回目（便9・G31〜G35）: 2 回目 APPROVE（2026-11-08 15:28〜15:29 UTC・クラウドの Opus・origin/release/schedule-gcal-visual-diff-design 3169bb07d・セッション cse_01HHUUpSQJA9hhx3dQN7t8uG）
