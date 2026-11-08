@@ -378,16 +378,6 @@
   letter-spacing: 0.08em;
 }
 
-.schedule-category-chip {
-  display: inline-flex;
-  align-items: center;
-  width: fit-content;
-  min-height: 1.5rem;
-  padding: 0 var(--space-2);
-  border-radius: var(--radius-full);
-  font-size: var(--font-xs);
-}
-
 .schedule-popover__actions {
   display: inline-flex;
   align-items: center;
@@ -1025,10 +1015,7 @@
 
 .schedule-banner__close {
   margin-left: var(--space-3);
-  border: none;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
+  vertical-align: middle;
 }
 
 .success-banner {

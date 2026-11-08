@@ -17,6 +17,24 @@ const LOCALES: Array<[string, unknown]> = [
   ["en", en],
 ];
 
+describe("CALENDARS badgeVariant and colors (G29)", () => {
+  it("maps each calendar to its badge variant", () => {
+    expect(Object.fromEntries(CALENDARS.map((c) => [c.id, c.badgeVariant]))).toEqual({
+      meeting: "info",
+      personal: "purple",
+      procurement: "success",
+      shipping: "danger",
+      billing: "warning",
+      release: "neutral",
+      holiday: "purple",
+    });
+  });
+
+  it("holds no hex color", () => {
+    expect(JSON.stringify(CALENDARS)).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
+  });
+});
+
 describe("CALENDARS labelKey has non-empty text in both ja and en", () => {
   const cases = CALENDARS.flatMap((meta) =>
     LOCALES.map(([lang, dict]) => ({
