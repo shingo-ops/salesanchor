@@ -101,7 +101,7 @@ const CALENDAR_EVENTS_API = /^\/api\/v1\/calendar\/events$/;
     await page.goto("/inventory");
     expect((await inv).status(), "在庫表の API の応答").toBeLessThan(400);
     await expect(page.locator("main")).toBeVisible();
-    await expect(page.locator("main .sa-loading-block")).toHaveCount(0);
+    await expect(page.locator("main [data-testid=inventory-loading]")).toBeHidden();
     await expect(page.locator(NO_ERROR_BANNER)).toHaveCount(0);
     await expect(page.locator(".error-message")).toHaveCount(0);
   });
@@ -142,7 +142,8 @@ const CALENDAR_EVENTS_API = /^\/api\/v1\/calendar\/events$/;
   - `GET /api/v1/leads` の返事が配列であること（`backend/app/routers/leads.py:214-217` の `list[LeadResponse]`）。
   - InventoryPage・LeadEditPage・SchedulePage が開いただけで GET 以外を送らないこと。
   - エラーの出方は画面ごとに違う（審査 2026-11-08 の指摘。生出力 `/tmp/CC報告ファイル/recon-produi-15.txt`）。在庫表は `.error-message`（`frontend/src/pages/inventory/InventoryPage.tsx:549`）、リードの詳細も `.error-message`（`frontend/src/pages/leads/LeadEditPage.tsx:147`）。S4 と同じく `.error-banner` と `.error-message` の両方が 0 件であることを見る。予定表は読み込み中が `.schedule-loading`（`SchedulePageImpl.tsx:876`）、失敗が `.schedule-error`（`SchedulePageImpl.tsx:1525`）なので、この 2 つが 0 件であることを見る。
-  - 予定表は開くと `GET /api/v1/shifts` も呼ぶ（`SchedulePageImpl.tsx:961`）。`shifts.view` が要る（`backend/app/routers/shifts.py:83-84`）。点検用の人の役割「点検用（見るだけ）」は `shifts.view` を持つ（`/tmp/CC報告ファイル/checker-perms.txt:2`、本番の読み取り 2026-11-07）。403 の console.error で S12 が落ちることは無い。
+  - 在庫表の読み込み中の表示は `LoadingBlock` ではなく、いつも置いてある `data-testid="inventory-loading"` の箱（`frontend/src/pages/inventory/InventoryPage.tsx:632-640`）。読み込み中だけ `visibility: visible`、終わると `hidden`。数は常に 1 なので、S10 は件数でなく `toBeHidden()` で読み込みの終わりを見る（審査 2 回目の指摘）。リードの詳細は `LoadingBlock`（class `sa-loading-block`、`frontend/src/components/LoadingBlock.tsx:18`・`LeadEditPage.tsx:149`）なので S11 は件数 0 で見る。
+  - 予定表は開くと `GET /api/v1/shifts` も呼ぶ（`SchedulePageImpl.tsx:961`）。`shifts.view` が要る（`backend/app/routers/shifts.py:55-56`）。点検用の人の役割「点検用（見るだけ）」は `shifts.view` を持つ（`/tmp/CC報告ファイル/checker-perms.txt:2`、本番の読み取り 2026-11-07）。403 の console.error で S12 が落ちることは無い。
   - リードの番号は失敗の文に出さない（公開リポジトリの実行記録に残るため。ADR-1053 と同じ考え）。上のコードは道すじの形と状態の番号だけを出す。
 
 ## 5. 選ばなかった案
