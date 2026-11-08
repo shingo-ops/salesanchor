@@ -1297,40 +1297,60 @@ K31・K33・K34・K35 は第6版のまま。K35 は○（§14-10-10）。
 観測事実（2026-11-08 09:00〜09:40 JST）:
 - 定期実行は agent-console の dataDir の routines.json の 1 か所に持つ。AI は `node "<dataDir>/bin/ac-routine.mjs" add|update|enable|disable|list` で触る（agent-console 6aaba26 README.md「ac-routine の使い方」）。開始が他の有効な定期実行・予約と 60 分未満なら 400。有効な定期実行の開始は 09:00（月〜金）・11:00・12:00（毎日）・13:00（火・木）・14:00・16:00（月）。03:30 は空いている（`ac-routine.mjs list` の結果）。
 - probe が走るきっかけは、件を開いたとき（t1）とサーバーの起動（t2）だけ（agent-console 6aaba26 server/case-say-probe-wiring.ts:139-146・:182-190）。×の後 24 時間の待ちが明けても、時計で走り直す仕組みは無い。予約が待ちで捨てられる（server/case-say-probe.ts:296-300）。
-- サーバーの再起動は `launchctl kickstart -k gui/<uid>/local.agent-console.server`（scripts/lib/ac-common.sh:30・:499）。件の本体は専用の tmux の中で動き、再起動で止まらない（README.md「keep-sessions」）。チャットの送信の予約はメモリだけで、再起動で消える（README.md「v0.13.0」）。
+- サーバーの再起動は `launchctl kickstart -k gui/<uid>/local.agent-console.server`（名前は scripts/lib/ac-common.sh:30、再起動は同 :499）。件の本体は専用の tmux の中で動き、再起動で止まらない（README.md「keep-sessions」）。チャットの送信の予約はメモリだけで、再起動で消える（README.md「v0.13.0」）。
 - ×の後の材料は監査 agent-console の dataDir の routine-audit.jsonl の `action: "caseClaudeVersionProbe"` の行に残る: `outcome`・`failedCheck`・`counts`・`paneSamples`（画面の写し 4KiB×最大 4）・`claudeVersion`・`startedAt`・`endedAt`（server/case-say-probe.ts:584-599）。
 - `failCount` は ○ でしか 0 に戻らない。3 回で止まった後は、直した版を入れても probe は走らない（server/case-say-probe.ts:321-328・:619-628。記録には MAC があり、手で書き換えない）。
 
-見回りの手順（毎日 03:30 JST。読む物は版の記録の `claudeVersion`・`usable`・`lastResult`・`failCount`・`lastProbeAt` と、記録の外側の `runningVersionProbe` の有無だけ。MAC の欄・鍵は読まない。記録は書かない）:
+見回りの手順（毎日 03:30 JST。読む物は版の記録の各項目の `sha256`・`size`・`real`・`claudeVersion`・`usable`・`lastResult`・`failCount`・`lastProbeAt` と、記録の外側の `runningVersionProbe` の有無だけ。MAC の欄・鍵は読まない。記録は書かない）:
 
-| 場合 | 見分け方 | すること |
-|---|---|---|
-| A 使える | 今の `claude --version` の版の項目が `usable: true` | 「点検済み ○ <版>」と返して終える |
-| B 待ち時間中 | `usable: false`・`failCount` 1〜2・`lastProbeAt` から 24 時間たっていない | 「待ち時間中（<日本時間> から確かめ直せます）」と返して終える |
-| C 確かめ直す | 項目が無い、または `usable: false`・`failCount` 0〜2・24 時間たった・`lastProbeAt` の時刻が本書のどこかに書いてある（調べた×）・その節の直しの版が `/healthz` の版以下 | probe が動いていない（`runningVersionProbe` が無い）ことを確かめ、サーバーを再起動する（t2）。1 分ごとに `lastProbeAt` を読み、変わるまで最大 15 分待つ。変われば A か D へ。変わらなければ「枠が空かず未実施」と返して終える |
-| D 新しい× | `usable: false`・`lastProbeAt` の時刻が本書のどこにも無い | 下の「×の後の進め方」 |
-| E 止まった | `failCount` 3 以上 | `NEEDS_DECISION:` で PO に聞き、自分を `disable` する（理由つき）。3 回で止まると、直しても probe が走らないため（上の観測事実の 5 つ目） |
+今の claude の決め方: `command -v claude` の実体（シンボリックリンクをたどった先）の `shasum -a 256` と大きさ。probe も同じ実体を確かめ（server/case-say-probe-wiring.ts:46・:184-186）、使えるかは `sha256` と `size` の一致で決まる（server/case-say-versions.ts:207-210）。その `sha256` の項目を「項目」と呼ぶ。版の名前では見分けない。
 
-×の後の進め方（D）:
+×の名前: `lastResult` が E1〜E4・P0〜P5・R1 のどれか。24 時間の待ちと 3 回で止める規則は、この×の名前のときだけ効く（server/case-say-probe.ts:320-328）。`aborted`・`audit_failed`・`revoked` は待たずに次のきっかけで走る（同 :324・:624・:632、server/case-say-versions.ts:277）。
+
+上から順に見て、最初に当たった行だけを行う:
+
+| 順 | 場合 | 見分け方 | すること |
+|---|---|---|---|
+| 1 | 確かめ中 | `runningVersionProbe` がある | 「確かめ中」と返して終える（再起動しない） |
+| 2 | A 使える | 項目があり `usable: true` | 「点検済み ○ <版>」と返して終える |
+| 3 | E 止まった | 項目の `lastResult` が×の名前で `failCount` 3 以上 | 下の「×の後の進め方」の 1 だけ行い、`NEEDS_DECISION:` で PO に聞き、自分を `disable` する（理由つき）。直しても probe が走らないため（上の観測事実の 5 つ目） |
+| 4 | D 新しい× | 項目の `lastResult` が×の名前で、`lastProbeAt` が下の「調べた×の一覧」に無い | 下の「×の後の進め方」 |
+| 5 | B 待ち時間中 | 項目の `lastResult` が×の名前で、`lastProbeAt` から 24 時間たっていない | 「待ち時間中（<日本時間> から確かめ直せます）」と返して終える |
+| 6 | F 反映待ち | 項目の `lastResult` が×の名前で、一覧の「直しの版」が `/healthz` の版より新しい | 「直しの反映待ち」と返して終える。同じ×で 3 日続いたら `BLOCKED:` |
+| 7 | C 確かめ直す | 上のどれでもない（項目が無い・`aborted`・`audit_failed`・`revoked`・一覧にある×で直しが入り 24 時間たった） | 下の「確かめ直し」 |
+
+調べた×の一覧（D で節を書くたびに 1 行足す。C・D・F の見分けの正本）:
+
+| `lastProbeAt` | 版 | `lastResult` | 節 | 直しの版 |
+|---|---|---|---|---|
+| 2026-11-07T17:34:31Z | 2.1.319 | P3 | §14-14-16 | v0.55.2 |
+
+確かめ直し（C）:
+1. 再起動の直前に `runningVersionProbe` をもう一度読み、あれば 1 に戻って「確かめ中」で終える。
+2. サーバーを再起動する（t2）。1 分ごとに項目の `lastProbeAt` を読み、変わるまで最大 15 分待つ。
+3. 変われば、上の表を頭からやり直す（A か D か E になる）。
+4. 変わらなければ、再起動の後の監査の `caseClaudeVersionNotice` の行（`reason`・`claudeVersion` だけ）を読み、理由を分けて返す。n5 は記録に書けない（server/case-say-probe.ts:301-306）、n4 で `E4` は指紋が取れない（同 :288-293）、どれも無ければ空き枠が足りない（同 :307）か、待ちで捨てられた（同 :296-300）。どの場合も `BLOCKED:` で、読んだ行を添える。
+
+×の後の進め方（D。E のときは 1 だけ）:
 1. 監査の最後の `caseClaudeVersionProbe` の行を node で読み、`failedCheck`・`counts`・`paneSamples` を `/tmp/CC報告ファイル/case-probe-watch/<日付>/` に生のまま残す（鍵・token の欄は無い。読めない・行が無いときは `BLOCKED:`）。
 2. クラウドで、本物の同じ版の claude を件と同じ起動の形で動かし、×の形を再現して原因を切り分ける（§14-14-16 と同じやり方。件の画面・PO の件は読まない）。
-3. 本書に新しい節（§14-14-18 以降）を書く。節には、その×の `lastProbeAt` の時刻をそのまま書く（C・D の見分けに使う）。
+3. 本書に新しい節（§14-14-18 以降）を書き、上の「調べた×の一覧」に 1 行足す（直しの版は、決まった時点で書く）。
 4. 設計の審査をクラウドで受ける（APPROVE まで最大 3 回。3 回で通らなければ `NEEDS_DECISION:`）。
-5. 直しが次の範囲に収まるときだけ続ける: agent-console の server/case-say-probe.ts の、送る文・待ち方・画面の数え方。E1〜E4・P0〜P5・R1 の○×の条件を緩める直し、24 時間・3 回の規則、記録・鍵・MAC、hooks・見張り・許可に触る直しは `NEEDS_DECISION:`。
+5. 直しが次の範囲に収まるときだけ続ける: agent-console の server/case-say-probe.ts の、送る文と画面の数え方。次は `NEEDS_DECISION:`: 待ち時間・回数・枠の定数（`PROBE_TOTAL_MS`・`PROBE_P0_MS`〜`PROBE_P3_QUIET_MS`・`PROBE_RETRY_AFTER_FAIL_MS`・`PROBE_MAX_FAILS`・`PROBE_FREE_SLOTS`）を変える直し、E1〜E4・P0〜P5・R1 の○×の条件を緩める直し、記録・鍵・MAC、hooks・見張り・許可に触る直し。
 6. カード → クラウドの実装役 → CI → マージ前の審査役（opus） → マージ → タグ → agent-console の scripts/ac-update.sh で反映。反映した日の翌日以降の見回りで C になり、確かめ直す。
 7. どこかで止まったら、そこまでの事実を返して `BLOCKED:` か `NEEDS_DECISION:` で終える（閉じずに残る。agent-console README.md「自動クローズ」）。
 
 変わらない物: agent-console の製品コード、E1〜E4・P0〜P5・R1 の条件、24 時間・3 回の規則、記録・MAC、通知 n1〜n6 の文、hooks・見張り・許可。
 
-成功条件（この直しの分）:
+成功条件（この直しの分。「該当なし」は○でも×でもなく、そう書く）:
 
 | 基準 | 検証方法 |
 |---|---|
 | K60 見回りが登録されている | `ac-routine.mjs list` に名前「Claude版の確かめ 毎日見回り」・`enabled: true`・`weekdays` 0〜6・`timeHHmm` 03:30・`closeWhenIdle: true`・役割 opus-designer |
-| K61 初回（2026-11-09 03:30）が C で確かめ直す | 定期実行の履歴に 11/9 03:30 の `sent`、版の記録の `lastProbeAt` が 2026-11-08T17:34:31Z より後 |
-| K62 A・B の日は何も変えずに閉じる | 履歴の `closed` と返事の先頭（「点検済み」か「待ち時間中」） |
-| K63 D のとき、人の操作なしで材料の保存と新しい節の起案まで進む | 最初に D になった日に、`/tmp/CC報告ファイル/case-probe-watch/<日付>/` の生の材料と本書の新しい節（その `lastProbeAt` の時刻入り）がある |
-| K64 同じ理由の×が 2 回目から 0 回（PO 2026-11-01 の基準） | D の節ごとに、直しの反映後の確かめで同じ `failedCheck` が出ないこと（30 日） |
+| K61 初回（2026-11-09 03:30）が C で確かめ直す（その時点の記録は一覧の 1 行目で、直しの版 v0.55.2 は反映済み・24 時間は 11/9 02:34 に明ける） | ○: 定期実行の履歴に 11/9 03:30 の `sent` があり、項目の `lastProbeAt` が 2026-11-07T17:34:31Z から変わった。×: 変わらない（返事の `BLOCKED:` の理由を書く） |
+| K62 A・B・F・確かめ中の日は何も変えずに閉じる | 履歴の `closed` と返事の先頭（「点検済み」「待ち時間中」「直しの反映待ち」「確かめ中」のどれか） |
+| K63 D のとき、人の操作なしで材料の保存と新しい節の起案まで進む | D の日ごとに、`/tmp/CC報告ファイル/case-probe-watch/<日付>/` の生の材料と、一覧の新しい行・新しい節がある。D が 1 回も無ければ該当なし |
+| K64 同じ理由の×が 2 回目から 0 回（PO 2026-11-01 の基準） | 一覧の行ごとに、直しの反映後の確かめで同じ版・同じ `lastResult` の行が増えないこと（30 日）。一覧が 1 行目だけなら、その行で判定する
 
 残る危険:
 - U19 再起動でチャットの送信の予約が消える。C のときだけ再起動し（×1 回につき 1 回）、時刻を人が少ない 03:30 にする。
@@ -1342,3 +1362,9 @@ K31・K33・K34・K35 は第6版のまま。K35 は○（§14-10-10）。
 外部事例: 該当事例なし。理由: 自作の仕組みの中の、自分の確かめの失敗を自分で見回る手順で、確かめは実際の記録の数で行う（§14-14-10 と同じ）。
 
 この節を入れた後の手作業（Opus 本体）: `ac-routine.mjs add` で見回りを登録する。この会話の中だけの一回の見張り（11/9 03:17）は、見回りと二重に再起動しないよう消す。
+
+審査の記録（§14-14-17）:
+
+| 回 | 日時（UTC） | 結果 | 要点 |
+|---|---|---|---|
+| 1 | 2026-11-08 00:37 | REVISE | 必須 4: 見分け表の漏れ（aborted 等・3 回後の aborted・反映前）→ 順に当てる表と「調べた×の一覧」に直した。「確かめ直せば必ず lastProbeAt が変わる」は誤り → 変わらない理由を監査で分けて BLOCKED: に直した。直しの範囲の「待ち方」→ 定数を変える直しを NEEDS_DECISION: に直した。K61・K63・K64 の判定 → 該当なしの扱いと○×を書いた。推奨 2（再起動の直前の読み直し・指紋で見分ける）も入れた。照合 12 行合致・1 行（ac-common.sh:30 は名前の行）を書き分けた |
