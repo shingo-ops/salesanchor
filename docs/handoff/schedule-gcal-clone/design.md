@@ -589,3 +589,11 @@ B 組（決められた部品が形に合わない所・今回は変えない・
 - (5) × 必須 2 件と直したこと: R8-1 と作り方 2 の `Button.tsx:236`・`:262-263`・`:232-233` は実物（74 行）に無い → `aria-label` は `:54`・`:67`、`title` を含む残りは `...rest` で `:55`・`:68`、`layoutClassName` は `:37-38` に直した。R8-3 の `Badge.css:324-329` は実物（85 行）に無い → soft の 6 色は `:71-76` に直した。
 - 推奨 1 件と直したこと: 試験の作り物の持ち主は `color: null`（test:54-55）で、直した後の `normalizeOwner` は null を返す → 「心配と対処」に、画面の色は `getOwnerMeta:218` の `??` で補われ既存の試験は変わらないと足した。
 - 未確認とされた 1 件の確かめ: features 層から components を import してよいか → `frontend/eslint.config.js:120-131` の `no-restricted-imports` は lucide-react だけを止める。前例は `frontend/src/features/tcg-distribution/DistributionPreview.tsx` など 5 件以上（2026-11-08 grep）。
+
+### 11 回目（便8・G26〜G30）: 2 回目 APPROVE（2026-11-08 10:19〜10:20 UTC・クラウドの Opus・origin/release/schedule-mold-bin8 01297f23b・セッション cse_01HHUUpSDWn2RtGhc6fkiQ6x）
+
+- 結果は返事の本文で全部読んだ（途中で切れていない）。
+- (1) ○ 36ea9b7b2 の実物で `aria-label` は `Button.tsx:54`・`:67`、`...rest` は `:55`・`:68`、`layoutClassName` は `:37-38`。soft の 6 色は `Badge.css:71-76`。
+- (2) ○ 試験の持ち主は test:54-55 で 2 人とも `color: null`。Impl:218 は `owner?.color ?? DEFAULT_OWNER_COLOR`。frontend/src の試験に色の値を見る所は 0 件。`eslint.config.js:120-131` は lucide-react だけを止め、層の止め（no-restricted-paths・boundaries）は 0 件。features から components を import する file は 39 件（DistributionPreview.tsx:13-14 を含む）。
+- (3) ○ 直しは design.md だけ（15 行足し・3 行消し）。カードの「前」のコード・G29 の 22 件・試験の書き方は触っていない。
+- 指摘なし。
