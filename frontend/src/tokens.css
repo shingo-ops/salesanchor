@@ -428,6 +428,7 @@
   --schedule-row-step: 16px;         /* 1時間の高さの刻み（G23） */
   --schedule-visible-hours: 13;      /* 時間割に見せたい時間数（G23・Google の実測） */
   --schedule-row-fit: calc(100cqh / var(--schedule-visible-hours)); /* 時間割の見える高さ÷時間数。使う所の容器で決まる */
+  --role-color-dot-size: 12px;   /* ロール一覧の色の丸（完成イメージ実測 12px） */
 
   /* ---- Schedule category colors (Google Calendar handoff) ---- */
   --cal-personal:        #1e3a8a;  --cal-personal-tint: #e9edf7;  --cal-personal-text: #1e3a8a;
