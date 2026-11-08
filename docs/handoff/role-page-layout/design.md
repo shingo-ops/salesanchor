@@ -7,7 +7,7 @@
 | ADR | 新規なし。理由: 画面の配置だけの直しで、新しい仕組みの決定を含まない。高さの作り方は `frontend/src/tokens.css:247-254` の既存の決まりに従う |
 | PO の決定 | 2026-11-08 の3点（recon §0）。スマホは Android 側が対応し、ここでは記録だけ |
 | 完成イメージ | https://claude.ai/artifact/EpTEWEwpePki7C52Krcdb3（案2。左の一覧は最初の案と同じ） |
-| 危険 PR か | いいえ。`migrations/`・`deploy.yml`・本番 `scripts/` を含まない。DB・API・許可の意味は変えない |
+| 危険 PR か | いいえ。`migrations/`・`.github/workflows/deploy.yml`・本番 `scripts/` を含まない。DB・API・許可の意味は変えない |
 
 ## 0. 目的
 
@@ -45,8 +45,8 @@
 変更しない:
 
 - API・DB・許可の一覧・保存の中身（`savePermissions`・`cancelEdits` の処理）。
-- 3択の切替と表の中身（`RolesPage.tsx:379-458`）。
-- 管理センターの外枠（`hub-shell.css`）と `PageLayout`。
+- 3択の切替と表の中身（`frontend/src/pages/roles/RolesPage.tsx:379-458`）。
+- 管理センターの外枠（`frontend/src/hub-shell.css`）と `PageLayout`。
 - 新規作成・編集・削除の小窓。
 - 左の見出しの文言（今の「ロール・権限管理」）と「＋新規」の位置。
 
@@ -82,7 +82,7 @@
 
 - `SubMenu` は `import { SubMenu } from "../../components/SubMenu";`。
 - 字下げの計算（`level`）は消す。並び順は今と同じ（API `/roles` の順）。
-- 色はデータ（`roles.color`）なので、インラインの `background` だけを使う。今の `RolesPage.tsx:327` と同じ扱い。
+- 色はデータ（`roles.color`）なので、インラインの `background` だけを使う。今の `frontend/src/pages/roles/RolesPage.tsx:327` と同じ扱い。
 
 ### 3-2. 色の丸の決まり
 
@@ -163,7 +163,7 @@
 
 ### 3-4. 保存の段（表の下）
 
-`RolesPage.tsx:369-376` の「変更をキャンセル」と「変更を保存」を見出しから外す。`RolesPage.tsx:460-465` の注意書きと一緒に、`.role-perm-sections` の閉じタグの直後に置く:
+`frontend/src/pages/roles/RolesPage.tsx:369-376` の「変更をキャンセル」と「変更を保存」を見出しから外す。`frontend/src/pages/roles/RolesPage.tsx:460-465` の注意書きと一緒に、`.role-perm-sections` の閉じタグの直後に置く:
 
 ```tsx
 <div className="role-perm-footer">
@@ -224,7 +224,7 @@
 ### 3-6. 消すもの
 
 - `frontend/src/pages-layout.css` の `.roles-list`（469-473）、`.role-item`・`:hover`・`.active`・`.active:hover`・`.role-item-name`・`.role-item-meta`（474-508）。使うのはロール画面だけ（recon §3）。
-- `RolesPage.tsx` の冒頭の説明（4-11 行）の「上部のキャンセル/保存ボタン」を「表の下の保存の段」に直す。
+- `frontend/src/pages/roles/RolesPage.tsx` の冒頭の説明（4-11 行）の「上部のキャンセル/保存ボタン」を「表の下の保存の段」に直す。
 
 ## 4. 代わりの案と選んだ理由
 
@@ -248,15 +248,16 @@
 
 - 色・寸法の直書きは CI の CSS 検査が止める。
 - 左の一覧は `SubMenu` の金型に乗るので、見た目の直しは金型1か所で全部に効く。
+- 守り手: CI の「Lint & Dark Mode Check (ADR-067)」（`npm run check:all` の css-values・stylelint・dark-parity）が毎回走り、直書きの色・寸法を止める。金型の見た目は `frontend/src/components/SubMenu.test.tsx` が CI の frontend 試験で毎回確かめる。
 
-## 8. 外部事例
+## 8. 外部・過去事例の参照と我々への応用
 
 - 不要。理由: 管理センターの左メニュー（`SubMenu`）と、他の画面の高さの連鎖（`PageLayout`）という同じアプリの中の実物に合わせる直しで、外の事例で決める点が無い。
 
 ## 9. 自己審査（Opus・同じ AI による審査）
 
-- 既存の決まりとの整合: 高さは `tokens.css:247-254` の形。金型は `SubMenu`。色はデータの値だけ。→ 合う。
-- 根拠: 原因は `hub-shell.css:83-88` と `RolesPage.tsx:302` の実物で確かめた。
+- 既存の決まりとの整合: 高さは `frontend/src/tokens.css:247-254` の形。金型は `SubMenu`。色はデータの値だけ。→ 合う。
+- 根拠: 原因は `frontend/src/hub-shell.css:83-88` と `frontend/src/pages/roles/RolesPage.tsx:302` の実物で確かめた。
 - 受入の検証: 全部が本番の画面・DOM・DB の数で○×を付けられる。
 - 実装の範囲: §2 の5ファイル＋ docs。処理の中身は変えない。
 - 判定: APPROVE（設計合格）。未解決: なし。

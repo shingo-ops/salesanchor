@@ -31,9 +31,9 @@
 ## 3. 左のロール一覧の今の作り（事実）
 
 - `frontend/src/pages/roles/RolesPage.tsx:314-336`。`<ul className="roles-list">` の中に、ロールごとの `<button className="role-item">`。
-- 並び順の数（priority）から字下げを計算し、`marginLeft: level*16px` で木の形にしている（`RolesPage.tsx:318-324`）。
-- 色は左の 4px の線（`RolesPage.tsx:327`）。選ばれた行は `--accent` の塗り（`frontend/src/pages-layout.css:490-494`）。
-- `.role-item` と `.roles-list` を使うのはロール画面だけ（`git grep` で `RolesPage.tsx` と `pages-layout.css` 以外に無い）。
+- 並び順の数（priority）から字下げを計算し、`marginLeft: level*16px` で木の形にしている（`frontend/src/pages/roles/RolesPage.tsx:318-324`）。
+- 色は左の 4px の線（`frontend/src/pages/roles/RolesPage.tsx:327`）。選ばれた行は `--accent` の塗り（`frontend/src/pages-layout.css:490-494`）。
+- `.role-item` と `.roles-list` を使うのはロール画面だけ（`git grep` で `frontend/src/pages/roles/RolesPage.tsx` と `pages-layout.css` 以外に無い）。
 
 ## 4. 完成イメージの左の一覧（事実）
 
@@ -45,15 +45,15 @@
 
 ## 5. 使える金型（ADR-144）
 
-- `SubMenu`（`frontend/src/components/SubMenu.tsx`）: 縦に平らに並ぶ一覧。`variant="flat"`、`icon` の場所あり、`onChange` で押した行を知らせる「リモコン型」（`SubMenu.tsx:93-118`）。選ばれた行は `--sidebar-item-active-bg` の塗り＋太字（`frontend/src/components/SubMenu.css` の `.comp-subnav__item--active`）。管理センターの左メニューと同じ部品。
+- `SubMenu`（`frontend/src/components/SubMenu.tsx`）: 縦に平らに並ぶ一覧。`variant="flat"`、`icon` の場所あり、`onChange` で押した行を知らせる「リモコン型」（`frontend/src/components/SubMenu.tsx:93-118`）。選ばれた行は `--sidebar-item-active-bg` の塗り＋太字（`frontend/src/components/SubMenu.css` の `.comp-subnav__item--active`）。管理センターの左メニューと同じ部品。
 - `ListRow` は丸い画像（顔写真の大きさ）を持つスマホ用の1行で、12px の色の丸には合わない。
-- 色の丸の金型は無い。近いのは `--notice-unread-dot-size: 8px`（`frontend/src/tokens.css:242`）、`--schedule-now-dot-size: 12px`（`tokens.css:426`）。どちらも別の画面用の名前。
-- ロールの色は DB の `roles.color`（API `/roles` の `color`）。画面で色を決めず、この値をそのまま使う（今も `RolesPage.tsx:327` と `:348` で同じく使っている）。
+- 色の丸の金型は無い。近いのは `--notice-unread-dot-size: 8px`（`frontend/src/tokens.css:242`）、`--schedule-now-dot-size: 12px`（`frontend/src/tokens.css:426`）。どちらも別の画面用の名前。
+- ロールの色は DB の `roles.color`（API `/roles` の `color`）。画面で色を決めず、この値をそのまま使う（今も `frontend/src/pages/roles/RolesPage.tsx:327` と `:348` で同じく使っている）。
 
 ## 6. 保存ボタンの今の場所（事実）
 
-- 右の見出しの右端 `roles-main-actions` に、編集・削除・変更をキャンセル・変更を保存が並ぶ（`RolesPage.tsx:361-376`）。
-- 表の下には、変更があるときだけ黄色の注意書き `unsaved-banner` が出る（`RolesPage.tsx:460-465`。`position: sticky; bottom: 0` は `frontend/src/pages-layout.css:624-634`）。
+- 右の見出しの右端 `roles-main-actions` に、編集・削除・変更をキャンセル・変更を保存が並ぶ（`frontend/src/pages/roles/RolesPage.tsx:361-376`）。
+- 表の下には、変更があるときだけ黄色の注意書き `unsaved-banner` が出る（`frontend/src/pages/roles/RolesPage.tsx:460-465`。`position: sticky; bottom: 0` は `frontend/src/pages-layout.css:624-634`）。
 - 完成イメージでは「元に戻す」と「保存する」が並んで1組になっている。
 
 ## 7. スマホ幅
@@ -63,5 +63,5 @@
 
 ## 8. 試験
 
-- ロール画面の画面試験は無い（`frontend/src/pages/roles/` は `rolePermissionRows.test.ts` だけ）。
+- ロール画面の画面試験は無い（`frontend/src/pages/roles/` は `frontend/src/pages/roles/rolePermissionRows.test.ts` だけ）。
 - 新しい CSS 変数を足すと、PR 本文の「デザイントークン変更時」の点検表が必要になる（`frontend/scripts/check-new-tokens.js`）。
