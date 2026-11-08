@@ -359,31 +359,6 @@
   flex-shrink: 0;
 }
 
-/* ヘッダー内アイコンボタン（ゴミ箱・閉じる） */
-.modal-icon-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--space-9);
-  height: var(--space-9);
-  border: none;
-  background: transparent;
-  border-radius: var(--radius-full);
-  cursor: pointer;
-  color: var(--text-muted);
-  transition: background var(--transition-fast), color var(--transition-fast);
-}
-
-.modal-icon-btn:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
-}
-
-.modal-icon-btn--danger:hover {
-  background: var(--danger-bg);
-  color: var(--danger);
-}
-
 .modal h3 {
   font-size: var(--font-lg);
   margin: 0 0 var(--space-5);
