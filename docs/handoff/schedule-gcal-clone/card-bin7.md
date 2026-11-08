@@ -30,7 +30,7 @@
 | `frontend/src/pages/schedule.css` | 規則 1 つを足す（§6-3） |
 | `frontend/src/locales/ja.json`・`en.json` | キー 3 つ（§7） |
 | `frontend/src/components/CalendarView.test.tsx`・`frontend/src/pages/schedule/schedule-utils.test.ts`・`frontend/src/pages/schedule/SchedulePageImpl.test.tsx` | 試験（§8） |
-| `frontend/scripts/check-page-layout.js` | `SUBTITLE_ALLOWLIST`（`:27-32`）の末尾に `'schedule/SchedulePageImpl', // 予定の画面: 上の帯を 1 段（PO 2026-11-08・design §3.12）` を 1 行足すだけ。他は変えない（§6-2 #8 で説明の文を消すと `:94` の検査が落ちるため） |
+| `frontend/scripts/check-page-layout.js` | `SUBTITLE_ALLOWLIST`（`:28-33`）の末尾に `'schedule/SchedulePageImpl', // 予定の画面: 上の帯を 1 段（PO 2026-11-08・design §3.12）` を 1 行足すだけ。他は変えない（§6-2 #8 で説明の文を消すと `:94` の検査が落ちるため） |
 | `docs/specs/design-system/component-ssot/page-title/design.md` | 口の追加を 1 行記録（§9） |
 | .claude-pipeline/active-work.d/release-schedule-gcal-topbar-bin7.md | 台帳（new-worktree.sh が作る形のまま・状態を更新） |
 
