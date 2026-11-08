@@ -180,6 +180,7 @@
 | 4 | 2026-11-08 | クラウドの Opus（便2 §11 と card-bin2.md） | 止まった（判定なし） | 審査役が写しをフォルダごと消す命令を使い、クラウドの見張りに止められた → 依頼文に「消す命令は使わず、毎回新しい場所に mkdir と git archive で写しを作る」を足して出し直した |
 | 5 | 2026-11-08 | クラウドの Opus（便2 §11 と card-bin2.md。カードどおりに写しで試しに置き換え） | REVISE | 実測: 置き換え 92 件 47 ファイル・基準値 647 件 105 ファイル・tsc の新しい誤り 0・vitest 14 緑・pytest の見張り3本と突き合わせ2本が緑。直し: (1) 必須: 試験2ファイルの日本語の名前と期待値が `local/no-japanese-literal` の警告 13 件になり、記録の前の点検（`--max-warnings=0`）で止まる → 試験の名前を英語にし、日本語の期待値は ja.json から読む形にした（§3-6・§3-8） (2) 手順3の「出力が空」は説明のコメント4行が残るので成り立たない → その4行だけ許す書き方にした (3) 手順 6d に `--config vitest.unit.config.ts --project unit` を足した |
 | 6 | 2026-11-08 | Opus（自分の確かめ。対象 commit 098c59610 の実装と実行記録） | 直しの成立を確認 | 5回目の3つの直しが実装で成り立った: (1) eslint の警告 0（rc=0）・試験の名前は英語・ja の期待値は ja.json から読む (2) 手順3の残りは決めた説明のコメント4行だけ (3) vitest 14 緑（unit の設定で実行）。サーバー側の差分は置き換え 92 行だけ・基準値 647 件 105 ファイル。コードの審査はマージ前の reviewer（opus）が別に行う |
+| 7 | 2026-11-08 | クラウドの Opus（読むだけ。便3 §12。対象 commit ab93c2eff） | REVISE | 実測: 198 行は実物と食い違い 0・既存コードとぶつかり無し・置き換え後 449 件 93 ファイルで 65 ファイルが減るだけ。直し: (1) 必須: C5 の e2e は `.github/workflows/e2e.yml:251` の `if: false` で CI で走らない → 判定を pytest と vitest にし、e2e の見本は合わせて直すだけにした (2) C6 の「Discord紐付け」は今の ja.json に既にある → 今の辞書に無い3つの文で確かめる形にした (3) en の名前が2組重なっていた → `supplier_master` を The supplier master entry、`notification_channel` を The notification channel にした (4) §12-3 に i18next の `:` の扱いを書いた |
 
 - 1回目の §9 の未確認（../backend を読めるか）は、2回目で確認済みになった
 
@@ -290,6 +291,7 @@
 
 - サーバー: 198 か所の detail を `not_found:<対象>` の文字列に置き換える（§12-10）。状態番号は変えない。W1 は `:` を含む識別子の形を違反にしない。
 - 画面: `frontend/src/lib/apiErrorReason.ts` に「対象 → 名前の文言キー」の表（67 行）を足し、`not_found:` で始まる detail を `apiError.notFound`（名前を差し込む型の文）にする。表に無い対象は `apiError.notFoundUnknown`（名前なしの文）にする。コードの生の値は画面に出さない（ADR-1071 What 3）。`frontend/src/lib/api.ts` の2か所は、この結果で文を作る（関数を1つにまとめ、2か所から呼ぶ）。
+- i18next ではキーの中の `:` が名前空間の区切りになる。だから detail をそのまま `i18n.t` に渡さない。`not_found:` の後ろを対象として切り出し、表から名前のキーを引いてから `i18n.t("apiError.notFound", { target: i18n.t(<名前のキー>) })` で文を作る。
 - `not_found`（`:` なし）や `company_not_found` などの今のコードは `not_found:` で始まらないので、今までどおりそのまま `message` に入る。
 - 選ばなかった案: (a) 名前ごとに 67 個のコードを作る（`lead_not_found` など）→ 便2 の表に 67 行と文 67 個が増え、型の文を1か所で直せない。(b) 名前をサーバーから文字で送る（`{"reason": "not_found", "target": "リード"}`）→ 名前の言葉がサーバーに残り、英語にできない（ADR-1071 What 4）。(c) 「見つかりません」を全部同じ文にする → 何が見つからないかが分からなくなる（PO の目的「誰でも分かる」に反する）。
 
@@ -317,7 +319,7 @@
 | `not_found:contact` | 担当者 | The contact | 6 | 担当者が見つかりません / 指定された担当者が見つかりません |  |
 | `not_found:alias` | 別名 | The alias | 5 | aliasが見つかりません / 別名が見つかりません | 内部の英語名 alias を、同じものの画面の言葉「別名」(unitMaster.aliases) にした |
 | `not_found:invoice` | 請求書 | The invoice | 5 | 請求書が見つかりません |  |
-| `not_found:supplier_master` | 仕入元 | The supplier | 5 | 仕入元が見つかりません |  |
+| `not_found:supplier_master` | 仕入元 | The supplier master entry | 5 | 仕入元が見つかりません | 英語は仕入先 supplier と言い分けた（口 /super-admin/suppliers は共用の名簿） |
 | `not_found:team` | チーム | The team | 5 | チームが見つかりません |  |
 | `not_found:bot` | ボット | The bot | 4 | Botが見つかりません | 画面の見出し「ボット」(nav.bots) に合わせた |
 | `not_found:my_staff_profile` | あなたのスタッフ情報 | Your staff profile | 4 | 現在のユーザに紐づく staff レコードが見つかりません / 現在のユーザーに紐づく担当者が見つかりません | 内部の言葉 staff レコード を日常語にした; 同じもの（ログイン中の人の名簿行）を同じ言葉にした |
@@ -345,7 +347,7 @@
 | `not_found:inventory_offer` | オファー | The offer | 2 | 指定されたオファーが見つかりません |  |
 | `not_found:message` | メッセージ | The message | 2 | メッセージが見つかりません |  |
 | `not_found:notice` | お知らせ | The notification | 2 | 知らせが見つかりません | 画面の見出し「お知らせ」(notices.title) に合わせた |
-| `not_found:notification_channel` | チャンネル | The channel | 2 | チャンネルが見つかりません |  |
+| `not_found:notification_channel` | チャンネル | The notification channel | 2 | チャンネルが見つかりません | 英語はチャネル channel_master と言い分けた（口 /notification-channels） |
 | `not_found:own_inventory` | 自社在庫 | The own inventory item | 2 | 自社在庫が見つかりません |  |
 | `not_found:product_master` | 商品マスタ | The product master entry | 2 | マスタが見つかりません | 何のマスタか分からないため、口 /super-admin/product-masters と画面の見出し「商品マスタ」(nav.products) に合わせた |
 | `not_found:dex_entry` | 図鑑エントリ | The dex entry | 2 | 図鑑エントリが見つかりません |  |
@@ -388,8 +390,8 @@
 | C2: 67 種類のコードを受けたとき、日本語の画面は §12-4 の型に §12-5 の日本語の名前を入れた文、英語の画面は英語の文を出す | `frontend/src/lib/apiErrorReason.test.ts` に足す試験: 表の全 67 行 × ja/en で、作った文が「型＋名前」と一致し、`{{` やコードの生の値（`not_found:`）を含まない。`frontend/src/lib/api.httpError.test.ts` に足す試験: `request` と `requestForm` それぞれ `not_found:lead` で ja/en の文、`responseDetail` は元のコード |
 | C3: 表に無い対象・今のコードは壊れない | 同じ試験: `not_found:zzz` は `apiError.notFoundUnknown` の文。`not_found`・`company_not_found`・`viewer_already_linked` はそのまま `message`。便2 の2コードは便2 の文のまま |
 | C4: サーバーと表がずれない | 突き合わせ試験を両側に置く（便2 と同じ形）: `backend/tests/test_api_error_reason_sync.py` に「`backend/app` の `"not_found:<x>"` の x がすべて表にある」「表の対象がすべて `backend/app` で使われている」を足す。`frontend/src/lib/apiErrorReason.test.ts` にも同じ2つ。サーバーだけ・画面だけを変えた PR のどちらでも走る |
-| C5: 404 の状態番号で判断している画面の動きが変わらない | `frontend/tests-e2e/order-*.spec.ts` の見本の detail を新しいコードに直し、e2e が緑。`backend/tests/test_staff_me.py:81` を `== "not_found:my_staff_profile"` にして緑 |
-| C6: 本番に入る | Deploy to VPS が成功。本番の画面の JS（`https://app.salesanchor.jp/` が読み込む JS を curl で取る）に en の型の文 `could not be found. Reload the page and try again.` と ja の名前「Discord紐付け」が入っている。サーバーの返事は認証が要るので本番では見ない（CI の C1・C2 で確かめる） |
+| C5: 404 の状態番号で判断している画面の動きが変わらない | 判定は CI の pytest と vitest だけで行う: `backend/tests/test_staff_me.py:81` を `== "not_found:my_staff_profile"` にして緑。`frontend/src/lib/api.httpError.test.ts` に足す試験で、`not_found:lead` を受けた `ApiError` の `status` が 404 のまま。`frontend/tests-e2e/order-*.spec.ts` の見本の detail も新しいコードに直すが、e2e の仕事は `.github/workflows/e2e.yml:251` の `if: false` で止まっていて CI で走らないため、判定には使わない（試験は Mac で回さない決まり） |
+| C6: 本番に入る | Deploy to VPS が成功。本番の画面の JS（`https://app.salesanchor.jp/` が読み込む JS を curl で取る）に en の型の文 `could not be found. Reload the page and try again.`・en の名前 `The Discord routing`・ja の名前なしの文「お探しのものが見つかりませんでした。」が入っている（3つとも今の辞書には無いことを 2026-11-08 に確かめた。ja の「Discord紐付け」は今の画面に既にあるので確かめに使わない）。サーバーの返事は認証が要るので本番では見ない（CI の C1・C2 で確かめる） |
 | C7: PO が名前を確かめる | PO が §12-5 の表（特に「変えた理由」の 11 行）を読んで○× |
 
 ### 12-7. 弊害・トレードオフ
