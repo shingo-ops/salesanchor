@@ -424,6 +424,7 @@
   --schedule-event-estimate-style: dashed; /* 見積もりの枠の線の種類（実際は solid） */
   --schedule-now-line-w: 2px;     /* 今の時刻の線の太さ（G16） */
   --schedule-now-dot-size: 12px;  /* 今の時刻の丸の直径（G16） */
+  --role-color-dot-size: 12px;   /* ロール一覧の色の丸（完成イメージ実測 12px） */
 
   /* ---- Schedule category colors (Google Calendar handoff) ---- */
   --cal-personal:        #1e3a8a;  --cal-personal-tint: #e9edf7;  --cal-personal-text: #1e3a8a;

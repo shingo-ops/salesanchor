@@ -440,20 +440,26 @@
 /* --- Phase 1.1: ロール・権限ページ split-view --- */
 .roles-page {
   padding: var(--space-5);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
+.roles-page > .error-message { flex-shrink: 0; }
 .roles-layout {
+  flex: 1;
+  min-height: 0;
   display: grid;
   grid-template-columns: 260px 1fr;
   gap: var(--space-5);
-  align-items: flex-start;
+  align-items: stretch;
 }
 .roles-sidebar {
   background: var(--bg-surface);
   border-radius: var(--radius-lg);
   padding: var(--space-4);
   box-shadow: var(--shadow-sm);
-  position: sticky;
-  top: var(--space-5);
+  min-height: 0;
+  overflow-y: auto;
 }
 .roles-sidebar-header {
   display: flex;
@@ -466,53 +472,18 @@
   font-size: var(--font-md);
   color: var(--text-primary);
 }
-.roles-list {
-  list-style: none;
-  padding: 0;
-  margin: 0 0 var(--space-3) 0;
-}
-.role-item {
-  display: block;
-  width: 100%;
-  text-align: left;
-  padding: var(--space-10px) var(--space-3);
-  background: var(--bg-subtle);
-  border: none;
-  border-radius: var(--radius-md);
-  margin-bottom: var(--space-6px);
-  cursor: pointer;
-  transition: background var(--transition-fast);
-}
-.role-item:hover {
-  background: var(--bg-hover);
-  transform: translateX(2px);
-}
-.role-item.active {
-  background: var(--accent);
-  color: var(--on-accent);
-  transform: translateX(2px);
-}
-.role-item.active:hover {
-  background: var(--accent-hover);
-}
-.role-item-name {
-  display: block;
-  font-weight: var(--font-weight-semi);
-  font-size: var(--font-base);
-}
-.role-item-meta {
-  display: block;
-  font-size: var(--font-xs);
-  opacity: var(--opacity-dim);
-  margin-top: var(--space-2px);
-}
 .roles-main {
   background: var(--bg-surface);
   border-radius: var(--radius-lg);
   padding: var(--space-5);
   box-shadow: var(--shadow-sm);
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 .roles-main-header {
+  flex-shrink: 0;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -520,10 +491,7 @@
   padding-bottom: var(--space-4);
   border-bottom: 1px solid var(--border);
   margin-bottom: var(--space-5);
-  position: sticky;
-  top: 0;
   background: var(--bg-surface);
-  z-index: var(--z-base);
   padding-top: var(--space-1);
 }
 .roles-main-header h2 {
@@ -622,9 +590,8 @@
   margin-top: var(--space-2px);
 }
 .unsaved-banner {
-  position: sticky;
-  bottom: 0;
-  margin-top: var(--space-5);
+  flex: 1;
+  min-width: 0;
   padding: var(--space-3) var(--space-4);
   background: var(--warning-bg);
   border: 1px solid var(--warning-text);
