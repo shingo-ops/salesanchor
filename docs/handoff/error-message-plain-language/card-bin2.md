@@ -210,7 +210,7 @@ type Dict = Record<string, unknown>;
 const lookup = (d: Dict, key: string): unknown =>
   key.split(".").reduce<unknown>((cur, k) => (cur && typeof cur === "object" ? (cur as Dict)[k] : undefined), d);
 
-// CI の frontend 試験は repo 全体を取り出し、frontend で動く（前例: src/features/discord-connect/discordConnectError.test.ts）
+// CI checks out the whole repo and runs from frontend (precedent: src/features/discord-connect/discordConnectError.test.ts)
 function readPyFiles(dir: string): string[] {
   const out: string[] = [];
   for (const name of readdirSync(dir)) {
@@ -222,7 +222,7 @@ function readPyFiles(dir: string): string[] {
 }
 
 describe("apiErrorReasonKey", () => {
-  it("表のコードは文言キー、それ以外は null", () => {
+  it("maps table codes to locale keys and returns null otherwise", () => {
     expect(apiErrorReasonKey("no_fields_to_update")).toBe("apiError.noFieldsToUpdate");
     expect(apiErrorReasonKey("conflict_constraint")).toBe("apiError.conflictConstraint");
     expect(apiErrorReasonKey("viewer_already_linked")).toBeNull();
@@ -233,7 +233,7 @@ describe("apiErrorReasonKey", () => {
 });
 
 describe("i18n", () => {
-  it("表の全キーが ja / en にある（空でない）", () => {
+  it("has a non-empty ja and en text for every key", () => {
     for (const key of Object.values(API_ERROR_REASON_KEYS)) {
       expect(lookup(ja as Dict, key), `ja:${key}`).toBeTruthy();
       expect(lookup(en as Dict, key), `en:${key}`).toBeTruthy();
@@ -241,9 +241,9 @@ describe("i18n", () => {
   });
 });
 
-describe("サーバーのコードとの突き合わせ", () => {
+describe("backend sync", () => {
   const sources = readPyFiles("../backend/app").join("\n");
-  it("表のコードはすべてサーバーで使われている", () => {
+  it("every table code is used in backend/app", () => {
     expect(Object.keys(API_ERROR_REASON_KEYS).length).toBe(2);
     for (const code of Object.keys(API_ERROR_REASON_KEYS)) {
       expect(sources.includes(`"${code}"`), code).toBe(true);
@@ -290,7 +290,7 @@ def test_table_codes_are_used_in_app():
 
 ### 3-8 `frontend/src/lib/api.httpError.test.ts`（足す）
 
-ファイルの最後に次を足す（既存の試験は変えない）:
+ファイルの先頭の import の並びに `import ja from "../locales/ja.json";` を1行足し、ファイルの最後に次を足す（既存の試験は変えない）。日本語の期待値は ja.json から読む（試験のファイルに日本語を直接書くと、記録の前の点検 `eslint --max-warnings=0` の `local/no-japanese-literal` で止まるため）:
 
 ```ts
 async function catchApiError(run: () => Promise<unknown>): Promise<ApiError> {
@@ -313,7 +313,7 @@ function stubDetail(status: number, detail: unknown) {
   );
 }
 
-describe("共通の理由コードの文（ADR-1071 便2）", () => {
+describe("common reason code texts (ADR-1071 bin2)", () => {
   afterEach(async () => {
     await i18n.changeLanguage("ja");
   });
@@ -322,20 +322,20 @@ describe("共通の理由コードの文（ADR-1071 便2）", () => {
     {
       status: 400,
       code: "no_fields_to_update",
-      ja: "変わった項目がないため、保存しませんでした。内容を変えてから、もう一度保存してください。",
+      ja: ja.apiError.noFieldsToUpdate,
       en: "Nothing was saved because no fields were changed. Change something, then save again.",
     },
     {
       status: 409,
       code: "conflict_constraint",
-      ja: "同じものがすでに登録されているか、関係するデータと合わないため、保存できませんでした。入力した内容を確かめて、もう一度お試しください。",
+      ja: ja.apiError.conflictConstraint,
       en: "This could not be saved because the same item already exists or it does not match related data. Check what you entered and try again.",
     },
   ];
 
   for (const c of cases) {
     for (const lang of ["ja", "en"] as const) {
-      it(`request: ${c.code} は ${lang} の文になる`, async () => {
+      it(`request: ${c.code} becomes the ${lang} text`, async () => {
         await i18n.changeLanguage(lang);
         stubDetail(c.status, c.code);
         const err = await catchApiError(() => api.patch("/dummy", {}));
@@ -343,7 +343,7 @@ describe("共通の理由コードの文（ADR-1071 便2）", () => {
         expect(err.message).toBe(c[lang]);
         expect(err.responseDetail).toBe(c.code);
       });
-      it(`requestForm: ${c.code} は ${lang} の文になる`, async () => {
+      it(`requestForm: ${c.code} becomes the ${lang} text`, async () => {
         await i18n.changeLanguage(lang);
         stubDetail(c.status, c.code);
         const err = await catchApiError(() => api.postForm("/dummy", new FormData()));
@@ -353,13 +353,13 @@ describe("共通の理由コードの文（ADR-1071 便2）", () => {
     }
   }
 
-  it("表に無いコードは今までどおりそのまま", async () => {
+  it("passes an unknown code through unchanged", async () => {
     stubDetail(409, "viewer_already_linked");
     const err = await catchApiError(() => api.post("/dummy", {}));
     expect(err.message).toBe("viewer_already_linked");
   });
 
-  it("dict の detail は今までどおり detail フィールド", async () => {
+  it("keeps the detail field of a dict detail", async () => {
     stubDetail(409, { detail: "x", id: 1 });
     const err = await catchApiError(() => api.post("/dummy", {}));
     expect(err.message).toBe("x");
@@ -393,14 +393,14 @@ POST・PATCH が送り直しをして試験が待つときは、止まらずに�
    - (2a) `python3.12 --version; echo rc=$?`。rc=0 なら `python3.12 -m venv /tmp/v312; echo rc=$?`、0 でなければ `uv venv --python 3.12 /tmp/v312; echo rc=$?`（これも 0 でなければ BLOCKED）。
    - (2b) `cd <repo>/backend && /tmp/v312/bin/python -m pip install -q -r requirements.txt -r requirements-dev.txt > /tmp/v312-pip.txt 2>&1; echo rc=$?` と `tail -30 /tmp/v312-pip.txt`（uv で作ったときは `uv pip install --python /tmp/v312/bin/python -q -r requirements.txt -r requirements-dev.txt`）。rc=0 でなければ BLOCKED。
    - (2c) `cd <repo>/frontend && npm ci > /tmp/npm-ci.txt 2>&1; echo rc=$?` と `tail -20 /tmp/npm-ci.txt`。rc=0 でなければ BLOCKED。
-3. サーバーの置き換え: `/tmp/replace_bin2.py` を §3-1 のとおり Write で作り、`cd <repo>/backend && /tmp/v312/bin/python /tmp/replace_bin2.py app 2>&1 | tail -60`。続けて `cd <repo> && git diff --stat backend/app | tail -5` と `cd <repo> && git grep -nE '更新するフィールド|更新フィールドが指定|制約違反|FK 違反' -- backend/app | tail -10`（合格: 出力が空）。
+3. サーバーの置き換え: `/tmp/replace_bin2.py` を §3-1 のとおり Write で作り、`cd <repo>/backend && /tmp/v312/bin/python /tmp/replace_bin2.py app 2>&1 | tail -60`。続けて `cd <repo> && git diff --stat backend/app | tail -5` と `cd <repo> && git grep -nE '更新するフィールド|更新フィールドが指定|制約違反|FK 違反' -- backend/app | tail -10`（合格: 出力が次のコメント4行だけ。`app/schemas/central_masters.py:30`・`app/routers/super_admin_aliases.py:300`・`app/routers/super_admin_aliases.py:308`・`app/routers/tcg_product_import.py:491`。どれも `#` の後ろの説明文で、detail ではないので直さない。これ以外の行が出たら BLOCKED:）。
 4. 基準値を台本で書き出す: `cd <repo>/backend && /tmp/v312/bin/python tests/test_error_detail_guard.py --write-baseline` と `cd <repo> && git diff --stat backend/tests/error_detail_baseline.json | tail -3`。期待: `書き出し: ` の後の件数が 647。違っても止まらず、数を報告に書く。
 5. §3-2〜§3-8 を Edit／Write で作る。
 6. 確かめ（それぞれ `| tail -N` で切る）:
    - (6a) `cd <repo>/frontend && node -e "for (const f of ['src/locales/ja.json','src/locales/en.json']) { const d=require('./'+f); console.log(f, Object.keys(d).length, JSON.stringify(d.apiError)); }"`
    - (6b) `cd <repo>/backend && /tmp/v312/bin/python -m pytest -q --no-cov -p no:cacheprovider -n 0 -rA tests/test_error_detail_guard.py tests/test_api_error_reason_sync.py 2>&1 | tail -30`。timeout 引数は 600000。合格: 5 つ passed・赤 0。
    - (6c) `cd <repo>/backend && /tmp/v312/bin/python -m pytest -q --no-cov -p no:cacheprovider -n 0 tests/test_super_admin_unit_ignore_phrases.py 2>&1 | tail -30`。DB が無くて skip や error になるときは、その出力をそのまま報告に書いて続ける（CI で見る）。
-   - (6d) `cd <repo>/frontend && npx vitest run src/lib/api.httpError.test.ts src/lib/apiErrorReason.test.ts 2>&1 | tail -40`。合格: 赤 0。
+   - (6d) `cd <repo>/frontend && npx vitest run --config vitest.unit.config.ts --project unit src/lib/api.httpError.test.ts src/lib/apiErrorReason.test.ts 2>&1 | tail -40`。合格: 赤 0。
    - (6e) `cd <repo>/frontend && npx tsc --noEmit -p tsconfig.json 2>&1 | tail -20; echo rc=$?`（tsconfig の名前が違えば `ls tsconfig*` を流し、app 用のものを使う）。
    - (6f) `cd <repo>/frontend && npx eslint src/lib/api.ts src/lib/apiErrorReason.ts src/lib/apiErrorReason.test.ts src/lib/api.httpError.test.ts 2>&1 | tail -20; echo rc=$?`
    - (6g) `cd <repo>/frontend && npm run check:i18n-missing-keys 2>&1 | tail -10` と `cd <repo>/frontend && npm run check:error-text-next-action 2>&1 | tail -10`。合格: どちらも赤 0。W2 の基準値は変えない。
