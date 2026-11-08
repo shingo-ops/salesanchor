@@ -6,7 +6,7 @@
  *   - 右メインペイン: 選択中ロールの権限編集
  *     - カテゴリ単位でグループ化（アイコン + カテゴリ名 + メニュー表示トグル）
  *     - 各カテゴリ内に個別権限のチェックボックス
- *     - 未保存時は下部に警告バナー + 上部のキャンセル/保存ボタン有効化
+ *     - 未保存時は表の下の保存の段に警告バナー + キャンセル/保存ボタン有効化
  *
  * 変更履歴:
  *   2026-04-16: 初版（GAS UI互換に刷新、モーダル式→split-view式）
@@ -23,6 +23,7 @@ import ConfirmModal from "../../components/ConfirmModal";
 import { Select } from "../../components/Select";
 import { RadioControl } from "../../components/RadioControl";
 import { Button } from "../../components/Button";
+import { SubMenu } from "../../components/SubMenu";
 import { usePermissions } from "../../hooks/usePermissions";
 import { SlashOutline, STATUS_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
@@ -311,28 +312,25 @@ export default function RolesPage() {
               <Button variant="primary" size="sm" onClick={openCreateRole}>+ {t("common.new")}</Button>
             )}
           </div>
-          <ul className="roles-list">
-            {roles.map((r) => {
-              // priorityに応じた階層インデント。カード全体（カラーバー含む）を右にずらす
-              // 1000→0, 700→1, 400→2, 100→3, 0→4
-              const level =
-                r.priority >= 1000 ? 0 :
-                r.priority >= 700 ? 1 :
-                r.priority >= 400 ? 2 :
-                r.priority >= 100 ? 3 : 4;
-              return (
-                <li key={r.id} style={{ marginLeft: `${level * 16}px` }}>
-                  <button
-                    className={`role-item ${r.id === selectedRoleId ? "active" : ""}`}
-                    style={{ borderLeft: `4px solid ${r.color || "var(--border-color)"}` }}
-                    onClick={() => selectRole(r.id)}
-                  >
-                    <span className="role-item-name">{r.name}</span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
+          <SubMenu
+            variant="flat"
+            className="roles-list"
+            groups={[{
+              items: roles.map((r) => ({
+                key: String(r.id),
+                label: r.name,
+                icon: (
+                  <span
+                    className="role-color-dot"
+                    style={{ background: r.color || "var(--border)" }}
+                    aria-hidden="true"
+                  />
+                ),
+              })),
+            }]}
+            activeKey={selectedRoleId == null ? "" : String(selectedRoleId)}
+            onChange={(key) => selectRole(Number(key))}
+          />
         </aside>
 
         {/* === 右メインペイン: 権限編集 === */}
@@ -367,12 +365,6 @@ export default function RolesPage() {
                       )}
                     </>
                   )}
-                  <Button variant="secondary" size="md" disabled={!dirty || savingPerms} onClick={cancelEdits}>
-                    {t("roles.cancelChanges")}
-                  </Button>
-                  <Button loading={savingPerms} variant="primary" size="md" disabled={!dirty || savingPerms || !canEditPerms} onClick={savePermissions}>
-                    {t("roles.saveChanges")}
-                  </Button>
                 </div>
               </div>
 
@@ -457,12 +449,22 @@ export default function RolesPage() {
                 })}
               </div>
 
-              {dirty && (
-                <div className="unsaved-banner">
-                  <STATUS_ICONS.warning size={ICON.sm} aria-hidden="true" />
-                  {" "}{t("roles.unsavedChanges")}{t("roles.unsavedClickHint", { btn: t("roles.saveChanges") })}
+              <div className="role-perm-footer">
+                {dirty && (
+                  <div className="unsaved-banner">
+                    <STATUS_ICONS.warning size={ICON.sm} aria-hidden="true" />
+                    {" "}{t("roles.unsavedChanges")}{t("roles.unsavedClickHint", { btn: t("roles.saveChanges") })}
+                  </div>
+                )}
+                <div className="role-perm-footer-actions">
+                  <Button variant="secondary" size="md" disabled={!dirty || savingPerms} onClick={cancelEdits}>
+                    {t("roles.cancelChanges")}
+                  </Button>
+                  <Button loading={savingPerms} variant="primary" size="md" disabled={!dirty || savingPerms || !canEditPerms} onClick={savePermissions}>
+                    {t("roles.saveChanges")}
+                  </Button>
                 </div>
-              )}
+              </div>
             </>
           ) : (
             <div className="empty">{t("roles.selectRoleHint")}</div>
