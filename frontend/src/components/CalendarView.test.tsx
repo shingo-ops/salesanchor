@@ -288,12 +288,20 @@ describe('T8 normalizeSelectedRange', () => {
 });
 
 describe('T9 scrollTimeForNow', () => {
-  it('returns one hour before now', () => {
-    expect(scrollTimeForNow(new Date(2026, 10, 5, 12, 34))).toBe('11:00:00');
+  it('returns half past the hour before now', () => {
+    expect(scrollTimeForNow(new Date(2026, 10, 5, 12, 34))).toBe('11:30:00');
   });
 
   it('does not go before midnight', () => {
     expect(scrollTimeForNow(new Date(2026, 10, 5, 0, 10))).toBe('00:00:00');
+  });
+
+  it('returns 00:30 at 1 am', () => {
+    expect(scrollTimeForNow(new Date(2026, 10, 5, 1, 5))).toBe('00:30:00');
+  });
+
+  it('returns 22:30 at 23:50', () => {
+    expect(scrollTimeForNow(new Date(2026, 10, 5, 23, 50))).toBe('22:30:00');
   });
 });
 
@@ -452,7 +460,7 @@ describe('T10 new props passed to FullCalendar', () => {
     expect(p.height).toBe('100%');
     expect(p.slotMinTime).toBe('00:00:00');
     expect(p.slotMaxTime).toBe('24:00:00');
-    expect(p.scrollTime).toMatch(/^\d{2}:00:00$/);
+    expect(p.scrollTime).toMatch(/^\d{2}:(00|30):00$/);
     expect(typeof p.slotLabelContent).toBe('function');
   });
 

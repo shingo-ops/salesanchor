@@ -64,6 +64,11 @@
   align-items: stretch; /* .schedule-sidebar keeps align-self:start; .schedule-main fills cell */
 }
 
+/* 左上のメニューボタンで左の欄をしまった時は 1 列（design §3.12・G21） */
+.schedule-shell__content--panel-hidden {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 /* 幅 1024px 以上: 親 .page-layout-content（display:block・高さ確定）いっぱいに伸ばし、升目を画面の下まで届かせる（G10・G13）。
    1023px 以下は今のまま（1 列に並ぶため 100% にすると左の欄が高さを取り、升目が隠れる） */
 @media (min-width: 1024px) {

@@ -268,3 +268,21 @@
   font-weight: var(--font-weight-medium);
   transform: translateY(-50%);
 }
+
+/* ---- 便7（design §3.12）: 1 時間の高さを時間割の見える高さに合わせる（G23） ---- */
+.comp-calendar--schedule.comp-calendar--fill.comp-calendar--days .fc-scroller-liquid-absolute {
+  container-type: size;
+}
+
+.comp-calendar--schedule.comp-calendar--fill.comp-calendar--days .fc-timegrid-slot {
+  height: clamp(
+    var(--schedule-row-min),
+    round(nearest, var(--schedule-row-fit), var(--schedule-row-step)),
+    var(--schedule-row-height)
+  );
+}
+
+/* 今の時刻の丸を欠けさせない（G24） */
+.comp-calendar--schedule.comp-calendar--days .fc-timegrid-now-indicator-container {
+  overflow: visible;
+}
