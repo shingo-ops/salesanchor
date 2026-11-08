@@ -309,6 +309,25 @@ describe("SchedulePage keyboard shortcuts (K7)", () => {
       expect(pressed(i18n.t("schedule.dayView"))).toBe(true);
     });
 
+    it("X switches to the 3-day view", async () => {
+      await ready();
+      press("x");
+      expect(pressed(i18n.t("schedule.threeDayView"))).toBe(true);
+    });
+
+    it("the menu button hides and shows the left panel, and the header has no subtitle", async () => {
+      await ready();
+      const toggle = screen.getByRole("button", { name: i18n.t("schedule.togglePanel") });
+      expect(toggle.getAttribute("aria-expanded")).toBe("true");
+      fireEvent.click(toggle);
+      expect(toggle.getAttribute("aria-expanded")).toBe("false");
+      expect(screen.queryByRole("button", { name: i18n.t("schedule.create") })).toBeNull();
+      fireEvent.click(toggle);
+      expect(toggle.getAttribute("aria-expanded")).toBe("true");
+      expect(screen.getByRole("button", { name: i18n.t("schedule.create") })).toBeTruthy();
+      expect(document.querySelectorAll(".page-subtitle")).toHaveLength(0);
+    });
+
     it("W switches to the week view", async () => {
       await ready();
       press("d");
@@ -594,7 +613,7 @@ describe("SchedulePage on CalendarView", () => {
     fireEvent.click(button);
     const menu = await screen.findByRole("menu");
     expect(menu).toBeTruthy();
-    expect(screen.getAllByRole("menuitem")).toHaveLength(4);
+    expect(screen.getAllByRole("menuitem")).toHaveLength(5);
     fireEvent.click(screen.getByRole("menuitem", { name: i18n.t("schedule.monthView") }));
     await waitFor(() => expect(calendarProps.current?.mode).toBe("month"));
     await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());

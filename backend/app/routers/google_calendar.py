@@ -350,7 +350,7 @@ async def update_event(
     if not event_body:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="更新フィールドが指定されていません",
+            detail="no_fields_to_update",
         )
     try:
         updated = await cal_svc.update_event(db, tenant_id, event_id, event_body)

@@ -191,7 +191,7 @@ async def create_status_master(
         log_hidden_error("super_admin_status_master.create_status_master", exc)
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="重複または制約違反",
+            detail="conflict_constraint",
         )
     row = result.mappings().first()
     await db.commit()
@@ -211,7 +211,7 @@ async def update_status_master(
     update_data = data.model_dump(exclude_unset=True)
     update_data = {k: v for k, v in update_data.items() if k in _UPDATABLE}
     if not update_data:
-        raise HTTPException(status_code=400, detail="更新するフィールドを指定してください")
+        raise HTTPException(status_code=400, detail="no_fields_to_update")
 
     # Gate: enabled false→true requires latest test run = passed
     if update_data.get("enabled") is True:
@@ -243,7 +243,7 @@ async def update_status_master(
     except IntegrityError as exc:
         await db.rollback()
         log_hidden_error("super_admin_status_master.update_status_master", exc)
-        raise HTTPException(status_code=409, detail="制約違反")
+        raise HTTPException(status_code=409, detail="conflict_constraint")
     row = result.mappings().first()
     if not row:
         raise HTTPException(status_code=404, detail="ステータスが見つかりません")

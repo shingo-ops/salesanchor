@@ -152,8 +152,9 @@
 | 便 | 中身 | 状態 |
 |---|---|---|
 | 便1 | Discord 連携（本書 §4） | 本番反映済み・PO 目視合格（2026-11-07） |
-| 便0 | 見張り W1・W2・G1（§5。card-guard.md） | KGI PO 承認済み（2026-11-08）・実装カード作成済み |
-| 便2 以降 | Meta・Google カレンダー・外部連携の戻り口、画面で e.message を出す箇所、サーバーの直書き（多い画面から） | 未着手 |
+| 便0 | 見張り W1・W2・G1（§5。card-guard.md） | 本番反映済み（2026-11-08。基準値 W1 739・W2 209） |
+| 便2 | サーバーの共通の2種類の文（項目の指定なし・重複や食い違い）92 件を理由コードに＋画面の共通の対応表（§11。card-bin2.md） | 設計案作成済み（2026-11-08） |
+| 便3 以降 | 「見つかりません」の種類（221 件）、Meta・Google カレンダー・外部連携の戻り口、画面で e.message を出す箇所、残りのサーバーの直書き | 未着手 |
 
 ## 8. 継続（維持の仕組み）
 
@@ -175,5 +176,81 @@
 
 | 2 | 2026-11-07 14:07 UTC | クラウドの Sonnet（読むだけ。対象 commit 05fda8f27） | APPROVE（軽い直し付き） | (A) 1回目の4点はすべて直っている (B) ../backend は読める。根拠を frontend-check.yml から実際に試験を回す e2e.yml:92・95 に差し替え、§9 を確認済みにした (C1) 開始の失敗の `responseDetail` の形 → Opus が api.ts:131-133・164-171 を読み、POST は `body.detail` がそのまま入ると確かめ §4-4 に書いた。取り出しを1関数にまとめた (C2) 突き合わせの正規表現が曖昧 → §4-6 に3つの式と数の確かめを書いた (C3) 返事が途中で切れて読めなかった（実行記録の上限） |
 | 3 | 2026-11-07 19:00 UTC | クラウドの Opus（読むだけ。対象 commit 1d54a5107。アプリ全体の見張り W1・W2・G1） | REVISE | 実測: W1 の自己点検は合計 6 で合う・backend/app は 739 件 106 ファイル・読めないファイル 0。W2 は 209 件・自己点検 0/1/1/2 で合う。G1 は e2e.yml:50-55 と :84-87 で効く。直し: (1) 指示書 §5 (1e) を switch -C ＋ rev-parse の一致確認に直した（前例 stageW-card.md） (2) 自己点検の b.0 を失敗の文にし、基準 keys に b.0 を足した（配列の道すじも数えることを確かめる） (3) W1 の目安を実測 739 にした（§2-2・§5・指示書 §5 手順4） |
+| 4 | 2026-11-08 | クラウドの Opus（便2 §11 と card-bin2.md） | 止まった（判定なし） | 審査役が写しをフォルダごと消す命令を使い、クラウドの見張りに止められた → 依頼文に「消す命令は使わず、毎回新しい場所に mkdir と git archive で写しを作る」を足して出し直した |
+| 5 | 2026-11-08 | クラウドの Opus（便2 §11 と card-bin2.md。カードどおりに写しで試しに置き換え） | REVISE | 実測: 置き換え 92 件 47 ファイル・基準値 647 件 105 ファイル・tsc の新しい誤り 0・vitest 14 緑・pytest の見張り3本と突き合わせ2本が緑。直し: (1) 必須: 試験2ファイルの日本語の名前と期待値が `local/no-japanese-literal` の警告 13 件になり、記録の前の点検（`--max-warnings=0`）で止まる → 試験の名前を英語にし、日本語の期待値は ja.json から読む形にした（§3-6・§3-8） (2) 手順3の「出力が空」は説明のコメント4行が残るので成り立たない → その4行だけ許す書き方にした (3) 手順 6d に `--config vitest.unit.config.ts --project unit` を足した |
+| 6 | 2026-11-08 | Opus（自分の確かめ。対象 commit 098c59610 の実装と実行記録） | 直しの成立を確認 | 5回目の3つの直しが実装で成り立った: (1) eslint の警告 0（rc=0）・試験の名前は英語・ja の期待値は ja.json から読む (2) 手順3の残りは決めた説明のコメント4行だけ (3) vitest 14 緑（unit の設定で実行）。サーバー側の差分は置き換え 92 行だけ・基準値 647 件 105 ファイル。コードの審査はマージ前の reviewer（opus）が別に行う |
 
 - 1回目の §9 の未確認（../backend を読めるか）は、2回目で確認済みになった
+
+## 11. 便2: サーバーの共通の2種類の文を理由コードにする（A2 の1回目）
+
+- 状態: 設計案作成済み（2026-11-08 Opus）。PO の選択「2」（サーバーの文を直す作業から始める）と「PRマージ、デプロイまで完走」の委任に基づく。実装カード `docs/handoff/error-message-plain-language/card-bin2.md`。
+- 調べた土台: origin/main `b6b89095c4d9cbedca3c17b66b0191ec96457413`。
+
+### 11-1. 何が起きるか（利用者に見える変化）
+
+- 保存の画面で「変えた項目が無いまま保存」したとき、または「同じものが既にある・関係するデータと合わない」ときに出る文が、日本語の画面では §11-4 の日本語、英語の画面では英語になる。
+- 今は、サーバーが作った日本語の文（例「更新するフィールドを指定してください」「制約違反」）が、英語の画面でもそのまま出る。次にすることも書かれていない。
+
+### 11-2. 現在地（事実）
+
+- 対象の文と件数（W1 の数え方。backend/app の全 .py ファイル。文字どおりの一致の数と ast の数が同じ＝この文は `HTTPException` の detail 以外に使われていない）:
+
+| 文（今） | 件数 | 新しい理由コード |
+|---|---|---|
+| 更新するフィールドを指定してください | 42 | `no_fields_to_update` |
+| 更新するフィールドを少なくとも1つ指定してください | 5 | `no_fields_to_update` |
+| 更新フィールドが指定されていません | 3 | `no_fields_to_update` |
+| 制約違反 | 19 | `conflict_constraint` |
+| 重複または制約違反 | 15 | `conflict_constraint` |
+| 重複または FK 違反 | 6 | `conflict_constraint` |
+| 会社の登録に失敗しました（company_code 重複または制約違反の可能性） | 1 | `conflict_constraint` |
+| 担当者の登録に失敗しました（contact_code 重複または制約違反の可能性） | 1 | `conflict_constraint` |
+
+  合計 92 件（`no_fields_to_update` 50 件・46 ファイル、`conflict_constraint` 42 件・21 ファイル）。状態番号（400・409・422）は変えない。
+- 画面がサーバーの文を受ける所は `frontend/src/lib/api.ts` の2か所（`request` の 163-171 行・`requestForm` の 251-258 行）。detail が文字列ならそのまま `ApiError.message` にする。サーバーだけコードに変えると、画面にコードがそのまま出る → 画面とサーバーを同じ PR で変える。
+- 対象の文に頼る所（`git grep`、origin/main、backend/app と docs を除く）: `backend/tests/test_super_admin_unit_ignore_phrases.py:124`（`"重複または制約違反"` と一致を見る）の1か所だけ。画面のコード・e2e・scripts には無い。
+- `err.message` や detail を決まったコードと比べる画面のコード（`frontend/src/lib/api.ts:84`・`frontend/src/lib/auth/authErrorMessage.ts`・`frontend/src/features/tcg-analysis-review/ReviewRegisterProductForm.tsx:131`・`frontend/src/features/tcg-product-import/productDetailModel.ts:205`・`frontend/src/pages/super-admin/components/ProductFormatsMasterPanel.tsx:145-146`・`frontend/src/pages/super-admin/ViewerAccountsPage.tsx:282`・`frontend/src/pages/super-admin/components/TypeMasterPanel.tsx:139` ほか）は、今回の2つのコードを使っていない。表に無いコードは今までどおりそのまま `message` に入るので、動きは変わらない。
+- 文言の表は `frontend/src/locales/ja.json`・`frontend/src/locales/en.json` の2つだけ（キー数は同じ）。`apiError` の区切りはまだ無い。
+- 直接 `fetch` する画面（RegisterPage など 14 ファイル）は、今回の 47 ファイルの口を呼ばない（呼び先は public/register・erp・shipping・inbox など）。
+
+### 11-3. 方針
+
+- サーバー: 92 か所の detail を理由コードの文字列に置き換える（W1 は識別子の形の文字列を違反にしない）。
+- 画面: 共通の理由コード → 文言キーの対応表を1か所 `frontend/src/lib/apiErrorReason.ts` に作る（便1 の `frontend/src/features/discord-connect/discordConnectError.ts` と同じ考え）。`frontend/src/lib/api.ts` の2か所は、detail がこの表のコードのときだけ `i18n.t(キー)` を `message` にする。表に無いときは今までどおり。`ApiError.responseDetail` には元のコードが残る。
+- 選ばなかった案: (a) サーバーで言語を見て文を返す → 文がサーバーと画面の2か所に分かれる（ADR-1071 は表1か所）。(b) 画面ごとに直す → 47 ファイルの口を呼ぶ画面が多く、同じ対応を何十か所にも書くことになる。
+- 「見つかりません」の種類（221 件・75 ファイル・文 92 種類）は便3 以降。何が見つからないかの名前を残す形を別に決める。
+
+### 11-4. 文（ja は ADR-1071 の型。en は同じ意味）
+
+| キー | ja | en |
+|---|---|---|
+| `apiError.noFieldsToUpdate` | 変わった項目がないため、保存しませんでした。内容を変えてから、もう一度保存してください。 | Nothing was saved because no fields were changed. Change something, then save again. |
+| `apiError.conflictConstraint` | 同じものがすでに登録されているか、関係するデータと合わないため、保存できませんでした。入力した内容を確かめて、もう一度お試しください。 | This could not be saved because the same item already exists or it does not match related data. Check what you entered and try again. |
+
+- W2（ja の失敗の文に次にすることがあるか）: 1つ目は失敗の語が無いので数えない。2つ目は W2 の失敗の語と次にすることの語の両方を含むので通る。W2 の基準値 209 は変わらない。
+
+### 11-5. KGI（便2）と確かめ方
+
+| 基準 | 検証方法 |
+|---|---|
+| B1: サーバーの決まりに合わない文が 739 → 647 に減る | `python tests/test_error_detail_guard.py --write-baseline` の出力が 647 件。W1 の試験3本が緑。基準値の表の差分が 47 ファイルの行の減りだけ |
+| B2: 2つのコードを受けたとき、日本語の画面は §11-4 の ja、英語の画面は en を出す | `frontend/src/lib/api.httpError.test.ts` に足す試験: `request` と `requestForm` それぞれ、2コード × ja/en で `err.message` が §11-4 と一致。`responseDetail` は元のコード |
+| B3: 表に無いコードと dict の detail は今までどおり | 同じ試験: `"viewer_already_linked"` はそのまま `message`。`{detail: "x"}` は `"x"` |
+| B4: 表のコードがサーバーで使われ、ja・en に文がある | 突き合わせ試験を両側に置く: `frontend/src/lib/apiErrorReason.test.ts`（`../backend/app` を読む・ja/en のキーを確かめる）と `backend/tests/test_api_error_reason_sync.py`（`frontend/src/lib/apiErrorReason.ts` を読む）。サーバーだけ・画面だけを変えた PR のどちらでも走る |
+| B5: 本番に入る | Deploy to VPS が成功。本番の画面の JS に en の文が入っている（`https://app.salesanchor.jp/` の読み込む JS を curl で取り、§11-4 の en 1つ目の文を grep）。サーバーの返事は認証が要るので本番では見ない（CI の B1・B2 で確かめる） |
+
+### 11-6. 弊害・トレードオフ
+
+- 「同じものが既にある」と「関係するデータと合わない」を1つの文にまとめる。今のサーバーも区別していない（同じ例外の受け口）ので、失われる情報は無い。
+- 2つのコードの文は、どの画面でも同じ文になる。画面ごとに言い分けたいときは、その画面が `responseDetail` のコードを見て別の文を出せる。
+- 画面が `err.message` を出さずに自分の文を出している所は、見た目が変わらない（悪くはならない）。
+
+### 11-7. 戻し方
+
+- PR の取り込みを戻す（revert）。DB・設定の変更は無い。
+
+### 11-8. 継続
+
+- 新しく理由コードを足すときは `frontend/src/lib/apiErrorReason.ts` の表に1行と ja/en の文を足す。突き合わせ試験（B4）が、表とサーバーのずれを両側の PR で止める。
+- W1 の基準値は直した PR の中で下げる（下げないと CI が赤）。

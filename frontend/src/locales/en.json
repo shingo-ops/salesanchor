@@ -3355,6 +3355,8 @@
     "emptyDescription": "Click an empty slot or day cell to create a new event.",
     "monthView": "Month",
     "weekView": "Week",
+    "threeDayView": "3 days",
+    "togglePanel": "Main menu",
     "listView": "Schedule",
     "dateTimeLine": "{{date}} {{time}}",
     "addMeet": "Add Google Meet",
@@ -3366,6 +3368,7 @@
       "next": "Next period",
       "prev": "Previous period",
       "day": "Day view",
+      "threeDay": "3-day view",
       "week": "Week view",
       "month": "Month view",
       "list": "Schedule view",
@@ -6120,5 +6123,9 @@
       "unknown": "The connection was not completed. Please try again. If this keeps happening, please contact support.",
       "disconnectFailed": "The connection could not be removed. Please try again. If this keeps happening, please contact support."
     }
+  },
+  "apiError": {
+    "noFieldsToUpdate": "Nothing was saved because no fields were changed. Change something, then save again.",
+    "conflictConstraint": "This could not be saved because the same item already exists or it does not match related data. Check what you entered and try again."
   }
 }

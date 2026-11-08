@@ -234,9 +234,13 @@ export function formatTimeRange(
   return t('calendarView.timeRange', { start: startText, end: endText });
 }
 
-/** 今の時刻の 1 時間前（0 時より前にしない）を "HH:00:00" で */
+/**
+ * 開いた時の上端。今の 1 時間前の 30 分（0 時台は 0 時）。
+ * 上端を 1 時間の線からずらし、一番上の時刻の文字が切れないようにする（design §3.12・G25）
+ */
 export function scrollTimeForNow(now: Date): string {
-  return `${pad2(Math.max(0, now.getHours() - 1))}:00:00`;
+  const h = now.getHours();
+  return h === 0 ? '00:00:00' : `${pad2(h - 1)}:30:00`;
 }
 
 /** 押しただけ（15 分以下）なら始まりから 1 時間に広げる。終日はそのまま */

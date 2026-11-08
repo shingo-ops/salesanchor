@@ -201,6 +201,14 @@ describe("toCalendarEnd", () => {
   });
 });
 
+describe("three-day view range", () => {
+  it("covers 3 days from the selected day", () => {
+    const anchor = new Date(2026, 10, 4, 15);
+    expect(toRangeStart("threeDay", anchor)).toEqual(new Date(2026, 10, 4));
+    expect(toRangeEnd("threeDay", anchor)).toEqual(new Date(2026, 10, 7));
+  });
+});
+
 describe("list view range", () => {
   it("covers 30 days from the selected day", () => {
     const anchor = new Date(2026, 10, 4, 15, 30);

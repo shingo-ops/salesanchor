@@ -27,6 +27,7 @@ import i18n from "../i18n";
 import { getClientId } from "./realtime/clientId";
 import { isDevSession } from "./auth/devSessionSlot";
 import { expireSession, getAccessToken, selfRefresh } from "./auth/selfAuth";
+import { apiErrorReasonKey } from "./apiErrorReason";
 
 const API_BASE = "/api/v1";
 
@@ -163,9 +164,12 @@ async function request<T>(
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         const detail = body?.detail;
-        // detail が文字列ならそのままメッセージ、dict なら detail フィールドを優先
-        const message =
-          typeof detail === "string"
+        // detail が共通の理由コード（apiErrorReason.ts の表）なら画面の言語の文、
+        // それ以外の文字列ならそのまま、dict なら detail フィールドを優先
+        const reasonKey = apiErrorReasonKey(detail);
+        const message = reasonKey
+          ? i18n.t(reasonKey)
+          : typeof detail === "string"
             ? detail
             : detail?.detail || i18n.t("common.httpError", { status: res.status });
         throw new ApiError(message, res.status, detail);
@@ -251,8 +255,10 @@ async function requestForm<T>(path: string, body: FormData): Promise<T> {
   if (!res.ok) {
     const errBody = await res.json().catch(() => ({}));
     const detail = (errBody as { detail?: unknown }).detail;
-    const message =
-      typeof detail === "string"
+    const reasonKey = apiErrorReasonKey(detail);
+    const message = reasonKey
+      ? i18n.t(reasonKey)
+      : typeof detail === "string"
         ? detail
         : (detail as { detail?: string })?.detail || i18n.t("common.httpError", { status: res.status });
     throw new ApiError(message, res.status, detail);

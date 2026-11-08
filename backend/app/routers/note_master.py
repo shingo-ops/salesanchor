@@ -185,7 +185,7 @@ async def create_note_master(
         log_hidden_error("note_master.create_note_master", exc)
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="重複または制約違反",
+            detail="conflict_constraint",
         )
     row = result.mappings().first()
     await db.commit()
@@ -207,7 +207,7 @@ async def update_note_master(
     update_data = data.model_dump(exclude_unset=True)
     update_data = {k: v for k, v in update_data.items() if k in _NOTE_UPDATABLE}
     if not update_data:
-        raise HTTPException(status_code=400, detail="更新するフィールドを指定してください")
+        raise HTTPException(status_code=400, detail="no_fields_to_update")
     set_clauses = ", ".join(f"{k} = :{k}" for k in update_data)
     update_data["id"] = note_id
     update_data["tenant_id"] = tenant_id
@@ -222,7 +222,7 @@ async def update_note_master(
     except IntegrityError as exc:
         await db.rollback()
         log_hidden_error("note_master.update_note_master", exc)
-        raise HTTPException(status_code=409, detail="制約違反")
+        raise HTTPException(status_code=409, detail="conflict_constraint")
     row = result.mappings().first()
     if not row:
         raise HTTPException(status_code=404, detail="備考マスタが見つかりません（テナント個別エントリのみ編集可能です）")

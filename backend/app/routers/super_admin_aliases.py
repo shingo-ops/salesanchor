@@ -131,7 +131,7 @@ async def create_alias(
         log_hidden_error("super_admin_aliases.create_alias", exc)
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="重複または FK 違反",
+            detail="conflict_constraint",
         )
     row = result.mappings().first()
     await db.commit()
@@ -151,7 +151,7 @@ async def update_alias(
     update_data = data.model_dump(exclude_unset=True)
     update_data = {k: v for k, v in update_data.items() if k in _UPDATABLE}
     if not update_data:
-        raise HTTPException(status_code=400, detail="更新するフィールドを指定してください")
+        raise HTTPException(status_code=400, detail="no_fields_to_update")
     set_clauses = ", ".join(f"{k} = :{k}" for k in update_data)
     update_data["id"] = alias_id
     try:
@@ -165,7 +165,7 @@ async def update_alias(
     except IntegrityError as exc:
         await db.rollback()
         log_hidden_error("super_admin_aliases.update_alias", exc)
-        raise HTTPException(status_code=409, detail="重複または FK 違反")
+        raise HTTPException(status_code=409, detail="conflict_constraint")
     row = result.mappings().first()
     if not row:
         raise HTTPException(status_code=404, detail="aliasが見つかりません")

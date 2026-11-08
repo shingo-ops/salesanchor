@@ -30,6 +30,7 @@ const SUBTITLE_ALLOWLIST = [
   'admin/',            // テナント管理ツール
   'design-system/',    // 開発用デザインシステムページ
   'crm/CustomerHub',   // タブコンテナ（CRMハブ）、子ページで表示
+  'schedule/SchedulePageImpl', // 予定の画面: 上の帯を 1 段（PO 2026-11-08・design §3.12）
 ];
 
 /**
