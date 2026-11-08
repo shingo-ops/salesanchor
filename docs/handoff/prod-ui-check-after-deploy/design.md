@@ -31,7 +31,7 @@ KGI: main への配備が成功するたびに、本番の画面点検が人の�
   - `docs/adr/ADR-1051-prod-ui-black-box-check.md`・`docs/adr/ADR-1053-prod-page-speed-record.md` の改訂、`docs/adr/README.md` の作り直し（`node scripts/generate-adr-index.js`）
 - 対象外（触らない）
   - `.github/workflows/deploy.yml`（危険パス。ADR-136）、`.github/workflows/workflow-lint.yml`
-  - `tests/prod-check/fixtures.ts`・`login.ts`・`settle.ts`・`page-speed*.ts`
+  - `tests/prod-check/fixtures.ts`・`tests/prod-check/login.ts`・`tests/prod-check/settle.ts`・`tests/prod-check/page-speed.spec.ts`・`tests/prod-check/page-speed.config.ts`・`tests/prod-check/page-speed-targets.ts`
   - S4 の 1 回目の 20 秒切れ（recon §5。2 回目で合格している。別件）
   - `nginx/nginx.conf` の他の CSP（jarvis-claude.uk・`/grafana/`・api.salesanchor.jp）
   - `frontend/src/App.tsx:63` の SchedulePage を遅延読み込みにすること（字形の読み込みは予定表を開けば結局起きるので、CSP の直しが要る。読み込みの速さの話は別件）
@@ -51,7 +51,7 @@ KGI: main への配備が成功するたびに、本番の画面点検が人の�
 ```
 - 1 行の右端に `; font-src 'self' data:` を足すだけ。他の行は変えない。
 - 理由: FullCalendar が読み込み時に差し込む `fcicons` の字形は `data:` で来る（recon §2）。`/grafana/` の CSP（`nginx/nginx.conf:320`）と同じ書き方にそろえる。
-- 反映: 配備が `nginx/**` の変更を見て、`nginx -t` を通してから作り直す。通らなければ前の設定に自動で戻す（`deploy.yml:516-553`、recon §3）。
+- 反映: 配備が `nginx/**` の変更を見て、`nginx -t` を通してから作り直す。通らなければ前の設定に自動で戻す（`.github/workflows/deploy.yml:516-553`、recon §3）。
 
 ### 4-2. `.github/workflows/prod-ui-check.yml`
 
@@ -82,8 +82,8 @@ KGI: main への配備が成功するたびに、本番の画面点検が人の�
 (5) ファイル先頭のコメントに、配備の後にも動くことを 1 行書く。
 
 - 実装の前に Context7 で GitHub Actions の `workflow_run` を確かめる（recon §3 の 4 点）。食い違えば実装せず止まって報告する。
-- `workflow_dispatch` の入力 `force_fail` は、`workflow_run` のときは空になる。今の参照 `PROD_CHECK_FORCE_FAIL: ${{ inputs.force_fail && '1' || '' }}`（`prod-ui-check.yml:107`）は空なら `''` になり、S9 は足されない（`prod-ui.spec.ts:134-135`）。変えない。
-- 配備中の待ち（`prod-ui-check.yml:30-53`）・concurrency・timeout・permissions は変えない。
+- `workflow_dispatch` の入力 `force_fail` は、`workflow_run` のときは空になる。今の参照 `PROD_CHECK_FORCE_FAIL: ${{ inputs.force_fail && '1' || '' }}`（`.github/workflows/prod-ui-check.yml:107`）は空なら `''` になり、S9 は足されない（`tests/prod-check/prod-ui.spec.ts:134-135`）。変えない。
+- 配備中の待ち（`.github/workflows/prod-ui-check.yml:30-53`）・concurrency・timeout・permissions は変えない。
 
 ### 4-3. `tests/prod-check/prod-ui.spec.ts`
 
@@ -141,9 +141,9 @@ const CALENDAR_EVENTS_API = /^\/api\/v1\/calendar\/events$/;
   - 予定表の目印は金型 CalendarView の外枠の class `comp-calendar`（`frontend/src/components/CalendarView.tsx:159-160,232`。FullCalendar の名前は金型の外に出さない ADR-1065 に合わせる）。SchedulePage の中にあることを実物で確かめる。
   - `GET /api/v1/leads` の返事が配列であること（`backend/app/routers/leads.py:214-217` の `list[LeadResponse]`）。
   - InventoryPage・LeadEditPage・SchedulePage が開いただけで GET 以外を送らないこと。
-  - エラーの出方は画面ごとに違う（審査 2026-11-08 の指摘。生出力 `/tmp/CC報告ファイル/recon-produi-15.txt`）。在庫表は `.error-message`（`frontend/src/pages/inventory/InventoryPage.tsx:549`）、リードの詳細も `.error-message`（`frontend/src/pages/leads/LeadEditPage.tsx:147`）。S4 と同じく `.error-banner` と `.error-message` の両方が 0 件であることを見る。予定表は読み込み中が `.schedule-loading`（`SchedulePageImpl.tsx:876`）、失敗が `.schedule-error`（`SchedulePageImpl.tsx:1525`）なので、この 2 つが 0 件であることを見る。
-  - 在庫表の読み込み中の表示は `LoadingBlock` ではなく、いつも置いてある `data-testid="inventory-loading"` の箱（`frontend/src/pages/inventory/InventoryPage.tsx:632-640`）。読み込み中だけ `visibility: visible`、終わると `hidden`。数は常に 1 なので、S10 は件数でなく `toBeHidden()` で読み込みの終わりを見る（審査 2 回目の指摘）。リードの詳細は `LoadingBlock`（class `sa-loading-block`、`frontend/src/components/loading/LoadingBlock.tsx:18`・`LeadEditPage.tsx:149`）なので S11 は件数 0 で見る。
-  - 予定表は開くと `GET /api/v1/shifts` も呼ぶ（`SchedulePageImpl.tsx:961`）。`shifts.view` が要る（`backend/app/routers/shifts.py:55-56`）。点検用の人の役割「点検用（見るだけ）」は `shifts.view` を持つ（`/tmp/CC報告ファイル/checker-perms.txt:2`、本番の読み取り 2026-11-07）。403 の console.error で S12 が落ちることは無い。
+  - エラーの出方は画面ごとに違う（審査 2026-11-08 の指摘。生出力 `/tmp/CC報告ファイル/recon-produi-15.txt`）。在庫表は `.error-message`（`frontend/src/pages/inventory/InventoryPage.tsx:549`）、リードの詳細も `.error-message`（`frontend/src/pages/leads/LeadEditPage.tsx:147`）。S4 と同じく `.error-banner` と `.error-message` の両方が 0 件であることを見る。予定表は読み込み中が `.schedule-loading`（`frontend/src/pages/schedule/SchedulePageImpl.tsx:876`）、失敗が `.schedule-error`（`frontend/src/pages/schedule/SchedulePageImpl.tsx:1525`）なので、この 2 つが 0 件であることを見る。
+  - 在庫表の読み込み中の表示は `LoadingBlock` ではなく、いつも置いてある `data-testid="inventory-loading"` の箱（`frontend/src/pages/inventory/InventoryPage.tsx:632-640`）。読み込み中だけ `visibility: visible`、終わると `hidden`。数は常に 1 なので、S10 は件数でなく `toBeHidden()` で読み込みの終わりを見る（審査 2 回目の指摘）。リードの詳細は `LoadingBlock`（class `sa-loading-block`、`frontend/src/components/loading/LoadingBlock.tsx:18`・`frontend/src/pages/leads/LeadEditPage.tsx:149`）なので S11 は件数 0 で見る。
+  - 予定表は開くと `GET /api/v1/shifts` も呼ぶ（`frontend/src/pages/schedule/SchedulePageImpl.tsx:961`）。`shifts.view` が要る（`backend/app/routers/shifts.py:55-56`）。点検用の人の役割「点検用（見るだけ）」は `shifts.view` を持つ（`/tmp/CC報告ファイル/checker-perms.txt:2`、本番の読み取り 2026-11-07）。403 の console.error で S12 が落ちることは無い。
   - リードの番号は失敗の文に出さない（公開リポジトリの実行記録に残るため。ADR-1053 と同じ考え）。上のコードは道すじの形と状態の番号だけを出す。
 
 ## 5. 選ばなかった案
@@ -171,11 +171,13 @@ const CALENDAR_EVENTS_API = /^\/api\/v1\/calendar\/events$/;
 
 ## 7. 維持の仕組み
 
+- 守り手: `.github/workflows/prod-ui-check.yml`（配備の後と毎朝の実行）・Claude Opus（週次の保守で失敗件数を見る）
+
 - 点検が動いているかは、GitHub の実行一覧の event 列で `workflow_run` と `schedule` の両方の直近の成功を見る（ADR-1051「守り方」に足す）。
 - 新しい画面の点検を足すときは `tests/prod-check/prod-ui.spec.ts` の S 番号を続けて足す。開くだけ・書き込まない・番号を文に出さない、の 3 つを守る。
 - 週次の保守（agent-console 定期実行）で、直近 7 日の prod-ui-check の失敗件数を見る。0 でなければ原因を調べる。
 
-## 8. 外部事例
+## 8. 外部・過去事例の参照と我々への応用
 
 - 配備の後に画面の自動点検を回す形（post-deploy smoke test）は一般的な作り方。GitHub の公式資料は `workflow_run` を「別の仕事の完了で動かす」入口として説明している（実装時に Context7 で版と書き方を確かめる）。
 - 数値で効果を示した直接の事例は使わない。本件の成否は §2 の K1〜K7 の実測で判断する。
