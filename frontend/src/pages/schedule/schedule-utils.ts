@@ -161,12 +161,6 @@ export function formatTimeInput(date: Date): string {
   return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
 }
 
-export function formatTimeRange(start: Date, end: Date, allDay: boolean, locale = "ja-JP", allDayLabel = "all day"): string {
-  if (allDay) return allDayLabel;
-  const fmt = new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit", hour12: false });
-  return `${fmt.format(start)} - ${fmt.format(end)}`;
-}
-
 export function getMonthCells(anchor: Date): Date[] {
   const first = new Date(anchor.getFullYear(), anchor.getMonth(), 1);
   const start = addDays(first, -first.getDay());

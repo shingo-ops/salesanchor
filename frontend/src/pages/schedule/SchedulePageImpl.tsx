@@ -53,7 +53,6 @@ import {
   formatSearchResultLine,
   formatMonthLabel,
   formatTimeInput,
-  formatTimeRange,
   getMonthCells,
   getWeekDays,
   isSameDay,
@@ -66,6 +65,7 @@ import {
   toRangeEnd,
   toRangeStart,
 } from "./schedule-utils";
+import { formatTimeRange as formatEventTimeRange } from "../../components/calendarView.utils";
 import {
   DEFAULT_OWNER_COLOR,
   normalizeOwner,
@@ -270,8 +270,7 @@ function SchedulePopover({
     if (creating && placed) titleRef.current?.focus();
   }, [creating, placed]);
   const meta = getCalendarMeta(draft.category);
-  const dateLabel = item ? formatDayLabel(item.start) : "";
-  const timeLabel = item ? formatTimeRange(item.start, item.end, item.allDay, "ja-JP", t("schedule.allDay")) : "";
+  const timeLabel = item ? formatSearchResultLine(item, t, i18n.language) : "";
   const meetUrl = item?.meetUrl && item.meetUrl.startsWith(MEET_URL_PREFIX) ? item.meetUrl : null;
   const joinMeetLink = meetUrl ? (
     <ButtonLink
@@ -337,7 +336,6 @@ function SchedulePopover({
           <div className="schedule-popover__body">
             <p className="schedule-popover__title">{item.title || t("schedule.noTitle")}</p>
             <p className="schedule-popover__time">{timeLabel}</p>
-            <p className="schedule-popover__date">{dateLabel}</p>
             {item.ownerName && <p className="schedule-popover__meta">{item.ownerName}</p>}
             {item.location && <p className="schedule-popover__meta">{item.location}</p>}
             {item.description && <p className="schedule-popover__description">{item.description}</p>}
@@ -828,7 +826,7 @@ function ScheduleListView({
                   >
                     <span className="schedule-month__dot" style={{ background: ownerMeta.color }} aria-hidden="true" />
                     <span className="schedule-list__time">
-                      {item.allDay ? t("schedule.allDay") : formatTimeRange(item.start, item.end, false)}
+                      {item.allDay ? t("schedule.allDay") : formatEventTimeRange(item.start, item.end, t, false)}
                     </span>
                     <span className="schedule-list__title">{item.title || t("schedule.noTitle")}</span>
                     {meta && <span className="schedule-list__category">{t(meta.labelKey)}</span>}

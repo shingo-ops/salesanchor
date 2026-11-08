@@ -146,6 +146,17 @@ export function CalendarView({
   }): ReactNode => {
     const source = arg.event.extendedProps.source as CalendarViewEvent;
     if (renderEventContent) return renderEventContent(source, arg.timeText);
+    // 月の升目・予定の画面の見た目・時刻のある予定は「点＋時刻＋題名」の 1 行（Google と同じ・design §3.14 G33）。
+    // 点の形か帯の形かは FullCalendar が決め、帯の形の時は css で点を隠す。
+    if (isMonth && appearance === 'schedule' && !arg.event.allDay && arg.event.start) {
+      return (
+        <>
+          <span className="fc-daygrid-event-dot" />
+          <span className="comp-calendar__time">{formatMeridiem(arg.event.start, t)}</span>
+          <span className="comp-calendar__title">{arg.event.title}</span>
+        </>
+      );
+    }
     const timeText =
       timeStyle === 'meridiem' && !arg.event.allDay && arg.event.start
         ? formatTimeRange(arg.event.start, arg.event.end, t, omitSameMeridiem)
@@ -238,6 +249,27 @@ export function CalendarView({
     navLinkDayClick: (d: Date) => {
       onDayClick?.(d);
     },
+    ...(isSchedule
+      ? {
+          // 日付は升目の上の真ん中・1 日だけ「M月1日」・今日は丸（design §3.14 G31）
+          dayCellContent: (arg: { date: Date; isToday: boolean }) => (
+            <span
+              className={
+                arg.isToday
+                  ? 'comp-calendar__monthnum comp-calendar__monthnum--today'
+                  : 'comp-calendar__monthnum'
+              }
+            >
+              {arg.date.getDate() === 1
+                ? new Intl.DateTimeFormat(i18n.language ?? 'en', {
+                    month: 'short',
+                    day: 'numeric',
+                  }).format(arg.date)
+                : arg.date.getDate()}
+            </span>
+          ),
+        }
+      : {}),
   };
 
   return (
