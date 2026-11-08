@@ -1,6 +1,6 @@
 import { formatMeridiem, formatTimeRange as formatEventTimeRange, type CalendarViewEvent } from "../../components/calendarView.utils";
 
-export type ScheduleView = "day" | "week" | "month" | "list";
+export type ScheduleView = "day" | "threeDay" | "week" | "month" | "list";
 export type DemoState = "normal" | "loading" | "empty";
 
 export interface AnchorRect {
@@ -191,11 +191,12 @@ export function startOfMonth(date: Date): Date {
 
 /** 一覧の表示で見せる日数（選んだ日から） */
 export const LIST_VIEW_DAYS = 30;
+export const THREE_DAY_VIEW_DAYS = 3;
 
 export function toRangeStart(view: ScheduleView, anchor: Date): Date {
   if (view === "list") return new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate());
   if (view === "month") return new Date(anchor.getFullYear(), anchor.getMonth(), 1);
-  if (view === "day") return new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate());
+  if (view === "day" || view === "threeDay") return new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate());
   return getWeekDays(anchor)[0];
 }
 
@@ -203,6 +204,7 @@ export function toRangeEnd(view: ScheduleView, anchor: Date): Date {
   if (view === "list") return addDays(new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate()), LIST_VIEW_DAYS);
   if (view === "month") return addMonths(new Date(anchor.getFullYear(), anchor.getMonth(), 1), 1);
   if (view === "day") return addDays(new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate()), 1);
+  if (view === "threeDay") return addDays(new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate()), THREE_DAY_VIEW_DAYS);
   return addDays(getWeekDays(anchor)[6], 1);
 }
 

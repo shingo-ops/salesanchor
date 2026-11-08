@@ -19,6 +19,7 @@ recon証跡: docs/handoff/page-title/recon.md（対象ADR: ADR-067。色変更�
 
 ## 2. 差分設計（D1〜D4・最小差分で KGI を満たす）
 - D1 金型の口の追加: PageLayout に titleText?: string（詳細ページのデータ名用・navKey と排他）を追加。見た目props（色/サイズ等）は追加しない＝ページごとに違う見え方の再発を構造で防止。
+- D1 追記（2026-11-08・予定の画面 便7）: タイトルより左に置く中身の口 headerStart?: ReactNode を足した。見た目の props ではない（headerLeft と同じ種類）。
 - D2 移行: 生h1/h2のうち a) と b) を PageLayout 経由に移行（b) は titleText を使用）。invoice/quote の「タイトル — 番号」形式は titleText に文字列合成して渡す。
 - D3 CSS集約: ページ題名の見た目定義を pages-layout.css の金型節1箇所に集約。company-forms.css:25-35 と ParseReviewPage.css:40-41 の重複定義は移行完了後に削除。
 - D4 対象外の線引き（KGI③の分母確定）: c) ナビ枠外画面（登録/ログイン/OAuth。ページ枠=サイドバー付きレイアウトの外にあり金型の前提が合わない）、LoginPage の sr-only（視覚表示なしの読み上げ用）、d) ページ内の節見出し（ページ題名ではない。節見出しの金型化は別部品=SectionTitle の領分として全体計画書に残す）、ComingSoonPage の h2（準備中カードの中央見出し。ページ題名でなくカード部品・eslint例外指定済み 2026-07-18実物確認）、RolesPage の h2（右ペインの選択中ロール見出し。ページ題名でなくペイン部品・2026-07-18実物確認）。

@@ -71,6 +71,7 @@ export function CalendarView({
 }: CalendarViewProps) {
   const { t, i18n } = useTranslation();
   const calendarRef = useRef<FullCalendar | null>(null);
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
 
   const isMonth = mode === 'month';
   const viewName = isMonth ? MONTH_VIEW : DAYS_VIEW;
@@ -117,6 +118,17 @@ export function CalendarView({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- initialDate は dateKey で追う
   }, [viewName, dateKey, dayCount]);
+
+  // 包みの大きさが変わったら（左の欄の出し入れ等）FullCalendar に測り直させる（design §3.12・G23）
+  useEffect(() => {
+    const el = wrapperRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(() => {
+      calendarRef.current?.getApi?.().updateSize();
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   const locale = i18n.language?.startsWith('ja') ? jaLocale : undefined;
 
@@ -229,7 +241,7 @@ export function CalendarView({
   };
 
   return (
-    <div className={wrapperClass} role="region" aria-label={ariaLabel}>
+    <div ref={wrapperRef} className={wrapperClass} role="region" aria-label={ariaLabel}>
       <FullCalendar
         ref={calendarRef}
         plugins={PLUGINS}
