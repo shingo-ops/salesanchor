@@ -55,6 +55,7 @@ ADR-1051・ADR-1053 の改訂と recon・design は Opus が済ませた。触�
   - 指摘 1（必須）: shifts の行は `shifts.py:55-56`（83-84 は誤り）→ design §4-3 を直した（手元の Read で 55-56 を確認）。
   - 指摘 2（推奨）: 在庫表に `sa-loading-block` は無く、S10 の件数 0 は何も見ていない → `InventoryPage.tsx:634` の `data-testid="inventory-loading"` を確かめ、S10 を `toBeHidden()` に替えた。design §4-3 に理由を追記。
   - 指摘 3（推奨）: クラウドの決まりで merge は使えない → 手順 4 を `git switch -C` ＋ 40 桁の照合に替え、§4 の禁止と揃えた。
-- 3 回目: （再審査の結果をここに書く）
+- 3 回目（クラウド・claude-opus-5-5、HEAD 34a41fe42、2026-11-08T00:14Z、session cse_01HHUUpTRfnhzcrPvaCcbRuc）: APPROVE。(1)○ (2)○（Chromium と Playwright の実行で `visibility:hidden` に toBeHidden が通り、visible では落ちることを確認。playwright.dev はプロキシで読めず文面は未確認） (3)○ (4)×1 件。
+  - 指摘（推奨）: design §4-3 の LoadingBlock のパスは `frontend/src/components/loading/LoadingBlock.tsx:18` → 直した。中身の設計は変えていない。
 
 END OF CARD
