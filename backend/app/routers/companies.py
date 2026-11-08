@@ -503,7 +503,7 @@ async def create_company(
         logger.warning("create_company IntegrityError: tenant=%d, err=%s", tenant_id, e.orig)
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="会社の登録に失敗しました（company_code 重複または制約違反の可能性）",
+            detail="conflict_constraint",
         )
     await invalidate_dashboard_cache(tenant_id)
     return await _compose_response(db, dict(row))
@@ -536,7 +536,7 @@ async def update_company(
     if not update_data:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="更新するフィールドを少なくとも1つ指定してください",
+            detail="no_fields_to_update",
         )
 
     if "sales_rep_id" in update_data:

@@ -122,7 +122,7 @@ async def update_close_reason(
     if not update_fields:
         raise HTTPException(
             status_code=http_status.HTTP_400_BAD_REQUEST,
-            detail="更新するフィールドを指定してください",
+            detail="no_fields_to_update",
         )
 
     set_clause = ", ".join(f"{k} = :{k}" for k in update_fields)

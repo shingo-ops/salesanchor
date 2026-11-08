@@ -312,7 +312,7 @@ async def update_calendar_owner(
     if not payload:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="更新フィールドが指定されていません",
+            detail="no_fields_to_update",
         )
 
     staff_row = await db.execute(
@@ -455,7 +455,7 @@ async def update_event(
     if not payload:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="更新フィールドが指定されていません",
+            detail="no_fields_to_update",
         )
 
     # 権限確認: 自分のイベントか tenant admin（owner / admin のシステムロール）のみ
