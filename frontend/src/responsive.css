@@ -35,6 +35,10 @@
     align-items: stretch;
   }
 
+  .roles-page { height: auto; }
+  .roles-main { overflow: visible; }
+  .role-perm-sections { overflow-y: visible; }
+
   /* --- Dashboard tables --- */
   .dashboard-tables {
     grid-template-columns: 1fr;
