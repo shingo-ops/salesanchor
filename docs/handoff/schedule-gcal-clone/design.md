@@ -3,6 +3,7 @@
 状態: 成功条件 G1〜G14 は **PO 承認済み**（2026-11-06、PO 原文「1.」＝「この14項目で決める」を選択）。設計審査 1 回目・2 回目は REVISE、3 回目は **APPROVE**（§9）。3 回目の推奨 2 件も直した。実装は未着手。
 実装の承認: PO はこのセッションの冒頭で「PRマージ、デプロイまで完走させてくれ」、3 択で「3」（違いもまとめて設計し直してから全部いっしょに作る）と指示した。設計審査の APPROVE と便ごとのカードが揃った便から作る。
 追加（2026-11-07）: 見た目 5 か所の成功条件 G15〜G19 は **PO 承認済み**（PO 原文「１，」＝「この決め方で設計を進める」を選択）。作り方は §3.8・便6。設計審査は §9 の 4 回目（REVISE）・5 回目（**APPROVE**）。
+追加（2026-11-08）: 便8（残りの部品を決められた部品に差し替える・G26〜G30）は PO の選択「1」（2026-11-08）。作り方は §3.13。設計審査は §9 の 11 回目。
 根拠: `docs/handoff/schedule-gcal-clone/recon.md`（以下 recon）。前の設計 `docs/handoff/schedule-gcal-alignment/design.md`（K1〜K14）を引き継ぎ、便2（K8〜K11）はこの設計に入れ直す。
 
 ## 1. 目的
@@ -60,6 +61,20 @@ PO の言葉（2026-11-08）: 「ヘッダーをGoogleと同じく上部だけ�
 | G23 | 1 時間の高さが窓の高さで変わる: 時間割の見える高さ ÷ 13 を 16px 刻みに丸め、48px 以上 96px 以下。窓 1440x723 で 48px・時間割の見える高さ 1073px で 80px・1242px で 96px（Google の実測と同じ） | `.fc-timegrid-slot` の高さと `.fc-scroller-liquid-absolute` の高さを読む。左の欄を出し入れした後も予定の箱の位置が 1 時間の線とずれない（10 時の予定の箱の上端と 10 時の線の差が 2px 以内） | R7-4 |
 | G24 | 今の時刻の丸（直径 12px）が欠けずに丸ごと見える | 丸の getBoundingClientRect の幅と、画面写しで丸の左右が切れていないこと | R7-5 |
 | G25 | 昼（例: 午後3時台）に開くと、一番上に見える時刻の文字（例:「午後3時」）が上で切れない。上端は「今の 1 時間前の 30 分」（例: 午後3時31分なら午後2時30分。Google の実測 午前3時31分→上端 午前2時30分と同じ） | 開いた直後に、一番上に見える時刻の文字の上端が時間割の見える上端より下にある | R7-6 |
+
+### 2.3 残りの部品を決められた部品に差し替える（G26〜G30・便8・2026-11-08 追加）
+
+PO の選択（2026-11-08）「1」＝「残りの5か所を決められた部品に差し替える【おすすめ】」。奥の目的: 予定の画面（PC）の部品を全部、決められた部品（金型）とトークンで作り、直書きを残さない（ADR-144・ADR-067）。
+範囲: 決められた部品がそのまま使える所だけ（§3.13 の A 組）。決められた部品が形に合わない所（§3.13 の B 組）は今回は変えず、PO に聞く。
+測る場所: 本番 /schedule・幅 1024px 以上。予定は保存しない（見るだけ）。
+
+| # | 基準 | 検証方法 | recon |
+|---|---|---|---|
+| G26 | 予定の詳しくの小窓の右上のボタン 3 つ（直す・消す・閉じる）と、「他 N 件」で開くその日の一覧の小窓の閉じるボタンが、決められたボタンの部品（`comp-btn comp-btn--ghost comp-btn--icon-only`・大きさ 36px）。画面の中に `.modal-icon-btn` が 0 個。押した時の動き（直す画面が開く・消す確認が出る・閉じる）は今と同じ | 本番で自分の予定を押して小窓を開き、3 つのボタンの class と getBoundingClientRect の幅・高さを読む。単体の試験で押した時の動き | R8-1 |
+| G27 | つながった知らせの帯（緑・赤）の × が、決められたボタンの部品（`comp-btn comp-btn--ghost comp-btn--sm comp-btn--icon-only`）で、中身は閉じるの絵（文字の「×」ではない）。押すと帯が消える | 本番で `/schedule?connected=true` を開き（読むだけ・保存しない）、帯の中のボタンの class と中身の `svg` を読む。押して帯が消えるのを見る | R8-2 |
+| G28 | 詳しくの小窓の種類の札が、決められた札の部品（`comp-badge comp-badge--soft comp-badge--md`）。7 種類の色は次の表どおりで、要素に `style` が無い: 会議=info・個人=purple・仕入れ=success・発送=danger・請求=warning・リリース=neutral・祝日=purple | 本番で会議の予定を押して札の class と `style` の有無を読む。7 種類全部は単体の試験 | R8-3 |
+| G29 | 予定の画面の部品のファイル 4 つ（`frontend/src/pages/schedule/SchedulePageImpl.tsx`・`frontend/src/features/schedule/calendars.config.ts`・`frontend/src/pages/schedule/schedule-owner.ts`・`frontend/src/components/CalendarView.stories.tsx`）に、色の直書き（`#` と 3〜8 桁の英数字）が 0 件（今は 22 件） | `grep -cE "#[0-9a-fA-F]{3,8}\b"` を 4 つのファイルで数える | R8-3・R8-4 |
+| G30 | 使われなくなった見た目の規則を消した: `frontend/src/components.css` の `.modal-icon-btn` の 3 つと `frontend/src/pages/schedule.css` の `.schedule-category-chip` が 0 件。`.schedule-banner__close` は置き場所の 2 行（左の間・縦の真ん中）だけ | `grep -c` で数える | R8-5 |
 
 ## 3. 作り方（How）
 
@@ -335,6 +350,40 @@ PO 承認: 成功条件 G12（§2）。便5 の着手は PO が 2026-11-07「1�
 - 送り枠に `container-type: size` を付けると、中身の大きさで送り枠の大きさが決まらなくなる: 送り枠は FullCalendar が上下左右 0 の絶対配置で大きさを決めている（`height` 100% の時）ので影響しない。クラウドの審査で 6.1.22 の実物の css と生成の道を照らす。
 - 1023px 以下: 送り枠の規則は `fillHeight` の時だけ。今の 1023px 以下は時間割の高さが 0 になる不具合（scratchpad 実測 D）があり、それは Android 側の担当が直す。便7 は 1023px 以下の並び方を変えない。
 
+### 3.13 便8: 残りの部品を決められた部品に差し替える（G26〜G30・2026-11-08）
+
+確かめた事実（行番号は origin/main 36ea9b7b2）:
+- R8-1: 小窓のボタン 4 つは生の `<button className="modal-icon-btn">`。詳しくの小窓: 直す `frontend/src/pages/schedule/SchedulePageImpl.tsx:308-317`・消す `:318-327`（`modal-icon-btn--danger`）・閉じる `:328-330`。その日の一覧の小窓: 閉じる `:744-746`。絵は `SCHEDULE_POPOVER_ICONS`（`:250-252`・`:735`）で `size={18}`。見た目は `frontend/src/components.css:362-385`（36px＝`--space-9`・丸・地は透明・乗せると `--bg-hover`・消すは乗せると `--danger-bg`）。`.modal-icon-btn` を使うのはこの 4 つだけ（2026-11-08 に `frontend/src` 全体を grep。他は `frontend/src/tokens.css:81` の説明の文だけ）。決められたボタンの部品 `frontend/src/components/Button.tsx` は `variant="ghost"`（地は透明・文字は `--text-primary`・乗せると `--bg-subtle`・`frontend/src/components/Button.css:83-103`）と `iconOnly`（36px＝`--size-icon-btn`・`Button.css:149-155`・`frontend/src/tokens.css:167`）を持ち、`aria-label` と `title` はそのまま渡る（`Button.tsx:236`・`:262-263`）。同じ画面の上の帯は既に `<Button variant="ghost" size="sm" iconOnly ...>` を使っている（`SchedulePageImpl.tsx:1388`）。
+- R8-2: 知らせの帯の × は生の `<button className="schedule-banner__close">×</button>`（`SchedulePageImpl.tsx:1532-1538`）で、中身は文字の「×」。見た目は `frontend/src/pages/schedule.css:1026-1032`。帯は `?connected=true`／`false` で開いた時に出る（`SchedulePageImpl.tsx:1012-1020`）。帯は横並び（flex）ではない（`schedule.css:1034-1041`・`frontend/src/components.css:698-706`）。
+- R8-3: 種類の札は生の `<span className="schedule-category-chip" style={{ background: cssVar(meta.tintVar), color: cssVar(meta.textVar) }}>`（`SchedulePageImpl.tsx:298-304`）。色は `frontend/src/features/schedule/calendars.config.ts:23-73` に 7 種類 × 3 つ＝21 個の直書き（`colorVar`・`tintVar`・`textVar`）。`colorVar` はどこからも読まれていない。`tintVar`・`textVar` を読むのは `:301` だけ。`cssVar`（`calendars.config.ts:82-84`）は値をそのまま返すだけで、使うのは `:301` だけ。ダークの時も明るい色のまま出る（直書きのため）。決められた札の部品 `frontend/src/components/Badge.tsx` は 6 色（neutral・info・success・warning・danger・purple）を持ち、色はトークン（`Badge.css:324-329`・ライトとダークの両方がある）。札の試験 `calendars.config.test.ts` は文言キーだけを見る。
+- R8-4: 持ち主の色が無い時の色 `DEFAULT_OWNER_COLOR = "#1a73e8"`（`frontend/src/pages/schedule/schedule-owner.ts:34`）。使う所は `normalizeOwner`（同 `:43`）・`getOwnerMeta`（`SchedulePageImpl.tsx:218`）・見本帳（`frontend/src/components/CalendarView.stories.tsx:5`・`:118-119`）。持ち主の色の正本はサーバー: 色が無い時は `backend/app/routers/calendar.py:50` の `_DEFAULT_OWNER_COLOR = "#1a73e8"` で必ず埋めて返す（`:243`・`:250`・`:269`・`:368`・`:377`・`:392`）。同じ色のトークン `--calendar-google-blue`（ライト `#1a73e8`・ダーク `#8ab4f8`・`frontend/src/index.css:184`・`:385`）が在る。金型 CalendarView は色を css の変数に入れるだけ（`frontend/src/components/CalendarView.tsx:261-262`）なので `var(...)` の文字でも効く。設定の画面の色の欄 `<input type="color" value={owner.color}>`（`frontend/src/pages/schedule/ScheduleSettingsPage.tsx:145-148`・`:198-201`）は `#` の 6 桁でないと黒になるので、`normalizeOwner` の色に `var(...)` を入れてはいけない。
+- R8-5: 消す規則を使う所は他に無い（`.modal-icon-btn` は R8-1・`.schedule-category-chip` と `.schedule-banner__close` は `SchedulePageImpl.tsx` だけ。2026-11-08 に `frontend/src` 全体を grep）。
+
+作り方（A 組・決められた部品がそのまま使える所）:
+1. 小窓のボタン 4 つ（G26）: `<Button variant="ghost" size="md" iconOnly aria-label=... title=... onClick=...>` にする。中身の絵と `size={18}` は今のまま。大きさは今と同じ 36px（`size="md"`）。消すボタンも `ghost`。
+2. 帯の ×（G27）: `<Button variant="ghost" size="sm" iconOnly aria-label={t("common.close")} layoutClassName="schedule-banner__close" onClick=...>` にし、中身を `SCHEDULE_POPOVER_ICONS.close`（`size={16}`）にする。`schedule.css` の `.schedule-banner__close` は置き場所の 2 行 `margin-left: var(--space-3); vertical-align: middle;` だけにする（`layoutClassName` は外側の置き場所専用の口・`Button.tsx:232-233`）。
+3. 種類の札（G28）: `CalendarMeta` に `badgeVariant: BadgeVariant` を足し、`colorVar`・`tintVar`・`textVar` と `cssVar` を消す。札は `<Badge variant={meta.badgeVariant} size="md">{t(meta.labelKey)}</Badge>`。色の対応は会議=info・個人=purple・仕入れ=success・発送=danger・請求=warning・リリース=neutral・祝日=purple（今の色に一番近い色の組。祝日と個人は同じ紫になる）。
+4. 持ち主の色が無い時（G29）: `DEFAULT_OWNER_COLOR` を `"var(--calendar-google-blue)"` にする（画面に描く時だけの色）。`normalizeOwner` の `|| DEFAULT_OWNER_COLOR` は消し `owner.color` だけにする（正本はサーバーで、必ず埋めて返す・R8-4）。
+5. 消す規則（G30）: `frontend/src/components.css:362-385` の `.modal-icon-btn` の 3 つ（直前の説明の 1 行も）と `schedule.css:381-389` の `.schedule-category-chip`。`frontend/src/tokens.css:81` の説明の文の「（.modal-icon-btn 等）」は消す。
+
+B 組（決められた部品が形に合わない所・今回は変えない・PO に聞く）:
+- 左の小さい月の日の升目（`SchedulePageImpl.tsx:637` の生の `<button>`）: 決められたボタンの部品に「日付の丸」の形が無い。
+- その日の一覧の行（`:753`）と一覧の表示の行（`:821`）: 決められた 1 行の部品 `ListRow` は丸い画像つきの 2 段の行で、今の 1 段の行と見た目が変わる。
+- 小窓の外枠（`:290`・`:740` の手作りの `schedule-popover`）: 決められた小窓の部品 `Popover` は押したボタンの横に出す形で、押した予定の箱の横に出す口が無い。
+- 設定の画面の左の項目（`ScheduleSettingsPage.tsx:115`・`:123` の生の `<button>`）: 決められた項目の部品 `NavItemList` は画面の移動（リンク）用。
+- 設定の画面の色の欄（`ScheduleSettingsPage.tsx:144`・`:197` の `<input type="color">`）: 色を選ぶ部品が無い。
+- どれも、部品を新しく作るか部品を変える必要があり、PO の承認が要る（ADR-144）。
+
+選ばなかった案:
+- 消すボタンを `variant="danger"`: 文字が常に赤になる（`Button.css:112-115`）。今は灰色で、乗せた時だけ赤い。灰色のまま乗せた時だけ赤くする形は部品に無く、足すには部品を変える（PO の承認が要る）。乗せた時の赤は無くなる。
+- 種類ごとに色のトークンを 21 個作る: 同じ役目の色が札の部品に既にある（ADR-067 の重複を作らない）。
+- `normalizeOwner` に `var(...)` を入れる: 設定の画面の色の欄が黒になる（R8-4）。
+
+心配と対処:
+- 札の色が少し変わる（例: 会議は `#e8f0fe` の地→`--info-bg` `#bee3f8`）: 決められた色に揃えるのが目的。ダークでも暗い地の色になる（今は明るい地のまま）。
+- 帯の × が 28px の丸になり、帯が少し高くなる: 押しやすくなる。帯の文字の並びは変えない。
+- サーバーが色を空で返すと、設定の画面の色の欄が黒になる: サーバーは必ず埋める（R8-4 の 6 か所）。今の画面の表示でも `getOwnerMeta` が持ち主の無い時に色を補う形は残る。
+
 ### 3.4 祝日の出どころ（2026-11-06 に確かめて決めた）
 
 確かめた事実:
@@ -369,6 +418,7 @@ PO 承認: 成功条件 G12（§2）。便5 の着手は PO が 2026-11-07「1�
 | 便5 | 検索（§3.11） | G12 | なし（移行・deploy・scripts・DB の形は無い。裏側は読み取りの道 1 本と `calendar_service.list_events` の省略できる引数だけ） |
 | 便6 | 見た目 5 か所（§3.8）。金型に口 1 つ・css・トークン 2 つ・予定の画面に 1 行 | G15〜G19 | なし（frontend だけ。移行・deploy・scripts・DB は無い） |
 | 便7 | 上の帯を 1 段・左上のメニューボタン・3日間・1時間の高さ・今の時刻の丸・一番上の文字（§3.12）。金型 PageLayout に口 1 つ・金型 CalendarView に測り直し 1 つ・css・トークン 3 つ | G20〜G25 | なし（frontend だけ。移行・deploy・scripts・DB は無い） |
+| 便8 | 残りの部品を決められた部品に差し替える（§3.13 の A 組）。ボタン 5 つ・札 1 つ・持ち主の色・使わなくなった規則を消す。部品の追加・変更なし | G26〜G30 | なし（frontend だけ。移行・deploy・scripts・DB は無い） |
 
 便0 を先に出す理由: 今の本番で毎回起きる間違いで、1 行で直り、載せ替えを待つ理由がない。
 
@@ -405,6 +455,7 @@ PO 承認: 成功条件 G12（§2）。便5 の着手は PO が 2026-11-07「1�
 - 時間割は金型 1 か所。新しい画面が時間割を自前で書いたら、UI の見張り（ADR-144）で止める対象に加えるかを便2 で決める。
 - 金型の口ごとに見本帳の例と単体の試験を置く。
 - 便6 の見た目は `CalendarView.css` の `.comp-calendar--schedule.comp-calendar--days` の 1 か所だけ。数値の見張り（`frontend/scripts/check-css-hardcoded-values.js`）と色の見張り（`frontend/scripts/check-css-hardcoded-colors.js`）が CI で直書きを止める。
+- 便8 の札の色は札の部品の 6 色だけ。`frontend/src/features/schedule/calendars.config.test.ts` が 7 種類の対応と、設定に `#` の色が無いことを CI で毎回確かめる。
 - 守り手: frontend/src/pages/schedule/SchedulePageImpl.test.tsx（押した時刻で小窓が開くことを CI の試験で毎回確かめる。金型に載せ替えた後は frontend/src/components/CalendarView.test.tsx が加わる）
 
 ## 9. 審査
