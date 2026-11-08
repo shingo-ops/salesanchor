@@ -509,3 +509,11 @@ PO 承認: 成功条件 G12（§2）。便5 の着手は PO が 2026-11-07「1�
   - G21 の幅の差は左の欄 256 と間 20 で 276px → 基準を 276±16 に直した。
   - G20 の帯は計算 70px で 64px を外れる → 金型の余白は全画面に響くので変えず、基準を 72px 以下に直した（説明の文の無い他の画面と同じ高さ）。
 - 推奨 3 件と直したこと: 消す行は `:1364`（`:1363` は navKey）に直した。G25 の例を「午後3時」に直した。カード §5 に check-new-tokens の PR 本文の項目を足した。
+
+### 10 回目（便7・G20〜G25）: 2 回目 REVISE（2026-11-08 00:33〜00:34 UTC・クラウドの Opus・origin/release/schedule-gcal-topbar 997451513・セッション cse_01HHUUpT6RA4AvoHyvdMfeTF）
+
+- 結果は返事の本文で全部読んだ（途中で切れていない）。前の回（cse_01HHUUpSTC362LBLQTWR2RCK）は写しを消す操作が見張りに止められ、判定なしで終わった。消さない試し方に変えてやり直した。
+- (1) ○ 写しで除外を足して説明の文を消すと rc=0、除外を外すと SchedulePageImpl.tsx の 1 件だけで rc=1。includes で当たるのは SchedulePageImpl.tsx と .test.tsx だけで、.test.tsx に PageLayout は 0 件。G21 は 256（tokens.css:405）＋20＝276。G20 は 10＋40＋20＝70 で 72 以下。
+- (2) △ :1364 と午後3時は ○。PR 本文の項目は ×（下の必須 1）。
+- (4) ○ 直しは文書 2 つだけ。stylelint と tsc は未確認（実装の CI で確かめる）。
+- 必須 1 件と直したこと: カードの PR 本文の 1 行には「デザイントークン変更時」も「check:dark-parity」も無く、`frontend/scripts/check-new-tokens.js:96-97` で rc=1 になる → `.github/PULL_REQUEST_TEMPLATE.md:51-55` の見出しと 4 項目をそのまま残し、4 項目すべてを `- [x]` にすると書き直した。色トークンは足さないと添え、dark-parity は流して確かめてから付ける。

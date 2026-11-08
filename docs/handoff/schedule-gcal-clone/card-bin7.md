@@ -124,7 +124,11 @@ export function scrollTimeForNow(now: Date): string {
 ```
 （トークンは 4 行になる。設計の「3 つ」は min・step・hours。`row-fit` は計算式の置き場で、css 本体に `cqh` を直書きしないため。）
 
-PR 本文: tokens.css にトークンを足すので、`frontend/scripts/check-new-tokens.js` が求める項目 `- [x] 新しいトークンを追加した場合、その理由を概要欄に記載した` を入れ、概要欄に理由（1 時間の高さを時間割の見える高さに合わせる・design §3.12 G23）を書く。
+PR 本文: tokens.css にトークンを足すので、`frontend/scripts/check-new-tokens.js` が通る形にする。見出しが無いと `:96-97` で rc=1 になり、`[ ]` が残ると `:112-127` で rc=1 になる。`.github/PULL_REQUEST_TEMPLATE.md:51-55` の見出し「### デザイントークン変更時（tokens.css / index.css を変更した場合）」と 4 項目をそのまま残し、4 項目すべてを `- [x]` にする。
+- 概要欄に理由を書く: 1 時間の高さを時間割の見える高さに合わせる（design §3.12 G23）。
+- 色トークンの項目: 今回足すのは寸法と数のトークンだけで色は無い。`[x]` にして、行末に「（色トークンの追加なし）」と添える。
+- `npm run check:dark-parity` の項目: 手元で流して rc=0 を確かめてから `[x]` にする。
+- 既存トークンの項目: `--schedule-row-height`（tokens.css:403）は上限として使い続け、下限・刻み・時間数を表すトークンは既存に無いことを確かめて `[x]` にする。
 
 ## 6. 予定の画面
 
