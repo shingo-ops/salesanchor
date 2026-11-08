@@ -410,6 +410,7 @@
   --schedule-popover-max-h:  34rem;    /* 詳細ポップオーバー最大高 */
   --schedule-month-cell-min-h: 7.5rem; /* 月ビューのセル最小高 */
   --schedule-month-dot-size: 8px;      /* 月ビュー・一覧の担当者色の丸 */
+  --schedule-month-daynum-size: 24px;  /* 月ビューの日付の丸（今日の丸・Google の実測 24px） */
   --schedule-rail-bg:        var(--bg-surface); /* 左パネル/レール面背景 */
   --schedule-rail-border:    var(--border); /* 左パネル/レール枠線 */
   --schedule-cell-border:    var(--schedule-gridline); /* 時間グリッド罫線 */
