@@ -260,7 +260,7 @@
 
 ## 12. 便3: 「〇〇が見つかりません」を、名前を残した理由コードにする（A2 の2回目）
 
-- 状態: 設計案作成済み（2026-11-08 Opus）。PO の選択「1」（「見つかりません」の文を直す設計を始める）に基づく。PO の承認待ち: §12-4 の文の型と §12-5 の名前（特に「変えた理由」のある 11 行）。
+- 状態: 設計案作成済み（2026-11-08 Opus）。PO の選択「1」（「見つかりません」の文を直す設計を始める）に基づく。PO 承認済み（2026-11-08 PO「1」＝「この文と名前で決まり、作り始める」）: §12-4 の文の型と §12-5 の名前。
 - 調べた土台: `36ea9b7b2a1a38509ca1d6c82d9ba9847b6ed8dd` の写し（git archive）。その後の origin/main `986df80cd404f2edec89ce6476ee2fbe876fecd2` までの 10 commit は、`backend/app`・`frontend/src/lib/api.ts`・`frontend/src/lib/apiErrorReason.ts`・`frontend/src/locales/ja.json`・`frontend/src/locales/en.json`・`frontend/tests-e2e/order-*.spec.ts`・`backend/tests/test_staff_me.py`・W1 の基準値に触れていない（`git diff --name-only 36ea9b7b2 986df80cd` の絞り込みが 0 行）。
 
 ### 12-1. 何が起きるか（利用者に見える変化）
@@ -296,7 +296,7 @@
 - `not_found`（`:` なし）や `company_not_found` などの今のコードは `not_found:` で始まらないので、今までどおりそのまま `message` に入る。
 - 選ばなかった案: (a) 名前ごとに 67 個のコードを作る（`lead_not_found` など）→ 便2 の表に 67 行と文 67 個が増え、型の文を1か所で直せない。(b) 名前をサーバーから文字で送る（`{"reason": "not_found", "target": "リード"}`）→ 名前の言葉がサーバーに残り、英語にできない（ADR-1071 What 4）。(c) 「見つかりません」を全部同じ文にする → 何が見つからないかが分からなくなる（PO の目的「誰でも分かる」に反する）。
 
-### 12-4. 文の型（PO の承認待ち。ja は ADR-1071 の型。en は同じ意味）
+### 12-4. 文の型（PO 承認済み 2026-11-08「1」。ja は ADR-1071 の型。en は同じ意味）
 
 | キー | ja | en |
 |---|---|---|
@@ -308,7 +308,7 @@
 - W2（`frontend/scripts/check-error-text-next-action.js:28-29`）: 型の文は失敗の語に当たらず（「見つかりません」は失敗の語ではない）、次にすることの語（もう一度・お試し・ください）を含む。名前だけの値は失敗の語を含まない。W2 の基準値 209 は変わらない。
 - 差し込みは i18next の `{{target}}`。`frontend/src/i18n.ts:38` は `escapeValue: false`（React が守る）。
 
-### 12-5. 名前の表（67 種類・198 か所。PO の承認待ち）
+### 12-5. 名前の表（67 種類・198 か所。PO 承認済み 2026-11-08「1」）
 
 | コード | 日本語の名前 | 英語の名前 | か所 | 今の文 | 名前を変えた理由 |
 |---|---|---|---|---|---|
@@ -393,7 +393,7 @@
 | C4: サーバーと表がずれない | 突き合わせ試験を両側に置く（便2 と同じ形）: `backend/tests/test_api_error_reason_sync.py` に「`backend/app` の `"not_found:<x>"` の x がすべて表にある」「表の対象がすべて `backend/app` で使われている」を足す。`frontend/src/lib/apiErrorReason.test.ts` にも同じ2つ。サーバーだけ・画面だけを変えた PR のどちらでも走る |
 | C5: 404 の状態番号で判断している画面の動きが変わらない | 判定は CI の pytest（`.github/workflows/test.yml:114` の pytest-run）と vitest（`.github/workflows/e2e.yml:87` の unit-run が `npm run test:coverage` で `src/**/*.test.{ts,tsx}` を流す）だけで行う: `backend/tests/test_staff_me.py:81` を `== "not_found:my_staff_profile"` にして緑。`frontend/src/lib/api.httpError.test.ts` に足す試験で、`not_found:lead` を受けた `ApiError` の `status` が 404 のまま。`frontend/tests-e2e/order-*.spec.ts` の見本の detail も新しいコードに直すが、e2e の仕事は `.github/workflows/e2e.yml:251` の `if: false` で止まっていて CI で走らないため、判定には使わない（試験は Mac で回さない決まり） |
 | C6: 本番に入る | Deploy to VPS が成功。本番の画面の JS（`https://app.salesanchor.jp/` が読み込む JS を curl で取る）に en の型の文 `could not be found. Reload the page and try again.`・en の名前 `The Discord routing`・ja の名前なしの文「お探しのものが見つかりませんでした。」が入っている（3つとも今の辞書には無いことを 2026-11-08 に確かめた。ja の「Discord紐付け」は今の画面に既にあるので確かめに使わない）。サーバーの返事は認証が要るので本番では見ない（CI の C1・C2 で確かめる） |
-| C7: PO が名前を確かめる | PO が §12-5 の表（特に「変えた理由」の 11 行）を読んで○× |
+| C7: PO が名前を確かめる | PO が §12-5 の表（特に「変えた理由」の 11 行）を読んで○× → ○（2026-11-08 PO「1」） |
 
 ### 12-7. 弊害・トレードオフ
 
