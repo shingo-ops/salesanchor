@@ -593,7 +593,7 @@ describe("not_found:<target> texts (ADR-1071 bin3)", () => {
 
 GET の 404 は送り直しの対象ではない（`RETRYABLE_STATUS` は 5xx）。試験が待つときは、止まらずに原因を報告に書く。
 
-### 3-9 `frontend/tests-e2e/order-*.spec.ts` の見本（Edit の replace_all で、4 ファイルそれぞれ）
+### 3-9 `frontend/tests-e2e/order-commission.spec.ts`・`frontend/tests-e2e/order-financial.spec.ts`・`frontend/tests-e2e/order-purchase.spec.ts`・`frontend/tests-e2e/order-shipping.spec.ts` の見本（Edit の replace_all で、4 ファイルそれぞれ）
 
 | 今の文字列 | 新しい文字列 |
 |---|---|
