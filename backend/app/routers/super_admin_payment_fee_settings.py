@@ -143,7 +143,7 @@ async def update_payment_fee_setting(
         raise HTTPException(status_code=409, detail="conflict_constraint")
     row = result.mappings().first()
     if not row:
-        raise HTTPException(status_code=404, detail="決済手数料設定が見つかりません")
+        raise HTTPException(status_code=404, detail="not_found:payment_fee_setting")
     await db.commit()
     return PaymentFeeSettingResponse(**dict(row))
 
@@ -165,5 +165,5 @@ async def delete_payment_fee_setting(
         {"id": setting_id},
     )
     if result.rowcount == 0:
-        raise HTTPException(status_code=404, detail="決済手数料設定が見つかりません")
+        raise HTTPException(status_code=404, detail="not_found:payment_fee_setting")
     await db.commit()

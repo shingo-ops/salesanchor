@@ -219,7 +219,7 @@ async def update_note_master(
         raise HTTPException(status_code=409, detail="conflict_constraint")
     row = result.mappings().first()
     if not row:
-        raise HTTPException(status_code=404, detail="備考マスタが見つかりません")
+        raise HTTPException(status_code=404, detail="not_found:note_master")
     await db.commit()
     return TcgNoteMasterResponse(**dict(row))
 
@@ -241,7 +241,7 @@ async def delete_note_master(
         {"id": note_id},
     )
     if result.rowcount == 0:
-        raise HTTPException(status_code=404, detail="備考マスタが見つかりません")
+        raise HTTPException(status_code=404, detail="not_found:note_master")
     await db.commit()
 
 

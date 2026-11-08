@@ -388,7 +388,7 @@ async def update_conv_log(
         or existing.get("lead_id") != lead_id
         or existing.get("is_manual") not in (True, 1)
     ):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="会話ログが見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:conv_log")
     if existing.get("deleted_at") is not None:
         raise HTTPException(status_code=status.HTTP_410_GONE, detail="削除済みの会話ログは編集できません")
 
@@ -462,7 +462,7 @@ async def delete_conv_log(
         or existing.get("lead_id") != lead_id
         or existing.get("is_manual") not in (True, 1)
     ):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="会話ログが見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:conv_log")
     if existing.get("deleted_at") is not None:
         raise HTTPException(status_code=status.HTTP_410_GONE, detail="すでに削除済みです")
 
@@ -551,7 +551,7 @@ async def update_channel_master_visibility(
     await set_tenant_context(db, tenant_id)
     row = await channel_masters.get_channel_by_id(db, tenant_id, master_id)
     if row is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="チャネルが見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:channel_master")
     if row["connection_type"] == "auto":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -591,7 +591,7 @@ async def deactivate_channel_master(
     await set_tenant_context(db, tenant_id)
     row = await channel_masters.get_channel_by_id(db, tenant_id, master_id)
     if row is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="チャネルが見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:channel_master")
     if row["connection_type"] == "auto":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

@@ -135,7 +135,7 @@ async def update_attribute_master(
         )
     row = result.mappings().first()
     if not row:
-        raise HTTPException(status_code=404, detail="マスタが見つかりません")
+        raise HTTPException(status_code=404, detail="not_found:product_master")
     await db.commit()
     return ProductAttributeMasterResponse(**dict(row))
 
@@ -154,5 +154,5 @@ async def delete_attribute_master(
         {"id": master_id},
     )
     if result.rowcount == 0:
-        raise HTTPException(status_code=404, detail="マスタが見つかりません")
+        raise HTTPException(status_code=404, detail="not_found:product_master")
     await db.commit()

@@ -350,7 +350,7 @@ async def get_company(
     )
     row = result.mappings().first()
     if not row:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="会社が見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:company")
     return await _compose_response(db, dict(row))
 
 
@@ -386,7 +386,7 @@ async def create_company(
         # 便1a: lead 必須（背骨）
         lead_check = await db.execute(text("SELECT id FROM leads WHERE id = :id"), {"id": data.lead_id})
         if not lead_check.first():
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="指定されたリードが見つかりません")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:lead")
 
         await _ensure_sales_rep_in_tenant(db, data.sales_rep_id, tenant_id)
 
@@ -464,7 +464,7 @@ async def create_company(
             deal_row = (await db.execute(
                 text("SELECT lead_id FROM deals WHERE id = :id"), {"id": data.deal_id})).first()
             if not deal_row:
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="指定された商談が見つかりません")
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:deal")
             if deal_row[0] != data.lead_id:
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                     detail="商談の出自リードと会社の出自リードが一致しません")
@@ -527,7 +527,7 @@ async def update_company(
     )
     old_row = old_result.mappings().first()
     if not old_row:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="会社が見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:company")
 
     # PR #145 F9: 副テーブルの old スナップショットを _replace_* 前に取得
     old_subs_snapshot = await _snapshot_company_subtables(db, company_id)
@@ -639,7 +639,7 @@ async def delete_company(
     )
     old_row = old_result.mappings().first()
     if not old_row:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="会社が見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:company")
 
     # PR #145 F9: 副テーブルも CASCADE で消える前にスナップショットを取って old_data に含める
     old_subs_snapshot = await _snapshot_company_subtables(db, company_id)

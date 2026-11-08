@@ -81,7 +81,7 @@ async def _ensure_order_exists(db: AsyncSession, order_id: int, tenant_id: int) 
     if not res.first():
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="注文が見つかりません",
+            detail="not_found:order",
         )
 
 
@@ -202,7 +202,7 @@ async def get_order_shipping(
     if not row:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="発送情報が見つかりません",
+            detail="not_found:order_shipping",
         )
     return OrderShippingDetailResponse(**row)
 
@@ -224,7 +224,7 @@ async def update_order_shipping(
     if not old_row:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="発送情報が見つかりません",
+            detail="not_found:order_shipping",
         )
 
     update_data = data.model_dump(exclude_unset=True, mode="python")
@@ -281,7 +281,7 @@ async def delete_order_shipping(
     if not old_row:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="発送情報が見つかりません",
+            detail="not_found:order_shipping",
         )
 
     order_shipping_details_t = tenant_table_ref(db, tenant_id, "order_shipping_details")
@@ -364,7 +364,7 @@ async def get_order_shipping_elogi_csv(
     if not order_row:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="注文が見つかりません",
+            detail="not_found:order",
         )
     shipping_row = await _fetch_shipping_row(db, order_id, tenant_id)
     # 発送情報が無くても CSV 自体は出す（一部列が空で出るだけ）。

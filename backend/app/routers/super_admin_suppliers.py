@@ -217,7 +217,7 @@ async def update_supplier(
         raise HTTPException(status_code=409, detail="conflict_constraint")
     row = result.mappings().first()
     if not row:
-        raise HTTPException(status_code=404, detail="仕入元が見つかりません")
+        raise HTTPException(status_code=404, detail="not_found:supplier_master")
     await db.commit()
     return CentralSupplierResponse(**dict(row))
 
@@ -242,7 +242,7 @@ async def delete_supplier(
         {"id": supplier_id},
     )
     if result.rowcount == 0:
-        raise HTTPException(status_code=404, detail="仕入元が見つかりません")
+        raise HTTPException(status_code=404, detail="not_found:supplier_master")
     await db.commit()
 
 
@@ -621,7 +621,7 @@ async def delete_routing(routing_id: int, db: AsyncSession = Depends(get_db)):
         {"id": routing_id},
     )
     if result.rowcount == 0:
-        raise HTTPException(status_code=404, detail="routing が見つかりません")
+        raise HTTPException(status_code=404, detail="not_found:discord_routing")
     await db.commit()
 
 
@@ -728,7 +728,7 @@ async def get_supplier_extraction_rules(
         )
     ).mappings().first()
     if not row:
-        raise HTTPException(status_code=404, detail="仕入元が見つかりません")
+        raise HTTPException(status_code=404, detail="not_found:supplier_master")
 
     # 最新原文を取得
     raw_row = (
@@ -799,7 +799,7 @@ async def update_supplier_extraction_rules(
 
     row = result.mappings().first()
     if not row:
-        raise HTTPException(status_code=404, detail="仕入元が見つかりません")
+        raise HTTPException(status_code=404, detail="not_found:supplier_master")
     await db.commit()
 
     return SupplierExtractionRulesResponse(
@@ -968,7 +968,7 @@ async def create_supplier_knowledge_link(
         )
     ).first()
     if not sup:
-        raise HTTPException(status_code=404, detail="仕入元が見つかりません")
+        raise HTTPException(status_code=404, detail="not_found:supplier_master")
     try:
         result = await db.execute(
             text(
@@ -1022,7 +1022,7 @@ async def delete_supplier_knowledge_link(
         {"id": link_id, "supplier_id": supplier_id},
     )
     if result.rowcount == 0:
-        raise HTTPException(status_code=404, detail="リンクが見つかりません")
+        raise HTTPException(status_code=404, detail="not_found:knowledge_link")
     await db.commit()
 
 

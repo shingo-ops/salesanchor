@@ -137,7 +137,7 @@ async def update_quantity_unit(
         raise HTTPException(status_code=409, detail="conflict_constraint")
     row = result.mappings().first()
     if not row:
-        raise HTTPException(status_code=404, detail="数量単位が見つかりません")
+        raise HTTPException(status_code=404, detail="not_found:quantity_unit")
     await db.commit()
     # カウントを再取得
     cond_res = await db.execute(
@@ -183,7 +183,7 @@ async def delete_quantity_unit(
         {"id": unit_id},
     )
     if result.rowcount == 0:
-        raise HTTPException(status_code=404, detail="数量単位が見つかりません")
+        raise HTTPException(status_code=404, detail="not_found:quantity_unit")
     await db.commit()
 
 
@@ -203,7 +203,7 @@ async def get_quantity_unit_links(
         {"id": unit_id},
     )
     if not exists.fetchone():
-        raise HTTPException(status_code=404, detail="数量単位が見つかりません")
+        raise HTTPException(status_code=404, detail="not_found:quantity_unit")
 
     cond_res = await db.execute(
         text(

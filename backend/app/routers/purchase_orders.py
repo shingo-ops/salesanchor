@@ -81,7 +81,7 @@ async def _resolve_tenant_supplier_id(db: AsyncSession, supplier_id: int, tenant
             {"id": supplier_id},
         )).first()
         if legacy is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="指定された仕入先が見つかりません")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:supplier")
         return supplier_id
 
     if not pub["is_active"]:
@@ -152,7 +152,7 @@ async def get_po(po_id: int, db: AsyncSession = Depends(get_db),
     result = await db.execute(text(f"SELECT {_PO_COLS} FROM purchase_orders WHERE id = :id"), {"id": po_id})
     row = result.mappings().first()
     if not row:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="仕入注文が見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:purchase_order")
     items = await _get_po_items(db, po_id)
     return PODetailResponse(**dict(row), items=[POItemResponse(**i) for i in items])
 
@@ -194,7 +194,7 @@ async def create_po(
                 {"id": item.order_item_id},
             )
             if found.first() is None:
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="指定された受注明細が見つかりません")
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:order_item")
         await db.execute(
             text("""
                 INSERT INTO purchase_order_items (purchase_order_id, product_id, quantity, unit_cost, subtotal, sort_order, order_item_id)

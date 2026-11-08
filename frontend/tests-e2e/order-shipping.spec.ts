@@ -170,7 +170,7 @@ function ordersWithShippingMocks(initial: ShippingFixture | null): {
       await route.fulfill({
         status: 404,
         contentType: "application/json",
-        body: JSON.stringify({ detail: "売上情報が見つかりません" }),
+        body: JSON.stringify({ detail: "not_found:order_financial" }),
       });
     },
     "GET /orders/1/shipping": async (route: Route) => {
@@ -184,7 +184,7 @@ function ordersWithShippingMocks(initial: ShippingFixture | null): {
         await route.fulfill({
           status: 404,
           contentType: "application/json",
-          body: JSON.stringify({ detail: "発送情報が見つかりません" }),
+          body: JSON.stringify({ detail: "not_found:order_shipping" }),
         });
       }
     },

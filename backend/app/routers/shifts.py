@@ -111,7 +111,7 @@ async def delete_shift(shift_id: int, db: AsyncSession = Depends(get_db),
                        current_user: User = Depends(get_current_user)):
     r = await db.execute(text("DELETE FROM shifts WHERE id = :id RETURNING id"), {"id": shift_id})
     if not r.first():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="シフトが見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:shift")
     await record_audit_log(db=db, tenant_id=tenant_id, user_id=current_user.id,
                            action="delete", table_name="shifts", record_id=shift_id)
     await db.commit()
