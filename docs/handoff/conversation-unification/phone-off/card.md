@@ -11,12 +11,11 @@
 
 ### 1-1. run.sh
 
-data-store/run.sh を写し、次の 3 か所だけ変える。
+data-store/run.sh を写し、2〜4 行目のコメントだけ変える。5 行目は data-store と同じ文のまま。
 - 2 行目のコメント: `# 名簿の共通行 id 10・11（phone・in_person）を全社で外す（is_active=false）。`
 - 3 行目のコメント: `# 設計 docs/handoff/conversation-unification/phone-off/design.md・card.md。`
 - 4 行目のコメント: `# PO の委任を受けた Opus が manual-only 鍵で流す。`
-- 5 行目のコメント: `# 順番: precheck → dryrun → commit → verify（戻すとき: rollback）`
-- 6 行目以降（`set -euo pipefail` から最後まで）は一字も変えない。ファイルは全部で data-store/run.sh と同じ行数。
+- 5 行目以降は一字も変えない。ファイルは全部で data-store/run.sh と同じ行数。
 
 ### 1-2. 各 SQL の 1 行目（共通の見出し）
 
@@ -30,6 +29,7 @@ data-store/run.sh を写し、次の 3 か所だけ変える。
 SELECT 1 / (CASE WHEN (SELECT count(*) FROM public.channel_masters WHERE tenant_id IS NULL)=6 THEN 1 ELSE 0 END) AS shared_must_be_6;
 SELECT 1 / (CASE WHEN (SELECT count(*) FROM public.channel_masters WHERE tenant_id IS NULL AND is_active=true AND id IN (10,11) AND platform IN ('phone','in_person'))=2 THEN 1 ELSE 0 END) AS ids_10_11_must_be_active;
 SELECT 1 / (CASE WHEN (SELECT count(*) FROM public.channel_masters WHERE tenant_id IS NULL AND is_active=true AND id IN (7,8,9,12))=4 THEN 1 ELSE 0 END) AS ids_7_8_9_12_must_be_active;
+SELECT 1 / (CASE WHEN (SELECT count(*) FROM public.channel_masters WHERE tenant_id IS NULL AND id IN (10,11) AND conversion_item IS NULL)=2 THEN 1 ELSE 0 END) AS ids_10_11_no_conversion_item;
 SELECT id, tenant_id, platform, display_name, is_active, updated_at FROM public.channel_masters ORDER BY id;
 ```
 
@@ -78,7 +78,7 @@ COMMIT;
 ## 3. 確かめ（クラウドで）
 
 - `bash -n docs/handoff/conversation-unification/phone-off/run.sh` が rc=0
-- `diff <(sed -n '6,$p' data-store/run.sh) <(sed -n '6,$p' phone-off/run.sh)` が空（実行の部分が同じ）
+- `diff <(sed -n '5,$p' docs/handoff/conversation-unification/data-store/run.sh) <(sed -n '5,$p' docs/handoff/conversation-unification/phone-off/run.sh)` が空（5 行目以降が同じ）。リポジトリの最上位で流す
 - `git diff --name-only origin/main...HEAD` が phone-off/ の 8 ファイル（design.md・card.md・run.sh・SQL 5 本）だけ
 - 本番・DB には接続しない
 

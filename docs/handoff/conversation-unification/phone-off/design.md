@@ -14,9 +14,9 @@
 |---|---|
 | K1 名簿の共通行のうち使える行が messenger・instagram・discord・whatsapp の 4 行だけ | reader 鍵で `SELECT id, platform, is_active FROM ai_ro.public__channel_masters ORDER BY id` → id 10・11 が is_active=false、7・8・9・12 が true |
 | K2 共通行の総数は 6 のまま（行を消さない） | 同上の行数 = 6 |
-| K3 リードで phone・in_person を使っている件数が 0（外しても保存が壊れない） | 5 社の leads.channel_type 集計 = 0（実施前後） |
-| K4 会話の数（meta_messages）が前後で同じ | 5 社の meta_messages 件数を実施前後で比べ差 0 |
-| K5 戻すと元の形に戻る | rollback.sql の検査（id 10・11 が true）を dryrun 内で確認 |
+| K3 リードで phone・in_person を使っている件数が 0（外しても保存が壊れない） | reader 鍵で 5 社の leads.channel_type を phone・in_person で数える（1 社 1 文）= 0（実施前後） |
+| K4 会話の数（meta_messages）が前後で同じ | 本番の会話は増え続けるので、実施時刻より前に作られた行に限って数える。reader 鍵で 5 社の meta_messages を `created_at < 実施時刻` で数え、実施前の基準（実施時刻より前に作られた行の数）と差 0 |
+| K5 戻す手順が使える | rollback.sql は 2 行を true に戻し、共通行で使える行が 6 行でなければゼロ除算で止まる（restored）。本番では戻すときだけ流す。今回は文の形（WHERE が commit と対になっている）を審査で確かめる |
 
 ## 3. 現在地（観測事実・2026-11-08 09:45 JST・reader 鍵）
 
@@ -29,7 +29,9 @@
 ## 4. コードの実物（origin/main）
 
 - 「外す」の既存の表し方は `is_active = false`: backend/app/routers/conv_logs.py:585-615（会社の行の削除は is_active=false にする）
-- 名簿の読み出しは全部 is_active=true で絞る: backend/app/services/channel_masters.py の list_channels（画面一覧・選択欄）・get_channel（記録の作成 conv_logs.py:212、リード保存 leads.py:205）・conversion_items・platforms_by_store
+- 名簿の読み出しは is_active=true で絞る: backend/app/services/channel_masters.py の list_channels（画面一覧・選択欄）・get_channel（記録の作成 conv_logs.py:212、リード保存 leads.py:205）・conversion_items・platforms_by_store
+- 例外: get_channel_by_id（channel_masters.py:113）は is_active を見ない。外した共用行に会社が「隠す」を切り替える操作（PUT）は今後も通る。表示には出ないので害は無い
+- 成約分析は変わらない: id 10・11 の conversion_item は空（2026-11-08 10:13 JST 本番観測 /tmp/CC報告ファイル/conv/pi-q4.txt）。conversion_items() の結果は外す前後で同じ。precheck でも空を確かめ、空でなければ止める
 - 言語判定 backend/app/services/lang_judge.py:33-37 は is_active を見ずに is_verbatim=FALSE の行で除外。行を残すので判定は変わらない（K4 系の数が変わらない根拠）
 - phone・in_person の値を直書きしたコードは無い（git grep。ChannelTypeCombobox.stories.tsx:11-12 は見本データ、ja.json の contactChannels.channels.phone は別機能「連絡先リンク」）
 - 値は migration で書かない決まり（ADR-1007・backend/tests/test_value_migrations_neutralized.py）。前例 docs/handoff/conversation-unification/data-store/ と同じ「手順一式を PO 権限の鍵で流す」形にする
@@ -57,6 +59,7 @@
 
 - 外した手段のリードが保存できなくなる → 現在 0 件（K3）。値を変えないリード保存は leads.py:202 の既存値の通し道で通る
 - 本番の書き込み → lock_timeout 5s・数の検査が合わないと COMMIT に届かない・rollback を用意
+- 会社が自分で phone を足し直した後に rollback すると、共用と自社の phone が 2 行並ぶ（一意の索引は共用と自社で別なので通る）。言語判定は外した共用行の is_verbatim=FALSE が残るので、自社の phone も除いたままになる → rollback の前に会社用の phone 行が無いかを読み取りで確かめる
 
 ## 9. 維持する仕組み
 
