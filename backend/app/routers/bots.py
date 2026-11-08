@@ -115,7 +115,7 @@ async def get_bot(bot_id: int, db: AsyncSession = Depends(get_db),
     )
     row = result.mappings().first()
     if not row:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Botが見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:bot")
     return BotResponse(**row)
 
 
@@ -215,7 +215,7 @@ async def update_bot(bot_id: int, data: BotUpdate,
     )
     old_row = old.mappings().first()
     if not old_row:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Botが見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:bot")
 
     update_data = data.model_dump(exclude_unset=True, mode="python")
     if not update_data:
@@ -259,7 +259,7 @@ async def rotate_bot_api_key(bot_id: int, db: AsyncSession = Depends(get_db),
     staff_t = tenant_table_ref(db, tenant_id, "staff")
     check = await db.execute(text(f"SELECT id FROM {bots_t} WHERE id = :id"), {"id": bot_id})
     if not check.first():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Botが見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:bot")
 
     plain_key, key_hash = _generate_api_key()
     await db.execute(
@@ -295,7 +295,7 @@ async def delete_bot(bot_id: int, db: AsyncSession = Depends(get_db),
     )
     old_row = old.mappings().first()
     if not old_row:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Botが見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:bot")
     try:
         await db.execute(text(f"DELETE FROM {bots_t} WHERE id = :id"), {"id": bot_id})
         await record_audit_log(

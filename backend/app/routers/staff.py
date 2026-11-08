@@ -204,7 +204,7 @@ async def get_my_staff(
     if row is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="現在のユーザに紐づく staff レコードが見つかりません",
+            detail="not_found:my_staff_profile",
         )
     return await _compose(db, dict(row))
 
@@ -289,7 +289,7 @@ async def update_my_profile(
     if not row:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="現在のユーザに紐づく staff レコードが見つかりません",
+            detail="not_found:my_staff_profile",
         )
 
     staff_id = row["id"]
@@ -350,7 +350,7 @@ async def _my_staff_id_and_token(db: AsyncSession, user_id: int) -> tuple[int, s
     if row is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="現在のユーザに紐づく staff レコードが見つかりません",
+            detail="not_found:my_staff_profile",
         )
     return row["id"], row["avatar_token"]
 
@@ -494,7 +494,7 @@ async def get_staff(staff_id: int, db: AsyncSession = Depends(get_db),
     )
     row = result.mappings().first()
     if not row:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="スタッフが見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:staff")
     return await _compose(db, dict(row))
 
 
@@ -558,7 +558,7 @@ async def update_staff(staff_id: int, data: StaffUpdate,
     )
     old_row = old.mappings().first()
     if not old_row:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="スタッフが見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:staff")
 
     update_data = data.model_dump(exclude_unset=True, mode="python")
     if "user_id" in update_data:
@@ -643,7 +643,7 @@ async def delete_staff(staff_id: int, db: AsyncSession = Depends(get_db),
     )
     old_row = old.mappings().first()
     if not old_row:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="スタッフが見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:staff")
     try:
         # 副テーブルは ON DELETE CASCADE で消える
         await db.execute(text("DELETE FROM staff WHERE id = :id"), {"id": staff_id})

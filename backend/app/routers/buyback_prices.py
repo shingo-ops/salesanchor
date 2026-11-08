@@ -773,7 +773,7 @@ async def get_price_history(
     if product_row is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="指定の商品が見つかりません",
+            detail="not_found:product",
         )
 
     logs = (
@@ -841,7 +841,7 @@ async def link_product(
     if not exists:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="指定の商品が見つかりません",
+            detail="not_found:product",
         )
 
     # product_id が指定された場合、products テーブルに存在するか確認

@@ -95,7 +95,7 @@ async def mark_notice_read(
 ):
     """本人の行だけ既読にする（既読なら変えない）。他人・他社の id は 404。"""
     if not current_user.tenant_id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="知らせが見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:notice")
     notices_t = tenant_table_ref(db, current_user.tenant_id, "user_notices")
     found = (
         await db.execute(
@@ -104,7 +104,7 @@ async def mark_notice_read(
         )
     ).first()
     if found is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="知らせが見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:notice")
     await db.execute(
         text(
             f"UPDATE {notices_t} SET read_at = :now "

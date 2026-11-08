@@ -327,7 +327,7 @@ async def list_company_contacts(
         {"id": company_id},
     )
     if exists.first() is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="会社が見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:company")
 
     result = await db.execute(
         text(f"""
@@ -399,7 +399,7 @@ async def get_contact(
     )
     row = result.mappings().first()
     if not row:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="担当者が見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:contact")
     return await _compose_response(db, dict(row))
 
 
@@ -422,7 +422,7 @@ async def create_contact(
         {"id": data.company_id},
     )
     if company_exists.first() is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="指定の会社が見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:company")
 
     try:
         explicit_code = data.contact_code and data.contact_code.strip()
@@ -533,7 +533,7 @@ async def update_contact(
     )
     old_row = old_result.mappings().first()
     if not old_row:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="担当者が見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:contact")
 
     # PR #145 F9: 副テーブルの old スナップショットを _replace_* 前に取得
     old_subs_snapshot = await _snapshot_contact_subtables(db, contact_id)
@@ -623,7 +623,7 @@ async def delete_contact(
     )
     old_row = old_result.mappings().first()
     if not old_row:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="担当者が見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:contact")
 
     # PR #145 F9: 副テーブルも CASCADE で消える前にスナップショットを取って old_data に含める
     old_subs_snapshot = await _snapshot_contact_subtables(db, contact_id)

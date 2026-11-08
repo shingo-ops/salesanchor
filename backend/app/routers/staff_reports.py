@@ -155,7 +155,7 @@ async def review_report(
     )
     row = result.mappings().first()
     if not row:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="レポートが見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:staff_report")
 
     await record_audit_log(db=db, tenant_id=tenant_id, user_id=current_user.id,
                            action="review", table_name="staff_reports", record_id=report_id,

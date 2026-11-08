@@ -111,7 +111,7 @@ async def _ensure_order_exists(db: AsyncSession, order_id: int, tenant_id: int) 
     if not res.first():
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="注文が見つかりません",
+            detail="not_found:order",
         )
 
 
@@ -210,7 +210,7 @@ async def get_order_purchase(
     if not row:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="仕入情報が見つかりません",
+            detail="not_found:order_purchase",
         )
     return _build_response(row)
 
@@ -232,7 +232,7 @@ async def update_order_purchase(
     if not old_row:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="仕入情報が見つかりません",
+            detail="not_found:order_purchase",
         )
 
     update_data = data.model_dump(exclude_unset=True, mode="python")
@@ -292,7 +292,7 @@ async def delete_order_purchase(
     if not old_row:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="仕入情報が見つかりません",
+            detail="not_found:order_purchase",
         )
 
     order_purchase_details_t = tenant_table_ref(db, tenant_id, "order_purchase_details")
@@ -334,7 +334,7 @@ async def update_order_purchase_status(
     if not old_row:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="仕入情報が見つかりません",
+            detail="not_found:order_purchase",
         )
 
     new_status: str = "confirmed"

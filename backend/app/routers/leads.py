@@ -383,7 +383,7 @@ async def get_lead(
     )
     row = result.mappings().first()
     if not row:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="リードが見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:lead")
 
     # ADR-108 Phase B-1: 複数選択データ + 選択肢マスタを付加
     lead_dict = dict(row)
@@ -502,7 +502,7 @@ async def update_lead(
     )
     old_row = old_result.mappings().first()
     if not old_row:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="リードが見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:lead")
 
     update_data = data.model_dump(exclude_unset=True)
     if "assigned_to" in update_data:
@@ -774,7 +774,7 @@ async def delete_lead(
     )
     old_row = old_result.mappings().first()
     if not old_row:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="リードが見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:lead")
 
     await db.execute(text(f"DELETE FROM {leads_t} WHERE id = :id"), {"id": lead_id})
     await record_audit_log(
@@ -817,7 +817,7 @@ async def convert_lead(
     )
     lead_row = lead_result.mappings().first()
     if not lead_row:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="リードが見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:lead")
     if lead_row["status"] == "negotiating":
         # 早期409（UXのため）。完全な保証は下のUPDATEで行う。
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="このリードは既に商談中です")
@@ -992,7 +992,7 @@ async def list_lead_messages(
     if not lead_row:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="リードが見つかりません",
+            detail="not_found:lead",
         )
 
     # messages 取得
@@ -1194,7 +1194,7 @@ async def mark_lead_messages_read(
     if lead_q.first() is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="リードが見つかりません",
+            detail="not_found:lead",
         )
 
     # 既読者はログイン中の users.id（ADR-1008: seen_by_staff_id には users.id を入れる）
@@ -1293,7 +1293,7 @@ async def mark_lead_message_unread(
     if lead_q.first() is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="リードが見つかりません",
+            detail="not_found:lead",
         )
 
     latest_q = await db.execute(
@@ -1401,7 +1401,7 @@ async def translate_message_endpoint(
     if lead_q.first() is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="リードが見つかりません",
+            detail="not_found:lead",
         )
 
     # message 存在確認 & テキスト取得
@@ -1417,7 +1417,7 @@ async def translate_message_endpoint(
     if msg_row is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="メッセージが見つかりません",
+            detail="not_found:message",
         )
 
     message_text = msg_row[0]
@@ -1556,7 +1556,7 @@ async def get_message_attachment_url(
     if lead_q.first() is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="リードが見つかりません",
+            detail="not_found:lead",
         )
 
     # message 存在確認 + platform 取得
@@ -1572,7 +1572,7 @@ async def get_message_attachment_url(
     if msg_row is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="メッセージが見つかりません",
+            detail="not_found:message",
         )
     platform = msg_row[0]
 
@@ -1798,7 +1798,7 @@ async def send_lead_message(
     if not lead_row:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="リードが見つかりません",
+            detail="not_found:lead",
         )
 
     text_body = payload.text.strip()
@@ -2448,7 +2448,7 @@ async def send_lead_image_message(
     )
     lead_row = lead_q.mappings().first()
     if not lead_row:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="リードが見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:lead")
 
     # ----- (3) 直近 inbound 取得 + platform 推論 -----
     inbound_q = await db.execute(

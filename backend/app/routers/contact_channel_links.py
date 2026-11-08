@@ -135,7 +135,7 @@ async def get_channel_links(
         {"cid": contact_id},
     )
     if not contact_check.mappings().first():
-        raise HTTPException(status_code=404, detail="担当者が見つかりません")
+        raise HTTPException(status_code=404, detail="not_found:contact")
 
     # チャンネル一覧取得（guild_id 列を含む）
     channels_res = await db.execute(

@@ -352,7 +352,7 @@ async def get_order(
     )
     row = result.mappings().first()
     if not row:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="注文が見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:order")
     return OrderResponse(**row)
 
 
@@ -373,7 +373,7 @@ async def list_order_items(
         {"id": order_id},
     )
     if exists.first() is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="注文が見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:order")
     return [OrderItemResponse(**item) for item in await _get_order_items(db, tenant_id, order_id)]
 
 
@@ -399,7 +399,7 @@ async def create_order_items(
         {"id": order_id},
     )
     if exists.first() is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="注文が見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:order")
 
     for item in items:
         await db.execute(
@@ -534,7 +534,7 @@ async def update_order(
     )
     old_row = old_result.mappings().first()
     if not old_row:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="注文が見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:order")
 
     update_data = data.model_dump(exclude_unset=True)
     update_data = {k: v for k, v in update_data.items() if k in _UPDATABLE_COLUMNS}
@@ -590,7 +590,7 @@ async def set_order_paid(
     )
     old_row = old_result.mappings().first()
     if not old_row:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="注文が見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:order")
 
     if data.paid:
         set_clause = "paid_at = NOW()"
@@ -635,7 +635,7 @@ async def delete_order(
     )
     old_row = old_result.mappings().first()
     if not old_row:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="注文が見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:order")
 
     await db.execute(text(f"DELETE FROM {orders_t} WHERE id = :id"), {"id": order_id})
 

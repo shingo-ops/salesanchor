@@ -168,7 +168,7 @@ async def update_alias(
         raise HTTPException(status_code=409, detail="conflict_constraint")
     row = result.mappings().first()
     if not row:
-        raise HTTPException(status_code=404, detail="aliasが見つかりません")
+        raise HTTPException(status_code=404, detail="not_found:alias")
     await db.commit()
     return SupplierAliasResponse(**dict(row))
 
@@ -184,7 +184,7 @@ async def delete_alias(alias_id: int, db: AsyncSession = Depends(get_db)):
         {"id": alias_id},
     )
     if result.rowcount == 0:
-        raise HTTPException(status_code=404, detail="aliasが見つかりません")
+        raise HTTPException(status_code=404, detail="not_found:alias")
     await db.commit()
 
 

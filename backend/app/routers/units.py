@@ -174,7 +174,7 @@ async def update_unit(
     )
     row = result.mappings().first()
     if not row:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="単位が見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:unit")
     await db.commit()
     await reset_tenant_context(db, tenant_id)  # ADR-072
     return UnitResponse(**dict(row))
@@ -199,7 +199,7 @@ async def delete_unit(
         {"id": unit_id, "tenant_id": tenant_id},
     )
     if result.rowcount == 0:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="単位が見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:unit")
     await db.commit()
     await reset_tenant_context(db, tenant_id)  # ADR-072
 

@@ -51,7 +51,7 @@ async def _get_lead_discord_info(
     )
     row = result.mappings().first()
     if not row:
-        raise HTTPException(status_code=404, detail="リードが見つかりません")
+        raise HTTPException(status_code=404, detail="not_found:lead")
     discord_user_id = row["discord_user_id"]
     if not discord_user_id:
         raise HTTPException(status_code=409, detail="このリードには Discord ユーザーID が設定されていません。")

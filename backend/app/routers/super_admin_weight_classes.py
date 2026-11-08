@@ -120,7 +120,7 @@ async def update_weight_class(
         raise HTTPException(status_code=409, detail="conflict_constraint")
     row = result.mappings().first()
     if not row:
-        raise HTTPException(status_code=404, detail="重量クラスが見つかりません")
+        raise HTTPException(status_code=404, detail="not_found:weight_class")
     await db.commit()
     return WeightClassResponse(**dict(row))
 
@@ -153,5 +153,5 @@ async def delete_weight_class(
         {"id": class_id},
     )
     if result.rowcount == 0:
-        raise HTTPException(status_code=404, detail="重量クラスが見つかりません")
+        raise HTTPException(status_code=404, detail="not_found:weight_class")
     await db.commit()

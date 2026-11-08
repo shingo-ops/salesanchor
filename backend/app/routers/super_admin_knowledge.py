@@ -155,7 +155,7 @@ async def update_rule(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=detail)
     row = result.mappings().first()
     if not row:
-        raise HTTPException(status_code=404, detail="ルールが見つかりません")
+        raise HTTPException(status_code=404, detail="not_found:knowledge_rule")
     await db.commit()
     return KnowledgeRuleResponse(**dict(row))
 
@@ -171,7 +171,7 @@ async def delete_rule(rule_id: int, db: AsyncSession = Depends(get_db)):
         {"id": rule_id},
     )
     if result.rowcount == 0:
-        raise HTTPException(status_code=404, detail="ルールが見つかりません")
+        raise HTTPException(status_code=404, detail="not_found:knowledge_rule")
     await db.commit()
 
 

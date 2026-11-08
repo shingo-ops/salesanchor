@@ -368,7 +368,7 @@ async def get_pending_job(
     )
     rec = row.fetchone()
     if rec is None:
-        raise HTTPException(status_code=404, detail="import_job が見つかりません")
+        raise HTTPException(status_code=404, detail="not_found:line_import_job")
 
     names = rec[4] if rec[4] is not None else []
     if isinstance(names, str):
@@ -440,7 +440,7 @@ async def _resolve_supplier_impl(
     )
     job = job_row.fetchone()
     if job is None:
-        raise HTTPException(status_code=404, detail="import_job が見つかりません")
+        raise HTTPException(status_code=404, detail="not_found:line_import_job")
     if job[0] != "pending_review":
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -600,7 +600,7 @@ async def commit_pending_job(
     )
     job = job_row.fetchone()
     if job is None:
-        raise HTTPException(status_code=404, detail="import_job が見つかりません")
+        raise HTTPException(status_code=404, detail="not_found:line_import_job")
     if job[0] != "pending_review":
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,

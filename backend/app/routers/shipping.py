@@ -148,7 +148,7 @@ async def delete_zone(
         {"id": zone_id},
     )
     if not result.first():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="ゾーンが見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:shipping_zone")
     await record_audit_log(
         db=db, tenant_id=tenant_id, user_id=current_user.id,
         action="delete", table_name="shipping_zones", record_id=zone_id,
@@ -250,7 +250,7 @@ async def delete_rate(
         {"id": rate_id},
     )
     if not result.first():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="料金が見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:shipping_rate")
     await record_audit_log(
         db=db, tenant_id=tenant_id, user_id=current_user.id,
         action="delete", table_name="shipping_rates", record_id=rate_id,

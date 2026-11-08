@@ -102,7 +102,7 @@ async def award_badge(data: AwardRequest, db: AsyncSession = Depends(get_db),
                       current_user: User = Depends(get_current_user)):
     badge = await db.execute(text("SELECT id, name FROM badge_definitions WHERE id = :id AND is_active = TRUE"), {"id": data.badge_id})
     if not badge.first():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="バッジが見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:badge")
     try:
         result = await db.execute(
             text("""

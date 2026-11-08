@@ -106,3 +106,48 @@ describe("common reason code texts (ADR-1071 bin2)", () => {
     expect(err.message).toBe("x");
   });
 });
+
+describe("not_found:<target> texts (ADR-1071 bin3)", () => {
+  afterEach(async () => {
+    await i18n.changeLanguage("ja");
+  });
+
+  const expected = {
+    ja: ja.apiError.notFound.replace("{{target}}", ja.apiError.notFoundTarget.lead),
+    en: "The lead could not be found. Reload the page and try again.",
+  };
+
+  for (const lang of ["ja", "en"] as const) {
+    it(`request: not_found:lead becomes the ${lang} text and keeps 404`, async () => {
+      await i18n.changeLanguage(lang);
+      stubDetail(404, "not_found:lead");
+      const err = await catchApiError(() => api.get("/dummy"));
+      expect(err.status).toBe(404);
+      expect(err.message).toBe(expected[lang]);
+      expect(err.responseDetail).toBe("not_found:lead");
+    });
+    it(`requestForm: not_found:lead becomes the ${lang} text and keeps 404`, async () => {
+      await i18n.changeLanguage(lang);
+      stubDetail(404, "not_found:lead");
+      const err = await catchApiError(() => api.postForm("/dummy", new FormData()));
+      expect(err.status).toBe(404);
+      expect(err.message).toBe(expected[lang]);
+      expect(err.responseDetail).toBe("not_found:lead");
+    });
+  }
+
+  it("uses the text without a name for an unknown target", async () => {
+    stubDetail(404, "not_found:zzz");
+    const err = await catchApiError(() => api.get("/dummy"));
+    expect(err.message).toBe(ja.apiError.notFoundUnknown);
+    expect(err.responseDetail).toBe("not_found:zzz");
+  });
+
+  it("passes the old not-found codes through unchanged", async () => {
+    for (const code of ["not_found", "company_not_found"]) {
+      stubDetail(404, code);
+      const err = await catchApiError(() => api.get("/dummy"));
+      expect(err.message).toBe(code);
+    }
+  });
+});

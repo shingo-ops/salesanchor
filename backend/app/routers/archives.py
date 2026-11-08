@@ -90,7 +90,7 @@ async def archive_record(
     )
     row = result.mappings().first()
     if not row:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="対象レコードが見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:archive_target")
 
     archived_data = json.dumps(dict(row), ensure_ascii=False, default=str)
 
@@ -132,7 +132,7 @@ async def restore_record(
     )
     arch = result.mappings().first()
     if not arch:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="アーカイブが見つかりません")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="not_found:archive")
     if arch["restored_at"] is not None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="既に復元済みです")
 
