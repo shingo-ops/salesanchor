@@ -1,0 +1,76 @@
+generate:api-types exit 0
+tsc exit 0
+check:all exit 0
+test:unit exit 0
+
+=== gen (tail 40) ===
+
+> salesanchor-frontend@1.0.0 generate:api-types
+> openapi-typescript api-contract/openapi.json -o src/api/generated/schema.d.ts
+
+✨ openapi-typescript 7.13.0
+🚀 api-contract/openapi.json → src/api/generated/schema.d.ts [1.2s]
+
+=== tsc (tail 40) ===
+
+=== check (tail 40) ===
+[1] 
+[1] /root/worktrees/salesanchor/release-role-section-no-shrink/frontend/src/lib/api.no-double-prefix.test.ts
+[1]   29:10  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   30:6   warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1] 
+[1] /root/worktrees/salesanchor/release-role-section-no-shrink/frontend/src/mocks/funnelFixtures.ts
+[1]    33:17  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]    42:17  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]    51:17  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]    60:17  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]    69:17  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]    78:17  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]    87:17  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   135:14  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   136:14  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   137:14  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   138:14  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   143:22  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   144:13  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   149:22  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   150:13  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   158:14  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   159:14  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   160:14  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   165:22  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   166:13  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   183:25  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   223:18  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   241:25  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   281:18  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   299:25  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   339:18  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1] 
+[1] /root/worktrees/salesanchor/release-role-section-no-shrink/frontend/src/pages/oauth-callback/OAuthCallbackPage.tsx
+[1]   130:6  warning  React Hook useEffect has a missing dependency: 't'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+[1] 
+[1] ✖ 59 problems (0 errors, 59 warnings)
+[1]   0 errors and 1 warning potentially fixable with the `--fix` option.
+[1] 
+[1] npm run lint exited with code 0
+
+=== unit (tail 40) ===
+
+> salesanchor-frontend@1.0.0 test:unit
+> vitest run --config vitest.unit.config.ts --project unit
+
+
+ RUN  v4.1.7 /root/worktrees/salesanchor/release-role-section-no-shrink/frontend
+
+Not implemented: navigation to another Document
+Not implemented: navigation to another Document
+Not implemented: navigation to another Document
+Not implemented: navigation to another Document
+Not implemented: navigation to another Document
+
+ Test Files  208 passed (208)
+      Tests  2410 passed (2410)
+   Start at  02:31:24
+   Duration  130.50s (transform 9.33s, setup 4.72s, import 67.11s, tests 120.32s, environment 160.03s)
+
