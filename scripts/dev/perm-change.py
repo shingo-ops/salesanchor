@@ -665,11 +665,47 @@ def cmd_record(a, home, now, audit):
     ref = a.po_ref or ""
     if not (PO_REF_RE.fullmatch(ref) or audit.parse_consent_ref(ref)):
         raise Exit(EXIT_FAIL, "--po-ref は PR#<数字> か consent:<k1>:<k2>:<k3> の形です")
+    replaced_by = getattr(a, "replaced_by", "") or ""
+    batch = getattr(a, "batch", "") or ""
+    old_json_s = getattr(a, "old_json", "") or ""
+    if replaced_by and not re.fullmatch(r"[0-9a-f]{8}", replaced_by):
+        raise Exit(EXIT_FAIL, "--replaced-by は8桁の16進数です")
+    if batch and not re.fullmatch(r"batch:[0-9a-f]{16}", batch):
+        raise Exit(EXIT_FAIL, "--batch は batch:<16桁の16進数> の形です")
+    old_obj = None
+    if old_json_s:
+        if a.target != "user-hooks" or a.op != "remove":
+            raise Exit(EXIT_FAIL, "--old-json は target user-hooks・op remove のときだけ使えます")
+        try:
+            old_obj = json.loads(old_json_s)
+        except ValueError:
+            raise Exit(EXIT_FAIL, "--old-json は JSON として読めません")
+        if not isinstance(old_obj, dict):
+            raise Exit(EXIT_FAIL, "--old-json は object（dict）です")
+        if audit.item_sha8(old_obj) != a.item_hash:
+            raise Exit(EXIT_FAIL, "--old-json のハッシュが --item-hash と違います")
+        hooks = old_obj.get("hooks")
+        for hk in hooks if isinstance(hooks, list) else []:
+            cmd = hk.get("command") if isinstance(hk, dict) else None
+            for word in (cmd.split() if isinstance(cmd, str) else []):
+                if "=" in word or re.fullmatch(r"[A-Za-z0-9_-]{32,}", word):
+                    raise Exit(EXIT_FAIL, "--old-json の command に秘密の値の疑いがある語があります")
+    if bool(replaced_by) != bool(old_json_s):
+        raise Exit(EXIT_FAIL, "--replaced-by と --old-json は両方か、両方なしです")
+    if replaced_by and not batch:
+        raise Exit(EXIT_FAIL, "--replaced-by があるときは --batch が必須です")
     key = audit.TARGET_KEYS[a.target]
     category = "normal" if key in audit.LEDGER_ONLY_KEYS else "reserved:R4"
-    append_ledger(audit, home, make_row(now, a.actor, "record", a.target, a.op, a.item_hash,
-                                        "(record) %s" % a.target, a.intent or "", a.reason or "", "", "",
-                                        category, "recorded", ref))
+    row = make_row(now, a.actor, "record", a.target, a.op, a.item_hash,
+                   "(record) %s" % a.target, a.intent or "", a.reason or "", "", "",
+                   category, "recorded", ref)
+    if replaced_by:
+        row["replaced_by"] = replaced_by
+    if batch:
+        row["batch"] = batch
+    if old_obj is not None:
+        row["old_json"] = old_obj
+    append_ledger(audit, home, row)
     print("RESULT=recorded target=%s op=%s item_hash=%s" % (a.target, a.op, a.item_hash))
     return EXIT_OK
 
@@ -743,6 +779,9 @@ def build_parser():
     r.add_argument("--intent", default="")
     r.add_argument("--reason", default="")
     r.add_argument("--actor", default="opus", choices=["opus", "po-script"])
+    r.add_argument("--replaced-by", default="")
+    r.add_argument("--batch", default="")
+    r.add_argument("--old-json", default="")
     v = sub.add_parser("review")
     v.add_argument("--hash", required=True)
     v.add_argument("--decision", required=True, choices=["keep", "remove"])

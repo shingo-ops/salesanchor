@@ -434,6 +434,8 @@ TARGET_KEYS = {
     "repo-local-hooks": "repo-local:hooks",
     "danger-ops": "danger_ops",
     "hook-files": "hook_files",
+    "guard-installer": "guard_installer",
+    "guard-judge": "guard_judge",
 }
 
 # 旧キー名 → 新キー名（初回の比較で「増減」にしないための読み替え）
@@ -629,6 +631,45 @@ def _backup_path_hashes(hook_dir):
     return hs
 
 
+GUARD_MARK_BEGIN = "# >>> ADR-1072 guard-add" + " judge"
+GUARD_MARK_END = "# <<< ADR-1072 guard-add" + " judge"
+
+
+def _guard_installer_sha(tools):
+    """共通の台本 install-guard.sh の sha256 先頭8桁（無ければ空の一覧）。"""
+    try:
+        with open(os.path.join(tools, "scripts", "agent-hooks", "install-guard.sh"), "rb") as f:
+            return [hashlib.sha256(f.read()).hexdigest()[:8]]
+    except OSError:
+        return []
+
+
+def _guard_judge_sha(tools):
+    """この判定の部分（印に挟まれた行）の sha8。印の組が無い・数が合わない・読めないときは空の一覧。"""
+    try:
+        with open(os.path.join(tools, "scripts", "dev", "consent-audit.py"), encoding="utf-8") as f:
+            lines = f.read().split("\n")
+    except (OSError, UnicodeDecodeError):
+        return []
+    inside, pairs, kept = False, 0, []
+    for ln in lines:
+        t = ln.strip()
+        if t == GUARD_MARK_BEGIN:
+            if inside:
+                return []
+            inside = True
+        elif t == GUARD_MARK_END:
+            if not inside:
+                return []
+            inside = False
+            pairs += 1
+        elif inside:
+            kept.append(ln)
+    if inside or pairs == 0:
+        return []
+    return [sha8("\n".join(kept))]
+
+
 def collect_permissions(home, git_run=None, tstate=None):
     p = perm_paths(home)
     git_run = git_run or run_git
@@ -655,6 +696,8 @@ def collect_permissions(home, git_run=None, tstate=None):
                 continue
             files.append("%s|%s" % (sha8(os.path.relpath(fp, p["hook_dir"])), digest))
     snap["hook_files"] = sorted(files)
+    snap["guard_installer"] = _guard_installer_sha(p["tools"])
+    snap["guard_judge"] = _guard_judge_sha(p["tools"])
     led = read_ledger(home)
     snap["ledger"] = ["lines=%d" % led["lines_n"], "head=%s" % led["head"]]
     ts = tstate if tstate is not None else tools_state(home, git_run)
@@ -875,7 +918,316 @@ def pr_diff_ok(home, row, h, v, mc, git_run):
     return d is not None and any(h in ln for ln in _added_lines(d))
 
 
-def record_ok(home, row, held, key, h, since, rows, gh_view, git_run, v):
+# >>> ADR-1072 guard-add judge
+_GA_NAME_RE = re.compile(r"[a-z0-9-]+")
+_GA_PATH_RE = re.compile(r"[A-Za-z0-9_.-]+(/[A-Za-z0-9_.-]+)*")
+_GA_AFTER_RE = re.compile(r"[A-Za-z0-9_.-]+")
+_GA_SHA_RE = re.compile(r"[0-9a-f]{7,64}")
+_GA_WORDS = ("approve", "updatedInput", "updatedPermissions", "updatedToolOutput", "behavior",
+             "additionalContext")
+_GA_PLUS_RES = tuple(re.compile(p) for p in (
+    r"\bskip\b", r"\bxfail\b", r"\bexit 0\b", r"\bexit\(0\)", r"\bset \+e\b"))
+_GA_CI_BAD = ("|| true", "|| :", "; true", "|| exit 0", "set +e", " -k ", "--deselect")
+
+
+def _ga_path_ok(s):
+    return (isinstance(s, str) and _GA_PATH_RE.fullmatch(s) is not None
+            and all(seg not in (".", "..") for seg in s.split("/")))
+
+
+def _ga_manifest(text, name):
+    """札（guard-manifest.json）を読み、設計 §5-0 の検査を全部当てる。外れたら None。"""
+    try:
+        m = json.loads(text)
+    except Exception:
+        return None
+    if not isinstance(m, dict) or set(m) != {"name", "files", "hooks", "tests"}:
+        return None
+    if m["name"] != name or _GA_NAME_RE.fullmatch(name) is None:
+        return None
+    for k in ("files", "tests"):
+        if not isinstance(m[k], list) or not all(_ga_path_ok(x) for x in m[k]):
+            return None
+    if not isinstance(m["hooks"], list):
+        return None
+    for hk in m["hooks"]:
+        if not isinstance(hk, dict):
+            return None
+        ks = set(hk)
+        if not {"event", "interpreter", "file"} <= ks or not ks <= {"event", "matcher", "interpreter", "file", "after"}:
+            return None
+        if hk["event"] not in ("PreToolUse", "Stop") or hk["interpreter"] not in ("python3", "bash"):
+            return None
+        if not _ga_path_ok(hk["file"]) or hk["file"] not in m["files"]:
+            return None
+        if "matcher" in hk and not isinstance(hk["matcher"], str):
+            return None
+        if "after" in hk and not (isinstance(hk["after"], str) and _GA_AFTER_RE.fullmatch(hk["after"])):
+            return None
+    return m
+
+
+def _ga_words_ok(text):
+    """設計 §5-5 の語。大文字と小文字を区別し、部分一致で当てる。1行でもあれば False。"""
+    for ln in text.split("\n"):
+        if "permissionDecision" in ln and "allow" in ln:
+            return False
+        if any(w in ln for w in _GA_WORDS):
+            return False
+    return True
+
+
+def _ga_hook_form(home, name, hk):
+    return {"type": "command",
+            "command": "%s %s/.claude/scripts/%s/%s" % (hk["interpreter"], home, name, hk["file"])}
+
+
+def _ga_group(home, event, matcher, want_hash):
+    """今の settings.json の hooks[event] から、matcher が同じで組の sha8 が want_hash のものを返す。"""
+    groups = (load_json(perm_paths(home)["settings"]).get("hooks") or {})
+    groups = groups.get(event) if isinstance(groups, dict) else None
+    for g in groups if isinstance(groups, list) else []:
+        if isinstance(g, dict) and g.get("matcher", "") == matcher and item_sha8(g) == want_hash:
+            return g
+    return None
+
+
+def _ga_built_forms(home, cands, event, matcher):
+    out = []
+    for name, m in cands:
+        for hk in m["hooks"]:
+            if hk["event"] == event and hk.get("matcher", "") == matcher:
+                out.append(_ga_hook_form(home, name, hk))
+    return out
+
+
+def _ga_user_remove(home, rr, event, matcher, rows, cands):
+    """入れ替えの減の側（設計 §5-3）。rr は減の行。"""
+    rep, batch, old = rr.get("replaced_by"), rr.get("batch"), rr.get("old_json")
+    if not rep or not batch or not isinstance(old, dict):
+        return False
+    if item_sha8(old) != rr.get("item_hash"):
+        return False
+    if not any(r.get("sub") == "record" and r.get("target") == "user-hooks" and r.get("op") == "add"
+               and r.get("po_ref") == rr.get("po_ref") and r.get("batch") == batch
+               and r.get("item_hash") == rep for r in rows):
+        return False
+    new = _ga_group(home, event, matcher, rep)
+    if new is None:
+        return False
+    if {k: x for k, x in old.items() if k != "hooks"} != {k: x for k, x in new.items() if k != "hooks"}:
+        return False
+    oh, nh = old.get("hooks"), new.get("hooks")
+    if not isinstance(oh, list) or not isinstance(nh, list):
+        return False
+    i, extra = 0, []
+    for x in nh:
+        if i < len(oh) and x == oh[i]:
+            i += 1
+        else:
+            extra.append(x)
+    if i != len(oh):
+        return False
+    forms = _ga_built_forms(home, cands, event, matcher)
+    return all(x in forms for x in extra)
+
+
+def _ga_ci_ok(git_run, tools, v, name, mtests):
+    try:
+        import yaml
+    except ImportError:
+        return False
+    rc, out = git_run(["show", "%s:.github/workflows/agent-hooks-test.yml" % v], tools)
+    if rc != 0:
+        return False
+    try:
+        doc = yaml.safe_load(out.decode("utf-8", "replace"))
+    except Exception:
+        return False
+    jobs = doc.get("jobs") if isinstance(doc, dict) else None
+    if not isinstance(jobs, dict):
+        return False
+    called = set()
+    for job in jobs.values():
+        if not isinstance(job, dict):
+            continue
+        for st in job.get("steps") or []:
+            if not isinstance(st, dict) or not isinstance(st.get("run"), str):
+                continue
+            run = st["run"]
+            live = [ln.lstrip() for ln in run.split("\n") if not ln.lstrip().startswith("#")]
+            hit = [t for t in mtests if any(("scripts/agent-hooks/%s/%s" % (name, t)) in ln for ln in live)]
+            if not hit:
+                continue
+            called.update(hit)
+            if any(b in run for b in _GA_CI_BAD):
+                return False
+            for holder in (st, job):
+                if str(holder.get("continue-on-error")).lower() == "true" or "if" in holder:
+                    return False
+    return all(t in called for t in mtests)
+
+
+def _ga_content8(git_run, tools, c, name, f):
+    rc, out = git_run(["show", "%s:scripts/agent-hooks/%s/%s" % (c, name, f)], tools)
+    return hashlib.sha256(out).hexdigest()[:8] if rc == 0 else None
+
+
+def _ga_hookfiles_remove(home, git_run, tools, v, mc, name, m, pathsha, h):
+    """hook_files の中身の書き換えの減の側（設計 §5-4・§12-12）。"""
+    fname = next((f for f in m["files"] if sha8("%s/%s" % (name, f)) == pathsha), None)
+    if fname is None:
+        return False
+    new8 = _ga_content8(git_run, tools, mc, name, fname)
+    try:
+        with open(os.path.join(home, ".claude", "scripts", name, fname), "rb") as f:
+            cur8 = hashlib.sha256(f.read()).hexdigest()[:8]
+    except OSError:
+        return False
+    if new8 is None or cur8 != new8:
+        return False
+    rc, out = git_run(["log", "--first-parent", "--format=%H", "%s^1" % mc, "--", "scripts/agent-hooks/%s/" % name], tools)
+    if rc != 0:
+        return False
+    commits = out.decode("utf-8", "replace").split()
+    P, started = None, False
+    for c in commits:
+        d = _ga_content8(git_run, tools, c, name, fname)
+        if not started:
+            if d == h:
+                started, P = True, c
+        elif d == h:
+            P = c
+        else:
+            break
+    if P is None:
+        return False
+    rc, pt = git_run(["show", "%s:scripts/agent-hooks/%s/guard-manifest.json" % (P, name)], tools)
+    if rc != 0:
+        return False
+    pm = _ga_manifest(pt.decode("utf-8", "replace"), name)
+    if pm is None:
+        return False
+    if any(t not in m["tests"] for t in pm["tests"]):
+        return False
+    T = sorted(set(pm["tests"]) | set(m["tests"]))
+    if T:
+        rc, d = git_run(["diff", "--no-renames", P, mc, "--"] + ["scripts/agent-hooks/%s/%s" % (name, t) for t in T], tools)
+        if rc != 0:
+            return False
+        for ln in d.decode("utf-8", "replace").split("\n"):
+            if ln.startswith("-") and not ln.startswith("---"):
+                return False
+            if ln.startswith("+") and not ln.startswith("+++") and any(rx.search(ln[1:]) for rx in _GA_PLUS_RES):
+                return False
+    return _ga_ci_ok(git_run, tools, v, name, m["tests"])
+
+
+def _ga_check(home, row, held_ts, since, rows, gh_view, git_run, v, el, now):
+    if el is None or now is None or not v:
+        return False
+    tools = perm_paths(home)["tools"]
+    target, op = row.get("target"), row.get("op")
+    if (target, op) not in (("hook-files", "add"), ("hook-files", "remove"), ("user-hooks", "add"),
+                            ("user-hooks", "remove")):
+        return False
+    ref = row.get("po_ref") or ""
+    row_ts = parse_ts(row.get("ts"))
+    if row_ts is None or not re.fullmatch(r"PR#[0-9]+", ref):
+        return False
+    h = el.rsplit("|", 1)[-1]
+    rc, out = git_run(["rev-parse", "--is-shallow-repository"], tools)
+    if rc != 0 or out.strip() != b"false":
+        return False
+    vw = gh_view(int(ref[3:]))
+    if not isinstance(vw, dict) or vw.get("state") != "MERGED":
+        return False
+    merged = parse_ts(vw.get("mergedAt"))
+    mco = vw.get("mergeCommit")
+    mc = mco.get("oid") if isinstance(mco, dict) else None
+    if merged is None or not isinstance(mc, str) or _GA_SHA_RE.fullmatch(mc) is None:
+        return False
+    rc, _ = git_run(["merge-base", "--is-ancestor", mc, v], tools)
+    if rc != 0:
+        return False
+    base = held_ts if held_ts is not None else since
+    if not (merged < row_ts < now) or (base is not None and not base < row_ts):
+        return False
+    rc, out = git_run(["rev-parse", "--verify", "%s^{commit}" % mc], tools)
+    mc40 = out.decode("utf-8", "replace").strip()
+    if rc != 0 or not re.fullmatch(r"[0-9a-f]{40}", mc40):
+        return False
+    rc, out = git_run(["diff", "--name-only", "%s^1" % mc, mc, "--", "scripts/agent-hooks/"], tools)
+    if rc != 0:
+        return False
+    names = []
+    for ln in out.decode("utf-8", "replace").split("\n"):
+        parts = ln.strip().split("/")
+        if len(parts) >= 4 and parts[0] == "scripts" and parts[1] == "agent-hooks" and parts[2] not in names:
+            names.append(parts[2])
+    until = row_ts.strftime("%Y-%m-%dT%H:%M:%SZ")
+    cands = []
+    for name in names:
+        rc, mt = git_run(["show", "%s:scripts/agent-hooks/%s/guard-manifest.json" % (mc40, name)], tools)
+        if rc != 0:
+            continue
+        m = _ga_manifest(mt.decode("utf-8", "replace"), name)
+        if m is None:
+            continue
+        ok = True
+        for f in sorted(set(m["files"]) | {hk["file"] for hk in m["hooks"]}):
+            rc, body = git_run(["show", "%s:scripts/agent-hooks/%s/%s" % (mc40, name, f)], tools)
+            if rc != 0 or not _ga_words_ok(body.decode("utf-8", "replace")):
+                ok = False
+                break
+        if not ok:
+            continue
+        rc, out = git_run(["log", "--first-parent", v, "--until=%s" % until, "-1", "--format=%H", "--",
+                           "scripts/agent-hooks/%s/" % name], tools)
+        if rc != 0 or out.decode("utf-8", "replace").strip() != mc40:
+            continue
+        cands.append((name, m))
+    if not cands:
+        return False
+    if target == "hook-files":
+        pathsha = el.split("|", 1)[0]
+        for name, m in cands:
+            if op == "add":
+                for f in m["files"]:
+                    if sha8("%s/%s" % (name, f)) == pathsha and _ga_content8(git_run, tools, mc40, name, f) == h:
+                        return True
+            elif _ga_hookfiles_remove(home, git_run, tools, v, mc40, name, m, pathsha, h):
+                return True
+        return False
+    event, rest = el.split("|", 1)
+    matcher, _gsha = rest.rsplit("|", 1)
+    if op == "remove":
+        return _ga_user_remove(home, row, event, matcher, rows, cands)
+    grp = _ga_group(home, event, matcher, h)
+    if grp is None:
+        return False
+    gh = grp.get("hooks")
+    forms = _ga_built_forms(home, cands, event, matcher)
+    if isinstance(gh, list) and gh and all(x in forms for x in gh):
+        return True
+    for rr in rows:
+        if (rr.get("sub") == "record" and rr.get("target") == "user-hooks" and rr.get("op") == "remove"
+                and rr.get("po_ref") == ref and rr.get("replaced_by") == h
+                and _ga_user_remove(home, rr, event, matcher, rows, cands)):
+            return True
+    return False
+
+
+def guard_add_ok(home, row, held_ts, key, h, since, rows, gh_view, git_run, v, el, now):
+    """設計 ADR-1072: AI が PR で入れた見張りを、記録で説明できるか（強める変更だけ）。"""
+    try:
+        return bool(_ga_check(home, row, held_ts, since, rows, gh_view, git_run, v, el, now))
+    except Exception:
+        return False
+# <<< ADR-1072 guard-add judge
+
+
+def record_ok(home, row, held, key, h, since, rows, gh_view, git_run, v, *, el=None, now=None):
     """record の行の確かめ（設計 §4-3 第6版）。通ったときだけ差分の説明に使う。"""
     ref = row.get("po_ref") or ""
     held_ts = parse_ts(held.get("ts")) if held else None
@@ -903,6 +1255,10 @@ def record_ok(home, row, held, key, h, since, rows, gh_view, git_run, v):
         elif since is not None and used <= since:
             return False
         return consent_ticket_has_hash(home, key3[0], h, used)
+    # >>> ADR-1072 guard-add judge
+    if ref.startswith("PR#") and row.get("target") in ("hook-files", "user-hooks"):
+        return guard_add_ok(home, row, held_ts, key, h, since, rows, gh_view, git_run, v, el, now)
+    # <<< ADR-1072 guard-add judge
     if b_target and row.get("target") not in PR_ONLY_TARGETS:
         return False
     vw = gh_view(int(ref[3:]))
@@ -919,7 +1275,7 @@ def record_ok(home, row, held, key, h, since, rows, gh_view, git_run, v):
     return pr_diff_ok(home, row, h, v, mc, git_run)
 
 
-def judge_change(home, key, h, op, since, rows, gh_view, git_run=None, v=None):
+def judge_change(home, key, h, op, since, rows, gh_view, git_run=None, v=None, *, el=None, now=None):
     """差分1件を判定する。None=説明がつく、'A'=台帳に無い、'B'=PO 記録が足りない。"""
     git_run = git_run or run_git
     cands = []
@@ -951,7 +1307,7 @@ def judge_change(home, key, h, op, since, rows, gh_view, git_run=None, v=None):
             if not must_po and not str(row.get("category", "")).startswith("reserved"):
                 return None
             continue
-        if record_ok(home, row, held, key, h, since, rows, gh_view, git_run, v):
+        if record_ok(home, row, held, key, h, since, rows, gh_view, git_run, v, el=el, now=now):
             return None
     # §2-3 のキー（allow 系以外）は、通らない record の行しか無いときも B。repo:permissions.allow は
     # allow 系なので、held の行が無ければ A（design A19）。
@@ -1030,7 +1386,7 @@ def run_permissions(home, out, now=None, commit=False, gh_view=None, git_run=Non
             for op, els in (("add", added), ("remove", removed)):
                 for el in els:
                     h = element_hash(el)
-                    v = judge_change(home, k, h, op, old_ts, led["rows"], gh_view, git_run, tstate.get("v"))
+                    v = judge_change(home, k, h, op, old_ts, led["rows"], gh_view, git_run, tstate.get("v"), el=el, now=now)
                     if v:
                         reasons[v].append("%s %s" % (k, h))
         # C: 台帳の鎖・行数・前回の head
