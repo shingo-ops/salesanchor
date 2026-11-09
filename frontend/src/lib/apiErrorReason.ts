@@ -9,6 +9,12 @@
 export const API_ERROR_REASON_KEYS: Readonly<Record<string, string>> = {
   no_fields_to_update: "apiError.noFieldsToUpdate",
   conflict_constraint: "apiError.conflictConstraint",
+  role_not_editable_here: "apiError.roleNotEditableHere",
+  role_not_deletable: "apiError.roleNotDeletable",
+  role_permissions_edit_forbidden: "apiError.rolePermissionsEditForbidden",
+  role_permissions_not_editable_here: "apiError.rolePermissionsNotEditableHere",
+  role_page_keys_not_savable: "apiError.rolePageKeysNotSavable",
+  role_not_assignable: "apiError.roleNotAssignable",
 };
 
 /** detail が表のコードなら文言キー、そうでなければ null */

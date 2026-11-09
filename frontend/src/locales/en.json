@@ -6127,6 +6127,12 @@
   },
   "apiError": {
     "noFieldsToUpdate": "Nothing was saved because no fields were changed. Change something, then save again.",
-    "conflictConstraint": "This could not be saved because the same item already exists or it does not match related data. Check what you entered and try again."
+    "conflictConstraint": "This could not be saved because the same item already exists or it does not match related data. Check what you entered and try again.",
+    "roleNotEditableHere": "This role can't be changed on the Roles page. Ask the owner to change it.",
+    "roleNotDeletable": "This role is used by the system and can't be deleted. Remove it from people instead.",
+    "rolePermissionsEditForbidden": "Only the owner, system admin or manager can change role permissions. Ask one of them.",
+    "rolePermissionsNotEditableHere": "This role's permissions can't be changed on the Roles page. Ask the owner to change them.",
+    "rolePageKeysNotSavable": "Who can open the Roles page is set by role, so this was not saved. Reload the page and save again.",
+    "roleNotAssignable": "Only the owner or system admin can give this role. Ask the owner to give it."
   }
 }
