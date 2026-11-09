@@ -287,6 +287,50 @@
   overflow: visible;
 }
 
+/* ---- 便11（design §3.16）: 線は予定を入れる升目だけ（G37〜G40） ---- */
+.comp-calendar--schedule.comp-calendar--days .fc-scrollgrid {
+  border-top-width: 0;
+  border-left-width: 0;
+}
+
+.comp-calendar--schedule.comp-calendar--days .fc-scrollgrid-section > * {
+  border-right-width: 0;
+  border-bottom-width: 0;
+}
+
+.comp-calendar--schedule.comp-calendar--days .fc-col-header-cell,
+.comp-calendar--schedule.comp-calendar--days .fc-timegrid-axis,
+.comp-calendar--schedule.comp-calendar--days .fc-timegrid-slot-label {
+  border-width: 0;
+}
+
+.comp-calendar--schedule.comp-calendar--days .fc-scrollgrid-section > .fc-timegrid-divider {
+  padding: 0;
+  border-bottom-width: var(--schedule-gridline-w);
+}
+
+.comp-calendar--schedule.comp-calendar--days .fc-timegrid-slot-label {
+  position: relative;
+}
+
+.comp-calendar--schedule.comp-calendar--days .fc-timegrid-slot-label::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: var(--schedule-hour-tick-w);
+  border-top: var(--schedule-gridline-w) solid var(--schedule-gridline);
+}
+
+.comp-calendar--schedule.comp-calendar--days .fc-timegrid-slot-label-cushion {
+  padding-right: calc(var(--schedule-hour-tick-w) + var(--space-1));
+}
+
+/* 上の行と終日の行の空の巻き上げの帯を見せない（幅は残して列をそろえる） */
+.comp-calendar--schedule.comp-calendar--days .fc-scrollgrid-section:not(.fc-scrollgrid-section-liquid) .fc-scroller {
+  scrollbar-color: transparent transparent;
+}
+
 /* ---- 予定の画面の見た目・月の升目（ADR-1065 What 7・design §3.14 G31〜G33） ---- */
 .comp-calendar--schedule.comp-calendar--month {
   --fc-today-bg-color: transparent;
