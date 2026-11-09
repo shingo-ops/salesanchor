@@ -90,7 +90,7 @@
 |---|---|---|
 | `INSTALL_OK` | 0 | 入れた、または差が無かった。記録も全部書けた |
 | `INSTALL_OK_RECORD_INCOMPLETE` | 3 | 入れたが、記録の行の一部を書けなかった（週次点検で B に出る。Opus が PO に報告する） |
-| `INSTALL_FAILED: <理由>` | 1 | 止まった。settings.json に触っていない。手順9で本体を写す前に止まったときは `~/.claude/scripts/` にも触っていない（手順9で本体を1つでも写した後に止まったときの扱いは手順10） |
+| `INSTALL_FAILED: <理由>` | 1 | 止まった。settings.json に触っていない。手順9で本体を写す前に止まったときは `~/.claude/scripts/` にも触っていない（手順9で本体を1つでも写した後に止まったときの扱いは手順10）。手順10で控え `settings.json.bak-install-guard-*` を取った後に止まったときは、控えが残ることがある |
 
 手順（設計 §6 の 1〜10。どこか1つでも失敗したら `INSTALL_FAILED:` で止まる）:
 
@@ -125,7 +125,7 @@
 10. settings.json を書く:
    - `d == old` なら書き直さない（sha256 が前と同じまま）。
    - 違えば、`settings.json.bak-install-guard-<name>-<UTC の時刻>` に控えを取り、同じフォルダに一時ファイル（名前は `settings.json.tmp-install-guard-<name>`）を書き、読み直して JSON の object であることを確かめてから `os.replace`。書き方は `json.dump(d, f, ensure_ascii=False, indent=2)` と改行1つ（今の install.sh:56-57 と同じ）。一時ファイルは、`os.replace` しなかったときは finally で消す。
-   - 手順9で本体を1つでも写した後に、手順9の残りか手順10で止まったとき: settings.json は変えないまま（`os.replace` の前なら元のまま）、写した本体の分の hook-files の記録（手順11の「本体」の行）だけを書いてから、`INSTALL_FAILED: <理由>` で止まる。こうすると、~/.claude/scripts の差は記録で説明でき、週次点検で B に出ない。
+   - 手順9で本体を1つでも写した後に、手順9の残りか手順10で止まったとき: settings.json は変えないまま（`os.replace` の前なら元のまま）、写した本体の分の hook-files の記録（手順11の「本体」の行）だけを書いてから、`INSTALL_FAILED: <理由>` で止まる。こうすると、~/.claude/scripts の差は記録で説明でき、週次点検で B に出ない。この hook-files の記録の一部を書けなかったときは、`RECORD_FAILED: <理由>` を出したうえで、最後の行は `INSTALL_FAILED: <理由>`、終了コードは 1 にする（3 にはしない）。
 11. 記録（設計 §6 の 10・§5-3）。変わったものだけ書く。2回目の実行で差が無ければ1行も書かない。
     - batch: `"batch:" + secrets.token_hex(8)`（1回の実行で1つ）
     - 本体: 中身が変わったファイルごとに、前が `-` でなければ `--target hook-files --op remove --item-hash <前8桁>`、続けて `--target hook-files --op add --item-hash <後8桁>`
