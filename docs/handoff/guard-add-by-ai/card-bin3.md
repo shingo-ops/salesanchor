@@ -1,6 +1,6 @@
 # 実装カード 便3: 自動判定の例外 HKI-1 を PO の `!` で足す・外す台本（ADR-1072）
 
-- 版: 第2版（2026-11-10。クラウド審査1回目 APPROVE の推奨1〜3を取り込み。design.md §13-13）
+- 版: 第3版（2026-11-10。第2版の実装 e58d98a6c の確かめで、写し元の説明文が2か所残ることを Opus が見つけ §4 に2項を追加。動きは変えない。第2版はクラウド審査1回目 APPROVE の推奨1〜3を取り込み。design.md §13-13）
 - 設計: docs/handoff/guard-add-by-ai/design.md §6・§6-1・§13-13
 - PO の決定: 2026-11-10 の返事「1」（「前回と同じ形の専用の台本を作る」を選んだ）。ADR-1072 と実装開始は 2026-11-09 の「1」
 - 基準: origin/main 96a63df05a23c0250e7a0550ca7399e1ddb4b01a
@@ -57,6 +57,12 @@
   - `EDIT="${HERE}/../permission-delegation/po_delegation_edit.py"` を足し、python の呼び出しを `python3 -I -B "${EDIT}" register "${SETTINGS}" "${DESIGN}" "${AUDIT}" "### 6-1." "HKI-1"` にする。
   - record の行（:51）は今と同じ（`--target user-automode-allow --op add ... --actor po-script`）。
 - `po-unregister-hki.sh` は `po-unregister-delegation.sh` を写し、上と同じ変更をする（`unregister`・`--op remove`・説明の「外す」）。
+- 【第3版で追加】`po-unregister-hki.sh` の6行目の説明 `# - PDL-1 の1件だけを外す。…` の `PDL-1` を `HKI-1` に変える（写し元の文が残り、外す対象を取り違えて読める。動きは変わらない）。
+- 【第3版で追加】`po_delegation_edit.py` の冒頭の説明（2〜5行目）を、ラベルを引数で受ける形に合わせて次の4行にする（動きは変わらない）。
+  - `"""settings.json の autoMode.allow に例外の文（既定は PDL-1）を足す／外す（ADR-1034 §4-6・ADR-1072 §6-1）。`
+  - `- 文は実行のたびに design.md の指定の見出しの節の引用ブロック（> <ラベル>: で始まる1行）から読む（直書きしない）。`
+  - `- 足すのは末尾に1件。同じ文が既にあれば何もしない。外すのはそのラベルの文だけ（他の要素は触らない）。`
+  - 3行目（空行）と `- 最後に item_hash …` の行はそのまま。
 - 2本とも実行権（0755）を付ける。`set -euo pipefail`・`GIT_NO_REPLACE_OBJECTS=1`・consent: の確かめ・控え・失敗のとき控えから戻す・SKIP_RECORD は、写し元と同じにする。
 
 ## 5. consent-audit.py の変更
