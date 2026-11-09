@@ -530,7 +530,26 @@ restore() {
   exit "$rc"
 }
 trap restore EXIT
-trap 'exit 130' INT TERM
+trap 'exit 130' INT TERM HUP
+
+HEALTH_LOG="$LOG_DIR/health-$STAMP.txt"
+start_health() {
+  (
+    while :; do
+      code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 3 "$HEALTH_URL" || true)"
+      echo "$(date +%s) $code"
+      sleep 2
+    done
+  ) > "$HEALTH_LOG" &
+  HEALTH_PID=$!
+  sleep 10
+}
+stop_health() {
+  sleep 20
+  kill "$HEALTH_PID" 2>/dev/null || true
+  HEALTH_PID=""
+  awk '$2!="200"{if(s==""){s=$1}; e=$1; n++} $2=="200"{if(s!=""){d=e-s+2; if(d>m){m=d}; s=""}} END{if(s!=""){d=e-s+2; if(d>m){m=d}}; printf "健康確認: %d 回のうち 200 以外 %d 回・最長の途切れ 約 %d 秒（記録 %s）\n", NR, n, m, FILENAME}' "$HEALTH_LOG"
+}
 
 busy_runs() {
   gh run list -R "$REPO" --workflow deploy.yml --limit 20 --json status \
@@ -560,6 +579,8 @@ echo "入れ替えを止めました（終わりに戻します）"
 snapshot "前"
 
 if [ "$MODE" = live-restore ]; then
+  before_running="$(ssh "$HOST" 'docker ps -q | wc -l' | tr -d ' ')"
+  start_health
   ssh -t "$HOST" 'set -e
 if test -e /etc/docker/daemon.json; then echo "止めました: /etc/docker/daemon.json が既にあります（中身を変えないため）"; exit 5; fi
 tmp=$(mktemp)
@@ -576,6 +597,9 @@ for i in $(seq 1 15); do
 done
 echo "LiveRestore=$v"
 test "$v" = true'
+  stop_health
+  after_running="$(ssh "$HOST" 'docker ps -q | wc -l' | tr -d ' ')"
+  echo "動いている箱: 前 $before_running → 後 $after_running"
 else
   lr="$(ssh "$HOST" 'docker info --format "{{.LiveRestoreEnabled}}"')"
   if [ "$lr" != true ]; then
@@ -587,16 +611,7 @@ else
     exit 7
   fi
   before_running="$(ssh "$HOST" 'docker ps -q | wc -l' | tr -d ' ')"
-  HEALTH_LOG="$LOG_DIR/health-$STAMP.txt"
-  (
-    while :; do
-      code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 3 "$HEALTH_URL" || true)"
-      echo "$(date +%s) $code"
-      sleep 2
-    done
-  ) > "$HEALTH_LOG" &
-  HEALTH_PID=$!
-  sleep 10
+  start_health
   ssh "$HOST" 'sudo -n /usr/bin/systemctl restart docker && sudo -n /usr/bin/systemctl is-active docker'
   after_running=""
   for i in $(seq 1 30); do
@@ -604,11 +619,8 @@ else
     if [ "$after_running" = "$before_running" ]; then break; fi
     sleep 2
   done
-  sleep 20
-  kill "$HEALTH_PID" 2>/dev/null || true
-  HEALTH_PID=""
+  stop_health
   echo "動いている箱: 前 $before_running → 後 $after_running"
-  awk '$2!="200"{if(s==""){s=$1}; e=$1; n++} $2=="200"{if(s!=""){d=e-s+2; if(d>m){m=d}; s=""}} END{if(s!=""){d=e-s+2; if(d>m){m=d}}; printf "健康確認: %d 回のうち 200 以外 %d 回・最長の途切れ 約 %d 秒（記録 %s）\n", NR, n, m, FILENAME}' "$HEALTH_LOG"
 fi
 
 snapshot "後"
@@ -728,6 +740,7 @@ echo "ALL OK"
 5. 登録の 5 分後に K0-3・K0-4 を Prometheus に問い合わせる（`salesanchor_dockerd_rss_bytes{instance="app-vps"}`・`time() - salesanchor_dockerd_state_last_run_timestamp_seconds{instance="app-vps"}`・`/api/v1/rules` の 2 本の health・`ALERTS{alertname=~"Dockerd.*"}`）。
 6. 生出力は /tmp/CC報告ファイル/dockerd-bin0/deploy/ に置く。
 7. PO へ「日本時間 14:00〜15:44 に `bash scripts/ops/dockerd-restart-window.sh live-restore` を `!` で流す」案内を出す（K0-5）。
+8. PO が流した後、Opus が `gh api repos/shingo-ops/salesanchor/actions/workflows/deploy.yml --jq .state` で `active` に戻っていることを確かめる（戻っていなければ `gh workflow enable deploy.yml` を流して PO に伝える）。あわせて台本が出した健康確認の行（200 以外の回数・最長の途切れ）と「動いている箱 前→後」を受け取り、K0-5 を判定する。
 
 ## 9. 弊害と戻し方
 
@@ -735,8 +748,8 @@ echo "ALL OK"
 
 ## 10. 作業場所と push（PR は Opus が作る）
 
-1. `cd /Users/tanizawashingo/salesanchor && git fetch origin && bash scripts/new-worktree.sh release/dockerd-memory-maintenance-impl --claude`（origin/main 起点）。出力はパイプに通さない。作成後に `git worktree list` で実在を確かめ、以後はその作業場所に `cd` してから行う（クラウドで本店の場所が違うときは、その環境の本店で同じ命令を流す）
-2. `git merge --no-ff --no-edit origin/release/dockerd-memory-maintenance` → 期待: 設計の 2 ファイルが入る。`ls docs/handoff/build-on-github/card-bin0.md` で実在を確かめる
+1. クラウドの写しの一番上（`git rev-parse --show-toplevel` の場所）で `git fetch origin && bash scripts/new-worktree.sh release/dockerd-memory-maintenance-impl --claude`（origin/main 起点）。出力はパイプに通さない。作成後に `git worktree list` で実在を確かめ、以後はその作業場所に `cd` してから行う
+2. `git checkout origin/release/dockerd-memory-maintenance -- docs/handoff/build-on-github/design.md docs/handoff/build-on-github/card-bin0.md .claude-pipeline/active-work.d/release-dockerd-memory-maintenance.md` → 期待: 3 ファイルが入る。`git status --short` で 3 件を確かめる（枝の取り込みは使わない）
 3. §4 のとおりに書く（Write/Edit ツール）。§5-1 を通す
 4. commit（`--no-verify` は使わない）→ `git log -1 --oneline`
 5. `git push -u origin release/dockerd-memory-maintenance-impl` → `git log origin/release/dockerd-memory-maintenance-impl -1 --oneline`
