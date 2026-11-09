@@ -1,7 +1,8 @@
 # design — 試しの道具が計算の間に取引を開いたままにしない（本番反映の移行を止めない）
 
 - 状態: 設計案（Opus 作成・自己審査済み）。PO 承認済み（2026-11-10 PO「1」＝この設計で作る）。P1 基準値は測定済み（§11）。実装は未着手。
-- 根拠: 同じ場所の recon.md（行番号は origin/main 96a63df05）。
+- 根拠: docs/handoff/replay-tx-release/recon.md（行番号は origin/main 96a63df05）。
+- 実装: release/replay-tx-impl（クラウドの Sonnet・card.md §1〜§8 のとおり）。マージ前の審査・本番での測定（P4）はその PR で行う。
 - 関係する決まり: ADR-1037（移行の鍵待ち 1 秒）・ADR-1070（接続の返却時の後始末）・docs/handoff/deploy-db-stall/design.md §17（段4 接続の名前）・docs/handoff/migration-runner-redesign/design.md §5（段5 全件の流し直しをやめる）。
 
 ## 1. 目的（KGI）
