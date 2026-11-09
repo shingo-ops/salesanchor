@@ -531,7 +531,6 @@ async def setup_test_db(test_engine):
                 discord_user_id VARCHAR(50),
                 role_id INTEGER,
                 status VARCHAR(20) NOT NULL DEFAULT 'active',
-                firebase_uid VARCHAR(128) UNIQUE,
                 is_employee BOOLEAN NOT NULL DEFAULT 0,
                 phone VARCHAR(20),
                 avatar_token TEXT,

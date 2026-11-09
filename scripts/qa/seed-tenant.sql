@@ -18,9 +18,6 @@
 --     1〜5 をすべて満たす
 --
 -- psql 変数 (reset-tenant.sh から -v で渡される):
---   :qa_admin_firebase_uid   admin ユーザーの Firebase UID
---   :qa_staff_firebase_uid   staff ユーザーの Firebase UID
---   :qa_viewer_firebase_uid  viewer ユーザーの Firebase UID
 --   :qa_admin_password_hash  bcrypt 済 password hash (fallback 用)
 --   :qa_staff_password_hash
 --   :qa_viewer_password_hash
@@ -106,18 +103,18 @@ VALUES
 
 -- tenant_006.staff (per-tenant) と role 紐付け
 -- role_id は seed_system_roles で既に作成済 (オーナー / システム管理者 / 営業)
-INSERT INTO tenant_006.staff (tenant_id, user_id, staff_code, surname_jp, given_name_jp, primary_email, role_id, status, firebase_uid)
-SELECT 6, u.id, 'QA-ADMIN-001', 'QA', 'Admin', u.email, r.id, 'active', :'qa_admin_firebase_uid'
+INSERT INTO tenant_006.staff (tenant_id, user_id, staff_code, surname_jp, given_name_jp, primary_email, role_id, status)
+SELECT 6, u.id, 'QA-ADMIN-001', 'QA', 'Admin', u.email, r.id, 'active'
 FROM public.users u, tenant_006.roles r
 WHERE u.email = 'qa-admin@salesanchor.jp' AND r.tenant_id = 6 AND r.name = 'オーナー';
 
-INSERT INTO tenant_006.staff (tenant_id, user_id, staff_code, surname_jp, given_name_jp, primary_email, role_id, status, firebase_uid)
-SELECT 6, u.id, 'QA-STAFF-001', 'QA', 'Staff', u.email, r.id, 'active', :'qa_staff_firebase_uid'
+INSERT INTO tenant_006.staff (tenant_id, user_id, staff_code, surname_jp, given_name_jp, primary_email, role_id, status)
+SELECT 6, u.id, 'QA-STAFF-001', 'QA', 'Staff', u.email, r.id, 'active'
 FROM public.users u, tenant_006.roles r
 WHERE u.email = 'qa-staff@salesanchor.jp' AND r.tenant_id = 6 AND r.name = '営業';
 
-INSERT INTO tenant_006.staff (tenant_id, user_id, staff_code, surname_jp, given_name_jp, primary_email, role_id, status, firebase_uid)
-SELECT 6, u.id, 'QA-VIEWER-001', 'QA', 'Viewer', u.email, r.id, 'active', :'qa_viewer_firebase_uid'
+INSERT INTO tenant_006.staff (tenant_id, user_id, staff_code, surname_jp, given_name_jp, primary_email, role_id, status)
+SELECT 6, u.id, 'QA-VIEWER-001', 'QA', 'Viewer', u.email, r.id, 'active'
 FROM public.users u, tenant_006.roles r
 WHERE u.email = 'qa-viewer@salesanchor.jp' AND r.tenant_id = 6 AND r.name = 'CS';
 
