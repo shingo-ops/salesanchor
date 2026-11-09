@@ -7,6 +7,7 @@
 追加（2026-11-09）: 便9（月表示・詳しくの小窓と一覧の時刻を Google の形に・G31〜G35）は PO の選択「1、2」（2026-11-08）で設計した。作り方は §3.14。設計審査は §9 の 12 回目（APPROVE）。G31〜G35 は **PO 承認済み**（2026-11-09、PO の選択「1」＝「5か所の直しを承認して、作るところまで進める」）。実装カードは `docs/handoff/schedule-gcal-clone/card-bin9.md`。
 追加（2026-11-09）: 便10（日・3日間・週から月へ切り替えると画面全体が消える不具合・G36）は PO の選択「1」（2026-11-09・画面が消える不具合を先に直す）。作り方は §3.15。設計審査は §9 の 13 回目（APPROVE）。実装カードは `docs/handoff/schedule-gcal-clone/card-bin10.md`。金型の設計 `docs/handoff/calendar-view-component/design.md` §4-3 の `views` の行も「月でも渡す」に直した。
 追加（2026-11-09）: 便11（日・3日間・週の枠線を Google に揃える・G37〜G41）は PO の選択「1」（2026-11-09・枠線を揃える設計を作り、PO の承認を得てから直す）。作り方は §3.16。設計審査は §9 の 14 回目（APPROVE）。G37〜G41 は **PO 承認済み**（2026-11-09、PO の選択「1」＝「この直し方で作り、本番に出して Google と並べて確かめる」）。実装カードは `docs/handoff/schedule-gcal-clone/card-bin11.md`。
+追加（2026-11-09）: 便12（作る小窓を Google の形に・作っている途中の箱を動かせる・G42〜G50）は PO の言葉「つぎは新規の予定を追加するときの表示の仕方と編集途中でもドラッグで動かせる機能を実装してくれ、Googleカレンダーと同じUI/UXで」（2026-11-09）。作り方は §3.17。G42〜G50 と金型 2 つの変更（ADR-144）は **PO の承認待ち**。設計審査は §9 の 15 回目。
 根拠: `docs/handoff/schedule-gcal-clone/recon.md`（以下 recon）。前の設計 `docs/handoff/schedule-gcal-alignment/design.md`（K1〜K14）を引き継ぎ、便2（K8〜K11）はこの設計に入れ直す。
 
 ## 1. 目的
@@ -96,6 +97,22 @@ PO 2026-11-09 の言葉:「Googleかれんだーはタイムテーブルの予�
 | G39 | 終日の行は、日と日の間の縦線だけ残る。「終日」の文字の升目には線が無い。終日の行と時間割の間は 1px の横線 1 本（今は高さ 3px の灰色の帯） | 本番の週で `.fc-daygrid-body .fc-timegrid-axis` の 4 辺が 0px。`.fc-timegrid-divider` の高さが 1px・下の線 1px・右の線 0px | R11-1・R11-4 |
 | G40 | 予定を入れる升目の線（日と日の間の縦線・毎時の横線・升目の左の端の縦線）は今のまま残る。土曜の右の外と、上の行・終日の行の右の端に、線や灰色の帯が出ない。色は今のトークンのまま（ダークでも同じトークン） | 本番の週で `.fc-timegrid-slot-lane` の上の線 1px・`.fc-timegrid-col` の線 1px。`.fc-scrollgrid-section > *` の右と下が 0px。上の行と終日の行の `.fc-scroller` の `scrollbar-color` が透明。画面写しで右の端に灰色の帯が無い | R11-1・R11-5 |
 | G41 | 月表示の線は変わらない | 本番の月表示で `.fc-scrollgrid`（上 1px・左 1px）・`.fc-col-header-cell`（4 辺 1px）・`.fc-daygrid-day`（4 辺 1px）・`.fc-scrollgrid-section-body > *`（右 1px・下 1px）・`.fc-scroller` の `scrollbar-color`（auto）が直す前と同じ（直す前の値は R11-6） | R11-6 |
+
+### 2.5 作る小窓を Google の形に・作っている途中の箱を動かせる（G42〜G50・便12・2026-11-09 追加）
+
+PO 2026-11-09 の言葉:「つぎは新規の予定を追加するときの表示の仕方と編集途中でもドラッグで動かせる機能を実装してくれ、Googleカレンダーと同じUI/UXで」。
+
+| # | 成功条件 | 確かめ方 | 根拠 |
+|---|---|---|---|
+| G42 | 時間割を押して（引っぱって）作る小窓の見た目が Google と同じ並びになる。①幅 600px（窓が狭いときは窓の幅−24px）②角の丸み 28px・枠線なし・地は薄い色 ③題名は下線だけの欄で、文字の大きさ 22px、空のときは「タイトルを追加」 ④行は「絵の列（左から 24px）＋中身（左から 68px）」で、題名も中身の列にそろう ⑤1 行の高さは 40px 以上 ⑥下の右に「その他のオプション」と「保存」が並ぶ（「キャンセル」は無い。閉じるのは右上の ×・Esc・時間割の外を押す） | 本番 /schedule の週で空の升目を押し、小窓の `getBoundingClientRect().width`・`border-radius`・`border-width`・`background-color`、題名の欄の `font-size`・`border-bottom-width`・`border-top-width`（0）・`placeholder`、日時の行の絵と文字の左の位置（小窓の左から 24px・68px・差 ±2px）、各行の高さ、下のボタンの文字と並び順を読む。Google の作る小窓（R12-1）と並べて画面写しを撮る（保存しない） | R12-1・R12-2 |
+| G43 | 作る小窓は、時間割の仮の箱の横（右。右に入らないときは左）に 8px あけて出る。縦の位置は「箱の上の端」と「画面の真ん中に置いた位置」の小さい方（画面からはみ出さない）。C キー・左の作成ボタンから作るとき（箱が無い）は今と同じく画面の真ん中 | 本番の週で、月曜 10 時・土曜 10 時・水曜 21 時の 3 か所を押し、仮の箱と小窓の四角を読む。箱の右（左）の端と小窓の左（右）の端の差が 8px ±1、上の端が式どおり ±1。C キーで開いて真ん中に出ることも見る | R12-3 |
+| G44 | 作る小窓が開いている間、画面が灰色にならない（幕が無い）。時間割は押せる・引っぱれる。時間割と小窓の外（左の欄・上の帯）を押すと小窓が閉じ、仮の箱も消える。詳しく見る・直す小窓と「他 N 件」の小窓は今のまま（幕あり） | 本番の週で作る小窓を開き、`.schedule-popover-backdrop` が 0 個。詳しく見る小窓では 1 個。左の欄の空いた所を押すと小窓と仮の箱が消える | R12-2・R12-4 |
+| G45 | 作る小窓が開いたまま、仮の箱をつかんで別の時刻・別の日へ動かせる。離すと、小窓の日時の 1 行がすぐ新しい日時になり、小窓は動いた箱の横へ付いていく。題名に入れた文字は消えず、箱にも出る | 本番の週で月曜 10 時を押し、題名に「試し」と入れ、箱を水曜 14 時へ動かす。日時の 1 行が「11月11日(水) 午後2時～午後3時」の形になる・小窓の左の端が箱の右の端＋8px（または左）・題名の欄が「試し」・箱の文字が「試し」。保存せず × で閉じる | R12-5 |
+| G46 | 作る小窓が開いたまま、仮の箱の下の端を引いて長さを変えられる。離すと日時の 1 行の終わりの時刻が変わる | 本番の週で 10 時の箱の下の端を 11 時半まで引き、日時の 1 行が「午前10時～午前11時30分」の形になる。保存しない | R12-5 |
+| G47 | 小窓の日付・時刻の欄を直すと、仮の箱も同じ日時へ動く（箱と小窓の日時は 1 か所から出る） | 本番の週で日時の 1 行を押して始まりを 15:00 に直し、箱が 15 時の所へ動く。単体の試験で、下書きの日時を変えると仮の箱の start・end が変わる | R12-6 |
+| G48 | 箱を動かした後に「保存」を押すと、動かした後の日時で保存される。仮の箱を動かしても、保存を押すまでは裏側へ何も送らない | 単体の試験で、仮の箱を動かした後の保存の送り先・中身（`POST /calendar/events` の start_datetime・end_datetime）と、動かした時点で PATCH・POST が 0 回であることを確かめる（本番では保存しない） | R12-6 |
+| G49 | 月表示で 2 日以上を引っぱって作る終日の仮の箱も、つかんで別の日へ動かせ、小窓の日付が変わる。月の 1 日押しは今と同じ（箱を出さず 7 時から 1 時間） | 本番の月で 2 日を引っぱり、箱を 1 週後へ動かして日時の 1 行を読む。単体の試験で終日の箱を動かした後の下書き（startDate・endDate・allDay）を確かめる | R12-5・R12-6 |
+| G50 | ダークでも同じ並びで、色はトークンだけ。既にある項目（種類・Google Meet・社員にも見せる・場所・説明）は 1 つも減らない。英語の画面でも文字が t() から出る | 本番でダークに切り替えて小窓の地・下線・文字の色を読む（明るい画面と別の値）。作る小窓に 5 つの項目が出る（Meet は Google をつないだ人だけ）。CI の色・数値の見張りと i18n の検査が緑 | R12-2 |
 
 ## 3. 作り方（How）
 
@@ -593,6 +610,73 @@ PO 2026-11-09「1」（枠線を揃える設計を作り、PO の承認を得て
 
 - 2026-11-07 に読んで決めた: 今の一覧の道には題名の絞り込みが無く期間が必須なので、読み取りの道 `GET /calendar/events/search` を 1 本足す。見せてよい予定の決まりは `calendar_service.list_events` の 1 か所のまま使う。作り方は §3.11。
 
+### 3.17 便12: 作る小窓を Google の形に・作っている途中の箱を動かせる（G42〜G50・2026-11-09）
+
+2026-11-09 に Google カレンダーの週（PO のログインの画面・Claude in Chrome・窓 1378×1392）で、作る小窓を開いて測った。予定は保存していない（測った後に Google カレンダーの読み取りで 11/11〜11/14 に予定が 0 件と確かめた）。アプリの行番号は origin/main c6ce79fb6。
+
+確かめた事実:
+- R12-1（Google の作る小窓・実測）: 幅 598px・角の丸み 28px・地 rgb(240,244,249)・影 3 層・枠線なし。右上に 28×28 の ×、左上に小窓を動かすつまみ（≡）。題名は 22px・枠なしで下線だけ（押すと青い下線）・空のとき「タイトルを追加」・左から 68px。行は絵が左から 24px・文字が 68px。行の高さは 40px（日時とカレンダーの行は 52px・下に 12px の灰色の 2 行目）。日時の文は「11月 11日 (水曜日) 午後1:00 – 午後2:15」。下の右に文字のボタン「その他のオプション」150×40 と、青い「保存」76×40（丸み 20px）。キャンセルは無い。種類のタブ（予定・タスク・予約枠）がある。
+- R12-2（アプリの今）: 作る小窓は幅 320px（`--schedule-popover-width: 20rem`。同じ値が `frontend/src/tokens.css:409-410` と `frontend/src/pages/schedule.css:7-8` の 2 か所にある）・丸み 8px・枠 1px・地 `--bg-surface`（`frontend/src/pages/schedule.css:342-356`）。題名は枠つきの欄（`TextFieldControl variant="schedule"`・`frontend/src/pages/schedule/SchedulePageImpl.tsx:367-375`・見た目は `frontend/src/components/FormField.css:381-390`）で、空のとき「タイトル」。日時・場所・説明は金型 Button（ghost・sm・高さ 28px）の 1 行（`:440-450`・`:510-528`）。種類は見出しつきの選ぶ欄（`:452-470`）、Meet と社員にも見せるは見出し＋切り替え（`:476-497`）。下は左から「保存」「キャンセル」（`:538-547`）。小窓の後ろに画面全体の幕（`:289`・`frontend/src/pages/schedule.css:335-340`）があり、時間割を押せない。
+- R12-3（置き場所）: Google は箱の横に 8〜9px あけて出す。右に入らないときは左。縦は「箱の上の端」と「画面の真ん中に置いた位置」の小さい方（5 か所で測って全部この式に合った）。アプリは押した点（`pointRect`・`frontend/src/components/CalendarView.tsx:303`）の右に 12px あけ、上の端を押した点にそろえる（`frontend/src/pages/schedule/schedule-utils.ts:221-240`）。
+- R12-4（Google の外を押す）: 時間割の外を押すと小窓が閉じる。開いたまま別の空の升目を押したときの動きは測っていない（未確認）。アプリは同じ形にする（下の作り方 3）。
+- R12-5（Google の動かす）: 小窓が開いたまま、仮の箱（rgb(3,155,229)・丸み 6px）をつかんで別の日・時刻へ動かせ、下の端を引いて長さを変えられる。離すと小窓の日時がすぐ変わり、小窓が箱の横へ付いていく。入れた題名は消えず、箱に出る。刻みは 15 分（アプリも 15 分・`frontend/src/components/CalendarView.tsx` の `snapDuration`）。
+- R12-6（アプリの仮の箱）: 仮の箱は `pendingRange`（`frontend/src/pages/schedule/SchedulePageImpl.tsx:952`）から作り、`editable: false`（`:1260-1272`）。小窓の日時（`draft`）とは別に持つので、小窓で日時を直しても箱は動かない。動かした予定は `patchMoved`（`:1287-1312`）が PATCH で保存する。
+- R12-7（FullCalendar 6.1.22・Context7 `/llmstxt/legacy_fullcalendar_io_v6_llms_txt`）: `eventDrop`・`eventResize` の引数に `el`（つかんだ要素）・`event`（動かした後）・`revert` がある。描き直した後の要素は `eventDidMount` で受ける。
+
+作り方:
+1. 仮の箱の日時を下書き 1 か所から出す（G47・SSOT）。
+   - `pendingRange` をやめ、`pendingVisible`（真偽）だけ持つ。時間割を押して作ったときだけ真（今と同じ条件）。作る小窓以外になったら偽（今の `:1221-1224` と同じ道）。
+   - 箱の start・end・allDay は `draft` から出す（終日は `endDate` の次の日 0 時を end にする。日時が読めない・end が start 以前のときは箱を出さない）。この変換は `schedule-utils.ts` に純粋な関数 `draftToRange(draft)` として置き、`saveEvent`（`:1090-1095`）の日時の作り方と同じ `combineDateTime` を使う。
+   - 箱は `editable: true` にする。
+2. 箱を動かした・長さを変えたら、下書きを直す（G45・G46・G48・G49）。
+   - `onEventMove`・`onEventResize` で id が `"pending"` のときは `patchMoved` を呼ばず、新しい関数 `moveDraft(start, end, allDay)` で `draft` の日付・時刻・終日を直す。裏側へは何も送らない。
+   - 終日へ動かしたとき（end が無い）は 1 日、時刻つきへ動かしたとき（end が無い）は 1 時間（FullCalendar の既定と同じ）。
+3. 作る小窓だけ幕を外す（G44）。
+   - `SchedulePopover` の幕（`:289`）を `mode !== "create"` のときだけ出す。「他 N 件」の小窓（`:739`）は変えない。
+   - 作る小窓のときは、document の `pointerdown` を見て、押した所が小窓の中でも時間割の中でもないときに閉じる（今の幕を押したときと同じ `onClose`）。時間割の中を押したときは FullCalendar に任せる（空の升目は今と同じく新しい箱で作り直す・別の予定は詳しく見る小窓に替わる・仮の箱はつかんで動かせる）。時間割の中かどうかは、予定の画面の時間割の箱（`.schedule-calendar`・`:1563`）に `ref` を付けて `contains` で見る（FullCalendar の名前を画面に出さない）。
+   - 押している間の幕の色の token（`--schedule-overlay-scrim`）は残る道（詳しく見る・他 N 件）で使い続ける。
+4. 小窓を箱の横に置く（G43）。
+   - 金型 `CalendarView` に口を 1 つ足す: `onEventRect?: (id: string, rect: CalendarViewRect | null) => void` と、その対象 `trackEventId?: string`。金型は `eventDidMount` で対象の要素を覚え（`eventWillUnmount` で忘れる）、描いた後と、時間割の巻き上げ（`wrapperRef` の中の scroll を capture で受ける）と窓の大きさが変わった時に、その要素の四角を `rectOf` で返す。FullCalendar の型は金型の外に出さない（ADR-1065 What 1）。
+   - 予定の画面は `trackEventId="pending"` を渡し、返ってきた四角を作る小窓の `anchor` にする（押した点の四角は使わない）。
+   - 置き場所の式は新しい純粋な関数 `fitCreatePopover(anchor, size, viewport, margin, gap)`（`schedule-utils.ts`）: 横は箱の右＋gap、入らなければ箱の左−小窓の幅−gap。縦は `min(anchor.top, (viewport.height − size.height) / 2)` を margin〜(画面の高さ−小窓の高さ−margin) に収める。gap は 8（`--space-2` と同じ値・`POPOVER_MARGIN` と同じく定数で持つ）。箱が無いとき（C キー・作成ボタン）は今の `fitPopover` と同じ真ん中。詳しく見る小窓・他 N 件の小窓は今の `fitPopover` のまま。
+5. 作る小窓の見た目を Google に寄せる（G42・G50）。作る小窓だけに `schedule-popover--create` の class を足し、規則はその下だけに書く（詳しく見る・直す小窓は変えない）。
+   - 小窓: 幅 `--schedule-create-popover-width: 37.5rem`、丸み `--schedule-create-popover-radius: 1.75rem`、地 `--schedule-create-popover-bg: var(--bg-subtle)`、枠なし、影は今の `--shadow-lg`。新しいトークンは `frontend/src/tokens.css` の `--schedule-popover-max-h` の次に置く（色は既存トークンを指すだけなので、ダークでも `--bg-subtle` のダークの値になる）。あわせて `frontend/src/pages/schedule.css:7-8` の `--schedule-popover-width`・`--schedule-popover-max-h` の写しを消し、`frontend/src/tokens.css:409-410` の 1 か所にする（値は同じなので見た目は変わらない）。
+   - 行の形: 中身を 2 列の格子（`grid-template-columns: var(--schedule-create-icon-col) minmax(0, 1fr)`・`--schedule-create-icon-col: 2.75rem`＝絵 20px＋あき 24px）にし、小窓の左右の内側のあきを `--space-6`（24px）にする。絵は 1 列目、中身は 2 列目。各行の高さは `min-height: var(--space-10)`（40px）。題名は 2 列目に置く（Google と同じく 68px）。
+   - 日時・場所・説明の 1 行: 今の金型 Button（ghost）を `size="md"` にする（高さ 36px・行の高さは 40px の格子が持つ）。絵は Button の外の 1 列目に出す。
+   - 種類・Meet・社員にも見せる: 見出しの文字を外し、絵（下記）＋中身の行にする。種類の選ぶ欄は `aria-label` に「種類」を付ける。Meet と社員にも見せるは、文字＋右の切り替えのまま 1 行。
+   - 絵: 金型の絵の表 `SCHEDULE_POPOVER_ICONS`（`frontend/src/constants/icons.tsx`）に heroicons outline の `CalendarIcon`（種類）・`VideoCameraIcon`（Meet）・`UsersIcon`（社員にも見せる）を足す。3 つとも heroicons 2.2.0 に在る（2026-11-09 に `frontend/node_modules/@heroicons/react/24/outline/CalendarIcon.js`・`VideoCameraIcon.js`・`UsersIcon.js` を確かめた。`frontend/package.json:79` は `^2.2.0`）。
+   - 題名: 金型 `TextFieldControl` に種類 `"schedule-title"` を 1 つ足す（`frontend/src/components/TextField.tsx:35` の型と `frontend/src/components/FormField.css` の規則）。枠は下だけ 1px `var(--border)`、押すと下 2px `var(--accent)`、地は透明、文字は `--schedule-create-title-size: 1.375rem`（22px・tokens.css に足す）。空のときの文字は新しい文言キー `schedule.addTitle`（ja「タイトルを追加」・en「Add title」）。見本帳の例（`frontend/src/components/TextField.stories.tsx:112-` の variants の例）に 1 つ足す。
+   - 下のボタン: 作るときは右寄せで「その他のオプション」（ghost）→「保存」（primary）の順。「キャンセル」は出さない（× は残す・Esc は今のまま）。「その他のオプション」は閉じている行（日時・場所・説明）を全部開き、全部開いたら出さない。新しい文言キー `schedule.moreOptions`（ja「その他のオプション」・en「More options」）。直す・詳しく見る小窓の下は今のまま。
+   - 保存のボタンの形（Google は丸み 20px の青）は金型 Button の primary のまま（色はアプリの accent・丸みは `--comp-btn-radius`）。pill の形はログインの画面だけの決まり（`frontend/src/components/Button.tsx:9`）なので使わない。
+6. 文言: 新しく足すキーは `schedule.addTitle`・`schedule.moreOptions` の 2 つ（2026-11-09 に `frontend/src/locales/ja.json` の `schedule` に無いことを確かめた）。`frontend/src/locales/ja.json`・`frontend/src/locales/en.json` に同じキーを足す（ADR-027）。種類の選ぶ欄の aria-label は今ある `schedule.category`（「カテゴリ」）を使う。
+7. ADR-1065 の What 6 に 1 文足す:「予定の四角を知りたいときは、呼ぶ側が対象の id と口（onEventRect）を渡す。金型はその予定の四角だけを返す」。`node scripts/generate-adr-index.js` で索引を作り直す。
+
+試験:
+- `frontend/src/pages/schedule/schedule-utils.test.ts`: `draftToRange`（時刻つき・終日 1 日・終日 2 日・読めない・end≦start）と `fitCreatePopover`（右・左・縦の min・下にはみ出す・箱なしで真ん中）。
+- `frontend/src/pages/schedule/SchedulePageImpl.test.tsx`: 作る小窓に幕が無い・詳しく見るには幕がある／仮の箱が `editable: true`／金型の `onEventMove("pending", …)` を呼ぶと日時の 1 行が変わり、PATCH・POST が 0 回、続けて保存すると POST の start_datetime・end_datetime が動かした後の値／`onEventResize("pending", …)` で終わりが変わる／終日の箱を動かすと startDate・endDate が変わる／日時の欄を直すと箱の start が変わる／時間割と小窓の外の pointerdown で閉じ、時間割の中の pointerdown では閉じない／下のボタンが「その他のオプション」「保存」の順で「キャンセル」が無い／「その他のオプション」で 3 つの行が開く。
+- `frontend/src/components/CalendarView.test.tsx`: `trackEventId` を渡すと、その予定の描画の後に `onEventRect` が四角つきで呼ばれ、ほかの予定では呼ばれない。
+- 見た目の値（幅・丸み・22px・68px・40px・8px）は jsdom が計算しないので、受入れで本番の値を読む（G42〜G44）。
+
+選ばなかった案:
+- 仮の箱を FullCalendar の `selectMirror`（選んだ範囲の影）にする: 影は動かせない（つかめない）ので G45 を満たさない。
+- `pendingRange` を残して、動かすたびに `pendingRange` と `draft` の両方を直す: 日時が 2 か所になり、片方だけ直す漏れが出る（G47 と SSOT に反する）。
+- 幕を残し、幕の上に穴を開ける: 時間割の他の所（別の升目・他の予定）が押せないままで、Google と違う。
+- 押した点を基準に置き続ける: 箱を動かした後に小窓が付いていかない（G45）。
+- 小窓を動かすつまみ（≡）・種類のタブ（予定・タスク・予約枠）を作る: アプリにタスク・予約枠の種類は無く、つまみは今回の願い（作る時の表示と、箱を動かす）の外。次の便の候補に残す。
+- 保存のボタンを pill にする: 金型 Button の pill はログインの画面だけの決まり。変えると全画面の決まりが変わる。
+- 下線の題名を schedule.css で `variant="schedule"` に上書きする: 金型の外で見た目を変えることになる（ADR-144）。金型に種類を足す。
+
+心配と対処:
+- 幕を外すと、小窓の外の押した所がそのまま下の物に届く（例: 左の欄の別のカレンダーの切替を押すと、閉じると同時に切り替わる）: Google も同じ（外を押すとその操作も効く）。小窓の外の押しで閉じた後、入れかけの題名は消える（今の幕と同じ）。
+- 仮の箱を時間割の外へ落とす: FullCalendar が元へ戻す（`eventDrop` は呼ばれない）。
+- 作る小窓が開いている間に別の空の升目を押す: 今と同じく新しい箱で作り直す（題名は消える）。Google の動きは未確認（R12-4）。受入れで目で見て、Google と違えば次の便で直す。
+- 幅 600px の小窓が狭い窓ではみ出す: 幅は `min(var(--schedule-create-popover-width), calc(100vw - var(--space-6)))`（今と同じ式）。高さは今の上限のまま。窓の幅 900 でも測る。
+- 箱の四角を返す口が多く呼ばれる: 呼ぶのは対象の予定 1 つだけで、四角が前と同じなら置き場所は変えない（`usePopoverPlacement` の今の比べ方）。
+- 金型 `TextFieldControl` の種類を足す（ADR-144・`docs/CC_UI_GOVERNANCE.md:14`「PO 許可を得てから components/ に金型を登録」）: PO の承認を得てから作る。今ある種類は変えない。
+- 月表示: 箱を出すのは 2 日以上の終日だけ（今と同じ）。1 日押しは箱なしで真ん中ではなく押した所の横（今のまま）。
+
+戻し方: 便12 の PR を revert する（frontend だけ・DB・移行・設定は変えない）。
+
 ## 4. 便の分け方（作る順）
 
 | 便 | 中身 | 成功条件 | 危険な道 |
@@ -609,6 +693,7 @@ PO 2026-11-09「1」（枠線を揃える設計を作り、PO の承認を得て
 | 便9 | 月表示の日付・今日の丸・曜日の行・予定の 1 行の形、詳しくの小窓と一覧の時刻の形（§3.14 の A 組）。金型 CalendarView の月の中身 2 つ・css・トークン 1 つ・予定の画面の 2 か所・ADR-1065 の決まり 7 に月の 1 文（§3.14「ADR の改訂」・PO 承認 2026-11-09「1」） | G31〜G35 | なし（frontend だけ。移行・deploy・scripts・DB は無い） |
 | 便10 | 日・3日間・週から月へ切り替えると画面全体が消える不具合の直し（§3.15）。金型 CalendarView の 1 か所（`views` を常に渡す）と試験 | G36 | なし（frontend だけ。移行・deploy・scripts・DB は無い） |
 | 便11 | 日・3日間・週の枠線を Google に揃える（§3.16）。金型 CalendarView の css に規則 8 つ・トークン 1 つ | G37〜G41 | なし（frontend の css だけ。移行・deploy・scripts・DB は無い） |
+| 便12 | 作る小窓を Google の形に・作っている途中の箱を動かせる（§3.17）。金型 CalendarView に口 1 つ（ADR-1065 What 6 に 1 文）・金型 TextFieldControl に種類 1 つ・絵 3 つ・トークン 5 つ・文言 2 つ・予定の画面 | G42〜G50 | なし（frontend だけ。移行・deploy・scripts・DB は無い） |
 
 便0 を先に出す理由: 今の本番で毎回起きる間違いで、1 行で直り、載せ替えを待つ理由がない。
 
@@ -638,6 +723,7 @@ PO 2026-11-09「1」（枠線を揃える設計を作り、PO の承認を得て
 ## 7. 外部・過去事例の参照と我々への応用
 
 - 使う事例: Google カレンダー本体（2026-11-06 に同じ窓で並べて観測・recon §3）。比べたのは画面の形と手の動きだけで、速さや使われ方の数字は持っていない。
+- 便12 の事例: Google カレンダーの作る小窓と、開いたまま仮の箱を動かす動き（2026-11-09 に PO のログインの画面で測った・§3.17 R12-1・R12-3・R12-5。保存はしていない）。Google の絵・名前・色は使わず、並びと手の動きだけ合わせる。
 - 他社の導入事例の数字は使わない。理由: 今回の成功条件はすべて「Google と同じ画面・同じ操作になったか」で、本物を横に置いて直接比べられるため。
 
 ## 8. 維持の仕組み
@@ -649,6 +735,7 @@ PO 2026-11-09「1」（枠線を揃える設計を作り、PO の承認を得て
 - 便9 の月表示の見た目は `CalendarView.css` の `.comp-calendar--schedule.comp-calendar--month` の 1 か所だけ。数値と色の見張り（同上）が CI で直書きを止める。`frontend/src/components/CalendarView.test.tsx` が 1 日の「M月1日」（M は月の数字）・今日の丸・点の 1 行を毎回確かめる。
 - 便10 の不具合は `frontend/src/components/CalendarView.test.tsx` が、表示を切り替えても月の時に `views.calendarDays` が渡ることと、FullCalendar の設定の置き換え方（丸ごと置き換え）を CI で毎回確かめる。
 - 便11 の線は `frontend/src/components/CalendarView.css` の `.comp-calendar--schedule.comp-calendar--days` の 1 か所だけ。数値と色の見張り（同上）が CI で直書きを止める。jsdom は見た目の規則を計算しないので単体の試験は置かず、FullCalendar の版を上げる時は G37〜G41 の確かめ方で本番の値を読み直す（版は ADR-1065 で 6.1.22 に固定）。
+- 便12 の仮の箱の日時は下書き 1 か所から出す（`draftToRange`）。`frontend/src/pages/schedule/schedule-utils.test.ts` と `frontend/src/pages/schedule/SchedulePageImpl.test.tsx` が、箱を動かすと日時が変わり保存まで何も送らないこと・作る小窓に幕が無いことを CI で毎回確かめる。作る小窓の見た目は `.schedule-popover--create` の下と `frontend/src/tokens.css` だけで、数値と色の見張り（同上）が直書きを止める。
 - 守り手: frontend/src/pages/schedule/SchedulePageImpl.test.tsx（押した時刻で小窓が開くことを CI の試験で毎回確かめる。金型に載せ替えた後は frontend/src/components/CalendarView.test.tsx が加わる）
 
 ## 9. 審査
