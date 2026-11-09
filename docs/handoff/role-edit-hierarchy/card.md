@@ -111,3 +111,38 @@ DONE / BLOCKED: / NEEDS_DECISION: のどれか。commit と push までして、
 4. commit・push（同じ枝）。PostgreSQL が無ければ試験は流さなくてよい（CI で確かめる）。`python -m py_compile` だけ流す。
 
 触らない: `backend/tests/test_permission_resolution_pg.py` 以外。
+
+## 追加カード6（スタッフ画面からの割当の止め・2026-11-09）
+
+理由: マージ前の審査で見つかった入れ忘れ。設計 K7「マネージャーは点検用・スモーク専用などを人に付けられない」を、`PUT /users/{id}/roles`（`backend/app/routers/roles.py:607-613`）にしか入れていなかった。スタッフ画面の道（PATCH /staff・POST /staff・参加の招待）は `backend/app/services/role_assignment.py:35-67` の `check_assignable_role` を通るが、ここは順位しか見ていない。この PR でマネージャーが計算で `roles.assign` を持つようになったので、PATCH /staff の道が新しく開いた。
+
+手順:
+
+1. `backend/app/services/role_assignment.py`:
+   - 取り込みを足す: `from app.auth.dependencies import get_user_system_keys` と `from app.auth.system_roles import OWNER_ADMIN_ONLY_KEYS, is_tenant_admin`（循環 import になったら、関数の中で import する。roles.py:619-620 と同じやり方）。
+   - `check_assignable_role` の SELECT を `"SELECT id, priority, system_key FROM roles ..."` にする。
+   - `if role is None:` の 400 の直後、順位の確かめの前に次を足す（roles.py:607-613 と同じ判定・同じ印）:
+     ```python
+     if role["system_key"] in OWNER_ADMIN_ONLY_KEYS and not is_tenant_admin(
+         await get_user_system_keys(db, granter.id)
+     ):
+         raise HTTPException(
+             status_code=status.HTTP_403_FORBIDDEN,
+             detail="role_not_assignable",
+         )
+     ```
+   - docstring の箇条に「付けられるのが owner/admin だけのロール（OWNER_ADMIN_ONLY_KEYS）を、owner/admin でない人が付けようとした → 403 role_not_assignable」を1行足す。`assign_single_role` の docstring にも同じ1行。
+2. 試験 `backend/tests/test_roles_edit_hierarchy.py` の末尾に足す（既存の `roles` と `_act_as` を使う）:
+   - `@pytest.mark.parametrize("target", ["owner", "manager", "inspector", "smoke"])` で、マネージャーとして `check_assignable_role(db_session, 999, granter, roles[target])` を呼ぶと HTTPException 403・detail `role_not_assignable`（admin は隠すロールなので 400 になるため、この表に入れない）。
+   - マネージャーが `roles["sales"]` と `roles["low"]` を付けると例外なし。
+   - オーナーが `roles["inspector"]`・`roles["smoke"]`・`roles["manager"]` を付けると例外なし。
+   - granter は `from app.models import User` を使い、`await db_session.get(User, 999)` で取る。取れなければ止めて BLOCKED: を返す。
+   - `from app.services.role_assignment import check_assignable_role`。
+3. 試験: `backend` で `timeout 900 pytest tests/test_roles_edit_hierarchy.py tests/test_staff_join_api.py tests/test_error_detail_guard.py tests/test_roles.py -q --no-cov -n0 -p no:cacheprovider`。生出力を `docs/handoff/role-edit-hierarchy/impl-checks-6.txt` に保存する。
+   - `error_detail_baseline.json` は変えない（`role_not_assignable` は識別子の形なので数は増えない）。増えたら止める。
+4. commit・push（同じ枝）。
+
+触らない: `backend/app/services/role_assignment.py`・`backend/tests/test_roles_edit_hierarchy.py`・`impl-checks-6.txt` 以外。`staff.py`・`staff_join.py`・`staff_create.py` は変えない（3つとも上の関数を通るので、ここだけで閉じる）。
+想定分岐:
+- 既存の試験（test_staff_join_api など）が落ちた → 直さず止めて、落ちた試験名と生出力を返す。
+- 循環 import がどうしても解けない → 止めて BLOCKED:。
