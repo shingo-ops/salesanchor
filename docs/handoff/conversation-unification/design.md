@@ -1,7 +1,7 @@
 # 会話の表を会社の中で1つにまとめる — 設計（KGI は PO 承認済み・設計審査3回目 APPROVE）
 
 > この文書は何か（1行）: 会社ごとに2つある会話の表を meta_messages の1つにまとめ、全会話を必ずリードに結ぶまでの手順。
-> 現在地: [recon.md](recon.md)。上位: docs/specs/db-ssot/conversation-unification/design.md・docs/specs/db-ssot/ideal-state.md。関連 ADR: ADR-106・ADR-096・ADR-110・ADR-1049・ADR-136・ADR-1003。
+> 現在地: [recon.md](recon.md)（docs/handoff/conversation-unification/recon.md）。上位: docs/specs/db-ssot/conversation-unification/design.md・docs/specs/db-ssot/ideal-state.md。関連 ADR: ADR-106・ADR-096・ADR-110・ADR-1049・ADR-136・ADR-1003。
 
 ## 1. 目的（PO から見て変わること）
 - 会話の記録が、会社ごとに1か所だけになる。
