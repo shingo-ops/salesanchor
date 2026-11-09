@@ -64,6 +64,7 @@ const fixtures: Record<string, unknown> = {
   "/meta/channels": { channels: [channel] },
   "/admin/discord-config": { guild_id: null, connected_at: null, connected_by_staff_name: null },
   "/roles": [role],
+  "/roles?scope=role_page": [role],
   "/permissions": [permission],
   "/roles/1/permissions": [permission],
   "/staff": [staff],
@@ -84,7 +85,7 @@ type Case = {
 };
 const cases: Case[] = [
   { name: "channels", Page: ChannelsPage, route: "/channels", at: "/channels", path: "/meta/channels", text: "Fixture Page", value: false, spinner: true },
-  { name: "roles", Page: RolesPage, route: "/roles", at: "/roles", path: "/roles", text: "Fixture Role", value: false, spinner: false },
+  { name: "roles", Page: RolesPage, route: "/roles", at: "/roles", path: "/roles?scope=role_page", text: "Fixture Role", value: false, spinner: false },
   { name: "staff", Page: StaffPage, route: "/staff", at: "/staff", path: "/staff", text: "Fixture Person", value: false, spinner: true },
   { name: "staff edit", Page: StaffEditPage, route: "/staff/:id/edit", at: "/staff/7/edit", path: "/staff/7", text: "Fixture", value: true, spinner: false },
   { name: "orders", Page: OrdersPage, route: "/orders", at: "/orders", path: "/orders?sort_by=updated_at&sort_order=desc", text: "ORD-FIX", value: false, spinner: true },

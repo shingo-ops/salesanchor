@@ -58299,7 +58299,7 @@
     },
     "/api/v1/roles": {
       "get": {
-        "description": "ロール一覧を取得する（priority降順）",
+        "description": "ロール一覧を取得する（priority降順）。scope=role_page はロール画面用で、画面に出さないロールを super admin でも除く",
         "operationId": "list_roles_api_v1_roles_get",
         "parameters": [
           {
@@ -58323,6 +58323,23 @@
               "minimum": 1,
               "title": "Per Page",
               "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "const": "role_page",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scope"
             }
           }
         ],

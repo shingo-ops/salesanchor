@@ -53,7 +53,7 @@
   "app/routers/quotes.py": 7,
   "app/routers/realtime_events.py": 1,
   "app/routers/reports.py": 2,
-  "app/routers/roles.py": 15,
+  "app/routers/roles.py": 13,
   "app/routers/rule_test.py": 3,
   "app/routers/shifts.py": 1,
   "app/routers/shipping.py": 11,

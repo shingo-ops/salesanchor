@@ -24,7 +24,7 @@ beforeEach(async () => {
     if (url === '/me/permissions') return { permissions: ['purchase_orders.create', 'roles.update'] };
     if (url.startsWith('/purchase-orders')) return [];
     if (url === '/suppliers/catalog') return [{ id: 7, name: 'Supplier', is_active: true }];
-    if (url === '/roles') return [role]; if (url === '/permissions') return [permission]; if (url === '/roles/1/permissions') return [permission];
+    if (url === '/roles?scope=role_page') return [role]; if (url === '/permissions') return [permission]; if (url === '/roles/1/permissions') return [permission];
     throw new Error('Unexpected GET ' + url);
   });
   for (const method of ['post', 'put', 'patch', 'delete'] as const) mock[method].mockImplementation(() => { throw new Error('Unexpected ' + method); });

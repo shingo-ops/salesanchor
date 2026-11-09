@@ -21,7 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.auth.dependencies import load_user_permissions as real_load_user_permissions
-from app.auth.system_roles import ROLE_KEY_ADMIN, ROLE_KEY_OWNER, SYSTEM_MANAGE_KEY
+from app.auth.system_roles import ROLE_KEY_ADMIN, ROLE_KEY_MANAGER, ROLE_KEY_OWNER, SYSTEM_MANAGE_KEY
 from tests.rls_bootstrap import (
     _apply_migration_on_conn,
     _bootstrap_public_shared,
@@ -212,7 +212,8 @@ async def test_real_load_user_permissions_computes_owner_and_admin_and_fresh_ten
                 }
                 assert roles["オーナー"] == (ROLE_KEY_OWNER, True)
                 assert roles["システム管理者"] == (ROLE_KEY_ADMIN, True)
-                assert all(roles[n][0] is None for n in ("マネージャー", "営業", "CS", "仕入れ", "発送"))
+                assert roles["マネージャー"] == (ROLE_KEY_MANAGER, False)
+                assert all(roles[n][0] is None for n in ("営業", "CS", "仕入れ", "発送"))
                 goals = {
                     (r[0], r[1])
                     for r in (

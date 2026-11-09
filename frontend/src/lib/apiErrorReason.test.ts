@@ -34,6 +34,7 @@ describe("apiErrorReasonKey", () => {
   it("maps table codes to locale keys and returns null otherwise", () => {
     expect(apiErrorReasonKey("no_fields_to_update")).toBe("apiError.noFieldsToUpdate");
     expect(apiErrorReasonKey("conflict_constraint")).toBe("apiError.conflictConstraint");
+    expect(apiErrorReasonKey("role_not_assignable")).toBe("apiError.roleNotAssignable");
     expect(apiErrorReasonKey("viewer_already_linked")).toBeNull();
     expect(apiErrorReasonKey("toString")).toBeNull();
     expect(apiErrorReasonKey({ reason: "no_fields_to_update" })).toBeNull();
@@ -56,7 +57,7 @@ describe("i18n", () => {
 
 describe("backend sync", () => {
   it("every table code is used in backend/app", () => {
-    expect(Object.keys(API_ERROR_REASON_KEYS).length).toBe(2);
+    expect(Object.keys(API_ERROR_REASON_KEYS).length).toBe(8);
     for (const code of Object.keys(API_ERROR_REASON_KEYS)) {
       expect(sources.includes(`"${code}"`), code).toBe(true);
     }

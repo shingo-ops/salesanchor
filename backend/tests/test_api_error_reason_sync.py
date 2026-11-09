@@ -39,7 +39,16 @@ def _app_sources() -> str:
 
 
 def test_table_rows_are_read():
-    assert _codes() == ["no_fields_to_update", "conflict_constraint"]
+    assert _codes() == [
+        "no_fields_to_update",
+        "conflict_constraint",
+        "role_not_editable_here",
+        "role_not_deletable",
+        "role_permissions_edit_forbidden",
+        "role_permissions_not_editable_here",
+        "role_page_keys_not_savable",
+        "role_not_assignable",
+    ]
 
 
 def test_table_codes_are_used_in_app():
