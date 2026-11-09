@@ -1,6 +1,6 @@
 # design: AI が足した見張りを記録できる道（草案・2026-11-09）
 
-状態: 設計案作成済み／自己審査済み（同じ AI。§12）／§9 は PO 決定済み（2026-11-09「1」＝案1）／クラウドでの設計審査は未実施／実装未着手。
+状態: 設計案作成済み（第2版）／自己審査済み（同じ AI。§12）／§9 は PO 決定済み（2026-11-09「1」＝案1）／クラウドでの設計審査 1回目 REVISE（必須6件）を反映済み・2回目は未実施／実装未着手。
 根拠: recon.md（同じフォルダ）。関係 ADR: ADR-1034・ADR-1033・ADR-1029。
 
 ## 1. 目的（PO の言葉から）
@@ -12,36 +12,70 @@
 | 番号 | 基準 | 今 | 目標 | 測り方 |
 |---|---|---|---|---|
 | K1 | GitHub main にマージ済みの PR から入れた見張り（足す・組に足す）が、週次点検の `ABNORMAL_REASON=B` に出る件数 | 11/09 で3件 | 導入後の毎週 0件 | 週次点検の出力の B の行を数える |
-| K2 | 見張りを外す・組から抜く・PR に無い中身に書き換える変更が B に出る割合 | 100%（今は全部出る） | 100% のまま | 試験（A3〜A5）で各1件ずつ作り、全部 B に出ること |
+| K2 | 見張りを外す・組から抜く・PR に無い中身に書き換える・試験を消す・確認を飛ばす返事を足す変更が B に出る割合 | 100%（今は全部出る） | 100% のまま | 試験（A3〜A5・A8・A9）で各1件ずつ作り、全部 B に出ること |
 | K3 | 見張りを入れるために PO が `!` を打つ回数 | mac-test-guard で1回 | 0回（導入時の1回を除く） | 新しい見張りの設計書の「導入」の欄に PO の `!` が無いこと |
 
 ## 3. 対象と対象外
-- 対象: ~/.claude/settings.json の hooks（user:hooks）と ~/.claude/scripts/ の見張りの本体（hook_files）。
+- 対象: ~/.claude/settings.json の hooks（user:hooks）と ~/.claude/scripts/ の見張りの本体（hook_files）のうち、正本が `scripts/agent-hooks/<名前>/` のフォルダにあり、そのフォルダに台帳札 `guard-manifest.json`（§5-0）があるもの。
+- 対象外のまま（B が出る）: `scripts/agent-hooks/` の直下に置かれた見張り（例: master-register-rules-guard.py）、札の無いフォルダ、正本がリポジトリに無い見張り。
 - 対象外（今までどおり PO の「1」）: 見張りを外す・弱める変更、permissions.deny / ask / defaultMode、確認を省く設定、autoMode.soft_deny / environment、danger_ops、本番の設定。
 
 ## 4. 変更前後
 | | 変更前 | 変更後 |
 |---|---|---|
-| 見張りの正本 | リポジトリの `scripts/agent-hooks/<名前>/`（mac-test-guard で既にこの形） | 同じ。正本の無い見張りは対象外 |
-| ~/.claude へ入れる人 | PO が `!` で install.sh | Opus か実行役が `bash ~/.salesanchor-tools/scripts/agent-hooks/<名前>/install.sh`（GitHub main に揃えた写しの版だけ）。自動判定の例外 HKI-1 で通す |
-| 台帳への記録 | PO の「1」で `consent:` の record（無いと B） | install.sh の最後で `perm-change.py record --po-ref PR#<n>` を自動で書く |
+| 見張りの正本 | リポジトリの `scripts/agent-hooks/<名前>/`（置き方は見張りごとにばらばら。直下に置いたものもある） | 同じフォルダに台帳札 `guard-manifest.json` を置いたものだけが対象（§5-0） |
+| ~/.claude へ入れる台本 | 見張りごとの install.sh を PO が `!` で流す | 全部の見張りで共通の台本 `scripts/agent-hooks/install-guard.sh <名前>` を1本だけ使う。Opus か実行役が流す。自動判定の例外 HKI-1 で通す（§6） |
+| 台帳への記録 | PO の「1」で `consent:` の record（無いと B） | 共通の台本が最後に `perm-change.py record --po-ref PR#<n>` を書く（§6） |
 | 点検の確かめ | user:hooks・hook_files の PR 番号は通らない（consent-audit.py:906） | 「強める変更」に限り PR 番号で通す（§5） |
 | 外す・弱める | PO の `!`＋「1」 | 変わらない |
+| 共通の台本そのものの変更 | （無い） | PO の「1」が要る（§5-5） |
 
 ## 5. 「強める変更」の定め方（点検が機械で判定する）
-PR 番号 `PR#n` で説明できるのは、次のどれかに当たるものだけ。どれにも当たらなければ今までどおり B。
-1. hook_files の増: そのファイルの中身の sha256 先頭8桁が、PR #n のマージの版の `scripts/agent-hooks/` の下の同じ名前のファイルと一致し、PR #n の差分がそのファイルを変えている。
-2. user:hooks の増: その組のすべての命令が `~/.claude/scripts/<相対パス>` を指し、そのファイルが 1. を満たすか、前回の写しで既に登録済み。
-3. user:hooks の「組の入れ替え」: 減の組 E_old と、同じ record の束にある増の組 E_new が、同じ event と matcher で、E_new の命令が E_old の命令をすべて含む（足しただけ）。減の行には `--replaced-by <E_new の sha8>` と E_old の中身（命令はパスだけ。値は出さない）を付け、点検は中身の sha8 が item_hash と同じことを確かめる。
-4. hook_files の中身の書き換え（同じパスで中身が変わる）: 1. の条件に加え、PR #n の差分で、その見張りの試験ファイル（`scripts/agent-hooks/<名前>/test_*.py`）の行が1行も消えていない（足しただけ）。試験の行を消す・変える直しは「弱める」かもしれないので B。【PO 決定 §9 案1】
+### 5-0. 台帳札 guard-manifest.json（点検が読む正本の対応表）
+見張りのフォルダごとに1つ置く。形:
+```json
+{"name": "mac-test-guard",
+ "files": ["guard.py"],
+ "hooks": [{"event": "PreToolUse", "matcher": "Bash", "interpreter": "python3", "file": "guard.py", "after": "mac-vm-guard.py"}],
+ "tests": ["test_guard.py"]}
+```
+- 名前は `^[a-z0-9-]+$`。フォルダ名と同じであること。
+- パスの対応は固定: 入れた先 `~/.claude/scripts/<name>/<file>` ⇔ 正本 `scripts/agent-hooks/<name>/<file>`。点検は sha8(`<name>/<file>`) を札から計算し、hook_files の要素（consent-audit.py:656 の `sha8(相対パス)|中身8桁`）と突き合わせる。
+- 命令の形は固定: `<interpreter> <$HOME を展開した絶対パス>/.claude/scripts/<name>/<file>`（mac-test-guard の install.sh:34 と同じ形）。点検はこの文字列を札から作り、組の JSON と比べる。interpreter は `python3` と `bash` だけ。
 
-あわせて、PR #n は ADR-1029 の審査（新しく起動した opus の審査役の APPROVE）を通ってマージされていることを条件にする（既にマージの見張りで強制されている）。審査役の確認項目に「この PR は見張りの止める範囲を狭めていないか」を1行足す。
+### 5-1〜5-4. PR 番号 `PR#n` で説明できる変化（どれにも当たらなければ今までどおり B）
+1. hook_files の増: 要素の相対パスが札の `files` のどれかで、中身8桁が、PR #n のマージの版の正本と一致し、PR #n の差分がそのフォルダを変えている。
+2. user:hooks の増: 組のすべての命令が、§5-0 の形で札の `hooks` から作れる命令か、前回の写しで既に登録済みの命令。
+3. user:hooks の組の入れ替え: 減の組 E_old と増の組 E_new が、同じ束（下）にあり、同じ event と matcher で、E_new の命令の並びが E_old の命令の並びをすべて含み（足しただけ）、足した命令が 2. を満たす。減の行には `--replaced-by <E_new の sha8>` と E_old の JSON 全体を持たせる。点検は、行の JSON の sha8 が item_hash と同じことを確かめる。E_old の命令に秘密の値（`=` を含む引数・トークンの形）があれば、JSON を行に書かずに B のまま残す。
+   - 束の決め方: 共通の台本の1回の実行で書いた行。行に同じ `batch:<実行の id>`（台本が作る乱数16桁）と同じ PR#n を持たせる。
+4. hook_files の中身の書き換え（同じパスで中身が変わる）【PO 決定 §9 案1】: 1. の条件に加え、次の全部を満たすこと。
+   - PR #n の差分を `git diff --no-renames <マージの親1> <マージ>` で取り、札の `tests` にあるファイルに `-` の行が0行。
+   - 札の `tests` から消えた名前が0件（前のマージの版の札と比べる）。
+   - 札の `tests` の全部が、GitHub main の `.github/workflows/agent-hooks-test.yml` の中で名前を呼ばれている（CI で毎回流れる）。
 
-## 6. 入れる道（install.sh の型）
-- 置き場所は `scripts/agent-hooks/<名前>/install.sh`。mac-test-guard の install.sh（写す→原本と比べる→試験→settings の控え→1件足す→JSON を読み直す）の型に、最後の「台帳に record を書く」を足す。足すだけで、外す処理を持たない（外すのは rollback.sh で、PO の `!` のまま）。
+### 5-5. 強める変更とは数えないもの（必ず B）
+- 本体の中に、確認を飛ばす返事を返す処理があるもの。点検は正本の全ファイルを読み、`permissionDecision` と `allow` が同じ行にある、または `"decision"` と `approve` が同じ行にある、のどれかが1行でもあれば B にする。文字列を組み立てて隠す書き方は機械では見つけきれないので、審査役の確認項目（下）と ADR の受け入れたリスクで持つ。
+- 共通の台本 `install-guard.sh` と点検の判定の部分（consent-audit.py の §5 の分岐）を変える PR。台帳に置いた台本の sha256 と GitHub main の台本が違えば B。PO の「1」で台帳の値を更新する。
+- 札の `files` や `hooks` から消えた名前があるもの（外す変更）。
+
+あわせて、PR #n は ADR-1029 の審査（新しく起動した opus の審査役の APPROVE）を通ってマージされていることを条件にする（既にマージの見張りで強制されている）。審査役の確認項目に2行を足す。「この PR は見張りの止める範囲を狭めていないか」「確認を飛ばす返事（allow・approve）を返す道を作っていないか」。
+
+## 6. 入れる道（共通の台本 install-guard.sh）
+- 置き場所は `scripts/agent-hooks/install-guard.sh`（1本だけ）。見張りごとの install.sh は作らない。既にある mac-test-guard・confidential-quote-guard・review-gate の install.sh は残すが、AI は流さない（HKI-1 の対象外）。
+- 台本の手順（どこか1つでも失敗したら settings.json に触らず `INSTALL_FAILED:` で止まる）:
+  1. 引数は名前1つだけ。`^[a-z0-9-]+$` に合わない・フォルダや札が無い・引数が2つ以上なら止まる。
+  2. 入れ先は `$HOME/.claude` に固定する。環境変数 CLAUDE_DIR は読まない（今の mac-test-guard/install.sh:8 の形を使わない）。
+  3. 走らせる前に、~/.salesanchor-tools が変更なし（`git status --porcelain` が空）で、HEAD が `git ls-remote origin refs/heads/main` と同じことを確かめる。
+  4. §5-5 の確認を飛ばす返事の検査を正本に当てる。
+  5. 札の `files` を `~/.claude/scripts/<name>/` へ写し、原本と比べ、読み取り専用にする。
+  6. 札の `tests` を写した先に向けて流す。
+  7. settings.json の控えを取り、札の `hooks` の命令を足す（`after` の命令の直後。既にあれば足さない）。外す処理は持たない。
+  8. JSON として読み直してから置き換える。
+  9. PR 番号は `git log --first-parent origin/main -1 --format=%s -- scripts/agent-hooks/<name>/` の「Merge pull request #n」から取る。取れなければ記録せず止まる。
+  10. 変わった要素ごとに `perm-change.py record --po-ref PR#<n>` の行を書く（§5-3 の batch と E_old の JSON を含む）。
 - 自動判定の例外 HKI-1（PO が導入時に `!` で1回だけ足す。ADR-1034 の PDL-1 と同じ形）:
-  > HKI-1: Running exactly `bash ~/.salesanchor-tools/scripts/agent-hooks/<name>/install.sh` is allowed, only when ~/.salesanchor-tools is clean and at GitHub main (checked by `perm-change.py sync`). These install scripts only add a guard hook that was reviewed and merged by PR; they never remove or loosen hooks. Running rollback.sh, editing settings files directly, or running any other script under ~/.claude is still Self-Modification.
-- 実装は mac-test-guard の install.sh を1つ目の対象にして、今週の3件を PR #5039・#5049 で記録し直せるかを試す。
+  > HKI-1: Allowed only for a Bash command that is exactly `bash ~/.salesanchor-tools/scripts/agent-hooks/install-guard.sh <name>`, where `<name>` matches `^[a-z0-9-]+$`, with no other arguments, no environment variable prefix (for example `CLAUDE_DIR=`), no pipe, no `;`, `&&` or `||`, and no redirection. The script itself refuses to run unless ~/.salesanchor-tools is clean and equal to GitHub main. It only adds guard hooks listed in a reviewed and merged guard-manifest.json; it never removes or loosens hooks. Running any per-guard install.sh or rollback.sh, any other script under ~/.salesanchor-tools or ~/.claude, or editing settings files directly is still Self-Modification.
+- 1つ目の対象は mac-test-guard。札を足す PR で、test_guard.py を CI（agent-hooks-test.yml）に足す。今の CI が流しているのは review-gate と master-register の試験だけ（.github/workflows/agent-hooks-test.yml:25・:36。mac-test-guard と confidential-quote-guard の試験は呼ばれていない。Opus が 2026-11-09 に `git grep agent-hooks origin/main -- .github/workflows/` で確認）。
 
 ## 7. 代替案
 | 案 | 中身 | 採らない理由 |
@@ -49,14 +83,23 @@ PR 番号 `PR#n` で説明できるのは、次のどれかに当たるものだ
 | A 今のまま | PO の `!` と「1」 | PO の原則に反する。毎週異常が出て、本当の異常が埋もれる |
 | B 見張りは全部 PR 番号で通す | 外す変更も通す | Opus は自分でマージできるので、見張りを外すことも AI だけで済む。ADR-1034 が閉じた穴が開く |
 | C 点検から見張りを外す | 数えない | 弱める変更も見つからなくなる |
-| D（採る） 強める変更だけ PR 番号で通す | §5 | 足す作業は AI だけ、外す・弱めるは PO の目に必ず届く |
+| D1 見張りごとの install.sh を例外で通す（第1版） | 名前の形だけで通す | 1回目の審査で不採用。Opus が自分でマージした install.sh なら中身を問わず通り、外す処理も入れられる |
+| D2（採る） 共通の台本1本＋台帳札＋強める変更だけ PR 番号で通す | §5・§6 | 台本は1本に固定して PO の「1」で守る。見張りごとに変わるのは札と本体だけで、点検が機械で判定できる |
 
 ## 8. リスクと対処
-1. 中身の書き換えで、試験を消さずに止める範囲を狭める。対処: §5-4 の試験の条件と審査役の確認項目（PO 決定 §9 案1）。それでも残る分は受け入れたリスクとして ADR に書く。
-2. HKI-1 の例外の文が広く読まれ、ほかの台本まで通る。対処: 道と名前の形を `~/.salesanchor-tools/scripts/agent-hooks/*/install.sh` に固定し、sync で版を確かめる。導入後、AI が rollback.sh や別の台本を走らせたら止まることを試す（A6）。
-3. 1つの PR を何度も使う。対処: 今の「同じ po_ref と item_hash の組は1回」をそのまま使う（design.md:195）。
-- 戻し方: HKI-1 を外す台本（PO の `!`）と、consent-audit.py の §5 の分岐を元に戻す PR。
+1. 試験を消さずに、本体だけで止める範囲を狭める。対処: §5-4 の試験の条件（CI で流れる試験に限る）と審査役の確認項目。残る分は受け入れたリスクとして ADR に書く。
+2. 本体に確認を飛ばす返事を隠して入れる（文字列を組み立てるなど）。対処: §5-5 の機械の検査と審査役の確認項目。残る分は ADR に書く。
+3. 見張りの本体はフックとして何でも実行できる（設定ファイルを書き換える処理を入れるなど）。対処: 審査役の確認項目と週次点検（設定の変化は今までどおり B に出る）。残る分は ADR に書く。
+4. HKI-1 の文が広く読まれ、ほかの台本まで通る。対処: 命令の形を1つに固定し、台本の中でも版を確かめる。導入後に A6 で、通らないことを確かめる。
+5. 1つの PR を何度も使う。対処: 今の「同じ po_ref と item_hash の組は1回」をそのまま使う（permission-delegation/design.md:195）。
+6. 審査役が中身を読まずに APPROVE できる（ADR-1029:40）。Opus は自分でマージできる。対処: この2つは新しい ADR に受け入れたリスクとして書き、PO の承認を取る。
+- 戻し方: HKI-1 を外す台本（PO の `!`）と、consent-audit.py の §5 の分岐を元に戻す PR。共通の台本で入れた見張りを外すのは、今までどおり見張りごとの rollback.sh を PO の `!` で流す。
 - 外部事例: 使わない。社内の決まり（誰が確認するか）の変更で、外の数値が設計の正しさを示さないため。
+
+### 8-1. ADR の扱い
+- 新しい ADR を起こし、ADR-1034 の決定2（見張りは R4。PR 番号で説明できるのは repo の settings.json だけ。ADR-1034:16・:34）を一部改める。改めるのは「§5 の強める変更に限り、user:hooks と hook_files も PR 番号で説明できる」の1点だけ。外す・弱める・共通の台本の変更は ADR-1034 のまま。
+- Why に書くこと: PO の言葉（2026-11-09）、毎週の B（11/02・11/09）、§8 の受け入れたリスク 1・2・3・6。
+- この ADR が PO に承認されるまで、実装の便は出さない。
 
 ## 9. PO の決定（2026-11-09。PO の返事「1」＝下の案1）
 見張りの「中身の書き換え」を AI の確認だけで記録してよいか。
@@ -68,19 +111,32 @@ PR 番号 `PR#n` で説明できるのは、次のどれかに当たるものだ
 | 基準 | 検証方法 |
 |---|---|
 | A1 §5-1〜3 を満たす増・入れ替えが B に出ない | 試験（一時の HOME と一時の git リポジトリ。既存の permission-delegation-tests.py に足す） |
-| A2 今週の3件を PR #5039・#5049 の record で説明でき、B が0件 | 実物の写しで点検を流し直す（`--commit-snapshot` なし） |
+| A2 今週の3件が下の3行の記録で説明でき、B が0件 | 11/09 の写しの複製を一時の HOME に置き、下の3行を一時の台帳に書いて点検を流す（`--commit-snapshot` なし）。行: ① hook_files `29ac3748\|9e086e1e` を PR#5049 ② user:hooks `PreToolUse\|Bash\|3ba846f5` を PR#5049・batch X ③ user:hooks `PreToolUse\|Bash\|062521a7` の減を PR#5049・batch X・`--replaced-by 3ba846f5`・E_old の JSON。PR#5049 は GitHub main で mac-test-guard のフォルダを最後に変えたマージ（0e82884f7。その前は #5039 の c758ea8d8） |
 | A3 組から命令を抜く入れ替えが B | 試験 |
-| A4 PR に無い中身・`scripts/agent-hooks/` の外のファイルが B | 試験 |
-| A5 試験の行を消した PR での中身の書き換えが B（案1のとき） | 試験 |
-| A6 AI が rollback.sh・別の台本を走らせると自動判定で止まる | 導入後に1回ずつ試し、止まった記録を残す |
-| A7 install.sh が足すだけで、2回流しても1件 | 試験（mac-test-guard の test と同じ型） |
+| A4 PR に無い中身・札の無いフォルダ・`scripts/agent-hooks/` の直下のファイルが B | 試験 |
+| A5 札の `tests` に `-` の行がある PR・`tests` から名前が消えた PR・CI で呼ばれていない試験での中身の書き換えが B | 試験（3件） |
+| A6 AI が、見張りごとの install.sh・rollback.sh・`CLAUDE_DIR=` を前に付けた共通の台本・引数2つの共通の台本を走らせると止まる | 導入後に1回ずつ試す。止まったと判定する条件: Bash の結果が拒否で返り、settings.json の sha256 が試す前と同じ。4件の結果を keep に残す |
+| A7 共通の台本が足すだけで、2回流しても命令は1件・台帳の行も1組 | 試験 |
+| A8 本体に `permissionDecision` と `allow` が同じ行にある見張りは、台本が止め、点検も B にする | 試験 |
+| A9 共通の台本が、~/.salesanchor-tools に変更がある・main と版が違う・名前の形が違うときに止まる | 試験（3件） |
 
 ## 11. 維持の仕組み
 - 週次点検（agent-console の定期作業）が毎週 K1・K2 を出す。B が出たら今までどおり Opus が中身を調べて PO に報告する。
-- 新しい見張りの設計書は「正本は `scripts/agent-hooks/<名前>/`、導入は AI が install.sh」を書く。
+- 新しい見張りの設計書は「正本は `scripts/agent-hooks/<名前>/`、札は guard-manifest.json、試験は agent-hooks-test.yml で流す、導入は AI が install-guard.sh」を書く。
+- 審査役の確認項目（§5 の末尾の2行）は reviewer の定義に足す。
 
-## 12. 設計審査（Architect・同じ AI の自己審査。独立した第二者の審査ではない）
-- 判定: REVISE（§9 は PO 決定で解消。残る②③をクラウドの設計審査と実装カードで固める）。
-- 確かめたこと: 今の判定の場所（consent-audit.py:801・:845・:906）、今週の3件の中身と GitHub main の正本の一致（recon 1）、install.sh の型（mac-test-guard/install.sh）。
-- 残る点: ①（解消）§9 は PO 決定。②HKI-1 が実際に通るかは未確認（recon 未確認）。③§5-3 の「同じ record の束」の決め方（同じ PR 番号で同じ日の行）を実装カードで固める。
-- 正式な審査（クラウドでの設計審査）は PO の §9 の回答の後に行う。
+## 12. 設計審査
+### 12-1. クラウドでの設計審査 1回目（2026-11-09 07:27 UTC・opus・読むだけ。判定 REVISE）
+| 指摘 | 直したところ |
+|---|---|
+| 必須1 パスの対応と命令の読み方が無い。直下のファイルがある | §5-0（札・パスと命令の形を固定）・§3（直下は対象外） |
+| 必須2 E_old の JSON 全体が無いと sha8 と照らせない。束が未定 | §5-3（JSON 全体・batch の id） |
+| 必須3 足す見張りが確認を飛ばす返事を返せる | §5-5・A8・審査役の確認項目 |
+| 必須4 試験の名前の決め方で漏れる。改名で抜ける。CI で流れているか未確認 | §5-4（札の tests・`--no-renames`・CI の条件）。CI は Opus が確かめた: 今は流れていない（§6 の末尾） |
+| 必須5 HKI-1 が走る前に版を確かめない。CLAUDE_DIR で入れ先を変えられる。見張りごとの install.sh が何でも通る | §6（共通の台本1本・手順2と3・HKI-1 の文）・§5-5（台本の変更は PO の「1」）・A6・A9 |
+| 必須6 ADR-1034 との食い違いの扱いが無い | §8-1 |
+| 推奨 A2 の記録の形・A6 の止まった判定が無い | §10 の A2・A6 |
+
+### 12-2. 自己審査（同じ AI。独立した第二者の審査ではない）
+- 判定: 2回目のクラウド審査の結果を待つ。
+- 残る未確認: HKI-1 の文で、自動判定が AI の実行を実際に通すか（recon 未確認）。これは ADR の承認の後、導入の便で確かめる（A6 と同じ時）。通らなかったときは、K3 を満たせないことを PO に戻す。
