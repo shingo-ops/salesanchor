@@ -1,6 +1,6 @@
 # 見張りのルール別 手順書
 
-この文書は何か：見張り（アラート）のルールごとの手順書です。ルールの正本は `monitoring/prometheus/alert_rules.yml`（Prometheus 34 本）と `monitoring/loki/rules/jarvis/alerts.yml`（Loki 6 本）です。各ルールの `runbook_url` はこの文書の同名の見出しを指します。見出しはルール名と同じにしてあります。札とリンクの欠けは `monitoring/scripts/check_alert_rules.py` が CI で検査します。
+この文書は何か：見張り（アラート）のルールごとの手順書です。ルールの正本は `monitoring/prometheus/alert_rules.yml`（Prometheus 38 本）と `monitoring/loki/rules/jarvis/alerts.yml`（Loki 6 本）です。各ルールの `runbook_url` はこの文書の同名の見出しを指します。見出しはルール名と同じにしてあります。札とリンクの欠けは `monitoring/scripts/check_alert_rules.py` が CI で検査します。
 
 ### 札（tier）の意味
 
@@ -26,7 +26,7 @@
 
 - 札：ticket
 - 何が起きているか：メモリ使用率が 85% を超えた状態が 5 分続いた。
-- 最初に見るもの：Grafana のサーバー資源のダッシュボード、`docker stats --no-stream`。
+- 最初に見るもの：Grafana のサーバー資源のダッシュボード、`docker stats --no-stream`。あわせて Prometheus で `salesanchor_dockerd_rss_bytes{instance="app-vps"}`（docker の土台そのもののメモリ。箱ごとの `docker stats` には出ない）。1GiB を超えていれば DockerdMemoryHigh の手順に進む。
 - 直し方：どのコンテナがメモリを使っているかを切り分けて Opus に報告する。
 - 止め方：`amtool silence add alertname=HighMemoryUsage --duration=PERIOD --comment=REASON`
 
@@ -370,3 +370,21 @@
 - 最初に見るもの：backend のログの「権限キーの見張り: 数えられなかった」の行と、DB の具合（BackendHighErrorRate など）。
 - 直し方：DB が戻れば、次の 300 秒の数え直しで 0 以上に戻り自動で解決する。
 - 止め方：`amtool silence add alertname=PermissionKeyCheckFailed --duration=PERIOD --comment=REASON`
+
+## DockerdMemoryHigh
+
+- 札：ticket
+- 何が起きているか：prod1 の docker の土台（dockerd）のメモリが 1GiB を超えた状態が 30 分続いた。健康なときは約 0.15〜0.3GB。2026-11-08 夜は約 2.0GB まで膨らみ、空きメモリが尽きて本番が止まった（build-on-github design.md §24）。値は prod1 の `scripts/ops/dockerd_state.py` が毎分 textfile に書く。
+- 影響：今すぐの影響は無い。放置すると空きメモリが減り、入れ替え（deploy）の組み立てが打ち切られたり、本番が止まったりする。
+- 最初に見るもの：Prometheus の `salesanchor_dockerd_rss_bytes{instance="app-vps"}` の 7 日の増え方と、`salesanchor_dockerd_start_time_seconds` （最後に入れ直した時刻）。
+- 直し方：日本時間 14:00〜16:00 に、PO が Mac の「ターミナル」で `bash scripts/ops/dockerd-restart-window.sh restart` を流す（live-restore が有効なら箱は止まらない）。live-restore が未設定なら、先に同じ台本の `live-restore` を流す。台本は入れ替えを止めて、終わりに必ず戻す。
+- 入れ直しの許可：prod1 の `/etc/sudoers.d/90-sa-docker-restart` が、ubuntu に `/usr/bin/systemctl restart docker` と `/usr/bin/systemctl is-active docker` だけをパスワード無しで許している（2026-11-09 PO が設置）。あるかの確かめは prod1 で `sudo -n -l /usr/bin/systemctl restart docker`（終了コード 0 ならある）。外すときは `ssh -t prod1 'sudo rm /etc/sudoers.d/90-sa-docker-restart'`。
+- 止め方：`amtool silence add alertname=DockerdMemoryHigh --duration=PERIOD --comment=REASON`
+
+## DockerdStateStale
+
+- 札：ticket
+- 何が起きているか：prod1 の dockerd のメモリを書く係（`scripts/ops/dockerd_state.py`、ubuntu の cron で毎分）が 10 分以上 textfile を書いていない、または値が無い状態が 5 分続いた。この間は dockerd が膨らんでも DockerdMemoryHigh が鳴らない。
+- 最初に見るもの：prod1 の `crontab -l` に dockerd_state の行があるか → `/tmp/dockerd-state.log` の最後の行（失敗のときだけ書かれる）→ `/home/ubuntu/node_exporter_textfile/dockerd_state.prom` の時刻。
+- 直し方：ログの原因（pid ファイルが読めない・dockerd が動いていない・書けない）を切り分けて Opus に報告する。
+- 止め方：`amtool silence add alertname=DockerdStateStale --duration=PERIOD --comment=REASON`
