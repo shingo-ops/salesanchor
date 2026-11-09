@@ -104,7 +104,6 @@
     "fedexRateModal.errorApiFailure",
     "inbox.fetchError",
     "inbox.imageExpired",
-    "inbox.manualRecord.saveError",
     "inbox.reactionDeleteFailed",
     "inbox.reactionSendFailed",
     "inbox.sendDisabled7d",

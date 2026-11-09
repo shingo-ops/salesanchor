@@ -69,8 +69,8 @@ describe("not_found:<target> (ADR-1071 bin3)", () => {
     await i18n.changeLanguage("ja");
   });
 
-  it("has 67 targets, each key named after its target", () => {
-    expect(Object.keys(NOT_FOUND_TARGET_KEYS).length).toBe(67);
+  it("has 66 targets, each key named after its target", () => {
+    expect(Object.keys(NOT_FOUND_TARGET_KEYS).length).toBe(66);
     for (const [target, key] of Object.entries(NOT_FOUND_TARGET_KEYS)) {
       expect(key).toBe(`apiError.notFoundTarget.${target}`);
     }
