@@ -69,7 +69,7 @@ PO 実装承認: 2026-11-09「1」（この設計で実装まで進める）。�
    - :265-269: 札ごとに 1 行のものは `targets[group][札]`（札が None の行は入れない。今と同じ）。それに加えて、既定の行が札の入った 1 行なら `targets[group][_KIND_DEFAULT]` = その行。
 6. `_current_kind`（:310-316）: 語で決まった行は札をそのまま返す（`_kind` を通さない）。
 7. `_review_code_kinds`（:319-330）: 札をそのまま集める（`_kind` を通さない）。
-8. `decide_kind`（:333-349）を次の `decide_target` に置き換える（名前を変える。呼び出しは :381-382 と下の 3. のテストだけ。`git grep -n decide_kind` で 0 件になることを確かめる）:
+8. `decide_kind`（:333-349）を次の `decide_target` に置き換える（名前を変える。呼び出しは :381-382 と下の 3. のテストだけ。`git grep -n decide_kind -- backend` で 0 件。書類の中の名前は直さないになることを確かめる）:
    ```python
    def _target_of(rows: Mapping[Any, Target], kind: Any) -> Target | None:
        if kind in _FALLBACK_TO_DEFAULT_LABELS:
