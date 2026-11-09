@@ -462,3 +462,30 @@ groups:
           summary: "運用の受け箱を 3 時間読めていません"
           description: "さくらの点検・障害のメールを読む処理が {{ $value | humanizeDuration }} の間、受け箱を読めていません（閾値: 3 時間）。この間、さくらのお知らせは Discord に届きません。"
           runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#opsmailpollstale"
+
+  - name: dockerd_state_alerts
+    rules:
+      # docker の土台（dockerd）のメモリが 1GiB を 30 分超えた（build-on-github 便0・design.md §24-3）
+      # 2026-11-09 の停止の前は約 2.0GB、入れ直し後は約 0.15GB。値は prod1 の scripts/ops/dockerd_state.py が毎分 textfile に書く
+      - alert: DockerdMemoryHigh
+        expr: salesanchor_dockerd_rss_bytes{instance="app-vps"} > 1073741824
+        for: 30m
+        labels:
+          severity: warning
+          tier: ticket
+        annotations:
+          summary: "docker の土台（dockerd）のメモリが 1GiB を超えています"
+          description: "prod1 の dockerd のメモリが 30 分続けて 1GiB を超えています。2026-11-09 は約 2.0GB まで膨らみ本番が止まりました。日本時間 14:00〜16:00 に入れ直しの台本を流してください。"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#dockerdmemoryhigh"
+
+      # dockerd の値を書く係が 10 分書いていない。書いた時刻の値が変わらないことで見る（時計のずれで誤って鳴らない）
+      - alert: DockerdStateStale
+        expr: changes(salesanchor_dockerd_state_last_run_timestamp_seconds{instance="app-vps"}[10m]) == 0 or absent(salesanchor_dockerd_state_last_run_timestamp_seconds{instance="app-vps"})
+        for: 5m
+        labels:
+          severity: warning
+          tier: ticket
+        annotations:
+          summary: "dockerd のメモリを書く係が 10 分以上動いていません"
+          description: "prod1 の scripts/ops/dockerd_state.py が 10 分以上 textfile を書いていません。dockerd が膨らんでも DockerdMemoryHigh が鳴りません。"
+          runbook_url: "https://github.com/shingo-ops/salesanchor/blob/main/docs/runbooks/alerts.md#dockerdstatestale"

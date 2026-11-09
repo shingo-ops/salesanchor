@@ -1,0 +1,13 @@
+........................................................................ [ 57%]
+.....................................................                    [100%]
+=============================== warnings summary ===============================
+tests/test_roles_edit_hierarchy.py::test_role_page_list_hides_four_keys_for_every_editor[owner]
+  /root/worktrees/salesanchor/release-role-edit-hierarchy/backend/app/main.py:27: StarletteDeprecationWarning: 'HTTP_422_UNPROCESSABLE_ENTITY' is deprecated. Use 'HTTP_422_UNPROCESSABLE_CONTENT' instead.
+    from app.routers import (
+
+tests/test_staff_join_api.py: 20 warnings
+  /tmp/claude-0/venv/lib/python3.12/site-packages/aiosqlite/core.py:63: DeprecationWarning: The default datetime adapter is deprecated as of Python 3.12; see the sqlite3 documentation for suggested replacement recipes
+    result = function()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+125 passed, 21 warnings in 13.83s

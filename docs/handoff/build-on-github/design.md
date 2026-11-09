@@ -191,7 +191,7 @@ docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml p
 5. 走査の道具（gitleaks）の版は固定し、`actions/*` と同じく SHA で pin する。
 
 ### 7-3 VITE の値
-- 事実: `frontend/Dockerfile:7-16` の `ARG/ENV` 5 つ。`VITE_FIREBASE_API_KEY`・`VITE_FIREBASE_AUTH_DOMAIN`・`VITE_GCP_PROJECT_ID` は prod1 の `.env`（手で置いた値。deploy は書かない）から `docker-compose.yml:201-203` で渡っている。`VITE_FUNNEL_DASHBOARD` と `VITE_AUTH_PROVIDER='self'` は deploy が GitHub secret / 固定値で `.env` に書く（`deploy.yml:370,380`）。画面の JS に `VITE_FIREBASE_API_KEY` が 1 か所載っている（recon §6）＝画面を開く人に届く前提の値。`frontend/src/lib/firebase.ts:19-21` が今も 3 つを読む。
+- 事実: `frontend/Dockerfile:7-16` の `ARG/ENV` 5 つ。`VITE_FIREBASE_API_KEY`・`VITE_FIREBASE_AUTH_DOMAIN`・`VITE_GCP_PROJECT_ID` は prod1 の `.env`（手で置いた値。deploy は書かない）から `docker-compose.yml:201-203` で渡っている。`VITE_FUNNEL_DASHBOARD` と `VITE_AUTH_PROVIDER='self'` は deploy が GitHub secret / 固定値で `.env` に書く（`deploy.yml:370,380`）。画面の JS に `VITE_FIREBASE_API_KEY` が 1 か所載っている（recon §6）＝画面を開く人に届く前提の値。（当時は frontend/src/lib/firebase.ts の 19〜21 行が 3 つを読んでいた。その後 b88c0ce49 でこのファイルは消え、2026-11-09 の origin/main では frontend/src に VITE_FIREBASE_API_KEY を読む所は無い）。
 - 後: 組み立てが GitHub に移るので、5 つの値は GitHub から渡す。
   - `VITE_GCP_PROJECT_ID`・`VITE_FIREBASE_AUTH_DOMAIN`・`VITE_AUTH_PROVIDER`: 置き場の **Variables**（秘密でない。`frontend/.env.example` にも載る種類の値）。
   - `VITE_FIREBASE_API_KEY`: 画面に載る値だが、置き場が公開なので Variables は誰でも読める。Variables に置いても JS に載っている以上は同じ露出。ただし「GitHub の画面で一覧に出る」ことを避けたいなら **secret** に置く（記録では自動で伏せ字）。推奨は secret（露出を増やさない）。§19-1 D6。
@@ -456,7 +456,7 @@ docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml p
 | U4 | `COMPOSE_FILE` 指定時に docker-compose.override.yml が読まれないか | 便2 で手元の `docker compose config` | 決定済み（§19-2 D9 override 方式）。通らなければ §12 便2 分岐 (b) に落とす技術判断で、PO には聞かない |
 | U5 | prod1 に未追跡の docker-compose.override.yml が無いか | PO の読み取り `ls /home/ubuntu/salesanchor/docker-compose.override.yml` | 同上（あれば中身を PO が読み、便2 の前に消すか分岐 (b)） |
 | U6 | 完成品ごとの GitHub での組み立て分数 | 便1 の実測（§11） | K8・案B の見積もり |
-| U7 | prod1 の `.env` にある VITE_FIREBASE_* の値の出所と、AUTH_PROVIDER=self でも要るか | PO が `.env` の名前だけ確かめる（値は見せない）。`frontend/src/lib/firebase.ts:19-21` は今も読むので要る前提 | D6 |
+| U7 | prod1 の `.env` にある VITE_FIREBASE_* の値の出所と、AUTH_PROVIDER=self でも要るか | PO が `.env` の名前だけ確かめる（値は見せない）。当時の frontend/src/lib/firebase.ts は b88c0ce49 で消えたため、要るかは組み立て移動の便で確かめ直す | D6 |
 | U8 | build-push-action の provenance（既定）に build-args が含まれるか | 便1 で `provenance: false` にするので頼らない | — |
 | U9 | 案B の repository_dispatch / workflow_dispatch に要る fine-grained PAT の権限名 | docs.github.com の REST の該当ページ（本セッションから到達不可） | 案B を選ぶ場合のみ（D1） |
 | U10 | `/home/ubuntu/node_exporter_textfile` に ubuntu の cron から書けるか | PO の読み取り `ls -ld` | 便0 の分岐 (b) |
@@ -577,3 +577,61 @@ docker compose -p astro-webapp-secretary -f docker-compose.secretary-agent.yml p
 - 鍵を作る手順は、便1 の実装を始める直前に PO へ渡す。早く作ると、使わないまま 180 日の期限が進むため。
 - §19-1 の 4 件はすべて決まった（2026-11-04）。
 - 件3 の 2 つの候補（14〜16 時・4〜6 時）から 14〜16 時を選んだのは Opus（PO が「どちらか」と委ねたため）。理由は external-cases-dockerd.md §5。
+
+---
+
+## 24. 便0 の細部の確定（追補・2026-11-09 Opus）
+
+### 24-1 なぜ今か（事実）
+- 2026-11-08 23:27 JST 以降、prod1 の空きメモリが尽き、監視の値が欠け、入れ替え（deploy）の組み立てが 10 分で打ち切られた。dockerd の VmRSS は 2026-11-09 16:12:43 JST に 2,008,012 kB（約 2.0GB）。prod1 は 2026-09-20 13:54 から約 50 日連続稼働（`uptime -s`）。
+- 2026-11-09 16:12 JST に PO の許可で `sudo systemctl restart docker` を行った。live-restore が無効だったため全 17 箱が止まり、約 1.5 分止まった（Opus の判断の誤り。PO に報告済み）。入れ直し後の VmRSS は 148,924 kB（16:45）・148,712 kB（17:04、VmSwap 0 kB・Threads 41）。
+- 同日 PO が prod1 に `/etc/sudoers.d/90-sa-docker-restart` を置いた（中身: ubuntu が `/usr/bin/systemctl restart docker` と `/usr/bin/systemctl is-active docker` だけをパスワード無しで実行できる）。`sudo -n -l /usr/bin/systemctl restart docker` は rc=0（2026-11-09 Opus 実測）。この設定はリポジトリに記録が無かったので、本便で手順書（DockerdMemoryHigh の節）に書く。
+- dockerd が膨らんだ原因は【未確認】。だから本便は「測る」と「計画して入れ直せる」を作り、原因の切り分けは測った値で行う（§10-1 の増え方の表）。
+- 本便は PO の選択「3」（2026-11-09：記録と計画した入れ直しだけを行う）と「組み立ての移動は次便」による。便1 以降は本便の後。
+
+### 24-2 §12 便0 からの変更点（Opus の技術判断。目的と範囲は変えない）
+| 項目 | §12 便0 の記載 | 確定 | 理由 |
+|---|---|---|---|
+| 値を書く係 | scripts/ops/dockerd-rss-textfile.sh | scripts/ops/dockerd_state.py（python3 標準ライブラリだけ） | 既存の scripts/ops/container_state.py（同じ置き場・同じ cron の型）と揃え、単体試験を CI で回せるようにする |
+| 書く値 | rss・vmswap・threads | 左に加え、dockerd の起動時刻（`/run/docker.pid` の更新時刻）と、書いた時刻 | 入れ直しの時刻を Prometheus だけで読めるようにする。書いた時刻は係の止まりの見張りに使う |
+| 見張り | 記載なし | DockerdMemoryHigh（1GiB 超が 30 分・ticket）と DockerdStateStale（係が 10 分書いていない・ticket） | 測るだけでは次の膨らみに気づけない。閾値の根拠は 24-3 |
+| 係の止まりの見張りの式 | — | `changes(...[10m]) == 0 or absent(...)` | `time() -` の比較だと時計のずれ（ClockSkew）で誤って鳴る。既存の 7 本は Alertmanager の抑止で避けているが、本便は Alertmanager に触らずに済む式にした |
+| U10（textfile の置き場に書けるか） | 未確認 | 解決: `/home/ubuntu/node_exporter_textfile` は ubuntu が書ける（`scripts/ops/container_state.py` が毎分ここへ書いている） | §18 U10 |
+| 台本の時間帯 | 14:00〜16:00 | 開始は 14:00〜15:44 だけ受け付ける | 16:00 までに終わらせるため（再起動の所要は約 2 分の見込み・live-restore の試し 1 回分を含めて 15 分の余裕） |
+
+### 24-3 閾値の根拠（DockerdMemoryHigh）
+- 健康なとき: 0.15〜0.3GB（2026-11-09 入れ直し後 148,712 kB・入れ直し約 7 分後 約 298MB）。
+- 止まったとき: 約 2.0GB（2,008,012 kB）。prod1 の全メモリは約 3.9GB。
+- 1GiB は「健康なときの 3 倍以上」かつ「止まったときの半分」。30 分続いたときだけ鳴らす（入れ替え中の一時的な膨らみで鳴らさない）。
+- 札は ticket（翌営業日まで）。鳴ったら手順書のとおり、PO が 14:00〜16:00 に台本の restart を流す。自動の入れ直しは入れない（全箱の停止になりうる操作を機械に任せない。live-restore の効き目を 1 回実測してから別便で検討）。
+
+### 24-4 台本（scripts/ops/dockerd-restart-window.sh）の形
+- PO が Mac の「ターミナル」で `!` で流す（§23 件3）。モードは 2 つ:
+  - `live-restore`: /etc/docker/daemon.json が無いことを確かめ、`{"live-restore": true}` を一時ファイルに書いて `sudo dockerd --validate --config-file` で確かめてから置き、`sudo systemctl reload docker`。箱は止まらない（Docker 公式文書の live-restore の節。Context7 /docker/docs で 2026-11-09 確認）。途中で管理者パスワードを 1 回聞かれる。
+  - `restart`: live-restore が有効で、再起動の許可（sudoers）があるときだけ、`sudo -n systemctl restart docker`。その間、Mac から 2 秒ごとに `https://api.salesanchor.jp/api/health` を叩き、200 以外が続いた最長の秒数を出す。
+- どちらも: 日本時間 14:00〜15:44 以外は何もせず止まる／入れ替え（deploy.yml）が動いていれば止まる／入れ替えを止め、終わりに必ず戻す（途中で止まっても戻す）／前後の VmRSS・VmSwap・Threads・LiveRestore・動いている箱の数・`free -m` を出す／記録を Mac の `~/CC報告ファイル-keep/dockerd-restart-window/` に残す。
+- 「再起動中も公開の口（ポート）が届き続けるか」は Docker の文書に書かれておらず【未確認】。だから restart で健康確認を回して実測する。
+
+### 24-5 受け入れ基準（便0）
+| 基準 | 検証方法 |
+|---|---|
+| K0-1 値を書く係の単体試験が全て pass・本物の dockerd（GitHub の試験場）で値が書け、失敗のときはファイルを変えない | CI（deploy-script-test）と試験場の `ALL OK` |
+| K0-2 見張り 2 本の単体試験が pass・検査（札・手順書の見出し）が通る | CI（monitoring-check） |
+| K0-3 本番: cron 登録の 5 分後に prod2 の Prometheus で `salesanchor_dockerd_rss_bytes{instance="app-vps"}` が 1 本返り、`time() - salesanchor_dockerd_state_last_run_timestamp_seconds{instance="app-vps"}` が 120 未満 | Prometheus の問い合わせの生出力 |
+| K0-4 本番: prod2 の `/api/v1/rules` に DockerdMemoryHigh と DockerdStateStale があり health が ok・どちらも鳴っていない・監視設定のずれが 0 | 同上と monitoring-config-drift の手動実行のログ |
+| K0-5 PO の live-restore の実行の後: LiveRestore が true・動いている箱の数が前後で同じ・健康確認の途切れ 0 | 台本の記録 |
+| K0-6 （restart を初めて流したとき）健康確認の 200 以外の最長が 10 秒以下・箱の数が前後で同じ・VmRSS が 0.5GB 未満に下がる | 台本の記録 |
+
+### 24-6 弊害と戻し方
+- 弊害: prod1 で毎分 1 回、ファイルを 2 つ読んで 1 つ書く（docker は呼ばない）。
+- 弊害: 台本の実行中（数分）は main へのマージがあっても本番へ入れ替わらない。台本の最後に戻す。戻らなかったときは台本が「入れ替えが戻っていません」と出す。
+- 戻し方: ①prod1 の crontab から dockerd_state の行を消す（控えから戻す）②この PR の revert を main にマージし、prod2 の alert_rules.yml を main の版に置き直す ③prod1 の `dockerd_state.prom` を消す（残すと最後の値が読まれ続ける）④live-restore は /etc/docker/daemon.json を消して `sudo systemctl reload docker` ⑤再起動の許可は `ssh -t prod1 'sudo rm /etc/sudoers.d/90-sa-docker-restart'`。
+
+### 24-7 審査（Opus 自己審査・2026-11-09）
+- 判定: APPROVE（設計合格）。同一 AI による自己審査で、独立した第二者の審査ではない。クラウドの設計審査をこの後に行う。
+- 整合: §10-1・§12 便0・§23 件3 と食い違わない（変更点は 24-2 に全部書いた）。既存の見張り（ContainerStateStale）・状態書き係（container_state.py）・試験場（sandbox-test.yml）の型をそのまま使う。
+- 未解決: 「dockerd の再起動中に公開の口が届くか」（24-4）は実測で決める。実測の前に自動の入れ直しは作らない。
+
+### 24-8 §10-4 への記録（2026-11-09 の入れ直し・live-restore 無しの 1 回）
+- 段0 前: VmRSS 2,008,012 kB・VmSwap 記録なし・Threads 記録なし・LiveRestore false（2026-11-09 16:12:43 JST）
+- 段0 後: VmRSS 148,712 kB・VmSwap 0 kB・Threads 41（2026-11-09 17:04 JST）

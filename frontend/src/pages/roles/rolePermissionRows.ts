@@ -22,7 +22,7 @@ export interface PermRow {
   menus: RowMenuId[] | null;
   /** 実在する許可の鍵だけ */
   keys: string[];
-  fixed?: "always" | "ownerOnly";
+  fixed?: "always" | "ownerOnly" | "roleEditors";
   noteKey?: string;
   /** 「メニュー以外の許可」の行だけ: DB の区分名 */
   category?: string;
