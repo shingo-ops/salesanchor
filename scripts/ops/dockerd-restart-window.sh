@@ -139,7 +139,7 @@ else
   start_health
   ssh "$HOST" 'sudo -n /usr/bin/systemctl restart docker && sudo -n /usr/bin/systemctl is-active docker'
   after_running=""
-  for i in $(seq 1 30); do
+  for _ in $(seq 1 30); do
     after_running="$(ssh "$HOST" 'docker ps -q | wc -l' | tr -d ' ' || true)"
     if [ "$after_running" = "$before_running" ]; then break; fi
     sleep 2

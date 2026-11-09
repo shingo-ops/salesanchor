@@ -50,7 +50,7 @@ echo "rc1=$rc1 rc2=$rc2"
 [ "$rc1" -eq 1 ] && [ "$rc2" -eq 1 ] || { echo "NG: rc"; exit 1; }
 [ "$(sha256sum "$TF/dockerd_state.prom")" = "$before" ] || { echo "NG: file changed"; exit 1; }
 ls -a "$TF"
-if ls -A "$TF" | grep -q '^\.dockerd_state\.'; then echo "NG: temp left"; exit 1; fi
+if find "$TF" -maxdepth 1 -name '.dockerd_state.*' | grep -q .; then echo "NG: temp left"; exit 1; fi
 
 echo "== 5. 台本の入口（外の操作の前に止まること。gh・ssh は呼ばれない）"
 bash -n scripts/ops/dockerd-restart-window.sh
