@@ -338,3 +338,9 @@
 - 記録が一部書けなかったとき（perm-change.py が拒んだとき。§5-3 の秘密の値の疑いなど）は、入れたまま `INSTALL_OK_RECORD_INCOMPLETE`（終了コード 3）で終える。書けなかった変化は週次点検で B に出て、Opus が PO に報告する。
 - 同時に2回流れるのを防ぐため、`~/.claude/.install-guard.lock` をフォルダで作る（macOS に flock が無いため mkdir の形）。
 - 台本の試験では、perm-change.py を偽物に差し替える（本物は origin の URL を GitHub と決めていて、試験から GitHub に触れずには流せない。:29・:293）。本物の record の行の形は便1 の G14 で確かめ済み。
+
+### 13-9. 便2 のカードの審査（1回目 REVISE）を受けた直し（第13版・2026-11-09）
+- settings.json を読んで新しい形を組み立てるところまでを、本体を写す前に移す（カード §5 の手順8）。壊れた settings.json で本体だけが入れ替わる道をふさぐ。
+- 本体を写した後に止まったときは、settings.json を変えないまま、写した本体の hook-files の記録だけを書いてから `INSTALL_FAILED:` で止まる（~/.claude/scripts の差を記録で説明できる形に保つ）。
+- 1回の実行で同じ組に2件以上入れるときは、「実行の前の組」と「全部入れた後の組」の1組だけを記録する（途中の形では `_ga_group` が組を見つけられない）。
+- 試験の一時の HOME では、git の名前とメールを env で渡し、`git init --bare -b main` で作る。壊れた settings.json の試験（S-bad）を足す。
