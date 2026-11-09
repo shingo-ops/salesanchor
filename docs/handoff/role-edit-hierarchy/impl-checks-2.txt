@@ -1,0 +1,25 @@
+$ pytest tests/test_api_error_reason_sync.py tests/test_error_detail_guard.py tests/test_roles_edit_hierarchy.py -q --no-cov -n0
+...............................................................          [100%]
+=============================== warnings summary ===============================
+tests/test_roles_edit_hierarchy.py::test_role_page_list_hides_four_keys_for_every_editor[owner]
+  /root/worktrees/salesanchor/release-role-edit-hierarchy/backend/app/main.py:27: StarletteDeprecationWarning: 'HTTP_422_UNPROCESSABLE_ENTITY' is deprecated. Use 'HTTP_422_UNPROCESSABLE_CONTENT' instead.
+    from app.routers import (
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+63 passed, 1 warning in 8.61s
+exit: 124
+
+$ npx vitest run src/lib/apiErrorReason.test.ts
+|
+!  No story files found for the specified pattern: src/**/*.mdx
+
+ RUN  v4.1.7 /root/worktrees/salesanchor/release-role-edit-hierarchy/frontend
+
+
+ Test Files  1 passed (1)
+      Tests  3 passed (3)
+   Start at  01:34:03
+   Duration  830ms (transform 169ms, setup 47ms, import 201ms, tests 9ms, environment 451ms)
+
+$ npx tsc --noEmit -p .
+tsc exit: 0

@@ -1,0 +1,97 @@
+## backend: pytest (changed/related test files, SQLite)
+bringing up nodes...
+bringing up nodes...
+
+........................................................................ [ 42%]
+........................................................................ [ 84%]
+...........................                                              [100%]
+=============================== warnings summary ===============================
+tests/test_roles_hidden_system_admin.py::test_list_roles_hides_admin_for_non_super_admin
+tests/test_tenant_admin_ssot.py::TestAdminOnlyRoutesWiring::test_route_requires_tenant_admin[PATCH-/api/v1/calendar/sync-mode]
+tests/test_roles_edit_hierarchy.py::test_role_page_list_hides_four_keys_for_every_editor[owner]
+tests/test_roles.py::TestPermissions::test_list_permissions_returns_200
+  /root/worktrees/salesanchor/release-role-edit-hierarchy/backend/app/main.py:27: StarletteDeprecationWarning: 'HTTP_422_UNPROCESSABLE_ENTITY' is deprecated. Use 'HTTP_422_UNPROCESSABLE_CONTENT' instead.
+    from app.routers import (
+
+tests/test_roles_hidden_system_admin.py: 12 warnings
+tests/test_role_assignment.py: 12 warnings
+  /tmp/claude-0/-home-user-salesanchor/44bfddde-1ba9-5903-bea6-3b1af6123f0c/scratchpad/v312/lib/python3.12/site-packages/aiosqlite/core.py:105: DeprecationWarning: The default datetime adapter is deprecated as of Python 3.12; see the sqlite3 documentation for suggested replacement recipes
+    result = function()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+171 passed, 28 warnings in 11.82s
+exit=0
+
+## backend: ruff (changed files)
+All checks passed!
+
+## backend: full suite (SQLite, -n 4) — 644 errors are PostgreSQL-only tests with no DB here; 3 failures are pre-existing (same on origin branch HEAD)
+4 failed, 7247 passed, 841 skipped, 1647 warnings, 644 errors in 412.46s (0:06:52)
+FAILED tests/test_unit_recovery.py::test_e5_does_not_overwrite_empty_or_manual_condition[EMPTY_BOX:explicit]
+FAILED tests/test_unit_recovery.py::test_e5_does_not_overwrite_empty_or_manual_condition[MANUAL_CONDITION_REVIEW]
+FAILED tests/test_reextract_v6_with_v102_pg.py::test_help_runs - assert (1 == 0)
+FAILED tests/test_error_detail_guard.py::test_detail_guard_no_increase - Asse...
+
+## frontend: npx tsc --noEmit -p .  exit=0
+
+## frontend: npm run check:all  exit=0
+[1] 
+[1] /root/worktrees/salesanchor/release-role-edit-hierarchy/frontend/src/lib/api.no-double-prefix.test.ts
+[1]   29:10  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   30:6   warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1] 
+[1] /root/worktrees/salesanchor/release-role-edit-hierarchy/frontend/src/mocks/funnelFixtures.ts
+[1]    33:17  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]    42:17  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]    51:17  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]    60:17  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]    69:17  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]    78:17  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]    87:17  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   135:14  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   136:14  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   137:14  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   138:14  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   143:22  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   144:13  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   149:22  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   150:13  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   158:14  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   159:14  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   160:14  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   165:22  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   166:13  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   183:25  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   223:18  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   241:25  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   281:18  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   299:25  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1]   339:18  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+[1] 
+[1] /root/worktrees/salesanchor/release-role-edit-hierarchy/frontend/src/pages/oauth-callback/OAuthCallbackPage.tsx
+[1]   130:6  warning  React Hook useEffect has a missing dependency: 't'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+[1] 
+[1] ✖ 59 problems (0 errors, 59 warnings)
+[1]   0 errors and 1 warning potentially fixable with the `--fix` option.
+[1] 
+[1] npm run lint exited with code 0
+
+## frontend: npm run test:unit  exit=0
+
+> salesanchor-frontend@1.0.0 test:unit
+> vitest run --config vitest.unit.config.ts --project unit
+
+
+ RUN  v4.1.7 /root/worktrees/salesanchor/release-role-edit-hierarchy/frontend
+
+Not implemented: navigation to another Document
+Not implemented: navigation to another Document
+Not implemented: navigation to another Document
+Not implemented: navigation to another Document
+Not implemented: navigation to another Document
+
+ Test Files  209 passed (209)
+      Tests  2434 passed (2434)
+   Start at  01:23:04
+   Duration  129.08s (transform 9.96s, setup 5.36s, import 66.31s, tests 123.97s, environment 154.63s)
+
