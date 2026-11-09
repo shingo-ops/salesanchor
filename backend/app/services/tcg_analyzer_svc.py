@@ -59,6 +59,12 @@ TCG_SCHEMA = "public"
 
 ENGINE_VERSION = "name-first-v9-product-all-terms"
 
+# 状態の語が無い行の、状態マスタの群（line_conditions.value_group）ごとの既定の状態の code。
+# R4・R5（resolve_condition_v2）と値段で単位を決める規則（v102_buyback_unit_svc）の両方がここを読む（正本はここ 1 か所）
+DEFAULT_CONDITION_CODE_BY_GROUP = {"box": "CN0003", "case": "CN0001", "pack": "CN0010"}
+# 上の code の行が状態マスタ（cond_entries）に無いときだけ使う名前（今の直書きと同じ）。ある時は行の名前を使う
+_DEFAULT_CANONICAL_IF_ROW_MISSING = {"box": "Sealed box", "case": "Case", "pack": "Searched pack"}
+
 # NOTE: E3a/E5/E3b/E4 後処理は循環インポート回避のため analyze_extraction_job 内で lazy import する
 # (tcg_unit_recovery_svc → tcg_analyzer_svc の依存があるため)
 
@@ -950,11 +956,11 @@ def resolve_condition_v2(
     b4_prefix = f"{flag_note}," if flag_note else ""
     b4 = b4_prefix + "R4:単位既定"
     if "箱系大" in kubun:
-        cid = _find_cond_id(cond_entries, "CN0001") or cond_canonical_to_uuid.get("Case")
-        return ("Case", cid, b4)
+        canonical, cid = _group_default_condition(cond_entries, cond_canonical_to_uuid, "case")
+        return (canonical, cid, b4)
     if "箱系" in kubun:
-        cid = _find_cond_id(cond_entries, "CN0003") or cond_canonical_to_uuid.get("Sealed box")
-        return ("Sealed box", cid, b4)
+        canonical, cid = _group_default_condition(cond_entries, cond_canonical_to_uuid, "box")
+        return (canonical, cid, b4)
 
     # --- R5: パック既定 (GAS: applyPackConditionDefault, AnalysisV2PackCondition.gs:66-180) ---
     # unit=パック系(UN0003) かつ R4b で FLAG_SINGLE になった行を Searched pack に変換する。
@@ -971,8 +977,8 @@ def resolve_condition_v2(
             hit, keyword = match_keyword(raw_memo, search, exclude)
             if hit:
                 return (entry["canonical"], entry["cond_id"], f"R3:MEMO:{keyword}")
-        cid = _find_cond_id(cond_entries, "CN0010") or cond_canonical_to_uuid.get("Searched pack")
-        return ("Searched pack", cid, b4_prefix + "R5:パック既定")
+        canonical, cid = _group_default_condition(cond_entries, cond_canonical_to_uuid, "pack")
+        return (canonical, cid, b4_prefix + "R5:パック既定")
 
     # --- R4c: 商品分類既定 — 単位では箱か決まらないが、照合された商品が箱系 ---
     # CN0008（FLAG_SINGLE）の語は適用区分が 枚系,単位不明 で主ループに当たらないため、
@@ -1001,6 +1007,17 @@ def _find_cond_id(cond_entries: list[dict], code: str) -> Optional[str]:
         if e["code"] == code:
             return e["cond_id"]
     return None
+
+
+def _group_default_condition(cond_entries: list[dict], cond_canonical_to_uuid: dict, group: str) -> tuple[str, Optional[str]]:
+    """群の既定の状態の（名前, id）。DEFAULT_CONDITION_CODE_BY_GROUP の code の行があればその行の名前と id。
+    無ければ _DEFAULT_CANONICAL_IF_ROW_MISSING の名前と、その名前で引いた id（今の動きと同じ）。"""
+    code = DEFAULT_CONDITION_CODE_BY_GROUP[group]
+    for e in cond_entries:
+        if e["code"] == code:
+            return e["canonical"], e["cond_id"]
+    name = _DEFAULT_CANONICAL_IF_ROW_MISSING[group]
+    return name, cond_canonical_to_uuid.get(name)
 
 
 # ---------------------------------------------------------------------------
