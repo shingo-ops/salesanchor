@@ -25,7 +25,7 @@
 - `.github/workflows/deploy.yml:516-605`: 「Recreate nginx」の段。`nginx -t` を通してから `docker compose up -d --no-deps --force-recreate nginx`（:577）。
 - `.github/workflows/deploy.yml:561`: 戻り先の設定の点検は、`-v .deploy_prev_nginx.conf:/etc/nginx/conf.d/default.conf:ro` で 1 ファイルを差し替えて `nginx -t`。
 - `.github/workflows/deploy.yml:1261-`: 失敗時の /design/ 遮断の段も `--force-recreate nginx`。
-- `scripts/blue-green-cutover.sh:154`: 配備のたびに `docker exec <nginx> nginx -s reload` を流している。`deploy.yml:759` も reload を流す。
+- `scripts/blue-green-cutover.sh:154`: 配備のたびに `docker exec <nginx> nginx -s reload` を流している。`.github/workflows/deploy.yml:759` も reload を流す。
 
 ## 3. 本番での観測（読み取りだけ）
 
