@@ -33,6 +33,7 @@ from app.auth.dependencies import get_current_tenant, get_current_user
 from app.database import get_db
 from app.routers import leads as leads_router
 from app.services import encryption
+from tests import test_message_send as ms
 
 # ---------------------------------------------------------------------------
 # DDL
@@ -222,7 +223,8 @@ async def engine():
 
     async with eng.begin() as conn:
         for ddl in (
-            _LEAD_DDL, _META_MESSAGES_DDL, _TENANT_META_CONFIG_DDL,
+            _LEAD_DDL, _META_MESSAGES_DDL, ms._META_MESSAGES_MSGID_INDEX_DDL,
+            _TENANT_META_CONFIG_DDL,
             _STAFF_DDL, _OUTBOUND_DRAFT_DDL, _AUDIT_LOGS_DDL,
             _MESSAGE_TRANSLATIONS_DDL,
         ):

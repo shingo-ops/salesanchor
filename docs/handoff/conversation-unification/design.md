@@ -1,7 +1,7 @@
 # 会話の表を会社の中で1つにまとめる — 設計（KGI は PO 承認済み・設計審査3回目 APPROVE）
 
 > この文書は何か（1行）: 会社ごとに2つある会話の表を meta_messages の1つにまとめ、全会話を必ずリードに結ぶまでの手順。
-> 現在地: [recon.md](recon.md)。上位: docs/specs/db-ssot/conversation-unification/design.md・docs/specs/db-ssot/ideal-state.md。関連 ADR: ADR-106・ADR-096・ADR-110・ADR-1049・ADR-136・ADR-1003。
+> 現在地: [recon.md](recon.md)（docs/handoff/conversation-unification/recon.md）。上位: docs/specs/db-ssot/conversation-unification/design.md・docs/specs/db-ssot/ideal-state.md。関連 ADR: ADR-106・ADR-096・ADR-110・ADR-1049・ADR-136・ADR-1003。
 
 ## 1. 目的（PO から見て変わること）
 - 会話の記録が、会社ごとに1か所だけになる。
@@ -66,7 +66,8 @@ PO 要件（2026-11-07 原文）: 「Messangerに限らず、受信箱で送受�
   - 返信の写し（echo）を meta_messages に outbound で入れる。`ON CONFLICT (message_id) WHERE message_id IS NOT NULL DO NOTHING`。echo の app_id が自社アプリ（META_APP_ID）なら入れない（アプリから送った分は送信の処理が既に入れている。二重を防ぐ）。
   - アプリの送信の INSERT（leads.py:2086・2346・2532/2552・2843/2863）にも同じ ON CONFLICT を付ける（写しが先に届いても送信が失敗しない保険）。
   - 購読の既定に `message_echoes` を足す。既存の接続は付け直しで反映（接続画面の操作。PO の作業）。
-  - B 形式の echo も A 形式と同じく outbound で受ける。
+  - B 形式の echo も A 形式と同じく outbound で受ける。→ **カード便1.5 で絞り込み（2026-11-09 Opus）**: B 形式（changes[]）の写しは今までどおり捨て、ログを1行残す。理由: Meta 公式の説明に B 形式の写しの形が無く、お客さんの id の場所が分からない。Instagram の写しは A 形式（messaging[]）で届くと公式に書かれている（webhooks/examples）ので K7 は満たせる。
+  - アプリの送信の INSERT は **DO NOTHING ではなく DO UPDATE**（sent_by_staff_id 等を書き足す）にする（カード便1.5 §2 の (2)・2026-11-09 Opus）。理由: RETURNING の行が無いと古い SQLite 用の2回目の INSERT（leads.py:2101-2121 ほか）に進み、写しが先に入っていたとき重複で送信が 500 になるため。
   - `_create_outbound_lead_for_echo`（webhook.py:537-581）の窓口の決め打ち "messenger" を、届いた窓口にする。
   - Discord チケット: bot でも客でもない人の文を outbound で入れる（sender_name はその人の表示名）。
 - 便1 との関係: 便1 で webhook.py:832 の写し先を外すとき、echo の行き先はこの便で meta に付け直す。echo は購読が無いため本番で今まで 0 件（recon §8 p10）なので、便1 と便1.5 の間に失う返信は無い。

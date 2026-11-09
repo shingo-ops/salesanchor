@@ -141,6 +141,12 @@ _META_MESSAGES_DDL = """
     )
 """
 
+# 便1.5: 本番と同じ重複防止の索引（送信の INSERT が ON CONFLICT (message_id) を使う）
+_META_MESSAGES_MSGID_INDEX_DDL = (
+    "CREATE UNIQUE INDEX idx_meta_messages_message_id_unique "
+    "ON meta_messages (message_id) WHERE message_id IS NOT NULL"
+)
+
 _TENANT_META_CONFIG_DDL = """
     CREATE TABLE tenant_meta_config (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -184,6 +190,7 @@ async def engine():
     async with eng.begin() as conn:
         await conn.execute(text(_LEAD_DDL))
         await conn.execute(text(_META_MESSAGES_DDL))
+        await conn.execute(text(_META_MESSAGES_MSGID_INDEX_DDL))
         await conn.execute(text(_TENANT_META_CONFIG_DDL))
         await conn.execute(text(_STAFF_DDL))
 

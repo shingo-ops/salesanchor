@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import discord
 import pytest
 
 from app.discord_gateway import ticket_channel_writer
@@ -46,6 +47,7 @@ class _FakeMessage:
     guild: _FakeGuild
     created_at: object | None = None
     webhook_id: object | None = None
+    type: object = discord.MessageType.default
 
 
 def _mock_result(first_value):
@@ -153,11 +155,11 @@ async def test_ticket_channel_message_enqueues_translation_task_after_save():
 
 
 @pytest.mark.asyncio
-async def test_ticket_channel_outbound_is_ignored_without_commit_or_translation():
+async def test_ticket_channel_staff_post_is_stored_outbound_without_translation():
     session = AsyncMock()
     session.execute.side_effect = [
         _mock_result((45, "1234567890", "Shingo")),
-        _mock_result((1,)),
+        _mock_result((99,)),
     ]
     session.commit = AsyncMock()
     db_factory = MagicMock(return_value=_DBContext(session))
@@ -178,7 +180,11 @@ async def test_ticket_channel_outbound_is_ignored_without_commit_or_translation(
     ) as enqueue_mock, patch(
         "app.services.sse_pubsub.publish_inbox_update",
         AsyncMock(return_value=None),
-    ) as publish_mock:
+    ) as publish_mock, patch.object(
+        ticket_channel_writer.customer_reply_notifier,
+        "schedule_customer_reply_notice",
+        MagicMock(),
+    ) as notice_mock:
         handled = await ticket_channel_writer.process_ticket_channel_message(
             db_factory,
             tenant_id=4,
@@ -186,6 +192,10 @@ async def test_ticket_channel_outbound_is_ignored_without_commit_or_translation(
         )
 
     assert handled is True
-    assert session.commit.await_count == 0
+    assert session.commit.await_count == 1
     enqueue_mock.assert_not_called()
     publish_mock.assert_not_called()
+    notice_mock.assert_not_called()
+    insert_params = session.execute.call_args_list[1].args[1]
+    assert insert_params["direction"] == "outbound"
+    assert insert_params["recipient_id"] == "1234567890"

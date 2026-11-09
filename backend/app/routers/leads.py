@@ -2093,6 +2093,11 @@ async def send_lead_message(
                 'outbound', :message_id, :recipient_id,
                 :messaging_type, :message_tag, :sent_by_staff_id, :page_id, NOW()
             )
+            ON CONFLICT (message_id) WHERE message_id IS NOT NULL
+            DO UPDATE SET sent_by_staff_id = EXCLUDED.sent_by_staff_id,
+                          lead_id = EXCLUDED.lead_id,
+                          messaging_type = EXCLUDED.messaging_type,
+                          message_tag = EXCLUDED.message_tag
             RETURNING id, created_at
         """),
         insert_params,
@@ -2351,6 +2356,9 @@ async def _send_discord_message(
                 (:tenant_id, :lead_id, 'discord', :sender_id, :text,
                  'outbound', :message_id, :recipient_id,
                  :sent_by_staff_id, NOW())
+            ON CONFLICT (message_id) WHERE message_id IS NOT NULL
+            DO UPDATE SET sent_by_staff_id = EXCLUDED.sent_by_staff_id,
+                          lead_id = EXCLUDED.lead_id
             RETURNING id, created_at
         """),
         {
@@ -2542,6 +2550,9 @@ async def send_lead_image_message(
                     :messaging_type, :message_tag, :sent_by_staff_id, :page_id,
                     :attachment_type, NOW()
                 )
+                ON CONFLICT (message_id) WHERE message_id IS NOT NULL
+                DO UPDATE SET sent_by_staff_id = EXCLUDED.sent_by_staff_id,
+                              lead_id = EXCLUDED.lead_id
                 RETURNING id, created_at
             """),
             dc_insert_params,
@@ -2853,6 +2864,11 @@ async def send_lead_image_message(
                 :messaging_type, :message_tag, :sent_by_staff_id, :page_id,
                 :attachment_type, NOW()
             )
+            ON CONFLICT (message_id) WHERE message_id IS NOT NULL
+            DO UPDATE SET sent_by_staff_id = EXCLUDED.sent_by_staff_id,
+                          lead_id = EXCLUDED.lead_id,
+                          messaging_type = EXCLUDED.messaging_type,
+                          message_tag = EXCLUDED.message_tag
             RETURNING id, created_at
         """),
         insert_params,

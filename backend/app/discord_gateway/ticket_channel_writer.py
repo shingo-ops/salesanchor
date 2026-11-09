@@ -1,7 +1,8 @@
 """Discord ticket channel inbound 保存ヘルパ。
 
-チケット専用チャンネルの customer 投稿を meta_messages に保存し、
-保存後に worker へ即時翻訳を enqueue する。
+チケット専用チャンネルの投稿を meta_messages に保存する。
+お客さんの投稿は inbound、担当がチケットの部屋に直接書いた投稿は outbound で保存する。
+inbound は保存後に worker へ即時翻訳を enqueue する。
 """
 from __future__ import annotations
 
@@ -205,10 +206,21 @@ async def process_ticket_channel_message(
             )
             return True
 
-        inbound = bool(lead.discord_user_id) and author_id == str(lead.discord_user_id)
-        if not inbound:
+        if not lead.discord_user_id:
+            # 誰がお客さんか分からないまま担当の投稿として入れると、お客さんの文を送った側に置いてしまう
             logger.info(
-                "[discord-gateway] ticket channel non-customer message ignored tenant=%s lead=%s msg=%s",
+                "[discord-gateway] ticket channel lead has no discord_user_id tenant=%s lead=%s msg=%s",
+                tenant_id,
+                lead.lead_id,
+                message_id,
+            )
+            return True
+
+        direction = "inbound" if author_id == str(lead.discord_user_id) else "outbound"
+        if direction == "outbound" and getattr(message, "type", None) not in outside_ticket_notice._ALLOWED_TYPES:
+            # ピン留め・参加の知らせなどの仕組みの投稿は、担当の文として入れない
+            logger.info(
+                "[discord-gateway] ticket channel system message ignored tenant=%s lead=%s msg=%s",
                 tenant_id,
                 lead.lead_id,
                 message_id,
@@ -220,12 +232,12 @@ async def process_ticket_channel_message(
         schema = _schema(tenant_id)
         insert_sql = text(f"""
             INSERT INTO {schema}.meta_messages
-                (tenant_id, lead_id, platform, sender_id, sender_name,
+                (tenant_id, lead_id, platform, sender_id, sender_name, recipient_id,
                  message_text, direction, message_id, created_at, original_language,
                  attachment_url, attachment_type)
             VALUES
-                (:tenant_id, :lead_id, 'discord', :sender_id, :sender_name,
-                 :message_text, 'inbound', :message_id, :created_at, :original_language,
+                (:tenant_id, :lead_id, 'discord', :sender_id, :sender_name, :recipient_id,
+                 :message_text, :direction, :message_id, :created_at, :original_language,
                  :attachment_url, :attachment_type)
             ON CONFLICT (message_id) WHERE message_id IS NOT NULL
             DO NOTHING
@@ -236,6 +248,8 @@ async def process_ticket_channel_message(
             "lead_id": lead.lead_id,
             "sender_id": author_id,
             "sender_name": author_name,
+            "recipient_id": str(lead.discord_user_id) if direction == "outbound" else None,
+            "direction": direction,
             "message_text": message_text,
             "message_id": message_id,
             "created_at": received_at,
@@ -259,9 +273,11 @@ async def process_ticket_channel_message(
             return True
 
         # 第2段 2d: 新しい行で commit できたときだけ、担当者にお客さんの返信を知らせる（待たない）
-        customer_reply_notifier.schedule_customer_reply_notice(
-            db_factory, tenant_id=tenant_id, lead_id=lead.lead_id, source="discord",
-        )
+        # 担当の直接の投稿（outbound）では知らせない
+        if direction == "inbound":
+            customer_reply_notifier.schedule_customer_reply_notice(
+                db_factory, tenant_id=tenant_id, lead_id=lead.lead_id, source="discord",
+            )
 
         if attachment_url:
             original_filename = None
@@ -333,7 +349,7 @@ async def process_ticket_channel_message(
                         tenant_id, lead.lead_id, message_id, exc_info=True,
                     )
 
-        if message_text.strip():
+        if direction == "inbound" and message_text.strip():
             enqueue_inbound_translation(
                 "meta_messages",
                 message_id,

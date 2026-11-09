@@ -173,7 +173,10 @@ async def test_t9_writer_calls_notify_only_outside_room(has_lead):
     lead = tcw.TicketChannelLead(lead_id=1, discord_user_id="999", customer_name="x")
     notify = AsyncMock()
     db = MagicMock()
+    db.execute = AsyncMock(return_value=MagicMock(first=MagicMock(return_value=None)))
+    db.commit = AsyncMock()
     with patch.object(tcw, "set_tenant_context", new=AsyncMock()), \
+         patch.object(tcw, "reset_tenant_context", new=AsyncMock()), \
          patch.object(tcw, "_lookup_ticket_channel_lead",
                       new=AsyncMock(return_value=lead if has_lead else None)), \
          patch.object(tcw.outside_ticket_notice, "notify_outside_ticket_post", new=notify):
